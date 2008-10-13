@@ -75,7 +75,6 @@ GLOBAL: p_sign_eoi;
     ]
   ;
 
-
   (* Πx:A. K + Πx:A. B
    | {x:A} K + {x:A} B
    | A ->  K + A ->  B

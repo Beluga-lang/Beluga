@@ -6,31 +6,32 @@
 
 
 
+open Id
+open Syntax.Int
+
+
+
 module Cid : sig
-
-  open Syntax.Int
-
-
 
   module Typ : sig
 
     type entry          = private {
-      name : Id.name
-    ; kind : LF.kind
+      name : name
+    ; kind : kind
     }
 
-    val mk_entry             : Id.name -> LF.kind -> entry
+    val mk_entry        : name -> kind -> entry
 
-    val string_of_entry      : entry -> string
+    val string_of_entry : entry -> string
 
 
     type t
 
-    val add           : entry -> Id.cid_typ
+    val add             : entry -> cid_typ
 
-    val get           : Id.cid_typ -> entry
+    val get             : cid_typ -> entry
 
-    val index_of_name : Id.name -> Id.cid_typ
+    val index_of_name   : name -> cid_typ
 
   end
 
@@ -39,38 +40,36 @@ module Cid : sig
   module Term : sig
 
     type entry          = private {
-      name : Id.name
-    ; typ  : LF.typ
+      name : name
+    ; typ  : typ
     }
 
-    val mk_entry        : Id.name -> LF.typ -> entry
+    val mk_entry        : name -> typ -> entry
 
     val string_of_entry : entry -> string
 
 
     type t
 
-    val add             : entry -> Id.cid_term
+    val add             : entry -> cid_term
 
-    val get             : Id.cid_term -> entry
+    val get             : cid_term -> entry
 
-    val index_of_name   : Id.name -> Id.cid_term
+    val index_of_name   : name -> cid_term
 
   end
-
-
 
 end
 
 
 
-module DataVar : sig
+module BVar : sig
 
   type entry          = private {
-    name : Id.name
+    name : name
   }
 
-  val mk_entry        : Id.name -> entry
+  val mk_entry        : name -> entry
 
   val string_of_entry : entry -> string
 
@@ -81,8 +80,8 @@ module DataVar : sig
 
   val extend          : t -> entry -> t
 
-  val get             : t -> Id.var  -> entry
+  val get             : t -> var  -> entry
 
-  val index_of_name   : t -> Id.name -> Id.offset
+  val index_of_name   : t -> name -> offset
 
 end

@@ -13,16 +13,15 @@
 (* Load the camlp4 extensible grammar syntax extension *)
 #load "pa_extend.cmo";;
 
-open Core.Syntax.Int
+open Core
+open Core.Store
+open Core.Store.Cid
+open Core.Syntax
 open Token
 
 
 
-module DataVar = Core.Store.DataVar
 module Grammar = Camlp4.Struct.Grammar.Static.Make(Lexer)
-module Id      = Core.Id
-module Term    = Core.Store.Cid.Term
-module Typ     = Core.Store.Cid.Typ
 
 
 
@@ -32,8 +31,8 @@ module Typ     = Core.Store.Cid.Typ
    it could be either with this type and continue parsing until we
    find out one way or the other. *)
 type kind_or_typ =
-  | Kind of LF.kind
-  | Typ  of LF.typ
+  | Kind of Ext.kind
+  | Typ  of Ext.typ
 
 
 
@@ -63,59 +62,62 @@ GLOBAL: p_sig_eoi;
     ]
   ;
 
-  (* A : K. ∨ c : A. *)
+  (* A : K. + c : A. *)
   p_sig_decl:
     [
       [
-        a_or_c = SYMBOL; ":"; k_or_a_fun = p_kind_or_typ; "."
-      -> begin match k_or_a_fun (DataVar.create ()) with
-           | Kind k -> Decl.Typ   ((Typ.add  (Typ.mk_entry  (Id.mk_name (Some a_or_c)) k)), k)
-           | Typ  a -> Decl.Const ((Term.add (Term.mk_entry (Id.mk_name (Some a_or_c)) a)), a)
+        a_or_c = SYMBOL; ":"; k_or_a = p_kind_or_typ; "."
+      -> begin match k_or_a with
+           | Kind k -> Ext.SgnTyp   (Id.mk_name (Some a_or_c), k)
+           | Typ  a -> Ext.SgnConst (Id.mk_name (Some a_or_c), a)
          end
       ]
     ]
   ;
 
 
-  (* Πx:A. K ∨ Πx:A. B
-   | {x:A} K ∨ {x:A} B
-   | A ->  K ∨ A ->  B
-   |       K ∨ A      
+  (* Πx:A. K + Πx:A. B
+   | {x:A} K + {x:A} B
+   | A ->  K + A ->  B
+   |       K + A      
    *)
   p_kind_or_typ:
     [
       RIGHTA
         [
-          "Π"; x = SYMBOL; ":"; a2_fun = p_full_typ; "."; k_or_a_fun = SELF
-        -> fun data_ctx ->
-             let data_ctx' = DataVar.extend data_ctx (DataVar.mk_entry (Id.mk_name (Some x))) in
-               begin match k_or_a_fun data_ctx' with
-                 | Kind k -> Kind (LF.PiKind ((Id.mk_name (Some x), a2_fun data_ctx'), k))
-                 | Typ  a -> Typ  (LF.PiTyp  ((Id.mk_name (Some x), a2_fun data_ctx'), a))
-               end
+          "Π"; x = SYMBOL; ":"; a2 = p_full_typ; "."; k_or_a = SELF
+        -> begin match k_or_a with
+             | Kind k ->
+                 Kind
+                   (Ext.PiKind ((Id.mk_name (Some x), a2), k))
+             | Typ  a ->
+                 Typ
+                   (Ext.PiTyp  ((Id.mk_name (Some x), a2), a))
+           end
         |
-          "{"; x = SYMBOL; ":"; a2_fun = p_full_typ; "}"; k_or_a_fun = SELF
-        -> fun data_ctx ->
-             let data_ctx' = DataVar.extend data_ctx (DataVar.mk_entry (Id.mk_name (Some x))) in
-               begin match k_or_a_fun data_ctx' with
-                 | Kind k -> Kind (LF.PiKind ((Id.mk_name (Some x), a2_fun data_ctx'), k))
-                 | Typ  a -> Typ  (LF.PiTyp  ((Id.mk_name (Some x), a2_fun data_ctx'), a))
-               end
+           "{"; x = SYMBOL; ":"; a2 = p_full_typ; "}"; k_or_a = SELF
+        -> begin match k_or_a with
+             | Kind k ->
+                 Kind
+                   (Ext.PiKind ((Id.mk_name (Some x), a2), k))
+             | Typ  a ->
+                 Typ
+                   (Ext.PiTyp  ((Id.mk_name (Some x), a2), a))
+           end
         |
-          a2_fun = p_basic_typ; "->"; k_or_a_fun = SELF
-       -> fun data_ctx ->
-            begin match k_or_a_fun data_ctx with
-              | Kind k -> Kind (LF.PiKind ((Id.mk_name None, a2_fun data_ctx), k))
-              | Typ  a -> Typ  (LF.PiTyp  ((Id.mk_name None, a2_fun data_ctx), a))
-            end
+          a2 = p_basic_typ; "->"; k_or_a = SELF
+       -> begin match k_or_a with
+            | Kind k ->
+                Kind (Ext.PiKind ((Id.mk_name None, a2), k))
+            | Typ  a ->
+                Typ  (Ext.PiTyp  ((Id.mk_name None, a2), a))
+          end
         |
-           k_fun = p_basic_kind
-        -> fun data_ctx ->
-             Kind (k_fun data_ctx)
+           k = p_basic_kind
+        -> Kind k
         |
-           a_fun = p_basic_typ
-        -> fun data_ctx ->
-             Typ  (a_fun data_ctx)
+           a = p_basic_typ
+        -> Typ  a
         ]
     ]
   ;
@@ -125,8 +127,7 @@ GLOBAL: p_sig_eoi;
     [
       [
         "type"
-      -> fun _ ->
-           LF.TypKind
+      -> Ext.Typ
       ]
     ]
   ;
@@ -138,12 +139,12 @@ GLOBAL: p_sig_eoi;
     [
       [
          a = SYMBOL; ms = LIST0 p_basic_term
-      -> fun data_ctx ->
-           let sp = List.fold_right (fun t s -> LF.App (t data_ctx, s)) ms LF.Nil in
-             LF.Atom ((Typ.index_of_name (Id.mk_name (Some a))), sp)
+      -> let sp =
+           List.fold_right (fun t s -> Ext.App (t, s)) ms Ext.Nil in
+             Ext.Atom (Id.mk_name (Some a), sp)
       |
-        "("; a_fun = p_full_typ; ")"
-         ->  a_fun
+         "("; a = p_full_typ; ")"
+      ->  a
       ]
     ]
   ;
@@ -155,22 +156,20 @@ GLOBAL: p_sig_eoi;
   p_full_typ:
     [
       [
-         a_fun = p_basic_typ
-      -> a_fun
+         a = p_basic_typ
+      -> a
       |
-         "Π"; x = SYMBOL; ":"; a2_fun = SELF; "."; a_fun = SELF
-      -> fun data_ctx ->
-           let data_ctx' = DataVar.extend data_ctx (DataVar.mk_entry (Id.mk_name (Some x))) in
-             LF.PiTyp ((Id.mk_name (Some x), a2_fun data_ctx'), a_fun data_ctx')
+         "Π"; x = SYMBOL; ":"; a2 = SELF; "."; a = SELF
+      -> Ext.PiTyp
+           ((Id.mk_name (Some x), a2), a)
       |
-         "{"; x = SYMBOL; ":"; a2_fun = SELF; "}"; a_fun = SELF
-      -> fun data_ctx ->
-           let data_ctx' = DataVar.extend data_ctx (DataVar.mk_entry (Id.mk_name (Some x))) in
-             LF.PiTyp ((Id.mk_name (Some x), a2_fun data_ctx'), a_fun data_ctx')
+         "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF
+      -> Ext.PiTyp
+           ((Id.mk_name (Some x), a2), a)
       |
-          a2_fun = p_basic_typ; "->"; a_fun = SELF
-       -> fun data_ctx ->
-            LF.PiTyp ((Id.mk_name None, a2_fun data_ctx), a_fun data_ctx)
+          a2 = p_basic_typ; "->"; a = SELF
+       -> Ext.PiTyp
+            ((Id.mk_name None, a2), a)
       ]
     ]
   ;
@@ -182,8 +181,7 @@ GLOBAL: p_sig_eoi;
     [
       [
          h = p_head
-      -> fun data_ctx ->
-           LF.Root ((h data_ctx), LF.Nil)
+      -> Ext.Root (h, Ext.Nil)
       |
          "("; m = p_full_term; ")"
       -> m
@@ -200,19 +198,15 @@ GLOBAL: p_sig_eoi;
     [
       [
          "λ"; x = SYMBOL; "."; m = p_full_term
-      -> fun data_ctx ->
-           let data_ctx' = DataVar.extend data_ctx (DataVar.mk_entry (Id.mk_name (Some x))) in
-             LF.Lam ((Id.mk_name (Some x)), (m data_ctx'))
+      -> Ext.Lam ((Id.mk_name (Some x)), m)
       |
          "["; x = SYMBOL; "]"; m = p_full_term
-      -> fun data_ctx ->
-           let data_ctx' = DataVar.extend data_ctx (DataVar.mk_entry (Id.mk_name (Some x))) in
-             LF.Lam ((Id.mk_name (Some x)), (m data_ctx'))
+      -> Ext.Lam ((Id.mk_name (Some x)), m)
       |
          h = p_head; ms = LIST0 p_basic_term
-      -> fun data_ctx ->
-           let sp = List.fold_right (fun t s -> LF.App (t data_ctx, s)) ms LF.Nil in
-             LF.Root (h data_ctx, sp)
+      -> let sp =
+           List.fold_right (fun t s -> Ext.App (t, s)) ms Ext.Nil in
+             Ext.Root (h, sp)
       |
          m = p_basic_term
       -> m
@@ -227,13 +221,7 @@ GLOBAL: p_sig_eoi;
     [
       [
          x_or_c = SYMBOL
-      -> fun data_ctx ->
-           try
-             LF.DataVar (DataVar.index_of_name data_ctx (Id.mk_name (Some x_or_c)))
-           with
-             | Not_found ->
-                (* FIXME: catch another Not_found again... *)
-                 LF.Const (Term.index_of_name (Id.mk_name (Some x_or_c)))
+      -> Ext.Name (Id.mk_name (Some x_or_c))
       ]
     ]
   ;

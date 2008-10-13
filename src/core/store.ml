@@ -6,17 +6,17 @@
 
 
 
+module Int = Syntax.Int
+
+
+
 module Cid = struct
-
-  open Syntax.Int
-
-
 
   module Typ = struct
 
     type entry =
       { name : Id.name
-      ; kind : LF.kind }
+      ; kind : Int.kind }
 
     let mk_entry n k =
       { name = n
@@ -55,7 +55,7 @@ module Cid = struct
 
     type entry =
       { name : Id.name
-      ; typ  : LF.typ }
+      ; typ  : Int.typ }
 
     let mk_entry n t =
       { name = n
@@ -87,13 +87,11 @@ module Cid = struct
 
   end
 
-
-
 end
 
 
 
-module DataVar = struct
+module BVar = struct
 
   type entry =
     { name : Id.name }

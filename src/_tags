@@ -1,0 +1,3 @@
+# -*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+<beluga.top> : package(extlib), package(ulex), use_camlp4

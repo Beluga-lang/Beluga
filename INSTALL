@@ -1,0 +1,107 @@
+-*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+This document describes the compilation and installation procedures
+for Beluga.
+
+
+*      [Pre-requisites](#01)
+
+*      [Building](#02)
+
+*      [Installing](#03)
+
+
+Pre-requisites
+==============
+
+* [ocaml 3.10][01] or greater
+* [camlp5][02]
+* [extlib][03]
+* [ledit][04]
+* [ulex][05]
+
+[01]: http://localhost
+[02]: http://localhost
+[03]: http://localhost
+[04]: http://localhost
+[05]: http://localhost
+
+
+Building
+========
+
+The Simple Way
+--------------
+
+If you just want to build everything and immediately install it, do
+the following:
+
+    $ cd src
+    $ make
+    $ make install
+
+This will install the Beluga intepreter into `/usr/local/bin`.  If you
+wish to change the install location, simply edit the appropriate
+variables in `Makefile`.
+
+
+Compiling Everything
+--------------------
+
+If you wish to compile everything at once:
+
+    $ cd src
+    $ make
+
+
+Compiling the Beluga Library
+----------------------------
+
+If you wish to compile just the Beluga library:
+
+    $ cd src
+    $ cd make belugalib
+
+
+Building the Documentation
+--------------------------
+
+    $ cd src
+    $ make doc
+
+
+Compiling the Beluga-specific Toplevel
+--------------------------------------
+
+If you wish to compile the Beluga toplevel:
+
+    $ cd src
+    $ make top
+
+
+Interacting with the Beluga-specific Toplevel
+---------------------------------------------
+
+If you wish to easily interact with the Beluga toplevel:
+
+    $ cd src
+    $ make interactive
+
+The `interactive` target will compile the beluga library and toplevel
+and then immediately load the toplevel with the appropriate flags.
+
+This target is intended to be used during the development cycle.
+After you make changes to the code, simply run `make interactive` to
+recompile the code and drop into the toplevel to experiment with the
+changes you just made.
+
+
+
+Installing
+==========
+
+To install the Beluga interpreter after you have compiled everything,
+simply issue:
+
+    $ cd src
+    $ make install

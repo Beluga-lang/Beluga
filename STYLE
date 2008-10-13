@@ -1,0 +1,67 @@
+-*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+This document describes several stylistic conventions used within the
+Beluga source code and its accompanying documentation.
+
+*      [Documentation](#01)
+
+       *        [Character Set](#02)
+       *        [Markup](#03)
+
+*      [Coding](#04)
+
+       *        [Philosophy](#05)
+       *        [Documentation](#06)
+
+
+Documentation <a id="01"/>
+=============
+
+Character Set <a id="02"/>
+-------------
+
+The Beluga source code and documentation are encoded with UTF-8.  Any
+files added to the source tree should be saved with the appropriate
+encoding.  To help maintain this invariant, the emacs mode line
+present at the top of this file should be placed within all new files
+immediately upon creation.
+
+Markup <a id="03"/>
+------
+
+Simple textual documentation files, such as this one, use a
+lightweight markup language known as [Markdown][01].  They are
+readable as regular text files with the added benefit of being
+renderable to HTML, LaTeX, or a variety of other formats in a nice and
+consistent fashion.  A Markdown mode for Emacs is available
+[here][02].
+
+[01]: http://daringfireball.net/projects/markdown/
+[02]: http://jblevins.org/projects/markdown-mode/
+
+
+Coding <a id="04"/>
+======
+
+
+Philosophy <a id="05"/>
+----------
+
+The Beluga source code is intended, above all, to be *correct* and *clear*.
+
+
+Documentation <a id="06"/>
+-------------
+
+The Beluga source code is intended to be fully documented.  We use
+[ocamldoc][03] for documentation markup and pretty documentation
+generation.
+
+All modules should have their signatures fully documented: exceptions,
+functions, and types should include at least a brief comment.  Where
+possible, syntactic conventions from publications should be correlated
+with the source code in question.  For this, we will often use
+Unicode.  For example, if something is called Ψ in a paper, then Ψ
+should be written in the comment, rather than `Psi'.
+
+[03]: http://caml.inria.fr/pub/docs/manual-ocaml/manual029.html

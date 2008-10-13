@@ -1,0 +1,104 @@
+-*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+This document describes the Beluga source code, including a
+description of the source code structure and a description of the
+Beluga project.
+
+*      [Structure](#01)
+
+*      [Project Description](#02)
+
+       *        [Contextual Modal Type Theory](#03)
+
+
+Structure <a id="01"/>
+=========
+
+
+beluga
+------
+
+    INSTALL.text        Compilation and installation instructions
+    README.text         Current file
+    STYLE.text          Comments on stylistic conventions
+    TODO.text           List of tasks to be completed
+
+
+doc
+---
+
+Various papers describing Contextual Modal Type Theory.
+
+
+ocaml-notes
+-----------
+
+Many of the programmers on this project were experienced with SML but
+not Ocaml.  `ocaml-notes` contains information relevant such people.
+
+
+src
+---
+
+    Makefile            make driver for ocamlbuild
+    _tags               ocamlbuild configuration for local directory
+    beluga.mltop        Beluga-specific toplevel target
+    core.mlpack         Target to pack core/* into Target module
+    frontend.mlpack     Target to pack frontend/* into Frontend module
+    interpreter.mlpack  Target to pack interperter/* into Interpreter module
+    myocamlbuild.ml     Custom ocamlbuild plugin
+
+
+core
+----
+
+    _tags               ocamlbuild configuration for local directory
+    config.ml           State configuration for Core
+    core.odocl          Target to generate Core documentation
+    gensym.ml           Unique symbol generation
+    gensym.mli          ...
+    id.ml               Identifiers, used for variables, constants, etc.
+    id.mli              ...
+    normalize.ml        Normalization
+    normalize.mli       ...
+    store.ml            Variable store, maps ids to variable information
+    store.mli           ...
+    syntax.ml           Syntax for the LF and computation layer of Beluga
+    typecheck.ml        Typechecking
+    typecheck.mli       ...
+
+
+
+frontend
+--------
+
+    _tags               ocamlbuild configuration for local directories
+    frontend.odocl      Target to generate Frontend documentation
+    lexer.ml            Beluga lexer
+    lexer.mli           ...
+    parser.ml           Beluga parser
+    token.ml            Tokens for lexing
+
+
+
+interpreter
+-----------
+
+    _tags               ocamlbuild configuration for local directories
+    interpreter.odocl   Target to generate Interpreter documentation
+
+
+tools
+-----
+
+
+
+Project Description <a id="02"/>
+===================
+
+
+Contextual Modal Type Theory <a id="03"/>
+----------------------------
+
+
+

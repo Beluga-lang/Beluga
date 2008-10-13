@@ -40,7 +40,7 @@ type kind_or_typ =
 (* Global Grammar Entry Points *)
 (*******************************)
 
-let p_sig_eoi = Grammar.Entry.mk "sig_eoi" (* Σ *)
+let p_sign_eoi = Grammar.Entry.mk "sig_eoi" (* Σ *)
 
 
 
@@ -49,21 +49,21 @@ let p_sig_eoi = Grammar.Entry.mk "sig_eoi" (* Σ *)
 (*****************************************)
 
 EXTEND Grammar
-GLOBAL: p_sig_eoi;
+GLOBAL: p_sign_eoi;
 
 
   (* Σ *)
-  p_sig_eoi:
+  p_sign_eoi:
     [
       [
-        decls = LIST0 p_sig_decl; `EOI
+        decls = LIST0 p_sign_decl; `EOI
           -> decls
       ]
     ]
   ;
 
   (* A : K. + c : A. *)
-  p_sig_decl:
+  p_sign_decl:
     [
       [
         a_or_c = SYMBOL; ":"; k_or_a = p_kind_or_typ; "."
@@ -238,7 +238,7 @@ let parse_file file_name =
   let in_channel = Pervasives.open_in file_name in
   let stream     = Stream.of_channel in_channel in
     try
-      Grammar.parse p_sig_eoi (Grammar.Loc.mk file_name) stream
+      Grammar.parse p_sign_eoi (Grammar.Loc.mk file_name) stream
     with
       | Grammar.Loc.Exc_located (loc, exc) ->
           Format.printf "%s\n" (Printexc.to_string exc)

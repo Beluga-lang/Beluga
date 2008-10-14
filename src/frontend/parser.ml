@@ -226,5 +226,5 @@ let parse_file file_name =
     with
       | Grammar.Loc.Exc_located (loc, exc) ->
           Format.printf "%s\n" (Printexc.to_string exc)
-          ; Grammar.Loc.print Format.std_formatter loc
-          ; assert false
+        ; Grammar.Loc.print Format.std_formatter loc
+        ; assert false

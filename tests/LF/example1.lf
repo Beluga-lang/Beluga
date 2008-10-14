@@ -1,0 +1,12 @@
+tp : type.
+tp/unit : tp.
+tp/arr  : tp -> tp -> t.
+
+tm : type.
+tm/unit : tm.
+tm/lam  : (tm -> tm) -> tm.
+tm/app  : tm -> tm -> tm.
+
+of : tm -> tp -> type.
+of/unit : of tm/unit tp/unit.
+of/app  : {A:tp} {B:tp} {M:tm} {N:tm} of M (tp/arr A B) -> of N A -> of (tm/app M N) B.

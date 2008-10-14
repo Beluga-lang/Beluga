@@ -23,7 +23,21 @@ module Id : sig
 
   open Core.Id
 
-  val ppr_name : formatter -> name -> unit
+
+
+  (********************************)
+  (* Format Based Pretty Printers *)
+  (********************************)
+
+  val fmt_ppr_name : formatter -> name -> unit
+
+
+
+  (***************************)
+  (* Default Pretty Printers *)
+  (***************************)
+
+  val ppr_name : name -> unit
 
 end
 
@@ -33,17 +47,41 @@ module Ext : sig
 
   open Core.Syntax.Ext
 
-  val ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
 
-  val ppr_kind     : lvl -> formatter -> kind     -> unit
 
-  val ppr_type     : lvl -> formatter -> typ      -> unit
+  (*******************************************)
+  (* Contextual Format Based Pretty Printers *)
+  (*******************************************)
 
-  val ppr_term     : lvl -> formatter -> term     -> unit
+  val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
 
-  val ppr_head     :        formatter -> head     -> unit
+  val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
 
-  val ppr_spine    : lvl -> formatter -> spine    -> unit
+  val fmt_ppr_type     : lvl -> formatter -> typ      -> unit
+
+  val fmt_ppr_term     : lvl -> formatter -> term     -> unit
+
+  val fmt_ppr_head     :        formatter -> head     -> unit
+
+  val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
+
+
+
+  (***************************)
+  (* Default Pretty Printers *)
+  (***************************)
+
+  val ppr_sgn_decl : sgn_decl -> unit
+
+  val ppr_kind     : kind     -> unit
+
+  val ppr_type     : typ      -> unit
+
+  val ppr_term     : term     -> unit
+
+  val ppr_head     : head     -> unit
+
+  val ppr_spine    : spine    -> unit
 
 end
 

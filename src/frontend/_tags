@@ -4,4 +4,5 @@
 
 <lexer.*>        : package(camlp4), package(ulex), syntax(camlp4o), warn_e, warn_x, warn_z
 <parser.*>       : package(camlp4), camlp4of, use_camlp4, warn_e
+<pretty.*>       : warn_e
 <token.*>        : package(camlp4), camlp4of, use_camlp4

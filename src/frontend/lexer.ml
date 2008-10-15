@@ -30,17 +30,15 @@ let regexp symbol_char = [^ "%(),.:[]{}" ' ' '0'-'9' '\n' '\t' ]
 
 (* Make a {!Token.t} taking no arguments and advance the {!Loc.t ref}. *)
 let mk_tok tok loc lexbuf =
-  loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-  ; Token.print Format.std_formatter tok
+    loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
   ; tok
 
 (* Make a {!Token.t} taking a {!string} argument for the current
    lexeme and advance the {!Loc.t ref}. *)
 let mk_tok_of_lexeme tok_cons loc lexbuf =
-  loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
   ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
-    Token.print Format.std_formatter tok
-    ; tok
+    tok
 
 let mk_keyword s = Token.KEYWORD s
 

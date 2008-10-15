@@ -232,7 +232,11 @@ let parse_string ?(name = "<string>") ~input entry =
   let stream = Stream.of_string input in
     parse_stream ~name:name ~input:stream entry
 
-let parse_file ~file_name entry =
-  let in_channel = Pervasives.open_in file_name in
+let parse_channel ?(name = "<channel>") ~input entry =
+  let stream = Stream.of_channel input in
+    parse_stream ~name:name ~input:stream entry
+
+let parse_file ~name entry =
+  let in_channel = Pervasives.open_in name in
   let stream     = Stream.of_channel in_channel in
-    parse_stream ~name:file_name ~input:stream entry
+    parse_stream ~name:name ~input:stream entry

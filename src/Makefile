@@ -22,10 +22,10 @@ FRONT_NAME=frontend
 
 INT_CFLAGS=-cflags '-w A','-warn-error A'
 INT_CFLAGS_OPT=-cflags -noassert,-unsafe,'-ccopt -O3'
-INT_DIR=interpreter
-INT_DOC_NAME=interpreter
+INT_DIR=tools
+INT_DOC_NAME=
 INT_LFLAGS=
-INT_LIBS=-libs extlib
+INT_LIBS=
 INT_NAME=interpreter
 
 TOP_CFLAGS=-cflags '-w A','-warn-error A'
@@ -40,7 +40,7 @@ SCRIPTS_DIR=../scripts
 
 
 
-all:	beluga-core beluga-frontend #beluga-interpreter
+all:	beluga-core beluga-frontend beluga-interpreter
 
 clean:
 	@${OCAMLBUILD} -clean
@@ -53,7 +53,7 @@ doc:	beluga-doc
 interactive:	all top
 	@ledit ./beluga.top -I _build
 
-opt:	beluga-core-opt beluga-frontend-opt #beluga-interpreter-opt
+opt:	beluga-core-opt beluga-frontend-opt beluga-interpreter-opt
 
 prof:
 	@echo "\nTarget 'prof' not yet implemented."
@@ -75,9 +75,9 @@ beluga-frontend:
 	@${OCAMLBUILD} ${JOBS} ${FRONT_CFLAGS} ${FRONT_LFLAGS} ${FRONT_LIBS}\
 	 ${FRONT_NAME}.cmx
 
-# beluga-interpreter:
-# 	@echo "\nBuilding Beluga Interpreter..."
-# 	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS} ${INT_LFLAGS} ${INT_LIBS} ${INT_NAME}.cmx
+beluga-interpreter:
+	@echo "\nBuilding Beluga Interpreter..."
+	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS} ${INT_LFLAGS} ${INT_LIBS} ${INT_DIR}/${INT_NAME}.native
 
 
 
@@ -92,10 +92,10 @@ beluga-frontend-opt:
 	@${OCAMLBUILD} ${JOBS} ${FRONT_CFLAGS_OPT} ${FRONT_LFLAGS} ${FRONT_LIBS}\
 	 ${FRONT_NAME}.cmx
 
-# beluga-interpreter-opt:
-# 	@echo "\nGenerating Beluga Interpreter... (Optimized)"
-# 	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS_OPT} ${INT_LFLAGS} ${INT_LIBS}\
-# 	 ${INT_NAME}.cmx
+beluga-interpreter-opt:
+	@echo "\nGenerating Beluga Interpreter... (Optimized)"
+	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS_OPT} ${INT_LFLAGS} ${INT_LIBS}\
+	 ${INT_NAME}.cmx
 
 
 

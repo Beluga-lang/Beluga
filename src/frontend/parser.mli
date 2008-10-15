@@ -15,6 +15,8 @@ module Grammar : Camlp4.Sig.Grammar.Static
   and  module Token = Lexer.Token
 
 
+(** Grammar entry for an entire LF Signature *)
+val p_sgn_eoi : Ext.sgn_decl list Grammar.Entry.t
 
 (** Parse a stream and return a signature *)
 val parse_stream :
@@ -30,8 +32,15 @@ val parse_string :
   -> 'a Grammar.Entry.t
   -> 'a
 
+(** Parse a channel and return a signature *)
+val parse_channel :
+  ?name:string
+  -> input:in_channel
+  -> 'a Grammar.Entry.t
+  -> 'a
+
 (** Parse a file and return a signature *)
 val parse_file   :
-     file_name:string
+     name:string
   -> 'a Grammar.Entry.t
   -> 'a

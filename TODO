@@ -9,10 +9,10 @@ CRITICAL
 
 
 
-
 IMPORTANT
 =========
 
+* 10/15/08 :: Cleanup Makefile.  -dwm
 * 10/14/08 :: Consider a way to use labels to clean up pretty printer
               interface.  May be possible pass std_formatter and
               std_lvl in as default arguments.  -dwm

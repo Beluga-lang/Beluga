@@ -53,7 +53,7 @@ doc:	beluga-doc
 interactive:	all top
 	@ledit ./beluga.top -I _build
 
-opt:	beluga-core-opt beluga-frontend-opt beluga-interpreter-opt
+opt:	beluga-core-opt beluga-frontend-opt #beluga-interpreter-opt
 
 prof:
 	@echo "\nTarget 'prof' not yet implemented."
@@ -75,9 +75,9 @@ beluga-frontend:
 	@${OCAMLBUILD} ${JOBS} ${FRONT_CFLAGS} ${FRONT_LFLAGS} ${FRONT_LIBS}\
 	 ${FRONT_NAME}.cmx
 
-beluga-interpreter:
-	@echo "\nBuilding Beluga Interpreter..."
-	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS} ${INT_LFLAGS} ${INT_LIBS} ${INT_NAME}.cmx
+# beluga-interpreter:
+# 	@echo "\nBuilding Beluga Interpreter..."
+# 	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS} ${INT_LFLAGS} ${INT_LIBS} ${INT_NAME}.cmx
 
 
 
@@ -92,10 +92,10 @@ beluga-frontend-opt:
 	@${OCAMLBUILD} ${JOBS} ${FRONT_CFLAGS_OPT} ${FRONT_LFLAGS} ${FRONT_LIBS}\
 	 ${FRONT_NAME}.cmx
 
-beluga-interpreter-opt:
-	@echo "\nGenerating Beluga Interpreter... (Optimized)"
-	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS_OPT} ${INT_LFLAGS} ${INT_LIBS}\
-	 ${INT_NAME}.cmx
+# beluga-interpreter-opt:
+# 	@echo "\nGenerating Beluga Interpreter... (Optimized)"
+# 	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS_OPT} ${INT_LFLAGS} ${INT_LIBS}\
+# 	 ${INT_NAME}.cmx
 
 
 

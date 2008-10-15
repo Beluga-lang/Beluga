@@ -6,7 +6,7 @@
 
 
 
-module Loc   = Camlp4.PreCast.Loc
+module Loc   = Core.Syntax.Ext.Loc (*Camlp4.PreCast.Loc*)
 module Token = Token
 module Error = Camlp4.Struct.EmptyError
 

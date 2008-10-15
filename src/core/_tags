@@ -3,3 +3,4 @@
 <*.cmx>       : for-pack(Core)
 
 <store.*>     : package(extlib)
+<syntax.*>    : package(camlp4), camlp4of, use_camlp4

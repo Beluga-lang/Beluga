@@ -89,21 +89,21 @@ module Ext = struct
   (*******************************************)
 
   let rec fmt_ppr_sgn_decl lvl ppf = function
-    | SgnTyp (a, k)   ->
+    | SgnTyp (_, a, k)   ->
         fprintf ppf "@[<1>%a : %a@]\n"
            fmt_ppr_name      a
           (fmt_ppr_kind lvl) k
 
-    | SgnConst (c, a) ->
+    | SgnConst (_, c, a) ->
         fprintf ppf "@[<1>%a : %a@]\n"
            fmt_ppr_name      c
           (fmt_ppr_type lvl) a
 
   and fmt_ppr_kind lvl ppf = function
-    | Typ              ->
+    | Typ _               ->
         fprintf ppf "type"
 
-    | PiKind ((x,a),k) ->
+    | PiKind (_, (x,a),k) ->
         let cond = lvl > 0 in
           fprintf ppf "@[%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
@@ -112,13 +112,12 @@ module Ext = struct
             (fmt_ppr_kind 0) k
             (r_paren_if cond)
 
-
   and fmt_ppr_type lvl ppf = function
-    | Atom (a, Nil)   ->
+    | Atom (_, a, Nil)   ->
         fprintf ppf "%a"
            fmt_ppr_name a
 
-    | Atom (a, ms)    ->
+    | Atom (_, a, ms)    ->
         let cond = lvl > 1 in
           fprintf ppf "@[%s%a%a%s@]"
             (l_paren_if cond)
@@ -126,7 +125,7 @@ module Ext = struct
             (fmt_ppr_spine 2) ms
             (r_paren_if cond)
 
-    | PiTyp ((x,a),b) ->
+    | PiTyp (_, (x,a),b) ->
         let cond = lvl > 0 in
           fprintf ppf "@[%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
@@ -136,7 +135,7 @@ module Ext = struct
             (r_paren_if cond)
 
   and fmt_ppr_term lvl ppf = function
-    | Lam (x, m)    ->
+    | Lam (_, x, m)    ->
         let cond = lvl > 0 in
           fprintf ppf "@[%s[%a]@ %a%s@]"
             (l_paren_if cond)
@@ -144,11 +143,11 @@ module Ext = struct
             (fmt_ppr_term 0) m
             (r_paren_if cond)
 
-    | Root (h, Nil) ->
+    | Root (_, h, Nil) ->
         fprintf ppf "%a"
            fmt_ppr_head h
 
-    | Root (h, ms)  ->
+    | Root (_, h, ms)  ->
         let cond = lvl > 1 in
           fprintf ppf "@[%s%a%a%s@]"
             (l_paren_if cond)
@@ -157,7 +156,7 @@ module Ext = struct
             (r_paren_if cond)
 
   and fmt_ppr_head ppf = function
-    | Name n ->
+    | Name (_, n) ->
         fprintf ppf "%a"
           fmt_ppr_name n
 

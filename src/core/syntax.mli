@@ -15,9 +15,9 @@ open Id
 
 
 (** External Syntax *)
-module Ext = struct
+module Ext : sig
 
-  module Loc = Camlp4.PreCast.Loc
+  module Loc : Camlp4.Sig.Loc
 
   type kind =
     | Typ    of Loc.t
@@ -49,7 +49,7 @@ end
 
 
 (** Internal Syntax *)
-module Int = struct
+module Int : sig
 
   type kind =
     | Typ

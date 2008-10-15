@@ -217,14 +217,25 @@ END
 (* Parser Interface *)
 (********************)
 
+(* NOTE: Subject to change! *)
+
+(* Parse a stream and return a signature *)
+let parse_stream ?(name = "<stream>") ~input =
+  try
+    Grammar.parse p_sgn_eoi (Grammar.Loc.mk name) input
+  with
+    | Grammar.Loc.Exc_located (loc, exc) ->
+        Format.printf "%s\n" (Printexc.to_string exc)
+      ; Grammar.Loc.print Format.std_formatter loc
+      ; assert false
+
+(* Parse a string and return a signature *)
+let parse_string ?(name = "<string>") ~input =
+  let stream = Stream.of_string input in
+    parse_stream ~name:name ~input:stream
+
 (* Parse a file and return a signature *)
-let parse_file file_name =
-  let in_channel = Pervasives.open_in file_name in
+let parse_file ~name =
+  let in_channel = Pervasives.open_in name in
   let stream     = Stream.of_channel in_channel in
-    try
-      Grammar.parse p_sgn_eoi (Grammar.Loc.mk file_name) stream
-    with
-      | Grammar.Loc.Exc_located (loc, exc) ->
-          Format.printf "%s\n" (Printexc.to_string exc)
-        ; Grammar.Loc.print Format.std_formatter loc
-        ; assert false
+    parse_stream ~name:name ~input:stream

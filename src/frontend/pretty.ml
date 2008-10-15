@@ -90,12 +90,12 @@ module Ext = struct
 
   let rec fmt_ppr_sgn_decl lvl ppf = function
     | SgnTyp (_, a, k)   ->
-        fprintf ppf "@[<1>%a : %a@]\n"
+        fprintf ppf "%a : %a.@.@?"
            fmt_ppr_name      a
           (fmt_ppr_kind lvl) k
 
     | SgnConst (_, c, a) ->
-        fprintf ppf "@[<1>%a : %a@]\n"
+        fprintf ppf "%a : %a.@.@?"
            fmt_ppr_name      c
           (fmt_ppr_type lvl) a
 
@@ -105,7 +105,7 @@ module Ext = struct
 
     | PiKind (_, (x,a),k) ->
         let cond = lvl > 0 in
-          fprintf ppf "@[%s{%a : %a}@ %a%s@]"
+          fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
              fmt_ppr_name    x
             (fmt_ppr_type 0) a
@@ -119,7 +119,7 @@ module Ext = struct
 
     | Atom (_, a, ms)    ->
         let cond = lvl > 1 in
-          fprintf ppf "@[%s%a%a%s@]"
+          fprintf ppf "%s%a%a%s"
             (l_paren_if cond)
              fmt_ppr_name     a
             (fmt_ppr_spine 2) ms
@@ -127,7 +127,7 @@ module Ext = struct
 
     | PiTyp (_, (x,a),b) ->
         let cond = lvl > 0 in
-          fprintf ppf "@[%s{%a : %a}@ %a%s@]"
+          fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
              fmt_ppr_name      x
             (fmt_ppr_type lvl) a
@@ -137,7 +137,7 @@ module Ext = struct
   and fmt_ppr_term lvl ppf = function
     | Lam (_, x, m)    ->
         let cond = lvl > 0 in
-          fprintf ppf "@[%s[%a]@ %a%s@]"
+          fprintf ppf "%s[%a] %a%s"
             (l_paren_if cond)
              fmt_ppr_name    x
             (fmt_ppr_term 0) m
@@ -149,7 +149,7 @@ module Ext = struct
 
     | Root (_, h, ms)  ->
         let cond = lvl > 1 in
-          fprintf ppf "@[%s%a%a%s@]"
+          fprintf ppf "%s%a%a%s"
             (l_paren_if cond)
              fmt_ppr_head     h
             (fmt_ppr_spine 2) ms
@@ -165,7 +165,7 @@ module Ext = struct
         fprintf ppf ""
 
     | App (m, ms) ->
-        fprintf ppf "@ %a%a"
+        fprintf ppf " %a%a"
           (fmt_ppr_term  lvl) m
           (fmt_ppr_spine lvl) ms
 

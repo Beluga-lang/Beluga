@@ -16,8 +16,6 @@
 
 open Core
 open Core.Common
-open Core.Store
-open Core.Store.Cid
 open Core.Syntax
 open Token
 

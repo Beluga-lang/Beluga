@@ -72,9 +72,6 @@ module Cid = struct
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0 (* FIXME: investigate better initial size *)
 
-
-    (* FIXME: change handling of gensym situation... need to figure
-       out what to do when matching on names that are empty *)
     let index_of_name n = Hashtbl.find directory n
 
     let add e =

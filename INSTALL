@@ -57,67 +57,52 @@ GODI Installation Instructions
 3. `cd /tmp/godi-rocketboost-20080630` or wherever you extracted to.
 
 4. Run the first bootstrap script, placing the GODI installation
-   somewhere convenient, e.g., `./bootstrap -prefix ~/local/GODI`
+   somewhere convenient, e.g.,
+
+       $ ./bootstrap -prefix ~/local/GODI`
 
 5. After the bootstrap completes, make sure to add the GODI bin and
    man directories to your $PATH and $MANPATH variables respectively,
    e.g.,
 
-        # GODI
-        export PATH=~/local/GODI/bin:~/local/GODI/sbin:$PATH
-        export MANPATH=~/local/GODI/man:$MANPATH
+       # GODI
+       export PATH=~/local/GODI/bin:~/local/GODI/sbin:$PATH
+       export MANPATH=~/local/GODI/man:$MANPATH
 
 6. Either reload your terminal, or refresh your shell configuration,
-   e.g., `source ~/.profile`, if you use `~/.profile` to set your
-   environment variables.
+   e.g.,
+
+       $ source ~/.profile`
+
+   if you use `~/.profile` to set your environment variables.
 
 7. Still within `/tmp/godi-rocketboost-20080630`, run
-   `./bootstrap_stage2`.  During this phase, your GODI installation
-   will synchronize with the central GODI repository and obtain the
-   necessary information to download and build the packages we need.
+
+       $ ./bootstrap_stage2
+
+   During this phase, your GODI installation will synchronize with the
+   central GODI repository and obtain the necessary information to
+   download and build the packages.
 
    *NOTE: If this stage failes, it may give you a message about PCRE
    not being found.  If this is the case, edit and uncomment the line:
    `GODI_BASEPKG_PCRE=yes` in `~/local/GODI/etc/godi.conf`, then rerun
-   `./bootsstrap_stage2`.
+   `./bootsstrap_stage2`.*
 
    This phase will take a little while since it will download,
    compile, and install the basic ocaml compiler and several other
-   fundamental packages.  Now is a good time to go make a cup of
-   coffee, drink a glass of wine, or make a delicious sandwich.  Once
-   the second bootstrap phase has completed, you have a basic GODI
-   installation.
+   fundamental packages.  Once the second bootstrap phase has
+   completed, you have a basic GODI installation.
 
-8. From any directory, run `godi_console`.  This will start an
-   interactive console program from which you can manage all of the
-   available GODI packages.  Start the program and select menu `2`.
-   Recall our list of pre-requisites above.  You already have the
-   ocaml compiler installed, so we can skip that one.  On the
-   `godi_console` "Select Source Packages" menu that you should now
-   see, find the number for each of the following packages.  For each
-   number, enter the number, taking you to the package submenu, and
-   hit `b` for build and install.  This will queue them up to build in
-   just a moment.  Hit `x` to go back to the main packages menu and
-   repeat the process until all of the following packages have been
-   marked for build and installation:
+8. Now we will install the Beluga dependencies mentioned above.  To do
+   so, run the following commands:
 
-   * apps-ledit
-   * godi-extlib
-   * godi-ounit
-   * godi-ulex
+       $ godi_wish -build apps-ledit -build godi-extlib \
+       $ -build godi-ounit -build godi-ulex && godi_perform -wishes
 
-   All of these packages should show a `b` to the left of them in the
-   menu system.  Now hit `s` to start their installation.  You may
-   notice that at this point, other dependencies have been detected
-   and marked for build (in particular, camlp5 for ledit).  If this
-   happens, go head and hit `s` again.  The next screen will ask you
-   to hit `o` for ok to continue.  Go ahead and do it.  You should now
-   see godi_console begin to build and install the packages.  This
-   part should go pretty quickly.
-
-9. Go ahead and exit out of the menus with `x` and eventually `3`.
-   Now you're ready to follow the build instructions below for Beluga
-   itself.
+   You should now see GODI begin to build and install the packages.
+   This part should go pretty quickly.  Once this stage finishes, you
+   are ready to follow the build instructions below for Beluga itself.
 
 Building
 ========

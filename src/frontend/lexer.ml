@@ -19,7 +19,9 @@ module Error = Camlp4.Struct.EmptyError
 
 (* Matches any utf-8 character that isn't a single character
    keyword. *)
-let regexp symbol_char = [^ "%(),.:[]{}" ' ' '0'-'9' '\n' '\t' ]
+let regexp start_sym = [^ "%(),.:[]{}" ' ' '0'-'9' '\n' '\t' ]
+
+let regexp sym       = [^ "%(),.:[]{}" ' ' '\n' '\t' ]
 
 
 
@@ -55,10 +57,11 @@ let mk_symbol  s = Token.SYMBOL  s
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
 let rec lex_token loc = lexer
   | "Π"              -> mk_tok_of_lexeme mk_keyword loc lexbuf
+  | "λ"              -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | "type"           -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | [ "%(),.:[]{}" ] -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | eof              -> mk_tok           Token.EOI  loc lexbuf
-  | symbol_char+     -> mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | start_sym sym*   -> mk_tok_of_lexeme mk_symbol  loc lexbuf
 
 
 (* NOTE: The following two lexers loop endlessly, by design.  The loop

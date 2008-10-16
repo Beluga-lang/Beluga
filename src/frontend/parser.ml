@@ -13,7 +13,9 @@
 (* Load the camlp4 extensible grammar syntax extension *)
 #load "pa_extend.cmo";;
 
+
 open Core
+open Core.Common
 open Core.Store
 open Core.Store.Cid
 open Core.Syntax
@@ -221,12 +223,9 @@ END
 
 let parse_stream ?(name = "<stream>") ~input entry =
   try
-    Grammar.parse entry (Grammar.Loc.mk name) input
+    InR (Grammar.parse entry (Grammar.Loc.mk name) input)
   with
-    | Grammar.Loc.Exc_located (loc, exc) ->
-        Format.printf "%s\n" (Printexc.to_string exc)
-      ; Grammar.Loc.print Format.std_formatter loc
-      ; assert false (* needed for type-checking *)
+    | exc -> InL exc
 
 let parse_string ?(name = "<string>") ~input entry =
   let stream = Stream.of_string input in

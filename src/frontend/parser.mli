@@ -6,6 +6,7 @@
 
 
 
+open Core.Common
 open Core.Syntax
 
 
@@ -23,24 +24,24 @@ val parse_stream :
      ?name:string
   -> input:char Stream.t
   -> 'a Grammar.Entry.t
-  -> 'a
+  -> (exn, 'a) either
 
 (** Parse a string and return a signature *)
 val parse_string :
      ?name:string
   -> input:string
   -> 'a Grammar.Entry.t
-  -> 'a
+  -> (exn, 'a) either
 
 (** Parse a channel and return a signature *)
 val parse_channel :
   ?name:string
   -> input:in_channel
   -> 'a Grammar.Entry.t
-  -> 'a
+  -> (exn, 'a) either
 
 (** Parse a file and return a signature *)
 val parse_file   :
      name:string
   -> 'a Grammar.Entry.t
-  -> 'a
+  -> (exn, 'a) either

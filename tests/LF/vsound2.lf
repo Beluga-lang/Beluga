@@ -1,0 +1,14 @@
+exp  : type.  
+z    : exp.
+suc  : exp -> exp.
+letv : exp -> (exp -> exp) -> exp.
+
+value : exp -> type.
+v_z   : value z.
+v_s   : Π E:exp. value E -> value (suc E).
+
+eval : exp -> exp -> type.
+ev_z : eval z z.
+ev_s : Π E:exp. Π V:exp. eval E V -> eval (suc E) (suc V).
+ev_l : Π E1:exp. Π E2:exp -> exp. Π V1:exp. Π V:exp.
+       eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (λ x. E2 x)) V.

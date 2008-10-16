@@ -20,14 +20,16 @@ module Ext = struct
   module Loc = Camlp4.PreCast.Loc
 
   type kind =
-    | Typ    of Loc.t
-    | PiKind of Loc.t * typ_decl * kind
+    | Typ     of Loc.t
+    | ArrKind of Loc.t * typ * kind
+    | PiKind  of Loc.t * typ_decl * kind
 
   and typ_decl = name * typ
 
   and typ =
-    | Atom  of Loc.t * name * spine
-    | PiTyp of Loc.t * typ_decl * typ
+    | Atom   of Loc.t * name * spine
+    | ArrTyp of Loc.t * typ * typ
+    | PiTyp  of Loc.t * typ_decl * typ
 
   and term =
     | Lam  of Loc.t * name * term

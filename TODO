@@ -23,6 +23,9 @@ IMPORTANT
 MINOR
 =====
 
+* 10/16/08 :: Add proper interface for token.ml.  Some tricky bits
+              with the Camlp4 sig.  -dwm
+
 * 10/15/08 :: Investigate gensym, think about wrap around.  -dwm
 
 * 10/12/08 :: Fix documentation generation.  -dwm

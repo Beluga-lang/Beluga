@@ -3,24 +3,28 @@
 This document describes several stylistic conventions used within the
 Beluga source code and its accompanying documentation.
 
-*      [Documentation](#01)
+*      [Textual](#01)
 
-       *        [Character Set](#02)
-       *        [Markup](#03)
+       *        [Character Set](#0101)
+       *        [Tabs vs. Spaces](#0102)
 
-*      [Coding](#04)
+*      [Documentation](#02)
 
-       *        [Philosophy](#05)
-       *        [Documentation](#06)
-       *        [Conventions](#07)
+       *        [Markup](#0201)
+
+*      [Coding](#03)
+
+       *        [Philosophy](#0301)
+       *        [Documentation](#0302)
+       *        [Conventions](#0303)
 
 
 
-Documentation <a id="01"/>
-=============
+Textual <a id="01"/>
+=======
 
 
-Character Set <a id="02"/>
+Character Set <a id="0101"/>
 -------------
 
 The Beluga source code and documentation are encoded with UTF-8.  Any
@@ -30,7 +34,22 @@ present at the top of this file should be placed within all new files
 immediately upon creation.
 
 
-Markup <a id="03"/>
+Tabs vs. Spaces <a id="0102"/>
+---------------
+
+It is well known that using tabs together with spaces generally wreaks
+havoc upon the textual display of code in many editors.  Therefore, we
+only use spaces in Beluga code, except in the Makefile.  To help
+maintain this invariant, the emacs mode line present at the top of
+this file should be placed within all new files immediately upon
+creation.
+
+
+Documentation <a id="02"/>
+=============
+
+
+Markup <a id="0201"/>
 ------
 
 Simple textual documentation files, such as this one, use a
@@ -45,17 +64,17 @@ consistent fashion.  A Markdown mode for Emacs is available
 
 
 
-Coding <a id="04"/>
+Coding <a id="03"/>
 ======
 
 
-Philosophy <a id="05"/>
+Philosophy <a id="0301"/>
 ----------
 
 The Beluga source code is intended, above all, to be *correct* and *clear*.
 
 
-Documentation <a id="06"/>
+Documentation <a id="0302"/>
 -------------
 
 The Beluga source code is intended to be fully documented.  We use
@@ -87,7 +106,7 @@ file:
 [03]: http://caml.inria.fr/pub/docs/manual-ocaml/manual029.html
 
 
-Conventions <a id="07"/>
+Conventions <a id="0303"/>
 -----------
 
 Lots more to come about our actual coding conventions.  Things about

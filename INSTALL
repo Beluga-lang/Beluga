@@ -6,46 +6,50 @@ for Beluga.
 
 *      [Pre-requisites](#01)
 
-*      [Building](#02)
+       *        [GODI](#02)
+       *        [GODI Installation Instructions](#03)
 
-*      [Installing](#03)
+*      [Building](#04)
 
 
-Pre-requisites
+Pre-requisites <a id="01"/>
 ==============
 
 *IMPORTANT NOTE: Before downloading and installing any of these, or
  giving up in despair, see the following section about the OCaml GODI
  distribution.*
 
-* [ocaml 3.10][01] or greater
-* [camlp5][02]
-* [extlib][03]
-* [ledit][04]
-* [ulex][05]
-* [OUnit][06]
+* [ocaml 3.10][0101] or greater
+* [camlp5][0102]
+* [extlib][0103]
+* [ledit][0104]
+* [ulex][0105]
+* [OUnit][0106]
 
-[01]: http://caml.inria.fr/download.en.html
-[02]: http://pauillac.inria.fr/~ddr/camlp5/
-[03]: http://code.google.com/p/ocaml-extlib/downloads/list
-[04]: http://cristal.inria.fr/~ddr/ledit/
-[05]: http://www.cduce.org/download.html#side
-[06]: http://www.xs4all.nl/~mmzeeman/ocaml/
+[0101]: http://caml.inria.fr/download.en.html
+[0102]: http://pauillac.inria.fr/~ddr/camlp5/
+[0103]: http://code.google.com/p/ocaml-extlib/downloads/list
+[0104]: http://cristal.inria.fr/~ddr/ledit/
+[0105]: http://www.cduce.org/download.html#side
+[0106]: http://www.xs4all.nl/~mmzeeman/ocaml/
 
-GODI
-====
+
+
+GODI <a id="02"/>
+----
 
 The above list of required packages may seem excessive and you may
 feel that you shouldn't have to manually download and install five or
 more separate packages to compile this software.  We agree with you.
 That's why, rather than downloading the extremely barebones OCaml
-compiler, you can instead download the OCaml [GODI][07] distribution
+compiler, you can instead download the OCaml [GODI][godi] distribution
 and have it automatically take care of downloading and installing the
 necessary packages for you.
 
-[07]: http://godi.camlcity.org/godi/index.html
+[godi]: http://godi.camlcity.org/godi/index.html
 
-GODI Installation Instructions
+
+GODI Installation Instructions <a id="03"/>
 ------------------------------
 
 1. Download the most recent GODI tarball, e.g.,
@@ -104,7 +108,9 @@ GODI Installation Instructions
    This part should go pretty quickly.  Once this stage finishes, you
    are ready to follow the build instructions below for Beluga itself.
 
-Building
+
+
+Building <a id="04"/>
 ========
 
 For the moment, the only supported targets are:

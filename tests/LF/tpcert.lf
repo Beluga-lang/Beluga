@@ -1,0 +1,23 @@
+term : type.
+z    : term.
+tt   : term.
+ff   : term.
+suc  : term -> term.
+eq   : term -> term -> term.
+if   : term -> term -> term -> term.
+letv : term -> (term -> term) -> term.
+
+tp   : type.
+nat  : tp.
+bool : tp.
+
+oft  : term -> tp -> type.
+o_tt : oft tt bool.
+o_ff : oft ff bool.
+o_z  : oft z nat.
+o_s  : {E: term} oft E nat -> oft (suc E) nat.
+o_if : {E: term} {E1: term} {E2: term} {T: tp}
+       oft E bool -> oft E1 T -> oft E2 T -> oft (if E E1 E2) T.
+o_let: {E1: term} {T1: tp} {E2: term -> term} {T2: tp}
+       oft E1 T1 -> ({x:term} oft x T1 -> oft (E2 x) T2)
+       -> oft (letv E1 E2) T2.

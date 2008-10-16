@@ -1,0 +1,15 @@
+tp   : type.
+nat  : tp.
+bool : tp.
+
+exp  : tp -> type.
+
+tt   : exp bool.
+ff   : exp bool.
+
+z    : exp nat.
+suc  : exp nat -> exp nat.
+eq   : exp nat -> exp nat -> exp bool.
+
+if   : {T:tp} exp bool -> exp T -> exp T -> exp T.
+letv : {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.

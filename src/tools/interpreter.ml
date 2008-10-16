@@ -6,36 +6,46 @@
 
 
 
-open Core.Common
+open Core
+open Format
 open Frontend
 
 
-(* Grammar.Loc.Exc_located (loc, exc) -> *)
-(*         Format.printf "%s\n" (Printexc.to_string exc) *)
-(*       ; Grammar.Loc.print Format.std_formatter loc *)
-(*       ; assert false (\* needed for type-checking *\) *)
 
+(* The following is an example of how to use the Frontend module *)
 let main () =
-  let file_name     = Sys.argv.(1) in
-  let sgn           = Parser.parse_file ~name:file_name Parser.p_sgn_eoi in
-  let rec print_sgn = function
-    | []            -> ()
-    | (decl::decls) ->
-          Pretty.Ext.ppr_sgn_decl decl
-        ; print_sgn decls
-  in
-    match sgn with
-      | (InL exc)   ->
-          begin match exc with
-            | Parser.Grammar.Loc.Exc_located (loc, exc) ->
-                  Format.fprintf Format.std_formatter "%s\n" (Printexc.to_string exc)
-                ; Parser.Grammar.Loc.print Format.std_formatter loc
-                ; Format.fprintf Format.std_formatter "\n"
-                ; ()
-            | _ ->
-                  Format.fprintf Format.std_formatter "Uncaught Exception\n"
-          end
-      | (InR decls) ->
-          print_sgn decls
+  if Array.length Sys.argv < 2
+  then
+    fprintf std_formatter "Usage: %s <file-1.lf> ... <file-n.lf>\n" Sys.argv.(0)
+  else
+    let per_file file_name =
+      let sgn           = Parser.parse_file ~name:file_name Parser.p_sgn_eoi in
+      let rec print_sgn = function
+        | []            -> ()
+        | (decl::decls) ->
+              Pretty.Ext.ppr_sgn_decl decl
+            ; print_sgn decls
+      in
+        (* matching against `(exn, 'a) either` which is just a sum type *)
+        match sgn with
+          (* If we have a parse failure, print out some messages *)
+          | (Common.InL exn)   ->
+              begin match exn with
+                | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
+                      fprintf std_formatter "Parse Error: \n\t%s\n\nLocation:\n\t" exn
+                    ; Parser.Grammar.Loc.print std_formatter loc
+                    ; fprintf std_formatter "\n"
+                    ; ()
+                | exn ->
+                      fprintf std_formatter "Uncaught Exception: %s\n" (Printexc.to_string exn)
+              end
+          (* If we succeed, pretty print the resulting AST *)
+          | (Common.InR decls) ->
+                fprintf std_formatter "## Pretty Printing: %s ##\n\n" file_name
+              ; print_sgn decls
+              ; fprintf std_formatter "\n"
+    in
+      (* Iterate the process for each file given on the commandline *)
+      Array.iter per_file (Array.sub Sys.argv 1 (Array.length Sys.argv -1))
 
 let _ = main ()

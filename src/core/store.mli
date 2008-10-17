@@ -33,6 +33,8 @@ module Cid : sig
 
     val index_of_name   : name -> cid_typ
 
+    val clear           : unit -> unit
+
   end
 
 
@@ -56,6 +58,8 @@ module Cid : sig
     val get             : cid_term -> entry
 
     val index_of_name   : name -> cid_term
+
+    val clear           : unit -> unit
 
   end
 

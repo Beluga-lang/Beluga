@@ -47,6 +47,10 @@ module Cid = struct
 
     let get = DynArray.get store
 
+    let clear () =
+        DynArray.clear store
+      ; Hashtbl.clear directory
+
   end
 
 
@@ -81,6 +85,10 @@ module Cid = struct
         ; cid_tm
 
     let get = DynArray.unsafe_get store
+
+    let clear () =
+        DynArray.clear store
+      ; Hashtbl.clear directory
 
   end
 

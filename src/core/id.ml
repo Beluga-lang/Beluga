@@ -30,10 +30,12 @@ let mk_name = function
   | Some x  -> { string_of_name = x                          }
 
 
-let string_of_name n   = n.string_of_name
+let string_of_name n     = n.string_of_name
 
-let string_of_cid_tp t = string_of_int t
+let string_of_cid_typ  t = "A" ^ string_of_int t
 
-let string_of_cid_tm m = string_of_int m
+let string_of_cid_term m = "M" ^ string_of_int m
 
-let string_of_var x    = string_of_int x
+let string_of_offset x   = "x" ^ string_of_int x
+
+let string_of_var x      = string_of_int x

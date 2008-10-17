@@ -33,14 +33,12 @@ type var      = int
 val mk_name : string option -> name
 
 
-(** Convert a `name' to a `string' *)
-val string_of_name   : name     -> string
+val string_of_name     : name     -> string
 
-(** Convert a `cid_tp' to a `string' *)
-val string_of_cid_tp : cid_typ  -> string
+val string_of_cid_typ  : cid_typ  -> string
 
-(** Convert a `cid_tm' to a `string' *)
-val string_of_cid_tm : cid_term -> string
+val string_of_cid_term : cid_term -> string
 
-(** Convert a `var' to a `string' *)
-val string_of_var    : var      -> string
+val string_of_offset   : offset   -> string
+
+val string_of_var      : var      -> string

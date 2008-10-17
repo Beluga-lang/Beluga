@@ -19,12 +19,12 @@ let main () =
     fprintf std_formatter "Usage: %s <file-1.lf> ... <file-n.lf>\n" Sys.argv.(0)
   else
     let per_file file_name =
-      let sgn           = Parser.parse_file ~name:file_name Parser.p_sgn_eoi in
-      let rec print_sgn = function
+      let sgn                   = Parser.parse_file ~name:file_name Parser.p_sgn_eoi in
+      let rec print_sgn printer = function
         | []            -> ()
         | (decl::decls) ->
-              Pretty.Ext.ppr_sgn_decl decl
-            ; print_sgn decls
+              printer decl
+            ; print_sgn printer decls
       in
         (* matching against `(exn, 'a) either` which is just a sum type *)
         match sgn with
@@ -41,9 +41,11 @@ let main () =
               end
           (* If we succeed, pretty print the resulting AST *)
           | (Common.InR decls) ->
-                fprintf std_formatter "## Pretty Printing: %s ##\n\n" file_name
-              ; print_sgn decls
-              ; fprintf std_formatter "\n"
+                fprintf std_formatter   "## Pretty Printing External Syntax: %s ##\n" file_name
+              ; print_sgn Pretty.Ext.ppr_sgn_decl decls
+              ; fprintf std_formatter "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
+              ; print_sgn Pretty.Int.ppr_sgn_decl (List.map Typerecon.internalize_sgn_decl decls)
+              ; fprintf std_formatter "\n----------------------------------\n\n"
     in
       (* Iterate the process for each file given on the commandline *)
       Array.iter per_file (Array.sub Sys.argv 1 (Array.length Sys.argv -1))

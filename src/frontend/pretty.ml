@@ -62,16 +62,27 @@ module Id = struct
   (* Format Based Pretty Printers *)
   (********************************)
 
-  let fmt_ppr_name ppf = function
+  let fmt_ppr_name     ppf     = function
     | {string_of_name = x} -> fprintf ppf "%s" x
 
+  let fmt_ppr_cid_typ  ppf cid = fprintf ppf "%s" (string_of_cid_typ  cid)
+
+  let fmt_ppr_cid_term ppf cid = fprintf ppf "%s" (string_of_cid_term cid)
+
+  let fmt_ppr_offset   ppf cid = fprintf ppf "%s" (string_of_offset   cid)
 
 
   (***************************)
   (* Default Pretty Printers *)
   (***************************)
 
-  let ppr_name = fmt_ppr_name std_formatter
+  let ppr_name       = fmt_ppr_name     std_formatter
+
+  let ppr_cid_typ    = fmt_ppr_cid_typ  std_formatter
+
+  let ppr_cid_term   = fmt_ppr_cid_term std_formatter
+
+  let ppr_cid_offset = fmt_ppr_cid_term std_formatter
 
 end
 
@@ -96,8 +107,10 @@ module Ext = struct
 
     | SgnConst (_, c, a) ->
         fprintf ppf "%a : %a.@.@?"
-           fmt_ppr_name      c
-          (fmt_ppr_type lvl) a
+           fmt_ppr_name     c
+          (fmt_ppr_typ lvl) a
+
+
 
   and fmt_ppr_kind lvl ppf = function
     | Typ _                 ->
@@ -107,7 +120,7 @@ module Ext = struct
         let cond = lvl > 0 in
           fprintf ppf "@[%s%a -> %a%s@]"
             (l_paren_if cond)
-            (fmt_ppr_type 1) a
+            (fmt_ppr_typ  1) a
             (fmt_ppr_kind 0) k
             (r_paren_if cond)
 
@@ -116,11 +129,13 @@ module Ext = struct
           fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
              fmt_ppr_name    x
-            (fmt_ppr_type 0) a
+            (fmt_ppr_typ  0) a
             (fmt_ppr_kind 0) k
             (r_paren_if cond)
 
-  and fmt_ppr_type lvl ppf = function
+
+
+  and fmt_ppr_typ lvl ppf = function
     | Atom (_, a, Nil)     ->
         fprintf ppf "%a"
            fmt_ppr_name a
@@ -137,8 +152,8 @@ module Ext = struct
         let cond = lvl > 0 in
           fprintf ppf "@[%s%a -> %a%s@]"
             (l_paren_if cond)
-            (fmt_ppr_type 1) a
-            (fmt_ppr_type 0) b
+            (fmt_ppr_typ 1) a
+            (fmt_ppr_typ 0) b
             (r_paren_if cond)
 
     | PiTyp (_, (x, a), b) ->
@@ -146,9 +161,11 @@ module Ext = struct
           fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
              fmt_ppr_name      x
-            (fmt_ppr_type 0) a
-            (fmt_ppr_type 0) b
+            (fmt_ppr_typ 0) a
+            (fmt_ppr_typ 0) b
             (r_paren_if cond)
+
+
 
   and fmt_ppr_term lvl ppf = function
     | Lam (_, x, m)    ->
@@ -171,10 +188,14 @@ module Ext = struct
             (fmt_ppr_spine 2) ms
             (r_paren_if cond)
 
+
+
   and fmt_ppr_head ppf = function
     | Name (_, n) ->
         fprintf ppf "%a"
           fmt_ppr_name n
+
+
 
   and fmt_ppr_spine lvl ppf = function
     | Nil         ->
@@ -195,7 +216,7 @@ module Ext = struct
 
   let ppr_kind     = fmt_ppr_kind     std_lvl std_formatter
 
-  let ppr_type     = fmt_ppr_type     std_lvl std_formatter
+  let ppr_type     = fmt_ppr_typ      std_lvl std_formatter
 
   let ppr_term     = fmt_ppr_term     std_lvl std_formatter
 
@@ -209,62 +230,126 @@ end
 
 module Int = struct
 
-(*   let rec fmt_ppr_sgn_decl ppf = function *)
-(*     | SgnTyp (a, k)   -> *)
-(*         fprintf ppf "@[<1>%a : %a]" *)
-(*           fmt_ppr_name a *)
-(*           fmt_ppr_kind k *)
+  open Id
+  open Core.Syntax.Int
 
-(*     | SgnConst (c, a) -> *)
-(*         fprintf ppf "@[<1>%a : %a]" *)
-(*           fmt_ppr_name c *)
-(*           fmt_ppr_type a *)
 
-(*   and fmt_ppr_kind ppf = function *)
-(*     | Typ              -> *)
-(*         fprintf ppf "type" *)
 
-(*     | PiKind ((x,a),k) -> *)
-(*         fprintf ppf "@[{%a : %a}@ %a@]" *)
-(*           fmt_ppr_name x *)
-(*           fmt_ppr_type a *)
-(*           fmt_ppr_kind k *)
+  (*******************************************)
+  (* Contextual Format Based Pretty Printers *)
+  (*******************************************)
 
-(*   and fmt_ppr_type ppf = function *)
-(*     | Atom (a, ms)    -> *)
-(*         fprintf ppf "@[%a%a@]" *)
-(*           fmt_ppr_name  a *)
-(*           fmt_ppr_spine ms *)
+  let rec fmt_ppr_sgn_decl lvl ppf = function
+    | SgnTyp (a, k)   ->
+        fprintf ppf "%a : %a.@.@?"
+           fmt_ppr_cid_typ   a
+          (fmt_ppr_kind lvl) k
 
-(*     | PiTyp ((x,a),b) -> *)
-(*         fprintf ppf "@[{%a : %a}@ %a@]" *)
-(*           fmt_ppr_name x *)
-(*           fmt_ppr_type a *)
-(*           fmt_ppr_type b *)
+    | SgnConst (c, a) ->
+        fprintf ppf "%a : %a.@.@?"
+           fmt_ppr_cid_term c
+          (fmt_ppr_typ lvl) a
 
-(*   and fmt_ppr_term ppf = function *)
-(*     | Lam (x, m)   -> *)
-(*         fprintf ppf "@[[%a]@ %a@]" *)
-(*           fmt_ppr_name x *)
-(*           fmt_ppr_term m *)
 
-(*     | Root (h, ms) -> *)
-(*         fprintf ppf "@[%a%a@]" *)
-(*           fmt_ppr_head  h *)
-(*           fmt_ppr_spine ms *)
 
-(*   and fmt_ppr_head ppf = function *)
-(*     | Name n -> *)
-(*         fprintf ppf "%a" *)
-(*           fmt_ppr_name n *)
+  and fmt_ppr_kind lvl ppf = function
+    | Typ                ->
+        fprintf ppf "type"
 
-(*   and fmt_ppr_spine ppf = function *)
-(*     | Nil         -> *)
-(*         fprintf ppf "" *)
+    | PiKind ((x, a), k) ->
+        let cond = lvl > 0 in
+          fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
+            (l_paren_if cond)
+             fmt_ppr_name    x
+            (fmt_ppr_typ  0) a
+            (fmt_ppr_kind 0) k
+            (r_paren_if cond)
 
-(*     | App (m, ms) -> *)
-(*         fprintf ppf "@ %a%a" *)
-(*           fmt_ppr_term m *)
-(*           fmt_ppr_spine ms *)
+
+
+  and fmt_ppr_typ lvl ppf = function
+    | Atom (a, Nil)     ->
+        fprintf ppf "%a"
+           fmt_ppr_cid_typ a
+
+    | Atom (a, ms)      ->
+        let cond = lvl > 1 in
+          fprintf ppf "%s%a%a%s"
+            (l_paren_if cond)
+             fmt_ppr_cid_typ  a
+            (fmt_ppr_spine 2) ms
+            (r_paren_if cond)
+
+    | PiTyp ((x, a), b) ->
+        let cond = lvl > 0 in
+          fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
+            (l_paren_if cond)
+             fmt_ppr_name   x
+            (fmt_ppr_typ 0) a
+            (fmt_ppr_typ 0) b
+            (r_paren_if cond)
+
+
+
+  and fmt_ppr_term lvl ppf = function
+    | Lam (x, m)    ->
+        let cond = lvl > 0 in
+          fprintf ppf "%s[%a] %a%s"
+            (l_paren_if cond)
+             fmt_ppr_name    x
+            (fmt_ppr_term 0) m
+            (r_paren_if cond)
+
+    | Root (h, Nil) ->
+        fprintf ppf "%a"
+           fmt_ppr_head h
+
+    | Root (h, ms)  ->
+        let cond = lvl > 1 in
+          fprintf ppf "%s%a%a%s"
+            (l_paren_if cond)
+             fmt_ppr_head     h
+            (fmt_ppr_spine 2) ms
+            (r_paren_if cond)
+
+
+
+  and fmt_ppr_head ppf = function
+    | BVar x  ->
+        fprintf ppf "%a"
+          fmt_ppr_offset x
+
+    | Const c ->
+        fprintf ppf "%a"
+          fmt_ppr_cid_term c
+
+
+
+  and fmt_ppr_spine lvl ppf = function
+    | Nil         ->
+        fprintf ppf ""
+
+    | App (m, ms) ->
+        fprintf ppf " %a%a"
+          (fmt_ppr_term  lvl) m
+          (fmt_ppr_spine lvl) ms
+
+
+
+  (***************************)
+  (* Default Pretty Printers *)
+  (***************************)
+
+  let ppr_sgn_decl = fmt_ppr_sgn_decl std_lvl std_formatter
+
+  let ppr_kind     = fmt_ppr_kind     std_lvl std_formatter
+
+  let ppr_type     = fmt_ppr_typ      std_lvl std_formatter
+
+  let ppr_term     = fmt_ppr_term     std_lvl std_formatter
+
+  let ppr_head     = fmt_ppr_head             std_formatter
+
+  let ppr_spine    = fmt_ppr_spine    std_lvl std_formatter
 
 end

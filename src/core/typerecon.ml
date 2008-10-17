@@ -13,7 +13,7 @@ open Syntax
 
 
 
-let rec internalize_sgn = function
+let rec internalize_sgn_decl = function
   | Ext.SgnTyp (_, a, k)   ->
       let k' = internalize_kind (BVar.create ()) k in
       let a' = Typ.add (Typ.mk_entry a k') in

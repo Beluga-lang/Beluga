@@ -2,3 +2,19 @@
 
 For the time being, see the section in the main INSTALL file about
 installing the OCaml GODI distribution.
+
+For editing, [Taureg-mode][tm] is recommended over the default ocaml
+emacs mode.  As an example, you can add the following lines to your
+`.emacs` file to enable it:
+
+;; tuareg-mode 1.45.6
+(add-to-list 'load-path "~/.emacs-modes/tuareg-mode-1.45.6")
+(setq auto-mode-alist (cons '("\\.ml\\w?" . tuareg-mode) auto-mode-alist))
+(autoload 'tuareg-mode "tuareg" "Major mode for editing Caml code" t)
+(autoload 'camldebug "camldebug" "Run the Caml debugger" t)
+(add-hook 'tuareg-mode-hook 'toggle-input-method)
+
+Make sure to edit the path string to the location where you actually
+put tuareg-mode on your computer.
+
+[tm]: http://www-rocq.inria.fr/~acohen/tuareg/

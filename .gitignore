@@ -1,5 +1,6 @@
 *.byte
 *.native
+*.top
 .DS_Store
 src/_build
 

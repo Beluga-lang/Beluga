@@ -125,3 +125,15 @@ or
 modules and the simple `interpreter` tool.  `make interactive` will
 build and run a custom Ocaml toplevel with the `Core` and `Frontend`
 modules loaded.
+
+If you run `make interactive`, once you are in the custom toplevel,
+you can use any of the main modules, such as the Core or Frontend
+module.  It may be helpful to see their contents, which can be done by
+typing:
+
+    $ module Core = Core;;
+
+or
+
+    $ module Frontend = Frontend;;
+

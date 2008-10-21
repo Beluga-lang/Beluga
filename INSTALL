@@ -92,7 +92,7 @@ GODI Installation Instructions <a id="03"/>
    not being found.  If this is the case, edit and uncomment the line:
    `GODI_BASEPKG_PCRE=yes` in `~/local/GODI/etc/godi.conf`, then rerun
    `./bootstrap_stage2`.*
-   
+
    This phase will take a little while since it will download,
    compile, and install the basic ocaml compiler and several other
    fundamental packages.  Once the second bootstrap phase has

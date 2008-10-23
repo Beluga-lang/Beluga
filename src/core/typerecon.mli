@@ -20,7 +20,7 @@ val internalize_kind     : Store.BVar.t -> Ext.kind     -> Int.kind
 
 val internalize_typ      : Store.BVar.t -> Ext.typ      -> Int.typ
 
-val internalize_term     : Store.BVar.t -> Ext.term     -> Int.term
+val internalize_term     : Store.BVar.t -> Ext.normal   -> Int.normal
 
 val internalize_head     : Store.BVar.t -> Ext.head     -> Int.head
 

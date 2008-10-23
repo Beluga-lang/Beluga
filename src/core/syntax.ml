@@ -31,8 +31,8 @@ module Ext = struct
     | ArrTyp of Loc.t * typ * typ
     | PiTyp  of Loc.t * typ_decl * typ
 
-  and term =
-    | Lam  of Loc.t * name * term
+  and normal =
+    | Lam  of Loc.t * name * normal
     | Root of Loc.t * head * spine
 
   and head =
@@ -40,7 +40,7 @@ module Ext = struct
 
   and spine =
     | Nil
-    | App of term * spine
+    | App of normal * spine
 
   type sgn_decl =
     | SgnTyp   of Loc.t * name * kind
@@ -63,8 +63,8 @@ module Int = struct
     | Atom  of cid_typ * spine
     | PiTyp of typ_decl * typ
 
-  and term =
-    | Lam  of name * term
+  and normal =
+    | Lam  of name * normal
     | Root of head * spine
 
   and head =
@@ -73,7 +73,7 @@ module Int = struct
 
   and spine =
     | Nil
-    | App of term * spine
+    | App of normal * spine
 
   type sgn_decl =
     | SgnTyp   of cid_typ  * kind

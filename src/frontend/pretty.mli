@@ -67,7 +67,7 @@ module Ext : sig
 
   val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
 
-  val fmt_ppr_term     : lvl -> formatter -> term     -> unit
+  val fmt_ppr_term     : lvl -> formatter -> normal   -> unit
 
   val fmt_ppr_head     :        formatter -> head     -> unit
 
@@ -85,7 +85,7 @@ module Ext : sig
 
   val ppr_type     : typ      -> unit
 
-  val ppr_term     : term     -> unit
+  val ppr_term     : normal   -> unit
 
   val ppr_head     : head     -> unit
 
@@ -111,7 +111,7 @@ module Int : sig
 
   val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
 
-  val fmt_ppr_term     : lvl -> formatter -> term     -> unit
+  val fmt_ppr_term     : lvl -> formatter -> normal   -> unit
 
   val fmt_ppr_head     :        formatter -> head     -> unit
 
@@ -129,7 +129,7 @@ module Int : sig
 
   val ppr_type     : typ      -> unit
 
-  val ppr_term     : term     -> unit
+  val ppr_term     : normal   -> unit
 
   val ppr_head     : head     -> unit
 

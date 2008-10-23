@@ -61,9 +61,13 @@ module Int : sig
   and typ_decl =
     | TypDecl of name * typ
 
+  and sigma_decl =
+    | SigmaDecl of name * typ_rec
+
   and typ =
     | Atom  of cid_typ * spine
     | PiTyp of typ_decl * typ
+    | TClo  of typ * sub
 
   and normal =
     | Lam  of name * normal
@@ -76,6 +80,47 @@ module Int : sig
   and spine =
     | Nil
     | App of normal * spine
+
+  and sub =
+    | Shift of offset
+    | SVar  of cvar * sub
+    | Dot   of front * sub
+
+  and front =
+    | Head of head
+    | Obj  of normal
+    | Undef
+
+  and cvar =
+    | Offset of offset
+    | Inst   of normal option ref * dctx * typ * (constrnt ref) list ref
+    | PInst  of head   option ref * dctx * typ * (constrnt ref) list ref
+    | CInst  of dctx   option ref * schema
+
+  and constrnt =
+    | Solved
+    | Eqn of psi_hat * normal * normal
+    | Eqh of psi_hat * head * head
+
+  and dctx =
+    | Null
+    | CtxVar   of cvar
+    | DDec     of dctx * typ_decl
+    | SigmaDec of dctx * sigma_decl
+
+  and 'a ctx =
+    | Empty
+    | Dec of 'a ctx * 'a
+
+  and sch_elem =
+    | SchElem of typ ctx * sigma_decl
+
+  and schema =
+    | Schema of sch_elem list
+
+  and psi_hat = cvar option * offset
+
+  and typ_rec = typ list
 
   type sgn_decl =
     | SgnTyp   of cid_typ  * kind

@@ -24,7 +24,8 @@ module Ext : sig
     | ArrKind of Loc.t * typ * kind
     | PiKind  of Loc.t * typ_decl * kind
 
-  and typ_decl = name * typ
+  and typ_decl =
+    | TypDecl of name * typ
 
   and typ =
     | Atom   of Loc.t * name * spine
@@ -57,7 +58,8 @@ module Int : sig
     | Typ
     | PiKind of typ_decl * kind
 
-  and typ_decl = name * typ
+  and typ_decl =
+    | TypDecl of name * typ
 
   and typ =
     | Atom  of cid_typ * spine

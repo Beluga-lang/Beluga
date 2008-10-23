@@ -27,19 +27,19 @@ let rec internalize_sgn_decl = function
 
 
 and internalize_kind ctx = function
-  | Ext.Typ _                 -> Int.Typ
+  | Ext.Typ _                             -> Int.Typ
 
-  | Ext.ArrKind (_, a, k)     ->
+  | Ext.ArrKind (_, a, k)                 ->
       let x  = Id.mk_name None
       and a' = internalize_typ  ctx a
       and k' = internalize_kind ctx k in
-        Int.PiKind ((x, a'), k')
+        Int.PiKind (Int.TypDecl (x, a'), k')
 
-  | Ext.PiKind (_, (x, a), k) ->
+  | Ext.PiKind (_, Ext.TypDecl (x, a), k) ->
       let a'   = internalize_typ  ctx  a
       and ctx' = BVar.extend ctx (BVar.mk_entry x) in
       let k'   = internalize_kind ctx' k in
-        Int.PiKind ((x, a'), k')
+        Int.PiKind (Int.TypDecl (x, a'), k')
 
 
 
@@ -53,13 +53,13 @@ and internalize_typ ctx = function
       let x  = Id.mk_name None
       and a' = internalize_typ ctx a
       and b' = internalize_typ ctx b in
-        Int.PiTyp ((x, a'), b')
+        Int.PiTyp (Int.TypDecl (x, a'), b')
 
-  | Ext.PiTyp (_, (x, a), b) ->
+  | Ext.PiTyp (_, Ext.TypDecl (x, a), b) ->
       let a'   = internalize_typ ctx  a
       and ctx' = BVar.extend ctx (BVar.mk_entry x) in
       let b'   = internalize_typ ctx' b in
-        Int.PiTyp ((x, a'), b')
+        Int.PiTyp (Int.TypDecl (x, a'), b')
 
 
 

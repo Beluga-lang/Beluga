@@ -86,14 +86,14 @@ GLOBAL: p_sgn_eoi;
         [
           "Π"; x = SYMBOL; ":"; a2 = p_full_typ; "."; k_or_a = SELF
         -> begin match k_or_a with
-             | Kind k -> Kind (Ext.PiKind (_loc, (Id.mk_name (Some x), a2), k))
-             | Typ  a -> Typ  (Ext.PiTyp  (_loc, (Id.mk_name (Some x), a2), a))
+             | Kind k -> Kind (Ext.PiKind (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), k))
+             | Typ  a -> Typ  (Ext.PiTyp  (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), a))
            end
         |
            "{"; x = SYMBOL; ":"; a2 = p_full_typ; "}"; k_or_a = SELF
         -> begin match k_or_a with
-             | Kind k -> Kind (Ext.PiKind (_loc, (Id.mk_name (Some x), a2), k))
-             | Typ  a -> Typ  (Ext.PiTyp  (_loc, (Id.mk_name (Some x), a2), a))
+             | Kind k -> Kind (Ext.PiKind (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), k))
+             | Typ  a -> Typ  (Ext.PiTyp  (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), a))
            end
         |
           a2 = p_basic_typ; "->"; k_or_a = SELF
@@ -148,10 +148,10 @@ GLOBAL: p_sgn_eoi;
       -> a
       |
          "Π"; x = SYMBOL; ":"; a2 = SELF; "."; a = SELF
-      -> Ext.PiTyp (_loc, (Id.mk_name (Some x), a2), a)
+      -> Ext.PiTyp (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), a)
       |
          "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF
-      -> Ext.PiTyp (_loc, (Id.mk_name (Some x), a2), a)
+      -> Ext.PiTyp (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), a)
       |
          a2 = p_basic_typ; "->"; a = SELF
       -> Ext.ArrTyp (_loc, a2, a)

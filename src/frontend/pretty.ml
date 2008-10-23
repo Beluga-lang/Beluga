@@ -113,10 +113,10 @@ module Ext = struct
 
 
   and fmt_ppr_kind lvl ppf = function
-    | Typ _                 ->
+    | Typ _                         ->
         fprintf ppf "type"
 
-    | ArrKind (_, a, k)     ->
+    | ArrKind (_, a, k)             ->
         let cond = lvl > 0 in
           fprintf ppf "@[%s%a -> %a%s@]"
             (l_paren_if cond)
@@ -124,7 +124,7 @@ module Ext = struct
             (fmt_ppr_kind 0) k
             (r_paren_if cond)
 
-    | PiKind (_, (x, a), k) ->
+    | PiKind (_, TypDecl (x, a), k) ->
         let cond = lvl > 0 in
           fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
@@ -136,11 +136,11 @@ module Ext = struct
 
 
   and fmt_ppr_typ lvl ppf = function
-    | Atom (_, a, Nil)     ->
+    | Atom (_, a, Nil)             ->
         fprintf ppf "%a"
            fmt_ppr_name a
 
-    | Atom (_, a, ms)      ->
+    | Atom (_, a, ms)              ->
         let cond = lvl > 1 in
           fprintf ppf "%s%a%a%s"
             (l_paren_if cond)
@@ -148,7 +148,7 @@ module Ext = struct
             (fmt_ppr_spine 2) ms
             (r_paren_if cond)
 
-    | ArrTyp (_, a, b)     ->
+    | ArrTyp (_, a, b)             ->
         let cond = lvl > 0 in
           fprintf ppf "@[%s%a -> %a%s@]"
             (l_paren_if cond)
@@ -156,7 +156,7 @@ module Ext = struct
             (fmt_ppr_typ 0) b
             (r_paren_if cond)
 
-    | PiTyp (_, (x, a), b) ->
+    | PiTyp (_, TypDecl (x, a), b) ->
         let cond = lvl > 0 in
           fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
@@ -253,10 +253,10 @@ module Int = struct
 
 
   and fmt_ppr_kind lvl ppf = function
-    | Typ                ->
+    | Typ                        ->
         fprintf ppf "type"
 
-    | PiKind ((x, a), k) ->
+    | PiKind (TypDecl (x, a), k) ->
         let cond = lvl > 0 in
           fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)
@@ -268,11 +268,11 @@ module Int = struct
 
 
   and fmt_ppr_typ lvl ppf = function
-    | Atom (a, Nil)     ->
+    | Atom (a, Nil)             ->
         fprintf ppf "%a"
            fmt_ppr_cid_typ a
 
-    | Atom (a, ms)      ->
+    | Atom (a, ms)              ->
         let cond = lvl > 1 in
           fprintf ppf "%s%a%a%s"
             (l_paren_if cond)
@@ -280,7 +280,7 @@ module Int = struct
             (fmt_ppr_spine 2) ms
             (r_paren_if cond)
 
-    | PiTyp ((x, a), b) ->
+    | PiTyp (TypDecl (x, a), b) ->
         let cond = lvl > 0 in
           fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
             (l_paren_if cond)

@@ -73,6 +73,7 @@ module Cid = struct
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
+
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0 (* FIXME: investigate better initial size *)
 
@@ -111,7 +112,7 @@ module BVar = struct
 
   let index_of_name store n =
     let rec loop i = function
-      | []      -> raise Not_found
+(*      | []      -> raise Not_found *)
       | (e::es) -> if e.name = n
                    then i
                    else loop (i+1) es in

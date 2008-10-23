@@ -5,23 +5,14 @@
    @author Darin Morrison
 *)
 
-
-
-
-(* Type Checker for LF and computations *)
-(* Author: Brigitte Pientka, Darin Morrison *)
-
-module LF : sig
-
-  open Syntax.LF
+  open Syntax.Int
 
   exception Error of string
 
-  val check : ctx_mdl * ctx_lf * tm_clo * tp_clo -> unit
+  val check : mctx -> dctx -> nclo -> tclo -> unit
 
-end
-
-
+(*
 
 module Cmp : sig
 end
+*)

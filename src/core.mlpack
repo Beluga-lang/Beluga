@@ -4,3 +4,6 @@ Id
 Store
 Syntax
 Typerecon
+Typecheck
+Unify
+Whnf

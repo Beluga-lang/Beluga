@@ -64,6 +64,11 @@ module Int : sig
   and sigma_decl =
     | SigmaDecl of name * typ_rec
 
+  and ctx_decl =
+    | MDecl of name * typ  * dctx
+    | PDecl of name * typ  * dctx
+    | SDecl of name * dctx * dctx
+
   and typ =
     | Atom  of cid_typ * spine
     | PiTyp of typ_decl * typ
@@ -125,5 +130,64 @@ module Int : sig
   type sgn_decl =
     | SgnTyp   of cid_typ  * kind
     | SgnConst of cid_term * typ
+
+
+
+  (**********************)
+  (* Type Abbreviations *)
+  (**********************)
+
+  type nclo     = normal * sub
+  type tclo     = typ    * sub
+  type trec_clo = typ_rec * sub
+  type mctx     = ctx_decl ctx
+
+
+
+  (**************************)
+  (* Explicit Substitutions *)
+  (**************************)
+
+  val id         : sub
+  val shift      : sub
+  val invShift   : sub
+
+  val bvarSub    : int -> sub -> front
+  val frontSub   : front -> sub -> front
+  val decSub     : typ_decl -> sub -> typ_decl
+  val comp       : sub -> sub -> sub
+  val dot1       : sub -> sub
+  val invDot1    : sub -> sub
+
+  val isPatSub   : sub -> bool
+
+
+
+  (***************************)
+  (* Inverting Substitutions *)
+  (***************************)
+
+  val invert     : sub -> sub
+  val strengthen : sub -> dctx -> dctx
+  val isId       : sub -> bool
+
+  val compInv    : sub -> sub -> sub
+
+  (*------------------------------------------------------------------------ *)
+
+  val dctxToHat   : dctx -> psi_hat
+
+  val ctxDec      : dctx -> int -> typ_decl
+  val ctxSigmaDec : dctx -> int -> sigma_decl
+  val ctxVar      : dctx -> cvar option
+
+  val mctxMDec    : mctx -> int -> typ * dctx
+  val mctxPDec    : mctx -> int -> typ * dctx
+
+  val constType   : cid_term -> typ
+  val tconstKind  : cid_typ  -> kind
+
+  val newMVar     : dctx * typ -> cvar
+  val newPVar     : dctx * typ -> cvar
 
 end

@@ -64,6 +64,11 @@ module Int = struct
   and sigma_decl =
     | SigmaDecl of name * typ_rec
 
+  and ctx_decl =
+    | MDecl of name * typ  * dctx
+    | PDecl of name * typ  * dctx
+    | SDecl of name * dctx * dctx
+
   and typ =
     | Atom  of cid_typ * spine
     | PiTyp of typ_decl * typ
@@ -125,5 +130,65 @@ module Int = struct
   type sgn_decl =
     | SgnTyp   of cid_typ  * kind
     | SgnConst of cid_term * typ
+
+
+
+  (**********************)
+  (* Type Abbreviations *)
+  (**********************)
+
+  type nclo     = normal  * sub
+  type tclo     = typ     * sub
+  type trec_clo = typ_rec * sub
+  type mctx     = ctx_decl ctx
+
+
+
+  (* Should consider moving the following stuff out into it's own
+     module, e.g., Subst -dwm *)
+
+  (**************************)
+  (* Explicit Substitutions *)
+  (**************************)
+
+  (* id = ^0 
+     
+     Invariant:
+     Psi |- id : Psi        id is patsub
+
+     Note: we do not take into account weakening here. 
+  *)
+  let id = assert false
+  let shift = assert false
+  let invShift = assert false
+  let bvarSub = assert false
+  let frontSub = assert false
+  let decSub = assert false
+  let comp = assert false
+  let dot1 = assert false
+  let invDot1 = assert false
+  let isPatSub = assert false
+
+  (***************************)
+  (* Inverting Substitutions *)
+  (***************************)
+
+  let invert = assert false
+  let strengthen = assert false
+  let isId = assert false
+  let compInv = assert false
+
+  (*------------------------------------------------------------------------ *)
+
+  let dctxToHat = assert false
+  let ctxDec = assert false
+  let ctxSigmaDec = assert false
+  let ctxVar = assert false
+  let mctxMDec = assert false
+  let mctxPDec = assert false
+  let constType = assert false
+  let tconstKind = assert false
+  let newMVar = assert false
+  let newPVar = assert false
 
 end

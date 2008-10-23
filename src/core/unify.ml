@@ -29,12 +29,12 @@ struct
 
     let globalTrail : (action Trail.trail) = Trail.trail()
 
-    in let rec undo action = match action with
+    let rec undo action = match action with
       | InstNormal refM ->
           refM := None
       | InstHead refH ->
           refH := None
-      | Add (cnstrs as ref(cnstr :: cnstrL)) ->
+      | Add (cnstrs as {contents= cnstr :: cnstrL}) ->
           cnstrs := cnstrL
       | Solve (cnstr, constrnt) ->
           cnstr := constrnt

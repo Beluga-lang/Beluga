@@ -1,7 +1,7 @@
 # -*- coding: utf-8; indent-tabs-mode: t; -*-
 
-CORE_CFLAGS=-cflags '-w A','-warn-error A'
-CORE_CFLAGS_OPT=-cflags -noassert,-unsafe,'-ccopt -O3','-w A','-warn-error A'
+CORE_CFLAGS=-cflags '-w A','-warn-error Ap'
+CORE_CFLAGS_OPT=-cflags -noassert,-unsafe,'-ccopt -O3','-w A','-warn-error Ap'
 CORE_DIR=core
 CORE_DOC_NAME=core
 CORE_LFLAGS=
@@ -12,7 +12,7 @@ DOC_CFLAGS=
 DOC_LFLAGS=
 DOC_LIBS=
 
-FRONT_CFLAGS=-cflags '-w A','-warn-error A'
+FRONT_CFLAGS=-cflags '-w A','-warn-error Ap'
 FRONT_CFLAGS_OPT=-cflags -noassert,-unsafe,'-ccopt -O3'
 FRONT_DIR=frontend
 FRONT_DOC_NAME=frontend
@@ -20,7 +20,7 @@ FRONT_LFLAGS=
 FRONT_LIBS=
 FRONT_NAME=frontend
 
-INT_CFLAGS=-cflags '-w A','-warn-error A'
+INT_CFLAGS=-cflags '-w A','-warn-error Ap'
 INT_CFLAGS_OPT=-cflags -noassert,-unsafe,'-ccopt -O3'
 INT_DIR=tools
 INT_DOC_NAME=
@@ -28,7 +28,7 @@ INT_LFLAGS=
 INT_LIBS=
 INT_NAME=interpreter
 
-TOP_CFLAGS=-cflags '-w A','-warn-error A'
+TOP_CFLAGS=-cflags '-w A','-warn-error Ap'
 TOP_CFLAGS_OPT=
 TOP_LFLAGS=
 TOP_LIBS=

@@ -21,7 +21,7 @@
       | (PiTyp (cD', tA'), s') ->
         let (u', tM) = lowerMVar' (DDec (cPsi, decSub cD' s'))  (tA', dot1 s')
         in
-          (u', Lam (None, tM))
+          (u', Lam (mk_name None, tM))
 
       | (TClo(tA,s), s') ->
           lowerMVar' cPsi (tA, comp s s')

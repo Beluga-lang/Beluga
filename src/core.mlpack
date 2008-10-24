@@ -3,6 +3,7 @@ Gensym
 Id
 Store
 Syntax
+Trail
 Typerecon
 Typecheck
 Unify

@@ -5,12 +5,13 @@
    @author Darin Morrison
 *)
 
+open Syntax.Int
 
-val whnf     : Syntax.Int.nclo -> Syntax.Int.nclo 
-val whnfTyp  : Syntax.Int.tclo -> Syntax.Int.tclo 
-val norm     : Syntax.Int.nclo -> Syntax.Int.normal
+val whnf     : nclo -> nclo 
+val whnfTyp  : tclo -> tclo 
+val norm     : nclo -> normal
 
-val conv       : Syntax.Int.nclo -> Syntax.Int.nclo -> bool
-val convTyp    : Syntax.Int.tclo -> Syntax.Int.tclo -> bool
-val convTypRec : Syntax.Int.trec_clo -> Syntax.Int.trec_clo -> bool
-val convSub    : Syntax.Int.sub -> Syntax.Int.sub -> bool
+val conv       : nclo -> nclo -> bool
+val convTyp    : tclo -> tclo -> bool
+val convTypRec : trec_clo -> trec_clo -> bool
+val convSub    : sub -> sub -> bool

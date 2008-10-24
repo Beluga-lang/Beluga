@@ -180,8 +180,7 @@ module Int = struct
   
      Invariant:
 
-       Psi, x:A |- ^ : Psi      ^ is patsub
-
+       Psi, x:A |- ^ : Psi     ^ is patsub
   *)
   let shift = Shift 1
 
@@ -191,8 +190,7 @@ module Int = struct
 
      Invariant:
 
-       G |- ^-1 : G, V      ^-1 is patsub
-
+       G |- ^-1 : G, V    ^-1 is patsub
   *)
   let invShift = Dot (Undef, id)
 
@@ -209,7 +207,6 @@ module Int = struct
 
        If   s1, s2 patsub
        then s' patsub
-
    *)
   let rec comp s1 s2 = match (s1, s2) with
     | (Shift 0, s)             -> s
@@ -232,53 +229,225 @@ module Int = struct
      *)
 
 
+
   (* bvarSub n s = Ft'
      
      Invariant: 
 
-     If    G |- s : G'    G' |- n : V
-     then  Ft' = Ftn         if  s = Ft1 .. Ftn .. ^k
-       or  Ft' = ^(n+k)     if  s = Ft1 .. Ftm ^k   and m<n
-       and   G |- Ft' : V [s]
+       If    G |- s : G'    G' |- n : V
+       then  Ft' = Ftn         if  s = Ft1 .. Ftn .. ^k
+         or  Ft' = ^(n + k)    if  s = Ft1 .. Ftm ^k   and m < n
+         and G |- Ft' : V [s]
      *)
   and bvarSub n s = match (n, s) with
     | (1, Dot (ft, s)) -> ft
     | (n, Dot (ft, s)) -> bvarSub (n-1) s
     | (n, Shift k)     -> Head (BVar (n+k))
 
+
+
+  (* frontSub Ft s = Ft'
+
+     Invariant:
+
+       If   G |- s : G'     G' |- Ft : V
+       then Ft' = Ft [s]
+       and  G |- Ft' : V [s]
+  *)
   and frontSub ft s = match ft with
     | Head (BVar n)       -> bvarSub n s
     | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))
     | Head (PVar (u, s')) -> Head (PVar (u, comp s' s))
+
     | Head (Proj (h, k))  ->
         let Head h' = frontSub (Head h) s in
           Head (Proj (h', k))
+
     | Head (AnnH (h, a))  ->
         let Head h' = frontSub (Head h) s in
           Head (AnnH (h', a))
+
     | Head (Const c)      -> Head(Const c)
     | Obj u               -> Obj (Clo (u, s))
     | Undef               -> Undef
 
-  and dot1 = assert false
 
-  let decSub = assert false
 
-  let invDot1 = assert false
+  (* dot1 (s) = s'
 
-  let isPatSub = assert false
+     Invariant:
+
+       If   G |- s : G'
+       then s' = 1. (s o ^)
+       and  for all V s.t.  G' |- V : L
+         G, V[s] |- s' : G', V 
+
+         If s patsub then s' patsub
+  *)
+  (* first line is an optimization *)
+  (* roughly 15% on standard suite for Twelf 1.1 *)
+  (* Sat Feb 14 10:16:16 1998 -fp *)
+  and dot1 s = match s with
+    | Shift 0 -> s
+    | s       -> Dot (Head (BVar 1), comp s shift)
+
+
+
+  (* decSub (x:A) s = (x:A[s])
+
+     Invariant:
+
+       If   D ; Psi  |- s <= Psi'    D ; Psi' |- A <= type
+       then D ; Psi  |- A[s] <= type
+  *)
+
+  (* First line is an optimization suggested by cs *)
+  (* Dec[id] = Dec *)
+  (* Sat Feb 14 18:37:44 1998 -fp *)
+  (* seems to have no statistically significant effect *)
+  (* undo for now Sat Feb 14 20:22:29 1998 -fp *)
+  (*
+    fun decSub (D, Shift(0)) = D
+    | decSub (Dec (x, A), s) = Dec (x, Clo (A, s))
+  *)
+  let decSub (TypDecl (x, a)) s = TypDecl (x, TClo (a, s))
+
+
+
+  (* invDot1 (s)         = s'
+     invDot1 (1. s' o ^) = s'
+
+     Invariant:
+
+       s = 1 . s' o ^
+       If G' |- s' : G
+       (so G',V[s] |- s : G,V)
+  *)
+  let invDot1 s = comp (comp shift s) invShift
+
+
 
   (***************************)
   (* Inverting Substitutions *)
   (***************************)
 
-  let invert = assert false
+  (* invert s = s'
 
-  let strengthen = assert false
+     Invariant:
 
-  let isId = assert false
+       If   D ; Psi  |- s  <= Psi'    (and s patsub)
+       then D ; Psi' |- s' <= Psi
+       s.t. s o s' = id  
+  *)
+  let invert s =
+    let rec lookup n s p = match s with
+      | Shift _                 -> None
+      | Dot (Undef, s')         -> lookup (n+1) s' p
+      | Dot (Head (BVar k), s') ->
+          if k = p
+          then Some n
+          else lookup (n+1) s' p in
 
-  let compInv = assert false
+    let rec invert'' p si = match p with
+      | 0 -> si
+      | p ->
+          let front = match lookup 1 s p with
+            | Some k -> Head (BVar k)
+            | None   -> Undef
+          in
+            invert'' (p-1) (Dot (front, si)) in
+
+    let rec invert' n s = match s with
+      | Shift p     -> invert'' p (Shift n)
+      | Dot (_, s') -> invert' (n+1) s'
+
+    in
+      invert' 0 s
+
+
+
+  (* strengthen t Psi = Psi'
+
+     Invariant:
+
+       If   D ; Psi'' |- t : Psi  (* and t is a pattern sub *)
+       then D ; Psi'  |- t : Psi  and Psi' subcontext of Psi
+  *)
+  let rec strengthen s psi = match (s, psi) with
+    | (Shift n (* = 0 *), Null) -> Null
+
+    | (Dot (Head (BVar k) (* k = 1 *), t), DDec (psi, decl)) ->
+        let t' = comp t invShift in
+          (* Psi  |- decl dec     *)
+          (* Psi' |- t' : Psi     *)
+          (* Psi' |- decl[t'] dec *)
+          DDec (strengthen t' psi, decSub decl t')
+
+    | (Dot (Undef, t), DDec (psi, _)) ->
+        strengthen t psi
+
+    | (Shift n, psi) ->
+        strengthen (Dot (Head(BVar (n+1)), Shift (n+1))) psi
+
+
+
+  (* isId s = B
+     
+     Invariant:
+
+       If   Psi |- s: Psi', s weakensub
+       then B holds 
+         iff s = id, Psi' = Psi
+  *)
+  let isId s =
+    let rec isId' s k' = match s with
+      | Shift k                 -> k = k'
+      | Dot (Head (BVar n), s') -> n = k' && isId' s' (k' + 1)
+      | _                       -> false
+    in
+      isId' s 0
+
+
+
+  (* cloInv (U, w) = U[w^-1]
+
+     Invariant:
+
+       If Psi |- M <= A
+          Psi |- w <= Psi'  w pattern subst
+          M[w^-1] defined (without pruning or constraints)
+
+       then Psi' |- M[w^-1] : A[w^-1]
+
+     Effects: None
+  *)
+  let cloInv (m, w) = Clo (m, invert w)
+
+
+
+  (* compInv s w = t
+
+     Invariant:
+
+       If  D ; Psi |- s <= Psi1 
+           D ; Psi |- w <= Psi'
+       then  t = s o (w^-1)
+       and   D ; Psi' |- t <= Psi1
+  *)
+  let compInv s w = comp s (invert w)
+
+    (* isPatSub s = B
+
+       Invariant:
+       If    Psi |- s : Psi' 
+       and   s = n1 .. nm ^k
+       then  B iff  n1, .., nm pairwise distinct
+               and  ni <= k or ni = _ for all 1 <= i <= m
+    *)
+
+
+
+  let isPatSub = assert false
 
   (*------------------------------------------------------------------------ *)
 

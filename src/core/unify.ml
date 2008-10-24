@@ -18,17 +18,17 @@ module type UNIFY = sig
 
   (* trailing of variable instantiation *)
 
-  val reset       : unit -> unit
+  val reset  : unit -> unit
   val mark   : unit -> unit
   val unwind : unit -> unit
 
   val instantiateMVar : normal option ref * normal * constrnt list -> unit
-  val instantiatePVar : head option ref * head * constrnt list -> unit
+  val instantiatePVar : head   option ref * head   * constrnt list -> unit
 
   val resetAwakenCnstrs : unit -> unit
-  val nextCnstr : unit -> constrnt option
-  val addConstraint : constrnt list ref * constrnt -> unit
-  val solveConstraint : constrnt -> unit
+  val nextCnstr         : unit -> constrnt option
+  val addConstraint     : constrnt list ref * constrnt -> unit
+  val solveConstraint   : constrnt -> unit
 
 
   (* unification *)
@@ -43,60 +43,55 @@ end
 (* Unification *)
 (* Author: Brigitte Pientka *)
 (* Trailing is taken from Twelf 1.5 *)
+
+(* Shouldn't this have a signature? -dwm *)
 module Make (T : Trail.TRAIL) =
 struct
-  
+
   exception Unify of string
   exception NotInvertible
-  
+
   open Syntax.Int
 
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
 
   type action =
-      InstNormal of normal option ref
-    | InstHead of head option ref
-    | Add of cnstr list ref
-    | Solve of cnstr * constrnt   (* FIXME: names *)
+    | InstNormal of normal option ref
+    | InstHead   of head   option ref
+    | Add        of cnstr list ref
+    | Solve      of cnstr * constrnt   (* FIXME: names *)
 
-    type unifTrail = action T.trail
+    type unifTrail = action T.t
 
-    let globalTrail : (action T.trail) = T.trail()
+    let globalTrail : action T.t = T.trail()
 
     let rec undo action = match action with
-      | InstNormal refM ->
-          refM := None
-      | InstHead refH ->
-          refH := None
-      | Add ({contents= cnstr :: cnstrL} as cnstrs) ->
-          cnstrs := cnstrL
-      | Solve (cnstr, constrnt) ->
-          cnstr := constrnt
+      | InstNormal refM         -> refM   := None
+      | InstHead   refH         -> refH   := None
+      | Add cnstrs              -> cnstrs := List.tl !cnstrs
+(* was | Add ({contents = cnstr :: cnstrL} as cnstrs) ->
+          cnstrs := cnstrL *)
+      | Solve (cnstr, constrnt) -> cnstr  := constrnt
 
-    let rec reset () = T.reset globalTrail
+    let rec reset  () = T.reset globalTrail
 
-    let rec mark () = T.mark globalTrail
+    let rec mark   () = T.mark globalTrail
 
-    let rec unwind () = T.unwind (globalTrail, undo)
+    let rec unwind () = T.unwind globalTrail undo
 
     let rec addConstraint (cnstrs, cnstr) =
-          (
-            cnstrs := cnstr :: (!cnstrs);
-            T.log (globalTrail, Add cnstrs)
-          )
+        cnstrs := cnstr :: !cnstrs
+      ; T.log globalTrail (Add cnstrs)
 
     let rec solveConstraint ({contents=constrnt} as cnstr) =
-          (
-            cnstr := Solved;
-            T.log (globalTrail, Solve (cnstr, constrnt))
-          )
+        cnstr := Solved
+      ; T.log globalTrail (Solve (cnstr, constrnt))
 
     (* trail the given function *)
     let rec trail f =
-      let
-        _ = mark ()
-      and r = f()
+      let _ = mark   ()
+      and r = f      ()
       and _ = unwind ()
       in
         r
@@ -107,24 +102,24 @@ struct
 
     let awakenCnstrs : cnstr list ref = ref []
 
-    let rec resetAwakenCnstrs () = (awakenCnstrs := [])
+    let rec resetAwakenCnstrs () = awakenCnstrs := []
 
-    let rec nextCnstr () = 
-            match !awakenCnstrs
-            with | [] -> None
-               | cnstr :: cnstrL -> 
-                   (awakenCnstrs := cnstrL; Some cnstr)
+    let rec nextCnstr () = match !awakenCnstrs with
+      | []              -> None
+      | cnstr :: cnstrL ->
+            awakenCnstrs := cnstrL
+          ; Some cnstr
 
-    let rec instantiatePVar(q, head, cnstrL) = 
-        (q := Some head;
-         T.log (globalTrail, InstHead q);
-         awakenCnstrs := cnstrL @ !awakenCnstrs)
+    let rec instantiatePVar (q, head, cnstrL) =
+        q := Some head
+      ; T.log globalTrail (InstHead q)
+      ; awakenCnstrs := cnstrL @ !awakenCnstrs
 
 
-    let rec instantiateMVar(u, tM, cnstrL) = 
-        (u := Some tM ;
-         T.log (globalTrail, InstNormal u);
-         awakenCnstrs := cnstrL @ !awakenCnstrs)
+    let rec instantiateMVar (u, tM, cnstrL) =
+        u := Some tM
+      ; T.log globalTrail (InstNormal u)
+      ; awakenCnstrs := cnstrL @ !awakenCnstrs
 
     (* ---------------------------------------------------------------------- *)
     (* Higher-order unification *)

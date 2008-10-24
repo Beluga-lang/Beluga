@@ -8,38 +8,38 @@
 
 
 module type TRAIL = sig
-  type 'a trail
+  type 'a t
 
-  val trail   : unit -> 'a trail
+  val trail   : unit -> 'a t
 
-  val suspend : 'a trail * ('a -> 'b) -> 'b trail
-  val resume  : 'b trail * 'a trail  * ('b -> 'a) -> unit
+  val suspend : 'a t -> ('a -> 'b) -> 'b t
+  val resume  : 'b t -> 'a t -> ('b -> 'a) -> unit
 
-  val reset   : 'a trail -> unit
-  val mark    : 'a trail -> unit
-  val unwind  : 'a trail * ('a -> unit) -> unit
-  val log     : 'a trail * 'a -> unit
+  val reset   : 'a t -> unit
+  val mark    : 'a t -> unit
+  val unwind  : 'a t -> ('a -> unit) -> unit
+  val log     : 'a t -> 'a -> unit
 end
 
 
 
 module EmptyTrail : TRAIL = struct
 
-  type 'a trail = unit
+  type 'a t = unit
 
   let trail () = ()
 
-  let suspend ((), copy) = ()
+  let suspend () copy = ()
 
-  let resume ((), (), reset) = ()
+  let resume () () reset = ()
 
   let reset () = ()
 
   let mark () = ()
 
-  let unwind ((), undo) = ()
+  let unwind () undo = ()
 
-  let log ((), action) = ()
+  let log () action = ()
 
 end
 
@@ -52,14 +52,14 @@ module Trail : TRAIL = struct
       | Mark of 'a trail_desc
       | Nil
 
-    type 'a trail = 'a trail_desc ref
+    type 'a t = 'a trail_desc ref
 
     let rec trail () = ref Nil
 
     let rec reset trail =
       trail := Nil
 
-    let rec suspend (trail, copy) =
+    let rec suspend trail copy =
       let rec suspend' trail = match trail with
         | Nil                  -> Nil
         | Mark trail           -> suspend' trail
@@ -69,7 +69,7 @@ module Trail : TRAIL = struct
       in
         ref ftrail
 
-    let rec resume (ftrail, trail, reset) =
+    let rec resume ftrail trail reset =
       let rec resume' trail = match trail with
         | Nil                    -> Nil
         | Mark ftrail            -> resume' ftrail
@@ -82,7 +82,7 @@ module Trail : TRAIL = struct
 
     let rec mark trail = trail := Mark !trail
 
-    let rec unwind (trail, undo) =
+    let rec unwind trail undo =
       let rec unwind' trail = match trail with
         | Nil                  -> Nil
         | Mark trail           -> trail
@@ -92,6 +92,6 @@ module Trail : TRAIL = struct
       in
         trail := unwind' !trail
 
-    let rec log (trail, action) = trail := Cons (action, !trail)
+    let rec log trail action = trail := Cons (action, !trail)
 
 end

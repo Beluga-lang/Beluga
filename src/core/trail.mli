@@ -8,17 +8,17 @@
 
 
 module type TRAIL = sig
-  type 'a trail
+  type 'a t
 
-  val trail   : unit -> 'a trail
+  val trail   : unit -> 'a t
 
-  val suspend : 'a trail * ('a -> 'b) -> 'b trail
-  val resume  : 'b trail * 'a trail  * ('b -> 'a) -> unit
+  val suspend : 'a t -> ('a -> 'b) -> 'b t
+  val resume  : 'b t -> 'a t -> ('b -> 'a) -> unit
 
-  val reset   : 'a trail -> unit
-  val mark    : 'a trail -> unit
-  val unwind  : 'a trail * ('a -> unit) -> unit
-  val log     : 'a trail * 'a -> unit
+  val reset   : 'a t -> unit
+  val mark    : 'a t -> unit
+  val unwind  : 'a t -> ('a -> unit) -> unit
+  val log     : 'a t -> 'a -> unit
 end
 
 

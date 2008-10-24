@@ -168,7 +168,7 @@ module Int = struct
      
      Invariant:
 
-       Psi |- id : Psi      id is patsub
+       cPsi |- id : cPsi      id is patsub
 
      Note: we do not take into account weakening here. 
   *)
@@ -180,7 +180,7 @@ module Int = struct
   
      Invariant:
 
-       Psi, x:A |- ^ : Psi     ^ is patsub
+       cPsi, x:tA |- ^ : cPsi     ^ is patsub
   *)
   let shift = Shift 1
 
@@ -214,7 +214,7 @@ module Int = struct
     (* roughly 15% on standard suite for Twelf 1.1 *)
     (* Sat Feb 14 10:15:16 1998 -fp *)
     | (s, Shift 0)             -> s
-    | (SVar(s,tau), s2)        -> SVar(s, comp tau s2)
+    | (SVar (s, tau), s2)      -> SVar(s, comp tau s2)
       (* (s1, SVar(s,tau)) => undefined ? -bp *)
     | (Shift (n), Dot (ft, s)) -> comp (Shift (n-1)) s
     | (Shift (n), Shift (m))   -> Shift (n+m)
@@ -293,12 +293,12 @@ module Int = struct
 
 
 
-  (* decSub (x:A) s = (x:A[s])
+  (* decSub (x:tA) s = (x:tA[s])
 
      Invariant:
 
-       If   D ; Psi  |- s <= Psi'    D ; Psi' |- A <= type
-       then D ; Psi  |- A[s] <= type
+       If   cD ; cPsi  |- s     <= cPsi'    cD ; cPsi' |- tA <= type
+       then cD ; cPsi  |- tA[s] <= type
   *)
 
   (* First line is an optimization suggested by cs *)
@@ -310,7 +310,7 @@ module Int = struct
     fun decSub (D, Shift(0)) = D
     | decSub (Dec (x, A), s) = Dec (x, Clo (A, s))
   *)
-  let decSub (TypDecl (x, a)) s = TypDecl (x, TClo (a, s))
+  let decSub (TypDecl (x, tA)) s = TypDecl (x, TClo (tA, s))
 
 
 
@@ -335,18 +335,18 @@ module Int = struct
 
      Invariant:
 
-       If   D ; Psi  |- s  <= Psi'    (and s patsub)
-       then D ; Psi' |- s' <= Psi
+       If   cD ; cPsi  |- s  <= cPsi'    (and s patsub)
+       then cD ; cPsi' |- s' <= cPsi
        s.t. s o s' = id  
   *)
   let invert s =
     let rec lookup n s p = match s with
       | Shift _                 -> None
-      | Dot (Undef, s')         -> lookup (n+1) s' p
+      | Dot (Undef, s')         -> lookup (n + 1) s' p
       | Dot (Head (BVar k), s') ->
           if k = p
           then Some n
-          else lookup (n+1) s' p in
+          else lookup (n + 1) s' p in
 
     let rec invert'' p si = match p with
       | 0 -> si
@@ -355,11 +355,11 @@ module Int = struct
             | Some k -> Head (BVar k)
             | None   -> Undef
           in
-            invert'' (p-1) (Dot (front, si)) in
+            invert'' (p - 1) (Dot (front, si)) in
 
     let rec invert' n s = match s with
       | Shift p     -> invert'' p (Shift n)
-      | Dot (_, s') -> invert' (n+1) s'
+      | Dot (_, s') -> invert' (n + 1) s'
 
     in
       invert' 0 s
@@ -370,24 +370,24 @@ module Int = struct
 
      Invariant:
 
-       If   D ; Psi'' |- t : Psi  (* and t is a pattern sub *)
-       then D ; Psi'  |- t : Psi  and Psi' subcontext of Psi
+       If   cD ; cPsi'' |- t : cPsi  (* and t is a pattern sub *)
+       then cD ; cPsi'  |- t : cPsi  and cPsi' subcontext of cPsi
   *)
-  let rec strengthen s psi = match (s, psi) with
+  let rec strengthen s cPsi = match (s, cPsi) with
     | (Shift n (* = 0 *), Null) -> Null
 
-    | (Dot (Head (BVar k) (* k = 1 *), t), DDec (psi, decl)) ->
+    | (Dot (Head (BVar k) (* k = 1 *), t), DDec (cPsi, decl)) ->
         let t' = comp t invShift in
-          (* Psi  |- decl dec     *)
-          (* Psi' |- t' : Psi     *)
-          (* Psi' |- decl[t'] dec *)
-          DDec (strengthen t' psi, decSub decl t')
+          (* cPsi  |- decl dec     *)
+          (* cPsi' |- t' : cPsi    *)
+          (* cPsi' |- decl[t'] dec *)
+          DDec (strengthen t' cPsi, decSub decl t')
 
-    | (Dot (Undef, t), DDec (psi, _)) ->
-        strengthen t psi
+    | (Dot (Undef, t), DDec (cPsi, _)) ->
+        strengthen t cPsi
 
-    | (Shift n, psi) ->
-        strengthen (Dot (Head(BVar (n+1)), Shift (n+1))) psi
+    | (Shift n, cPsi) ->
+        strengthen (Dot (Head(BVar (n + 1)), Shift (n + 1))) cPsi
 
 
 
@@ -395,9 +395,9 @@ module Int = struct
      
      Invariant:
 
-       If   Psi |- s: Psi', s weakensub
+       If   cPsi |- s: cPsi', s weakensub
        then B holds 
-         iff s = id, Psi' = Psi
+         iff s = id, cPsi' = cPsi
   *)
   let isId s =
     let rec isId' s k' = match s with
@@ -413,15 +413,15 @@ module Int = struct
 
      Invariant:
 
-       If Psi |- M <= A
-          Psi |- w <= Psi'  w pattern subst
-          M[w^-1] defined (without pruning or constraints)
+       If cPsi |- tM <= tA
+          cPsi |- w  <= cPsi'  w pattern subst
+          tM[w^-1] defined (without pruning or constraints)
 
-       then Psi' |- M[w^-1] : A[w^-1]
+       then cPsi' |- tM[w^-1] : tA[w^-1]
 
      Effects: None
   *)
-  let cloInv (m, w) = Clo (m, invert w)
+  let cloInv (tM, w) = Clo (tM, invert w)
 
 
 
@@ -429,25 +429,39 @@ module Int = struct
 
      Invariant:
 
-       If  D ; Psi |- s <= Psi1 
-           D ; Psi |- w <= Psi'
+       If  cD ; cPsi |- s <= cPsi1 
+           cD ; cPsi |- w <= cPsi'
        then  t = s o (w^-1)
-       and   D ; Psi' |- t <= Psi1
+       and   cD ; cPsi' |- t <= cPsi1
   *)
   let compInv s w = comp s (invert w)
 
-    (* isPatSub s = B
 
-       Invariant:
-       If    Psi |- s : Psi' 
+
+  (* isPatSub s = B
+
+     Invariant:
+
+       If    cPsi |- s : cPsi' 
        and   s = n1 .. nm ^k
        then  B iff  n1, .., nm pairwise distinct
                and  ni <= k or ni = _ for all 1 <= i <= m
-    *)
+  *)
+  let rec isPatSub s = match s with
+    | Shift k               -> true
+    | Dot (Head(BVar n), s) ->
+        let rec checkBVar s' = match s' with
+          | Shift k                 -> n <= k
+          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+          | Dot (Undef, s)          -> checkBVar s
+          | _                       -> false
+        in
+          checkBVar s && isPatSub s
+    | Dot (Undef, s)        -> isPatSub s
+    | _                     -> false
 
 
 
-  let isPatSub = assert false
 
   (*------------------------------------------------------------------------ *)
 
@@ -467,8 +481,30 @@ module Int = struct
 
   let tconstKind = assert false
 
-  let newMVar = assert false
+  (*************************************)
+  (* Creating new contextual variables *)
+  (*************************************)
 
-  let newPVar = assert false
+  (* newMVar (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
+
+     Invariant:
+
+          tA =   Atom (a, S)
+      or  tA =   Pi (x:tB, tB')
+      but tA =/= TClo (_, _)
+  *)
+  let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
+
+
+
+  (* newPVar (cPsi, tA) = p
+
+     Invariant:
+
+           tA =   Atom (a, S)
+       or  tA =   Pi (x:tB, tB')
+       but tA =/= TClo (_, _)
+  *)
+  let newPVar (cPsi, tA) = PInst (ref None, cPsi, tA, ref [])
 
 end

@@ -14,20 +14,6 @@
   Unify.UnifyNoTrail to other modules (?)) are declared at the end of this file.
 *)
 
-module type TRAIL = sig
-  type 'a trail
-
-  val trail : unit -> 'a trail
-
-  val suspend: 'a trail * ('a -> 'b) -> 'b trail
-  val resume : 'b trail * 'a trail  * ('b -> 'a) -> unit
-
-  val reset  : 'a trail -> unit
-  val mark   : 'a trail -> unit
-  val unwind : 'a trail * ('a -> unit) -> unit
-  val log    : 'a trail * 'a -> unit
-end
-
 module type UNIFY = sig
 
   open Syntax.Int
@@ -60,7 +46,7 @@ end
 (* Unification *)
 (* Author: Brigitte Pientka *)
 (* Trailing is taken from Twelf 1.5 *)
-module Make (Trail : TRAIL) =
+module Make (T : Trail.TRAIL) =
 struct
   
   exception Unify of string
@@ -77,9 +63,9 @@ struct
     | Add of cnstr list ref
     | Solve of cnstr * constrnt   (* FIXME: names *)
 
-    type unifTrail = action Trail.trail
+    type unifTrail = action T.trail
 
-    let globalTrail : (action Trail.trail) = Trail.trail()
+    let globalTrail : (action T.trail) = T.trail()
 
     let rec undo action = match action with
       | InstNormal refM ->
@@ -91,22 +77,22 @@ struct
       | Solve (cnstr, constrnt) ->
           cnstr := constrnt
 
-    let rec reset () = Trail.reset globalTrail
+    let rec reset () = T.reset globalTrail
 
-    let rec mark () = Trail.mark globalTrail
+    let rec mark () = T.mark globalTrail
 
-    let rec unwind () = Trail.unwind (globalTrail, undo)
+    let rec unwind () = T.unwind (globalTrail, undo)
 
     let rec addConstraint (cnstrs, cnstr) =
           (
             cnstrs := cnstr :: (!cnstrs);
-            Trail.log (globalTrail, Add cnstrs)
+            T.log (globalTrail, Add cnstrs)
           )
 
     let rec solveConstraint ({contents=constrnt} as cnstr) =
           (
             cnstr := Solved;
-            Trail.log (globalTrail, Solve (cnstr, constrnt))
+            T.log (globalTrail, Solve (cnstr, constrnt))
           )
 
     (* trail the given function *)
@@ -134,13 +120,13 @@ struct
 
     let rec instantiatePVar(q, head, cnstrL) = 
         (q := Some head;
-         Trail.log (globalTrail, InstHead q);
+         T.log (globalTrail, InstHead q);
          awakenCnstrs := cnstrL @ !awakenCnstrs)
 
 
     let rec instantiateMVar(u, tM, cnstrL) = 
         (u := Some tM ;
-         Trail.log (globalTrail, InstNormal u);
+         T.log (globalTrail, InstNormal u);
          awakenCnstrs := cnstrL @ !awakenCnstrs)
 
     (* ---------------------------------------------------------------------- *)
@@ -749,5 +735,5 @@ struct
 
 end
 
-module UnifyNoTrail = Make (Notrail.Notrail)
-module UnifyTrail = Make (Trail.Trail)
+module UnifyEmptyTrail = Make (Trail.EmptyTrail)
+module UnifyTrail      = Make (Trail.Trail)

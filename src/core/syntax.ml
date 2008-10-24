@@ -104,8 +104,8 @@ module Int = struct
 
   and cvar =
     | Offset of offset
-    | Inst   of normal option ref * dctx * typ * constr list ref
-    | PInst  of head   option ref * dctx * typ * constr list ref
+    | Inst   of normal option ref * dctx * typ * cnstr list ref
+    | PInst  of head   option ref * dctx * typ * cnstr list ref
     | CInst  of dctx   option ref * schema
 
   and constrnt =
@@ -113,8 +113,8 @@ module Int = struct
     | Eqn of psi_hat * normal * normal
     | Eqh of psi_hat * head * head
 
-  (* looks too much like constructor - dwm *)
-  and constr = constrnt ref
+  (* looks too much like constructor... - dwm *)
+  and cnstr = constrnt ref
 
   and dctx =
     | Null

@@ -21,7 +21,7 @@
       | (PiTyp (cD', tA'), s') ->
         let (u', tM) = lowerMVar' (DDec (cPsi, decSub cD' s'))  (tA', dot1 s')
         in
-          (u', Lam (mk_name None, tM))
+          (u', Lam (Id.mk_name None, tM))
 
       | (TClo(tA,s), s') ->
           lowerMVar' cPsi (tA, comp s s')
@@ -33,7 +33,7 @@
         
     (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
     and lowerMVar1 (u, sA) = match (u, sA) with
-        (Inst(r, cPsi, _, _) as u, (PiTyp _, _) as sA) ->
+        ((Inst(r, cPsi, _, _) as u), ((PiTyp _, _) as sA)) ->
             let (u', tM) = lowerMVar' cPsi sA
             in
              (   r := Some tM;   (* [|tM/u|] *)
@@ -59,7 +59,7 @@
       | (Inst (r, cPsi, tA, {contents= []}) as u) -> lowerMVar1 (u, (tA, id))
       | _ ->
         (* It is not clear if it can happen that cnstr =/= nil *)
-        raise Error "Typing ambiguous -- constraint of functional type cannot be simplified"
+        raise (Error "Typing ambiguous -- constraint of functional type cannot be simplified")
   
 
 
@@ -90,7 +90,7 @@
       | (Root(BVar(i),tS)) ->    
         (match bvarSub i sigma with
            Obj tM -> reduce (tM, id) (normSpine (tS, sigma))
-         | Head H -> Root(H, normSpine(tS, sigma)))
+         | Head head -> Root(head, normSpine(tS, sigma)))
          (* Undef should not happen ! *)
       (* Meta-variables *)         
       | (Root(MVar(Offset _ as u, r), tS)) -> 
@@ -106,7 +106,7 @@
       | Root(MVar(Inst({contents= None}, _, tA, _) as u, r), tS) -> 
       (* Meta-variable is not atomic and tA = Pi x:B1.B2 
          lower u, and normalize the lowered meta-variable *)
-          (lowerMVar u; norm (tM, sigma))
+          let _ = lowerMVar u in norm (tM, sigma)
 
       (* Parameter variables *)
       | (Root(PVar(Offset _ as p, r), tS)) -> 
@@ -114,7 +114,7 @@
       | (Root(PVar(PInst({contents= Some(BVar i)}, _, _, _) as p , r), tS)) -> 
         (match bvarSub i r with
            Obj(tM) -> reduce (tM, id) (normSpine (tS, sigma))
-         | Head(H) -> Root(H, normSpine(tS, sigma)))
+         | Head head -> Root(head, normSpine(tS, sigma)))
       | (Root(PVar(PInst({contents= Some(PVar(q,r'))}, _, _, _) as p, r), tS)) -> 
           norm (Root(PVar(q, comp r' r), tS), sigma)    
        (* where p::tA[cPsi]  and  cD; cPsi' |- r : cPsi 
@@ -216,7 +216,7 @@
       | (Root(BVar(i),tS), sigma) -> 
           begin match bvarSub i sigma with 
              Obj tM -> whnfRedex (whnf(tM,id), (tS,sigma))
-           | Head H -> (Root(H, SClo(tS,sigma)), id)
+           | Head head -> (Root(head, SClo(tS,sigma)), id)
          (* Undef should not happen! *)
           end
 
@@ -232,7 +232,7 @@
             let rec expose (tA, s) = match tA with
                    | Atom(a,tS) -> Atom(a, SClo(tS,s))
                    | PiTyp(TypDecl(x,tA), tB) -> PiTyp(TypDecl(x,TClo(tA,s)), TClo(tB, dot1 s))
-                   | TClo(tA, s) -> expose (tA, comp s s')
+                   | TClo(tA, s') -> expose (tA, comp s' s)
             in begin 
                match expose(tA,id) with
                | Atom(_) -> 
@@ -242,7 +242,8 @@
                    (* Meta-variable is not atomic and tA = Pi x:B1.B2 
                     lower u, and normalize the lowered meta-variable
                     note: we may expose and compose substitutions twice. *)
-                   (lowerMVar u; whnf (tM, sigma))
+                   let _ = lowerMVar u
+                   in whnf (tM, sigma)
             end
 
       (* Parameter variable *)
@@ -251,7 +252,7 @@
       | (Root(PVar(PInst({contents= Some(BVar i)} as p, _, _, _) , r), tS), sigma) ->
         (match bvarSub i r with
            Obj tM -> whnfRedex(whnf(tM, id), (tS, sigma))
-         | Head H -> (Root(H, SClo(tS, sigma)), id))
+         | Head head -> (Root(head, SClo(tS, sigma)), id))
       | (Root(PVar(PInst({contents= Some(PVar(q,r'))}, _, _, _) as p, r), tS), sigma) ->
           whnf (Root(PVar(q, comp r' r), tS), sigma)
 
@@ -281,7 +282,7 @@
           [s']tP' = [s2]tP and [s']R' = tM[s1] @ tS[s2] 
 
      *)
-    and whnfRedex (sM, Ss) = match (sM, Ss) with
+    and whnfRedex (sM, sS) = match (sM, sS) with
         ((Root(_,_) as root, s1), (Nil,s2)) ->  whnf (root, s1)
       | ((Lam(x,tM), s1), (App(tN, tS), s2)) ->
             let tN' = Clo(tN,s2)        (* cD ; cPsi |- tN' <= tA' *)
@@ -292,8 +293,8 @@
              
       | (sM, (SClo(tS,s2'), s2)) ->
           whnfRedex (sM, (tS, comp s2' s2))
-      | ((Clo(tM,s), s1), Ss) ->
-          whnfRedex ((tM, comp s s1), Ss)
+      | ((Clo(tM,s), s1), sS) ->
+          whnfRedex ((tM, comp s s1), sS)
 
     (* whnfTyp (tA, sigma) = tA'
 
@@ -331,7 +332,7 @@
                 | Dot (Undef, s') ->
                       checkBVar s'
 
-              and _ = checkBVar s'
+            in let _ = checkBVar s'
             in
               Dot (Head(BVar n), s')
             
@@ -339,9 +340,9 @@
       | Dot (Obj (tM), s) ->
           begin match whnf (tM, id) with
               | (Root(BVar k, Nil), id) -> Dot(Head(BVar k), mkPatSub s)
-              | _ -> raise Error "Not a pattern substitution"
+              | _ -> raise (Error "Not a pattern substitution")
           end
-      | _ -> raise Error "Not a pattern substitution"
+      | _ -> raise (Error "Not a pattern substitution")
 
     let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
 
@@ -359,22 +360,22 @@
        This is on normal forms -- needs to be on whnf.
      *)
 
-    let rec conv Ms1 Ns2 = conv' (whnf Ms1) (whnf Ns2)
+    let rec conv sM1 sN2 = conv' (whnf sM1) (whnf sN2)
 
     and conv' sM sN = match (sM, sN) with
-        ((Lam(_, M1),s1),  (Lam(_, M2), s2)) ->
-          conv (M1, dot1 s1) (M2, dot1 s2)
-      | ((Root(H1,S1),s1), (Root(H2, S2),s2)) ->
-          let hConv = (match (H1, H2) with 
+        ((Lam(_, tM1),s1),  (Lam(_, tM2), s2)) ->
+          conv (tM1, dot1 s1) (tM2, dot1 s2)
+      | ((Root(head1,spine1),s1), (Root(head2, spine2),s2)) ->
+          let hConv = (match (head1, head2) with 
                              (BVar(k1), BVar(k2)) ->  (k1 = k2) 
                            | (Const(c1), Const(c2)) -> (c1 = c2) 
                            | (PVar(p,s'), PVar(q,s'')) -> 
                                (p = q) && convSub (comp s' s1) (comp s'' s2)
                            | (MVar(u,s'), MVar(w,s'')) -> 
                                (u = w) && convSub (comp s' s1) (comp s'' s2)
-                           | (AnnH (H,tA), _) -> conv' (Root(H,S1), s1) sN
-                           | (_ , AnnH (H,tA)) -> conv' sM (Root(H,S2), s2)
-                           | (Proj (BVar(k1),i), Proj(BVar(k2),j)) -> 
+                           | (AnnH (head,tA), _) -> conv' (Root(head,spine1), s1) sN
+                           | (_ , AnnH (head,tA)) -> conv' sM (Root(head,spine2), s2)
+                           | (Proj (BVar(k1),i), Proj(BVar(k2),j)) ->
                                (k1 = k2) && (i = j) 
                            | (Proj (PVar(p,s'),i), Proj(PVar(q,s''),j)) -> 
                                (p = q) && (i = j) 
@@ -382,16 +383,16 @@
                            (* additional case: p[x] = x ? -bp*)
                            | (_, _ ) -> false)
             in 
-              hConv && convSpine (S1, s1) (S2, s2)
+              hConv && convSpine (spine1, s1) (spine2, s2)
            
       | _ -> false
 
-     and convSpine S1 S2 = match (S1, S2) with
+     and convSpine spine1 spine2 = match (spine1, spine2) with
           ((Nil,s1), (Nil,s2)) -> true
-       | ((App(M1, S1),s1), (App(M2, S2),s2)) ->
-           conv (M1,s1) (M2,s2) && convSpine (S1,s1) (S2, s2)
-       | (S1, (SClo(tS,s),s')) -> convSpine S1 (tS, comp s s')
-       | ((SClo(tS,s),s'), S2) -> convSpine (tS, comp s s') S2
+       | ((App(tM1, spine1),s1), (App(tM2, spine2),s2)) ->
+           conv (tM1,s1) (tM2,s2) && convSpine (spine1,s1) (spine2, s2)
+       | (spine1, (SClo(tS,s),s')) -> convSpine spine1 (tS, comp s s')
+       | ((SClo(tS,s),s'), spine2) -> convSpine (tS, comp s s') spine2
 
     and convSub subst1 subst2 = match (subst1, subst2) with
         (Shift n, Shift k) -> (k = n)
@@ -408,26 +409,26 @@
           p = q && convSub s s'
       | (Head(MVar(q, s)), Head(MVar(p,s'))) ->
           p = q && convSub s s'
-      | (Head(Proj(H, k)), Head(Proj(H',k'))) -> 
-          k = k' && convFront (Head H) (Head H')
+      | (Head(Proj(head, k)), Head(Proj(head',k'))) -> 
+          k = k' && convFront (Head head) (Head head')
       | (Obj tM, Obj tN) -> conv (tM,id) (tN, id)
-      | (Head(H), Obj(tN)) ->
-          conv (Root(H, Nil), id) (tN, id)
-      | (Obj(tN), Head(H)) ->
-          conv (tN, id) (Root(H, Nil), id)
+      | (Head head, Obj tN) ->
+          conv (Root(head, Nil), id) (tN, id)
+      | (Obj tN, Head head) ->
+          conv (tN, id) (Root(head, Nil), id)
       | (Undef, Undef) -> true
       | (_, _) -> false
 
 
     let rec convTyp' sA sB = match (sA, sB) with
 
-        ((Atom(a1,S1), s1),  (Atom(a2, S2), s2)) ->
-          (a1 = a2) && convSpine (S1,s1) (S2,s2)
+        ((Atom(a1,spine1), s1),  (Atom(a2, spine2), s2)) ->
+          (a1 = a2) && convSpine (spine1,s1) (spine2,s2)
 
-      | ((PiTyp(TypDecl(_,A1), B1), s1),  (PiTyp(TypDecl(_,A2), B2),s2)) ->
+      | ((PiTyp(TypDecl(_,tA1), tB1), s1),  (PiTyp(TypDecl(_,tA2), tB2),s2)) ->
             (* G |- A1[s1] = A2[s2] by typing invariant *)
-            convTyp (A1,s1) (A2,s2) && convTyp (B1, dot1 s1) (B2, dot1 s2)
-
+            convTyp (tA1,s1) (tA2,s2) && convTyp (tB1, dot1 s1) (tB2, dot1 s2)
+      
       | _ -> false
 
 
@@ -441,7 +442,7 @@
        returns true iff recA and recB are convertible where 
           cD ; cPsi |- [s]recA = [s']recB <= type
      *)
-    let rec convTypRec Arecs Brecs = match (Arecs, Brecs) with
+    let rec convTypRec sArec sBrec = match (sArec, sBrec) with
          (([],s),  ([],s')) -> true
       | ((tA::recA, s),  (tB::recB, s')) ->
           convTyp (tA,s) (tB,s') && 
@@ -455,12 +456,12 @@
 
       | (CtxVar(c1), CtxVar(c2)) -> (c1 = c2)
 
-      | (DDec(Psi1, TypDecl(_, tA)), DDec(Psi2, TypDecl(_, tB))) ->
-            convTyp (tA,id) (tB, id) && convDCtx Psi1 Psi2
+      | (DDec(cPsi1, TypDecl(_, tA)), DDec(cPsi2, TypDecl(_, tB))) ->
+            convTyp (tA,id) (tB, id) && convDCtx cPsi1 cPsi2
 
-      | (SigmaDec(cPsi, Sigma_decl(_, TypRec)), 
-         SigmaDec(cPsi', Sigma_decl(_, TypRec'))) ->
-            convDCtx cPsi cPsi' && convTypRec (TypRec, id) (TypRec', id)
+      | (SigmaDec(cPsi, SigmaDecl(_, typrec)), 
+         SigmaDec(cPsi', SigmaDecl(_, typrec'))) ->
+            convDCtx cPsi cPsi' && convTypRec (typrec, id) (typrec', id)
 
       | (_, _) -> false
 

@@ -31,10 +31,9 @@
           (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
           sA = Whnf.whnfTyp (inferHead cD cPsi h, I.id)
         in
-(*XXX 
+(*
           checkSpine cD cPsi (tS, s) sA sP
 *) ()
- 
     and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 
 

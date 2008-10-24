@@ -47,12 +47,12 @@ end
 
 module Trail : TRAIL = struct
 
-    type 'a trail_desc =
-      | Cons of 'a * 'a trail_desc
-      | Mark of 'a trail_desc
+    type 'a desc =
+      | Cons of 'a * 'a desc
+      | Mark of 'a desc
       | Nil
 
-    type 'a t = 'a trail_desc ref
+    type 'a t = 'a desc ref
 
     let trail () = ref Nil
 

@@ -113,7 +113,6 @@ module Int = struct
     | Eqn of psi_hat * normal * normal
     | Eqh of psi_hat * head * head
 
-  (* looks too much like constructor... - dwm *)
   and cnstr = constrnt ref
 
   and dctx =

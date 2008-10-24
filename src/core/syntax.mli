@@ -113,6 +113,8 @@ module Int : sig
     | Eqn of psi_hat * normal * normal
     | Eqh of psi_hat * head * head
 
+  and cnstr    = constrnt ref
+
   and dctx =
     | Null
     | CtxVar   of cvar
@@ -147,7 +149,6 @@ module Int : sig
   type tclo     = typ    * sub
   type trec_clo = typ_rec * sub
   type mctx     = ctx_decl ctx
-
 
 
   (**************************)

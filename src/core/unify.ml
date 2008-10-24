@@ -8,9 +8,9 @@
 (* Unification *)
 (* Author: Brigitte Pientka *)
 (* Trailing is taken from Twelf 1.5 *)
-module Unify (Trail   : TRAIL) =
+module Unify (Trail : Trail.TRAIL) =
 struct
-    
+  
   exception Unify of string
   exception NotInvertible
   
@@ -538,8 +538,8 @@ struct
                 in
                   instantiateMVar (r1, Root(MVar(w, s'),Nil), !cnstrs1)
                 end
-              else addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
-            else addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
+              else addConstraint (cnstrs2, {contents=Eqn (phat, Clo sM2, Clo sM1)})
+            else addConstraint (cnstrs1, {contents=Eqn (phat, Clo sM1, Clo sM2)})
           else
             if isPatSub t1' then (* cD ; cPsi' |- t1 <= Psi1 and cD ; cPsi |- t1 o s1 <= Psi1 *)
               begin try let ss1 = invert (t1') (* cD ; Psi1 |- ss1 <= cPsi *)
@@ -547,7 +547,7 @@ struct
                in
                 (sc(); instantiateMVar (r1, sM2', !cnstrs1))
               with NotInvertible -> 
-                addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
+                addConstraint (cnstrs1, {contents= Eqn (phat, Clo sM1, Clo sM2)})
               end
             else 
               if isPatSub t2' then try begin
@@ -556,7 +556,7 @@ struct
                 in
                   (sc'() ; instantiateMVar (r2, sM1', !cnstrs2))
               end with NotInvertible -> 
-                addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
+                addConstraint (cnstrs2, {contents= Eqn (phat, Clo sM2, Clo sM1)})
               else
                 (* neither t1' nor t2' are pattern substitutions *)
                 let cnstr = ref (Eqn (phat, Clo sM1, Clo sM2))

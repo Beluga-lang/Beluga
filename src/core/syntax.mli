@@ -77,14 +77,20 @@ module Int : sig
   and normal =
     | Lam  of name * normal
     | Root of head * spine
+    | Clo  of normal * sub
 
   and head =
     | BVar  of offset
     | Const of cid_term
+    | MVar  of cvar * sub
+    | PVar  of cvar * sub
+    | AnnH  of head * typ
+    | Proj  of head * int
 
   and spine =
     | Nil
     | App of normal * spine
+    | SClo of spine * sub
 
   and sub =
     | Shift of offset

@@ -77,14 +77,20 @@ module Int = struct
   and normal =
     | Lam  of name * normal
     | Root of head * spine
+    | Clo  of normal * sub
 
   and head =
     | BVar  of offset
     | Const of cid_term
+    | MVar  of cvar * sub
+    | PVar  of cvar * sub
+    | AnnH  of head * typ
+    | Proj  of head * int
 
   and spine =
     | Nil
-    | App of normal * spine
+    | App  of normal * spine
+    | SClo of spine * sub
 
   and sub =
     | Shift of offset
@@ -151,22 +157,71 @@ module Int = struct
   (* Explicit Substitutions *)
   (**************************)
 
+
   (* id = ^0 
      
      Invariant:
-     Psi |- id : Psi        id is patsub
+
+        Psi |- id : Psi      id is patsub
 
      Note: we do not take into account weakening here. 
   *)
-  let id = assert false
-  let shift = assert false
-  let invShift = assert false
+  let id = Shift 0
+
+
+  (* shift = ^1
+  
+     Invariant:
+
+        Psi, x:A |- ^ : Psi      ^ is patsub
+
+  *)
+  let shift = Shift 1
+
+
+  (* invShift = ^-1 = _.^0
+
+     Invariant:
+
+        G |- ^-1 : G, V      ^-1 is patsub
+
+  *)
+  let invShift = Dot (Undef, id)
+
+(*
+  let comp s1 s2 = match (s1, s2) with
+    | (Shift 0, s) -> s
+    (* next line is an optimization *)
+    (* roughly 15% on standard suite for Twelf 1.1 *)
+    (* Sat Feb 14 10:15:16 1998 -fp *)
+    | (s, Shift 0) -> s
+    | (SVar(s,tau), s2) -> SVar(s, comp tau s2)
+      (* (s1, SVar(s,tau)) => undefined ? -bp *)
+    | (Shift (n), Dot (Ft, s)) -> comp (Shift (n-1)) s
+    | (Shift (n), Shift (m)) -> Shift (n+m)
+    | (Dot (Ft, s), s') -> Dot (frontSub Ft s', comp s s')
+
+    (* comp(s[tau], Shift(k)) = s[tau]
+       where s :: Psi[Phi]  and |Psi| = k 
+
+       comp(s[tau], Shift(k)) = Dot(Id(1), ... Dot(Id(k0), s[tau]))
+       where s :: Psi[Phi]  and |Psi| = k'
+       k = k' + k0  
+     *)
+*)
+
   let bvarSub = assert false
+
   let frontSub = assert false
+
   let decSub = assert false
+
   let comp = assert false
+
   let dot1 = assert false
+
   let invDot1 = assert false
+
   let isPatSub = assert false
 
   (***************************)
@@ -174,21 +229,33 @@ module Int = struct
   (***************************)
 
   let invert = assert false
+
   let strengthen = assert false
+
   let isId = assert false
+
   let compInv = assert false
 
   (*------------------------------------------------------------------------ *)
 
   let dctxToHat = assert false
+
   let ctxDec = assert false
+
   let ctxSigmaDec = assert false
+
   let ctxVar = assert false
+
   let mctxMDec = assert false
+
   let mctxPDec = assert false
+
   let constType = assert false
+
   let tconstKind = assert false
+
   let newMVar = assert false
+
   let newPVar = assert false
 
 end

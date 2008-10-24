@@ -34,7 +34,8 @@ TOP_LFLAGS=
 TOP_LIBS=
 TOP_NAME=beluga
 
-JOBS=-j 0
+JOBS=
+#-j 0
 OCAMLBUILD=ocamlbuild
 SCRIPTS_DIR=../scripts
 

@@ -104,14 +104,17 @@ module Int = struct
 
   and cvar =
     | Offset of offset
-    | Inst   of normal option ref * dctx * typ * (constrnt ref) list ref
-    | PInst  of head   option ref * dctx * typ * (constrnt ref) list ref
+    | Inst   of normal option ref * dctx * typ * constr list ref
+    | PInst  of head   option ref * dctx * typ * constr list ref
     | CInst  of dctx   option ref * schema
 
   and constrnt =
     | Solved
     | Eqn of psi_hat * normal * normal
     | Eqh of psi_hat * head * head
+
+  (* looks too much like constructor - dwm *)
+  and constr = constrnt ref
 
   and dctx =
     | Null
@@ -153,6 +156,10 @@ module Int = struct
   (* Should consider moving the following stuff out into it's own
      module, e.g., Subst -dwm *)
 
+  (* Which of thise functions are in the signature? -dwm *)
+
+  (* Fix order wrt signature. -dwm *)
+
   (**************************)
   (* Explicit Substitutions *)
   (**************************)
@@ -162,44 +169,60 @@ module Int = struct
      
      Invariant:
 
-        Psi |- id : Psi      id is patsub
+       Psi |- id : Psi      id is patsub
 
      Note: we do not take into account weakening here. 
   *)
   let id = Shift 0
 
 
+
   (* shift = ^1
   
      Invariant:
 
-        Psi, x:A |- ^ : Psi      ^ is patsub
+       Psi, x:A |- ^ : Psi      ^ is patsub
 
   *)
   let shift = Shift 1
+
 
 
   (* invShift = ^-1 = _.^0
 
      Invariant:
 
-        G |- ^-1 : G, V      ^-1 is patsub
+       G |- ^-1 : G, V      ^-1 is patsub
 
   *)
   let invShift = Dot (Undef, id)
 
-(*
-  let comp s1 s2 = match (s1, s2) with
-    | (Shift 0, s) -> s
+
+
+  (* comp (s1, s2) = s'
+
+     Invariant:
+
+       If   G'  |- s1 : G 
+       and  G'' |- s2 : G'
+       then s'  =  s1 o s2
+       and  G'' |- s1 o s2 : G
+
+       If   s1, s2 patsub
+       then s' patsub
+
+   *)
+  let rec comp s1 s2 = match (s1, s2) with
+    | (Shift 0, s)             -> s
     (* next line is an optimization *)
     (* roughly 15% on standard suite for Twelf 1.1 *)
     (* Sat Feb 14 10:15:16 1998 -fp *)
-    | (s, Shift 0) -> s
-    | (SVar(s,tau), s2) -> SVar(s, comp tau s2)
+    | (s, Shift 0)             -> s
+    | (SVar(s,tau), s2)        -> SVar(s, comp tau s2)
       (* (s1, SVar(s,tau)) => undefined ? -bp *)
-    | (Shift (n), Dot (Ft, s)) -> comp (Shift (n-1)) s
-    | (Shift (n), Shift (m)) -> Shift (n+m)
-    | (Dot (Ft, s), s') -> Dot (frontSub Ft s', comp s s')
+    | (Shift (n), Dot (ft, s)) -> comp (Shift (n-1)) s
+    | (Shift (n), Shift (m))   -> Shift (n+m)
+    | (Dot (ft, s), s')        -> Dot (frontSub ft s', comp s s')
 
     (* comp(s[tau], Shift(k)) = s[tau]
        where s :: Psi[Phi]  and |Psi| = k 
@@ -208,17 +231,39 @@ module Int = struct
        where s :: Psi[Phi]  and |Psi| = k'
        k = k' + k0  
      *)
-*)
 
-  let bvarSub = assert false
 
-  let frontSub = assert false
+  (* bvarSub n s = Ft'
+     
+     Invariant: 
+
+     If    G |- s : G'    G' |- n : V
+     then  Ft' = Ftn         if  s = Ft1 .. Ftn .. ^k
+       or  Ft' = ^(n+k)     if  s = Ft1 .. Ftm ^k   and m<n
+       and   G |- Ft' : V [s]
+     *)
+  and bvarSub n s = match (n, s) with
+    | (1, Dot (ft, s)) -> ft
+    | (n, Dot (ft, s)) -> bvarSub (n-1) s
+    | (n, Shift k)     -> Head (BVar (n+k))
+
+  and frontSub ft s = match ft with
+    | Head (BVar n)       -> bvarSub n s
+    | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))
+    | Head (PVar (u, s')) -> Head (PVar (u, comp s' s))
+    | Head (Proj (h, k))  ->
+        let Head h' = frontSub (Head h) s in
+          Head (Proj (h', k))
+    | Head (AnnH (h, a))  ->
+        let Head h' = frontSub (Head h) s in
+          Head (AnnH (h', a))
+    | Head (Const c)      -> Head(Const c)
+    | Obj u               -> Obj (Clo (u, s))
+    | Undef               -> Undef
+
+  and dot1 = assert false
 
   let decSub = assert false
-
-  let comp = assert false
-
-  let dot1 = assert false
 
   let invDot1 = assert false
 

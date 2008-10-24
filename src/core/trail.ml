@@ -54,12 +54,11 @@ module Trail : TRAIL = struct
 
     type 'a t = 'a trail_desc ref
 
-    let rec trail () = ref Nil
+    let trail () = ref Nil
 
-    let rec reset trail =
-      trail := Nil
+    let reset trail = trail := Nil
 
-    let rec suspend trail copy =
+    let suspend trail copy =
       let rec suspend' trail = match trail with
         | Nil                  -> Nil
         | Mark trail           -> suspend' trail
@@ -69,7 +68,7 @@ module Trail : TRAIL = struct
       in
         ref ftrail
 
-    let rec resume ftrail trail reset =
+    let resume ftrail trail reset =
       let rec resume' trail = match trail with
         | Nil                    -> Nil
         | Mark ftrail            -> resume' ftrail
@@ -80,9 +79,9 @@ module Trail : TRAIL = struct
         trail := trail'
 
 
-    let rec mark trail = trail := Mark !trail
+    let mark trail = trail := Mark !trail
 
-    let rec unwind trail undo =
+    let unwind trail undo =
       let rec unwind' trail = match trail with
         | Nil                  -> Nil
         | Mark trail           -> trail
@@ -92,6 +91,6 @@ module Trail : TRAIL = struct
       in
         trail := unwind' !trail
 
-    let rec log trail action = trail := Cons (action, !trail)
+    let log trail action = trail := Cons (action, !trail)
 
 end

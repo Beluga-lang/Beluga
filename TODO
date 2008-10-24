@@ -5,12 +5,18 @@
 CRITICAL
 ========
 
+* 10/23/08 :: Several cases of variable shadowing, might want to
+              consider during code-walk.  -dwm
+
 * 10/12/08 :: Naming Scheme for Brigitte's code.  -dwm
 
 
 
 IMPORTANT
 =========
+
+* 10/23/08 :: Investigate magic parens, i.e., Foo of (bar * baz)
+                vs. Foo of bar * baz.  -dwm
 
 * 10/22/08 :: Add target for debugging, add documentaiton on how to
               use.  -dwm

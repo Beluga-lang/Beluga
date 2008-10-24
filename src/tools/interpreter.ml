@@ -28,7 +28,7 @@ let main () =
       in
         (* matching against `(exn, 'a) either` which is just a sum type *)
         match sgn with
-          (* If we have a parse failure, print out some messages *)
+          (* If we have a parse failure, print some messages *)
           | (Common.InL exn)   ->
               begin match exn with
                 | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
@@ -39,13 +39,22 @@ let main () =
                 | exn ->
                       fprintf std_formatter "Uncaught Exception: %s\n" (Printexc.to_string exn)
               end
-          (* If we succeed, pretty print the resulting AST *)
+          (* If we succeed, pretty-print the resulting AST *)
           | (Common.InR decls) ->
                 fprintf std_formatter   "## Pretty Printing External Syntax: %s ##\n" file_name
               ; print_sgn Pretty.Ext.ppr_sgn_decl decls
               ; fprintf std_formatter "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
-              ; print_sgn Pretty.Int.ppr_sgn_decl (List.map Typerecon.internalize_sgn_decl decls)
+              ; let internal_decls = List.map Typerecon.internalize_sgn_decl decls
+              in print_sgn Pretty.Int.ppr_sgn_decl internal_decls
               ; fprintf std_formatter "\n----------------------------------\n\n"
+(*              ; let cD = ____
+                and cPsi = ____
+                and tM = ___
+                and tA = ___
+              in try Typecheck.check cD cPsi (nclo, Syntax.Int.id) (tclo, Syntax.Int.id)
+                with Typecheck.Error message ->
+                     fprintf std_formatter "## Typechecking failed:\n%s\n" message
+*)
     in
       (* Iterate the process for each file given on the commandline *)
       Array.iter per_file (Array.sub Sys.argv 1 (Array.length Sys.argv -1))

@@ -23,17 +23,16 @@
        otherwise exception Error is raised
     *)
     let rec checkW cD cPsi sM1 sA2 = match (sM1, sA2) with
-      | ((I.Lam(_,tM), s1), (I.PiTyp(I.TypDecl(x,tA) as tX, tB), s2)) ->
+      | ((I.Lam(_,tM), s1), (I.PiTyp((I.TypDecl(x,tA) as tX), tB), s2)) ->
           check cD  (I.DDec(cPsi, I.decSub tX s2))
                  (tM, I.dot1 s1) (tB, I.dot1 s2)
-      | ((I.Root (h, tS), s), (I.Atom _,s') as sP) ->
+      | ((I.Root (h, tS), s), (((I.Atom _),s') as sP)) ->
         let
           (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
           sA = Whnf.whnfTyp (inferHead cD cPsi h, I.id)
         in
-(*
           checkSpine cD cPsi (tS, s) sA sP
-*) ()
+
     and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 
 
@@ -47,7 +46,7 @@
             and  cD ; cPsi |- tA'[s'] = tA [s2] <= type
             and  cD ; cPsi |- tP'[s'] = sP     <= type
     *)
-    and checkSpine cD cPsi sS1 sA2 sP = match (sS1, sA2) with
+    and checkSpine cD cPsi sS1 sA2 (sP : I.tclo) = match (sS1, sA2) with
         ((I.Nil, _), sP') ->
             if Whnf.convTyp sP' sP then ()
             else raise (Error "Type mismatch")
@@ -233,3 +232,6 @@
           (checkCtx cD cPsi; checkSigmaDec cD cPsi (tX, I.id))
       | I.CtxVar psi -> () 
         (* need to check if psi is in Omega (or cD, if context vars live there) -bp *) 
+
+    let rec check_sgn_decls decls = ()
+          

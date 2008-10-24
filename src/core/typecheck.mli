@@ -11,6 +11,8 @@
 
   val check : mctx -> dctx -> nclo -> tclo -> unit
 
+  val check_sgn_decls : sgn_decl list -> unit
+
 (*
 
 module Cmp : sig

@@ -36,7 +36,7 @@ TOP_NAME=beluga
 
 JOBS=
 #-j 0
-OCAMLBUILD=ocamlbuild
+OCAMLBUILD=ocamlbuild -classic-display
 SCRIPTS_DIR=../scripts
 
 

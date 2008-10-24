@@ -4,7 +4,8 @@ Id
 Store
 Syntax
 Trail
+Notrail
 Typerecon
 Typecheck
-# Unify
+Unify
 Whnf

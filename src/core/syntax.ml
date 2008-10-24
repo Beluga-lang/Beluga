@@ -77,7 +77,7 @@ module Int = struct
   and normal =
     | Lam  of name * normal
     | Root of head * spine
-    | Clo  of normal * sub
+    | Clo  of (normal * sub)
 
   and head =
     | BVar  of offset

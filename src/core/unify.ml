@@ -5,10 +5,58 @@
    @author Darin Morrison
 *)
 
+(* There may be a better way of arranging the signatures ("module types") and
+  structures across unify.ml, trail.ml, and notrail.ml; this is the only thing I stumbled
+  across that actually seems to work.  The 
+*)
+
+module type TRAIL = sig
+  type 'a trail
+
+  val trail : unit -> 'a trail
+
+  val suspend: 'a trail * ('a -> 'b) -> 'b trail
+  val resume : 'b trail * 'a trail  * ('b -> 'a) -> unit
+
+  val reset  : 'a trail -> unit
+  val mark   : 'a trail -> unit
+  val unwind : 'a trail * ('a -> unit) -> unit
+  val log    : 'a trail * 'a -> unit
+end
+
+module type UNIFY = sig
+
+  open Syntax.Int
+  type unifTrail
+
+  (* trailing of variable instantiation *)
+
+  val reset       : unit -> unit
+  val mark   : unit -> unit
+  val unwind : unit -> unit
+
+  val instantiateMVar : normal option ref * normal * constrnt list -> unit
+  val instantiatePVar : head option ref * head * constrnt list -> unit
+
+  val resetAwakenCnstrs : unit -> unit
+  val nextCnstr : unit -> constrnt option
+  val addConstraint : constrnt list ref * constrnt -> unit
+  val solveConstraint : constrnt -> unit
+
+
+  (* unification *)
+  val intersection : psi_hat * (sub * sub) * dctx -> (sub * dctx)
+
+  exception Unify of string
+
+  val unify : psi_hat * nclo * nclo -> unit (* raises Unify *)
+
+end
+
 (* Unification *)
 (* Author: Brigitte Pientka *)
 (* Trailing is taken from Twelf 1.5 *)
-module Unify (Trail : Trail.TRAIL) =
+module Make (Trail : TRAIL) =
 struct
   
   exception Unify of string
@@ -380,6 +428,7 @@ struct
     *)
 
     let rec prune  (phat, sM, ss, rOccur, sc) = 
+      let qq : sub = ss in
           prune' (phat, Whnf.whnf sM, ss, rOccur, sc)
 
     and prune' ((cvar, offset) as phat, sM, ss, rOccur, sc) = match sM with
@@ -516,8 +565,8 @@ struct
           unify ((psi, offset+1), (tN, dot1 s1), (tM, dot1 s2))
 
       (* MVar-MVar case *)
-      | ((((Root(MVar(Inst(r1, cPsi1, tP1, cnstrs1), t1), Nil) as tM1),s1)), 
-         (((Root(MVar(Inst(r2, cPsi2, tP2, cnstrs2), t2), Nil) as tM2), s2))) -> 
+      | ((((Root(MVar(Inst(r1, cPsi1, tP1, cnstrs1), t1), Nil) as tM1), s1) as sM1), 
+         ((((Root(MVar(Inst(r2, cPsi2, tP2, cnstrs2), t2), Nil) as tM2), s2)) as sM2)) -> 
         (* by invariant: meta-variables are lowered during whnf, s1 = s2 = id *)
           begin let t1' = comp t1 s1 (* cD ; cPsi |- t1' <= cPsi1 *)
           and t2' = comp t2 s2 (* cD ; cPsi |- t2' <= cPsi2 *)
@@ -528,7 +577,7 @@ struct
                 begin let (s', cPsi') = intersection (phat, (t1', t2'), cPsi1)
                       (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1 
                        then cD ; cPsi1 |- s' <= cPsi' *)
-                in let ss' = invert(s')
+                in let ss' = invert s'
                       (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
                 in let w = newMVar (cPsi', TClo(tP1, ss')) 
                      (* w::[s']^-1(tP1)[cPsi1'] in cD'            *)
@@ -538,16 +587,16 @@ struct
                 in
                   instantiateMVar (r1, Root(MVar(w, s'),Nil), !cnstrs1)
                 end
-              else addConstraint (cnstrs2, {contents=Eqn (phat, Clo sM, Clo sN)}) (*XXX double-check sM, sN *)
-            else addConstraint (cnstrs1, {contents=Eqn (phat, Clo sN, Clo sM)})
+              else addConstraint (cnstrs2, ref (Eqn (phat, Clo sM, Clo sN))) (*XXX double-check *)
+            else addConstraint (cnstrs1, ref (Eqn (phat, Clo sN, Clo sM)))  (*XXX double-check *)
           else
             if isPatSub t1' then (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
-              begin try let ss1 = invert (t1') (* cD ; cPsi1 |- ss1 <= cPsi *)
+              begin try let ss1 = invert t1' (* cD ; cPsi1 |- ss1 <= cPsi *)
                in let (sM2',sc) = prune (phat, sM2, ss1, r1, idsc) (* sM2 = ([ss1][s2]tM2 *)
                in
                 (sc(); instantiateMVar (r1, sM2', !cnstrs1))
               with NotInvertible -> 
-                addConstraint (cnstrs1, {contents= Eqn (phat, Clo sM1, Clo sM2)})
+                addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
               end
             else 
               if isPatSub t2' then try begin
@@ -565,7 +614,7 @@ struct
         end
 
       (* MVar-normal case *)
-      | ((Root(MVar(Inst(r, cPsi, tP, cnstrs) as u, t), tS), s1) as sM1, (tM2,s2) as sM2) -> 
+      | ((Root(MVar(Inst(r, cPsi, tP, cnstrs) as u, t), tS), s1) as sM1, ((tM2,s2) as sM2)) -> 
         let t' = comp t s1
         in 
           if isPatSub t' then
@@ -582,7 +631,7 @@ struct
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
 
       (* normal-MVar case *)
-      | ((tM1,s1) as sM1, (Root(MVar (Inst(r, cPsi, tP, cnstrs), t), tS), s2) as sM2) ->
+      | ((tM1,s1) as sM1, ((Root(MVar (Inst(r, cPsi, tP, cnstrs), t), tS), s2) as sM2)) ->
         let t' = comp t s2
         in 
           if isPatSub t' then 
@@ -619,7 +668,7 @@ struct
          else 
            addConstraint(cnstr, ref (Eqh (phat, h1, BVar k2)))
 
-      | (BVar k1, PVar(PInst(q, _, _, cnstr), s2) as h1) ->
+      | (BVar k1, (PVar(PInst(q, _, _, cnstr), s2) as h1)) ->
         if isPatSub s2 then 
           (match bvarSub k1 (invert s2) with 
              Head(BVar k1') -> instantiatePVar(q, BVar k1', !cnstr)
@@ -631,7 +680,7 @@ struct
                (* check s1', and s2' are pattern substitutions; possibly generate constraints
                   check intersection(s1',s2'); possibly prune;
                   check q1 = q2 *)
-               raise Unify "Not Implemented"
+               raise (Unify "Not Implemented")
                 
     (* Not Implemented: Cases for projections 
 
@@ -682,11 +731,11 @@ struct
     and awakeCnstr constrnt = match constrnt with
        None -> ()
       | Some {contents= Solved} -> awakeCnstr (nextCnstr ())
-      | Some {contents= Eqn (phat, tM1, tM2) as cnstr} ->
+      | Some ({contents= Eqn (phat, tM1, tM2)} as cnstr) ->
           (solveConstraint cnstr;
            unify1 (phat, (tM1, id), (tM2, id)))
 
-      | Some {contents= Eqh (phat, h1, h2) as cnstr} ->
+      | Some ({contents= Eqh (phat, h1, h2)} as cnstr) ->
           (solveConstraint cnstr;
            unifyHead (phat, h1, h2))
 
@@ -696,6 +745,5 @@ struct
 
 end
 
-module UnifyNoTrail = Unify (NoTrail)
-
-module UnifyTrail = Unify (Trail)
+module UnifyNoTrail = Make (Notrail.Notrail)
+module UnifyTrail = Make (Trail.Trail)

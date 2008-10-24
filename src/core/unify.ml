@@ -5,13 +5,10 @@
    @author Darin Morrison
 *)
 
-(* There may be a better way of arranging the signatures ("module types") and
-  structures across unify.ml, trail.ml, and notrail.ml; this is the only thing I stumbled
-  across that actually seems to work.
-
-  The functor itself is called Make (hence Unify.Make to other modules (?));
-  the instantiations UnifyTrail and UnifyNoTrail (hence Unify.UnifyTrail and
-  Unify.UnifyNoTrail to other modules (?)) are declared at the end of this file.
+(* The functor itself is called Make (hence Unify.Make to other
+   modules); the instantiations UnifyTrail and UnifyNoTrail (hence
+   Unify.UnifyTrail and Unify.UnifyNoTrail to other modules) are
+   declared at the end of this file.
 *)
 
 module type UNIFY = sig

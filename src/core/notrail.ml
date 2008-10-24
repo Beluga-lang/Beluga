@@ -1,5 +1,9 @@
-(* Not Trailing Abstract Operations *)
-(* Author: Roberto Virga *)
+(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+
+(** Not Trailing Abstract Operations
+
+   @author: Roberto Virga
+*)
 
 module Notrail = struct
 
@@ -8,8 +12,9 @@ module Notrail = struct
   let trail () = ()
 
   let suspend ((), copy) = ()
-  let resume ((),(), reset) = ()
-  
+
+  let resume ((), (), reset) = ()
+
   let reset () = ()
 
   let mark () = ()
@@ -17,4 +22,5 @@ module Notrail = struct
   let unwind ((), undo) = ()
 
   let log ((), action) = ()
-end (* module struct NoTrail *)
+
+end

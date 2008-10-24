@@ -8,7 +8,7 @@
 (* Unification *)
 (* Author: Brigitte Pientka *)
 (* Trailing is taken from Twelf 1.5 *)
-module Unify = functor (Trail   : TRAIL) ->
+module Unify (Trail   : TRAIL) =
 struct
     
   exception Unify of string
@@ -34,7 +34,7 @@ struct
           refM := None
       | InstHead refH ->
           refH := None
-      | Add (cnstrs as {contents= cnstr :: cnstrL}) ->
+      | Add ({contents= cnstr :: cnstrL} as cnstrs) ->
           cnstrs := cnstrL
       | Solve (cnstr, constrnt) ->
           cnstr := constrnt
@@ -51,7 +51,7 @@ struct
             Trail.log (globalTrail, Add cnstrs)
           )
 
-    let rec solveConstraint (cnstr as ref constrnt) =
+    let rec solveConstraint ({contents=constrnt} as cnstr) =
           (
             cnstr := Solved;
             Trail.log (globalTrail, Solve (cnstr, constrnt))
@@ -60,39 +60,36 @@ struct
     (* trail the given function *)
     let rec trail f =
       let
-        val _ = mark ()
-        val r = f()
-        val _ = unwind ()
+        _ = mark ()
+      and r = f()
+      and _ = unwind ()
       in
         r
-      end
 
     (* initial success contination used in prune *)
-    val idsc = fn () -> ()
+    let idsc = fun () -> ()
    (* ---------------------------------------------------------------------- *)
 
-    local
-      val awakenCnstrs = ref nil : cnstr list ref
-    in
-      let rec resetAwakenCnstrs () = (awakenCnstrs := nil)
+    let awakenCnstrs : cnstr list ref = ref []
 
-      let rec nextCnstr () = 
-            case !awakenCnstrs
-              of nil -> None
-               | (cnstr :: cnstrL) -> 
+    let rec resetAwakenCnstrs () = (awakenCnstrs := [])
+
+    let rec nextCnstr () = 
+            match !awakenCnstrs
+            with | [] -> None
+               | cnstr :: cnstrL -> 
                    (awakenCnstrs := cnstrL; Some cnstr)
 
-      let rec instantiatePVar(q, H, cnstrL) = 
+    let rec instantiatePVar(q, H, cnstrL) = 
         (q := Some H;
          Trail.log (globalTrail, InstHead q);
          awakenCnstrs := cnstrL @ !awakenCnstrs)
 
 
-      let rec instantiateMVar(u, tM, cnstrL) = 
+    let rec instantiateMVar(u, tM, cnstrL) = 
         (u := Some tM ;
          Trail.log (globalTrail, InstNormal u);
          awakenCnstrs := cnstrL @ !awakenCnstrs)
-    end
 
     (* ---------------------------------------------------------------------- *)
     (* Higher-order unification *)
@@ -132,8 +129,6 @@ struct
           - Weak head normal forms are either
             (Lam (x,tM) ,s)   or   (Root(H, tS), id).        
      *)
-    
-
 
     (* pruneCtx(phat, (t,Psi1), ss) = (Psi2, s')
 
@@ -148,25 +143,22 @@ struct
      *)
     let rec pruneCtx (phat, (t, Psi1), ss) = match (t, Psi1) with
          (Shift k, Null) ->  (id, Null)
-      | (Shift k, Psi1 as DDec(_, Decl(x,tA))) ->  
+      | (Shift k, DDec(_, Decl(x,tA))) ->  
           pruneCtx(phat, (Dot (Head(BVar (k+1)), Shift (k+1)), Psi1), ss)
       | (Dot(Head(BVar k), s), DDec (Psi1, Decl(x,tA))) -> 
-        let
-          val (s', Psi2) = pruneCtx(phat, (s, Psi1), ss)
+          let (s', Psi2) = pruneCtx(phat, (s, Psi1), ss)
               (* sP1 |- s' <= Psi2 *)
-        in 
+          in begin
           match bvarSub k ss with 
-            Undef ->  (comp s' shift, Psi2) (* Psi1, x:tA |- s' <= Psi2 *)
-          | Head(BVar n) ->                   (* Psi1, x:tA |- s' <= Psi2, x:([s']^-1 tA) 
-                                                 since tA = [s']([s']^-1 tA) *)
-              (dot1 s',  DDec(Psi2, Decl(x, TClo(tA, invert s'))))
-        end
+            | Undef ->  (comp s' shift, Psi2) (* Psi1, x:tA |- s' <= Psi2 *)
+            | Head(BVar n) ->                   (* Psi1, x:tA |- s' <= Psi2, x:([s']^-1 tA) 
+                                                    since tA = [s']([s']^-1 tA) *)
+                (dot1 s',  DDec(Psi2, Decl(x, TClo(tA, invert s'))))
+          end
       | (Dot(Undef, t), DDec(Psi1, _)) -> 
-        let
-          val (s', Psi2) = pruneCtx (phat, (t, Psi1), ss)  (* sP1 |- s' <= Psi2 *)
-        in 
+          let (s', Psi2) = pruneCtx (phat, (t, Psi1), ss)  (* sP1 |- s' <= Psi2 *)
+          in 
           (comp s' shift, Psi2)
-        end
 
     (* invNorm (cPsi, (tM, s), ss, rOccur) = [ss](tM[s])
 
@@ -183,28 +175,25 @@ struct
     let rec invNorm (phat, sM, ss, rOccur) =
           invNorm' (phat, Whnf.whnf sM, ss, rOccur)
 
-    and invNorm' (phat as (cvar, offset), sM, ss, rOccur) = match sM with
+    and invNorm' ((cvar, offset) as phat, sM, ss, rOccur) = match sM with
           (Lam (x, tM), s) ->
           Lam (x, invNorm ((cvar, offset +1), (tM, dot1 s), dot1 ss, rOccur))
 
-      | (Root(MVar(u as Inst(r, Psi1, tP, cnstrs), t), Nil), s) ->
+      | (Root(MVar(Inst(r, Psi1, tP, cnstrs) as u, t), Nil), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered; 
            hence tS = Nil and s = id *)
           if (rOccur = r) then raise NotInvertible
           else 
-            let
-              val t' = comp t s (* t' = t, since s = Id *)
+            let t' = comp t s (* t' = t, since s = Id *)
             in 
-              if isPatSub (t') then
-               let
-                 val (s',Psi2) = pruneCtx (phat, (t', Psi1), ss)
+              if isPatSub t' then
+               let (s',Psi2) = pruneCtx (phat, (t', Psi1), ss)
                      (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= Psi1
                         t' =  t o s 
                         cD ; cPsi |-  t' <= Psi1 and 
                         cD ; Psi1 |- s' <= Psi2 and 
                         cD ; cPsi  |- [t']s' <= Psi2  *)
-               in
-                 if isId s' then 
+               in begin if isId s' then 
                    Root(MVar(u, comp t' ss), Nil) 
                  (* this is what happens in Twelf -- not sure I
                   understand entirely why this is correct *)
@@ -215,22 +204,19 @@ struct
                 Root(MVar(u, invSub (phat, t', ss, rOccur)), Nil)
                (* this is what happens in Twelf -- not sure I
                understand entirely why this is correct *)
-                
-            end
-      | (Root(PVar (q as PInst(r, Psi1, tA, cnstrs),t), tS),  s) ->
+
+      | (Root(PVar (PInst(r, Psi1, tA, cnstrs) as q, t), tS),  s) ->
         (* by invariant tM is in whnf and meta-variables are lowered and s = id *)
-            let
-              val t' = comp t s (* t' = t, since s = Id *)
+            let t' = comp t s (* t' = t, since s = Id *)
             in 
-              if isPatSub (t') then
-               let
-                 val (s',Psi2) = pruneCtx (phat, (t', Psi1), ss)
+              if isPatSub t' then
+                let (s',Psi2) = pruneCtx (phat, (t', Psi1), ss)
                      (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= Psi1
                         t' =  t o s 
                         cD ; cPsi |-  t' <= Psi1 and 
                         cD ; Psi1 |- s' <= Psi2 and 
                         cD ; cPsi  |- [t']s' <= Psi2  *)
-               in
+                in begin
                  if isId s' then (* Psi1 = Psi2 *)
                    Root(PVar(q, comp t' ss), 
                         invSpine(phat, (tS,s), ss, rOccur)) 
@@ -244,21 +230,18 @@ struct
                      invSpine (phat, (tS,s), ss, rOccur))
                (* this is what happens in Twelf -- not sure I
                understand entirely why this is correct *)               
-            end
 
-      | (Root(Proj (PVar(q as PInst(r, Psi1, tA, cnstrs),t), i), tS), s) ->
-            let
-              val t' = comp t s   (* t' = t, since s = Id *)
-            in 
-              if isPatSub (t') then
-               let
-                 val (s',Psi2) = pruneCtx (phat, (t', Psi1), ss)
+      | (Root(Proj (PVar(PInst(r, Psi1, tA, cnstrs) as q,t), i), tS), s) ->
+            let t' = comp t s   (* t' = t, since s = Id *)
+            in begin
+              if isPatSub t' then
+               let (s',Psi2) = pruneCtx (phat, (t', Psi1), ss)
                      (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= Psi1
                         t' =  t o s r
                         cD ; cPsi |-  t' <= Psi1 and 
                         cD ; Psi1 |- s' <= Psi2 and 
                         cD ; cPsi  |- [t']s' <= Psi2  *)
-               in
+               in begin
                  if isId s' then (* Psi1 = Psi2 *)
                    Root(Proj (PVar(q, comp t' ss), i),
                         invSpine(phat, (tS,s), ss, rOccur)) 
@@ -286,18 +269,19 @@ struct
       | (SClo (tS, s'), s) ->
           invSpine (phat, (tS, comp s' s), ss, rOccur) 
 
-   (* invHead(phat, H, ss, rOccur) = H' 
+   (* invHead(phat, H, ss, rOccur) = h' 
        cases for parameter variable and meta-variables taken 
        care in invNorm' *) 
     and invHead (phat, head, ss, rOccur) = match head with
         BVar k ->
-        (case bvarSub k ss
-           of Undef -> raise NotInvertible
-            | Head(BVar k') -> BVar k')
+          begin match bvarSub k ss
+           with Undef -> raise NotInvertible
+            | Head(BVar k') -> BVar k'
+          end
       | Const _ -> head
-      | Proj (tB as BVar k, i) ->
-        (case bvarSub k ss
-           of Head(H as BVar k') -> H
+      | Proj (BVar k as tB, i) ->
+        (match bvarSub k ss
+           with Head(BVar k' as head) -> head
              | Undef -> raise NotInvertible)
   
     (* invSub (phat, s, ss, rOccur) = s' 
@@ -309,15 +293,15 @@ struct
             cD ; cPsi'' |- [ss]s <= cPsi'
 
      *)
-    and invSub (phat as (cvar, offset), s, ss, rOccur) =
+    and invSub ((cvar, offset) as phat, s, ss, rOccur) =
         match s with
             Shift n ->
                 if n < offset 
                   then invSub (phat, Dot (Head(BVar (n+1)), Shift (n+1)), ss, rOccur)
                 else comp s ss          (* must be defined *)
       | Dot (Head(BVar(n)), s') ->
-        (case bvarSub n ss
-           of Undef -> raise NotInvertible
+        (match bvarSub n ss
+           with Undef -> raise NotInvertible
             | Ft -> Dot (Ft, invSub (phat, s', ss, rOccur)))
       | Dot (Obj (tM), s') ->
           (* below may raise NotInvertible *)
@@ -338,27 +322,26 @@ struct
          (Dot (Head(BVar k1), s1), Dot (Head(BVar k2), s2), 
                       DDec (cPsi', Decl(x,tA))) ->
           if k1 = k2 then 
-            let val (s', cPsi') = intersection (phat, (s1,s2), cPsi')
+            begin let (s', cPsi') = intersection (phat, (s1,s2), cPsi')
                 (* cD ; cPsi |- s' : cPsi'' where cPsi'' =< cPsi' *)
-                val ss' = invert s'
+            in let ss' = invert s'
                 (* cD ; cPsi'' |- ss' <= cPsi *)
                 (* by assumption:
                    [s1]tA = [s2]tA = tA'  and cD ; cPsi |- tA' <= type *)
                 (* tA'' = [s']^-1(tA') = *)
-                val tA'' = TClo(tA, comp s1 ss')
+            in let tA'' = TClo(tA, comp s1 ss')
                  (* cD ; cPsi |- s', x/x <= cPsi, x:[s']^-1(tA') *)
             in 
               (dot1 s', DDec (cPsi', Decl(x,tA'')))
             end
           else  (* k1 = k2 *)
-            let
-               val (s', cPsi') = intersection (phat, (s1,s2), cPsi')
+            begin let (s', cPsi') = intersection (phat, (s1,s2), cPsi')
             in
                 (comp s' shift, cPsi')
             end
-      | (s1 as Dot _, Shift n2, cPsi) ->
+      | (Dot _ as s1, Shift n2, cPsi) ->
           intersection (phat, (s1, Dot (Head(BVar (n2+1)), Shift (n2+1))), cPsi)
-      | (Shift n1, s2 as Dot _, cPsi) ->
+      | (Shift n1, Dot _ as s2, cPsi) ->
           intersection (phat, (Dot (Head(BVar (n1+1)), Shift (n1+1)), s2), cPsi)
       | (Shift _ , Shift _, Null) -> (id, Null)
         (* both substitutions are the same number of shifts by invariant *)
@@ -395,31 +378,30 @@ struct
                     traversing [s]tM twice, once for pruning and once
                     for actually applying [ss]  to ([|rho|]([s]tM)).
     *)
+
     let rec prune  (phat, sM, ss, rOccur, sc) = 
           prune' (phat, Whnf.whnf sM, ss, rOccur, sc)
-    
-    and prune' (phat as (cvar, offset), sM, ss, rOccur, sc) = match sM with
+
+    and prune' ((cvar, offset) as phat, sM, ss, rOccur, sc) = match sM with
        (Lam (x, tM), s) ->
-        let 
-          val (tM',sc') = prune ((cvar, offset+1), (tM, dot1 s), dot1 ss, rOccur, sc)
+        let (tM',sc') = prune ((cvar, offset+1), (tM, dot1 s), dot1 ss, rOccur, sc)
         in 
           (Lam(x,tM'), sc')
-        end
-      | (tM as Root(MVar (u as Inst(r, Psi1, tP, cnstrs), t), Nil), s (* id *)) ->
+
+      | (Root(MVar (Inst(r, Psi1, tP, cnstrs) as u, t), Nil) as tM, s (* id *)) ->
         (* by invariant: MVars are lowered since tM is in whnf *)
         (if rOccur = r then raise Unify "Variable occurrence"
           else 
             if isPatSub t then
-              let
-                val (idsub, Psi2) = pruneCtx (phat, (comp t s, Psi1), ss)  
+              begin let (idsub, Psi2) = pruneCtx (phat, (comp t s, Psi1), ss)  
                 (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= Psi1
                  cD ; cPsi |-  t o s <= Psi1 and 
                  cD ; Psi1 |- idsub <= Psi2 and 
                  cD ; cPsi |- t o s o idsub <= Psi2 *)
-                 val v = newMVar(Psi2, tP) (* v::tP[Psi2] -- may need to shift tP*)
+              in let v = newMVar(Psi2, tP) (* v::tP[Psi2] -- may need to shift tP*)
                                           (* should be TClo(tP, invert idsub) *)
-               in
-                 (tM, fn () -> (instantiateMVar (r, Root(MVar(v, idsub), Nil), !cnstrs) ; sc ()))
+              in
+                 (tM, fun () -> (instantiateMVar (r, Root(MVar(v, idsub), Nil), !cnstrs) ; sc ()))
                       (* [|v[idsub] / u|] *)
               end 
             else (* s not patsub *)
@@ -427,87 +409,74 @@ struct
                  cD ; cPsi  |- s <= cPsi'     and cD ; cPsi''|- ss <= cPsi 
 
                  s' = [ss]([s]t) and  cD ; cPsi'' |- s' <= cPsi'  *)
-              (let
-                 val s' = invSub(phat, comp t s, ss, rOccur) 
+              (let s' = invSub(phat, comp t s, ss, rOccur) 
                in 
                  (Root(MVar(u,s'), Nil), sc)
-               end))
+               ))
               (* may raise notInvertible *)
-      | (Root(H as PVar(q as PInst(r, Psi1, tA, cnstrs), t), tS), s (* id *)) ->
+      | (Root(PVar(PInst(r, Psi1, tA, cnstrs) as q, t) as h, tS), s (* id *)) ->
         (if isPatSub t then
-           let
-             val (idsub, Psi2) = pruneCtx(phat, (comp t s, Psi1), ss)  
+           begin let (idsub, Psi2) = pruneCtx(phat, (comp t s, Psi1), ss)  
              (* cD ; Psi1 |- idsub <= Psi2 *)
-             val p = newPVar(Psi2, tA) (* p::tA[Psi2] *)
-             val sc1 = fn () ->  (instantiatePVar (r, PVar(p, idsub), !cnstrs) ; sc())
+           in let p = newPVar(Psi2, tA) (* p::tA[Psi2] *)
+           in let sc1 = fun () -> (instantiatePVar (r, PVar(p, idsub), !cnstrs) ; sc())
              (* [|p[idsub] / q|] *)
-             val (tS', sc') = pruneSpine (phat, (tS,s), ss, rOccur, sc1)
+           in let (tS', sc') = pruneSpine (phat, (tS,s), ss, rOccur, sc1)
            in
-             (Root(H, tS'), sc') 
+             (Root(h, tS'), sc') 
            end 
          else (* s not patsub *) 
-           let
-             val s' = invSub(phat, comp t s, ss, rOccur) 
-             val (tS', sc') = pruneSpine (phat, (tS,s), ss, rOccur, sc)
+           let s' = invSub(phat, comp t s, ss, rOccur) 
+             and (tS', sc') = pruneSpine (phat, (tS,s), ss, rOccur, sc)
            in 
              (Root(PVar(q,s'), tS'), sc')
-           end)
+           )
 
-      | (Root(H as Proj(PVar(q as PInst(r, Psi1, tA, cnstrs), t), i), tS), s (* id *)) ->
-       (if isPatSub t then
-          let
-            val (idsub, Psi2) = pruneCtx(phat, (comp t s, Psi1), ss)  
-            (* cD ; Psi1 |- idsub <= Psi2 *)
-            val p = newPVar(Psi2, tA) (* p::tA[Psi2] *)
-            val sc0 = fn () -> (instantiatePVar (r, PVar(p, idsub), !cnstrs) ; sc())
-            (* [|p[idsub] / q|] *)
-            val (tS',sc') = pruneSpine (phat, (tS,s), ss, rOccur, sc0)
-          in
-            (Root(H, tS'), sc')
-          end 
-        else (* s not patsub *) 
-          let
-            val s' = invSub(phat, comp t s, ss, rOccur) 
-            val (tS', sc') = pruneSpine (phat, (tS,s), ss, rOccur, sc)
-          in 
-            (Root(Proj(PVar(q,s'), i), tS'), sc')
-          end)
+      | (Root(Proj(PVar(PInst(r, Psi1, tA, cnstrs) as q, t), i) as h, tS), s (* id *)) ->
+           if isPatSub t then
+              let (idsub, Psi2) = pruneCtx(phat, (comp t s, Psi1), ss)  
+                (* cD ; Psi1 |- idsub <= Psi2 *)
+              in let p = newPVar(Psi2, tA) (* p::tA[Psi2] *)
+              in let sc0 = fun () -> (instantiatePVar (r, PVar(p, idsub), !cnstrs) ; sc())
+                (* [|p[idsub] / q|] *)
+              in let (tS',sc') = pruneSpine (phat, (tS,s), ss, rOccur, sc0)
+              in
+                (Root(h, tS'), sc')
+            else (* s not patsub *) 
+              let s' = invSub(phat, comp t s, ss, rOccur) 
+              in let (tS', sc') = pruneSpine (phat, (tS,s), ss, rOccur, sc)
+              in 
+                (Root(Proj(PVar(q,s'), i), tS'), sc')
               
-      | (Root (H as BVar k, tS), s (* = id *)) ->
-        (case bvarSub k ss
-           of Undef -> raise Unify "Parameter dependency"
-            | Head(H' as BVar k) -> 
-             let
-               val (tS',sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc)
+      | (Root ((*H as*) BVar k, tS), s (* = id *)) ->
+          begin match bvarSub k ss
+          with Undef -> raise Unify "Parameter dependency"
+            | Head(BVar k as h') -> 
+             let (tS',sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc)
              in 
-               (Root(H',tS'), sc')
-             end)
+               (Root(h',tS'), sc')
+          end
 
-      | (Root (H as Const _, tS), s (* id *)) ->
-        let
-           val (tS', sc') = pruneSpine(phat, (tS, s), ss, rOccur, sc)
-        in 
-           (Root(H, tS'), sc')
-        end
+      | (Root (Const _ as h, tS), s (* id *)) ->
+          let (tS', sc') = pruneSpine(phat, (tS, s), ss, rOccur, sc)
+          in (Root(h, tS'), sc')
 
-      | (Root (Proj (BVar(k), i), tS), s (* id *)) ->
-        let 
-          val (tS',sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc) 
-        in 
-          match bvarSub k ss with 
-            Head(H' as (BVar k')) -> (Root(Proj(H',i), tS') , sc')
-          | _ -> raise Unify "Parameter dependency"
-        end
+      | (Root (Proj (BVar k, i), tS), s (* id *)) ->
+          let (tS',sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc) 
+          in 
+            match bvarSub k ss with 
+              Head(BVar k' as h') -> (Root(Proj(h',i), tS') , sc')
+            | _ -> raise Unify "Parameter dependency"
 
     and pruneSpine (phat, spine, ss, rOccur, sc) = match spine with
         (Nil, s) -> (Nil , sc)
+
       | (App (tM, tS), s) ->
-        let
-           val (tM', sc') = prune (phat, (tM, s), ss, rOccur, sc)
-           val (tS', sc'') = pruneSpine (phat, (tS, s), ss, rOccur, sc')
+        let (tM', sc') = prune (phat, (tM, s), ss, rOccur, sc)
+        in let (tS', sc'') = pruneSpine (phat, (tS, s), ss, rOccur, sc')
         in 
           (App(tM',tS') , sc'')
-        end
+
       | (SClo (tS, s'), s) ->
           pruneSpine (phat, (tS, comp s' s), ss, rOccur, sc)
 
@@ -542,28 +511,26 @@ struct
 
     let rec unify (phat, sN, sM) = unify' (phat, Whnf.whnf sN, Whnf.whnf sM) 
     
-    and unify' (phat as (psi, offset), sN, sM) = match (sN, sM) with
+    and unify' ((psi, offset) as phat, sN, sM) = match (sN, sM) with
        ((Lam(x,tN), s1), (Lam(y,tM),s2)) ->
           unify ((psi, offset+1), (tN, dot1 s1), (tM, dot1 s2))
 
       (* MVar-MVar case *)
-      | (sM1 as (tM1 as Root(MVar(u as Inst(r1, Psi1, tP1, cnstrs1), t1), Nil) ,s1), 
-                      sM2 as (tM2 as Root(MVar(v as Inst(r2, Psi2, tP2, cnstrs2), t2), Nil), s2)) -> 
+      | ((Root(MVar(Inst(r1, Psi1, tP1, cnstrs1) as u, t1), Nil) as tM1 ,s1) as sM1, 
+         (Root(MVar(Inst(r2, Psi2, tP2, cnstrs2) as v, t2), Nil) as tM2, s2) as sM2) -> 
         (* by invariant: meta-variables are lowered during whnf, s1 = s2 = id *)
-        let
-          val t1' = comp t1 s1 (* cD ; cPsi |- t1' <= Psi1 *)
-          val t2' = comp t2 s2 (* cD ; cPsi |- t2' <= Psi2 *)
+          begin let t1' = comp t1 s1 (* cD ; cPsi |- t1' <= Psi1 *)
+          and t2' = comp t2 s2 (* cD ; cPsi |- t2' <= Psi2 *)
         in
           if r1 = r2 then (* by invariant:  Psi1 = Psi2, tP1 = tP2, cnstr1 = cnstr2 *)
-            if isPatSub(t1') then 
-              if isPatSub(t2') then
-                let
-                  val (s', cPsi') = intersection (phat, (t1', t2'), Psi1)
+            if isPatSub t1' then 
+              if isPatSub t2' then
+                begin let (s', cPsi') = intersection (phat, (t1', t2'), Psi1)
                       (* if cD ; cPsi |- t1' <= Psi1 and cD ; cPsi |- t2' <= Psi1 
                        then cD ; Psi1 |- s' <= cPsi' *)
-                  val ss' = invert(s')
+                in let ss' = invert(s')
                       (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
-                  val w = newMVar (cPsi', TClo(tP1, ss')) 
+                in let w = newMVar (cPsi', TClo(tP1, ss')) 
                      (* w::[s']^-1(tP1)[Psi1'] in cD'            *)
                      (* cD' ; Psi1 |- w[s'] <= [s']([s']^-1 tP1) 
                         [|w[s']/u|](u[t]) = [t](w[s'])
@@ -574,75 +541,65 @@ struct
               else addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
             else addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
           else
-            if isPatSub(t1') then (* cD ; cPsi' |- t1 <= Psi1 and cD ; cPsi |- t1 o s1 <= Psi1 *)
-               let
-                val ss1 = invert (t1') (* cD ; Psi1 |- ss1 <= cPsi *)
-                val (sM2',sc) = prune (phat, sM2, ss1, r1, idsc) (* sM2 = ([ss1][s2]tM2 *)
-              in
+            if isPatSub t1' then (* cD ; cPsi' |- t1 <= Psi1 and cD ; cPsi |- t1 o s1 <= Psi1 *)
+              begin try let ss1 = invert (t1') (* cD ; Psi1 |- ss1 <= cPsi *)
+               in let (sM2',sc) = prune (phat, sM2, ss1, r1, idsc) (* sM2 = ([ss1][s2]tM2 *)
+               in
                 (sc(); instantiateMVar (r1, sM2', !cnstrs1))
-              end
-              handle NotInvertible -> 
+              with NotInvertible -> 
                 addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
+              end
             else 
-              if isPatSub(t2') then 
-                let
-                  val ss2 = invert t2'(* cD ; Psi2 |- ss2 <= cPsi *)
-                  val (sM1', sc') = prune(phat, sM1, ss2, r2, idsc)
+              if isPatSub t2' then try begin
+                let ss2 = invert t2'(* cD ; Psi2 |- ss2 <= cPsi *)
+                in let (sM1', sc') = prune(phat, sM1, ss2, r2, idsc)
                 in
                   (sc'() ; instantiateMVar (r2, sM1', !cnstrs2))
-                end
-              handle NotInvertible -> 
+              end with NotInvertible -> 
                 addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
               else
                 (* neither t1' nor t2' are pattern substitutions *)
-                let
-                  val cnstr = ref (Eqn (phat, Clo sM1, Clo sM2))
+                let cnstr = ref (Eqn (phat, Clo sM1, Clo sM2))
                 in
                   addConstraint (cnstrs1, cnstr)
-                end
         end
 
       (* MVar-normal case *)
-      | (sM1 as (Root(MVar(u as Inst(r, cPsi, tP, cnstrs), t), tS), s1), sM2 as (tM2,s2)) -> 
-        let
-          val t' = comp t s1
+      | ((Root(MVar(Inst(r, cPsi, tP, cnstrs) as u, t), tS), s1) as sM1, (tM2,s2) as sM2) -> 
+        let t' = comp t s1
         in 
-          if isPatSub t' then 
-            let 
-              val ss = invert t'
-              val (sM2', sc) = prune (phat, sM2, ss, r, idsc)    
+          if isPatSub t' then
+            try begin
+            let ss = invert t'
+            in let (sM2', sc) = prune (phat, sM2, ss, r, idsc)    
             in
               sc ();
               instantiateMVar (r, sM2', !cnstrs)
             end
-              handle NotInvertible -> 
+            with NotInvertible -> 
                 addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
           else
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
-        end
 
       (* normal-MVar case *)
-      | (sM1 as (tM1,s1), sM2 as (Root(MVar (u as Inst(r, cPsi, tP, cnstrs), t), tS), s2)) ->
-        let
-          val t' = comp t s2
+      | ((tM1,s1) as sM1, (Root(MVar (Inst(r, cPsi, tP, cnstrs), t), tS), s2) as sM2) ->
+        let t' = comp t s2
         in 
           if isPatSub t' then 
-            let
-              val ss = invert t'
-              val (sM1', sc) = prune (phat, sM1, ss, r, idsc)
+            try begin let ss = invert t'
+            in let (sM1', sc) = prune (phat, sM1, ss, r, idsc)
             in
               sc ();
               instantiateMVar (r, Clo (tM1, ss), !cnstrs)
             end
-              handle NotInvertible -> 
+            with NotInvertible -> 
                 addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
           else
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
-        end
 
-      | ((Root(H1,tS1), s1), (Root(H2, tS2), s2)) ->
+      | ((Root(h1,tS1), s1), (Root(h2, tS2), s2)) ->
         (* s1 = s2 = id by whnf *)
-        (unifyHead(phat, H1, H2); unifySpine (phat, (tS1, s1), (tS2, s2)))
+        (unifyHead(phat, h1, h2); unifySpine (phat, (tS1, s1), (tS2, s2)))
           
       | (sM1, sM2) -> 
           raise Unify ("Expression clash")
@@ -654,21 +611,21 @@ struct
       | (Const c1, Const c2) ->
         if (c1 = c2) then ()
         else raise Unify "Constant clash"
-      | (H1 as PVar(PInst(q, _, _, cnstr),s1), BVar k2) ->
+      | (PVar(PInst(q, _, _, cnstr),s1) as h1, BVar k2) ->
          if isPatSub s1 then 
            (match bvarSub k2 (invert s1) with 
-              Head(H' as (BVar k2')) -> instantiatePVar(q, BVar(k2'), !cnstr)
+              Head(BVar k2') -> instantiatePVar(q, BVar(k2'), !cnstr)
            | _ -> raise Unify "Parameter violation")
          else 
-           addConstraint(cnstr, ref (Eqh (phat, H1, BVar k2)))
+           addConstraint(cnstr, ref (Eqh (phat, h1, BVar k2)))
 
-      | ((BVar k1), (H1 as PVar(PInst(q, _, _, cnstr), s2))) ->
+      | (BVar k1, PVar(PInst(q, _, _, cnstr), s2) as h1) ->
         if isPatSub s2 then 
           (match bvarSub k1 (invert s2) with 
-             Head(H' as BVar k1') -> instantiatePVar(q, BVar k1', !cnstr)
+             Head(BVar k1') -> instantiatePVar(q, BVar k1', !cnstr)
            | _ -> raise Unify "Parameter violation")
         else 
-          addConstraint(cnstr, ref (Eqh (phat, BVar k1, H1)))
+          addConstraint(cnstr, ref (Eqh (phat, BVar k1, h1)))
 
       | (PVar(PInst(q1, _, _, cnstr1), s1'), PVar(PInst(q2, _, _, cnstr2), s2')) ->
                (* check s1', and s2' are pattern substitutions; possibly generate constraints
@@ -724,14 +681,14 @@ struct
 
     and awakeCnstr constrnt = match constrnt with
        None -> ()
-      | Some(ref Solved) -> awakeCnstr (nextCnstr ())
-      | Some(cnstr as ref (Eqn (phat, tM1, tM2))) ->
+      | Some {contents= Solved} -> awakeCnstr (nextCnstr ())
+      | Some {contents= Eqn (phat, tM1, tM2) as cnstr} ->
           (solveConstraint cnstr;
            unify1 (phat, (tM1, id), (tM2, id)))
 
-      | Some(cnstr as ref (Eqh (phat, H1, H2))) ->
+      | Some {contents= Eqh (phat, h1, h2) as cnstr} ->
           (solveConstraint cnstr;
-           unifyHead (phat, H1, H2))
+           unifyHead (phat, h1, h2))
 
     let unify (phat, sM1, sM2) =
       (resetAwakenCnstrs (); 
@@ -741,4 +698,4 @@ end
 
 module UnifyNoTrail = Unify (NoTrail)
 
-module UnifyTrail = Unify(Trail)
+module UnifyTrail = Unify (Trail)

@@ -45,7 +45,7 @@ let main () =
                 fprintf std_formatter   "## Pretty Printing External Syntax: %s ##\n" file_name
               ; print_sgn Pretty.Ext.ppr_sgn_decl decls
               ; fprintf std_formatter "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
-              ; let internal_decls = List.map Typerecon.internalize_sgn_decl decls
+              ; let internal_decls = List.map Reconstruct.internalize_sgn_decl decls
               in print_sgn Pretty.Int.ppr_sgn_decl internal_decls
               ; fprintf std_formatter "\n----------------------------------\n\n"
 (*              ; let cD = ____

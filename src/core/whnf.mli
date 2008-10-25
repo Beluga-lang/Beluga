@@ -7,8 +7,8 @@
 
 open Syntax.Int
 
-val whnf     : nclo -> nclo 
-val whnfTyp  : tclo -> tclo 
+val whnf     : nclo -> nclo
+val whnfTyp  : tclo -> tclo
 val norm     : nclo -> normal
 
 val conv       : nclo -> nclo -> bool

@@ -5,16 +5,10 @@
    @author Darin Morrison
 *)
 
-  open Syntax.Int
+open Syntax.Int
 
-  exception Error of string
+exception Error of string
 
-  val check : mctx -> dctx -> nclo -> tclo -> unit
+val check : mctx -> dctx -> nclo -> tclo -> unit
 
-  val check_sgn_decls : sgn_decl list -> unit
-
-(*
-
-module Cmp : sig
-end
-*)
+val check_sgn_decls : sgn_decl list -> unit

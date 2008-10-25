@@ -112,7 +112,7 @@ module BVar = struct
 
   let index_of_name store n =
     let rec loop i = function
-(*      | []      -> raise Not_found *)
+      | []      -> raise Not_found
       | (e::es) -> if e.name = n
                    then i
                    else loop (i+1) es in

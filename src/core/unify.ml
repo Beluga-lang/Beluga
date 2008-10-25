@@ -6,6 +6,7 @@
    @author Brigitte Pientka
 *)
 
+open Contexts
 open Syntax.Int
 
 

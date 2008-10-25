@@ -150,46 +150,4 @@ module Int = struct
   type trec_clo = typ_rec * sub
   type mctx     = ctx_decl ctx
 
-
-
-  (*------------------------------------------------------------------------ *)
-
-  let dctxToHat = assert false
-
-  let ctxDec = assert false
-
-  let ctxSigmaDec = assert false
-
-  let ctxVar = assert false
-
-  let mctxMDec = assert false
-
-  let mctxPDec = assert false
-
-  (*************************************)
-  (* Creating new contextual variables *)
-  (*************************************)
-
-  (* newMVar (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
-
-     Invariant:
-
-          tA =   Atom (a, S)
-      or  tA =   Pi (x:tB, tB')
-      but tA =/= TClo (_, _)
-  *)
-  let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
-
-
-
-  (* newPVar (cPsi, tA) = p
-
-     Invariant:
-
-           tA =   Atom (a, S)
-       or  tA =   Pi (x:tB, tB')
-       but tA =/= TClo (_, _)
-  *)
-  let newPVar (cPsi, tA) = PInst (ref None, cPsi, tA, ref [])
-
 end

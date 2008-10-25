@@ -10,6 +10,7 @@
    Normalization, and alpha-conversion *)
 (* Author: Brigitte Pientka *)
 
+open Contexts
 open Substitutions
 open Syntax.Int
 

@@ -9,6 +9,7 @@
 
 exception Error of string
 
+open Contexts
 open Store.Cid
 open Substitutions
 open Syntax.Int

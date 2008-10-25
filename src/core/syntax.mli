@@ -150,20 +150,4 @@ module Int : sig
   type trec_clo = typ_rec * sub
   type mctx     = ctx_decl ctx
 
-
-
-  (*------------------------------------------------------------------------ *)
-
-  val dctxToHat   : dctx -> psi_hat
-
-  val ctxDec      : dctx -> int -> typ_decl
-  val ctxSigmaDec : dctx -> int -> sigma_decl
-  val ctxVar      : dctx -> cvar option
-
-  val mctxMDec    : mctx -> int -> typ * dctx
-  val mctxPDec    : mctx -> int -> typ * dctx
-
-  val newMVar     : dctx * typ -> cvar
-  val newPVar     : dctx * typ -> cvar
-
 end

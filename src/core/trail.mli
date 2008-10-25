@@ -2,6 +2,9 @@
 
 (** Trailing Abstract Operations
 
+    @author Joshua Dunfield
+    @author Darin Morrison
+    @author Brigitte Pientka
     @author Roberto Virga
 *)
 

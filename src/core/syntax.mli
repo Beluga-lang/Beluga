@@ -2,8 +2,8 @@
 
 (**
    @author Renaud Germain
-   @author Brigitte Pientka
    @author Darin Morrison
+   @author Brigitte Pientka
 *)
 
 (** Syntax for the LF and Computation languages *)

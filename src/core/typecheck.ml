@@ -1,9 +1,10 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
+   @author Joshua Dunfield
    @author Renaud Germain
-   @author Brigitte Pientka
    @author Darin Morrison
+   @author Brigitte Pientka
 *)
 
 exception Error of string

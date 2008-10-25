@@ -1,6 +1,7 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
+   @author Joshua Dunfield
    @author Darin Morrison
 *)
 

@@ -1,8 +1,8 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Darin Morrison
    @author Renaud Germain
+   @author Darin Morrison
 *)
 
 

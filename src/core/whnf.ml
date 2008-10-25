@@ -1,8 +1,9 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Brigitte Pientka
+   @author Joshua Dunfield
    @author Darin Morrison
+   @author Brigitte Pientka
 *)
 
 (* Weak Head Normalization,

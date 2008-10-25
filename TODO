@@ -15,10 +15,24 @@ CRITICAL
 IMPORTANT
 =========
 
+* 10/25/08 :: Functions that just tuple back up all of their arguments
+              should maybe use f = function  -dwm
+
+* 10/25/08 :: Some functions named with ' and 1.  What's the
+              difference / significance?  -dwm
+
+* 10/25/08 :: Many of the longer pattern cases could probably be
+              greatly simplified using pattern guards.  Investigate.
+              -dwm
+
+* 10/25/08 :: Many invariants / comments written in different styles,
+              making them harder to read.  Should revisit as group.
+              -dwm
+
 * 10/24/08 :: Add unify.mli.  -dwm
 
 * 10/23/08 :: Investigate magic parens, i.e., Foo of (bar * baz)
-                vs. Foo of bar * baz.  -dwm
+              vs. Foo of bar * baz.  -dwm
 
 * 10/22/08 :: Add target for debugging, add documentaiton on how to
               use.  -dwm

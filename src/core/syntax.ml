@@ -477,10 +477,6 @@ module Int = struct
 
   let mctxPDec = assert false
 
-  let constType = assert false
-
-  let tconstKind = assert false
-
   (*************************************)
   (* Creating new contextual variables *)
   (*************************************)

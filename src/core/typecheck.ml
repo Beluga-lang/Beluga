@@ -6,9 +6,11 @@
    @author Darin Morrison
 *)
 
-  exception Error of string
+exception Error of string
 
-  module I = Syntax.Int
+module I = Syntax.Int
+
+open Store.Cid
 
     (* check cD cPsi (tM, s1) (tA, s2) = ()
 
@@ -99,7 +101,7 @@
 
          These cases are impossible at the moment.
        *)
-      | I.Const c -> I.constType c
+      | I.Const c -> (Term.get c).Term.typ
 
       | I.MVar(I.Offset u, s) ->
         let
@@ -192,7 +194,7 @@
     (* checkTyp (cD, cPsi, (tA,s)) succeeds iff cD ; cPsi |- [s]tA <= type *)
     let rec checkTyp' (cD, cPsi, (tA,s)) = match (tA, s) with
          (I.Atom(a, tS),s) ->
-            checkSpineK cD cPsi (tS,s) (I.tconstKind(a), I.id)
+            checkSpineK cD cPsi (tS,s) ((Typ.get a).Typ.kind, I.id)
       | (I.PiTyp(I.TypDecl(x, tA), tB), s)  ->
         (   checkTyp cD cPsi (tA,s); 
             checkTyp cD (I.DDec(cPsi, I.TypDecl(x, I.TClo(tA,s)))) (tB, I.dot1 s)   )

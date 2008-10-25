@@ -191,9 +191,6 @@ module Int : sig
   val mctxMDec    : mctx -> int -> typ * dctx
   val mctxPDec    : mctx -> int -> typ * dctx
 
-  val constType   : cid_term -> typ
-  val tconstKind  : cid_typ  -> kind
-
   val newMVar     : dctx * typ -> cvar
   val newPVar     : dctx * typ -> cvar
 

@@ -4,6 +4,7 @@ Gensym
 Id
 Reconstruct
 Store
+Substitutions
 Syntax
 Trail
 Unify

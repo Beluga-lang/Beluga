@@ -6,6 +6,10 @@
    @author Brigitte Pientka
 *)
 
+open Syntax.Int
+
+
+
 (* The functor itself is called Make (hence Unify.Make to other
    modules); the instantiations UnifyTrail and UnifyNoTrail (hence
    Unify.UnifyTrail and Unify.UnifyNoTrail to other modules) are
@@ -14,7 +18,6 @@
 
 module type UNIFY = sig
 
-  open Syntax.Int
   type unifTrail
 
   (* trailing of variable instantiation *)
@@ -53,7 +56,9 @@ struct
   exception Unify of string
   exception NotInvertible
 
-  open Syntax.Int
+  open Substitutions
+
+
 
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)

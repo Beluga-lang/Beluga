@@ -10,6 +10,7 @@
 exception Error of string
 
 open Store.Cid
+open Substitutions
 open Syntax.Int
 
 

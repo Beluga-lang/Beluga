@@ -10,7 +10,10 @@
    Normalization, and alpha-conversion *)
 (* Author: Brigitte Pientka *)
 
+open Substitutions
 open Syntax.Int
+
+
 
 exception Error of string
 

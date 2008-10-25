@@ -15,8 +15,12 @@ CRITICAL
 IMPORTANT
 =========
 
+* 10/25/08 :: Should probably make clo type abbreviations actual
+              datatypes with constructors.  Clearer this way, esp. since we are
+              currying functions.  -dwm
+
 * 10/25/08 :: Functions that just tuple back up all of their arguments
-              should maybe use f = function  -dwm
+              should maybe use f = function.  -dwm
 
 * 10/25/08 :: Some functions named with ' and 1.  What's the
               difference / significance?  -dwm

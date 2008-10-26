@@ -2,6 +2,6 @@
 *.native
 *.top
 *~
+.omake*
 .DS_Store
 src/_build
-

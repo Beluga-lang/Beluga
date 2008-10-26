@@ -329,5 +329,5 @@ let rec check_sgn_decls = function
       and cPsi = Null
       and s    = id
       in
-          check cD cPsi (Root (Const c, Nil), s) (a, s)
+          checkTyp cD cPsi (a, s)
         ; check_sgn_decls decls

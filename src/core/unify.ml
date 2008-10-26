@@ -6,7 +6,7 @@
    @author Brigitte Pientka
 *)
 
-open Contexts
+open Context
 open Syntax.Int
 
 
@@ -54,12 +54,12 @@ end
 module Make (T : Trail.TRAIL) =
 struct
 
+  open Substitution
+
+
+
   exception Unify of string
   exception NotInvertible
-
-  open Substitutions
-
-
 
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
@@ -78,8 +78,6 @@ struct
       | InstNormal refM         -> refM   := None
       | InstHead   refH         -> refH   := None
       | Add cnstrs              -> cnstrs := List.tl !cnstrs
-(* was | Add ({contents = cnstr :: cnstrL} as cnstrs) ->
-          cnstrs := cnstrL *)
       | Solve (cnstr, constrnt) -> cnstr  := constrnt
 
     let rec reset  () = T.reset globalTrail

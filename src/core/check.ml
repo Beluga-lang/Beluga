@@ -9,9 +9,9 @@
 
 exception Error of string
 
-open Contexts
+open Context
 open Store.Cid
-open Substitutions
+open Substitution
 open Syntax.Int
 
 
@@ -327,7 +327,7 @@ let rec check_sgn_decls = function
   | SgnConst (c, a) :: decls ->
       let cD   = Empty
       and cPsi = Null
-      and s    = Substitutions.id
+      and s    = id
       in
           check cD cPsi (Root (Const c, Nil), s) (a, s)
         ; check_sgn_decls decls

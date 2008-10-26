@@ -2,7 +2,7 @@ tp : type.
 
 tp/unit : tp.
 
-tp/arr  : tp -> tp -> t.
+tp/arr  : tp -> tp -> tp.
 
 
 

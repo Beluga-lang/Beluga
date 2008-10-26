@@ -58,82 +58,89 @@ module Int = struct
     | Typ
     | PiKind of typ_decl * kind
 
-  and typ_decl =
-    | TypDecl of name * typ
+  and typ_decl =                         (* LF Declarations                *)
+    | TypDecl of name * typ              (* D := x:A                       *)
 
   and sigma_decl =
-    | SigmaDecl of name * typ_rec
+    | SigmaDecl of name * typ_rec        (* x:Sigma x1:A1 .... xk:Ak       *)
 
-  and ctx_decl =
-    | MDecl of name * typ  * dctx
-    | PDecl of name * typ  * dctx
-    | SDecl of name * dctx * dctx
+  and ctx_decl =                         (* Contextual Declarations        *)
+    | MDecl of name * typ  * dctx        (* D ::= u::A[Psi]                *)
+    | PDecl of name * typ  * dctx        (*   |  p::A[Psi]                 *)
+    | SDecl of name * dctx * dctx        (*   |  s::A[Psi]                 *)
+                                         (* Potentially, A is Sigma type ? *)
 
-  and typ =
-    | Atom  of cid_typ * spine
-    | PiTyp of typ_decl * typ
-    | TClo  of typ * sub
+  and typ =                              (* LF level                       *)
+    | Atom  of cid_typ * spine           (* A ::= a M1 ... Mn              *)
+    | PiTyp of typ_decl * typ            (*   | Pi x:A.B                   *)
+    | TClo  of typ * sub                 (*   | TClo(A,s)                  *)
 
-  and normal =
-    | Lam  of name * normal
-    | Root of head * spine
-    | Clo  of (normal * sub)
+  and normal =                           (* normal terms                   *)
+    | Lam  of name * normal              (* M ::= \x.M                     *)
+    | Root of head * spine               (*   | h . S                      *)
+    | Clo  of (normal * sub)             (*   | Clo(N,s)                   *)
 
   and head =
-    | BVar  of offset
-    | Const of cid_term
-    | MVar  of cvar * sub
-    | PVar  of cvar * sub
-    | AnnH  of head * typ
-    | Proj  of head * int
+    | BVar  of offset                    (* H ::= x                        *)
+    | Const of cid_term                  (*   | c                          *)
+    | MVar  of cvar * sub                (*   | u[s]                       *)
+    | PVar  of cvar * sub                (*   | p[s]                       *)
+    | AnnH  of head * typ                (*   | (H:A)                      *)
+    | Proj  of head * int                (*   | #k(x) | #k(p[s])           *)
 
-  and spine =
-    | Nil
-    | App  of normal * spine
-    | SClo of spine * sub
+  and spine =                            (* spine                          *)
+    | Nil                                (* S ::= Nil                      *)
+    | App  of normal * spine             (*   | M . S                      *)
+    | SClo of spine * sub                (*   | SClo(S,s)                  *)
 
-  and sub =
-    | Shift of offset
-    | SVar  of cvar * sub
-    | Dot   of front * sub
+  and sub =                              (* Substitutions                  *)
+    | Shift of offset                    (* sigma ::= ^n                   *)
+    | SVar  of cvar * sub                (*       | s[sigma]               *)
+    | Dot   of front * sub               (*       | Ft . s                 *)
 
-  and front =
-    | Head of head
-    | Obj  of normal
-    | Undef
+  and front =                            (* Fronts:                        *)
+    | Head of head                       (* Ft ::= H                       *)
+    | Obj  of normal                     (*    | N                         *)
+    | Undef                              (*    | _                         *)
 
-  and cvar =
-    | Offset of offset
-    | Inst   of normal option ref * dctx * typ * cnstr list ref
-    | PInst  of head   option ref * dctx * typ * cnstr list ref
-    | CInst  of dctx   option ref * schema
+  and cvar =                                                     (* Contextual Variables                  *)
+    | Offset of offset                                           (* Bound Variables                       *)
+    | Inst   of normal option ref * dctx * typ * cnstr list ref  (* D ; Psi |- M <= A provided constraint *)
+    | PInst  of head   option ref * dctx * typ * cnstr list ref  (* D ; Psi |- H => A                     *)
+    | CInst  of dctx   option ref * schema                       (* D       |- Psi : schema               *)
 
-  and constrnt =
-    | Solved
-    | Eqn of psi_hat * normal * normal
-    | Eqh of psi_hat * head * head
+  and constrnt =                         (* Constraint                     *)
+    | Solved                             (* constraint ::= solved          *)
+    | Eqn of psi_hat * normal * normal   (*            | Psi |-(M1 == M2)  *)
+    | Eqh of psi_hat * head * head       (*            | Psi |-(H1 == H2)  *)
 
   and cnstr = constrnt ref
 
-  and dctx =
-    | Null
-    | CtxVar   of cvar
-    | DDec     of dctx * typ_decl
-    | SigmaDec of dctx * sigma_decl
+  and dctx =                             (* LF Context                              *)
+    | Null                               (* Psi, Phi ::= Null                       *)
+    | CtxVar   of cvar                   (*          | psi                          *)
+    | DDec     of dctx * typ_decl        (*          | Psi, x:A                     *)
+    | SigmaDec of dctx * sigma_decl      (*          | Psi, x:Sigma x1:A1...xn:An.A *)
 
-  and 'a ctx =
-    | Empty
-    | Dec of 'a ctx * 'a
+  and 'a ctx =                           (* Generic context declaration    *)
+    | Empty                              (* Context                        *)
+    | Dec of 'a ctx * 'a                 (* C ::= Empty                    *)
+                                         (*   | C, x:'a                    *)
 
-  and sch_elem =
-    | SchElem of typ ctx * sigma_decl
+  and sch_elem =                         (* Schema Element                               *)
+    | SchElem of typ ctx * sigma_decl    (* Pi x1:A1 ... xn:An. Sigma y1:B1 ... yk:Bk. B *)
+                                         (* Sigma-types not allowed in Ai                *)
 
   and schema =
     | Schema of sch_elem list
 
-  and psi_hat = cvar option * offset
+  and psi_hat = cvar option * offset     (* Psihat ::=         *)
+                                         (*        | psi       *)
+                                         (*        | .         *)
+                                         (*        | Psihat, x *)
 
-  and typ_rec = typ list
+  and typ_rec = typ list                 (* Sigma x1:A1 ... xk:Ak          *)
+                                         (* should not be a list ... -bp   *)
 
   type sgn_decl =
     | SgnTyp   of cid_typ  * kind
@@ -145,9 +152,11 @@ module Int = struct
   (* Type Abbreviations *)
   (**********************)
 
-  type nclo     = normal  * sub
-  type tclo     = typ     * sub
-  type trec_clo = typ_rec * sub
-  type mctx     = ctx_decl ctx
+  type nclo     = normal  * sub          (* Ns = N[s]                      *)
+  type tclo     = typ     * sub          (* As = A[s]                      *)
+  type trec_clo = typ_rec * sub          (* Arec[s]                        *)
+  type mctx     = ctx_decl ctx           (* Modal Context  D: CDec ctx     *)
+                                         (* Comp. Context  G: VDec ctx     *)
+                                         (* CtxVar Context O: CtxDec ctx   *)
 
 end

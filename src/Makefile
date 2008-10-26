@@ -1,10 +1,10 @@
 # -*- coding: utf-8; indent-tabs-mode: t; -*-
 
-CORE_CFLAGS=-cflags '-w A','-warn-error Aepyz'
+CORE_CFLAGS=-cflags '-g','-w A','-warn-error Aepyz'
 CORE_CFLAGS_OPT=-cflags -noassert,-unsafe,'-ccopt -O3','-w A','-warn-error Aepyz'
 CORE_DIR=core
 CORE_DOC_NAME=core
-CORE_LFLAGS=
+CORE_LFLAGS=-lflags '-g'
 CORE_LIBS=
 CORE_NAME=core
 
@@ -12,23 +12,23 @@ DOC_CFLAGS=
 DOC_LFLAGS=
 DOC_LIBS=
 
-FRONT_CFLAGS=-cflags '-w A','-warn-error Aepyz'
+FRONT_CFLAGS=-cflags '-g','-w A','-warn-error Aepyz'
 FRONT_CFLAGS_OPT=-cflags -noassert,-unsafe,'-ccopt -O3'
 FRONT_DIR=frontend
 FRONT_DOC_NAME=frontend
-FRONT_LFLAGS=
+FRONT_LFLAGS=-lflags '-g'
 FRONT_LIBS=
 FRONT_NAME=frontend
 
-INT_CFLAGS=-cflags '-w A','-warn-error Aepyz'
+INT_CFLAGS=-cflags '-g','-w A','-warn-error Aepyz'
 INT_CFLAGS_OPT=-cflags -noassert,-unsafe,'-ccopt -O3'
 INT_DIR=tools
 INT_DOC_NAME=
-INT_LFLAGS=
+INT_LFLAGS=-lflags '-g'
 INT_LIBS=
 INT_NAME=interpreter
 
-TOP_CFLAGS=-cflags '-w A','-warn-error Aepyz'
+TOP_CFLAGS=-cflags '-g','-w A','-warn-error Aepyz'
 TOP_CFLAGS_OPT=
 TOP_LFLAGS=
 TOP_LIBS=
@@ -68,16 +68,16 @@ world.opt:	opt
 beluga-core:
 	@echo "\nBuilding Beluga Core..."
 	@${OCAMLBUILD} ${JOBS} ${CORE_CFLAGS} ${CORE_LFLAGS} ${CORE_LIBS}\
-	 ${CORE_NAME}.cmx
+	 ${CORE_NAME}.cmx ${CORE_NAME}.cmo
 
 beluga-frontend:
 	@echo "\nBuilding Beluga Frontend..."
 	@${OCAMLBUILD} ${JOBS} ${FRONT_CFLAGS} ${FRONT_LFLAGS} ${FRONT_LIBS}\
-	 ${FRONT_NAME}.cmx
+	 ${FRONT_NAME}.cmx ${FRONT_NAME}.cmo
 
 beluga-interpreter:
 	@echo "\nBuilding Beluga Interpreter..."
-	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS} ${INT_LFLAGS} ${INT_LIBS} ${INT_DIR}/${INT_NAME}.native
+	@${OCAMLBUILD} ${JOBS} ${INT_CFLAGS} ${INT_LFLAGS} ${INT_LIBS} ${INT_DIR}/${INT_NAME}.native ${INT_DIR}/${INT_NAME}.byte
 
 
 
@@ -85,7 +85,7 @@ beluga-interpreter:
 beluga-core-opt:
 	@echo "\nBuilding Beluga Core... (Optimized)"
 	@${OCAMLBUILD} ${JOBS} ${CORE_CFLAGS_OPT} ${CORE_LFLAGS} ${CORE_LIBS}\
-	${CORE_NAME}.cmx
+	 ${CORE_NAME}.cmx
 
 beluga-frontend-opt:
 	@echo "\nBuilding Beluga Frontend... (Optimized)"

@@ -1,0 +1,32 @@
+# -*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+# Declare the directories we need to include other libraries from
+OCAMLINCLUDES += +camlp4 ../../lib/core ../../lib/frontend
+
+# Declare the names of the libraries we depend on
+OCAML_LIBS[]  +=
+        camlp4lib
+        ../../lib/core/beluga-core
+        ../../lib/frontend/beluga-frontend
+
+# Declare the name of the program
+PROGRAM = interpreter
+
+# Declare the files the program is built from
+FILES[] =
+        interpreter
+
+# Declare some phony empty targets so omake doesn't try to build
+# camlp4lib.  May be a more elegant way to do this.
+.PHONY: camlp4lib.a camlp4lib.cma camlp4lib.cmxa
+
+camlp4lib.a:
+
+camlp4lib.cma:
+
+camlp4lib.cmxa:
+
+# Zero out the flags for this part -- packaging doesn't understand
+# warning flags and other things like that
+OCAMLFLAGS =
+.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))

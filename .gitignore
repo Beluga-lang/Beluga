@@ -1,7 +1,9 @@
-*.byte
-*.native
-*.top
+*.a
+*.cm*
+*.o
+*.omc
 *~
 .DS_Store
-src/_build
+.omake*
+
 

@@ -1,0 +1,4 @@
+# -*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+# Include the src subdirectory
+.SUBDIRS: interpreter

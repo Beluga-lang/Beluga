@@ -1,0 +1,33 @@
+# -*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+# Use ocamlfind to manage library linking
+USE_OCAMLFIND = true
+
+# Set up the ocamlfind flags
+OCAMLFINDFLAGS = -syntax camlp4o
+
+# The ocamlfind packages we use
+OCAMLPACKS[] =
+        camlp4
+        extlib
+        ulex
+
+# Set up the standard configuration
+OCAMLFLAGS += -Wa
+
+# Compile to byte code?
+BYTE_ENABLED   = true
+
+# Compile to native code?
+NATIVE_ENABLED = true
+
+# Include the src subdirectory
+.SUBDIRS: src
+
+# Declare a phony clean target
+.PHONY: clean
+
+# Recursively clean the project
+clean:
+	rm $(filter-proper-targets $(ls R, .))
+        rm $(filter %.omc,         $(ls R, .))

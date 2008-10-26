@@ -1,0 +1,43 @@
+# -*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+# Declare an OCaml library
+LIBRARY = beluga-core
+
+# Declare an OCaml package
+PACK    = Core
+
+# Declare the files the package will contain
+FILES[] =
+        check
+        common
+        config
+        context
+        gensym
+        id
+        reconstruct
+        store
+        substitution
+        syntax
+        trail
+        unify
+        whnf
+
+# Declare one pseudo target for the package and one for the files it
+# contains
+.PHONY: pack files
+
+# **NOTE** Because of the way scoping for OCAMLFLAGS works, the
+# core-pack target must come _BEFORE_ the core-files target, otherwise
+# core-pack will be passed the -for-pack flag as well, which is not
+# what we want
+
+# Zero out the flags for this part -- packaging doesn't understand
+# warning flags and other things like that
+OCAMLFLAGS =
+pack: $(OCamlPackage $(PACK), $(FILES))
+
+# Use the -for-pack flag for compiling the individual modules
+OCAMLFLAGS = -for-pack $(PACK)
+files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
+
+.DEFAULT: files pack $(OCamlLibrary $(LIBRARY), $(PACK))

@@ -1,0 +1,41 @@
+# -*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+# Declare the directories we need to include other libraries from
+OCAMLINCLUDES += ../core
+
+# Declare the names of the libraries we depend on
+OCAML_LIBS[]  +=
+        ../lib/beluga-core
+
+# Declare an OCaml library
+LIBRARY        = beluga-frontend
+
+# Declare an OCaml package
+PACK           = Frontend
+
+# Declare the files the package will contain
+FILES[] =
+        lexer
+        parser
+        pretty
+	token
+
+# Declare one pseudo target for the package and one for the files it
+# contains
+.PHONY: core-pack core-files
+
+# **NOTE** Because of the way scoping for OCAMLFLAGS works, the
+# core-pack target must come _BEFORE_ the core-files target, otherwise
+# core-pack will be passed the -for-pack flag as well, which is not
+# what we want
+
+# Zero out the flags for this part -- packaging doesn't understand
+# warning flags and other things like that
+OCAMLFLAGS =
+pack: $(OCamlPackage $(PACK), $(FILES))
+
+# Use the -for-pack flag for compiling the individual modules
+OCAMLFLAGS = -for-pack $(PACK)
+files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
+
+.DEFAULT: files pack $(OCamlLibrary $(LIBRARY), $(PACK))

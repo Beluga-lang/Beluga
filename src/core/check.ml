@@ -319,4 +319,12 @@ and checkCtx cD cPsi = match cPsi with Null ->  ()
   | CtxVar psi          -> ()
   (* need to check if psi is in Omega (or cD, if context vars live there) -bp *)
 
-let rec check_sgn_decls decls = ()
+
+
+let check_sgn_decls decls = ()
+(*   let cD   = assert false *)
+(*   and cPsi = assert false *)
+(*   and nclo = assert false *)
+(*   and tclo = assert false *)
+(*   in *)
+

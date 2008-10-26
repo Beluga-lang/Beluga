@@ -51,10 +51,11 @@ let main () =
                   ; try
                         Check.check_sgn_decls internal_decls
                       ; fprintf std_formatter "\n####\n\n"
+                      (* finally, cleanup for the next file *)
+                      ; Store.clear ()
                     with
                       | Check.Error msg ->
                           fprintf std_formatter "## Typechecking failed:\n\t%s\n" msg
-
 
     in
       (* Iterate the process for each file given on the commandline *)

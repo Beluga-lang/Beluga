@@ -65,6 +65,8 @@ module Cid : sig
 
 end
 
+val clear : unit -> unit
+
 
 
 module BVar : sig

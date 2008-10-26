@@ -95,6 +95,9 @@ module Cid = struct
 
 end
 
+let clear () =
+    Cid.Typ.clear  ()
+  ; Cid.Term.clear ()
 
 
 module BVar = struct

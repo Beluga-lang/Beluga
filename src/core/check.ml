@@ -236,7 +236,7 @@ and checkSpineK cD cPsi sS1 sA = match (sS1, sA) with
 
      succeeds iff cD ; cPsi |- [s]tA <= type
 *)
-let rec checkTyp' (cD, cPsi, (tA,s)) = match (tA, s) with
+let rec checkTyp' (cD, cPsi, (tA, s)) = match (tA, s) with
   | (Atom (a, tS), s)                ->
       checkSpineK cD cPsi (tS, s) ((Typ.get a).Typ.kind, id)
 
@@ -321,10 +321,13 @@ and checkCtx cD cPsi = match cPsi with Null ->  ()
 
 
 
-let check_sgn_decls decls = ()
-(*   let cD   = assert false *)
-(*   and cPsi = assert false *)
-(*   and nclo = assert false *)
-(*   and tclo = assert false *)
-(*   in *)
-
+let rec check_sgn_decls = function
+  | []                       -> ()
+  | SgnTyp _        :: decls -> check_sgn_decls decls
+  | SgnConst (c, a) :: decls ->
+      let cD   = Empty
+      and cPsi = Null
+      and s    = Substitutions.id
+      in
+          check cD cPsi (Root (Const c, Nil), s) (a, s)
+        ; check_sgn_decls decls

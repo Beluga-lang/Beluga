@@ -5,6 +5,8 @@
 CRITICAL
 ========
 
+* 10/25/08 :: Port syntax comments back over.  -dwm
+
 * 10/23/08 :: Several cases of variable shadowing, might want to
               consider during code-walk.  -dwm
 
@@ -15,7 +17,13 @@ CRITICAL
 IMPORTANT
 =========
 
-* 10/25/08 :: SigmaDec and SigmaDecl are a bit close together... -dwm
+* 10/25/08 :: Make pretty printer break line late rather than early.
+              -dwm
+
+* 10/25/08 :: Fix pretty printing of internal syntax to show names
+              rather than cids.  -dwm
+
+* 10/25/08 :: SigmaDec and SigmaDecl are a bit close together...  -dwm
 
 * 10/25/08 :: Should probably make clo type abbreviations actual
               datatypes with constructors.  Clearer this way, esp. since we are
@@ -53,6 +61,8 @@ IMPORTANT
 
 MINOR
 =====
+
+* 10/25/08 :: Could we call cD cDel to go better with cPsi?  -dwm
 
 * 10/16/08 :: Add proper interface for token.ml.  Some tricky bits
               with the Camlp4 sig.  -dwm

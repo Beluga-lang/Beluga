@@ -7,14 +7,22 @@
    @author Brigitte Pientka
 *)
 
-exception Error of string
-
 open Context
 open Store.Cid
 open Substitution
 open Syntax.Int
 
 
+
+type error =
+  | CtxVarMisMatch of cvar * cvar
+  | DeclIllTyped
+  | ExpAppNotFun
+  | KindMisMatch
+  | SubIllTyped
+  | TypMisMatch    of tclo * tclo
+
+exception Error of error
 
 (* check cD cPsi (tM, s1) (tA, s2) = ()
 
@@ -62,8 +70,10 @@ and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
   | ((Nil, _), sP')              ->
       if Whnf.convTyp sP' sP
-      then ()
-      else raise (Error "Type mismatch")
+      then
+        ()
+      else
+        raise (Error (TypMisMatch (sP', sP)))
 
   | ((SClo (tS, s'), s), sA)     ->
       checkSpine cD cPsi (tS, comp s' s) sA sP
@@ -80,7 +90,7 @@ and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
 
   | ((App (tM, tS), _), (tA, s)) ->
       (* tA <> (Pi x:tA1. tA2, s) *)
-      raise  (Error "Expression is applied, but not a function")
+      raise (Error ExpAppNotFun)
 
 
 
@@ -147,14 +157,14 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
   | (CtxVar psi, Shift 0, CtxVar psi') ->
       if psi = psi'
       then ()
-      else raise (Error "ctx variable mismatch")
+      else raise (Error (CtxVarMisMatch (psi, psi')))
 
   (* SVar case to be added - bp *)
 
   | (DDec (cPsi, tX), Shift k, Null)   ->
       if k > 0
       then checkSub cD cPsi (Shift (k - 1)) Null
-      else raise (Error "Substitution not well-typed")
+      else raise (Error (SubIllTyped))
 
   | (cPsi', Shift k, cPsi)             ->
       checkSub cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
@@ -167,13 +177,7 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
       in
         if Whnf.convTyp (tA1, id) (tA2, s')
         then ()
-        else
-          raise (Error ("Substitution not well-typed \n  found: "
-                          (* Print.expToString (cD, cPsi', tA1) ^ "\n  expected: " ^
-                             Print.expToString (cD, cPsi', Clo (tA2, s'))*)))
-
-                (* don't think this will print out properly... should use
-                   more elaborate error printing.  -dwm *)
+        else raise (Error SubIllTyped)
 
   | (cPsi', Dot (Head (BVar w), t), SigmaDec (cPsi, (SigmaDecl (_, arec)))) ->
       (* other heads of type Sigma disallowed -bp *)
@@ -183,7 +187,7 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
       in
         if Whnf.convTypRec (brec, id) (arec, t)
         then ()
-        else raise (Error "Declaration not well-typed")
+        else raise (Error DeclIllTyped)
 
   | (cPsi', Dot (Obj tM, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
       (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
@@ -216,7 +220,7 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
 and checkSpineK cD cPsi sS1 sA = match (sS1, sA) with
   | ((Nil, _), (Typ, s))          -> ()
 
-  | ((Nil, _), _)                 ->  raise (Error "kind mismatch")
+  | ((Nil, _), _)                 ->  raise (Error (KindMisMatch))
 
   | ((SClo (tS, s'), s), sA)      ->
       checkSpineK cD cPsi (tS, comp s' s) sA
@@ -226,7 +230,7 @@ and checkSpineK cD cPsi sS1 sA = match (sS1, sA) with
       ; checkSpineK cD cPsi (tS, s1) (kind, Dot (Obj (Clo (tM, s1)), s2))
 
   | ((App (tM , tS), _), (tA, s)) ->
-      raise  (Error "Expression is applied, but not a function")
+      raise  (Error ExpAppNotFun)
 
 
 

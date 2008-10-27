@@ -16,7 +16,11 @@ open Syntax.Int
 
 
 
-exception Error of string
+type error =
+  | TypingAmbiguous
+  | NotPatSub
+
+exception Error of error
 
 (******************************)
 (* Lowering of Meta-Variables *)
@@ -72,7 +76,7 @@ and lowerMVar1 u sA = match (u, sA) with
 
       | _
         (* It is not clear if it can happen that cnstr =/= nil *)
-        -> raise (Error "Typing ambiguous -- constraint of functional type cannot be simplified")
+        -> raise (Error TypingAmbiguous)
 
 
 
@@ -403,10 +407,10 @@ and lowerMVar1 u sA = match (u, sA) with
       | Dot (Obj (tM), s)      ->
           begin match whnf (tM, id) with
             | (Root (BVar k, Nil), id) -> Dot (Head (BVar k), mkPatSub s)
-            | _                        -> raise (Error "Not a pattern substitution")
+            | _                        -> raise (Error NotPatSub)
           end
 
-      | _                      -> raise (Error "Not a pattern substitution")
+      | _                      -> raise (Error NotPatSub)
 
     let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
 

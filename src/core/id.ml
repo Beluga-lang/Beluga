@@ -28,14 +28,3 @@ let mk_name = function
   | None    -> { string_of_name = (Gensym.VarData.gensym ()) }
   | Some "" -> { string_of_name = (Gensym.VarData.gensym ()) }
   | Some x  -> { string_of_name = x                          }
-
-
-let string_of_name n     = n.string_of_name
-
-let string_of_cid_typ  t = string_of_int t ^ "A"
-
-let string_of_cid_term m = string_of_int m ^ "M"
-
-let string_of_offset x   = string_of_int x ^ "x"
-
-let string_of_var x      = string_of_int x

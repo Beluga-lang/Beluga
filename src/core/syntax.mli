@@ -145,8 +145,8 @@ module Int : sig
   (* Type Abbreviations *)
   (**********************)
 
-  type nclo     = normal * sub
-  type tclo     = typ    * sub
+  type nclo     = normal  * sub
+  type tclo     = typ     * sub
   type trec_clo = typ_rec * sub
   type mctx     = ctx_decl ctx
 

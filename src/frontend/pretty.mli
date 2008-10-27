@@ -19,33 +19,19 @@ val std_lvl : lvl
 
 
 
-module Id : sig
+module type CID_RENDERER = sig
 
   open Core.Id
 
+  val render_name       : name     -> string
 
+  val render_cid_typ    : cid_typ  -> string
 
-  (********************************)
-  (* Format Based Pretty Printers *)
-  (********************************)
+  val render_cid_term   : cid_term -> string
 
-  val fmt_ppr_name     : formatter -> name     -> unit
+  val render_offset     : offset   -> string
 
-  val fmt_ppr_cid_typ  : formatter -> cid_typ  -> unit
-
-  val fmt_ppr_cid_term : formatter -> cid_term -> unit
-
-
-
-  (***************************)
-  (* Default Pretty Printers *)
-  (***************************)
-
-  val ppr_name     : name     -> unit
-
-  val ppr_cid_typ  : cid_typ  -> unit
-
-  val ppr_cid_term : cid_term -> unit
+  val render_var        : var      -> string
 
 end
 
@@ -53,43 +39,73 @@ end
 
 module Ext : sig
 
-  open Core.Syntax.Ext
+  (*************************************)
+  (* External Syntax Printer Signature *)
+  (*************************************)
+
+  module type PRINTER = sig
+
+    open Core.Syntax.Ext
+
+    (*******************************************)
+    (* Contextual Format Based Pretty Printers *)
+    (*******************************************)
+
+    val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
+
+    val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
+
+    val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
+
+    val fmt_ppr_normal   : lvl -> formatter -> normal   -> unit
+
+    val fmt_ppr_head     :        formatter -> head     -> unit
+
+    val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
 
 
 
-  (*******************************************)
-  (* Contextual Format Based Pretty Printers *)
-  (*******************************************)
+    (***************************)
+    (* Regular Pretty Printers *)
+    (***************************)
 
-  val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
+    val ppr_sgn_decl : sgn_decl -> unit
 
-  val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
+    val ppr_kind     : kind     -> unit
 
-  val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
+    val ppr_type     : typ      -> unit
 
-  val fmt_ppr_term     : lvl -> formatter -> normal   -> unit
+    val ppr_normal   : normal   -> unit
 
-  val fmt_ppr_head     :        formatter -> head     -> unit
+    val ppr_head     : head     -> unit
 
-  val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
+    val ppr_spine    : spine    -> unit
+
+  end
 
 
 
-  (***************************)
-  (* Default Pretty Printers *)
-  (***************************)
+  (******************************************)
+  (* External Syntax Pretty Printer Functor *)
+  (******************************************)
 
-  val ppr_sgn_decl : sgn_decl -> unit
+  module Make : functor (R : CID_RENDERER) -> PRINTER
 
-  val ppr_kind     : kind     -> unit
 
-  val ppr_type     : typ      -> unit
 
-  val ppr_term     : normal   -> unit
+  (********************************************)
+  (* Default CID_RENDERER for External Syntax *)
+  (********************************************)
 
-  val ppr_head     : head     -> unit
+  module DefaultCidRenderer : CID_RENDERER
 
-  val ppr_spine    : spine    -> unit
+
+
+  (****************************************************************)
+  (* Default External Syntax Pretty Printer Functor Instantiation *)
+  (****************************************************************)
+
+  module DefaultPrinter : PRINTER
 
 end
 
@@ -97,42 +113,161 @@ end
 
 module Int : sig
 
-  open Core.Syntax.Int
+  (*************************************)
+  (* Internal Syntax Printer Signature *)
+  (*************************************)
+
+  module type PRINTER = sig
+
+    open Core.Syntax.Int
+
+    (*******************************************)
+    (* Contextual Format Based Pretty Printers *)
+    (*******************************************)
+
+    val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
+
+    val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
+
+    val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
+
+    val fmt_ppr_normal   : lvl -> formatter -> normal   -> unit
+
+    val fmt_ppr_head     :        formatter -> head     -> unit
+
+    val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
+
+    val fmt_ppr_sub      : lvl -> formatter -> sub      -> unit
+
+    val fmt_ppr_front    : lvl -> formatter -> front    -> unit
 
 
 
-  (*******************************************)
-  (* Contextual Format Based Pretty Printers *)
-  (*******************************************)
+    (***************************)
+    (* Regular Pretty Printers *)
+    (***************************)
 
-  val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
+    val ppr_sgn_decl : sgn_decl -> unit
 
-  val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
+    val ppr_kind     : kind     -> unit
 
-  val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
+    val ppr_type     : typ      -> unit
 
-  val fmt_ppr_term     : lvl -> formatter -> normal   -> unit
+    val ppr_normal   : normal   -> unit
 
-  val fmt_ppr_head     :        formatter -> head     -> unit
+    val ppr_head     : head     -> unit
 
-  val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
+    val ppr_spine    : spine    -> unit
+
+    val ppr_sub      : sub      -> unit
+
+    val ppr_front    : front    -> unit
+
+  end
 
 
+
+  (******************************************)
+  (* Internal Syntax Pretty Printer Functor *)
+  (******************************************)
+
+  module Make : functor (R : CID_RENDERER) -> PRINTER
+
+
+
+  (********************************************)
+  (* Default CID_RENDERER for Internal Syntax *)
+  (********************************************)
+
+  module DefaultCidRenderer : CID_RENDERER
+
+
+
+  (****************************************************************)
+  (* Default Internal Syntax Pretty Printer Functor Instantiation *)
+  (****************************************************************)
+
+  module DefaultPrinter : PRINTER
+
+end
+
+
+
+module Error : sig
 
   (***************************)
-  (* Default Pretty Printers *)
+  (* Error Printer Signature *)
   (***************************)
 
-  val ppr_sgn_decl : sgn_decl -> unit
+  module type PRINTER = sig
 
-  val ppr_kind     : kind     -> unit
+    module Check : sig
 
-  val ppr_type     : typ      -> unit
+      (********************************)
+      (* Format Based Pretty Printers *)
+      (********************************)
 
-  val ppr_term     : normal   -> unit
+      val fmt_ppr : formatter -> Core.Check.error -> unit
 
-  val ppr_head     : head     -> unit
 
-  val ppr_spine    : spine    -> unit
+
+      (***************************)
+      (* Regular Pretty Printers *)
+      (***************************)
+
+      val ppr : Core.Check.error -> unit
+
+    end
+
+
+
+    module Whnf : sig
+
+      (********************************)
+      (* Format Based Pretty Printers *)
+      (********************************)
+
+      val fmt_ppr : formatter -> Core.Whnf.error -> unit
+
+
+
+      (***************************)
+      (* Regular Pretty Printers *)
+      (***************************)
+
+      val ppr : Core.Whnf.error -> unit
+
+    end
+
+  end
+
+
+
+  (***********************************)
+  (* Default CID_RENDERER for Errors *)
+  (***********************************)
+
+  module DefaultCidRenderer : CID_RENDERER
+
+
+
+  (*********************************)
+  (* Error Pretty Printer Functor  *)
+  (*********************************)
+
+  module Make :
+       functor (R : CID_RENDERER)
+    -> functor (IPF : functor (R' : CID_RENDERER) -> Int.PRINTER)
+    -> PRINTER
+      (* Might need a constraint here saying that IPF will be
+      instantiated with R.  -dwm *)
+
+
+
+  (******************************************************)
+  (* Default Error Pretty Printer Functor Instantiation *)
+  (******************************************************)
+
+  module DefaultPrinter : PRINTER
 
 end

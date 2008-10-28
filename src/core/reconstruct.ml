@@ -50,10 +50,9 @@ and internalize_typ ctx = function
         Int.Atom (a', ms')
 
   | Ext.ArrTyp (_, a, b)     ->
-      let x    = Id.mk_name None in
-      let ctx' = BVar.extend ctx (BVar.mk_entry x) in
-      let a'   = internalize_typ ctx' a
-      and b'   = internalize_typ ctx' b in
+      let x  = Id.mk_name None
+      and a' = internalize_typ ctx a
+      and b' = internalize_typ ctx b in
         Int.PiTyp (Int.TypDecl (x, a'), b')
 
   | Ext.PiTyp (_, Ext.TypDecl (x, a), b) ->

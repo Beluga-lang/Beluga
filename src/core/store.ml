@@ -113,7 +113,7 @@ module BVar = struct
       | (e::es) -> if e.name = n
                    then i
                    else loop (i+1) es in
-      loop 0 store
+      loop 1 store
 
   let create () = []
 

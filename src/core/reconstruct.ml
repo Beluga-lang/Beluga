@@ -82,8 +82,7 @@ and internalize_head ctx = function
       (* First check to see if a name is a term variable.  If the
          lookup fails, we can assume it must be a constant. *)
       try
-        Int.BVar ((BVar.index_of_name ctx x_or_c) + 1)
-          (* + 1 because we start counting from 1? -dwm *)
+        Int.BVar (BVar.index_of_name ctx x_or_c)
       with
         | Not_found ->
             Int.Const (Term.index_of_name x_or_c)

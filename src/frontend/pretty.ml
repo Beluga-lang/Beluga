@@ -446,7 +446,7 @@ module Int = struct
 
     and fmt_ppr_spine lvl ppf = function
       | Nil          ->
-          fprintf ppf " <Nil>"
+          fprintf ppf ""
 
       | App (m, ms)  ->
           fprintf ppf " %a%a"

@@ -10,6 +10,7 @@ open Core
 open Format
 open Frontend
 
+(* FIXME: make sure we're sequencing the printing properly by using appropriate print_newline () -dwm *)
 
 
 (* The following is an example of how to use the Core and Frontend modules *)
@@ -50,8 +51,10 @@ let main () =
               ; let internal_decls = List.map Reconstruct.internalize_sgn_decl decls in
                     print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl internal_decls
                   ; try
-                        Check.check_sgn_decls internal_decls
-                      ; fprintf ppf "\n####\n\n"
+                        fprintf ppf "\n## Checking Kinds and Types ##\n"
+                      ; print_newline ()
+                      ; Check.check_sgn_decls internal_decls
+                      ; fprintf ppf "\n## Checking Successful! ##\n\n"
                       (* finally, cleanup for the next file *)
                       ; Store.clear ()
                   with

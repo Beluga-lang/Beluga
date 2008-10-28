@@ -327,11 +327,19 @@ and checkCtx cD cPsi = match cPsi with Null ->  ()
 
 let rec check_sgn_decls = function
   | []                       -> ()
-  | SgnTyp _        :: decls -> check_sgn_decls decls
+
+  | SgnTyp   (a, k) :: decls ->
+      let cD   = Empty
+      and cPsi = Null
+      in
+          Printf.printf "Checking kind: %s\n" ((Typ .get a).Typ .name).Id.string_of_name
+        ; checkKind cD cPsi k
+        ; check_sgn_decls decls
+
   | SgnConst (c, a) :: decls ->
       let cD   = Empty
       and cPsi = Null
-      and s    = id
       in
-          checkTyp cD cPsi (a, s)
+          Printf.printf "Checking type: %s\n" ((Term.get c).Term.name).Id.string_of_name
+        ; checkTyp cD cPsi (a, id)
         ; check_sgn_decls decls

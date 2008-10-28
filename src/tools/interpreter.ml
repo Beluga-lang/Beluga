@@ -51,7 +51,7 @@ let main () =
               ; let internal_decls = List.map Reconstruct.internalize_sgn_decl decls in
                     print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl internal_decls
                   ; try
-                        fprintf ppf "\n## Checking Kinds and Types ##\n"
+                        fprintf ppf "\n## Begin Checking ##"
                       ; print_newline ()
                       ; Check.check_sgn_decls internal_decls
                       ; fprintf ppf "\n## Checking Successful! ##\n\n"

@@ -48,6 +48,7 @@ let rec checkW cD cPsi sM1 sA2 = match (sM1, sA2) with
       (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
       let sA = Whnf.whnfTyp (inferHead cD cPsi h, id) in
         checkSpine cD cPsi (tS, s) sA sP
+  | _       -> raise (Error (SubIllTyped))
 
 and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 (* can probably transform this to let check = let checkW ... in checkW - dwm *)
@@ -105,6 +106,7 @@ and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
 *)
 and inferHead cD cPsi head = match head with
   | BVar k'                 ->
+      let (_, l) = dctxToHat cPsi in 
       let TypDecl (_, tA) = ctxDec cPsi k' in
         tA
 
@@ -129,7 +131,8 @@ and inferHead cD cPsi head = match head with
 
      These cases are impossible at the moment.
   *)
-  | Const c                 -> (Term.get c).Term.typ
+  | Const c                 -> 
+      (Term.get c).Term.typ
 
   | MVar (Offset u, s)      ->
       (* cD ; cPsi' |- tA <= type *)
@@ -245,7 +248,7 @@ let rec checkTyp' (cD, cPsi, (tA, s)) = match (tA, s) with
       checkSpineK cD cPsi (tS, s) ((Typ.get a).Typ.kind, id)
 
   | (PiTyp (TypDecl (x, tA), tB), s) ->
-        checkTyp cD cPsi (tA, s)
+        checkTyp cD cPsi (tA, s) 
       ; checkTyp cD (DDec (cPsi, TypDecl(x, TClo (tA, s)))) (tB, dot1 s)
 
 and checkTyp cD cPsi sA = checkTyp' (cD, cPsi, Whnf.whnfTyp sA)
@@ -334,6 +337,7 @@ let rec check_sgn_decls = function
       in
           Printf.printf "Checking kind: %s\n" ((Typ .get a).Typ .name).Id.string_of_name
         ; checkKind cD cPsi k
+        ;  Printf.printf "done\n"
         ; check_sgn_decls decls
 
   | SgnConst (c, a) :: decls ->
@@ -342,4 +346,5 @@ let rec check_sgn_decls = function
       in
           Printf.printf "Checking type: %s\n" ((Term.get c).Term.name).Id.string_of_name
         ; checkTyp cD cPsi (a, id)
+        ;  Printf.printf "done\n"
         ; check_sgn_decls decls

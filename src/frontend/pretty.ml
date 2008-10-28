@@ -605,13 +605,9 @@ module Error = struct
   (* Error Pretty Printer Functor *)
   (********************************)
 
-  module Make =
-       functor (R : CID_RENDERER)
-    -> functor (IPF : functor (R' : CID_RENDERER) -> Int.PRINTER)
-    ->
-  struct
+  module Make = functor (R : CID_RENDERER) -> struct
 
-    module IP = IPF (R)
+    module IP = Int.Make (R)
 
     module Check = struct
 
@@ -708,6 +704,6 @@ module Error = struct
   (* Default Error Pretty Printer Functor Instantiation *)
   (******************************************************)
 
-  module DefaultPrinter = Make (DefaultCidRenderer) (Int.Make)
+  module DefaultPrinter = Make (DefaultCidRenderer)
 
 end

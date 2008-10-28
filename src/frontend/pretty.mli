@@ -255,10 +255,7 @@ module Error : sig
   (* Error Pretty Printer Functor  *)
   (*********************************)
 
-  module Make :
-       functor (R : CID_RENDERER)
-    -> functor (IPF : functor (R' : CID_RENDERER) -> Int.PRINTER)
-    -> PRINTER
+  module Make : functor (R : CID_RENDERER) -> PRINTER
       (* Might need a constraint here saying that IPF will be
       instantiated with R.  -dwm *)
 

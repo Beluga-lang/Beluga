@@ -10,6 +10,7 @@ open Core
 open Format
 open Frontend
 
+(* FIXME: make sure we're sequencing the printing properly by using appropriate print_newline () -dwm *)
 
 
 (* The following is an example of how to use the Core and Frontend modules *)
@@ -19,7 +20,8 @@ let main () =
     fprintf std_formatter "Usage: %s <file-1.lf> ... <file-n.lf>\n" Sys.argv.(0)
   else
     let per_file file_name =
-      let rec sgn = Parser.parse_file ~name:file_name Parser.p_sgn_eoi
+      let rec sgn           = Parser.parse_file ~name:file_name Parser.p_sgn_eoi
+      and ppf               = std_formatter
       and print_sgn printer = function
         | []            -> ()
         | decl :: decls ->
@@ -32,30 +34,41 @@ let main () =
           | Common.InL exn   ->
               begin match exn with
                 | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-                      fprintf std_formatter "Parse Error: \n\t%s\n\nLocation:\n\t" exn
-                    ; Parser.Grammar.Loc.print std_formatter loc
-                    ; fprintf std_formatter "\n"
+                      fprintf ppf "Parse Error: \n\t%s\n\nLocation:\n\t" exn
+                    ; Parser.Grammar.Loc.print ppf loc
+                    ; fprintf ppf "\n"
                     ; ()
                 | exn' ->
-                      fprintf std_formatter "Uncaught Exception: %s\n" (Printexc.to_string exn')
+                      fprintf ppf "Uncaught Exception: %s\n" (Printexc.to_string exn')
               end
 
           (* If we succeed, pretty-print the resulting AST *)
           | Common.InR decls ->
-                fprintf std_formatter   "## Pretty Printing External Syntax: %s ##\n" file_name
-              ; print_sgn Pretty.Ext.ppr_sgn_decl decls
+                fprintf ppf "## Pretty Printing External Syntax: %s ##\n" file_name
+              ; print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl decls
 
-              ; fprintf std_formatter "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
+              ; fprintf ppf "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
               ; let internal_decls = List.map Reconstruct.internalize_sgn_decl decls in
-                    print_sgn Pretty.Int.ppr_sgn_decl internal_decls
+                    print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl internal_decls
                   ; try
-                        Check.check_sgn_decls internal_decls
-                      ; fprintf std_formatter "\n####\n\n"
+                        fprintf ppf "\n## Begin Checking ##"
+                      ; print_newline ()
+                      ; Check.check_sgn_decls internal_decls
+                      ; fprintf ppf "\n## Checking Successful! ##\n\n"
                       (* finally, cleanup for the next file *)
                       ; Store.clear ()
-                    with
-                      | Check.Error msg ->
-                          fprintf std_formatter "## Typechecking failed:\n\t%s\n" msg
+                  with
+                    | Whnf.Error  err ->
+                        fprintf
+                          ppf
+                          "\n!! Error during Weak-Head Normalization !!\n\n%a\n\n"
+                          Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err
+
+                    | Check.Error err ->
+                        fprintf
+                          ppf
+                          "\n!! Error during Type-Checking !!\n\n%a\n\n"
+                          Pretty.Error.DefaultPrinter.Check.fmt_ppr err
 
     in
       (* Iterate the process for each file given on the commandline *)

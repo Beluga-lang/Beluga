@@ -22,8 +22,6 @@ module Cid = struct
       { name = n
       ; kind = k }
 
-    let string_of_entry e = Id.string_of_name e.name
-
 
     type t = Id.name DynArray.t
 
@@ -64,8 +62,6 @@ module Cid = struct
     let mk_entry n t =
       { name = n
       ; typ  = t }
-
-    let string_of_entry e = Id.string_of_name e.name
 
 
     type t = Id.name DynArray.t
@@ -108,8 +104,6 @@ module BVar = struct
   let mk_entry n =
     { name = n }
 
-  let string_of_entry e = Id.string_of_name e.name
-
 
   type t = entry list
 
@@ -119,7 +113,7 @@ module BVar = struct
       | (e::es) -> if e.name = n
                    then i
                    else loop (i+1) es in
-      loop 0 store
+      loop 1 store
 
   let create () = []
 

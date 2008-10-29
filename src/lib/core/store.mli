@@ -22,8 +22,6 @@ module Cid : sig
 
     val mk_entry        : name -> kind -> entry
 
-    val string_of_entry : entry -> string
-
 
     type t
 
@@ -47,8 +45,6 @@ module Cid : sig
     }
 
     val mk_entry        : name -> typ -> entry
-
-    val string_of_entry : entry -> string
 
 
     type t
@@ -76,8 +72,6 @@ module BVar : sig
   }
 
   val mk_entry        : name -> entry
-
-  val string_of_entry : entry -> string
 
 
   type t

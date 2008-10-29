@@ -31,14 +31,3 @@ type var      = int
 (** Smart constructor for `name'.  If `None' or `Some ""' are given,
     `mk_name' generates a `name' with a guaranteed unique `string'. *)
 val mk_name : string option -> name
-
-
-val string_of_name     : name     -> string
-
-val string_of_cid_typ  : cid_typ  -> string
-
-val string_of_cid_term : cid_term -> string
-
-val string_of_offset   : offset   -> string
-
-val string_of_var      : var      -> string

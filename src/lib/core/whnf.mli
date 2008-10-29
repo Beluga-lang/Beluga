@@ -8,6 +8,14 @@
 
 open Syntax.Int
 
+
+
+type error =
+  | TypingAmbiguous
+  | NotPatSub
+
+exception Error of error
+
 val whnf     : nclo -> nclo
 val whnfTyp  : tclo -> tclo
 val norm     : nclo -> normal

@@ -7,8 +7,6 @@
     @author Darin Morrison
 *)
 
-
-
 open Format
 
 
@@ -52,37 +50,21 @@ let r_paren_if cond =
 
 
 
-module Id = struct
+module type CID_RENDERER = sig
 
   open Core.Id
 
 
 
-  (********************************)
-  (* Format Based Pretty Printers *)
-  (********************************)
+  val render_name     : name     -> string
 
-  let fmt_ppr_name     ppf     = function
-    | {string_of_name = x} -> fprintf ppf "%s" x
+  val render_cid_typ  : cid_typ  -> string
 
-  let fmt_ppr_cid_typ  ppf cid = fprintf ppf "%s" (string_of_cid_typ  cid)
+  val render_cid_term : cid_term -> string
 
-  let fmt_ppr_cid_term ppf cid = fprintf ppf "%s" (string_of_cid_term cid)
+  val render_offset   : offset   -> string
 
-  let fmt_ppr_offset   ppf cid = fprintf ppf "%s" (string_of_offset   cid)
-
-
-  (***************************)
-  (* Default Pretty Printers *)
-  (***************************)
-
-  let ppr_name       = fmt_ppr_name     std_formatter
-
-  let ppr_cid_typ    = fmt_ppr_cid_typ  std_formatter
-
-  let ppr_cid_term   = fmt_ppr_cid_term std_formatter
-
-  let ppr_cid_offset = fmt_ppr_cid_term std_formatter
+  val render_var      : var      -> string
 
 end
 
@@ -90,266 +72,638 @@ end
 
 module Ext = struct
 
-  open Id
+  open Core.Id
   open Core.Syntax.Ext
 
+  (*************************************)
+  (* External Syntax Printer Signature *)
+  (*************************************)
+
+  module type PRINTER = sig
+
+    open Core.Syntax.Ext
+
+    (*******************************************)
+    (* Contextual Format Based Pretty Printers *)
+    (*******************************************)
+
+    val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
+
+    val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
+
+    val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
+
+    val fmt_ppr_normal   : lvl -> formatter -> normal   -> unit
+
+    val fmt_ppr_head     :        formatter -> head     -> unit
+
+    val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
 
 
-  (*******************************************)
-  (* Contextual Format Based Pretty Printers *)
-  (*******************************************)
 
-  let rec fmt_ppr_sgn_decl lvl ppf = function
-    | SgnTyp (_, a, k)   ->
-        fprintf ppf "%a : %a.@.@?"
-           fmt_ppr_name      a
-          (fmt_ppr_kind lvl) k
+    (***************************)
+    (* Regular Pretty Printers *)
+    (***************************)
 
-    | SgnConst (_, c, a) ->
-        fprintf ppf "%a : %a.@.@?"
-           fmt_ppr_name     c
-          (fmt_ppr_typ lvl) a
+    val ppr_sgn_decl : sgn_decl -> unit
+
+    val ppr_kind     : kind     -> unit
+
+    val ppr_type     : typ      -> unit
+
+    val ppr_normal   : normal   -> unit
+
+    val ppr_head     : head     -> unit
+
+    val ppr_spine    : spine    -> unit
+
+  end
 
 
 
-  and fmt_ppr_kind lvl ppf = function
-    | Typ _                         ->
-        fprintf ppf "type"
+  (******************************************)
+  (* External Syntax Pretty Printer Functor *)
+  (******************************************)
 
-    | ArrKind (_, a, k)             ->
-        let cond = lvl > 0 in
-          fprintf ppf "@[%s%a -> %a%s@]"
+  module Make = functor (R : CID_RENDERER) -> struct
+
+    (*******************************************)
+    (* Contextual Format Based Pretty Printers *)
+    (*******************************************)
+
+    let rec fmt_ppr_sgn_decl lvl ppf = function
+      | SgnTyp (_, a, k)   ->
+          fprintf ppf "%s : %a.@.@?"
+            (R.render_name     a)
+            (fmt_ppr_kind lvl) k
+
+      | SgnConst (_, c, a) ->
+          fprintf ppf "%s : %a.@.@?"
+            (R.render_name    c)
+            (fmt_ppr_typ lvl) a
+
+
+
+    and fmt_ppr_kind lvl ppf = function
+      | Typ _                         ->
+          fprintf ppf "type"
+
+      | ArrKind (_, a, k)             ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[%s%a -> %a%s@]"
+              (l_paren_if cond)
+              (fmt_ppr_typ  1) a
+              (fmt_ppr_kind 0) k
+              (r_paren_if cond)
+
+      | PiKind (_, TypDecl (x, a), k) ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
+              (l_paren_if cond)
+              (R.render_name   x)
+              (fmt_ppr_typ  0) a
+              (fmt_ppr_kind 0) k
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_typ lvl ppf = function
+      | Atom (_, a, Nil)             ->
+          fprintf ppf "%s"
+            (R.render_name a)
+
+      | Atom (_, a, ms)              ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%s%a%s"
+              (l_paren_if cond)
+              (R.render_name    a)
+              (fmt_ppr_spine 2) ms
+              (r_paren_if cond)
+
+      | ArrTyp (_, a, b)             ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[%s%a -> %a%s@]"
+              (l_paren_if cond)
+              (fmt_ppr_typ 1) a
+              (fmt_ppr_typ 0) b
+              (r_paren_if cond)
+
+      | PiTyp (_, TypDecl (x, a), b) ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
+              (l_paren_if cond)
+              (R.render_name  x)
+              (fmt_ppr_typ 0) a
+              (fmt_ppr_typ 0) b
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_normal lvl ppf = function
+      | Lam (_, x, m)    ->
+          let cond = lvl > 0 in
+            fprintf ppf "%s[%s] %a%s"
+              (l_paren_if cond)
+              (R.render_name   x)
+              (fmt_ppr_normal 0) m
+              (r_paren_if cond)
+
+      | Root (_, h, Nil) ->
+          fprintf ppf "%a"
+            fmt_ppr_head h
+
+      | Root (_, h, ms)  ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a%a%s"
+              (l_paren_if cond)
+              fmt_ppr_head     h
+              (fmt_ppr_spine 2) ms
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_head ppf = function
+      | Name (_, n) ->
+          fprintf ppf "%s"
+            (R.render_name n)
+
+
+
+    and fmt_ppr_spine lvl ppf = function
+      | Nil         ->
+          fprintf ppf ""
+
+      | App (m, ms) ->
+          fprintf ppf " %a%a"
+            (fmt_ppr_normal  lvl) m
+            (fmt_ppr_spine lvl) ms
+
+
+
+    (***************************)
+    (* Regular Pretty Printers *)
+    (***************************)
+
+    let ppr_sgn_decl = fmt_ppr_sgn_decl std_lvl std_formatter
+
+    let ppr_kind     = fmt_ppr_kind     std_lvl std_formatter
+
+    let ppr_type     = fmt_ppr_typ      std_lvl std_formatter
+
+    let ppr_normal   = fmt_ppr_normal     std_lvl std_formatter
+
+    let ppr_head     = fmt_ppr_head             std_formatter
+
+    let ppr_spine    = fmt_ppr_spine    std_lvl std_formatter
+
+  end
+
+
+
+  (********************************************)
+  (* Default CID_RENDERER for External Syntax *)
+  (********************************************)
+
+  module DefaultCidRenderer = struct
+
+    let render_name n   = n.string_of_name
+
+    let render_cid_typ  = string_of_int
+
+    let render_cid_term = string_of_int
+
+    let render_offset   = string_of_int
+
+    let render_var      = string_of_int
+
+  end
+
+
+
+  (****************************************************************)
+  (* Default External Syntax Pretty Printer Functor Instantiation *)
+  (****************************************************************)
+
+  module DefaultPrinter = Make (DefaultCidRenderer)
+
+end
+
+
+module Int = struct
+
+  open Core.Id
+  open Core.Syntax.Int
+
+  (*************************************)
+  (* Internal Syntax Printer Signature *)
+  (*************************************)
+
+  module type PRINTER = sig
+
+    open Core.Syntax.Int
+
+    (*******************************************)
+    (* Contextual Format Based Pretty Printers *)
+    (*******************************************)
+
+    val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
+
+    val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
+
+    val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
+
+    val fmt_ppr_normal   : lvl -> formatter -> normal   -> unit
+
+    val fmt_ppr_head     :        formatter -> head     -> unit
+
+    val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
+
+    val fmt_ppr_sub      : lvl -> formatter -> sub      -> unit
+
+    val fmt_ppr_front    : lvl -> formatter -> front    -> unit
+
+
+
+    (***************************)
+    (* Regular Pretty Printers *)
+    (***************************)
+
+    val ppr_sgn_decl : sgn_decl -> unit
+
+    val ppr_kind     : kind     -> unit
+
+    val ppr_type     : typ      -> unit
+
+    val ppr_normal   : normal   -> unit
+
+    val ppr_head     : head     -> unit
+
+    val ppr_spine    : spine    -> unit
+
+    val ppr_sub      : sub      -> unit
+
+    val ppr_front    : front    -> unit
+
+  end
+
+
+
+  (******************************************)
+  (* Internal Syntax Pretty Printer Functor *)
+  (******************************************)
+
+  module Make = functor (R : CID_RENDERER) -> struct
+
+    (*******************************************)
+    (* Contextual Format Based Pretty Printers *)
+    (*******************************************)
+
+    let rec fmt_ppr_sgn_decl lvl ppf = function
+      | SgnTyp (a, k)   ->
+          fprintf ppf "%s : %a.@.@?"
+            (R.render_cid_typ  a)
+            (fmt_ppr_kind lvl) k
+
+      | SgnConst (c, a) ->
+          fprintf ppf "%s : %a.@.@?"
+            (R.render_cid_term c)
+            (fmt_ppr_typ lvl)  a
+
+
+
+    and fmt_ppr_kind lvl ppf = function
+      | Typ                        ->
+          fprintf ppf "type"
+
+      | PiKind (TypDecl (x, a), k) ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
+              (l_paren_if cond)
+              (R.render_name   x)
+              (fmt_ppr_typ  0) a
+              (fmt_ppr_kind 0) k
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_typ lvl ppf = function
+      | Atom (a, Nil)             ->
+          fprintf ppf "%s"
+            (R.render_cid_typ a)
+
+      | Atom (a, ms)              ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%s%a%s"
+              (l_paren_if cond)
+              (R.render_cid_typ a)
+              (fmt_ppr_spine 2) ms
+              (r_paren_if cond)
+
+      | PiTyp (TypDecl (x, a), b) ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
+              (l_paren_if cond)
+              (R.render_name  x)
+              (fmt_ppr_typ 0) a
+              (fmt_ppr_typ 0) b
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_normal lvl ppf = function
+      | Lam (x, m)    ->
+          let cond = lvl > 0 in
+            fprintf ppf "%s[%s] %a%s"
+              (l_paren_if cond)
+              (R.render_name   x)
+              (fmt_ppr_normal 0) m
+              (r_paren_if cond)
+
+      | Root (h, Nil) ->
+          fprintf ppf "%a"
+            fmt_ppr_head h
+
+      | Root (h, ms)  ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a%a%s"
+              (l_paren_if cond)
+              fmt_ppr_head     h
+              (fmt_ppr_spine 2) ms
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_head ppf = function
+      | BVar x  ->
+          fprintf ppf "%s"
+            (R.render_offset x)
+
+      | Const c ->
+          fprintf ppf "%s"
+            (R.render_cid_term c)
+
+
+
+    and fmt_ppr_spine lvl ppf = function
+      | Nil          ->
+          fprintf ppf ""
+
+      | App (m, ms)  ->
+          fprintf ppf " %a%a"
+            (fmt_ppr_normal  lvl) m
+            (fmt_ppr_spine lvl) ms
+
+      | SClo (ms, s) ->
+          let cond = lvl > 1 in
+          fprintf ppf "%sSClo (%a, %a)%s"
             (l_paren_if cond)
-            (fmt_ppr_typ  1) a
-            (fmt_ppr_kind 0) k
+            (fmt_ppr_spine 0) ms
+            (fmt_ppr_sub   0) s
             (r_paren_if cond)
 
-    | PiKind (_, TypDecl (x, a), k) ->
-        let cond = lvl > 0 in
-          fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
-            (l_paren_if cond)
-             fmt_ppr_name    x
-            (fmt_ppr_typ  0) a
-            (fmt_ppr_kind 0) k
-            (r_paren_if cond)
+
+
+    (* FIXME *)
+    and fmt_ppr_sub lvl ppf = function
+      | Shift n     ->
+          fprintf ppf "^%s"
+            (R.render_offset n)
+
+      (* Not sure how to print a cvar.  -dwm *)
+      | SVar (_, s) ->
+          fprintf ppf "cvar[%a]"
+            (fmt_ppr_sub 0) s
+
+      | Dot (f, s)  ->
+          fprintf ppf "%a@ .@ %a"
+            (fmt_ppr_front 1) f
+            (fmt_ppr_sub   2) s
+
+
+    and fmt_ppr_front lvl ppf = function
+      | Head h ->
+          fprintf ppf "%a"
+            fmt_ppr_head h
+
+      | Obj m  ->
+          fprintf ppf "%a"
+            (fmt_ppr_normal lvl) m
+
+      | Undef  ->
+          fprintf ppf "_"
+
+
+    (***************************)
+    (* Regular Pretty Printers *)
+    (***************************)
+
+    let ppr_sgn_decl = fmt_ppr_sgn_decl std_lvl std_formatter
+
+    let ppr_kind     = fmt_ppr_kind     std_lvl std_formatter
+
+    let ppr_type     = fmt_ppr_typ      std_lvl std_formatter
+
+    let ppr_normal   = fmt_ppr_normal     std_lvl std_formatter
+
+    let ppr_head     = fmt_ppr_head             std_formatter
+
+    let ppr_spine    = fmt_ppr_spine    std_lvl std_formatter
+
+    let ppr_sub      = fmt_ppr_sub      std_lvl std_formatter
+
+    let ppr_front    = fmt_ppr_front    std_lvl std_formatter
+
+  end
 
 
 
-  and fmt_ppr_typ lvl ppf = function
-    | Atom (_, a, Nil)             ->
-        fprintf ppf "%a"
-           fmt_ppr_name a
+  (********************************************)
+  (* Default CID_RENDERER for External Syntax *)
+  (********************************************)
 
-    | Atom (_, a, ms)              ->
-        let cond = lvl > 1 in
-          fprintf ppf "%s%a%a%s"
-            (l_paren_if cond)
-             fmt_ppr_name     a
-            (fmt_ppr_spine 2) ms
-            (r_paren_if cond)
+  module DefaultCidRenderer = struct
 
-    | ArrTyp (_, a, b)             ->
-        let cond = lvl > 0 in
-          fprintf ppf "@[%s%a -> %a%s@]"
-            (l_paren_if cond)
-            (fmt_ppr_typ 1) a
-            (fmt_ppr_typ 0) b
-            (r_paren_if cond)
+    open Core.Store.Cid
 
-    | PiTyp (_, TypDecl (x, a), b) ->
-        let cond = lvl > 0 in
-          fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
-            (l_paren_if cond)
-             fmt_ppr_name      x
-            (fmt_ppr_typ 0) a
-            (fmt_ppr_typ 0) b
-            (r_paren_if cond)
+    let render_name     n = n.string_of_name
+
+    let render_cid_typ  a = render_name (Typ .get a).Typ .name
+
+    let render_cid_term c = render_name (Term.get c).Term.name
+
+    let render_offset   i = string_of_int i
+
+    let render_var      x = string_of_int x
+
+  end
 
 
 
-  and fmt_ppr_term lvl ppf = function
-    | Lam (_, x, m)    ->
-        let cond = lvl > 0 in
-          fprintf ppf "%s[%a] %a%s"
-            (l_paren_if cond)
-             fmt_ppr_name    x
-            (fmt_ppr_term 0) m
-            (r_paren_if cond)
+  (****************************************************************)
+  (* Default External Syntax Pretty Printer Functor Instantiation *)
+  (****************************************************************)
 
-    | Root (_, h, Nil) ->
-        fprintf ppf "%a"
-           fmt_ppr_head h
-
-    | Root (_, h, ms)  ->
-        let cond = lvl > 1 in
-          fprintf ppf "%s%a%a%s"
-            (l_paren_if cond)
-             fmt_ppr_head     h
-            (fmt_ppr_spine 2) ms
-            (r_paren_if cond)
-
-
-
-  and fmt_ppr_head ppf = function
-    | Name (_, n) ->
-        fprintf ppf "%a"
-          fmt_ppr_name n
-
-
-
-  and fmt_ppr_spine lvl ppf = function
-    | Nil         ->
-        fprintf ppf ""
-
-    | App (m, ms) ->
-        fprintf ppf " %a%a"
-          (fmt_ppr_term  lvl) m
-          (fmt_ppr_spine lvl) ms
-
-
-
-  (***************************)
-  (* Default Pretty Printers *)
-  (***************************)
-
-  let ppr_sgn_decl = fmt_ppr_sgn_decl std_lvl std_formatter
-
-  let ppr_kind     = fmt_ppr_kind     std_lvl std_formatter
-
-  let ppr_type     = fmt_ppr_typ      std_lvl std_formatter
-
-  let ppr_term     = fmt_ppr_term     std_lvl std_formatter
-
-  let ppr_head     = fmt_ppr_head             std_formatter
-
-  let ppr_spine    = fmt_ppr_spine    std_lvl std_formatter
+  module DefaultPrinter = Make (DefaultCidRenderer)
 
 end
 
 
 
-module Int = struct
+module Error = struct
 
-  open Id
   open Core.Syntax.Int
 
-
-
-  (*******************************************)
-  (* Contextual Format Based Pretty Printers *)
-  (*******************************************)
-
-  let rec fmt_ppr_sgn_decl lvl ppf = function
-    | SgnTyp (a, k)   ->
-        fprintf ppf "%a : %a.@.@?"
-           fmt_ppr_cid_typ   a
-          (fmt_ppr_kind lvl) k
-
-    | SgnConst (c, a) ->
-        fprintf ppf "%a : %a.@.@?"
-           fmt_ppr_cid_term c
-          (fmt_ppr_typ lvl) a
-
-
-
-  and fmt_ppr_kind lvl ppf = function
-    | Typ                        ->
-        fprintf ppf "type"
-
-    | PiKind (TypDecl (x, a), k) ->
-        let cond = lvl > 0 in
-          fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
-            (l_paren_if cond)
-             fmt_ppr_name    x
-            (fmt_ppr_typ  0) a
-            (fmt_ppr_kind 0) k
-            (r_paren_if cond)
-
-
-
-  and fmt_ppr_typ lvl ppf = function
-    | Atom (a, Nil)             ->
-        fprintf ppf "%a"
-           fmt_ppr_cid_typ a
-
-    | Atom (a, ms)              ->
-        let cond = lvl > 1 in
-          fprintf ppf "%s%a%a%s"
-            (l_paren_if cond)
-             fmt_ppr_cid_typ  a
-            (fmt_ppr_spine 2) ms
-            (r_paren_if cond)
-
-    | PiTyp (TypDecl (x, a), b) ->
-        let cond = lvl > 0 in
-          fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
-            (l_paren_if cond)
-             fmt_ppr_name   x
-            (fmt_ppr_typ 0) a
-            (fmt_ppr_typ 0) b
-            (r_paren_if cond)
-
-
-
-  and fmt_ppr_term lvl ppf = function
-    | Lam (x, m)    ->
-        let cond = lvl > 0 in
-          fprintf ppf "%s[%a] %a%s"
-            (l_paren_if cond)
-             fmt_ppr_name    x
-            (fmt_ppr_term 0) m
-            (r_paren_if cond)
-
-    | Root (h, Nil) ->
-        fprintf ppf "%a"
-           fmt_ppr_head h
-
-    | Root (h, ms)  ->
-        let cond = lvl > 1 in
-          fprintf ppf "%s%a%a%s"
-            (l_paren_if cond)
-             fmt_ppr_head     h
-            (fmt_ppr_spine 2) ms
-            (r_paren_if cond)
-
-
-
-  and fmt_ppr_head ppf = function
-    | BVar x  ->
-        fprintf ppf "%a"
-          fmt_ppr_offset x
-
-    | Const c ->
-        fprintf ppf "%a"
-          fmt_ppr_cid_term c
-
-
-
-  and fmt_ppr_spine lvl ppf = function
-    | Nil         ->
-        fprintf ppf ""
-
-    | App (m, ms) ->
-        fprintf ppf " %a%a"
-          (fmt_ppr_term  lvl) m
-          (fmt_ppr_spine lvl) ms
-
-
-
   (***************************)
-  (* Default Pretty Printers *)
+  (* Error Printer Signature *)
   (***************************)
 
-  let ppr_sgn_decl = fmt_ppr_sgn_decl std_lvl std_formatter
+  module type PRINTER = sig
 
-  let ppr_kind     = fmt_ppr_kind     std_lvl std_formatter
+    module Check : sig
 
-  let ppr_type     = fmt_ppr_typ      std_lvl std_formatter
+      (********************************)
+      (* Format Based Pretty Printers *)
+      (********************************)
 
-  let ppr_term     = fmt_ppr_term     std_lvl std_formatter
+      val fmt_ppr : formatter -> Core.Check.error -> unit
 
-  let ppr_head     = fmt_ppr_head             std_formatter
 
-  let ppr_spine    = fmt_ppr_spine    std_lvl std_formatter
+
+      (***************************)
+      (* Regular Pretty Printers *)
+      (***************************)
+
+      val ppr : Core.Check.error -> unit
+
+    end
+
+
+
+    module Whnf : sig
+
+      (********************************)
+      (* Format Based Pretty Printers *)
+      (********************************)
+
+      val fmt_ppr : formatter -> Core.Whnf.error -> unit
+
+
+
+      (***************************)
+      (* Regular Pretty Printers *)
+      (***************************)
+
+      val ppr : Core.Whnf.error -> unit
+
+    end
+
+  end
+
+
+
+  (********************************)
+  (* Error Pretty Printer Functor *)
+  (********************************)
+
+  module Make = functor (R : CID_RENDERER) -> struct
+
+    module IP = Int.Make (R)
+
+    module Check = struct
+
+      open Core.Check
+
+      (********************************)
+      (* Format Based Pretty Printers *)
+      (********************************)
+
+      let fmt_ppr ppf = function
+        | CtxVarMisMatch _ ->
+            fprintf ppf
+              "ctx variable mismatch"
+
+        | DeclIllTyped ->
+            fprintf ppf
+              "Declaration not well-typed"
+
+        | ExpAppNotFun ->
+            fprintf ppf
+              "Expression is applied, but not a function"
+
+        | KindMisMatch ->
+            fprintf ppf
+              "Kind mismatch"
+
+        | SubIllTyped ->
+            fprintf ppf
+              "Substitution not well-typed"
+
+        | TypMisMatch ((tA1, s1), (tA2, s2)) ->
+            fprintf ppf
+              "Type mismatch:@ @[%a[%a]@ =/=@ %a[%a]@]"
+              (* The 2 is for precedence.  Treat printing
+                 below as if it were similar to an application context as
+                 far as precedence is concerned -dwm *)
+              (IP.fmt_ppr_typ 0) tA1
+              (IP.fmt_ppr_sub 0) s1
+              (IP.fmt_ppr_typ 0) tA2
+              (IP.fmt_ppr_sub 0) s2
+
+
+
+      (***************************)
+      (* Regular Pretty Printers *)
+      (***************************)
+
+      let ppr = fmt_ppr std_formatter
+
+    end
+
+
+
+    module Whnf = struct
+
+      open Core.Whnf
+
+      (********************************)
+      (* Format Based Pretty Printers *)
+      (********************************)
+
+      let fmt_ppr ppf = function
+        | TypingAmbiguous ->
+            fprintf ppf
+              "Typing ambiguous -- constraint of functional type cannot be simplified"
+
+        | NotPatSub       ->
+            fprintf ppf
+              "Not a pattern substitution"
+
+
+
+      (***************************)
+      (* Regular Pretty Printers *)
+      (***************************)
+
+      let ppr = fmt_ppr std_formatter
+
+    end
+
+  end
+
+
+
+  (***********************************)
+  (* Default CID_RENDERER for Errors *)
+  (***********************************)
+
+  module DefaultCidRenderer = Int.DefaultCidRenderer
+
+
+
+  (******************************************************)
+  (* Default Error Pretty Printer Functor Instantiation *)
+  (******************************************************)
+
+  module DefaultPrinter = Make (DefaultCidRenderer)
 
 end

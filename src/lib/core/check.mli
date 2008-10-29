@@ -8,7 +8,17 @@
 
 open Syntax.Int
 
-exception Error of string
+
+
+type error =
+  | CtxVarMisMatch of cvar * cvar
+  | DeclIllTyped
+  | ExpAppNotFun
+  | KindMisMatch
+  | SubIllTyped
+  | TypMisMatch    of tclo * tclo
+
+exception Error of error
 
 val check : mctx -> dctx -> nclo -> tclo -> unit
 

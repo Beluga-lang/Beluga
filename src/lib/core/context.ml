@@ -71,6 +71,8 @@ let ctxDec cPsi k =
   let rec ctxDec' = function
     | (DDec     (cPsi', TypDecl   (x, tA'  )), 1 )
       -> TypDecl (x, TClo (tA', Shift k))
+    | (DDec     (cPsi', TypDecl   (x, tA'  )), k' )
+      -> ctxDec' (cPsi', k' - 1)
 
     | (SigmaDec (cPsi', SigmaDecl (x, tArec)), k')
       -> ctxDec' (cPsi', k' - 1)

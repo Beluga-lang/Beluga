@@ -19,7 +19,7 @@ let main () =
   then
     fprintf std_formatter "Usage: %s <file-1.lf> ... <file-n.lf>\n" Sys.argv.(0)
   else
-    let per_file file_name =
+    let per_file errors file_name =
       let rec sgn           = Parser.parse_file ~name:file_name Parser.p_sgn_eoi
       and ppf               = std_formatter
       and print_sgn printer = function
@@ -32,7 +32,7 @@ let main () =
         match sgn with
           (* If we have a parse failure, print some messages *)
           | Common.InL exn   ->
-              begin match exn with
+             (begin match exn with
                 | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
                       fprintf ppf "Parse Error: \n\t%s\n\nLocation:\n\t" exn
                     ; Parser.Grammar.Loc.print ppf loc
@@ -41,6 +41,7 @@ let main () =
                 | exn' ->
                       fprintf ppf "Uncaught Exception: %s\n" (Printexc.to_string exn')
               end
+            ; errors + 1)
 
           (* If we succeed, pretty-print the resulting AST *)
           | Common.InR decls ->
@@ -55,23 +56,49 @@ let main () =
                       ; print_newline ()
                       ; Check.check_sgn_decls internal_decls
                       ; fprintf ppf "\n## Checking Successful! ##\n\n"
-                      (* finally, cleanup for the next file *)
+                      (* clean up for the next file *)
                       ; Store.clear ()
+                      ; errors
                   with
                     | Whnf.Error  err ->
                         fprintf
                           ppf
                           "\n!! Error during Weak-Head Normalization !!\n\n%a\n\n"
                           Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err
+                      ; errors + 1
 
                     | Check.Error err ->
                         fprintf
                           ppf
                           "\n!! Error during Type-Checking !!\n\n%a\n\n"
-                          Pretty.Error.DefaultPrinter.Check.fmt_ppr err
+                          Pretty.Error.DefaultPrinter.Check.fmt_ppr err;
+                      ; errors + 1
 
+    (* Iterate the process for each file given on the command line *)
+    in let file_count = Array.length Sys.argv - 1
+    in let error_count = Array.fold_left
+                           per_file
+                           0  (*number of errors*)
+                           (Array.sub Sys.argv 1 file_count)
+
+    in let plural count what suffix =
+        string_of_int count
+      ^ " "
+      ^ (if count = 1 then
+           what
+         else
+           what ^ suffix)
+
+    in let status_code = if error_count = 0 then 0 else 1
+       and message = if file_count = 1 && error_count = 0 then
+                       ""
+                     else "#### " ^
+                       (if file_count <= 1 then "" 
+                        else plural file_count "file" "s" ^ ", ")
+                     ^ plural error_count "error" "s"
+                     ^ "\n"
     in
-      (* Iterate the process for each file given on the commandline *)
-      Array.iter per_file (Array.sub Sys.argv 1 (Array.length Sys.argv -1))
+        print_string message
+      ; exit status_code
 
 let _ = main ()

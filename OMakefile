@@ -23,7 +23,7 @@ OCAMLFLAGS = -w Ae -warn-error Ap
 OCAMLOPTFLAGS = -noassert -inline 100
 
 # Compile to byte code?
-BYTE_ENABLED   = true
+BYTE_ENABLED   = false
 
 # Compile to native code?
 NATIVE_ENABLED = true

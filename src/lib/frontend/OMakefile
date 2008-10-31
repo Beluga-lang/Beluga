@@ -35,6 +35,6 @@ files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), 
 # Turn off unused variable warning only for the lexer; needed for
 # dummy variables created by ulex / camlp4
 OCAMLFLAGS += -w z
-lexer: $(addsuffixes .cmo .cmx, lexer)
+lexer: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), lexer)
 
 .DEFAULT: lexer files pack $(OCamlLibrary $(LIBRARY), $(PACK))

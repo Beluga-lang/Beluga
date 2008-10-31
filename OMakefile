@@ -10,10 +10,17 @@ OCAMLFINDFLAGS = -syntax camlp4o
 OCAMLPACKS[] =
         camlp4
         extlib
+        oUnit
         ulex
 
 # Set up the standard configuration
 OCAMLFLAGS = -w Ae -warn-error Ap
+
+# Flags to pass to the native-code compiler
+# Explanation:
+#       -noassert       (turn off assertions)
+#       -inline 100     (aggressive inlining)
+OCAMLOPTFLAGS = -noassert -inline 100
 
 # Compile to byte code?
 BYTE_ENABLED   = true

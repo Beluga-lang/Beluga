@@ -1,10 +1,11 @@
 *.a
 *.cm*
 *.o
+*.opt
 *.omc
+*.run
 *~
 .DS_Store
 .omake*
-src/tool/interpreter/interpreter
-src/tool/interpreter/interpreter.opt
-src/tool/interpreter/interpreter.run
+src/tools/interpreter/interpreter
+src/tests/test-harness

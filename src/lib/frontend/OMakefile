@@ -16,7 +16,6 @@ PACK           = Frontend
 # Declare the files the package will contain
 FILES[] =
         parser
-        pretty
 	token
 
 # Declare one pseudo target for the lexer

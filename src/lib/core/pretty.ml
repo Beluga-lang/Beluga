@@ -52,7 +52,7 @@ let r_paren_if cond =
 
 module type CID_RENDERER = sig
 
-  open Core.Id
+  open Id
 
 
 
@@ -72,8 +72,8 @@ end
 
 module Ext = struct
 
-  open Core.Id
-  open Core.Syntax.Ext
+  open Id
+  open Syntax.Ext
 
   (*************************************)
   (* External Syntax Printer Signature *)
@@ -81,7 +81,7 @@ module Ext = struct
 
   module type PRINTER = sig
 
-    open Core.Syntax.Ext
+    open Syntax.Ext
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
@@ -291,8 +291,8 @@ end
 
 module Int = struct
 
-  open Core.Id
-  open Core.Syntax.Int
+  open Id
+  open Syntax.Int
 
   (*************************************)
   (* Internal Syntax Printer Signature *)
@@ -300,7 +300,7 @@ module Int = struct
 
   module type PRINTER = sig
 
-    open Core.Syntax.Int
+    open Syntax.Int
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
@@ -523,7 +523,7 @@ module Int = struct
 
   module DefaultCidRenderer = struct
 
-    open Core.Store.Cid
+    open Store.Cid
 
     let render_name     n = n.string_of_name
 
@@ -551,7 +551,7 @@ end
 
 module Error = struct
 
-  open Core.Syntax.Int
+  open Syntax.Int
 
   (***************************)
   (* Error Printer Signature *)
@@ -565,7 +565,7 @@ module Error = struct
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Core.Check.error -> unit
+      val fmt_ppr : formatter -> Check.error -> unit
 
 
 
@@ -573,7 +573,7 @@ module Error = struct
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Core.Check.error -> unit
+      val ppr : Check.error -> unit
 
     end
 
@@ -585,7 +585,7 @@ module Error = struct
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Core.Whnf.error -> unit
+      val fmt_ppr : formatter -> Whnf.error -> unit
 
 
 
@@ -593,7 +593,7 @@ module Error = struct
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Core.Whnf.error -> unit
+      val ppr : Whnf.error -> unit
 
     end
 
@@ -611,7 +611,7 @@ module Error = struct
 
     module Check = struct
 
-      open Core.Check
+      open Check
 
       (********************************)
       (* Format Based Pretty Printers *)
@@ -663,7 +663,7 @@ module Error = struct
 
     module Whnf = struct
 
-      open Core.Whnf
+      open Whnf
 
       (********************************)
       (* Format Based Pretty Printers *)

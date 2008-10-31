@@ -21,7 +21,7 @@ val std_lvl : lvl
 
 module type CID_RENDERER = sig
 
-  open Core.Id
+  open Id
 
   val render_name       : name     -> string
 
@@ -45,7 +45,7 @@ module Ext : sig
 
   module type PRINTER = sig
 
-    open Core.Syntax.Ext
+    open Syntax.Ext
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
@@ -119,7 +119,7 @@ module Int : sig
 
   module type PRINTER = sig
 
-    open Core.Syntax.Int
+    open Syntax.Int
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
@@ -207,7 +207,7 @@ module Error : sig
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Core.Check.error -> unit
+      val fmt_ppr : formatter -> Check.error -> unit
 
 
 
@@ -215,7 +215,7 @@ module Error : sig
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Core.Check.error -> unit
+      val ppr : Check.error -> unit
 
     end
 
@@ -227,7 +227,7 @@ module Error : sig
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Core.Whnf.error -> unit
+      val fmt_ppr : formatter -> Whnf.error -> unit
 
 
 
@@ -235,7 +235,7 @@ module Error : sig
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Core.Whnf.error -> unit
+      val ppr : Whnf.error -> unit
 
     end
 

@@ -31,13 +31,10 @@ FILES[] =
 # core-pack will be passed the -for-pack flag as well, which is not
 # what we want
 
-# Zero out the flags for this part -- packaging doesn't understand
-# warning flags and other things like that
-OCAMLFLAGS =
 pack: $(OCamlPackage $(PACK), $(FILES))
 
 # Use the -for-pack flag for compiling the individual modules
-OCAMLFLAGS = -for-pack $(PACK)
+OCAMLFLAGS += -for-pack $(PACK)
 files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
 
 .DEFAULT: files pack $(OCamlLibrary $(LIBRARY), $(PACK))

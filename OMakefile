@@ -13,7 +13,7 @@ OCAMLPACKS[] =
         ulex
 
 # Set up the standard configuration
-OCAMLFLAGS += -Wa
+OCAMLFLAGS += -w a
 
 # Compile to byte code?
 BYTE_ENABLED   = true

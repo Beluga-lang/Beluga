@@ -5,3 +5,6 @@
 *~
 .DS_Store
 .omake*
+src/tool/interpreter/interpreter
+src/tool/interpreter/interpreter.opt
+src/tool/interpreter/interpreter.run

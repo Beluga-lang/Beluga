@@ -14,19 +14,13 @@ PROGRAM = interpreter
 
 # Declare the files the program is built from
 FILES[] =
-        interpreter
+        main
 
 # Declare some phony empty targets so omake doesn't try to build
 # camlp4lib.  May be a more elegant way to do this.
 .PHONY: camlp4lib.a camlp4lib.cma camlp4lib.cmxa
-
 camlp4lib.a:
-
 camlp4lib.cma:
-
 camlp4lib.cmxa:
 
-# Zero out the flags for this part -- packaging doesn't understand
-# warning flags and other things like that
-OCAMLFLAGS =
 .DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))

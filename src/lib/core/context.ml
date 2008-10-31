@@ -69,12 +69,13 @@ let ctxDec cPsi k =
      where Psi |- ^(k-k') : Psi'', 1 <= k' <= k
   *)
   let rec ctxDec' = function
-    | (DDec     (cPsi', TypDecl   (x, tA'  )), 1 )
+    | (DDec     (_cPsi', TypDecl   (x, tA'    )), 1 )
       -> TypDecl (x, TClo (tA', Shift k))
-    | (DDec     (cPsi', TypDecl   (x, tA'  )), k' )
+
+    | (DDec     (cPsi' , TypDecl   (_x, _tA'  )), k' )
       -> ctxDec' (cPsi', k' - 1)
 
-    | (SigmaDec (cPsi', SigmaDecl (x, tArec)), k')
+    | (SigmaDec (cPsi', SigmaDecl  (_x, _tArec)), k')
       -> ctxDec' (cPsi', k' - 1)
     (* ctxDec' (Null    , k') should not occur by invariant *)
     (* ctxDec' (CtxVar _, k') should not occur by invariant *)
@@ -97,12 +98,12 @@ let ctxSigmaDec cPsi k =
      where Psi |- ^(k-k') : Psi'', 1 <= k' <= k
   *)
   let rec ctxDec' = function
-    | (DDec (cPsi', TypDecl (x, tA')), k')
+    | (DDec (cPsi', TypDecl (_x, _tA')), k')
       -> ctxDec' (cPsi', k' - 1)
 
-    | (SigmaDec (cPsi', SigmaDecl (x, tArec)), 1)
+    | (SigmaDec (_cPsi', SigmaDecl (x, tArec)), 1)
       -> SigmaDecl (x, sigmaShift tArec k) (* ? -bp *)
-         (* ctxDec' (Null, k')  should not occur by invariant *)
+         (* ctxDec' (Null    , k') should not occur by invariant *)
          (* ctxDec' (CtxVar _, k') should not occur by invariant *)
   in
     ctxDec' (cPsi, k)
@@ -118,17 +119,17 @@ let ctxSigmaDec cPsi k =
      otherwise None
 *)
 let rec ctxVar = function
-  | Null -> None
-  | CtxVar psi -> Some psi
-  | DDec (cPsi, x) -> ctxVar cPsi
-  | SigmaDec (cPsi, x) -> ctxVar cPsi
+  | Null                -> None
+  | CtxVar   psi        -> Some psi
+  | DDec     (cPsi, _x) -> ctxVar cPsi
+  | SigmaDec (cPsi, _x) -> ctxVar cPsi
 
 
 
 (*
 *)
 let rec mctxMDec cD k' = match (cD, k') with
-  | (Dec (cD, MDecl(u, tA, cPsi)), 1)
+  | (Dec (_cD, MDecl(_u, tA, cPsi)), 1)
     -> (TClo (tA, Shift k'), ctxShift cPsi k')
 
   | (Dec (cD, _), k)
@@ -139,7 +140,7 @@ let rec mctxMDec cD k' = match (cD, k') with
 (*
 *)
 let rec mctxPDec cD k' = match (cD, k') with
-  | (Dec (cD, PDecl (u, tA, cPsi)), 1)
+  | (Dec (_cD, PDecl (_u, tA, cPsi)), 1)
     -> (TClo (tA, Shift k'), ctxShift cPsi k')
 
   | (Dec (cD, _), k)

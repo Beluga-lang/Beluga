@@ -30,19 +30,19 @@ module EmptyTrail : TRAIL = struct
 
   type 'a t = unit
 
-  let trail () = ()
+  let trail   ()           = ()
 
-  let suspend () copy = ()
+  let suspend () _copy     = ()
 
-  let resume () () reset = ()
+  let resume  () () _reset = ()
 
-  let reset () = ()
+  let reset   ()           = ()
 
-  let mark () = ()
+  let mark    ()           = ()
 
-  let unwind () undo = ()
+  let unwind  () _undo     = ()
 
-  let log () action = ()
+  let log     () _action   = ()
 
 end
 

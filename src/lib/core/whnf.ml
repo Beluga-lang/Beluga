@@ -51,7 +51,7 @@ and lowerMVar1 u sA = match (u, sA) with
   | (_, (TClo (tA, s), s'))
     -> lowerMVar1 u (tA, comp s s')
 
-  | (_, (Atom _, s))
+  | (_, (Atom _, _s))
     -> u
 
 
@@ -71,7 +71,7 @@ and lowerMVar1 u sA = match (u, sA) with
              if n = 0, u = u' and no effect occurs.
 *)
     and lowerMVar = function
-      | Inst (r, cPsi, tA, { contents = [] }) as u
+      | Inst (_r, _cPsi, tA, { contents = [] }) as u
         -> lowerMVar1 u (tA, id)
 
       | _
@@ -119,7 +119,7 @@ and lowerMVar1 u sA = match (u, sA) with
       | Root (MVar (Offset _ as u, r), tS)
         -> Root (MVar (u, comp sigma r), normSpine (tS, sigma))
 
-      | Root (MVar (Inst ({ contents = Some tM}, _, _, _), r) as u, tS)
+      | Root (MVar (Inst ({ contents = Some tM}, _, _, _), r) as _u, tS)
         (* constraints associated with u must be in solved form *)
         -> reduce (tM, r) (normSpine (tS, sigma))
 
@@ -127,10 +127,10 @@ and lowerMVar1 u sA = match (u, sA) with
           (* meta-variable is of atomic type; tS = Nil *)
         -> Root (MVar (u, comp r sigma), normSpine (tS, sigma))
 
-      | Root (MVar (Inst ({ contents = None } as r, cPsi, TClo (tA, s'), cnstr) as u, s), tS)
+      | Root (MVar (Inst ({ contents = None } as r, cPsi, TClo (tA, s'), cnstr) as _u, s), tS)
         -> norm (Root (MVar (Inst (r, cPsi, normTyp (tA, s'), cnstr), s), tS), sigma)
 
-      | Root (MVar (Inst ({ contents = None }, _, tA, _) as u, r), tS)
+      | Root (MVar (Inst ({ contents = None }, _, _tA, _) as u, _r), _tS)
       (* Meta-variable is not atomic and tA = Pi x:B1.B2 
          lower u, and normalize the lowered meta-variable *)
         -> let _ = lowerMVar u in norm (tM, sigma)
@@ -141,13 +141,13 @@ and lowerMVar1 u sA = match (u, sA) with
       | Root (PVar (Offset _ as p, r), tS)
         -> Root (PVar (p, comp sigma r), normSpine (tS, sigma))
 
-      | Root (PVar (PInst ({ contents = Some (BVar i) }, _, _, _) as p, r), tS)
+      | Root (PVar (PInst ({ contents = Some (BVar i) }, _, _, _) as _p, r), tS)
         -> begin match bvarSub i r with
              | Obj tM    -> reduce (tM, id) (normSpine (tS, sigma))
              | Head head -> Root (head, normSpine (tS, sigma))
            end
 
-      | Root (PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as p, r), tS)
+      | Root (PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS)
         -> norm (Root (PVar (q, comp r' r), tS), sigma)
        (* where p::tA[cPsi]
           and  cD; cPsi' |- r : cPsi 
@@ -170,7 +170,7 @@ and lowerMVar1 u sA = match (u, sA) with
             (* other cases are impossible -- at least for now -bp *)
            end
 
-      | Root (Proj (PVar (Offset i as q, s), k), tS)
+      | Root (Proj (PVar (Offset _i as q, s), k), tS)
         -> Root (Proj (PVar (q, comp s sigma), k), normSpine (tS, sigma))
 
       | Root (Proj (PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _), s), k), tS)
@@ -191,9 +191,9 @@ and lowerMVar1 u sA = match (u, sA) with
      *)
     (* shouldn't it be |- rather than | ? - dwm *)
     and reduce sM spine = match (sM, spine) with
-      | ((Root (_, _) as root, s), Nil)   -> norm (root, s)
-      | ((Lam (y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
-      | ((Clo (tM, s'), s), tS)           -> reduce (tM, comp s' s) tS
+      | ((Root (_, _) as root, s), Nil)    -> norm (root, s)
+      | ((Lam (_y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
+      | ((Clo (tM, s'), s), tS)            -> reduce (tM , comp s' s)       tS
       (* other cases are impossible *)
 
 
@@ -210,7 +210,7 @@ and lowerMVar1 u sA = match (u, sA) with
       |  Atom (a, tS)
         -> Atom (a, normSpine (tS, sigma))
 
-      |  PiTyp (TypDecl (x, tA) as decl, tB)
+      |  PiTyp (TypDecl (_x, _tA) as decl, tB)
         -> PiTyp (normDecl (decl, sigma),  normTyp (tB, dot1 sigma))
 
       |  TClo (tA, s)
@@ -251,7 +251,7 @@ and lowerMVar1 u sA = match (u, sA) with
 
      *)
     let rec whnf sM = match sM with
-      | (Lam _, s)                 -> sM
+      | (Lam _, _s)                -> sM
 
       | (Clo (tN, s), s')          -> whnf (tN, comp s s')
 
@@ -264,14 +264,14 @@ and lowerMVar1 u sA = match (u, sA) with
 
 
       (* Meta-variable *)
-      |  (Root (MVar (Offset k as u, r), tS), sigma)
+      |  (Root (MVar (Offset _k as u, r), tS), sigma)
         -> (Root (MVar (u, comp sigma r), SClo (tS, sigma)), id)
 
-      | (Root (MVar (Inst ({ contents = Some tM }, _   , _ , _    ) as u, r), tS)      , sigma)
+      | (Root (MVar (Inst ({ contents = Some tM }, _    , _ , _     ) as _u, r), tS)      , sigma)
          (* constraints associated with u must be in solved form *)
         -> whnfRedex (whnf (tM, r), (tS, sigma))
 
-      | (Root (MVar (Inst ({ contents = None    }, cPsi, tA, cnstr) as u, r), tS) as tM, sigma)
+      | (Root (MVar (Inst ({ contents = None    }, _cPsi, tA, _cnstr) as u , r), tS) as tM, sigma)
             (* note: we could split this case based on tA; 
                      this would avoid possibly building closures with id *)
         -> let rec expose (tA, s) = match tA with
@@ -299,17 +299,17 @@ and lowerMVar1 u sA = match (u, sA) with
 
 
       (* Parameter variable *)
-      | (Root (PVar (Offset k as p, r), tS), sigma)
+      | (Root (PVar (Offset _k as p, r), tS), sigma)
         -> (Root (PVar (p, comp sigma r), SClo (tS, sigma)), id)
 
-      | (Root (PVar (PInst ({ contents = Some (BVar i)} as p, _, _, _) , r), tS), sigma)
+      | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma)
         ->
           begin match bvarSub i r with
             | Obj tM    -> whnfRedex (whnf (tM, id), (tS, sigma))
             | Head head -> (Root (head, SClo (tS, sigma)), id)
           end
 
-      | (Root (PVar (PInst ({ contents = Some (PVar (q, r'))}, _, _, _) as p, r), tS), sigma)
+      | (Root (PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS), sigma)
         -> whnf (Root (PVar (q, comp r' r), tS), sigma)
 
 
@@ -330,7 +330,7 @@ and lowerMVar1 u sA = match (u, sA) with
       | (Root (Proj (PVar (Offset _ as q, s), k), tS), sigma)
         -> (Root (Proj (PVar (q, comp s sigma), k), SClo (tS, sigma)), id)
 
-      | (Root (Proj (PVar (PInst ({ contents = Some (PVar (q', r'))}, _, _, _) as q, s), k), tS), sigma)
+      | (Root (Proj (PVar (PInst ({ contents = Some (PVar (q', r'))}, _, _, _) as _q, s), k), tS), sigma)
         -> whnf (Root (Proj (PVar (q', comp r' s), k), tS), sigma)
 
 
@@ -346,13 +346,13 @@ and lowerMVar1 u sA = match (u, sA) with
 
      *)
     and whnfRedex (sM, sS) = match (sM, sS) with
-      | ((Root (_, _) as root, s1), (Nil, s2))
+      | ((Root (_, _) as root, s1), (Nil, _s2))
         -> whnf (root, s1)
 
-      | ((Lam (x, tM), s1), (App (tN, tS), s2))
-        ->  let tN' = Clo(tN,s2) in    (* cD ; cPsi |- tN'      <= tA' *)
-            let s1' = Dot(Obj(tN'),s1) (* cD ; cPsi |- tN' . s1 <= Psi1, x:tA''
-                                          tA'' = [s1]tA' *)
+      | ((Lam (_x, tM), s1), (App (tN, tS), s2))
+        ->  let tN' = Clo (    tN , s2) in    (* cD ; cPsi |- tN'      <= tA' *)
+            let s1' = Dot (Obj tN', s1)       (* cD ; cPsi |- tN' . s1 <= Psi1, x:tA''
+                                                 tA'' = [s1]tA' *)
             in
               whnfRedex ((tM, s1'), (tS, s2))
 
@@ -374,9 +374,9 @@ and lowerMVar1 u sA = match (u, sA) with
 
      *)
     and whnfTyp (tA, sigma) = match tA with
-      | Atom (a, tS)   -> (Atom (a, SClo (tS, sigma)), id)
-      | PiTyp (cD, tB) -> (tA, sigma)
-      | TClo (tA, s)   -> whnfTyp (tA, comp s sigma)
+      | Atom (a, tS)     -> (Atom (a, SClo (tS, sigma)), id)
+      | PiTyp (_cD, _tB) -> (tA, sigma)
+      | TClo (tA, s)     -> whnfTyp (tA, comp s sigma)
 
 
 
@@ -391,7 +391,7 @@ and lowerMVar1 u sA = match (u, sA) with
                and  ni <= k or ni = _ for all 1 <= i <= m
     *)
     let rec mkPatSub s = match s with
-      | Shift k                -> s
+      | Shift _k               -> s
 
       | Dot (Head (BVar n), s) ->
             let s' = mkPatSub s in
@@ -406,8 +406,8 @@ and lowerMVar1 u sA = match (u, sA) with
 
       | Dot (Obj (tM), s)      ->
           begin match whnf (tM, id) with
-            | (Root (BVar k, Nil), id) -> Dot (Head (BVar k), mkPatSub s)
-            | _                        -> raise (Error NotPatSub)
+            | (Root (BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
+            | _                         -> raise (Error NotPatSub)
           end
 
       | _                      -> raise (Error NotPatSub)
@@ -448,10 +448,10 @@ and lowerMVar1 u sA = match (u, sA) with
               | (MVar (u, s'), MVar (w, s''))
                 -> u = w && convSub (comp s' s1) (comp s'' s2)
 
-              | (AnnH (head, tA), _)
+              | (AnnH (head, _tA), _)
                 -> conv' (Root (head, spine1), s1) sN
 
-              | (_ , AnnH (head,tA))
+              | (_ , AnnH (head, _tA))
                 -> conv' sM (Root (head, spine2), s2)
 
               | (Proj (BVar k1, i), Proj (BVar k2, j))
@@ -473,7 +473,7 @@ and lowerMVar1 u sA = match (u, sA) with
 
 
      and convSpine spine1 spine2 = match (spine1, spine2) with
-       | ((Nil, s1), (Nil, s2))
+       | ((Nil, _s1), (Nil, _s2))
          -> true
 
        | ((App (tM1, spine1), s1), (App (tM2, spine2), s2))
@@ -567,10 +567,10 @@ and lowerMVar1 u sA = match (u, sA) with
           cD ; cPsi |- [s]recA = [s']recB <= type
      *)
     let rec convTypRec sArec sBrec = match (sArec, sBrec) with
-      | (([]        , s), ([]        , s'))
+      | (([]        , _s), ([]        , _s'))
         -> true
 
-      | ((tA :: recA, s), (tB :: recB, s'))
+      | ((tA :: recA,  s), (tB :: recB,  s'))
         ->   convTyp    (tA  ,      s) (tB  ,      s')
           && convTypRec (recA, dot1 s) (recB, dot1 s')
 

@@ -137,7 +137,7 @@ module Int : sig
 
     val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
 
-    val fmt_ppr_sub      : lvl -> formatter -> sub      -> unit
+    val fmt_ppr_sub      :        formatter -> sub      -> unit
 
     val fmt_ppr_front    : lvl -> formatter -> front    -> unit
 

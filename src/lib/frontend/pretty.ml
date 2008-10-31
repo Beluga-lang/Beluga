@@ -318,7 +318,7 @@ module Int = struct
 
     val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
 
-    val fmt_ppr_sub      : lvl -> formatter -> sub      -> unit
+    val fmt_ppr_sub      :        formatter -> sub      -> unit
 
     val fmt_ppr_front    : lvl -> formatter -> front    -> unit
 
@@ -458,13 +458,13 @@ module Int = struct
           fprintf ppf "%sSClo (%a, %a)%s"
             (l_paren_if cond)
             (fmt_ppr_spine 0) ms
-            (fmt_ppr_sub   0) s
+            fmt_ppr_sub       s
             (r_paren_if cond)
 
 
 
     (* FIXME *)
-    and fmt_ppr_sub lvl ppf = function
+    and fmt_ppr_sub ppf = function
       | Shift n     ->
           fprintf ppf "^%s"
             (R.render_offset n)
@@ -472,12 +472,12 @@ module Int = struct
       (* Not sure how to print a cvar.  -dwm *)
       | SVar (_, s) ->
           fprintf ppf "cvar[%a]"
-            (fmt_ppr_sub 0) s
+            fmt_ppr_sub s
 
       | Dot (f, s)  ->
           fprintf ppf "%a@ .@ %a"
             (fmt_ppr_front 1) f
-            (fmt_ppr_sub   2) s
+            fmt_ppr_sub       s
 
 
     and fmt_ppr_front lvl ppf = function
@@ -509,7 +509,7 @@ module Int = struct
 
     let ppr_spine    = fmt_ppr_spine    std_lvl std_formatter
 
-    let ppr_sub      = fmt_ppr_sub      std_lvl std_formatter
+    let ppr_sub      = fmt_ppr_sub              std_formatter
 
     let ppr_front    = fmt_ppr_front    std_lvl std_formatter
 
@@ -645,9 +645,9 @@ module Error = struct
                  below as if it were similar to an application context as
                  far as precedence is concerned -dwm *)
               (IP.fmt_ppr_typ 0) tA1
-              (IP.fmt_ppr_sub 0) s1
+               IP.fmt_ppr_sub    s1
               (IP.fmt_ppr_typ 0) tA2
-              (IP.fmt_ppr_sub 0) s2
+               IP.fmt_ppr_sub    s2
 
 
 

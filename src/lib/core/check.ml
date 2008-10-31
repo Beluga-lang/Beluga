@@ -38,17 +38,19 @@ exception Error of error
      otherwise exception Error is raised
 *)
 let rec checkW cD cPsi sM1 sA2 = match (sM1, sA2) with
-  | ((Lam (_, tM), s1), (PiTyp ((TypDecl (x, tA) as tX), tB), s2)) ->
-      check cD
-            (DDec (cPsi, decSub tX s2))
-            (tM, dot1 s1)
-            (tB, dot1 s2)
+  | ((Lam (_, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX), tB), s2))
+    -> check cD
+             (DDec (cPsi, decSub tX s2))
+             (tM, dot1 s1)
+             (tB, dot1 s2)
 
-  | ((Root (h, tS), s), (((Atom _), s') as sP)) ->
-      (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
-      let sA = Whnf.whnfTyp (inferHead cD cPsi h, id) in
-        checkSpine cD cPsi (tS, s) sA sP
-  | _       -> raise (Error (SubIllTyped))
+  | ((Root (h, tS), s), (((Atom _), _s') as sP))
+    -> (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
+       let sA = Whnf.whnfTyp (inferHead cD cPsi h, id) in
+         checkSpine cD cPsi (tS, s) sA sP
+
+  | _
+    -> raise (Error (SubIllTyped))
 
 and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 (* can probably transform this to let check = let checkW ... in checkW - dwm *)
@@ -69,14 +71,14 @@ and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
           and  cD ; cPsi  |- tP'[s'] = sP      <= type
 *)
 and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
-  | ((Nil, _), sP')              ->
+  | ((Nil, _), sP') ->
       if Whnf.convTyp sP' sP
       then
         ()
       else
         raise (Error (TypMisMatch (sP', sP)))
 
-  | ((SClo (tS, s'), s), sA)     ->
+  | ((SClo (tS, s'), s), sA) ->
       checkSpine cD cPsi (tS, comp s' s) sA sP
 
   | ((App (tM, tS), s1), (PiTyp (TypDecl (_, tA1), tB2), s2)) ->
@@ -89,7 +91,7 @@ and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
         let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
           checkSpine cD cPsi (tS, s1) tB2 sP
 
-  | ((App (tM, tS), _), (tA, s)) ->
+  | ((App (_tM, _tS), _), (_tA, _s)) ->
       (* tA <> (Pi x:tA1. tA2, s) *)
       raise (Error ExpAppNotFun)
 
@@ -106,7 +108,7 @@ and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
 *)
 and inferHead cD cPsi head = match head with
   | BVar k'                 ->
-      let (_, l) = dctxToHat cPsi in 
+      let (_, _l) = dctxToHat cPsi in
       let TypDecl (_, tA) = ctxDec cPsi k' in
         tA
 
@@ -115,9 +117,9 @@ and inferHead cD cPsi head = match head with
         (* getType traverses the type from left to right;
            target is relative to the remaining suffix of the type *)
       let rec getType s_recA target j = match (s_recA, target) with
-        | ((tA :: recA, s), 1)      -> TClo(tA, s)
+        | (( tA :: _recA, s), 1)      -> TClo(tA, s)
 
-        | ((tA :: recA, s), target) ->
+        | ((_tA ::  recA, s), target) ->
             let tPj = Root (Proj (BVar k', j), Nil) in
               getType (recA, Dot (Obj tPj, s)) (target - 1) (j + 1)
 
@@ -155,21 +157,21 @@ and inferHead cD cPsi head = match head with
      succeeds iff cD ; cPsi |- s : cPsi'
 *)
 and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
-  | (Null, Shift 0, Null)              -> ()
+  | (Null, Shift 0, Null)               -> ()
 
-  | (CtxVar psi, Shift 0, CtxVar psi') ->
+  | (CtxVar psi, Shift 0, CtxVar psi')  ->
       if psi = psi'
       then ()
       else raise (Error (CtxVarMisMatch (psi, psi')))
 
   (* SVar case to be added - bp *)
 
-  | (DDec (cPsi, tX), Shift k, Null)   ->
+  | (DDec (cPsi, _tX), Shift k, Null)   ->
       if k > 0
       then checkSub cD cPsi (Shift (k - 1)) Null
       else raise (Error (SubIllTyped))
 
-  | (cPsi', Shift k, cPsi)             ->
+  | (cPsi', Shift k, cPsi)              ->
       checkSub cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
 
   | (cPsi', Dot (Head h, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
@@ -221,18 +223,18 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
     succeeds iff cD ; cPsi |- [s1]tS <= [s2]K
 *)
 and checkSpineK cD cPsi sS1 sA = match (sS1, sA) with
-  | ((Nil, _), (Typ, s))          -> ()
+  | ((Nil, _), (Typ, _s))             -> ()
 
-  | ((Nil, _), _)                 ->  raise (Error (KindMisMatch))
+  | ((Nil, _), _)                     ->  raise (Error (KindMisMatch))
 
-  | ((SClo (tS, s'), s), sA)      ->
+  | ((SClo (tS, s'), s), sA)          ->
       checkSpineK cD cPsi (tS, comp s' s) sA
 
   | ((App (tM, tS), s1), (PiKind (TypDecl (_, tA1), kind), s2)) ->
         check cD cPsi (tM, s1) (tA1, s2)
       ; checkSpineK cD cPsi (tS, s1) (kind, Dot (Obj (Clo (tM, s1)), s2))
 
-  | ((App (tM , tS), _), (tA, s)) ->
+  | ((App (_tM , _tS), _), (_tA, _s)) ->
       raise  (Error ExpAppNotFun)
 
 
@@ -323,7 +325,7 @@ and checkCtx cD cPsi = match cPsi with Null ->  ()
         checkCtx      cD cPsi
       ; checkSigmaDec cD cPsi (tX, id)
 
-  | CtxVar psi          -> ()
+  | CtxVar _psi         -> ()
   (* need to check if psi is in Omega (or cD, if context vars live there) -bp *)
 
 

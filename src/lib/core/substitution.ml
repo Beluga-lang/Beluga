@@ -66,10 +66,10 @@ let rec comp s1 s2 = match (s1, s2) with
   (* roughly 15% on standard suite for Twelf 1.1 *)
   (* Sat Feb 14 10:15:16 1998 -fp *)
   | (s, Shift 0)             -> s
-  | (SVar (s, tau), s2)      -> SVar(s, comp tau s2)
+  | (SVar (s, tau), s2)      -> SVar (s, comp tau s2)
   (* (s1, SVar(s,tau)) => undefined ? -bp *)
-  | (Shift (n), Dot (ft, s)) -> comp (Shift (n-1)) s
-  | (Shift (n), Shift (m))   -> Shift (n+m)
+  | (Shift n, Dot (_ft, s))  -> comp (Shift (n - 1)) s
+  | (Shift n, Shift m)       -> Shift (n + m)
   | (Dot (ft, s), s')        -> Dot (frontSub ft s', comp s s')
   (* comp(s[tau], Shift(k)) = s[tau]
      where s :: Psi[Phi]  and |Psi| = k 
@@ -91,9 +91,9 @@ let rec comp s1 s2 = match (s1, s2) with
        and G |- Ft' : V [s]
 *)
 and bvarSub n s = match (n, s) with
-  | (1, Dot (ft, s)) -> ft
-  | (n, Dot (ft, s)) -> bvarSub (n-1) s
-  | (n, Shift k)     -> Head (BVar (n+k))
+  | (1, Dot (ft, _s)) -> ft
+  | (n, Dot (_ft, s)) -> bvarSub (n - 1) s
+  | (n, Shift k)      -> Head (BVar (n + k))
 
 
 
@@ -225,20 +225,21 @@ let invert s =
      then cD ; cPsi'  |- t : cPsi  and cPsi' subcontext of cPsi
 *)
 let rec strengthen s cPsi = match (s, cPsi) with
-  | (Shift n (* = 0 *), Null) -> Null
+  | (Shift _n (* = 0 *), Null)
+    -> Null
 
-  | (Dot (Head (BVar k) (* k = 1 *), t), DDec (cPsi, decl)) ->
-      let t' = comp t invShift in
-        (* cPsi  |- decl dec     *)
-        (* cPsi' |- t' : cPsi    *)
-        (* cPsi' |- decl[t'] dec *)
-        DDec (strengthen t' cPsi, decSub decl t')
+  | (Dot (Head (BVar _k) (* k = 1 *), t), DDec (cPsi, decl))
+    -> let t' = comp t invShift in
+         (* cPsi  |- decl dec     *)
+         (* cPsi' |- t' : cPsi    *)
+         (* cPsi' |- decl[t'] dec *)
+         DDec (strengthen t' cPsi, decSub decl t')
 
-  | (Dot (Undef, t), DDec (cPsi, _)) ->
-      strengthen t cPsi
+  | (Dot (Undef, t), DDec (cPsi, _))
+    -> strengthen t cPsi
 
-  | (Shift n, cPsi) ->
-      strengthen (Dot (Head(BVar (n + 1)), Shift (n + 1))) cPsi
+  | (Shift n, cPsi)
+    -> strengthen (Dot (Head(BVar (n + 1)), Shift (n + 1))) cPsi
 
 
 
@@ -299,7 +300,7 @@ let compInv s w = comp s (invert w)
              and  ni <= k or ni = _ for all 1 <= i <= m
 *)
 let rec isPatSub s = match s with
-  | Shift k               -> true
+  | Shift _k              -> true
   | Dot (Head(BVar n), s) ->
       let rec checkBVar s' = match s' with
         | Shift k                 -> n <= k

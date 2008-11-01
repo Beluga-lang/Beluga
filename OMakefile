@@ -39,3 +39,12 @@ NATIVE_ENABLED = true
 
 # Include the src subdirectory
 .SUBDIRS: src
+
+.DEFAULT: .PHONY/src/.DEFAULT :effects: build
+        $(if $(not $(file-exists build)),             \
+          $(mkdir build))                             \
+        $(if $(not $(file-exists build/interpreter)), \
+          $(symlink src/tools/interpreter/interpreter, build/interpreter))
+
+clean: .PHONY/src/clean
+        $(if $(file-exists build), $(rmdir -r build))

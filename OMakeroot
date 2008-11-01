@@ -3,6 +3,9 @@
 #
 open build/OCaml
 
+# Define the default value for DEBUG.  May be overriden by the commandline
+DEBUG = false
+
 #
 # Process the command-line variables are defined *after* the standard
 # configuration has been loaded.

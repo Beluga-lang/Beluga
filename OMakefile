@@ -13,14 +13,20 @@ OCAMLPACKS[] =
         oUnit
         ulex
 
-# Set up the standard configuration
-OCAMLFLAGS = -w Ae -warn-error Ap
+# Compile with debugging options?  This enables:
+#
+# 1. Pattern match failure warnings
+# 2. Debugging information in compiled code (-g)
+# 3. Profiling information in compiled code (-p)
+OCAMLFLAGS = $(if $(DEBUG), -w Ae  -warn-error Ap -g \
+                          , -w Aep -warn-error A)
 
 # Flags to pass to the native-code compiler
 # Explanation:
 #       -noassert       (turn off assertions)
 #       -inline 100     (aggressive inlining)
-OCAMLOPTFLAGS = -noassert -inline 100
+OCAMLOPTFLAGS  = -noassert -inline 100
+OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
 # Compile to byte code?
 BYTE_ENABLED   = false
@@ -29,7 +35,7 @@ BYTE_ENABLED   = false
 NATIVE_ENABLED = true
 
 # Declare a phony clean target
-.PHONY: clean
+.PHONY: core clean frontend interpreter test
 
 # Include the src subdirectory
 .SUBDIRS: src

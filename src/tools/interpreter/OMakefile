@@ -23,8 +23,10 @@ camlp4lib.a   :
 camlp4lib.cma :
 camlp4lib.cmxa:
 
-.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+.DEFAULT: interpreter
 
 clean:
         rm $(filter-proper-targets $(ls R, .))
         rm $(filter %.omc,         $(ls R, .))
+
+interpreter: $(OCamlProgram $(PROGRAM), $(FILES))

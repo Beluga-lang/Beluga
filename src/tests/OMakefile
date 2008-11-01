@@ -1,31 +1,16 @@
 # -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
-# Declare the directories we need to include other libraries from
-#OCAMLINCLUDES += +camlp4 ../../lib/core ../../lib/frontend
-
-# Declare the names of the libraries we depend on
-# OCAML_LIBS[]  +=
-#         camlp4lib
-#         ../../lib/core/beluga-core
-#         ../../lib/frontend/beluga-frontend
-
 # Declare the name of the program
 PROGRAM = test-harness
-
-# Declare some phony empty targets so omake doesn't try to build
-# camlp4lib.  May be a more elegant way to do this.
-# .PHONY: camlp4lib.a camlp4lib.cma camlp4lib.cmxa
-# camlp4lib.a   :
-# camlp4lib.cma :
-# camlp4lib.cmxa:
 
 # Declare the files the test harness is built from
 FILES[] =
         lf
         main
 
-.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
-
 clean:
         rm $(filter-proper-targets $(ls R, .))
         rm $(filter %.omc,         $(ls R, .))
+
+test: $(OCamlProgram $(PROGRAM), $(FILES))
+        echo "<not implemented yet>"

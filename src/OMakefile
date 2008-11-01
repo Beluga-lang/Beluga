@@ -1,7 +1,4 @@
 # -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
-# Declare a phony clean target
-.PHONY: clean
-
 # Include the lib, tests, and tools subdirectory
-.SUBDIRS: lib tests tools
+.SUBDIRS: lib tools tests

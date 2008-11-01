@@ -25,21 +25,22 @@ FILES[] =
 
 # Declare one pseudo target for the package and one for the files it
 # contains
-.PHONY: pack files
+.PHONY: core files pack
 
-# **NOTE** Because of the way scoping for OCAMLFLAGS works, the
-# core-pack target must come _BEFORE_ the core-files target, otherwise
-# core-pack will be passed the -for-pack flag as well, which is not
-# what we want
-
-pack: $(OCamlPackage $(PACK), $(FILES))
-
-# Use the -for-pack flag for compiling the individual modules
-OCAMLFLAGS += -for-pack $(PACK)
-files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
-
-.DEFAULT: files pack $(OCamlLibrary $(LIBRARY), $(PACK))
+.DEFAULT: core
 
 clean:
         rm $(filter-proper-targets $(ls R, .))
         rm $(filter %.omc,         $(ls R, .))
+
+core: files pack $(OCamlLibrary $(LIBRARY), $(PACK))
+
+pack: $(OCamlPackage $(PACK), $(FILES))
+
+# **NOTE** Because of the way scoping for OCAMLFLAGS works, the pack
+# target must come _BEFORE_ the files target, otherwise pack will be
+# passed the -for-pack flag as well, which is not what we want
+
+# Use the -for-pack flag for compiling the individual modules
+OCAMLFLAGS += -for-pack $(PACK)
+files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))

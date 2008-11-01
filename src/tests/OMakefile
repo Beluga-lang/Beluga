@@ -25,3 +25,7 @@ FILES[] =
         main
 
 .DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+
+clean:
+        rm $(filter-proper-targets $(ls R, .))
+        rm $(filter %.omc,         $(ls R, .))

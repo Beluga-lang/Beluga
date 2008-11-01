@@ -39,3 +39,7 @@ OCAMLFLAGS += -for-pack $(PACK)
 files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
 
 .DEFAULT: files pack $(OCamlLibrary $(LIBRARY), $(PACK))
+
+clean:
+        rm $(filter-proper-targets $(ls R, .))
+        rm $(filter %.omc,         $(ls R, .))

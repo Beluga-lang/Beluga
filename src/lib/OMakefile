@@ -1,4 +1,7 @@
 # -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
+# Declare a phony clean target
+.PHONY: clean
+
 # Include the core and frontend subdirectories
 .SUBDIRS: core frontend

@@ -24,3 +24,7 @@ camlp4lib.cma :
 camlp4lib.cmxa:
 
 .DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+
+clean:
+        rm $(filter-proper-targets $(ls R, .))
+        rm $(filter %.omc,         $(ls R, .))

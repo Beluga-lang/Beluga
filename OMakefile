@@ -28,13 +28,8 @@ BYTE_ENABLED   = false
 # Compile to native code?
 NATIVE_ENABLED = true
 
-# Include the src subdirectory
-.SUBDIRS: src
-
 # Declare a phony clean target
 .PHONY: clean
 
-# Recursively clean the project
-clean:
-	rm $(filter-proper-targets $(ls R, .))
-        rm $(filter %.omc,         $(ls R, .))
+# Include the src subdirectory
+.SUBDIRS: src

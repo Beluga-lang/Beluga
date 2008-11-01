@@ -1,16 +1,26 @@
 # -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
+# Declare the directories we need to include other libraries from
+OCAMLINCLUDES += +camlp4 ../lib/core ../lib/frontend
+
+# Declare the names of the libraries we depend on
+OCAML_LIBS[]  +=
+        camlp4lib
+        ../lib/core/beluga-core
+        ../lib/frontend/beluga-frontend
+
 # Declare the name of the program
 PROGRAM = test-harness
 
 # Declare the files the test harness is built from
 FILES[] =
-        lf
+        checktest
         main
+        parsetest
 
 clean:
         rm $(filter-proper-targets $(ls R, .))
         rm $(filter %.omc,         $(ls R, .))
 
 test: $(OCamlProgram $(PROGRAM), $(FILES))
-        echo "<not implemented yet>"
+        ./$(PROGRAM)

@@ -29,13 +29,13 @@ module type UNIFY = sig
   val mark   : unit -> unit
   val unwind : unit -> unit
 
-  val instantiateMVar : normal option ref * normal * constrnt list -> unit
-  val instantiatePVar : head   option ref * head   * constrnt list -> unit
+  val instantiateMVar : normal option ref * normal * cnstr list -> unit
+  val instantiatePVar : head   option ref * head   * cnstr list -> unit
 
   val resetAwakenCnstrs : unit -> unit
-  val nextCnstr         : unit -> constrnt option
-  val addConstraint     : constrnt list ref * constrnt -> unit
-  val solveConstraint   : constrnt -> unit
+  val nextCnstr         : unit -> cnstr option
+  val addConstraint     : cnstr list ref * cnstr -> unit
+  val solveConstraint   : cnstr -> unit
 
 
   (* unification *)
@@ -51,9 +51,7 @@ end
 (* Unification *)
 (* Author: Brigitte Pientka *)
 (* Trailing is taken from Twelf 1.5 *)
-
-(* Shouldn't this have a signature? -dwm *)
-module Make (T : Trail.TRAIL) =
+module Make (T : Trail.TRAIL) : UNIFY =
 struct
 
   open Substitution
@@ -217,11 +215,11 @@ struct
 
        Invariant:
 
-         if cD ; cPsi  |- s <= cPsi'   
-            cD ; cPsi' |- tM <= tA  (cD ; cPsi |- tM[s] <= tA[s])
+         if D ; Psi  |- s <= Psi'   
+            D ; Psi' |- tM <= tA  (D ; Psi |- tM[s] <= tA[s])
 
-            cD ; cPsi'' |- ss  <= cPsi  and ss = [ss']^-1
-            cD ; cPsi   |- ss' <= cPsi''
+            D ; Psi'' |- ss  <= Psi  and ss = [ss']^-1
+            D ; Psi   |- ss' <= Psi''
 
        Effect:
 
@@ -245,50 +243,43 @@ struct
            then raise NotInvertible
            else
              let t' = comp t s (* t' = t, since s = Id *) in
+	       (* D ; Psi |- s <= Psi'   D ; Psi' |- t <= Psi1
+                  t' =  t o s     and    D ; Psi  |-  t' <= Psi1 *)
                if isPatSub t'
                then
                  let (s', _cPsi2) = pruneCtx (phat, (t', cPsi1), ss) in
-                     (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= cPsi1
-                        t' =  t o s 
-                        cD ; cPsi |-  t' <= cPsi1 and 
-                        cD ; cPsi1 |- s' <= cPsi2 and 
-                        cD ; cPsi  |- [t']s' <= cPsi2  *)
+                     (* D ; Psi  |- t' <= Psi1 and 
+                        D ; Psi1 |- s' <= Psi2 and 
+                        D ; Psi  |- [t']s' <= Psi2  *)
                    if isId s'
                    then
                      Root(MVar(u, comp t' ss), Nil)
-                     (* this is what happens in Twelf -- not sure I
-                        understand entirely why this is correct *)
                    else
                      raise NotInvertible
                else (* t' not patsub *)
                  Root(MVar(u, invSub (phat, t', ss, rOccur)), Nil)
-               (* this is what happens in Twelf -- not sure I
-               understand entirely why this is correct *)
 
       | (Root (PVar (PInst (_r, cPsi1, _tA, _cnstrs) as q, t), tS), s)
         (* by invariant tM is in whnf and meta-variables are lowered and s = id *)
         -> let t' = comp t s (* t' = t, since s = Id *) in
+             (* D ; Psi |- s <= Psi'   D ; Psi' |- t <= Psi1
+                t' =  t o s 
+                D ; Psi |-  t' <= Psi1 *)
              if isPatSub t'
              then
                let (s', _cPsi2) = pruneCtx (phat, (t', cPsi1), ss) in
-                     (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= cPsi1
-                        t' =  t o s 
-                        cD ; cPsi |-  t' <= cPsi1 and 
-                        cD ; cPsi1 |- s' <= cPsi2 and 
-                        cD ; cPsi  |- [t']s' <= cPsi2  *)
+		 (* D ; Psi' |- t' <= Psi1 and
+                    D ; Psi1 |- s' <= Psi2 and 
+                    D ; Psi  |- [t']s' <= Psi2  *)
                  if isId s'
                  then (* cPsi1 = cPsi2 *)
                    Root ( PVar (q, comp t' ss)
                         , invSpine(phat, (tS,s), ss, rOccur) )
-                 (* this is what happens in Twelf -- not sure I
-                  understand entirely why this is correct *)
                  else
                    raise NotInvertible
               else (* t' not patsub *)
                 Root ( PVar (q, invSub (phat, t', ss, rOccur))
                      , invSpine (phat, (tS,s), ss, rOccur) )
-               (* this is what happens in Twelf -- not sure I
-               understand entirely why this is correct *)
 
       | (Root (Proj (PVar (PInst (_r, cPsi1, _tA, _cnstrs) as q, t), i), tS), s)
         -> let t' = comp t s   (* t' = t, since s = Id *) in
@@ -303,21 +294,15 @@ struct
                  then (* cPsi1 = cPsi2 *)
                    Root ( Proj (PVar(q, comp t' ss), i)
                         , invSpine(phat, (tS,s), ss, rOccur) )
-                 (* this is what happens in Twelf -- not sure I
-                  understand entirely why this is correct *)
                  else
                    raise NotInvertible
               else (* t' not patsub *)
                 Root ( Proj (PVar (q, invSub (phat, t', ss, rOccur)), i)
                      , invSpine (phat, (tS,s), ss, rOccur) )
-               (* this is what happens in Twelf -- not sure I
-               understand entirely why this is correct *)
 
       | (Root (head, tS), s (* = id *))
         -> Root ( invHead  (phat, head   , ss, rOccur)
                 , invSpine (phat, (tS, s), ss, rOccur))
-
-
 
     and invSpine (phat, spine, ss, rOccur) = match spine with
       | (Nil          , _s) -> Nil
@@ -326,7 +311,6 @@ struct
               , invSpine (phat, (tS, s), ss, rOccur))
       | (SClo (tS, s'),  s) ->
           invSpine (phat, (tS, comp s' s), ss, rOccur)
-
 
 
    (* invHead(phat, head, ss, rOccur) = h' 
@@ -352,17 +336,20 @@ struct
 
     (* invSub (phat, s, ss, rOccur) = s' 
        
-       if phat = hat(cPsi)  and 
-          cD ; cPsi  |- s <= cPsi'
-          cD ; cPsi''|- ss <= cPsi 
+       if phat = hat(Psi)  and 
+          D ; Psi  |- s <= Psi'
+          D ; Psi''|- ss <= Psi 
        then s' = [ss]s   if it exists, and 
             cD ; cPsi'' |- [ss]s <= cPsi'
 
      *)
     and invSub ((_cvar, offset) as phat, s, ss, rOccur) = match s with
-      | Shift n when n < offset -> invSub (phat, Dot (Head (BVar (n + 1)), Shift (n + 1)), ss, rOccur)
+      | Shift n when n < offset -> 
+          invSub (phat, Dot (Head (BVar (n + 1)), Shift (n + 1)), ss, rOccur)
 
-      | Shift _n                -> comp s ss (* must be defined *)
+      | Shift _n                -> comp s ss 
+        (* must be defined -- n = offset ?
+           otherwise it is undefined *)
 
       | Dot (Head(BVar(n)), s') ->
           begin match bvarSub n ss with
@@ -380,9 +367,9 @@ struct
        s' = s1 /\ s2 (see JICSLP'96 and Pientka's thesis)
        
        Invariant: 
-       If   cD ; cPsi |- s1 : cPsi'    s1 patsub
-       and  cD ; cPsi |- s2 : cPsi'    s2 patsub
-       then cD ; cPsi |- s' : cPsi'' for some cPsi''  
+       If   D ; Psi |- s1 : Psi'    s1 patsub
+       and  D ; Psi |- s2 : Psi'    s2 patsub
+       then D ; Psi |- s' : Psi'' for some Psi'' which is a subset of Psi'
        and  s' patsub
     *)
     let rec intersection (phat, (subst1, subst2), cPsi') = match (subst1, subst2, cPsi') with
@@ -390,18 +377,18 @@ struct
         -> if k1 = k2
            then
              let (s', cPsi') = intersection (phat, (s1, s2), cPsi') in
-                (* cD ; cPsi |- s' : cPsi'' where cPsi'' =< cPsi' *)
+                (* D ; Psi |- s' : Psi'' where Psi'' =< Psi' *)
              let ss' = invert s' in
                 (* cD ; cPsi'' |- ss' <= cPsi *)
                 (* by assumption:
                    [s1]tA = [s2]tA = tA'  and cD ; cPsi |- tA' <= type *)
-                (* tA'' = [s']^-1(tA') = *)
+                (* tA'' = [s']^-1(tA') exists *)
              let tA'' = TClo (tA, comp s1 ss')
-                 (* cD ; cPsi |- s', x/x <= cPsi, x:[s']^-1(tA') *)
+                 (* cD ; cPsi, x:tA' |- s', x/x <= cPsi, x:[s']^-1(tA') *)
              in
                (dot1 s', DDec (cPsi', TypDecl(x, tA'')))
 
-          else  (* k1 = k2 *)
+          else  (* k1 =/= k2 *)
             let (s', cPsi') = intersection (phat, (s1, s2), cPsi') in
               (comp s' shift, cPsi')
 

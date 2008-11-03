@@ -1,9 +1,9 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Joshua Dunfield
-   @author Darin Morrison
    @author Brigitte Pientka
+   modified: Joshua Dunfield
+             Darin Morrison
 *)
 
 open Syntax.Int
@@ -11,7 +11,7 @@ open Syntax.Int
 
 
 type error =
-  | TypingAmbiguous
+  | ConstraintsLeft
   | NotPatSub
 
 exception Error of error

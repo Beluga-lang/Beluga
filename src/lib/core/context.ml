@@ -2,9 +2,8 @@
 
 (** Contexts
 
-    @author Renaud Germain
-    @author Darin Morrison
     @author Brigitte Pientka
+    modified: Darin Morrison
 *)
 
 open Syntax.Int

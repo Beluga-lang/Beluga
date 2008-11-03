@@ -1,21 +1,23 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Joshua Dunfield
-   @author Darin Morrison
    @author Brigitte Pientka
+   modified: Joshua Dunfield
+             Darin Morrison
+
 *)
-
-open Context
-open Syntax.Int
-
 
 
 (* The functor itself is called Make (hence Unify.Make to other
    modules); the instantiations UnifyTrail and UnifyNoTrail (hence
    Unify.UnifyTrail and Unify.UnifyNoTrail to other modules) are
    declared at the end of this file.
+
+   ** subject to change ** Sun Nov  2 20:39:48 2008 -bp 
+
 *)
+open Syntax.Int
+open Context
 
 module type UNIFY = sig
 
@@ -55,8 +57,6 @@ module Make (T : Trail.TRAIL) =
 struct
 
   open Substitution
-
-
 
   exception Unify of string
   exception NotInvertible
@@ -172,16 +172,20 @@ struct
 
        Invariant:
 
-         If phat = hat (cPsi)  and  cD ; cPsi |- t  <= Psi1 
-                                    cD ; cPsi'|- ss <= cPsi   and (ss')^-1 = ss
-         then   cD ; Psi1 |- s' <= cPsi2  
-                where Psi2 <= Psi1 where s' is a weakened identity substitution,
+         If phat = hat (Psi)  and  
+            cD ; Psi |- t  <= Psi1  and 
+            cD ; Psi'|- ss <= Psi   and (ss')^-1 = ss
+         then  
+            cD ; Psi1 |- s' <= Psi2  
+            where every declaration x:A in Psi2 is also in Psi1 
+              and s' is a weakened identity substitution.
 
-                and there exists a t' s.t. [t]s' = t'   and cD ; cPsi  |- t'  <= Psi2 , 
-                and moreover [ss']^-1 (t') = t'' exists and cD ; cPsi' |- t'' <= Psi2  
+              moreover:  
+                  [t]s' = t'  s.t. D ; Psi  |- t'  <= Psi2 , 
+              and [ss']^-1 (t') = t'' exists 
+              and D ; Psi' |- t'' <= Psi2  
      
      *)
-    (* a bit hard to read above invariant -dwm *)
     let rec pruneCtx (phat, (t, cPsi1), ss) = match (t, cPsi1) with
       | (Shift _k, Null)
         -> (id, Null)
@@ -191,15 +195,15 @@ struct
 
       | (Dot (Head (BVar k), s), DDec (cPsi1, TypDecl (x, tA)))
         -> let (s', cPsi2) = pruneCtx (phat, (s, cPsi1), ss) in
-            (* sP1 |- s' <= cPsi2 *)
+            (* Ps1 |- s' <= Psi2 *)
              begin match bvarSub k ss with
                | Undef          ->
-                  (* cPsi1, x:tA |- s' <= cPsi2 *)
+                  (* Psi1, x:tA |- s' <= Psi2 *)
                    (comp s' shift, cPsi2)
 
                | Head (BVar _n) ->
-                   (* cPsi1, x:tA |- s' <= cPsi2, x:([s']^-1 tA) since
-                      tA = [s']([s']^-1 tA) *)
+                   (* Psi1, x:A |- s' <= Psi2, x:([s']^-1 A) since
+                      A = [s']([s']^-1 A) *)
                    (dot1 s',  DDec(cPsi2, TypDecl(x, TClo(tA, invert s'))))
              end
       | (Dot (Undef, t), DDec (cPsi1, _))
@@ -213,7 +217,8 @@ struct
 
        Invariant:
 
-         if cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- tM <= tA  (cD ; cPsi |- tM[s] <= tA[s])
+         if cD ; cPsi  |- s <= cPsi'   
+            cD ; cPsi' |- tM <= tA  (cD ; cPsi |- tM[s] <= tA[s])
 
             cD ; cPsi'' |- ss  <= cPsi  and ss = [ss']^-1
             cD ; cPsi   |- ss' <= cPsi''

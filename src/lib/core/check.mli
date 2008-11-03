@@ -1,22 +1,25 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Joshua Dunfield
-   @author Darin Morrison
    @author Brigitte Pientka
+   modified: Joshua Dunfield
+             Darin Morrison
 *)
 
 open Syntax.Int
 
 
-
 type error =
   | CtxVarMisMatch of cvar * cvar
-  | DeclIllTyped
-  | ExpAppNotFun
-  | KindMisMatch
-  | SubIllTyped
-  | TypMisMatch    of tclo * tclo
+  | SigmaIllTyped of mctx * dctx * 
+                     trec_clo (* inferred *) * trec_clo (* expected *)
+  | ExpAppNotFun  
+  | KindMisMatch 
+  | SubIllTyped      
+  | TypIllTyped of mctx * dctx * 
+                   tclo (* inferred *) * tclo (* expected *) 
+  | TypMisMatch  of mctx * dctx * tclo * tclo
+  | IllTyped of mctx * dctx * nclo * tclo
 
 exception Error of error
 

@@ -622,9 +622,9 @@ module Error = struct
             fprintf ppf
               "ctx variable mismatch"
 
-        | DeclIllTyped ->
+        | TypIllTyped (_cD, _cPsi, _tA, _tB) ->
             fprintf ppf
-              "Declaration not well-typed"
+              "Inferred _tA but expected _tB"
 
         | ExpAppNotFun ->
             fprintf ppf
@@ -638,9 +638,9 @@ module Error = struct
             fprintf ppf
               "Substitution not well-typed"
 
-        | TypMisMatch ((tA1, s1), (tA2, s2)) ->
+        | TypMisMatch (_cD, _cPsi, (tA1, s1), (tA2, s2)) ->
             fprintf ppf
-              "Type mismatch:@ @[%a[%a]@ =/=@ %a[%a]@]"
+              "Type mismatch ** WARNING: Types not in context **:@ @[%a[%a]@ =/=@ %a[%a]@]"
               (* The 2 is for precedence.  Treat printing
                  below as if it were similar to an application context as
                  far as precedence is concerned -dwm *)
@@ -649,6 +649,13 @@ module Error = struct
               (IP.fmt_ppr_typ 0) tA2
                IP.fmt_ppr_sub    s2
 
+        | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) -> 
+            fprintf ppf
+              "Sigma Type mismatch"
+
+        | IllTyped (_cD, _cPsi, (_tM, _s1), (_tA, _s2)) -> 
+            fprintf ppf
+              "Illtyped normal object" 
 
 
       (***************************)
@@ -670,9 +677,9 @@ module Error = struct
       (********************************)
 
       let fmt_ppr ppf = function
-        | TypingAmbiguous ->
+        | ConstraintsLeft ->
             fprintf ppf
-              "Typing ambiguous -- constraint of functional type cannot be simplified"
+              "Constraint of functional type are not simplified"
 
         | NotPatSub       ->
             fprintf ppf

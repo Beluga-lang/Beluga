@@ -1,10 +1,10 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Joshua Dunfield
-   @author Renaud Germain
-   @author Darin Morrison
    @author Brigitte Pientka
+   modified: Joshua Dunfield
+             Darin Morrison
+
 *)
 
 open Context
@@ -13,14 +13,17 @@ open Substitution
 open Syntax.Int
 
 
-
 type error =
   | CtxVarMisMatch of cvar * cvar
-  | DeclIllTyped
-  | ExpAppNotFun
-  | KindMisMatch
-  | SubIllTyped
-  | TypMisMatch    of tclo * tclo
+  | SigmaIllTyped of mctx * dctx * 
+                     trec_clo (* inferred *) * trec_clo (* expected *)
+  | ExpAppNotFun  
+  | KindMisMatch 
+  | SubIllTyped      
+  | TypIllTyped of mctx * dctx * 
+                   tclo (* inferred *) * tclo (* expected *) 
+  | TypMisMatch  of mctx * dctx * tclo * tclo
+  | IllTyped of mctx * dctx * nclo * tclo
 
 exception Error of error
 
@@ -50,7 +53,7 @@ let rec checkW cD cPsi sM1 sA2 = match (sM1, sA2) with
          checkSpine cD cPsi (tS, s) sA sP
 
   | _
-    -> raise (Error (SubIllTyped))
+    -> raise (Error (IllTyped (cD, cPsi, sM1, sA2)))
 
 and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 (* can probably transform this to let check = let checkW ... in checkW - dwm *)
@@ -76,7 +79,7 @@ and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
       then
         ()
       else
-        raise (Error (TypMisMatch (sP', sP)))
+        raise (Error (TypMisMatch (cD, cPsi, sP', sP)))
 
   | ((SClo (tS, s'), s), sA) ->
       checkSpine cD cPsi (tS, comp s' s) sA sP
@@ -182,7 +185,7 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
       in
         if Whnf.convTyp (tA1, id) (tA2, s')
         then ()
-        else raise (Error SubIllTyped)
+        else raise (Error (TypIllTyped (cD, cPsi', (tA1, id), (tA2, s'))))
 
   | (cPsi', Dot (Head (BVar w), t), SigmaDec (cPsi, (SigmaDecl (_, arec)))) ->
       (* other heads of type Sigma disallowed -bp *)
@@ -192,7 +195,7 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
       in
         if Whnf.convTypRec (brec, id) (arec, t)
         then ()
-        else raise (Error DeclIllTyped)
+        else raise (Error (SigmaIllTyped (cD, cPsi', (brec, id), (arec, t))))
 
   | (cPsi', Dot (Obj tM, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
       (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
@@ -222,19 +225,20 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
 
     succeeds iff cD ; cPsi |- [s1]tS <= [s2]K
 *)
-and checkSpineK cD cPsi sS1 sA = match (sS1, sA) with
+and checkSpineK cD cPsi sS1 sK = match (sS1, sK) with
   | ((Nil, _), (Typ, _s))             -> ()
 
-  | ((Nil, _), _)                     ->  raise (Error (KindMisMatch))
+  | ((Nil, _), _)                     ->  
+      raise (Error (KindMisMatch))
 
-  | ((SClo (tS, s'), s), sA)          ->
-      checkSpineK cD cPsi (tS, comp s' s) sA
+  | ((SClo (tS, s'), s), sK)          ->
+      checkSpineK cD cPsi (tS, comp s' s) sK
 
-  | ((App (tM, tS), s1), (PiKind (TypDecl (_, tA1), kind), s2)) ->
+  | ((App (tM, tS), s1), (PiKind (TypDecl (_, tA1), kK), s2)) ->
         check cD cPsi (tM, s1) (tA1, s2)
-      ; checkSpineK cD cPsi (tS, s1) (kind, Dot (Obj (Clo (tM, s1)), s2))
+      ; checkSpineK cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
-  | ((App (_tM , _tS), _), (_tA, _s)) ->
+  | ((App (_tM , _tS), _), (_kK, _s)) ->
       raise  (Error ExpAppNotFun)
 
 

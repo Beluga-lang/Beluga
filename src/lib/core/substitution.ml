@@ -2,13 +2,11 @@
 
 (** Substitutions
 
-    @author Renaud Germain
-    @author Darin Morrison
     @author Brigitte Pientka
+    modified: Darin Morrison
 *)
 
 open Syntax.Int
-
 
 
 (**************************)
@@ -42,7 +40,7 @@ let shift = Shift 1
 
    Invariant:
 
-     G |- ^-1 : G, V    ^-1 is patsub
+     Psi |- ^-1 : Psi, A    ^-1 is patsub
 *)
 let invShift = Dot (Undef, id)
 
@@ -52,10 +50,10 @@ let invShift = Dot (Undef, id)
 
    Invariant:
 
-   If   G'  |- s1 : G 
-   and  G'' |- s2 : G'
+   If   Psi'  |- s1 : Psi 
+   and  Psi'' |- s2 : Psi'
    then s'  =  s1 o s2
-   and  G'' |- s1 o s2 : G
+   and  Psi'' |- s1 o s2 : Psi
 
    If   s1, s2 patsub
    then s' patsub
@@ -85,10 +83,10 @@ let rec comp s1 s2 = match (s1, s2) with
      
    Invariant: 
 
-     If    G |- s : G'    G' |- n : V
+     If    Psi |- s <= Psi'    Psi' |- n <= A
      then  Ft' = Ftn         if  s = Ft1 .. Ftn .. ^k
        or  Ft' = ^(n + k)    if  s = Ft1 .. Ftm ^k   and m < n
-       and G |- Ft' : V [s]
+       and Psi |- Ft' <= [s]A
 *)
 and bvarSub n s = match (n, s) with
   | (1, Dot (ft, _s)) -> ft
@@ -101,9 +99,9 @@ and bvarSub n s = match (n, s) with
 
    Invariant:
 
-     If   G |- s : G'     G' |- Ft : V
+     If   Psi |- s : Psi'     Psi' |- Ft : A
      then Ft' = Ft [s]
-     and  G |- Ft' : V [s]
+     and  Psi |- Ft' : [s]A
 *)
 and frontSub ft s = match ft with
   | Head (BVar n)       -> bvarSub n s
@@ -128,10 +126,10 @@ and frontSub ft s = match ft with
 
    Invariant:
 
-     If   G |- s : G'
+     If   Psi |- s : Psi'
      then s' = 1. (s o ^)
-     and  for all V s.t.  G' |- V : L
-       G, V[s] |- s' : G', V 
+     and  for all A s.t.  Psi' |- A : type
+       Psi, [s]A |- s' : Psi', A 
 
        If s patsub then s' patsub
 *)
@@ -148,8 +146,8 @@ and dot1 s = match s with
 
    Invariant:
 
-     If   cD ; cPsi  |- s     <= cPsi'    cD ; cPsi' |- tA <= type
-     then cD ; cPsi  |- tA[s] <= type
+     If   D ; Psi  |- s     <= Psi'    D ; Psi' |- A <= type
+     then D ; Psi  |- [s]A] <= type
 *)
 
 (* First line is an optimization suggested by cs *)
@@ -171,8 +169,8 @@ let decSub (TypDecl (x, tA)) s = TypDecl (x, TClo (tA, s))
    Invariant:
 
      s = 1 . s' o ^
-     If G' |- s' : G
-     (so G',V[s] |- s : G,V)
+     If Psi' |- s' : Psi
+     (so Psi',A[s] |- s : Psi,A)
 *)
 let invDot1 s = comp (comp shift s) invShift
 
@@ -186,8 +184,8 @@ let invDot1 s = comp (comp shift s) invShift
 
    Invariant:
 
-     If   cD ; cPsi  |- s  <= cPsi'    (and s patsub)
-     then cD ; cPsi' |- s' <= cPsi
+     If   D ; Psi  |- s  <= Psi'    (and s patsub)
+     then D ; Psi' |- s' <= Psi
      s.t. s o s' = id  
 *)
 let invert s =
@@ -221,8 +219,8 @@ let invert s =
 
    Invariant:
 
-     If   cD ; cPsi'' |- t : cPsi  (* and t is a pattern sub *)
-     then cD ; cPsi'  |- t : cPsi  and cPsi' subcontext of cPsi
+     If   D ; Psi'' |- t : Psi  (* and t is a pattern sub *)
+     then D ; Psi'  |- t : Psi  and cPsi' subcontext of cPsi
 *)
 let rec strengthen s cPsi = match (s, cPsi) with
   | (Shift _n (* = 0 *), Null)
@@ -230,9 +228,9 @@ let rec strengthen s cPsi = match (s, cPsi) with
 
   | (Dot (Head (BVar _k) (* k = 1 *), t), DDec (cPsi, decl))
     -> let t' = comp t invShift in
-         (* cPsi  |- decl dec     *)
-         (* cPsi' |- t' : cPsi    *)
-         (* cPsi' |- decl[t'] dec *)
+         (* Psi  |- x:A dec where decl = x:A    *)
+         (* Psi' |- t' : Psi    *)
+         (* Psi' |- x:[t']A dec *)
          DDec (strengthen t' cPsi, decSub decl t')
 
   | (Dot (Undef, t), DDec (cPsi, _))
@@ -247,9 +245,9 @@ let rec strengthen s cPsi = match (s, cPsi) with
      
    Invariant:
 
-     If   cPsi |- s: cPsi', s weakensub
+     If   Psi |- s: Psi', s weakensub
      then B holds 
-       iff s = id, cPsi' = cPsi
+       iff s = id, Psi' = Psi
 *)
 let isId s =
   let rec isId' s k' = match s with
@@ -265,11 +263,11 @@ let isId s =
 
    Invariant:
 
-     If cPsi |- tM <= tA
-        cPsi |- w  <= cPsi'  w pattern subst
-        tM[w^-1] defined (without pruning or constraints)
+     If Psi |- M <= A
+        Psi |- w  <= Psi'  w pattern subst
+        [w^-1]M defined (without pruning or constraints)
 
-     then cPsi' |- tM[w^-1] : tA[w^-1]
+     then Psi' |- [w^-1]M : [w^-1]A
 
    Effects: None
 *)
@@ -281,10 +279,10 @@ let cloInv (tM, w) = Clo (tM, invert w)
 
    Invariant:
 
-     If  cD ; cPsi |- s <= cPsi1 
-         cD ; cPsi |- w <= cPsi'
+     If  D ; Psi |- s <= Psi1 
+         D ; Psi |- w <= Psi'
      then  t = s o (w^-1)
-     and   cD ; cPsi' |- t <= cPsi1
+     and   D ; Psi' |- t <= Psi1
 *)
 let compInv s w = comp s (invert w)
 
@@ -294,7 +292,7 @@ let compInv s w = comp s (invert w)
 
    Invariant:
 
-     If    cPsi |- s : cPsi' 
+     If    Psi |- s : Psi' 
      and   s = n1 .. nm ^k
      then  B iff  n1, .., nm pairwise distinct
              and  ni <= k or ni = _ for all 1 <= i <= m

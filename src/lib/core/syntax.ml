@@ -1,9 +1,8 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Renaud Germain
-   @author Darin Morrison
    @author Brigitte Pientka
+   modified: Darin Morrison
 *)
 
 (** Syntax for the LF and Computation languages *)
@@ -64,7 +63,7 @@ module Int = struct
   and sigma_decl =
     | SigmaDecl of name * typ_rec        (* x:Sigma x1:A1 .... xk:Ak       *)
 
-  and ctx_decl =                         (* Contextual Declarations        *)
+  and ctyp_decl =                        (* Contextual Declarations        *)
     | MDecl of name * typ  * dctx        (* D ::= u::A[Psi]                *)
     | PDecl of name * typ  * dctx        (*   |  p::A[Psi]                 *)
     | SDecl of name * dctx * dctx        (*   |  s::A[Psi]                 *)
@@ -103,11 +102,15 @@ module Int = struct
     | Obj  of normal                     (*    | N                         *)
     | Undef                              (*    | _                         *)
 
-  and cvar =                                                     (* Contextual Variables                  *)
-    | Offset of offset                                           (* Bound Variables                       *)
-    | Inst   of normal option ref * dctx * typ * cnstr list ref  (* D ; Psi |- M <= A provided constraint *)
-    | PInst  of head   option ref * dctx * typ * cnstr list ref  (* D ; Psi |- H => A                     *)
-    | CInst  of dctx   option ref * schema                       (* D       |- Psi : schema               *)
+  and cvar =                             (* Contextual Variables           *)
+    | Offset of offset                   (* Bound Variables                *)
+    | Inst   of normal option ref * dctx * typ * cnstr list ref  
+                                         (* D ; Psi |- M <= A 
+                                            provided constraint            *)
+    | PInst  of head   option ref * dctx * typ * cnstr list ref  
+                                         (* D ; Psi |- H => A 
+                                            provided constraint            *)
+    | CInst  of dctx   option ref * schema (* D |- Psi : schema            *)
 
   and constrnt =                         (* Constraint                     *)
     | Solved                             (* constraint ::= solved          *)
@@ -116,20 +119,21 @@ module Int = struct
 
   and cnstr = constrnt ref
 
-  and dctx =                             (* LF Context                              *)
-    | Null                               (* Psi, Phi ::= Null                       *)
-    | CtxVar   of cvar                   (*          | psi                          *)
-    | DDec     of dctx * typ_decl        (*          | Psi, x:A                     *)
-    | SigmaDec of dctx * sigma_decl      (*          | Psi, x:Sigma x1:A1...xn:An.A *)
+  and dctx =                             (* LF Context                     *)
+    | Null                               (* Psi ::= .                      *)
+    | CtxVar   of cvar                   (* | psi                          *)
+    | DDec     of dctx * typ_decl        (* | Psi, x:A                     *)
+    | SigmaDec of dctx * sigma_decl      (* | Psi, x:Sigma x1:A1...xn:An.A *)
 
   and 'a ctx =                           (* Generic context declaration    *)
     | Empty                              (* Context                        *)
     | Dec of 'a ctx * 'a                 (* C ::= Empty                    *)
                                          (*   | C, x:'a                    *)
 
-  and sch_elem =                         (* Schema Element                               *)
-    | SchElem of typ ctx * sigma_decl    (* Pi x1:A1 ... xn:An. Sigma y1:B1 ... yk:Bk. B *)
-                                         (* Sigma-types not allowed in Ai                *)
+  and sch_elem =                         (* Schema Element                 *)
+    | SchElem of typ ctx * sigma_decl    (* Pi x1:A1 ... xn:An. 
+                                               Sigma y1:B1 ... yk:Bk. B    *)
+                                         (* Sigma-types not allowed in Ai  *)
 
   and schema =
     | Schema of sch_elem list
@@ -152,11 +156,9 @@ module Int = struct
   (* Type Abbreviations *)
   (**********************)
 
-  type nclo     = normal  * sub          (* Ns = N[s]                      *)
-  type tclo     = typ     * sub          (* As = A[s]                      *)
-  type trec_clo = typ_rec * sub          (* Arec[s]                        *)
-  type mctx     = ctx_decl ctx           (* Modal Context  D: CDec ctx     *)
-                                         (* Comp. Context  G: VDec ctx     *)
-                                         (* CtxVar Context O: CtxDec ctx   *)
+  type nclo     = normal  * sub          (* Ns = [s]N                      *)
+  type tclo     = typ     * sub          (* As = [s]A                      *)
+  type trec_clo = typ_rec * sub          (* [s]Arec                        *)
+  type mctx     = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
 end

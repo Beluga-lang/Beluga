@@ -1,14 +1,15 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Joshua Dunfield
-   @author Darin Morrison
+
    @author Brigitte Pientka
+   modified:  Joshua Dunfield,
+              Darin Morrison   
+
 *)
 
 (* Weak Head Normalization,
    Normalization, and alpha-conversion *)
-(* Author: Brigitte Pientka *)
 
 open Context
 open Substitution
@@ -17,7 +18,7 @@ open Syntax.Int
 
 
 type error =
-  | TypingAmbiguous
+  | ConstraintsLeft
   | NotPatSub
 
 exception Error of error
@@ -76,7 +77,7 @@ and lowerMVar1 u sA = match (u, sA) with
 
       | _
         (* It is not clear if it can happen that cnstr =/= nil *)
-        -> raise (Error TypingAmbiguous)
+        -> raise (Error ConstraintsLeft)
 
 
 

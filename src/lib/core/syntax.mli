@@ -1,9 +1,8 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (**
-   @author Renaud Germain
-   @author Darin Morrison
    @author Brigitte Pientka
+   modified: Darin Morrison
 *)
 
 (** Syntax for the LF and Computation languages *)
@@ -64,7 +63,7 @@ module Int : sig
   and sigma_decl =
     | SigmaDecl of name * typ_rec
 
-  and ctx_decl =
+  and ctyp_decl =
     | MDecl of name * typ  * dctx
     | PDecl of name * typ  * dctx
     | SDecl of name * dctx * dctx
@@ -148,6 +147,6 @@ module Int : sig
   type nclo     = normal  * sub
   type tclo     = typ     * sub
   type trec_clo = typ_rec * sub
-  type mctx     = ctx_decl ctx
+  type mctx     = ctyp_decl ctx
 
 end

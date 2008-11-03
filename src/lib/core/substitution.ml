@@ -3,7 +3,6 @@
 (** Substitutions
 
     @author Brigitte Pientka
-    modified: Darin Morrison
 *)
 
 open Syntax.Int

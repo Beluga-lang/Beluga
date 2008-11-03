@@ -3,7 +3,6 @@
 (**
    @author Brigitte Pientka
    modified: Joshua Dunfield
-             Darin Morrison
 *)
 
 open Syntax.Int

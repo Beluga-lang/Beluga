@@ -3,7 +3,6 @@
 (**
    @author Brigitte Pientka
    modified: Joshua Dunfield
-             Darin Morrison
 
 *)
 
@@ -56,7 +55,6 @@ let rec checkW cD cPsi sM1 sA2 = match (sM1, sA2) with
     -> raise (Error (IllTyped (cD, cPsi, sM1, sA2)))
 
 and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
-(* can probably transform this to let check = let checkW ... in checkW - dwm *)
 
 
 
@@ -258,7 +256,6 @@ let rec checkTyp' (cD, cPsi, (tA, s)) = match (tA, s) with
       ; checkTyp cD (DDec (cPsi, TypDecl(x, TClo (tA, s)))) (tB, dot1 s)
 
 and checkTyp cD cPsi sA = checkTyp' (cD, cPsi, Whnf.whnfTyp sA)
-(* can probably transform - dwm *)
 
 
 

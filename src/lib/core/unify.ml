@@ -3,8 +3,6 @@
 (**
    @author Brigitte Pientka
    modified: Joshua Dunfield
-             Darin Morrison
-
 *)
 
 
@@ -52,7 +50,6 @@ end
 (* Author: Brigitte Pientka *)
 (* Trailing is taken from Twelf 1.5 *)
 
-(* Shouldn't this have a signature? -dwm *)
 module Make (T : Trail.TRAIL) =
 struct
 

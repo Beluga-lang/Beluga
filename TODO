@@ -1,25 +1,66 @@
 -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
 
-
 CRITICAL
 ========
+
+*  1/4/08  :: Unification: is the occurs check for parameter variables 
+              necessary? -bp 
+
+              Example: q[q[x,y],y] = x  should succeed
+                       q[q[x,y],y] = y  should succeed
+
+              q::A[x1:A,x2:B]  and x1,x2. x2/q
+
+*  1/4/08  :: Unification: Instantiation of parameter variables
+              Currently: Given 
+             cPsi  |- s2' <= cPsi2   and 
+             cPsi1 |- ss <= cPsi     and
+             cPsi2 |- s' <= cPsi'    and [ss](s2' (s')) exists
+
+              will (comp ss s2') s'  have the same result as comp ss (comp s2' s') ? 
+                -bp
+   
+* 1/4/08   :: Testing of unification: Frontend should support
+              processing of unification problems  -bp
+
 
 * 10/23/08 :: Several cases of variable shadowing, might want to
               consider during code-walk.  -dwm
 
-* 10/12/08 :: Naming Scheme for Brigitte's code.  -dwm
-
-
 
 IMPORTANT
 =========
+
+*  1/4/08  :: Unification: Are cases for proj necessary? -bp
 
 * 10/25/08 :: Make pretty printer break line late rather than early.
               -dwm
 
 * 10/25/08 :: Fix pretty printing of internal syntax to show names
               rather than cids.  -dwm
+
+* 10/25/08 :: Many invariants / comments written in different styles,
+              making them harder to read.  Should revisit as group.
+              -dwm
+
+* 10/24/08 :: Add unify.mli.  -dwm
+
+* 10/23/08 :: Investigate magic parens, i.e., Foo of (bar * baz)
+              vs. Foo of bar * baz.  -dwm
+
+* 10/22/08 :: Add target for debugging, add documentation on how to
+              use.  -dwm
+
+* 10/15/08 :: Cleanup Makefile.  -dwm
+
+* 10/14/08 :: Consider a way to use labels to clean up pretty printer
+              interface.  May be possible pass std_formatter and
+              std_lvl in as default arguments.  -dwm
+
+
+MINOR
+=====
 
 * 10/25/08 :: SigmaDec and SigmaDecl are a bit close together...  -dwm
 
@@ -37,29 +78,6 @@ IMPORTANT
               greatly simplified using pattern guards.  Investigate.
               -dwm
 
-* 10/25/08 :: Many invariants / comments written in different styles,
-              making them harder to read.  Should revisit as group.
-              -dwm
-
-* 10/24/08 :: Add unify.mli.  -dwm
-
-* 10/23/08 :: Investigate magic parens, i.e., Foo of (bar * baz)
-              vs. Foo of bar * baz.  -dwm
-
-* 10/22/08 :: Add target for debugging, add documentaiton on how to
-              use.  -dwm
-
-* 10/15/08 :: Cleanup Makefile.  -dwm
-
-* 10/14/08 :: Consider a way to use labels to clean up pretty printer
-              interface.  May be possible pass std_formatter and
-              std_lvl in as default arguments.  -dwm
-
-
-
-MINOR
-=====
-
 * 10/25/08 :: Could we call cD cDel to go better with cPsi?  -dwm
 
 * 10/16/08 :: Add proper interface for token.ml.  Some tricky bits
@@ -68,3 +86,5 @@ MINOR
 * 10/15/08 :: Investigate gensym, think about wrap around.  -dwm
 
 * 10/12/08 :: Fix documentation generation.  -dwm
+
+* 10/12/08 :: Naming Scheme for Brigitte's code.  -bp

@@ -2,7 +2,6 @@
 
 (**
    @author Brigitte Pientka
-   modified: Darin Morrison
 *)
 
 (** Syntax for the LF and Computation languages *)

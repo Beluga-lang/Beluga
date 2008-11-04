@@ -4,7 +4,6 @@
 
    @author Brigitte Pientka
    modified:  Joshua Dunfield,
-              Darin Morrison   
 
 *)
 
@@ -190,7 +189,7 @@ and lowerMVar1 u sA = match (u, sA) with
     (*   cPsi |- s' : cPsi'       cPsi'  | tS > tA' <= tP
          cPsi |  s  : cPsi''      cPsi'' |- tM <= tA''       [s']tA' = [s'']tA''
      *)
-    (* shouldn't it be |- rather than | ? - dwm *)
+
     and reduce sM spine = match (sM, spine) with
       | ((Root (_, _) as root, s), Nil)    -> norm (root, s)
       | ((Lam (_y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
@@ -470,7 +469,7 @@ and lowerMVar1 u sA = match (u, sA) with
               && convSpine (spine1, s1) (spine2, s2)
 
       | _ -> false
-      (* could probably transform - dwm *)
+
 
 
      and convSpine spine1 spine2 = match (spine1, spine2) with

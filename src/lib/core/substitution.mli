@@ -3,7 +3,6 @@
 (** Substitutions
 
     @author Renaud Germain
-    @author Darin Morrison
     @author Brigitte Pientka
 *)
 

@@ -3,7 +3,7 @@
 (**
 
    @author Brigitte Pientka
-   modified:  Joshua Dunfield,
+   modified:  Joshua Dunfield
 
 *)
 

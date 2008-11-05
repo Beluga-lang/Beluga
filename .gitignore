@@ -7,5 +7,6 @@
 *~
 .DS_Store
 .omake*
+build
 src/tools/interpreter/interpreter
 src/tests/test-harness

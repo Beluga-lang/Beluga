@@ -70,36 +70,37 @@ and lowerMVar1 u sA = match (u, sA) with
      Effect: u is instantiated to lam x1 ... xn.u'[id(cPsi), x1 ... xn]
              if n = 0, u = u' and no effect occurs.
 *)
-    and lowerMVar = function
-      | Inst (_r, _cPsi, tA, { contents = [] }) as u
-        -> lowerMVar1 u (tA, id)
+and lowerMVar = function
+  | Inst (_r, _cPsi, tA, { contents = [] }) as u
+    -> lowerMVar1 u (tA, id)
 
-      | _
-        (* It is not clear if it can happen that cnstr =/= nil *)
-        -> raise (Error ConstraintsLeft)
+  | _
+   (* It is not clear if it can happen that cnstr =/= nil *)
+    -> raise (Error ConstraintsLeft)
 
+(* ------------------------------------------------------------ *)
+(* Normalization = applying simultaneous hereditary substitution
 
+   Applying the substitution ss to an LF term tM yields again
+   a normal term. This corresponds to normalizing the term [s]tM. 
 
-    (* ------------------------------------------------------------ *)
-    (* Normalization = applying simultaneous hereditary 
-       substitution                                                 
+   We assume that the LF term tM does not contain any closures 
+   MClo (tN,t), TMClo(tA, t), SMClo(tS, t); this means we must
+   first call contextual normalization and then call ordinary
+   normalization.
 
-       Applying the substitution sigma to an LF term tM yields again
-       a normal term. This corresponds to normalizing the term [s]tM. 
+*)
+  (* 
+     norm (tM,s) = [s]tM 
 
-     *)
-    (* 
-       norm (tM,s) = [s]tM 
+     Invariant:
+     if cD ; cPsi  |- tM <= tA
+        cD ; cPsi' |- s <= cPsi
+     then
+        cD ; cPsi' |- [s]tM <= [s]tA
 
-       Invariant:
-       if cD ; cPsi  |- tM <= tA
-          cD ; cPsi' |- s <= cPsi
-       then
-          cD ; cPsi' |- [s]tM <= [s]tA
-
-      Similar invariants for norm, normSpine.
-
-     *)
+    Similar invariants for norm, normSpine.
+    *)
   let rec norm (tM, sigma) = match tM with
       | Lam (y, tN)       -> Lam (y, norm (tN, dot1 sigma))
 
@@ -111,8 +112,6 @@ and lowerMVar1 u sA = match (u, sA) with
             | Head head -> Root (head, normSpine (tS, sigma))
             (* Undef should not happen ! *)
           end
-
-
 
       (* Meta-variables *)
 
@@ -181,170 +180,174 @@ and lowerMVar1 u sA = match (u, sA) with
 
 
 
-    and normSpine (tS, sigma) = match tS with
-      | Nil           -> Nil
-      | App  (tN, tS) -> App (norm (tN, sigma), normSpine (tS, sigma))
-      | SClo (tS, s)  -> normSpine (tS, comp s sigma)
+  and normSpine (tS, sigma) = match tS with
+    | Nil           -> Nil
+    | App  (tN, tS) -> App (norm (tN, sigma), normSpine (tS, sigma))
+    | SClo (tS, s)  -> normSpine (tS, comp s sigma)
 
-    (*   cPsi |- s' : cPsi'       cPsi'  | tS > tA' <= tP
-         cPsi |  s  : cPsi''      cPsi'' |- tM <= tA''       [s']tA' = [s'']tA''
-     *)
+  (*  reduce(sM, tS) = M'
 
-    and reduce sM spine = match (sM, spine) with
-      | ((Root (_, _) as root, s), Nil)    -> norm (root, s)
-      | ((Lam (_y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
-      | ((Clo (tM, s'), s), tS)            -> reduce (tM , comp s' s)       tS
-      (* other cases are impossible *)
+      cPsi | tS > tA' <= tP
+      cPsi |  s  : cPsi''      cPsi'' |- tM <= tA''       [s]tA'' = tA'
+   *)
 
-
-
-    (* normType (tA, sigma) = tA'
-
-       If cD ; G |- tA <= type
-          cD ; G' |- sigma <= G
-       then
-          tA' = [sigma]tA
-          cD ; G' |- tA' <= type   and tA' is in normal form
-     *)
-    and normTyp (tA, sigma) = match tA with
-      |  Atom (a, tS)
-        -> Atom (a, normSpine (tS, sigma))
-
-      |  PiTyp (TypDecl (_x, _tA) as decl, tB)
-        -> PiTyp (normDecl (decl, sigma),  normTyp (tB, dot1 sigma))
-
-      |  TClo (tA, s)
-        -> normTyp (tA, comp s sigma)
-
-    and normTypRec (recA, sigma) = match recA with
-      | []          -> []
-      | tA :: recA' -> normTyp (tA, sigma) :: normTypRec (recA', dot1 sigma)
-
-    and normDecl (decl, sigma) = match decl with
-       TypDecl (x, tA) -> TypDecl (x, normTyp (tA, sigma))
+  and reduce sM spine = match (sM, spine) with
+    | ((Root (_, _) as root, s), Nil)    -> norm (root, s)
+    | ((Lam (_y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
+    | ((Clo (tM, s'), s), tS)            -> reduce (tM , comp s' s)       tS
+    (* other cases are impossible *)
 
 
 
-    (* ---------------------------------------------------------- *)
-    (* Weak head normalization = applying simultaneous hereditary 
-       substitution lazily                                                 
+  (* normType (tA, sigma) = tA'
 
-       Instead of fully applying the substitution sigma to an 
-       LF term tM, we apply it incrementally, and delay its application
-       where appropriate using Clo, SClo.
+     If cD ; G |- tA <= type
+        cD ; G' |- sigma <= G
+     then
+        tA' = [sigma]tA
+        cD ; G' |- tA' <= type   and tA' is in normal form
+   *)
+  and normTyp (tA, sigma) = match tA with
+    |  Atom (a, tS)
+      -> Atom (a, normSpine (tS, sigma))
+
+    |  PiTyp (TypDecl (_x, _tA) as decl, tB)
+      -> PiTyp (normDecl (decl, sigma),  normTyp (tB, dot1 sigma))
+
+    |  TClo (tA, s)
+      -> normTyp (tA, comp s sigma)
+
+  and normTypRec (recA, sigma) = match recA with
+    | []          -> []
+    | tA :: recA' -> normTyp (tA, sigma) :: normTypRec (recA', dot1 sigma)
+
+  and normDecl (decl, sigma) = match decl with
+     TypDecl (x, tA) -> TypDecl (x, normTyp (tA, sigma))
+
+(* ---------------------------------------------------------- *)
+(* Weak head normalization = applying simultaneous hereditary 
+   substitution lazily                                                 
+
+   Instead of fully applying the substitution sigma to an 
+   LF term tM, we apply it incrementally, and delay its application
+   where appropriate using Clo, SClo.
+
+   We assume that the LF term tM does not contain any closures 
+   MClo (tN,t), TMClo(tA, t), SMClo(tS, t); this means we must
+   first call contextual normalization (or whnf) and then call 
+   ordinary normalization, if these two substitutions interact.
          
-     *)
-    (* 
-       whnf(tM,s) = (tN,s')
+*)
+  (* 
+    whnf(tM,s) = (tN,s')
 
-       Invariant:
-       if cD ; cPsi'  |- tM <= tA
-          cD ; cPsi   |- s <= cPsi'
-       then
-          cD ; cPsi  |- s' <= cPsi''
-          cD ; cPsi''  |- tN  <= tB
+    Invariant:
+    if cD ; cPsi'  |- tM <= tA
+       cD ; cPsi   |- s <= cPsi'
+    then
+       cD ; cPsi  |- s' <= cPsi''
+       cD ; cPsi''  |- tN  <= tB
 
-          cD ; cPsi |- [s]tM = tN[s'] <= tA''
-          cD ; cPsi |- [s]tA = [s']tB = tA'' <= type 
+       cD ; cPsi |- [s]tM = tN[s'] <= tA''
+       cD ; cPsi |- [s]tA = [s']tB = tA'' <= type 
 
-      Similar invariants for whnf, whnfTyp.
+     Similar invariants for whnf, whnfTyp.
 
-     *)
-    let rec whnf sM = match sM with
-      | (Lam _, _s)                -> sM
+  *)
+  let rec whnf sM = match sM with
+    | (Lam _, _s)                -> sM
 
-      | (Clo (tN, s), s')          -> whnf (tN, comp s s')
+    | (Clo (tN, s), s')          -> whnf (tN, comp s s')
 
-      | (Root (BVar i, tS), sigma) ->
-          begin match bvarSub i sigma with
-            | Obj tM    -> whnfRedex (whnf(tM,id), (tS,sigma))
-            | Head head -> (Root(head, SClo(tS,sigma)), id)
-            (* Undef should not happen! *)
-          end
+    | (Root (BVar i, tS), sigma) ->
+        begin match bvarSub i sigma with
+          | Obj tM    -> whnfRedex (whnf(tM,id), (tS,sigma))
+          | Head head -> (Root(head, SClo(tS,sigma)), id)
+          (* Undef should not happen! *)
+        end
 
+    (* Meta-variable *)
+    |  (Root (MVar (Offset _k as u, r), tS), sigma)
+      -> (Root (MVar (u, comp sigma r), SClo (tS, sigma)), id)
 
-      (* Meta-variable *)
-      |  (Root (MVar (Offset _k as u, r), tS), sigma)
-        -> (Root (MVar (u, comp sigma r), SClo (tS, sigma)), id)
+    | (Root (MVar (Inst ({ contents = Some tM }, _    , _ , _     ) as _u, r), tS)      , sigma)
+       (* constraints associated with u must be in solved form *)
+      -> whnfRedex (whnf (tM, r), (tS, sigma))
 
-      | (Root (MVar (Inst ({ contents = Some tM }, _    , _ , _     ) as _u, r), tS)      , sigma)
-         (* constraints associated with u must be in solved form *)
-        -> whnfRedex (whnf (tM, r), (tS, sigma))
+    | (Root (MVar (Inst ({ contents = None    }, _cPsi, tA, _cnstr) as u , r), tS) as tM, sigma)
+      (* note: we could split this case based on tA; 
+              this would avoid possibly building closures with id *)
+      -> let rec expose (tA, s) = match tA with
+           | Atom (a, tS)                ->
+               Atom (a, SClo (tS, s))
 
-      | (Root (MVar (Inst ({ contents = None    }, _cPsi, tA, _cnstr) as u , r), tS) as tM, sigma)
-            (* note: we could split this case based on tA; 
-                     this would avoid possibly building closures with id *)
-        -> let rec expose (tA, s) = match tA with
-             | Atom (a, tS)                ->
-                 Atom (a, SClo (tS, s))
+           | PiTyp (TypDecl (x, tA), tB) ->
+               PiTyp (TypDecl (x, TClo (tA, s)), TClo (tB, dot1 s))
 
-             | PiTyp (TypDecl (x, tA), tB) ->
-                 PiTyp (TypDecl (x, TClo (tA, s)), TClo (tB, dot1 s))
+            | TClo (tA, s')               ->
+               expose (tA, comp s' s)
+         in
+           begin match expose (tA, id) with
+             | Atom _       ->
+               (* meta-variable is of atomic type; tS = Nil *)
+                 (Root (MVar (u, comp r sigma), SClo (tS, sigma)), id)
 
-             | TClo (tA, s')               ->
-                 expose (tA, comp s' s)
-           in
-             begin match expose (tA, id) with
-               | Atom _       ->
-                 (* meta-variable is of atomic type; tS = Nil *)
-                   (Root (MVar (u, comp r sigma), SClo (tS, sigma)), id)
-
-               | PiTyp (_, _) ->
-                  (* Meta-variable is not atomic and tA = Pi x:B1.B2 
-                     lower u, and normalize the lowered meta-variable
-                     note: we may expose and compose substitutions twice. *)
-                   let _ = lowerMVar u in
-                     whnf (tM, sigma)
-             end
-
-
-      (* Parameter variable *)
-      | (Root (PVar (Offset _k as p, r), tS), sigma)
-        -> (Root (PVar (p, comp sigma r), SClo (tS, sigma)), id)
-
-      | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma)
-        ->
-          begin match bvarSub i r with
-            | Obj tM    -> whnfRedex (whnf (tM, id), (tS, sigma))
-            | Head head -> (Root (head, SClo (tS, sigma)), id)
-          end
-
-      | (Root (PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS), sigma)
-        -> whnf (Root (PVar (q, comp r' r), tS), sigma)
+             | PiTyp (_, _) ->
+               (* Meta-variable is not atomic and tA = Pi x:B1.B2 
+                  lower u, and normalize the lowered meta-variable
+                  note: we may expose and compose substitutions twice. *)
+                let _ = lowerMVar u in
+                  whnf (tM, sigma)
+         end
 
 
-      (* Constant *)
-      | (Root (Const c, tS), sigma)
-        -> (Root (Const c, SClo (tS, sigma)), id)
+    (* Parameter variable *)
+    | (Root (PVar (Offset _k as p, r), tS), sigma)
+      -> (Root (PVar (p, comp sigma r), SClo (tS, sigma)), id)
+
+    | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma)
+      ->
+        begin match bvarSub i r with
+          | Obj tM    -> whnfRedex (whnf (tM, id), (tS, sigma))
+          | Head head -> (Root (head, SClo (tS, sigma)), id)
+        end
+
+    | (Root (PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS), sigma)
+      -> whnf (Root (PVar (q, comp r' r), tS), sigma)
 
 
-      (* Projections *)
-      | (Root (Proj (BVar i, k), tS), sigma)
-        -> begin match bvarSub i sigma with
-             | Head (BVar j)      -> (Root (Proj (BVar j, k)     , SClo (tS, sigma)), id)
-             | Head (PVar (q, s)) -> (Root (Proj (PVar (q, s), k), SClo (tS, sigma)), id)
-            (* other cases are impossible -- at least for now -bp *)
-           end
+    (* Constant *)
+    | (Root (Const c, tS), sigma)
+      -> (Root (Const c, SClo (tS, sigma)), id)
 
 
-      | (Root (Proj (PVar (Offset _ as q, s), k), tS), sigma)
-        -> (Root (Proj (PVar (q, comp s sigma), k), SClo (tS, sigma)), id)
+    (* Projections *)
+    | (Root (Proj (BVar i, k), tS), sigma)
+      -> begin match bvarSub i sigma with
+           | Head (BVar j)      -> (Root (Proj (BVar j, k)     , SClo (tS, sigma)), id)
+           | Head (PVar (q, s)) -> (Root (Proj (PVar (q, s), k), SClo (tS, sigma)), id)
+          (* other cases are impossible -- at least for now -bp *)
+         end
 
-      | (Root (Proj (PVar (PInst ({ contents = Some (PVar (q', r'))}, _, _, _) as _q, s), k), tS), sigma)
-        -> whnf (Root (Proj (PVar (q', comp r' s), k), tS), sigma)
+
+    | (Root (Proj (PVar (Offset _ as q, s), k), tS), sigma)
+      -> (Root (Proj (PVar (q, comp s sigma), k), SClo (tS, sigma)), id)
+
+    | (Root (Proj (PVar (PInst ({ contents = Some (PVar (q', r'))}, _, _, _) as _q, s), k), tS), sigma)
+      -> whnf (Root (Proj (PVar (q', comp r' s), k), tS), sigma)
 
 
 
-    (* whnfRedex((tM,s1), (tS, s2)) = (R,s')
+  (* whnfRedex((tM,s1), (tS, s2)) = (R,s')
  
-       If cD ; Psi1 |- tM <= tA      and cD ; cPsi |- s1 <= Psi1
-          cD ; Psi2 |- tS > tA <= tP  and cD ; cPsi |- s2 <= Psi2
-      then
-          cD ; cPsi |- s' : cPsi'    and cD ; cPsi' |- R' -> tP'   
+     If cD ; Psi1 |- tM <= tA      and cD ; cPsi |- s1 <= Psi1
+        cD ; Psi2 |- tS > tA <= tP  and cD ; cPsi |- s2 <= Psi2
+    then
+        cD ; cPsi |- s' : cPsi'    and cD ; cPsi' |- R' -> tP'   
 
-          [s']tP' = [s2]tP and [s']R' = tM[s1] @ tS[s2] 
+        [s']tP' = [s2]tP and [s']R' = tM[s1] @ tS[s2] 
 
-     *)
+   *)
     and whnfRedex (sM, sS) = match (sM, sS) with
       | ((Root (_, _) as root, s1), (Nil, _s2))
         -> whnf (root, s1)

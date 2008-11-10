@@ -7,10 +7,7 @@
 (** Syntax for the LF and Computation languages *)
 
 
-
 open Id
-
-
 
 (** External Syntax *)
 module Ext = struct
@@ -72,11 +69,13 @@ module Int = struct
     | Atom  of cid_typ * spine           (* A ::= a M1 ... Mn              *)
     | PiTyp of typ_decl * typ            (*   | Pi x:A.B                   *)
     | TClo  of typ * sub                 (*   | TClo(A,s)                  *)
+    | TMClo of typ * msub                (*   | TMClo (A, t)               *)
 
   and normal =                           (* normal terms                   *)
     | Lam  of name * normal              (* M ::= \x.M                     *)
     | Root of head * spine               (*   | h . S                      *)
     | Clo  of (normal * sub)             (*   | Clo(N,s)                   *)
+    | MClo of (normal * msub)            (*   | MClo(M, t)                 *)
 
   and head =
     | BVar  of offset                    (* H ::= x                        *)
@@ -90,6 +89,7 @@ module Int = struct
     | Nil                                (* S ::= Nil                      *)
     | App  of normal * spine             (*   | M . S                      *)
     | SClo of spine * sub                (*   | SClo(S,s)                  *)
+    | SMClo of spine * msub              (*   | SMClo(S,t)                 *)
 
   and sub =                              (* Substitutions                  *)
     | Shift of offset                    (* sigma ::= ^n                   *)
@@ -100,6 +100,16 @@ module Int = struct
     | Head of head                       (* Ft ::= H                       *)
     | Obj  of normal                     (*    | N                         *)
     | Undef                              (*    | _                         *)
+
+  and msub =                             (* Contextual substitutions       *)
+    | MShift of offset                   (* theta ::= ^n                   *)
+    | MDot   of mfront * msub            (*       | MFt . theta            *) 
+
+  and mfront =                           (* Fronts:                        *)
+    | Id   of offset                     (* MFt ::= k                      *)
+    | MObj of psi_hat * normal           (*    | Psihat.N                  *)
+    | PObj of psi_hat * offset           (*    | Psihat.x                  *)
+
 
   and cvar =                             (* Contextual Variables           *)
     | Offset of offset                   (* Bound Variables                *)
@@ -156,6 +166,7 @@ module Int = struct
   (**********************)
 
   type nclo     = normal  * sub          (* Ns = [s]N                      *)
+  type sclo     = spine   * sub          (* Ss = [s]S                      *)
   type tclo     = typ     * sub          (* As = [s]A                      *)
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
   type mctx     = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)

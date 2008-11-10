@@ -18,6 +18,7 @@ exception Error of error
 val whnf     : nclo -> nclo
 val whnfTyp  : tclo -> tclo
 val norm     : nclo -> normal
+val reduce   : nclo -> spine -> normal
 
 val conv       : nclo -> nclo -> bool
 val convTyp    : tclo -> tclo -> bool

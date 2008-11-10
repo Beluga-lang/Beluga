@@ -338,7 +338,6 @@ let rec check_sgn_decls = function
       let cD   = Empty
       and cPsi = Null
       in
-          (*Printf.printf "Kind checking: %s\n" ((Typ .get a).Typ .name).Id.string_of_name*)
           checkKind cD cPsi k
         ; check_sgn_decls decls
 
@@ -346,6 +345,5 @@ let rec check_sgn_decls = function
       let cD   = Empty
       and cPsi = Null
       in
-          (*Printf.printf "Type checking: %s\n" ((Term.get c).Term.name).Id.string_of_name*)
           checkTyp cD cPsi (a, id)
         ; check_sgn_decls decls

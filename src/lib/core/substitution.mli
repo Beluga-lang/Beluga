@@ -2,7 +2,6 @@
 
 (** Substitutions
 
-    @author Renaud Germain
     @author Brigitte Pientka
 *)
 

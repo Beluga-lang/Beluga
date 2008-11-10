@@ -6,11 +6,7 @@
 
 (** Syntax for the LF and Computation languages *)
 
-
-
 open Id
-
-
 
 (** External Syntax *)
 module Ext : sig
@@ -71,11 +67,13 @@ module Int : sig
     | Atom  of cid_typ * spine
     | PiTyp of typ_decl * typ
     | TClo  of typ * sub
+    | TMClo of typ * msub
 
   and normal =
     | Lam  of name * normal
     | Root of head * spine
     | Clo  of (normal * sub)
+    | MClo of (normal * msub)       
 
   and head =
     | BVar  of offset
@@ -89,6 +87,7 @@ module Int : sig
     | Nil
     | App of normal * spine
     | SClo of spine * sub
+    | SMClo of spine * msub
 
   and sub =
     | Shift of offset
@@ -99,6 +98,15 @@ module Int : sig
     | Head of head
     | Obj  of normal
     | Undef
+
+  and msub =                            
+    | MShift of offset                  
+    | MDot   of mfront * msub           
+
+  and mfront =                          
+    | Id   of offset
+    | MObj of psi_hat * normal           
+    | PObj of psi_hat * offset
 
   and cvar =
     | Offset of offset
@@ -144,6 +152,7 @@ module Int : sig
   (**********************)
 
   type nclo     = normal  * sub
+  type sclo     = spine   * sub
   type tclo     = typ     * sub
   type trec_clo = typ_rec * sub
   type mctx     = ctyp_decl ctx

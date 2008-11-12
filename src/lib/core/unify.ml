@@ -13,8 +13,10 @@
 
 *)
 
-open Syntax.Int
+open Syntax.Int.LF
 open Context
+
+
 
 module type UNIFY = sig
 

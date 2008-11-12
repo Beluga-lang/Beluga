@@ -5,7 +5,7 @@
     @author Brigitte Pientka
 *)
 
-open Syntax.Int
+open Syntax.Int.LF
 
 
 (**************************)

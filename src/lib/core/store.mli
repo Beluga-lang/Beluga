@@ -7,7 +7,7 @@
 
 
 open Id
-open Syntax.Int
+open Syntax.Int.LF
 
 
 

@@ -4,8 +4,6 @@
    @author Darin Morrison
 *)
 
-
-
 open Core.Common
 open Core.Syntax
 
@@ -17,7 +15,7 @@ module Grammar : Camlp4.Sig.Grammar.Static
 
 
 (** Grammar entry for an entire LF Signature *)
-val p_sgn_eoi : Ext.sgn_decl list Grammar.Entry.t
+val p_sgn_eoi : Ext.LF.sgn_decl list Grammar.Entry.t
 
 (** Parse a stream and return a signature *)
 val parse_stream :

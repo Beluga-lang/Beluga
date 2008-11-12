@@ -5,7 +5,7 @@
    modified: Joshua Dunfield
 *)
 
-open Syntax.Int
+open Syntax.Int.LF
 
 
 
@@ -15,10 +15,10 @@ type error =
 
 exception Error of error
 
-val whnf     : nclo -> nclo
-val whnfTyp  : tclo -> tclo
-val norm     : nclo -> normal
-val reduce   : nclo -> spine -> normal
+val whnf    : nclo -> nclo
+val whnfTyp : tclo -> tclo
+val norm    : nclo -> normal
+val reduce  : nclo -> spine -> normal
 
 val conv       : nclo -> nclo -> bool
 val convTyp    : tclo -> tclo -> bool

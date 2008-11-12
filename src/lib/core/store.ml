@@ -6,7 +6,7 @@
 
 
 
-module Int = Syntax.Int
+open Syntax
 
 
 
@@ -16,7 +16,7 @@ module Cid = struct
 
     type entry =
       { name : Id.name
-      ; kind : Int.kind }
+      ; kind : Int.LF.kind }
 
     let mk_entry n k =
       { name = n
@@ -57,7 +57,7 @@ module Cid = struct
 
     type entry =
       { name : Id.name
-      ; typ  : Int.typ }
+      ; typ  : Int.LF.typ }
 
     let mk_entry n t =
       { name = n

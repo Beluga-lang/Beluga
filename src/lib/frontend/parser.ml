@@ -4,8 +4,6 @@
    @author Darin Morrison
 *)
 
-
-
 (* NOTE: Be careful with taureg-mode M-q in this file – it doesn't
    understand the grammar formatting below very well and will easily
    trash the layout. *)
@@ -21,9 +19,7 @@ open Token
 
 
 
-module Grammar = Camlp4.Struct.Grammar.Static.Make(Lexer)
-
-
+module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
 (* Silly type needed for manual backtracking. We need this because,
    given Πx:A._, we do not know whether _ is a kind or a type until we
@@ -31,8 +27,8 @@ module Grammar = Camlp4.Struct.Grammar.Static.Make(Lexer)
    it could be either with this type and continue parsing until we
    find out one way or the other. *)
 type kind_or_typ =
-  | Kind of Ext.kind
-  | Typ  of Ext.typ
+  | Kind of Ext.LF.kind
+  | Typ  of Ext.LF.typ
 
 
 
@@ -68,8 +64,8 @@ GLOBAL: p_sgn_eoi;
       [
         a_or_c = SYMBOL; ":"; k_or_a = p_kind_or_typ; "."
       -> begin match k_or_a with
-           | Kind k -> Ext.SgnTyp   (_loc, Id.mk_name (Some a_or_c), k)
-           | Typ  a -> Ext.SgnConst (_loc, Id.mk_name (Some a_or_c), a)
+           | Kind k -> Ext.LF.SgnTyp   (_loc, Id.mk_name (Some a_or_c), k)
+           | Typ  a -> Ext.LF.SgnConst (_loc, Id.mk_name (Some a_or_c), a)
          end
       ]
     ]
@@ -86,20 +82,20 @@ GLOBAL: p_sgn_eoi;
         [
           "Π"; x = SYMBOL; ":"; a2 = p_full_typ; "."; k_or_a = SELF
         -> begin match k_or_a with
-             | Kind k -> Kind (Ext.PiKind (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), k))
-             | Typ  a -> Typ  (Ext.PiTyp  (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), a))
+             | Kind k -> Kind (Ext.LF.PiKind (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), k))
+             | Typ  a -> Typ  (Ext.LF.PiTyp  (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), a))
            end
         |
            "{"; x = SYMBOL; ":"; a2 = p_full_typ; "}"; k_or_a = SELF
         -> begin match k_or_a with
-             | Kind k -> Kind (Ext.PiKind (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), k))
-             | Typ  a -> Typ  (Ext.PiTyp  (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), a))
+             | Kind k -> Kind (Ext.LF.PiKind (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), k))
+             | Typ  a -> Typ  (Ext.LF.PiTyp  (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), a))
            end
         |
           a2 = p_basic_typ; "->"; k_or_a = SELF
        -> begin match k_or_a with
-            | Kind k -> Kind (Ext.ArrKind (_loc, a2, k))
-            | Typ  a -> Typ  (Ext.ArrTyp  (_loc, a2, a))
+            | Kind k -> Kind (Ext.LF.ArrKind (_loc, a2, k))
+            | Typ  a -> Typ  (Ext.LF.ArrTyp  (_loc, a2, a))
           end
         |
            k = p_basic_kind
@@ -116,7 +112,7 @@ GLOBAL: p_sgn_eoi;
     [
       [
         "type"
-      -> Ext.Typ _loc
+      -> Ext.LF.Typ _loc
       ]
     ]
   ;
@@ -128,8 +124,8 @@ GLOBAL: p_sgn_eoi;
     [
       [
          a = SYMBOL; ms = LIST0 p_basic_term
-      -> let sp = List.fold_right (fun t s -> Ext.App (t, s)) ms Ext.Nil in
-           Ext.Atom (_loc, Id.mk_name (Some a), sp)
+      -> let sp = List.fold_right (fun t s -> Ext.LF.App (t, s)) ms Ext.LF.Nil in
+           Ext.LF.Atom (_loc, Id.mk_name (Some a), sp)
       |
          "("; a = p_full_typ; ")"
       ->  a
@@ -148,13 +144,13 @@ GLOBAL: p_sgn_eoi;
       -> a
       |
          "Π"; x = SYMBOL; ":"; a2 = SELF; "."; a = SELF
-      -> Ext.PiTyp (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), a)
+      -> Ext.LF.PiTyp (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), a)
       |
          "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF
-      -> Ext.PiTyp (_loc, Ext.TypDecl (Id.mk_name (Some x), a2), a)
+      -> Ext.LF.PiTyp (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), a)
       |
          a2 = p_basic_typ; "->"; a = SELF
-      -> Ext.ArrTyp (_loc, a2, a)
+      -> Ext.LF.ArrTyp (_loc, a2, a)
       ]
     ]
   ;
@@ -166,7 +162,7 @@ GLOBAL: p_sgn_eoi;
     [
       [
          h = p_head
-      -> Ext.Root (_loc, h, Ext.Nil)
+      -> Ext.LF.Root (_loc, h, Ext.LF.Nil)
       |
          "("; m = p_full_term; ")"
       -> m
@@ -183,14 +179,14 @@ GLOBAL: p_sgn_eoi;
     [
       [
          "λ"; x = SYMBOL; "."; m = p_full_term
-      -> Ext.Lam (_loc, (Id.mk_name (Some x)), m)
+      -> Ext.LF.Lam (_loc, (Id.mk_name (Some x)), m)
       |
          "["; x = SYMBOL; "]"; m = p_full_term
-      -> Ext.Lam (_loc, (Id.mk_name (Some x)), m)
+      -> Ext.LF.Lam (_loc, (Id.mk_name (Some x)), m)
       |
          h = p_head; ms = LIST0 p_basic_term
-      -> let sp = List.fold_right (fun t s -> Ext.App (t, s)) ms Ext.Nil in
-           Ext.Root (_loc, h, sp)
+      -> let sp = List.fold_right (fun t s -> Ext.LF.App (t, s)) ms Ext.LF.Nil in
+           Ext.LF.Root (_loc, h, sp)
       |
          m = p_basic_term
       -> m
@@ -205,7 +201,7 @@ GLOBAL: p_sgn_eoi;
     [
       [
          x_or_c = SYMBOL
-      -> Ext.Name (_loc, Id.mk_name (Some x_or_c))
+      -> Ext.LF.Name (_loc, Id.mk_name (Some x_or_c))
       ]
     ]
   ;

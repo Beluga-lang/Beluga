@@ -8,38 +8,47 @@
 
 open Id
 
+
+
+module Loc : Camlp4.Sig.Loc
+
 (** External Syntax *)
 module Ext : sig
 
-  module Loc : Camlp4.Sig.Loc
+  module LF : sig
 
-  type kind =
-    | Typ     of Loc.t
-    | ArrKind of Loc.t * typ * kind
-    | PiKind  of Loc.t * typ_decl * kind
+    type kind =
+      | Typ     of Loc.t
+      | ArrKind of Loc.t * typ * kind
+      | PiKind  of Loc.t * typ_decl * kind
 
-  and typ_decl =
-    | TypDecl of name * typ
+    and typ_decl =
+      | TypDecl of name * typ
 
-  and typ =
-    | Atom   of Loc.t * name * spine
-    | ArrTyp of Loc.t * typ * typ
-    | PiTyp  of Loc.t * typ_decl * typ
+    and typ =
+      | Atom   of Loc.t * name * spine
+      | ArrTyp of Loc.t * typ * typ
+      | PiTyp  of Loc.t * typ_decl * typ
 
-  and normal =
-    | Lam  of Loc.t * name * normal
-    | Root of Loc.t * head * spine
+    and normal =
+      | Lam  of Loc.t * name * normal
+      | Root of Loc.t * head * spine
 
-  and head =
-    | Name of Loc.t * name
+    and head =
+      | Name of Loc.t * name
 
-  and spine =
-    | Nil
-    | App of normal * spine
+    and spine =
+      | Nil
+      | App of normal * spine
 
-  type sgn_decl =
-    | SgnTyp   of Loc.t * name * kind
-    | SgnConst of Loc.t * name * typ
+    type sgn_decl =
+      | SgnTyp   of Loc.t * name * kind
+      | SgnConst of Loc.t * name * typ
+
+  end
+
+  module Comp : sig
+  end
 
 end
 
@@ -48,113 +57,120 @@ end
 (** Internal Syntax *)
 module Int : sig
 
-  type kind =
-    | Typ
-    | PiKind of typ_decl * kind
+  module LF : sig
 
-  and typ_decl =
-    | TypDecl of name * typ
+    type kind =
+      | Typ
+      | PiKind of typ_decl * kind
 
-  and sigma_decl =
-    | SigmaDecl of name * typ_rec
+    and typ_decl =
+      | TypDecl of name * typ
 
-  and ctyp_decl =
-    | MDecl of name * typ  * dctx
-    | PDecl of name * typ  * dctx
-    | SDecl of name * dctx * dctx
+    and sigma_decl =
+      | SigmaDecl of name * typ_rec
 
-  and typ =
-    | Atom  of cid_typ * spine
-    | PiTyp of typ_decl * typ
-    | TClo  of typ * sub
-    | TMClo of typ * msub
+    and ctyp_decl =
+      | MDecl of name * typ  * dctx
+      | PDecl of name * typ  * dctx
+      | SDecl of name * dctx * dctx
 
-  and normal =
-    | Lam  of name * normal
-    | Root of head * spine
-    | Clo  of (normal * sub)
-    | MClo of (normal * msub)       
+    and typ =
+      | Atom  of cid_typ * spine
+      | PiTyp of typ_decl * typ
+      | TClo  of typ * sub
+      | TMClo of typ * msub
 
-  and head =
-    | BVar  of offset
-    | Const of cid_term
-    | MVar  of cvar * sub
-    | PVar  of cvar * sub
-    | AnnH  of head * typ
-    | Proj  of head * int
+    and normal =
+      | Lam  of name * normal
+      | Root of head * spine
+      | Clo  of (normal * sub)
+      | MClo of (normal * msub)       
 
-  and spine =
-    | Nil
-    | App of normal * spine
-    | SClo of spine * sub
-    | SMClo of spine * msub
+    and head =
+      | BVar  of offset
+      | Const of cid_term
+      | MVar  of cvar * sub
+      | PVar  of cvar * sub
+      | AnnH  of head * typ
+      | Proj  of head * int
 
-  and sub =
-    | Shift of offset
-    | SVar  of cvar * sub
-    | Dot   of front * sub
+    and spine =
+      | Nil
+      | App of normal * spine
+      | SClo of spine * sub
+      | SMClo of spine * msub
 
-  and front =
-    | Head of head
-    | Obj  of normal
-    | Undef
+    and sub =
+      | Shift of offset
+      | SVar  of cvar * sub
+      | Dot   of front * sub
 
-  and msub =                            
-    | MShift of offset                  
-    | MDot   of mfront * msub           
+    and front =
+      | Head of head
+      | Obj  of normal
+      | Undef
 
-  and mfront =                          
-    | Id   of offset
-    | MObj of psi_hat * normal           
-    | PObj of psi_hat * offset
+    and msub =                            
+      | MShift of offset                  
+      | MDot   of mfront * msub           
 
-  and cvar =
-    | Offset of offset
-    | Inst   of normal option ref * dctx * typ * (constrnt ref) list ref
-    | PInst  of head   option ref * dctx * typ * (constrnt ref) list ref
-    | CInst  of dctx   option ref * schema
+    and mfront =                          
+      | Id   of offset
+      | MObj of psi_hat * normal           
+      | PObj of psi_hat * offset
 
-  and constrnt =
-    | Solved
-    | Eqn of psi_hat * normal * normal
-    | Eqh of psi_hat * head * head
+    and cvar =
+      | Offset of offset
+      | Inst   of normal option ref * dctx * typ * (constrnt ref) list ref
+      | PInst  of head   option ref * dctx * typ * (constrnt ref) list ref
+      | CInst  of dctx   option ref * schema
 
-  and cnstr    = constrnt ref
+    and constrnt =
+      | Solved
+      | Eqn of psi_hat * normal * normal
+      | Eqh of psi_hat * head * head
 
-  and dctx =
-    | Null
-    | CtxVar   of cvar
-    | DDec     of dctx * typ_decl
-    | SigmaDec of dctx * sigma_decl
+    and cnstr    = constrnt ref
 
-  and 'a ctx =
-    | Empty
-    | Dec of 'a ctx * 'a
+    and dctx =
+      | Null
+      | CtxVar   of cvar
+      | DDec     of dctx * typ_decl
+      | SigmaDec of dctx * sigma_decl
 
-  and sch_elem =
-    | SchElem of typ ctx * sigma_decl
+    and 'a ctx =
+      | Empty
+      | Dec of 'a ctx * 'a
 
-  and schema =
-    | Schema of sch_elem list
+    and sch_elem =
+      | SchElem of typ ctx * sigma_decl
 
-  and psi_hat = cvar option * offset
+    and schema =
+      | Schema of sch_elem list
 
-  and typ_rec = typ list
+    and psi_hat = cvar option * offset
 
-  type sgn_decl =
-    | SgnTyp   of cid_typ  * kind
-    | SgnConst of cid_term * typ
+    and typ_rec = typ list
+
+    type sgn_decl =
+      | SgnTyp   of cid_typ  * kind
+      | SgnConst of cid_term * typ
 
 
 
-  (**********************)
-  (* Type Abbreviations *)
-  (**********************)
+    (**********************)
+    (* Type Abbreviations *)
+    (**********************)
 
-  type nclo     = normal  * sub
-  type sclo     = spine   * sub
-  type tclo     = typ     * sub
-  type trec_clo = typ_rec * sub
-  type mctx     = ctyp_decl ctx
+    type nclo     = normal  * sub
+    type sclo     = spine   * sub
+    type tclo     = typ     * sub
+    type trec_clo = typ_rec * sub
+    type mctx     = ctyp_decl ctx
+
+  end
+
+  module Comp : sig
+  end
 
 end

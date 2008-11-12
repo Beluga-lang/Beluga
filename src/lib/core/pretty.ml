@@ -73,15 +73,15 @@ end
 module Ext = struct
 
   open Id
-  open Syntax.Ext
+  open Syntax.Ext.LF
+
+
 
   (*************************************)
   (* External Syntax Printer Signature *)
   (*************************************)
 
   module type PRINTER = sig
-
-    open Syntax.Ext
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
@@ -292,15 +292,15 @@ end
 module Int = struct
 
   open Id
-  open Syntax.Int
+  open Syntax.Int.LF
+
+
 
   (*************************************)
   (* Internal Syntax Printer Signature *)
   (*************************************)
 
   module type PRINTER = sig
-
-    open Syntax.Int
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)

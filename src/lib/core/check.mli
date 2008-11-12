@@ -5,7 +5,8 @@
    modified: Joshua Dunfield
 *)
 
-open Syntax.Int
+open Syntax.Int.LF
+
 
 
 type error =

@@ -9,7 +9,7 @@
 (** A location, to be paired with a token during lexical analysis.
     Used for localized error reporting, etc. *)
 module Loc : Camlp4.Sig.Loc
-  with type t = Core.Syntax.Ext.Loc.t
+  with type t = Core.Syntax.Loc.t
 
 (** Token functionality, parameterized on a concrete location and
     token representation. *)

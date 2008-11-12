@@ -45,7 +45,7 @@ module Ext : sig
 
   module type PRINTER = sig
 
-    open Syntax.Ext
+    open Syntax.Ext.LF
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
@@ -119,7 +119,7 @@ module Int : sig
 
   module type PRINTER = sig
 
-    open Syntax.Int
+    open Syntax.Int.LF
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)

@@ -12,7 +12,8 @@
 
 open Context
 open Csubstitution
-open Syntax.Int
+open Syntax.Int.LF
+
 
 
   (* ------------------------------------------------------------ *)

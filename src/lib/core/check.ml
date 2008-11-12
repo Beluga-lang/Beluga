@@ -9,7 +9,8 @@
 open Context
 open Store.Cid
 open Substitution
-open Syntax.Int
+open Syntax.Int.LF
+
 
 
 type error =

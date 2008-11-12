@@ -73,7 +73,7 @@ module Int = struct
       | MDecl of name * typ  * dctx        (* D ::= u::A[Psi]                *)
       | PDecl of name * typ  * dctx        (*   |  p::A[Psi]                 *)
       | SDecl of name * dctx * dctx        (*   |  s::A[Psi]                 *)
-          (* Potentially, A is Sigma type ? *)
+                                           (* Potentially, A is Sigma type ? *)
 
     and typ =                              (* LF level                       *)
       | Atom  of cid_typ * spine           (* A ::= a M1 ... Mn              *)
@@ -125,11 +125,12 @@ module Int = struct
       | Offset of offset                   (* Bound Variables                *)
       | Inst   of normal option ref * dctx * typ * cnstr list ref  
           (* D ; Psi |- M <= A 
-             provided constraint            *)
+             provided constraint *)
       | PInst  of head   option ref * dctx * typ * cnstr list ref  
           (* D ; Psi |- H => A 
-             provided constraint            *)
-      | CInst  of dctx   option ref * schema (* D |- Psi : schema            *)
+             provided constraint *)
+      | CInst  of dctx   option ref * schema
+          (* D |- Psi : schema   *)
 
     and constrnt =                         (* Constraint                     *)
       | Solved                             (* constraint ::= solved          *)
@@ -147,23 +148,23 @@ module Int = struct
     and 'a ctx =                           (* Generic context declaration    *)
       | Empty                              (* Context                        *)
       | Dec of 'a ctx * 'a                 (* C ::= Empty                    *)
-          (*   | C, x:'a                    *)
+                                           (* | C, x:'a                      *)
 
     and sch_elem =                         (* Schema Element                 *)
-      | SchElem of typ ctx * sigma_decl    (* Pi x1:A1 ... xn:An. 
-                                              Sigma y1:B1 ... yk:Bk. B    *)
-          (* Sigma-types not allowed in Ai  *)
+      | SchElem of typ ctx * sigma_decl    (* Pi    x1:A1 ... xn:An. 
+                                              Sigma y1:B1 ... yk:Bk. B       *)
+                                           (* Sigma-types not allowed in Ai  *)
 
     and schema =
       | Schema of sch_elem list
 
     and psi_hat = cvar option * offset     (* Psihat ::=         *)
-        (*        | psi       *)
-        (*        | .         *)
-        (*        | Psihat, x *)
+                                           (*        | psi       *)
+                                           (*        | .         *)
+                                           (*        | Psihat, x *)
 
     and typ_rec = typ list                 (* Sigma x1:A1 ... xk:Ak          *)
-        (* should not be a list ... -bp   *)
+                                           (* should not be a list ... -bp   *)
 
     type sgn_decl =
       | SgnTyp   of cid_typ  * kind
@@ -184,6 +185,41 @@ module Int = struct
   end
 
   module Comp = struct
+                                                           (* Computational level expressions *)
+    type exp =                                             (* Expressions :                   *)
+      | Var     of offset                                  (* e := x                          *)
+      | Rec     of name       * exp                        (*    | rec f => e                 *)
+      | Fun     of name       * exp                        (*    | fn x => e                  *)
+      | CtxFun  of name       * exp                        (*    | FN psi => e                *)
+      | MLam    of name       * exp                        (*    | mlam u => e                *)
+      | Box     of LF.psi_hat * LF.normal                  (*    | box Psihat.M               *)
+      | SBox    of LF.psi_hat * LF.sub                     (*    | sbox Psihat.s              *)
+      | Pack    of LF.psi_hat * LF.normal * exp            (*    | <Psihat.M , e>             *)
+      | Apply   of exp        * exp                        (*    | e e'                       *)
+      | CtxApp  of exp        * LF.dctx                    (*    | e <Psi>                    *)
+      | MApp    of exp        * (LF.psi_hat * LF.normal)   (*    | e <Psihat.M>               *)
+      | Ann     of exp        * typ                        (*    | e : tau                    *)
+      | Case    of exp        * branch list                (*    | case e of b1 => e1 ...     *)
+      | Let     of exp        * (name * exp)               (*    | let x = e in e'            *)
+      | LetPack of exp        * (name * name * exp)        (*    | let pack <u,x> = e in e'   *)
+
+    and branch =                                  (* Branches                        *)
+      | BBranch of LF.ctyp_decl LF.ctx            (* b := Pibox D.                   *)
+                 * (LF.psi_hat * LF.normal * typ) (*      box(Psihat.M) : A[Psi]     *)
+                 * exp                            (*      => e                       *)
+
+      | SBranch of LF.ctyp_decl LF.ctx            (*    | Pibox D.                   *)
+                 * (LF.psi_hat * LF.sub    * typ) (*      sbox(Psihat.s) : Phi[Psi]  *)
+                 * exp                            (*      => e                       *)
+     
+     and typ =                                    (* Computational level types       *)          
+       | BTyp     of typ  * LF.dctx               (* tau := A[Psi]                   *)
+       | STyp     of LF.dctx * LF.dctx            (*     |  Psi[Phi]                 *)
+       | Arrow    of typ  * typ                   (*     |  tau -> tau'              *)
+       | CtxPi    of (name * LF.schema) * typ     (*     | Pi g::W.tau               *)
+       | PiBox    of LF.ctyp_decl * typ           (*     | Pibox  u::A[Psi].tau      *)
+       | SigmaBox of LF.ctyp_decl * typ           (*     | Sigmabox u::A[Psi].tau    *)
+
   end
 
 end

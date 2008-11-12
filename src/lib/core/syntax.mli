@@ -171,6 +171,41 @@ module Int : sig
   end
 
   module Comp : sig
+
+    type exp =
+      | Var     of offset
+      | Rec     of name    * exp
+      | Fun     of name    * exp
+      | CtxFun  of name    * exp
+      | MLam    of name    * exp
+      | Box     of LF.psi_hat * LF.normal
+      | SBox    of LF.psi_hat * LF.sub
+      | Pack    of LF.psi_hat * LF.normal * exp
+      | Apply   of exp     * exp
+      | CtxApp  of exp     * LF.dctx
+      | MApp    of exp     * (LF.psi_hat * LF.normal)
+      | Ann     of exp     * typ
+      | Case    of exp     * branch list
+      | Let     of exp     * (name * exp)
+      | LetPack of exp     * (name * name * exp)
+
+    and branch =
+      | BBranch of LF.ctyp_decl LF.ctx
+                 * (LF.psi_hat * LF.normal * typ)
+                 * exp
+
+      | SBranch of LF.ctyp_decl LF.ctx
+                 * (LF.psi_hat * LF.sub    * typ)
+                 * exp
+     
+     and typ =
+       | BTyp     of typ     * LF.dctx
+       | STyp     of LF.dctx * LF.dctx
+       | Arrow    of typ     * typ
+       | CtxPi    of (name * LF.schema) * typ
+       | PiBox    of LF.ctyp_decl * typ
+       | SigmaBox of LF.ctyp_decl * typ
+
   end
 
 end

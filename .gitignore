@@ -6,7 +6,8 @@
 *.run
 *~
 .DS_Store
+.build
 .omake*
-build
+bin
 src/tools/interpreter/interpreter
 src/tests/test-harness

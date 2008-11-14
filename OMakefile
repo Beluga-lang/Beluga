@@ -37,14 +37,20 @@ NATIVE_ENABLED = true
 # Declare a phony clean target
 .PHONY: core clean frontend interpreter test
 
-# Include the src subdirectory
-.SUBDIRS: src
+# Map the src dir onto the build dir
+vmount(-l, src, .build)
+
+# Include the fake .build subdirectory
+.SUBDIRS: .build
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
-        $(if $(not $(file-exists build)),             \
-          $(mkdir build))                             \
-        $(if $(not $(file-exists build/interpreter)), \
-          $(symlink src/tools/interpreter/interpreter, build/interpreter))
+        $(if $(not $(file-exists bin)),               \
+          $(mkdir bin))                               \
+        $(if $(not $(file-exists bin/interpreter)),   \
+          $(symlink .build/tools/interpreter/interpreter, bin/interpreter))
 
 clean: .PHONY/src/clean
-        $(if $(file-exists build), $(rmdir -r build))
+        rm $(filter-proper-targets $(ls R, .))
+        rm $(filter %.omc,         $(ls R, .))
+        $(if $(file-exists bin), $(rmdir -r bin))
+

@@ -39,15 +39,12 @@ module Ext : sig
 
     and spine =
       | Nil
-      | App of normal * spine
+      | App of Loc.t * normal * spine
 
     type sgn_decl =
       | SgnTyp   of Loc.t * name * kind
       | SgnConst of Loc.t * name * typ
 
-  end
-
-  module Comp : sig
   end
 
 end
@@ -110,13 +107,13 @@ module Int : sig
       | Obj  of normal
       | Undef
 
-    and msub =                            
-      | MShift of offset                  
-      | MDot   of mfront * msub           
+    and msub =                  
+      | MShift of offset           
+      | MDot   of mfront * msub     
 
-    and mfront =                          
+    and mfront =
       | Id   of offset
-      | MObj of psi_hat * normal           
+      | MObj of psi_hat * normal
       | PObj of psi_hat * offset
 
     and cvar =
@@ -170,41 +167,41 @@ module Int : sig
 
   end
 
+
+
   module Comp : sig
 
-    type exp =
-      | Var     of offset
-      | Rec     of name    * exp
-      | Fun     of name    * exp
-      | CtxFun  of name    * exp
-      | MLam    of name    * exp
-      | Box     of LF.psi_hat * LF.normal
-      | SBox    of LF.psi_hat * LF.sub
-      | Pack    of LF.psi_hat * LF.normal * exp
-      | Apply   of exp     * exp
-      | CtxApp  of exp     * LF.dctx
-      | MApp    of exp     * (LF.psi_hat * LF.normal)
-      | Ann     of exp     * typ
-      | Case    of exp     * branch list
-      | Let     of exp     * (name * exp)
-      | LetPack of exp     * (name * name * exp)
+    type typ =
+      | TypBox   of typ * LF.dctx
+      | TypArr   of typ * typ
+      | TypCtxPi of (name * LF.schema) * typ
+      | TypPiBox of LF.ctyp_decl * typ
+
+    and exp_chk =
+      | ChkSyn    of exp_syn
+      | ChkRec    of name * exp_chk
+      | ChkFun    of name * exp_chk
+      | ChkCtxFun of name * exp_chk
+      | ChkMLam   of name * exp_chk
+      | ChkBox    of LF.psi_hat * LF.normal
+      | ChkSBox   of LF.psi_hat * LF.sub
+      | ChkCase   of exp_syn * branch list
+
+    and exp_syn =
+      | SynVar    of offset
+      | SynApp    of exp_syn * exp_chk
+      | SynCtxApp of exp_syn * LF.dctx
+      | ExpMApp   of exp_syn * (LF.psi_hat * LF.normal)
+      | ExpAnn    of exp_chk * typ
 
     and branch =
-      | BBranch of LF.ctyp_decl LF.ctx
-                 * (LF.psi_hat * LF.normal * typ)
-                 * exp
+      | BranchBox  of LF.ctyp_decl LF.ctx
+          * (LF.psi_hat * LF.normal * typ)
+          * exp_chk
 
-      | SBranch of LF.ctyp_decl LF.ctx
-                 * (LF.psi_hat * LF.sub    * typ)
-                 * exp
-     
-     and typ =
-       | BTyp     of typ     * LF.dctx
-       | STyp     of LF.dctx * LF.dctx
-       | Arrow    of typ     * typ
-       | CtxPi    of (name * LF.schema) * typ
-       | PiBox    of LF.ctyp_decl * typ
-       | SigmaBox of LF.ctyp_decl * typ
+      | BranchSBox of LF.ctyp_decl LF.ctx
+          * (LF.psi_hat * LF.sub    * typ)
+          * exp_chk
 
   end
 

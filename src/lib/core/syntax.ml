@@ -39,15 +39,12 @@ module Ext = struct
 
     and spine =
       | Nil
-      | App of normal * spine
+      | App of Loc.t * normal * spine
 
     type sgn_decl =
       | SgnTyp   of Loc.t * name * kind
       | SgnConst of Loc.t * name * typ
 
-  end
-
-  module Comp = struct
   end
 
 end
@@ -120,13 +117,12 @@ module Int = struct
       | MObj of psi_hat * normal           (*    | Psihat.N                  *)
       | PObj of psi_hat * offset           (*    | Psihat.x                  *)
 
-
     and cvar =                             (* Contextual Variables           *)
       | Offset of offset                   (* Bound Variables                *)
-      | Inst   of normal option ref * dctx * typ * cnstr list ref  
-          (* D ; Psi |- M <= A 
+      | Inst   of normal option ref * dctx * typ * cnstr list ref
+          (* D ; Psi |- M <= A
              provided constraint *)
-      | PInst  of head   option ref * dctx * typ * cnstr list ref  
+      | PInst  of head   option ref * dctx * typ * cnstr list ref
           (* D ; Psi |- H => A 
              provided constraint *)
       | CInst  of dctx   option ref * schema
@@ -184,41 +180,41 @@ module Int = struct
 
   end
 
+
+
   module Comp = struct
-                                                           (* Computational level expressions *)
-    type exp =                                             (* Expressions :                   *)
-      | Var     of offset                                  (* e := x                          *)
-      | Rec     of name       * exp                        (*    | rec f => e                 *)
-      | Fun     of name       * exp                        (*    | fn x => e                  *)
-      | CtxFun  of name       * exp                        (*    | FN psi => e                *)
-      | MLam    of name       * exp                        (*    | mlam u => e                *)
-      | Box     of LF.psi_hat * LF.normal                  (*    | box Psihat.M               *)
-      | SBox    of LF.psi_hat * LF.sub                     (*    | sbox Psihat.s              *)
-      | Pack    of LF.psi_hat * LF.normal * exp            (*    | <Psihat.M , e>             *)
-      | Apply   of exp        * exp                        (*    | e e'                       *)
-      | CtxApp  of exp        * LF.dctx                    (*    | e <Psi>                    *)
-      | MApp    of exp        * (LF.psi_hat * LF.normal)   (*    | e <Psihat.M>               *)
-      | Ann     of exp        * typ                        (*    | e : tau                    *)
-      | Case    of exp        * branch list                (*    | case e of b1 => e1 ...     *)
-      | Let     of exp        * (name * exp)               (*    | let x = e in e'            *)
-      | LetPack of exp        * (name * name * exp)        (*    | let pack <u,x> = e in e'   *)
 
-    and branch =                                  (* Branches                        *)
-      | BBranch of LF.ctyp_decl LF.ctx            (* b := Pibox D.                   *)
-                 * (LF.psi_hat * LF.normal * typ) (*      box(Psihat.M) : A[Psi]     *)
-                 * exp                            (*      => e                       *)
+    type typ =
+      | TypBox   of typ * LF.dctx
+      | TypArr   of typ * typ
+      | TypCtxPi of (name * LF.schema) * typ
+      | TypPiBox of LF.ctyp_decl * typ
 
-      | SBranch of LF.ctyp_decl LF.ctx            (*    | Pibox D.                   *)
-                 * (LF.psi_hat * LF.sub    * typ) (*      sbox(Psihat.s) : Phi[Psi]  *)
-                 * exp                            (*      => e                       *)
-     
-     and typ =                                    (* Computational level types       *)          
-       | BTyp     of typ  * LF.dctx               (* tau := A[Psi]                   *)
-       | STyp     of LF.dctx * LF.dctx            (*     |  Psi[Phi]                 *)
-       | Arrow    of typ  * typ                   (*     |  tau -> tau'              *)
-       | CtxPi    of (name * LF.schema) * typ     (*     | Pi g::W.tau               *)
-       | PiBox    of LF.ctyp_decl * typ           (*     | Pibox  u::A[Psi].tau      *)
-       | SigmaBox of LF.ctyp_decl * typ           (*     | Sigmabox u::A[Psi].tau    *)
+    and exp_chk =
+      | ChkSyn    of exp_syn
+      | ChkRec    of name * exp_chk
+      | ChkFun    of name * exp_chk
+      | ChkCtxFun of name * exp_chk
+      | ChkMLam   of name * exp_chk
+      | ChkBox    of LF.psi_hat * LF.normal
+      | ChkSBox   of LF.psi_hat * LF.sub
+      | ChkCase   of exp_syn * branch list
+
+    and exp_syn =
+      | SynVar    of offset
+      | SynApp    of exp_syn * exp_chk
+      | SynCtxApp of exp_syn * LF.dctx
+      | ExpMApp   of exp_syn * (LF.psi_hat * LF.normal)
+      | ExpAnn    of exp_chk * typ
+
+    and branch =
+      | BranchBox  of LF.ctyp_decl LF.ctx
+          * (LF.psi_hat * LF.normal * typ)
+          * exp_chk
+
+      | BranchSBox of LF.ctyp_decl LF.ctx
+          * (LF.psi_hat * LF.sub    * typ)
+          * exp_chk
 
   end
 

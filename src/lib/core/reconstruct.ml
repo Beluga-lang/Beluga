@@ -91,9 +91,9 @@ and internalize_head ctx = function
 
 
 and internalize_spine ctx = function
-  | Ext.LF.Nil         -> Int.LF.Nil
+  | Ext.LF.Nil            -> Int.LF.Nil
 
-  | Ext.LF.App (m, ms) ->
+  | Ext.LF.App (_, m, ms) ->
       let m'  = internalize_term  ctx m
       and ms' = internalize_spine ctx ms
       in Int.LF.App (m', ms')

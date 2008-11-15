@@ -230,10 +230,10 @@ module Ext = struct
 
 
     and fmt_ppr_spine lvl ppf = function
-      | Nil         ->
+      | Nil            ->
           fprintf ppf ""
 
-      | App (m, ms) ->
+      | App (_, m, ms) ->
           fprintf ppf " %a%a"
             (fmt_ppr_normal  lvl) m
             (fmt_ppr_spine lvl) ms

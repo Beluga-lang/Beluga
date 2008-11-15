@@ -124,7 +124,7 @@ GLOBAL: p_sgn_eoi;
     [
       [
          a = SYMBOL; ms = LIST0 p_basic_term
-      -> let sp = List.fold_right (fun t s -> Ext.LF.App (t, s)) ms Ext.LF.Nil in
+      -> let sp = List.fold_right (fun t s -> Ext.LF.App (_loc, t, s)) ms Ext.LF.Nil in
            Ext.LF.Atom (_loc, Id.mk_name (Some a), sp)
       |
          "("; a = p_full_typ; ")"
@@ -185,7 +185,7 @@ GLOBAL: p_sgn_eoi;
       -> Ext.LF.Lam (_loc, (Id.mk_name (Some x)), m)
       |
          h = p_head; ms = LIST0 p_basic_term
-      -> let sp = List.fold_right (fun t s -> Ext.LF.App (t, s)) ms Ext.LF.Nil in
+      -> let sp = List.fold_right (fun t s -> Ext.LF.App (_loc, t, s)) ms Ext.LF.Nil in
            Ext.LF.Root (_loc, h, sp)
       |
          m = p_basic_term

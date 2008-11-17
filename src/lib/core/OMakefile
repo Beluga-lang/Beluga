@@ -18,7 +18,6 @@ FILES[] =
         reconstruct
         store
         substitution
-        csubstitution
         syntax
         trail
         unify

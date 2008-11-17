@@ -55,7 +55,7 @@ module Make (T : Trail.TRAIL) : UNIFY =
 
 struct
 
-  open Substitution
+  open Substitution.LF
 
   exception Unify of string
   exception NotInvertible

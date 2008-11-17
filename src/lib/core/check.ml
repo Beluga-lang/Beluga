@@ -43,13 +43,13 @@ exception Error of error
 let rec checkW cD cPsi sM1 sA2 = match (sM1, sA2) with
   | ((Lam (_, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX), tB), s2))
     -> check cD
-             (DDec (cPsi, decSub tX s2))
-             (tM, dot1 s1)
-             (tB, dot1 s2)
+             (DDec (cPsi, LF.decSub tX s2))
+             (tM, LF.dot1 s1)
+             (tB, LF.dot1 s2)
 
   | ((Root (h, tS), s), (((Atom _), _s') as sP))
     -> (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
-       let sA = Whnf.whnfTyp (inferHead cD cPsi h, id) in
+       let sA = Whnf.whnfTyp (inferHead cD cPsi h, LF.id) in
          checkSpine cD cPsi (tS, s) sA sP
 
   | _
@@ -81,7 +81,7 @@ and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
         raise (Error (TypMisMatch (cD, cPsi, sP', sP)))
 
   | ((SClo (tS, s'), s), sA) ->
-      checkSpine cD cPsi (tS, comp s' s) sA sP
+      checkSpine cD cPsi (tS, LF.comp s' s) sA sP
 
   | ((App (tM, tS), s1), (PiTyp (TypDecl (_, tA1), tB2), s2)) ->
         check cD cPsi (tM, s1) (tA1, s2)
@@ -126,7 +126,7 @@ and inferHead cD cPsi head = match head with
               getType (recA, Dot (Obj tPj, s)) (target - 1) (j + 1)
 
       in
-        getType (recA, id) target 1
+        getType (recA, LF.id) target 1
 
   (* Missing cases?  Tue Sep 30 22:09:27 2008 -bp 
 
@@ -182,9 +182,9 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
       (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
       and tA1 = inferHead cD cPsi' h
       in
-        if Whnf.convTyp (tA1, id) (tA2, s')
+        if Whnf.convTyp (tA1, LF.id) (tA2, s')
         then ()
-        else raise (Error (TypIllTyped (cD, cPsi', (tA1, id), (tA2, s'))))
+        else raise (Error (TypIllTyped (cD, cPsi', (tA1, LF.id), (tA2, s'))))
 
   | (cPsi', Dot (Head (BVar w), t), SigmaDec (cPsi, (SigmaDecl (_, arec)))) ->
       (* other heads of type Sigma disallowed -bp *)
@@ -192,16 +192,16 @@ and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
       (* ensures that t is well-typed before comparing types BRec = [t]ARec *)
       and SigmaDecl (_, brec) = ctxSigmaDec cPsi' w
       in
-        if Whnf.convTypRec (brec, id) (arec, t)
+        if Whnf.convTypRec (brec, LF.id) (arec, t)
         then ()
-        else raise (Error (SigmaIllTyped (cD, cPsi', (brec, id), (arec, t))))
+        else raise (Error (SigmaIllTyped (cD, cPsi', (brec, LF.id), (arec, t))))
 
   | (cPsi', Dot (Obj tM, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
       (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
       let _ = checkSub cD cPsi' s' cPsi
       (* ensures that s' is well-typed and [s']tA2 is well-defined *)
       in
-        check cD cPsi' (tM, id) (tA2, s')
+        check cD cPsi' (tM, LF.id) (tA2, s')
 
 
 
@@ -231,7 +231,7 @@ and checkSpineK cD cPsi sS1 sK = match (sS1, sK) with
       raise (Error (KindMisMatch))
 
   | ((SClo (tS, s'), s), sK)          ->
-      checkSpineK cD cPsi (tS, comp s' s) sK
+      checkSpineK cD cPsi (tS, LF.comp s' s) sK
 
   | ((App (tM, tS), s1), (PiKind (TypDecl (_, tA1), kK), s2)) ->
         check cD cPsi (tM, s1) (tA1, s2)
@@ -250,11 +250,11 @@ and checkSpineK cD cPsi sS1 sK = match (sS1, sK) with
 *)
 let rec checkTyp' (cD, cPsi, (tA, s)) = match (tA, s) with
   | (Atom (a, tS), s)                ->
-      checkSpineK cD cPsi (tS, s) ((Typ.get a).Typ.kind, id)
+      checkSpineK cD cPsi (tS, s) ((Typ.get a).Typ.kind, LF.id)
 
   | (PiTyp (TypDecl (x, tA), tB), s) ->
         checkTyp cD cPsi (tA, s) 
-      ; checkTyp cD (DDec (cPsi, TypDecl(x, TClo (tA, s)))) (tB, dot1 s)
+      ; checkTyp cD (DDec (cPsi, TypDecl(x, TClo (tA, s)))) (tB, LF.dot1 s)
 
 and checkTyp cD cPsi sA = checkTyp' (cD, cPsi, Whnf.whnfTyp sA)
 
@@ -271,8 +271,8 @@ let rec checkTypRec cD cPsi (recA, s) = match recA with
   | tA :: recA ->
         checkTyp    cD cPsi (tA, s)
       ; checkTypRec cD
-                    (DDec (cPsi, decSub (TypDecl (Id.mk_name None, tA)) s))
-                    (recA, dot1 s)
+                    (DDec (cPsi, LF.decSub (TypDecl (Id.mk_name None, tA)) s))
+                    (recA, LF.dot1 s)
 
 
 
@@ -285,7 +285,7 @@ let rec checkTypRec cD cPsi (recA, s) = match recA with
 let rec checkKind cD cPsi kind = match kind with
   | Typ                            -> ()
   | PiKind (TypDecl (x, tA), kind) ->
-        checkTyp  cD cPsi (tA, id)
+        checkTyp  cD cPsi (tA, LF.id)
       ; checkKind cD (DDec (cPsi, TypDecl (x, tA))) kind
 
 
@@ -321,11 +321,11 @@ and checkSigmaDec cD cPsi (sigma_decl, s) = match sigma_decl with
 and checkCtx cD cPsi = match cPsi with Null ->  ()
   | DDec (cPsi, tX)     ->
         checkCtx cD cPsi
-      ; checkDec cD cPsi (tX, id)
+      ; checkDec cD cPsi (tX, LF.id)
 
   | SigmaDec (cPsi, tX) ->
         checkCtx      cD cPsi
-      ; checkSigmaDec cD cPsi (tX, id)
+      ; checkSigmaDec cD cPsi (tX, LF.id)
 
   | CtxVar _psi         -> ()
   (* need to check if psi is in Omega (or cD, if context vars live there) -bp *)
@@ -346,5 +346,5 @@ let rec check_sgn_decls = function
       let cD   = Empty
       and cPsi = Null
       in
-          checkTyp cD cPsi (a, id)
+          checkTyp cD cPsi (a, LF.id)
         ; check_sgn_decls decls

@@ -75,13 +75,11 @@ module Int : sig
       | Atom  of cid_typ * spine
       | PiTyp of typ_decl * typ
       | TClo  of typ * sub
-      | TMClo of typ * msub
 
     and normal =
       | Lam  of name * normal
       | Root of head * spine
       | Clo  of (normal * sub)
-      | MClo of (normal * msub)       
 
     and head =
       | BVar  of offset
@@ -95,7 +93,6 @@ module Int : sig
       | Nil
       | App of normal * spine
       | SClo of spine * sub
-      | SMClo of spine * msub
 
     and sub =
       | Shift of offset
@@ -115,6 +112,7 @@ module Int : sig
       | Id   of offset
       | MObj of psi_hat * normal
       | PObj of psi_hat * offset
+      | CObj of dctx                      
 
     and cvar =
       | Offset of offset

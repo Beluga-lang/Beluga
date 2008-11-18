@@ -24,3 +24,4 @@ val conv       : nclo -> nclo -> bool
 val convTyp    : tclo -> tclo -> bool
 val convTypRec : trec_clo -> trec_clo -> bool
 val convSub    : sub -> sub -> bool
+val convDCtx   : dctx -> dctx -> bool

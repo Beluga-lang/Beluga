@@ -40,23 +40,3 @@ module LF : sig
 
 end
 
-
-module Ctx : sig 
-
-
-  (*********************************)
-  (* Explicit Modual Substitutions *)
-  (*********************************)
-
-  val id         : msub
-  val shift      : msub
-
-
-  val mvarMSub   : int       -> msub -> mfront
-  val mfrontMSub : mfront    -> msub -> mfront
-  val mdecMSub   : ctyp_decl -> msub -> ctyp_decl
-  val comp       : msub -> msub -> msub
-  val dot1       : msub -> msub
-
- 
-end

@@ -76,13 +76,11 @@ module Int = struct
       | Atom  of cid_typ * spine           (* A ::= a M1 ... Mn              *)
       | PiTyp of typ_decl * typ            (*   | Pi x:A.B                   *)
       | TClo  of typ * sub                 (*   | TClo(A,s)                  *)
-      | TMClo of typ * msub                (*   | TMClo (A, t)               *)
 
     and normal =                           (* normal terms                   *)
       | Lam  of name * normal              (* M ::= \x.M                     *)
       | Root of head * spine               (*   | h . S                      *)
       | Clo  of (normal * sub)             (*   | Clo(N,s)                   *)
-      | MClo of (normal * msub)            (*   | MClo(M, t)                 *)
 
     and head =
       | BVar  of offset                    (* H ::= x                        *)
@@ -96,7 +94,6 @@ module Int = struct
       | Nil                                (* S ::= Nil                      *)
       | App  of normal * spine             (*   | M . S                      *)
       | SClo of spine * sub                (*   | SClo(S,s)                  *)
-      | SMClo of spine * msub              (*   | SMClo(S,t)                 *)
 
     and sub =                              (* Substitutions                  *)
       | Shift of offset                    (* sigma ::= ^n                   *)
@@ -116,6 +113,7 @@ module Int = struct
       | Id   of offset                     (* MFt ::= k                      *)
       | MObj of psi_hat * normal           (*    | Psihat.N                  *)
       | PObj of psi_hat * offset           (*    | Psihat.x                  *)
+      | CObj of dctx                       (*    | Psi                       *)
 
     and cvar =                             (* Contextual Variables           *)
       | Offset of offset                   (* Bound Variables                *)

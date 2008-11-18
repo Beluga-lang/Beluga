@@ -177,28 +177,32 @@ module Int : sig
       | TypPiBox of LF.ctyp_decl * typ
       | TypClo   of typ * LF.msub
 
-    and exp =
-      | Rec    of name * exp
-      | Fun    of name * exp
-      | CtxFun of name * exp
-      | MLam   of name * exp
-      | Box    of LF.psi_hat * LF.normal
-      | SBox   of LF.psi_hat * LF.sub
-      | Case   of exp * branch list
-      | Var    of offset
-      | Apply  of exp * exp
-      | CtxApp of exp * LF.dctx
-      | MApp   of exp * (LF.psi_hat * LF.normal)
-      | Ann    of exp * typ
+
+    and exp_chk =
+       | Syn    of exp_syn
+       | Rec    of name * exp_chk
+       | Fun    of name * exp_chk
+       | CtxFun of name * exp_chk
+       | MLam   of name * exp_chk
+       | Box    of LF.psi_hat * LF.normal
+       | SBox   of LF.psi_hat * LF.sub
+       | Case   of exp_syn * branch list
+
+    and exp_syn =
+       | Var    of offset
+       | Apply  of exp_syn * exp_chk
+       | CtxApp of exp_syn * LF.dctx
+       | MApp   of exp_syn * (LF.psi_hat * LF.normal)
+       | Ann    of exp_chk * typ
 
     and branch =
       | BranchBox  of LF.ctyp_decl LF.ctx
           * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
-          * exp
+          * exp_chk
 
       | BranchSBox of LF.ctyp_decl LF.ctx
           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx))
-          * exp
+          * exp_chk
 
   end
 

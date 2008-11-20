@@ -23,3 +23,6 @@ val internalize_term     : Store.BVar.t -> Ext.LF.normal   -> Int.LF.normal
 val internalize_head     : Store.BVar.t -> Ext.LF.head     -> Int.LF.head
 
 val internalize_spine    : Store.BVar.t -> Ext.LF.spine    -> Int.LF.spine
+
+(* type reconstruction *)
+val reconstruct_sgn_decl : Ext.LF.sgn_decl -> Int.LF.sgn_decl

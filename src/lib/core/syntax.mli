@@ -50,6 +50,39 @@ module Ext : sig
 end
 
 
+(** Approximate Simple Syntax *)
+module Apx : sig
+
+  module LF : sig
+
+    type kind = 
+      | Typ
+      | PiKind of typ_decl * kind
+
+    and typ_decl =
+      | TypDecl of name * typ
+
+    and typ = 
+      | Atom  of cid_typ * spine
+      | PiTyp of typ_decl * typ
+
+    and normal =
+      | Lam  of name * normal
+      | Root of head * spine
+
+    and head =
+      | BVar  of offset
+      | Const of cid_term
+      | FVar  of name
+
+    and spine =
+      | Nil
+      | App of normal * spine
+
+  end
+
+end
+
 
 (** Internal Syntax *)
 module Int : sig

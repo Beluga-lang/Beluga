@@ -51,7 +51,7 @@ end
 
 (** Approximate Simple Syntax *)
 (* TODO write explanatory comments for each *)
-(* TODO reorder declaration to avoid mutual recursion if possible *)
+(* TODO move this syntax to reconstruct.ml *)
 module Apx = struct
 
   module LF = struct

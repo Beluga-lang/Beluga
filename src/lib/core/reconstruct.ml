@@ -122,11 +122,8 @@ let rec type_of_fvar x = function
       if x = x' then a else type_of_fvar x ctx
 
 
-(* TODO reorder declaration to avoid mutual recursion if possible *)
 exception NotImplemented
-
-(* TODO detail as in check.ml *)
-exception Error
+exception Error (* TODO detail error types as in check.ml *)
 
 (* PHASE 0 : Indexing 
   
@@ -135,44 +132,45 @@ exception Error
    Translates external syntax into approximate syntax.
 *)
 let rec index_kind names = function
-  | Ext.LF.Typ _                             -> Apx.LF.Typ
+  | Ext.LF.Typ _ -> 
+      Apx.LF.Typ
 
-  | Ext.LF.ArrKind (_, a, k)                 ->
-      let x    = Id.mk_name None
-      and a'   = index_typ names a in
+  | Ext.LF.ArrKind (_, a, k) ->
+      let x      = Id.mk_name None
+      and a'     = index_typ names a in
       let names' = BVar.extend names (BVar.mk_entry x) in
-      let k'   = index_kind names' k in
+      let k'     = index_kind names' k in
         Apx.LF.PiKind (Apx.LF.TypDecl (x, a'), k')
 
   | Ext.LF.PiKind (_, Ext.LF.TypDecl (x, a), k) ->
-      let a'   = index_typ names a
+      let a'     = index_typ names a
       and names' = BVar.extend names (BVar.mk_entry x) in
-      let k'   = index_kind names' k in
+      let k'     = index_kind names' k in
         Apx.LF.PiKind (Apx.LF.TypDecl (x, a'), k')
 
 and index_typ names = function
-  | Ext.LF.Atom (_, a, s)      ->
+  | Ext.LF.Atom (_, a, s) ->
       let a' = Typ.index_of_name a
       and s' = index_spine names s in
         Apx.LF.Atom (a', s')
 
-  | Ext.LF.ArrTyp (_, a, b)     ->
-      let x    = Id.mk_name None
-      and a'   = index_typ names a in
+  | Ext.LF.ArrTyp (_, a, b) ->
+      let x      = Id.mk_name None
+      and a'     = index_typ names a in
       let names' = BVar.extend names (BVar.mk_entry x) in
-      let b'   = index_typ names' b in
+      let b'     = index_typ names' b in
         Apx.LF.PiTyp (Apx.LF.TypDecl (x, a'), b')
 
   | Ext.LF.PiTyp (_, Ext.LF.TypDecl (x, a), b) ->
-      let a'   = index_typ names  a
+      let a'     = index_typ names  a
       and names' = BVar.extend names (BVar.mk_entry x) in
-      let b'   = index_typ names' b in
+      let b'     = index_typ names' b in
         Apx.LF.PiTyp (Apx.LF.TypDecl (x, a'), b')
 
 and index_term names = function
   | Ext.LF.Lam (_, x, m)   ->
       let names' = BVar.extend names (BVar.mk_entry x) in
-      let m'   = index_term names' m in
+      let m'     = index_term names' m in
         Apx.LF.Lam (x, m')
 
   | Ext.LF.Root (_, h, s) ->
@@ -190,7 +188,8 @@ and index_head names = function
         Apx.LF.FVar (n)
                   
 and index_spine names = function
-  | Ext.LF.Nil         -> Apx.LF.Nil
+  | Ext.LF.Nil -> 
+      Apx.LF.Nil
 
   | Ext.LF.App (_, m, s) ->
       let m' = index_term  names m
@@ -198,83 +197,107 @@ and index_spine names = function
         Apx.LF.App (m', s')
 
 (* PHASE 1 : Elaboration and free variables typing *)
+let rec is_a_pattern_spine seen_vars spine = match spine with
+  | Apx.LF.Nil ->
+      true
 
-(* y1 -> cUpsilon  or  make it global *)
+  | Apx.LF.App (Apx.LF.Root (Apx.LF.BVar x, Apx.LF.Nil), spine) ->
+      not (List.mem x seen_vars) && is_a_pattern_spine (x :: seen_vars) spine
+
+  | _ ->
+      false
+
+(* TODO y1 -> cUpsilon  or  make it global *)
 let rec elaborate_kind y1 cPsi k = match k with 
   | Apx.LF.Typ -> 
       (y1, Int.LF.Typ)
 
   | Apx.LF.PiKind (Apx.LF.TypDecl (x, a), k) ->
       let (y2, tA) = elaborate_typ y1 cPsi a in
-      let cPsi'      = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
+      let cPsi'    = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
       let (y3, tK) = elaborate_kind y2 cPsi' k in
         (y3, Int.LF.PiKind (Int.LF.TypDecl (x, tA), tK))
-
 
 and elaborate_typ y1 cPsi a = match a with 
   | Apx.LF.Atom (a, s) ->
       (* (tK, i) = (Typ.get a).Typ.kind *)
-      let tK  = (Typ.get a).Typ.kind in
+      let tK       = (Typ.get a).Typ.kind in
       let (y2, tS) = elaborate_spine_k_i y1 cPsi s 0 (tK, Substitution.LF.id) in
         (y2, Int.LF.Atom (a, tS))
 
   | Apx.LF.PiTyp (Apx.LF.TypDecl (x, a), b) ->
       let (y2, tA) = elaborate_typ y1 cPsi a in
-      let cPsi'     = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
+      let cPsi'    = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
       let (y3, tB) = elaborate_typ y2 cPsi' b in
         (y3, Int.LF.PiTyp (Int.LF.TypDecl (x, tA), tB))
 
 and elaborate_term y1 cPsi m sA = match (m, sA) with
   | (Apx.LF.Lam (x, m), (Int.LF.PiTyp (tA, tB), s)) ->
-      let cPsi' = Int.LF.DDec (cPsi, LF.decSub tA s) in
+      let cPsi'    = Int.LF.DDec (cPsi, LF.decSub tA s) in
       let (y2, tM) = elaborate_term y1 cPsi' m (tB, LF.dot1 s) in
         (y2, Int.LF.Lam(x, tM))
 
   | (Apx.LF.Root (Apx.LF.Const c, spine), ((Int.LF.Atom _ as tP), s)) ->
-      (* (tA, i) = Term.get c).Term.typ  -bp *)
-      let tA = (Term.get c).Term.typ in
-      let (y2, tS) = elaborate_spine_i y1 cPsi spine 0 (tA, LF.id) (tP,s) in
+      (* (tA, i) = (Term.get c).Term.typ  -bp *)
+      let tA       = (Term.get c).Term.typ in
+      let (y2, tS) = elaborate_spine_i y1 cPsi spine 0 (tA, LF.id) (tP, s) in
         (y2, Int.LF.Root (Int.LF.Const c, tS))
 
   | (Apx.LF.Root (Apx.LF.BVar x, spine), (Int.LF.Atom _ as tP, s)) ->
       let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
-      let (y2, tS) = elaborate_spine y1 cPsi spine (tA, LF.id) (tP,s ) in
+      let (y2, tS) = elaborate_spine y1 cPsi spine (tA, LF.id) (tP, s) in
         (y2, Int.LF.Root (Int.LF.BVar x, tS))
 
-  | (Apx.LF.Root (Apx.LF.FVar _x, _spine), (Int.LF.Atom _ , _s)) ->
+  | (Apx.LF.Root (Apx.LF.FVar _x, _spine), (Int.LF.Atom _ as _tP, _s)) ->
+      (* if (x is in y1) then 
+            let tA = get x from y1 in
+               elaborate_spine y1 cPsi spine (tA, LF.id) (tP, s)
+         else if (is_a_pattern_spine [] spine) then
+            let (y2, tS, tA) = elaborate_spine_infer y1 cPsi spine tP in
+               (Int.LF.Dec (y2, Int.TypDecl (x, tA)), Int.LF.Root (Int.LF.FVar x, tS))
+         else
+            create a new meta-variable as a place holder for the reconstructed spine
+            add constraint
+               let tA      = get x from (final) y1 in
+               let (_, tS) = elaborate_spine y1 cPsi spine (tA, LF.id) (tP, s)
+               instanciate meta-variable with tS
+            return (y1, meta-variable)
+      *)
       raise NotImplemented
 
   | _ ->
       raise Error (* Error message *)
 
-
 and elaborate_spine_i y1 cPsi spine i sA sP = 
   if i = 0 then 
     elaborate_spine y1 cPsi spine sA sP
   else
+    (* FIXME is the "begin ... end" really necessary? *)
     begin match sA with 
-      | (Int.LF.PiTyp(Int.LF.TypDecl(_,tA), tB), s)
-	-> let u = Context.newMVar (cPsi, Int.LF.TClo(tA, s)) in
-	   let tR = Int.LF.Root(Int.LF.MVar(u,LF.id), Int.LF.Nil) in 
-             elaborate_spine_i y1 cPsi spine (i-1) (tB, Int.LF.Dot(Int.LF.Obj(tR), s)) sP
-	    
-      | _  ->	    raise Error
+      | (Int.LF.PiTyp(Int.LF.TypDecl(_, tA), tB), s) ->
+          let u  = Context.newMVar (cPsi, Int.LF.TClo(tA, s)) in
+          let tR = Int.LF.Root(Int.LF.MVar(u, LF.id), Int.LF.Nil) in 
+          elaborate_spine_i y1 cPsi spine (i - 1) (tB, Int.LF.Dot(Int.LF.Obj(tR), s)) sP
+
+      | _  ->       
+          raise Error (* Error message *)
     end 
 
 and elaborate_spine y1 cPsi s sA sP = match (s, sA) with
   | (Apx.LF.Nil, (Int.LF.Atom (a, _spine), _s)) -> 
       let (Int.LF.Atom (a', _spine'), _s') = sP in 
-	if a = a' then
+        if a = a' then
           (y1, Int.LF.Nil)
-	else
-          raise Error
+        else
+          raise Error (* Error message *)
 
- | (Apx.LF.App (m, spine), (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s)) ->
+  | (Apx.LF.App (m, spine), (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s)) ->
       let (y2, tM) = elaborate_term  y1 cPsi m (tA, s) in 
       let (y3, tS) = elaborate_spine y2 cPsi spine (tB, Int.LF.Dot(Int.LF.Obj(tM), s)) sP in
         (y3, Int.LF.App (tM, tS))
+
   | _ ->
-      raise Error
+      raise Error (* Error message *)
 
 
 and elaborate_spine_k_i y1 cPsi spine i sK = 
@@ -282,12 +305,13 @@ and elaborate_spine_k_i y1 cPsi spine i sK =
     elaborate_spine_k y1 cPsi spine sK
   else 
     begin match sK with 
-      | (Int.LF.PiKind(Int.LF.TypDecl(_,tA), tK), s)
-	-> let u = Context.newMVar (cPsi, Int.LF.TClo(tA, s)) in
-	   let tR = Int.LF.Root(Int.LF.MVar(u, LF.id), Int.LF.Nil) in 
-             elaborate_spine_k_i y1 cPsi spine (i-1) (tK, Int.LF.Dot(Int.LF.Obj(tR), s))
-	    
-      | _  ->	    raise Error
+      | (Int.LF.PiKind(Int.LF.TypDecl(_, tA), tK), s) ->
+          let u  = Context.newMVar (cPsi, Int.LF.TClo(tA, s)) in
+          let tR = Int.LF.Root(Int.LF.MVar(u, LF.id), Int.LF.Nil) in 
+            elaborate_spine_k_i y1 cPsi spine (i - 1) (tK, Int.LF.Dot(Int.LF.Obj(tR), s))
+        
+      | _  ->  
+          raise Error
     end 
 
 and elaborate_spine_k y1 cPsi spine sK = match (spine, sK) with
@@ -295,52 +319,72 @@ and elaborate_spine_k y1 cPsi spine sK = match (spine, sK) with
       (y1, Int.LF.Nil) 
 
   | (Apx.LF.App (m, spine), (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s)) ->
-      let (y2, tM) = elaborate_term    y1 cPsi m (tA,s) in 
+      let (y2, tM) = elaborate_term    y1 cPsi m (tA, s) in 
       let (y3, tS) = elaborate_spine_k y2 cPsi spine (tK, Int.LF.Dot(Int.LF.Obj(tM), s)) in
         (y3, Int.LF.App (tM, tS))
 
+and elaborate_spine_infer y1 _cPsi spine tP = match spine with
+  | Apx.LF.Nil ->
+      (y1, Int.LF.Nil, tP)
 
-(*
-(* PHASE 2 : Reconstruction *)
-let rec reconstruct_kind = function
-  | _ ->
-      raise NotImplemented
-        (* FIXME
-let rec reconstruct_kind d1 y1 ps = function
-  | Int.LF.Typ ->
-      (d1, id(d1))
+(* FIXME
+  | Apx.LF.App (Apx.LF.Root (Apx.LF.BVar x, Apx.LF.Nil), spine) ->
+      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
+      let (y2, tS, tB) = elaborate_spine_infer y1 cPsi spine tP in
+        (y2, Int.LF.App (Int.LF.Root (Int.LF.BVar x, Int.LF.Nil)), 
+         Int.LF.PiTyp (Int.LF.TypDecl ("y", tA), [y/x] tB))
+*)
 
-  | Int.LF.PiKind (Int.LF.TypDecl (x, a), k) ->
-      let (d2, r2) = reconstruct_typ d1 y1 ps a in
-      let (d3, r3) = reconstruct_kind d2 [[r2]](Int.LF.Ddec (ps, Int.LF.TypDecl (x, a))) [[r2]]k in
-        (d3, [[r3]]r2)
-          *)
-
-and reconstruct_typ = function
+and elaborate_spine_infer_k _y1 _cPsi spine _sK = match spine with
   | _ -> raise NotImplemented
 
+(* PHASE 2 : Reconstruction *)
+(* FIXME maybe we'll need to work with explicit substitution for types here too
+   will see when spine functions get implemented *)
+let rec reconstruct_kind y1 cPsi tK = match tK with
+  | Int.LF.Typ ->
+      ()
 
-and reconstruct_term d1 y1 ps m a = match (m, a) with
-  | (Int.LF.Lam (x, m), Int.LF.PiTyp (Int.LF.TypDecl (_, a), b)) ->
-      let ps' = (Int.LF.DDec (ps, Int.LF.TypDecl (x, a))) in
-        reconstruct_term d1 y1 ps' m b
+  | Int.LF.PiKind (Int.LF.TypDecl (x, tA), tK) -> (
+      reconstruct_typ y1 cPsi tA ;
+      reconstruct_kind y1 (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) tK
+    )
 
-  | (Int.LF.Root (Int.LF.Const c, s), (Int.LF.Atom _ as p)) ->
-      let a = (Term.get c).Term.typ in
-        reconstruct_spine d1 y1 ps s a p
 
-  | (Int.LF.Root (Int.LF.BVar x, s), (Int.LF.Atom _ as p)) ->
-      let Int.LF.TypDecl (_, a) = Context.ctxDec ps x in
-        reconstruct_spine d1 y1 ps s a p
+and reconstruct_typ y1 cPsi tA = match tA with
+  | Int.LF.Atom (a, tS) ->
+      (* (tK, _) = (Typ.get a).Typ.kind *)
+      let tK = (Typ.get a).Typ.kind in
+        reconstruct_spine_k y1 cPsi tS tK
 
-  (* FIXME
+  | Int.LF.PiTyp (Int.LF.TypDecl (x, tA), tB) -> (
+      reconstruct_typ y1 cPsi tA ;
+      reconstruct_typ y1 (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) tB
+    )
+
+and reconstruct_term y1 cPsi tM tA = match (tM, tA) with
+  | (Int.LF.Lam (x, tM), Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB)) ->
+      let cPsi' = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
+        reconstruct_term y1 cPsi' tM tB
+
+  | (Int.LF.Root (Int.LF.Const c, tS), (Int.LF.Atom _ as tP)) ->
+      let tA = (Term.get c).Term.typ in
+        reconstruct_spine y1 cPsi tS tA tP
+
+  | (Int.LF.Root (Int.LF.BVar x, tS), (Int.LF.Atom _ as tP)) ->
+      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
+        reconstruct_spine y1 cPsi tS tA tP
+
+  | (Int.LF.Root (Int.LF.MVar (_u, _s), _tS), (Int.LF.Atom _ as _tP)) ->
+      raise NotImplemented
+  (*
   | (Int.LF.Root (Int.LF.FVar x, s), (Int.LF.Atom _ as p)) ->
-      let a = type_of_fvar x y1 in
-        reconstruct_spine d1 y1 ps s a p
+      let tA = type_of_fvar x y1 in
+        reconstruct_spine y1 cPsi s tA p
   *)
 
   | _ ->
-      raise Error
+      raise Error (* Error message *)
 
 and reconstruct_spine = function
   | _ -> raise NotImplemented
@@ -350,30 +394,28 @@ and reconstruct_spine_k = function
 
 
 (* PHASE 3 : transform Y to a bunch of implicit Pi's *)
-let rec phase3_kind = function
-  | _ -> raise NotImplemented
-and phase3_typ = function
+let rec phase3_kind y tK = match (y, tK) with
   | _ -> raise NotImplemented
 
-*)
+and phase3_typ y tA = match (y, tA) with
+  | _ -> raise NotImplemented
+
+
 (* wrapper function *)
-let rec reconstruct_sgn_decl _ =  raise NotImplemented
-
-    (* FIXME
+let rec reconstruct_sgn_decl d = match d with
   | Ext.LF.SgnTyp (_, a, k0)   ->
-      let k1           = index_kind (BVar.create ()) k0 in
-      let (d2, y2, k2) = elaborate_kind Int.LF.Empty Int.LF.Empty Int.LF.Null k1 in
-      let (d3, r3)     = reconstruct_kind d2 y2 Int.LF.Null k2 in
-      let k4           = phase3_kind d3 [r3]y2 [r3]k2 in
-      let a'           = Typ.add (Typ.mk_entry a k4) in
-        Int.LF.SgnTyp (a', k4)
+      let k1       = index_kind (BVar.create ()) k0 in
+      let (y2, k2) = elaborate_kind Int.LF.Empty Int.LF.Null k1 in
+      let _        = reconstruct_kind y2 Int.LF.Null k2 in
+      let (k3, _i) = phase3_kind y2 k2 in
+      let a'       = Typ.add (Typ.mk_entry a k3) in
+        Int.LF.SgnTyp (a', k3)
 
   | Ext.LF.SgnConst (_, c, a0) ->
-      let a1           = index_typ (BVar.create ()) a0 in
-      let (d2, y2, a2) = elaborate_typ Int.LF.Empty Int.LF.Empty Int.LF.Null a1 in
-      let (d3, r3)     = reconstruct_typ d2 y2 Int.LF.Null a2 in
-      let a4           = phase3_typ d3 [r3]y2 [r3]a2 in
-      let c'           = Term.add (Term.mk_entry c a4) in
-        Int.LF.SgnConst (c', a4)
-    *)
+      let a1       = index_typ (BVar.create ()) a0 in
+      let (y2, a2) = elaborate_typ Int.LF.Empty Int.LF.Null a1 in
+      let _        = reconstruct_typ y2 Int.LF.Null a2 in
+      let (a3, _i) = phase3_typ y2 a2 in
+      let c'       = Term.add (Term.mk_entry c a3) in
+        Int.LF.SgnConst (c', a3)
 

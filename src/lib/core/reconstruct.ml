@@ -5,106 +5,10 @@
    @author Darin Morrison
 *)
 
-
-
 open Store
 open Store.Cid
 open Syntax
 open Substitution
-
-(* Translation of external syntax into 
-   LF internal syntax 
-
-   Eventually calls to internalize_sgn_decl
-   will be replaced reconstruct_sgn_decl. 
-
-*)
-let rec internalize_sgn_decl = function
-  | Ext.LF.SgnTyp (_, a, k)   ->
-      let k' = internalize_kind (BVar.create ()) k in
-      let a' = Typ.add (Typ.mk_entry a k') in
-        Int.LF.SgnTyp (a', k')
-
-  | Ext.LF.SgnConst (_, c, a) ->
-      let a' = internalize_typ (BVar.create ()) a in
-      let c' = Term.add (Term.mk_entry c a') in
-        Int.LF.SgnConst (c', a')
-
-
-
-and internalize_kind ctx = function
-  | Ext.LF.Typ _                             -> Int.LF.Typ
-
-  | Ext.LF.ArrKind (_, a, k)                 ->
-      let x    = Id.mk_name None
-      and a'   = internalize_typ  ctx  a in
-      let ctx' = BVar.extend ctx (BVar.mk_entry x) in
-      let k'   = internalize_kind ctx' k in
-        Int.LF.PiKind (Int.LF.TypDecl (x, a'), k')
-
-  | Ext.LF.PiKind (_, Ext.LF.TypDecl (x, a), k) ->
-      let a'   = internalize_typ  ctx  a
-      and ctx' = BVar.extend ctx (BVar.mk_entry x) in
-      let k'   = internalize_kind ctx' k in
-        Int.LF.PiKind (Int.LF.TypDecl (x, a'), k')
-
-and internalize_typ ctx = function
-  | Ext.LF.Atom (_, a, ms)      ->
-      let a'  = Typ.index_of_name a
-      and ms' = internalize_spine ctx ms in
-        Int.LF.Atom (a', ms')
-
-  | Ext.LF.ArrTyp (_, a, b)     ->
-      let x    = Id.mk_name None
-      and a'   = internalize_typ ctx  a in
-      let ctx' = BVar.extend ctx (BVar.mk_entry x) in
-      let b'   = internalize_typ ctx' b in
-        Int.LF.PiTyp (Int.LF.TypDecl (x, a'), b')
-
-  | Ext.LF.PiTyp (_, Ext.LF.TypDecl (x, a), b) ->
-      let a'   = internalize_typ ctx  a
-      and ctx' = BVar.extend ctx (BVar.mk_entry x) in
-      let b'   = internalize_typ ctx' b in
-        Int.LF.PiTyp (Int.LF.TypDecl (x, a'), b')
-
-
-
-and internalize_term ctx = function
-  | Ext.LF.Lam (_, x, m)   ->
-      let ctx' = BVar.extend ctx (BVar.mk_entry x) in
-      let m'   = internalize_term ctx' m in
-        Int.LF.Lam (x, m')
-
-  | Ext.LF.Root (_, h, ms) ->
-      let h'  = internalize_head  ctx h
-      and ms' = internalize_spine ctx ms in
-        Int.LF.Root (h', ms')
-
-
-
-and internalize_head ctx = function
-  | Ext.LF.Name (_, x_or_c) ->
-      (* First check to see if a name is a term variable.  If the
-         lookup fails, we can assume it must be a constant. *)
-      try
-        Int.LF.BVar (BVar.index_of_name ctx x_or_c)
-      with
-        | Not_found ->
-            Int.LF.Const (Term.index_of_name x_or_c)
-
-
-
-and internalize_spine ctx = function
-  | Ext.LF.Nil            -> Int.LF.Nil
-
-  | Ext.LF.App (_, m, ms) ->
-      let m'  = internalize_term  ctx m
-      and ms' = internalize_spine ctx ms
-      in Int.LF.App (m', ms')
-
-
-(* --------------------------------------------------------------------- *)
-(* TYPE RECONSTRUCTION *)
 
 (* type_of_fvar x cUpsilon = A 
 
@@ -220,9 +124,9 @@ let rec elaborate_kind y1 cPsi k = match k with
 
 and elaborate_typ y1 cPsi a = match a with 
   | Apx.LF.Atom (a, s) ->
-      (* (tK, i) = (Typ.get a).Typ.kind *)
       let tK       = (Typ.get a).Typ.kind in
-      let (y2, tS) = elaborate_spine_k_i y1 cPsi s 0 (tK, Substitution.LF.id) in
+      let i        = (Typ.get a).Typ.implicit_arguments in
+      let (y2, tS) = elaborate_spine_k_i y1 cPsi s i (tK, Substitution.LF.id) in
         (y2, Int.LF.Atom (a, tS))
 
   | Apx.LF.PiTyp (Apx.LF.TypDecl (x, a), b) ->
@@ -238,9 +142,9 @@ and elaborate_term y1 cPsi m sA = match (m, sA) with
         (y2, Int.LF.Lam(x, tM))
 
   | (Apx.LF.Root (Apx.LF.Const c, spine), ((Int.LF.Atom _ as tP), s)) ->
-      (* (tA, i) = (Term.get c).Term.typ  -bp *)
       let tA       = (Term.get c).Term.typ in
-      let (y2, tS) = elaborate_spine_i y1 cPsi spine 0 (tA, LF.id) (tP, s) in
+      let i        = (Term.get c).Term.implicit_arguments in
+      let (y2, tS) = elaborate_spine_i y1 cPsi spine i (tA, LF.id) (tP, s) in
         (y2, Int.LF.Root (Int.LF.Const c, tS))
 
   | (Apx.LF.Root (Apx.LF.BVar x, spine), (Int.LF.Atom _ as tP, s)) ->
@@ -407,15 +311,15 @@ let rec reconstruct_sgn_decl d = match d with
       let k1       = index_kind (BVar.create ()) k0 in
       let (y2, k2) = elaborate_kind Int.LF.Empty Int.LF.Null k1 in
       let _        = reconstruct_kind y2 Int.LF.Null k2 in
-      let (k3, _i) = phase3_kind y2 k2 in
-      let a'       = Typ.add (Typ.mk_entry a k3) in
+      let (k3, i)  = phase3_kind y2 k2 in
+      let a'       = Typ.add (Typ.mk_entry a k3 i) in
         Int.LF.SgnTyp (a', k3)
 
   | Ext.LF.SgnConst (_, c, a0) ->
       let a1       = index_typ (BVar.create ()) a0 in
       let (y2, a2) = elaborate_typ Int.LF.Empty Int.LF.Null a1 in
       let _        = reconstruct_typ y2 Int.LF.Null a2 in
-      let (a3, _i) = phase3_typ y2 a2 in
-      let c'       = Term.add (Term.mk_entry c a3) in
+      let (a3, i)  = phase3_typ y2 a2 in
+      let c'       = Term.add (Term.mk_entry c a3 i) in
         Int.LF.SgnConst (c', a3)
 

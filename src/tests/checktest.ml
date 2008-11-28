@@ -12,7 +12,7 @@ let assert_is_parsable file_name =
       | Common.InL _exn  -> false
       | Common.InR decls ->
           try
-            let internal_decls = List.map Reconstruct.internalize_sgn_decl decls in
+            let internal_decls = List.map Reconstruct.reconstruct_sgn_decl decls in
                 Core.Check.check_sgn_decls internal_decls
               ; true
           with

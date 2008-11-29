@@ -121,6 +121,7 @@ module Int : sig
       | PVar  of cvar * sub
       | AnnH  of head * typ
       | Proj  of head * int
+      | FVar  of name
 
     and spine =
       | Nil

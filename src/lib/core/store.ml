@@ -126,3 +126,15 @@ module BVar = struct
   let get = List.nth
 
 end
+
+module FVar = struct
+
+  let store = Hashtbl.create 0
+
+  let add = Hashtbl.add store
+
+  let get = Hashtbl.find store
+
+  let clear () = Hashtbl.clear store
+
+end

@@ -87,3 +87,12 @@ module BVar : sig
   val index_of_name   : t -> name -> offset
 
 end
+
+
+module FVar : sig
+
+  val add             : name -> typ -> unit
+  val get             : name -> typ
+  val clear           : unit -> unit
+
+end

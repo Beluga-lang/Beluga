@@ -111,180 +111,186 @@ let rec is_a_pattern_spine seen_vars spine = match spine with
   | _ ->
       false
 
-(* TODO y1 -> cUpsilon  or  make it global *)
-let rec elaborate_kind y1 cPsi k = match k with 
+let rec elaborate_kind cPsi k = match k with 
   | Apx.LF.Typ -> 
-      (y1, Int.LF.Typ)
+      Int.LF.Typ
 
   | Apx.LF.PiKind (Apx.LF.TypDecl (x, a), k) ->
-      let (y2, tA) = elaborate_typ y1 cPsi a in
-      let cPsi'    = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
-      let (y3, tK) = elaborate_kind y2 cPsi' k in
-        (y3, Int.LF.PiKind (Int.LF.TypDecl (x, tA), tK))
+      let tA    = elaborate_typ cPsi a in
+      let cPsi' = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
+      let tK    = elaborate_kind cPsi' k in
+        Int.LF.PiKind (Int.LF.TypDecl (x, tA), tK)
 
-and elaborate_typ y1 cPsi a = match a with 
+and elaborate_typ cPsi a = match a with 
   | Apx.LF.Atom (a, s) ->
-      let tK       = (Typ.get a).Typ.kind in
-      let i        = (Typ.get a).Typ.implicit_arguments in
-      let (y2, tS) = elaborate_spine_k_i y1 cPsi s i (tK, Substitution.LF.id) in
-        (y2, Int.LF.Atom (a, tS))
+      let tK = (Typ.get a).Typ.kind in
+      let i  = (Typ.get a).Typ.implicit_arguments in
+      let tS = elaborate_spine_k_i cPsi s i (tK, Substitution.LF.id) in
+        Int.LF.Atom (a, tS)
 
   | Apx.LF.PiTyp (Apx.LF.TypDecl (x, a), b) ->
-      let (y2, tA) = elaborate_typ y1 cPsi a in
-      let cPsi'    = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
-      let (y3, tB) = elaborate_typ y2 cPsi' b in
-        (y3, Int.LF.PiTyp (Int.LF.TypDecl (x, tA), tB))
+      let tA    = elaborate_typ cPsi a in
+      let cPsi' = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
+      let tB    = elaborate_typ cPsi' b in
+        Int.LF.PiTyp (Int.LF.TypDecl (x, tA), tB)
 
-and elaborate_term y1 cPsi m sA = match (m, sA) with
+and elaborate_term cPsi m sA = match (m, sA) with
   | (Apx.LF.Lam (x, m), (Int.LF.PiTyp (tA, tB), s)) ->
-      let cPsi'    = Int.LF.DDec (cPsi, LF.decSub tA s) in
-      let (y2, tM) = elaborate_term y1 cPsi' m (tB, LF.dot1 s) in
-        (y2, Int.LF.Lam(x, tM))
+      let cPsi' = Int.LF.DDec (cPsi, LF.decSub tA s) in
+      let tM    = elaborate_term cPsi' m (tB, LF.dot1 s) in
+        Int.LF.Lam(x, tM)
 
   | (Apx.LF.Root (Apx.LF.Const c, spine), ((Int.LF.Atom _ as tP), s)) ->
-      let tA       = (Term.get c).Term.typ in
-      let i        = (Term.get c).Term.implicit_arguments in
-      let (y2, tS) = elaborate_spine_i y1 cPsi spine i (tA, LF.id) (tP, s) in
-        (y2, Int.LF.Root (Int.LF.Const c, tS))
+      let tA = (Term.get c).Term.typ in
+      let i  = (Term.get c).Term.implicit_arguments in
+      let tS = elaborate_spine_i cPsi spine i (tA, LF.id) (tP, s) in
+        Int.LF.Root (Int.LF.Const c, tS)
 
   | (Apx.LF.Root (Apx.LF.BVar x, spine), (Int.LF.Atom _ as tP, s)) ->
       let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
-      let (y2, tS) = elaborate_spine y1 cPsi spine (tA, LF.id) (tP, s) in
-        (y2, Int.LF.Root (Int.LF.BVar x, tS))
+      let tS = elaborate_spine cPsi spine (tA, LF.id) (tP, s) in
+        Int.LF.Root (Int.LF.BVar x, tS)
 
-  | (Apx.LF.Root (Apx.LF.FVar _x, _spine), (Int.LF.Atom _ as _tP, _s)) ->
-      (* if (x is in y1) then 
-            let tA = get x from y1 in
-               elaborate_spine y1 cPsi spine (tA, LF.id) (tP, s)
-         else if (is_a_pattern_spine [] spine) then
-            let (y2, tS, tA) = elaborate_spine_infer y1 cPsi spine tP in
-               (Int.LF.Dec (y2, Int.TypDecl (x, tA)), Int.LF.Root (Int.LF.FVar x, tS))
-         else
-            create a new meta-variable as a place holder for the reconstructed spine
-            add constraint
-               let tA      = get x from (final) y1 in
-               let (_, tS) = elaborate_spine y1 cPsi spine (tA, LF.id) (tP, s)
-               instanciate meta-variable with tS
-            return (y1, meta-variable)
-      *)
-      raise NotImplemented
+  | (Apx.LF.Root (Apx.LF.FVar x, spine), (Int.LF.Atom _ as tP, s)) ->
+      try
+        let tA = FVar.get x in
+        let tS = elaborate_spine cPsi spine (tA, LF.id) (tP, s) in
+          Int.LF.Root (Int.LF.FVar x, tS)
+      with Not_found ->
+        if is_a_pattern_spine [] spine then
+          let (tS, tA) = elaborate_spine_infer cPsi spine tP in
+          let _        = FVar.add x tA in
+            Int.LF.Root (Int.LF.FVar x, tS)
+        else
+          raise NotImplemented
+          (*
+            let placeholder = ref Int.LF.Nil in
+               (add_delayed
+                  let tA = FVar.get x in
+                     placeholder := elaborate_spine cPsi spine (tA, LF.id) (tP, s);
+                Int.LF.Root (Int.LF.FVar x, placeholder)
+               )
+          *)
 
   | _ ->
       raise Error (* Error message *)
 
-and elaborate_spine_i y1 cPsi spine i sA sP = 
+and elaborate_spine_i cPsi spine i sA sP = 
   if i = 0 then 
-    elaborate_spine y1 cPsi spine sA sP
+    elaborate_spine cPsi spine sA sP
   else
-    (* FIXME is the "begin ... end" really necessary? *)
-    begin match sA with 
+    match sA with 
       | (Int.LF.PiTyp(Int.LF.TypDecl(_, tA), tB), s) ->
           let u  = Context.newMVar (cPsi, Int.LF.TClo(tA, s)) in
           let tR = Int.LF.Root(Int.LF.MVar(u, LF.id), Int.LF.Nil) in 
-          elaborate_spine_i y1 cPsi spine (i - 1) (tB, Int.LF.Dot(Int.LF.Obj(tR), s)) sP
+          elaborate_spine_i cPsi spine (i - 1) (tB, Int.LF.Dot(Int.LF.Obj(tR), s)) sP
 
       | _  ->       
           raise Error (* Error message *)
-    end 
 
-and elaborate_spine y1 cPsi s sA sP = match (s, sA) with
+and elaborate_spine cPsi s sA sP = match (s, sA) with
   | (Apx.LF.Nil, (Int.LF.Atom (a, _spine), _s)) -> 
       let (Int.LF.Atom (a', _spine'), _s') = sP in 
         if a = a' then
-          (y1, Int.LF.Nil)
+          Int.LF.Nil
         else
           raise Error (* Error message *)
 
   | (Apx.LF.App (m, spine), (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s)) ->
-      let (y2, tM) = elaborate_term  y1 cPsi m (tA, s) in 
-      let (y3, tS) = elaborate_spine y2 cPsi spine (tB, Int.LF.Dot(Int.LF.Obj(tM), s)) sP in
-        (y3, Int.LF.App (tM, tS))
+      let tM = elaborate_term  cPsi m (tA, s) in 
+      let tS = elaborate_spine cPsi spine (tB, Int.LF.Dot(Int.LF.Obj(tM), s)) sP in
+        Int.LF.App (tM, tS)
 
   | _ ->
       raise Error (* Error message *)
 
 
-and elaborate_spine_k_i y1 cPsi spine i sK = 
+and elaborate_spine_k_i cPsi spine i sK = 
   if  i = 0 then 
-    elaborate_spine_k y1 cPsi spine sK
+    elaborate_spine_k cPsi spine sK
   else 
-    begin match sK with 
+    match sK with 
       | (Int.LF.PiKind(Int.LF.TypDecl(_, tA), tK), s) ->
           let u  = Context.newMVar (cPsi, Int.LF.TClo(tA, s)) in
           let tR = Int.LF.Root(Int.LF.MVar(u, LF.id), Int.LF.Nil) in 
-            elaborate_spine_k_i y1 cPsi spine (i - 1) (tK, Int.LF.Dot(Int.LF.Obj(tR), s))
-        
+            elaborate_spine_k_i cPsi spine (i - 1) (tK, Int.LF.Dot(Int.LF.Obj(tR), s))
+
       | _  ->  
           raise Error
-    end 
+     
 
-and elaborate_spine_k y1 cPsi spine sK = match (spine, sK) with
+and elaborate_spine_k cPsi spine sK = match (spine, sK) with
   | (Apx.LF.Nil, (Int.LF.Typ, _s)) -> 
-      (y1, Int.LF.Nil) 
+      Int.LF.Nil
 
   | (Apx.LF.App (m, spine), (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s)) ->
-      let (y2, tM) = elaborate_term    y1 cPsi m (tA, s) in 
-      let (y3, tS) = elaborate_spine_k y2 cPsi spine (tK, Int.LF.Dot(Int.LF.Obj(tM), s)) in
-        (y3, Int.LF.App (tM, tS))
+      let tM = elaborate_term    cPsi m (tA, s) in 
+      let tS = elaborate_spine_k cPsi spine (tK, Int.LF.Dot(Int.LF.Obj (tM), s)) in
+        Int.LF.App (tM, tS)
 
-and elaborate_spine_infer y1 _cPsi spine tP = match spine with
+and elaborate_spine_infer cPsi spine tP = match spine with
   | Apx.LF.Nil ->
-      (y1, Int.LF.Nil, tP)
+      (Int.LF.Nil, tP)
 
-(* FIXME
   | Apx.LF.App (Apx.LF.Root (Apx.LF.BVar x, Apx.LF.Nil), spine) ->
       let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
-      let (y2, tS, tB) = elaborate_spine_infer y1 cPsi spine tP in
-        (y2, Int.LF.App (Int.LF.Root (Int.LF.BVar x, Int.LF.Nil)), 
-         Int.LF.PiTyp (Int.LF.TypDecl ("y", tA), [y/x] tB))
-*)
+      let (tS, tB) = elaborate_spine_infer cPsi spine tP in
 
-and elaborate_spine_infer_k _y1 _cPsi spine _sK = match spine with
-  | _ -> raise NotImplemented
+      let rec foo cPsi i j = match cPsi with (* TODO rename *)
+        | Int.LF.Null ->
+            Int.LF.Shift 0
+              
+        | Int.LF.DDec (cPsi, Int.LF.TypDecl _) ->
+            let x = if i = j then 0 else i in
+              Int.LF.Dot (Int.LF.Head (Int.LF.BVar x), foo cPsi (i + 1) j) in
+
+      (* TODO confirm this is correct *)
+      let tB' = Int.LF.TClo (tB, foo cPsi 0 x) in
+        (Int.LF.App (Int.LF.Root (Int.LF.BVar x, Int.LF.Nil), tS), 
+         Int.LF.PiTyp (Int.LF.TypDecl (Id.mk_name None, tA), tB'))
 
 (* PHASE 2 : Reconstruction *)
 (* FIXME maybe we'll need to work with explicit substitution for types here too
    will see when spine functions get implemented *)
-let rec reconstruct_kind y1 cPsi tK = match tK with
+let rec reconstruct_kind cPsi tK = match tK with
   | Int.LF.Typ ->
       ()
 
   | Int.LF.PiKind (Int.LF.TypDecl (x, tA), tK) -> (
-      reconstruct_typ y1 cPsi tA ;
-      reconstruct_kind y1 (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) tK
+      reconstruct_typ cPsi tA ;
+      reconstruct_kind (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) tK
     )
 
 
-and reconstruct_typ y1 cPsi tA = match tA with
+and reconstruct_typ cPsi tA = match tA with
   | Int.LF.Atom (a, tS) ->
-      (* (tK, _) = (Typ.get a).Typ.kind *)
       let tK = (Typ.get a).Typ.kind in
-        reconstruct_spine_k y1 cPsi tS tK
+        reconstruct_spine_k cPsi tS tK
 
   | Int.LF.PiTyp (Int.LF.TypDecl (x, tA), tB) -> (
-      reconstruct_typ y1 cPsi tA ;
-      reconstruct_typ y1 (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) tB
+      reconstruct_typ cPsi tA ;
+      reconstruct_typ (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) tB
     )
 
-and reconstruct_term y1 cPsi tM tA = match (tM, tA) with
+and reconstruct_term cPsi tM tA = match (tM, tA) with
   | (Int.LF.Lam (x, tM), Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB)) ->
       let cPsi' = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
-        reconstruct_term y1 cPsi' tM tB
+        reconstruct_term cPsi' tM tB
 
   | (Int.LF.Root (Int.LF.Const c, tS), (Int.LF.Atom _ as tP)) ->
       let tA = (Term.get c).Term.typ in
-        reconstruct_spine y1 cPsi tS tA tP
+        reconstruct_spine cPsi tS tA tP
 
   | (Int.LF.Root (Int.LF.BVar x, tS), (Int.LF.Atom _ as tP)) ->
       let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
-        reconstruct_spine y1 cPsi tS tA tP
+        reconstruct_spine cPsi tS tA tP
 
   | (Int.LF.Root (Int.LF.MVar (_u, _s), _tS), (Int.LF.Atom _ as _tP)) ->
       raise NotImplemented
   (*
   | (Int.LF.Root (Int.LF.FVar x, s), (Int.LF.Atom _ as p)) ->
-      let tA = type_of_fvar x y1 in
-        reconstruct_spine y1 cPsi s tA p
+      let tA = type_of_fvar x in
+        reconstruct_spine cPsi s tA p
   *)
 
   | _ ->
@@ -298,28 +304,30 @@ and reconstruct_spine_k = function
 
 
 (* PHASE 3 : transform Y to a bunch of implicit Pi's *)
-let rec phase3_kind y tK = match (y, tK) with
-  | _ -> raise NotImplemented
+let rec phase3_kind tK = match tK with
+  | _ -> 
+      (tK, 0) (* TODO implement this *)
 
-and phase3_typ y tA = match (y, tA) with
-  | _ -> raise NotImplemented
+and phase3_typ tA = match tA with
+  | _ -> 
+      (tA, 0) (* TODO implement this *)
 
 
 (* wrapper function *)
 let rec reconstruct_sgn_decl d = match d with
   | Ext.LF.SgnTyp (_, a, k0)   ->
       let k1       = index_kind (BVar.create ()) k0 in
-      let (y2, k2) = elaborate_kind Int.LF.Empty Int.LF.Null k1 in
-      let _        = reconstruct_kind y2 Int.LF.Null k2 in
-      let (k3, i)  = phase3_kind y2 k2 in
+      let k2       = elaborate_kind Int.LF.Null k1 in
+      let _        = reconstruct_kind Int.LF.Null k2 in
+      let (k3, i)  = phase3_kind k2 in
       let a'       = Typ.add (Typ.mk_entry a k3 i) in
         Int.LF.SgnTyp (a', k3)
 
   | Ext.LF.SgnConst (_, c, a0) ->
       let a1       = index_typ (BVar.create ()) a0 in
-      let (y2, a2) = elaborate_typ Int.LF.Empty Int.LF.Null a1 in
-      let _        = reconstruct_typ y2 Int.LF.Null a2 in
-      let (a3, i)  = phase3_typ y2 a2 in
+      let a2       = elaborate_typ Int.LF.Null a1 in
+      let _        = reconstruct_typ Int.LF.Null a2 in
+      let (a3, i)  = phase3_typ a2 in
       let c'       = Term.add (Term.mk_entry c a3 i) in
         Int.LF.SgnConst (c', a3)
 

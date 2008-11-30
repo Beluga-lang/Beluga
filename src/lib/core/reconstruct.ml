@@ -256,12 +256,20 @@ and elaborate_term y1 cPsi m sA = match (m, sA) with
             let (y2, tS, tA) = elaborate_spine_infer y1 cPsi spine tP in
                (Int.LF.Dec (y2, Int.TypDecl (x, tA)), Int.LF.Root (Int.LF.FVar x, tS))
          else
-            create a new meta-variable as a place holder for the reconstructed spine
-            add constraint
-               let tA      = get x from (final) y1 in
-               let (_, tS) = elaborate_spine y1 cPsi spine (tA, LF.id) (tP, s)
-               instanciate meta-variable with tS
+            create a new meta-variable u[id] as a place holder of type tP in context cPsi 
+	    for the FVar(x, spine) 
+
+            add constraint which says:  cPsi |- u[id] = FVar(x,spine) 
+
             return (y1, meta-variable)
+
+
+            Later after elaboration is done, revisit the constraints: 
+
+               let tA      = get x from (final) y1 in
+               let (y1', tS) = elaborate_spine y1 cPsi spine (tA, LF.id) (tP, s)
+               instantiate meta-variable u := FVar(x, tS)
+
       *)
       raise NotImplemented
 

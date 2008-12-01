@@ -559,10 +559,10 @@ struct
        instantiation theta is applied as an effect and () is returned. 
        otherwise exception Unify is raised.
      
-       Post-Condition: cD' describes the new and possibly updated
+       Post-Condition: cD' includes new and possibly updated
                        contextual variables; 
 
-       Other effects: MVars in cD may have been lowered and pruned; Constraints 
+       Other effects: MVars in cD' may have been lowered and pruned; Constraints 
        may be added for non-patterns.  
 
           
@@ -576,64 +576,68 @@ struct
       -> unify ((psi, offset + 1), (tN, dot1 s1), (tM, dot1 s2))
 
     (* MVar-MVar case *)
+    (* remove sM1, sM2 -bp *)
     | ((((Root (MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), Nil) as _tM1), s1)  as sM1),
       ((((Root (MVar (Inst (r2, _cPsi2, _tP2, cnstrs2), t2), Nil) as _tM2), s2)) as sM2))
       ->
-      (* by invariant: meta-variables are lowered during whnf, s1 = s2 = id *)
+      (* by invariant of whnf:
+           meta-variables are lowered during whnf, s1 = s2 = id 
+           r1 and r2 are uninstantiated  (None)
+       *)
         let t1' = comp t1 s1 (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = comp t2 s2 (* cD ; cPsi |- t2' <= cPsi2 *)
         in
           if r1 = r2
           then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
-            if isPatSub t1'
-            then
-              if isPatSub t2'
-              then
+            match (isPatSub t1' , isPatSub t2') with
+	      | (true, true) -> 
                 let (s', cPsi') = intersection (phat, (t1', t2'), cPsi1) in
-                  (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1 
+                  (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
                      then cD ; cPsi1 |- s' <= cPsi' *)
                 let ss' = invert s' in
                   (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
                 let w = newMVar (cPsi', TClo(tP1, ss'))
-                  (* w::[s']^-1(tP1)[cPsi'] in cD'            *)
-                  (* cD' ; cPsi1 |- w[s'] <= [s']([s']^-1 tP1) 
-                     [|w[s']/u|](u[t]) = [t](w[s'])
+                  (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
+                  (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1) 
+                     [|w[s']/u|](u[t1]) = [t1](w[s'])
+                     [|w[s']/u|](u[t2]) = [t2](w[s'])
                   *)
                 in
                   instantiateMVar (r1, Root(MVar(w, s'),Nil), !cnstrs1)
-              else
+	      | (true, false) -> 
                 addConstraint (cnstrs2, ref (Eqn (phat, Clo sM, Clo sN))) (*XXX double-check *)
-            else
-              addConstraint (cnstrs1, ref (Eqn (phat, Clo sN, Clo sM)))  (*XXX double-check *)
+	      | (false, _) -> 
+		  addConstraint (cnstrs1, ref (Eqn (phat, Clo sN, Clo sM)))  (*XXX double-check *)
           else
-            if isPatSub t1'
-            then (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
-              try
-                let ss1 = invert t1' (* cD ; cPsi1 |- ss1 <= cPsi *) in
-                let (sM2',sc) = prune (phat, sM2, ss1, r1, idsc) (* sM2 = ([ss1][s2]tM2 *)
-                in
-                    sc ()
-                  ; instantiateMVar (r1, sM2', !cnstrs1)
-              with
-                | NotInvertible ->
-                    addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
-            else
-              if isPatSub t2'
-              then
-                try
-                  let ss2 = invert t2'(* cD ; cPsi2 |- ss2 <= cPsi *) in
-                  let (sM1', sc') = prune (phat, sM1, ss2, r2, idsc)
+	    begin match (isPatSub t1' , isPatSub t2') with
+	      | (true, _) -> 
+		(* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
+                begin try
+                  let ss1 = invert t1' (* cD ; cPsi1 |- ss1 <= cPsi *) in
+                  let (sM2',sc) = prune (phat, sM2, ss1, r1, idsc) (* sM2 = [ss1][s2]tM2 *)
                   in
-                      sc' ()
-                    ; instantiateMVar (r2, sM1', !cnstrs2)
-                with
+                    sc ()
+                    ; instantiateMVar (r1, sM2', !cnstrs1)
+		with
                   | NotInvertible ->
-                      addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
-              else
+                      addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
+		end 
+	      | (false, true) -> 		    
+                  begin try
+                    let ss2 = invert t2'(* cD ; cPsi2 |- ss2 <= cPsi *) in
+                    let (sM1', sc') = prune (phat, sM1, ss2, r2, idsc)
+                    in
+                      sc' ()
+                      ; instantiateMVar (r2, sM1', !cnstrs2)
+                  with
+                    | NotInvertible ->
+			addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
+		  end 
+ 	      | (false , false) ->
                 (* neither t1' nor t2' are pattern substitutions *)
                 let cnstr = ref (Eqn (phat, Clo sM1, Clo sM2)) in
                   addConstraint (cnstrs1, cnstr)
-
+	    end   
     (* MVar-normal case *)
     | ((Root (MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2))
       -> let t' = comp t s1 in
@@ -658,10 +662,10 @@ struct
          then
            try
              let ss = invert t' in
-             let (_sM1', sc) = prune (phat, sM1, ss, r, idsc)
+             let (sM1', sc) = prune (phat, sM1, ss, r, idsc)
              in
                  sc ()
-               ; instantiateMVar (r, Clo (tM1, ss), !cnstrs)
+               ; instantiateMVar (r, sM1', !cnstrs)
            with
              | NotInvertible ->
                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
@@ -676,6 +680,7 @@ struct
     | (_sM1, _sM2)
       -> raise (Unify "Expression clash")
 
+(* code walk of unify done up to here Mon Dec  1 17:01:54 2008 -bp  *)
   and unifyHead (phat, head1, head2) = match (head1, head2) with
     | (BVar k1, BVar k2)
       -> if k1 = k2

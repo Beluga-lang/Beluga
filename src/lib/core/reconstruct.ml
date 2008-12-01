@@ -530,6 +530,8 @@ and recSub cPsi s cPhi = match (s, cPhi) with
       recTerm cPsi tM (tA, s)
     )
 
+  (* needs other cases for Shift n -bp *)
+
 (* ******************************************************************* *)
 (* Abstraction:
 
@@ -539,6 +541,32 @@ and recSub cPsi s cPhi = match (s, cPhi) with
    Abstraction only succeeds, if O and U are not cyclic.
 
    Abstraction should be in a different module. -bp
+
+  We write {{K}} for the context of K, where MVars and FVars have
+  been translated to declarations and their occurrences to BVars.
+  We write {{A}}_K, {{M}}_K, {{S}}_K for the corresponding translation 
+  of a type, an expression or spine.
+
+  Just like contexts Psi, any K is implicitly assumed to be
+  well-formed and in dependency order. ** note that K may contain
+  cyclic dependencies, which need to be detected **
+
+  We write  K ; Psi ||- M  if all MVars and FVars in M and Psi are 
+  collected in K. In particular, . ; Psi ||- M means M and Psi contain 
+  no MVars or FVars.  Similarly, for spines . ; Psi ||- S and other 
+  syntactic categories.
+
+  Abstraction proceeds in two phases:
+
+   - Collection of all MVars and FVars into K.
+  
+   - Abstraction over K
+
+ Collection and abstraction raise Error if there are unresolved
+  constraints after simplification.
+
+
+
 *)
 
 let rec abstractKind tK = match tK with

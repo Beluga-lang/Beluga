@@ -15,12 +15,14 @@ module Cid = struct
   module Typ = struct
 
     type entry =
-      { name : Id.name
-      ; kind : Int.LF.kind }
+      { name               : Id.name
+      ; implicit_arguments : int
+      ; kind               : Int.LF.kind }
 
-    let mk_entry n k =
-      { name = n
-      ; kind = k }
+    let mk_entry n k i =
+      { name               = n
+      ; implicit_arguments = i
+      ; kind               = k }
 
 
     type t = Id.name DynArray.t
@@ -56,12 +58,14 @@ module Cid = struct
   module Term = struct
 
     type entry =
-      { name : Id.name
-      ; typ  : Int.LF.typ }
+      { name               : Id.name
+      ; implicit_arguments : int
+      ; typ                : Int.LF.typ }
 
-    let mk_entry n t =
-      { name = n
-      ; typ  = t }
+    let mk_entry n t i =
+      { name               = n
+      ; implicit_arguments = i
+      ; typ                = t }
 
 
     type t = Id.name DynArray.t
@@ -120,5 +124,17 @@ module BVar = struct
   let extend ctx e = e :: ctx
 
   let get = List.nth
+
+end
+
+module FVar = struct
+
+  let store = Hashtbl.create 0
+
+  let add = Hashtbl.add store
+
+  let get = Hashtbl.find store
+
+  let clear () = Hashtbl.clear store
 
 end

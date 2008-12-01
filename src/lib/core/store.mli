@@ -16,11 +16,12 @@ module Cid : sig
   module Typ : sig
 
     type entry          = private {
-      name : name
-    ; kind : kind
+      name                 : name
+      ; implicit_arguments : int
+      ; kind               : kind
     }
 
-    val mk_entry        : name -> kind -> entry
+    val mk_entry        : name -> kind -> int -> entry
 
 
     type t
@@ -40,11 +41,12 @@ module Cid : sig
   module Term : sig
 
     type entry          = private {
-      name : name
-    ; typ  : typ
+      name                 : name
+      ; implicit_arguments : int
+      ; typ                : typ
     }
 
-    val mk_entry        : name -> typ -> entry
+    val mk_entry        : name -> typ -> int -> entry
 
 
     type t
@@ -83,5 +85,14 @@ module BVar : sig
   val get             : t -> var  -> entry
 
   val index_of_name   : t -> name -> offset
+
+end
+
+
+module FVar : sig
+
+  val add             : name -> typ -> unit
+  val get             : name -> typ
+  val clear           : unit -> unit
 
 end

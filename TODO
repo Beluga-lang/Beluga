@@ -4,7 +4,13 @@
 CRITICAL
 ========
 
-*  1/4/08  :: Unification: is the occurs check for parameter variables 
+*  12/1/08  :: Printing the result of unification
+               i.e. printing terms with references denoting
+               meta-variables (necessary to printing result of
+               unification, and intermediate information in
+               type reconstruction)
+
+*  11/4/08  :: Unification: is the occurs check for parameter variables 
               necessary? -bp 
 
               Example: q[q[x,y],y] = x  should succeed
@@ -12,7 +18,7 @@ CRITICAL
 
               q::A[x1:A,x2:B]  and x1,x2. x2/q
 
-*  1/4/08  :: Unification: Instantiation of parameter variables
+*  11/4/08  :: Unification: Instantiation of parameter variables
               Currently: Given 
              cPsi  |- s2' <= cPsi2   and 
              cPsi1 |- ss <= cPsi     and
@@ -21,7 +27,7 @@ CRITICAL
               will (comp ss s2') s'  have the same result as comp ss (comp s2' s') ? 
                 -bp
    
-* 1/4/08   :: Testing of unification: Frontend should support
+* 11/4/08  :: Testing of unification: Frontend should support
               processing of unification problems  -bp
 
 
@@ -32,7 +38,7 @@ CRITICAL
 IMPORTANT
 =========
 
-*  1/4/08  :: Unification: Are cases for proj necessary? -bp
+* 11/4/08  :: Unification: Are cases for proj necessary? -bp
 
 * 10/25/08 :: Make pretty printer break line late rather than early.
               -dwm

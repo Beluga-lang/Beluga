@@ -8,8 +8,6 @@
 
 open Id
 
-
-
 module Loc = Camlp4.PreCast.Loc
 
 (** External Syntax *)
@@ -50,8 +48,6 @@ module Ext = struct
 end
 
 (** Approximate Simple Syntax *)
-(* TODO write explanatory comments for each *)
-(* TODO move this syntax to reconstruct.ml *)
 module Apx = struct
 
   module LF = struct
@@ -123,6 +119,7 @@ module Int = struct
       | PVar  of cvar * sub                (*   | p[s]                       *)
       | AnnH  of head * typ                (*   | (H:A)                      *)
       | Proj  of head * int                (*   | #k(x) | #k(p[s])           *)
+      | FVar  of name                      (* free variable (type rec. only) *)
 
     and spine =                            (* spine                          *)
       | Nil                                (* S ::= Nil                      *)

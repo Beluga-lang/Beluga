@@ -478,9 +478,9 @@ and recTermW cPsi tM sA = match (tM, sA) with
         if instanciated then
           check as normal term
         else
-          reconstruct_sub cPsi s cPhi;
+          recSub cPsi s cPhi;
           unifyTyp cPsi (tP, s') (tP', s);
-          reconstruct_spine cPsi tS (tP', s) (tP, s') (* redundant since we assume tS to be Nil *)
+          recSpine cPsi tS (tP', s) (tP, s') (* redundant since we assume tS to be Nil *)
         )
       *)
       raise NotImplemented
@@ -514,24 +514,21 @@ and recKSpine cPsi tS sK = match (tS, sK) with
 
   (* other case: tS = SClo(tS',s') cannot happen *)
 
-(*
-and reconstruct_sub cPsi s cPhi = match (s, cPhi) with
+and recSub cPsi s cPhi = match (s, cPhi) with
   | (I.Shift 0, I.Null) ->
       ()
 
   | (I.Dot (I.Head I.BVar x, s), I.DDec (cPhi, I.TypDecl (_, _tA))) ->
       let I.TypDecl (_, _tA') = Context.ctxDec cPsi x in (
-          reconstruct_sub  cPsi s cPhi;
+          recSub  cPsi s cPhi;
           (* unifyTyp cPsi (tA', s) (tA, LF.id) *)
           raise NotImplemented
         )
 
   | (I.Dot (I.Obj tM, s), I.DDec (cPhi, I.TypDecl (_, tA))) -> (
-      reconstruct_sub  cPsi s cPhi;
-      reconstruct_term cPsi tM (tA, s)
+      recSub  cPsi s cPhi;
+      recTerm cPsi tM (tA, s)
     )
-
-*)
 
 (* ******************************************************************* *)
 (* Abstraction:

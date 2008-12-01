@@ -43,7 +43,8 @@ module type UNIFY = sig
 
   exception Unify of string
 
-  val unify : psi_hat * nclo * nclo -> unit (* raises Unify *)
+  val unify    : psi_hat * nclo * nclo -> unit (* raises Unify *)
+  val unifyTyp : psi_hat * tclo * tclo -> unit (* raises Unify *)
 
 end
 
@@ -818,7 +819,7 @@ struct
 
     and unify1' (phat, sM1, sM2) =
         unify' (phat, sM1, sM2)
-      ; awakeCnstr (nextCnstr ())
+      ; awakeCnstr (nextCnstr ())       
 
 
     and awakeCnstr constrnt = match constrnt with
@@ -837,7 +838,22 @@ struct
         resetAwakenCnstrs ()
       ; unify1 (phat, sM1, sM2)
 
+
+    (* does not deal with constraints -bp *)
+    let rec unifyTyp (phat, sA, sB) = unifyTypW (phat, Whnf.whnfTyp sA, Whnf.whnfTyp sB)
+
+    and unifyTypW (phat, sA, sB) = match (sA, sB) with 
+      | ((Atom(a, tS1), s1), (Atom(b, tS2), s2))  -> 
+      if a = b then
+        unifySpine (phat, (tS1, s1), (tS2, s2))
+      else 
+        raise (Unify "Type constant clash")
+    | ((PiTyp(TypDecl(_x, tA1), tB1), s1), (PiTyp(TypDecl(_y, tA2), tB2), s2)) ->  
+        (unifyTyp (phat, (tA1, s1), (tA2, s2));
+         unifyTyp (phat, (tB1, dot1 s1), (tB2, dot1 s2))
+        )
+
 end
 
-module UnifyEmptyTrail = Make (Trail.EmptyTrail)
+module UnifyNoTrail = Make (Trail.EmptyTrail)
 module UnifyTrail      = Make (Trail.Trail)

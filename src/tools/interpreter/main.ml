@@ -49,7 +49,7 @@ let main () =
               ; print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl decls
 
               ; fprintf ppf "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
-              ; let internal_decls = List.map Reconstruct.reconstruct_sgn_decl decls in
+              ; let internal_decls = List.map Reconstruct.recSgnDecl decls in
                     print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl internal_decls
                   ; try
                         fprintf ppf "\n## Begin Checking ##"

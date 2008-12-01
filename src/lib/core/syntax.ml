@@ -8,8 +8,6 @@
 
 open Id
 
-
-
 module Loc = Camlp4.PreCast.Loc
 
 (** External Syntax *)

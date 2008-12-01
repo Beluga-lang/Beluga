@@ -41,4 +41,4 @@ module Apx : sig
 
 end
 
-val reconstruct_sgn_decl : Ext.LF.sgn_decl -> Int.LF.sgn_decl
+val recSgnDecl : Ext.LF.sgn_decl -> Int.LF.sgn_decl

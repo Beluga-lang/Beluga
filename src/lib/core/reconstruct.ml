@@ -119,7 +119,7 @@ and index_head names = function
       with Not_found -> try
         A.Const (Term.index_of_name n)
       with Not_found ->
-        A.FVar (n)
+        A.FVar n
 
 and index_spine names = function
   | E.Nil ->
@@ -212,8 +212,8 @@ and elaborate_spine_i cPsi spine i sA sP =
     match sA with
       | (I.PiTyp(I.TypDecl(_, tA), tB), s) ->
           let u  = Context.newMVar (cPsi, I.TClo(tA, s)) in
-          let tR = I.Root(I.MVar(u, LF.id), I.Nil) in
-          elaborate_spine_i cPsi spine (i - 1) (tB, I.Dot(I.Obj(tR), s)) sP
+          let tR = I.Root (I.MVar (u, LF.id), I.Nil) in
+            elaborate_spine_i cPsi spine (i - 1) (tB, I.Dot (I.Obj tR, s)) sP
 
 and elaborate_spine cPsi s sA sP = match (s, sA) with
   | (A.Nil, (I.Atom (a, _spine), _s)) ->
@@ -228,7 +228,7 @@ and elaborate_spine cPsi s sA sP = match (s, sA) with
 
   | (A.App (m, spine), (I.PiTyp (I.TypDecl (_, tA), tB), s)) ->
       let tM = elaborate_term  cPsi m (tA, s) in
-      let tS = elaborate_spine cPsi spine (tB, I.Dot(I.Obj(tM), s)) sP in
+      let tS = elaborate_spine cPsi spine (tB, I.Dot (I.Obj tM, s)) sP in
         I.App (tM, tS)
 
   | (A.App _, _) ->
@@ -240,9 +240,9 @@ and elaborate_spine_k_i cPsi spine i sK =
   else
     match sK with
       | (I.PiKind(I.TypDecl(_, tA), tK), s) ->
-          let u  = Context.newMVar (cPsi, I.TClo(tA, s)) in
-          let tR = I.Root(I.MVar(u, LF.id), I.Nil) in
-            elaborate_spine_k_i cPsi spine (i - 1) (tK, I.Dot(I.Obj(tR), s))
+          let u  = Context.newMVar (cPsi, I.TClo (tA, s)) in
+          let tR = I.Root (I.MVar (u, LF.id), I.Nil) in
+            elaborate_spine_k_i cPsi spine (i - 1) (tK, I.Dot (I.Obj tR, s))
 
 and elaborate_spine_k cPsi spine sK = match (spine, sK) with
   | (A.Nil, (I.Typ, _s)) ->
@@ -315,9 +315,11 @@ and reconstruct_term cPsi tM sA = match (tM, sA) with
       let I.TypDecl (_, tA) = Context.ctxDec cPsi x in
         reconstruct_spine cPsi tS (tA, LF.id) (tP, s)
 
-  | (I.Root (I.MVar (I.Offset _u, _s), _tS), ((I.Atom _ as _tP), _s')) ->
+  | (I.Root (I.MVar (I.Inst (_tM, _cPhi, _tP', _cnstr), _s), _tS), ((I.Atom _ as _tP), _s')) ->
       (*
-      let (tP', cPhi) = mctxMDec cD u in ((* FIXME cD is implicit here ... *)
+        if instanciated then
+          check as normal term
+        else
           reconstruct_sub cPsi s cPhi;
           unifyTyp cPsi (tP, s') (tP', s);
           reconstruct_spine cPsi tS (tP', s) (tP, s') (* redundant since we assume tS to be Nil *)
@@ -393,3 +395,8 @@ let rec reconstruct_sgn_decl d = match d with
       let c'       = Term.add (Term.mk_entry c a3 i) in
         I.SgnConst (c', a3)
 
+(* TODO
+   - add an implicit Delta to the store and work with it
+   - add delayed jobs stuff
+   - think about phase 3
+*)

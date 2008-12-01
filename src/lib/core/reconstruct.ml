@@ -10,22 +10,6 @@ open Store.Cid
 open Syntax
 open Substitution
 
-(* type_of_fvar x cUpsilon = A 
-
-   Invariant: 
-   If x:A in cUpsilon then
-   
-    D ; cUpsilon |- A <= type
-
- *)
-let rec type_of_fvar x = function
-  | Int.LF.Empty ->
-      raise Not_found
-
-  | Int.LF.Dec (ctx, Int.LF.TypDecl (x', a)) ->
-      if x = x' then a else type_of_fvar x ctx
-
-
 exception NotImplemented
 exception Error (* TODO detail error types as in check.ml *)
 
@@ -250,14 +234,12 @@ and elaborate_spine_infer cPsi spine tP = match spine with
          Int.LF.PiTyp (Int.LF.TypDecl (Id.mk_name None, tA), tB'))
 
 (* PHASE 2 : Reconstruction *)
-(* FIXME maybe we'll need to work with explicit substitution for types here too
-   will see when spine functions get implemented *)
 let rec reconstruct_kind cPsi tK = match tK with
   | Int.LF.Typ ->
       ()
 
   | Int.LF.PiKind (Int.LF.TypDecl (x, tA), tK) -> (
-      reconstruct_typ cPsi tA ;
+      reconstruct_typ cPsi tA;
       reconstruct_kind (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) tK
     )
 
@@ -265,43 +247,86 @@ let rec reconstruct_kind cPsi tK = match tK with
 and reconstruct_typ cPsi tA = match tA with
   | Int.LF.Atom (a, tS) ->
       let tK = (Typ.get a).Typ.kind in
-        reconstruct_spine_k cPsi tS tK
+        reconstruct_spine_k cPsi tS (tK, LF.id)
 
   | Int.LF.PiTyp (Int.LF.TypDecl (x, tA), tB) -> (
-      reconstruct_typ cPsi tA ;
+      reconstruct_typ cPsi tA;
       reconstruct_typ (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) tB
     )
 
-and reconstruct_term cPsi tM tA = match (tM, tA) with
-  | (Int.LF.Lam (x, tM), Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB)) ->
-      let cPsi' = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
-        reconstruct_term cPsi' tM tB
+and reconstruct_term cPsi tM sA = match (tM, sA) with
+  | (Int.LF.Lam (_, tM), (Int.LF.PiTyp (tA, tB), s)) ->
+      let cPsi' = (Int.LF.DDec (cPsi, LF.decSub tA s)) in
+        reconstruct_term cPsi' tM (tB, LF.dot1 s)
 
-  | (Int.LF.Root (Int.LF.Const c, tS), (Int.LF.Atom _ as tP)) ->
+  | (Int.LF.Root (Int.LF.Const c, tS), ((Int.LF.Atom _ as tP), s)) ->
       let tA = (Term.get c).Term.typ in
-        reconstruct_spine cPsi tS tA tP
+        reconstruct_spine cPsi tS (tA, LF.id) (tP, s)
 
-  | (Int.LF.Root (Int.LF.BVar x, tS), (Int.LF.Atom _ as tP)) ->
+  | (Int.LF.Root (Int.LF.BVar x, tS), ((Int.LF.Atom _ as tP), s)) ->
       let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
-        reconstruct_spine cPsi tS tA tP
+        reconstruct_spine cPsi tS (tA, LF.id) (tP, s)
 
-  | (Int.LF.Root (Int.LF.MVar (_u, _s), _tS), (Int.LF.Atom _ as _tP)) ->
+  | (Int.LF.Root (Int.LF.MVar (Int.LF.Offset _u, _s), _tS), ((Int.LF.Atom _ as _tP), _s')) ->
+      (*
+      let (tP', cPhi) = mctxMDec cD u in ((* FIXME cD is implicit here ... *)
+          reconstruct_sub cPsi s cPhi;
+          unifyTyp cPsi (tP, s') (tP', s);
+          reconstruct_spine cPsi tS (tP', s) (tP, s') (* redundant since we assume tS to be Nil *)
+        )
+      *)
       raise NotImplemented
-  (*
-  | (Int.LF.Root (Int.LF.FVar x, s), (Int.LF.Atom _ as p)) ->
-      let tA = type_of_fvar x in
-        reconstruct_spine cPsi s tA p
-  *)
+
+  | (Int.LF.Root (Int.LF.FVar x, tS), ((Int.LF.Atom _ as tP), s)) ->
+      let tA = FVar.get x in (* won't raise Not_found by (invariant?) *)
+        reconstruct_spine cPsi tS (tA, LF.id) (tP, s)
 
   | _ ->
       raise Error (* Error message *)
 
-and reconstruct_spine = function
-  | _ -> raise NotImplemented
+and reconstruct_spine cPsi tS sA sP = match (tS, sA) with
+  | (Int.LF.Nil, (_tP', _s)) ->
+      (* unifyTyp cPsi tP tP' *)
+      raise NotImplemented
 
-and reconstruct_spine_k = function
-  | _ -> raise NotImplemented
+  | (Int.LF.App (tM, tS), (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s)) -> (
+      reconstruct_term  cPsi tM (tA, s);
+      reconstruct_spine cPsi tS (tB, Int.LF.Dot (Int.LF.Obj(tM), s)) sP
+    )
 
+  | _ ->
+      raise Error (* Error message *)
+
+and reconstruct_spine_k cPsi tS sK = match (tS, sK) with
+  | (Int.LF.Nil, (Int.LF.Typ, _s)) ->
+      ()
+
+  | (Int.LF.App (tM, tS), (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s)) -> (
+      reconstruct_term    cPsi tM (tA, s);
+      reconstruct_spine_k cPsi tS (tK, Int.LF.Dot (Int.LF.Obj(tM), s))
+    )
+
+  | _ ->
+      raise Error (* Error message *)
+
+and reconstruct_sub cPsi s cPhi = match (s, cPhi) with
+  | (Int.LF.Shift 0, Int.LF.Null) ->
+      ()
+
+  | (Int.LF.Dot (Int.LF.Head Int.LF.BVar x, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, _tA))) ->
+      let Int.LF.TypDecl (_, _tA') = Context.ctxDec cPsi x in (
+          reconstruct_sub  cPsi s cPhi;
+          (* unifyTyp cPsi (tA', s) (tA, LF.id) *)
+          raise NotImplemented
+        )
+
+  | (Int.LF.Dot (Int.LF.Obj tM, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) -> (
+      reconstruct_sub  cPsi s cPhi;
+      reconstruct_term cPsi tM (tA, s)
+    )
+
+  | _ ->
+      raise Error (* Error message *)
 
 (* PHASE 3 : transform Y to a bunch of implicit Pi's *)
 let rec phase3_kind tK = match tK with

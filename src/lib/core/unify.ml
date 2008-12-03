@@ -2,7 +2,7 @@
 
 (**
    @author Brigitte Pientka
-   modified: Joshua Dunfield
+   code walk with Joshua Dunfield, Dec 3 2008
 *)
 
 
@@ -31,7 +31,7 @@ module type UNIFY = sig
   val instantiateMVar : normal option ref * normal * cnstr list -> unit
   val instantiatePVar : head   option ref * head   * cnstr list -> unit
 
-  val resetAwakenCnstrs : unit -> unit
+  val resetDelayedCnstrs : unit -> unit
   val nextCnstr         : unit -> cnstr option
   val addConstraint     : cnstr list ref * cnstr -> unit
   val solveConstraint   : cnstr -> unit
@@ -60,6 +60,16 @@ struct
 
   exception Unify of string
   exception NotInvertible
+
+  type cvarRef = 
+    | MVarRef of normal option ref
+    | PVarRef of head option ref
+
+
+  let eq_cvarRef cv cv' = match (cv, cv') with
+    | (MVarRef r, MVarRef r') -> r = r'
+    | (PVarRef r, PVarRef r') -> r = r'
+    | ( _ , _ )               -> false
 
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
@@ -91,40 +101,41 @@ struct
     ; T.log globalTrail (Add cnstrs)
 
   let rec solveConstraint ({contents=constrnt} as cnstr) =
-      cnstr := Solved
+      cnstr := Queued
     ; T.log globalTrail (Solve (cnstr, constrnt))
 
-  (* trail the given function *)
+  (* trail a function;
+     if the function raises an exception,
+       backtrack and propagate the exception  *)
   let rec trail f =
-    let _ = mark   ()
-    and r = f      ()
-    and _ = unwind ()
-    in
-      r
-   (* initial success contination used in prune *)
+    let _ = mark   () in 
+      try f () with e -> (unwind (); raise e)
+
+
+   (* initial success continuation used in prune *)
   let idsc = fun () -> ()
   (* ---------------------------------------------------------------------- *)
 
-  let awakenCnstrs : cnstr list ref = ref []
+  let delayedCnstrs : cnstr list ref = ref []
 
-  let rec resetAwakenCnstrs () = awakenCnstrs := []
+  let rec resetDelayedCnstrs () = delayedCnstrs := []
 
-  let rec nextCnstr () = match !awakenCnstrs with
+  let rec nextCnstr () = match !delayedCnstrs with
     | []              -> None
     | cnstr :: cnstrL ->
-        awakenCnstrs := cnstrL
+        delayedCnstrs := cnstrL
       ; Some cnstr
 
   let rec instantiatePVar (q, head, cnstrL) =
       q := Some head
     ; T.log globalTrail (InstHead q)
-    ; awakenCnstrs := cnstrL @ !awakenCnstrs
+    ; delayedCnstrs := cnstrL @ !delayedCnstrs
 
 
   let rec instantiateMVar (u, tM, cnstrL) =
       u := Some tM
     ; T.log globalTrail (InstNormal u)
-    ; awakenCnstrs := cnstrL @ !awakenCnstrs
+    ; delayedCnstrs := cnstrL @ !delayedCnstrs
 
   (* ---------------------------------------------------------------------- *)
   (* Higher-order unification *)
@@ -166,7 +177,7 @@ struct
      *)
 
 
-  (* pruneCtx (phat, (t, Psi1), ss) = (cPsi2, s')
+  (* pruneCtx (phat, (t, Psi1), ss) = (s', cPsi2)
 
      Invariant:
 
@@ -181,8 +192,7 @@ struct
         moreover:  
         [t]s' = t'  s.t. D ; Psi  |- t'  <= Psi2 , 
         and [ss']^-1 (t') = t'' exists 
-        and D ; Psi' |- t'' <= Psi2  
-     
+        and D ; Psi' |- t'' <= Psi2
   *)
   let rec pruneCtx (phat, (t, cPsi1), ss) = match (t, cPsi1) with
     | (Shift _k, Null)
@@ -218,7 +228,7 @@ struct
     if D ; Psi  |- s <= Psi'   
        D ; Psi' |- tM <= tA  (D ; Psi |- tM[s] <= tA[s])
 
-       D ; Psi'' |- ss  <= Psi  and ss = [ss']^-1
+       D ; Psi'' |- ss  <= Psi  and ss = (ss')^-1
        D ; Psi   |- ss' <= Psi''
 
      Effect:
@@ -226,8 +236,8 @@ struct
      Raises NotInvertible if [ss](tM[s]) does not exist
      or rOccurs occurs in tM[s].
 
-     Does NOT prune MVars in tM[s] according to ss; fails
-     instead.
+     Does NOT prune MVars or PVars in tM[s] according to ss; 
+     fails  instead.
   *)
   let rec invNorm (phat, sM, ss, rOccur) =
     invNorm' (phat, Whnf.whnf sM, ss, rOccur)
@@ -239,7 +249,7 @@ struct
     | (Root (MVar (Inst(r, cPsi1, _tP, _cnstrs) as u, t), Nil), s)
         (* by invariant tM is in whnf and meta-variables are lowered; 
            hence tS = Nil and s = id *)
-      -> if rOccur = r
+      -> if eq_cvarRef (MVarRef r) rOccur
          then raise NotInvertible
          else
            let t' = comp t s (* t' = t, since s = Id *) in
@@ -259,14 +269,17 @@ struct
              else (* t' not patsub *)
                Root(MVar(u, invSub (phat, t', ss, rOccur)), Nil)
 
-    | (Root (PVar (PInst (_r, cPsi1, _tA, _cnstrs) as q, t), tS), s)
+    | (Root (PVar (PInst (r, cPsi1, _tA, _cnstrs) as q, t), tS), s)
       (* by invariant tM is in whnf and meta-variables are lowered and s = id *)
-      -> let t' = comp t s (* t' = t, since s = Id *) in
-           (* D ; Psi |- s <= Psi'   D ; Psi' |- t <= Psi1
-              t' =  t o s 
-              D ; Psi |-  t' <= Psi1 *)
-           if isPatSub t'
-           then
+      -> if eq_cvarRef (PVarRef r) rOccur
+         then raise NotInvertible
+         else
+	   let t' = comp t s (* t' = t, since s = Id *) in
+             (* D ; Psi |- s <= Psi'   D ; Psi' |- t <= Psi1
+		t' =  t o s 
+		D ; Psi |-  t' <= Psi1 *)
+             if isPatSub t'
+             then
              let (s', _cPsi2) = pruneCtx (phat, (t', cPsi1), ss) in
                (* D ; Psi' |- t' <= Psi1 and
                   D ; Psi1 |- s' <= Psi2 and 
@@ -281,8 +294,11 @@ struct
               Root ( PVar (q, invSub (phat, t', ss, rOccur))
                    , invSpine (phat, (tS,s), ss, rOccur) )
 
-    | (Root (Proj (PVar (PInst (_r, cPsi1, _tA, _cnstrs) as q, t), i), tS), s)
-      -> let t' = comp t s   (* t' = t, since s = Id *) in
+    | (Root (Proj (PVar (PInst (r, cPsi1, _tA, _cnstrs) as q, t), i), tS), s)
+      ->if eq_cvarRef (PVarRef r) rOccur
+         then raise NotInvertible
+         else 
+	 let t' = comp t s   (* t' = t, since s = Id *) in
             if isPatSub t' then
              let (s', _cPsi2) = pruneCtx (phat, (t', cPsi1), ss) in
                  (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= cPsi1
@@ -345,8 +361,8 @@ struct
     | Shift n when n < offset -> 
         invSub (phat, Dot (Head (BVar (n + 1)), Shift (n + 1)), ss, rOccur)
 
-    | Shift _n                -> comp s ss 
-      (* must be defined -- n = offset ?
+    | Shift n when n = offset -> comp s ss 
+      (* must be defined -- n = offset 
          otherwise it is undefined *)
 
     | Dot (Head(BVar(n)), s') ->
@@ -355,7 +371,7 @@ struct
           | ft    -> Dot (ft, invSub (phat, s', ss, rOccur))
         end
 
-    | Dot (Obj (tM), s')      ->
+    | Dot (Obj tM, s')      ->
         (* below may raise NotInvertible *)
         Dot ( Obj  (invNorm (phat, (tM, id), ss, rOccur))
             , invSub        (phat, s'      , ss, rOccur))
@@ -371,24 +387,23 @@ struct
      and  s' patsub
   *)
   let rec intersection (phat, (subst1, subst2), cPsi') = match (subst1, subst2, cPsi') with
-    | (Dot (Head (BVar k1), s1), Dot (Head (BVar k2), s2), DDec (cPsi', TypDecl (x, tA)))
-      -> if k1 = k2
-         then
-           let (s', cPsi') = intersection (phat, (s1, s2), cPsi') in
-              (* D ; Psi |- s' : Psi'' where Psi'' =< Psi' *)
-           let ss' = invert s' in
-              (* cD ; cPsi'' |- ss' <= cPsi *)
-              (* by assumption:
-                 [s1]tA = [s2]tA = tA'  and cD ; cPsi |- tA' <= type *)
-              (* tA'' = [s']^-1(tA') exists *)
-           let tA'' = TClo (tA, comp s1 ss')
-               (* cD ; cPsi, x:tA' |- s', x/x <= cPsi, x:[s']^-1(tA') *)
-           in
-             (dot1 s', DDec (cPsi', TypDecl(x, tA'')))
-
-         else  (* k1 =/= k2 *)
-           let (s', cPsi') = intersection (phat, (s1, s2), cPsi') in
-             (comp s' shift, cPsi')
+    | (Dot (Head (BVar k1), s1),  Dot (Head (BVar k2), s2),  DDec (cPsi', TypDecl (x, tA)))
+      -> let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
+	(* D ; Psi |- s' : Psi'' where Psi'' =< Psi' *)
+           if k1 = k2
+           then
+	     let ss' = invert s' in
+		(* cD ; cPsi'' |- ss' <= cPsi *)
+		(* by assumption:
+		   [s1]tA = [s2]tA = tA'  and cD ; cPsi |- tA' <= type *)
+		(* tA'' = [(s')^-1]tA' = [s'^-1][s1]tA  exists *)
+	     let tA'' = TClo (tA, comp s1 ss')
+		 (* cD ; cPsi, x:tA' |- x => tA'   tA' = [s'][s'^-1]tA' *)
+		 (* cD ; cPsi, x:tA' |- s', x/x <= cPsi, x:[s'^-1]tA'   *)
+	     in
+               (dot1 s', DDec (cPsi'', TypDecl(x, tA'')))
+           else  (* k1 =/= k2 *)
+             (comp s' shift, cPsi'')
 
     | ((Dot _ as s1), Shift n2, cPsi) ->
         intersection (phat, (s1, Dot (Head (BVar (n2 + 1)), Shift (n2 + 1))), cPsi)
@@ -402,46 +417,49 @@ struct
 
 
 
-  (* prune (phat, (tM, s), ss, rOccur) = tM' 
+  (* prune (phat, (tM, s), ss, rOccur) = tM'  
 
-     If cD ; cPsi  |- s <= cPsi'  and  
-        cD ; cPsi' |- tM <= tA  and phat = hat(cPsi)
-        ss = (ss')^-1 is a pattern substitution where 
+     Given: a success continuation sc
+            cD ; cPsi  |- s <= cPsi'  and  
+            cD ; cPsi' |- tM <= tA    and phat = hat(cPsi)
+            ss = (ss')^-1 is a pattern substitution where 
 
      cD ; cPsi   |- ss' <= cPsi'' 
-     cD ; cPsi'' |- ss  <= cPsi    where  ss = [ss']^-1
-
-     then it returns tM' = [ss]([s]tM) where cD ; cPsi'', cPsi* |- tM' <= tA'
+     cD ; cPsi'' |- ss  <= cPsi    where  ss = (ss')^-1
+     
+     succeeds, returning (tM', sc')
           if 
             - rOccur does not occur in tM
             - there exists a pruning substitution rho s.t. 
-     cD' |- rho <= cD   and [ss']^-1([|rho|]([s]tM)) = tM' exists.
+              cD' |- rho <= cD   and [ss]([|rho|]([s]tM)) = tM' exists.
 
+          where cD' ; [|rho|]cPsi'' |- tM' <= tA'
+            and tA' = [ss]([|rho|]([s]tA)) will exist
 
-       - fails if there is a meta-variables u[t] where t is not a
-       pattern substitution and [ss](t) does not exist 
+         effect 
+         - MVars and PVars in tM are pruned;
 
-       Effect: 
-       - MVars and PVars in tM are pruned;
-       - raises Unify if [ss]([|rho|][s]tM) does not exist, 
-       or rOccur occurs in tM
-       - raises not_invertible meta-variables u[t] where t is not a pattern substitution
-       and [ss] (t) does not exist are delayed and added to the constraints.    
+     can fail:
 
+       - raises Unify if rOccur occurs in tM (occurs check)
+         or [ss]([|rho|][s]tM) does not exist, 
+
+       - raises NotInvertible if there exist meta-variables u[t] where t is not a
+         pattern substitution and [ss](t) does not exist 
   *)
 
-  let rec prune  (phat, sM, ss, rOccur, sc) =
+  let rec prune  (phat, sM, ss, rOccur) =
     let _qq : sub = ss in
-      prune' (phat, Whnf.whnf sM, ss, rOccur, sc)
+      prune' (phat, Whnf.whnf sM, ss, rOccur)
 
-  and prune' ((cvar, offset) as phat, sM, ss, rOccur, sc) = match sM with
+  and prune' ((cvar, offset) as phat, sM, ss, rOccur) = match sM with
     | (Lam (x, tM), s)
-      -> let (tM', sc') = prune ((cvar, offset + 1), (tM, dot1 s), dot1 ss, rOccur, sc) in
-         (Lam (x, tM'), sc')
+      -> let tM' = prune ((cvar, offset + 1), (tM, dot1 s), dot1 ss, rOccur) in
+         Lam (x, tM')
 
     | (Root (MVar (Inst (r, cPsi1, tP, cnstrs) as u, t), Nil) as tM, s (* id *))
       (* by invariant: MVars are lowered since tM is in whnf *)
-      -> if rOccur = r
+      -> if eq_cvarRef (MVarRef r) rOccur 
          then
            raise (Unify "Variable occurrence")
          else
@@ -453,92 +471,92 @@ struct
                  cD ; cPsi1 |- idsub <= cPsi2 and 
                  cD ; cPsi |- t o s o idsub <= cPsi2 *)
              let v = newMVar(cPsi2, TClo(tP, invert idsub))
+	       (* code walk Dec  3, 2008 -bp *)
              in
-               ( tM
-               , fun () ->
-                 (sc ()
-                 ; instantiateMVar (r, Root (MVar (v, idsub), Nil), !cnstrs))
-                  )
+               (instantiateMVar (r, Root (MVar (v, idsub), Nil), !cnstrs) ;
+		Clo(tM, comp s ss)
+               )
             (* [|v[idsub] / u|] *)
-             else (* s not patsub *)
+           else (* s not patsub *)
                (* cD ; cPsi' |- u[t] <= [t]tP, and u::tP[cPsi1]  and cD ; cPsi' |- t <= cPsi1
                   cD ; cPsi  |- s <= cPsi'     and cD ; cPsi''|- ss <= cPsi 
                  s' = [ss]([s]t) and  cD ; cPsi'' |- s' <= cPsi'  *)
                let s' = invSub (phat, comp t s, ss, rOccur) in
-                 (Root (MVar (u, s'), Nil), sc)
-                 (* may raise notInvertible *)
+                 Root (MVar (u, s'), Nil)
+                 (* may raise NotInvertible *)
 
-    | (Root (PVar (PInst (r, cPsi1, tA, cnstrs) as q, t) as h, tS), s (* id *))
-      -> if isPatSub t
-         then
-           let (idsub, cPsi2) = pruneCtx(phat, (comp t s, cPsi1), ss) in
-           (* cD ; cPsi1 |- idsub <= cPsi2 *)
-           let p = newPVar (cPsi2, TClo(tA, invert idsub)) (* p::[idsub]^-1(tA)[cPsi2] *) in
-           let sc1 = fun () -> (sc() ; instantiatePVar (r, PVar (p, idsub), !cnstrs)) in
-           (* [|p[idsub] / q|] *)
-           let (tS', sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc1)
-         in
-           (Root (h, tS'), sc')
-         else (* s not patsub *)
-           let s' = invSub(phat, comp t s, ss, rOccur)
-           and (tS', sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc)
-           in
-             (Root (PVar (q, s'), tS'), sc')
+    | (Root (PVar (PInst (r, cPsi1, tA, cnstrs) as q, t), tS), s (* id *))
+      -> if eq_cvarRef (PVarRef r) rOccur then 
+	  raise (Unify "Parameter variable occurrence")
+	else
+          if isPatSub t
+          then
+            let (idsub, cPsi2) = pruneCtx(phat, (comp t s, cPsi1), ss) in
+              (* cD ; cPsi1 |- idsub <= cPsi2 *)
+            let p = newPVar (cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1]tA)[cPsi2] *) in
+            let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) in
+              (* [|p[idsub] / q|] *)
+            let tS' = pruneSpine (phat, (tS, s), ss, rOccur)
+            (* h = p[[ss] ([t] idsub)] *)
+            in
+              Root (PVar(p, comp ss (comp t idsub)), tS')
+          else (* s not patsub *)
+            let s' = invSub(phat, comp t s, ss, rOccur)
+            and tS' = pruneSpine (phat, (tS, s), ss, rOccur)
+            in
+              Root (PVar (q, s'), tS')
 
 
-    | (Root(Proj(PVar(PInst(r, cPsi1, tA, cnstrs) as q, t), i) as h, tS), s (* id *))
-        -> if isPatSub t
+    | (Root(Proj(PVar(PInst(r, cPsi1, tA, cnstrs) as q, t), i), tS), s (* id *))
+        -> if eq_cvarRef (PVarRef r) rOccur then 
+	  raise (Unify "Parameter variable occurrence")
+ 	else
+	  if isPatSub t
            then
            let (idsub, cPsi2) = pruneCtx(phat, (comp t s, cPsi1), ss) in
               (* cD ; cPsi1 |- idsub <= cPsi2 *)
-           let p = newPVar(cPsi2, TClo(tA, invert idsub)) (* p::([idsub]^-1 tA)[cPsi2] *) in
-            let sc0 =
-              fun () ->
-                sc ()
-                ;  instantiatePVar (r, PVar (p, idsub), !cnstrs)
-            in
-              (* [|p[idsub] / q|] *)
-            let (tS', sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc0)
-            in
-              (Root(h, tS'), sc')
+           let p = newPVar(cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1] tA)[cPsi2] *) in
+           let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) (* [|p[idsub] / q|] *) in
+           let tS' = pruneSpine (phat, (tS, s), ss, rOccur)
+           in
+              Root(PVar(p, comp ss (comp t idsub)), tS')
           else (* s not patsub *)
             let s' = invSub (phat, comp t s, ss, rOccur) in
-            let (tS', sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc)
+            let tS' = pruneSpine (phat, (tS, s), ss, rOccur)
             in
-              (Root (Proj (PVar (q, s'), i), tS'), sc')
+              Root (Proj (PVar (q, s'), i), tS')
 
     | (Root ((*H as*) BVar k, tS), s (* = id *)) ->
         begin match bvarSub k ss with
-          | Undef                -> raise (Unify "Parameter dependency")
+          | Undef                -> raise (Unify "Bound variable dependency")
           | Head (BVar _k as h') ->
-              let (tS',sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc) in
-                (Root (h', tS'), sc')
+              let tS' = pruneSpine (phat, (tS, s), ss, rOccur) in
+                Root (h', tS')
         end
 
     | (Root (Const _ as h, tS), s (* id *)) ->
-        let (tS', sc') = pruneSpine(phat, (tS, s), ss, rOccur, sc) in
-          (Root(h, tS'), sc')
+        let tS' = pruneSpine(phat, (tS, s), ss, rOccur) in
+          Root(h, tS')
 
     | (Root (Proj (BVar k, i), tS), s (* id *)) ->
-        let (tS',sc') = pruneSpine (phat, (tS, s), ss, rOccur, sc) in
+        let tS' = pruneSpine (phat, (tS, s), ss, rOccur) in
           begin match bvarSub k ss with
-            | Head (BVar _k' as h') -> (Root (Proj (h', i), tS'), sc')
-            | _                     -> raise (Unify "Parameter dependency")
+            | Head (BVar _k' as h') -> Root (Proj (h', i), tS')
+            | _                     -> raise (Unify "Bound variable dependency")
           end
 
 
-
-  and pruneSpine (phat, spine, ss, rOccur, sc) = match spine with
-    | (Nil, _s)           -> (Nil , sc)
+  and pruneSpine (phat, spine, ss, rOccur) = match spine with
+    | (Nil, _s)           -> Nil 
 
     | (App (tM, tS), s)   ->
-      let (tM', sc') = prune (phat, (tM, s), ss, rOccur, sc) in
-      let (tS', sc'') = pruneSpine (phat, (tS, s), ss, rOccur, sc')
+      let tM' = prune (phat, (tM, s), ss, rOccur) in
+      let tS' = pruneSpine (phat, (tS, s), ss, rOccur)
       in
-        (App (tM', tS'), sc'')
+        App (tM', tS')
 
     | (SClo (tS, s'), s) ->
-        pruneSpine (phat, (tS, comp s' s), ss, rOccur, sc)
+        pruneSpine (phat, (tS, comp s' s), ss, rOccur)
 
 
   (* Unification: 
@@ -569,11 +587,11 @@ struct
      *)
 
 
-  let rec unify (phat, sN, sM) = unify' (phat, Whnf.whnf sN, Whnf.whnf sM)
+  let rec unifyTerm (phat, sN, sM) = unifyTerm' (phat, Whnf.whnf sN, Whnf.whnf sM)
 
-  and unify' (((psi, offset) as phat), sN, sM) = match (sN, sM) with
+  and unifyTerm' (((psi, offset) as phat), sN, sM) = match (sN, sM) with
     | ((Lam (_x, tN), s1), (Lam (_y, tM), s2))
-      -> unify ((psi, offset + 1), (tN, dot1 s1), (tM, dot1 s2))
+      -> unifyTerm ((psi, offset + 1), (tN, dot1 s1), (tM, dot1 s2))
 
     (* MVar-MVar case *)
     (* remove sM1, sM2 -bp *)
@@ -613,11 +631,10 @@ struct
 	      | (true, _) -> 
 		(* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
                 begin try
-                  let ss1 = invert t1' (* cD ; cPsi1 |- ss1 <= cPsi *) in
-                  let (sM2',sc) = prune (phat, sM2, ss1, r1, idsc) (* sM2 = [ss1][s2]tM2 *)
-                  in
-                    sc ()
-                    ; instantiateMVar (r1, sM2', !cnstrs1)
+                  let ss1  = invert t1' (* cD ; cPsi1 |- ss1 <= cPsi *) in
+                  let sM2' = trail (fun () -> prune (phat, sM2, ss1, MVarRef r1)) in
+		    (* sM2 = [ss1][s2]tM2 *)
+                     instantiateMVar (r1, sM2', !cnstrs1)
 		with
                   | NotInvertible ->
                       addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
@@ -625,10 +642,9 @@ struct
 	      | (false, true) -> 		    
                   begin try
                     let ss2 = invert t2'(* cD ; cPsi2 |- ss2 <= cPsi *) in
-                    let (sM1', sc') = prune (phat, sM1, ss2, r2, idsc)
+                    let sM1' = trail (fun () -> prune (phat, sM1, ss2, MVarRef r2))
                     in
-                      sc' ()
-                      ; instantiateMVar (r2, sM1', !cnstrs2)
+                      instantiateMVar (r2, sM1', !cnstrs2)
                   with
                     | NotInvertible ->
 			addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
@@ -645,10 +661,9 @@ struct
          then
            try 
              let ss = invert t' in
-             let (sM2', sc) = prune (phat, sM2, ss, r, idsc)
+             let sM2' = trail (fun () -> prune (phat, sM2, ss, MVarRef r))
              in
-                 sc ()
-               ; instantiateMVar (r, sM2', !cnstrs)
+               instantiateMVar (r, sM2', !cnstrs)
            with
              | NotInvertible ->
                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
@@ -662,10 +677,9 @@ struct
          then
            try
              let ss = invert t' in
-             let (sM1', sc) = prune (phat, sM1, ss, r, idsc)
+             let sM1' = trail (fun () -> prune (phat, sM1, ss, MVarRef r))
              in
-                 sc ()
-               ; instantiateMVar (r, sM1', !cnstrs)
+               instantiateMVar (r, sM1', !cnstrs)
            with
              | NotInvertible ->
                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
@@ -698,6 +712,10 @@ struct
              | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
              | _               -> raise (Unify "Parameter violation")
          else
+          (* example: q[q[x,y],y] = x  should succeed
+                      q[q[x,y],y] = y  should fail 
+             This will be dealt with when solving constraints.
+           *)
            addConstraint(cnstr, ref (Eqh (phat, h1, BVar k2)))
 
     | (BVar k1, (PVar (PInst (q, _, _, cnstr), s2) as h1))
@@ -736,10 +754,8 @@ struct
 	    | (false , _) ->
               addConstraint (cnstr1, ref (Eqh (phat, head2, head1)))  (*XXX double-check *)
          else
-           (if isPatSub s1' 
-           then 
-             (if isPatSub s2'
-              then             
+           (match (isPatSub s1' , isPatSub s2') with
+	      | (true , true) -> 
                (* no occurs check necessary, because s1' and s2' are pattern subs. *)
                let ss = invert s1' in
                let (s', cPsi') = pruneCtx (phat, (s2', cPsi2), ss) in
@@ -757,29 +773,29 @@ struct
                (  instantiatePVar (q2, PVar(p, s'), !cnstr2) 
                 ; instantiatePVar (q1, PVar(p, comp ss (comp s2' s')), !cnstr1)
                 ) 
-              else
-               (* code walk with Joshua, Dec  2, 2008 -bp *)
-               (* should we do the occurs check for q1? 
-                  example: q[q[x,y],y] = x  should succeed
-                           q[q[x,y],y] = y  should fail *)
-               let s' = invSub (phat, s2', invert s1', ref None) in 
+
+              | (true , false) ->
+	       (* only s1' is a pattern sub 
+                  [(s1)^-1](q2[s2']) = q2[(s1)^-1 s2']
+                *)
+               let s' = invSub (phat, s2', invert s1', PVarRef q1) in 
                instantiatePVar (q1, PVar(q2',s'), !cnstr1)
-             )
-           else
-             if isPatSub s2' 
-             then
-               let s' = invSub (phat, s1', invert s2', ref None) in 
+             
+	      | (false , true) -> 		  
+	       (* only s2' is a pattern sub *)
+               let s' = invSub (phat, s1', invert s2', PVarRef q2) in 
                instantiatePVar (q2, PVar(q1', s'), !cnstr2)
-             else (* neither s1' nor s2' are patsub *)
-               addConstraint (cnstr1, ref (Eqh (phat, head2, head2))))
+
+	      | (false , false) -> 
+		(* neither s1' nor s2' are patsub *)
+               addConstraint (cnstr1, ref (Eqh (phat, head1, head2))))
 
     (* Not Implemented: Cases for projections 
 
             Proj(BVar k, i), Proj(BVar k', i)
             Proj(BVar k, i), Proj(PVar(q, _,_, cnstr), i)
             Proj(PVar(q, _,_, cnstr), i), Proj(BVar k, i)
-
-            *)
+     *)
 
     (* unifySpine (phat, (tS1, s1), (tS2, s2)) = ()
      
@@ -793,6 +809,7 @@ struct
                  s.t. cPsi |- [|theta|] (tS1 [s1]) == [|theta|](tS2 [s2])
             then instantiation is applied as effect, () returned
             else exception Unify is raised
+
        Other effects: MVars may be lowered during whnf,
                       constraints may be added for non-patterns
     *)
@@ -807,41 +824,13 @@ struct
         -> unifySpine (phat, sS, (tS2, comp s2' s2))
 
       | ((App (tM1, tS1), s1), (App (tM2, tS2), s2))
-        ->  unify (phat, (tM1, s1), (tM2, s2))
+        ->  unifyTerm (phat, (tM1, s1), (tM2, s2))
           ; unifySpine (phat, (tS1, s1), (tS2, s2))
       (* Nil/App or App/Nil cannot occur by typing invariants *)
 
 
-    (* Unify pattern fragement, and awake constraints after pattern unification succeeded *)
 
-    let rec unify1 (phat, sM1, sM2) =
-        unify (phat, sM1, sM2)
-      ; awakeCnstr (nextCnstr ())
-
-    and unify1' (phat, sM1, sM2) =
-        unify' (phat, sM1, sM2)
-      ; awakeCnstr (nextCnstr ())       
-
-
-    and awakeCnstr constrnt = match constrnt with
-      | None       -> ()
-      | Some cnstr ->
-          match !cnstr with
-            | Solved               -> awakeCnstr (nextCnstr ())
-            | Eqn (phat, tM1, tM2) ->
-                  solveConstraint cnstr
-                ; unify1 (phat, (tM1, id), (tM2, id))
-            | Eqh (phat, h1, h2)   ->
-                  solveConstraint cnstr
-                ; unifyHead (phat, h1, h2)
-
-    let unify (phat, sM1, sM2) =
-        resetAwakenCnstrs ()
-      ; unify1 (phat, sM1, sM2)
-
-
-    (* does not deal with constraints -bp *)
-    let rec unifyTyp (phat, sA, sB) = unifyTypW (phat, Whnf.whnfTyp sA, Whnf.whnfTyp sB)
+    let rec unifyTyp' (phat, sA, sB) = unifyTypW (phat, Whnf.whnfTyp sA, Whnf.whnfTyp sB)
 
     and unifyTypW (phat, sA, sB) = match (sA, sB) with 
       | ((Atom(a, tS1), s1), (Atom(b, tS2), s2))  -> 
@@ -850,9 +839,38 @@ struct
       else 
         raise (Unify "Type constant clash")
     | ((PiTyp(TypDecl(_x, tA1), tB1), s1), (PiTyp(TypDecl(_y, tA2), tB2), s2)) ->  
-        (unifyTyp (phat, (tA1, s1), (tA2, s2));
-         unifyTyp (phat, (tB1, dot1 s1), (tB2, dot1 s2))
+        (unifyTyp' (phat, (tA1, s1), (tA2, s2));
+         unifyTyp' (phat, (tB1, dot1 s1), (tB2, dot1 s2))
         )
+
+    (* Unify pattern fragment, and force constraints after pattern unification succeeded *)
+
+    let rec unify1 (phat, sM1, sM2) =
+        unifyTerm (phat, sM1, sM2)
+      ; forceCnstr (nextCnstr ())
+
+
+    and forceCnstr constrnt = match constrnt with
+      | None       -> ()   (* all constraints are forced *)
+      | Some cnstr ->
+          match !cnstr with
+            | Queued (* in process elsewhere *) ->  forceCnstr (nextCnstr ())
+            | Eqn (phat, tM1, tM2) ->
+                  solveConstraint cnstr
+                ; unify1 (phat, (tM1, id), (tM2, id))
+            | Eqh (phat, h1, h2)   ->
+                  solveConstraint cnstr
+                ; unifyHead (phat, h1, h2)
+
+    let unify (phat, sM1, sM2) =
+        resetDelayedCnstrs ()
+      ; unify1 (phat, sM1, sM2)
+
+
+     let unifyTyp (phat, sA, sB) = 
+        resetDelayedCnstrs ()
+      ; unifyTyp' (phat, sA, sB)
+
 
 end
 

@@ -121,7 +121,7 @@ module Int : sig
       | CInst  of dctx   option ref * schema
 
     and constrnt =
-      | Solved
+      | Queued
       | Eqn of psi_hat * normal * normal
       | Eqh of psi_hat * head * head
 

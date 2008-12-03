@@ -6,12 +6,7 @@
 *)
 
 (* TO DO:
-   
-   - FV name : tA  should probably be 
-      cPsi |- FV name : tA  
-    
-     (treat free variables as contextual variables)
- 
+  
    - add appropriate case for FV to unify
 
    - Finish collect
@@ -275,19 +270,20 @@ and elTermW cPsi m sA = match (m, sA) with
   | (A.Root (A.FVar x, spine), (I.Atom _ as tP, s)) ->
       try
         let tA = FVar.get x in
+        (* For type reconstruction to succeed, we must have
+            . |- tA <= type 
+           This will be enforced during abstraction *)
         let tS = elSpine cPsi spine (tA, LF.id) (tP, s) in
           I.Root (I.FVar x, tS)
       with Not_found ->
         if patSpine spine then          
           let (tS, tA) = elSpineSynth cPsi spine (tP,s) in
-          (* NOTE: cPsi |- tS : tA <= [s]tP    *)
+          (* For type reconstruction to succeed, we must have
+            . |- tA <= type  and cPsi |- tS : tA <= [s]tP
+            This will be enforced during abstraction. 
+	    *)
           let _        = FVar.add x tA in
-          (* should be: 
-          let _ = FVar.add x tA cPsi            *)
-
             I.Root (I.FVar x, tS) 
-          (* should be:
-             I.Root (I.FVar (x, LF.id), tS)   *)             
         else
           raise NotImplemented 
           (*
@@ -740,12 +736,12 @@ and collectSub cQ phat s = match s with
 and collectHead cQ _phat sH = match sH with
   | (I.BVar _x, _s)  -> cQ
   | (I.Const _c, _s) -> cQ
-(*
-  | (I.FVar name, s)   -> 
-       if exists (eqFVar name) then 
-	 cQ 
-       else
-         let  tA  = FVar.get x in
+(*  | (I.FVar name, s)   -> 
+       if exists (eqFVar name) then  
+	 cQ  
+       else 
+         let  tA  = FVar.get x in 
+         
 	 let cQ' = collectTyp cQ _? tA in  
 	   I.Dec (cQ', FV(name, tA))
 

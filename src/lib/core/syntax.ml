@@ -126,7 +126,7 @@ module Int = struct
           (* D |- Psi : schema   *)
 
     and constrnt =                         (* Constraint                     *)
-      | Solved                             (* constraint ::= solved          *)
+      | Queued                             (* constraint ::= Queued          *)
       | Eqn of psi_hat * normal * normal   (*            | Psi |-(M1 == M2)  *)
       | Eqh of psi_hat * head * head       (*            | Psi |-(H1 == H2)  *)
 

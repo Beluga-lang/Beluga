@@ -46,7 +46,7 @@ module LF = struct
 
 
 
-  (* comp (s1, s2) = s'
+  (* comp s1 s2 = s'
 
      Invariant:
 

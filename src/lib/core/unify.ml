@@ -656,7 +656,7 @@ struct
            addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
 
     (* normal-MVar case *)
-    | ((tM1, _s1) as sM1, ((Root (MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s2) as sM2))
+    | ((_tM1, _s1) as sM1, ((Root (MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s2) as sM2))
       -> let t' = comp t s2 in
          if isPatSub t'
          then
@@ -680,7 +680,6 @@ struct
     | (_sM1, _sM2)
       -> raise (Unify "Expression clash")
 
-(* code walk of unify done up to here Mon Dec  1 17:01:54 2008 -bp  *)
   and unifyHead (phat, head1, head2) = match (head1, head2) with
     | (BVar k1, BVar k2)
       -> if k1 = k2
@@ -716,10 +715,8 @@ struct
            check intersection (s1', s2'); possibly prune;
            check q1 = q2 *)
       -> if q1 = q2 then (* cPsi1 = _cPsi2 *)
-           if isPatSub s1' 
-           then 
-             if isPatSub s2' 
-             then
+	  match (isPatSub s1' ,  isPatSub s2' ) with
+	    | (true , true) -> 
                let (s', cPsi') = intersection (phat, (s1', s2'), cPsi1) in
                    (* if cD ; cPsi |- s1' <= cPsi1 and cD ; cPsi |- s2' <= cPsi1 
                       then cD ; cPsi1 |- s' <= cPsi' *)
@@ -728,22 +725,22 @@ struct
                 let ss' = invert s' in
                   (* cD ; cPsi' |- [s']^-1(tA1) <= type *)
                 let w = newPVar (cPsi', TClo(tA1, ss'))
-                  (* w::[s']^-1(tA1)[cPsi'] in cD'            *)
-                  (* cD' ; cPsi1 |- w[s'] <= [s']([s']^-1 tA1) 
+                  (* w::[s'^-1](tA1)[cPsi'] in cD'            *)
+                  (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tA1) 
                      [|w[s']/u|](u[t]) = [t](w[s'])
                   *)
                 in
                   instantiatePVar (q2, PVar(w, s'), !cnstr2) 
-                ; instantiatePVar (q1, PVar(q2', comp ss' s2'), !cnstr1)
-              else
+	    | (true , false) -> 
                 addConstraint (cnstr2, ref (Eqh (phat, head1, head2))) (*XXX double-check *)
-            else
+	    | (false , _) ->
               addConstraint (cnstr1, ref (Eqh (phat, head2, head1)))  (*XXX double-check *)
          else
            (if isPatSub s1' 
            then 
              (if isPatSub s2'
               then             
+               (* no occurs check necessary, because s1' and s2' are pattern subs. *)
                let ss = invert s1' in
                let (s', cPsi') = pruneCtx (phat, (s2', cPsi2), ss) in
                  (* if   cPsi  |- s2' <= cPsi2  and cPsi1 |- ss <= cPsi
@@ -757,15 +754,14 @@ struct
                     and   cPsi |- [s2'] s' : cPsi' 
                     and   cPsi |- p[[s2'] s'] : [s2'][s'][s'^-1] tA2 
                     and [s2'][s'][s'^-1] tA2  = [s2']tA2 *)
-               (instantiatePVar (q2, PVar(p, s'), !cnstr2) 
-                ; instantiatePVar (q1, PVar(q2', comp ss s2'), !cnstr1)) 
-                 (* this may cause problems, since now we first
-                    compose ([ss]s2') and THEN [[ss]s2']s'. But
-                    [ss]s2' may possibly not exist? *)
+               (  instantiatePVar (q2, PVar(p, s'), !cnstr2) 
+                ; instantiatePVar (q1, PVar(p, comp ss (comp s2' s')), !cnstr1)
+                ) 
               else
-               (* should be do the occurs check for q1? 
+               (* code walk with Joshua, Dec  2, 2008 -bp *)
+               (* should we do the occurs check for q1? 
                   example: q[q[x,y],y] = x  should succeed
-                           q[q[x,y],y] = y  should succeed *)
+                           q[q[x,y],y] = y  should fail *)
                let s' = invSub (phat, s2', invert s1', ref None) in 
                instantiatePVar (q1, PVar(q2',s'), !cnstr1)
              )

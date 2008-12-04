@@ -104,16 +104,6 @@ module Int : sig
       | Obj  of normal
       | Undef
 
-    and msub =                  
-      | MShift of offset           
-      | MDot   of mfront * msub     
-
-    and mfront =
-      | Id   of offset
-      | MObj of psi_hat * normal
-      | PObj of psi_hat * offset
-      | CObj of dctx                      
-
     and cvar =
       | Offset of offset
       | Inst   of normal option ref * dctx * typ * (constrnt ref) list ref
@@ -169,13 +159,22 @@ module Int : sig
 
   module Comp : sig
 
+   type mfront =              
+     | MObj of LF.psi_hat * LF.normal 
+     | PObj of LF.psi_hat * LF.head
+     | CObj of LF.dctx                
+
+   type msub =                            
+     | MShiftZero
+     | MDot   of mfront * msub
+
     type typ =
       | TypBox   of LF.typ * LF.dctx
       | TypSBox  of LF.dctx * LF.dctx
       | TypArr   of typ * typ
       | TypCtxPi of (name * LF.schema) * typ
       | TypPiBox of LF.ctyp_decl * typ
-      | TypClo   of typ * LF.msub
+      | TypClo   of typ * msub
 
 
     and exp_chk =

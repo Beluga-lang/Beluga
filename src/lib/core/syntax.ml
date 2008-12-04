@@ -87,8 +87,7 @@ module Int = struct
       | Proj  of head * int                (*   | #k(x) | #k(p[s])           *)
       | FVar  of name                      (* free variable for type
 					      reconstruction                 *)
-
-
+ 
     and spine =                            (* spine                          *)
       | Nil                                (* S ::= Nil                      *)
       | App  of normal * spine             (*   | M . S                      *)
@@ -104,25 +103,15 @@ module Int = struct
       | Obj  of normal                     (*    | N                         *)
       | Undef                              (*    | _                         *)
 
-    and msub =                             (* Contextual substitutions       *)
-      | MShift of offset                   (* theta ::= ^n                   *)
-      | MDot   of mfront * msub            (*       | MFt . theta            *) 
-
-    and mfront =                           (* Fronts:                        *)
-      | Id   of offset                     (* MFt ::= k                      *)
-      | MObj of psi_hat * normal           (*    | Psihat.N                  *)
-      | PObj of psi_hat * offset           (*    | Psihat.x                  *)
-      | CObj of dctx                       (*    | Psi                       *)
-
     and cvar =                             (* Contextual Variables           *)
       | Offset of offset                   (* Bound Variables                *)
       | Inst   of normal option ref * dctx * typ * cnstr list ref
           (* D ; Psi |- M <= A
              provided constraint *)
-      | PInst  of head   option ref * dctx * typ * cnstr list ref
+      | PInst  of head option ref * dctx * typ * cnstr list ref
           (* D ; Psi |- H => A 
              provided constraint *)
-      | CInst  of dctx   option ref * schema
+      | CInst  of dctx option ref * schema
           (* D |- Psi : schema   *)
 
     and constrnt =                         (* Constraint                     *)
@@ -178,8 +167,17 @@ module Int = struct
   end
 
 
-
   module Comp = struct
+ 
+   type mfront =                          (* Fronts:                        *)
+     | MObj of LF.psi_hat * LF.normal     (* Mft::= Psihat.N                *)
+     | PObj of LF.psi_hat * LF.head       (*    | Psihat.p[s] | Psihat.x    *)
+     | CObj of LF.dctx                    (*    | Psi                       *)
+
+   type msub =                            (* Contextual substitutions       *)
+     | MShiftZero                         (* theta ::= ^0                   *)
+     | MDot   of mfront * msub            (*       | MFt . theta            *) 
+
 
     type typ =
       | TypBox   of LF.typ * LF.dctx
@@ -187,7 +185,7 @@ module Int = struct
       | TypArr   of typ * typ
       | TypCtxPi of (name * LF.schema) * typ
       | TypPiBox of LF.ctyp_decl * typ
-      | TypClo   of typ * LF.msub
+      | TypClo   of typ * msub
 
 
     and exp_chk =

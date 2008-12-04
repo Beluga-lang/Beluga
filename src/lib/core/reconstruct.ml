@@ -643,7 +643,7 @@ let exists p cQ =
     exists' cQ
 
 
-(* eqMVar mV mV' = B
+(* eqMoVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
 let rec eqMVar mV1 mV2 = match (mV1, mV2) with

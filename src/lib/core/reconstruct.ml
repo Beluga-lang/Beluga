@@ -643,7 +643,7 @@ let exists p cQ =
     exists' cQ
 
 
-(* eqEVar mV mV' = B
+(* eqMVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
 let rec eqMVar mV1 mV2 = match (mV1, mV2) with
@@ -651,12 +651,18 @@ let rec eqMVar mV1 mV2 = match (mV1, mV2) with
        r1 = r2
   | ( _ , _ ) -> false
 
-(* eqFVar fV fV' = B
-   where B iff fV and fV' represent same variable
+(* eqFVar n fV' = B
+   where B iff n and fV' represent same variable
 *)
-let rec eqFVar fV1 fV2 = match (fV1, fV2) with
-  | (I.FVar n1 ,  FV (n2, _)) ->  (n1 = n2)
+let rec eqFVar n1 fV2 = match (n1, fV2) with
+  | (n1 ,  FV (n2, _)) ->  (n1 = n2)
   | ( _,  _)  ->  false
+
+
+let rec raiseType cPsi tA = match cPsi with
+  | I.Null -> tA
+  | I.DDec(cPsi', decl) -> 
+      raiseType cPsi' (I.PiTyp(decl, tA))
 
 
 (* collectTerm cQ phat (tM,s) = cQ' 
@@ -733,26 +739,38 @@ and collectSub cQ phat s = match s with
     *)
 
 
-and collectHead cQ _phat sH = match sH with
+and collectHead cQ phat sH = match sH with
   | (I.BVar _x, _s)  -> cQ
   | (I.Const _c, _s) -> cQ
-(*  | (I.FVar name, s)   -> 
-       if exists (eqFVar name) then  
-	 cQ  
-       else 
-         let  tA  = FVar.get x in 
-         
-	 let cQ' = collectTyp cQ _? tA in  
-	   I.Dec (cQ', FV(name, tA))
+  | (I.FVar name, s)   -> 
+      if exists (eqFVar name) cQ then  
+	cQ  
+      else 
+        let  tA  = FVar.get name in 
+        (* tA must be closed *)          
+        (* Since we only use abstraction on pure LF objects,
+	   there are no context variables; different abstraction
+	   is necessary for handling computation-level expressions,
+	   and LF objects which occur in computations. *)
+	let cQ' = collectTyp cQ (None, 0) (tA, LF.id) in  
+	   collectSub (I.Dec (cQ', FV(name, tA))) phat s
 
-  | (I.MVar (r, cPsi, tA, cnstrs), s') as u, s) ->
-    if exists (eqEVar u) K
-    then collectSub cQ phat (LF.comp s' s) 
-    else 
-      let (*  _ = checkEmpty !cnstrs *)
-         cQ' = collectTerm cQ cPsi (tA', ?s) in 
-	collectSub (I.Decl (cQ', MV (u)))) phat (LF.comp s' s)
-*)
+  | (I.MVar (I.Inst(_r, cPsi, tA, _cnstrs), s') as u, s) -> 
+    if exists (eqMVar u) cQ 
+    then collectSub cQ phat (LF.comp s' s)  
+    else  
+         (*  checkEmpty !cnstrs ? -bp *) 
+      (let tA' = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in 
+       let cQ' = collectTyp cQ (None,0) (tA', LF.id) in   
+	collectSub (I.Dec (cQ', MV (u))) phat (LF.comp s' s))
+
+
+
+and collectTyp cQ ((cvar, offset) as phat) sA =  match sA with
+  | (I.Atom (_a, tS), s) -> collectSpine cQ phat (tS, s)
+  | (I.PiTyp(I.TypDecl(_, tA), tB), s) -> 
+      let cQ' = collectTyp cQ phat (tA, s) in
+	collectTyp cQ' (cvar, offset+1) (tB, LF.dot1 s)
 
 
 let rec abstractKind tK = match tK with

@@ -1,0 +1,52 @@
+Coding style for Beluga
+==========
+
+Naming conventions
+----------
+- object are prefixed with a t: tA, tK, tM, ...
+
+- object under a substitution are prefixed with a s: sA, sK, sM, ...
+
+- contexts are prefixed with a c: cPsi, cPhi, ...
+
+- function names follow the CamelCase convention
+
+Lexical conventions
+----------
+- files end with a new line (emacs: require-final-newline)
+
+- tabulations are not used (emacs: indent-tabs-mode)
+
+- files are encoded in unicode, but the code is written in ascii
+
+- indentation follows emacs tuareg mode
+
+- lines length should be limited to 80 characters
+
+Syntactic conventions
+----------
+- if constructs are written with the "then" ending the test line
+
+- code is written in a currified style, a space separating the function from its
+  arguments
+
+- tuples are parenthesize even when not ambiguous
+
+- sequential code is written in the OTBS (One True Brace Style), preferred to
+  using "let _"
+
+- function declaration list all arguments and match on them explicitely
+
+- function cases are separated by a blank line
+
+- '->' are written at the end of lines
+
+- spaces are inserted after commas and around arithmetic operators
+
+Comments
+----------
+- each function must list its invariants
+
+- catching of Ocaml errors must be explained by a comment
+
+- leave revision comments to the revision control system

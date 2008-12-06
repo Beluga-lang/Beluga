@@ -281,7 +281,7 @@ and elTermW cPsi m sA = match (m, sA) with
           (* For type reconstruction to succeed, we must have
             . |- tA <= type  and cPsi |- tS : tA <= [s]tP
             This will be enforced during abstraction. 
-	    *)
+        *)
           let _        = FVar.add x tA in
             I.Root (I.FVar x, tS) 
         else
@@ -523,19 +523,19 @@ and recTermW cPsi sM sA = match (sM, sA) with
       let I.TypDecl (_, tA) = Context.ctxDec cPsi x in
         recSpine cPsi (tS, s') (tA, LF.id) (tP, s)
 
-  | ((I.Root (I.MVar (I.Inst (_r, cPhi, tP', _cnstr), t), _tS), s'), ((I.Atom _ as tP), s)) ->
+  | ((I.Root (I.MVar (I.Inst (_r, cPhi, tP', _cnstr), t), _tS), s'), (I.Atom _ as tP, s)) ->
      (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
      (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
       let s1 = (LF.comp t s') in 
-	(recSub cPsi s1 cPhi;
-	 Unif.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))
-	)               
+        (recSub cPsi s1 cPhi;
+         Unif.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))
+        )               
 
   | ((I.Root (I.FVar x, tS), s'), (I.Atom _ as tP, s)) ->
       (* x is in eta-expanded form and tA is closed 
-	 type of FVar x : A[cPsi'] and FVar x should be 
-	 associated with a substitution, since tA is not always
-	 closed. 
+         type of FVar x : A[cPsi'] and FVar x should be 
+         associated with a substitution, since tA is not always
+         closed. 
  
          by invariant of whnf: s' = id 
       *)
@@ -551,7 +551,7 @@ and recSpineW cPsi sS sA sP = match (sS, sA) with
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
       recTerm  cPsi (tM, s') (tA,s);
-      recSpine cPsi (tS, s') (tB, I.Dot(I.Obj(tM), s)) sP
+      recSpine cPsi (tS, s') (tB, I.Dot (I.Obj tM, s)) sP
     )
 
   (* other case: tS = SClo(tS',s') to be added -bp *)        
@@ -627,17 +627,17 @@ and recSub cPsi s cPhi = match (s, cPhi) with
 *)
 
   type free_var =
-    | MV of I.head			(* Y ::= u[s]   where h = MVar(u, Psi, P, _)
- 				                          and    Psi |- u[s] <= [s]P *)
-    | FV of Id.name * I.typ		(*     | (F, A)                  . |- F <= A *)
+    | MV of I.head          (* Y ::= u[s]   where h = MVar(u, Psi, P, _)
+                               and    Psi |- u[s] <= [s]P *)
+    | FV of Id.name * I.typ (*     | (F, A)                  . |- F <= A *)
 
 
 (* exists p cQ = B
    where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
- *)
+*)
 let exists p cQ =
   let rec exists' cQ = match cQ with 
-    | I.Empty       -> false
+    | I.Empty        -> false
     | I.Dec(cQ', y)  -> p(y) || exists' cQ'
   in
     exists' cQ
@@ -647,22 +647,22 @@ let exists p cQ =
    where B iff mV and mV' represent same variable
 *)
 let rec eqMVar mV1 mV2 = match (mV1, mV2) with
-  | (I.MVar(I.Inst(r1, _, _, _), _s) , MV (I.MVar(I.Inst(r2, _, _, _), _s'))) -> 
+  | (I.MVar (I.Inst (r1, _, _, _), _s) , MV (I.MVar (I.Inst (r2, _, _, _), _s'))) -> 
        r1 = r2
-  | ( _ , _ ) -> false
+  | _ -> false
 
 (* eqFVar n fV' = B
    where B iff n and fV' represent same variable
 *)
 let rec eqFVar n1 fV2 = match (n1, fV2) with
-  | (n1 ,  FV (n2, _)) ->  (n1 = n2)
-  | ( _,  _)  ->  false
+  | (n1 ,  FV (n2, _)) -> (n1 = n2)
+  | _ ->  false
 
 
 let rec raiseType cPsi tA = match cPsi with
   | I.Null -> tA
-  | I.DDec(cPsi', decl) -> 
-      raiseType cPsi' (I.PiTyp(decl, tA))
+  | I.DDec (cPsi', decl) -> 
+      raiseType cPsi' (I.PiTyp (decl, tA))
 
 
 (* collectTerm cQ phat (tM,s) = cQ' 
@@ -687,12 +687,12 @@ let rec raiseType cPsi tA = match cPsi with
 let rec collectTerm cQ phat sM = collectTermW cQ phat (Whnf.whnf sM)
 
 and collectTermW cQ ((cvar, offset) as phat) sM = match sM with
-  | (I.Lam(_x, tM), s) -> 
+  | (I.Lam (_x, tM), s) -> 
       collectTerm cQ (cvar, offset + 1) (tM, LF.dot1 s)
 
-  | (I.Root(h, tS), s) -> 
+  | (I.Root (h, tS), s) -> 
       let cQ' = collectHead cQ phat (h,s) in 
-	collectSpine cQ' phat (tS, s)
+        collectSpine cQ' phat (tS, s)
 
 
 (* collectSpine cQ phat (S, s) = cQ' 
@@ -706,7 +706,7 @@ and collectTermW cQ ((cvar, offset) as phat) sM = match sM with
 and collectSpine cQ phat sS = match sS with 
   | (I.Nil, _) -> cQ
 
-  | (I.SClo(tS, s'), s) ->
+  | (I.SClo (tS, s'), s) ->
     (* need to collect MVars and FVars from s' first? 
        since invariant of collectTerm says so... *)
       collectSpine cQ phat (tS, LF.comp s' s)
@@ -729,48 +729,48 @@ and collectSub cQ phat s = match s with
     let cQ' = collectHead cQ phat (h, LF.id) in 
       collectSub cQ' phat s
 
-  | (I.Dot (I.Obj (tM), s)) ->
+  | (I.Dot (I.Obj tM, s)) ->
     let cQ' = collectTerm cQ phat (tM, LF.id) in 
       collectSub cQ' phat s
 
   (*
   | (I.Dot (I.Undef, s), K) =
           collectSub (G, s, K)
-    *)
+  *)
 
 
 and collectHead cQ phat sH = match sH with
   | (I.BVar _x, _s)  -> cQ
   | (I.Const _c, _s) -> cQ
-  | (I.FVar name, s)   -> 
+  | (I.FVar name, s) ->
       if exists (eqFVar name) cQ then  
-	cQ  
+        cQ
       else 
         let  tA  = FVar.get name in 
         (* tA must be closed *)          
         (* Since we only use abstraction on pure LF objects,
-	   there are no context variables; different abstraction
-	   is necessary for handling computation-level expressions,
-	   and LF objects which occur in computations. *)
-	let cQ' = collectTyp cQ (None, 0) (tA, LF.id) in  
-	   collectSub (I.Dec (cQ', FV(name, tA))) phat s
+           there are no context variables; different abstraction
+           is necessary for handling computation-level expressions,
+           and LF objects which occur in computations. *)
+        let cQ' = collectTyp cQ (None, 0) (tA, LF.id) in  
+          collectSub (I.Dec (cQ', FV (name, tA))) phat s
 
   | (I.MVar (I.Inst(_r, cPsi, tA, _cnstrs), s') as u, s) -> 
-    if exists (eqMVar u) cQ 
-    then collectSub cQ phat (LF.comp s' s)  
-    else  
-         (*  checkEmpty !cnstrs ? -bp *) 
-      (let tA' = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in 
-       let cQ' = collectTyp cQ (None,0) (tA', LF.id) in   
-	collectSub (I.Dec (cQ', MV (u))) phat (LF.comp s' s))
+      if exists (eqMVar u) cQ then
+        collectSub cQ phat (LF.comp s' s)  
+      else  
+        (*  checkEmpty !cnstrs ? -bp *) 
+        let tA' = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in 
+        let cQ' = collectTyp cQ (None,0) (tA', LF.id) in   
+          collectSub (I.Dec (cQ', MV u)) phat (LF.comp s' s)
 
 
 
 and collectTyp cQ ((cvar, offset) as phat) sA =  match sA with
   | (I.Atom (_a, tS), s) -> collectSpine cQ phat (tS, s)
-  | (I.PiTyp(I.TypDecl(_, tA), tB), s) -> 
+  | (I.PiTyp (I.TypDecl (_, tA), tB), s) -> 
       let cQ' = collectTyp cQ phat (tA, s) in
-	collectTyp cQ' (cvar, offset+1) (tB, LF.dot1 s)
+        collectTyp cQ' (cvar, offset + 1) (tB, LF.dot1 s)
 
 
 let rec abstractKind tK = match tK with
@@ -785,6 +785,7 @@ and abstractTyp tA = match tA with
 let rec recSgnDecl d = match d with
   | E.SgnTyp (_, a, extK)   ->
       let apxK     = index_kind (BVar.create ()) extK in
+      let _        = FVar.clear ()
       let tK       = elKind I.Null apxK in
       let _        = recKind I.Null (tK, LF.id) in
       let (tK', i) = abstractKind tK in
@@ -795,9 +796,10 @@ let rec recSgnDecl d = match d with
 
   | E.SgnConst (_, c, extT) ->
       let apxT     = index_typ (BVar.create ()) extT in
+      let _        = FVar.clear ()
       let tA       = elTyp I.Null apxT in
       let _        = recTyp I.Null (tA, LF.id) in
-      let (tA', i)  = abstractTyp tA in
+      let (tA', i) = abstractTyp tA in
         (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in
         I.SgnConst (c', tA')

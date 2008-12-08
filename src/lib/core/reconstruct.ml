@@ -6,7 +6,7 @@
 *)
 
 (* TO DO:
-  
+
    - add appropriate case for FV to unify
 
    - Finish collect
@@ -16,7 +16,7 @@
    - Write phase 2 and phase 3 for abstraction
 
    - Deal with FV which are non-patterns
-  
+
    - Create test cases for type reconstruction
 
    - Code walk for reconstruction
@@ -95,14 +95,14 @@ exception Error of error
 
    Generalization:
       Allow user to write terms which are not eta-expanded.
-      this requires a change in the definition of FVar constructor. 
+      this requires a change in the definition of FVar constructor.
 
-      FVar of name     
+      FVar of name
 
       would need to change to  FVar of name * sub * typ * dctx
-      and may also need information about its type and context in 
-      which it was created;                      
-              
+      and may also need information about its type and context in
+      which it was created;
+
 *)
 let rec index_kind names = function
   | E.Typ _ ->
@@ -172,34 +172,34 @@ and index_spine names = function
 (* ******************************************************************* *)
 (* PHASE 1 : Elaboration and free variables typing                     *)
 
-(* patSpine s = bool 
- 
+(* patSpine s = bool
+
    if cPsi |- s : A <- P  and
-      s is a pattern spine (simple approximate), 
+      s is a pattern spine (simple approximate),
    i.e. it consists of distinct bound variables
-    
+
    then
-      return true; 
+      return true;
       otherwise false.
-     
+
 *)
-let patSpine spine = 
+let patSpine spine =
   let rec patSpine' seen_vars spine = match spine with
     | A.Nil ->
         true
-          
+
     | A.App (A.Root (A.BVar x, A.Nil), spine) ->
         not (List.mem x seen_vars) && patSpine' (x :: seen_vars) spine
-          
+
     | _ ->  false
-  in 
+  in
     patSpine' [] spine
 
-(* elKind  cPsi (k,s) = K 
+(* elKind  cPsi (k,s) = K
 
 *)
-let rec elKind cPsi k = match k with 
-  | A.Typ -> 
+let rec elKind cPsi k = match k with
+  | A.Typ ->
       I.Typ
 
   | A.PiKind (A.TypDecl (x, a), k) ->
@@ -208,22 +208,22 @@ let rec elKind cPsi k = match k with
       let tK    = elKind cPsi' k in
         I.PiKind (I.TypDecl (x, tA), tK)
 
-(* elTyp cPsi a = A 
+(* elTyp cPsi a = A
 
-   Pre-condition: 
+   Pre-condition:
        Upsilon = set of free variables
 
-   if |cPsi| |- a <= type and 
+   if |cPsi| |- a <= type and
       a is in beta-eta normal form
    then
        cPsi   |- A <- type (pre-dependent)
    and A is in beta-eta normal form.
 
-   Effect: 
+   Effect:
        Upsilon' = FV(A)  where Upsilon' is an extension of Upsilon
 
 *)
-and elTyp cPsi a = match a with 
+and elTyp cPsi a = match a with
   | A.Atom (a, s) ->
       let tK = (Typ.get a).Typ.kind in
       let i  = (Typ.get a).Typ.implicit_arguments in
@@ -236,19 +236,19 @@ and elTyp cPsi a = match a with
       let tB    = elTyp cPsi' b in
         I.PiTyp (I.TypDecl (x, tA), tB)
 
-(* elTerm  cPsi m sA = M 
+(* elTerm  cPsi m sA = M
    elTermW cPsi m sA = M  where sA = (A,s) is in whnf
                                 m is in beta-eta normal form.
-   if |cPsi| |- m <= |[s]A'| 
+   if |cPsi| |- m <= |[s]A'|
        cPsi  |- s <= cPsi'
-       cPsi' |- A <- type (pre-dependent)       
-   then 
-       cPsi |- M <- A     (pre-dependent)       
+       cPsi' |- A <- type (pre-dependent)
+   then
+       cPsi |- M <- A     (pre-dependent)
    and M is in beta-eta normal form, i.e.
      all free variables are eta-expanded.
 
 *)
-and elTerm cPsi m sA = elTermW cPsi m (Whnf.whnfTyp sA) 
+and elTerm cPsi m sA = elTermW cPsi m (Whnf.whnfTyp sA)
 
 and elTermW cPsi m sA = match (m, sA) with
   | (A.Lam (x, m), (I.PiTyp (tA, tB), s)) ->
@@ -271,21 +271,21 @@ and elTermW cPsi m sA = match (m, sA) with
       try
         let tA = FVar.get x in
         (* For type reconstruction to succeed, we must have
-           . |- tA <= type 
+           . |- tA <= type
            This will be enforced during abstraction *)
         let tS = elSpine cPsi spine (tA, LF.id) (tP, s) in
           I.Root (I.FVar x, tS)
       with Not_found ->
-        if patSpine spine then          
+        if patSpine spine then
           let (tS, tA) = elSpineSynth cPsi spine (tP,s) in
           (* For type reconstruction to succeed, we must have
              . |- tA <= type  and cPsi |- tS : tA <= [s]tP
-             This will be enforced during abstraction. 
+             This will be enforced during abstraction.
           *)
           let _        = FVar.add x tA in
-            I.Root (I.FVar x, tS) 
+            I.Root (I.FVar x, tS)
         else
-          raise NotImplemented 
+          raise NotImplemented
           (*
             let v = newMVar (cPsi, TClo(tP, s))  in
                (add_delayed (cPsi |- m = v[id])
@@ -297,62 +297,62 @@ and elTermW cPsi m sA = match (m, sA) with
       raise (Error (IllTyped (cPsi, m, sA)))
 
 (* elSpineI  cPsi spine i sA sP  = S
-   elSpineIW cPsi spine i sA sP  = S   
+   elSpineIW cPsi spine i sA sP  = S
 
-     where sA = (A,s) and sP = (P,s') 
+     where sA = (A,s) and sP = (P,s')
        and sA and sP in whnf
- 
-   Pre-condition: 
+
+   Pre-condition:
      U = free variables
      O = meta-variables for implicit arguments
 
    Invariant:
 
-   If O ; U ; cPsi |- spine <- [s]A  (approx)   
+   If O ; U ; cPsi |- spine <- [s]A  (approx)
    then
       O' ; U' ; cPsi |- S <- [s]A : [s']P (pre-dependent)
 
 
-   Post-condition:  
+   Post-condition:
      U' = extension of U containing all free variables of S
      O' = extension of O containing i new meta-variables
               for implicit arguments
 
    Comment: elSpineI will insert new meta-variables (as references)
-     for omitted implicit type arguments; their type is pre-dependent. 
+     for omitted implicit type arguments; their type is pre-dependent.
 *)
-and elSpineI cPsi spine i sA sP = 
+and elSpineI cPsi spine i sA sP =
       elSpineIW cPsi spine i (Whnf.whnfTyp sA) (Whnf.whnfTyp sP)
 
-and elSpineIW cPsi spine i sA sP = 
-  if i = 0 then 
+and elSpineIW cPsi spine i sA sP =
+  if i = 0 then
     elSpine cPsi spine sA sP
   else
-    match sA with 
+    match sA with
       | (I.PiTyp (I.TypDecl (_, tA), tB), s) ->
           let u = Context.newMVar (cPsi, I.TClo (tA, s)) in
-          let h = I.MVar (u, LF.id) in 
+          let h = I.MVar (u, LF.id) in
             elSpineI cPsi spine (i - 1) (tB, I.Dot (I.Head h, s)) sP
 
       (* other cases impossible by (soundness?) of abstraction *)
 
-(* elSpine  cPsi spine sA sP = S 
+(* elSpine  cPsi spine sA sP = S
    elSpineW cPsi spine sA sP = S
-     where sA = (A,s) and sP = (P,s') 
+     where sA = (A,s) and sP = (P,s')
        and sA and sP in whnf
 
-   Pre-condition: 
+   Pre-condition:
      U = free variables
      O = meta-variables for implicit arguments
 
    Invariant:
 
-   If O ; U ; cPsi |- spine <- [s]A  (approx)   
+   If O ; U ; cPsi |- spine <- [s]A  (approx)
    then
       O' ; U' ; cPsi |- S <- [s]A : [s']P (pre-dependent)
 
 
-   Post-condition:  
+   Post-condition:
      U' = extension of U containing all free variables of S
      O' = extension of O containing new meta-variables of S
 
@@ -361,8 +361,8 @@ and elSpine cPsi spine sA sP =
    elSpineW cPsi spine (Whnf.whnfTyp sA) (Whnf.whnfTyp sP)
 
 and elSpineW cPsi spine sA sP = match (spine, sA) with
-  | (A.Nil, (I.Atom (a, _spine), _s)) -> 
-      let (I.Atom (a', _spine'), _s') = sP in 
+  | (A.Nil, (I.Atom (a, _spine), _s)) ->
+      let (I.Atom (a', _spine'), _s') = sP in
         if a = a' then
           I.Nil
         else
@@ -372,7 +372,7 @@ and elSpineW cPsi spine sA sP = match (spine, sA) with
       raise (Error ExpNilNotAtom)
 
   | (A.App (m, spine), (I.PiTyp (I.TypDecl (_, tA), tB), s)) ->
-      let tM = elTerm  cPsi m (tA, s) in 
+      let tM = elTerm  cPsi m (tA, s) in
       let tS = elSpine cPsi spine (tB, I.Dot (I.Obj tM, s)) sP in
         I.App (tM, tS)
 
@@ -380,38 +380,38 @@ and elSpineW cPsi spine sA sP = match (spine, sA) with
       raise (Error ExpAppNotFun)
 
 (* see invariant for elSpineI *)
-and elKSpineI cPsi spine i sK = 
-  if  i = 0 then 
+and elKSpineI cPsi spine i sK =
+  if  i = 0 then
     elKSpine cPsi spine sK
-  else 
-    match sK with 
+  else
+    match sK with
       | (I.PiKind (I.TypDecl (_, tA), tK), s) ->
           let u = Context.newMVar (cPsi, I.TClo (tA, s)) in
-          let h = I.MVar (u, LF.id) in 
+          let h = I.MVar (u, LF.id) in
             elKSpineI cPsi spine (i - 1) (tK, I.Dot (I.Head h, s))
 
       (* other cases impossible by (soundness?) of abstraction *)
 
-     
+
 (* see invariant for elSpine *)
 and elKSpine cPsi spine sK = match (spine, sK) with
-  | (A.Nil, (I.Typ, _s)) -> 
+  | (A.Nil, (I.Typ, _s)) ->
       I.Nil
 
   | (A.Nil, _) ->
       raise (Error KindMisMatch)
 
   | (A.App (m, spine), (I.PiKind (I.TypDecl (_, tA), tK), s)) ->
-      let tM = elTerm   cPsi m (tA, s) in 
+      let tM = elTerm   cPsi m (tA, s) in
       let tS = elKSpine cPsi spine (tK, I.Dot (I.Obj tM, s)) in
         I.App (tM, tS)
 
   | (A.App _, _) ->
       raise (Error ExpAppNotFun)
 
-(* elSpineSynth cPsi spine sP = (S, P') 
+(* elSpineSynth cPsi spine sP = (S, P')
 
-   Pre-condition: 
+   Pre-condition:
      U = free variables
      O = meta-variables for implicit arguments
 
@@ -421,7 +421,7 @@ and elKSpine cPsi spine sK = match (spine, sK) with
       and spine is a pattern spine
 
 
-   Post-condition:  
+   Post-condition:
      U' = extension of U containing all free variables of S
      O' = extension of O containing new meta-variables of S
 
@@ -431,14 +431,14 @@ and elSpineSynth cPsi spine sP = match (spine, sP) with
       (I.Nil, I.TClo (tP, s))
 
   | (A.App (A.Root (A.BVar x, A.Nil), spine), sP) ->
-      let I.TypDecl (_, tA) = Context.ctxDec cPsi x in   
-      let (tS, tB) = elSpineSynth cPsi spine sP in 
+      let I.TypDecl (_, tA) = Context.ctxDec cPsi x in
+      let (tS, tB) = elSpineSynth cPsi spine sP in
       (*  cPsi |- tS : tB <- sP  (pre-dependent) *)
-      (*  show there exists: tB'  s.t [x/y,id(cPsi)]tB' = tB 
-           tB' = [(x/y, id(cPsi))^-1] tB                                 
+      (*  show there exists: tB'  s.t [x/y,id(cPsi)]tB' = tB
+           tB' = [(x/y, id(cPsi))^-1] tB
       *)
-      let s = I.Dot (I.Head (I.BVar x), LF.id) in 
-      (* cPsi       |- s  : cPsi, y:A 
+      let s = I.Dot (I.Head (I.BVar x), LF.id) in
+      (* cPsi       |- s  : cPsi, y:A
          cPsi, y:A  |- s' : cPsi      where s' = (s)^1
 
       *)
@@ -446,9 +446,9 @@ and elSpineSynth cPsi spine sP = match (spine, sP) with
        let tB' = I.TClo (tB, s') in
        (* cPsi, y:A |- tB' <- type (pre-dependent) *)
 
-         (I.App (I.Root (I.BVar x, I.Nil), tS), 
+         (I.App (I.Root (I.BVar x, I.Nil), tS),
           I.PiTyp (I.TypDecl (Id.mk_name None, tA), tB'))
-   
+
    (* other cases impossible *)
 
 (* ******************************************************************* *)
@@ -463,21 +463,21 @@ and elSpineSynth cPsi spine sP = match (spine, sP) with
 
    Invariant:
     If  O ; U ; cPsi |- [s']M <- [s]A (predependent)
-        and there exists a modal substitution r  
+        and there exists a modal substitution r
         s.t. O' |- r <= O
-    then 
+    then
 
-       recTerm cPsi sM sA succeeds and 
+       recTerm cPsi sM sA succeeds and
 
-       O' ; [|r|]U ; [|r|]cPsi |- [|r|][s']M <= [|r|][s]A 
-  
-   Post-condition: 
+       O' ; [|r|]U ; [|r|]cPsi |- [|r|][s']M <= [|r|][s]A
+
+   Post-condition:
 
      U' = [|r|]U
-     O' s.t. O' |- r <= O , and 
+     O' s.t. O' |- r <= O , and
 
-   Effect: 
-     - all meta-variables in O have been destructively updated. 
+   Effect:
+     - all meta-variables in O have been destructively updated.
      - may raise exception Error, if no modal substitution r exists.
 
 Similar invariants and pre- and post-conditions for:
@@ -507,7 +507,7 @@ and recTypW cPsi sA = match sA with
       recTyp (I.DDec (cPsi, LF.decSub adec s)) (tB, LF.dot1 s)
     )
 
-and recTerm cPsi sM sA = 
+and recTerm cPsi sM sA =
   recTermW cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and recTermW cPsi sM sA = match (sM, sA) with
@@ -526,27 +526,27 @@ and recTermW cPsi sM sA = match (sM, sA) with
   | ((I.Root (I.MVar (I.Inst (_r, cPhi, tP', _cnstr), t), _tS), s'), (I.Atom _ as tP, s)) ->
      (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
      (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
-      let s1 = (LF.comp t s') in 
+      let s1 = (LF.comp t s') in
         (recSub cPsi s1 cPhi;
          Unif.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))
-        )               
+        )
 
   | ((I.Root (I.FVar x, tS), s'), (I.Atom _ as tP, s)) ->
-      (* x is in eta-expanded form and tA is closed 
-         type of FVar x : A[cPsi'] and FVar x should be 
+      (* x is in eta-expanded form and tA is closed
+         type of FVar x : A[cPsi'] and FVar x should be
          associated with a substitution, since tA is not always
-         closed. 
- 
-         by invariant of whnf: s' = id 
+         closed.
+
+         by invariant of whnf: s' = id
       *)
-      let tA = FVar.get x in 
+      let tA = FVar.get x in
         recSpine cPsi (tS,s') (tA, LF.id) (tP, s)
 
-and recSpine cPsi sS sA sP = 
-  recSpineW cPsi sS (Whnf.whnfTyp sA) sP 
+and recSpine cPsi sS sA sP =
+  recSpineW cPsi sS (Whnf.whnfTyp sA) sP
 
-and recSpineW cPsi sS sA sP = match (sS, sA) with 
-  | ((I.Nil, _s), (tP', s')) -> 
+and recSpineW cPsi sS sA sP = match (sS, sA) with
+  | ((I.Nil, _s), (tP', s')) ->
       Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
@@ -554,10 +554,10 @@ and recSpineW cPsi sS sA sP = match (sS, sA) with
       recSpine cPsi (tS, s') (tB, I.Dot (I.Obj tM, s)) sP
     )
 
-  (* other case: tS = SClo(tS',s') to be added -bp *)        
+  (* other case: tS = SClo(tS',s') to be added -bp *)
 
-and recKSpine cPsi sS sK = match (sS, sK) with 
-  | ((I.Nil, _s), (I.Typ, _s')) -> 
+and recKSpine cPsi sS sK = match (sS, sK) with
+  | ((I.Nil, _s), (I.Typ, _s')) ->
       ()
 
   | ((I.App (tM, tS), s'), (I.PiKind (I.TypDecl (_,tA), tK), s)) -> (
@@ -598,26 +598,26 @@ and recSub cPsi s cPhi = match (s, cPhi) with
 
   We write {{Q}} for the context of Q, where MVars and FVars have
   been translated to declarations and their occurrences to BVars.
-  We write {{A}}_Q, {{M}}_Q, {{S}}_Q for the corresponding translation 
+  We write {{A}}_Q, {{M}}_Q, {{S}}_Q for the corresponding translation
   of a type, an expression or spine.
 
   Just like contexts Psi, any Q is implicitly assumed to be
   well-formed and in dependency order. ** note that Q may contain
   cyclic dependencies, which need to be detected **
 
-  We write  Q ; Psi ||- M  if all MVars and FVars in M and Psi are 
-  collected in Q. In particular, . ; Psi ||- M means M and Psi contain 
-  no MVars or FVars.  Similarly, for spines . ; Psi ||- S and other 
+  We write  Q ; Psi ||- M  if all MVars and FVars in M and Psi are
+  collected in Q. In particular, . ; Psi ||- M means M and Psi contain
+  no MVars or FVars.  Similarly, for spines . ; Psi ||- S and other
   syntactic categories.
 
   Abstraction proceeds in three phases:
 
    - Collection of all MVars and FVars in M into Q;
-  
-   - Abstraction over all MVars and FVars (which are listed in Q) 
-     and occur in M, will yield a new term M' 
 
-   - 
+   - Abstraction over all MVars and FVars (which are listed in Q)
+     and occur in M, will yield a new term M'
+
+   -
 
  Collection and abstraction raise Error if there are unresolved
   constraints after simplification.
@@ -626,17 +626,17 @@ and recSub cPsi s cPhi = match (s, cPhi) with
 
 *)
 
-  type free_var =
-    | MV of I.head          (* Y ::= u[s]   where h = MVar(u, Psi, P, _)
-                               and    Psi |- u[s] <= [s]P *)
-    | FV of Id.name * I.typ (*     | (F, A)                  . |- F <= A *)
+type free_var =
+  | MV of I.head          (* Y ::= u[s]   where h = MVar(u, Psi, P, _)
+                             and    Psi |- u[s] <= [s]P *)
+  | FV of Id.name * I.typ option (*     | (F, A)                  . |- F <= A *)
 
 
 (* exists p cQ = B
    where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
 *)
 let exists p cQ =
-  let rec exists' cQ = match cQ with 
+  let rec exists' cQ = match cQ with
     | I.Empty        -> false
     | I.Dec(cQ', y)  -> p y || exists' cQ'
   in
@@ -651,7 +651,7 @@ let rec length cQ = match cQ with
    where B iff mV and mV' represent same variable
 *)
 let rec eqMVar mV1 mV2 = match (mV1, mV2) with
-  | (I.MVar (I.Inst (r1, _, _, _), _s) , MV (I.MVar (I.Inst (r2, _, _, _), _s'))) -> 
+  | (I.MVar (I.Inst (r1, _, _, _), _s) , MV (I.MVar (I.Inst (r2, _, _, _), _s'))) ->
        r1 = r2
   | _ -> false
 
@@ -662,10 +662,25 @@ let rec eqFVar n1 fV2 = match (n1, fV2) with
   | (n1 ,  FV (n2, _)) -> (n1 = n2)
   | _ -> false
 
+(* index_of cQ n = i
+   where cQ = cQ1, Y, cQ2 s.t. n = Y and length cQ2 = i
+*)
+let rec index_of cQ n = match (cQ, n) with
+  | (I.Empty, _) ->
+      raise Not_found (* impossible due to invariant on collect *)
+
+  | (I.Dec (cQ', MV u1), MV u2) ->
+      if eqMVar u1 (MV u2) then 0 else (index_of cQ' n) + 1
+
+  | (I.Dec (cQ', FV (f1, _)), FV (f2, tA)) ->
+      if eqFVar f1 (FV (f2, tA)) then 0 else (index_of cQ' n) + 1
+
+  | (I.Dec (cQ', _), _) ->
+      (index_of cQ' n) + 1
 
 let rec raiseType cPsi tA = match cPsi with
   | I.Null -> tA
-  | I.DDec (cPsi', decl) -> 
+  | I.DDec (cPsi', decl) ->
       raiseType cPsi' (I.PiTyp (decl, tA))
 
 let rec raiseKind cPsi tK = match cPsi with
@@ -684,26 +699,26 @@ let rec ctxToDctx cQ = match cQ with
   | I.Empty ->
       I.Null
 
-  | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
-      (* FIXME don't we need to apply s to tA? if so, fix other calls to raiseType too *)
-      I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, raiseType cPsi tA))
+  | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), s))) ->
+      (* TODO confirm that *)
+      I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, raiseType cPsi (I.TClo (tA, s))))
 
-  | I.Dec (cQ', FV (_, tA)) ->
+  | I.Dec (cQ', FV (_, Some tA)) ->
       I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, tA))
 
 
-(* collectTerm cQ phat (tM,s) = cQ' 
-   
+(* collectTerm cQ phat (tM,s) = cQ'
+
    Invariant:
 
-   If  cPsi' |- tM <= tA'   and 
+   If  cPsi' |- tM <= tA'   and
        cPsi  |- s  <= cPsi' and  (tM, s) is ins whnf
                             and   phat = |cPsi|
        No circularities in [s]tM
-       (enforced by extended occurs-check for FVars 
+       (enforced by extended occurs-check for FVars
         in Unify (to be done -bp))
 
-   then cQ' = cQ, cQ'' 
+   then cQ' = cQ, cQ''
         where cQ'' contains all MVars and FVars in tM
             all MVars and FVars in s are already in cQ.
 
@@ -714,50 +729,49 @@ let rec ctxToDctx cQ = match cQ with
 let rec collectTerm cQ phat sM = collectTermW cQ phat (Whnf.whnf sM)
 
 and collectTermW cQ ((cvar, offset) as phat) sM = match sM with
-  | (I.Lam (_x, tM), s) -> 
+  | (I.Lam (_x, tM), s) ->
       collectTerm cQ (cvar, offset + 1) (tM, LF.dot1 s)
 
-  | (I.Root (h, tS), s) -> 
-      let cQ' = collectHead cQ phat (h,s) in 
+  | (I.Root (h, tS), s) ->
+      let cQ' = collectHead cQ phat (h, s) in
         collectSpine cQ' phat (tS, s)
 
+(* collectSpine cQ phat (S, s) = cQ'
 
-(* collectSpine cQ phat (S, s) = cQ' 
-
-   Invariant: 
+   Invariant:
    If    cPsi |- s : cPsi1     cPsi1 |- S : A > P
    then  cQ' = cQ, cQ''
        where cQ'' contains all MVars and FVars in (S, s)
 
 *)
-and collectSpine cQ phat sS = match sS with 
+and collectSpine cQ phat sS = match sS with
   | (I.Nil, _) -> cQ
 
   | (I.SClo (tS, s'), s) ->
-    (* need to collect MVars and FVars from s' first? 
+    (* need to collect MVars and FVars from s' first?
        since invariant of collectTerm says so... *)
       collectSpine cQ phat (tS, LF.comp s' s)
 
   | (I.App (tM, tS), s) ->
-    let cQ' = collectTerm cQ phat (tM, s) in 
+    let cQ' = collectTerm cQ phat (tM, s) in
       collectSpine cQ' phat (tS, s)
 
 
 (* collectSub cQ phat s = cQ'
 
-   Invariant: 
+   Invariant:
    If    cPsi |- s : cPsi1    and phat = |cPsi|
    then  cQ' = cQ, cQ''
    where cQ'' contains all MVars and FVars in s
 *)
-and collectSub cQ phat s = match s with 
-  | (I.Shift _) -> cQ 
-  | (I.Dot (I.Head h, s)) -> 
-    let cQ' = collectHead cQ phat (h, LF.id) in 
+and collectSub cQ phat s = match s with
+  | (I.Shift _) -> cQ
+  | (I.Dot (I.Head h, s)) ->
+    let cQ' = collectHead cQ phat (h, LF.id) in
       collectSub cQ' phat s
 
   | (I.Dot (I.Obj tM, s)) ->
-    let cQ' = collectTerm cQ phat (tM, LF.id) in 
+    let cQ' = collectTerm cQ phat (tM, LF.id) in
       collectSub cQ' phat s
 
   (*
@@ -770,74 +784,165 @@ and collectHead cQ phat sH = match sH with
   | (I.BVar _x, _s)  -> cQ
   | (I.Const _c, _s) -> cQ
   | (I.FVar name, s) ->
-      if exists (eqFVar name) cQ then  
+      if exists (eqFVar name) cQ then
         cQ
-      else 
-        let tA  = FVar.get name in 
-        (* tA must be closed *)          
+      else
+        let tA  = FVar.get name in
+        (* tA must be closed *)
         (* Since we only use abstraction on pure LF objects,
            there are no context variables; different abstraction
            is necessary for handling computation-level expressions,
            and LF objects which occur in computations. *)
-        let cQ' = collectTyp cQ (None, 0) (tA, LF.id) in  
-          collectSub (I.Dec (cQ', FV (name, tA))) phat s
+        let cQ' = collectTyp cQ (None, 0) (tA, LF.id) in
+          collectSub (I.Dec (cQ', FV (name, Some tA))) phat s
 
-  | (I.MVar (I.Inst (_r, cPsi, tA, _cnstrs), s') as u, s) -> 
+  | (I.MVar (I.Inst (_r, cPsi, tA, _cnstrs), s') as u, s) ->
       if exists (eqMVar u) cQ then
-        collectSub cQ phat (LF.comp s' s)  
-      else  
-        (*  checkEmpty !cnstrs ? -bp *) 
-        let tA' = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in 
-        let cQ' = collectTyp cQ (None, 0) (tA', LF.id) in   
+        collectSub cQ phat (LF.comp s' s)
+      else
+        (*  checkEmpty !cnstrs ? -bp *)
+        let tA' = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
+        let cQ' = collectTyp cQ (None, 0) (tA', LF.id) in
           collectSub (I.Dec (cQ', MV u)) phat (LF.comp s' s)
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
-  | (I.Atom (_a, tS), s) -> 
+  | (I.Atom (_a, tS), s) ->
       collectSpine cQ phat (tS, s)
 
-  | (I.PiTyp (I.TypDecl (_, tA), tB), s) -> 
+  | (I.PiTyp (I.TypDecl (_, tA), tB), s) ->
       let cQ' = collectTyp cQ phat (tA, s) in
         collectTyp cQ' (cvar, offset + 1) (tB, LF.dot1 s)
 
 and collectKind cQ ((cvar, offset) as phat) sK = match sK with
-  | (I.Typ, _s) -> 
+  | (I.Typ, _s) ->
       cQ
 
-  | (I.PiKind (I.TypDecl (_, tA), tK), s) -> 
+  | (I.PiKind (I.TypDecl (_, tA), tK), s) ->
       let cQ' = collectTyp cQ phat (tA, s) in
         collectKind cQ' (cvar, offset + 1) (tK, LF.dot1 s)
 
-(* phase4Typ cQ tA
+(* phase4Kind cQ offset tK = tK'
 
-   assumes no cycle
+   where tK' is tK with all occurences of FVar and MVar have been replaced by
+   BVar and indexed according to their order in cQ and the base offset
 
-   - traverse cQ and tA
-     - replace FVars by BVars (index according to cQ)
-     - replace MVars by BVars (index according to cQ) and (unroll the substitution as a spine ??)
+   assumes there are no cycles
 *)
+let rec phase4Kind cQ offset tK = match tK with
+  | I.Typ -> I.Typ
 
-let rec phase4Kind _cQ _tK = 
-  raise NotImplemented
+  | I.PiKind (I.TypDecl (x, tA), tK) ->
+      I.PiKind (I.TypDecl (x, phase4Typ cQ offset tA), phase4Kind cQ (offset + 1) tK)
 
-let rec phase4Typ _cQ _tK = 
-  raise NotImplemented
+and phase4Typ cQ offset tA = match tA with
+  | I.Atom (a, tS) ->
+      I.Atom (a, phase4Spine cQ offset tS)
+
+  | I.PiTyp (I.TypDecl (x, tA), tB) ->
+      I.PiTyp (I.TypDecl (x, phase4Typ cQ offset tA), phase4Typ cQ (offset + 1) tB)
+
+  (* what about I.TClo ? *)
+
+and phase4Term cQ offset tM = match tM with
+  | I.Lam (x, tM) ->
+      I.Lam (x, phase4Term cQ (offset + 1) tM)
+
+  | I.Root (tH, tS) ->
+      I.Root (phase4Head cQ offset tH, phase4Spine cQ offset tS)
+
+  (* what about I.Clo ? *)
+
+and phase4Head cQ offset tH = match tH with
+  | I.BVar x ->
+      I.BVar x
+
+  | I.Const c ->
+      I.Const c
+
+  | I.MVar (_u, _s) ->
+      (*
+        I.BVar ((index_of cQ (MV tH)) + offset)
+        unroll s as a spine
+      *)
+      raise NotImplemented
+
+  | I.FVar n ->
+      I.BVar ((index_of cQ (FV (n, None))) + offset)
+
+  | I.AnnH (_tH, _tA) ->
+      raise NotImplemented
+
+  (* other cases impossible for object level *)
+
+and phase4Spine cQ offset tS = match tS with
+  | I.Nil ->
+      I.Nil
+
+  | I.App (tM, tS) ->
+      I.App (phase4Term cQ offset tM, phase4Spine cQ offset tS)
+
+  (* what about I.SClo ? *)
+
+and phase4Ctx cQ = match cQ with
+  | I.Empty ->
+      I.Empty
+
+  | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
+      let cQ'   = phase4Ctx cQ in
+      let cPsi' = phase4Dctx cQ cPsi in
+      let tA'   = phase4Typ cQ (length cPsi) tA in
+      let s'    = phase4Sub cQ (length cPsi) s in
+      let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
+        I.Dec (cQ', MV u')
+
+  | I.Dec (cQ, FV (f, Some tA)) ->
+      let cQ' = phase4Ctx cQ in
+      let tA' = phase4Typ cQ' 0 tA in
+        I.Dec (cQ', FV (f, Some tA'))
+
+and phase4Dctx cQ cPsi = match cPsi with
+  | I.Null ->
+      I.Null
+
+  | I.DDec (cPsi, I.TypDecl (x, tA)) ->
+      let cPsi' = phase4Dctx cQ cPsi in
+      let tA'   = phase4Typ cQ (length cPsi) tA in
+        I.DDec (cPsi', I.TypDecl (x, tA'))
+
+  (* other cases impossible in LF layer *)
+
+and phase4Sub cQ offset s = match s with
+  | I.Shift _ ->
+      s
+
+  | I.Dot (I.Head tH, s) ->
+      I.Dot (I.Head (phase4Head cQ offset tH), phase4Sub cQ offset s)
+
+  | I.Dot (I.Obj tM, s) ->
+      I.Dot (I.Obj (phase4Term cQ offset tM), phase4Sub cQ offset s)
+
+  (* what about I.Dot (I.Undef, s) ? *)
+
+  (* SVar impossible in LF layer *)
 
 (* wrapper function *)
-let rec abstractKind tK =
+let abstractKind tK =
   (* what is the purpose of phat? *)
-  let cQ         = collectKind I.Empty (None, 0) (tK, LF.id) in (* TODO confirm that *)
-  let (cQ', tK') = phase4Kind cQ tK in
-  let cQ''       = ctxToDctx cQ' in
+  let cQ    = collectKind I.Empty (None, 0) (tK, LF.id) in (* TODO confirm that *)
+  let cQ'   = phase4Ctx cQ in
+  let tK'   = phase4Kind cQ' 0 tK in
+  let cQ''  = ctxToDctx cQ' in
     (raiseKind cQ'' tK', length cQ'')
 
 and abstractTyp tA =
-  let cQ         = collectTyp I.Empty (None, 0) (tA, LF.id) in (* TODO confirm that *)
-  let (cQ', tA') = phase4Typ cQ tA in
-  let cQ''       = ctxToDctx cQ' in
+  let cQ   = collectTyp I.Empty (None, 0) (tA, LF.id) in (* TODO confirm that *)
+  let cQ'  = phase4Ctx cQ in
+  let tA'  = phase4Typ cQ' 0 tA in
+  let cQ'' = ctxToDctx cQ' in
     (raiseType cQ'' tA', length cQ'')
 
 
-let rec recSgnDecl d = match d with
+let recSgnDecl d = match d with
   | E.SgnTyp (_, a, extK)   ->
       let apxK     = index_kind (BVar.create ()) extK in
       let _        = FVar.clear () in

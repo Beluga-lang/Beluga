@@ -39,9 +39,27 @@ module Ext = struct
       | Nil
       | App of Loc.t * normal * spine
 
+    and prag =
+      | PragUnifyTerm of
+            unify_decl list
+          * normal
+          * normal
+      | PragUnifyTyp of
+            unify_decl list
+          * typ
+          * typ
+
+    and unify_decl =
+      | UnifyTermDecl of name          * typ
+      | UnifyTermDefn of name * normal * typ
+      | UnifyTypeDecl of name          * kind
+      | UnifyTypeDefn of name * typ    * kind
+
     type sgn_decl =
-      | SgnTyp   of Loc.t * name * kind
-      | SgnConst of Loc.t * name * typ
+      | SgnComment of Loc.t * string
+      | SgnConst   of Loc.t * name * typ
+      | SgnPragma  of Loc.t * prag
+      | SgnTyp     of Loc.t * name * kind
 
   end
 

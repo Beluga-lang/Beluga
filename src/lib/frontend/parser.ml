@@ -67,6 +67,36 @@ GLOBAL: p_sgn_eoi;
            | Kind k -> Ext.LF.SgnTyp   (_loc, Id.mk_name (Some a_or_c), k)
            | Typ  a -> Ext.LF.SgnConst (_loc, Id.mk_name (Some a_or_c), a)
          end
+      |
+        "{-#"; "UNIFY_TERM"; "["; decls = LIST0 p_unify_decl SEP "," ;"]"; tm1 = p_full_term; "=?="; tm2 = p_full_term; "#-}"
+      -> Ext.LF.SgnPragma (_loc, Ext.LF.PragUnifyTerm (decls, tm1, tm2))
+      |
+        "{-#"; "UNIFY_TYPE"; "["; decls = LIST0 p_unify_decl SEP "," ;"]"; tp1 = p_full_typ; "=?="; tp2 = p_full_typ; "#-}"
+      -> Ext.LF.SgnPragma (_loc, Ext.LF.PragUnifyTyp (decls, tp1, tp2))
+      ]
+    ]
+  ;
+
+  p_unify_decl:
+    [
+      [
+         "term"; "|"; x = SYMBOL; ":"; a = p_full_typ
+      -> Ext.LF.UnifyTermDecl (Id.mk_name (Some x), a)
+      |
+         "term"; "|"; x = SYMBOL; "="; tm = p_full_term; ":"; a = p_full_typ
+      -> Ext.LF.UnifyTermDefn (Id.mk_name (Some x), tm, a)
+      |
+         "type"; "|"; x = SYMBOL; ":"; k = p_kind_or_typ
+      -> begin match k with
+           | Kind k ->
+               Ext.LF.UnifyTypeDecl (Id.mk_name (Some x), k)
+         end
+      |
+         "type"; "|"; x = SYMBOL; "="; tp = p_full_typ; ":"; k = p_kind_or_typ
+      -> begin match k with
+           | Kind k ->
+               Ext.LF.UnifyTypeDefn (Id.mk_name (Some x), tp, k)
+         end
       ]
     ]
   ;

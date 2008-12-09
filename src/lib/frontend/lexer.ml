@@ -59,6 +59,8 @@ let rec lex_token loc = lexer
   | "Π"              -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | "λ"              -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | "type"           -> mk_tok_of_lexeme mk_keyword loc lexbuf
+  | "{-#"            -> mk_tok_of_lexeme mk_keyword loc lexbuf
+  | "#-}"            -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | [ "%(),.:[]{}" ] -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | eof              -> mk_tok           Token.EOI  loc lexbuf
   | start_sym sym*   -> mk_tok_of_lexeme mk_symbol  loc lexbuf

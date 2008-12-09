@@ -132,15 +132,17 @@ module Ext = struct
     (*******************************************)
 
     let rec fmt_ppr_sgn_decl lvl ppf = function
+      | SgnConst (_, c, a) ->
+          fprintf ppf "%s : %a.@.@?"
+            (R.render_name    c)
+            (fmt_ppr_typ lvl) a
+
       | SgnTyp (_, a, k)   ->
           fprintf ppf "%s : %a.@.@?"
             (R.render_name     a)
             (fmt_ppr_kind lvl) k
 
-      | SgnConst (_, c, a) ->
-          fprintf ppf "%s : %a.@.@?"
-            (R.render_name    c)
-            (fmt_ppr_typ lvl) a
+      | _ -> fprintf ppf ""
 
 
 

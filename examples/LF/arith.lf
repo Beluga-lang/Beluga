@@ -2,10 +2,26 @@ nat : type.
 z : nat.
 s : nat -> nat.
 
+{-# UNIFY_TERM
+
+    [ term | N       : nat
+    , term | M = s z : nat ]
+
+    s M =?= s (s N)
+#-}
+
 nt : nat -> type.		
 nt_z : nt z.
 nt_s : {X:nat}nt X -> nt (s X).
 
+{-# UNIFY_TYPE
+
+    [ term | N             : nat
+    , type | E1 = nt N     : type
+    , type | E2 = nt (s z) : type ]
+
+    E1 =?= E2
+#-}
 
 plus : nat -> nat -> nat -> type.	
 p_z : {Y:nat}plus z Y Y.

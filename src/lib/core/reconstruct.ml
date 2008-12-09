@@ -643,15 +643,17 @@ let exists p cQ =
     exists' cQ
 
 (* TODO move to context.ml *)
+(* why are there is there no case for ctx variable -bp *)
+(* should be 'a ctx *)
 let rec length cQ = match cQ with
   | I.Null         -> 0
   | I.DDec (cQ, _) -> 1 + length cQ
 
-(* eqMoVar mV mV' = B
+(* eqMVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
 let rec eqMVar mV1 mV2 = match (mV1, mV2) with
-  | (I.MVar (I.Inst (r1, _, _, _), _s) , MV (I.MVar (I.Inst (r2, _, _, _), _s'))) ->
+  | (I.MVar (I.Inst (r1, _, _, _), _s) , MV (I.MVar (I.Inst (r2, _, _, _), _s'))) -> 
        r1 = r2
   | _ -> false
 
@@ -821,38 +823,38 @@ and collectKind cQ ((cvar, offset) as phat) sK = match sK with
       let cQ' = collectTyp cQ phat (tA, s) in
         collectKind cQ' (cvar, offset + 1) (tK, LF.dot1 s)
 
-(* phase4Kind cQ offset tK = tK'
+(* abstractKind cQ offset tK = tK'
 
    where tK' is tK with all occurences of FVar and MVar have been replaced by
    BVar and indexed according to their order in cQ and the base offset
 
    assumes there are no cycles
 *)
-let rec phase4Kind cQ offset tK = match tK with
+let rec abstractKind cQ offset tK = match tK with
   | I.Typ -> I.Typ
 
   | I.PiKind (I.TypDecl (x, tA), tK) ->
-      I.PiKind (I.TypDecl (x, phase4Typ cQ offset tA), phase4Kind cQ (offset + 1) tK)
+      I.PiKind (I.TypDecl (x, abstractTyp cQ offset tA), abstractKind cQ (offset + 1) tK)
 
-and phase4Typ cQ offset tA = match tA with
+and abstractTyp cQ offset tA = match tA with
   | I.Atom (a, tS) ->
-      I.Atom (a, phase4Spine cQ offset tS)
+      I.Atom (a, abstractSpine cQ offset tS)
 
   | I.PiTyp (I.TypDecl (x, tA), tB) ->
-      I.PiTyp (I.TypDecl (x, phase4Typ cQ offset tA), phase4Typ cQ (offset + 1) tB)
+      I.PiTyp (I.TypDecl (x, abstractTyp cQ offset tA), abstractTyp cQ (offset + 1) tB)
 
   (* what about I.TClo ? *)
 
-and phase4Term cQ offset tM = match tM with
+and abstractTerm cQ offset tM = match tM with
   | I.Lam (x, tM) ->
-      I.Lam (x, phase4Term cQ (offset + 1) tM)
+      I.Lam (x, abstractTerm cQ (offset + 1) tM)
 
   | I.Root (tH, tS) ->
-      I.Root (phase4Head cQ offset tH, phase4Spine cQ offset tS)
+      I.Root (abstractHead cQ offset tH, abstractSpine cQ offset tS)
 
   (* what about I.Clo ? *)
 
-and phase4Head cQ offset tH = match tH with
+and abstractHead cQ offset tH = match tH with
   | I.BVar x ->
       I.BVar x
 
@@ -874,70 +876,70 @@ and phase4Head cQ offset tH = match tH with
 
   (* other cases impossible for object level *)
 
-and phase4Spine cQ offset tS = match tS with
+and abstractSpine cQ offset tS = match tS with
   | I.Nil ->
       I.Nil
 
   | I.App (tM, tS) ->
-      I.App (phase4Term cQ offset tM, phase4Spine cQ offset tS)
+      I.App (abstractTerm cQ offset tM, abstractSpine cQ offset tS)
 
   (* what about I.SClo ? *)
 
-and phase4Ctx cQ = match cQ with
+and abstractCtx cQ = match cQ with
   | I.Empty ->
       I.Empty
 
   | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
-      let cQ'   = phase4Ctx cQ in
-      let cPsi' = phase4Dctx cQ cPsi in
-      let tA'   = phase4Typ cQ (length cPsi) tA in
-      let s'    = phase4Sub cQ (length cPsi) s in
+      let cQ'   = abstractCtx cQ in
+      let cPsi' = abstractDctx cQ cPsi in
+      let tA'   = abstractTyp cQ (length cPsi) tA in
+      let s'    = abstractSub cQ (length cPsi) s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV u')
 
   | I.Dec (cQ, FV (f, Some tA)) ->
-      let cQ' = phase4Ctx cQ in
-      let tA' = phase4Typ cQ' 0 tA in
+      let cQ' = abstractCtx cQ in
+      let tA' = abstractTyp cQ' 0 tA in
         I.Dec (cQ', FV (f, Some tA'))
 
-and phase4Dctx cQ cPsi = match cPsi with
+and abstractDctx cQ cPsi = match cPsi with
   | I.Null ->
       I.Null
 
   | I.DDec (cPsi, I.TypDecl (x, tA)) ->
-      let cPsi' = phase4Dctx cQ cPsi in
-      let tA'   = phase4Typ cQ (length cPsi) tA in
+      let cPsi' = abstractDctx cQ cPsi in
+      let tA'   = abstractTyp cQ (length cPsi) tA in
         I.DDec (cPsi', I.TypDecl (x, tA'))
 
   (* other cases impossible in LF layer *)
 
-and phase4Sub cQ offset s = match s with
+and abstractSub cQ offset s = match s with
   | I.Shift _ ->
       s
 
   | I.Dot (I.Head tH, s) ->
-      I.Dot (I.Head (phase4Head cQ offset tH), phase4Sub cQ offset s)
+      I.Dot (I.Head (abstractHead cQ offset tH), abstractSub cQ offset s)
 
   | I.Dot (I.Obj tM, s) ->
-      I.Dot (I.Obj (phase4Term cQ offset tM), phase4Sub cQ offset s)
+      I.Dot (I.Obj (abstractTerm cQ offset tM), abstractSub cQ offset s)
 
   (* what about I.Dot (I.Undef, s) ? *)
 
   (* SVar impossible in LF layer *)
 
 (* wrapper function *)
-let abstractKind tK =
+let abstrKind tK =
   (* what is the purpose of phat? *)
   let cQ    = collectKind I.Empty (None, 0) (tK, LF.id) in (* TODO confirm that *)
-  let cQ'   = phase4Ctx cQ in
-  let tK'   = phase4Kind cQ' 0 tK in
+  let cQ'   = abstractCtx cQ in
+  let tK'   = abstractKind cQ' 0 tK in
   let cQ''  = ctxToDctx cQ' in
     (raiseKind cQ'' tK', length cQ'')
 
-and abstractTyp tA =
+and abstrTyp tA =
   let cQ   = collectTyp I.Empty (None, 0) (tA, LF.id) in (* TODO confirm that *)
-  let cQ'  = phase4Ctx cQ in
-  let tA'  = phase4Typ cQ' 0 tA in
+  let cQ'  = abstractCtx cQ in
+  let tA'  = abstractTyp cQ' 0 tA in
   let cQ'' = ctxToDctx cQ' in
     (raiseType cQ'' tA', length cQ'')
 
@@ -948,7 +950,7 @@ let recSgnDecl d = match d with
       let _        = FVar.clear () in
       let tK       = elKind I.Null apxK in
       let _        = recKind I.Null (tK, LF.id) in
-      let (tK', i) = abstractKind tK in
+      let (tK', i) = abstrKind tK in
       let a'       = Typ.add (Typ.mk_entry a tK' i) in
         (* why does Term.add return a' ? -bp *)
         (* because (a : name) and (a' : cid_typ) *)
@@ -959,7 +961,7 @@ let recSgnDecl d = match d with
       let _        = FVar.clear () in
       let tA       = elTyp I.Null apxT in
       let _        = recTyp I.Null (tA, LF.id) in
-      let (tA', i) = abstractTyp tA in
+      let (tA', i) = abstrTyp tA in
         (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in
         I.SgnConst (c', tA')

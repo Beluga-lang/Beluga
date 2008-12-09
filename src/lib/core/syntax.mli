@@ -146,7 +146,7 @@ module Int : sig
       | Dec of 'a ctx * 'a
 
     and sch_elem =
-      | SchElem of typ ctx * sigma_decl
+      | SchElem of typ_decl ctx * sigma_decl
 
     and schema =
       | Schema of sch_elem list

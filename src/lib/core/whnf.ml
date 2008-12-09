@@ -579,7 +579,7 @@ and lowerMVar = function
 
 
 
-    (* convCtx cPsi cPsi' = true iff
+    (* convDCtx cPsi cPsi' = true iff
        cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx       
      *)
     let rec convDCtx cPsi cPsi' = match (cPsi, cPsi') with
@@ -600,6 +600,18 @@ and lowerMVar = function
 
       | (_, _)
         -> false
+
+
+    (* convCtx cPsi cPsi' = true iff
+       cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx       
+     *)
+    let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
+      | (Empty, Empty)
+        -> true
+
+      | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)))
+        ->   convTyp (tA, LF.id) (tB, LF.id)
+          && convCtx cPsi1 cPsi2
 
 
     (* convHatCtx((psiOpt, l), cPsi) = true iff |cPsi| = |Psihat|

@@ -151,7 +151,7 @@ module Int = struct
                                            (* | C, x:'a                      *)
 
     and sch_elem =                         (* Schema Element                 *)
-      | SchElem of typ ctx * sigma_decl    (* Pi    x1:A1 ... xn:An. 
+      | SchElem of typ_decl ctx * sigma_decl  (* Pi    x1:A1 ... xn:An. 
                                               Sigma y1:B1 ... yk:Bk. B       *)
                                            (* Sigma-types not allowed in Ai  *)
 

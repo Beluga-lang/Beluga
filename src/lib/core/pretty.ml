@@ -316,13 +316,15 @@ module Int = struct
 
     val fmt_ppr_normal   : lvl -> formatter -> normal   -> unit
 
-    val fmt_ppr_head     :        formatter -> head     -> unit
+    val fmt_ppr_head     : lvl -> formatter -> head     -> unit
 
     val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
 
-    val fmt_ppr_sub      :        formatter -> sub      -> unit
+    val fmt_ppr_sub      : lvl -> formatter -> sub      -> unit
 
     val fmt_ppr_front    : lvl -> formatter -> front    -> unit
+
+    val fmt_ppr_cvar     : lvl -> formatter -> cvar     -> unit
 
 
 
@@ -346,6 +348,8 @@ module Int = struct
 
     val ppr_front    : front    -> unit
 
+    val ppr_cvar     : cvar     -> unit
+
   end
 
 
@@ -355,6 +359,16 @@ module Int = struct
   (******************************************)
 
   module Make = functor (R : CID_RENDERER) -> struct
+
+    module InstHashedType = struct
+      type t    = normal option ref
+      let equal = (==)
+      let hash  = Hashtbl.hash
+    end
+
+    module InstHashtbl = Hashtbl.Make (InstHashedType)
+
+    let inst_hashtbl : string InstHashtbl.t = InstHashtbl.create 0
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
@@ -423,19 +437,19 @@ module Int = struct
 
       | Root (h, Nil) ->
           fprintf ppf "%a"
-            fmt_ppr_head h
+            (fmt_ppr_head lvl) h
 
       | Root (h, ms)  ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a%a%s"
               (l_paren_if cond)
-              fmt_ppr_head     h
-              (fmt_ppr_spine 2) ms
+              (fmt_ppr_head lvl) h
+              (fmt_ppr_spine 2)  ms
               (r_paren_if cond)
 
 
 
-    and fmt_ppr_head ppf = function
+    and fmt_ppr_head lvl ppf = function
       | BVar x  ->
           fprintf ppf "%s"
             (R.render_offset x)
@@ -443,6 +457,11 @@ module Int = struct
       | Const c ->
           fprintf ppf "%s"
             (R.render_cid_term c)
+
+      | MVar (c, s) ->
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_cvar lvl) c
+            (fmt_ppr_sub  lvl) s
 
 
 
@@ -452,40 +471,41 @@ module Int = struct
 
       | App (m, ms)  ->
           fprintf ppf " %a%a"
-            (fmt_ppr_normal  lvl) m
-            (fmt_ppr_spine lvl) ms
+            (fmt_ppr_normal lvl) m
+            (fmt_ppr_spine  lvl) ms
 
       | SClo (ms, s) ->
           let cond = lvl > 1 in
           fprintf ppf "%sSClo (%a, %a)%s"
             (l_paren_if cond)
             (fmt_ppr_spine 0) ms
-            fmt_ppr_sub       s
+            (fmt_ppr_sub lvl) s
             (r_paren_if cond)
 
 
 
     (* FIXME *)
-    and fmt_ppr_sub ppf = function
+    and fmt_ppr_sub lvl ppf = function
       | Shift n     ->
           fprintf ppf "^%s"
             (R.render_offset n)
 
       (* Not sure how to print a cvar.  -dwm *)
-      | SVar (_, s) ->
-          fprintf ppf "cvar[%a]"
-            fmt_ppr_sub s
+      | SVar (c, s) ->
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_cvar lvl) c
+            (fmt_ppr_sub  lvl) s
 
       | Dot (f, s)  ->
           fprintf ppf "%a@ .@ %a"
             (fmt_ppr_front 1) f
-            fmt_ppr_sub       s
+            (fmt_ppr_sub lvl) s
 
 
     and fmt_ppr_front lvl ppf = function
       | Head h ->
           fprintf ppf "%a"
-            fmt_ppr_head h
+            (fmt_ppr_head lvl) h
 
       | Obj m  ->
           fprintf ppf "%a"
@@ -494,6 +514,27 @@ module Int = struct
       | Undef  ->
           fprintf ppf "_"
 
+    and fmt_ppr_cvar lvl ppf = function
+      | Offset n ->
+          fprintf ppf "%s"
+            (R.render_offset n)
+
+      | Inst ({ contents = None } as u, _, _, _) ->
+          begin
+            try
+              fprintf ppf "%s"
+                (InstHashtbl.find inst_hashtbl u)
+            with
+              | Not_found ->
+                  (* Should probably create a sep. generator for this -dwm *)
+                  let sym = String.uppercase (Gensym.VarData.gensym ()) in
+                      InstHashtbl.replace inst_hashtbl u sym
+                    ; fprintf ppf "%s" sym
+          end
+
+      | Inst ({ contents = Some tM }, _, _, _) ->
+          fprintf ppf "%a"
+            (fmt_ppr_normal lvl) tM
 
     (***************************)
     (* Regular Pretty Printers *)
@@ -505,15 +546,17 @@ module Int = struct
 
     let ppr_type     = fmt_ppr_typ      std_lvl std_formatter
 
-    let ppr_normal   = fmt_ppr_normal     std_lvl std_formatter
+    let ppr_normal   = fmt_ppr_normal   std_lvl std_formatter
 
-    let ppr_head     = fmt_ppr_head             std_formatter
+    let ppr_head     = fmt_ppr_head     std_lvl std_formatter
 
     let ppr_spine    = fmt_ppr_spine    std_lvl std_formatter
 
-    let ppr_sub      = fmt_ppr_sub              std_formatter
+    let ppr_sub      = fmt_ppr_sub      std_lvl std_formatter
 
     let ppr_front    = fmt_ppr_front    std_lvl std_formatter
+
+    let ppr_cvar     = fmt_ppr_cvar     std_lvl std_formatter
 
   end
 
@@ -646,10 +689,10 @@ module Error = struct
               (* The 2 is for precedence.  Treat printing
                  below as if it were similar to an application context as
                  far as precedence is concerned -dwm *)
-              (IP.fmt_ppr_typ 0) tA1
-               IP.fmt_ppr_sub    s1
-              (IP.fmt_ppr_typ 0) tA2
-               IP.fmt_ppr_sub    s2
+              (IP.fmt_ppr_typ 0)       tA1
+              (IP.fmt_ppr_sub std_lvl) s1
+              (IP.fmt_ppr_typ 0)       tA2
+              (IP.fmt_ppr_sub std_lvl) s2
 
         | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) -> 
             fprintf ppf

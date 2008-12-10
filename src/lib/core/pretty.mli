@@ -133,13 +133,15 @@ module Int : sig
 
     val fmt_ppr_normal   : lvl -> formatter -> normal   -> unit
 
-    val fmt_ppr_head     :        formatter -> head     -> unit
+    val fmt_ppr_head     : lvl -> formatter -> head     -> unit
 
     val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
 
-    val fmt_ppr_sub      :        formatter -> sub      -> unit
+    val fmt_ppr_sub      : lvl -> formatter -> sub      -> unit
 
     val fmt_ppr_front    : lvl -> formatter -> front    -> unit
+
+    val fmt_ppr_cvar     : lvl -> formatter -> cvar     -> unit
 
 
 
@@ -162,6 +164,8 @@ module Int : sig
     val ppr_sub      : sub      -> unit
 
     val ppr_front    : front    -> unit
+
+    val ppr_cvar     : cvar     -> unit
 
   end
 

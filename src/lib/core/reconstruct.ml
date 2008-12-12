@@ -962,8 +962,8 @@ let recSgnDecl d = match d with
   | E.SgnConst (_, c, extT) ->
       let apxT     = index_typ (BVar.create ()) extT in
       let _        = FVar.clear () in
-      let _        = fprintf std_formatter "Reconstruction for constant : %s \n" 
-                             c.string_of_name in 
+      let _        = Printf.printf "Reconstruction for constant : %s \n" c.string_of_name
+                   ; flush stdout in 
       let tA       = elTyp I.Null apxT in
       let _        = recTyp I.Null (tA, LF.id) in
       let (tA', i) = abstrTyp tA in

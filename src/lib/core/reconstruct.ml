@@ -549,8 +549,9 @@ and recSpine cPsi sS sA sP =
 
 and recSpineW cPsi sS sA sP = match (sS, sA) with
   | ((I.Nil, _s), (tP', s')) ->
-      (fprintf std_formatter "Reconstruction : Call unify  ##\n" ; 
-       Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s')))
+        Printf.printf "Reconstruction : Call unify  ##\n"
+      ; flush stdout
+      ; Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
       recTerm  cPsi (tM, s') (tA,s);
@@ -950,9 +951,8 @@ let recSgnDecl d = match d with
   | E.SgnTyp (_, a, extK)   ->
       let apxK     = index_kind (BVar.create ()) extK in
       let _        = FVar.clear () in
-      (* let _        = Printf.printf  "Reconstruction for constant : %s \n" 
-                             a.string_of_name in  *)
-      (* let _ = print_newline () in *)
+      let _        = Printf.printf "Reconstruction for constant : %s \n" a.string_of_name
+                   ; flush stdout in
       let tK       = elKind I.Null apxK in
       let _        = recKind I.Null (tK, LF.id) in
       let (tK', i) = abstrKind tK in

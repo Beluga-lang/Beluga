@@ -545,9 +545,7 @@ and recSpine cPsi sS sA sP =
 
 and recSpineW cPsi sS sA sP = match (sS, sA) with
   | ((I.Nil, _s), (tP', s')) ->
-        Printf.printf "Reconstruction : Call unify  ##\n"
-      ; flush stdout
-      ; Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))
+      Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
       recTerm  cPsi (tM, s') (tA,s);
@@ -893,7 +891,7 @@ and abstractCtx cQ = match cQ with
   | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractCtx cQ in
       let cPsi' = abstractDctx cQ cPsi in
-(*      let ( *)
+(*      let  (_, depth)  = dctxToHat cPsi in  *)
       let tA'   = abstractTyp cQ (length cPsi) tA in
       let s'    = abstractSub cQ (length cPsi) s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
@@ -939,7 +937,8 @@ let abstrKind tK =
     (raiseKind cQ'' tK', length cQ'')
 
 and abstrTyp tA =
-  let cQ   = collectTyp I.Empty (None, 0) (tA, LF.id) in (* TODO confirm that *)
+  let empty_phat = (None, 0) in
+  let cQ   = collectTyp I.Empty  empty_phat (tA, LF.id) in (* TODO confirm that *)
   let cQ'  = abstractCtx cQ in
   let tA'  = abstractTyp cQ' 0 tA in
   let cQ'' = ctxToDctx cQ' in

@@ -49,13 +49,14 @@ let main () =
               ; print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl decls
 
               ; fprintf ppf "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
+              ; fprintf ppf "\n## Type Reconstruction ##\n"
               ; let internal_decls = List.map Reconstruct.recSgnDecl decls in
                     print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl internal_decls
                   ; try
-                        fprintf ppf "\n## Begin Checking ##"
+                        fprintf ppf "\n## Double Checking ##"
                       ; print_newline ()
                       ; Check.check_sgn_decls internal_decls
-                      ; fprintf ppf "\n## Checking Successful! ##\n\n"
+                      ; fprintf ppf "\n## Double Checking Successful! ##\n\n"
                       (* clean up for the next file *)
                       ; Store.clear ()
                       ; errors

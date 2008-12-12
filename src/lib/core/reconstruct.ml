@@ -29,6 +29,8 @@ open Syntax
 open Substitution
 open Id
 
+open Format
+
 module Apx = struct
 
   module LF = struct
@@ -547,14 +549,16 @@ and recSpine cPsi sS sA sP =
 
 and recSpineW cPsi sS sA sP = match (sS, sA) with
   | ((I.Nil, _s), (tP', s')) ->
-      Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))
+      (fprintf std_formatter "Reconstruction : Call unify  ##\n" ; 
+       Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s')))
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
       recTerm  cPsi (tM, s') (tA,s);
       recSpine cPsi (tS, s') (tB, I.Dot (I.Obj tM, s)) sP
     )
+  | ((I.SClo (tS, s), s'), sA) -> 
+      recSpine cPsi (tS, LF.comp s s') sA sP
 
-  (* other case: tS = SClo(tS',s') to be added -bp *)
 
 and recKSpine cPsi sS sK = match (sS, sK) with
   | ((I.Nil, _s), (I.Typ, _s')) ->
@@ -564,19 +568,17 @@ and recKSpine cPsi sS sK = match (sS, sK) with
       recTerm   cPsi (tM, s') (tA,s);
       recKSpine cPsi (tS, s') (tK, I.Dot (I.Obj tM, s))
     )
-
-  (* other case: tS = SClo(tS',s') to be added -bp *)
-
+  | ((I.SClo(tS, s),  s'), sK) -> 
+      recKSpine cPsi (tS, LF.comp s s') sK
 
 and recSub cPsi s cPhi = match (s, cPhi) with
   | (I.Shift _n, _cPhi) ->
       ()
 
-  | (I.Dot (I.Head I.BVar x, s), I.DDec (cPhi, I.TypDecl (_, _tA))) ->
-      let I.TypDecl (_, _tA') = Context.ctxDec cPsi x in (
+  | (I.Dot (I.Head I.BVar x, s), I.DDec (cPhi, I.TypDecl (_, tA))) ->
+      let I.TypDecl (_, tA') = Context.ctxDec cPsi x in (
           recSub  cPsi s cPhi;
-          (* unifyTyp cPsi (tA', s) (tA, LF.id) *)
-          raise NotImplemented
+          Unif.unifyTyp (Context.dctxToHat cPsi, (tA', s), (tA, LF.id))
         )
 
   | (I.Dot (I.Obj tM, s), I.DDec (cPhi, I.TypDecl (_, tA))) -> (
@@ -948,6 +950,9 @@ let recSgnDecl d = match d with
   | E.SgnTyp (_, a, extK)   ->
       let apxK     = index_kind (BVar.create ()) extK in
       let _        = FVar.clear () in
+      (* let _        = Printf.printf  "Reconstruction for constant : %s \n" 
+                             a.string_of_name in  *)
+      (* let _ = print_newline () in *)
       let tK       = elKind I.Null apxK in
       let _        = recKind I.Null (tK, LF.id) in
       let (tK', i) = abstrKind tK in
@@ -959,6 +964,8 @@ let recSgnDecl d = match d with
   | E.SgnConst (_, c, extT) ->
       let apxT     = index_typ (BVar.create ()) extT in
       let _        = FVar.clear () in
+      let _        = fprintf std_formatter "Reconstruction for constant : %s \n" 
+                             c.string_of_name in 
       let tA       = elTyp I.Null apxT in
       let _        = recTyp I.Null (tA, LF.id) in
       let (tA', i) = abstrTyp tA in

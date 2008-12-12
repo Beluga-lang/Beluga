@@ -9,14 +9,10 @@
 
    - add appropriate case for FV to unify
 
-   - Finish collect
-
-   - Finish recSub
-
-   - Write phase 2 and phase 3 for abstraction
-
    - Deal with FV which are non-patterns
 
+   - Write cycle detection 
+   
    - Create test cases for type reconstruction
 
    - Code walk for reconstruction
@@ -645,11 +641,13 @@ let exists p cQ =
     exists' cQ
 
 (* TODO move to context.ml *)
-(* why are there is there no case for ctx variable -bp *)
+(* length cPsi = |cPsi|    
+ 
+ *)
 (* should be 'a ctx *)
-let rec length cQ = match cQ with
+let rec length cPsi = match cPsi with
   | I.Null         -> 0
-  | I.DDec (cQ, _) -> 1 + length cQ
+  | I.DDec (cPsi, _) -> 1 + length cPsi
 
 (* eqMVar mV mV' = B
    where B iff mV and mV' represent same variable
@@ -894,6 +892,7 @@ and abstractCtx cQ = match cQ with
   | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractCtx cQ in
       let cPsi' = abstractDctx cQ cPsi in
+(*      let ( *)
       let tA'   = abstractTyp cQ (length cPsi) tA in
       let s'    = abstractSub cQ (length cPsi) s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in

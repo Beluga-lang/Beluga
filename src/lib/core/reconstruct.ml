@@ -547,6 +547,7 @@ and recSpine cPsi sS sA sP =
 
 and recSpineW cPsi sS sA sP = match (sS, sA) with
   | ((I.Nil, _s), (tP', s')) ->
+
       Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
@@ -554,7 +555,9 @@ and recSpineW cPsi sS sA sP = match (sS, sA) with
       recSpine cPsi (tS, s') (tB, I.Dot (I.Obj tM, s)) sP
     )
 
-  (* other case: tS = SClo(tS',s') to be added -bp *)
+  (* other case: sS = SClo(tS',s') to be added -bp *)
+  | ((I.SClo (tS, s'), s), sA) ->
+      recSpine cPsi (tS, LF.comp s' s) sA sP
 
 and recKSpine cPsi sS sK = match (sS, sK) with
   | ((I.Nil, _s), (I.Typ, _s')) ->
@@ -565,8 +568,9 @@ and recKSpine cPsi sS sK = match (sS, sK) with
       recKSpine cPsi (tS, s') (tK, I.Dot (I.Obj tM, s))
     )
 
-  (* other case: tS = SClo(tS',s') to be added -bp *)
-
+  (* other case: sS = SClo(tS',s') to be added -bp *)
+  | ((I.SClo (tS, s'), s), sK) ->
+      recKSpine cPsi (tS, LF.comp s' s) sK
 
 and recSub cPsi s cPhi = match (s, cPhi) with
   | (I.Shift _n, _cPhi) ->

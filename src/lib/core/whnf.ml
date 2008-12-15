@@ -194,7 +194,7 @@ and lowerMVar = function
   and reduce sM spine = match (sM, spine) with
     | ((Root (_, _) as root, s), Nil)    -> norm (root, s)
     | ((Lam (_y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
-    | ((Clo (tM, s'), s), tS)            -> reduce (tM , LF.comp s' s)       tS
+    | ((Clo (tM, s'), s), tS)            -> reduce (tM , LF.comp s' s) tS
     (* other cases are impossible *)
 
 
@@ -206,13 +206,13 @@ and lowerMVar = function
      then
         tA' = [sigma]tA
         cD ; G' |- tA' <= type   and tA' is in normal form
-   *)
+  *)
   and normTyp (tA, sigma) = match tA with
     |  Atom (a, tS)
       -> Atom (a, normSpine (tS, sigma))
 
     |  PiTyp (TypDecl (_x, _tA) as decl, tB)
-      -> PiTyp (normDecl (decl, sigma),  normTyp (tB, LF.dot1 sigma))
+      -> PiTyp (normDecl (decl, sigma), normTyp (tB, LF.dot1 sigma))
 
     |  TClo (tA, s)
       -> normTyp (tA, LF.comp s sigma)
@@ -235,8 +235,7 @@ and lowerMVar = function
    We assume that the LF term tM does not contain any closures 
    MClo (tN,t), TMClo(tA, t), SMClo(tS, t); this means we must
    first call contextual normalization (or whnf) and then call 
-   ordinary normalization, if these two substitutions interact.
-         
+   ordinary normalization, if these two substitutions interact.   
 *)
   (* 
     whnf(tM,s) = (tN,s')
@@ -267,104 +266,101 @@ and lowerMVar = function
         end
 
     (* Meta-variable *)
-    |  (Root (MVar (Offset _k as u, r), tS), sigma)
-      -> (Root (MVar (u, LF.comp sigma r), SClo (tS, sigma)), LF.id)
+    | (Root (MVar (Offset _k as u, r), tS), sigma) ->
+        (Root (MVar (u, LF.comp sigma r), SClo (tS, sigma)), LF.id)
 
-    | (Root (MVar (Inst ({ contents = Some tM }, _    , _ , _     ) as _u, r), tS)      , sigma)
-       (* constraints associated with u must be in solved form *)
-      -> whnfRedex (whnf (tM, r), (tS, sigma))
+    | (Root (MVar (Inst ({contents = Some tM}, _, _, _) as _u, r), tS), sigma) ->
+        (* constraints associated with u must be in solved form *)
+        whnfRedex (whnf (tM, r), (tS, sigma))
 
-    | (Root (MVar (Inst ({ contents = None    }, _cPsi, tA, _cnstr) as u , r), tS) as tM, sigma)
+    | (Root (MVar (Inst ({contents = None}, _cPsi, tA, _cnstr) as u, r), tS) as tM, sigma) ->
       (* note: we could split this case based on tA; 
               this would avoid possibly building closures with id *)
-      -> let rec expose (tA, s) = match tA with
-           | Atom (a, tS)                ->
-               Atom (a, SClo (tS, s))
+        let rec expose (tA, s) = match tA with
+          | Atom (a, tS)                ->
+              Atom (a, SClo (tS, s))
 
-           | PiTyp (TypDecl (x, tA), tB) ->
-               PiTyp (TypDecl (x, TClo (tA, s)), TClo (tB, LF.dot1 s))
+          | PiTyp (TypDecl (x, tA), tB) ->
+              PiTyp (TypDecl (x, TClo (tA, s)), TClo (tB, LF.dot1 s))
 
-            | TClo (tA, s')               ->
-               expose (tA, LF.comp s' s)
-         in
-           begin match expose (tA, LF.id) with
-             | Atom _       ->
-               (* meta-variable is of atomic type; tS = Nil *)
-                 (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+          | TClo (tA, s')               ->
+              expose (tA, LF.comp s' s)
+        in
+          begin match expose (tA, LF.id) with
+            | Atom _ ->
+                (* meta-variable is of atomic type; tS = Nil *)
+                (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
-             | PiTyp (_, _) ->
-               (* Meta-variable is not atomic and tA = Pi x:B1.B2 
-                  lower u, and normalize the lowered meta-variable
-                  note: we may expose and compose substitutions twice. *)
+            | PiTyp _ ->
+                (* Meta-variable is not atomic and tA = Pi x:B1.B2 
+                   lower u, and normalize the lowered meta-variable
+                   note: we may expose and compose substitutions twice. *)
                 let _ = lowerMVar u in
                   whnf (tM, sigma)
-         end
-
+          end
 
     (* Parameter variable *)
-    | (Root (PVar (Offset _k as p, r), tS), sigma)
-      -> (Root (PVar (p, LF.comp sigma r), SClo (tS, sigma)), LF.id)
+    | (Root (PVar (Offset _k as p, r), tS), sigma) ->
+        (Root (PVar (p, LF.comp sigma r), SClo (tS, sigma)), LF.id)
 
-    | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma)
-      ->
+    | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma) ->
         begin match LF.bvarSub i r with
           | Obj tM    -> whnfRedex (whnf (tM, LF.id), (tS, sigma))
           | Head head -> (Root (head, SClo (tS, sigma)), LF.id)
         end
 
-    | (Root (PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS), sigma)
-      -> whnf (Root (PVar (q, LF.comp r' r), tS), sigma)
-
+    | (Root (PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _) as _p, r), tS), sigma) ->
+        whnf (Root (PVar (q, LF.comp r' r), tS), sigma)
 
     (* Constant *)
-    | (Root (Const c, tS), sigma)
-      -> (Root (Const c, SClo (tS, sigma)), LF.id)
-
+    | (Root (Const c, tS), sigma) ->
+        (Root (Const c, SClo (tS, sigma)), LF.id)
 
     (* Projections *)
-    | (Root (Proj (BVar i, k), tS), sigma)
-      -> begin match LF.bvarSub i sigma with
-           | Head (BVar j)      -> (Root (Proj (BVar j, k)     , SClo (tS, sigma)), LF.id)
-           | Head (PVar (q, s)) -> (Root (Proj (PVar (q, s), k), SClo (tS, sigma)), LF.id)
+    | (Root (Proj (BVar i, k), tS), sigma) ->
+        begin match LF.bvarSub i sigma with
+          | Head (BVar j)      -> (Root (Proj (BVar j, k)     , SClo (tS, sigma)), LF.id)
+          | Head (PVar (q, s)) -> (Root (Proj (PVar (q, s), k), SClo (tS, sigma)), LF.id)
           (* other cases are impossible -- at least for now -bp *)
-         end
+        end
 
+    | (Root (Proj (PVar (Offset _ as q, s), k), tS), sigma) ->
+        (Root (Proj (PVar (q, LF.comp s sigma), k), SClo (tS, sigma)), LF.id)
 
-    | (Root (Proj (PVar (Offset _ as q, s), k), tS), sigma)
-      -> (Root (Proj (PVar (q, LF.comp s sigma), k), SClo (tS, sigma)), LF.id)
+    | (Root (Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _) as _q, s), k), tS), sigma) ->
+        whnf (Root (Proj (PVar (q', LF.comp r' s), k), tS), sigma)
 
-    | (Root (Proj (PVar (PInst ({ contents = Some (PVar (q', r'))}, _, _, _) as _q, s), k), tS), sigma)
-      -> whnf (Root (Proj (PVar (q', LF.comp r' s), k), tS), sigma)
+    (* free variables *)
+    | (Root (FVar x, tS), sigma) ->
+        (Root (FVar x, SClo (tS, sigma)), LF.id)
 
 
 
   (* whnfRedex((tM,s1), (tS, s2)) = (R,s')
  
-     If cD ; Psi1 |- tM <= tA      and cD ; cPsi |- s1 <= Psi1
+     If cD ; Psi1 |- tM <= tA       and cD ; cPsi |- s1 <= Psi1
         cD ; Psi2 |- tS > tA <= tP  and cD ; cPsi |- s2 <= Psi2
-    then
+     then
         cD ; cPsi |- s' : cPsi'    and cD ; cPsi' |- R' -> tP'   
 
         [s']tP' = [s2]tP and [s']R' = tM[s1] @ tS[s2] 
 
-   *)
-    and whnfRedex (sM, sS) = match (sM, sS) with
-      | ((Root (_, _) as root, s1), (Nil, _s2))
-        -> whnf (root, s1)
+  *)
+  and whnfRedex (sM, sS) = match (sM, sS) with
+    | ((Root (_, _) as root, s1), (Nil, _s2)) ->
+        whnf (root, s1)
 
-      | ((Lam (_x, tM), s1), (App (tN, tS), s2))
-        ->  let tN' = Clo (    tN , s2) in    (* cD ; cPsi |- tN'      <= tA' *)
-            let s1' = Dot (Obj tN', s1)       (* cD ; cPsi |- tN' . s1 <= Psi1, x:tA''
-                                                 tA'' = [s1]tA' *)
-            in
-              whnfRedex ((tM, s1'), (tS, s2))
+    | ((Lam (_x, tM), s1), (App (tN, tS), s2)) ->
+        let tN' = Clo (    tN , s2) in  (* cD ; cPsi |- tN'      <= tA' *)
+        let s1' = Dot (Obj tN', s1) in  (* cD ; cPsi |- tN' . s1 <= Psi1, x:tA''
+                                           tA'' = [s1]tA' *)
+          whnfRedex ((tM, s1'), (tS, s2))
 
-      | (sM, (SClo (tS, s2'), s2))
-        -> whnfRedex (sM, (tS, LF.comp s2' s2))
+    | (sM, (SClo (tS, s2'), s2)) ->
+        whnfRedex (sM, (tS, LF.comp s2' s2))
 
-      | ((Clo (tM, s), s1), sS)
-        -> whnfRedex ((tM, LF.comp s s1), sS)
-
+    | ((Clo (tM, s), s1), sS) ->
+        whnfRedex ((tM, LF.comp s s1), sS)
 
 
     (* whnfTyp (tA, sigma) = tA'
@@ -376,12 +372,10 @@ and lowerMVar = function
           cD ; cPsi' |- tA' <= type   and tA' is in weak head normal form
 
      *)
-    and whnfTyp (tA, sigma) = match tA with
-      | Atom (a, tS)     -> (Atom (a, SClo (tS, sigma)), LF.id)
-      | PiTyp (_cD, _tB) -> (tA, sigma)
-      | TClo (tA, s)     -> whnfTyp (tA, LF.comp s sigma)
-
-
+  and whnfTyp (tA, sigma) = match tA with
+    | Atom (a, tS)     -> (Atom (a, SClo (tS, sigma)), LF.id)
+    | PiTyp (_cD, _tB) -> (tA, sigma)
+    | TClo (tA, s)     -> whnfTyp (tA, LF.comp s sigma)
 
   (* ----------------------------------------------------------- *)
     (* makePatSub s = Some(s') if s is convertible to a patSub

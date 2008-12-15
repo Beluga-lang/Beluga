@@ -5,18 +5,17 @@
    @author Brigitte Pientka
 *)
 
-(* TO DO:
+(* TODO:
 
    - add appropriate case for FV to unify
-
    - Deal with FV which are non-patterns
-
    - Write cycle detection 
-   
    - Create test cases for type reconstruction
-
    - Code walk for reconstruction
 
+   rcog's list
+   - implement FVar handling in unification & whnf (treat as constants)
+   - indices start at 1
 *)
 
 open Store
@@ -320,7 +319,7 @@ and elTermW cPsi m sA = match (m, sA) with
      for omitted implicit type arguments; their type is pre-dependent.
 *)
 and elSpineI cPsi spine i sA sP =
-      elSpineIW cPsi spine i (Whnf.whnfTyp sA) (Whnf.whnfTyp sP)
+  elSpineIW cPsi spine i (Whnf.whnfTyp sA) (Whnf.whnfTyp sP)
 
 and elSpineIW cPsi spine i sA sP =
   if i = 0 then
@@ -328,9 +327,10 @@ and elSpineIW cPsi spine i sA sP =
   else
     match sA with
       | (I.PiTyp (I.TypDecl (_, tA), tB), s) ->
-          let u = Context.newMVar (cPsi, I.TClo (tA, s)) in
-          let h = I.MVar (u, LF.id) in
-            elSpineI cPsi spine (i - 1) (tB, I.Dot (I.Head h, s)) sP
+          let u      = Context.newMVar (cPsi, I.TClo (tA, s)) in
+          let h      = I.MVar (u, LF.id) in
+          let spine' = elSpineI cPsi spine (i - 1) (tB, I.Dot (I.Head h, s)) sP in
+            I.App (I.Root (h, I.Nil), spine')
 
       (* other cases impossible by (soundness?) of abstraction *)
 
@@ -356,7 +356,7 @@ and elSpineIW cPsi spine i sA sP =
 
 *)
 and elSpine cPsi spine sA sP =
-   elSpineW cPsi spine (Whnf.whnfTyp sA) (Whnf.whnfTyp sP)
+  elSpineW cPsi spine (Whnf.whnfTyp sA) (Whnf.whnfTyp sP)
 
 and elSpineW cPsi spine sA sP = match (spine, sA) with
   | (A.Nil, (I.Atom (a, _spine), _s)) ->
@@ -384,9 +384,10 @@ and elKSpineI cPsi spine i sK =
   else
     match sK with
       | (I.PiKind (I.TypDecl (_, tA), tK), s) ->
-          let u = Context.newMVar (cPsi, I.TClo (tA, s)) in
-          let h = I.MVar (u, LF.id) in
-            elKSpineI cPsi spine (i - 1) (tK, I.Dot (I.Head h, s))
+          let u      = Context.newMVar (cPsi, I.TClo (tA, s)) in
+          let h      = I.MVar (u, LF.id) in
+          let spine' = elKSpineI cPsi spine (i - 1) (tK, I.Dot (I.Head h, s)) in
+            I.App (I.Root (h, I.Nil), spine')
 
       (* other cases impossible by (soundness?) of abstraction *)
 
@@ -545,29 +546,26 @@ and recSpine cPsi sS sA sP =
 
 and recSpineW cPsi sS sA sP = match (sS, sA) with
   | ((I.Nil, _s), (tP', s')) ->
-
       Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
-      recTerm  cPsi (tM, s') (tA,s);
+      recTerm  cPsi (tM, s') (tA, s);
       recSpine cPsi (tS, s') (tB, I.Dot (I.Obj tM, s)) sP
     )
-  | ((I.SClo (tS, s), s'), sA) -> 
-      recSpine cPsi (tS, LF.comp s s') sA sP
 
-  | ((I.SClo (tS, s), s'), sA) ->
+  | ((I.SClo (tS, s), s'), sA) -> 
       recSpine cPsi (tS, LF.comp s s') sA sP
 
 and recKSpine cPsi sS sK = match (sS, sK) with
   | ((I.Nil, _s), (I.Typ, _s')) ->
       ()
 
-  | ((I.App (tM, tS), s'), (I.PiKind (I.TypDecl (_,tA), tK), s)) -> (
-      recTerm   cPsi (tM, s') (tA,s);
+  | ((I.App (tM, tS), s'), (I.PiKind (I.TypDecl (_, tA), tK), s)) -> (
+      recTerm   cPsi (tM, s') (tA, s);
       recKSpine cPsi (tS, s') (tK, I.Dot (I.Obj tM, s))
     )
 
-  | ((I.SClo(tS, s),  s'), sK) -> 
+  | ((I.SClo (tS, s),  s'), sK) -> 
       recKSpine cPsi (tS, LF.comp s s') sK
 
 and recSub cPsi s cPhi = match (s, cPhi) with
@@ -643,14 +641,10 @@ let exists p cQ =
   in
     exists' cQ
 
-(* TODO move to context.ml *)
-(* length cPsi = |cPsi|    
- 
- *)
-(* should be 'a ctx *)
-let rec length cPsi = match cPsi with
-  | I.Null         -> 0
-  | I.DDec (cPsi, _) -> 1 + length cPsi
+(* length cPsi = |cPsi| *)
+let length cPsi = 
+  let (_, n) = Context.dctxToHat cPsi in
+    n
 
 (* eqMVar mV mV' = B
    where B iff mV and mV' represent same variable
@@ -675,10 +669,11 @@ let rec index_of cQ n = match (cQ, n) with
       raise Not_found (* impossible due to invariant on collect *)
 
   | (I.Dec (cQ', MV u1), MV u2) ->
-      if eqMVar u1 (MV u2) then 0 else (index_of cQ' n) + 1
+      (* TODO investigate the feasibility of having it start at 0*)
+      if eqMVar u1 (MV u2) then 1 else (index_of cQ' n) + 1 
 
   | (I.Dec (cQ', FV (f1, _)), FV (f2, tA)) ->
-      if eqFVar f1 (FV (f2, tA)) then 0 else (index_of cQ' n) + 1
+      if eqFVar f1 (FV (f2, tA)) then 1 else (index_of cQ' n) + 1
 
   | (I.Dec (cQ', _), _) ->
       (index_of cQ' n) + 1
@@ -818,6 +813,10 @@ and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
       let cQ' = collectTyp cQ phat (tA, s) in
         collectTyp cQ' (cvar, offset + 1) (tB, LF.dot1 s)
 
+  | (I.TClo (tA, s'), s) ->
+      (* see comment in collectSpine for SClo *)
+      collectTyp cQ phat (tA, LF.comp s' s)
+
 and collectKind cQ ((cvar, offset) as phat) sK = match sK with
   | (I.Typ, _s) ->
       cQ
@@ -846,7 +845,8 @@ and abstractTyp cQ offset tA = match tA with
   | I.PiTyp (I.TypDecl (x, tA), tB) ->
       I.PiTyp (I.TypDecl (x, abstractTyp cQ offset tA), abstractTyp cQ (offset + 1) tB)
 
-  (* what about I.TClo ? *)
+  | I.TClo sA ->
+      abstractTyp cQ offset (Whnf.normTyp sA) (* TODO confirm that [1] *)
 
 and abstractTerm cQ offset tM = match tM with
   | I.Lam (x, tM) ->
@@ -855,7 +855,8 @@ and abstractTerm cQ offset tM = match tM with
   | I.Root (tH, tS) ->
       I.Root (abstractHead cQ offset tH, abstractSpine cQ offset tS)
 
-  (* what about I.Clo ? *)
+  | I.Clo sM ->
+      abstractTerm cQ offset (Whnf.norm sM) (* TODO confirm that [1] *)
 
 and abstractHead cQ offset tH = match tH with
   | I.BVar x ->
@@ -886,7 +887,8 @@ and abstractSpine cQ offset tS = match tS with
   | I.App (tM, tS) ->
       I.App (abstractTerm cQ offset tM, abstractSpine cQ offset tS)
 
-  (* what about I.SClo ? *)
+  | I.SClo sS ->
+      abstractSpine cQ offset (Whnf.normSpine sS) (* TODO confirm that [1] *)
 
 and abstractCtx cQ = match cQ with
   | I.Empty ->
@@ -934,18 +936,19 @@ and abstractSub cQ offset s = match s with
 (* wrapper function *)
 let abstrKind tK =
   (* what is the purpose of phat? *)
-  let cQ    = collectKind I.Empty (None, 0) (tK, LF.id) in (* TODO confirm that *)
-  let cQ'   = abstractCtx cQ in
-  let tK'   = abstractKind cQ' 0 tK in
-  let cQ''  = ctxToDctx cQ' in
+  let empty_phat = (None, 0) in
+  let cQ         = collectKind I.Empty empty_phat (tK, LF.id) in
+  let cQ'        = abstractCtx cQ in
+  let tK'        = abstractKind cQ' 0 tK in
+  let cQ''       = ctxToDctx cQ' in
     (raiseKind cQ'' tK', length cQ'')
 
 and abstrTyp tA =
   let empty_phat = (None, 0) in
-  let cQ   = collectTyp I.Empty  empty_phat (tA, LF.id) in (* TODO confirm that *)
-  let cQ'  = abstractCtx cQ in
-  let tA'  = abstractTyp cQ' 0 tA in
-  let cQ'' = ctxToDctx cQ' in
+  let cQ         = collectTyp I.Empty empty_phat (tA, LF.id) in
+  let cQ'        = abstractCtx cQ in
+  let tA'        = abstractTyp cQ' 0 tA in
+  let cQ''       = ctxToDctx cQ' in
     (raiseType cQ'' tA', length cQ'')
 
 
@@ -953,8 +956,7 @@ let recSgnDecl d = match d with
   | E.SgnTyp (_, a, extK)   ->
       let apxK     = index_kind (BVar.create ()) extK in
       let _        = FVar.clear () in
-      let _        = Printf.printf "Reconstruction for constant : %s \n" a.string_of_name
-                   ; flush stdout in
+      let _        = Printf.printf "Reconstruction for constant : %s \n" a.string_of_name in
       let tK       = elKind I.Null apxK in
       let _        = recKind I.Null (tK, LF.id) in
       let (tK', i) = abstrKind tK in
@@ -966,11 +968,13 @@ let recSgnDecl d = match d with
   | E.SgnConst (_, c, extT) ->
       let apxT     = index_typ (BVar.create ()) extT in
       let _        = FVar.clear () in
-      let _        = Printf.printf "Reconstruction for constant : %s \n" c.string_of_name
-                   ; flush stdout in 
+      let _        = Printf.printf "Reconstruction for constant : %s \n" c.string_of_name in
       let tA       = elTyp I.Null apxT in
       let _        = recTyp I.Null (tA, LF.id) in
       let (tA', i) = abstrTyp tA in
         (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in
         I.SgnConst (c', tA')
+
+(* [1] maybe we only call normalisation "once" from the wrapper function, would
+   need smaller interface in whnf.mli *)

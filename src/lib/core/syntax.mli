@@ -91,7 +91,7 @@ module Int : sig
     and typ =
       | Atom  of cid_typ * spine
       | PiTyp of typ_decl * typ
-      | TClo  of typ * sub
+      | TClo  of (typ * sub)
 
     and normal =
       | Lam  of name * normal
@@ -110,7 +110,7 @@ module Int : sig
     and spine =
       | Nil
       | App of normal * spine
-      | SClo of spine * sub
+      | SClo of (spine * sub)
 
     and sub =
       | Shift of offset

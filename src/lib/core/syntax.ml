@@ -89,7 +89,7 @@ module Int = struct
     and typ =                              (* LF level                       *)
       | Atom  of cid_typ * spine           (* A ::= a M1 ... Mn              *)
       | PiTyp of typ_decl * typ            (*   | Pi x:A.B                   *)
-      | TClo  of typ * sub                 (*   | TClo(A,s)                  *)
+      | TClo  of (typ * sub)               (*   | TClo(A,s)                  *)
 
     and normal =                           (* normal terms                   *)
       | Lam  of name * normal              (* M ::= \x.M                     *)
@@ -104,12 +104,12 @@ module Int = struct
       | AnnH  of head * typ                (*   | (H:A)                      *)
       | Proj  of head * int                (*   | #k(x) | #k(p[s])           *)
       | FVar  of name                      (* free variable for type
-					      reconstruction                 *)
+                                              reconstruction                 *)
  
     and spine =                            (* spine                          *)
       | Nil                                (* S ::= Nil                      *)
       | App  of normal * spine             (*   | M . S                      *)
-      | SClo of spine * sub                (*   | SClo(S,s)                  *)
+      | SClo of (spine * sub)              (*   | SClo(S,s)                  *)
 
     and sub =                              (* Substitutions                  *)
       | Shift of offset                    (* sigma ::= ^n                   *)
@@ -152,7 +152,7 @@ module Int = struct
 
     and sch_elem =                         (* Schema Element                 *)
       | SchElem of typ_decl ctx * sigma_decl  (* Pi    x1:A1 ... xn:An. 
-                                              Sigma y1:B1 ... yk:Bk. B       *)
+                                                 Sigma y1:B1 ... yk:Bk. B    *)
                                            (* Sigma-types not allowed in Ai  *)
 
     and schema =

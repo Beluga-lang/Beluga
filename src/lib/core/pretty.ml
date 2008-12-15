@@ -463,6 +463,10 @@ module Int = struct
             (fmt_ppr_cvar lvl) c
             (fmt_ppr_sub  lvl) s
 
+      | FVar x ->
+          fprintf ppf "%s"
+            (R.render_name x)
+
 
 
     and fmt_ppr_spine lvl ppf = function

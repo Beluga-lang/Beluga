@@ -53,3 +53,6 @@ Comments
 
 - whenever comment indentation is needed in multiline comment, prefix each line
   with *
+
+- for ease of navigation, comments denoting things that are to be done and
+  identifying problematic code use TODO and FIXME tags respectively

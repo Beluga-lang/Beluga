@@ -614,7 +614,7 @@ module Error = struct
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Check.error -> unit
+      val fmt_ppr : formatter -> Check.LF.error -> unit
 
 
 
@@ -622,7 +622,7 @@ module Error = struct
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Check.error -> unit
+      val ppr : Check.LF.error -> unit
 
     end
 
@@ -660,7 +660,7 @@ module Error = struct
 
     module Check = struct
 
-      open Check
+      open Check.LF
 
       (********************************)
       (* Format Based Pretty Printers *)

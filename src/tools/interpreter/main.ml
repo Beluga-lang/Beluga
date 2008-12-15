@@ -55,7 +55,7 @@ let main () =
                   ; try
                         fprintf ppf "\n## Double Checking ##"
                       ; print_newline ()
-                      ; Check.check_sgn_decls internal_decls
+                      ; Check.LF.check_sgn_decls internal_decls
                       ; fprintf ppf "\n## Double Checking Successful! ##\n\n"
                       (* clean up for the next file *)
                       ; Store.clear ()
@@ -68,7 +68,7 @@ let main () =
                           Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err
                       ; errors + 1
 
-                    | Check.Error err ->
+                    | Check.LF.Error err ->
                         fprintf
                           ppf
                           "\n!! Error during Type-Checking !!\n\n%a\n\n"

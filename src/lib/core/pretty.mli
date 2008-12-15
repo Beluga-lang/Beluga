@@ -211,7 +211,7 @@ module Error : sig
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Check.error -> unit
+      val fmt_ppr : formatter -> Check.LF.error -> unit
 
 
 
@@ -219,7 +219,7 @@ module Error : sig
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Check.error -> unit
+      val ppr : Check.LF.error -> unit
 
     end
 

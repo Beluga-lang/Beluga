@@ -7,8 +7,6 @@
 
 open Syntax.Int.LF
 
-
-
 type error =
   | ConstraintsLeft
   | NotPatSub

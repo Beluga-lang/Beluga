@@ -134,8 +134,6 @@ and lowerMVar = function
          lower u, and normalize the lowered meta-variable *)
         -> let _ = lowerMVar u in norm (tM, sigma)
 
-
-
       (* Parameter variables *)
       | Root (PVar (Offset _ as p, r), tS)
         -> Root (PVar (p, LF.comp sigma r), normSpine (tS, sigma))
@@ -178,6 +176,8 @@ and lowerMVar = function
       | Root (Proj (PVar (PInst ({ contents = None}, _, _, _) as q, s), k), tS)
         -> Root (Proj (PVar (q, LF.comp s sigma), k), normSpine (tS, sigma))
 
+      | Root (FVar x, tS)
+        -> Root(FVar x, normSpine (tS, sigma))
 
 
   and normSpine (tS, sigma) = match tS with
@@ -330,7 +330,7 @@ and lowerMVar = function
     | (Root (Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _) as _q, s), k), tS), sigma) ->
         whnf (Root (Proj (PVar (q', LF.comp r' s), k), tS), sigma)
 
-    (* free variables *)
+    (* Free variables *)
     | (Root (FVar x, tS), sigma) ->
         (Root (FVar x, SClo (tS, sigma)), LF.id)
 
@@ -459,6 +459,10 @@ and lowerMVar = function
                    && i = j
                    && convSub (LF.comp s' s1) (LF.comp s'' s2)
                    (* additional case: p[x] = x ? -bp*)
+
+              | (FVar x , FVar y)
+                ->  x = y 
+
               | (_, _)
                 -> false
             in
@@ -518,6 +522,9 @@ and lowerMVar = function
       | (Head (Proj (head, k)), Head (Proj (head', k')))
         ->    k = k'
            && convFront (Head head) (Head head')
+
+      | (Head (FVar x), Head (FVar y))
+        -> x = y
 
       | (Obj tM, Obj tN)
         -> conv (tM, LF.id) (tN, LF.id)

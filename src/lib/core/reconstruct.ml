@@ -402,7 +402,7 @@ and elKSpine cPsi spine sK = match (spine, sK) with
   | (A.App _, _) ->
       raise (Error ExpAppNotFun)
 
-(* elSpineSynth cPsi spine sP = (S, P')
+(* elSpineSynth cPsi spine sP = (S, A')
 
    Pre-condition:
      U = free variables
@@ -413,10 +413,11 @@ and elKSpine cPsi spine sK = match (spine, sK) with
    If O ; U ; Psi |- spine < [s]P
       and spine is a pattern spine
 
+   then O ; U ; Psi |- S : A' < [s]P
 
    Post-condition:
-     U' = extension of U containing all free variables of S
-     O' = extension of O containing new meta-variables of S
+     U = containing all free variables of S (unchanged)
+     O = containing new meta-variables of S (unchanged)
 
 *)
 and elSpineSynth cPsi spine sP = match (spine, sP) with
@@ -621,8 +622,9 @@ and recSub cPsi s cPhi = match (s, cPhi) with
 
 type free_var =
   | MV of I.head          (* Y ::= u[s]   where h = MVar(u, Psi, P, _)
-                             and    Psi |- u[s] <= [s]P *)
-  | FV of Id.name * I.typ option (*     | (F, A)                  . |- F <= A *)
+                             and    Psi |- u[s] <= [s]P               *)
+  | FV of Id.name * I.typ option 
+                         (*     | (F, A)                  . |- F <= A *)
 
 
 (* exists p cQ = B

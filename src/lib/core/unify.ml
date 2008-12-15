@@ -338,6 +338,11 @@ struct
           | Undef                   -> raise NotInvertible
         end
 
+    | FVar _x           -> head
+      (* For any free variable x:tA, we have  . |- tA <= type ;
+         Occurs check is necessary on tA Dec 15 2008 -bp  :(
+       *)
+
   (* invSub (phat, s, ss, rOccur) = s'
 
      if phat = hat(Psi)  and
@@ -515,6 +520,10 @@ struct
         let tS' = pruneSpine(phat, (tS, s), ss, rOccur) in
           Root(h, tS')
 
+    | (Root (FVar _ as h, tS), s (* id *)) ->
+        let tS' = pruneSpine(phat, (tS, s), ss, rOccur) in
+          Root(h, tS')
+
     | (Root (Proj (BVar k, i), tS), s (* id *)) ->
         let tS' = pruneSpine (phat, (tS, s), ss, rOccur) in
           begin match bvarSub k ss with
@@ -673,6 +682,12 @@ struct
           ()
         else
           raise (Unify "Constant clash")
+
+    | (FVar x1, FVar x2) ->
+        if x1 = x2 then
+          ()
+        else
+          raise (Unify "Free Variable clash")
 
     | (PVar (PInst (q, _, _, cnstr), s1) as h1, BVar k2) ->
         if isPatSub s1 then

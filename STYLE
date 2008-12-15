@@ -50,3 +50,6 @@ Comments
 - catching of Ocaml errors must be explained by a comment
 
 - leave revision comments to the revision control system
+
+- whenever comment indentation is needed in multiline comment, prefix each line
+  with *

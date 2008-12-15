@@ -5,17 +5,13 @@
    @author Brigitte Pientka
 *)
 
-(* TODO:
+(* TODO
 
    - add appropriate case for FV to unify
    - Deal with FV which are non-patterns
    - Write cycle detection 
    - Create test cases for type reconstruction
    - Code walk for reconstruction
-
-   rcog's list
-   - implement FVar handling in unification & whnf (treat as constants)
-   - indices start at 1
 *)
 
 open Store
@@ -23,8 +19,6 @@ open Store.Cid
 open Syntax
 open Substitution
 open Id
-
-open Format
 
 module Apx = struct
 

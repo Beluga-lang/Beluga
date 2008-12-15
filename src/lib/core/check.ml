@@ -374,19 +374,46 @@ module Comp = struct
 
   exception Error of error
 
+  let rec length cD = match cD with
+    | I.Empty -> 0
+    | I.Dec(cD, _) -> 1 + length cD
+
   let rec lookup cG k = match (cG, k) with 
     | (I.Dec(_cG', (_,  tau)), 1) ->  tau
     | (I.Dec( cG', (_, _tau)), k) ->  
         lookup cG' (k-1)
 
-  let rec mctxToSub cD = match cD with
-    | I.Empty -> I.Shift 0
+  let rec split tc d = match (tc, d) with
+    | (tc, 0) -> tc
+    | (MDot(_ft, t), d) -> split t (d-1)
+
+  let rec mctxToMSub cD = match cD with
+    | I.Empty -> MShiftZero
     | I.Dec(cD', I.MDecl(_, tA, cPsi)) -> 
       let u = Context.newMVar (cPsi, tA) in 
-        I.Dot(I.Head(I.MVar(u, S.LF.id)) , mctxToSub cD')
+      let phat = Context.dctxToHat cPsi in 
+        MDot(MObj(phat, I.Root(I.MVar(u, S.LF.id), I.Nil)) , mctxToMSub cD')
     | I.Dec(cD', I.PDecl(_, tA, cPsi)) -> 
-      let p = Context.newPVar (cPsi, tA) in 
-        I.Dot(I.Head(I.PVar(p, S.LF.id)) , mctxToSub cD')
+      let p = Context.newPVar (cPsi, tA) in
+      let phat = Context.dctxToHat cPsi in  
+        MDot(PObj(phat, I.PVar(p, S.LF.id)) , mctxToMSub cD')
+
+  (* extend t1 t2 = t
+    
+     Invariant: 
+     If    . |- t1 <= cD1
+       and . |- t2 <= cD2
+       and FMV(cD1) intersect FMV(cD2) = {} 
+       (i.e. no modal variable occurring in type declarations in cD1
+        also occurs in a type declaration of cD2)
+     then
+           . |- t1,t2 <= cD1, cD2   and t = t1,t2
+  *)
+  let extend t1 t2 = 
+    let rec ext t2 = match t2 with
+    | MShiftZero -> t1
+    | MDot(ft, t) -> MDot(ft, ext t)
+    in ext t2
 
   (* raiseTyp cPsi tA = Pi cPsi . tA
 
@@ -475,21 +502,25 @@ module Comp = struct
         (checkBranch cD cG branch tAbox ttau;
          checkBranches cD cG branches tAbox ttau)
 
-  and checkBranch cD _cG branch (tA, cPsi) (_tau, _t) = match branch with
-   | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), _e1) -> 
+  and checkBranch cD cG branch (tA, cPsi) (tau, t) = match branch with
+   | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) -> 
       let _ = LF.check cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
-      let t1 = mctxToSub cD1 in 
-      let t' = mctxToSub cD in  
+      let d1 = length cD1 in
+      let _d  = length cD in
+      let t1 = mctxToMSub cD1 in   (* {cD1} |- t1 <= cD1 *)
+      let t' = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
+      let tc = extend t' t1 in    (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
       let phat = dctxToHat cPsi in 
-      let tA1'  = raiseTyp cPsi1 tA1 in 
-      let tA'   = raiseTyp cPsi tA in
-      let _     =  Unif.unifyTyp (phat, (tA', t'), (tA1', t1))  in ()
-(*      let tc    = add t1 t'  (* . |- tc : cD, cD'  and tc = t',t1 *) in
-      let (cD1, t1', t'')  = abstractMCtx  t1 t' in 
-      (* cD1 |- t'' : cD, cD'     t2 = (t'', t1') *)     
-        check cD1 (cnormCtx cG t'' (cnormExp e (add t1 t'')) (tau, comp t'' t)) 
+      let tA1' = raiseTyp cPsi1 tA1 in 
+      let tA'  = raiseTyp cPsi tA in
+      let _    =  Unif.unifyTyp (phat, (C.cnormTyp (tA', t'), S.LF.id), (C.cnormTyp (tA1', t1), S.LF.id))  in 
+      let (tc', cD1') = Abstract.abstractMSub tc in
+      let t'' = split tc d1 in 
+      (* NOTE: cnormCtx and cnormExp not implemented
+         -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
+      *)
+        check cD1' (C.cnormCtx (cG, t'')) (C.cnormExp (e1, tc')) (tau, C.comp t'' t)  
 
-*)
   and checkSchema _cD _cPsi _schema = ()
     
 end 

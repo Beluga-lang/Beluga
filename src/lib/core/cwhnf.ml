@@ -117,7 +117,7 @@ and shiftFt ft n = match ft with
   and ctxvar_dot1 t = 
     Comp.MDot (Comp.CObj(LF.CtxVar(LF.Offset 1)), shift t 1)
 
-(* comp (t1, t2) = t'
+(* comp t1 t2 = t'
 
    Invariant:
 
@@ -391,6 +391,10 @@ and applyMSub n t = match (n, t) with
     | (Comp.TypClo (tT, t'), t)        -> (tT, comp t' t)
 
 
+  (* WHNF and Normalization for computation-level terms to be added -bp *)
+  let rec cnormExp (e, _t) = e
+
+  let rec cnormCtx (cG, _t) = cG
 
   (* ----------------------------------------------------------- *)
   (* Conversion: Convertibility modulo alpha for 

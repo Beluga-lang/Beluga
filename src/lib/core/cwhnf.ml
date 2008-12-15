@@ -1,6 +1,6 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(**
+(** Contextual normal form
 
    @author Brigitte Pientka
 
@@ -11,12 +11,9 @@
    for contextual substitutions *)
 
 open Context
-open Syntax.Int.LF
-open Syntax.Int.Comp
+open Syntax.Int
 
 module S = Substitution.LF
-
-
 
 (*************************************)
 (* Contextual Explicit Substitutions *)
@@ -38,6 +35,9 @@ module S = Substitution.LF
 
 *)
 (*************************************)
+
+let id = Comp.MShiftZero
+
 (* shift t n = t' 
 
    Invariant: 
@@ -47,50 +47,50 @@ module S = Substitution.LF
                                    and t' = t^n
 *)
 let rec shift t n = match t with
-  | MShiftZero     -> t
-  | MDot(ft, t') -> MDot(shiftMFt ft n, shift t' n)
+  | Comp.MShiftZero     -> t
+  | Comp.MDot(ft, t') -> Comp.MDot(shiftMFt ft n, shift t' n)
 
 
 and shiftMFt ft n = match ft with 
-  | MObj(phat, tM) -> 
-      MObj(phat, shiftTerm tM n)   
+  | Comp.MObj(phat, tM) -> 
+      Comp.MObj(phat, shiftTerm tM n)   
 
-  | PObj(phat, PVar(Offset k, s)) -> 
-     PObj(phat, PVar(Offset (k+n), s))
+  | Comp.PObj(phat, LF.PVar(LF.Offset k, s)) -> 
+     Comp.PObj(phat, LF.PVar(LF.Offset (k+n), s))
 
-  | PObj(_phat, BVar _k) -> ft
+  | Comp.PObj(_phat, LF.BVar _k) -> ft
 
 and shiftTerm tM n = match tM with
-  | Lam(x, tN)  -> Lam(x, shiftTerm tN n)
-  | Root(h, tS) -> Root(shiftHead h n, shiftSpine tS n)
-  | Clo(tM, s)  -> Clo(shiftTerm tM n, shiftSub s n)
+  | LF.Lam(x, tN)  -> LF.Lam(x, shiftTerm tN n)
+  | LF.Root(h, tS) -> LF.Root(shiftHead h n, shiftSpine tS n)
+  | LF.Clo(tM, s)  -> LF.Clo(shiftTerm tM n, shiftSub s n)
 
 and shiftHead h n = match h with
-  | MVar(Offset k, s) -> MVar(Offset (k+n), shiftSub s n)
-  | PVar(Offset k, s) -> PVar(Offset (k+n), shiftSub s n)
-  | Proj(PVar(Offset k, s), j) -> Proj(PVar(Offset (k+n), shiftSub s n), j)
-  | AnnH(h, tA) -> AnnH(shiftHead h n, shiftTyp tA n)
+  | LF.MVar(LF.Offset k, s) -> LF.MVar(LF.Offset (k+n), shiftSub s n)
+  | LF.PVar(LF.Offset k, s) -> LF.PVar(LF.Offset (k+n), shiftSub s n)
+  | LF.Proj(LF.PVar(LF.Offset k, s), j) -> LF.Proj(LF.PVar(LF.Offset (k+n), shiftSub s n), j)
+  | LF.AnnH(h, tA) -> LF.AnnH(shiftHead h n, shiftTyp tA n)
   | _ -> h
 
 and shiftSpine tS n = match tS with 
-  | Nil -> Nil
-  | App(tM, tS) -> App(shiftTerm tM n, shiftSpine tS n)
-  | SClo(tS, s) -> SClo(shiftSpine tS n, shiftSub s n)
+  | LF.Nil -> LF.Nil
+  | LF.App(tM, tS) -> LF.App(shiftTerm tM n, shiftSpine tS n)
+  | LF.SClo(tS, s) -> LF.SClo(shiftSpine tS n, shiftSub s n)
 
 and shiftTyp tA n = match tA with
-  | Atom (a, tS) -> Atom(a, shiftSpine tS n)
-  | PiTyp(TypDecl(x, tA), tB) -> PiTyp(TypDecl(x, shiftTyp tA n), shiftTyp tB n)
-  | TClo(tA, s) -> TClo(shiftTyp tA n, shiftSub s n)
+  | LF.Atom (a, tS) -> LF.Atom(a, shiftSpine tS n)
+  | LF.PiTyp(LF.TypDecl(x, tA), tB) -> LF.PiTyp(LF.TypDecl(x, shiftTyp tA n), shiftTyp tB n)
+  | LF.TClo(tA, s) -> LF.TClo(shiftTyp tA n, shiftSub s n)
 
 and shiftSub s n = match s with
-  | Shift _k -> s
-  | SVar(Offset k, s) -> SVar(Offset (k+n), shiftSub s n)
-  | Dot(ft, s) -> Dot (shiftFt ft n, shiftSub s n)
+  | LF.Shift _k -> s
+  | LF.SVar(LF.Offset k, s) -> LF.SVar(LF.Offset (k+n), shiftSub s n)
+  | LF.Dot(ft, s) -> LF.Dot (shiftFt ft n, shiftSub s n)
 
 and shiftFt ft n = match ft with
-  | Head h -> Head (shiftHead h n)
-  | Obj tM -> Obj (shiftTerm tM n)
-  | Undef  -> Undef
+  | LF.Head h -> LF.Head (shiftHead h n)
+  | LF.Obj tM -> LF.Obj (shiftTerm tM n)
+  | LF.Undef  -> LF.Undef
   
 (* mvar_dot1 psihat t = t'
    Invariant:
@@ -105,15 +105,19 @@ and shiftFt ft n = match ft with
   NOTE: This in fact only works, if the type of u is atomic!
 
  *)
-  and mvar_dot1 phat t = MDot (MObj(phat , Root(MVar(Offset 1, S.id), Nil)), shift t 1)
+  and mvar_dot1 phat t = 
+    Comp.MDot (Comp.MObj(phat , LF.Root(LF.MVar(LF.Offset 1, S.id), LF.Nil)), 
+               shift t 1)
 
 
-  and pvar_dot1 phat t = MDot (PObj(phat , PVar(Offset 1, S.id)), shift t 1)
+  and pvar_dot1 phat t = 
+    Comp.MDot (Comp.PObj(phat , LF.PVar(LF.Offset 1, S.id)), shift t 1)
 
 
-  and ctxvar_dot1 t = MDot (CObj(CtxVar(Offset 1)), shift t 1)
+  and ctxvar_dot1 t = 
+    Comp.MDot (Comp.CObj(LF.CtxVar(LF.Offset 1)), shift t 1)
 
-(* mcomp (t1, t2) = t'
+(* comp (t1, t2) = t'
 
    Invariant:
 
@@ -127,9 +131,9 @@ and shiftFt ft n = match ft with
 *)
 
 let rec comp t1 t2 = match (t1, t2) with
-  | (MShiftZero, t)         -> t
-  | (t, MShiftZero)         -> t
-  | (MDot (mft, t), t')     -> MDot (mfrontMSub mft t', comp t t')
+  | (Comp.MShiftZero, t)         -> t
+  | (t, Comp.MShiftZero)         -> t
+  | (Comp.MDot (mft, t), t')     -> Comp.MDot (mfrontMSub mft t', comp t t')
 
 
 (* mfrontMSub Ft t = Ft'
@@ -141,22 +145,22 @@ let rec comp t1 t2 = match (t1, t2) with
    and  D ; [|t|]Psi |- Ft' : [|t|]A
 *)
 and mfrontMSub ft t = match ft with
-  | MObj (phat, tM)     -> 
-	MObj (phat, cnorm(tM, t))
-  | PObj (_phat, PVar (Offset k, s))  -> 
+  | Comp.MObj (phat, tM)     -> 
+	Comp.MObj (phat, cnorm(tM, t))
+  | Comp.PObj (_phat, LF.PVar (LF.Offset k, s))  -> 
       begin match applyMSub k t with
-        | PObj(phat, BVar k') ->  
+        | Comp.PObj(phat, LF.BVar k') ->  
 	    begin match S.bvarSub k' s with 
-	      | Head(BVar j) -> PObj(phat, BVar j)
-	      | Head(PVar (q, s')) -> PObj(phat, PVar(q, s'))
+	      | LF.Head(LF.BVar j) -> Comp.PObj(phat, LF.BVar j)
+	      | LF.Head(LF.PVar (q, s')) -> Comp.PObj(phat, LF.PVar(q, s'))
 	      (* no case for S.Head(MVar(u, s')) since u not guaranteed
 	         to be of atomic type. *)
-	      | Obj tM      -> MObj(phat, tM)
+	      | LF.Obj tM      -> Comp.MObj(phat, tM)
 	    end 
-	| PObj(phat, PVar (q, s')) -> PObj(phat, PVar(q, S.comp s' s))
+	| Comp.PObj(phat, LF.PVar (q, s')) -> Comp.PObj(phat, LF.PVar(q, S.comp s' s))
           (* other cases impossible *)
       end
-  | PObj (_phat, BVar _k)  -> ft
+  | Comp.PObj (_phat, LF.BVar _k)  -> ft
 
 
 (* applyMSub n t = MFt'
@@ -169,8 +173,8 @@ and mfrontMSub ft t = match ft with
   *)
 
 and applyMSub n t = match (n, t) with
-  | (1, MDot (ft, _t)) -> ft
-  | (n, MDot (_ft, t)) -> applyMSub (n - 1) t
+  | (1, Comp.MDot (ft, _t)) -> ft
+  | (n, Comp.MDot (_ft, t)) -> applyMSub (n - 1) t
     
 
 (* ------------------------------------------------------------ *)
@@ -197,24 +201,25 @@ and applyMSub n t = match (n, t) with
 
   *)
   and cnorm (tM, t) = match tM with
-    | Lam (y, tN)       -> Lam (y, cnorm (tN, t))
+    | LF.Lam (y, tN)       -> LF.Lam (y, cnorm (tN, t))
 
-    | Clo (tN, s)       -> Clo(cnorm (tN, t), cnormSub(s, t))  
+    | LF.Clo (tN, s)       -> LF.Clo(cnorm (tN, t), cnormSub(s, t))  
 
-    | Root (BVar i, tS) -> Root(BVar i, cnormSpine (tS, t))
+    | LF.Root (LF.BVar i, tS) -> LF.Root(LF.BVar i, cnormSpine (tS, t))
 
     (* Meta-variables *)
 
-    | Root (MVar (Offset k, r), tS)
+    | LF.Root (LF.MVar (LF.Offset k, r), tS)
       -> begin match applyMSub k t with
-        | MObj (_phat,tM)   -> Clo(Whnf.whnfRedex ((tM, r), (cnormSpine (tS, t), S.id)))
+        | Comp.MObj (_phat,tM)   -> 
+            LF.Clo(Whnf.whnfRedex ((tM, r), (cnormSpine (tS, t), S.id)))
         (* other cases impossible *)
        end
 
     (* Ignore other cases for destructive (free) meta-variables -- at least for now *)
 
     (* Parameter variables *)
-    | Root (PVar (Offset k, r), tS)
+    | LF.Root (LF.PVar (LF.Offset k, r), tS)
         (* cD' ; cPsi' |- r <= cPsi1 
            cD          |- t <= cD'
  
@@ -223,88 +228,88 @@ and applyMSub n t = match (n, t) with
 
          *)
       -> begin match applyMSub k t with
-        | PObj (_phat, BVar i) -> 
+        | Comp.PObj (_phat, LF.BVar i) -> 
 	    begin match S.bvarSub i (cnormSub (r,t)) with
-	      | Head h  -> Root(h, cnormSpine (tS, t))
-	      | Obj tM  -> Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
+	      | LF.Head h  -> LF.Root(h, cnormSpine (tS, t))
+	      | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
 	    end
-        | PObj (_phat, PVar(Offset i, r')) -> 
-	    Root (PVar(Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
+        | Comp.PObj (_phat, LF.PVar(LF.Offset i, r')) -> 
+	    LF.Root (LF.PVar(LF.Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
             (* Other case MObj _ should not happen -- ill-typed *)
       end
 
     (* Ignore other cases for destructive (free) parameter variables *)
 
     (* Constants *)
-    | Root (Const c, tS)
-      -> Root (Const c, cnormSpine (tS, t))
+    | LF.Root (LF.Const c, tS)
+      -> LF.Root (LF.Const c, cnormSpine (tS, t))
 
     (* Projections *)
-    | Root (Proj (BVar i, k), tS)
-      -> Root (Proj (BVar i, k), cnormSpine (tS, t))
+    | LF.Root (LF.Proj (LF.BVar i, k), tS)
+      -> LF.Root (LF.Proj (LF.BVar i, k), cnormSpine (tS, t))
 
-    | Root (Proj (PVar (Offset j, s), k), tS)
+    | LF.Root (LF.Proj (LF.PVar (LF.Offset j, s), k), tS)
         (* cD' ; cPsi' |- s <= cPsi1 *)
         (* cD          |- t <= cD'   *)         
       -> begin match applyMSub j t with
-        | PObj (_phat, BVar i)   -> 
+        | Comp.PObj (_phat, LF.BVar i)   -> 
             (*  i <= phat *) 
             begin match S.bvarSub i (cnormSub (s,t)) with
-              | Head (BVar j)     -> 
-                  Root(Proj (BVar j, k), cnormSpine (tS, t))
-              | Head (PVar (p,r'))-> 
-                  Root(Proj (PVar (p, r'), k), 
+              | LF.Head (LF.BVar j)     -> 
+                  LF.Root(LF.Proj (LF.BVar j, k), cnormSpine (tS, t))
+              | LF.Head (LF.PVar (p,r'))-> 
+                  LF.Root(LF.Proj (LF.PVar (p, r'), k), 
                        cnormSpine (tS, t))
                     (* other cases should not happen; 
                        term would be ill-typed *)
             end
-        | PObj(_phat, Proj (PVar (Offset i, s'), k)) -> 
-	    Root (Proj (PVar (Offset i, S.comp s' (cnormSub (s,t))), k), 
+        | Comp.PObj(_phat, LF.Proj (LF.PVar (LF.Offset i, s'), k)) -> 
+	    LF.Root (LF.Proj (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))), k), 
 		  cnormSpine (tS, t))
       end
 
   (* Ignore other cases for destructive (free) parameter-variables *)
 
   and cnormSpine (tS, t) = match tS with
-    | Nil            -> Nil
-    | App  (tN, tS)  -> App (cnorm (tN, t), cnormSpine (tS, t))
-    | SClo (tS, s)   -> SClo(cnormSpine (tS, t), cnormSub (s, t))
+    | LF.Nil            -> LF.Nil
+    | LF.App  (tN, tS)  -> LF.App (cnorm (tN, t), cnormSpine (tS, t))
+    | LF.SClo (tS, s)   -> LF.SClo(cnormSpine (tS, t), cnormSub (s, t))
 
 
   and cnormSub (s, t) = match s with 
-    | Shift _         -> s
-    | Dot (ft, s')     -> Dot (cnormFront (ft, t), cnormSub (s', t))
+    | LF.Shift _         -> s
+    | LF.Dot (ft, s')    -> LF.Dot (cnormFront (ft, t), cnormSub (s', t))
      (* substitution variables ignored for how -bp *)
 
 
   and cnormFront (ft, t) = match ft with
-    | Head (BVar _ )            -> ft
-    | Head (Const _ )           -> ft
-    | Head (PVar (Offset i, r)) ->
+    | LF.Head (LF.BVar _ )            -> ft
+    | LF.Head (LF.Const _ )           -> ft
+    | LF.Head (LF.PVar (LF.Offset i, r)) ->
         begin match applyMSub i t with
-          | PObj(_phat, PVar(Offset n, s')) -> 
-             Head(PVar(Offset n, S.comp s' (cnormSub (r,t))))
-          | PObj (_phat, BVar j)    ->  S.bvarSub j (cnormSub (r,t))
+          | Comp.PObj(_phat, LF.PVar(LF.Offset n, s')) -> 
+             LF.Head(LF.PVar(LF.Offset n, S.comp s' (cnormSub (r,t))))
+          | Comp.PObj (_phat, LF.BVar j)    ->  S.bvarSub j (cnormSub (r,t))
   	      (* other case MObj _ cannot happen *)
         end
 
-    | Head (MVar (Offset i, r)) -> 
+    | LF.Head (LF.MVar (LF.Offset i, r)) -> 
         begin match applyMSub i t with
-          | MObj (_phat, tM)    -> Obj(Clo (tM, cnormSub (r,t)))
+          | Comp.MObj (_phat, tM)    -> LF.Obj(LF.Clo (tM, cnormSub (r,t)))
         end
 
-    | Head (Proj (BVar _, _))    -> ft
-    | Head (Proj (PVar (Offset i, r), k)) -> 
+    | LF.Head (LF.Proj (LF.BVar _, _))    -> ft
+    | LF.Head (LF.Proj (LF.PVar (LF.Offset i, r), k)) -> 
         let r' = cnormSub (r,t) in 
         begin match applyMSub i t with
-          | PObj (_phat, BVar j)  -> 
+          | Comp.PObj (_phat, LF.BVar j)  -> 
 	      begin match S.bvarSub j r' with
-		| Head(BVar j') -> Head(Proj (BVar j', k))
-		| Head(PVar (Offset j, s')) -> Head (Proj (PVar (Offset j, s'), k))
+		| LF.Head(LF.BVar j') -> LF.Head(LF.Proj (LF.BVar j', k))
+		| LF.Head(LF.PVar (LF.Offset j, s')) -> LF.Head (LF.Proj (LF.PVar (LF.Offset j, s'), k))
                 (* other cases impossible for projections *)
 	      end
-	  | PObj (_phat, PVar(Offset j, s'))   ->  
-	      Head(Proj (PVar(Offset j, S.comp s' r'), k))
+	  | Comp.PObj (_phat, LF.PVar(LF.Offset j, s'))   ->  
+	      LF.Head(LF.Proj (LF.PVar(LF.Offset j, S.comp s' r'), k))
           (* other case MObj _ cannot happen *)
         end
           
@@ -317,36 +322,36 @@ and applyMSub n t = match (n, t) with
      cD' ; cPsi' |- tA' <= type   
   *)
   and cnormTyp (tA, t) = match tA with
-    |  Atom (a, tS)
-      -> Atom (a, cnormSpine (tS, t))
+    |  LF.Atom (a, tS)
+      -> LF.Atom (a, cnormSpine (tS, t))
 
-    |  PiTyp (TypDecl (_x, _tA) as decl, tB)
-      -> PiTyp (cnormDecl (decl, t),  cnormTyp (tB, t))
+    |  LF.PiTyp (LF.TypDecl (_x, _tA) as decl, tB)
+      -> LF.PiTyp (cnormDecl (decl, t),  cnormTyp (tB, t))
 
-    |  TClo (tA, s)
-      -> TClo(cnormTyp (tA,t), cnormSub (s,t))
+    |  LF.TClo (tA, s)
+      -> LF.TClo(cnormTyp (tA,t), cnormSub (s,t))
 
   and cnormTypRec (recA, t) = match recA with
     | []          -> []
     | tA :: recA' -> cnormTyp (tA, t) :: cnormTypRec (recA', t)
 
   and cnormDecl (decl, t) = match decl with
-      TypDecl (x, tA) -> TypDecl (x, cnormTyp (tA, t))
+      LF.TypDecl (x, tA) -> LF.TypDecl (x, cnormTyp (tA, t))
 
   and cnormDCtx tcPsi = match tcPsi with
-    | (Null, _)       ->  Null 
+    | (LF.Null, _)       ->  LF.Null 
 
-    | (CtxVar (Offset psi), t) -> 
+    | (LF.CtxVar (LF.Offset psi), t) -> 
 	begin match applyMSub psi t with
-	  | CObj cPsi -> cPsi
+	  | Comp.CObj cPsi -> cPsi
 	  (* other cases ill-typed *)
 	end 
 
-    | (DDec(cPsi, decl), t) ->  
-	DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
+    | (LF.DDec(cPsi, decl), t) ->  
+	LF.DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
 
-    | (SigmaDec (cPsi, SigmaDecl(x, recA)), t) -> 
-	SigmaDec(cnormDCtx (cPsi, t), SigmaDecl(x, cnormTypRec (recA, t)))
+    | (LF.SigmaDec (cPsi, LF.SigmaDecl(x, recA)), t) -> 
+	LF.SigmaDec(cnormDCtx (cPsi, t), LF.SigmaDecl(x, cnormTypRec (recA, t)))
 
 
   (* ***************************************** *)
@@ -371,19 +376,19 @@ and applyMSub n t = match (n, t) with
 
 
   let rec cwhnfCTyp thetaT = match thetaT with 
-    | (TypBox (tA, cPsi), t)     
-      -> (TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t)), MShiftZero) 
+    | (Comp.TypBox (tA, cPsi), t)     
+      -> (Comp.TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t)), id) 
 
-    | (TypSBox (cPsi, cPsi'), t) 
-      -> (TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t)), MShiftZero)
+    | (Comp.TypSBox (cPsi, cPsi'), t) 
+      -> (Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t)), id)
 
-    | (TypArr (_tT1, _tT2), _t)   -> thetaT
+    | (Comp.TypArr (_tT1, _tT2), _t)   -> thetaT
 
-    | (TypCtxPi _, _)             -> thetaT
+    | (Comp.TypCtxPi _, _)             -> thetaT
 
-    | (TypPiBox (_, _) , _)       -> thetaT
+    | (Comp.TypPiBox (_, _) , _)       -> thetaT
 
-    | (TypClo (tT, t'), t)        -> (tT, comp t' t)
+    | (Comp.TypClo (tT, t'), t)        -> (tT, comp t' t)
 
 
 
@@ -398,27 +403,27 @@ and applyMSub n t = match (n, t) with
   let rec convCTyp thetaT1 thetaT2 = convCTyp' (cwhnfCTyp thetaT1) (cwhnfCTyp thetaT2)
 
   and convCTyp' thetaT1 thetaT2 = match (thetaT1, thetaT2) with 
-    | ((TypBox (tA1, cPsi1), _t1), (TypBox (tA2, cPsi2), _t2)) (* t1 = t2 = id *)
+    | ((Comp.TypBox (tA1, cPsi1), _t1), (Comp.TypBox (tA2, cPsi2), _t2)) (* t1 = t2 = id *)
       -> Whnf.convDCtx cPsi1 cPsi2
 	&&
 	  Whnf.convTyp (tA1, S.id) (tA2, S.id)
 
-    | ((TypSBox (cPsi1, cPsi2), _t), (TypSBox (cPsi1', cPsi2'), _t'))  (* t1 = t2 = id *)
+    | ((Comp.TypSBox (cPsi1, cPsi2), _t), (Comp.TypSBox (cPsi1', cPsi2'), _t'))  (* t1 = t2 = id *)
       -> Whnf.convDCtx cPsi1 cPsi1'
 	&&
 	  Whnf.convDCtx cPsi2 cPsi2'
 
-    | ((TypArr (tT1, tT2), t), (TypArr (tT1', tT2'), t')) 
+    | ((Comp.TypArr (tT1, tT2), t), (Comp.TypArr (tT1', tT2'), t')) 
       -> convCTyp (tT1, t) (tT1', t') 
 	&&
 	  convCTyp (tT2, t) (tT2', t')
 
-    | ((TypCtxPi ((_psi, schema), tT1), t) , (TypCtxPi ((_psi', schema'), tT1'), t'))
+    | ((Comp.TypCtxPi ((_psi, schema), tT1), t) , (Comp.TypCtxPi ((_psi', schema'), tT1'), t'))
       -> convSchema schema schema'
 	&& 
 	  convCTyp (tT1, ctxvar_dot1 t) (tT1', ctxvar_dot1 t')
 
-    | ((TypPiBox (MDecl(_, tA, cPsi), tT), t), (TypPiBox (MDecl(_, tA', cPsi'), tT'), t'))
+    | ((Comp.TypPiBox (LF.MDecl(_, tA, cPsi), tT), t), (Comp.TypPiBox (LF.MDecl(_, tA', cPsi'), tT'), t'))
       -> let psihat = dctxToHat cPsi in 
 	Whnf.convTyp (cnormTyp (tA, t), S.id) (cnormTyp (tA', t'), S.id)
 	&&
@@ -428,9 +433,9 @@ and applyMSub n t = match (n, t) with
 
 (* For now we omit PDecl, SDecl - bp *)
 
-and convSchema (Schema fs) (Schema fs') =  List.for_all2 convSchElem fs fs' 
+and convSchema (LF.Schema fs) (LF.Schema fs') =  List.for_all2 convSchElem fs fs' 
 
-and convSchElem (SchElem (cPsi, SigmaDecl (_, trec))) (SchElem (cPsi', SigmaDecl (_, trec'))) = 
+and convSchElem (LF.SchElem (cPsi, LF.SigmaDecl (_, trec))) (LF.SchElem (cPsi', LF.SigmaDecl (_, trec'))) = 
     Whnf.convCtx cPsi cPsi'
     &&
       Whnf.convTypRec (trec, S.id) (trec', S.id)

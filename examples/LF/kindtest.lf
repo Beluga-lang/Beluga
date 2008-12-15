@@ -6,6 +6,19 @@ tp: type.
 arrow: tp -> tp -> tp.
 
 eval: exp -> exp -> type.
+
+
+value: exp -> type.
+val_lam:  value (lam ([x] E x)).
+
+vs: {E: exp} {V: exp} eval E V -> value V -> type.
+vs_lam: {E: exp -> exp} vs (lam ([x] E x)) (lam ([x] E x)) 
+	(ev_lam ([x] E x)) (val_lam ([x] E x)).
+vs_app: {E1: exp} {E2: exp} {E1': exp -> exp} {V2: exp} {V: exp}
+    {D1: eval E2 V2} {D2: eval E1 (lam ([x] E1' x))} {D3: eval (E1' V2) V} {P3: value V}
+    vs (E1' V2) V D3 P3 -> vs (app E1 E2) V (ev_app E1 E2 ([x] E1' x) V2 V D1 D2 D3) P3.
+
+
 ev_lam: {E: exp -> exp} eval (lam ([x] E x)) (lam ([x] E x)).
 ev_app: {E1: exp} {E2: exp} {E1': exp -> exp} {V2: exp} {V: exp}
     eval E2 V2 -> eval E1 (lam ([x] E1' x)) -> eval (E1' V2) V -> eval (app E1 E2) V.
@@ -15,13 +28,3 @@ tp_lam: {E: exp -> exp} {T1: tp} {T2: tp}
     {x: exp} oft x T1 -> oft (E x) T2 -> oft (lam ([x] E x)) (arrow T1 T2).
 tp_app: {E1: exp} {E2: exp} {T1: tp} {T2: tp}
     oft E2 T1 -> oft E1 (arrow T1 T2) -> oft (app E1 E2) T2.
-
-value: exp -> type.
-val_lam: {E: exp -> exp} value (lam ([x] E x)).
-
-vs: {E: exp} {V: exp} eval E V -> value V -> type.
-vs_lam: {E: exp -> exp} vs (lam ([x] E x)) (lam ([x] E x)) 
-	(ev_lam ([x] E x)) (val_lam ([x] E x)).
-vs_app: {E1: exp} {E2: exp} {E1': exp -> exp} {V2: exp} {V: exp}
-    {D1: eval E2 V2} {D2: eval E1 (lam ([x] E1' x))} {D3: eval (E1' V2) V} {P3: value V}
-    vs (E1' V2) V D3 P3 -> vs (app E1 E2) V (ev_app E1 E2 ([x] E1' x) V2 V D1 D2 D3) P3.

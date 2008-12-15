@@ -87,6 +87,7 @@ module Int : sig
       | MDecl of name * typ  * dctx
       | PDecl of name * typ  * dctx
       | SDecl of name * dctx * dctx
+      | CDecl of name * schema
 
     and typ =
       | Atom  of cid_typ * spine

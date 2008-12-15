@@ -82,8 +82,9 @@ module Int = struct
 
     and ctyp_decl =                        (* Contextual Declarations        *)
       | MDecl of name * typ  * dctx        (* D ::= u::A[Psi]                *)
-      | PDecl of name * typ  * dctx        (*   |  p::A[Psi]                 *)
-      | SDecl of name * dctx * dctx        (*   |  s::A[Psi]                 *)
+      | PDecl of name * typ  * dctx        (*   |   p::A[Psi]                *)
+      | SDecl of name * dctx * dctx        (*   |   s::A[Psi]                *)
+      | CDecl of name * schema             (*   | psi::W                     *)
                                            (* Potentially, A is Sigma type ? *)
 
     and typ =                              (* LF level                       *)
@@ -224,11 +225,11 @@ module Int = struct
        | Ann    of exp_chk * typ
 
     and branch =
-      | BranchBox  of LF.ctyp_decl LF.ctx
+      | BranchBox  of LF.mctx
           * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
           * exp_chk
 
-      | BranchSBox of LF.ctyp_decl LF.ctx
+      | BranchSBox of LF.mctx
           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx))
           * exp_chk
 

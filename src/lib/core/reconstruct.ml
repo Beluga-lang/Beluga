@@ -260,31 +260,32 @@ and elTermW cPsi m sA = match (m, sA) with
         I.Root (I.BVar x, tS)
 
   | (A.Root (A.FVar x, spine), (I.Atom _ as tP, s)) ->
-      try
+      begin try
         let tA = FVar.get x in
-        (* For type reconstruction to succeed, we must have
-           . |- tA <= type
-           This will be enforced during abstraction *)
+          (* For type reconstruction to succeed, we must have
+             . |- tA <= type
+             This will be enforced during abstraction *)
         let tS = elSpine cPsi spine (tA, LF.id) (tP, s) in
           I.Root (I.FVar x, tS)
       with Not_found ->
         if patSpine spine then
-          let (tS, tA) = elSpineSynth cPsi spine (tP,s) in
-          (* For type reconstruction to succeed, we must have
-             . |- tA <= type  and cPsi |- tS : tA <= [s]tP
-             This will be enforced during abstraction.
-          *)
+          let (tS, tA) = elSpineSynth cPsi spine (tP, s) in
+            (* For type reconstruction to succeed, we must have
+               . |- tA <= type  and cPsi |- tS : tA <= [s]tP
+               This will be enforced during abstraction.
+            *)
           let _        = FVar.add x tA in
             I.Root (I.FVar x, tS)
         else
           (Printf.printf "Reconstruction of free variables with non-pattern spines not handled\n";
-          raise NotImplemented)
-          (*
-            let v = newMVar (cPsi, TClo(tP, s))  in
-               (add_delayed (cPsi |- m = v[id])
+           raise NotImplemented)
+            (*
+              let v = newMVar (cPsi, TClo(tP, s)) in
+              (add_delayed (cPsi |- m = v[id])
                 I.Root (I.MVar (v, LF.id), I.Nil)
-               )
-          *)
+              )
+            *)
+      end
 
   | _ ->
       raise (Error (IllTyped (cPsi, m, sA)))
@@ -536,7 +537,7 @@ and recTermW cPsi sM sA = match (sM, sA) with
          by invariant of whnf: s' = id
       *)
       let tA = FVar.get x in
-        recSpine cPsi (tS,s') (tA, LF.id) (tP, s)
+        recSpine cPsi (tS, s') (tA, LF.id) (tP, s)
 
 and recSpine cPsi sS sA sP =
   recSpineW cPsi sS (Whnf.whnfTyp sA) sP

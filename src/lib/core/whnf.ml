@@ -69,6 +69,9 @@ and lowerMVar1 u sA = match (u, sA) with
 
      Effect: u is instantiated to lam x1 ... xn.u'[id(cPsi), x1 ... xn]
              if n = 0, u = u' and no effect occurs.
+
+   FIXME MVar spine is not elaborated consistently with lowering
+     –- Tue Dec 16 00:19:06 EST 2008
 *)
 and lowerMVar = function
   | Inst (_r, _cPsi, tA, { contents = [] }) as u

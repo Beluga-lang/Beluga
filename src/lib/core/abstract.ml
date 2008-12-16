@@ -96,7 +96,7 @@ let rec index_of cQ n = match (cQ, n) with
       raise Not_found (* impossible due to invariant on collect *)
 
   | (I.Dec (cQ', MV u1), MV u2) ->
-      (* TODO investigate the feasibility of having it start at 0*)
+      (* TODO investigate the feasibility of having it start at 0 *)
       if eqMVar u1 (MV u2) then 1 else (index_of cQ' n) + 1 
 
   | (I.Dec (cQ', FV (f1, _)), FV (f2, tA)) ->
@@ -298,9 +298,9 @@ and abstractTerm cQ offset tM = match tM with
   | I.Lam (x, tM) ->
       I.Lam (x, abstractTerm cQ (offset + 1) tM)
 
-  | I.Root (I.MVar(_u, s) as tH, I.Nil) -> 
+  | I.Root (I.MVar (_u, s) as tH, I.Nil) -> 
       let x = index_of cQ (MV tH) + offset in 
-      I.Root (I.BVar x, subToSpine cQ offset s I.Nil)
+        I.Root (I.BVar x, subToSpine cQ offset s I.Nil)
 
   | I.Root (tH, tS) ->
       I.Root (abstractHead cQ offset tH, abstractSpine cQ offset tS)
@@ -335,11 +335,14 @@ and abstractHead cQ offset tH = match tH with
 and subToSpine cQ offset s tS = match s with
   | I.Shift k -> 
       if k < offset then 
-	subToSpine cQ offset (I.Dot(I.Head(I.BVar (k+1)), I.Shift (k+1))) tS
-      else (* k = offet *) tS
-  | I.Dot(I.Head(h), s) -> 
-      subToSpine cQ offset s (I.App(I.Root(h, I.Nil), tS))
-  | I.Dot(I.Obj(tM), s) -> 
+        subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (k + 1))) tS
+      else (* k = offet *) 
+        tS
+
+  | I.Dot (I.Head tH, s) -> 
+      subToSpine cQ offset s (I.App (I.Root (tH, I.Nil), tS))
+
+  | I.Dot (I.Obj tM, s) -> 
       subToSpine cQ offset s (I.App (abstractTerm cQ offset tM, tS))
 
 and abstractSpine cQ offset tS = match tS with
@@ -398,18 +401,18 @@ and abstractSub cQ offset s = match s with
 and abstrMSub cQ t = match t with
   | Comp.MShiftZero -> Comp.MShiftZero
   | Comp.MDot(Comp.MObj(phat, tM), t) -> 
-     let tM' = abstractTerm cQ 0 tM in 
-       Comp.MDot(Comp.MObj(phat, tM'), abstrMSub cQ t)
+      let tM' = abstractTerm cQ 0 tM in 
+        Comp.MDot(Comp.MObj(phat, tM'), abstrMSub cQ t)
 
   | Comp.MDot(Comp.PObj(phat, h), t) -> 
-     let h' = abstractHead cQ 0 h in 
-       Comp.MDot(Comp.PObj(phat, h'), abstrMSub cQ t)
+      let h' = abstractHead cQ 0 h in 
+        Comp.MDot(Comp.PObj(phat, h'), abstrMSub cQ t)
 
 and abstractMSub t =  
-    let cQ  = collectMSub I.Empty t in
-    let t'  = abstrMSub cQ t in
-    let cD  = ctxToMCtx cQ in 
-     ( t' , cD) 
+  let cQ  = collectMSub I.Empty t in
+  let t'  = abstrMSub cQ t in
+  let cD  = ctxToMCtx cQ in 
+    (t' , cD) 
 
 
 (* wrapper function *)

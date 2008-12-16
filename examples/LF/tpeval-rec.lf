@@ -17,3 +17,5 @@ letv : exp T1 -> (exp T1 -> exp T2) -> exp T2.
 eval : exp T -> exp T -> type.
 
 ev_z: eval z z.
+
+ev_s: eval N M -> eval (suc N) (suc M).

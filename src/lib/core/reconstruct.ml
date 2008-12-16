@@ -219,6 +219,8 @@ and elTyp cPsi a = match a with
   | A.Atom (a, s) ->
       let tK = (Typ.get a).Typ.kind in
       let i  = (Typ.get a).Typ.implicit_arguments in
+      let _        = Printf.printf "\n Elaborate spine for constant : \n" in
+      let _        = Pretty.Int.DefaultPrinter.ppr_kind tK in
       let tS = elKSpineI cPsi s i (tK, Substitution.LF.id) in
         I.Atom (a, tS)
 
@@ -327,6 +329,8 @@ and elSpineIW cPsi spine i sA sP =
           let u      = Context.newMVar (cPsi, I.TClo (tA, s)) in
           let h      = I.MVar (u, LF.id) in
           let spine' = elSpineI cPsi spine (i - 1) (tB, I.Dot (I.Head h, s)) sP in
+            (* This only works, if tA is atomic -- if tA is not atomic, we
+               need to eta-expand h, so we preserve normal forms -bp *)
             I.App (I.Root (h, I.Nil), spine')
 
       (* other cases impossible by (soundness?) of abstraction *)
@@ -382,8 +386,11 @@ and elKSpineI cPsi spine i sK =
     match sK with
       | (I.PiKind (I.TypDecl (_, tA), tK), s) ->
           let u      = Context.newMVar (cPsi, I.TClo (tA, s)) in
+          let _      = Printf.printf "\n Generate new meta-variable \n" in
           let h      = I.MVar (u, LF.id) in
           let spine' = elKSpineI cPsi spine (i - 1) (tK, I.Dot (I.Head h, s)) in
+            (* This only works, if tA is atomic -- if tA is not atomic, we
+               need to eta-expand h, so we preserve normal forms -bp *)
             I.App (I.Root (h, I.Nil), spine')
 
       (* other cases impossible by (soundness?) of abstraction *)
@@ -524,9 +531,13 @@ and recTermW cPsi sM sA = match (sM, sA) with
      (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
      (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
       let s1 = (LF.comp t s') in
-        (recSub cPsi s1 cPhi;
-         Unif.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))
-        )
+      let _        = Printf.printf "\n RecTerm: Unify \n" in
+      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP',s1)) in
+      let _        = Printf.printf "\n with \n" in
+      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP,s)) in
+      let _        = (recSub cPsi s1 cPhi;
+                      Unif.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))) in 
+       Printf.printf "\n done \n"
 
   | ((I.Root (I.FVar x, tS), s'), (I.Atom _ as tP, s)) ->
       (* x is in eta-expanded form and tA is closed
@@ -544,7 +555,12 @@ and recSpine cPsi sS sA sP =
 
 and recSpineW cPsi sS sA sP = match (sS, sA) with
   | ((I.Nil, _s), (tP', s')) ->
-      Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))
+      let _        = Printf.printf "\n RecSpine Unify \n" in
+      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP',s')) in
+      let _        = Printf.printf "\n with \n" in
+      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp sP) in
+      let _        =  Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s')) in 
+        Printf.printf "\n done \n"
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
       recTerm  cPsi (tM, s') (tA, s);
@@ -591,7 +607,8 @@ let recSgnDecl d = match d with
       let tK       = elKind I.Null apxK in
       let _        = recKind I.Null (tK, LF.id) in
       let (tK', i) = Abstract.abstrKind tK in
-      let _        = Printf.printf "Reconstruction for constant : %s done -- number of implicit arg: %s \n" a.string_of_name (string_of_int i) in
+      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n" a.string_of_name (string_of_int i) in
+      let _        = Pretty.Int.DefaultPrinter.ppr_kind tK' in
       let a'       = Typ.add (Typ.mk_entry a tK' i) in
         (* why does Term.add return a' ? -bp *)
         (* because (a : name) and (a' : cid_typ) *)
@@ -600,11 +617,15 @@ let recSgnDecl d = match d with
   | E.SgnConst (_, c, extT) ->
       let apxT     = index_typ (BVar.create ()) extT in
       let _        = FVar.clear () in
-      let _        = Printf.printf "Reconstruction for constant : %s \n" c.string_of_name in
+      let _        = Printf.printf "\n Reconstruction for constant : %s \n" c.string_of_name in
       let tA       = elTyp I.Null apxT in
+      let _        = Printf.printf "\n Elaboration for constant : %s \n" c.string_of_name in
+      let _        = Pretty.Int.DefaultPrinter.ppr_type tA in
       let _        = recTyp I.Null (tA, LF.id) in
+      let _        = Printf.printf "\n Reconstruction (without abstraction) for : %s \n" c.string_of_name in
+      let _        = Pretty.Int.DefaultPrinter.ppr_type tA in
       let (tA', i) = Abstract.abstrTyp tA in
-      let _        = Printf.printf "Reconstruction for constant : %s done -- number of implicit arg: %s \n" c.string_of_name (string_of_int i)  in
+      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n" c.string_of_name (string_of_int i)  in
       (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in
         I.SgnConst (c', tA')

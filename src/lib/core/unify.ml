@@ -64,8 +64,8 @@ struct
 
 
   let eq_cvarRef cv cv' = match (cv, cv') with
-    | (MVarRef r, MVarRef r') -> r = r'
-    | (PVarRef r, PVarRef r') -> r = r'
+    | (MVarRef r, MVarRef r') -> r == r'
+    | (PVarRef r, PVarRef r') -> r == r'
     | (_, _)                  -> false
 
   (*-------------------------------------------------------------------------- *)
@@ -580,15 +580,16 @@ struct
 
     (* MVar-MVar case *)
     (* remove sM1, sM2 -bp *)
-    | ((((Root (MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), Nil) as _tM1), s1)  as sM1),
-       ((((Root (MVar (Inst (r2, _cPsi2, _tP2, cnstrs2), t2), Nil) as _tM2), s2)) as sM2)) ->
+    | ((((Root (MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), _tS1) as _tM1), s1)  as sM1),
+       ((((Root (MVar (Inst (r2, _cPsi2, _tP2, cnstrs2), t2), _tS2) as _tM2), s2)) as sM2)) ->
         (* by invariant of whnf:
            meta-variables are lowered during whnf, s1 = s2 = id
            r1 and r2 are uninstantiated  (None)
         *)
         let t1' = comp t1 s1    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = comp t2 s2 in (* cD ; cPsi |- t2' <= cPsi2 *)
-          if r1 = r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
+        let _        = Printf.printf "\n Unify two MVars \n" in
+          if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isPatSub t1' , isPatSub t2') with
               | (true, true) ->
                   let (s', cPsi') = intersection (phat, (t1', t2'), cPsi1) in
@@ -637,6 +638,10 @@ struct
     (* MVar-normal case *)
     | ((Root (MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         let t' = comp t s1 in
+        let _        = Printf.printf "\n Unify MVar \n" in
+        let _        = Pretty.Int.DefaultPrinter.ppr_normal (Whnf.norm sM1) in
+        let _        = Printf.printf "\n with normal term \n" in
+        let _        = Pretty.Int.DefaultPrinter.ppr_normal (Whnf.norm sM2) in
           if isPatSub t' then
             try
               let ss = invert t' in

@@ -9,6 +9,7 @@ open Store.Cid
 open Substitution
 open Syntax
 
+module S    = Substitution.LF
 module I    = Int.LF
 module Comp = Int.Comp
 
@@ -278,35 +279,36 @@ and collectKind cQ ((cvar, offset) as phat) sK = match sK with
 
    assumes there are no cycles
 *)
-let rec abstractKind cQ offset tK = match tK with
-  | I.Typ -> I.Typ
 
-  | I.PiKind (I.TypDecl (x, tA), tK) ->
-      I.PiKind (I.TypDecl (x, abstractTyp cQ offset tA), abstractKind cQ (offset + 1) tK)
+let rec abstractKind cQ offset sK = match sK with
+  | (I.Typ, _s) -> I.Typ
 
-and abstractTyp cQ offset tA = match tA with
-  | I.Atom (a, tS) ->
-      I.Atom (a, abstractSpine cQ offset tS)
+  | (I.PiKind (I.TypDecl (x, tA), tK), s) ->
+      I.PiKind (I.TypDecl (x, abstractTyp cQ offset (tA,s)), abstractKind cQ (offset + 1) (tK, LF.dot1 s))
 
-  | I.PiTyp (I.TypDecl (x, tA), tB) ->
-      I.PiTyp (I.TypDecl (x, abstractTyp cQ offset tA), abstractTyp cQ (offset + 1) tB)
+and abstractTyp cQ offset sA = abstractTypW cQ offset (Whnf.whnfTyp sA) 
 
-  | I.TClo sA ->
-      abstractTyp cQ offset (Whnf.normTyp sA) (* TODO confirm that [1] *)
+and abstractTypW cQ offset sA = match sA with
+  | (I.Atom (a, tS), s (* id *)) ->
+      I.Atom (a, abstractSpine cQ offset (tS, s))
 
-and abstractTerm cQ offset tM = match tM with
-  | I.Lam (x, tM) ->
-      I.Lam (x, abstractTerm cQ (offset + 1) tM)
+  | (I.PiTyp (I.TypDecl (x, tA), tB), s) ->
+      I.PiTyp (I.TypDecl (x, abstractTyp cQ offset (tA,s)), abstractTyp cQ (offset + 1) (tB, LF.dot1 s))
 
-  | I.Root (I.MVar (_u, s) as tH, I.Nil) -> 
+and abstractTerm cQ offset sM = abstractTermW cQ offset (Whnf.whnf sM)
+
+and abstractTermW cQ offset sM = match sM with
+  | (I.Lam (x, tM), s) ->
+      I.Lam (x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
+
+  | (I.Root (I.MVar (_u, s) as tH, I.Nil), _s (* LF.id *)) -> 
+    (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MV tH) + offset in 
         I.Root (I.BVar x, subToSpine cQ offset s I.Nil)
 
-  | I.Root (tH, tS) ->
-      I.Root (abstractHead cQ offset tH, abstractSpine cQ offset tS)
+  | (I.Root (tH, tS), s (* LF.id *)) ->
+      I.Root (abstractHead cQ offset tH, abstractSpine cQ offset (tS,s))
 
-  | I.Clo sM ->
-      abstractTerm cQ offset (Whnf.norm sM) (* TODO confirm that [1] *)
 
 and abstractHead cQ offset tH = match tH with
   | I.BVar x ->
@@ -315,14 +317,6 @@ and abstractHead cQ offset tH = match tH with
   | I.Const c ->
       I.Const c
 
-(*  | I.MVar (_u, _s) ->
-     
-      (*
-        I.BVar ((index_of cQ (MV tH)) + offset)
-        unroll s as a spine
-      *)
-      raise NotImplemented
-*)
   | I.FVar n ->
       I.BVar ((index_of cQ (FV (n, None))) + offset)
 
@@ -343,17 +337,17 @@ and subToSpine cQ offset s tS = match s with
       subToSpine cQ offset s (I.App (I.Root (tH, I.Nil), tS))
 
   | I.Dot (I.Obj tM, s) -> 
-      subToSpine cQ offset s (I.App (abstractTerm cQ offset tM, tS))
+      subToSpine cQ offset s (I.App (abstractTerm cQ offset (tM,LF.id), tS))
 
-and abstractSpine cQ offset tS = match tS with
-  | I.Nil ->
+and abstractSpine cQ offset sS = match sS with
+  | (I.Nil, _s) ->
       I.Nil
 
-  | I.App (tM, tS) ->
-      I.App (abstractTerm cQ offset tM, abstractSpine cQ offset tS)
+  | (I.App (tM, tS), s) ->
+      I.App (abstractTerm cQ offset (tM,s),  abstractSpine cQ offset (tS, s))
 
-  | I.SClo sS ->
-      abstractSpine cQ offset (Whnf.normSpine sS) (* TODO confirm that [1] *)
+  | (I.SClo (tS, s'), s)  ->
+      abstractSpine cQ offset (tS, LF.comp s' s)
 
 and abstractCtx cQ = match cQ with
   | I.Empty ->
@@ -363,14 +357,14 @@ and abstractCtx cQ = match cQ with
       let cQ'   = abstractCtx cQ in
       let cPsi' = abstractDctx cQ cPsi in
 (*      let  (_, depth)  = dctxToHat cPsi in  *)
-      let tA'   = abstractTyp cQ (length cPsi) tA in
+      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in
       let s'    = abstractSub cQ (length cPsi) s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV u')
 
   | I.Dec (cQ, FV (f, Some tA)) ->
       let cQ' = abstractCtx cQ in
-      let tA' = abstractTyp cQ' 0 tA in
+      let tA' = abstractTyp cQ' 0 (tA, LF.id) in
         I.Dec (cQ', FV (f, Some tA'))
 
 and abstractDctx cQ cPsi = match cPsi with
@@ -379,7 +373,7 @@ and abstractDctx cQ cPsi = match cPsi with
 
   | I.DDec (cPsi, I.TypDecl (x, tA)) ->
       let cPsi' = abstractDctx cQ cPsi in
-      let tA'   = abstractTyp cQ (length cPsi) tA in
+      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in
         I.DDec (cPsi', I.TypDecl (x, tA'))
 
   (* other cases impossible in LF layer *)
@@ -392,7 +386,7 @@ and abstractSub cQ offset s = match s with
       I.Dot (I.Head (abstractHead cQ offset tH), abstractSub cQ offset s)
 
   | I.Dot (I.Obj tM, s) ->
-      I.Dot (I.Obj (abstractTerm cQ offset tM), abstractSub cQ offset s)
+      I.Dot (I.Obj (abstractTerm cQ offset (tM, LF.id)), abstractSub cQ offset s)
 
   (* what about I.Dot (I.Undef, s) ? *)
 
@@ -401,7 +395,7 @@ and abstractSub cQ offset s = match s with
 and abstrMSub cQ t = match t with
   | Comp.MShiftZero -> Comp.MShiftZero
   | Comp.MDot(Comp.MObj(phat, tM), t) -> 
-      let tM' = abstractTerm cQ 0 tM in 
+      let tM' = abstractTerm cQ 0 (tM, LF.id) in 
         Comp.MDot(Comp.MObj(phat, tM'), abstrMSub cQ t)
 
   | Comp.MDot(Comp.PObj(phat, h), t) -> 
@@ -421,7 +415,7 @@ let abstrKind tK =
   let empty_phat = (None, 0) in
   let cQ         = collectKind I.Empty empty_phat (tK, LF.id) in
   let cQ'        = abstractCtx cQ in
-  let tK'        = abstractKind cQ' 0 tK in
+  let tK'        = abstractKind cQ' 0 (tK, LF.id) in
   let cPsi       = ctxToDctx cQ' in
     (raiseKind cPsi tK', length cPsi)
 
@@ -429,7 +423,7 @@ and abstrTyp tA =
   let empty_phat = (None, 0) in
   let cQ         = collectTyp I.Empty empty_phat (tA, LF.id) in
   let cQ'        = abstractCtx cQ in
-  let tA'        = abstractTyp cQ' 0 tA in
+  let tA'        = abstractTyp cQ' 0 (tA, LF.id) in
   let cPsi       = ctxToDctx cQ' in
     (raiseType cPsi tA', length cPsi)
 

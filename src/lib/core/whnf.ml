@@ -107,39 +107,45 @@ and lowerMVar = function
   let rec norm (tM, sigma) = match tM with
       | Lam (y, tN)       -> Lam (y, norm (tN, LF.dot1 sigma))
 
-      | Clo (tN, s)       -> norm (tN, LF.comp s sigma)
+      | Clo (tN, s)       -> (Printf.printf "\n Normalize Closure\n" ; norm (tN, LF.comp s sigma))
 
       | Root (BVar i, tS) ->
+          (Printf.printf "\n normalize BVar case \n" ;
           begin match LF.bvarSub i sigma with
-            | Obj tM    -> reduce (tM, LF.id) (normSpine (tS, sigma))
-            | Head head -> Root (head, normSpine (tS, sigma))
+            | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
+            | Head (BVar k) -> Root (BVar k, normSpine (tS, sigma))
+            | Head head     -> norm (Root (head, normSpine (tS, sigma)), LF.id)
             (* Undef should not happen ! *)
-          end
+          end)
 
       (* Meta-variables *)
 
       | Root (MVar (Offset _ as u, r), tS)
-        -> Root (MVar (u, LF.comp sigma r), normSpine (tS, sigma))
+        -> Root (MVar (u, LF.comp r sigma), normSpine (tS, sigma))
 
       | Root (MVar (Inst ({ contents = Some tM}, _, _, _), r) as _u, tS)
         (* constraints associated with u must be in solved form *)
-        -> reduce (tM, r) (normSpine (tS, sigma))
+        -> (Printf.printf "\n Normalize MVar instantiated\n" ;
+            reduce (tM, LF.comp r sigma) (normSpine (tS, sigma)))
 
       | Root (MVar (Inst ({ contents = None }, _, Atom _, _) as u, r), tS)
           (* meta-variable is of atomic type; tS = Nil *)
-        -> Root (MVar (u, LF.comp r sigma), normSpine (tS, sigma))
+        -> (Printf.printf "\n Normalize MVar uninstantiated\n" ;
+           Root (MVar (u, LF.comp r sigma), normSpine (tS, sigma)))
 
       | Root (MVar (Inst ({ contents = None } as r, cPsi, TClo (tA, s'), cnstr) as _u, s), tS)
-        -> norm (Root (MVar (Inst (r, cPsi, normTyp (tA, s'), cnstr), s), tS), sigma)
+        -> (Printf.printf "\n Normalize MVar uninstantiated -- TClo(tA,s') \n" ; 
+            norm (Root (MVar (Inst (r, cPsi, normTyp (tA, s'), cnstr), s), tS), sigma))
 
       | Root (MVar (Inst ({ contents = None }, _, _tA, _) as u, _r), _tS)
       (* Meta-variable is not atomic and tA = Pi x:B1.B2 
          lower u, and normalize the lowered meta-variable *)
-        -> let _ = lowerMVar u in norm (tM, sigma)
+        -> let _ = Printf.printf "\n Normalize MVar uninstantiated -- lowering\n"  in 
+           let _ = lowerMVar u in  norm (tM, sigma)
 
       (* Parameter variables *)
       | Root (PVar (Offset _ as p, r), tS)
-        -> Root (PVar (p, LF.comp sigma r), normSpine (tS, sigma))
+        -> Root (PVar (p, LF.comp r sigma), normSpine (tS, sigma))
 
       | Root (PVar (PInst ({ contents = Some (BVar i) }, _, _, _) as _p, r), tS)
         -> begin match LF.bvarSub i r with
@@ -180,12 +186,15 @@ and lowerMVar = function
         -> Root (Proj (PVar (q, LF.comp s sigma), k), normSpine (tS, sigma))
 
       | Root (FVar x, tS)
-        -> Root(FVar x, normSpine (tS, sigma))
-
+        -> (Printf.printf "\n normalize FVar case \n" ; Root(FVar x, normSpine (tS, sigma)))
+                             
 
   and normSpine (tS, sigma) = match tS with
     | Nil           -> Nil
-    | App  (tN, tS) -> App (norm (tN, sigma), normSpine (tS, sigma))
+    | App  (tN, tS) -> (Printf.printf "\n normSpine App \n"; 
+                        let tN' = norm (tN, sigma) in 
+                        let _    = Printf.printf "\n normTerm done \n" in 
+                        App (tN', normSpine (tS, sigma)))
     | SClo (tS, s)  -> normSpine (tS, LF.comp s sigma)
 
   (*  reduce(sM, tS) = M'
@@ -195,7 +204,7 @@ and lowerMVar = function
    *)
 
   and reduce sM spine = match (sM, spine) with
-    | ((Root (_, _) as root, s), Nil)    -> norm (root, s)
+    | ((Root (_, _) as root, s), Nil)    -> (Printf.printf "\n Reduce done -- call normalize\n" ; norm (root, s))
     | ((Lam (_y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
     | ((Clo (tM, s'), s), tS)            -> reduce (tM , LF.comp s' s) tS
     (* other cases are impossible *)
@@ -212,7 +221,7 @@ and lowerMVar = function
   *)
   and normTyp (tA, sigma) = match tA with
     |  Atom (a, tS)
-      -> Atom (a, normSpine (tS, sigma))
+      -> (Printf.printf "\n normTyp \n"; Atom (a, normSpine (tS, sigma)))
 
     |  PiTyp (TypDecl (_x, _tA) as decl, tB)
       -> PiTyp (normDecl (decl, sigma), normTyp (tB, LF.dot1 sigma))
@@ -264,17 +273,19 @@ and lowerMVar = function
     | (Root (BVar i, tS), sigma) ->
         begin match LF.bvarSub i sigma with
           | Obj tM    -> whnfRedex (whnf(tM,LF.id), (tS,sigma))
-          | Head head -> (Root(head, SClo(tS,sigma)), LF.id)
+          | Head (BVar k) -> (Root(BVar k, SClo(tS,sigma)), LF.id)
+          | Head head     -> whnf (Root(head, SClo(tS,sigma)), LF.id)
           (* Undef should not happen! *)
         end
 
     (* Meta-variable *)
     | (Root (MVar (Offset _k as u, r), tS), sigma) ->
-        (Root (MVar (u, LF.comp sigma r), SClo (tS, sigma)), LF.id)
+        (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
     | (Root (MVar (Inst ({contents = Some tM}, _, _, _) as _u, r), tS), sigma) ->
         (* constraints associated with u must be in solved form *)
-        whnfRedex (whnf (tM, r), (tS, sigma))
+        (* whnfRedex (whnf (tM, r), (tS, sigma)) *)
+        whnfRedex ((tM, LF.comp r sigma), (tS, sigma))
 
     | (Root (MVar (Inst ({contents = None}, _cPsi, tA, _cnstr) as u, r), tS) as tM, sigma) ->
       (* note: we could split this case based on tA; 
@@ -304,7 +315,7 @@ and lowerMVar = function
 
     (* Parameter variable *)
     | (Root (PVar (Offset _k as p, r), tS), sigma) ->
-        (Root (PVar (p, LF.comp sigma r), SClo (tS, sigma)), LF.id)
+        (Root (PVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
     | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma) ->
         begin match LF.bvarSub i r with

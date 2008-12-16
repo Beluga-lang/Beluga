@@ -363,7 +363,7 @@ module Comp = struct
   module S = Substitution
   module I = Syntax.Int.LF 
   module C = Cwhnf
-  module Unif = Unify.UnifyNoTrail
+(*  module Unif = Unify.UnifyNoTrail *)
 
   type error = 
     | CaseGuardMisMatch
@@ -502,6 +502,9 @@ module Comp = struct
         (checkBranch cD cG branch tAbox ttau;
          checkBranches cD cG branches tAbox ttau)
 
+  and checkBranch _cD _cG _branch (_tA, _cPsi) (_tau, _t) = () 
+
+(* match branch with
   and checkBranch cD cG branch (tA, cPsi) (tau, t) = match branch with
    | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) -> 
       let _ = LF.check cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
@@ -520,7 +523,7 @@ module Comp = struct
          -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
       *)
         check cD1' (C.cnormCtx (cG, t'')) (C.cnormExp (e1, tc')) (tau, C.comp t'' t)  
-
+*)
   and checkSchema _cD _cPsi _schema = ()
     
 end 

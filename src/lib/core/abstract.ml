@@ -79,7 +79,7 @@ let length cPsi =
 *)
 let rec eqMVar mV1 mV2 = match (mV1, mV2) with
   | (I.MVar (I.Inst (r1, _, _, _), _s) , MV (I.MVar (I.Inst (r2, _, _, _), _s'))) -> 
-       r1 = r2
+       r1 == r2
   | _ -> false
 
 (* eqFVar n fV' = B
@@ -301,7 +301,7 @@ and abstractTermW cQ offset sM = match sM with
   | (I.Lam (x, tM), s) ->
       I.Lam (x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
-  | (I.Root (I.MVar (_u, s) as tH, I.Nil), _s (* LF.id *)) -> 
+  | (I.Root (I.MVar (_u, s) as tH, _tS (* Nil *)), _s (* LF.id *)) -> 
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MV tH) + offset in 
         I.Root (I.BVar x, subToSpine cQ offset s I.Nil)

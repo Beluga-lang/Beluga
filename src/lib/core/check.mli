@@ -23,8 +23,10 @@ module LF : sig
 
   exception Error of error
 
-  val check : mctx -> dctx -> nclo -> tclo -> unit
+  val check     : mctx -> dctx -> nclo -> tclo -> unit
+  val checkTyp  : mctx -> dctx -> tclo -> unit
+  val checkKind : mctx -> dctx -> kind -> unit 
 
-  val check_sgn_decls : sgn_decl list -> unit
+  val check_sgn_decls : sgn_decl list -> unit 
 
 end

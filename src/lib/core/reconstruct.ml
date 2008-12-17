@@ -187,6 +187,17 @@ let patSpine spine =
   in
     patSpine' [] spine
 
+let rec etaExpandMV cPsi sA = etaExpandMV' cPsi (Whnf.whnfTyp sA) 
+
+and etaExpandMV' cPsi sA  = match sA with
+
+  | (I.Atom (_a, _tS) as tP, s) -> 
+    let u      = Context.newMVar (cPsi, I.TClo (tP, s)) in         
+      I.Root(I.MVar (u, LF.id), I.Nil)
+
+  | (I.PiTyp (I.TypDecl(x, _tA) as decl, tB), s) -> 
+      I.Lam (x, etaExpandMV (I.DDec(cPsi, decl)) (tB, LF.dot1 s))
+
 (* elKind  cPsi (k,s) = K
 
 *)
@@ -326,12 +337,11 @@ and elSpineIW cPsi spine i sA sP =
   else
     match sA with
       | (I.PiTyp (I.TypDecl (_, tA), tB), s) ->
-          let u      = Context.newMVar (cPsi, I.TClo (tA, s)) in
-          let h      = I.MVar (u, LF.id) in
-          let spine' = elSpineI cPsi spine (i - 1) (tB, I.Dot (I.Head h, s)) sP in
+          let tN     = etaExpandMV cPsi (tA,s) in
+          let spine' = elSpineI cPsi spine (i - 1) (tB, I.Dot (I.Obj tN, s)) sP in
             (* This only works, if tA is atomic -- if tA is not atomic, we
                need to eta-expand h, so we preserve normal forms -bp *)
-            I.App (I.Root (h, I.Nil), spine')
+            I.App (tN, spine')
 
       (* other cases impossible by (soundness?) of abstraction *)
 
@@ -385,13 +395,9 @@ and elKSpineI cPsi spine i sK =
   else
     match sK with
       | (I.PiKind (I.TypDecl (_, tA), tK), s) ->
-          let u      = Context.newMVar (cPsi, I.TClo (tA, s)) in
-          let _      = Printf.printf "\n Generate new meta-variable \n" in
-          let h      = I.MVar (u, LF.id) in
-          let spine' = elKSpineI cPsi spine (i - 1) (tK, I.Dot (I.Head h, s)) in
-            (* This only works, if tA is atomic -- if tA is not atomic, we
-               need to eta-expand h, so we preserve normal forms -bp *)
-            I.App (I.Root (h, I.Nil), spine')
+          let tN     = etaExpandMV cPsi (tA,s) in
+          let spine' = elKSpineI cPsi spine (i - 1) (tK, I.Dot (I.Obj tN, s)) in
+            I.App (tN, spine')
 
       (* other cases impossible by (soundness?) of abstraction *)
 
@@ -620,12 +626,16 @@ let recSgnDecl d = match d with
       let _        = Printf.printf "\n Reconstruction for constant : %s \n" c.string_of_name in
       let tA       = elTyp I.Null apxT in
       let _        = Printf.printf "\n Elaboration for constant : %s \n" c.string_of_name in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type tA in
+      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tA, LF.id)) in
       let _        = recTyp I.Null (tA, LF.id) in
-      let _        = Printf.printf "\n Reconstruction (without abstraction) for : %s \n" c.string_of_name in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type tA in
-      let (tA', i) = Abstract.abstrTyp tA in
-      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n" c.string_of_name (string_of_int i)  in
+      let _        = Printf.printf "\n Reconstruction (without abstraction) for : %s \n\n" c.string_of_name in
+      let tAnorm   = Whnf.normTyp (tA, LF.id) in
+      let _        = Pretty.Int.DefaultPrinter.ppr_type tAnorm in 
+      let (tA', i) = Abstract.abstrTyp tAnorm in
+      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n" c.string_of_name (string_of_int i)  in 
+      let _        = Pretty.Int.DefaultPrinter.ppr_type tA' in 
+      let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  \n" c.string_of_name  in 
+      let _        = Check.LF.checkTyp I.Empty I.Null (tA', LF.id) in  
       (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in
         I.SgnConst (c', tA')

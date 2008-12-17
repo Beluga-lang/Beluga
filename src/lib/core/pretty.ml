@@ -223,7 +223,6 @@ module Ext = struct
               (r_paren_if cond)
 
 
-
     and fmt_ppr_head ppf = function
       | Name (_, n) ->
           fprintf ppf "%s"

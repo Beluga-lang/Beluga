@@ -68,6 +68,8 @@ struct
     | (PVarRef r, PVarRef r') -> r == r'
     | (_, _)                  -> false
 
+
+
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
 
@@ -241,7 +243,7 @@ struct
     | (Lam (x, tM), s) ->
         Lam (x, invNorm ((cvar, offset + 1), (tM, dot1 s), dot1 ss, rOccur))
 
-    | (Root (MVar (Inst (r, cPsi1, _tP, _cnstrs) as u, t), Nil), s) ->
+    | (Root (MVar (Inst (r, cPsi1, _tP, _cnstrs) as u, t), _tS (* Nil *)), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered;
            hence tS = Nil and s = id *)
         if eq_cvarRef (MVarRef r) rOccur then
@@ -402,7 +404,7 @@ struct
     | (Shift n1, (Dot _ as s2), cPsi) ->
         intersection (phat, (Dot (Head (BVar (n1 + 1)), Shift (n1 + 1)), s2), cPsi)
 
-    | (Shift _, Shift _, Null) -> (id, Null)
+    | (Shift _, Shift _, cPsi) -> (id, cPsi)
         (* both substitutions are the same number of shifts by invariant *)
         (* all other cases impossible for pattern substitutions *)
 
@@ -447,7 +449,7 @@ struct
         let tM' = prune ((cvar, offset + 1), (tM, dot1 s), dot1 ss, rOccur) in
           Lam (x, tM')
 
-    | (Root (MVar (Inst (r, cPsi1, tP, cnstrs) as u, t), Nil) as tM, s (* id *)) ->
+    | (Root (MVar (Inst (r, cPsi1, tP, cnstrs) as u, t), _tS (* Nil *)) as tM, s (* id *)) ->
       (* by invariant: MVars are lowered since tM is in whnf *)
         if eq_cvarRef (MVarRef r) rOccur then
           raise (Unify "Variable occurrence")
@@ -576,22 +578,33 @@ struct
 
   and unifyTerm' (((psi, offset) as phat), sN, sM) = match (sN, sM) with
     | ((Lam (_x, tN), s1), (Lam (_y, tM), s2)) ->
+        let _    = Printf.printf "\n Unify Lam \n" in
+        let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm (tN, dot1 s1)) in
+        let _    = Printf.printf "\n with Lam  \n" in
+        let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm (tM, dot1 s2)) in
         unifyTerm ((psi, offset + 1), (tN, dot1 s1), (tM, dot1 s2))
 
     (* MVar-MVar case *)
     (* remove sM1, sM2 -bp *)
-    | ((((Root (MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), _tS1) as _tM1), s1)  as sM1),
-       ((((Root (MVar (Inst (r2, _cPsi2, _tP2, cnstrs2), t2), _tS2) as _tM2), s2)) as sM2)) ->
+    | ((((Root (MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), _tS1) as tM1), s1)  as sM1),
+       ((((Root (MVar (Inst (r2, _cPsi2, _tP2, cnstrs2), t2), _tS2) as tM2), s2)) as sM2)) ->
         (* by invariant of whnf:
            meta-variables are lowered during whnf, s1 = s2 = id
            r1 and r2 are uninstantiated  (None)
         *)
         let t1' = comp t1 s1    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = comp t2 s2 in (* cD ; cPsi |- t2' <= cPsi2 *)
+        let _    = Printf.printf "\n Unify MV \n" in
+        let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm (tM1, t1')) in
+        let _    = Printf.printf "\n with MV  \n" in
+        let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm (tM2, t2')) in
+
         let _        = Printf.printf "\n Unify two MVars \n" in
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
-            match (isPatSub t1' , isPatSub t2') with
+            (Printf.printf "\n MVar - MVar (equal) \n";
+            match (isPatSub t1' , isPatSub t2') with                
               | (true, true) ->
+                  let _ = Printf.printf "\n MVars the same \n" in
                   let (s', cPsi') = intersection (phat, (t1', t2'), cPsi1) in
                     (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
                        then cD ; cPsi1 |- s' <= cPsi' *)
@@ -607,22 +620,25 @@ struct
               | (true, false) ->
                   addConstraint (cnstrs2, ref (Eqn (phat, Clo sM, Clo sN))) (* XXX double-check *)
               | (false, _) ->
-                  addConstraint (cnstrs1, ref (Eqn (phat, Clo sN, Clo sM)))  (* XXX double-check *)
+                  addConstraint (cnstrs1, ref (Eqn (phat, Clo sN, Clo sM)))  (* XXX double-check *))
           else
+            (Printf.printf "\n MVar - MVar (not equal) \n";
             begin match (isPatSub t1' , isPatSub t2') with
               | (true, _) ->
                   (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
                   begin try
+                    let _    = Printf.printf "\n Unify – PatSub MVar 1 \n" in
                     let ss1  = invert t1' (* cD ; cPsi1 |- ss1 <= cPsi *) in
-                    let sM2' = trail (fun () -> prune (phat, sM2, ss1, MVarRef r1)) in
-                      (* sM2 = [ss1][s2]tM2 *)
+                    let sM2' = trail (fun () -> prune (phat, sM2, ss1, MVarRef r1)) in                                      (* sM2 = [ss1][s2]tM2 *)
                       instantiateMVar (r1, sM2', !cnstrs1)
                   with
                     | NotInvertible ->
-                        addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
+                        (let _    = Printf.printf "\n Pruning failed \n" in
+                        addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2))))
                   end
               | (false, true) ->
                   begin try
+                    let _    = Printf.printf "\n Unify - PatSub MVar 2 \n" in
                     let ss2 = invert t2'(* cD ; cPsi2 |- ss2 <= cPsi *) in
                     let sM1' = trail (fun () -> prune (phat, sM1, ss2, MVarRef r2)) in
                       instantiateMVar (r2, sM1', !cnstrs2)
@@ -632,9 +648,14 @@ struct
                   end
               | (false , false) ->
                   (* neither t1' nor t2' are pattern substitutions *)
+                  let _    = Printf.printf "\n Unify - No PatSub!! \n" in
+                  let _    = Printf.printf "\n MVAR 2 \n" in
+                  let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm sM2) in
+                  let _    = Printf.printf "\n MVAR 1 \n" in
+                  let _    = Pretty.Int.DefaultPrinter.ppr_normal (Whnf.norm sM1) in
                   let cnstr = ref (Eqn (phat, Clo sM1, Clo sM2)) in
                     addConstraint (cnstrs1, cnstr)
-            end
+            end)
     (* MVar-normal case *)
     | ((Root (MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         let t' = comp t s1 in

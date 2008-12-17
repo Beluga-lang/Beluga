@@ -338,18 +338,18 @@ module LF = struct
   let rec check_sgn_decls = function
     | []                       -> ()
 
-    | SgnTyp   (_a, k) :: decls ->
+    | SgnTyp   (_a, tK) :: decls ->
         let cD   = Empty
         and cPsi = Null
         in
-          checkKind cD cPsi k
+          checkKind cD cPsi tK
           ; check_sgn_decls decls
 
-    | SgnConst (_c, a) :: decls ->
+    | SgnConst (_c, tA) :: decls ->
         let cD   = Empty
         and cPsi = Null
         in
-          checkTyp cD cPsi (a, LF.id)
+          checkTyp cD cPsi (tA, LF.id)
           ; check_sgn_decls decls
 
 end
@@ -366,11 +366,11 @@ module Comp = struct
 (*  module Unif = Unify.UnifyNoTrail *)
 
   type error = 
-    | CaseGuardMisMatch
-    | FunMisMatch
-    | CtxAbsMisMatch
-    | MLamMisMatch
-    | TypMisMatch
+    | CaseScrutineeMismatch
+    | FunMismatch
+    | CtxAbsMismatch
+    | MLamMismatch
+    | TypMismatch
 
   exception Error of error
 
@@ -422,12 +422,12 @@ module Comp = struct
     | I.Null -> tA
     | I.DDec (cPsi', decl) -> raiseTyp cPsi' (I.PiTyp(decl, tA))
 
-  (* check cD cG e (tau, t) = ()
+  (* check cD cG e (tau, theta) = ()
 
      Invariant:
 
      If  cD ; cG |- e wf-exp
-     and cD |- t <= cD' 
+     and cD |- theta <= cD' 
      and cD'|- tau <= c_typ
      returns ()
      if  cD ; cG |- e <= [|t|]tau
@@ -451,18 +451,18 @@ module Comp = struct
               cG   e (tau, C.mvar_dot1 phat t)
 
     | (Box(_phat, tM), (TypBox (tA, cPsi),t)) -> 
-        LF.check cD cPsi (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+        LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
 
     | (Case (e, branches), (tau, t)) -> 
         begin match syn cD cG e with
           | (TypBox(tA, cPsi), t') -> 
               checkBranches cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
-          | _ -> raise (Error CaseGuardMisMatch)
+          | _ -> raise (Error CaseScrutineeMismatch)
         end
 
     | (Syn e, (tau, t)) -> 
         if C.convCTyp (tau,t) (syn cD cG e) then ()
-        else raise (Error TypMisMatch)
+        else raise (Error TypMismatch)
 
   and check cD cG e theta_tau = checkW cD cG e (C.cwhnfCTyp theta_tau)
 
@@ -473,23 +473,23 @@ module Comp = struct
           | (TypArr (tau2, tau), t) -> 
               (check cD cG e2 (tau2, t);
                (tau, t))
-          | _ -> raise (Error FunMisMatch)
+          | _ -> raise (Error FunMismatch)
         end
     | CtxApp (e, cPsi) -> 
         begin match syn cD cG e with
           | (TypCtxPi ((_psi, schema) , tau), t) ->
               (checkSchema cD cPsi schema ;
                (tau, MDot(CObj cPsi, t)))
-          | _ -> raise (Error CtxAbsMisMatch)
+          | _ -> raise (Error CtxAbsMismatch)
         end 
     | MApp (e, (_phat, tM)) -> 
         begin match syn cD cG e with
           | (TypPiBox (I.MDecl(_, tA, cPsi), tau), t) -> 
               let phat = Context.dctxToHat cPsi in 
-                (LF.check cD cPsi (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
+                (LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
                  (tau, MDot(MObj (phat, tM), t))
                 )
-          | _ -> raise (Error MLamMisMatch)
+          | _ -> raise (Error MLamMismatch)
         end
 
     | (Ann (e, tau)) -> 
@@ -505,20 +505,22 @@ module Comp = struct
   and checkBranch _cD _cG _branch (_tA, _cPsi) (_tau, _t) = () 
 
 (* match branch with
+
   and checkBranch cD cG branch (tA, cPsi) (tau, t) = match branch with
    | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) -> 
       let _ = LF.check cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
+
       let d1 = length cD1 in
       let _d  = length cD in
       let t1 = mctxToMSub cD1 in   (* {cD1} |- t1 <= cD1 *)
       let t' = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
-      let tc = extend t' t1 in    (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
+      let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
       let phat = dctxToHat cPsi in 
       let tA1' = raiseTyp cPsi1 tA1 in 
       let tA'  = raiseTyp cPsi tA in
       let _    =  Unif.unifyTyp (phat, (C.cnormTyp (tA', t'), S.LF.id), (C.cnormTyp (tA1', t1), S.LF.id))  in 
-      let (tc', cD1') = Abstract.abstractMSub tc in
-      let t'' = split tc d1 in 
+      let (tc', cD1') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
+      let t'' = split tc d1 in (* cD1' |- t'' <= cD  suffix *)
       (* NOTE: cnormCtx and cnormExp not implemented
          -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
       *)

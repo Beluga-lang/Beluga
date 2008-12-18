@@ -349,6 +349,10 @@ module Int = struct
 
     val ppr_cvar     : cvar     -> unit
 
+    val subToString    : sub      -> string
+    val spineToString  : spine    -> string
+    val typToString    : typ      -> string
+    val normalToString : normal   -> string
   end
 
 
@@ -446,7 +450,10 @@ module Int = struct
               (fmt_ppr_spine 2)  ms
               (r_paren_if cond)
 
-
+      | Clo(tM, s) -> 
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_normal lvl) tM
+            (fmt_ppr_sub  lvl) s
 
     and fmt_ppr_head lvl ppf = function
       | BVar x  ->
@@ -561,6 +568,18 @@ module Int = struct
 
     let ppr_cvar     = fmt_ppr_cvar     std_lvl std_formatter
 
+    let subToString  s    = (fmt_ppr_sub  std_lvl str_formatter s
+                            ; flush_str_formatter ())
+
+    let spineToString tS  = (fmt_ppr_spine  std_lvl str_formatter tS
+                            ; flush_str_formatter ())
+
+    let typToString tA   = (fmt_ppr_typ  std_lvl str_formatter tA
+                            ; flush_str_formatter ())
+
+    let normalToString tM = (fmt_ppr_normal  std_lvl str_formatter tM
+                          ; flush_str_formatter ())
+
   end
 
 
@@ -596,6 +615,8 @@ module Int = struct
 end
 
 
+(* Disabled Error module to allow printing in check, whnf, unify, etc. 
+   Wed Dec 17 21:12:38 2008 -bp 
 
 module Error = struct
 
@@ -746,7 +767,6 @@ module Error = struct
   end
 
 
-
   (***********************************)
   (* Default CID_RENDERER for Errors *)
   (***********************************)
@@ -762,3 +782,4 @@ module Error = struct
   module DefaultPrinter = Make (DefaultCidRenderer)
 
 end
+*)

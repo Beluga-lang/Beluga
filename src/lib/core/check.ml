@@ -14,7 +14,7 @@ module LF = struct
   open Syntax.Int.LF
 
 
-
+(*
   type error =
     | CtxVarMisMatch of cvar * cvar
     | SigmaIllTyped of mctx * dctx * 
@@ -27,7 +27,11 @@ module LF = struct
     | TypMisMatch  of mctx * dctx * tclo * tclo
     | IllTyped of mctx * dctx * nclo * tclo
 
+
   exception Error of error
+*)
+
+  exception Error of string
 
   (* check cD cPsi (tM, s1) (tA, s2) = ()
 
@@ -55,7 +59,8 @@ module LF = struct
           checkSpine cD cPsi (tS, s) sA sP
 
     | _
-      -> raise (Error (IllTyped (cD, cPsi, sM1, sA2)))
+      -> raise (Error "LF Term is illtyped")
+               (* IllTyped (cD, cPsi, sM1, sA2) *)
 
   and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 
@@ -80,7 +85,8 @@ module LF = struct
         then
           ()
         else
-          raise (Error (TypMisMatch (cD, cPsi, sP', sP)))
+          raise (Error "Type Mismatch")
+            (* (TypMisMatch (cD, cPsi, sP', sP)) *)
 
     | ((SClo (tS, s'), s), sA) ->
         checkSpine cD cPsi (tS, LF.comp s' s) sA sP
@@ -97,7 +103,8 @@ module LF = struct
 
     | ((App (_tM, _tS), _), (_tA, _s)) ->
         (* tA <> (Pi x:tA1. tA2, s) *)
-        raise (Error ExpAppNotFun)
+        raise (Error "Expression not a function")
+                 (* ExpAppNotFun *)
 
 
 
@@ -166,14 +173,16 @@ module LF = struct
     | (CtxVar psi, Shift 0, CtxVar psi')  ->
         if psi = psi'
         then ()
-        else raise (Error (CtxVarMisMatch (psi, psi')))
+        else raise (Error "Context variable mismatch")
+                      (* (CtxVarMisMatch (psi, psi')) *)
 
     (* SVar case to be added - bp *)
 
     | (DDec (cPsi, _tX), Shift k, Null)   ->
         if k > 0
         then checkSub cD cPsi (Shift (k - 1)) Null
-        else raise (Error (SubIllTyped))
+        else raise (Error "Substitution illtyped")
+                      (* (SubIllTyped) *)
 
     | (cPsi', Shift k, cPsi)              ->
         checkSub cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
@@ -186,7 +195,8 @@ module LF = struct
         in
           if Whnf.convTyp (tA1, LF.id) (tA2, s')
           then ()
-          else raise (Error (TypIllTyped (cD, cPsi', (tA1, LF.id), (tA2, s'))))
+          else raise (Error "Type illkinded")
+                        (* (TypIllTyped (cD, cPsi', (tA1, LF.id), (tA2, s'))) *)
 
     | (cPsi', Dot (Head (BVar w), t), SigmaDec (cPsi, (SigmaDecl (_, arec)))) ->
         (* other heads of type Sigma disallowed -bp *)
@@ -196,7 +206,8 @@ module LF = struct
         in
           if Whnf.convTypRec (brec, LF.id) (arec, t)
           then ()
-          else raise (Error (SigmaIllTyped (cD, cPsi', (brec, LF.id), (arec, t))))
+          else raise (Error "Sigma-type illtyped")
+                        (* (SigmaIllTyped (cD, cPsi', (brec, LF.id), (arec, t))) *)
 
     | (cPsi', Dot (Obj tM, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
         (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
@@ -230,7 +241,8 @@ module LF = struct
     | ((Nil, _), (Typ, _s))             -> ()
 
     | ((Nil, _), _)                     ->  
-        raise (Error (KindMisMatch))
+        raise (Error "Kind mismatch")
+                 (* (KindMisMatch) *)
 
     | ((SClo (tS, s'), s), sK)          ->
         checkSpineK cD cPsi (tS, LF.comp s' s) sK
@@ -240,7 +252,8 @@ module LF = struct
         ; checkSpineK cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
     | ((App (_tM , _tS), _), (_kK, _s)) ->
-        raise  (Error ExpAppNotFun)
+        raise  (Error "LF term not well-typed")
+                  (* ExpAppNotFun *)
 
 
 
@@ -365,7 +378,7 @@ module Comp = struct
   module C = Cwhnf
 (*  module Unif = Unify.UnifyNoTrail *)
 
-  type error = 
+(*  type error = 
     | CaseScrutineeMismatch
     | FunMismatch
     | CtxAbsMismatch
@@ -373,6 +386,9 @@ module Comp = struct
     | TypMismatch
 
   exception Error of error
+*)
+
+  exception Error of string 
 
   let rec length cD = match cD with
     | I.Empty -> 0
@@ -457,12 +473,12 @@ module Comp = struct
         begin match syn cD cG e with
           | (TypBox(tA, cPsi), t') -> 
               checkBranches cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
-          | _ -> raise (Error CaseScrutineeMismatch)
+          | _ -> raise (Error "Case scrutinee not of boxed type")
         end
 
     | (Syn e, (tau, t)) -> 
         if C.convCTyp (tau,t) (syn cD cG e) then ()
-        else raise (Error TypMismatch)
+        else raise (Error "Type mismatch")
 
   and check cD cG e theta_tau = checkW cD cG e (C.cwhnfCTyp theta_tau)
 
@@ -473,14 +489,14 @@ module Comp = struct
           | (TypArr (tau2, tau), t) -> 
               (check cD cG e2 (tau2, t);
                (tau, t))
-          | _ -> raise (Error FunMismatch)
+          | _ -> raise (Error "Function mismatch")
         end
     | CtxApp (e, cPsi) -> 
         begin match syn cD cG e with
           | (TypCtxPi ((_psi, schema) , tau), t) ->
               (checkSchema cD cPsi schema ;
                (tau, MDot(CObj cPsi, t)))
-          | _ -> raise (Error CtxAbsMismatch)
+          | _ -> raise (Error "Context abstraction mismatch")
         end 
     | MApp (e, (_phat, tM)) -> 
         begin match syn cD cG e with
@@ -489,7 +505,7 @@ module Comp = struct
                 (LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
                  (tau, MDot(MObj (phat, tM), t))
                 )
-          | _ -> raise (Error MLamMismatch)
+          | _ -> raise (Error "MLam mismatch")
         end
 
     | (Ann (e, tau)) -> 

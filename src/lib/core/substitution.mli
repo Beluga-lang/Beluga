@@ -24,8 +24,6 @@ module LF : sig
   val dot1     : sub -> sub
   val invDot1  : sub -> sub
 
-  val isPatSub : sub -> bool
-
 
 
   (***************************)

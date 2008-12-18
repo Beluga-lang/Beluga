@@ -15,12 +15,18 @@ open Substitution
 open Syntax.Int.LF
 
 
-
+(*
 type error =
   | ConstraintsLeft
   | NotPatSub
+*)
 
-exception Error of error
+exception Error of string
+
+
+let rec emptySpine tS = match tS with
+  | Nil -> true
+  | SClo(tS, _s) -> emptySpine tS
 
 (******************************)
 (* Lowering of Meta-Variables *)
@@ -79,7 +85,8 @@ and lowerMVar = function
 
   | _
    (* It is not clear if it can happen that cnstr =/= nil *)
-    -> raise (Error ConstraintsLeft)
+    -> raise (Error "Constraints Left")
+                (* ConstraintsLeft *)
 
 (* ------------------------------------------------------------ *)
 (* Normalization = applying simultaneous hereditary substitution
@@ -111,7 +118,7 @@ and lowerMVar = function
 
       | Root (BVar i, tS) ->          
           begin match LF.bvarSub i sigma with
-            | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
+            | Obj tM        ->  reduce (tM, LF.id) (normSpine (tS, sigma))
             | Head (BVar k) -> Root (BVar k, normSpine (tS, sigma))
             | Head head     -> norm (Root (head, normSpine (tS, sigma)), LF.id)
             (* Undef should not happen ! *)
@@ -120,7 +127,7 @@ and lowerMVar = function
       (* Meta-variables *)
 
       | Root (MVar (Offset _ as u, r), tS)
-        -> Root (MVar (u, LF.comp r sigma), normSpine (tS, sigma))
+        -> Root (MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
       | Root (MVar (Inst ({ contents = Some tM}, _, _, _), r) as _u, tS)
         (* constraints associated with u must be in solved form *)
@@ -128,7 +135,7 @@ and lowerMVar = function
 
       | Root (MVar (Inst ({ contents = None }, _, Atom _, _) as u, r), tS)
           (* meta-variable is of atomic type; tS = Nil *)
-        -> Root (MVar (u, LF.comp r sigma), normSpine (tS, sigma))
+        -> Root (MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
       | Root (MVar (Inst ({ contents = None } as r, cPsi, TClo (tA, s'), cnstr) as _u, s), tS)
         -> norm (Root (MVar (Inst (r, cPsi, normTyp (tA, s'), cnstr), s), tS), sigma)
@@ -140,7 +147,7 @@ and lowerMVar = function
 
       (* Parameter variables *)
       | Root (PVar (Offset _ as p, r), tS)
-        -> Root (PVar (p, LF.comp r sigma), normSpine (tS, sigma))
+        -> Root (PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
       | Root (PVar (PInst ({ contents = Some (BVar i) }, _, _, _) as _p, r), tS)
         -> begin match LF.bvarSub i r with
@@ -158,7 +165,7 @@ and lowerMVar = function
           and  cD; cPsi' |- q[r' o r] -> [r]tA
          *)
       | Root (PVar (PInst ({ contents = None}, _, _, _) as p, r), tS)
-        -> Root (PVar (p, LF.comp r sigma), normSpine (tS, sigma))
+        -> Root (PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
       (* Constants *)
       | Root (Const c, tS)
@@ -179,7 +186,7 @@ and lowerMVar = function
         -> norm (Root (Proj (PVar (q, LF.comp r' s), k), tS), sigma)
 
       | Root (Proj (PVar (PInst ({ contents = None}, _, _, _) as q, s), k), tS)
-        -> Root (Proj (PVar (q, LF.comp s sigma), k), normSpine (tS, sigma))
+        -> Root (Proj (PVar (q, normSub (LF.comp s sigma)), k), normSpine (tS, sigma))
 
       | Root (FVar x, tS)
         -> Root(FVar x, normSpine (tS, sigma))
@@ -203,6 +210,21 @@ and lowerMVar = function
     (* other cases are impossible *)
 
 
+  and normSub s = match s with 
+    | Shift _ -> s
+    | Dot(ft, s') -> Dot(normFt ft, normSub s')
+
+  and normFt ft = match ft with
+    | Obj tM -> 
+        begin match norm (tM, LF.id) with
+          | Root(BVar k, Nil) -> Head (BVar k)
+          | tN                -> Obj (tN) 
+        end 
+    | Head (BVar _k)  -> ft
+    | Head (MVar (u, s')) -> Head(MVar (u, normSub s'))
+    | Head (PVar (p, s')) -> Head(PVar (p, normSub s'))
+    | Head (Proj(PVar (p,s'), k)) -> Head(Proj(PVar (p, normSub s'), k))
+    | Head h            -> Head h
 
   (* normType (tA, sigma) = tA'
 
@@ -265,9 +287,9 @@ and lowerMVar = function
 
     | (Root (BVar i, tS), sigma) ->       
         begin match LF.bvarSub i sigma with
-          | Obj tM    -> whnfRedex (whnf(tM,LF.id), (tS,sigma))
+          | Obj tM    -> whnfRedex ((tM, LF.id), (tS,sigma))
           | Head (BVar k) -> (Root(BVar k, SClo(tS,sigma)), LF.id)
-          | Head head     -> whnf (Root(head, SClo(tS,sigma)), LF.id)
+          | Head head     ->  whnf (Root(head, SClo(tS,sigma)), LF.id)
           (* Undef should not happen! *)
         end
 
@@ -278,7 +300,6 @@ and lowerMVar = function
   
   | (Root (MVar (Inst ({contents = Some tM}, _, _, _) as _u, r), tS), sigma) ->
         (* constraints associated with u must be in solved form *)
-        (* whnfRedex (whnf (tM, r), (tS, sigma)) *)
         whnfRedex ((tM, LF.comp r sigma), (tS, sigma))
 
     | (Root (MVar (Inst ({contents = None}, _cPsi, tA, _cnstr) as u, r), tS) as tM, sigma) ->
@@ -287,11 +308,8 @@ and lowerMVar = function
         begin match whnfTyp (tA, LF.id) with
           | (Atom _, _s (* id *)) ->
               (* meta-variable is of atomic type; tS = Nil  *)
-              (let _ = Printf.printf "\n Whnf – Atomic type  \n" in 
-                 (Root (MVar (u, r ), tS), LF.id)  )
-                (* (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)) *)
-                (* did not work ! Wed Dec 17 00:04:15 2008 -bp !!! *)
-          | ((PiTyp _ , _s)->
+              (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+          | (PiTyp _ , _s)->
               (* Meta-variable is not atomic and tA = Pi x:B1.B2 
                  lower u, and normalize the lowered meta-variable
                  note: we may expose and compose substitutions twice. *)
@@ -305,7 +323,7 @@ and lowerMVar = function
 
     | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma) ->
         begin match LF.bvarSub i r with
-          | Obj tM    -> whnfRedex (whnf (tM, LF.id), (tS, sigma))
+          | Obj tM    -> whnfRedex ((tM, LF.id), (tS, sigma))
           | Head head -> (Root (head, SClo (tS, sigma)), LF.id)
         end
 
@@ -335,7 +353,6 @@ and lowerMVar = function
         (Root (FVar x, SClo (tS, sigma)), LF.id)
 
 
-
   (* whnfRedex((tM,s1), (tS, s2)) = (R,s')
  
      If cD ; Psi1 |- tM <= tA       and cD ; cPsi |- s1 <= Psi1
@@ -348,8 +365,8 @@ and lowerMVar = function
   *)
   and whnfRedex (sM, sS) = match (sM, sS) with
     | ((Root (_, _) as root, s1), (Nil, _s2)) ->
-        whnf (root, s1)
-
+        whnf (root, s1) 
+       
     | ((Lam (_x, tM), s1), (App (tN, tS), s2)) ->
         let tN' = Clo (    tN , s2) in  (* cD ; cPsi |- tN'      <= tA' *)
         let s1' = Dot (Obj tN', s1) in  (* cD ; cPsi |- tN' . s1 <= Psi1, x:tA''
@@ -407,10 +424,12 @@ and lowerMVar = function
       | Dot (Obj (tM), s)      ->
           begin match whnf (tM, LF.id) with
             | (Root (BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
-            | _                         -> raise (Error NotPatSub)
+            | _                         -> raise (Error "Not a pattern substitution")
+                                                       (* NotPatSub *)
           end
 
-      | _                      -> raise (Error NotPatSub)
+      | _                      -> raise (Error "Not a pattern substitution")
+                                        (* NotPatSub *)
 
     let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
 
@@ -627,3 +646,4 @@ and lowerMVar = function
       let (cvar', l') = dctxToHat cPsi in
              l'   = l
           && cvar = cvar'
+

@@ -6,17 +6,18 @@
 *)
 
 open Syntax.Int.LF
-
+(*
 type error =
   | ConstraintsLeft
   | NotPatSub
-
-exception Error of error
+*)
+exception Error of string
 
 val whnf       : nclo -> nclo
 val whnfTyp    : tclo -> tclo
 val norm       : nclo -> normal
 val normTyp    : tclo -> typ
+val normSub    : sub  -> sub
 val normSpine  : sclo -> spine
 val reduce     : nclo -> spine -> normal
 val whnfRedex  : nclo *  sclo  -> nclo

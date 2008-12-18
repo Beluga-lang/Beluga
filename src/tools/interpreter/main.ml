@@ -64,15 +64,17 @@ let main () =
                     | Whnf.Error  err ->
                         fprintf
                           ppf
-                          "\n!! Error during Weak-Head Normalization !!\n\n%a\n\n"
-                          Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err
+                          "\n!! Error during Weak-Head Normalization !!\n\n%s\n\n"
+                          err
+                          (* Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err *)
                       ; errors + 1
 
                     | Check.LF.Error err ->
                         fprintf
                           ppf
-                          "\n!! Error during Type-Checking !!\n\n%a\n\n"
-                          Pretty.Error.DefaultPrinter.Check.fmt_ppr err;
+                          "\n!! Error during Type-Checking !!\n\n%s\n\n"
+                          err
+                          (* Pretty.Error.DefaultPrinter.Check.fmt_ppr err; *)
                       ; errors + 1
 
     (* Iterate the process for each file given on the command line *)

@@ -13,7 +13,7 @@ ev_app: eval E2 V2 -> eval E1 (lam ([x] E1' x)) -> eval (E1' V2) V -> eval (app 
 
 oft: exp -> tp -> type.
 
-tp_lam: {x: exp} oft x T1 -> oft (E x) T2 -> oft (lam ([x] E x)) (arrow T1 T2).
+tp_lam: ({x: exp} oft x T1 -> oft (E x) T2) -> oft (lam ([x] E x)) (arrow T1 T2).
 
 tp_app: oft E2 T1 -> oft E1 (arrow T1 T2) -> oft (app E1 E2) T2.
 
@@ -23,6 +23,7 @@ val_lam: value (lam ([x] E x)).
 the_following_don't_work_and_we_really_need_comments_soon: type.
 
 vs: eval E V -> value V -> type.
+
 vs_lam: vs ev_lam val_lam.
 
 vs_app': vs (ev_app D1 D2 D3) P3.

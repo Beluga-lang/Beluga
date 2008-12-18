@@ -230,8 +230,6 @@ and elTyp cPsi a = match a with
   | A.Atom (a, s) ->
       let tK = (Typ.get a).Typ.kind in
       let i  = (Typ.get a).Typ.implicit_arguments in
-      let _        = Printf.printf "\n Elaborate spine for constant : \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_kind tK in
       let tS = elKSpineI cPsi s i (tK, Substitution.LF.id) in
         I.Atom (a, tS)
 
@@ -537,13 +535,8 @@ and recTermW cPsi sM sA = match (sM, sA) with
      (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
      (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
       let s1 = (LF.comp t s') in
-      let _        = Printf.printf "\n RecTerm: Unify \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP',s1)) in
-      let _        = Printf.printf "\n with \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP,s)) in
-      let _        = (recSub cPsi s1 cPhi;
-                      Unif.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))) in 
-       Printf.printf "\n done \n"
+        (recSub cPsi s1 cPhi;
+         Unif.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s)))
 
   | ((I.Root (I.FVar x, tS), s'), (I.Atom _ as tP, s)) ->
       (* x is in eta-expanded form and tA is closed
@@ -561,12 +554,7 @@ and recSpine cPsi sS sA sP =
 
 and recSpineW cPsi sS sA sP = match (sS, sA) with
   | ((I.Nil, _s), (tP', s')) ->
-      let _        = Printf.printf "\n RecSpine Unify \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP',s')) in
-      let _        = Printf.printf "\n with \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp sP) in
-      let _        =  Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s')) in 
-        Printf.printf "\n done \n"
+      Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s')) 
 
   | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
       recTerm  cPsi (tM, s') (tA, s);
@@ -614,7 +602,6 @@ let recSgnDecl d = match d with
       let _        = recKind I.Null (tK, LF.id) in
       let (tK', i) = Abstract.abstrKind tK in
       let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n" a.string_of_name (string_of_int i) in
-      let _        = Pretty.Int.DefaultPrinter.ppr_kind tK' in
       let a'       = Typ.add (Typ.mk_entry a tK' i) in
         (* why does Term.add return a' ? -bp *)
         (* because (a : name) and (a' : cid_typ) *)
@@ -625,15 +612,13 @@ let recSgnDecl d = match d with
       let _        = FVar.clear () in
       let _        = Printf.printf "\n Reconstruction for constant : %s \n" c.string_of_name in
       let tA       = elTyp I.Null apxT in
-      let _        = Printf.printf "\n Elaboration for constant : %s \n" c.string_of_name in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tA, LF.id)) in
+      let _        = Printf.printf "\n Elaboration for constant : %s \n %s \n" c.string_of_name (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, LF.id))) in
+(*      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tA, LF.id)) in *)
       let _        = recTyp I.Null (tA, LF.id) in
-      let _        = Printf.printf "\n Reconstruction (without abstraction) for : %s \n\n" c.string_of_name in
+      let _        = Printf.printf "\n Reconstruction (without abstraction) for : %s : %s \n\n" c.string_of_name (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, LF.id)))in
       let tAnorm   = Whnf.normTyp (tA, LF.id) in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type tAnorm in 
       let (tA', i) = Abstract.abstrTyp tAnorm in
-      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n" c.string_of_name (string_of_int i)  in 
-      let _        = Pretty.Int.DefaultPrinter.ppr_type tA' in 
+      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n %s" c.string_of_name (string_of_int i) (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA', LF.id))) in 
       let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  \n" c.string_of_name  in 
       let _        = Check.LF.checkTyp I.Empty I.Null (tA', LF.id) in  
       (* why does Term.add return a c' ? -bp *)

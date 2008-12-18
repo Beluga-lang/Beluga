@@ -167,6 +167,11 @@ module Int : sig
 
     val ppr_cvar     : cvar     -> unit
 
+    val subToString    : sub      -> string
+    val spineToString  : spine    -> string
+    val typToString    : typ      -> string
+    val normalToString : normal   -> string
+
   end
 
 
@@ -196,7 +201,7 @@ module Int : sig
 end
 
 
-
+(*
 module Error : sig
 
   (***************************)
@@ -272,3 +277,4 @@ module Error : sig
   module DefaultPrinter : PRINTER
 
 end
+*)

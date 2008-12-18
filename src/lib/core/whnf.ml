@@ -308,6 +308,9 @@ and lowerMVar = function
         begin match whnfTyp (tA, LF.id) with
           | (Atom _, _s (* id *)) ->
               (* meta-variable is of atomic type; tS = Nil  *)
+              let _   = Printf.printf "WHNF mvar :" in
+              let _   = Printf.printf " \n %s \n" 
+                    (Pretty.Int.DefaultPrinter.normalToString (norm (tM, sigma))) in
               (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
           | (PiTyp _ , _s)->
               (* Meta-variable is not atomic and tA = Pi x:B1.B2 

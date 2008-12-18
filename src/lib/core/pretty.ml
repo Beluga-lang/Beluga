@@ -349,6 +349,7 @@ module Int = struct
 
     val ppr_cvar     : cvar     -> unit
 
+    val headToString   : head     -> string
     val subToString    : sub      -> string
     val spineToString  : spine    -> string
     val typToString    : typ      -> string
@@ -427,6 +428,10 @@ module Int = struct
               (fmt_ppr_typ 0) b
               (r_paren_if cond)
 
+      | TClo (tA, s) -> 
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_typ lvl) tA
+            (fmt_ppr_sub  lvl) s
 
 
     and fmt_ppr_normal lvl ppf = function
@@ -567,6 +572,10 @@ module Int = struct
     let ppr_front    = fmt_ppr_front    std_lvl std_formatter
 
     let ppr_cvar     = fmt_ppr_cvar     std_lvl std_formatter
+
+
+    let headToString h    = (fmt_ppr_head  std_lvl str_formatter h;
+                              flush_str_formatter ())
 
     let subToString  s    = (fmt_ppr_sub  std_lvl str_formatter s
                             ; flush_str_formatter ())

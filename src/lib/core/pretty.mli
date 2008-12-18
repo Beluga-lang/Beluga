@@ -167,6 +167,7 @@ module Int : sig
 
     val ppr_cvar     : cvar     -> unit
 
+    val headToString   : head     -> string
     val subToString    : sub      -> string
     val spineToString  : spine    -> string
     val typToString    : typ      -> string

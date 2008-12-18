@@ -190,13 +190,12 @@ let patSpine spine =
 let rec etaExpandMV cPsi sA = etaExpandMV' cPsi (Whnf.whnfTyp sA) 
 
 and etaExpandMV' cPsi sA  = match sA with
-
   | (I.Atom (_a, _tS) as tP, s) -> 
-    let u      = Context.newMVar (cPsi, I.TClo (tP, s)) in         
-      I.Root(I.MVar (u, LF.id), I.Nil)
+      let u = Context.newMVar (cPsi, I.TClo (tP, s)) in         
+        I.Root (I.MVar (u, LF.id), I.Nil)
 
-  | (I.PiTyp (I.TypDecl(x, _tA) as decl, tB), s) -> 
-      I.Lam (x, etaExpandMV (I.DDec(cPsi, decl)) (tB, LF.dot1 s))
+  | (I.PiTyp (I.TypDecl (x, _tA) as decl, tB), s) -> 
+      I.Lam (x, etaExpandMV (I.DDec (cPsi, decl)) (tB, LF.dot1 s))
 
 (* elKind  cPsi (k,s) = K
 
@@ -335,12 +334,9 @@ and elSpineIW cPsi spine i sA sP =
   else
     match sA with
       | (I.PiTyp (I.TypDecl (_, tA), tB), s) ->
-          let tN     = etaExpandMV cPsi (tA,s) in
+          let tN     = etaExpandMV I.Null (tA,LF.id) in 
           let spine' = elSpineI cPsi spine (i - 1) (tB, I.Dot (I.Obj tN, s)) sP in
-            (* This only works, if tA is atomic -- if tA is not atomic, we
-               need to eta-expand h, so we preserve normal forms -bp *)
             I.App (tN, spine')
-
       (* other cases impossible by (soundness?) of abstraction *)
 
 (* elSpine  cPsi spine sA sP = S
@@ -616,8 +612,8 @@ let recSgnDecl d = match d with
 (*      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tA, LF.id)) in *)
       let _        = recTyp I.Null (tA, LF.id) in
       let _        = Printf.printf "\n Reconstruction (without abstraction) for : %s : %s \n\n" c.string_of_name (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, LF.id)))in
-      let tAnorm   = Whnf.normTyp (tA, LF.id) in
-      let (tA', i) = Abstract.abstrTyp tAnorm in
+      let _        = Printf.printf "\n Call abstraction \n" in
+      let (tA', i) = Abstract.abstrTyp tA in
       let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n %s" c.string_of_name (string_of_int i) (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA', LF.id))) in 
       let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  \n" c.string_of_name  in 
       let _        = Check.LF.checkTyp I.Empty I.Null (tA', LF.id) in  

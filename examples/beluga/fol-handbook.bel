@@ -1,0 +1,132 @@
+% Natural Deduction - Hilbert Translation
+% adapted from Handbook article on Logical Frameworks
+% by F. Pfenning
+%
+% Author: Brigitte Pientka
+%
+% Comment: 
+% - This is a good example to 
+%   illustrate the differences
+%   between Twelf, Delphin and our language.
+% - illustrate the need for context schema
+%   subsumption
+% - proper context coercions should be added
+% - should be extended to include the proof
+%   that every Hilber-style derivation has 
+%   a natural deduction derivation
+
+i : type.  % individual
+o : type.  % formulas
+
+imp : o -> o -> o.     %infix right 10 =>.
+all : (i -> o) -> o.
+not    : o -> o.     
+
+nd : o -> type. % Natural deduction
+impi : (nd A -> nd B) -> nd (A imp B).
+impe : nd (A imp B) -> nd A -> nd B.
+noti : ({p:o} nd A -> nd p) -> nd (not A).
+note : nd (not A) -> {C:o} nd A -> nd C.
+alli : ({a:i} nd (A a)) -> nd (all \x. A x).
+alle : nd (all \x. A x) -> {T:i} nd (A T).
+
+hil : o -> type.  % Hilbert deductions
+k  : hil (A imp (B imp A)).
+s  : hil ((A imp (B imp C)) imp ((A imp B) imp (A imp C))).
+n1 : hil ((A imp (not B)) imp ((A imp B) imp (not A))).
+n2 : hil ((not A) imp (A imp B)).
+f1 : {T:i} hil ((all \x.A x) imp (A T)).
+f2 : hil ((all \x.(B imp A x)) imp (B imp (all \x.A x))).
+mp : hil (A imp B) -> hil A -> hil B.
+ug : ({a:i} hil (A a)) -> hil (all \x.A x).
+
+% Implementation of the Deduction Theorem
+%
+%   If G, u:hil A |- hil B then G |- hil (A imp B).
+%
+% NOTE: WE OMIT IMPLICIT TYPE ARGUMENTS a AND b IN THE SUBSEQUENT
+% PROGRAM FOR BETTER READABILITY 
+
+% schema w = some [ ] block i + some [ a:o ] block hil a;
+
+% rec ded: {g:(w)*} {a1::o[g]} {b::o[g]}
+%    (hil b[id(g)])[g, u:hil a1[id(g)]] -> (hil (a1[id(g)] imp b[id(g)]))[g] = 
+% FN g => mlam a => mlam b => fn H =>  
+% case H of 
+%   box(g, u. p[id(g)]) =>  box(g. mp k p[id(g)])  % SPECIAL!
+% | box(g, u. u)  => box(g. (mp (mp s k) k)
+% | box(g, u. k)  => box(g. mp k k)
+% | box(g, u. n1) => box(g. mp k n1)
+% | box(g, u. n2) => box(g. mp k n2)
+% | box(g, u. f1 T[id(g)]) => box(g.  mp k (f1 T[id(g)]))
+% | box(g, u. f2) => box(g. mp k f2)
+% | box(g, u. (mp H1[id(g),u] H2[id(g),u])) => 
+%   let
+%       box(g.H2'[id(g)]) = ded [g] box(g,u. H2[id(g), u])
+%       box(g.H1'[id(g)]) = ded [g] box(g,u. H1[id(g), u])
+%   in
+%       box(g. (mp (mp s H1'[id(g)) H2'[id(g)])
+%   end
+% | box(g, u. ug (\x.A[id(g), u,x]) \x.H[id(g),x,u]) => 
+%   let
+%       box(g,x. H'[id(g),x]) = ded [g, x:i]  <g,x.A[id(g),x]> box(g, x,u. H[id(g), x, u])
+%   in
+%       box(g. mp f2 (ug  \x.H'[id(g),x]))
+%   end;
+
+% % Theorem: If G |- nd A  where G = nd B1 .... nd Bn 
+% %          then G* |- hil A   where G' = hil B1 ... hil Bn
+
+% schema l = i + (some {A:o} block {u:nd A} {h:hil A}) + o; % where l < w 
+
+% rec ndhil : {g:(l)*}{a::o[g]} (nd a[id(g)])[g] -> (hil a[id(g)])[g] =
+% FN g => mlam a => fn D => 
+% case D of 
+%   box(g. fst p[id(g)]) => box(g. snd p[id(g)])
+% | box(g. impi A[id(g)]  B[id(g)]  \u. D[id(g),u]) => 
+%   let 
+%       box(g,u.H[id(g),u]) = ndhil [g, u:Sigma u:nd A[id(g)].hil A[id(g)]] 
+%                                 < . B[id(g)]> box(g,u. D[id(g), fst u])
+%   in
+%     % NOTE HERE WE NEED THE FACT THAT l < w !!!
+%       ded [g] box(g,u.H[id(g),u]
+%   end
+% | box(g. impe A[id(g)] B[id(g)] D1[id(g)] D2[id(g)]) => 
+%   let
+%       box(g.H1[id(g)]) = ndhil [g] <g.A[id(g)]> <g.B[id(g)] box(g. D1[id(g)]		
+%       box(g.H2[id(g)]) = ndhil [g] <g.B[id(g)] box(g. D2[id(g)]		
+%   in 
+%       box(g. mp A[id(g)] B[id(g)] H1[id(g)] H2[id(g)])
+%   end
+% | box(g. noti \p.\u.D[id(g),p,u]) => 
+%   let
+%       box(g,w,p. H[id(g),w,p]) = ndhil [g, w:(nd A[id(g)] * hil A[id(g)],  p:o]
+%                            <g,w p.p> box(g,w,p. D[id(g),p, fst w])
+%       % NOTE HERE WE NEED THE FACT THAT l < w !!!
+%       box(g. H1'[id(g)]) = ded [g] <g. not A[id(g)> 
+%                              box(g,w. H[id(g),w, not A[id(g)]])
+%       % NOTE HERE WE NEED THE FACT THAT l < w !!!
+%       box(g. H1''[id(g)]) = ded [g] <g. A[id(g)]>
+%                              box(g,w. H[id(g),w, A[id(g)]])
+%   in 
+%       box(g. mp (mp n1 H1'[id(g)]) H1''[id(g)])
+%   end
+% | box(g. (note A[id(g)] D1[id(g)] C[id(g)] D2[id(g)]) => 
+%   let
+%       box(g. H1[id(g)]) = ndhil [g] <g.A[id(g)]> box(g.D1[id(g)]
+%       box(g. H2[id(g)]) = ndhil [g] <g.A[id(g)]> box(g.D2[id(g)]
+%   in
+%       box(g. mp (mp n2 H1[id(g)]) H2[id(g)])
+%   end
+% | box(g. alle (\x.A[id(t),x]) D1[id(g)] T[.]) => 
+%   let
+%       box(g.H1[id(g)]) =  ndhil [g] <g.A[id(g),T[.]]> D1[id(g)]
+%   in
+%       box(g .  mp (f1 T[.]) H1[id(g)])
+%   end
+% | box(g. alli \x. D[id(g), x]) => 
+%   let
+%       box(g,x.H[id(g),x]) =  ndhil [g, x:i] box(g, x. D[id(g),x])
+%   in
+%       box(g. ug \x.H[id(g),x])
+%   end;

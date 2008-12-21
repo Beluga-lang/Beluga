@@ -3,8 +3,6 @@
 (** Pretty printing for external and internal syntax.
 
     @see http://caml.inria.fr/resources/doc/guides/format.html
-
-    @author Darin Morrison
 *)
 
 
@@ -45,23 +43,47 @@ module Ext : sig
 
   module type PRINTER = sig
 
-    open Syntax.Ext.LF
+    open Syntax.Ext
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
     (*******************************************)
 
-    val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
+    val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl         -> unit
 
-    val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
+    val fmt_ppr_lf_kind       : lvl -> formatter -> LF.kind          -> unit
 
-    val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
+    val fmt_ppr_lf_ctyp_decl  : lvl -> formatter -> LF.ctyp_decl     -> unit
 
-    val fmt_ppr_normal   : lvl -> formatter -> normal   -> unit
+    val fmt_ppr_lf_typ        : lvl -> formatter -> LF.typ           -> unit
 
-    val fmt_ppr_head     :        formatter -> head     -> unit
+    val fmt_ppr_lf_normal     : lvl -> formatter -> LF.normal        -> unit
 
-    val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
+    val fmt_ppr_lf_head       : lvl -> formatter -> LF.head          -> unit
+
+    val fmt_ppr_lf_spine      : lvl -> formatter -> LF.spine         -> unit
+
+    val fmt_ppr_lf_sub        : lvl -> formatter -> LF.sub           -> unit
+
+    val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
+
+    val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
+
+    val fmt_ppr_lf_sigma_decl : lvl -> formatter -> LF.sigma_decl    -> unit
+
+    val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
+
+    val fmt_ppr_lf_dctx       : lvl -> formatter -> LF.dctx          -> unit
+
+    val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
+
+    val fmt_ppr_cmp_exp_chk   : lvl -> formatter -> Comp.exp_chk     -> unit
+
+    val fmt_ppr_cmp_exp_syn   : lvl -> formatter -> Comp.exp_syn     -> unit
+
+    val fmt_ppr_cmp_branches  : lvl -> formatter -> Comp.branch list -> unit
+
+    val fmt_ppr_cmp_branch    : lvl -> formatter -> Comp.branch      -> unit
 
 
 
@@ -69,17 +91,41 @@ module Ext : sig
     (* Regular Pretty Printers *)
     (***************************)
 
-    val ppr_sgn_decl : sgn_decl -> unit
+    val ppr_sgn_decl      : Sgn.decl         -> unit
 
-    val ppr_kind     : kind     -> unit
+    val ppr_lf_kind       : LF.kind          -> unit
 
-    val ppr_type     : typ      -> unit
+    val ppr_lf_ctyp_decl  : LF.ctyp_decl     -> unit
 
-    val ppr_normal   : normal   -> unit
+    val ppr_lf_typ        : LF.typ           -> unit
 
-    val ppr_head     : head     -> unit
+    val ppr_lf_normal     : LF.normal        -> unit
 
-    val ppr_spine    : spine    -> unit
+    val ppr_lf_head       : LF.head          -> unit
+
+    val ppr_lf_spine      : LF.spine         -> unit
+
+    val ppr_lf_sub        : LF.sub           -> unit
+
+    val ppr_lf_schema     : LF.schema        -> unit
+
+    val ppr_lf_sch_elem   : LF.sch_elem      -> unit
+
+    val ppr_lf_sigma_decl : LF.sigma_decl    -> unit
+
+    val ppr_lf_psi_hat    : LF.psi_hat       -> unit
+
+    val ppr_lf_dctx       : LF.dctx          -> unit
+
+    val ppr_cmp_typ       : Comp.typ         -> unit
+
+    val ppr_cmp_exp_chk   : Comp.exp_chk     -> unit
+
+    val ppr_cmp_exp_syn   : Comp.exp_syn     -> unit
+
+    val ppr_cmp_branches  : Comp.branch list -> unit
+
+    val ppr_cmp_branch    : Comp.branch      -> unit
 
   end
 
@@ -119,29 +165,29 @@ module Int : sig
 
   module type PRINTER = sig
 
-    open Syntax.Int.LF
+    open Syntax.Int
 
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
     (*******************************************)
 
-    val fmt_ppr_sgn_decl : lvl -> formatter -> sgn_decl -> unit
+    val fmt_ppr_sgn_decl    : lvl -> formatter -> Sgn.decl  -> unit
 
-    val fmt_ppr_kind     : lvl -> formatter -> kind     -> unit
+    val fmt_ppr_lf_kind     : lvl -> formatter -> LF.kind   -> unit
 
-    val fmt_ppr_typ      : lvl -> formatter -> typ      -> unit
+    val fmt_ppr_lf_typ      : lvl -> formatter -> LF.typ    -> unit
 
-    val fmt_ppr_normal   : lvl -> formatter -> normal   -> unit
+    val fmt_ppr_lf_normal   : lvl -> formatter -> LF.normal -> unit
 
-    val fmt_ppr_head     : lvl -> formatter -> head     -> unit
+    val fmt_ppr_lf_head     : lvl -> formatter -> LF.head   -> unit
 
-    val fmt_ppr_spine    : lvl -> formatter -> spine    -> unit
+    val fmt_ppr_lf_spine    : lvl -> formatter -> LF.spine  -> unit
 
-    val fmt_ppr_sub      : lvl -> formatter -> sub      -> unit
+    val fmt_ppr_lf_sub      : lvl -> formatter -> LF.sub    -> unit
 
-    val fmt_ppr_front    : lvl -> formatter -> front    -> unit
+    val fmt_ppr_lf_front    : lvl -> formatter -> LF.front  -> unit
 
-    val fmt_ppr_cvar     : lvl -> formatter -> cvar     -> unit
+    val fmt_ppr_lf_cvar     : lvl -> formatter -> LF.cvar   -> unit
 
 
 
@@ -149,23 +195,23 @@ module Int : sig
     (* Regular Pretty Printers *)
     (***************************)
 
-    val ppr_sgn_decl : sgn_decl -> unit
+    val ppr_sgn_decl    : Sgn.decl  -> unit
 
-    val ppr_kind     : kind     -> unit
+    val ppr_lf_kind     : LF.kind   -> unit
 
-    val ppr_type     : typ      -> unit
+    val ppr_lf_typ      : LF.typ    -> unit
 
-    val ppr_normal   : normal   -> unit
+    val ppr_lf_normal   : LF.normal -> unit
 
-    val ppr_head     : head     -> unit
+    val ppr_lf_head     : LF.head   -> unit
 
-    val ppr_spine    : spine    -> unit
+    val ppr_lf_spine    : LF.spine  -> unit
 
-    val ppr_sub      : sub      -> unit
+    val ppr_lf_sub      : LF.sub    -> unit
 
-    val ppr_front    : front    -> unit
+    val ppr_lf_front    : LF.front  -> unit
 
-    val ppr_cvar     : cvar     -> unit
+    val ppr_lf_cvar     : LF.cvar   -> unit
 
   end
 

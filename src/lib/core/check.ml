@@ -333,25 +333,6 @@ module LF = struct
     | CtxVar _psi         -> ()
         (* need to check if psi is in Omega (or cD, if context vars live there) -bp *)
 
-
-
-  let rec check_sgn_decls = function
-    | []                       -> ()
-
-    | SgnTyp   (_a, tK) :: decls ->
-        let cD   = Empty
-        and cPsi = Null
-        in
-          checkKind cD cPsi tK
-          ; check_sgn_decls decls
-
-    | SgnConst (_c, tA) :: decls ->
-        let cD   = Empty
-        and cPsi = Null
-        in
-          checkTyp cD cPsi (tA, LF.id)
-          ; check_sgn_decls decls
-
 end
 
 module Comp = struct
@@ -529,3 +510,26 @@ module Comp = struct
   and checkSchema _cD _cPsi _schema = ()
     
 end 
+
+module Sgn = struct
+
+  open LF
+
+  let rec check_sgn_decls = function
+    | []                       -> ()
+
+    | Syntax.Int.Sgn.Typ   (_a, tK) :: decls ->
+        let cD   = Syntax.Int.LF.Empty
+        and cPsi = Syntax.Int.LF.Null
+        in
+            checkKind cD cPsi tK
+          ; check_sgn_decls decls
+
+    | Syntax.Int.Sgn.Const (_c, tA) :: decls ->
+        let cD   = Syntax.Int.LF.Empty
+        and cPsi = Syntax.Int.LF.Null
+        in
+            checkTyp cD cPsi (tA, Substitution.LF.id)
+          ; check_sgn_decls decls
+
+end

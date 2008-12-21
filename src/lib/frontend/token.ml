@@ -1,11 +1,5 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(**
-   @author Darin Morrison
-*)
-
-
-
 (** Locations, used to locate a token within a file.  Since locations
     are slightly complicated, we just reuse the existing Camlp4
     definition. *)
@@ -38,10 +32,8 @@ let print ppf x = Format.pp_print_string ppf (to_string x)
     lexer must also determine during lexical analysis whether a symbol
     is a keyword or not, however. *)
 let match_keyword kwd = function
-  | EOI                          -> false
   | KEYWORD kwd' when kwd' = kwd -> true
-  | KEYWORD _                    -> false
-  | SYMBOL _                     -> false
+  | _                            -> false
 
 (** Convert a token back to its textual representation. *)
 let extract_string = function

@@ -1,11 +1,5 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(**
-   @author Darin Morrison
-*)
-
-
-
 open Id
 open Syntax.Int.LF
 

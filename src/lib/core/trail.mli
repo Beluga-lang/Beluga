@@ -27,4 +27,4 @@ end
 
 module EmptyTrail : TRAIL
 
-module Trail      : TRAIL
+module StdTrail   : TRAIL

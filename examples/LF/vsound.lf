@@ -11,4 +11,4 @@ eval : exp -> exp -> type.
 ev_z : eval z z.
 ev_s : {E:exp} {V:exp} eval E V -> eval (suc E) (suc V).
 ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp} 
-       eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 ([x] E2 x)) V.
+       eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\ x . E2 x)) V.

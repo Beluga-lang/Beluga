@@ -1,11 +1,5 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(**
-   @author Darin Morrison
-*)
-
-
-
 (** Functionality for generating unique symbols *)
 module type GENSYM = sig
 

@@ -53,10 +53,7 @@ module Apx = struct
 
 end
 
-module Unif = Unify.UnifyNoTrail
-module E    = Ext.LF
-module A    = Apx.LF
-module I    = Int.LF
+module Unify = Unify.StdTrail
 
 exception NotImplemented
 
@@ -65,8 +62,8 @@ type error =
   | ExpNilNotAtom
   | KindMisMatch
   | SubIllTyped
-  | TypMisMatch of I.dctx * I.tclo * I.tclo
-  | IllTyped    of I.dctx * A.normal * I.tclo
+  | TypMisMatch of Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
+  | IllTyped    of Int.LF.dctx * Apx.LF.normal * Int.LF.tclo
 
 exception Error of error
 
@@ -97,69 +94,69 @@ exception Error of error
 
 *)
 let rec index_kind names = function
-  | E.Typ _ ->
-      A.Typ
+  | Ext.LF.Typ _ ->
+      Apx.LF.Typ
 
-  | E.ArrKind (_, a, k) ->
+  | Ext.LF.ArrKind (_, a, k) ->
       let x      = Id.mk_name None
       and a'     = index_typ names a in
       let names' = BVar.extend names (BVar.mk_entry x) in
       let k'     = index_kind names' k in
-        A.PiKind (A.TypDecl (x, a'), k')
+        Apx.LF.PiKind (Apx.LF.TypDecl (x, a'), k')
 
-  | E.PiKind (_, E.TypDecl (x, a), k) ->
+  | Ext.LF.PiKind (_, Ext.LF.TypDecl (x, a), k) ->
       let a'     = index_typ names a
       and names' = BVar.extend names (BVar.mk_entry x) in
       let k'     = index_kind names' k in
-        A.PiKind (A.TypDecl (x, a'), k')
+        Apx.LF.PiKind (Apx.LF.TypDecl (x, a'), k')
 
 and index_typ names = function
-  | E.Atom (_, a, s) ->
+  | Ext.LF.Atom (_, a, s) ->
       let a' = Typ.index_of_name a
       and s' = index_spine names s in
-        A.Atom (a', s')
+        Apx.LF.Atom (a', s')
 
-  | E.ArrTyp (_, a, b) ->
+  | Ext.LF.ArrTyp (_, a, b) ->
       let x      = Id.mk_name None
       and a'     = index_typ names a in
       let names' = BVar.extend names (BVar.mk_entry x) in
       let b'     = index_typ names' b in
-        A.PiTyp (A.TypDecl (x, a'), b')
+        Apx.LF.PiTyp (Apx.LF.TypDecl (x, a'), b')
 
-  | E.PiTyp (_, E.TypDecl (x, a), b) ->
+  | Ext.LF.PiTyp (_, Ext.LF.TypDecl (x, a), b) ->
       let a'     = index_typ names  a
       and names' = BVar.extend names (BVar.mk_entry x) in
       let b'     = index_typ names' b in
-        A.PiTyp (A.TypDecl (x, a'), b')
+        Apx.LF.PiTyp (Apx.LF.TypDecl (x, a'), b')
 
 and index_term names = function
-  | E.Lam (_, x, m)   ->
+  | Ext.LF.Lam (_, x, m)   ->
       let names' = BVar.extend names (BVar.mk_entry x) in
       let m'     = index_term names' m in
-        A.Lam (x, m')
+        Apx.LF.Lam (x, m')
 
-  | E.Root (_, h, s) ->
+  | Ext.LF.Root (_, h, s) ->
       let h' = index_head  names h
       and s' = index_spine names s in
-        A.Root (h', s')
+        Apx.LF.Root (h', s')
 
 and index_head names = function
-  | E.Name (_, n) ->
+  | Ext.LF.Name (_, n) ->
       try
-        A.BVar (BVar.index_of_name names n)
+        Apx.LF.BVar (BVar.index_of_name names n)
       with Not_found -> try
-        A.Const (Term.index_of_name n)
+        Apx.LF.Const (Term.index_of_name n)
       with Not_found ->
-        A.FVar n
+        Apx.LF.FVar n
 
 and index_spine names = function
-  | E.Nil ->
-      A.Nil
+  | Ext.LF.Nil ->
+      Apx.LF.Nil
 
-  | E.App (_, m, s) ->
+  | Ext.LF.App (_, m, s) ->
       let m' = index_term  names m
       and s' = index_spine names s in
-        A.App (m', s')
+        Apx.LF.App (m', s')
 
 (* ******************************************************************* *)
 (* PHASE 1 : Elaboration and free variables typing                     *)
@@ -177,10 +174,10 @@ and index_spine names = function
 *)
 let patSpine spine =
   let rec patSpine' seen_vars spine = match spine with
-    | A.Nil ->
+    | Apx.LF.Nil ->
         true
 
-    | A.App (A.Root (A.BVar x, A.Nil), spine) ->
+    | Apx.LF.App (Apx.LF.Root (Apx.LF.BVar x, Apx.LF.Nil), spine) ->
         not (List.mem x seen_vars) && patSpine' (x :: seen_vars) spine
 
     | _ ->  false
@@ -191,25 +188,25 @@ let rec etaExpandMV cPsi sA = etaExpandMV' cPsi (Whnf.whnfTyp sA)
 
 and etaExpandMV' cPsi sA  = match sA with
 
-  | (I.Atom (_a, _tS) as tP, s) -> 
-    let u      = Context.newMVar (cPsi, I.TClo (tP, s)) in         
-      I.Root(I.MVar (u, LF.id), I.Nil)
+  | (Int.LF.Atom (_a, _tS) as tP, s) -> 
+    let u      = Context.newMVar (cPsi, Int.LF.TClo (tP, s)) in         
+      Int.LF.Root(Int.LF.MVar (u, LF.id), Int.LF.Nil)
 
-  | (I.PiTyp (I.TypDecl(x, _tA) as decl, tB), s) -> 
-      I.Lam (x, etaExpandMV (I.DDec(cPsi, decl)) (tB, LF.dot1 s))
+  | (Int.LF.PiTyp (Int.LF.TypDecl(x, _tA) as decl, tB), s) -> 
+      Int.LF.Lam (x, etaExpandMV (Int.LF.DDec(cPsi, decl)) (tB, LF.dot1 s))
 
 (* elKind  cPsi (k,s) = K
 
 *)
 let rec elKind cPsi k = match k with
-  | A.Typ ->
-      I.Typ
+  | Apx.LF.Typ ->
+      Int.LF.Typ
 
-  | A.PiKind (A.TypDecl (x, a), k) ->
+  | Apx.LF.PiKind (Apx.LF.TypDecl (x, a), k) ->
       let tA    = elTyp cPsi a in
-      let cPsi' = (I.DDec (cPsi, I.TypDecl (x, tA))) in
+      let cPsi' = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
       let tK    = elKind cPsi' k in
-        I.PiKind (I.TypDecl (x, tA), tK)
+        Int.LF.PiKind (Int.LF.TypDecl (x, tA), tK)
 
 (* elTyp cPsi a = A
 
@@ -227,19 +224,19 @@ let rec elKind cPsi k = match k with
 
 *)
 and elTyp cPsi a = match a with
-  | A.Atom (a, s) ->
+  | Apx.LF.Atom (a, s) ->
       let tK = (Typ.get a).Typ.kind in
       let i  = (Typ.get a).Typ.implicit_arguments in
-      let _        = Printf.printf "\n Elaborate spine for constant : \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_kind tK in
+      let _        = Printf.printf "\n Elaborate spine for constant : "; print_newline () in
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_kind tK in
       let tS = elKSpineI cPsi s i (tK, Substitution.LF.id) in
-        I.Atom (a, tS)
+        Int.LF.Atom (a, tS)
 
-  | A.PiTyp (A.TypDecl (x, a), b) ->
+  | Apx.LF.PiTyp (Apx.LF.TypDecl (x, a), b) ->
       let tA    = elTyp cPsi a in
-      let cPsi' = (I.DDec (cPsi, I.TypDecl (x, tA))) in
+      let cPsi' = (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))) in
       let tB    = elTyp cPsi' b in
-        I.PiTyp (I.TypDecl (x, tA), tB)
+        Int.LF.PiTyp (Int.LF.TypDecl (x, tA), tB)
 
 (* elTerm  cPsi m sA = M
    elTermW cPsi m sA = M  where sA = (A,s) is in whnf
@@ -256,30 +253,30 @@ and elTyp cPsi a = match a with
 and elTerm cPsi m sA = elTermW cPsi m (Whnf.whnfTyp sA)
 
 and elTermW cPsi m sA = match (m, sA) with
-  | (A.Lam (x, m), (I.PiTyp (tA, tB), s)) ->
-      let cPsi' = I.DDec (cPsi, LF.decSub tA s) in
+  | (Apx.LF.Lam (x, m), (Int.LF.PiTyp (tA, tB), s)) ->
+      let cPsi' = Int.LF.DDec (cPsi, LF.decSub tA s) in
       let tM    = elTerm cPsi' m (tB, LF.dot1 s) in
-        I.Lam(x, tM)
+        Int.LF.Lam(x, tM)
 
-  | (A.Root (A.Const c, spine), ((I.Atom _ as tP), s)) ->
+  | (Apx.LF.Root (Apx.LF.Const c, spine), ((Int.LF.Atom _ as tP), s)) ->
       let tA = (Term.get c).Term.typ in
       let i  = (Term.get c).Term.implicit_arguments in
       let tS = elSpineI cPsi spine i (tA, LF.id) (tP, s) in
-        I.Root (I.Const c, tS)
+        Int.LF.Root (Int.LF.Const c, tS)
 
-  | (A.Root (A.BVar x, spine), (I.Atom _ as tP, s)) ->
-      let I.TypDecl (_, tA) = Context.ctxDec cPsi x in
+  | (Apx.LF.Root (Apx.LF.BVar x, spine), (Int.LF.Atom _ as tP, s)) ->
+      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
       let tS = elSpine cPsi spine (tA, LF.id) (tP, s) in
-        I.Root (I.BVar x, tS)
+        Int.LF.Root (Int.LF.BVar x, tS)
 
-  | (A.Root (A.FVar x, spine), (I.Atom _ as tP, s)) ->
+  | (Apx.LF.Root (Apx.LF.FVar x, spine), (Int.LF.Atom _ as tP, s)) ->
       begin try
         let tA = FVar.get x in
           (* For type reconstruction to succeed, we must have
              . |- tA <= type
              This will be enforced during abstraction *)
         let tS = elSpine cPsi spine (tA, LF.id) (tP, s) in
-          I.Root (I.FVar x, tS)
+          Int.LF.Root (Int.LF.FVar x, tS)
       with Not_found ->
         if patSpine spine then
           let (tS, tA) = elSpineSynth cPsi spine (tP, s) in
@@ -288,14 +285,15 @@ and elTermW cPsi m sA = match (m, sA) with
                This will be enforced during abstraction.
             *)
           let _        = FVar.add x tA in
-            I.Root (I.FVar x, tS)
+            Int.LF.Root (Int.LF.FVar x, tS)
         else
-          (Printf.printf "Reconstruction of free variables with non-pattern spines not handled\n";
+          (Printf.printf "Reconstruction of free variables with non-pattern spines not handled";
+           print_newline ();
            raise NotImplemented)
             (*
               let v = newMVar (cPsi, TClo(tP, s)) in
               (add_delayed (cPsi |- m = v[id])
-                I.Root (I.MVar (v, LF.id), I.Nil)
+                Int.LF.Root (Int.LF.MVar (v, LF.id), Int.LF.Nil)
               )
             *)
       end
@@ -336,12 +334,12 @@ and elSpineIW cPsi spine i sA sP =
     elSpine cPsi spine sA sP
   else
     match sA with
-      | (I.PiTyp (I.TypDecl (_, tA), tB), s) ->
+      | (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s) ->
           let tN     = etaExpandMV cPsi (tA,s) in
-          let spine' = elSpineI cPsi spine (i - 1) (tB, I.Dot (I.Obj tN, s)) sP in
+          let spine' = elSpineI cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) sP in
             (* This only works, if tA is atomic -- if tA is not atomic, we
                need to eta-expand h, so we preserve normal forms -bp *)
-            I.App (tN, spine')
+            Int.LF.App (tN, spine')
 
       (* other cases impossible by (soundness?) of abstraction *)
 
@@ -370,22 +368,22 @@ and elSpine cPsi spine sA sP =
   elSpineW cPsi spine (Whnf.whnfTyp sA) (Whnf.whnfTyp sP)
 
 and elSpineW cPsi spine sA sP = match (spine, sA) with
-  | (A.Nil, (I.Atom (a, _spine), _s)) ->
-      let (I.Atom (a', _spine'), _s') = sP in
+  | (Apx.LF.Nil, (Int.LF.Atom (a, _spine), _s)) ->
+      let (Int.LF.Atom (a', _spine'), _s') = sP in
         if a = a' then
-          I.Nil
+          Int.LF.Nil
         else
           raise (Error (TypMisMatch (cPsi, sA, sP)))
 
-  | (A.Nil, _) ->
+  | (Apx.LF.Nil, _) ->
       raise (Error ExpNilNotAtom)
 
-  | (A.App (m, spine), (I.PiTyp (I.TypDecl (_, tA), tB), s)) ->
+  | (Apx.LF.App (m, spine), (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s)) ->
       let tM = elTerm  cPsi m (tA, s) in
-      let tS = elSpine cPsi spine (tB, I.Dot (I.Obj tM, s)) sP in
-        I.App (tM, tS)
+      let tS = elSpine cPsi spine (tB, Int.LF.Dot (Int.LF.Obj tM, s)) sP in
+        Int.LF.App (tM, tS)
 
-  | (A.App _, _) ->
+  | (Apx.LF.App _, _) ->
       raise (Error ExpAppNotFun)
 
 (* see invariant for elSpineI *)
@@ -394,28 +392,28 @@ and elKSpineI cPsi spine i sK =
     elKSpine cPsi spine sK
   else
     match sK with
-      | (I.PiKind (I.TypDecl (_, tA), tK), s) ->
+      | (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s) ->
           let tN     = etaExpandMV cPsi (tA,s) in
-          let spine' = elKSpineI cPsi spine (i - 1) (tK, I.Dot (I.Obj tN, s)) in
-            I.App (tN, spine')
+          let spine' = elKSpineI cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
+            Int.LF.App (tN, spine')
 
       (* other cases impossible by (soundness?) of abstraction *)
 
 
 (* see invariant for elSpine *)
 and elKSpine cPsi spine sK = match (spine, sK) with
-  | (A.Nil, (I.Typ, _s)) ->
-      I.Nil
+  | (Apx.LF.Nil, (Int.LF.Typ, _s)) ->
+      Int.LF.Nil
 
-  | (A.Nil, _) ->
+  | (Apx.LF.Nil, _) ->
       raise (Error KindMisMatch)
 
-  | (A.App (m, spine), (I.PiKind (I.TypDecl (_, tA), tK), s)) ->
+  | (Apx.LF.App (m, spine), (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s)) ->
       let tM = elTerm   cPsi m (tA, s) in
-      let tS = elKSpine cPsi spine (tK, I.Dot (I.Obj tM, s)) in
-        I.App (tM, tS)
+      let tS = elKSpine cPsi spine (tK, Int.LF.Dot (Int.LF.Obj tM, s)) in
+        Int.LF.App (tM, tS)
 
-  | (A.App _, _) ->
+  | (Apx.LF.App _, _) ->
       raise (Error ExpAppNotFun)
 
 (* elSpineSynth cPsi spine sP = (S, A')
@@ -437,27 +435,27 @@ and elKSpine cPsi spine sK = match (spine, sK) with
 
 *)
 and elSpineSynth cPsi spine sP = match (spine, sP) with
-  | (A.Nil, (tP, s))  ->
-      (I.Nil, I.TClo (tP, s))
+  | (Apx.LF.Nil, (tP, s))  ->
+      (Int.LF.Nil, Int.LF.TClo (tP, s))
 
-  | (A.App (A.Root (A.BVar x, A.Nil), spine), sP) ->
-      let I.TypDecl (_, tA) = Context.ctxDec cPsi x in
+  | (Apx.LF.App (Apx.LF.Root (Apx.LF.BVar x, Apx.LF.Nil), spine), sP) ->
+      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
       let (tS, tB) = elSpineSynth cPsi spine sP in
       (*  cPsi |- tS : tB <- sP  (pre-dependent) *)
       (*  show there exists: tB'  s.t [x/y,id(cPsi)]tB' = tB
            tB' = [(x/y, id(cPsi))^-1] tB
       *)
-      let s = I.Dot (I.Head (I.BVar x), LF.id) in
+      let s = Int.LF.Dot (Int.LF.Head (Int.LF.BVar x), LF.id) in
       (* cPsi       |- s  : cPsi, y:A
          cPsi, y:A  |- s' : cPsi      where s' = (s)^1
 
       *)
        let s' = LF.invert s in
-       let tB' = I.TClo (tB, s') in
+       let tB' = Int.LF.TClo (tB, s') in
        (* cPsi, y:A |- tB' <- type (pre-dependent) *)
 
-         (I.App (I.Root (I.BVar x, I.Nil), tS),
-          I.PiTyp (I.TypDecl (Id.mk_name None, tA), tB'))
+         (Int.LF.App (Int.LF.Root (Int.LF.BVar x, Int.LF.Nil), tS),
+          Int.LF.PiTyp (Int.LF.TypDecl (Id.mk_name None, tA), tB'))
 
    (* other cases impossible *)
 
@@ -497,55 +495,55 @@ Similar invariants and pre- and post-conditions for:
 
 *)
 let rec recKind cPsi sK = match sK with
-  | (I.Typ, _s) ->
+  | (Int.LF.Typ, _s) ->
       ()
 
-  | (I.PiKind (I.TypDecl(_x, tA) as adec, tK), s) -> (
+  | (Int.LF.PiKind (Int.LF.TypDecl(_x, tA) as adec, tK), s) -> (
       recTyp cPsi (tA, s);
-      recKind (I.DDec (cPsi, LF.decSub adec s)) (tK, LF.dot1 s)
+      recKind (Int.LF.DDec (cPsi, LF.decSub adec s)) (tK, LF.dot1 s)
     )
 
 and recTyp cPsi sA = recTypW cPsi (Whnf.whnfTyp sA)
 
 and recTypW cPsi sA = match sA with
-  | (I.Atom (a, tS) , s) ->
+  | (Int.LF.Atom (a, tS) , s) ->
       let tK = (Typ.get a).Typ.kind in
         recKSpine cPsi (tS, s) (tK, LF.id)
 
-  | (I.PiTyp ((I.TypDecl (_x, tA) as adec), tB), s) -> (
+  | (Int.LF.PiTyp ((Int.LF.TypDecl (_x, tA) as adec), tB), s) -> (
       recTyp cPsi (tA, s);
-      recTyp (I.DDec (cPsi, LF.decSub adec s)) (tB, LF.dot1 s)
+      recTyp (Int.LF.DDec (cPsi, LF.decSub adec s)) (tB, LF.dot1 s)
     )
 
 and recTerm cPsi sM sA =
   recTermW cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and recTermW cPsi sM sA = match (sM, sA) with
-  | ((I.Lam (_, tM), s'), (I.PiTyp (tA, tB), s)) ->
-      let cPsi' = I.DDec (cPsi, LF.decSub tA s) in
+  | ((Int.LF.Lam (_, tM), s'), (Int.LF.PiTyp (tA, tB), s)) ->
+      let cPsi' = Int.LF.DDec (cPsi, LF.decSub tA s) in
         recTerm cPsi' (tM, LF.dot1 s') (tB, LF.dot1 s)
 
-  | ((I.Root (I.Const c, tS), s'), (I.Atom _ as tP, s)) ->
+  | ((Int.LF.Root (Int.LF.Const c, tS), s'), (Int.LF.Atom _ as tP, s)) ->
       let tA = (Term.get c).Term.typ in
         recSpine cPsi (tS, s') (tA, LF.id) (tP, s)
 
-  | ((I.Root (I.BVar x, tS), s'), (I.Atom _ as tP, s)) ->
-      let I.TypDecl (_, tA) = Context.ctxDec cPsi x in
+  | ((Int.LF.Root (Int.LF.BVar x, tS), s'), (Int.LF.Atom _ as tP, s)) ->
+      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
         recSpine cPsi (tS, s') (tA, LF.id) (tP, s)
 
-  | ((I.Root (I.MVar (I.Inst (_r, cPhi, tP', _cnstr), t), _tS), s'), (I.Atom _ as tP, s)) ->
+  | ((Int.LF.Root (Int.LF.MVar (Int.LF.Inst (_r, cPhi, tP', _cnstr), t), _tS), s'), (Int.LF.Atom _ as tP, s)) ->
      (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
      (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
       let s1 = (LF.comp t s') in
-      let _        = Printf.printf "\n RecTerm: Unify \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP',s1)) in
-      let _        = Printf.printf "\n with \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP,s)) in
+      let _        = Printf.printf "\n RecTerm: Unify "; print_newline () in
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_typ (Whnf.normTyp (tP',s1)) in
+      let _        = Printf.printf "\n with "; print_newline () in
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_typ (Whnf.normTyp (tP,s)) in
       let _        = (recSub cPsi s1 cPhi;
-                      Unif.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))) in 
-       Printf.printf "\n done \n"
+                      Unify.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))) in 
+       Printf.printf "\n done "; print_newline ()
 
-  | ((I.Root (I.FVar x, tS), s'), (I.Atom _ as tP, s)) ->
+  | ((Int.LF.Root (Int.LF.FVar x, tS), s'), (Int.LF.Atom _ as tP, s)) ->
       (* x is in eta-expanded form and tA is closed
          type of FVar x : A[cPsi'] and FVar x should be
          associated with a substitution, since tA is not always
@@ -560,45 +558,45 @@ and recSpine cPsi sS sA sP =
   recSpineW cPsi sS (Whnf.whnfTyp sA) sP
 
 and recSpineW cPsi sS sA sP = match (sS, sA) with
-  | ((I.Nil, _s), (tP', s')) ->
-      let _        = Printf.printf "\n RecSpine Unify \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tP',s')) in
-      let _        = Printf.printf "\n with \n" in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp sP) in
-      let _        =  Unif.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s')) in 
-        Printf.printf "\n done \n"
+  | ((Int.LF.Nil, _s), (tP', s')) ->
+      let _        = Printf.printf "\n RecSpine Unify "; print_newline () in
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_typ (Whnf.normTyp (tP',s')) in
+      let _        = Printf.printf "\n with "; print_newline () in
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_typ (Whnf.normTyp sP) in
+      let _        =  Unify.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s')) in 
+        Printf.printf "\n done "; print_newline ()
 
-  | ((I.App (tM, tS), s'), (I.PiTyp (I.TypDecl (_, tA), tB), s)) -> (
+  | ((Int.LF.App (tM, tS), s'), (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s)) -> (
       recTerm  cPsi (tM, s') (tA, s);
-      recSpine cPsi (tS, s') (tB, I.Dot (I.Obj tM, s)) sP
+      recSpine cPsi (tS, s') (tB, Int.LF.Dot (Int.LF.Obj tM, s)) sP
     )
 
-  | ((I.SClo (tS, s), s'), sA) -> 
+  | ((Int.LF.SClo (tS, s), s'), sA) -> 
       recSpine cPsi (tS, LF.comp s s') sA sP
 
 and recKSpine cPsi sS sK = match (sS, sK) with
-  | ((I.Nil, _s), (I.Typ, _s')) ->
+  | ((Int.LF.Nil, _s), (Int.LF.Typ, _s')) ->
       ()
 
-  | ((I.App (tM, tS), s'), (I.PiKind (I.TypDecl (_, tA), tK), s)) -> (
+  | ((Int.LF.App (tM, tS), s'), (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s)) -> (
       recTerm   cPsi (tM, s') (tA, s);
-      recKSpine cPsi (tS, s') (tK, I.Dot (I.Obj tM, s))
+      recKSpine cPsi (tS, s') (tK, Int.LF.Dot (Int.LF.Obj tM, s))
     )
 
-  | ((I.SClo (tS, s),  s'), sK) -> 
+  | ((Int.LF.SClo (tS, s),  s'), sK) -> 
       recKSpine cPsi (tS, LF.comp s s') sK
 
 and recSub cPsi s cPhi = match (s, cPhi) with
-  | (I.Shift _n, _cPhi) ->
+  | (Int.LF.Shift _n, _cPhi) ->
       ()
 
-  | (I.Dot (I.Head I.BVar x, s), I.DDec (cPhi, I.TypDecl (_, tA))) ->
-      let I.TypDecl (_, tA') = Context.ctxDec cPsi x in (
+  | (Int.LF.Dot (Int.LF.Head Int.LF.BVar x, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) ->
+      let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in (
           recSub  cPsi s cPhi;
-          Unif.unifyTyp (Context.dctxToHat cPsi, (tA', s), (tA, LF.id))
+          Unify.unifyTyp (Context.dctxToHat cPsi, (tA', s), (tA, LF.id))
         )
 
-  | (I.Dot (I.Obj tM, s), I.DDec (cPhi, I.TypDecl (_, tA))) -> (
+  | (Int.LF.Dot (Int.LF.Obj tM, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) -> (
       recSub  cPsi s cPhi;
       recTerm cPsi (tM, LF.id) (tA, s)
     )
@@ -606,39 +604,39 @@ and recSub cPsi s cPhi = match (s, cPhi) with
   (* needs other cases for Head(h) where h = MVar, Const, etc. -bp *)
 
 let recSgnDecl d = match d with
-  | E.SgnTyp (_, a, extK)   ->
+  | Ext.Sgn.Typ (_, a, extK)   ->
       let apxK     = index_kind (BVar.create ()) extK in
       let _        = FVar.clear () in
-      let _        = Printf.printf "Reconstruction for constant : %s \n" a.string_of_name in
-      let tK       = elKind I.Null apxK in
-      let _        = recKind I.Null (tK, LF.id) in
+      let _        = Printf.printf "Reconstruction for constant : %s " a.string_of_name; print_newline () in
+      let tK       = elKind Int.LF.Null apxK in
+      let _        = recKind Int.LF.Null (tK, LF.id) in
       let (tK', i) = Abstract.abstrKind tK in
-      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n" a.string_of_name (string_of_int i) in
-      let _        = Pretty.Int.DefaultPrinter.ppr_kind tK' in
+      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s " a.string_of_name (string_of_int i); print_newline () in
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_kind tK' in
       let a'       = Typ.add (Typ.mk_entry a tK' i) in
         (* why does Term.add return a' ? -bp *)
         (* because (a : name) and (a' : cid_typ) *)
-        I.SgnTyp (a', tK')
+        Int.Sgn.Typ (a', tK')
 
-  | E.SgnConst (_, c, extT) ->
+  | Ext.Sgn.Const (_, c, extT) ->
       let apxT     = index_typ (BVar.create ()) extT in
       let _        = FVar.clear () in
-      let _        = Printf.printf "\n Reconstruction for constant : %s \n" c.string_of_name in
-      let tA       = elTyp I.Null apxT in
-      let _        = Printf.printf "\n Elaboration for constant : %s \n" c.string_of_name in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type (Whnf.normTyp (tA, LF.id)) in
-      let _        = recTyp I.Null (tA, LF.id) in
-      let _        = Printf.printf "\n Reconstruction (without abstraction) for : %s \n\n" c.string_of_name in
+      let _        = Printf.printf "\n Reconstruction for constant : %s " c.string_of_name; print_newline () in
+      let tA       = elTyp Int.LF.Null apxT in
+      let _        = Printf.printf "\n Elaboration for constant : %s " c.string_of_name; print_newline () in
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_typ (Whnf.normTyp (tA, LF.id)) in
+      let _        = recTyp Int.LF.Null (tA, LF.id) in
+      let _        = Printf.printf "\n Reconstruction (without abstraction) for : %s \n" c.string_of_name; print_newline () in
       let tAnorm   = Whnf.normTyp (tA, LF.id) in
-      let _        = Pretty.Int.DefaultPrinter.ppr_type tAnorm in 
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_typ tAnorm in 
       let (tA', i) = Abstract.abstrTyp tAnorm in
-      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s \n" c.string_of_name (string_of_int i)  in 
-      let _        = Pretty.Int.DefaultPrinter.ppr_type tA' in 
-      let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  \n" c.string_of_name  in 
-      let _        = Check.LF.checkTyp I.Empty I.Null (tA', LF.id) in  
+      let _        = Printf.printf "\n Reconstruction for constant : %s done -- number of implicit arg: %s " c.string_of_name (string_of_int i); print_newline ()  in 
+      let _        = Pretty.Int.DefaultPrinter.ppr_lf_typ tA' in 
+      let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  " c.string_of_name; print_newline ()  in 
+      let _        = Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', LF.id) in  
       (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in
-        I.SgnConst (c', tA')
+        Int.Sgn.Const (c', tA')
 
 
 

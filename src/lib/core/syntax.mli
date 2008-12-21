@@ -19,15 +19,23 @@ module Ext : sig
 
     type kind =
       | Typ     of Loc.t
-      | ArrKind of Loc.t * typ * kind
+      | ArrKind of Loc.t * typ      * kind
       | PiKind  of Loc.t * typ_decl * kind
 
     and typ_decl =
       | TypDecl of name * typ
 
+    and sigma_decl =
+      | SigmaDecl of name * typ_rec
+
+    and ctyp_decl =
+      | MDecl of Loc.t * name * typ  * dctx
+      | PDecl of Loc.t * name * typ  * dctx
+(*       | SDecl of Loc.t * name * dctx * dctx *)
+
     and typ =
       | Atom   of Loc.t * name * spine
-      | ArrTyp of Loc.t * typ * typ
+      | ArrTyp of Loc.t * typ      * typ
       | PiTyp  of Loc.t * typ_decl * typ
 
     and normal =
@@ -36,10 +44,37 @@ module Ext : sig
 
     and head =
       | Name of Loc.t * name
+      | MVar of Loc.t * name * sub
+      | PVar of Loc.t * name * sub
 
     and spine =
       | Nil
       | App of Loc.t * normal * spine
+
+    and sub =
+      | Dot    of Loc.t
+      | Normal of Loc.t * sub * normal
+      | Id     of Loc.t * name
+
+    and typ_rec = typ list
+
+    and dctx =
+      | Null
+      | CtxVar   of name
+      | DDec     of dctx * typ_decl
+(*       | SigmaDec of dctx * sigma_decl *)
+
+    and 'a ctx =
+      | Empty
+      | Dec of 'a ctx * 'a
+
+    and sch_elem =
+      | SchElem of Loc.t * typ_decl ctx * sigma_decl
+
+    and schema =
+      | Schema of sch_elem list
+
+    and psi_hat = name list
 
     and prag =
       | PragUnifyTerm of
@@ -57,11 +92,59 @@ module Ext : sig
       | UnifyTypeDecl of name          * kind
       | UnifyTypeDefn of name * typ    * kind
 
-    type sgn_decl =
-      | SgnComment of Loc.t * string
-      | SgnConst   of Loc.t * name * typ
-      | SgnPragma  of Loc.t * prag
-      | SgnTyp     of Loc.t * name * kind
+  end
+
+
+
+  module Comp : sig
+
+    type typ =
+      | TypBox   of Loc.t * LF.typ  * LF.dctx        (* A[Psi]      *)
+(*       | TypSBox  of LF.dctx * LF.dctx        (\* Phi[Psi]    *\) *)
+      | TypArr   of Loc.t * typ * typ                (* tau -> tau  *)
+      | TypCtxPi of Loc.t * (name * name) * typ      (* {psi:W} tau *)
+(*       | TypPiBox of LF.ctyp_decl * typ       (\*             *\) *)
+
+    and exp_chk =
+       | Syn    of Loc.t * exp_syn                (* i                   *)
+(*        | Rec    of Loc.t * name * exp_chk         (\* rec f : tau = e     *\) *)
+       | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
+       | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *)
+       | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
+       | Box    of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
+(*        | SBox   of LF.psi_hat * LF.sub *)
+       | Case   of Loc.t * exp_syn * branch list
+
+    and exp_syn =
+       | Var    of Loc.t * name                               (* x              *)
+       | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
+       | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
+       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)
+       | Ann    of Loc.t * exp_chk * typ                      (* e : tau        *)
+
+    and branch =
+      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
+          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
+          * exp_chk
+
+(*       | BranchSBox of LF.ctyp_decl LF.ctx *)
+(*           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx)) *)
+(*           * exp_chk *)
+
+  end
+
+
+
+  module Sgn : sig
+
+    type decl =
+      | Const  of Loc.t * name * LF.typ
+      | Pragma of Loc.t * LF.prag
+      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
+      | Schema of Loc.t * name * LF.schema
+      | Typ    of Loc.t * name * LF.kind
+
+    type sgn = decl list
 
   end
 
@@ -156,10 +239,6 @@ module Int : sig
 
     and typ_rec = typ list
 
-    type sgn_decl =
-      | SgnTyp   of cid_typ  * kind
-      | SgnConst of cid_term * typ
-
 
 
     (**********************)
@@ -221,6 +300,18 @@ module Int : sig
       | BranchSBox of LF.ctyp_decl LF.ctx
           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx))
           * exp_chk
+
+  end
+
+
+
+  module Sgn : sig
+
+    type decl =
+      | Typ   of cid_typ  * LF.kind
+      | Const of cid_term * LF.typ
+
+    type sgn = decl list
 
   end
 

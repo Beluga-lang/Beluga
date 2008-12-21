@@ -47,7 +47,7 @@ end
 
 
 
-module Trail : TRAIL = struct
+module StdTrail : TRAIL = struct
 
     type 'a desc =
       | Cons of 'a * 'a desc

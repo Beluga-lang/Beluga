@@ -25,8 +25,14 @@ module LF : sig
 
   val check     : mctx -> dctx -> nclo -> tclo -> unit
   val checkTyp  : mctx -> dctx -> tclo -> unit
-  val checkKind : mctx -> dctx -> kind -> unit 
+  val checkKind : mctx -> dctx -> kind -> unit
 
-  val check_sgn_decls : sgn_decl list -> unit 
+end
+
+module Sgn : sig
+
+  open Syntax.Int.Sgn
+
+  val check_sgn_decls :  decl list -> unit
 
 end

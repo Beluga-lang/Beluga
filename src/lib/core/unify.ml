@@ -12,8 +12,9 @@
    declared at the end of this file.
 *)
 
-open Syntax.Int.LF
 open Context
+open Syntax.Int.LF
+open Trail
 
 module type UNIFY = sig
 
@@ -49,9 +50,7 @@ end
 (* Author: Brigitte Pientka *)
 (* Trailing is taken from Twelf 1.5 *)
 
-module Make (T : Trail.TRAIL) : UNIFY =
-
-struct
+module Make (T : TRAIL) : UNIFY = struct
 
   open Substitution.LF
 
@@ -579,9 +578,9 @@ struct
   and unifyTerm' (((psi, offset) as phat), sN, sM) = match (sN, sM) with
     | ((Lam (_x, tN), s1), (Lam (_y, tM), s2)) ->
         let _    = Printf.printf "\n Unify Lam \n" in
-        let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm (tN, dot1 s1)) in
+        let _    = Pretty.Int.DefaultPrinter.ppr_lf_normal (Whnf.norm (tN, dot1 s1)) in
         let _    = Printf.printf "\n with Lam  \n" in
-        let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm (tM, dot1 s2)) in
+        let _    = Pretty.Int.DefaultPrinter.ppr_lf_normal (Whnf.norm (tM, dot1 s2)) in
         unifyTerm ((psi, offset + 1), (tN, dot1 s1), (tM, dot1 s2))
 
     (* MVar-MVar case *)
@@ -595,9 +594,9 @@ struct
         let t1' = comp t1 s1    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = comp t2 s2 in (* cD ; cPsi |- t2' <= cPsi2 *)
         let _    = Printf.printf "\n Unify MV \n" in
-        let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm (tM1, t1')) in
+        let _    = Pretty.Int.DefaultPrinter.ppr_lf_normal  (Whnf.norm (tM1, t1')) in
         let _    = Printf.printf "\n with MV  \n" in
-        let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm (tM2, t2')) in
+        let _    = Pretty.Int.DefaultPrinter.ppr_lf_normal  (Whnf.norm (tM2, t2')) in
 
         let _        = Printf.printf "\n Unify two MVars \n" in
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
@@ -650,9 +649,9 @@ struct
                   (* neither t1' nor t2' are pattern substitutions *)
                   let _    = Printf.printf "\n Unify - No PatSub!! \n" in
                   let _    = Printf.printf "\n MVAR 2 \n" in
-                  let _    = Pretty.Int.DefaultPrinter.ppr_normal  (Whnf.norm sM2) in
+                  let _    = Pretty.Int.DefaultPrinter.ppr_lf_normal  (Whnf.norm sM2) in
                   let _    = Printf.printf "\n MVAR 1 \n" in
-                  let _    = Pretty.Int.DefaultPrinter.ppr_normal (Whnf.norm sM1) in
+                  let _    = Pretty.Int.DefaultPrinter.ppr_lf_normal (Whnf.norm sM1) in
                   let cnstr = ref (Eqn (phat, Clo sM1, Clo sM2)) in
                     addConstraint (cnstrs1, cnstr)
             end)
@@ -660,9 +659,9 @@ struct
     | ((Root (MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         let t' = comp t s1 in
         let _        = Printf.printf "\n Unify MVar \n" in
-        let _        = Pretty.Int.DefaultPrinter.ppr_normal (Whnf.norm sM1) in
+        let _        = Pretty.Int.DefaultPrinter.ppr_lf_normal (Whnf.norm sM1) in
         let _        = Printf.printf "\n with normal term \n" in
-        let _        = Pretty.Int.DefaultPrinter.ppr_normal (Whnf.norm sM2) in
+        let _        = Pretty.Int.DefaultPrinter.ppr_lf_normal (Whnf.norm sM2) in
           if isPatSub t' then
             try
               let ss = invert t' in
@@ -725,7 +724,7 @@ struct
                       q[q[x,y],y] = y  should fail
              This will be dealt with when solving constraints.
           *)
-          addConstraint(cnstr, ref (Eqh (phat, h1, BVar k2)))
+          addConstraint (cnstr, ref (Eqh (phat, h1, BVar k2)))
 
     | (BVar k1, (PVar (PInst (q, _, _, cnstr), s2) as h1)) ->
         if isPatSub s2 then
@@ -742,7 +741,7 @@ struct
            check q1 = q2 *)
         if q1 = q2 then (* cPsi1 = _cPsi2 *)
           match (isPatSub s1' ,  isPatSub s2' ) with
-            | (true , true) ->
+            | (true, true) ->
                 let (s', cPsi') = intersection (phat, (s1', s2'), cPsi1) in
                   (* if cD ; cPsi |- s1' <= cPsi1 and cD ; cPsi |- s2' <= cPsi1
                      then cD ; cPsi1 |- s' <= cPsi' *)
@@ -878,5 +877,5 @@ struct
       unifyTyp' (phat, sA, sB)
 end
 
-module UnifyNoTrail = Make (Trail.EmptyTrail)
-module UnifyTrail   = Make (Trail.Trail)
+module EmptyTrail = Make (EmptyTrail)
+module StdTrail   = Make (StdTrail)

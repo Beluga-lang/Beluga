@@ -1,11 +1,5 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(**
-   @author Darin Morrison
-*)
-
-
-
 (** A `name' represents the original named representation of a
     variable.  These are used primarily during parsing and pretty
     printing.  Names should never be constructed directly.  See

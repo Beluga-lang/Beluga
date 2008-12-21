@@ -1,9 +1,5 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(**
-   @author Darin Morrison
-*)
-
 (* NOTE: Be careful with taureg-mode M-q in this file – it doesn't
    understand the grammar formatting below very well and will easily
    trash the layout. *)
@@ -11,245 +7,361 @@
 (* Load the camlp4 extensible grammar syntax extension *)
 #load "pa_extend.cmo";;
 
-
 open Core
 open Core.Common
-open Core.Syntax
+open Core.Syntax.Ext
 open Token
-
-
 
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
-(* Silly type needed for manual backtracking. We need this because,
-   given Πx:A._, we do not know whether _ is a kind or a type until we
-   reach the very end of the syntax tree.  Therefore, we just assume
-   it could be either with this type and continue parsing until we
-   find out one way or the other. *)
 type kind_or_typ =
-  | Kind of Ext.LF.kind
-  | Typ  of Ext.LF.typ
-
-
+  | Kind of LF.kind
+  | Typ  of LF.typ
 
 (*******************************)
 (* Global Grammar Entry Points *)
 (*******************************)
 
-let p_sgn_eoi = Grammar.Entry.mk "sig_eoi" (* Σ *)
-
-
+let sgn_eoi = Grammar.Entry.mk "sig_eoi"
 
 (*****************************************)
 (* Dynamically Extensible Beluga Grammar *)
 (*****************************************)
 
 EXTEND Grammar
-GLOBAL: p_sgn_eoi;
+GLOBAL: sgn_eoi;
 
-
-  (* Σ *)
-  p_sgn_eoi:
+  sgn_eoi:
     [
       [
-         decls = LIST0 p_sgn_decl; `EOI
-      -> decls
+         decls = LIST0 sgn_decl; `EOI ->
+           decls
       ]
     ]
   ;
 
-  (* A : K. + c : A. *)
-  p_sgn_decl:
+  sgn_decl:
     [
       [
-        a_or_c = SYMBOL; ":"; k_or_a = p_kind_or_typ; "."
-      -> begin match k_or_a with
-           | Kind k -> Ext.LF.SgnTyp   (_loc, Id.mk_name (Some a_or_c), k)
-           | Typ  a -> Ext.LF.SgnConst (_loc, Id.mk_name (Some a_or_c), a)
-         end
+         a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ; "." ->
+           begin match k_or_a with
+             | Kind k -> Sgn.Typ   (_loc, Id.mk_name (Some a_or_c), k)
+             | Typ  a -> Sgn.Const (_loc, Id.mk_name (Some a_or_c), a)
+           end
       |
-        "{-#"; "UNIFY_TERM"; "["; decls = LIST0 p_unify_decl SEP "," ;"]"; tm1 = p_full_term; "=?="; tm2 = p_full_term; "#-}"
-      -> Ext.LF.SgnPragma (_loc, Ext.LF.PragUnifyTerm (decls, tm1, tm2))
+        "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
+          Sgn.Schema (_loc, Id.mk_name (Some w), LF.Schema bs)
+(*       | *)
+(*          "{-#"; "UNIFY_TERM"; "["; decls = LIST0 unify_decl SEP "," ;"]"; tm1 = lf_term; "=?="; tm2 = lf_term; "#-}" -> *)
+(*            LF.SgnPragma (_loc, LF.PragUnifyTerm (decls, tm1, tm2)) *)
+(*       | *)
+(*          "{-#"; "UNIFY_TYPE"; "["; decls = LIST0 unify_decl SEP "," ;"]"; tp1 = lf_typ; "=?="; tp2 = lf_typ; "#-}" -> *)
+(*            LF.SgnPragma (_loc, LF.PragUnifyTyp (decls, tp1, tp2)) *)
       |
-        "{-#"; "UNIFY_TYPE"; "["; decls = LIST0 p_unify_decl SEP "," ;"]"; tp1 = p_full_typ; "=?="; tp2 = p_full_typ; "#-}"
-      -> Ext.LF.SgnPragma (_loc, Ext.LF.PragUnifyTyp (decls, tp1, tp2))
+        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
+          Sgn.Rec (_loc, Id.mk_name (Some f), tau, e)
       ]
     ]
   ;
 
-  p_unify_decl:
-    [
-      [
-         "term"; "|"; x = SYMBOL; ":"; a = p_full_typ
-      -> Ext.LF.UnifyTermDecl (Id.mk_name (Some x), a)
-      |
-         "term"; "|"; x = SYMBOL; "="; tm = p_full_term; ":"; a = p_full_typ
-      -> Ext.LF.UnifyTermDefn (Id.mk_name (Some x), tm, a)
-      |
-         "type"; "|"; x = SYMBOL; ":"; k = p_kind_or_typ
-      -> begin match k with
-           | Kind k ->
-               Ext.LF.UnifyTypeDecl (Id.mk_name (Some x), k)
-         end
-      |
-         "type"; "|"; x = SYMBOL; "="; tp = p_full_typ; ":"; k = p_kind_or_typ
-      -> begin match k with
-           | Kind k ->
-               Ext.LF.UnifyTypeDefn (Id.mk_name (Some x), tp, k)
-         end
-      ]
-    ]
-  ;
+(*   unify_decl: *)
+(*     [ *)
+(*       [ *)
+(*          "@term"; "|"; x = SYMBOL; ":"; a = lf_typ -> *)
+(*            LF.UnifyTermDecl (Id.mk_name (Some x), a) *)
+(*       | *)
+(*          "@term"; "|"; x = SYMBOL; "="; tm = lf_term; ":"; a = lf_typ -> *)
+(*            LF.UnifyTermDefn (Id.mk_name (Some x), tm, a) *)
+(*       | *)
+(*          "@type"; "|"; x = SYMBOL; ":"; k = lf_kind_or_typ -> *)
+(*            begin match k with *)
+(*              | Kind k -> *)
+(*                  LF.UnifyTypeDecl (Id.mk_name (Some x), k) *)
+(*            end *)
+(*       | *)
+(*          "@type"; "|"; x = SYMBOL; "="; tp = lf_typ; ":"; k = lf_kind_or_typ -> *)
+(*            begin match k with *)
+(*              | Kind k -> *)
+(*                  LF.UnifyTypeDefn (Id.mk_name (Some x), tp, k) *)
+(*            end *)
+(*       ] *)
+(*     ] *)
+(*   ; *)
 
-  (* Πx:A. K + Πx:A. B
-   | {x:A} K + {x:A} B
-   | A ->  K + A ->  B
-   |       K + A      
-   *)
-  p_kind_or_typ:
+  lf_kind_or_typ:
     [
       RIGHTA
         [
-          "Π"; x = SYMBOL; ":"; a2 = p_full_typ; "."; k_or_a = SELF
-        -> begin match k_or_a with
-             | Kind k -> Kind (Ext.LF.PiKind (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), k))
-             | Typ  a -> Typ  (Ext.LF.PiTyp  (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), a))
-           end
+           "{"; x = SYMBOL; ":"; a2 = lf_typ; "}"; k_or_a = SELF ->
+             begin match k_or_a with
+               | Kind k -> Kind (LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Some x), a2), k))
+               | Typ  a -> Typ  (LF.PiTyp  (_loc, LF.TypDecl (Id.mk_name (Some x), a2), a))
+             end
         |
-           "{"; x = SYMBOL; ":"; a2 = p_full_typ; "}"; k_or_a = SELF
-        -> begin match k_or_a with
-             | Kind k -> Kind (Ext.LF.PiKind (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), k))
-             | Typ  a -> Typ  (Ext.LF.PiTyp  (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), a))
-           end
+           a2 = lf_typ LEVEL "atomic"; "->"; k_or_a = SELF ->
+             begin match k_or_a with
+               | Kind k -> Kind (LF.ArrKind (_loc, a2, k))
+               | Typ  a -> Typ  (LF.ArrTyp  (_loc, a2, a))
+             end
         |
-          a2 = p_basic_typ; "->"; k_or_a = SELF
-       -> begin match k_or_a with
-            | Kind k -> Kind (Ext.LF.ArrKind (_loc, a2, k))
-            | Typ  a -> Typ  (Ext.LF.ArrTyp  (_loc, a2, a))
-          end
+           k = lf_kind LEVEL "atomic" ->
+             Kind k
         |
-           k = p_basic_kind
-        -> Kind k
-        |
-           a = p_basic_typ
-        -> Typ  a
+           a = lf_typ LEVEL "atomic" ->
+             Typ  a
         ]
     ]
   ;
 
-  (* type *)
-  p_basic_kind:
-    [
+  lf_kind:
+    [ RIGHTA
       [
-        "type"
-      -> Ext.LF.Typ _loc
+         "{"; x = SYMBOL; ":"; a = lf_typ; "}"; k = SELF ->
+           LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Some x), a), k)
+      |
+         a = lf_typ LEVEL "atomic"; "->"; k = SELF ->
+           LF.ArrKind (_loc, a, k)
+      ]
+
+    | "atomic"
+      [
+         "type" ->
+           LF.Typ _loc
       ]
     ]
   ;
 
-  (*  a M₁ … Mn
-   | (A)
-   *)
-  p_basic_typ:
+  lf_ctyp_decl:
     [
       [
-         a = SYMBOL; ms = LIST0 p_basic_term
-      -> let sp = List.fold_right (fun t s -> Ext.LF.App (_loc, t, s)) ms Ext.LF.Nil in
-           Ext.LF.Atom (_loc, Id.mk_name (Some a), sp)
-      |
-         "("; a = p_full_typ; ")"
-      ->  a
+        "{"; hash = OPT "#"; u_or_p = SYMBOL; "::"; tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]"; "}" ->
+          match hash with
+            | None   ->
+                LF.MDecl (_loc, Id.mk_name (Some u_or_p), tA, cPsi)
+
+            | Some _ ->
+                LF.PDecl (_loc, Id.mk_name (Some u_or_p), tA, cPsi)
       ]
     ]
   ;
 
-  (* Πx:A. B
-   | {x:A} B
-   | A ->  B
-   *)
-  p_full_typ:
-    [
+  lf_typ:
+    [ RIGHTA
+        [
+           "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF ->
+             LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Some x), a2), a)
+        |
+           a2 = SELF; "->"; a = SELF ->
+             LF.ArrTyp (_loc, a2, a)
+        ]
+
+    | "atomic"
+        [
+          a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              LF.Atom (_loc, Id.mk_name (Some a), sp)
+        |
+          "("; a = SELF; ")" ->
+            a
+        ]
+    ]
+  ;
+
+  lf_term:
+    [ RIGHTA
+        [
+          "\\"; x = SYMBOL; "."; m = SELF ->
+            LF.Lam (_loc, (Id.mk_name (Some x)), m)
+        ]
+
+    | LEFTA
+        [
+          h = lf_head; ms = LIST0 (lf_term LEVEL "atomic") ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              LF.Root (_loc, h, sp)
+        ]
+
+    | "atomic"
+        [
+           h = lf_head ->
+             LF.Root (_loc, h, LF.Nil)
+        |
+           "("; m = SELF; ")" ->
+             m
+        ]
+    ]
+  ;
+
+  lf_head:
+    [ 
       [
-         a = p_basic_typ
-      -> a
+        "#"; p = SYMBOL; "["; sigma = lf_sub; "]" ->
+          LF.PVar (_loc, Id.mk_name (Some p), sigma)
       |
-         "Π"; x = SYMBOL; ":"; a2 = SELF; "."; a = SELF
-      -> Ext.LF.PiTyp (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), a)
-      |
-         "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF
-      -> Ext.LF.PiTyp (_loc, Ext.LF.TypDecl (Id.mk_name (Some x), a2), a)
-      |
-         a2 = p_basic_typ; "->"; a = SELF
-      -> Ext.LF.ArrTyp (_loc, a2, a)
+        u_or_x = SYMBOL; sigma = OPT [ "["; sigma = lf_sub; "]" -> sigma ] ->
+          match sigma with
+            | None ->
+                LF.Name (_loc, Id.mk_name (Some u_or_x))
+            | Some sigma' ->
+                LF.MVar (_loc, Id.mk_name (Some u_or_x), sigma')
       ]
     ]
   ;
 
-  (*  h
-   | (M) 
-   *)
-  p_basic_term:
+  lf_sub:
     [
       [
-         h = p_head
-      -> Ext.LF.Root (_loc, h, Ext.LF.Nil)
+        "." ->
+          LF.Dot _loc
       |
-         "("; m = p_full_term; ")"
-      -> m
+        sigma = SELF; ","; tM = lf_term ->
+          LF.Normal (_loc, sigma, tM)
+      |
+        "id"; "("; x = SYMBOL; ")" ->
+          LF.Id (_loc, Id.mk_name (Some x))
       ]
     ]
   ;
 
-  (* λx. M
-   | [x] M
-   | h M₁ Mn
-   | M
-   *)
-  p_full_term:
+  (* We don't currently deal with sigma types, so no need for ~ *)
+  lf_schema_elem:
     [
       [
-         "λ"; x = SYMBOL; "."; m = p_full_term
-      -> Ext.LF.Lam (_loc, (Id.mk_name (Some x)), m)
-      |
-         "["; x = SYMBOL; "]"; m = p_full_term
-      -> Ext.LF.Lam (_loc, (Id.mk_name (Some x)), m)
-      |
-         h = p_head; ms = LIST0 p_basic_term
-      -> let sp = List.fold_right (fun t s -> Ext.LF.App (_loc, t, s)) ms Ext.LF.Nil in
-           Ext.LF.Root (_loc, h, sp)
-      |
-         m = p_basic_term
-      -> m
+        "some"; "["; ahat_decls = LIST0 lf_ahat_decl; "]"; "block"; a = lf_ahat ->
+          LF.SchElem (_loc, List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty ahat_decls, LF.SigmaDecl (Id.mk_name None, [a]))
       ]
     ]
   ;
 
-  (* x
-   | c
-   *)
-  p_head:
+  lf_ahat_decl:
     [
       [
-         x_or_c = SYMBOL
-      -> Ext.LF.Name (_loc, Id.mk_name (Some x_or_c))
+        x = SYMBOL; ":"; a = lf_ahat ->
+          LF.TypDecl (Id.mk_name (Some x), a)
       ]
     ]
   ;
+
+  lf_ahat:
+    [
+      [
+        a = lf_typ
+          -> a
+      ]
+    ]
+  ;
+
+  lf_dctx:
+    [
+      [
+        "." ->
+          LF.Null
+      |
+        psi = SYMBOL ->
+          LF.CtxVar (Id.mk_name (Some psi))
+      |
+        cPsi = lf_dctx; ","; x = SYMBOL; ":"; tA = lf_typ ->
+          LF.DDec (cPsi, LF.TypDecl (Id.mk_name (Some x), tA))
+      ]
+    ]
+  ;
+
+  cmp_typ:
+    [ "full" RIGHTA
+      [
+        "{"; psi = SYMBOL; ":"; "("; w = SYMBOL; ")"; "*"; "}"; tau = SELF ->
+          Comp.TypCtxPi (_loc, (Id.mk_name (Some psi), Id.mk_name (Some w)), tau)
+      |
+        tau1 = SELF; "->"; tau2 = SELF ->
+          Comp.TypArr (_loc, tau1, tau2)
+      ]
+    | "atomic"
+      [
+        tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]" ->
+          Comp.TypBox (_loc, tA, cPsi)
+      |
+        "("; tau = SELF; ")" ->
+          tau
+      ]
+    ] 
+  ;
+
+  cmp_exp_chk:
+    [ "full"
+      [
+         "fn"; f = SYMBOL; "=>"; e = SELF ->
+           Comp.Fun (_loc, Id.mk_name (Some f), e)
+      |
+        "FN"; f = SYMBOL; "=>"; e = SELF ->
+          Comp.CtxFun (_loc, Id.mk_name (Some f), e)
+      |
+        "mlam"; f = SYMBOL; "=>"; e = SELF ->
+          Comp.MLam (_loc, Id.mk_name (Some f), e)
+      |
+        "case"; i = cmp_exp_syn; "of"; bs = LIST1 cmp_branch SEP "|" ->
+          Comp.Case (_loc, i, bs)
+      ]
+    | "atomic"
+      [
+        "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term; ")" ->
+          let pHat = List.map (fun x' -> Id.mk_name (Some x')) vars in
+            Comp.Box (_loc, pHat, tM)
+      |
+        i = cmp_exp_syn ->
+          Comp.Syn (_loc, i)
+      |
+        "("; e = SELF; ")" ->
+          e
+      ]
+    ]
+  ;
+
+  cmp_exp_syn:
+    [ "full"
+      [
+        i = SELF; e = cmp_exp_chk ->
+          Comp.Apply (_loc, i, e)
+      |
+        i = SELF; "["; cPsi = lf_dctx; "]" ->
+          Comp.CtxApp (_loc, i, cPsi)
+(*       | *)
+(*         i = SELF; "["; vars = LIST0 [ x = SYMBOL -> x ]; "."; tM = lf_term; "]" -> *)
+(*           let pHat = List.map (fun x' -> Id.mk_name (Some x')) vars in *)
+(*             Comp.MApp (_loc, i, (pHat, tM)) *)
+      ]
+    | "atomic"
+      [
+        x = SYMBOL ->
+          Comp.Var (_loc, Id.mk_name (Some x))
+      |
+(*         e = cmp_exp_chk; ":"; tau = cmp_typ -> *)
+(*           Comp.Ann (_loc, e, tau) *)
+(*       | *)
+        "("; i = SELF; ")" ->
+          i
+      ]
+    ]
+  ;
+
+  cmp_branch:
+    [
+      [
+        ctyp_decls = LIST0 lf_ctyp_decl; "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term; ")"; ":"; tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]"; "=>"; e = cmp_exp_chk ->
+          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls
+          and pHat        = List.map (fun x' -> Id.mk_name (Some x')) vars in
+            Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, (tA, cPsi)), e)
+      ]
+    ]
+  ;
+
 END
-
-
 
 (********************)
 (* Parser Interface *)
 (********************)
 
-(* NOTE: Subject to change! *)
-
 let parse_stream ?(name = "<stream>") ~input entry =
-  try
-    InR (Grammar.parse entry (Grammar.Loc.mk name) input)
-  with
-    | exc -> InL exc
+  Grammar.parse entry (Grammar.Loc.mk name) input
 
 let parse_string ?(name = "<string>") ~input entry =
   let stream = Stream.of_string input in

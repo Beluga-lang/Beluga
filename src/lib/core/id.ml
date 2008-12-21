@@ -1,11 +1,5 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(**
-   @author Darin Morrison
-*)
-
-
-
 type name     = {
   string_of_name : string
 }

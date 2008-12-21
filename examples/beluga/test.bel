@@ -1,0 +1,12 @@
+nat : type.
+z : nat.
+s : nat -> nat.
+
+schema w = some [] block nat;
+
+rec identity : {g:(w)*} nat [g] -> nat [g] =
+  FN g =>
+    fn x =>
+      case x of
+          box (g . z)   : nat [.] => box (. z)
+        | box (g . s n) : nat [.] => box (. s n);

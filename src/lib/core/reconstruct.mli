@@ -2,7 +2,6 @@
 
 (**
    @author Renaud Germain
-   @author Darin Morrison
 *)
 
 open Syntax
@@ -41,4 +40,4 @@ module Apx : sig
 
 end
 
-val recSgnDecl : Ext.LF.sgn_decl -> Int.LF.sgn_decl
+val recSgnDecl : Ext.Sgn.decl -> Int.Sgn.decl

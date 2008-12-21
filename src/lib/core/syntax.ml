@@ -17,15 +17,23 @@ module Ext = struct
 
     type kind =
       | Typ     of Loc.t
-      | ArrKind of Loc.t * typ * kind
+      | ArrKind of Loc.t * typ      * kind
       | PiKind  of Loc.t * typ_decl * kind
 
     and typ_decl =
       | TypDecl of name * typ
 
+    and sigma_decl =
+      | SigmaDecl of name * typ_rec
+
+    and ctyp_decl =
+      | MDecl of Loc.t * name * typ  * dctx
+      | PDecl of Loc.t * name * typ  * dctx
+(*       | SDecl of Loc.t * name * dctx * dctx *)
+
     and typ =
       | Atom   of Loc.t * name * spine
-      | ArrTyp of Loc.t * typ * typ
+      | ArrTyp of Loc.t * typ      * typ
       | PiTyp  of Loc.t * typ_decl * typ
 
     and normal =
@@ -34,10 +42,37 @@ module Ext = struct
 
     and head =
       | Name of Loc.t * name
+      | MVar of Loc.t * name * sub
+      | PVar of Loc.t * name * sub
 
     and spine =
       | Nil
       | App of Loc.t * normal * spine
+
+    and sub =
+      | Dot    of Loc.t
+      | Normal of Loc.t * sub * normal
+      | Id     of Loc.t * name
+
+    and typ_rec = typ list
+
+    and dctx =
+      | Null
+      | CtxVar   of name
+      | DDec     of dctx * typ_decl
+(*       | SigmaDec of dctx * sigma_decl *)
+
+    and 'a ctx =
+      | Empty
+      | Dec of 'a ctx * 'a
+
+    and sch_elem =
+      | SchElem of Loc.t * typ_decl ctx * sigma_decl
+
+    and schema =
+      | Schema of sch_elem list
+
+    and psi_hat = name list
 
     and prag =
       | PragUnifyTerm of
@@ -55,11 +90,59 @@ module Ext = struct
       | UnifyTypeDecl of name          * kind
       | UnifyTypeDefn of name * typ    * kind
 
-    type sgn_decl =
-      | SgnComment of Loc.t * string
-      | SgnConst   of Loc.t * name * typ
-      | SgnPragma  of Loc.t * prag
-      | SgnTyp     of Loc.t * name * kind
+  end
+
+
+
+  module Comp = struct
+
+    type typ =
+      | TypBox   of Loc.t * LF.typ  * LF.dctx        (* A[Psi]         *)
+(*       | TypSBox  of LF.dctx * LF.dctx        (\* Phi[Psi]    *\) *)
+      | TypArr   of Loc.t * typ * typ                (* tau -> tau     *)
+      | TypCtxPi of Loc.t * (name * name) * typ      (* {psi:(w)*} tau *)
+(*       | TypPiBox of LF.ctyp_decl * typ       (\*                *\) *)
+
+    and exp_chk =
+       | Syn    of Loc.t * exp_syn                (* i                   *)
+(*        | Rec    of Loc.t * name * exp_chk         (\* rec f : tau = e     *\) *)
+       | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
+       | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *)
+       | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
+       | Box    of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
+(*        | SBox   of LF.psi_hat * LF.sub *)
+       | Case   of Loc.t * exp_syn * branch list
+
+    and exp_syn =
+       | Var    of Loc.t * name                               (* x              *)
+       | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
+       | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
+       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)
+       | Ann    of Loc.t * exp_chk * typ                      (* e : tau        *)
+
+    and branch =
+      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
+          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
+          * exp_chk
+
+(*       | BranchSBox of LF.ctyp_decl LF.ctx *)
+(*           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx)) *)
+(*           * exp_chk *)
+
+  end
+
+
+
+  module Sgn = struct
+
+    type decl =
+      | Const  of Loc.t * name * LF.typ
+      | Pragma of Loc.t * LF.prag
+      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
+      | Schema of Loc.t * name * LF.schema
+      | Typ    of Loc.t * name * LF.kind
+
+    type sgn = decl list
 
   end
 
@@ -84,7 +167,7 @@ module Int = struct
       | MDecl of name * typ  * dctx        (* D ::= u::A[Psi]                *)
       | PDecl of name * typ  * dctx        (*   |   p::A[Psi]                *)
       | SDecl of name * dctx * dctx        (*   |   s::A[Psi]                *)
-      | CDecl of name * schema             (*   | psi::W                     *)
+      | CDecl of name * schema
                                            (* Potentially, A is Sigma type ? *)
 
     and typ =                              (* LF level                       *)
@@ -105,7 +188,7 @@ module Int = struct
       | AnnH  of head * typ                (*   | (H:A)                      *)
       | Proj  of head * int                (*   | #k(x) | #k(p[s])           *)
       | FVar  of name                      (* free variable for type
-                                              reconstruction                 *)
+					      reconstruction                 *)
  
     and spine =                            (* spine                          *)
       | Nil                                (* S ::= Nil                      *)
@@ -127,10 +210,10 @@ module Int = struct
       | Inst   of normal option ref * dctx * typ * cnstr list ref
           (* D ; Psi |- M <= A
              provided constraint *)
-      | PInst  of head option ref * dctx * typ * cnstr list ref
+      | PInst  of head   option ref * dctx * typ * cnstr list ref
           (* D ; Psi |- H => A 
              provided constraint *)
-      | CInst  of dctx option ref * schema
+      | CInst  of dctx   option ref * schema
           (* D |- Psi : schema   *)
 
     and constrnt =                         (* Constraint                     *)
@@ -152,8 +235,8 @@ module Int = struct
                                            (* | C, x:'a                      *)
 
     and sch_elem =                         (* Schema Element                 *)
-      | SchElem of typ_decl ctx * sigma_decl  (* Pi    x1:A1 ... xn:An. 
-                                                 Sigma y1:B1 ... yk:Bk. B    *)
+      | SchElem of typ_decl ctx * sigma_decl    (* Pi    x1:A1 ... xn:An. 
+                                              Sigma y1:B1 ... yk:Bk. B       *)
                                            (* Sigma-types not allowed in Ai  *)
 
     and schema =
@@ -167,9 +250,6 @@ module Int = struct
     and typ_rec = typ list                 (* Sigma x1:A1 ... xk:Ak          *)
                                            (* should not be a list ... -bp   *)
 
-    type sgn_decl =
-      | SgnTyp   of cid_typ  * kind
-      | SgnConst of cid_term * typ
 
 
 
@@ -199,39 +279,50 @@ module Int = struct
 
 
     type typ =
-      | TypBox   of LF.typ * LF.dctx
-      | TypSBox  of LF.dctx * LF.dctx
-      | TypArr   of typ * typ
-      | TypCtxPi of (name * LF.schema) * typ
+      | TypBox   of LF.typ  * LF.dctx
+      | TypSBox  of LF.dctx * LF.dctx        (* Phi[Psi]    *)
+      | TypArr   of typ * typ                (* tau -> tau  *)
+      | TypCtxPi of (name * LF.schema) * typ (* {psi:W} tau *)
       | TypPiBox of LF.ctyp_decl * typ
       | TypClo   of typ * msub
 
-
     and exp_chk =
-       | Syn    of exp_syn
-       | Rec    of name * exp_chk
-       | Fun    of name * exp_chk
-       | CtxFun of name * exp_chk
-       | MLam   of name * exp_chk
-       | Box    of LF.psi_hat * LF.normal
-       | SBox   of LF.psi_hat * LF.sub
-       | Case   of exp_syn * branch list
+      | Syn    of exp_syn
+      | Rec    of name * exp_chk
+      | Fun    of name * exp_chk
+      | CtxFun of name * exp_chk
+      | MLam   of name * exp_chk
+      | Box    of LF.psi_hat * LF.normal
+      | SBox   of LF.psi_hat * LF.sub
+      | Case   of exp_syn * branch list
 
     and exp_syn =
-       | Var    of offset
-       | Apply  of exp_syn * exp_chk
-       | CtxApp of exp_syn * LF.dctx
-       | MApp   of exp_syn * (LF.psi_hat * LF.normal)
-       | Ann    of exp_chk * typ
+      | Var    of offset
+      | Apply  of exp_syn * exp_chk
+      | CtxApp of exp_syn * LF.dctx
+      | MApp   of exp_syn * (LF.psi_hat * LF.normal)
+      | Ann    of exp_chk * typ
 
     and branch =
-      | BranchBox  of LF.mctx
+      | BranchBox  of LF.ctyp_decl LF.ctx
           * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
           * exp_chk
 
-      | BranchSBox of LF.mctx
+      | BranchSBox of LF.ctyp_decl LF.ctx
           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx))
           * exp_chk
+
+  end
+
+
+
+  module Sgn = struct
+
+    type decl =
+      | Typ   of cid_typ  * LF.kind
+      | Const of cid_term * LF.typ
+
+    type sgn = decl list
 
   end
 

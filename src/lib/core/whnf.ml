@@ -291,7 +291,7 @@ and lowerMVar = function
                  (Root (MVar (u, r ), tS), LF.id)  )
                 (* (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)) *)
                 (* did not work ! Wed Dec 17 00:04:15 2008 -bp !!! *)
-          | ((PiTyp _ , _s)->
+          | (PiTyp _ , _s) ->
               (* Meta-variable is not atomic and tA = Pi x:B1.B2 
                  lower u, and normalize the lowered meta-variable
                  note: we may expose and compose substitutions twice. *)

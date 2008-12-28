@@ -7,7 +7,7 @@
 
 open Syntax.Int.LF
 
-
+exception Error of string
 
 (* More approriate: Psi into psihat  Sat Oct  4 11:44:55 2008 -bp *)
 let dctxToHat cPsi =
@@ -75,12 +75,16 @@ let ctxDec cPsi k =
 
     | (SigmaDec (cPsi', SigmaDecl  (_x, _tArec)), k')
       -> ctxDec' (cPsi', k' - 1)
+    | (Null, _ ) -> raise (Error "Lookin up index bigger than length of context\n")
     (* ctxDec' (Null    , k') should not occur by invariant *)
     (* ctxDec' (CtxVar _, k') should not occur by invariant *)
   in
+   try 
     ctxDec' (cPsi, k)
-
-
+   with Error s -> (Printf.printf "Looking up index %s in context \n  \n" (string_of_int k) ;
+                   raise (Error s))
+       
+      
 
 (* ctxSigmaDec (Psi, k,i) = x:A
 
@@ -144,31 +148,3 @@ let rec mctxPDec cD k' = match (cD, k') with
     -> mctxPDec cD (k - 1)
 
 
-
-
-
-(*************************************)
-(* Creating new contextual variables *)
-(*************************************)
-
-(* newMVar (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
-
-   Invariant:
-
-         tA =   Atom (a, S)
-     or  tA =   Pi (x:tB, tB')
-     but tA =/= TClo (_, _)
-*)
-let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
-
-
-
-(* newPVar (cPsi, tA) = p
-
-   Invariant:
-
-         tA =   Atom (a, S)
-     or  tA =   Pi (x:tB, tB')
-     but tA =/= TClo (_, _)
-*)
-let newPVar (cPsi, tA) = PInst (ref None, cPsi, tA, ref [])

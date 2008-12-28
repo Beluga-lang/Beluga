@@ -85,7 +85,7 @@ module LF = struct
 
      If    Psi |- s <= Psi'    Psi' |- n <= A
      then  Ft' = Ftn         if  s = Ft1 .. Ftn .. ^k
-     or  Ft' = ^(n + k)    if  s = Ft1 .. Ftm ^k   and m < n
+     or  Ft' = ^(n + k)      if  s = Ft1 .. Ftm ^k   and m < n
      and Psi |- Ft' <= [s]A
   *)
   and bvarSub n s = match (n, s) with
@@ -186,7 +186,7 @@ module LF = struct
 
      If   D ; Psi  |- s  <= Psi'    (and s patsub)
      then D ; Psi' |- s' <= Psi
-     s.t. s o s' = id  
+     s.t. s o s' = id    (comp s' s = id)
   *)
   let invert s =
     let rec lookup n s p = match s with

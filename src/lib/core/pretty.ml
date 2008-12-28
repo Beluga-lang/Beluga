@@ -353,7 +353,10 @@ module Int = struct
     val subToString    : sub      -> string
     val spineToString  : spine    -> string
     val typToString    : typ      -> string
+    val kindToString   : kind     -> string
     val normalToString : normal   -> string
+
+    val dctxToString   : dctx     -> string
   end
 
 
@@ -583,11 +586,20 @@ module Int = struct
     let spineToString tS  = (fmt_ppr_spine  std_lvl str_formatter tS
                             ; flush_str_formatter ())
 
-    let typToString tA   = (fmt_ppr_typ  std_lvl str_formatter tA
+    let typToString tA    = (fmt_ppr_typ  std_lvl str_formatter tA
+                            ; flush_str_formatter ())
+
+    let kindToString tK   = (fmt_ppr_kind  std_lvl str_formatter tK
                             ; flush_str_formatter ())
 
     let normalToString tM = (fmt_ppr_normal  std_lvl str_formatter tM
                           ; flush_str_formatter ())
+
+    let rec dctxToString cPsi = match cPsi with
+      | Null -> " . "
+      | DDec (cPsi', TypDecl(_x, tA)) -> 
+          (dctxToString cPsi') ^ " , _ : " ^ typToString tA
+
 
   end
 
@@ -616,7 +628,7 @@ module Int = struct
 
 
   (****************************************************************)
-  (* Default External Syntax Pretty Printer Functor Instantiation *)
+  (* Default Internal Syntax Pretty Printer Functor Instantiation *)
   (****************************************************************)
 
   module DefaultPrinter = Make (DefaultCidRenderer)

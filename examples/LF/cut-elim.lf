@@ -9,11 +9,164 @@ forall : (i -> o) -> o.
 hyp  : o -> type.
 conc : o -> type.
 
-axiom   : {A:o} (hyp A -> conc A).
+axiom   : (hyp A -> conc A).
 truer   : conc (true).
-impr    : {A:o} {B:o} (hyp A -> conc B) -> conc (imp A B).
-impl    : {A:o} {B:o} {C:o} conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C).
-notr    : {A:o} ({p:o} hyp A -> conc p) -> conc (not A).
-notl    : {A:o} {C:o} conc A -> (hyp (not A) -> conc C).
-forallr : {A:i -> o} ({a:i} conc (A a)) -> conc (forall ([x] A x)).
-foralll : {A:i -> o} {C:o} {T:i} (hyp (A T) -> conc C) -> (hyp (forall ([x] A x)) -> conc C).
+impr    : (hyp A -> conc B) -> conc (imp A B).
+impl    : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C).
+notr    : ({p:o} hyp A -> conc p) -> conc (not A).
+notl    : conc A -> (hyp (not A) -> conc C).
+forallr : ({a:i} conc (A a)) -> conc (forall ([x] A x)).
+foralll : (hyp (A T) -> conc C) -> (hyp (forall ([x] A x)) -> conc C).
+
+
+# : type.         
+neg : o -> type.  
+pos : o -> type.  
+
+axiom' : (neg A -> pos A -> #).
+
+impr'  : (neg A -> pos B -> #)
+	  -> (pos (imp A B) -> #).
+
+impl'  : (pos A -> #)
+	  -> (neg B -> #)
+	  -> (neg (imp A B) -> #).
+
+notr'  : (neg A -> #)
+	  -> (pos (not A) -> #).
+
+notl'  : (pos A -> #)
+	  -> (neg (not A) -> #).
+
+truer' : (pos (true) -> #).
+
+
+forallr' : ({a:i} pos (A a) -> #)
+	    -> (pos (forall ([x] A x)) -> #). 
+
+foralll' : {T:i} (neg (A T) -> #)
+	    -> (neg (forall ([x] A x)) -> #).
+
+ca' : {A:o} (pos A -> #) -> (neg A -> #) -> # -> type.
+ 
+ca_axiom'l : ca' A ([p] axiom' N p) ([n] E n) (E N).
+
+ca_axiom'r : ca' A ([p] D p) ([n] axiom' n P) (D P).
+
+
+ca_imp' : 
+       ca' B ([p2] F2 p2) ([n2] E2' n2) F
+   -> ({p2:pos B} ca' A ([p1] E1' p1) ([n1] D1' n1 p2) (F2 p2))
+         -> ({n1:neg A} {p2:pos B}
+                ca' (imp A B) ([p] D1 p n1 p2)
+                   ([n] impl' ([p] E1 n p) ([n2] E2 n n2) n)
+                   (D1' n1 p2))
+         -> ({n2:neg B}
+                ca' (imp A B)
+                   ([p] impr' ([n] [p1] D1 p n p1) p)
+                   ([n] E2 n n2) (E2' n2))
+         -> ({p1:pos A}
+                ca' (imp A B)
+                   ([p] impr' ([n] [p2] D1 p n p2) p)
+                   ([n] E1 n p1) (E1' p1))
+         -> ca' (imp A B)
+               ([p] impr' ([n] [p1] D1 p n p1) p)
+               ([n]
+                   impl' ([p] E1 n p) ([n1] E2 n n1) n) F.
+
+
+car_impr' : ({n1:neg B1} {p2:pos B2} 
+	      ca' A ([p] D p) ([n] E1 n n1 p2) (F1 n1 p2))
+         -> ca' A ([p] D p)
+               ([n] impr' ([n1] [p] E1 n n1 p) P)
+               (impr' ([n] [p] F1 n p) P).
+car_impl' :
+      ({n2:neg B2} ca' A ([p] D p) ([n] E2 n n2) (F2 n2))
+         -> ({p1:pos B1} ca' A ([p] D p) ([n] E1 n p1) (F1 p1))
+         -> ca' A ([p] D p)
+               ([n] impl' ([p] E1 n p) ([n1] E2 n n1) N)
+               (impl' ([p] F1 p) ([n] F2 n) N).
+
+ca_not' :
+      ca' A ([p] E1' p) ([n] D1' n) F
+         -> ({n1:neg A}
+                ca' (not A) ([p] D1 p n1)
+                   ([n] notl' ([p] E1 n p) n) (D1' n1))
+         -> ({p1:pos A}
+                ca' (not A) ([p] notr' ([n] D1 p n) p)
+                   ([n] E1 n p1) (E1' p1))
+         -> ca' (not A) ([p] notr' ([n] D1 p n) p)
+               ([n] notl' ([p] E1 n p) n) F.
+ca_forall' :
+      ca' (A T) ([p] D1' p) ([n] E1' n) F
+         -> ({p1:pos (A T)}
+                ca' (forall ([t] A t))
+                   ([p] D1 p T p1)
+                   ([n]
+                       foralll' T ([n1] E1 n n1) n) (D1' p1))
+         -> ({n1:neg (A T)}
+                ca' (forall ([t] A t))
+                   ([p]
+                       forallr' ([a] [p1] D1 p a p1) p)
+                   ([n] E1 n n1) (E1' n1))
+         -> ca' (forall ([t] A t))
+               ([p]
+                   forallr' ([a] [p1] D1 p a p1) p)
+               ([n]
+                   foralll' T ([n1] E1 n n1) n) F.
+
+
+car_notr' :
+      ({n1:neg B1} ca' A ([p] D p) ([n] E1 n n1) (F1 n1))
+         -> ca' A ([p] D p) ([n] notr' ([n1] E1 n n1) P)
+               (notr' ([n] F1 n) P).
+car_notl' :
+      ({p1:pos B1} ca' A ([p] D p) ([n] E1 n p1) (F1 p1))
+         -> ca' A ([p] D p) ([n] notl' ([p] E1 n p) N)
+               (notl' ([p] F1 p) N).
+car_forallr' :
+      ({a:i} {p1:pos (B1 a)}
+          ca' A ([p] D p) ([n] E1 n a p1) (F1 a p1))
+         -> ca' A ([p] D p)
+               ([n] forallr' ([a] [p] E1 n a p) P)
+               (forallr' ([a] [p] F1 a p) P).
+car_foralll' :
+      ({n1:neg (A1 T)} ca' A ([p] D p) ([n] E1 n n1) (F1 n1))
+         -> ca' A ([p] D p)
+               ([n] foralll' T ([n1] E1 n n1) N)
+               (foralll' T ([n] F1 n) N).
+cal_axiom' :
+      ca' A ([p] axiom' N P) ([n] E n) (axiom' N P).
+
+
+cal_impr' :
+      ({n1:neg B1} {p2:pos B2}
+          ca' A ([p] D1 p n1 p2) ([n] E n) (F1 n1 p2))
+         -> ca' A ([p] impr' ([n] [p1] D1 p n p1) P)
+               ([n] E n) (impr' ([n] [p] F1 n p) P).
+cal_impl' :
+      ({n2:neg B2} ca' A ([p] D2 p n2) ([n] E n) (F2 n2))
+         -> ({p1:pos B1} ca' A ([p] D1 p p1) ([n] E n) (F1 p1))
+         -> ca' A ([p] impl' ([p1] D1 p p1) ([n] D2 p n) N)
+               ([n] E n) (impl' ([p] F1 p) ([n] F2 n) N).
+
+cal_notr' :
+      ({n1:neg B1} ca' A ([p] D1 p n1) ([n] E n) (F1 n1))
+         -> ca' A ([p] notr' ([n] D1 p n) P) ([n] E n)
+               (notr' ([n] F1 n) P).
+cal_notl' :
+      ({p1:pos B1} ca' A ([p] D1 p p1) ([n] E n) (F1 p1))
+         -> ca' A ([p] notl' ([p1] D1 p p1) N) ([n] E n)
+               (notl' ([p] F1 p) N).
+
+cal_forallr' :
+      ({a:i} {p1:pos (B1 a)}
+          ca' A ([p] D1 p a p1) ([n] E n) (F1 a p1))
+         -> ca' A ([p] forallr' ([a] [p1] D1 p a p1) P)
+               ([n] E n) (forallr' ([a] [p] F1 a p) P).
+
+
+cal_foralll' :
+      ({n1:neg (A1 T)} ca' A ([p] D1 p n1) ([n] E n) (F1 n1))
+         -> ca' A ([p] foralll' T ([n] D1 p n) N)
+               ([n] E n) (foralll' T ([n] F1 n) N).

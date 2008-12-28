@@ -171,7 +171,9 @@ module Int : sig
     val subToString    : sub      -> string
     val spineToString  : spine    -> string
     val typToString    : typ      -> string
+    val kindToString   : kind     -> string
     val normalToString : normal   -> string
+    val dctxToString   : dctx     -> string
 
   end
 

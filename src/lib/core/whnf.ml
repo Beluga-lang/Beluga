@@ -24,9 +24,44 @@ type error =
 exception Error of string
 
 
+let rec raiseType cPsi tA = match cPsi with
+  | Null -> tA
+  | DDec (cPsi', decl) ->
+      raiseType cPsi' (PiTyp (decl, tA))
+
 let rec emptySpine tS = match tS with
   | Nil -> true
   | SClo(tS, _s) -> emptySpine tS
+
+
+
+(*************************************)
+(* Creating new contextual variables *)
+(*************************************)
+
+(* newPVar (cPsi, tA) = p
+
+   Invariant:
+
+         tA =   Atom (a, S)
+     or  tA =   Pi (x:tB, tB')
+     but tA =/= TClo (_, _)
+*)
+let newPVar (cPsi, tA) = PInst (ref None, cPsi, tA, ref [])
+
+
+(* newMVar (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
+
+   Invariant:
+
+         tA =   Atom (a, S)
+     or  tA =   Pi (x:tB, tB')
+     but tA =/= TClo (_, _)
+*)
+let newMVar (cPsi, tA) = 
+Inst (ref None, cPsi, tA, ref [])
+
+
 
 (******************************)
 (* Lowering of Meta-Variables *)
@@ -111,14 +146,14 @@ and lowerMVar = function
 
     Similar invariants for norm, normSpine.
     *)
-  let rec norm (tM, sigma) = match tM with
+let rec norm (tM, sigma) = match tM with
       | Lam (y, tN)       -> Lam (y, norm (tN, LF.dot1 sigma))
 
       | Clo (tN, s)       -> norm (tN, LF.comp s sigma)
 
       | Root (BVar i, tS) ->          
           begin match LF.bvarSub i sigma with
-            | Obj tM        ->  reduce (tM, LF.id) (normSpine (tS, sigma))
+            | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
             | Head (BVar k) -> Root (BVar k, normSpine (tS, sigma))
             | Head head     -> norm (Root (head, normSpine (tS, sigma)), LF.id)
             (* Undef should not happen ! *)
@@ -221,10 +256,12 @@ and lowerMVar = function
           | tN                -> Obj (tN) 
         end 
     | Head (BVar _k)  -> ft
+    | Head (FVar _k)  -> ft
     | Head (MVar (u, s')) -> Head(MVar (u, normSub s'))
     | Head (PVar (p, s')) -> Head(PVar (p, normSub s'))
     | Head (Proj(PVar (p,s'), k)) -> Head(Proj(PVar (p, normSub s'), k))
     | Head h            -> Head h
+    | Undef             -> Undef  (* -bp Tue Dec 23 2008 : DOUBLE CHECK *)
 
   (* normType (tA, sigma) = tA'
 
@@ -250,6 +287,18 @@ and lowerMVar = function
 
   and normDecl (decl, sigma) = match decl with
      TypDecl (x, tA) -> TypDecl (x, normTyp (tA, sigma))
+
+
+  let rec normKind tK = match tK with
+    | Typ  -> Typ
+    | PiKind (decl, tK) -> PiKind(normDecl (decl, LF.id), normKind tK)
+
+
+  let rec normDCtx cPsi = match cPsi with
+    | Null -> Null
+    | CtxVar psi -> CtxVar psi 
+    | DDec (cPsi1, decl) -> DDec(normDCtx cPsi1, normDecl (decl, LF.id))
+    | SigmaDec (cPsi1, SigmaDecl(x, typrec)) -> SigmaDec(normDCtx cPsi1, SigmaDecl (x, normTypRec (typrec, LF.id)))
 
 (* ---------------------------------------------------------- *)
 (* Weak head normalization = applying simultaneous hereditary 
@@ -298,20 +347,26 @@ and lowerMVar = function
         (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
   
-  | (Root (MVar (Inst ({contents = Some tM}, _, _, _) as _u, r), tS), sigma) ->
+  | (Root (MVar (Inst ({contents = Some tM}, _cPsi, _tA, _) as _u, r), tS), sigma) ->
         (* constraints associated with u must be in solved form *)
-        whnfRedex ((tM, LF.comp r sigma), (tS, sigma))
+      ((*let _ = Printf.printf "Whnf Instantiated MVar %s \n"
+                 (Pretty.Int.DefaultPrinter.normalToString (Clo sM)) in 
+       let _  = Printf.printf "Typ of Instantiated MVar %s \n"
+                 (Pretty.Int.DefaultPrinter.typToString (raiseType cPsi tA)) in *)
+       let sR =  whnfRedex ((tM, LF.comp r sigma), (tS, sigma)) in 
+(*       let _ = Printf.printf "Whnf Instantiated MVar REDUCED %s \n\n"
+                 (Pretty.Int.DefaultPrinter.normalToString (norm sR)) in *)
+         sR)
 
-    | (Root (MVar (Inst ({contents = None}, _cPsi, tA, _cnstr) as u, r), tS) as tM, sigma) ->
+
+    | (Root (MVar (Inst ({contents = None} as uref, cPsi, tA, cnstr) as u, r), tS) as tM, sigma) ->
       (* note: we could split this case based on tA; 
               this would avoid possibly building closures with id *)
         begin match whnfTyp (tA, LF.id) with
-          | (Atom _, _s (* id *)) ->
+          | (Atom (a, tS'), _s (* id *)) ->
               (* meta-variable is of atomic type; tS = Nil  *)
-              let _   = Printf.printf "WHNF mvar :" in
-              let _   = Printf.printf " \n %s \n" 
-                    (Pretty.Int.DefaultPrinter.normalToString (norm (tM, sigma))) in
-              (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+              let u' = Inst (uref, cPsi, Atom(a, tS'), cnstr) in  
+                (Root (MVar (u', LF.comp r sigma), SClo (tS, sigma)), LF.id)
           | (PiTyp _ , _s)->
               (* Meta-variable is not atomic and tA = Pi x:B1.B2 
                  lower u, and normalize the lowered meta-variable
@@ -523,7 +578,9 @@ and lowerMVar = function
 
       | (Dot (f, s), Dot (f', s'))
         -> convFront f f' && convSub s s'
-
+      
+      (* Additional case missing:
+         Shift n, Dot(Head BVar k, s') *)
       |  _
         -> false
 

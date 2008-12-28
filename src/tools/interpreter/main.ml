@@ -57,8 +57,9 @@ let main () =
                       ; print_newline ()
                       ; Check.LF.check_sgn_decls internal_decls
                       ; fprintf ppf "\n## Double Checking Successful! ##\n\n"
+
                       (* clean up for the next file *)
-                      ; Store.clear ()
+                      ; Store.clear () 
                       ; errors
                   with
                     | Whnf.Error  err ->

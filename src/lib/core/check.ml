@@ -406,11 +406,11 @@ module Comp = struct
   let rec mctxToMSub cD = match cD with
     | I.Empty -> MShiftZero
     | I.Dec(cD', I.MDecl(_, tA, cPsi)) -> 
-      let u = Context.newMVar (cPsi, tA) in 
+      let u = Whnf.newMVar (cPsi, tA) in 
       let phat = Context.dctxToHat cPsi in 
         MDot(MObj(phat, I.Root(I.MVar(u, S.LF.id), I.Nil)) , mctxToMSub cD')
     | I.Dec(cD', I.PDecl(_, tA, cPsi)) -> 
-      let p = Context.newPVar (cPsi, tA) in
+      let p = Whnf.newPVar (cPsi, tA) in
       let phat = Context.dctxToHat cPsi in  
         MDot(PObj(phat, I.PVar(p, S.LF.id)) , mctxToMSub cD')
 

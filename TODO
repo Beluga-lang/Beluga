@@ -4,24 +4,26 @@
 CRITICAL
 ========
 
-*  1/4/08  :: Unification: is the occurs check for parameter variables 
-              necessary? -bp 
+* 28/12/08 :: Reconstruction: Handle Pi-abstractions where type has been omitted
+               and must be inferred.
 
-              Example: q[q[x,y],y] = x  should succeed
-                       q[q[x,y],y] = y  should succeed
+               Example: 
+               cal_foralll' :
+                   ({n1:neg (A1 T)} ca' A ([p] D1 p n1) ([n] E n) (F1 n1))
+                 -> ca' A ([p] foralll' T ([n] D1 p n) N)
+                    ([n] E n) (foralll' T ([n] F1 n) N).
 
-              q::A[x1:A,x2:B]  and x1,x2. x2/q
+               We should be able to omit the typing at n1. 
+               Alternatively, we need typing annotations elsewhere. -bp
 
-*  1/4/08  :: Unification: Instantiation of parameter variables
-              Currently: Given 
-             cPsi  |- s2' <= cPsi2   and 
-             cPsi1 |- ss <= cPsi     and
-             cPsi2 |- s' <= cPsi'    and [ss](s2' (s')) exists
+* 28/12/08 :: Error messages from type reconstruction  -bp
 
-              will (comp ss s2') s'  have the same result as comp ss (comp s2' s') ? 
-                -bp
-   
-* 1/4/08   :: Testing of unification: Frontend should support
+* 28/12/08 :: Frontend: Being able to read in signatures distributed in
+                different files. Follow Twelf model of config file. -bp
+ 
+
+  
+* 11/4/08   :: Testing of unification: Frontend should support
               processing of unification problems  -bp
 
 
@@ -31,6 +33,12 @@ CRITICAL
 
 IMPORTANT
 =========
+
+* 28/12/08 :: Printing named representation of variables in
+               addition to de Bruijn index representation -bp
+
+* 28/12/08 :: Naming convention: Use names provided in signature
+                -bp
 
 *  1/4/08  :: Unification: Are cases for proj necessary? -bp
 

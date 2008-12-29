@@ -696,6 +696,19 @@ module Int = struct
 
     val ppr_lf_cvar       : LF.cvar       -> unit
 
+    val headToString      : LF.head       -> string
+
+    val subToString       : LF.sub        -> string
+
+    val spineToString     : LF.spine      -> string
+
+    val typToString       : LF.typ        -> string
+
+    val kindToString      : LF.kind       -> string
+
+    val normalToString    : LF.normal     -> string
+
+    val dctxToString      : LF.dctx       -> string
   end
 
 
@@ -770,6 +783,10 @@ module Int = struct
               (fmt_ppr_lf_typ 0) b
               (r_paren_if cond)
 
+      | LF.TClo (tA, s) -> 
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_lf_typ lvl) tA
+            (fmt_ppr_lf_sub lvl) s
 
 
     and fmt_ppr_lf_normal lvl ppf = function
@@ -793,7 +810,10 @@ module Int = struct
               (fmt_ppr_lf_spine 2)  ms
               (r_paren_if cond)
 
-
+      | LF.Clo(tM, s) -> 
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_lf_normal lvl) tM
+            (fmt_ppr_lf_sub lvl) s
 
     and fmt_ppr_lf_head lvl ppf = function
       | LF.BVar x  ->
@@ -890,23 +910,47 @@ module Int = struct
     (* Regular Pretty Printers *)
     (***************************)
 
-    let ppr_sgn_decl    = fmt_ppr_sgn_decl    std_lvl std_formatter
+    let ppr_sgn_decl      = fmt_ppr_sgn_decl  std_lvl std_formatter
 
-    let ppr_lf_kind     = fmt_ppr_lf_kind     std_lvl std_formatter
+    let ppr_lf_kind       = fmt_ppr_lf_kind   std_lvl std_formatter
 
-    let ppr_lf_typ      = fmt_ppr_lf_typ      std_lvl std_formatter
+    let ppr_lf_typ        = fmt_ppr_lf_typ    std_lvl std_formatter
 
-    let ppr_lf_normal   = fmt_ppr_lf_normal   std_lvl std_formatter
+    let ppr_lf_normal     = fmt_ppr_lf_normal std_lvl std_formatter
 
-    let ppr_lf_head     = fmt_ppr_lf_head     std_lvl std_formatter
+    let ppr_lf_head       = fmt_ppr_lf_head   std_lvl std_formatter
 
-    let ppr_lf_spine    = fmt_ppr_lf_spine    std_lvl std_formatter
+    let ppr_lf_spine      = fmt_ppr_lf_spine  std_lvl std_formatter
 
-    let ppr_lf_sub      = fmt_ppr_lf_sub      std_lvl std_formatter
+    let ppr_lf_sub        = fmt_ppr_lf_sub    std_lvl std_formatter
 
-    let ppr_lf_front    = fmt_ppr_lf_front    std_lvl std_formatter
+    let ppr_lf_front      = fmt_ppr_lf_front  std_lvl std_formatter
 
-    let ppr_lf_cvar     = fmt_ppr_lf_cvar     std_lvl std_formatter
+    let ppr_lf_cvar       = fmt_ppr_lf_cvar   std_lvl std_formatter
+
+    let headToString h    = fmt_ppr_lf_head   std_lvl str_formatter h
+                          ; flush_str_formatter ()
+
+    let subToString  s    = fmt_ppr_lf_sub    std_lvl str_formatter s
+                          ; flush_str_formatter ()
+
+    let spineToString tS  = fmt_ppr_lf_spine  std_lvl str_formatter tS
+                          ; flush_str_formatter ()
+
+    let typToString tA    = fmt_ppr_lf_typ    std_lvl str_formatter tA
+                          ; flush_str_formatter ()
+
+    let kindToString tK   = fmt_ppr_lf_kind   std_lvl str_formatter tK
+                          ; flush_str_formatter ()
+
+    let normalToString tM = fmt_ppr_lf_normal std_lvl str_formatter tM
+                          ; flush_str_formatter ()
+
+    let rec dctxToString cPsi = match cPsi with
+      | LF.Null -> " . "
+      | LF.DDec (cPsi', LF.TypDecl (_x, tA)) -> 
+          dctxToString cPsi' ^ " , _ : " ^ typToString tA
+
 
   end
 
@@ -935,7 +979,7 @@ module Int = struct
 
 
   (****************************************************************)
-  (* Default External Syntax Pretty Printer Functor Instantiation *)
+  (* Default Internal Syntax Pretty Printer Functor Instantiation *)
   (****************************************************************)
 
   module DefaultPrinter = Make (DefaultCidRenderer)
@@ -943,6 +987,8 @@ module Int = struct
 end
 
 
+(* Disabled Error module to allow printing in check, whnf, unify, etc. 
+   Wed Dec 17 21:12:38 2008 -bp 
 
 module Error = struct
 
@@ -1093,7 +1139,6 @@ module Error = struct
   end
 
 
-
   (***********************************)
   (* Default CID_RENDERER for Errors *)
   (***********************************)
@@ -1109,3 +1154,4 @@ module Error = struct
   module DefaultPrinter = Make (DefaultCidRenderer)
 
 end
+*)

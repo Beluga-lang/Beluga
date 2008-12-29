@@ -8,6 +8,7 @@ open Store
 open Store.Cid
 open Substitution
 open Syntax
+open Id
 
 module S    = Substitution.LF
 module I    = Int.LF
@@ -59,6 +60,37 @@ type free_var =
   | FV of Id.name * I.typ option 
                          (*     | (F, A)                  . |- F <= A *)
 
+let freeVarToString x = match x with
+  | (MV tH) -> Pretty.Int.DefaultPrinter.headToString tH
+  | (FV (n, _tA)) -> n.string_of_name
+
+
+let rec raiseType cPsi tA = match cPsi with
+  | I.Null -> tA
+  | I.DDec (cPsi', decl) ->
+      raiseType cPsi' (I.PiTyp (decl, tA))
+
+let rec raiseKind cPsi tK = match cPsi with
+  | I.Null -> tK
+  | I.DDec (cPsi', decl) ->
+      raiseKind cPsi' (I.PiKind (decl, tK))
+
+
+let rec printCollection cQ = match cQ with
+  | I.Empty -> Printf.printf " \n end "
+  | I.Dec(cQ, MV ((I.MVar (I.Inst(_r, cPsi, tP, _c), _s)) as h)) -> 
+      (printCollection cQ ; 
+       Printf.printf " %s : " 
+         (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(h, I.Nil), LF.id))) ;
+       Printf.printf " %s \n" 
+         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (raiseType cPsi tP, LF.id)))
+      )
+  | I.Dec(cQ, FV (_n, None)) -> (printCollection cQ ; Printf.printf " FV _ . ")
+  | I.Dec(cQ, FV (n, Some tA)) -> 
+            (printCollection cQ ; 
+             Printf.printf " FV %s : %s \n" n.string_of_name 
+                     (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, LF.id))))
+
 (* exists p cQ = B
    where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
 *)
@@ -92,7 +124,8 @@ let rec eqFVar n1 fV2 = match (n1, fV2) with
 (* index_of cQ n = i
    where cQ = cQ1, Y, cQ2 s.t. n = Y and length cQ2 = i
 *)
-let rec index_of cQ n = match (cQ, n) with
+let rec index_of cQ n = 
+  match (cQ, n) with
   | (I.Empty, _) ->
       raise Not_found (* impossible due to invariant on collect *)
 
@@ -105,16 +138,6 @@ let rec index_of cQ n = match (cQ, n) with
 
   | (I.Dec (cQ', _), _) ->
       (index_of cQ' n) + 1
-
-let rec raiseType cPsi tA = match cPsi with
-  | I.Null -> tA
-  | I.DDec (cPsi', decl) ->
-      raiseType cPsi' (I.PiTyp (decl, tA))
-
-let rec raiseKind cPsi tK = match cPsi with
-  | I.Null -> tK
-  | I.DDec (cPsi', decl) ->
-      raiseKind cPsi' (I.PiKind (decl, tK))
 
 (* If   cQ = cQ1 (MV u) cQ2
    and  u :: A[Psi]
@@ -211,11 +234,10 @@ and collectSub cQ phat s = match s with
     let cQ' = collectTerm cQ phat (tM, LF.id) in
       collectSub cQ' phat s
 
-  (* this case should be impossible :
+  | (I.Dot (I.Undef, s)) ->
+    (let _ = Printf.printf "Collect Sub encountered undef \n" in 
+          collectSub cQ phat  s)
 
-  | (I.Dot (I.Undef, s), K) =
-          collectSub (G, s, K)
-  *)
 
 (* collectMSub cQ theta = cQ' *) 
 and collectMSub cQ theta =  match theta with 
@@ -232,26 +254,27 @@ and collectHead cQ phat sH = match sH with
   | (I.BVar _x, _s)  -> cQ
   | (I.Const _c, _s) -> cQ
   | (I.FVar name, s) ->
-      if exists (eqFVar name) cQ then
-        cQ
-      else
-        let tA  = FVar.get name in
-        (* tA must be closed *)
-        (* Since we only use abstraction on pure LF objects,
-           there are no context variables; different abstraction
-           is necessary for handling computation-level expressions,
-           and LF objects which occur in computations. *)
-        let cQ' = collectTyp cQ (None, 0) (tA, LF.id) in
-          collectSub (I.Dec (cQ', FV (name, Some tA))) phat s
+      let cQ' = collectSub cQ (None, 0) s in
+        if exists (eqFVar name) cQ' then
+          cQ'
+        else
+          let tA  = FVar.get name in
+            (* tA must be closed *)
+            (* Since we only use abstraction on pure LF objects,
+               there are no context variables; different abstraction
+               is necessary for handling computation-level expressions,
+               and LF objects which occur in computations. *)
+            I.Dec (collectTyp cQ' (None, 0) (tA, LF.id), FV (name, Some tA))
 
   | (I.MVar (I.Inst (_r, cPsi, tA, _cnstrs), s') as u, s) ->
-      if exists (eqMVar u) cQ then
-        collectSub cQ phat (LF.comp s' s)
-      else
-        (*  checkEmpty !cnstrs ? -bp *)
-        let tA' = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
-        let cQ' = collectTyp cQ (None, 0) (tA', LF.id) in
-          collectSub (I.Dec (cQ', MV u)) phat (LF.comp s' s)
+      let cQ' = collectSub cQ phat (LF.comp s' s) in
+        if exists (eqMVar u) cQ' then
+          cQ'
+        else
+          (*  checkEmpty !cnstrs ? -bp *)
+          let tA' = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
+            I.Dec (collectTyp cQ' (None, 0) (tA', LF.id), MV u) in
+          
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
   | (I.Atom (_a, tS), s) ->
@@ -293,7 +316,7 @@ and abstractTypW cQ offset sA = match sA with
       I.Atom (a, abstractSpine cQ offset (tS, s))
 
   | (I.PiTyp (I.TypDecl (x, tA), tB), s) ->
-      I.PiTyp (I.TypDecl (x, abstractTyp cQ offset (tA,s)), abstractTyp cQ (offset + 1) (tB, LF.dot1 s))
+      I.PiTyp (I.TypDecl (x, abstractTyp cQ offset (tA, s)), abstractTyp cQ (offset + 1) (tB, LF.dot1 s))
 
 and abstractTerm cQ offset sM = abstractTermW cQ offset (Whnf.whnf sM)
 
@@ -301,10 +324,10 @@ and abstractTermW cQ offset sM = match sM with
   | (I.Lam (x, tM), s) ->
       I.Lam (x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
-  | (I.Root (I.MVar (_u, s) as tH, _tS (* Nil *)), _s (* LF.id *)) -> 
+  | (I.Root (I.MVar (I.Inst(_r, cPsi, _tP , _cnstr), s) as tH, _tS (* Nil *)), _s (* LF.id *)) -> 
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MV tH) + offset in 
-        I.Root (I.BVar x, subToSpine cQ offset s I.Nil)
+        I.Root (I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)     
 
   | (I.Root (tH, tS), s (* LF.id *)) ->
       I.Root (abstractHead cQ offset tH, abstractSpine cQ offset (tS,s))
@@ -326,18 +349,21 @@ and abstractHead cQ offset tH = match tH with
   (* other cases impossible for object level *)
 
 
-and subToSpine cQ offset s tS = match s with
-  | I.Shift k -> 
-      if k < offset then 
-        subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (k + 1))) tS
-      else (* k = offet *) 
-        tS
+and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
+  | (I.Shift _k, I.Null) ->  tS
+  | (I.Shift k , I.DDec(_cPsi', _dec)) ->
+       subToSpine cQ offset ((I.Dot (I.Head (I.BVar (k + 1)), I.Shift (k + 1))), cPsi) tS
 
-  | I.Dot (I.Head tH, s) -> 
-      subToSpine cQ offset s (I.App (I.Root (tH, I.Nil), tS))
+  | (I.Dot (I.Head (I.BVar k), s), I.DDec(cPsi', _dec)) -> 
+      subToSpine cQ offset  (s,cPsi') (I.App (I.Root (I.BVar k, I.Nil), tS))
 
-  | I.Dot (I.Obj tM, s) -> 
-      subToSpine cQ offset s (I.App (abstractTerm cQ offset (tM,LF.id), tS))
+  | (I.Dot (I.Head (I.MVar (_u, _r)), _s) , I.DDec(_cPsi', _dec)) -> 
+      (Printf.printf "SubToSpine encountered MVar as head \n";
+      raise NotImplemented)
+      (* subToSpine cQ offset s (I.App (I.Root (I.BVar k, I.Nil), tS)) *)
+
+  | (I.Dot (I.Obj tM, s), I.DDec(cPsi', _dec)) -> 
+      subToSpine cQ offset (s, cPsi') (I.App (abstractTerm cQ offset (tM, LF.id), tS))
 
 and abstractSpine cQ offset sS = match sS with
   | (I.Nil, _s) ->
@@ -349,23 +375,25 @@ and abstractSpine cQ offset sS = match sS with
   | (I.SClo (tS, s'), s)  ->
       abstractSpine cQ offset (tS, LF.comp s' s)
 
-and abstractCtx cQ = match cQ with
+and abstractCtx cQ =  match cQ with
   | I.Empty ->
       I.Empty
 
   | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractCtx cQ in
-      let cPsi' = abstractDctx cQ cPsi in
-(*      let  (_, depth)  = dctxToHat cPsi in  *)
-      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in
+      let cPsi' = abstractDctx cQ cPsi in 
+      (* let  (_, depth)  = dctxToHat cPsi in   *)
+      (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
+      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in 
       let s'    = abstractSub cQ (length cPsi) s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV u')
 
   | I.Dec (cQ, FV (f, Some tA)) ->
+      let tA' = abstractTyp cQ 0 (tA, LF.id) in
       let cQ' = abstractCtx cQ in
-      let tA' = abstractTyp cQ' 0 (tA, LF.id) in
         I.Dec (cQ', FV (f, Some tA'))
+
 
 and abstractDctx cQ cPsi = match cPsi with
   | I.Null ->
@@ -428,10 +456,3 @@ and abstrTyp tA =
     (raiseType cPsi tA', length cPsi)
 
 
-(* [1] maybe we only call normalisation "once" from the wrapper function, would
-   need smaller interface in whnf.mli
-
-   should be written in whnf form, since then normalization is done simultanously
-   with abstraction. -bp 
-
- *)

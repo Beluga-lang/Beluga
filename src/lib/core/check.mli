@@ -9,6 +9,7 @@ module LF : sig
 
   open Syntax.Int.LF
 
+(*
   type error =
     | CtxVarMisMatch of cvar * cvar
     | SigmaIllTyped of mctx * dctx * 
@@ -22,6 +23,9 @@ module LF : sig
     | IllTyped of mctx * dctx * nclo * tclo
 
   exception Error of error
+*)
+    
+  exception Error of string
 
   val check     : mctx -> dctx -> nclo -> tclo -> unit
   val checkTyp  : mctx -> dctx -> tclo -> unit

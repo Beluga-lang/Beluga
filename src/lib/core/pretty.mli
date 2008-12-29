@@ -213,6 +213,20 @@ module Int : sig
 
     val ppr_lf_cvar     : LF.cvar   -> unit
 
+    val headToString    : LF.head   -> string
+
+    val subToString     : LF.sub    -> string
+
+    val spineToString   : LF.spine  -> string
+
+    val typToString     : LF.typ    -> string
+
+    val kindToString    : LF.kind   -> string
+
+    val normalToString  : LF.normal -> string
+
+    val dctxToString    : LF.dctx   -> string
+
   end
 
 
@@ -242,7 +256,7 @@ module Int : sig
 end
 
 
-
+(*
 module Error : sig
 
   (***************************)
@@ -318,3 +332,4 @@ module Error : sig
   module DefaultPrinter : PRINTER
 
 end
+*)

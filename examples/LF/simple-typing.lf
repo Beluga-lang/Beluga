@@ -15,15 +15,15 @@ tm/app  : tm -> tm -> tm.
 
 
 
-of : tm -> tp -> type.
+of' : tm -> tp -> type.
 
-of/unit : of tm/unit tp/unit.
+of'/unit : of' tm/unit tp/unit.
 
-of/lam  :  {A:tp} {B:tp} {M:tm -> tm}
-           ({x:tm} of x A -> of (M x) B)
-        -> of (tm/lam (\ x . M x)) (tp/arr A B).
+of'/lam  :  {A:tp} {B:tp} {M:tm -> tm}
+           ({x:tm} of' x A -> of' (M x) B)
+        -> of' (tm/lam (\ x . M x)) (tp/arr A B).
 
-of/app  :  {A:tp} {B:tp} {M:tm} {N:tm}
-           of M (tp/arr A B)
-        -> of N A
-        -> of (tm/app M N) B.
+of'/app  :  {A:tp} {B:tp} {M:tm} {N:tm}
+           of' M (tp/arr A B)
+        -> of' N A
+        -> of' (tm/app M N) B.

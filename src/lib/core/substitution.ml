@@ -85,7 +85,7 @@ module LF = struct
 
      If    Psi |- s <= Psi'    Psi' |- n <= A
      then  Ft' = Ftn         if  s = Ft1 .. Ftn .. ^k
-     or  Ft' = ^(n + k)    if  s = Ft1 .. Ftm ^k   and m < n
+     or  Ft' = ^(n + k)      if  s = Ft1 .. Ftm ^k   and m < n
      and Psi |- Ft' <= [s]A
   *)
   and bvarSub n s = match (n, s) with
@@ -186,7 +186,7 @@ module LF = struct
 
      If   D ; Psi  |- s  <= Psi'    (and s patsub)
      then D ; Psi' |- s' <= Psi
-     s.t. s o s' = id  
+     s.t. s o s' = id    (comp s' s = id)
   *)
   let invert s =
     let rec lookup n s p = match s with
@@ -286,29 +286,6 @@ module LF = struct
   *)
   let compInv s w = comp s (invert w)
 
-
-
-  (* isPatSub s = B
-
-     Invariant:
-
-     If    Psi |- s : Psi' 
-     and   s = n1 .. nm ^k
-     then  B iff  n1, .., nm pairwise distinct
-     and  ni <= k or ni = _ for all 1 <= i <= m
-  *)
-  let rec isPatSub s = match s with
-    | Shift _k              -> true
-    | Dot (Head(BVar n), s) ->
-	let rec checkBVar s' = match s' with
-          | Shift k                 -> n <= k
-          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
-          | Dot (Undef, s)          -> checkBVar s
-          | _                       -> false
-	in
-          checkBVar s && isPatSub s
-    | Dot (Undef, s)        -> isPatSub s
-    | _                     -> false
 
 end
 

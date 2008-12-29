@@ -26,9 +26,3 @@ val mctxPDec    : mctx -> int -> typ * dctx
 
 
 
-(*************************************)
-(* Creating new contextual variables *)
-(*************************************)
-
-val newMVar     : dctx * typ -> cvar
-val newPVar     : dctx * typ -> cvar

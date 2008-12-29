@@ -41,18 +41,22 @@ let main () =
                 ; errors
                 with
                   | Whnf.Error  err ->
-                        Format.fprintf
+                       printf "\n!! Error during Weak-Head Normalization !!\n\n%s\n\n" err
+                     ; print_newline ()
+                        (* Format.fprintf
                           Format.std_formatter
                           "\n!! Error during Weak-Head Normalization !!\n\n%a\n\n@?"
-                          Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err
-                      ; errors + 1
+                          Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err *)
+                     ; errors + 1
 
                   | Check.LF.Error err ->
-                        Format.fprintf
+                       printf "\n!! Error during Type-Checking !!\n\n%s\n\n" err
+                     ; print_newline ()
+                        (* Format.fprintf
                           Format.std_formatter
                           "\n!! Error during Type-Checking !!\n\n%a\n\n@?"
-                          Pretty.Error.DefaultPrinter.Check.fmt_ppr err;
-                      ; errors + 1
+                           Pretty.Error.DefaultPrinter.Check.fmt_ppr err; *)
+                     ; errors + 1
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
                 printf "Parse Error: \n\t%s\nLocation:\n\t" exn

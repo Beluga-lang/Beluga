@@ -14,6 +14,10 @@ type cid_typ  = int
 (** A constant identifier for terms *)
 type cid_term = int
 
+(** A constant identifier for schemas *)
+type cid_schema = int
+
+
 (** An offset to be used during shifting for a DeBruijn variable
     representation *)
 type offset   = int

@@ -6,7 +6,13 @@
 *)
 
 (* TODO
-   - Deal with FV which are non-patterns
+
+   - Extension to deal with MVars, PVars
+   - Extension to deal with substitutions
+   - Extension to deal with A[Psi]
+   - Extension to deal with psi_hat
+   - Extension to deal with schemas
+
    - Cycle detection ?
    - Code walk for reconstruction
 *)
@@ -29,9 +35,18 @@ module Apx = struct
     and typ_decl =
       | TypDecl of name * typ
 
+    and sigma_decl =
+      | SigmaDecl of name * typ_rec
+
+    and ctyp_decl =
+      | MDecl of  name * typ  * dctx
+      | PDecl of  name * typ  * dctx
+
     and typ =
       | Atom  of cid_typ * spine
       | PiTyp of typ_decl * typ
+
+    and typ_rec = typ list
 
     and normal =
       | Lam  of name * normal
@@ -40,11 +55,67 @@ module Apx = struct
     and head =
       | BVar  of offset
       | Const of cid_term
+      | MVar  of offset * sub
+      | PVar  of offset * sub
       | FVar  of name
 
     and spine =
       | Nil
       | App of normal * spine
+
+    and sub =                       
+      | Shift of offset             
+      | Dot   of front * sub        
+
+    and front =                     
+      | Head of head                
+      | Obj  of normal              
+
+    and dctx =
+      | Null
+      | CtxVar   of offset
+      | DDec     of dctx * typ_decl
+
+    and 'a ctx =
+      | Empty
+      | Dec of 'a ctx * 'a
+
+    and sch_elem =
+      | SchElem of typ_decl ctx * sigma_decl
+
+    and schema =
+      | Schema of sch_elem list
+
+    and psi_hat = offset option * offset 
+  end
+
+  module Comp = struct 
+
+    type typ =
+      | TypBox   of LF.typ  * LF.dctx        
+      | TypArr   of typ * typ         
+      | TypCtxPi of (name * cid_schema) * typ
+      | TypPiBox of LF.ctyp_decl * typ 
+
+    and exp_chk =
+       | Syn    of exp_syn 
+       | Fun    of name * exp_chk         (* fn   f => e         *)
+       | CtxFun of name * exp_chk         (* FN   f => e         *)
+       | MLam   of name * exp_chk         (* mlam f => e         *)
+       | Box    of LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
+       | Case   of exp_syn * branch list
+
+    and exp_syn =
+       | Var    of name                               (* x              *)
+       | Apply  of exp_syn * exp_chk                  (* i e            *)
+       | CtxApp of exp_syn * LF.dctx                  (* i [Psi]        *)
+       | MApp   of exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)
+       | Ann    of exp_chk * typ                      (* e : tau        *)
+
+    and branch =
+      | BranchBox of LF.ctyp_decl LF.ctx
+          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
+          * exp_chk
 
   end
 
@@ -90,70 +161,167 @@ exception Error of string
       which it was created;
 
 *)
-let rec index_kind names = function
+let rec index_kind cvars bvars = function
   | Ext.LF.Typ _ ->
       Apx.LF.Typ
 
   | Ext.LF.ArrKind (_, a, k) ->
       let x      = Id.mk_name None
-      and a'     = index_typ names a in
-      let names' = BVar.extend names (BVar.mk_entry x) in
-      let k'     = index_kind names' k in
+      and a'     = index_typ cvars bvars a in
+      let bvars' = BVar.extend bvars (BVar.mk_entry x) in
+      let k'     = index_kind cvars bvars' k in
         Apx.LF.PiKind (Apx.LF.TypDecl (x, a'), k')
 
   | Ext.LF.PiKind (_, Ext.LF.TypDecl (x, a), k) ->
-      let a'     = index_typ names a
-      and names' = BVar.extend names (BVar.mk_entry x) in
-      let k'     = index_kind names' k in
+      let a'     = index_typ cvars bvars a
+      and bvars' = BVar.extend bvars (BVar.mk_entry x) in
+      let k'     = index_kind cvars bvars' k in
         Apx.LF.PiKind (Apx.LF.TypDecl (x, a'), k')
 
-and index_typ names = function
+and index_typ cvars bvars = function
   | Ext.LF.Atom (_, a, s) ->
       let a' = Typ.index_of_name a
-      and s' = index_spine names s in
+      and s' = index_spine cvars bvars s in
         Apx.LF.Atom (a', s')
 
   | Ext.LF.ArrTyp (_, a, b) ->
       let x      = Id.mk_name None
-      and a'     = index_typ names a in
-      let names' = BVar.extend names (BVar.mk_entry x) in
-      let b'     = index_typ names' b in
+      and a'     = index_typ cvars bvars a in
+      let bvars' = BVar.extend bvars (BVar.mk_entry x) in
+      let b'     = index_typ cvars bvars' b in
         Apx.LF.PiTyp (Apx.LF.TypDecl (x, a'), b')
 
   | Ext.LF.PiTyp (_, Ext.LF.TypDecl (x, a), b) ->
-      let a'     = index_typ names  a
-      and names' = BVar.extend names (BVar.mk_entry x) in
-      let b'     = index_typ names' b in
+      let a'     = index_typ cvars bvars  a
+      and bvars' = BVar.extend bvars (BVar.mk_entry x) in
+      let b'     = index_typ cvars bvars' b in
         Apx.LF.PiTyp (Apx.LF.TypDecl (x, a'), b')
 
-and index_term names = function
+and index_term cvars bvars = function
   | Ext.LF.Lam (_, x, m)   ->
-      let names' = BVar.extend names (BVar.mk_entry x) in
-      let m'     = index_term names' m in
+      let bvars' = BVar.extend bvars (BVar.mk_entry x) in
+      let m'     = index_term cvars bvars' m in
         Apx.LF.Lam (x, m')
 
   | Ext.LF.Root (_, h, s) ->
-      let h' = index_head  names h
-      and s' = index_spine names s in
+      let h' = index_head  cvars bvars h
+      and s' = index_spine cvars bvars s in
         Apx.LF.Root (h', s')
 
-and index_head names = function
+and index_head cvars bvars = function
   | Ext.LF.Name (_, n) ->
-      try
-        Apx.LF.BVar (BVar.index_of_name names n)
+      begin try
+        Apx.LF.BVar (BVar.index_of_name bvars n)
       with Not_found -> try
         Apx.LF.Const (Term.index_of_name n)
-      with Not_found ->
+      with Not_found -> 
         Apx.LF.FVar n
+      end 
+  | Ext.LF.PVar (_, p, s) -> 
+      let offset = CVar.index_of_name cvars p in 
+      let s'     = index_sub cvars bvars s in 
+        Apx.LF.PVar (offset, s')
+  | Ext.LF.MVar (_, u, s) -> 
+      let offset = CVar.index_of_name cvars u in 
+      let s'     = index_sub cvars bvars s in 
+        Apx.LF.MVar (offset, s')
 
-and index_spine names = function
+and index_spine cvars bvars = function
   | Ext.LF.Nil ->
       Apx.LF.Nil
 
   | Ext.LF.App (_, m, s) ->
-      let m' = index_term  names m
-      and s' = index_spine names s in
+      let m' = index_term  cvars bvars m
+      and s' = index_spine cvars bvars s in
         Apx.LF.App (m', s')
+
+(* THE FOLLOWING IS PROCESSING AN INCORRECT EXTERNAL SUBSTITUTION
+   INTO A CORRECT APPROXIMATE SUBSTITUTION !!! *)
+and index_sub cvars bvars = function 
+  | Ext.LF.Id (_, _ ) -> Apx.LF.Shift 0
+
+  | Ext.LF.Normal (_, s, n) -> 
+      let s' = index_sub cvars bvars s in 
+        begin match index_term cvars bvars n with 
+          | Apx.LF.Root(h, Apx.LF.Nil) -> Apx.LF.Dot(Apx.LF.Head h, s')
+          | m                               -> Apx.LF.Dot(Apx.LF.Obj  m, s')
+        end
+
+  | Ext.LF.Dot _         -> Apx.LF.Shift 0
+
+let index_decl cvars bvars (Ext.LF.TypDecl(x, a)) = 
+      let a'     = index_typ cvars bvars a in 
+      let bvars' = BVar.extend bvars (BVar.mk_entry x) in
+        (Apx.LF.TypDecl(x,a'), bvars')
+
+let rec index_dctx cvars bvars = function 
+  | Ext.LF.Null        -> (Apx.LF.Null , bvars)
+  | Ext.LF.CtxVar psi_name  -> 
+      let offset = CVar.index_of_name cvars psi_name in 
+        (Apx.LF.CtxVar offset , bvars)
+  | Ext.LF.DDec (psi, decl) -> 
+      let (psi', bvars') = index_dctx cvars bvars psi in 
+      let (decl', bvars'')  = index_decl cvars bvars' decl in 
+        (Apx.LF.DDec(psi', decl'), bvars'')
+  
+let index_psihat explicit_psihat = 
+  List.length explicit_psihat
+
+let rec index_ctx index_dec cvars bvars = function 
+  | Ext.LF.Empty        -> (Apx.LF.Empty , bvars)
+
+  | Ext.LF.Dec (psi, dec) -> 
+      let (psi', bvars') = index_ctx index_dec cvars bvars psi in 
+      let (dec',bvars'') = index_dec cvars bvars' dec in 
+        (Apx.LF.Dec(psi', dec'), bvars'')
+  
+let index_cdecl cvars = function
+  | Ext.LF.MDecl(_, u, a, psi) -> 
+      let (psi', bvars')  = index_dctx cvars (BVar.create ()) psi in 
+      let  a'             = index_typ  cvars bvars' a in 
+      let cvars'          = CVar.extend cvars (CVar.mk_entry u) in 
+        (Apx.LF.MDecl(u, a', psi'), cvars')
+
+  | Ext.LF.PDecl(_, p, a, psi) -> 
+      let (psi', bvars')  = index_dctx cvars (BVar.create ()) psi in 
+      let  a'             = index_typ  cvars bvars' a in 
+      let cvars'          = CVar.extend cvars (CVar.mk_entry p) in 
+        (Apx.LF.PDecl(p, a', psi') , cvars')
+
+
+(* Translation of external schemas into approximate schemas *)
+(* let rec index_elements el_list = match el_list with 
+  | [] -> []
+  | el::el_list' -> index_el el :: index_elements el_list'
+
+and index_el (SchElem (_, typ_ctx, sigma_decl)) = 
+
+let index_schema (Schema el_list) = 
+  index_elemets el_list 
+*)
+(* Translation of external computations into approximate computations *)
+let rec index_ctyp cvars  = function
+  | Ext.Comp.TypBox (_, a, psi)    ->
+      let (psi', bvars') = index_dctx cvars (BVar.create ()) psi in 
+      let  a'            = index_typ cvars bvars' a   in
+        Apx.Comp.TypBox(a', psi')
+
+  | Ext.Comp.TypArr (_, tau, tau') -> 
+      Apx.Comp.TypArr (index_ctyp cvars tau, index_ctyp cvars tau')
+
+  | Ext.Comp.TypPiBox (cdecl, tau)    -> 
+      let (cdecl', cvars') = index_cdecl cvars cdecl in 
+        Apx.Comp.TypPiBox(cdecl', index_ctyp cvars' tau)
+
+  | Ext.Comp.TypCtxPi (_, (ctx_name, schema_name), tau)    ->      
+      let cvars'           = CVar.extend cvars (CVar.mk_entry ctx_name) in 
+      let schema_cid       = Schema.index_of_name schema_name in 
+      (* if exception Not_Found is raised, it means schema_name does not exist *)      
+        Apx.Comp.TypCtxPi((ctx_name, schema_cid), index_ctyp cvars' tau)
+
+
+
+
 
 (* ******************************************************************* *)
 (* PHASE 1 : Elaboration and free variables typing                     *)
@@ -689,7 +857,7 @@ and recSub cPsi s cPhi = match (s, cPhi) with
 
 let recSgnDecl d = match d with
   | Ext.Sgn.Typ (_, a, extK)   ->
-      let apxK     = index_kind (BVar.create ()) extK in
+      let apxK     = index_kind (CVar.create ()) (BVar.create ()) extK in
       let _        = FVar.clear () in
       let tK       = elKind Int.LF.Null apxK in
       let _        = solve_fvarCnstr !fvar_cnstr in
@@ -706,7 +874,7 @@ let recSgnDecl d = match d with
         Int.Sgn.Typ (a', tK')
 
   | Ext.Sgn.Const (_, c, extT) ->
-      let apxT     = index_typ (BVar.create ()) extT in
+      let apxT     = index_typ (CVar.create ()) (BVar.create ()) extT in
       let _        = Printf.printf "\n Reconstruct constant : %s  \n" c.string_of_name  in 
       let _        = FVar.clear () in
       let tA       = elTyp Int.LF.Null apxT in

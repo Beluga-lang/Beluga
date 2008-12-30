@@ -97,11 +97,11 @@ module Ext = struct
   module Comp = struct
 
     type typ =
-      | TypBox   of Loc.t * LF.typ  * LF.dctx        (* A[Psi]         *)
-(*       | TypSBox  of LF.dctx * LF.dctx        (\* Phi[Psi]    *\) *)
-      | TypArr   of Loc.t * typ * typ                (* tau -> tau     *)
-      | TypCtxPi of Loc.t * (name * name) * typ      (* {psi:(w)*} tau *)
-(*       | TypPiBox of LF.ctyp_decl * typ       (\*                *\) *)
+      | TypBox   of Loc.t * LF.typ  * LF.dctx        (* A[Psi]          *)
+(*    | TypSBox  of LF.dctx * LF.dctx              (\* Phi[Psi]    *\)  *)
+      | TypArr   of Loc.t * typ * typ                (* tau -> tau      *)
+      | TypCtxPi of Loc.t * (name * name) * typ      (* {psi:(w)*} tau  *)
+      | TypPiBox of LF.ctyp_decl * typ               (* {u::A[Psi].tau  *) 
 
     and exp_chk =
        | Syn    of Loc.t * exp_syn                (* i                   *)

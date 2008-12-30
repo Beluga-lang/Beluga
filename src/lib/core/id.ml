@@ -4,13 +4,15 @@ type name     = {
   string_of_name : string
 }
 
-type cid_typ  = int
+type cid_typ    = int
 
-type cid_term = int
+type cid_term   = int
 
-type offset   = int
+type cid_schema = int
 
-type var      = int
+type offset     = int
+
+type var        = int
 
 
 let mk_name = function

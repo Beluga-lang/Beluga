@@ -55,6 +55,29 @@ module Cid : sig
 
   end
 
+
+  module Schema : sig
+
+    type entry          = private {
+      name                 : name
+      ; schema             : schema
+    }
+
+    val mk_entry        : name -> schema -> entry
+
+
+    type t
+
+    val add             : entry -> cid_schema
+
+    val get             : cid_schema -> entry
+
+    val index_of_name   : name -> cid_schema
+
+    val clear           : unit -> unit
+
+  end
+
 end
 
 val clear : unit -> unit
@@ -90,3 +113,48 @@ module FVar : sig
   val clear           : unit -> unit
 
 end
+
+module Var : sig
+
+  type entry          = private {
+    name : name
+  }
+
+  val mk_entry        : name -> entry
+
+
+  type t
+
+  val create          : unit -> t
+
+  val extend          : t -> entry -> t
+
+  val get             : t -> var  -> entry
+
+  val index_of_name   : t -> name -> offset
+
+end
+
+
+
+module CVar : sig
+
+  type entry          = private {
+    name : name
+  }
+
+  val mk_entry        : name -> entry
+
+
+  type t
+
+  val create          : unit -> t
+
+  val extend          : t -> entry -> t
+
+  val get             : t -> var  -> entry
+
+  val index_of_name   : t -> name -> offset
+
+end
+

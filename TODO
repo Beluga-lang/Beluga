@@ -21,7 +21,6 @@ CRITICAL
 * 28/12/08 :: Frontend: Being able to read in signatures distributed in
                 different files. Follow Twelf model of config file. -bp
  
-
   
 * 11/4/08   :: Testing of unification: Frontend should support
               processing of unification problems  -bp
@@ -33,6 +32,7 @@ CRITICAL
 
 IMPORTANT
 =========
+
 
 * 28/12/08 :: Printing named representation of variables in
                addition to de Bruijn index representation -bp
@@ -69,6 +69,11 @@ IMPORTANT
 
 MINOR
 =====
+
+* 29/12/08 :: Apply substition when printing instanciated MVar's  
+
+* 29/12/08 :: Printing of open terms
+
 
 * 10/25/08 :: SigmaDec and SigmaDecl are a bit close together...  -dwm
 

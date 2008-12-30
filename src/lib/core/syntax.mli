@@ -98,12 +98,12 @@ module Ext : sig
 
   module Comp : sig
 
-    type typ =
-      | TypBox   of Loc.t * LF.typ  * LF.dctx        (* A[Psi]      *)
+    type typ =                            
+      | TypBox   of Loc.t * LF.typ  * LF.dctx     (* A[Psi]             *)
 (*       | TypSBox  of LF.dctx * LF.dctx        (\* Phi[Psi]    *\) *)
-      | TypArr   of Loc.t * typ * typ                (* tau -> tau  *)
-      | TypCtxPi of Loc.t * (name * name) * typ      (* {psi:W} tau *)
-(*       | TypPiBox of LF.ctyp_decl * typ       (\*             *\) *)
+      | TypArr   of Loc.t * typ * typ             (* tau -> tau         *)
+      | TypCtxPi of Loc.t * (name * name) * typ   (* Pi psi:W . tau     *)
+      | TypPiBox of LF.ctyp_decl * typ            (*  Pi u::A[Psi]}.tau *)
 
     and exp_chk =
        | Syn    of Loc.t * exp_syn                (* i                   *)

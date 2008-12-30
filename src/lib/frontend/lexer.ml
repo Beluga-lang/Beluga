@@ -61,6 +61,8 @@ let rec lex_token loc = lexer
   | "case"
   | "fn"
   | "id"
+  | "in"
+  | "let"
   | "of"
   | "rec"
   | "schema"

@@ -101,7 +101,7 @@ module Ext = struct
 (*       | TypSBox  of LF.dctx * LF.dctx        (\* Phi[Psi]    *\) *)
       | TypArr   of Loc.t * typ * typ                (* tau -> tau     *)
       | TypCtxPi of Loc.t * (name * name) * typ      (* {psi:(w)*} tau *)
-(*       | TypPiBox of LF.ctyp_decl * typ       (\*                *\) *)
+      | TypPiBox of Loc.t * LF.ctyp_decl * typ       (*                *)
 
     and exp_chk =
        | Syn    of Loc.t * exp_syn                (* i                   *)

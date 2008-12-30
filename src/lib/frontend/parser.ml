@@ -193,7 +193,41 @@ GLOBAL: sgn_eoi;
   ;
 
   lf_head:
-    [ 
+    [
+      [
+        u_or_x = SYMBOL ->
+          LF.Name (_loc, Id.mk_name (Some u_or_x))
+      ]
+    ]
+  ;
+
+  lf_term_w_meta:
+    [ RIGHTA
+        [
+          "\\"; x = SYMBOL; "."; m = SELF ->
+            LF.Lam (_loc, (Id.mk_name (Some x)), m)
+        ]
+
+    | LEFTA
+        [
+          h = lf_head_w_meta; ms = LIST0 (lf_term_w_meta LEVEL "atomic") ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              LF.Root (_loc, h, sp)
+        ]
+
+    | "atomic"
+        [
+           h = lf_head_w_meta ->
+             LF.Root (_loc, h, LF.Nil)
+        |
+           "("; m = SELF; ")" ->
+             m
+        ]
+    ]
+  ;
+
+  lf_head_w_meta:
+    [
       [
         "#"; p = SYMBOL; "["; sigma = lf_sub; "]" ->
           LF.PVar (_loc, Id.mk_name (Some p), sigma)
@@ -214,7 +248,7 @@ GLOBAL: sgn_eoi;
         "." ->
           LF.Dot _loc
       |
-        sigma = SELF; ","; tM = lf_term ->
+        sigma = SELF; ","; tM = lf_term_w_meta ->
           LF.Normal (_loc, sigma, tM)
       |
         "id"; "("; x = SYMBOL; ")" ->
@@ -272,12 +306,15 @@ GLOBAL: sgn_eoi;
         "{"; psi = SYMBOL; ":"; "("; w = SYMBOL; ")"; "*"; "}"; tau = SELF ->
           Comp.TypCtxPi (_loc, (Id.mk_name (Some psi), Id.mk_name (Some w)), tau)
       |
+        ctyp_decl = lf_ctyp_decl; tau = SELF ->
+          Comp.TypPiBox (_loc, ctyp_decl, tau)
+      |
         tau1 = SELF; "->"; tau2 = SELF ->
           Comp.TypArr (_loc, tau1, tau2)
       ]
     | "atomic"
       [
-        tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]" ->
+        tA = lf_typ (*LEVEL "atomic"*); "["; cPsi = lf_dctx; "]" ->
           Comp.TypBox (_loc, tA, cPsi)
       |
         "("; tau = SELF; ")" ->
@@ -303,7 +340,7 @@ GLOBAL: sgn_eoi;
       ]
     | "atomic"
       [
-        "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term; ")" ->
+        "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term_w_meta; ")" ->
           let pHat = List.map (fun x' -> Id.mk_name (Some x')) vars in
             Comp.Box (_loc, pHat, tM)
       |
@@ -346,7 +383,7 @@ GLOBAL: sgn_eoi;
   cmp_branch:
     [
       [
-        ctyp_decls = LIST0 lf_ctyp_decl; "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term; ")"; ":"; tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]"; "=>"; e = cmp_exp_chk ->
+        ctyp_decls = LIST0 lf_ctyp_decl; "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term_w_meta; ")"; ":"; tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]"; "=>"; e = cmp_exp_chk ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls
           and pHat        = List.map (fun x' -> Id.mk_name (Some x')) vars in
             Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, (tA, cPsi)), e)

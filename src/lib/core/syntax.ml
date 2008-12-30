@@ -96,29 +96,30 @@ module Ext = struct
 
   module Comp = struct
 
-    type typ =
-      | TypBox   of Loc.t * LF.typ  * LF.dctx        (* A[Psi]          *)
-(*    | TypSBox  of LF.dctx * LF.dctx              (\* Phi[Psi]    *\)  *)
-      | TypArr   of Loc.t * typ * typ                (* tau -> tau      *)
-      | TypCtxPi of Loc.t * (name * name) * typ      (* {psi:(w)*} tau  *)
-      | TypPiBox of LF.ctyp_decl * typ               (* {u::A[Psi].tau  *) 
+    type typ =                                     (* Computation-level types *)
+      | TypBox   of Loc.t * LF.typ  * LF.dctx      (* tau ::= A[Psi]          *)
+(*    | TypSBox  of LF.dctx * LF.dctx              (\*    | Phi[Psi]      *\) *)
+      | TypArr   of Loc.t * typ * typ              (*     | tau -> tau        *)
+      | TypCtxPi of Loc.t * (name * name) * typ    (*     | Pi psi:(w)*. tau  *)
+      | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *) 
 
-    and exp_chk =
-       | Syn    of Loc.t * exp_syn                (* i                   *)
-(*        | Rec    of Loc.t * name * exp_chk         (\* rec f : tau = e     *\) *)
-       | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
-       | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *)
-       | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
-       | Box    of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
+    and exp_chk =                            (* Computation-level expressions *)
+       | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
+(*     | Rec    of Loc.t * name * exp_chk         (\*   | rec f : tau = e *\) *)
+       | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
+       | CtxFun of Loc.t * name * exp_chk         (*    | FN f => e           *)
+       | MLam   of Loc.t * name * exp_chk         (*    | mlam f => e         *)
+       | Box    of Loc.t * LF.psi_hat * LF.normal (*    | box (Psi hat. M)    *)
 (*        | SBox   of LF.psi_hat * LF.sub *)
-       | Case   of Loc.t * exp_syn * branch list
+       | Case   of Loc.t * exp_syn * branch list  (*    | case i of branches *)
 
-    and exp_syn =
-       | Var    of Loc.t * name                               (* x              *)
-       | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
-       | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
-       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)
-       | Ann    of Loc.t * exp_chk * typ                      (* e : tau        *)
+    and exp_syn =                            
+       | Var    of Loc.t * name                   (*  i ::= x                 *)
+       | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
+       | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)
+       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) 
+                                                  (*    | i [Psi hat. M]      *)
+       | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx

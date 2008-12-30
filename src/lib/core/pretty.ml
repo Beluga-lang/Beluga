@@ -442,6 +442,14 @@ module Ext = struct
               (fmt_ppr_cmp_typ 0) tau
               (r_paren_if cond)
 
+      | Comp.TypPiBox (_, ctyp_decl, tau) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%s%a %a%s"
+              (l_paren_if cond)
+              (fmt_ppr_lf_ctyp_decl 1) ctyp_decl
+              (fmt_ppr_cmp_typ 0) tau
+              (r_paren_if cond)
+
 
 
     and fmt_ppr_cmp_exp_chk lvl ppf = function

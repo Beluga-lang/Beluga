@@ -12,6 +12,9 @@
    - Extension to deal with A[Psi]
    - Extension to deal with psi_hat
    - Extension to deal with schemas
+   - Extension to handle sigma-types
+      -> need to change data-type definition for typ_rec
+       
 
    - Cycle detection ?
    - Code walk for reconstruction
@@ -289,16 +292,34 @@ let index_cdecl cvars = function
         (Apx.LF.PDecl(p, a', psi') , cvars')
 
 
-(* Translation of external schemas into approximate schemas *)
-(* let rec index_elements el_list = match el_list with 
-  | [] -> []
-  | el::el_list' -> index_el el :: index_elements el_list'
 
-and index_el (SchElem (_, typ_ctx, sigma_decl)) = 
-
-let index_schema (Schema el_list) = 
-  index_elemets el_list 
+(* Records are not handled in a general manner
+   We need to change the data-type for typ_rec to be typ_decl ctx  
 *)
+let rec index_typrec cvars bvars = function 
+  | []  -> []
+  | [a] -> [index_typ cvars bvars a]
+
+ 
+
+(* Translation of external schemas into approximate schemas *)
+let rec index_elements el_list = match el_list with 
+  | [] -> []
+  | el::el_list' -> index_el el :: index_elements el_list' 
+
+and index_el (Ext.LF.SchElem (_, typ_ctx, Ext.LF.SigmaDecl (x, typ_rec))) =  
+  let cvars = (CVar.create ()) in 
+  let bvars = (BVar.create ()) in 
+  let (typ_ctx', bvars') = index_ctx index_decl cvars bvars typ_ctx in 
+  let typ_rec'          = index_typrec cvars bvars' typ_rec in 
+    Apx.LF.SchElem (typ_ctx', Apx.LF.SigmaDecl (x, typ_rec'))
+
+
+let index_schema (Ext.LF.Schema el_list) = 
+  Apx.LF.Schema (index_elements el_list) 
+
+
+
 (* Translation of external computations into approximate computations *)
 let rec index_ctyp cvars  = function
   | Ext.Comp.TypBox (_, a, psi)    ->
@@ -309,7 +330,7 @@ let rec index_ctyp cvars  = function
   | Ext.Comp.TypArr (_, tau, tau') -> 
       Apx.Comp.TypArr (index_ctyp cvars tau, index_ctyp cvars tau')
 
-  | Ext.Comp.TypPiBox (cdecl, tau)    -> 
+  | Ext.Comp.TypPiBox (_, cdecl, tau)    -> 
       let (cdecl', cvars') = index_cdecl cvars cdecl in 
         Apx.Comp.TypPiBox(cdecl', index_ctyp cvars' tau)
 
@@ -318,8 +339,6 @@ let rec index_ctyp cvars  = function
       let schema_cid       = Schema.index_of_name schema_name in 
       (* if exception Not_Found is raised, it means schema_name does not exist *)      
         Apx.Comp.TypCtxPi((ctx_name, schema_cid), index_ctyp cvars' tau)
-
-
 
 
 

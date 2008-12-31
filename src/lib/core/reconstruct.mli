@@ -91,7 +91,7 @@ module Apx : sig
        | Case   of exp_syn * branch list
 
     and exp_syn =
-       | Var    of name                               (* x              *)
+       | Var    of offset                             (* x              *)
        | Apply  of exp_syn * exp_chk                  (* i e            *)
        | CtxApp of exp_syn * LF.dctx                  (* i [Psi]        *)
        | MApp   of exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)

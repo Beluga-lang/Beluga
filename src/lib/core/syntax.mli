@@ -98,6 +98,7 @@ module Ext : sig
 
   module Comp : sig
 
+
     type typ =                            
       | TypBox   of Loc.t * LF.typ  * LF.dctx     
 (*    | TypSBox  of LF.dctx * LF.dctx             *)
@@ -132,6 +133,7 @@ module Ext : sig
 (*           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx)) *)
 (*           * exp_chk *)
 
+
   end
 
 
@@ -140,10 +142,13 @@ module Ext : sig
 
     type decl =
       | Const  of Loc.t * name * LF.typ
-      | Pragma of Loc.t * LF.prag
-      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
-      | Schema of Loc.t * name * LF.schema
       | Typ    of Loc.t * name * LF.kind
+      | Schema of Loc.t * name * LF.schema
+
+      | Pragma of Loc.t * LF.prag
+
+      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
+
 
     type sgn = decl list
 
@@ -171,7 +176,7 @@ module Int : sig
       | MDecl of name * typ  * dctx
       | PDecl of name * typ  * dctx
       | SDecl of name * dctx * dctx
-      | CDecl of name * schema
+      | CDecl of name * cid_schema
 
     and typ =
       | Atom  of cid_typ * spine
@@ -211,7 +216,7 @@ module Int : sig
       | Offset of offset
       | Inst   of normal option ref * dctx * typ * (constrnt ref) list ref
       | PInst  of head   option ref * dctx * typ * (constrnt ref) list ref
-      | CInst  of dctx   option ref * schema
+      | CInst  of dctx   option ref * cid_schema
 
     and constrnt =
       | Queued
@@ -261,17 +266,18 @@ module Int : sig
    type mfront =              
      | MObj of LF.psi_hat * LF.normal 
      | PObj of LF.psi_hat * LF.head
-     | CObj of LF.dctx                
+     | PV   of offset
+     | MV   of offset
 
    type msub =                            
-     | MShiftZero
+     | MShift of int
      | MDot   of mfront * msub
 
     type typ =
       | TypBox   of LF.typ * LF.dctx
       | TypSBox  of LF.dctx * LF.dctx
       | TypArr   of typ * typ
-      | TypCtxPi of (name * LF.schema) * typ
+      | TypCtxPi of (name * cid_schema) * typ
       | TypPiBox of LF.ctyp_decl * typ
       | TypClo   of typ * msub
 
@@ -302,6 +308,9 @@ module Int : sig
           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx))
           * exp_chk
 
+    type gctx = (name * typ) LF.ctx
+    type tclo = typ  * msub
+
   end
 
 
@@ -311,6 +320,8 @@ module Int : sig
     type decl =
       | Typ   of cid_typ  * LF.kind
       | Const of cid_term * LF.typ
+      | Schema of cid_schema * LF.schema
+      | Rec    of cid_prog   * Comp.typ * Comp.exp_chk
 
     type sgn = decl list
 

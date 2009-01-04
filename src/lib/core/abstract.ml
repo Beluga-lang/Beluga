@@ -16,6 +16,8 @@ module Comp = Int.Comp
 
 exception NotImplemented
 
+exception Error of string
+
 (* ******************************************************************* *)
 (* Abstraction:
 
@@ -66,7 +68,8 @@ let freeVarToString x = match x with
 
 
 let rec raiseType cPsi tA = match cPsi with
-  | I.Null -> tA
+  | I.Null -> (None, tA)
+  | I.CtxVar psi -> (Some psi, tA)
   | I.DDec (cPsi', decl) ->
       raiseType cPsi' (I.PiTyp (decl, tA))
 
@@ -75,15 +78,20 @@ let rec raiseKind cPsi tK = match cPsi with
   | I.DDec (cPsi', decl) ->
       raiseKind cPsi' (I.PiKind (decl, tK))
 
+let ctxVarToString psi = match psi with
+  | None -> " "
+  | (Some (I.Offset k)) -> "Ctx_Var " ^ string_of_int k
 
 let rec printCollection cQ = match cQ with
   | I.Empty -> Printf.printf " \n end "
   | I.Dec(cQ, MV ((I.MVar (I.Inst(_r, cPsi, tP, _c), _s)) as h)) -> 
+      let (ctx_var, tA) = raiseType cPsi tP in        
       (printCollection cQ ; 
        Printf.printf " %s : " 
          (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(h, I.Nil), LF.id))) ;
-       Printf.printf " %s \n" 
-         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (raiseType cPsi tP, LF.id)))
+       Printf.printf " %s . %s \n" 
+         (ctxVarToString ctx_var)
+         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
       )
   | I.Dec(cQ, FV (_n, None)) -> (printCollection cQ ; Printf.printf " FV _ . ")
   | I.Dec(cQ, FV (n, Some tA)) -> 
@@ -151,8 +159,11 @@ let rec ctxToDctx cQ = match cQ with
       I.Null
 
   | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
-      I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, raiseType cPsi tA))
-
+      begin match raiseType cPsi tA with
+        | (None, tA') -> 
+            I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, tA'))
+        | (Some _, _ ) -> raise (Error "ctxToDctx generates LF-dctx with context variable: should be impossible!")
+      end 
   | I.Dec (cQ', FV (_, Some tA)) ->
       I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, tA))
 
@@ -241,7 +252,7 @@ and collectSub cQ phat s = match s with
 
 (* collectMSub cQ theta = cQ' *) 
 and collectMSub cQ theta =  match theta with 
-  | Comp.MShiftZero -> cQ 
+  | Comp.MShift _n -> cQ 
   | Comp.MDot(Comp.MObj(phat, tM), t) -> 
     let cQ' = collectTerm cQ phat (tM, LF.id) in 
       collectMSub cQ' t
@@ -272,8 +283,9 @@ and collectHead cQ phat sH = match sH with
           cQ'
         else
           (*  checkEmpty !cnstrs ? -bp *)
-          let tA' = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
-            I.Dec (collectTyp cQ' (None, 0) (tA', LF.id), MV u) in
+          let (ctx_var, tA') = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
+
+            I.Dec (collectTyp cQ' (ctx_var, 0) (tA', LF.id), MV u) in
           
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
@@ -286,6 +298,7 @@ and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
 
   | (I.TClo (tA, s'), s) ->
       collectTyp cQ phat (tA, LF.comp s' s)
+
 
 and collectKind cQ ((cvar, offset) as phat) sK = match sK with
   | (I.Typ, _s) ->
@@ -420,20 +433,90 @@ and abstractSub cQ offset s = match s with
 
   (* SVar impossible in LF layer *)
 
-and abstrMSub cQ t = match t with
-  | Comp.MShiftZero -> Comp.MShiftZero
+(* **************************************************************************** *)
+(* Abstracting over mvars to create bound mvars  
+   This is needed in type checking and type reconstruction for computations.
+
+*)
+
+let rec abstractMVarTyp cQ offset sA = abstractMVarTypW cQ offset (Whnf.whnfTyp sA) 
+
+and abstractMVarTypW cQ offset sA = match sA with
+  | (I.Atom (a, tS), s (* id *)) ->
+      I.Atom (a, abstractMVarSpine cQ offset (tS, s))
+
+  | (I.PiTyp (I.TypDecl (x, tA), tB), s) ->
+      I.PiTyp (I.TypDecl (x, abstractMVarTyp cQ offset (tA, s)), abstractMVarTyp cQ offset (tB, LF.dot1 s))
+
+and abstractMVarTerm cQ offset sM = abstractMVarTermW cQ offset (Whnf.whnf sM)
+
+and abstractMVarTermW cQ offset sM = match sM with
+  | (I.Lam (x, tM), s) ->
+      I.Lam (x, abstractMVarTerm cQ offset (tM, LF.dot1 s))
+
+  | (I.Root (I.MVar (I.Inst(_r, _cPsi, _tP , _cnstr), s) as tH, _tS (* Nil *)), _s (* LF.id *)) -> 
+    (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
+      let x = index_of cQ (MV tH) + offset in 
+        I.Root (I.MVar (I.Offset x, abstractMVarSub cQ offset s), I.Nil)     
+
+  | (I.Root (tH, tS), s (* LF.id *)) ->
+      I.Root (abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
+
+
+and abstractMVarHead cQ offset tH = match tH with
+  | I.BVar x ->
+      I.BVar x
+
+  | I.Const c ->
+      I.Const c
+
+  | I.FVar n ->
+      I.BVar ((index_of cQ (FV (n, None))) + offset)
+
+  | I.AnnH (_tH, _tA) ->
+      raise NotImplemented
+
+  (* other cases impossible for object level *)
+and abstractMVarSpine cQ offset sS = match sS with
+  | (I.Nil, _s) ->
+      I.Nil
+
+  | (I.App (tM, tS), s) ->
+      I.App (abstractMVarTerm cQ offset (tM,s),  abstractMVarSpine cQ offset (tS, s))
+
+  | (I.SClo (tS, s'), s)  ->
+      abstractMVarSpine cQ offset (tS, LF.comp s' s)
+
+
+and abstractMVarSub cQ offset s = match s with
+  | I.Shift _ ->
+      s
+
+  | I.Dot (I.Head tH, s) ->
+      I.Dot (I.Head (abstractMVarHead cQ offset tH), abstractMVarSub cQ offset s)
+
+  | I.Dot (I.Obj tM, s) ->
+      I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub cQ offset s)
+
+
+let rec abstrMSub cQ t = match t with
+  | Comp.MShift n -> Comp.MShift n
   | Comp.MDot(Comp.MObj(phat, tM), t) -> 
-      let tM' = abstractTerm cQ 0 (tM, LF.id) in 
-        Comp.MDot(Comp.MObj(phat, tM'), abstrMSub cQ t)
+      (* NEED DIFFERENT abstractMVTerm function !! 
+         we need to deal with the case for when we encounter an
+         uninstantiated MVar differently and turn it into a MVar (Offset ...) *)
+      let tM' = abstractMVarTerm cQ 0 (tM, LF.id) in 
+        Comp.MDot(Comp.MObj(phat, tM'), abstrMSub cQ t) 
 
   | Comp.MDot(Comp.PObj(phat, h), t) -> 
-      let h' = abstractHead cQ 0 h in 
+      let h' = abstractMVarHead cQ 0 h in 
         Comp.MDot(Comp.PObj(phat, h'), abstrMSub cQ t)
 
 and abstractMSub t =  
   let cQ  = collectMSub I.Empty t in
   let t'  = abstrMSub cQ t in
   let cD  = ctxToMCtx cQ in 
+
     (t' , cD) 
 
 
@@ -453,6 +536,9 @@ and abstrTyp tA =
   let cQ'        = abstractCtx cQ in
   let tA'        = abstractTyp cQ' 0 (tA, LF.id) in
   let cPsi       = ctxToDctx cQ' in
-    (raiseType cPsi tA', length cPsi)
+    begin match raiseType cPsi tA' with 
+      | (None, tA'') -> (tA'', length cPsi)
+      | _            -> raise (Error "Abstraction not valid LF-type because of left-over context variable")
+    end 
 
 

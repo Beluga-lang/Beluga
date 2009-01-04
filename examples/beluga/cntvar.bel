@@ -16,15 +16,19 @@ tt  : exp bool.
 add : exp nat -> exp nat -> exp nat.
 letv: {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
-% schema W = some [T:tp] block exp T;
+schema W = some [T:tp] block exp T;
 
-% rec plus : (exp nat)[] -> (exp nat)[] -> (exp nat)[] =
-% fn x => fn y =>
-%     (case x of
-%         box(. z)                       : (exp nat)[] => y
-%       | {U::(exp nat)[]} box(. s U[.]) : (exp nat)[] =>
-%         (case plus box(. U[.]) y of
-%             {V::(exp nat)[]} box(. V[.]) : (exp nat)[] => box(. s V[.])));
+
+% NOT WORKING : PARSE ERROR -bp 
+ rec plus : exp nat [.] -> exp nat [.] -> exp nat [.] =
+ fn x => fn y =>
+     (case x of
+         box(. z)                       : (exp nat)[.] => y
+       | {U::(exp nat)[.]} box(. s U[.]) : (exp nat)[.] =>
+         (case plus box(. U[.]) y of
+             {V::(exp nat)[.]} box(. V[.]) : (exp nat)[.] => box(. s V[.])));
+
+
 
 % rec cntV : {g:(W)*} {T::tp[]} {TT::tp[]} (exp TT[.])[g, x:(exp T[.])] -> (exp nat)[] =
 % FN g => mlam t => mlam tt => fn e =>

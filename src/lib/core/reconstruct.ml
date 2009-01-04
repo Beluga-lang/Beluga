@@ -7,14 +7,15 @@
 
 (* TODO
 
-   - Extension to deal with MVars, PVars
-   - Extension to deal with substitutions
-   - Extension to deal with A[Psi]
-   - Extension to deal with psi_hat
    - Extension to deal with schemas
+   - Checking Schemas 
+
    - Extension to handle sigma-types
       -> need to change data-type definition for typ_rec
-       
+ 
+   - Sgn module (see syntax.ml/syntax.mli) 
+     what is this for? – All individual pieces are already
+     stored somehow using store.ml
 
    - Cycle detection ?
    - Code walk for reconstruction
@@ -89,7 +90,7 @@ module Apx = struct
     and schema =
       | Schema of sch_elem list
 
-    and psi_hat = offset option * offset 
+    and psi_hat = (Int.LF.cvar) option * offset 
   end
 
   module Comp = struct 
@@ -125,6 +126,7 @@ module Apx = struct
 end
 
 module Unify = Unify.EmptyTrail
+module C     = Cwhnf
 
 exception NotImplemented
 
@@ -137,6 +139,11 @@ type error =
   | IllTyped    of Int.LF.dctx * Apx.LF.normal * Int.LF.tclo
 
 exception Error of string
+
+let rec lookup cG k = match (cG, k) with 
+   | (Int.LF.Dec(_cG', (_,  tau)), 1) ->  tau
+   | (Int.LF.Dec( cG', (_, _tau)), k) ->  
+       lookup cG' (k-1)
 
 (* PHASE 0 : Indexing
 
@@ -257,13 +264,13 @@ let index_decl cvars bvars (Ext.LF.TypDecl(x, a)) =
       let bvars' = BVar.extend bvars (BVar.mk_entry x) in
         (Apx.LF.TypDecl(x,a'), bvars')
 
-let rec index_dctx cvars bvars = function 
+let rec index_dctx ctx_vars cvars bvars = function 
   | Ext.LF.Null        -> (Apx.LF.Null , bvars)
   | Ext.LF.CtxVar psi_name  -> 
-      let offset = CVar.index_of_name cvars psi_name in 
+      let offset = CVar.index_of_name ctx_vars psi_name in 
         (Apx.LF.CtxVar offset , bvars)
   | Ext.LF.DDec (psi, decl) -> 
-      let (psi', bvars') = index_dctx cvars bvars psi in 
+      let (psi', bvars') = index_dctx ctx_vars cvars bvars psi in 
       let (decl', bvars'')  = index_decl cvars bvars' decl in 
         (Apx.LF.DDec(psi', decl'), bvars'')
   
@@ -271,13 +278,13 @@ let rec index_dctx cvars bvars = function
    It's not clear how to know that the last name is a bound variable
    or if it is a name of a context variable...
 *)
-let index_psihat cvars explicit_psihat = 
+let index_psihat ctx_vars explicit_psihat = 
   let rec index_hat bvars = function 
     | [] -> ((None, 0), bvars)
     | [x] -> 
         begin try 
-          let ctx_var = CVar.index_of_name cvars x in 
-          ((Some ctx_var, 0) , bvars)
+          let ctx_var = CVar.index_of_name ctx_vars x in 
+          ((Some (Int.LF.Offset ctx_var), 0) , bvars)
         with Not_found -> 
         let bvars' = BVar.extend bvars (BVar.mk_entry x) in 
           ((None, 1), bvars')
@@ -295,30 +302,30 @@ let rec index_ctx cvars bvars = function
   | Ext.LF.Empty        -> (Apx.LF.Empty , bvars)
 
   | Ext.LF.Dec (psi, dec) -> 
-      let (psi', bvars') = index_ctx cvars bvars psi in 
-      let (dec',bvars'') = index_decl cvars bvars' dec in 
+      let (psi', bvars') = index_ctx  cvars bvars psi in 
+      let (dec',bvars'') = index_decl  cvars bvars' dec in 
         (Apx.LF.Dec(psi', dec'), bvars'')
 
-let index_cdecl cvars = function
+let index_cdecl ctx_vars cvars = function
   | Ext.LF.MDecl(_, u, a, psi) -> 
-      let (psi', bvars')  = index_dctx cvars (BVar.create ()) psi in 
+      let (psi', bvars')  = index_dctx ctx_vars cvars (BVar.create ()) psi in 
       let  a'             = index_typ  cvars bvars' a in 
       let cvars'          = CVar.extend cvars (CVar.mk_entry u) in 
         (Apx.LF.MDecl(u, a', psi'), cvars')
 
   | Ext.LF.PDecl(_, p, a, psi) -> 
-      let (psi', bvars')  = index_dctx cvars (BVar.create ()) psi in 
+      let (psi', bvars')  = index_dctx ctx_vars cvars (BVar.create ()) psi in 
       let  a'             = index_typ  cvars bvars' a in 
       let cvars'          = CVar.extend cvars (CVar.mk_entry p) in 
         (Apx.LF.PDecl(p, a', psi') , cvars')
 
 
-let rec index_mctx cvars = function 
+let rec index_mctx ctx_vars cvars = function 
   | Ext.LF.Empty        -> (Apx.LF.Empty , cvars)
 
   | Ext.LF.Dec (delta, cdec) -> 
-      let (delta', cvars') = index_mctx cvars delta in 
-      let (cdec',cvars'') = index_cdecl cvars' cdec in 
+      let (delta', cvars') = index_mctx ctx_vars cvars delta in 
+      let (cdec',cvars'') = index_cdecl ctx_vars cvars' cdec in 
         (Apx.LF.Dec(delta', cdec'), cvars'')
 
 
@@ -350,51 +357,52 @@ let index_schema (Ext.LF.Schema el_list) =
 
 
 (* Translation of external computations into approximate computations *)
-let rec index_ctyp cvars  = function
+let rec index_comptyp ctx_vars cvars  = function
   | Ext.Comp.TypBox (_, a, psi)    ->
-      let (psi', bvars') = index_dctx cvars (BVar.create ()) psi in 
+      let (psi', bvars') = index_dctx ctx_vars cvars (BVar.create ()) psi in 
       let  a'            = index_typ cvars bvars' a   in
         Apx.Comp.TypBox(a', psi')
 
   | Ext.Comp.TypArr (_, tau, tau') -> 
-      Apx.Comp.TypArr (index_ctyp cvars tau, index_ctyp cvars tau')
+      Apx.Comp.TypArr (index_comptyp ctx_vars cvars tau, index_comptyp ctx_vars cvars tau')
 
   | Ext.Comp.TypPiBox (_, cdecl, tau)    -> 
-      let (cdecl', cvars') = index_cdecl cvars cdecl in 
-        Apx.Comp.TypPiBox(cdecl', index_ctyp cvars' tau)
+      let (cdecl', cvars') = index_cdecl ctx_vars cvars cdecl in 
+        Apx.Comp.TypPiBox(cdecl', index_comptyp ctx_vars cvars' tau)
 
   | Ext.Comp.TypCtxPi (_, (ctx_name, schema_name), tau)    ->      
-      let cvars'           = CVar.extend cvars (CVar.mk_entry ctx_name) in 
+      let ctx_vars'        = CVar.extend ctx_vars (CVar.mk_entry ctx_name) in 
       let schema_cid       = Schema.index_of_name schema_name in 
       (* if exception Not_Found is raised, it means schema_name does not exist *)      
-        Apx.Comp.TypCtxPi((ctx_name, schema_cid), index_ctyp cvars' tau)
+        Apx.Comp.TypCtxPi((ctx_name, schema_cid), index_comptyp ctx_vars' cvars tau)
 
 
-let rec index_exp cvars vars = function
-  | Ext.Comp.Syn (_ , i)   -> Apx.Comp.Syn (index_exp' cvars vars i)
+let rec index_exp ctx_vars cvars vars = function
+  | Ext.Comp.Syn (_ , i)   -> 
+        Apx.Comp.Syn (index_exp' ctx_vars cvars vars i)
 
   | Ext.Comp.Fun (_, x, e) -> 
       let vars' = Var.extend vars (Var.mk_entry x) in 
-        Apx.Comp.Fun (x, index_exp cvars vars' e)
+        Apx.Comp.Fun (x, index_exp ctx_vars cvars vars' e)
 
   | Ext.Comp.CtxFun (_, psi_name, e) -> 
-      let cvars' = CVar.extend cvars (CVar.mk_entry psi_name) in 
-        Apx.Comp.CtxFun (psi_name, index_exp cvars' vars e)
+      let ctx_vars' = CVar.extend ctx_vars (CVar.mk_entry psi_name) in 
+        Apx.Comp.CtxFun (psi_name, index_exp ctx_vars' cvars vars e)
 
   | Ext.Comp.MLam (_, u, e) -> 
       let cvars' = CVar.extend cvars (CVar.mk_entry u) in 
-        Apx.Comp.MLam (u, index_exp cvars' vars e)
+        Apx.Comp.MLam (u, index_exp ctx_vars cvars' vars e)
 
   | Ext.Comp.Box (_, psihat, m) -> 
-      let (psihat', bvars) = index_psihat cvars psihat in 
+      let (psihat', bvars) = index_psihat ctx_vars psihat in 
       Apx.Comp.Box (psihat', index_term cvars bvars m)
 
   | Ext.Comp.Case (_, i, branches) -> 
-      let i' = index_exp' cvars vars i in 
-      let branches' = List.map (function b -> index_branch cvars vars b) branches in 
+      let i' = index_exp' ctx_vars cvars vars i in 
+      let branches' = List.map (function b -> index_branch ctx_vars cvars vars b) branches in 
         Apx.Comp.Case (i', branches')
 
-and index_exp' cvars vars = function
+and index_exp' ctx_vars cvars vars = function
   | Ext.Comp.Var (_, x) ->       
       begin try 
         Apx.Comp.Var (Var.index_of_name vars x)
@@ -403,35 +411,35 @@ and index_exp' cvars vars = function
       end      
 
   | Ext.Comp.Apply (_, i, e) ->  
-      let i' = index_exp' cvars vars i in 
-      let e' = index_exp  cvars vars e in
+      let i' = index_exp' ctx_vars cvars vars i in 
+      let e' = index_exp  ctx_vars cvars vars e in
         Apx.Comp.Apply (i', e')
 
   | Ext.Comp.CtxApp (_, i, psi) -> 
-      let i'   = index_exp' cvars vars i in 
-      let (psi', _) = index_dctx cvars (BVar.create ()) psi in 
+      let i'   = index_exp' ctx_vars cvars vars i in 
+      let (psi', _) = index_dctx ctx_vars cvars (BVar.create ()) psi in 
         Apx.Comp.CtxApp (i', psi')
 
   | Ext.Comp.MApp (_, i, (psihat, m)) -> 
-      let i'      = index_exp' cvars vars i in 
-      let (psihat', bvars) = index_psihat cvars psihat in 
+      let i'      = index_exp' ctx_vars cvars vars i in 
+      let (psihat', bvars) = index_psihat ctx_vars psihat in 
       let m' = index_term cvars bvars m in 
         Apx.Comp.MApp (i', (psihat', m'))
 
 
   | Ext.Comp.Ann (_, e, tau) -> 
-      Apx.Comp.Ann (index_exp  cvars vars e,
-                    index_ctyp cvars tau)
+      Apx.Comp.Ann (index_exp  ctx_vars cvars vars e,
+                    index_comptyp ctx_vars cvars tau)
 
-and index_branch cvars vars 
+and index_branch ctx_vars cvars vars 
     (Ext.Comp.BranchBox(_, delta, (psihat, m, (a, psi)), e)) = 
-    let (delta', cvars')  = index_mctx cvars delta in 
-    let (psihat', bvars) = index_psihat cvars' psihat in 
+    let (delta', cvars')  = index_mctx ctx_vars cvars delta in 
+    let (psihat', bvars) = index_psihat ctx_vars psihat in 
     let m'               = index_term cvars' bvars m in 
-    let (psi', _bvars)   = index_dctx cvars' (BVar.create ()) psi in 
+    let (psi', _bvars)   = index_dctx ctx_vars cvars' (BVar.create ()) psi in 
     (* _bvars = bvars *)
     let a'               = index_typ cvars' bvars a in 
-    let e'               = index_exp cvars' vars e in 
+    let e'               = index_exp ctx_vars cvars' vars e in 
       Apx.Comp.BranchBox (delta', (psihat', m', (a', psi')), e')
 
 
@@ -840,7 +848,11 @@ and elSpineSynth cD cPsi spine s' sP = match (spine, sP) with
  
    It would be more convenient, if ctx would be
    a dctx, since then we can do simple type-checking
-   of the rest of the typrec. -bp *)
+   of the rest of the typrec. -bp 
+
+   DOUBLE CHECK -bp
+
+   *)
 
 (* let rec elSchElem (Apx.Int.SchElem (ctx, Apx.Int.SigmaDecl [a])) = 
   let ctx' = elCtx ctx in 
@@ -864,29 +876,146 @@ let rec elDCtx cD psi = match psi with
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
 
 
+let rec elCDecl cD cdecl = match cdecl with 
+  | Apx.LF.MDecl (u, a, psi) -> 
+      let cPsi = elDCtx cD psi in 
+      let tA   = elTyp cD cPsi a in 
+        Int.LF.MDecl (u, tA, cPsi)
+  | Apx.LF.PDecl (u, a, psi) -> 
+      let cPsi = elDCtx cD psi in 
+      let tA   = elTyp cD cPsi a in 
+        Int.LF.PDecl (u, tA, cPsi)
+
+
+let rec elMCtx delta = match delta with 
+  | Apx.LF.Empty -> Int.LF.Empty 
+  | Apx.LF.Dec (delta, cdec) -> 
+      let cD    = elMCtx delta in 
+      let cdec' = elCDecl cD cdec in 
+        Int.LF.Dec (cD, cdec')
 
 (* Elaboration of computations *)
 
-let rec elCompTyp cD tau = match tau with 
+let rec elCompTyp cO cD tau = match tau with 
   | Apx.Comp.TypBox (a, psi) -> 
       let cPsi = elDCtx cD psi in 
       let tA    = elTyp cD cPsi a in 
         Int.Comp.TypBox (tA, cPsi)
 
   | Apx.Comp.TypArr (tau1, tau2) -> 
-      let tau1' = elCompTyp cD tau1 in 
-      let tau2' = elCompTyp cD tau2 in 
+      let tau1' = elCompTyp cO cD tau1 in 
+      let tau2' = elCompTyp cO cD tau2 in 
         Int.Comp.TypArr (tau1', tau2')
 
-(*  | Apx.Comp.TypCtxPi ((x, schema_cid) , tau) -> 
-      let schema  = 
-      let tau'    = elCompTyp (Int.LF.Dec (cD, Int.LF.CDecl(x, schema))) tau in
-        Int.Comp.TypCtxPi ((x, schema), tau')
+  | Apx.Comp.TypCtxPi ((x, schema_cid) , tau) -> 
+      let tau'    = elCompTyp cO (Int.LF.Dec (cD, Int.LF.CDecl(x, schema_cid))) tau in
+        Int.Comp.TypCtxPi ((x, schema_cid), tau')
 
-*)    
+  | Apx.Comp.TypPiBox (cdecl, tau) -> 
+      let cdecl' = elCDecl cD cdecl  in 
+      let tau'   = elCompTyp cO (Int.LF.Dec (cD, cdecl')) tau in 
+        Int.Comp.TypPiBox (cdecl', tau')
 
 
+let rec elExp cO cD cG e theta_tau = elExpW cO cD cG e (C.cwhnfCTyp theta_tau)
 
+and elExpW cO cD cG e theta_tau = match (e , theta_tau) with
+  | (Apx.Comp.Syn i, _ ) -> 
+      let (i', _t) = elExp' cO cD cG i in 
+        Int.Comp.Syn i'
+
+  | (Apx.Comp.Fun (x, e), (Int.Comp.TypArr (tau1, tau2), theta)) -> 
+      let e' = elExp cO cD (Int.LF.Dec (cG, (x, Int.Comp.TypClo(tau1, theta)))) e (tau2, theta) in 
+        Int.Comp.Fun (x, e')
+
+  | (Apx.Comp.CtxFun (psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid), tau), theta)) -> 
+      let e' = elExp (Int.LF.Dec(cO, Int.LF.CDecl(psi_name, schema_cid))) cD cG e (tau, theta) in 
+        Int.Comp.CtxFun (psi_name, e')
+
+  | (Apx.Comp.MLam (u, e), , (Int.Comp.TypPiBox(Int.LF.MDecl(_u, tA, cPsi), tau), theta))  -> 
+      let e'   = elExp cO (Int.LF.Dec(cD, Int.LF.MDecl(u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))))
+                        cG   e (tau, C.mvar_dot1 theta) in 
+        Int.Comp.MLam (u, e')
+
+  | (Apx.Comp.Box (psihat, tM), (Int.Comp.TypBox (tA, cPsi), theta)) -> 
+      let tM' = elTerm cD (C.cnormDCtx (cPsi, theta)) tM (C.cnormTyp (tA, theta), LF.id) in 
+        Int.Comp.Box (psihat, tM')
+
+  | (Apx.Comp.Case (i, branches), tau_theta) ->  
+      let (i', tau_theta') = elExp' cO cD cG i in 
+        begin match C.cwhnfCTyp tau_theta'  with 
+        | (Int.Comp.TypBox (_tA, _cPsi), _theta') -> 
+           (* We don't check that each branch has approximate type tA[cPsi] - DOUBLE CHECK -bp  *)              
+            let branches' = List.map (function b -> elBranch cO cD cG b tau_theta) branches in 
+              Int.Comp.Case (i', branches')
+
+        | _ -> raise (Error "Case-expression ill-typed; Trying to branch on an expression which is not a boxed-LF type")
+        end 
+
+  | ( _, _ ) -> 
+      raise (Error "Elaboration: Found ill-typed computation-level expression.")
+
+
+and elExp' cO cD cG i = match i with 
+
+  | Apx.Comp.Var offset -> (Int.Comp.Var offset, (lookup cG offset, C.id))
+
+  | Apx.Comp.Apply (i, e) -> 
+     begin match elExp' cO cD cG i with 
+          | (i', (Int.Comp.TypArr (tau2, tau), theta)) -> 
+              let e' = elExp cO cD cG e (tau2, theta) in 
+                (Int.Comp.Apply (i', e'), (tau, theta))
+          | _ -> raise (Error "Elaboration Error: Function mismatch")
+     end
+
+  | Apx.Comp.CtxApp (i, cPsi) -> 
+      begin match elExp' cO cD cG i with
+          | (i', (Int.Comp.TypCtxPi ((_psi, _sW) , tau), theta)) ->
+              let cPsi'  = elDCtx cD cPsi in 
+              let theta' = Cwhnf.csub_msub cPsi' 1 theta in 
+              let tau'   = Cwhnf.csub_ctyp cPsi' 1 tau in 
+                (Int.Comp.CtxApp (i', cPsi') , (tau', theta'))
+
+          | _ -> raise (Error "Context abstraction mismatch")
+        end 
+
+
+  | Apx.Comp.MApp (i, (psihat, tM)) -> 
+      begin match elExp' cO cD cG i with
+          | (i', (Int.Comp.TypPiBox (Int.LF.MDecl(_, tA, cPsi), tau), theta)) -> 
+              let tM'  = elTerm cD (C.cnormDCtx (cPsi, theta)) tM  (C.cnormTyp (tA, theta), LF.id) in 
+                (Int.Comp.MApp (i', (psihat, tM')) , 
+                 (tau, Int.Comp.MDot(Int.Comp.MObj (psihat, tM'), theta))
+                )
+          | _ -> raise (Error "MLam mismatch")
+        end
+
+  | Apx.Comp.Ann (e, tau) -> 
+      let tau' = elCompTyp cO cD tau in 
+      let e' = elExp cO cD cG e (tau', C.id) in 
+        (Int.Comp.Ann (e', tau') , (tau', C.id))
+
+
+(* We don't check that each box-expression has approximately
+   the same type as the expression we analyze. 
+
+   DOUBLE CHECK -bp *)
+(* NOTE: Any context variable occurring in delta, psihat, a, psi is bound
+    in cD !  So delta (and cD') do not contain it!!!! *) 
+
+and elBranch cO cD cG (Apx.Comp.BranchBox (delta, (psihat, m, (a, psi)), e)) (tau, theta) = 
+  let cD'     = elMCtx delta in 
+  let cPsi'   = elDCtx (* cO *) cD' psi in 
+
+  let tA'     = elTyp  (* cO *) cD' cPsi' a in 
+
+  let tM'     = elTerm (* cO *) cD' cPsi' m (tA', LF.id) in 
+
+  let n       =  Context.length cD' in 
+  let cD_i    = Context.append cD cD' in 
+  let theta_i = C.mshift theta n in 
+  let e'     = elExp cO cD_i cG e (tau, theta_i) in
+    Int.Comp.BranchBox (cD', (psihat, tM', (tA', cPsi')), e')
 
 
 (* ******************************************************************* *)
@@ -1078,7 +1207,7 @@ let recSgnDecl d = match d with
       let (tK', i) = Abstract.abstrKind tK in
       (* let _        = Printf.printf "\n Reconstruction (wih abstraction) of constant %s \n %s \n\n" a.string_of_name
         (Pretty.Int.DefaultPrinter.kindToString tK') in *)
-      let _        = Check.LF.checkKind Int.LF.Empty Int.LF.Null tK' in  
+      let _        = Check.LF.checkKind Int.LF.Empty Int.LF.Empty Int.LF.Null tK' in  
       let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  successful! \n" a.string_of_name  in 
       let a'       = Typ.add (Typ.mk_entry a tK' i) in
         (* why does Term.add return a' ? -bp *)
@@ -1101,11 +1230,49 @@ let recSgnDecl d = match d with
       let (tA', i) = Abstract.abstrTyp tA in 
       (*let _        = Printf.printf "\n Reconstruction (with abstraction) of constant %s \n %s \n\n" c.string_of_name
         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA', LF.id))) in *)
-      let _        = Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', LF.id) in  
+      let _        = Check.LF.checkTyp Int.LF.Empty Int.LF.Empty Int.LF.Null (tA', LF.id) in  
       let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  successful! \n" c.string_of_name  in 
       (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in 
         Int.Sgn.Const (c', tA')
 
 
+  | Ext.Sgn.Schema (_, g, schema) -> 
+      let apx_schema = index_schema schema in 
+      let _        = Printf.printf "\n Reconstruct schema : %s  \n" g.string_of_name  in 
+      let sW         = elSchema apx_schema in 
+(*      let _        = Printf.printf "\n Elaboration of schema %s \n : %s \n\n" g.string_of_name
+                        (Pretty.Int.DefaultPrinter.schemaToString sW) in   *)
+      let cPsi       = Int.LF.Null in  
+      let cD         = Int.LF.Empty in  
+      let cO         = Int.LF.Empty in  
+      let _          = Check.LF.checkSchema cO cD cPsi sW in  
+      let _        = Printf.printf "\n TYPE CHECK for schema : %s  successful! \n" g.string_of_name  in 
+      let g'         = Schema.add (Schema.mk_entry g sW) in  
+        Int.Sgn.Schema (g', sW)
+
+
+  | Ext.Sgn.Rec (_, f, tau, e) -> 
+      let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) tau in 
+      let _        = Printf.printf "\n Reconstruct function : %s  \n" f.string_of_name  in 
+      let cD      = Int.LF.Empty in  
+      let cO      = Int.LF.Empty in  
+      let tau'    = elCompTyp cO cD apx_tau in  
+(*      let _        = Printf.printf "\n Elaboration of program type %s \n : %s \n\n" f.string_of_name
+                        (Pretty.Int.DefaultPrinter.compTypToString tau') in  *)
+      let _       = Check.Comp.checkTyp cO cD tau' in  
+      let _       = Printf.printf "\n Checking computation type %s successful ! \n\n "
+                        (Pretty.Int.DefaultPrinter.compTypToString tau') in  
+      let cG      = Int.LF.Empty in   
+      let apx_e   = index_exp (CVar.create ()) (CVar.create ()) (Var.create ()) e in 
+
+      let e'      = elExp cO cD cG apx_e (tau', C.id) in  
+(*      let _        = Printf.printf "\n Elaboration of program %s \n : %s \n %s \n" f.string_of_name 
+                        (Pretty.Int.DefaultPrinter.compTypToString tau') 
+                        (Pretty.Int.DefaultPrinter.expChkToString e') in  
+*)
+      let _       = Check.Comp.check cO cD cG e' (tau', C.id) in 
+      let _        = Printf.printf "\n TYPE CHECK for program : %s  successful! \n\n" f.string_of_name  in 
+      let f'      = Comp.add (Comp.mk_entry f tau' 0 e') in 
+        Int.Sgn.Rec (f', tau', e')
 

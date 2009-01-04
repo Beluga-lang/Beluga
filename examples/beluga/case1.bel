@@ -4,6 +4,11 @@ suc : nat -> nat.
 
 schema w = some [ ] block nat;
 
+
+rec copynat1 : {g:(w)*} nat[g] -> nat[g] = 
+    FN g => fn e => copynat1 [g] e;
+
+
 rec copynat : {g:(w)*} nat[g] -> nat[g] =
   FN g =>
     fn e =>

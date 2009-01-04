@@ -32,12 +32,14 @@ let main () =
             ; let int_decls = List.map Reconstruct.recSgnDecl sgn in
                 print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls
               ; try
+                (* Double Checking is done after reconstruction 
+
                   printf "\n## Double Checking ##"
                 ; print_newline ()
                 ; Check.Sgn.check_sgn_decls int_decls
-                ; printf "\n## Double Checking Successful! ##\n\n"
+                ; printf "\n## Double Checking Successful! ##\n\n" *)
                   (* clean up for the next file *)
-                ; Store.clear ()
+                  Store.clear () 
                 ; errors
                 with
                   | Whnf.Error  err ->

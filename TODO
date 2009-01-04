@@ -3,6 +3,7 @@
 
 CRITICAL
 ========
+*  1/01/09 :: Support for mutual recursive computations
 
 * 28/12/08 :: Reconstruction: Handle Pi-abstractions where type has been omitted
                and must be inferred.
@@ -33,6 +34,8 @@ CRITICAL
 IMPORTANT
 =========
 
+* 01/01/09 :: Clean up opening modules -bp
+              (Int.LF.  and Int.Comp should never be open at the same time!)
 
 * 28/12/08 :: Printing named representation of variables in
                addition to de Bruijn index representation -bp

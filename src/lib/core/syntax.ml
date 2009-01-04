@@ -138,10 +138,12 @@ module Ext = struct
 
     type decl =
       | Const  of Loc.t * name * LF.typ
-      | Pragma of Loc.t * LF.prag
-      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
-      | Schema of Loc.t * name * LF.schema
       | Typ    of Loc.t * name * LF.kind
+      | Schema of Loc.t * name * LF.schema
+
+      | Pragma of Loc.t * LF.prag
+
+      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
 
     type sgn = decl list
 
@@ -168,7 +170,7 @@ module Int = struct
       | MDecl of name * typ  * dctx        (* D ::= u::A[Psi]                *)
       | PDecl of name * typ  * dctx        (*   |   p::A[Psi]                *)
       | SDecl of name * dctx * dctx        (*   |   s::A[Psi]                *)
-      | CDecl of name * schema
+      | CDecl of name * cid_schema
                                            (* Potentially, A is Sigma type ? *)
 
     and typ =                              (* LF level                       *)
@@ -214,7 +216,7 @@ module Int = struct
       | PInst  of head   option ref * dctx * typ * cnstr list ref
           (* D ; Psi |- H => A 
              provided constraint *)
-      | CInst  of dctx   option ref * schema
+      | CInst  of dctx   option ref * cid_schema
           (* D |- Psi : schema   *)
 
     and constrnt =                         (* Constraint                     *)
@@ -272,20 +274,22 @@ module Int = struct
    type mfront =                          (* Fronts:                        *)
      | MObj of LF.psi_hat * LF.normal     (* Mft::= Psihat.N                *)
      | PObj of LF.psi_hat * LF.head       (*    | Psihat.p[s] | Psihat.x    *)
-     | CObj of LF.dctx                    (*    | Psi                       *)
+     | PV   of offset                     (*    | p//p                      *)
+     | MV   of offset                     (*    | u//u                      *)
+
 
    type msub =                            (* Contextual substitutions       *)
-     | MShiftZero                         (* theta ::= ^0                   *)
+     | MShift of int                      (* theta ::= ^n                   *)
      | MDot   of mfront * msub            (*       | MFt . theta            *) 
 
 
-    type typ =
+   type typ =
       | TypBox   of LF.typ  * LF.dctx
       | TypSBox  of LF.dctx * LF.dctx        (* Phi[Psi]    *)
       | TypArr   of typ * typ                (* tau -> tau  *)
-      | TypCtxPi of (name * LF.schema) * typ (* {psi:W} tau *)
+      | TypCtxPi of (name * cid_schema) * typ (* {psi:W} tau *)
       | TypPiBox of LF.ctyp_decl * typ
-      | TypClo   of typ * msub
+      | TypClo   of typ *  msub
 
     and exp_chk =
       | Syn    of exp_syn
@@ -313,6 +317,8 @@ module Int = struct
           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx))
           * exp_chk
 
+    type gctx = (name * typ) LF.ctx
+    type tclo = typ * msub
   end
 
 
@@ -320,8 +326,10 @@ module Int = struct
   module Sgn = struct
 
     type decl =
-      | Typ   of cid_typ  * LF.kind
-      | Const of cid_term * LF.typ
+      | Typ    of cid_typ    * LF.kind
+      | Const  of cid_term   * LF.typ
+      | Schema of cid_schema * LF.schema
+      | Rec    of cid_prog   * Comp.typ * Comp.exp_chk
 
     type sgn = decl list
 

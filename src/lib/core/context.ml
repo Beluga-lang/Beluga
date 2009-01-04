@@ -28,7 +28,6 @@ let dctxToHat cPsi =
     length cPsi
 
 
-
 (************************)
 (* Declaration Contexts *)
 (************************)
@@ -36,7 +35,6 @@ let dctxToHat cPsi =
 let rec sigmaShift tArec k = match tArec with
   | []          -> []
   | tA :: tArec -> TClo (tA, Shift k) :: sigmaShift tArec (k + 1)
-
 
 
 let rec ctxShift cPsi k = match cPsi with
@@ -148,3 +146,14 @@ let rec mctxPDec cD k' = match (cD, k') with
     -> mctxPDec cD (k - 1)
 
 
+
+let rec append cD1 cD2 = match cD2 with 
+  | Empty -> cD1
+  | Dec (cD2', dec) -> 
+      let cD1' = append cD1 cD2' in 
+        Dec (cD1', dec)
+
+
+let rec length cD = match cD with
+  | Empty -> 0
+  | Dec(cD', _ ) -> 1 + length cD'

@@ -33,53 +33,53 @@ module LF = struct
 
   exception Error of string
 
-  (* check cD cPsi (tM, s1) (tA, s2) = ()
+  (* check cO cD cPsi (tM, s1) (tA, s2) = ()
 
      Invariant: 
 
-     If   cD ; cPsi |- s1 <= cPsi1   
-     and  cD ; cPsi |- s2 <= cPsi2    cPsi2 |- tA <= type
+     If   cO ; cD ; cPsi |- s1 <= cPsi1   
+     and  cO ; cD ; cPsi |- s2 <= cPsi2    cPsi2 |- tA <= type
      returns () 
      if there exists an tA' s.t.    
-     cD ; cPsi1 |- tM      <= tA' 
-     and  cD ; cPsi  |- tA'[s1]  = tA [s2] : type
-     and  cD ; cPsi  |- tM [s1] <= tA'[s1]
+     cO ; cD ; cPsi1 |- tM      <= tA' 
+     and  cO ; cD ; cPsi  |- tA'[s1]  = tA [s2] : type
+     and  cO ; cD ; cPsi  |- tM [s1] <= tA'[s1]
      otherwise exception Error is raised
   *)
-  let rec checkW cD cPsi sM1 sA2 = match (sM1, sA2) with
+  let rec checkW cO cD cPsi sM1 sA2 = match (sM1, sA2) with
     | ((Lam (_, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX), tB), s2))
-      -> check cD
+      -> check cO cD
         (DDec (cPsi, LF.decSub tX s2))
           (tM, LF.dot1 s1)
           (tB, LF.dot1 s2)
 
     | ((Root (h, tS), s), (((Atom _), _s') as sP))
       -> (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
-        let sA = Whnf.whnfTyp (inferHead cD cPsi h, LF.id) in
-          checkSpine cD cPsi (tS, s) sA sP
+        let sA = Whnf.whnfTyp (inferHead cO cD cPsi h, LF.id) in
+          checkSpine cO cD cPsi (tS, s) sA sP
 
     | _
       -> raise (Error "LF Term is illtyped")
                (* IllTyped (cD, cPsi, sM1, sA2) *)
 
-  and check cD cPsi sM1 sA2 = checkW cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
+  and check cO cD cPsi sM1 sA2 = checkW cO cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 
 
 
-  (* checkSpine cD cPsi (tS, s1) (tA, s2) sP = ()
+  (* checkSpine cO cD cPsi (tS, s1) (tA, s2) sP = ()
 
      Invariant: 
-     If   cD ; cPsi  |- s1 <= cPsi1  
-     and  cD ; cPsi  |- s2 <= cPsi2
-     and  cD ; cPsi2 |- tA <= type      (tA, s2) in whnf  
+     If   cO ;  cD ; cPsi  |- s1 <= cPsi1  
+     and  cO ;  cD ; cPsi  |- s2 <= cPsi2
+     and  cO ;  cD ; cPsi2 |- tA <= type      (tA, s2) in whnf  
      then succeeds if there exists tA', tP' such that
-     cD ; cPsi1 |- tS : tA' > tP'
-     and  cD ; cPsi  |- s' : cPsi'
-     and  cD ; cPsi' |- tA' <= type
-     and  cD ; cPsi  |- tA'[s'] = tA [s2] <= type
-     and  cD ; cPsi  |- tP'[s'] = sP      <= type
+          cO ; cD ; cPsi1 |- tS : tA' > tP'
+     and  cO ; cD ; cPsi  |- s' : cPsi'
+     and  cO ; cD ; cPsi' |- tA' <= type
+     and  cO ; cD ; cPsi  |- tA'[s'] = tA [s2] <= type
+     and  cO ; cD ; cPsi  |- tP'[s'] = sP      <= type
   *)
-  and checkSpine cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
+  and checkSpine cO cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
     | ((Nil, _), sP') ->
         if Whnf.convTyp sP' sP
         then
@@ -89,17 +89,17 @@ module LF = struct
             (* (TypMisMatch (cD, cPsi, sP', sP)) *)
 
     | ((SClo (tS, s'), s), sA) ->
-        checkSpine cD cPsi (tS, LF.comp s' s) sA sP
+        checkSpine cO cD cPsi (tS, LF.comp s' s) sA sP
 
     | ((App (tM, tS), s1), (PiTyp (TypDecl (_, tA1), tB2), s2)) ->
-        check cD cPsi (tM, s1) (tA1, s2)
+        check cO cD cPsi (tM, s1) (tA1, s2)
         ; (*     cD ; cPsi1        |- tM  <= tA1'
                  and cD ; cPsi         |- s1  <= cPsi1
                  and cD ; cPsi2, x:tA1 |- tB2 <= type
                  and [s1]tA1' = [s2]tA1
           *)
         let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
-          checkSpine cD cPsi (tS, s1) tB2 sP
+          checkSpine cO cD cPsi (tS, s1) tB2 sP
 
     | ((App (_tM, _tS), _), (_tA, _s)) ->
         (* tA <> (Pi x:tA1. tA2, s) *)
@@ -108,16 +108,16 @@ module LF = struct
 
 
 
-  (* inferHead cD cPsi h = tA
+  (* inferHead cO cD cPsi h = tA
 
      Invariant:
 
      returns tA if
-     cD ; cPsi |- h -> tA
-     where cD ; cPsi |- tA <= type
+     cO cD ; cPsi |- h -> tA
+     where cO cD ; cPsi |- tA <= type
      else exception Error is raised. 
   *)
-  and inferHead cD cPsi head = match head with
+  and inferHead cO cD cPsi head = match head with
     | BVar k'                 ->
         let (_, _l) = dctxToHat cPsi in
         let TypDecl (_, tA) = ctxDec cPsi k' in
@@ -150,24 +150,26 @@ module LF = struct
     | MVar (Offset u, s)      ->
         (* cD ; cPsi' |- tA <= type *)
         let (tA, cPsi') = mctxMDec cD u in
-          checkSub cD cPsi s cPsi'
+          checkSub cO cD cPsi s cPsi'
           ; TClo (tA, s)
 
     | PVar(Offset u,s)        ->
         (* cD ; cPsi' |- tA <= type *)
         let (tA, cPsi') = mctxPDec cD u in
-          checkSub cD cPsi s cPsi'
+          checkSub cO cD cPsi s cPsi'
           ; TClo (tA, s)
 
+    | FVar _ -> 
+        raise (Error "Encountered free variable\n")
 
 
-  (* checkSub cD cPsi s cPsi' = ()
+  (* checkSub cO cD cPsi s cPsi' = ()
 
      Invariant:
 
-     succeeds iff cD ; cPsi |- s : cPsi'
+     succeeds iff cO cD ; cPsi |- s : cPsi'
   *)
-  and checkSub cD cPsi s cPsi' = match (cPsi, s, cPsi') with
+  and checkSub cO cD cPsi s cPsi' = match (cPsi, s, cPsi') with
     | (Null, Shift 0, Null)               -> ()
 
     | (CtxVar psi, Shift 0, CtxVar psi')  ->
@@ -180,18 +182,18 @@ module LF = struct
 
     | (DDec (cPsi, _tX), Shift k, Null)   ->
         if k > 0
-        then checkSub cD cPsi (Shift (k - 1)) Null
+        then checkSub cO cD cPsi (Shift (k - 1)) Null
         else raise (Error "Substitution illtyped")
                       (* (SubIllTyped) *)
 
     | (cPsi', Shift k, cPsi)              ->
-        checkSub cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
+        checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
 
     | (cPsi', Dot (Head h, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
         (* changed order of subgoals here Sun Dec  2 12:14:27 2001 -fp *)
-        let _   = checkSub cD cPsi' s' cPsi
+        let _   = checkSub cO cD cPsi' s' cPsi
           (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
-        and tA1 = inferHead cD cPsi' h
+        and tA1 = inferHead cO cD cPsi' h
         in
           if Whnf.convTyp (tA1, LF.id) (tA2, s')
           then ()
@@ -200,7 +202,7 @@ module LF = struct
 
     | (cPsi', Dot (Head (BVar w), t), SigmaDec (cPsi, (SigmaDecl (_, arec)))) ->
         (* other heads of type Sigma disallowed -bp *)
-        let _ = checkSub cD cPsi' t cPsi
+        let _ = checkSub cO cD cPsi' t cPsi
           (* ensures that t is well-typed before comparing types BRec = [t]ARec *)
         and SigmaDecl (_, brec) = ctxSigmaDec cPsi' w
         in
@@ -211,10 +213,10 @@ module LF = struct
 
     | (cPsi', Dot (Obj tM, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
         (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
-        let _ = checkSub cD cPsi' s' cPsi
+        let _ = checkSub cO cD cPsi' s' cPsi
           (* ensures that s' is well-typed and [s']tA2 is well-defined *)
         in
-          check cD cPsi' (tM, LF.id) (tA2, s')
+          check cO cD cPsi' (tM, LF.id) (tA2, s')
 
 
 
@@ -237,7 +239,7 @@ module LF = struct
 
      succeeds iff cD ; cPsi |- [s1]tS <= [s2]K
   *)
-  and checkSpineK cD cPsi sS1 sK = match (sS1, sK) with
+  and checkSpineK cO cD cPsi sS1 sK = match (sS1, sK) with
     | ((Nil, _), (Typ, _s))             -> ()
 
     | ((Nil, _), _)                     ->  
@@ -245,11 +247,11 @@ module LF = struct
                  (* (KindMisMatch) *)
 
     | ((SClo (tS, s'), s), sK)          ->
-        checkSpineK cD cPsi (tS, LF.comp s' s) sK
+        checkSpineK cO cD cPsi (tS, LF.comp s' s) sK
 
     | ((App (tM, tS), s1), (PiKind (TypDecl (_, tA1), kK), s2)) ->
-        check cD cPsi (tM, s1) (tA1, s2)
-        ; checkSpineK cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
+        check cO cD cPsi (tM, s1) (tA1, s2)
+        ; checkSpineK cO cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
     | ((App (_tM , _tS), _), (_kK, _s)) ->
         raise  (Error "LF term not well-typed")
@@ -263,92 +265,133 @@ module LF = struct
 
      succeeds iff cD ; cPsi |- [s]tA <= type
   *)
-  let rec checkTyp' (cD, cPsi, (tA, s)) = match (tA, s) with
+  let rec checkTyp' cO cD cPsi (tA, s) = match (tA, s) with
     | (Atom (a, tS), s)                ->
-        checkSpineK cD cPsi (tS, s) ((Typ.get a).Typ.kind, LF.id)
+        checkSpineK cO cD cPsi (tS, s) ((Typ.get a).Typ.kind, LF.id)
 
     | (PiTyp (TypDecl (x, tA), tB), s) ->
-        checkTyp cD cPsi (tA, s) 
-        ; checkTyp cD (DDec (cPsi, TypDecl(x, TClo (tA, s)))) (tB, LF.dot1 s)
+        checkTyp cO cD cPsi (tA, s) 
+        ; checkTyp cO cD (DDec (cPsi, TypDecl(x, TClo (tA, s)))) (tB, LF.dot1 s)
 
-  and checkTyp cD cPsi sA = checkTyp' (cD, cPsi, Whnf.whnfTyp sA)
+  and checkTyp cO cD cPsi sA = checkTyp' cO cD cPsi (Whnf.whnfTyp sA)
 
 
 
-  (* checkTypRec cD cPsi (recA, s)
+  (* checkTypRec cO cD cPsi (recA, s)
 
      Invariant:
 
-     succeeds iff cD ; cPsi |- [s]recA <= type
+     succeeds iff cO cD ; cPsi |- [s]recA <= type
   *)
-  let rec checkTypRec cD cPsi (recA, s) = match recA with
+  let rec checkTypRec cO cD cPsi (recA, s) = match recA with
     | []         -> ()
     | tA :: recA ->
-        checkTyp    cD cPsi (tA, s)
-        ; checkTypRec cD
+        checkTyp  cO  cD cPsi (tA, s)
+        ; checkTypRec cO cD
           (DDec (cPsi, LF.decSub (TypDecl (Id.mk_name None, tA)) s))
           (recA, LF.dot1 s)
 
 
 
-  (* checkKind cD cPsi K
+  (* checkKind cO cD cPsi K
 
      Invariant:
 
-     succeeds iff cD ; cPsi |- K kind
+     succeeds iff cO cD ; cPsi |- K kind
   *)
-  let rec checkKind cD cPsi kind = match kind with
+  let rec checkKind cO cD cPsi kind = match kind with
     | Typ                            -> ()
     | PiKind (TypDecl (x, tA), kind) ->
-        checkTyp  cD cPsi (tA, LF.id)
-        ; checkKind cD (DDec (cPsi, TypDecl (x, tA))) kind
+        checkTyp cO cD cPsi (tA, LF.id)
+        ; checkKind cO cD (DDec (cPsi, TypDecl (x, tA))) kind
 
 
 
-  (* checkDec cD cPsi (x:tA, s)
-
-     Invariant:
-
-     succeeds iff cD ; cPsi |- [s]tA <= type
-  *)
-  and checkDec cD cPsi (decl, s) = match decl with
-    | TypDecl (_, tA) -> checkTyp cD cPsi (tA, s)
-
-
-
-  (* checkSigmaDec cD cPsi (x:recA, s)
+  (* checkDec cO cD cPsi (x:tA, s)
 
      Invariant:
 
-     succeeds iff cD ; cPsi |- [s]recA <= type
+     succeeds iff cO ; cD ; cPsi |- [s]tA <= type
   *)
-  and checkSigmaDec cD cPsi (sigma_decl, s) = match sigma_decl with
-    | SigmaDecl (_, arec) -> checkTypRec cD cPsi (arec, s)
+  and checkDec cO cD cPsi (decl, s) = match decl with
+    | TypDecl (_, tA) -> checkTyp cO cD cPsi (tA, s)
 
 
 
-  (* checkCtx cD cPsi
+  (* checkSigmaDec cO cD cPsi (x:recA, s)
 
      Invariant:
 
-     succeeds iff cD |- cPsi ctx
+     succeeds iff cO ; cD ; cPsi |- [s]recA <= type
   *)
-  and checkCtx cD cPsi = match cPsi with 
+  and checkSigmaDec cO cD cPsi (sigma_decl, s) = match sigma_decl with
+    | SigmaDecl (_, arec) -> checkTypRec cO cD cPsi (arec, s)
+
+
+
+  (* checkCtx cO cD cPsi
+
+     Invariant:
+
+     succeeds iff cO ; cD |- cPsi ctx
+  *)
+  and checkDCtx cO  cD cPsi = match cPsi with 
     | Null ->  ()
     | DDec (cPsi, tX)     ->
-        checkCtx cD cPsi
-        ; checkDec cD cPsi (tX, LF.id)
+        checkDCtx cO cD cPsi
+        ; checkDec cO cD cPsi (tX, LF.id)
 
     | SigmaDec (cPsi, tX) ->
-        checkCtx      cD cPsi
-        ; checkSigmaDec cD cPsi (tX, LF.id)
+        checkDCtx cO cD cPsi
+        ; checkSigmaDec cO cD cPsi (tX, LF.id)
 
-    | CtxVar _psi         -> ()
-        (* need to check if psi is in Omega (or cD, if context vars live there) -bp *)
+    | CtxVar (Offset psi_offset)  -> 
+        if psi_offset <= (Context.length cO) then ()
+        else 
+          raise (Error "Context variable out of scope")
+
+    (* other cases should be impossible -bp *)
+
+
+  and checkSchema _cO _cD _cPsi _schema = 
+    Printf.printf "WARNING: SCHEMA CHECKING NOT IMPLEMENTED!"
 
 end
 
 module Comp = struct
+
+  module Unify = Unify.EmptyTrail
+(* NOTES on handling context variables: -bp 
+
+  - We should maybe put context variables into a context Omega (not Delta)
+    It makes it difficult to deal with branches.
+
+    Recall: Case(e, branches)  where branch 1 = Pi Delta1. box(psihat. tM1) : A1[Psi1] -> e1
+
+    Note that any context variable occurring in Delta, psihat, A and Psi is bound OUTSIDE. 
+    So if 
+ 
+    D ; G |- Case (e, branches)  and ctxvar psi in D the branch 1 is actually well formed iff
+
+    D, D1 ; Psi1 |- tM1 <= tA1  (where only psi declared in D is relevant to the rest.)
+
+    Also, ctx variables are not subject to instantiations during unification / matching
+    which is used in type checking and type reconstruction. 
+
+    This has wider implications; 
+
+   * revise indexing structure; the offset of ctxvar is with respect to 
+   a context Omega
+
+   * Applying substitution for context variables; does it make sense to
+   deal with it lazily? – It seems complicated to handle lazy context substitutions
+   AND lazy msubs. 
+
+    If we keep them in Delta, we need to rewrite mctxToMSub for example; 
+
+  
+
+*)
 
   open Context
   open Store.Cid
@@ -385,7 +428,7 @@ module Comp = struct
     | (MDot(_ft, t), d) -> split t (d-1)
 
   let rec mctxToMSub cD = match cD with
-    | I.Empty -> MShiftZero
+    | I.Empty -> C.id
     | I.Dec(cD', I.MDecl(_, tA, cPsi)) -> 
       let u = Whnf.newMVar (cPsi, tA) in 
       let phat = Context.dctxToHat cPsi in 
@@ -408,144 +451,180 @@ module Comp = struct
   *)
   let extend t1 t2 = 
     let rec ext t2 = match t2 with
-    | MShiftZero -> t1
+    | MShift 0 -> t1
+    (* other cases should be impossible *)
     | MDot(ft, t) -> MDot(ft, ext t)
     in ext t2
 
-  (* raiseTyp cPsi tA = Pi cPsi . tA
 
-     Note: works only if no sigma-decl are in cPsi *)
-  let rec raiseTyp cPsi tA = match cPsi with
-    | I.Null -> tA
-    | I.DDec (cPsi', decl) -> raiseTyp cPsi' (I.PiTyp(decl, tA))
+  let rec checkTyp cO cD tau = match tau with 
+    | TypBox (tA, cPsi) -> 
+        (LF.checkDCtx cO cD cPsi ; 
+         LF.checkTyp  cO cD cPsi (tA, S.LF.id))
 
-  (* check cD cG e (tau, theta) = ()
+    | TypArr (tau1, tau2) -> 
+        (checkTyp cO cD tau1 ;
+         checkTyp cO cD tau2)
+
+    | TypCtxPi ((psi_name, schema_cid), tau) -> 
+        checkTyp (I.Dec(cO, I.CDecl(psi_name, schema_cid))) cD tau
+
+    | TypPiBox (cdecl, tau) -> 
+        checkTyp cO (I.Dec(cD, cdecl)) tau        
+
+
+  (* check cO cD cG e (tau, theta) = ()
 
      Invariant:
 
-     If  cD ; cG |- e wf-exp
-     and cD |- theta <= cD' 
-     and cD'|- tau <= c_typ
+     If  cO ; cD ; cG |- e wf-exp
+     and cO ; cD |- theta <= cD' 
+     and cO ; cD'|- tau <= c_typ
      returns ()
-     if  cD ; cG |- e <= [|t|]tau
+     if  cO ; cD ; cG |- e <= [|t|]tau
 
      otherwise exception Error is raised
   *)
 
-  let rec checkW cD cG e ttau = match (e , ttau) with 
+  let rec checkW cO cD cG e ttau = match (e , ttau) with 
     | (Rec(f, e), (tau, t)) ->  
-        check cD (I.Dec (cG, (f, TypClo(tau,t)))) e ttau
+        check cO cD (I.Dec (cG, (f, TypClo(tau,t)))) e ttau
 
     | (Fun(x, e), (TypArr(tau1, tau2), t)) -> 
-        check cD (I.Dec (cG, (x, TypClo(tau1, t)))) e (tau2, t)
+        check cO cD (I.Dec (cG, (x, TypClo(tau1, t)))) e (tau2, t)
 
     | (CtxFun(psi, e) , (TypCtxPi ((_psi, schema), tau), t)) -> 
-        check (I.Dec(cD, I.CDecl(psi, schema))) cG e (tau, C.ctxvar_dot1 t)
+        check (I.Dec(cO, I.CDecl(psi, schema))) cD cG e (tau, t)
 
     | (MLam(u, e), (TypPiBox(I.MDecl(_u, tA, cPsi), tau), t)) -> 
-        let phat = Context.dctxToHat cPsi in 
-          check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
-              cG   e (tau, C.mvar_dot1 phat t)
+        check cO (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
+              cG   e (tau, C.mvar_dot1 t)
 
-    | (Box(_phat, tM), (TypBox (tA, cPsi),t)) -> 
-        LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+    | (Box(_phat, tM), (TypBox (tA, cPsi), t)) -> 
+        LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+
 
     | (Case (e, branches), (tau, t)) -> 
-        begin match syn cD cG e with
-          | (TypBox(tA, cPsi), t') -> 
-              checkBranches cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
+        begin match C.cwhnfCTyp (syn cO cD cG e) with
+          | (TypBox(tA, cPsi),  t') -> 
+              checkBranches cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
           | _ -> raise (Error "Case scrutinee not of boxed type")
         end
 
     | (Syn e, (tau, t)) -> 
-        if C.convCTyp (tau,t) (syn cD cG e) then ()
+        if C.convCTyp (tau,t) (syn cO cD cG e) then ()
         else raise (Error "Type mismatch")
 
-  and check cD cG e theta_tau = checkW cD cG e (C.cwhnfCTyp theta_tau)
+  and check cO cD cG e (tau, t) = 
+    checkW cO cD cG e (C.cwhnfCTyp (tau, t))
 
-  and syn cD cG e = match e with 
-    | Var x  -> (lookup cG x, MShiftZero)
+  and syn cO cD cG e = match e with 
+    | Var x  -> (lookup cG x, C.id) 
+          (* !!!! MAY BE WRONG since only . |- ^0 : .   and not cD |- ^0 : cD !!! *)
     | Apply (e1, e2) -> 
-        begin match syn cD cG e1 with 
+        begin match C.cwhnfCTyp (syn cO cD cG e1) with 
           | (TypArr (tau2, tau), t) -> 
-              (check cD cG e2 (tau2, t);
+              (check cO cD cG e2 (tau2, t);
                (tau, t))
           | _ -> raise (Error "Function mismatch")
         end
     | CtxApp (e, cPsi) -> 
-        begin match syn cD cG e with
-          | (TypCtxPi ((_psi, schema) , tau), t) ->
-              (checkSchema cD cPsi schema ;
-               (tau, MDot(CObj cPsi, t)))
+        begin match C.cwhnfCTyp (syn cO cD cG e) with
+          | (TypCtxPi ((_psi, sW) , tau), t) ->
+              (LF.checkSchema cO cD cPsi ((Schema.get sW).Schema.schema)  ;
+               (Cwhnf.csub_ctyp cPsi 1 tau, Cwhnf.csub_msub cPsi 1 t))
           | _ -> raise (Error "Context abstraction mismatch")
         end 
-    | MApp (e, (_phat, tM)) -> 
-        begin match syn cD cG e with
+    | MApp (e, (phat, tM)) -> 
+        begin match C.cwhnfCTyp (syn cO cD cG e) with
           | (TypPiBox (I.MDecl(_, tA, cPsi), tau), t) -> 
-              let phat = Context.dctxToHat cPsi in 
-                (LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
+                (LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
                  (tau, MDot(MObj (phat, tM), t))
                 )
           | _ -> raise (Error "MLam mismatch")
         end
 
     | (Ann (e, tau)) -> 
-        (check cD cG e (tau, MShiftZero) ; 
-         (tau, MShiftZero))
+        (check cO cD cG e (tau, C.id) ; 
+         (tau, C.id))
 
-  and checkBranches cD cG branches tAbox ttau = match branches with
+  and checkBranches cO cD cG branches tAbox ttau = match branches with
     | [] -> ()
     | (branch::branches) -> 
-        (checkBranch cD cG branch tAbox ttau;
-         checkBranches cD cG branches tAbox ttau)
+        let _ = checkBranch cO cD cG branch tAbox ttau in 
+          checkBranches cO cD cG branches tAbox ttau
 
-  and checkBranch _cD _cG _branch (_tA, _cPsi) (_tau, _t) = () 
+(*  and checkBranch _cO _cD _cG _branch (_tA, _cPsi) (_tau, _t) = 
+    Printf.printf "WARNING: BRANCH CHECKING NOT IMPLEMENTED!"
+*)
 
-(* match branch with
 
-  and checkBranch cD cG branch (tA, cPsi) (tau, t) = match branch with
-   | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) -> 
-      let _ = LF.check cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
+  and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = match branch with
+   | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->  
+(*       let _ = Printf.printf "Check Pattern Term is well-typed: \n %s   |-    %s <= %s \n\n"
+         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
+         (Pretty.Int.DefaultPrinter.normalToString tM1)
+         (Pretty.Int.DefaultPrinter.typToString tA1) in *)
+      let _ = LF.check cO cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
 
-      let d1 = length cD1 in
-      let _d  = length cD in
+      let d1 = length cD1 in 
+      let _d  = length cD in 
       let t1 = mctxToMSub cD1 in   (* {cD1} |- t1 <= cD1 *)
       let t' = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
       let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
       let phat = dctxToHat cPsi in 
-      let tA1' = raiseTyp cPsi1 tA1 in 
-      let tA'  = raiseTyp cPsi tA in
-      let _    =  Unif.unifyTyp (phat, (C.cnormTyp (tA', t'), S.LF.id), (C.cnormTyp (tA1', t1), S.LF.id))  in 
+      let _    = Unify.unifyDCtx (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
+      let _    =  Unify.unifyTyp (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
+
       let (tc', cD1') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
+
       let t'' = split tc d1 in (* cD1' |- t'' <= cD  suffix *)
+
       (* NOTE: cnormCtx and cnormExp not implemented
          -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
       *)
-        check cD1' (C.cnormCtx (cG, t'')) (C.cnormExp (e1, tc')) (tau, C.comp t'' t)  
-*)
-  and checkSchema _cD _cPsi _schema = ()
+        check cO cD1' (C.cwhnfCtx (cG, t'')) (C.cnormExp (e1, tc')) (tau, C.mcomp t'' t)  
+
     
 end 
 
 module Sgn = struct
 
-  open LF
 
   let rec check_sgn_decls = function
     | []                       -> ()
 
     | Syntax.Int.Sgn.Typ   (_a, tK) :: decls ->
-        let cD   = Syntax.Int.LF.Empty
+        let cD   = Syntax.Int.LF.Empty 
+        and cO   = Syntax.Int.LF.Empty
         and cPsi = Syntax.Int.LF.Null
         in
-            checkKind cD cPsi tK
+            LF.checkKind cO cD cPsi tK
           ; check_sgn_decls decls
 
     | Syntax.Int.Sgn.Const (_c, tA) :: decls ->
         let cD   = Syntax.Int.LF.Empty
+        and cO   = Syntax.Int.LF.Empty
         and cPsi = Syntax.Int.LF.Null
         in
-            checkTyp cD cPsi (tA, Substitution.LF.id)
+            LF.checkTyp cO cD cPsi (tA, Substitution.LF.id)
           ; check_sgn_decls decls
+
+    | Syntax.Int.Sgn.Schema (_w, schema) :: decls -> 
+        let cD   = Syntax.Int.LF.Empty
+        and cO   = Syntax.Int.LF.Empty
+        and cPsi = Syntax.Int.LF.Null
+        in 
+          LF.checkSchema cO cD cPsi schema
+          ; check_sgn_decls decls
+
+    | Syntax.Int.Sgn.Rec (_f, tau, e) :: decls ->
+        let cD = Syntax.Int.LF.Empty  
+        and cO   = Syntax.Int.LF.Empty
+        and cG = Syntax.Int.LF.Empty in 
+          Comp.checkTyp cO cD tau
+          ; Comp.check cO cD cG e (tau, Cwhnf.id)
+          ; check_sgn_decls decls
+
 
 end

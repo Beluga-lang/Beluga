@@ -123,8 +123,48 @@ module Cid = struct
 
   end
 
-end
+  module Comp = struct
 
+    type entry =
+      { name               : Id.name
+      ; implicit_arguments : int
+      ; typ                : Int.Comp.typ 
+      ; prog               : Int.Comp.exp_chk
+      }
+
+    let mk_entry n t i e =
+      { name               = n
+      ; implicit_arguments = i
+      ; typ                = t 
+      ; prog               = e}
+
+
+    type t = Id.name DynArray.t
+
+    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0 (* FIXME: investigate better initial size *)
+
+    let index_of_name n = Hashtbl.find directory n
+
+    let add e =
+      let cid_prog = DynArray.length store in
+          DynArray.add store e
+        ; Hashtbl.replace directory e.name cid_prog
+        ; cid_prog
+
+    let get = DynArray.unsafe_get store
+
+    let clear () =
+        DynArray.clear store
+      ; Hashtbl.clear directory
+
+  end
+
+end
 
 (* LF Bound variables *)
 module BVar = struct
@@ -227,3 +267,4 @@ let clear () =
     Cid.Typ.clear    ()
   ; Cid.Term.clear   ()
   ; Cid.Schema.clear ()
+  ; Cid.Comp.clear   ()

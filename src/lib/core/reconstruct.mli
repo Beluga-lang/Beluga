@@ -71,7 +71,7 @@ module Apx : sig
     and schema =
       | Schema of sch_elem list
 
-    and psi_hat = offset option * offset 
+    and psi_hat = Int.LF.cvar option * offset 
   end
 
   module Comp : sig

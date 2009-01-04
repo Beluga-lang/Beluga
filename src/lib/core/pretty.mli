@@ -27,6 +27,10 @@ module type CID_RENDERER = sig
 
   val render_cid_term   : cid_term -> string
 
+  val render_cid_schema : cid_schema -> string
+
+  val render_cid_prog : cid_prog -> string
+
   val render_offset     : offset   -> string
 
   val render_var        : var      -> string
@@ -175,6 +179,8 @@ module Int : sig
 
     val fmt_ppr_lf_kind     : lvl -> formatter -> LF.kind   -> unit
 
+    val fmt_ppr_lf_ctyp_decl: lvl -> formatter -> LF.ctyp_decl  -> unit
+
     val fmt_ppr_lf_typ      : lvl -> formatter -> LF.typ    -> unit
 
     val fmt_ppr_lf_normal   : lvl -> formatter -> LF.normal -> unit
@@ -189,6 +195,30 @@ module Int : sig
 
     val fmt_ppr_lf_cvar     : lvl -> formatter -> LF.cvar   -> unit
 
+    val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
+
+    val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
+
+    val fmt_ppr_lf_sigma_decl : lvl -> formatter -> LF.sigma_decl    -> unit
+
+    val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
+
+    val fmt_ppr_lf_dctx       : lvl -> formatter -> LF.dctx          -> unit 
+
+    val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
+
+    val fmt_ppr_cmp_exp_chk   : lvl -> formatter -> Comp.exp_chk     -> unit
+
+    val fmt_ppr_cmp_exp_syn   : lvl -> formatter -> Comp.exp_syn     -> unit
+
+    val fmt_ppr_cmp_branches  : lvl -> formatter -> Comp.branch list -> unit
+
+    val fmt_ppr_cmp_branch    : lvl -> formatter -> Comp.branch      -> unit
+
+    val fmt_ppr_cmp_msub      : lvl -> formatter -> Comp.msub        -> unit
+
+    val fmt_ppr_cmp_mfront    : lvl -> formatter -> Comp.mfront      -> unit
+
 
 
     (***************************)
@@ -198,6 +228,8 @@ module Int : sig
     val ppr_sgn_decl    : Sgn.decl  -> unit
 
     val ppr_lf_kind     : LF.kind   -> unit
+
+    val ppr_lf_ctyp_decl: LF.ctyp_decl -> unit
 
     val ppr_lf_typ      : LF.typ    -> unit
 
@@ -213,7 +245,33 @@ module Int : sig
 
     val ppr_lf_cvar     : LF.cvar   -> unit
 
-    val headToString    : LF.head   -> string
+    val ppr_lf_schema     : LF.schema        -> unit
+
+    val ppr_lf_sch_elem   : LF.sch_elem      -> unit
+
+    val ppr_lf_sigma_decl : LF.sigma_decl    -> unit
+
+    val ppr_lf_psi_hat    : LF.psi_hat       -> unit
+
+    val ppr_lf_dctx       : LF.dctx          -> unit
+
+    val ppr_cmp_typ       : Comp.typ         -> unit
+
+    val ppr_cmp_exp_chk   : Comp.exp_chk     -> unit
+
+    val ppr_cmp_exp_syn   : Comp.exp_syn     -> unit
+
+    val ppr_cmp_branches  : Comp.branch list -> unit
+
+    val ppr_cmp_branch    : Comp.branch      -> unit
+
+    val ppr_cmp_msub      : Comp.msub        -> unit
+
+    val ppr_cmp_mfront    : Comp.mfront      -> unit
+
+    (* Conversion to string *)
+
+    val headToString    : LF.head   -> string   
 
     val subToString     : LF.sub    -> string
 
@@ -226,6 +284,18 @@ module Int : sig
     val normalToString  : LF.normal -> string
 
     val dctxToString    : LF.dctx   -> string
+
+    val schemaToString  : LF.schema -> string
+
+    val expChkToString  : Comp.exp_chk  -> string
+
+    val expSynToString  : Comp.exp_syn  -> string
+
+    val branchToString  : Comp.branch  -> string
+
+    val compTypToString : Comp.typ  -> string
+
+    val msubToString    : Comp.msub  -> string
 
   end
 

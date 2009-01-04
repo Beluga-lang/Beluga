@@ -1,9 +1,8 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 open Id
-open Syntax.Int.LF
 
-
+open Syntax.Int
 
 module Cid : sig
 
@@ -12,10 +11,10 @@ module Cid : sig
     type entry          = private {
       name                 : name
       ; implicit_arguments : int
-      ; kind               : kind
+      ; kind               : LF.kind
     }
 
-    val mk_entry        : name -> kind -> int -> entry
+    val mk_entry        : name -> LF.kind -> int -> entry
 
 
     type t
@@ -37,10 +36,10 @@ module Cid : sig
     type entry          = private {
       name                 : name
       ; implicit_arguments : int
-      ; typ                : typ
+      ; typ                : LF.typ
     }
 
-    val mk_entry        : name -> typ -> int -> entry
+    val mk_entry        : name -> LF.typ -> int -> entry
 
 
     type t
@@ -55,15 +54,39 @@ module Cid : sig
 
   end
 
+  module Comp : sig
+
+    type entry          = private {
+      name                 : name
+      ; implicit_arguments : int
+      ; typ                : Comp.typ
+      ; prog               : Comp.exp_chk
+    }
+
+    val mk_entry           : name -> Comp.typ -> int -> Comp.exp_chk -> entry
+
+
+    type t
+
+    val add             : entry -> cid_prog
+
+    val get             : cid_prog -> entry
+
+    val index_of_name   : name -> cid_prog
+
+    val clear           : unit -> unit
+
+  end
+
 
   module Schema : sig
 
     type entry          = private {
       name                 : name
-      ; schema             : schema
+      ; schema             : LF.schema
     }
 
-    val mk_entry        : name -> schema -> entry
+    val mk_entry        : name -> LF.schema -> entry
 
 
     type t
@@ -108,8 +131,8 @@ end
 
 module FVar : sig
 
-  val add             : name -> typ -> unit
-  val get             : name -> typ
+  val add             : name -> LF.typ -> unit
+  val get             : name -> LF.typ
   val clear           : unit -> unit
 
 end

@@ -43,6 +43,7 @@ module type UNIFY = sig
 
   val unify    : psi_hat * nclo * nclo -> unit (* raises Unify *)
   val unifyTyp : psi_hat * tclo * tclo -> unit (* raises Unify *)
+  val unifyDCtx:           dctx -> dctx -> unit (* raises Unify *)
 
 end
 
@@ -886,6 +887,18 @@ module Make (T : TRAIL) : UNIFY = struct
           raise (Unify "Type clash")
 
     (* Unify pattern fragment, and force constraints after pattern unification succeeded *)
+
+
+    let rec unifyDCtx cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
+      | (Null , Null) -> ()
+      | (CtxVar (Offset psi1) , CtxVar (Offset psi2)) -> 
+          if psi1 = psi2 then () 
+          else raise (Unify "CtxVar clash")
+      | (DDec (cPsi1, TypDecl(_ , tA1)) , DDec (cPsi2, TypDecl(_ , tA2))) -> 
+          let phat  = Context.dctxToHat cPsi1 in 
+          (unifyDCtx cPsi1 cPsi2 ; 
+           unifyTyp' (phat, (tA1, id) ,  (tA2, id)))
+
 
     let rec unify1 (phat, sM1, sM2) =
       unifyTerm (phat, sM1, sM2);

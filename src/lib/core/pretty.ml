@@ -60,6 +60,10 @@ module type CID_RENDERER = sig
 
   val render_cid_term : cid_term -> string
 
+  val render_cid_schema : cid_schema -> string
+
+  val render_cid_prog : cid_prog -> string
+
   val render_offset   : offset   -> string
 
   val render_var      : var      -> string
@@ -162,6 +166,7 @@ module Ext = struct
     val ppr_cmp_branches  : Comp.branch list -> unit
 
     val ppr_cmp_branch    : Comp.branch      -> unit
+
 
   end
 
@@ -575,7 +580,6 @@ module Ext = struct
     (***************************)
     (* Regular Pretty Printers *)
     (***************************)
-
     let ppr_sgn_decl      = fmt_ppr_sgn_decl      std_lvl std_formatter
 
     let ppr_lf_kind       = fmt_ppr_lf_kind       std_lvl std_formatter
@@ -628,6 +632,10 @@ module Ext = struct
 
     let render_cid_term = string_of_int
 
+    let render_cid_schema = string_of_int
+
+    let render_cid_prog = string_of_int
+
     let render_offset   = string_of_int
 
     let render_var      = string_of_int
@@ -666,7 +674,9 @@ module Int = struct
 
     val fmt_ppr_lf_kind     : lvl -> formatter -> LF.kind     -> unit
 
-    val fmt_ppr_lf_typ      : lvl -> formatter -> LF.typ      -> unit
+   val fmt_ppr_lf_ctyp_decl  : lvl -> formatter -> LF.ctyp_decl     -> unit 
+
+    val fmt_ppr_lf_typ      : lvl -> formatter -> LF.typ      -> unit 
 
     val fmt_ppr_lf_normal   : lvl -> formatter -> LF.normal   -> unit
 
@@ -680,6 +690,30 @@ module Int = struct
 
     val fmt_ppr_lf_cvar     : lvl -> formatter -> LF.cvar     -> unit
 
+    val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
+
+    val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
+
+    val fmt_ppr_lf_sigma_decl : lvl -> formatter -> LF.sigma_decl    -> unit
+
+    val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
+
+    val fmt_ppr_lf_dctx       : lvl -> formatter -> LF.dctx          -> unit
+
+    val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
+
+    val fmt_ppr_cmp_exp_chk   : lvl -> formatter -> Comp.exp_chk     -> unit
+
+    val fmt_ppr_cmp_exp_syn   : lvl -> formatter -> Comp.exp_syn     -> unit
+
+    val fmt_ppr_cmp_branches  : lvl -> formatter -> Comp.branch list -> unit
+
+    val fmt_ppr_cmp_branch    : lvl -> formatter -> Comp.branch      -> unit
+
+    val fmt_ppr_cmp_msub      : lvl -> formatter -> Comp.msub        -> unit
+
+    val fmt_ppr_cmp_mfront    : lvl -> formatter -> Comp.mfront      -> unit
+
 
 
     (***************************)
@@ -689,6 +723,8 @@ module Int = struct
     val ppr_sgn_decl      : Sgn.decl      -> unit
 
     val ppr_lf_kind       : LF.kind       -> unit
+
+    val ppr_lf_ctyp_decl  : LF.ctyp_decl     -> unit
 
     val ppr_lf_typ        : LF.typ        -> unit
 
@@ -704,6 +740,33 @@ module Int = struct
 
     val ppr_lf_cvar       : LF.cvar       -> unit
 
+    val ppr_lf_schema     : LF.schema        -> unit
+
+    val ppr_lf_sch_elem   : LF.sch_elem      -> unit
+
+    val ppr_lf_sigma_decl : LF.sigma_decl    -> unit
+
+    val ppr_lf_psi_hat    : LF.psi_hat       -> unit
+
+    val ppr_lf_dctx       : LF.dctx          -> unit
+
+    val ppr_cmp_typ       : Comp.typ         -> unit
+
+    val ppr_cmp_exp_chk   : Comp.exp_chk     -> unit
+
+    val ppr_cmp_exp_syn   : Comp.exp_syn     -> unit
+
+    val ppr_cmp_branches  : Comp.branch list -> unit
+
+    val ppr_cmp_branch    : Comp.branch      -> unit
+
+    val ppr_cmp_msub      : Comp.msub        -> unit
+
+    val ppr_cmp_mfront    : Comp.mfront      -> unit
+
+
+    (* Conversion to string *)
+
     val headToString      : LF.head       -> string
 
     val subToString       : LF.sub        -> string
@@ -717,6 +780,18 @@ module Int = struct
     val normalToString    : LF.normal     -> string
 
     val dctxToString      : LF.dctx       -> string
+
+    val schemaToString    : LF.schema     -> string 
+
+    val expChkToString    : Comp.exp_chk  -> string
+
+    val expSynToString    : Comp.exp_syn  -> string
+
+    val branchToString    : Comp.branch  -> string
+
+    val compTypToString   : Comp.typ      -> string
+
+    val msubToString      : Comp.msub     -> string
   end
 
 
@@ -740,7 +815,6 @@ module Int = struct
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
     (*******************************************)
-
     let rec fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (c, a) ->
           fprintf ppf "%s : %a.@.@?"
@@ -752,6 +826,16 @@ module Int = struct
             (R.render_cid_typ  a)
             (fmt_ppr_lf_kind lvl) k
 
+      | Sgn.Schema (w, schema) -> 
+          fprintf ppf "%s : %a.@.@?"
+            (R.render_cid_schema  w)
+            (fmt_ppr_lf_schema lvl) schema
+
+      | Sgn.Rec (f, tau, e) -> 
+          fprintf ppf "rec %s : %a = %a.@.@?"
+            (R.render_cid_prog  f)
+            (fmt_ppr_cmp_typ lvl) tau
+            (fmt_ppr_cmp_exp_chk lvl) e
 
 
     and fmt_ppr_lf_kind lvl ppf = function
@@ -767,6 +851,19 @@ module Int = struct
               (fmt_ppr_lf_kind 0) k
               (r_paren_if cond)
 
+
+    and fmt_ppr_lf_ctyp_decl _lvl ppf = function
+      | LF.MDecl (u, tA, cPsi) ->
+          fprintf ppf "{%s :: %a[%a]}"
+            (R.render_name u)
+            (fmt_ppr_lf_typ 0) tA
+            (fmt_ppr_lf_dctx 0) cPsi
+
+      | LF.PDecl (p, tA, cPsi) ->
+          fprintf ppf "{#%s :: %a[%a]}"
+            (R.render_name p)
+            (fmt_ppr_lf_typ 0) tA
+            (fmt_ppr_lf_dctx 0) cPsi
 
 
     and fmt_ppr_lf_typ lvl ppf = function
@@ -914,11 +1011,274 @@ module Int = struct
 
 
 
+    and fmt_ppr_lf_schema lvl ppf = function
+      | LF.Schema [] -> ()
+
+      | LF.Schema (f :: []) ->
+            fprintf ppf "%a"
+              (fmt_ppr_lf_sch_elem lvl) f
+
+      | LF.Schema (f :: fs) ->
+            fprintf ppf "%a@ +"
+              (fmt_ppr_lf_sch_elem lvl) f
+          ; fmt_ppr_lf_schema lvl ppf (LF.Schema fs)
+
+    and fmt_ppr_lf_sch_elem lvl ppf = function
+      | LF.SchElem (typDecls, sgmDecl) ->
+          let rec ppr_typ_decl_ctx ppf = function
+            | LF.Empty -> ()
+
+            | LF.Dec (LF.Empty, LF.TypDecl (x, tA)) ->
+                fprintf ppf "%s : %a"
+                  (R.render_name x)
+                  (fmt_ppr_lf_typ 0) tA
+
+            | LF.Dec (xs, LF.TypDecl (x, tA)) ->
+                  fprintf ppf "%s : %a,@ "
+                    (R.render_name x)
+                    (fmt_ppr_lf_typ 0) tA
+                ; ppr_typ_decl_ctx ppf xs
+          in
+            fprintf ppf "some [%a] block %a"
+              ppr_typ_decl_ctx            typDecls
+              (fmt_ppr_lf_sigma_decl lvl) sgmDecl
+
+    and fmt_ppr_lf_sigma_decl _lvl ppf = function
+      | LF.SigmaDecl (_x, tAs) ->
+          let rec ppr_typ_rec ppf = function
+            | [tA] ->
+                fprintf ppf "%a"
+                  (fmt_ppr_lf_typ 0) tA
+(*             | [] -> () *)
+
+(*             | tA :: [] -> *)
+(*                 fprintf ppf "%a" *)
+(*                   (fmt_ppr_lf_typ 0) tA *)
+
+(*             | tA :: tAs -> *)
+(*                   fprintf ppf "%a,@ %a" *)
+(*                     (fmt_ppr_lf_typ 0) tA *)
+(*                     ppr_typ_rec        tAs *)
+          in
+            fprintf ppf "%a"
+              ppr_typ_rec tAs
+
+    and fmt_ppr_lf_psi_hat lvl ppf = function
+      | (None, offset)  -> fprintf ppf "%s" (R.render_offset offset)
+
+      | (Some psi, offset) -> 
+          fprintf ppf "(%a , %s)" 
+            (fmt_ppr_lf_cvar lvl) psi
+            (R.render_offset offset)
+
+
+    and fmt_ppr_lf_dctx lvl ppf = function
+      | LF.Null ->
+          fprintf ppf "."
+
+      | LF.CtxVar psi ->
+          fprintf ppf "%a"
+            (fmt_ppr_lf_cvar lvl) psi
+
+      | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
+          fprintf ppf "%a, %s : %a"
+            (fmt_ppr_lf_dctx 0) cPsi
+            (R.render_name x)
+            (fmt_ppr_lf_typ 0) tA
+
+
+
+    and fmt_ppr_cmp_typ lvl ppf = function
+      | Comp.TypBox (tA, cPsi) ->
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_lf_typ 1) tA
+            (fmt_ppr_lf_dctx 0) cPsi
+
+      | Comp.TypArr (tau1, tau2) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%s%a -> %a%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_typ 1) tau1
+              (fmt_ppr_cmp_typ 0) tau2
+              (r_paren_if cond)
+
+      | Comp.TypCtxPi ((psi, w), tau) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%s{%s:(%s)*} %a%s"
+              (l_paren_if cond)
+              (R.render_name psi)
+              (R.render_cid_schema w)
+              (fmt_ppr_cmp_typ 0) tau
+              (r_paren_if cond)
+
+      | Comp.TypPiBox (ctyp_decl, tau) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%s%a %a%s"
+              (l_paren_if cond)
+              (fmt_ppr_lf_ctyp_decl 1) ctyp_decl
+              (fmt_ppr_cmp_typ 0) tau
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_cmp_exp_chk lvl ppf = function
+      | Comp.Syn i ->
+          fmt_ppr_cmp_exp_syn lvl ppf i
+
+      | Comp.Fun (x, e) ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]"
+              (l_paren_if cond)
+              (R.render_name x)
+              (fmt_ppr_cmp_exp_chk 0) e
+              (r_paren_if cond)
+
+      | Comp.CtxFun (x, e) ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[<2>%sFN %s =>@ %a%s@]"
+              (l_paren_if cond)
+              (R.render_name x)
+              (fmt_ppr_cmp_exp_chk 0) e
+              (r_paren_if cond)
+
+      | Comp.MLam (x, e) ->
+          let cond = lvl > 0 in
+            fprintf ppf "@[<2>%smlam %s => %a%s@]"
+              (l_paren_if cond)
+              (R.render_name x)
+              (fmt_ppr_cmp_exp_chk 0) e
+              (r_paren_if cond)
+
+      | Comp.Box (pHat, tM) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%sbox (%a. %a)%s"
+              (l_paren_if cond)
+              (fmt_ppr_lf_psi_hat 0) pHat
+              (fmt_ppr_lf_normal 0) tM
+              (r_paren_if cond)
+
+      | Comp.Case (i, bs) ->
+          let cond = lvl > 1 in
+            fprintf ppf "@[<2>%scase %a of@[<-1>%a@]%s@]"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_syn 0) i
+              (fmt_ppr_cmp_branches 0) bs
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_cmp_exp_syn lvl ppf = function
+      | Comp.Var x ->
+          fprintf ppf "%s"
+            (R.render_offset x)
+
+      | Comp.Apply (i, e) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a %a%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_syn 1) i
+              (fmt_ppr_cmp_exp_chk 2) e
+              (r_paren_if cond)
+
+      | Comp.CtxApp (i, cPsi) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a [%a]%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_syn 1) i
+              (fmt_ppr_lf_dctx 0) cPsi
+              (r_paren_if cond)
+
+      | Comp.MApp (i, (pHat, tM)) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a [%a. %a]%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_syn 1) i
+              (fmt_ppr_lf_psi_hat 0) pHat
+              (fmt_ppr_lf_normal 0) tM
+              (r_paren_if cond)
+
+      | Comp.Ann (e, tau) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a : %a%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_chk 1) e
+              (fmt_ppr_cmp_typ 2) tau
+              (r_paren_if cond)
+
+
+
+    and fmt_ppr_cmp_branches lvl ppf = function
+      | [] -> ()
+
+      | b :: [] ->
+          fprintf ppf "%a"
+            (fmt_ppr_cmp_branch 0) b
+
+      | b :: bs ->
+          fprintf ppf "%a@,|%a"
+            (fmt_ppr_cmp_branch 0) b
+            (fmt_ppr_cmp_branches lvl) bs
+
+
+
+    and fmt_ppr_cmp_branch _lvl ppf = function
+      | Comp.BranchBox (ctyp_decls, (pHat, tM, (tA, cPsi)), e) ->
+          let rec ppr_ctyp_decls ppf = function
+            | LF.Empty             -> ()
+
+            | LF.Dec (decls, decl) ->
+                fprintf ppf "%a %a"
+                  ppr_ctyp_decls decls
+                  (fmt_ppr_lf_ctyp_decl 1) decl
+          in
+            fprintf ppf "%a box (%a . %a) : %a[%a] => %a"
+              ppr_ctyp_decls ctyp_decls
+              (fmt_ppr_lf_psi_hat 0) pHat
+              (fmt_ppr_lf_normal 0) tM
+              (fmt_ppr_lf_typ 0) tA
+              (fmt_ppr_lf_dctx 0) cPsi
+              (fmt_ppr_cmp_exp_chk 0) e
+
+
+
+    and fmt_ppr_cmp_msub lvl ppf = function
+      | Comp.MShift k ->
+          fprintf ppf "^%s" (string_of_int k)
+
+      | Comp.MDot (f, s) ->
+          fprintf ppf "%a@ ,@ %a"
+            (fmt_ppr_cmp_mfront 1) f
+            (fmt_ppr_cmp_msub lvl) s
+
+
+    and fmt_ppr_cmp_mfront lvl ppf = function
+      | Comp.MObj (psihat, m) ->
+          fprintf ppf "M (%a . %a)"
+            (fmt_ppr_lf_psi_hat lvl) psihat
+            (fmt_ppr_lf_normal lvl) m
+
+      | Comp.PObj (psihat, h) ->
+          fprintf ppf "P (%a . %a)"
+            (fmt_ppr_lf_psi_hat lvl) psihat
+            (fmt_ppr_lf_head lvl) h
+
+      | Comp.PV k -> 
+          fprintf ppf "PVar %s "
+            (string_of_int k)
+
+      | Comp.MV k -> 
+          fprintf ppf "MVar %s "
+            (string_of_int k)
+
+
+
     (***************************)
     (* Regular Pretty Printers *)
     (***************************)
 
     let ppr_sgn_decl      = fmt_ppr_sgn_decl  std_lvl std_formatter
+
+    let ppr_lf_ctyp_decl  = fmt_ppr_lf_ctyp_decl  std_lvl std_formatter
 
     let ppr_lf_kind       = fmt_ppr_lf_kind   std_lvl std_formatter
 
@@ -935,6 +1295,31 @@ module Int = struct
     let ppr_lf_front      = fmt_ppr_lf_front  std_lvl std_formatter
 
     let ppr_lf_cvar       = fmt_ppr_lf_cvar   std_lvl std_formatter
+
+    let ppr_lf_schema     = fmt_ppr_lf_schema     std_lvl std_formatter
+
+    let ppr_lf_sch_elem   = fmt_ppr_lf_sch_elem   std_lvl std_formatter
+
+    let ppr_lf_sigma_decl = fmt_ppr_lf_sigma_decl std_lvl std_formatter
+
+    let ppr_lf_psi_hat    = fmt_ppr_lf_psi_hat    std_lvl std_formatter
+
+    let ppr_lf_dctx       = fmt_ppr_lf_dctx       std_lvl std_formatter
+
+    let ppr_cmp_typ       = fmt_ppr_cmp_typ       std_lvl std_formatter
+
+    let ppr_cmp_exp_chk   = fmt_ppr_cmp_exp_chk   std_lvl std_formatter
+
+    let ppr_cmp_exp_syn   = fmt_ppr_cmp_exp_syn   std_lvl std_formatter
+
+    let ppr_cmp_branches  = fmt_ppr_cmp_branches  std_lvl std_formatter
+
+    let ppr_cmp_branch    = fmt_ppr_cmp_branch    std_lvl std_formatter
+
+    let ppr_cmp_msub      = fmt_ppr_cmp_msub      std_lvl std_formatter
+
+    let ppr_cmp_mfront    = fmt_ppr_cmp_mfront    std_lvl std_formatter
+
 
     let headToString h    = fmt_ppr_lf_head   std_lvl str_formatter h
                           ; flush_str_formatter ()
@@ -953,11 +1338,35 @@ module Int = struct
 
     let normalToString tM = fmt_ppr_lf_normal std_lvl str_formatter tM
                           ; flush_str_formatter ()
+                         
 
     let rec dctxToString cPsi = match cPsi with
       | LF.Null -> " . "
+      | LF.CtxVar (LF.Offset k) -> "CtxV " ^ string_of_int k
       | LF.DDec (cPsi', LF.TypDecl (_x, tA)) -> 
           dctxToString cPsi' ^ " , _ : " ^ typToString tA
+
+
+    let schemaToString schema = fmt_ppr_lf_schema std_lvl str_formatter schema
+                              ; flush_str_formatter ()
+
+    let expChkToString  e    = fmt_ppr_cmp_exp_chk std_lvl str_formatter e
+                              ; flush_str_formatter ()
+
+    let expSynToString  i    = fmt_ppr_cmp_exp_syn std_lvl str_formatter i
+                              ; flush_str_formatter ()
+
+    let branchToString  b    = fmt_ppr_cmp_branch std_lvl str_formatter b
+                              ; flush_str_formatter ()
+
+
+    let compTypToString tau  = fmt_ppr_cmp_typ std_lvl str_formatter tau
+                              ; flush_str_formatter ()
+
+    let msubToString    s    = fmt_ppr_cmp_msub    std_lvl str_formatter s
+                              ; flush_str_formatter ()
+
+    
 
 
   end
@@ -965,7 +1374,7 @@ module Int = struct
 
 
   (********************************************)
-  (* Default CID_RENDERER for External Syntax *)
+  (* Default CID_RENDERER for Internal Syntax *)
   (********************************************)
 
   module DefaultCidRenderer = struct
@@ -978,7 +1387,15 @@ module Int = struct
 
     let render_cid_term c = render_name (Term.get c).Term.name
 
-    let render_offset   i = string_of_int i
+    let render_cid_schema w = render_name (Schema.get w).Schema.name
+
+    let render_cid_prog f = render_name (Comp.get f).Comp.name
+
+    let render_cvar     u = match u with 
+      | LF.Offset offset -> string_of_int offset 
+     (* other cases to be added *)
+
+    let render_offset   i = string_of_int i 
 
     let render_var      x = string_of_int x
 

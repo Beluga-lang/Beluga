@@ -17,6 +17,9 @@ type cid_term = int
 (** A constant identifier for schemas *)
 type cid_schema = int
 
+(** A constant identifier for recursive computations/programs *)
+type cid_prog = int
+
 
 (** An offset to be used during shifting for a DeBruijn variable
     representation *)

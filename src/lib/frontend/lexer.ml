@@ -10,9 +10,9 @@ module Error = Camlp4.Struct.EmptyError
 
 (* Matches any utf-8 character that isn't a single character
    keyword. *)
-let regexp start_sym = [^ "#%()*,.:;=[]{|}" ' ' '0'-'9' '\n' '\t' ]
+let regexp start_sym = [^ "\\#%()*,.:;=[]{|}" ' ' '0'-'9' '\n' '\t' ]
 
-let regexp sym       = [^ "#%()*,.:;=[]{|}" ' ' '\n' '\t' ]
+let regexp sym       = [^ "\\#%()*,.:;=[]{|}" ' ' '\n' '\t' ]
 
 (**************************************************)
 (* Location Update and Token Generation Functions *)
@@ -68,9 +68,9 @@ let rec lex_token loc = lexer
   | "schema"
   | "some"
   | "type"
-  | [ "#%()*,.:;=[]{|}" ] -> mk_tok_of_lexeme mk_keyword loc lexbuf
-  | eof                   -> mk_tok           Token.EOI  loc lexbuf
-  | start_sym sym*        -> mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | [ "\\#%()*,.:;=[]{|}" ] -> mk_tok_of_lexeme mk_keyword loc lexbuf
+  | eof                     -> mk_tok           Token.EOI  loc lexbuf
+  | start_sym sym*          -> mk_tok_of_lexeme mk_symbol  loc lexbuf
 
 (* Skip comments and advance the location reference. *)
 let skip_comment     loc = lexer

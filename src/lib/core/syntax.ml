@@ -52,7 +52,7 @@ module Ext = struct
     and sub =
       | Dot    of Loc.t
       | Normal of Loc.t * sub * normal
-      | Id     of Loc.t * name
+      | Id     of Loc.t 
 
     and typ_rec = typ list
 
@@ -274,8 +274,7 @@ module Int = struct
    type mfront =                          (* Fronts:                        *)
      | MObj of LF.psi_hat * LF.normal     (* Mft::= Psihat.N                *)
      | PObj of LF.psi_hat * LF.head       (*    | Psihat.p[s] | Psihat.x    *)
-     | PV   of offset                     (*    | p//p                      *)
-     | MV   of offset                     (*    | u//u                      *)
+     | MV   of offset                     (*    | u//u | p//p               *)
 
 
    type msub =                            (* Contextual substitutions       *)

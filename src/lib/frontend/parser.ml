@@ -157,12 +157,12 @@ GLOBAL: sgn_eoi;
 
     | "atomic"
         [
+          "("; a = SELF; ")" ->
+            a    
+        | 
           a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Some a), sp)
-        |
-          "("; a = SELF; ")" ->
-            a
         ]
     ]
   ;
@@ -216,9 +216,10 @@ GLOBAL: sgn_eoi;
         ]
 
     | "atomic"
-        [
+        [  (* why are heads treated special here? Wed Jan  7 14:49:49 2009 -bp *)
            h = lf_head_w_meta ->
              LF.Root (_loc, h, LF.Nil)
+               
         |
            "("; m = SELF; ")" ->
              m
@@ -247,15 +248,17 @@ GLOBAL: sgn_eoi;
       [
         "." ->
           LF.Dot _loc
-      |
-        sigma = SELF; ","; tM = lf_term_w_meta ->
+      | (* The following is wrong -- Wed Jan  7 14:37:59 2009 -bp *)
+        sigma = SELF; ","; tM = lf_term_w_meta -> 
           LF.Normal (_loc, sigma, tM)
+
       |
-        "id"; "("; x = SYMBOL; ")" ->
-          LF.Id (_loc, Id.mk_name (Some x))
+          "id" ->
+          LF.Id (_loc) 
       ]
     ]
   ;
+
 
   (* We don't currently deal with sigma types, so no need for ~ *)
   lf_schema_elem:
@@ -314,7 +317,7 @@ GLOBAL: sgn_eoi;
       ]
     | "atomic"
       [
-        tA = lf_typ (*LEVEL "atomic"*); "["; cPsi = lf_dctx; "]" ->
+        "("; tA = lf_typ (*LEVEL "atomic"*); ")"; "["; cPsi = lf_dctx; "]" ->
           Comp.TypBox (_loc, tA, cPsi)
       |
         "("; tau = SELF; ")" ->
@@ -367,15 +370,21 @@ GLOBAL: sgn_eoi;
   cmp_exp_syn:
     [ "full"
       [
-        i = SELF; e = cmp_exp_chk ->
-          Comp.Apply (_loc, i, e)
-      |
         i = SELF; "["; cPsi = lf_dctx; "]" ->
           Comp.CtxApp (_loc, i, cPsi)
+
 (*       | *)
 (*         i = SELF; "["; vars = LIST0 [ x = SYMBOL -> x ]; "."; tM = lf_term; "]" -> *)
 (*           let pHat = List.map (fun x' -> Id.mk_name (Some x')) vars in *)
 (*             Comp.MApp (_loc, i, (pHat, tM)) *)
+
+      |
+        i = SELF; "<"; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term_w_meta; ">" ->
+          let pHat = List.map (fun x' -> Id.mk_name (Some x')) vars in
+            Comp.MApp (_loc, i, (pHat, tM))
+      |
+        i = SELF; e = cmp_exp_chk ->
+          Comp.Apply (_loc, i, e)
       ]
     | "atomic"
       [

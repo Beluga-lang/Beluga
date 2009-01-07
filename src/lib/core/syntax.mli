@@ -54,7 +54,7 @@ module Ext : sig
     and sub =
       | Dot    of Loc.t
       | Normal of Loc.t * sub * normal
-      | Id     of Loc.t * name
+      | Id     of Loc.t 
 
     and typ_rec = typ list
 
@@ -266,7 +266,6 @@ module Int : sig
    type mfront =              
      | MObj of LF.psi_hat * LF.normal 
      | PObj of LF.psi_hat * LF.head
-     | PV   of offset
      | MV   of offset
 
    type msub =                            

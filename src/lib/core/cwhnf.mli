@@ -22,10 +22,12 @@ val cnormTyp   : LF.typ  * Comp.msub -> LF.typ
 val cnormTypRec: LF.typ_rec * Comp.msub -> LF.typ_rec
 val cnormDCtx  : LF.dctx * Comp.msub -> LF.dctx
 
+val cnormCTyp  : Comp.typ * Comp.msub -> Comp.typ
 val cwhnfCTyp  : Comp.typ * Comp.msub -> Comp.typ * Comp.msub
 val cwhnfCtx   : (Id.name * Comp.typ) LF.ctx * Comp.msub -> (Id.name * Comp.typ) LF.ctx
 
 val cnormExp   : Comp.exp_chk * Comp.msub -> Comp.exp_chk
+
 
 val convCTyp   : (Comp.typ * Comp.msub) -> (Comp.typ * Comp.msub) -> bool
 

@@ -561,11 +561,15 @@ module Comp = struct
 
   and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = match branch with
    | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->  
-(*       let _ = Printf.printf "Check Pattern Term is well-typed: \n %s   |-    %s <= %s \n\n"
+       let _ = Printf.printf "Check Pattern Term is well-typed: \n %s   |-    %s <= %s \n\n"
          (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
          (Pretty.Int.DefaultPrinter.normalToString tM1)
-         (Pretty.Int.DefaultPrinter.typToString tA1) in *)
+         (Pretty.Int.DefaultPrinter.typToString tA1) in 
       let _ = LF.check cO cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
+       let _ = Printf.printf "Pattern Term  \n %s   |-    %s <= %s  is well-typed.\n\n"
+         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
+         (Pretty.Int.DefaultPrinter.normalToString tM1)
+         (Pretty.Int.DefaultPrinter.typToString tA1) in 
 
       let d1 = length cD1 in 
       let _d  = length cD in 
@@ -574,16 +578,31 @@ module Comp = struct
       let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
       let phat = dctxToHat cPsi in 
       let _    = Unify.unifyDCtx (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
-      let _    =  Unify.unifyTyp (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
-
+      let _    = Unify.unifyTyp (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
+      let _    = Printf.printf "Unification of type annotations in branch successful!\n" in 
       let (tc', cD1') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
 
-      let t'' = split tc d1 in (* cD1' |- t'' <= cD  suffix *)
+      let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
+      let cG1 = C.cwhnfCtx (cG, t'') in 
+      let _   = Printf.printf "cG1 = %s \n"   
+        (Pretty.Int.DefaultPrinter.gctxToString cG1) in
+      let e1' = C.cnormExp (e1, tc') in 
+      let _   = Printf.printf "e1' = %s \n"   
+         (Pretty.Int.DefaultPrinter.expChkToString e1') in
+      let tau' = (tau, C.mcomp t'' t)  in 
+      let _   = Printf.printf "tau' = %s \n"   
+         (Pretty.Int.DefaultPrinter.compTypToString (C.cnormCTyp tau')) in
+
+      let _ = Printf.printf "Check branch  \n %s ; %s   |-    %s <= %s  is well-typed.\n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString cD1')
+         (Pretty.Int.DefaultPrinter.gctxToString cG1)
+         (Pretty.Int.DefaultPrinter.expChkToString e1')
+         (Pretty.Int.DefaultPrinter.compTypToString  (Cwhnf.cnormCTyp tau')) in 
 
       (* NOTE: cnormCtx and cnormExp not implemented
          -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
       *)
-        check cO cD1' (C.cwhnfCtx (cG, t'')) (C.cnormExp (e1, tc')) (tau, C.mcomp t'' t)  
+        check cO cD1' cG1 e1' tau'
 
     
 end 

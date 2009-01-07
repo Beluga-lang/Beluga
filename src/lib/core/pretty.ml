@@ -113,8 +113,6 @@ module Ext = struct
 
     val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
 
-    val fmt_ppr_lf_dctx       : lvl -> formatter -> LF.dctx          -> unit
-
     val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
 
     val fmt_ppr_cmp_exp_chk   : lvl -> formatter -> Comp.exp_chk     -> unit
@@ -337,9 +335,8 @@ module Ext = struct
           (fmt_ppr_lf_sub 0) sigma
           (fmt_ppr_lf_normal 0) tM
 
-      | LF.Id (_, x) ->
-          fprintf ppf "id(%s)"
-            (R.render_name x)
+      | LF.Id _ ->
+          fprintf ppf "id"
 
 
 
@@ -700,6 +697,10 @@ module Int = struct
 
     val fmt_ppr_lf_dctx       : lvl -> formatter -> LF.dctx          -> unit
 
+    val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx          -> unit
+
+    val fmt_ppr_cmp_gctx      : lvl -> formatter -> Comp.gctx        -> unit
+
     val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
 
     val fmt_ppr_cmp_exp_chk   : lvl -> formatter -> Comp.exp_chk     -> unit
@@ -750,6 +751,10 @@ module Int = struct
 
     val ppr_lf_dctx       : LF.dctx          -> unit
 
+    val ppr_lf_mctx       : LF.mctx          -> unit
+
+    val ppr_cmp_gctx      : Comp.gctx        -> unit
+
     val ppr_cmp_typ       : Comp.typ         -> unit
 
     val ppr_cmp_exp_chk   : Comp.exp_chk     -> unit
@@ -781,7 +786,11 @@ module Int = struct
 
     val dctxToString      : LF.dctx       -> string
 
+    val mctxToString      : LF.mctx       -> string
+
     val schemaToString    : LF.schema     -> string 
+
+    val gctxToString      : Comp.gctx       -> string
 
     val expChkToString    : Comp.exp_chk  -> string
 
@@ -1087,6 +1096,26 @@ module Int = struct
             (fmt_ppr_lf_typ 0) tA
 
 
+    and fmt_ppr_lf_mctx lvl ppf = function
+      | LF.Empty ->
+          fprintf ppf "."
+
+      | LF.Dec (cD, ctyp_decl) ->
+          fprintf ppf "%a, %a"
+            (fmt_ppr_lf_mctx 0) cD
+            (fmt_ppr_lf_ctyp_decl lvl) ctyp_decl
+
+
+    and fmt_ppr_cmp_gctx lvl ppf = function
+      | LF.Empty ->
+          fprintf ppf "."
+
+      | LF.Dec (cG, (x, tau)) ->
+          fprintf ppf "%a, %s: %a"
+            (fmt_ppr_cmp_gctx 0) cG
+            (R.render_name x)
+            (fmt_ppr_cmp_typ lvl) tau
+
 
     and fmt_ppr_cmp_typ lvl ppf = function
       | Comp.TypBox (tA, cPsi) ->
@@ -1119,7 +1148,10 @@ module Int = struct
               (fmt_ppr_cmp_typ 0) tau
               (r_paren_if cond)
 
-
+      | Comp.TypClo (tau, msub) -> 
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_cmp_typ lvl) tau
+            (fmt_ppr_cmp_msub lvl) msub
 
     and fmt_ppr_cmp_exp_chk lvl ppf = function
       | Comp.Syn i ->
@@ -1262,12 +1294,8 @@ module Int = struct
             (fmt_ppr_lf_psi_hat lvl) psihat
             (fmt_ppr_lf_head lvl) h
 
-      | Comp.PV k -> 
-          fprintf ppf "PVar %s "
-            (string_of_int k)
-
       | Comp.MV k -> 
-          fprintf ppf "MVar %s "
+          fprintf ppf "MV %s "
             (string_of_int k)
 
 
@@ -1305,6 +1333,10 @@ module Int = struct
     let ppr_lf_psi_hat    = fmt_ppr_lf_psi_hat    std_lvl std_formatter
 
     let ppr_lf_dctx       = fmt_ppr_lf_dctx       std_lvl std_formatter
+
+    let ppr_lf_mctx       = fmt_ppr_lf_mctx       std_lvl std_formatter
+
+    let ppr_cmp_gctx      = fmt_ppr_cmp_gctx      std_lvl std_formatter
 
     let ppr_cmp_typ       = fmt_ppr_cmp_typ       std_lvl std_formatter
 
@@ -1347,7 +1379,13 @@ module Int = struct
           dctxToString cPsi' ^ " , _ : " ^ typToString tA
 
 
+    let mctxToString cD = fmt_ppr_lf_mctx std_lvl str_formatter cD
+                              ; flush_str_formatter ()
+
     let schemaToString schema = fmt_ppr_lf_schema std_lvl str_formatter schema
+                              ; flush_str_formatter ()
+
+    let gctxToString cG = fmt_ppr_cmp_gctx std_lvl str_formatter cG
                               ; flush_str_formatter ()
 
     let expChkToString  e    = fmt_ppr_cmp_exp_chk std_lvl str_formatter e

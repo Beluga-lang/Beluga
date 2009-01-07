@@ -15,6 +15,8 @@ open Syntax.Int
 
 module S = Substitution.LF
 
+exception Error of string 
+
 (*************************************)
 (* Contextual Explicit Substitutions *)
 
@@ -60,8 +62,6 @@ and mshiftMFt ft n = match ft with
      Comp.PObj(phat, LF.PVar(LF.Offset (k+n), s))
 
   | Comp.PObj(_phat, LF.BVar _k) -> ft
-
-  | Comp.PV (p_offset) -> Comp.PV (p_offset + n)
 
   | Comp.MV (u_offset) -> Comp.MV (u_offset + n)
 
@@ -116,7 +116,7 @@ and mshiftFt ft n = match ft with
     Comp.MDot (Comp.MV 1, mshift t 1)
 
   and pvar_dot1 t = 
-    Comp.MDot (Comp.PV 1, mshift t 1)
+    Comp.MDot (Comp.MV 1, mshift t 1)
 
 
 (* comp t1 t2 = t'
@@ -161,25 +161,26 @@ and mfrontMSub ft t = match ft with
 	    end 
 	| Comp.PObj(phat, LF.PVar (q, s')) -> Comp.PObj(phat, LF.PVar(q, S.comp s' s))
 
-        | Comp.PV k'  -> Comp.PObj (_phat, LF.PVar (LF.Offset k', s))
+        | Comp.MV k'  -> Comp.PObj (_phat, LF.PVar (LF.Offset k', s))
           (* other cases impossible *)
       end
   | Comp.PObj (_phat, LF.BVar _k)  -> ft
 
-  | Comp.PV k -> 
-      begin match applyMSub k t with
+  | Comp.MV k -> 
+      begin match applyMSub k t with  (* DOUBLE CHECK - bp Wed Jan  7 13:47:43 2009 -bp *)
         | Comp.PObj(phat, p) ->  Comp.PObj(phat, p)          
-        | Comp.PV k'         -> Comp.PV k'
+        | Comp.MObj(phat, tM) ->  Comp.MObj(phat, tM)          
+        | Comp.MV k'         -> Comp.MV k'
         (* other cases impossible *)
       end
 
-  | Comp.MV u -> 
+(*  | Comp.MV u -> 
       begin match applyMSub u t with
         | Comp.MObj(phat, tM) ->  Comp.MObj(phat, tM)          
         | Comp.MV u'          ->  Comp.MV u'
         (* other cases impossible *)
       end
-
+*)
 
 (* applyMSub n t = MFt'
      
@@ -197,6 +198,7 @@ and applyMSub n t =
     begin match (n, t) with
   | (1, Comp.MDot (ft, _t)) -> ft
   | (n, Comp.MDot (_ft, t)) -> applyMSub (n - 1) t
+  | (n, Comp.MShift k)       -> Comp.MV (k + n)
     end 
 
 (* ------------------------------------------------------------ *)
@@ -233,11 +235,13 @@ and applyMSub n t =
 
     | LF.Root (LF.MVar (LF.Offset k, r), tS)
       -> begin match applyMSub k t with
+        | Comp.MV  k'            -> LF.Root (LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
         | Comp.MObj (_phat,tM)   -> 
             LF.Clo(Whnf.whnfRedex ((tM, r), (cnormSpine (tS, t), S.id)))
         (* other cases impossible *)
        end
-
+    | LF.Root (LF.MVar (_, _r), _tS) -> 
+        raise (Error "Encountered MVar with reference?\n")
     (* Ignore other cases for destructive (free) meta-variables -- at least for now *)
 
     (* Parameter variables *)
@@ -250,6 +254,7 @@ and applyMSub n t =
 
          *)
       -> begin match applyMSub k t with
+        | Comp.MV  k'            -> LF.Root (LF.PVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
         | Comp.PObj (_phat, LF.BVar i) -> 
 	    begin match S.bvarSub i (cnormSub (r,t)) with
 	      | LF.Head h  -> LF.Root(h, cnormSpine (tS, t))
@@ -265,6 +270,11 @@ and applyMSub n t =
     (* Constants *)
     | LF.Root (LF.Const c, tS)
       -> LF.Root (LF.Const c, cnormSpine (tS, t))
+
+    (* Free Variables *)
+    | LF.Root (LF.FVar x, tS)        
+      -> (Printf.printf "Encountered a free variable!?\n" ; 
+          LF.Root (LF.FVar x, cnormSpine (tS, t)))
 
     (* Projections *)
     | LF.Root (LF.Proj (LF.BVar i, k), tS)
@@ -440,6 +450,25 @@ let rec cnormDCtx (cPsi, t) = match cPsi with
   (* Contextual weak head normal form for 
      computation-level types                   *)
   (* ***************************************** *)
+
+  let rec cnormCTyp thetaT = match thetaT with 
+    | (Comp.TypBox (tA, cPsi), t)     
+      -> Comp.TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t))
+
+    | (Comp.TypSBox (cPsi, cPsi'), t) 
+      -> Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))
+
+    | (Comp.TypArr (tT1, tT2), t)   -> 
+        Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
+
+    | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
+         Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
+
+    | (Comp.TypPiBox (LF.MDecl(u, tA, cPsi) , tau), t)    -> 
+        Comp.TypPiBox (LF.MDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), 
+                       cnormCTyp (tau, t))
+
+    | (Comp.TypClo (tT, t'), t)        -> cnormCTyp (tT, mcomp t' t)
 
 
   (* cwhnfCTyp (tT1, t1) = (tT2, t2)

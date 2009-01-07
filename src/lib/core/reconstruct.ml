@@ -248,7 +248,7 @@ and index_spine cvars bvars = function
 (* THE FOLLOWING IS PROCESSING AN INCORRECT EXTERNAL SUBSTITUTION
    INTO A CORRECT APPROXIMATE SUBSTITUTION !!! *)
 and index_sub cvars bvars = function 
-  | Ext.LF.Id (_, _ ) -> Apx.LF.Shift 0
+  | Ext.LF.Id _ -> Apx.LF.Shift 0
 
   | Ext.LF.Normal (_, s, n) -> 
       let s' = index_sub cvars bvars s in 
@@ -407,7 +407,7 @@ and index_exp' ctx_vars cvars vars = function
       begin try 
         Apx.Comp.Var (Var.index_of_name vars x)
       with Not_found -> 
-        raise (Error "Unbound computation-level variable")
+        raise (Error ("Unbound computation-level variable " ^ Pretty.Ext.DefaultCidRenderer.render_name x))
       end      
 
   | Ext.Comp.Apply (_, i, e) ->  
@@ -1253,6 +1253,7 @@ let recSgnDecl d = match d with
 
 
   | Ext.Sgn.Rec (_, f, tau, e) -> 
+
       let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) tau in 
       let _        = Printf.printf "\n Reconstruct function : %s  \n" f.string_of_name  in 
       let cD      = Int.LF.Empty in  
@@ -1263,15 +1264,19 @@ let recSgnDecl d = match d with
       let _       = Check.Comp.checkTyp cO cD tau' in  
       let _       = Printf.printf "\n Checking computation type %s successful ! \n\n "
                         (Pretty.Int.DefaultPrinter.compTypToString tau') in  
-      let cG      = Int.LF.Empty in   
-      let apx_e   = index_exp (CVar.create ()) (CVar.create ()) (Var.create ()) e in 
 
+      let vars' = Var.extend  (Var.create ()) (Var.mk_entry f) in 
+      let apx_e   = index_exp (CVar.create ()) (CVar.create ()) vars' e in 
+      let _       = Printf.printf "\n Indexing  computation done ! \n\n " in 
+      let cG      = Int.LF.Dec(Int.LF.Empty, (f, tau'))  in   
+      let _       = Printf.printf "\n Starting elaboration of computation ! \n\n " in
       let e'      = elExp cO cD cG apx_e (tau', C.id) in  
-(*      let _        = Printf.printf "\n Elaboration of program %s \n : %s \n %s \n" f.string_of_name 
+      let _       = Printf.printf "\n Starting elaboration of computation ! \n\n " in
+      let _        = Printf.printf "\n Elaboration of program %s \n : %s \n %s \n" f.string_of_name 
                         (Pretty.Int.DefaultPrinter.compTypToString tau') 
                         (Pretty.Int.DefaultPrinter.expChkToString e') in  
-*)
-      let _       = Check.Comp.check cO cD cG e' (tau', C.id) in 
+
+      let _       = Check.Comp.check cO cD  cG e' (tau', C.id) in 
       let _        = Printf.printf "\n TYPE CHECK for program : %s  successful! \n\n" f.string_of_name  in 
       let f'      = Comp.add (Comp.mk_entry f tau' 0 e') in 
         Int.Sgn.Rec (f', tau', e')

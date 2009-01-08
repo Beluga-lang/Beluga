@@ -10,9 +10,9 @@ module Error = Camlp4.Struct.EmptyError
 
 (* Matches any utf-8 character that isn't a single character
    keyword. *)
-let regexp start_sym = [^ "\\#%()*,.:;=[]{|}" ' ' '0'-'9' '\n' '\t' ]
+let regexp start_sym = [^ "!\\#%()*,.:;=[]{|}" ' ' '0'-'9' '\n' '\t' ]
 
-let regexp sym       = [^ "\\#%()*,.:;=[]{|}" ' ' '\n' '\t' ]
+let regexp sym       = [^ "!\\#%()*,.:;=[]{|}" ' ' '\n' '\t' ]
 
 (**************************************************)
 (* Location Update and Token Generation Functions *)
@@ -21,8 +21,6 @@ let regexp sym       = [^ "\\#%()*,.:;=[]{|}" ' ' '\n' '\t' ]
 (* Make a {!Token.t} taking no arguments and advance the {!Loc.t ref}. *)
 let mk_tok tok loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-  ; Token.print Format.std_formatter tok
-  ; Format.fprintf Format.std_formatter "@.@?"
   ; tok
 
 (* Make a {!Token.t} taking a {!string} argument for the current
@@ -30,9 +28,7 @@ let mk_tok tok loc lexbuf =
 let mk_tok_of_lexeme tok_cons loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
   ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
-        Token.print Format.std_formatter tok
-      ; Format.fprintf Format.std_formatter "@.@?"
-      ; tok
+      tok
 
 let mk_keyword s = Token.KEYWORD s
 
@@ -68,9 +64,9 @@ let rec lex_token loc = lexer
   | "schema"
   | "some"
   | "type"
-  | [ "\\#%()*,.:;=[]{|}" ] -> mk_tok_of_lexeme mk_keyword loc lexbuf
-  | eof                     -> mk_tok           Token.EOI  loc lexbuf
-  | start_sym sym*          -> mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | [ "!\\#%()*,.:;=[]{|}" ] -> mk_tok_of_lexeme mk_keyword loc lexbuf
+  | eof                      -> mk_tok           Token.EOI  loc lexbuf
+  | start_sym sym*           -> mk_tok_of_lexeme mk_symbol  loc lexbuf
 
 (* Skip comments and advance the location reference. *)
 let skip_comment     loc = lexer

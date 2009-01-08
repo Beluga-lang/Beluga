@@ -52,9 +52,13 @@ module Ext : sig
       | App of Loc.t * normal * spine
 
     and sub =
-      | Dot    of Loc.t
-      | Normal of Loc.t * sub * normal
-      | Id     of Loc.t 
+      | EmptySub of Loc.t
+      | Dot      of Loc.t * sub * front
+      | Id       of Loc.t 
+
+    and front = 
+      | Head     of head
+      | Normal   of normal
 
     and typ_rec = typ list
 
@@ -126,7 +130,7 @@ module Ext : sig
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
-          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
+          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
 (*       | BranchSBox of LF.ctyp_decl LF.ctx *)

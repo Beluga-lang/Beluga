@@ -4,34 +4,34 @@ s : nat -> nat.
 
 schema w = some [] block nat;
 
-rec id-test : {g:(w)*} nat [g] -> nat [g] =
+rec id-test : {g:(w)*} (nat) [g] -> (nat) [g] =
     FN g => fn x => x ;
 
 
 
-rec identity1 : {g:(w)*} nat [g] -> nat [g] =
+rec identity1 : {g:(w)*} (nat) [g] -> (nat) [g] =
   FN g =>
     fn x =>
       case x of
-          box (g . z)   : nat [g] => box (g . z)
-        | {U:: nat [g]} box (g . s U[id]) : nat [g] => box (g . s U[id]);
+          box (g . z)  : nat [g] => box (g . z)
+        | {U:: nat [g]} box (g . s U ! id ! ) : nat [g] => box (g . s U ! id ! );
 
 
 
-rec identity2 : {g:(w)*} nat [g] -> nat [g] =
-  FN g =>
-    fn x =>
-      case x of
-          box (g . z)   : nat [g] => x
-        | {U::nat[g]} box (g . s U[id]) : nat [g] => box (g . s U[id]);
-
-
-rec identity2 : {g:(w)*} nat [g] -> nat [g] =
+rec identity2 : {g:(w)*} (nat) [g] -> (nat) [g] =
   FN g =>
     fn x =>
       case x of
           box (g . z)   : nat [g] => x
-        | {U::nat[g]} box (g . s U[id]) : nat [g] => x;
+        | {U::nat[g]} box (g . s U ! id ! ) : nat [g] => box (g . s U ! id ! );
+
+
+rec identity2 : {g:(w)*} (nat) [g] -> (nat) [g] =
+  FN g =>
+    fn x =>
+      case x of
+          box (g . z)   : nat [g] => x
+        | {U::nat[g]} box (g . s U ! id ! ) : nat [g] => x;
 
 
 

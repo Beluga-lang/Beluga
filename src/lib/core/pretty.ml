@@ -327,13 +327,18 @@ module Ext = struct
 
 
     and fmt_ppr_lf_sub _lvl ppf = function
-      | LF.Dot _ ->
+      | LF.EmptySub _ ->
           fprintf ppf "."
 
-      | LF.Normal (_, sigma, tM) ->
+      | LF.Dot (_, sigma, LF.Normal tM) ->
           fprintf ppf "%a, %a"
           (fmt_ppr_lf_sub 0) sigma
           (fmt_ppr_lf_normal 0) tM
+
+      | LF.Dot (_, sigma, LF.Head h) ->
+          fprintf ppf "%a; %a"
+          (fmt_ppr_lf_sub 0) sigma
+          (fmt_ppr_lf_head 0) h
 
       | LF.Id _ ->
           fprintf ppf "id"
@@ -555,22 +560,31 @@ module Ext = struct
 
 
     and fmt_ppr_cmp_branch _lvl ppf = function
-      | Comp.BranchBox (_, ctyp_decls, (pHat, tM, (tA, cPsi)), e) ->
+      | Comp.BranchBox (_, ctyp_decls, (pHat, tM, tau), e) ->
           let rec ppr_ctyp_decls ppf = function
             | LF.Empty             -> ()
 
             | LF.Dec (decls, decl) ->
                 fprintf ppf "%a %a"
                   ppr_ctyp_decls decls
-                  (fmt_ppr_lf_ctyp_decl 1) decl
+                  (fmt_ppr_lf_ctyp_decl 1) decl 
           in
-            fprintf ppf "%a box (%a . %a) : %a[%a] => %a"
-              ppr_ctyp_decls ctyp_decls
-              (fmt_ppr_lf_psi_hat 0) pHat
-              (fmt_ppr_lf_normal 0) tM
-              (fmt_ppr_lf_typ 0) tA
-              (fmt_ppr_lf_dctx 0) cPsi
-              (fmt_ppr_cmp_exp_chk 0) e
+            match tau with
+              | None -> 
+                  fprintf ppf "%a box (%a . %a) => %a"
+                    ppr_ctyp_decls ctyp_decls
+                    (fmt_ppr_lf_psi_hat 0) pHat
+                    (fmt_ppr_lf_normal 0) tM
+                    (fmt_ppr_cmp_exp_chk 0) e
+
+              | Some (tA, cPsi) -> 
+                  fprintf ppf "%a box (%a . %a) : %a[%a] => %a"
+                    ppr_ctyp_decls ctyp_decls
+                    (fmt_ppr_lf_psi_hat 0) pHat
+                    (fmt_ppr_lf_normal 0) tM
+                    (fmt_ppr_lf_typ 0) tA
+                    (fmt_ppr_lf_dctx 0) cPsi
+                    (fmt_ppr_cmp_exp_chk 0) e
 
 
 

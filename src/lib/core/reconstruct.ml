@@ -245,19 +245,20 @@ and index_spine cvars bvars = function
       and s' = index_spine cvars bvars s in
         Apx.LF.App (m', s')
 
-(* THE FOLLOWING IS PROCESSING AN INCORRECT EXTERNAL SUBSTITUTION
-   INTO A CORRECT APPROXIMATE SUBSTITUTION !!! *)
 and index_sub cvars bvars = function 
   | Ext.LF.Id _ -> Apx.LF.Shift 0
 
-  | Ext.LF.Normal (_, s, n) -> 
+  | Ext.LF.Dot (_, s, Ext.LF.Head h) -> 
       let s' = index_sub cvars bvars s in 
-        begin match index_term cvars bvars n with 
-          | Apx.LF.Root(h, Apx.LF.Nil) -> Apx.LF.Dot(Apx.LF.Head h, s')
-          | m                               -> Apx.LF.Dot(Apx.LF.Obj  m, s')
-        end
+      let h' = index_head cvars bvars h in 
+        Apx.LF.Dot(Apx.LF.Head h', s')
 
-  | Ext.LF.Dot _         -> Apx.LF.Shift 0
+  | Ext.LF.Dot (_, s, Ext.LF.Normal m) -> 
+      let s' = index_sub cvars bvars s in 
+      let m' = index_term cvars bvars m in 
+        Apx.LF.Dot(Apx.LF.Obj  m', s')
+
+  | Ext.LF.EmptySub _     -> Apx.LF.Shift 0
 
 let index_decl cvars bvars (Ext.LF.TypDecl(x, a)) = 
       let a'     = index_typ cvars bvars a in 
@@ -432,7 +433,7 @@ and index_exp' ctx_vars cvars vars = function
                     index_comptyp ctx_vars cvars tau)
 
 and index_branch ctx_vars cvars vars 
-    (Ext.Comp.BranchBox(_, delta, (psihat, m, (a, psi)), e)) = 
+    (Ext.Comp.BranchBox(_, delta, (psihat, m, Some (a, psi)), e)) = 
     let (delta', cvars')  = index_mctx ctx_vars cvars delta in 
     let (psihat', bvars) = index_psihat ctx_vars psihat in 
     let m'               = index_term cvars' bvars m in 

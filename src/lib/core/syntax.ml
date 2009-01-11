@@ -175,7 +175,7 @@ module Int = struct
       | PDecl of name * typ  * dctx        (*   |   p::A[Psi]                *)
       | SDecl of name * dctx * dctx        (*   |   s::A[Psi]                *)
       | CDecl of name * cid_schema
-                                           (* Potentially, A is Sigma type ? *)
+                                           (* Potentially, A is Sigma type? *)
 
     and typ =                              (* LF level                       *)
       | Atom  of cid_typ * spine           (* A ::= a M1 ... Mn              *)
@@ -255,7 +255,7 @@ module Int = struct
                                            (*        | Psihat, x *)
 
     and typ_rec = typ list                 (* Sigma x1:A1 ... xk:Ak          *)
-                                           (* should not be a list ... -bp   *)
+                                           (* should have names *)
 
 
 

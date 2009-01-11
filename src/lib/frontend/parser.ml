@@ -230,10 +230,10 @@ GLOBAL: sgn_eoi;
   lf_head_w_meta:
     [
       [
-        "#"; p = SYMBOL; "["; sigma = lf_sub; "]" ->
+        "#"; p = SYMBOL; "!";"["; sigma = lf_sub; "]"; "!" ->
           LF.PVar (_loc, Id.mk_name (Some p), sigma)
       |
-        u_or_x = SYMBOL; sigma = OPT [ "!"; sigma = lf_sub; "!" -> sigma ] ->
+        u_or_x = SYMBOL; sigma = OPT [ "!"; "["; sigma = lf_sub; "]";"!" -> sigma ] ->
           match sigma with
             | None ->
                 LF.Name (_loc, Id.mk_name (Some u_or_x))
@@ -261,6 +261,7 @@ GLOBAL: sgn_eoi;
           LF.Id (_loc) 
       ]
     ]
+
   ;
 
 

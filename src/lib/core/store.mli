@@ -124,6 +124,8 @@ module BVar : sig
 
   val get             : t -> var  -> entry
 
+  val length          : t -> int
+
   val index_of_name   : t -> name -> offset
 
 end

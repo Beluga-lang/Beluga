@@ -68,7 +68,8 @@ module Apx = struct
       | App of normal * spine
 
     and sub =                       
-      | Shift of offset             
+      | EmptySub
+      | Id
       | Dot   of front * sub        
 
     and front =                     
@@ -111,6 +112,7 @@ module Apx = struct
 
     and exp_syn =
        | Var    of offset                             (* x              *)
+       | Const  of cid_prog                           (* c              *)
        | Apply  of exp_syn * exp_chk                  (* i e            *)
        | CtxApp of exp_syn * LF.dctx                  (* i [Psi]        *)
        | MApp   of exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)
@@ -227,14 +229,24 @@ and index_head cvars bvars = function
       with Not_found -> 
         Apx.LF.FVar n
       end 
+
   | Ext.LF.PVar (_, p, s) -> 
-      let offset = CVar.index_of_name cvars p in 
-      let s'     = index_sub cvars bvars s in 
-        Apx.LF.PVar (offset, s')
+      begin try 
+        let offset = CVar.index_of_name cvars p in 
+        let s'     = index_sub cvars bvars s in 
+          Apx.LF.PVar (offset, s')
+      with Not_found -> 
+        raise (Error "Encountered undefined parameter variable")
+      end 
   | Ext.LF.MVar (_, u, s) -> 
-      let offset = CVar.index_of_name cvars u in 
-      let s'     = index_sub cvars bvars s in 
-        Apx.LF.MVar (offset, s')
+      begin try
+        let offset = CVar.index_of_name cvars u in 
+        let s'     = index_sub cvars bvars s in 
+          Apx.LF.MVar (offset, s')
+      with Not_found -> 
+        raise (Error "Encountered undefined meta-variable")
+      end 
+          
 
 and index_spine cvars bvars = function
   | Ext.LF.Nil ->
@@ -246,19 +258,20 @@ and index_spine cvars bvars = function
         Apx.LF.App (m', s')
 
 and index_sub cvars bvars = function 
-  | Ext.LF.Id _ -> Apx.LF.Shift 0
+  | Ext.LF.Id _ -> Apx.LF.Id
 
   | Ext.LF.Dot (_, s, Ext.LF.Head h) -> 
-      let s' = index_sub cvars bvars s in 
+      let s' = index_sub cvars bvars s  in 
       let h' = index_head cvars bvars h in 
         Apx.LF.Dot(Apx.LF.Head h', s')
 
   | Ext.LF.Dot (_, s, Ext.LF.Normal m) -> 
-      let s' = index_sub cvars bvars s in 
+      let s' = index_sub cvars bvars s  in 
       let m' = index_term cvars bvars m in 
         Apx.LF.Dot(Apx.LF.Obj  m', s')
 
-  | Ext.LF.EmptySub _     -> Apx.LF.Shift 0
+  | Ext.LF.EmptySub _     -> 
+        Apx.LF.EmptySub
 
 let index_decl cvars bvars (Ext.LF.TypDecl(x, a)) = 
       let a'     = index_typ cvars bvars a in 
@@ -280,23 +293,27 @@ let rec index_dctx ctx_vars cvars bvars = function
    or if it is a name of a context variable...
 *)
 let index_psihat ctx_vars explicit_psihat = 
+  let bv = BVar.create () in 
+
   let rec index_hat bvars = function 
-    | [] -> ((None, 0), bvars)
-    | [x] -> 
+    | [] -> (0, bvars)
+    | x::psihat -> 
+        let bvars' = BVar.extend bvars (BVar.mk_entry x) in 
+        let (l, bvars'') = index_hat bvars' psihat in 
+          (l+1, bvars'')
+  in 
+    begin match explicit_psihat with 
+      | [] -> ((None, 0), bv)
+      | x::psihat -> 
         begin try 
           let ctx_var = CVar.index_of_name ctx_vars x in 
-          ((Some (Int.LF.Offset ctx_var), 0) , bvars)
+          let (d, bvars) = index_hat bv psihat in 
+            ((Some (Int.LF.Offset ctx_var), d) , bvars)
         with Not_found -> 
-        let bvars' = BVar.extend bvars (BVar.mk_entry x) in 
-          ((None, 1), bvars')
+          let (d, bvars ) = index_hat bv explicit_psihat in 
+            ((None, d) , bvars)
         end
-
-    | x::psihat -> 
-        let ((ctx_var, l), bvars') = index_hat bvars psihat in 
-        let bvars'' = BVar.extend bvars' (BVar.mk_entry x) in 
-          ((ctx_var, l+1), bvars'')
-  in 
-    index_hat (BVar.create ()) explicit_psihat
+    end 
 
 
 let rec index_ctx cvars bvars = function 
@@ -407,7 +424,9 @@ and index_exp' ctx_vars cvars vars = function
   | Ext.Comp.Var (_, x) ->       
       begin try 
         Apx.Comp.Var (Var.index_of_name vars x)
-      with Not_found -> 
+      with Not_found -> try
+        Apx.Comp.Const (Comp.index_of_name x) 
+      with Not_found ->         
         raise (Error ("Unbound computation-level variable " ^ Pretty.Ext.DefaultCidRenderer.render_name x))
       end      
 
@@ -593,13 +612,13 @@ and elTermW cD cPsi m sA = match (m, sA) with
         Int.LF.Root (Int.LF.BVar x, tS) 
 
   | (Apx.LF.Root (Apx.LF.MVar (u,s'), spine), (Int.LF.Atom (_a, _) as tP, s)) -> 
-      let (tA, cPhi) = Context.mctxMDec cD u in 
+      let (tA, cPhi) = Cwhnf.mctxMDec cD u in 
       let s'' = elSub cD cPsi s' cPhi in  
       let tS = elSpine cD cPsi spine (tA, s'') (tP, s) in 
           Int.LF.Root (Int.LF.MVar(Int.LF.Offset u, s''), tS)
 
   | (Apx.LF.Root (Apx.LF.PVar (p,s'), spine), (Int.LF.Atom (_a, _) as tP, s)) -> 
-      let (tA, cPhi) = Context.mctxPDec cD p in 
+      let (tA, cPhi) = Cwhnf.mctxPDec cD p in 
       let s'' = elSub cD cPsi s' cPhi in  
       let tS = elSpine cD cPsi spine (tA, s'') (tP, s) in 
           Int.LF.Root (Int.LF.PVar(Int.LF.Offset p, s''), tS)
@@ -642,7 +661,16 @@ and elTermW cD cPsi m sA = match (m, sA) with
 
 *)
 and elSub cD cPsi s cPhi = match (s, cPhi) with 
-  | (Apx.LF.Shift k, _ )  -> Int.LF.Shift k
+  | (Apx.LF.EmptySub, Int.LF.Null )  -> 
+      let (_, d) = Context.dctxToHat cPsi in 
+        Int.LF.Shift d
+
+  | (Apx.LF.Id , _)  -> 
+      let (ctx_v , d )  = Context.dctxToHat cPsi in 
+      let (ctx_v', d')  = Context.dctxToHat cPhi in 
+      let k  = d - d' in 
+        if k < 0 && ctx_v = ctx_v' then raise (Error "Identity Substitution not well-typed")
+        else Int.LF.Shift k
 
   | (Apx.LF.Dot (Apx.LF.Head h, s), Int.LF.DDec (cPhi', _decl)) -> 
     (* NOTE: if decl = x:A, and cPsi(h) = A' s.t. A =/= A'
@@ -660,11 +688,11 @@ and elHead cD cPsi h   = match h with
   | Apx.LF.Const c -> Int.LF.Const c
  
   | Apx.LF.MVar (u,s) -> 
-    let (_tA, cPhi) = Context.mctxMDec cD u in 
+    let (_tA, cPhi) = Cwhnf.mctxMDec cD u in 
       Int.LF.MVar (Int.LF.Offset u, elSub cD cPsi s cPhi)
 
   | Apx.LF.PVar (p,s) -> 
-    let (_tA, cPhi) = Context.mctxPDec cD p in 
+    let (_tA, cPhi) = Cwhnf.mctxPDec cD p in 
       Int.LF.PVar (Int.LF.Offset p, elSub cD cPsi s cPhi)
 
   | Apx.LF.FVar x -> Int.LF.FVar x
@@ -960,6 +988,8 @@ and elExpW cO cD cG e theta_tau = match (e , theta_tau) with
 and elExp' cO cD cG i = match i with 
 
   | Apx.Comp.Var offset -> (Int.Comp.Var offset, (lookup cG offset, C.id))
+
+  | Apx.Comp.Const prog -> (Int.Comp.Const prog, ((Comp.get prog).Comp.typ , C.id))
 
   | Apx.Comp.Apply (i, e) -> 
      begin match elExp' cO cD cG i with 
@@ -1268,14 +1298,14 @@ let recSgnDecl d = match d with
 
       let vars' = Var.extend  (Var.create ()) (Var.mk_entry f) in 
       let apx_e   = index_exp (CVar.create ()) (CVar.create ()) vars' e in 
-      let _       = Printf.printf "\n Indexing  computation done ! \n\n " in 
+      (* let _       = Printf.printf "\n Indexing  computation done ! \n\n " in  *)
       let cG      = Int.LF.Dec(Int.LF.Empty, (f, tau'))  in   
-      let _       = Printf.printf "\n Starting elaboration of computation ! \n\n " in
+      (* let _       = Printf.printf "\n Starting elaboration of computation ! \n\n " in *)
       let e'      = elExp cO cD cG apx_e (tau', C.id) in  
-      let _       = Printf.printf "\n Starting elaboration of computation ! \n\n " in
+      (* let _       = Printf.printf "\n Starting elaboration of computation ! \n\n " in
       let _        = Printf.printf "\n Elaboration of program %s \n : %s \n %s \n" f.string_of_name 
                         (Pretty.Int.DefaultPrinter.compTypToString tau') 
-                        (Pretty.Int.DefaultPrinter.expChkToString e') in  
+                        (Pretty.Int.DefaultPrinter.expChkToString e') in  *)
 
       let _       = Check.Comp.check cO cD  cG e' (tau', C.id) in 
       let _        = Printf.printf "\n TYPE CHECK for program : %s  successful! \n\n" f.string_of_name  in 

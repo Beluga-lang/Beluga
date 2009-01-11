@@ -245,6 +245,9 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Shift _k, Null) ->
         (id, Null)
 
+    | (Shift _k, CtxVar psi) ->
+        (id, CtxVar psi)
+
    | (Shift k, DDec (_, TypDecl (_x, _tA))) ->
        pruneCtx' (phat, (Dot (Head (BVar (k + 1)), Shift (k + 1)), cPsi1), ss)
 
@@ -408,6 +411,10 @@ module Make (T : TRAIL) : UNIFY = struct
         invSub (phat, (Dot (Head (BVar (n + 1)), Shift (n + 1)), cPsi1), ss, rOccur)
 
     | (Shift n, Null) -> comp (Shift n) ss  (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
+        (* must be defined -- n = offset
+           otherwise it is undefined *)
+
+    | (Shift n, CtxVar _psi) -> comp (Shift n) ss  (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
         (* must be defined -- n = offset
            otherwise it is undefined *)
 

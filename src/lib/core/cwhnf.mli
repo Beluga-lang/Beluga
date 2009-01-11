@@ -17,6 +17,9 @@ val pvar_dot1  : Comp.msub -> Comp.msub
 
 val mcomp      : Comp.msub -> Comp.msub -> Comp.msub
 
+val mctxMDec   : LF.mctx -> int -> LF.typ * LF.dctx
+val mctxPDec   : LF.mctx -> int -> LF.typ * LF.dctx
+
 val cnorm      : LF.normal * Comp.msub -> LF.normal
 val cnormTyp   : LF.typ  * Comp.msub -> LF.typ
 val cnormTypRec: LF.typ_rec * Comp.msub -> LF.typ_rec
@@ -29,7 +32,13 @@ val cwhnfCtx   : (Id.name * Comp.typ) LF.ctx * Comp.msub -> (Id.name * Comp.typ)
 val cnormExp   : Comp.exp_chk * Comp.msub -> Comp.exp_chk
 
 
+val normMCtx   : LF.mctx -> LF.mctx
+val normCtx    : Comp.gctx -> Comp.gctx
+val normCTyp   : Comp.typ  -> Comp.typ
+
+
 val convCTyp   : (Comp.typ * Comp.msub) -> (Comp.typ * Comp.msub) -> bool
 
 val csub_ctyp  : LF.dctx -> int -> Comp.typ -> Comp.typ
 val csub_msub  : LF.dctx -> int -> Comp.msub -> Comp.msub
+

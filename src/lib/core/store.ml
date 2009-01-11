@@ -190,6 +190,8 @@ module BVar = struct
 
   let extend ctx e = e :: ctx
 
+  let length = List.length
+
   let get = List.nth
 
 end

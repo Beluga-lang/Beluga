@@ -59,11 +59,14 @@ exception Error of string
 type free_var =
   | MV of I.head          (* Y ::= u[s]   where h = MVar(u, Psi, P, _)
                              and    Psi |- u[s] <= [s]P               *)
+  | PV of I.head          (*    |  p[s]   where h = PVar(p, Psi, A, _)
+                             and    Psi |- p[s] <= [s]A               *)
   | FV of Id.name * I.typ option 
                          (*     | (F, A)                  . |- F <= A *)
 
 let freeVarToString x = match x with
   | (MV tH) -> Pretty.Int.DefaultPrinter.headToString tH
+  | (PV tH) -> Pretty.Int.DefaultPrinter.headToString tH
   | (FV (n, _tA)) -> n.string_of_name
 
 
@@ -93,7 +96,18 @@ let rec printCollection cQ = match cQ with
          (ctxVarToString ctx_var)
          (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
       )
+  | I.Dec(cQ, PV ((I.PVar (I.PInst(_r, cPsi, tA', _c), _s)) as h)) -> 
+      let (ctx_var, tA) = raiseType cPsi tA' in        
+      (printCollection cQ ; 
+       Printf.printf " %s : " 
+         (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(h, I.Nil), LF.id))) ;
+       Printf.printf " %s . %s \n" 
+         (ctxVarToString ctx_var)
+         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
+      )
+
   | I.Dec(cQ, FV (_n, None)) -> (printCollection cQ ; Printf.printf " FV _ . ")
+
   | I.Dec(cQ, FV (n, Some tA)) -> 
             (printCollection cQ ; 
              Printf.printf " FV %s : %s \n" n.string_of_name 
@@ -122,6 +136,16 @@ let rec eqMVar mV1 mV2 = match (mV1, mV2) with
        r1 == r2
   | _ -> false
 
+
+
+(* eqPVar mV mV' = B
+   where B iff mV and mV' represent same variable
+*)
+let rec eqPVar mV1 mV2 = match (mV1, mV2) with
+  | (I.PVar (I.PInst (r1, _, _, _), _s) , PV (I.PVar (I.PInst (r2, _, _, _), _s'))) -> 
+       r1 == r2
+  | _ -> false
+
 (* eqFVar n fV' = B
    where B iff n and fV' represent same variable
 *)
@@ -135,11 +159,15 @@ let rec eqFVar n1 fV2 = match (n1, fV2) with
 let rec index_of cQ n = 
   match (cQ, n) with
   | (I.Empty, _) ->
-      raise Not_found (* impossible due to invariant on collect *)
+      raise (Error "index_of bvar does not exist – should be impossible \n")  (* impossible due to invariant on collect *)
 
   | (I.Dec (cQ', MV u1), MV u2) ->
       (* TODO investigate the feasibility of having it start at 0 *)
       if eqMVar u1 (MV u2) then 1 else (index_of cQ' n) + 1 
+
+  | (I.Dec (cQ', PV p1), PV p2) ->
+      (* TODO investigate the feasibility of having it start at 0 *)
+      if eqPVar p1 (PV p2) then 1 else (index_of cQ' n) + 1 
 
   | (I.Dec (cQ', FV (f1, _)), FV (f2, tA)) ->
       if eqFVar f1 (FV (f2, tA)) then 1 else (index_of cQ' n) + 1
@@ -168,6 +196,7 @@ let rec ctxToDctx cQ = match cQ with
       I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, tA))
 
 
+
 let rec ctxToMCtx cQ = match cQ with
   | I.Empty ->
       I.Empty
@@ -175,9 +204,14 @@ let rec ctxToMCtx cQ = match cQ with
   | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
       I.Dec (ctxToMCtx cQ', I.MDecl (Id.mk_name None, tA, cPsi))
 
+  | I.Dec (cQ', PV (I.PVar (I.PInst (_, cPsi, tA, _), _s))) ->
+      I.Dec (ctxToMCtx cQ', I.PDecl (Id.mk_name None, tA, cPsi))
+
+
   (* this case should not happen -bp *)
   | I.Dec (cQ', FV (_, Some tA)) ->
       I.Dec (ctxToMCtx cQ', I.MDecl (Id.mk_name None, tA, I.Null))
+
 
 
 (* collectTerm cQ phat (tM,s) = cQ'
@@ -234,16 +268,19 @@ and collectSpine cQ phat sS = match sS with
    If    cPsi |- s : cPsi1    and phat = |cPsi|
    then  cQ' = cQ, cQ''
    where cQ'' contains all MVars and FVars in s
+
 *)
 and collectSub cQ phat s = match s with
   | (I.Shift _) -> cQ
   | (I.Dot (I.Head h, s)) ->
-    let cQ' = collectHead cQ phat (h, LF.id) in
-      collectSub cQ' phat s
+      let cQ1 =  collectSub cQ phat s in 
+      let cQ2 = collectHead cQ1 phat (h, LF.id) in
+        cQ2
 
   | (I.Dot (I.Obj tM, s)) ->
-    let cQ' = collectTerm cQ phat (tM, LF.id) in
-      collectSub cQ' phat s
+      let cQ1 =  collectSub cQ phat s in 
+      let cQ2 = collectTerm cQ1 phat (tM, LF.id) in
+        cQ2
 
   | (I.Dot (I.Undef, s)) ->
     (let _ = Printf.printf "Collect Sub encountered undef \n" in 
@@ -254,16 +291,21 @@ and collectSub cQ phat s = match s with
 and collectMSub cQ theta =  match theta with 
   | Comp.MShift _n -> cQ 
   | Comp.MDot(Comp.MObj(phat, tM), t) -> 
-    let cQ' = collectTerm cQ phat (tM, LF.id) in 
-      collectMSub cQ' t
+      let cQ1 =  collectMSub cQ t in 
+      let cQ2 = collectTerm cQ1 phat (tM, LF.id) in 
+        cQ2
 
   | Comp.MDot(Comp.PObj(phat, h), t) -> 
-     let cQ' = collectHead cQ phat (h, LF.id) in 
-       collectMSub cQ' t
+      let cQ1 =  collectMSub cQ t in 
+      let cQ2 = collectHead cQ1 phat (h, LF.id) in 
+        cQ2
 
 and collectHead cQ phat sH = match sH with
+
   | (I.BVar _x, _s)  -> cQ
+
   | (I.Const _c, _s) -> cQ
+
   | (I.FVar name, s) ->
       let cQ' = collectSub cQ (None, 0) s in
         if exists (eqFVar name) cQ' then
@@ -284,9 +326,27 @@ and collectHead cQ phat sH = match sH with
         else
           (*  checkEmpty !cnstrs ? -bp *)
           let (ctx_var, tA') = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
+            I.Dec (collectTyp cQ' (ctx_var, 0) (tA', LF.id), MV u) 
 
-            I.Dec (collectTyp cQ' (ctx_var, 0) (tA', LF.id), MV u) in
-          
+
+  | (I.MVar (I.Offset _k, s'), s) ->
+       collectSub cQ phat (LF.comp s' s) 
+      
+  | (I.PVar (I.PInst (_r, cPsi, tA, _cnstrs), s') as p, s) ->
+      let cQ' = collectSub cQ phat (LF.comp s' s) in
+        if exists (eqPVar p) cQ' then
+          cQ'
+        else
+          (*  checkEmpty !cnstrs ? -bp *)
+          let (ctx_var, tA') = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
+
+            I.Dec (collectTyp cQ' (ctx_var, 0) (tA', LF.id), PV p) 
+
+  | (I.PVar (I.Offset _k, s'), s) ->
+       collectSub cQ phat (LF.comp s' s) 
+      
+
+
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
   | (I.Atom (_a, tS), s) ->
@@ -348,7 +408,7 @@ and abstractTermW cQ offset sM = match sM with
 
 and abstractHead cQ offset tH = match tH with
   | I.BVar x ->
-      I.BVar x
+      I.BVar x   
 
   | I.Const c ->
       I.Const c
@@ -364,6 +424,7 @@ and abstractHead cQ offset tH = match tH with
 
 and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
   | (I.Shift _k, I.Null) ->  tS
+
   | (I.Shift k , I.DDec(_cPsi', _dec)) ->
        subToSpine cQ offset ((I.Dot (I.Head (I.BVar (k + 1)), I.Shift (k + 1))), cPsi) tS
 
@@ -402,15 +463,27 @@ and abstractCtx cQ =  match cQ with
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV u')
 
+  | I.Dec (cQ, PV (I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
+      let cQ'   = abstractCtx cQ in
+      let cPsi' = abstractDctx cQ cPsi in 
+      (* let  (_, depth)  = dctxToHat cPsi in   *)
+      (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
+      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in 
+      let s'    = abstractSub cQ (length cPsi) s in
+      let p'    = I.PVar (I.PInst (r, cPsi', tA', cnstr), s') in
+        I.Dec (cQ', PV p')
+
   | I.Dec (cQ, FV (f, Some tA)) ->
       let tA' = abstractTyp cQ 0 (tA, LF.id) in
       let cQ' = abstractCtx cQ in
         I.Dec (cQ', FV (f, Some tA'))
 
 
+
 and abstractDctx cQ cPsi = match cPsi with
   | I.Null ->
       I.Null
+  | I.CtxVar psi -> I.CtxVar psi
 
   | I.DDec (cPsi, I.TypDecl (x, tA)) ->
       let cPsi' = abstractDctx cQ cPsi in
@@ -459,6 +532,12 @@ and abstractMVarTermW cQ offset sM = match sM with
       let x = index_of cQ (MV tH) + offset in 
         I.Root (I.MVar (I.Offset x, abstractMVarSub cQ offset s), I.Nil)     
 
+  | (I.Root(I.MVar (I.Offset x , s), _tS), _s) -> 
+  (* ERROR ??? Sun Jan 11 15:56:53 2009 -bp *)
+  (* raise (Error "Encountered bound meta-variable") *)
+      let _ = Printf.printf "WARNING: Encountered bound meta-variable: %s " (string_of_int x) in 
+        I.Root (I.MVar (I.Offset x, abstractMVarSub cQ offset s), I.Nil)     
+
   | (I.Root (tH, tS), s (* LF.id *)) ->
       I.Root (abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
 
@@ -466,6 +545,18 @@ and abstractMVarTermW cQ offset sM = match sM with
 and abstractMVarHead cQ offset tH = match tH with
   | I.BVar x ->
       I.BVar x
+
+  | I.PVar (I.PInst(_r, _cPsi, _tA , _cnstr), s) -> 
+      let x = index_of cQ (PV tH) + offset in 
+        I.PVar (I.Offset x, abstractMVarSub cQ offset s)
+
+  | I.MVar (I.Inst(_r, _cPsi, _tP , _cnstr), s) -> 
+      let x = index_of cQ (MV tH) + offset in 
+        I.MVar (I.Offset x, abstractMVarSub cQ offset s)
+
+  | I.MVar (I.Offset x , s) -> 
+      let _ = Printf.printf "WARNING: Encountered bound meta-variable: %s " (string_of_int x) in 
+        I.MVar (I.Offset x, abstractMVarSub cQ offset s) 
 
   | I.Const c ->
       I.Const c
@@ -475,6 +566,9 @@ and abstractMVarHead cQ offset tH = match tH with
 
   | I.AnnH (_tH, _tA) ->
       raise NotImplemented
+
+  | I.PVar (I.Offset _ , _s) -> raise (Error "Encountered bound parameter variable")
+
 
   (* other cases impossible for object level *)
 and abstractMVarSpine cQ offset sS = match sS with
@@ -499,25 +593,59 @@ and abstractMVarSub cQ offset s = match s with
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub cQ offset s)
 
 
+and abstractMVarDctx cQ cPsi = match cPsi with
+  | I.Null ->
+      I.Null
+  | I.CtxVar psi -> I.CtxVar psi
+
+  | I.DDec (cPsi, I.TypDecl (x, tA)) ->
+      let cPsi' = abstractMVarDctx cQ cPsi in
+      let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in
+        I.DDec (cPsi', I.TypDecl (x, tA'))
+
+and abstractMVarCtx cQ =  match cQ with
+  | I.Empty ->
+      I.Empty
+
+  | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
+      let cQ'   = abstractMVarCtx cQ in
+      let cPsi' = abstractMVarDctx cQ cPsi in 
+      (* let  (_, depth)  = dctxToHat cPsi in   *)
+      (* let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in *)
+      let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in 
+      let s'    = abstractMVarSub cQ 0 s in
+      let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
+        I.Dec (cQ', MV u')
+
+  | I.Dec (cQ, PV (I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
+      let cQ'   = abstractMVarCtx cQ in
+      let cPsi' = abstractMVarDctx cQ cPsi in 
+      (* let  (_, depth)  = dctxToHat cPsi in   *)
+      (* let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in *)
+      let tA'   = abstractMVarTyp cQ 0  (tA, LF.id) in 
+      let s'    = abstractMVarSub cQ 0 s in
+      let p'    = I.PVar (I.PInst (r, cPsi', tA', cnstr), s') in
+        I.Dec (cQ', PV p')
+
 let rec abstrMSub cQ t = match t with
   | Comp.MShift n -> Comp.MShift n
   | Comp.MDot(Comp.MObj(phat, tM), t) -> 
-      (* NEED DIFFERENT abstractMVTerm function !! 
-         we need to deal with the case for when we encounter an
-         uninstantiated MVar differently and turn it into a MVar (Offset ...) *)
+      let s'  = abstrMSub cQ t in 
       let tM' = abstractMVarTerm cQ 0 (tM, LF.id) in 
-        Comp.MDot(Comp.MObj(phat, tM'), abstrMSub cQ t) 
+        Comp.MDot(Comp.MObj(phat, tM'), s') 
 
-  | Comp.MDot(Comp.PObj(phat, h), t) -> 
+  | Comp.MDot(Comp.PObj(phat, h), t) ->
+      let s' = abstrMSub cQ t in 
       let h' = abstractMVarHead cQ 0 h in 
-        Comp.MDot(Comp.PObj(phat, h'), abstrMSub cQ t)
+        Comp.MDot(Comp.PObj(phat, h'), s')
+
 
 and abstractMSub t =  
   let cQ  = collectMSub I.Empty t in
-  let t'  = abstrMSub cQ t in
-  let cD  = ctxToMCtx cQ in 
-
-    (t' , cD) 
+  let cQ' = abstractMVarCtx cQ in
+  let t'  = abstrMSub cQ' t in
+  let cD  = ctxToMCtx cQ' in  
+    (t' , cD)  
 
 
 (* wrapper function *)

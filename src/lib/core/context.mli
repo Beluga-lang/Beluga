@@ -21,9 +21,6 @@ val ctxDec      : dctx -> int -> typ_decl
 val ctxSigmaDec : dctx -> int -> sigma_decl
 val ctxVar      : dctx -> cvar option
 
-val mctxMDec    : mctx -> int -> typ * dctx
-val mctxPDec    : mctx -> int -> typ * dctx
-
 val append      : 'a ctx -> 'a ctx -> 'a ctx
 
 val length      : 'a ctx -> int

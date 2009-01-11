@@ -74,13 +74,17 @@ let ctxDec cPsi k =
     | (SigmaDec (cPsi', SigmaDecl  (_x, _tArec)), k')
       -> ctxDec' (cPsi', k' - 1)
     | (Null, _ ) -> raise (Error "Lookin up index bigger than length of context\n")
+    | (CtxVar _ , _ ) -> raise (Error "Lookin up index bigger than length of context\n")
     (* ctxDec' (Null    , k') should not occur by invariant *)
     (* ctxDec' (CtxVar _, k') should not occur by invariant *)
   in
    try 
     ctxDec' (cPsi, k)
-   with Error s -> (Printf.printf "Looking up index %s in context \n  \n" (string_of_int k) ;
-                   raise (Error s))
+   with Error s -> (Printf.printf "\n Looking up index %s in context %s \n  \n" 
+                      (string_of_int k) 
+                      (Pretty.Int.DefaultPrinter.dctxToString cPsi)
+                   ;
+                    raise (Error s))
        
       
 
@@ -126,27 +130,8 @@ let rec ctxVar = function
 
 
 
-(*
-*)
-let rec mctxMDec cD k' = match (cD, k') with
-  | (Dec (_cD, MDecl(_u, tA, cPsi)), 1)
-    -> (TClo (tA, Shift k'), ctxShift cPsi k')
 
-  | (Dec (cD, _), k)
-    -> mctxMDec cD (k - 1)
-
-
-(*
-*)
-let rec mctxPDec cD k' = match (cD, k') with
-  | (Dec (_cD, PDecl (_u, tA, cPsi)), 1)
-    -> (TClo (tA, Shift k'), ctxShift cPsi k')
-
-  | (Dec (cD, _), k)
-    -> mctxPDec cD (k - 1)
-
-
-
+(* append cD1 cD2 = (cD1, cD2) *)
 let rec append cD1 cD2 = match cD2 with 
   | Empty -> cD1
   | Dec (cD2', dec) -> 

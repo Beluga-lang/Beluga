@@ -24,14 +24,15 @@ eq_app : {E1:exp} {F1:exp} {E2:exp} {F2:exp}
          eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 eq_lam : {E:exp -> exp} {F:exp -> exp} ({x} eq x x -> eq (E x) (F x)) -> eq (lam E) (lam F).
  
-% schema W = some [x:exp] block eq x x;
+schema W = some [x:exp] block eq x x;
 
 % rec eqfun : {g:(W)*} {u::exp[g]} (eq u[id(g)] u[id(g)])[g] = 
-%     FN g => mlam u => 
-%         case box(g . u[id(g)]) of
-%             box(g . fst p[id(g)]) => box(g . snd p[id(g)])
-%           | box(g . lam \x . u[id(g),x]) => 
-%             let
+% FN g => mlam u => 
+%  case box(g . u[id(g)]) of
+%    box(g . fst p[id(g)]) => box(g . snd p[id(g)])
+%
+%  | box(g . lam \x . u[id(g),x]) => 
+%      let
 %                 box(g,e. v[id(g),e]) = eqfun [g,e:sigma(x:exp) eq x x]
 %                 <g,e . u[id(g), fst e]>
 %             in

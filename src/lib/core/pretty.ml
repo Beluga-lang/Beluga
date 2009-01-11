@@ -304,7 +304,7 @@ module Ext = struct
             (R.render_name x)
 
       | LF.MVar (_, x, sigma) ->
-          fprintf ppf "%s[%a]"
+          fprintf ppf "mvar %s[%a]"
             (R.render_name x)
             (fmt_ppr_lf_sub 0) sigma
 
@@ -331,12 +331,12 @@ module Ext = struct
           fprintf ppf "."
 
       | LF.Dot (_, sigma, LF.Normal tM) ->
-          fprintf ppf "%a, %a"
+          fprintf ppf "%a; %a"
           (fmt_ppr_lf_sub 0) sigma
           (fmt_ppr_lf_normal 0) tM
 
       | LF.Dot (_, sigma, LF.Head h) ->
-          fprintf ppf "%a; %a"
+          fprintf ppf "%a, %a"
           (fmt_ppr_lf_sub 0) sigma
           (fmt_ppr_lf_head 0) h
 
@@ -835,6 +835,17 @@ module Int = struct
 
     let inst_hashtbl : string InstHashtbl.t = InstHashtbl.create 0
 
+
+    module PInstHashedType = struct
+      type t    = LF.head option ref
+      let equal = (==)
+      let hash  = Hashtbl.hash
+    end
+
+    module PInstHashtbl = Hashtbl.Make (PInstHashedType)
+
+    let pinst_hashtbl : string PInstHashtbl.t = PInstHashtbl.create 0
+
     (*******************************************)
     (* Contextual Format Based Pretty Printers *)
     (*******************************************)
@@ -953,7 +964,12 @@ module Int = struct
             (R.render_cid_term c)
 
       | LF.MVar (c, s) ->
-          fprintf ppf "%a[%a]"
+          fprintf ppf "mvar %a[%a]"
+            (fmt_ppr_lf_cvar lvl) c
+            (fmt_ppr_lf_sub  lvl) s
+
+      | LF.PVar (c, s) ->
+          fprintf ppf "#%a[%a]"
             (fmt_ppr_lf_cvar lvl) c
             (fmt_ppr_lf_sub  lvl) s
 
@@ -1031,6 +1047,24 @@ module Int = struct
       | LF.Inst ({ contents = Some tM }, _, _, _) ->
           fprintf ppf "%a"
             (fmt_ppr_lf_normal lvl) tM
+
+
+      | LF.PInst ({ contents = None } as p, _, _, _) ->
+          begin
+            try
+              fprintf ppf "#%s"
+                (PInstHashtbl.find pinst_hashtbl p)
+            with
+              | Not_found ->
+                  (* Should probably create a sep. generator for this -dwm *)
+                  let sym = String.lowercase (Gensym.VarData.gensym ()) in
+                      PInstHashtbl.replace pinst_hashtbl p sym
+                    ; fprintf ppf "#%s" sym
+          end
+
+      | LF.PInst ({ contents = Some h }, _, _, _) ->
+          fprintf ppf "%a"
+            (fmt_ppr_lf_head lvl) h
 
 
 
@@ -1218,6 +1252,10 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_offset x)
 
+      | Comp.Const prog ->
+          fprintf ppf "%s"
+            (R.render_cid_prog prog)
+
       | Comp.Apply (i, e) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a %a%s"
@@ -1236,7 +1274,7 @@ module Int = struct
 
       | Comp.MApp (i, (pHat, tM)) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a [%a. %a]%s"
+            fprintf ppf "%s%a <%a. %a>%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn 1) i
               (fmt_ppr_lf_psi_hat 0) pHat

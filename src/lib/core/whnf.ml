@@ -300,6 +300,7 @@ and lowerMVar = function
     | DDec (cPsi1, decl) -> DDec(normDCtx cPsi1, normDecl (decl, LF.id))
     | SigmaDec (cPsi1, SigmaDecl(x, typrec)) -> SigmaDec(normDCtx cPsi1, SigmaDecl (x, normTypRec (typrec, LF.id)))
 
+
 (* ---------------------------------------------------------- *)
 (* Weak head normalization = applying simultaneous hereditary 
    substitution lazily                                                 
@@ -570,8 +571,8 @@ and lowerMVar = function
 
 
     and convSub subst1 subst2 = match (subst1, subst2) with
-      | (Shift n, Shift k)
-        -> k  = n
+      | (Shift n, Shift k) -> 
+          n = k
 
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2))
         -> s1 = s2 && convSub sigma1 sigma2
@@ -579,8 +580,12 @@ and lowerMVar = function
       | (Dot (f, s), Dot (f', s'))
         -> convFront f f' && convSub s s'
       
-      (* Additional case missing:
-         Shift n, Dot(Head BVar k, s') *)
+      | (Shift n, Dot(Head BVar _k, _s')) 
+          -> convSub (Dot (Head (BVar (n+1)), Shift (n+1))) subst2
+
+      | (Dot(Head BVar _k, _s'), Shift n) 
+          -> convSub subst1 (Dot (Head (BVar (n+1)), Shift (n+1)))
+          
       |  _
         -> false
 

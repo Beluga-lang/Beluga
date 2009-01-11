@@ -14,7 +14,7 @@ rec identity1 : {g:(w)*} (nat) [g] -> (nat) [g] =
     fn x =>
       case x of
           box (g . z)  : nat [g] => box (g . z)
-        | {U:: nat [g]} box (g . s U ! id ! ) : nat [g] => box (g . s U ! id ! );
+        | {U:: nat [g]} box (g . s U ![ id ]! ) : nat [g] => box (g . s U ![ id ]! );
 
 
 
@@ -23,7 +23,7 @@ rec identity2 : {g:(w)*} (nat) [g] -> (nat) [g] =
     fn x =>
       case x of
           box (g . z)   : nat [g] => x
-        | {U::nat[g]} box (g . s U ! id ! ) : nat [g] => box (g . s U ! id ! );
+        | {U::nat[g]} box (g . s U ![ id ]! ) : nat [g] => box (g . s U ![ id ]! );
 
 
 rec identity2 : {g:(w)*} (nat) [g] -> (nat) [g] =
@@ -31,7 +31,7 @@ rec identity2 : {g:(w)*} (nat) [g] -> (nat) [g] =
     fn x =>
       case x of
           box (g . z)   : nat [g] => x
-        | {U::nat[g]} box (g . s U ! id ! ) : nat [g] => x;
+        | {U::nat[g]} box (g . s U ![ id ]! ) : nat [g] => x;
 
 
 

@@ -48,7 +48,8 @@ module LF = struct
   *)
   let rec checkW cO cD cPsi sM1 sA2 = match (sM1, sA2) with
     | ((Lam (_, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX), tB), s2))
-      -> check cO cD
+      -> 
+        check cO cD
         (DDec (cPsi, LF.decSub tX s2))
           (tM, LF.dot1 s1)
           (tB, LF.dot1 s2)
@@ -85,7 +86,10 @@ module LF = struct
         then
           ()
         else
-          raise (Error "Type Mismatch")
+          let _ = Printf.printf "checkSpine: Expected type : %s \n Inferred type: %s\n\n"
+            (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp sP))
+            (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp sP')) in 
+          raise (Error "Spine Type Mismatch")
             (* (TypMisMatch (cD, cPsi, sP', sP)) *)
 
     | ((SClo (tS, s'), s), sA) ->
@@ -149,13 +153,25 @@ module LF = struct
 
     | MVar (Offset u, s)      ->
         (* cD ; cPsi' |- tA <= type *)
-        let (tA, cPsi') = mctxMDec cD u in
-          checkSub cO cD cPsi s cPsi'
-          ; TClo (tA, s)
+        let (tA, cPsi') = Cwhnf.mctxMDec cD u in
+(*         let _ = Printf.printf "\n Check MVar: %s  has type \n %s [%s] \n in Delta %s \n\n"
+                 (Pretty.Int.DefaultPrinter.headToString head)
+                 (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, Shift 0)))
+                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi')) 
+                 (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD)) in
+
+        let _ = Printf.printf "\n Check substitution: \n %s ; \n %s  \n |-    %s    <= %s  \n\n"
+                 (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
+                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi))
+                 (Pretty.Int.DefaultPrinter.subToString (Whnf.normSub s)) 
+                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi')) in
+*)
+        let _ = checkSub cO cD cPsi s cPsi'  in 
+           TClo (tA, s) 
 
     | PVar(Offset u,s)        ->
         (* cD ; cPsi' |- tA <= type *)
-        let (tA, cPsi') = mctxPDec cD u in
+        let (tA, cPsi') = Cwhnf.mctxPDec cD u in
           checkSub cO cD cPsi s cPsi'
           ; TClo (tA, s)
 
@@ -178,12 +194,20 @@ module LF = struct
         else raise (Error "Context variable mismatch")
                       (* (CtxVarMisMatch (psi, psi')) *)
 
+    | (CtxVar _psi, Shift 0, Null)  ->       ()
+
     (* SVar case to be added - bp *)
 
     | (DDec (cPsi, _tX), Shift k, Null)   ->
         if k > 0
         then checkSub cO cD cPsi (Shift (k - 1)) Null
         else raise (Error "Substitution illtyped")
+                      (* (SubIllTyped) *)
+
+    | (DDec (cPsi, _tX), Shift k, CtxVar psi)   ->
+        if k > 0
+        then checkSub cO cD cPsi (Shift (k - 1)) (CtxVar psi)
+        else raise (Error ("Substitution illtyped: k = %s" ^ (string_of_int k)))
                       (* (SubIllTyped) *)
 
     | (cPsi', Shift k, cPsi)              ->
@@ -197,8 +221,12 @@ module LF = struct
         in
           if Whnf.convTyp (tA1, LF.id) (tA2, s')
           then ()
-          else raise (Error "Type illkinded")
-                        (* (TypIllTyped (cD, cPsi', (tA1, LF.id), (tA2, s'))) *)
+          else 
+            let _ = Printf.printf " Inferred type: %s \n Expected type: %s \n\n"
+                    (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA1, LF.id)))
+                    (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA2, s'))) in
+          raise (Error "Substitution ill-typed")
+          (* (TypIllTyped (cD, cPsi', (tA1, LF.id), (tA2, s'))) *)
 
     | (cPsi', Dot (Head (BVar w), t), SigmaDec (cPsi, (SigmaDecl (_, arec)))) ->
         (* other heads of type Sigma disallowed -bp *)
@@ -211,12 +239,22 @@ module LF = struct
           else raise (Error "Sigma-type illtyped")
                         (* (SigmaIllTyped (cD, cPsi', (brec, LF.id), (arec, t))) *)
 
+    (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
+
+
     | (cPsi', Dot (Obj tM, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
         (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
         let _ = checkSub cO cD cPsi' s' cPsi
           (* ensures that s' is well-typed and [s']tA2 is well-defined *)
         in
           check cO cD cPsi' (tM, LF.id) (tA2, s')
+
+    | (cPsi1, s, cPsi2) -> 
+        let _ = Printf.printf "\n Check substitution: %s   |-    %s    <= %s  \n\n"
+          (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi1))
+          (Pretty.Int.DefaultPrinter.subToString (Whnf.normSub s)) 
+          (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi2)) in
+          raise (Error "Substitution is ill-typed; This case should be impossible.\n")
 
 
 
@@ -354,7 +392,8 @@ module LF = struct
 
 
   and checkSchema _cO _cD _cPsi _schema = 
-    Printf.printf "WARNING: SCHEMA CHECKING NOT IMPLEMENTED!"
+    (Printf.printf "\n WARNING: SCHEMA CHECKING NOT IMPLEMENTED! \n" 
+       ; ())
 
 end
 
@@ -430,13 +469,17 @@ module Comp = struct
   let rec mctxToMSub cD = match cD with
     | I.Empty -> C.id
     | I.Dec(cD', I.MDecl(_, tA, cPsi)) -> 
-      let u = Whnf.newMVar (cPsi, tA) in 
+      let t = mctxToMSub cD' in 
+      let cPsi' = Cwhnf.cnormDCtx (cPsi,t) in 
+      let tA' = Cwhnf.cnormTyp (tA, t) in 
+      let u = Whnf.newMVar (cPsi' , tA') in 
       let phat = Context.dctxToHat cPsi in 
-        MDot(MObj(phat, I.Root(I.MVar(u, S.LF.id), I.Nil)) , mctxToMSub cD')
+        MDot(MObj(phat, I.Root(I.MVar(u, S.LF.id), I.Nil)) , t) 
     | I.Dec(cD', I.PDecl(_, tA, cPsi)) -> 
-      let p = Whnf.newPVar (cPsi, tA) in
+      let t = mctxToMSub cD' in  
+      let p = Whnf.newPVar (Cwhnf.cnormDCtx (cPsi,t),  Cwhnf.cnormTyp (tA, t)) in
       let phat = Context.dctxToHat cPsi in  
-        MDot(PObj(phat, I.PVar(p, S.LF.id)) , mctxToMSub cD')
+        MDot(PObj(phat, I.PVar(p, S.LF.id)) , t)
 
   (* extend t1 t2 = t
     
@@ -521,6 +564,9 @@ module Comp = struct
   and syn cO cD cG e = match e with 
     | Var x  -> (lookup cG x, C.id) 
           (* !!!! MAY BE WRONG since only . |- ^0 : .   and not cD |- ^0 : cD !!! *)
+
+    | Const prog  -> ((Comp.get prog).Comp.typ, C.id) 
+
     | Apply (e1, e2) -> 
         begin match C.cwhnfCTyp (syn cO cD cG e1) with 
           | (TypArr (tau2, tau), t) -> 
@@ -531,8 +577,17 @@ module Comp = struct
     | CtxApp (e, cPsi) -> 
         begin match C.cwhnfCTyp (syn cO cD cG e) with
           | (TypCtxPi ((_psi, sW) , tau), t) ->
+              let _ = Printf.printf "\n Schema checking omitted \n" in 
+              (* REVISIT: Sun Jan 11 17:48:52 2009 -bp *)
+              (* let tau' =  Cwhnf.csub_ctyp cPsi 1 tau in 
+                 let t'   = Cwhnf.csub_msub cPsi 1 t in   *)
+
+              let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in  
+
               (LF.checkSchema cO cD cPsi ((Schema.get sW).Schema.schema)  ;
-               (Cwhnf.csub_ctyp cPsi 1 tau, Cwhnf.csub_msub cPsi 1 t))
+               (* (tau', t') *)
+               (tau1, Cwhnf.id)
+              )
           | _ -> raise (Error "Context abstraction mismatch")
         end 
     | MApp (e, (phat, tM)) -> 
@@ -559,46 +614,70 @@ module Comp = struct
 *)
 
 
-  and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = match branch with
+  and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = 
+(*    let _ = Printf.printf "BEGIN: Checking branch: \n %s ; \n %s \n |- \n %s \n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
+         (Pretty.Int.DefaultPrinter.gctxToString (Cwhnf.normCtx  cG))
+         (Pretty.Int.DefaultPrinter.branchToString branch) in 
+*)
+   match branch with
    | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->  
-       let _ = Printf.printf "Check Pattern Term is well-typed: \n %s   |-    %s <= %s \n\n"
+(*       let _ = Printf.printf "Checking Pattern Term is well-typed: \n %s ; %s   |-    %s <= %s \n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString cD1)
          (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
          (Pretty.Int.DefaultPrinter.normalToString tM1)
          (Pretty.Int.DefaultPrinter.typToString tA1) in 
+*)
       let _ = LF.check cO cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
-       let _ = Printf.printf "Pattern Term  \n %s   |-    %s <= %s  is well-typed.\n\n"
+(*       let _ = Printf.printf "DONE: Pattern Term  \n %s ; %s   |-    %s <= %s  is well-typed.\n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString cD1)
          (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
          (Pretty.Int.DefaultPrinter.normalToString tM1)
          (Pretty.Int.DefaultPrinter.typToString tA1) in 
-
+*)
       let d1 = length cD1 in 
       let _d  = length cD in 
       let t1 = mctxToMSub cD1 in   (* {cD1} |- t1 <= cD1 *)
       let t' = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
       let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
       let phat = dctxToHat cPsi in 
+
+(*      let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
+         (Pretty.Int.DefaultPrinter.dctxToString cPsi)
+         (Pretty.Int.DefaultPrinter.typToString tA)
+         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
+         (Pretty.Int.DefaultPrinter.typToString tA1) in 
+*)  
       let _    = Unify.unifyDCtx (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
       let _    = Unify.unifyTyp (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
-      let _    = Printf.printf "Unification of type annotations in branch successful!\n" in 
+
+(*      let  _   = Printf.printf "Resulting msub from unifying type annotations in branches: \n %s\n\n" 
+        (Pretty.Int.DefaultPrinter.msubToString tc) in 
+*)
       let (tc', cD1') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
 
+
+(*      let cD1_n  = (Cwhnf.normMCtx cD1') in  *)
+
+(*      let  _   = Printf.printf "Resulting msub after abstraction: \n %s   |-   %s    <=  %s \n\n" 
+         (Pretty.Int.DefaultPrinter.mctxToString cD1_n)
+        (Pretty.Int.DefaultPrinter.msubToString tc') 
+         (Pretty.Int.DefaultPrinter.mctxToString (Context.append cD cD1))  in
+*)
       let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
-      let cG1 = C.cwhnfCtx (cG, t'') in 
-      let _   = Printf.printf "cG1 = %s \n"   
-        (Pretty.Int.DefaultPrinter.gctxToString cG1) in
+      let cG1 = C.cwhnfCtx (cG, t'') in  
+(*      let cGn = (Cwhnf.normCtx cG1) in *)
       let e1' = C.cnormExp (e1, tc') in 
-      let _   = Printf.printf "e1' = %s \n"   
-         (Pretty.Int.DefaultPrinter.expChkToString e1') in
+
       let tau' = (tau, C.mcomp t'' t)  in 
-      let _   = Printf.printf "tau' = %s \n"   
-         (Pretty.Int.DefaultPrinter.compTypToString (C.cnormCTyp tau')) in
+(*      let taun = (C.cnormCTyp tau') in  *)
 
-      let _ = Printf.printf "Check branch  \n %s ; %s   |-    %s <= %s  is well-typed.\n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString cD1')
-         (Pretty.Int.DefaultPrinter.gctxToString cG1)
+(*      let _ = Printf.printf "\n Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD1_n))
+         (Pretty.Int.DefaultPrinter.gctxToString cGn)
          (Pretty.Int.DefaultPrinter.expChkToString e1')
-         (Pretty.Int.DefaultPrinter.compTypToString  (Cwhnf.cnormCTyp tau')) in 
-
+         (Pretty.Int.DefaultPrinter.compTypToString  taun) in 
+*)
       (* NOTE: cnormCtx and cnormExp not implemented
          -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
       *)

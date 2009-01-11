@@ -306,6 +306,7 @@ module Int = struct
 
     and exp_syn =
       | Var    of offset
+      | Const  of cid_prog
       | Apply  of exp_syn * exp_chk
       | CtxApp of exp_syn * LF.dctx
       | MApp   of exp_syn * (LF.psi_hat * LF.normal)

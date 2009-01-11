@@ -1,0 +1,68 @@
+Features tested:
+-----------------
+
+- Parameter variables (basic treatment seems ok)
+  To test: 
+    * Non-pattern substitution applied to a parameter variable
+
+- Handling of previously defined auxiliary computation-level functions
+
+- Weakening substitutions attached to meta-variables and parameter variables
+  (see copy.bel example) 
+
+- Context variables
+  To test:
+    * more than one context variable
+
+
+
+Working examples: 
+------------------
+
+test.bel
+case1.bel
+case2.bel
+
+id.bel
+id-dep.bel
+
+eval-sub.bel
+
+eval-sub-1.bel
+
+copy.bel
+
+copy-simple.bel
+
+fvnat.bel
+
+tpevalsub.bel
+
+vsound.bel
+
+TODO -- Examples:
+------------------
+
+- tpcert.bel 
+   Not working because Sigma-types are not handled
+   
+
+- cut-elim.bel
+    Twelf Proof is not converted into functional program
+    may also require sigma-types?
+
+- eq-proof.bel
+    Should be converted to new syntax; seems to require sigma-types
+    NOTE: current definition of schema W is WRONG. It should be
+
+     schema W = some [] block {x:exp}eq x x; 
+
+- tpeval.bel
+
+    No handling of substitution variables yet.
+
+
+- fol-handbool.bel
+
+    Needs context coercions, reconstruction, sigma-types
+

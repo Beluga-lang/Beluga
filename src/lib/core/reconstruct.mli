@@ -48,7 +48,8 @@ module Apx : sig
       | App of normal * spine       (*   | M . S                      *)
 
     and sub =                       (* Substitutions                  *)
-      | Shift of offset             (* sigma ::= ^n                   *)
+      | EmptySub                    (* sigma ::= .                    *)
+      | Id                          (*       | id                     *) 
       | Dot   of front * sub        (*       | Ft . s                 *)
 
     and front =                     (* Fronts:                        *)
@@ -92,6 +93,7 @@ module Apx : sig
 
     and exp_syn =
        | Var    of offset                             (* x              *)
+       | Const  of cid_prog                           (* c              *)
        | Apply  of exp_syn * exp_chk                  (* i e            *)
        | CtxApp of exp_syn * LF.dctx                  (* i [Psi]        *)
        | MApp   of exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)

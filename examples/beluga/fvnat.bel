@@ -15,19 +15,24 @@ SOME: {T:tp} exp T -> opt.
 
 schema w = some [T:tp] block exp T;
 
-% rec FVnat : {g:(w)*} {T::tp[]} (exp T[.])[g] -> opt[g] =
-%     FN g => mlam T => fn e => 
-%         (case e of
-%             box(g . z)            : (exp nat)[g]   => box(g . NONE)
-%           | box(g . tt)           : (exp bool)[g]  => box(g . NONE)
-%           | box(g . ff)           : (exp bool)[g]  => box(g . NONE)
-%           | {T'::tp[]} {p::(exp T'[.])[g]}
-%             box(g . p[id(g)])     : (exp T'[.])[g] => box(g . SOME T'[.] p[id(g)])
-%           | {U::(exp nat)[g]}
-%             box(g . suc U[id(g)]) : (exp nat)[g]   => FVnat [g] < . nat>  (box(g . U[id(g)]))
-%           | {U::(exp bool)[g]} {V::(exp bool)[g]}
-%             box(g . and U[id(g)] V[id(g)]) : (exp bool)[g]  => 
-%             (case FVnat [g] < . bool> (box(g . U[id(g)])) of
-%                 box(g . NONE)                : opt[g] => FVnat [g] < . bool> (box(g . V[id(g)]))
-%               | {T'::tp[]} {p::(exp T'[.])[g]}
-%                 box(g . SOME T'[.] p[id(g)]) : opt[g] => box(g . SOME T'[.] p[id(g)])));
+rec FVnat : {g:(w)*} {T::tp[.]} (exp T![.]!)[g] -> (opt)[g] =
+FN g => mlam T => fn e => 
+ (case e of
+    box(g . z)            : (exp nat)[g]   => box(g . NONE)
+  | box(g . tt)           : (exp bool)[g]  => box(g . NONE)
+  | box(g . ff)           : (exp bool)[g]  => box(g . NONE)
+
+  | {T'::tp[.]} {#p::(exp T'![.]!)[g]}
+     box(g . #p![id]!)     : (exp T'![.]!)[g] => box(g . SOME T'![.]! #p![id]!)
+
+  | {U::(exp nat)[g]}
+    box(g . suc U![id]!) : (exp nat)[g]   => FVnat [g] < . nat >  (box(g . U![id]!))
+
+  | {U::(exp bool)[g]} {V::(exp bool)[g]}
+     box(g . and U![id]! V![id]!) : (exp bool)[g]  => 
+       (case FVnat [g] < . bool > (box(g . U![id]!)) of
+          box(g . NONE)                : opt[g] => FVnat [g] < . bool > (box(g . V![id]!))
+
+       | {T'::tp[.]} {#p::(exp T'![.]!)[g]}
+          box(g . SOME T'![.]! #p![id]!) : opt[g] => box(g . SOME T'![.]! #p![id]!))
+);

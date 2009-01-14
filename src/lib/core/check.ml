@@ -13,24 +13,6 @@ module LF = struct
   open Substitution
   open Syntax.Int.LF
 
-
-(*
-  type error =
-    | CtxVarMisMatch of cvar * cvar
-    | SigmaIllTyped of mctx * dctx * 
-        trec_clo (* inferred *) * trec_clo (* expected *)
-    | ExpAppNotFun  
-    | KindMisMatch 
-    | SubIllTyped      
-    | TypIllTyped of mctx * dctx * 
-        tclo (* inferred *) * tclo (* expected *) 
-    | TypMisMatch  of mctx * dctx * tclo * tclo
-    | IllTyped of mctx * dctx * nclo * tclo
-
-
-  exception Error of error
-*)
-
   exception Error of string
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()

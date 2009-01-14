@@ -13,16 +13,9 @@
 open Context
 open Substitution
 open Syntax.Int.LF
+open Error 
 
-
-(*
-type error =
-  | ConstraintsLeft
-  | NotPatSub
-*)
-
-exception Error of string
-
+exception Error of error
 
 let rec raiseType cPsi tA = match cPsi with
   | Null -> tA
@@ -120,8 +113,7 @@ and lowerMVar = function
 
   | _
    (* It is not clear if it can happen that cnstr =/= nil *)
-    -> raise (Error "Constraints Left")
-                (* ConstraintsLeft *)
+    -> raise (Error ConstraintsLeft)
 
 (* ------------------------------------------------------------ *)
 (* Normalization = applying simultaneous hereditary substitution
@@ -483,12 +475,10 @@ and lowerMVar = function
       | Dot (Obj (tM), s)      ->
           begin match whnf (tM, LF.id) with
             | (Root (BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
-            | _                         -> raise (Error "Not a pattern substitution")
-                                                       (* NotPatSub *)
+            | _                         -> raise (Error NotPatSub)
           end
 
-      | _                      -> raise (Error "Not a pattern substitution")
-                                        (* NotPatSub *)
+      | _                      -> raise (Error NotPatSub)
 
     let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
 

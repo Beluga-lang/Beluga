@@ -42,14 +42,13 @@ let main () =
                   Store.clear () 
                 ; errors
                 with
-                  | Whnf.Error  err ->
-                       printf "\n!! Error during Weak-Head Normalization !!\n\n%s\n\n" err
-                     ; print_newline ()
-                        (* Format.fprintf
-                          Format.std_formatter
-                          "\n!! Error during Weak-Head Normalization !!\n\n%a\n\n@?"
-                          Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err *)
-                     ; errors + 1
+                  | Whnf.Error err ->
+                      Format.fprintf
+                        Format.std_formatter
+                        "\n!! Error during Weak-Head Normalization !!\n\n%a\n\n@?"
+                        Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err
+                      ; print_newline ()
+                      ; errors + 1
 
                   | Check.LF.Error err ->
                        printf "\n!! Error during Type-Checking !!\n\n%s\n\n" err

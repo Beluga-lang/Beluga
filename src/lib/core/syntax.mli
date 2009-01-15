@@ -60,7 +60,9 @@ module Ext : sig
       | Head     of head
       | Normal   of normal
 
-    and typ_rec = typ list
+    and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
+      |  SigmaLast of typ                             (* ... . B *)
+      |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
 
     and dctx =
       | Null
@@ -247,7 +249,9 @@ module Int : sig
 
     and psi_hat = cvar option * offset
 
-    and typ_rec = typ list
+    and typ_rec =
+      |  SigmaLast of typ
+      |  SigmaElem of name * typ * typ_rec
 
 
 

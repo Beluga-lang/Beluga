@@ -58,7 +58,9 @@ module Ext = struct
       | Head     of head
       | Normal   of normal
 
-    and typ_rec = typ list
+    and typ_rec =
+      |  SigmaLast of typ
+      |  SigmaElem of name * typ * typ_rec
 
     and dctx =
       | Null
@@ -254,8 +256,9 @@ module Int = struct
                                            (*        | .         *)
                                            (*        | Psihat, x *)
 
-    and typ_rec = typ list                 (* Sigma x1:A1 ... xk:Ak          *)
-                                           (* should have names *)
+    and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
+      |  SigmaLast of typ                             (* ... . B *)
+      |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
 
 
 

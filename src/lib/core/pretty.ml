@@ -378,24 +378,25 @@ module Ext = struct
               (fmt_ppr_lf_sigma_decl lvl) sgmDecl
 
     and fmt_ppr_lf_sigma_decl _lvl ppf = function
-      | LF.SigmaDecl (_x, tAs) ->
-          let rec ppr_typ_rec ppf = function
-            | [tA] ->
-                fprintf ppf "%a"
-                  (fmt_ppr_lf_typ 0) tA
-(*             | [] -> () *)
-
-(*             | tA :: [] -> *)
-(*                 fprintf ppf "%a" *)
-(*                   (fmt_ppr_lf_typ 0) tA *)
-
+      | LF.SigmaDecl (_x, typrec) ->
+          let ppr_element ppf suffix = function
+          | (x, tA) ->
+                 fprintf ppf "%s:%a%s"
+                   (R.render_name x)
+                   (fmt_ppr_lf_typ 0) tA
+                  suffix
+          in let rec ppr_elements ppf = function
+            | LF.SigmaLast tA -> fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA
+            | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) -> begin ppr_element ppf ". " (x, tA1); fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA2 end
+            | LF.SigmaElem (x, tA, tAs)  -> begin ppr_element ppf ", " (x, tA); ppr_elements ppf  tAs end
 (*             | tA :: tAs -> *)
 (*                   fprintf ppf "%a,@ %a" *)
 (*                     (fmt_ppr_lf_typ 0) tA *)
 (*                     ppr_typ_rec        tAs *)
+(*                fprintf ppf "Sigma %a. %a" *)
           in
             fprintf ppf "%a"
-              ppr_typ_rec tAs
+              (ppr_elements) typrec
 
     and fmt_ppr_lf_psi_hat _lvl ppf = function
       | []      -> ()
@@ -1101,24 +1102,25 @@ module Int = struct
               (fmt_ppr_lf_sigma_decl lvl) sgmDecl
 
     and fmt_ppr_lf_sigma_decl _lvl ppf = function
-      | LF.SigmaDecl (_x, tAs) ->
-          let rec ppr_typ_rec ppf = function
-            | [tA] ->
-                fprintf ppf "%a"
-                  (fmt_ppr_lf_typ 0) tA
-(*             | [] -> () *)
-
-(*             | tA :: [] -> *)
-(*                 fprintf ppf "%a" *)
-(*                   (fmt_ppr_lf_typ 0) tA *)
-
+      | LF.SigmaDecl (_x, typrec) ->
+          let ppr_element ppf suffix = function
+          | (x, tA) ->
+                 fprintf ppf "%s:%a%s"
+                   (R.render_name x)
+                   (fmt_ppr_lf_typ 0) tA
+                  suffix
+          in let rec ppr_elements ppf = function
+            | LF.SigmaLast tA -> fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA
+            | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) -> begin ppr_element ppf ". " (x, tA1); fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA2 end
+            | LF.SigmaElem (x, tA, tAs)  -> begin ppr_element ppf ", " (x, tA); ppr_elements ppf  tAs end
 (*             | tA :: tAs -> *)
 (*                   fprintf ppf "%a,@ %a" *)
 (*                     (fmt_ppr_lf_typ 0) tA *)
 (*                     ppr_typ_rec        tAs *)
+(*                fprintf ppf "Sigma %a. %a" *)
           in
             fprintf ppf "%a"
-              ppr_typ_rec tAs
+              (ppr_elements) typrec
 
     and fmt_ppr_lf_psi_hat lvl ppf = function
       | (None, offset)  -> fprintf ppf "%s" (R.render_offset offset)

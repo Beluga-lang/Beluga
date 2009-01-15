@@ -30,7 +30,9 @@ module Apx : sig
       | Atom  of cid_typ * spine    (* A ::= a M1 ... Mn              *)
       | PiTyp of typ_decl * typ     (*   | Pi x:A.B                   *)
 
-    and typ_rec = typ list
+    and typ_rec =
+      | SigmaLast of typ
+      | SigmaElem of name * typ * typ_rec
 
     and normal =                    (* normal terms                   *)
       | Lam  of name * normal       (* M ::= \x.M                     *)

@@ -17,7 +17,7 @@
      what is this for? – All individual pieces are already
      stored somehow using store.ml
 
-   - Cycle detection ?
+   - Cycle detection?
    - Code walk for reconstruction
 *)
 
@@ -50,7 +50,9 @@ module Apx = struct
       | Atom  of cid_typ * spine
       | PiTyp of typ_decl * typ
 
-    and typ_rec = typ list
+    and typ_rec =
+      | SigmaLast of typ
+      | SigmaElem of name * typ * typ_rec
 
     and normal =
       | Lam  of name * normal
@@ -348,12 +350,11 @@ let rec index_mctx ctx_vars cvars = function
 
 
 (* Records are not handled in a general manner
-   We need to change the data-type for typ_rec to be typ_decl ctx  
+   We need to change the datatype for typ_rec to be typ_decl ctx  
 *)
 let rec index_typrec cvars bvars = function 
-  | []  -> []
-  | [a] -> [index_typ cvars bvars a]
-
+  | Ext.LF.SigmaLast last_a  -> Apx.LF.SigmaLast (index_typ cvars bvars last_a)
+  | Ext.LF.SigmaElem (x, a,arec) -> Apx.LF.SigmaElem (x, index_typ cvars bvars a, index_typrec cvars bvars arec)
 
 
 (* Translation of external schemas into approximate schemas *)

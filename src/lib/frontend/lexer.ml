@@ -52,6 +52,7 @@ let rec lex_token loc = lexer
   | "::"
   | "=>"
   | "FN"
+  | "Sigma"
   | "block"
   | "box"
   | "case"

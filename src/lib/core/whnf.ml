@@ -282,8 +282,11 @@ and lowerMVar = function
       -> normTyp (tA, LF.comp s sigma)
 
   and normTypRec (recA, sigma) = match recA with
-    | []          -> []
-    | tA :: recA' -> normTyp (tA, sigma) :: normTypRec (recA', LF.dot1 sigma)
+    | SigmaLast lastA -> SigmaLast (normTyp(lastA, sigma))
+    | SigmaElem (x, tA, recA') ->
+       let tA = normTyp (tA, sigma)
+       in
+         SigmaElem(x, tA, normTypRec (recA', LF.dot1 sigma))
 
   and normDecl (decl, sigma) = match decl with
      TypDecl (x, tA) -> TypDecl (x, normTyp (tA, sigma))
@@ -298,7 +301,8 @@ and lowerMVar = function
     | Null -> Null
     | CtxVar psi -> CtxVar psi 
     | DDec (cPsi1, decl) -> DDec(normDCtx cPsi1, normDecl (decl, LF.id))
-    | SigmaDec (cPsi1, SigmaDecl(x, typrec)) -> SigmaDec(normDCtx cPsi1, SigmaDecl (x, normTypRec (typrec, LF.id)))
+    | SigmaDec (cPsi1, SigmaDecl(x, typrec)) ->
+        SigmaDec(normDCtx cPsi1, SigmaDecl (x, normTypRec (typrec, LF.id)))
 
 
 (* ---------------------------------------------------------- *)
@@ -658,11 +662,11 @@ and lowerMVar = function
           cD ; cPsi |- [s]recA = [s']recB <= type
      *)
     let rec convTypRec sArec sBrec = match (sArec, sBrec) with
-      | (([]        , _s), ([]        , _s'))
-        -> true
+      | (  (SigmaLast lastA,  s),     (SigmaLast lastB,  s')  )
+        -> convTyp (lastA, s) (lastB, s')
 
-      | ((tA :: recA,  s), (tB :: recB,  s'))
-        ->   convTyp    (tA  ,      s) (tB  ,      s')
+      | (  (SigmaElem(_xA, tA, recA),  s),     (SigmaElem(_xB, tB, recB),  s')  )
+        ->   convTyp (tA, s) (tB, s')
           && convTypRec (recA, LF.dot1 s) (recB, LF.dot1 s')
 
 

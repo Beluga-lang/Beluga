@@ -18,27 +18,27 @@
 i : type.  % individual
 o : type.  % formulas
 
-imp : o -> o -> o.     %infix right 10 =>.
+imp : o -> o -> o.  
 all : (i -> o) -> o.
-not    : o -> o.     
+not : o -> o.     
 
 nd : o -> type. % Natural deduction
-impi : (nd A -> nd B) -> nd (A imp B).
-impe : nd (A imp B) -> nd A -> nd B.
+impi : (nd A -> nd B) -> nd (imp A B).
+impe : nd (imp A B) -> nd A -> nd B.
 noti : ({p:o} nd A -> nd p) -> nd (not A).
 note : nd (not A) -> {C:o} nd A -> nd C.
-alli : ({a:i} nd (A a)) -> nd (all \x. A x).
-alle : nd (all \x. A x) -> {T:i} nd (A T).
+alli : ({a:i} nd (A a)) -> nd (all (\x. A x)).
+alle : nd (all (\x. A x)) -> {T:i} nd (A T).
 
 hil : o -> type.  % Hilbert deductions
-k  : hil (A imp (B imp A)).
-s  : hil ((A imp (B imp C)) imp ((A imp B) imp (A imp C))).
-n1 : hil ((A imp (not B)) imp ((A imp B) imp (not A))).
-n2 : hil ((not A) imp (A imp B)).
-f1 : {T:i} hil ((all \x.A x) imp (A T)).
-f2 : hil ((all \x.(B imp A x)) imp (B imp (all \x.A x))).
-mp : hil (A imp B) -> hil A -> hil B.
-ug : ({a:i} hil (A a)) -> hil (all \x.A x).
+k  : hil (imp A (imp B A)).
+s  : hil (imp (imp A (imp B C)) (imp (imp A B) (imp A C))).
+n1 : hil (imp (imp A (not B)) (imp (imp A B) (not A))).
+n2 : hil (imp (not A) (imp A B)).
+f1 : {T:i} hil (imp (all (\x.A x)) (A T)).
+f2 : hil (imp (all (\x.(imp B  (A x))))  (imp B (all (\x.A x)))).
+mp : hil (imp A B) -> hil A -> hil B.
+ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 
 % Implementation of the Deduction Theorem
 %

@@ -17,8 +17,8 @@ impr    : {A:o} {B:o} (hyp A -> conc B) -> conc (imp A B).
 impl    : {A:o} {B:o} {C:o} conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C).
 notr    : {A:o} ({p:o} hyp A -> conc p) -> conc (not A).
 notl    : {A:o} {C:o} conc A -> (hyp (not A) -> conc C).
-forallr : {A:i -> o} ({a:i} conc (A a)) -> conc (forall A). 
-foralll : {A:i -> o} {C:o} {T:i} (hyp (A T) -> conc C) -> (hyp (forall A) -> conc C).
+forallr : {A:i -> o} ({a:i} conc (A a)) -> conc (forall (\x. A x)). 
+foralll : {A:i -> o} {C:o} {T:i} (hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C).
 
 % TODO convert the following (Twelf) proof
 

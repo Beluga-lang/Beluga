@@ -6,12 +6,9 @@
 *)
 
 open Syntax.Int.LF
-(*
-type error =
-  | ConstraintsLeft
-  | NotPatSub
-*)
-exception Error of string
+open Error
+
+exception Error of error
 
 val whnf       : nclo -> nclo
 val whnfTyp    : tclo -> tclo

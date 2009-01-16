@@ -54,7 +54,7 @@ module LF = struct
           (tM, LF.dot1 s1)
           (tB, LF.dot1 s2)
 
-    | ((Root (h, tS), s), (((Atom _), _s') as sP))
+    | ((Root (h, tS), s (* id *)), (((Atom _), _s') as sP))
       -> (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
         let sA = Whnf.whnfTyp (inferHead cO cD cPsi h, LF.id) in
           checkSpine cO cD cPsi (tS, s) sA sP
@@ -169,9 +169,9 @@ module LF = struct
         let _ = checkSub cO cD cPsi s cPsi'  in 
            TClo (tA, s) 
 
-    | PVar(Offset u,s)        ->
+    | PVar(Offset p,s)        ->
         (* cD ; cPsi' |- tA <= type *)
-        let (tA, cPsi') = Cwhnf.mctxPDec cD u in
+        let (tA, cPsi') = Cwhnf.mctxPDec cD p in
           checkSub cO cD cPsi s cPsi'
           ; TClo (tA, s)
 

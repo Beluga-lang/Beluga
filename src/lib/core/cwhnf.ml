@@ -17,6 +17,7 @@ module S = Substitution.LF
 
 exception Error of string 
 
+exception Fmvar_not_found
 (*************************************)
 (* Contextual Explicit Substitutions *)
 
@@ -558,6 +559,25 @@ let rec mctxPDec cD k =
     | (_ , _ ) -> raise (Error "Parameter-variable out of bounds")
   in 
     lookup cD k
+
+
+
+let rec mctxPos cD u = 
+  let rec lookup cD k = match cD  with
+    | LF.Dec (_cD, LF.MDecl(v, tA, cPsi))    -> 
+        if v = u then 
+          (k, (mshiftTyp tA k, mshiftDCtx cPsi k))
+        else 
+          lookup cD (k+1)
+        
+    | LF.Dec (_cD, LF.PDecl _)  -> 
+        raise (Error "Expected meta-variable; Found parameter variable")
+      
+    | LF.Dec (cD, _) -> lookup cD (k+1)
+
+    | LF.Empty  -> raise Fmvar_not_found
+  in 
+    lookup cD 1
 
 
   (* ***************************************** *)

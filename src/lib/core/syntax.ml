@@ -194,7 +194,13 @@ module Int = struct
       | PVar  of cvar * sub                (*   | p[s]                       *)
       | AnnH  of head * typ                (*   | (H:A)                      *)
       | Proj  of head * int                (*   | #k(x) | #k(p[s])           *)
+
       | FVar  of name                      (* free variable for type
+					      reconstruction                 *)
+      | FMVar of name * sub                (* free meta-variable for type
+					      reconstruction                 *)
+
+      | FPVar of name * sub                (* free parameter variable for type
 					      reconstruction                 *)
  
     and spine =                            (* spine                          *)

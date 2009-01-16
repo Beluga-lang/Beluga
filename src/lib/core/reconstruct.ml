@@ -61,7 +61,9 @@ module Apx = struct
       | Const of cid_term
       | MVar  of offset * sub
       | PVar  of offset * sub
-      | FVar  of name
+      | FVar  of name            (* Free bound variable     *)  
+      | FMVar of name   * sub    (* Free meta-variable      *)
+      | FPVar of name   * sub    (* Free parameter-variable *)
 
     and spine =
       | Nil
@@ -120,7 +122,7 @@ module Apx = struct
 
     and branch =
       | BranchBox of LF.ctyp_decl LF.ctx
-          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
+          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
   end
@@ -164,7 +166,7 @@ let rec lookup cG k = match (cG, k) with
 
    Generalization:
       Allow user to write terms which are not eta-expanded.
-      this requires a change in the definition of FVar constructor.
+      this possibly requires a change in the definition of FVar constructor. 
 
       FVar of name
 
@@ -236,17 +238,19 @@ and index_head cvars bvars = function
         let s'     = index_sub cvars bvars s in 
           Apx.LF.PVar (offset, s')
       with Not_found -> 
-        raise (Error "Encountered undefined parameter variable")
+        let s'     = index_sub cvars bvars s in 
+          Apx.LF.FPVar (p, s')
       end 
+
   | Ext.LF.MVar (_, u, s) -> 
       begin try
         let offset = CVar.index_of_name cvars u in 
         let s'     = index_sub cvars bvars s in 
           Apx.LF.MVar (offset, s')
       with Not_found -> 
-        raise (Error "Encountered undefined meta-variable")
-      end 
-          
+        let s'     = index_sub cvars bvars s in 
+          Apx.LF.FMVar (u, s')
+      end        
 
 and index_spine cvars bvars = function
   | Ext.LF.Nil ->
@@ -451,8 +455,8 @@ and index_exp' ctx_vars cvars vars = function
       Apx.Comp.Ann (index_exp  ctx_vars cvars vars e,
                     index_comptyp ctx_vars cvars tau)
 
-and index_branch ctx_vars cvars vars 
-    (Ext.Comp.BranchBox(_, delta, (psihat, m, Some (a, psi)), e)) = 
+and index_branch ctx_vars cvars vars branch = match branch with
+  | (Ext.Comp.BranchBox(_, delta, (psihat, m, Some (a, psi)), e)) ->
     let (delta', cvars')  = index_mctx ctx_vars cvars delta in 
     let (psihat', bvars) = index_psihat ctx_vars psihat in 
     let m'               = index_term cvars' bvars m in 
@@ -460,7 +464,15 @@ and index_branch ctx_vars cvars vars
     (* _bvars = bvars *)
     let a'               = index_typ cvars' bvars a in 
     let e'               = index_exp ctx_vars cvars' vars e in 
-      Apx.Comp.BranchBox (delta', (psihat', m', (a', psi')), e')
+      Apx.Comp.BranchBox (delta', (psihat', m', Some (a', psi')), e')
+
+
+  | (Ext.Comp.BranchBox(_, delta, (psihat, m, None), e)) ->  
+    let (delta', cvars')  = index_mctx ctx_vars cvars delta in 
+    let (psihat', bvars) = index_psihat ctx_vars psihat in 
+    let m'               = index_term cvars' bvars m in 
+    let e'               = index_exp ctx_vars cvars' vars e in 
+      Apx.Comp.BranchBox (delta', (psihat', m', None), e')
 
 
 
@@ -479,12 +491,21 @@ and index_branch ctx_vars cvars vars
 *)
 
 
-
+(* Constraints for free bound variables *)
 let fvar_cnstr : ((Apx.LF.normal * Int.LF.cvar)  list) ref = ref []
 
 let add_fvarCnstr  c = fvar_cnstr := c :: !fvar_cnstr
 
 let reset_fvarCnstr () = (fvar_cnstr := [])
+
+(* Constraints for free metavariables and parameter variables  *)
+let fcvar_cnstr : ((Apx.LF.normal * Int.LF.cvar)  list) ref = ref []
+
+let add_fcvarCnstr  c = fvar_cnstr := c :: !fvar_cnstr
+
+let reset_fcvarCnstr () = (fvar_cnstr := [])
+
+
 
 let rec raiseType cPsi tA = match cPsi with
   | Int.LF.Null -> tA
@@ -535,6 +556,54 @@ and etaExpandMV' cPsi sA  s' = match sA with
 
   | (Int.LF.PiTyp (Int.LF.TypDecl (x, _tA) as decl, tB), s) -> 
       Int.LF.Lam (x, etaExpandMV (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
+
+
+(* isPatSub s = bool *)
+let rec isPatSub s = match s with
+  | Apx.LF.Id -> true
+  | Apx.LF.EmptySub -> true
+  | Apx.LF.Dot(Apx.LF. Head (Apx.LF.BVar _k), s) -> 
+      isPatSub s
+  | _ -> false
+
+(* synDom cPsi s = (cPhi , s')
+
+   If s is a pattern substitution in approximate syntax
+      cPsi is the range of the pattern substitution
+
+   then
+       s' the pattern substitution in internal syntax
+       corresponding to s and 
+
+       cPsi |- s' <= cPhi
+
+
+*)
+let rec synDom cPsi s = match s with
+  | Apx.LF.Id -> (cPsi, Int.LF.Shift 0)
+  | Apx.LF.EmptySub -> 
+      let (_, d) = Context.dctxToHat cPsi in 
+        (Int.LF.Null , Int.LF.Shift d)
+
+  | Apx.LF.Dot(Apx.LF.Head (Apx.LF.BVar k), s) -> 
+      begin match Context.ctxDec cPsi k with
+        | Int.LF.TypDecl(x, tA) -> 
+            let (cPhi, s') = synDom cPsi s in 
+              (*  cPsi |- s <= cPhi 
+               *  cPsi |- tA <= type
+               *  tA' = [s]^-1(tA)  
+               *
+               * Note: We may need to check that indeed
+               *        [s]^-1(tA) exists.
+               *
+               *  Wed Jan 14 13:51:11 2009 -bp 
+               *)
+              (Int.LF.DDec (cPhi, 
+                          Int.LF.TypDecl (x, Int.LF.TClo(tA, Substitution.LF.invert s'))) , 
+               Int.LF.Dot(Int.LF.Head(Int.LF.BVar k), s'))
+
+      end 
+  | _ -> raise (Error "Encountered non-pattern substitution")
 
 (* elKind  cPsi (k,s) = K
 
@@ -650,6 +719,54 @@ and elTermW cD cPsi m sA = match (m, sA) with
             )
 
       end
+
+  (* We only allow free meta-variables of atomic type *)
+  | (Apx.LF.Root (Apx.LF.FMVar (u, s), Apx.LF.Nil) as m, (Int.LF.Atom _ as tP', s')) -> 
+      begin try
+        (* For named free meta-variables which may occur in branches of case-expressions;
+           these named free meta-variables may be bound by the pattern. 
+         *)
+        let (offset, (_tP, cPhi)) = Cwhnf.mctxPos cD u  in 
+        let s'' = elSub cD cPsi s cPhi in  
+          (* We do not check here that tP approx. [s']tP' -- 
+             this check is delayed to reconstruction *)        
+          Int.LF.Root (Int.LF.MVar (Int.LF.Offset offset, s''), Int.LF.Nil) 
+
+      with Cwhnf.Fmvar_not_found -> 
+      begin try
+        let (_tP, cPhi) = FMVar.get u in
+          (* For type reconstruction to succeed, we must have 
+               . ; cPsi |- tA <= type , i.e. cPsi and tA cannot depend on 
+             meta-variables in cD. This will be enforced during abstraction *)
+
+      let s'' = elSub cD cPsi s cPhi in  
+          (* We do not check here that tP approx. [s']tP' -- 
+             this check is delayed to reconstruction *)        
+          Int.LF.Root (Int.LF.FMVar (u, s''), Int.LF.Nil) 
+
+      with Not_found ->        
+        if isPatSub s then
+          (* 1) given cPsi and s synthesize the domain cPhi 
+             2) [s]^-1 ([s']tP) is the type of u 
+          *)
+
+          let (cPhi, s'') = synDom cPsi s in 
+          let tP   = Int.LF.TClo( Int.LF.TClo(tP',s'), Substitution.LF.invert s'') in 
+            (* For type reconstruction to succeed, we must have
+               . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
+               This will be enforced during abstraction.
+            *)
+          let _   = FMVar.add u (tP, cPhi) in
+            Int.LF.Root (Int.LF.FMVar (u, s''), Int.LF.Nil)
+        else
+         let v = Whnf.newMVar (cPsi, Int.LF.TClo(tP', s')) in
+            (add_fcvarCnstr (m, v) ; 
+             Int.LF.Root (Int.LF.MVar (v, LF.id), Int.LF.Nil)
+            )
+      end
+      end 
+
+  (* Add case for parameter variables -bp *)
 
   | _ ->
       raise (Error "Ill-typed " (* (IllTyped (cPsi, m, sA)) *))
@@ -923,6 +1040,224 @@ let rec elMCtx delta = match delta with
       let cdec' = elCDecl cD cdec in 
         Int.LF.Dec (cD, cdec')
 
+
+
+(* ******************************************************************* *)
+(* Solve free variable constraints *)
+
+let rec solve_fvarCnstr cD cnstr = match cnstr with 
+  | []  -> ()
+  | ((Apx.LF.Root (Apx.LF.FVar x, spine) , Int.LF.Inst(r, cPsi, Int.LF.TClo(tP,s), _)) :: cnstrs) ->
+     begin try 
+        let tA = FVar.get x in
+          (* For type reconstruction to succeed, we must have
+             . |- tA <= type
+             This will be enforced during abstraction *)
+        let (_, d) = Context.dctxToHat cPsi in 
+          
+        (* let tS = elSpine cPsi spine (tA, LF.id) (tP,s) in *)
+        let tS = elSpine cD cPsi spine (tA, Int.LF.Shift d) (tP,s) in 
+          (r := Some (Int.LF.Root (Int.LF.FVar x, tS));
+           solve_fvarCnstr cD cnstrs  
+          )
+     with Not_found ->
+       raise (Error "Type reconstruction: Left-over constraints for free variables \n")
+     end
+
+
+(* ******************************************************************* *)
+(* PHASE 2 : Reconstruction *)
+
+(*  recTerm cPsi sM sA = ()
+
+    Pre-condition:
+
+    U = FV(M) (FV(A), FV(K) resp.)
+    O = meta-variables in M (A, K, resp.)
+
+   Invariant:
+    If  O ; U ; (cD ; cPsi) |- [s']M <- [s]A (predependent)
+        and there exists a modal substitution r
+        s.t. O' |- r <= O
+    then
+
+       recTerm cPsi sM sA succeeds and
+
+       O' ; [|r|]U ; ([|r|]cD ; [|r|]cPsi) |- [|r|][s']M <= [|r|][s]A
+
+   Post-condition:
+
+     U' = [|r|]U
+     O' s.t. O' |- r <= O , and
+
+   Effect:
+     - all meta-variables in O have been destructively updated.
+     - may raise exception Error, if no modal substitution r exists.
+
+Similar invariants and pre- and post-conditions for:
+
+    recKind cD cPsi (K,s) = K'
+    recTyp  cD cPsi (A,s) = A'
+
+*)
+let rec recKind cD cPsi sK = match sK with
+  | (Int.LF.Typ, _s) ->
+      ()
+
+  | (Int.LF.PiKind (Int.LF.TypDecl(_x, tA) as adec, tK), s) -> (
+      recTyp cD cPsi (tA, s);
+      recKind cD (Int.LF.DDec (cPsi, LF.decSub adec s)) (tK, LF.dot1 s)
+    )
+
+and recTyp cD cPsi sA = recTypW cD cPsi (Whnf.whnfTyp sA)
+
+and recTypW cD cPsi sA = match sA with
+  | (Int.LF.Atom (a, tS) , s) ->
+      let tK = (Typ.get a).Typ.kind in
+        let (_, d) = Context.dctxToHat cPsi in 
+      let tA' =  recKSpine cD cPsi (tS, s) (tK, Int.LF.Shift d) in 
+        tA'
+
+
+  | (Int.LF.PiTyp ((Int.LF.TypDecl (_x, tA) as adec), tB), s) -> (      
+      recTyp cD cPsi (tA, s);
+      recTyp cD (Int.LF.DDec (cPsi, LF.decSub adec s)) (tB, LF.dot1 s);
+    )
+
+and recTerm cD cPsi sM sA =
+  recTermW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
+
+and recTermW cD cPsi sM sA = match (sM, sA) with
+  | ((Int.LF.Lam (_, tM), s'), (Int.LF.PiTyp (tA, tB), s)) ->
+      let cPsi' = Int.LF.DDec (cPsi, LF.decSub tA s) in
+        recTerm cD cPsi' (tM, LF.dot1 s') (tB, LF.dot1 s)
+
+  | ((Int.LF.Root (Int.LF.Const c, tS), s'), (Int.LF.Atom _ as tP, s)) ->
+      let tA = (Term.get c).Term.typ in
+      let (_, d) = Context.dctxToHat cPsi in 
+        recSpine cD cPsi (tS, s') (tA, Int.LF.Shift d) (tP, s)
+
+  | ((Int.LF.Root (Int.LF.BVar x, tS), s'), (Int.LF.Atom _ as tP, s)) ->
+      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
+        recSpine cD cPsi (tS, s') (tA, LF.id) (tP, s)
+
+  | ((Int.LF.Root (Int.LF.MVar (Int.LF.Inst (_r, cPhi, tP', _cnstr), t), _tS), s'), (Int.LF.Atom _ as tP, s)) ->
+     (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
+     (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
+      let s1 = (LF.comp t s') in
+        (recSub cD cPsi s1 cPhi;
+         Unify.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))
+        )  
+
+
+  | ((Int.LF.Root (Int.LF.MVar (Int.LF.Offset u, t), _tS), s'), (Int.LF.Atom _ as tP, s)) ->
+     (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
+     (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
+      let s1 = (LF.comp t s') in
+      let (tP', cPsi') = Cwhnf.mctxMDec cD u in
+        (recSub cD cPsi s1 cPsi';
+         Unify.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))
+        )  
+
+    | ((Int.LF.Root (Int.LF.FMVar (u, t), _tS), s'), (Int.LF.Atom _ as tP, s)) ->
+     (* By invariant of whnf: tS = Nil *)
+      let s1 = (LF.comp t s') in
+      let (tP', cPhi) = FMVar.get u in
+        (recSub cD cPsi s1 cPhi;
+         Unify.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))
+        )
+
+
+    | ((Int.LF.Root (Int.LF.FPVar (p, t), tS), s'), (Int.LF.Atom _ as tP, s)) ->
+      let s1 = (LF.comp t s') in
+      let (tA', cPhi) = FPVar.get p in
+      let (_, d) = Context.dctxToHat cPsi in  
+        (recSub cD cPsi s1 cPhi;
+         recSpine cD cPsi (tS, s') (tA', Int.LF.Shift d) (tP, s))
+     
+
+
+    | ((Int.LF.Root (Int.LF.PVar (Int.LF.Offset p, t), tS), s'), (Int.LF.Atom _ as tP, s)) ->
+      let s1 = (LF.comp t s') in
+      let (tA, cPsi') = Cwhnf.mctxPDec cD p in
+        (recSub cD cPsi s1 cPsi';
+         recSpine cD cPsi (tS, s') (tA, t) (tP, s))
+     
+
+  | ((Int.LF.Root (Int.LF.FVar x, tS), s'), (Int.LF.Atom _ as tP, s)) ->
+      (* x is in eta-expanded form and tA is closed
+         type of FVar x : A[cPsi'] and FVar x should be
+         associated with a substitution, since tA is not always
+         closed.
+
+         by invariant of whnf: s' = id
+      *)
+      let tA = FVar.get x in
+      let (_, d) = Context.dctxToHat cPsi in  
+        recSpine cD cPsi (tS, s') (tA, Int.LF.Shift d) (tP, s)    
+
+
+and recSpine cD cPsi sS sA sP = 
+  recSpineW cD cPsi sS (Whnf.whnfTyp sA) sP
+
+and recSpineW cD cPsi sS sA sP = match (sS, sA) with
+  | ((Int.LF.Nil, _s), (tP', s')) ->
+      Unify.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))  
+      
+  | ((Int.LF.App (tM, tS), s'), (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s)) -> (
+      let _ = recTerm  cD cPsi (tM, s') (tA, s) in 
+      (*   cPsi |-  s <= cPsi1     cPsi1 |- Pi x:tA .tB <= typ
+                                   cPsi1 |- tA <= typ   
+                                   cPsi1, x:tA |- tB <= typ
+
+           cPsi |-  s'<= cPsi2     cPsi |- [s']tM <= tA'   tA' = [s]tA   
+           
+           cPsi2 |- tM <= tA2       [s']tA2 = tA' = [s]tA
+       
+           cPsi |-  [s']tM . s <= cPsi1, x: tA
+
+      *)
+      recSpine cD cPsi (tS, s') (tB, Int.LF.Dot (Int.LF.Obj (Int.LF.Clo (tM,s')), s)) sP 
+    )
+
+  | ((Int.LF.SClo (tS, s), s'), sA) -> 
+      recSpine cD cPsi (tS, LF.comp s s') sA sP
+
+and recKSpine cD cPsi sS sK = match (sS, sK) with
+  | ((Int.LF.Nil, _s), (Int.LF.Typ, _s')) ->
+      ()
+
+  | ((Int.LF.App (tM, tS), s'), (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s)) -> (
+      recTerm   cD cPsi (tM, s') (tA, s);
+      recKSpine cD cPsi (tS, s') (tK, Int.LF.Dot (Int.LF.Obj tM, s))
+    )
+
+  | ((Int.LF.SClo (tS, s),  s'), sK) -> 
+      recKSpine cD cPsi (tS, LF.comp s s') sK
+
+and recSub cD cPsi s cPhi = match (s, cPhi) with
+  | (Int.LF.Shift _n, _cPhi) ->
+      (* We may need to expand cPhi further if n =/= 0 *)
+      ()
+
+  | (Int.LF.Dot (Int.LF.Head Int.LF.BVar x, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) ->
+      let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in 
+        recSub cD cPsi s cPhi;
+        Unify.unifyTyp (Context.dctxToHat cPsi, (tA', LF.id), (tA, s))
+
+
+  | (Int.LF.Dot (Int.LF.Obj tM, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) -> (
+      recSub  cD cPsi s cPhi;
+      recTerm cD cPsi (tM, LF.id) (tA, s)
+    )
+
+  | (Int.LF.Dot (Int.LF.Undef, _s), _) ->
+      raise (Error "Found Undef")
+
+  (* needs other cases for Head(h) where h = MVar, Const, etc. -bp *)
+
+
+(* ******************************************************************* *)
 (* Elaboration of computations *)
 
 let rec elCompTyp cO cD tau = match tau with 
@@ -1034,198 +1369,296 @@ and elExp' cO cD cG i = match i with
 (* NOTE: Any context variable occurring in delta, psihat, a, psi is bound
     in cD !  So delta (and cD') do not contain it!!!! *) 
 
-and elBranch cO cD cG (Apx.Comp.BranchBox (delta, (psihat, m, (a, psi)), e)) (tau, theta) = 
-  let cD'     = elMCtx delta in 
-  let cPsi'   = elDCtx (* cO *) cD' psi in 
+and elBranch cO cD cG branch (tau, theta) = match branch with 
+  | (Apx.Comp.BranchBox (delta, (psihat, m, Some (a, psi)), e)) -> 
+      let cD'     = elMCtx delta in 
+      let cPsi'   = elDCtx (* cO *) cD' psi in 
+        
+      let tA'     = elTyp  (* cO *) cD' cPsi' a in 
 
-  let tA'     = elTyp  (* cO *) cD' cPsi' a in 
+      let tM'     = elTerm (* cO *) cD' cPsi' m (tA', LF.id) in 
+        
+      let _ = recTerm (* cO *) cD' cPsi' (tM', LF.id) (tA', LF.id) in  
+      let (cD1', cPsi1', (phat', tM1'), tA1') = 
+       Abstract.abstrPattern cD' cPsi' (psihat, tM') tA' in   
 
-  let tM'     = elTerm (* cO *) cD' cPsi' m (tA', LF.id) in 
+      let _ = Printf.printf "Reconstructed Pattern : \n  %s ;  \n %s \n |- \n %s      :     %s \n\n"
+        (Pretty.Int.DefaultPrinter.mctxToString cD1')
+        (Pretty.Int.DefaultPrinter.dctxToString cPsi1')
+        (Pretty.Int.DefaultPrinter.normalToString tM1')
+        (Pretty.Int.DefaultPrinter.typToString tA1') in 
 
-  let n       =  Context.length cD' in 
-  let cD_i    = Context.append cD cD' in 
-  let theta_i = C.mshift theta n in 
-  let e'     = elExp cO cD_i cG e (tau, theta_i) in
-    Int.Comp.BranchBox (cD', (psihat, tM', (tA', cPsi')), e')
+      let n       = Context.length cD1' in  
+      let cD_i    = Context.append cD cD1' in 
+      let theta_i = C.mshift theta n in 
+      let _ = Printf.printf "theta_i = %s \n\n" 
+        (Pretty.Int.DefaultPrinter.msubToString theta_i) in 
+      let e'     = elExp cO cD_i cG e (tau, theta_i) in
+      let b =         Int.Comp.BranchBox (cD1', (phat', tM1', (tA1', cPsi1')), e') in 
+        
 
-
-(* ******************************************************************* *)
-(* Solve free variable constraints *)
-
-let rec solve_fvarCnstr cD cnstr = match cnstr with 
-  | []  -> ()
-  | ((Apx.LF.Root (Apx.LF.FVar x, spine) , Int.LF.Inst(r, cPsi, Int.LF.TClo(tP,s), _)) :: cnstrs) ->
-     begin try 
-        let tA = FVar.get x in
-          (* For type reconstruction to succeed, we must have
-             . |- tA <= type
-             This will be enforced during abstraction *)
-        let (_, d) = Context.dctxToHat cPsi in 
-          
-        (* let tS = elSpine cPsi spine (tA, LF.id) (tP,s) in *)
-        let tS = elSpine cD cPsi spine (tA, Int.LF.Shift d) (tP,s) in 
-          (r := Some (Int.LF.Root (Int.LF.FVar x, tS));
-           solve_fvarCnstr cD cnstrs  
-          )
-     with Not_found ->
-       raise (Error "Type reconstruction: Left-over constraints for free variables \n")
-     end
+      let _ = Printf.printf "Elaborated Branch: \n %s \n\n" (Pretty.Int.DefaultPrinter.branchToString b) in 
+        b
 
 
-(* ******************************************************************* *)
-(* PHASE 2 : Reconstruction *)
+(*
+  | (Apx.Comp.BranchBox (delta, (psihat, m, None), e))  -> 
+      let cD'     = elMCtx delta in 
+      let cPsi'   = elDCtx (* cO *) cD' psi in 
+        
+      let tA'     = elTyp  (* cO *) cD' cPsi' a in 
 
-(*  recTerm cPsi sM sA = ()
-
-    Pre-condition:
-
-    U = FV(M) (FV(A), FV(K) resp.)
-    O = meta-variables in M (A, K, resp.)
-
-   Invariant:
-    If  O ; U ; cPsi |- [s']M <- [s]A (predependent)
-        and there exists a modal substitution r
-        s.t. O' |- r <= O
-    then
-
-       recTerm cPsi sM sA succeeds and
-
-       O' ; [|r|]U ; [|r|]cPsi |- [|r|][s']M <= [|r|][s]A
-
-   Post-condition:
-
-     U' = [|r|]U
-     O' s.t. O' |- r <= O , and
-
-   Effect:
-     - all meta-variables in O have been destructively updated.
-     - may raise exception Error, if no modal substitution r exists.
-
-Similar invariants and pre- and post-conditions for:
-
-    recKind cPsi (K,s) = K'
-    recTyp  cPsi (A,s) = A'
+      let tM'     = elTerm (* cO *) cD' cPsi' m (tA', LF.id) in 
+        
+      let n       =  Context.length cD' in 
+      let cD_i    = Context.append cD cD' in 
+      let theta_i = C.mshift theta n in 
+      let e'     = elExp cO cD_i cG e (tau, theta_i) in
+        Int.Comp.BranchBox (cD', (psihat, tM', (tA', cPsi')), e')
 
 *)
-let rec recKind cPsi sK = match sK with
-  | (Int.LF.Typ, _s) ->
-      ()
-
-  | (Int.LF.PiKind (Int.LF.TypDecl(_x, tA) as adec, tK), s) -> (
-      recTyp cPsi (tA, s);
-      recKind (Int.LF.DDec (cPsi, LF.decSub adec s)) (tK, LF.dot1 s)
-    )
-
-and recTyp cPsi sA = recTypW cPsi (Whnf.whnfTyp sA)
-
-and recTypW cPsi sA = match sA with
-  | (Int.LF.Atom (a, tS) , s) ->
-      let tK = (Typ.get a).Typ.kind in
-        let (_, d) = Context.dctxToHat cPsi in 
-      let tA' =  recKSpine cPsi (tS, s) (tK, Int.LF.Shift d) in 
-        tA'
 
 
-  | (Int.LF.PiTyp ((Int.LF.TypDecl (_x, tA) as adec), tB), s) -> (      
-      recTyp cPsi (tA, s);
-      recTyp (Int.LF.DDec (cPsi, LF.decSub adec s)) (tB, LF.dot1 s);
-    )
+(* ******************************************************************* *)
 
-and recTerm cPsi sM sA =
-  recTermW cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
-and recTermW cPsi sM sA = match (sM, sA) with
-  | ((Int.LF.Lam (_, tM), s'), (Int.LF.PiTyp (tA, tB), s)) ->
-      let cPsi' = Int.LF.DDec (cPsi, LF.decSub tA s) in
-        recTerm cPsi' (tM, LF.dot1 s') (tB, LF.dot1 s)
+(* Reconstruction for computations *)
+(* First version be identical to type checking computations *)
+   
+  let rec length cD = match cD with
+    | Int.LF.Empty -> 0
+    | Int.LF.Dec(cD, _) -> 1 + length cD
 
-  | ((Int.LF.Root (Int.LF.Const c, tS), s'), (Int.LF.Atom _ as tP, s)) ->
-      let tA = (Term.get c).Term.typ in
-      let (_, d) = Context.dctxToHat cPsi in 
-        recSpine cPsi (tS, s') (tA, Int.LF.Shift d) (tP, s)
+  let rec lookup cG k = match (cG, k) with 
+    | (Int.LF.Dec(_cG', (_,  tau)), 1) ->  tau
+    | (Int.LF.Dec( cG', (_, _tau)), k) ->  
+        lookup cG' (k-1)
 
-  | ((Int.LF.Root (Int.LF.BVar x, tS), s'), (Int.LF.Atom _ as tP, s)) ->
-      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
-        recSpine cPsi (tS, s') (tA, LF.id) (tP, s)
+  let rec split tc d = match (tc, d) with
+    | (tc, 0) -> tc
+    | (Int.Comp.MDot(_ft, t), d) -> split t (d-1)
 
-  | ((Int.LF.Root (Int.LF.MVar (Int.LF.Inst (_r, cPhi, tP', _cnstr), t), _tS), s'), (Int.LF.Atom _ as tP, s)) ->
-     (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
-     (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
-      let s1 = (LF.comp t s') in
-        (recSub cPsi s1 cPhi;
-         Unify.unifyTyp (Context.dctxToHat cPsi, (tP', s1), (tP, s))
-        )  
+  let rec mctxToMSub cD = match cD with
+    | Int.LF.Empty -> C.id
+    | Int.LF.Dec(cD', Int.LF.MDecl(_, tA, cPsi)) -> 
+      let t = mctxToMSub cD' in 
+      let cPsi' = Cwhnf.cnormDCtx (cPsi,t) in 
+      let tA' = Cwhnf.cnormTyp (tA, t) in 
+      let u = Whnf.newMVar (cPsi' , tA') in 
+      let phat = Context.dctxToHat cPsi in 
+        Int.Comp.MDot(Int.Comp.MObj(phat, Int.LF.Root(Int.LF.MVar(u, LF.id), Int.LF.Nil)) , t) 
+    | Int.LF.Dec(cD', Int.LF.PDecl(_, tA, cPsi)) -> 
+      let t = mctxToMSub cD' in  
+      let p = Whnf.newPVar (Cwhnf.cnormDCtx (cPsi,t),  Cwhnf.cnormTyp (tA, t)) in
+      let phat = Context.dctxToHat cPsi in  
+        Int.Comp.MDot(Int.Comp.PObj(phat, Int.LF.PVar(p, LF.id)) , t)
 
-  | ((Int.LF.Root (Int.LF.FVar x, tS), s'), (Int.LF.Atom _ as tP, s)) ->
-      (* x is in eta-expanded form and tA is closed
-         type of FVar x : A[cPsi'] and FVar x should be
-         associated with a substitution, since tA is not always
-         closed.
+  (* extend t1 t2 = t
+    
+     Invariant: 
+     If    . |- t1 <= cD1
+       and . |- t2 <= cD2
+       and FMV(cD1) intersect FMV(cD2) = {} 
+       (i.e. no modal variable occurring in type declarations in cD1
+        also occurs in a type declaration of cD2)
+     then
+           . |- t1,t2 <= cD1, cD2   and t = t1,t2
+  *)
+  let extend t1 t2 = 
+    let rec ext t2 = match t2 with
+    | Int.Comp.MShift 0 -> t1
+    (* other cases should be impossible *)
+    | Int.Comp.MDot(ft, t) -> Int.Comp.MDot(ft, ext t)
+    in ext t2
 
-         by invariant of whnf: s' = id
+
+  let rec checkTyp cO cD tau = match tau with 
+    | Int.Comp.TypBox (tA, cPsi) -> 
+        (Check.LF.checkDCtx cO cD cPsi ; 
+         Check.LF.checkTyp  cO cD cPsi (tA, LF.id))
+
+    | Int.Comp.TypArr (tau1, tau2) -> 
+        (checkTyp cO cD tau1 ;
+         checkTyp cO cD tau2)
+
+    | Int.Comp.TypCtxPi ((psi_name, schema_cid), tau) -> 
+        checkTyp (Int.LF.Dec(cO, Int.LF.CDecl(psi_name, schema_cid))) cD tau
+
+    | Int.Comp.TypPiBox (cdecl, tau) -> 
+        checkTyp cO (Int.LF.Dec(cD, cdecl)) tau        
+
+
+  (* check cO cD cG e (tau, theta) = ()
+
+     Invariant:
+
+     If  cO ; cD ; cG |- e wf-exp
+     and cO ; cD |- theta <= cD' 
+     and cO ; cD'|- tau <= c_typ
+     returns ()
+     if  cO ; cD ; cG |- e <= [|t|]tau
+
+     otherwise exception Error is raised
+  *)
+
+  let rec checkW cO cD cG e ttau = match (e , ttau) with 
+    | (Int.Comp.Rec(f, e), (tau, t)) ->  
+        check cO cD (Int.LF.Dec (cG, (f, Int.Comp.TypClo(tau,t)))) e ttau
+
+    | (Int.Comp.Fun(x, e), (Int.Comp.TypArr(tau1, tau2), t)) -> 
+        check cO cD (Int.LF.Dec (cG, (x, Int.Comp.TypClo(tau1, t)))) e (tau2, t)
+
+    | (Int.Comp.CtxFun(psi, e) , (Int.Comp.TypCtxPi ((_psi, schema), tau), t)) -> 
+        check (Int.LF.Dec(cO, Int.LF.CDecl(psi, schema))) cD cG e (tau, t)
+
+    | (Int.Comp.MLam(u, e), (Int.Comp.TypPiBox(Int.LF.MDecl(_u, tA, cPsi), tau), t)) -> 
+        check cO (Int.LF.Dec(cD, Int.LF.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
+              cG   e (tau, C.mvar_dot1 t)
+
+    | (Int.Comp.Box(_phat, tM), (Int.Comp.TypBox (tA, cPsi), t)) -> 
+        Check.LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, LF.id) (C.cnormTyp (tA, t), LF.id)
+
+
+    | (Int.Comp.Case (e, branches), (tau, t)) -> 
+        begin match C.cwhnfCTyp (syn cO cD cG e) with
+          | (Int.Comp.TypBox(tA, cPsi),  t') -> 
+              checkBranches cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
+          | _ -> raise (Error "Case scrutinee not of boxed type")
+        end
+
+    | (Int.Comp.Syn e, (tau, t)) -> 
+        if C.convCTyp (tau,t) (syn cO cD cG e) then ()
+        else raise (Error "Type mismatch")
+
+  and check cO cD cG e (tau, t) = 
+    checkW cO cD cG e (C.cwhnfCTyp (tau, t))
+
+  and syn cO cD cG e = match e with 
+    | Int.Comp.Var x  -> (lookup cG x, C.id) 
+          (* !!!! MAY BE WRONG since only . |- ^0 : .   and not cD |- ^0 : cD !!! *)
+
+    | Int.Comp.Const prog  -> ((Comp.get prog).Comp.typ, C.id) 
+
+    | Int.Comp.Apply (e1, e2) -> 
+        begin match C.cwhnfCTyp (syn cO cD cG e1) with 
+          | (Int.Comp.TypArr (tau2, tau), t) -> 
+              (check cO cD cG e2 (tau2, t);
+               (tau, t))
+          | _ -> raise (Error "Function mismatch")
+        end
+    | Int.Comp.CtxApp (e, cPsi) -> 
+        begin match C.cwhnfCTyp (syn cO cD cG e) with
+          | (Int.Comp.TypCtxPi ((_psi, sW) , tau), t) ->
+              let _ = Printf.printf "\n Schema checking omitted \n" in 
+              (* REVISIT: Sun Jan 11 17:48:52 2009 -bp *)
+              (* let tau' =  Cwhnf.csub_ctyp cPsi 1 tau in 
+                 let t'   = Cwhnf.csub_msub cPsi 1 t in   *)
+
+              let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in  
+
+              (Check.LF.checkSchema cO cD cPsi ((Schema.get sW).Schema.schema)  ;
+               (* (tau', t') *)
+               (tau1, Cwhnf.id)
+              )
+          | _ -> raise (Error "Context abstraction mismatch")
+        end 
+    | Int.Comp.MApp (e, (phat, tM)) -> 
+        begin match C.cwhnfCTyp (syn cO cD cG e) with
+          | (Int.Comp.TypPiBox (Int.LF.MDecl(_, tA, cPsi), tau), t) -> 
+                (Check.LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, LF.id) (C.cnormTyp (tA, t), LF.id);
+                 (tau, Int.Comp.MDot(Int.Comp.MObj (phat, tM), t))
+                )
+          | _ -> raise (Error "MLam mismatch")
+        end
+
+    | (Int.Comp.Ann (e, tau)) -> 
+        (check cO cD cG e (tau, C.id) ; 
+         (tau, C.id))
+
+  and checkBranches cO cD cG branches tAbox ttau = match branches with
+    | [] -> ()
+    | (branch::branches) -> 
+        let _ = checkBranch cO cD cG branch tAbox ttau in 
+          checkBranches cO cD cG branches tAbox ttau
+
+(*  and checkBranch _cO _cD _cG _branch (_tA, _cPsi) (_tau, _t) = 
+    Printf.printf "WARNING: BRANCH CHECKING NOT IMPLEMENTED!"
+*)
+
+
+  and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = 
+(*    let _ = Printf.printf "BEGIN: Checking branch: \n %s ; \n %s \n |- \n %s \n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
+         (Pretty.Int.DefaultPrinter.gctxToString (Cwhnf.normCtx  cG))
+         (Pretty.Int.DefaultPrinter.branchToString branch) in 
+*)
+   match branch with
+   | Int.Comp.BranchBox (cD1, (phat, tM1, (tA1, cPsi1)), e1) ->  
+(*       let _ = Printf.printf "Checking Pattern Term is well-typed: \n %s ; %s   |-    %s <= %s \n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString cD1)
+         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
+         (Pretty.Int.DefaultPrinter.normalToString tM1)
+         (Pretty.Int.DefaultPrinter.typToString tA1) in 
+*)
+
+       let _ = Check.LF.check cO cD1 cPsi1 (tM1, LF.id) (tA1, LF.id) in  
+         (* This is like a double-check here, since reconstruction was done during elaboration of branch *)
+
+
+(*       let _ = Printf.printf "DONE: Pattern Term  \n %s ; %s   |-    %s <= %s  is well-typed.\n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString cD1)
+         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
+         (Pretty.Int.DefaultPrinter.normalToString tM1)
+         (Pretty.Int.DefaultPrinter.typToString tA1) in 
+*)
+      let d1 = length cD1 in 
+      let _d  = length cD in 
+      let t1 = mctxToMSub cD1 in   (* {cD1} |- t1 <= cD1 *)
+      let t' = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
+      let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
+
+(*      let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
+         (Pretty.Int.DefaultPrinter.dctxToString cPsi)
+         (Pretty.Int.DefaultPrinter.typToString tA)
+         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
+         (Pretty.Int.DefaultPrinter.typToString tA1) in 
+*)  
+      let _    = Unify.unifyDCtx (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
+      let _    = Unify.unifyTyp (phat, (C.cnormTyp (tA, t'), LF.id), (C.cnormTyp (tA1, tc), LF.id))  in 
+
+(*      let  _   = Printf.printf "Resulting msub from unifying type annotations in branches: \n %s\n\n" 
+        (Pretty.Int.DefaultPrinter.msubToString tc) in 
+*)
+      let (tc', cD1'') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
+
+
+(*      let cD1_n  = (Cwhnf.normMCtx cD1') in  *)
+
+(*      let  _   = Printf.printf "Resulting msub after abstraction: \n %s   |-   %s    <=  %s \n\n" 
+         (Pretty.Int.DefaultPrinter.mctxToString cD1_n)
+        (Pretty.Int.DefaultPrinter.msubToString tc') 
+         (Pretty.Int.DefaultPrinter.mctxToString (Context.append cD cD1))  in
+*)
+      let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
+      let cG1 = C.cwhnfCtx (cG, t'') in  
+(*      let cGn = (Cwhnf.normCtx cG1) in *)
+      let e1' = C.cnormExp (e1, tc') in 
+
+      let tau' = (tau, C.mcomp t'' t)  in 
+(*      let taun = (C.cnormCTyp tau') in  *)
+
+(*      let _ = Printf.printf "\n Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+         (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD1_n))
+         (Pretty.Int.DefaultPrinter.gctxToString cGn)
+         (Pretty.Int.DefaultPrinter.expChkToString e1')
+         (Pretty.Int.DefaultPrinter.compTypToString  taun) in 
+*)
+      (* NOTE: cnormCtx and cnormExp not implemented
+         -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
       *)
-      let tA = FVar.get x in
-      let (_, d) = Context.dctxToHat cPsi in  
-        recSpine cPsi (tS, s') (tA, Int.LF.Shift d) (tP, s)    
+        check cO cD1'' cG1 e1' tau'
 
-and recSpine cPsi sS sA sP = 
-  recSpineW cPsi sS (Whnf.whnfTyp sA) sP
-
-and recSpineW cPsi sS sA sP = match (sS, sA) with
-  | ((Int.LF.Nil, _s), (tP', s')) ->
-      Unify.unifyTyp (Context.dctxToHat cPsi, sP, (tP', s'))  
-      
-  | ((Int.LF.App (tM, tS), s'), (Int.LF.PiTyp (Int.LF.TypDecl (_, tA), tB), s)) -> (
-      let _ = recTerm  cPsi (tM, s') (tA, s) in 
-      (*   cPsi |-  s <= cPsi1     cPsi1 |- Pi x:tA .tB <= typ
-                                   cPsi1 |- tA <= typ   
-                                   cPsi1, x:tA |- tB <= typ
-
-           cPsi |-  s'<= cPsi2     cPsi |- [s']tM <= tA'   tA' = [s]tA   
-           
-           cPsi2 |- tM <= tA2       [s']tA2 = tA' = [s]tA
-       
-           cPsi |-  [s']tM . s <= cPsi1, x: tA
-
-      *)
-      recSpine cPsi (tS, s') (tB, Int.LF.Dot (Int.LF.Obj (Int.LF.Clo (tM,s')), s)) sP 
-    )
-
-  | ((Int.LF.SClo (tS, s), s'), sA) -> 
-      recSpine cPsi (tS, LF.comp s s') sA sP
-
-and recKSpine cPsi sS sK = match (sS, sK) with
-  | ((Int.LF.Nil, _s), (Int.LF.Typ, _s')) ->
-      ()
-
-  | ((Int.LF.App (tM, tS), s'), (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s)) -> (
-      recTerm   cPsi (tM, s') (tA, s);
-      recKSpine cPsi (tS, s') (tK, Int.LF.Dot (Int.LF.Obj tM, s))
-    )
-
-  | ((Int.LF.SClo (tS, s),  s'), sK) -> 
-      recKSpine cPsi (tS, LF.comp s s') sK
-
-and recSub cPsi s cPhi = match (s, cPhi) with
-  | (Int.LF.Shift _n, _cPhi) ->
-      (* We may need to expand cPhi further if n =/= 0 *)
-      ()
-
-  | (Int.LF.Dot (Int.LF.Head Int.LF.BVar x, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) ->
-      let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in 
-        recSub  cPsi s cPhi;
-        Unify.unifyTyp (Context.dctxToHat cPsi, (tA', LF.id), (tA, s))
-
-
-  | (Int.LF.Dot (Int.LF.Obj tM, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) -> (
-      recSub  cPsi s cPhi;
-      recTerm cPsi (tM, LF.id) (tA, s)
-    )
-
-  | (Int.LF.Dot (Int.LF.Undef, _s), _) ->
-      raise (Error "Found Undef")
-
-  (* needs other cases for Head(h) where h = MVar, Const, etc. -bp *)
+(* ------------------------------------------------------------------- *)
 
 let recSgnDecl d = match d with
   | Ext.Sgn.Typ (_, a, extK)   ->
@@ -1234,7 +1667,7 @@ let recSgnDecl d = match d with
       let tK       = elKind Int.LF.Null apxK in
       let _        = solve_fvarCnstr Int.LF.Empty !fvar_cnstr in
       let _        = reset_fvarCnstr () in 
-      let _        = recKind Int.LF.Null (tK, LF.id) in
+      let _        = recKind Int.LF.Empty Int.LF.Null (tK, LF.id) in
       let (tK', i) = Abstract.abstrKind tK in
       (* let _        = Printf.printf "\n Reconstruction (wih abstraction) of constant %s \n %s \n\n" a.string_of_name
         (Pretty.Int.DefaultPrinter.kindToString tK') in *)
@@ -1254,7 +1687,8 @@ let recSgnDecl d = match d with
       let _        = reset_fvarCnstr () in 
       (* let _        = Printf.printf "\n Elaboration of constant %s \n : %s \n\n" c.string_of_name
         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, LF.id))) in  *)
-      let _        = recTyp Int.LF.Null (tA, LF.id) in
+      let cD       = Int.LF.Empty in 
+      let _        = recTyp cD Int.LF.Null (tA, LF.id) in
       (* let _        = Printf.printf "\n Reconstruction (without abstraction) of constant %s \n %s \n\n" c.string_of_name
         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, LF.id))) in *)
 
@@ -1307,7 +1741,8 @@ let recSgnDecl d = match d with
                         (Pretty.Int.DefaultPrinter.compTypToString tau') 
                         (Pretty.Int.DefaultPrinter.expChkToString e') in  *)
 
-      let _       = Check.Comp.check cO cD  cG e' (tau', C.id) in 
+       let _       = check  cO cD cG e' (tau', C.id) in 
+      (* let _       = Check.Comp.check cO cD  cG e' (tau', C.id) in  *)
       let _        = Printf.printf "\n TYPE CHECK for program : %s  successful! \n\n" f.string_of_name  in 
       let f'      = Comp.add (Comp.mk_entry f tau' 0 e') in 
         Int.Sgn.Rec (f', tau', e')

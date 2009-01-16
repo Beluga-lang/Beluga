@@ -196,7 +196,7 @@ module BVar = struct
 
 end
 
-(* Free Variables *)
+(* Free Bound Variables *)
 module FVar = struct
 
   let store = Hashtbl.create 0
@@ -208,6 +208,35 @@ module FVar = struct
   let clear () = Hashtbl.clear store
 
 end
+
+
+(* Free meta-variables *)
+module FMVar = struct
+
+  let store = Hashtbl.create 0
+
+  let add = Hashtbl.add store
+
+  let get = Hashtbl.find store
+
+  let clear () = Hashtbl.clear store
+
+end
+
+
+(* Free parameter-variables *)
+module FPVar = struct
+
+  let store = Hashtbl.create 0
+
+  let add = Hashtbl.add store
+
+  let get = Hashtbl.find store
+
+  let clear () = Hashtbl.clear store
+
+end
+
 
 (* Computation-level variables *)
 module Var = struct

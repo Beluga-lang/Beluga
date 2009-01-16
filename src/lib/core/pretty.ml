@@ -977,6 +977,15 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_name x)
 
+      | LF.FMVar (u, s) ->
+          fprintf ppf "%s[%a]"
+            (R.render_name u)
+            (fmt_ppr_lf_sub  lvl) s
+
+      | LF.FPVar (p, s) ->
+          fprintf ppf "#%s[%a]"
+            (R.render_name p)
+            (fmt_ppr_lf_sub  lvl) s
 
 
     and fmt_ppr_lf_spine lvl ppf = function

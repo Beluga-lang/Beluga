@@ -200,6 +200,8 @@ module Int : sig
       | AnnH  of head * typ
       | Proj  of head * int
       | FVar  of name
+      | FMVar of name * sub
+      | FPVar of name * sub
 
     and spine =
       | Nil

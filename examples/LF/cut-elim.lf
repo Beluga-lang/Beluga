@@ -167,6 +167,6 @@ cal_forallr' :
 
 
 cal_foralll' :
-      ({n1:neg (A1 T)} ca' A (\ p . D1 p n1) (\ n . E n) (F1 n1))
+      ({n1: neg _ } ca' A (\ p . D1 p n1) (\ n . E n) (F1 n1))
          -> ca' A (\ p . foralll' T (\ n . D1 p n) N)
                (\ n . E n) (foralll' T (\ n . F1 n) N).

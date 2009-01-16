@@ -139,6 +139,24 @@ module FVar : sig
 
 end
 
+
+module FMVar : sig
+
+  val add             : name -> (LF.typ * LF.dctx) -> unit
+  val get             : name -> (LF.typ * LF.dctx)
+  val clear           : unit -> unit
+
+end
+
+module FPVar : sig
+
+  val add             : name -> (LF.typ * LF.dctx) -> unit
+  val get             : name -> (LF.typ * LF.dctx)
+  val clear           : unit -> unit
+
+end
+
+
 module Var : sig
 
   type entry          = private {

@@ -31,6 +31,7 @@ module LF : sig
   val checkTyp    : mctx -> mctx -> dctx -> tclo   -> unit
   val checkKind   : mctx -> mctx -> dctx -> kind   -> unit
   val checkSchema : mctx -> mctx -> dctx -> schema -> unit
+  val checkDCtx   : mctx -> mctx -> dctx -> unit
 
 end
 

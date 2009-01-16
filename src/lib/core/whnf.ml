@@ -347,6 +347,10 @@ and lowerMVar = function
     | (Root (MVar (Offset _k as u, r), tS), sigma) ->
         (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
+
+    | (Root (FMVar (u, r), tS), sigma) ->
+        (Root (FMVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+
   
   | (Root (MVar (Inst ({contents = Some tM}, _cPsi, _tA, _) as _u, r), tS), sigma) ->
         (* constraints associated with u must be in solved form *)
@@ -379,6 +383,9 @@ and lowerMVar = function
     (* Parameter variable *)
     | (Root (PVar (Offset _k as p, r), tS), sigma) ->
         (Root (PVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+
+    | (Root (FPVar (p, r), tS), sigma) ->
+        (Root (FPVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
     | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma) ->
         begin match LF.bvarSub i r with
@@ -523,7 +530,13 @@ and lowerMVar = function
               | (PVar (p, s'), PVar (q, s''))
                 -> p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
+              | (FPVar (p, s'), FPVar (q, s''))
+                -> p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
+
               | (MVar (u, s'), MVar (w, s''))
+                -> u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+
+              | (FMVar (u, s'), FMVar (w, s''))
                 -> u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
               | (AnnH (head, _tA), _)
@@ -602,7 +615,16 @@ and lowerMVar = function
         ->    p = q
            && convSub s s'
 
+
+      | (Head (FPVar (q, s)), Head (FPVar (p, s')))
+        ->    p = q
+           && convSub s s'
+
       | (Head (MVar (q, s)), Head (MVar (p, s')))
+        ->    p = q
+           && convSub s s'
+
+      | (Head (FMVar (q, s)), Head (FMVar (p, s')))
         ->    p = q
            && convSub s s'
 

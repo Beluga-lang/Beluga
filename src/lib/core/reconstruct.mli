@@ -41,7 +41,10 @@ module Apx : sig
       | Const of cid_term           (*   | c                          *)
       | MVar  of offset * sub       (*   | u[s]                       *)
       | PVar  of offset * sub       (*   | p[s]                       *)
+
       | FVar  of name               (*   | X                          *)
+      | FMVar of name  * sub        (*   | U[s]                       *)
+      | FPVar of name  * sub        (*   | #p[s]                      *)
 
     and spine =                     (* spine                          *)
       | Nil                         (* S ::= Nil                      *)
@@ -101,7 +104,7 @@ module Apx : sig
 
     and branch =
       | BranchBox of LF.ctyp_decl LF.ctx
-          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx))
+          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
   end

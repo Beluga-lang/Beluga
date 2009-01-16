@@ -34,6 +34,7 @@ module type UNIFY = sig
   val addConstraint     : cnstr list ref * cnstr -> unit
   val solveConstraint   : cnstr -> unit
 
+  val isPatSub          : sub -> bool
 
   (* unification *)
 
@@ -838,11 +839,13 @@ module Make (T : TRAIL) : UNIFY = struct
                  addConstraint (cnstr1, ref (Eqh (phat, head1, head2))))
 
     | (_ , _ ) -> raise (Unify "Head clash")
+
     (* Not Implemented: Cases for projections
 
             Proj(BVar k, i), Proj(BVar k', i)
             Proj(BVar k, i), Proj(PVar(q, _,_, cnstr), i)
             Proj(PVar(q, _,_, cnstr), i), Proj(BVar k, i)
+
      *)
 
     (* unifySpine (phat, (tS1, s1), (tS2, s2)) = ()

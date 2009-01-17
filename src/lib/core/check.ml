@@ -13,24 +13,6 @@ module LF = struct
   open Substitution
   open Syntax.Int.LF
 
-
-(*
-  type error =
-    | CtxVarMisMatch of cvar * cvar
-    | SigmaIllTyped of mctx * dctx * 
-        trec_clo (* inferred *) * trec_clo (* expected *)
-    | ExpAppNotFun  
-    | KindMisMatch 
-    | SubIllTyped      
-    | TypIllTyped of mctx * dctx * 
-        tclo (* inferred *) * tclo (* expected *) 
-    | TypMisMatch  of mctx * dctx * tclo * tclo
-    | IllTyped of mctx * dctx * nclo * tclo
-
-
-  exception Error of error
-*)
-
   exception Error of string
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
@@ -132,9 +114,11 @@ module LF = struct
           (* getType traverses the type from left to right;
              target is relative to the remaining suffix of the type *)
         let rec getType s_recA target j = match (s_recA, target) with
-          | (( tA :: _recA, s), 1)      -> TClo(tA, s)
+          | ( (SigmaLast lastA, s), 1 )      -> TClo(lastA, s)
 
-          | ((_tA ::  recA, s), target) ->
+          | ( (SigmaElem(_x, tA, _recA), s), 1 )   -> TClo(tA, s)
+
+          | ( (SigmaElem(_x, _tA, recA), s), target ) ->
               let tPj = Root (Proj (BVar k', j), Nil) in
                 getType (recA, Dot (Obj tPj, s)) (target - 1) (j + 1)
 
@@ -321,9 +305,9 @@ module LF = struct
 
      succeeds iff cO cD ; cPsi |- [s]recA <= type
   *)
-  let rec checkTypRec cO cD cPsi (recA, s) = match recA with
-    | []         -> ()
-    | tA :: recA ->
+  let rec checkTypRec cO cD cPsi (typRec, s) = match typRec with
+    | SigmaLast lastA         -> checkTyp cO cD cPsi (lastA, s)
+    | SigmaElem(_x, tA, recA) ->
         checkTyp  cO  cD cPsi (tA, s)
         ; checkTypRec cO cD
           (DDec (cPsi, LF.decSub (TypDecl (Id.mk_name None, tA)) s))

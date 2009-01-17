@@ -378,24 +378,25 @@ module Ext = struct
               (fmt_ppr_lf_sigma_decl lvl) sgmDecl
 
     and fmt_ppr_lf_sigma_decl _lvl ppf = function
-      | LF.SigmaDecl (_x, tAs) ->
-          let rec ppr_typ_rec ppf = function
-            | [tA] ->
-                fprintf ppf "%a"
-                  (fmt_ppr_lf_typ 0) tA
-(*             | [] -> () *)
-
-(*             | tA :: [] -> *)
-(*                 fprintf ppf "%a" *)
-(*                   (fmt_ppr_lf_typ 0) tA *)
-
+      | LF.SigmaDecl (_x, typrec) ->
+          let ppr_element ppf suffix = function
+          | (x, tA) ->
+                 fprintf ppf "%s:%a%s"
+                   (R.render_name x)
+                   (fmt_ppr_lf_typ 0) tA
+                  suffix
+          in let rec ppr_elements ppf = function
+            | LF.SigmaLast tA -> fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA
+            | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) -> begin ppr_element ppf ". " (x, tA1); fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA2 end
+            | LF.SigmaElem (x, tA, tAs)  -> begin ppr_element ppf ", " (x, tA); ppr_elements ppf  tAs end
 (*             | tA :: tAs -> *)
 (*                   fprintf ppf "%a,@ %a" *)
 (*                     (fmt_ppr_lf_typ 0) tA *)
 (*                     ppr_typ_rec        tAs *)
+(*                fprintf ppf "Sigma %a. %a" *)
           in
             fprintf ppf "%a"
-              ppr_typ_rec tAs
+              (ppr_elements) typrec
 
     and fmt_ppr_lf_psi_hat _lvl ppf = function
       | []      -> ()
@@ -1110,24 +1111,25 @@ module Int = struct
               (fmt_ppr_lf_sigma_decl lvl) sgmDecl
 
     and fmt_ppr_lf_sigma_decl _lvl ppf = function
-      | LF.SigmaDecl (_x, tAs) ->
-          let rec ppr_typ_rec ppf = function
-            | [tA] ->
-                fprintf ppf "%a"
-                  (fmt_ppr_lf_typ 0) tA
-(*             | [] -> () *)
-
-(*             | tA :: [] -> *)
-(*                 fprintf ppf "%a" *)
-(*                   (fmt_ppr_lf_typ 0) tA *)
-
+      | LF.SigmaDecl (_x, typrec) ->
+          let ppr_element ppf suffix = function
+          | (x, tA) ->
+                 fprintf ppf "%s:%a%s"
+                   (R.render_name x)
+                   (fmt_ppr_lf_typ 0) tA
+                  suffix
+          in let rec ppr_elements ppf = function
+            | LF.SigmaLast tA -> fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA
+            | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) -> begin ppr_element ppf ". " (x, tA1); fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA2 end
+            | LF.SigmaElem (x, tA, tAs)  -> begin ppr_element ppf ", " (x, tA); ppr_elements ppf  tAs end
 (*             | tA :: tAs -> *)
 (*                   fprintf ppf "%a,@ %a" *)
 (*                     (fmt_ppr_lf_typ 0) tA *)
 (*                     ppr_typ_rec        tAs *)
+(*                fprintf ppf "Sigma %a. %a" *)
           in
             fprintf ppf "%a"
-              ppr_typ_rec tAs
+              (ppr_elements) typrec
 
     and fmt_ppr_lf_psi_hat lvl ppf = function
       | (None, offset)  -> fprintf ppf "%s" (R.render_offset offset)
@@ -1511,12 +1513,10 @@ module Int = struct
 end
 
 
-(* Disabled Error module to allow printing in check, whnf, unify, etc. 
-   Wed Dec 17 21:12:38 2008 -bp 
-
 module Error = struct
 
   open Syntax.Int
+  open Error
 
   (***************************)
   (* Error Printer Signature *)
@@ -1530,19 +1530,15 @@ module Error = struct
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Check.LF.error -> unit
-
-
+      val fmt_ppr : formatter -> error -> unit
 
       (***************************)
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Check.LF.error -> unit
+      val ppr : error -> unit
 
     end
-
-
 
     module Whnf : sig
 
@@ -1550,20 +1546,17 @@ module Error = struct
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Whnf.error -> unit
-
-
+      val fmt_ppr : formatter -> error -> unit
 
       (***************************)
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Whnf.error -> unit
+      val ppr : error -> unit
 
     end
 
   end
-
 
 
   (********************************)
@@ -1575,8 +1568,6 @@ module Error = struct
     module IP = Int.Make (R)
 
     module Check = struct
-
-      open Check.LF
 
       (********************************)
       (* Format Based Pretty Printers *)
@@ -1603,7 +1594,7 @@ module Error = struct
             fprintf ppf
               "Substitution not well-typed"
 
-        | TypMisMatch (_cD, _cPsi, (tA1, s1), (tA2, s2)) ->
+        | TypMisMatch ((* _cD ,*) _cPsi, (tA1, s1), (tA2, s2)) ->
             fprintf ppf
               "Type mismatch ** WARNING: Types not in context **:@ @[%a[%a]@ =/=@ %a[%a]@]"
               (* The 2 is for precedence.  Treat printing
@@ -1618,7 +1609,8 @@ module Error = struct
             fprintf ppf
               "Sigma Type mismatch"
 
-        | IllTyped (_cD, _cPsi, (_tM, _s1), (_tA, _s2)) -> 
+        (* | IllTyped (_cD , _cPsi, (_tM, _s1), (_tA, _s2)) ->  *)
+        | IllTyped (_cPsi, _m, (_tA, _s2)) -> 
             fprintf ppf
               "Illtyped normal object" 
 
@@ -1631,11 +1623,7 @@ module Error = struct
 
     end
 
-
-
     module Whnf = struct
-
-      open Whnf
 
       (********************************)
       (* Format Based Pretty Printers *)
@@ -1670,7 +1658,6 @@ module Error = struct
   module DefaultCidRenderer = Int.DefaultCidRenderer
 
 
-
   (******************************************************)
   (* Default Error Pretty Printer Functor Instantiation *)
   (******************************************************)
@@ -1678,4 +1665,3 @@ module Error = struct
   module DefaultPrinter = Make (DefaultCidRenderer)
 
 end
-*)

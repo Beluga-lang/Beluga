@@ -8,13 +8,11 @@
 
 
 open Format
-
-
+open Error
 
 type lvl
 
 val std_lvl : lvl
-
 
 
 module type CID_RENDERER = sig
@@ -336,7 +334,6 @@ module Int : sig
 end
 
 
-(*
 module Error : sig
 
   (***************************)
@@ -351,19 +348,15 @@ module Error : sig
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Check.LF.error -> unit
-
-
+      val fmt_ppr : formatter -> error -> unit
 
       (***************************)
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Check.LF.error -> unit
+      val ppr : error -> unit
 
     end
-
-
 
     module Whnf : sig
 
@@ -371,20 +364,17 @@ module Error : sig
       (* Format Based Pretty Printers *)
       (********************************)
 
-      val fmt_ppr : formatter -> Whnf.error -> unit
-
-
+      val fmt_ppr : formatter -> error -> unit
 
       (***************************)
       (* Regular Pretty Printers *)
       (***************************)
 
-      val ppr : Whnf.error -> unit
+      val ppr : error -> unit
 
     end
 
   end
-
 
 
   (***********************************)
@@ -393,17 +383,13 @@ module Error : sig
 
   module DefaultCidRenderer : CID_RENDERER
 
-
-
   (*********************************)
   (* Error Pretty Printer Functor  *)
   (*********************************)
 
   module Make : functor (R : CID_RENDERER) -> PRINTER
-      (* Might need a constraint here saying that IPF will be
-      instantiated with R.  -dwm *)
-
-
+    (* Might need a constraint here saying that IPF will be
+       instantiated with R.  -dwm *)
 
   (******************************************************)
   (* Default Error Pretty Printer Functor Instantiation *)
@@ -412,4 +398,3 @@ module Error : sig
   module DefaultPrinter : PRINTER
 
 end
-*)

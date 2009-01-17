@@ -269,8 +269,31 @@ GLOBAL: sgn_eoi;
   lf_schema_elem:
     [
       [
-        "some"; "["; ahat_decls = LIST0 lf_ahat_decl; "]"; "block"; a = lf_ahat ->
-          LF.SchElem (_loc, List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty ahat_decls, LF.SigmaDecl (Id.mk_name None, [a]))
+        "some"; "["; ahat_decls = LIST0 lf_ahat_decl; "]"; "block"; arec = lf_typ_rec_toplevel ->
+          LF.SchElem (_loc, List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty ahat_decls,
+                 LF.SigmaDecl (Id.mk_name None, arec))
+      ]
+    ]
+  ;
+
+  lf_typ_rec_toplevel:
+    [
+      [
+        a_list = LIST1 lf_typ_rec_elem SEP ","; "."; a_last = lf_ahat
+         -> List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last)
+      | 
+        a = lf_ahat
+         -> LF.SigmaLast a
+      ]
+    ]
+  ;
+
+
+  lf_typ_rec_elem:
+    [
+      [
+        x = SYMBOL; ":"; a = lf_ahat
+         -> (Id.mk_name (Some x), a)
       ]
     ]
   ;
@@ -288,7 +311,7 @@ GLOBAL: sgn_eoi;
     [
       [
         a = lf_typ
-          -> a
+          -> a 
       ]
     ]
   ;

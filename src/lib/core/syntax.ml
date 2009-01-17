@@ -58,7 +58,9 @@ module Ext = struct
       | Head     of head
       | Normal   of normal
 
-    and typ_rec = typ list
+    and typ_rec =
+      |  SigmaLast of typ
+      |  SigmaElem of name * typ * typ_rec
 
     and dctx =
       | Null
@@ -175,12 +177,13 @@ module Int = struct
       | PDecl of name * typ  * dctx        (*   |   p::A[Psi]                *)
       | SDecl of name * dctx * dctx        (*   |   s::A[Psi]                *)
       | CDecl of name * cid_schema
-                                           (* Potentially, A is Sigma type ? *)
+                                           (* Potentially, A is Sigma type? *)
 
     and typ =                              (* LF level                       *)
       | Atom  of cid_typ * spine           (* A ::= a M1 ... Mn              *)
       | PiTyp of typ_decl * typ            (*   | Pi x:A.B                   *)
       | TClo  of (typ * sub)               (*   | TClo(A,s)                  *)
+      | TVar  of tvar * sub                (*   | TVar(a,s)                  *)
 
     and normal =                           (* normal terms                   *)
       | Lam  of name * normal              (* M ::= \x.M                     *)
@@ -229,6 +232,9 @@ module Int = struct
       | CInst  of dctx   option ref * cid_schema
           (* D |- Psi : schema   *)
 
+    and tvar = 
+      | TInst   of typ option ref * dctx * kind * cnstr list ref
+
     and constrnt =                         (* Constraint                     *)
       | Queued                             (* constraint ::= Queued          *)
       | Eqn of psi_hat * normal * normal   (*            | Psi |-(M1 == M2)  *)
@@ -260,8 +266,9 @@ module Int = struct
                                            (*        | .         *)
                                            (*        | Psihat, x *)
 
-    and typ_rec = typ list                 (* Sigma x1:A1 ... xk:Ak          *)
-                                           (* should not be a list ... -bp   *)
+    and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
+      |  SigmaLast of typ                             (* ... . B *)
+      |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
 
 
 
@@ -342,6 +349,111 @@ module Int = struct
       | Rec    of cid_prog   * Comp.typ * Comp.exp_chk
 
     type sgn = decl list
+
+  end
+
+end
+
+(** Approximate Simple Syntax *)
+module Apx = struct
+
+  module LF = struct
+
+    type kind =
+      | Typ
+      | PiKind of typ_decl * kind
+
+    and typ_decl =
+      | TypDecl of name * typ
+
+    and sigma_decl =
+      | SigmaDecl of name * typ_rec
+
+    and ctyp_decl =
+      | MDecl of  name * typ  * dctx
+      | PDecl of  name * typ  * dctx
+
+    and typ =
+      | Atom  of cid_typ * spine
+      | PiTyp of typ_decl * typ
+
+    and typ_rec =
+      |  SigmaLast of typ
+      |  SigmaElem of name * typ * typ_rec
+
+    and normal =
+      | Lam  of name * normal
+      | Root of head * spine
+
+    and head =
+      | BVar  of offset
+      | Const of cid_term
+      | MVar  of offset * sub
+      | PVar  of offset * sub
+      | FVar  of name
+      | FMVar of name   * sub    
+      | FPVar of name   * sub    
+
+
+    and spine =
+      | Nil
+      | App of normal * spine
+
+    and sub =
+      | EmptySub
+      | Id
+      | Dot   of front * sub
+
+    and front =
+      | Head of head
+      | Obj  of normal
+
+    and dctx =
+      | Null
+      | CtxVar   of offset
+      | DDec     of dctx * typ_decl
+
+    and 'a ctx =
+      | Empty
+      | Dec of 'a ctx * 'a
+
+    and sch_elem =
+      | SchElem of typ_decl ctx * sigma_decl
+
+    and schema =
+      | Schema of sch_elem list
+
+    and psi_hat = (Int.LF.cvar) option * offset
+  end
+
+  module Comp = struct
+
+    type typ =
+      | TypBox   of LF.typ  * LF.dctx
+      | TypArr   of typ * typ
+      | TypCtxPi of (name * cid_schema) * typ
+      | TypPiBox of LF.ctyp_decl * typ
+
+    and exp_chk =
+       | Syn    of exp_syn
+       | Fun    of name * exp_chk         (* fn   f => e         *)
+       | CtxFun of name * exp_chk         (* FN   f => e         *)
+       | MLam   of name * exp_chk         (* mlam f => e         *)
+       | Box    of LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
+       | Case   of exp_syn * branch list
+
+    and exp_syn =
+       | Var    of offset                             (* x              *)
+       | Const  of cid_prog                           (* c              *)
+       | Apply  of exp_syn * exp_chk                  (* i e            *)
+       | CtxApp of exp_syn * LF.dctx                  (* i [Psi]        *)
+       | MApp   of exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)
+       | Ann    of exp_chk * typ                      (* e : tau        *)
+
+    and branch =
+      | BranchBox of LF.ctyp_decl LF.ctx
+          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
+          * exp_chk
 
   end
 

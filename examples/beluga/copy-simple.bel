@@ -20,5 +20,6 @@ FN g => fn e =>
        (case (copy [g, x:term]  (box(g,x . U![id, x]!))) of
 
           {V:: term[g, x : term ]}
+
            box(g,x . V![id, x]!) : term [g,x:term] =>
              box(g . lam (\ x. V![id , x]!))));

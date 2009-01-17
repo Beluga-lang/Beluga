@@ -13,16 +13,9 @@
 open Context
 open Substitution
 open Syntax.Int.LF
+open Error 
 
-
-(*
-type error =
-  | ConstraintsLeft
-  | NotPatSub
-*)
-
-exception Error of string
-
+exception Error of error
 
 let rec raiseType cPsi tA = match cPsi with
   | Null -> tA
@@ -120,8 +113,7 @@ and lowerMVar = function
 
   | _
    (* It is not clear if it can happen that cnstr =/= nil *)
-    -> raise (Error "Constraints Left")
-                (* ConstraintsLeft *)
+    -> raise (Error ConstraintsLeft)
 
 (* ------------------------------------------------------------ *)
 (* Normalization = applying simultaneous hereditary substitution
@@ -282,8 +274,11 @@ and lowerMVar = function
       -> normTyp (tA, LF.comp s sigma)
 
   and normTypRec (recA, sigma) = match recA with
-    | []          -> []
-    | tA :: recA' -> normTyp (tA, sigma) :: normTypRec (recA', LF.dot1 sigma)
+    | SigmaLast lastA -> SigmaLast (normTyp(lastA, sigma))
+    | SigmaElem (x, tA, recA') ->
+       let tA = normTyp (tA, sigma)
+       in
+         SigmaElem(x, tA, normTypRec (recA', LF.dot1 sigma))
 
   and normDecl (decl, sigma) = match decl with
      TypDecl (x, tA) -> TypDecl (x, normTyp (tA, sigma))
@@ -298,7 +293,8 @@ and lowerMVar = function
     | Null -> Null
     | CtxVar psi -> CtxVar psi 
     | DDec (cPsi1, decl) -> DDec(normDCtx cPsi1, normDecl (decl, LF.id))
-    | SigmaDec (cPsi1, SigmaDecl(x, typrec)) -> SigmaDec(normDCtx cPsi1, SigmaDecl (x, normTypRec (typrec, LF.id)))
+    | SigmaDec (cPsi1, SigmaDecl(x, typrec)) ->
+        SigmaDec(normDCtx cPsi1, SigmaDecl (x, normTypRec (typrec, LF.id)))
 
 
 (* ---------------------------------------------------------- *)
@@ -490,12 +486,10 @@ and lowerMVar = function
       | Dot (Obj (tM), s)      ->
           begin match whnf (tM, LF.id) with
             | (Root (BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
-            | _                         -> raise (Error "Not a pattern substitution")
-                                                       (* NotPatSub *)
+            | _                         -> raise (Error NotPatSub)
           end
 
-      | _                      -> raise (Error "Not a pattern substitution")
-                                        (* NotPatSub *)
+      | _                      -> raise (Error NotPatSub)
 
     let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
 
@@ -534,7 +528,9 @@ and lowerMVar = function
                 -> p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
               | (MVar (u, s'), MVar (w, s''))
-                -> u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+                -> let _ = Printf.printf "Check conv for mvars...\n" in   
+          
+                  u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
               | (FMVar (u, s'), FMVar (w, s''))
                 -> u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
@@ -620,12 +616,12 @@ and lowerMVar = function
         ->    p = q
            && convSub s s'
 
-      | (Head (MVar (q, s)), Head (MVar (p, s')))
-        ->    p = q
+      | (Head (MVar (u, s)), Head (MVar (v, s')))
+        ->  u = v
            && convSub s s'
 
-      | (Head (FMVar (q, s)), Head (FMVar (p, s')))
-        ->    p = q
+      | (Head (FMVar (u, s)), Head (FMVar (v, s')))
+        ->    u = v
            && convSub s s'
 
       | (Head (Proj (head, k)), Head (Proj (head', k')))
@@ -680,11 +676,11 @@ and lowerMVar = function
           cD ; cPsi |- [s]recA = [s']recB <= type
      *)
     let rec convTypRec sArec sBrec = match (sArec, sBrec) with
-      | (([]        , _s), ([]        , _s'))
-        -> true
+      | (  (SigmaLast lastA,  s),     (SigmaLast lastB,  s')  )
+        -> convTyp (lastA, s) (lastB, s')
 
-      | ((tA :: recA,  s), (tB :: recB,  s'))
-        ->   convTyp    (tA  ,      s) (tB  ,      s')
+      | (  (SigmaElem(_xA, tA, recA),  s),     (SigmaElem(_xB, tB, recB),  s')  )
+        ->   convTyp (tA, s) (tB, s')
           && convTypRec (recA, LF.dot1 s) (recB, LF.dot1 s')
 
 

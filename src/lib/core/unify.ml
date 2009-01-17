@@ -20,6 +20,8 @@ module type UNIFY = sig
 
   type unifTrail
 
+  exception Error of string
+
   (* trailing of variable instantiation *)
 
   val reset  : unit -> unit
@@ -658,6 +660,7 @@ module Make (T : TRAIL) : UNIFY = struct
         and t2' = comp t2 s2 in (* cD ; cPsi |- t2' <= cPsi2 *)
         in
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
+            let _ = Printf.printf "UNIFY: MVAR same \n\n" in 
             match (isPatSub t1' , isPatSub t2') with                
               | (true, true) ->                 
                   let (s', cPsi') = intersection (phat, (Whnf.normSub t1', Whnf.normSub t2'), cPsi1) in
@@ -682,7 +685,8 @@ module Make (T : TRAIL) : UNIFY = struct
                   (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
                   begin try
                     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
-                    let sM2' = trail (fun () -> prune (phat, sM2, ss1, MVarRef r1)) in                                      (* sM2 = [ss1][s2]tM2 *) 
+                    let sM2' = trail (fun () -> prune (phat, sM2, ss1, MVarRef r1)) in 
+                    (* sM2 = [ss1][s2]tM2 *) 
                       instantiateMVar (r1, sM2', !cnstrs1)
                   with
                     | NotInvertible ->
@@ -757,6 +761,10 @@ module Make (T : TRAIL) : UNIFY = struct
         else
           raise (Unify "Free Variable clash")
 
+    | (MVar (Offset k, s) , MVar(Offset k', s')) -> 
+        if k = k' then unifySub phat s s' 
+        else raise (Unify "Bound MVar clash")
+
     | (PVar (PInst (q, _, _, cnstr), s1) as h1, BVar k2) ->
         if isPatSub s1 then
           match bvarSub k2 (invert (Whnf.normSub s1)) with
@@ -782,7 +790,7 @@ module Make (T : TRAIL) : UNIFY = struct
         (* check s1', and s2' are pattern substitutions; possibly generate constraints
            check intersection (s1', s2'); possibly prune;
            check q1 = q2 *)
-        if q1 = q2 then (* cPsi1 = _cPsi2 *)
+        if q1 == q2 then (* cPsi1 = _cPsi2 *)
           match (isPatSub s1' ,  isPatSub s2' ) with
             | (true, true) ->
                 let (s', cPsi') = intersection (phat, (s1', s2'), cPsi1) in
@@ -878,6 +886,84 @@ module Make (T : TRAIL) : UNIFY = struct
           unifyTerm (phat, (tM1, s1), (tM2, s2));
           unifySpine (phat, (tS1, s1), (tS2, s2))
       (* Nil/App or App/Nil cannot occur by typing invariants *)
+
+
+    and unifySub phat s1 s2 = match (s1, s2) with 
+      | (Shift n, Shift k) -> 
+          if n = k then () else raise (Error "Substitutions not well-typed")
+
+      | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2)) 
+        -> if s1 = s2 then 
+          unifySub phat sigma1 sigma2
+        else raise (Error "SVar mismatch")
+
+      | (Dot (f, s), Dot (f', s'))
+        -> (unifyFront phat f f' ;
+            unifySub phat s s')
+      
+      | (Shift n, Dot(Head BVar _k, _s')) 
+          -> unifySub phat (Dot (Head (BVar (n+1)), Shift (n+1))) s2
+
+      | (Dot(Head BVar _k, _s'), Shift n) 
+          -> unifySub phat s1 (Dot (Head (BVar (n+1)), Shift (n+1)))
+          
+      |  _
+        -> raise (Error "Substitution mismatch")
+
+
+    and unifyFront phat front1 front2 = match (front1, front2) with
+      | (Head (BVar i), Head (BVar k))
+        -> if i = k then () else raise (Error "Front BVar mismatch")
+
+      | (Head (Const i), Head (Const k))
+        -> if i = k then () else raise (Error "Front Constant mismatch")
+
+      | (Head (PVar (q, s)), Head (PVar (p, s')))
+        -> (if p = q then
+            unifySub phat s s'
+            else raise (Error "Front PVar mismatch"))
+
+
+      | (Head (FPVar (q, s)), Head (FPVar (p, s')))
+        ->   (if p = q then 
+                unifySub phat s s' 
+              else raise (Error "Front FPVar mismatch"))
+
+      | (Head (MVar (u, s)), Head (MVar (v, s')))
+        ->  (if u = v then
+               unifySub phat s s'
+             else raise (Error "Front MVar mismatch"))
+
+      | (Head (FMVar (u, s)), Head (FMVar (v, s')))
+        ->    (if u = v then
+                 unifySub phat s s'
+               else raise (Error "Front FMVar mismatch"))
+
+      | (Head (Proj (head, k)), Head (Proj (head', k')))
+        ->    (if k = k' then
+                 unifyFront phat (Head head) (Head head')
+               else raise (Error "Front Proj mismatch"))
+
+      | (Head (FVar x), Head (FVar y)) 
+        -> if x = y then () else raise (Error "Front FVar mismatch")
+
+      | (Obj tM, Obj tN)
+        -> unifyTerm (phat, (tM, id), (tN, id))
+
+      | (Head head, Obj tN)
+        -> unifyTerm (phat, (Root (head, Nil), id), (tN, id))
+
+      | (Obj tN, Head head)
+        -> unifyTerm (phat, (tN, id), (Root (head, Nil), id))
+
+      | (Undef, Undef)
+        -> ()
+
+      | (_, _)
+        -> raise (Error "Front mismatch")
+
+
+
 
     let rec unifyTyp' (phat, sA, sB) = unifyTypW (phat, Whnf.whnfTyp sA, Whnf.whnfTyp sB)
 

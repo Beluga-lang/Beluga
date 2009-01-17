@@ -9,7 +9,7 @@ open Syntax.Int.LF
 
 exception Error of string
 
-(* More approriate: Psi into psihat  Sat Oct  4 11:44:55 2008 -bp *)
+(* More appropriate: Psi into psihat  Sat Oct  4 11:44:55 2008 -bp *)
 let dctxToHat cPsi =
   let rec length = function
     | Null               -> (None    , 0)
@@ -32,9 +32,9 @@ let dctxToHat cPsi =
 (* Declaration Contexts *)
 (************************)
 
-let rec sigmaShift tArec k = match tArec with
-  | []          -> []
-  | tA :: tArec -> TClo (tA, Shift k) :: sigmaShift tArec (k + 1)
+let rec sigmaShift typrec k = match typrec with
+  | SigmaLast tA          -> SigmaLast (TClo (tA, Shift k))
+  | SigmaElem(x, tA, typrec) -> SigmaElem(x, TClo (tA, Shift k), sigmaShift typrec (k + 1))
 
 
 let rec ctxShift cPsi k = match cPsi with

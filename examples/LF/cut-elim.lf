@@ -130,11 +130,12 @@ car_forallr' :
          -> ca' A (\ p . D p)
                (\ n . forallr' (\ a . \ p . E1 n a p) P)
                (forallr' (\ a . \ p . F1 a p) P).
-car_foralll' :
-      ({n1:neg (A1 T)} ca' A (\ p . D p) (\ n . E1 n n1) (F1 n1))
-         -> ca' A (\ p . D p)
-               (\ n . foralll' T (\ n1 . E1 n n1) N)
-               (foralll' T (\ n . F1 n) N).
+% car_foralll' :
+%      ({n1:neg (A1 T)} ca' A (\ p . D p) (\ n . E1 n n1) (F1 n1))
+%         -> ca' A (\ p . D p)
+%               (\ n . foralll' T (\ n1 . E1 n n1) N)
+%               (foralll' T (\ n . F1 n) N).
+
 cal_axiom' :
       ca' A (\ p . axiom' N P) (\ n . E n) (axiom' N P).
 
@@ -159,6 +160,12 @@ cal_notl' :
          -> ca' A (\ p . notl' (\ p1 . D1 p p1) N) (\ n . E n)
                (notl' (\ p . F1 p) N).
 
+% cal_foralll' :
+%      ({n1: neg _ } ca' A (\ p . D1 p n1) (\ n . E n) (F1 n1))
+%         -> ca' A (\ p . foralll' T (\ n . D1 p n) N)
+%               (\ n . E n) (foralll' T (\ n . F1 n) N).
+%
+
 cal_forallr' :
       ({a:i} {p1:pos (B1 a)}
           ca' A (\ p . D1 p a p1) (\ n . E n) (F1 a p1))
@@ -166,7 +173,3 @@ cal_forallr' :
                (\ n . E n) (forallr' (\ a . \ p . F1 a p) P).
 
 
-cal_foralll' :
-      ({n1: neg _ } ca' A (\ p . D1 p n1) (\ n . E n) (F1 n1))
-         -> ca' A (\ p . foralll' T (\ n . D1 p n) N)
-               (\ n . E n) (foralll' T (\ n . F1 n) N).

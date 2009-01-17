@@ -686,7 +686,8 @@ and abstractMVarHead cQ offset tH = match tH with
   | I.AnnH (_tH, _tA) ->
       raise NotImplemented
 
-  | I.PVar (I.Offset _ , _s) -> raise (Error "Encountered bound parameter variable")
+  | I.PVar (I.Offset p , s) -> 
+      I.PVar (I.Offset p, abstractMVarSub cQ offset s)
 
 
   (* other cases impossible for object level *)

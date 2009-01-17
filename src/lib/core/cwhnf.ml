@@ -385,9 +385,11 @@ and cnorm (tM, t) = match tM with
     |  LF.TClo (tA, s)
       -> LF.TClo(cnormTyp (tA,t), cnormSub (s,t))
 
-  and cnormTypRec (recA, t) = match recA with
-    | []          -> []
-    | tA :: recA' -> cnormTyp (tA, t) :: cnormTypRec (recA', t)
+  and cnormTypRec (typRec, t) = match typRec with
+    |  LF.SigmaLast lastA -> LF.SigmaLast(cnormTyp (lastA, t))
+    |  LF.SigmaElem (x, tA, recA') ->
+         let tA = cnormTyp (tA, t) in
+           LF.SigmaElem (x, tA, cnormTypRec (recA', t))
 
   and cnormDecl (decl, t) = match decl with
       LF.TypDecl (x, tA) -> LF.TypDecl (x, cnormTyp (tA, t))
@@ -410,10 +412,10 @@ let rec cnormDCtx (cPsi, t) = match cPsi with
         LF.CtxVar (LF.Offset psi) 
 
     | LF.DDec(cPsi, decl) ->  
-	LF.DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
+        LF.DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
 
     | LF.SigmaDec (cPsi, LF.SigmaDecl(x, recA)) -> 
-	LF.SigmaDec(cnormDCtx (cPsi, t), LF.SigmaDecl(x, cnormTypRec (recA, t)))
+        LF.SigmaDec(cnormDCtx (cPsi, t), LF.SigmaDecl(x, cnormTypRec (recA, t)))
 
 
 

@@ -44,7 +44,7 @@ let main () =
                     Format.fprintf
                       Format.std_formatter
                       "\n!! Error during Weak-Head Normalization !!\n\n%a\n\n@?"
-                      Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err;
+                      Pretty.Error.DefaultPrinter.fmt_ppr err;
                     print_newline ();
                     errors + 1
 
@@ -65,6 +65,13 @@ let main () =
               print_newline ();
               errors + 1
 
+          | Reconstruct.Error err ->
+              Format.fprintf
+                Format.std_formatter
+                "\n!! Error during Reconstruction !!\n\n%a\n\n@?"
+                Pretty.Error.DefaultPrinter.fmt_ppr err;
+              print_newline ();
+              errors + 1
 
     (* Iterate the process for each file given on the command line *)
     in

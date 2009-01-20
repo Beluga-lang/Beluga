@@ -1312,7 +1312,16 @@ module Error = struct
           fprintf ppf "Inferred _tA but expected _tB"
 
       | ExpAppNotFun ->
-          fprintf ppf "Expression is applied, but not a function"
+          fprintf ppf "expression is not a function\n  "
+
+stdIn:1.1-1.4 Error: operator is not a function [literal]
+  operator: int
+    in expression:
+    1 2
+
+
+      | ExpNilNotAtom ->
+          fprintf ppf "TODO"
 
       | KindMisMatch ->
           fprintf ppf "Kind mismatch"
@@ -1334,15 +1343,39 @@ module Error = struct
       | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
           fprintf ppf "Sigma Type mismatch"
 
-      (* | IllTyped (_cD , _cPsi, (_tM, _s1), (_tA, _s2)) ->  *)
-      | IllTyped (_cPsi, _m, (_tA, _s2)) ->
-          fprintf ppf "Illtyped normal object"
+      | IllTyped (_cPsi, (tM, _s1), (tA, _s2)) ->
+          (* FIXME call normalisation or normalizing string conversion *)
+          fprintf ppf
+            "ill typed expression\n  expected type: %a\n  for expression:\n    %a" 
+            (IP.fmt_ppr_lf_typ std_lvl) tA
+            (IP.fmt_ppr_lf_normal std_lvl) tM
+            (* (IP.fmt_ppr_lf_typ (Whnf.norm (tA, s2))) *)
+            (* (IP.fmt_ppr_lf_normal (Whnf.normTyp (tM, s1))) *)
+
+      | LeftOverConstraints ->
+          fprintf ppf "constraints left after reconstruction"
+
+      | LeftOverUndef ->
+          fprintf ppf "Undef left after unification"
+
+      | IllTypedIdSub ->
+          fprintf ppf "TODO"
+
+      | ValueRestriction ->
+          fprintf ppf "value restriction (case construct)"
+
+      | CompIllTyped ->
+          fprintf ppf "TODO"
+
+      | UnboundName n   ->
+          fprintf ppf "unbound variable or constructor: %s" (R.render_name n)
 
       | ConstraintsLeft ->
           fprintf ppf "Constraint of functional type are not simplified"
 
       | NotPatSub       ->
           fprintf ppf "Not a pattern substitution"
+
 
     (* Regular Pretty Printers *)
     let ppr = fmt_ppr std_formatter

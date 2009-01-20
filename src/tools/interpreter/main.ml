@@ -68,7 +68,8 @@ let main () =
           | Reconstruct.Error err ->
               Format.fprintf
                 Format.std_formatter
-                "\n!! Error during Reconstruction !!\n\n%a\n\n@?"
+                (* TODO print location as "filename:line1.col1-line2-col2" *)
+                "Error (Reconstruction): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               errors + 1

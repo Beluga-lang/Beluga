@@ -54,7 +54,6 @@ module Ext : sig
     val fmt_ppr_cmp_branches  : lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : lvl -> formatter -> Comp.branch      -> unit
 
-
     (* Regular Pretty Printers *)
     val ppr_sgn_decl      : Sgn.decl         -> unit
     val ppr_lf_kind       : LF.kind          -> unit
@@ -77,7 +76,6 @@ module Ext : sig
 
   end
 
-
   (* External Syntax Pretty Printer Functor *)
   module Make : functor (R : CID_RENDERER) -> PRINTER
 
@@ -88,7 +86,6 @@ module Ext : sig
   module DefaultPrinter : PRINTER
 
 end
-
 
 
 module Int : sig

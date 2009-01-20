@@ -64,8 +64,7 @@ module LF = struct
   *)
   and checkSpine cO cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
     | ((Nil, _), sP') ->
-        if Whnf.convTyp sP' sP
-        then
+        if Whnf.convTyp sP' sP then
           ()
         else
           let _ = Printf.printf "checkSpine: Expected type : %s \n Inferred type: %s\n\n"

@@ -1312,13 +1312,7 @@ module Error = struct
           fprintf ppf "Inferred _tA but expected _tB"
 
       | ExpAppNotFun ->
-          fprintf ppf "expression is not a function\n  "
-
-stdIn:1.1-1.4 Error: operator is not a function [literal]
-  operator: int
-    in expression:
-    1 2
-
+          fprintf ppf "expression is not a function"
 
       | ExpNilNotAtom ->
           fprintf ppf "TODO"

@@ -113,6 +113,8 @@ module Ext = struct
 
     val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
 
+    val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx          -> unit
+
     val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
 
     val fmt_ppr_cmp_exp_chk   : lvl -> formatter -> Comp.exp_chk     -> unit
@@ -154,6 +156,8 @@ module Ext = struct
     val ppr_lf_psi_hat    : LF.psi_hat       -> unit
 
     val ppr_lf_dctx       : LF.dctx          -> unit
+
+    val ppr_lf_mctx       : LF.mctx          -> unit
 
     val ppr_cmp_typ       : Comp.typ         -> unit
 
@@ -242,6 +246,15 @@ module Ext = struct
             (fmt_ppr_lf_typ 0) tA
             (fmt_ppr_lf_dctx 0) cPsi
 
+
+    and fmt_ppr_lf_mctx lvl ppf = function
+      | LF.Empty ->
+          fprintf ppf "."
+
+      | LF.Dec (cD, ctyp_decl) ->
+          fprintf ppf "%a, %a"
+            (fmt_ppr_lf_mctx 0) cD
+            (fmt_ppr_lf_ctyp_decl lvl) ctyp_decl
 
     and fmt_ppr_lf_typ lvl ppf = function
       | LF.Atom (_, a, LF.Nil) ->
@@ -562,31 +575,25 @@ module Ext = struct
 
     and fmt_ppr_cmp_branch _lvl ppf = function
       | Comp.BranchBox (_, ctyp_decls, (pHat, tM, tau), e) ->
-          let rec ppr_ctyp_decls ppf = function
-            | LF.Empty             -> ()
+          begin match tau with
+            | None -> 
+                fprintf ppf "%a box (%a . %a) => %a"
+                  (*                    ppr_ctyp_decls ctyp_decls *)
+                  (fmt_ppr_lf_mctx 0) ctyp_decls
+                  (fmt_ppr_lf_psi_hat 0) pHat
+                  (fmt_ppr_lf_normal 0) tM
+                  (fmt_ppr_cmp_exp_chk 0) e
 
-            | LF.Dec (decls, decl) ->
-                fprintf ppf "%a %a"
-                  ppr_ctyp_decls decls
-                  (fmt_ppr_lf_ctyp_decl 1) decl 
-          in
-            match tau with
-              | None -> 
-                  fprintf ppf "%a box (%a . %a) => %a"
-                    ppr_ctyp_decls ctyp_decls
-                    (fmt_ppr_lf_psi_hat 0) pHat
-                    (fmt_ppr_lf_normal 0) tM
-                    (fmt_ppr_cmp_exp_chk 0) e
-
-              | Some (tA, cPsi) -> 
-                  fprintf ppf "%a box (%a . %a) : %a[%a] => %a"
-                    ppr_ctyp_decls ctyp_decls
-                    (fmt_ppr_lf_psi_hat 0) pHat
-                    (fmt_ppr_lf_normal 0) tM
-                    (fmt_ppr_lf_typ 0) tA
-                    (fmt_ppr_lf_dctx 0) cPsi
-                    (fmt_ppr_cmp_exp_chk 0) e
-
+            | Some (tA, cPsi) -> 
+                fprintf ppf "%a box (%a . %a) : %a[%a] => %a"
+                  (*                  ppr_ctyp_decls ctyp_decls *)
+                  (fmt_ppr_lf_mctx 0) ctyp_decls
+                  (fmt_ppr_lf_psi_hat 0) pHat
+                  (fmt_ppr_lf_normal 0) tM
+                  (fmt_ppr_lf_typ 0) tA
+                  (fmt_ppr_lf_dctx 0) cPsi
+                  (fmt_ppr_cmp_exp_chk 0) e
+          end 
 
 
     (***************************)
@@ -617,6 +624,8 @@ module Ext = struct
     let ppr_lf_psi_hat    = fmt_ppr_lf_psi_hat    std_lvl std_formatter
 
     let ppr_lf_dctx       = fmt_ppr_lf_dctx       std_lvl std_formatter
+
+    let ppr_lf_mctx       = fmt_ppr_lf_mctx       std_lvl std_formatter
 
     let ppr_cmp_typ       = fmt_ppr_cmp_typ       std_lvl std_formatter
 
@@ -802,6 +811,8 @@ module Int = struct
     val dctxToString      : LF.dctx       -> string
 
     val mctxToString      : LF.mctx       -> string
+
+    val phatToString      : LF.psi_hat    -> string
 
     val schemaToString    : LF.schema     -> string 
 
@@ -1009,8 +1020,13 @@ module Int = struct
 
 
     and fmt_ppr_lf_sub lvl ppf = function
-      | LF.Shift n ->
+      | LF.Shift (None,n) -> 
           fprintf ppf "^%s"
+            (R.render_offset n)
+
+      | LF.Shift (Some (LF.Offset psi), n) -> 
+          fprintf ppf "^(ctx_var %s + %s)"
+            (R.render_offset psi)
             (R.render_offset n)
 
       | LF.SVar (c, s) ->
@@ -1444,6 +1460,11 @@ module Int = struct
 
     let mctxToString cD = fmt_ppr_lf_mctx std_lvl str_formatter cD
                               ; flush_str_formatter ()
+
+
+    let phatToString phat = fmt_ppr_lf_psi_hat std_lvl str_formatter phat
+                              ; flush_str_formatter ()
+
 
     let schemaToString schema = fmt_ppr_lf_schema std_lvl str_formatter schema
                               ; flush_str_formatter ()

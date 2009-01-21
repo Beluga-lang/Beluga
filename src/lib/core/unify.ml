@@ -95,10 +95,10 @@ module Make (T : TRAIL) : UNIFY = struct
   let rec isPatSub s = 
     let s = (Whnf.normSub s) in 
     begin match s with
-    | Shift _k              -> true
+    | Shift (_,_k)              -> true
     | Dot (Head(BVar n), s) ->
 	let rec checkBVar s' = match s' with
-          | Shift k                 -> n <= k
+          | Shift (_ , k)           -> n <= k
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
           | Dot (Undef, s)          -> checkBVar s
           | _                       -> false
@@ -245,14 +245,14 @@ module Make (T : TRAIL) : UNIFY = struct
   *)
 
   let rec pruneCtx' (phat, (t, cPsi1), ss) = match (t, cPsi1) with
-    | (Shift _k, Null) ->
+    | (Shift (_ ,_k), Null) ->
         (id, Null)
 
-    | (Shift _k, CtxVar psi) ->
+    | (Shift (_, _k), CtxVar psi) ->
         (id, CtxVar psi)
 
-   | (Shift k, DDec (_, TypDecl (_x, _tA))) ->
-       pruneCtx' (phat, (Dot (Head (BVar (k + 1)), Shift (k + 1)), cPsi1), ss)
+   | (Shift (psi, k), DDec (_, TypDecl (_x, _tA))) ->
+       pruneCtx' (phat, (Dot (Head (BVar (k + 1)), Shift (psi, k + 1)), cPsi1), ss)
 
    | (Dot (Head (BVar k), s), DDec (cPsi1, TypDecl (x, tA))) ->
        let (s', cPsi2) = pruneCtx' (phat, (s, cPsi1), ss) in
@@ -410,14 +410,14 @@ module Make (T : TRAIL) : UNIFY = struct
         D ; cPsi'' |- [ss]s <= cPsi'
    *)
   and invSub (phat, (s, cPsi1), ss, rOccur) = match (s, cPsi1) with
-    | (Shift n, DDec(_cPsi', _dec)) ->
-        invSub (phat, (Dot (Head (BVar (n + 1)), Shift (n + 1)), cPsi1), ss, rOccur)
+    | (Shift (psi, n), DDec(_cPsi', _dec)) ->
+        invSub (phat, (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1), ss, rOccur)
 
-    | (Shift n, Null) -> comp (Shift n) ss  (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
+    | (Shift (psi, n), Null) -> comp (Shift (psi, n)) ss  (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
         (* must be defined -- n = offset
            otherwise it is undefined *)
 
-    | (Shift n, CtxVar _psi) -> comp (Shift n) ss  (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
+    | (Shift (psi, n), CtxVar _psi) -> comp (Shift (psi, n)) ss  (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
         (* must be defined -- n = offset
            otherwise it is undefined *)
 
@@ -458,13 +458,13 @@ module Make (T : TRAIL) : UNIFY = struct
           else  (* k1 =/= k2 *)
             (comp s' shift, cPsi'')
 
-    | ((Dot _ as s1), Shift n2, cPsi) ->
-        intersection (phat, (s1, Dot (Head (BVar (n2 + 1)), Shift (n2 + 1))), cPsi)
+    | ((Dot _ as s1), Shift (psi, n2), cPsi) ->
+        intersection (phat, (s1, Dot (Head (BVar (n2 + 1)), Shift (psi, n2 + 1))), cPsi)
 
-    | (Shift n1, (Dot _ as s2), cPsi) ->
-        intersection (phat, (Dot (Head (BVar (n1 + 1)), Shift (n1 + 1)), s2), cPsi)
+    | (Shift (psi, n1), (Dot _ as s2), cPsi) ->
+        intersection (phat, (Dot (Head (BVar (n1 + 1)), Shift (psi, n1 + 1)), s2), cPsi)
 
-    | (Shift _, Shift _, cPsi) -> (id, cPsi)
+    | (Shift (_psi, _k), Shift (_psi', _k'), cPsi) -> (id, cPsi)
         (* both substitutions are the same number of shifts by invariant *)
         (* all other cases impossible for pattern substitutions *)
 
@@ -680,14 +680,35 @@ module Make (T : TRAIL) : UNIFY = struct
               | (false, _) ->
                   addConstraint (cnstrs1, ref (Eqn (phat, Clo sN, Clo sM)))  (* XXX double-check *)
           else
+            let _ = Printf.printf "UNIFY: MVAR different \n\n" in 
             begin match (isPatSub t1' , isPatSub t2') with
               | (true, _) ->
                   (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
                   begin try
+                    let _    = Printf.printf "UNIFY: pat sub (MVAR-Diff case) \n t1' = %s \n t2' = %s \n " 
+                      (Pretty.Int.DefaultPrinter.subToString t1')
+                      (Pretty.Int.DefaultPrinter.subToString t2')
+                    in 
                     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
-                    let sM2' = trail (fun () -> prune (phat, sM2, ss1, MVarRef r1)) in 
+                    let _    = Printf.printf "UNIFY: inverted t1' : ss1 = %s  \n" 
+                                            (Pretty.Int.DefaultPrinter.subToString ss1)
+                    in 
+                    let _    = Printf.printf "UNIFY: pruning sM2= %s \n" 
+                      (Pretty.Int.DefaultPrinter.normalToString (Clo sM2)) in 
+
+                    let tM2' = trail (fun () -> prune (phat, sM2, ss1, MVarRef r1)) in 
+                    let _    = Printf.printf "UNIFY: pruning done tM2'= %s \n" 
+                      (Pretty.Int.DefaultPrinter.normalToString tM2') in 
+
+                    let _    = Printf.printf "UNIFY: r1[t1']= %s \n" 
+                      (Pretty.Int.DefaultPrinter.normalToString (Clo(tM2', t1'))) in 
+
+                    let _    = Printf.printf "UNIFY: r1[t1']= %s \n" 
+                      (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (tM2', t1')))
+
+                    in 
                     (* sM2 = [ss1][s2]tM2 *) 
-                      instantiateMVar (r1, sM2', !cnstrs1)
+                      instantiateMVar (r1, tM2', !cnstrs1)
                   with
                     | NotInvertible ->
                         addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
@@ -764,6 +785,11 @@ module Make (T : TRAIL) : UNIFY = struct
     | (MVar (Offset k, s) , MVar(Offset k', s')) -> 
         if k = k' then unifySub phat s s' 
         else raise (Unify "Bound MVar clash")
+
+    | (FMVar (u, s) , FMVar(u', s')) -> 
+        if u = u' then unifySub phat s s' 
+        else raise (Unify "Bound MVar clash")
+
 
     | (PVar (PInst (q, _, _, cnstr), s1) as h1, BVar k2) ->
         if isPatSub s1 then
@@ -889,8 +915,8 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     and unifySub phat s1 s2 = match (s1, s2) with 
-      | (Shift n, Shift k) -> 
-          if n = k then () else raise (Error "Substitutions not well-typed")
+      | (Shift (psi, n), Shift (phi, k)) -> 
+          if n = k && psi = phi then () else raise (Error "Substitutions not well-typed")
 
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2)) 
         -> if s1 = s2 then 
@@ -901,11 +927,11 @@ module Make (T : TRAIL) : UNIFY = struct
         -> (unifyFront phat f f' ;
             unifySub phat s s')
       
-      | (Shift n, Dot(Head BVar _k, _s')) 
-          -> unifySub phat (Dot (Head (BVar (n+1)), Shift (n+1))) s2
+      | (Shift (psi, n), Dot(Head BVar _k, _s')) 
+          -> unifySub phat (Dot (Head (BVar (n+1)), Shift (psi, n+1))) s2
 
-      | (Dot(Head BVar _k, _s'), Shift n) 
-          -> unifySub phat s1 (Dot (Head (BVar (n+1)), Shift (n+1)))
+      | (Dot(Head BVar _k, _s'), Shift (psi, n)) 
+          -> unifySub phat s1 (Dot (Head (BVar (n+1)), Shift (psi, n+1)))
           
       |  _
         -> raise (Error "Substitution mismatch")

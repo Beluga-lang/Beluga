@@ -24,10 +24,13 @@ let main () =
       in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
+(*             print_endline "\n## Parsing done ##\n" 
+               ; flush_all () ; *)
               printf "## Pretty Printing External Syntax: %s ##\n" file_name
             ; print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
 
             ; printf "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
+
             ; printf "\n## Type Reconstruction ##\n"
             ; let int_decls = List.map Reconstruct.recSgnDecl sgn in
                 print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls

@@ -82,6 +82,8 @@ module Ext : sig
 
     and psi_hat = name list
 
+    and mctx     = ctyp_decl ctx          
+
     and prag =
       | PragUnifyTerm of
             unify_decl list
@@ -211,7 +213,7 @@ module Int : sig
       | SClo of (spine * sub)
 
     and sub =
-      | Shift of offset
+      | Shift of ctx_offset * offset
       | SVar  of cvar * sub
       | Dot   of front * sub
 
@@ -219,6 +221,8 @@ module Int : sig
       | Head of head
       | Obj  of normal
       | Undef
+
+    and ctx_offset = cvar option
 
     and cvar =
       | Offset of offset

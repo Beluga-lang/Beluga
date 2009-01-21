@@ -90,7 +90,7 @@ and mshiftTyp tA n = match tA with
   | LF.TClo(tA, s) -> LF.TClo(mshiftTyp tA n, mshiftSub s n)
 
 and mshiftSub s n = match s with
-  | LF.Shift _k -> s
+  | LF.Shift (_,_k) -> s
   | LF.SVar(LF.Offset k, s) -> LF.SVar(LF.Offset (k+n), mshiftSub s n)
   | LF.Dot(ft, s) -> LF.Dot (mshiftFt ft n, mshiftSub s n)
 
@@ -455,12 +455,20 @@ and csub_spine cPsi k tS = match tS with
   | LF.SClo (tS, s) -> 
       LF.SClo (csub_spine cPsi k tS, csub_sub cPsi k s)
 
-and csub_sub cPsi k s = match s with
-  | LF.Shift k -> 
-      let (_ctx_v, d) = Context.dctxToHat cPsi in 
-        LF.Shift (k+d)
+(* csub_sub cPsi phi s = s' 
+
+*)
+and csub_sub cPsi phi (* k *) s = match s with
+  | LF.Shift (None, _k) -> s
+  | LF.Shift (Some (LF.Offset psi), k) -> 
+      if psi = phi then 
+        let (ctx_v, d) = Context.dctxToHat cPsi in  
+          LF.Shift (ctx_v, k+d)
+      else 
+        LF.Shift(Some (LF.Offset psi), k)
+
   | LF.Dot (ft, s) -> 
-      LF.Dot(csub_front cPsi k ft, csub_sub cPsi k s)
+      LF.Dot(csub_front cPsi phi ft, csub_sub cPsi phi s)
 
 and csub_front cPsi k ft = match ft with
   | LF.Head h -> LF.Head (csub_head cPsi k h)
@@ -494,7 +502,8 @@ and csub_psihat cPsi k (ctxvar, offset) = match ctxvar with
 
 
 and csub_dctx cPsi k cPhi = 
-  let (_ctx_var, d) = Context.dctxToHat cPsi in 
+  let (ctx_var, d) = Context.dctxToHat cPsi in 
+    
   let rec csub_dctx' cPhi = match cPhi with 
     | LF.Null -> (LF.Null, false)
     | LF.CtxVar (LF.Offset offset) -> if k = offset then 
@@ -503,7 +512,7 @@ and csub_dctx cPsi k cPhi =
     | LF.DDec (cPhi, LF.TypDecl (x, tA)) ->  
         let (cPhi', b) = csub_dctx' cPhi in 
         if b then       
-            (LF.DDec (cPhi', LF.TypDecl(x, LF.TClo(tA, LF.Shift d))), b)
+            (LF.DDec (cPhi', LF.TypDecl(x, LF.TClo(tA, LF.Shift (ctx_var, d)))), b)
         else 
           (LF.DDec(cPhi', LF.TypDecl (x, tA)), b)
   in 
@@ -566,7 +575,7 @@ let rec mctxPDec cD k =
 
 let rec mctxPos cD u = 
   let rec lookup cD k = match cD  with
-    | LF.Dec (_cD, LF.MDecl(v, tA, cPsi))    -> 
+    | LF.Dec (cD, LF.MDecl(v, tA, cPsi))    -> 
         if v = u then 
           (k, (mshiftTyp tA k, mshiftDCtx cPsi k))
         else 

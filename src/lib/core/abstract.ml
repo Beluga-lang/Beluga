@@ -447,7 +447,7 @@ and collectKind cQ ((cvar, offset) as phat) sK = match sK with
 
 
 let rec collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with 
-  | I.Null -> cQ
+  | I.Null -> (Printf.printf "cPsi = Null\n" ; cQ)
 
   | I.CtxVar _ -> cQ
 
@@ -473,9 +473,14 @@ let rec collectMctx cQ cD = match cD with
 
 
 let rec collectPattern cQ cD cPsi (phat, tM) tA = 
+  let _    = Printf.printf "Start Collection of cD \n" in 
   let cQ1 = collectMctx cQ cD in 
-  let cQ2 = collectTerm cQ1 phat (tM, LF.id) in 
-  let cQ3 = collectDctx cQ2 phat cPsi in 
+(*  let _    = Printf.printf "Start Collection of cPsi = %s \n" 
+  (Pretty.Int.DefaultPrinter.dctxToString cPsi) in *)
+  let cQ2 = collectDctx cQ1 phat cPsi in 
+  let _    = Printf.printf "Start Collection of tM \n" in 
+  let cQ3 = collectTerm cQ2 phat (tM, LF.id) in 
+  let _    = Printf.printf "Start Collection of tA \n" in 
     collectTyp cQ3 phat (tA, LF.id)
 
 
@@ -539,10 +544,10 @@ and abstractHead cQ offset tH = match tH with
 
 
 and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
-  | (I.Shift _k, I.Null) ->  tS
+  | (I.Shift (None,_k), I.Null) ->  tS
 
-  | (I.Shift k , I.DDec(_cPsi', _dec)) ->
-       subToSpine cQ offset ((I.Dot (I.Head (I.BVar (k + 1)), I.Shift (k + 1))), cPsi) tS
+  | (I.Shift (None, k) , I.DDec(_cPsi', _dec)) ->
+       subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (None, (k + 1))), cPsi) tS
 
   | (I.Dot (I.Head (I.BVar k), s), I.DDec(cPsi', _dec)) -> 
       subToSpine cQ offset  (s,cPsi') (I.App (I.Root (I.BVar k, I.Nil), tS))
@@ -795,9 +800,13 @@ let rec abstrMSub cQ t = match t with
 
 
 and abstractMSub t =  
+  let _    = Printf.printf "Start Collection of msub done \n" in 
   let cQ  = collectMSub I.Empty t in
+  let _    = Printf.printf "Collection of msub done \n" in 
   let cQ' = abstractMVarCtx cQ in
+  let _    = Printf.printf "abstractMVarCtx of msub done \n" in 
   let t'  = abstrMSub cQ' t in
+  let _    = Printf.printf "abstrMSub of msub done \n" in 
   let cD'  = ctxToMCtx cQ' in  
     (t' , cD')  
 
@@ -829,13 +838,23 @@ and abstrTyp tA =
  
 *)
   and abstrPattern cD1 cPsi1 (phat, tM) tA =  
+  let _       = Printf.printf "BEGIN: Collect Pattern \n" in 
   let cQ      = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in 
+  let _       = Printf.printf "DONE: Collect Pattern \n" in 
+  let _       = Printf.printf "BEGIN: abstractMVarCtx \n" in 
   let cQ'     = abstractMVarCtx cQ in 
+  let _       = Printf.printf "Done: abstractMVarCtx \n" in 
+  let _       = Printf.printf "BEGIN: abstractMVarMctx \n" in 
   let cD1'    = abstractMVarMctx cQ' cD1 in 
+  let _       = Printf.printf "Done: abstractMVarMctx \n" in 
   let offset  = Context.length cD1' in 
-  let tM'     = abstractMVarTerm cQ' offset (tM, LF.id) in 
+  let _       = Printf.printf "Begin: abstractMVarDctx \n" in 
   let cPsi1'  = abstractMVarDctx cQ' offset cPsi1 in 
+  let _       = Printf.printf "Begin: abstractMVarTerm \n" in 
+  let tM'     = abstractMVarTerm cQ' offset (tM, LF.id) in
+   let _       = Printf.printf "Begin: abstractMVarTyp \n" in 
   let tA'     = abstractMVarTyp  cQ' offset (tA, LF.id) in 
+   let _       = Printf.printf "Begin: ctxToMCtx\n" in 
   let cD'     = ctxToMCtx cQ' in 
   let cD      = Context.append cD' cD1' in 
     (cD, cPsi1', (phat, tM'), tA')

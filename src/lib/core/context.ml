@@ -32,9 +32,10 @@ let dctxToHat cPsi =
 (* Declaration Contexts *)
 (************************)
 
+
 let rec sigmaShift typrec k = match typrec with
-  | SigmaLast tA          -> SigmaLast (TClo (tA, Shift k))
-  | SigmaElem(x, tA, typrec) -> SigmaElem(x, TClo (tA, Shift k), sigmaShift typrec (k + 1))
+  | SigmaLast tA          -> SigmaLast (TClo (tA, Shift  (None, k)))
+  | SigmaElem(x, tA, typrec) -> SigmaElem(x, TClo (tA, Shift (None, k)), sigmaShift typrec (k + 1))
 
 
 let rec ctxShift cPsi k = match cPsi with
@@ -45,7 +46,7 @@ let rec ctxShift cPsi k = match cPsi with
     -> CtxVar psi
 
   | DDec (cPsi, TypDecl(x, tA))
-    -> DDec (ctxShift cPsi k, TypDecl (x, TClo (tA, Shift k)))
+    -> DDec (ctxShift cPsi k, TypDecl (x, TClo (tA, Shift (None, k))))
 
   | SigmaDec (cPsi, SigmaDecl (x, tArec))
     -> SigmaDec (ctxShift cPsi k, SigmaDecl (x, sigmaShift tArec k))
@@ -66,7 +67,7 @@ let ctxDec cPsi k =
   *)
   let rec ctxDec' = function
     | (DDec     (_cPsi', TypDecl   (x, tA'    )), 1 )
-      -> TypDecl (x, TClo (tA', Shift k))
+      -> TypDecl (x, TClo (tA', Shift (None, k)))
 
     | (DDec     (cPsi' , TypDecl   (_x, _tA'  )), k' )
       -> ctxDec' (cPsi', k' - 1)
@@ -106,7 +107,7 @@ let ctxSigmaDec cPsi k =
       -> ctxDec' (cPsi', k' - 1)
 
     | (SigmaDec (_cPsi', SigmaDecl (x, tArec)), 1)
-      -> SigmaDecl (x, sigmaShift tArec k) (* ? -bp *)
+      -> SigmaDecl (x, sigmaShift tArec  k) (* ? -bp *)
          (* ctxDec' (Null    , k') should not occur by invariant *)
          (* ctxDec' (CtxVar _, k') should not occur by invariant *)
   in

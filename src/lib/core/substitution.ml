@@ -9,6 +9,8 @@ open Syntax.Int.LF
 
 module LF = struct
 
+  exception Error of string 
+
   (**************************)
   (* Explicit Substitutions *)
   (**************************)
@@ -22,7 +24,7 @@ module LF = struct
 
      Note: we do not take into account weakening here. 
   *)
-  let id = Shift 0
+  let id = Shift (None, 0)
 
 
 
@@ -32,7 +34,7 @@ module LF = struct
 
      cPsi, x:tA |- ^ : cPsi     ^ is patsub
   *)
-  let shift = Shift 1
+  let shift  = Shift (None, 1)
 
 
 
@@ -58,17 +60,32 @@ module LF = struct
      If   s1, s2 patsub
      then s' patsub
   *)
-  let rec comp s1 s2 = match (s1, s2) with
-    | (Shift 0, s)             -> s
-	(* next line is an optimization *)
-	(* roughly 15% on standard suite for Twelf 1.1 *)
-	(* Sat Feb 14 10:15:16 1998 -fp *)
-    | (s, Shift 0)             -> s
-    | (SVar (s, tau), s2)      -> SVar (s, comp tau s2)
-	(* (s1, SVar(s,tau)) => undefined ? -bp *)
-    | (Shift n, Dot (_ft, s))  -> comp (Shift (n - 1)) s
-    | (Shift n, Shift m)       -> Shift (n + m)
-    | (Dot (ft, s), s')        -> Dot (frontSub ft s', comp s s')
+  let rec comp s1 s2 = 
+      match (s1, s2) with
+    | (Shift (None , 0), s)              -> s
+    | (s, Shift (None, 0))               -> s
+
+    | (Shift (Some (Offset psi), m), Shift (Some (Offset psi'), n)) ->
+        if psi = -psi' then 
+          Shift (None, n + m)
+        else 
+          if psi = psi' then 
+            Shift (Some (Offset psi), n+m)
+          else 
+            raise (Error "Composition undefined \n")
+            
+   
+    | (Shift (psi, n), Shift (None, m)) -> Shift (psi, (n + m))
+
+
+(*    | (Shift (psi, n), SVar (s, tau)) -> Shift (|Psi''|) *)
+
+
+    | (Shift (psi,n), Dot (_ft, s))     -> comp (Shift (psi, n - 1)) s
+
+    | (SVar (s, tau), s2)               -> SVar (s, comp tau s2) 
+
+    | (Dot (ft, s), s')                 -> Dot (frontSub ft s', comp s s')
 	(* comp(s[tau], Shift(k)) = s[tau]
 	   where s :: Psi[Phi]  and |Psi| = k 
 
@@ -91,7 +108,7 @@ module LF = struct
   and bvarSub n s = match (n, s) with
     | (1, Dot (ft, _s)) -> ft
     | (n, Dot (_ft, s)) -> bvarSub (n - 1) s
-    | (n, Shift k)      -> Head (BVar (n + k))
+    | (n, Shift (_ , k))      -> Head (BVar (n + k))
 
 
 
@@ -137,8 +154,8 @@ module LF = struct
   (* roughly 15% on standard suite for Twelf 1.1 *)
   (* Sat Feb 14 10:16:16 1998 -fp *)
   and dot1 s = match s with
-    | Shift 0 -> s
-    | s       -> Dot (Head (BVar 1), comp s shift)
+    | Shift (_ , 0) -> s
+    | s       -> Dot (Head (BVar 1), comp s shift) 
 
 
 
@@ -172,7 +189,7 @@ module LF = struct
      If Psi' |- s' : Psi
      (so Psi',A[s] |- s : Psi,A)
   *)
-  let invDot1 s = comp (comp shift s) invShift
+(*  let invDot1 s = comp (comp shift s) invShift *)
 
 
 
@@ -207,7 +224,8 @@ module LF = struct
             invert'' (p - 1) (Dot (front, si)) in
 
     let rec invert' n s = match s with
-      | Shift p     -> invert'' p (Shift n)
+      | Shift (None, p)     -> invert'' p (Shift (None, n))
+      | Shift (Some(Offset psi), p)     -> invert'' p (Shift (Some (Offset (-psi)), n))
       | Dot (_, s') -> invert' (n + 1) s'
 
     in
@@ -223,8 +241,11 @@ module LF = struct
      then D ; Psi'  |- t : Psi  and cPsi' subcontext of cPsi
   *)
   let rec strengthen s cPsi = match (s, cPsi) with
-    | (Shift _n (* = 0 *), Null)
+    | (Shift  _ (* = 0 *), Null)
       -> Null
+
+    | (Shift  _ (* = 0 *), CtxVar psi)
+      -> CtxVar psi
 
     | (Dot (Head (BVar _k) (* k = 1 *), t), DDec (cPsi, decl))
       -> let t' = comp t invShift in
@@ -236,8 +257,8 @@ module LF = struct
     | (Dot (Undef, t), DDec (cPsi, _))
       -> strengthen t cPsi
 
-    | (Shift n, cPsi)
-      -> strengthen (Dot (Head(BVar (n + 1)), Shift (n + 1))) cPsi
+    | (Shift (psi, n), cPsi)
+      -> strengthen (Dot (Head(BVar (n + 1)), Shift (psi, n + 1))) cPsi
 
 
 
@@ -251,7 +272,7 @@ module LF = struct
   *)
   let isId s =
     let rec isId' s k' = match s with
-      | Shift k                 -> k = k'
+      | Shift (None, k)          -> k = k'
       | Dot (Head (BVar n), s') -> n = k' && isId' s' (k' + 1)
       | _                       -> false
     in
@@ -271,7 +292,7 @@ module LF = struct
 
      Effects: None
   *)
-  let cloInv (tM, w) = Clo (tM, invert w)
+(*   let cloInv (tM, w) = Clo (tM, invert w) *)
 
 
 
@@ -284,7 +305,7 @@ module LF = struct
      then  t = s o (w^-1)
      and   D ; Psi' |- t <= Psi1
   *)
-  let compInv s w = comp s (invert w)
+(*  let compInv s w = comp s (invert w) *)
 
 
 end

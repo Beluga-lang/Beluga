@@ -75,6 +75,8 @@ module Ext : sig
 
     val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
 
+    val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx          -> unit
+
     val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
 
     val fmt_ppr_cmp_exp_chk   : lvl -> formatter -> Comp.exp_chk     -> unit
@@ -116,6 +118,8 @@ module Ext : sig
     val ppr_lf_psi_hat    : LF.psi_hat       -> unit
 
     val ppr_lf_dctx       : LF.dctx          -> unit
+
+    val ppr_lf_mctx       : LF.mctx          -> unit
 
     val ppr_cmp_typ       : Comp.typ         -> unit
 
@@ -290,6 +294,8 @@ module Int : sig
     val dctxToString    : LF.dctx   -> string
 
     val mctxToString    : LF.mctx   -> string
+
+    val phatToString      : LF.psi_hat    -> string
 
     val schemaToString  : LF.schema -> string
 

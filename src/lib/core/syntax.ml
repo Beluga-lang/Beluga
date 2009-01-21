@@ -80,6 +80,8 @@ module Ext = struct
 
     and psi_hat = name list
 
+    and mctx     = ctyp_decl ctx          
+
     and prag =
       | PragUnifyTerm of
             unify_decl list
@@ -128,7 +130,7 @@ module Ext = struct
        | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
 
     and branch =
-      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
+      | BranchBox of Loc.t * LF.mctx
           * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
@@ -212,7 +214,7 @@ module Int = struct
       | SClo of (spine * sub)              (*   | SClo(S,s)                  *)
 
     and sub =                              (* Substitutions                  *)
-      | Shift of offset                    (* sigma ::= ^n                   *)
+      | Shift of ctx_offset * offset       (* sigma ::= ^(psi,n)             *)
       | SVar  of cvar * sub                (*       | s[sigma]               *)
       | Dot   of front * sub               (*       | Ft . s                 *)
 
@@ -220,6 +222,8 @@ module Int = struct
       | Head of head                       (* Ft ::= H                       *)
       | Obj  of normal                     (*    | N                         *)
       | Undef                              (*    | _                         *)
+
+    and ctx_offset = cvar option
 
     and cvar =                             (* Contextual Variables           *)
       | Offset of offset                   (* Bound Variables                *)

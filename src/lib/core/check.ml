@@ -170,32 +170,43 @@ module LF = struct
      succeeds iff cO cD ; cPsi |- s : cPsi'
   *)
   and checkSub cO cD cPsi s cPsi' = match (cPsi, s, cPsi') with
-    | (Null, Shift 0, Null)               -> ()
+    | (Null, Shift (None, 0), Null)               -> ()
 
-    | (CtxVar psi, Shift 0, CtxVar psi')  ->
-        if psi = psi'
-        then ()
+    | (CtxVar psi, Shift (None, 0), CtxVar psi')  ->
+        if psi = psi' then 
+          ()
         else raise (Error "Context variable mismatch")
                       (* (CtxVarMisMatch (psi, psi')) *)
 
-    | (CtxVar _psi, Shift 0, Null)  ->       ()
+
+    | (CtxVar psi, Shift (Some (phi), 0), CtxVar psi')  ->
+        if psi = psi' && psi = phi then 
+          ()
+        else raise (Error "Context variable mismatch")
+                      (* (CtxVarMisMatch (psi, psi')) *)
+
+    | (CtxVar psi, Shift (Some psi', 0), Null)  ->  
+        if psi = psi' then 
+          () 
+        else 
+          raise (Error "Substitution ill-typed" )
 
     (* SVar case to be added - bp *)
 
-    | (DDec (cPsi, _tX), Shift k, Null)   ->
+    | (DDec (cPsi, _tX), Shift (psi, k), Null)   ->
         if k > 0
-        then checkSub cO cD cPsi (Shift (k - 1)) Null
+        then checkSub cO cD cPsi (Shift (psi, k - 1)) Null
         else raise (Error "Substitution illtyped")
                       (* (SubIllTyped) *)
 
-    | (DDec (cPsi, _tX), Shift k, CtxVar psi)   ->
+    | (DDec (cPsi, _tX), Shift (phi (* None *), k), CtxVar psi)   ->
         if k > 0
-        then checkSub cO cD cPsi (Shift (k - 1)) (CtxVar psi)
+        then checkSub cO cD cPsi (Shift (phi, k - 1)) (CtxVar psi) 
         else raise (Error ("Substitution illtyped: k = %s" ^ (string_of_int k)))
                       (* (SubIllTyped) *)
 
-    | (cPsi', Shift k, cPsi)              ->
-        checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
+    | (cPsi', Shift (psi, k), cPsi)              ->
+        checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
 
     | (cPsi', Dot (Head h, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
         (* changed order of subgoals here Sun Dec  2 12:14:27 2001 -fp *)
@@ -599,26 +610,26 @@ module Comp = struct
 
 
   and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = 
-(*    let _ = Printf.printf "BEGIN: Checking branch: \n %s ; \n %s \n |- \n %s \n\n"
+    let _ = Printf.printf "BEGIN: Checking branch: \n %s ; \n %s \n |- \n %s \n\n"
          (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
          (Pretty.Int.DefaultPrinter.gctxToString (Cwhnf.normCtx  cG))
          (Pretty.Int.DefaultPrinter.branchToString branch) in 
-*)
+
    match branch with
    | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->  
-(*       let _ = Printf.printf "Checking Pattern Term is well-typed: \n %s ; %s   |-    %s <= %s \n\n"
+       let _ = Printf.printf "Checking Pattern Term is well-typed: \n %s ; %s   |-    %s <= %s \n\n"
          (Pretty.Int.DefaultPrinter.mctxToString cD1)
          (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
          (Pretty.Int.DefaultPrinter.normalToString tM1)
          (Pretty.Int.DefaultPrinter.typToString tA1) in 
-*)
+
       let _ = LF.check cO cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
-(*       let _ = Printf.printf "DONE: Pattern Term  \n %s ; %s   |-    %s <= %s  is well-typed.\n\n"
+       let _ = Printf.printf "DONE: Pattern Term  \n %s ; %s   |-    %s <= %s  is well-typed.\n\n"
          (Pretty.Int.DefaultPrinter.mctxToString cD1)
          (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
          (Pretty.Int.DefaultPrinter.normalToString tM1)
          (Pretty.Int.DefaultPrinter.typToString tA1) in 
-*)
+
       let d1 = length cD1 in 
       let _d  = length cD in 
       let t1 = mctxToMSub cD1 in   (* {cD1} |- t1 <= cD1 *)
@@ -626,42 +637,54 @@ module Comp = struct
       let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
       let phat = dctxToHat cPsi in 
 
-(*      let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
+     let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
          (Pretty.Int.DefaultPrinter.dctxToString cPsi)
          (Pretty.Int.DefaultPrinter.typToString tA)
          (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
          (Pretty.Int.DefaultPrinter.typToString tA1) in 
-*)  
+  
       let _    = Unify.unifyDCtx (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
+      let _     = Printf.printf "Unification of dctx done \n" in 
       let _    = Unify.unifyTyp (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
+      let _     = Printf.printf "Unification of type done \n" in 
 
-(*      let  _   = Printf.printf "Resulting msub from unifying type annotations in branches: \n %s\n\n" 
+      let  _   = Printf.printf "Resulting msub from unifying type annotations in branches: \n %s\n\n" 
         (Pretty.Int.DefaultPrinter.msubToString tc) in 
-*)
+
       let (tc', cD1') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
 
 
-(*      let cD1_n  = (Cwhnf.normMCtx cD1') in  *)
+      let _    = Printf.printf "abstractMSub done \n" in 
 
-(*      let  _   = Printf.printf "Resulting msub after abstraction: \n %s   |-   %s    <=  %s \n\n" 
+      let cD1_n  = (Cwhnf.normMCtx cD1') in  
+
+      let  _   = Printf.printf "Resulting msub after abstraction: \n %s   |-   %s    <=  %s \n\n" 
          (Pretty.Int.DefaultPrinter.mctxToString cD1_n)
-        (Pretty.Int.DefaultPrinter.msubToString tc') 
-         (Pretty.Int.DefaultPrinter.mctxToString (Context.append cD cD1))  in
-*)
+        (Pretty.Int.DefaultPrinter.msubToString tc')  
+         (Pretty.Int.DefaultPrinter.mctxToString (Context.append cD cD1))  in 
+
+      let _    = Printf.printf "splitting msub ... \n" in 
       let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
+      let _    = Printf.printf "split msub done \n" in 
       let cG1 = C.cwhnfCtx (cG, t'') in  
-(*      let cGn = (Cwhnf.normCtx cG1) in *)
+      let _    = Printf.printf "cwhnfCtx (cG, t'') done : cG1 = %s\n" 
+        (Pretty.Int.DefaultPrinter.gctxToString cG1)
+      in 
+
+      let cGn = (Cwhnf.normCtx cG1) in 
+      let _    = Printf.printf "norm cG1 done \n" in 
       let e1' = C.cnormExp (e1, tc') in 
+      let _    = Printf.printf "norm e1 done \n" in 
 
       let tau' = (tau, C.mcomp t'' t)  in 
-(*      let taun = (C.cnormCTyp tau') in  *)
+      let taun = (C.cnormCTyp tau') in  
 
-(*      let _ = Printf.printf "\n Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+      let _ = Printf.printf "\n Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
          (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD1_n))
          (Pretty.Int.DefaultPrinter.gctxToString cGn)
          (Pretty.Int.DefaultPrinter.expChkToString e1')
          (Pretty.Int.DefaultPrinter.compTypToString  taun) in 
-*)
+
       (* NOTE: cnormCtx and cnormExp not implemented
          -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
       *)

@@ -1,0 +1,65 @@
+% Substitution based evaluator
+%   call-by-value strategy
+%
+%   Author: Brigitte Pientka
+%
+
+tp:type. 
+exp: tp -> type.
+
+nat: tp.
+bool:tp.
+
+z : exp nat.
+s : exp nat -> exp nat.
+tt: exp bool.
+ff: exp bool.
+Andalso: exp bool -> exp bool -> exp bool.
+
+
+Add: exp nat -> exp nat -> exp nat.
+Let: {T1:tp}{T2:tp}exp T1 -> (exp T1 -> exp T2) -> exp T2.
+
+
+
+rec add : (exp nat)[.] -> (exp nat)[.] -> (exp nat)[.] = 
+fn a => fn b =>
+   (case a of
+        box(. . z)  => b
+      | box(. . s U![.]!) =>
+        (case b of
+          box(. . V![.]!) : (exp nat) [.] => add (box(. U![.]!)) box(. s V![.]!))
+)
+;
+
+rec and : (exp bool)[.] -> (exp bool)[.] -> (exp bool)[.] = 
+fn a => fn b => 
+ (case a of 
+   box(.. tt) => b 
+ | box(.. ff) => a)
+;
+
+
+rec eval : (exp T![.]!)[.] -> (exp T![.]!)[.] = 
+mlam T =>
+fn e => 
+(case e of
+   box(. . z) => e
+ | box(. . tt) => box(. tt)
+ | box(. . ff) => box(. ff)
+
+ | box(. . s U![.]!)  =>  
+    (case (eval < . nat > box(. U![.]!)) of 
+     box (. . V![.]!) : (exp nat)[.] => box(. s V![.]!))
+
+| box(. . Andalso U1![.]! W1![.]!)  => 
+       and (eval < . bool > box( . U1![.]!)) (eval < . bool > box( . W1![.]!))
+
+ | box(. . Add U![.]! W![.]!)  => 
+       add (eval < . nat > box( . U![.]!)) (eval < . nat > box( . W![.]!))
+
+ | box(. . Let T1![.]! T2![.]! U![.]! (\x . W![. , x]!))  => 
+    case (eval < . T1![.]! > box( . U![.]!)) of 
+        box (. . V![.]!) : (exp T![.]!) [.] =>  
+          eval < . T2![.]! > box( . W![. , V![.]! ]!)
+);

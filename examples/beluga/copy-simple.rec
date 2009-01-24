@@ -1,0 +1,34 @@
+
+term :  type.
+app  : term -> term -> term.    
+lam  : (term -> term) -> term.
+
+schema W = some [] block term;
+
+rec copy' : (term) [.] -> (term) [.] = 
+ fn t =>  case t of box(. . lam (\ x . x)) => t
+;
+
+rec copy : {g:(W)*} (term) [g] -> (term) [g] =
+FN g => fn e =>
+ (case e of
+     box(g . #p![id]!) 
+     => box(g . #p![id]!)
+
+  | box(g . lam (\ x. U![id, x]!)) => 
+
+       (case (copy [g, x:term]  (box(g,x . U![id, x]!))) of
+               box(g,x : term. V![id, x]!) : term [g,x:term] =>
+	                    box(g . lam (\ x. V![id , x]!)))
+
+  | box (g . app U![id]! V![id]!)  => 
+    (case (copy [g] (box (g. U![id]!))) of
+
+      box (g. U'![id]!) : term [g] => 
+
+      (case (copy [g] (box(g. V![id]!))) of
+
+        box (g. V'![id]!) : term [g] =>  box (g. app U'![id]! V'![id]!)))
+
+
+);

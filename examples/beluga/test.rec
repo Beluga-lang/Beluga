@@ -1,0 +1,19 @@
+nat : type.
+bool: type.
+
+tt: bool.
+
+z : nat.
+s : nat -> nat.
+add: nat -> nat -> nat.
+foo: nat -> bool -> nat.
+
+rec identity : (nat) [.] -> (nat) [.] =
+    fn x =>
+      (case x of
+          box (. . z) : nat [.] => box (. z)
+%        | box (. . add U ![.]! U ![.]!) : nat [.] => box (. add U ![.]! V ![.]!)
+%        | box (. foo U ![.]! U ![.]!) : nat [.] => box (. z)
+);
+
+

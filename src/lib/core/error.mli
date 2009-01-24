@@ -14,7 +14,7 @@ type error =
   | TypIllTyped of Int.LF.mctx * Int.LF.dctx
       * Int.LF.tclo (* inferred *) * Int.LF.tclo (* expected *) 
   | TypMisMatch of (* Int.LF.mctx * *) Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
-  | IllTyped of (* Int.LF.mctx * *) Int.LF.dctx * Apx.LF.normal * Int.LF.tclo
+  | IllTyped of (* Int.LF.mctx * *) Int.LF.dctx * Int.LF.nclo * Int.LF.tclo
 
   | UnboundName of name
   | LeftOverConstraints

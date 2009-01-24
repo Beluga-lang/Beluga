@@ -52,9 +52,9 @@ module Ext = struct
     and sub =
       | EmptySub of Loc.t
       | Dot      of Loc.t * sub * front
-      | Id       of Loc.t 
+      | Id       of Loc.t
 
-    and front = 
+    and front =
       | Head     of head
       | Normal   of normal
 
@@ -109,7 +109,7 @@ module Ext = struct
 (*    | TypSBox  of LF.dctx * LF.dctx              (\*    | Phi[Psi]      *\) *)
       | TypArr   of Loc.t * typ * typ              (*     | tau -> tau        *)
       | TypCtxPi of Loc.t * (name * name) * typ    (*     | Pi psi:(w)*. tau  *)
-      | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *) 
+      | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *)
 
     and exp_chk =                            (* Computation-level expressions *)
        | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
@@ -121,17 +121,17 @@ module Ext = struct
 (*        | SBox   of LF.psi_hat * LF.sub *)
        | Case   of Loc.t * exp_syn * branch list  (*    | case i of branches *)
 
-    and exp_syn =                            
+    and exp_syn =
        | Var    of Loc.t * name                   (*  i ::= x                 *)
        | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
        | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)
-       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) 
+       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
                                                   (*    | i [Psi hat. M]      *)
        | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
 
     and branch =
       | BranchBox of Loc.t * LF.mctx
-          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
+          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
 (*       | BranchSBox of LF.ctyp_decl LF.ctx *)
@@ -207,7 +207,7 @@ module Int = struct
 
       | FPVar of name * sub                (* free parameter variable for type
 					      reconstruction                 *)
- 
+
     and spine =                            (* spine                          *)
       | Nil                                (* S ::= Nil                      *)
       | App  of normal * spine             (*   | M . S                      *)
@@ -223,7 +223,7 @@ module Int = struct
       | Obj  of normal                     (*    | N                         *)
       | Undef                              (*    | _                         *)
 
-    and ctx_offset = cvar option
+    and ctx_offset = ctx_var option
 
     and cvar =                             (* Contextual Variables           *)
       | Offset of offset                   (* Bound Variables                *)
@@ -231,12 +231,12 @@ module Int = struct
           (* D ; Psi |- M <= A
              provided constraint *)
       | PInst  of head   option ref * dctx * typ * cnstr list ref
-          (* D ; Psi |- H => A 
+          (* D ; Psi |- H => A
              provided constraint *)
       | CInst  of dctx   option ref * cid_schema
           (* D |- Psi : schema   *)
 
-    and tvar = 
+    and tvar =
       | TInst   of typ option ref * dctx * kind * cnstr list ref
 
     and constrnt =                         (* Constraint                     *)
@@ -248,9 +248,14 @@ module Int = struct
 
     and dctx =                             (* LF Context                     *)
       | Null                               (* Psi ::= .                      *)
-      | CtxVar   of cvar                   (* | psi                          *)
+      | CtxVar   of ctx_var                (* | psi                          *)
       | DDec     of dctx * typ_decl        (* | Psi, x:A                     *)
       | SigmaDec of dctx * sigma_decl      (* | Psi, x:Sigma x1:A1...xn:An.A *)
+
+
+    and ctx_var = 
+      | CtxName   of name
+      | CtxOffset of offset
 
     and 'a ctx =                           (* Generic context declaration    *)
       | Empty                              (* Context                        *)
@@ -258,14 +263,14 @@ module Int = struct
                                            (* | C, x:'a                      *)
 
     and sch_elem =                         (* Schema Element                 *)
-      | SchElem of typ_decl ctx * sigma_decl    (* Pi    x1:A1 ... xn:An. 
+      | SchElem of typ_decl ctx * sigma_decl    (* Pi    x1:A1 ... xn:An.
                                               Sigma y1:B1 ... yk:Bk. B       *)
                                            (* Sigma-types not allowed in Ai  *)
 
     and schema =
       | Schema of sch_elem list
 
-    and psi_hat = cvar option * offset     (* Psihat ::=         *)
+    and psi_hat = ctx_var option * offset  (* Psihat ::=         *)
                                            (*        | psi       *)
                                            (*        | .         *)
                                            (*        | Psihat, x *)
@@ -291,7 +296,7 @@ module Int = struct
 
 
   module Comp = struct
- 
+
    type mfront =                          (* Fronts:                        *)
      | MObj of LF.psi_hat * LF.normal     (* Mft::= Psihat.N                *)
      | PObj of LF.psi_hat * LF.head       (*    | Psihat.p[s] | Psihat.x    *)
@@ -300,7 +305,7 @@ module Int = struct
 
    type msub =                            (* Contextual substitutions       *)
      | MShift of int                      (* theta ::= ^n                   *)
-     | MDot   of mfront * msub            (*       | MFt . theta            *) 
+     | MDot   of mfront * msub            (*       | MFt . theta            *)
 
 
    type typ =
@@ -382,8 +387,8 @@ module Apx = struct
       | PiTyp of typ_decl * typ
 
     and typ_rec =
-      |  SigmaLast of typ
-      |  SigmaElem of name * typ * typ_rec
+      | SigmaLast of typ
+      | SigmaElem of name * typ * typ_rec
 
     and normal =
       | Lam  of name * normal
@@ -395,9 +400,8 @@ module Apx = struct
       | MVar  of offset * sub
       | PVar  of offset * sub
       | FVar  of name
-      | FMVar of name   * sub    
-      | FPVar of name   * sub    
-
+      | FMVar of name   * sub
+      | FPVar of name   * sub
 
     and spine =
       | Nil
@@ -414,8 +418,13 @@ module Apx = struct
 
     and dctx =
       | Null
-      | CtxVar   of offset
+      | CtxVar   of ctx_var 
       | DDec     of dctx * typ_decl
+
+    and ctx_var = 
+      | CtxName   of name
+      | CtxOffset of offset
+       
 
     and 'a ctx =
       | Empty
@@ -427,7 +436,7 @@ module Apx = struct
     and schema =
       | Schema of sch_elem list
 
-    and psi_hat = (Int.LF.cvar) option * offset
+    and psi_hat = (Int.LF.ctx_var) option * offset
   end
 
   module Comp = struct
@@ -456,7 +465,7 @@ module Apx = struct
 
     and branch =
       | BranchBox of LF.ctyp_decl LF.ctx
-          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
+          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
   end

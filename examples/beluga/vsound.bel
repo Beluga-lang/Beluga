@@ -21,24 +21,24 @@ ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp}
 rec vs : {E::exp[.]} {V::exp[.]} (eval E![.]! V![.]!)[.] -> (value V![.]!)[.] = 
 mlam E => mlam V => fn e =>
   case e of 
-     box(. ev_z) : (eval z z)[.] => box(. v_z)
+     box(. . ev_z) : (eval z z)[.] => box(. v_z)
 
   | {E::exp[.]}{V::exp[.]}{D::(eval  E![.]! V![.]!)[.]}
-    box(. ev_s E![.]! V![.]! D![.]!) : (eval (suc E![.]!) (suc V![.]!))[.]
+    box(. . ev_s E![.]! V![.]! D![.]!) : (eval (suc E![.]!) (suc V![.]!))[.]
 
     => 
 
     (case   (vs   <. E![.]! > <. V![.]! > box(. D![.]!)) of 
 
       {V'::exp[.]}{F::(value V'![.]!)[.]}
-       box(. F![.]!) : (value V'![.]!)[.] 
+       box(. . F![.]!) : (value V'![.]!)[.] 
        =>    box(. v_s V![.]! F![.]!) 
      )
 
   | {E1::exp[.]} {E2::exp[. , x:exp]} {V1::exp[.]} {V2::exp[.]}
     {D1::(eval E1![.]! V1![.]!)[.]} {D2::(eval E2![., V1![.]! ]! V2![.]!)[.]}
 
-     box(. ev_l E1![.]! (\x . E2![., x]!) V1![.]! V2![.]! D2![.]! D1![.]!) :
+     box(. . ev_l E1![.]! (\x . E2![., x]!) V1![.]! V2![.]! D2![.]! D1![.]!) :
        (eval (letv E1![.]! (\x . E2![., x]!)) V2![.]!)[.] 
 
      =>

@@ -65,12 +65,12 @@ module LF = struct
     | (Shift (None , 0), s)              -> s
     | (s, Shift (None, 0))               -> s
 
-    | (Shift (Some (Offset psi), m), Shift (Some (Offset psi'), n)) ->
+    | (Shift (Some (CtxOffset psi), m), Shift (Some (CtxOffset psi'), n)) ->
         if psi = -psi' then 
           Shift (None, n + m)
         else 
           if psi = psi' then 
-            Shift (Some (Offset psi), n+m)
+            Shift (Some (CtxOffset psi), n+m)
           else 
             raise (Error "Composition undefined \n")
             
@@ -225,7 +225,7 @@ module LF = struct
 
     let rec invert' n s = match s with
       | Shift (None, p)     -> invert'' p (Shift (None, n))
-      | Shift (Some(Offset psi), p)     -> invert'' p (Shift (Some (Offset (-psi)), n))
+      | Shift (Some(CtxOffset psi), p)     -> invert'' p (Shift (Some (CtxOffset (-psi)), n))
       | Dot (_, s') -> invert' (n + 1) s'
 
     in

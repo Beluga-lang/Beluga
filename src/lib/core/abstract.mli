@@ -7,11 +7,13 @@
 
 open Syntax.Int 
 
-val abstrKind : LF.kind -> LF.kind * Id.offset
+val abstrKind     : LF.kind -> LF.kind * Id.offset
 
-val abstrTyp  : LF.typ  -> LF.typ  * Id.offset
+val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
 
-val abstractMSub : Comp.msub -> Comp.msub * LF.mctx
+val abstractMSub  : Comp.msub -> Comp.msub * LF.mctx
 
- val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
-                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ
+val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset
+
+val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
+                    LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ

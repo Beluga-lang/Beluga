@@ -64,8 +64,7 @@ module LF = struct
   *)
   and checkSpine cO cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
     | ((Nil, _), sP') ->
-        if Whnf.convTyp sP' sP
-        then
+        if Whnf.convTyp sP' sP then
           ()
         else
           let _ = Printf.printf "checkSpine: Expected type : %s \n Inferred type: %s\n\n"
@@ -378,7 +377,7 @@ module LF = struct
         checkDCtx cO cD cPsi
         ; checkSigmaDec cO cD cPsi (tX, LF.id)
 
-    | CtxVar (Offset psi_offset)  -> 
+    | CtxVar (CtxOffset psi_offset)  -> 
         if psi_offset <= (Context.length cO) then ()
         else 
           raise (Error "Context variable out of scope")
@@ -618,7 +617,7 @@ module Comp = struct
    match branch with
    | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->  
        let _ = Printf.printf "Checking Pattern Term is well-typed: \n %s ; %s   |-    %s <= %s \n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString cD1)
+         (Pretty.Int.DefaultPrinter.mctxToString cD1) 
          (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
          (Pretty.Int.DefaultPrinter.normalToString tM1)
          (Pretty.Int.DefaultPrinter.typToString tA1) in 
@@ -643,9 +642,9 @@ module Comp = struct
          (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
          (Pretty.Int.DefaultPrinter.typToString tA1) in 
   
-      let _    = Unify.unifyDCtx (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
+      let _    = Unify.unifyDCtx (I.Empty) (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
       let _     = Printf.printf "Unification of dctx done \n" in 
-      let _    = Unify.unifyTyp (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
+      let _    = Unify.unifyTyp (I.Empty) (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
       let _     = Printf.printf "Unification of type done \n" in 
 
       let  _   = Printf.printf "Resulting msub from unifying type annotations in branches: \n %s\n\n" 

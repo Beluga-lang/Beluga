@@ -368,8 +368,8 @@ GLOBAL: sgn_eoi;
       |
         "case"; i = cmp_exp_syn; "of"; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, i, bs)
-       |
-        "let"; "val"; bs = LIST1 cmp_let_val_binding SEP "val"; "in"; e' = cmp_exp_chk; "end" ->
+(*      |
+        "let"; "box"; bs = LIST1 cmp_let_val_binding SEP "val"; "in"; e' = cmp_exp_chk; "end" ->
           List.fold_right
             (fun
                (Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, tau), Comp.Syn (_, i)))
@@ -378,6 +378,7 @@ GLOBAL: sgn_eoi;
                  Comp.Case (_loc, i, [Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, tau), e'')]))
             bs
             e'
+*)
 (* FIXME: locations are wrong here *)
       ]
     | "atomic"
@@ -428,18 +429,23 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
+(*        ctyp_decls = LIST0 lf_ctyp_decl; "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term_w_meta; ")"; tau = OPT [ ":"; tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]" -> (tA, cPsi)]; "=>"; e = cmp_exp_chk ->
+          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls
+          and pHat        = List.map (fun x' -> Id.mk_name (Some x')) vars in  
+            Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, tau), e)
+*)
+
   cmp_branch:
     [
       [
-        ctyp_decls = LIST0 lf_ctyp_decl; "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term_w_meta; ")"; tau = OPT [ ":"; tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]" -> (tA, cPsi)]; "=>"; e = cmp_exp_chk ->
-          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls
-          and pHat        = List.map (fun x' -> Id.mk_name (Some x')) vars in
+        ctyp_decls = LIST0 lf_ctyp_decl; "box"; "("; pHat = lf_dctx ;"."; tM = lf_term_w_meta; ")"; tau = OPT [ ":"; tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]" -> (tA, cPsi)]; "=>"; e = cmp_exp_chk -> 
+          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
             Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, tau), e)
       ]
     ]
   ;
 
-  cmp_let_val_binding:
+(*  cmp_let_val_binding:
     [
       [
         ctyp_decls = LIST0 lf_ctyp_decl; "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = lf_term_w_meta; ")"; tau = OPT [ ":"; tA = lf_typ LEVEL "atomic"; "["; cPsi = lf_dctx; "]" -> (tA, cPsi)];  "="; i = cmp_exp_syn ->
@@ -450,7 +456,7 @@ GLOBAL: sgn_eoi;
       ]
     ]
   ;
-
+*)
 END
 
 (********************)

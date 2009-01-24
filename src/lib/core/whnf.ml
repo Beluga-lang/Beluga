@@ -540,9 +540,7 @@ and lowerMVar = function
                 -> p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
               | (MVar (u, s'), MVar (w, s''))
-                -> let _ = Printf.printf "Check conv for mvars...\n" in   
-          
-                  u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+                -> u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
               | (FMVar (u, s'), FMVar (w, s''))
                 -> u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)

@@ -24,32 +24,32 @@ fn e =>
 (case e of
 
   {U::exp[.]} 
-   box( . suc U![.]!) : exp [.] =>
+   box(. . suc U![.]!) : exp [.] =>
 
     (case (eval (box( . U![.]!))) of       
 
       {V::exp[.]} 
-      box( . V![.]!) : exp [.] => box( . suc V![.]!))
+      box(. . V![.]!) : exp [.] => box( . suc V![.]!))
 
 | {U::exp[.]}{W::exp[.]}
-    box( . app U![.]! W![.]!) : exp [.] =>   
+    box(. . app U![.]! W![.]!) : exp [.] =>   
     (case (eval (box (. U![.]!))) of
-       {V::exp[. , x:exp]} box( . lam (\ x. V![.,x]!)) : exp[.] => 
+       {V::exp[. , x:exp]} box(. . lam (\ x. V![.,x]!)) : exp[.] => 
           eval (box( . V![., W![.]! ]!))
     )
         
 | {U::exp[. , x:exp]}
-  box( . lam (\ x. U![. , x]!)) : exp[.] =>  e
+  box(. . lam (\ x. U![. , x]!)) : exp[.] =>  e
 
 
 | {W::exp[.]}{U::exp[. , x:exp]}
-   box ( . letn W![.]! (\ x. U![.,x]!)) : exp [.] => 
+   box (. . letn W![.]! (\ x. U![.,x]!)) : exp [.] => 
 
        eval (box ( . U![. , W![.]! ]!))
 
 
 | {U::exp[. , x:exp]}
-   box( . fix (\ x. U![. , x]!)) : exp[.] =>  
+   box(. . fix (\ x. U![. , x]!)) : exp[.] =>  
 
        eval (box (. U![. ; fix (\ x. U![. , x]!) ]!))
 
@@ -63,34 +63,34 @@ fn e =>
 (case e of
 
   {U::exp[.]} 
-   box( . suc U![.]!) : exp [.] =>
+   box(. . suc U![.]!) : exp [.] =>
 
     (case (eval' (box( . U![.]!))) of       
 
       {V::exp[.]} 
-      box( . V![.]!) : exp [.] => box( . suc V![.]!))
+      box(. . V![.]!) : exp [.] => box( . suc V![.]!))
 
 | {U::exp[.]}{W::exp[.]}
-    box( . app U![.]! W![.]!) : exp [.] => 
+    box(. . app U![.]! W![.]!) : exp [.] => 
 
     (case (eval' (box (. U![.]!))) of
-       {V::exp[. , x:exp]} box( . lam (\ x. V![.,x]!)) : exp[.] => 
+       {V::exp[. , x:exp]} box(. . lam (\ x. V![.,x]!)) : exp[.] => 
 
           (case (eval' (box (. W![.]!))) of 
-              {V2::exp[.]} box( . V2![.]!) : exp[.] => 
+              {V2::exp[.]} box(. . V2![.]!) : exp[.] => 
                    eval' (box( . V![., V2![.]! ]!))
           )
     )
         
 | {U::exp[. , x:exp]}
-  box( . lam (\ x. U![. , x]!)) : exp[.] =>  e
+  box(. . lam (\ x. U![. , x]!)) : exp[.] =>  e
 
 
 | {W::exp[.]}{U::exp[. , x:exp]}
-   box ( . letv W![.]! (\ x. U![.,x]!)) : exp [.] => 
+   box (. . letv W![.]! (\ x. U![.,x]!)) : exp [.] => 
 
      case (eval' (box ( . W![.]!))) of 
-         {V::exp[.]} box ( . V![.]!) : exp [.] => 
+         {V::exp[.]} box (. . V![.]!) : exp [.] => 
                eval' (box ( . U![. , V![.]! ]!))
 
 );

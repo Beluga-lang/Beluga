@@ -252,10 +252,7 @@ let rec index_typrec cvars bvars = function
 
 
 (* Translation of external schemas into approximate schemas *)
-let rec index_elements el_list = match el_list with
-  | [] -> []
-  | el::el_list' -> index_el el :: index_elements el_list'
-
+let rec index_elements el_list = List.map index_el el_list
 
 and index_el (Ext.LF.SchElem (_, typ_ctx, Ext.LF.SigmaDecl (x, typ_rec))) =
   let cvars = (CVar.create ()) in
@@ -876,24 +873,32 @@ and elSpineSynth cD cPsi spine s' sP = match (spine, sP) with
 
 (* REVISE DEFINITION OF SCHEMA ELEMENTS:
 
-   It would be more convenient, if ctx would be
+   It would be more convenient if ctx were
    a dctx, since then we can do simple type-checking
    of the rest of the typrec. -bp
 
    DOUBLE CHECK -bp
-
    *)
 
-(* let rec elSchElem (Apx.Int.SchElem (ctx, Apx.Int.SigmaDecl [a])) =
-  let ctx' = elCtx ctx in
+let rec projectCtxIntoDctx = function
+  |  Int.LF.Empty -> Int.LF.Null
+  |  Int.LF.Dec (rest, last) -> Int.LF.DDec (projectCtxIntoDctx rest, last)
 
-*)
+let rec elTypDeclCtx cD cPsi = function
+  | Apx.LF.Empty -> Int.LF.Empty
+  | Apx.LF.Dec (ctx, Apx.LF.TypDecl(name, typ)) ->
+      let ctx'    = elTypDeclCtx cD cPsi ctx in
+      let typDecl' = Int.LF.TypDecl(name, elTyp cD cPsi typ) in
+        Int.LF.Dec (ctx', typDecl')
 
+ let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, Apx.LF.SigmaLast a))) =
+    let cD = Int.LF.Empty in
+    let ctx' = elTypDeclCtx cD Int.LF.Null ctx in
+    let typRec = Int.LF.SigmaLast (elTyp cD (projectCtxIntoDctx ctx')  a) in
+      Int.LF.SchElem (ctx', Int.LF.SigmaDecl (name, typRec))
 
-let rec elSchema (Apx.LF.Schema _list) = Int.LF.Schema []
-(*  Int.LF.Schema (
-    List.map (function schElem -> elSchElem schElem) el_list)
-*)
+let rec elSchema (Apx.LF.Schema el_list) = (* Int.LF.Schema [] *)   (* ?!? *)
+   Int.LF.Schema (List.map elSchElem el_list)
 
 let rec elDCtx cD psi = match psi with
   | Apx.LF.Null -> Int.LF.Null
@@ -1598,7 +1603,7 @@ and elBranch cO cD cG branch (tau, theta) = match branch with
 
               let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in  
 
-              (Check.LF.checkSchema cO cD cPsi ((Schema.get sW).Schema.schema)  ;
+              (Check.Comp.checkSchema cO cD cPsi ((Schema.get sW).Schema.schema)  ;
                (* (tau', t') *)
                (tau1, Cwhnf.id)
               )
@@ -1746,14 +1751,14 @@ let recSgnDecl d = match d with
 
   | Ext.Sgn.Schema (_, g, schema) ->
       let apx_schema = index_schema schema in
-      let _        = Printf.printf "\n Reconstruct schema : %s  \n" g.string_of_name  in
+      let _        = Printf.printf "\n Reconstruct schema: %s\n" g.string_of_name  in
       let sW         = elSchema apx_schema in
 (*      let _        = Printf.printf "\n Elaboration of schema %s \n : %s \n\n" g.string_of_name
                         (Pretty.Int.DefaultPrinter.schemaToString sW) in   *)
       let cPsi       = Int.LF.Null in
       let cD         = Int.LF.Empty in
       let cO         = Int.LF.Empty in
-      let _          = Check.LF.checkSchema cO cD cPsi sW in
+      let _          = Check.Comp.checkSchema cO cD cPsi sW in
       let _        = Printf.printf "\n TYPE CHECK for schema : %s  successful! \n" g.string_of_name  in
       let g'         = Schema.add (Schema.mk_entry g sW) in
         Int.Sgn.Schema (g', sW)

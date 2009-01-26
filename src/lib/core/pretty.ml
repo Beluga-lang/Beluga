@@ -965,7 +965,7 @@ module Int = struct
             (R.render_cid_term c)
 
       | LF.MVar (c, s) ->
-          fprintf ppf "mvar %a[%a]"
+          fprintf ppf "(mvar %a[%a])"
             (fmt_ppr_lf_cvar lvl) c
             (fmt_ppr_lf_sub  lvl) s
 
@@ -1019,7 +1019,7 @@ module Int = struct
             (fmt_ppr_lf_sub  lvl) s
 
       | LF.Dot (f, s) ->
-          fprintf ppf "%a@ .@ %a"
+          fprintf ppf "%a . %a"
             (fmt_ppr_lf_front 1) f
             (fmt_ppr_lf_sub lvl) s
 

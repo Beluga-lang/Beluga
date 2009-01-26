@@ -30,7 +30,6 @@ module LF : sig
   val check       : mctx -> mctx -> dctx -> nclo   -> tclo -> unit
   val checkTyp    : mctx -> mctx -> dctx -> tclo   -> unit
   val checkKind   : mctx -> mctx -> dctx -> kind   -> unit
-  val checkSchema : mctx -> mctx -> dctx -> schema -> unit
   val checkDCtx   : mctx -> mctx -> dctx -> unit
 
 end
@@ -44,6 +43,7 @@ module Comp : sig
   val check      : LF.mctx -> LF.mctx -> gctx -> exp_chk -> tclo -> unit
   val syn        : LF.mctx -> LF.mctx -> gctx -> exp_syn -> tclo
 
+  val checkSchema : LF.mctx -> LF.mctx -> LF.dctx -> LF.schema -> unit
   val checkTyp   : LF.mctx -> LF.mctx -> typ -> unit
 
 end

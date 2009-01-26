@@ -27,10 +27,11 @@ let main () =
               printf "## Pretty Printing External Syntax: %s ##\n" file_name
             ; print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
 
-            ; printf "\n## Pretty Printing Internal Syntax: %s ##\n" file_name
-            ; printf "\n## Type Reconstruction ##\n"
+(*            ; printf "\n## Pretty Printing Internal Syntax: %s ##\n" file_name *)
+            ; printf "\n## Type Reconstruction: %s ##\n" file_name
             ; let int_decls = List.map Reconstruct.recSgnDecl sgn in
-                print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls
+print_string "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx\n"
+              ;  print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls
               ; try
                 (* Double Checking is done after reconstruction 
 
@@ -45,14 +46,12 @@ let main () =
                   | Whnf.Error err ->
                       Format.fprintf
                         Format.std_formatter
-                        "\n!! Error during Weak-Head Normalization !!\n\n%a\n\n@?"
+                        "\n!! Error during weak-head normalization !!\n\n%a\n@?\n"
                         Pretty.Error.DefaultPrinter.Whnf.fmt_ppr err
-                      ; print_newline ()
                       ; errors + 1
 
                   | Check.LF.Error err ->
-                       printf "\n!! Error during Type-Checking !!\n\n%s\n\n" err
-                     ; print_newline ()
+                       printf "\n!! Error during typechecking !!\n\n%s\n\n" err
                         (* Format.fprintf
                           Format.std_formatter
                           "\n!! Error during Type-Checking !!\n\n%a\n\n@?"

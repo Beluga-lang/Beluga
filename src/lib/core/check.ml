@@ -13,6 +13,8 @@ module LF = struct
   open Substitution
   open Syntax.Int.LF
 
+  module Print = Pretty.Int.DefaultPrinter
+
   exception Error of string
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
@@ -42,7 +44,7 @@ module LF = struct
           checkSpine cO cD cPsi (tS, s) sA sP
 
     | _
-      -> raise (Error "LF Term is illtyped")
+      -> raise (Error "LF Term is ill-typed")
                (* IllTyped (cD, cPsi, sM1, sA2) *)
 
   and check cO cD cPsi sM1 sA2 = checkW cO cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
@@ -351,7 +353,7 @@ module LF = struct
 
 
 
-  (* checkCtx cO cD cPsi
+  (* checkDCtx cO cD cPsi
 
      Invariant:
 
@@ -374,12 +376,7 @@ module LF = struct
 
     (* other cases should be impossible -bp *)
 
-
-  and checkSchema _cO _cD _cPsi _schema = 
-    (Printf.printf "\n WARNING: SCHEMA CHECKING NOT IMPLEMENTED! \n" 
-       ; ())
-
-end
+end (* struct LF *)
 
 module Comp = struct
 
@@ -423,6 +420,9 @@ module Comp = struct
   module S = Substitution
   module I = Syntax.Int.LF 
   module C = Cwhnf
+
+  module Print = Pretty.Int.DefaultPrinter
+
 (*  module Unif = Unify.UnifyNoTrail *)
 
 (*  type error = 
@@ -464,6 +464,38 @@ module Comp = struct
       let p = Whnf.newPVar (Cwhnf.cnormDCtx (cPsi,t),  Cwhnf.cnormTyp (tA, t)) in
       let phat = Context.dctxToHat cPsi in  
         MDot(PObj(phat, I.PVar(p, S.LF.id)) , t)
+
+(* ctxToSub cPsi:
+
+  generates, based on cPsi, a substitution suitable for unification
+
+ Currently broken: assumes all types in cPsi are atomic
+*)
+  let rec ctxToSub cPsi = match cPsi with
+    | I.Null -> S.LF.id
+    | I.DDec(cPsi', I.TypDecl(_, tA)) -> 
+      let s = ((ctxToSub cPsi') : I.sub) in 
+(* For the moment, assume tA atomic. *)
+(* lower tA? *)
+(* A = A_1 -> ... -> A_n -> P
+
+ create cPhi = A_1, ..., A_n
+    \x_1. ... \x_n. u[id]
+    u::P[cPhi]
+
+already done in reconstruct.ml
+          let (_, d) = Context.dctxToHat cPsi in
+          let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift d) in
+in elSpineIW
+*)
+(*      let (_, phat) = Context.dctxToHat cPsi' in *)
+      let u = Whnf.newMVar (I.Null ,  I.TClo( tA, s)) in 
+      let front = (I.Obj(I.Root(I.MVar(u, S.LF.id), I.Nil)) : I.front) in
+      in
+        I.Dot(front, s)
+
+
+
 
   (* extend t1 t2 = t
     
@@ -560,7 +592,7 @@ module Comp = struct
         end
     | CtxApp (e, cPsi) -> 
         begin match C.cwhnfCTyp (syn cO cD cG e) with
-          | (TypCtxPi ((_psi, sW) , tau), t) ->
+          | (TypCtxPi ((_psi, w) , tau), t) ->
               let _ = Printf.printf "\n Schema checking omitted \n" in 
               (* REVISIT: Sun Jan 11 17:48:52 2009 -bp *)
               (* let tau' =  Cwhnf.csub_ctyp cPsi 1 tau in 
@@ -568,7 +600,7 @@ module Comp = struct
 
               let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in  
 
-              (LF.checkSchema cO cD cPsi ((Schema.get sW).Schema.schema)  ;
+              (checkSchema cO cD cPsi ((Schema.get w).Schema.schema)  ;
                (* (tau', t') *)
                (tau1, Cwhnf.id)
               )
@@ -667,6 +699,60 @@ module Comp = struct
       *)
         check cO cD1' cG1 e1' tau'
 
+
+  (* checkTypeAgainstSchema cO cD cPsi tA (elements : sch_elem list)
+  *)
+  and checkTypeAgainstSchema cO cD cPsi tA =
+
+    let rec projectCtxIntoDctx = function
+         |  I.Empty -> I.Null
+         |  I.Dec (rest, last) -> I.DDec (projectCtxIntoDctx rest, last)
+
+    and checkAgainstElement (I.SchElem (some_part, block_part)) =
+      match (some_part, block_part) with
+        (cSomeCtx, I.SigmaDecl(_name, I.SigmaLast elem1)) ->
+          let dctx = projectCtxIntoDctx cSomeCtx in 
+          let ssss = ctxToSub dctx in
+          let _ = print_string ("checkAgainstElement  " ^ Print.subToString ssss ^ "\n") in
+      let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
+          let normedA = Cwhnf.cnormTyp (tA, subD)
+          and normedElem1 = Cwhnf.cnormTyp (elem1, subD) in
+          
+      let phat = dctxToHat cPsi in
+            print_string ("normedElem1 " ^ Print.typToString normedElem1 ^ ";\n" ^ "normedA " ^ Print.typToString normedA ^ "\n")
+;
+            print_string ("***Unify.unifyTyp ("
+                        ^ "\n   dctx = " ^ Print.dctxToString dctx
+                        ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString ssss ^ " ] "
+                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString ssss ^ " ] "
+                        ^ "\n")
+          ; flush_all()
+          ; try Unify.unifyTyp (phat, (normedA, S.LF.id), (normedElem1, ssss))
+            with exn ->  (print_string ("Type " ^ Print.typToString tA ^ " doesn't unify with " ^ Print.typToString elem1 ^ "\n") ; flush_all()
+                         ; raise exn)
+    in
+      function
+        [] -> raise (Error ("Type " ^ Print.typToString tA ^ " doesn't check against schema"))
+      | element :: elements ->
+          try
+            checkAgainstElement element
+          with
+            _ -> checkTypeAgainstSchema cO cD cPsi tA elements
+
+  and checkSchema cO cD cPsi (I.Schema elements as schema) = 
+     print_string ("\n checkSchema " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema  ^ "\n");
+     print_string "\n WARNING: SCHEMA CHECKING NOT IMPLEMENTED! \n" 
+       ; 
+     match cPsi with
+     |  I.Null -> ()
+     |  I.CtxVar _phi -> () (* WRONG *)
+     |  I.DDec (cPsi', decl) ->
+          begin
+            checkSchema cO cD cPsi' schema;
+            match decl with
+               I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA elements
+          end
+
     
 end 
 
@@ -697,7 +783,7 @@ module Sgn = struct
         and cO   = Syntax.Int.LF.Empty
         and cPsi = Syntax.Int.LF.Null
         in 
-          LF.checkSchema cO cD cPsi schema
+          Comp.checkSchema cO cD cPsi schema
           ; check_sgn_decls decls
 
     | Syntax.Int.Sgn.Rec (_f, tau, e) :: decls ->

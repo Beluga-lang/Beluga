@@ -7,5 +7,4 @@
 open Syntax
 open Id
 
-
 val recSgnDecl : Ext.Sgn.decl -> Int.Sgn.decl

@@ -32,7 +32,7 @@ OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 BYTE_ENABLED   = true
 
 # Compile to native code?
-# NATIVE_ENABLED = true
+NATIVE_ENABLED = true
 
 # Declare a phony clean target
 .PHONY: core clean frontend interpreter test

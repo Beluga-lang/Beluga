@@ -22,11 +22,11 @@ schema W = some [T:tp] block exp T;
 rec plus : (exp nat) [.] -> (exp nat) [.] -> (exp nat) [.] =
 fn x => fn y =>
  (case x of
-    box(. z)                           : (exp nat)[.] => y
+    box(. . z)                           : (exp nat)[.] => y
 
-  | {U::(exp nat)[.]} box(. s U ![.]!) : (exp nat)[.] =>
+  | {U::(exp nat)[.]} box(. . s U ![.]!) : (exp nat)[.] =>
     (case (plus box(. U![.]!) y) of
-       {V::(exp nat)[.]} box(. V![.]!) : (exp nat)[.] 
+       {V::(exp nat)[.]} box(. . V![.]!) : (exp nat)[.] 
        => box(. s V![.]!)));
 
 
@@ -34,22 +34,22 @@ rec cntV : {g:(W)*} {T::tp[.]} {S::tp[.]} (exp S![.]!)[g, x:(exp T![.]!)] -> (ex
 FN g => mlam t => mlam tt => fn e =>
   (case e of
      {T1::tp[.]} {T2::tp[.]} {#p::(exp T1![.]!)[g]}
-     box(g,x . #p![id]!)      : (exp T1![.]!)[g,x: exp T2![.]!] => box(. z)
+     box(g,x: exp T2![.]! . #p![id]!)      : (exp T1![.]!)[g,x: exp T2![.]!] => box(. z)
 
-   | {T'::tp[.]} box(g,x . x)  : (exp T'![.]!)[g,x: exp T'![.]!] => box(. s z)
+   | {T'::tp[.]} box(g,x: exp T'![.]! . x)  : (exp T'![.]!)[g,x: exp T'![.]!] => box(. s z)
 
-   | {T'::tp[.]} box(g,x . tt) : (exp bool) [g,x: exp T'![.]!] => box(. z)
+   | {T'::tp[.]} box(g,x: exp T'![.]! . tt) : (exp bool) [g,x: exp T'![.]!] => box(. z)
 
-   | {T'::tp[.]} box(g,x . z)  : (exp nat)  [g,x: exp T'![.]!] => box(. z)
+   | {T'::tp[.]} box(g,x: exp T'![.]! . z)  : (exp nat)  [g,x: exp T'![.]!] => box(. z)
 
    | {T'::tp[.]} {U::(exp nat)[g, x:(exp T'![.]!)]}
-      box(g,x . s U ![id, x]! )  : (exp nat) [g,x: exp T'![.]!] => 
+      box(g,x: exp T'![.]! . s U ![id, x]! )  : (exp nat) [g,x: exp T'![.]!] => 
           cntV [g] <. T'![.]! >  < . nat >   box(g,x . U![id, x]!)
 
    | {T'::tp[.]} {T1::tp[.]} {T2::tp[.]} 
      {U1::(exp T1![.]!)[g, x:(exp T'![.]!)]} {U2::(exp T2![.]!)[g, x:(exp T'![.]!), y:(exp T1![.]!)]}
 
-      box(g,x . letv T1![.]! T2![.]! U1![id, x]! (\ y . U2![id, x, y]!)) : (exp T2![.]!)[g, x:(exp T'![.]!)] =>
+      box(g,x: exp T'![.]! . letv T1![.]! T2![.]! U1![id, x]! (\ y . U2![id, x, y]!)) : (exp T2![.]!)[g, x:(exp T'![.]!)] =>
 
           plus (cntV [g] <. T'![.]! >     < . T1![.]! >    box(g,x . U1![id, x]!)) 
                (cntV [g, y:(exp T1![.]!)] < . T'![.]! >    < . T2![.]! >   box(g,y,x . U2![id, x, y]!))

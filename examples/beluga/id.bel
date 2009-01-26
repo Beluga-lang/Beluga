@@ -3,25 +3,25 @@ z : nat.
 s : nat -> nat.
 
 
-rec identity : (nat) [.] -> (nat) [.] =
+rec identity : (nat)[.] -> (nat) [.] =
     fn x =>
       case x of
-          box (. z)   : (nat) [.] => box (. z)
-        | {U::nat[.]}box (. s U ![ . ]!) : nat [.] => box (. s U ![ . ]!);
+          box (. . z)   : (nat) [.] => box (. z)
+        | {U::nat[.]}box (. . s U ![ . ]!) : nat [.] => box (. s U ![ . ]!);
 
 
 rec plus : (nat) [.] -> (nat) [.] -> (nat) [.] = 
   fn x => fn y => 
-    case x of box (. z) : nat [.]  => y
-            | {U:: nat [.]}box (. s U ![id]! ) : nat [.] => 
+    case x of box (. . z) : nat [.]  => y
+            | {U:: nat [.]}box (. . s U ![id]! ) : nat [.] => 
 	      (case (plus (box (. U![id]!)) y) of 
- 	        {V:: nat [.]} box (. V![id]!) : nat [.] => box ( . s V![id]!));
+ 	        {V:: nat [.]} box (. . V![id]!) : nat [.] => box (. s V![id]!));
 
 
 rec plus' : (nat) [.] -> (nat) [.] -> (nat) [.] = 
   fn x => fn y => 
-    case x of box (. z) : nat [.]  => y
-            | {U:: nat [.]}box (. s U![.]!) : nat [.] => 
+    case x of box (. . z) : nat [.]  => y
+            | {U:: nat [.]}box (. . s U![.]!) : nat [.] => 
 	      (case (plus' (box (. U![.]!)) y) of 
- 	        {V:: nat [.]} box (. V![.]!) : nat [.] => box ( . s V![.]!));
+ 	        {V:: nat [.]} box (. . V![.]!) : nat [.] => box (. s V![.]!));
 

@@ -5,7 +5,7 @@ lam  : (term -> term) -> term.
 schema W = some [] block term;
 
 rec copy' : (term) [.] -> (term) [.] = 
- fn t =>  case t of box(. lam (\ x . x)) : term[.] => t
+ fn t =>  case t of box(. . lam (\ x . x)) : term[.] => t
 ;
 
 rec copy : {g:(W)*} (term) [g] -> (term) [g] =
@@ -21,5 +21,5 @@ FN g => fn e =>
 
           {V:: term[g, x : term ]}
 
-           box(g,x . V![id, x]!) : term [g,x:term] =>
+           box(g,x:term . V![id, x]!) : term [g,x:term] =>
              box(g . lam (\ x. V![id , x]!))));

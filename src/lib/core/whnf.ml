@@ -172,9 +172,19 @@ and lowerMVar = function
          lower u, and normalize the lowered meta-variable *)
         ->  let _ = lowerMVar u in  norm (tM, sigma)
 
+
+      (* Parameter variables *)
+      | Root (FMVar (u, r), tS)
+        -> Root (FMVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+
       (* Parameter variables *)
       | Root (PVar (Offset _ as p, r), tS)
         -> Root (PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+
+
+      (* Parameter variables *)
+      | Root (FPVar (p, r), tS)
+        -> Root (FPVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
       | Root (PVar (PInst ({ contents = Some (BVar i) }, _, _, _) as _p, r), tS)
         -> begin match LF.bvarSub i r with
@@ -249,8 +259,10 @@ and lowerMVar = function
         end 
     | Head (BVar _k)  -> ft
     | Head (FVar _k)  -> ft
-    | Head (MVar (u, s')) -> Head(MVar (u, normSub s'))
-    | Head (PVar (p, s')) -> Head(PVar (p, normSub s'))
+    | Head (MVar (u, s'))  -> Head(MVar (u, normSub s'))
+    | Head (FMVar (u, s')) -> Head(FMVar (u, normSub s'))
+    | Head (PVar (p, s'))  -> Head(PVar (p, normSub s'))
+    | Head (FPVar (p, s')) -> Head(FPVar (p, normSub s'))
     | Head (Proj(PVar (p,s'), k)) -> Head(Proj(PVar (p, normSub s'), k))
     | Head h            -> Head h
     | Undef             -> Undef  (* -bp Tue Dec 23 2008 : DOUBLE CHECK *)
@@ -470,12 +482,12 @@ and lowerMVar = function
                and  ni <= k or ni = _ for all 1 <= i <= m
     *)
     let rec mkPatSub s = match s with
-      | Shift _k               -> s
+      | Shift (_psi, _k)                 -> s
 
       | Dot (Head (BVar n), s) ->
             let s' = mkPatSub s in
             let rec checkBVar s = match s with
-              | Shift k                  -> n <= k
+              | Shift (_ , k)            -> n <= k
               | Dot (Head (BVar n'), s') -> n <> n' && checkBVar s'
               | Dot (Undef, s')          ->            checkBVar s' in
             let _ = checkBVar s'
@@ -528,9 +540,7 @@ and lowerMVar = function
                 -> p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
               | (MVar (u, s'), MVar (w, s''))
-                -> let _ = Printf.printf "Check conv for mvars...\n" in   
-          
-                  u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+                -> u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
               | (FMVar (u, s'), FMVar (w, s''))
                 -> u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
@@ -580,8 +590,8 @@ and lowerMVar = function
 
 
     and convSub subst1 subst2 = match (subst1, subst2) with
-      | (Shift n, Shift k) -> 
-          n = k
+      | (Shift (psi,n), Shift (psi', k)) -> 
+          n = k && psi = psi'
 
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2))
         -> s1 = s2 && convSub sigma1 sigma2
@@ -589,11 +599,11 @@ and lowerMVar = function
       | (Dot (f, s), Dot (f', s'))
         -> convFront f f' && convSub s s'
       
-      | (Shift n, Dot(Head BVar _k, _s')) 
-          -> convSub (Dot (Head (BVar (n+1)), Shift (n+1))) subst2
+      | (Shift (psi, n), Dot(Head BVar _k, _s')) 
+          -> convSub (Dot (Head (BVar (n+1)), Shift (psi, n+1))) subst2
 
-      | (Dot(Head BVar _k, _s'), Shift n) 
-          -> convSub subst1 (Dot (Head (BVar (n+1)), Shift (n+1)))
+      | (Dot(Head BVar _k, _s'), Shift (psi, n)) 
+          -> convSub subst1 (Dot (Head (BVar (n+1)), Shift (psi, n+1)))
           
       |  _
         -> false

@@ -1,0 +1,73 @@
+% Type-preserving substitution-based interpreter
+%
+% Author: Brigitte Pientka
+%
+% TODO extend with functions and function application
+
+tp   : type.
+nat  : tp.
+bool : tp.
+
+exp  : tp -> type.  
+
+tt   : exp bool.
+ff   : exp bool.
+
+z    : exp nat.
+suc  : exp nat -> exp nat.
+eq   : exp nat -> exp nat -> exp bool.
+
+iff   : {T:tp} exp bool -> exp T -> exp T -> exp T.
+letv : {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
+
+rec equal : (exp nat)[.] -> (exp nat)[.] -> (exp bool)[.] =
+fn x => fn y => 
+  case x of
+    box(. . z) : (exp nat)[.] => 
+      (case y of
+          box(. . z)  => box(. tt)
+
+       | box(. . suc U![.]!) => box(. ff))
+
+  | box(. . suc U![.]!) => 
+      (case y of
+         box(. . z)  => box(. ff)
+      |  box(. . suc V![.]!) 
+            => equal box(. U![.]!) box(. V![.]!))
+;
+
+
+
+
+rec eval : (exp T![.]!)[.] -> (exp T![.]!)[.] = 
+mlam S => fn e => 
+  case e of 
+    box(. . tt) => box(. tt)
+
+  | box(. . ff) => box(. ff)
+
+  | box(. . z)  => box(. z)
+
+  | box(. . suc U![.]!) => 
+         (case eval <. nat >  box(. U![.]!) of
+             box(. . V![.]!)  => box(. suc V![.]!))
+
+
+ | box(. . eq U![.]! V![.]!) =>
+         equal (eval <. nat >   box(. U![.]!)) 
+               (eval <. nat >   box(. V![.]!))
+
+   | 
+     box(. . iff T![.]! U![.]! V![.]! W![.]!)  =>
+         (case eval <. bool > box(. U![.]!) of
+             box(. . tt) 
+	        => eval <. T![.]! > box(. V![.]!)
+           | box(. . ff) 
+	      => eval <. T![.]! > box(. W![.]!))
+
+   | box(. . letv T1![.]! T2![.]! U![.]! (\ x . W![., x]!))  =>
+
+         (case eval <. T1![.]! > box(. U![.]!) of
+             box(. . V![.]!) 
+             => eval <. T2![.]! > box(. W![ ., V![.]! ]!))
+;

@@ -120,7 +120,7 @@ let rec raiseKind cPsi tK = match cPsi with
 
 let ctxVarToString psi = match psi with
   | None -> " "
-  | (Some (I.Offset k)) -> "Ctx_Var " ^ string_of_int k
+  | (Some (I.CtxOffset k)) -> "Ctx_Var " ^ string_of_int k
 
 let rec printCollection cQ = match cQ with
   | I.Empty -> Printf.printf " \n end "
@@ -229,7 +229,7 @@ let rec index_of cQ n =
       if eqFMVar u1 (FMV (u2, tA_cPsi)) then 1 else (index_of cQ' n) + 1
 
   | (I.Dec (cQ', FPV (p1, _)), FPV (p2, tA_cPsi)) ->
-      if eqFMVar p1 (FPV (p2, tA_cPsi)) then 1 else (index_of cQ' n) + 1
+      if eqFPVar p1 (FPV (p2, tA_cPsi)) then 1 else (index_of cQ' n) + 1
 
 
   | (I.Dec (cQ', _), _) ->
@@ -424,6 +424,19 @@ and collectHead cQ phat sH = match sH with
   | (I.PVar (I.Offset _k, s'), s) ->
        collectSub cQ phat (LF.comp s' s) 
       
+  | (I.FPVar (u, s'), s) ->
+      let cQ' = collectSub cQ phat (LF.comp s' s) in
+        if exists (eqFPVar u) cQ' then
+          cQ'
+        else
+          let (tA, cPhi)  = FPVar.get u in
+            (* tA must be closed with respect to cPhi *)
+            (* Since we only use abstraction on pure LF objects,
+               there are no context variables; different abstraction
+               is necessary for handling computation-level expressions,
+               and LF objects which occur in computations. *)
+            I.Dec (collectTyp cQ' (None, 0) (tA, LF.id), FPV (u, Some (tA, cPhi)))
+
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
   | (I.Atom (_a, tS), s) ->
@@ -447,7 +460,7 @@ and collectKind cQ ((cvar, offset) as phat) sK = match sK with
 
 
 let rec collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with 
-  | I.Null -> cQ
+  | I.Null ->  cQ
 
   | I.CtxVar _ -> cQ
 
@@ -469,14 +482,6 @@ let rec collectMctx cQ cD = match cD with
       let phat = Context.dctxToHat cPsi in 
       let cQ'' = collectDctx cQ' phat cPsi in 
         collectTyp cQ'' phat (tA, LF.id)
-
-
-
-let rec collectPattern cQ cD cPsi (phat, tM) tA = 
-  let cQ1 = collectMctx cQ cD in 
-  let cQ2 = collectTerm cQ1 phat (tM, LF.id) in 
-  let cQ3 = collectDctx cQ2 phat cPsi in 
-    collectTyp cQ3 phat (tA, LF.id)
 
 
 
@@ -539,10 +544,10 @@ and abstractHead cQ offset tH = match tH with
 
 
 and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
-  | (I.Shift _k, I.Null) ->  tS
+  | (I.Shift (None,_k), I.Null) ->  tS
 
-  | (I.Shift k , I.DDec(_cPsi', _dec)) ->
-       subToSpine cQ offset ((I.Dot (I.Head (I.BVar (k + 1)), I.Shift (k + 1))), cPsi) tS
+  | (I.Shift (None, k) , I.DDec(_cPsi', _dec)) ->
+       subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (None, (k + 1))), cPsi) tS
 
   | (I.Dot (I.Head (I.BVar k), s), I.DDec(cPsi', _dec)) -> 
       subToSpine cQ offset  (s,cPsi') (I.App (I.Root (I.BVar k, I.Nil), tS))
@@ -823,18 +828,93 @@ and abstrTyp tA =
       | _            -> raise (Error "Abstraction not valid LF-type because of left-over context variable")
     end 
 
+(* *********************************************************************** *)
+(* Abstract over computations *)
+(* *********************************************************************** *)
+let rec collectCompTyp cQ tau = match tau with
+  | Comp.TypBox (tA, cPsi) -> 
+      let phat = Context.dctxToHat cPsi in 
+      let cQ' = collectDctx cQ phat cPsi in 
+        collectTyp cQ' phat (tA, LF.id)
+
+  | Comp.TypArr (tau1, tau2) -> 
+      let cQ1 = collectCompTyp cQ tau1 in 
+        collectCompTyp cQ1 tau2
+
+  | Comp.TypCtxPi (_, tau) -> 
+      collectCompTyp cQ tau 
+
+  | Comp.TypPiBox (I.MDecl(_, tA, cPsi), tau) -> 
+      let phat = Context.dctxToHat cPsi in 
+      let cQ1 = collectDctx cQ phat cPsi in 
+      let cQ2 = collectTyp cQ1 phat (tA, LF.id) in 
+        collectCompTyp cQ2 tau
+
+
+let rec collectPattern cQ cD cPsi (phat, tM) tA = 
+  let cQ1 = collectMctx cQ cD in 
+(*  let _    = Printf.printf "Start Collection of cPsi = %s \n" 
+  (Pretty.Int.DefaultPrinter.dctxToString cPsi) in *)
+  let cQ2 = collectDctx cQ1 phat cPsi in 
+  let cQ3 = collectTerm cQ2 phat (tM, LF.id) in 
+    collectTyp cQ3 phat (tA, LF.id)
+
+
+
+let rec abstractMVarCompTyp cQ offset tau = match tau with 
+  | Comp.TypBox (tA, cPsi) -> 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+      let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
+        Comp.TypBox (tA', cPsi')      
+
+  | Comp.TypArr (tau1, tau2) -> 
+      Comp.TypArr (abstractMVarCompTyp cQ offset tau1, 
+                   abstractMVarCompTyp cQ offset tau2)
+
+  | Comp.TypCtxPi (ctx_decl, tau) -> 
+      Comp.TypCtxPi (ctx_decl, abstractMVarCompTyp cQ offset tau)
+
+  | Comp.TypPiBox (I.MDecl(u, tA, cPsi), tau) -> 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+      let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
+      let tau'  = abstractMVarCompTyp cQ (offset+1) tau in 
+        Comp.TypPiBox (I.MDecl(u, tA', cPsi'), tau')
+
+
+let raiseCompTyp cD tau = 
+  let rec roll tau = match tau with
+    | Comp.TypCtxPi (ctx_decl, tau) -> 
+        Comp.TypCtxPi (ctx_decl, roll tau)
+    | tau -> raisePiBox cD tau 
+
+  and raisePiBox cD tau = match cD with
+    | I.Empty -> tau
+    | I.Dec(cD ,mdecl) -> 
+        raisePiBox cD (Comp.TypPiBox (mdecl, tau))
+  in 
+    roll tau 
+
+
+let rec abstrCompTyp tau = 
+  let cQ   = collectCompTyp I.Empty tau in 
+  let cQ'  = abstractMVarCtx cQ in 
+  let tau' = abstractMVarCompTyp cQ' 0 tau in 
+  let cD'  = ctxToMCtx cQ' in 
+    (raiseCompTyp cD' tau', Context.length cD')
+
+
 (*  
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
    2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA
  
 *)
-  and abstrPattern cD1 cPsi1 (phat, tM) tA =  
+let rec abstrPattern cD1 cPsi1 (phat, tM) tA =  
   let cQ      = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in 
   let cQ'     = abstractMVarCtx cQ in 
   let cD1'    = abstractMVarMctx cQ' cD1 in 
   let offset  = Context.length cD1' in 
-  let tM'     = abstractMVarTerm cQ' offset (tM, LF.id) in 
   let cPsi1'  = abstractMVarDctx cQ' offset cPsi1 in 
+  let tM'     = abstractMVarTerm cQ' offset (tM, LF.id) in
   let tA'     = abstractMVarTyp  cQ' offset (tA, LF.id) in 
   let cD'     = ctxToMCtx cQ' in 
   let cD      = Context.append cD' cD1' in 

@@ -18,6 +18,9 @@ module S = Substitution.LF
 exception Error of string 
 
 exception Fmvar_not_found
+exception FreeMVar of LF.head
+exception FreeCtxVar of Id.name
+
 (*************************************)
 (* Contextual Explicit Substitutions *)
 
@@ -90,7 +93,7 @@ and mshiftTyp tA n = match tA with
   | LF.TClo(tA, s) -> LF.TClo(mshiftTyp tA n, mshiftSub s n)
 
 and mshiftSub s n = match s with
-  | LF.Shift _k -> s
+  | LF.Shift (_,_k) -> s
   | LF.SVar(LF.Offset k, s) -> LF.SVar(LF.Offset (k+n), mshiftSub s n)
   | LF.Dot(ft, s) -> LF.Dot (mshiftFt ft n, mshiftSub s n)
 
@@ -254,6 +257,10 @@ and cnorm (tM, t) = match tM with
         (* other cases impossible *)
       end
 
+
+    | LF.Root (LF.FMVar (u, r), _tS) ->
+        raise (FreeMVar (LF.FMVar (u,cnormSub (r, t))))
+
     | LF.Root (LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _) as _u , _r), _tS) -> 
         raise (Error "Encountered Instantiated MVar with reference?\n")
 
@@ -282,6 +289,10 @@ and cnorm (tM, t) = match tM with
 	    LF.Root (LF.PVar(LF.Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
             (* Other case MObj _ should not happen -- ill-typed *)
       end
+
+    | LF.Root (LF.FPVar (p, r), _tS) ->
+        raise (FreeMVar 
+                 (LF.FPVar (p, cnormSub (r, t))))
 
     (* Ignore other cases for destructive (free) parameter variables *)
 
@@ -408,8 +419,11 @@ and cnorm (tM, t) = match tM with
 let rec cnormDCtx (cPsi, t) = match cPsi with
     | LF.Null       ->  LF.Null 
 
-    | LF.CtxVar (LF.Offset psi) -> 
-        LF.CtxVar (LF.Offset psi) 
+    | LF.CtxVar (LF.CtxOffset psi) -> 
+        LF.CtxVar (LF.CtxOffset psi) 
+
+    | LF.CtxVar (LF.CtxName psi) -> 
+        raise (FreeCtxVar psi)
 
     | LF.DDec(cPsi, decl) ->  
         LF.DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
@@ -455,12 +469,20 @@ and csub_spine cPsi k tS = match tS with
   | LF.SClo (tS, s) -> 
       LF.SClo (csub_spine cPsi k tS, csub_sub cPsi k s)
 
-and csub_sub cPsi k s = match s with
-  | LF.Shift k -> 
-      let (_ctx_v, d) = Context.dctxToHat cPsi in 
-        LF.Shift (k+d)
+(* csub_sub cPsi phi s = s' 
+
+*)
+and csub_sub cPsi phi (* k *) s = match s with
+  | LF.Shift (None, _k) -> s
+  | LF.Shift (Some (LF.CtxOffset psi), k) -> 
+      if psi = phi then 
+        let (ctx_v, d) = Context.dctxToHat cPsi in  
+          LF.Shift (ctx_v, k+d)
+      else 
+        LF.Shift(Some (LF.CtxOffset psi), k)
+
   | LF.Dot (ft, s) -> 
-      LF.Dot(csub_front cPsi k ft, csub_sub cPsi k s)
+      LF.Dot(csub_front cPsi phi ft, csub_sub cPsi phi s)
 
 and csub_front cPsi k ft = match ft with
   | LF.Head h -> LF.Head (csub_head cPsi k h)
@@ -485,7 +507,7 @@ let rec csub_ctyp cPsi k tau = match tau with
 
 and csub_psihat cPsi k (ctxvar, offset) = match ctxvar with 
   | None -> (None, offset)
-  | Some (LF.Offset psi) -> 
+  | Some (LF.CtxOffset psi) -> 
       if k = psi then 
         let (psivar, psi_offset) = dctxToHat cPsi in 
           (psivar, (psi_offset + offset))
@@ -494,16 +516,17 @@ and csub_psihat cPsi k (ctxvar, offset) = match ctxvar with
 
 
 and csub_dctx cPsi k cPhi = 
-  let (_ctx_var, d) = Context.dctxToHat cPsi in 
+  let (ctx_var, d) = Context.dctxToHat cPsi in 
+    
   let rec csub_dctx' cPhi = match cPhi with 
     | LF.Null -> (LF.Null, false)
-    | LF.CtxVar (LF.Offset offset) -> if k = offset then 
+    | LF.CtxVar (LF.CtxOffset offset) -> if k = offset then 
         (cPsi, true) else (cPhi, false)
 
     | LF.DDec (cPhi, LF.TypDecl (x, tA)) ->  
         let (cPhi', b) = csub_dctx' cPhi in 
         if b then       
-            (LF.DDec (cPhi', LF.TypDecl(x, LF.TClo(tA, LF.Shift d))), b)
+            (LF.DDec (cPhi', LF.TypDecl(x, LF.TClo(tA, LF.Shift (ctx_var, d)))), b)
         else 
           (LF.DDec(cPhi', LF.TypDecl (x, tA)), b)
   in 
@@ -564,17 +587,30 @@ let rec mctxPDec cD k =
 
 
 
-let rec mctxPos cD u = 
+let rec mctxMVarPos cD u = 
   let rec lookup cD k = match cD  with
-    | LF.Dec (_cD, LF.MDecl(v, tA, cPsi))    -> 
+    | LF.Dec (cD, LF.MDecl(v, tA, cPsi))    -> 
         if v = u then 
           (k, (mshiftTyp tA k, mshiftDCtx cPsi k))
         else 
           lookup cD (k+1)
-        
-    | LF.Dec (_cD, LF.PDecl _)  -> 
-        raise (Error "Expected meta-variable; Found parameter variable")
-      
+              
+    | LF.Dec (cD, _) -> lookup cD (k+1)
+
+    | LF.Empty  -> raise Fmvar_not_found
+  in 
+    lookup cD 1
+
+
+
+let rec mctxPVarPos cD p = 
+  let rec lookup cD k = match cD  with
+    | LF.Dec (cD, LF.PDecl(q, tA, cPsi))    -> 
+        if p = q then 
+          (k, (mshiftTyp tA k, mshiftDCtx cPsi k))
+        else 
+          lookup cD (k+1)
+              
     | LF.Dec (cD, _) -> lookup cD (k+1)
 
     | LF.Empty  -> raise Fmvar_not_found

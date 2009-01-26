@@ -8,6 +8,7 @@ open Context
 open Syntax.Int
 
 exception Fmvar_not_found
+exception FreeMVar of LF.head
 
 val id   : Comp.msub
 val mshift: Comp.msub -> int -> Comp.msub
@@ -23,7 +24,8 @@ val mctxMDec   : LF.mctx -> int -> LF.typ * LF.dctx
 val mctxPDec   : LF.mctx -> int -> LF.typ * LF.dctx
 
 
-val mctxPos    : LF.mctx -> Id.name -> (Id.offset * (LF.typ * LF.dctx))
+val mctxMVarPos : LF.mctx -> Id.name -> (Id.offset * (LF.typ * LF.dctx))
+val mctxPVarPos : LF.mctx -> Id.name -> (Id.offset * (LF.typ * LF.dctx))
 
 val cnorm      : LF.normal * Comp.msub -> LF.normal
 val cnormTyp   : LF.typ  * Comp.msub -> LF.typ

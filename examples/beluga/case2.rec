@@ -1,0 +1,16 @@
+nat: type.
+z   : nat.
+suc : nat -> nat.
+
+irrelevancy : type.
+irrelevant_con : irrelevancy.
+
+schema w = some [ ] block nat;
+
+rec copynat : {g:(w)*} (nat)[g] -> (nat)[g] =
+   FN g => fn e =>
+     case e of box (g. z) => box(g. z)
+
+             | box (g . suc U![id]!) => copynat [g] box (g . U![id]!)
+    
+;

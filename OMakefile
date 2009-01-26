@@ -29,10 +29,10 @@ OCAMLOPTFLAGS  = -noassert -inline 100
 OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
 # Compile to byte code?
-BYTE_ENABLED   = false
+BYTE_ENABLED   = true
 
 # Compile to native code?
-NATIVE_ENABLED = true
+# NATIVE_ENABLED = true
 
 # Declare a phony clean target
 .PHONY: core clean frontend interpreter test

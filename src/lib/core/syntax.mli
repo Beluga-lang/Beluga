@@ -82,6 +82,8 @@ module Ext : sig
 
     and psi_hat = name list
 
+    and mctx     = ctyp_decl ctx          
+
     and prag =
       | PragUnifyTerm of
             unify_decl list
@@ -132,7 +134,7 @@ module Ext : sig
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
-          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
+          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
 (*       | BranchSBox of LF.ctyp_decl LF.ctx *)
@@ -211,7 +213,7 @@ module Int : sig
       | SClo of (spine * sub)
 
     and sub =
-      | Shift of offset
+      | Shift of ctx_offset * offset
       | SVar  of cvar * sub
       | Dot   of front * sub
 
@@ -219,6 +221,8 @@ module Int : sig
       | Head of head
       | Obj  of normal
       | Undef
+
+    and ctx_offset = ctx_var option
 
     and cvar =
       | Offset of offset
@@ -238,9 +242,13 @@ module Int : sig
 
     and dctx =
       | Null
-      | CtxVar   of cvar
+      | CtxVar   of ctx_var
       | DDec     of dctx * typ_decl
       | SigmaDec of dctx * sigma_decl
+
+    and ctx_var = 
+      | CtxName   of name
+      | CtxOffset of offset
 
     and 'a ctx =
       | Empty
@@ -252,7 +260,7 @@ module Int : sig
     and schema =
       | Schema of sch_elem list
 
-    and psi_hat = cvar option * offset
+    and psi_hat = ctx_var option * offset
 
     and typ_rec =
       |  SigmaLast of typ
@@ -398,8 +406,13 @@ module Apx : sig
 
     and dctx =
       | Null
-      | CtxVar   of offset
+      | CtxVar   of ctx_var
       | DDec     of dctx * typ_decl
+
+    and ctx_var = 
+      | CtxName   of name
+      | CtxOffset of offset
+       
 
     and 'a ctx =
       | Empty
@@ -411,7 +424,7 @@ module Apx : sig
     and schema =
       | Schema of sch_elem list
 
-    and psi_hat = (Int.LF.cvar) option * offset
+    and psi_hat = (Int.LF.ctx_var) option * offset
   end
 
   module Comp : sig
@@ -440,7 +453,7 @@ module Apx : sig
 
     and branch =
       | BranchBox of LF.ctyp_decl LF.ctx
-          * (LF.psi_hat * LF.normal * (LF.typ * LF.dctx) option)
+          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
   end

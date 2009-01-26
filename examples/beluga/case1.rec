@@ -2,7 +2,7 @@ nat: type.
 z   : nat.
 suc : nat -> nat.
 
-schema w = block nat;
+schema w = some [ ] block nat;
 
 rec copynat1 : {g:(w)*} (nat)[g] -> (nat)[g] = 
     FN g => fn e => copynat1 [g] e;
@@ -11,6 +11,6 @@ rec copynat1 : {g:(w)*} (nat)[g] -> (nat)[g] =
 rec copynat : {g:(w)*} (nat)[g] -> (nat)[g] =
   FN g =>
     fn e =>
-      case e of               box (g. z)              : nat[g] => box(g. z)
-             | {U :: nat [g]} box (g. suc (U![id]!)) : nat[g] => copynat [g] box(g. U![id]!)
+      case e of box (g. z)             => box(g. z)
+              | box (g. suc (U![id]!)) => copynat [g] box(g. U![id]!)
 ;

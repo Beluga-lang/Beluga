@@ -18,25 +18,23 @@ suc: nat -> nat.
 rec add : (nat)[.] -> (nat)[.] -> (nat)[.] = 
 fn a => fn b =>
    (case a of
-        box(. . z) : nat [.] => b
-      | {U::nat[.]} box(. . suc U![.]!) : nat [.]=>
+        box(. . z)  => b
+      | box(. . suc U![.]!) =>
         case b of
-          {V::nat[.]} box(. . V![.]!) : nat [.] => add (box(. U![.]!)) box(. suc V![.]!)
+          box(. . V![.]!) => add (box(. U![.]!)) box(. suc V![.]!)
 )
 ;
 
 rec eval : (exp)[.] -> (nat)[.] = 
 fn e => 
 (case e of
-   {U::nat[.]} box(. . Nat U![.]!) : exp [.] => box( . U![.]!)
- | {U::exp[.]}{W::exp[.]}
-    box(. . Add U![.]! W![.]!) : exp [.] => 
+   box(. . Nat U![.]!) => box( . U![.]!)
+ | box(. . Add U![.]! W![.]!)  => 
        add (eval box( . U![.]!)) (eval box( . W![.]!))
 
- | {U::exp[.]}{W::exp[.,x : nat]}
-   box(. . Let U![.]! (\ x . W![. , x]!)) : exp[.] => 
+ | box(. . Let U![.]! (\ x . W![. , x]!))  => 
 
     case (eval box( . U![.]!)) of 
-       {V::nat[.]} box (. . V![.]!) : nat [.] =>  
+        box (. . V![.]!)  =>  
           eval box( . W![. , V![.]! ]!)
 );

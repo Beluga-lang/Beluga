@@ -6,5 +6,8 @@
 
 open Syntax
 open Id
+open Error
+
+exception Error of error
 
 val recSgnDecl : Ext.Sgn.decl -> Int.Sgn.decl

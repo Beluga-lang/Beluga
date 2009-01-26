@@ -2,6 +2,13 @@ nat: type.
 z   : nat.
 suc : nat -> nat.
 
-schema w = some [ ] block x:nat, y:nat. nat;
+boolean : type.
+true : boolean.
+false : boolean.
 
-% rec copynat1 : {g:(w)*} (nat)[g] -> (nat)[g] = FN g => fn e => copynat1[g] e;
+schema nat3 = block x:nat, y:nat. nat;
+schema bool = block boolean;
+
+rec loop1 : {g:(nat3)*} {bb:(bool)*} (nat)[g] -> (nat)[g] = FN g => FN bb => fn e => loop1[g][bb] e;
+
+rec loop2 : {g:(nat3)*} {bb:(bool)*} (nat)[g] -> (nat)[g] = FN g => FN bb => fn e => loop2[bb][g] e;

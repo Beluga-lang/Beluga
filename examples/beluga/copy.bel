@@ -24,7 +24,7 @@ FN g => mlam T => fn e =>
 
              {T1'::tp[.]} {T2'::tp[.]} {V::(term T2'![.]!)[g, x : (term T1'![.]!) ]}
 
-                 box(g,x . V![id, x]!) : (term T2'![.]!)[g,x:(term T1'![.]!)] 
+                 box(g,x:(term T1'![.]!) . V![id, x]!) : (term T2'![.]!)[g,x:(term T1'![.]!)] 
 
                  => box(g . lam T1'![.]! T2'![.]!  (\ x. V![id , x]!)))
 

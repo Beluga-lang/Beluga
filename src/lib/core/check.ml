@@ -6,6 +6,7 @@
 
 *)
 
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [1])
 
 module LF = struct 
   open Context
@@ -14,7 +15,7 @@ module LF = struct
   open Syntax.Int.LF
 
   module Print = Pretty.Int.DefaultPrinter
-
+  
   exception Error of string
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
@@ -735,20 +736,19 @@ in elSpineIW
         (cSomeCtx, I.SigmaDecl(_name, I.SigmaLast elem1)) ->
           let dctx = projectCtxIntoDctx cSomeCtx in 
           let ssss = ctxToSub dctx in
-          let _ = print_string ("checkAgainstElement  " ^ Print.subToString ssss ^ "\n") in
+          let _ = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString ssss) in
       let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
           let normedA = Cwhnf.cnormTyp (tA, subD)
           and normedElem1 = Cwhnf.cnormTyp (elem1, subD) in
           
       let phat = dctxToHat cPsi in
-            print_string ("normedElem1 " ^ Print.typToString normedElem1 ^ ";\n" ^ "normedA " ^ Print.typToString normedA ^ "\n")
+            dprint (fun () -> "normedElem1 " ^ Print.typToString normedElem1 ^ ";\n" ^ "normedA " ^ Print.typToString normedA)
 ;
-            print_string ("***Unify.unifyTyp ("
+            dprint (fun () -> "***Unify.unifyTyp ("
                         ^ "\n   dctx = " ^ Print.dctxToString dctx
                         ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString ssss ^ " ] "
                         ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString ssss ^ " ] "
-                        ^ "\n")
-          ; flush_all()
+                        )
           ; try Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, ssss))
             with exn ->  (print_string ("Type " ^ Print.typToString tA ^ " doesn't unify with " ^ Print.typToString elem1 ^ "\n") ; flush_all()
                          ; raise exn)
@@ -762,8 +762,8 @@ in elSpineIW
             _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
   and checkSchema cO cD cPsi (I.Schema elements as schema) = 
-     print_string ("\n checkSchema " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema  ^ "\n");
-     print_string "\n WARNING: SCHEMA CHECKING NOT IMPLEMENTED! \n" 
+     dprint (fun () -> "checkSchema " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema);
+     print_string "\n WARNING: Schema checking not fully implemented\n" 
        ; 
      match cPsi with
      |  I.Null -> ()

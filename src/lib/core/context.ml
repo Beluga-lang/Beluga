@@ -6,8 +6,9 @@
 *)
 
 open Syntax.Int.LF
+open Error
 
-exception Error of string
+exception Error of error
 
 (* More appropriate: Psi into psihat  Sat Oct  4 11:44:55 2008 -bp *)
 let dctxToHat cPsi =
@@ -74,18 +75,12 @@ let ctxDec cPsi k =
 
     | (SigmaDec (cPsi', SigmaDecl  (_x, _tArec)), k')
       -> ctxDec' (cPsi', k' - 1)
-    | (Null, _ ) -> raise (Error "Looked-up index bigger than length of context\n")
-    | (CtxVar _ , _ ) -> raise (Error "Looked-up index bigger than length of context\n")
-    (* ctxDec' (Null    , k') should not occur by invariant *)
-    (* ctxDec' (CtxVar _, k') should not occur by invariant *)
+    (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in
-   try 
-    ctxDec' (cPsi, k)
-   with Error s -> (Printf.printf "\n Looking up index %s in context %s \n  \n" 
-                      (string_of_int k) 
-                      (Pretty.Int.DefaultPrinter.dctxToString cPsi)
-                   ;
-                    raise (Error s))
+    try 
+      ctxDec' (cPsi, k)
+    with Match_failure _ -> 
+      raise (Error (IndexError (k, cPsi)))
        
       
 

@@ -97,6 +97,14 @@ let main () =
               print_newline ();
               errors + 1
 
+          | Context.Error err ->
+              Format.fprintf
+                Format.std_formatter
+                "Error (Context): %a\n@?"
+                Pretty.Error.DefaultPrinter.fmt_ppr err;
+              print_newline ();
+              errors + 1
+
     (* Iterate the process for each file given on the command line *)
     in
     let args = List.tl (Array.to_list Sys.argv) in

@@ -6,7 +6,9 @@
 *)
 
 open Syntax.Int.LF
+open Error
 
+exception Error of error
 
 
 val dctxToHat   : dctx -> psi_hat

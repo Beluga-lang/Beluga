@@ -26,3 +26,6 @@ type error =
   (* whnf errors *)
   | ConstraintsLeft
   | NotPatSub
+
+  (* context error *)
+  | IndexError of int * Int.LF.dctx

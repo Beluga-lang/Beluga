@@ -740,3 +740,21 @@ and lowerMVar = function
              l'   = l
           && cvar = cvar'
 
+
+
+(* etaExpandMV cPsi sA s' = tN
+ *
+ *  cPsi'  |- s'   <= cPsi
+ *  cPsi   |- [s]A <= typ
+ *
+ *  cPsi'  |- tN   <= [s'][s]A
+ *)
+let rec etaExpandMV cPsi sA s' = etaExpandMV' cPsi (whnfTyp sA)  s'
+
+and etaExpandMV' cPsi sA  s' = match sA with
+  | (Atom (_a, _tS) as tP, s) ->
+      let u = newMVar (cPsi, TClo(tP,s)) in
+        Root (MVar (u, s'), Nil)
+
+  | (PiTyp (TypDecl (x, _tA) as decl, tB), s) ->
+      Lam (x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))

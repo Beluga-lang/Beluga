@@ -36,3 +36,10 @@ val newMVar     : dctx * typ -> cvar
 val newPVar     : dctx * typ -> cvar
 
 val raiseType   : dctx -> typ -> typ 
+
+
+(*************************************)
+(* Other operations *)
+(*************************************)
+
+val etaExpandMV : dctx -> tclo -> sub -> normal

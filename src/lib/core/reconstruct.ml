@@ -438,25 +438,6 @@ let patSpine spine =
   in
     patSpine' [] spine
 
-
-(* etaExpandMV cPsi sA s' = tN
- *
- *  cPsi'  |- s'   <= cPsi
- *  cPsi   |- [s]A <= typ
- *
- *  cPsi'  |- tN   <= [s'][s]A
- *)
-let rec etaExpandMV cPsi sA s' = etaExpandMV' cPsi (Whnf.whnfTyp sA)  s'
-
-and etaExpandMV' cPsi sA  s' = match sA with
-  | (Int.LF.Atom (_a, _tS) as tP, s) ->
-      let u = Whnf.newMVar (cPsi, Int.LF.TClo(tP,s)) in
-        Int.LF.Root (Int.LF.MVar (u, s'), Int.LF.Nil)
-
-  | (Int.LF.PiTyp (Int.LF.TypDecl (x, _tA) as decl, tB), s) ->
-      Int.LF.Lam (x, etaExpandMV (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
-
-
 (* isPatSub s = bool *)
 let rec isPatSub s = match s with
   | Apx.LF.Id -> 
@@ -845,7 +826,7 @@ and elSpineIW cD cPsi spine i sA =
            *   and    [s]A = [s']A'. Therefore A' = [s']^-1([s]A)           
            *)
           let (ctx_v, d) = Context.dctxToHat cPsi in
-          let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift (ctx_v, d)) in
+          let tN     = Whnf.etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift (ctx_v, d)) in
           let spine' = elSpineI cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
       (* other cases impossible by (soundness?) of abstraction *)
@@ -892,7 +873,7 @@ and elKSpineI cD cPsi spine i sK =
     match sK with
       | (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s) ->
           let (ctx_v, d) = Context.dctxToHat cPsi in
-          let tN     = etaExpandMV Int.LF.Null (tA,s) (Int.LF.Shift (ctx_v, d)) in
+          let tN     = Whnf.etaExpandMV Int.LF.Null (tA,s) (Int.LF.Shift (ctx_v, d)) in
           let spine' = elKSpineI cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
 

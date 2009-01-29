@@ -636,11 +636,6 @@ in elSpineIW
         let _ = checkBranch cO cD cG branch tAbox ttau in 
           checkBranches cO cD cG branches tAbox ttau
 
-(*  and checkBranch _cO _cD _cG _branch (_tA, _cPsi) (_tau, _t) = 
-    Printf.printf "WARNING: BRANCH CHECKING NOT IMPLEMENTED!"
-*)
-
-
   and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = 
     let _ = Printf.printf "BEGIN: Checking branch: \n %s ; \n %s \n |- \n %s \n\n"
          (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
@@ -735,8 +730,8 @@ in elSpineIW
       match (some_part, block_part) with
         (cSomeCtx, I.SigmaDecl(_name, I.SigmaLast elem1)) ->
           let dctx = projectCtxIntoDctx cSomeCtx in 
-          let ssss = ctxToSub dctx in
-          let _ = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString ssss) in
+          let dctxSub = ctxToSub dctx in
+          let _ = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString dctxSub) in
       let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
           let normedA = Cwhnf.cnormTyp (tA, subD)
           and normedElem1 = Cwhnf.cnormTyp (elem1, subD) in
@@ -746,10 +741,10 @@ in elSpineIW
 ;
             dprint (fun () -> "***Unify.unifyTyp ("
                         ^ "\n   dctx = " ^ Print.dctxToString dctx
-                        ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString ssss ^ " ] "
-                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString ssss ^ " ] "
+                        ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString dctxSub ^ " ] "
+                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString dctxSub ^ " ] "
                         )
-          ; try Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, ssss))
+          ; try Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, dctxSub))
             with exn ->  (print_string ("Type " ^ Print.typToString tA ^ " doesn't unify with " ^ Print.typToString elem1 ^ "\n") ; flush_all()
                          ; raise exn)
     in

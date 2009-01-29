@@ -72,6 +72,7 @@ module Cid : sig
     type t
     val add             : entry -> cid_schema
     val get             : cid_schema -> entry
+    val get_schema      : cid_schema -> LF.schema
     val index_of_name   : name -> cid_schema
     val clear           : unit -> unit
 

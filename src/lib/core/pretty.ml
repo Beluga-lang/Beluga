@@ -728,6 +728,10 @@ module Int = struct
             (fmt_ppr_lf_typ 0) tA
             (fmt_ppr_lf_dctx 0) cPsi
 
+      | LF.CDecl (name, schemaName) ->
+          fprintf ppf "{#%s :: %a}"
+            (R.render_name name)
+            (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
     and fmt_ppr_lf_typ lvl ppf = function
       | LF.Atom (a, LF.Nil) ->

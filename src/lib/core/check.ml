@@ -499,9 +499,10 @@ already done in reconstruct.ml
           let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift d) in
 in elSpineIW
 *)
-(*      let (_, phat) = Context.dctxToHat cPsi' in *)
-      let u = Whnf.newMVar (I.Null ,  I.TClo( tA, s)) in 
-      let front = (I.Obj(I.Root(I.MVar(u, S.LF.id), I.Nil)) : I.front) in
+      let (ctx_v, phat') = Context.dctxToHat cPsi' in
+      let u     = Whnf.etaExpandMV I.Null (tA, s) (I.Shift (ctx_v, phat')) in
+(*      let u = Whnf.newMVar (I.Null ,  I.TClo( tA, s)) in  *)
+      let front = (I.Obj(    (*I.Root(I.MVar(u, S.LF.id), I.Nil) *)    u ) : I.front) in
       in
         I.Dot(front, s)
 
@@ -586,6 +587,7 @@ in elSpineIW
         else raise (Error "Type mismatch")
 
   and check cO cD cG e (tau, t) = 
+   let _ = dprint (fun () -> "check cO = " ^ Print.mctxToString cO) in
     checkW cO cD cG e (C.cwhnfCTyp (tau, t))
 
   and syn cO cD cG e = match e with 
@@ -611,9 +613,9 @@ in elSpineIW
 
               let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in  
 
-              (checkSchema cO cD cPsi ((Schema.get w).Schema.schema)  ;
+              (checkSchema cO cD cPsi (Schema.get_schema w)
                (* (tau', t') *)
-               (tau1, Cwhnf.id)
+             ; (tau1, Cwhnf.id)
               )
           | _ -> raise (Error "Context abstraction mismatch")
         end 
@@ -756,22 +758,41 @@ in elSpineIW
           with
             _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
-  and checkSchema cO cD cPsi (I.Schema elements as schema) = 
-     dprint (fun () -> "checkSchema " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema);
-     print_string "\n WARNING: Schema checking not fully implemented\n" 
-       ; 
-     match cPsi with
-     |  I.Null -> ()
-     |  I.CtxVar _phi -> () (* WRONG *)
-     |  I.DDec (cPsi', decl) ->
-          begin
-            checkSchema cO cD cPsi' schema;
-            match decl with
-               I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA elements
-          end
+  and checkElementAgainstElement _cO _cD elem1 elem2 = match (elem1, elem2) with
+    _ -> true  (* WRONG *)
 
-    
-end 
+  (* checkElementAgainstSchema cO cD sch_elem (elements : sch_elem list)
+  *)
+  and checkElementAgainstSchema cO cD sch_elem elements =
+    List.exists (checkElementAgainstElement cO cD sch_elem) elements
+
+  and checkSchema cO cD cPsi (I.Schema elements as schema) = 
+     dprint (fun () -> "checkSchema " ^ Print.mctxToString cO ^ " ... " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema);
+     print_string "\n WARNING: Schema checking not fully implemented\n" 
+   ; match cPsi with
+     | I.Null -> ()
+     | I.CtxVar phi ->
+         let rec lookupCtxVar = function
+           | I.Empty -> raise (Error ("Context variable not found"))
+           | I.Dec(cO, I.CDecl(psi, schemaName)) -> function
+               | I.CtxName phi  when  psi = phi  ->  schemaName
+               |  (I.CtxName _phi) as ctx_var  ->  lookupCtxVar cO ctx_var
+               |  I.CtxOffset 1  ->  schemaName
+               |  I.CtxOffset n  ->  lookupCtxVar cO (I.CtxOffset (n-1))
+         in
+         let I.Schema phiSchemaElements = Schema.get_schema (lookupCtxVar cO phi) in
+           if List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements
+           then ()
+           else raise (Error "CtxVar doesn't check against schema")
+
+     | I.DDec (cPsi', decl) ->
+         begin
+           checkSchema cO cD cPsi' schema
+         ; match decl with
+           | I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA elements
+         end
+  
+end
 
 module Sgn = struct
 

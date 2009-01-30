@@ -797,7 +797,7 @@ module Int = struct
             (R.render_cid_term c)
 
       | LF.MVar (c, s) ->
-          fprintf ppf "mvar %a[%a]"
+          fprintf ppf "(mvar %a[%a])"
             (fmt_ppr_lf_cvar lvl) c
             (fmt_ppr_lf_sub  lvl) s
 
@@ -862,7 +862,7 @@ module Int = struct
             (fmt_ppr_lf_sub  lvl) s
 
       | LF.Dot (f, s) ->
-          fprintf ppf "%a@ .@ %a"
+          fprintf ppf "%a . %a"
             (fmt_ppr_lf_front 1) f
             (fmt_ppr_lf_sub lvl) s
 
@@ -1344,7 +1344,7 @@ module Error = struct
 
     (* Format Based Pretty Printers *)
     let fmt_ppr ppf = function
-      | CtxVarMisMatch _ ->
+      | CtxVarMismatch _ ->
           fprintf ppf "ctx variable mismatch"
 
       | TypIllTyped (_cD, _cPsi, _tA, _tB) ->
@@ -1356,13 +1356,13 @@ module Error = struct
       | ExpNilNotAtom ->
           fprintf ppf "TODO"
 
-      | KindMisMatch ->
+      | KindMismatch ->
           fprintf ppf "Kind mismatch"
 
       | SubIllTyped ->
           fprintf ppf "Substitution not well-typed"
 
-      | TypMisMatch ((* _cD ,*) _cPsi, (tA1, s1), (tA2, s2)) ->
+      | TypMismatch ((* _cD ,*) _cPsi, (tA1, s1), (tA2, s2)) ->
           fprintf ppf
             "Type mismatch ** WARNING: Types not in context **:@ @[%a[%a]@ =/=@ %a[%a]@]"
             (* The 2 is for precedence.  Treat printing
@@ -1385,10 +1385,10 @@ module Error = struct
             (* (IP.fmt_ppr_lf_typ (Whnf.norm (tA, s2))) *)
             (* (IP.fmt_ppr_lf_normal (Whnf.normTyp (tM, s1))) *)
 
-      | LeftOverConstraints ->
+      | LeftoverConstraints ->
           fprintf ppf "constraints left after reconstruction"
 
-      | LeftOverUndef ->
+      | LeftoverUndef ->
           fprintf ppf "Undef left after unification"
 
       | IllTypedIdSub ->

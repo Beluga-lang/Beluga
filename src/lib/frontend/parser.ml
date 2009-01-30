@@ -1,6 +1,6 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(* NOTE: Be careful with taureg-mode M-q in this file – it doesn't
+(* NOTE: Be careful with tuareg-mode M-q in this file – it doesn't
    understand the grammar formatting below very well and will easily
    trash the layout. *)
 
@@ -272,12 +272,22 @@ GLOBAL: sgn_eoi;
   lf_schema_elem:
     [
       [
-        "some"; "["; ahat_decls = LIST0 lf_ahat_decl; "]"; "block"; arec = lf_typ_rec_toplevel ->
-          LF.SchElem (_loc, List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty ahat_decls,
+        some = lf_schema_some; "block"; arec = lf_typ_rec_toplevel ->
+          LF.SchElem (_loc, List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some,
                  LF.SigmaDecl (Id.mk_name None, arec))
       ]
     ]
   ;
+
+  lf_schema_some:
+    [
+      [
+       "some"; "["; ahat_decls = LIST0 lf_ahat_decl SEP ","; "]" -> ahat_decls
+     | 
+       -> []
+     ] 
+   ] 
+;
 
   lf_typ_rec_toplevel:
     [

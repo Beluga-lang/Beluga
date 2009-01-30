@@ -2,7 +2,7 @@ nat: type.
 z   : nat.
 suc : nat -> nat.
 
-schema w = some [ ] block nat;
+schema w = block nat;
 
 rec copynat1 : {g:(w)*} (nat)[g] -> (nat)[g] = 
     FN g => fn e => copynat1 [g] e;

@@ -74,8 +74,8 @@ let ctxDec cPsi k =
 
     | (SigmaDec (cPsi', SigmaDecl  (_x, _tArec)), k')
       -> ctxDec' (cPsi', k' - 1)
-    | (Null, _ ) -> raise (Error "Lookin up index bigger than length of context\n")
-    | (CtxVar _ , _ ) -> raise (Error "Lookin up index bigger than length of context\n")
+    | (Null, _ ) -> raise (Error "Looked-up index bigger than length of context\n")
+    | (CtxVar _ , _ ) -> raise (Error "Looked-up index bigger than length of context\n")
     (* ctxDec' (Null    , k') should not occur by invariant *)
     (* ctxDec' (CtxVar _, k') should not occur by invariant *)
   in

@@ -13,6 +13,7 @@ FILES[] =
         common
         config
         context
+        debug
         error
         gensym
         id

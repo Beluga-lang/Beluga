@@ -60,6 +60,7 @@ end
 module Make (T : TRAIL) : UNIFY = struct
 
   open Substitution.LF
+  module Print = Pretty.Int.DefaultPrinter
 
   exception Unify of string
 

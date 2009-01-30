@@ -230,6 +230,9 @@ GLOBAL: sgn_eoi;
   lf_head_w_meta:
     [
       [
+        "_" -> 
+          LF.Hole _loc   
+      |
         "#"; p = SYMBOL; "!";"["; sigma = lf_sub; "]"; "!" ->
           LF.PVar (_loc, Id.mk_name (Some p), sigma)
       |

@@ -17,8 +17,8 @@ z    : exp nat.
 suc  : exp nat -> exp nat.
 eq   : exp nat -> exp nat -> exp bool.
 
-iff   : {T:tp} exp bool -> exp T -> exp T -> exp T.
-letv : {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
+iff   : exp bool -> exp T -> exp T -> exp T.
+letv :  exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 rec equal : (exp nat)[.] -> (exp nat)[.] -> (exp bool)[.] =
 fn x => fn y => 
@@ -40,7 +40,8 @@ fn x => fn y =>
 
 
 rec eval : (exp T![.]!)[.] -> (exp T![.]!)[.] = 
-mlam S => fn e => 
+% mlam S => 
+ fn e => 
   case e of 
     box(. . tt) => box(. tt)
 
@@ -49,25 +50,25 @@ mlam S => fn e =>
   | box(. . z)  => box(. z)
 
   | box(. . suc U![.]!) => 
-         (case eval <. nat >  box(. U![.]!) of
+         (case eval  box(. U![.]!) of
              box(. . V![.]!)  => box(. suc V![.]!))
 
 
  | box(. . eq U![.]! V![.]!) =>
-         equal (eval <. nat >   box(. U![.]!)) 
-               (eval <. nat >   box(. V![.]!))
+         equal (eval box(. U![.]!)) 
+               (eval  box(. V![.]!))
 
    | 
-     box(. . iff T![.]! U![.]! V![.]! W![.]!)  =>
-         (case eval <. bool > box(. U![.]!) of
+     box(. . iff  U![.]! V![.]! W![.]!)  =>
+         (case eval box(. U![.]!) of
              box(. . tt) 
-	        => eval <. T![.]! > box(. V![.]!)
+	        => eval box(. V![.]!)
            | box(. . ff) 
-	      => eval <. T![.]! > box(. W![.]!))
+	      => eval box(. W![.]!))
 
-   | box(. . letv T1![.]! T2![.]! U![.]! (\ x . W![., x]!))  =>
+   | box(. . letv  U![.]! (\ x . W![., x]!))  =>
 
-         (case eval <. T1![.]! > box(. U![.]!) of
+         (case eval  box(. U![.]!) of
              box(. . V![.]!) 
-             => eval <. T2![.]! > box(. W![ ., V![.]! ]!))
+             => eval box(. W![ ., V![.]! ]!))
 ;

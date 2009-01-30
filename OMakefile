@@ -29,7 +29,7 @@ OCAMLOPTFLAGS  = -noassert -inline 100
 OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
 # Compile to byte code?
-BYTE_ENABLED   = false
+BYTE_ENABLED   = true
 
 # Compile to native code?
 NATIVE_ENABLED = true

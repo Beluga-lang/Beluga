@@ -15,5 +15,7 @@ val abstractMSub  : Comp.msub -> Comp.msub * LF.mctx
 
 val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset
 
+val abstrExp      : Comp.exp_chk  -> Comp.exp_chk
+
 val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ

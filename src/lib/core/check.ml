@@ -730,9 +730,16 @@ in elSpineIW
      ... |- psi <= W
 
 so checking a context element against a context element is just equality. *)
-  and checkElementAgainstElement _cO _cD (I.SchElem(cSome1, block1)) (I.SchElem(cSome2, block2)) =
-    (cSome1 = cSome2) && (block1 = block2)
-    
+  and checkElementAgainstElement _cO _cD elem1 elem2 =
+    let result =
+      Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in
+    let _ = dprint (fun () -> "checkElementAgainstElement "
+                      ^Print.schemaToString (I.Schema[elem1])
+                      ^" <== "
+                      ^Print.schemaToString (I.Schema[elem2])
+                      ^ ":  "
+                      ^ string_of_bool result)
+    in result
 
   (* checkElementAgainstSchema cO cD sch_elem (elements : sch_elem list)
   *)

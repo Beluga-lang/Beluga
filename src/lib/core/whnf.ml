@@ -696,7 +696,8 @@ and lowerMVar = function
         ->   convTyp (tA, s) (tB, s')
           && convTypRec (recA, LF.dot1 s) (recB, LF.dot1 s')
 
-
+      | (  _, _) -> (* lengths differ *)
+          false
 
     (* convDCtx cPsi cPsi' = true iff
        cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx       
@@ -732,6 +733,9 @@ and lowerMVar = function
         ->   convTyp (tA, LF.id) (tB, LF.id)
           && convCtx cPsi1 cPsi2
 
+    let rec convSchElem (SchElem(cSome1, SigmaDecl(_, typRec1))) (SchElem(cSome2, SigmaDecl(_, typRec2))) =
+         convCtx cSome1 cSome2
+      && convTypRec (typRec1, LF.id) (typRec2, LF.id)
 
     (* convHatCtx((psiOpt, l), cPsi) = true iff |cPsi| = |Psihat|
 

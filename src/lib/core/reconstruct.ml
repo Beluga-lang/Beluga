@@ -1020,11 +1020,19 @@ let rec elTypDeclCtx cD cPsi = function
       let typDecl' = Int.LF.TypDecl(name, elTyp PiRecon cD cPsi typ) in
         Int.LF.Dec (ctx', typDecl')
 
- let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, Apx.LF.SigmaLast a))) =
-    let cD = Int.LF.Empty in
-    let ctx' = elTypDeclCtx cD Int.LF.Null ctx in
-    let typRec = Int.LF.SigmaLast (elTyp PiRecon cD (projectCtxIntoDctx ctx')  a) in
-      Int.LF.SchElem (ctx', Int.LF.SigmaDecl (name, typRec))
+ let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, typRec))) =
+   let cD = Int.LF.Empty in
+   let el_ctx = elTypDeclCtx cD Int.LF.Null in
+   let el_typ ctx = elTyp PiRecon cD (projectCtxIntoDctx ctx) in
+   let rec elTypRec ctx = function
+     | Apx.LF.SigmaLast a ->
+         let ctx' = el_ctx ctx in
+           Int.LF.SigmaLast (el_typ ctx' a)
+     | Apx.LF.SigmaElem (name, tA, typRec) ->
+         let ctx' = el_ctx ctx in
+           Int.LF.SigmaElem(name, el_typ ctx' tA, elTypRec ctx typRec)
+   in
+     Int.LF.SchElem(el_ctx ctx, Int.LF.SigmaDecl (name, elTypRec ctx typRec))
 
 let rec elSchema (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map elSchElem el_list)

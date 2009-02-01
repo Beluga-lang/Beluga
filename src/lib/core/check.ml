@@ -384,6 +384,8 @@ end (* struct LF *)
 
 module Comp = struct
 
+  module E = Error
+
   module Unify = Unify.EmptyTrail
 (* NOTES on handling context variables: -bp 
 
@@ -439,8 +441,10 @@ module Comp = struct
   exception Error of error
 *)
 
-  exception Error of string 
-
+  exception Error of string
+  exception Err of E.error
+  let raiseErr x = raise (Err x)
+  
   let rec length cD = match cD with
     | I.Empty -> 0
     | I.Dec(cD, _) -> 1 + length cD
@@ -719,8 +723,16 @@ in elSpineIW
           with
             _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
-  and checkElementAgainstElement _cO _cD elem1 elem2 = match (elem1, elem2) with
-    _ -> true  (* WRONG *)
+(* The rule for checking a context against a schema is
+
+    psi::W \in \Omega
+    -----------------
+     ... |- psi <= W
+
+so checking a context element against a context element is just equality. *)
+  and checkElementAgainstElement _cO _cD (I.SchElem(cSome1, block1)) (I.SchElem(cSome2, block2)) =
+    (cSome1 = cSome2) && (block1 = block2)
+    
 
   (* checkElementAgainstSchema cO cD sch_elem (elements : sch_elem list)
   *)
@@ -736,15 +748,16 @@ in elSpineIW
          let rec lookupCtxVar = function
            | I.Empty -> raise (Error ("Context variable not found"))
            | I.Dec(cO, I.CDecl(psi, schemaName)) -> function
-               | I.CtxName phi  when  psi = phi  ->  schemaName
+               | I.CtxName phi  when  psi = phi  ->  (psi, schemaName)
                |  (I.CtxName _phi) as ctx_var  ->  lookupCtxVar cO ctx_var
-               |  I.CtxOffset 1  ->  schemaName
+               |  I.CtxOffset 1  ->  (psi, schemaName)
                |  I.CtxOffset n  ->  lookupCtxVar cO (I.CtxOffset (n-1))
          in
-         let I.Schema phiSchemaElements = Schema.get_schema (lookupCtxVar cO phi) in
+         let lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi) in
+         let I.Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
            if List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements
            then ()
-           else raise (Error "CtxVar doesn't check against schema")
+           else raiseErr (E.CtxVarMismatch (phi, schema))
 
      | I.DDec (cPsi', decl) ->
          begin

@@ -991,18 +991,20 @@ module Int = struct
             (R.render_offset psi)          
             (R.render_offset offset)
 
+    and fmt_ppr_lf_ctx_var ppf = function
+      | LF.CtxOffset psi ->
+          fprintf ppf "%s"
+            (R.render_offset psi)
+      | LF.CtxName psi ->
+          fprintf ppf "%s"
+            (R.render_name psi)
 
     and fmt_ppr_lf_dctx _lvl ppf = function
       | LF.Null ->
           fprintf ppf "."
 
-      | LF.CtxVar (LF.CtxOffset psi) ->
-          fprintf ppf "%s"
-            (R.render_offset psi)
-
-      | LF.CtxVar (LF.CtxName psi) ->
-          fprintf ppf "%s"
-            (R.render_name psi)
+      | LF.CtxVar ctx_var ->
+          fmt_ppr_lf_ctx_var ppf ctx_var
 
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
@@ -1348,8 +1350,10 @@ module Error = struct
 
     (* Format Based Pretty Printers *)
     let fmt_ppr ppf = function
-      | CtxVarMismatch _ ->
-          fprintf ppf "ctx variable mismatch"
+      | CtxVarMismatch (var, expected) ->
+          fprintf ppf "Context variable %a doesn't check against schema %a"
+            (IP.fmt_ppr_lf_ctx_var) var
+            (IP.fmt_ppr_lf_schema 0) expected
 
       | TypIllTyped (_cD, _cPsi, _tA, _tB) ->
           fprintf ppf "Inferred _tA but expected _tB"

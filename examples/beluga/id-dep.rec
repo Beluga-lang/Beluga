@@ -5,7 +5,8 @@ arr: tp -> tp -> tp.
 exp : tp -> type.
 z : exp nat.
 s  : exp nat -> exp nat.
-lam : {T1:tp}{T2:tp}(exp T1 -> exp T2) -> exp (arr T1 T2).
+lam : % {T1:tp}
+      (exp T1 -> exp T2) -> exp (arr T1 T2).
 
 rec identity : (exp nat)[.] -> (exp nat) [.] =
     fn x =>
@@ -43,10 +44,10 @@ FN g =>  % mlam T =>
 	   (case (copy [g] (box(g. U![id]!))) of
 	      box (g. V ![id]! ) => box(g. s V![id]!))
 
-        | box(g . lam T1![id]!  T2![id]!  (\ x. E![id , x]!))  => 
-              box(g . lam T1![id]!  T2![id]!  (\ x. E![id , x]!)) 					  
+        | box(g . lam (\ x. E![id , x]!))  => 
+              box(g . lam  (\ x. E![id , x]!)) 					  
 
-        | box(g . lam T1![id]!  T2![id]!  (\ x. E![id , x]!))  => 
+        | box(g . lam (\ x. E![id , x]!))  => 
 	   x
 
  	| box(g. #p![id]!) => box(g. #p![id]!)

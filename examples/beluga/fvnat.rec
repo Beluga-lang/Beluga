@@ -11,7 +11,7 @@ ff  : exp bool.
 
 opt: type.
 NONE: opt.
-SOME: {T:tp} exp T -> opt.
+SOME: exp T -> opt.
 
 schema w = some [T:tp] block exp T;
 
@@ -23,8 +23,8 @@ FN g  => % mlam T  =>
   | box(g . tt)            => box(g . NONE)
   | box(g . ff)            => box(g . NONE)
 
-  | box(g . #p![id]!)   : (exp T'![.]!)[g] 
-    => box(g . SOME T'![.]! #p![id]!)
+  | box(g . #p![id]!) 
+    => box(g . SOME  #p![id]!)
 
   | box(g . suc U![id]!)  => FVnat [g] (box(g . U![id]!))
 
@@ -32,5 +32,5 @@ FN g  => % mlam T  =>
        (case FVnat [g] (box(g . U![id]!)) of
           box(g . NONE)   => FVnat [g] (box(g . V![id]!))
 
-  | box(g . SOME T'![.]! #p![id]!)  => box(g . SOME T'![.]! #p![id]!))
+   | box(g . SOME  #p![id]!)  => box(g . SOME  #p![id]!))
 );

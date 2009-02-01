@@ -304,9 +304,10 @@ and cnorm (tM, t) = match tM with
         begin match applyMSub k t with
         | Comp.MV  k'            -> 
             LF.Root (LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
- 
+            
         | Comp.MObj (_phat,tM)   -> 
-            LF.Clo(Whnf.whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), S.id))) 
+            LF.Clo(Whnf.whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), S.id)))  
+            
         (* other cases impossible *)
         end 
 
@@ -462,7 +463,8 @@ and cnorm (tM, t) = match tM with
            LF.SigmaElem (x, tA, cnormTypRec (recA', t))
 
   and cnormDecl (decl, t) = match decl with
-      LF.TypDecl (x, tA) -> LF.TypDecl (x, cnormTyp (tA, t))
+      LF.TypDecl (x, tA) -> 
+          LF.TypDecl (x, cnormTyp (tA, t))
 
 
   
@@ -638,7 +640,7 @@ and csub_msub cPsi k theta = match theta with
 
 (*
 *)
-let rec mctxMDec cD k = 
+let rec mctxMDec cD' k = 
   let rec lookup cD k' = match (cD, k') with
     | (LF.Dec (_cD, LF.MDecl(_u, tA, cPsi)), 1)
       -> (mshiftTyp tA k, mshiftDCtx cPsi k)
@@ -651,7 +653,7 @@ let rec mctxMDec cD k =
 
     | (_ , _ ) -> raise (Error "Meta-variable out of bounds")
   in 
-    lookup cD k
+    lookup cD' k
 
 
 (*
@@ -729,24 +731,29 @@ let rec mctxPVarPos cD p =
 
 
 
-  let rec cnormCTyp thetaT = match thetaT with 
-    | (Comp.TypBox (tA, cPsi), t)     (* !!!! any instantiation in t needs to possibly be shifted by |cPsi| !!! *)
-      -> Comp.TypBox(Whnf.normTyp (cnormTyp(tA, t), S.id), Whnf.normDCtx (cnormDCtx(cPsi, t)))
+  let rec cnormCTyp thetaT = 
+    begin match thetaT with 
+        | (Comp.TypBox (tA, cPsi), t) -> 
+            let tA'   = Whnf.normTyp (cnormTyp(tA, t), S.id) in 
+            let cPsi' = Whnf.normDCtx (cnormDCtx(cPsi, t)) in 
+              Comp.TypBox(tA', cPsi')
 
-    | (Comp.TypSBox (cPsi, cPsi'), t) 
-      -> Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))
+        | (Comp.TypSBox (cPsi, cPsi'), t) -> 
+            Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))
 
-    | (Comp.TypArr (tT1, tT2), t)   -> 
-        Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
+        | (Comp.TypArr (tT1, tT2), t)   -> 
+            Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
 
-    | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
-         Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
+        | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
+              Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
 
-    | (Comp.TypPiBox ((LF.MDecl(u, tA, cPsi) , dep), tau), t)    -> 
-        Comp.TypPiBox ((LF.MDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
-                       cnormCTyp (tau, mvar_dot1 t))
+        | (Comp.TypPiBox ((LF.MDecl(u, tA, cPsi) , dep), tau), t)    -> 
+              Comp.TypPiBox ((LF.MDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
+                             cnormCTyp (tau, mvar_dot1 t))
 
-    | (Comp.TypClo (tT, t'), t)        -> cnormCTyp (tT, mcomp t' t)
+        | (Comp.TypClo (tT, t'), t)        -> 
+              cnormCTyp (tT, mcomp t' t)
+      end 
 
 
   (* cwhnfCTyp (tT1, t1) = (tT2, t2)
@@ -766,9 +773,15 @@ let rec mctxPVarPos cD p =
 
   let rec cwhnfCTyp thetaT = match thetaT with 
     | (Comp.TypBox (tA, cPsi), t)     
-      -> (Comp.TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t)), id) 
+      -> 
+        let tA' = Whnf.normTyp (cnormTyp(tA, t), S.id) in 
+        let cPsi' = Whnf.normDCtx (cnormDCtx(cPsi, t)) in 
 
-    | (Comp.TypSBox (cPsi, cPsi'), t) 
+          (Comp.TypBox(tA', cPsi') , id)
+
+          (* (Comp.TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t)), id)  *)
+
+    | (Comp.TypSBox (cPsi, cPsi'), t)  
       -> (Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t)), id)
 
     | (Comp.TypArr (_tT1, _tT2), _t)   -> thetaT

@@ -15,8 +15,7 @@ v_s   : value E -> value (suc E).
 eval : exp -> exp -> type.
 ev_z : eval z z.
 ev_s : eval E V -> eval (suc E) (suc V).
-ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp} 
-       eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
+ev_l : eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 
 rec vs :  (eval E![.]! V![.]!)[.] -> (value V![.]!)[.] = 
 
@@ -32,7 +31,7 @@ fn e =>
        =>    box(. v_s F![.]!) 
      )
 
-  |  box(. . ev_l E1![.]! (\x . E2![., x]!) V1![.]! V2![.]! D2![.]! D1![.]!)
+  |  box(. . ev_l D2![.]! D1![.]!)
 
      =>
         vs  box(. D2![.]!)

@@ -464,27 +464,29 @@ module Make (T : TRAIL) : UNIFY = struct
      s' = s1 /\ s2 (see JICSLP'96 and Pientka's thesis)
 
      Invariant:
-     If   D ; Psi |- s1 : Psi'    s1 patsub
-     and  D ; Psi |- s2 : Psi'    s2 patsub
-     then D ; Psi |- s' : Psi'' for some Psi'' which is a subset of Psi'
+     If   D ; Psi  |- s1 : Psi'    s1 patsub
+     and  D ; Psi  |- s2 : Psi'    s2 patsub
+     then D ; Psi' |- s' : Psi'' for some Psi'' which is a subset of Psi'
      and  s' patsub
   *)
   let rec intersection (phat, (subst1, subst2), cPsi') = match (subst1, subst2, cPsi') with
     | (Dot (Head (BVar k1), s1), Dot (Head (BVar k2), s2), DDec (cPsi', TypDecl (x, tA))) ->
         let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
-          (* D ; Psi |- s' : Psi'' where Psi'' =< Psi' *)
+          (* D ; Psi' |- s' : Psi'' where Psi'' =< Psi' *)
           if k1 = k2 then
             let ss' = invert (Whnf.normSub s') in
-              (* cD ; cPsi'' |- ss' <= cPsi *)
+              (* cD ; cPsi'' |- ss' <= cPsi' *)
               (* by assumption:
-                 [s1]tA = [s2]tA = tA'  and cD ; cPsi |- tA' <= type *)
-              (* tA'' = [(s')^-1]tA' = [s'^-1][s1]tA  exists *)
-            let tA'' = TClo (tA, comp s1 ss') in
-              (* cD ; cPsi, x:tA' |- x => tA'   tA' = [s'][s'^-1]tA' *)
-              (* cD ; cPsi, x:tA' |- s', x/x <= cPsi, x:[s'^-1]tA'   *)
-              (dot1 s', DDec (cPsi'', TypDecl(x, tA'')))
+                 cD ; cPsi' |- tA <= type *)
+              (* tA'' = [(s')^-1]tA   and cPsi'' |- tA'' <= type *)
+
+            (* let tA'' = TClo (tA, ss') in *)
+            let tA'' = TClo (tA, ss') in
+
+              (dot1 s', DDec (cPsi'', TypDecl(x, tA''))) 
+              
           else  (* k1 =/= k2 *)
-            (comp s' shift, cPsi'')
+            (comp s' shift, cPsi'') 
 
 
     | (Dot (Undef, s1), Dot (Head (BVar _k2), s2), DDec (cPsi', TypDecl _)) ->
@@ -502,7 +504,7 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Shift (psi, n1), (Dot _ as s2), cPsi) ->
         intersection (phat, (Dot (Head (BVar (n1 + 1)), Shift (psi, n1 + 1)), s2), cPsi)
 
-    | (Shift (NoCtxShift, _k), Shift (NoCtxShift, _k'), cPsi) -> (id, cPsi)
+    | (Shift (NoCtxShift, _k), Shift (NoCtxShift, _k'), cPsi) -> (id, cPsi) 
         (* both substitutions are the same number of shifts by invariant *)
 
     | (Shift (CtxShift _psi, _k), Shift (CtxShift _psi', _k'), cPsi) -> (id, cPsi)
@@ -572,8 +574,7 @@ module Make (T : TRAIL) : UNIFY = struct
                  cD ; cPsi |-  t o s <= cPsi1 and
                  cD ; cPsi1 |- idsub <= cPsi2 and
                  cD ; cPsi |- t o s o idsub <= cPsi2 *)
-            let v = Whnf.newMVar(cPsi2, TClo(tP, invert idsub)) 
-            in
+            let v = Whnf.newMVar(cPsi2, TClo(tP, invert idsub)) in
               (instantiateMVar (r, Root (MVar (v, idsub), Nil), !cnstrs);
                Clo(tM, comp s ss)
               )
@@ -731,15 +732,19 @@ module Make (T : TRAIL) : UNIFY = struct
                   let (s', cPsi') = intersection (phat, (Whnf.normSub t1', Whnf.normSub t2'), cPsi1) in
                     (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
                        then cD ; cPsi1 |- s' <= cPsi' *)
+                    
+
                   let ss' = invert (Whnf.normSub s') in
                     (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
+
                   let w = Whnf.newMVar (cPsi', TClo(tP1, ss')) in
                     (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                     (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                        [|w[s']/u|](u[t1]) = [t1](w[s'])
                        [|w[s']/u|](u[t2]) = [t2](w[s'])
                     *)
-                    instantiateMVar (r1, Root(MVar(w, s'),Nil), !cnstrs1) 
+                    instantiateMVar (r1, Root(MVar(w, s'),Nil), !cnstrs1)
+
               | (true, false) ->
                   addConstraint (cnstrs2, ref (Eqn (phat, Clo sM, Clo sN))) (* XXX double-check *)
               | (false, _) ->
@@ -752,7 +757,8 @@ module Make (T : TRAIL) : UNIFY = struct
                     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
                     let tM2' = trail (fun () -> prune cD0 (phat, sM2, ss1, MVarRef r1)) in 
                     (* sM2 = [ss1][s2]tM2 *) 
-                      instantiateMVar (r1, tM2', !cnstrs1)
+
+                    instantiateMVar (r1, tM2', !cnstrs1) 
                   with
                     | NotInvertible ->
                         addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
@@ -761,7 +767,7 @@ module Make (T : TRAIL) : UNIFY = struct
                   begin try
                     let ss2 = invert (Whnf.normSub t2')(* cD ; cPsi2 |- ss2 <= cPsi *) in
                     let tM1' = trail (fun () -> prune cD0 (phat, sM1, ss2, MVarRef r2)) in
-                      instantiateMVar (r2, tM1', !cnstrs2)                         
+                      instantiateMVar (r2, tM1', !cnstrs2)                       
                   with
                     | NotInvertible ->
                         addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
@@ -778,7 +784,7 @@ module Make (T : TRAIL) : UNIFY = struct
             try
               let ss = invert (Whnf.normSub t') in
               let sM2' = trail (fun () -> prune cD0 (phat, sM2, ss, MVarRef r)) in
-                instantiateMVar (r, sM2', !cnstrs)
+                instantiateMVar (r, sM2', !cnstrs) 
             with
               | NotInvertible ->
                   addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
@@ -791,11 +797,13 @@ module Make (T : TRAIL) : UNIFY = struct
           if isPatSub t' then
             try
               let ss = invert (Whnf.normSub t') in
+
               let sM1' = trail (fun () -> prune cD0 (phat, sM1, ss, MVarRef r)) in
-                instantiateMVar (r, sM1', !cnstrs)
+                instantiateMVar (r, sM1', !cnstrs) 
             with
               | NotInvertible ->
-                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
+                  (let _ = Printf.printf "Raised NotInvertible! – Left-over constraints...\n" in 
+                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2))))
           else
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
 

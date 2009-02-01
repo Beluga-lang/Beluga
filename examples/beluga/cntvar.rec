@@ -31,33 +31,44 @@ fn x => fn y =>
        => box(. s V![.]!)));
 
 
-rec cntV : {g:(W)*} (exp S![.]!)[g, x:(exp T![.]!)] -> (exp nat) [.] =
+rec cntV : {g:(W)*} (exp S![id]!)[g, x:(exp T![id]!)] -> (exp nat) [.] =
 FN g => 
   fn e =>
   (case e of
 
-      box(g,x : exp T'![.]! . tt)  => box(. z)
+      box(g,x : exp T'![id]! . tt)  => box(. z)
 
-%   | box(g,x : exp T2![.]! . #p![id]!)     
-%    => box(. z)
-%
-%   | box(g,x : exp T'![.]! . x)  => box(. s z)
-%
-%
-%   | box(g,x : exp T'![.]! . z)   => box(. z)
-%
-%   | box(g,x : exp T'![.]! . s W ![id, x]! )  => 
-%          cntV [g]   box(g,x . W![id, x]!)
-%
-%   | box(g,x : exp T'![.]! . letv  T1![.]! U1![id, x]! (\ y . U2![id, x, y]!)) =>
-%             plus (cntV [g]  box(g,x . U1![id, x]!)) 
-%                  (cntV [g, y:exp T1![.]!]  box(g,y,x . U2![id, x, y]!))
+   | box(g,x : exp T2![id]! . #p![id]!)     
+    => box(. z)
+
+   | box(g,x : exp T'![id]! . x)  => box(. s z)
+
+
+   | box(g,x : exp T'![id]! . z)   => box(. z)
+
+   | box(g,x : exp T'![id]! . s W ![id, x]! )  => 
+          cntV [g]   box(g,x . W![id, x]!)
 %
 %
-%   | box(g,x: exp T'![.]! . add U![id, x]! W![id, x]!)  =>
-%          plus (cntV [g] box(g,x . U![id, x]!))
-%               (cntV [g] box(g,x . W![id, x]!))
+%  NOT WORKING IF WE OMIT T1![id]! since from the pattern we simply infer
+%  T1:tp[g, x:exp _]    and only later in the branch we learn that T1:tp[g].
+%  
+%%   | box(g,x : exp _ . letv  _ U1![id, x]! (\ y . U2![id, x, y]!)) =>
+%%             plus (cntV [g]  box(g,x . U1![id, x]!)) 
+%%                  (cntV [g, y:exp T1![id]!]  box(g,y,x . U2![id, x, y]!))
 %
+%
+
+   | box(g,x : exp _ . letv T1![id]! U1![id, x]! (\ y . U2![id, x, y]!)) =>
+             plus 
+	     (cntV [g]  box(g,x . U1![id, x]!)) 
+             (cntV [g, y:exp _]  box(g,y,x . U2![id, x, y]!))
+
+
+   | box(g,x: exp _ . add U![id, x]! W![id, x]!)  =>
+          plus (cntV [g] box(g,x . U![id, x]!))
+               (cntV [g] box(g,x . W![id, x]!))
+
 );
 
 

@@ -14,6 +14,10 @@ module S    = Substitution.LF
 module I    = Int.LF
 module Comp = Int.Comp
 
+module P = Pretty.Int.DefaultPrinter
+module R = Pretty.Int.DefaultCidRenderer
+
+
 exception NotImplemented
 
 exception Error of string
@@ -133,6 +137,15 @@ let rec printCollection cQ = match cQ with
          (ctxVarToString ctx_var)
          (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
       )
+  | I.Dec (cQ, FMV (u, Some (tP, cPhi))) -> 
+      (printCollection cQ ; 
+       Printf.printf " %s : " 
+         (R.render_name u) ;
+       Printf.printf " %s [ %s ]\n" 
+         (P.typToString (Whnf.normTyp (tP, LF.id)))
+         (P.dctxToString (Whnf.normDCtx cPhi))
+         )
+                          
   | I.Dec(cQ, PV ((I.PVar (I.PInst(_r, cPsi, tA', _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tA' in        
       (printCollection cQ ; 
@@ -391,12 +404,17 @@ and collectHead cQ phat sH = match sH with
           cQ'
         else
           let (tA, cPhi)  = FMVar.get u in
+          let phihat = Context.dctxToHat cPhi in 
+
+          let cQ1  = collectDctx cQ' phihat cPhi in 
+          let cQ'' = collectTyp cQ1  phihat (tA, LF.id) in 
+
             (* tA must be closed with respect to cPhi *)
             (* Since we only use abstraction on pure LF objects,
                there are no context variables; different abstraction
                is necessary for handling computation-level expressions,
-               and LF objects which occur in computations. *)
-            I.Dec (collectTyp cQ' (None, 0) (tA, LF.id), FMV (u, Some (tA, cPhi)))
+               and LF objects which occur in comp utations. *)
+            I.Dec (cQ'', FMV (u, Some (tA, cPhi)))
 
   | (I.MVar (I.Inst (_r, cPsi, tA, _cnstrs), s') as u, s) ->
       let cQ' = collectSub cQ phat (LF.comp s' s) in
@@ -404,8 +422,12 @@ and collectHead cQ phat sH = match sH with
           cQ'
         else
           (*  checkEmpty !cnstrs ? -bp *)
-          let (ctx_var, tA') = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
-            I.Dec (collectTyp cQ' (ctx_var, 0) (tA', LF.id), MV u) 
+          let phihat = Context.dctxToHat cPsi in 
+
+          let cQ1  = collectDctx cQ' phihat cPsi in 
+          let cQ'' = collectTyp cQ1  phihat (tA, LF.id) in 
+
+            I.Dec (cQ'', MV u) 
 
 
   | (I.MVar (I.Offset _k, s'), s) ->
@@ -417,9 +439,12 @@ and collectHead cQ phat sH = match sH with
           cQ'
         else
           (*  checkEmpty !cnstrs ? -bp *)
-          let (ctx_var, tA') = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
+          let psihat = Context.dctxToHat cPsi in 
 
-            I.Dec (collectTyp cQ' (ctx_var, 0) (tA', LF.id), PV p) 
+          let cQ1  = collectDctx cQ' psihat cPsi in 
+          let cQ'' = collectTyp cQ1  psihat (tA, LF.id) in 
+
+            I.Dec (cQ'', PV p) 
 
   | (I.PVar (I.Offset _k, s'), s) ->
        collectSub cQ phat (LF.comp s' s) 
@@ -435,7 +460,13 @@ and collectHead cQ phat sH = match sH with
                there are no context variables; different abstraction
                is necessary for handling computation-level expressions,
                and LF objects which occur in computations. *)
-            I.Dec (collectTyp cQ' (None, 0) (tA, LF.id), FPV (u, Some (tA, cPhi)))
+
+          let phihat = Context.dctxToHat cPhi in 
+
+          let cQ1  = collectDctx cQ' phihat cPhi in 
+          let cQ'' = collectTyp cQ1  phihat (tA, LF.id) in 
+
+            I.Dec (cQ'', FPV (u, Some (tA, cPhi)))
 
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
@@ -459,7 +490,7 @@ and collectKind cQ ((cvar, offset) as phat) sK = match sK with
         collectKind cQ' (cvar, offset + 1) (tK, LF.dot1 s)
 
 
-let rec collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with 
+and collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with 
   | I.Null ->  cQ
 
   | I.CtxVar _ -> cQ
@@ -895,11 +926,20 @@ and collectExp' cQ i = match i with
 
 and collectPattern cQ cD cPsi (phat, tM) tA = 
   let cQ1 = collectMctx cQ cD in 
-(*  let _    = Printf.printf "Start Collection of cPsi = %s \n" 
-  (Pretty.Int.DefaultPrinter.dctxToString cPsi) in *)
+  (* let _    = Printf.printf "Start Collection of cPsi = %s \n" 
+  (   Pretty.Int.DefaultPrinter.dctxToString cPsi) in  *)
   let cQ2 = collectDctx cQ1 phat cPsi in 
+  (* let _ = Printf.printf "cQ2 (collection of cPsi)\n" in 
+     let _   = printCollection cQ2 in  *)
   let cQ3 = collectTerm cQ2 phat (tM, LF.id) in 
-    collectTyp cQ3 phat (tA, LF.id)
+  (* let _ = Printf.printf "cQ3 (collection of cPsi)\n" in 
+     let _   = printCollection cQ3 in  *)
+  let cQ4 = collectTyp cQ3 phat (tA, LF.id) in 
+  (* let _ = Printf.printf "cQ4 (collection of cPsi)\n" in 
+  let _   = printCollection cQ4 in  *)
+    cQ4
+
+
 
 
 and collectBranch cQ branch = match branch with
@@ -1053,3 +1093,10 @@ let rec abstrExp e =
                       raise (Error "Abstract: Encountered free MVars in computation-level expression\n"))
     end
 
+
+let rec printFreeMVars phat tM = 
+  let cQ = collectTerm I.Empty  phat (tM, LF.id) in 
+    printCollection cQ
+
+
+let collectTerm' (phat, tM ) = collectTerm I.Empty  phat (tM, LF.id) 

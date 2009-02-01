@@ -134,7 +134,7 @@ let main () =
     let args = List.tl (Array.to_list Sys.argv) in
     let args = process_options args in
     let file_count  = List.length args in
-    let (_error_count, unsound_count, incomplete_count) = List.fold_left per_file
+    let (error_count, unsound_count, incomplete_count) = List.fold_left per_file
                          (0, 0, 0) (* initial number of: errors, unsounds, incompletes *)
                          args in
     let plural count what suffix =
@@ -153,9 +153,10 @@ let main () =
         else (if sound then "" else "####    " ^ plural unsound_count "erroneously accepted (unsound)" "" ^ (if complete then "" else ", "))
           ^(if complete then "" else "####    " ^ plural incomplete_count "erroneously rejected (incomplete)" ""))
         ^ "\n"
-      in match (file_count, unsound_count + incomplete_count) with
-         | (1, 0) -> ""
-         | (_, _) -> "\n#### " ^ plural file_count "file" "s" ^ ":\n" ^ full
+      in match (file_count, error_count, unsound_count + incomplete_count) with
+         | (1, 0, 0) -> ""
+         | (1, 1, 1) -> "\n#### 1 error\n"
+         | (_, _, _) -> "\n#### " ^ plural file_count "file" "s" ^ ":\n" ^ full
     in
       print_string message;
       exit status_code

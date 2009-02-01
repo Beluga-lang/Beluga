@@ -45,6 +45,7 @@ module Ext : sig
     and head =
       | Name of Loc.t * name
       | MVar of Loc.t * name * sub
+      | Hole of Loc.t
       | PVar of Loc.t * name * sub
 
     and spine =
@@ -105,7 +106,6 @@ module Ext : sig
 
 
   module Comp : sig
-
 
     type typ =                            
       | TypBox   of Loc.t * LF.typ  * LF.dctx     
@@ -222,7 +222,10 @@ module Int : sig
       | Obj  of normal
       | Undef
 
-    and ctx_offset = ctx_var option
+    and ctx_offset = 
+      | CtxShift of ctx_var
+      | NoCtxShift
+      | NegCtxShift of ctx_var
 
     and cvar =
       | Offset of offset
@@ -288,17 +291,22 @@ module Int : sig
      | MObj of LF.psi_hat * LF.normal 
      | PObj of LF.psi_hat * LF.head
      | MV   of offset
+     | Undef
 
    type msub =                            
      | MShift of int
      | MDot   of mfront * msub
+
+   type depend = 
+     | Implicit 
+     | Explicit
 
     type typ =
       | TypBox   of LF.typ * LF.dctx
       | TypSBox  of LF.dctx * LF.dctx
       | TypArr   of typ * typ
       | TypCtxPi of (name * cid_schema) * typ
-      | TypPiBox of LF.ctyp_decl * typ
+      | TypPiBox of (LF.ctyp_decl * depend) * typ
       | TypClo   of typ * msub
 
 
@@ -385,6 +393,7 @@ module Apx : sig
       | BVar  of offset
       | Const of cid_term
       | MVar  of offset * sub
+      | Hole 
       | PVar  of offset * sub
       | FVar  of name
       | FMVar of name   * sub    

@@ -40,8 +40,8 @@ fn a => fn b =>
 ;
 
 
-rec eval : (exp T![.]!)[.] -> (exp T![.]!)[.] = 
-mlam T =>
+rec eval :{T::tp[.]} (exp T![.]!)[.] -> (exp T![.]!)[.] = 
+mlam T => 
 fn e => 
 (case e of
    box(. . z) => e

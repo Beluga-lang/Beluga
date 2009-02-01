@@ -14,7 +14,8 @@ s   : exp nat -> exp nat.
 tt  : exp bool.
 
 add : exp nat -> exp nat -> exp nat.
-letv: {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
+letv: {T1:tp}exp T1 -> (exp T1 -> exp T2) -> exp T2.
+
 
 schema W = some [T:tp] block exp T;
 
@@ -31,29 +32,32 @@ fn x => fn y =>
 
 
 rec cntV : {g:(W)*} (exp S![.]!)[g, x:(exp T![.]!)] -> (exp nat) [.] =
-FN g => mlam t => mlam tt => fn e =>
+FN g => 
+  fn e =>
   (case e of
 
-     box(g,x : exp T2![.]! . #p![id]!)     % : (exp T1![.]!)[g,x: exp T2![.]!] 
-     => box(. z)
+      box(g,x : exp T'![.]! . tt)  => box(. z)
 
-   | box(g,x : exp T'![.]! . x)  => box(. s z)
-
-   | box(g,x : exp T'![.]! . tt)  => box(. z)
-
-   | box(g,x : exp T'![.]! . z)   => box(. z)
-
-   | box(g,x : exp T'![.]! . s W ![id, x]! )  => 
-          cntV [g] <. T'![.]! >  < . nat >   box(g,x . W![id, x]!)
-
-   | box(g,x : exp T'![.]! . letv T1![.]! T2![.]! U1![id, x]! (\ y . U2![id, x, y]!)) =>
-
-             plus (cntV [g] <. T'![.]! >     < . T1![.]! >    box(g,x . U1![id, x]!)) 
-               (cntV [g, y:(exp T1![.]!)] < . T'![.]! >    < . T2![.]! >   box(g,y,x . U2![id, x, y]!))
-
-   | box(g,x: exp T'![.]! . add U![id, x]! W![id, x]!)  =>
-          plus (cntV [g] < . T'![.]! > < . nat >  box(g,x . U![id, x]!))
-               (cntV [g] < . T'![.]! > < . nat > box(g,x . W![id, x]!))
-
+%   | box(g,x : exp T2![.]! . #p![id]!)     
+%    => box(. z)
+%
+%   | box(g,x : exp T'![.]! . x)  => box(. s z)
+%
+%
+%   | box(g,x : exp T'![.]! . z)   => box(. z)
+%
+%   | box(g,x : exp T'![.]! . s W ![id, x]! )  => 
+%          cntV [g]   box(g,x . W![id, x]!)
+%
+%   | box(g,x : exp T'![.]! . letv  T1![.]! U1![id, x]! (\ y . U2![id, x, y]!)) =>
+%             plus (cntV [g]  box(g,x . U1![id, x]!)) 
+%                  (cntV [g, y:exp T1![.]!]  box(g,y,x . U2![id, x, y]!))
+%
+%
+%   | box(g,x: exp T'![.]! . add U![id, x]! W![id, x]!)  =>
+%          plus (cntV [g] box(g,x . U![id, x]!))
+%               (cntV [g] box(g,x . W![id, x]!))
+%
 );
+
 

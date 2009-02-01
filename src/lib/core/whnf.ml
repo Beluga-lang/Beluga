@@ -482,7 +482,10 @@ and lowerMVar = function
                and  ni <= k or ni = _ for all 1 <= i <= m
     *)
     let rec mkPatSub s = match s with
-      | Shift (_psi, _k)                 -> s
+      | Shift (NoCtxShift, _k)            -> s
+      | Shift (CtxShift(_psi), _k)        -> s
+      | Shift (NegCtxShift _ ,  _k)        -> 
+          raise (Error NotPatSub)
 
       | Dot (Head (BVar n), s) ->
             let s' = mkPatSub s in

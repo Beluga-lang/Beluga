@@ -5,6 +5,10 @@
     @author Brigitte Pientka
 *)
 
+
+module P = Pretty.Int.DefaultPrinter
+module R = Pretty.Int.DefaultCidRenderer
+
 open Syntax.Int.LF
 
 module LF = struct
@@ -24,9 +28,7 @@ module LF = struct
 
      Note: we do not take into account weakening here. 
   *)
-  let id = Shift (None, 0)
-
-
+  let id =  Shift (NoCtxShift , 0)
 
   (* shift = ^1
      
@@ -34,8 +36,7 @@ module LF = struct
 
      cPsi, x:tA |- ^ : cPsi     ^ is patsub
   *)
-  let shift  = Shift (None, 1)
-
+  let shift =  Shift (NoCtxShift , 1)
 
 
   (* invShift = ^-1 = _.^0
@@ -62,24 +63,72 @@ module LF = struct
   *)
   let rec comp s1 s2 = 
       match (s1, s2) with
-    | (Shift (None , 0), s)              -> s
-    | (s, Shift (None, 0))               -> s
+    | (Shift (NoCtxShift , 0), s2)         -> s2
+      (*  Psi |- s1 : Psi   and Psi2 |- s2 : Psi 
+       *  therefore   Psi2 |- s2 : Psi  and s2 = s1 o s2
+       *)
 
-    | (Shift (Some (CtxOffset psi), m), Shift (Some (CtxOffset psi'), n)) ->
-        if psi = -psi' then 
-          Shift (None, n + m)
+
+    | (Shift (CtxShift psi, n), Shift (NegCtxShift psi', k)) ->
+       (* psi, Psi |- s1 : .   and     Psi,Psi' |- s2 : psi, Psi
+        * therefore  Psi,Psi' |- s : .            
+        *)
+        if psi = psi' then 
+          Shift (NoCtxShift, n+k)
         else 
-          if psi = psi' then 
-            Shift (Some (CtxOffset psi), n+m)
-          else 
-            raise (Error "Composition undefined \n")
-            
+          (Printf.printf "s1 = %s \n s2 = %s\n\n" 
+             (P.subToString s1) (P.subToString s2) ; 
+          raise (Error "Composition undefined \n"))
+
+    | (Shift (CtxShift psi , m), s2)      -> 
+        let rec ctx_shift n s2 = match s2 with
+          | Dot(_ft, s) -> ctx_shift (n-1) s
+              (*  psi, Psi |- s1 : .   and Psi2 |- s2. ft : psi, Psi  *)
+
+          | Shift(NoCtxShift, k) -> Shift (CtxShift(psi), k+n)
+              (*  psi, Psi |- s1 : .   and (psi, Psi), Psi2 |- s2 : psi, Psi  
+                  psi |-  s : .  *)
+
+          | Shift(NegCtxShift _psi, k) -> Shift (NoCtxShift, k+n)
+              (* psi, Psi |- s1 : .    and Psi, Psi' |- s2 : psi, Psi 
+               * Psi, Psi' |- s1 o s2 : . 
+               *)
+
+          | _ -> (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n" 
+                    (P.subToString s1) (P.subToString s2) ; 
+                  raise (Error "Composition undefined\n"))
+        in 
+          ctx_shift m s2
+
+    | (s, Shift (NoCtxShift, 0))          -> s
+      (*  Psi1 |- s1 : Psi   and Psi1 |- s2 : Psi1
+       *  therefore   Psi1 |- s1 : Psi  and s1 = s1 o s2
+       *)
+
+    | (Shift (NegCtxShift psi, k), Shift(NoCtxShift, m)) -> 
+      (* Psi1 |- s1 : psi     and   Psi1, Psi |- s2 : Psi1
+       *  therefore   Psi1, Psi |- s : psi      where s = s1 o s2 
+       *)
+       Shift(NegCtxShift psi, k + m)
+
+    | (Shift (NegCtxShift psi, 0), Shift(CtxShift psi', m)) -> 
+      (* . |- s1 : psi     and  psi,Psi' |- s2 : .
+       *  therefore   psi, Psi' |- s : psi      where s = s1 o s2 
+       *)
+        if psi = psi' then 
+          Shift(NoCtxShift, m)
+        else raise (Error "Composition not defined\n")
    
-    | (Shift (psi, n), Shift (None, m)) -> Shift (psi, (n + m))
+    (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
+
+    | (Shift (NoCtxShift, n), Shift (NoCtxShift, m)) -> 
+      (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
+       *  therefore  psi, Psi2 |- s : psi, Psi1  where s = s1 o s2 
+       *)
+         Shift (NoCtxShift, (n + m))
 
 
-(*    | (Shift (psi, n), SVar (s, tau)) -> Shift (|Psi''|) *)
-
+   (*    | (Shift (psi, n), SVar (s, tau)) -> Shift (|Psi''|) *)
 
     | (Shift (psi,n), Dot (_ft, s))     -> comp (Shift (psi, n - 1)) s
 
@@ -93,7 +142,9 @@ module LF = struct
 	   where s :: Psi[Phi]  and |Psi| = k'
 	   k = k' + k0  
 	*)
-
+    | (s1, s2) -> (Printf.printf "Composing: s1 = %s \n and s2 = %s    FAILED\n"
+                     (P.subToString s1) (P.subToString s2) ; 
+                   raise (Error "Composition not defined?\n"))
 
 
   (* bvarSub n s = Ft'
@@ -224,8 +275,17 @@ module LF = struct
             invert'' (p - 1) (Dot (front, si)) in
 
     let rec invert' n s = match s with
-      | Shift (None, p)     -> invert'' p (Shift (None, n))
-      | Shift (Some(CtxOffset psi), p)     -> invert'' p (Shift (Some (CtxOffset (-psi)), n))
+      | Shift (NoCtxShift, p)      -> invert'' p (Shift (NoCtxShift, n))
+
+      | Shift (CtxShift(psi), p) -> invert'' p (Shift (NegCtxShift(psi), n))
+
+      | Shift (NegCtxShift(psi), 0) -> Shift (CtxShift(psi), 0)
+        (* . |- s : psi  Hence psi |- si : . *)
+
+      | Shift (NegCtxShift(psi), p) -> 
+        (* Psi |- s : psi  Hence psi |- si : Psi *)
+          invert'' p (Shift (CtxShift psi, n))
+
       | Dot (_, s') -> invert' (n + 1) s'
 
     in
@@ -241,11 +301,19 @@ module LF = struct
      then D ; Psi'  |- t : Psi  and cPsi' subcontext of cPsi
   *)
   let rec strengthen s cPsi = match (s, cPsi) with
-    | (Shift  _ (* = 0 *), Null)
+    | (Shift  (NoCtxShift, _ (* 0 *)), Null)
       -> Null
 
-    | (Shift  _ (* = 0 *), CtxVar psi)
+    | (Shift  (CtxShift _psi, _ (* 0 *)), Null)
+      -> Null
+
+    | (Shift  (NegCtxShift _psi, _ ), CtxVar _psi')
+      -> Null
+
+
+    | (Shift  (NoCtxShift, _ ), CtxVar psi)
       -> CtxVar psi
+
 
     | (Dot (Head (BVar _k) (* k = 1 *), t), DDec (cPsi, decl))
       -> let t' = comp t invShift in
@@ -272,7 +340,7 @@ module LF = struct
   *)
   let isId s =
     let rec isId' s k' = match s with
-      | Shift (None, k)          -> k = k'
+      | Shift (NoCtxShift, k)   -> k = k'
       | Dot (Head (BVar n), s') -> n = k' && isId' s' (k' + 1)
       | _                       -> false
     in

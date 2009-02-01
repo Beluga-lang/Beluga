@@ -6,7 +6,12 @@
 
 *)
 
+
+module P = Pretty.Int.DefaultPrinter
+module R = Pretty.Int.DefaultCidRenderer
+
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [1])
+
 
 module LF = struct 
   open Context
@@ -140,20 +145,8 @@ module LF = struct
     | MVar (Offset u, s)      ->
         (* cD ; cPsi' |- tA <= type *)
         let (tA, cPsi') = Cwhnf.mctxMDec cD u in
-(*         let _ = Printf.printf "\n Check MVar: %s  has type \n %s [%s] \n in Delta %s \n\n"
-                 (Pretty.Int.DefaultPrinter.headToString head)
-                 (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, Shift 0)))
-                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi')) 
-                 (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD)) in
-
-        let _ = Printf.printf "\n Check substitution: \n %s ; \n %s  \n |-    %s    <= %s  \n\n"
-                 (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
-                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi))
-                 (Pretty.Int.DefaultPrinter.subToString (Whnf.normSub s)) 
-                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi')) in
-*)
-        let _ = checkSub cO cD cPsi s cPsi'  in 
-           TClo (tA, s) 
+        let _ = checkSub cO cD cPsi s cPsi'  in  
+           TClo (tA, s)  
 
     | PVar(Offset p,s)        ->
         (* cD ; cPsi' |- tA <= type *)
@@ -172,22 +165,22 @@ module LF = struct
      succeeds iff cO cD ; cPsi |- s : cPsi'
   *)
   and checkSub cO cD cPsi s cPsi' = match (cPsi, s, cPsi') with
-    | (Null, Shift (None, 0), Null)               -> ()
+    | (Null, Shift (NoCtxShift, 0), Null)               -> ()
 
-    | (CtxVar psi, Shift (None, 0), CtxVar psi')  ->
+    | (CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi')  ->
         if psi = psi' then 
           ()
         else raise (Error "Context variable mismatch")
                       (* (CtxVarMisMatch (psi, psi')) *)
 
+    | (CtxVar psi, Shift (CtxShift (psi'), 0), Null)  ->  
+        if psi = psi' then 
+          () 
+        else 
+          raise (Error "Substitution ill-typed" )
 
-    | (CtxVar psi, Shift (Some (phi), 0), CtxVar psi')  ->
-        if psi = psi' && psi = phi then 
-          ()
-        else raise (Error "Context variable mismatch")
-                      (* (CtxVarMisMatch (psi, psi')) *)
 
-    | (CtxVar psi, Shift (Some psi', 0), Null)  ->  
+    | (Null , Shift (NegCtxShift (psi'), 0), CtxVar psi)  ->  
         if psi = psi' then 
           () 
         else 
@@ -201,7 +194,7 @@ module LF = struct
         else raise (Error "Substitution illtyped")
                       (* (SubIllTyped) *)
 
-    | (DDec (cPsi, _tX), Shift (phi (* None *), k), CtxVar psi)   ->
+    | (DDec (cPsi, _tX), Shift (phi, k), CtxVar psi)   ->
         if k > 0
         then checkSub cO cD cPsi (Shift (phi, k - 1)) (CtxVar psi) 
         else raise (Error ("Substitution illtyped: k = %s" ^ (string_of_int k)))
@@ -454,7 +447,7 @@ module Comp = struct
 
   let rec lookup cG k = match (cG, k) with 
     | (I.Dec(_cG', (_,  tau)), 1) ->  tau
-    | (I.Dec( cG', (_, _tau)), k) ->  
+    | (I.Dec( cG', (_,  _tau)), k) ->  
         lookup cG' (k-1)
 
   let rec split tc d = match (tc, d) with
@@ -499,8 +492,8 @@ already done in reconstruct.ml
           let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift d) in
 in elSpineIW
 *)
-      let (ctx_v, phat') = Context.dctxToHat cPsi' in
-      let u     = Whnf.etaExpandMV I.Null (tA, s) (I.Shift (ctx_v, phat')) in
+      let (_, phat') = Context.dctxToHat cPsi' in
+      let u     = Whnf.etaExpandMV I.Null (tA, s) (I.Shift (I.NoCtxShift, phat')) in
 (*      let u = Whnf.newMVar (I.Null ,  I.TClo( tA, s)) in  *)
       let front = (I.Obj(    (*I.Root(I.MVar(u, S.LF.id), I.Nil) *)    u ) : I.front) in
       in
@@ -540,7 +533,7 @@ in elSpineIW
     | TypCtxPi ((psi_name, schema_cid), tau) -> 
         checkTyp (I.Dec(cO, I.CDecl(psi_name, schema_cid))) cD tau
 
-    | TypPiBox (cdecl, tau) -> 
+    | TypPiBox ((cdecl, _ ), tau) -> 
         checkTyp cO (I.Dec(cD, cdecl)) tau        
 
 
@@ -567,12 +560,20 @@ in elSpineIW
     | (CtxFun(psi, e) , (TypCtxPi ((_psi, schema), tau), t)) -> 
         check (I.Dec(cO, I.CDecl(psi, schema))) cD cG e (tau, t)
 
-    | (MLam(u, e), (TypPiBox(I.MDecl(_u, tA, cPsi), tau), t)) -> 
+    | (MLam(u, e), (TypPiBox((I.MDecl(_u, tA, cPsi), _ ), tau), t)) -> 
         check cO (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
               cG   e (tau, C.mvar_dot1 t)
 
     | (Box(_phat, tM), (TypBox (tA, cPsi), t)) -> 
-        LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+      begin try 
+        let cPsi' = C.cnormDCtx (cPsi, t) in 
+        let tA'   = C.cnormTyp (tA, t) in 
+          LF.check cO cD  cPsi' (tM, S.LF.id) (tA', S.LF.id)
+      with Cwhnf.FreeMVar (I.FMVar(u, _ )) -> 
+        raise (Error ("Free meta-variable " ^ (R.render_name u)))
+      end 
+
+        (* LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) *)
 
 
     | (Case (e, branches), (tau, t)) -> 
@@ -621,7 +622,7 @@ in elSpineIW
         end 
     | MApp (e, (phat, tM)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG e) with
-          | (TypPiBox (I.MDecl(_, tA, cPsi), tau), t) -> 
+          | (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t) -> 
                 (LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
                  (tau, MDot(MObj (phat, tM), t))
                 )
@@ -639,25 +640,10 @@ in elSpineIW
           checkBranches cO cD cG branches tAbox ttau
 
   and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = 
-    let _ = Printf.printf "BEGIN: Checking branch: \n %s ; \n %s \n |- \n %s \n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
-         (Pretty.Int.DefaultPrinter.gctxToString (Cwhnf.normCtx  cG))
-         (Pretty.Int.DefaultPrinter.branchToString branch) in 
-
    match branch with
    | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->  
-       let _ = Printf.printf "Checking Pattern Term is well-typed: \n %s ; %s   |-    %s <= %s \n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString cD1) 
-         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
-         (Pretty.Int.DefaultPrinter.normalToString tM1)
-         (Pretty.Int.DefaultPrinter.typToString tA1) in 
 
       let _ = LF.check cO cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
-       let _ = Printf.printf "DONE: Pattern Term  \n %s ; %s   |-    %s <= %s  is well-typed.\n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString cD1)
-         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
-         (Pretty.Int.DefaultPrinter.normalToString tM1)
-         (Pretty.Int.DefaultPrinter.typToString tA1) in 
 
       let d1 = length cD1 in 
       let _d  = length cD in 
@@ -666,59 +652,34 @@ in elSpineIW
       let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
       let phat = dctxToHat cPsi in 
 
-     let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
-         (Pretty.Int.DefaultPrinter.dctxToString cPsi)
-         (Pretty.Int.DefaultPrinter.typToString tA)
-         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
-         (Pretty.Int.DefaultPrinter.typToString tA1) in 
-  
-      let _    = Unify.unifyDCtx (I.Empty) (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
-      let _     = Printf.printf "Unification of dctx done \n" in 
-      let _    = Unify.unifyTyp (I.Empty) (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
-      let _     = Printf.printf "Unification of type done \n" in 
+      let _    = Unify.unifyDCtx (I.Empty) 
+                                 (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
+      let _    = Unify.unifyTyp (I.Empty) 
+                                (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
 
-      let  _   = Printf.printf "Resulting msub from unifying type annotations in branches: \n %s\n\n" 
-        (Pretty.Int.DefaultPrinter.msubToString tc) in 
-
-      let (tc', cD1') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
+      let (tc', cD1'') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
 
 
-      let _    = Printf.printf "abstractMSub done \n" in 
-
-      let cD1_n  = (Cwhnf.normMCtx cD1') in  
-
-      let  _   = Printf.printf "Resulting msub after abstraction: \n %s   |-   %s    <=  %s \n\n" 
-         (Pretty.Int.DefaultPrinter.mctxToString cD1_n)
-        (Pretty.Int.DefaultPrinter.msubToString tc')  
-         (Pretty.Int.DefaultPrinter.mctxToString (Context.append cD cD1))  in 
-
-      let _    = Printf.printf "splitting msub ... \n" in 
       let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
-      let _    = Printf.printf "split msub done \n" in 
-      let cG1 = C.cwhnfCtx (cG, t'') in  
-      let _    = Printf.printf "cwhnfCtx (cG, t'') done : cG1 = %s\n" 
-        (Pretty.Int.DefaultPrinter.gctxToString cG1)
-      in 
 
-      let cGn = (Cwhnf.normCtx cG1) in 
-      let _    = Printf.printf "norm cG1 done \n" in 
-      let e1' = C.cnormExp (e1, tc') in 
-      let _    = Printf.printf "norm e1 done \n" in 
+
+     (* let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
+         (Pretty.Int.DefaultPrinter.dctxToString (Cwhnf.cnormDCtx (cPsi, t'')))
+         (Pretty.Int.DefaultPrinter.typToString (Cwhnf.cnormTyp (tA, t'')))
+         (Pretty.Int.DefaultPrinter.dctxToString (Cwhnf.cnormDCtx (cPsi1, tc')))
+         (Pretty.Int.DefaultPrinter.typToString (Cwhnf.cnormTyp (tA1, tc'))) in 
+     *)
+      let e1' = begin try Cwhnf.cnormExp (e1, tc')  
+                 with Cwhnf.FreeMVar (I.FMVar(u, _ )) -> 
+                   raise (Error ("Encountered free meta-variable " ^ (R.render_name u)))
+                end  in
+
+      let cG1 = C.cwhnfCtx (cG, t'') in   
 
       let tau' = (tau, C.mcomp t'' t)  in 
-      let taun = (C.cnormCTyp tau') in  
 
-      let _ = Printf.printf "\n Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD1_n))
-         (Pretty.Int.DefaultPrinter.gctxToString cGn)
-         (Pretty.Int.DefaultPrinter.expChkToString e1')
-         (Pretty.Int.DefaultPrinter.compTypToString  taun) in 
-
-      (* NOTE: cnormCtx and cnormExp not implemented
-         -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
-      *)
-        check cO cD1' cG1 e1' tau'
-
+         check cO cD1'' cG1 e1' tau' 
+          
 
   (* checkTypeAgainstSchema cO cD cPsi tA (elements : sch_elem list)
   *)

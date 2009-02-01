@@ -16,7 +16,8 @@ SOME: {T:tp} exp T -> opt.
 schema w = some [T:tp] block exp T;
 
 rec FVnat : {g:(w)*} (exp T![.]!)[g] -> (opt)[g] =
-FN g => mlam T => fn e => 
+FN g  => % mlam T  => 
+ fn e => 
  (case e of
     box(g . z)             => box(g . NONE)
   | box(g . tt)            => box(g . NONE)
@@ -25,11 +26,11 @@ FN g => mlam T => fn e =>
   | box(g . #p![id]!)   : (exp T'![.]!)[g] 
     => box(g . SOME T'![.]! #p![id]!)
 
-  | box(g . suc U![id]!)  => FVnat [g] < . nat >  (box(g . U![id]!))
+  | box(g . suc U![id]!)  => FVnat [g] (box(g . U![id]!))
 
   | box(g . and U![id]! V![id]!)  => 
-       (case FVnat [g] < . bool > (box(g . U![id]!)) of
-          box(g . NONE)   => FVnat [g] < . bool > (box(g . V![id]!))
+       (case FVnat [g] (box(g . U![id]!)) of
+          box(g . NONE)   => FVnat [g] (box(g . V![id]!))
 
   | box(g . SOME T'![.]! #p![id]!)  => box(g . SOME T'![.]! #p![id]!))
 );

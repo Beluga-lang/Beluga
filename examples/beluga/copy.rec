@@ -2,23 +2,24 @@ tp: type.
 arrow: tp -> tp -> tp.
 
 term : tp -> type.
-lam  : {T:tp} {T':tp} (term T -> term T') -> term (arrow T T').
+lam  : % {T:tp}{T':tp}
+     {T:tp}(term T -> term T') -> term (arrow T T').
 
 schema W = some [T:tp] block term T;
 
 rec copy : {g:(W)*} (term T![.]!)[g] -> (term T![.]!) [g] =
+FN g => % mlam T => 
+  fn e =>
+   (case e of
 
-FN g => mlam T => fn e =>
-(case e of
+   box(g . #p![id]!)  => box(g . #p![id]!)
 
-       box(g . #p![id]!) % : (term T'![.]!)[g] 
-       => box(g . #p![id]!)
+ % T1![.]! T2![.]!
+ | box(g . lam  T1![.]! (\ x. U![id, x]!)) 
+       => (case copy [g, x:(term T1![.]!)] box(g,x . U![id, x]!) of
 
-| box(g . lam T1![.]! T2![.]! (\ x. U![id, x]!)) 
-       => (case copy [g, x:(term T1![.]!)] <. T2![.]!> box(g,x . U![id, x]!) of
+                 box(g,x : (term T1'![.]!) . V![id, x]!)  % : (term T2'![.]!)[g,x:(term T1'![.]!)] 
 
-                 box(g,x : (term T1'![.]!) . V![id, x]!) : (term T2'![.]!)[g,x:(term T1'![.]!)] 
-
-                 => box(g . lam T1'![.]! T2'![.]!  (\ x. V![id , x]!)))
-
+                 => box(g . lam   T1![.]! (\ x. V![id , x]!)))
+% T1'![.]!  T2![.]!
 );

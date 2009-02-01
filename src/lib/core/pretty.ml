@@ -251,6 +251,9 @@ module Ext = struct
           fprintf ppf "%s"
             (R.render_name x)
 
+      | LF.Hole _ ->
+          fprintf ppf "_"
+
       | LF.MVar (_, x, sigma) ->
           fprintf ppf "mvar %s[%a]"
             (R.render_name x)
@@ -733,6 +736,7 @@ module Int = struct
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
+
     and fmt_ppr_lf_typ lvl ppf = function
       | LF.Atom (a, LF.Nil) ->
           fprintf ppf "%s"
@@ -841,14 +845,20 @@ module Int = struct
 
 
     and fmt_ppr_lf_sub lvl ppf = function
-      | LF.Shift (None,n) -> 
+      | LF.Shift (LF.NoCtxShift,n) -> 
           fprintf ppf "^%s"
             (R.render_offset n)
 
-      | LF.Shift (Some (LF.CtxOffset psi), n) -> 
-          fprintf ppf "^(ctx_var %s + %s)"
+      | LF.Shift (LF.CtxShift (LF.CtxOffset psi), n) -> 
+          fprintf ppf "^(ctxShift (%s) + %s)"
             (R.render_offset psi)
             (R.render_offset n)
+
+      | LF.Shift (LF.NegCtxShift (LF.CtxOffset psi), n) -> 
+          fprintf ppf "^(NegShift(%s) + %s)"
+            (R.render_offset psi)
+            (R.render_offset n)
+
 
       | LF.SVar (c, s) ->
           fprintf ppf "%a[%a]"
@@ -1045,7 +1055,7 @@ module Int = struct
               (fmt_ppr_cmp_typ 0) tau
               (r_paren_if cond)
 
-      | Comp.TypPiBox (ctyp_decl, tau) ->
+      | Comp.TypPiBox ((ctyp_decl, _ ), tau) ->
           let cond = lvl > 0 in
             fprintf ppf "%s%a %a%s"
               (l_paren_if cond)
@@ -1205,6 +1215,8 @@ module Int = struct
           fprintf ppf "MV %s "
             (string_of_int k)
 
+      | Comp.Undef -> 
+          fprintf ppf "_ "
 
     (* Regular Pretty Printers *)
     let ppr_sgn_decl      = fmt_ppr_sgn_decl      std_lvl std_formatter

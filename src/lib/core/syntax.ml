@@ -41,9 +41,10 @@ module Ext = struct
       | Root of Loc.t * head * spine
 
     and head =
-      | Name of Loc.t * name
-      | MVar of Loc.t * name * sub
-      | PVar of Loc.t * name * sub
+      | Name  of Loc.t * name
+      | MVar  of Loc.t * name * sub
+      | Hole  of Loc.t 
+      | PVar  of Loc.t * name * sub
 
     and spine =
       | Nil
@@ -223,7 +224,10 @@ module Int = struct
       | Obj  of normal                     (*    | N                         *)
       | Undef                              (*    | _                         *)
 
-    and ctx_offset = ctx_var option
+    and ctx_offset = 
+      | CtxShift of ctx_var
+      | NoCtxShift
+      | NegCtxShift of ctx_var
 
     and cvar =                             (* Contextual Variables           *)
       | Offset of offset                   (* Bound Variables                *)
@@ -301,19 +305,23 @@ module Int = struct
      | MObj of LF.psi_hat * LF.normal     (* Mft::= Psihat.N                *)
      | PObj of LF.psi_hat * LF.head       (*    | Psihat.p[s] | Psihat.x    *)
      | MV   of offset                     (*    | u//u | p//p               *)
+     | Undef 
 
 
    type msub =                            (* Contextual substitutions       *)
      | MShift of int                      (* theta ::= ^n                   *)
      | MDot   of mfront * msub            (*       | MFt . theta            *)
 
+   type depend =  
+     | Implicit 
+     | Explicit
 
    type typ =
       | TypBox   of LF.typ  * LF.dctx
       | TypSBox  of LF.dctx * LF.dctx        (* Phi[Psi]    *)
       | TypArr   of typ * typ                (* tau -> tau  *)
       | TypCtxPi of (name * cid_schema) * typ (* {psi:W} tau *)
-      | TypPiBox of LF.ctyp_decl * typ
+      | TypPiBox of (LF.ctyp_decl * depend) * typ
       | TypClo   of typ *  msub
 
     and exp_chk =
@@ -398,6 +406,7 @@ module Apx = struct
       | BVar  of offset
       | Const of cid_term
       | MVar  of offset * sub
+      | Hole 
       | PVar  of offset * sub
       | FVar  of name
       | FMVar of name   * sub

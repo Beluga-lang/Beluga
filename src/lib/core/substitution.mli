@@ -10,7 +10,7 @@ open Syntax.Int.LF
 module LF : sig
 
   (**************************)
-  (* Explicit Substitutions *)
+  (* Explicit substitutions *)
   (**************************)
 
   val id       : sub
@@ -27,7 +27,7 @@ module LF : sig
 
 
   (***************************)
-  (* Inverting Substitutions *)
+  (* Inverting substitutions *)
   (***************************)
 
   val invert     : sub -> sub

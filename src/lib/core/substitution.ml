@@ -375,6 +375,5 @@ module LF = struct
   *)
 (*  let compInv s w = comp s (invert w) *)
 
-
 end
 

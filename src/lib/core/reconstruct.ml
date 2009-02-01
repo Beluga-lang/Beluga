@@ -444,30 +444,13 @@ let patSpine spine =
   in
     patSpine' [] spine
 
-
 let rec mkShift recT cPsi = match recT with
   | PiboxRecon -> Int.LF.Shift(Int.LF.NoCtxShift, 0)
   | PiRecon -> 
       let (None, d) = Context.dctxToHat cPsi in 
         Int.LF.Shift(Int.LF.NoCtxShift, d)
 
-(* etaExpandMV cPsi sA s' = tN
- *
- *  cPsi'  |- s'   <= cPsi
- *  cPsi   |- [s]A <= typ
- *
- *  cPsi'  |- tN   <= [s'][s]A
- *)
-let rec etaExpandMV cPsi sA s' = etaExpandMV' cPsi (Whnf.whnfTyp sA)  s'
-
-and etaExpandMV' cPsi sA  s' = match sA with
-  | (Int.LF.Atom (_a, _tS) as tP, s) ->
-      let u = Whnf.newMVar (cPsi, Int.LF.TClo(tP,s)) in
-        Int.LF.Root (Int.LF.MVar (u, s'), Int.LF.Nil)
-
-  | (Int.LF.PiTyp (Int.LF.TypDecl (x, _tA) as decl, tB), s) ->
-      Int.LF.Lam (x, etaExpandMV (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
-
+(* etaExpandMV moved to whnf.ml -jd 2009-02-01 *)
 
 (* isPatSub s = bool *)
 let rec isPatSub s = match s with
@@ -889,7 +872,7 @@ and elSpineIW recT cD cPsi spine i sA =
            *)
           let (_, d) = Context.dctxToHat cPsi in 
 
-          let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift(Int.LF.NoCtxShift, d)) in
+          let tN     = Whnf.etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift(Int.LF.NoCtxShift, d)) in
 
           let spine' = elSpineI recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
@@ -902,7 +885,7 @@ and elSpineIW recT cD cPsi spine i sA =
            * 
            * s.t.  cPsi |- \x1...\xn. u[id] => [id]A  where cPsi |- id : cPsi
            *)
-          let tN     = etaExpandMV cPsi (tA, s) LF.id in
+          let tN     = Whnf.etaExpandMV cPsi (tA, s) LF.id in
 
           let spine' = elSpineI recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
@@ -950,7 +933,7 @@ and elKSpineI recT cD cPsi spine i sK =
     match sK with
       | (Int.LF.PiKind (Int.LF.TypDecl (_, tA), tK), s) ->
           let sshift = mkShift recT cPsi in 
-          let tN     = etaExpandMV Int.LF.Null (tA,s) sshift in
+          let tN     = Whnf.etaExpandMV Int.LF.Null (tA,s) sshift in
           let spine' = elKSpineI recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
 
@@ -1038,11 +1021,19 @@ let rec elTypDeclCtx cD cPsi = function
       let typDecl' = Int.LF.TypDecl(name, elTyp PiRecon cD cPsi typ) in
         Int.LF.Dec (ctx', typDecl')
 
- let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, Apx.LF.SigmaLast a))) =
-    let cD = Int.LF.Empty in
-    let ctx' = elTypDeclCtx cD Int.LF.Null ctx in
-    let typRec = Int.LF.SigmaLast (elTyp PiRecon cD (projectCtxIntoDctx ctx')  a) in
-      Int.LF.SchElem (ctx', Int.LF.SigmaDecl (name, typRec))
+ let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, typRec))) =
+   let cD = Int.LF.Empty in
+   let el_ctx = elTypDeclCtx cD Int.LF.Null in
+   let el_typ ctx = elTyp PiRecon cD (projectCtxIntoDctx ctx) in
+   let rec elTypRec ctx = function
+     | Apx.LF.SigmaLast a ->
+         let ctx' = el_ctx ctx in
+           Int.LF.SigmaLast (el_typ ctx' a)
+     | Apx.LF.SigmaElem (name, tA, typRec) ->
+         let ctx' = el_ctx ctx in
+           Int.LF.SigmaElem(name, el_typ ctx' tA, elTypRec ctx typRec)
+   in
+     Int.LF.SchElem(el_ctx ctx, Int.LF.SigmaDecl (name, elTypRec ctx typRec))
 
 let rec elSchema (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map elSchElem el_list)
@@ -1432,7 +1423,7 @@ let rec genMApp (i,  tau_t) = genMAppW (i,  Cwhnf.cwhnfCTyp tau_t)
 and genMAppW   (i, tau_t)  = match tau_t with 
   | (Int.Comp.TypPiBox ((Int.LF.MDecl(_, tA, cPsi),  Int.Comp.Implicit ), tau), theta) -> 
       let psihat  = Context.dctxToHat cPsi in 
-      let tM'     = etaExpandMV (C.cnormDCtx (cPsi, theta))  (C.cnormTyp (tA,theta), LF.id) LF.id in
+      let tM'     = Whnf.etaExpandMV (C.cnormDCtx (cPsi, theta))  (C.cnormTyp (tA,theta), LF.id) LF.id in
         genMApp ((Int.Comp.MApp (i, (psihat, tM'))) ,  (tau, Int.Comp.MDot(Int.Comp.MObj (psihat, tM'), theta)))
 
   | _ -> (i, tau_t)

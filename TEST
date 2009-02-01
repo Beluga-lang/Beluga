@@ -1,0 +1,64 @@
+#!/bin/sh
+
+# TEST: tests Beluga by calling it on various examples.
+#
+# Usage: TEST [options]
+#
+# [options], if given, are passed to bin/interpreter.
+# Example: TEST +d
+#
+# Note that a leading '@' in a filename means that the test should NOT succeed,
+#  because the file has a type error that should be caught.
+
+
+# set $BELUGA to an absolute path to the toplevel .../beluga directory
+#
+pwd=`pwd`
+BELUGA=`dirname $pwd/$0`
+cd $BELUGA
+BELUGA=`pwd`
+# echo BELUGA: $BELUGA
+
+# set $INTERPRETER to the executable
+INTERPRETER=$BELUGA/bin/interpreter
+
+# set $X to the `beluga' examples directory
+X=$BELUGA/examples/beluga
+cd $X
+
+$INTERPRETER  \
+    $* \
+    case1.bel \
+    case2.bel \
+    cntvar.bel \
+    copy-simple.bel \
+    copy.bel \
+    cut-elim.bel \
+    eq-proof.bel \
+    eval-sub-1.bel \
+    eval-sub.bel \
+    fol-handbook.bel \
+    fvnat.bel \
+    id-dep.bel \
+    id.bel \
+    schema.bel \
+    @sigma1.bel \
+    test.bel \
+    tpcert.bel \
+    tpeval.bel \
+    tpevalsub.bel \
+    vsound.bel \
+    case1.rec \
+    case2.rec \
+    cntvar.rec \
+    copy-simple.rec \
+    copy.rec \
+    eval-sub-1.rec \
+    eval-sub-tp.rec \
+    eval-sub.rec \
+    fvnat.rec \
+    id-dep.rec \
+    id.rec \
+    test.rec \
+    tpevalsub.rec \
+    vsound.rec

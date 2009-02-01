@@ -118,6 +118,8 @@ module Cid = struct
 
     let get = DynArray.unsafe_get store
 
+    let get_schema name = (get name).schema
+
     let clear () =
       DynArray.clear store;
       Hashtbl.clear directory

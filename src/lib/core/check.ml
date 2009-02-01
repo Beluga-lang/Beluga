@@ -384,6 +384,8 @@ end (* struct LF *)
 
 module Comp = struct
 
+  module E = Error
+
   module Unify = Unify.EmptyTrail
 (* NOTES on handling context variables: -bp 
 
@@ -439,8 +441,10 @@ module Comp = struct
   exception Error of error
 *)
 
-  exception Error of string 
-
+  exception Error of string
+  exception Err of E.error
+  let raiseErr x = raise (Err x)
+  
   let rec length cD = match cD with
     | I.Empty -> 0
     | I.Dec(cD, _) -> 1 + length cD
@@ -492,9 +496,10 @@ already done in reconstruct.ml
           let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift d) in
 in elSpineIW
 *)
-(*      let (_, phat) = Context.dctxToHat cPsi' in *)
-      let u = Whnf.newMVar (I.Null ,  I.TClo( tA, s)) in 
-      let front = (I.Obj(I.Root(I.MVar(u, S.LF.id), I.Nil)) : I.front) in
+      let (_, phat') = Context.dctxToHat cPsi' in
+      let u     = Whnf.etaExpandMV I.Null (tA, s) (I.Shift (I.NoCtxShift, phat')) in
+(*      let u = Whnf.newMVar (I.Null ,  I.TClo( tA, s)) in  *)
+      let front = (I.Obj(    (*I.Root(I.MVar(u, S.LF.id), I.Nil) *)    u ) : I.front) in
       in
         I.Dot(front, s)
 
@@ -587,6 +592,7 @@ in elSpineIW
         else raise (Error "Type mismatch")
 
   and check cO cD cG e (tau, t) = 
+   let _ = dprint (fun () -> "check cO = " ^ Print.mctxToString cO) in
     checkW cO cD cG e (C.cwhnfCTyp (tau, t))
 
   and syn cO cD cG e = match e with 
@@ -612,9 +618,9 @@ in elSpineIW
 
               let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in  
 
-              (checkSchema cO cD cPsi ((Schema.get w).Schema.schema)  ;
+              (checkSchema cO cD cPsi (Schema.get_schema w)
                (* (tau', t') *)
-               (tau1, Cwhnf.id)
+             ; (tau1, Cwhnf.id)
               )
           | _ -> raise (Error "Context abstraction mismatch")
         end 
@@ -636,11 +642,6 @@ in elSpineIW
     | (branch::branches) -> 
         let _ = checkBranch cO cD cG branch tAbox ttau in 
           checkBranches cO cD cG branches tAbox ttau
-
-(*  and checkBranch _cO _cD _cG _branch (_tA, _cPsi) (_tau, _t) = 
-    Printf.printf "WARNING: BRANCH CHECKING NOT IMPLEMENTED!"
-*)
-
 
   and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = 
    match branch with
@@ -696,8 +697,8 @@ in elSpineIW
       match (some_part, block_part) with
         (cSomeCtx, I.SigmaDecl(_name, I.SigmaLast elem1)) ->
           let dctx = projectCtxIntoDctx cSomeCtx in 
-          let ssss = ctxToSub dctx in
-          let _ = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString ssss) in
+          let dctxSub = ctxToSub dctx in
+          let _ = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString dctxSub) in
       let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
           let normedA = Cwhnf.cnormTyp (tA, subD)
           and normedElem1 = Cwhnf.cnormTyp (elem1, subD) in
@@ -707,10 +708,10 @@ in elSpineIW
 ;
             dprint (fun () -> "***Unify.unifyTyp ("
                         ^ "\n   dctx = " ^ Print.dctxToString dctx
-                        ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString ssss ^ " ] "
-                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString ssss ^ " ] "
+                        ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString dctxSub ^ " ] "
+                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString dctxSub ^ " ] "
                         )
-          ; try Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, ssss))
+          ; try Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, dctxSub))
             with exn ->  (print_string ("Type " ^ Print.typToString tA ^ " doesn't unify with " ^ Print.typToString elem1 ^ "\n") ; flush_all()
                          ; raise exn)
     in
@@ -722,22 +723,50 @@ in elSpineIW
           with
             _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
-  and checkSchema cO cD cPsi (I.Schema elements as schema) = 
-     dprint (fun () -> "checkSchema " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema);
-     print_string "\n WARNING: Schema checking not fully implemented\n" 
-       ; 
-     match cPsi with
-     |  I.Null -> ()
-     |  I.CtxVar _phi -> () (* WRONG *)
-     |  I.DDec (cPsi', decl) ->
-          begin
-            checkSchema cO cD cPsi' schema;
-            match decl with
-               I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA elements
-          end
+(* The rule for checking a context against a schema is
 
+    psi::W \in \Omega
+    -----------------
+     ... |- psi <= W
+
+so checking a context element against a context element is just equality. *)
+  and checkElementAgainstElement _cO _cD (I.SchElem(cSome1, block1)) (I.SchElem(cSome2, block2)) =
+    (cSome1 = cSome2) && (block1 = block2)
     
-end 
+
+  (* checkElementAgainstSchema cO cD sch_elem (elements : sch_elem list)
+  *)
+  and checkElementAgainstSchema cO cD sch_elem elements =
+    List.exists (checkElementAgainstElement cO cD sch_elem) elements
+
+  and checkSchema cO cD cPsi (I.Schema elements as schema) = 
+     dprint (fun () -> "checkSchema " ^ Print.mctxToString cO ^ " ... " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema);
+     print_string "\n WARNING: Schema checking not fully implemented\n" 
+   ; match cPsi with
+     | I.Null -> ()
+     | I.CtxVar phi ->
+         let rec lookupCtxVar = function
+           | I.Empty -> raise (Error ("Context variable not found"))
+           | I.Dec(cO, I.CDecl(psi, schemaName)) -> function
+               | I.CtxName phi  when  psi = phi  ->  (psi, schemaName)
+               |  (I.CtxName _phi) as ctx_var  ->  lookupCtxVar cO ctx_var
+               |  I.CtxOffset 1  ->  (psi, schemaName)
+               |  I.CtxOffset n  ->  lookupCtxVar cO (I.CtxOffset (n-1))
+         in
+         let lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi) in
+         let I.Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
+           if List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements
+           then ()
+           else raiseErr (E.CtxVarMismatch (phi, schema))
+
+     | I.DDec (cPsi', decl) ->
+         begin
+           checkSchema cO cD cPsi' schema
+         ; match decl with
+           | I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA elements
+         end
+  
+end
 
 module Sgn = struct
 

@@ -251,6 +251,9 @@ module Ext = struct
           fprintf ppf "%s"
             (R.render_name x)
 
+      | LF.Hole _ ->
+          fprintf ppf "_"
+
       | LF.MVar (_, x, sigma) ->
           fprintf ppf "mvar %s[%a]"
             (R.render_name x)
@@ -728,6 +731,11 @@ module Int = struct
             (fmt_ppr_lf_typ 0) tA
             (fmt_ppr_lf_dctx 0) cPsi
 
+      | LF.CDecl (name, schemaName) ->
+          fprintf ppf "{#%s :: %a}"
+            (R.render_name name)
+            (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
+
 
     and fmt_ppr_lf_typ lvl ppf = function
       | LF.Atom (a, LF.Nil) ->
@@ -837,14 +845,20 @@ module Int = struct
 
 
     and fmt_ppr_lf_sub lvl ppf = function
-      | LF.Shift (None,n) -> 
+      | LF.Shift (LF.NoCtxShift,n) -> 
           fprintf ppf "^%s"
             (R.render_offset n)
 
-      | LF.Shift (Some (LF.CtxOffset psi), n) -> 
-          fprintf ppf "^(ctx_var %s + %s)"
+      | LF.Shift (LF.CtxShift (LF.CtxOffset psi), n) -> 
+          fprintf ppf "^(ctxShift (%s) + %s)"
             (R.render_offset psi)
             (R.render_offset n)
+
+      | LF.Shift (LF.NegCtxShift (LF.CtxOffset psi), n) -> 
+          fprintf ppf "^(NegShift(%s) + %s)"
+            (R.render_offset psi)
+            (R.render_offset n)
+
 
       | LF.SVar (c, s) ->
           fprintf ppf "%a[%a]"
@@ -977,18 +991,20 @@ module Int = struct
             (R.render_offset psi)          
             (R.render_offset offset)
 
+    and fmt_ppr_lf_ctx_var ppf = function
+      | LF.CtxOffset psi ->
+          fprintf ppf "%s"
+            (R.render_offset psi)
+      | LF.CtxName psi ->
+          fprintf ppf "%s"
+            (R.render_name psi)
 
     and fmt_ppr_lf_dctx _lvl ppf = function
       | LF.Null ->
           fprintf ppf "."
 
-      | LF.CtxVar (LF.CtxOffset psi) ->
-          fprintf ppf "%s"
-            (R.render_offset psi)
-
-      | LF.CtxVar (LF.CtxName psi) ->
-          fprintf ppf "%s"
-            (R.render_name psi)
+      | LF.CtxVar ctx_var ->
+          fmt_ppr_lf_ctx_var ppf ctx_var
 
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
@@ -1041,7 +1057,7 @@ module Int = struct
               (fmt_ppr_cmp_typ 0) tau
               (r_paren_if cond)
 
-      | Comp.TypPiBox (ctyp_decl, tau) ->
+      | Comp.TypPiBox ((ctyp_decl, _ ), tau) ->
           let cond = lvl > 0 in
             fprintf ppf "%s%a %a%s"
               (l_paren_if cond)
@@ -1201,6 +1217,8 @@ module Int = struct
           fprintf ppf "MV %s "
             (string_of_int k)
 
+      | Comp.Undef -> 
+          fprintf ppf "_ "
 
     (* Regular Pretty Printers *)
     let ppr_sgn_decl      = fmt_ppr_sgn_decl      std_lvl std_formatter
@@ -1332,8 +1350,10 @@ module Error = struct
 
     (* Format Based Pretty Printers *)
     let fmt_ppr ppf = function
-      | CtxVarMismatch _ ->
-          fprintf ppf "ctx variable mismatch"
+      | CtxVarMismatch (var, expected) ->
+          fprintf ppf "Context variable %a doesn't check against schema %a"
+            (IP.fmt_ppr_lf_ctx_var) var
+            (IP.fmt_ppr_lf_schema 0) expected
 
       | TypIllTyped (_cD, _cPsi, _tA, _tB) ->
           fprintf ppf "Inferred _tA but expected _tB"

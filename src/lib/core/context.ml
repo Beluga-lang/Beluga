@@ -34,10 +34,10 @@ let dctxToHat cPsi =
 
 let rec sigmaShift typrec k = match typrec with
   | SigmaLast tA -> 
-      SigmaLast (TClo (tA, Shift  (None, k)))
+      SigmaLast (TClo (tA, Shift  (NoCtxShift, k)))
 
-  | SigmaElem (x, tA, typrec) ->
-      SigmaElem (x, TClo (tA, Shift (None, k)), sigmaShift typrec (k + 1))
+  | SigmaElem (x, tA, typrec) -> 
+      SigmaElem (x, TClo (tA, Shift (NoCtxShift, k)), sigmaShift typrec (k + 1))
 
 
 let rec ctxShift cPsi k = match cPsi with
@@ -48,7 +48,7 @@ let rec ctxShift cPsi k = match cPsi with
       CtxVar psi
 
   | DDec (cPsi, TypDecl (x, tA)) ->
-      DDec (ctxShift cPsi k, TypDecl (x, TClo (tA, Shift (None, k))))
+      DDec (ctxShift cPsi k, TypDecl (x, TClo (tA, Shift (NoCtxShift, k))))
 
   | SigmaDec (cPsi, SigmaDecl (x, tArec)) ->
       SigmaDec (ctxShift cPsi k, SigmaDecl (x, sigmaShift tArec k))
@@ -68,7 +68,7 @@ let ctxDec cPsi k =
    *)
   let rec ctxDec' = function
     | (DDec (_cPsi', TypDecl (x, tA')), 1) ->
-        TypDecl (x, TClo (tA', Shift (None, k)))
+        TypDecl (x, TClo (tA', Shift (NoCtxShift, k)))
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)

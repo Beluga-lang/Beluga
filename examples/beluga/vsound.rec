@@ -10,33 +10,30 @@ letv : exp -> (exp -> exp) -> exp.
 
 value : exp -> type.
 v_z   : value z.
-v_s   : {E:exp} value E -> value (suc E).
+v_s   : value E -> value (suc E).
 
 eval : exp -> exp -> type.
 ev_z : eval z z.
-ev_s : {E:exp} {V:exp} eval E V -> eval (suc E) (suc V).
-ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp} 
-       eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
+ev_s : eval E V -> eval (suc E) (suc V).
+ev_l : eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 
 rec vs :  (eval E![.]! V![.]!)[.] -> (value V![.]!)[.] = 
 
-mlam E => mlam V => fn e =>
+fn e =>
   case e of 
      box(. . ev_z) => box(. v_z)
 
-  | box(. . ev_s E'![.]! V'![.]! D![.]!) 
-
+  | box(. . ev_s D![.]!) 
     => 
 
-    (case   (vs   <. E'![.]! > <. V'![.]! > box(. D![.]!)) of 
-
-             box(. . F![.]!) : (value V''![.]!)[.] 
-       =>    box(. v_s V'![.]! F![.]!) 
+    (case   (vs   box(. D![.]!)) of 
+             box(. . F![.]!)  
+       =>    box(. v_s F![.]!) 
      )
 
-  |  box(. . ev_l E1![.]! (\x . E2![., x]!) V1![.]! V2![.]! D2![.]! D1![.]!)
+  |  box(. . ev_l D2![.]! D1![.]!)
 
      =>
-        vs <. E2![., V1![.]! ]! >  <. V2![.]! >  box(. D2![.]!)
+        vs  box(. D2![.]!)
 
 ;

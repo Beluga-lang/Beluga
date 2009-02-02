@@ -388,9 +388,9 @@ let rec whnf sM = match sM with
       begin match whnfTyp (tA, LF.id) with
         | (Atom (a, tS'), _s (* id *)) ->
             (* meta-variable is of atomic type; tS = Nil  *)
-            let u' = Inst (uref, cPsi, Atom(a, tS'), cnstr) in
+            let u' = Inst (uref, cPsi, Atom (a, tS'), cnstr) in
               (Root (MVar (u', LF.comp r sigma), SClo (tS, sigma)), LF.id)
-        | (PiTyp _ , _s)->
+        | (PiTyp _, _s)->
             (* Meta-variable is not atomic and tA = Pi x:B1.B2
              * lower u, and normalize the lowered meta-variable
              * note: we may expose and compose substitutions twice.
@@ -406,13 +406,13 @@ let rec whnf sM = match sM with
   | (Root (FPVar (p, r), tS), sigma) ->
       (Root (FPVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
-  | (Root (PVar (PInst ({ contents = Some (BVar i)} as _p, _, _, _) , r), tS), sigma) ->
+  | (Root (PVar (PInst ({contents = Some (BVar i)}, _, _, _) , r), tS), sigma) ->
       begin match LF.bvarSub i r with
         | Obj tM    -> whnfRedex ((tM, LF.id), (tS, sigma))
         | Head head -> (Root (head, SClo (tS, sigma)), LF.id)
       end
 
-  | (Root (PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _) as _p, r), tS), sigma) ->
+  | (Root (PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), r), tS), sigma) ->
       whnf (Root (PVar (q, LF.comp r' r), tS), sigma)
 
   (* Constant *)
@@ -430,7 +430,7 @@ let rec whnf sM = match sM with
   | (Root (Proj (PVar (Offset _ as q, s), k), tS), sigma) ->
       (Root (Proj (PVar (q, LF.comp s sigma), k), SClo (tS, sigma)), LF.id)
 
-  | (Root (Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _) as _q, s), k), tS), sigma) ->
+  | (Root (Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _), s), k), tS), sigma) ->
       whnf (Root (Proj (PVar (q', LF.comp r' s), k), tS), sigma)
 
   (* Free variables *)
@@ -489,8 +489,14 @@ and whnfTyp (tA, sigma) = match tA with
  *         and  ni <= k or ni = _ for all 1 <= i <= m
  *)
 let rec mkPatSub s = match s with
-  | Shift (_psi, _k) ->
+  | Shift (NoCtxShift, _k) ->
       s
+
+  | Shift (CtxShift (_psi), _k) ->
+      s
+
+  | Shift (NegCtxShift _,  _k) ->
+      raise (Error NotPatSub)
 
   | Dot (Head (BVar n), s) ->
       let s' = mkPatSub s in
@@ -512,6 +518,7 @@ let rec mkPatSub s = match s with
 
   | _ ->
       raise (Error NotPatSub)
+
 
 let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
 
@@ -591,16 +598,16 @@ and convSub subst1 subst2 = match (subst1, subst2) with
   | (Shift (psi,n), Shift (psi', k)) ->
       n = k && psi = psi'
 
-  | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2)) ->
+  | (SVar (Offset s1, sigma1), SVar (Offset s2, sigma2)) ->
       s1 = s2 && convSub sigma1 sigma2
 
   | (Dot (f, s), Dot (f', s')) ->
       convFront f f' && convSub s s'
 
-  | (Shift (psi, n), Dot(Head BVar _k, _s')) ->
+  | (Shift (psi, n), Dot (Head BVar _k, _s')) ->
       convSub (Dot (Head (BVar (n + 1)), Shift (psi, n + 1))) subst2
 
-  | (Dot(Head BVar _k, _s'), Shift (psi, n)) ->
+  | (Dot (Head BVar _k, _s'), Shift (psi, n)) ->
       convSub subst1 (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)))
 
   | _ ->
@@ -675,6 +682,9 @@ let rec convTypRec sArec sBrec = match (sArec, sBrec) with
   | ((SigmaElem (_xA, tA, recA), s), (SigmaElem(_xB, tB, recB), s')) ->
       convTyp (tA, s) (tB, s') && convTypRec (recA, LF.dot1 s) (recB, LF.dot1 s')
 
+  | (_, _) -> (* lengths differ *)
+      false
+
 (* convDCtx cPsi cPsi' = true iff
  * cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx
  *)
@@ -695,6 +705,7 @@ let rec convDCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (_, _) ->
       false
 
+
 (* convCtx cPsi cPsi' = true iff
  * cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx
  *)
@@ -705,6 +716,8 @@ let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
       convTyp (tA, LF.id) (tB, LF.id) && convCtx cPsi1 cPsi2
 
+let rec convSchElem (SchElem(cSome1, SigmaDecl(_, typRec1))) (SchElem(cSome2, SigmaDecl(_, typRec2))) =
+  convCtx cSome1 cSome2 && convTypRec (typRec1, LF.id) (typRec2, LF.id)
 
 (* convHatCtx((psiOpt, l), cPsi) = true iff |cPsi| = |Psihat|
  *
@@ -715,3 +728,20 @@ let convHatCtx ((cvar, l), cPsi) =
   let (cvar', l') = dctxToHat cPsi in
     l' = l && cvar = cvar'
 
+
+(* etaExpandMV cPsi sA s' = tN
+ *
+ *  cPsi'  |- s'   <= cPsi
+ *  cPsi   |- [s]A <= typ
+ *
+ *  cPsi'  |- tN   <= [s'][s]A
+ *)
+let rec etaExpandMV cPsi sA s' = etaExpandMV' cPsi (whnfTyp sA)  s'
+
+and etaExpandMV' cPsi sA  s' = match sA with
+  | (Atom (_a, _tS) as tP, s) ->
+      let u = newMVar (cPsi, TClo(tP,s)) in
+        Root (MVar (u, s'), Nil)
+
+  | (PiTyp (TypDecl (x, _tA) as decl, tB), s) ->
+      Lam (x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))

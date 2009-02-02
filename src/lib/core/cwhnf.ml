@@ -14,12 +14,15 @@ open Context
 open Syntax.Int
 
 module S = Substitution.LF
+module P = Pretty.Int.DefaultPrinter
+module R = Pretty.Int.DefaultCidRenderer
 
 exception Error of string 
 
 exception Fmvar_not_found
 exception FreeMVar of LF.head
 exception FreeCtxVar of Id.name
+exception NonInvertible 
 
 (*************************************)
 (* Contextual Explicit Substitutions *)
@@ -207,14 +210,61 @@ and mfrontMSub ft t = match ft with
   *)
 
 and applyMSub n t = 
-  (* let _ = Printf.printf "ApplyMSub: Apply msub %s \n to %s \n\n" 
-    (Pretty.Int.DefaultPrinter.msubToString t)
-    (string_of_int n) in  *)
     begin match (n, t) with
   | (1, Comp.MDot (ft, _t)) -> ft
   | (n, Comp.MDot (_ft, t)) -> applyMSub (n - 1) t
   | (n, Comp.MShift k)       -> Comp.MV (k + n)
     end 
+
+
+
+(* invert t = t'
+
+   Invariant:
+
+   If   D  |- t  <= D'    (and s !!!patsub!!!)
+   then D' |- t' <= D
+   s.t. t o t' = id    (mcomp t' t = id)
+*)
+and invert s =
+  let rec lookup n s p = match s with
+    | Comp.MShift _                 -> None
+    | Comp.MDot (Comp.Undef, t')    -> lookup (n + 1) t' p
+
+    | Comp.MDot (Comp.MV k, t') ->
+        if k = p then Some n
+        else lookup (n + 1) t' p 
+
+    | Comp.MDot (Comp.MObj(_phat, LF.Root(LF.MVar (LF.Offset k, LF.Shift (_,0)), LF.Nil)), t') -> 
+        if k = p then
+          Some n
+        else lookup (n + 1) t' p 
+
+    | Comp.MDot (Comp.PObj (_phat, LF.PVar (LF.Offset k, LF.Shift (_, 0))), t') -> 
+        if k = p then
+          Some n
+        else lookup (n + 1) t' p 
+         
+          
+  in
+
+  let rec invert'' p ti = match p with
+      | 0 -> ti
+      | p ->
+          let front = match lookup 1 s p with
+            | Some k -> Comp.MV k (* or Comp.MObj (phat, Root(MVar(Offset k), id), Nil)  *)
+            | None   -> Comp.Undef
+          in
+            invert'' (p - 1) (Comp.MDot (front, ti)) in
+
+    let rec invert' n t = match t with
+      | Comp.MShift p     -> invert'' p (Comp.MShift n)
+      | Comp.MDot (_, t') -> invert' (n + 1) t'
+
+    in
+      invert' 0 s
+
+
 
 (* ------------------------------------------------------------ *)
 (* Normalization = applying simultaneous modal substitution   
@@ -250,24 +300,34 @@ and cnorm (tM, t) = match tM with
     (* Meta-variables *)
 
     | LF.Root (LF.MVar (LF.Offset k, r), tS)
-      -> begin match applyMSub k t with
-        | Comp.MV  k'            -> LF.Root (LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
+      -> 
+        begin match applyMSub k t with
+        | Comp.MV  k'            -> 
+            LF.Root (LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
+            
         | Comp.MObj (_phat,tM)   -> 
-            LF.Clo(Whnf.whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), S.id)))
+            LF.Clo(Whnf.whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), S.id)))  
+            
         (* other cases impossible *)
-      end
+        end 
 
 
     | LF.Root (LF.FMVar (u, r), _tS) ->
         raise (FreeMVar (LF.FMVar (u,cnormSub (r, t))))
 
-    | LF.Root (LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _) as _u , _r), _tS) -> 
-        raise (Error "Encountered Instantiated MVar with reference?\n")
+    | LF.Root (LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r), _tS) -> 
+        (* We could normalize [r]tM *)
+        let tM' = Whnf.norm (tM, S.id) in 
+          cnorm (tM', t)
+          
+(*        LF.Root (LF.MVar(LF.Inst ({contents = Some (cnorm (tM, t))}, cPsi, tA, cnstr), 
+                         cnormSub (r, t)), cnormSpine (tS, t)) 
 
+*)
+    | LF.Root (LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) as u , r), tS) -> 
+        (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
+        LF.Root (LF.MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
 
-    | LF.Root (LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) as _u , _r), _tS) -> 
-        raise (Error "Encountered Un-Instantiated MVar with reference?\n")
-    (* Ignore other cases for destructive (free) meta-variables -- at least for now *)
 
     (* Parameter variables *)
     | LF.Root (LF.PVar (LF.Offset k, r), tS)
@@ -403,7 +463,8 @@ and cnorm (tM, t) = match tM with
            LF.SigmaElem (x, tA, cnormTypRec (recA', t))
 
   and cnormDecl (decl, t) = match decl with
-      LF.TypDecl (x, tA) -> LF.TypDecl (x, cnormTyp (tA, t))
+      LF.TypDecl (x, tA) -> 
+          LF.TypDecl (x, cnormTyp (tA, t))
 
 
   
@@ -473,13 +534,41 @@ and csub_spine cPsi k tS = match tS with
 
 *)
 and csub_sub cPsi phi (* k *) s = match s with
-  | LF.Shift (None, _k) -> s
-  | LF.Shift (Some (LF.CtxOffset psi), k) -> 
+  | LF.Shift (LF.NoCtxShift, _k) -> s
+
+  | LF.Shift (LF.CtxShift (LF.CtxOffset psi), k) -> 
       if psi = phi then 
-        let (ctx_v, d) = Context.dctxToHat cPsi in  
-          LF.Shift (ctx_v, k+d)
+        begin match Context.dctxToHat cPsi with
+          | (Some ctx_v, d) -> 
+              LF.Shift (LF.CtxShift ctx_v, k+d)
+          | (None, d) -> LF.Shift (LF.NoCtxShift, k+d)
+        end
+
       else 
-        LF.Shift(Some (LF.CtxOffset psi), k)
+        LF.Shift(LF.CtxShift (LF.CtxOffset psi), k)
+
+  | LF.Shift (LF.NegCtxShift (LF.CtxOffset psi), k) -> 
+      if psi = phi then 
+        let rec undef_sub d s = 
+          if d = 0 then s 
+          else undef_sub (d-1) (LF.Dot(LF.Undef, s)) 
+        in 
+          begin match Context.dctxToHat cPsi with
+          | (Some ctx_v, d) -> 
+          (* Psi |- s : psi  and psi not in Psi and |Psi| = k 
+           * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi 
+           *)                      
+              undef_sub d (LF.Shift (LF.NegCtxShift ctx_v, k))
+
+          | (None, d) -> undef_sub d (LF.Shift (LF.NoCtxShift, k))
+
+          end
+              
+      else 
+
+        LF.Shift(LF.NegCtxShift (LF.CtxOffset psi), k)
+
+
 
   | LF.Dot (ft, s) -> 
       LF.Dot(csub_front cPsi phi ft, csub_sub cPsi phi s)
@@ -497,8 +586,8 @@ let rec csub_ctyp cPsi k tau = match tau with
   | Comp.TypCtxPi (psi_decl, tau) -> 
       Comp.TypCtxPi (psi_decl, csub_ctyp cPsi (k+1) tau)
 
-  | Comp.TypPiBox (LF.MDecl(u, tA, cPhi), tau) -> 
-      Comp.TypPiBox (LF.MDecl (u, tA, csub_dctx cPsi k cPhi), 
+  | Comp.TypPiBox ((LF.MDecl(u, tA, cPhi), dep), tau) -> 
+      Comp.TypPiBox ((LF.MDecl (u, tA, csub_dctx cPsi k cPhi), dep), 
                      csub_ctyp (cnormDCtx (cPsi, Comp.MShift 1)) k tau)
 
   | Comp.TypClo (tau, theta) -> 
@@ -516,17 +605,17 @@ and csub_psihat cPsi k (ctxvar, offset) = match ctxvar with
 
 
 and csub_dctx cPsi k cPhi = 
-  let (ctx_var, d) = Context.dctxToHat cPsi in 
-    
   let rec csub_dctx' cPhi = match cPhi with 
     | LF.Null -> (LF.Null, false)
     | LF.CtxVar (LF.CtxOffset offset) -> if k = offset then 
         (cPsi, true) else (cPhi, false)
 
-    | LF.DDec (cPhi, LF.TypDecl (x, tA)) ->  
+    | LF.DDec (cPhi, LF.TypDecl (x, tA)) ->   
         let (cPhi', b) = csub_dctx' cPhi in 
         if b then       
-            (LF.DDec (cPhi', LF.TypDecl(x, LF.TClo(tA, LF.Shift (ctx_var, d)))), b)
+          (* cPhi |- tA type     phi', cPhi' |- s : phi, cPhi *)
+          let tA' = csub_typ cPsi k tA in 
+          (LF.DDec (cPhi', LF.TypDecl(x, tA')), b)
         else 
           (LF.DDec(cPhi', LF.TypDecl (x, tA)), b)
   in 
@@ -551,7 +640,7 @@ and csub_msub cPsi k theta = match theta with
 
 (*
 *)
-let rec mctxMDec cD k = 
+let rec mctxMDec cD' k = 
   let rec lookup cD k' = match (cD, k') with
     | (LF.Dec (_cD, LF.MDecl(_u, tA, cPsi)), 1)
       -> (mshiftTyp tA k, mshiftDCtx cPsi k)
@@ -564,7 +653,7 @@ let rec mctxMDec cD k =
 
     | (_ , _ ) -> raise (Error "Meta-variable out of bounds")
   in 
-    lookup cD k
+    lookup cD' k
 
 
 (*
@@ -636,30 +725,35 @@ let rec mctxPVarPos cD p =
     | (Comp.TypCtxPi (ctx_dec , tau))      -> 
          Comp.TypCtxPi (ctx_dec, normCTyp tau)
 
-    | (Comp.TypPiBox (LF.MDecl(u, tA, cPsi) , tau))    -> 
-        Comp.TypPiBox (LF.MDecl (u, Whnf.normTyp (tA, S.id), Whnf.normDCtx cPsi), 
+    | (Comp.TypPiBox ((LF.MDecl(u, tA, cPsi) , dep), tau))    -> 
+        Comp.TypPiBox ((LF.MDecl (u, Whnf.normTyp (tA, S.id), Whnf.normDCtx cPsi), dep),
                        normCTyp tau)
 
 
 
-  let rec cnormCTyp thetaT = match thetaT with 
-    | (Comp.TypBox (tA, cPsi), t)     (* !!!! any instantiation in t needs to possibly be shifted by |cPsi| !!! *)
-      -> Comp.TypBox(Whnf.normTyp (cnormTyp(tA, t), S.id), Whnf.normDCtx (cnormDCtx(cPsi, t)))
+  let rec cnormCTyp thetaT = 
+    begin match thetaT with 
+        | (Comp.TypBox (tA, cPsi), t) -> 
+            let tA'   = Whnf.normTyp (cnormTyp(tA, t), S.id) in 
+            let cPsi' = Whnf.normDCtx (cnormDCtx(cPsi, t)) in 
+              Comp.TypBox(tA', cPsi')
 
-    | (Comp.TypSBox (cPsi, cPsi'), t) 
-      -> Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))
+        | (Comp.TypSBox (cPsi, cPsi'), t) -> 
+            Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))
 
-    | (Comp.TypArr (tT1, tT2), t)   -> 
-        Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
+        | (Comp.TypArr (tT1, tT2), t)   -> 
+            Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
 
-    | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
-         Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
+        | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
+              Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
 
-    | (Comp.TypPiBox (LF.MDecl(u, tA, cPsi) , tau), t)    -> 
-        Comp.TypPiBox (LF.MDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), 
-                       cnormCTyp (tau, mvar_dot1 t))
+        | (Comp.TypPiBox ((LF.MDecl(u, tA, cPsi) , dep), tau), t)    -> 
+              Comp.TypPiBox ((LF.MDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
+                             cnormCTyp (tau, mvar_dot1 t))
 
-    | (Comp.TypClo (tT, t'), t)        -> cnormCTyp (tT, mcomp t' t)
+        | (Comp.TypClo (tT, t'), t)        -> 
+              cnormCTyp (tT, mcomp t' t)
+      end 
 
 
   (* cwhnfCTyp (tT1, t1) = (tT2, t2)
@@ -679,9 +773,15 @@ let rec mctxPVarPos cD p =
 
   let rec cwhnfCTyp thetaT = match thetaT with 
     | (Comp.TypBox (tA, cPsi), t)     
-      -> (Comp.TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t)), id) 
+      -> 
+        let tA' = Whnf.normTyp (cnormTyp(tA, t), S.id) in 
+        let cPsi' = Whnf.normDCtx (cnormDCtx(cPsi, t)) in 
 
-    | (Comp.TypSBox (cPsi, cPsi'), t) 
+          (Comp.TypBox(tA', cPsi') , id)
+
+          (* (Comp.TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t)), id)  *)
+
+    | (Comp.TypSBox (cPsi, cPsi'), t)  
       -> (Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t)), id)
 
     | (Comp.TypArr (_tT1, _tT2), _t)   -> thetaT
@@ -732,9 +832,10 @@ let rec mctxPVarPos cD p =
         
     | (Comp.CtxApp (i, cPsi), t) -> Comp.CtxApp (cnormExp' (i, t), Whnf.normDCtx (cnormDCtx (cPsi, t)))
 
-    | (Comp.MApp (i, (psihat, tM)), t) -> Comp.MApp (cnormExp' (i, t), (psihat, Whnf.norm (cnorm (tM, t), S.id)))
+    | (Comp.MApp (i, (psihat, tM)), t) -> 
+        Comp.MApp (cnormExp' (i, t), (psihat, Whnf.norm (cnorm (tM, t), S.id)))
 
-    | (Comp.Ann (e, tau), t) -> Comp.Ann (cnormExp (e, t), Comp.TypClo (tau, t))
+    | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), Comp.TypClo (tau, mcomp t' t))
 
 
 
@@ -798,6 +899,255 @@ let rec mctxPVarPos cD p =
 
 
   (* ----------------------------------------------------------- *)
+  (* Compute the inverted expression 
+   *
+   * If D ; G |- e <= tau    and D |- t <= D' 
+   * then we return an expresion e' for some context G' and some type tau'
+   *
+   *        s.t. D' ; G' |- e' <= tau' 
+   * 
+   *  [|t|]G' = G and [|t|]tau' = tau and [|t|]e' = e
+   * 
+   *  and D ; [|t|]G' |- [|t|]e' <= [|t|]tau'
+   * 
+   * 
+   * In general if t is not a pattern substitution (i.e. maps variables to variables), 
+   * the inverse of t will not exist. So, instead we compute one possible expresssion e'
+   * (keeping in mind that there may be many such e')
+   * 
+   *)
+ 
+  let rec lookDom k t1 d =  
+    let rec look t p = begin match t with
+      | Comp.MDot (Comp.MV k', t) -> 
+          if k > d then 
+            if k' = (k-d) then (p +d)
+            else look t (p+1)
+          else 
+            k
+      | Comp.MDot (Comp.MObj (_phat, LF.Root(LF.MVar (LF.Offset k', LF.Shift (_,0)), _ (* Nil *))), t) -> 
+          if k > d then 
+            if k' = (k-d) then (p+d)
+            else look t (p+1)
+          else k
+
+      | Comp.MDot (Comp.MObj (_phat, LF.Root(_ , _ )), t) -> 
+          look t (p+1)
+
+
+    | Comp.MDot (Comp.PObj (_phat, LF.PVar (LF.Offset k', LF.Shift (_, 0))), t') -> 
+        if k > d then 
+          if (k-d) = k' then
+            (p+d)
+          else look t' (p+1)
+        else k
+
+    | Comp.MDot (Comp.Undef, t') -> look t' (p+1)
+
+      | _ -> 
+          (Printf.printf "InvExp: Looking up %s \n in substitution %s \n depth d = %s \n\n" 
+             (string_of_int k) (P.msubToString t1) (string_of_int d);
+          raise NonInvertible)
+      end 
+    in
+      look t1 1
+      
+
+
+  (* invTerm (tM, t) = tM' s.t. [|t|]tM' = tM *)
+  let rec invTerm (tM, t) d = match tM with
+    | LF.Lam (y, tN)       -> LF.Lam (y, invTerm (tN, t) d) 
+
+    | LF.Clo (tN, s)       -> LF.Clo(invTerm (tN, t) d , invSub(s, t) d)  
+
+    | LF.Root (LF.BVar i, tS) -> LF.Root(LF.BVar i, invSpine (tS, t) d)
+
+    (* Meta-variables *)
+
+    | LF.Root (LF.MVar (LF.Offset k, r), tS)
+      -> 
+        LF.Root (LF.MVar (LF.Offset (lookDom k t d), invSub (r, t) d), invSpine (tS, t) d) 
+
+    | LF.Root (LF.FMVar (u, r), _tS) ->
+        raise (FreeMVar (LF.FMVar (u,invSub (r, t) d)))
+
+    | LF.Root (LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r), _tS) -> 
+        (* We could normalize [r]tM *)
+        let tM' = Whnf.norm (tM, S.id) in 
+          invTerm (tM', t) d
+          
+    | LF.Root (LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) , _r), _tS) -> 
+        raise (Error "Encountered Un-Instantiated MVar with reference ?\n") 
+        (* LF.Root (LF.MVar(u, invSub (r, t)), invSpine (tS, t))  *)
+
+    (* Parameter variables *)
+    | LF.Root (LF.PVar (LF.Offset k, r), tS)
+        (* cD' ; cPsi' |- r <= cPsi1 
+           cD          |- t <= cD'
+ 
+           [|t|](p[r] . S)  = [r']h . [|t|]S
+           where r' = [|t|] r
+
+         *)
+      ->  LF.Root (LF.PVar (LF.Offset (lookDom k t d), invSub (r, t) d), invSpine (tS, t) d)
+
+    | LF.Root (LF.FPVar (p, r), _tS) ->
+        raise (FreeMVar 
+                 (LF.FPVar (p, invSub (r, t) d)))
+
+    (* Ignore other cases for destructive (free) parameter variables *)
+
+    (* Constants *)
+    | LF.Root (LF.Const c, tS)
+      -> LF.Root (LF.Const c, invSpine (tS, t) d)
+
+    (* Free Variables *)
+    | LF.Root (LF.FVar x, tS)        
+      -> (Printf.printf "Encountered a free variable!?\n" ; 
+          LF.Root (LF.FVar x, invSpine (tS, t) d))
+
+    (* Projections *)
+    | LF.Root (LF.Proj (LF.BVar i, k), tS)
+      -> LF.Root (LF.Proj (LF.BVar i, k), invSpine (tS, t) d)
+
+    | LF.Root (LF.Proj (LF.PVar (LF.Offset j, s), k), tS)
+        (* cD' ; cPsi' |- s <= cPsi1 *)
+        (* cD          |- t <= cD'   *)         
+      -> LF.Root(LF.Proj (LF.PVar (LF.Offset (lookDom j t d), invSub (s,t) d), k), invSpine (tS, t) d)
+
+  (* Ignore other cases for destructive (free) parameter-variables *)
+
+  and invSpine (tS, t) d = match tS with
+    | LF.Nil            -> LF.Nil
+    | LF.App  (tN, tS)  -> LF.App (invTerm (tN, t) d, invSpine (tS, t) d)
+    | LF.SClo (tS, s)   -> LF.SClo(invSpine (tS, t) d, invSub (s, t) d)
+
+
+  and invSub (s, t) d = match s with 
+    | LF.Shift _         -> s
+    | LF.Dot (ft, s')    -> LF.Dot (invFront (ft, t) d, invSub (s', t) d)
+     (* substitution variables ignored for how -bp *)
+
+
+  and invFront (ft, t) d = match ft with
+    | LF.Head (LF.BVar _ )            -> ft
+    | LF.Head (LF.Const _ )           -> ft
+    | LF.Head (LF.PVar (LF.Offset i, r)) ->
+        LF.Head(LF.PVar (LF.Offset (lookDom i t d), invSub (r,t) d))
+  	      (* other case MObj _ cannot happen *)
+
+    | LF.Head (LF.MVar (LF.Offset i, r)) -> 
+        LF.Head(LF.MVar (LF.Offset (lookDom i t d), invSub (r,t) d)) 
+
+    | LF.Head (LF.Proj (LF.BVar _, _))    -> ft
+
+    | LF.Head (LF.Proj (LF.PVar (LF.Offset i, r), k)) -> 
+        let r' = invSub (r,t) d in 
+          LF.Head (LF.Proj (LF.PVar (LF.Offset (lookDom i t d), r'), k))
+
+    | LF.Obj (tM) -> LF.Obj(invTerm (tM, t) d)
+          
+  (* invType (tA, t) = tA'
+
+     If cD' ; cPsi  |- tA <= type
+     cD |- t <= cD'
+     then
+     tA' = [|t|]tA  and cPsi' = [|t|]cPsi
+     cD' ; cPsi' |- tA' <= type   
+  *)
+  and invTyp (tA, t) d = match tA with
+    |  LF.Atom (a, tS)
+      -> LF.Atom (a, invSpine (tS, t) d)
+
+    |  LF.PiTyp (LF.TypDecl (_x, _tA) as decl, tB)
+      -> LF.PiTyp (invDecl (decl, t) d,  invTyp (tB, t) d)
+
+    |  LF.TClo (tA, s)
+      -> LF.TClo(invTyp (tA,t) d, invSub (s,t) d)
+
+
+  and invTypRec (typRec, t) d = match typRec with
+    |  LF.SigmaLast lastA -> LF.SigmaLast(invTyp (lastA, t) d)
+    |  LF.SigmaElem (x, tA, recA') ->
+         let tA = invTyp (tA, t) d in
+           LF.SigmaElem (x, tA, invTypRec (recA', t) d)
+
+  and invDecl (decl, t) d = match decl with
+      LF.TypDecl (x, tA) -> LF.TypDecl (x, invTyp (tA, t) d)
+
+
+let rec invDCtx (cPsi, t)  d = match cPsi with
+    | LF.Null       ->  LF.Null 
+
+    | LF.CtxVar (LF.CtxOffset psi) -> 
+        LF.CtxVar (LF.CtxOffset psi) 
+
+    | LF.CtxVar (LF.CtxName psi) -> 
+        raise (FreeCtxVar psi)
+
+    | LF.DDec(cPsi, decl) ->  
+        LF.DDec(invDCtx(cPsi, t) d, invDecl(decl, t) d) 
+
+    | LF.SigmaDec (cPsi, LF.SigmaDecl(x, recA)) -> 
+        LF.SigmaDec(invDCtx (cPsi, t) d, LF.SigmaDecl(x, invTypRec (recA, t) d))
+
+
+  (* invExp (e, t) = e' 
+   
+     If cO ; cD  ; cG   |- e <= tau
+        cO ; cD' ; cG'  |- [|t|]e <= tau'  where [|t|]cG = cG' and [|t|]tau = tau'
+        cO ; cD'        |- t <= cD
+    
+     then e' = [|t|]e and cO ; cD' ; cG' |- e' <= tau'
+
+  *)
+
+  let rec invExp (e, t) d = match (e,t) with
+    | (Comp.Syn (i), t) -> Comp.Syn (invExp' (i, t) d)
+
+    | (Comp.Rec (f, e), t) -> Comp.Rec (f, invExp (e,t) d)
+
+    | (Comp.Fun (x, e), t) -> Comp.Fun (x, invExp (e,t) d)
+
+    | (Comp.CtxFun (psi, e) , t ) ->  Comp.CtxFun (psi, invExp (e, t) d)
+
+    | (Comp.MLam (u, e), t) -> Comp.MLam (u, invExp (e, t) (d+1))
+
+    | (Comp.Box (psihat, tM), t) -> Comp.Box (psihat, Whnf.norm (invTerm (tM, t) d, S.id))
+
+    | (Comp.Case (i, branches), t) -> 
+        Comp.Case (invExp' (i,t) d, 
+                   List.map (function b -> invBranch (b, t) d) branches)
+    
+ 
+  and invExp' (i, t) d = match (i,t) with
+    | (Comp.Var _, _ ) -> i 
+
+    | (Comp.Const _, _ ) -> i 
+
+    | (Comp.Apply (i, e), t) -> Comp.Apply (invExp' (i, t) d, invExp (e,t) d)
+        
+    | (Comp.CtxApp (i, cPsi), t) -> Comp.CtxApp (invExp' (i, t) d, Whnf.normDCtx (invDCtx (cPsi, t) d))
+
+    | (Comp.MApp (i, (psihat, tM)), t) -> 
+        Comp.MApp (invExp' (i, t) d, (psihat, Whnf.norm (invTerm (tM, t) d, S.id)))
+
+    | (Comp.Ann (e, tau), t') -> Comp.Ann (invExp (e, t) d, Comp.TypClo (tau, mcomp t' t)) (* invCTyp (tau , t') d *)
+
+
+
+  (* invBranch (b as BranchBox (cD, (psihat, tM, (tA, cPsi)), e), theta) = b'
+
+  *)
+  and invBranch (Comp.BranchBox (cD, (psihat, tM, (tA, cPsi)), e) , theta) d = 
+    (* let l      = Context.length cD in  *)
+    (* let theta' = mshift theta l in  *)
+    let d' = Context.length cD  in
+      Comp.BranchBox (cD, (psihat, Whnf.norm (tM, S.id), (Whnf.normTyp (tA, S.id), Whnf.normDCtx cPsi)), 
+                      invExp (e, theta) (d+d'))
+    
+
+  (* ----------------------------------------------------------- *)
   (* Conversion: Convertibility modulo alpha for 
      computation-level types
   *)
@@ -828,8 +1178,10 @@ let rec mctxPVarPos cD p =
 	&& 
 	  convCTyp (tT1, t) (tT1', t')
 
-    | ((Comp.TypPiBox (LF.MDecl(_, tA, cPsi), tT), t), (Comp.TypPiBox (LF.MDecl(_, tA', cPsi'), tT'), t'))
-      -> Whnf.convTyp (cnormTyp (tA, t), S.id) (cnormTyp (tA', t'), S.id)
+    | ((Comp.TypPiBox ((LF.MDecl(_, tA, cPsi), dep), tT), t), (Comp.TypPiBox ((LF.MDecl(_, tA', cPsi'), dep'), tT'), t'))
+      -> dep = dep' 
+        &&
+          Whnf.convTyp (cnormTyp (tA, t), S.id) (cnormTyp (tA', t'), S.id)
 	&&
 	  Whnf.convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
 	&& 

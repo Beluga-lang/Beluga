@@ -14,6 +14,10 @@ module S    = Substitution.LF
 module I    = Int.LF
 module Comp = Int.Comp
 
+module P = Pretty.Int.DefaultPrinter
+module R = Pretty.Int.DefaultCidRenderer
+
+
 exception NotImplemented
 
 exception Error of string
@@ -133,6 +137,15 @@ let rec printCollection cQ = match cQ with
          (ctxVarToString ctx_var)
          (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
       )
+  | I.Dec (cQ, FMV (u, Some (tP, cPhi))) -> 
+      (printCollection cQ ; 
+       Printf.printf " %s : " 
+         (R.render_name u) ;
+       Printf.printf " %s [ %s ]\n" 
+         (P.typToString (Whnf.normTyp (tP, LF.id)))
+         (P.dctxToString (Whnf.normDCtx cPhi))
+         )
+                          
   | I.Dec(cQ, PV ((I.PVar (I.PInst(_r, cPsi, tA', _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tA' in        
       (printCollection cQ ; 
@@ -391,12 +404,17 @@ and collectHead cQ phat sH = match sH with
           cQ'
         else
           let (tA, cPhi)  = FMVar.get u in
+          let phihat = Context.dctxToHat cPhi in 
+
+          let cQ1  = collectDctx cQ' phihat cPhi in 
+          let cQ'' = collectTyp cQ1  phihat (tA, LF.id) in 
+
             (* tA must be closed with respect to cPhi *)
             (* Since we only use abstraction on pure LF objects,
                there are no context variables; different abstraction
                is necessary for handling computation-level expressions,
-               and LF objects which occur in computations. *)
-            I.Dec (collectTyp cQ' (None, 0) (tA, LF.id), FMV (u, Some (tA, cPhi)))
+               and LF objects which occur in comp utations. *)
+            I.Dec (cQ'', FMV (u, Some (tA, cPhi)))
 
   | (I.MVar (I.Inst (_r, cPsi, tA, _cnstrs), s') as u, s) ->
       let cQ' = collectSub cQ phat (LF.comp s' s) in
@@ -404,8 +422,12 @@ and collectHead cQ phat sH = match sH with
           cQ'
         else
           (*  checkEmpty !cnstrs ? -bp *)
-          let (ctx_var, tA') = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
-            I.Dec (collectTyp cQ' (ctx_var, 0) (tA', LF.id), MV u) 
+          let phihat = Context.dctxToHat cPsi in 
+
+          let cQ1  = collectDctx cQ' phihat cPsi in 
+          let cQ'' = collectTyp cQ1  phihat (tA, LF.id) in 
+
+            I.Dec (cQ'', MV u) 
 
 
   | (I.MVar (I.Offset _k, s'), s) ->
@@ -417,9 +439,12 @@ and collectHead cQ phat sH = match sH with
           cQ'
         else
           (*  checkEmpty !cnstrs ? -bp *)
-          let (ctx_var, tA') = raiseType cPsi tA  (* tA' = Pi cPsi. tA *) in
+          let psihat = Context.dctxToHat cPsi in 
 
-            I.Dec (collectTyp cQ' (ctx_var, 0) (tA', LF.id), PV p) 
+          let cQ1  = collectDctx cQ' psihat cPsi in 
+          let cQ'' = collectTyp cQ1  psihat (tA, LF.id) in 
+
+            I.Dec (cQ'', PV p) 
 
   | (I.PVar (I.Offset _k, s'), s) ->
        collectSub cQ phat (LF.comp s' s) 
@@ -435,7 +460,13 @@ and collectHead cQ phat sH = match sH with
                there are no context variables; different abstraction
                is necessary for handling computation-level expressions,
                and LF objects which occur in computations. *)
-            I.Dec (collectTyp cQ' (None, 0) (tA, LF.id), FPV (u, Some (tA, cPhi)))
+
+          let phihat = Context.dctxToHat cPhi in 
+
+          let cQ1  = collectDctx cQ' phihat cPhi in 
+          let cQ'' = collectTyp cQ1  phihat (tA, LF.id) in 
+
+            I.Dec (cQ'', FPV (u, Some (tA, cPhi)))
 
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
@@ -459,7 +490,7 @@ and collectKind cQ ((cvar, offset) as phat) sK = match sK with
         collectKind cQ' (cvar, offset + 1) (tK, LF.dot1 s)
 
 
-let rec collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with 
+and collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with 
   | I.Null ->  cQ
 
   | I.CtxVar _ -> cQ
@@ -544,10 +575,10 @@ and abstractHead cQ offset tH = match tH with
 
 
 and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
-  | (I.Shift (None,_k), I.Null) ->  tS
+  | (I.Shift (I.NoCtxShift,_k), I.Null) ->  tS
 
-  | (I.Shift (None, k) , I.DDec(_cPsi', _dec)) ->
-       subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (None, (k + 1))), cPsi) tS
+  | (I.Shift (I.NoCtxShift, k) , I.DDec(_cPsi', _dec)) ->
+       subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (I.NoCtxShift, (k + 1))), cPsi) tS
 
   | (I.Dot (I.Head (I.BVar k), s), I.DDec(cPsi', _dec)) -> 
       subToSpine cQ offset  (s,cPsi') (I.App (I.Root (I.BVar k, I.Nil), tS))
@@ -786,18 +817,21 @@ and abstractMVarCtx cQ =  match cQ with
 (* Casess for: FMV, FPV *)
 
 
-let rec abstrMSub cQ t = match t with
-  | Comp.MShift n -> Comp.MShift n
-  | Comp.MDot(Comp.MObj(phat, tM), t) -> 
-      let s'  = abstrMSub cQ t in 
-      let tM' = abstractMVarTerm cQ 0 (tM, LF.id) in 
-        Comp.MDot(Comp.MObj(phat, tM'), s') 
-
-  | Comp.MDot(Comp.PObj(phat, h), t) ->
-      let s' = abstrMSub cQ t in 
-      let h' = abstractMVarHead cQ 0 h in 
-        Comp.MDot(Comp.PObj(phat, h'), s')
-
+let rec abstrMSub cQ t = 
+  let rec abstrMSub' cQ t k = 
+    match t with
+      | Comp.MShift n -> Comp.MShift (n+k)
+      | Comp.MDot(Comp.MObj(phat, tM), t) -> 
+          let s'  = abstrMSub' cQ t (k+1) in 
+          let tM' = abstractMVarTerm cQ 0 (tM, LF.id) in 
+            Comp.MDot(Comp.MObj(phat, tM'), s') 
+              
+      | Comp.MDot(Comp.PObj(phat, h), t) ->
+          let s' = abstrMSub' cQ t (k+1)in 
+          let h' = abstractMVarHead cQ 0 h in 
+            Comp.MDot(Comp.PObj(phat, h'), s')
+  in 
+    abstrMSub' cQ t 0
 
 and abstractMSub t =  
   let cQ  = collectMSub I.Empty t in
@@ -844,21 +878,80 @@ let rec collectCompTyp cQ tau = match tau with
   | Comp.TypCtxPi (_, tau) -> 
       collectCompTyp cQ tau 
 
-  | Comp.TypPiBox (I.MDecl(_, tA, cPsi), tau) -> 
+  | Comp.TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau) -> 
       let phat = Context.dctxToHat cPsi in 
       let cQ1 = collectDctx cQ phat cPsi in 
       let cQ2 = collectTyp cQ1 phat (tA, LF.id) in 
         collectCompTyp cQ2 tau
 
 
-let rec collectPattern cQ cD cPsi (phat, tM) tA = 
-  let cQ1 = collectMctx cQ cD in 
-(*  let _    = Printf.printf "Start Collection of cPsi = %s \n" 
-  (Pretty.Int.DefaultPrinter.dctxToString cPsi) in *)
-  let cQ2 = collectDctx cQ1 phat cPsi in 
-  let cQ3 = collectTerm cQ2 phat (tM, LF.id) in 
-    collectTyp cQ3 phat (tA, LF.id)
+let rec collectExp cQ e = match e with 
+  | Comp.Syn i -> collectExp' cQ i
 
+  | Comp.Rec (_f, e) -> collectExp cQ e
+
+  | Comp.Fun (_x, e) -> collectExp cQ e
+
+  | Comp.MLam (_u, e) -> collectExp cQ e
+
+  | Comp.CtxFun (_psi, e) -> collectExp cQ e
+
+  | Comp.Box (phat, tM) -> collectTerm  cQ  phat (tM, LF.id) 
+
+  | Comp.Case (i, branches) -> 
+      let cQ' = collectExp' cQ i in 
+        collectBranches cQ' branches
+
+
+and collectExp' cQ i = match i with
+  | Comp.Var _x -> cQ 
+  | Comp.Const _c ->  cQ 
+  | Comp.Apply (i, e) -> 
+      let cQ' = collectExp' cQ i  in 
+        collectExp cQ' e
+
+  | Comp.CtxApp (i, cPsi) -> 
+      let cQ' = collectExp' cQ i  in 
+      let phat = Context.dctxToHat cPsi in 
+        collectDctx cQ' phat cPsi
+
+  | Comp.MApp (i, (phat, tM)) -> 
+      let cQ' = collectExp' cQ i  in 
+        collectTerm cQ' phat (tM, LF.id)
+
+  | Comp.Ann  (e, tau) -> 
+      let cQ' = collectExp cQ e in 
+        collectCompTyp cQ' tau
+
+
+and collectPattern cQ cD cPsi (phat, tM) tA = 
+  let cQ1 = collectMctx cQ cD in 
+  (* let _    = Printf.printf "Start Collection of cPsi = %s \n" 
+  (   Pretty.Int.DefaultPrinter.dctxToString cPsi) in  *)
+  let cQ2 = collectDctx cQ1 phat cPsi in 
+  (* let _ = Printf.printf "cQ2 (collection of cPsi)\n" in 
+     let _   = printCollection cQ2 in  *)
+  let cQ3 = collectTerm cQ2 phat (tM, LF.id) in 
+  (* let _ = Printf.printf "cQ3 (collection of cPsi)\n" in 
+     let _   = printCollection cQ3 in  *)
+  let cQ4 = collectTyp cQ3 phat (tA, LF.id) in 
+  (* let _ = Printf.printf "cQ4 (collection of cPsi)\n" in 
+  let _   = printCollection cQ4 in  *)
+    cQ4
+
+
+
+
+and collectBranch cQ branch = match branch with
+  | Comp.BranchBox (_cD, _pat, e) -> 
+      (* pat and cD cannot contain any free meta-variables *)
+        collectExp cQ e
+
+and collectBranches cQ branches = match branches with 
+  | [] -> cQ
+  | b::branches -> 
+      let cQ' = collectBranch cQ b in
+        collectBranches cQ' branches
 
 
 let rec abstractMVarCompTyp cQ offset tau = match tau with 
@@ -874,11 +967,63 @@ let rec abstractMVarCompTyp cQ offset tau = match tau with
   | Comp.TypCtxPi (ctx_decl, tau) -> 
       Comp.TypCtxPi (ctx_decl, abstractMVarCompTyp cQ offset tau)
 
-  | Comp.TypPiBox (I.MDecl(u, tA, cPsi), tau) -> 
+  | Comp.TypPiBox ((I.MDecl(u, tA, cPsi), dep), tau) -> 
       let cPsi' = abstractMVarDctx cQ offset cPsi in 
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
       let tau'  = abstractMVarCompTyp cQ (offset+1) tau in 
-        Comp.TypPiBox (I.MDecl(u, tA', cPsi'), tau')
+        Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep), tau')
+
+
+let rec abstractMVarExp cQ offset e = match e with
+  | Comp.Syn i -> Comp.Syn (abstractMVarExp' cQ offset i)
+
+  | Comp.Rec (f, e) -> Comp.Rec (f, abstractMVarExp cQ offset e)
+
+  | Comp.Fun (x, e) -> Comp.Fun (x, abstractMVarExp  cQ offset e)
+
+  | Comp.MLam (u, e) -> Comp.MLam (u, abstractMVarExp  cQ (offset+1) e)
+
+  | Comp.CtxFun (psi, e) -> Comp.CtxFun (psi, abstractMVarExp cQ offset e)
+
+  | Comp.Box (phat, tM) -> Comp.Box (phat, abstractMVarTerm  cQ  offset (tM, LF.id) )
+
+  | Comp.Case (i, branches) -> 
+      let i' = abstractMVarExp' cQ offset i in 
+        Comp.Case(i', abstractMVarBranches cQ offset branches)
+
+
+and abstractMVarExp' cQ offset i = match i with
+  | Comp.Var x -> Comp.Var x 
+  | Comp.Const _c ->  i
+  | Comp.Apply (i, e) -> 
+      let i' = abstractMVarExp' cQ offset i  in 
+      let e' = abstractMVarExp  cQ offset e in 
+        Comp.Apply (i', e')
+
+  | Comp.CtxApp (i, cPsi) -> 
+      let i' = abstractMVarExp' cQ offset i  in 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+        Comp.CtxApp (i', cPsi')
+
+  | Comp.MApp (i, (phat, tM)) -> 
+      let i' = abstractMVarExp' cQ offset i  in 
+      let tM' = abstractMVarTerm cQ offset (tM, LF.id) in
+        Comp.MApp (i', (phat, tM'))
+
+  | Comp.Ann  (e, tau) -> 
+      let e' = abstractMVarExp cQ offset e in 
+      let tau' = abstractMVarCompTyp cQ offset tau in 
+        Comp.Ann (e', tau')
+
+and abstractMVarBranches cQ offset branches = 
+  List.map (function b -> abstractMVarBranch cQ offset b) branches
+
+and abstractMVarBranch cQ offset branch = match branch with 
+  | Comp.BranchBox(cD, (phat, tM, (tA, cPsi)), e) ->     
+      (* cD, tM, tA, cPsi cannot contain any free meta-variables *)
+      let offset  = Context.length cD + offset in 
+      let e'      = abstractMVarExp  cQ offset e in 
+        Comp.BranchBox (cD, (phat, tM, (tA, cPsi)), e')
 
 
 let raiseCompTyp cD tau = 
@@ -890,9 +1035,23 @@ let raiseCompTyp cD tau =
   and raisePiBox cD tau = match cD with
     | I.Empty -> tau
     | I.Dec(cD ,mdecl) -> 
-        raisePiBox cD (Comp.TypPiBox (mdecl, tau))
+        raisePiBox cD (Comp.TypPiBox ((mdecl, Comp.Implicit), tau))
   in 
     roll tau 
+
+
+let raiseExp cD e = 
+  let rec roll e = match e with
+    | Comp.CtxFun (psi, e) -> 
+        Comp.CtxFun (psi, roll e)
+    | e -> raiseMLam cD e 
+
+  and raiseMLam cD e = match cD with
+    | I.Empty -> e
+    | I.Dec(cD ,_mdecl) -> 
+        raiseMLam cD (Comp.MLam (Id.mk_name None, e))
+  in 
+    roll e
 
 
 let rec abstrCompTyp tau = 
@@ -909,7 +1068,7 @@ let rec abstrCompTyp tau =
  
 *)
 let rec abstrPattern cD1 cPsi1 (phat, tM) tA =  
-  let cQ      = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in 
+  let cQ      = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in
   let cQ'     = abstractMVarCtx cQ in 
   let cD1'    = abstractMVarMctx cQ' cD1 in 
   let offset  = Context.length cD1' in 
@@ -922,5 +1081,22 @@ let rec abstrPattern cD1 cPsi1 (phat, tM) tA =
     
 
 
+let rec abstrExp e =
+  let cQ      = collectExp I.Empty e in 
+  let cQ'     = abstractMVarCtx cQ in 
+  let e'      = abstractMVarExp cQ' 0 e in 
+  let _cD'     = ctxToMCtx cQ' in 
+    begin match cQ with 
+        I.Empty -> e' 
+      | _       -> (Printf.printf "Impossible? – Left-over free MVars-ref which are not already constraint?\n";
+                     (* raiseExp cD' e' *)
+                      raise (Error "Abstract: Encountered free MVars in computation-level expression\n"))
+    end
 
 
+let rec printFreeMVars phat tM = 
+  let cQ = collectTerm I.Empty  phat (tM, LF.id) in 
+    printCollection cQ
+
+
+let collectTerm' (phat, tM ) = collectTerm I.Empty  phat (tM, LF.id) 

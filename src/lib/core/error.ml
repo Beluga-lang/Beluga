@@ -4,7 +4,7 @@ open Syntax
 open Id
 
 type error =
-  | CtxVarMismatch of Int.LF.cvar * Int.LF.cvar
+  | CtxVarMismatch of Int.LF.ctx_var * Int.LF.schema
   | SigmaIllTyped of Int.LF.mctx * Int.LF.dctx
       * Int.LF.trec_clo (* inferred *) * Int.LF.trec_clo (* expected *)
   | ExpAppNotFun  

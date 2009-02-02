@@ -6,7 +6,12 @@
 
 *)
 
+
+module P = Pretty.Int.DefaultPrinter
+module R = Pretty.Int.DefaultCidRenderer
+
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [1])
+
 
 module LF = struct 
   open Context
@@ -140,20 +145,8 @@ module LF = struct
     | MVar (Offset u, s)      ->
         (* cD ; cPsi' |- tA <= type *)
         let (tA, cPsi') = Cwhnf.mctxMDec cD u in
-(*         let _ = Printf.printf "\n Check MVar: %s  has type \n %s [%s] \n in Delta %s \n\n"
-                 (Pretty.Int.DefaultPrinter.headToString head)
-                 (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, Shift 0)))
-                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi')) 
-                 (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD)) in
-
-        let _ = Printf.printf "\n Check substitution: \n %s ; \n %s  \n |-    %s    <= %s  \n\n"
-                 (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
-                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi))
-                 (Pretty.Int.DefaultPrinter.subToString (Whnf.normSub s)) 
-                 (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi')) in
-*)
-        let _ = checkSub cO cD cPsi s cPsi'  in 
-           TClo (tA, s) 
+        let _ = checkSub cO cD cPsi s cPsi'  in  
+           TClo (tA, s)  
 
     | PVar(Offset p,s)        ->
         (* cD ; cPsi' |- tA <= type *)
@@ -172,22 +165,22 @@ module LF = struct
      succeeds iff cO cD ; cPsi |- s : cPsi'
   *)
   and checkSub cO cD cPsi s cPsi' = match (cPsi, s, cPsi') with
-    | (Null, Shift (None, 0), Null)               -> ()
+    | (Null, Shift (NoCtxShift, 0), Null)               -> ()
 
-    | (CtxVar psi, Shift (None, 0), CtxVar psi')  ->
+    | (CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi')  ->
         if psi = psi' then 
           ()
         else raise (Error "Context variable mismatch")
                       (* (CtxVarMisMatch (psi, psi')) *)
 
+    | (CtxVar psi, Shift (CtxShift (psi'), 0), Null)  ->  
+        if psi = psi' then 
+          () 
+        else 
+          raise (Error "Substitution ill-typed" )
 
-    | (CtxVar psi, Shift (Some (phi), 0), CtxVar psi')  ->
-        if psi = psi' && psi = phi then 
-          ()
-        else raise (Error "Context variable mismatch")
-                      (* (CtxVarMisMatch (psi, psi')) *)
 
-    | (CtxVar psi, Shift (Some psi', 0), Null)  ->  
+    | (Null , Shift (NegCtxShift (psi'), 0), CtxVar psi)  ->  
         if psi = psi' then 
           () 
         else 
@@ -201,7 +194,7 @@ module LF = struct
         else raise (Error "Substitution illtyped")
                       (* (SubIllTyped) *)
 
-    | (DDec (cPsi, _tX), Shift (phi (* None *), k), CtxVar psi)   ->
+    | (DDec (cPsi, _tX), Shift (phi, k), CtxVar psi)   ->
         if k > 0
         then checkSub cO cD cPsi (Shift (phi, k - 1)) (CtxVar psi) 
         else raise (Error ("Substitution illtyped: k = %s" ^ (string_of_int k)))
@@ -391,6 +384,8 @@ end (* struct LF *)
 
 module Comp = struct
 
+  module E = Error
+
   module Unify = Unify.EmptyTrail
 (* NOTES on handling context variables: -bp 
 
@@ -446,15 +441,17 @@ module Comp = struct
   exception Error of error
 *)
 
-  exception Error of string 
-
+  exception Error of string
+  exception Err of E.error
+  let raiseErr x = raise (Err x)
+  
   let rec length cD = match cD with
     | I.Empty -> 0
     | I.Dec(cD, _) -> 1 + length cD
 
   let rec lookup cG k = match (cG, k) with 
     | (I.Dec(_cG', (_,  tau)), 1) ->  tau
-    | (I.Dec( cG', (_, _tau)), k) ->  
+    | (I.Dec( cG', (_,  _tau)), k) ->  
         lookup cG' (k-1)
 
   let rec split tc d = match (tc, d) with
@@ -499,9 +496,10 @@ already done in reconstruct.ml
           let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift d) in
 in elSpineIW
 *)
-(*      let (_, phat) = Context.dctxToHat cPsi' in *)
-      let u = Whnf.newMVar (I.Null ,  I.TClo( tA, s)) in 
-      let front = (I.Obj(I.Root(I.MVar(u, S.LF.id), I.Nil)) : I.front) in
+      let (_, phat') = Context.dctxToHat cPsi' in
+      let u     = Whnf.etaExpandMV I.Null (tA, s) (I.Shift (I.NoCtxShift, phat')) in
+(*      let u = Whnf.newMVar (I.Null ,  I.TClo( tA, s)) in  *)
+      let front = (I.Obj(    (*I.Root(I.MVar(u, S.LF.id), I.Nil) *)    u ) : I.front) in
       in
         I.Dot(front, s)
 
@@ -539,7 +537,7 @@ in elSpineIW
     | TypCtxPi ((psi_name, schema_cid), tau) -> 
         checkTyp (I.Dec(cO, I.CDecl(psi_name, schema_cid))) cD tau
 
-    | TypPiBox (cdecl, tau) -> 
+    | TypPiBox ((cdecl, _ ), tau) -> 
         checkTyp cO (I.Dec(cD, cdecl)) tau        
 
 
@@ -566,12 +564,20 @@ in elSpineIW
     | (CtxFun(psi, e) , (TypCtxPi ((_psi, schema), tau), t)) -> 
         check (I.Dec(cO, I.CDecl(psi, schema))) cD cG e (tau, t)
 
-    | (MLam(u, e), (TypPiBox(I.MDecl(_u, tA, cPsi), tau), t)) -> 
+    | (MLam(u, e), (TypPiBox((I.MDecl(_u, tA, cPsi), _ ), tau), t)) -> 
         check cO (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
               cG   e (tau, C.mvar_dot1 t)
 
     | (Box(_phat, tM), (TypBox (tA, cPsi), t)) -> 
-        LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+      begin try 
+        let cPsi' = C.cnormDCtx (cPsi, t) in 
+        let tA'   = C.cnormTyp (tA, t) in 
+          LF.check cO cD  cPsi' (tM, S.LF.id) (tA', S.LF.id)
+      with Cwhnf.FreeMVar (I.FMVar(u, _ )) -> 
+        raise (Error ("Free meta-variable " ^ (R.render_name u)))
+      end 
+
+        (* LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) *)
 
 
     | (Case (e, branches), (tau, t)) -> 
@@ -586,6 +592,7 @@ in elSpineIW
         else raise (Error "Type mismatch")
 
   and check cO cD cG e (tau, t) = 
+   let _ = dprint (fun () -> "check cO = " ^ Print.mctxToString cO) in
     checkW cO cD cG e (C.cwhnfCTyp (tau, t))
 
   and syn cO cD cG e = match e with 
@@ -611,15 +618,15 @@ in elSpineIW
 
               let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in  
 
-              (checkSchema cO cD cPsi ((Schema.get w).Schema.schema)  ;
+              (checkSchema cO cD cPsi (Schema.get_schema w)
                (* (tau', t') *)
-               (tau1, Cwhnf.id)
+             ; (tau1, Cwhnf.id)
               )
           | _ -> raise (Error "Context abstraction mismatch")
         end 
     | MApp (e, (phat, tM)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG e) with
-          | (TypPiBox (I.MDecl(_, tA, cPsi), tau), t) -> 
+          | (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t) -> 
                 (LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
                  (tau, MDot(MObj (phat, tM), t))
                 )
@@ -636,31 +643,11 @@ in elSpineIW
         let _ = checkBranch cO cD cG branch tAbox ttau in 
           checkBranches cO cD cG branches tAbox ttau
 
-(*  and checkBranch _cO _cD _cG _branch (_tA, _cPsi) (_tau, _t) = 
-    Printf.printf "WARNING: BRANCH CHECKING NOT IMPLEMENTED!"
-*)
-
-
   and checkBranch cO cD cG branch (tA, cPsi) (tau, t) = 
-    let _ = Printf.printf "BEGIN: Checking branch: \n %s ; \n %s \n |- \n %s \n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD))
-         (Pretty.Int.DefaultPrinter.gctxToString (Cwhnf.normCtx  cG))
-         (Pretty.Int.DefaultPrinter.branchToString branch) in 
-
    match branch with
    | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->  
-       let _ = Printf.printf "Checking Pattern Term is well-typed: \n %s ; %s   |-    %s <= %s \n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString cD1) 
-         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
-         (Pretty.Int.DefaultPrinter.normalToString tM1)
-         (Pretty.Int.DefaultPrinter.typToString tA1) in 
 
       let _ = LF.check cO cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id) in 
-       let _ = Printf.printf "DONE: Pattern Term  \n %s ; %s   |-    %s <= %s  is well-typed.\n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString cD1)
-         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
-         (Pretty.Int.DefaultPrinter.normalToString tM1)
-         (Pretty.Int.DefaultPrinter.typToString tA1) in 
 
       let d1 = length cD1 in 
       let _d  = length cD in 
@@ -669,59 +656,34 @@ in elSpineIW
       let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
       let phat = dctxToHat cPsi in 
 
-     let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
-         (Pretty.Int.DefaultPrinter.dctxToString cPsi)
-         (Pretty.Int.DefaultPrinter.typToString tA)
-         (Pretty.Int.DefaultPrinter.dctxToString cPsi1)
-         (Pretty.Int.DefaultPrinter.typToString tA1) in 
-  
-      let _    = Unify.unifyDCtx (I.Empty) (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
-      let _     = Printf.printf "Unification of dctx done \n" in 
-      let _    = Unify.unifyTyp (I.Empty) (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
-      let _     = Printf.printf "Unification of type done \n" in 
+      let _    = Unify.unifyDCtx (I.Empty) 
+                                 (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
+      let _    = Unify.unifyTyp (I.Empty) 
+                                (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in 
 
-      let  _   = Printf.printf "Resulting msub from unifying type annotations in branches: \n %s\n\n" 
-        (Pretty.Int.DefaultPrinter.msubToString tc) in 
-
-      let (tc', cD1') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
+      let (tc', cD1'') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
 
 
-      let _    = Printf.printf "abstractMSub done \n" in 
-
-      let cD1_n  = (Cwhnf.normMCtx cD1') in  
-
-      let  _   = Printf.printf "Resulting msub after abstraction: \n %s   |-   %s    <=  %s \n\n" 
-         (Pretty.Int.DefaultPrinter.mctxToString cD1_n)
-        (Pretty.Int.DefaultPrinter.msubToString tc')  
-         (Pretty.Int.DefaultPrinter.mctxToString (Context.append cD cD1))  in 
-
-      let _    = Printf.printf "splitting msub ... \n" in 
       let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
-      let _    = Printf.printf "split msub done \n" in 
-      let cG1 = C.cwhnfCtx (cG, t'') in  
-      let _    = Printf.printf "cwhnfCtx (cG, t'') done : cG1 = %s\n" 
-        (Pretty.Int.DefaultPrinter.gctxToString cG1)
-      in 
 
-      let cGn = (Cwhnf.normCtx cG1) in 
-      let _    = Printf.printf "norm cG1 done \n" in 
-      let e1' = C.cnormExp (e1, tc') in 
-      let _    = Printf.printf "norm e1 done \n" in 
+
+     (* let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
+         (Pretty.Int.DefaultPrinter.dctxToString (Cwhnf.cnormDCtx (cPsi, t'')))
+         (Pretty.Int.DefaultPrinter.typToString (Cwhnf.cnormTyp (tA, t'')))
+         (Pretty.Int.DefaultPrinter.dctxToString (Cwhnf.cnormDCtx (cPsi1, tc')))
+         (Pretty.Int.DefaultPrinter.typToString (Cwhnf.cnormTyp (tA1, tc'))) in 
+     *)
+      let e1' = begin try Cwhnf.cnormExp (e1, tc')  
+                 with Cwhnf.FreeMVar (I.FMVar(u, _ )) -> 
+                   raise (Error ("Encountered free meta-variable " ^ (R.render_name u)))
+                end  in
+
+      let cG1 = C.cwhnfCtx (cG, t'') in   
 
       let tau' = (tau, C.mcomp t'' t)  in 
-      let taun = (C.cnormCTyp tau') in  
 
-      let _ = Printf.printf "\n Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
-         (Pretty.Int.DefaultPrinter.mctxToString (Cwhnf.normMCtx cD1_n))
-         (Pretty.Int.DefaultPrinter.gctxToString cGn)
-         (Pretty.Int.DefaultPrinter.expChkToString e1')
-         (Pretty.Int.DefaultPrinter.compTypToString  taun) in 
-
-      (* NOTE: cnormCtx and cnormExp not implemented
-         -- should handle computation-level expressions in whnf so we don't need to normalize here -bp
-      *)
-        check cO cD1' cG1 e1' tau'
-
+         check cO cD1'' cG1 e1' tau' 
+          
 
   (* checkTypeAgainstSchema cO cD cPsi tA (elements : sch_elem list)
   *)
@@ -735,8 +697,8 @@ in elSpineIW
       match (some_part, block_part) with
         (cSomeCtx, I.SigmaDecl(_name, I.SigmaLast elem1)) ->
           let dctx = projectCtxIntoDctx cSomeCtx in 
-          let ssss = ctxToSub dctx in
-          let _ = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString ssss) in
+          let dctxSub = ctxToSub dctx in
+          let _ = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString dctxSub) in
       let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
           let normedA = Cwhnf.cnormTyp (tA, subD)
           and normedElem1 = Cwhnf.cnormTyp (elem1, subD) in
@@ -746,10 +708,10 @@ in elSpineIW
 ;
             dprint (fun () -> "***Unify.unifyTyp ("
                         ^ "\n   dctx = " ^ Print.dctxToString dctx
-                        ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString ssss ^ " ] "
-                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString ssss ^ " ] "
+                        ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString dctxSub ^ " ] "
+                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString dctxSub ^ " ] "
                         )
-          ; try Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, ssss))
+          ; try Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, dctxSub))
             with exn ->  (print_string ("Type " ^ Print.typToString tA ^ " doesn't unify with " ^ Print.typToString elem1 ^ "\n") ; flush_all()
                          ; raise exn)
     in
@@ -761,22 +723,57 @@ in elSpineIW
           with
             _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
-  and checkSchema cO cD cPsi (I.Schema elements as schema) = 
-     dprint (fun () -> "checkSchema " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema);
-     print_string "\n WARNING: Schema checking not fully implemented\n" 
-       ; 
-     match cPsi with
-     |  I.Null -> ()
-     |  I.CtxVar _phi -> () (* WRONG *)
-     |  I.DDec (cPsi', decl) ->
-          begin
-            checkSchema cO cD cPsi' schema;
-            match decl with
-               I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA elements
-          end
+(* The rule for checking a context against a schema is
 
-    
-end 
+    psi::W \in \Omega
+    -----------------
+     ... |- psi <= W
+
+so checking a context element against a context element is just equality. *)
+  and checkElementAgainstElement _cO _cD elem1 elem2 =
+    let result =
+      Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in
+    let _ = dprint (fun () -> "checkElementAgainstElement "
+                      ^Print.schemaToString (I.Schema[elem1])
+                      ^" <== "
+                      ^Print.schemaToString (I.Schema[elem2])
+                      ^ ":  "
+                      ^ string_of_bool result)
+    in result
+
+  (* checkElementAgainstSchema cO cD sch_elem (elements : sch_elem list)
+  *)
+  and checkElementAgainstSchema cO cD sch_elem elements =
+    List.exists (checkElementAgainstElement cO cD sch_elem) elements
+
+  and checkSchema cO cD cPsi (I.Schema elements as schema) = 
+     dprint (fun () -> "checkSchema " ^ Print.mctxToString cO ^ " ... " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema);
+     print_string "\n WARNING: Schema checking not fully implemented\n" 
+   ; match cPsi with
+     | I.Null -> ()
+     | I.CtxVar phi ->
+         let rec lookupCtxVar = function
+           | I.Empty -> raise (Error ("Context variable not found"))
+           | I.Dec(cO, I.CDecl(psi, schemaName)) -> function
+               | I.CtxName phi  when  psi = phi  ->  (psi, schemaName)
+               |  (I.CtxName _phi) as ctx_var  ->  lookupCtxVar cO ctx_var
+               |  I.CtxOffset 1  ->  (psi, schemaName)
+               |  I.CtxOffset n  ->  lookupCtxVar cO (I.CtxOffset (n-1))
+         in
+         let lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi) in
+         let I.Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
+           if List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements
+           then ()
+           else raiseErr (E.CtxVarMismatch (phi, schema))
+
+     | I.DDec (cPsi', decl) ->
+         begin
+           checkSchema cO cD cPsi' schema
+         ; match decl with
+           | I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA elements
+         end
+  
+end
 
 module Sgn = struct
 

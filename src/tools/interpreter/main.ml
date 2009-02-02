@@ -16,7 +16,7 @@ let usage () =
                 ^ "    +d      turn all debugging on\n"
   in
     fprintf stderr
-      "Usage: %s [options] file1 ... file-n\noptions:\n%s"
+      "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
       Sys.argv.(0)   options
   ; exit 2
 
@@ -29,16 +29,39 @@ let rec process_options = function
   | [] -> []
   | arg :: rest ->
       let first = String.get arg 0 in
-        if first == '-' or first == '+' then
+        if first = '-' or first = '+' then
          (process_option arg; process_options rest)
         else  (* reached end of options: return this and remaining arguments *)
           arg :: rest
+
+(* File specification. *)
+type spec =
+  | Positive   (* "filename": should be processed with no errors *)
+  | Negative   (* "@filename": should yield errors *)
+  (* "Negative" is too broad; should distinguish type errors from internal failures, at least! *)
+
+let process_name name =
+  let rest = String.sub name 1 (String.length name - 1) in
+    if String.get name 0 = '@' then
+      (print_string "NEGATIVE\n"; (Negative, rest))
+(* else if String.get name 0 = ...... then
+      (......, rest)
+*)
+    else
+      (Positive, name)
 
 let main () =
   if Array.length Sys.argv < 2 then
     usage ()
   else
-    let per_file errors file_name =
+    let per_file (errors, unsound, incomplete) file_name =
+      let (spec, file_name) = process_name file_name in
+      let return actual = match (spec, actual) with
+        | (Positive, Positive) -> (errors, unsound, incomplete)
+        | (Positive, Negative) -> (errors + 1, unsound, incomplete + 1)
+        | (Negative, Positive) -> (errors, unsound + 1, incomplete)
+        | (Negative, Negative) -> (errors + 1, unsound, incomplete)
+      in
       let rec print_sgn printer = function
         | []            -> ()
         | decl :: decls ->
@@ -63,14 +86,14 @@ let main () =
                 ; printf "\n## Double Checking Successful! ##\n\n" *)
                   (* clean up for the next file *)
                   Store.clear () 
-                ; errors
+                ; return Positive
                 with
                   | Whnf.Error err ->
                       Format.fprintf
                         Format.std_formatter
                         "\n!! Error during weak-head normalization !!\n\n%a\n@?\n"
                         Pretty.Error.DefaultPrinter.fmt_ppr err
-                      ; errors + 1
+                      ; return Negative
 
                   | Check.LF.Error err ->
                        printf "\n!! Error during typechecking !!\n\n%s\n\n" err
@@ -78,7 +101,7 @@ let main () =
                           Format.std_formatter
                           "\n!! Error during Type-Checking !!\n\n%a\n\n@?"
                            Pretty.Error.DefaultPrinter.Check.fmt_ppr err; *)
-                     ; errors + 1
+                     ; return Negative
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
               printf "Parse Error: \n\t%s\nLocation:\n\t" exn;
@@ -86,7 +109,7 @@ let main () =
               Format.fprintf Format.std_formatter "@?";
               print_newline ();
               print_newline ();
-              errors + 1
+              return Negative
 
           | Reconstruct.Error err ->
               Format.fprintf
@@ -95,7 +118,16 @@ let main () =
                 "Error (Reconstruction): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              errors + 1
+              return Negative
+
+          | Check.Comp.Err err ->
+              Format.fprintf
+                Format.std_formatter
+                (* TODO print location as "filename:line1.col1-line2-col2" *)
+                "Error (Checking): %a\n@?"
+                Pretty.Error.DefaultPrinter.fmt_ppr err;
+              print_newline ();
+              return Negative
 
           | Context.Error err ->
               Format.fprintf
@@ -103,17 +135,16 @@ let main () =
                 "Error (Context): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              errors + 1
+              return Negative
 
     (* Iterate the process for each file given on the command line *)
     in
     let args = List.tl (Array.to_list Sys.argv) in
     let args = process_options args in
     let file_count  = List.length args in
-    let error_count = List.fold_left per_file
-                         0 (* initial number of errors *)
+    let (error_count, unsound_count, incomplete_count) = List.fold_left per_file
+                         (0, 0, 0) (* initial number of: errors, unsounds, incompletes *)
                          args in
-
     let plural count what suffix =
       string_of_int count ^ " "
       ^ (if count = 1 then
@@ -121,15 +152,19 @@ let main () =
          else
            what ^ suffix) in
 
-    let status_code = if error_count = 0 then 0 else 1
+    let status_code = if unsound_count + incomplete_count = 0 then 0 else 1
     and message     = 
-      if file_count = 1 && error_count = 0 then
-        ""
-      else "#### " ^
-        (if file_count <= 1 then "" 
-         else plural file_count "file" "s" ^ ", ")
-        ^ plural error_count "error" "s"
+      let full =
+        let sound = unsound_count = 0
+        and complete = incomplete_count = 0 in
+       (if sound && complete then "#      OK!"
+        else (if sound then "" else "####    " ^ plural unsound_count "erroneously accepted (unsound)" "" ^ (if complete then "" else ", "))
+          ^(if complete then "" else "####    " ^ plural incomplete_count "erroneously rejected (incomplete)" ""))
         ^ "\n"
+      in match (file_count, error_count, unsound_count + incomplete_count) with
+         | (1, 0, 0) -> ""
+         | (1, 1, 1) -> "\n#### 1 error\n"
+         | (_, _, _) -> "\n#### " ^ plural file_count "file" "s" ^ ":\n" ^ full
     in
       print_string message;
       exit status_code

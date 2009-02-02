@@ -24,9 +24,11 @@ module Comp : sig
   open Syntax.Int
   open Syntax.Int.Comp
 
-  val check       : LF.mctx -> LF.mctx -> gctx -> exp_chk -> tclo -> unit
-  val syn         : LF.mctx -> LF.mctx -> gctx -> exp_syn -> tclo
+  exception Err of Error.error
 
+  val check       : LF.mctx -> LF.mctx -> gctx -> exp_chk -> tclo -> unit
+  val checkBranch : LF.mctx -> LF.mctx -> gctx -> branch -> LF.typ * LF.dctx -> tclo -> unit
+  val syn         : LF.mctx -> LF.mctx -> gctx -> exp_syn -> tclo
   val checkSchema : LF.mctx -> LF.mctx -> LF.dctx -> LF.schema -> unit
   val checkTyp    : LF.mctx -> LF.mctx -> typ                  -> unit
 

@@ -41,7 +41,6 @@ exception Violation of string
 
 type reconType = PiboxRecon | PiRecon
 
-let freeMVars = ref (Int.LF.Empty)  
 
 let rec lookup cG k = match (cG, k) with
   | (Int.LF.Dec(_cG', (_,  tau)), 1) ->  tau
@@ -1142,8 +1141,7 @@ and recTermW recT cD cPsi sM sA = match (sM, sA) with
         begin
           try 
             Unify.unifyTyp cD (Context.dctxToHat cPsi, sP', sA) 
-          with Unify.Error s -> (Printf.printf "Non unifiable: %s \n %s    =/= \n %s " 
-                                   s
+          with _ -> (Printf.printf "Non unifiable:  \n %s    =/= \n %s \n \n" 
                                    (P.typToString (Whnf.normTyp sP')) 
                                    (P.typToString (Whnf.normTyp sA));
                                  raise (Error (TypMismatch (cPsi, sA, sP'))))
@@ -1423,6 +1421,7 @@ let rec genMApp (i,  tau_t) = genMAppW (i,  Cwhnf.cwhnfCTyp tau_t)
 and genMAppW   (i, tau_t)  = match tau_t with 
   | (Int.Comp.TypPiBox ((Int.LF.MDecl(_, tA, cPsi),  Int.Comp.Implicit ), tau), theta) -> 
       let psihat  = Context.dctxToHat cPsi in 
+
       let tM'     = Whnf.etaExpandMV (C.cnormDCtx (cPsi, theta))  (C.cnormTyp (tA,theta), LF.id) LF.id in
         genMApp ((Int.Comp.MApp (i, (psihat, tM'))) ,  (tau, Int.Comp.MDot(Int.Comp.MObj (psihat, tM'), theta)))
 
@@ -1557,8 +1556,8 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(a, _spine) , _cPsi) = mat
       let psihat  =  Context.dctxToHat cPsi1 in 
 
       let tA'     = elTyp PiboxRecon  (* cO *) cD' cPsi' a in 
-      let tM'     = elTerm PiboxRecon (* cO *) cD' cPsi' m (tA', LF.id) in    
-        
+      let tM'     = elTerm PiboxRecon (* cO *) cD' cPsi' m (tA', LF.id) in                  
+
       let _ = recTerm PiboxRecon (* cO *) cD' cPsi' (tM', LF.id) (tA', LF.id) in 
 
       let (cD1', cPsi1', (phat', tM1'), tA1') =
@@ -1583,11 +1582,26 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(a, _spine) , _cPsi) = mat
 
       let tR      = elTerm' PiboxRecon (* cO *) cD' cPsi' r  (tP0, LF.id) in 
 
+      (* let _       = Printf.printf "Elaborated pattern...\n" in   
+
+      let _ = Printf.printf "%s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+                  (P.mctxToString (Cwhnf.normMCtx cD'))
+                  (P.dctxToString cPsi')
+                  (P.normalToString tR)
+                  (P.typToString  tP0) in
+      *)
       let psihat  = Context.dctxToHat cPsi' in 
 
-      let _       = (freeMVars := Abstract.collectTerm' (psihat, tR)) in 
-
       let sP      = synTerm PiboxRecon (* cO *) cD' cPsi' (tR, LF.id) in   
+       
+      (*
+      let _       = Printf.printf "Reconstructed pattern...\n" in   
+      let _ = Printf.printf "%s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+                  (P.mctxToString (Cwhnf.normMCtx cD'))
+                  (P.dctxToString cPsi')
+                  (P.normalToString tR)
+                  (P.typToString  tP0) in
+      *)
 
       let _       = Unify.unifyTyp cD' (psihat, sP, (tP0, LF.id)) in 
 
@@ -1601,7 +1615,6 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(a, _spine) , _cPsi) = mat
 
       let _        = FMVar.clear () in
       let _        = FPVar.clear () in
-      let _        = freeMVars := Int.LF.Empty in 
 
       let e'     = elExp cO cD_i cG e (tau, theta_i) in
         Int.Comp.BranchBox (cD1', (phat', tR1', (tP1', cPsi1')), e') 
@@ -1734,13 +1747,14 @@ let rec checkW cO cD cG e ttau = match (e , ttau) with
   | (Int.Comp.Syn e, (tau, t)) ->
       let (i, tau_t') = syn cO cD cG e in 
       (* if C.convCTyp (tau,t) tau_t' then *)
-      try
+      try       
         Unify.unifyCompTyp cD (tau,t) (tau_t') ;
         (Int.Comp.Syn i)
-      with Unify.Error _ -> 
+      with  _ -> 
         (let  _ = Printf.printf "Synthesized type: %s \n Expected type %s\n" 
-           (P.compTypToString (Cwhnf.cnormCTyp (tau,t))) 
-           (P.compTypToString (Cwhnf.cnormCTyp tau_t')) in  
+                  (P.compTypToString (Cwhnf.cnormCTyp tau_t'))           
+                  (P.compTypToString (Cwhnf.cnormCTyp (tau,t))) 
+         in  
            raise (Violation "Type mismatch"))
 
 and check cO cD cG e (tau, t) =
@@ -1766,6 +1780,7 @@ and syn cO cD cG e = match e with
               let tau' = C.cnormCTyp (tau1, t) in  
 
               let e = check cO cD cG e2 (tau2', C.id) in  
+
               (* This is being on the safe side: Using (tau2, t) should work here *)
 
               (Int.Comp.Apply (i, e) , (tau', C.id))
@@ -1782,8 +1797,8 @@ and syn cO cD cG e = match e with
                    let t'   = Cwhnf.csub_msub cPsi 1 t in   *)
                 
               let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in
-                (* (tau', t') *)
                 (Int.Comp.CtxApp (i, cPsi) , (tau1, Cwhnf.id))
+
           | _ -> raise (Violation "Context abstraction mismatch")
         end
 
@@ -1791,8 +1806,10 @@ and syn cO cD cG e = match e with
       let (i, tau') = syn cO cD cG e in 
         begin match C.cwhnfCTyp tau' with
           | (Int.Comp.TypPiBox ((Int.LF.MDecl(_, tA, cPsi), _ (* Int.Comp.Explicit*) ), tau), t) ->               
-              (recTerm PiboxRecon cD (C.cnormDCtx (cPsi, t)) (tM, LF.id) (C.cnormTyp (tA, t), LF.id)
-              ; (Int.Comp.MApp (i, (phat, tM)) , (tau, Int.Comp.MDot(Int.Comp.MObj (phat, tM), t)))
+              (let _ = recTerm PiboxRecon cD (C.cnormDCtx (cPsi, t)) (tM, LF.id) (C.cnormTyp (tA, t), LF.id) in 
+               let t' = Int.Comp.MDot(Int.Comp.MObj (phat, tM), t) in 
+                 
+                 (Int.Comp.MApp (i, (phat, tM)) , (tau, t'))
               )
           | _ -> raise (Violation "MLam mismatch")
         end
@@ -1823,10 +1840,23 @@ and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
         let t' = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
         let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *) 
 
-        let _    = Unify.unifyDCtx (Int.LF.Empty) 
-                                   (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in 
-        let _    = Unify.unifyTyp (Int.LF.Empty) 
-                                  (phat, (C.cnormTyp (tA, t'), LF.id), (C.cnormTyp (tA1, tc), LF.id))  in 
+        let _  = begin try 
+                    (Unify.unifyDCtx (Int.LF.Empty) 
+                                    (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) 
+                   ; Unify.unifyTyp (Int.LF.Empty) 
+                                  (phat, (C.cnormTyp (tA, t'), LF.id), (C.cnormTyp (tA1, tc), LF.id)))
+                 with 
+                     _ -> (let _ = Printf.printf "Unify ERROR:"   in
+                                         let _ = Printf.printf "Inferred pattern type : %s  |- %s \n Expected pattern type: %s |- %s" 
+                                           (P.dctxToString (C.cnormDCtx (cPsi1, tc))) 
+                                           (P.typToString (C.cnormTyp (tA1, tc)))
+                                           (P.dctxToString  (C.cnormDCtx (cPsi, t'))) 
+                                           (P.typToString (C.cnormTyp (tA, t')))
+                                         in   
+                                            raise (Violation "Pattern Type Clash")
+                                        )
+                 end
+        in 
 
         let (tc', cD1'') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *) 
 
@@ -1927,9 +1957,9 @@ let recSgnDecl d = match d with
 
 
   | Ext.Sgn.Rec (_, f, tau, e) ->
-      (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in *)
+      (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in  *)
       let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) tau in
-      let _       = Printf.printf "\n Reconstruct function: %s  \n" f.string_of_name  in
+      let _       = Printf.printf "\n Reconstruct function: %s  \n" f.string_of_name  in 
       let cD      = Int.LF.Empty in
       let cO      = Int.LF.Empty in
 

@@ -754,6 +754,7 @@ module Make (T : TRAIL) : UNIFY = struct
               | (true, _) ->
                   (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
                   begin try
+
                     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
                     let tM2' = trail (fun () -> prune cD0 (phat, sM2, ss1, MVarRef r1)) in 
                     (* sM2 = [ss1][s2]tM2 *) 
@@ -796,8 +797,8 @@ module Make (T : TRAIL) : UNIFY = struct
         let t' = comp t s2 in
           if isPatSub t' then
             try
-              let ss = invert (Whnf.normSub t') in
 
+              let ss = invert (Whnf.normSub t') in
               let sM1' = trail (fun () -> prune cD0 (phat, sM1, ss, MVarRef r)) in
                 instantiateMVar (r, sM1', !cnstrs) 
             with
@@ -1078,6 +1079,7 @@ module Make (T : TRAIL) : UNIFY = struct
           let phat  = Context.dctxToHat cPsi1 in 
           (unifyDCtx cD0 cPsi1 cPsi2 ; 
            unifyTyp' cD0 (phat, (tA1, id) ,  (tA2, id)))
+      | _ -> raise (Unify "Context clash")
 
 
    (* **************************************************************** *)

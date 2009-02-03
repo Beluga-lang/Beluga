@@ -1,6 +1,8 @@
 tp: type.
 nat: tp.
 bool: tp.
+arr : tp -> tp -> tp.
+
 
 exp : tp -> type.
 z   : exp nat.
@@ -8,6 +10,11 @@ suc : exp nat -> exp nat.
 and : exp bool -> exp bool -> exp bool.
 tt  : exp bool.
 ff  : exp bool.
+
+app:  exp (arr T T') -> exp T -> exp T'.
+
+lam : (exp T -> exp T') -> exp (arr T T').
+
 
 opt: type.
 NONE: opt.
@@ -31,6 +38,20 @@ FN g  => % mlam T  =>
   | box(g . and U![id]! V![id]!)  => 
        (case FVnat [g] (box(g . U![id]!)) of
           box(g . NONE)   => FVnat [g] (box(g . V![id]!))
+        | box(g . SOME  #p![id]!)  => box(g . SOME  #p![id]!))
 
-   | box(g . SOME  #p![id]!)  => box(g . SOME  #p![id]!))
+  | box(g . app U![id]! V![id]!)  => 
+       (case FVnat [g] (box(g . U![id]!)) of
+          box(g . NONE)   => FVnat [g] (box(g . V![id]!))
+
+        | box(g . SOME  #p![id]!)  => box(g . SOME  #p![id]!))
+
+
+% CAUSES ERROR HERE: because the recursive call will return opt[g, x:exp _] 
+% but the overall function requires opt[g] 
+% THIS IS THE CORRECT BEHAVIOR
+
+  | box (g . lam (\x . U![id,x]!)) => 
+     FVnat [g, x:exp _ ] box(g, x. U![id,x]!)
+
 );

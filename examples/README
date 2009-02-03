@@ -1,0 +1,90 @@
+
+simple
+--------
+This directory contains simply-typed examples. 
+
+- copy-simple.{bel,rec}
+
+   Copying recursively lambda-terms.
+
+
+- eval-sub-1.{bel,rec}
+
+   Substitution-based interpreter for a simple
+   functional language containing z, suc, letn, letv,
+   app, lam and fix.
+
+
+- arith.rec
+
+  Definition of natural numbers using z and sucessor;
+  contains simple arithmetic functions such as plus.
+
+
+depend
+------
+
+- cntvar.{bel,rec}
+
+  Variable counting example containing typed expressions z, suc, tt, add
+  and letv. 
+
+  This example illustrates that reconstructing all implicit type
+  arguments in patterns is slightly limitting, since we may learn
+  further information about some of them in the actual branch.
+
+- copy.{bel,rec} 
+
+   Copying recursively typed lambda-terms.
+
+- eval-sub-tp.rec
+
+  Substitution-based interpreter containing booleans, numbers, 
+  primitive operatorors and Let-expressions.
+
+
+- fvnat.{bel,rec}
+  
+  Checks if a typed expression contains a free variable.
+
+- tpevalsub.rec
+
+  Substitution-based interpreter containing booleans, numbers, 
+  primitive operator eq, If-expressions and Let-expressions.
+
+- tps.rec
+
+  Type preservation proof for Mini-ML
+
+- vsound.{rec,bel}
+ 
+  Value soundness for Mini-ML
+
+
+
+Notworking
+------------------
+
+- tpcert.bel 
+   Not working because Sigma-types are not handled
+   
+
+- cut-elim.bel
+    Twelf Proof is not converted into functional program
+    may also require sigma-types?
+
+- eq-proof.bel
+    Should be converted to new syntax; seems to require sigma-types
+    NOTE: current definition of schema W is WRONG. It should be
+
+     schema W = some [] block {x:exp}eq x x; 
+
+- tpeval.bel
+
+    No handling of substitution variables yet.
+
+
+- fol-handbool.bel
+
+    Needs context coercions, reconstruction, sigma-types
+

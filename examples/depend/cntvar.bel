@@ -54,10 +54,10 @@ FN g => mlam t => mlam tt => fn e =>
           plus (cntV [g] <. T'![.]! >     < . T1![.]! >    box(g,x . U1![id, x]!)) 
                (cntV [g, y:(exp T1![.]!)] < . T'![.]! >    < . T2![.]! >   box(g,y,x . U2![id, x, y]!))
 
-%        | {T'::tp[.]} {U::(exp nat)[g, x:(exp T'!.!)]} {W::(exp nat)[g, x:(exp T'!.!)]}
-%          box(g,x . add U!id, x! W!id, x!) : (exp nat)[g, x: exp T'!.!] =>
-%          plus (cntV [g] <. T'!.!> < . nat> box(g,x . U!id, x!))
-%               (cntV [g] <. T'!.!> < . nat> box(g,x . W!id, x!))
+        | {T'::tp[.]} {U::(exp nat)[g, x:(exp T'![.]!)]} {W::(exp nat)[g, x:(exp T'![.]!)]}
+          box(g,x : exp T1![.]! . add U![id, x]! W![id, x]!) : (exp nat)[g, x: exp T'![.]!] =>
+          plus (cntV [g] <. T'![.]!> < . nat > box(g,x . U![id, x]!))
+               (cntV [g] <. T'![.]!> < . nat > box(g,x . W![id, x]!))
 
 );
 

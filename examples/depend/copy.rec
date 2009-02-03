@@ -2,9 +2,7 @@ tp: type.
 arrow: tp -> tp -> tp.
 
 term : tp -> type.
-lam  : % {T:tp}{T':tp}
-     % {T:tp}
-     (term T -> term T') -> term (arrow T T').
+lam  : (term T -> term T') -> term (arrow T T').
 
 schema W = some [T:tp] block term T;
 

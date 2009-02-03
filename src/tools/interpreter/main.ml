@@ -104,27 +104,29 @@ let main () =
                      ; return Negative
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-              printf "Parse Error: \n\t%s\nLocation:\n\t" exn;
               Parser.Grammar.Loc.print Format.std_formatter loc;
+              Format.fprintf Format.std_formatter ":\n";
+              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
               Format.fprintf Format.std_formatter "@?";
-              print_newline ();
               print_newline ();
               return Negative
 
           | Reconstruct.Error err ->
+              (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
+              Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter
-                (* TODO print location as "filename:line1.col1-line2-col2" *)
-                "Error (Reconstruction): %a\n@?"
+                "Error (Reconstruction): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               return Negative
 
           | Check.Comp.Err err ->
+              (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
+              Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter
-                (* TODO print location as "filename:line1.col1-line2-col2" *)
-                "Error (Checking): %a\n@?"
+                "Error (Checking): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               return Negative

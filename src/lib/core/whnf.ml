@@ -62,14 +62,14 @@ let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
 let rec lowerMVar' cPsi sA' = match sA' with
   | (PiTyp (cD', tA'), s') ->
       let (u', tM) = lowerMVar' (DDec (cPsi, LF.decSub cD' s')) (tA', LF.dot1 s') in
-        (u', Lam (Id.mk_name None, tM))
+        (u', Lam (None, Id.mk_name None, tM))
 
   | (TClo (tA, s), s') ->
       lowerMVar' cPsi (tA, LF.comp s s')
 
   | (Atom (a, tS), s') ->
       let u' = newMVar (cPsi, Atom (a, SClo (tS, s'))) in
-        (u', Root (MVar (u', LF.id), Nil)) (* cvar * normal *)
+        (u', Root (None, MVar (u', LF.id), Nil)) (* cvar * normal *)
 
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
@@ -134,37 +134,37 @@ and lowerMVar = function
  * Similar invariants for norm, normSpine.
  *)
 let rec norm (tM, sigma) = match tM with
-  | Lam (y, tN) ->
-      Lam (y, norm (tN, LF.dot1 sigma))
+  | Lam (loc, y, tN) ->
+      Lam (loc, y, norm (tN, LF.dot1 sigma))
 
   | Clo (tN, s) ->
       norm (tN, LF.comp s sigma)
 
-  | Root (BVar i, tS) ->
+  | Root (loc, BVar i, tS) ->
       begin match LF.bvarSub i sigma with
         | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
-        | Head (BVar k) -> Root (BVar k, normSpine (tS, sigma))
-        | Head head     -> norm (Root (head, normSpine (tS, sigma)), LF.id)
+        | Head (BVar k) -> Root (loc, BVar k, normSpine (tS, sigma))
+        | Head head     -> norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
             (* Undef should not happen ! *)
       end
 
   (* Meta-variables *)
 
-  | Root (MVar (Offset _ as u, r), tS) ->
-      Root (MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+  | Root (loc, MVar (Offset _ as u, r), tS) ->
+      Root (loc, MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
-  | Root (MVar (Inst ({ contents = Some tM}, _, _, _), r), tS) ->
+  | Root (_, MVar (Inst ({ contents = Some tM}, _, _, _), r), tS) ->
       (* constraints associated with u must be in solved form *)
       reduce (tM, LF.comp r sigma) (normSpine (tS, sigma))
 
-  | Root (MVar (Inst ({contents = None}, _, Atom _, _) as u, r), tS) ->
+  | Root (loc, MVar (Inst ({contents = None}, _, Atom _, _) as u, r), tS) ->
       (* meta-variable is of atomic type; tS = Nil *)
-      Root (MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+      Root (loc, MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
-  | Root (MVar (Inst ({contents = None} as r, cPsi, TClo (tA, s'), cnstr), s), tS) ->
-      norm (Root (MVar (Inst (r, cPsi, normTyp (tA, s'), cnstr), s), tS), sigma)
+  | Root (loc, MVar (Inst ({contents = None} as r, cPsi, TClo (tA, s'), cnstr), s), tS) ->
+      norm (Root (loc, MVar (Inst (r, cPsi, normTyp (tA, s'), cnstr), s), tS), sigma)
 
-  | Root (MVar (Inst ({contents = None}, _, _tA, _) as u, _r), _tS) ->
+  | Root (_, MVar (Inst ({contents = None}, _, _tA, _) as u, _r), _tS) ->
       (* Meta-variable is not atomic and tA = Pi x:B1.B2
        * lower u, and normalize the lowered meta-variable
        *)
@@ -172,59 +172,59 @@ let rec norm (tM, sigma) = match tM with
         norm (tM, sigma)
 
   (* Parameter variables *)
-  | Root (FMVar (u, r), tS) ->
-      Root (FMVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+  | Root (loc, FMVar (u, r), tS) ->
+      Root (loc, FMVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
   (* Parameter variables *)
-  | Root (PVar (Offset _ as p, r), tS) ->
-      Root (PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+  | Root (loc, PVar (Offset _ as p, r), tS) ->
+      Root (loc, PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
 
   (* Parameter variables *)
-  | Root (FPVar (p, r), tS) ->
-      Root (FPVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+  | Root (loc, FPVar (p, r), tS) ->
+      Root (loc, FPVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
-  | Root (PVar (PInst ({ contents = Some (BVar i)}, _, _, _), r), tS) ->
+  | Root (loc, PVar (PInst ({ contents = Some (BVar i)}, _, _, _), r), tS) ->
       begin match LF.bvarSub i r with
         | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
-        | Head (BVar x) -> Root (BVar x, normSpine (tS, sigma))
-        | Head (head)   -> norm (Root (head, normSpine (tS, sigma)), LF.id)
+        | Head (BVar x) -> Root (loc, BVar x, normSpine (tS, sigma))
+        | Head (head)   -> norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
       end
 
-  | Root (PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS) ->
-      norm (Root (PVar (q, LF.comp r' r), tS), sigma)
+  | Root (loc, PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS) ->
+      norm (Root (loc, PVar (q, LF.comp r' r), tS), sigma)
       (* where p::tA[cPsi]
        * and  cD; cPsi' |- r : cPsi
        * and  cD; cPsi' |- p[r]      -> [r]tA
        * and  cD; cPsi  |- q[r']     ->    tA
        * and  cD; cPsi' |- q[r' o r] -> [r]tA
        *)
-  | Root (PVar (PInst ({ contents = None}, _, _, _) as p, r), tS) ->
-      Root (PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+  | Root (loc, PVar (PInst ({ contents = None}, _, _, _) as p, r), tS) ->
+      Root (loc, PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
   (* Constants *)
-  | Root (Const c, tS) ->
-      Root (Const c, normSpine (tS, sigma))
+  | Root (loc, Const c, tS) ->
+      Root (loc, Const c, normSpine (tS, sigma))
 
   (* Projections *)
-  | Root (Proj (BVar i, k), tS) ->
+  | Root (loc, Proj (BVar i, k), tS) ->
       begin match LF.bvarSub i sigma with
-        | Head (BVar j)      -> Root (Proj (BVar j, k), normSpine (tS, sigma))
-        | Head (PVar (p, s)) -> Root (PVar (p, s)     , normSpine (tS, sigma))
+        | Head (BVar j)      -> Root (loc, Proj (BVar j, k), normSpine (tS, sigma))
+        | Head (PVar (p, s)) -> Root (loc, PVar (p, s)     , normSpine (tS, sigma))
             (* other cases are impossible -- at least for now -bp *)
       end
 
-  | Root (Proj (PVar (Offset _i as q, s), k), tS) ->
-      Root (Proj (PVar (q, LF.comp s sigma), k), normSpine (tS, sigma))
+  | Root (loc, Proj (PVar (Offset _i as q, s), k), tS) ->
+      Root (loc, Proj (PVar (q, LF.comp s sigma), k), normSpine (tS, sigma))
 
-  | Root (Proj (PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), s), k), tS) ->
-      norm (Root (Proj (PVar (q, LF.comp r' s), k), tS), sigma)
+  | Root (loc, Proj (PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), s), k), tS) ->
+      norm (Root (loc, Proj (PVar (q, LF.comp r' s), k), tS), sigma)
 
-  | Root (Proj (PVar (PInst ({contents = None}, _, _, _) as q, s), k), tS) ->
-      Root (Proj (PVar (q, normSub (LF.comp s sigma)), k), normSpine (tS, sigma))
+  | Root (loc, Proj (PVar (PInst ({contents = None}, _, _, _) as q, s), k), tS) ->
+      Root (loc, Proj (PVar (q, normSub (LF.comp s sigma)), k), normSpine (tS, sigma))
 
-  | Root (FVar x, tS) ->
-      Root(FVar x, normSpine (tS, sigma))
+  | Root (loc, FVar x, tS) ->
+      Root (loc, FVar x, normSpine (tS, sigma))
 
 
 and normSpine (tS, sigma) = match tS with
@@ -238,9 +238,9 @@ and normSpine (tS, sigma) = match tS with
  *  cPsi |  s  : cPsi''      cPsi'' |- tM <= tA''       [s]tA'' = tA'
  *)
 and reduce sM spine = match (sM, spine) with
-  | ((Root (_, _) as root, s), Nil)    -> norm (root, s)
-  | ((Lam (_y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
-  | ((Clo (tM, s'), s), tS)            -> reduce (tM , LF.comp s' s) tS
+  | ((Root (_, _, _) as root, s), Nil)    -> norm (root, s)
+  | ((Lam (_, _y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
+  | ((Clo (tM, s'), s), tS)               -> reduce (tM , LF.comp s' s) tS
       (* other cases are impossible *)
 
 
@@ -251,8 +251,8 @@ and normSub s = match s with
 and normFt ft = match ft with
   | Obj tM ->
       begin match norm (tM, LF.id) with
-        | Root(BVar k, Nil) -> Head (BVar k)
-        | tN                -> Obj (tN)
+        | Root (_, BVar k, Nil) -> Head (BVar k)
+        | tN                    -> Obj (tN)
       end
   | Head (BVar _k)                -> ft
   | Head (FVar _k)                -> ft
@@ -344,28 +344,26 @@ let rec normDCtx cPsi = match cPsi with
  *  Similar invariants for whnf, whnfTyp.
  *)
 let rec whnf sM = match sM with
-  | (Lam _, _s)                -> sM
+  | (Lam _, _s) -> sM
 
-  | (Clo (tN, s), s')          -> whnf (tN, LF.comp s s')
+  | (Clo (tN, s), s') -> whnf (tN, LF.comp s s')
 
-  | (Root (BVar i, tS), sigma) ->
+  | (Root (loc, BVar i, tS), sigma) ->
       begin match LF.bvarSub i sigma with
-        | Obj tM    -> whnfRedex ((tM, LF.id), (tS,sigma))
-        | Head (BVar k) -> (Root(BVar k, SClo(tS,sigma)), LF.id)
-        | Head head     ->  whnf (Root(head, SClo(tS,sigma)), LF.id)
+        | Obj tM        -> whnfRedex ((tM, LF.id), (tS, sigma))
+        | Head (BVar k) -> (Root (loc, BVar k, SClo (tS,sigma)), LF.id)
+        | Head head     -> whnf (Root (loc, head, SClo (tS,sigma)), LF.id)
             (* Undef should not happen! *)
       end
 
   (* Meta-variable *)
-  | (Root (MVar (Offset _k as u, r), tS), sigma) ->
-      (Root (MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+  | (Root (loc, MVar (Offset _k as u, r), tS), sigma) ->
+      (Root (loc, MVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
+  | (Root (loc, FMVar (u, r), tS), sigma) ->
+      (Root (loc, FMVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
-  | (Root (FMVar (u, r), tS), sigma) ->
-      (Root (FMVar (u, LF.comp r sigma), SClo (tS, sigma)), LF.id)
-
-
-  | (Root (MVar (Inst ({contents = Some tM}, _cPsi, _tA, _) as _u, r), tS), sigma) ->
+  | (Root (_, MVar (Inst ({contents = Some tM}, _cPsi, _tA, _), r), tS), sigma) ->
       (* constraints associated with u must be in solved form *)
 (*
       let _ = Printf.printf "Whnf Instantiated MVar %s \n"
@@ -380,8 +378,7 @@ let rec whnf sM = match sM with
 *)
         sR
 
-
-  | (Root (MVar (Inst ({contents = None} as uref, cPsi, tA, cnstr) as u, r), tS) as tM, sigma) ->
+  | (Root (loc, MVar (Inst ({contents = None} as uref, cPsi, tA, cnstr) as u, r), tS) as tM, sigma) ->
       (* note: we could split this case based on tA;
        *      this would avoid possibly building closures with id
        *)
@@ -389,7 +386,7 @@ let rec whnf sM = match sM with
         | (Atom (a, tS'), _s (* id *)) ->
             (* meta-variable is of atomic type; tS = Nil  *)
             let u' = Inst (uref, cPsi, Atom (a, tS'), cnstr) in
-              (Root (MVar (u', LF.comp r sigma), SClo (tS, sigma)), LF.id)
+              (Root (loc, MVar (u', LF.comp r sigma), SClo (tS, sigma)), LF.id)
         | (PiTyp _, _s)->
             (* Meta-variable is not atomic and tA = Pi x:B1.B2
              * lower u, and normalize the lowered meta-variable
@@ -400,42 +397,42 @@ let rec whnf sM = match sM with
       end
 
   (* Parameter variable *)
-  | (Root (PVar (Offset _k as p, r), tS), sigma) ->
-      (Root (PVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+  | (Root (loc, PVar (Offset _k as p, r), tS), sigma) ->
+      (Root (loc, PVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
-  | (Root (FPVar (p, r), tS), sigma) ->
-      (Root (FPVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+  | (Root (loc, FPVar (p, r), tS), sigma) ->
+      (Root (loc, FPVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
-  | (Root (PVar (PInst ({contents = Some (BVar i)}, _, _, _) , r), tS), sigma) ->
+  | (Root (loc, PVar (PInst ({contents = Some (BVar i)}, _, _, _) , r), tS), sigma) ->
       begin match LF.bvarSub i r with
         | Obj tM    -> whnfRedex ((tM, LF.id), (tS, sigma))
-        | Head head -> (Root (head, SClo (tS, sigma)), LF.id)
+        | Head head -> (Root (loc, head, SClo (tS, sigma)), LF.id)
       end
 
-  | (Root (PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), r), tS), sigma) ->
-      whnf (Root (PVar (q, LF.comp r' r), tS), sigma)
+  | (Root (loc, PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), r), tS), sigma) ->
+      whnf (Root (loc, PVar (q, LF.comp r' r), tS), sigma)
 
   (* Constant *)
-  | (Root (Const c, tS), sigma) ->
-      (Root (Const c, SClo (tS, sigma)), LF.id)
+  | (Root (loc, Const c, tS), sigma) ->
+      (Root (loc, Const c, SClo (tS, sigma)), LF.id)
 
   (* Projections *)
-  | (Root (Proj (BVar i, k), tS), sigma) ->
+  | (Root (loc, Proj (BVar i, k), tS), sigma) ->
       begin match LF.bvarSub i sigma with
-        | Head (BVar j)      -> (Root (Proj (BVar j, k)     , SClo (tS, sigma)), LF.id)
-        | Head (PVar (q, s)) -> (Root (Proj (PVar (q, s), k), SClo (tS, sigma)), LF.id)
+        | Head (BVar j)      -> (Root (loc, Proj (BVar j, k)     , SClo (tS, sigma)), LF.id)
+        | Head (PVar (q, s)) -> (Root (loc, Proj (PVar (q, s), k), SClo (tS, sigma)), LF.id)
             (* other cases are impossible -- at least for now -bp *)
       end
 
-  | (Root (Proj (PVar (Offset _ as q, s), k), tS), sigma) ->
-      (Root (Proj (PVar (q, LF.comp s sigma), k), SClo (tS, sigma)), LF.id)
+  | (Root (loc, Proj (PVar (Offset _ as q, s), k), tS), sigma) ->
+      (Root (loc, Proj (PVar (q, LF.comp s sigma), k), SClo (tS, sigma)), LF.id)
 
-  | (Root (Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _), s), k), tS), sigma) ->
-      whnf (Root (Proj (PVar (q', LF.comp r' s), k), tS), sigma)
+  | (Root (loc, Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _), s), k), tS), sigma) ->
+      whnf (Root (loc, Proj (PVar (q', LF.comp r' s), k), tS), sigma)
 
   (* Free variables *)
-  | (Root (FVar x, tS), sigma) ->
-      (Root (FVar x, SClo (tS, sigma)), LF.id)
+  | (Root (loc, FVar x, tS), sigma) ->
+      (Root (loc, FVar x, SClo (tS, sigma)), LF.id)
 
 
 (* whnfRedex((tM,s1), (tS, s2)) = (R,s')
@@ -448,10 +445,10 @@ let rec whnf sM = match sM with
  *    [s']tP' = [s2]tP and [s']R' = tM[s1] @ tS[s2]
  *)
 and whnfRedex (sM, sS) = match (sM, sS) with
-  | ((Root (_, _) as root, s1), (Nil, _s2)) ->
+  | ((Root (_, _, _) as root, s1), (Nil, _s2)) ->
       whnf (root, s1)
 
-  | ((Lam (_x, tM), s1), (App (tN, tS), s2)) ->
+  | ((Lam (_, _x, tM), s1), (App (tN, tS), s2)) ->
       let tN' = Clo (    tN , s2) in  (* cD ; cPsi |- tN'      <= tA' *)
       let s1' = Dot (Obj tN', s1) in  (* cD ; cPsi |- tN' . s1 <= Psi1, x:tA''
                                          tA'' = [s1]tA' *)
@@ -512,8 +509,8 @@ let rec mkPatSub s = match s with
 
   | Dot (Obj tM, s) ->
       begin match whnf (tM, LF.id) with
-        | (Root (BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
-        | _                         -> raise (Error NotPatSub)
+        | (Root (_, BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
+        | _                            -> raise (Error NotPatSub)
       end
 
   | _ ->
@@ -535,10 +532,10 @@ let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
 let rec conv sM1 sN2 = conv' (whnf sM1) (whnf sN2)
 
 and conv' sM sN = match (sM, sN) with
-  | ((Lam (_, tM1), s1),  (Lam (_, tM2), s2)) ->
+  | ((Lam (_, _, tM1), s1), (Lam (_, _, tM2), s2)) ->
       conv (tM1, LF.dot1 s1) (tM2, LF.dot1 s2)
 
-  | ((Root (head1, spine1), s1), (Root (head2, spine2), s2)) ->
+  | ((Root (_, head1, spine1), s1), (Root (_, head2, spine2), s2)) ->
       let hConv = match (head1, head2) with
         | (BVar k1, BVar k2) ->
             k1 = k2
@@ -559,10 +556,10 @@ and conv' sM sN = match (sM, sN) with
             u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
         | (AnnH (head, _tA), _) ->
-            conv' (Root (head, spine1), s1) sN
+            conv' (Root (None, head, spine1), s1) sN
 
         | (_ , AnnH (head, _tA)) ->
-            conv' sM (Root (head, spine2), s2)
+            conv' sM (Root (None, head, spine2), s2)
 
         | (Proj (BVar k1, i), Proj (BVar k2, j)) ->
             k1 = k2 && i = j
@@ -642,10 +639,10 @@ and convFront front1 front2 = match (front1, front2) with
       conv (tM, LF.id) (tN, LF.id)
 
   | (Head head, Obj tN) ->
-      conv (Root (head, Nil), LF.id) (tN, LF.id)
+      conv (Root (None, head, Nil), LF.id) (tN, LF.id)
 
   | (Obj tN, Head head) ->
-      conv (tN, LF.id) (Root (head, Nil), LF.id)
+      conv (tN, LF.id) (Root (None, head, Nil), LF.id)
 
   | (Undef, Undef) ->
       true
@@ -741,7 +738,7 @@ let rec etaExpandMV cPsi sA s' = etaExpandMV' cPsi (whnfTyp sA)  s'
 and etaExpandMV' cPsi sA  s' = match sA with
   | (Atom (_a, _tS) as tP, s) ->
       let u = newMVar (cPsi, TClo(tP,s)) in
-        Root (MVar (u, s'), Nil)
+        Root (None, MVar (u, s'), Nil)
 
   | (PiTyp (TypDecl (x, _tA) as decl, tB), s) ->
-      Lam (x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
+      Lam (None, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))

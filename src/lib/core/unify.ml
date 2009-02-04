@@ -300,10 +300,10 @@ module Make (T : TRAIL) : UNIFY = struct
     invNorm' cD0 (phat, Whnf.whnf sM, ss, rOccur)
 
   and invNorm' cD0 ((cvar, offset) as phat, sM, ss, rOccur) = match sM with
-    | (Lam (x, tM), s) ->
-        Lam (x, invNorm cD0 ((cvar, offset + 1), (tM, dot1 s), dot1 ss, rOccur))
+    | (Lam (loc, x, tM), s) ->
+        Lam (loc, x, invNorm cD0 ((cvar, offset + 1), (tM, dot1 s), dot1 ss, rOccur))
 
-    | (Root (MVar (Inst (r, cPsi1, _tP, _cnstrs) as u, t), _tS (* Nil *)), s) ->
+    | (Root (loc, MVar (Inst (r, cPsi1, _tP, _cnstrs) as u, t), _tS (* Nil *)), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered;
            hence tS = Nil and s = id *)
         if eq_cvarRef (MVarRef r) rOccur then
@@ -318,33 +318,33 @@ module Make (T : TRAIL) : UNIFY = struct
                    D ; Psi1 |- s' <= Psi2 and
                    D ; Psi  |- [t']s' <= Psi2  *)
                 if isId s' then
-                  Root(MVar(u, comp t' ss), Nil)
+                  Root(loc, MVar(u, comp t' ss), Nil)
                 else
                   raise NotInvertible
             else (* t' not patsub *)
-              Root(MVar(u, invSub cD0 (phat, (t', cPsi1), ss, rOccur)), Nil)
+              Root(loc, MVar(u, invSub cD0 (phat, (t', cPsi1), ss, rOccur)), Nil)
 
-    | (Root (MVar (Offset u, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, MVar (Offset u, t), _tS (* Nil *)), s (* id *)) ->
         let t' = comp t s (* t' = t, since s = Id *) in
         let (_tA, cPsi1) = Cwhnf.mctxMDec cD0 u in 
-          Root(MVar(Offset u, invSub cD0 (phat, (t', cPsi1), ss, rOccur)), Nil)
+          Root(loc, MVar(Offset u, invSub cD0 (phat, (t', cPsi1), ss, rOccur)), Nil)
 
-    | (Root (FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
         let (_tA, cPsi1) = Store.FMVar.get u in 
         let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-          Root (FMVar (u, s'), Nil)
+          Root (loc, FMVar (u, s'), Nil)
 
-    | (Root (FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
         let (_tA, cPsi1) = Store.FPVar.get p in 
         let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-          Root (FPVar (p, s'), Nil)
+          Root (loc, FPVar (p, s'), Nil)
 
-    | (Root (PVar (Offset p, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, PVar (Offset p, t), _tS (* Nil *)), s (* id *)) ->
         let (_tA, cPsi1) = Cwhnf.mctxPDec cD0 p in 
         let t' = comp t s (* t' = t, since s = Id *) in
-          Root(PVar(Offset p, invSub cD0 (phat, (t', cPsi1), ss, rOccur)), Nil)
+          Root(loc, PVar(Offset p, invSub cD0 (phat, (t', cPsi1), ss, rOccur)), Nil)
 
-    | (Root (PVar (PInst (r, cPsi1, _tA, _cnstrs) as q, t), tS), s) ->
+    | (Root (loc, PVar (PInst (r, cPsi1, _tA, _cnstrs) as q, t), tS), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered and s = id *)
         if eq_cvarRef (PVarRef r) rOccur then
           raise NotInvertible
@@ -359,15 +359,15 @@ module Make (T : TRAIL) : UNIFY = struct
                    D ; Psi1 |- s' <= Psi2 and
                    D ; Psi  |- [t']s' <= Psi2  *)
                 if isId s' then (* cPsi1 = cPsi2 *)
-                  Root (PVar (q, comp t' ss), 
+                  Root (loc, PVar (q, comp t' ss), 
                         invSpine cD0 (phat, (tS, s), ss, rOccur))
                 else
                   raise NotInvertible
             else (* t' not patsub *)
-              Root (PVar (q, invSub cD0 (phat, (t', cPsi1), ss, rOccur)),
+              Root (loc, PVar (q, invSub cD0 (phat, (t', cPsi1), ss, rOccur)),
                     invSpine cD0 (phat, (tS,s), ss, rOccur))
 
-    | (Root (Proj (PVar (PInst (r, cPsi1, _tA, _cnstrs) as q, t), i), tS), s) ->
+    | (Root (loc, Proj (PVar (PInst (r, cPsi1, _tA, _cnstrs) as q, t), i), tS), s) ->
         if eq_cvarRef (PVarRef r) rOccur then
           raise NotInvertible
         else
@@ -380,16 +380,16 @@ module Make (T : TRAIL) : UNIFY = struct
                    cD ; cPsi1 |- s' <= cPsi2 and
                    cD ; cPsi  |- [t']s' <= cPsi2  *)
                 if isId s' then (* cPsi1 = cPsi2 *)
-                  Root (Proj (PVar(q, comp t' ss), i),
+                  Root (loc, Proj (PVar(q, comp t' ss), i),
                         invSpine cD0 (phat, (tS,s), ss, rOccur))
                 else
                   raise NotInvertible
             else (* t' not patsub *)
-              Root (Proj (PVar (q, invSub cD0 (phat, (t', cPsi1), ss, rOccur)), i),
+              Root (loc, Proj (PVar (q, invSub cD0 (phat, (t', cPsi1), ss, rOccur)), i),
                     invSpine cD0 (phat, (tS,s), ss, rOccur))
 
-    | (Root (head, tS), s (* = id *)) ->
-        Root (invHead  cD0 (phat, head   , ss, rOccur),
+    | (Root (loc, head, tS), s (* = id *)) ->
+        Root (loc, invHead  cD0 (phat, head   , ss, rOccur),
               invSpine cD0 (phat, (tS, s), ss, rOccur))
 
   and invSpine cD0 (phat, spine, ss, rOccur) = match spine with
@@ -559,11 +559,11 @@ module Make (T : TRAIL) : UNIFY = struct
       prune' cD0 (phat, Whnf.whnf sM, ss, rOccur)
 
   and prune' cD0 ((cvar, offset) as phat, sM, ss, rOccur) = match sM with
-    | (Lam (x, tM), s) ->
+    | (Lam (loc, x, tM), s) ->
         let tM' = prune cD0 ((cvar, offset + 1), (tM, dot1 s), dot1 ss, rOccur) in
-          Lam (x, tM')
+          Lam (loc, x, tM')
 
-    | (Root (MVar (Inst (r, cPsi1, tP, cnstrs) as u, t), _tS (* Nil *)) as tM, s (* id *)) ->
+    | (Root (loc, MVar (Inst (r, cPsi1, tP, cnstrs) as u, t), _tS (* Nil *)) as tM, s (* id *)) ->
       (* by invariant: MVars are lowered since tM is in whnf *)
         if eq_cvarRef (MVarRef r) rOccur then
           raise (Unify "Variable occurrence")
@@ -575,7 +575,7 @@ module Make (T : TRAIL) : UNIFY = struct
                  cD ; cPsi1 |- idsub <= cPsi2 and
                  cD ; cPsi |- t o s o idsub <= cPsi2 *)
             let v = Whnf.newMVar(cPsi2, TClo(tP, invert idsub)) in
-              (instantiateMVar (r, Root (MVar (v, idsub), Nil), !cnstrs);
+              (instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs);
                Clo(tM, comp s ss)
               )
                 (* [|v[idsub] / u|] *)
@@ -586,31 +586,31 @@ module Make (T : TRAIL) : UNIFY = struct
                CD ; cPsi  |- comp t s <= cPsi1  and cD ; cPsi''|- ss <= cPsi
                s' = [ss]([s]t) and  cD ; cPsi'' |- s' <= cPsi'  *)
             let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-              Root (MVar (u, s'), Nil)
+              Root (loc, MVar (u, s'), Nil)
                 (* may raise NotInvertible *)
 
-    | (Root (MVar (Offset u, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, MVar (Offset u, t), _tS (* Nil *)), s (* id *)) ->
         let (_tA, cPsi1) = Cwhnf.mctxMDec cD0 u in 
         let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-          Root (MVar (Offset u, s'), Nil)
+          Root (loc, MVar (Offset u, s'), Nil)
 
 
-    | (Root (FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
         let (_tA, cPsi1) = Store.FMVar.get u in 
         let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-          Root (FMVar (u, s'), Nil)
+          Root (loc, FMVar (u, s'), Nil)
 
-    | (Root (FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
         let (_tA, cPsi1) = Store.FPVar.get p in 
         let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-          Root (FPVar (p, s'), Nil)
+          Root (loc, FPVar (p, s'), Nil)
 
-    | (Root (PVar (Offset p, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, PVar (Offset p, t), _tS (* Nil *)), s (* id *)) ->
         let (_tA, cPsi1) = Cwhnf.mctxPDec cD0 p in 
         let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-          Root (PVar (Offset p, s'), Nil)
+          Root (loc, PVar (Offset p, s'), Nil)
 
-    | (Root (PVar (PInst (r, cPsi1, tA, cnstrs) as q, t), tS), s (* id *)) ->
+    | (Root (loc, PVar (PInst (r, cPsi1, tA, cnstrs) as q, t), tS), s (* id *)) ->
         if eq_cvarRef (PVarRef r) rOccur then
           raise (Unify "Parameter variable occurrence")
         else
@@ -622,14 +622,14 @@ module Make (T : TRAIL) : UNIFY = struct
               (* [|p[idsub] / q|] *)
             let tS' = pruneSpine cD0 (phat, (tS, s), ss, rOccur) in
               (* h = p[[ss] ([t] idsub)] *)
-              Root (PVar(p, comp ss (comp t idsub)), tS')
+              Root (loc, PVar(p, comp ss (comp t idsub)), tS')
           else (* s not patsub *)
             let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur)
             and tS' = pruneSpine cD0 (phat, (tS, s), ss, rOccur) in
-              Root (PVar (q, s'), tS')
+              Root (loc, PVar (q, s'), tS')
 
 
-    | (Root (Proj (PVar (PInst (r, cPsi1, tA, cnstrs) as q, t), i), tS), s (* id *)) ->
+    | (Root (loc, Proj (PVar (PInst (r, cPsi1, tA, cnstrs) as q, t), i), tS), s (* id *)) ->
         if eq_cvarRef (PVarRef r) rOccur then
           raise (Unify "Parameter variable occurrence")
         else
@@ -639,32 +639,32 @@ module Make (T : TRAIL) : UNIFY = struct
             let p = Whnf.newPVar(cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1] tA)[cPsi2] *) in
             let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) (* [|p[idsub] / q|] *) in
             let tS' = pruneSpine cD0 (phat, (tS, s), ss, rOccur) in
-              Root(PVar(p, comp ss (comp t idsub)), tS')
+              Root(loc, PVar(p, comp ss (comp t idsub)), tS')
           else (* s not patsub *)
             let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
             let tS' = pruneSpine cD0 (phat, (tS, s), ss, rOccur) in
-              Root (Proj (PVar (q, s'), i), tS')
+              Root (loc, Proj (PVar (q, s'), i), tS')
 
-    | (Root ((*H as*) BVar k, tS), s (* = id *)) ->
+    | (Root (loc, (*H as*) BVar k, tS), s (* = id *)) ->
         begin match bvarSub k ss with
           | Undef                -> raise (Unify "Bound variable dependency")
           | Head (BVar _k as h') ->
               let tS' = pruneSpine cD0 (phat, (tS, s), ss, rOccur) in
-                Root (h', tS')
+                Root (loc, h', tS')
         end
 
-    | (Root (Const _ as h, tS), s (* id *)) ->
+    | (Root (loc, (Const _ as h), tS), s (* id *)) ->
         let tS' = pruneSpine cD0 (phat, (tS, s), ss, rOccur) in
-          Root(h, tS')
+          Root(loc, h, tS')
 
-    | (Root (FVar _ as h, tS), s (* id *)) ->
+    | (Root (loc, (FVar _ as h), tS), s (* id *)) ->
         let tS' = pruneSpine cD0 (phat, (tS, s), ss, rOccur) in
-          Root(h, tS')
+          Root(loc, h, tS')
 
-    | (Root (Proj (BVar k, i), tS), s (* id *)) ->
+    | (Root (loc, Proj (BVar k, i), tS), s (* id *)) ->
         let tS' = pruneSpine cD0 (phat, (tS, s), ss, rOccur) in
           begin match bvarSub k ss with
-            | Head (BVar _k' as h') -> Root (Proj (h', i), tS')
+            | Head (BVar _k' as h') -> Root (loc, Proj (h', i), tS')
             | _                     -> raise (Unify "Bound variable dependency")
           end
 
@@ -712,13 +712,13 @@ module Make (T : TRAIL) : UNIFY = struct
   let rec unifyTerm cD0 (phat, sN, sM) = unifyTerm' cD0 (phat, Whnf.whnf sN, Whnf.whnf sM)
 
   and unifyTerm' cD0 (((psi, offset) as phat), sN, sM) = match (sN, sM) with
-    | ((Lam (_x, tN), s1), (Lam (_y, tM), s2)) ->
+    | ((Lam (_, _, tN), s1), (Lam (_, _, tM), s2)) ->
         unifyTerm cD0 ((psi, offset + 1), (tN, dot1 s1), (tM, dot1 s2))
 
     (* MVar-MVar case *)
     (* remove sM1, sM2 -bp *)
-    | ((((Root (MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), _tS1) as _tM1), s1)  as sM1),
-       ((((Root (MVar (Inst (r2, _cPsi2, _tP2, cnstrs2), t2), _tS2) as _tM2), s2)) as sM2)) ->
+    | ((((Root (_, MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), _tS1) as _tM1), s1)  as sM1),
+       ((((Root (_, MVar (Inst (r2, _cPsi2, _tP2, cnstrs2), t2), _tS2) as _tM2), s2)) as sM2)) ->
         (* by invariant of whnf:
            meta-variables are lowered during whnf, s1 = s2 = id
            r1 and r2 are uninstantiated  (None)
@@ -743,7 +743,7 @@ module Make (T : TRAIL) : UNIFY = struct
                        [|w[s']/u|](u[t1]) = [t1](w[s'])
                        [|w[s']/u|](u[t2]) = [t2](w[s'])
                     *)
-                    instantiateMVar (r1, Root(MVar(w, s'),Nil), !cnstrs1)
+                    instantiateMVar (r1, Root(None, MVar(w, s'),Nil), !cnstrs1)
 
               | (true, false) ->
                   addConstraint (cnstrs2, ref (Eqn (phat, Clo sM, Clo sN))) (* XXX double-check *)
@@ -779,7 +779,7 @@ module Make (T : TRAIL) : UNIFY = struct
                     addConstraint (cnstrs1, cnstr)
             end
     (* MVar-normal case *)
-    | ((Root (MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
+    | ((Root (_, MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         let t' = comp t s1 in
           if isPatSub t' then
             try
@@ -793,7 +793,7 @@ module Make (T : TRAIL) : UNIFY = struct
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
 
     (* normal-MVar case *)
-    | ((_tM1, _s1) as sM1, ((Root (MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s2) as sM2)) ->
+    | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (r, _cPsi, _tP, cnstrs), t), _tS), s2) as sM2)) ->
         let t' = comp t s2 in
           if isPatSub t' then
             try
@@ -808,7 +808,7 @@ module Make (T : TRAIL) : UNIFY = struct
           else
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
 
-    | ((Root(h1,tS1), s1), (Root(h2, tS2), s2)) ->
+    | ((Root(_, h1,tS1), s1), (Root(_, h2, tS2), s2)) ->
         (* s1 = s2 = id by whnf *)
         unifyHead  cD0 (phat, h1, h2);
         unifySpine cD0 (phat, (tS1, s1), (tS2, s2))
@@ -1037,10 +1037,10 @@ module Make (T : TRAIL) : UNIFY = struct
         -> unifyTerm cD0 (phat, (tM, id), (tN, id))
 
       | (Head head, Obj tN)
-        -> unifyTerm cD0 (phat, (Root (head, Nil), id), (tN, id))
+        -> unifyTerm cD0 (phat, (Root (None, head, Nil), id), (tN, id))
 
       | (Obj tN, Head head)
-        -> unifyTerm cD0 (phat, (tN, id), (Root (head, Nil), id))
+        -> unifyTerm cD0 (phat, (tN, id), (Root (None, head, Nil), id))
 
       | (Undef, Undef)
         -> ()

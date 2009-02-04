@@ -189,8 +189,8 @@ module Int = struct
       | TVar  of tvar * sub                (*   | TVar(a,s)                  *)
 
     and normal =                           (* normal terms                   *)
-      | Lam  of name * normal              (* M ::= \x.M                     *)
-      | Root of head * spine               (*   | h . S                      *)
+      | Lam  of Loc.t option * name * normal (* M ::= \x.M                     *)
+      | Root of Loc.t option * head * spine  (*   | h . S                      *)
       | Clo  of (normal * sub)             (*   | Clo(N,s)                   *)
 
     and head =
@@ -399,8 +399,8 @@ module Apx = struct
       | SigmaElem of name * typ * typ_rec
 
     and normal =
-      | Lam  of name * normal
-      | Root of head * spine
+      | Lam  of Loc.t * name * normal
+      | Root of Loc.t * head * spine
 
     and head =
       | BVar  of offset

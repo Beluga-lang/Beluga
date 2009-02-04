@@ -766,7 +766,7 @@ module Int = struct
 
 
     and fmt_ppr_lf_normal lvl ppf = function
-      | LF.Lam (x, m) ->
+      | LF.Lam (_, x, m) ->
           let cond = lvl > 0 in
             fprintf ppf "%s\\ %s . %a%s"
               (l_paren_if cond)
@@ -774,11 +774,11 @@ module Int = struct
               (fmt_ppr_lf_normal 0) m
               (r_paren_if cond)
 
-      | LF.Root (h, LF.Nil) ->
+      | LF.Root (_, h, LF.Nil) ->
           fprintf ppf "%a"
             (fmt_ppr_lf_head lvl) h
 
-      | LF.Root (h, ms)  ->
+      | LF.Root (_, h, ms)  ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a%a%s"
               (l_paren_if cond)
@@ -1384,6 +1384,7 @@ module Error = struct
             "ill typed expression\n  expected type: %a\n  for expression:\n    %a"
             (IP.fmt_ppr_lf_typ std_lvl) (Whnf.normTyp sA)
             (IP.fmt_ppr_lf_normal std_lvl) (Whnf.norm sM)
+            (* TODO print context *)
 
       | LeftoverConstraints ->
           fprintf ppf "constraints left after reconstruction"

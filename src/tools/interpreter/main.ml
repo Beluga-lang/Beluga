@@ -68,6 +68,10 @@ let main () =
             printer decl;
             print_sgn printer decls
       in
+      let printOptionalLocation locOpt = match locOpt with
+        | None     -> Format.fprintf Format.std_formatter "<unknown location>"
+        | Some loc -> Parser.Grammar.Loc.print Format.std_formatter loc
+      in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
               printf "## Pretty Printing External Syntax: %s ##\n" file_name
@@ -111,8 +115,8 @@ let main () =
               print_newline ();
               return Negative
 
-          | Reconstruct.Error err ->
-              (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
+          | Reconstruct.Error (locOpt, err) ->
+              printOptionalLocation locOpt;
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter

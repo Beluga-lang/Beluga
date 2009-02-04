@@ -9,5 +9,6 @@ open Id
 open Error
 
 exception Error of error
+exception Violation of string
 
 val recSgnDecl : Ext.Sgn.decl -> Int.Sgn.decl

@@ -26,20 +26,11 @@ INTERPRETER=$BELUGA/bin/interpreter
 X=$BELUGA/examples
 cd $X
 
-
-#  copy examples/{beluga/cntvar.rec => depend/cntvar-2.rec} (56%)
-#  create mode 100644 examples/depend/test-dep.rec
-#  create mode 100644 examples/depend/tps.rec
-#  create mode 100644 examples/notworking/church-rosser.rec
-#  create mode 100644 examples/simple/arith.rec
-#  create mode 100644 examples/tests/error.rec
-#  create mode 100644 examples/tests/fvnat.rec
-
-
 $INTERPRETER  \
     $* \
     depend/cntvar.bel \
     depend/cntvar.rec \
+    depend/cntvar-2.rec \
     depend/copy.bel \
     depend/copy.rec \
     depend/eval-sub-tp.rec \

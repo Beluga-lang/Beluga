@@ -5,7 +5,7 @@ s' : nat -> nat.
 adding: nat -> nat -> nat.
 plus: nat -> nat -> nat.
 
-rec identity : (nat) [.] -> (nat) [.] =
+rec identity : nat [.] -> nat [.] =
     fn x =>
       case x of
           box (. . z)  => box (. z)
@@ -16,16 +16,19 @@ rec identity : (nat) [.] -> (nat) [.] =
 ;
 
 
-rec plus : (nat) [.] -> (nat) [.] -> (nat) [.] = 
+rec plus : nat [.] -> nat [.] -> nat [.] = 
 fn x => fn y => 
  case x of 
     box (. . z)  => y
  |  box (. . s U ![.]! )  => 
-    (case (plus (box (. U![.]!)) y) of 
-       box (. . V![.]!)  => box ( . s V![.]!));
+    let 
+      box (. . V![.]!)  = plus (box (. U![.]!)) y
+    in
+      box ( . s V![.]!)
+    end;
 
 
-rec plus' : (nat) [.] -> (nat) [.] -> (nat) [.] = 
+rec plus' : nat [.] -> nat [.] -> nat [.] = 
   fn x => fn y => 
     case x of box (. . z)  => y
             | box (. . s U![.]!) => 

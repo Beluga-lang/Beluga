@@ -8,10 +8,11 @@ s : nat -> nat.
 
 nt : nat -> type.		
 nt_z : nt z.
-nt_s : {X:nat}nt X -> nt (s X).
+
+nt_s : {X:nat}nt X  -> nt (s X).
 
 
-plus : nat -> nat -> nat -> type.	
-p_z : {Y:nat}plus z Y Y.
-p_s : {X:nat}{Y:nat}{Z:nat} 
+ plus : nat -> nat -> nat -> type.	
+ p_z : {Y:nat}plus z Y Y.
+ p_s : {X:nat}{Y:nat}{Z:nat} 
       plus X Y Z -> plus (s X) Y (s Z).

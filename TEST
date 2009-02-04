@@ -23,42 +23,59 @@ BELUGA=`pwd`
 INTERPRETER=$BELUGA/bin/interpreter
 
 # set $X to the `beluga' examples directory
-X=$BELUGA/examples/beluga
+X=$BELUGA/examples
 cd $X
+
+
+#  copy examples/{beluga/cntvar.rec => depend/cntvar-2.rec} (56%)
+#  create mode 100644 examples/depend/test-dep.rec
+#  create mode 100644 examples/depend/tps.rec
+#  create mode 100644 examples/notworking/church-rosser.rec
+#  create mode 100644 examples/simple/arith.rec
+#  create mode 100644 examples/tests/error.rec
+#  create mode 100644 examples/tests/fvnat.rec
+
 
 $INTERPRETER  \
     $* \
-    case1.bel \
-    case2.bel \
-    cntvar.bel \
-    copy-simple.bel \
-    copy.bel \
-    cut-elim.bel \
-    eq-proof.bel \
-    eval-sub-1.bel \
-    eval-sub.bel \
-    fol-handbook.bel \
-    fvnat.bel \
-    id-dep.bel \
-    id.bel \
-    schema.bel \
-    @sigma1.bel \
-    test.bel \
-    tpcert.bel \
-    tpeval.bel \
-    tpevalsub.bel \
-    vsound.bel \
-    case1.rec \
-    case2.rec \
-    cntvar.rec \
-    copy-simple.rec \
-    copy.rec \
-    eval-sub-1.rec \
-    eval-sub-tp.rec \
-    eval-sub.rec \
-    fvnat.rec \
-    id-dep.rec \
-    id.rec \
-    test.rec \
-    tpevalsub.rec \
-    vsound.rec
+    depend/cntvar.bel \
+    depend/cntvar.rec \
+    depend/copy.bel \
+    depend/copy.rec \
+    depend/eval-sub-tp.rec \
+    depend/fvnat.bel \
+    depend/fvnat.rec \
+    depend/id-dep.bel \
+    depend/id-dep.rec \
+    depend/schema.bel \
+    depend/test-dep.rec \
+    depend/tpevalsub.bel \
+    depend/tpevalsub.rec \
+    depend/tps.rec \
+    depend/vsound.bel \
+    depend/vsound.rec \
+    simple/arith.rec \
+    simple/case1.bel \
+    simple/case1.rec \
+    simple/case2.bel \
+    simple/case2.rec \
+    simple/copy-simple.bel \
+    simple/copy-simple.rec \
+    simple/eval-sub-1.bel \
+    simple/eval-sub-1.rec \
+    simple/eval-sub.bel \
+    simple/eval-sub.rec \
+    simple/id.bel \
+    simple/id.rec \
+    @simple/sigma1.bel \
+    simple/test.bel \
+    simple/test.rec \
+    tests/error.rec \
+    @tests/fvnat.rec
+
+#    notworking/church-rosser.rec \
+#    notworking/cut-elim.bel \
+#    notworking/eq-proof.bel \
+#    notworking/fol-handbook.bel \
+#    notworking/tpcert.bel \
+#    notworking/tpeval.bel \

@@ -43,7 +43,7 @@ type spec =
 let process_name name =
   let rest = String.sub name 1 (String.length name - 1) in
     if String.get name 0 = '@' then
-      (print_string "NEGATIVE\n"; (Negative, rest))
+      (Negative, rest)
 (* else if String.get name 0 = ...... then
       (......, rest)
 *)
@@ -122,6 +122,15 @@ let main () =
                 Format.std_formatter
                 "Error (Reconstruction): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
+              print_newline ();
+              return Negative
+
+          | Reconstruct.Violation err_string ->
+              Format.fprintf
+                Format.std_formatter
+                (* TODO print location as "filename:line1.col1-line2-col2" *)
+                "Error (\"Violation\") (Reconstruction): %s\n@?"
+                err_string;
               print_newline ();
               return Negative
 

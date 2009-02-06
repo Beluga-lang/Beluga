@@ -7,36 +7,36 @@
 exp: type.
 nat: type.
 
-Nat: nat -> exp.
-Add: exp -> exp -> exp.
-Let: exp -> (nat -> exp) -> exp.
+num: nat -> exp.
+add: exp -> exp -> exp.
+letv: exp -> (nat -> exp) -> exp.
 
 
 z  : nat.
 suc: nat -> nat.
 
-rec add : (nat)[.] -> (nat)[.] -> (nat)[.] = 
+rec add : nat[ ] -> nat[ ] -> nat[ ] = 
 fn a => fn b =>
    (case a of
-        box(. . z) : nat [.] => b
-      | {U::nat[.]} box(. . suc U![.]!) : nat [.]=>
+         [ ] z : nat [ ] => b
+      | {U::nat[ ]} [ ] suc U : nat [ ]=>
         case b of
-          {V::nat[.]} box(. . V![.]!) : nat [.] => add (box(. U![.]!)) box(. suc V![.]!)
+          {V::nat[ ]} [ ] V : nat [ ] => add ([ ] U) ([ ] suc V)
 )
 ;
 
-rec eval : (exp)[.] -> (nat)[.] = 
+rec eval : (exp)[ ] -> nat[ ] = 
 fn e => 
 (case e of
-   {U::nat[.]} box(. . Nat U![.]!) : exp [.] => box( . U![.]!)
- | {U::exp[.]}{W::exp[.]}
-    box(. . Add U![.]! W![.]!) : exp [.] => 
-       add (eval box( . U![.]!)) (eval box( . W![.]!))
+   {U::nat[ ]} [ ] num U : exp [ ] => ([ ] U)
+ | {U::exp[ ]}{W::exp[ ]}
+    [ ] add U W : exp [ ] => 
+       add (eval ([ ] U)) (eval ([ ] W))
 
- | {U::exp[.]}{W::exp[.,x : nat]}
-   box(. . Let U![.]! (\ x . W![. , x]!)) : exp[.] => 
+ | {U::exp[ ]}{W::exp[x : nat]}
+   [ ] letv U (\x . (W x)) : exp[ ] => 
 
-    case (eval box( . U![.]!)) of 
-       {V::nat[.]} box (. . V![.]!) : nat [.] =>  
-          eval box( . W![. , V![.]! ]!)
+    case (eval ([ ] U)) of 
+       {V::nat[ ]} [ ] V : nat [ ] =>  
+          eval ([ ] (W V))
 );

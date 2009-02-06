@@ -5,9 +5,10 @@
     @author Brigitte Pientka
 *)
 
-
+(*
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
+*)
 
 open Syntax.Int.LF
 
@@ -76,9 +77,9 @@ module LF = struct
         if psi = psi' then 
           Shift (NoCtxShift, n+k)
         else 
-          (Printf.printf "s1 = %s \n s2 = %s\n\n" 
-             (P.subToString s1) (P.subToString s2) ; 
-          raise (Error "Composition undefined \n"))
+          (* (Printf.printf "s1 = %s \n s2 = %s\n\n" 
+             (P.subToString s1) (P.subToString s2) ; *)
+          raise (Error "Composition undefined \n")
 
     | (Shift (CtxShift psi , m), s2)      -> 
         let rec ctx_shift n s2 = match s2 with
@@ -94,9 +95,9 @@ module LF = struct
                * Psi, Psi' |- s1 o s2 : . 
                *)
 
-          | _ -> (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n" 
-                    (P.subToString s1) (P.subToString s2) ; 
-                  raise (Error "Composition undefined\n"))
+          | _ -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n" 
+                    (P.subToString s1) (P.subToString s2) ; *)
+                  raise (Error "Composition undefined\n")
         in 
           ctx_shift m s2
 
@@ -142,9 +143,9 @@ module LF = struct
 	   where s :: Psi[Phi]  and |Psi| = k'
 	   k = k' + k0  
 	*)
-    | (s1, s2) -> (Printf.printf "Composing: s1 = %s \n and s2 = %s    FAILED\n"
-                     (P.subToString s1) (P.subToString s2) ; 
-                   raise (Error "Composition not defined?\n"))
+    | (_s1, _s2) -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s    FAILED\n"
+                     (P.subToString s1) (P.subToString s2) ;  *)
+                   raise (Error "Composition not defined?\n")
 
 
   (* bvarSub n s = Ft'

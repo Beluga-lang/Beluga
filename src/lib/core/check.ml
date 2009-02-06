@@ -37,14 +37,14 @@ module LF = struct
      otherwise exception Error is raised
   *)
   let rec checkW cO cD cPsi sM1 sA2 = match (sM1, sA2) with
-    | ((Lam (_, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX), tB), s2))
+    | ((Lam (_, _, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX), tB), s2))
       -> 
         check cO cD
         (DDec (cPsi, LF.decSub tX s2))
           (tM, LF.dot1 s1)
           (tB, LF.dot1 s2)
 
-    | ((Root (h, tS), s (* id *)), (((Atom _), _s') as sP))
+    | ((Root (_, h, tS), s (* id *)), (((Atom _), _s') as sP))
       -> (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
         let sA = Whnf.whnfTyp (inferHead cO cD cPsi h, LF.id) in
           checkSpine cO cD cPsi (tS, s) sA sP
@@ -126,7 +126,7 @@ module LF = struct
           | ( (SigmaElem(_x, tA, _recA), s), 1 )   -> TClo(tA, s)
 
           | ( (SigmaElem(_x, _tA, recA), s), target ) ->
-              let tPj = Root (Proj (BVar k', j), Nil) in
+              let tPj = Root (None, Proj (BVar k', j), Nil) in
                 getType (recA, Dot (Obj tPj, s)) (target - 1) (j + 1)
 
         in
@@ -466,7 +466,7 @@ module Comp = struct
       let tA' = Cwhnf.cnormTyp (tA, t) in 
       let u = Whnf.newMVar (cPsi' , tA') in 
       let phat = Context.dctxToHat cPsi in 
-        MDot(MObj(phat, I.Root(I.MVar(u, S.LF.id), I.Nil)) , t) 
+        MDot(MObj(phat, I.Root(None, I.MVar(u, S.LF.id), I.Nil)) , t) 
     | I.Dec(cD', I.PDecl(_, tA, cPsi)) -> 
       let t = mctxToMSub cD' in  
       let p = Whnf.newPVar (Cwhnf.cnormDCtx (cPsi,t),  Cwhnf.cnormTyp (tA, t)) in

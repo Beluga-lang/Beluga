@@ -7,10 +7,9 @@ irrelevant_con : irrelevancy.
 
 schema w = some [ ] block nat;
 
-rec copynat : {g:(w)*} (nat)[g] -> (nat)[g] =
+rec copynat : {g:(w)*} nat[g] -> nat[g] =
    FN g => fn e =>
-     case e of box (g. z) => box(g. z)
-
-             | box (g . suc U![id]!) => copynat [g] box (g . U![id]!)
+     case e of [g] z => [g] z
+             | [g] suc (U ..) => copynat [g] ([g]  (U ..))
     
 ;

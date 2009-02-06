@@ -74,8 +74,8 @@ and mshiftMFt ft n = match ft with
 
 
 and mshiftTerm tM n = match tM with
-  | LF.Lam(x, tN)  -> LF.Lam(x, mshiftTerm tN n)
-  | LF.Root(h, tS) -> LF.Root(mshiftHead h n, mshiftSpine tS n)
+  | LF.Lam(loc, x, tN)  -> LF.Lam(loc, x, mshiftTerm tN n)
+  | LF.Root(loc, h, tS) -> LF.Root(loc, mshiftHead h n, mshiftSpine tS n)
   | LF.Clo(tM, s)  -> LF.Clo(mshiftTerm tM n, mshiftSub s n)
 
 and mshiftHead h n = match h with
@@ -235,7 +235,7 @@ and invert s =
         if k = p then Some n
         else lookup (n + 1) t' p 
 
-    | Comp.MDot (Comp.MObj(_phat, LF.Root(LF.MVar (LF.Offset k, LF.Shift (_,0)), LF.Nil)), t') -> 
+    | Comp.MDot (Comp.MObj(_phat, LF.Root(_, LF.MVar (LF.Offset k, LF.Shift (_,0)), LF.Nil)), t') -> 
         if k = p then
           Some n
         else lookup (n + 1) t' p 
@@ -291,19 +291,19 @@ and invert s =
   *)
 
 and cnorm (tM, t) = match tM with
-    | LF.Lam (y, tN)       -> LF.Lam (y, cnorm (tN, t))
+    | LF.Lam (loc, y, tN)  -> LF.Lam (loc, y, cnorm (tN, t))
 
     | LF.Clo (tN, s)       -> LF.Clo(cnorm (tN, t), cnormSub(s, t))  
 
-    | LF.Root (LF.BVar i, tS) -> LF.Root(LF.BVar i, cnormSpine (tS, t))
+    | LF.Root (loc, LF.BVar i, tS) -> LF.Root(loc, LF.BVar i, cnormSpine (tS, t))
 
     (* Meta-variables *)
 
-    | LF.Root (LF.MVar (LF.Offset k, r), tS)
+    | LF.Root (loc, LF.MVar (LF.Offset k, r), tS)
       -> 
         begin match applyMSub k t with
         | Comp.MV  k'            -> 
-            LF.Root (LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
+            LF.Root (loc, LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
             
         | Comp.MObj (_phat,tM)   -> 
             LF.Clo(Whnf.whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), S.id)))  
@@ -312,10 +312,10 @@ and cnorm (tM, t) = match tM with
         end 
 
 
-    | LF.Root (LF.FMVar (u, r), _tS) ->
+    | LF.Root (_, LF.FMVar (u, r), _tS) ->
         raise (FreeMVar (LF.FMVar (u,cnormSub (r, t))))
 
-    | LF.Root (LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r), _tS) -> 
+    | LF.Root (_, LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r), _tS) -> 
         (* We could normalize [r]tM *)
         let tM' = Whnf.norm (tM, S.id) in 
           cnorm (tM', t)
@@ -324,13 +324,13 @@ and cnorm (tM, t) = match tM with
                          cnormSub (r, t)), cnormSpine (tS, t)) 
 
 *)
-    | LF.Root (LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) as u , r), tS) -> 
+    | LF.Root (loc, LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) as u , r), tS) -> 
         (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
-        LF.Root (LF.MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
+        LF.Root (loc, LF.MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
 
 
     (* Parameter variables *)
-    | LF.Root (LF.PVar (LF.Offset k, r), tS)
+    | LF.Root (loc, LF.PVar (LF.Offset k, r), tS)
         (* cD' ; cPsi' |- r <= cPsi1 
            cD          |- t <= cD'
  
@@ -339,37 +339,36 @@ and cnorm (tM, t) = match tM with
 
          *)
       -> begin match applyMSub k t with
-        | Comp.MV  k'            -> LF.Root (LF.PVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
+        | Comp.MV  k'            -> LF.Root (loc, LF.PVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
         | Comp.PObj (_phat, LF.BVar i) -> 
 	    begin match S.bvarSub i (cnormSub (r,t)) with
-	      | LF.Head h  -> LF.Root(h, cnormSpine (tS, t))
+	      | LF.Head h  -> LF.Root(loc, h, cnormSpine (tS, t))
 	      | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
 	    end
         | Comp.PObj (_phat, LF.PVar(LF.Offset i, r')) -> 
-	    LF.Root (LF.PVar(LF.Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
+	    LF.Root (loc, LF.PVar(LF.Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
             (* Other case MObj _ should not happen -- ill-typed *)
       end
 
-    | LF.Root (LF.FPVar (p, r), _tS) ->
-        raise (FreeMVar 
-                 (LF.FPVar (p, cnormSub (r, t))))
+    | LF.Root (_, LF.FPVar (p, r), _tS) ->
+        raise (FreeMVar (LF.FPVar (p, cnormSub (r, t))))
 
     (* Ignore other cases for destructive (free) parameter variables *)
 
     (* Constants *)
-    | LF.Root (LF.Const c, tS)
-      -> LF.Root (LF.Const c, cnormSpine (tS, t))
+    | LF.Root (loc, LF.Const c, tS)
+      -> LF.Root (loc, LF.Const c, cnormSpine (tS, t))
 
     (* Free Variables *)
-    | LF.Root (LF.FVar x, tS)        
+    | LF.Root (loc, LF.FVar x, tS)        
       -> (Printf.printf "Encountered a free variable!?\n" ; 
-          LF.Root (LF.FVar x, cnormSpine (tS, t)))
+          LF.Root (loc, LF.FVar x, cnormSpine (tS, t)))
 
     (* Projections *)
-    | LF.Root (LF.Proj (LF.BVar i, k), tS)
-      -> LF.Root (LF.Proj (LF.BVar i, k), cnormSpine (tS, t))
+    | LF.Root (loc, LF.Proj (LF.BVar i, k), tS)
+      -> LF.Root (loc, LF.Proj (LF.BVar i, k), cnormSpine (tS, t))
 
-    | LF.Root (LF.Proj (LF.PVar (LF.Offset j, s), k), tS)
+    | LF.Root (loc, LF.Proj (LF.PVar (LF.Offset j, s), k), tS)
         (* cD' ; cPsi' |- s <= cPsi1 *)
         (* cD          |- t <= cD'   *)         
       -> begin match applyMSub j t with
@@ -377,15 +376,15 @@ and cnorm (tM, t) = match tM with
             (*  i <= phat *) 
             begin match S.bvarSub i (cnormSub (s,t)) with
               | LF.Head (LF.BVar j)     -> 
-                  LF.Root(LF.Proj (LF.BVar j, k), cnormSpine (tS, t))
+                  LF.Root(loc, LF.Proj (LF.BVar j, k), cnormSpine (tS, t))
               | LF.Head (LF.PVar (p,r'))-> 
-                  LF.Root(LF.Proj (LF.PVar (p, r'), k), 
+                  LF.Root(loc, LF.Proj (LF.PVar (p, r'), k), 
                        cnormSpine (tS, t))
                     (* other cases should not happen; 
                        term would be ill-typed *)
             end
         | Comp.PObj(_phat, LF.Proj (LF.PVar (LF.Offset i, s'), k)) -> 
-	    LF.Root (LF.Proj (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))), k), 
+	    LF.Root (loc, LF.Proj (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))), k), 
 		  cnormSpine (tS, t))
       end
 
@@ -510,10 +509,10 @@ let rec csub_typ cPsi k tA = match tA with
      LF.TClo (csub_typ cPsi k tA, csub_sub cPsi k s)
 
 and csub_norm cPsi k tM = match tM with
-  | LF.Lam (x, tN)  -> LF.Lam (x, csub_norm cPsi k tN)
+  | LF.Lam (loc, x, tN)  -> LF.Lam (loc, x, csub_norm cPsi k tN)
 
-  | LF.Root (h, tS) ->
-      LF.Root (csub_head cPsi k h, csub_spine cPsi k tS)
+  | LF.Root (loc, h, tS) ->
+      LF.Root (loc, csub_head cPsi k h, csub_spine cPsi k tS)
 
   | LF.Clo (tN, s) -> 
       LF.Clo (csub_norm cPsi k tN, csub_sub cPsi k s)
@@ -925,13 +924,13 @@ let rec mctxPVarPos cD p =
             else look t (p+1)
           else 
             k
-      | Comp.MDot (Comp.MObj (_phat, LF.Root(LF.MVar (LF.Offset k', LF.Shift (_,0)), _ (* Nil *))), t) -> 
+      | Comp.MDot (Comp.MObj (_phat, LF.Root(_, LF.MVar (LF.Offset k', LF.Shift (_,0)), _ (* Nil *))), t) -> 
           if k > d then 
             if k' = (k-d) then (p+d)
             else look t (p+1)
           else k
 
-      | Comp.MDot (Comp.MObj (_phat, LF.Root(_ , _ )), t) -> 
+      | Comp.MDot (Comp.MObj (_phat, LF.Root(_, _, _)), t) -> 
           look t (p+1)
 
 
@@ -956,32 +955,32 @@ let rec mctxPVarPos cD p =
 
   (* invTerm (tM, t) = tM' s.t. [|t|]tM' = tM *)
   let rec invTerm (tM, t) d = match tM with
-    | LF.Lam (y, tN)       -> LF.Lam (y, invTerm (tN, t) d) 
+    | LF.Lam (loc, y, tN)  -> LF.Lam (loc, y, invTerm (tN, t) d) 
 
     | LF.Clo (tN, s)       -> LF.Clo(invTerm (tN, t) d , invSub(s, t) d)  
 
-    | LF.Root (LF.BVar i, tS) -> LF.Root(LF.BVar i, invSpine (tS, t) d)
+    | LF.Root (loc, LF.BVar i, tS) -> LF.Root(loc, LF.BVar i, invSpine (tS, t) d)
 
     (* Meta-variables *)
 
-    | LF.Root (LF.MVar (LF.Offset k, r), tS)
+    | LF.Root (loc, LF.MVar (LF.Offset k, r), tS)
       -> 
-        LF.Root (LF.MVar (LF.Offset (lookDom k t d), invSub (r, t) d), invSpine (tS, t) d) 
+        LF.Root (loc, LF.MVar (LF.Offset (lookDom k t d), invSub (r, t) d), invSpine (tS, t) d) 
 
-    | LF.Root (LF.FMVar (u, r), _tS) ->
+    | LF.Root (_, LF.FMVar (u, r), _tS) ->
         raise (FreeMVar (LF.FMVar (u,invSub (r, t) d)))
 
-    | LF.Root (LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r), _tS) -> 
+    | LF.Root (_, LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r), _tS) -> 
         (* We could normalize [r]tM *)
         let tM' = Whnf.norm (tM, S.id) in 
           invTerm (tM', t) d
           
-    | LF.Root (LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) , _r), _tS) -> 
+    | LF.Root (_, LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) , _r), _tS) -> 
         raise (Error "Encountered Un-Instantiated MVar with reference ?\n") 
         (* LF.Root (LF.MVar(u, invSub (r, t)), invSpine (tS, t))  *)
 
     (* Parameter variables *)
-    | LF.Root (LF.PVar (LF.Offset k, r), tS)
+    | LF.Root (loc, LF.PVar (LF.Offset k, r), tS)
         (* cD' ; cPsi' |- r <= cPsi1 
            cD          |- t <= cD'
  
@@ -989,31 +988,31 @@ let rec mctxPVarPos cD p =
            where r' = [|t|] r
 
          *)
-      ->  LF.Root (LF.PVar (LF.Offset (lookDom k t d), invSub (r, t) d), invSpine (tS, t) d)
+      ->  LF.Root (loc, LF.PVar (LF.Offset (lookDom k t d), invSub (r, t) d), invSpine (tS, t) d)
 
-    | LF.Root (LF.FPVar (p, r), _tS) ->
+    | LF.Root (_, LF.FPVar (p, r), _tS) ->
         raise (FreeMVar 
                  (LF.FPVar (p, invSub (r, t) d)))
 
     (* Ignore other cases for destructive (free) parameter variables *)
 
     (* Constants *)
-    | LF.Root (LF.Const c, tS)
-      -> LF.Root (LF.Const c, invSpine (tS, t) d)
+    | LF.Root (loc, LF.Const c, tS)
+      -> LF.Root (loc, LF.Const c, invSpine (tS, t) d)
 
     (* Free Variables *)
-    | LF.Root (LF.FVar x, tS)        
+    | LF.Root (loc, LF.FVar x, tS)        
       -> (Printf.printf "Encountered a free variable!?\n" ; 
-          LF.Root (LF.FVar x, invSpine (tS, t) d))
+          LF.Root (loc, LF.FVar x, invSpine (tS, t) d))
 
     (* Projections *)
-    | LF.Root (LF.Proj (LF.BVar i, k), tS)
-      -> LF.Root (LF.Proj (LF.BVar i, k), invSpine (tS, t) d)
+    | LF.Root (loc, LF.Proj (LF.BVar i, k), tS)
+      -> LF.Root (loc, LF.Proj (LF.BVar i, k), invSpine (tS, t) d)
 
-    | LF.Root (LF.Proj (LF.PVar (LF.Offset j, s), k), tS)
+    | LF.Root (loc, LF.Proj (LF.PVar (LF.Offset j, s), k), tS)
         (* cD' ; cPsi' |- s <= cPsi1 *)
         (* cD          |- t <= cD'   *)         
-      -> LF.Root(LF.Proj (LF.PVar (LF.Offset (lookDom j t d), invSub (s,t) d), k), invSpine (tS, t) d)
+      -> LF.Root(loc, LF.Proj (LF.PVar (LF.Offset (lookDom j t d), invSub (s,t) d), k), invSpine (tS, t) d)
 
   (* Ignore other cases for destructive (free) parameter-variables *)
 

@@ -132,7 +132,7 @@ let rec printCollection cQ = match cQ with
       let (ctx_var, tA) = raiseType cPsi tP in        
       (printCollection cQ ; 
        Printf.printf " %s : " 
-         (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(h, I.Nil), LF.id))) ;
+         (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(None, h, I.Nil), LF.id))) ;
        Printf.printf " %s . %s \n" 
          (ctxVarToString ctx_var)
          (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
@@ -150,7 +150,7 @@ let rec printCollection cQ = match cQ with
       let (ctx_var, tA) = raiseType cPsi tA' in        
       (printCollection cQ ; 
        Printf.printf " %s : " 
-         (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(h, I.Nil), LF.id))) ;
+         (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(None, h, I.Nil), LF.id))) ;
        Printf.printf " %s . %s \n" 
          (ctxVarToString ctx_var)
          (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
@@ -314,10 +314,10 @@ let rec ctxToMCtx cQ  = match cQ with
 let rec collectTerm cQ phat sM = collectTermW cQ phat (Whnf.whnf sM)
 
 and collectTermW cQ ((cvar, offset) as phat) sM = match sM with
-  | (I.Lam (_x, tM), s) ->
+  | (I.Lam (_, _x, tM), s) ->
       collectTerm cQ (cvar, offset + 1) (tM, LF.dot1 s)
 
-  | (I.Root (h, tS), s) ->
+  | (I.Root (_, h, tS), s) ->
       let cQ' = collectHead cQ phat (h, s) in
         collectSpine cQ' phat (tS, s)
 
@@ -546,16 +546,16 @@ and abstractTypW cQ offset sA = match sA with
 and abstractTerm cQ offset sM = abstractTermW cQ offset (Whnf.whnf sM)
 
 and abstractTermW cQ offset sM = match sM with
-  | (I.Lam (x, tM), s) ->
-      I.Lam (x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
+  | (I.Lam (loc, x, tM), s) ->
+      I.Lam (loc, x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
-  | (I.Root (I.MVar (I.Inst(_r, cPsi, _tP , _cnstr), s) as tH, _tS (* Nil *)), _s (* LF.id *)) -> 
+  | (I.Root (loc, (I.MVar (I.Inst (_r, cPsi, _tP, _cnstr), s) as tH), _tS (* Nil *)), _s (* LF.id *)) -> 
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MV tH) + offset in 
-        I.Root (I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)     
+        I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)     
 
-  | (I.Root (tH, tS), s (* LF.id *)) ->
-      I.Root (abstractHead cQ offset tH, abstractSpine cQ offset (tS,s))
+  | (I.Root (loc, tH, tS), s (* LF.id *)) ->
+      I.Root (loc, abstractHead cQ offset tH, abstractSpine cQ offset (tS, s))
 
 
 and abstractHead cQ offset tH = match tH with
@@ -581,7 +581,7 @@ and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
        subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (I.NoCtxShift, (k + 1))), cPsi) tS
 
   | (I.Dot (I.Head (I.BVar k), s), I.DDec(cPsi', _dec)) -> 
-      subToSpine cQ offset  (s,cPsi') (I.App (I.Root (I.BVar k, I.Nil), tS))
+      subToSpine cQ offset  (s,cPsi') (I.App (I.Root (None, I.BVar k, I.Nil), tS))
 
   | (I.Dot (I.Head (I.MVar (_u, _r)), _s) , I.DDec(_cPsi', _dec)) -> 
       (Printf.printf "SubToSpine encountered MVar as head \n";
@@ -684,10 +684,10 @@ and abstractMVarTypW cQ offset sA = match sA with
 and abstractMVarTerm cQ offset sM = abstractMVarTermW cQ offset (Whnf.whnf sM)
 
 and abstractMVarTermW cQ offset sM = match sM with
-  | (I.Lam (x, tM), s) ->
-      I.Lam (x, abstractMVarTerm cQ offset (tM, LF.dot1 s))
-  | (I.Root (tH, tS), s (* LF.id *)) ->
-      I.Root (abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
+  | (I.Lam (loc, x, tM), s) ->
+      I.Lam (loc, x, abstractMVarTerm cQ offset (tM, LF.dot1 s))
+  | (I.Root (loc, tH, tS), s (* LF.id *)) ->
+      I.Root (loc, abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
 
 
 and abstractMVarHead cQ offset tH = match tH with

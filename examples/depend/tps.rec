@@ -50,42 +50,28 @@ tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
 
 
 % Type preservation proof
-rec tps :  (eval E![.]! V![.]!)[.] -> (oft E![.]! T![.]!)[.]
-        -> (oft V![.]! T![.]!)[.]  = 
+rec tps :  (eval E V)[ ] -> (oft E T)[ ]
+         -> (oft V T)[ ]  = 
 fn e => fn d => 
-
   case e of 
-    box(. . ev_z) => 
-      (case d of box(. . tp_z) => box(. tp_z))
+    [ ] ev_z => 
+    let [ ] tp_z = d in [ ] tp_z
+
+  | [ ]  ev_s E1  =>
+    let [ ] tp_s D1 = d in 
+    let [ ] F1      = tps ([ ] E1) ([ ] D1) in 
+      [ ] tp_s F1
+	
+
+  | [ ] ev_lam =>  
+    let [ ] tp_lam (\x. \u. (D x u)) = d in d
 
 
-  | box(. . ev_s E1![.]!)  =>
-    (case d of  box(. . tp_s D1![.]!)  =>    
-       (case (tps box(. E1![.]!) box(. D1![.]!)) of 
-	   box(. .  F1![.]!) => box(. tp_s F1![.]!)
-       )
-    )
-
-  | box(. . ev_lam) =>  
-    (case d of box (. . tp_lam (\x. \u. D![. , x, u]!)) => d)     
-
-
-  | box(. . ev_app E1![.]! E2![.]! E3![.]!) => 
-     (case d of box (. . tp_app D2![.]! D1![.]!) => 
-
-         (case (tps box(. E1![.]!) box( . D1![.]!)) of 
-
-           box(. . tp_lam (\x. \u. D![.,x,u]!)) => 
-            
-              (case (tps box( . E2![.]!) box( . D2![.]!)) of 
-	         box(. . F2![.]!) =>  
-                    
-                      tps box( . E3![.]!) box( . D![. ; _ ; F2![.]!]!) 
-
-	      )
-          )
-      )
-
+   | [ ] ev_app E1 E2 E3 => 
+    let [ ] tp_app D2 D1        = d in 
+    let [ ] tp_lam (\x. \u. (D x u)) = tps ([ ] E1) ([ ] D1)  in 
+    let [ ] F2                       = tps ([ ] E2) ([ ] D2)  in 
+        tps ([ ] E3) ([ ] (D  _  F2))
 
 
 ;

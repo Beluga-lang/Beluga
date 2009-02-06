@@ -2,24 +2,25 @@
 term :  type.
 lam  : (term -> term) -> term.
 
-schema W = some [] block term;
+schema tctx = some [] block term;
 
-rec copy' : (term) [.] -> (term) [.] = 
- fn t =>  case t of box(. . lam (\ x . x)) : term[.] => t
+rec copy' : term [ ] -> term [ ] = 
+ fn t =>  case t of [ ] lam (\x . x) : term[ ] => t
 ;
 
-rec copy : {g:(W)*} (term) [g] -> (term) [g] =
+rec copy : {g:(tctx)*} term[g] -> term[g] =
 FN g => fn e =>
  (case e of
     {#p::term [g]}
-     box(g . #p![id]!) : term [g] => box(g . #p![id]!)
+     [g] (#p ..) : term [g] => [g] (#p ..)
 
   | {U::term [g, x : term]}
-    box(g . lam (\ x. U![id, x]!)) : term [g] => 
+    [g] lam (\x. (U .. x)) : term [g] => 
 
-       (case (copy [g, x:term]  (box(g,x . U![id, x]!))) of
+       (case (copy [g, x:term]  ([g,x] (U .. x))) of
 
           {V:: term[g, x : term ]}
 
-           box(g,x:term . V![id, x]!) : term [g,x:term] =>
-             box(g . lam (\ x. V![id , x]!))));
+           [g,x:term ] (V .. x) : term [g,x:term] =>
+             [g] lam (\x. (V .. x)))
+);

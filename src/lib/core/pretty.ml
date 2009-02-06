@@ -766,7 +766,7 @@ module Int = struct
 
 
     and fmt_ppr_lf_normal lvl ppf = function
-      | LF.Lam (x, m) ->
+      | LF.Lam (_, x, m) ->
           let cond = lvl > 0 in
             fprintf ppf "%s\\ %s . %a%s"
               (l_paren_if cond)
@@ -774,11 +774,11 @@ module Int = struct
               (fmt_ppr_lf_normal 0) m
               (r_paren_if cond)
 
-      | LF.Root (h, LF.Nil) ->
+      | LF.Root (_, h, LF.Nil) ->
           fprintf ppf "%a"
             (fmt_ppr_lf_head lvl) h
 
-      | LF.Root (h, ms)  ->
+      | LF.Root (_, h, ms)  ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a%a%s"
               (l_paren_if cond)
@@ -1370,28 +1370,21 @@ module Error = struct
       | SubIllTyped ->
           fprintf ppf "Substitution not well-typed"
 
-      | TypMismatch ((* _cD ,*) _cPsi, (tA1, s1), (tA2, s2)) ->
+      | TypMismatch ((* _cD ,*) _cPsi, sA1, sA2) ->
           fprintf ppf
-            "Type mismatch ** WARNING: Types not in context **:@ @[%a[%a]@ =/=@ %a[%a]@]"
-            (* The 2 is for precedence.  Treat printing
-               below as if it were similar to an application context as
-               far as precedence is concerned -dwm *)
-            (IP.fmt_ppr_lf_typ 0)    tA1
-            (IP.fmt_ppr_lf_sub std_lvl) s1
-            (IP.fmt_ppr_lf_typ 0)    tA2
-            (IP.fmt_ppr_lf_sub std_lvl) s2
+            "non unifiable types\n    %a\n    %a"
+            (IP.fmt_ppr_lf_typ std_lvl) (Whnf.normTyp sA1)
+            (IP.fmt_ppr_lf_typ std_lvl) (Whnf.normTyp sA2)
 
       | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
           fprintf ppf "Sigma Type mismatch"
 
-      | IllTyped (_cPsi, (tM, _s1), (tA, _s2)) ->
-          (* FIXME call normalisation or normalizing string conversion *)
+      | IllTyped (_cPsi, sM, sA) ->
           fprintf ppf
-            "ill typed expression\n  expected type: %a\n  for expression:\n    %a" 
-            (IP.fmt_ppr_lf_typ std_lvl) tA
-            (IP.fmt_ppr_lf_normal std_lvl) tM
-            (* (IP.fmt_ppr_lf_typ (Whnf.norm (tA, s2))) *)
-            (* (IP.fmt_ppr_lf_normal (Whnf.normTyp (tM, s1))) *)
+            "ill typed expression\n  expected type: %a\n  for expression:\n    %a"
+            (IP.fmt_ppr_lf_typ std_lvl) (Whnf.normTyp sA)
+            (IP.fmt_ppr_lf_normal std_lvl) (Whnf.norm sM)
+            (* TODO print context *)
 
       | LeftoverConstraints ->
           fprintf ppf "constraints left after reconstruction"
@@ -1416,6 +1409,11 @@ module Error = struct
 
       | NotPatSub       ->
           fprintf ppf "Not a pattern substitution"
+
+      | IndexError (k, cPsi) ->
+          fprintf ppf "looking up index %s in context %a" 
+            (string_of_int k) 
+            (IP.fmt_ppr_lf_dctx std_lvl) cPsi
 
 
     (* Regular Pretty Printers *)

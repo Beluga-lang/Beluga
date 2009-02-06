@@ -192,8 +192,8 @@ module Int : sig
       | TVar  of tvar * sub                
 
     and normal =
-      | Lam  of name * normal
-      | Root of head * spine
+      | Lam  of Loc.t option * name * normal
+      | Root of Loc.t option * head * spine
       | Clo  of (normal * sub)
 
     and head =
@@ -386,8 +386,8 @@ module Apx : sig
       |  SigmaElem of name * typ * typ_rec
 
     and normal =
-      | Lam  of name * normal
-      | Root of head * spine
+      | Lam  of Loc.t * name * normal
+      | Root of Loc.t * head * spine
 
     and head =
       | BVar  of offset

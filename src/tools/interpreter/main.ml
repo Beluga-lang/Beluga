@@ -43,7 +43,7 @@ type spec =
 let process_name name =
   let rest = String.sub name 1 (String.length name - 1) in
     if String.get name 0 = '@' then
-      (print_string "NEGATIVE\n"; (Negative, rest))
+      (Negative, rest)
 (* else if String.get name 0 = ...... then
       (......, rest)
 *)
@@ -67,6 +67,10 @@ let main () =
         | decl :: decls ->
             printer decl;
             print_sgn printer decls
+      in
+      let printOptionalLocation locOpt = match locOpt with
+        | None     -> Format.fprintf Format.std_formatter "<unknown location>"
+        | Some loc -> Parser.Grammar.Loc.print Format.std_formatter loc
       in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
@@ -104,27 +108,46 @@ let main () =
                      ; return Negative
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-              printf "Parse Error: \n\t%s\nLocation:\n\t" exn;
               Parser.Grammar.Loc.print Format.std_formatter loc;
+              Format.fprintf Format.std_formatter ":\n";
+              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
               Format.fprintf Format.std_formatter "@?";
-              print_newline ();
               print_newline ();
               return Negative
 
-          | Reconstruct.Error err ->
+          | Reconstruct.Error (locOpt, err) ->
+              printOptionalLocation locOpt;
+              Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter
-                (* TODO print location as "filename:line1.col1-line2-col2" *)
-                "Error (Reconstruction): %a\n@?"
+                "Error (Reconstruction): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               return Negative
 
-          | Check.Comp.Err err ->
+          | Reconstruct.Violation err_string ->
               Format.fprintf
                 Format.std_formatter
                 (* TODO print location as "filename:line1.col1-line2-col2" *)
-                "Error (Checking): %a\n@?"
+                "Error (\"Violation\") (Reconstruction): %s\n@?"
+                err_string;
+              print_newline ();
+              return Negative
+
+          | Check.Comp.Err err ->
+              (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
+              Format.fprintf Format.std_formatter ":\n";
+              Format.fprintf
+                Format.std_formatter
+                "Error (Checking): %a@?"
+                Pretty.Error.DefaultPrinter.fmt_ppr err;
+              print_newline ();
+              return Negative
+
+          | Context.Error err ->
+              Format.fprintf
+                Format.std_formatter
+                "Error (Context): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               return Negative

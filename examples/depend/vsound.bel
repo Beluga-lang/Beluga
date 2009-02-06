@@ -1,7 +1,7 @@
 % Value soundness 
 % Author: Brigitte Pientka
 %
-% TODO extend with functions and function application
+
 
 exp  : type.  
 z    : exp.
@@ -18,30 +18,29 @@ ev_s : {E:exp} {V:exp} eval E V -> eval (suc E) (suc V).
 ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp} 
        eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 
-rec vs : {E::exp[.]} {V::exp[.]} (eval E![.]! V![.]!)[.] -> (value V![.]!)[.] = 
+rec vs : {E::exp[ ]} {V::exp[ ]} (eval E V)[ ] -> (value V)[ ] = 
 mlam E => mlam V => fn e =>
   case e of 
-     box(. . ev_z) : (eval z z)[.] => box(. v_z)
+     [ ] ev_z : (eval z z)[ ] =>  [ ] v_z
 
-  | {E::exp[.]}{V::exp[.]}{D::(eval  E![.]! V![.]!)[.]}
-    box(. . ev_s E![.]! V![.]! D![.]!) : (eval (suc E![.]!) (suc V![.]!))[.]
+   | {E::exp[ ]}{V::exp[ ]}{D::(eval  E V)[ ]}
+     [ ] ev_s E V D : (eval (suc E) (suc V))[ ]
+     => 
 
-    => 
+     (case   (vs  <. E > <. V > ([ ] D)) of 
 
-    (case   (vs   <. E![.]! > <. V![.]! > box(. D![.]!)) of 
+       {V'::exp[ ]}{F::(value V')[ ]}
+        [ ] F : (value V')[ ] 
+        =>    [ ] v_s V F 
+      )
 
-      {V'::exp[.]}{F::(value V'![.]!)[.]}
-       box(. . F![.]!) : (value V'![.]!)[.] 
-       =>    box(. v_s V![.]! F![.]!) 
-     )
+   | {E1::exp[ ]} {E2::exp[x:exp]} {V1::exp[ ]} {V2::exp[ ]}
+     {D1::(eval E1 V1)[ ]} {D2::(eval (E2 V1) V2)[ ]}
 
-  | {E1::exp[.]} {E2::exp[. , x:exp]} {V1::exp[.]} {V2::exp[.]}
-    {D1::(eval E1![.]! V1![.]!)[.]} {D2::(eval E2![., V1![.]! ]! V2![.]!)[.]}
+      [ ] ev_l E1 (\x . (E2 x)) V1 V2 D2 D1 :
+        (eval (letv E1 (\x . (E2 x))) V2)[ ] 
 
-     box(. . ev_l E1![.]! (\x . E2![., x]!) V1![.]! V2![.]! D2![.]! D1![.]!) :
-       (eval (letv E1![.]! (\x . E2![., x]!)) V2![.]!)[.] 
-
-     =>
-        vs <. E2![., V1![.]! ]! >  <. V2![.]! >  box(. D2![.]!)
+      => 
+           vs < . (E2 V1) >  < . V2 >  ([ ] D2)
 
 ;

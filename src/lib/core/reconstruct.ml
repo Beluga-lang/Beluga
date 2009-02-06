@@ -91,9 +91,7 @@ let rec index_kind cvars bvars = function
 
 and index_typ cvars bvars = function
   | Ext.LF.Atom (_, a, s) ->
-      let _  = Printf.printf "index_typ atom %s \n" (a.string_of_name) in 
       let a' = Typ.index_of_name a
-      and _  = Printf.printf "index_typ atom %s \n" (a.string_of_name) in 
       and s' = index_spine cvars bvars s in
         Apx.LF.Atom (a', s')
 
@@ -276,9 +274,7 @@ and index_el (Ext.LF.SchElem (_, typ_ctx, Ext.LF.SigmaDecl (x, typ_rec))) =
   let cvars = (CVar.create ()) in
   let bvars = (BVar.create ()) in
   let (typ_ctx', bvars') = index_ctx cvars bvars typ_ctx in
-  let _ = Printf.printf "index_ctx done ... |bvars| = %s \n" (string_of_int (BVar.length bvars')) in 
   let typ_rec'           = index_typrec cvars bvars' typ_rec in
-  let _ = Printf.printf "index_typrec done ... \n" in 
     Apx.LF.SchElem (typ_ctx', Apx.LF.SigmaDecl (x, typ_rec'))
 
 
@@ -1218,8 +1214,6 @@ and synTermW recT cD cPsi sR = match sR with
        *
        * This only applies to LF reconstruction
        *)
-      let _ = Printf.printf "Show FV %s \n" (R.render_name x) in 
-      let _ = Printf.printf "Show cPsi %s \n" (P.dctxToString cPsi) in 
       let tA = FVar.get x in
       let (None , d) = Context.dctxToHat cPsi in
         synSpine recT cD cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d))
@@ -1945,7 +1939,7 @@ let recSgnDecl d = match d with
 
 
   | Ext.Sgn.Schema (_, g, schema) ->
-      let _       = Printf.printf "\n Indexing schema : %s  \n" g.string_of_name  in  
+     (*  let _       = Printf.printf "\n Indexing schema : %s  \n" g.string_of_name  in  *)
       let apx_schema = index_schema schema in
       let _        = Printf.printf "\n Reconstruct schema: %s\n" g.string_of_name  in
       let sW         = elSchema apx_schema in
@@ -1961,7 +1955,7 @@ let recSgnDecl d = match d with
 
 
   | Ext.Sgn.Rec (_, f, tau, e) ->
-      let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in  
+      (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
       let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) tau in
       let _       = Printf.printf "\n Reconstruct function: %s  \n" f.string_of_name  in
       let cD      = Int.LF.Empty in

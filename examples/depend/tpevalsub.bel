@@ -20,61 +20,63 @@ eq   : exp nat -> exp nat -> exp bool.
 iff   : {T:tp} exp bool -> exp T -> exp T -> exp T.
 letv : {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
-rec equal : (exp nat)[.] -> (exp nat)[.] -> (exp bool)[.] =
+rec equal : (exp nat)[ ] -> (exp nat)[ ] -> (exp bool)[ ] =
 fn x => fn y => 
   case x of
-    box(. . z) : (exp nat)[.] => 
+    [ ] z : (exp nat)[ ] => 
       (case y of
-          box(. . z) : (exp nat)[.] => box(. tt)
+          [ ] z : (exp nat)[ ] => [ ] tt
 
-       | {U::(exp nat)[.]} 
-         box(. . suc U![.]!) : (exp nat)[.] => box(. ff))
+       | {U::(exp nat)[ ]} 
+         [ ] suc U : (exp nat)[ ] => [ ] ff)
 
-  | {U::(exp nat)[.]} 
-    box(. . suc U![.]!) : (exp nat)[.] => 
+  | {U::(exp nat)[ ]} 
+    [ ] suc U : (exp nat)[ ] => 
       (case y of
-         box(. . z) : (exp nat)[.] => box(. ff)
-      | {V::(exp nat)[.]} 
-         box(. . suc V![.]!) : (exp nat)[.] 
-            => equal box(. U![.]!) box(. V![.]!))
+         [ ] z : (exp nat)[ ] => [ ] ff
+      | {V::(exp nat)[ ]} 
+         [ ] suc V : (exp nat)[ ] 
+            => equal ([ ] U) ([ ] V))
 ;
 
 
 
 
-rec eval : {T::tp[.]} (exp T![.]!)[.] -> (exp T![.]!)[.] = 
+rec eval : {T::tp[ ]} (exp T)[ ] -> (exp T)[ ] = 
 mlam T => fn e => 
   case e of 
-    box(. . tt) : (exp bool)[.] => box(. tt)
+    [ ] tt : (exp bool)[ ] => [ ] tt
 
-  | box(. . ff) : (exp bool)[.] => box(. ff)
+  | [ ] ff : (exp bool)[ ] => [ ] ff
 
-  | box(. . z)  : (exp nat)[.]  => box(. z)
+  | [ ] z  : (exp nat)[ ]  => [ ] z
 
-  | {U::(exp nat)[.]}
-    box(. . suc U![.]!) : (exp nat)[.] => 
-         (case eval <. nat >  box(. U![.]!) of
-             {V::(exp nat)[.]} 
-             box(. . V![.]!) : (exp nat)[.] => box(. suc V![.]!))
+  | {U::(exp nat)[ ]}
+    [ ] suc U : (exp nat)[ ] => 
+         (case eval <. nat >  ([ ] U) of
+             {V::(exp nat)[ ]} 
+             [ ] V : (exp nat)[ ] => [ ] suc V)
 
 
-  | {U::(exp nat)[.]} {V::(exp nat)[.]}
-    box(. . eq U![.]! V![.]!) : (exp bool)[.] =>
-         equal (eval <. nat >   box(. U![.]!)) 
-               (eval <. nat >   box(. V![.]!))
+  | {U::(exp nat)[ ]} {V::(exp nat)[ ]}
+    [ ] eq U V : (exp bool)[ ] =>
+         equal (eval <. nat >   ([ ] U)) 
+               (eval <. nat >   ([ ] V))
 
-   | {T::tp[.]} {U::(exp bool)[.]} {V::(exp T![.]!)[.]} {W::(exp T![.]!)[.]}
-         box(. . iff T![.]! U![.]! V![.]! W![.]!) : (exp T![.]!)[.] =>
-         (case eval <. bool > box(. U![.]!) of
-             box(. . tt) : (exp bool)[.] => eval <. T![.]! > box(. V![.]!)
-           | box(. . ff) : (exp bool)[.] => eval <. T![.]! > box(. W![.]!))
+   | {T::tp[ ]} {U::(exp bool)[ ]} {V::(exp T)[ ]} {W::(exp T)[ ]}
+         [ ] iff T U V W : (exp T)[ ] =>
+         (case eval <. bool > ([ ] U) of
+             [ ] tt : (exp bool)[ ] => eval <. T > ([ ] V)
+           | [ ] ff : (exp bool)[ ] => eval <. T > ([ ] W)
+	   )
 
-   | {T1::tp[.]} {T2::tp[.]} {U::(exp T1![.]!)[.]} {W::(exp T2![.]!)[. , x:(exp T1![.]!)]}
-         box(. . letv T1![.]! T2![.]! U![.]! (\ x . W![., x]!)) : (exp T2![.]!)[.] =>
+   | {T1::tp[ ]} {T2::tp[ ]} {U::(exp T1)[ ]} {W::(exp T2)[x:exp T1]}
+         [ ] letv T1 T2 U (\x . (W x)) : (exp T2)[ ] =>
 
-         (case eval <. T1![.]! > box(. U![.]!) of
+         (case eval <. T1 > ([ ] U) of
 
-             {T1'::tp[.]} {V::(exp T1'![.]!)[.]}  
-             box(. . V![.]!) : (exp T1'![.]!)[.] 
-             => eval <. T2![.]! > box(. W![ ., V![.]! ]!))
+             {T1'::tp[ ]} {V::(exp T1')[ ]}  
+             [ ] V : (exp T1')[ ] 
+             => eval <. T2 > ([ ] (W V))
+	     )
 ;

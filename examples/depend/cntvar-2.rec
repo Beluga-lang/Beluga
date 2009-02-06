@@ -14,46 +14,42 @@ s   : exp nat -> exp nat.
 tt  : exp bool.
 
 add : exp nat -> exp nat -> exp nat.
-letv: {T1:tp}exp T1 -> (exp T1 -> exp T2) -> exp T2.
+letv: {T1:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 
-schema W = some [T:tp] block exp T;
+schema expCtx = some [t:tp] block (exp t);
 
 
-rec plus : (exp nat) [.] -> (exp nat) [.] -> (exp nat) [.] =
+rec plus : (exp nat) [ ] -> (exp nat) [ ] -> (exp nat) [ ] =
 fn x => fn y =>
- (case x of
-    box(. . z)  => y
+ case x of
+    [ ] z => y
 
-  | box(. . s U ![.]!)  =>
-    (case (plus box(. U![.]!) y) of
-       box(. . V![.]!) : (exp nat)[.] 
-       => box(. s V![.]!)));
+  | [ ] s U  =>
+  let  [ ] V = plus ([ ] U) y in 
+    [ ] s V;
 
 
-rec cntV : {g:(W)*} (exp S![id]!)[g, x:(exp T![id]!)] -> (exp nat) [.] =
+rec cntV : {g:(expCtx)*} (exp (S ..))[g, x:exp (T..)] -> (exp nat) [ ] =
 FN g => 
   fn e =>
   (case e of
 
-      box(g,x : exp _ . tt)  => box(. z)
+     [g,x : exp _ ] tt        => [ ] z
 
-   | box(g,x : exp _ . #p![id]!)     
-    => box(. z)
+   | [g,x : exp _ ] (#p ..)   => [ ] z
 
-   | box(g,x : exp _ . x)  => box(. s z)
+   | [g,x : exp _ ] x         => [ ] s z
 
+   | [g,x : exp _ ] z         => [ ] z
 
-   | box(g,x : exp _ . z)   => box(. z)
+   | [g,x : exp _ ] s (W .. x)  => 
+          cntV [g]  ([g,x] (W .. x))
 
-   | box(g,x : exp _ . s W ![id, x]! )  => 
-          cntV [g]   box(g,x . W![id, x]!)
-
-   | box(g,x : exp _ . letv T1![id]! U1![id, x]! (\ y . U2![id, x, y]!)) =>
+   | [g,x : exp _ ] letv (T1 ..) (U1 .. x) (\y . (U2 .. x y)) =>
              plus 
-	     (cntV [g]  box(g,x . U1![id, x]!)) 
-             (cntV [g, y:exp _]  box(g,y,x . U2![id, x, y]!))
-
+	     (cntV [g]           ([g,x]   (U1 .. x)))
+             (cntV [g, y:exp _]  ([g,y,x] (U2 .. x y)))
 
 );
 

@@ -14,53 +14,48 @@ z : exp nat.
 s : exp nat -> exp nat.
 tt: exp bool.
 ff: exp bool.
-Andalso: exp bool -> exp bool -> exp bool.
+andalso: exp bool -> exp bool -> exp bool.
 
 
-Add: exp nat -> exp nat -> exp nat.
-Let: exp T1 -> (exp T1 -> exp T2) -> exp T2.
+plus: exp nat -> exp nat -> exp nat.
+letv: exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 
 
-rec add : (exp nat)[.] -> (exp nat)[.] -> (exp nat)[.] = 
+rec add : (exp nat)[ ] -> (exp nat)[ ] -> (exp nat)[ ] = 
 fn a => fn b =>
-   (case a of
-        box(. . z)  => b
-      | box(. . s U![.]!) =>
-        (case b of
-          box(. . V![.]!) % : (exp nat) [.] 
-	  => add (box(. U![.]!)) box(. s V![.]!))
-)
+ case a of
+   [ ]   z  => b
+ | [ ] s U  =>
+   let [ ] V =  b in 
+     add ([ ] U) ([ ] s V)
 ;
 
-rec and : (exp bool)[.] -> (exp bool)[.] -> (exp bool)[.] = 
+rec and : (exp bool)[ ] -> (exp bool)[ ] -> (exp bool)[ ] = 
 fn a => fn b => 
- (case a of 
-   box(.. tt) => b 
- | box(.. ff) => a)
+ case a of 
+   [ ] tt => b 
+ | [ ] ff => a
 ;
 
 
-rec eval : (exp T![.]!)[.] -> (exp T![.]!)[.] = 
-% mlam T => 
+rec eval : (exp T)[ ] -> (exp T)[ ] = 
 fn e => 
-(case e of
-   box(. . z) => e
- | box(. . tt) => box(. tt)
- | box(. . ff) => box(. ff)
+case e of
+   [ ] z  => e
+ | [ ] tt => [ ] tt
+ | [ ] ff => [ ] ff
 
- | box(. . s U![.]!)  =>  
-    (case (eval box(. U![.]!)) of 
-     box (. . V![.]!)  => box(. s V![.]!))
+ | [ ] s U  =>  
+   let [ ] V = eval ([ ] U) in ([ ] s V)
 
-| box(. . Andalso U1![.]! W1![.]!)  => 
-       and (eval box( . U1![.]!)) (eval box( . W1![.]!))
+ | [ ] andalso U1 W1  => 
+    and (eval ([ ] U1)) (eval ([ ] W1))
 
- | box(. . Add U![.]! W![.]!)  => 
-       add (eval  box( . U![.]!)) (eval box( . W![.]!))
+ | [ ] plus U W  => 
+    add (eval  ([ ] U)) (eval ([ ] W))
 
- | box(. . Let  U![.]! (\x . W![. , x]!))  => 
-    case (eval  box( . U![.]!)) of 
-        box (. . V![.]!) 
-	=>  eval  box( . W![. , V![.]! ]!)
-);
+ | [ ] letv  U (\x . (W  x))  => 
+   let [ ] V = eval  ([ ] U) in 
+      eval ([ ] (W V))
+;

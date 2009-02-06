@@ -8,47 +8,39 @@ s  : exp nat -> exp nat.
 lam : % {T1:tp}
       (exp T1 -> exp T2) -> exp (arr T1 T2).
 
-rec identity : (exp nat)[.] -> (exp nat) [.] =
+rec identity : (exp nat) [ ] -> exp nat [ ] =
     fn x =>
       case x of
-          box (. . z)  => box (. z)
-        | box (. . s U ![ . ]! )  => box (. s U ![ . ]! );
+          [ ] z    =>  [ ] z
+        | [ ] s U  =>  [ ] s U;
 
 
-schema w = some [T:tp] block exp T;
+schema w = some [t:tp] block exp t;
 
 
-rec identity' : {g:(w)*} (exp T ![ id ]! )[g] -> (exp T ![ id]! ) [g] =
-FN g => % mlam T => 
+rec identity' : {g:(w)*} (exp T)[g] -> (exp T) [g] =
+FN g => 
     fn x =>
       case x of
-          box (g. z)    => box (g. z)
-        | box (g. s U![ id]! )  => box (g. s U![id]! )
-
-	| box(g. #p![id]!) 
-	 =>  box(g. #p![id]!)
-
-	| box(g. #p![id]!) % : (exp S![id]!)[g] 
-	=>   box(g. #p![id]!)
+          [g] z          => [g] z
+        | [g] s (U .. )  => [g] s (U .. )
+	| [g] (#p ..) 	 => [g] (#p ..)
 ;
 
 
-rec copy : {g:(w)*} (exp T ![id]! )[g] -> (exp T ![id]! ) [g] =
-FN g =>  % mlam T => 
-    fn x =>
-      case x of
+rec copy : {g:(w)*} (exp (T ..))[g] -> (exp (T ..)) [g] =
+FN g =>  
+ fn x =>
+   case x of
+     [g] z   => [g] z
 
-          box (g. z)   => box (g. z)
+   | [g] s (U .. )  => 
 
-        | box (g. s U ![id]! )  => 
-	   (case (copy [g] (box(g. U![id]!))) of
-	      box (g. V ![id]! ) => box(g. s V![id]!))
+      let [g] (V ..) =  copy [g] ([g] (U ..)) in
+        [g] s (V ..)
 
-        | box(g . lam (\ x. E![id , x]!))  => 
-              box(g . lam  (\ x. E![id , x]!)) 					  
+   | [g] lam (\x. (E ..  x))  => [g] lam  (\x. (E .. x)) 					  
+   | [g] lam (\ x. (E .. x))  => x
 
-        | box(g . lam (\ x. E![id , x]!))  => 
-	   x
-
- 	| box(g. #p![id]!) => box(g. #p![id]!)
+   | [g] (#p ..)              => [g] (#p ..)
 ;

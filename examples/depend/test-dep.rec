@@ -9,23 +9,23 @@ s  : exp nat -> exp nat.
 lam : (exp T1 -> exp T2) -> exp (arr T1 T2).
 coe : exp T -> exp T.
 
-schema w = some [T:tp] block exp T;
+schema w = some [t:tp] block exp t;
 
-rec test : {g:(w)*} (exp T ![id]! )[g] -> (exp T ![id]! ) [g] =
+rec test : {g:(w)*} (exp (T ..))[g] -> (exp (T ..)) [g] =
 FN g =>  
-    fn x => 
-      case x of
+ fn x => 
+  case x of
 
-          box (g. z)   => box (g. z)
+    [g] z          => [g] z
 
-        | box (g. s U![id]! )  => 
-	   box(g. s U![id]!)
+  | [g] (#p ..)    => [g] (#p ..)
 
-        | box(g . coe E![id]!) =>  box(g . coe E![id]!)
+  | [g] s (U ..)   => [g] s (U ..)
 
-        | box(g . lam (\ x. E![id , x]!))  =>  
-            box(g . lam (\ x. E![id , x]!))   
+  | [g] coe (E ..) =>  [g] coe (E ..)
+
+  | [g] lam (\x. (E .. x))  =>  
+      [g] lam (\x. (E .. x))   
 
 
- 	| box(g. #p![id]!) => box(g. #p![id]!)
 ;

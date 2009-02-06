@@ -7,50 +7,55 @@ z : exp nat.
 s  : exp nat -> exp nat.
 lam : {T1:tp}{T2:tp}(exp T1 -> exp T2) -> exp (arr T1 T2).
 
-rec identity : (exp nat)[.] -> (exp nat) [.] =
+rec identity : (exp nat)[ ] -> (exp nat) [ ] =
     fn x =>
       case x of
-          box (. . z)   : (exp nat) [.] => box (. z)
-        | {U::exp nat [.]} box (. . s U ![ . ]! ) : (exp nat) [.] => box (. s U ![ . ]! );
+          [ ] z   : (exp nat) [ ] => [ ] z
+        | {U::(exp nat)[ ]}
+          [ ] s U : (exp nat) [ ] => [ ] s U;
 
 
-schema w = some [T:tp] block exp T;
+schema w = some [t:tp] block exp t;
 
 
-rec identity' : {g:(w)*}{T:: tp[g]} (exp T ![ id ]! )[g] -> (exp T ![ id]! ) [g] =
+rec identity' : {g:(w)*}{T:: tp[g]} (exp (T ..))[g] -> (exp (T ..)) [g] =
 FN g =>  mlam T => 
     fn x =>
       case x of
-          box (g. z)   : (exp nat) [g] => box (g. z)
-        | {U::exp nat [g]} box (g. s U ![ id]! ) : (exp nat) [g] => box (g. s U ![id]! )
+          [g] z   : (exp nat) [g] => [g] z
+        | {U::exp nat [g]} 
+          [g] s (U ..) : (exp nat) [g] => [g] s (U ..)
 %
-	| {T::tp[g]}{#p:: (exp T![id]!)[g]}
-          box(g. #p![id]!) : (exp T![id]!)[g] => 
-	    box(g. #p![id]!)
+	| {T::tp[g]}{#p:: (exp (T ..))[g]}
+          [g] (#p ..) : (exp (T ..))[g] => 
+	    [g] (#p ..)
 ;
 
 
-rec copy : {g:(w)*}{T:: tp[g]} (exp T ![id]! )[g] -> (exp T ![id]! ) [g] =
+rec copy : {g:(w)*}{T:: tp[g]} (exp (T ..))[g] -> (exp (T ..)) [g] =
 FN g =>  mlam T => 
     fn x =>
       case x of
 
-          box (g. z)   : (exp nat) [g] => box (g. z)
+          [g] z   : (exp nat) [g] => [g] z
 
         | {U::exp nat [g]} 
-           box (g. s U ![id]! ) : (exp nat) [g] => 
-	   (case (copy [g] < g. nat > (box(g. U![id]!))) of
-	      {V::exp nat [g]}box (g. V ![id]! ) : (exp nat)[g]=> box(g. s V![id]!))
+           [g] s (U ..) : (exp nat) [g] => 
+	   (case (copy [g] < g. nat > ([g] (U ..))) of
+	      {V::(exp nat)[g]}
+              [g] (V ..) : (exp nat)[g]=> ([g] s (V ..)))
 
-        | {T1::tp[g]}{T2::tp[g]}{E::(exp T2![id]!)[g, x:(exp T1![id]!)]}
+        | {T1::tp[g]}{T2::tp[g]}{E::(exp (T2 ..))[g, x:exp (T1 ..)]}
 
-           box(g . lam T1![id]!  T2![id]!  (\ x. E![id , x]!)) : (exp (arr T1![id]! T2![id]!))[g] => 
-              box(g . lam T1![id]!  T2![id]!  (\ x. E![id , x]!)) 					  
+           [g] lam (T1 ..)  (T2 ..)  (\x. (E .. x)) : (exp (arr (T1 ..) (T2 ..)))[g] => 
+             [g] lam (T1 ..)  (T2 ..)  (\x. (E .. x)) 					  
 
-        | {T1::tp[g]}{T2::tp[g]}{E::(exp T2![id]!)[g, x:(exp T1![id]!)]}
-           box(g . lam T1![id]!  T2![id]!  (\ x. E![id , x]!)) : (exp (arr T1![id]! T2![id]!))[g] => 
+        | {T1::tp[g]}{T2::tp[g]}{E::(exp (T2 ..))[g, x:exp (T1 ..)]}
+
+           [g] lam (T1 ..)  (T2 ..)  (\x. (E .. x)) : (exp (arr (T1..) (T2 ..)))[g] => 
+
 	   x
 
- 	| {T::tp[g]}{#p::(exp T![id]!) [g]} 
-            box(g. #p![id]!) : (exp T![id]!)[g] => box(g. #p![id]!)
+ 	| {T::tp[g]}{#p::(exp (T ..)) [g]} 
+            [g] (#p ..) : (exp (T ..))[g] => [g] (#p ..)
 ;

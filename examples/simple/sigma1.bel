@@ -9,8 +9,14 @@ false : boolean.
 schema nat3 = block x:nat, y:nat. nat;
 schema bool = boolean;
 
+<<<<<<< HEAD:examples/simple/sigma1.bel
 rec loop1 : {g:(nat3)*} (nat)[.] -> (nat)[.]
   = FN g => fn e => loop1[g, zz:block zz1:nat. nat] e;
 
 % rec loop2 : {g:(nat3)*} {bb:(bool)*} (nat)[g] -> (nat)[g]
 %   = FN g => FN bb => fn e => loop2[bb][g] e;
+=======
+rec loop1 : {g:(nat3)*} {bb:(bool)*} (nat)[g] -> (nat)[g] = FN g => FN bb => fn e => loop1 [g][bb] e;
+
+rec loop2 : {g:(nat3)*} {bb:(bool)*} (nat)[g] -> (nat)[g] = FN g => FN bb => fn e => loop2 [bb][g] e;
+>>>>>>> 270abddf4e9c3a9565654f2108eb2d73b3950f51:examples/simple/sigma1.bel

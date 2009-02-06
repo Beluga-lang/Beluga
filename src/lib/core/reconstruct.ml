@@ -822,6 +822,8 @@ and elHead recT cD cPsi h   = match h with
         Int.LF.PVar (Int.LF.Offset offset, elSub recT cD cPsi s cPhi)
 
 
+
+
 (* elSpineI  recT cD cPsi spine i sA sP  = S
  * elSpineIW recT cD cPsi spine i sA sP  = S
  *
@@ -1213,8 +1215,9 @@ and synTermW recT cD cPsi sR = match sR with
        * This only applies to LF reconstruction
        *)
       let tA = FVar.get x in
-      let (None, d) = Context.dctxToHat cPsi in
+      let (None , d) = Context.dctxToHat cPsi in
         synSpine recT cD cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d))
+
 
 and synSpine recT cD cPsi sS sA =
   synSpineW recT cD cPsi sS (Whnf.whnfTyp sA)
@@ -1358,6 +1361,7 @@ let rec recTypRec recT cD cPsi (typRec, s) = match typRec with
 let recDec recT cD cPsi (decl, s) = match decl with
     | Int.LF.TypDecl (_, tA) ->
         recTyp recT cD cPsi (tA, s)
+(* need to take cO and unify with schema elements -- similar to CtxApp checking *)
 
 
 let recSigmaDec recT cD cPsi (sigma_decl, s) = match sigma_decl with
@@ -1570,6 +1574,7 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(a, _spine) , _cPsi) = mat
   | (Apx.Comp.BranchBox (delta, (psi, r, None), e))  ->
       let cD'     = elMCtx PiboxRecon delta in
       let cPsi'   = elDCtx PiboxRecon (* cO *) cD' psi in
+      (* Need to reconstruct cPsi'  *)
       let tP0     = mgTyp cPsi' a (Typ.get a).Typ.kind  in
 
       let tR      = elTerm' PiboxRecon (* cO *) cD' cPsi' r  (tP0, LF.id) in
@@ -1901,15 +1906,16 @@ let recSgnDecl d = match d with
       (* let _        = Printf.printf "\n Reconstruction (wih abstraction) of constant %s \n %s \n\n" a.string_of_name
         (P.kindToString tK') in *)
       let _        = Check.LF.checkKind Int.LF.Empty Int.LF.Empty Int.LF.Null tK' in
-      let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  successful! \n" a.string_of_name  in
+      let _        = Printf.printf "\n DOUBLE CHECK for type constant : %s  successful! \n" a.string_of_name  in
       let a'       = Typ.add (Typ.mk_entry a tK' i) in
+      let _        = Printf.printf "\n Added type constant : %s  successful! \n" a.string_of_name  in
         (* why does Term.add return a' ? -bp *)
         (* because (a : name) and (a' : cid_typ) *)
         Int.Sgn.Typ (a', tK')
 
   | Ext.Sgn.Const (_, c, extT) ->
       let apxT     = index_typ (CVar.create ()) (BVar.create ()) extT in
-      let _        = Printf.printf "\n Reconstruct constant : %s  \n" c.string_of_name  in
+      let _        = Printf.printf "\n Reconstruct term constant : %s  \n" c.string_of_name  in
       let _        = FVar.clear () in
       let tA       = elTyp PiRecon Int.LF.Empty Int.LF.Null apxT in
       let _        = solve_fvarCnstr PiRecon Int.LF.Empty !fvar_cnstr in
@@ -1925,15 +1931,15 @@ let recSgnDecl d = match d with
       (* let _        = Printf.printf "\n Reconstruction (with abstraction) of constant %s \n %s \n\n" c.string_of_name
          (P.typToString (Whnf.normTyp (tA', LF.id))) in *)
       let _        = Check.LF.checkTyp Int.LF.Empty Int.LF.Empty Int.LF.Null (tA', LF.id) in
-      let _        = Printf.printf "\n DOUBLE CHECK for constant : %s  successful! \n" c.string_of_name  in
+      let _        = Printf.printf "\n DOUBLE CHECK for term constant : %s  successful! \n" c.string_of_name  in
       (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in
-      let       _  = (print_string "Add constant \n"; flush_all ()) in
-      let _        = Printf.printf "\n Added constant : %s  successful! \n" c.string_of_name  in
+      let _        = Printf.printf "\n Added term constant : %s  successful! \n" c.string_of_name  in
         Int.Sgn.Const (c', tA')
 
 
   | Ext.Sgn.Schema (_, g, schema) ->
+     (*  let _       = Printf.printf "\n Indexing schema : %s  \n" g.string_of_name  in  *)
       let apx_schema = index_schema schema in
       let _        = Printf.printf "\n Reconstruct schema: %s\n" g.string_of_name  in
       let sW         = elSchema apx_schema in
@@ -1949,7 +1955,7 @@ let recSgnDecl d = match d with
 
 
   | Ext.Sgn.Rec (_, f, tau, e) ->
-      (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in  *)
+      (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
       let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) tau in
       let _       = Printf.printf "\n Reconstruct function: %s  \n" f.string_of_name  in
       let cD      = Int.LF.Empty in

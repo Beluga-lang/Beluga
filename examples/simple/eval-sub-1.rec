@@ -18,66 +18,55 @@ fix : (exp -> exp) -> exp.
 
 
 % Call-By-Name evaluation 
-rec eval : (exp)[.] -> (exp)[.] = 
+rec eval : exp[ ] -> exp[ ] = 
 fn e => 
 
 (case e of
 
-   box(. . suc U![.]!)  =>
+  [ ] suc U  =>
+   let [ ] V = eval ([ ] U) in 
+     [ ] suc V
 
-    (case (eval (box( . U![.]!))) of       
-      box(. . V![.]!) => box( . suc V![.]!))
-
-| box(. . app U![.]! W![.]!) =>   
-    (case (eval (box (. U![.]!))) of
-       box(. . lam (\ x. V![.,x]!))  => 
-          eval (box( . V![., W![.]! ]!))
-    )
+| [ ] app U W =>   
+  let [ ] lam (\ x. (V x))  =  eval ([ ] U) in 
+      eval ([ ] (V W))
+    
         
-| box(. . lam (\ x. U![. , x]!)) =>  e
+| [ ] lam (\x. (U x)) =>  e
 
 
-| box (. . letn W![.]! (\ x. U![.,x]!))  => 
+| [ ] letn W (\x. (U x))  => 
+       eval ([ ] (U W))
 
-       eval (box ( . U![. , W![.]! ]!))
 
+| [ ] fix (\x. (U x))  =>  
 
-| box(. . fix (\ x. U![. , x]!))  =>  
-
-       eval (box (. U![. ; fix (\ x. U![. , x]!) ]!))
+       eval ([ ] (U (fix (\ x. (U x)))))
 
 );
 
 
 % Call-By-Value 
-rec eval' : (exp)[.] -> (exp)[.] = 
+rec eval' : exp[ ] -> exp[ ] = 
 fn e => 
 
 (case e of
 
-   box(. . suc U![.]!)  =>
+  [ ] suc U  =>
+   let [ ] V  = eval' ([ ] U) in 
+     [ ] suc V
 
-    (case (eval' (box( . U![.]!))) of       
-      box(. . V![.]!)  => box( . suc V![.]!))
+| [ ] app U W => 
+  let [ ] lam (\x. (V x))  = eval' ([ ] U) in 
+  let [ ] V2               = eval' ([ ] W) in 
+    eval' ([ ] (V V2))
 
-| box(. . app U![.]! W![.]!) => 
-
-    (case (eval' (box (. U![.]!))) of
-       box(. . lam (\ x. V![.,x]!))  => 
-
-          (case (eval' (box (. W![.]!))) of 
-       	     box(. . V2![.]!) => 
-                   eval' (box( . V![., V2![.]! ]!))
-          )
-    )
         
-| box(. . lam (\ x. U![. , x]!)) =>  e
+| [ ] lam (\ x. (U x)) =>  e
 
 
-| box (. . letv W![.]! (\ x. U![.,x]!)) => 
-
-     case (eval' (box ( . W![.]!))) of 
-          box (. . V![.]!) => 
-               eval' (box ( . U![. , V![.]! ]!))
+| [ ] letv W (\x. (U x)) => 
+  let [ ] V = eval' ([ ] W) in 
+    eval' ([ ] (U V))
 
 );

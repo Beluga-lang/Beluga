@@ -3,22 +3,24 @@ z : nat.
 s : nat -> nat.
 
 
-rec plus : (nat) [.] -> (nat) [.] -> (nat) [.] = 
-fn x => fn y => 
- case x of 
-    box (. . z)  => y
- |  box (. . s U ![.]! )  => 
-    (case (plus (box (. U![.]!)) y) of 
-       box (. . V![.]!)  => box ( . s V![.]!));
+rec plus : nat [ ] -> nat [ ] -> nat [ ] = 
+fn x => fn y =>  
+  case x of 
+     [ ] z  => y 
+  |  [ ] U  =>  
+     let 
+       [ ] V = plus ([ ] U ) y 
+     in 
+        	 [ ] s V 
+     ;
 
 
-rec plus' : (nat) [.] -> (nat) [.] -> (nat) [.] = 
-  fn x => 
-    case x of box (. . z)  => (fn y => y)
-            | box (. . s U![.]!) => 
-	    fn y => 
-	      (case	(plus' (box (. U![.]!)) y) of 
- 	         box (. . V![.]!)  => box ( . s V![.]!));
-
+ rec plus' : nat [ ] -> nat [ ] -> nat [ ] = 
+   fn x => 
+     case x of [ ] z  => (fn y => y)
+             | [ ] s U => 
+ 	    fn y => 
+ 	      (case	(plus' ([ ] U) y) of 
+  	         [ ] V  => [ ] s V);
 
 

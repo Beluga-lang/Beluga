@@ -15,41 +15,43 @@ app:  exp (arr T T') -> exp T -> exp T'.
 lam : (exp T -> exp T') -> exp (arr T T').
 
 opt: type.
-NONE: opt.
-SOME: exp T -> opt.
+nothing: opt.
+something: exp T -> opt.
 
-schema w = some [T:tp] block exp T;
+schema w = some [t:tp] block exp t;
 
-rec FVnat : {g:(w)*} (exp T![.]!)[g] -> (opt)[g] =
+rec free_var : {g:(w)*} (exp T)[g] -> opt[g] =
 FN g  => % mlam T  => 
  fn e => 
- (case e of
-    box(g . z)             => box(g . NONE)
-  | box(g . tt)            => box(g . NONE)
-  | box(g . ff)            => box(g . NONE)
+ case e of
+    [g] z             => [g] nothing
+  | [g] tt            => [g] nothing
+  | [g] ff            => [g] nothing
 
-  | box(g . #p![id]!) 
-    => box(g . SOME  #p![id]!)
+  | [g] (#p ..) 
+    => [g] something  (#p ..)
 
-  | box(g . suc U![id]!)  => FVnat [g] (box(g . U![id]!))
+  | [g] suc (U ..)  => free_var [g] ([g] (U ..))
 
-  | box(g . and U![id]! V![id]!)  => 
-       (case FVnat [g] (box(g . U![id]!)) of
-          box(g . NONE)   => FVnat [g] (box(g . V![id]!))
-        | box(g . SOME  #p![id]!)  => box(g . SOME  #p![id]!))
+  | [g] and (U ..) (V ..)  => 
+       (case free_var [g] ([g] (U ..)) of
+          [g] nothing   => free_var [g] ([ ] (V ..))
+        | [g] something  (#p ..)  => [ ] something  (#p ..))
 
-  | box(g . app U![id]! V![id]!)  => 
-       (case FVnat [g] (box(g . U![id]!)) of
-          box(g . NONE)   => FVnat [g] (box(g . V![id]!))
+  | [g] app (U ..) (V ..)  => 
+       (case free_var [g] ([g] (U ..)) of
+          [g] nothing   => free_var [g] ([g] (V ..))
 
-        | box(g . SOME  #p![id]!)  => box(g . SOME  #p![id]!))
+        | [g] something  (#p ..)  => [g] something  (#p ..))
 
-  | box (g . lam (\x . U![id,x]!)) => 
-     (case (FVnat [g, x:exp _ ] box(g, x. U![id,x]!)) of 
-        box (g,x: exp _ . NONE) => box(g . NONE)
-      | box (g, x: exp _ . SOME x)   => box(g . NONE) % technically we need to initiate backtracking
-      | box (g, x: exp _ . SOME #p![id]!) => box(g . SOME #p![id]!)
+  | [g] lam (\x . (U .. x)) => 
+
+     (case (free_var [g, x:exp _ ] ([g, x] (U .. x))) of 
+        [g, x: exp _ ] nothing       => [ ] nothing
+      | [g, x: exp _ ] something x   => [ ] nothing
+          % technically we need to initiate backtracking
+      | [g, x: exp _ ] something (#p ..) => [ ] something (#p ..)
       )
-);
+;
 
 

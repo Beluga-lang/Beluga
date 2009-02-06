@@ -4,28 +4,26 @@ arrow: tp -> tp -> tp.
 term : tp -> type.
 lam  : {T:tp} {T':tp} (term T -> term T') -> term (arrow T T').
 
-schema W = some [T:tp] block term T;
+schema termCtx = some [t:tp] block (term t);
 
-rec copy : {g:(W)*} {T::tp[.]} (term T![.]!)[g] -> (term T![.]!) [g] =
+rec copy : {g:(termCtx)*} {T::tp[ ]} (term T)[g] -> (term T) [g] =
 
 FN g => mlam T => fn e =>
 (case e of
 
-  {T'::tp[.]} {#p::(term T'![.]!)[g]}
+  {T'::tp[ ]} {#p::(term T')[g]}
+  [g] (#p ..) : (term T')[g]        => [g] (#p ..)
 
-       box(g . #p![id]!) : (term T'![.]!)[g] 
-       => box(g . #p![id]!)
+| {T1::tp[ ]} {T2::tp[ ]} {U::(term T2)[g, x :term T1]}
 
-| {T1::tp[.]} {T2::tp[.]} {U::(term T2![.]!)[g, x : (term T1![.]!) ]}
+     [g] lam T1 T2 (\ x. (U .. x)) : (term (arrow T1 T2))[g] 
 
-       box(g . lam T1![.]! T2![.]! (\ x. U![id, x]!)) : (term (arrow T1![.]! T2![.]!))[g] 
+       => (case copy [g, x:term T1]  < . T2 > ([g,x] (U .. x)) of
 
-       => (case copy [g, x:(term T1![.]!)] <. T2![.]!> box(g,x . U![id, x]!) of
+          {T1'::tp[ ]} {T2'::tp[ ]} {V::(term T2')[g, x:term T1']}
 
-             {T1'::tp[.]} {T2'::tp[.]} {V::(term T2'![.]!)[g, x : (term T1'![.]!) ]}
+           [g,x:term T1'] (V .. x) : (term T2')[g,x:term T1'] 
 
-                 box(g,x:(term T1'![.]!) . V![id, x]!) : (term T2'![.]!)[g,x:(term T1'![.]!)] 
-
-                 => box(g . lam T1'![.]! T2'![.]!  (\ x. V![id , x]!)))
+                 => [g] lam T1' T2'  (\x. (V .. x)))
 
 );

@@ -1,7 +1,6 @@
 % Value soundness 
 % Author: Brigitte Pientka
 %
-% TODO extend with functions and function application
 
 exp  : type.  
 z    : exp.
@@ -28,27 +27,24 @@ ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V
      -> eval (app E1 E2) V.
 
 
-rec vs :  (eval E![.]! V![.]!)[.] -> (value V![.]!)[.] = 
+
+rec vs :  (eval E V)[ ] -> (value V)[ ] = 
 
 fn e =>
-  case e of 
-     box(. . ev_z) => box(. v_z)
+ case e of 
+   [ ] ev_z =>  [ ] v_z
 
-  | box(. . ev_s D![.]!) 
-    => 
-
-    (case   (vs   box(. D![.]!)) of 
-             box(. . F![.]!)  =>    box(. v_s F![.]!) 
-     )
-
-  |  box(. . ev_l D2![.]! D1![.]!) =>  
-      vs  box(. D2![.]!)
+ | [ ] ev_s D  => 
+   let [ ] F =  vs ([ ] D) in 
+        [ ] v_s F
 
 
-   | box(. . ev_lam) => box ( . v_lam)
+| [ ] ev_l D2 D1      =>  vs ([ ] D2)
 
-   | box(. . ev_app D1![.]! D2![.]! D3![.]!) => 
-      vs   box( . D3![.]!)
+
+| [ ] ev_lam          => [ ] v_lam
+
+| [ ] ev_app D1 D2 D3 =>  vs ([ ] D3)
 
 
 ;

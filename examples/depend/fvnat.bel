@@ -10,29 +10,32 @@ tt  : exp bool.
 ff  : exp bool.
 
 opt: type.
-NONE: opt.
-SOME: {T:tp} exp T -> opt.
 
-schema w = some [T:tp] block exp T;
+nothing: opt.
 
-rec FVnat : {g:(w)*} {T::tp[.]} (exp T![.]!)[g] -> (opt)[g] =
+something: {T:tp} exp T -> opt.
+
+schema expCtx = some [t:tp] block exp t;
+
+rec free_var : {g:(expCtx)*} {T::tp[ ]} (exp T)[g] -> opt[g] =
 FN g => mlam T => fn e => 
  (case e of
-    box(g . z)            : (exp nat)[g]   => box(g . NONE)
-  | box(g . tt)           : (exp bool)[g]  => box(g . NONE)
-  | box(g . ff)           : (exp bool)[g]  => box(g . NONE)
+    [g] z            : (exp nat)[g]   => [g] nothing
+  | [g] tt           : (exp bool)[g]  => [g] nothing
+  | [g] ff           : (exp bool)[g]  => [g] nothing
 
-  | {T'::tp[.]} {#p::(exp T'![.]!)[g]}
-     box(g . #p![id]!)     : (exp T'![.]!)[g] => box(g . SOME T'![.]! #p![id]!)
+  | {T'::tp[ ]} {#p::(exp T')[g]}
+     [g] (#p ..)     : (exp T')[g] => [g] something T' (#p ..)
 
   | {U::(exp nat)[g]}
-    box(g . suc U![id]!) : (exp nat)[g]   => FVnat [g] < . nat >  (box(g . U![id]!))
+    [g] suc (U ..) : (exp nat)[g]   => free_var [g] < . nat >  ([g] (U ..))
 
   | {U::(exp bool)[g]} {V::(exp bool)[g]}
-     box(g . and U![id]! V![id]!) : (exp bool)[g]  => 
-       (case FVnat [g] < . bool > (box(g . U![id]!)) of
-          box(g . NONE)                : opt[g] => FVnat [g] < . bool > (box(g . V![id]!))
+     [g] and (U ..) (V ..) : (exp bool)[g]  => 
 
-       | {T'::tp[.]} {#p::(exp T'![.]!)[g]}
-          box(g . SOME T'![.]! #p![id]!) : opt[g] => box(g . SOME T'![.]! #p![id]!))
+       (case free_var [g] < . bool > ([g] (U ..)) of
+          [g] nothing                : opt[g] => free_var [g] < . bool > ([g] (V ..))
+
+       | {T'::tp[ ]} {#p::(exp T')[g]}
+          [g] something T' (#p ..) : opt[g] => [g] something T' (#p ..))
 );

@@ -2,7 +2,7 @@
 term :  type.
 lam  : (term -> term) -> term.
 
-schema tctx = some [] block term;
+schema tctx = some [] term;
 
 rec copy' : term [ ] -> term [ ] = 
  fn t =>  case t of [ ] lam (\x . x) : term[ ] => t

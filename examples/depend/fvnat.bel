@@ -15,7 +15,7 @@ nothing: opt.
 
 something: {T:tp} exp T -> opt.
 
-schema expCtx = some [t:tp] block exp t;
+schema expCtx = some [t:tp] exp t;
 
 rec free_var : {g:(expCtx)*} {T::tp[ ]} (exp T)[g] -> opt[g] =
 FN g => mlam T => fn e => 

@@ -9,7 +9,7 @@ add: nat -> nat -> nat.
 foo: nat -> bool -> nat.
 zoo: (nat -> nat) -> nat.
 
-schema natCtx = some [] block nat;
+schema natCtx = some [] nat;
 
 rec identity : {g:(natCtx)*} nat [g] -> nat [g] =
 FN g => 

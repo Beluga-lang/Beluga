@@ -61,8 +61,7 @@ $INTERPRETER  \
     @simple/sigma1.bel \
     simple/test.bel \
     simple/test.rec \
-    tests/error.rec \
-    @tests/fvnat.rec
+    tests/error.rec
 
 #    notworking/church-rosser.rec \
 #    notworking/cut-elim.bel \
@@ -70,3 +69,7 @@ $INTERPRETER  \
 #    notworking/fol-handbook.bel \
 #    notworking/tpcert.bel \
 #    notworking/tpeval.bel \
+
+
+# *** Needs to be updated for new syntax: ***
+#    @tests/fvnat.rec

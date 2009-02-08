@@ -60,10 +60,10 @@ let rec accum_lines input =
   with
     | End_of_file -> []
 
-let rec process_lines : string list -> (bool * string) list = function
+let rec process_lines parent_dir = function
   | []      -> []
-  | x :: [] -> (true, x) :: []
-  | x :: xs -> let ((s, x') :: xs') = process_lines xs in (false, x) :: (s, x') :: xs'
+  | x :: [] -> (true, parent_dir ^ x) :: []
+  | x :: xs -> let ((s, x') :: xs') = process_lines parent_dir xs in (false, parent_dir ^ x) :: (s, x') :: xs'
 
 let rec process_files = function
   | []                    -> []
@@ -74,7 +74,7 @@ let rec process_files = function
         else
           open_in f in
       let lines = accum_lines cfg in
-        List.append (process_lines lines) (process_files fs)
+        List.append (process_lines (Filename.dirname f ^ "/") lines) (process_files fs)
   | f :: fs               -> (true, f) :: process_files fs
 
 let main () =

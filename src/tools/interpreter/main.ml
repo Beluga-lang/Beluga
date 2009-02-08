@@ -13,16 +13,17 @@ open Printf
 
 let usage () =
   let options = "    -d      turn all debugging off (default)\n"
-                ^ "    +d      turn all debugging on\n"
+              ^ "    +d      turn all debugging on\n"
   in
     fprintf stderr
       "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
       Sys.argv.(0)   options
   ; exit 2
 
+(* We should be using a library for this *)
 let process_option = function
-  | "+d" -> Debug.showAll()
-  | "-d" -> Debug.showNone()
+  | "+d" -> Debug.showAll ()
+  | "-d" -> Debug.showNone ()
   | _ -> usage ()
 
 let rec process_options = function
@@ -50,11 +51,37 @@ let process_name name =
     else
       (Positive, name)
 
+let is_cfg file_name =
+  Filename.check_suffix file_name ".cfg"
+
+let rec accum_lines input =
+  try
+    let res = input_line input in Printf.printf "%s\n" res; res :: accum_lines input
+  with
+    | End_of_file -> []
+
+let rec process_lines : string list -> (bool * string) list = function
+  | []      -> []
+  | x :: [] -> (true, x) :: []
+  | x :: xs -> let ((s, x') :: xs') = process_lines xs in (false, x) :: (s, x') :: xs'
+
+let rec process_files = function
+  | []                    -> []
+  | f :: fs when is_cfg f ->
+      let cfg =
+        if String.get f 0 = '@' then
+          open_in (String.sub f 1 (String.length f - 1))
+        else
+          open_in f in
+      let lines = accum_lines cfg in
+        List.append (process_lines lines) (process_files fs)
+  | f :: fs               -> (true, f) :: process_files fs
+
 let main () =
   if Array.length Sys.argv < 2 then
     usage ()
   else
-    let per_file (errors, unsound, incomplete) file_name =
+    let per_file (errors, unsound, incomplete) (should_reset_state, file_name) =
       let (spec, file_name) = process_name file_name in
       let return actual = match (spec, actual) with
         | (Positive, Positive) -> (errors, unsound, incomplete)
@@ -89,7 +116,10 @@ let main () =
                 ; Check.Sgn.check_sgn_decls int_decls
                 ; printf "\n## Double Checking Successful! ##\n\n" *)
                   (* clean up for the next file *)
-                  Store.clear () 
+                  if should_reset_state then
+                    Store.clear ()
+                  else
+                    ()
                 ; return Positive
                 with
                   | Whnf.Error err ->
@@ -154,12 +184,13 @@ let main () =
 
     (* Iterate the process for each file given on the command line *)
     in
-    let args = List.tl (Array.to_list Sys.argv) in
-    let args = process_options args in
-    let file_count  = List.length args in
+    let args   = List.tl (Array.to_list Sys.argv) in
+    let files  = process_options args in
+    let files' = process_files files in
+    let file_count = List.length files' in
     let (error_count, unsound_count, incomplete_count) = List.fold_left per_file
                          (0, 0, 0) (* initial number of: errors, unsounds, incompletes *)
-                         args in
+                         files' in
     let plural count what suffix =
       string_of_int count ^ " "
       ^ (if count = 1 then

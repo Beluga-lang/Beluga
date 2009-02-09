@@ -5,8 +5,8 @@ arrow: tp -> tp -> tp.
 term : tp -> type.
 lam  : (term T -> term T') -> term (arrow T T').
 
-schema tctx = some [t:tp] block (term t);
-% schema W = block term nat;
+schema tctx = some [t:tp] term t;
+% schema W = term nat;
 
 rec copy : {g:(tctx)*} (term T)[g] -> (term T)[g] =
 FN g => 

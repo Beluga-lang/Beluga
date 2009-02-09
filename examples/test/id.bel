@@ -15,7 +15,7 @@ rec identity : (exp nat) [ ] -> exp nat [ ] =
         | [ ] s U  =>  [ ] s U;
 
 
-schema w = some [t:tp] block exp t;
+schema w = some [t:tp] exp t;
 
 
 rec identity' : {g:(w)*} (exp T)[g] -> (exp T) [g] =

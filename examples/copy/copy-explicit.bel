@@ -4,7 +4,7 @@ arrow: tp -> tp -> tp.
 term : tp -> type.
 lam  : {T:tp} {T':tp} (term T -> term T') -> term (arrow T T').
 
-schema termCtx = some [t:tp] block (term t);
+schema termCtx = some [t:tp] term t;
 
 rec copy : {g:(termCtx)*} {T::tp[ ]} (term T)[g] -> (term T) [g] =
 

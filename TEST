@@ -28,45 +28,54 @@ cd $X
 
 $INTERPRETER  \
     $* \
-    depend/cntvar.bel \
-    depend/cntvar.rec \
-    depend/cntvar-2.rec \
-    depend/copy.bel \
-    depend/copy.rec \
-    depend/eval-sub-tp.rec \
-    depend/fvnat.bel \
-    depend/fvnat.rec \
-    depend/id-dep.bel \
-    depend/id-dep.rec \
-    depend/schema.bel \
-    depend/test-dep.rec \
-    depend/tpevalsub.bel \
-    depend/tpevalsub.rec \
-    depend/tps.rec \
-    depend/vsound.bel \
-    depend/vsound.rec \
-    simple/arith.rec \
-    simple/case1.bel \
-    simple/case1.rec \
-    simple/case2.bel \
-    simple/case2.rec \
-    simple/copy-simple.bel \
-    simple/copy-simple.rec \
-    simple/eval-sub-1.bel \
-    simple/eval-sub-1.rec \
-    simple/eval-sub.bel \
-    simple/eval-sub.rec \
-    simple/id.bel \
-    simple/id.rec \
-    @simple/sigma1.bel \
-    simple/test.bel \
-    simple/test.rec \
-    tests/error.rec \
-    @tests/fvnat.rec
+    arith/arith.bel \
+    count-var/cntvar.bel \
+    count-var/cntvar-explicit.bel \
+    count-var/cntvar-2.bel \
+    copy/copy.bel \
+    copy/copy-explicit.bel \
+    copy/copy-simple.bel \
+    copy/copy-simple-explicit.bel \
+    free-vars/fvnat.bel \
+    free-vars/fvnat-explicit.bel \
+    lp-horn/lp-horn.bel \
+    mini-ml/eval-sub-1.bel \
+    mini-ml/eval-sub-1-explicit.bel \
+    mini-ml/eval-sub.bel \
+    mini-ml/eval-sub-explicit.bel \
+    mini-ml/tps.bel \
+    mini-ml/vsound.bel \
+    mini-ml/vsound-explicit.bel \
+    small-step/lam.bel \
+    typed-eval/tpeval.bel \
+    typed-eval/tpeval-explicit.bel \
+    typed-eval/tpeval2.bel \
+    test/backarrow.bel \
+    test/case1.bel \
+    test/case1-explicit.bel \
+    test/case2.bel \
+    test/case2-explicit.bel \
+    test/cross.bel \
+    test/dependency.bel \
+    test/id.bel \
+    test/id-simple.bel \
+    test/id-explicit.bel \
+    test/test.bel \
+    test/test-simple.bel \
+    test/test-simple-explicit.bel \
+    test/schema.bel \
+    @test/sigma1.bel \
+    notworking/debruijn/mini-ml.bel \
+    notworking/debruijn1/mini-ml.bel \
 
+     
 #    notworking/church-rosser.rec \
 #    notworking/cut-elim.bel \
 #    notworking/eq-proof.bel \
 #    notworking/fol-handbook.bel \
 #    notworking/tpcert.bel \
 #    notworking/tpeval.bel \
+
+
+# *** Needs to be updated for new syntax: ***
+#    @tests/fvnat.rec

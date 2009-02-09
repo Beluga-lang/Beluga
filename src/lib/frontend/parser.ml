@@ -193,12 +193,10 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
-
-  (* We don't currently deal with sigma types, so no need for ~ *)
   lf_schema_elem:
     [
       [
-        some = lf_schema_some; "block"; arec = lf_typ_rec_toplevel ->
+        some = lf_schema_some; arec = lf_typ_rec_toplevel ->
           LF.SchElem (_loc, List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some,
                  LF.SigmaDecl (Id.mk_name None, arec))
       ]
@@ -218,7 +216,7 @@ GLOBAL: sgn_eoi;
   lf_typ_rec_toplevel:
     [
       [
-        a_list = LIST1 lf_typ_rec_elem SEP ","; "."; a_last = lf_ahat
+        "block"; a_list = LIST1 lf_typ_rec_elem SEP ","; "."; a_last = lf_typ
          -> List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last)
       | 
         a = lf_typ
@@ -231,11 +229,11 @@ GLOBAL: sgn_eoi;
   lf_typ_rec_elem:
     [
       [
-        x = SYMBOL; ":"; a = lf_ahat
+        x = SYMBOL; ":"; a = lf_typ
          -> (Id.mk_name (Some x), a)
 
       | 
-        x = UPSYMBOL; ":"; a = lf_ahat
+        x = UPSYMBOL; ":"; a = lf_typ
          -> (Id.mk_name (Some x), a)
 
       ]
@@ -245,7 +243,7 @@ GLOBAL: sgn_eoi;
   lf_ahat_decl:
     [
       [
-        x = SYMBOL; ":"; a = lf_ahat ->
+        x = SYMBOL; ":"; a = lf_typ ->
           LF.TypDecl (Id.mk_name (Some x), a)
       ]
     ]
@@ -408,6 +406,9 @@ GLOBAL: sgn_eoi;
       |
         cPsi = clf_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->
           LF.DDec (cPsi, LF.TypDecl (Id.mk_name (Some x), tA))
+      |
+        cPsi = clf_dctx; ","; x = SYMBOL; ":"; typRec = lf_typ_rec_toplevel ->
+          LF.SigmaDec (cPsi, LF.SigmaDecl (Id.mk_name (Some x), typRec))
       ]
     ]
   ;

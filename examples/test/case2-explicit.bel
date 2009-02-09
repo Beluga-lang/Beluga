@@ -5,7 +5,7 @@ suc : nat -> nat.
 irrelevancy : type.
 irrelevant_con : irrelevancy.
 
-schema w = block nat;
+schema w = nat;
 
 rec copynat : {g:(w)*} nat[g] -> nat[g] =
 FN g => fn e =>

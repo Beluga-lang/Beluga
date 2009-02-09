@@ -2,7 +2,7 @@ nat : type.
 z : nat.
 s : nat -> nat.
 
-schema w = some [] block nat;
+schema w = some [] nat;
 
 rec id-test : {g:(w)*} nat [g] -> nat [g] =
     FN g => fn x => x ;

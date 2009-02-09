@@ -67,7 +67,7 @@ module Ext = struct
       | Null
       | CtxVar   of name
       | DDec     of dctx * typ_decl
-(*       | SigmaDec of dctx * sigma_decl *)
+      | SigmaDec of dctx * sigma_decl
 
     and 'a ctx =
       | Empty

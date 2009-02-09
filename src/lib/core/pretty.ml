@@ -376,7 +376,10 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ 0) tA
 
-
+      | LF.SigmaDec (cPsi, sigma_decl) ->
+          fprintf ppf "%a, %a"
+            (fmt_ppr_lf_dctx 0) cPsi
+            (fmt_ppr_lf_sigma_decl 0) sigma_decl
 
     and fmt_ppr_cmp_typ lvl ppf = function
       | Comp.TypBox (_, tA, cPsi) ->
@@ -1036,6 +1039,11 @@ module Int = struct
             (fmt_ppr_lf_dctx 0) cPsi
             (R.render_name x)
             (fmt_ppr_lf_typ 0) tA
+
+      | LF.SigmaDec (cPsi, sigma_decl) ->
+          fprintf ppf "%a, %a"
+            (fmt_ppr_lf_dctx 0) cPsi
+            (fmt_ppr_lf_sigma_decl 0) sigma_decl
 
 
     and fmt_ppr_lf_mctx lvl ppf = function

@@ -1,0 +1,44 @@
+% Soundness of uniform proofs
+% Author: Brigitte Pientka
+% Adapted from Twelf proof 
+
+% rec h_sound: (assume A)[ ] -> (pf A)[ ] = 
+% rec i_sound: (focus A P)[ ] -> (pf (atom P))[u:pf A] = 
+
+% Context coercions necessary: 
+% schema canCtx = some [a:o] block assume a | x:i ; 
+% schema ndCtx = some [a:o] block assume a  | x:i ;
+
+%coercion c2n : canCtx => ndCtx = 
+%  | {a:o} assume a => pf a 
+%  |       o        => o
+%;
+
+% rec s_sound : {g:(canCtx)*} (solve A)[g] -> (pf A)[c2n(g)] = 
+
+% fn s => case s of 
+
+%   [g] s_and S2 S1 => 
+%      let [c2n (g) ] (D1 ..) = s_sound ([g] S1 ..) in 
+%      let [c2n (g) ] (D2 ..) = s_sound ([g] S2 ..) in 
+%        [c2n(g)] andi D2 D1
+
+% | [g] s_imp (\d. (S1 .. d)) =>  
+%    let [ c2n (g), u: pf _ ] (D1 .. u) = s_sound [g, d: assume _ ] ([g, d] (S1 .. d)) in 
+%      [ c2n (g) ] impi (\u. (D1 .. u))
+
+% | [g] s_true     => [ c2n(g) ] truei 
+
+% | [g] s_forall (\a. S1 .. a) => 
+%    let [ c2n(g), a:i] (D1 .. a)  = s_sound [g, a:i] ([g, a] (S1 .. a)) in 
+%      [ c2n(g)] foralli (\a. D1 .. a)
+
+% | [g] s_atom (I2 ..) (#p ..) => 
+%   % #p:: (assume A)[g]   ,  I2::(focus A P)[g] 
+%     let [c2n(g), u: pf _ ] (D2 .. u)  = i_sound [g] ([ ] (I2 .. )) in 
+%        % D2: (pf (atom P))[c2n(g), u: pf A]
+% 	[c2n(g)] (D2 .. (#p ..))
+% ;
+
+
+

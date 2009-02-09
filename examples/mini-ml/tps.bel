@@ -5,6 +5,7 @@
 exp  : type.  
 z    : exp.
 suc  : exp -> exp.
+match: exp -> exp -> (exp -> exp) -> exp.
 letv : exp -> (exp -> exp) -> exp.
 lam  : (exp -> exp) -> exp.
 app  : exp -> exp -> exp.
@@ -19,6 +20,14 @@ eval : exp -> exp -> type.
 ev_z : eval z z.
 
 ev_s : eval E V -> eval (suc E) (suc V).
+
+ev_m_z: eval (match E E1 (\x. E2 x)) V
+	<- eval E z 
+	<- eval E1 V.
+
+ev_m_s: eval (match E E1 (\x. E2 x)) V
+	<- eval E (suc V2)
+	<- eval (E2 V2) V.
 
 ev_l : eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 
@@ -35,6 +44,11 @@ oft : exp -> tp -> type.
 tp_z     : oft z nat.
 tp_s     : oft E nat -> 
 	   oft (suc E) nat.
+
+tp_match : oft (match E E1 (\x. E2 x)) T
+	 <- oft E nat
+	 <- oft E1 T
+	 <- ({x:exp}oft x nat -> oft (E2 x) T).
 
 tp_lam :   ({x:exp} oft x T1 -> oft (E x) T2) 
         -> oft (lam (\ x . E x)) (arrow T1 T2).
@@ -62,6 +76,14 @@ fn e => fn d =>
     let [ ] F1      = tps ([ ] E1) ([ ] D1) in 
       [ ] tp_s F1
 	
+  | [ ] ev_m_z E1 E => 
+    let [ ] tp_match (\x.\u. (D2 x u)) D1 D = d   in
+      tps ([ ] E1) ([ ] D1)
+
+  | [ ] ev_m_s E2 E => 
+    let [ ] tp_match (\x.\u. (D2 x u)) D1 D = d   in
+    let [ ] tp_s F    =   tps ([ ] E) ([ ] D) in 
+     tps ([ ] E2) ([ ] (D2 _ F))
 
   | [ ] ev_lam =>  
     let [ ] tp_lam (\x. \u. (D x u)) = d in d

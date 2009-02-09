@@ -3,7 +3,12 @@ nat: tp.
 arrow: tp -> tp -> tp.
 
 term : tp -> type.
+
+z    : term nat.
+s    : term nat -> term nat.
+
 lam  : (term T -> term T') -> term (arrow T T').
+app  : term (arrow T T') -> term T -> term T'.
 
 schema tctx = some [t:tp] term t;
 % schema W = term nat;
@@ -15,10 +20,19 @@ FN g =>
    
       [g] (#p ..)  => [g] (#p ..)
 
-    | [g] lam  (\x. (U .. x))
-       => 
-       (let 
-           [g,x : term _ ] (V .. x) = copy [g, x:term _]   ([g,x] (U .. x))
-       in
+    | [g]  z       => [g] z 
+
+    | [g] s (E ..) => 
+      (let [g] (F ..) = copy [g] ([g] (E .. )) in 
+         [g] s (F ..))
+
+    | [g] lam  (\x. (U .. x)) => 
+
+       (let [g,x : term _ ] (V .. x) = copy [g, x:term _]   ([g,x] (U .. x))  in
 	  [g] lam  (\x. (V ..  x)))
+
+    | [g] app (E1 ..) (E2 ..) => 
+      let [g] (F1 .. ) = copy [g] ([g] (E1 ..)) in 
+      let [g] (F2 .. ) = copy [g] ([g] (E2 ..)) in 
+        [g] app (F1 ..) (F2 ..)
 );

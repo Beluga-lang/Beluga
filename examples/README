@@ -1,30 +1,20 @@
+- arith 
 
-simple
---------
-This directory contains simply-typed examples. 
+   simple arithmetic functions
+   * arith.bel
 
-- copy-simple.{bel,rec}
+- copy 
+
+  copying recursively lambda-terms 
+   * copy-simple.bel            (simply typed)
+   * copy-simple-explicit.bel   (simply typed, fully explicit)
+   * copy.bel                   (dependently typed)
+   * copy-explicit.bel          (dependently typed, fully explicit)
+
 
    Copying recursively lambda-terms.
 
-
-- eval-sub-1.{bel,rec}
-
-   Substitution-based interpreter for a simple
-   functional language containing z, suc, letn, letv,
-   app, lam and fix.
-
-
-- arith.rec
-
-  Definition of natural numbers using z and sucessor;
-  contains simple arithmetic functions such as plus.
-
-
-depend
-------
-
-- cntvar.{bel,rec}
+- count-var
 
   Variable counting example containing typed expressions z, suc, tt, add
   and letv. 
@@ -33,33 +23,70 @@ depend
   arguments in patterns is slightly limitting, since we may learn
   further information about some of them in the actual branch.
 
-- copy.{bel,rec} 
+  * cntvar.bel
+  * cntvar-explicit.bel (fully explicit version)
+  * cntvar-2.bel  (same as cntvar.bel with different plus function)
 
-   Copying recursively typed lambda-terms.
+- free-vars
 
-- eval-sub-tp.rec
-
-  Substitution-based interpreter containing booleans, numbers, 
-  primitive operatorors and Let-expressions.
-
-
-- fvnat.{bel,rec}
-  
   Checks if a typed expression contains a free variable.
+  * fvnat.bel
+  * fvnat-explicit.bel
 
-- tpevalsub.rec
+- LF 
+   Contains several pure LF examples.
 
-  Substitution-based interpreter containing booleans, numbers, 
-  primitive operator eq, If-expressions and Let-expressions.
 
-- tps.rec
-
-  Type preservation proof for Mini-ML
-
-- vsound.{rec,bel}
+- lp-horn 
  
-  Value soundness for Mini-ML
+   Contains encoding of natural deduction, together with canonical proofs, and uniform proofs. 
+   These are adapted from the Twelf repository. The proofs cannot be implemented in Beluga yet,
+   since they require context coercions.
 
+- mini-ml
+
+  * * eval-sub.bel 
+    * eval-sub-explicit.bel 
+
+     Substitution-based interpreter for a simple
+     functional language containing z, suc, letn, letv,
+     app, lam and fix.
+
+    * eval-sub-1.bel
+    * eval-sub-1-explicit
+
+      Substitution-based interpreter for simple language 
+      containing natural numbers, add, and let-expresion.
+      (see POPL'08)
+
+    * tps.bel
+       Type preservation proof implemented as Beluga program
+       for z, s, match, letv, lam, app
+
+    * vsound.bel
+    * vsound-explicit.bel
+       Value soundness proof implemented as Beluga program
+       for z, s, letv. lam, app
+      
+
+- small-step
+
+   Small-step step semantics for Church-style simply-typed lambda-calculus
+   including preservation and progress proof.
+   The function prog' implements progress by exploiting inversion properties.
+
+   NOTE: function prog is incomplete -- in fact, it is impossible to write
+   this function currently in Beluga.
+
+- test
+
+  Contains various simple test files for different features
+
+
+- typed-eval
+
+   Contains a substitution-based interpreter which only evaluates well-typed expressions
+   It includes tt, ff, z, suc, iff, eq, letv  
 
 
 Notworking
@@ -86,5 +113,26 @@ Notworking
 
 - fol-handbool.bel
 
-    Needs context coercions, reconstruction, sigma-types
+    Needs context coercions, and sigma-types in context schemas
 
+
+- debruijn
+   
+    Example taken from Twelf examples/compile.
+    It needs Sigma-types in computations to state the main theorem:
+
+    rec map_eval: (eval E V)[ ] -> (trans K F E)[ ]
+      -> Sigma W. (feval K F W)[ ] *  (vtrans W V)[ ] = 
+
+    In addition, we need to be able to compare two LF objects for equality
+    and propagate type information. If [ ] D' : eval E E = [ ] D : eval E V 
+    then   E = V. 
+
+
+- debruijn1 
+
+    Example taken from Twelf examples/compile.
+    It needs Sigma-types in computations. 
+
+     rec map_eval : (eval E V)[ ] -> (trans K F E)[ ]
+ 	        -> Sigma W . (feval K F W)[ ] * (vtrans W V)[ ] = 

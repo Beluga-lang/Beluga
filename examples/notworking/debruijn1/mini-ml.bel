@@ -131,7 +131,7 @@ vtr_lam : vtrans (clo K (lam' F)) (lam (\x. E x))
 % choosing W = lam' F
 %
 %
-% Remaingin cases in Twelf proof:
+% Remaining cases in Twelf proof:
 % -------------------------------
 % mp_^ : map_eval D (tr_^ C1) (fev_^ D1') U1
 % 	  <- map_eval D C1 D1' U1.

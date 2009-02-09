@@ -43,6 +43,7 @@ let mk_symbol  s = Token.SYMBOL  s
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
 let rec lex_token loc = lexer
   | "->"
+  | "<-"
   | "::"
   | "=>"
   | "FN"

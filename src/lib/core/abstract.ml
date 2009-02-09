@@ -219,6 +219,23 @@ let rec eqFPVar n1 fV2 = match (n1, fV2) with
   | (n1 ,  FPV (n2, _)) -> (n1 = n2)
   | _ -> false
 
+
+
+let rec constraints_solved cnstr = match cnstr with
+  | [] -> true
+  | ({contents = I.Queued} :: cnstrs) -> 
+      constraints_solved cnstrs 
+  | ({contents = I.Eqn (_phat, tM, tN)} :: cnstrs) -> 
+      if Whnf.conv (tM, LF.id) (tN, LF.id) then 
+        constraints_solved cnstrs
+      else false 
+ | ({contents = I.Eqh (_phat, h1, h2)} :: cnstrs) -> 
+      if Whnf.convHead (h1, LF.id) (h2, LF.id) then 
+        constraints_solved cnstrs
+      else false 
+
+
+
 (* index_of cQ n = i
    where cQ = cQ1, Y, cQ2 s.t. n = Y and length cQ2 = i
 *)
@@ -360,9 +377,9 @@ and collectSub cQ phat s = match s with
       let cQ2 = collectTerm cQ1 phat (tM, LF.id) in
         cQ2
 
-  | (I.Dot (I.Undef, s)) ->
+  | (I.Dot (I.Undef, s')) ->
     (let _ = Printf.printf "Collect Sub encountered undef \n" in 
-          collectSub cQ phat  s)
+          collectSub cQ phat  s')
 
 
 (* collectMSub cQ theta = cQ' *) 
@@ -416,19 +433,20 @@ and collectHead cQ phat sH = match sH with
                and LF objects which occur in comp utations. *)
             I.Dec (cQ'', FMV (u, Some (tA, cPhi)))
 
-  | (I.MVar (I.Inst (_r, cPsi, tA, _cnstrs), s') as u, s) ->
+  | (I.MVar (I.Inst (_r, cPsi, tA,  {contents = cnstr}), s') as u, s) ->
+      if constraints_solved cnstr then
       let cQ' = collectSub cQ phat (LF.comp s' s) in
         if exists (eqMVar u) cQ' then
           cQ'
         else
           (*  checkEmpty !cnstrs ? -bp *)
           let phihat = Context.dctxToHat cPsi in 
-
           let cQ1  = collectDctx cQ' phihat cPsi in 
           let cQ'' = collectTyp cQ1  phihat (tA, LF.id) in 
-
+ 
             I.Dec (cQ'', MV u) 
-
+      else 
+        raise (Error "Left over constraints during abstraction")
 
   | (I.MVar (I.Offset _k, s'), s) ->
        collectSub cQ phat (LF.comp s' s) 
@@ -875,6 +893,10 @@ let rec collectCompTyp cQ tau = match tau with
       let cQ1 = collectCompTyp cQ tau1 in 
         collectCompTyp cQ1 tau2
 
+  | Comp.TypCross (tau1, tau2) -> 
+      let cQ1 = collectCompTyp cQ tau1 in 
+        collectCompTyp cQ1 tau2
+
   | Comp.TypCtxPi (_, tau) -> 
       collectCompTyp cQ tau 
 
@@ -893,6 +915,14 @@ let rec collectExp cQ e = match e with
   | Comp.Fun (_x, e) -> collectExp cQ e
 
   | Comp.MLam (_u, e) -> collectExp cQ e
+
+  | Comp.Pair (e1, e2) -> 
+      let cQ1 = collectExp cQ e1 in 
+        collectExp cQ1 e2
+
+  | Comp.LetPair (i, (_x, _y, e)) -> 
+      let cQi = collectExp' cQ i in 
+        collectExp cQi e
 
   | Comp.CtxFun (_psi, e) -> collectExp cQ e
 
@@ -964,6 +994,10 @@ let rec abstractMVarCompTyp cQ offset tau = match tau with
       Comp.TypArr (abstractMVarCompTyp cQ offset tau1, 
                    abstractMVarCompTyp cQ offset tau2)
 
+  | Comp.TypCross (tau1, tau2) -> 
+      Comp.TypCross (abstractMVarCompTyp cQ offset tau1, 
+                     abstractMVarCompTyp cQ offset tau2)
+
   | Comp.TypCtxPi (ctx_decl, tau) -> 
       Comp.TypCtxPi (ctx_decl, abstractMVarCompTyp cQ offset tau)
 
@@ -982,6 +1016,16 @@ let rec abstractMVarExp cQ offset e = match e with
   | Comp.Fun (x, e) -> Comp.Fun (x, abstractMVarExp  cQ offset e)
 
   | Comp.MLam (u, e) -> Comp.MLam (u, abstractMVarExp  cQ (offset+1) e)
+
+  | Comp.Pair (e1, e2) -> 
+      let e1' = abstractMVarExp  cQ offset e1 in 
+      let e2' = abstractMVarExp  cQ offset e2 in 
+        Comp.Pair (e1', e2')
+
+  | Comp.LetPair (i, (x, y, e)) -> 
+      let i' = abstractMVarExp' cQ offset i in 
+      let e' = abstractMVarExp cQ offset e in 
+        Comp.LetPair (i', (x, y, e'))
 
   | Comp.CtxFun (psi, e) -> Comp.CtxFun (psi, abstractMVarExp cQ offset e)
 

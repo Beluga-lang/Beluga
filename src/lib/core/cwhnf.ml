@@ -582,6 +582,11 @@ let rec csub_ctyp cPsi k tau = match tau with
   | Comp.TypArr (tau1, tau2) -> 
       Comp.TypArr (csub_ctyp cPsi k tau1, 
                    csub_ctyp cPsi k tau2)
+
+  | Comp.TypCross (tau1, tau2) -> 
+      Comp.TypCross (csub_ctyp cPsi k tau1, 
+                   csub_ctyp cPsi k tau2)
+
   | Comp.TypCtxPi (psi_decl, tau) -> 
       Comp.TypCtxPi (psi_decl, csub_ctyp cPsi (k+1) tau)
 
@@ -743,6 +748,10 @@ let rec mctxPVarPos cD p =
         | (Comp.TypArr (tT1, tT2), t)   -> 
             Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
 
+        | (Comp.TypCross (tT1, tT2), t)   -> 
+            Comp.TypCross (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
+
+
         | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
               Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
 
@@ -785,6 +794,8 @@ let rec mctxPVarPos cD p =
 
     | (Comp.TypArr (_tT1, _tT2), _t)   -> thetaT
 
+    | (Comp.TypCross (_tT1, _tT2), _t)   -> thetaT
+
     | (Comp.TypCtxPi _, _)             -> thetaT
 
     | (Comp.TypPiBox (_, _) , _)       -> thetaT
@@ -814,6 +825,11 @@ let rec mctxPVarPos cD p =
     | (Comp.CtxFun (psi, e) , t ) ->  Comp.CtxFun (psi, cnormExp (e, t))
 
     | (Comp.MLam (u, e), t) -> Comp.MLam (u, cnormExp (e, mvar_dot1  t))
+
+    | (Comp.Pair (e1, e2), t) -> Comp.Pair (cnormExp (e1, t), cnormExp (e2, t))
+
+    | (Comp.LetPair (i, (x, y, e)), t) -> 
+        Comp.LetPair (cnormExp' (i, t), (x, y, cnormExp (e, t)))
 
     | (Comp.Box (psihat, tM), t) -> Comp.Box (psihat, Whnf.norm (cnorm (tM, t), S.id))
 
@@ -1112,6 +1128,10 @@ let rec invDCtx (cPsi, t)  d = match cPsi with
 
     | (Comp.MLam (u, e), t) -> Comp.MLam (u, invExp (e, t) (d+1))
 
+    | (Comp.Pair(e1, e2), t) -> Comp.Pair (invExp (e1, t) d, invExp (e2, t) d)
+
+    | (Comp.LetPair (i, (x, y, e)), t) -> Comp.LetPair(invExp' (i,t) d, (x, y, invExp (e, t) d))
+
     | (Comp.Box (psihat, tM), t) -> Comp.Box (psihat, Whnf.norm (invTerm (tM, t) d, S.id))
 
     | (Comp.Case (i, branches), t) -> 
@@ -1171,6 +1191,12 @@ let rec invDCtx (cPsi, t)  d = match cPsi with
       -> convCTyp (tT1, t) (tT1', t') 
 	&&
 	  convCTyp (tT2, t) (tT2', t')
+
+    | ((Comp.TypCross (tT1, tT2), t), (Comp.TypCross (tT1', tT2'), t')) 
+      -> convCTyp (tT1, t) (tT1', t') 
+	&&
+	  convCTyp (tT2, t) (tT2', t')
+
 
     | ((Comp.TypCtxPi ((_psi, cid_schema), tT1), t) , (Comp.TypCtxPi ((_psi', cid_schema'), tT1'), t'))
       -> cid_schema = cid_schema'

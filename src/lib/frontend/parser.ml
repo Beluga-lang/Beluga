@@ -18,6 +18,12 @@ type kind_or_typ =
   | Kind of LF.kind
   | Typ  of LF.typ
 
+
+type pair_or_atom =
+  | Pair of Comp.exp_chk
+  | Atom
+
+
 (*******************************)
 (* Global Grammar Entry Points *)
 (*******************************)
@@ -54,7 +60,7 @@ GLOBAL: sgn_eoi;
   sgn_decl:
     [
       [
-         a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ; "." ->
+         a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ; "." ->
            begin match k_or_a with
              | Kind k -> Sgn.Typ   (_loc, Id.mk_name (Some a_or_c), k)
              | Typ  a -> Sgn.Const (_loc, Id.mk_name (Some a_or_c), a)
@@ -78,37 +84,36 @@ GLOBAL: sgn_eoi;
                | Kind k -> Kind (LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Some x), a2), k))
                | Typ  a -> Typ  (LF.PiTyp  (_loc, LF.TypDecl (Id.mk_name (Some x), a2), a))
              end
+
         |
            a2 = lf_typ LEVEL "atomic"; "->"; k_or_a = SELF ->
              begin match k_or_a with
                | Kind k -> Kind (LF.ArrKind (_loc, a2, k))
                | Typ  a -> Typ  (LF.ArrTyp  (_loc, a2, a))
              end
+
+        | 
+          "type" ->
+             Kind (LF.Typ _loc)
+
         |
-           k = lf_kind LEVEL "atomic" ->
-             Kind k
-        |
-           a = lf_typ LEVEL "atomic" ->
-             Typ  a
+          a = lf_typ LEVEL "atomic" ->
+              Typ a
+
         ]
-    ]
-  ;
 
-  lf_kind:
-    [ RIGHTA
-      [
-         "{"; x = SYMBOL; ":"; a = lf_typ; "}"; k = SELF ->
-           LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Some x), a), k)
-      |
-         a = lf_typ LEVEL "atomic"; "->"; k = SELF ->
-           LF.ArrKind (_loc, a, k)
-      ]
+    | LEFTA
+        [
 
-    | "atomic"
-      [
-         "type" ->
-           LF.Typ _loc
-      ]
+          k_or_a = SELF; "<-"; a2 = lf_typ LEVEL "atomic" ->
+             begin match k_or_a with
+               | Kind k -> Kind (LF.ArrKind (_loc, a2, k))
+               | Typ  a -> Typ  (LF.ArrTyp  (_loc, a2, a))
+             end
+
+
+        ]
+
     ]
   ;
 
@@ -120,6 +125,13 @@ GLOBAL: sgn_eoi;
         |
            a2 = SELF; "->"; a = SELF ->
              LF.ArrTyp (_loc, a2, a)
+
+        ]
+    | LEFTA
+        [
+           a2 = SELF; "<-"; a = SELF ->
+             LF.ArrTyp (_loc, a, a2)
+
         ]
 
     | "atomic"
@@ -411,11 +423,25 @@ GLOBAL: sgn_eoi;
       |
         ctyp_decl = clf_ctyp_decl; tau = SELF ->
           Comp.TypPiBox (_loc, ctyp_decl, tau)
+
       |
         tau1 = SELF; "->"; tau2 = SELF ->
           Comp.TypArr (_loc, tau1, tau2)
+
       ]
-    | "atomic"
+
+    | 
+        LEFTA 
+      [
+
+        tau1 = SELF; "*"; tau2 = SELF ->
+          Comp.TypCross (_loc, tau1, tau2)
+
+      ]
+
+
+    | 
+        "atomic"
       [
         "("; tA = clf_typ (*LEVEL "atomic"*); ")" ; "["; cPsi = clf_dctx; "]" ->
           Comp.TypBox (_loc, tA, cPsi)
@@ -428,8 +454,23 @@ GLOBAL: sgn_eoi;
         "("; tau = SELF; ")" ->
           tau
       ]
+
+
     ] 
   ;
+
+
+  cmp_pair_atom : 
+    [
+      [
+        ","; e2 = cmp_exp_chk ; ")" -> Pair e2
+
+      | ")"                 -> Atom
+
+      ]
+    ]
+  ;
+
 
   cmp_exp_chk:
     [ "full"
@@ -445,13 +486,18 @@ GLOBAL: sgn_eoi;
       |
         "case"; i = cmp_exp_syn; "of"; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, i, bs)
+
+      | 
+        "let"; "("; x = SYMBOL; ","; y = SYMBOL; ")"; "="; i = cmp_exp_syn;  "in"; e = SELF ->
+          Comp.LetPair (_loc, i, (Id.mk_name (Some x), Id.mk_name (Some y), e))
+
       |
 
        "let"; ctyp_decls = LIST0 clf_ctyp_decl; 
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
        "["; pHat = clf_dctx ;"]"; tM = clf_term; 
        tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi)];  
-       "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk ->         
+       "="; i = cmp_exp_syn; "in"; e' = SELF ->         
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
           Comp.Case (_loc, i, [Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, tau), e')]) 
 
@@ -463,15 +509,24 @@ GLOBAL: sgn_eoi;
       "["; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "]"; tM = clf_term ->   
           let pHat = List.map (fun x' -> Id.mk_name (Some x')) vars in
             Comp.Box (_loc, pHat, tM)
+
+      | 
+        "(" ; e1 = SELF; p_or_a = cmp_pair_atom -> 
+          begin match p_or_a with 
+            | Pair e2 ->   Comp.Pair (_loc, e1, e2)
+            | Atom    ->   e1
+          end 
       |
         i = cmp_exp_syn ->
           Comp.Syn (_loc, i)
-      |
+(*      |
         "("; e = SELF; ")" ->
           e
+*)
       ]
     ]
   ;
+
 
   cmp_exp_syn:
     [ "full"

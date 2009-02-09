@@ -1,0 +1,26 @@
+tp  : type.
+nat : tp.
+bool: tp.
+
+exp : tp -> type.
+z   : exp nat.
+
+typist : {TT:tp} exp nat.
+
+tt  : exp bool.
+
+schema expCtx = some [t:tp] block exp t;
+
+rec expnatter : {g:(expCtx)*} (exp nat) [g] -> (exp nat) [ ] = 
+   FN g => fn e => [ ] z
+;
+
+rec cntV : {g:(expCtx)*} (exp nat) [g] -> (exp nat) [ ] =
+FN g => fn e =>
+ case e of
+   {T1::tp[ ]}
+   [g] typist T1 : (exp nat)[g] =>
+
+      expnatter [g, x:exp T1] ([g, x] typist T1)
+
+;

@@ -1,0 +1,82 @@
+% Type-preserving substitution-based interpreter
+%
+% Author: Brigitte Pientka
+%
+% TODO extend with functions and function application
+
+tp   : type.
+nat  : tp.
+bool : tp.
+
+exp  : tp -> type.  
+
+tt   : exp bool.
+ff   : exp bool.
+
+z    : exp nat.
+suc  : exp nat -> exp nat.
+eq   : exp nat -> exp nat -> exp bool.
+
+iff   : {T:tp} exp bool -> exp T -> exp T -> exp T.
+letv : {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
+
+rec equal : (exp nat)[ ] -> (exp nat)[ ] -> (exp bool)[ ] =
+fn x => fn y => 
+  case x of
+    [ ] z : (exp nat)[ ] => 
+      (case y of
+          [ ] z : (exp nat)[ ] => [ ] tt
+
+       | {U::(exp nat)[ ]} 
+         [ ] suc U : (exp nat)[ ] => [ ] ff)
+
+  | {U::(exp nat)[ ]} 
+    [ ] suc U : (exp nat)[ ] => 
+      (case y of
+         [ ] z : (exp nat)[ ] => [ ] ff
+      | {V::(exp nat)[ ]} 
+         [ ] suc V : (exp nat)[ ] 
+            => equal ([ ] U) ([ ] V))
+;
+
+
+
+
+rec eval : {T::tp[ ]} (exp T)[ ] -> (exp T)[ ] = 
+mlam T => fn e => 
+  case e of 
+    [ ] tt : (exp bool)[ ] => [ ] tt
+
+  | [ ] ff : (exp bool)[ ] => [ ] ff
+
+  | [ ] z  : (exp nat)[ ]  => [ ] z
+
+  | {U::(exp nat)[ ]}
+    [ ] suc U : (exp nat)[ ] => 
+         (case eval <. nat >  ([ ] U) of
+             {V::(exp nat)[ ]} 
+             [ ] V : (exp nat)[ ] => [ ] suc V)
+
+
+  | {U::(exp nat)[ ]} {V::(exp nat)[ ]}
+    [ ] eq U V : (exp bool)[ ] =>
+         equal (eval <. nat >   ([ ] U)) 
+               (eval <. nat >   ([ ] V))
+
+   | {T::tp[ ]} {U::(exp bool)[ ]} {V::(exp T)[ ]} {W::(exp T)[ ]}
+         [ ] iff T U V W : (exp T)[ ] =>
+         (case eval <. bool > ([ ] U) of
+             [ ] tt : (exp bool)[ ] => eval <. T > ([ ] V)
+           | [ ] ff : (exp bool)[ ] => eval <. T > ([ ] W)
+	   )
+
+   | {T1::tp[ ]} {T2::tp[ ]} {U::(exp T1)[ ]} {W::(exp T2)[x:exp T1]}
+         [ ] letv T1 T2 U (\x . (W x)) : (exp T2)[ ] =>
+
+         (case eval <. T1 > ([ ] U) of
+
+             {T1'::tp[ ]} {V::(exp T1')[ ]}  
+             [ ] V : (exp T1')[ ] 
+             => eval <. T2 > ([ ] (W V))
+	     )
+;

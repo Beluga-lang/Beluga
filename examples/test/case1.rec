@@ -1,0 +1,17 @@
+nat: type.
+z   : nat.
+suc : nat -> nat.
+
+schema w = some [ ] block nat;
+
+rec copynat1 : {g:(w)*} nat[g] -> nat[g] = 
+    FN g => fn e => copynat1 [g] e;
+
+
+rec copynat : {g:(w)*} nat[g] -> nat[g] =
+  FN g =>
+  fn e =>
+    case e of 
+      [g] z          =>  [g] z
+    | [g] suc (U ..) => copynat [g] ([g] (U .. ))
+;

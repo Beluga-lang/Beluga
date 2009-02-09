@@ -1,0 +1,42 @@
+% Substitution based evaluator
+%   call-by-value strategy
+%
+%   Author: Brigitte Pientka
+%
+
+exp: type.
+nat: type.
+
+num: nat -> exp.
+add: exp -> exp -> exp.
+letv: exp -> (nat -> exp) -> exp.
+
+
+z  : nat.
+suc: nat -> nat.
+
+rec add : nat[ ] -> nat[ ] -> nat[ ] = 
+fn a => fn b =>
+   (case a of
+         [ ] z : nat [ ] => b
+      | {U::nat[ ]} [ ] suc U : nat [ ]=>
+        case b of
+          {V::nat[ ]} [ ] V : nat [ ] => add ([ ] U) ([ ] suc V)
+)
+;
+
+rec eval : (exp)[ ] -> nat[ ] = 
+fn e => 
+(case e of
+   {U::nat[ ]} [ ] num U : exp [ ] => ([ ] U)
+ | {U::exp[ ]}{W::exp[ ]}
+    [ ] add U W : exp [ ] => 
+       add (eval ([ ] U)) (eval ([ ] W))
+
+ | {U::exp[ ]}{W::exp[x : nat]}
+   [ ] letv U (\x . (W x)) : exp[ ] => 
+
+    case (eval ([ ] U)) of 
+       {V::nat[ ]} [ ] V : nat [ ] =>  
+          eval ([ ] (W V))
+);

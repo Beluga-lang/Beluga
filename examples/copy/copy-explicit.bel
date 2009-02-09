@@ -1,0 +1,29 @@
+tp: type.
+arrow: tp -> tp -> tp.
+
+term : tp -> type.
+lam  : {T:tp} {T':tp} (term T -> term T') -> term (arrow T T').
+
+schema termCtx = some [t:tp] block (term t);
+
+rec copy : {g:(termCtx)*} {T::tp[ ]} (term T)[g] -> (term T) [g] =
+
+FN g => mlam T => fn e =>
+(case e of
+
+  {T'::tp[ ]} {#p::(term T')[g]}
+  [g] (#p ..) : (term T')[g]        => [g] (#p ..)
+
+| {T1::tp[ ]} {T2::tp[ ]} {U::(term T2)[g, x :term T1]}
+
+     [g] lam T1 T2 (\ x. (U .. x)) : (term (arrow T1 T2))[g] 
+
+       => (case copy [g, x:term T1]  < . T2 > ([g,x] (U .. x)) of
+
+          {T1'::tp[ ]} {T2'::tp[ ]} {V::(term T2')[g, x:term T1']}
+
+           [g,x:term T1'] (V .. x) : (term T2')[g,x:term T1'] 
+
+                 => [g] lam T1' T2'  (\x. (V .. x)))
+
+);

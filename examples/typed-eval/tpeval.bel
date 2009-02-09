@@ -1,0 +1,64 @@
+% Type-preserving substitution-based interpreter
+%
+% Author: Brigitte Pientka
+%
+% TODO extend with functions and function application
+
+tp   : type.
+nat  : tp.
+bool : tp.
+
+exp  : tp -> type.  
+
+tt   : exp bool.
+ff   : exp bool.
+
+z    : exp nat.
+suc  : exp nat -> exp nat.
+eq   : exp nat -> exp nat -> exp bool.
+
+iff   : exp bool -> exp T -> exp T -> exp T.
+letv :  exp T1 -> (exp T1 -> exp T2) -> exp T2.
+
+rec equal : (exp nat)[ ] -> (exp nat)[ ] -> (exp bool)[ ] =
+fn x => fn y => 
+  case x of
+    [ ] z  => 
+      (case y of
+          [ ] z     => [ ] tt
+        | [ ] suc U => [ ] ff)
+
+  | [ ] suc U => 
+      (case y of
+         [ ]  z      => [ ] ff
+      |  [ ]  suc V  => equal ([ ] U) ([ ] V))
+;
+
+
+
+
+rec eval : (exp T)[ ] -> (exp T)[ ] = 
+ fn e => 
+  case e of 
+    [ ] tt => [ ] tt
+
+  | [ ] ff => [ ] ff
+
+  | [ ] z  => [ ] z
+
+  | [ ] suc U => 
+    let [ ] V  = eval ([ ] U) in [ ] suc V
+
+
+  | [ ]  eq U V =>
+    equal (eval ([ ] U))  (eval  ([ ] V))
+
+  | [ ] iff  U V W  =>
+    (case eval ([ ] U) of
+       [ ] tt => eval ([ ] V)
+     | [ ] ff => eval ([ ] W)
+     )
+
+   | [ ] letv  U (\x . (W x))  =>
+   let [ ] V = eval  ([ ] U) in eval ([ ] (W V))
+;

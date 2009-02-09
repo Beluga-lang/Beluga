@@ -1,0 +1,24 @@
+tp: type.
+nat: tp.
+arrow: tp -> tp -> tp.
+
+term : tp -> type.
+lam  : (term T -> term T') -> term (arrow T T').
+
+schema tctx = some [t:tp] block (term t);
+% schema W = block term nat;
+
+rec copy : {g:(tctx)*} (term T)[g] -> (term T)[g] =
+FN g => 
+  fn e =>
+   (case e of
+   
+      [g] (#p ..)  => [g] (#p ..)
+
+    | [g] lam  (\x. (U .. x))
+       => 
+       (let 
+           [g,x : term _ ] (V .. x) = copy [g, x:term _]   ([g,x] (U .. x))
+       in
+	  [g] lam  (\x. (V ..  x)))
+);

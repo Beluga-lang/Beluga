@@ -38,7 +38,7 @@ $INTERPRETER  \
     copy/copy-simple-explicit.bel \
     free-vars/fvnat.bel \
     free-vars/fvnat-explicit.bel \
-    lp-horn/lp-horn.bel \
+    lp-horn/sources.cfg \
     mini-ml/eval-sub-1.bel \
     mini-ml/eval-sub-1-explicit.bel \
     mini-ml/eval-sub.bel \

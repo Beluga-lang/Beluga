@@ -186,7 +186,7 @@ module Int = struct
                                            (* Potentially, A is Sigma type? *)
 
     and typ =                              (* LF level                       *)
-      | Atom  of cid_typ * spine           (* A ::= a M1 ... Mn              *)
+      | Atom  of Loc.t option * cid_typ * spine (* A ::= a M1 ... Mn              *)
       | PiTyp of typ_decl * typ            (*   | Pi x:A.B                   *)
       | TClo  of (typ * sub)               (*   | TClo(A,s)                  *)
       | TVar  of tvar * sub                (*   | TVar(a,s)                  *)
@@ -397,7 +397,7 @@ module Apx = struct
       | PDecl of  name * typ  * dctx
 
     and typ =
-      | Atom  of cid_typ * spine
+      | Atom  of Loc.t * cid_typ * spine
       | PiTyp of typ_decl * typ
 
     and typ_rec =

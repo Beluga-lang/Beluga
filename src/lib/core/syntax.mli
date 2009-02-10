@@ -188,7 +188,7 @@ module Int : sig
       | CDecl of name * cid_schema
 
     and typ =
-      | Atom  of cid_typ * spine
+      | Atom  of Loc.t option * cid_typ * spine
       | PiTyp of typ_decl * typ
       | TClo  of (typ * sub)
       | TVar  of tvar * sub                
@@ -383,7 +383,7 @@ module Apx : sig
       | PDecl of  name * typ  * dctx
 
     and typ =
-      | Atom  of cid_typ * spine
+      | Atom  of Loc.t * cid_typ * spine
       | PiTyp of typ_decl * typ
 
     and typ_rec =

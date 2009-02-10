@@ -766,11 +766,11 @@ module Int = struct
 
 
     and fmt_ppr_lf_typ lvl ppf = function
-      | LF.Atom (a, LF.Nil) ->
+      | LF.Atom (_, a, LF.Nil) ->
           fprintf ppf "%s"
             (R.render_cid_typ a)
 
-      | LF.Atom (a, ms) ->
+      | LF.Atom (_, a, ms) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%s%a%s"
               (l_paren_if cond)
@@ -1407,69 +1407,65 @@ module Error = struct
 
     (* Format Based Pretty Printers *)
     let fmt_ppr ppf = function
+      | UnboundName n ->
+          fprintf ppf "unbound variable or constructor: %s" (R.render_name n)
+
       | CtxVarMismatch (var, expected) ->
           fprintf ppf "Context variable %a doesn't check against schema %a"
             (IP.fmt_ppr_lf_ctx_var) var
             (IP.fmt_ppr_lf_schema 0) expected
 
-      | TypIllTyped (_cD, _cPsi, _tA, _tB) ->
-          fprintf ppf "Inferred _tA but expected _tB"
-
-      | ExpAppNotFun ->
-          fprintf ppf "expression is not a function"
-
-      | ExpNilNotAtom ->
-          fprintf ppf "TODO"
-
-      | KindMismatch ->
-          fprintf ppf "Kind mismatch"
-
-      | SubIllTyped ->
-          fprintf ppf "Substitution not well-typed"
-
-      | TypMismatch ((* _cD ,*) cPsi, sA1, sA2) ->
-          fprintf ppf
-            "non unifiable types\n  %a  |-  \n %a\n    %a"
-            (IP.fmt_ppr_lf_dctx std_lvl) (Whnf.normDCtx cPsi)
-            (IP.fmt_ppr_lf_typ std_lvl) (Whnf.normTyp sA1)
-            (IP.fmt_ppr_lf_typ std_lvl) (Whnf.normTyp sA2)
-
       | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
-          fprintf ppf "Sigma Type mismatch"
+          fprintf ppf "Sigma Type mismatch" (* TODO *)
 
-      | IllTyped (_cPsi, sM, sA) ->
+      | KindMismatch (cPsi, sA) ->
+          fprintf ppf "ill kinded type\n  expected: type\n  for type: %a\n  in context:\n    %a"
+            (IP.fmt_ppr_lf_typ  std_lvl) (Whnf.normTyp sA)
+            (IP.fmt_ppr_lf_dctx std_lvl) cPsi
+
+      | TypMismatch (cPsi, sM, sA1, sA2) ->
           fprintf ppf
-            "ill typed expression\n  expected type: %a\n  for expression:\n    %a"
+            "ill typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n  in context:\n    %a"
+            (IP.fmt_ppr_lf_typ    std_lvl) (Whnf.normTyp sA1)
+            (IP.fmt_ppr_lf_typ    std_lvl) (Whnf.normTyp sA2)
+            (IP.fmt_ppr_lf_normal std_lvl) (Whnf.norm sM)
+            (IP.fmt_ppr_lf_dctx   std_lvl) cPsi
+
+      | IllTyped (cPsi, sM, sA) ->
+          fprintf ppf
+            "ill typed expression\n  expected type: %a\n  for expression:\n    %a\n  in context:\n    %a"
             (IP.fmt_ppr_lf_typ std_lvl) (Whnf.normTyp sA)
             (IP.fmt_ppr_lf_normal std_lvl) (Whnf.norm sM)
-            (* TODO print context *)
+            (IP.fmt_ppr_lf_dctx std_lvl) cPsi
 
-      | LeftoverConstraints ->
-          fprintf ppf "constraints left after reconstruction"
-
-      | LeftoverUndef ->
-          fprintf ppf "Undef left after unification"
+      | LeftoverConstraints x ->
+          fprintf ppf
+            "cannot reconstruct a type for free variable %s (leftover constraints)"
+            (R.render_name x)
 
       | IllTypedIdSub ->
-          fprintf ppf "TODO"
+          fprintf ppf "ill typed substitution" (* TODO *)
 
       | ValueRestriction ->
-          fprintf ppf "value restriction (case construct)"
+          fprintf ppf "value restriction (case construct)" (* TODO *)
 
-      | CompIllTyped ->
-          fprintf ppf "TODO"
-
-      | UnboundName n   ->
-          fprintf ppf "unbound variable or constructor: %s" (R.render_name n)
+      | CompIllTyped (_e, _theta_tau) ->
+          fprintf ppf "ill typed expression (computational level)" (* TODO *)
 
       | ConstraintsLeft ->
-          fprintf ppf "Constraint of functional type are not simplified"
+          fprintf ppf "Constraint of functional type are not simplified" (* TODO *)
 
-      | NotPatSub       ->
-          fprintf ppf "Not a pattern substitution"
+      | NotPatSub ->
+          fprintf ppf "Not a pattern substitution" (* TODO *)
 
-      | IndexError (k, cPsi) ->
-          fprintf ppf "looking up index %s in context %a" 
+      | LeftoverUndef ->
+          fprintf ppf "Undef left after unification" (* FIXME this is a beluga error *)
+
+      | SubIllTyped ->
+          fprintf ppf "Substitution not well-typed"  (* TODO *)
+
+      | IndexError (k, cPsi) -> (* FIXME this is a beluga error *)
+          fprintf ppf "looking up index %s in context %a"
             (string_of_int k) 
             (IP.fmt_ppr_lf_dctx std_lvl) cPsi
 

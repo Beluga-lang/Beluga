@@ -745,7 +745,7 @@ module Make (T : TRAIL) : UNIFY = struct
          (comp s1' shift, cPsi1')
 
   and pruneTypW cD0 (phat, sA, ss, rOccur) = match sA with
-    | (Atom(a, tS) , s) -> Atom(a, pruneSpine cD0 (phat, (tS, s), ss, rOccur)) 
+    | (Atom(loc, a, tS) , s) -> Atom(loc, a, pruneSpine cD0 (phat, (tS, s), ss, rOccur)) 
     | (PiTyp(TypDecl(x, tA), tB), s) -> 
         let tA' = pruneTyp cD0 (phat, (tA, s), ss, rOccur) in 
         let tB' = pruneTyp cD0 (phat, (tB, dot1 s), ss, rOccur) in 
@@ -1132,7 +1132,7 @@ module Make (T : TRAIL) : UNIFY = struct
     let rec unifyTyp' cD0 (phat, sA, sB) = unifyTypW cD0 (phat, Whnf.whnfTyp sA, Whnf.whnfTyp sB)
 
     and unifyTypW cD0 (phat, sA, sB) = match (sA, sB) with
-      | ((Atom (a, tS1), s1), (Atom (b, tS2), s2))  ->
+      | ((Atom (_, a, tS1), s1), (Atom (_, b, tS2), s2))  ->
           if a = b then
             unifySpine cD0 (phat, (tS1, s1), (tS2, s2))
           else

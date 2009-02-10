@@ -215,8 +215,10 @@ module LF = struct
             let _ = Printf.printf " Inferred type: %s \n Expected type: %s \n\n"
                     (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA1, LF.id)))
                     (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA2, s'))) in
-          raise (Error "Substitution ill-typed")
-          (* (TypIllTyped (cD, cPsi', (tA1, LF.id), (tA2, s'))) *)
+              raise (Error "Substitution ill-typed")
+            (* let sM = Root (None, h, Nil) in 
+              raise (TypMismatch (cPsi', sM, (tA2, s'), (tA1, LF.id)))
+            *)
 
     | (cPsi', Dot (Head (BVar w), t), SigmaDec (cPsi, (SigmaDecl (_, arec)))) ->
         (* other heads of type Sigma disallowed -bp *)
@@ -294,7 +296,7 @@ module LF = struct
      succeeds iff cD ; cPsi |- [s]tA <= type
   *)
   let rec checkTyp' cO cD cPsi (tA, s) = match (tA, s) with
-    | (Atom (a, tS), s)                ->
+    | (Atom (_, a, tS), s)                ->
         checkSpineK cO cD cPsi (tS, s) ((Typ.get a).Typ.kind, LF.id)
 
     | (PiTyp (TypDecl (x, tA), tB), s) ->

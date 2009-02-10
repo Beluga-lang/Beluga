@@ -67,8 +67,8 @@ let rec lowerMVar' cPsi sA' = match sA' with
   | (TClo (tA, s), s') ->
       lowerMVar' cPsi (tA, LF.comp s s')
 
-  | (Atom (a, tS), s') ->
-      let u' = newMVar (cPsi, Atom (a, SClo (tS, s'))) in
+  | (Atom (loc, a, tS), s') ->
+      let u' = newMVar (cPsi, Atom (loc, a, SClo (tS, s'))) in
         (u', Root (None, MVar (u', LF.id), Nil)) (* cvar * normal *)
 
 
@@ -273,8 +273,8 @@ and normFt ft = match ft with
  *    cD ; G' |- tA' <= type   and tA' is in normal form
  *)
 and normTyp (tA, sigma) = match tA with
-  | Atom (a, tS) ->
-      Atom (a, normSpine (tS, sigma))
+  | Atom (loc, a, tS) ->
+      Atom (loc, a, normSpine (tS, sigma))
 
   | PiTyp (TypDecl (_x, _tA) as decl, tB) ->
       PiTyp (normDecl (decl, sigma), normTyp (tB, LF.dot1 sigma))
@@ -383,9 +383,9 @@ let rec whnf sM = match sM with
        *      this would avoid possibly building closures with id
        *)
       begin match whnfTyp (tA, LF.id) with
-        | (Atom (a, tS'), _s (* id *)) ->
+        | (Atom (loc', a, tS'), _s (* id *)) ->
             (* meta-variable is of atomic type; tS = Nil  *)
-            let u' = Inst (uref, cPsi, Atom (a, tS'), cnstr) in
+            let u' = Inst (uref, cPsi, Atom (loc', a, tS'), cnstr) in
               (Root (loc, MVar (u', LF.comp r sigma), SClo (tS, sigma)), LF.id)
         | (PiTyp _, _s)->
             (* Meta-variable is not atomic and tA = Pi x:B1.B2
@@ -470,9 +470,9 @@ and whnfRedex (sM, sS) = match (sM, sS) with
  *    cD ; cPsi' |- tA' <= type   and tA' is in weak head normal form
  *)
 and whnfTyp (tA, sigma) = match tA with
-  | Atom (a, tS)     -> (Atom (a, SClo (tS, sigma)), LF.id)
-  | PiTyp (_cD, _tB) -> (tA, sigma)
-  | TClo (tA, s)     -> whnfTyp (tA, LF.comp s sigma)
+  | Atom (loc, a, tS) -> (Atom (loc, a, SClo (tS, sigma)), LF.id)
+  | PiTyp (_cD, _tB)  -> (tA, sigma)
+  | TClo (tA, s)      -> whnfTyp (tA, LF.comp s sigma)
 
 
 (* ----------------------------------------------------------- *)
@@ -652,7 +652,7 @@ and convFront front1 front2 = match (front1, front2) with
 
 
 let rec convTyp' sA sB = match (sA, sB) with
-  | ((Atom (a1, spine1), s1), (Atom (a2, spine2), s2)) ->
+  | ((Atom (_, a1, spine1), s1), (Atom (_, a2, spine2), s2)) ->
       a1 = a2 && convSpine (spine1, s1) (spine2, s2)
 
   | ((PiTyp (TypDecl (_, tA1), tB1), s1), (PiTyp (TypDecl (_, tA2), tB2), s2)) ->
@@ -736,7 +736,7 @@ let convHatCtx ((cvar, l), cPsi) =
 let rec etaExpandMV cPsi sA s' = etaExpandMV' cPsi (whnfTyp sA)  s'
 
 and etaExpandMV' cPsi sA  s' = match sA with
-  | (Atom (_a, _tS) as tP, s) ->
+  | (Atom (_, _a, _tS) as tP, s) ->
       let u = newMVar (cPsi, TClo(tP,s)) in
         Root (None, MVar (u, s'), Nil)
 

@@ -1052,7 +1052,7 @@ module Make (T : TRAIL) : UNIFY = struct
     let rec unifyTyp' cD0 (phat, sA, sB) = unifyTypW cD0 (phat, Whnf.whnfTyp sA, Whnf.whnfTyp sB)
 
     and unifyTypW cD0 (phat, sA, sB) = match (sA, sB) with
-      | ((Atom (a, tS1), s1), (Atom (b, tS2), s2))  ->
+      | ((Atom (_, a, tS1), s1), (Atom (_, b, tS2), s2))  ->
           if a = b then
             unifySpine cD0 (phat, (tS1, s1), (tS2, s2))
           else

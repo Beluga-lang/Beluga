@@ -1,31 +1,25 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-open Syntax
+open Syntax.Int
 open Id
 
 type error =
-  | CtxVarMismatch of Int.LF.ctx_var * Int.LF.schema
-  | SigmaIllTyped of Int.LF.mctx * Int.LF.dctx
-      * Int.LF.trec_clo (* inferred *) * Int.LF.trec_clo (* expected *)
-  | ExpAppNotFun  
-  | ExpNilNotAtom
-  | KindMismatch 
-  | SubIllTyped      
-  | TypIllTyped of Int.LF.mctx * Int.LF.dctx
-      * Int.LF.tclo (* inferred *) * Int.LF.tclo (* expected *) 
-  | TypMismatch of (* Int.LF.mctx * *) Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
-  | IllTyped of (* Int.LF.mctx * *) Int.LF.dctx * Int.LF.nclo * Int.LF.tclo
+  | UnboundName         of name
 
-  | UnboundName of name
-  | LeftoverConstraints
-  | LeftoverUndef
+  | CtxVarMismatch      of LF.ctx_var * LF.schema
+  | SigmaIllTyped       of LF.mctx * LF.dctx * LF.trec_clo * LF.trec_clo
+  | KindMismatch        of LF.dctx * LF.tclo
+  | TypMismatch         of LF.dctx * LF.nclo * LF.tclo * LF.tclo
+  | IllTyped            of LF.dctx * LF.nclo * LF.tclo
+
+  | LeftoverConstraints of name
   | IllTypedIdSub
   | ValueRestriction
-  | CompIllTyped
+  | CompIllTyped        of Comp.exp_chk * Comp.typ
 
-  (* whnf errors *)
   | ConstraintsLeft
   | NotPatSub
 
-  (* context error *)
-  | IndexError of int * Int.LF.dctx
+  | LeftoverUndef
+  | SubIllTyped
+  | IndexError          of int * LF.dctx

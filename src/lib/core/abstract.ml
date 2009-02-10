@@ -470,7 +470,7 @@ and collectHead cQ phat sH = match sH with
 
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
-  | (I.Atom (_a, tS), s) ->
+  | (I.Atom (_, _a, tS), s) ->
       collectSpine cQ phat (tS, s)
 
   | (I.PiTyp (I.TypDecl (_, tA), tB), s) ->
@@ -537,8 +537,8 @@ let rec abstractKind cQ offset sK = match sK with
 and abstractTyp cQ offset sA = abstractTypW cQ offset (Whnf.whnfTyp sA) 
 
 and abstractTypW cQ offset sA = match sA with
-  | (I.Atom (a, tS), s (* id *)) ->
-      I.Atom (a, abstractSpine cQ offset (tS, s))
+  | (I.Atom (loc, a, tS), s (* id *)) ->
+      I.Atom (loc, a, abstractSpine cQ offset (tS, s))
 
   | (I.PiTyp (I.TypDecl (x, tA), tB), s) ->
       I.PiTyp (I.TypDecl (x, abstractTyp cQ offset (tA, s)), abstractTyp cQ (offset + 1) (tB, LF.dot1 s))
@@ -674,8 +674,8 @@ and abstractSub cQ offset s = match s with
 let rec abstractMVarTyp cQ offset sA = abstractMVarTypW cQ offset (Whnf.whnfTyp sA) 
 
 and abstractMVarTypW cQ offset sA = match sA with
-  | (I.Atom (a, tS), s (* id *)) ->
-      I.Atom (a, abstractMVarSpine cQ offset (tS, s))
+  | (I.Atom (loc, a, tS), s (* id *)) ->
+      I.Atom (loc, a, abstractMVarSpine cQ offset (tS, s))
 
   | (I.PiTyp (I.TypDecl (x, tA), tB), s) ->
       I.PiTyp (I.TypDecl (x, abstractMVarTyp cQ offset (tA, s)), 

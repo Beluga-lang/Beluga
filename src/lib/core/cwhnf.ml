@@ -91,7 +91,7 @@ and mshiftSpine tS n = match tS with
   | LF.SClo(tS, s) -> LF.SClo(mshiftSpine tS n, mshiftSub s n)
 
 and mshiftTyp tA n = match tA with
-  | LF.Atom (a, tS) -> LF.Atom(a, mshiftSpine tS n)
+  | LF.Atom (loc, a, tS) -> LF.Atom (loc, a, mshiftSpine tS n)
   | LF.PiTyp(LF.TypDecl(x, tA), tB) -> LF.PiTyp(LF.TypDecl(x, mshiftTyp tA n), mshiftTyp tB n)
   | LF.TClo(tA, s) -> LF.TClo(mshiftTyp tA n, mshiftSub s n)
 
@@ -446,8 +446,8 @@ and cnorm (tM, t) = match tM with
      cD' ; cPsi' |- tA' <= type   
   *)
   and cnormTyp (tA, t) = match tA with
-    |  LF.Atom (a, tS)
-      -> LF.Atom (a, cnormSpine (tS, t))
+    |  LF.Atom (loc, a, tS) ->
+         LF.Atom (loc, a, cnormSpine (tS, t))
 
     |  LF.PiTyp (LF.TypDecl (_x, _tA) as decl, tB)
       -> LF.PiTyp (cnormDecl (decl, t),  cnormTyp (tB, t))
@@ -498,8 +498,8 @@ let rec cnormDCtx (cPsi, t) = match cPsi with
 (* ************************************************* *)
 
 let rec csub_typ cPsi k tA = match tA with 
-  | LF.Atom (a, tS) -> 
-      LF.Atom (a, csub_spine cPsi k tS)
+  | LF.Atom (loc, a, tS) -> 
+      LF.Atom (loc, a, csub_spine cPsi k tS)
 
   | LF.PiTyp (LF.TypDecl (x, tA), tB) -> 
       LF.PiTyp (LF.TypDecl (x, csub_typ cPsi k tA), 
@@ -1055,8 +1055,8 @@ let rec mctxPVarPos cD p =
      cD' ; cPsi' |- tA' <= type   
   *)
   and invTyp (tA, t) d = match tA with
-    |  LF.Atom (a, tS)
-      -> LF.Atom (a, invSpine (tS, t) d)
+    |  LF.Atom (loc, a, tS) ->
+         LF.Atom (loc, a, invSpine (tS, t) d)
 
     |  LF.PiTyp (LF.TypDecl (_x, _tA) as decl, tB)
       -> LF.PiTyp (invDecl (decl, t) d,  invTyp (tB, t) d)

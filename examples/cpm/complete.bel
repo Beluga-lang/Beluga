@@ -1,0 +1,39 @@
+%%% Completeness of Evaluation under Continuations
+%%% Author: Frank Pfenning
+
+%  The natural informal proof relies on the lemma
+%    If   D :: eval E V
+%    then for any K
+%         C :: K # (ev E) =>* K # (return V).
+
+% Proof: by induction on the structure of D.
+
+% The formalization of this proof requires appending partial computation
+% sequences, which is possible, although somewhat tedious.
+
+% Below we give a simpler implementation in which the partial computations
+% are accumulated incrementally.
+% 
+
+%  Main Lemma
+%    If   D :: eval E V
+%    and  C' :: K # (return V) =>* (answer W)
+%    then C :: K # (ev E) =>* (answer W).
+
+% Proof: by induction on the structure of D.  C' is the "accumulator"
+% argument for the resulting computation.
+
+rec ccp :  (eval E V)[ ]  -> (mstep (state K  (return V)) (answer W))[ ]   
+	   -> (mstep (state K  (ev E)) (answer W))[ ] = 
+
+fn e => fn c => case e of 
+ 
+  [ ] ev_z    =>  
+    let [ ] C' = c in [ ] to C' st_z
+
+%| [ ] ev_s D1 =>  
+%   let [ ] C' = c in 
+%   let [ ] C1 = ccp ([ ] D1) ([ ] to C' st_return) in 
+%    [ ] to C1 st_s
+		 
+;

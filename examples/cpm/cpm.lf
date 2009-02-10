@@ -1,0 +1,29 @@
+%%% Continuation Machine for Mini-ML
+%%% Author: Frank Pfenning
+
+% Machine Instructions
+inst : type.  %name inst I.
+
+ev : exp -> inst.
+return : val -> inst.
+
+match1 : val -> exp -> (val -> exp) -> inst.
+pair1 : val -> exp -> inst.
+fst1 : val -> inst.
+snd1 : val -> inst.
+app1 : val -> exp -> inst.
+app2 : val -> val -> inst.
+
+% Continuations
+cont : type.  %name cont K.
+
+init : cont.
+cons    : cont -> (val -> inst) -> cont.  
+%infix left 8 ;.
+
+% Continuation Machine States
+cm_state : type.  %name cm_state S.
+
+state : cont -> inst -> cm_state.
+answer : val -> cm_state.
+%infix none 7 #.

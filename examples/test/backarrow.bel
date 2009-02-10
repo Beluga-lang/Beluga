@@ -1,0 +1,77 @@
+exp : type.  
+
+z    : exp.
+s    : exp -> exp.
+pair : exp -> exp -> exp.
+
+lam  : (exp -> exp) -> exp.
+app  : exp -> exp -> exp.
+
+
+tp : type.  %name tp T.
+
+nat   : tp.				% Natural Numbers
+cross : tp -> tp -> tp.			% Pairs
+arrow : tp -> tp -> tp.			% Functions
+
+
+eval : exp -> exp -> type.  
+
+% Natural Numbers
+ev_z      : eval z z.
+ev_s      : eval (s E) (s V)  
+	  <- eval E V .
+
+ev_pair   : eval (pair E1 E2) (pair V1 V2) 
+	  <- eval E1 V1 
+	  <- eval E2 V2.
+
+
+ev_lam : eval (lam (\x. E x)) (lam (\x. E x)).
+
+ev_app : eval (app E1 E2) V
+	  <- eval E1 (lam (\x. E1' x))
+	  <- eval E2 V2
+	  <- eval (E1' V2) V.
+
+has_type : exp -> tp -> type.  %name has_type P u.
+
+% Natural Numbers
+tp_z     : has_type z nat.
+tp_s     : has_type (s E) nat
+	    <- has_type E nat.
+
+tp_pair : has_type (pair E1 E2) (cross T1 T2)
+	   <- has_type E1 T1
+	   <- has_type E2 T2.
+
+tp_lam : has_type (lam (\x. E x)) (arrow T1 T2)
+	  <- ({x:exp} has_type x T1 -> has_type (E x) T2).
+
+tp_app : has_type (app E1 E2) T1
+	  <- has_type E1 (arrow T2 T1)
+	  <- has_type E2 T2.
+
+
+%%% Representation of the Proof of Type Preservation
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+tps : eval E V -> has_type E T -> has_type V T -> type.
+
+%mode tps +D +P -Q.
+
+% Natural Numbers
+tps_z     : tps (ev_z) (tp_z) (tp_z).
+tps_s     : tps (ev_s D1) (tp_s P1) (tp_s Q1)
+	     <- tps D1 P1 Q1.
+
+tps_pair : tps (ev_pair D2 D1) (tp_pair P2 P1) (tp_pair Q2 Q1)
+	      <- tps D1 P1 Q1
+	      <- tps D2 P2 Q2.
+
+tps_lam  : tps (ev_lam) (tp_lam (\x. \d. P x d)) (tp_lam (\x. \d. P x d)).
+
+tps_app  : tps (ev_app D3 D2 D1) (tp_app P2 P1) Q3
+	    <- tps D1 P1 (tp_lam (\x. \d. Q1' x d))
+	    <- tps D2 P2 Q2
+	    <- tps D3 (Q1' V2 Q2) Q3.

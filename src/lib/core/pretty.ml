@@ -376,7 +376,10 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ 0) tA
 
-
+      | LF.SigmaDec (cPsi, sigma_decl) ->
+          fprintf ppf "%a, %a"
+            (fmt_ppr_lf_dctx 0) cPsi
+            (fmt_ppr_lf_sigma_decl 0) sigma_decl
 
     and fmt_ppr_cmp_typ lvl ppf = function
       | Comp.TypBox (_, tA, cPsi) ->
@@ -391,6 +394,15 @@ module Ext = struct
               (fmt_ppr_cmp_typ 1) tau1
               (fmt_ppr_cmp_typ 0) tau2
               (r_paren_if cond)
+
+      | Comp.TypCross (_, tau1, tau2) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%s%a * %a%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_typ 1) tau1
+              (fmt_ppr_cmp_typ 0) tau2
+              (r_paren_if cond)
+
 
       | Comp.TypCtxPi (_, (psi, w), tau) ->
           let cond = lvl > 0 in
@@ -436,6 +448,22 @@ module Ext = struct
             fprintf ppf "@[<2>%smlam %s => %a%s@]"
               (l_paren_if cond)
               (R.render_name x)
+              (fmt_ppr_cmp_exp_chk 0) e
+              (r_paren_if cond)
+
+      | Comp.Pair (_, e1, e2) -> 
+            fprintf ppf "<%a , %a>"
+              (fmt_ppr_cmp_exp_chk 0) e1
+              (fmt_ppr_cmp_exp_chk 0) e2
+
+
+      | Comp.LetPair(_, i, (x, y, e)) -> 
+          let cond = lvl > 1 in
+            fprintf ppf "@[<2>%slet <%s,%s> = %ain %a%s@]"
+              (l_paren_if cond)
+              (R.render_name x)
+              (R.render_name y)
+              (fmt_ppr_cmp_exp_syn 0) i
               (fmt_ppr_cmp_exp_chk 0) e
               (r_paren_if cond)
 
@@ -1012,6 +1040,11 @@ module Int = struct
             (R.render_name x)
             (fmt_ppr_lf_typ 0) tA
 
+      | LF.SigmaDec (cPsi, sigma_decl) ->
+          fprintf ppf "%a, %a"
+            (fmt_ppr_lf_dctx 0) cPsi
+            (fmt_ppr_lf_sigma_decl 0) sigma_decl
+
 
     and fmt_ppr_lf_mctx lvl ppf = function
       | LF.Empty ->
@@ -1043,6 +1076,14 @@ module Int = struct
       | Comp.TypArr (tau1, tau2) ->
           let cond = lvl > 0 in
             fprintf ppf "%s%a -> %a%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_typ 1) tau1
+              (fmt_ppr_cmp_typ 0) tau2
+              (r_paren_if cond)
+
+      | Comp.TypCross (tau1, tau2) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%s%a * %a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_typ 1) tau1
               (fmt_ppr_cmp_typ 0) tau2
@@ -1095,6 +1136,22 @@ module Int = struct
             fprintf ppf "@[<2>%smlam %s => %a%s@]"
               (l_paren_if cond)
               (R.render_name x)
+              (fmt_ppr_cmp_exp_chk 0) e
+              (r_paren_if cond)
+
+      | Comp.Pair (e1, e2) -> 
+            fprintf ppf "(%a , %a)"
+              (fmt_ppr_cmp_exp_chk 0) e1
+              (fmt_ppr_cmp_exp_chk 0) e2
+
+
+      | Comp.LetPair(i, (x, y, e)) -> 
+          let cond = lvl > 1 in
+            fprintf ppf "@[<2>%slet <%s,%s> = %ain %a%s@]"
+              (l_paren_if cond)
+              (R.render_name x)
+              (R.render_name y)
+              (fmt_ppr_cmp_exp_syn 0) i
               (fmt_ppr_cmp_exp_chk 0) e
               (r_paren_if cond)
 

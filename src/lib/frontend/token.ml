@@ -16,11 +16,13 @@ type t =
   | EOI               (** End of Input, usually the same thing as EOF. *)
   | KEYWORD of string (** A keyword, see Lexer for examples.           *)
   | SYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
+  | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"
   | KEYWORD s -> Printf.sprintf "KEYWORD %S" s
   | SYMBOL  s -> Printf.sprintf "SYMBOL %S"  s
+  | UPSYMBOL  s -> Printf.sprintf "UPSYMBOL %S"  s
 
 (** Pretty print a token using {!Format} functionality. *)
 let print ppf x = Format.pp_print_string ppf (to_string x)
@@ -42,6 +44,7 @@ let extract_string = function
                      to_string EOI)
   | KEYWORD s -> s
   | SYMBOL  s -> s
+  | UPSYMBOL  s -> s
 
 
 
@@ -75,7 +78,12 @@ module Filter = struct
     | EOI                    -> EOI
     | KEYWORD s              -> KEYWORD s
     | SYMBOL s when is_kwd s -> KEYWORD s
-    | SYMBOL s               -> SYMBOL  s
+    | SYMBOL s               -> 
+        let firstChar = String.get s 0 in 
+          if firstChar >= 'A' && firstChar <= 'Z' then 
+            UPSYMBOL  s
+          else 
+            SYMBOL s
 
   (** Create a token filter given a function to determine keywords. *)
   let mk is_kwd = {

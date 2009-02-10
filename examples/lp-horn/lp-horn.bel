@@ -1,0 +1,57 @@
+
+
+%%% The result of conversion to canonical form is canonical.
+%%% Author: Frank Pfenning
+
+iscan : tocan A D D' -> can A D' -> type.
+isatm : toatm D D' -> atm D' -> type.
+%mode iscan +TC -C.
+%mode isatm +TA -A.
+
+
+% isc_and : iscan (tc_and TC2 TC1) (can_andi CN2 CN1)
+% 	   <- iscan TC1 CN1
+% 	   <- iscan TC2 CN2.
+
+% % ERROR in type reconstruction 
+% % isc_imp : iscan (tc_imp (\u. \ta. TC1 u ta)) (can_impi (\u. \at. CN1 u at))
+% %	   <- ({u:pf A} {ta:toatm u u} {at:atm u}
+% %	      isatm ta at -> iscan (TC1 u ta) (CN1 u at)).
+
+% isc_true : iscan (tc_true) (can_truei).
+
+% ERROR in type reconstruction 
+% isc_forall :
+%    {A1:i -> o} {D1:pf (forall ([t:i] A1 t))} {D2:{t:i} pf (A1 t)}
+%       {TC1:{t:i} tocan (A1 t) (foralle ([t1:i] A1 t1) D1 t) (D2 t)}
+%       {CN1:{t:i} can (A1 t) (D2 t)}
+%       ({a:i} iscan (A1 a) (foralle ([t:i] A1 t) D1 a) (D2 a) (TC1 a) (CN1 a))
+%          -> iscan (forall ([t:i] A1 t)) D1 (foralli ([t:i] A1 t) ([a:i] D2 a))
+%                (tc_forall ([t:i] A1 t) D1 ([t:i] D2 t) ([a:i] TC1 a))
+%                (can_foralli ([t:i] A1 t) ([t:i] D2 t) ([a:i] CN1 a)).
+%
+isc_forall : iscan (tc_forall (\a. TC1 a)) (can_foralli (\x. CN1 x))
+	       <- ({a:i} iscan (TC1 a) (CN1 a)).
+
+
+% isc_whr : iscan (tc_whr TC1 WHR) CN1
+% 	   <- iscan TC1 CN1.
+
+% isc_atm : iscan (tc_atm TA1) (can_atm AT1)
+% 	   <- isatm TA1 AT1.
+
+% isa_impe : isatm (ta_impe TC2 TA1) (atm_impe CN2 AT1)
+% 	    <- isatm TA1 AT1
+% 	    <- iscan TC2 CN2.
+
+% isa_andel : isatm (ta_andel TA1) (atm_andel AT1)
+% 	     <- isatm TA1 AT1.
+
+% isa_ander : isatm (ta_ander TA1) (atm_ander AT1)
+% 	     <- isatm TA1 AT1.
+
+% isa_foralle : isatm (ta_foralle TA1) (atm_foralle AT1)
+% 	       <- isatm TA1 AT1.
+
+
+

@@ -1,0 +1,15 @@
+nat: type.
+z   : nat.
+suc : nat -> nat.
+
+irrelevancy : type.
+irrelevant_con : irrelevancy.
+
+schema w = some [ ] nat;
+
+rec copynat : {g:(w)*} nat[g] -> nat[g] =
+   FN g => fn e =>
+     case e of [g] z => [g] z
+             | [g] suc (U ..) => copynat [g] ([g]  (U ..))
+    
+;

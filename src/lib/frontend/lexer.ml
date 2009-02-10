@@ -42,13 +42,8 @@ let mk_symbol  s = Token.SYMBOL  s
 
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
 let rec lex_token loc = lexer
-(*   | "UNIFY_TERM"       -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
-(*   | "UNIFY_TYPE"       -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
-(*   | "@term"            -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
-(*   | "@type"            -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
-(*   | "{-#"              -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
-(*   | "#-}"              -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
   | "->"
+  | "<-"
   | "::"
   | "=>"
   | "FN"

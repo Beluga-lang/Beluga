@@ -1,0 +1,41 @@
+
+o:type.
+i:type.
+
+z: i.
+
+all: (i -> o) -> o.
+neg: o -> o.
+
+nd: o -> type.
+
+nd_allI: nd (all (\x. A x))
+	 <- ({a:i} nd (A a)).
+
+nd_neg : nd (neg A)
+	  <- nd A. 
+
+proof: nd A -> type.
+
+pr_all: proof (nd_allI (\a. D a)) 
+	<- ({a:i} proof (D a)).
+
+
+
+pr_neg: proof (nd_neg D)
+	 <- proof D.
+
+%
+% pr_all : {A :  i -> o}
+%          {D: {a : i} nd (A a)}
+%           ({a : i} proof (A a) (D a)) ->
+%            proof (all (\ x . A x)) (nd_allI (\x . A x) (\a . D a)).
+%
+
+
+prove: proof D -> ({a:i}proof (E a)) -> type.
+
+prove_all: prove (pr_all (\a. D a))  (\a. E a)
+	   <- ({a:i} prove (D a)  (\b. (pr_neg (E a)))).
+
+

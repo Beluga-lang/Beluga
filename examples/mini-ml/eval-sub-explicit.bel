@@ -1,0 +1,95 @@
+% Substitution based evaluator
+%   call-by-value strategy
+%
+%   Author: Brigitte Pientka
+%
+
+exp: type.
+
+
+z   : exp.
+suc : exp -> exp.
+app : exp -> exp -> exp.
+lam : (exp -> exp) -> exp.
+letn: exp -> (exp -> exp) -> exp.
+letv: exp -> (exp -> exp) -> exp.
+fix : (exp -> exp) -> exp. 
+
+
+
+% Call-By-Name evaluation 
+rec eval : exp[ ] -> exp[ ] = 
+fn e => 
+
+(case e of
+
+  {U::exp[ ]} 
+    [ ] suc U : exp [ ] =>
+
+    (case (eval ([ ] U)) of       
+
+      {V::exp[ ]} 
+       [ ] V : exp [ ] => ([ ] suc V))
+
+| {U::exp[ ]}{W::exp[ ]}
+    [ ] app U W : exp [ ] =>   
+    (case (eval ([ ] U)) of
+       {V::exp[x:exp]} [ ] lam (\ x. (V x)) : exp[ ] => 
+          eval ([ ] (V W))
+    )
+        
+| {U::exp[x:exp]}
+  [ ] lam (\ x. (U x)) : exp[ ] =>  e
+
+
+| {W::exp[ ]}{U::exp[x:exp]}
+   [ ] letn W (\x. (U x)) : exp [ ] => 
+       eval ([ ] (U W))
+
+
+| {U::exp[x:exp]}
+   [ ] fix (\x. (U x)) : exp[ ] =>  
+       eval ([ ]  (U (fix (\x. (U x)))))
+
+);
+
+
+% Call-By-Value 
+rec eval' : (exp)[ ] -> (exp)[ ] = 
+fn e => 
+
+(case e of
+
+  {U::exp[ ]} 
+   [ ] suc U : exp [ ] =>
+
+    (case (eval' ([ ] U)) of       
+
+      {V::exp[ ]} 
+       [ ] V : exp [ ] => [ ] suc V)
+
+| {U::exp[ ]}{W::exp[ ]}
+    [ ] app U W : exp [ ] => 
+
+    (case (eval' ([ ] U)) of
+       {V::exp[x:exp]} [ ] lam (\x. (V x)) : exp[ ] => 
+
+          (case (eval' ([ ] W)) of 
+              {V2::exp[ ]} [ ] V2 : exp[ ] => 
+                   eval' ([ ] (V V2))
+          )
+    )
+        
+| {U::exp[x:exp]}
+  [ ] lam (\ x. (U x)) : exp[ ] =>  e
+
+
+| {W::exp[ ]}{U::exp[x:exp]}
+   [ ] letv W (\x. (U x)) : exp [ ] => 
+
+     case (eval' ([ ]  W)) of 
+         {V::exp[ ]} 
+         [ ] V : exp [ ] => 
+             eval' ([ ] (U V))
+
+);

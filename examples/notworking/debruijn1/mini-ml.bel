@@ -1,0 +1,147 @@
+%%% The Mini-ML Language
+%%% Version restricted to pure lambda-calculus
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+exp  : type.  %name exp E.
+
+lam   : (exp -> exp) -> exp.
+app   : exp -> exp -> exp.
+
+
+%%% Mini-ML Natural Semantics
+%%% Version restricted to pure lambda-calculus
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+eval : exp -> exp -> type.  %name eval D.
+
+% Functions
+ev_lam  : eval (lam (\x. E x)) (lam (\x. E x)).
+ev_app  : eval (app E1 E2) V
+	    <- eval E1 (lam (\x. E1' x))
+	    <- eval E2 V2
+	    <- eval (E1' V2) V.
+
+
+%%% Expression representation using de Bruijn indices
+%%% Version restricted to pure lambda-calculus
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+% Expressions
+
+exp'   : type.  %name exp' F.
+
+one      : exp'.
+shift    : exp' -> exp'.  %postfix 20 ^.
+lam'     : exp' -> exp'.
+app'     : exp' -> exp' -> exp'.
+
+% Environments and values
+
+env    : type.  %name env K.
+val    : type.  %name val W.
+
+empty  : env.
+cons   : env -> val -> env.   %infix left 10 ;.
+
+clo    : env -> exp' -> val.
+
+
+%%% Mini-ML Natural Semantics
+%%% Version restricted to pure lambda-calculus
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+feval : env -> exp' -> val -> type.  %name feval D.
+
+% Variables
+fev_1 : feval (cons K W) one W.
+fev_^ : feval (cons K W') (shift F) W
+	   <- feval K F W.
+
+% Functions
+fev_lam : feval K (lam' F) (clo K (lam' F)).
+
+fev_app : feval K (app' F1 F2) W
+	   <- feval K F1 (clo K' (lam' F1'))
+	   <- feval K F2 W2
+	   <- feval (cons K' W2) F1' W.
+
+
+%%% Translation to representation using de Bruijn indices
+%%% Version restricted to pure lambda-calculus
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+trans  : env -> exp' -> exp -> type.  %name trans C.
+vtrans : val -> exp -> type.          %name vtrans U.
+
+% Functions
+tr_lam : trans K (lam' F) (lam (\x. E x))
+	    <- {w:val} {x:exp}
+		  vtrans w x -> trans (cons K w) F (E x).
+tr_app : trans K (app' F1 F2) (app E1 E2)
+	    <- trans K F1 E1
+	    <- trans K F2 E2.
+
+% Variables
+tr_1  : trans (cons K W) one E <- vtrans W E.
+tr_^  : trans (cons K W) (shift F) E <- trans K F E.
+
+% Values
+vtr_lam : vtrans (clo K (lam' F)) (lam (\x. E x))
+	   <- trans K (lam' F) (lam (\x. E x)).
+
+%%% Mapping evaluations to evaluations in environments.
+%%% Version restricted to pure lambda-calculus
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+%%% REQUIRES SIGMA-Types
+
+% rec map_eval : (eval E V)[ ] -> (trans K F E)[ ]
+% 	      -> Sigma W . (feval K F W)[ ] * (vtrans W V)[ ] = 
+% fn d => fn c => case d of 
+
+%  [ ] ev_lam  =>                                          
+%   let [ ] tr_1 (vtr_lam (tr_lam (\w. \x. \v. (C2 w x v)))) = c  in 
+%    < lam' F  , 
+%       (   [ ] fev_1   , [ ] vtr_lam (tr_lam (\w. \x. \v. (C2 w x v)))   )
+%     >
+%
+% ;
+
+
+% Twelf proof: 
+%
+%
+% mp_1 : map_eval (ev_lam) (tr_1 (vtr_lam (tr_lam C2)))
+%		(fev_1) (vtr_lam (tr_lam C2)).
+%
+%
+% Informal proof of case mp_1:
+% ------------------------------
+%
+% d : eval (lam (\x. E x)) (lam (\x. E x)) [ ]   
+%
+%
+%          trans  K'   (lam' F)  (lam (\x. E x))        
+%       vtrans (clo K' (lam' F)) (lam (\x. E x))        
+% c : trans (cons K' (clo K' (lam' F))) one (lam (\x. E x))         
+%
+% f : feval (cons K' (clo K' (lam' F))) one   W
+%
+% u : vtrans W  (lam (\x. E x))
+%
+% choosing W = lam' F
+%
+%
+% Remaining cases in Twelf proof:
+% -------------------------------
+% mp_^ : map_eval D (tr_^ C1) (fev_^ D1') U1
+% 	  <- map_eval D C1 D1' U1.
+
+% mp_lam : map_eval (ev_lam) (tr_lam C1)
+% 		  (fev_lam) (vtr_lam (tr_lam C1)).
+
+% mp_app : map_eval (ev_app D3 D2 D1) (tr_app C2 C1)
+% 	  (fev_app D3' D2' D1') U3
+% 	  <- map_eval D1 C1 D1' (vtr_lam (tr_lam C3))
+% 	  <- map_eval D2 C2 D2' U2
+% 	  <- map_eval D3 (C3 W2 V2 U2) D3' U3.
+

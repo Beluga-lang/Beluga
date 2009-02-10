@@ -18,6 +18,7 @@ open Syntax.Int
 open Trail
 
 module P = Pretty.Int.DefaultPrinter
+module R = Pretty.Int.DefaultCidRenderer
 
 module type UNIFY = sig
 
@@ -451,13 +452,18 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ss with
-          | Undef -> raise NotInvertible
+          | Undef -> 
+              let si = invSub cD0 (phat, (s', cPsi'), ss, rOccur) in 
+                Dot(Undef, si) 
+                  (* Mon Feb  9 14:37:27 2009 -bp : previously raise NotInvertible) *)
           | ft    -> Dot (ft, invSub cD0 (phat, (s', cPsi'), ss, rOccur))
         end
 
     | (Dot (Obj tM, s'), DDec(cPsi', _dec))        ->
         (* below may raise NotInvertible *)
-        Dot (Obj (invNorm cD0 (phat, (tM, id), ss, rOccur)), invSub cD0 (phat, (s', cPsi'), ss, rOccur))
+
+        let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in 
+          Dot (Obj tM', invSub cD0 (phat, (s', cPsi'), ss, rOccur))
 
 
   (* intersection (phat, (s1, s2), cPsi') = (s', cPsi'')
@@ -467,7 +473,7 @@ module Make (T : TRAIL) : UNIFY = struct
      If   D ; Psi  |- s1 : Psi'    s1 patsub
      and  D ; Psi  |- s2 : Psi'    s2 patsub
      then D ; Psi' |- s' : Psi'' for some Psi'' which is a subset of Psi'
-     and  s' patsub
+     and  s' patsub   s.t.  [s1]s'  = [s2]s' 
   *)
   let rec intersection (phat, (subst1, subst2), cPsi') = match (subst1, subst2, cPsi') with
     | (Dot (Head (BVar k1), s1), Dot (Head (BVar k2), s2), DDec (cPsi', TypDecl (x, tA))) ->
@@ -498,6 +504,10 @@ module Make (T : TRAIL) : UNIFY = struct
             (comp s' shift, cPsi'')
 
 
+    | (Dot (Undef, s1), Dot (Undef, s2), DDec (cPsi', TypDecl _)) ->
+        let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
+            (comp s' shift, cPsi'')
+
     | ((Dot _ as s1), Shift (psi, n2), cPsi) ->
         intersection (phat, (s1, Dot (Head (BVar (n2 + 1)), Shift (psi, n2 + 1))), cPsi)
 
@@ -525,8 +535,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
   (* prune cD0 (phat, (tM, s), ss, rOccur) = tM'
 
-     Given: a success continuation sc
-            cD ; cPsi  |- s <= cPsi'  and
+     Given: cD ; cPsi  |- s <= cPsi'  and
             cD ; cPsi' |- tM <= tA    and phat = hat(cPsi)
             ss = (ss')^-1 is a pattern substitution where
 
@@ -563,7 +572,7 @@ module Make (T : TRAIL) : UNIFY = struct
         let tM' = prune cD0 ((cvar, offset + 1), (tM, dot1 s), dot1 ss, rOccur) in
           Lam (loc, x, tM')
 
-    | (Root (loc, MVar (Inst (r, cPsi1, tP, cnstrs) as u, t), _tS (* Nil *)) as tM, s (* id *)) ->
+    | (Root (loc, MVar (Inst (r, cPsi1, tP, cnstrs)as _u, t), _tS (* Nil *)) as tM, s (* id *)) ->
       (* by invariant: MVars are lowered since tM is in whnf *)
         if eq_cvarRef (MVarRef r) rOccur then
           raise (Unify "Variable occurrence")
@@ -585,9 +594,19 @@ module Make (T : TRAIL) : UNIFY = struct
                cD ; cPsi  |- s <= cPsi'
                CD ; cPsi  |- comp t s <= cPsi1  and cD ; cPsi''|- ss <= cPsi
                s' = [ss]([s]t) and  cD ; cPsi'' |- s' <= cPsi'  *)
-            let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-              Root (loc, MVar (u, s'), Nil)
-                (* may raise NotInvertible *)
+            (* Mon Feb  9 14:38:08 2009 -bp : instead of simply computing the inverted
+               substitution, we now actually prune the substitution *)
+            (* let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
+                Root (loc, MVar (u, s'), Nil) *)
+
+            let (idsub, cPsi2) = pruneSub  cD0 (phat, (Whnf.normSub (comp t s), cPsi1), ss, rOccur) in
+
+            let idsub_i = invert idsub in 
+            let v = Whnf.newMVar(cPsi2, TClo(tP, invert idsub_i)) in
+
+            let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in 
+              Clo(tM, comp s ss) 
+             (* may raise NotInvertible *)
 
     | (Root (loc, MVar (Offset u, t), _tS (* Nil *)), s (* id *)) ->
         let (_tA, cPsi1) = Cwhnf.mctxMDec cD0 u in 
@@ -680,6 +699,59 @@ module Make (T : TRAIL) : UNIFY = struct
     | (SClo (tS, s'), s) ->
         pruneSpine cD0 (phat, (tS, comp s' s), ss, rOccur)
 
+  (* pruneSub cD0 (phat, s, ss, rOccur) = (s', cPsi')
+
+     if phat = hat(Psi)  and
+        D ; Psi  |- s <= Psi1
+        D ; Psi''|- ss <= Psi
+     then  cPsi1 |- s' <= Psi1'
+           ss' = [ss](s   if it exists, and
+        D ; cPsi'' |- [ss]s <= cPsi1'
+   *)
+
+  and pruneSub cD0 (phat, (s, cPsi1), ss, rOccur) = match (s, cPsi1) with
+    | (Shift (psi, n), DDec(_cPsi', _dec)) ->       
+        pruneSub cD0 (phat, (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1), ss, rOccur)
+
+    | (Shift (_psi, _n), Null) -> (id, Null)
+
+    | (Shift (_psi', _n), CtxVar psi) -> (id, CtxVar psi)
+
+    | (Dot (Head (BVar n), s'), DDec(cPsi', TypDecl(x, tA))) ->
+        begin match bvarSub n ss with
+          | Undef -> 
+              let (s1', cPsi1') = pruneSub cD0 (phat, (s', cPsi'), ss, rOccur)  in 
+                (comp s1' shift, cPsi1')
+
+           | Head (BVar _n) ->
+              let (s1', cPsi1') = pruneSub cD0 (phat, (s', cPsi'), ss, rOccur) in
+              let s1_i = invert (Whnf.normSub s1') in      (* cPsi1' |- s1_i <= cPsi' *)
+               (dot1 s1' ,  DDec(cPsi1', TypDecl(x, TClo (tA, s1_i))))
+        end
+
+    | (Dot (Obj tM, s'), DDec(cPsi', TypDecl(x, tA)))        ->
+        (* below may raise NotInvertible *)
+        (* let _tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in    *)
+        let _tM' = prune cD0 (phat, (tM, id), ss, rOccur) in     
+
+        let (s1', cPsi1')  = pruneSub cD0 (phat, (s', cPsi'), ss, rOccur) in 
+        let s1_i = invert (Whnf.normSub s1') in      (* cPsi1' |- s1_i <= cPsi' *)
+        (* We need to prune the type here as well; Mon Feb  9 14:39:47 2009 -bp *)
+        let tA' = pruneTyp cD0 (phat, (tA, id), s1_i, rOccur) in  
+          (dot1 s1'  , DDec(cPsi1', TypDecl(x, tA'))) 
+
+   | (Dot (Undef, t), DDec (cPsi1, _)) ->
+       let (s1', cPsi1') = pruneSub cD0 (phat, (t, cPsi1), ss, rOccur) in
+         (comp s1' shift, cPsi1')
+
+  and pruneTypW cD0 (phat, sA, ss, rOccur) = match sA with
+    | (Atom(loc, a, tS) , s) -> Atom(loc, a, pruneSpine cD0 (phat, (tS, s), ss, rOccur)) 
+    | (PiTyp(TypDecl(x, tA), tB), s) -> 
+        let tA' = pruneTyp cD0 (phat, (tA, s), ss, rOccur) in 
+        let tB' = pruneTyp cD0 (phat, (tB, dot1 s), ss, rOccur) in 
+          PiTyp(TypDecl(x, tA'), tB')
+
+  and pruneTyp cD0 (phat, sA, ss, rOccur) = pruneTypW cD0 (phat, Whnf.whnfTyp sA, ss, rOccur)
 
   (* Unification:
 
@@ -756,13 +828,16 @@ module Make (T : TRAIL) : UNIFY = struct
                   begin try
 
                     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
+
                     let tM2' = trail (fun () -> prune cD0 (phat, sM2, ss1, MVarRef r1)) in 
                     (* sM2 = [ss1][s2]tM2 *) 
 
                     instantiateMVar (r1, tM2', !cnstrs1) 
                   with
                     | NotInvertible ->
-                        addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2)))
+                        (Printf.printf "Added constraints: NotInvertible: \n sM1 = %s  \n sM2 = %s\n\n"
+                           (P.normalToString (Whnf.norm (sM1))) (P.normalToString (Whnf.norm sM2)) ; 
+                        addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2))))
                   end
               | (false, true) ->
                   begin try
@@ -771,7 +846,9 @@ module Make (T : TRAIL) : UNIFY = struct
                       instantiateMVar (r2, tM1', !cnstrs2)                       
                   with
                     | NotInvertible ->
-                        addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1)))
+                        (Printf.printf "Added constraints: NotInvertible: \n sM1 = %s  \n sM2= %s \n\n"
+                           (P.normalToString (Whnf.norm (sM1))) (P.normalToString (Whnf.norm sM2)) ;
+                        addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1))))
                   end
               | (false , false) ->
                   (* neither t1' nor t2' are pattern substitutions *)
@@ -788,7 +865,9 @@ module Make (T : TRAIL) : UNIFY = struct
                 instantiateMVar (r, sM2', !cnstrs) 
             with
               | NotInvertible ->
-                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
+                  (Printf.printf "Added constraints: NotInvertible: \n sM1 = %s  \n sM2= %s \n\n"
+                           (P.normalToString (Whnf.norm (sM1))) (P.normalToString (Whnf.norm sM2)) ;
+                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2))))
           else
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
 
@@ -803,7 +882,8 @@ module Make (T : TRAIL) : UNIFY = struct
                 instantiateMVar (r, sM1', !cnstrs) 
             with
               | NotInvertible ->
-                  (let _ = Printf.printf "Raised NotInvertible! – Left-over constraints...\n" in 
+                  (Printf.printf "Added constraints: NotInvertible: \n sM1 = %s  \n sM2 = %s\n\n"
+                           (P.normalToString (Whnf.norm (sM1))) (P.normalToString (Whnf.norm sM2)) ;
                   addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2))))
           else
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
@@ -1098,6 +1178,12 @@ module Make (T : TRAIL) : UNIFY = struct
            unifyCompTyp cD (tau2, t) (tau2', t')
           )
 
+
+      | ((Comp.TypCross (tau1, tau2), t), (Comp.TypCross (tau1', tau2'), t')) -> 
+          (unifyCompTyp cD (tau1, t) (tau1', t') ; 
+           unifyCompTyp cD (tau2, t) (tau2', t')
+          )
+
       | ((Comp.TypCtxPi (_, tau), t) , (Comp.TypCtxPi (_, tau'), t')) -> 
           unifyCompTyp cD (tau, t) (tau', t')
 
@@ -1132,13 +1218,19 @@ module Make (T : TRAIL) : UNIFY = struct
                 solveConstraint cnstr;
                 unifyHead cD0 (phat, h1, h2)
 
+
     let unify cD0 (phat, sM1, sM2) =
       resetDelayedCnstrs ();
       unify1 cD0 (phat, sM1, sM2)
 
+    let unifyTyp1 cD0 (phat, sA, sB) = 
+      (unifyTyp' cD0 (phat, sA, sB);
+      forceCnstr cD0 (nextCnstr ()))
+
+
     let unifyTyp cD0 (phat, sA, sB) =
       resetDelayedCnstrs ();
-      unifyTyp' cD0 (phat, sA, sB)
+      unifyTyp1 cD0 (phat, sA, sB)
 end
 
 module EmptyTrail = Make (EmptyTrail)

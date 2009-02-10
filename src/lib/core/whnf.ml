@@ -535,8 +535,19 @@ and conv' sM sN = match (sM, sN) with
   | ((Lam (_, _, tM1), s1), (Lam (_, _, tM2), s2)) ->
       conv (tM1, LF.dot1 s1) (tM2, LF.dot1 s2)
 
+  | ((Root (_,AnnH (head, _tA), spine1), s1), sN) -> 
+       conv' (Root (None, head, spine1), s1) sN
+
+  | (sM, (Root(_ , AnnH (head, _tA), spine2), s2)) ->
+      conv' sM (Root (None, head, spine2), s2)
+
   | ((Root (_, head1, spine1), s1), (Root (_, head2, spine2), s2)) ->
-      let hConv = match (head1, head2) with
+        convHead (head1,s1) (head2, s2) && convSpine (spine1, s1) (spine2, s2)
+
+  | _ -> false
+
+
+and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
         | (BVar k1, BVar k2) ->
             k1 = k2
 
@@ -549,17 +560,14 @@ and conv' sM sN = match (sM, sN) with
         | (FPVar (p, s'), FPVar (q, s'')) ->
             p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
-        | (MVar (u, s'), MVar (w, s'')) ->
+        | (MVar (Offset u , s'), MVar (Offset w, s'')) ->
             u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+
+        | (MVar (Inst(u, _cPsi, _tA, _cnstr) , s'), MVar (Inst(w, _, _, _ ), s'')) ->
+            u == w && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
         | (FMVar (u, s'), FMVar (w, s'')) ->
             u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
-
-        | (AnnH (head, _tA), _) ->
-            conv' (Root (None, head, spine1), s1) sN
-
-        | (_ , AnnH (head, _tA)) ->
-            conv' sM (Root (None, head, spine2), s2)
 
         | (Proj (BVar k1, i), Proj (BVar k2, j)) ->
             k1 = k2 && i = j
@@ -573,10 +581,7 @@ and conv' sM sN = match (sM, sN) with
 
         | (_, _) ->
             false
-      in
-        hConv && convSpine (spine1, s1) (spine2, s2)
 
-  | _ -> false
 
 and convSpine spine1 spine2 = match (spine1, spine2) with
   | ((Nil, _s1), (Nil, _s2)) ->

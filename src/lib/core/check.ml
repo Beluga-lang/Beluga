@@ -536,6 +536,11 @@ in elSpineIW
         (checkTyp cO cD tau1 ;
          checkTyp cO cD tau2)
 
+    | TypCross (tau1, tau2) -> 
+        (checkTyp cO cD tau1 ;
+         checkTyp cO cD tau2)
+
+
     | TypCtxPi ((psi_name, schema_cid), tau) -> 
         checkTyp (I.Dec(cO, I.CDecl(psi_name, schema_cid))) cD tau
 
@@ -570,6 +575,18 @@ in elSpineIW
         check cO (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
               cG   e (tau, C.mvar_dot1 t)
 
+    | (Pair (e1, e2), (TypCross (tau1, tau2), t)) -> 
+         check cO cD cG e1 (tau1, t) ;
+         check cO cD cG e2 (tau2, t)
+
+    | (LetPair (i, (x,y, e)), (tau, t)) -> 
+        begin match C.cwhnfCTyp (syn cO cD cG i) with 
+          | (TypCross (tau1, tau2), t') -> 
+              let cG' = I.Dec (I.Dec (cG, (x, TypClo (tau1, t'))), (y, TypClo(tau2, t'))) in 
+                check cO cD cG' e (tau,t)
+          | _ -> raise (Error "Case scrutinee not of boxed type")
+        end 
+
     | (Box(_phat, tM), (TypBox (tA, cPsi), t)) -> 
       begin try 
         let cPsi' = C.cnormDCtx (cPsi, t) in 
@@ -578,8 +595,6 @@ in elSpineIW
       with Cwhnf.FreeMVar (I.FMVar(u, _ )) -> 
         raise (Error ("Free meta-variable " ^ (R.render_name u)))
       end 
-
-        (* LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) *)
 
 
     | (Case (e, branches), (tau, t)) -> 

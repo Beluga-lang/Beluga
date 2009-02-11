@@ -9,7 +9,9 @@ module LF : sig
 
   open Syntax.Int.LF
 
-  exception Error of string
+  exception Violation of string
+  exception Error of Syntax.Loc.t option * Error.error
+
 
   val check       : mctx -> mctx -> dctx -> nclo -> tclo -> unit
   val checkTyp    : mctx -> mctx -> dctx -> tclo         -> unit

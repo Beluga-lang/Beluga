@@ -1469,6 +1469,9 @@ module Error = struct
             (string_of_int k) 
             (IP.fmt_ppr_lf_dctx std_lvl) cPsi
 
+      | LeftoverFVar ->
+          fprintf ppf "FVar left after reconstruction" (* FIXME this is a beluga error *)
+
 
     (* Regular Pretty Printers *)
     let ppr = fmt_ppr std_formatter

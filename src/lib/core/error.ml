@@ -23,3 +23,4 @@ type error =
   | LeftoverUndef
   | SubIllTyped
   | IndexError          of int * LF.dctx
+  | LeftoverFVar

@@ -126,16 +126,23 @@ let main () =
                       Format.fprintf
                         Format.std_formatter
                         "\n!! Error during weak-head normalization !!\n\n%a\n@?\n"
-                        Pretty.Error.DefaultPrinter.fmt_ppr err
-                      ; return Negative
+                        Pretty.Error.DefaultPrinter.fmt_ppr err;
+                      return Negative
 
-                  | Check.LF.Error err ->
-                       printf "\n!! Error during typechecking !!\n\n%s\n\n" err
-                        (* Format.fprintf
-                          Format.std_formatter
-                          "\n!! Error during Type-Checking !!\n\n%a\n\n@?"
-                           Pretty.Error.DefaultPrinter.Check.fmt_ppr err; *)
-                     ; return Negative
+                  | Check.LF.Error (locOpt, err) ->
+                      printOptionalLocation locOpt;
+                      Format.fprintf Format.std_formatter ":\n";
+                      Format.fprintf
+                        Format.std_formatter
+                        "Error (Type-Checking): %a@?"
+                        Pretty.Error.DefaultPrinter.fmt_ppr err;
+                      print_newline ();
+                      return Negative
+
+                  | Check.LF.Violation msg ->
+                      printf "\n!! Error during typechecking !!\n\n%s\n\n" msg;
+                      return Negative
+
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
               Parser.Grammar.Loc.print Format.std_formatter loc;

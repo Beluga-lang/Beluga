@@ -36,3 +36,4 @@ type error =
   | LeftoverUndef                      (* encountered Undef after unification *)
   | SubIllTyped                        (* TODO                                *)
   | IndexError of int * LF.dctx        (* looking for index x in context Psi  *)
+  | LeftoverFVar                       (* encountered FVar after reconstruction *)

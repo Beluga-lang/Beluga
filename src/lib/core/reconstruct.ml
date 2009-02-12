@@ -34,6 +34,8 @@ module C     = Cwhnf
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
+
 exception NotImplemented
 exception Error of Syntax.Loc.t option * error
 
@@ -108,6 +110,14 @@ and index_typ cvars bvars = function
       let b'     = index_typ cvars bvars' b in
         Apx.LF.PiTyp (Apx.LF.TypDecl (x, a'), b')
 
+and index_typ_rec cvars bvars = function
+  | Ext.LF.SigmaLast a -> Apx.LF.SigmaLast (index_typ cvars bvars a)
+  | Ext.LF.SigmaElem (x, a, rest) ->
+      let a' = index_typ cvars bvars a
+      and bvars' = BVar.extend bvars (BVar.mk_entry x) in
+      let rest' = index_typ_rec cvars bvars' rest in
+        Apx.LF.SigmaElem (x, a', rest')
+
 and index_term cvars bvars = function
   | Ext.LF.Lam (loc, x, m) ->
       let bvars' = BVar.extend bvars (BVar.mk_entry x) in
@@ -181,6 +191,11 @@ let index_decl cvars bvars (Ext.LF.TypDecl(x, a)) =
   let bvars' = BVar.extend bvars (BVar.mk_entry x) in
     (Apx.LF.TypDecl (x,a'), bvars')
 
+let index_sigmadec cvars bvars (Ext.LF.SigmaDecl(x, typRec)) =
+  let typRec'     = index_typ_rec cvars bvars typRec in
+  let bvars' = BVar.extend bvars (BVar.mk_entry x) in
+    (Apx.LF.SigmaDecl (x,typRec'), bvars')
+
 let rec index_dctx ctx_vars cvars bvars = function
   | Ext.LF.Null        -> (Apx.LF.Null , bvars)
   | Ext.LF.CtxVar psi_name  ->
@@ -194,6 +209,10 @@ let rec index_dctx ctx_vars cvars bvars = function
       let (psi', bvars') = index_dctx ctx_vars cvars bvars psi in
       let (decl', bvars'')  = index_decl cvars bvars' decl in
         (Apx.LF.DDec (psi', decl'), bvars'')
+  | Ext.LF.SigmaDec (psi, sdec) ->
+      let (psi', bvars') = index_dctx ctx_vars cvars bvars psi in
+      let (sdec', bvars'')  = index_sigmadec cvars bvars' sdec in
+        (Apx.LF.SigmaDec (psi', sdec'), bvars'')
 
 (* Order of psihat ? -bp
    It's not clear how to know that the last name is a bound variable
@@ -264,7 +283,9 @@ let rec index_typrec cvars bvars = function
       Apx.LF.SigmaLast (index_typ cvars bvars last_a)
 
   | Ext.LF.SigmaElem (x, a, arec) ->
-      Apx.LF.SigmaElem (x, index_typ cvars bvars a, index_typrec cvars bvars arec)
+      let a' = index_typ cvars bvars a 
+      and bvars' = BVar.extend bvars (BVar.mk_entry x) in
+        Apx.LF.SigmaElem (x, a', index_typrec cvars bvars' arec)
 
 
 (* Translation of external schemas into approximate schemas *)
@@ -432,15 +453,11 @@ let rec raiseType cPsi tA = match cPsi with
   | Int.LF.DDec (cPsi', decl) ->
       raiseType cPsi' (Int.LF.PiTyp (decl, tA))
 
-(* patSpine s = bool
+(* patSpine s = true iff
  *
- * if cPsi |- s : A <- P  and
- *    s is a pattern spine (simple approximate),
- * i.e. it consists of distinct bound variables
- *
- * then
- *    return true;
- *    otherwise false.
+ *     cPsi |- s : A <- P  and
+ *     s is a pattern spine (simple approximate),
+ *     i.e. it consists of distinct bound variables
  *)
 let patSpine spine =
   let rec patSpine' seen_vars spine = match spine with
@@ -516,6 +533,7 @@ let rec synDom cPsi s = begin match s with
             (Int.LF.Null , Int.LF.Shift (Int.LF.CtxShift psi, d))
         |  (None, d) ->  (Int.LF.Null , Int.LF.Shift (Int.LF.NoCtxShift, d))
       end
+
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
       begin match Context.ctxDec cPsi k with
         | Int.LF.TypDecl(x, tA) ->
@@ -1039,19 +1057,23 @@ let rec elTypDeclCtx cD cPsi = function
       let typDecl' = Int.LF.TypDecl (name, elTyp PiRecon cD cPsi typ) in
         Int.LF.Dec (ctx', typDecl')
 
- let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, typRec))) =
+let rec elTypRec recT cD cPsi =
+(*  let el_typ ctx = elTyp recT cD (projectCtxIntoDctx ctx) in *)
+    function
+      | Apx.LF.SigmaLast a ->
+          Int.LF.SigmaLast (elTyp recT cD cPsi a)
+      | Apx.LF.SigmaElem (name, a, typRec) ->
+          let tA = elTyp recT cD cPsi a in
+          let cPsi' = Int.LF.DDec (cPsi, Int.LF.TypDecl (name, tA)) in
+          let typRec' = elTypRec recT cD cPsi' typRec in
+            Int.LF.SigmaElem (name, tA, typRec')
+
+let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, typRec))) =
    let cD = Int.LF.Empty in
    let el_ctx = elTypDeclCtx cD Int.LF.Null in
-   let el_typ ctx = elTyp PiRecon cD (projectCtxIntoDctx ctx) in
-   let rec elTypRec ctx = function
-     | Apx.LF.SigmaLast a ->
-         let ctx' = el_ctx ctx in
-           Int.LF.SigmaLast (el_typ ctx' a)
-     | Apx.LF.SigmaElem (name, tA, typRec) ->
-         let ctx' = el_ctx ctx in
-           Int.LF.SigmaElem (name, el_typ ctx' tA, elTypRec ctx typRec)
-   in
-     Int.LF.SchElem(el_ctx ctx, Int.LF.SigmaDecl (name, elTypRec ctx typRec))
+   let dctx = projectCtxIntoDctx (el_ctx ctx) in
+   let typRec' = elTypRec PiRecon cD dctx typRec in
+     Int.LF.SchElem(el_ctx ctx, Int.LF.SigmaDecl (name, typRec'))
 
 let rec elSchema (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map elSchElem el_list)
@@ -1066,6 +1088,11 @@ let rec elDCtx recT cD psi = match psi with
       let cPsi = elDCtx recT cD psi' in
       let tA   = elTyp recT cD cPsi a in
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+
+  | Apx.LF.SigmaDec (psi', Apx.LF.SigmaDecl (x, typRec)) ->
+      let cPsi = elDCtx recT cD psi' in
+      let typRec' = elTypRec recT cD cPsi typRec in
+        Int.LF.SigmaDec (cPsi, Int.LF.SigmaDecl (x, typRec'))
 
 
 let rec elCDecl recT cD cdecl = match cdecl with

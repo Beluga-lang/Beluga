@@ -1,0 +1,14 @@
+tp : type.
+unit : tp.
+arr : tp -> tp -> tp.
+
+exp : tp -> type.
+unitexp : exp unit.
+
+schema assn = block t:tp. exp t;
+
+% rec loop1 : {g:(assn)*} tp[] -> tp[]
+% = FN g => fn e => loop1[g, zz:block u:tp. exp unit] e;
+
+rec loop2 : {g:(assn)*} tp[] -> tp[]
+= FN g => fn e => loop2[g, zz:block u:tp. exp u] e;

@@ -499,6 +499,13 @@ and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
       collectTyp cQ phat (tA, LF.comp s' s)
 
 
+and collectTypRec cQ ((cvar, offset) as phat) = function
+  | (I.SigmaLast tA, s) -> collectTyp cQ phat (tA, s)
+  | (I.SigmaElem(_, tA, typRec), s) ->
+       let cQ = collectTyp cQ phat (tA, s) in
+         collectTypRec cQ (cvar, offset + 1) (typRec, LF.dot1 s)
+
+
 and collectKind cQ ((cvar, offset) as phat) sK = match sK with
   | (I.Typ, _s) ->
       cQ
@@ -516,6 +523,10 @@ and collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with
   | I.DDec(cPsi, I.TypDecl(_, tA)) ->
       let cQ' =  collectDctx cQ (cvar, offset - 1) cPsi in 
         collectTyp cQ' (cvar, offset - 1) (tA, LF.id)
+
+  | I.SigmaDec(cPsi, I.SigmaDecl(_, typRec)) ->
+      let cQ' =  collectDctx cQ (cvar, offset - 1) cPsi in 
+        collectTypRec cQ' (cvar, offset - 1) (typRec, LF.id)
 
 let rec collectMctx cQ cD = match cD with
   | I.Empty -> cQ
@@ -699,6 +710,13 @@ and abstractMVarTypW cQ offset sA = match sA with
       I.PiTyp (I.TypDecl (x, abstractMVarTyp cQ offset (tA, s)), 
                abstractMVarTyp cQ offset (tB, LF.dot1 s))
 
+and abstractMVarTypRec cQ offset = function
+  | (I.SigmaLast tA, s) -> I.SigmaLast (abstractMVarTyp cQ offset (tA, s))
+  | (I.SigmaElem(x, tA, typRec), s) ->
+      let tA = abstractMVarTyp cQ offset (tA, s) in
+      let typRec = abstractMVarTypRec cQ offset (typRec, LF.dot1 s) in
+        I.SigmaElem(x, tA, typRec)
+
 and abstractMVarTerm cQ offset sM = abstractMVarTermW cQ offset (Whnf.whnf sM)
 
 and abstractMVarTermW cQ offset sM = match sM with
@@ -776,6 +794,11 @@ and abstractMVarDctx cQ offset cPsi = match cPsi with
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
         I.DDec (cPsi', I.TypDecl (x, tA'))
+
+  | I.SigmaDec (cPsi, I.SigmaDecl (x, typRec)) ->
+      let cPsi' = abstractMVarDctx cQ offset cPsi in
+      let typRec'   = abstractMVarTypRec cQ offset (typRec, LF.id) in
+        I.SigmaDec (cPsi', I.SigmaDecl (x, typRec'))
 
 and abstractMVarMctx cQ cD = match cD with
   | I.Empty -> I.Empty

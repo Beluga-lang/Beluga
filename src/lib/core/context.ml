@@ -37,7 +37,7 @@ let rec sigmaShift typrec k = match typrec with
       SigmaLast (TClo (tA, Shift  (NoCtxShift, k)))
 
   | SigmaElem (x, tA, typrec) -> 
-      SigmaElem (x, TClo (tA, Shift (NoCtxShift, k)), sigmaShift typrec (k + 1))
+      SigmaElem (x, TClo (tA, Shift (NoCtxShift, k)), sigmaShift typrec (k (*+ 1*) ))
 
 
 let rec ctxShift cPsi k = match cPsi with
@@ -97,11 +97,15 @@ let ctxSigmaDec cPsi k =
    * where Psi |- ^(k-k') : Psi'', 1 <= k' <= k
    *)
   let rec ctxDec' = function
+    | (SigmaDec (_cPsi', SigmaDecl (x, tArec)), 1) ->
+        SigmaDecl (x, sigmaShift tArec  k) (* ? -bp *)
+
+    | (SigmaDec (cPsi', _), k') ->
+        ctxDec' (cPsi', k' - 1)
+
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
 
-    | (SigmaDec (_cPsi', SigmaDecl (x, tArec)), 1) ->
-        SigmaDecl (x, sigmaShift tArec  k) (* ? -bp *)
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in
     ctxDec' (cPsi, k)

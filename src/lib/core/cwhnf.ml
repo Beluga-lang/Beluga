@@ -110,6 +110,8 @@ and mshiftDCtx cPsi k = match cPsi with
   | LF.CtxVar _ -> cPsi
   | LF.DDec(cPsi', LF.TypDecl(x, tA)) -> 
       LF.DDec(mshiftDCtx cPsi' k, LF.TypDecl(x, mshiftTyp tA k))
+(*  | LF.SigmaDec(cPsi', LF.SigmaDecl(x, typRec)) -> 
+      LF.SigmaDec(mshiftDCtx cPsi' k, LF.SigmaDecl(x, mshiftTypRec(*to be written*) tA k)) *)
 
 (* mvar_dot1 psihat t = t'
    Invariant:

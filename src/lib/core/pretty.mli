@@ -46,6 +46,7 @@ module Ext : sig
     val fmt_ppr_lf_sub        : lvl -> formatter -> LF.sub           -> unit
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
+    val fmt_ppr_lf_typ_rec : lvl -> formatter -> LF.typ_rec    -> unit
     val fmt_ppr_lf_sigma_decl : lvl -> formatter -> LF.sigma_decl    -> unit
     val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx          -> unit
@@ -66,6 +67,7 @@ module Ext : sig
     val ppr_lf_sub        : LF.sub           -> unit
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
+    val ppr_lf_typ_rec : LF.typ_rec    -> unit
     val ppr_lf_sigma_decl : LF.sigma_decl    -> unit
     val ppr_lf_psi_hat    : LF.psi_hat       -> unit
     val ppr_lf_dctx       : LF.dctx          -> unit
@@ -110,6 +112,7 @@ module Int : sig
     val fmt_ppr_lf_cvar       : lvl -> formatter -> LF.cvar          -> unit
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
+    val fmt_ppr_lf_typ_rec    : lvl -> formatter -> LF.typ_rec       -> unit
     val fmt_ppr_lf_sigma_decl : lvl -> formatter -> LF.sigma_decl    -> unit
     val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
     val fmt_ppr_lf_dctx       : lvl -> formatter -> LF.dctx          -> unit 
@@ -136,6 +139,7 @@ module Int : sig
     val ppr_lf_cvar       : LF.cvar          -> unit
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
+    val ppr_lf_typ_rec    : LF.typ_rec       -> unit
     val ppr_lf_sigma_decl : LF.sigma_decl    -> unit
     val ppr_lf_psi_hat    : LF.psi_hat       -> unit
     val ppr_lf_dctx       : LF.dctx          -> unit
@@ -154,6 +158,7 @@ module Int : sig
     val subToString     : LF.sub        -> string
     val spineToString   : LF.spine      -> string
     val typToString     : LF.typ        -> string
+    val typRecToString     : LF.typ_rec -> string
     val kindToString    : LF.kind       -> string
     val normalToString  : LF.normal     -> string
     val dctxToString    : LF.dctx       -> string

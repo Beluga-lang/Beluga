@@ -7,8 +7,11 @@ unitexp : exp unit.
 
 schema assn = block t:tp. exp t;
 
-% rec loop1 : {g:(assn)*} tp[] -> tp[]
-% = FN g => fn e => loop1[g, zz:block u:tp. exp unit] e;
+% rec fff : {g:(assn)*} tp[] -> tp[]
+% = FN g => fn e => fff[g, zz:block u:tp. exp unit] e;
 
-rec loop2 : {g:(assn)*} tp[] -> tp[]
-= FN g => fn e => loop2[g, zz:block u:tp. exp u] e;
+rec ggg : {g:(assn)*} tp[] -> tp[]
+= FN g => fn e => ggg[g, zz:block u:tp. exp u] e;
+
+rec hhh : {g:(assn)*} tp[] -> tp[]
+= FN g => fn e => hhh[g, zz:block u:tp. exp u, zz1:block u':tp. exp u'] e;

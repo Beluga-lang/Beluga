@@ -854,8 +854,13 @@ and abstractMVarCtx cQ =  match cQ with
         I.Dec (cQ', FPV (u, Some (tA', cPsi')))
 
 
+  | I.Dec (_cQ, FV _) ->
+        (* This case is hit in e.g.  ... f[g, x:block y:tp. exp unk], where unk is an unknown identifier;
+         * is it ever hit on correct code?  -jd 2009-02-12 *)
+      raise (Error "abstractMVarCtx(_, FV _): unknown identifier in program?")
 
-(* Casess for: FMV, FPV *)
+
+(* Cases for: FMV, FPV *)
 
 
 let rec abstrMSub cQ t = 

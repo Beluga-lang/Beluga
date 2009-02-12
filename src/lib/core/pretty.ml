@@ -370,16 +370,25 @@ module Ext = struct
 
     and fmt_ppr_lf_dctx _lvl ppf = function
       | LF.Null ->
-          fprintf ppf "."
+          fprintf ppf ""
 
       | LF.CtxVar psi ->
           fprintf ppf "%s" (R.render_name psi)
+
+      | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
+          fprintf ppf "%s : %a"
+            (R.render_name x)
+            (fmt_ppr_lf_typ 0) tA
 
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
             (fmt_ppr_lf_dctx 0) cPsi
             (R.render_name x)
             (fmt_ppr_lf_typ 0) tA
+
+      | LF.SigmaDec (LF.Null, sigma_decl) ->
+          fprintf ppf "%a"
+            (fmt_ppr_lf_sigma_decl 0) sigma_decl
 
       | LF.SigmaDec (cPsi, sigma_decl) ->
           fprintf ppf "%a, %a"
@@ -1041,16 +1050,25 @@ module Int = struct
 
     and fmt_ppr_lf_dctx _lvl ppf = function
       | LF.Null ->
-          fprintf ppf "."
+          fprintf ppf ""
 
       | LF.CtxVar ctx_var ->
           fmt_ppr_lf_ctx_var ppf ctx_var
+
+      | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
+          fprintf ppf "%s : %a"
+            (R.render_name x)
+            (fmt_ppr_lf_typ 0) tA
 
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
             (fmt_ppr_lf_dctx 0) cPsi
             (R.render_name x)
             (fmt_ppr_lf_typ 0) tA
+
+      | LF.SigmaDec (LF.Null, sigma_decl) ->
+          fprintf ppf "%a"
+            (fmt_ppr_lf_sigma_decl 0) sigma_decl
 
       | LF.SigmaDec (cPsi, sigma_decl) ->
           fprintf ppf "%a, %a"

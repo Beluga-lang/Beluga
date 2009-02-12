@@ -800,6 +800,16 @@ and elSub recT cD cPsi s cPhi = match (s, cPhi) with
         | _ -> raise (Violation "Id must be associated with ctxvar")
       end
 
+  | (Apx.LF.Dot (Apx.LF.Head (Apx.LF.Hole), s), Int.LF.DDec (cPhi', Int.LF.TypDecl(_x, tA))) ->
+      begin match tA with 
+        | Int.LF.Atom _ -> 
+            let s' = mkShift recT cPsi in
+            let ss = LF.invert s' in
+            let u =  Whnf.newMVar (cPsi, Int.LF.TClo(tA, ss)) in
+              Int.LF.Dot (Int.LF.Head (Int.LF.MVar(u, LF.id)), elSub recT cD cPsi s cPhi')
+        | _ -> raise (Violation "Omitted arguments need to be of atomic type; eta-expansion needed")
+      end 
+
   | (Apx.LF.Dot (Apx.LF.Head h, s), Int.LF.DDec (cPhi', _decl)) ->
       (* NOTE: if decl = x:A, and cPsi(h) = A' s.t. A =/= A'
        *       we will fail during reconstruction / type checking
@@ -807,7 +817,6 @@ and elSub recT cD cPsi s cPhi = match (s, cPhi) with
         Int.LF.Dot (Int.LF.Head (elHead recT cD cPsi h), elSub recT cD cPsi s cPhi')
 
   | (Apx.LF.Dot (Apx.LF.Obj m, s), Int.LF.DDec (cPhi', Int.LF.TypDecl(_, tA))) ->
-      let _ = (print_string  "elSub: Obj m ... \n" ; flush_all ()) in
       let s' = elSub recT cD cPsi s cPhi' in
       let m' = elTerm recT cD cPsi m (tA, s') in
         Int.LF.Dot (Int.LF.Obj m', s')
@@ -837,6 +846,7 @@ and elHead recT cD cPsi h   = match h with
   | Apx.LF.FPVar (p,s) ->
       let (offset, (_tA, cPhi)) = Cwhnf.mctxPVarPos cD p  in
         Int.LF.PVar (Int.LF.Offset offset, elSub recT cD cPsi s cPhi)
+
 
 
 
@@ -1937,25 +1947,26 @@ and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
 
         let tau' = (tau, C.mcomp t'' t)  in
 
-        (* let _ = Printf.printf "\nRecon: Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+        let _ = Printf.printf "\nRecon: Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
                   (P.mctxToString (Cwhnf.normMCtx cD1''))
                   (P.gctxToString cG1)
                   (P.expChkToString e1')
                   (P.compTypToString  (Cwhnf.cnormCTyp tau')) in
-        *)
+      
 
         let e1_r =  check cO cD1'' cG1 e1' tau' in
         
-        (* let _ = Printf.printf "\nRecon (DONE): Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+        let _ = Printf.printf "\nRecon (DONE): Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
                   (P.mctxToString (Cwhnf.normMCtx cD1''))
                   (P.gctxToString cG1)
                   (P.expChkToString e1_r)
                   (P.compTypToString  (Cwhnf.cnormCTyp tau')) in
-        *)
+      
+
 
         let e1''   = try Cwhnf.invExp (e1_r, tc') 0 with 
                       Cwhnf.NonInvertible ->
-                        raise (Violation "Reconstruction suceeded,i.e. the expression is well-typed – but we cannot uniquely generate the actual expression\n")
+                        raise (Violation "Reconstruction suceeded,i.e. the expression is well-typed – but we cannot uniquely generate the actual expression\n") 
         in
 
           Int.Comp.BranchBox (cD1, (phat, tM1, (tA1, cPsi1)), e1'')
@@ -2042,8 +2053,8 @@ let recSgnDecl d = match d with
 
       let  _      = Check.Comp.checkTyp cO cD tau' in
 
-      (* let _       = Printf.printf "\n Checking computation type %s successful ! \n\n "
-                                  (P.compTypToString tau') in *)
+      let _       = Printf.printf "\n Checking computation type %s successful ! \n\n "
+                                  (P.compTypToString tau') in 
 
 
       let vars' = Var.extend  (Var.create ()) (Var.mk_entry f) in
@@ -2054,16 +2065,16 @@ let recSgnDecl d = match d with
 
       let e'      = elExp cO cD cG apx_e (tau', C.id) in
 
-      (* let _       = Printf.printf "\n Elaboration of program %s \n : %s \n %s \n" f.string_of_name
+      let _       = Printf.printf "\n Elaboration of program %s \n : %s \n %s \n" f.string_of_name
                          (P.compTypToString tau')
-                         (P.expChkToString e') in
-      *)
+                         (P.expChkToString e') in 
+      
       let e_r     = check  cO cD cG e' (tau', C.id) in
       let e_r'    = Abstract.abstrExp e_r in
 
       let _       = Printf.printf "\n Reconstructed program %s \n : %s \n %s \n" f.string_of_name
                          (P.compTypToString tau')
-                         (P.expChkToString e_r') in
+                         (P.expChkToString e_r') in 
 
       let _       = Check.Comp.check cO cD  cG e_r' (tau', C.id) in
       let _        = Printf.printf "\n DOUBLE CHECK for program : %s  successful! \n\n" f.string_of_name  in

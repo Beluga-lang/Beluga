@@ -1039,7 +1039,8 @@ let rec mctxPVarPos cD p =
 
 
   and invSub (s, t) d = match s with 
-    | LF.Shift _         -> s
+    | LF.Shift (LF.NegCtxShift _, _)         -> raise NonInvertible
+    | LF.Shift _                       -> s
     | LF.Dot (ft, s')    -> LF.Dot (invFront (ft, t) d, invSub (s', t) d)
      (* substitution variables ignored for how -bp *)
 
@@ -1061,6 +1062,7 @@ let rec mctxPVarPos cD p =
           LF.Head (LF.Proj (LF.PVar (LF.Offset (lookDom i t d), r'), k))
 
     | LF.Obj (tM) -> LF.Obj(invTerm (tM, t) d)
+    | _ ->  raise NonInvertible 
           
   (* invType (tA, t) = tA'
 

@@ -542,6 +542,10 @@ GLOBAL: sgn_eoi;
       [
         x = SYMBOL ->
           Comp.Var (_loc, Id.mk_name (Some x))
+      | 
+      "["; cPsi = clf_dctx; "]"; tR = clf_term ->   
+            Comp.BoxVal (_loc, cPsi, tR)
+
       |
 (*         e = cmp_exp_chk; ":"; tau = cmp_typ -> *)
 (*           Comp.Ann (_loc, e, tau) *)

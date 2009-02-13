@@ -10,7 +10,7 @@
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [1])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [3])
 
 
 module LF = struct
@@ -655,6 +655,7 @@ module Comp = struct
 
   and checkBranches cO cD cG branches tAbox ttau = match branches with
     | [] -> ()
+
     | (branch :: branches) ->
         checkBranch cO cD cG branch tAbox ttau;
         checkBranches cO cD cG branches tAbox ttau
@@ -688,7 +689,7 @@ module Comp = struct
           let e1' = 
             begin try
               Cwhnf.cnormExp (e1, tc')
-            with Cwhnf.FreeMVar (I.FMVar(u, _)) ->
+            with Cwhnf.FreeMVar (I.FMVar (u, _)) ->
               raise (Error ("Encountered free meta-variable " ^ (R.render_name u)))
             end
           in
@@ -696,9 +697,11 @@ module Comp = struct
           let tau' = (tau, C.mcomp t'' t) in
             check cO cD1'' cG1 e1' tau'
 
-
-  (* checkTypeAgainstSchema cO cD cPsi tA (elements : sch_elem list) *)
-  and checkTypeAgainstSchema cO cD cPsi tA =
+ (* checkTypeAgainstSchema cO cD cPsi tA sch (elements : sch_elem list)
+  *   sch = full schema, for error messages
+  *   elements = elements to be tried
+  *)
+  and checkTypeAgainstSchema cO cD cPsi tA sch =
 
     let rec projectCtxIntoDctx = function
       | I.Empty -> 
@@ -722,24 +725,58 @@ module Comp = struct
               dprint (fun () -> "***Unify.unifyTyp ("
                         ^ "\n   dctx = " ^ Print.dctxToString dctx
                         ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString dctxSub ^ " ] "
-                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString dctxSub ^ " ] "
-                     );
+                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString dctxSub ^ " ] ");
               try
                 Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, dctxSub))
               with exn ->
-                print_string ("Type " ^ Print.typToString tA ^ " doesn't unify with " ^ Print.typToString elem1 ^ "\n");
-                flush_all();
+                dprint (fun () -> "Type " ^ Print.typToString tA ^ " doesn't unify with " ^ Print.typToString elem1);
                 raise exn
     in
       function
         | [] -> 
-            raise (Error ("Type " ^ Print.typToString tA ^ " doesn't check against schema"))
+            raise (Error ("Type " ^ Print.typToString tA ^ " doesn't check against schema " ^ Print.schemaToString sch))
+        | element :: elements ->
+            try
+              checkAgainstElement element
+            with _ ->
+              checkTypeAgainstSchema cO cD cPsi tA sch elements
+
+  and checkTypRecAgainstSchema cO cD cPsi typRec sch =
+
+    let rec projectCtxIntoDctx = function
+      |  I.Empty -> I.Null
+      |  I.Dec (rest, last) -> I.DDec (projectCtxIntoDctx rest, last)
+
+    and checkAgainstElement (I.SchElem (some_part, block_part)) =
+      match (some_part, block_part) with
+          (cSomeCtx, I.SigmaDecl(_, sigma)) ->
+            let dctx = projectCtxIntoDctx cSomeCtx in 
+            let dctxSub = ctxToSub dctx in
+            let _ = dprint (fun () -> "TypRec:checkAgainstElement  " ^ Print.subToString dctxSub) in
+            let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
+            let normedTypRec = Cwhnf.cnormTypRec (typRec, subD)
+            and normedSigma = Cwhnf.cnormTypRec (sigma, subD) in
+            let phat = dctxToHat cPsi in
+              dprint (fun () -> "normedSigma " ^ Print.typRecToString normedSigma ^ ";\n" ^ "normedTypRec " ^ Print.typRecToString normedTypRec);
+              dprint (fun () -> "***Unify.unifyTypRec ("
+                        ^ "\n   dctx = " ^ Print.dctxToString dctx
+                        ^ "\n   " ^ Print.typRecToString normedTypRec ^ " [ " ^ Print.subToString dctxSub ^ " ] "
+                        ^ "\n== " ^ Print.typRecToString normedSigma ^ " [ " ^Print.subToString dctxSub ^ " ] ");
+              try
+                Unify.unifyTypRec cD (phat, (normedTypRec, S.LF.id), (normedSigma, dctxSub))
+              with exn ->  
+                dprint (fun () -> "TypRec " ^ Print.typRecToString typRec ^ " doesn't unify with " ^ Print.typRecToString sigma);
+                raise exn
+    in
+      function
+        | [] -> 
+            raise (Error ("TypRec " ^ Print.typRecToString typRec ^ " doesn't check against schema " ^ Print.schemaToString sch))
 
         | element :: elements ->
             try
               checkAgainstElement element
             with _ ->
-              checkTypeAgainstSchema cO cD cPsi tA elements
+              checkTypRecAgainstSchema cO cD cPsi typRec sch elements
 
   (* The rule for checking a context against a schema is
    *
@@ -753,9 +790,9 @@ module Comp = struct
     let result =
       Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in
     let _ = dprint (fun () -> "checkElementAgainstElement "
-                      ^Print.schemaToString (I.Schema[elem1])
-                      ^" <== "
-                      ^Print.schemaToString (I.Schema[elem2])
+                      ^ Print.schemaToString (I.Schema[elem1])
+                      ^ " <== "
+                      ^ Print.schemaToString (I.Schema[elem2])
                       ^ ":  "
                       ^ string_of_bool result)
     in result
@@ -772,11 +809,11 @@ module Comp = struct
       | I.CtxVar phi ->
           let rec lookupCtxVar = function
             | I.Empty -> raise (Error ("Context variable not found"))
-            | I.Dec(cO, I.CDecl(psi, schemaName)) -> function
-                | I.CtxName phi  when  psi = phi  ->  (psi, schemaName)
-                | (I.CtxName _phi) as ctx_var  ->  lookupCtxVar cO ctx_var
-                | I.CtxOffset 1  ->  (psi, schemaName)
-                | I.CtxOffset n  ->  lookupCtxVar cO (I.CtxOffset (n-1))
+            | I.Dec (cO, I.CDecl (psi, schemaName)) -> function
+                | I.CtxName phi when psi = phi -> (psi, schemaName)
+                | (I.CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
+                | I.CtxOffset 1                -> (psi, schemaName)
+                | I.CtxOffset n                -> lookupCtxVar cO (I.CtxOffset (n - 1))
           in
           let lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi) in
           let I.Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
@@ -784,14 +821,20 @@ module Comp = struct
               ()
             else
               raiseErr (E.CtxVarMismatch (phi, schema))
-
       | I.DDec (cPsi', decl) ->
           begin
             checkSchema cO cD cPsi' schema;
             match decl with
-              | I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA elements
+              | I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA schema elements
           end
 
+     | I.SigmaDec (cPsi', decl) ->
+         begin
+           checkSchema cO cD cPsi' schema;
+           match decl with
+             | I.SigmaDecl (_x, typRec) -> checkTypRecAgainstSchema cO cD cPsi' typRec schema elements
+         end
+  
 end
 
 module Sgn = struct

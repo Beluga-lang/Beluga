@@ -20,7 +20,7 @@ something: exp T -> opt.
 
 schema w = some [t:tp] exp t;
 
-rec free_var : {g:(w)*} (exp T)[g] -> opt[g] =
+rec free_var : {g:(w)*} (exp (T ..))[g] -> opt[g] =
 FN g  => % mlam T  => 
  fn e => 
  case e of
@@ -33,25 +33,24 @@ FN g  => % mlam T  =>
 
   | [g] suc (U ..)  => free_var [g] ([g] (U ..))
 
-  | [g] and (U ..) (V ..)  => 
-       (case free_var [g] ([g] (U ..)) of
-          [g] nothing   => free_var [g] ([ ] (V ..))
-        | [g] something  (#p ..)  => [ ] something  (#p ..))
+   | [g] and (U ..) (V ..)  => 
+        (case free_var [g] ([g] (U ..)) of
+           [g] nothing   => free_var [g] ([ ] (V ..))
+         | [g] something  (#p ..)  => [ ] something  (#p ..))
 
-  | [g] app (U ..) (V ..)  => 
-       (case free_var [g] ([g] (U ..)) of
-          [g] nothing   => free_var [g] ([g] (V ..))
+   | [g] app (U ..) (V ..)  => 
+        (case free_var [g] ([g] (U ..)) of
+           [g] nothing   => free_var [g] ([g] (V ..))
+         | [g] something  (#p ..)  => [g] something  (#p ..))
 
-        | [g] something  (#p ..)  => [g] something  (#p ..))
+   | [g] lam (\x . (U .. x)) => 
 
-  | [g] lam (\x . (U .. x)) => 
-
-     (case (free_var [g, x:exp _ ] ([g, x] (U .. x))) of 
-        [g, x: exp _ ] nothing       => [ ] nothing
-      | [g, x: exp _ ] something x   => [ ] nothing
-          % technically we need to initiate backtracking
-      | [g, x: exp _ ] something (#p ..) => [ ] something (#p ..)
-      )
+      (case (free_var [g, x:exp _ ] ([g, x] (U .. x))) of 
+         [g, x: exp _ ] nothing       => [ ] nothing
+       | [g, x: exp _ ] something x   => [ ] nothing
+           % technically we need to initiate backtracking
+       | [g, x: exp _ ] something (#p ..) => [ ] something (#p ..)
+       )
 ;
 
 

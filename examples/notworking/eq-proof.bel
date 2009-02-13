@@ -26,13 +26,16 @@ eq_app : {E1:exp} {F1:exp} {E2:exp} {F2:exp}
 eq_lam : {E:exp -> exp} {F:exp -> exp} ({x:exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
  
-schema W = some [x:exp] block eq x x;
+schema w = some [x:exp] eq x x;
 
-% rec eqfun : {g:(W)*} {u::exp[g]} (eq u[id(g)] u[id(g)])[g] = 
-% FN g => mlam u => 
-%  case box(g . u[id(g)]) of
-%    box(g . fst p[id(g)]) => box(g . snd p[id(g)])
-%
+rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e
+;
+
+rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
+FN g => mlam U => 
+ case exp_identity [g] ([g] (U ..)) of
+   [g] fst (#p ..) => [g] snd (#p ..)
+
 %  | box(g . lam \x . u[id(g),x]) => 
 %      let
 %                 box(g,e. v[id(g),e]) = eqfun [g,e:sigma(x:exp) eq x x]
@@ -46,7 +49,8 @@ schema W = some [x:exp] block eq x x;
 %                 box(g . v2[id(g)]) = eqfun [g] <g . u2[id(g)]>
 %             in
 %                 box(g . eq_app v1[id(g)] v2[id(g)])
-%             end;
+%             end
+;
 
 % schema l = some [x:term] block equal x x;
 

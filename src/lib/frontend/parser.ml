@@ -394,6 +394,9 @@ GLOBAL: sgn_eoi;
 
       |  x = SYMBOL; ":"; tA = clf_typ ->
           LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Some x), tA))
+      |
+         x = SYMBOL; ":"; typRec = lf_typ_rec_toplevel ->
+          LF.SigmaDec (LF.Null, LF.SigmaDecl (Id.mk_name (Some x), typRec))
 
       |
         cPsi = clf_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->

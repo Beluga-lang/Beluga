@@ -50,6 +50,7 @@ module type UNIFY = sig
 
   val unify    : mctx -> psi_hat * nclo * nclo -> unit (* raises  Unify *)
   val unifyTyp : mctx -> psi_hat * tclo * tclo -> unit (* raises Unify *)
+  val unifyTypRec : mctx -> psi_hat * (typ_rec * sub) * (typ_rec * sub) -> unit (* raises Unify *)
   val unifyDCtx:   mctx -> dctx -> dctx -> unit (* raises Unify *)
   val unifyCompTyp : mctx -> (Comp.typ * Comp.msub) -> (Comp.typ * Comp.msub) -> unit (* raises Unify *)
 end
@@ -1146,6 +1147,21 @@ module Make (T : TRAIL) : UNIFY = struct
       | _ ->
           raise (Unify "Type clash")
 
+    let rec unifyTypRec' cD0 (phat, sArec, sBrec) = unifyTypRecW cD0 (phat, sArec, sBrec)
+
+    and unifyTypRecW cD0 (phat, srec1, srec2) = match (srec1, srec2) with
+      | ((SigmaLast t1, s1) ,  (SigmaLast t2, s2)) ->
+          unifyTyp' cD0 (phat, (t1,s1), (t2,s2))
+
+      | ((SigmaElem (_x1, t1, rec1),  s1) ,   (SigmaElem (_x2, t2, rec2),  s2))  ->
+           unifyTyp' cD0 (phat, (t1,s1), (t2,s2))
+         ; let s1' = dot1 s1
+           and s2' = dot1 s2 in
+             unifyTypRecW cD0 (phat, (rec1,s1'), (rec2,s2'))
+
+      | ((_, _s1) ,  (_, _s2)) ->
+          raise (Unify "TypRec length clash")
+
 
    (* Unify pattern fragment, and force constraints after pattern unification succeeded *)
 
@@ -1159,6 +1175,10 @@ module Make (T : TRAIL) : UNIFY = struct
           let phat  = Context.dctxToHat cPsi1 in 
           (unifyDCtx cD0 cPsi1 cPsi2 ; 
            unifyTyp' cD0 (phat, (tA1, id) ,  (tA2, id)))
+      | (SigmaDec (cPsi1, SigmaDecl(_ , typrec1)) , SigmaDec (cPsi2, SigmaDecl(_ , typrec2))) -> 
+          let phat  = Context.dctxToHat cPsi1 in 
+          (unifyDCtx cD0 cPsi1 cPsi2 ; 
+           unifyTypRec' cD0 (phat, (typrec1, id) ,  (typrec2, id)))
       | _ -> raise (Unify "Context clash")
 
 
@@ -1231,6 +1251,17 @@ module Make (T : TRAIL) : UNIFY = struct
     let unifyTyp cD0 (phat, sA, sB) =
       resetDelayedCnstrs ();
       unifyTyp1 cD0 (phat, sA, sB)
+
+
+
+
+    let unifyTypRec1 cD0 (phat, sArec, sBrec) = 
+      (unifyTypRec' cD0 (phat, sArec, sBrec);
+      forceCnstr cD0 (nextCnstr ()))
+
+    let unifyTypRec cD0 (phat, sArec, sBrec) =
+      resetDelayedCnstrs ();
+      unifyTypRec1 cD0 (phat, sArec, sBrec)
 end
 
 module EmptyTrail = Make (EmptyTrail)

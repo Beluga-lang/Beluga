@@ -34,6 +34,8 @@ module C     = Cwhnf
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
+
 exception NotImplemented
 exception Error of Syntax.Loc.t option * error
 
@@ -108,6 +110,14 @@ and index_typ cvars bvars = function
       let b'     = index_typ cvars bvars' b in
         Apx.LF.PiTyp (Apx.LF.TypDecl (x, a'), b')
 
+and index_typ_rec cvars bvars = function
+  | Ext.LF.SigmaLast a -> Apx.LF.SigmaLast (index_typ cvars bvars a)
+  | Ext.LF.SigmaElem (x, a, rest) ->
+      let a' = index_typ cvars bvars a
+      and bvars' = BVar.extend bvars (BVar.mk_entry x) in
+      let rest' = index_typ_rec cvars bvars' rest in
+        Apx.LF.SigmaElem (x, a', rest')
+
 and index_term cvars bvars = function
   | Ext.LF.Lam (loc, x, m) ->
       let bvars' = BVar.extend bvars (BVar.mk_entry x) in
@@ -181,6 +191,11 @@ let index_decl cvars bvars (Ext.LF.TypDecl(x, a)) =
   let bvars' = BVar.extend bvars (BVar.mk_entry x) in
     (Apx.LF.TypDecl (x,a'), bvars')
 
+let index_sigmadec cvars bvars (Ext.LF.SigmaDecl(x, typRec)) =
+  let typRec'     = index_typ_rec cvars bvars typRec in
+  let bvars' = BVar.extend bvars (BVar.mk_entry x) in
+    (Apx.LF.SigmaDecl (x,typRec'), bvars')
+
 let rec index_dctx ctx_vars cvars bvars = function
   | Ext.LF.Null        -> (Apx.LF.Null , bvars)
   | Ext.LF.CtxVar psi_name  ->
@@ -194,6 +209,10 @@ let rec index_dctx ctx_vars cvars bvars = function
       let (psi', bvars') = index_dctx ctx_vars cvars bvars psi in
       let (decl', bvars'')  = index_decl cvars bvars' decl in
         (Apx.LF.DDec (psi', decl'), bvars'')
+  | Ext.LF.SigmaDec (psi, sdec) ->
+      let (psi', bvars') = index_dctx ctx_vars cvars bvars psi in
+      let (sdec', bvars'')  = index_sigmadec cvars bvars' sdec in
+        (Apx.LF.SigmaDec (psi', sdec'), bvars'')
 
 (* Order of psihat ? -bp
    It's not clear how to know that the last name is a bound variable
@@ -264,7 +283,9 @@ let rec index_typrec cvars bvars = function
       Apx.LF.SigmaLast (index_typ cvars bvars last_a)
 
   | Ext.LF.SigmaElem (x, a, arec) ->
-      Apx.LF.SigmaElem (x, index_typ cvars bvars a, index_typrec cvars bvars arec)
+      let a' = index_typ cvars bvars a 
+      and bvars' = BVar.extend bvars (BVar.mk_entry x) in
+        Apx.LF.SigmaElem (x, a', index_typrec cvars bvars' arec)
 
 
 (* Translation of external schemas into approximate schemas *)
@@ -432,15 +453,11 @@ let rec raiseType cPsi tA = match cPsi with
   | Int.LF.DDec (cPsi', decl) ->
       raiseType cPsi' (Int.LF.PiTyp (decl, tA))
 
-(* patSpine s = bool
+(* patSpine s = true iff
  *
- * if cPsi |- s : A <- P  and
- *    s is a pattern spine (simple approximate),
- * i.e. it consists of distinct bound variables
- *
- * then
- *    return true;
- *    otherwise false.
+ *     cPsi |- s : A <- P  and
+ *     s is a pattern spine (simple approximate),
+ *     i.e. it consists of distinct bound variables
  *)
 let patSpine spine =
   let rec patSpine' seen_vars spine = match spine with
@@ -516,6 +533,7 @@ let rec synDom cPsi s = begin match s with
             (Int.LF.Null , Int.LF.Shift (Int.LF.CtxShift psi, d))
         |  (None, d) ->  (Int.LF.Null , Int.LF.Shift (Int.LF.NoCtxShift, d))
       end
+
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
       begin match Context.ctxDec cPsi k with
         | Int.LF.TypDecl(x, tA) ->
@@ -800,6 +818,16 @@ and elSub recT cD cPsi s cPhi = match (s, cPhi) with
         | _ -> raise (Violation "Id must be associated with ctxvar")
       end
 
+  | (Apx.LF.Dot (Apx.LF.Head (Apx.LF.Hole), s), Int.LF.DDec (cPhi', Int.LF.TypDecl(_x, tA))) ->
+      begin match tA with 
+        | Int.LF.Atom _ -> 
+            let s' = mkShift recT cPsi in
+            let ss = LF.invert s' in
+            let u =  Whnf.newMVar (cPsi, Int.LF.TClo(tA, ss)) in
+              Int.LF.Dot (Int.LF.Head (Int.LF.MVar(u, LF.id)), elSub recT cD cPsi s cPhi')
+        | _ -> raise (Violation "Omitted arguments need to be of atomic type; eta-expansion needed")
+      end 
+
   | (Apx.LF.Dot (Apx.LF.Head h, s), Int.LF.DDec (cPhi', _decl)) ->
       (* NOTE: if decl = x:A, and cPsi(h) = A' s.t. A =/= A'
        *       we will fail during reconstruction / type checking
@@ -807,7 +835,6 @@ and elSub recT cD cPsi s cPhi = match (s, cPhi) with
         Int.LF.Dot (Int.LF.Head (elHead recT cD cPsi h), elSub recT cD cPsi s cPhi')
 
   | (Apx.LF.Dot (Apx.LF.Obj m, s), Int.LF.DDec (cPhi', Int.LF.TypDecl(_, tA))) ->
-      let _ = (print_string  "elSub: Obj m ... \n" ; flush_all ()) in
       let s' = elSub recT cD cPsi s cPhi' in
       let m' = elTerm recT cD cPsi m (tA, s') in
         Int.LF.Dot (Int.LF.Obj m', s')
@@ -837,6 +864,7 @@ and elHead recT cD cPsi h   = match h with
   | Apx.LF.FPVar (p,s) ->
       let (offset, (_tA, cPhi)) = Cwhnf.mctxPVarPos cD p  in
         Int.LF.PVar (Int.LF.Offset offset, elSub recT cD cPsi s cPhi)
+
 
 
 
@@ -1039,19 +1067,23 @@ let rec elTypDeclCtx cD cPsi = function
       let typDecl' = Int.LF.TypDecl (name, elTyp PiRecon cD cPsi typ) in
         Int.LF.Dec (ctx', typDecl')
 
- let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, typRec))) =
+let rec elTypRec recT cD cPsi =
+(*  let el_typ ctx = elTyp recT cD (projectCtxIntoDctx ctx) in *)
+    function
+      | Apx.LF.SigmaLast a ->
+          Int.LF.SigmaLast (elTyp recT cD cPsi a)
+      | Apx.LF.SigmaElem (name, a, typRec) ->
+          let tA = elTyp recT cD cPsi a in
+          let cPsi' = Int.LF.DDec (cPsi, Int.LF.TypDecl (name, tA)) in
+          let typRec' = elTypRec recT cD cPsi' typRec in
+            Int.LF.SigmaElem (name, tA, typRec')
+
+let rec elSchElem (Apx.LF.SchElem (ctx, Apx.LF.SigmaDecl (name, typRec))) =
    let cD = Int.LF.Empty in
    let el_ctx = elTypDeclCtx cD Int.LF.Null in
-   let el_typ ctx = elTyp PiRecon cD (projectCtxIntoDctx ctx) in
-   let rec elTypRec ctx = function
-     | Apx.LF.SigmaLast a ->
-         let ctx' = el_ctx ctx in
-           Int.LF.SigmaLast (el_typ ctx' a)
-     | Apx.LF.SigmaElem (name, tA, typRec) ->
-         let ctx' = el_ctx ctx in
-           Int.LF.SigmaElem (name, el_typ ctx' tA, elTypRec ctx typRec)
-   in
-     Int.LF.SchElem(el_ctx ctx, Int.LF.SigmaDecl (name, elTypRec ctx typRec))
+   let dctx = projectCtxIntoDctx (el_ctx ctx) in
+   let typRec' = elTypRec PiRecon cD dctx typRec in
+     Int.LF.SchElem(el_ctx ctx, Int.LF.SigmaDecl (name, typRec'))
 
 let rec elSchema (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map elSchElem el_list)
@@ -1066,6 +1098,11 @@ let rec elDCtx recT cD psi = match psi with
       let cPsi = elDCtx recT cD psi' in
       let tA   = elTyp recT cD cPsi a in
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+
+  | Apx.LF.SigmaDec (psi', Apx.LF.SigmaDecl (x, typRec)) ->
+      let cPsi = elDCtx recT cD psi' in
+      let typRec' = elTypRec recT cD cPsi typRec in
+        Int.LF.SigmaDec (cPsi, Int.LF.SigmaDecl (x, typRec'))
 
 
 let rec elCDecl recT cD cdecl = match cdecl with
@@ -1293,17 +1330,17 @@ and recSub recT cD cPsi s cPhi = match (cPsi, s, cPhi) with
 
     | (Int.LF.Null, Int.LF.Shift (Int.LF.NegCtxShift psi, 0), Int.LF.CtxVar psi')  ->
         if psi = psi' then () else
-          raise (Violation "Substitution illtyped – negative shift on CtxVar")
+          raise (Violation "Substitution ill-typed -- negative shift on CtxVar")
 
     | (Int.LF.DDec (cPsi, _tX), Int.LF.Shift (psi, k), Int.LF.Null)   ->
         if k > 0
         then recSub recT cD cPsi (Int.LF.Shift (psi, k - 1)) Int.LF.Null
-        else raise (Violation "Substitution illtyped")
+        else raise (Violation "Substitution ill-typed")
 
     | (Int.LF.DDec (cPsi, _tX), Int.LF.Shift (phi, k), Int.LF.CtxVar psi)   ->
         if k > 0
         then recSub recT cD cPsi (Int.LF.Shift (phi, k - 1)) (Int.LF.CtxVar psi)
-        else raise (Violation ("Substitution illtyped: k = %s" ^ (string_of_int k)))
+        else raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
                       (* (SubIllTyped) *)
 
     | (cPsi', Int.LF.Shift (psi, k), cPsi)              ->
@@ -1526,11 +1563,11 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
               let branches' = List.map (function b -> elBranch cO cD cG b tau_theta (tP, cPsi)) branches in
                 Int.Comp.Case (i', branches')
 
-          | _ -> raise (Violation "Case-expression ill-typed; Trying to branch on an expression which is not a boxed-LF type")
+          | _ -> raise (Violation "Case-expression ill-typed; Trying to branch on an expression that is not a boxed-LF type")
         end
 
   | (_, _) ->
-      raise (Violation "Elaboration: Found ill-typed computation-level expression.")
+      raise (Violation "Elaboration: Found ill-typed computation-level expression")
 
 
 and elExp' cO cD cG i = match i with
@@ -1937,25 +1974,26 @@ and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
 
         let tau' = (tau, C.mcomp t'' t)  in
 
-        (* let _ = Printf.printf "\nRecon: Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+        let _ = Printf.printf "\nRecon: Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
                   (P.mctxToString (Cwhnf.normMCtx cD1''))
                   (P.gctxToString cG1)
                   (P.expChkToString e1')
                   (P.compTypToString  (Cwhnf.cnormCTyp tau')) in
-        *)
+      
 
         let e1_r =  check cO cD1'' cG1 e1' tau' in
         
-        (* let _ = Printf.printf "\nRecon (DONE): Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+        let _ = Printf.printf "\nRecon (DONE): Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
                   (P.mctxToString (Cwhnf.normMCtx cD1''))
                   (P.gctxToString cG1)
                   (P.expChkToString e1_r)
                   (P.compTypToString  (Cwhnf.cnormCTyp tau')) in
-        *)
+      
+
 
         let e1''   = try Cwhnf.invExp (e1_r, tc') 0 with 
                       Cwhnf.NonInvertible ->
-                        raise (Violation "Reconstruction suceeded,i.e. the expression is well-typed – but we cannot uniquely generate the actual expression\n")
+                        raise (Violation "Reconstruction succeeded in that the expression is well-typed -- but we cannot uniquely generate the actual expression\n") 
         in
 
           Int.Comp.BranchBox (cD1, (phat, tM1, (tA1, cPsi1)), e1'')
@@ -1976,16 +2014,16 @@ let recSgnDecl d = match d with
       (* let _        = Printf.printf "\n Reconstruction (wih abstraction) of constant %s \n %s \n\n" a.string_of_name
         (P.kindToString tK') in *)
       let _        = Check.LF.checkKind Int.LF.Empty Int.LF.Empty Int.LF.Null tK' in
-      let _        = Printf.printf "\n DOUBLE CHECK for type constant : %s  successful! \n" a.string_of_name  in
+      let _        = Printf.printf "\n DOUBLE CHECK for type constant  %s  successful! \n" a.string_of_name  in
       let a'       = Typ.add (Typ.mk_entry a tK' i) in
-      let _        = Printf.printf "\n Added type constant : %s  successful! \n" a.string_of_name  in
+      let _        = Printf.printf "\n Added type constant  %s\n" a.string_of_name  in
         (* why does Term.add return a' ? -bp *)
         (* because (a : name) and (a' : cid_typ) *)
         Int.Sgn.Typ (a', tK')
 
   | Ext.Sgn.Const (_, c, extT) ->
       let apxT     = index_typ (CVar.create ()) (BVar.create ()) extT in
-      let _        = Printf.printf "\n Reconstruct term constant : %s  \n" c.string_of_name  in
+      let _        = Printf.printf "\n Reconstructing term constant  %s\n" c.string_of_name  in
       let _        = FVar.clear () in
       let tA       = elTyp PiRecon Int.LF.Empty Int.LF.Null apxT in
       let _        = solve_fvarCnstr PiRecon Int.LF.Empty !fvar_cnstr in
@@ -2001,25 +2039,25 @@ let recSgnDecl d = match d with
       (* let _        = Printf.printf "\n Reconstruction (with abstraction) of constant %s \n %s \n\n" c.string_of_name
          (P.typToString (Whnf.normTyp (tA', LF.id))) in *)
       let _        = Check.LF.checkTyp Int.LF.Empty Int.LF.Empty Int.LF.Null (tA', LF.id) in
-      let _        = Printf.printf "\n DOUBLE CHECK for term constant : %s  successful! \n" c.string_of_name  in
+      let _        = Printf.printf "\n DOUBLE CHECK for term constant  %s  successful!\n" c.string_of_name  in
       (* why does Term.add return a c' ? -bp *)
       let c'       = Term.add (Term.mk_entry c tA' i) in
-      let _        = Printf.printf "\n Added term constant : %s  successful! \n" c.string_of_name  in
+      let _        = Printf.printf "\n Added term constant  %s\n" c.string_of_name  in
         Int.Sgn.Const (c', tA')
 
 
   | Ext.Sgn.Schema (_, g, schema) ->
-     (*  let _       = Printf.printf "\n Indexing schema : %s  \n" g.string_of_name  in  *)
+     (*  let _       = Printf.printf "\n Indexing schema  %s  \n" g.string_of_name  in  *)
       let apx_schema = index_schema schema in
-      let _        = Printf.printf "\n Reconstruct schema: %s\n" g.string_of_name  in
+      let _        = Printf.printf "\n Reconstructing schema  %s\n" g.string_of_name  in
       let sW         = elSchema apx_schema in
-(*      let _        = Printf.printf "\n Elaboration of schema %s \n : %s \n\n" g.string_of_name
+(*      let _        = Printf.printf "\n Elaboration of schema  %s \n = %s \n\n" g.string_of_name
                         (P.schemaToString sW) in   *)
       let cPsi       = Int.LF.Null in
       let cD         = Int.LF.Empty in
       let cO         = Int.LF.Empty in
       let _          = Check.Comp.checkSchema cO cD cPsi sW in
-      let _        = Printf.printf "\n TYPE CHECK for schema %s successful!\n" g.string_of_name  in
+      let _        = Printf.printf "\n TYPE CHECK for schema  %s  successful\n" g.string_of_name  in
       let g'         = Schema.add (Schema.mk_entry g sW) in
         Int.Sgn.Schema (g', sW)
 
@@ -2027,7 +2065,7 @@ let recSgnDecl d = match d with
   | Ext.Sgn.Rec (_, f, tau, e) ->
       (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
       let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) tau in
-      let _       = Printf.printf "\n Reconstruct function: %s  \n" f.string_of_name  in
+      let _       = Printf.printf "\n Reconstructing function  %s\n" f.string_of_name  in
       let cD      = Int.LF.Empty in
       let cO      = Int.LF.Empty in
 
@@ -2042,8 +2080,8 @@ let recSgnDecl d = match d with
 
       let  _      = Check.Comp.checkTyp cO cD tau' in
 
-      (* let _       = Printf.printf "\n Checking computation type %s successful ! \n\n "
-                                  (P.compTypToString tau') in *)
+      let _       = Printf.printf "\n Checked computation type  %s  successfully\n\n"
+                                  (P.compTypToString tau') in 
 
 
       let vars' = Var.extend  (Var.create ()) (Var.mk_entry f) in
@@ -2054,18 +2092,18 @@ let recSgnDecl d = match d with
 
       let e'      = elExp cO cD cG apx_e (tau', C.id) in
 
-      (* let _       = Printf.printf "\n Elaboration of program %s \n : %s \n %s \n" f.string_of_name
+      let _       = Printf.printf "\n Elaboration of function  %s\n     type:  %s\n   result:  %s\n" f.string_of_name
                          (P.compTypToString tau')
-                         (P.expChkToString e') in
-      *)
+                         (P.expChkToString e') in 
+      
       let e_r     = check  cO cD cG e' (tau', C.id) in
       let e_r'    = Abstract.abstrExp e_r in
 
-      let _       = Printf.printf "\n Reconstructed program %s \n : %s \n %s \n" f.string_of_name
+      let _       = Printf.printf "\n Reconstructed function  %s\n     type:  %s\n   result:  %s\n" f.string_of_name
                          (P.compTypToString tau')
-                         (P.expChkToString e_r') in
+                         (P.expChkToString e_r') in 
 
       let _       = Check.Comp.check cO cD  cG e_r' (tau', C.id) in
-      let _        = Printf.printf "\n DOUBLE CHECK for program : %s  successful! \n\n" f.string_of_name  in
+      let _        = Printf.printf "\n DOUBLE CHECK of function  %s  successful!\n\n" f.string_of_name  in
       let f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' ) in
         Int.Sgn.Rec (f', tau',  e_r' )

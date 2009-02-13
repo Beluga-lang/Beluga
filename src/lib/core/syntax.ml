@@ -39,6 +39,7 @@ module Ext = struct
     and normal =
       | Lam  of Loc.t * name * normal
       | Root of Loc.t * head * spine
+      | Tuple of Loc.t * tuple
 
     and head =
       | Name  of Loc.t * name
@@ -60,8 +61,12 @@ module Ext = struct
       | Normal   of normal
 
     and typ_rec =
-      |  SigmaLast of typ
-      |  SigmaElem of name * typ * typ_rec
+      | SigmaLast of typ
+      | SigmaElem of name * typ * typ_rec
+
+    and tuple =
+      | Last of normal
+      | Cons of name * normal * tuple
 
     and dctx =
       | Null
@@ -195,6 +200,7 @@ module Int = struct
       | Lam  of Loc.t option * name * normal (* M ::= \x.M                     *)
       | Root of Loc.t option * head * spine  (*   | h . S                      *)
       | Clo  of (normal * sub)             (*   | Clo(N,s)                   *)
+      | Tuple of Loc.t option * tuple
 
     and head =
       | BVar  of offset                    (* H ::= x                        *)
@@ -286,6 +292,9 @@ module Int = struct
       |  SigmaLast of typ                             (* ... . B *)
       |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
 
+    and tuple =
+      | Last of normal
+      | Cons of name * normal * tuple
 
 
 
@@ -404,9 +413,14 @@ module Apx = struct
       | SigmaLast of typ
       | SigmaElem of name * typ * typ_rec
 
+    and tuple =
+      | Last of normal
+      | Cons of name * normal * tuple
+
     and normal =
       | Lam  of Loc.t * name * normal
       | Root of Loc.t * head * spine
+      | Tuple of Loc.t * tuple
 
     and head =
       | BVar  of offset
@@ -435,6 +449,7 @@ module Apx = struct
       | Null
       | CtxVar   of ctx_var 
       | DDec     of dctx * typ_decl
+      | SigmaDec of dctx * sigma_decl
 
     and ctx_var = 
       | CtxName   of name

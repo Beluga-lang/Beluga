@@ -36,6 +36,7 @@ $INTERPRETER  \
     copy/copy-explicit.bel \
     copy/copy-simple.bel \
     copy/copy-simple-explicit.bel \
+    debruijn1/sources.cfg \
     free-vars/fvnat.bel \
     free-vars/fvnat-explicit.bel \
     lp-horn/sources.cfg \
@@ -66,7 +67,6 @@ $INTERPRETER  \
     test/schema.bel \
     @test/sigma1.bel \
     notworking/debruijn/mini-ml.bel \
-    notworking/debruijn1/mini-ml.bel \
 
      
 #    notworking/church-rosser.rec \

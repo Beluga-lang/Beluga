@@ -1974,21 +1974,21 @@ and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
 
         let tau' = (tau, C.mcomp t'' t)  in
 
-        let _ = Printf.printf "\nRecon: Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+        (* let _ = Printf.printf "\nRecon: Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
                   (P.mctxToString (Cwhnf.normMCtx cD1''))
                   (P.gctxToString cG1)
                   (P.expChkToString e1')
                   (P.compTypToString  (Cwhnf.cnormCTyp tau')) in
-      
+        *)
 
         let e1_r =  check cO cD1'' cG1 e1' tau' in
         
-        let _ = Printf.printf "\nRecon (DONE): Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
+        (* let _ = Printf.printf "\nRecon (DONE): Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
                   (P.mctxToString (Cwhnf.normMCtx cD1''))
                   (P.gctxToString cG1)
                   (P.expChkToString e1_r)
                   (P.compTypToString  (Cwhnf.cnormCTyp tau')) in
-      
+        *)
 
 
         let e1''   = try Cwhnf.invExp (e1_r, tc') 0 with 
@@ -2092,10 +2092,10 @@ let recSgnDecl d = match d with
 
       let e'      = elExp cO cD cG apx_e (tau', C.id) in
 
-      let _       = Printf.printf "\n Elaboration of function  %s\n     type:  %s\n   result:  %s\n" f.string_of_name
+      (* let _       = Printf.printf "\n Elaboration of function  %s\n     type:  %s\n   result:  %s\n" f.string_of_name
                          (P.compTypToString tau')
                          (P.expChkToString e') in 
-      
+      *)
       let e_r     = check  cO cD cG e' (tau', C.id) in
       let e_r'    = Abstract.abstrExp e_r in
 

@@ -938,15 +938,15 @@ let rec mctxPVarPos cD p =
     let rec look t p = begin match t with
       | Comp.MDot (Comp.MV k', t) -> 
           if k > d then 
-            if k' = (k-d) then (p +d)
+            if k' = (k-d) then Some (p +d)
             else look t (p+1)
           else 
-            k
+            Some k
       | Comp.MDot (Comp.MObj (_phat, LF.Root(_, LF.MVar (LF.Offset k', LF.Shift (_,0)), _ (* Nil *))), t) -> 
           if k > d then 
-            if k' = (k-d) then (p+d)
+            if k' = (k-d) then Some (p+d)
             else look t (p+1)
-          else k
+          else Some k
 
       | Comp.MDot (Comp.MObj (_phat, LF.Root(_, _, _)), t) -> 
           look t (p+1)
@@ -955,16 +955,16 @@ let rec mctxPVarPos cD p =
     | Comp.MDot (Comp.PObj (_phat, LF.PVar (LF.Offset k', LF.Shift (_, 0))), t') -> 
         if k > d then 
           if (k-d) = k' then
-            (p+d)
+            Some (p+d)
           else look t' (p+1)
-        else k
+        else Some k
 
     | Comp.MDot (Comp.Undef, t') -> look t' (p+1)
 
-      | _ -> 
-          (Printf.printf "InvExp: Looking up %s \n in substitution %s \n depth d = %s \n\n" 
+      | _ -> None
+(*          (Printf.printf "InvExp: Looking up %s \n in substitution %s \n depth d = %s \n\n" 
              (string_of_int k) (P.msubToString t1) (string_of_int d);
-          raise NonInvertible)
+          raise NonInvertible)*)
       end 
     in
       look t1 1
@@ -983,7 +983,12 @@ let rec mctxPVarPos cD p =
 
     | LF.Root (loc, LF.MVar (LF.Offset k, r), tS)
       -> 
-        LF.Root (loc, LF.MVar (LF.Offset (lookDom k t d), invSub (r, t) d), invSpine (tS, t) d) 
+        let k' =  begin match lookDom k t d with 
+                    | None ->  k 
+                    | Some k' ->  k' 
+                  end 
+        in 
+          LF.Root (loc, LF.MVar (LF.Offset k', invSub (r, t) d), invSpine (tS, t) d) 
 
     | LF.Root (_, LF.FMVar (u, r), _tS) ->
         raise (FreeMVar (LF.FMVar (u,invSub (r, t) d)))
@@ -1006,7 +1011,13 @@ let rec mctxPVarPos cD p =
            where r' = [|t|] r
 
          *)
-      ->  LF.Root (loc, LF.PVar (LF.Offset (lookDom k t d), invSub (r, t) d), invSpine (tS, t) d)
+      ->  
+        let k' =  begin match lookDom k t d with 
+                      | None ->  k 
+                      | Some k' ->  k' 
+                    end 
+        in 
+          LF.Root (loc, LF.PVar (LF.Offset k', invSub (r, t) d), invSpine (tS, t) d)
 
     | LF.Root (_, LF.FPVar (p, r), _tS) ->
         raise (FreeMVar 
@@ -1030,7 +1041,13 @@ let rec mctxPVarPos cD p =
     | LF.Root (loc, LF.Proj (LF.PVar (LF.Offset j, s), k), tS)
         (* cD' ; cPsi' |- s <= cPsi1 *)
         (* cD          |- t <= cD'   *)         
-      -> LF.Root(loc, LF.Proj (LF.PVar (LF.Offset (lookDom j t d), invSub (s,t) d), k), invSpine (tS, t) d)
+      -> 
+        let k' =  begin match lookDom j t d with 
+                      | None ->  j 
+                      | Some k' ->  k' 
+                    end 
+        in 
+          LF.Root(loc, LF.Proj (LF.PVar (LF.Offset k', invSub (s,t) d), k), invSpine (tS, t) d)
 
   (* Ignore other cases for destructive (free) parameter-variables *)
 
@@ -1051,17 +1068,32 @@ let rec mctxPVarPos cD p =
     | LF.Head (LF.BVar _ )            -> ft
     | LF.Head (LF.Const _ )           -> ft
     | LF.Head (LF.PVar (LF.Offset i, r)) ->
-        LF.Head(LF.PVar (LF.Offset (lookDom i t d), invSub (r,t) d))
+        let k' =  begin match lookDom i t d with 
+                      | None ->  i 
+                      | Some k' ->  k' 
+                    end 
+        in 
+        LF.Head(LF.PVar (LF.Offset k', invSub (r,t) d))
   	      (* other case MObj _ cannot happen *)
 
     | LF.Head (LF.MVar (LF.Offset i, r)) -> 
-        LF.Head(LF.MVar (LF.Offset (lookDom i t d), invSub (r,t) d)) 
+        let k' =  begin match lookDom i t d with 
+                      | None ->  i 
+                      | Some k' ->  k' 
+                    end 
+        in 
+          LF.Head(LF.MVar (LF.Offset k', invSub (r,t) d)) 
 
     | LF.Head (LF.Proj (LF.BVar _, _))    -> ft
 
     | LF.Head (LF.Proj (LF.PVar (LF.Offset i, r), k)) -> 
         let r' = invSub (r,t) d in 
-          LF.Head (LF.Proj (LF.PVar (LF.Offset (lookDom i t d), r'), k))
+        let k' =  begin match lookDom i t d with 
+                      | None ->  i 
+                      | Some k' ->  k' 
+                    end 
+        in 
+          LF.Head (LF.Proj (LF.PVar (LF.Offset k', r'), k))
 
     | LF.Obj (tM) -> LF.Obj(invTerm (tM, t) d)
     | _ ->  raise NonInvertible 
@@ -1155,7 +1187,8 @@ let rec invDCtx (cPsi, t)  d = match cPsi with
     | (Comp.MApp (i, (psihat, tM)), t) -> 
         Comp.MApp (invExp' (i, t) d, (psihat, Whnf.norm (invTerm (tM, t) d, S.id)))
 
-    | (Comp.Ann (e, tau), t') -> Comp.Ann (invExp (e, t) d, Comp.TypClo (tau, mcomp t' t)) (* invCTyp (tau , t') d *)
+    | (Comp.Ann (e, tau), t') -> Comp.Ann (invExp (e, t) d, Comp.TypClo (tau, mcomp t' t)) 
+                                                           (* invCTyp (tau , t') d *)
 
 
 

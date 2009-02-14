@@ -138,6 +138,7 @@ module Ext = struct
        | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)
        | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
                                                   (*    | i [Psi hat. M]      *)
+       | BoxVal of Loc.t * LF.dctx * LF.normal 
        | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
 
     and branch =
@@ -357,7 +358,7 @@ module Int = struct
       | Apply  of exp_syn * exp_chk
       | CtxApp of exp_syn * LF.dctx
       | MApp   of exp_syn * (LF.psi_hat * LF.normal)
-      | Ann    of exp_chk * typ
+      | Ann    of exp_chk * typ 
 
     and branch =
       | BranchBox  of LF.ctyp_decl LF.ctx
@@ -497,6 +498,7 @@ module Apx = struct
        | Apply  of exp_syn * exp_chk                  (* i e            *)
        | CtxApp of exp_syn * LF.dctx                  (* i [Psi]        *)
        | MApp   of exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)
+       | BoxVal of LF.dctx * LF.normal             (* box (Psi. tR)  *)
        | Ann    of exp_chk * typ                      (* e : tau        *)
 
     and branch =

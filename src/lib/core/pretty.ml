@@ -529,6 +529,15 @@ module Ext = struct
               (fmt_ppr_lf_normal 0) tM
               (r_paren_if cond)
 
+      | Comp.BoxVal (_,psi, tM) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%sboxVal (%a. %a)%s"
+              (l_paren_if cond)
+              (fmt_ppr_lf_dctx 0) psi
+              (fmt_ppr_lf_normal 0) tM
+              (r_paren_if cond)
+
+
       | Comp.Ann (_, e, tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a : %a%s"

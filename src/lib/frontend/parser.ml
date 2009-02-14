@@ -1,6 +1,6 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(* NOTE: Be careful with tuareg-mode M-q in this file – it doesn't
+(* NOTE: Be careful with tuareg-mode M-q in this file -- it doesn't
    understand the grammar formatting below very well and will easily
    trash the layout. *)
 
@@ -333,14 +333,18 @@ GLOBAL: sgn_eoi;
 
   clf_head:
     [
-      [      
+      [
+        "#"; k = INTEGER; p = SYMBOL; sigma = clf_sub_new ->
+                LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Some p), sigma))
+      |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
                 LF.PVar (_loc, Id.mk_name (Some p), sigma)
-
       |
         x = SYMBOL ->
                 LF.Name (_loc, Id.mk_name (Some x))
-
+      |
+        "#"; k = INTEGER; x = SYMBOL ->
+                LF.ProjName (_loc, int_of_string k, Id.mk_name (Some x))
       ]
     ]
   ;

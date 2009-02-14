@@ -17,12 +17,14 @@ type t =
   | KEYWORD of string (** A keyword, see Lexer for examples.           *)
   | SYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
+  | INTEGER  of string
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"
   | KEYWORD s -> Printf.sprintf "KEYWORD %S" s
   | SYMBOL  s -> Printf.sprintf "SYMBOL %S"  s
   | UPSYMBOL  s -> Printf.sprintf "UPSYMBOL %S"  s
+  | INTEGER s ->  Printf.sprintf "INTEGER %S"  s
 
 (** Pretty print a token using {!Format} functionality. *)
 let print ppf x = Format.pp_print_string ppf (to_string x)
@@ -45,6 +47,7 @@ let extract_string = function
   | KEYWORD s -> s
   | SYMBOL  s -> s
   | UPSYMBOL  s -> s
+  | INTEGER  s -> s
 
 
 

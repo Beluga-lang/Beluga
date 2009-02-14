@@ -46,6 +46,8 @@ module Ext = struct
       | MVar  of Loc.t * name * sub
       | Hole  of Loc.t 
       | PVar  of Loc.t * name * sub
+      | ProjName  of Loc.t * int * name
+      | ProjPVar  of Loc.t * int * (name * sub)
 
     and spine =
       | Nil

@@ -428,6 +428,8 @@ module Comp = struct
 
   module Print = Pretty.Int.DefaultPrinter
 
+  type caseType  = IndexObj of I.psi_hat * I.normal | DataObj 
+
   (*  module Unif = Unify.UnifyNoTrail *)
 
   (*  type error =
@@ -593,10 +595,15 @@ module Comp = struct
         end
 
 
-    | (Case (e, branches), (tau, t)) ->
+    | (Case (Ann (Box (phat, tR), TypBox (tA', cPsi')), branches), (tau, t)) ->
+        let _  = LF.check cO cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
+        let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in 
+          checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t) 
+
+    | (Case (e, branches), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG e) with
-          | (TypBox (tA, cPsi), t') ->
-              checkBranches cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
+          | (TypBox (tA, cPsi),  t') -> 
+              checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
           | _ -> raise (Error "Case scrutinee not of boxed type")
         end
 
@@ -653,14 +660,14 @@ module Comp = struct
         check cO cD cG e (tau, C.id);
         (tau, C.id)
 
-  and checkBranches cO cD cG branches tAbox ttau = match branches with
+  and checkBranches caseTyp cO cD cG branches tAbox ttau = match branches with
     | [] -> ()
 
     | (branch :: branches) ->
-        checkBranch cO cD cG branch tAbox ttau;
-        checkBranches cO cD cG branches tAbox ttau
+        checkBranch caseTyp cO cD cG branch tAbox ttau;
+        checkBranches caseTyp cO cD cG branches tAbox ttau
 
-  and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
+  and checkBranch caseTyp cO cD cG branch (tA, cPsi) (tau, t) =
     match branch with
       | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->
           LF.check cO cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id);
@@ -671,6 +678,19 @@ module Comp = struct
           let t'   = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
           let tc   = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *)
           let phat = dctxToHat cPsi in
+
+          let _  = 
+            begin match caseTyp with
+              | IndexObj (_phat, tM') -> 
+                  begin try
+                    Unify.unify cD1 (phat, (C.cnorm (tM', t'), S.LF.id), (tM1, S.LF.id)) 
+                  with Unify.Unify msg -> 
+                    Printf.printf "Unify ERROR: %s \n"  msg;
+                    raise (Error "Pattern matching on index argument failed") 
+                  end
+              | DataObj -> ()
+            end
+          in
 
           let _    = Unify.unifyDCtx (I.Empty)
             (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in

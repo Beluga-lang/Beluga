@@ -43,6 +43,8 @@ exception Violation of string
 
 type reconType = PiboxRecon | PiRecon
 
+type caseType  = IndexObj of Int.LF.psi_hat * Int.LF.normal | DataObj 
+
 
 let rec lookup cG k = match (cG, k) with
   | (Int.LF.Dec(_cG', (_,  tau)), 1) ->  tau
@@ -390,6 +392,9 @@ and index_exp' ctx_vars cvars vars = function
       let m' = index_term cvars bvars m in
         Apx.Comp.MApp (i', (psihat', m'))
 
+  | Ext.Comp.BoxVal (_, psi, m) ->
+      let (psi', bvars) = index_dctx ctx_vars cvars  (BVar.create ()) psi in
+        Apx.Comp.BoxVal (psi', index_term cvars bvars m)
 
   | Ext.Comp.Ann (_, e, tau) ->
       Apx.Comp.Ann (index_exp  ctx_vars cvars vars e,
@@ -793,8 +798,37 @@ and elTerm' recT cD cPsi r sP = match r with
         end
       end
 
+and elClosedTerm' recT cD cPsi r = match r with
+  | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
+      let tA = (Term.get c).Term.typ in
+      let i  = (Term.get c).Term.implicit_arguments in
+      (* let s  = mkShift recT cPsi in *)
+      let s = LF.id in
+      let tS = elSpineI recT cD cPsi spine i (tA, s)  in
+        Int.LF.Root (Some loc, Int.LF.Const c, tS)
+
+  | Apx.LF.Root (loc, Apx.LF.BVar x, spine) ->
+      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
+      let tS = elSpine recT cD cPsi spine (tA, LF.id) in
+        Int.LF.Root (Some loc, Int.LF.BVar x, tS)
+
+  | Apx.LF.Root (loc, Apx.LF.MVar (u, s), spine) ->
+      let (tA, cPhi) = Cwhnf.mctxMDec cD u in
+      let s'' = elSub recT cD cPsi s cPhi in
+      let tS = elSpine recT cD cPsi spine (tA, s'')  in
+        Int.LF.Root (Some loc, Int.LF.MVar (Int.LF.Offset u, s''), tS)
+
+  | Apx.LF.Root (loc, Apx.LF.PVar (p,s'), spine) ->
+      let (tA, cPhi) = Cwhnf.mctxPDec cD p in
+      let s'' = elSub recT cD cPsi s' cPhi in
+      let tS = elSpine recT cD cPsi spine (tA, s'')  in
+        Int.LF.Root (Some loc, Int.LF.PVar (Int.LF.Offset p, s''), tS)
+
+  | _ -> raise (Violation "Synthesis of term failed \n Use of typing annotation suggested.")
+
 
   (* TODO find a way to postpone type mismatch to reconstruction step *)
+
 
 (* elSub recT cD cPsi s cPhi = s'
  *
@@ -1596,15 +1630,25 @@ and elExp' cO cD cG i = match i with
       end
 
 
-  | Apx.Comp.MApp (i, (psihat, tM)) ->
+  | Apx.Comp.MApp (i, (psihat, m)) ->
       begin match genMApp (elExp' cO cD cG i) with
         | (i', (Int.Comp.TypPiBox ((Int.LF.MDecl(_, tA, cPsi), Int.Comp.Explicit ), tau), theta)) ->
-            let tM'  = elTerm PiboxRecon cD (C.cnormDCtx (cPsi, theta)) tM  (C.cnormTyp (tA, theta), LF.id) in
+            let tM'  = elTerm PiboxRecon cD (C.cnormDCtx (cPsi, theta)) m  (C.cnormTyp (tA, theta), LF.id) in
               (Int.Comp.MApp (i', (psihat, tM')),
                (tau, Int.Comp.MDot(Int.Comp.MObj (psihat, tM'), theta)))
 
         | _ -> raise (Violation "MLam mismatch")
       end
+
+  | Apx.Comp.BoxVal (psi, r) ->
+      let cPsi   = elDCtx PiboxRecon (* cO *) cD psi in
+      let tR     = elClosedTerm' PiboxRecon cD cPsi  r in
+      let sP     = synTerm PiboxRecon cD cPsi (tR, LF.id) in 
+      let phat   = Context.dctxToHat cPsi in 
+      let tau    = Int.Comp.TypBox(Int.LF.TClo sP, cPsi) in 
+        (Int.Comp.Ann(Int.Comp.Box (phat, tR), tau), 
+         (tau, C.id))
+
 
   | Apx.Comp.Ann (e, tau) ->
       let tau' = elCompTyp cO cD tau in
@@ -1634,7 +1678,7 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(loc, a, _spine) , _cPsi) 
       let psihat  =  Context.dctxToHat cPsi1 in
 
       let tA'     = elTyp PiboxRecon  (* cO *) cD' cPsi' a in
-      let tM'     = elTerm PiboxRecon (* cO *) cD' cPsi' m (tA', LF.id) in
+      let tM'     = elTerm' PiboxRecon (* cO *) cD' cPsi' m (tA', LF.id) in
 
       let _ = recTerm PiboxRecon (* cO *) cD' cPsi' (tM', LF.id) (tA', LF.id) in
 
@@ -1660,27 +1704,23 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(loc, a, _spine) , _cPsi) 
       let tP0     = mgTyp cPsi' loc a (Typ.get a).Typ.kind  in
 
       let tR      = elTerm' PiboxRecon (* cO *) cD' cPsi' r  (tP0, LF.id) in
+      (* TO BE ADDED: recDCtx cD' cPsi' schema *)
+      let _   = dprint (fun () -> "elBranch: Elaborated pattern...\n" ^ 
+                  (P.mctxToString (Cwhnf.normMCtx cD')) ^ "  ;   " ^ 
+                  (P.dctxToString cPsi') ^ "\n   |-   \n    "  ^ 
+                  (P.normalToString tR) ^ " \n has type " ^ 
+                  (P.typToString  tP0) ^ " \n\n") in 
 
-      (* let _       = Printf.printf "Elaborated pattern...\n" in
-
-      let _ = Printf.printf "%s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
-                  (P.mctxToString (Cwhnf.normMCtx cD'))
-                  (P.dctxToString cPsi')
-                  (P.normalToString tR)
-                  (P.typToString  tP0) in
-      *)
       let psihat  = Context.dctxToHat cPsi' in
 
       let sP      = synTerm PiboxRecon (* cO *) cD' cPsi' (tR, LF.id) in
 
-      (*
-      let _       = Printf.printf "Reconstructed pattern...\n" in
-      let _ = Printf.printf "%s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
-                  (P.mctxToString (Cwhnf.normMCtx cD'))
-                  (P.dctxToString cPsi')
-                  (P.normalToString tR)
-                  (P.typToString  tP0) in
-      *)
+
+      let _       = dprint (fun () -> "elBranch: Reconstructed pattern...\n" ^
+                  (P.mctxToString (Cwhnf.normMCtx cD')) ^ "  ;   " ^ 
+                  (P.dctxToString cPsi') ^ "\n   |-   \n    "  ^ 
+                  (P.normalToString tR) ^ " \n has type " ^ 
+                  (P.typToString  tP0) ^ " \n\n") in 
 
       let _       = Unify.unifyTyp cD' (psihat, sP, (tP0, LF.id)) in
 
@@ -1696,6 +1736,10 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(loc, a, _spine) , _cPsi) 
       let _        = FPVar.clear () in
 
       let e'     = elExp cO cD_i cG e (tau, theta_i) in
+      let _      = dprint (fun () -> "elBranch: Elaborated branch" ^ 
+                             (P.mctxToString (Cwhnf.normMCtx cD)) ^ "  ;  " ^
+                             (P.gctxToString cG) ^ "\n      |-    \n" ^ 
+                             (P.expChkToString e') ^ "\n\n") in 
         Int.Comp.BranchBox (cD1', (phat', tR1', (tP1', cPsi1')), e')
 
 
@@ -1839,11 +1883,19 @@ let rec checkW cO cD cG e ttau = match (e , ttau) with
         raise (Violation ("Free meta-variable " ^ (R.render_name u)))
       end
 
+  (* Matching of implicit argument *)
+  | (Int.Comp.Case (Int.Comp.Ann(Int.Comp.Box(phat, tR), Int.Comp.TypBox(tA', cPsi')) as i, branches), (tau, t)) ->
+      let _  = recTerm PiboxRecon cD  cPsi' (tR, LF.id) (tA', LF.id) in 
+      let cA = (Whnf.normTyp (tA', LF.id), Whnf.normDCtx cPsi') in 
+      let branches =  checkBranches (IndexObj(phat, tR)) cO cD cG branches cA (tau, t) in 
+        Int.Comp.Case (i, branches)
+
+  (* Matching on data *)
   | (Int.Comp.Case (e, branches), (tau, t)) ->
       let (i, tau') = syn cO cD cG e in
       begin match C.cwhnfCTyp tau' with
         | (Int.Comp.TypBox (tA, cPsi),  t') ->
-            let branches' = checkBranches cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau, t) in
+            let branches' = checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau, t) in
               Int.Comp.Case (i, branches')
         | _ -> raise (Violation "Case scrutinee not of boxed type")
       end
@@ -1918,19 +1970,19 @@ and syn cO cD cG e = match e with
           | _ -> raise (Violation "MLam mismatch")
         end
 
-  | (Int.Comp.Ann (e, tau)) ->
+  | Int.Comp.Ann (e, tau) ->
       let e' = check cO cD cG e (tau, C.id) in
        (Int.Comp.Ann (e', tau) , (tau, C.id))
 
 
-and checkBranches cO cD cG branches tAbox ttau = match branches with
+and checkBranches caseTyp cO cD cG branches tAbox ttau = match branches with
   | [] -> []
   | (branch :: branches) ->
-      let b = checkBranch cO cD cG branch tAbox ttau in
-        b :: (checkBranches cO cD cG branches tAbox ttau)
+      let b = checkBranch caseTyp cO cD cG branch tAbox ttau in
+        b :: (checkBranches caseTyp cO cD cG branches tAbox ttau)
 
 
-and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
+and checkBranch caseTyp cO cD cG branch (tA, cPsi) (tau, t) =
   match branch with
     | Int.Comp.BranchBox (cD1, (phat, tM1, (tA1, cPsi1)), e1) ->
         let _ = Check.LF.check cO cD1 cPsi1 (tM1, LF.id) (tA1, LF.id) in
@@ -1938,11 +1990,21 @@ and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
         * done during elaboration of branch
         *)
 
-        let d1 = length cD1 in
-        let _d  = length cD in
-        let t1 = mctxToMSub cD1 in   (* {cD1} |- t1 <= cD1 *)
-        let t' = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
-        let tc = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *)
+        let d1  = length cD1     in
+        let _d  = length cD      in
+        let t1  = mctxToMSub cD1 in    (* {cD1} |- t1 <= cD1             *)
+        let t'  = mctxToMSub cD  in    (* {cD}  |- t' <= cD              *)
+        let tc  = extend t' t1   in    (* {cD1, cD} |- t', t1 <= cD, cD1 *)
+          
+        let _  = begin match caseTyp with
+                   | IndexObj (_phat, tM') -> 
+                       begin try Unify.unify cD1 (phat, (C.cnorm (tM', t'), LF.id), (tM1, LF.id)) 
+                       with Unify.Unify msg -> 
+                         (dprint (fun () -> "Unify ERROR: " ^  msg  ^ "\n") ; 
+                           raise (Violation "Pattern matching on index argument failed"))
+                       end
+                   | DataObj -> ()
+                 end  in
 
         let _  = begin try
                     (Unify.unifyDCtx (Int.LF.Empty)
@@ -1950,14 +2012,12 @@ and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
                    ; Unify.unifyTyp (Int.LF.Empty)
                                   (phat, (C.cnormTyp (tA, t'), LF.id), (C.cnormTyp (tA1, tc), LF.id)))
                  with
-                     _ -> (let _ = Printf.printf "Unify ERROR:"   in
-                                         let _ = Printf.printf "Inferred pattern type : %s  |- %s \n Expected pattern type: %s |- %s"
-                                           (P.dctxToString (C.cnormDCtx (cPsi1, tc)))
-                                           (P.typToString (C.cnormTyp (tA1, tc)))
-                                           (P.dctxToString  (C.cnormDCtx (cPsi, t')))
-                                           (P.typToString (C.cnormTyp (tA, t')))
-                                         in
-                                            raise (Violation "Pattern Type Clash")
+                     Unify.Unify msg -> (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n" ^
+                                           "Inferred pattern type : " ^ (P.dctxToString (C.cnormDCtx (cPsi1, tc))) ^
+                                           "    |-    " ^   (P.typToString (C.cnormTyp (tA1, tc))) ^ 
+                                           "\nExpected pattern type: " ^ (P.dctxToString  (C.cnormDCtx (cPsi, t'))) ^
+                                          "     |-    " ^   (P.typToString (C.cnormTyp (tA, t')))) 
+                                        ; raise (Violation "Pattern Type Clash")
                                         )
                  end
         in
@@ -1969,27 +2029,24 @@ and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
 
         let e1' = begin try C.cnormExp (e1, tc')
                     with Cwhnf.FreeMVar (Int.LF.FMVar(u, _ )) ->
-                      raise (Violation ("Encountered free meta-variable " ^ (R.render_name u)))
+                      raise (Violation ("Encountered free meta-variable " ^ (R.render_name u) ^ " \n in expression " ^ (P.expChkToString e1) ^ "\n"))
                   end  in
 
         let tau' = (tau, C.mcomp t'' t)  in
 
-        (* let _ = Printf.printf "\nRecon: Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
-                  (P.mctxToString (Cwhnf.normMCtx cD1''))
-                  (P.gctxToString cG1)
-                  (P.expChkToString e1')
-                  (P.compTypToString  (Cwhnf.cnormCTyp tau')) in
-        *)
+        let _ = dprint (fun () ->  "\nRecon: Check branch  \n" ^ 
+                        (P.mctxToString (Cwhnf.normMCtx cD1'')) ^ " ; \n " ^ 
+                        (P.gctxToString cG1) ^ "  \n   |- \n " ^ 
+                        (P.expChkToString e1') ^ "\n has type " ^
+                        (P.compTypToString  (Cwhnf.cnormCTyp tau')) ^ " \n\n" ) in
 
         let e1_r =  check cO cD1'' cG1 e1' tau' in
         
-        (* let _ = Printf.printf "\nRecon (DONE): Check branch  \n %s ; \n %s  \n   |-   \n %s \n has type: %s  .\n\n"
-                  (P.mctxToString (Cwhnf.normMCtx cD1''))
-                  (P.gctxToString cG1)
-                  (P.expChkToString e1_r)
-                  (P.compTypToString  (Cwhnf.cnormCTyp tau')) in
-        *)
-
+        let _ = dprint (fun () -> "\nRecon (DONE): Check branch  \n " ^
+                        (P.mctxToString (Cwhnf.normMCtx cD1'')) ^ " ; \n " ^ 
+                        (P.gctxToString cG1) ^ "  \n   |- \n " ^ 
+                        (P.expChkToString e1_r) ^ "\n has type " ^
+                        (P.compTypToString  (Cwhnf.cnormCTyp tau')) ^ " \n\n" ) in
 
         let e1''   = try Cwhnf.invExp (e1_r, tc') 0 with 
                       Cwhnf.NonInvertible ->
@@ -1997,8 +2054,6 @@ and checkBranch cO cD cG branch (tA, cPsi) (tau, t) =
         in
 
           Int.Comp.BranchBox (cD1, (phat, tM1, (tA1, cPsi1)), e1'')
-
-
 
 (* ------------------------------------------------------------------- *)
 
@@ -2099,9 +2154,9 @@ let recSgnDecl d = match d with
       let e_r     = check  cO cD cG e' (tau', C.id) in
       let e_r'    = Abstract.abstrExp e_r in
 
-      let _       = Printf.printf "\n Reconstructed function  %s\n     type:  %s\n   result:  %s\n" f.string_of_name
-                         (P.compTypToString tau')
-                         (P.expChkToString e_r') in 
+      let _       = dprint (fun () ->  "\n Reconstructed function " ^  f.string_of_name ^ 
+                                       "\n type: " ^  (P.compTypToString tau') ^ "\n  result: " ^ 
+                                       (P.expChkToString e_r') ^ "\n\n") in 
 
       let _       = Check.Comp.check cO cD  cG e_r' (tau', C.id) in
       let _        = Printf.printf "\n DOUBLE CHECK of function  %s  successful!\n\n" f.string_of_name  in

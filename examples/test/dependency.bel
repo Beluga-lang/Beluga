@@ -1,6 +1,6 @@
 
-o:type.
-i:type.
+o:type. #name o A p.
+i:type. #name i T x.
 
 z: i.
 

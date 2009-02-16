@@ -3,11 +3,11 @@
 %
 % This example only uses weak higher-order abstract syntax.
 
-tp  : type.
+tp  : type.   #name tp T.
 nat : tp.
 bool: tp.
 
-exp : tp -> type.
+exp : tp -> type.  #name exp E x.
 z   : exp nat.
 s   : exp nat -> exp nat.
 

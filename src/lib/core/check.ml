@@ -37,7 +37,7 @@ module LF = struct
      otherwise exception Error is raised
   *)
   let rec checkW cO cD cPsi sM1 sA2 = match (sM1, sA2) with
-    | ((Lam (_, _, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX), tB), s2))
+    | ((Lam (_, _, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2))
       -> 
         check cO cD
         (DDec (cPsi, LF.decSub tX s2))
@@ -76,15 +76,15 @@ module LF = struct
           ()
         else
           let _ = Printf.printf "checkSpine: Expected type : %s \n Inferred type: %s\n\n"
-            (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp sP))
-            (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp sP')) in 
+            (P.typToString cO cD cPsi sP)
+            (P.typToString cO cD cPsi sP') in 
           raise (Error "Spine Type Mismatch")
             (* (TypMisMatch (cD, cPsi, sP', sP)) *)
 
     | ((SClo (tS, s'), s), sA) ->
         checkSpine cO cD cPsi (tS, LF.comp s' s) sA sP
 
-    | ((App (tM, tS), s1), (PiTyp (TypDecl (_, tA1), tB2), s2)) ->
+    | ((App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _ ), tB2), s2)) ->
         check cO cD cPsi (tM, s1) (tA1, s2)
         ; (*     cD ; cPsi1        |- tM  <= tA1'
                  and cD ; cPsi         |- s1  <= cPsi1
@@ -213,8 +213,8 @@ module LF = struct
           then ()
           else 
             let _ = Printf.printf " Inferred type: %s \n Expected type: %s \n\n"
-                    (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA1, LF.id)))
-                    (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA2, s'))) in
+                    (P.typToString cO cD cPsi (tA1, LF.id))
+                    (P.typToString cO cD cPsi (tA2, s')) in
               raise (Error "Substitution ill-typed")
             (* let sM = Root (None, h, Nil) in 
               raise (TypMismatch (cPsi', sM, (tA2, s'), (tA1, LF.id)))
@@ -243,9 +243,9 @@ module LF = struct
 
     | (cPsi1, s, cPsi2) -> 
         let _ = Printf.printf "\n Check substitution: %s   |-    %s    <= %s  \n\n"
-          (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi1))
-          (Pretty.Int.DefaultPrinter.subToString (Whnf.normSub s)) 
-          (Pretty.Int.DefaultPrinter.dctxToString (Whnf.normDCtx cPsi2)) in
+          (P.dctxToString cO cD cPsi1)
+          (P.subToString cO cD cPsi1 s)
+          (P.dctxToString cO cD cPsi2) in
           raise (Error "Substitution is ill-typed; This case should be impossible.\n")
 
 
@@ -279,7 +279,7 @@ module LF = struct
     | ((SClo (tS, s'), s), sK)          ->
         checkSpineK cO cD cPsi (tS, LF.comp s' s) sK
 
-    | ((App (tM, tS), s1), (PiKind (TypDecl (_, tA1), kK), s2)) ->
+    | ((App (tM, tS), s1), (PiKind ((TypDecl (_, tA1),_), kK), s2)) ->
         check cO cD cPsi (tM, s1) (tA1, s2)
         ; checkSpineK cO cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
@@ -299,7 +299,7 @@ module LF = struct
     | (Atom (_, a, tS), s)                ->
         checkSpineK cO cD cPsi (tS, s) ((Typ.get a).Typ.kind, LF.id)
 
-    | (PiTyp (TypDecl (x, tA), tB), s) ->
+    | (PiTyp ((TypDecl (x, tA), _ ), tB), s) ->
         checkTyp cO cD cPsi (tA, s) 
         ; checkTyp cO cD (DDec (cPsi, TypDecl(x, TClo (tA, s)))) (tB, LF.dot1 s)
 
@@ -318,7 +318,7 @@ module LF = struct
     | SigmaElem(_x, tA, recA) ->
         checkTyp  cO  cD cPsi (tA, s)
         ; checkTypRec cO cD
-          (DDec (cPsi, LF.decSub (TypDecl (Id.mk_name None, tA)) s))
+          (DDec (cPsi, LF.decSub (TypDecl (Id.mk_name Id.NoName, tA)) s))
           (recA, LF.dot1 s)
 
 
@@ -331,7 +331,7 @@ module LF = struct
   *)
   let rec checkKind cO cD cPsi kind = match kind with
     | Typ                            -> ()
-    | PiKind (TypDecl (x, tA), kind) ->
+    | PiKind ((TypDecl (x, tA), _ ), kind) ->
         checkTyp cO cD cPsi (tA, LF.id)
         ; checkKind cO cD (DDec (cPsi, TypDecl (x, tA))) kind
 
@@ -432,7 +432,7 @@ module Comp = struct
   module I = Syntax.Int.LF 
   module C = Cwhnf
 
-  module Print = Pretty.Int.DefaultPrinter
+  module P = Pretty.Int.DefaultPrinter
 
   type caseType  = IndexObj of I.psi_hat * I.normal | DataObj 
 
@@ -457,8 +457,8 @@ module Comp = struct
     | I.Dec(cD, _) -> 1 + length cD
 
   let rec lookup cG k = match (cG, k) with 
-    | (I.Dec(_cG', (_,  tau)), 1) ->  tau
-    | (I.Dec( cG', (_,  _tau)), k) ->  
+    | (I.Dec(_cG', CTypDecl (_,  tau)), 1) ->  tau
+    | (I.Dec( cG', CTypDecl (_, _tau)), k) ->  
         lookup cG' (k-1)
 
   let rec split tc d = match (tc, d) with
@@ -468,15 +468,15 @@ module Comp = struct
   let rec mctxToMSub cD = match cD with
     | I.Empty -> C.id
     | I.Dec(cD', I.MDecl(_, tA, cPsi)) -> 
-      let t = mctxToMSub cD' in 
+      let t     = mctxToMSub cD' in 
       let cPsi' = Cwhnf.cnormDCtx (cPsi,t) in 
-      let tA' = Cwhnf.cnormTyp (tA, t) in 
-      let u = Whnf.newMVar (cPsi' , tA') in 
-      let phat = Context.dctxToHat cPsi in 
+      let tA'   = Cwhnf.cnormTyp (tA, t) in 
+      let u     = Whnf.newMVar (cPsi' , tA') in 
+      let phat  = Context.dctxToHat cPsi in 
         MDot(MObj(phat, I.Root(None, I.MVar(u, S.LF.id), I.Nil)) , t) 
     | I.Dec(cD', I.PDecl(_, tA, cPsi)) -> 
-      let t = mctxToMSub cD' in  
-      let p = Whnf.newPVar (Cwhnf.cnormDCtx (cPsi,t),  Cwhnf.cnormTyp (tA, t)) in
+      let t    = mctxToMSub cD' in  
+      let p    = Whnf.newPVar (Cwhnf.cnormDCtx (cPsi,t),  Cwhnf.cnormTyp (tA, t)) in
       let phat = Context.dctxToHat cPsi in  
         MDot(PObj(phat, I.PVar(p, S.LF.id)) , t)
 
@@ -568,10 +568,10 @@ in elSpineIW
 
   let rec checkW cO cD cG e ttau = match (e , ttau) with 
     | (Rec(f, e), (tau, t)) ->  
-        check cO cD (I.Dec (cG, (f, TypClo(tau,t)))) e ttau
+        check cO cD (I.Dec (cG, CTypDecl (f, TypClo(tau,t)))) e ttau
 
     | (Fun(x, e), (TypArr(tau1, tau2), t)) -> 
-        check cO cD (I.Dec (cG, (x, TypClo(tau1, t)))) e (tau2, t)
+        check cO cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t)))) e (tau2, t)
 
     | (CtxFun(psi, e) , (TypCtxPi ((_psi, schema), tau), t)) -> 
         check (I.Dec(cO, I.CDecl(psi, schema))) cD cG e (tau, t)
@@ -587,7 +587,7 @@ in elSpineIW
     | (LetPair (i, (x,y, e)), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG i) with 
           | (TypCross (tau1, tau2), t') -> 
-              let cG' = I.Dec (I.Dec (cG, (x, TypClo (tau1, t'))), (y, TypClo(tau2, t'))) in 
+              let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t'))), CTypDecl (y, TypClo(tau2, t'))) in 
                 check cO cD cG' e (tau,t)
           | _ -> raise (Error "Case scrutinee not of boxed type")
         end 
@@ -619,7 +619,7 @@ in elSpineIW
         else raise (Error "Type mismatch")
 
   and check cO cD cG e (tau, t) = 
-   let _ = dprint (fun () -> "check cO = " ^ Print.mctxToString cO) in
+   let _ = dprint (fun () -> "check cO = " ^ P.octxToString cO) in
     checkW cO cD cG e (C.cwhnfCTyp (tau, t))
 
   and syn cO cD cG e = match e with 
@@ -705,11 +705,13 @@ in elSpineIW
       let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
 
 
-     (* let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
-         (Pretty.Int.DefaultPrinter.dctxToString (Cwhnf.cnormDCtx (cPsi, t'')))
-         (Pretty.Int.DefaultPrinter.typToString (Cwhnf.cnormTyp (tA, t'')))
-         (Pretty.Int.DefaultPrinter.dctxToString (Cwhnf.cnormDCtx (cPsi1, tc')))
-         (Pretty.Int.DefaultPrinter.typToString (Cwhnf.cnormTyp (tA1, tc'))) in 
+     (* let cPsi_n = Cwhnf.cnormDCtx (cPsi, t'') in 
+        let cPsi1_n = Cwhnf.cnormDCtx (cPsi1, tc') in 
+        let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
+         (P.dctxToString cO cD cPsi_n)
+         (P.typToString cO cD cPsi_n (Cwhnf.cnormTyp (tA, t'')))
+         (P.dctxToString cO cD cPsi1_n)
+         (P.typToString cO cD cPsi1_n (Cwhnf.cnormTyp (tA1, tc'))) in 
      *)
       let e1' = begin try Cwhnf.cnormExp (e1, tc')  
                  with Cwhnf.FreeMVar (I.FMVar(u, _ )) -> 
@@ -738,25 +740,31 @@ in elSpineIW
         (cSomeCtx, I.SigmaDecl(_name, I.SigmaLast elem1)) ->
           let dctx = projectCtxIntoDctx cSomeCtx in 
           let dctxSub = ctxToSub dctx in
-          let _ = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString dctxSub) in
+           let _ = dprint (fun () -> "checkAgainstElement  " ^ P.subToString cO cD dctx dctxSub) in 
       let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
           let normedA = Cwhnf.cnormTyp (tA, subD)
           and normedElem1 = Cwhnf.cnormTyp (elem1, subD) in
           
       let phat = dctxToHat cPsi in
-            dprint (fun () -> "normedElem1 " ^ Print.typToString normedElem1 ^ ";\n" ^ "normedA " ^ Print.typToString normedA)
+            dprint (fun () -> "normedElem1 " ^ 
+                      P.typToString cO cD cPsi (normedElem1, S.LF.id) ^ ";\n" ^ "normedA " ^ 
+                      P.typToString cO cD cPsi (normedA, S.LF.id))
 ;
             dprint (fun () -> "***Unify.unifyTyp ("
-                        ^ "\n   dctx = " ^ Print.dctxToString dctx
-                        ^ "\n   " ^ Print.typToString normedA ^ " [ " ^ Print.subToString dctxSub ^ " ] "
-                        ^ "\n== " ^ Print.typToString normedElem1 ^ " [ " ^Print.subToString dctxSub ^ " ] "
+                        ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
+                        ^ "\n   " ^ P.typToString cO cD cPsi (normedA, S.LF.id) ^ " [ " ^ 
+                      P.subToString cO cD cPsi dctxSub ^ " ] "
+                        ^ "\n== " ^ P.typToString cO cD cPsi (normedElem1, S.LF.id) ^ " [ " ^
+                      P.subToString cO cD cPsi dctxSub ^ " ] "
                         )
           ; try Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, dctxSub))
-            with exn ->  (dprint (fun () -> "Type " ^ Print.typToString tA ^ " doesn't unify with " ^ Print.typToString elem1)
+            with exn ->  (dprint (fun () -> "Type " ^ 
+                                    P.typToString cO cD cPsi (tA, S.LF.id) ^ " doesn't unify with " ^ 
+                                    P.typToString cO cD cPsi (elem1, S.LF.id))
                          ; raise exn)
     in
       function
-        [] -> raise (Error ("Type " ^ Print.typToString tA ^ " doesn't check against schema " ^ Print.schemaToString sch))
+        [] -> raise (Error ("Type " ^ P.typToString cO cD cPsi (tA, S.LF.id) ^ " doesn't check against schema " ^ P.schemaToString sch))
       | element :: elements ->
           try
             checkAgainstElement element
@@ -774,25 +782,34 @@ in elSpineIW
         (cSomeCtx, I.SigmaDecl(_, sigma)) ->
           let dctx = projectCtxIntoDctx cSomeCtx in 
           let dctxSub = ctxToSub dctx in
-          let _ = dprint (fun () -> "TypRec:checkAgainstElement  " ^ Print.subToString dctxSub) in
+          let _ = dprint (fun () -> "TypRec:checkAgainstElement  " ^ P.subToString cO cD dctx dctxSub) in
       let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
           let normedTypRec = Cwhnf.cnormTypRec (typRec, subD)
           and normedSigma = Cwhnf.cnormTypRec (sigma, subD) in
           
       let phat = dctxToHat cPsi in
-            dprint (fun () -> "normedSigma " ^ Print.typRecToString normedSigma ^ ";\n" ^ "normedTypRec " ^ Print.typRecToString normedTypRec)
+            dprint (fun () -> "normedSigma " ^ P.typRecToString cO cD cPsi (normedSigma, S.LF.id) 
+                      ^ ";\n" ^ "normedTypRec " ^ P.typRecToString cO cD cPsi (normedTypRec, S.LF.id))
 ;
             dprint (fun () -> "***Unify.unifyTypRec ("
-                        ^ "\n   dctx = " ^ Print.dctxToString dctx
-                        ^ "\n   " ^ Print.typRecToString normedTypRec ^ " [ " ^ Print.subToString dctxSub ^ " ] "
-                        ^ "\n== " ^ Print.typRecToString normedSigma ^ " [ " ^Print.subToString dctxSub ^ " ] "
+                        ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
+                        ^ "\n   " ^ P.typRecToString cO cD cPsi (normedTypRec, S.LF.id) 
+                      ^ " [ " ^ P.subToString cO cD cPsi dctxSub ^ " ] "
+                        ^ "\n== " ^ P.typRecToString cO cD cPsi (normedSigma, S.LF.id) ^ " [ " 
+                      ^P.subToString cO cD cPsi dctxSub ^ " ] "
                         )
           ; try Unify.unifyTypRec cD (phat, (normedTypRec, S.LF.id), (normedSigma, dctxSub))
-            with exn ->  (dprint (fun () -> "TypRec " ^ Print.typRecToString typRec ^ " doesn't unify with " ^ Print.typRecToString sigma)
+            with exn ->  (dprint (fun () -> "TypRec " ^ 
+                                    P.typRecToString cO cD cPsi (typRec, S.LF.id) 
+                                    ^ " doesn't unify with " ^ 
+                                    P.typRecToString cO cD cPsi (sigma, S.LF.id))
                          ; raise exn)
     in
       function
-        [] -> raise (Error ("TypRec " ^ Print.typRecToString typRec ^ " doesn't check against schema " ^ Print.schemaToString sch))
+        [] -> raise (Error ("TypRec " ^ 
+                             P.typRecToString cO cD cPsi (typRec, S.LF.id) ^ 
+                             " doesn't check against schema " ^ 
+                             P.schemaToString sch))
       | element :: elements ->
           try
             checkAgainstElement element
@@ -811,9 +828,9 @@ so checking a context element against a context element is just equality. *)
     let result =
       Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in
     let _ = dprint (fun () -> "checkElementAgainstElement "
-                      ^Print.schemaToString (I.Schema[elem1])
+                      ^P.schemaToString (I.Schema[elem1])
                       ^" <== "
-                      ^Print.schemaToString (I.Schema[elem2])
+                      ^P.schemaToString (I.Schema[elem2])
                       ^ ":  "
                       ^ string_of_bool result)
     in result
@@ -824,7 +841,8 @@ so checking a context element against a context element is just equality. *)
     List.exists (checkElementAgainstElement cO cD sch_elem) elements
 
   and checkSchema cO cD cPsi (I.Schema elements as schema) = 
-     dprint (fun () -> "checkSchema " ^ Print.mctxToString cO ^ " ... " ^ Print.dctxToString cPsi ^ " against " ^ Print.schemaToString schema);
+     dprint (fun () -> "checkSchema " ^ P.octxToString cO ^ " ... " ^ 
+                       P.dctxToString cO cD cPsi ^ " against " ^ P.schemaToString schema);
      print_string "\n WARNING: Schema checking not fully implemented\n" 
    ; match cPsi with
      | I.Null -> ()
@@ -841,7 +859,7 @@ so checking a context element against a context element is just equality. *)
          let I.Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
            if List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements
            then ()
-           else raiseErr (E.CtxVarMismatch (phi, schema))
+           else raiseErr (E.CtxVarMismatch (cO, phi, schema))
 
      | I.DDec (cPsi', decl) ->
          begin

@@ -2,7 +2,7 @@
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
-exp  : type.  %name exp E.
+exp  : type.  #name exp E.
 
 lam   : (exp -> exp) -> exp.
 app   : exp -> exp -> exp.
@@ -12,7 +12,7 @@ app   : exp -> exp -> exp.
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
-eval : exp -> exp -> type.  %name eval D.
+eval : exp -> exp -> type.  #name eval D.
 
 % Functions
 ev_lam  : eval (lam (\x. E x)) (lam (\x. E x)).

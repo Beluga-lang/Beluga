@@ -40,13 +40,12 @@ val cnormDCtx  : LF.dctx * Comp.msub -> LF.dctx
 
 val cnormCTyp  : Comp.typ * Comp.msub -> Comp.typ
 val cwhnfCTyp  : Comp.typ * Comp.msub -> Comp.typ * Comp.msub
-val cwhnfCtx   : (Id.name * Comp.typ) LF.ctx * Comp.msub -> (Id.name * Comp.typ) LF.ctx
+val cwhnfCtx   : Comp.gctx * Comp.msub -> Comp.gctx
 
 val cnormExp   : Comp.exp_chk * Comp.msub -> Comp.exp_chk
 val cnormExp'  : Comp.exp_syn * Comp.msub -> Comp.exp_syn
 
 
-val normMCtx   : LF.mctx -> LF.mctx
 val normCtx    : Comp.gctx -> Comp.gctx
 val normCTyp   : Comp.typ  -> Comp.typ
 

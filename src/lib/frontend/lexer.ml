@@ -60,6 +60,7 @@ let rec lex_token loc = lexer
   | "schema"
   | "some"
   | "type"
+  | "#name"
   | [ "!\\#%()*,.:;=[]{|}" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | eof                       -> mk_tok           Token.EOI  loc lexbuf
   | start_sym sym*            -> mk_tok_of_lexeme mk_symbol  loc lexbuf

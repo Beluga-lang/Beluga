@@ -2,7 +2,7 @@
 %%% Version with separate category of values
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
-eval : exp -> val -> type.  %name eval D.
+eval : exp -> val -> type.  #name eval D.
 
 % Natural Numbers
 ev_z       : eval z z'.

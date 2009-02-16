@@ -62,7 +62,7 @@ end
 module Make (T : TRAIL) : UNIFY = struct
 
   open Substitution.LF
-  module Print = Pretty.Int.DefaultPrinter
+  module P = Pretty.Int.DefaultPrinter
 
   exception Unify of string
 
@@ -83,7 +83,7 @@ module Make (T : TRAIL) : UNIFY = struct
   let rec raiseType cPsi tA = match cPsi with
     | Null -> tA
     | DDec (cPsi', decl) ->
-        raiseType cPsi' (PiTyp (decl, tA))
+        raiseType cPsi' (PiTyp ((decl, Maybe), tA))
 
   let rec emptySpine tS = match tS with
     | Nil -> true
@@ -526,12 +526,8 @@ module Make (T : TRAIL) : UNIFY = struct
 
     (* all other cases impossible for pattern substitutions *)
 
-    | (s1, s2, cPsi )  -> 
-        (Printf.printf "Intersection of: \n s1 = %s \n s2 = %s \n in context cPsi = %s not defined. \n\n"
-           (Pretty.Int.DefaultPrinter.subToString s1)
-           (Pretty.Int.DefaultPrinter.subToString s2)
-           (Pretty.Int.DefaultPrinter.dctxToString cPsi);
-           raise (Error "Intersection not defined"))
+    | (_s1, _s2, _cPsi )  -> 
+           raise (Error "Intersection not defined")
 
 
   (* prune cD0 (phat, (tM, s), ss, rOccur) = tM'
@@ -747,10 +743,10 @@ module Make (T : TRAIL) : UNIFY = struct
 
   and pruneTypW cD0 (phat, sA, ss, rOccur) = match sA with
     | (Atom(loc, a, tS) , s) -> Atom(loc, a, pruneSpine cD0 (phat, (tS, s), ss, rOccur)) 
-    | (PiTyp(TypDecl(x, tA), tB), s) -> 
+    | (PiTyp((TypDecl(x, tA), dep), tB), s) -> 
         let tA' = pruneTyp cD0 (phat, (tA, s), ss, rOccur) in 
         let tB' = pruneTyp cD0 (phat, (tB, dot1 s), ss, rOccur) in 
-          PiTyp(TypDecl(x, tA'), tB')
+          PiTyp((TypDecl(x, tA'), dep), tB')
 
   and pruneTyp cD0 (phat, sA, ss, rOccur) = pruneTypW cD0 (phat, Whnf.whnfTyp sA, ss, rOccur)
 
@@ -836,9 +832,8 @@ module Make (T : TRAIL) : UNIFY = struct
                     instantiateMVar (r1, tM2', !cnstrs1) 
                   with
                     | NotInvertible ->
-                        (Printf.printf "Added constraints: NotInvertible: \n sM1 = %s  \n sM2 = %s\n\n"
-                           (P.normalToString (Whnf.norm (sM1))) (P.normalToString (Whnf.norm sM2)) ; 
-                        addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2))))
+                        (Printf.printf "Added constraints: NotInvertible: \n "
+                        ; addConstraint (cnstrs1, ref (Eqn (phat, Clo sM1, Clo sM2))))
                   end
               | (false, true) ->
                   begin try
@@ -847,9 +842,8 @@ module Make (T : TRAIL) : UNIFY = struct
                       instantiateMVar (r2, tM1', !cnstrs2)                       
                   with
                     | NotInvertible ->
-                        (Printf.printf "Added constraints: NotInvertible: \n sM1 = %s  \n sM2= %s \n\n"
-                           (P.normalToString (Whnf.norm (sM1))) (P.normalToString (Whnf.norm sM2)) ;
-                        addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1))))
+                        (Printf.printf "Added constraints: NotInvertible: \n" 
+                        ; addConstraint (cnstrs2, ref (Eqn (phat, Clo sM2, Clo sM1))))
                   end
               | (false , false) ->
                   (* neither t1' nor t2' are pattern substitutions *)
@@ -866,9 +860,8 @@ module Make (T : TRAIL) : UNIFY = struct
                 instantiateMVar (r, sM2', !cnstrs) 
             with
               | NotInvertible ->
-                  (Printf.printf "Added constraints: NotInvertible: \n sM1 = %s  \n sM2= %s \n\n"
-                           (P.normalToString (Whnf.norm (sM1))) (P.normalToString (Whnf.norm sM2)) ;
-                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2))))
+                  (Printf.printf "Added constraints: NotInvertible: \n"
+                  ; addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2))))
           else
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
 
@@ -883,9 +876,8 @@ module Make (T : TRAIL) : UNIFY = struct
                 instantiateMVar (r, sM1', !cnstrs) 
             with
               | NotInvertible ->
-                  (Printf.printf "Added constraints: NotInvertible: \n sM1 = %s  \n sM2 = %s\n\n"
-                           (P.normalToString (Whnf.norm (sM1))) (P.normalToString (Whnf.norm sM2)) ;
-                  addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2))))
+                  (Printf.printf "Added constraints: NotInvertible: \n" 
+                  ; addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2))))
           else
             addConstraint (cnstrs, ref (Eqn (phat, Clo sM1, Clo sM2)))
 
@@ -1079,8 +1071,8 @@ module Make (T : TRAIL) : UNIFY = struct
 
     and unifyFront cD0 phat front1 front2 = match (front1, front2) with
       | (Head (BVar i), Head (BVar k))
-        -> (if i = k then () else 
-              raise (Error ("Front BVar mismatch: "^ (P.headToString (BVar i)) ^ " and " ^ (P.headToString (BVar k))) ))
+        -> if i = k then () else 
+              raise (Error "Front BVar mismatch")
 
       | (Head (Const i), Head (Const k))
         -> if i = k then () else raise (Error "Front Constant mismatch")
@@ -1139,7 +1131,7 @@ module Make (T : TRAIL) : UNIFY = struct
           else
             raise (Unify "Type constant clash")
 
-      | ((PiTyp (TypDecl (_x, tA1), tB1), s1), (PiTyp (TypDecl (_y, tA2), tB2), s2)) -> (
+      | ((PiTyp ((TypDecl (_x, tA1), _), tB1), s1), (PiTyp ((TypDecl (_y, tA2), _ ), tB2), s2)) -> (
           unifyTyp' cD0 (phat, (tA1, s1), (tA2, s2));
           unifyTyp' cD0 (phat, (tB1, dot1 s1), (tB2, dot1 s2))
         )

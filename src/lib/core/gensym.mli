@@ -7,6 +7,7 @@ module type GENSYM = sig
       unique because they always end in [%], making them unparsable
       and thus impossible to use directly in any program. *)
   val gensym : unit -> string
+  val name_gensym : string -> (unit -> string)
 
 end
 
@@ -14,3 +15,5 @@ end
 (** Symbol generation for data variables.  Symbols take the form
     [a,..., z, a1, ...z1, a2, ...] *)
 module VarData : GENSYM
+
+module MVarData : GENSYM

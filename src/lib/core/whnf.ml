@@ -21,7 +21,7 @@ exception Error of error
 let rec raiseType cPsi tA = match cPsi with
   | Null -> tA
   | DDec (cPsi', decl) ->
-      raiseType cPsi' (PiTyp (decl, tA))
+      raiseType cPsi' (PiTyp ((decl, Maybe), tA))
 
 let rec emptySpine tS = match tS with
   | Nil -> true
@@ -60,9 +60,9 @@ let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
 
 (* lowerMVar' cPsi tA[s] = (u, tM), see lowerMVar *)
 let rec lowerMVar' cPsi sA' = match sA' with
-  | (PiTyp (cD', tA'), s') ->
-      let (u', tM) = lowerMVar' (DDec (cPsi, LF.decSub cD' s')) (tA', LF.dot1 s') in
-        (u', Lam (None, Id.mk_name None, tM))
+  | (PiTyp ((decl,_ ), tA'), s') ->
+      let (u', tM) = lowerMVar' (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1 s') in
+        (u', Lam (None, Id.mk_name Id.NoName, tM))
 
   | (TClo (tA, s), s') ->
       lowerMVar' cPsi (tA, LF.comp s s')
@@ -276,8 +276,8 @@ and normTyp (tA, sigma) = match tA with
   | Atom (loc, a, tS) ->
       Atom (loc, a, normSpine (tS, sigma))
 
-  | PiTyp (TypDecl (_x, _tA) as decl, tB) ->
-      PiTyp (normDecl (decl, sigma), normTyp (tB, LF.dot1 sigma))
+  | PiTyp ((TypDecl (_x, _tA) as decl, dep ), tB) ->
+      PiTyp ((normDecl (decl, sigma), dep), normTyp (tB, LF.dot1 sigma))
 
   | TClo (tA, s) ->
       normTyp (tA, LF.comp s sigma)
@@ -298,8 +298,8 @@ let rec normKind tK = match tK with
   | Typ ->
       Typ
 
-  | PiKind (decl, tK) ->
-      PiKind (normDecl (decl, LF.id), normKind tK)
+  | PiKind ((decl, dep), tK) ->
+      PiKind ((normDecl (decl, LF.id), dep), normKind tK)
 
 let rec normDCtx cPsi = match cPsi with
   | Null ->
@@ -313,6 +313,23 @@ let rec normDCtx cPsi = match cPsi with
 
   | SigmaDec (cPsi1, SigmaDecl (x, typrec)) ->
       SigmaDec (normDCtx cPsi1, SigmaDecl (x, normTypRec (typrec, LF.id)))
+
+
+let rec normCDecl (decl, sigma) = match decl with
+  | MDecl (x, tA, cPsi) ->
+      MDecl (x, normTyp (tA, sigma) , normDCtx cPsi)
+
+  | PDecl (x, tA, cPsi) ->
+      PDecl (x, normTyp (tA, sigma) , normDCtx cPsi)
+  | CDecl (x, schema) ->
+      CDecl (x, schema)
+
+
+let rec normMCtx cD = match cD with
+  | Empty -> Empty
+  | Dec(cD, cdecl) -> 
+      Dec (normMCtx cD, normCDecl (cdecl, LF.id))
+        
 
 
 (* ---------------------------------------------------------- *)
@@ -660,7 +677,7 @@ let rec convTyp' sA sB = match (sA, sB) with
   | ((Atom (_, a1, spine1), s1), (Atom (_, a2, spine2), s2)) ->
       a1 = a2 && convSpine (spine1, s1) (spine2, s2)
 
-  | ((PiTyp (TypDecl (_, tA1), tB1), s1), (PiTyp (TypDecl (_, tA2), tB2), s2)) ->
+  | ((PiTyp ((TypDecl (_, tA1), _ ), tB1), s1), (PiTyp ((TypDecl (_, tA2), _ ), tB2), s2)) ->
       (* G |- A1[s1] = A2[s2] by typing invariant *)
       convTyp (tA1, s1) (tA2, s2) && convTyp (tB1, LF.dot1 s1) (tB2, LF.dot1 s2)
 
@@ -745,5 +762,5 @@ and etaExpandMV' cPsi sA  s' = match sA with
       let u = newMVar (cPsi, TClo(tP,s)) in
         Root (None, MVar (u, s'), Nil)
 
-  | (PiTyp (TypDecl (x, _tA) as decl, tB), s) ->
+  | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Lam (None, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))

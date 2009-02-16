@@ -15,9 +15,11 @@ val whnfTyp    : tclo -> tclo
 val norm       : nclo -> normal
 val normKind   : kind -> kind
 val normTyp    : tclo -> typ
+val normTypRec : trec_clo -> typ_rec
 val normSub    : sub  -> sub
 val normSpine  : sclo -> spine
 val normDCtx   : dctx -> dctx
+val normMCtx   : mctx -> mctx
 val reduce     : nclo -> spine -> normal
 val whnfRedex  : nclo *  sclo  -> nclo
 

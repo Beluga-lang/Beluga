@@ -6,6 +6,7 @@
 *)
 
 open Syntax.Int.LF
+open Syntax.Int
 open Error
 
 exception Error of error
@@ -19,3 +20,7 @@ val ctxVar      : dctx -> ctx_var option
 
 val append      : 'a ctx -> 'a ctx -> 'a ctx
 val length      : 'a ctx -> int
+
+val getNameDCtx : dctx -> int -> Id.name
+val getNameMCtx : mctx -> int -> Id.name
+val getNameCtx  : Comp.gctx -> int -> Id.name

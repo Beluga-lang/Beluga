@@ -26,7 +26,8 @@ eq_app : {E1:exp} {F1:exp} {E2:exp} {F2:exp}
 eq_lam : {E:exp -> exp} {F:exp -> exp} ({x:exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
  
-schema w = some [x:exp] eq x x;
+% schema w = some [x:exp] eq x x;
+schema w = block x:exp. eq x x;
 
 rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e
 ;
@@ -34,7 +35,16 @@ rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e
 rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
 FN g => mlam U => 
  case exp_identity [g] ([g] (U ..)) of
-   [g] fst (#p ..) => [g] snd (#p ..)
+%
+% [g] U ..      c(e)
+ case [g] U .. of
+ match < g.  U > of
+   [g] #p .. => [g] #p ..
+% | [g] 5563 => [g] 1252
+ |  [g] #1 p .. => [g] #2 p ..
+
+ |  [g] #p.1 .. => [g] #2 p ..
+ |  [g] x.1 
 
 %  | box(g . lam \x . u[id(g),x]) => 
 %      let

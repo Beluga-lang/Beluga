@@ -1,8 +1,8 @@
-tp: type.
+tp: type.   #name tp T.
 nat: tp.
 arrow: tp -> tp -> tp.
 
-term : tp -> type.
+term : tp -> type.  #name term E x.
 
 z    : term nat.
 s    : term nat -> term nat.

@@ -2,6 +2,7 @@
 
 open Syntax
 
+
 module Cid = struct
 
   module Typ = struct
@@ -9,13 +10,17 @@ module Cid = struct
     type entry = {
       name               : Id.name;
       implicit_arguments : int;
-      kind               : Int.LF.kind
+      kind               : Int.LF.kind;
+      var_generator      : (unit -> string) option;
+      mvar_generator      : (unit -> string) option;
     }
 
     let mk_entry n k i = {
       name               = n;
       implicit_arguments = i;
-      kind               = k
+      kind               = k;
+      var_generator      = None;
+      mvar_generator     = None;
     }
 
     type t = Id.name DynArray.t
@@ -38,6 +43,29 @@ module Cid = struct
         cid_tp
 
     let get = DynArray.get store
+
+    let addNameConvention cid_name var_name_generator mvar_name_generator =
+      let cid_tp = index_of_name cid_name in 
+      let entry = get cid_tp in
+      let new_entry = {name = entry.name ; implicit_arguments = entry.implicit_arguments ; 
+                       kind = entry.kind ; var_generator = var_name_generator; 
+                       mvar_generator =  mvar_name_generator} in 
+        (DynArray.set store cid_tp new_entry ; 
+         cid_tp)
+
+
+    let var_gen cid_tp =  (get cid_tp).var_generator 
+    let mvar_gen cid_tp =  (get cid_tp).mvar_generator 
+
+    let rec gen_var_name tA = match tA with 
+      | Int.LF.Atom (_, a, _ ) -> var_gen a
+      | Int.LF.PiTyp(_, tA) -> gen_var_name tA
+
+    let rec gen_mvar_name tA = match tA with 
+      | Int.LF.Atom (_, a, _ ) -> mvar_gen a
+      | Int.LF.PiTyp(_, tA)    -> gen_mvar_name tA
+      | Int.LF.TClo(tA, _)     -> gen_mvar_name tA
+
 
     let clear () =
       DynArray.clear store;
@@ -190,7 +218,7 @@ module BVar = struct
             loop (i + 1) es
     in
       loop 1 store
-
+  
   let create ()    = []
   let extend ctx e = e :: ctx
   let length       = List.length

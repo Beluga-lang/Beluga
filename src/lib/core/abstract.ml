@@ -103,24 +103,17 @@ type free_var =
   | FPV of Id.name * (I.typ * I.dctx) option 
                          (*     | (F, (A, cPsi))                  cPsi |- F <= A *)
 
-let freeVarToString x = match x with
-  | (MV tH) -> Pretty.Int.DefaultPrinter.headToString tH
-  | (PV tH) -> Pretty.Int.DefaultPrinter.headToString tH
-  | (FV (n, _tA))  -> "FV " ^ n.string_of_name
-  | (FMV (n, _)) -> "FMV " ^ n.string_of_name
-  | (FPV (n, _)) -> "FPV " ^ n.string_of_name
-
 
 let rec raiseType cPsi tA = match cPsi with
   | I.Null -> (None, tA)
   | I.CtxVar psi -> (Some psi, tA)
   | I.DDec (cPsi', decl) ->
-      raiseType cPsi' (I.PiTyp (decl, tA))
+      raiseType cPsi' (I.PiTyp ((decl, I.Maybe), tA))
 
 let rec raiseKind cPsi tK = match cPsi with
   | I.Null -> tK
   | I.DDec (cPsi', decl) ->
-      raiseKind cPsi' (I.PiKind (decl, tK))
+      raiseKind cPsi' (I.PiKind ((decl, I.Maybe), tK))
 
 let ctxVarToString psi = match psi with
   | None -> " "
@@ -130,38 +123,46 @@ let rec printCollection cQ = match cQ with
   | I.Empty -> Printf.printf " \n end "
   | I.Dec(cQ, MV ((I.MVar (I.Inst(_r, cPsi, tP, _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tP in        
+      let cO = I.Empty in 
+      let cD = I.Empty in 
       (printCollection cQ ; 
        Printf.printf " %s : " 
-         (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(None, h, I.Nil), LF.id))) ;
+         (P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)) ;
        Printf.printf " %s . %s \n" 
          (ctxVarToString ctx_var)
-         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
+         (P.typToString cO cD I.Null (tA , LF.id))
       )
   | I.Dec (cQ, FMV (u, Some (tP, cPhi))) -> 
+      let cO = I.Empty in 
+      let cD = I.Empty in 
       (printCollection cQ ; 
        Printf.printf " %s : " 
          (R.render_name u) ;
        Printf.printf " %s [ %s ]\n" 
-         (P.typToString (Whnf.normTyp (tP, LF.id)))
-         (P.dctxToString (Whnf.normDCtx cPhi))
-         )
+         (P.typToString cO cD cPhi (tP, LF.id))
+         (P.dctxToString cO cD cPhi)
+      )
                           
   | I.Dec(cQ, PV ((I.PVar (I.PInst(_r, cPsi, tA', _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tA' in        
+      let cO = I.Empty in 
+      let cD = I.Empty in 
       (printCollection cQ ; 
        Printf.printf " %s : " 
-         (Pretty.Int.DefaultPrinter.normalToString (Whnf.norm (I.Root(None, h, I.Nil), LF.id))) ;
+         (P.normalToString cO cD (I.Null) (I.Root(None, h, I.Nil), LF.id)) ;
        Printf.printf " %s . %s \n" 
          (ctxVarToString ctx_var)
-         (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA , LF.id)))
+         (P.typToString cO cD (I.Null) (tA , LF.id))
       )
 
   | I.Dec(cQ, FV (_n, None)) -> (printCollection cQ ; Printf.printf " FV _ . ")
 
   | I.Dec(cQ, FV (n, Some tA)) -> 
-            (printCollection cQ ; 
-             Printf.printf " FV %s : %s \n" n.string_of_name 
-                     (Pretty.Int.DefaultPrinter.typToString (Whnf.normTyp (tA, LF.id))))
+      let cO = I.Empty in 
+      let cD = I.Empty in       
+        (printCollection cQ ; 
+         Printf.printf " FV %s : %s \n" n.string_of_name 
+           (P.typToString cO cD (I.Null) (tA, LF.id)))
 
 (* exists p cQ = B
    where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
@@ -279,11 +280,13 @@ let rec ctxToDctx cQ = match cQ with
   | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
       begin match raiseType cPsi tA with
         | (None, tA') -> 
-            I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, tA'))
+            let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in 
+            I.DDec (ctxToDctx cQ', I.TypDecl (x, tA'))
         | (Some _, _ ) -> raise (Error "ctxToDctx generates LF-dctx with context variable: should be impossible!")
       end 
-  | I.Dec (cQ', FV (_, Some tA)) ->
-      I.DDec (ctxToDctx cQ', I.TypDecl (Id.mk_name None, tA))
+  | I.Dec (cQ', FV (x, Some tA)) ->
+      (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in  *)
+      I.DDec (ctxToDctx cQ', I.TypDecl (x, tA))
 
 
 
@@ -292,10 +295,12 @@ let rec ctxToMCtx cQ  = match cQ with
       I.Empty
 
   | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
-      I.Dec (ctxToMCtx cQ', I.MDecl (Id.mk_name None, tA, cPsi))
+      let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in 
+      I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi))
 
   | I.Dec (cQ', PV (I.PVar (I.PInst (_, cPsi, tA, _), _s))) ->
-      I.Dec (ctxToMCtx cQ', I.PDecl (Id.mk_name None, tA, cPsi))
+      let p = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in 
+      I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi))
 
   | I.Dec (cQ', FMV (u, Some (tA, cPsi))) ->
       I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi))
@@ -305,7 +310,7 @@ let rec ctxToMCtx cQ  = match cQ with
 
   (* this case should not happen -bp *)
 (* | I.Dec (cQ', FV (_, Some tA)) ->
-      I.Dec (ctxToMCtx cQ', I.MDecl (Id.mk_name None, tA, I.Null))
+      I.Dec (ctxToMCtx cQ', I.MDecl (Id.mk_name Id.NoName, tA, I.Null))
 *)
 
 
@@ -491,7 +496,7 @@ and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
   | (I.Atom (_, _a, tS), s) ->
       collectSpine cQ phat (tS, s)
 
-  | (I.PiTyp (I.TypDecl (_, tA), tB), s) ->
+  | (I.PiTyp ((I.TypDecl (_, tA), _ ), tB), s) ->
       let cQ' = collectTyp cQ phat (tA, s) in
         collectTyp cQ' (cvar, offset + 1) (tB, LF.dot1 s)
 
@@ -510,7 +515,7 @@ and collectKind cQ ((cvar, offset) as phat) sK = match sK with
   | (I.Typ, _s) ->
       cQ
 
-  | (I.PiKind (I.TypDecl (_, tA), tK), s) ->
+  | (I.PiKind ((I.TypDecl (_, tA), _ ), tK), s) ->
       let cQ' = collectTyp cQ phat (tA, s) in
         collectKind cQ' (cvar, offset + 1) (tK, LF.dot1 s)
 
@@ -560,8 +565,9 @@ let rec collectMctx cQ cD = match cD with
 let rec abstractKind cQ offset sK = match sK with
   | (I.Typ, _s) -> I.Typ
 
-  | (I.PiKind (I.TypDecl (x, tA), tK), s) ->
-      I.PiKind (I.TypDecl (x, abstractTyp cQ offset (tA,s)), abstractKind cQ (offset + 1) (tK, LF.dot1 s))
+  | (I.PiKind ((I.TypDecl (x, tA), dep), tK), s) ->
+      I.PiKind ((I.TypDecl (x, abstractTyp cQ offset (tA,s)), dep), 
+                abstractKind cQ (offset + 1) (tK, LF.dot1 s))
 
 and abstractTyp cQ offset sA = abstractTypW cQ offset (Whnf.whnfTyp sA) 
 
@@ -569,8 +575,9 @@ and abstractTypW cQ offset sA = match sA with
   | (I.Atom (loc, a, tS), s (* id *)) ->
       I.Atom (loc, a, abstractSpine cQ offset (tS, s))
 
-  | (I.PiTyp (I.TypDecl (x, tA), tB), s) ->
-      I.PiTyp (I.TypDecl (x, abstractTyp cQ offset (tA, s)), abstractTyp cQ (offset + 1) (tB, LF.dot1 s))
+  | (I.PiTyp ((I.TypDecl (x, tA), dep),  tB), s) ->
+      I.PiTyp ((I.TypDecl (x, abstractTyp cQ offset (tA, s)), dep), 
+               abstractTyp cQ (offset + 1) (tB, LF.dot1 s))
 
 and abstractTerm cQ offset sM = abstractTermW cQ offset (Whnf.whnf sM)
 
@@ -706,8 +713,8 @@ and abstractMVarTypW cQ offset sA = match sA with
   | (I.Atom (loc, a, tS), s (* id *)) ->
       I.Atom (loc, a, abstractMVarSpine cQ offset (tS, s))
 
-  | (I.PiTyp (I.TypDecl (x, tA), tB), s) ->
-      I.PiTyp (I.TypDecl (x, abstractMVarTyp cQ offset (tA, s)), 
+  | (I.PiTyp ((I.TypDecl (x, tA), dep), tB), s) ->
+      I.PiTyp ((I.TypDecl (x, abstractMVarTyp cQ offset (tA, s)), dep), 
                abstractMVarTyp cQ offset (tB, LF.dot1 s))
 
 and abstractMVarTypRec cQ offset = function
@@ -985,7 +992,7 @@ and collectExp' cQ i = match i with
 and collectPattern cQ cD cPsi (phat, tM) tA = 
   let cQ1 = collectMctx cQ cD in 
   (* let _    = Printf.printf "Start Collection of cPsi = %s \n" 
-  (   Pretty.Int.DefaultPrinter.dctxToString cPsi) in  *)
+  (   P.dctxToString cPsi) in  *)
   let cQ2 = collectDctx cQ1 phat cPsi in 
   (* let _ = Printf.printf "cQ2 (collection of cPsi)\n" in 
      let _   = printCollection cQ2 in  *)
@@ -1120,8 +1127,8 @@ let raiseExp cD e =
 
   and raiseMLam cD e = match cD with
     | I.Empty -> e
-    | I.Dec(cD ,_mdecl) -> 
-        raiseMLam cD (Comp.MLam (Id.mk_name None, e))
+    | I.Dec(cD ,I.MDecl(u, _cPsi, _tA)) -> 
+        raiseMLam cD (Comp.MLam (Id.mk_name (Id.SomeName u), e))
   in 
     roll e
 

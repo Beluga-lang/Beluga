@@ -2,8 +2,8 @@
 %%% Version distinguishing expressions and values
 %%% Author: Frank Pfenning
 
-exp  : type.  %name exp E.
-val  : type.  %name val V.
+exp  : type.  #name exp E.
+val  : type.  #name val V.
 
 z     : exp.
 s     : exp -> exp.

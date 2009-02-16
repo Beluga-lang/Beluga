@@ -2,8 +2,8 @@
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
-trans  : env -> exp' -> exp -> type.  %name trans C.
-vtrans : val -> exp -> type.          %name vtrans U.
+trans  : env -> exp' -> exp -> type.  #name trans C.
+vtrans : val -> exp -> type.          #name vtrans U.
 
 % Functions
 tr_lam : trans K (lam' F) (lam (\x. E x))

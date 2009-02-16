@@ -16,10 +16,15 @@ OCAMLPACKS[] =
 # Compile with debugging options?  This enables:
 #
 # 1. Pattern match failure warnings
-# 2. Debugging information in compiled code (-g)
-# 3. Profiling information in compiled code (-p)
-OCAMLFLAGS = $(if $(DEBUG), -w Ae  -warn-error Ap -g \
+# 2. Profiling information in compiled code (-p)
+
+# DEBUG = true
+
+OCAMLFLAGS = $(if $(DEBUG), -w Ae  -warn-error Ap \
                           , -w Aep -warn-error A)
+
+# 3. Debugging information in compiled code (-g)  (It is never useful to turn this off. -jd)
+OCAMLFLAGS += -g
 
 # Flags to pass to the native-code compiler
 # Explanation:
@@ -28,14 +33,23 @@ OCAMLFLAGS = $(if $(DEBUG), -w Ae  -warn-error Ap -g \
 OCAMLOPTFLAGS  = -noassert -inline 100
 OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
-# Compile to byte code?
+# Compile to byte code / native code?
 BYTE_ENABLED   = true
+NATIVE_ENABLED = false
+#
+#  - as of 2009-02-14, the *bytecode* version takes <2 s for the full ./TEST script;
+#  - compilation is slower when compiling to both targets:
+#        only bytecode:
+#        only native:
+#        bytecode + native:
+#  - if you want to use ocamldebug, you must compile to bytecode
+#
+# Note that commenting out NATIVE_ENABLED has the same effect as setting it to true.
 
-# Compile to native code?
-NATIVE_ENABLED = true
 
 # Declare a phony clean target
-.PHONY: core clean frontend interpreter test
+# .PHONY: core clean frontend interpreter test
+.PHONY: clean interpreter
 
 # Map the src dir onto the build dir
 vmount(-l, src, .build)
@@ -55,4 +69,3 @@ clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))
         rm $(filter %.omc,         $(ls R, .))
         $(if $(file-exists bin), $(rmdir -r bin))
-

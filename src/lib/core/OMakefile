@@ -39,7 +39,10 @@ clean:
 
 core: files pack $(OCamlLibrary $(LIBRARY), $(PACK))
 
-pack: $(OCamlPackage $(PACK), $(FILES))
+if $(NATIVE_ENABLED)
+    pack: $(OCamlPackage $(PACK), $(FILES))
+else
+    pack: $(QuietOCamlPackage $(PACK), $(FILES))
 
 # **NOTE** Because of the way scoping for OCAMLFLAGS works, the pack
 # target must come _BEFORE_ the files target, otherwise pack will be

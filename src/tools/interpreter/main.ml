@@ -41,6 +41,11 @@ type spec =
   | Negative   (* "@filename": should yield errors *)
   (* "Negative" is too broad; should distinguish type errors from internal failures, at least! *)
 
+type session =
+  | Session of string list
+
+exception SessionFatal
+
 let process_name name =
   let rest = String.sub name 1 (String.length name - 1) in
     if String.get name 0 = '@' then
@@ -62,26 +67,23 @@ let rec accum_lines input =
 
 let rec process_lines parent_dir = function
   | []      -> []
-  | x :: [] -> (true, parent_dir ^ x) :: []
-  | x :: xs -> let ((s, x') :: xs') = process_lines parent_dir xs in (false, parent_dir ^ x) :: (s, x') :: xs'
+  | [x]    -> [parent_dir ^ x]
+  | x :: xs -> let x' :: xs' = process_lines parent_dir xs in (parent_dir ^ x) :: x' :: xs'
 
 let rec process_files = function
   | []                    -> []
   | f :: fs when is_cfg f ->
-      let cfg =
-        if String.get f 0 = '@' then
-          open_in (String.sub f 1 (String.length f - 1))
-        else
-          open_in f in
+      let filename = if String.get f 0 = '@' then String.sub f 1 (String.length f - 1) else f in
+      let cfg = open_in filename in
       let lines = accum_lines cfg in
-        List.append (process_lines (Filename.dirname f ^ "/") lines) (process_files fs)
-  | f :: fs               -> (true, f) :: process_files fs
+        (Session (process_lines (Filename.dirname f ^ "/") lines)) :: (process_files fs)
+  | f :: fs               -> (Session [f]) :: process_files fs
 
 let main () =
   if Array.length Sys.argv < 2 then
     usage ()
   else
-    let per_file (errors, unsound, incomplete) (should_reset_state, file_name) =
+    let per_file (errors, unsound, incomplete) file_name =
       let (spec, file_name) = process_name file_name in
       let return actual = match (spec, actual) with
         | (Positive, Positive) -> (errors, unsound, incomplete)
@@ -116,11 +118,7 @@ let main () =
                 ; Check.Sgn.check_sgn_decls int_decls
                 ; printf "\n## Double Checking Successful! ##\n\n" *)
                   (* clean up for the next file *)
-                  if should_reset_state then
-                    Store.clear ()
-                  else
-                    ()
-                ; return Positive
+                return Positive
                 with
                   | Whnf.Error err ->
                       Format.fprintf
@@ -150,7 +148,7 @@ let main () =
               Format.fprintf Format.std_formatter "Parse Error: %s" exn;
               Format.fprintf Format.std_formatter "@?";
               print_newline ();
-              return Negative
+              raise SessionFatal
 
           | Reconstruct.Error (locOpt, err) ->
               printOptionalLocation locOpt;
@@ -188,16 +186,20 @@ let main () =
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               return Negative
-
-    (* Iterate the process for each file given on the command line *)
     in
+    let per_session (errors, unsound, incomplete) (Session file_names) =
+        Store.clear ()
+      ; try List.fold_left per_file (errors, unsound, incomplete) file_names
+      with SessionFatal -> (errors + 1, unsound, incomplete + 1)
+    in
+    (* Iterate the process for each file given on the command line *)
     let args   = List.tl (Array.to_list Sys.argv) in
     let files  = process_options args in
-    let files' = process_files files in
-    let file_count = List.length files' in
-    let (error_count, unsound_count, incomplete_count) = List.fold_left per_file
+    let sessions = process_files files in
+    let session_count = List.length sessions in
+    let (error_count, unsound_count, incomplete_count) = List.fold_left per_session
                          (0, 0, 0) (* initial number of: errors, unsounds, incompletes *)
-                         files' in
+                         sessions in
     let plural count what suffix =
       string_of_int count ^ " "
       ^ (if count = 1 then
@@ -214,10 +216,10 @@ let main () =
         else (if sound then "" else "####    " ^ plural unsound_count "erroneously accepted (unsound)" "" ^ (if complete then "" else ", "))
           ^(if complete then "" else "####    " ^ plural incomplete_count "erroneously rejected (incomplete)" ""))
         ^ "\n"
-      in match (file_count, error_count, unsound_count + incomplete_count) with
+      in match (session_count, error_count, unsound_count + incomplete_count) with
          | (1, 0, 0) -> ""
          | (1, 1, 1) -> "\n#### 1 error\n"
-         | (_, _, _) -> "\n#### " ^ plural file_count "file" "s" ^ ":\n" ^ full
+         | (_, _, _) -> "\n#### " ^ plural session_count "session" "s" ^ ":\n" ^ full
     in
       print_string message;
       exit status_code

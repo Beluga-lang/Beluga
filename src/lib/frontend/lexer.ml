@@ -14,7 +14,7 @@ let regexp start_sym = [^ "!\\#%()*,.:;=[]{|}" ' ' '0'-'9' '\n' '\t' ]
 
 let regexp sym       = [^ "!\\#%()*,.:;=[]{|}" ' ' '\n' '\t' ]
 
-
+let regexp digit       = [ '0'-'9' ]
 
 (**************************************************)
 (* Location Update and Token Generation Functions *)
@@ -35,6 +35,8 @@ let mk_tok_of_lexeme tok_cons loc lexbuf =
 let mk_keyword s = Token.KEYWORD s
 
 let mk_symbol  s = Token.SYMBOL  s
+
+let mk_integer  s = Token.INTEGER s
 
 (**********)
 (* Lexers *)
@@ -66,14 +68,15 @@ let rec lex_token loc = lexer
   | [ "!\\#%()*,.:;=[]{|}" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | eof                       -> mk_tok           Token.EOI  loc lexbuf
   | start_sym sym*            -> mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | digit digit*   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
 (* Skip comments and advance the location reference. *)
 let skip_comment     loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)
 (*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
     | '%' ( [^ 'n'] [^ '\n']* )? '\n' ->
-       loc := Loc.shift     (Ulexing.lexeme_length lexbuf - 1) !loc
-       ; loc := Loc.move_line 1                                  !loc
+        loc := Loc.shift     (Ulexing.lexeme_length lexbuf - 1) !loc
+      ; loc := Loc.move_line 1                                  !loc
 
 (* Skip non-newline whitespaces and advance the location reference. *)
 let skip_whitespaces loc = lexer

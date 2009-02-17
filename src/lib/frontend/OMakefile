@@ -7,21 +7,18 @@ OCAMLINCLUDES += ../core
 OCAML_LIBS[]  +=
         ../lib/beluga-core
 
+FILES[] =
+    parser
+    token
+
 # Declare an OCaml library
 LIBRARY        = beluga-frontend
 
 # Declare an OCaml package
 PACK           = Frontend
 
-# Declare the files the package will contain
-FILES[] =
-        parser
-	token
-
 # Declare one pseudo target for the lexer
 .PHONY: lexer
-
-.DEFAULT: frontend
 
 clean:
         rm $(filter-proper-targets $(ls R, .))
@@ -29,7 +26,10 @@ clean:
 
 frontend: lexer files pack $(OCamlLibrary $(LIBRARY), $(PACK))
 
-pack: $(OCamlPackage $(PACK), $(FILES) lexer)
+if $(NATIVE_ENABLED)
+    pack: $(OCamlPackage $(PACK), $(FILES) lexer)
+else
+    pack: $(QuietOCamlPackage $(PACK), $(FILES) lexer)
 
 # **NOTE** Because of the way scoping for OCAMLFLAGS works, the pack
 # target must come _BEFORE_ the files target, otherwise pack will be

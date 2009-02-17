@@ -1,7 +1,7 @@
 # -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
 # Declare the directories we need to include other libraries from
-OCAMLINCLUDES += +camlp4 ../../lib/core ../../lib/frontend
+OCAMLINCLUDES +=  +camlp4 ../../lib/core ../../lib/frontend
 
 # Declare the names of the libraries we depend on
 OCAML_LIBS[]  +=
@@ -13,11 +13,14 @@ OCAML_LIBS[]  +=
 PROGRAM = interpreter
 
 # Declare the files the program is built from
+## FILES[] = $(read-sources ../../lib/core, sources)
+## FILES[] += $(read-sources ../../lib/frontend, sources)
 FILES[] =
+FILES[] +=
         main
 
-# Declare some phony empty targets so omake doesn't try to build
-# camlp4lib.  May be a more elegant way to do this.
+# Declare some phony empty targets so omake doesn't try to build camlp4lib.
+#   May be a more elegant way to do this.
 .PHONY: camlp4lib.a camlp4lib.cma camlp4lib.cmxa
 camlp4lib.a   :
 camlp4lib.cma :
@@ -30,3 +33,7 @@ clean:
         rm $(filter %.omc,         $(ls R, .))
 
 interpreter: $(OCamlProgram $(PROGRAM), $(FILES))
+#        echo BYTE_ENABLED $(BYTE_ENABLED)
+#        echo NATIVE_ENABLED $(NATIVE_ENABLED)
+#        echo OCAMLFLAGS $(OCAMLFLAGS)
+#        echo OCAMLOPTFLAGS $(OCAMLOPTFLAGS)

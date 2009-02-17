@@ -26,6 +26,7 @@ INTERPRETER=$BELUGA/bin/interpreter
 X=$BELUGA/examples
 cd $X
 
+
 $INTERPRETER  \
     $* \
     arith/arith.bel \
@@ -65,9 +66,7 @@ $INTERPRETER  \
     test/test-simple.bel \
     test/test-simple-explicit.bel \
     test/schema.bel \
-    @test/sigma1.bel \
-    notworking/debruijn/mini-ml.bel \
-
+    @test/sigma1.bel
      
 #    notworking/church-rosser.rec \
 #    notworking/cut-elim.bel \

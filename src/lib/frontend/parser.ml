@@ -1,6 +1,6 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(* NOTE: Be careful with tuareg-mode M-q in this file – it doesn't
+(* NOTE: Be careful with tuareg-mode M-q in this file -- it doesn't
    understand the grammar formatting below very well and will easily
    trash the layout. *)
 
@@ -75,6 +75,8 @@ GLOBAL: sgn_eoi;
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
             Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
 
+      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
+            Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
       ]
     ]
   ;
@@ -337,14 +339,18 @@ GLOBAL: sgn_eoi;
 
   clf_head:
     [
-      [      
+      [
+        "#"; p = SYMBOL; "."; k = INTEGER; sigma = clf_sub_new ->
+                LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
+      |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
                 LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
-
+      |
+        x = SYMBOL; "."; k = INTEGER ->
+                LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
       |
         x = SYMBOL ->
                 LF.Name (_loc, Id.mk_name (Id.SomeString x))
-
       ]
     ]
   ;

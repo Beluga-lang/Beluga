@@ -42,7 +42,7 @@ rec copy :  nat [ ] -> nat [ ] =
 ;
 
 
-%rec plus :  nat [ ] -> nat [ ] -> nat [ ] =
+% rec plus :  nat [ ] -> nat [ ] -> nat [ ] =
 % fn x => fn y => 
 %  (case x of
 %     box ( . z)            =>  y
@@ -55,7 +55,7 @@ rec copy :  nat [ ] -> nat [ ] =
 
 
 
-%rec identity :  nat [,x:nat] -> nat [,x:nat] =
+% rec identity :  nat [,x:nat] -> nat [,x:nat] =
 % fn x =>
 %  (case x of
 %     box (y : nat. z)            =>  box (y . z)

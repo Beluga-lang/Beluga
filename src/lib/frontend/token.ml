@@ -64,9 +64,8 @@ module Filter = struct
       take. *)
   type token_filter = (t, Loc.t) Camlp4.Sig.stream_filter
 
-  (** A token filter is able to determine whether a token is a keyword
-      and is able to dynamically update its underlying filter
-      function. *)
+  (** A token filter can determine whether a token is a keyword
+      and dynamically update its underlying filter function. *)
   type t = {
     is_kwd         : string -> bool;
     mutable filter : token_filter

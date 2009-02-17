@@ -26,12 +26,13 @@ INTERPRETER=$BELUGA/bin/interpreter
 X=$BELUGA/examples
 cd $X
 
-#     count-var/cntvar-2.bel \
+
 $INTERPRETER  \
     $* \
     arith/arith.bel \
     count-var/cntvar.bel \
     count-var/cntvar-explicit.bel \
+    count-var/cntvar-2.bel \
     copy/copy.bel \
     copy/copy-explicit.bel \
     copy/copy-simple.bel \
@@ -60,14 +61,12 @@ $INTERPRETER  \
     test/dependency.bel \
     test/id.bel \
     test/id-simple.bel \
- \
+    test/id-explicit.bel \
     test/test.bel \
     test/test-simple.bel \
     test/test-simple-explicit.bel \
     test/schema.bel \
     @test/sigma1.bel
-
-#        test/id-explicit.bel \
      
 #    notworking/church-rosser.rec \
 #    notworking/cut-elim.bel \

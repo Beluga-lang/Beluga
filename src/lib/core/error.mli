@@ -31,3 +31,4 @@ type error =
   (* beluga errors *)
   | LeftoverUndef                      (* encountered Undef after unification *)
   | SubIllTyped                        (* TODO                                *)
+  | LeftoverFVar                       (* encountered FVar after reconstruction *)

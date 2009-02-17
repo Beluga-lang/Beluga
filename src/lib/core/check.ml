@@ -51,10 +51,10 @@ module LF = struct
           checkSpine cO cD cPsi (tS, s) sA sP
 
     | ((Lam (loc, _, _), _), _) ->
-       raise (Error (loc, IllTyped (cPsi, sM1, sA2)))
+       raise (Error (loc, IllTyped (cO, cD, cPsi, sM1, sA2)))
 
     | ((Root (loc, _, _), _), _) ->
-       raise (Error (loc, IllTyped (cPsi, sM1, sA2)))
+       raise (Error (loc, IllTyped (cO, cD, cPsi, sM1, sA2)))
 
   and check cO cD cPsi sM1 sA2 = checkW cO cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
 
@@ -216,8 +216,8 @@ module LF = struct
             ()
           else
             let _ = Printf.printf " Inferred type: %s \n Expected type: %s \n\n"
-              (P.typToString cO cD cPsi (tA1, LF.id)))
-              (P.typToString cO cD cPsi (tA2, s'))) in
+              (P.typToString cO cD cPsi (tA1, LF.id))
+              (P.typToString cO cD cPsi (tA2, s')) in
               raise (Error (None, SubIllTyped))
                 (* let sM = Root (None, h, Nil) in
                    raise (TypMismatch (cPsi', sM, (tA2, s'), (tA1, LF.id)))
@@ -244,11 +244,11 @@ module LF = struct
           check cO cD cPsi' (tM, LF.id) (tA2, s')
 
     | (cPsi1, s, cPsi2) ->
-        let _ = Printf.printf "\n Check substitution: %s   |-    %s    <= %s  \n\n"
-          (P.dctxToString cO cD cPsi1 cPsi1)
-          (P.subToString cO cD cPsi1 s s)
-          (P.dctxToString cO cD cPsi2) in
-          raise (Violation "Substitution is ill-typed; This case should be impossible.\n")
+        Printf.printf "\n Check substitution: %s   |-    %s    <= %s  \n\n"
+          (P.dctxToString cO cD cPsi1)
+          (P.subToString cO cD cPsi1 s)
+          (P.dctxToString cO cD cPsi2);
+        raise (Violation "Substitution is ill-typed; This case should be impossible.\n")
 
   (*****************)
   (* Kind Checking *)
@@ -293,10 +293,10 @@ module LF = struct
             if tK = Typ then
               ()
             else
-              raise (Error (loc, (KindMismatch (cPsi, sA))))
+              raise (Error (loc, (KindMismatch (cD, cPsi, sA))))
         with Match_failure _ ->
           (* synKSpine cO cD cPsi (App _, _) (Typ, _) *)
-          raise (Error (loc, (KindMismatch (cPsi, sA))))
+          raise (Error (loc, (KindMismatch (cD, cPsi, sA))))
         end
 
     | (PiTyp ((TypDecl (x, tA), _), tB), s) ->
@@ -736,7 +736,7 @@ module Comp = struct
           (cSomeCtx, I.SigmaDecl (_name, I.SigmaLast elem1)) ->
             let dctx        = projectCtxIntoDctx cSomeCtx in
             let dctxSub     = ctxToSub dctx in
-            let _           = dprint (fun () -> "checkAgainstElement  " ^ Print.subToString dctxSub) in
+            let _           = dprint (fun () -> "checkAgainstElement  " ^ P.subToString cO cD cPsi dctxSub) in
             let subD        = mctxToMSub cD in   (* {cD} |- subD <= cD *)
             let normedA     = Cwhnf.cnormTyp (tA, subD)
             and normedElem1 = Cwhnf.cnormTyp (elem1, subD) in
@@ -745,7 +745,7 @@ module Comp = struct
 
               dprint (fun () -> "normedElem1 " ^ 
                         P.typToString cO cD cPsi (normedElem1, S.LF.id) ^ ";\n" ^ "normedA " ^ 
-                        P.typToString cO cD cPsi (normedA, S>LF>id));
+                        P.typToString cO cD cPsi (normedA, S.LF.id));
               dprint (fun () -> "***Unify.unifyTyp ("
                         ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
                         ^ "\n   " ^ P.typToString cO cD cPsi (normedA, S.LF.id) ^ " [ "

@@ -22,3 +22,4 @@ type error =
 
   | LeftoverUndef
   | SubIllTyped
+  | LeftoverFVar

@@ -88,21 +88,7 @@ module Ext = struct
 
     and mctx     = ctyp_decl ctx          
 
-    and prag =
-      | PragUnifyTerm of
-            unify_decl list
-          * normal
-          * normal
-      | PragUnifyTyp of
-            unify_decl list
-          * typ
-          * typ
-
-    and unify_decl =
-      | UnifyTermDecl of name          * typ
-      | UnifyTermDefn of name * normal * typ
-      | UnifyTypeDecl of name          * kind
-      | UnifyTypeDefn of name * typ    * kind
+    and prag = NamePrag of name * string * string option 
 
   end
 
@@ -158,10 +144,9 @@ module Ext = struct
       | Const  of Loc.t * name * LF.typ
       | Typ    of Loc.t * name * LF.kind
       | Schema of Loc.t * name * LF.schema
-
       | Pragma of Loc.t * LF.prag
-
       | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
+       
 
     type sgn = decl list
 
@@ -174,12 +159,17 @@ module Int = struct
 
   module LF = struct
 
+    type depend =
+      | No       
+      | Maybe        
+
     type kind =
       | Typ
-      | PiKind of typ_decl * kind
+      | PiKind of (typ_decl * depend) * kind
 
     and typ_decl =                         (* LF Declarations                *)
       | TypDecl of name * typ              (* D := x:A                       *)
+      | TypDeclOpt of name                 (*   |  x:_                       *)
 
     and sigma_decl =
       | SigmaDecl of name * typ_rec        (* x:Sigma x1:A1 .... xk:Ak       *)
@@ -189,11 +179,15 @@ module Int = struct
       | PDecl of name * typ  * dctx        (*   |   p::A[Psi]                *)
       | SDecl of name * dctx * dctx        (*   |   s::A[Psi]                *)
       | CDecl of name * cid_schema
+      | MDeclOpt of name 
+      | PDeclOpt of name 
+      | CDeclOpt of name 
+
                                            (* Potentially, A is Sigma type? *)
 
     and typ =                              (* LF level                       *)
       | Atom  of Loc.t option * cid_typ * spine (* A ::= a M1 ... Mn              *)
-      | PiTyp of typ_decl * typ            (*   | Pi x:A.B                   *)
+      | PiTyp of (typ_decl * depend) * typ (*   | Pi x:A.B                   *)
       | TClo  of (typ * sub)               (*   | TClo(A,s)                  *)
       | TVar  of tvar * sub                (*   | TVar(a,s)                  *)
 
@@ -309,6 +303,9 @@ module Int = struct
     type trec_clo = typ_rec * sub          (* [s]Arec                        *)
     type mctx     = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
+
+    type prag = NamePrag of cid_typ 
+
   end
 
 
@@ -367,7 +364,11 @@ module Int = struct
           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx))
           * exp_chk
 
-    type gctx = (name * typ) LF.ctx
+   type ctyp_decl = 
+     | CTypDecl of name * typ
+     | CTypDeclOpt of name 
+    
+    type gctx = ctyp_decl LF.ctx
     type tclo = typ * msub
   end
 
@@ -380,6 +381,7 @@ module Int = struct
       | Const  of cid_term   * LF.typ
       | Schema of cid_schema * LF.schema
       | Rec    of cid_prog   * Comp.typ * Comp.exp_chk
+      | Pragma of LF.prag
 
     type sgn = decl list
 
@@ -392,9 +394,13 @@ module Apx = struct
 
   module LF = struct
 
+    type depend =
+      | No       
+      | Maybe        
+
     type kind =
       | Typ
-      | PiKind of typ_decl * kind
+      | PiKind of (typ_decl * depend) * kind
 
     and typ_decl =
       | TypDecl of name * typ
@@ -408,7 +414,7 @@ module Apx = struct
 
     and typ =
       | Atom  of Loc.t * cid_typ * spine
-      | PiTyp of typ_decl * typ
+      | PiTyp of (typ_decl * depend) * typ
 
     and typ_rec =
       | SigmaLast of typ

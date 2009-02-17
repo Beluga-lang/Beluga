@@ -7,7 +7,7 @@
 exp'   : type.  %name exp' F.
 
 one      : exp'.
-shift    : exp' -> exp'.  %postfix 20 ^.
+shift    : exp' -> exp'.  % postfix 20 ^.
 lam'     : exp' -> exp'.
 app'     : exp' -> exp' -> exp'.
 
@@ -17,7 +17,7 @@ env    : type.  %name env K.
 val    : type.  %name val W.
 
 empty  : env.
-cons   : env -> val -> env.   %infix left 10 ;.
+cons   : env -> val -> env.   % infix left 10 ;.
 
 clo    : env -> exp' -> val.
 

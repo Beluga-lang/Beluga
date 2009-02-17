@@ -2,7 +2,7 @@
 %%% Author: Frank Pfenning
 
 %%% Single Step Transitions
-step: cm_state -> cm_state -> type.		%name => St.
+step: cm_state -> cm_state -> type.		%name step St.
 %infix none 6 =>.
 
 % Natural Numbers
@@ -65,7 +65,7 @@ st_return : step (state (cons K  (\x. C x))  (return V))  (state K (C V)).
 st_init   : step (state init (return V)) (answer V).
 
 %%% Multi-Step Computation
-mstep : cm_state -> cm_state -> type.		%name =>* C. 
+mstep : cm_state -> cm_state -> type.		%name mstep C. 
 %infix none 5 =>*.
 
 stop : mstep S  S.

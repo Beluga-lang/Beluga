@@ -16,6 +16,13 @@ type offset     = int
 
 type var        = int
 
+type name_guide = 
+  | NoName 
+  | MVarName of (unit -> string) option
+  | BVarName of (unit -> string) option
+  | SomeName of name
+  | SomeString of string
+
 
 let mk_name = function
     (* If no {!name} is given, create a new unique {!name}.  This
@@ -23,6 +30,20 @@ let mk_name = function
     {!Store.Term.entry} is looked up, we never have to compare a
     {!string option}.  This prevents the case where two entries appear
     to refer to the same name because {!None} = {!None}. *)
-  | None    -> { string_of_name = (Gensym.VarData.gensym ()) }
-  | Some "" -> { string_of_name = (Gensym.VarData.gensym ()) }
-  | Some x  -> { string_of_name = x                          }
+
+  | MVarName (Some vGen)  -> 
+      { string_of_name = vGen () }                          
+       
+  | MVarName None  -> 
+      { string_of_name = (Gensym.MVarData.gensym ()) }                          
+
+  | BVarName (Some vGen)   -> 
+        { string_of_name = vGen () }                          
+          
+  | SomeName x       -> x 
+
+  | SomeString x     -> 
+        { string_of_name = x }                          
+
+
+  | _     -> { string_of_name = (Gensym.VarData.gensym ()) }

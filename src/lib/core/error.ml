@@ -6,11 +6,11 @@ open Id
 type error =
   | UnboundName         of name
 
-  | CtxVarMismatch      of LF.ctx_var * LF.schema
-  | SigmaIllTyped       of LF.mctx * LF.dctx * LF.trec_clo * LF.trec_clo
-  | KindMismatch        of LF.dctx * LF.tclo
-  | TypMismatch         of LF.dctx * LF.nclo * LF.tclo * LF.tclo
-  | IllTyped            of LF.dctx * LF.nclo * LF.tclo
+  | CtxVarMismatch      of LF.mctx * LF.ctx_var * LF.schema
+  | SigmaIllTyped       of LF.mctx * LF.mctx * LF.dctx * LF.trec_clo * LF.trec_clo
+  | KindMismatch        of LF.mctx * LF.dctx * LF.tclo
+  | TypMismatch         of LF.mctx * LF.mctx * LF.dctx * LF.nclo * LF.tclo * LF.tclo
+  | IllTyped            of LF.mctx * LF.mctx * LF.dctx * LF.nclo * LF.tclo
 
   | LeftoverConstraints of name
   | IllTypedIdSub
@@ -22,5 +22,3 @@ type error =
 
   | LeftoverUndef
   | SubIllTyped
-  | IndexError          of int * LF.dctx
-  | LeftoverFVar

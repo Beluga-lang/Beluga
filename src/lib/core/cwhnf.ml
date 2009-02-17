@@ -14,8 +14,6 @@ open Context
 open Syntax.Int
 
 module S = Substitution.LF
-module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.DefaultCidRenderer
 
 exception Error of string 
 
@@ -92,7 +90,7 @@ and mshiftSpine tS n = match tS with
 
 and mshiftTyp tA n = match tA with
   | LF.Atom (loc, a, tS) -> LF.Atom (loc, a, mshiftSpine tS n)
-  | LF.PiTyp(LF.TypDecl(x, tA), tB) -> LF.PiTyp(LF.TypDecl(x, mshiftTyp tA n), mshiftTyp tB n)
+  | LF.PiTyp((LF.TypDecl(x, tA), dep), tB) -> LF.PiTyp((LF.TypDecl(x, mshiftTyp tA n), dep), mshiftTyp tB n)
   | LF.TClo(tA, s) -> LF.TClo(mshiftTyp tA n, mshiftSub s n)
 
 and mshiftSub s n = match s with
@@ -451,8 +449,8 @@ and cnorm (tM, t) = match tM with
     |  LF.Atom (loc, a, tS) ->
          LF.Atom (loc, a, cnormSpine (tS, t))
 
-    |  LF.PiTyp (LF.TypDecl (_x, _tA) as decl, tB)
-      -> LF.PiTyp (cnormDecl (decl, t),  cnormTyp (tB, t))
+    |  LF.PiTyp ((LF.TypDecl (_x, _tA) as decl, dep), tB)
+      -> LF.PiTyp ((cnormDecl (decl, t), dep), cnormTyp (tB, t))
 
     |  LF.TClo (tA, s)
       -> LF.TClo(cnormTyp (tA,t), cnormSub (s,t))
@@ -503,8 +501,8 @@ let rec csub_typ cPsi k tA = match tA with
   | LF.Atom (loc, a, tS) -> 
       LF.Atom (loc, a, csub_spine cPsi k tS)
 
-  | LF.PiTyp (LF.TypDecl (x, tA), tB) -> 
-      LF.PiTyp (LF.TypDecl (x, csub_typ cPsi k tA), 
+  | LF.PiTyp ((LF.TypDecl (x, tA), dep), tB) -> 
+      LF.PiTyp ((LF.TypDecl (x, csub_typ cPsi k tA), dep),
                 csub_typ cPsi k tB)
 
   | LF.TClo (tA, s) -> 
@@ -728,6 +726,9 @@ let rec mctxPVarPos cD p =
     | (Comp.TypArr (tT1, tT2))   -> 
         Comp.TypArr (normCTyp tT1, normCTyp tT2)
 
+    | (Comp.TypCross (tT1, tT2))   -> 
+        Comp.TypCross (normCTyp tT1, normCTyp tT2)
+
     | (Comp.TypCtxPi (ctx_dec , tau))      -> 
          Comp.TypCtxPi (ctx_dec, normCTyp tau)
 
@@ -893,17 +894,17 @@ let rec mctxPVarPos cD p =
 
   let rec cwhnfCtx (cG, t) = match cG with 
     | LF.Empty  -> LF.Empty
-    | LF.Dec(cG, (x, tau)) -> LF.Dec (cwhnfCtx (cG,t), (x, Comp.TypClo (tau, t)))
+    | LF.Dec(cG, Comp.CTypDecl (x, tau)) -> LF.Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t)))
 
 
   let rec cnormCtx (cG, t) = match cG with
     | LF.Empty -> LF.Empty
-    | LF.Dec(cG, (x, tau)) -> LF.Dec (cwhnfCtx (cG, t), (x, cnormCTyp (tau, t)))
-
+    | LF.Dec(cG, Comp.CTypDecl(x, tau)) -> 
+        LF.Dec (cnormCtx (cG, t), Comp.CTypDecl (x, cnormCTyp (tau, t)))
 
   let rec normCtx cG = match cG with
     | LF.Empty -> LF.Empty
-    | LF.Dec(cG, (x, tau)) -> LF.Dec (normCtx cG, (x, normCTyp (cnormCTyp (tau, id))))
+    | LF.Dec(cG, Comp.CTypDecl (x, tau)) -> LF.Dec (normCtx cG, Comp.CTypDecl(x, normCTyp (cnormCTyp (tau, id))))
 
   let rec normMCtx cD = match cD with
     | LF.Empty -> LF.Empty
@@ -1110,8 +1111,8 @@ let rec mctxPVarPos cD p =
     |  LF.Atom (loc, a, tS) ->
          LF.Atom (loc, a, invSpine (tS, t) d)
 
-    |  LF.PiTyp (LF.TypDecl (_x, _tA) as decl, tB)
-      -> LF.PiTyp (invDecl (decl, t) d,  invTyp (tB, t) d)
+    |  LF.PiTyp ((LF.TypDecl (_x, _tA) as decl, dep), tB)
+      -> LF.PiTyp ((invDecl (decl, t) d, dep), invTyp (tB, t) d)
 
     |  LF.TClo (tA, s)
       -> LF.TClo(invTyp (tA,t) d, invSub (s,t) d)

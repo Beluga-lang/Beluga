@@ -6,7 +6,8 @@
 *)
 
 open Syntax.Int.LF
-open Error
+open Syntax.Int
+open Error 
 
 exception Error of error
 
@@ -77,11 +78,7 @@ let ctxDec cPsi k =
         ctxDec' (cPsi', k' - 1)
     (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in
-    try
-      ctxDec' (cPsi, k)
-    with Match_failure _ ->
-      raise (Error (IndexError (k, cPsi)))
-
+    ctxDec' (cPsi, k)
 
 (* ctxSigmaDec (Psi, k,i) = x:A
  *
@@ -139,3 +136,38 @@ let rec append cD1 cD2 = match cD2 with
 let rec length cD = match cD with
   | Empty        -> 0
   | Dec (cD', _) -> 1 + length cD'
+
+
+
+(* Lookup name in context
+ * 
+ * getNameDCtx cPsi k = x 
+ *  
+ * If |cPsi| <= k then x is the name of the k-th declaration in cPsi
+ *
+ * Invariants for lookup in cD and cG similar.
+ *)
+
+let rec getNameDCtx cPsi k = match (cPsi, k) with
+  | (DDec (_cPsi, TypDecl (x, _ )), 1) -> x
+  | (DDec (_cPsi, TypDeclOpt x) , 1)   -> x
+  | (SigmaDec (_cPsi, SigmaDecl (x, _ )), 1 ) -> x
+  | (DDec (cPsi, _ ) , k) -> getNameDCtx cPsi (k-1)
+  | (SigmaDec (cPsi, _ ) , k) -> getNameDCtx cPsi (k-1)
+
+let rec getNameMCtx cD k = match (cD, k) with 
+  | (Dec (_cD, MDecl(u, _, _ )), 1) -> u 
+  | (Dec (_cD, PDecl(u, _, _ )), 1) -> u 
+  | (Dec (_cD, CDecl(u, _)), 1) -> u 
+  | (Dec (_cD, MDeclOpt u), 1) -> u 
+  | (Dec (_cD, PDeclOpt u), 1) -> u 
+  | (Dec (_cD, CDeclOpt u), 1) -> u 
+  | (Dec (cD, _ ) , k) -> 
+      getNameMCtx cD (k-1)
+
+let rec getNameCtx cG k = match (cG, k) with 
+  | (Dec(_cG, Comp.CTypDecl (x, _ )), 1 ) -> x 
+  | (Dec(_cG, Comp.CTypDeclOpt x), 1) -> x
+  | (Dec(cG, _ ) , k) -> getNameCtx cG (k-1)
+
+

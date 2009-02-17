@@ -1,4 +1,4 @@
-nat : type.
+nat : type.     %name nat N x.
 z : nat.
 s : nat -> nat.
 

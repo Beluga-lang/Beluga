@@ -26,4 +26,4 @@ cm_state : type.  %name cm_state S.
 
 state : cont -> inst -> cm_state.
 answer : val -> cm_state.
-%infix none 7 #.
+

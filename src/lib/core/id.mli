@@ -29,6 +29,13 @@ type offset   = int
 type var      = int
 
 
-(** Smart constructor for `name'.  If `None' or `Some ""' are given,
+type name_guide = 
+  | NoName 
+  | MVarName of (unit -> string) option
+  | BVarName of (unit -> string) option
+  | SomeName of name
+  | SomeString of string
+
+(** Smart constructor for `name'.  
     `mk_name' generates a `name' with a guaranteed unique `string'. *)
-val mk_name : string option -> name
+val mk_name : name_guide -> name

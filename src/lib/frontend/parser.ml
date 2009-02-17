@@ -340,13 +340,13 @@ GLOBAL: sgn_eoi;
   clf_head:
     [
       [
-        "#"; k = INTEGER; p = SYMBOL; sigma = clf_sub_new ->
+        "#"; p = SYMBOL; "."; k = INTEGER; sigma = clf_sub_new ->
                 LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
                 LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
       |
-        "#"; k = INTEGER; x = SYMBOL ->
+        x = SYMBOL; "."; k = INTEGER ->
                 LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
       |
         x = SYMBOL ->

@@ -33,20 +33,6 @@ OCAMLFLAGS += -g
 OCAMLOPTFLAGS  = -noassert -inline 100
 OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
-# Compile to byte code / native code?
-BYTE_ENABLED   = true
-NATIVE_ENABLED = false
-#
-#  - as of 2009-02-14, the *bytecode* version takes <2 s for the full ./TEST script;
-#  - compilation is slower when compiling to both targets:
-#        only bytecode:
-#        only native:
-#        bytecode + native:
-#  - if you want to use ocamldebug, you must compile to bytecode
-#
-# Note that commenting out NATIVE_ENABLED has the same effect as setting it to true.
-
-
 # Declare a phony clean target
 # .PHONY: core clean frontend interpreter test
 .PHONY: clean interpreter

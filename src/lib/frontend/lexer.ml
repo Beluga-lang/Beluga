@@ -64,7 +64,6 @@ let rec lex_token loc = lexer
   | "schema"
   | "some"
   | "type"
-  | "#name"
   | "%name"
   | [ "!\\#%()*,.:;=[]{|}" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf
   | eof                       -> mk_tok           Token.EOI  loc lexbuf
@@ -73,14 +72,15 @@ let rec lex_token loc = lexer
 
 (* Skip comments and advance the location reference. *)
 let skip_comment     loc = lexer
-(*  | '%' [^ '\n' ]* '\n'   -> *)
-  | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n' ->
+(*   | '%' [^ '\n' ]* '\n'   ->   *)
+(*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
+    | '%' ( [^ 'n'] [^ '\n']* )? '\n' ->
         loc := Loc.shift     (Ulexing.lexeme_length lexbuf - 1) !loc
       ; loc := Loc.move_line 1                                  !loc
 
 (* Skip non-newline whitespaces and advance the location reference. *)
 let skip_whitespaces loc = lexer
-  | [ ' ' '\t' ]+         ->
+  | [ ' ' '\t' ]+         -> 
         loc := Loc.shift     (Ulexing.lexeme_length lexbuf)     !loc
 
 (* Skip newlines and advance the location reference. *)

@@ -33,18 +33,13 @@ rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e
 ;
 
 rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
-FN g => mlam U => 
- case exp_identity [g] ([g] (U ..)) of
-%
-% [g] U ..      c(e)
- case [g] U .. of
- match < g.  U > of
-   [g] #p .. => [g] #p ..
-% | [g] 5563 => [g] 1252
- |  [g] #1 p .. => [g] #2 p ..
-
- |  [g] #p.1 .. => [g] #2 p ..
- |  [g] x.1 
+ FN g => mlam U =>
+  case exp_identity [g] ([g] (U ..)) of
+%  case [g] U .. of
+% % match < g.  U > of
+    [g] #p.1 .. => [g] #p.2 ..
+% % | [g] 5563 => [g] 1252
+% % |  [g] #p.1 .. => [g] #2 p ..
 
 %  | box(g . lam \x . u[id(g),x]) => 
 %      let

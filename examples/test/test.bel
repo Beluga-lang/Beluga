@@ -1,8 +1,8 @@
-tp: type.
+tp: type.   %name tp T.
 nat: tp.
 arr: tp -> tp -> tp.
 
-exp : tp -> type.
+exp : tp -> type.   %name exp E x.
 
 z : exp nat.
 s  : exp nat -> exp nat.

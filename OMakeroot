@@ -3,8 +3,10 @@
 #
 open build/OCaml
 
-# Define the default value for DEBUG.  May be overriden by the commandline
+# Default values, which can be overridden by the command line:
 DEBUG = false
+BYTE_ENABLED   = true
+NATIVE_ENABLED = false
 
 #
 # Process the command-line variables are defined *after* the standard

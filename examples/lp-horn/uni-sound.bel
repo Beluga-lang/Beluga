@@ -9,7 +9,7 @@
 % schema canCtx = some [a:o] block assume a | x:i ; 
 % schema ndCtx = some [a:o] block assume a  | x:i ;
 
-%coercion c2n : canCtx => ndCtx = 
+% coercion c2n : canCtx => ndCtx = 
 %  | {a:o} assume a => pf a 
 %  |       o        => o
 %;

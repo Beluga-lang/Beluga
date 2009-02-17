@@ -4,20 +4,20 @@
 
 % Expressions
 
-exp'   : type.  #name exp' F.
+exp'   : type.  %name exp' F.
 
 one      : exp'.
-shift    : exp' -> exp'.  %postfix 20 ^.
+shift    : exp' -> exp'.  % postfix 20 ^.
 lam'     : exp' -> exp'.
 app'     : exp' -> exp' -> exp'.
 
 % Environments and values
 
-env    : type.  #name env K.
-val    : type.  #name val W.
+env    : type.  %name env K.
+val    : type.  %name val W.
 
 empty  : env.
-cons   : env -> val -> env.   %infix left 10 ;.
+cons   : env -> val -> env.   % infix left 10 ;.
 
 clo    : env -> exp' -> val.
 
@@ -26,7 +26,7 @@ clo    : env -> exp' -> val.
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
-feval : env -> exp' -> val -> type.  #name feval D.
+feval : env -> exp' -> val -> type.  %name feval D.
 
 % Variables
 fev_1 : feval (cons K W) one W.

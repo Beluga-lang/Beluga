@@ -8,7 +8,7 @@ focus  : o -> p -> type.  % immediate entailment
 
 %name solve S.
 %name assume H.
-%name >> I.
+%name focus I.
 
 s_and  : solve (and A1 A2)
 	  <- solve A1

@@ -25,7 +25,7 @@ FN g =>  mlam T =>
           [g] z   : (exp nat) [g] => [g] z
         | {U::exp nat [g]} 
           [g] s (U ..) : (exp nat) [g] => [g] s (U ..)
-%
+
 	| {T::tp[g]}{#p:: (exp (T ..))[g]}
           [g] (#p ..) : (exp (T ..))[g] => 
 	    [g] (#p ..)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
 # Declare the directories we need to include other libraries from
-OCAMLINCLUDES += +camlp4 ../../lib/core ../../lib/frontend
+OCAMLINCLUDES +=  +camlp4 ../../lib/core ../../lib/frontend
 
 # Declare the names of the libraries we depend on
 OCAML_LIBS[]  +=

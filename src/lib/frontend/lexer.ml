@@ -23,12 +23,14 @@ let regexp digit       = [ '0'-'9' ]
 (* Make a {!Token.t} taking no arguments and advance the {!Loc.t ref}. *)
 let mk_tok tok loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+(*  ; print_string ("mk_tok ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
   ; tok
 
 (* Make a {!Token.t} taking a {!string} argument for the current
    lexeme and advance the {!Loc.t ref}. *)
 let mk_tok_of_lexeme tok_cons loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+(*  ; print_string ("mk_tok_of_lexeme ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
   ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
       tok
 
@@ -74,14 +76,19 @@ let rec lex_token loc = lexer
 let skip_comment     loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)
 (*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
-    | '%' ( [^ 'n'] [^ '\n']* )? '\n' ->
+    | '%' ( [^ '\n' 'n'] [^ '\n']* )? '\n' ->
+(*        print_string ("BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ;   *)
         loc := Loc.shift     (Ulexing.lexeme_length lexbuf - 1) !loc
       ; loc := Loc.move_line 1                                  !loc
+(*      ; print_string ("AFT " ^ Loc.to_string !loc ^"\n") *)
 
 (* Skip non-newline whitespaces and advance the location reference. *)
 let skip_whitespaces loc = lexer
   | [ ' ' '\t' ]+         -> 
+       (* print_string ("bef " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
         loc := Loc.shift     (Ulexing.lexeme_length lexbuf)     !loc
+(*    ;    print_string ("aft " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")   *)
+
 
 (* Skip newlines and advance the location reference. *)
 let skip_newlines    loc = lexer

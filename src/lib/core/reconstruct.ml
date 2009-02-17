@@ -137,8 +137,8 @@ and index_head cvars bvars = function
         Apx.LF.BVar (BVar.index_of_name bvars n)
       with Not_found -> try
         Apx.LF.Const (Term.index_of_name n)
-      with Not_found ->
-        Apx.LF.FVar n
+      with Not_found -> 
+        Apx.LF.FVar n          
       end
 
   | Ext.LF.PVar (_, p, s) ->

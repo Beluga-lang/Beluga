@@ -7,7 +7,8 @@ exp : tp -> type.
 z : exp nat.
 s  : exp nat -> exp nat.
 lam : (exp T1 -> exp T2) -> exp (arr T1 T2).
-% coe : exp T -> exp T.
+
+coe : exp T -> exp T.
 
 schema w = some [t:tp] exp t;
 

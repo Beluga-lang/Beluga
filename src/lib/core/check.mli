@@ -26,7 +26,8 @@ module Comp : sig
   open Syntax.Int
   open Syntax.Int.Comp
 
-  exception Err of Error.error
+  exception Violation of string
+  exception Error of Error.error
 
   val check       : LF.mctx -> LF.mctx -> gctx -> exp_chk -> tclo -> unit
   val syn         : LF.mctx -> LF.mctx -> gctx -> exp_syn -> tclo

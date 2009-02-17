@@ -38,54 +38,48 @@ module LF = struct
    * and  cO ; cD ; cPsi  |- tM [s1] <= tA'[s1]
    * otherwise exception Error is raised
    *)
-  let rec checkW cO cD cPsi sM1 sA2 = match (sM1, sA2) with
+  let rec checkW cO cD cPsi sM sA = match (sM, sA) with
     | ((Lam (_, _, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2)) -> 
         check cO cD
           (DDec (cPsi, LF.decSub tX s2))
           (tM, LF.dot1 s1)
           (tB, LF.dot1 s2)
 
-    | ((Root (_, h, tS), s (* id *)), (((Atom _), _s') as sP)) ->
+    | ((Root (loc, h, tS), s (* id *)), (Atom _, _s')) ->
         (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
         let sA = Whnf.whnfTyp (inferHead cO cD cPsi h, LF.id) in
-          checkSpine cO cD cPsi (tS, s) sA sP
+          begin try
+            let sP = synSpine cO cD cPsi (tS, s) sA in
+              if Whnf.convTyp sP sA then
+                ()
+              else
+                raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP)))
+          with Match_failure _ ->
+            (* synSpine cO cD cPsi (App _, _) (Atom _, _) *)
+            raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
+          end
 
     | ((Lam (loc, _, _), _), _) ->
-       raise (Error (loc, IllTyped (cO, cD, cPsi, sM1, sA2)))
+       raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA)))
 
     | ((Root (loc, _, _), _), _) ->
-       raise (Error (loc, IllTyped (cO, cD, cPsi, sM1, sA2)))
+       raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA)))
 
-  and check cO cD cPsi sM1 sA2 = checkW cO cD cPsi (Whnf.whnf sM1) (Whnf.whnfTyp sA2)
+  and check cO cD cPsi sM sA = checkW cO cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 
-  (* checkSpine cO cD cPsi (tS, s1) (tA, s2) sP = ()
-   *
+  (* synSpine cO cD cPsi sS sA = sP
+   * 
    * Invariant:
-   * If   cO ;  cD ; cPsi  |- s1 <= cPsi1
-   * and  cO ;  cD ; cPsi  |- s2 <= cPsi2
-   * and  cO ;  cD ; cPsi2 |- tA <= type      (tA, s2) in whnf
-   * then succeeds if there exists tA', tP' such that
-   *      cO ; cD ; cPsi1 |- tS : tA' > tP'
-   * and  cO ; cD ; cPsi  |- s' : cPsi'
-   * and  cO ; cD ; cPsi' |- tA' <= type
-   * and  cO ; cD ; cPsi  |- tA'[s'] = tA [s2] <= type
-   * and  cO ; cD ; cPsi  |- tP'[s'] = sP      <= type
+   *
+   * cO ; cD ; cPsi sS : sA => sP
    *)
-  and checkSpine cO cD cPsi sS1 sA2 (sP : tclo) = match (sS1, sA2) with
-    | ((Nil, _), sP') ->
-        if Whnf.convTyp sP' sP then
-          ()
-        else (
-          Printf.printf "checkSpine: Expected type : %s \n Inferred type: %s\n\n"
-            (P.typToString cO cD cPsi sP)
-            (P.typToString cO cD cPsi sP');
-          raise (Violation "Spine Type Mismatch")
-              (* (TypMisMatch (cD, cPsi, sP', sP)) *)
-        )
+  and synSpine cO cD cPsi sS sA = match (sS, sA) with
+    | ((Nil, _), sP) ->
+        sP
 
     | ((SClo (tS, s'), s), sA) ->
-        checkSpine cO cD cPsi (tS, LF.comp s' s) sA sP
+        synSpine cO cD cPsi (tS, LF.comp s' s) sA
 
     | ((App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2)) ->
         check cO cD cPsi (tM, s1) (tA1, s2);
@@ -95,19 +89,15 @@ module LF = struct
          * and [s1]tA1' = [s2]tA1
          *)
         let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
-          checkSpine cO cD cPsi (tS, s1) tB2 sP
+          synSpine cO cD cPsi (tS, s1) tB2
 
-    | ((App (_tM, _tS), _), (_tA, _s)) ->
-        (* tA <> (Pi x:tA1. tA2, s) *)
-        raise (Violation "Expression not a function")
-          (* ExpAppNotFun *)
 
   (* inferHead cO cD cPsi h = tA
    *
    * Invariant:
    *
    * returns tA if
-   * cO cD ; cPsi |- h -> tA
+   * cO cD ; cPsi |- h => tA
    * where cO cD ; cPsi |- tA <= type
    * else exception Error is raised.
    *)
@@ -442,9 +432,8 @@ module Comp = struct
       exception Error of error
   *)
 
-  exception Error of string
-  exception Err of E.error
-  let raiseErr x = raise (Err x)
+  exception Violation of string
+  exception Error of E.error
 
   let rec length cD = match cD with
     | I.Empty -> 0
@@ -581,7 +570,7 @@ module Comp = struct
           | (TypCross (tau1, tau2), t') ->
               let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t'))), CTypDecl (y, TypClo(tau2, t'))) in
                 check cO cD cG' e (tau,t)
-          | _ -> raise (Error "Case scrutinee not of boxed type")
+          | _ -> raise (Violation "Case scrutinee not of boxed type")
         end
 
     | (Box (_phat, tM), (TypBox (tA, cPsi), t)) ->
@@ -590,7 +579,7 @@ module Comp = struct
           let tA'   = C.cnormTyp (tA, t) in
             LF.check cO cD  cPsi' (tM, S.LF.id) (tA', S.LF.id)
         with Cwhnf.FreeMVar (I.FMVar (u, _ )) ->
-          raise (Error ("Free meta-variable " ^ (R.render_name u)))
+          raise (Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
 
@@ -603,14 +592,14 @@ module Comp = struct
         begin match C.cwhnfCTyp (syn cO cD cG e) with
           | (TypBox (tA, cPsi),  t') -> 
               checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
-          | _ -> raise (Error "Case scrutinee not of boxed type")
+          | _ -> raise (Violation "Case scrutinee not of boxed type")
         end
 
     | (Syn e, (tau, t)) ->
         if C.convCTyp (tau,t) (syn cO cD cG e) then 
           ()
         else
-          raise (Error "Type mismatch")
+          raise (Violation "Type mismatch")
 
   and check cO cD cG e (tau, t) =
     dprint (fun () -> "check cO = " ^ P.octxToString cO);
@@ -629,7 +618,7 @@ module Comp = struct
               check cO cD cG e2 (tau2, t);
               (tau, t)
           | _ -> 
-              raise (Error "Function mismatch")
+              raise (Violation "Function mismatch")
         end
 
     | CtxApp (e, cPsi) ->
@@ -645,14 +634,14 @@ module Comp = struct
                  (* (tau', t') *)
                  (tau1, Cwhnf.id)                
           | _ -> 
-              raise (Error "Context abstraction mismatch")
+              raise (Violation "Context abstraction mismatch")
         end
     | MApp (e, (phat, tM)) ->
         begin match C.cwhnfCTyp (syn cO cD cG e) with
           | (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t) ->
               LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
               (tau, MDot(MObj (phat, tM), t))
-          | _ -> raise (Error "MLam mismatch")
+          | _ -> raise (Violation "MLam mismatch")
         end
 
     | (Ann (e, tau)) ->
@@ -685,7 +674,7 @@ module Comp = struct
                     Unify.unify cD1 (phat, (C.cnorm (tM', t'), S.LF.id), (tM1, S.LF.id)) 
                   with Unify.Unify msg -> 
                     Printf.printf "Unify ERROR: %s \n"  msg;
-                    raise (Error "Pattern matching on index argument failed") 
+                    raise (Violation "Pattern matching on index argument failed") 
                   end
               | DataObj -> ()
             end
@@ -711,7 +700,7 @@ module Comp = struct
             begin try
               Cwhnf.cnormExp (e1, tc')
             with Cwhnf.FreeMVar (I.FMVar (u, _)) ->
-              raise (Error ("Encountered free meta-variable " ^ (R.render_name u)))
+              raise (Violation ("Encountered free meta-variable " ^ (R.render_name u)))
             end
           in
           let cG1 = C.cwhnfCtx (cG, t'') in
@@ -762,7 +751,7 @@ module Comp = struct
     in
       function
         | [] -> 
-            raise (Error ("Type " ^ P.typToString cO cD cPsi (tA, S.LF.id) ^ " doesn't check against schema " ^ P.schemaToString sch))
+            raise (Violation ("Type " ^ P.typToString cO cD cPsi (tA, S.LF.id) ^ " doesn't check against schema " ^ P.schemaToString sch))
         | element :: elements ->
             try
               checkAgainstElement element
@@ -802,7 +791,7 @@ module Comp = struct
     in
       function
         | [] -> 
-            raise (Error ("TypRec " 
+            raise (Violation ("TypRec " 
                           ^ P.typRecToString cO cD cPsi (typRec, S.LF.id) ^ " doesn't check against schema " 
                           ^ P.schemaToString sch))
 
@@ -843,7 +832,7 @@ module Comp = struct
       | I.Null -> ()
       | I.CtxVar phi ->
           let rec lookupCtxVar = function
-            | I.Empty -> raise (Error ("Context variable not found"))
+            | I.Empty -> raise (Violation ("Context variable not found"))
             | I.Dec (cO, I.CDecl (psi, schemaName)) -> function
                 | I.CtxName phi when psi = phi -> (psi, schemaName)
                 | (I.CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
@@ -855,7 +844,7 @@ module Comp = struct
             if List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements then
               ()
             else
-              raiseErr (E.CtxVarMismatch (cO, phi, schema))
+              raise (Error (E.CtxVarMismatch (cO, phi, schema)))
       | I.DDec (cPsi', decl) ->
           begin
             checkSchema cO cD cPsi' schema;

@@ -169,7 +169,7 @@ let main () =
               print_newline ();
               return Negative
 
-          | Check.Comp.Err err ->
+          | Check.Comp.Error err ->
               (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf

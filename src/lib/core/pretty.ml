@@ -1626,7 +1626,7 @@ module Error = struct
             (IP.fmt_ppr_lf_typ cO cD cPsi   std_lvl) (Whnf.normTyp sA1)
             (IP.fmt_ppr_lf_typ cO cD cPsi   std_lvl) (Whnf.normTyp sA2)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) (Whnf.norm sM)
-            (IP.fmt_ppr_lf_dctx cO cD  std_lvl) cPsi
+            (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi
 
       | IllTyped (cO, cD, cPsi, sM, sA) ->
           fprintf ppf

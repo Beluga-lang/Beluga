@@ -129,11 +129,11 @@ let main () =
               print_newline ();
               return Negative
 
-          | Reconstruct.Violation err_string ->
+          | Reconstruct.Violation str ->
               Format.fprintf
                 Format.std_formatter
                 "Error (\"Violation\") (Reconstruction): %s\n@?"
-                err_string;
+                str;
               print_newline ();
               return Negative
 
@@ -157,8 +157,8 @@ let main () =
               print_newline ();
               return Negative
 
-          | Check.LF.Violation msg ->
-              printf "\n!! Error during typechecking !!\n\n%s\n\n" msg;
+          | Check.LF.Violation str ->
+              printf "Error (\"Violation\") (Checking): %s\n@?" str;
               return Negative
 
           | Context.Error err ->
@@ -172,8 +172,12 @@ let main () =
           | Whnf.Error err ->
               Format.fprintf
                 Format.std_formatter
-                "\n!! Error during weak-head normalization !!\n\n%a\n@?\n"
+                "Error (Whnf): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
+              return Negative
+
+          | Abstract.Error str ->
+              printf "Error (Abstraction): %s\n@?" str;
               return Negative
 
     in

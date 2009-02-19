@@ -790,7 +790,6 @@ module Int = struct
               (fmt_ppr_lf_typ cO cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
               (r_paren_if cond)
 
-
       | LF.PiTyp ((LF.TypDecl (x, a), LF.No), b) ->
           let cond = lvl > 0 in
             fprintf ppf "@[<1>%s%a -> %a%s@]"
@@ -1629,10 +1628,10 @@ module Error = struct
       | TypMismatch (cO, cD, cPsi, sM, sA1, sA2) ->
           fprintf ppf
             "ill typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n  in context:\n    %a"
-            (IP.fmt_ppr_lf_typ cO cD cPsi   std_lvl) (Whnf.normTyp sA1)
-            (IP.fmt_ppr_lf_typ cO cD cPsi   std_lvl) (Whnf.normTyp sA2)
+            (IP.fmt_ppr_lf_typ cO cD cPsi    std_lvl) (Whnf.normTyp sA1)
+            (IP.fmt_ppr_lf_typ cO cD cPsi    std_lvl) (Whnf.normTyp sA2)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) (Whnf.norm sM)
-            (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi
+            (IP.fmt_ppr_lf_dctx cO cD std_lvl)        (Whnf.normDCtx cPsi)
 
       | IllTyped (cO, cD, cPsi, sM, sA) ->
           fprintf ppf

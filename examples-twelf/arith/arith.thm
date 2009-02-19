@@ -1,0 +1,39 @@
+% Termination of Ackermann's function requires
+% lexicographic termination ordering
+% terminates [N M] (acker N M _).    % causes termination error
+%terminates {N M} (acker N M _).
+
+%theorem assoc : forall* {X:nat} {Y:nat} {Z:nat} {X':nat} {Z':nat}
+                 forall {P1:plus X Y X'} {P2:plus X' Z Z'}
+		 exists {Y':nat} {Q1:plus Y Z Y'} {Q2:plus X Y' Z'}
+		 true.
+%prove 3 P1 (assoc P1 _ _ _ _).
+
+%terminates P1 (assoc P1 _ _ _ _).
+
+%theorem assoc' : forall* {X:nat} {Y:nat} {Z:nat} {X':nat} {Z':nat}
+                 forall {P1:plus X Y X'} {P2:plus X' Z Z'}
+		 exists {Y':nat} {Q1:plus Y Z Y'} {Q2:plus X Y' Z'}
+		 true.
+%terminates P2 (assoc' _ P2 _ _ _).
+% %prove 3 P2 (assoc' _ P2 _ _ _).  % fails
+
+
+%theorem comm : forall* {X:nat} {Y:nat} {Z:nat}
+	        forall {N:nt X} {M:nt Y} {P'': nt Z} {P0:plus X Y Z}
+		exists {Q:plus Y X Z}
+		true.
+%theorem comm' : forall* {X:nat} {Y:nat} {Z:nat}
+	        forall {M':nt X} {N':nt Y} {P'': nt Z} {P0:plus X Y Z}
+		exists {Q:plus Y X Z}
+		true.
+
+%prove 6 [(N N') (M M')]
+  (comm N M _ _ _)
+  (comm' M' N' _ _ _).
+
+%terminates [(N N') (M M')]
+  (comm N M _ _ _)
+  (comm' M' N' _ _ _).
+
+

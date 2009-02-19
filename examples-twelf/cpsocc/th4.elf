@@ -1,0 +1,67 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Theorem 4 : A result of cps transformation is var-valid
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+cps_vvR : cpsR R R' -> vvalR R' -> type.                    
+cps_vvE : vvalK Xi Kappa -> cpsE E Kappa E' -> vvalE Xi E' -> type.   
+cps_vvT : cpsT T T' -> ({Xi:stack}vvalT Xi T' Xi) -> type.                    
+
+%mode cps_vvR +CR -VVR.
+%mode cps_vvE +VVK +CE -VVE.
+%mode cps_vvT +CT -VVT.
+
+%name cps_vvR CVVR.
+%name cps_vvE CVVE.
+%name cps_vvT CVVT.
+
+vval_droot : cps_vvR (cps_droot CE) (vval_klam VVE)
+             <- ({k:ccont}{VVC:vvalC dot k}
+                 cps_vvE (vval_kappa ([t:ctriv]
+                                      [VVV:{Xi':stack} vvalT Xi' t Xi']
+                                       vval_cret VVC (VVV dot))
+                                     ([v:ctriv]
+                                      [VVV:{Xi':stack} vvalT (Xi' , v) v Xi']
+                                       vval_cret VVC (VVV dot)))
+                         (CE k)
+                         (VVE k VVC)).
+
+vval_dtriv : cps_vvE (vval_kappa VVTE VVVE) (cps_dtriv CT) (VVTE T VVT)
+             <- cps_vvT CT VVT.
+
+vval_dapp : cps_vvE (vval_kappa VVTE VVVE) (cps_dapp CE0 CE1) VE
+            <- ({t0:ctriv}{VVt0:{Xi':stack}vvalT Xi' t0 Xi'}
+                cps_vvE (vval_kappa ([t1:ctriv]
+                                      [vvt1:{Xi:stack}vvalT Xi t1 Xi]
+                                       (vval_capp (vval_vlam VVVE) 
+                                                  (VVt0 Xi)
+                                                  (vvt1 Xi)))
+                                    ([v1:ctriv]
+                                      [vvv1:{Xi:stack}vvalT (Xi , v1) v1 Xi]
+                                       (vval_capp (vval_vlam VVVE) 
+                                                  (VVt0 Xi)
+                                                  (vvv1 Xi))))
+                        (CE1 t0)
+                        (VVTE' t0 VVt0))
+            <- ({v0:ctriv}{VVv0:{Xi':stack}vvalT (Xi' , v0) v0 Xi'}
+                cps_vvE (vval_kappa ([t1:ctriv]
+                                      [vvt1:{Xi:stack}vvalT Xi t1 Xi]
+                                       (vval_capp (vval_vlam VVVE) 
+                                                  (VVv0 Xi)
+                                                  (vvt1 (Xi , v0))))
+                                    ([v1:ctriv]
+                                      [vvv1:{Xi:stack}vvalT (Xi , v1) v1 Xi]
+                                       (vval_capp (vval_vlam VVVE) 
+                                                  (VVv0 Xi)
+                                                  (vvv1 (Xi , v0)))))
+                        (CE1 v0)
+                        (VVVE' v0 VVv0))
+            <- cps_vvE (vval_kappa VVTE' VVVE') CE0 VE.                
+                
+vval_dlam : cps_vvT (cps_dlam CR) ([Xi:stack](vval_xlam VVR))
+            <- ({x:dtriv}{x':ctriv}{CX:cpsT x x'}{VVX:{Xi:stack}vvalT Xi x' Xi}
+                cps_vvT CX VVX -> cps_vvR (CR x x' CX) (VVR x' VVX)).
+
+%terminates (CR CE CT)
+   (cps_vvR CR _)
+   (cps_vvE _ CE _)
+   (cps_vvT CT _).

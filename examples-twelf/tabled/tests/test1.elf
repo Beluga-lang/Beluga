@@ -1,0 +1,25 @@
+node:type.
+
+a:node.
+b:node.
+c:node.
+d:node.
+
+edge: node -> node -> type.
+
+e_ab: edge a b.
+e_ac: edge a c.
+e_ba: edge b a.
+e_bd: edge b d.
+
+reach: node -> node -> type.
+%tabled reach.
+
+r_refl: reach X X.
+
+r_cl  : reach X Y 
+	 <- edge X Z
+	 <- reach Z Y.
+
+%querytabled * 3 (reach a X).
+

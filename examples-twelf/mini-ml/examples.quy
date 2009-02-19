@@ -1,0 +1,67 @@
+%%% Example of Mini-ML evaluation
+
+%%% Evaluation
+%query 1 *
+eval (case z (s z) ([x:exp] z)) V.
+
+%query 1 *
+eval (app (lam [x:exp] x) z) V.
+
+% Next fails (specify 0 solutions)
+
+%query 0 *
+eval (fst z) V.
+
+% Next does not terminate.
+% eval (fix [x:exp] x) V.
+
+% Double 1 to yield 2.
+%query 1 *
+eval (app
+	(fix [f:exp] lam [x:exp]
+	   (case x z ([x':exp] s (s (app f x')))))
+	(s z))
+V.
+
+%%% Values
+
+%query 1 *
+value (pair z (s z)).
+
+%query 0 *
+value (fst (pair z (s z))).
+
+%query 1 *
+value (lam [x] (fst x)).
+
+%%% Value Soundness
+%query 1 *
+vs (ev_case_z (ev_s ev_z) ev_z) P.
+
+%solve d0 : eval (case z (s z) ([x:exp] z)) V.
+%query 1 *
+vs d0 P.
+
+%%% Type Inference
+
+%query 1 *
+of (lam [x] pair x (s x)) T.
+
+%query 1 *
+of (lam [x] x) T.
+
+%query 1 *
+{T1:tp} of (lam ([x:exp] x)) (arrow T1 T1).
+
+% Next query leaves constraints.
+%query 1 *
+of (lam [x] x) (F nat).
+
+%query 1 *
+of (letn (lam [y] y) ([f] pair (app f z) (app f (pair z z)))) T.
+
+%%% Last example
+e0 : exp = letn (lam [x] x) ([f] letn (app f f) ([g] app g g)).
+%solve p0 : of e0 T.
+%solve d0 : eval e0 V.
+%query 1 * tps d0 p0 Q.

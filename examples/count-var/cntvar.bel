@@ -29,6 +29,15 @@ case x of
 | [ ] s U  =>
   let [ ] V = plus ([ ] U) y in ([ ] s V);
 
+% G, x:exp T |-  z  ==>  0
+% G, x:exp T |-  tt  ==>  0
+% G, x:exp T |-  x  ==>  1
+% G, x:exp T |-  y  ==>  0   y =/= x 
+% G, x: exp T |- s (U .. x) ==> n   if G, x:exp T |- U  ==> n
+% G, x: exp T |- s U  ==> n   if G, x:exp T |- U  ==> n
+% G, x: exp T |- letv (U .. x) (\y. V .. x y) ===> n1 + n2
+% if  G, x: exp T |-  U .. x ==> n1
+% if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
 
 rec cntV : {g:(expCtx)*} (exp (S .. x))[g, x:exp (T ..)] -> (exp nat) [ ] =
 FN g => 

@@ -1,0 +1,53 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Definition 1 + 5 + Figure 4 : Cont-validity of cps terms
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+cvalR : croot -> type.           
+cvalE : (ccont -> cexp) -> type.   
+cvalT : ctriv -> type.           
+cvalC : (ccont -> ccont) -> type.  
+%mode cvalR +R.
+%mode cvalE +E.
+%mode cvalT +T.
+%mode cvalC +C.
+
+cvalK : (ccont -> (ctriv -> cexp)) -> type.
+%mode cvalK +K.
+
+cval_klam : cvalR (klam E)
+            <- cvalE E.
+
+cval_capp : cvalE ([k:ccont]capp T0 T1 (C k))
+            <- cvalT T1
+            <- cvalT T0
+            <- cvalC C.
+
+cval_cret : cvalE ([k:ccont]cret (C k) T)
+            <- cvalT T
+            <- cvalC C.
+
+cval_xlam : cvalT (xlam R)
+            <- ({x:ctriv}cvalT x -> cvalR (R x)).
+
+
+cval_vlam : cvalC ([k:ccont]vlam [v:ctriv](C v k))
+            <- ({v:ctriv}cvalT v -> cvalE (C v)).
+
+cval_k : cvalC ([k:ccont]k).
+
+cval_kappa : cvalK Kappa
+             <- ({t:ctriv}cvalT t -> cvalE ([k:ccont]Kappa k t)).
+
+
+%name cvalR CVR.
+%name cvalE CVE.
+%name cvalT CVT.
+%name cvalC CVC.
+%name cvalK CVK.
+
+%terminates (R E T C)
+  (cvalR R)
+  (cvalE E)
+  (cvalT T)
+  (cvalC C).
+%terminates K (cvalK K).

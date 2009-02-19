@@ -1,0 +1,111 @@
+%%% Simply Typed Lambda Calculus w/ small-step, allocation semantics
+%%% Author: Matthew Fluet (June 2005)
+%%% preservation-lemmas.elf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Preservation Lemmas
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Allocation Preserves
+pres_alloc     : stwf_judg S ST ->
+                 val_judg ST V T ->
+                 st_alloc S V S' L'
+                  -> sttp_extend ST ST' ->
+                     stwf_judg S' ST' -> 
+                     exp_judg ST' (loc_e L') T -> type.
+%mode pres_alloc +DStTcWf +DValTc +DStAlloc -DSttpExtend -DStTcWf' -DExpTcL.
+-nil           : pres_alloc (stwf_judg_ DSTWf DSWf 
+                                     st_judg_nil)
+                            DValTc %% (DValTc : val_judg _ _ T)
+		            (st_alloc_nil) 
+                            DSttpExtend
+		            (stwf_judg_ DSTWf' DSWf' 
+                                     (st_judg_cons DValTc (st_judg_nil)))
+                            (exp_judg_loc (loc_judg_ sttp_lookup_hit))
+		  <- sttp_alloc_implies_extend (sttp_alloc_nil) DSttpExtend
+		  <- sttp_alloc_preserves_wf DSTWf (sttp_alloc_nil) DSTWf'
+		  <- st_alloc_preserves_wf DSWf (st_alloc_nil) DSWf'.
+
+
+-cons          : pres_alloc (stwf_judg_ DSTWf DSWf 
+                                     (st_judg_cons DValTcX DStTc))
+		            DValTc % (DValTc : val_judg _ _ T)
+		            (st_alloc_cons)
+                            DSttpExtend
+		            (stwf_judg_ DSTWf' DSWf' 
+                                     (st_judg_cons DValTc (st_judg_cons DValTcX DStTc)))
+                            (exp_judg_loc (loc_judg_ sttp_lookup_hit))
+		  <- sttp_alloc_implies_extend (sttp_alloc_cons) DSttpExtend
+		  <- st_alloc_preserves_wf DSWf (st_alloc_cons) DSWf'
+		  <- sttp_alloc_preserves_wf DSTWf (sttp_alloc_cons) DSTWf'.
+
+
+%terminates DStTcWf (pres_alloc DStTcWf _ _ _ _ _).
+%worlds () (pres_alloc _ _ _ _ _ _).
+%covers pres_alloc +DStTcWf +DValTc +DStAlloc -DSttpExtend -DStTcWf' -DExpTcL.
+%total DStTcWf (pres_alloc DStTcWf _ _ _ _ _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Substitution Preserves
+pres_var       : ({z:exp} var_judg z Tz -> exp_judg ST (F z) T) ->
+                 exp_judg ST E Tz
+		  -> exp_judg ST (F E) T -> type.
+%mode pres_var +DExpTcF +DExpTcZ -DExpTcFZ.
+
+-refl          : pres_var (\z.\dvar. T ) DExpTc1 T.
+
+-var           : pres_var (\z.\dvar. (exp_judg_var dvar)) DExpTcZ DExpTcZ.
+-loc           : pres_var (\z.\dvar. (exp_judg_loc DLocTc)) _ (exp_judg_loc DLocTc).
+-lam           : pres_var (\z.\dvar. (exp_judg_lam (\x. \d. DExpTcF z dvar x d)))
+                          DExpTcZ
+                          (exp_judg_lam (\x. \d. DExpTcF' x d))
+		  <- ({x:exp}{dvar': var_judg x Tx}
+			pres_var (\z.\dvar. (DExpTcF z dvar x dvar'))
+                                 DExpTcZ
+                                 (DExpTcF' x dvar')).
+-app           : pres_var (\z.\dvar. (exp_judg_app (DExpTcE2 z dvar)
+                                                   (DExpTcE1 z dvar)))
+                          DExpTcZ 
+                          (exp_judg_app DExpTcE2' DExpTcE1')
+		  <- pres_var DExpTcE1 DExpTcZ DExpTcE1'
+		  <- pres_var DExpTcE2 DExpTcZ DExpTcE2'.
+-unit          : pres_var (\z.\dvar. (exp_judg_unit)) _ (exp_judg_unit).
+-letunit       : pres_var (\z.\dvar. (exp_judg_letunit (DExpTcE2 z dvar)
+                                                       (DExpTcE1 z dvar)))
+                          DExpTcZ 
+                          (exp_judg_letunit DExpTcE2' DExpTcE1')
+		  <- pres_var DExpTcE1 DExpTcZ DExpTcE1'
+		  <- pres_var DExpTcE2 DExpTcZ DExpTcE2'.
+-pair          : pres_var (\z.\dvar. (exp_judg_pair (DExpTcE2 z dvar)
+                                                    (DExpTcE1 z dvar)))
+                          DExpTcZ 
+                          (exp_judg_pair DExpTcE2' DExpTcE1')
+		  <- pres_var DExpTcE1 DExpTcZ DExpTcE1'
+		  <- pres_var DExpTcE2 DExpTcZ DExpTcE2'.
+-letpair       : pres_var (\z.\dvar. (exp_judg_letpair (\x.\d.\y.\d'. DExpTcF2 z dvar x d y d')
+                                                       (DExpTcE1 z dvar)))
+                          DExpTcZ
+                          (exp_judg_letpair (\x.\d.\y.\d'. DExpTcF2' x d y d') DExpTcE1')
+		  <- pres_var DExpTcE1 DExpTcZ DExpTcE1'
+		  <- ({x:exp}{dVar_x: var_judg x Tx}
+                      {y:exp}{dVar_y: var_judg y Ty}
+			pres_var (\z.\dvar. (DExpTcF2 z dvar x dVar_x y dVar_y))
+                                 DExpTcZ
+                                 (DExpTcF2' x dVar_x y dVar_y)).
+%terminates DExpTcF (pres_var DExpTcF _ _).
+%worlds (var_judg_block) (pres_var _ _ _).
+%covers pres_var +DExpTcF +DExpTcZ -DExpTcFZ.
+%total DExpTcF (pres_var DExpTcF _ _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pres_val_judg_lam_inversion
+               : val_judg ST (lam_v Tx' (\x.F x)) (fn_t Tx T)
+		  -> ({x:exp} var_judg x Tx -> exp_judg ST (F x) T) -> type.
+%mode pres_val_judg_lam_inversion +DValTcLam -DExpTcF.
+-              : pres_val_judg_lam_inversion (val_judg_lam (\x. \d. DExpTcF x d)) (\x. \d. DExpTcF x d).
+%terminates {} (pres_val_judg_lam_inversion _ _).
+%worlds () (pres_val_judg_lam_inversion _ _).
+%covers pres_val_judg_lam_inversion +DValTcLam -DExpTcF.
+%total {} (pres_val_judg_lam_inversion _ _).

@@ -151,7 +151,8 @@ let main () =
                 "Error (Reconstruction): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              return Negative
+              raise SessionFatal
+              (* return Negative *)
 
           | Reconstruct.Violation err_string ->
               Format.fprintf
@@ -160,7 +161,8 @@ let main () =
                 "Error (\"Violation\") (Reconstruction): %s\n@?"
                 err_string;
               print_newline ();
-              return Negative
+              raise SessionFatal
+              (* return Negative *)
 
           | Check.Comp.Err err ->
               (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
@@ -170,7 +172,8 @@ let main () =
                 "Error (Checking): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              return Negative
+              raise SessionFatal
+              (* return Negative *)
 
           | Context.Error err ->
               Format.fprintf
@@ -178,7 +181,8 @@ let main () =
                 "Error (Context): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              return Negative
+              (* return Negative *)
+              raise SessionFatal
     in
     let per_session (errors, unsound, incomplete) (Session file_names) =
         Store.clear ()

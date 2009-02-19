@@ -1,0 +1,87 @@
+%%% Intuitionistic Sequent Calculus using inversion-based strategy
+%%% Tabling only used for loop-detection for implL rule
+%%% Follows Frank Pfenning ATP notes.
+
+%%% Author: Brigitte Pientka
+
+ctx : type.
+nil : ctx.
+; : ctx -> o -> ctx. %infix left 11 ;.
+
+search : o -> type.
+activeR : ctx -> o -> type.  % Conclusion (right)
+activeL : ctx -> o -> type.  
+focusR : o -> type.   % Conclusion (right)
+hyp : o -> type.      % Hypothesis (left)
+
+%name hyp H.
+%name activeR D.
+%name activeL F.
+%name focusR E.
+
+% tabled hyp.
+%tabled focusR.
+
+
+% Right asynchronous propositions
+
+truer : activeR G true.
+
+andr  : activeR G (A and B)
+	 <- activeR G A
+	 <- activeR G B.
+
+impr  : activeR G  (A imp B)
+	 <- activeR (G ; A) B.
+
+
+aRL_atom : activeR G (atom P)
+	    <- activeL G (atom P).
+
+aRL_false : activeR G false
+	     <- activeL G false.
+
+aRL_or : activeR G (A or B)
+	  <- activeL G (A or B).
+
+% Left asynchronous propositions
+a_nil : activeL nil R
+	 <- focusR R.
+
+andL : activeL (G ; (A and B)) R
+	<- activeL ((G ; A ); B) R.
+	     
+orL  : activeL (G ; (A or B)) R
+	<- activeL (G ; A) R
+	<- activeL (G ; B) R.
+
+falseL : activeL (G ; false) R.
+
+a_imp : activeL (G ; (A imp B)) R 
+       <- (hyp (A imp B) -> activeL G R).
+
+a_atom : activeL (G ; (atom A)) R 
+       <- (hyp (atom A) -> activeL G R).
+
+a_true : activeL (G ; true) R 
+       <-  activeL G R.
+
+
+% Right synchronous propositions
+axiom : (hyp (atom A) -> focusR (atom A)).
+
+f_or1: focusR (A or B)
+	<- search A.
+
+f_or2: focusR (A or B)
+	<- search B.
+
+% Left synchronous propositions
+impl  : (hyp (A imp B) -> focusR R)
+	 <- search A
+	 <- activeL (nil ; B) R.
+
+
+% top level search
+s_top: search A <- activeR nil A.
+

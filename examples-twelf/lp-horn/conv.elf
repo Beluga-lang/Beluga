@@ -1,0 +1,62 @@
+%%% Conversion to canonical form
+%%% Author: Frank Pfenning
+
+% Weak head reduction
+
+whr : pf A -> pf A -> type.  % Weak head reduction
+%name whr WHR.
+
+% Reductions
+whr_andl : whr (andel (andi D E)) D.
+whr_andr : whr (ander (andi D E)) E.
+whr_imp  : whr (impe (impi D) E) (D E).
+whr_forall : whr (foralle (foralli D) T) (D T).
+
+% Congruences on elimination rules
+whr_andel : whr (andel D) (andel D')
+	     <- whr D D'.
+whr_ander : whr (ander D) (ander D')
+	     <- whr D D'.
+whr_impe  : whr (impe D E) (impe D' E)
+	     <- whr D D'.
+whr_foralle : whr (foralle D T) (foralle D' T)
+	       <- whr D D'.
+
+% Conversion to canonical and atomic form.
+
+tocan : {A:o} pf A -> pf A -> type.  % Conversion to canonical form
+toatm : pf A -> pf A -> type.        % Conversion to atomic form
+%name tocan TC.
+%name toatm TA.
+
+tc_and : tocan (A and B) D (andi D1' D2')
+	  <- tocan A (andel D) D1'
+	  <- tocan B (ander D) D2'.
+
+tc_imp : tocan (A imp B) D (impi D')
+	  <- {u:pf A} toatm u u -> tocan B (impe D u) (D' u).
+
+tc_true : tocan (true) D (truei).
+
+tc_forall : tocan (forall A) D (foralli D')
+	      <- {a:i} tocan (A a) (foralle D a) (D' a).
+
+tc_whr : tocan (atom P) D D'
+	  <- whr D D''
+	  <- tocan (atom P) D'' D'.
+
+tc_atm : tocan (atom P) D D'
+	  <- toatm D D'.
+
+ta_impe : toatm (impe D (E : pf A)) (impe D' E')
+	   <- toatm D D'
+	   <- tocan A E E'.
+
+ta_andel : toatm (andel D) (andel D')
+	    <- toatm D D'.
+
+ta_ander : toatm (ander D) (ander D')
+	    <- toatm D D'.
+
+ta_foralle : toatm (foralle D T) (foralle D' T)
+	      <- toatm D D'.

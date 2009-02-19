@@ -1,0 +1,12 @@
+%%% into a proof in the Hilbert-style system and vice versa.
+%%% Expresses the equivalence of the two systems.
+%%% Author: Frank Pfenning
+
+abs : (|- A -> |- B) -> |- A => B -> type.
+
+aID	  : abs ([x] x) (MP (MP S K) K).
+aK	  : abs ([x] K) (MP K K).
+aS	  : abs ([x] S) (MP K S).
+aMP	  : abs ([x] MP (P x) (Q x)) (MP (MP S P') Q')
+	      <- abs P P' <- abs Q Q'.
+

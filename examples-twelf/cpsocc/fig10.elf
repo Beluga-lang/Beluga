@@ -1,0 +1,37 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Figure 10 : CPS abstract machine with a data stack 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+dstackR : croot -> ctriv -> type.
+dstackE : stack -> cexp -> ctriv -> type.
+dstackT : stack -> ctriv -> ctriv -> stack -> type.
+
+%mode dstackR +R -A.
+%mode dstackE +Xi +E -A.
+%mode dstackT +Xi +T -T' -Xi'.
+
+dstack_klam : dstackR (klam E) A
+              <- {k:ccont}
+                 {d:{xi:stack}{t:ctriv}{t':ctriv}
+                    dstackT xi t t' dot
+                    -> dstackE xi (cret k t) t'} 
+                 dstackE dot (E k) A.
+
+dstack_cret_vlam : dstackE Xi (cret (vlam E) T) A
+                   <- dstackT Xi T T' Xi'
+                   <- ({v:ctriv}
+                       ({t:ctriv}{xi:stack}dstackT (xi , t) v t xi)
+                       -> dstackE (Xi' , T') (E v) A).
+
+dstack_capp : dstackE Xi (capp T0 T1 C) A
+              <- dstackT Xi T1 T1' Xi1
+              <- dstackT Xi1 T0 (xlam [x:ctriv]klam (E x)) Xi0 
+              <- dstackE Xi0 (E T1' C) A.
+
+dstack_xlam : dstackT Xi (xlam R) (xlam R) Xi.
+
+
+
+%name dstackR DATAR.
+%name dstackE DATAE.
+%name dstackT DATAT.

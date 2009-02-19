@@ -1,0 +1,41 @@
+% Ordinary reduction.
+
+%query 2 *
+(app (lam [x] (app x x)) (app (lam [y] y) (lam [z] z))) --> M'.
+
+% Parallel reduction.
+
+%query 4 *
+(app (lam [x] (app x x)) (app (lam [y] y) (lam [z] z))) => M'.
+
+% Diamond property for two different parallel reductions
+% out of the 4 above
+
+%{
+%query 1 *
+dia (beta ([x:term] [R4:x => x] ap R4 R4)
+       (ap (lm ([x:term] [R5:x => x] R5)) (lm ([x:term] [R6:x => x] R6))))
+    (ap (lm ([x:term] [R7:x => x] ap R7 R7))
+       (beta ([x:term] [R8:x => x] R8) (lm ([x:term] [R9:x => x] R9))))
+    S' S''.
+}%
+%{
+% Ordinary reduction.
+
+R : (app (lam [x] (app x x)) (app (lam [y] y) (lam [z] z))) --> M'.
+
+% Parallel reduction.
+
+R : (app (lam [x] (app x x)) (app (lam [y] y) (lam [z] z))) => M'.
+
+((beta ([x:term] [R:x => x] ap R R)
+       (beta ([x:term] [R:x => x] R) (lm ([x:term] [R:x => x] R))))
+ ; beta ([x] [R] R) (lm [x] [R] R)
+ ; id) : M =>* M'.
+
+% The diamond property.
+
+sigma [R' : (app (lam [x] (app x x)) (app (lam [y] y) (lam [z] z))) => M']
+sigma [R'' : (app (lam [x] (app x x)) (app (lam [y] y) (lam [z] z))) => M'']
+dia R' R'' (S' : M' => N) (S'' : M'' => N).
+}%

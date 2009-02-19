@@ -1,0 +1,101 @@
+%query 1 *
+cls_sound
+   (run
+      (c_app ~ c_fix ~ c_lam ~ c_s ~ c_z ~ c_add1 ~ c_apply ~ c_case ~ c_1
+          ~ c_branch_s ~ c_s ~ c_s ~ c_app ~ c_^ ~ c_^ ~ c_1+ ~ c_fix ~ c_lam
+          ~ c_1 ~ c_apply ~ c_case ~ c_1 ~ c_branch_z ~ c_z ~ c_add1 ~ c_add1
+          ~ id))
+D.
+
+%{
+% Kills SML 110 right now!
+%query 1 1
+cev_complete
+   (fev_letn
+      (fev_letn
+          (fev_app
+              (fev_case_s
+                  (fev_app
+                      (fev_case_s
+                          (fev_s
+                              (fev_app
+                                  (fev_case_s
+                                      (fev_s
+                                          
+(fev_app
+    (fev_case_s
+        (fev_s
+            (fev_app (fev_case_z fev_1 (fev_^ fev_1)) (fev_^ fev_1)
+                (fev_app fev_lam fev_1
+                    (fev_^ (fev_^ (fev_^ (fev_1+ (fev_fix fev_lam))))))))
+        (fev_^ fev_1))
+    (fev_^ fev_1)
+    (fev_app fev_lam fev_1 (fev_^ (fev_^ (fev_^ (fev_1+ (fev_fix fev_lam))))))))
+                                      (fev_^ fev_1))
+                                  (fev_^ fev_1)
+                                  (fev_app fev_lam fev_1
+                                      (fev_^
+                                          (fev_^
+                                              (fev_^ (fev_1+ (fev_fix fev_lam))))))))
+                          (fev_^ fev_1))
+                      (fev_^ fev_1)
+                      (fev_app fev_lam
+                          (fev_app
+                              (fev_case_s
+                                  (fev_app (fev_case_z fev_1 (fev_^ fev_1))
+                                      (fev_^ fev_1)
+                                      (fev_app fev_lam
+                                          
+(fev_app (fev_case_z fev_z (fev_^ fev_1)) (fev_^ fev_1)
+    (fev_app fev_lam fev_1 (fev_^ (fev_^ (fev_^ (fev_1+ (fev_fix fev_lam)))))))
+                                          (fev_^
+                                              (fev_^
+                                                  (fev_^
+                                                      (fev_^+
+                                                          (fev_1+
+                                                              (fev_fix fev_lam))))))))
+                                  (fev_^ fev_1))
+                              (fev_^ fev_1)
+                              (fev_app fev_lam fev_1
+                                  (fev_^
+                                      (fev_^ (fev_^ (fev_1+ (fev_fix fev_lam)))))))
+                          (fev_^
+                              (fev_^ (fev_^ (fev_^+ (fev_1+ (fev_fix fev_lam))))))))
+                  (fev_^ fev_1))
+              (fev_s (fev_s (fev_s fev_z)))
+              (fev_app fev_lam (fev_s (fev_s fev_z)) (fev_1+ (fev_fix fev_lam))))))
+C.
+}%
+
+%{
+sigma [D:feval empty (s' z') W]
+cev_complete D C.
+
+sigma [D:feval empty (app' (lam' 1) z') W]
+cev_complete D C.
+
+% Doubling 1
+sigma [D:feval empty (app' (fix' (lam' (case' 1 z'
+			    (s' (s' (app' (1 ^ ^) 1))))))
+		           (s' z')) W]
+cev_complete D C.
+}%
+
+%{
+% This is VERY slow
+% Multiplication: 2 * 3 = 6.
+sigma [D:feval empty
+    (let'
+      (fix' (lam' (lam' (case' (1 ^) 1 (s' (app' (app' (1 ^ ^ ^) 1) (1 ^)))))))
+      (let'
+          (fix'
+              (lam'
+                  (lam'
+                      (case' (1 ^) z'
+                          (app'
+                              (app' (1 ^ ^ ^ ^)
+                                  (app' (app' (1 ^ ^ ^) 1) (1 ^))) (1 ^))))))
+          (app' (app' 1 (s' (s' z'))) (s' (s' (s' z'))))))
+	   W]
+cev_complete D C.
+}%

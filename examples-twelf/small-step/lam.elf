@@ -1,0 +1,135 @@
+% Progress and preservation for the Church-style simply-typed lambda calculus
+
+tp : type.
+tm : type.
+
+% Types
+=> : tp -> tp -> tp.  %infix left 5 =>.
+
+% Terms
+@   : tm -> tm -> tm.  %infix left 5 @.
+lam : tp -> (tm -> tm) -> tm.
+
+% Typing
+is : tm -> tp -> type. %infix left 5 is.
+
+is_@   : E1 is (T1 => T2) ->
+         E2 is T1 ->
+       % -------------------   
+         (E1 @ E2) is T2.
+
+is_lam : ({x:tm} x is T1 -> (E x) is T2) ->
+       % -----------------------------------
+         ((lam T1 ([x] E x)) is (T1 => T2)).
+
+% Values
+value : tm -> type. 
+
+value_lam : value (lam T ([x] E x)).
+
+% Operational semantics
+
+~> : tm -> tm -> type. %infix left 5 ~>.
+
+~>_@1 : (E1 ~> E1') ->
+      % --------------------------
+        ((E1 @ E2) ~> (E1' @ E2)).
+
+~>_@2 : value E1 ->
+        (E2 ~> E2') ->
+      % --------------------------
+        ((E1 @ E2) ~> (E1 @ E2')).
+
+~>_@3 : value E2 ->
+      % --------------------------
+        (((lam T ([x] E1 x)) @ E2) ~> (E1 E2)).
+
+% Preservation
+pres : (E is T) -> (E ~> E') -> (E' is T) -> type.
+%mode pres +D1 +EV -D2.
+
+pres_@1 : pres D1 EV1 D1' ->
+        % ----------------------------------------
+          pres (is_@ D1 D2) (~>_@1 EV1) (is_@ D1' D2).
+         
+pres_@2 : pres D2 EV2 D2' ->
+        % --------------------------------------------
+          pres (is_@ D1 D2) (~>_@2 V EV2) (is_@ D1 D2').
+
+pres_@3 :
+        % -----------------------------------------------------------------------
+          pres (is_@ (is_lam ([x:tm] [d:x is T1] D1 x d)) D2) (~>_@3 V) (D1 _ D2).
+
+%worlds () (pres D1 E D2).
+%total E (pres _ E _).
+
+% Progress (much trickier)
+
+% Introduce a new type family to distinguish between the case where a term can 
+% take a step and it is a value. 
+step_or_val : tm -> type.
+
+step : (E ~> E') -> step_or_val E.
+val : (value E) -> step_or_val E.
+
+%{
+% The usual declarative proof of progress will not work because it 
+% requires Twelf to perform output splitting when it attempts to coverage
+% check the application case.
+
+prog : (E is T) -> step_or_val E -> type.
+%mode prog +D -SV.
+
+prog_@1  : prog D1 (step EV) ->
+         % -----------------------------------
+           prog (is_@ D1 D2) (step (~>_@1 EV)). 
+
+prog_@2  : prog D1 (val VL) ->
+           prog D2 (step EV) ->
+         % -----------------------------------
+           prog (is_@ D1 D2) (step (~>_@2 VL EV)). 
+
+prog_@3  : prog D1 (val VL1) ->
+           prog D2 (val VL2) ->
+         % -----------------------------------
+           prog (is_@ D1 D2) (step (~>_@3 VL2)). 
+
+prog_lam : 
+         % --------------------------------------------------------
+           prog (is_lam ([x:tm] [d:x is T1] D1 x d)) (val value_lam).
+
+%worlds () (prog D SV).
+%total D (prog D _).
+}%
+
+% Instead we need to factor the subcases for application into a single lemma
+
+prog_@_lemma :  step_or_val E1 -> step_or_val E2 -> step_or_val (E1 @ E2) -> type.
+%mode prog_@_lemma +SV1 +SV2 -SV3.
+
+prog_@_lemma_s  : prog_@_lemma (step EV) _ (step (~>_@1 EV)).
+prog_@_lemma_vs : prog_@_lemma (val VL) (step EV) (step (~>_@2 VL EV)).
+prog_@_lemma_vs : prog_@_lemma (val VL1) (val VL2) (step (~>_@3 VL2)).
+
+%worlds () (prog_@_lemma SV1 SV2 SV3).
+%total {SV1 SV2} (prog_@_lemma SV1 SV2 _).
+
+% Now we can prove progress by simply using the lemma 
+
+prog : (E is T) -> step_or_val E -> type.
+%mode prog +D -SV.
+
+prog_@   : prog_@_lemma SV1 SV2 SV3 ->
+           prog D1 SV1 ->
+           prog D2 SV2 ->
+         % ------------------------------
+           prog (is_@ D1 D2) SV3. 
+
+prog_lam : 
+         % --------------------------------------------------------
+           prog (is_lam ([x:tm] [d:x is T1] D1 x d)) (val value_lam).
+
+%worlds () (prog D SV).
+%total D (prog D _).
+
+% QED

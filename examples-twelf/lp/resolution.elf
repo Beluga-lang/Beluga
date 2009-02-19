@@ -1,0 +1,55 @@
+% Resolution without unification
+
+solve'  : goal -> type.
+assume' : prog -> type.
+resolve : prog -> p -> goal -> type.
+%name solve' S'.
+%name assume' H'.
+%name resolve R.
+% Next lines should give an error for exists'.
+% %mode solve' +G.
+% %mode assume' +D.
+% %mode resolve +D +P -G.
+
+s'_and : solve' (G1 and' G2)
+	 <- solve' G1
+	 <- solve' G2.
+
+s'_imp : solve' (D2 imp' G1)
+	 <- (assume' D2 -> solve' G1).
+
+s'_true : solve' (true').
+
+s'_forall : solve' (forall' G1)
+	    <- {a:i} solve' (G1 a).
+
+s'_eqp : solve' (P == P).
+
+s'_orl : solve' (G1 or' G2)
+	  <- solve' G1.
+
+s'_orr : solve' (G1 or' G2)
+	  <- solve' G2.
+
+s'_exists : {T:i}
+	     solve' (exists' G1)
+	     <- solve' (G1 T).
+
+s'_atom : solve' (atom' P)
+	   <- assume' D
+	   <- resolve D P G
+	   <- solve' G.
+
+r_and : resolve (D1 and^ D2) P (G1 or' G2)
+	   <- resolve D1 P G1
+	   <- resolve D2 P G2.
+
+r_imp  : resolve (G2 imp^ D1) P (G1 and' G2)
+	   <- resolve D1 P G1.
+
+r_true : resolve (true^) P (false').
+
+r_forall : resolve (forall^ D1) P (exists' G1)
+	     <- {a:i} resolve (D1 a) P (G1 a).
+
+r_atom : resolve (atom^ Q) P (Q == P).

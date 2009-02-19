@@ -1,0 +1,22 @@
+%%% Simply Typed Lambda Calculus w/ small-step, allocation semantics
+%%% Author: Matthew Fluet (June 2005)
+%%% nat.elf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Naturals
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+nat       : type.   %name nat N.
+
+z_nat          : nat.
+s_nat          : nat -> nat.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Nat Less-than
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+nat_lt         : nat -> nat -> type.
+%mode nat_lt +N1 +N2.
+nat_lt_z       : nat_lt z_nat (s_nat _).
+nat_lt_s       : nat_lt (s_nat N1) (s_nat N2)
+		  <- nat_lt N1 N2.
+%terminates N1 (nat_lt N1 _).
+%worlds () (nat_lt _ _).

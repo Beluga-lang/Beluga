@@ -1,0 +1,14 @@
+An implementation of a meta-interpreter for the implicational fragment of
+intuitionistic non-commutative linear logic (INCLL).  The interpreter and
+code are described in the technical report given below.
+
+Author: Jeff Polakow
+Edited (slightly): Frank Pfenning
+
+References:
+
+Jeff Polakow and Frank Pfenning
+Ordered Linear Logic Programming
+Technical Report CMU-CS-98-183
+December 1998
+http://www.cs.cmu.edu/~fp/www/papers/CMU-CS-98-183.ps.gz

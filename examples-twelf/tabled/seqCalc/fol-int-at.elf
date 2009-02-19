@@ -1,0 +1,68 @@
+%%% Cut-Free Intuitionistic Sequent Calculus
+%%% First-order Logic
+%%% Tabling achieves loop-detection based sequent calculus
+%%% Author: Frank Pfenning
+%%% Modified: Brigitte Pientka
+
+hyp  : o -> type.  % Hypotheses (left)
+conc : o -> type.  % Conclusion (right)
+%name hyp H.
+%name conc D.
+%tabled hyp.
+%tabled conc.
+
+axiom : (hyp (atom P) -> conc (atom P)).
+truer : conc (true).
+
+andr  : conc (A and B)
+	 <- conc A
+	 <- conc B.
+
+andl1 : (hyp (A and B) -> conc C)
+	 <- (hyp A -> conc C).
+
+
+andl2 : (hyp (A and B) -> conc C)
+	 <- (hyp B -> conc C).
+
+impr  : conc (A imp B)
+	 <- (hyp A -> conc B).
+
+impl  : (hyp (A imp B) -> conc C)
+	 <- conc A
+	 <- (hyp B -> conc C).
+
+forallr : ({a:i} conc (A a))
+	   -> conc (forall A). 
+
+foralll : {T:i} (hyp (A T) -> conc C)
+	   -> (hyp (forall A) -> conc C).
+
+
+orr1  : conc A
+	 -> conc (A or B).
+
+orr2  : conc B
+	 -> conc (A or B).
+
+orl   : (hyp A -> conc C)
+	 -> (hyp B -> conc C)
+	 -> (hyp (A or B) -> conc C).
+
+
+notr  : ({p:o} hyp A -> conc p)
+	 -> conc (not A).
+
+notl  : conc A
+	 -> (hyp (not A) -> conc C).
+
+falsel : (hyp (false) -> conc C).
+
+existsr : {T:i} conc (A T)
+	   -> conc (exists A).
+
+existsl : ({a:i} hyp (A a) -> conc C)
+	   -> (hyp (exists A) -> conc C).
+
+
+

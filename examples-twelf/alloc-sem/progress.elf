@@ -1,0 +1,53 @@
+%%% Simply Typed Lambda Calculus w/ small-step, allocation semantics
+%%% Author: Matthew Fluet (June 2005)
+%%% progress.elf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Progress: If |- M, then M ok (i.e., M irred or M ==> M').
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+prog           : |-stwf S ST ->
+                 |-exp ST E T
+		  -> mach_ok S E -> type.
+%mode prog +DSTcWf +DExpTc -DMachOk.
+
+-loc           : prog DStTcWf
+                      (|-exp_loc _)
+		      (mach_ok_irred exp_irred_loc).
+
+-lam           : prog DStTcWf
+                      (|-exp_lam _)
+		      (mach_ok_step (lam_alloc_step DStAlloc))
+		  <- prog_st_alloc _ DStTcWf DStAlloc.
+-app           : prog DStTcWf
+                      (|-exp_app DExpTcE2 DExpTcE1)
+                      DMachOk
+		  <- prog DStTcWf DExpTcE1 DMachOk1
+		  <- prog DStTcWf DExpTcE2 DMachOk2
+		  <- prog_app_aux _ _ DStTcWf DExpTcE1 DMachOk1 DMachOk2 DMachOk.
+
+-unit          : prog DStTcWf
+                      (|-exp_unit)
+		      (mach_ok_step (unit_alloc_step DStAlloc))
+		  <- prog_st_alloc _ DStTcWf DStAlloc.
+-letunit       : prog DStTcWf
+		      (|-exp_letunit DExpTcE2 DExpTcE1)
+                      DMachOk
+		  <- prog DStTcWf DExpTcE1 DMachOk1
+		  <- prog_letunit_aux _ _ DStTcWf DExpTcE1 DMachOk1 DMachOk.
+
+-pair          : prog DStTcWf
+                      (|-exp_pair DExpTcE2 DExpTcE1)
+                      DMachOk
+		  <- prog DStTcWf DExpTcE1 DMachOk1
+		  <- prog DStTcWf DExpTcE2 DMachOk2
+		  <- prog_pair_aux _ _ DStTcWf DMachOk1 DMachOk2 DMachOk.
+-letpair       : prog DStTcWf
+                      (|-exp_letpair DExpTcF2 DExpTcE1)
+                      DMachOk
+                  <- prog DStTcWf DExpTcE1 DMachOk1
+		  <- prog_letpair_aux _ _ DStTcWf DExpTcE1 DMachOk1 DMachOk.
+
+%terminates DExpTc (prog _ DExpTc _).
+%worlds () (prog _ _ _).
+%covers prog +DSTcWf +DExpTc -DMachOk.
+%total DExpTc (prog _ DExpTc _).

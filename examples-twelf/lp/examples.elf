@@ -1,0 +1,26 @@
+% Needed to allow extension of p, i, o
+% as of Twelf 1.5R2 (March 2005)
+%thaw p i o.
+
+q0 : p.
+r0 : p.
+s0 : p.
+
+0 : i.
+s : i -> i.
+
+nat : i -> p.
+natz : assume (atom (nat 0)).
+nats : assume (forall [X] atom (nat X) imp atom (nat (s X))).
+
+plus : i -> i -> i -> p.
+
+plz : assume (forall [Y] atom (plus 0 Y Y)).
+pls : assume (forall [X] forall [Y] forall [Z]
+	      atom (plus X Y Z) imp atom (plus (s X) Y (s Z))).
+
+
+double : i -> i -> p.
+db : assume' (atom^ (double 0 0) and^
+	      (forall^ [X] forall^ [Y]
+		 atom' (double X Y) imp^ atom^ (double (s X) (s (s Y))))).

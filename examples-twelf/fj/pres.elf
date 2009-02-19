@@ -1,0 +1,108 @@
+%{ This is part of a proof of the soundness of Featherweight Java (Atsushi Igarashi,
+Benjamin Pierce and Philip Wadler) in the Twelf logical Framework.
+It was developed by Stephanie Weirich <sweirich@cis.upenn.edu> and
+Geoffrey Washburn <geoffw@cis.upenn.edu>. }%
+
+% Preservation Theorem
+
+pres : class_table_typing CT -> typing CT E1 C1 -> reduction CT E1 E2 -> 
+       typing CT E2 C2 -> subtyping CT C2 C1 -> type.
+%mode pres +CT +P +D -Q -SB.
+
+pres_elist : class_table_typing CT -> typing_list CT EL1 CS1 -> reduction_list CT EL1 EL2 ->
+             typing_list CT EL2 CS1 -> type.
+%mode pres_elist +CT +PL +DL -QL.
+
+
+pres_rl_hd : sub_trans SB1 SB2 SB3 -> pres CT P1 D1 Q1 SB1 -> 
+          % --------------------------------------------------------------------------------
+             pres_elist CT (tl_cons SB2 PL1 P1) (rl_hd D1) (tl_cons SB3 PL1 Q1).
+
+pres_rl_tl : pres_elist CT PL1 DL1 QL1 ->
+          % --------------------------------------------------------------------
+             pres_elist CT (tl_cons SB PL1 P1) (rl_tl VL DL1) (tl_cons  SB QL1 P1).
+
+
+pres_rc_field : 
+       {D1 : reduction CT E1 E2} 
+		 {P1 : typing CT E1 D }
+		 {Q1 : typing CT E2 C }
+		 {SB : subtyping CT C D}
+		 {FS1 : fields CT D N1 DG} 
+		 {FS2 : fields CT C N3 CS}
+		 {APP : cnappend DG EF CS PL}
+		 {CNTH1 : cnnth_opt FI DG CI}
+		 {CNTH2 : cnnth_opt FI CS CI}
+		 {WCT : class_table_typing CT}
+		    append_nth CI CNTH1 APP CNTH2 
+		 -> sub_fields SB FS1 APP FS2 
+		 -> pres WCT P1 D1 Q1 SB 
+		 -> pres WCT (t_field CNTH1 FS1 P1) (rc_field D1) (t_field CNTH2 FS2 Q1) s_refl.
+
+pres_r_field :  
+      {ENTH : enth_opt FI ES EI}
+		{CNTH1: cnnth_opt FI CS CI}
+		{FS1  : fields CT C N CS}
+      {FS2  : fields CT C N2 CS2}
+		{PL1  : typing_list CT ES CS2}
+		{SB   : subtyping CT C0 CI}
+		{Q    : typing CT EI C0}
+      {CNTH2 : cnnth_opt FI CS2 CI}
+	   typing_list_proj_lemma PL1 ENTH CNTH2 SB Q ->
+	   refine_really EQ CNTH1 CNTH2 ->
+      fields_unique FS1 FS2 EQ ->
+		pres WCT (t_field CNTH1 FS1 (t_new PL1 FS2)) (r_field ENTH) Q SB.
+
+pres_rc_invk_arg : pres_elist WCT PL1 DL1 QL1 ->
+           % --------------------------------------------------
+             pres WCT 
+						(t_invk PL1 MT1 P1) (rc_invk_arg VL DL1)
+                  (t_invk QL1 MT1 P1) (s_refl).
+
+
+% Needs a lemma about mtype under subtyping.
+pres_rc_invk_recv: sub_mtype WCT MT1 SB1 MT2	
+						  -> pres WCT P1 D1 Q1 SB1
+					 % --------------------------------------------------
+						  -> pres WCT (t_invk PL1 MT1 P1) (rc_invk_recv D1) (t_invk PL1 MT2 Q1) (s_refl).
+
+pres_r_invk :
+              {PL1 : typing_list CT ES DS}
+				  {P1  : typing CT (new D0 EL1) C0}  % |- new D0 EL1 : C0
+ 				  {MT1 : mtype CT M C0 DS C}         % |- M : DS -> C   in class C0
+				  {MB  : mbody CT M D0 (BE : bexp CS)}
+              {INV : invoc BE ES (new D0 EL1) E} % 
+              {MT2 : mtype CT M D0 DS C}         % |- M : DS -> C   in class D0
+				  {TBE : typing_bexp CT BE D0 C1}    % this : D0 |- BE : C1 
+				  {SB  : subtyping CT C1 C}          % C1 < C
+				  {PL2 : typing_list CT ES CS}
+              {P2  : typing CT (new D0 EL1) D0}
+              {X   : typing CT E C2}
+              {SB2 : subtyping CT C2 C1}                
+             sub_trans SB2 SB SB3 ->
+				 invoc_lemma WCT PL2 TBE INV P2 X SB2 ->
+             refine_typing_list CSEQ PL1 PL2 -> 
+             mtype_mbody WCT MT2 MB TBE SB CSEQ ->
+				 refineCEQ CEQ MT1 MT2 ->											 
+				 inv_new P1 P2 ->								  
+             inv_new2 P1 CEQ ->
+           % -----------------------------------------------------
+             pres WCT (t_invk PL1 MT1 P1) (r_invk VL MB INV) X SB3.
+               
+
+pres_new : pres_elist WCT PL1 DL1 QL1 ->
+         % -------------------------------------------------------------------------
+           pres WCT (t_new PL1 FS) (rc_new_arg DL1) (t_new QL1 FS) (s_refl).
+
+
+pres_cast1 : pres WCT P1 D1 Q1 SB2 -> 
+           % ------------------------------------------------------- 
+             pres WCT (t_cast P1) (rc_cast D1) (t_cast Q1) (s_refl).
+
+pres_cast2 : inv_new P1 P2 ->
+           % -----------------------------------------------
+             pres WCT (t_cast P1) (r_cast SB) P2 SB.
+
+
+%worlds () (pres_elist CT PL DL QL ) (pres CT P D Q SB).
+%total (DL D) (pres_elist CT PL DL QL) (pres CT2 P D Q SB).

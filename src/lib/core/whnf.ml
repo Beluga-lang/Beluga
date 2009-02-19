@@ -294,12 +294,12 @@ and normDecl (decl, sigma) = match decl with
   | TypDecl (x, tA) ->
       TypDecl (x, normTyp (tA, sigma))
 
-let rec normKind tK = match tK with
-  | Typ ->
+let rec normKind sK = match sK with
+  | (Typ, _s) ->
       Typ
 
-  | PiKind ((decl, dep), tK) ->
-      PiKind ((normDecl (decl, LF.id), dep), normKind tK)
+  | (PiKind ((decl, dep), tK), s) ->
+      PiKind ((normDecl (decl, s), dep), normKind (tK, LF.dot1 s))
 
 let rec normDCtx cPsi = match cPsi with
   | Null ->
@@ -685,6 +685,9 @@ let rec convTyp' sA sB = match (sA, sB) with
       false
 
 and convTyp sA sB = convTyp' (whnfTyp sA) (whnfTyp sB)
+
+
+
 
 (* convTypRec((recA,s), (recB,s'))
  *

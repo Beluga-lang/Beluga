@@ -12,7 +12,8 @@ type error =
   | SigmaIllTyped  of LF.mctx * LF.mctx  * LF.dctx * 
                       LF.trec_clo (* inferred *) * LF.trec_clo (* expected *)
 
-  | KindMismatch   of LF.mctx * LF.dctx * LF.tclo         (* cO ; cD ; cPsi |- sA <=/= Typ                 *)
+  | KindMismatch   of LF.mctx * LF.dctx * LF.sclo  * (LF.kind * LF.sub)
+      (* cO ; cD ; cPsi |- sA <=/= Typ                 *)
   | TypMismatch    of LF.mctx * LF.mctx *  LF.dctx        (* cO ; cD ; cPsi |- sR => sP but sP =/= sA      *)
                      * LF.nclo * LF.tclo (* expected *) * LF.tclo (* inferred *)
 

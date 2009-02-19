@@ -1,0 +1,143 @@
+%%% Mapping CLS computations to evaluations.
+%%% This expresses the soundness proof for the CLS machine.
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+%%% The postfix ordering for computations.
+%%% This is ordering is well-founded.
+
+< : (st KS1 P1 S1) =>* (st KS P S)
+     -> (st KS2 P2 S2) =>* (st KS P S)
+     -> type.
+%infix none 8 <.
+%mode < +C +C'.
+
+sub_imm : C < R ~ C.
+
+sub_med : C < C'
+       -> C < R ~ C'.
+
+%{
+Lemma: The postfix relation on computations is transitive:
+  For every  R1 :: C1 < C2  and  R2 :: C2 < C3
+  there exists an  R3 :: C1 < C3.
+
+Proof: By induction on the structure of R2.
+}%
+
+trans* : C1 < C2 -> C2 < C3 -> C1 < C3 -> type.
+%mode trans* +R1 +R2 -R3.
+
+trans*_imm : trans* R1 (sub_imm) (sub_med R1).
+trans*_med : trans* R1 (sub_med R2) (sub_med R3)
+	  <- trans* R1 R2 R3.
+
+%{
+Splitting Lemma:
+  If C :: (st (KS ;; K) (ev F & P) S) =>* (st (emptys) (done) (empty ; W'))
+  then there exists a value W, an evaluation
+    D :: feval K F W
+  and a computation
+    C' :: (st KS P (S ; W)) =>* (st (emptys) (done) (empty ; W'))
+  such that C' < C.
+
+Proof: By complete induction on C.
+}%
+
+spl : {C : (st (KS ;; K) (ev F & P) S) =>* (st (emptys) (done) (empty ; W'))}
+      feval K F W ->
+      {C' : (st KS P (S ; W)) =>* (st (emptys) (done) (empty ; W'))}
+      C' < C -> type.
+%mode spl +C -D -C' -C'<C.
+
+% C = id  is impossible, since  (ev F & P)  is different from  (done).
+
+% Variables
+
+spl_1 : spl (c_1 ~ C1) (fev_1) C1 (sub_imm).
+
+spl_^ : spl (c_^ ~ C1) (fev_^ D1) C2 (sub_med C2<C1)
+      <- spl C1 D1 C2 C2<C1.
+
+spl_1+ : spl (c_1+ ~ C1) (fev_1+ D1) C2 (sub_med C2<C1)
+       <- spl C1 D1 C2 C2<C1.
+
+spl_^+ : spl (c_^+ ~ C1) (fev_^+ D1) C2 (sub_med C2<C1)
+       <- spl C1 D1 C2 C2<C1.
+
+% Natural Numbers
+
+spl_z : spl (c_z ~ C1) (fev_z) C1 (sub_imm).
+spl_s : spl (c_s ~ C1) (fev_s D1) C2' (sub_med C2'<C1)
+	 <- spl C1 D1 (c_add1 ~ C2') C2<C1
+	 <- trans* (sub_imm) C2<C1 C2'<C1.
+
+spl_case_z : spl (c_case ~ C1) (fev_case_z D2 D1) C3 (sub_med C3<C1)
+	      <- spl C1 D1 (c_branch_z ~ C2') C2<C1
+	      <- spl C2' D2 C3 C3<C2'
+	      <- trans* (sub_imm) C2<C1 C2'<C1
+	      <- trans* C3<C2' C2'<C1 C3<C1.
+spl_case_s : spl (c_case ~ C1) (fev_case_s D3 D1) C3 (sub_med C3<C1)
+	      <- spl C1 D1 (c_branch_s ~ C2') C2<C1
+	      <- spl C2' D3 C3 C3<C2'
+	      <- trans* (sub_imm) C2<C1 C2'<C1
+	      <- trans* C3<C2' C2'<C1 C3<C1.
+
+% Pairs
+
+spl_pair : spl (c_pair ~ C1) (fev_pair D2 D1) C3' (sub_med C3'<C1)
+	 <- spl C1 D1 C2 C2<C1
+	 <- spl C2 D2 (c_mkpair ~ C3') C3<C2
+	 <- trans* (sub_imm) C3<C2 C3'<C2
+	 <- trans* C3'<C2 C2<C1 C3'<C1.
+
+spl_fst : spl (c_fst ~ C1) (fev_fst D1) C2' (sub_med C2'<C1)
+	<- spl C1 D1 (c_getfst ~ C2') C2<C1
+	<- trans* (sub_imm) C2<C1 C2'<C1.
+
+spl_snd : spl (c_snd ~ C1) (fev_snd D1) C2' (sub_med C2'<C1)
+	<- spl C1 D1 (c_getsnd ~ C2') C2<C1
+	<- trans* (sub_imm) C2<C1 C2'<C1.
+
+% Functions
+
+spl_lam : spl (c_lam ~ C1) (fev_lam) C1 (sub_imm).
+
+spl_app : spl (c_app ~ C1)
+	   (fev_app D3 D2 D1) C4
+	   (sub_med C4<C1)
+	    <- spl C1 D1 C2 C2<C1
+	    <- spl C2 D2 (c_apply ~ C3') C3<C2
+	    <- spl C3' D3 C4 C4<C3'
+	    <- trans* C3<C2 C2<C1 C3<C1
+	    <- trans* (sub_imm) C3<C1 C3'<C1
+	    <- trans* C4<C3' C3'<C1 C4<C1.
+
+% Definitions
+
+spl_letv : spl (c_letv ~ C1) (fev_letv D2 D1) C3 (sub_med C3<C1)
+	    <- spl C1 D1 (c_bind ~ C2') C2<C1
+	    <- spl C2' D2 C3 C3<C2'
+	    <- trans* (sub_imm) C2<C1 C2'<C1
+	    <- trans* C3<C2' C2'<C1 C3<C1.
+
+spl_letn : spl (c_letn ~ C2) (fev_letn D2) C3 (sub_med C3<C2)
+	    <- spl C2 D2 C3 C3<C2.
+
+% Recursion
+
+spl_fix : spl (c_fix ~ C1) (fev_fix D1) C2 (sub_med C2<C1)
+	   <- spl C1 D1 C2 C2<C1.
+
+%{
+Soundness Theorem: For every complete computation
+  E :: ceval K F W
+there exists an evaluation
+  D :: feval K F W
+
+Proof: By the splitting lemma for computations.
+}%
+
+cls_sound : ceval K F W -> feval K F W -> type.
+%mode cls_sound +CE -D.
+
+clss : cls_sound (run C) D <- spl C D (id) Id<C.

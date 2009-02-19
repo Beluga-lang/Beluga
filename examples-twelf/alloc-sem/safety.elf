@@ -1,0 +1,35 @@
+%%% Simply Typed Lambda Calculus w/ small-step, allocation semantics
+%%% Author: Matthew Fluet (June 2005)
+%%% safety.elf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Safety: If |- M1 and M1 ==>* M2, then M2 ok.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+safety         : |-stwf S ST ->
+                 |-exp ST E T ->
+                 step* S E S' E'
+                  -> mach_ok S' E' -> type.
+%mode safety +DStTcWf +DExpTc +DSteps -DMachOk.
+
+-refl          : safety DStTcWf
+                        DExpTc
+                        (refl_step*)
+                        DMachOk
+		  <- prog DStTcWf DExpTc DMachOk.
+-trans         : safety DStTcWf
+                        DExpTc
+                        (trans_step* DSteps23 DSteps12)
+                        DMachOk3
+		  <- pres* DSteps12 DStTcWf DExpTc _ DStTcWf2 DExpTc2
+		  <- safety DStTcWf2 DExpTc2 DSteps23 DMachOk3.
+-step          : safety DStTcWf
+                        DExpTc
+                        (step_step* DStep)
+                        DMachOk'
+		  <- pres DStep DStTcWf DExpTc DSttpExtend DStTcWf' DExpTc'
+		  <- prog DStTcWf' DExpTc' DMachOk'.
+
+%terminates DSteps (safety _ _ DSteps _).
+%worlds () (safety _ _ _ _).
+%covers safety +DStTcWf +DExpTc +DSteps -DMachOk.
+%total DSteps (safety _ _ DSteps _).

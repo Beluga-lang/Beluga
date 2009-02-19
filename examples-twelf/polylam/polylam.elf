@@ -1,0 +1,23 @@
+tp : type.
+=> : tp -> tp -> tp.  %infix right 10 =>.
+all : (tp -> tp) -> tp.
+
+tm : tp -> type.
+lam : (tm A -> tm B) -> tm (A => B).
+app : tm (A => B) -> tm A -> tm B.
+tlam : ({a:tp} tm (A a)) -> tm (all A).
+tapp : tm (all A) -> {B:tp} tm (A B).
+
+nat = all [a] a => (a => a) => a.
+zero = tlam [a] lam [z:tm a] lam [s:tm (a => a)] z.
+succ = lam [x:tm nat] tlam [a:tp] lam [z:tm a] lam [s:tm (a => a)]
+         app s (app (app (tapp x a) z) s).
+succ' : tm (nat => nat)
+      = lam [x] tlam [a] lam [z] lam [s]
+         app s (app (app (tapp x a) z) s).
+plus = lam [x:tm nat] lam [y:tm nat] (app (app (tapp y nat) x) succ).
+
+times = lam [x: tm nat] lam [y:tm nat] (app (app (tapp y nat) zero) (app plus x)).
+exp   = lam [x: tm nat] lam [y:tm nat] (app (app (tapp y nat) (app succ zero)) (app times x)).
+
+% idnat = [x: tm nat] x.

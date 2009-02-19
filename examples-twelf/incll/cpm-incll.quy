@@ -1,0 +1,47 @@
+%
+% Example queries
+%
+
+% ceval (app (lam [x] (vl x)) z) V.
+% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>> 
+%	^(ev (appm (lamm [x] (vl x)) z)))).
+%query 1 1 (sqnt rnil rnil rnil rnil (^(return V) =>> 
+	^(ev (appm (lamm [x] (vl x)) z)))).
+
+% Doubling 3
+% ceval (app (fix [double] lamm [x]
+%              case (vl x) z
+%              [x'] s (s (appm double (vl x')))) (s (s (s z))))
+% V.
+%
+% this query has successfully completed on my machine (~ 4 minutes to run)
+%
+
+% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>> 
+% 	^(ev (appm (fix [double] lamm [x]
+%              case (vl x) z
+%              [x'] s (s (appm double (vl x')))) (s (s (s z)))) ))).
+
+% Computing 2 * 3
+% ceval (letv (lam [x] fix [add] lam [y]
+%               case (vl y) (vl x) [y'] s (app add (vl y'))) [add]
+%         (letv (lam [x] fix [mult] lam [y]
+%                  case (vl y) z ([y'] (app (app (vl add) (vl x))
+%                                         (app mult (vl y'))))) [mult]
+%            (app (app (vl mult) (s (s z))) (s (s (s z))))))
+% V.
+%
+% this has produced one right answer, but after 2 hours it still hadn't decided
+%   if there were any others on my machine.
+%
+% has successfully run, in about 5 hours.
+%
+
+% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>> 
+%	^(ev (letv (lamm [x] fix [add] lamm [y]
+%               case (vl y) (vl x) [y'] s (appm add (vl y'))) [add]
+%         (letv (lamm [x] fix [mult] lamm [y]
+%                  case (vl y) z ([y'] (appm (appm (vl add) (vl x))
+%                                         (appm mult (vl y'))))) [mult]
+%            (appm (appm (vl mult) (s (s z))) (s (s (s z)))))) ))).
+

@@ -1,0 +1,58 @@
+% Success and failure continuations for Horn-clause fragment
+% Restriction to the Horn clause fragment is not reflected
+% in the typing.
+% THIS IS COMPLETELY WRONG; it requires closures.
+
+csolve : prog -> goal -> goal -> goal -> type.
+
+cs_and : csolve D (G1 and' G2) SC FC
+	  <- csolve D G1 (G2 and' SC) FC.
+
+cs_true : csolve D (true') (G1 and' SC2) FC
+	   <- csolve D G1 SC2 FC.
+
+cs_true* : csolve D (true') (true') FC.
+
+cs_true' : csolve D (true') SC (G1 or' FC2)
+	    <- csolve D G1 SC FC2.
+
+% csolve D (true') SC (false')  meta-fails.
+
+cs_eqp : csolve D (P == P) (G1 and' SC2) FC
+	  <- csolve D G1 SC2 FC.
+
+cs_eqp* : csolve D (P == P) (true') FC.
+
+cs_eqp' : csolve D (Q == P) SC (G1 or' FC2)
+	   <- csolve D G1 SC FC2.
+
+% csolve D (Q == P) SC (false')  meta-fails.
+
+cs_or : csolve D (G1 or' G2) SC FC
+	 <- csolve D G1 SC (G2 or' FC).
+
+cs_false : csolve D (false') SC (G1 or' FC2)
+	    <- csolve D G1 SC FC2.
+
+% csolve D (false') SC (false')  meta-fails
+
+cs_exists : {T:i}
+	     csolve D (exists' G1) SC FC
+	     <- csolve D (G1 T) SC FC.
+
+cs_atom : csolve D (atom' P) SC FC
+	   <- resolve D P G
+	   <- csolve D G SC FC.
+
+top_solve : prog -> goal -> type.
+
+ts : top_solve D G
+      <- csolve D G true' false'.
+
+%{
+  A more satisfactory solution would omit cs_true' and guard cs_eqp'
+by non-unifiability (disequality) of Q and P.  top_solve could then
+choose to either accept only one solution or call the failure
+continuation, if there is one.  Unfortunately, non-unifiability
+is not part of the framework.
+}%

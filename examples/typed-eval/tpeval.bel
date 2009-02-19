@@ -48,7 +48,7 @@ rec eval : (exp T)[ ] -> (exp T)[ ] =
 
   | [ ] suc U => 
     let [ ] V  = eval ([ ] U) in [ ] suc V
-
+     
 
   | [ ]  eq U V =>
     equal (eval ([ ] U))  (eval  ([ ] V))

@@ -1,0 +1,11 @@
+% Evaluation is a strategy for reduction
+
+%theorem evalRed :
+  forall* {E:exp} {V:exp}
+  forall {D:eval E V}
+  exists {R* : E ==>* V} true.
+
+%prove 4 D (evalRed D _).
+
+% Partial check if proof
+%terminates D (evalRed D _).

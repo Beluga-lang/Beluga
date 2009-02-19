@@ -1,0 +1,18 @@
+node:type.
+a:node.
+b:node.
+
+
+
+r: node -> type.
+s: node -> type.
+%tabled s.
+
+r2: r a 
+     <- s b.
+s3: s b
+     <- s a.
+
+q1: s a.
+
+%querytabled * 2 A:(r a).

@@ -1,0 +1,19 @@
+% Completeness of refining evaluation to small step semantics
+
+% Partial check of hand-coded proof
+%terminates D (ccp D _ _).
+
+%theorem ccf : forall* {E:exp} {V:val}
+	       forall {D:eval E V}
+	       exists {C:({K} {W} K # (return V) =>* (answer W) -> K # (ev E) =>* (answer W))} true.
+%prove 20 D (ccf D _).
+
+% Partial verification of generated proof
+%terminates D (ccf D _).
+
+%theorem cevalc : forall* {E:exp} {V:val}
+		  forall {D:eval E V}
+		  exists {CE:ceval E V}
+		  true.
+
+%prove 10 {} (cevalc _ _).

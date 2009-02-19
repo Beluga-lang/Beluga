@@ -1,0 +1,39 @@
+%%%
+%%% A Breadth-First Numbering Algorithm
+%%% Author: Frank Pfenning
+%%% See C. Okasaki: Breadth-First Numbering, ICFP'00, pp. 131-136
+%%%
+
+%name trm M.
+%name atm P.
+int : sort.
+z : trm int.
+s : trm int -> trm int. %prefix 10 s.
+
+tree : sort.
+e : trm tree.
+t : trm int -> trm tree -> trm tree -> trm tree.
+
+bf : trm tree -> trm tree -> atm.
+n : trm tree -> trm tree -> atm.
+bff : trm int -> atm.
+
+bf0 : prog (
+^ bf T T' <<= (^ n T T' =>> ^ bff (s z))
+).
+
+bffdone : prog (
+^ bff N
+).
+
+bffe : prog (
+^ bff N
+   <<= ^ n e e
+   <<= ^ bff N
+).
+
+bfft : prog (
+^ bff N 
+  <<= ^ n (t _ L R) (t N L' R')
+  <<= (^ n L L' >=> ^ n R R' >=> ^ bff (s N))
+).

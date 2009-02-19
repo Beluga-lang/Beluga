@@ -1,0 +1,291 @@
+%query 1 *
+{y:dtriv}{y':ctriv}
+ cpsT y y' ->
+ cpsR (dexp->droot 
+	 (dapp
+	    (dapp
+	       (dtriv->dexp
+		  (dlam [f:dtriv]
+		     (dexp->droot
+			(dtriv->dexp
+			   (dlam [x:dtriv]
+			      (dexp->droot
+				 (dapp
+				    (dtriv->dexp f)
+				    (dapp
+                                       (dtriv->dexp f)
+                                       (dtriv->dexp x)))))))))
+	       (dtriv->dexp
+		  (dlam [x:dtriv]
+		     (dexp->droot
+			(dtriv->dexp x)))))
+	    (dtriv->dexp y)))
+	     (R'1 y').
+
+r'1 : ctriv -> croot
+    = [y':ctriv]
+      (klam
+	 ([CCONT1:ccont]
+	    capp
+	    (xlam
+	       ([CTRIV2:ctriv]
+		  klam
+		  ([CCONT2:ccont]
+		     cret CCONT2
+		     (xlam
+			([CTRIV3:ctriv]
+			   klam
+			   ([CCONT3:ccont]
+			      capp CTRIV2 CTRIV3
+			      (vlam
+				 ([CTRIV4:ctriv]
+				    capp CTRIV2 CTRIV4
+				    (vlam ([CTRIV5:ctriv] cret CCONT3
+					     CTRIV5))))))))))
+	    (xlam ([CTRIV6:ctriv] klam ([CCONT4:ccont] cret CCONT4 CTRIV6)))
+	    (vlam
+	       ([CTRIV7:ctriv]
+		  capp CTRIV7 y'
+		  (vlam ([CTRIV8:ctriv] cret CCONT1 CTRIV8)))))).
+
+%solve CVR : {y':ctriv} cvalT y' -> cvalR (r'1 y').
+
+%solve CM : {y':ctriv} cstackR (r'1 y') (C y').
+
+%query 1 *
+{y':ctriv} {cvy:cvalT y'}
+th15-1 (CVR y' cvy) (CM y') (BM y').
+
+%{
+Solving...
+
+BM =
+   [y':ctriv] bare_klam [k:ccont] [b:{t:ctriv} bareE (cret k t) t]
+      bare_capp
+         (bare_cret
+             (bare_capp
+                 (bare_capp
+                     (bare_cret (bare_capp (bare_cret (bare_cret (b y')))))))),
+C = [y':ctriv] y',
+R' =
+   [y':ctriv] klam [k:ccont]
+      capp
+         (xlam [x':ctriv] klam [k1:ccont]
+             cret k1
+                (xlam [x'1:ctriv] klam [k11:ccont]
+                    capp x' x'1
+                       (vlam [t1:ctriv] capp x' t1 (vlam [v:ctriv] cret k11 v))))
+         (xlam [x':ctriv] klam [k1:ccont] cret k1 x')
+         (vlam [t01:ctriv] capp t01 y' (vlam [v:ctriv] cret k v)).
+;
+no more solutions
+}%
+%{
+-------------------------------------------------------------------------------
+sigma[CR : {y:dtriv}{y':ctriv}{cy:cpsT y y'}
+           cpsR (dexp->droot 
+                 (dapp
+                  (dapp
+                   (dtriv->dexp
+                    (dlam [f:dtriv]
+                           (dexp->droot
+                            (dtriv->dexp
+                             (dlam [x:dtriv]
+                                    (dexp->droot
+                                     (dapp
+                                      (dtriv->dexp f)
+                                      (dapp
+                                       (dtriv->dexp f)
+                                       (dtriv->dexp x)))))))))
+                   (dtriv->dexp
+                    (dlam [x:dtriv]
+                           (dexp->droot
+                            (dtriv->dexp x)))))
+                  (dtriv->dexp y)))
+          (R' y')]
+sigma[CVR : {y':ctriv}{cvy:cvalT y'}
+            cvalR (R' y')]
+sigma[BM:{y':ctriv}bareR (R' y') (B y')]
+{y':ctriv}{cvy:cvalT y'}
+th15-1 (CVR y' cvy) (CM y') (BM y').
+                                                                           Solving...
+
+CM =
+   [y':ctriv]
+      cstack_klam
+         (cstack_capp
+             (cstack_cret_k_vlam
+                 (cstack_capp
+                     (cstack_capp
+                         (cstack_cret_k_vlam
+                             (cstack_capp
+                                 (cstack_cret_k_vlam
+                                     (cstack_cret_k_vlam cstack_cret_k_init))
+                                 cstack_vlam))
+                         cstack_vlam)
+                     cstack_vlam))
+             cstack_vlam),
+B = [y':ctriv] y',
+R' =
+   [y':ctriv] klam [k:ccont]
+      capp
+         (xlam [x':ctriv] klam [k1:ccont]
+             cret k1
+                (xlam [x'1:ctriv] klam [k11:ccont]
+                    capp x' x'1
+                       (vlam [t1:ctriv] capp x' t1 (vlam [v:ctriv] cret k11 v))))
+         (xlam [x':ctriv] klam [k1:ccont] cret k1 x')
+         (vlam [t01:ctriv] capp t01 y' (vlam [v:ctriv] cret k v)).
+;
+no more solutions
+-------------------------------------------------------------------------------
+sigma[CR : {y:dtriv}{y':ctriv}{cy:cpsT y y'}
+           cpsR (dexp->droot 
+                 (dapp
+                  (dapp
+                   (dtriv->dexp
+                    (dlam [f:dtriv]
+                           (dexp->droot
+                            (dtriv->dexp
+                             (dlam [x:dtriv]
+                                    (dexp->droot
+                                     (dapp
+                                      (dtriv->dexp f)
+                                      (dapp
+                                       (dtriv->dexp f)
+                                       (dtriv->dexp x)))))))))
+                   (dtriv->dexp
+                    (dlam [x:dtriv]
+                           (dexp->droot
+                            (dtriv->dexp x)))))
+                  (dtriv->dexp y)))
+          (R' y')]
+sigma[VVR : {y':ctriv}{vvy:{xi:stack}vvalT xi y' xi}
+            vvalR (R' y')]
+sigma[CVR : {y':ctriv}{cvy:cvalT y'}
+            cvalR (R' y')]
+sigma[DR : {y':ctriv}{dy':{xi:stack}dstackT xi y' y' xi}
+           dstackR (R' y') (D y')]
+{y:dtriv}{y':ctriv}{vvy:{xi:stack}vvalT xi y' xi}{cy:cpsT y y'}{cvy:cvalT y'}
+{dy':{xi:stack}dstackT xi y' y' xi}{dsy':{xi:stack}dstack_substT y' xi y' xi} 
+th18-1 (VVR y' vvy) (CVR y' cvy) (DR y' dy') (BR y').
+                                                                              Solving...
+
+BR =
+   [y':ctriv] bare_klam [k:ccont] [b:{t:ctriv} bareE (cret k t) t]
+      bare_capp
+         (bare_cret
+             (bare_capp
+                 (bare_capp
+                     (bare_cret (bare_capp (bare_cret (bare_cret (b y')))))))),
+D = [y':ctriv] y',
+R' =
+   [y':ctriv] klam [k:ccont]
+      capp
+         (xlam [x':ctriv] klam [k1:ccont]
+             cret k1
+                (xlam [x'1:ctriv] klam [k11:ccont]
+                    capp x' x'1
+                       (vlam [t1:ctriv] capp x' t1 (vlam [v:ctriv] cret k11 v))))
+         (xlam [x':ctriv] klam [k1:ccont] cret k1 x')
+         (vlam [t01:ctriv] capp t01 y' (vlam [v:ctriv] cret k v)).
+;
+no more solutions
+-------------------------------------------------------------------------------
+sigma[CR : {y:dtriv}{y':ctriv}{cy:cpsT y y'}
+           cpsR (dexp->droot 
+                 (dapp
+                  (dapp
+                   (dtriv->dexp
+                    (dlam [f:dtriv]
+                           (dexp->droot
+                            (dtriv->dexp
+                             (dlam [x:dtriv]
+                                    (dexp->droot
+                                     (dapp
+                                      (dtriv->dexp f)
+                                      (dapp
+                                       (dtriv->dexp f)
+                                       (dtriv->dexp x)))))))))
+                   (dtriv->dexp
+                    (dlam [x:dtriv]
+                           (dexp->droot
+                            (dtriv->dexp x)))))
+                  (dtriv->dexp y)))
+          (R' y')]
+sigma[VVR : {y':ctriv}{vvy:{xi:stack}vvalT xi y' xi}
+            vvalR (R' y')]
+sigma[CVR : {y':ctriv}{cvy:cvalT y'}
+            cvalR (R' y')]
+sigma[BR : {y':ctriv}
+           bareR (R' y') (B y')]
+{y:dtriv}{y':ctriv}{vvy:{xi:stack}vvalT xi y' xi}{cy:cpsT y y'}{cvy:cvalT y'}
+{dy':{xi:stack}dstackT xi y' y' xi}{dsy':{xi:stack}dstack_substT y' xi y' xi} 
+th18-1 (VVR y' vvy) (CVR y' cvy) (DR y' dy') (BR y').
+                                                                              Solving...
+
+DR =
+   [y':ctriv] [dy':{xi:stack} dstackT xi y' y' xi] dstack_klam [k:ccont]
+      [d:{xi:stack} {t:ctriv} {t':ctriv}
+            dstackT xi t t' dot -> dstackE xi (cret k t) t']
+      dstack_capp
+         (dstack_cret_vlam
+             ([v:ctriv] [dv:{t:ctriv} {xi:stack} dstackT (xi , t) v t xi]
+                 dstack_capp
+                    (dstack_capp
+                        (dstack_cret_vlam
+                            ([v2:ctriv]
+                                [dv2:{t:ctriv} {xi:stack}
+                                        dstackT (xi , t) v2 t xi]
+                                dstack_capp
+                                   (dstack_cret_vlam
+                                       ([v21:ctriv]
+                                           [dv21:{t:ctriv} {xi:stack}
+                                                    dstackT (xi , t) v21 t xi]
+                                           dstack_cret_vlam
+                                              ([v211:ctriv]
+                                                  [dv211:{t:ctriv} {xi:stack}
+                                                            dstackT (xi , t)
+                                                               v211 t xi]
+                                                  d (dot , y') v211 y'
+                                                    (dv211 y' dot))
+                                              (dv21 y' dot))
+                                       (dy' dot))
+                                   dstack_xlam (dv2 y' dot))
+                            (dy' dot))
+                        dstack_xlam (dy' dot))
+                    (dv (xlam [x'1:ctriv] klam [k111:ccont]
+                            capp (xlam [x':ctriv] klam [k1:ccont] cret k1 x')
+                               x'1
+                               (vlam [t1:ctriv]
+                                   capp
+                                      (xlam [x':ctriv] klam [k1:ccont]
+                                          cret k1 x') t1
+                                      (vlam [v11:ctriv] cret k111 v11)))
+                        dot)
+                    (dy' (dot
+                             , (xlam [x'1:ctriv] klam [k111:ccont]
+                                   capp
+                                      (xlam [x':ctriv] klam [k1:ccont]
+                                          cret k1 x') x'1
+                                      (vlam [t1:ctriv]
+                                          capp
+                                             (xlam [x':ctriv] klam [k1:ccont]
+                                                 cret k1 x')
+                                             t1 (vlam [v1:ctriv] cret k111 v1))))))
+             dstack_xlam)
+         dstack_xlam dstack_xlam,
+B = [y':ctriv] y',
+R' =
+   [y':ctriv] klam [k:ccont]
+      capp
+         (xlam [x':ctriv] klam [k1:ccont]
+             cret k1
+                (xlam [x'1:ctriv] klam [k11:ccont]
+                    capp x' x'1
+                       (vlam [t1:ctriv] capp x' t1 (vlam [v:ctriv] cret k11 v))))
+         (xlam [x':ctriv] klam [k1:ccont] cret k1 x')
+         (vlam [t01:ctriv] capp t01 y' (vlam [v:ctriv] cret k v)).
+;
+no more solutions
+}%

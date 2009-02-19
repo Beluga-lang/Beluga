@@ -1,0 +1,47 @@
+%%% Uniform Derivations
+%%% Author: Frank Pfenning
+%%% Temporarily removed parametric and hypothetical judgments
+
+solve  : o -> type.       % solve goal formulas
+assume : o -> type.       % assume program formulas
+>>     : o -> p -> type.  % immediate entailment
+%infix none 8 >>.
+%name solve S.
+%name assume H.
+%name >> I.
+
+s_and  : solve (A1 and A2)
+	  <- solve A1
+	  <- solve A2.
+
+%{
+s_imp  : solve (A2 imp A1)
+	  <- (assume A2 -> solve A1).
+}%
+
+s_true : solve (true).
+
+%{
+s_forall : solve (forall A1)
+	    <- {a:i} solve (A1 a).
+}%
+
+s_atom : solve (atom P)
+	  <- assume A
+	  <- A >> P.
+
+i_andl : A1 and A2 >> P
+	   <- A1 >> P.
+
+i_andr : A1 and A2 >> P
+	   <- A2 >> P.
+
+i_imp  : A2 imp A1 >> P
+	  <- A1 >> P
+	  <- solve A2.
+
+i_forall : {T:i}
+	     forall A1 >> P
+	     <- A1 T >> P.
+
+i_atom : (atom P) >> P.

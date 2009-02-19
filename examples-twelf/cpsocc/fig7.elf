@@ -1,0 +1,34 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Figure 7 : Bare, stackless CPS abstract machine 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+bareR : croot -> ctriv -> type.
+bareE : cexp -> ctriv -> type.
+
+%mode bareR +R -T.
+%mode bareE +E -T.
+
+% style here -fp
+%{
+bare_klam : bareR (klam E) A
+            <- {k:ccont}
+               {b:{t:ctriv}bareE (cret k t) t}
+               bareE (E k) A.
+}%
+
+bare_klam : bareR (klam E) A
+            <- {k:ccont}
+               ({T:ctriv}bareE (cret k T) T)
+               -> bareE (E k) A.
+
+bare_cret : bareE (cret (vlam E) T) A
+            <- bareE (E T) A.
+
+bare_capp : bareE (capp (xlam ([x:ctriv]klam (E x))) T C) A
+            <- bareE (E T C) A.
+
+
+%name bareR BARER.
+%name bareE BAREE.
+

@@ -1,0 +1,30 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Figure 1 : The left-to-right, call-by-value CPS transformation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+cpsR : droot -> croot -> type.                     %name cpsR CR.
+cpsE : dexp -> (ctriv -> cexp) -> cexp -> type.    %name cpsE CE.
+cpsT : dtriv -> ctriv -> type.                     %name cpsT CT.
+%mode cpsR +R -R'.
+%mode cpsE +E +K -E'.
+%mode cpsT +T -T'.
+
+cps_droot : cpsR (dexp->droot E) (klam E') 
+            <- {k:ccont} cpsE E ([v:ctriv]cret k v) (E' k).
+
+cps_dtriv : cpsE (dtriv->dexp T) K (K T')
+            <- cpsT T T'.
+
+cps_dapp : cpsE (dapp E0 E1) K E'
+           <- ({t0:ctriv}
+               cpsE E1 ([t1:ctriv]capp t0 t1 (vlam K)) (E1' t0))
+           <- cpsE E0 E1' E'.
+
+cps_dlam : cpsT (dlam R) (xlam R')
+           <- ({x:dtriv}{x':ctriv}cpsT x x' -> cpsR (R x) (R' x')).
+
+%terminates (R E T)
+ (cpsR R R')
+ (cpsE E K E')
+ (cpsT T T').

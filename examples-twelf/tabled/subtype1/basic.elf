@@ -1,0 +1,69 @@
+%%% Mini-ML types.
+%%% Extended with some atomic subtyping
+%%% Author: Frank Pfenning
+
+tp : type.  %name tp T.
+
+nat   : tp.				% Natural Numbers
+pos   : tp.				% Positive Numbers
+zero  : tp.				% Singleton Zero
+int   : tp.
+neg   : tp.
+
+
+%%% Subtyping
+%%% Specification, not executable
+
+sub : tp -> tp -> type.  %name sub C.
+%mode sub *T *T'.
+%tabled sub.
+
+sub_refl : sub T T.
+sub_trans :  sub S R
+	     <- sub T R
+             <- sub S T.
+
+% sub_trans : sub S T -> sub T R -> sub S R.
+sub_pn : sub pos nat.
+sub_zn : sub zero nat.
+sub_nan : sub nat int.
+sub_nen : sub neg int.
+
+
+%
+%% Typing rules
+%%% Specification, not executable
+
+of : exp -> tp -> type.  %name of P u.
+%tabled of.
+% Subtyping
+
+tp_sub : of E T
+	  <- of E T'
+	  <- sub T' T.
+
+
+% Natural Numbers
+% Standard rules
+tp_z_nat : of z nat.
+tp_s_nat : of (s E) nat
+	    <- of E nat.
+tp_case_nat : of (case E1 E2 E3) T
+	       <- of E1 nat
+	       <- of E2 T
+	       <- ({x:exp} of x nat -> of (E3 x) T).
+
+% New rules
+tp_z_zero : of z zero.
+tp_s_pos  : of (s E) pos
+	     <- of E nat.
+tp_case_zero : of (case E1 E2 E3) T
+		<- of E1 zero
+		<- of E2 T.
+tp_case_pos : of (case E1 E2 E3) T
+	       <- of E1 pos
+	       <- ({x:exp} of x nat -> of (E3 x) T).
+
+
+
+

@@ -65,8 +65,8 @@ $INTERPRETER  \
     test/test.bel \
     test/test-simple.bel \
     test/test-simple-explicit.bel \
-    test/schema.bel \
-    @test/sigma1.bel
+    test/schema.bel 
+#    @test/sigma1.bel
      
 #    notworking/church-rosser.rec \
 #    notworking/cut-elim.bel \

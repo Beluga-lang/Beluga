@@ -1,0 +1,79 @@
+%%% Translation to representation using de Bruijn indices
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+trans  : env -> exp' -> exp -> type.  %name trans C.
+vtrans : val -> exp -> type.          %name vtrans U.
+
+% Natural numbers
+tr_z     : trans K z' z.
+tr_s     : trans K (s' F) (s E)
+	    <- trans K F E.
+tr_case : trans K (case' F1 F2 F3) (case E1 E2 E3)
+	   <- trans K F1 E1
+	   <- trans K F2 E2
+	   <- ({w:val} {x:exp}
+		 vtrans w x -> trans (K ; w) F3 (E3 x)).
+
+% Pairs
+tr_pair : trans K (pair' F1 F2) (pair E1 E2)
+	     <- trans K F1 E1
+	     <- trans K F2 E2.
+tr_fst  : trans K (fst' F1) (fst E1)
+	     <- trans K F1 E1.
+tr_snd  : trans K (snd' F1) (snd E1)
+	     <- trans K F1 E1.
+
+% Functions
+tr_lam : trans K (lam' F) (lam E)
+	    <- ({w:val} {x:exp}
+		  vtrans w x -> trans (K ; w) F (E x)).
+tr_app : trans K (app' F1 F2) (app E1 E2)
+	    <- trans K F1 E1
+	    <- trans K F2 E2.
+
+% Definitions
+tr_letv: trans K (letv' F1 F2) (letv E1 E2)
+	    <- trans K F1 E1
+	    <- ({w:val} {x:exp}
+		  vtrans w x -> trans (K ; w) F2 (E2 x)).
+
+tr_letn: trans K (letn' F1 F2) (letn E1 E2)
+	    <- trans K F1 E1
+	    <- ({f:exp'} {x:exp}
+		  trans K f x -> trans (K + f) F2 (E2 x)).
+
+% Recursion
+tr_fix : trans K (fix' F) (fix E)
+	    <- ({f:exp'} {x:exp}
+		  trans K f x -> trans (K + f) F (E x)).
+
+% Variables
+tr_1  : trans (K ; W) 1 E <- vtrans W E.
+tr_^  : trans (K ; W) (F ^) E <- trans K F E.
+
+tr_1+ : trans (K + F) 1 E <- trans K F E.
+tr_^+ : trans (K + F') (F ^) E <- trans K F E.
+
+% Natural number values
+vtr_z : vtrans z* z.
+vtr_s : vtrans (s* W) (s V)
+	 <- vtrans W V.
+
+% Pair values
+vtr_pair : vtrans (pair* W1 W2) (pair V1 V2)
+	    <- vtrans W1 V1
+	    <- vtrans W2 V2.
+
+% Function values
+vtr_lam : vtrans (clo K (lam' F)) (lam E)
+	   <- trans K (lam' F) (lam E).
+
+%mode (trans +K +F -E) (vtrans +W -V).
+%block tr : some {K:env} block {f:exp'} {x:exp} {u:trans K f x}.
+%block vtr : block {w:val} {x:exp} {v:vtrans w x}.
+%worlds (tr | vtr) (trans K F E) (vtrans W V).
+% cases for F are covered, although totality is not obvious
+%covers trans *K +F *E.
+% cases for W are not covered, only closures over lambda!
+% fails:
+% %covers vtrans +W -V.

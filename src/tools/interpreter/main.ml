@@ -103,44 +103,13 @@ let main () =
       in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
-              printf "## Pretty Printing External Syntax: %s ##\n" file_name
-            ; print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
+            printf "## Pretty Printing External Syntax: %s ##\n" file_name;
+            print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;
+            printf "\n## Type Reconstruction: %s ##\n" file_name;
 
-            ; printf "\n## Type Reconstruction: %s ##\n" file_name
-
-            ; let int_decls = List.map Reconstruct.recSgnDecl sgn in
-                print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls
-              ; try
-                (* Double Checking is done after reconstruction 
-
-                  printf "\n## Double Checking ##"
-                ; print_newline ()
-                ; Check.Sgn.check_sgn_decls int_decls
-                ; printf "\n## Double Checking Successful! ##\n\n" *)
-                  (* clean up for the next file *)
-                return Positive
-                with
-                  | Whnf.Error err ->
-                      Format.fprintf
-                        Format.std_formatter
-                        "\n!! Error during weak-head normalization !!\n\n%a\n@?\n"
-                        Pretty.Error.DefaultPrinter.fmt_ppr err;
-                      return Negative
-
-                  | Check.LF.Error (locOpt, err) ->
-                      printOptionalLocation locOpt;
-                      Format.fprintf Format.std_formatter ":\n";
-                      Format.fprintf
-                        Format.std_formatter
-                        "Error (Type-Checking): %a@?"
-                        Pretty.Error.DefaultPrinter.fmt_ppr err;
-                      print_newline ();
-                      return Negative
-
-                  | Check.LF.Violation msg ->
-                      printf "\n!! Error during typechecking !!\n\n%s\n\n" msg;
-                      return Negative
-
+            let int_decls = List.map Reconstruct.recSgnDecl sgn in
+              print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls;
+              return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
               Parser.Grammar.Loc.print Format.std_formatter loc;
@@ -169,6 +138,16 @@ let main () =
               print_newline ();
               return Negative
 
+          | Check.LF.Error (locOpt, err) ->
+              printOptionalLocation locOpt;
+              Format.fprintf Format.std_formatter ":\n";
+              Format.fprintf
+                Format.std_formatter
+                "Error (Type-Checking): %a@?"
+                Pretty.Error.DefaultPrinter.fmt_ppr err;
+              print_newline ();
+              return Negative
+
           | Check.Comp.Error err ->
               (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
               Format.fprintf Format.std_formatter ":\n";
@@ -179,6 +158,10 @@ let main () =
               print_newline ();
               return Negative
 
+          | Check.LF.Violation msg ->
+              printf "\n!! Error during typechecking !!\n\n%s\n\n" msg;
+              return Negative
+
           | Context.Error err ->
               Format.fprintf
                 Format.std_formatter
@@ -186,6 +169,14 @@ let main () =
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               return Negative
+
+          | Whnf.Error err ->
+              Format.fprintf
+                Format.std_formatter
+                "\n!! Error during weak-head normalization !!\n\n%a\n@?\n"
+                Pretty.Error.DefaultPrinter.fmt_ppr err;
+              return Negative
+
     in
     let per_session (errors, unsound, incomplete) (Session file_names) =
         Store.clear ()

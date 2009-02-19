@@ -132,7 +132,6 @@ let main () =
           | Reconstruct.Violation err_string ->
               Format.fprintf
                 Format.std_formatter
-                (* TODO print location as "filename:line1.col1-line2-col2" *)
                 "Error (\"Violation\") (Reconstruction): %s\n@?"
                 err_string;
               print_newline ();

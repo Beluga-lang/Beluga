@@ -53,6 +53,13 @@ module type UNIFY = sig
   val unifyTypRec : mctx -> psi_hat * (typ_rec * sub) * (typ_rec * sub) -> unit (* raises Unify *)
   val unifyDCtx:   mctx -> dctx -> dctx -> unit (* raises Unify *)
   val unifyCompTyp : mctx -> (Comp.typ * Comp.msub) -> (Comp.typ * Comp.msub) -> unit (* raises Unify *)
+
+  type cvarRef =
+    | MVarRef of normal option ref
+    | PVarRef of head option ref
+
+  val pruneTyp : mctx -> psi_hat * tclo * sub * cvarRef -> typ
+
 end
 
 (* Unification *)
@@ -1275,9 +1282,6 @@ module Make (T : TRAIL) : UNIFY = struct
          (P.typToString (Empty) (Empty) cPsi sA)
          (P.typToString (Empty) (Empty) cPsi sB) in *)
          ())
-
-
-
 
 
     let unifyTypRec1 cD0 (phat, sArec, sBrec) = 

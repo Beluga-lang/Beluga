@@ -5,52 +5,52 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Store Typing Inversion (Progress)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prog_|-st_inversion_aux
-               : sttp_wf ST -> st_wf S -> |-st S ST ->
+prog_st_judg_inversion_aux
+               : sttp_wf ST -> st_wf S -> st_judg S ST ->
                  sttp_lookup ST L T
                   -> st_lookup S L V ->
-                     |-val ST V T -> type.
-%mode prog_|-st_inversion_aux +DSTWf +DSWf +DStTcWf +SttpLookup -StLookup -DValTc.
--hit           : prog_|-st_inversion_aux DSTWf DSWf (|-st_cons DValTc' _)
+                     val_judg ST V T -> type.
+%mode prog_st_judg_inversion_aux +DSTWf +DSWf +DStTcWf +SttpLookup -StLookup -DValTc.
+-hit           : prog_st_judg_inversion_aux DSTWf DSWf (st_judg_cons DValTc' _)
                                          (sttp_lookup_hit)
                                          (st_lookup_hit)
 		                         DValTc
-		  <- sttp!wf_cons_implies_extend_cons DSTWf DSttpExtend
-		  <- sttp_weak_|-val DValTc' DSttpExtend DValTc.
--miss          : prog_|-st_inversion_aux DSTWf DSWf (|-st_cons _ DStTc')
+		  <- sttp_wf_cons_implies_extend_cons DSTWf DSttpExtend
+		  <- sttp_weak_val_judg DValTc' DSttpExtend DValTc.
+-miss          : prog_st_judg_inversion_aux DSTWf DSWf (st_judg_cons _ DStTc')
                                          (sttp_lookup_miss DSttpLookup' DLocLt)
                                          (st_lookup_miss DStLookup' DLocLt)
                                          DValTc
-		  <- sttp!wf_tail DSTWf DSTWf'
-		  <- st!wf_tail DSWf DSWf'
-		  <- prog_|-st_inversion_aux DSTWf' DSWf' DStTc' 
+		  <- sttp_wf_tail DSTWf DSTWf'
+		  <- st_wf_tail DSWf DSWf'
+		  <- prog_st_judg_inversion_aux DSTWf' DSWf' DStTc' 
                                              DSttpLookup' 
                                              DStLookup' 
                                              DValTc'
-		  <- sttp!wf_cons_implies_extend_cons DSTWf DSttpExtend'
-		  <- sttp_weak_|-val DValTc' DSttpExtend' DValTc.
-%terminates DSttpLookup (prog_|-st_inversion_aux _ _ _ DSttpLookup _ _).
-%worlds () (prog_|-st_inversion_aux _ _ _ _ _ _).
-%covers prog_|-st_inversion_aux +DSTWf +DSWf +DStTc -SttpLookup +StLookup -DValTc.
-%total DSttpLookup (prog_|-st_inversion_aux _ _ _ DSttpLookup _ _).
+		  <- sttp_wf_cons_implies_extend_cons DSTWf DSttpExtend'
+		  <- sttp_weak_val_judg DValTc' DSttpExtend' DValTc.
+%terminates DSttpLookup (prog_st_judg_inversion_aux _ _ _ DSttpLookup _ _).
+%worlds () (prog_st_judg_inversion_aux _ _ _ _ _ _).
+%covers prog_st_judg_inversion_aux +DSTWf +DSWf +DStTc -SttpLookup +StLookup -DValTc.
+%total DSttpLookup (prog_st_judg_inversion_aux _ _ _ DSttpLookup _ _).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-prog_|-st_inversion 
-               : |-stwf S ST ->
+prog_st_judg_inversion 
+               : stwf_judg S ST ->
                  sttp_lookup ST L T 
                   -> st_lookup S L V ->
-                     |-val ST V T -> type.
-%mode prog_|-st_inversion +DStTcWf +SttpLookup -StLookup -DValTc.
--              : prog_|-st_inversion (|-stwf_ DSTWf DSWf DStTc)
+                     val_judg ST V T -> type.
+%mode prog_st_judg_inversion +DStTcWf +SttpLookup -StLookup -DValTc.
+-              : prog_st_judg_inversion (stwf_judg_ DSTWf DSWf DStTc)
                                      DSttpLookup
                                      DStLookup
                                      DValTc
-		  <- prog_|-st_inversion_aux DSTWf DSWf DStTc
+		  <- prog_st_judg_inversion_aux DSTWf DSWf DStTc
                                              DSttpLookup
                                              DStLookup
                                              DValTc.
-%terminates {} (prog_|-st_inversion _ _ _ _).
-%worlds () (prog_|-st_inversion _ _ _ _).
-%covers prog_|-st_inversion +DStTcWf +SttpLookup -StLookup -DValTc.
-%total {} (prog_|-st_inversion _ _ _ _).
+%terminates {} (prog_st_judg_inversion _ _ _ _).
+%worlds () (prog_st_judg_inversion _ _ _ _).
+%covers prog_st_judg_inversion +DStTcWf +SttpLookup -StLookup -DValTc.
+%total {} (prog_st_judg_inversion _ _ _ _).

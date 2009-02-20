@@ -68,26 +68,26 @@ pres_var       : ({z:exp} var_judg z Tz -> exp_judg ST (F z) T) ->
                                                    (DExpTcE1 z dvar)))
                           DExpTcZ 
                           (exp_judg_app DExpTcE2' DExpTcE1')
-		  <- pres_var DExpTcE1 DExpTcZ DExpTcE1'
-		  <- pres_var DExpTcE2 DExpTcZ DExpTcE2'.
+		  <- pres_var (\z.\dvar. DExpTcE1 z dvar) DExpTcZ DExpTcE1'
+		  <- pres_var (\z.\dvar. DExpTcE2 z dvar) DExpTcZ DExpTcE2'.
 -unit          : pres_var (\z.\dvar. (exp_judg_unit)) _ (exp_judg_unit).
 -letunit       : pres_var (\z.\dvar. (exp_judg_letunit (DExpTcE2 z dvar)
                                                        (DExpTcE1 z dvar)))
                           DExpTcZ 
                           (exp_judg_letunit DExpTcE2' DExpTcE1')
-		  <- pres_var DExpTcE1 DExpTcZ DExpTcE1'
-		  <- pres_var DExpTcE2 DExpTcZ DExpTcE2'.
+		  <- pres_var (\z.\dvar. DExpTcE1 z dvar) DExpTcZ DExpTcE1'
+		  <- pres_var (\z.\dvar. DExpTcE2 z dvar) DExpTcZ DExpTcE2'.
 -pair          : pres_var (\z.\dvar. (exp_judg_pair (DExpTcE2 z dvar)
                                                     (DExpTcE1 z dvar)))
                           DExpTcZ 
                           (exp_judg_pair DExpTcE2' DExpTcE1')
-		  <- pres_var DExpTcE1 DExpTcZ DExpTcE1'
-		  <- pres_var DExpTcE2 DExpTcZ DExpTcE2'.
+		  <- pres_var (\z.\dvar. DExpTcE1 z dvar) DExpTcZ DExpTcE1'
+		  <- pres_var (\z.\dvar. DExpTcE2 z dvar) DExpTcZ DExpTcE2'.
 -letpair       : pres_var (\z.\dvar. (exp_judg_letpair (\x.\d.\y.\d'. DExpTcF2 z dvar x d y d')
                                                        (DExpTcE1 z dvar)))
                           DExpTcZ
                           (exp_judg_letpair (\x.\d.\y.\d'. DExpTcF2' x d y d') DExpTcE1')
-		  <- pres_var DExpTcE1 DExpTcZ DExpTcE1'
+		  <- pres_var (\z.\dvar. DExpTcE1 z dvar) DExpTcZ DExpTcE1'
 		  <- ({x:exp}{dVar_x: var_judg x Tx}
                       {y:exp}{dVar_y: var_judg y Ty}
 			pres_var (\z.\dvar. (DExpTcF2 z dvar x dVar_x y dVar_y))
@@ -103,6 +103,7 @@ pres_var       : ({z:exp} var_judg z Tz -> exp_judg ST (F z) T) ->
 pres_val_judg_lam_inversion
                : val_judg ST (lam_v Tx' (\x.F x)) (fn_t Tx T)
 		  -> ({x:exp} var_judg x Tx -> exp_judg ST (F x) T) -> type.
+
 %mode pres_val_judg_lam_inversion +DValTcLam -DExpTcF.
 -              : pres_val_judg_lam_inversion (val_judg_lam (\x. \d. DExpTcF x d)) (\x. \d. DExpTcF x d).
 %terminates {} (pres_val_judg_lam_inversion _ _).

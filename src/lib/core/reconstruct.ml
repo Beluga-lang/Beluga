@@ -696,16 +696,11 @@ and elTerm' recT cD cPsi r sP = match r with
         let (patternSpine, _l) = patSpine spine in
           if patternSpine then
             let s = mkShift recT cPsi in
-            (* let _ = Printf.printf "elTerm: add FVar %s "   (R.render_name x)         in 
-            let _ = Printf.printf ".... sP = %s \n" (P.typToString (Int.LF.Empty) cD cPsi sP) in
-            let _ = Printf.printf "s = %s \n" (P.subToString (Int.LF.Empty) cD cPsi s) in *)
             let (tS, tA) = elSpineSynth cD cPsi spine s sP in
               (* For type reconstruction to succeed, we must have
                *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
                *  This will be enforced during abstraction.
                *)
-            (* let _ = Printf.printf "elTerm: add FVar %s   with type "  (R.render_name x) in 
-            let _ = Printf.printf "  %s \n\n "   (P.typToString (Int.LF.Empty) cD cPsi (tA, LF.id)) in *)
             let _ = FVar.add x tA in
               Int.LF.Root (Some loc, Int.LF.FVar x, tS)
           else
@@ -1065,36 +1060,13 @@ and elKSpine recT cD cPsi spine sK = match (spine, sK) with
  *   O = containing new meta-variables of S (unchanged)
  *)
 and elSpineSynth cD cPsi spine s' sP = match (spine, sP) with
-  | (Apx.LF.Nil, (tP, s))  ->
+  | (Apx.LF.Nil, (_tP, _s))  ->
       let ss = LF.invert s' in
-        (* PROBLEM: [s'][ss] P is not really P... :( 
-             s' = ^2 ss = _._.^0    the result of comp ss s' = _ . _ . ^ 2 ...
-             which is actually different(?) to ^0 -- maybe don't use mkShift in 
-             elTerm, but use id ? -bp
-        *)
-      (* let _ = Printf.printf "elSpineSynth: s' = %s   ss = %s     s = %s \n\n" 
-        (P.subToString (Int.LF.Empty) cD cPsi s')
-        (P.subToString (Int.LF.Empty) cD cPsi ss)
-        (P.subToString (Int.LF.Empty) cD cPsi s)
-      in 
-      let _ = Printf.printf "elSpineSynth: comp s ss = %s  \n (comp s ss) s' = %s \n" 
-        (P.subToString (Int.LF.Empty) cD cPsi (LF.comp s ss))
-        (P.subToString (Int.LF.Empty) cD cPsi (LF.comp (LF.comp s ss) s')) in
-
-      let _ = Printf.printf "elSpineSynth: comp (comp s ss) s' = %s \n comp s (comp ss s') = %s \n\n"
-        (P.subToString (Int.LF.Empty) cD cPsi (LF.comp (LF.comp s ss) s'))
-        (P.subToString (Int.LF.Empty) cD cPsi (LF.comp s (LF.comp ss s'))) in 
-
-      let _ = Printf.printf "elSpineSynth: [s]tP = %s  \n\n" 
-        (P.typToString (Int.LF.Empty) cD cPsi (tP, s)) in 
-
-      let _ = Printf.printf "elSpineSynth: [ss][s]tP = %s  \n\n" 
-        (P.typToString (Int.LF.Empty) cD (Int.LF.Null) (tP, LF.comp s ss)) in 
-
-      let _ = Printf.printf "elSpineSynth: [s'][ss][s]tP = %s  \n\n" 
-        (P.typToString (Int.LF.Empty) cD cPsi (tP, LF.comp (LF.comp s ss) s')) in *)
-        (* ensure that [ss] ([s]tP) exists ! *)
-        (Int.LF.Nil, Int.LF.TClo(tP, LF.comp s ss))
+      let tQ = Unify.pruneTyp cD (Context.dctxToHat cPsi,  sP, ss, Unify.MVarRef (ref None)) in 
+      (* PROBLEM: [s'][ss] [s]P is not really P; in fact [ss][s]P may not exist;
+       *  We using pruning to ensure that [ss][s]P does exist
+       *)
+        (Int.LF.Nil, tQ) 
 
   | (Apx.LF.App (Apx.LF.Root (loc, Apx.LF.BVar x, Apx.LF.Nil), spine), sP) ->
       let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
@@ -1263,11 +1235,13 @@ and recTermW recT cO cD  cPsi sM sA = match (sM, sA) with
   | ((Int.LF.Root (loc, _, _), _) as sR, (Int.LF.Atom _, _)) ->
       begin
 (*        try *)
-(*          let _ = Printf.printf "recTerm: expected %s    of type  %s " 
-            (P.normalToString cO cD cPsi sR) (P.typToString cO cD cPsi sA) in *)
+          let _ = dprint (fun () -> "recTerm: expected " ^ 
+            (P.normalToString cO cD cPsi sR) ^ " of type " ^ 
+            (P.typToString cO cD cPsi sA) ^ "\n\n"  ) in 
           let sP' = synTermW recT cO cD  cPsi sR in
-          (* let _ = Printf.printf "\n recTerm: synthesized %s    of type  %s \n\n"
-            (P.normalToString cO cD cPsi sR) (P.typToString cO cD cPsi sP') in  *)
+          let _ = dprint (fun () -> "\n recTerm: synthesized " ^ 
+            (P.normalToString cO cD cPsi sR) ^ "    of type " 
+                            ^ (P.typToString cO cD cPsi sP') ^ "\n\n") in  
             try
               Unify.unifyTyp cD  (Context.dctxToHat cPsi, sP', sA) 
             with Unify.Unify msg ->
@@ -1347,14 +1321,12 @@ and synTermW recT cO cD  cPsi sR = match sR with
        * This only applies to LF reconstruction
        *)
       let tA = FVar.get x in
-      (* let _ = Printf.printf "synTerm FVAR %s \n"  (P.normalToString cO cD cPsi sR) in  *)
-      let (None , _d) = Context.dctxToHat cPsi in
-      (*let _ = Printf.printf "of type (original): " in 
-      let _ = Printf.printf "%s \n"
-         (P.typToString cO cD (Int.LF.Null) (tA, LF.id)) in 
-      let _ = Printf.printf "of type  %s \n\n "
-         (P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)))
-      in *)
+      let _ = dprint (fun () -> "synTerm FVAR " ^  (P.normalToString cO cD cPsi sR)
+                       ^ "\n\n" ) in 
+      let (None , d) = Context.dctxToHat cPsi in
+      let _ = dprint (fun () -> "of type " ^ 
+         (P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, d))) ^ " \n\n " )
+      in 
       let s = mkShift PiRecon cPsi in 
         (* synSpine recT cO cD  cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) *)
          synSpine recT cO cD  cPsi (tS, s') (tA, s) 
@@ -1368,16 +1340,7 @@ and synSpineW recT cO cD  cPsi sS sA = match (sS, sA) with
       sP'
 
   | ((Int.LF.App (tM, tS), s'), (Int.LF.PiTyp ((Int.LF.TypDecl (_, tA), _ ), tB), s)) -> (
-(*       let _ = Printf.printf "synSpine (BEFORE recTerm): tM = %s \n has type tA %s \n\n"  
-        (P.normalToString cO cD cPsi (tM, s'))
-        (P.typToString cO cD cPsi (tA, s)) in *)
       let _ = recTerm recT cO cD  cPsi (tM, s') (tA, s) in
-       (* let _ = Printf.printf "synSpine (AFTER recTerm): tM = %s \n has type tA %s \n\n"  
-        (P.normalToString cO cD cPsi (tM, s'))
-        (P.typToString cO cD cPsi (tA, s)) in
-       let _ = Printf.printf "synSpine: tS = %s   with type tB = %s \n \n "
-         (P.spineToString cO cD cPsi (tS, s')) 
-         (P.typToString cO cD cPsi (tB,Int.LF.Dot (Int.LF.Obj (Int.LF.Clo (tM,s')), s))) in *)
         (*   cPsi |-  s <= cPsi1     cPsi1 |- Pi x:tA .tB <= typ
          *                           cPsi1 |- tA <= typ
          *                           cPsi1, x:tA |- tB <= typ
@@ -1457,16 +1420,7 @@ let rec synKSpine loc recT cO cD  cPsi sS sK = match (sS, sK) with
   | ((Int.LF.Nil, _s), (Int.LF.Typ, _s')) -> ()
 
   | ((Int.LF.App (tM, tS), s'), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA),_ ), tK), s)) ->
-      (* let _ = Printf.printf "synKSpine (BEFORE recTerm): tM = %s \n has type tA %s \n\n"  
-        (P.normalToString cO cD cPsi (tM, s'))
-        (P.typToString cO cD cPsi (tA, s)) in *)
       let _ =   recTerm   recT cO cD cPsi (tM, s') (tA, s) in 
-      (*let _ = Printf.printf "synKSpine (AFTER recTerm): tM = %s \n has type tA %s \n\n"  
-        (P.normalToString cO cD cPsi (tM, s'))
-        (P.typToString cO cD cPsi (tA, s)) in *)
-       (* let _ = Printf.printf "synKSpine: tS = %s   with type tK = %s \n \n "
-         (P.spineToString cO cD cPsi (tS, s')) 
-         (P.kindToString cPsi (tK,Int.LF.Dot (Int.LF.Obj (Int.LF.Clo (tM,s')), s))) in *)
         synKSpine loc recT cO cD cPsi (tS, s') (tK, Int.LF.Dot (Int.LF.Obj (Int.LF.Clo (tM, s')), s))
 
   (* TODO confirm this is necessary, instead of having recKSpineW *)

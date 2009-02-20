@@ -32,13 +32,14 @@
 
 (defvar beluga-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-c\C-c" 'beluga-compile)
+    (define-key map "\C-c\C-c" 'compile)
     map))
 
 (defvar beluga-mode-syntax-table
   (let ((st (make-syntax-table)))
     (modify-syntax-entry ?% "<" st)
     (modify-syntax-entry ?\n ">" st)
+    (modify-syntax-entry ?#  "'" st)
     st))
 
 (defcustom beluga-font-lock-symbols t
@@ -142,13 +143,32 @@ Regexp match data 0 points to the chars."
               keep)))))))
 
 (defvar beluga-syntax-id-re "[[:alpha:]_][[:alnum:]_']*")
+(defvar beluga-syntax-fundec-re "^[ \t]*rec\\>")
 
 (defvar beluga-font-lock-keywords
-  `(,(regexp-opt '("FN" "fn" "case" "of" "rec" "schema" "in" "Sigma"
-                   "block" "let" "some" "type") 'word)
-    (,(concat "\\<rec\\>\\s +\\(" beluga-syntax-id-re "\\)")
+  `(,(concat (regexp-opt '("FN" "fn" "case" "of" "rec" "schema" "in" "Sigma"
+                           "block" "let" "some" "type") 'words)
+             "\\|\\\\")
+    (,(concat "^\\(" beluga-syntax-id-re "\\)[ \t\n]*:\\([^.]*\\<type\\>[ \t\n]*.\\)?")
+     ;; This is a regexp that can span multiple lines, so it may not
+     ;; always highlight properly.  `font-lock-multiline' tries to help.
+     (0 (if (match-end 2) '(face nil font-lock-multiline t)))
+     (1 (if (match-end 2)
+            font-lock-type-face font-lock-variable-name-face)))
+    (,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)")
      (1 font-lock-function-name-face))
     ,@(beluga-font-lock-symbols-keywords)))
+
+(defvar beluga-imenu-generic-expression
+  `(("Schemas"
+     ,(concat "^[ \t]*schema[ \t\n]+\\(" beluga-syntax-id-re "\\)") 1)
+    ("Constructors"
+     ,(concat "^\\(" beluga-syntax-id-re "\\)[ \t\n]*:") 1)
+    ("Type Constructors"
+     ,(concat "^\\(" beluga-syntax-id-re "\\)[ \t\n]*:[^.]*\\<type\\>[ \t\n]*.") 1)
+    ("Functions"
+     ,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)") 1)))
+
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.bel\\'" . beluga-mode))
@@ -156,6 +176,15 @@ Regexp match data 0 points to the chars."
 ;;;###autoload
 (define-derived-mode beluga-mode nil "Beluga"
   "Major mode to edit Beluga source code."
+  (set (make-local-variable 'imenu-generic-expression)
+       beluga-imenu-generic-expression)
+  (set (make-local-variable 'outline-regexp) beluga-syntax-fundec-re)
+  (set (make-local-variable 'require-final-newline) t)
+  (when buffer-file-name
+    (set (make-local-variable 'compile-command)
+         ;; Quite dubious, but it's the intention that counts.
+         (concat "interpreter " (shell-quote-argument buffer-file-name))))
+  (set (make-local-variable 'comment-start) "% ")
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
          (font-lock-syntactic-keywords . nil))))

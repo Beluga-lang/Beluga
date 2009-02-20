@@ -1,0 +1,21 @@
+
+%
+% All of these run correctly (with both versions of grammar). 
+% I have commented out some queries because they take some time.
+%
+
+% %query 1 * (sqnt  rnil rnil rnil rnil (^ bob =>> ^ loves =>> ^ mary =>> ^ snt)).
+
+% %query 1 * (sqnt  rnil rnil rnil rnil (^ mary =>> ^ loves =>> ^ the =>> ^ man =>> ^ whom =>> ^ jill =>> ^ married =>> ^ snt)).
+
+% %query 1 * (sqnt  rnil rnil rnil rnil (^ mary =>> ^ loves =>> ^ the =>> ^ man =>> ^ whom =>> ^ the =>> ^ woman =>> ^ whom =>> ^ jill =>> ^ loves =>> ^ married =>> ^ snt)).
+%query 1 1 (sqnt  rnil rnil rnil rnil (^ mary =>> ^ loves =>> ^ the =>> ^ man =>> ^ whom =>> ^ the =>> ^ woman =>> ^ whom =>> ^ jill =>> ^ loves =>> ^ married =>> ^ snt)).
+
+% %query 0 * (sqnt  rnil rnil rnil rnil (^ mary =>> ^ loves =>> ^ the =>> ^ man =>> ^ whom =>> ^ the =>> ^ woman =>> ^ whom =>> ^ loves =>> ^ jill =>> ^ married =>> ^ snt)).
+
+% %query 0 * (sqnt  rnil rnil rnil rnil (^ mary =>> ^ loves =>> ^ the =>> ^ man =>> ^ whom =>> ^ jill =>> ^ married =>> ^ mary =>> ^ snt)).
+
+% %query 0 * (sqnt  rnil rnil rnil rnil (^ mary =>> ^ loves =>> ^ the =>> ^ man =>> ^ whom =>> ^ married =>> ^ snt)).
+
+% %query 0 * (sqnt  rnil rnil rnil rnil (^ mary =>> ^ loves =>> ^ the =>> ^ man =>> ^ whom =>> ^ married =>> ^ jill =>> ^ snt)).
+

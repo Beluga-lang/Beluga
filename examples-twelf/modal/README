@@ -1,0 +1,5 @@
+Examples of encoding modal logics in Twelf.  Note that these files are written using
+UTF-8 to provide additional symbols.
+
+modal.elf       - Intuitionistic modal logic based upon Alex Simpson's thesis.
+modal-judge.elf - Intuitionistic modal logic based upon Pfenning and Davies.

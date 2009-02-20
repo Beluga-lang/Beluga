@@ -1,0 +1,25 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% var-validity of mixed stacks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+vvalMS : stack -> stack -> type.
+
+vvalMS_init : vvalMS dot dot.
+
+vvalMS_v : vvalMS (XXi , V) (Xi , V)
+            <- vvalMS XXi Xi.
+
+vvalMS_t : vvalMS (XXi , V) (Xi , T)
+            <- ({xi:stack}vvalT xi T xi)
+            <- vvalMS XXi Xi.
+
+
+
+vvalDS->vvalMS : vvalDS XXi Xi -> vvalMS XXi Xi -> type.
+
+ds_ms_init : vvalDS->vvalMS vvalDS_init 
+                            vvalMS_init.
+
+ds_ms_stack : vvalDS->vvalMS (vvalDS_stack VVDS VVT)  
+                             (vvalMS_t VVMS VVT)
+              <- vvalDS->vvalMS VVDS VVMS.

@@ -139,7 +139,7 @@ module LF = struct
 	(* comp(s[tau], Shift(k)) = s[tau]
 	   where s :: Psi[Phi]  and |Psi| = k 
 
-	   comp(s[tau], Shift(k)) = Dot(Id(1), ... Dot(Id(k0), s[tau]))
+	   comp(s[tau], Shift(k)) = Dot(Id(1), ... Dot(Id(k0), s[tau])) 
 	   where s :: Psi[Phi]  and |Psi| = k'
 	   k = k' + k0  
 	*)

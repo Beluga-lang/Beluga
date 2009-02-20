@@ -1,0 +1,163 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Theorem 18 : The data-stack and the bare 
+%%%%%                   machine are equivalent
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+th18-1 : vvalR R -> cvalR R -> dstackR R A -> bareR R A -> type.
+
+th18-2 : vvalDS XXi Xi 
+         -> cvalDS Xi 
+         -> ({k:ccont}{vvk:vvalC dot k}
+             vvalE XXi (E k))
+         -> cvalE E
+         -> ({k:ccont}{d:{xi:stack}{t:ctriv}{t':ctriv}
+                         dstackT xi t t' dot
+                         -> dstackE xi (cret k t) t'}
+             dstackE Xi (E k) A)
+         -> ({k:ccont}{s:dstack_substC k dot k}
+             dstack_substE (E k) Xi (E' k))
+         -> ({k:ccont}
+             {b:{t:ctriv}bareE (cret k t) t}
+             bareE (E' k) A)
+         -> type.
+
+th18-3 : vvalDS XXi Xi -> dstackT Xi T T' Xi' 
+         -> dstack_substT T Xi T' Xi' -> type.
+
+
+th18-1_klam : th18-1 (vval_klam VVE)
+                     (cval_klam CVE)
+                     (dstack_klam DE)
+                     (bare_klam BE)
+              <- ({k:ccont}{vvk:vvalC dot k}
+                  {s:dstack_substC k dot k}
+                  {l17-1:lemma17-1C vvk s}
+                  lemma17-1E (VVE k vvk) (DSE k s))
+              <- th18-2 vvalDS_init
+                        cvalDS_init
+                        VVE
+                        CVE
+                        DE
+                        DSE
+                        BE.
+
+th18-2_cret_init : th18-2 VVDS
+                          CVDS
+                          VVT
+                          CVT
+                          ([k:ccont][d]d Xi T T' DT)
+                          ([k:ccont][s]
+                            dstack_subst_cret s DST)
+                          BE
+                   <- th18-3 VVDS DT DST. 
+
+th18-2_cret_vlam : th18-2 VVDS
+                          CVDS
+                          ([k:ccont][vvk]
+                            vval_cret (vval_vlam [v:ctriv][vvv]
+                                                  VVE v vvv k vvk) 
+                                      VVT)
+                          (cval_cret (cval_vlam CVE) CVT)
+                          ([k:ccont][d]
+                            dstack_cret_vlam ([v:ctriv][dv]
+                                               DE v dv k d) DT)
+                          ([k:ccont][s]
+                            dstack_subst_cret 
+                              (dstack_subst_vlam ([v:ctriv][dsv]
+                                                   DSE v dsv k s))
+                              DST)
+                          ([k:ccont][b]bare_cret (BE k b))
+                    <- th18-3 VVDS DT DST
+                    <- rsT VVT CVT VVDS CVDS DST VVT' CVT' 
+                           VVDS' CVDS' DST' 
+                    <- vvalDS->vvalMS VVDS' VVMS'
+                    <- ({k:ccont}{vvk:vvalC dot k}
+                        {s:dstack_substC k dot k}
+                        lemma17-2 ([v:ctriv]T)
+                                  ([v:ctriv]app_init)
+                                  ([v:ctriv][vvv]VVE v vvv k vvk)
+                                  ([v:ctriv]app_init)
+                                  ([v:ctriv]vvalMS_t VVMS' VVT')
+                                  ([v:ctriv][dsv]DSE v dsv k s)
+                                  ([v:ctriv][dsv]DSE' v dsv k s))
+                    <- ({v1:ctriv}
+                        {dsv1:{xi:stack}{t:ctriv}
+                              dstack_substT v1 (xi , t) t xi}
+                        {dv1:{t:ctriv}{xi:stack} 
+                             dstackT (xi , t) v1 t xi}
+                        {vvv1:{xi:stack}vvalT (xi , v1) v1 xi}
+                        {cvv1:cvalT v1}
+                        th18-2 (vvalDS_stack DVS' VVT')
+                               (cvalDS_stack CVS' CVT')
+                               (VVE v1 vvv1)
+                               (CVE v1 cvv1)
+                               (DE v1 dv1)
+                               (DSE' v1 dsv1)
+                               BE).
+
+th18-2_capp : th18-2 VVDS
+                     CVDS
+                     ([k:ccont][vvk]
+                            vval_capp (VVC k vvk) VVT0 VVT1)
+                     (cval_capp CVC CVT0 CVT1)
+                     ([k:ccont][d]dstack_capp (DE k d) DT0 DT1)  
+                     ([k:ccont][s]
+                       dstack_subst_capp (DSC k s) DST0 DST1)
+                     ([k:ccont][b]bare_capp (BE k b))
+              <- th18-3 VVDS DT1 DST1
+              <- rsT VVT1 CVT1 VVDS CVDS DST1 VVT1' CVT1' 
+                     VVDS' CVDS' DST1' 
+              <- th18-3 VVDS' DT0 DST0
+              <- rsT VVT0 CVT0 VVDS' CVDS' DST0 
+                     ([xi:stack]
+                       (vval_xlam [x:ctriv][vvx:{xi':stack}
+                                                vvalT xi' x xi']
+                                   vval_klam [k:ccont][vvk] 
+                                              VVE x vvx k vvk))
+                     (cval_xlam [x:ctriv][cvx]
+                                 cval_klam (CVE x cvx))
+                     VVDS'' CVDS''
+                     ([xi:stack]dstack_subst_xlam)
+              <- th10-2 ([k:ccont][vvk]
+                          vval_capp (VVC k vvk)
+                                    (vval_xlam 
+                                     [x:ctriv][vvx:{xi':stack}
+                                                   vvalT xi' x xi']
+                                      vval_klam [k:ccont][vvk] 
+                                                 VVE x vvx k vvk) 
+                                    (VVT1' XXi'')) 
+                        (cval_capp CVC 
+                                   (cval_xlam [x:ctriv][cvx]
+                                               cval_klam (CVE x cvx)) 
+                                                         CVT1')
+                        VVT1'
+                        VVE'     
+              <- th8-2 (cval_capp CVC 
+                                  (cval_xlam [x:ctriv][cvx]
+                                              cval_klam (CVE x cvx)) 
+                                                        CVT1')
+                       CVE'
+              <- ({k:ccont}
+                  {vvk:vvalC dot k}{s:dstack_substC k dot k}
+                  {l17-1:lemma17-1C vvk s}
+                  {dbl:doubleC vvk vvalMS_init s v-part_init s}
+                  clr (VVE T1' VVT1')(CVE T1' CVT1') (VVC k vvk) 
+                      VVDS'' (DSC k s) (DSE' k s))
+              <- th18-2  VVDS''
+                         CVDS''
+                         VVE'
+                         CVE'
+                         DE
+                         DSE'
+                         BE.
+
+th18-3_t : {t:ctriv}
+           {dst:{xi:stack}dstack_substT t xi t xi}
+           {dt:{xi:stack}dstackT xi t t xi}
+           th18-3 DVS (dt Xi) (dst Xi).
+
+
+th18-3_v : {v:ctriv}
+           {dsv:{xi:stack}{t:ctriv}dstack_substT v (xi , t) t xi}
+           {dv:{xi:stack}{t:ctriv}dstackT (xi , t) v t xi}
+           th18-3 DVS (dv Xi T) (dsv Xi T).

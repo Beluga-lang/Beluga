@@ -1,0 +1,45 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Figure 8 : CPS abstract machine with a control stack 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+cstack : type.
+
+cdot : cstack.               
+; : cstack -> ccont -> cstack.        %infix left 10 ; .
+
+cstackR : croot -> ctriv -> type.
+cstackE : (ccont -> cstack) -> (ccont -> cexp) -> ctriv -> type.
+cstackC : (ccont -> cstack) -> (ccont -> ccont) -> (ccont -> cstack) -> type.
+
+%mode cstackR +R -A.
+%mode cstackE +Phi +E -A.
+%mode cstackC +Phi +C -Phi'.
+
+cstack_klam : cstackR (klam E) A
+              <- cstackE ([k:ccont]cdot) E A.
+
+cstack_cret_k_init : cstackE ([k:ccont]cdot) ([k:ccont]cret k T) T.
+
+cstack_cret_k_vlam : cstackE ([k:ccont]((Phi k) ; (vlam [v:ctriv]E v k))) 
+                             ([k:ccont]cret k T) 
+                             A
+                     <- cstackE Phi (E T) A.
+
+
+cstack_cret_vlam_phi : cstackE Phi ([k:ccont]cret (vlam [v:ctriv]E v k) T) A
+                       <- cstackE Phi (E T) A.
+
+cstack_capp : cstackE Phi ([k:ccont]capp (xlam [x:ctriv]klam (E x)) T (C k)) A
+              <- cstackC Phi C Phi'
+              <- cstackE Phi' (E T) A.
+
+cstack_phi_k : cstackC Phi ([k:ccont]k) Phi.
+
+cstack_vlam : cstackC Phi 
+                      ([k:ccont]vlam (E k)) 
+                      ([k:ccont](Phi k) ; (vlam (E k))).
+
+
+%name cstackR CONTR.
+%name cstackE CONTE.
+%name cstackC CONTC.

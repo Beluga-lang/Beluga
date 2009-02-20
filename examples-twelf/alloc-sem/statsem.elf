@@ -1,0 +1,123 @@
+%%% Simply Typed Lambda Calculus w/ small-step, allocation semantics
+%%% Author: Matthew Fluet (June 2005)
+%%% statsem.elf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Static Semantics
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% loc_judg
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+loc_judg          : sttp -> loc -> tp -> type.
+%name loc_judg DLocTc.
+%mode loc_judg +ST +L -T.
+
+loc_judg_         : loc_judg ST L T
+		  <- sttp_lookup ST L T.
+%terminates {} (loc_judg _ _ _).
+%worlds () (loc_judg _ _ _).
+%covers loc_judg +ST +E -T.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% var_judg
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+var_judg          : exp -> tp -> type.
+%name var_judg DVarTc.
+%mode var_judg +E -T. % Church-style
+%% %mode var_judg +E *T. % Curry-style
+%block var_judg_block : some {T:tp} block {x:exp} {_:var_judg x T}.
+%terminates {} (var_judg _ _).
+%worlds (var_judg_block) (var_judg _ _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% exp_judg
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+exp_judg          : sttp -> exp -> tp -> type.
+%name exp_judg DExpTc.
+%mode exp_judg +ST +E -T. % Church-style
+%% %mode exp_judg +ST +E *T. % Curry-style
+
+exp_judg_var      : exp_judg ST E T
+		  <- var_judg E T.
+exp_judg_loc      : exp_judg ST (loc_e L) T
+		  <- loc_judg ST L T.
+
+exp_judg_lam      : exp_judg ST (lam_e Tx (\x. F x)) (fn_t Tx T)
+		  <- ({x:exp} var_judg x Tx -> exp_judg ST (F x) T).
+
+exp_judg_app      : exp_judg ST (app_e E1 E2) T
+		  <- exp_judg ST E1 (fn_t Tx T) 
+		  <- exp_judg ST E2 Tx.
+exp_judg_unit     : exp_judg ST (unit_e) (unit_t).
+exp_judg_letunit  : exp_judg ST (letunit_e E1 E2) T
+		  <- exp_judg ST E1 (unit_t) 
+		  <- exp_judg ST E2 T.
+exp_judg_pair     : exp_judg ST (pair_e E1 E2) (pair_t T1 T2)
+		  <- exp_judg ST E1 T1 
+		  <- exp_judg ST E2 T2.
+exp_judg_letpair  : exp_judg ST (letpair_e E1 (\x. \y. F2 x y)) T
+		  <- exp_judg ST E1 (pair_t Tx Ty) 
+		  <- ({x:exp} var_judg x Tx -> 
+		      {y:exp} var_judg y Ty 
+		       -> exp_judg ST (F2 x y) T).
+
+%terminates E (exp_judg _ E _).
+%worlds (var_judg_block) (exp_judg _ _ _).
+%covers exp_judg +ST +E -T.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% val_judg
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+val_judg          : sttp -> val -> tp -> type.
+%name val_judg DValTc.
+%mode val_judg +ST +V -T. % Church-style
+%% %mode val_judg +ST +V *T. % Curry-style
+
+val_judg_lam      : val_judg ST (lam_v Tx (\x. F x)) (fn_t Tx T)
+		  <- ({x:exp} var_judg x Tx -> exp_judg ST (F x) T).
+val_judg_unit     : val_judg ST unit_v unit_t.
+val_judg_pair     : val_judg ST (pair_v L1 L2) (pair_t T1 T2)
+		  <- loc_judg ST L1 T1 
+		  <- loc_judg ST L2 T2.
+
+%terminates V (val_judg _ V _).
+%worlds (var_judg_block) (val_judg _ _ _).
+%covers val_judg +ST +V -T.
+
+raa_val_judg      : absurd -> val_judg ST V T -> type.
+%mode +{ST:sttp} +{V:val} +{T:tp} +{Absurd:absurd} -{DValTc: val_judg ST V T}  (raa_val_judg Absurd DValTc).
+%worlds () (raa_val_judg _ _).
+%total {} (raa_val_judg _ _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% st_judg
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+st_judg           : st -> sttp -> type.
+%name st_judg DStTc.
+%mode st_judg +S -ST. % Church-style
+%% %mode st_judg +S +ST. % Curry-style
+
+st_judg_nil       : st_judg nil_st nil_sttp.
+st_judg_cons      : st_judg (cons_st L V S') (cons_sttp L T ST')
+		  <- st_judg S' ST'
+		  <- val_judg ST' V T.
+
+%terminates S (st_judg S _).
+%worlds () (st_judg _ _).
+%covers st_judg +S -ST.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% stwf_judg
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+stwf_judg         : st -> sttp -> type.
+%name stwf_judg DStTcWf.
+%mode stwf_judg +S -ST. % Church-style
+%% %mode stwf_judg +S +ST. % Curry-style
+stwf_judg_        : stwf_judg S ST
+		  <- st_judg S ST
+		  <- st_wf S 
+		  <- sttp_wf ST.
+%terminates S (stwf_judg S _).
+%worlds () (stwf_judg _ _).
+%covers st_judg +S -ST.

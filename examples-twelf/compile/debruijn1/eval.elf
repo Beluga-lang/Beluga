@@ -1,0 +1,12 @@
+%%% Mini-ML Natural Semantics
+%%% Version restricted to pure lambda-calculus
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+eval : exp -> exp -> type.  %name eval D.
+
+% Functions
+ev_lam  : eval (lam E) (lam E).
+ev_app  : eval (app E1 E2) V
+	    <- eval E1 (lam E1')
+	    <- eval E2 V2
+	    <- eval (E1' V2) V.

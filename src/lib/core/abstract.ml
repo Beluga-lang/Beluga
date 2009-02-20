@@ -221,15 +221,24 @@ let rec eqFPVar n1 fV2 = match (n1, fV2) with
   | _ -> false
 
 
+let rec phatToDCtx phat = match phat with 
+  | (None,      0) -> I.Null
+  | (Some psi , 0) -> I.CtxVar psi
+  | (ctx_v    , k) -> 
+      I.DDec (phatToDCtx (ctx_v, k-1), I.TypDeclOpt (Id.mk_name Id.NoName)) 
 
 let rec constraints_solved cnstr = match cnstr with
   | [] -> true
   | ({contents = I.Queued} :: cnstrs) -> 
       constraints_solved cnstrs 
-  | ({contents = I.Eqn (_phat, tM, tN)} :: cnstrs) -> 
+  | ({contents = I.Eqn (phat, tM, tN)} :: cnstrs) -> 
       if Whnf.conv (tM, LF.id) (tN, LF.id) then 
         constraints_solved cnstrs
-      else false 
+      else 
+        (Printf.printf "Encountered unsolved constraint:\n %s  =   %s \n\n"
+           (P.normalToString (I.Empty) (I.Empty) (phatToDCtx phat) (tM, LF.id))
+           (P.normalToString (I.Empty) (I.Empty) (phatToDCtx phat) (tN, LF.id));         
+         false )
  | ({contents = I.Eqh (_phat, h1, h2)} :: cnstrs) -> 
       if Whnf.convHead (h1, LF.id) (h2, LF.id) then 
         constraints_solved cnstrs
@@ -647,6 +656,10 @@ and abstractCtx cQ =  match cQ with
       (* let  (_, depth)  = dctxToHat cPsi in   *)
       (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
       let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in 
+(*      let _     = Printf.printf "Abstraction: mvar r of type tA = %s \n in context = %s \n with substitution s = %s\n\n"
+        (P.typToString I.Empty I.Empty cPsi (tA, LF.id))
+        (P.dctxToString I.Empty I.Empty cPsi) 
+        (P.subToString I.Empty I.Empty cPsi s) in *)
       let s'    = abstractSub cQ (length cPsi) s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV u')

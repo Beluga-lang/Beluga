@@ -1,0 +1,254 @@
+% Context-free grammar for arithmetic expressions
+% Author: Brigitte Pientka
+
+% each operator is left-associative 
+% * and / binds tighter than + and - 
+%
+%  
+% expr --> expr, [+], term.
+% expr --> expr, [-], term.
+% expr --> term.
+% term --> term, [*], primary.
+% term --> term, [/], primary.
+% term --> primary.
+% primary --> ['('], expr, [')'].
+% primary --> [Int], {integer(Int)}.
+exp: type.
++ : exp -> exp -> exp.  %infix left 10 +.
+- : exp -> exp -> exp.  %infix left 10 -.
+* : exp -> exp -> exp.  %infix left 20 *.
+/ : exp -> exp -> exp.  %infix left 20 /.
+
+lam: (exp -> exp) -> exp.
+app: exp -> exp -> exp.
+
+n : exp.
+0: exp.
+1: exp.
+2: exp.
+3: exp.
+4: exp.
+5: exp.
+6: exp.
+7: exp.
+8: exp.
+9: exp.
+
+% brackets
+< : exp -> exp.   
+> : exp -> exp.    %postfix 30 >.
+
+% Tokens
+tok: type.
+'+': tok.
+'-': tok.
+'*': tok.
+'/': tok.
+'@': tok.
+
+'openB' : tok.
+'closeB' : tok.
+
+'lam' : tok.
+'app' : tok.
+
+num :tok.
+'0' :tok.
+'1' :tok.
+'2' :tok.
+'3' :tok.
+'4' :tok.
+'5' :tok.
+'6' :tok.
+'7' :tok.
+'8' :tok.
+'9' :tok.
+
+
+% variables
+% tokens reserved for variables or atomic propositions
+'x': tok.
+'y': tok.
+'z': tok.
+'u': tok.
+'v': tok.
+'w': tok.
+
+tokens : type.
+nil: tokens.
+; : tok -> tokens -> tokens.  %infix right 10 ;.
+
+
+% explicit context for bvars 
+% to only retrieve the first instance 
+ctx: type.
+hyp: type.
+bvar: tok -> exp -> hyp.
+# : hyp -> ctx -> ctx. %infix right 10 #.
+e : ctx.
+
+%  
+neq: tok -> tok -> type.
+% tabled neq.
+
+nxy: neq 'x' 'y'.
+nxz: neq 'x' 'z'.
+nxu: neq 'x' 'u'.
+nxv: neq 'x' 'v'.
+
+nyx: neq 'x' 'y'.
+nyz: neq 'y' 'z'.
+nyu: neq 'y' 'u'.
+nyu: neq 'y' 'v'.
+
+nzx: neq 'z' 'x'.
+nzy: neq 'z' 'y'.
+nzu: neq 'z' 'u'.
+nzv: neq 'z' 'v'.
+
+nux: neq 'u' 'x'.
+nuy: neq 'u' 'y'.
+nuz: neq 'u' 'z'.
+nuv: neq 'u' 'v'.
+
+nvx: neq 'v' 'x'.
+nvy: neq 'v' 'y'.
+nvz: neq 'v' 'z'.
+nvu: neq 'v' 'u'.
+
+%{
+nsym: neq T T'
+       <- neq T' T.
+
+}%
+lookup: tok -> ctx -> exp -> type.
+
+ls: lookup T ((bvar T I) # C) I.
+
+lf: lookup T ((bvar T' I') # C) I
+     <- neq T T'
+     <- lookup T C I.
+
+
+numConv : tok -> exp -> type.
+n1: numConv '1' 1.
+n2: numConv '2' 2.
+n3: numConv '3' 3.
+n4: numConv '4' 4.
+n5: numConv '5' 5.
+n6: numConv '6' 6.
+n7: numConv '7' 7.
+n8: numConv '8' 8.
+n9: numConv '9' 9.
+
+parse : tokens -> exp -> type.
+fun: ctx -> tokens -> tokens -> exp -> type.
+fapp: ctx -> tokens -> tokens -> exp -> type.
+expr: ctx -> tokens -> tokens -> exp -> type.
+term: ctx -> tokens -> tokens -> exp -> type.
+prim: ctx -> tokens -> tokens -> exp -> type.
+
+%tabled expr.
+%tabled term.
+%tabled fapp.
+
+
+% parses expressions; expression need not to be well typed.
+
+top: parse T E
+      <- fun e T nil E.
+
+plam: fun C ('lam' ; I ; L) R (lam E)
+       <- ({x} fun ((bvar I x) # C) L R (E x)).
+
+ca : fun C L R E <- fapp C L R E.
+
+% app left associative 
+papp: fapp C L R (app E1 E2)
+       <- fapp C L ('@' ; L2) E1
+       <- expr C L2 R E2.
+
+clam : fapp C L R E <- expr C L R E.
+
+% + left associative 
+plus: expr C L R (E1 + E2)
+       <- expr C L ('+' ; L2) E1
+       <- term C L2 R E2.
+
+% + left associative 
+minus: expr C L R (E1 - E2)
+       <- expr C L ('-' ; L2) E1
+       <- term C L2 R E2.
+
+conv_et : expr C L R E
+	   <- term C L R E.
+
+% + left associative 
+times: term C L R (E1 * E2)
+	<- term C L ('*' ; L2) E1
+	<- prim C L2 R E2.
+
+% + left associative 
+div: term C L R (E1 / E2)
+	<- term C L ('/' ; L2) E1
+	<- prim C L2 R E2.
+
+conv_tp : term C L R E
+       <- prim C L R E.
+
+%{
+% not needed when we use twelf's own precedence ordering
+brackets : prim ('openB' ; L) R (< E >)
+      <-  expr L ('closeB' ; R) E.
+}%
+
+brackets : prim C ('openB' ; L) R E
+      <-  fun C L ('closeB' ; R) E.
+
+number : prim C (num ; R) R n.
+num    : prim C (N ; R) R N' 
+	  <- numConv N N'.
+
+var : prim C (BV ; R) R V
+       <- lookup BV C V.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% only recognizing well-formed expressions
+% without reconstruction them
+
+expression: tokens -> tokens -> type.
+termE: tokens -> tokens -> type.
+primA: tokens -> tokens -> type.
+
+%tabled expression.
+%tabled termE.
+
+plus: expression L R
+       <- expression L ('+' ; L2)
+       <- termE L2 R.
+
+minus: expression L R
+       <- expression L ('-' ; L2)
+       <- termE L2 R.
+
+conv_et : expression L R <- termE L R.
+
+times: termE L R 
+	<- termE L ('*' ; L2)
+	<- primA L2 R.
+
+div: termE L R 
+	<- termE L ('/' ; L2)
+	<- primA L2 R.
+
+conv_tp : termE L R 
+       <- primA L R.
+
+brackets : primA ('openB' ; L) R
+      <-  expression L ('closeB' ; R).
+
+number : primA (Num ; R) R.
+
+

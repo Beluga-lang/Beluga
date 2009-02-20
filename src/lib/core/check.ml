@@ -277,16 +277,17 @@ module LF = struct
    *)
   let rec checkTyp' cO cD cPsi sA = match sA with
     | (Atom (loc, a, tS), s) ->
+        (* FIXME -bp *)
+        let tK = (Typ.get a).Typ.kind in
         begin try
-          let tK = (Typ.get a).Typ.kind in
-          let (tK, _s) = synKSpine cO cD cPsi (tS, s) (tK, LF.id) in
-            if tK = Typ then
+          let (tK', _s) = synKSpine cO cD cPsi (tS, s) (tK, LF.id) in
+            if tK' = Typ then
               ()
             else
-              raise (Error (loc, (KindMismatch (cD, cPsi, sA))))
+              raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, LF.id)))))
         with Match_failure _ ->
           (* synKSpine cO cD cPsi (App _, _) (Typ, _) *)
-          raise (Error (loc, (KindMismatch (cD, cPsi, sA))))
+          raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, LF.id)))))
         end
 
     | (PiTyp ((TypDecl (x, tA), _), tB), s) ->

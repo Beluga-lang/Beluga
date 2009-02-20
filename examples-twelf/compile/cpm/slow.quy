@@ -1,0 +1,105 @@
+% Applying soundness to the multiplication of 2 * 3
+%query 1 *
+ceval_sound
+   (cev
+      (stop << st_init << st_return << st_return << st_return << st_return
+          << st_vl << st_case1_z << st_return << st_vl << st_case << st_app2
+          << st_return << st_vl << st_app1 << st_return << st_lam << st_fix
+          << st_app << st_s << st_case1_s << st_return << st_vl << st_case
+          << st_app2 << st_return << st_vl << st_app1 << st_return << st_lam
+          << st_fix << st_app << st_s << st_case1_s << st_return << st_vl
+          << st_case << st_app2 << st_return << st_vl << st_app1 << st_return
+          << st_lam << st_fix << st_app << st_s << st_case1_s << st_return
+          << st_vl << st_case << st_app2 << st_return << st_vl << st_app1
+          << st_return << st_lam << st_fix << st_app << st_s << st_case1_s
+          << st_return << st_vl << st_case << st_app2 << st_return << st_return
+          << st_return << st_vl << st_case1_z << st_return << st_vl << st_case
+          << st_app2 << st_return << st_vl << st_app1 << st_return << st_lam
+          << st_fix << st_app << st_s << st_case1_s << st_return << st_vl
+          << st_case << st_app2 << st_return << st_vl << st_app1 << st_return
+          << st_lam << st_fix << st_app << st_s << st_case1_s << st_return
+          << st_vl << st_case << st_app2 << st_return << st_vl << st_case1_z
+          << st_return << st_vl << st_case << st_app2 << st_return << st_z
+          << st_case1_z << st_return << st_vl << st_case << st_app2 << st_return
+          << st_vl << st_app1 << st_return << st_lam << st_fix << st_app
+          << st_app1 << st_return << st_lam << st_fix << st_app2 << st_return
+          << st_vl << st_app1 << st_return << st_vl << st_app << st_app
+          << st_case1_s << st_return << st_vl << st_case << st_app2 << st_return
+          << st_vl << st_app1 << st_return << st_lam << st_fix << st_app
+          << st_app1 << st_return << st_lam << st_fix << st_app2 << st_return
+          << st_vl << st_app1 << st_return << st_vl << st_app << st_app
+          << st_case1_s << st_return << st_vl << st_case << st_app2 << st_return
+          << st_vl << st_app1 << st_return << st_lam << st_fix << st_app
+          << st_app1 << st_return << st_lam << st_fix << st_app2 << st_return
+          << st_vl << st_app1 << st_return << st_vl << st_app << st_app
+          << st_case1_s << st_return << st_vl << st_case << st_app2 << st_return
+          << st_return << st_return << st_return << st_z << st_s << st_s << st_s
+          << st_app1 << st_return << st_lam << st_fix << st_app2 << st_return
+          << st_return << st_return << st_z << st_s << st_s << st_app1
+          << st_return << st_vl << st_app << st_app << st_return << st_lam
+          << st_letv << st_return << st_lam << st_letv))
+D.
+
+% Currently kills SML
+%{
+% Applying completeness proof to obtain a computation of 2 * 3
+%query 1 1
+ceval_complete
+   (ev_letv
+      (ev_letv
+          (ev_app
+              (ev_case_s
+                  (ev_app
+                      (ev_case_s
+                          (ev_s
+                              (ev_app
+                                  (ev_case_s
+                                      (ev_s
+                                          
+(ev_app
+    (ev_case_s
+        (ev_s
+            (ev_app
+                (ev_case_s
+                    (ev_s (ev_app (ev_case_z ev_vl ev_vl) ev_vl (ev_fix ev_lam)))
+                    ev_vl)
+                ev_vl (ev_fix ev_lam)))
+        ev_vl)
+    ev_vl (ev_fix ev_lam)))
+                                      ev_vl)
+                                  ev_vl (ev_fix ev_lam)))
+                          ev_vl)
+                      (ev_app
+                          (ev_case_s
+                              (ev_app
+                                  (ev_case_s
+                                      (ev_s
+                                          (ev_app
+                                              (ev_case_s
+                                                  (ev_s
+                                                      (ev_app
+                                                          (ev_case_z ev_vl ev_vl)
+                                                          ev_vl (ev_fix ev_lam)))
+                                                  ev_vl)
+                                              ev_vl (ev_fix ev_lam)))
+                                      ev_vl)
+                                  (ev_app
+                                      (ev_case_s
+                                          (ev_app (ev_case_z ev_vl ev_vl)
+                                              (ev_app (ev_case_z ev_z ev_vl)
+                                                  ev_vl (ev_fix ev_lam))
+                                              (ev_app (ev_fix ev_lam) ev_vl
+                                                  ev_vl))
+                                          ev_vl)
+                                      ev_vl (ev_fix ev_lam))
+                                  (ev_app (ev_fix ev_lam) ev_vl ev_vl))
+                              ev_vl)
+                          ev_vl (ev_fix ev_lam))
+                      (ev_app (ev_fix ev_lam) ev_vl ev_vl))
+                  ev_vl)
+              (ev_s (ev_s (ev_s ev_z)))
+              (ev_app (ev_fix ev_lam) (ev_s (ev_s ev_z)) ev_vl))
+          ev_lam)
+      ev_lam)
+CE.
+}

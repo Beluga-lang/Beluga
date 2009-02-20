@@ -1,0 +1,184 @@
+% File: complete.elf
+
+% For completeness, we need a lemma that every nj proof "is" an nk proof.
+
+% Prover error: A proof could not be found
+% %theorem nj_nk_auto : forall* {A:o} forall {NJ:nj A} exists {NK:nk A} true.
+% %prove 2 NJ (nj_nk_auto NJ NK).
+
+nj_nk : nj A -> nk A -> type.
+%mode nj_nk +NJ -NK.
+
+nj_nk_andi    : nj_nk (nj_andi NJA NJB) (nk_andi NKA NKB)
+    <- nj_nk NJA NKA
+    <- nj_nk NJB NKB.
+
+nj_nk_andel   : nj_nk (nj_andel NJ) (nk_andel NK)
+    <- nj_nk NJ NK.
+
+nj_nk_ander   : nj_nk (nj_ander NJ) (nk_ander NK)
+    <- nj_nk NJ NK.
+
+nj_nk_impi    : nj_nk (nj_impi NJ) (nk_impi NK)
+    <- ({u} {v} nj_nk u v -> nj_nk (NJ u) (NK v)).
+
+nj_nk_impe    : nj_nk (nj_impe NJI NJA) (nk_impe NKI NKA)
+    <- nj_nk NJI NKI
+    <- nj_nk NJA NKA.
+
+nj_nk_oril    : nj_nk (nj_oril NJ) (nk_oril NK)
+    <- nj_nk NJ NK.
+
+nj_nk_oril    : nj_nk (nj_orir NJ) (nk_orir NK)
+    <- nj_nk NJ NK.
+
+nj_nk_ore     : nj_nk (nj_ore NJ NJ1 NJ2) (nk_ore NK NK1 NK2)
+    <- nj_nk NJ NK
+    <- ({u} {v} nj_nk u v -> nj_nk (NJ1 u) (NK1 v))
+    <- ({u} {v} nj_nk u v -> nj_nk (NJ2 u) (NK2 v)).
+
+nj_nk_noti    : nj_nk (nj_noti NJ) (nk_noti NK)
+    <- ({p} {u} {v} nj_nk u v -> nj_nk (NJ p u) (NK p v)).
+
+nj_nk_note    : nj_nk (nj_note NJ1 C NJ2) (nk_note NK1 C NK2)
+    <- nj_nk NJ1 NK1
+    <- nj_nk NJ2 NK2.
+
+nj_nk_truei   : nj_nk nj_truei nk_truei.
+
+
+nj_nk_falsee  : nj_nk (nj_falsee NJ) (nk_falsee NK)
+    <- nj_nk NJ NK.
+
+nj_nk_foralli : nj_nk (nj_foralli NJ) (nk_foralli NK)
+    <- ({a} nj_nk (NJ a) (NK a)).
+
+nj_nk_foralle : nj_nk (nj_foralle NJ T) (nk_foralle NK T)
+    <- nj_nk NJ NK.
+
+nj_nk_existsi : nj_nk (nj_existsi T NJ) (nk_existsi T NK)
+    <- nj_nk NJ NK.
+
+nj_nk_existse : nj_nk (nj_existse NJ1 NJ2) (nk_existse NK1 NK2)
+    <- nj_nk NJ1 NK1
+    <- ({a} {u} {v} nj_nk u v -> nj_nk (NJ2 a u) (NK2 a v)).
+
+%block l5 : some {A:o} block {u:nj A}{v:nk A}{h:nj_nk u v}.
+%block l6 : block {p:o}.
+%worlds (l1 | l5 | l6) (nj_nk _ _).
+% %mode (nj_nk +NJ -NK).
+% total NJ (nj_nk NJ NK).
+% total NJ (nj_nk NJ NK).
+
+% Lemma (equiv):  Given any K::kolm A A*, there are
+%    NK' : nk A -> nk A* and NK : nk A* -> nk A.
+% (i.e., A and A* are classically equivalent!)
+
+% Could not prove this automatically (I gave up)
+% %theorem equiv_auto : forall* {A:o} {A*:o} forall {K:kolm A A*} 
+%                      exists {NK*:nk A -> nk A*} {NK:nk A* -> nk A} true.
+% %prove 2 K (equiv_auto K NK* NK).
+
+equiv : kolm A A* -> (nk A -> nk A*) -> (nk A* -> nk A) -> type.
+%mode equiv +K -NK* -NK.
+
+equiv_and : equiv (kolm_and KB KA)
+                  ([u:nk (A and B)] (nk_dnotx (nk_andi (NKA* (nk_andel u))
+                                                       (NKB* (nk_ander u)))))
+                  ([u:nk (n (A* and B*))]
+                    (nk_andi (NKA (nk_andel (nk_dnotr u)))
+                             (NKB (nk_ander (nk_dnotr u)))))
+    <- equiv KA NKA* NKA
+    <- equiv KB NKB* NKB.
+
+% This case clearly demonstrates why we need to prove
+% the existence of NK* and NK together.
+equiv_imp : equiv (kolm_imp KB KA) 
+                  ([v:nk (A imp B)] 
+                     (nk_dnotx
+                       (nk_impi [u:nk A*]
+                          (NKB* (nk_impe v (NKA u))))))
+                  ([v:nk (n (A* imp B*))]
+                     (nk_impi [u:nk A] 
+                        (NKB (nk_impe (nk_dnotr v) (NKA* u)))))
+    <- equiv KA NKA* NKA
+    <- equiv KB NKB* NKB.
+
+equiv_or  : equiv (kolm_or KB KA)
+                  ([v:nk (A or B)]
+                     (nk_dnotx
+                       (nk_ore v
+                          ([u:nk A] (nk_oril (NKA* u)))
+                          ([u:nk B] (nk_orir (NKB* u))))))
+                  ([v:nk (n (A* or B*))]
+                     (nk_ore (nk_dnotr v)
+                        ([u:nk A*] (nk_oril (NKA u)))
+                        ([u:nk B*] (nk_orir (NKB u)))))
+    <- equiv KA NKA* NKA
+    <- equiv KB NKB* NKB.
+
+equiv_not : equiv (kolm_not K) 
+                  ([v:nk (not A)]
+                     (nk_noti [p] [u:nk (not not A*)]
+                        (nk_note
+                          v p (NKA (nk_dnotr u)))))
+                  ([v:nk (n not A*)]
+                     (nk_noti [p] [u:nk A]
+                        (nk_note
+                           (nk_dnotr v) p (NKA* u))))
+    <- equiv K NKA* NKA.
+
+% An alternative formulation is
+% equiv_true : equiv kolm_true ([v:nk true] (nk_dnotx nk_truei)) 
+%                              ([v:nk (n true)] nk_truei).
+equiv_true : equiv kolm_true ([v:nk true] (nk_dnotx v)) 
+                             ([v:nk (n true)] (nk_dnotr v)).
+
+equiv_false : equiv kolm_false ([v:nk false] (nk_dnotx v)) 
+                               ([v:nk (n false)] (nk_dnotr v)).
+
+equiv_forall : equiv (kolm_forall K) 
+                     ([v:nk (forall A)]
+                       (nk_dnotx
+                         (nk_foralli [a:i]
+                           (NK* a (nk_foralle v a)))))
+                     ([v:nk (n (forall A*))]
+                       (nk_foralli [a:i]
+                         (NK a (nk_foralle (nk_dnotr v) a))))
+   <- ({a} equiv (K a) (NK* a) (NK a)).
+
+equiv_exists : equiv (kolm_exists K) 
+                     ([v:nk (exists A)]
+                        (nk_dnotx
+                          (nk_existse v 
+                             ([a] [u:nk (A a)]
+                                (nk_existsi a (NK* a u))))))
+                     ([v:nk (n (exists A*))]
+                        (nk_existse (nk_dnotr v)
+                           ([a] [u:nk (A* a)]
+                              (nk_existsi a (NK a u)))))
+   <- ({a} equiv (K a) (NK* a) (NK a)).
+
+%worlds (l1) (equiv _ _ _).
+%terminates K (equiv K NK* NK).
+% %mode (equiv +K -NK* -NK).
+% total K (equiv K NK* NK).
+
+
+% (Completeness)
+% Given:  NJ::nj (n A*)
+%          K::kolm A A*
+%
+% Then we have
+%         NK::nk A.
+
+complete : kolm A A* -> nj A* -> nk A -> type.
+
+% Completeness reduces to nj_nk and equiv.
+complete1   : complete K NJ (NK2 NK1*)
+         <- nj_nk NJ NK1*
+         <- equiv K NK2* NK2.
+
+%mode complete +K +NJ -NK.
+%worlds () (complete _ _ _).
+% total [] (complete K NJ NK).

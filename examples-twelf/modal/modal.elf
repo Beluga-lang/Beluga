@@ -1,0 +1,185 @@
+% An implementation of intutitionistic modal logic based upon Alex 
+% Simpson's thesis
+
+w : type.  % worlds
+o : type.  % propositions
+
+% Relatedness between worlds.
+R : w -> w -> type. %infix left 5 R.
+%tabled R.
+
+% Propositions
+⊤ : o.
+⊥ : o.
+⇒ : o -> o -> o. %infix right 5 ⇒.
+□ : o -> o.
+<> : o -> o.
+
+% Negation is an abbreviation as usual.
+%abbrev ¬ : o -> o = ([x:o] x ⇒ ⊥ ).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Natural deduction version
+
+@ : o -> w -> type. %infix left 5 @.
+%tabled @.
+
+⊤I : ⊤ @ W.
+⊥E : P @ W
+   <- ⊥ @ W.
+⇒I: (P1 ⇒ P2) @ W
+   <- (P1 @ W -> P2 @ W).
+⇒E: P2 @ W
+   <- (P1 ⇒ P2) @ W
+   <- P1 @ W.
+
+□I : (□ P) @ W1
+   <- ({W2:w} W1 R W2 -> P @ W2).
+□E : P @ W2
+    <- (□ P) @ W1
+    <- W1 R W2.
+<>I : (<> P) @ W1
+      <- W1 R W2
+      <- P @ W2.
+<>E : P2 @ W
+      <- (<> P1) @ W1
+      <- ({W2:w} W1 R W2 -> P1 @ W2 -> P2 @ W).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%{
+%theorem identity : exists {D:{W:w}{P:o} (P ⇒  P) @ W} true.
+%establish 5 {} (identity D).
+}%
+
+%{
+%theorem false : exists {D:{W:w} ⊥ @ W} true.
+%establish 5 {} (false D).
+}%
+
+%{
+%theorem box_taut0 : exists {D:{W:w}{A:o} □ (A ⇒ A) @ W} true.
+%establish 10 {} (box_taut0 D).
+
+%theorem box_taut1 : exists {D:{W:w}{A:o}{B:o} □ (A ⇒ B ⇒ A) @ W} true.
+%establish 10 {} (box_taut1 D).
+
+%theorem box_taut2 : exists {D:{W:w}{A:o}{B:o}{C:o} ((A ⇒ B ⇒ C) ⇒ (A ⇒ B) ⇒ (A ⇒ C)) @ W} true.
+%establish 6 {} (box_taut2 D).
+
+%theorem k_axiom1 : exists {D:{W:w}{A:o}{B:o} ((□ (A ⇒ B)) ⇒  (□ A) ⇒ (□ B)) @ W} true.
+%establish 6 {} (k_axiom1 D).
+}%
+
+%{ Can't seem to be done with depth 6
+
+%theorem peirce : exists {D:{W:w}{A:o}{B:o} (¬ (¬ (((A ⇒ B) ⇒ A)⇒ A))) @ W} true.
+%establish 6 {} (peirce D).
+
+%theorem k_axiom2 : exists {D:{W:w}{A:o}{B:o} ((□ (A ⇒ B)) ⇒  (<> A) ⇒ (<> B)) @ W} true.
+%establish 6 {} (k_axiom2 D).
+}%
+
+%{ 
+%theorem modal_equiv1 : exists {D:{W:w}{A:o} ((□ A) ⇒ (¬ (<> (¬ A)))) @ W} true.
+%establish 5 {} (modal_equiv1 D).
+
+%theorem modal_equiv2 : exists {D:{W:w}{A:o} ((<> A) ⇒ (¬ (□ (¬ A)))) @ W} true.
+%establish 5 {} (modal_equiv2 D).
+}%
+
+%{
+% Can prove these if we add reflexivity
+refl : W R W.
+
+%theorem t_axiom1 : exists {D:{W:w}{A:o} ((□ A) ⇒ A) @ W} true.
+%establish 6 {} (t_axiom1 D).
+
+%theorem t_axiom2 : exists {D:{W:w}{A:o} (A ⇒  (<> A)) @ W} true.
+%establish 6 {} (t_axiom2 D).
+}%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Sequent calculus version
+
+hyp : o -> w -> type.
+conc : o -> w -> type.
+%tabled hyp.
+%tabled conc.
+
+axiom : hyp P W -> conc P W.
+
+⊤R : conc ⊤ W.
+
+⊥L : hyp ⊥ W1 -> 
+   % ----------
+     conc P W2.
+     
+⇒L : (hyp P2 W1 -> conc P3 W2) ->
+     (conc P1 W1) ->
+   % ---------------------------------
+     (hyp (P1 ⇒  P2) W1 -> conc P3 W2).
+     
+⇒R : (hyp P1 W -> conc P2 W) ->
+   % --------------------------
+     conc (P1 ⇒ P2) W.
+     
+□L : (hyp P1 W2 -> conc P2 W3) ->
+   % ----------------------------
+      (W1 R W2 -> hyp (□ P1) W1 -> conc P2 W3).
+      
+□R : (W1 R W2 -> conc P W2) ->
+   % -------------------------
+     conc (□ P) W1.
+
+<>L : (W1 R W2 -> hyp P1 W2 -> conc P2 W3) ->
+    % ---------------------------------------
+      (hyp (<> P1) W1 -> conc P2 W3).
+
+<>R : conc P W2 -> 
+    % ---------
+      (W1 R W2 -> conc (<> P) W1).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%{
+% Identity
+%querytabled * * D : {W:w} {P:o} conc ((P ⇒ P)) W.
+
+% Double negation of Peirce's law
+%querytabled * * D : {W:w} {A:o}{B:o}conc (¬ (¬ (((A ⇒  B) ⇒  A) ⇒ A))) W.
+
+% K axiom 1
+%querytabled * * D : {W:w}{A:o}{B:o} conc ((□ (A ⇒ B)) ⇒  (□ A) ⇒ (□ B)) W.
+
+}%
+
+%{ Can't be proven -- correct
+%theorem false : exists {D:{W:w} conc ⊥  W} true.
+%establish 10 {} (false D).
+}%
+
+%{ Can't be proven -- correct
+%theorem peirce : exists {D:{W:w}{A:o}{B:o} conc (((A ⇒ B) ⇒ A)⇒ A) W} true.
+%establish 20 {} (peirce D).
+}%
+
+%theorem dn_peirce : exists {D:{W:w}{A:o}{B:o} conc (¬ (¬ (((A ⇒ B) ⇒ A)⇒ A))) W} true.
+%prove 10 {} (dn_peirce D).
+
+%theorem k_axiom1 : exists {D:{W:w}{A:o}{B:o} conc ((□ (A ⇒ B)) ⇒  (□ A) ⇒ (□ B)) W} true.
+%prove 10 {} (k_axiom1 D).
+
+%theorem modaleq1 : exists {D:{W:w}{A:o} conc ((□ A) ⇒ (¬ (<> (¬ A)))) W} true.
+%prove 10 {} (modaleq1 D).
+
+%theorem modaleq2 : exists {D:{W:w}{A:o} conc ((<> A) ⇒ (¬ (□ (¬ A)))) W} true.
+%prove 10 {} (modaleq2 D).
+
+%theorem dn_modaleq1 : exists {D:{W:w}{A:o} conc (¬ (¬ ((□ A) ⇒ (¬ (<> (¬ A)))) )) W} true.
+%prove 10 {} (dn_modaleq1 D).
+
+%theorem dn_modaleq2 : exists {D:{W:w}{A:o} conc (¬ (¬ ((<> A) ⇒ (¬ (□ (¬ A)))) )) W} true.
+%prove 10 {} (dn_modaleq2 D).

@@ -1,0 +1,34 @@
+%%% Termination of the theorems in the
+%%% Church-Rosser proof.
+
+% par-lemmas
+%terminates M (identity M _).
+%terminates R* (append R* S* S*').
+
+% par-cr
+%terminates R (subst R S S').
+%terminates [R' R''] (dia R' R'' S' S'').
+%terminates R*'' (strip R' R*'' S*' S'').
+%terminates R*' (conf R*' R*'' S*' S*'').
+%terminates C (cr C S* S*').
+
+% ord-lemmas
+%terminates R (appd R S* S*').
+%terminates R* (lm1* R* S*).
+%terminates R* (apl1* R* S*).
+%terminates R* (apr1* R* S*).
+
+% equiv
+%terminates R (eq1 R S*).
+%terminates R (eq2 R S).
+%terminates R* (eq3 R* S*).
+%terminates R* (eq4 R* S*).
+%terminates C (eq5 C C').
+% %terminates C' (eq5 C C'). % should fail
+%terminates C (sym_pconv C C').
+% %terminates C' (sym_pconv C C'). % should fails with modes
+%terminates C (eq6 C C').
+
+% ord-cr
+%terminates {} (cr_ord C S* S*').
+

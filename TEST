@@ -66,10 +66,30 @@ $INTERPRETER  \
     test/test-simple.bel \
     test/test-simple-explicit.bel \
     test/schema.bel \
-    @test/sigma1.bel
+    LF/arith.lf \
+    LF/arith-rec1.lf \
+    LF/arith-unify.lf \
+    LF/lambda.lf \
+    LF/lambda-rec.lf \
+    LF/simple-typing.lf \
+    LF/lam-tp-rec.lf \
+    LF/cut-elim.lf \
+    LF/kindtest.lf \
+    LF/mini-ml.lf \
+    LF/mini-ml-rec.lf \
+    LF/vsound.lf \
+    LF/vsound-rec.lf \
+    LF/tpeval.lf \
+    LF/tpeval-rec.lf \
+    LF/tpcert.lf \
+    LF/tps-1.lf \
+    LF/tps.lf \
+    ../examples-twelf/arith/sources.cfg \
+    ../examples-twelf/alloc-sem/sources.cfg 
+#    @test/sigma1.bel
      
 #    notworking/church-rosser.rec \
-#    notworking/cut-elim.bel \
+#    notworking/c*ut-elim.bel \
 #    notworking/eq-proof.bel \
 #    notworking/fol-handbook.bel \
 #    notworking/tpcert.bel \
@@ -78,3 +98,4 @@ $INTERPRETER  \
 
 # *** Needs to be updated for new syntax: ***
 #    @tests/fvnat.rec
+

@@ -1,0 +1,25 @@
+% Completeness of refining evaluation to small step semantics
+
+%theorem ccf : forall* {E:exp} {V:val}
+	       forall {D:eval E V}
+	       exists {C:({K} {W} K # (return V) =>* (answer W) -> K # (ev E) =>* (answer W))} true.
+%prove 20 D (ccf D _).
+
+% Proof equivalence: "=>"  direction
+
+%theorem peq : forall* {K1:cont} {E1:exp} {V1:val} {V2:val} 
+		       {C:K1 # ev E1 =>* answer V1}
+         	       {D:eval E1 V2} {C':K1 # return V2 =>* answer V1}
+               forall {SD : csd C D C'}
+	       exists {CP : ccp D C' C} true.
+%prove 6 SD (peq SD _). 
+
+
+% Proof equivalence: "<=" direction
+
+%theorem peqr : forall* {K1:cont} {E1:exp} {V1:val} {V2:val} 
+		        {C:K1 # ev E1 =>* answer V1}
+         	        {D:eval E1 V2} {C':K1 # return V2 =>* answer V1}
+	        forall {CP : ccp D C' C}
+                exists {SD : csd C D C'} true.
+%prove 6 CP (peqr CP _). 

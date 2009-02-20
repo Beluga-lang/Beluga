@@ -1,0 +1,65 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Figure 12 : CPS abstract machine with two stack 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+two_stacksR : croot -> ctriv -> type.
+two_stacksE : (ccont -> cstack) -> stack -> (ccont -> cexp) -> ctriv -> type.
+two_stacksT : stack -> ctriv -> ctriv -> stack -> type.
+two_stacksC : (ccont -> cstack) 
+              -> (ccont -> ccont) 
+              -> (ccont -> cstack) 
+              -> type.
+
+%mode two_stacksR +R -A.
+%mode two_stacksE +Phi +Xi +E -A.
+%mode two_stacksT +Xi +T -T' -Xi'.
+%mode two_stacksC +Phi +C -Phi'.
+
+two_stacks_klam : two_stacksR (klam E) A
+                  <- two_stacksE ([k:ccont]cdot) dot E A. 
+
+two_stacks_cret_k_init : two_stacksE ([k:ccont]cdot)
+                                     Xi 
+                                     ([k:ccont]cret k T) A
+                         <- two_stacksT Xi T A dot.
+
+two_stacks_cret_k_vlam : two_stacksE ([k:ccont]((Phi k) 
+                                                ; (vlam [v:ctriv]E v k)))
+                                     Xi 
+                                     ([k:ccont]cret k T) A
+                         <- two_stacksT Xi T T' Xi'
+                         <- ({v:ctriv}
+                             ({xi:stack}{t:ctriv}two_stacksT (xi , t) v t xi)
+                             -> two_stacksE Phi (Xi' , T') (E v) A).
+                            
+
+two_stacks_cret_vlam_phi : two_stacksE Phi 
+                                       Xi 
+                                       ([k:ccont]cret (vlam [v:ctriv]E v k) T)
+                                       A
+                           <- two_stacksT Xi T T' Xi'
+                           <- ({v:ctriv}
+                               ({xi:stack}{t:ctriv}two_stacksT (xi , t) v t xi)
+                               -> two_stacksE Phi (Xi' , T') (E v) A).
+
+two_stacks_capp : two_stacksE Phi Xi ([k:ccont]capp T0 T1 (C k)) A
+                  <- two_stacksT Xi T1 T1' Xi1
+                  <- two_stacksT Xi1 T0 (xlam [x:ctriv]klam (E x)) Xi0
+                  <- two_stacksC Phi C Phi'
+                  <- two_stacksE Phi' Xi0 (E T1') A. 
+
+two_stacks_xlam : two_stacksT Xi (xlam R) (xlam R) Xi.
+
+two_stacks_vlam : two_stacksC Phi 
+                              ([k:ccont]vlam (E k)) 
+                              ([k:ccont]((Phi k) ; (vlam (E k)))).
+
+two_stacks_k : two_stacksC Phi
+                           ([k:ccont]k)
+                           Phi.
+                         
+
+%name two_stacksR TWOR.
+%name two_stacksE TWOE.
+%name two_stacksT TWOT.
+%name two_stacksC TWOC.

@@ -1,0 +1,22 @@
+% equality reflection:
+
+eqrefl1 : abse G E F -> abse G E' F' -> F == F' -> conv E E' -> type.
+
+eqrefl1_ : eqrefl1 AP AP' EP (c_trans (c_sym CVE)
+	                              (c_trans (CV MG) CVE'))
+	<- etoc EP CP CP' ([x] CV x)
+	<- invca AE CP (GG:exp _ MG) CVE
+	<- invca AE' CP' GG CVE'.
+
+eqrefl2 : conc F M -> conc F' M' -> ({x}conv (M x) (M' x)) -> F == F' -> type.
+
+eqrefl2_ : eqrefl2 CP CP' ([x] CVP x) (sym EPF then =@= EE refl then EPF')
+	<- ({x}ctoe (CVP x) (AP x) (AP' x) EE)
+	<- invac CP (zabs1 [x] AP x) EPF
+	<- invac CP'(zabs1 [x] AP' x) EPF'.
+
+%sigma [p1:abse empty (llam[x]x) F1] sigma[p2:abse empty (llam[x] lfst (lpair x x)) F2] eqrefl1 p1 p2 (sym (=cur= prod_l)) C.
+
+%sigma[p1:conc (id @ fst) M1] sigma [p2:conc (fst @ id) M2] eqrefl2 p1 p2 ([x]c_refl) E.
+
+%sigma[p1:conc (cur app) M1] sigma [p2:conc id M2] eqrefl2 p1 p2 ([x] c_trans (c_lam [y] c_app c_prl c_prr) c_eta) E.

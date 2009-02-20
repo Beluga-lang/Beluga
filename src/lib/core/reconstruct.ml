@@ -95,7 +95,9 @@ let rec index_kind cvars bvars = function
 
 and index_typ cvars bvars = function
   | Ext.LF.Atom (loc, a, s) ->
-      let a' = Typ.index_of_name a
+      let _        = dprint (fun () -> "\n Indexing type constant " ^ a.string_of_name ^ "\n") in 
+      let a' = Typ.index_of_name a in
+      let _        = dprint (fun () -> "\n Found type constant " ^ a.string_of_name ^ "\n") in 
       and s' = index_spine cvars bvars s in
         Apx.LF.Atom (loc, a', s')
 
@@ -133,6 +135,7 @@ and index_term cvars bvars = function
 
 and index_head cvars bvars = function
   | Ext.LF.Name (_, n) ->
+      let _        = dprint (fun () -> "\n Indexing name " ^ n.string_of_name ^ "\n") in 
       begin try
         Apx.LF.BVar (BVar.index_of_name bvars n)
       with Not_found -> try
@@ -483,8 +486,8 @@ let patSpine spine =
 let rec mkShift recT cPsi = match recT with
   | PiboxRecon -> Int.LF.Shift(Int.LF.NoCtxShift, 0)
   | PiRecon ->
-      let (None, d) = Context.dctxToHat cPsi in
-        Int.LF.Shift(Int.LF.NoCtxShift, d)
+       let (None, d) = Context.dctxToHat cPsi in
+         Int.LF.Shift(Int.LF.NoCtxShift, d) 
 
 (* etaExpandMV moved to whnf.ml -jd 2009-02-01 *)
 
@@ -630,7 +633,9 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
         Int.LF.Lam (Some loc, x, tM)
 
   | (Apx.LF.Root (_, _h, _spine), (Int.LF.Atom _, _s)) ->
-      elTerm' recT cD cPsi m sA
+      elTerm' recT cD cPsi m  sA
+  | _ -> raise (Violation "Elaboration encountered illtyped term: Check for eta-expansion")
+
 
 and elTerm' recT cD cPsi r sP = match r with
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
@@ -1052,10 +1057,13 @@ and elKSpine recT cD cPsi spine sK = match (spine, sK) with
  *   O = containing new meta-variables of S (unchanged)
  *)
 and elSpineSynth cD cPsi spine s' sP = match (spine, sP) with
-  | (Apx.LF.Nil, (tP, s))  ->
+  | (Apx.LF.Nil, (_tP, _s))  ->
       let ss = LF.invert s' in
-        (* ensure that [ss] ([s]tP) exists ! *)
-        (Int.LF.Nil, Int.LF.TClo(tP, LF.comp s ss))
+      let tQ = Unify.pruneTyp cD (Context.dctxToHat cPsi,  sP, ss, Unify.MVarRef (ref None)) in 
+      (* PROBLEM: [s'][ss] [s]P is not really P; in fact [ss][s]P may not exist;
+       *  We using pruning to ensure that [ss][s]P does exist
+       *)
+        (Int.LF.Nil, tQ) 
 
   | (Apx.LF.App (Apx.LF.Root (loc, Apx.LF.BVar x, Apx.LF.Nil), spine), sP) ->
       let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
@@ -1223,23 +1231,32 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
 
   | ((Int.LF.Root (loc, _, _), _) as sR, (Int.LF.Atom _, _)) ->
       begin
-        try
-          let sP' = synTerm recT cO cD cPsi sR in
+(*        try *)
+          let _ = dprint (fun () -> "recTerm: expected " ^ 
+            (P.normalToString cO cD cPsi sR) ^ " of type " ^ 
+            (P.typToString cO cD cPsi sA) ^ "\n\n"  ) in 
+          let sP' = synTermW recT cO cD  cPsi sR in
+          let _ = dprint (fun () -> "\n recTerm: synthesized " ^ 
+            (P.normalToString cO cD cPsi sR) ^ "    of type " 
+                            ^ (P.typToString cO cD cPsi sP') ^ "\n\n") in  
             try
-              Unify.unifyTyp cD (Context.dctxToHat cPsi, sP', sA)
+              Unify.unifyTyp cD  (Context.dctxToHat cPsi, sP', sA) 
             with Unify.Unify msg ->
-              Printf.printf "%s \n" msg;
-              raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP')))
-        with Match_failure _ ->
+              (Printf.printf "%s \n" msg;
+              raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP'))))
+      (* with Match_failure _ ->
           (* synSpine recT cO cD  cPsi (Int.LF.App _, _) (Int.LF.Atom _, _) *)
-          raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
-      end
+          (Printf.printf "recTerm: where is this coming from? \n";
+          raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))) *)
+      end 
 
   | ((Int.LF.Root (loc, _, _), _), _) ->
-       raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA)))
+      (Printf.printf "recTerm: Root object of non-atomic type \n";
+       raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA))))
 
   | ((Int.LF.Lam (loc, _, _), _), _) ->
-       raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA)))
+      (Printf.printf "recTerm: Lam object of atomic type \n";
+       raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA))))
 
 (* synTerm cO cD  cPsi sR = sP *)
 and synTerm recT cO cD  cPsi sR = synTermW recT cO cD  cPsi (Whnf.whnf sR)
@@ -1247,16 +1264,7 @@ and synTerm recT cO cD  cPsi sR = synTermW recT cO cD  cPsi (Whnf.whnf sR)
 and synTermW recT cO cD  cPsi sR = match sR with
   | (Int.LF.Root (_, Int.LF.Const c, tS), s') ->
       let tA = (Term.get c).Term.typ in
-      let sshift =
-        begin match recT with
-          | PiboxRecon ->
-              Int.LF.Shift (Int.LF.NoCtxShift, 0)
-
-          | PiRecon ->
-              let (_, d) = Context.dctxToHat cPsi in
-                Int.LF.Shift (Int.LF.NoCtxShift, d)
-        end
-      in
+      let sshift = mkShift recT cPsi in
         synSpine recT cO cD  cPsi (tS, s') (tA, sshift)
 
   | (Int.LF.Root (_, Int.LF.BVar x, tS), s') ->
@@ -1309,8 +1317,15 @@ and synTermW recT cO cD  cPsi sR = match sR with
        * This only applies to LF reconstruction
        *)
       let tA = FVar.get x in
+      let _ = dprint (fun () -> "synTerm FVAR " ^  (P.normalToString cO cD cPsi sR)
+                       ^ "\n\n" ) in 
       let (None , d) = Context.dctxToHat cPsi in
-        synSpine recT cO cD  cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d))
+      let _ = dprint (fun () -> "of type " ^ 
+         (P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, d))) ^ " \n\n " )
+      in 
+      let s = mkShift PiRecon cPsi in 
+        (* synSpine recT cO cD  cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) *)
+         synSpine recT cO cD  cPsi (tS, s') (tA, s) 
 
 
 and synSpine recT cO cD  cPsi sS sA =
@@ -1386,7 +1401,7 @@ and recSub recT cO cD cPsi s cPhi = match (cPsi, s, cPhi) with
 
     | (cPsi, Int.LF.Dot (Int.LF.Head Int.LF.BVar x, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) ->
         let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in
-          recSub recT cO cD  cPsi s cPhi;
+        let _ = recSub recT cO cD  cPsi s cPhi in 
           Unify.unifyTyp cD(Context.dctxToHat cPsi, (tA', LF.id), (tA, s))
 
     | (cPsi, Int.LF.Dot (Int.LF.Obj tM, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) ->
@@ -1401,49 +1416,29 @@ and recSub recT cO cD cPsi s cPhi = match (cPsi, s, cPhi) with
 
   (* needs other cases for Head(h) where h = MVar, Const, etc. -bp *)
 
-let rec synKSpine recT cO cD  cPsi sS sK = match (sS, sK) with
-  | ((Int.LF.Nil, _s), sK) ->
-      sK
+let rec synKSpine loc recT cO cD  cPsi sS sK = match (sS, sK) with
+  | ((Int.LF.Nil, _s), (Int.LF.Typ, _s')) -> ()
 
   | ((Int.LF.App (tM, tS), s'), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA),_ ), tK), s)) ->
-      recTerm   recT cO cD cPsi (tM, s') (tA, s);
-      synKSpine recT cO cD cPsi (tS, s') (tK, Int.LF.Dot (Int.LF.Obj tM, s))
+      let _ =   recTerm   recT cO cD cPsi (tM, s') (tA, s) in 
+        synKSpine loc recT cO cD cPsi (tS, s') (tK, Int.LF.Dot (Int.LF.Obj (Int.LF.Clo (tM, s')), s))
 
   (* TODO confirm this is necessary, instead of having recKSpineW *)
   | ((Int.LF.SClo (tS, s),  s'), sK) ->
-      synKSpine recT cO cD cPsi (tS, LF.comp s s') sK
+      synKSpine loc recT cO cD cPsi (tS, LF.comp s s') sK
+
+  | _ -> 
+      raise (Error (loc, (KindMismatch (cO, cPsi, sS, sK))))
 
 let rec recTyp recT cO cD  cPsi sA = recTypW recT cO cD  cPsi (Whnf.whnfTyp sA)
 
 and recTypW recT cO cD  cPsi sA = match sA with
   | (Int.LF.Atom (loc, a, tS) , s) ->
       let tK = (Typ.get a).Typ.kind in
+      let sshift = mkShift recT cPsi in 
+        synKSpine loc recT cO cD  cPsi (tS, s) (tK, sshift) 
 
-      let sshift =
-        begin match recT with
-          | PiboxRecon -> Int.LF.Shift (Int.LF.NoCtxShift, 0)
-          | PiRecon ->
-              let (_, d) = Context.dctxToHat cPsi in
-                Int.LF.Shift (Int.LF.NoCtxShift, d)
-        end
-      in
 
-      (* let sshift =
-        begin match Context.dctxToHat cPsi with
-          | (Some psi, d) -> Int.LF.Shift(Int.LF.CtxShift psi, d)
-          | (None, d)     -> Int.LF.Shift(Int.LF.NoCtxShift, d)
-        end
-      in *)
-        begin try
-          let (tK, _s) = synKSpine recT cO cD  cPsi (tS, s) (tK, sshift) in
-            if tK = Int.LF.Typ then
-              ()
-            else
-              raise (Error (loc, (KindMismatch (cO, cPsi, sA))))
-        with Match_failure _ ->
-          (* synKSpine recT cO cD  cPsi (Int.LF.App _, _) (Int.LF.Typ, _) *)
-          raise (Error (loc, (KindMismatch (cO, cPsi, sA))))
-        end
 
   | (Int.LF.PiTyp ((Int.LF.TypDecl (_x, tA) as adec, _), tB), s) ->
       recTyp recT cO cD  cPsi (tA, s);
@@ -2057,14 +2052,18 @@ and checkBranch caseTyp cO cD cG branch (tA, cPsi) (tau, t) =
 
 let recSgnDecl d = match d with
   | Ext.Sgn.Typ (_, a, extK)   ->
+      let _        = dprint (fun () -> "\n Indexing type constant " ^ a.string_of_name ^ "\n") in
       let apxK     = index_kind (CVar.create ()) (BVar.create ()) extK in
       let _        = FVar.clear () in
+      let _        = dprint (fun () -> "\n Elaborating type constant " ^ a.string_of_name ^ "\n") in
       let tK       = elKind Int.LF.Null apxK in
       let _        = solve_fvarCnstr PiRecon Int.LF.Empty !fvar_cnstr in
       let _        = reset_fvarCnstr () in
+      let _        = dprint (fun () -> "\n Reconstructing type constant " ^ a.string_of_name ^ "\n") in
       let _        = recKind Int.LF.Empty Int.LF.Null (tK, LF.id) in
       let (tK', i) = Abstract.abstrKind tK in
-      let _        = dprint (fun () ->  a.string_of_name ^ " : " ^  (P.kindToString Int.LF.Null tK') ^ "\n") in
+
+      let _        = dprint (fun () ->  a.string_of_name ^ " : " ^  (P.kindToString Int.LF.Null (tK', LF.id)) ^ "\n") in 
       let _        = Check.LF.checkKind Int.LF.Empty Int.LF.Empty Int.LF.Null tK' in
       let _        = dprint (fun () ->  "DOUBLE CHECK for type constant " ^a.string_of_name ^
                                         " successful! \n") in

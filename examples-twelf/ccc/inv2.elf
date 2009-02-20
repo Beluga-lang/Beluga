@@ -1,0 +1,48 @@
+
+%lemma:
+
+inve : conc F M -> abse G E GE -> abse G (M E) GME -> GME == F @ GE -> type.
+
+inve_id	  : inve cid AP AP (sym id_l).
+
+inve_comp : inve (ccomp CF CG) AP1 AP2 
+	         (EPF then (=@= refl EPG) then ass)
+	  <- inve CG AP1 AP3 EPG
+	  <- inve CF AP3 AP2 EPF.
+
+inve_pair : inve (cpair CF CG) AP (apair APF APG) 
+	         (=pair= EPF EPG then sym DP)
+	  <- distp DP
+	  <- inve CF AP APF EPF
+	  <- inve CG AP APG EPG.
+
+inve_fst  : inve cfst AP (afst AP) refl.
+
+inve_snd  : inve csnd AP (asnd AP) refl.
+
+inve_cur  : inve (ccur CF) AP (alam [x] AP2 x) 
+	         (=cur= (EE then =@= refl (=pair= (sym EW) refl))
+	          then sym DC)
+	  <- distc DC
+	  <- ({y}weak AP (AP' y) EW)
+	  <- ({y}inve CF (apair (AP' y) (avar av_x)) (AP2 y) EE). %???
+
+inve_app  : inve capp AP (aapp (afst AP) (asnd AP)) (=@= refl prod_u).
+
+zabs : (term A -> term B) -> mor A B -> type.
+
+zabs1     : zabs ([x]E x) (F @ pair drop id)
+          <- {x}abse (addv empty x) (E x) F.
+
+invac : conc F M -> zabs M F' -> F' == F -> type.
+
+invac1 	  : invac C (zabs1 ([x] AP x)) (=@= EE refl
+	                                then sym ass
+	                                then =@= refl prod_r
+		   	                then id_r)
+	  <- {x}inve C (avar av_x) (AP x) EE.
+
+%sigma [p1:conc id M] sigma [p2:{x}abse (addv empty x) x Z] sigma [p3:{x}abse (addv empty x) (M x) Y] {x}inve p1 (p2 x) (p3 x) R.
+
+%sigma [p1:conc (cur app @ fst) M] sigma [p2:zabs M F] invac p1 p2 E.
+

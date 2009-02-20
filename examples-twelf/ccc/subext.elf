@@ -1,0 +1,114 @@
+
+%% Substitution extension lemma
+
+% needs ccc.elf, lambda.elf, abs-env.elf
+
+% subproof used in lambda-case of lemma
+svx : ({A}{Y:term A}{GY}{DY}
+	absv G Y GY -> abse D Y DY -> GY @ H == DY -> type) ->
+      absv (addv G X) Y GXY -> abse (addv D X) Y DXY -> 
+	GXY @ pair (H @ fst) snd == DXY -> type.
+
+svx1 : svx Z av_x (avar av_x) prod_r.
+
+svx2 : svx Z (av_y AV1) (avar (av_y AV2)) (sym ass
+	 		   	           then =@= refl prod_l
+	     				   then ass
+	     		                   then =@= EE refl)
+	<- Z _ _ _ _ AV1 (avar AV2) EE.
+
+subext : abse G E GE -> abse D E DE
+	 -> ({A}{X:term A}{GX}{DX}
+              absv G X GX -> abse D X DX -> GX @ H == DX -> type)
+	 -> GE @ H == DE -> type.
+
+subext_var  : subext (avar AV) AP Z E
+	    <- Z _ _ _ _ AV AP E.
+
+subext_unit : subext aunit aunit Z term_u.
+
+subext_pair : subext (apair AP1 AP2) (apair AP1' AP2') Z
+  	             (DP then =pair= EP1 EP2)
+	    <- distp DP
+	    <- subext AP1 AP1' Z EP1
+	    <- subext AP2 AP2' Z EP2.
+
+subext_fst  : subext (afst AP) (afst AP') Z (sym ass then =@= refl EP)
+	    <- subext AP AP' Z EP.   
+
+subext_snd  : subext (asnd AP) (asnd AP') Z (sym ass then =@= refl EP)
+	    <- subext AP AP' Z EP.   
+
+subext_lam  : subext (alam ([x] AP x)) (alam ([x] AP' x)) Z
+		     (DC then =cur= EP)
+	    <- distc DC
+	    <- {x}subext (AP x) (AP' x) ([_][_][_][_]svx Z) EP.
+
+subext_app  : subext (aapp AP1 AP2) (aapp AP1' AP2') Z
+  	             (sym ass
+	              then =@= refl (DP then =pair= EP1 EP2))
+	    <- distp DP
+	    <- subext AP1 AP1' Z EP1
+	    <- subext AP2 AP2' Z EP2.
+
+% Corollary: weakening
+
+weakv : absv G V M' -> abse (addv G X) V M -> M' @ fst == M -> type.
+
+weakv1 : weakv AV (avar (av_y AV)) refl.
+
+weak : abse G E M' -> abse (addv G X) E M -> M' @ fst == M -> type.
+
+weak1 : weak AP AP1 E
+	<- subext AP AP1 ([_][_][_][_]weakv) E.
+
+% Corollary : substitution
+
+svx2' : svx Z (av_y AV) AP2 (sym ass
+	       		     then =@= refl prod_l
+	      		     then ass
+	      	             then =@= EE refl
+	      		     then WE)
+	<- Z _ _ _ _ AV AP EE
+	<- weak AP AP2 WE.
+
+subv : abse D X DX -> absv (addv D X) Y DXY -> abse D Y DY
+	-> DXY @ pair id DX == DY -> type.
+
+subv1 : subv AP av_x AP prod_r.
+
+subv2 : subv AP (av_y AV) (avar AV) (sym ass
+		                     then =@= refl prod_l
+	                             then id_r).
+
+subst : abse D E1 M1 -> ({x}abse (addv D x) (E2 x) M2) -> 
+	abse D (E2 E1) M -> M2 @ pair id M1 == M -> type.
+
+% Too much magic here...
+subst1 : subst AP1 ([x] AP2 x) AP E
+	<- subext (AP2 _) AP ([_][_][_][_]subv AP1) E.
+
+
+%%% tests
+
+%sigma[p1:{x}{y}absv (addv (addv empty x) y) x M1]sigma[p2:{x}absv (addv empty x) x M2]{x}{y}weakv (p2 x) (p1 x y) E.
+
+% {x}sigma[p1:{y}absv (addv (addv empty x) y) x M1]sigma[p2:absv (addv empty x) x M2]{y}weakv (p1 y) (p2) E. --> undecl cst x ???
+
+%sigma[p1:{x}{y}abse (addv (addv empty x) y) (lpair x x) M1]sigma[p2:{x}abse (addv empty x) (lpair x x) M2]{x}{y}weak (p2 x) (p1 x y) E.
+
+%sigma[p1:{x}{y}abse (addv (addv empty x) y) (llet ([x]x)x) M1]sigma[p2:{x}abse (addv empty x) (llet([x]x)x) M2]{x}{y}weak y (p1 x y) (p2 x) E.
+
+% [w,x,y |- let z=fst(x) in (z,w)] == [w,x |- let z=fst(x) in (z,w)] @ fst
+
+%sigma[p1:{w}{x}{y}abse (addv (addv (addv empty w) x) y) (llet ([z]lpair z w) (lfst x)) M1]sigma[p2:{w}{x}abse (addv (addv empty w) x) (llet([z]lpair z w) (lfst x)) M2]{w}{x}{y}weak (p2 w x) (p1 w x y) E.
+
+%[x,y |- \u.\v.(u,(v,x))] = [x |- \u.\v.(u,(v,x))] @ fst.
+
+%sigma[p1:{x}{y}abse (addv (addv empty x) y) (llam [u] llam [v] lpair u (lpair v x)) M1] sigma[p2:{x}abse (addv empty x) (llam [u] llam [v] lpair u (lpair v x)) M2] {x}{y}weak (p2 x) (p1 x y) E.
+
+
+%sigma [p1:abse empty lunit M1] sigma[p2:{x} abse (addv empty x) x M2] sigma [p3:abse empty lunit M] subst p1 p2 p3 E.
+
+
+%sigma [p2:{w}{x}abse (addv (addv empty w) x) (lpair x x) M2] sigma[p1:{w}abse (addv empty w) (lfst w) M1] sigma [p:{w}abse (addv empty w) (lpair (lfst w) (lfst w)) M] {w}subst (p1 w) ([x]p2 w x) (p w) E.

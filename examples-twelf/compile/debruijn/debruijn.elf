@@ -1,0 +1,34 @@
+%%% Expression representation using de Bruijn indices
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+exp'   : type.  %name exp' F.
+
+1      : exp'.
+^      : exp' -> exp'.  %postfix 20 ^.
+z'     : exp'.
+s'     : exp' -> exp'.
+case'  : exp' -> exp' -> exp' -> exp'.
+pair'  : exp' -> exp' -> exp'.
+fst'   : exp' -> exp'.
+snd'   : exp' -> exp'.
+lam'   : exp' -> exp'.
+app'   : exp' -> exp' -> exp'.
+letv'  : exp' -> exp' -> exp'.
+letn'  : exp' -> exp' -> exp'.
+fix'   : exp' -> exp'.
+
+% Environments and values
+
+env    : type.  %name env K.
+val    : type.  %name val W.
+
+empty  : env.
+;      : env -> val -> env.   %infix left 10 ;.
++      : env -> exp' -> env.  %infix left 10 +.
+
+z*     : val.
+s*     : val -> val.
+
+pair*  : val -> val -> val.
+
+clo    : env -> exp' -> val.

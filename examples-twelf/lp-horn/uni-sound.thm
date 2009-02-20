@@ -1,0 +1,21 @@
+% Soundness
+
+%theorem s_snd : forall* {A:o}
+	           forall {S: solve A}
+	           exists {DS: pf A} true.
+%theorem h_snd : forall* {A:o}
+	           forall {H: assume A}
+	           exists {DH: pf A} true.
+%theorem i_snd : forall* {A:o} {P:p} 
+	           forall {I: A >> P}
+		   exists {DI : (pf A -> pf (atom P))} true.
+
+%prove 3 (S H I)
+  (s_snd S _) 
+  (h_snd H _) 
+  (i_snd I _).
+
+%terminates (S H I)
+  (s_snd S _) 
+  (h_snd H _) 
+  (i_snd I _).

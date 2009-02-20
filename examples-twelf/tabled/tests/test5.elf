@@ -1,0 +1,32 @@
+%%%%%%%%%
+%% Sagonas, Swift
+
+node: type.
+a: node.
+b: node.
+c: node.
+d: node.
+
+pt: node -> node -> type.
+et: node -> node -> type.
+qt: node -> type.
+%tabled pt.
+
+p2: pt X Z
+     <- et X Z
+     <- qt Z.
+
+p1: pt X Z
+    <- pt X Y
+    <- pt Y Z.
+ 
+e1: et a b.
+e2: et a d.
+e3: et b c.
+
+q1: qt a.
+q2: qt b.
+q3: qt c.
+
+%querytabled * 6 (pt a X).
+

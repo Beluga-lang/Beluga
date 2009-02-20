@@ -234,12 +234,10 @@ module Ext = struct
               (fmt_ppr_lf_typ  0) b
               (r_paren_if cond)
 
-
-
     and fmt_ppr_lf_normal  lvl ppf = function
       | LF.Lam (_, x, tM) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s[%s] %a%s"
+            fprintf ppf "%s\\%s %a%s"
               (l_paren_if cond)
               (R.render_name   x)
               (fmt_ppr_lf_normal lvl) tM
@@ -724,7 +722,7 @@ module Int = struct
     val spineToString     : LF.mctx -> LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.mctx -> LF.dctx -> LF.tclo     -> string
     val typRecToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.trec_clo -> string
-    val kindToString      : LF.dctx -> LF.kind -> string
+    val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.nclo     -> string
     val dctxToString      : LF.mctx -> LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> LF.mctx -> string
@@ -801,7 +799,7 @@ module Int = struct
     and fmt_ppr_lf_normal cO cD cPsi lvl ppf = function
       | LF.Lam (_, x, m) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s\\ %s . %a%s"
+            fprintf ppf "%s\\%s . %a%s"
               (l_paren_if cond)
               (R.render_name x)
               (fmt_ppr_lf_normal cO cD (LF.DDec(cPsi, LF.TypDeclOpt x))  0) m
@@ -905,17 +903,23 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_cvar cD n)
 
-      | LF.Inst ({ contents = None } as u, _, _, _) ->
+      | LF.Inst ({ contents = None } as u, _, tA, _) ->
           begin
             try
-              fprintf ppf "%s"
+              fprintf ppf "?%s"
                 (InstHashtbl.find inst_hashtbl u)
             with
               | Not_found ->
-                  (* Should probably create a sep. generator for this -dwm *)
+                  (* (* Should probably create a sep. generator for this -dwm *)
                   let sym = String.uppercase (Gensym.VarData.gensym ()) in
+                  *)
+                  (* Not working -bp *)
+                  let sym = (match (Store.Cid.Typ.gen_mvar_name tA) with 
+                              | Some (vGen) -> vGen ()                    
+                              | None -> Gensym.MVarData.gensym ()) 
+                  in 
                       InstHashtbl.replace inst_hashtbl u sym
-                    ; fprintf ppf "%s" sym
+                    ; fprintf ppf "?%s" sym
           end
 
       | LF.PInst ({ contents = None } as p, _, _, _) ->
@@ -1456,7 +1460,8 @@ module Int = struct
       fmt_ppr_lf_typ_rec cO cD cPsi std_lvl str_formatter typrec
       ; flush_str_formatter () 
 
-    let kindToString cPsi tK   = 
+    let kindToString cPsi sK   = 
+      let tK = Whnf.normKind sK in 
       fmt_ppr_lf_kind cPsi std_lvl str_formatter tK
       ; flush_str_formatter ()
 
@@ -1620,9 +1625,10 @@ module Error = struct
       | SigmaIllTyped (_cO, _cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
           fprintf ppf "Sigma Type mismatch" (* TODO *)
 
-      | KindMismatch (cD, cPsi, sA) ->
-          fprintf ppf "ill kinded type\n  expected: type\n  for type: %a\n  in context:\n    %a"
-            (IP.fmt_ppr_lf_typ (LF.Empty) cD cPsi std_lvl) (Whnf.normTyp sA)
+      | KindMismatch (cD, cPsi, sS, sK) ->
+          fprintf ppf "ill kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
+            (IP.kindToString cPsi sK)
+            (IP.fmt_ppr_lf_spine (LF.Empty) cD cPsi std_lvl) (Whnf.normSpine sS)
             (IP.fmt_ppr_lf_dctx (LF.Empty) cD std_lvl) cPsi
 
       | TypMismatch (cO, cD, cPsi, sM, sA1, sA2) ->
@@ -1638,7 +1644,7 @@ module Error = struct
             "ill typed expression\n  expected type: %a\n  for expression:\n    %a\n  in context:\n    %a"
             (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) (Whnf.norm sM)
-            (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi
+            (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi 
 
       | LeftoverConstraints x ->
           fprintf ppf

@@ -1,0 +1,30 @@
+
+% Proof equivalence: "=>"  direction
+
+% Partial check of hand-coded proof
+% decidable {SD} peq SD _.
+
+%theorem peqf : forall* {K1:cont} {E1:exp} {V1:val} {V2:val} 
+		       {C:K1 # ev E1 =>* answer V1}
+         	       {D:eval E1 V2} {C':K1 # return V2 =>* answer V1}
+               forall {SD : csd C D C'}
+	       exists {CP : ccp D C' C} true.
+%prove 6 SD (peqf SD _). 
+
+% Partial verification of generated proof
+%terminates SD (peqf SD _).
+
+
+
+% Proof equivalence: "<=" direction
+
+
+%theorem peqr : forall* {K1:cont} {E1:exp} {V1:val} {V2:val} 
+		        {C:K1 # ev E1 =>* answer V1}
+         	        {D:eval E1 V2} {C':K1 # return V2 =>* answer V1}
+	        forall {CP : ccp D C' C}
+                exists {SD : csd C D C'} true.
+%prove 6 CP (peqr CP _). 
+
+% Partial verification of generated proof
+%terminates CP (peqr CP _).

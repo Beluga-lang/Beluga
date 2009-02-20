@@ -1,0 +1,47 @@
+%%% Completeness of uniform proofs with respect to canonical deductions
+%%% Author: Frank Pfenning
+
+cmpcs : can A D -> solve A -> type.
+cmpai : {D:pf A} atm D -> ({P:p} A >> P -> solve (atom P)) -> type.
+%mode cmpcs +CN -S.
+%mode cmpai +D +AT -S.
+
+cmpcs_andi : cmpcs (can_andi CN2 CN1) (s_and S2 S1)
+	     <- cmpcs CN1 S1
+	     <- cmpcs CN2 S2.
+
+%{
+cmpcs_impi : cmpcs (can_impi CN1) (s_imp S1)
+	     <- {u:pf A2} {a:atm u} {d:assume A2}
+		cmpai u a ([P:p] [i:A2 >> P] s_atom i d)
+		-> cmpcs (CN1 u a) (S1 d).
+}%
+
+cmpcs_truei : cmpcs (can_truei) (s_true).
+
+%{
+cmpcs_foralli : cmpcs (can_foralli CN1) (s_forall S1)
+		<- {a:i} cmpcs (CN1 a) (S1 a).
+}%
+
+cmpcs_atm : cmpcs (can_atm (AT1 : atm D)) (I1 Q (i_atom))
+	    <- cmpai D AT1 I1.
+
+cmpai_andel : cmpai (andel D1) (atm_andel CN1)
+	      ([P:p] [i:A >> P] I1 P (i_andl i))
+	      <- cmpai D1 CN1 I1.
+
+cmpai_ander : cmpai (ander D1) (atm_ander CN1)
+	      ([P:p] [i:A >> P] I1 P (i_andr i))
+	      <- cmpai D1 CN1 I1.
+
+cmpai_impe : cmpai (impe D1 D2) (atm_impe CN2 AT1)
+	     ([P:p] [i:A >> P] I1 P (i_imp S2 i))
+	     <- cmpai D1 AT1 I1
+	     <- cmpcs CN2 S2.
+
+cmpai_foralle : cmpai (foralle D1 T) (atm_foralle AT1)
+		([P:p] [i] I1 P (i_forall T i))
+		<- cmpai D1 AT1 I1.
+
+%worlds () (cmpcs _ _) (cmpai _ _ _).

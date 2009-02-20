@@ -1,0 +1,269 @@
+% Progress and preservation for System F with natural numbers and iso-recursive types.
+
+tp : type.
+tm : type.
+
+% Types
+nat : tp.
+=> : tp -> tp -> tp.  %infix left 5 =>.
+forall : (tp -> tp) -> tp.
+mu : (tp -> tp) -> tp.
+
+% Terms
+z : tm.
+s : tm -> tm.
+@   : tm -> tm -> tm.  %infix left 5 @.
+roll : tm -> tp -> tm.
+unroll : tm -> tp -> tm.
+lam : tp -> (tm -> tm) -> tm.
+Lam : (tp -> tm) -> tm.
+#   : tm -> tp -> tm.  %infix left 5 #.
+
+% Typing
+is : tm -> tp -> type. %infix left 5 is.
+
+is_z   : 
+       % ----------
+         z is nat.
+
+is_s   : E is nat ->
+         % -----------
+         (s E) is nat.
+
+is_roll : E is (T (mu ([a:tp] T a))) ->
+        % -----------------------------------------------
+          (roll E (mu ([a:tp] T a))) is (mu ([a:tp] T a)).
+
+is_unroll : E is (mu ([a:tp] T a)) ->
+        % ----------------------------------------------------
+          (unroll E (mu ([a:tp] T a))) is (T (mu ([a:tp] T a))).
+
+is_@   : E1 is (T1 => T2) ->
+         E2 is T1 ->
+       % -------------------   
+         (E1 @ E2) is T2.         
+
+is_lam : ({x:tm} x is T1 -> (E x) is T2) ->
+       % -----------------------------------
+         ((lam T1 ([x] E x)) is (T1 => T2)).
+
+is_Lam : ({a:tp} (E a) is (T a)) ->
+       % -----------------------------------
+         ((Lam ([a] E a)) is (forall ([a] T a))).
+
+is_#   : E is (forall ([a] T1 a)) -> 
+       % ----------------------------
+         ((E # T2) is (T1 T2)).
+
+% Values
+value : tm -> type. 
+
+value_z : value z.
+
+value_s : value V ->
+        % -----------
+          value (s V).
+
+value_roll : value E -> 
+           % --------------------
+             value (roll E T).
+
+value_lam : value (lam T ([x] E x)).
+
+value_Lam : value (Lam ([a] E a)).
+
+
+% Operational semantics
+
+~> : tm -> tm -> type. %infix left 5 ~>.
+
+~>_s : E ~> E' ->
+     % ---------------
+       (s E) ~> (s E').
+
+~>_@1 : (E1 ~> E1') ->
+      % --------------------------
+        ((E1 @ E2) ~> (E1' @ E2)).
+
+~>_@2 : value E1 ->
+        (E2 ~> E2') ->
+      % --------------------------
+        ((E1 @ E2) ~> (E1 @ E2')).
+
+~>_@3 : value E2 ->
+      % --------------------------
+        (((lam T ([x] E1 x)) @ E2) ~> (E1 E2)).
+
+~>_#1 : (E ~> E') ->
+      % --------------------------
+        ((E # T) ~> (E' # T)).
+
+~>_#2 : 
+      % ------------------------------
+        ((Lam ([a] E a)) # T) ~> (E T).
+
+~>_unroll1 : E ~> E' -> 
+           % -----------------------------
+            (unroll E T) ~> (unroll E' T).
+
+~>_unroll2 : value E ->
+           % -----------------------------
+            (unroll (roll E T1) T2) ~> E.
+
+~>_roll : E ~> E' ->
+        % -------------------------
+          (roll E T) ~> (roll E' T).
+
+
+% Preservation
+pres : (E is T) -> (E ~> E') -> (E' is T) -> type.
+%mode pres +D1 +EV -D2.
+
+pres_s : pres D EV D' ->
+       % ----------------------------------
+         pres (is_s D) (~>_s EV) (is_s D').
+
+pres_@1 : pres D1 EV1 D1' ->
+        % ----------------------------------------
+          pres (is_@ D1 D2) (~>_@1 EV1) (is_@ D1' D2).
+         
+pres_@2 : pres D2 EV2 D2' ->
+        % --------------------------------------------
+          pres (is_@ D1 D2) (~>_@2 V EV2) (is_@ D1 D2').
+
+pres_@3 :
+        % -----------------------------------------------------------------------
+          pres (is_@ (is_lam ([x:tm] [d:x is T1] D1 x d)) D2) (~>_@3 V) (D1 _ D2).
+
+pres_#1 : pres D EV D' ->
+        % -----------------------------------
+          pres (is_# D) (~>_#1 EV) (is_# D').
+
+pres_#2 : 
+        % ----------------------------------------------------------------
+          pres (is_# (is_Lam ([a:tp] D a)) : ((_ # T) is _)) (~>_#2) (D T).
+
+pres_unroll1 : pres D EV D' ->
+             % ----------------------------------------------------
+               pres (is_unroll D) (~>_unroll1 EV) (is_unroll D').
+
+pres_unroll2 : 
+             % -----------------------------------------------
+               pres (is_unroll (is_roll D)) (~>_unroll2 VL) D.
+
+pres_roll : pres D EV D' ->
+          % -------------------------------------------
+            pres (is_roll D) (~>_roll EV) (is_roll D').
+
+%worlds () (pres D1 E D2).
+%total E (pres _ E _).
+
+
+% Progress (much trickier)
+
+% Introduce a new type family to distinguish between the case where a term can 
+% take a step and it is a value. 
+step_or_val : tm -> type.
+
+step : (E ~> E') -> step_or_val E.
+val : (value E) -> step_or_val E.
+
+
+prog_@_lemma :  (E1 is (T1 => T2)) -> step_or_val E1 -> step_or_val E2 -> 
+                step_or_val (E1 @ E2) -> type.
+%mode prog_@_lemma +D +SV1 +SV2 -SV3.
+
+prog_@_lemma_s  : prog_@_lemma _ (step EV) _ (step (~>_@1 EV)).
+prog_@_lemma_vs : prog_@_lemma _ (val VL) (step EV) (step (~>_@2 VL EV)).
+prog_@_lemma_vs : prog_@_lemma _ (val VL1) (val VL2) (step (~>_@3 VL2)).
+
+%worlds () (prog_@_lemma D SV1 SV2 SV3).
+%total {SV1 SV2} (prog_@_lemma _ SV1 SV2 _).
+
+
+prog_roll_lemma :  {T:tp} step_or_val E -> 
+                   step_or_val (roll E T) -> type.
+%mode prog_roll_lemma +T +SV1 -SV2.
+
+prog_roll_lemma_s : prog_roll_lemma _ (step EV) (step (~>_roll EV)).
+prog_roll_lemma_v : prog_roll_lemma _ (val VL) (val (value_roll VL)).
+
+%worlds () (prog_roll_lemma T SV1 SV2).
+%total {SV1} (prog_roll_lemma _ SV1 _).
+
+prog_unroll_lemma :  E is (mu ([a:tp] T a)) ->
+                     step_or_val E -> 
+                     step_or_val (unroll E (mu ([a:tp] T a))) -> type.
+%mode prog_unroll_lemma +D +SV1 -SV2.
+
+prog_unroll_lemma_s : prog_unroll_lemma _ (step EV) (step (~>_unroll1 EV)).
+prog_unroll_lemma_v : prog_unroll_lemma _ (val (value_roll VL)) (step (~>_unroll2 VL)).
+
+%worlds () (prog_unroll_lemma D SV1 SV2).
+%total {SV1} (prog_unroll_lemma _ SV1 _).
+
+
+prog_#_lemma :  {T2:tp} (E is (forall ([a:tp] T1 a))) -> step_or_val E -> 
+                step_or_val (E # T2) -> type.
+%mode prog_#_lemma +T2 +D +SV1 -SV2.
+
+prog_#_lemma_s : prog_#_lemma _ _ (step EV) (step (~>_#1 EV)).
+prog_#_lemma_v : prog_#_lemma _ _ (val VL) (step (~>_#2)).
+
+%worlds () (prog_#_lemma T2 D SV1 SV2).
+%total {SV1} (prog_#_lemma _ _ SV1 _).
+
+prog_s_lemma :  step_or_val E -> step_or_val (s E) -> type.
+%mode prog_s_lemma +SV1 -SV2.
+
+prog_s_lemma_s  : prog_s_lemma (step EV) (step (~>_s EV)).
+prog_s_lemma_v  : prog_s_lemma (val VL) (val (value_s VL)).
+
+%worlds () (prog_s_lemma SV1 SV2).
+%total (SV1) (prog_s_lemma SV1 _).
+
+% Now we can prove progress by simply using the lemma 
+
+prog : (E is T) -> step_or_val E -> type.
+%mode prog +D -SV.
+
+prog_z   : prog (is_z) (val value_z).
+
+prog_s   : prog_s_lemma SV SV' ->
+           prog D SV -> 
+         % ---------------------------
+           prog (is_s D) SV'. 
+
+prog_@   : prog_@_lemma D1 SV1 SV2 SV3 ->
+           prog D1 SV1 ->
+           prog D2 SV2 ->
+         % ------------------------------
+           prog (is_@ D1 D2) SV3. 
+
+prog_#   : prog_#_lemma _ D SV SV' ->
+           prog D SV ->
+         % ------------------------------
+           prog (is_# D) SV'. 
+
+prog_roll : prog_roll_lemma (mu ([a:tp] T a)) SV SV' -> 
+            prog D SV -> 
+          % -----------------------
+            prog ((is_roll D) : (roll E (mu ([a:tp] T a)) is (mu ([a:tp] T a)))) SV'.
+
+prog_unroll : prog_unroll_lemma D SV SV' -> 
+              prog D SV -> 
+            % -----------------------
+              prog (is_unroll D) SV'.
+
+prog_lam : 
+         % --------------------------------------------------------
+           prog (is_lam ([x:tm] [d:x is T1] D1 x d)) (val value_lam).
+
+prog_Lam : 
+         % -------------------------------------------
+           prog (is_Lam ([a:tp] D a)) (val value_Lam).
+
+%worlds () (prog D SV).
+%total D (prog D _).
+
+% QED

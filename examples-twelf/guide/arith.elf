@@ -1,0 +1,95 @@
+%%% Simple Arithmetic Examples
+%%% Illustrate termination and reduction checking
+%%% Author: Brigitte Pientka
+
+nat : type.				%name nat X.
+z : nat.
+s : nat -> nat.
+
+bool: type.                             %name bool B.
+true: bool.
+false: bool.
+
+nt : nat -> type.			%name nt N.
+nt_z : nt z.
+nt_s : nt (s X) <- nt X.
+
+plus : nat -> nat -> nat -> type.	%name plus P.
+p_z : plus z Y Y.
+p_s : plus (s X) Y (s Z)
+       <- plus X Y Z.
+
+acker : nat -> nat -> nat -> type.
+%mode acker +X +Y -Z.
+
+a_1   : acker z Y (s Y).
+a_2   : acker (s X) z Z 
+	 <- acker X (s z) Z.
+a_3   : acker (s X) (s Y) Z
+	 <- acker (s X) Y Z'
+	 <- acker X Z' Z.
+
+sub: nat -> nat -> nat -> type.         %name sub S.
+%mode sub +X +Y -Z.
+
+s_z1 : sub X z X.
+s_z2 : sub z Y z.
+s_ss : sub (s X) (s Y) Z
+	<- sub X Y Z.
+
+%terminates X (sub X Y _).
+%reduces Z <= X (sub X Y Z).
+
+minus: nat -> nat -> nat -> type.       %name minus M.
+%mode minus +X +Y -Z.
+min: nat -> nat -> nat -> type.         %name min M'.
+%mode min +X +Y -Z.
+m_z1 : minus X z X.
+m_z2 : minus z Y z.
+m_ss : minus (s X) (s Y) Z
+	<- min X Y Z.
+
+m'_z1 : min X z X.
+m'_z2 : min z Y z.
+m'_ss : min X Y Z
+	<- minus X Y Z.
+
+%terminates (X X') (minus X _ _) (min X' _ _).  
+%reduces (Z Z') <= (X X') (minus X Y Z) (min X' _ Z'). 
+
+
+rminus: nat -> nat -> nat -> type.        %name rminus M.
+%mode rminus +X +Y -Z.
+rmin : rminus (s X) (s Y) Z
+	<- sub X Y Z.
+
+%terminates [X Y] (rminus X Y _).
+%reduces Z < X (rminus X Y Z).
+
+less: nat -> nat -> bool -> type.       %name less L.
+%mode less +X +Y -Z.
+l_z1 : less z (s X) true.
+l_z2 : less X z false.
+l_ss : less (s X) (s Y) B
+	<- less X Y B.
+
+%terminates X (less X Y _).
+
+gcd: nat -> nat -> nat -> type.          %name gcd G.
+%mode gcd +X +Y -Z.
+
+gcd_z1: gcd z Y Y.
+gcd_z2: gcd X z X.
+
+gcd_s1: gcd (s X) (s Y) Z
+	 <- less (s X) (s Y) true
+	 <- rminus (s Y) (s X) Y'
+	 <- gcd (s X) Y' Z.
+
+gcd_s1: gcd (s X) (s Y) Z
+	 <- less  (s X)(s Y) false
+	 <- rminus (s X) (s Y) X'
+	 <- gcd X' (s Y)  Z.
+
+%terminates [X Y] (gcd X Y _).
+%terminates {X Y}  (gcd X Y Z).  

@@ -17,9 +17,13 @@ type error =
       * LF.trec_clo (* inferred *) 
       * LF.trec_clo (* expected *)
 
-  | KindMismatch of                    (* cO ; cD ; cPsi |- sA <=/= Typ       *)
-      LF.mctx * LF.dctx * LF.tclo      
+  | KindMismatch   of LF.mctx * LF.dctx * LF.sclo  * (LF.kind * LF.sub)
 
+      (* cO ; cD ; cPsi |- sA <=/= Typ                 *)
+(*  | TypMismatch    of LF.mctx * LF.mctx *  LF.dctx        (* cO ; cD ; cPsi |- sR => sP but sP =/= sA      *)
+                     * LF.nclo * LF.tclo (* expected *) * LF.tclo (* inferred *)
+ *)
+ 
   | TypMismatch of LF.mctx             (* cO ; cD ; cPsi |- sR => sP          *)
       * LF.mctx *  LF.dctx * LF.nclo   (* but sP =/= sA                       *)
       * LF.tclo (* expected *) 

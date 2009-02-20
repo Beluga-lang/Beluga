@@ -1,0 +1,37 @@
+%{
+   Formalization of the natural numbers.
+   
+   Author: Brian E. Aydemir (baydemir [at] cis.upenn.edu)
+}%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Syntax.
+
+nat : type.             %name nat N.
+
+z : nat.                %% zero.
+s : nat -> nat.         %% successor.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% (In)Equality.
+
+nat_eq  : nat -> nat -> type.   %mode nat_eq  +N1 +N2.
+nat_neq : nat -> nat -> type.   %mode nat_neq +N1 +N2.
+nat_lt  : nat -> nat -> type.   %mode nat_lt  +N1 +N2.
+
+neq_eq_refl : nat_eq N N.
+
+nat_neq_zs : nat_neq z (s N).
+nat_neq_sz : nat_neq (s N) z.
+nat_neq_ss : nat_neq (s N1) (s N2) <- nat_neq N1 N2.
+
+nat_lt_zs : nat_lt z (s N).
+nat_lt_ss : nat_lt (s N1) (s N2) <- nat_lt N1 N2.
+
+%terminates {} (nat_eq _ _).
+%terminates N (nat_neq N _).
+%terminates N (nat_lt N _).

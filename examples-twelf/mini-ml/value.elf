@@ -1,0 +1,16 @@
+%%% Definition of Values
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+value : exp -> type.  %name value P.
+%mode value +V.
+
+val_z     : value z.
+val_lam   : value (lam E).
+val_s     : value (s V)
+	     <- value V.
+val_pair  : value (pair V1 V2)
+	     <- value V1
+	     <- value V2.
+
+% terminates D (value D).
+%worlds () (value D).

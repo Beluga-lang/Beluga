@@ -1,0 +1,59 @@
+%%% Computations of Continuation Machine
+%%% Author: Frank Pfenning
+
+%%% Single Step Transitions
+=> : state -> state -> type.		%name => St.
+%infix none 6 =>.
+
+% Natural Numbers
+st_z : K # (ev z) => K # (return z*).
+st_s : K # (ev (s E)) => (K ; [x:val] return (s* x)) # (ev E).
+st_case : K # (ev (case E1 E2 E3)) => (K ; [x1:val] case1 x1 E2 E3) # (ev E1).
+st_case1_z : K # (case1 (z*) E2 E3) => K # (ev E2).
+st_case1_s : K # (case1 (s* V1') E2 E3) => K # (ev (E3 V1')).
+
+% Pairs
+st_pair : K # (ev (pair E1 E2)) => (K ; [x1:val] pair1 x1 E2) # (ev E1).
+st_pair1 : K # (pair1 V1 E2) => (K ; [x2:val] return (pair* V1 x2)) # (ev E2).
+st_fst : K # (ev (fst E)) => (K ; [x:val] fst1 x) # (ev E).
+st_fst1 : K # (fst1 (pair* V1 V2)) => K # (return V1).
+st_snd : K # (ev (snd E)) => (K ; [x:val] snd1 x) # (ev E).
+st_snd1 : K # (snd1 (pair* V1 V2)) => K # (return V2).
+
+% Functions
+st_lam : K # (ev (lam E)) => K # (return (lam* E)).
+st_app : K # (ev (app E1 E2)) => (K ; [x1:val] app1 x1 E2) # (ev E1).
+st_app1 : K # (app1 V1 E2) => (K ; [x2:val] app2 V1 x2) # (ev E2).
+st_app2 : K # (app2 (lam* E1') V2) => K # (ev (E1' V2)).
+
+% Definitions
+st_letv : K # (ev (letv E1 E2)) => (K ; [x1:val] ev (E2 x1)) # (ev E1).
+st_letn : K # (ev (letn E1 E2)) => K # (ev (E2 E1)).
+
+% Recursion
+st_fix : K # (ev (fix E)) => K # (ev (E (fix E))).
+
+% Values
+st_vl : K # (ev (vl V)) => K # (return V).
+
+% Return Instructions
+st_return : (K ; C) # (return V) => K # (C V).
+st_init : (init) # (return V) => (answer V).
+
+%%% Multi-Step Computation
+=>* : state -> state -> type.		%name =>* C.
+%infix none 5 =>*.
+
+stop : S =>* S.
+<< : S =>* S''
+      <- S => S'
+      <- S' =>* S''.
+%infix left 5 <<.
+% Because of evaluation order, computation sequences are displayed
+% in reverse, using "<<" as a left-associative infix operator.
+
+%%% Full Evaluation
+ceval : exp -> val -> type.		%name ceval CE.
+
+cev : ceval E V
+       <- (init) # (ev E) =>* (answer V).

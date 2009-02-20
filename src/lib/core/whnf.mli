@@ -13,7 +13,7 @@ exception Error of error
 val whnf       : nclo -> nclo
 val whnfTyp    : tclo -> tclo
 val norm       : nclo -> normal
-val normKind   : kind -> kind
+val normKind   : (kind * sub) -> kind
 val normTyp    : tclo -> typ
 val normTypRec : trec_clo -> typ_rec
 val normSub    : sub  -> sub

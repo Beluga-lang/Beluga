@@ -1,0 +1,14 @@
+% Translation CCC combinators -> lambda-terms
+
+% Partial check of hand-coded proof
+%terminates F (conc F _).
+
+% Automatic proof generation
+%theorem concom : forall* {A:obj} {B:obj}
+		forall {F: mor A B}
+		exists {M: term A -> term B} true.
+%prove 4 F (concom F _).
+
+% Partial verification of generated proof
+%terminates F (concom F _).
+

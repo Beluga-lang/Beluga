@@ -139,6 +139,7 @@ let main () =
               print_newline ();
               abort_session ()
 
+
           | Check.LF.Error (locOpt, err) ->
               printOptionalLocation locOpt;
               Format.fprintf Format.std_formatter ":\n";
@@ -181,6 +182,7 @@ let main () =
           | Abstract.Error str ->
               printf "Error (Abstraction): %s\n@?" str;
               abort_session ()
+
 
     in
     let per_session (errors, unsound, incomplete) (Session file_names) =

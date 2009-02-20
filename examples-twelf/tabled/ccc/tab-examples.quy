@@ -1,0 +1,15 @@
+
+% A few test examples
+%{
+%querytabled * 10 10
+D : fst @ (pair f g @ h) == (f @ h).
+D : {f}{g}{h}pair f g @ h == pair (f @ h) (g @ h).
+}%
+% at least : termDepth 35 required
+%querytabled * 2 D : pair f g @ h == pair (f @ h) (g @ h).
+
+
+%{
+%querytabled * 10 10
+D : pair F G @ H == pair (F @ H) (G @ H). 
+}%

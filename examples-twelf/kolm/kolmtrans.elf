@@ -1,0 +1,97 @@
+% File kolmtrans.elf
+
+% Kolmogorov's double negation interpretation of classical logic
+% in intuitionistic logic.
+% 
+% Here I'm taking A to A* (it's Kolmogorov translation)
+% By inversion we have A* is of the form (not not A+).
+
+% First, define n as shorthand for double negation.
+
+n = [p:o] (not not p).
+
+kolm : o -> o -> type.
+%mode kolm +A -A*.
+
+kolm_and    : kolm (A and B) (n (A* and B*))
+    <- kolm A A*
+    <- kolm B B*.
+
+kolm_imp    : kolm (A imp B) (n (A* imp B*))
+    <- kolm A A*
+    <- kolm B B*.
+
+kolm_or     : kolm (A or B) (n (A* or B*))
+    <- kolm A A*
+    <- kolm B B*.
+
+kolm_not    : kolm (not A) (n (not A*))
+    <- kolm A A*.
+
+kolm_true   : kolm true (n true).
+
+kolm_false  : kolm false (n false).
+
+kolm_forall : kolm (forall A) (n (forall A*))
+    <- ({a:i} kolm (A a) (A* a)).
+
+kolm_exists : kolm (exists A) (n (exists A*))
+    <- ({a:i} kolm (A a) (A* a)).
+
+
+% A lemma saying explicitly that kolm terminates.
+% I need this for soundness of elimination rules.
+
+% I was not able to prove this automatically (I gave up).
+%  Note:  The theorem prover will not split over an index variable, such as A.
+% %theorem existskolm_auto : forall {A:o} exists {A*:o} {K:kolm A A*} true.
+% %prove 2 A (existskolm_auto A A* K).
+
+% Let me prove it automatically for the propositional case (using
+% induction on the derivation of the judgement that A is propositional.)
+prop : o -> type.
+
+and_prop   : prop A -> prop B -> prop (A and B).
+imp_prop   : prop A -> prop B -> prop (A imp B).
+or_prop    : prop A -> prop B -> prop (A or B).
+not_prop   : prop A -> prop (not A).
+true_prop  : prop true.
+false_prop : prop false.
+
+%theorem exkolm :  forallG (pi {a:i})
+		   forall {A:o} exists {A*:o} {K:kolm A A*} true.
+%prove 3 A (exkolm A A* K).
+
+existskolm : {A:o} {A*:o} kolm A A* -> type.
+%mode existskolm +A -A* -K.
+
+existskolm_and   : existskolm (A and B) (n (A* and B*))
+                              (kolm_and KB KA)
+     <- existskolm A A* KA
+     <- existskolm B B* KB.
+
+existskolm_imp   : existskolm (A imp B) (n (A* imp B*))
+                              (kolm_imp KB KA)
+     <- existskolm A A* KA
+     <- existskolm B B* KB.
+
+existskolm_or    : existskolm (A or B) (n (A* or B*))
+                              (kolm_or KB KA)
+     <- existskolm A A* KA
+     <- existskolm B B* KB.
+
+existskolm_not    : existskolm (not A) (n not A*)
+                               (kolm_not KA)
+     <- existskolm A A* KA.
+
+existskolm_true   : existskolm true  (n true) kolm_true.
+
+existskolm_false  : existskolm false (n false) kolm_false.
+
+existskolm_forall : existskolm (forall A) (n (forall A*))
+                               (kolm_forall KA)
+     <- ({a:i} existskolm (A a) (A* a) (KA a)).
+
+existskolm_exists : existskolm (exists A) (n (exists A*))
+                               (kolm_exists KA)
+     <- ({a:i} existskolm (A a) (A* a) (KA a)).

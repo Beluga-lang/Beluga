@@ -1,0 +1,15 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Figure 9 : Cont-valid control stacks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+cvalCS : (ccont -> cstack) -> type.
+%mode cvalCS +Phi.
+
+cvalCS_init : cvalCS ([k:ccont]cdot).
+
+cvalCS_vlam : cvalCS ([k:ccont]((Phi k); (vlam [v:ctriv]E v k)))
+              <- cvalCS Phi
+              <- {v:ctriv}{cvv:cvalT v}
+                 cvalE (E v).   
+
+%terminates Phi (cvalCS Phi).

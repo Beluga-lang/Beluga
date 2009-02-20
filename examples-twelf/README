@@ -1,0 +1,21 @@
+alloc-sem       Simply Typed Lambda-Calculus with a small-step, allocation semantics
+arith           Associativity and commutativity of unary addition
+ccc             Cartesian-closed categories [incomplete]
+church-rosser   The Church-Rosser theorem for untyped lambda-calculus
+compile		Various compilers starting from Mini-ML
+cpsocc          CPS conversion and stack-based machines [in progress]
+cut-elim	Cut elimination for intuitionistic and classical logic
+fol             Simple theorems in first-order logic
+guide           Examples from Users' Guide
+handbook        Examples from article in Handbook of Automated Reasoning
+incll		Meta-interpreter for int. non-commutative linear logic
+kolm		Kolmogorov translation from classical to intuitionistic logic
+fj              The soundness of Featherweight Java
+lp		Logic programming, uniform derivations
+lp-horn		Horn fragment of logic program
+mini-ml		Mini-ml, type preservation and related theorems
+modal           Examples of encoding modal logics in Twelf
+polylam		Polymorphic lambda-calculus
+prop-calc       Natural deduction and Hilbert propositional calculus
+small-step      Brief tutorial on proving progress and preservation in Twelf
+tapl-ch13       A formalization of Chapter 13 from "Types and Programming Languages"

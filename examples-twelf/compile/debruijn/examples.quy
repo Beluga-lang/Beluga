@@ -1,0 +1,104 @@
+%query 1 *
+feval empty (app' (lam' 1) z') W.
+
+%query 1 *
+feval empty (letn' (lam' 1) (letv' (app' 1 1) (app' 1 1))) W.
+
+%query 1 *
+trans empty F (app (lam [x] lam [y] x) (lam [z] z)).
+
+%query 1 *
+feval empty (app' (lam' (lam' (1 ^))) (lam' 1)) W.
+
+%query 1 *
+vtrans (clo (empty ; clo empty (lam' 1)) (lam' (1 ^))) V.
+
+%query 2 *
+trans empty F (lam [x] lam [y] app x x).
+
+%{
+sigma [D: eval (lam [x] x) V]
+sigma [C: trans empty F (lam [x] x)]
+map_eval D C D' U.
+}%
+%query 1 *
+map_eval (ev_lam)
+(tr_lam ([w:val] [x:exp] [U1:vtrans w x] tr_1 U1))
+D' U.
+
+%{
+sigma [D: eval (app (lam [x] x) z) V]
+sigma [C: trans empty F (app (lam [x] x) z)]
+map_eval D C D' U.
+}%
+%query 1 *
+map_eval (ev_app ev_z ev_z ev_lam)
+(tr_app tr_z (tr_lam ([w:val] [x:exp] [U1:vtrans w x] tr_1 U1)))
+D' U.
+
+%{
+sigma [D: eval (fix [f] (lam [y] f)) V]
+sigma [C: trans empty F (fix [f] (lam [y] f))]
+map_eval D C D' U.
+
+sigma [D: eval (app (fix [f] (lam [y] f)) z) V]
+sigma [C: trans empty F (app (fix [f] (lam [y] f)) z)]
+map_eval D C D' U.
+}%
+
+%{
+sigma [D: eval (app (fix [dbl] lam [n]
+		       case n
+			  z
+			  [n'] (s (s (app dbl n'))))
+		    (s z))
+          V]
+sigma [C: trans empty F (app (fix [dbl] lam [n]
+				case n
+				z
+				[n'] (s (s (app dbl n'))))
+			   (s z))]
+map_eval D C D' U.
+}%
+%query 3 *
+trans empty F (app (fix [dbl] lam [n]
+				case n
+				z
+				[n'] (s (s (app dbl n'))))
+			   (s z)).
+
+% Take the second solution from above
+%query 1 *
+map_eval
+   (ev_app
+      (ev_case_s
+          (ev_s (ev_s (ev_app (ev_case_z ev_z ev_z) ev_z (ev_fix ev_lam))))
+          (ev_s ev_z))
+      (ev_s ev_z) (ev_fix ev_lam))
+   (tr_app (tr_s tr_z)
+      (tr_fix
+          ([f:exp'] [x:exp] [C2:trans empty f x]
+              tr_lam
+                 ([w:val] [x3:exp] [U3:vtrans w x3]
+                     tr_case
+                        ([w2:val] [x4:exp] [U4:vtrans w2 x4]
+                            tr_s
+                               (tr_s (tr_app (tr_1 U4) (tr_^ (tr_^ (tr_1+ C2))))))
+                        (tr_^ tr_z) (tr_1 U3)))))
+D' U.
+
+%{
+sigma [D:eval (letn (lam [x] x) ([f] letv (app f f) ([g] app g g))) V]
+sigma [C:trans empty F (letn (lam [x] x) ([f] letv (app f f) ([g] app g g)))]
+map_eval D C D' U.
+}%
+
+%query 1 *
+map_eval
+(ev_letn (ev_letv (ev_app ev_lam ev_lam ev_lam) (ev_app ev_lam ev_lam ev_lam)))
+(tr_letn
+      ([f:exp'] [x:exp] [C1:trans empty f x]
+          tr_letv ([w:val] [x1:exp] [U1:vtrans w x1] tr_app (tr_1 U1) (tr_1 U1))
+             (tr_app (tr_1+ C1) (tr_1+ C1)))
+      (tr_lam ([w:val] [x:exp] [U2:vtrans w x] tr_1 U2)))
+D' U.

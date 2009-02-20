@@ -1,0 +1,94 @@
+%
+% Twelf code to manipulate lists
+%
+
+elmt : type.
+del : elmt.
+# : frm -> elmt. %prefix 40 #.
+
+
+rctx : type.
+rnil : rctx.
+,r : rctx -> elmt -> rctx. %infix left 15 ,r.
+
+%
+% append 2 ctx's
+%
+appr : rctx -> rctx -> rctx -> type.
+appr_0 : appr R rnil R.
+appr_1 : appr R (T ,r H) (T' ,r H) <- appr R T T'.
+
+
+lctx : type.
+lnil : lctx.
+,l : elmt -> lctx -> lctx. %infix right 15 ,l.
+
+%
+% append 2 lctx's
+%
+appl : lctx -> lctx -> lctx -> type.
+appl_0 : appl lnil L L.
+appl_1 : appl (H ,l T) L (H ,l T') <- appl T L T'.
+
+%
+% convert a lctx to a rctx.
+%
+l2r : lctx -> rctx -> type.
+l2r_0 : l2r lnil rnil.
+l2r_1 : l2r (H ,l T) T'' 
+	<- l2r T T'
+	<- appr (rnil ,r H) T' T''.
+
+%
+% convert a rctx to a lctx
+%
+r2l : rctx -> lctx -> type.
+r2l_0 : r2l rnil lnil.
+r2l_1 : r2l (T ,r H) T'' 
+	<- r2l T T'
+	<- appl T' (H ,l lnil) T''.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% insertAfter L1 F Lold Lnew ==>
+%	Lnew = Lold with F inserted |L1| elements from right.
+%
+% insertAfter (rnil ,r # a ,r # a) F (rnil ,r # b ,r # c ,r # d ,r # e) Lnew ==>
+%	Lnew = (rnil ,r # b ,r # c ,r F ,r # d ,r # e)
+%
+insertAfter : rctx -> elmt -> rctx -> rctx -> type.
+insertAfter_0 : insertAfter rnil E L (L ,r E).
+insertAfter_N : insertAfter (I ,r _) E (L ,r H) (L' ,r H) 
+	<- insertAfter I E L L'.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+choose : rctx -> rctx -> frm -> rctx -> type.
+
+choose_0 : choose (T ,r # A) T A rnil.
+choose_1 : choose (T ,r E) Tl A (Tr ,r E)
+	<- choose T Tl A Tr.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% splitr (rnil ,r # a ,r #(a =>> a) ,r del ,r # a) Dl Dr ==>
+%   Dl = (rnil ,r # a ,r #(a =>> a) ,r del)
+%   Dr = (rnil ,r # a)
+%
+% splitl (# a ,l #(a =>> a) ,l del ,l # a ,l lnil) Dl Dr ==>
+%   Dl = (# a ,l #(a =>> a) ,l del ,l lnil)
+%   Dr = (# a ,l lnil)
+%
+splitr : rctx -> rctx -> rctx -> type.
+spitr_rnil : splitr rnil rnil rnil.
+splitr_del : splitr (T ,r del) (T ,r del) rnil.
+splitr_# : splitr (T ,r # A) Tl (Tr ,r # A) <- splitr T Tl Tr.
+
+splitl : lctx -> lctx -> lctx -> type.
+spitl_lnil : splitl lnil lnil lnil.
+splitl_del : splitl (del ,l T) lnil (del ,l T).
+splitl_# : splitl (# A ,l T) (# A ,l Tl) Tr <- splitl T Tl Tr.
+

@@ -1,0 +1,18 @@
+This is an implementation of the Kolmogorov translation from
+classical into intuitionistic logic.  For details see
+the code and the report
+
+  The Kolmogorov Interpretation of Classical Logic
+  in Intuitionistic Logic
+
+  Chad E. Brown
+  Department of Mathematics
+  Carnegie Mellon University
+
+  cebrown+@andrew.cmu.edu
+
+The report is available as the file
+
+  report.ps
+
+in this directory.

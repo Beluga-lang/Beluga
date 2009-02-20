@@ -1,0 +1,116 @@
+%%% Computations of the CLS machine
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+%%% Single step transition.
+=> : state -> state -> type.  %infix none 10 =>.
+			      %name => R.
+%mode => +St -St'.
+
+% Variables
+
+c_1 : st (Ks ;; (K ; W)) (ev 1 & P) S
+   => st Ks P (S ; W).
+
+c_^ : st (Ks ;; (K ; W')) (ev (F ^) & P) S
+   => st (Ks ;; K) (ev F & P) S.
+
+c_1+ : st (Ks ;; (K + F)) (ev 1 & P) S
+    => st (Ks ;; K) (ev F & P) S.
+
+c_^+ : st (Ks ;; (K + F')) (ev (F ^) & P) S
+    => st (Ks ;; K) (ev F & P) S.
+
+% Natural Numbers
+
+c_z     : st (Ks ;; K) (ev z' & P) S => st Ks P (S ; z*).
+c_s     : st (Ks ;; K) (ev (s' F) & P) S => st (Ks ;; K) (ev F & add1 & P) S.
+c_add1  : st Ks (add1 & P) (S ; W) => st Ks P (S ; s* W).
+c_case  : st (Ks ;; K) (ev (case' F1 F2 F3) & P) S
+       => st (Ks ;; K ;; K) (ev F1 & branch & ev F2 & ev F3 & P) S.
+c_branch_z : st (Ks ;; K) (branch & ev F2 & ev F3 & P) (S ; z*)
+	  => st (Ks ;; K) (ev F2 & P) S.
+c_branch_s : st (Ks ;; K) (branch & ev F2 & ev F3 & P) (S ; s* W)
+	  => st (Ks ;; (K ; W)) (ev F3 & P) S.
+
+% Pairs
+
+c_pair   : st (Ks ;; K) (ev (pair' F1 F2) & P) S
+	=> st (Ks ;; K ;; K) (ev F1 & ev F2 & mkpair & P) S.
+c_mkpair : st Ks (mkpair & P) (S ; W1 ; W2)
+	=> st Ks P (S ; pair* W1 W2).
+
+c_fst    : st (Ks ;; K) (ev (fst' F) & P) S
+	=> st (Ks ;; K) (ev F & getfst & P) S.
+c_getfst : st Ks (getfst & P) (S ; pair* W1 W2)
+	=> st Ks P (S ; W1).
+
+c_snd    : st (Ks ;; K) (ev (snd' F) & P) S
+	=> st (Ks ;; K) (ev F & getsnd & P) S.
+c_getsnd : st Ks (getsnd & P) (S ; pair* W1 W2)
+	=> st Ks P (S ; W2).
+
+% Functions
+
+c_lam     : st (Ks ;; K) (ev (lam' F) & P) S
+	 => st Ks P (S ; clo K (lam' F)).
+c_app     : st (Ks ;; K) (ev (app' F1 F2) & P) S
+	 => st (Ks ;; K ;; K) (ev F1 & ev F2 & apply & P) S.
+c_apply   : st Ks (apply & P) (S ; clo K' (lam' F1') ; W2)
+	 => st (Ks ;; (K' ; W2)) (ev F1' & P) S.
+
+% Definitions
+
+c_letv : st (Ks ;; K) (ev (letv' F1 F2) & P) S
+      => st (Ks ;; K ;; K) (ev F1 & bind & ev F2 & P) S.
+c_bind : st (Ks ;; K) (bind & ev F2 & P) (S ; W1)
+      => st (Ks ;; (K ; W1)) (ev F2 & P) S.
+
+c_letn : st (Ks ;; K) (ev (letn' F1 F2) & P) S
+      => st (Ks ;; (K + F1)) (ev F2 & P) S.
+
+% Recursion
+
+c_fix  : st (Ks ;; K) (ev (fix' F) & P) S
+      => st (Ks ;; (K + fix' F)) (ev F & P) S.
+
+%%% Multi-step transition
+
+=>*  : state -> state -> type.  %infix none 10 =>*.
+				%name =>* C.
+% incorrect would be
+% %mode =>* +St -St'.
+% because of the incorrect ordering of subgoals
+
+id   : St =>* St.
+
+~    : St => St'
+    -> St' =>* St''
+    -> St =>* St''.
+
+%infix right 10 ~.
+
+%%% Evaluation in environment K
+
+ceval : env -> exp' -> val -> type.
+
+run :     st (emptys ;; K) (ev F & done) (empty)
+      =>* st (emptys) (done) (empty ; W)
+   -> ceval K F W.
+
+%%% Executable versions.
+
+>=>*  : state -> state -> type.  %infix none 10 >=>*.
+%mode >=>* +St -St'.
+
+id<   : St >=>* St.
+<=<   : St >=>* St''
+	 <- St => St'
+	 <- St' >=>* St''.
+%infix left 10 <=<.
+
+>ceval : env -> exp' -> val -> type.
+%mode >ceval +K +F -W.
+
+>run   : >ceval K F W
+	  <- st (emptys ;; K) (ev F & done) (empty)
+	     >=>* st (emptys) (done) (empty ; W).

@@ -44,7 +44,7 @@ type spec =
 type session =
   | Session of string list
 
-exception SessionFatal
+exception SessionFatal of spec
 
 let process_name name =
   let rest = String.sub name 1 (String.length name - 1) in
@@ -101,6 +101,8 @@ let main () =
         | None     -> Format.fprintf Format.std_formatter "<unknown location>"
         | Some loc -> Parser.Grammar.Loc.print Format.std_formatter loc
       in
+      let abort_session () = raise (SessionFatal spec)
+      in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
             printf "## Pretty Printing External Syntax: %s ##\n" file_name;
@@ -117,7 +119,7 @@ let main () =
               Format.fprintf Format.std_formatter "Parse Error: %s" exn;
               Format.fprintf Format.std_formatter "@?";
               print_newline ();
-              raise SessionFatal
+              abort_session ()
 
           | Reconstruct.Error (locOpt, err) ->
               printOptionalLocation locOpt;
@@ -127,7 +129,7 @@ let main () =
                 "Error (Reconstruction): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              return Negative
+              abort_session ()
 
           | Reconstruct.Violation str ->
               Format.fprintf
@@ -135,7 +137,7 @@ let main () =
                 "Error (\"Violation\") (Reconstruction): %s\n@?"
                 str;
               print_newline ();
-              return Negative
+              abort_session ()
 
           | Check.LF.Error (locOpt, err) ->
               printOptionalLocation locOpt;
@@ -145,7 +147,7 @@ let main () =
                 "Error (Type-Checking): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              return Negative
+              abort_session ()
 
           | Check.Comp.Error err ->
               (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
@@ -155,11 +157,11 @@ let main () =
                 "Error (Checking): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              return Negative
+              abort_session ()
 
           | Check.LF.Violation str ->
               printf "Error (\"Violation\") (Checking): %s\n@?" str;
-              return Negative
+              abort_session ()
 
           | Context.Error err ->
               Format.fprintf
@@ -167,24 +169,30 @@ let main () =
                 "Error (Context): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              return Negative
+              abort_session ()
 
           | Whnf.Error err ->
               Format.fprintf
                 Format.std_formatter
                 "Error (Whnf): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
-              return Negative
+              abort_session ()
 
           | Abstract.Error str ->
               printf "Error (Abstraction): %s\n@?" str;
-              return Negative
+              abort_session ()
 
     in
     let per_session (errors, unsound, incomplete) (Session file_names) =
+      let return spec actual = match (spec, actual) with
+        | (Positive, Positive) -> (errors, unsound, incomplete)
+        | (Positive, Negative) -> (errors + 1, unsound, incomplete + 1)
+        | (Negative, Positive) -> (errors, unsound + 1, incomplete)
+        | (Negative, Negative) -> (errors + 1, unsound, incomplete)
+      in
         Store.clear ()
       ; try List.fold_left per_file (errors, unsound, incomplete) file_names
-      with SessionFatal -> (errors + 1, unsound, incomplete + 1)
+      with  SessionFatal spec -> return spec Negative
     in
     (* Iterate the process for each file given on the command line *)
     let args   = List.tl (Array.to_list Sys.argv) in

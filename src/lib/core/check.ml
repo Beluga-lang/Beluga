@@ -47,9 +47,9 @@ module LF = struct
 
     | ((Root (loc, h, tS), s (* id *)), (Atom _, _s')) ->
         (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
-        let sA = Whnf.whnfTyp (inferHead cO cD cPsi h, LF.id) in
+        let sA' = Whnf.whnfTyp (inferHead cO cD cPsi h, LF.id) in
           begin try
-            let sP = synSpine cO cD cPsi (tS, s) sA in
+            let sP = synSpine cO cD cPsi (tS, s) sA' in
               if Whnf.convTyp sP sA then
                 ()
               else
@@ -421,16 +421,6 @@ module Comp = struct
   type caseType  = IndexObj of I.psi_hat * I.normal | DataObj 
 
   (*  module Unif = Unify.UnifyNoTrail *)
-
-  (*  type error =
-      | CaseScrutineeMismatch
-      | FunMismatch
-      | CtxAbsMismatch
-      | MLamMismatch
-      | TypMismatch
-
-      exception Error of error
-  *)
 
   exception Violation of string
   exception Error of E.error

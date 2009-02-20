@@ -44,7 +44,7 @@ type spec =
 type session =
   | Session of string list
 
-exception SessionFatal
+exception SessionFatal of spec
 
 let process_name name =
   let rest = String.sub name 1 (String.length name - 1) in
@@ -101,39 +101,17 @@ let main () =
         | None     -> Format.fprintf Format.std_formatter "<unknown location>"
         | Some loc -> Parser.Grammar.Loc.print Format.std_formatter loc
       in
+      let abort_session () = raise (SessionFatal spec)
+      in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
-              printf "## Pretty Printing External Syntax: %s ##\n" file_name
-            ; print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
+            printf "## Pretty Printing External Syntax: %s ##\n" file_name;
+            print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;
+            printf "\n## Type Reconstruction: %s ##\n" file_name;
 
-            ; printf "\n## Type Reconstruction: %s ##\n" file_name
-
-            ; let int_decls = List.map Reconstruct.recSgnDecl sgn in
-                print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls
-              ; try
-                (* Double Checking is done after reconstruction 
-
-                  printf "\n## Double Checking ##"
-                ; print_newline ()
-                ; Check.Sgn.check_sgn_decls int_decls
-                ; printf "\n## Double Checking Successful! ##\n\n" *)
-                  (* clean up for the next file *)
-                return Positive
-                with
-                  | Whnf.Error err ->
-                      Format.fprintf
-                        Format.std_formatter
-                        "\n!! Error during weak-head normalization !!\n\n%a\n@?\n"
-                        Pretty.Error.DefaultPrinter.fmt_ppr err
-                      ; return Negative
-
-                  | Check.LF.Error err ->
-                       printf "\n!! Error during typechecking !!\n\n%s\n\n" err
-                        (* Format.fprintf
-                          Format.std_formatter
-                          "\n!! Error during Type-Checking !!\n\n%a\n\n@?"
-                           Pretty.Error.DefaultPrinter.Check.fmt_ppr err; *)
-                     ; return Negative
+            let int_decls = List.map Reconstruct.recSgnDecl sgn in
+              print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls;
+              return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
               Parser.Grammar.Loc.print Format.std_formatter loc;
@@ -141,7 +119,7 @@ let main () =
               Format.fprintf Format.std_formatter "Parse Error: %s" exn;
               Format.fprintf Format.std_formatter "@?";
               print_newline ();
-              raise SessionFatal
+              abort_session ()
 
           | Reconstruct.Error (locOpt, err) ->
               printOptionalLocation locOpt;
@@ -151,20 +129,28 @@ let main () =
                 "Error (Reconstruction): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              raise SessionFatal
-              (* return Negative *)
+              abort_session ()
 
-          | Reconstruct.Violation err_string ->
+          | Reconstruct.Violation str ->
               Format.fprintf
                 Format.std_formatter
-                (* TODO print location as "filename:line1.col1-line2-col2" *)
                 "Error (\"Violation\") (Reconstruction): %s\n@?"
-                err_string;
+                str;
               print_newline ();
-              raise SessionFatal
-              (* return Negative *)
+              abort_session ()
 
-          | Check.Comp.Err err ->
+
+          | Check.LF.Error (locOpt, err) ->
+              printOptionalLocation locOpt;
+              Format.fprintf Format.std_formatter ":\n";
+              Format.fprintf
+                Format.std_formatter
+                "Error (Type-Checking): %a@?"
+                Pretty.Error.DefaultPrinter.fmt_ppr err;
+              print_newline ();
+              abort_session ()
+
+          | Check.Comp.Error err ->
               (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
@@ -172,8 +158,11 @@ let main () =
                 "Error (Checking): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              raise SessionFatal
-              (* return Negative *)
+              abort_session ()
+
+          | Check.LF.Violation str ->
+              printf "Error (\"Violation\") (Checking): %s\n@?" str;
+              abort_session ()
 
           | Context.Error err ->
               Format.fprintf
@@ -181,13 +170,31 @@ let main () =
                 "Error (Context): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
-              (* return Negative *)
-              raise SessionFatal
+              abort_session ()
+
+          | Whnf.Error err ->
+              Format.fprintf
+                Format.std_formatter
+                "Error (Whnf): %a\n@?"
+                Pretty.Error.DefaultPrinter.fmt_ppr err;
+              abort_session ()
+
+          | Abstract.Error str ->
+              printf "Error (Abstraction): %s\n@?" str;
+              abort_session ()
+
+
     in
     let per_session (errors, unsound, incomplete) (Session file_names) =
+      let return spec actual = match (spec, actual) with
+        | (Positive, Positive) -> (errors, unsound, incomplete)
+        | (Positive, Negative) -> (errors + 1, unsound, incomplete + 1)
+        | (Negative, Positive) -> (errors, unsound + 1, incomplete)
+        | (Negative, Negative) -> (errors + 1, unsound, incomplete)
+      in
         Store.clear ()
       ; try List.fold_left per_file (errors, unsound, incomplete) file_names
-      with SessionFatal -> (errors + 1, unsound, incomplete + 1)
+      with  SessionFatal spec -> return spec Negative
     in
     (* Iterate the process for each file given on the command line *)
     let args   = List.tl (Array.to_list Sys.argv) in

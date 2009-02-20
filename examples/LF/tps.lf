@@ -157,5 +157,3 @@ tps_letn : tps D2 P2 Q2
 
 tps_fix : tps D1 (P1 (fix (\ x . E x)) (tp_fix (\ x . \ u . P1 x u))) Q1
 	-> tps (ev_fix D1) (tp_fix (\ x . \ u . P1 x u)) Q1.
-
-

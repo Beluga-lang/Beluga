@@ -7,6 +7,8 @@
 
 open Syntax.Int 
 
+exception Error of string
+
 type free_var =
   (* Free variables (references): unnamed *)
   | MV of LF.head       

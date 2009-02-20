@@ -15,6 +15,20 @@ for Beluga.
 Pre-requisites <a id="01"/>
 ==============
 
+Debian
+------
+
+Under Debian GNU/Linux, all the necessary prerequisites can be installed
+with just the following command:
+
+# apt-get install ocaml omake ocaml-findlib libextlib-ocaml-dev libounit-ocaml-dev ocaml-ulex
+
+The same might hold for other distributions.
+
+
+Generic
+-------
+
 *IMPORTANT NOTE: Before downloading and installing any of these, or
  giving up in despair, see the following section about the OCaml GODI
  distribution.*
@@ -32,7 +46,6 @@ Pre-requisites <a id="01"/>
 [0104]: http://cristal.inria.fr/~ddr/ledit/
 [0105]: http://www.cduce.org/download.html#side
 [0106]: http://www.xs4all.nl/~mmzeeman/ocaml/
-
 
 
 GODI <a id="02"/>
@@ -114,6 +127,13 @@ GODI Installation Instructions <a id="03"/>
 
 Building <a id="04"/>
 ========
+
+The supported way to build Beluga currently is via OMake.  So just install
+the dependencies and then run "omake", after which you'll have an
+"interpreter" executable in the "bin" directory.
+
+
+*FIXME*  It seems the rest is out of date:
 
 For the moment, the only supported targets are:
 

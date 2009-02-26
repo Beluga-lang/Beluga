@@ -36,10 +36,12 @@ Generic
 * [ocaml 3.10][0101] or greater
 * [extlib][0102]
 * [ulex][0103]
+* [omake][0104]
 
 [0101]: http://caml.inria.fr/download.en.html
 [0102]: http://code.google.com/p/ocaml-extlib/downloads/list
 [0103]: http://www.cduce.org/download.html#side
+[0104]: http://omake.metaprl.org/index.html
 
 GODI <a id="02"/>
 ----
@@ -107,8 +109,7 @@ GODI Installation Instructions <a id="03"/>
 8. Now we will install the Beluga dependencies mentioned above.  To do
    so, run the following commands:
 
-       $ godi_wish -build apps-ledit -build godi-extlib \
-           -build godi-ounit -build godi-ulex
+       $ godi_wish -build godi-extlib -build godi-ulex -build godi-omake
 
        $ godi_perform -wishes
 

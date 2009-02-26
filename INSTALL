@@ -34,19 +34,12 @@ Generic
  distribution.*
 
 * [ocaml 3.10][0101] or greater
-* [camlp5][0102]
-* [extlib][0103]
-* [ledit][0104]
-* [ulex][0105]
-* [OUnit][0106]
+* [extlib][0102]
+* [ulex][0103]
 
 [0101]: http://caml.inria.fr/download.en.html
-[0102]: http://pauillac.inria.fr/~ddr/camlp5/
-[0103]: http://code.google.com/p/ocaml-extlib/downloads/list
-[0104]: http://cristal.inria.fr/~ddr/ledit/
-[0105]: http://www.cduce.org/download.html#side
-[0106]: http://www.xs4all.nl/~mmzeeman/ocaml/
-
+[0102]: http://code.google.com/p/ocaml-extlib/downloads/list
+[0103]: http://www.cduce.org/download.html#side
 
 GODI <a id="02"/>
 ----

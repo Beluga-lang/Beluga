@@ -1,4 +1,3 @@
-
 %%% Cartesian closed category
 
 %% Categorical language
@@ -11,61 +10,55 @@ mor : obj -> obj -> type.  %name mor _F.
 
 % morphism equality
 == : mor A B -> mor A B -> type.  %name == _ME.
-%infix none 5 ==.
 
 % morphisms
 id : mor A A.
-@ : mor B C -> mor A B -> mor A C. 
-%infix none 10 @.
+@  : mor B C -> mor A B -> mor A C.
 
 % equations
-refl : F == F.
-then : F == F' -> F' == F'' -> F == F''. %infix right 4 then.
-sym : F == F' -> F' == F.
+refl : == F F.
+then : == F F' -> == F' F'' -> == F F''.
+sym  : == F F' -> == F' F.
 
-=@= : F == F' -> G == G' -> F @ G == F' @ G'.
+=@= : == F F' -> == G G' -> == (@ F G) (@ F' G').
 
-id_l : id @ F == F.
-id_r : F @ id == F.
-ass  : H @ (G @ F) == (H @ G) @ F.
+id_l : == (@ id F) F.
+id_r : == (@ F id) F.
+ass  : == (@ H (@ G F)) (@ (@ H G) F).
 
 %% Products
 
 % objects
 1 : obj.
-* : obj -> obj -> obj. %infix none 10 *.
+* : obj -> obj -> obj.
 
 % morphisms
 drop : mor A 1.
 
-fst : mor (A * B) A.
-snd : mor (A * B) B.
-pair : mor A B -> mor A C -> mor A (B * C).
+fst  : mor (* A B) A.
+snd  : mor (* A B) B.
+pair : mor A B -> mor A C -> mor A (* B C).
 
 % equations
-=pair= : F == F' -> G == G' -> pair F G == pair F' G'.
+=pair= : == F F' -> == G G' -> == (pair F G) (pair F' G').
 
-term_u : H == drop.
+term_u : == H drop.
 
-prod_l : fst @ (pair F G) == F.
-prod_r : snd @ (pair F G) == G.
-prod_u : pair (fst @ H) (snd @ H) == H.
-
-% distp : pair F G @ H == pair (F @ H) (G @ H).
+prod_l : == (@ fst (pair F G)) F.
+prod_r : == (@ snd (pair F G)) G.
+prod_u : == (pair (@ fst H) (@ snd H)) H.
 
 %% Exponentials
 
 % objects
-=> : obj -> obj -> obj. %infix right 7 =>.
+=> : obj -> obj -> obj.
 
 % morphisms
-app : mor ((B => C) * B) C.
-cur : mor (A * B) C -> mor A (B => C).
+app : mor (* (=> B C) B) C.
+cur : mor (* A B) C -> mor A (=> B C).
 
 % equations
-=cur= : F == F' -> cur F == (cur F').
+=cur= : == F F' -> == (cur F) (cur F').
 
-exp_e : app @ (pair ((cur F) @ fst) snd) == F.
-exp_u : cur (app @ (pair (G @ fst) snd)) == G.
-
-% distc : (cur F) @ G == cur (F @ (pair (G @ fst) snd)).
+exp_e : == (@ app (pair (@ (cur F) fst) snd)) F.
+exp_u : == (cur (@ app (pair (@ G fst) snd))) G.

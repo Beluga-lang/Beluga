@@ -1,29 +1,19 @@
-
 % Lemmas about CCC combinators
 
 % <F,G> o H = <F o H, G o H>
-distp : pair F G @ H == pair (F @ H) (G @ H) -> type.
+distp : == (@ (pair F G) H) (pair (@ F H) (@ G H)) -> type.
 
-distp1 : distp (sym prod_u
-	        then (=pair= (ass then (=@= prod_l refl))
-		             (ass then (=@= prod_r refl)))).
+distp1 : distp (then (sym prod_u) (=pair= (then ass (=@= prod_l refl)) (then ass (=@= prod_r refl)))).
 
 % app @ <cur(F) @ G, H> = F @ <G, H>
-appl : app @ pair (cur F @ G) H == F @ pair G H -> type.
+appl : == (@ app (pair (@ (cur F) G) H)) (@ F (pair G H)) -> type.
 
-appl1 : appl (=@= refl
-                  (=pair= (=@= refl (sym prod_l)
-                           then ass)
-                          (sym prod_r)
-                   then sym DP)
-              then ass
-              then =@= exp_e refl)
-      <- distp DP.
+appl1 : appl (then (=@= refl (then (=pair= (then (=@= refl (sym prod_l)) ass) (sym prod_r)) (sym DP)))
+                (then ass (=@= exp_e refl)))
+         <- distp DP.
 
 % cur(F) o G = cur (F o <G o fst,snd>)
-distc : (cur F) @ G == cur (F @ (pair (G @ fst) snd)) -> type.
+distc : == (@ (cur F) G) (cur (@ F (pair (@ G fst) snd))) -> type.
 
-distc1 : distc (sym exp_u 
-	        then =cur= (=@= refl (=pair= (sym ass) refl)
-			    then AP))
-       <- appl AP.
+distc1 : distc (then (sym exp_u) (=cur= (then (=@= refl (=pair= (sym ass) refl)) AP)))
+          <- appl AP.

@@ -1,4 +1,3 @@
-
 % general congruence: if e <-> e' then e2[e/x] <-> e2[e'/x]
 
 cong : {M:term A -> term B} (conv E E' -> conv (M E) (M E')) -> type.
@@ -8,19 +7,18 @@ cong_var  : cong ([x] x) ([c] c).
 cong_unit : cong ([x] lunit) ([c] c_refl).
 
 cong_pair : cong ([x] lpair (E1 x) (E2 x)) ([c] c_pair (CP1 c) (CP2 c))
-	  <- cong E1 CP1
-	  <- cong E2 CP2.
+             <- cong E1 CP1
+             <- cong E2 CP2.
 
 cong_fst  : cong ([x] lfst (E x)) ([c] c_fst (CP c))
-	  <- cong E CP.
+             <- cong E CP.
 
 cong_snd  : cong ([x] lsnd (E x)) ([c] c_snd (CP c))
-	  <- cong E CP.
+             <- cong E CP.
 
 cong_lam  : cong ([x] llam [y] E x y) ([c] c_lam [y] (CP c y))
-	  <- {y}cong ([x] y) ([c] c_refl) -> cong ([x] E x y) ([c] CP c y).
+             <- {y} cong ([x] y) ([c] c_refl) -> cong ([x] E x y) ([c] CP c y).
 
 cong_app  : cong ([x] lapp (E1 x) (E2 x)) ([c] c_app (CP1 c) (CP2 c))
-	  <- cong E1 CP1
-  	  <- cong E2 CP2.
-
+             <- cong E1 CP1
+             <- cong E2 CP2.

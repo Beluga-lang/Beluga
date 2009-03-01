@@ -1,28 +1,27 @@
-
 % Translation CCC combinators -> lambda-terms
 
-conc 	: mor A B -> (term A -> term B) -> type.
+conc  : mor A B -> (term A -> term B) -> type.
 %mode conc +D -E.
 
-cid 	: conc id ([x] x).
+cid   : conc id ([x] x).
 
-ccomp 	: conc (F @ G) ([x] (M (N x)))
-	<- conc G N
-	<- conc F M.
+ccomp : conc (@ F G) ([x] (M (N x)))
+         <- conc G N
+         <- conc F M.
 
-cunit 	: conc drop ([x] lunit).
+cunit : conc drop ([x] lunit).
 
-cpair 	: conc (pair F G) ([x] (lpair (M x) (N x)))
-	<- conc G N
-	<- conc F M.
+cpair : conc (pair F G) ([x] (lpair (M x) (N x)))
+         <- conc G N
+         <- conc F M.
 
-cfst 	: conc fst ([x] (lfst x)).
+cfst  : conc fst ([x] (lfst x)).
 
-csnd 	: conc snd ([x] (lsnd x)).
+csnd  : conc snd ([x] (lsnd x)).
 
-ccur	: conc (cur F) ([a] llam [b] M (lpair a b))
-      	<- conc F M.
+ccur  : conc (cur F) ([a] llam [b] M (lpair a b))
+         <- conc F M.
 
-capp 	: conc app ([a] lapp (lfst a) (lsnd a)).
+capp  : conc app ([a] lapp (lfst a) (lsnd a)).
 
 %worlds () (conc _ _).

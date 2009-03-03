@@ -185,9 +185,330 @@ Regexp match data 0 points to the chars."
          ;; Quite dubious, but it's the intention that counts.
          (concat "interpreter " (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
+  (comment-normalize-vars)
+  ;; (set (make-local-variable 'indent-line-function) 'beluga-indent-line)
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
          (font-lock-syntactic-keywords . nil))))
+
+;;; Indentation
+
+(defconst beluga-op-levels
+  '(("of"      99  90  "case")
+    ("let"    nil  80)                  ;..=..in..
+    ("rec"    nil  80)                  ;..=..
+    ;; How to represent the nestability of if..then..else?
+    ("if"      nil 80)
+    ("then"    75  75)
+    ("else"    75  76)
+    ("|"       80  80)
+    ("in"      98  75  "let")           ;let..=..in
+    ;; Adding "let" breaks indentation because beluga-indent-rules applies
+    ;; to pairs where the first isn't mentioned here.
+    ("="       80  80)
+    ("fn"     nil  75)
+    ("FN"     nil  75)
+    ("=>"      70  70  "fn" "FN")
+    ;; ("forall" nil  75)
+    ;; ("end"      t nil  "case")
+    (","       60  60)
+    (":"       70  50)
+    ("->"      40  40)
+    (";"      150 150)
+    ("."      200 200))
+  "List of token info.
+Each element is of the form (TOKEN LEFT-LEVEL RIGHT-LEVEL &rest STOPS).")
+
+(defconst beluga-funlike-ops '("fn" "FN")
+  "Keywords that take a variable number of arguments.
+Those arguments will be aligned as if the keyword was a function.")
+
+(defcustom beluga-indent-basic 4
+  "Basic amount of indentation.")
+
+(defcustom beluga-indent-args beluga-indent-basic
+  "Amount of indentation of args below their function."
+  :type 'integer)
+
+(defconst beluga-indent-rules
+  '((("if" . "then") . 0)
+    ("of" 2)
+    ("in" nil 0)
+    ("=" 0)
+    ("let") ("if"))
+  "Rules of the following form.
+\((TOK1 . TOK2) . OFFSET)	how to indent TOK2 w.r.t TOK1.
+\(TOK OFFSET)			how to indent right after TOK.
+\(TOK)				OFFSET defaults to `beluga-indent-basic'.")
+
+(defun beluga-backward-token ()
+  (buffer-substring (point)
+                    (progn (if (zerop (skip-syntax-backward "."))
+                               (skip-syntax-backward "w_'"))
+                           (point))))
+
+(defun beluga-forward-token ()
+  (buffer-substring (point)
+                    (progn (if (zerop (skip-syntax-forward "."))
+                               (skip-syntax-forward "w_'"))
+                           (point))))
+
+(defun beluga-backward-sexp (&optional level stops)
+  "Skip over one sexp.
+Don't skip over an operator with right-level higher then LEVEL.
+LEVEL can be:
+  nil, meaning it's not decided yet.
+  t, meaning we're inside parentheses and should only
+     consider other parenthesized elements.
+  a number.
+Possible return values:
+  (stop POS TOKEN): we skipped over TOKEN which is in STOPS.
+  (LEFT-LEVEL POS TOKEN): we couldn't skip TOKEN because its right-level
+    is higher than LEVEL.  LEFT-LEVEL is the left-level of TOKEN,
+    POS is its start position in the buffer.
+  (t POS): we bumped into an open paren or the beginning of buffer.
+  (nil POS TOKEN): we skipped over a paren-like pair.
+  nil: we skipped over an identifier, matched parentheses, ..."
+  (if (bobp) (list t (point))
+    (let* ((pos (point))
+           (token (progn (forward-comment (- (point-max)))
+                         (beluga-backward-token)))
+           (tokinfo (cdr (assoc token beluga-op-levels))))
+
+      ;; Closing a paren-like thingy.
+      (if (member token stops)
+          
+          (list 'stop nil token)
+
+        (if tokinfo
+            (cond
+             ;; Bumping into a paren-like thingy.
+             ((or (eq (cadr tokinfo) t)
+                  ;; For a token that's "nil N", we shouldn't bump into
+                  ;; it if level > N because we may have skipped the
+                  ;; corresponding non-paren closer.
+                  (and (null level) (null (car tokinfo))))
+              (prog1 (list t (point)) (goto-char pos)))
+             ;; Bumping into an operator of higher right-level.
+             ((and (numberp level) (numberp (cadr tokinfo))
+                   (<= level (cadr tokinfo)))
+              ;; If left-level is nil, then it's kind of like an open-paren,
+              ;; so return t to indicate we bumped into an open-paren.
+              (prog1 (list (or (car tokinfo) t) (point) token)
+                (goto-char pos)))
+             ;; Skipping an operator of lower left-level.
+             ((and level (if (eq level t)
+                             (not (eq (car tokinfo) t))
+                           (or (null (car tokinfo))
+                               (and (numberp (car tokinfo))
+                                    (< (car tokinfo) level)))))
+              nil)
+             (t
+              (let (res)
+                (while (not
+                        (car (setq res
+                                   (beluga-backward-sexp
+                                    (car tokinfo)
+                                    ;; We append, so as to be more permissive
+                                    ;; w.r.t mismatched parenthesized elements.
+                                    (append stops (cddr tokinfo)))))))
+                (case (car res)
+                  ((t) res)
+                  (stop (cons nil (cdr res)))
+                  (t (if (or (not (numberp level))
+                             (and (numberp (car res)) (< level (car res))))
+                         res))))))
+          (if (equal token "")
+              (condition-case err
+                  (progn (goto-char pos) (backward-sexp 1) nil)
+                (scan-error (list t (caddr err))))
+            nil))))))
+
+(defun beluga-find-opener (re &optional level)
+  (unless level (setq level 100))
+  (while (progn
+           (beluga-backward-sexp level)
+           (not (looking-at re))))
+  t)
+
+(defun beluga-indent-hanging-p ()
+  ;; A Hanging keyword is one that's at the end of a line except it's not at
+  ;; the beginning of a line.
+  (and (save-excursion (beluga-forward-token)
+                       (skip-chars-forward " \t") (eolp))
+       (save-excursion (skip-chars-backward " \t") (not (bolp)))))
+
+(defun beluga-indent-virtual ()
+  (if (beluga-indent-hanging-p)
+      (beluga-indent-calculate 'virtual)
+    (current-column)))
+
+(defun beluga-bolp ()
+  (save-excursion (skip-chars-backward " \t") (bolp)))
+
+(defun beluga-indent-calculate (&optional virtual)
+  (or
+   ;; Trust pre-existing indentation on other lines.
+   (and virtual (beluga-bolp)
+        (current-column))
+   ;; Align close paren with opening paren.
+   (save-excursion
+     ;; (forward-comment (point-max))
+     (when (looking-at "\\s)")
+       (while (not (zerop (skip-syntax-forward ")")))
+         (skip-chars-forward " \t"))
+       (condition-case nil
+           (progn
+             (backward-sexp 1)
+             (beluga-indent-virtual))
+         (scan-error nil))))
+   ;; Align `of' with the corresponding `match'.
+   (save-excursion
+     (let* ((pos (point))
+            (token (beluga-forward-token))
+            (tokinfo (cdr (assoc token beluga-op-levels))))
+       (when (car tokinfo)
+         (let ((res (beluga-backward-sexp)) tmp)
+           ;; If we didn't move at all, that means we didn't really skip
+           ;; what we wanted.
+           (when (< (point) pos)
+             (cond
+              ((eq (car res) (car tokinfo))
+               ;; We bumped into a same-level operator. align with it.
+               (goto-char (cadr res))
+               (beluga-indent-virtual))
+              (t
+               (+ (if (null (setq tmp (assoc (cons (caddr res) token) beluga-indent-rules)))
+                      0
+                    (goto-char (cadr res))
+                    (cdr tmp))
+                  (beluga-indent-virtual)))))))))
+   ;; Indentation of a comment.
+   (and (looking-at comment-start-skip)
+        (save-excursion
+          (forward-comment (point-max))
+          (skip-chars-forward " \t\r\n")
+          (beluga-indent-calculate nil)))
+   ;; Indentation inside a comment.
+   (and (looking-at "\\*") (nth 4 (syntax-ppss))
+        (let ((ppss (syntax-ppss)))
+          (save-excursion
+            (forward-line -1)
+            (if (<= (point) (nth 8 ppss))
+                (progn (goto-char (1+ (nth 8 ppss))) (current-column))
+              (skip-chars-forward " \t")
+              (if (looking-at "\\*")
+                  (current-column))))))
+   ;; Indentation right after a special keyword.
+   (save-excursion
+     (let* ((tok (progn (forward-comment (- (point-max)))
+                        (beluga-backward-token)))
+            (tokinfo (assoc tok beluga-indent-rules))
+            (toklevel (assoc tok beluga-op-levels)))
+       (when (or tokinfo (and toklevel (null (cadr toklevel))))
+         (if (beluga-indent-hanging-p)
+             (+ (beluga-indent-calculate 'virtual)
+                (or (caddr tokinfo) (cadr tokinfo) beluga-indent-basic))
+           (+ (current-column)
+              (or (cadr tokinfo) beluga-indent-basic))))))
+   ;; Main loop.
+   (save-excursion
+     (let ((positions nil)
+           (begline nil)
+           arg)
+       (while (and (null (car (beluga-backward-sexp 0)))
+                   (push (point) positions)
+                   (not (setq begline (beluga-bolp)))))
+       (save-excursion
+         (setq arg (or (null (car (beluga-backward-sexp 0)))
+                       (member (progn (forward-comment (- (point-max)))
+                                      (beluga-backward-token)) beluga-funlike-ops))))
+       (cond
+        ((and arg positions)
+         (goto-char (car positions))
+         (current-column))
+        ((and (null begline) (cdr positions))
+         ;; We skipped some args plus the function and bumped into something.
+         ;; Align with the first arg.
+         (goto-char (cadr positions))
+         (current-column))
+        ((and (null begline) positions)
+         ;; We're the first arg.
+         ;; FIXME: it might not be a funcall, in which case we might be the
+         ;; second element.
+         (goto-char (car positions))
+         (+ beluga-indent-args (beluga-indent-calculate 'virtual)))
+        ((and (null arg) (null positions))
+         ;; We're the function itself.  Not sure what to do here yet.
+         (if virtual (current-column)
+           (save-excursion
+             (let* ((pos (point))
+                    (tok (progn (forward-comment (- (point-max)))
+                                (beluga-backward-token)))
+                    (tokinfo (cdr (assoc tok beluga-op-levels))))
+               (cond
+                ((numberp (car tokinfo))
+                 ;; We're right after an infix token.  Let's skip over the
+                 ;; lefthand side.
+                 (goto-char pos)
+                 (let (res)
+                   (while (progn (setq res (beluga-backward-sexp))
+                                 (and (not (beluga-bolp))
+                                      (equal (car res) (car tokinfo)))))
+                   ;; We should be right after a token of equal or
+                   ;; higher precedence.
+                   (cond
+                    ((and (consp res) (memq (car res) '(t nil)))
+                     ;; The token of higher-precedence is like an open-paren.
+                     ;; Sample case for t: foo { bar, \n[TAB] baz }.
+                     ;; Sample case for nil: match ... with \n[TAB] | toto ...
+                     ;; (goto-char (cadr res))
+                     (beluga-indent-virtual))
+                    ((and (consp res) (equal (car res) (car tokinfo)))
+                     ;; We stopped at a token of equal precedence because
+                     ;; we found a place with which to align.
+                     (current-column))
+                    )))
+                ;; For other cases.... hmm... we'll see when we get there.
+                )))))
+        ((null positions)
+         (beluga-backward-token)
+         (+ beluga-indent-args (beluga-indent-calculate 'virtual)))
+        ((car (beluga-backward-sexp 0))
+         ;; No arg stands on its own line, but the function does:
+         (if (cdr positions)
+             (progn
+               (goto-char (cadr positions))
+               (current-column))
+           (goto-char (car positions))
+           (+ (current-column) beluga-indent-args)))
+        (t
+         ;; We've skipped to a previous arg on its own line: align.
+         (goto-char (car positions))
+         (current-column)))))
+   ;; Other main loop.
+   ;; (save-excursion
+   ;;   (and (null (car (beluga-backward-sexp)))
+   ;;        (current-column)))
+   ;; ;; Old code.
+   ;; (beluga-indent-offset)
+   ))
+
+(defun beluga-indent-line ()
+  "Indent current line of Beluga code."
+  (interactive)
+  (let* ((savep (point))
+	 (indent (condition-case nil
+		     (save-excursion
+		       (forward-line 0)
+		       (skip-chars-forward " \t")
+		       (if (>= (point) savep) (setq savep nil))
+		       (max (beluga-indent-calculate) 0))
+		   (error 0))))
+    (if savep
+	(save-excursion (indent-line-to indent))
+      (indent-line-to indent))))
+
 
 (provide 'beluga-mode)
 ;;; beluga-mode.el ends here

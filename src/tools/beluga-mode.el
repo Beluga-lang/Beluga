@@ -1,4 +1,4 @@
-;;; beluga-mode.el --- Major mode for Beluga source code
+;;; beluga-mode.el --- Major mode for Beluga source code  -*- coding: utf-8 -*-
 
 ;; Copyright (C) 2009  Stefan Monnier
 
@@ -56,7 +56,7 @@ and `unicode'."
 	         (const japanese-jisx0208)))
 
 (defconst beluga-font-lock-symbols-alist
-  ;; Not sure about fn -> λ, since we could also have \ -> λ.
+  ;; Not sure about fn → λ, since we could also have \ → λ.
   (append
    ;; The symbols can come from a JIS0208 font.
    (and (fboundp 'make-char) (fboundp 'charsetp) (charsetp 'japanese-jisx0208)
@@ -75,18 +75,18 @@ and `unicode'."
    ;; Or a unicode font.
    (and (fboundp 'decode-char)
 	(memq beluga-font-lock-symbols '(t unicode))
-	(list (cons "not" (decode-char 'ucs 172))
-              (cons "fn" (decode-char 'ucs 955))
-              (cons "FN" (decode-char 'ucs 923))
-              (cons "Sigma" (decode-char 'ucs 931))
-              (cons "->" (decode-char 'ucs 8594))
-	      (cons "<-" (decode-char 'ucs 8592))
-	      (cons "=>" (decode-char 'ucs 8658))
-              (cons "::" (decode-char 'ucs 8759))
-	      ;; (cons ".." (decode-char 'ucs 8230)) ; Actually "..."
-	      (cons ".." (decode-char 'ucs 8229))
-              ;; (cons "forall" (decode-char 'ucs 8704))
-              )))
+	'(("not"   . ?¬)
+          ("fn"    . ?λ)
+          ("FN"    . ?Λ)
+          ("Sigma" . ?Σ)
+          ("->"    . ?→)
+          ("<-"    . ?←)
+          ("=>"    . ?⇒)
+          ("::"    . ?∷)
+          ;; (".." . ?…) ; Actually "..."
+          (".."    . ?‥)
+          ;; ("forall" . ?∀)
+          )))
   "Alist mapping Beluga symbols to chars.
 Each element has the form (STRING . CHAR) or (STRING CHAR PREDICATE).
 STRING is the Beluga symbol.
@@ -186,7 +186,7 @@ Regexp match data 0 points to the chars."
          (concat "interpreter " (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
   (comment-normalize-vars)
-  ;; (set (make-local-variable 'indent-line-function) 'beluga-indent-line)
+  (set (make-local-variable 'indent-line-function) 'beluga-indent-line)
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
          (font-lock-syntactic-keywords . nil))))
@@ -214,6 +214,7 @@ Regexp match data 0 points to the chars."
     (","       60  60)
     (":"       70  50)
     ("->"      40  40)
+    ("<-"      40  40)
     (";"      150 150)
     ("."      200 200))
   "List of token info.
@@ -235,6 +236,8 @@ Those arguments will be aligned as if the keyword was a function.")
     ("of" 2)
     ("in" nil 0)
     ("=" 0)
+    ("=>")
+    ((t . "|") . -2)
     ("let") ("if"))
   "Rules of the following form.
 \((TOK1 . TOK2) . OFFSET)	how to indent TOK2 w.r.t TOK1.
@@ -376,10 +379,16 @@ Possible return values:
               ((eq (car res) (car tokinfo))
                ;; We bumped into a same-level operator. align with it.
                (goto-char (cadr res))
-               (beluga-indent-virtual))
+               ;; Don't use beluga-indent-virtual here, because we want to
+               ;; jump back over a sequence of same-level ops such as
+               ;;    a -> b -> c
+               ;;    -> d
+               ;; So as to align with the earliest appropriate place.
+               (beluga-indent-calculate 'virtual))
               (t
-               (+ (if (null (setq tmp (assoc (cons (caddr res) token) beluga-indent-rules)))
-                      0
+               (+ (if (null (setq tmp (assoc (cons (caddr res) token)
+                                             beluga-indent-rules)))
+                      (or (cdr (assoc (cons t token) beluga-indent-rules)) 0)
                     (goto-char (cadr res))
                     (cdr tmp))
                   (beluga-indent-virtual)))))))))
@@ -464,9 +473,9 @@ Possible return values:
                      ;; Sample case for nil: match ... with \n[TAB] | toto ...
                      ;; (goto-char (cadr res))
                      (beluga-indent-virtual))
-                    ((and (consp res) (equal (car res) (car tokinfo)))
-                     ;; We stopped at a token of equal precedence because
-                     ;; we found a place with which to align.
+                    ((and (consp res) (>= (car res) (car tokinfo)))
+                     ;; We stopped at a token of equal or higher precedence
+                     ;; because we found a place with which to align.
                      (current-column))
                     )))
                 ;; For other cases.... hmm... we'll see when we get there.

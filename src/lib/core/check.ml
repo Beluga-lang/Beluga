@@ -24,6 +24,7 @@ module LF = struct
 
   exception Violation of string
   exception Error of Syntax.Loc.t option * error
+  exception SpineMismatch
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
    *
@@ -54,8 +55,7 @@ module LF = struct
                 ()
               else
                 raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP)))
-          with Match_failure _ ->
-            (* synSpine cO cD cPsi (App _, _) (Atom _, _) *)
+          with SpineMismatch ->
             raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
           end
 
@@ -90,6 +90,9 @@ module LF = struct
          *)
         let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
           synSpine cO cD cPsi (tS, s1) tB2
+
+    | ((App _, _), (Atom _, _)) ->
+        raise SpineMismatch
 
 
   (* inferHead cO cD cPsi h = tA
@@ -268,6 +271,8 @@ module LF = struct
         check cO cD cPsi (tM, s1) (tA1, s2);
         synKSpine cO cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
+    | ((App _, _), (Typ, _)) ->
+        raise SpineMismatch
 
   (* checkTyp (cD, cPsi, (tA,s))
    *
@@ -285,8 +290,7 @@ module LF = struct
               ()
             else
               raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, LF.id)))))
-        with Match_failure _ ->
-          (* synKSpine cO cD cPsi (App _, _) (Typ, _) *)
+        with SpineMismatch ->
           raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, LF.id)))))
         end
 

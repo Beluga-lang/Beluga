@@ -23,12 +23,13 @@ mp_^+ : map_eval D (tr_^+ C1) (fev_^+ D1') U1
 mp_z       : map_eval (ev_z) (tr_z) (fev_z) (vtr_z).
 mp_s       : map_eval (ev_s D1) (tr_s C1) (fev_s D1') (vtr_s U1)
 	      <- map_eval D1 C1 D1' U1.
-mp_case_z  : map_eval (ev_case_z D2 D1) (tr_case C3 C2 C1)
-	      (fev_case_z D2' D1') U2
+mp_match_z  : map_eval (ev_match_z D2 D1) (tr_match (\w.\x.\u. C3 w x u) C2 C1)
+	      (fev_match_z D2' D1') U2
 	      <- map_eval D1 C1 D1' (vtr_z)
 	      <- map_eval D2 C2 D2' U2.
-mp_case_s  : map_eval (ev_case_s D3 D1) (tr_case C3 C2 C1)
-	      (fev_case_s D3' D1') U3
+
+mp_match_s  : map_eval (ev_match_s D3 D1) (tr_match (\w.\x.\u. C3 w x u) C2 C1)
+	      (fev_match_s D3' D1') U3
 	      <- map_eval D1 C1 D1' (vtr_s U1')
 	      <- map_eval D3 (C3 W1' V1' U1') D3' U3.
 
@@ -47,36 +48,32 @@ mp_snd  : map_eval (ev_snd D1) (tr_snd C1)
 	     <- map_eval D1 C1 D1' (vtr_pair U2 U1).
 
 % Functions
-mp_lam : map_eval (ev_lam) (tr_lam C)
-		  (fev_lam) (vtr_lam (tr_lam C)).
+mp_lam : map_eval (ev_lam) (tr_lam (\w.\x.\u. C w x u))
+		  (fev_lam) (vtr_lam (tr_lam (\w.\x.\u. C w x u))).
 
 mp_app : map_eval (ev_app D3 D2 D1) (tr_app C2 C1)
 	  (fev_app D3' D2' D1') U3
-	  <- map_eval D1 C1 D1' (vtr_lam (tr_lam C3))
+	  <- map_eval D1 C1 D1' (vtr_lam (tr_lam (\w.\x.\u. C3 w x u)))
 	  <- map_eval D2 C2 D2' U2
 	  <- map_eval D3 (C3 W2 V2 U2) D3' U3.
 
 % Definitions
-mp_letv : map_eval (ev_letv D2 D1) (tr_letv C2 C1)
+mp_letv : map_eval (ev_letv D2 D1) (tr_letv (\w.\x.\u. C2 w x u) C1)
 	   (fev_letv D2' D1') U2
 	   <- map_eval D1 C1 D1' U1
 	   <- map_eval D2 (C2 W1 V1 U1) D2' U2.
 
-mp_letn : map_eval (ev_letn D2) (tr_letn C2 C1)
+mp_letn : map_eval (ev_letn D2) (tr_letn (\w.\x.\u. C2 w x u) C1)
 	   (fev_letn D2') U2
 	   <- map_eval D2 (C2 F1 E1 C1) D2' U2.
 
 % Recursion
-mp_fix : map_eval (ev_fix D1) (tr_fix C1)
+mp_fix : map_eval (ev_fix D1) (tr_fix (\w.\x.\u. C1 w x u))
 		  (fev_fix D1') U1
-	  <- map_eval D1 (C1 (fix' F1) (fix E1) (tr_fix C1)) D1' U1.
+	  <- map_eval D1 (C1 (fix' F1) (fix (\x. E1 x)) (tr_fix (\w.\x.\u. C1 w x u))) D1' U1.
 
 %mode map_eval +D +C -D' -U.
 %worlds () (map_eval D C D' U).
-% problem here---fixed in 2001 version
-% %covers map_eval +D +C -D' -U.
-
-
 
 % The copy of map_eval exists only to allow totality to be checked
 % using a different mode.
@@ -100,14 +97,16 @@ mp_^+ : map_eval' D (tr_^+ C1) (fev_^+ D1') U1
 
 % Natural Numbers
 mp_z       : map_eval' (ev_z) (tr_z) (fev_z) (vtr_z).
+
 mp_s       : map_eval' (ev_s D1) (tr_s C1) (fev_s D1') (vtr_s U1)
 	      <- map_eval' D1 C1 D1' U1.
-mp_case_z  : map_eval' (ev_case_z D2 D1) (tr_case C3 C2 C1)
-	      (fev_case_z D2' D1') U2
+
+mp_match_z  : map_eval' (ev_match_z D2 D1) (tr_match (\w.\x.\u. C3 w x u) C2 C1)
+	      (fev_match_z D2' D1') U2
 	      <- map_eval' D1 C1 D1' (vtr_z)
 	      <- map_eval' D2 C2 D2' U2.
-mp_case_s  : map_eval' (ev_case_s D3 D1) (tr_case C3 C2 C1)
-	      (fev_case_s D3' D1') U3
+mp_match_s  : map_eval' (ev_match_s D3 D1) (tr_match (\w.\x.\u. C3 w x u) C2 C1)
+	      (fev_match_s D3' D1') U3
 	      <- map_eval' D1 C1 D1' (vtr_s U1')
 	      <- map_eval' D3 (C3 W1' V1' U1') D3' U3.
 
@@ -126,29 +125,29 @@ mp_snd  : map_eval' (ev_snd D1) (tr_snd C1)
 	     <- map_eval' D1 C1 D1' (vtr_pair U2 U1).
 
 % Functions
-mp_lam : map_eval' (ev_lam) (tr_lam C)
-		  (fev_lam) (vtr_lam (tr_lam C)).
+mp_lam : map_eval' (ev_lam) (tr_lam (\w.\x.\u. C w x u))
+		  (fev_lam) (vtr_lam (tr_lam (\w.\x.\u. C w x u))).
 
 mp_app : map_eval' (ev_app D3 D2 D1) (tr_app C2 C1)
 	  (fev_app D3' D2' D1') U3
-	  <- map_eval' D1 C1 D1' (vtr_lam (tr_lam C3))
+	  <- map_eval' D1 C1 D1' (vtr_lam (tr_lam (\w.\x.\u. C3 w x u)))
 	  <- map_eval' D2 C2 D2' U2
 	  <- map_eval' D3 (C3 W2 V2 U2) D3' U3.
 
 % Definitions
-mp_letv : map_eval' (ev_letv D2 D1) (tr_letv C2 C1)
+mp_letv : map_eval' (ev_letv D2 D1) (tr_letv (\w.\x.\u. C2 w x u) C1)
 	   (fev_letv D2' D1') U2
 	   <- map_eval' D1 C1 D1' U1
 	   <- map_eval' D2 (C2 W1 V1 U1) D2' U2.
 
-mp_letn : map_eval' (ev_letn D2) (tr_letn C2 C1)
+mp_letn : map_eval' (ev_letn D2) (tr_letn (\w.\x.\u. C2 w x u) C1)
 	   (fev_letn D2') U2
 	   <- map_eval' D2 (C2 F1 E1 C1) D2' U2.
 
 % Recursion
-mp_fix : map_eval' (ev_fix D1) (tr_fix C1)
+mp_fix : map_eval' (ev_fix D1) (tr_fix (\w.\x.\u. C1 w x u))
 		  (fev_fix D1') U1
-	  <- map_eval' D1 (C1 (fix' F1) (fix E1) (tr_fix C1)) D1' U1.
+	  <- map_eval' D1 (C1 (fix' F1) (fix (\x. E1 x)) (tr_fix (\w.\x.\u. C1 w x u))) D1' U1.
 
 
 %mode map_eval' -D +C +D' -U.

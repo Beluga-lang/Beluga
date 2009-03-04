@@ -20,6 +20,9 @@ type free_var =
   | FPV of Id.name * (LF.typ * LF.dctx) option 
 
 
+
+val cnstr_ctyp : Comp.typ  -> bool
+
 val abstrKind     : LF.kind -> LF.kind * Id.offset
 
 val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
@@ -29,6 +32,10 @@ val abstractMSub  : Comp.msub -> Comp.msub * LF.mctx
 val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset
 
 val abstrExp      : Comp.exp_chk  -> Comp.exp_chk
+val abstrBranch   : (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) -> Comp.exp_chk  -> Comp.msub 
+                  -> LF.mctx * (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) * Comp.exp_chk * Comp.msub
+
+val abstrExpMSub  : Comp.exp_chk  -> Comp.msub -> LF.mctx * Comp.msub * Comp.exp_chk
 
 val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ

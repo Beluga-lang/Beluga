@@ -6,4 +6,4 @@
   val_z     : value z.
   val_s     : value (s E) <- value E.
   val_pair  : value (pair E1 E2) <- value E1 <- value E2.
-  val_lam   : value (lam E).
+  val_lam   : value (lam (\x. E x)).

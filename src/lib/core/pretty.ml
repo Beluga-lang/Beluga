@@ -724,6 +724,7 @@ module Int = struct
     val typRecToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.trec_clo -> string
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.nclo     -> string
+    val headToString      : LF.mctx -> LF.mctx -> LF.dctx -> LF.head     -> string
     val dctxToString      : LF.mctx -> LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> LF.mctx -> string
     val octxToString      : LF.mctx -> string
@@ -816,6 +817,8 @@ module Int = struct
               (fmt_ppr_lf_head cO cD cPsi lvl) h
               (fmt_ppr_lf_spine cO cD cPsi 2)  ms
               (r_paren_if cond)
+
+      | LF.Clo(tM, s) -> fmt_ppr_lf_normal cO cD cPsi lvl ppf (Whnf.norm (tM, s))
 
     and fmt_ppr_lf_head cO cD cPsi lvl ppf = function
       | LF.BVar x  ->
@@ -925,7 +928,7 @@ module Int = struct
       | LF.PInst ({ contents = None } as p, _, _, _) ->
           begin
             try
-              fprintf ppf "#%s"
+              fprintf ppf "?%s"
                 (PInstHashtbl.find pinst_hashtbl p)
             with
               | Not_found ->
@@ -934,6 +937,7 @@ module Int = struct
                       PInstHashtbl.replace pinst_hashtbl p sym
                     ; fprintf ppf "#%s" sym
           end
+
 
 
     and fmt_ppr_lf_ctx_var cO ppf = function
@@ -1196,6 +1200,7 @@ module Int = struct
               (fmt_ppr_cmp_typ cO (LF.Dec(cD, ctyp_decl)) 0) tau
               (r_paren_if cond)
 
+      | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo !"
 
     let rec fmt_ppr_cmp_exp_chk cO cD cG lvl ppf = function
       | Comp.Syn i ->
@@ -1465,6 +1470,10 @@ module Int = struct
       fmt_ppr_lf_kind cPsi std_lvl str_formatter tK
       ; flush_str_formatter ()
 
+    let headToString cO cD cPsi h = 
+      fmt_ppr_lf_head cO cD cPsi std_lvl str_formatter h
+      ; flush_str_formatter ()
+
     let normalToString cO cD cPsi sM = 
       let tM = Whnf.norm sM in 
         fmt_ppr_lf_normal cO cD cPsi std_lvl str_formatter tM
@@ -1698,7 +1707,10 @@ module Error = struct
 
 
   (* Default CID_RENDERER for Errors *)
-  module DefaultCidRenderer = Int.DefaultCidRenderer
+  (* module DefaultCidRenderer = Int.DefaultCidRenderer *)
+     module DefaultCidRenderer = Int.NamedRenderer
+
+
 
   (* Default Error Pretty Printer Functor Instantiation *)
   module DefaultPrinter = Make (DefaultCidRenderer)

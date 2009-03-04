@@ -2,120 +2,122 @@
 %%% This expresses the completeness proof for the CLS machine.
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
-%{
-Lemma: For every
-  C :: st Ks P S =>* st Ks' P' S'
-and
-  C' :: st Ks P S =>* st Ks' P' S'
-there exists a computation
-  C'' :: st Ks P S =>* st Ks'' P'' S''.
+% %{
+% Lemma: For every
+%   C :: st Ks P S =>* st Ks' P' S'
+% and
+%   C' :: st Ks P S =>* st Ks' P' S'
+% there exists a computation
+%  C'' :: st Ks P S =>* st Ks'' P'' S''.
 
-Proof: By induction on the structure of C.
-}%
+% Proof: By induction on the structure of C.
+% }%
 
-append : st Ks P S =>* st Ks' P' S'
-       -> st Ks' P' S' =>* st Ks'' P'' S''
-       -> st Ks P S =>* st Ks'' P'' S''
+append : mstep (st Ks P S)  (st Ks' P' S')
+       -> mstep (st Ks' P' S') (st Ks'' P'' S'')
+       -> mstep (st Ks P S) (st Ks'' P'' S'')
        -> type.
 %mode append +C +C' -C''.
 
-apd_id   : append (id) C' C'.
-apd_step : append (R ~ C) C' (R ~ C'')
+apd_id   : append (id_step) C' C'.
+apd_step : append (to R C) C' (to R C'')
 	    <- append C C' C''.
 
-%{
-Subcomputation Lemma:  For every
-  D :: feval K F W
-environment stack Ks, program P, and stack S there exists a computation
-  C :: st (Ks ;; K) (ev F & P) S =>* st Ks P (S ; W)
+% %{
+% Subcomputation Lemma:  For every
+%   D :: feval K F W
+% environment stack Ks, program P, and stack S there exists a computation
+%  C :: st (Ks ;; K) (ev F & P) S =>* st Ks P (S ; W)
 
-Proof: By induction on the structure of D
-}%
+% Proof: By induction on the structure of D
+% }%
 
 subcomp : feval K F W
-	   -> st (Ks ;; K) (ev F & P) S =>* st Ks P (S ; W)
+	   -> mstep (st (push Ks K) (prog (ev F) P) S) (st Ks P (vcons S  W))
 	   -> type.
 
 %mode +{K} +{F} +{W} +{D:feval K F W}
-      +{Ks} +{P} +{S} -{C:st (Ks ;; K) (ev F & P) S =>* st Ks P (S ; W)}
-      subcomp D C.
+%      +{Ks} +{P} +{S} -{C:st (Ks ;; K) (ev F & P) S =>* st Ks P (S ; W)}
+%      subcomp D C.
 
 % Variables
 
-sc_1  : subcomp (fev_1) (c_1 ~ id).
-sc_^  : subcomp (fev_^ D1) (c_^ ~ C1)
+sc_1  : subcomp (fev_1) (to c_1 id_step).
+sc_^  : subcomp (fev_^ D1) (to c_^ C1)
 	 <- subcomp D1 C1.
-sc_1+ : subcomp (fev_1+ D1) (c_1+ ~ C1)
+sc_1+ : subcomp (fev_1+ D1) (to c_1+ C1)
 	 <- subcomp D1 C1.
-sc_^+ : subcomp (fev_^+ D1) (c_^+ ~ C1)
+sc_^+ : subcomp (fev_^+ D1) (to c_^+ C1)
 	 <- subcomp D1 C1.
 
 % Natural Numbers
 
-sc_z     : subcomp (fev_z) (c_z ~ id).
+sc_z     : subcomp (fev_z) (to c_z id_step).
 sc_s     : subcomp (fev_s D1) C
 	    <- subcomp D1 C1
-	    <- append (c_s ~ C1) (c_add1 ~ id) C.
-sc_branch_z : subcomp (fev_case_z D2 D1) C
+	    <- append (to c_s C1) (to c_add1 id_step) C.
+
+sc_branch_z : subcomp (fev_match_z D2 D1) C
 	       <- subcomp D1 C1
 	       <- subcomp D2 C2
-	       <- append (c_case ~ C1) (c_branch_z ~ C2) C.
-sc_branch_s : subcomp (fev_case_s D3 D1) C
+	       <- append (to c_match C1) (to c_branch_z  C2) C.
+
+sc_branch_s : subcomp (fev_match_s D3 D1) C
 	       <- subcomp D1 C1
 	       <- subcomp D3 C3
-	       <- append (c_case ~ C1) (c_branch_s ~ C3) C.
+	       <- append (to c_match C1) (to c_branch_s C3) C.
 
 % Pairs
 
 sc_pair : subcomp (fev_pair D2 D1) C
 	   <- subcomp D1 C1
 	   <- subcomp D2 C2
-	   <- append (c_pair ~ C1) C2 C'
-	   <- append C' (c_mkpair ~ id) C.
+	   <- append (to c_pair C1) C2 C'
+	   <- append C' (to c_mkpair id_step) C.
 
 sc_fst : subcomp (fev_fst D1) C
 	  <- subcomp D1 C1
-	  <- append (c_fst ~ C1) (c_getfst ~ id) C.
+	  <- append (to c_fst C1) (to c_getfst id_step) C.
 
 sc_snd : subcomp (fev_snd D1) C
 	  <- subcomp D1 C1
-	  <- append (c_snd ~ C1) (c_getsnd ~ id) C.
+	  <- append (to c_snd C1) (to c_getsnd id_step) C.
 
 % Functions
 
-sc_lam : subcomp (fev_lam) (c_lam ~ id).
+sc_lam : subcomp (fev_lam) (to c_lam id_step).
 
 sc_app : subcomp (fev_app D3 D2 D1) C
 	   <- subcomp D1 C1
 	   <- subcomp D2 C2
 	   <- subcomp D3 C3
-	   <- append (c_app ~ C1) C2 C'
-	   <- append C' (c_apply ~ C3) C.
+	   <- append (to c_app C1) C2 C'
+	   <- append C' (to c_apply C3) C.
 
 % Definitions
 
 sc_letv : subcomp (fev_letv D2 D1) C
 	   <- subcomp D1 C1
 	   <- subcomp D2 C2
-	   <- append (c_letv ~ C1) (c_bind ~ C2) C.
+	   <- append (to c_letv C1) (to c_bind C2) C.
 
-sc_letn : subcomp (fev_letn D2) (c_letn ~ C2)
+sc_letn : subcomp (fev_letn D2) (to c_letn C2)
 	   <- subcomp D2 C2.
 
 % Recursion
 
-sc_fix : subcomp (fev_fix D1) (c_fix ~ C1)
+sc_fix : subcomp (fev_fix D1) (to c_fix C1)
 	  <- subcomp D1 C1.
 
 
-%{
-Completeness Theorem: For every evaluation 
- D :: feval K F W
-there exists a complete computation
- E :: ceval K F W
-
-Proof: Immediately from the subcomputation lemma.
-}%
+% %{
+% Completeness Theorem: For every evaluation 
+%  D :: feval K F W
+% there exists a complete computation
+%  E :: ceval K F W
+%
+% Proof: Immediately from the subcomputation lemma.
+% }%
 
 cev_complete : feval K F W -> ceval K F W -> type.
 %mode cev_complete +D -CE.

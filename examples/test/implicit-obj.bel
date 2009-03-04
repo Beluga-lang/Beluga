@@ -33,7 +33,7 @@ mlam T => fn e => case [ ] T of
                         | [ ]  ff  => [ ] ff
 		 ) 
 
- | [ ] arr T S => 
+ | [ ] arr S' S => 
    let [ ] lam (\x. (E x)) = e  in [ ] lam (\x. (E x))
 
 ;

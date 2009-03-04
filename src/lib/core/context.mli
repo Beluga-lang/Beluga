@@ -1,5 +1,5 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
+ 
 (** Contexts
 
     @author Brigitte Pientka
@@ -12,7 +12,7 @@ open Error
 exception Error of error
 
 val dctxToHat   : dctx -> psi_hat
-
+val hatToDCtx   : psi_hat -> dctx
 (* Declaration Contexts *)
 val ctxDec      : dctx -> int -> typ_decl
 val ctxSigmaDec : dctx -> int -> sigma_decl

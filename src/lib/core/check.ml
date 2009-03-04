@@ -650,6 +650,15 @@ module Comp = struct
     match branch with
       | BranchBox (cD1, (_phat, tM1, (tA1, cPsi1)), e1) ->
           LF.check cO cD1 cPsi1 (tM1, S.LF.id) (tA1, S.LF.id);
+                                         (* cD |- t <= cD0 *)
+          let _ = dprint (fun () -> "\nCheckBranch with pattern \n Pi " ^
+                        (P.mctxToString cO cD1) ^ " . " ^ 
+                        (P.normalToString cO cD1 cPsi1 (tM1, S.LF.id)) ^ " : " ^ 
+                        (P.typToString cO cD1 cPsi1 (tA1, S.LF.id)) ^ "[" ^ 
+                            (P.dctxToString cO cD1 cPsi1) ^ "] \n   =>  " ^ 
+                            (P.expChkToString cO (Context.append cD cD1) cG e1 ) ^ 
+                            "\n has type "  ^ P.compTypToString cO cD (Cwhnf.cnormCTyp (tau,t)) ^ "\n\n " 
+                       ) in
 
           let d1   = length cD1 in
           let _d   = length cD in
@@ -657,6 +666,13 @@ module Comp = struct
           let t'   = mctxToMSub cD in    (* {cD}  |- t' <= cD *)
           let tc   = extend t' t1 in     (* {cD1, cD} |- t', t1 <= cD, cD1 *)
           let phat = dctxToHat cPsi in
+
+          let cPsi1' = C.cnormDCtx (cPsi1, t1) in 
+          let tA1'   = C.cnormTyp (tA1, t1) in 
+          let tM1'   = C.cnorm (tM1, t1) in  
+
+          let cPsi'  = C.cnormDCtx (cPsi, t') in 
+          let tA'    = C.cnormTyp (tA, t') in 
 
           let _  = 
             begin match caseTyp with
@@ -671,16 +687,32 @@ module Comp = struct
             end
           in
 
-          let _    = Unify.unifyDCtx (I.Empty)
+(*          let _    = Unify.unifyDCtx (I.Empty)
             (C.cnormDCtx (cPsi, t')) (C.cnormDCtx (cPsi1, tc)) in
           let _    = Unify.unifyTyp (I.Empty)
             (phat, (C.cnormTyp (tA, t'), S.LF.id), (C.cnormTyp (tA1, tc), S.LF.id))  in
+*)
+          let _    = Unify.unifyDCtx (I.Empty) cPsi' cPsi1' in
+          let _    = Unify.unifyTyp (I.Empty)  (phat, (tA', S.LF.id), (tA1', S.LF.id))  in
+
+        let _ = dprint (fun () -> "\nCheckBranch with pattern (after unification) \n  " ) in 
+        let _ = dprint (fun () -> 
+                        (P.normalToString cO I.Empty cPsi1' (tM1', S.LF.id)) ^ " : " ^ 
+                        (P.typToString cO I.Empty cPsi1' (tA1', S.LF.id)) ^ "[" ^ 
+                        (P.dctxToString cO I.Empty cPsi1') ^ "] \n   =>  ... \n\n " 
+                       ) in
+
 
           let (tc', cD1'') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
-          let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
+
+          let _ = dprint (fun () -> "Show tc' = " ^ (P.msubToString cO cD1'' tc') ^ "\n") in 
+          let _ = dprint (fun () -> "Show cD1'' = " ^ (P.mctxToString cO cD1'') ^ "\n") in 
+          let _ = dprint (fun () -> "Show cD, cD1 = " ^ (P.mctxToString cO (Context.append cD cD1)) ^ "\n") in 
+          let _ = dprint (fun () -> "Show e1 = " ^ (P.expChkToString cO (Context.append cD cD1) cG e1) ^ "\n") in 
+          let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *) 
             (*
-          let cPsi_n = Cwhnf.cnormDCtx (cPsi, t'') in 
-          let cPsi1_n = Cwhnf.cnormDCtx (cPsi1, tc') in 
+          let cPsi_n = Cwhnf.cnormDCtx (cPsi, t'') in  
+          let cPsi1_n = Cwhnf.cnormDCtx (cPsi1, tc') in  
           let  _   = Printf.printf "Type of scrutinee: %s   |-    %s \n\n Type of Pattern in branch: %s   |-  %s \n\n"
             (P.dctxToString cO cD cPsi_n)
             (P.typToString  cO cD cPsi_n (Cwhnf.cnormTyp (tA, t'')))
@@ -695,7 +727,15 @@ module Comp = struct
             end
           in
           let cG1 = C.cwhnfCtx (cG, t'') in
-          let tau' = (tau, C.mcomp t'' t) in
+          let _ = dprint (fun () -> "Show e1' = " ^ (P.expChkToString cO cD1'' cG1 e1') ^ "\n") in 
+          let tau' = (tau, C.mcomp t t'') in
+          let _ = dprint (fun () -> "\nCheckBranch body \n  " ) in 
+          let _ = dprint (fun () -> 
+                        (P.mctxToString cO cD1'') ^ "  |-  " ^
+                        (P.expChkToString cO cD1'' cG1 e1') ^ " : " ^ 
+                        (P.compTypToString cO cD1'' (Cwhnf.cnormCTyp tau')) ^ " \n\n " 
+                       ) in
+
             check cO cD1'' cG1 e1' tau'
 
  (* checkTypeAgainstSchema cO cD cPsi tA sch (elements : sch_elem list)

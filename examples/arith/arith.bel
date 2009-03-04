@@ -7,7 +7,7 @@ rec plus : nat [ ] -> nat [ ] -> nat [ ] =
 fn x => fn y =>  
   case x of 
      [ ] z  => y 
-  |  [ ] U  =>  
+  |  [ ] s U  =>  
      let 
        [ ] V = plus ([ ] U ) y 
      in 

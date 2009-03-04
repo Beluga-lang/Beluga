@@ -1,9 +1,6 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
-(** Contextual normal form
-
+(**
    @author Brigitte Pientka
-
 *)
 
 (* Contextual Weak Head Normalization,
@@ -21,6 +18,21 @@ exception Fmvar_not_found
 exception FreeMVar of LF.head
 exception FreeCtxVar of Id.name
 exception NonInvertible 
+
+let rec constraints_solved cnstr = match cnstr with
+  | [] -> true
+  | ({contents = LF.Queued} :: cnstrs) -> 
+      constraints_solved cnstrs 
+  | ({contents = LF.Eqn (_cD, _phat, tM, tN)} :: cnstrs) -> 
+      if Whnf.conv (tM, S.id) (tN, S.id) then 
+        constraints_solved cnstrs
+      else         
+         false 
+ | ({contents = LF.Eqh (_cD, _phat, h1, h2)} :: cnstrs) -> 
+      if Whnf.convHead (h1, S.id) (h2, S.id) then 
+        constraints_solved cnstrs
+      else false 
+
 
 (*************************************)
 (* Contextual Explicit Substitutions *)
@@ -111,6 +123,8 @@ and mshiftDCtx cPsi k = match cPsi with
 (*  | LF.SigmaDec(cPsi', LF.SigmaDecl(x, typRec)) -> 
       LF.SigmaDec(mshiftDCtx cPsi' k, LF.SigmaDecl(x, mshiftTypRec(*to be written*) tA k)) *)
 
+
+
 (* mvar_dot1 psihat t = t'
    Invariant:
 
@@ -151,8 +165,13 @@ and mshiftDCtx cPsi k = match cPsi with
 *)
 
 let rec mcomp t1 t2 = match (t1, t2) with
-  | (Comp.MShift _n, _t)         -> t1
-  | (Comp.MDot (mft, t), t')     -> Comp.MDot (mfrontMSub mft t', mcomp t t')
+  | (Comp.MShift 0, t)         -> t
+  | (t, Comp.MShift 0)         -> t
+  | (Comp.MShift n, Comp.MShift k) -> (Comp.MShift (n+k))
+  |  (Comp.MShift n, Comp.MDot (_mft, t))  -> 
+      mcomp (Comp.MShift (n-1)) t
+  | (Comp.MDot (mft, t), t') -> 
+      Comp.MDot (mfrontMSub mft t', mcomp t t')
 
 
 (* mfrontMSub Ft t = Ft'
@@ -324,9 +343,28 @@ and cnorm (tM, t) = match tM with
                          cnormSub (r, t)), cnormSpine (tS, t)) 
 
 *)
-    | LF.Root (loc, LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) as u , r), tS) -> 
+    (* CHECK HERE IF THERE ARE ANY LEFT OVER CONSTRAINTS! *)
+    | LF.Root (loc, LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, cnstr) as u , r), tS) -> 
+        if constraints_solved (!cnstr) then 
         (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
-        LF.Root (loc, LF.MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
+          LF.Root (loc, LF.MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
+        else 
+          raise (Error "uninstiated meta-variables with unresolved constraints")
+
+
+    | LF.Root (loc, LF.PVar (LF.PInst ({contents = None}, _cPsi, _tA, _ ) as p, r), tS) -> 
+        LF.Root (loc, LF.PVar(p, cnormSub (r, t)), cnormSpine (tS, t)) 
+
+    | LF.Root (loc, LF.PVar (LF.PInst ({contents = Some (LF.BVar x)}, _cPsi, _tA, _ ) , r), tS) -> 
+        begin match S.bvarSub x (cnormSub (r,t)) with
+	  | LF.Head h  ->  
+              LF.Root (loc, h, cnormSpine (tS, t))
+	  | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
+	end
+
+
+    | LF.Root (loc, LF.PVar (LF.PInst ({contents = Some (LF.PVar (q,s))}, _cPsi, _tA, _ ) , r), tS) -> 
+	LF.Root (loc, LF.PVar (q, (S.comp s (cnormSub (r,t)))), cnormSpine (tS, t))                 
 
 
     (* Parameter variables *)
@@ -347,7 +385,25 @@ and cnorm (tM, t) = match tM with
 	    end
         | Comp.PObj (_phat, LF.PVar(LF.Offset i, r')) -> 
 	    LF.Root (loc, LF.PVar(LF.Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
-            (* Other case MObj _ should not happen -- ill-typed *)
+
+        | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = None}, _, _, _ ) as p, r')) -> 
+	    LF.Root (loc, LF.PVar(p, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
+
+
+        | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.PVar (x, rx))}, _, _, _ ), r')) -> 
+	    LF.Root (loc, LF.PVar (x, S.comp rx (S.comp r' (cnormSub (r,t)))), cnormSpine (tS, t))
+
+        | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.BVar x)}, _, _, _ ), r')) -> 
+            begin match S.bvarSub x (cnormSub (r',t)) with
+	      | LF.Head (LF.BVar i)  ->  
+                  begin match S.bvarSub i (cnormSub (r,t)) with
+	            | LF.Head h  -> LF.Root(loc, h, cnormSpine (tS, t))
+	            | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
+	          end
+              | LF.Head (LF.PVar(q, s)) -> LF.Root(loc, LF.PVar(q,  S.comp s (cnormSub (r,t))), cnormSpine (tS, t))
+                 (* Other case MObj _ should not happen -- ill-typed *)
+	    end
+
       end
 
     | LF.Root (_, LF.FPVar (p, r), _tS) ->
@@ -464,6 +520,37 @@ and cnorm (tM, t) = match tM with
   and cnormDecl (decl, t) = match decl with
       LF.TypDecl (x, tA) -> 
           LF.TypDecl (x, cnormTyp (tA, t))
+
+
+
+let rec cnormMSub t = match t with
+  | Comp.MShift _n -> t
+  | Comp.MDot (Comp.MObj(phat, tM), t) -> 
+      Comp.MDot (Comp.MObj (phat, Whnf.norm (tM, S.id)), cnormMSub t) 
+
+  | Comp.MDot (Comp.PObj(phat, LF.PVar(LF.Offset k, s)), t) -> 
+      Comp.MDot (Comp.PObj(phat, LF.PVar(LF.Offset k, s)), cnormMSub t)
+
+
+  | Comp.MDot (Comp.PObj(phat, LF.BVar k), t) -> 
+      Comp.MDot (Comp.PObj(phat, LF.BVar k), cnormMSub t)
+
+  | Comp.MDot (Comp.PObj(phat, LF.PVar(LF.PInst ({contents = None}, _cPsi, _tA, _ ) as p,  s)), t) -> 
+      Comp.MDot (Comp.PObj(phat, LF.PVar(p, s)), cnormMSub t)
+
+  | Comp.MDot(Comp.PObj(phat, LF.PVar (LF.PInst ({contents = Some (LF.BVar x)}, _cPsi, _tA, _ ) , r)), t) -> 
+        let t' = cnormMSub t in 
+        begin match S.bvarSub x r with
+	  | LF.Head h  ->  
+             Comp.MDot (Comp.PObj(phat, h), t')
+	  | LF.Obj tM  -> 
+              Comp.MDot (Comp.MObj(phat,  Whnf.norm (tM, S.id)), t')
+	end
+
+  | Comp.MDot(Comp.PObj(phat, LF.PVar (LF.PInst ({contents = Some (LF.PVar (q,s))}, _cPsi, _tA, _ ) , r)), t) -> 
+      cnormMSub (Comp.MDot (Comp.PObj (phat, LF.PVar(q, S.comp s r)), t))
+
+  | Comp.MDot (Comp.MV u, t) -> Comp.MDot (Comp.MV u, cnormMSub t)
 
 
   
@@ -655,7 +742,7 @@ let rec mctxMDec cD' k =
     | (LF.Dec (cD, _), k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Error "Meta-variable out of bounds")
+    | (_ , _ ) -> raise (Error ("Meta-variable out of bounds – looking for " ^ (string_of_int k) ^ "in context n"))
   in 
     lookup cD' k
 
@@ -992,7 +1079,7 @@ let rec mctxPVarPos cD p =
           LF.Root (loc, LF.MVar (LF.Offset k', invSub (r, t) d), invSpine (tS, t) d) 
 
     | LF.Root (_, LF.FMVar (u, r), _tS) ->
-        raise (FreeMVar (LF.FMVar (u,invSub (r, t) d)))
+        raise  (FreeMVar (LF.FMVar (u,invSub (r, t) d)))
 
     | LF.Root (_, LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r), _tS) -> 
         (* We could normalize [r]tM *)

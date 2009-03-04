@@ -31,6 +31,13 @@ let dctxToHat cPsi =
     length cPsi
 
 
+let rec hatToDCtx phat = match phat with 
+  | (None,      0) -> LF.Null
+  | (Some psi , 0) -> LF.CtxVar psi
+  | (ctx_v    , k) -> 
+      LF.DDec (hatToDCtx (ctx_v, k-1), LF.TypDeclOpt (Id.mk_name Id.NoName)) 
+        
+
 (* Declaration Contexts *)
 
 let rec sigmaShift typrec k = match typrec with

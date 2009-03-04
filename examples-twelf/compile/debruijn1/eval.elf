@@ -5,8 +5,8 @@
 eval : exp -> exp -> type.  %name eval D.
 
 % Functions
-ev_lam  : eval (lam E) (lam E).
+ev_lam  : eval (lam (\x. E x)) (lam (\x. E x)).
 ev_app  : eval (app E1 E2) V
-	    <- eval E1 (lam E1')
+	    <- eval E1 (lam (\x. E1' x))
 	    <- eval E2 V2
 	    <- eval (E1' V2) V.

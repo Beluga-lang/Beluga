@@ -5,7 +5,7 @@ exp  : type.  %name exp E.
 
 z     : exp.
 s     : exp -> exp.
-case  : exp -> exp -> (exp -> exp) -> exp.
+match : exp -> exp -> (exp -> exp) -> exp.
 pair  : exp -> exp -> exp.
 fst   : exp -> exp.
 snd   : exp -> exp.

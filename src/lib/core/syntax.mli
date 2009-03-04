@@ -243,8 +243,8 @@ module Int : sig
 
     and constrnt =
       | Queued
-      | Eqn of psi_hat * normal * normal
-      | Eqh of psi_hat * head * head
+      | Eqn of mctx * psi_hat * normal * normal
+      | Eqh of mctx * psi_hat * head * head
 
     and cnstr    = constrnt ref
 
@@ -278,7 +278,7 @@ module Int : sig
       |  SigmaLast of typ
       |  SigmaElem of name * typ * typ_rec
 
-
+    and mctx     = ctyp_decl ctx
 
     (**********************)
     (* Type Abbreviations *)
@@ -288,7 +288,7 @@ module Int : sig
     type sclo     = spine   * sub
     type tclo     = typ     * sub
     type trec_clo = typ_rec * sub
-    type mctx     = ctyp_decl ctx
+
 
     type prag = NamePrag of cid_typ 
   end

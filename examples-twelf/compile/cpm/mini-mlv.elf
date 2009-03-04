@@ -7,7 +7,7 @@ val  : type.  %name val V.
 
 z     : exp.
 s     : exp -> exp.
-case  : exp -> exp -> (val -> exp) -> exp.
+match : exp -> exp -> (val -> exp) -> exp.
 pair  : exp -> exp -> exp.
 fst   : exp -> exp.
 snd   : exp -> exp.
@@ -19,7 +19,7 @@ fix   : (exp -> exp) -> exp.
 
 vl    : val -> exp.
 
-z*    : val.
-s*    : val -> val.
-pair* : val -> val -> val.
-lam*  : (val -> exp) -> val.
+z_val    : val.
+s_val    : val -> val.
+pair_val : val -> val -> val.
+lam_val  : (val -> exp) -> val.

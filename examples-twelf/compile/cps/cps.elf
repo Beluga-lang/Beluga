@@ -6,7 +6,7 @@ cval : type.
 
 z+ : cval.
 s+ : cval -> cval.
-case+ : cval -> cexp -> (cval -> cexp) -> cexp.
+match+ : cval -> cexp -> (cval -> cexp) -> cexp.
 
 pair+ : cval -> cval -> cval.
 fst+ : cval -> (cval -> cexp) -> cexp.

@@ -31,8 +31,8 @@ FN g =>
        (let [g,x : term _ ] (V .. x) = copy [g, x:term _]   ([g,x] (U .. x))  in
 	  [g] lam  (\x. (V .. x)))
 
-    | [g] app (E1 ..) (E2 ..) => 
-      let [g] (F1 .. ) = copy [g] ([g] (E1 ..)) in 
-      let [g] (F2 .. ) = copy [g] ([g] (E2 ..)) in 
-        [g] app (F1 ..) (F2 ..)
+%    | [g] app (E1 ..) (E2 ..) => 
+%      let [g] (F1 .. ) = copy [g] ([g] (E1 ..)) in 
+%      let [g] (F2 .. ) = copy [g] ([g] (E2 ..)) in 
+%        [g] app (F1 ..) (F2 ..)
 );

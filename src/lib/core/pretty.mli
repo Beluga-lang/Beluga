@@ -160,6 +160,7 @@ module Int : sig
     val typRecToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.trec_clo -> string
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.nclo     -> string
+    val headToString      : LF.mctx -> LF.mctx -> LF.dctx -> LF.head     -> string
     val dctxToString      : LF.mctx -> LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> LF.mctx -> string
     val octxToString      : LF.mctx ->  string

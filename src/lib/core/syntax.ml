@@ -249,10 +249,11 @@ module Int = struct
     and tvar =
       | TInst   of typ option ref * dctx * kind * cnstr list ref
 
-    and constrnt =                         (* Constraint                     *)
-      | Queued                             (* constraint ::= Queued          *)
-      | Eqn of psi_hat * normal * normal   (*            | Psi |-(M1 == M2)  *)
-      | Eqh of psi_hat * head * head       (*            | Psi |-(H1 == H2)  *)
+    and constrnt =                          (* Constraint                     *)
+      | Queued                              (* constraint ::= Queued          *)
+      | Eqn of mctx * psi_hat * normal * normal
+                                            (*            | Psi |-(M1 == M2)  *)
+      | Eqh of mctx * psi_hat * head * head (*            | Psi |-(H1 == H2)  *)
 
     and cnstr = constrnt ref
 
@@ -293,7 +294,7 @@ module Int = struct
       | Last of normal
       | Cons of name * normal * tuple
 
-
+    and mctx     = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
     (**********************)
     (* Type Abbreviations *)
@@ -303,7 +304,7 @@ module Int = struct
     type sclo     = spine   * sub          (* Ss = [s]S                      *)
     type tclo     = typ     * sub          (* As = [s]A                      *)
     type trec_clo = typ_rec * sub          (* [s]Arec                        *)
-    type mctx     = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
+
 
 
     type prag = NamePrag of cid_typ 

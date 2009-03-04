@@ -16,11 +16,11 @@ apply  : instruction.
 bind   : instruction.
 
 done : program.
-&    : instruction -> program -> program.
+prog : instruction -> program -> program.
 %infix right 10 &.
 
 emptys : envstack.
-;;     : envstack -> env -> envstack.
+push   : envstack -> env -> envstack.
 %infix left 10 ;;.
 
 st : envstack -> program -> env -> state.

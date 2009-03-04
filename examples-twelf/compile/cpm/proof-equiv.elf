@@ -11,10 +11,10 @@ peq : csd C D C'
 peq_z : peq (csd_z) (ccp_z).
 peq_s : peq (csd_s SD1) (ccp_s CP1)
 	 <- peq SD1 CP1.
-peq_case_z : peq (csd_case_z SD2 SD1) (ccp_case_z CP1 CP2)
+peq_match_z : peq (csd_match_z SD2 SD1) (ccp_match_z CP1 CP2)
 	      <- peq SD1 CP1
 	      <- peq SD2 CP2.
-peq_case_s : peq (csd_case_s SD3 SD1) (ccp_case_s CP1 CP3)
+peq_match_s : peq (csd_match_s SD3 SD1) (ccp_match_s CP1 CP3)
 	      <- peq SD1 CP1
 	      <- peq SD3 CP3.
 

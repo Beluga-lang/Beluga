@@ -1,7 +1,7 @@
 Progress tracking of converting Twelf examples to Beluga:
 
 alloc-sem       Simply Typed Lambda-Calculus with a small-step, allocation semantics
-                (Brigitte)
+                (Brigitte, Part 1 done; )
 
 arith           Associativity and commutativity of unary addition (done)
 
@@ -11,6 +11,19 @@ church-rosser   The Church-Rosser theorem for untyped lambda-calculus
                 (Giulia)
 
 compile		Various compilers starting from Mini-ML
+                cls (Brigite, Part 1: done
+	                      Part 2: completeness  done, soundness: to do)
+                cpm (Brigitte, Part 1: done (sources.cfg)
+	                       Part 2: soundness done, 
+	                               completeness done,
+                                       equivalence of soundness and completeness proof omitted
+                                       (test.cfg)
+                    )
+                cps (Brigitte, Part 1 done)
+                cxm
+                debruijn  (Brigitte, Part 1 done ; Part 2: attempt can be found in examples)
+                debruijn1 (Brigitte, Part 1 done ; 
+                                     Part 2: Bisimulation proof both directions done)
 
 cpsocc          CPS conversion and stack-based machines [in progress]
 
@@ -48,5 +61,9 @@ prop-calc       Natural deduction and Hilbert propositional calculus
                 (Giulia)
 
 small-step      Brief tutorial on proving progress and preservation in Twelf
+                 - lam.elf (Brigitte, already in examples/small-step/lam.bel ? -- double check)
+                 - system-f.elf 
+                 - system-f-iso.elf
+
 
 tapl-ch13       A formalization of Chapter 13 from "Types and Programming Languages"

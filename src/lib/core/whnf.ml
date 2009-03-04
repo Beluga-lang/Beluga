@@ -179,7 +179,6 @@ let rec norm (tM, sigma) = match tM with
   | Root (loc, PVar (Offset _ as p, r), tS) ->
       Root (loc, PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
-
   (* Parameter variables *)
   | Root (loc, FPVar (p, r), tS) ->
       Root (loc, FPVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
@@ -417,17 +416,25 @@ let rec whnf sM = match sM with
   | (Root (loc, PVar (Offset _k as p, r), tS), sigma) ->
       (Root (loc, PVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
+
+  | (Root (loc, PVar (PInst({contents = None}, _cPsi, _tA, _ ) as p, r), tS), sigma) ->
+      (Root (loc, PVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
+
+
+  | (Root (loc, PVar (PInst({contents = Some (BVar x)}, _cPsi, _tA, _ ), r), tS), sigma) ->
+        begin match LF.bvarSub x (LF.comp r sigma) with
+	  | Head h  ->  
+              (Root (loc, h, SClo(tS, sigma)), LF.id)
+	  | Obj tM  -> whnfRedex ((tM, LF.id),  (tS, sigma))
+	end
+
+  | (Root (loc, PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), r), tS), sigma) -> 
+      whnf (Root (loc, PVar (q, LF.comp r' r), tS), sigma) 
+
+
   | (Root (loc, FPVar (p, r), tS), sigma) ->
       (Root (loc, FPVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
-  | (Root (loc, PVar (PInst ({contents = Some (BVar i)}, _, _, _) , r), tS), sigma) ->
-      begin match LF.bvarSub i r with
-        | Obj tM    -> whnfRedex ((tM, LF.id), (tS, sigma))
-        | Head head -> (Root (loc, head, SClo (tS, sigma)), LF.id)
-      end
-
-  | (Root (loc, PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), r), tS), sigma) ->
-      whnf (Root (loc, PVar (q, LF.comp r' r), tS), sigma)
 
   (* Constant *)
   | (Root (loc, Const c, tS), sigma) ->

@@ -1,17 +1,20 @@
-%%% Mini-ML Natural Semantics
+%%% Mini-ML Natural Semantics for de Buijn version
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
 feval : env -> exp' -> val -> type.  %name feval D.
 
 % Variables
-fev_1 : feval (K ; W) 1 W.
-fev_^ : feval (K ; W') (F ^) W
+fev_1 : feval (cons K W) one W.
+fev_^ : feval (cons K W') (shift F) W
 	   <- feval K F W.
 
 % Functions
 fev_lam : feval K (lam' F) (clo K (lam' F)).
+
 fev_app : feval K (app' F1 F2) W
 	   <- feval K F1 (clo K' (lam' F1'))
 	   <- feval K F2 W2
-	   <- feval (K' ; W2) F1' W.
+	   <- feval (cons K' W2) F1' W.
+
+

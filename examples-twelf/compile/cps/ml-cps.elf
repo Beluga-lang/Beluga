@@ -3,39 +3,41 @@
 
 cmp : exp -> (cval -> cexp) -> cexp -> type.
 
-cmp_z : cmp z K (K z+).
-cmp_s : cmp (s E) K E'
-	 <- cmp E ([x:cval] K (s+ x)) E'.
+cmp_z : cmp z (\v. K  v) (K z+).
+cmp_s : cmp (s E) (\v. K v) E'
+	 <- cmp E (\x. K (s+ x)) E'.
 
 % note duplication of K
-cmp_case : cmp (case E1 E2 E3) K E'
-	    <- cmp E2 K E2'
+cmp_match : cmp (match E1 E2 (\x.E3 x)) (\v. K v)  E'
+	    <- cmp E2 (\v. K v) E2'
 	    <- ({x:exp} {x':cval}
-		  ({K'} cmp x K' (K' x'))
-		  -> cmp (E3 x) K (E3' x'))
-	    <- cmp E1 ([x1:cval] case+ x1 E2' E3') E'.
+		  ({k':cval -> cexp} cmp x (\v. k' v) (k' x'))
+		  -> cmp (E3 x) (\v. K v) (E3' x'))
+	    <- cmp E1 (\x1. match+ x1 E2' (\x. E3' x)) E'.
 
-cmp_pair : cmp (pair E1 E2) K E'
-	    <- ({x1':cval} cmp E2 ([x2':cval] K (pair+ x1' x2')) (E2' x1'))
-	    <- cmp E1 E2' E'.
+cmp_pair : cmp (pair E1 E2) (\v. K v) E'
+	    <- ({x1':cval} cmp E2 (\x2'. K (pair+ x1' x2')) (E2' x1'))
+	    <- cmp E1 (\v. E2' v) E'.
 
-cmp_fst : cmp (fst E) K E'
-	   <- cmp E ([x:cval] fst+ x K) E'.
-cmp_snd : cmp (snd E) K E'
-	   <- cmp E ([x:cval] snd+ x K) E'.
+cmp_fst : cmp (fst E) (\v. K v) E'
+	   <- cmp E (\x. fst+ x (\v. K v)) E'.
 
-cmp_lam : cmp (lam E) K (K (lam+ E'))
+cmp_snd : cmp (snd E) (\v. K v) E'
+	   <- cmp E (\x. snd+ x (\v. K v)) E'.
+
+cmp_lam : {E':cval -> (cval -> cexp) -> cexp}
+	   cmp (lam (\x. E x)) (\v. K v) (K (lam+ (\v. \k. E' v (\v'. k v'))))
 	   <- ({x:exp} {x':cval}
-		 ({K'} cmp x K' (K' x'))
+		 ({k':cval -> cexp} cmp x (\v. k' v) (k' x'))
 		 -> {k:cval -> cexp}
-		    cmp (E x) k (E' x' k)).
+		    cmp (E x) (\v. k v) (E' x' (\v. k v))).
 
-cmp_app : cmp (app E1 E2) K E'
-	   <- ({x1:cval} cmp E2 ([x2:cval] app+ x1 x2 K) (E2' x1))
-	   <- cmp E1 ([x1:cval] E2' x1) E'.
+cmp_app : cmp (app E1 E2) (\v. K v) E'
+	   <- ({x1:cval} cmp E2 (\x2. app+ x1 x2 (\v. K v)) (E2' x1))
+	   <- cmp E1 (\x1. E2' x1) E'.
 
-cmp_letv : cmp (letv E1 E2) K E'
+cmp_letv : cmp (letv E1 (\x. E2 x)) (\v. K v) E'
 	    <- ({x:exp} {x':cval}
-		  ({K'} cmp x K' (K' x'))
-		  -> cmp (E2 x) K (E2' x'))
-	    <- cmp E1 ([x:cval] E2' x) E'.
+		  ({k':cval -> cexp} cmp x (\v. k' v) (k' x'))
+		  -> cmp (E2 x) (\v. K v) (E2' x'))
+	    <- cmp E1 (\x. E2' x) E'.

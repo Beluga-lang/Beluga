@@ -231,7 +231,7 @@ let rec constraints_solved cnstr = match cnstr with
   | [] -> true
   | ({contents = I.Queued} :: cnstrs) -> 
       constraints_solved cnstrs 
-  | ({contents = I.Eqn (phat, tM, tN)} :: cnstrs) -> 
+  | ({contents = I.Eqn (_cD, phat, tM, tN)} :: cnstrs) -> 
       if Whnf.conv (tM, LF.id) (tN, LF.id) then 
         constraints_solved cnstrs
       else 
@@ -239,10 +239,80 @@ let rec constraints_solved cnstr = match cnstr with
            (P.normalToString (I.Empty) (I.Empty) (phatToDCtx phat) (tM, LF.id))
            (P.normalToString (I.Empty) (I.Empty) (phatToDCtx phat) (tN, LF.id));         
          false )
- | ({contents = I.Eqh (_phat, h1, h2)} :: cnstrs) -> 
+ | ({contents = I.Eqh (_cD, _phat, h1, h2)} :: cnstrs) -> 
       if Whnf.convHead (h1, LF.id) (h2, LF.id) then 
         constraints_solved cnstrs
       else false 
+
+
+
+(* Check that a synthesized computation-level type is free of constraints *)
+let rec cnstr_ctyp tau =  match tau  with
+  | Comp.TypBox (tA, cPsi) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
+
+and cnstr_typ sA = match sA with
+  | (I.Atom  (_, _a, spine), s)  -> cnstr_spine (spine , s)
+
+  | (I.PiTyp ((t_decl, _ ), tB), s) -> 
+      cnstr_typ_decl (t_decl, s) && cnstr_typ (tB, LF.dot1 s)
+
+
+and cnstr_term sM = match sM with
+  | (I.Lam(_ , _x , tM), s) -> cnstr_term (tM, LF.dot1 s) 
+  | (I.Root (_, h, spine), s) -> 
+      cnstr_head h && cnstr_spine (spine, s)
+
+and cnstr_spine sS = match sS with
+  | (I.Nil, _s) -> false
+  | (I.App(tM, tS), s) -> 
+      cnstr_term (tM, s) && cnstr_spine (tS, s)
+  | (I.SClo (tS, s'), s) -> cnstr_spine (tS, LF.comp s' s)
+
+
+and cnstr_head h = match h with
+  | I.MVar(I.Inst (_r, _ , _ , cnstr), s) -> 
+       (if constraints_solved (!cnstr) then 
+          cnstr_sub s 
+        else false)
+
+  | I.PVar(I.PInst (_p, _, _, {contents = cnstr}), s) -> 
+      (if constraints_solved cnstr then 
+         cnstr_sub s 
+       else false)
+        
+ | I.Proj (I.PVar (I.PInst (_p, _, _, {contents = cnstr}), s), _ ) -> 
+      (if constraints_solved cnstr then 
+         cnstr_sub s 
+       else false)
+      
+ |  _  -> false
+
+
+and cnstr_sub s = match s with
+  | I.Shift _ -> false
+  | I.Dot (I.Head h , s) -> cnstr_head h && cnstr_sub s
+  | I.Dot (I.Obj tM , s) -> cnstr_term (tM, LF.id) && cnstr_sub s
+  | I.Dot (I.Undef, s')  -> cnstr_sub s'
+
+
+and cnstr_dctx cPsi = match cPsi with
+  | I.Null -> false
+  | I.CtxVar _ -> false
+  | I.DDec (cPsi, t_decl) -> cnstr_dctx cPsi && cnstr_typ_decl (t_decl, LF.id)
+  | I.SigmaDec (cPsi, s_decl) -> cnstr_dctx cPsi && cnstr_sigma_decl s_decl
+
+
+and cnstr_typ_decl st_decl = match st_decl with
+  | (I.TypDecl (_ , tA), s) -> cnstr_typ (tA, s)
+  | _ -> false
+
+and cnstr_sigma_decl s_decl = match s_decl with
+  | I.SigmaDecl (_, t_rec) -> cnstr_typ_rec t_rec
+
+and cnstr_typ_rec t_rec = match t_rec with
+  | I.SigmaLast tA -> cnstr_typ (tA, LF.id)
+  | I.SigmaElem (_, tA, t_rec) -> cnstr_typ (tA, LF.id) && cnstr_typ_rec t_rec
+
 
 
 
@@ -465,18 +535,20 @@ and collectHead cQ phat sH = match sH with
   | (I.MVar (I.Offset _k, s'), s) ->
        collectSub cQ phat (LF.comp s' s) 
       
-  | (I.PVar (I.PInst (_r, cPsi, tA, _cnstrs), s') as p, s) ->
-      let cQ' = collectSub cQ phat (LF.comp s' s) in
-        if exists (eqPVar p) cQ' then
-          cQ'
-        else
-          (*  checkEmpty !cnstrs ? -bp *)
-          let psihat = Context.dctxToHat cPsi in 
-
-          let cQ1  = collectDctx cQ' psihat cPsi in 
-          let cQ'' = collectTyp cQ1  psihat (tA, LF.id) in 
-
-            I.Dec (cQ'', PV p) 
+  | (I.PVar (I.PInst (_r, cPsi, tA, {contents = cnstr}), s') as p, s) ->
+      if constraints_solved cnstr then
+        let cQ' = collectSub cQ phat (LF.comp s' s) in
+          if exists (eqPVar p) cQ' then
+            cQ'
+          else
+            (*  checkEmpty !cnstrs ? -bp *)
+            let psihat = Context.dctxToHat cPsi in 
+              
+            let cQ1  = collectDctx cQ' psihat cPsi in 
+            let cQ'' = collectTyp cQ1  psihat (tA, LF.id) in              
+              I.Dec (cQ'', PV p) 
+      else 
+        raise (Error "Left over constraints during abstraction")
 
   | (I.PVar (I.Offset _k, s'), s) ->
        collectSub cQ phat (LF.comp s' s) 
@@ -820,28 +892,27 @@ and abstractMVarDctx cQ offset cPsi = match cPsi with
       let typRec'   = abstractMVarTypRec cQ offset (typRec, LF.id) in
         I.SigmaDec (cPsi', I.SigmaDecl (x, typRec'))
 
-and abstractMVarMctx cQ cD = match cD with
+and abstractMVarMctx cQ cD offset = match cD with
   | I.Empty -> I.Empty
 
   | I.Dec(cD, I.MDecl(u, tA, cPsi)) -> 
-      let cD' = abstractMVarMctx cQ cD in
-      let cPsi' = abstractMVarDctx cQ 0 cPsi in
-      let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in
+      let cD' = abstractMVarMctx cQ cD (offset - 1) in
+      let cPsi' = abstractMVarDctx cQ offset cPsi in
+      let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
         I.Dec(cD', I.MDecl (u, tA', cPsi'))
 
   | I.Dec(cD, I.PDecl(u, tA, cPsi)) -> 
-      let cD' = abstractMVarMctx cQ cD in
-      let cPsi' = abstractMVarDctx cQ 0 cPsi in
-      let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in
+      let cD' = abstractMVarMctx cQ cD (offset - 1) in
+      let cPsi' = abstractMVarDctx cQ offset cPsi in
+      let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
         I.Dec(cD', I.PDecl (u, tA', cPsi'))
 
 
 and abstractMVarCtx cQ =  match cQ with
-  | I.Empty ->
-      I.Empty
+  | I.Empty -> I.Empty
 
   | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
-      let cQ'   = abstractMVarCtx cQ in
+      let cQ'   = abstractMVarCtx  cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in 
       let s'    = abstractMVarSub cQ 0 s in
@@ -850,7 +921,7 @@ and abstractMVarCtx cQ =  match cQ with
         I.Dec (cQ', MV u')
 
   | I.Dec (cQ, PV (I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
-      let cQ'   = abstractMVarCtx cQ in
+      let cQ'   = abstractMVarCtx  cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0  (tA, LF.id) in 
       let s'    = abstractMVarSub cQ 0 s in
@@ -867,7 +938,7 @@ and abstractMVarCtx cQ =  match cQ with
 
 
   | I.Dec (cQ, FPV (u, Some (tA, cPsi))) ->
-      let cQ'   = abstractMVarCtx cQ in
+      let cQ'   = abstractMVarCtx  cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in
 
@@ -876,7 +947,9 @@ and abstractMVarCtx cQ =  match cQ with
 
   | I.Dec (_cQ, FV _) ->
         (* This case is hit in e.g.  ... f[g, x:block y:tp. exp unk], where unk is an unknown identifier;
-         * is it ever hit on correct code?  -jd 2009-02-12 *)
+         * is it ever hit on correct code?  -jd 2009-02-12 
+         * No. This case should not occur in correct code - bp 
+         *)
       raise (Error "abstractMVarCtx(_, FV _): unknown identifier in program?")
 
 
@@ -884,29 +957,38 @@ and abstractMVarCtx cQ =  match cQ with
 
 
 let rec abstrMSub cQ t = 
-  let rec abstrMSub' cQ t k = 
+  let l = Context.length cQ in 
+  let rec abstrMSub' t = 
     match t with
-      | Comp.MShift n -> Comp.MShift (n+k)
+      | Comp.MShift n -> Comp.MShift (n+l)
       | Comp.MDot(Comp.MObj(phat, tM), t) -> 
-          let s'  = abstrMSub' cQ t (k+1) in 
+          let s'  = abstrMSub' t  in 
           let tM' = abstractMVarTerm cQ 0 (tM, LF.id) in 
             Comp.MDot(Comp.MObj(phat, tM'), s') 
               
       | Comp.MDot(Comp.PObj(phat, h), t) ->
-          let s' = abstrMSub' cQ t (k+1)in 
+          let s' = abstrMSub' t in 
           let h' = abstractMVarHead cQ 0 h in 
             Comp.MDot(Comp.PObj(phat, h'), s')
   in 
-    abstrMSub' cQ t 0
+    abstrMSub' t 
 
-and abstractMSub t =  
+and abstractMSub  t =  
   let cQ  = collectMSub I.Empty t in
   let cQ' = abstractMVarCtx cQ in
   let t'  = abstrMSub cQ' t in
   let cD'  = ctxToMCtx cQ' in  
     (t' , cD')  
 
-
+(*
+ and abstractMSub cQ t =  
+  let cQ1  = collectMSub cQ t in
+  let d    = Context.length cQ in 
+  let cQ' = abstractMVarCtx d cQ1 in
+  let t'  = abstrMSub cQ' t in
+  let cD'  = ctxToMCtx cQ' in  
+    (t' , cD')  
+*)
 (* wrapper function *)
 let abstrKind tK =
   (* what is the purpose of phat? *)
@@ -1162,11 +1244,11 @@ let rec abstrCompTyp tau =
 let rec abstrPattern cD1 cPsi1 (phat, tM) tA =  
   let cQ      = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in
   let cQ'     = abstractMVarCtx cQ in 
-  let cD1'    = abstractMVarMctx cQ' cD1 in 
-  let offset  = Context.length cD1' in 
+  let offset  = Context.length cD1 in 
   let cPsi1'  = abstractMVarDctx cQ' offset cPsi1 in 
   let tM'     = abstractMVarTerm cQ' offset (tM, LF.id) in
   let tA'     = abstractMVarTyp  cQ' offset (tA, LF.id) in 
+  let cD1'    = abstractMVarMctx cQ' cD1 (offset-1) in 
   let cD'     = ctxToMCtx cQ' in 
   let cD      = Context.append cD' cD1' in 
     (cD, cPsi1', (phat, tM'), tA')
@@ -1184,6 +1266,36 @@ let rec abstrExp e =
                      (* raiseExp cD' e' *)
                       raise (Error "Abstract: Encountered free MVars in computation-level expression\n"))
     end
+
+
+
+let rec abstrBranch (cPsi1, (phat, tM), tA) e r =  
+  let cQ0     = collectPattern I.Empty I.Empty cPsi1 (phat,tM) tA in
+  let cQ1     = collectExp cQ0 e in 
+  let cQ2     = collectMSub cQ1 r in 
+  let cQ'     = abstractMVarCtx cQ2 in 
+
+  let cPsi1'  = abstractMVarDctx cQ' 0 cPsi1 in 
+  let tM'     = abstractMVarTerm cQ' 0 (tM, LF.id) in
+  let tA'     = abstractMVarTyp  cQ' 0 (tA, LF.id) in 
+  
+  let e'      = abstractMVarExp cQ' 0 e in 
+
+  let r'      = abstrMSub cQ' r in 
+  let cD      = ctxToMCtx cQ' in 
+    (cD, (cPsi1', (phat, tM'), tA'), e', r')
+
+
+
+let rec abstrExpMSub e t =
+  let cQ1     = collectMSub I.Empty t in
+  let cQ      = collectExp cQ1 e in 
+  let cQ'     = abstractMVarCtx cQ in 
+  let e'      = abstractMVarExp cQ' 0 e in 
+  let t'      = abstrMSub cQ' t in
+  let cD'     = ctxToMCtx cQ' in 
+     (cD', t', e')
+
 
 
 let rec printFreeMVars phat tM = 

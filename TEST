@@ -85,7 +85,16 @@ $INTERPRETER  \
     LF/tps-1.lf \
     LF/tps.lf \
     ../examples-twelf/arith/sources.cfg \
-    ../examples-twelf/alloc-sem/sources.cfg 
+    ../examples-twelf/alloc-sem/sources.cfg \
+    ../examples-twelf/compile/cls/sources.cfg \
+    ../examples-twelf/compile/cls/test.cfg \
+    ../examples-twelf/compile/cpm/sources.cfg \
+    ../examples-twelf/compile/cpm/test.cfg \
+    ../examples-twelf/compile/debruijn/sources.cfg \
+    ../examples-twelf/compile/debruijn/test.cfg \
+    ../examples-twelf/compile/debruijn1/sources.cfg \
+    ../examples-twelf/compile/cps/sources.cfg 
+
 #    @test/sigma1.bel
      
 #    notworking/church-rosser.rec \

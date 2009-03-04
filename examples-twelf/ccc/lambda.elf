@@ -6,22 +6,22 @@
 % obj : type (from ccc.elf)
 
 % simply-typed terms
-term : obj -> type. %name term _E.
+term : obj -> type. %name term E.
 
 % beta-eta convertibility
-conv : term A -> term A -> type. %name conv _LC.
+conv : term A -> term A -> type. %name conv LC.
 
 % products
-lpair : term A -> term B -> term (* A B).
-lfst  : term (* A B) -> term A.
-lsnd  : term (* A B) -> term B.
+lpair : term A -> term B -> term (cross A B).
+lfst  : term (cross A B) -> term A.
+lsnd  : term (cross A B) -> term B.
 
 % unit
-lunit : term 1.
+lunit : term one.
 
 % function space
-llam : (term A -> term B) -> term (=> A B).
-lapp : term (=> A B) -> term A -> term B.
+llam : (term A -> term B) -> term (arrow A B).
+lapp : term (arrow A B) -> term A -> term B.
 
 %% Equations
 
@@ -34,7 +34,7 @@ c_sym   : conv E E' -> conv E' E.
 c_fst   : conv E E' -> conv (lfst E) (lfst E').
 c_snd   : conv E E' -> conv (lsnd E) (lsnd E').
 c_pair  : conv E1 E1' -> conv E2 E2' -> conv (lpair E1 E2) (lpair E1' E2').
-c_lam   : ({x} conv (E x) (E' x)) -> conv (llam E) (llam E').
+c_lam   : ({x: term _} conv (E x) (E' x)) -> conv (llam (\x . E x)) (llam (\x . E' x)).
 c_app   : conv E1 E1' -> conv E2 E2' -> conv (lapp E1 E2) (lapp E1' E2').
 
 % proper equations
@@ -43,5 +43,5 @@ c_prl   : conv (lfst (lpair E1 E2)) E1.
 c_prr   : conv (lsnd (lpair E1 E2)) E2.
 c_surj  : conv (lpair (lfst E) (lsnd E)) E.
 
-c_beta  : conv (lapp (llam E1) E2) (E1 E2).
-c_eta   : conv (llam [x] (lapp E x)) E.
+c_beta  : conv (lapp (llam (\x . E1 x)) E2) (E1 E2).
+c_eta   : conv (llam (\x . (lapp E x))) E.

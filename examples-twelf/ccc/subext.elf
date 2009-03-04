@@ -6,24 +6,24 @@
 svx : ({A}{Y:term A}{GY}{DY}
          absv G Y GY
          -> abse D Y DY
-         -> == (@ GY H) DY
+         -> eq (@ GY H) DY
          -> type)
        -> absv (addv G X) Y GXY
        -> abse (addv D X) Y DXY
-       -> == (@ GXY pair (@ H fst) snd) DXY -> type.
+       -> eq (@ GXY pair (@ H fst) snd) DXY -> type.
 
 svx1 : svx Z av_x (avar av_x) prod_r.
 
 svx2 : svx Z (av_y AV1) (avar (av_y AV2)) (then (sym ass)
-                                             (then (=@= refl prod_l)
+                                             (then (eq_o refl prod_l)
                                                 (then ass
-                                                   (=@= EE refl))))
+                                                   (eq_o EE refl))))
         <- Z _ _ _ _ AV1 (avar AV2) EE.
 
 subext : abse G E GE
           -> abse D E DE
-          -> ({A} {X:term A} {GX} {DX} absv G X GX -> abse D X DX -> == (@ GX H) DX -> type)
-          -> == (@ GE H) DE -> type.
+          -> ({A} {X:term A} {GX} {DX} absv G X GX -> abse D X DX -> eq (@ GX H) DX -> type)
+          -> eq (@ GE H) DE -> type.
 
 subext_var  : subext (avar AV) AP Z E
                <- Z _ _ _ _ AV AP E.
@@ -31,35 +31,35 @@ subext_var  : subext (avar AV) AP Z E
 subext_unit : subext aunit aunit Z term_u.
 
 subext_pair : subext (apair AP1 AP2) (apair AP1' AP2') Z
-               (then DP (=pair= EP1 EP2))
+               (then DP (eq_pair EP1 EP2))
                <- distp DP
                <- subext AP1 AP1' Z EP1
                <- subext AP2 AP2' Z EP2.
 
-subext_fst  : subext (afst AP) (afst AP') Z (then (sym ass) (=@= refl EP))
+subext_fst  : subext (afst AP) (afst AP') Z (then (sym ass) (eq_o refl EP))
                <- subext AP AP' Z EP.
 
-subext_snd  : subext (asnd AP) (asnd AP') Z (then (sym ass) (=@= refl EP))
+subext_snd  : subext (asnd AP) (asnd AP') Z (then (sym ass) (eq_o refl EP))
                <- subext AP AP' Z EP.
 
 subext_lam  : subext (alam ([x] AP x)) (alam ([x] AP' x)) Z
-               (then DC (=cur= EP))
+               (then DC (eq_cur EP))
                <- distc DC
                <- {x}subext (AP x) (AP' x) ([_][_][_][_]svx Z) EP.
 
 subext_app  : subext (aapp AP1 AP2) (aapp AP1' AP2') Z
-               (then (sym ass) (=@= refl (then DP (=pair= EP1 EP2))))
+               (then (sym ass) (eq_o refl (then DP (eq_pair EP1 EP2))))
                <- distp DP
                <- subext AP1 AP1' Z EP1
                <- subext AP2 AP2' Z EP2.
 
 % Corollary: weakening
 
-weakv : absv G V M' -> abse (addv G X) V M -> == (@ M' fst) M -> type.
+weakv : absv G V M' -> abse (addv G X) V M -> eq (@ M' fst) M -> type.
 
 weakv1 : weakv AV (avar (av_y AV)) refl.
 
-weak : abse G E M' -> abse (addv G X) E M -> == (@ M' fst) M -> type.
+weak : abse G E M' -> abse (addv G X) E M -> eq (@ M' fst) M -> type.
 
 weak1 : weak AP AP1 E
          <- subext AP AP1 ([_][_][_][_]weakv) E.
@@ -67,9 +67,9 @@ weak1 : weak AP AP1 E
 % Corollary : substitution
 
 svx2' : svx Z (av_y AV) AP2 (then (sym ass)
-                               (then (=@= refl prod_l)
+                               (then (eq_o refl prod_l)
                                   (then ass
-                                     (then (=@= EE refl)
+                                     (then (eq_o EE refl)
                                         WE))))
          <- Z _ _ _ _ AV AP EE
          <- weak AP AP2 WE.
@@ -77,19 +77,19 @@ svx2' : svx Z (av_y AV) AP2 (then (sym ass)
 subv : abse D X DX
         -> absv (addv D X) Y DXY
         -> abse D Y DY
-        -> == (@ DXY (pair id DX)) DY
+        -> eq (@ DXY (pair idc DX)) DY
         -> type.
 
 subv1 : subv AP av_x AP prod_r.
 
 subv2 : subv AP (av_y AV) (avar AV) (then (sym ass)
-                                       (then (=@= refl prod_l)
+                                       (then (eq_o refl prod_l)
                                           id_r).
 
 subst : abse D E1 M1
          -> ({x}abse (addv D x) (E2 x) M2)
          -> abse D (E2 E1) M
-         -> == (@ M2 (pair id M1)) M
+         -> eq (@ M2 (pair idc M1)) M
          -> type.
 
 % Too much magic here...

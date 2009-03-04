@@ -1,52 +1,52 @@
 % equality preservation
-etoc : == F F' -> conc F M -> conc F' M' -> ({x}conv (M x) (M' x)) -> type.
+etoc : eq F F' -> conc F M -> conc F' M' -> ({x: term _} conv (M x) (M' x)) -> type.
 
-etoc_refl  : etoc refl CF CF ([x] c_refl).
+etoc_refl  : etoc refl CF CF (\x . c_refl).
 
-etoc_then  : etoc (then EP1 EP2) CF CF' ([x] c_trans (CP1 x) (CP2 x))
+etoc_then  : etoc (then EP1 EP2) CF CF' (\x . c_trans (CP1 x) (CP2 x))
               <- etoc EP1 CF CF'' CP1
               <- etoc EP1 CF'' CF' CP2.
 
-etoc_sym   : etoc (sym EP) CF CF' ([x]c_sym (CP x))
+etoc_sym   : etoc (sym EP) CF CF' (\x .c_sym (CP x))
               <- etoc EP CF' CF CP.
 
 
-etoc_comp  : etoc (=@= EPF EPG) 
+etoc_comp  : etoc (eq_o EPF EPG) 
               (ccomp CF (CG:conc _ M)) (ccomp (CF':conc _ N') CG')
-              ([x] c_trans (CPF (M x)) (CVF' x (CPG x)))
+              (\x . c_trans (CPF (M x)) (CVF' x (CPG x)))
               <- etoc EPF CF CF' CPF
               <- etoc EPG CG CG' CPG
               <- {x}cong N' (CVF' x).
 
-etoc_pair  : etoc (=pair= EPF EPG) (cpair CF CG) (cpair CF' CG')
-              ([x] c_pair (CPF x) (CPG x))
+etoc_pair  : etoc (eq_pair EPF EPG) (cpair CF CG) (cpair CF' CG')
+              (\x . c_pair (CPF x) (CPG x))
               <- etoc EPF CF CF' CPF
               <- etoc EPG CG CG' CPG.
 
-etoc_cur   : etoc (=cur= EPF) (ccur CF) (ccur CF')
-              ([x] c_lam [y] CPF (lpair x y))
+etoc_cur   : etoc (eq_cur EPF) (ccur CF) (ccur CF')
+              (\x . c_lam \y . CPF (lpair x y))
               <- etoc EPF CF CF' CPF.
 
 
-etoc_idl   : etoc id_l (ccomp cid CF) CF ([x] c_refl).
-etoc_idr   : etoc id_r (ccomp CF cid) CF ([x] c_refl).
-etoc_ass   : etoc ass (ccomp CF (ccomp CG CH)) (ccomp (ccomp CF CG) CH) ([x] c_refl).
+etoc_idl   : etoc id_l (ccomp cid CF) CF (\x . c_refl).
+etoc_idr   : etoc id_r (ccomp CF cid) CF (\x . c_refl).
+etoc_ass   : etoc ass (ccomp CF (ccomp CG CH)) (ccomp (ccomp CF CG) CH) (\x . c_refl).
 
-etoc_termu : etoc term_u cunit CF ([x] c_unit).
-etoc_prodl : etoc prod_l (ccomp cfst (cpair CF CG)) CF ([x] c_prl).
-etoc_prodr : etoc prod_r (ccomp csnd (cpair CF CG)) CG ([x] c_prr).
-etoc_produ : etoc prod_u (cpair (ccomp cfst CF) (ccomp csnd CF)) CF ([x] c_surj).
+etoc_termu : etoc term_u cunit CF (\x . c_unit).
+etoc_prodl : etoc prod_l (ccomp cfst (cpair CF CG)) CF (\x . c_prl).
+etoc_prodr : etoc prod_r (ccomp csnd (cpair CF CG)) CG (\x . c_prr).
+etoc_produ : etoc prod_u (cpair (ccomp cfst CF) (ccomp csnd CF)) CF (\x . c_surj).
 
 etoc_expe  : etoc exp_e (ccomp capp (cpair (ccomp (ccur CF) cfst) csnd)) 
               (CF:conc F M)
-              ([x] c_trans (c_app c_prl c_prr)
+              (\x . c_trans (c_app c_prl c_prr)
                  (c_trans c_beta (CC x (c_surj:conv _ x))))
-              <- {x}cong M (CC x).
+              <- {x} cong M (CC x).
 
 etoc_expu  : etoc exp_u (ccur (ccomp capp (cpair (ccomp CF cfst) csnd)))
                (CF:conc F M)
-               ([x] c_trans 
-                  (c_lam [y]
+               (\x . c_trans 
+                  (c_lam \y .
                      c_app (c_trans c_prl 
                               (CC x y (c_prl:
                                                conv (lfst (lpair x y))
@@ -57,4 +57,4 @@ etoc_expu  : etoc exp_u (ccur (ccomp capp (cpair (ccomp CF cfst) csnd)))
 
 % sigma [p1:conc (@ app (pair (@ (cur fst) fst) snd)) M1] sigma [p2:conc fst M2]etoc exp_e p1  p2  C.
 
-% sigma [p1:conc (cur (@ app (pair (@ id fst) snd))) M1] sigma [p2:conc id M2]etoc exp_u p1  p2  C.
+% sigma [p1:conc (cur (@ app (pair (@ idc fst) snd))) M1] sigma [p2:conc idc M2]etoc exp_u p1  p2  C.

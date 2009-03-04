@@ -1,6 +1,6 @@
 % Equality preservation for lambda-calc
 
-ctoe : conv E E' -> abse G E F -> abse G E' F' -> == F F' -> type.
+ctoe : conv E E' -> abse G E F -> abse G E' F' -> eq F F' -> type.
 
 ctoe_refl  : ctoe c_refl AP AP refl.
 
@@ -12,23 +12,23 @@ ctoe_sym   : ctoe (c_sym CP) AP1 AP2 (sym EP)
               <- ctoe CP AP2 AP1 EP.
 
 
-ctoe_fst   : ctoe (c_fst CP) (afst AP) (afst AP') (=@= refl EP)
+ctoe_fst   : ctoe (c_fst CP) (afst AP) (afst AP') (eq_o refl EP)
               <- ctoe CP AP AP' EP.
 
-ctoe_snd   : ctoe (c_snd CP) (asnd AP) (asnd AP') (=@= refl EP)
+ctoe_snd   : ctoe (c_snd CP) (asnd AP) (asnd AP') (eq_o refl EP)
               <- ctoe CP AP AP' EP.
 
 ctoe_pair  : ctoe (c_pair CP1 CP2) (apair AP1 AP2)
-              (apair AP1' AP2') (=pair= EP1 EP2)
+              (apair AP1' AP2') (eq_pair EP1 EP2)
               <- ctoe CP1 AP1 AP1' EP1
               <- ctoe CP2 AP2 AP2' EP2.
 
 ctoe_lam   : ctoe (c_lam ([x] CP x)) (alam ([x] AP x))
-              (alam ([x] AP' x)) (=cur= EP)
+              (alam ([x] AP' x)) (eq_cur EP)
               <- {x}ctoe (CP x) (AP x) (AP' x) EP.
 
 ctoe_app   : ctoe (c_app CP1 CP2) (aapp AP1 AP2)
-              (aapp AP1' AP2') (=@= refl (=pair= EP1 EP2))
+              (aapp AP1' AP2') (eq_o refl (eq_pair EP1 EP2))
               <- ctoe CP1 AP1 AP1' EP1
               <- ctoe CP2 AP2 AP2' EP2.
 
@@ -39,12 +39,12 @@ ctoe_prr   : ctoe c_prr (asnd (apair AP1 AP2)) AP2 prod_r.
 ctoe_surj  : ctoe c_surj (apair (afst AP) (asnd AP)) AP prod_u.
 
 ctoe_beta  : ctoe c_beta (aapp (alam ([x] AP1 x)) AP2) AP
-              (then (then (=@= refl (=pair= (sym id_r) refl)) EE) EP)
+              (then (then (eq_o refl (eq_pair (sym id_r) refl)) EE) EP)
               <- subst AP2 AP1 AP EP
               <- appl EE.
 
 ctoe_eta   : ctoe c_eta (alam ([x] aapp (AP x) (avar av_x))) AP'
-               (then (=cur= (=@= refl (=pair= (sym EP) refl))) exp_u)
+               (then (eq_cur (eq_o refl (eq_pair (sym EP) refl))) exp_u)
                <- {x}weak AP' (AP x) EP.
 
 %sigma[p1:{f}abse (addv empty f) (llam [x] lapp f x) M1] sigma [p2:{f}abse (addv empty f) f M2] {f} ctoe c_eta (p1 f) (p2 f) E.

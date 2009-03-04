@@ -3,62 +3,62 @@
 %% Categorical language
 
 % objects
-obj : type.  %name obj _A.
+obj : type.  %name obj A.
 
 % morphisms
-mor : obj -> obj -> type.  %name mor _F.
+mor : obj -> obj -> type.  %name mor F.
 
 % morphism equality
-== : mor A B -> mor A B -> type.  %name == _ME.
+eq : mor A B -> mor A B -> type.  %name eq ME.
 
 % morphisms
-id : mor A A.
-@  : mor B C -> mor A B -> mor A C.
+idc : mor A A.
+@   : mor B C -> mor A B -> mor A C.
 
 % equations
-refl : == F F.
-then : == F F' -> == F' F'' -> == F F''.
-sym  : == F F' -> == F' F.
+refl : eq F F.
+then : eq F F' -> eq F' F'' -> eq F F''.
+sym  : eq F F' -> eq F' F.
 
-=@= : == F F' -> == G G' -> == (@ F G) (@ F' G').
+eq_o : eq F F' -> eq G G' -> eq (@ F G) (@ F' G').
 
-id_l : == (@ id F) F.
-id_r : == (@ F id) F.
-ass  : == (@ H (@ G F)) (@ (@ H G) F).
+id_l : eq (@ idc F) F.
+id_r : eq (@ F idc) F.
+ass  : eq (@ H (@ G F)) (@ (@ H G) F).
 
 %% Products
 
 % objects
-1 : obj.
-* : obj -> obj -> obj.
+one   : obj.
+cross : obj -> obj -> obj.
 
 % morphisms
-drop : mor A 1.
+drop : mor A one.
 
-fst  : mor (* A B) A.
-snd  : mor (* A B) B.
-pair : mor A B -> mor A C -> mor A (* B C).
+fst  : mor (cross A B) A.
+snd  : mor (cross A B) B.
+pair : mor A B -> mor A C -> mor A (cross B C).
 
 % equations
-=pair= : == F F' -> == G G' -> == (pair F G) (pair F' G').
+eq_pair : eq F F' -> eq G G' -> eq (pair F G) (pair F' G').
 
-term_u : == H drop.
+term_u : eq H drop.
 
-prod_l : == (@ fst (pair F G)) F.
-prod_r : == (@ snd (pair F G)) G.
-prod_u : == (pair (@ fst H) (@ snd H)) H.
+prod_l : eq (@ fst (pair F G)) F.
+prod_r : eq (@ snd (pair F G)) G.
+prod_u : eq (pair (@ fst H) (@ snd H)) H.
 
 %% Exponentials
 
 % objects
-=> : obj -> obj -> obj.
+arrow : obj -> obj -> obj.
 
 % morphisms
-app : mor (* (=> B C) B) C.
-cur : mor (* A B) C -> mor A (=> B C).
+app : mor (cross (arrow B C) B) C.
+cur : mor (cross A B) C -> mor A (arrow B C).
 
 % equations
-=cur= : == F F' -> == (cur F) (cur F').
+eq_cur : eq F F' -> eq (cur F) (cur F').
 
-exp_e : == (@ app (pair (@ (cur F) fst) snd)) F.
-exp_u : == (cur (@ app (pair (@ G fst) snd))) G.
+exp_e : eq (@ app (pair (@ (cur F) fst) snd)) F.
+exp_u : eq (cur (@ app (pair (@ G fst) snd))) G.

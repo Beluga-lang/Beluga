@@ -1,9 +1,9 @@
 %% With explicit environments (as in Curien)
 
-env : obj -> type. %name env _G.
+env : obj -> type. %name env G.
 
-empty : env 1.
-addv  : env P -> term A -> env (* P A).
+empty : env one.
+addv  : env P -> term A -> env (cross P A).
 
 % look up variable
 absv : env A -> term B -> mor A B -> type.
@@ -29,8 +29,8 @@ afst  : abse G (lfst E) (@ fst F)
 asnd  : abse G (lsnd E) (@ snd F)
          <- abse G E F.
 
-alam  : abse G (llam [x] E x) (cur F)
-         <- {x}abse (addv G x) (E x) F.
+alam  : abse G (llam (\x . E x)) (cur F)
+         <- {x: term _} abse (addv G x) (E x) F.
 
 aapp  : abse G (lapp E1 E2) (@ app (pair F1 F2))
          <- abse G E2 F2

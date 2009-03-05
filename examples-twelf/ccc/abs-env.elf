@@ -1,38 +1,37 @@
 %% With explicit environments (as in Curien)
 
-env : obj -> type. %name env _G.
+env : obj -> type. %name env G.
 
-empty : env 1.
-addv : env P -> term A -> env (P * A).
+empty : env one.
+addv  : env P -> term A -> env (cross P A).
 
 % look up variable
 absv : env A -> term B -> mor A B -> type.
 
-av_x 	: absv (addv G X) X snd.
-av_y 	: absv (addv G Y) X (M @ fst)
-	<- absv G X M.
+av_x : absv (addv G X) X snd.
+av_y : absv (addv G Y) X (@ M fst)
+        <- absv G X M.
 
 % translate term
 abse : env A -> term B -> mor A B -> type.
 
-avar 	: abse G X M <- absv G X M.
+avar  : abse G X M <- absv G X M.
 
-aunit 	: abse G lunit drop.
+aunit : abse G lunit drop.
 
-apair 	: abse G (lpair E1 E2) (pair F1 F2)
-	<- abse G E2 F2
-	<- abse G E1 F1.
+apair : abse G (lpair E1 E2) (pair F1 F2)
+         <- abse G E2 F2
+         <- abse G E1 F1.
 
-afst 	: abse G (lfst E) (fst @ F)
-	<- abse G E F.
+afst  : abse G (lfst E) (@ fst F)
+         <- abse G E F.
 
-asnd 	: abse G (lsnd E) (snd @ F) 
-	<- abse G E F.
+asnd  : abse G (lsnd E) (@ snd F)
+         <- abse G E F.
 
-alam 	: abse G (llam [x] E x) (cur F)
-	<- {x}abse (addv G x) (E x) F.
+alam  : abse G (llam (\x . E x)) (cur F)
+         <- {x: term _} abse (addv G x) (E x) F.
 
-aapp 	: abse G (lapp E1 E2) (app @ (pair F1 F2))
-	<- abse G E2 F2
-	<- abse G E1 F1.
-
+aapp  : abse G (lapp E1 E2) (@ app (pair F1 F2))
+         <- abse G E2 F2
+         <- abse G E1 F1.

@@ -24,6 +24,7 @@ module LF = struct
 
   exception Violation of string
   exception Error of Syntax.Loc.t option * error
+  exception SpineMismatch
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
    *
@@ -54,8 +55,7 @@ module LF = struct
                 ()
               else
                 raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP)))
-          with Match_failure _ ->
-            (* synSpine cO cD cPsi (App _, _) (Atom _, _) *)
+          with SpineMismatch ->
             raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
           end
 
@@ -90,6 +90,9 @@ module LF = struct
          *)
         let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
           synSpine cO cD cPsi (tS, s1) tB2
+
+    | ((App _, _), (Atom _, _)) ->
+        raise SpineMismatch
 
 
   (* inferHead cO cD cPsi h = tA
@@ -268,6 +271,8 @@ module LF = struct
         check cO cD cPsi (tM, s1) (tA1, s2);
         synKSpine cO cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
+    | ((App _, _), (Typ, _)) ->
+        raise SpineMismatch
 
   (* checkTyp (cD, cPsi, (tA,s))
    *
@@ -285,8 +290,7 @@ module LF = struct
               ()
             else
               raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, LF.id)))))
-        with Match_failure _ ->
-          (* synKSpine cO cD cPsi (App _, _) (Typ, _) *)
+        with SpineMismatch ->
           raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, LF.id)))))
         end
 
@@ -615,11 +619,6 @@ module Comp = struct
     | CtxApp (e, cPsi) ->
         begin match C.cwhnfCTyp (syn cO cD cG e) with
           | (TypCtxPi ((_psi, w) , tau), t) ->
-              let _ = Printf.printf "\n Schema checking omitted \n" in
-                (* REVISIT: Sun Jan 11 17:48:52 2009 -bp *)
-                (* let tau' =  Cwhnf.csub_ctyp cPsi 1 tau in
-                   let t'   = Cwhnf.csub_msub cPsi 1 t in   *)
-
               let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in
                 checkSchema cO cD cPsi (Schema.get_schema w);
                  (* (tau', t') *)
@@ -757,27 +756,20 @@ module Comp = struct
             let dctx        = projectCtxIntoDctx cSomeCtx in
             let dctxSub     = ctxToSub dctx in
             let _           = dprint (fun () -> "checkAgainstElement  " ^ P.subToString cO cD cPsi dctxSub) in
-            let subD        = mctxToMSub cD in   (* {cD} |- subD <= cD *)
-            let normedA     = Cwhnf.cnormTyp (tA, subD)
-            and normedElem1 = Cwhnf.cnormTyp (elem1, subD) in
 
             let phat        = dctxToHat cPsi in
 
-              dprint (fun () -> "normedElem1 " ^ 
-                        P.typToString cO cD cPsi (normedElem1, S.LF.id) ^ ";\n" ^ "normedA " ^ 
-                        P.typToString cO cD cPsi (normedA, S.LF.id));
               dprint (fun () -> "***Unify.unifyTyp ("
                         ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
-                        ^ "\n   " ^ P.typToString cO cD cPsi (normedA, S.LF.id) ^ " [ "
-                        ^ P.subToString cO cD cPsi dctxSub ^ " ] "
-                        ^ "\n== " ^ P.typToString cO cD cPsi (normedElem1, S.LF.id) ^ " [ " 
-                        ^ P.subToString cO cD cPsi dctxSub ^ " ] ");
+                        ^ "\n   " ^ P.typToString cO cD cPsi (tA, S.LF.id)  
+                        ^ "\n== " ^ P.typToString cO cD cPsi (elem1, dctxSub) );
               try
-                Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, dctxSub))
+                (* Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, dctxSub)) *)
+                Unify.unifyTyp cD (phat, (tA, S.LF.id), (elem1, dctxSub))
               with exn ->
                 dprint (fun () -> "Type " 
                           ^ P.typToString cO cD cPsi (tA, S.LF.id) ^ " doesn't unify with " 
-                          ^ P.typToString cO cD cPsi (elem1, S.LF.id));
+                          ^ P.typToString cO cD cPsi (elem1, dctxSub));
                 raise exn
     in
       function
@@ -800,24 +792,18 @@ module Comp = struct
             let dctx = projectCtxIntoDctx cSomeCtx in 
             let dctxSub = ctxToSub dctx in
             let _ = dprint (fun () -> "TypRec:checkAgainstElement  " ^ P.subToString cO cD dctx dctxSub) in
-            let subD = mctxToMSub cD in   (* {cD} |- subD <= cD *)
-            let normedTypRec = Cwhnf.cnormTypRec (typRec, subD)
-            and normedSigma = Cwhnf.cnormTypRec (sigma, subD) in
+
             let phat = dctxToHat cPsi in
-              dprint (fun () -> "normedSigma " ^ P.typRecToString cO cD cPsi (normedSigma, S.LF.id) ^ ";\n" 
-                        ^ "normedTypRec " ^ P.typRecToString cO cD cPsi (normedTypRec, S.LF.id));
               dprint (fun () -> "***Unify.unifyTypRec (" ^ "\n   dctx = " 
                         ^ P.dctxToString cO cD dctx ^ "\n   " 
-                        ^ P.typRecToString cO cD cPsi (normedTypRec, S.LF.id) ^ " [ " 
-                        ^ P.subToString cO cD cPsi dctxSub ^ " ] " ^ "\n== " 
-                        ^ P.typRecToString cO cD cPsi (normedSigma, S.LF.id) ^ " [ " 
-                        ^ P.subToString cO cD cPsi dctxSub ^ " ] ");
+                        ^ P.typRecToString cO cD cPsi (typRec, S.LF.id) ^"\n== " 
+                        ^ P.typRecToString cO cD cPsi (sigma, dctxSub) );
               try
-                Unify.unifyTypRec cD (phat, (normedTypRec, S.LF.id), (normedSigma, dctxSub))
+                Unify.unifyTypRec cD (phat, (typRec, S.LF.id), (sigma, dctxSub))
               with exn ->  
                 dprint (fun () -> "TypRec " 
                           ^ P.typRecToString cO cD cPsi (typRec, S.LF.id) ^ " doesn't unify with " 
-                          ^ P.typRecToString cO cD cPsi (sigma, S.LF.id));
+                          ^ P.typRecToString cO cD cPsi (sigma, dctxSub));
                 raise exn
     in
       function

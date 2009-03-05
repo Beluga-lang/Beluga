@@ -208,12 +208,11 @@ module Int = struct
       | Proj  of head * int                (*   | #k(x) | #k(p[s])           *)
 
       | FVar  of name                      (* free variable for type
-					                          reconstruction                 *)
+                                              reconstruction                 *)
       | FMVar of name * sub                (* free meta-variable for type
-					                          reconstruction                 *)
-
+                                              reconstruction                 *)
       | FPVar of name * sub                (* free parameter variable for type
-					                          reconstruction                 *)
+                                              reconstruction                 *)
 
     and spine =                            (* spine                          *)
       | Nil                                (* S ::= Nil                      *)

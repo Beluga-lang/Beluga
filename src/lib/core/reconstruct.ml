@@ -38,6 +38,7 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 
 exception NotImplemented
 exception Error of Syntax.Loc.t option * error
+exception SpineMismatch
 
 exception Violation of string
 
@@ -1250,13 +1251,14 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
         recTerm recT cO cD  cPsi' (tM, LF.dot1 s') (tB, LF.dot1 s)
 
   | ((Int.LF.Root (loc, _, _), _) as sR, (Int.LF.Atom _, _)) ->
-      begin
-(*        try *)
-          let sP' = synTermW recT cO cD  cPsi sR in
+      begin try
+
           let _ = dprint (fun () -> "recTerm: expected " ^ 
             (P.mctxToString cO cD) ^ "\n |- " ^ 
             (P.normalToString cO cD cPsi sR) ^ "\n of type " ^ 
             (P.typToString cO cD cPsi sA) ^ "\n\n"  ) in 
+
+          let sP' = synTermW recT cO cD  cPsi sR in
 
           let _ = dprint (fun () -> "\n recTerm: synthesized " ^
             (P.mctxToString cO cD) ^ "\n |- " ^ 
@@ -1267,10 +1269,8 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
             with Unify.Unify msg ->
               (Printf.printf "%s \n" msg;
               raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP'))))
-      (* with Match_failure _ ->
-          (* synSpine recT cO cD  cPsi (Int.LF.App _, _) (Int.LF.Atom _, _) *)
-          (Printf.printf "recTerm: where is this coming from? \n";
-          raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))) *)
+      with SpineMismatch ->
+        raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
       end 
 
   | ((Int.LF.Root (loc, _, _), _), _) ->
@@ -1380,9 +1380,9 @@ and synSpineW recT cO cD  cPsi sS sA = match (sS, sA) with
   | ((Int.LF.SClo (tS, s), s'), sA) ->
       synSpine recT cO cD  cPsi (tS, LF.comp s s') sA
 
-  | ((Int.LF.App (_tM, _tS), _s') , ((Int.LF.Atom _), _s)) ->
-      (Printf.printf "synSpineW: Type mismatch";
-      raise NotImplemented )(* TODO should raise typmismatch *)
+  | ((Int.LF.App _, _), (Int.LF.Atom _, _)) ->
+     Printf.printf "synSpineW: Type mismatch";
+      raise SpineMismatch
 
 
 and recSub recT cO cD cPsi s cPhi = match (cPsi, s, cPhi) with
@@ -2197,12 +2197,14 @@ and syn cO cD cG e = match e with
   | Int.Comp.CtxApp (e, cPsi) ->
       let (i, tau) = syn cO cD cG e in
         begin match C.cwhnfCTyp tau with
-          | (Int.Comp.TypCtxPi ((_psi, _sW) , tau), t) ->
+          | (Int.Comp.TypCtxPi ((_psi, sW) , tau), t) ->
               let _ = Printf.printf "\n Schema checking omitted \n" in
                 (* REVISIT: Sun Jan 11 17:48:52 2009 -bp *)
                 (* let tau' =  Cwhnf.csub_ctyp cPsi 1 tau in
                    let t'   = Cwhnf.csub_msub cPsi 1 t in   *)
               let tau1 = Cwhnf.csub_ctyp cPsi 1 (Cwhnf.cnormCTyp (tau,t)) in
+              let _ = recDCtx PiboxRecon cO cD cPsi in 
+              let _ = Check.Comp.checkSchema cO cD cPsi (Schema.get_schema sW) in 
                 (Int.Comp.CtxApp (i, cPsi) , (tau1, Cwhnf.id))
 
           | _ -> 
@@ -2327,7 +2329,9 @@ and checkBranch caseTyp cO cD cG branch (tA, cPsi) (tau, t) =
 
 (* ------------------------------------------------------------------- *)
 
-let recSgnDecl d = match d with
+let recSgnDecl d = 
+    let _        = reset_fvarCnstr () in 
+    match d with
   | Ext.Sgn.Typ (_, a, extK)   ->
       let _        = dprint (fun () -> "\n Indexing type constant " ^ a.string_of_name ^ "\n") in
       let apxK     = index_kind (CVar.create ()) (BVar.create ()) extK in

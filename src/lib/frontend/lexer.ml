@@ -4,15 +4,91 @@ module Loc   = Core.Syntax.Loc (*Camlp4.PreCast.Loc*)
 module Token = Token
 module Error = Camlp4.Struct.EmptyError
 
+(*
+Beluga lexical categories:
+
+- Reserved characters (cannot be used anywhere in an ordinary identifier):
+
+        %
+        ,  .  :  ;
+        (  )  [  ]  {  }
+        \
+        "
+        ::
+
+   Note for Twelf users: the Twelf reserved characters
+
+      %  .  :  [  ]  {  }
+
+   as well as the forbidden character " are also reserved in Beluga.
+   However, Beluga also reserves
+
+           ,   ;  (  )  \
+
+   and # is not allowed as the first character in an identifier (but may appear
+   subsequently).
+
+- Symbols
+
+      First character:
+
+         ABCDEFGHIJKLMNOPQRSTUVWXYZ
+         abcdefghijklmnopqrstuvwxyz
+         !  $  &  '  *  +  -  /   : < = > ? @
+         ^ _ ` | ~
+         
+        (and any other UTF-8 character above 127)
+
+     Characters after the first:
+
+         0 1 2 3 4 5 6 7 8 9
+         ABCDEFGHIJKLMNOPQRSTUVWXYZ
+         abcdefghijklmnopqrstuvwxyz
+         !  $  &  '  *  +  -  /   : < = > ? @
+         ^ _ ` | ~
+         #
+         
+        (and any other UTF-8 character above 127)
+
+   Keyword symbols:
+
+         |   !
+         =  +  *
+         <  >
+         ->  <-   =>
+         FN
+         block  case  fn  id  in
+         let  mlam  of
+         rec  schema  some  type
+         %name
+
+     presently reserved but unused:           box
+
+- Single-character symbols that are also permitted as the second/third/...
+   character of an identifier:
+
+       #
+          
+- Integers
+         
+        Any sequence of '0'-'9' [generates token INTEGER]
+*)
+
 (*******************************)
 (* Regular Expression Patterns *)
 (*******************************)
 
-(* Matches any utf-8 character that isn't a single character
-   keyword. *)
-let regexp start_sym = [^ "!\\#%()*,.:;=[]{|}" ' ' '0'-'9' '\n' '\t' ]
+(* Matches any printable utf-8 character that isn't reserved or a digit *)
+let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
+                          "%,.:;()[]{}\\#" '"'    (* exclude reserved characters *)
+                          '0'-'9'                 (*exclude digits *)
+                       ]
 
-let regexp sym       = [^ "!\\#%()*,.:;=[]{|}" ' ' '\n' '\t' ]
+(* Matches any printable utf-8 character that isn't reserved *)
+let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
+                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
+                       ]
+(* let regexp sym       = [^ '\000'-' '   "!\\#%()*,.:;=[]{|}+<>" ] *)
 
 let regexp digit       = [ '0'-'9' ]
 
@@ -53,24 +129,32 @@ let rec lex_token loc = lexer
   | "::"
   | "=>"
   | "FN"
-  | "Sigma"
+(*  | "Sigma" *)
   | "block"
-  | "box"
+  | "box" (* unused as of 2009-02-18 *)
   | "case"
   | "fn"
   | "id"
   | "in"
   | "let"
+  | "mlam"  (* was missing -- added 2009-02-18 *)
   | "of"
   | "rec"
   | "schema"
   | "some"
   | "type"
   | "%name"
-  | [ "!\\#%()*,.:;=[]{|}" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf
+(*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
+
+  | [ "%,.:;()[]{}" '\\' '#' '\"']  -> (* reserved character *)
+         mk_tok_of_lexeme mk_keyword loc lexbuf
+
   | eof                       -> mk_tok           Token.EOI  loc lexbuf
+
   | start_sym sym*            -> mk_tok_of_lexeme mk_symbol  loc lexbuf
+
   | digit digit*   -> mk_tok_of_lexeme mk_integer loc lexbuf
+
 
 (* Skip comments and advance the location reference. *)
 let skip_comment     loc = lexer

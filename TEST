@@ -68,7 +68,6 @@ $INTERPRETER  \
     test/schema.bel \
     LF/arith.lf \
     LF/arith-rec1.lf \
-    LF/arith-unify.lf \
     LF/lambda.lf \
     LF/lambda-rec.lf \
     LF/simple-typing.lf \
@@ -82,7 +81,6 @@ $INTERPRETER  \
     LF/tpeval.lf \
     LF/tpeval-rec.lf \
     LF/tpcert.lf \
-    LF/tps-1.lf \
     LF/tps.lf \
     ../examples-twelf/arith/sources.cfg \
     ../examples-twelf/alloc-sem/sources.cfg \
@@ -91,20 +89,20 @@ $INTERPRETER  \
     ../examples-twelf/compile/cpm/sources.cfg \
     ../examples-twelf/compile/cpm/test.cfg \
     ../examples-twelf/compile/debruijn/sources.cfg \
-    ../examples-twelf/compile/debruijn/test.cfg \
     ../examples-twelf/compile/debruijn1/sources.cfg \
     ../examples-twelf/compile/cps/sources.cfg 
 
 #    @test/sigma1.bel
      
+#    LF/arith-unify.lf LF/tps-1.lf    ??
+#
 #    notworking/church-rosser.rec \
-#    notworking/c*ut-elim.bel \
+#    notworking/cut-elim.bel \
 #    notworking/eq-proof.bel \
 #    notworking/fol-handbook.bel \
 #    notworking/tpcert.bel \
 #    notworking/tpeval.bel \
-
-
+#
+#
 # *** Needs to be updated for new syntax: ***
 #    @tests/fvnat.rec
-

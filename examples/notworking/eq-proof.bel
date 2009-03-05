@@ -6,14 +6,13 @@
 % Comments: 
 % - use of Sigma-types in context
 %
-% - this example requires in Delphin a special function extend of
+% - in Delphin, this example requires a special function `extend' of
 %   type eqParamFun = <f:exp#> -> <eq f f> to keep track of the
 %   relationship between an introduced parameter and the fact that
-%   every parameter is equal to itself. 
+%   every parameter is equal to itself;
 %
-% - Also requires explicit use of "remove parameter x and u" in the
-%   definition of the function extend as well as when one uses the
-%   function extend in the function eqfun
+% - also requires explicit use of "remove parameter x and u" in the
+%   definition of `extend' as well as when one uses `extend' in `eqfun'
 
 exp: type.
 app: exp -> exp -> exp.

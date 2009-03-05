@@ -83,8 +83,8 @@ $INTERPRETER  \
     LF/tpcert.lf \
     LF/tps.lf \
     ../examples-twelf/arith/sources.cfg \
-    ../examples-twelf/alloc-sem/sources.cfg 
-#    @test/sigma1.bel
+    ../examples-twelf/alloc-sem/sources.cfg  \
+    test/sigma1.bel
      
 #    LF/arith-unify.lf LF/tps-1.lf    ??
 #

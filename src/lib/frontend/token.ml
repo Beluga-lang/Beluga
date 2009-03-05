@@ -17,24 +17,23 @@ type t =
   | KEYWORD of string (** A keyword, see Lexer for examples.           *)
   | SYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
-  | INTEGER  of string
+  | INTLIT  of string
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"
   | KEYWORD s -> Printf.sprintf "KEYWORD %S" s
   | SYMBOL  s -> Printf.sprintf "SYMBOL %S"  s
   | UPSYMBOL  s -> Printf.sprintf "UPSYMBOL %S"  s
-  | INTEGER s ->  Printf.sprintf "INTEGER %S"  s
+  | INTLIT s ->  Printf.sprintf "INTEGER %S"  s
 
 (** Pretty print a token using {!Format} functionality. *)
 let print ppf x = Format.pp_print_string ppf (to_string x)
 
 (** Determine whether a token is a keyword or not.  Keywords are
     determined automatically by the extensible camlp4 grammar system.
-    The way this works is that when a grammar is loaded, all string
-    literals used in the grammar rules are treated as keywords.  The
-    lexer must also determine during lexical analysis whether a symbol
-    is a keyword or not, however. *)
+    When a grammar is loaded, all string literals used in the grammar
+    rules are treated as keywords.  But the lexer must also determine
+    during lexical analysis if a symbol is a keyword. *)
 let match_keyword kwd = function
   | KEYWORD kwd' when kwd' = kwd -> true
   | _                            -> false
@@ -47,7 +46,7 @@ let extract_string = function
   | KEYWORD s -> s
   | SYMBOL  s -> s
   | UPSYMBOL  s -> s
-  | INTEGER  s -> s
+  | INTLIT  s -> s
 
 
 
@@ -77,7 +76,6 @@ module Filter = struct
       be a keyword. *)
   let keyword_conversion tok is_kwd =
     match tok with
-    | EOI                    -> EOI
     | KEYWORD s              -> KEYWORD s
     | SYMBOL s when is_kwd s -> KEYWORD s
     | SYMBOL s               -> 
@@ -86,6 +84,7 @@ module Filter = struct
             UPSYMBOL  s
           else 
             SYMBOL s
+    | tok -> tok  (* EOI, INTLIT *)
 
   (** Create a token filter given a function to determine keywords. *)
   let mk is_kwd = {

@@ -124,6 +124,20 @@ module Ext = struct
   (* External Syntax Pretty Printer Functor *)
   module Make = functor (R : CID_RENDERER) -> struct
 
+    let fmt_ppr_pragma ppf = function
+      | LF.NamePrag(typ, mv_name, None) -> 
+          fprintf ppf "%%name %s %s.@.@?"
+            (R.render_name    typ)
+             mv_name
+
+      | LF.NamePrag(typ, mv_name, Some v_name) -> 
+          fprintf ppf "%%name %s %s %s.@.@?"
+            (R.render_name  typ)
+             mv_name v_name
+
+      | LF.NotPrag -> 
+          fprintf ppf "%%not@."
+
     (* Contextual Format Based Pretty Printers *)
     let rec fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (_, c, a) ->
@@ -131,15 +145,8 @@ module Ext = struct
             (R.render_name    c)
             (fmt_ppr_lf_typ lvl) a
 
-      | Sgn.Pragma (_, LF.NamePrag(typ, mv_name, None)) -> 
-          fprintf ppf "name %s %s.@.@?"
-            (R.render_name    typ)
-             mv_name
-
-      | Sgn.Pragma (_, LF.NamePrag(typ, mv_name, Some v_name)) -> 
-          fprintf ppf "#name %s %s %s.@.@?"
-            (R.render_name  typ)
-             mv_name v_name
+      | Sgn.Pragma (_, pragma) ->
+          fmt_ppr_pragma ppf pragma
 
 
       | Sgn.Rec (_, f, tau, e) ->
@@ -262,6 +269,11 @@ module Ext = struct
           fprintf ppf "%s"
             (R.render_name x)
 
+      | LF.ProjName (_, k, x) ->
+          fprintf ppf "%s.%d"
+            (R.render_name x)
+            k
+
       | LF.Hole _ ->
           fprintf ppf "_"
 
@@ -281,6 +293,17 @@ module Ext = struct
       | LF.PVar (_, x, sigma) ->
           fprintf ppf "(#%s %a)"
             (R.render_name x)
+            (fmt_ppr_lf_sub 0) sigma
+
+      | LF.ProjPVar (_, k, (x, LF.EmptySub _)) ->
+          fprintf ppf "#%s.%d"
+            (R.render_name x)
+            k
+
+      | LF.ProjPVar (_, k, (x, sigma)) ->
+          fprintf ppf "(#%s.%d %a)"
+            (R.render_name x)
+            k
             (fmt_ppr_lf_sub 0) sigma
 
 

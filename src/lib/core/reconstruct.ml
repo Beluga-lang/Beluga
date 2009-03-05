@@ -38,6 +38,7 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 
 exception NotImplemented
 exception Error of Syntax.Loc.t option * error
+exception SpineMismatch
 
 exception Violation of string
 
@@ -1246,7 +1247,7 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
 
   | ((Int.LF.Root (loc, _, _), _) as sR,   (Int.LF.Atom _, _)) ->
       begin
-(*        try *)
+        try
           let _ = dprint (fun () -> "recTerm: expected " ^ 
             (P.normalToString cO cD cPsi sR) ^ " of type " ^ 
             (P.typToString cO cD cPsi sA) ^ "\n\n"  ) in 
@@ -1259,10 +1260,8 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
             with Unify.Unify msg ->
               (Printf.printf "%s\n" msg;
               raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP'))))
-      (* with Match_failure _ ->
-          (* synSpine recT cO cD  cPsi (Int.LF.App _, _) (Int.LF.Atom _, _) *)
-          (Printf.printf "recTerm: where is this coming from?\n";
-          raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))) *)
+      with SpineMismatch ->
+        raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
       end 
 
   | ((Int.LF.Root (loc, _, _), _),   _) ->
@@ -1378,8 +1377,8 @@ and synSpineW recT cO cD  cPsi sS sA = match (sS, sA) with
   | ((Int.LF.SClo (tS, s), s'), sA) ->
       synSpine recT cO cD  cPsi (tS, LF.comp s s') sA
 
-  | ((Int.LF.App (_tM, _tS), _s'), ((Int.LF.Atom _), _s)) ->
-      raise NotImplemented (* TODO should raise typmismatch *)
+  | ((Int.LF.App _, _), (Int.LF.Atom _, _)) ->
+      raise SpineMismatch
 
 
 and recSub recT cO cD cPsi s cPhi = match (cPsi, s, cPhi) with

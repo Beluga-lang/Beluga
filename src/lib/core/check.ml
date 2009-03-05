@@ -913,4 +913,7 @@ module Sgn = struct
           Comp.check cO cD cG e (tau, Cwhnf.id);
           check_sgn_decls decls
 
+    | Syntax.Int.Sgn.Pragma (_a, ) :: decls ->
+        check_sgn_decls decls
+
 end

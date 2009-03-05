@@ -90,9 +90,8 @@ $INTERPRETER  \
     ../examples-twelf/compile/cpm/test.cfg \
     ../examples-twelf/compile/debruijn/sources.cfg \
     ../examples-twelf/compile/debruijn1/sources.cfg \
-    ../examples-twelf/compile/cps/sources.cfg 
-
-#    @test/sigma1.bel
+    ../examples-twelf/compile/cps/sources.cfg \
+    test/sigma1.bel
      
 #    LF/arith-unify.lf LF/tps-1.lf    ??
 #

@@ -93,7 +93,9 @@ module Ext : sig
 
     and mctx     = ctyp_decl ctx          
 
-    and prag = NamePrag of name * string * string option 
+    and prag =
+      | NamePrag of name * string * string option 
+      | NotPrag
 
   end
 
@@ -290,7 +292,9 @@ module Int : sig
     type trec_clo = typ_rec * sub
 
 
-    type prag = NamePrag of cid_typ 
+    type prag =
+      | NamePrag of cid_typ 
+      | NotPrag
   end
 
 
@@ -420,6 +424,7 @@ module Apx : sig
       | BVar  of offset
       | Const of cid_term
       | MVar  of offset * sub
+      | Proj  of head * int
       | Hole 
       | PVar  of offset * sub
       | FVar  of name

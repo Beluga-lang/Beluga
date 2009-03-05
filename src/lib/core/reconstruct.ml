@@ -149,6 +149,10 @@ and index_head cvars bvars = function
         Apx.LF.FVar n
       end
 
+  | Ext.LF.ProjName (loc, k, n) ->
+      let bvar = index_head cvars bvars (Ext.LF.Name (loc, n)) in
+        Apx.LF.Proj(bvar, k)
+
   | Ext.LF.PVar (_, p, s) ->
       begin try
         let offset = CVar.index_of_name cvars p in
@@ -158,6 +162,10 @@ and index_head cvars bvars = function
         let s'     = index_sub cvars bvars s in
           Apx.LF.FPVar (p, s')
       end
+
+  | Ext.LF.ProjPVar (loc, k, (p, s)) ->
+      let pvar = index_head cvars bvars (Ext.LF.PVar(loc, p, s)) in
+        Apx.LF.Proj(pvar, k)
 
   | Ext.LF.Hole _ -> Apx.LF.Hole
 
@@ -643,6 +651,12 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
 
 
 and elTerm' recT cD cPsi r sP = match r with
+  | Apx.LF.Root (loc,  Apx.LF.Proj (tuple_r, k),  Apx.LF.Nil) ->
+      let Int.LF.Root(_, internal_tuple_r, _) =
+        elTerm' recT cD cPsi (Apx.LF.Root(loc, tuple_r, Apx.LF.Nil)) sP(*???*)
+      in
+        Int.LF.Root (Some loc,  Int.LF.Proj (internal_tuple_r, k),  Int.LF.Nil)
+
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
       let i  = (Term.get c).Term.implicit_arguments in
@@ -1243,16 +1257,18 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
  *  recT  cD cPsi (A,s) = A'
  *)
 
-let rec recTerm recT cO cD  cPsi sM sA = recTermW recT cO cD  cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
+let rec recTerm recT cO cD  cPsi sM sA =
+       recTermW recT cO cD  cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
-  | ((Int.LF.Lam (_, _, tM), s'), (Int.LF.PiTyp ((tA, _ ), tB), s)) ->
+  | ((Int.LF.Lam (_, _, tM), s'),   (Int.LF.PiTyp ((tA, _ ), tB), s)) ->
       let cPsi' = Int.LF.DDec (cPsi, LF.decSub tA s) in
         recTerm recT cO cD  cPsi' (tM, LF.dot1 s') (tB, LF.dot1 s)
 
-  | ((Int.LF.Root (loc, _, _), _) as sR, (Int.LF.Atom _, _)) ->
-      begin try
 
+  | ((Int.LF.Root (loc, _, _), _) as sR,   (Int.LF.Atom _, _)) ->
+      begin
+        try
           let _ = dprint (fun () -> "recTerm: expected " ^ 
             (P.mctxToString cO cD) ^ "\n |- " ^ 
             (P.normalToString cO cD cPsi sR) ^ "\n of type " ^ 
@@ -1267,90 +1283,100 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
             try
               Unify.unifyTyp cD  (Context.dctxToHat cPsi, sP', sA) 
             with Unify.Unify msg ->
-              (Printf.printf "%s \n" msg;
+              (Printf.printf "%s\n" msg;
               raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP'))))
       with SpineMismatch ->
         raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
       end 
 
-  | ((Int.LF.Root (loc, _, _), _), _) ->
-      (Printf.printf "recTerm: Root object of non-atomic type \n";
+  | ((Int.LF.Root (loc, _, _), _),   _) ->
+      (Printf.printf "recTerm: Root object of non-atomic type\n";
        raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA))))
 
-  | ((Int.LF.Lam (loc, _, _), _), _) ->
-      (Printf.printf "recTerm: Lam object of atomic type \n";
+  | ((Int.LF.Lam (loc, _, _), _),   _) ->
+      (Printf.printf "recTerm: Lam object of atomic type\n";
        raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA))))
 
 (* synTerm cO cD  cPsi sR = sP *)
-and synTerm recT cO cD  cPsi sR = synTermW recT cO cD  cPsi (Whnf.whnf sR)
+and synTerm recT cO cD  cPsi sR =
+   synTermW recT cO cD  cPsi (Whnf.whnf sR)
 
-and synTermW recT cO cD  cPsi sR = match sR with
-  | (Int.LF.Root (_, Int.LF.Const c, tS), s') ->
-      let tA = (Term.get c).Term.typ in
-      let sshift = mkShift recT cPsi in
-        synSpine recT cO cD  cPsi (tS, s') (tA, sshift)
+and synTermW recT cO cD  cPsi ((root, s') as sR) =
+  match root with
+    | Int.LF.Root (_, head, tS) ->
+        let rec synHead = function
+          | Int.LF.Const c ->
+              let tA = (Term.get c).Term.typ in
+              let sshift = mkShift recT cPsi in
+                synSpine recT cO cD  cPsi (tS, s') (tA, sshift)
+                  
+          | Int.LF.BVar x ->
+              let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
+                synSpine recT cO cD  cPsi (tS, s') (tA, LF.id)
+                  
+          | Int.LF.MVar (Int.LF.Inst (_r, cPhi, tP', _cnstr), t) ->
+              (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
+              (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
+              let s1 = (LF.comp t s') in
+                recSub recT cO cD  cPsi s1 cPhi;
+                (tP', s1)
+                  
+          | Int.LF.MVar (Int.LF.Offset u, t) ->
+              (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
+              (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
+              let s1 = (LF.comp t s') in
+              let (tP', cPsi') = Cwhnf.mctxMDec cD u in
+                recSub recT cO cD  cPsi s1 cPsi';
+                (tP', s1)
+                  
+          | Int.LF.FMVar (u, t) ->
+              (* By invariant of whnf: tS = Nil *)
+              let s1 = (LF.comp t s') in
+              let (tP', cPhi) = FMVar.get u in
+                recSub recT cO cD  cPsi s1 cPhi;
+                (tP', s1)
+                  
+          | Int.LF.FPVar (p, t) ->
+              let s1 = (LF.comp t s') in
+              let (tA', cPhi) = FPVar.get p in
+                (* cPsi |- t : cPhi *)
+                recSub recT cO cD  cPsi s1 cPhi;
+                synSpine recT cO cD  cPsi (tS, s') (tA',t)
 
-  | (Int.LF.Root (_, Int.LF.BVar x, tS), s') ->
-      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
-        synSpine recT cO cD  cPsi (tS, s') (tA, LF.id)
+          | Int.LF.PVar (Int.LF.Offset p, t) ->
+              let s1 = (LF.comp t s') in
+              let (tA, cPsi') = Cwhnf.mctxPDec cD p in
+                recSub recT cO cD  cPsi s1 cPsi';
+                synSpine recT cO cD  cPsi (tS, s') (tA, t)
 
-  | (Int.LF.Root (_, Int.LF.MVar (Int.LF.Inst (_r, cPhi, tP', _cnstr), t), _tS), s') ->
-      (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
-      (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
-      let s1 = (LF.comp t s') in
-        recSub recT cO cD  cPsi s1 cPhi;
-        (tP', s1)
+(*          | Int.LF.Proj (tuple_head, k) ->
+              begin match synHead tuple_head with
+                (tTuple, sTuple) -> 
+              end
+*)
 
-  | (Int.LF.Root (_, Int.LF.MVar (Int.LF.Offset u, t), _tS), s') ->
-      (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
-      (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
-      let s1 = LF.comp t s' in
-      let (tP', cPsi') = Cwhnf.mctxMDec cD u in
-        recSub recT cO cD  cPsi s1 cPsi';
-        (tP', s1)
-      
-
-  | (Int.LF.Root (_, Int.LF.FMVar (u, t), _tS), s') ->
-      (* By invariant of whnf: tS = Nil *)
-      let s1 = (LF.comp t s') in
-      let (tP', cPhi) = FMVar.get u in
-        recSub recT cO cD  cPsi s1 cPhi;
-        (tP', s1)
-
-  | (Int.LF.Root (_, Int.LF.FPVar (p, t), tS), s') ->
-      let s1 = (LF.comp t s') in
-      let (tA', cPhi) = FPVar.get p in
-        (* cPsi |- t : cPhi *)
-        recSub recT cO cD  cPsi s1 cPhi;
-        synSpine recT cO cD  cPsi (tS, s') (tA',t)
-
-  | (Int.LF.Root (_, Int.LF.PVar (Int.LF.Offset p, t), tS), s') ->
-      let s1 = (LF.comp t s') in
-      let (tA, cPsi') = Cwhnf.mctxPDec cD p in
-        recSub recT cO cD  cPsi s1 cPsi';
-        synSpine recT cO cD  cPsi (tS, s') (tA, t)
-
-  | (Int.LF.Root (_, Int.LF.FVar x, tS), s') ->
-      (* x is in eta-expanded form and tA is closed
-       * type of FVar x : A[cPsi'] and FVar x should be
-       * associated with a substitution, since tA is not always
-       * closed.
-       *
-       * by invariant of whnf: s'  id
-       *
-       * This only applies to LF reconstruction
-       *)
-      let tA = FVar.get x in
-      let _ = dprint (fun () -> "synTerm FVAR " ^  (P.normalToString cO cD cPsi sR)
-                       ^ "\n\n" ) in 
-      let (None , d) = Context.dctxToHat cPsi in
-      let _ = dprint (fun () -> "of type " ^ 
-         (P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, d))) ^ " \n\n " )
-      in 
-      let s = mkShift PiRecon cPsi in 
-        (* synSpine recT cO cD  cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) *)
-         synSpine recT cO cD  cPsi (tS, s') (tA, s) 
-
+          | Int.LF.FVar x ->
+              (* x is in eta-expanded form and tA is closed
+               * type of FVar x : A[cPsi'] and FVar x should be
+               * associated with a substitution, since tA is not always
+               * closed.
+               *
+               * by invariant of whnf: s'  id
+               *
+               * This only applies to LF reconstruction
+               *)
+              let tA = FVar.get x in
+              let _ = dprint (fun () -> "synTerm FVAR " ^  (P.normalToString cO cD cPsi sR)
+                                ^ "\n\n" ) in 
+              let (None , d) = Context.dctxToHat cPsi in
+              let _ = dprint (fun () -> "of type " ^ 
+                                (P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, d))) ^ " \n\n " )
+              in 
+              let s = mkShift PiRecon cPsi in 
+                (* synSpine recT cO cD  cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) *)
+                synSpine recT cO cD  cPsi (tS, s') (tA, s) 
+        in
+          synHead head
 
 and synSpine recT cO cD  cPsi sS sA =
   synSpineW recT cO cD  cPsi sS (Whnf.whnfTyp sA)
@@ -2455,3 +2481,29 @@ let recSgnDecl d =
                                                 (Some (Gensym.VarData.name_gensym x)) in
               Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp))
       end
+
+let rec recSgnDecls = function
+  | [] -> []
+
+  | Ext.Sgn.Pragma(_, Ext.LF.NotPrag) :: notted_decl :: rest ->
+      (*   let internal_syntax_pragma = Int.Sgn.Pragma(Int.LF.NotPrag) in *)
+      let notted_decl_succeeds = 
+        begin try
+          (let _ = recSgnDecl notted_decl in
+             true)
+        with
+            _ -> (print_string ("Reconstruction fails for %not'd declaration\n"); false)
+        end
+      in
+        if notted_decl_succeeds then
+          raise (Violation ("UNSOUND: reconstruction succeeded for %not'd declaration"))
+        else recSgnDecls rest
+
+  | [Ext.Sgn.Pragma(_, Ext.LF.NotPrag)] ->  (* %not declaration with nothing following *)
+      []
+
+  | decl :: rest ->
+      let internal_decl = recSgnDecl decl in
+      let internal_rest = recSgnDecls rest in
+        internal_decl :: internal_rest
+

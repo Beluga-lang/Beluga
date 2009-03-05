@@ -71,7 +71,7 @@ Beluga lexical categories:
           
 - Integers
          
-        Any sequence of '0'-'9' [generates token INTEGER]
+        Any sequence of '0'-'9' [generates token INTLIT]
 *)
 
 (*******************************)
@@ -108,13 +108,14 @@ let mk_tok_of_lexeme tok_cons loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 (*  ; print_string ("mk_tok_of_lexeme ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
   ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
+(*  let _ = print_string ("TOKEN>> " ^ Token.to_string tok ^"\n") in *)
       tok
 
 let mk_keyword s = Token.KEYWORD s
 
 let mk_symbol  s = Token.SYMBOL  s
 
-let mk_integer  s = Token.INTEGER s
+let mk_integer  s = Token.INTLIT s
 
 (**********)
 (* Lexers *)
@@ -144,6 +145,7 @@ let rec lex_token loc = lexer
   | "some"
   | "type"
   | "%name"
+  | "%not"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 
   | [ "%,.:;()[]{}" '\\' '#' '\"']  -> (* reserved character *)
@@ -153,7 +155,7 @@ let rec lex_token loc = lexer
 
   | start_sym sym*            -> mk_tok_of_lexeme mk_symbol  loc lexbuf
 
-  | digit digit*   -> mk_tok_of_lexeme mk_integer loc lexbuf
+  | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
 
 (* Skip comments and advance the location reference. *)
@@ -161,7 +163,7 @@ let skip_comment     loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)
 (*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
     | '%' ( [^ '\n' 'n'] [^ '\n']* )? '\n' ->
-(*        print_string ("BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ;   *)
+(*        print_string ("BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ;    *)
         loc := Loc.shift     (Ulexing.lexeme_length lexbuf - 1) !loc
       ; loc := Loc.move_line 1                                  !loc
 (*      ; print_string ("AFT " ^ Loc.to_string !loc ^"\n") *)
@@ -171,7 +173,7 @@ let skip_whitespaces loc = lexer
   | [ ' ' '\t' ]+         -> 
        (* print_string ("bef " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
         loc := Loc.shift     (Ulexing.lexeme_length lexbuf)     !loc
-(*    ;    print_string ("aft " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")   *)
+(*    ;    print_string ("aft " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
 
 
 (* Skip newlines and advance the location reference. *)

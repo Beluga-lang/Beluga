@@ -9,8 +9,6 @@ open Core
 open Frontend
 open Printf
 
-(* The following is an example of how to use the Core and Frontend modules *)
-
 let usage () =
   let options = "    -d      turn all debugging off (default)\n"
               ^ "    +d      turn all debugging on\n"
@@ -49,7 +47,8 @@ exception SessionFatal of spec
 let process_name name =
   let rest = String.sub name 1 (String.length name - 1) in
     if String.get name 0 = '@' then
-      (Negative, rest)
+      (print_string ("\nNOTE: %not is usually preferred over \"@\"\n\n")
+      ; (Negative, rest))
 (* else if String.get name 0 = ...... then
       (......, rest)
 *)
@@ -73,7 +72,10 @@ let rec process_lines parent_dir = function
 let rec process_files = function
   | []                    -> []
   | f :: fs when is_cfg f ->
-      let filename = if String.get f 0 = '@' then String.sub f 1 (String.length f - 1) else f in
+      let filename =
+        if String.get f 0 = '@'
+        then String.sub f 1 (String.length f - 1)
+        else f in
       let cfg = open_in filename in
       let lines = accum_lines cfg in
         (Session (process_lines (Filename.dirname f ^ "/") lines)) :: (process_files fs)
@@ -109,7 +111,8 @@ let main () =
             print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;
             printf "\n## Type Reconstruction: %s ##\n" file_name;
 
-            let int_decls = List.map Reconstruct.recSgnDecl sgn in
+(*            let int_decls = List.map Reconstruct.recSgnDecl sgn in *)
+            let int_decls = Reconstruct.recSgnDecls sgn in
               print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls;
               return Positive
         with

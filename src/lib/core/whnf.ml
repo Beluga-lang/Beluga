@@ -404,9 +404,9 @@ let rec whnf sM = match sM with
             let u' = Inst (uref, cPsi, Atom (loc', a, tS'), cnstr) in
               (Root (loc, MVar (u', LF.comp r sigma), SClo (tS, sigma)), LF.id)
         | (PiTyp _, _s)->
-            (* Meta-variable is not atomic and tA = Pi x:B1.B2
-             * lower u, and normalize the lowered meta-variable
-             * note: we may expose and compose substitutions twice.
+            (* Meta-variable is not atomic and tA = Pi x:B1.B2:
+             * lower u, and normalize the lowered meta-variable.
+             * Note: we may expose and compose substitutions twice.
              *)
             let _ = lowerMVar u in
               whnf (tM, sigma)
@@ -435,6 +435,9 @@ let rec whnf sM = match sM with
   | (Root (loc, FPVar (p, r), tS), sigma) ->
       (Root (loc, FPVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
+  | (Root (loc, Proj(FPVar (p, r), k), tS), sigma) ->
+      let fpvar = FPVar (p, LF.comp r sigma) in
+      (Root (loc, Proj(fpvar,k), SClo(tS,sigma)),  LF.id)
 
   (* Constant *)
   | (Root (loc, Const c, tS), sigma) ->
@@ -453,6 +456,8 @@ let rec whnf sM = match sM with
 
   | (Root (loc, Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _), s), k), tS), sigma) ->
       whnf (Root (loc, Proj (PVar (q', LF.comp r' s), k), tS), sigma)
+
+  (* see also Proj case near top *)
 
   (* Free variables *)
   | (Root (loc, FVar x, tS), sigma) ->

@@ -78,6 +78,9 @@ GLOBAL: sgn_eoi;
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
             Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
+
+      | "%not" ->
+            Sgn.Pragma (_loc, LF.NotPrag)
       ]
     ]
   ;
@@ -341,13 +344,13 @@ GLOBAL: sgn_eoi;
   clf_head:
     [
       [
-        "#"; p = SYMBOL; "."; k = INTEGER; sigma = clf_sub_new ->
+        "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
                 LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
                 LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
       |
-        x = SYMBOL; "."; k = INTEGER ->
+        x = SYMBOL; "."; k = INTLIT ->
                 LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
       |
         x = SYMBOL ->

@@ -90,7 +90,9 @@ module Ext = struct
 
     and mctx     = ctyp_decl ctx          
 
-    and prag = NamePrag of name * string * string option 
+    and prag =
+      | NamePrag of name * string * string option 
+      | NotPrag
 
   end
 
@@ -205,7 +207,7 @@ module Int = struct
       | MVar  of cvar * sub                (*   | u[s]                       *)
       | PVar  of cvar * sub                (*   | p[s]                       *)
       | AnnH  of head * typ                (*   | (H:A)                      *)
-      | Proj  of head * int                (*   | #k(x) | #k(p[s])           *)
+      | Proj  of head * int                (*   | x.k | #p.k s               *)
 
       | FVar  of name                      (* free variable for type
                                               reconstruction                 *)
@@ -306,7 +308,9 @@ module Int = struct
 
 
 
-    type prag = NamePrag of cid_typ 
+    type prag =
+      | NamePrag of cid_typ 
+      | NotPrag
 
   end
 
@@ -435,6 +439,7 @@ module Apx = struct
       | BVar  of offset
       | Const of cid_term
       | MVar  of offset * sub
+      | Proj  of head * int
       | Hole 
       | PVar  of offset * sub
       | FVar  of name

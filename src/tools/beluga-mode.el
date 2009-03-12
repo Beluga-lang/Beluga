@@ -20,7 +20,12 @@
 
 ;;; Commentary:
 
-;; 
+;; BUGS
+
+;; - Indentation thinks "." can only be the termination marker of
+;;   an LF declaration.  This can mess things up badly.
+;; - Indentation after curried terms like "fn x => fn y =>" is twice that
+;;   after "fn x y =>".
 
 ;;; Code:
 
@@ -186,6 +191,8 @@ Regexp match data 0 points to the chars."
          (concat "interpreter " (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
   (comment-normalize-vars)
+  ;; Used by indentation and navigation code.
+  (set (make-local-variable 'parse-sexp-ignore-comments) t)
   (set (make-local-variable 'indent-line-function) 'beluga-indent-line)
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
@@ -222,7 +229,15 @@ Each element is of the form (TOKEN LEFT-LEVEL RIGHT-LEVEL &rest STOPS).")
 
 (defconst beluga-funlike-ops '("fn" "FN")
   "Keywords that take a variable number of arguments.
-Those arguments will be aligned as if the keyword was a function.")
+I.e. text after those args might look like a function call, but it's really
+just a sequence of elements where the first is no different from the rest.
+This is used so as to indent
+
+               fn x1 x2 x3
+                  x4 x5 => ...
+rather than
+               fn x1 x2 x3
+                     x4 x5 => ...")
 
 (defcustom beluga-indent-basic 4
   "Basic amount of indentation.")
@@ -236,13 +251,18 @@ Those arguments will be aligned as if the keyword was a function.")
     ("of" 2)
     ("in" nil 0)
     ("=" 0)
-    ("=>")
+    ;; FIXME: we'd like some way to specify the indentation after => depending
+    ;; on whether it is a "=>" that goes with an "fn" or with a "|".
+    ("=>" 2)
     ((t . "|") . -2)
     ("let") ("if"))
   "Rules of the following form.
 \((TOK1 . TOK2) . OFFSET)	how to indent TOK2 w.r.t TOK1.
 \(TOK OFFSET)			how to indent right after TOK.
-\(TOK)				OFFSET defaults to `beluga-indent-basic'.")
+\(TOK O1 O2)			how to indent right after TOK,
+                                O1 is the default.
+                                O2 is used if TOK is \"hanging\".
+A nil offset defaults to `beluga-indent-basic'.")
 
 (defun beluga-backward-token ()
   (buffer-substring (point)
@@ -341,7 +361,7 @@ Possible return values:
                        (skip-chars-forward " \t") (eolp))
        (save-excursion (skip-chars-backward " \t") (not (bolp)))))
 
-(defun beluga-indent-virtual ()
+(defun beluga-indent-maybe-virtual ()
   (if (beluga-indent-hanging-p)
       (beluga-indent-calculate 'virtual)
     (current-column)))
@@ -363,7 +383,7 @@ Possible return values:
        (condition-case nil
            (progn
              (backward-sexp 1)
-             (beluga-indent-virtual))
+             (beluga-indent-maybe-virtual))
          (scan-error nil))))
    ;; Align `of' with the corresponding `match'.
    (save-excursion
@@ -379,19 +399,26 @@ Possible return values:
               ((eq (car res) (car tokinfo))
                ;; We bumped into a same-level operator. align with it.
                (goto-char (cadr res))
-               ;; Don't use beluga-indent-virtual here, because we want to
-               ;; jump back over a sequence of same-level ops such as
+               ;; Don't use beluga-indent-maybe-virtual here, because we want
+               ;; to jump back over a sequence of same-level ops such as
                ;;    a -> b -> c
                ;;    -> d
                ;; So as to align with the earliest appropriate place.
                (beluga-indent-calculate 'virtual))
+              ((equal token (save-excursion
+                              (forward-comment (- (point-max)))
+                              (beluga-backward-token)))
+               ;; in cases such as "fn x => fn y => fn z =>",
+               ;; jump back to the very first fn.
+               ;; FIXME: should we only do that for special tokens like "=>"?
+               (beluga-indent-calculate 'virtual))
+              ((setq tmp (assoc (cons (caddr res) token)
+                                beluga-indent-rules))
+               (goto-char (cadr res))
+               (+ (cdr tmp) (beluga-indent-maybe-virtual)))
               (t
-               (+ (if (null (setq tmp (assoc (cons (caddr res) token)
-                                             beluga-indent-rules)))
-                      (or (cdr (assoc (cons t token) beluga-indent-rules)) 0)
-                    (goto-char (cadr res))
-                    (cdr tmp))
-                  (beluga-indent-virtual)))))))))
+               (+ (or (cdr (assoc (cons t token) beluga-indent-rules)) 0)
+                  (current-column)))))))))
    ;; Indentation of a comment.
    (and (looking-at comment-start-skip)
         (save-excursion
@@ -415,7 +442,12 @@ Possible return values:
             (tokinfo (assoc tok beluga-indent-rules))
             (toklevel (assoc tok beluga-op-levels)))
        (when (or tokinfo (and toklevel (null (cadr toklevel))))
-         (if (beluga-indent-hanging-p)
+         (if (or (beluga-indent-hanging-p)
+                 ;; If calculating the virtual indentation point, prefer
+                 ;; looking up the virtual indentation of the alignment
+                 ;; point as well.  This is used for indentation after
+                 ;; "fn x => fn y =>".
+                 virtual)
              (+ (beluga-indent-calculate 'virtual)
                 (or (caddr tokinfo) (cadr tokinfo) beluga-indent-basic))
            (+ (current-column)
@@ -429,9 +461,12 @@ Possible return values:
                    (push (point) positions)
                    (not (setq begline (beluga-bolp)))))
        (save-excursion
+         ;; Figure out if the atom we just skipped is an argument rather
+         ;; than a function.
          (setq arg (or (null (car (beluga-backward-sexp 0)))
                        (member (progn (forward-comment (- (point-max)))
-                                      (beluga-backward-token)) beluga-funlike-ops))))
+                                      (beluga-backward-token))
+                               beluga-funlike-ops))))
        (cond
         ((and arg positions)
          (goto-char (car positions))
@@ -446,7 +481,11 @@ Possible return values:
          ;; FIXME: it might not be a funcall, in which case we might be the
          ;; second element.
          (goto-char (car positions))
-         (+ beluga-indent-args (beluga-indent-calculate 'virtual)))
+         (+ beluga-indent-args
+            ;; We used to use (beluga-indent-calculate 'virtual), but that
+            ;; doesn't seem right since it might then indent args less than
+            ;; the function itself.
+            (current-column)))
         ((and (null arg) (null positions))
          ;; We're the function itself.  Not sure what to do here yet.
          (if virtual (current-column)
@@ -472,7 +511,7 @@ Possible return values:
                      ;; Sample case for t: foo { bar, \n[TAB] baz }.
                      ;; Sample case for nil: match ... with \n[TAB] | toto ...
                      ;; (goto-char (cadr res))
-                     (beluga-indent-virtual))
+                     (beluga-indent-maybe-virtual))
                     ((and (consp res) (>= (car res) (car tokinfo)))
                      ;; We stopped at a token of equal or higher precedence
                      ;; because we found a place with which to align.

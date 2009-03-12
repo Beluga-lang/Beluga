@@ -35,6 +35,7 @@ module Ext = struct
       | Atom   of Loc.t * name * spine
       | ArrTyp of Loc.t * typ      * typ
       | PiTyp  of Loc.t * typ_decl * typ
+      | Sigma of Loc.t * typ_rec
 
     and normal =
       | Lam  of Loc.t * name * normal
@@ -74,14 +75,13 @@ module Ext = struct
       | Null
       | CtxVar   of name
       | DDec     of dctx * typ_decl
-      | SigmaDec of dctx * sigma_decl
 
     and 'a ctx =
       | Empty
       | Dec of 'a ctx * 'a
 
     and sch_elem =
-      | SchElem of Loc.t * typ_decl ctx * sigma_decl
+      | SchElem of Loc.t * typ_decl ctx * typ_rec
 
     and schema =
       | Schema of sch_elem list
@@ -94,6 +94,11 @@ module Ext = struct
       | NamePrag of name * string * string option 
       | NotPrag
 
+    let rec nth typRec n = match (typRec, n) with
+      | (SigmaLast  tA, 1) -> tA
+      | (SigmaLast _tA, _) -> raise (Failure "typRec nth")
+      | (SigmaElem(_,  tA, _rest), 1) -> tA
+      | (SigmaElem(_, _tA,  rest), n) -> nth rest (n - 1)
   end
 
 
@@ -192,6 +197,7 @@ module Int = struct
     and typ =                              (* LF level                       *)
       | Atom  of Loc.t option * cid_typ * spine (* A ::= a M1 ... Mn              *)
       | PiTyp of (typ_decl * depend) * typ (*   | Pi x:A.B                   *)
+      | Sigma of typ_rec
       | TClo  of (typ * sub)               (*   | TClo(A,s)                  *)
       | TVar  of tvar * sub                (*   | TVar(a,s)                  *)
 
@@ -261,9 +267,7 @@ module Int = struct
     and dctx =                             (* LF Context                     *)
       | Null                               (* Psi ::= .                      *)
       | CtxVar   of ctx_var                (* | psi                          *)
-      | DDec     of dctx * typ_decl        (* | Psi, x:A                     *)
-      | SigmaDec of dctx * sigma_decl      (* | Psi, x:Sigma x1:A1...xn:An.A *)
-
+      | DDec     of dctx * typ_decl        (* | Psi, x:A   or x:block ...              *)
 
     and ctx_var = 
       | CtxName   of name
@@ -275,7 +279,7 @@ module Int = struct
                                            (* | C, x:'a                      *)
 
     and sch_elem =                         (* Schema Element                 *)
-      | SchElem of typ_decl ctx * sigma_decl    (* Pi    x1:A1 ... xn:An.
+      | SchElem of typ_decl ctx * typ_rec    (* Pi    x1:A1 ... xn:An.
                                               Sigma y1:B1 ... yk:Bk. B       *)
                                            (* Sigma-types not allowed in Ai  *)
 
@@ -312,6 +316,18 @@ module Int = struct
       | NamePrag of cid_typ 
       | NotPrag
 
+    (* getType traverses the type from left to right;
+       target is relative to the remaining suffix of the type *)
+    let rec getType head s_recA target j = match (s_recA, target) with
+      | ((SigmaLast lastA, s), 1) ->
+          (lastA, s)
+            
+      | ((SigmaElem (_x, tA, _recA), s), 1) -> 
+          (tA, s)
+            
+      | ((SigmaElem (_x, _tA, recA), s), target) ->
+          let tPj = Root (None, Proj (head, j), Nil) in
+            getType head (recA, Dot (Obj tPj, s)) (target - 1) (j + 1)
   end
 
 
@@ -321,7 +337,7 @@ module Int = struct
      | MObj of LF.psi_hat * LF.normal     (* Mft::= Psihat.N                *)
      | PObj of LF.psi_hat * LF.head       (*    | Psihat.p[s] | Psihat.x    *)
      | MV   of offset                     (*    | u//u | p//p               *)
-     | Undef 
+     | Undef
 
 
    type msub =                            (* Contextual substitutions       *)
@@ -329,7 +345,7 @@ module Int = struct
      | MDot   of mfront * msub            (*       | MFt . theta            *)
 
    type depend =  
-     | Implicit 
+     | Implicit
      | Explicit
 
    type typ =
@@ -337,7 +353,7 @@ module Int = struct
       | TypSBox  of LF.dctx * LF.dctx
       | TypArr   of typ * typ
       | TypCross of typ * typ
-      | TypCtxPi of (name * cid_schema) * typ 
+      | TypCtxPi of (name * cid_schema) * typ
       | TypPiBox of (LF.ctyp_decl * depend) * typ
       | TypClo   of typ *  msub
 
@@ -359,7 +375,7 @@ module Int = struct
       | Apply  of exp_syn * exp_chk
       | CtxApp of exp_syn * LF.dctx
       | MApp   of exp_syn * (LF.psi_hat * LF.normal)
-      | Ann    of exp_chk * typ 
+      | Ann    of exp_chk * typ
 
     and branch =
       | BranchBox  of LF.ctyp_decl LF.ctx
@@ -372,7 +388,7 @@ module Int = struct
 
    type ctyp_decl = 
      | CTypDecl of name * typ
-     | CTypDeclOpt of name 
+     | CTypDeclOpt of name
     
     type gctx = ctyp_decl LF.ctx
     type tclo = typ * msub
@@ -421,6 +437,7 @@ module Apx = struct
     and typ =
       | Atom  of Loc.t * cid_typ * spine
       | PiTyp of (typ_decl * depend) * typ
+      | Sigma of typ_rec
 
     and typ_rec =
       | SigmaLast of typ
@@ -463,7 +480,6 @@ module Apx = struct
       | Null
       | CtxVar   of ctx_var 
       | DDec     of dctx * typ_decl
-      | SigmaDec of dctx * sigma_decl
 
     and ctx_var = 
       | CtxName   of name
@@ -475,7 +491,7 @@ module Apx = struct
       | Dec of 'a ctx * 'a
 
     and sch_elem =
-      | SchElem of typ_decl ctx * sigma_decl
+      | SchElem of typ_decl ctx * typ_rec
 
     and schema =
       | Schema of sch_elem list

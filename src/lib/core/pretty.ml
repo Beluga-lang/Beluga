@@ -87,7 +87,6 @@ module Ext = struct
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
     val fmt_ppr_lf_typ_rec : lvl -> formatter -> LF.typ_rec    -> unit
-    val fmt_ppr_lf_sigma_decl : lvl -> formatter -> LF.sigma_decl    -> unit
     val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx          -> unit
     val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
@@ -108,7 +107,6 @@ module Ext = struct
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
     val ppr_lf_typ_rec : LF.typ_rec    -> unit
-    val ppr_lf_sigma_decl : LF.sigma_decl    -> unit
     val ppr_lf_psi_hat    : LF.psi_hat       -> unit
     val ppr_lf_dctx       : LF.dctx          -> unit
     val ppr_lf_mctx       : LF.mctx          -> unit
@@ -241,6 +239,12 @@ module Ext = struct
               (fmt_ppr_lf_typ  0) b
               (r_paren_if cond)
 
+      | LF.Sigma (_, typRec) ->
+          fprintf ppf "%sblock %a%s"
+            (l_paren_if (lvl > 0))
+            (fmt_ppr_lf_typ_rec lvl) typRec
+            (r_paren_if (lvl > 0))
+
     and fmt_ppr_lf_normal  lvl ppf = function
       | LF.Lam (_, x, tM) ->
           let cond = lvl > 0 in
@@ -339,7 +343,7 @@ module Ext = struct
     and fmt_ppr_lf_schema lvl ppf = function
       | LF.Schema [] -> ()
 
-      | LF.Schema (f :: []) ->
+      | LF.Schema [f] ->
             fprintf ppf "%a"
               (fmt_ppr_lf_sch_elem lvl) f
 
@@ -366,7 +370,7 @@ module Ext = struct
           in
             fprintf ppf "some [%a] block %a"
               ppr_typ_decl_ctx            typDecls
-              (fmt_ppr_lf_sigma_decl lvl) sgmDecl
+              (fmt_ppr_lf_typ_rec lvl) sgmDecl
 
     and fmt_ppr_lf_typ_rec _lvl ppf typrec = 
        let ppr_element ppf suffix = function
@@ -395,10 +399,6 @@ module Ext = struct
        in
          fprintf ppf "%a"
            (ppr_elements) typrec
-
-    and fmt_ppr_lf_sigma_decl lvl ppf = function
-      | LF.SigmaDecl (_x, typrec) ->
-          fmt_ppr_lf_typ_rec lvl ppf typrec
 
     and fmt_ppr_lf_psi_hat _lvl ppf = function
       | []      -> ()
@@ -431,15 +431,6 @@ module Ext = struct
             (fmt_ppr_lf_dctx 0) cPsi
             (R.render_name x)
             (fmt_ppr_lf_typ  0) tA
-
-      | LF.SigmaDec (LF.Null, sigma_decl) ->
-          fprintf ppf "%a"
-            (fmt_ppr_lf_sigma_decl 0) sigma_decl
-
-      | LF.SigmaDec (cPsi, sigma_decl) ->
-          fprintf ppf "%a, %a"
-            (fmt_ppr_lf_dctx 0) cPsi
-            (fmt_ppr_lf_sigma_decl 0) sigma_decl
 
     and fmt_ppr_cmp_typ lvl ppf = function
       | Comp.TypBox (_, tA, cPsi) ->
@@ -648,7 +639,6 @@ module Ext = struct
     let ppr_lf_schema     = fmt_ppr_lf_schema     std_lvl std_formatter
     let ppr_lf_sch_elem   = fmt_ppr_lf_sch_elem   std_lvl std_formatter
     let ppr_lf_typ_rec = fmt_ppr_lf_typ_rec std_lvl std_formatter
-    let ppr_lf_sigma_decl = fmt_ppr_lf_sigma_decl std_lvl std_formatter
     let ppr_lf_psi_hat    = fmt_ppr_lf_psi_hat    std_lvl std_formatter
     let ppr_lf_dctx       = fmt_ppr_lf_dctx       std_lvl std_formatter
     let ppr_lf_mctx       = fmt_ppr_lf_mctx       std_lvl std_formatter
@@ -706,7 +696,6 @@ module Int = struct
 
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
-    val fmt_ppr_lf_sigma_decl : LF.mctx -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sigma_decl -> unit
 
     (* val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.psi_hat  -> unit *)
     val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     -> unit
@@ -729,7 +718,6 @@ module Int = struct
 
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
-    val ppr_lf_sigma_decl : LF.mctx -> LF.mctx -> LF.dctx -> LF.sigma_decl    -> unit
 
     (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.mctx -> LF.dctx  -> unit
@@ -820,6 +808,12 @@ module Int = struct
               (fmt_ppr_lf_typ cO cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
               (r_paren_if cond)
 
+      | LF.Sigma typRec ->
+          fprintf ppf "%sblock %a%s"
+            (l_paren_if (lvl > 0))
+            (fmt_ppr_lf_typ_rec cO cD cPsi lvl) typRec
+            (r_paren_if (lvl > 0))
+
     and fmt_ppr_lf_normal cO cD cPsi lvl ppf = function
       | LF.Lam (_, x, m) ->
           let cond = lvl > 0 in
@@ -843,38 +837,51 @@ module Int = struct
 
       | LF.Clo(tM, s) -> fmt_ppr_lf_normal cO cD cPsi lvl ppf (Whnf.norm (tM, s))
 
-    and fmt_ppr_lf_head cO cD cPsi lvl ppf = function
+    and fmt_ppr_lf_head cO cD cPsi lvl ppf head = 
+      let rec fmt_head_with proj = function
       | LF.BVar x  ->
-          fprintf ppf "%s"
+          fprintf ppf "%s%s"
             (R.render_bvar cPsi x)
+            proj
 
       | LF.Const c ->
-          fprintf ppf "%s"
+          fprintf ppf "%s%s"
             (R.render_cid_term c)
+            proj
 
       | LF.MVar (c, s) ->
-          fprintf ppf "%a[%a]"
+          fprintf ppf "%a%s[%a]"
             (fmt_ppr_lf_cvar cO cD lvl) c
+            proj
             (fmt_ppr_lf_sub  cO cD cPsi lvl) s
 
       | LF.PVar (c, s) ->
-          fprintf ppf "#%a[%a]"
+          fprintf ppf "#%a%s[%a]"
             (fmt_ppr_lf_cvar cO cD lvl) c
+            proj
             (fmt_ppr_lf_sub  cO cD cPsi lvl) s
 
       | LF.FVar x ->
-          fprintf ppf "%s"
+          fprintf ppf "%s%s"
             (R.render_name x)
+            proj
 
       | LF.FMVar (u, s) ->
-          fprintf ppf "%s[%a]"
+          fprintf ppf "%s%s[%a]"
             (R.render_name u)
+            proj
             (fmt_ppr_lf_sub cO cD cPsi lvl) s
 
       | LF.FPVar (p, s) ->
-          fprintf ppf "#%s[%a]"
+          fprintf ppf "#%s%s[%a]"
             (R.render_name p)
+            proj
             (fmt_ppr_lf_sub cO cD cPsi lvl) s
+
+      | LF.Proj (head, k) ->
+          fmt_head_with ("." ^ string_of_int k) head
+      in
+        fmt_head_with "" head
 
 
     and fmt_ppr_lf_spine cO cD cPsi lvl ppf = function
@@ -972,7 +979,7 @@ module Int = struct
             (R.render_name psi)
 
 
-    let rec fmt_ppr_lf_typ_rec cO cD cPsi _lvl ppf typrec = 
+    and fmt_ppr_lf_typ_rec cO cD cPsi _lvl ppf typrec = 
        let ppr_element cO cD cPsi ppf suffix = function
        | (x, tA) ->
               fprintf ppf "%s:%a%s"
@@ -1000,11 +1007,6 @@ module Int = struct
        in
          fprintf ppf "%a"
            (ppr_elements cO cD cPsi) typrec
-
-    and fmt_ppr_lf_sigma_decl cO cD cPsi lvl ppf = function
-      | LF.SigmaDecl (_x, typrec) ->
-          fmt_ppr_lf_typ_rec cO cD cPsi lvl ppf typrec
-
 
     let rec projectCtxIntoDctx = function
          |  LF.Empty -> LF.Null
@@ -1042,7 +1044,7 @@ module Int = struct
           let cPsi = projectCtxIntoDctx typDecls in 
             fprintf ppf "some [%a] block %a "
               (ppr_typ_decl_dctx  (LF.Empty))  cPsi
-              (fmt_ppr_lf_sigma_decl (LF.Empty) (LF.Empty) cPsi lvl) sgmDecl
+              (fmt_ppr_lf_typ_rec (LF.Empty) (LF.Empty) cPsi lvl) sgmDecl
 
 
     let rec fmt_ppr_lf_psi_hat cO _lvl ppf = function
@@ -1074,16 +1076,6 @@ module Int = struct
             (fmt_ppr_lf_psi_hat cO 0) cPsi
             (R.render_name x)
 
-      | LF.SigmaDec (LF.Null, LF.SigmaDecl(x, _ )) ->
-          fprintf ppf "%s"
-            (R.render_name x)
-
-      | LF.SigmaDec (cPsi, LF.SigmaDecl(x, _ )) ->
-          fprintf ppf "%a, %s"
-            (fmt_ppr_lf_psi_hat cO 0) cPsi
-            (R.render_name x)
-
-
     and fmt_ppr_lf_dctx cO cD _lvl ppf = function
       | LF.Null ->
           fprintf ppf ""
@@ -1101,15 +1093,6 @@ module Int = struct
             (fmt_ppr_lf_dctx cO cD 0) cPsi
             (R.render_name x)
             (fmt_ppr_lf_typ cO cD cPsi 0) tA
-
-      | LF.SigmaDec (LF.Null, sigma_decl) ->
-          fprintf ppf "%a"
-            (fmt_ppr_lf_sigma_decl cO cD (LF.Null) 0) sigma_decl
-
-      | LF.SigmaDec (cPsi, sigma_decl) ->
-          fprintf ppf "%a, %a"
-            (fmt_ppr_lf_dctx cO cD 0) cPsi
-            (fmt_ppr_lf_sigma_decl cO cD cPsi 0) sigma_decl
 
 
     and fmt_ppr_lf_mctx cO lvl ppf = function
@@ -1165,7 +1148,7 @@ module Int = struct
       | LF.PDecl (p, tA, cPsi) ->
           fprintf ppf "{#%s :: %a[%a]}"
             (R.render_name p)
-            (fmt_ppr_lf_typ cO cD cPsi 0) tA
+            (fmt_ppr_lf_typ cO cD cPsi 1) tA
             (fmt_ppr_lf_dctx cO cD 0) cPsi
 
       | LF.CDecl (name, schemaName) ->
@@ -1452,7 +1435,6 @@ module Int = struct
     let ppr_lf_sch_elem           = fmt_ppr_lf_sch_elem           std_lvl std_formatter
 
     let ppr_lf_typ_rec cO cD cPsi    = fmt_ppr_lf_typ_rec cO cD cPsi    std_lvl std_formatter
-    let ppr_lf_sigma_decl cO cD cPsi = fmt_ppr_lf_sigma_decl cO cD cPsi std_lvl std_formatter
 
     let ppr_lf_psi_hat cO         = fmt_ppr_lf_psi_hat cO         std_lvl std_formatter
     let ppr_lf_dctx cO cD         = fmt_ppr_lf_dctx cO cD         std_lvl std_formatter

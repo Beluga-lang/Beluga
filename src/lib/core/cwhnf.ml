@@ -104,6 +104,14 @@ and mshiftTyp tA n = match tA with
   | LF.Atom (loc, a, tS) -> LF.Atom (loc, a, mshiftSpine tS n)
   | LF.PiTyp((LF.TypDecl(x, tA), dep), tB) -> LF.PiTyp((LF.TypDecl(x, mshiftTyp tA n), dep), mshiftTyp tB n)
   | LF.TClo(tA, s) -> LF.TClo(mshiftTyp tA n, mshiftSub s n)
+  | LF.Sigma typRec -> LF.Sigma (mshiftTypRec typRec n)
+
+and mshiftTypRec typRec n = match typRec with
+  | LF.SigmaLast tA -> LF.SigmaLast (mshiftTyp tA n)
+  | LF.SigmaElem (x, tA, rest) ->
+      let tA = mshiftTyp tA n in
+      let rest = mshiftTypRec rest n in
+        LF.SigmaElem (x, tA, rest)
 
 and mshiftSub s n = match s with
   | LF.Shift (_,_k) -> s
@@ -120,8 +128,6 @@ and mshiftDCtx cPsi k = match cPsi with
   | LF.CtxVar _ -> cPsi
   | LF.DDec(cPsi', LF.TypDecl(x, tA)) -> 
       LF.DDec(mshiftDCtx cPsi' k, LF.TypDecl(x, mshiftTyp tA k))
-(*  | LF.SigmaDec(cPsi', LF.SigmaDecl(x, typRec)) -> 
-      LF.SigmaDec(mshiftDCtx cPsi' k, LF.SigmaDecl(x, mshiftTypRec(*to be written*) tA k)) *)
 
 
 
@@ -424,24 +430,57 @@ and cnorm (tM, t) = match tM with
     | LF.Root (loc, LF.Proj (LF.BVar i, k), tS)
       -> LF.Root (loc, LF.Proj (LF.BVar i, k), cnormSpine (tS, t))
 
-    | LF.Root (loc, LF.Proj (LF.PVar (LF.Offset j, s), k), tS)
+    | LF.Root (loc, LF.Proj (LF.PVar (LF.Offset j, s), tupleIndex), tS)
         (* cD' ; cPsi' |- s <= cPsi1 *)
         (* cD          |- t <= cD'   *)         
-      -> begin match applyMSub j t with
+      -> begin
+        let wrap head = LF.Proj (head, tupleIndex) in
+        let newHead =
+          match applyMSub j t with
         | Comp.PObj (_phat, LF.BVar i)   -> 
             (*  i <= phat *) 
             begin match S.bvarSub i (cnormSub (s,t)) with
-              | LF.Head (LF.BVar j)     -> 
-                  LF.Root(loc, LF.Proj (LF.BVar j, k), cnormSpine (tS, t))
-              | LF.Head (LF.PVar (p,r'))-> 
-                  LF.Root(loc, LF.Proj (LF.PVar (p, r'), k), 
-                       cnormSpine (tS, t))
+              | LF.Head (LF.BVar j)      ->  LF.BVar j
+              | LF.Head (LF.PVar (p,r')) ->  LF.PVar (p, r')
                     (* other cases should not happen; 
                        term would be ill-typed *)
             end
-        | Comp.PObj(_phat, LF.Proj (LF.PVar (LF.Offset i, s'), k)) -> 
-	    LF.Root (loc, LF.Proj (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))), k), 
-		  cnormSpine (tS, t))
+        | Comp.PObj(_phat, LF.Proj (LF.PVar (LF.Offset i, s'),  otherTupleIndex)) -> 
+              LF.Proj (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))),  otherTupleIndex)
+
+        | Comp.PObj(_phat, LF.PVar (LF.Offset i, s')) ->
+              wrap (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))))
+
+        | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents= None}, _, _, _) as p, r')) -> 
+              wrap (LF.PVar (p, S.comp r' (cnormSub (s,t))))
+
+        | Comp.PObj(_phat, LF.PVar (LF.PInst _, _s')) ->
+              (print_string "cnorm ...PVar PInst {contents= Some ...}\n"; exit 2)
+        | Comp.PObj(_phat, LF.PVar (_, _s')) ->
+              (print_string "cnorm ...PVar ???\n"; exit 2)
+
+        | Comp.MV  k'            -> wrap (LF.PVar (LF.Offset k', cnormSub (s, t)))
+
+        | Comp.MObj _ ->             (print_string "mobj\n"; exit 2)
+        | Comp.PObj(_phat, LF.Proj (LF.FPVar (_, _s'), _k)) ->  (print_string "PObj FPVar\n"; exit 2)
+        | Comp.PObj(_phat, LF.Proj (LF.PVar (_, _S'), _k)) ->   (print_string "PObj PVar\n"; exit 2)
+        | Comp.PObj(_phat, LF.Proj _) ->   (print_string "PObj other proj\n"; exit 2)
+        | Comp.PObj(_phat, head) -> 
+            let what = match head with 
+              | LF.BVar _ -> "BVar"
+              | LF.Const _ -> "Const"
+              | LF.MVar _ -> "MVar"
+              | LF.PVar _ -> "PVar"
+              | LF.AnnH _ -> "AnnH"
+              | LF.Proj _ -> "Proj"
+              | LF.FVar _ -> "FVar"
+              | LF.FMVar _ -> "FMVar"
+              | LF.FPVar _ -> "FPVar"
+            in
+            (print_string ("QQQQ " ^ what ^  "\n"); exit 2)
+        | Comp.Undef  ->             (print_string "Undef\n"; exit 2)
+        in
+          LF.Root (loc, newHead, cnormSpine (tS, t))
       end
 
   (* Ignore other cases for destructive (free) parameter-variables *)
@@ -502,14 +541,17 @@ and cnorm (tM, t) = match tM with
      cD' ; cPsi' |- tA' <= type   
   *)
   and cnormTyp (tA, t) = match tA with
-    |  LF.Atom (loc, a, tS) ->
-         LF.Atom (loc, a, cnormSpine (tS, t))
+    | LF.Atom (loc, a, tS) ->
+        LF.Atom (loc, a, cnormSpine (tS, t))
 
-    |  LF.PiTyp ((LF.TypDecl (_x, _tA) as decl, dep), tB)
+    | LF.PiTyp ((LF.TypDecl (_x, _tA) as decl, dep), tB)
       -> LF.PiTyp ((cnormDecl (decl, t), dep), cnormTyp (tB, t))
 
-    |  LF.TClo (tA, s)
+    | LF.TClo (tA, s)
       -> LF.TClo(cnormTyp (tA,t), cnormSub (s,t))
+
+    | LF.Sigma recA
+      -> LF.Sigma(cnormTypRec (recA, t))
 
   and cnormTypRec (typRec, t) = match typRec with
     |  LF.SigmaLast lastA -> LF.SigmaLast(cnormTyp (lastA, t))
@@ -574,9 +616,6 @@ let rec cnormDCtx (cPsi, t) = match cPsi with
 
     | LF.DDec(cPsi, decl) ->  
         LF.DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
-
-    | LF.SigmaDec (cPsi, LF.SigmaDecl(x, recA)) -> 
-        LF.SigmaDec(cnormDCtx (cPsi, t), LF.SigmaDecl(x, cnormTypRec (recA, t)))
 
 
 
@@ -1204,6 +1243,9 @@ let rec mctxPVarPos cD p =
     |  LF.TClo (tA, s)
       -> LF.TClo(invTyp (tA,t) d, invSub (s,t) d)
 
+    | LF.Sigma recA -> 
+        LF.Sigma (invTypRec (recA, t) d)
+
 
   and invTypRec (typRec, t) d = match typRec with
     |  LF.SigmaLast lastA -> LF.SigmaLast(invTyp (lastA, t) d)
@@ -1226,9 +1268,6 @@ let rec invDCtx (cPsi, t)  d = match cPsi with
 
     | LF.DDec(cPsi, decl) ->  
         LF.DDec(invDCtx(cPsi, t) d, invDecl(decl, t) d) 
-
-    | LF.SigmaDec (cPsi, LF.SigmaDecl(x, recA)) -> 
-        LF.SigmaDec(invDCtx (cPsi, t) d, LF.SigmaDecl(x, invTypRec (recA, t) d))
 
 
   (* invExp (e, t) = e' 
@@ -1341,7 +1380,7 @@ let rec invDCtx (cPsi, t)  d = match cPsi with
 
 and convSchema (LF.Schema fs) (LF.Schema fs') =  List.for_all2 convSchElem fs fs' 
 
-and convSchElem (LF.SchElem (cPsi, LF.SigmaDecl (_, trec))) (LF.SchElem (cPsi', LF.SigmaDecl (_, trec'))) = 
+and convSchElem (LF.SchElem (cPsi, trec)) (LF.SchElem (cPsi', trec')) = 
     Whnf.convCtx cPsi cPsi'
-    &&
-      Whnf.convTypRec (trec, S.id) (trec', S.id)
+  &&
+    Whnf.convTypRec (trec, S.id) (trec', S.id)

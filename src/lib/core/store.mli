@@ -97,7 +97,7 @@ module BVar : sig
   }
 
   val mk_entry      : name -> entry
-  type t   (* NOTE: t is an ordered data-structure *)  
+  type t   (* NOTE: t is an ordered data structure *)  
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry
@@ -108,7 +108,7 @@ end
 
 
 module FVar : sig
- (* NOTE: FVars are stored in an an ordered data-structure *)  
+ (* NOTE: FVars are stored in an an ordered data structure *)  
   val add   : name -> LF.typ -> unit
   val get   : name -> LF.typ
   val clear : unit -> unit
@@ -117,7 +117,7 @@ end
 
 
 module FMVar : sig
-   (* NOTE: FMVars are stored in an an ordered data-structure *)  
+   (* NOTE: FMVars are stored in an an ordered data structure *)  
   val add   : name -> (LF.typ * LF.dctx) -> unit
   val get   : name -> (LF.typ * LF.dctx)
   val clear : unit -> unit
@@ -126,7 +126,7 @@ end
 
 
 module FPVar : sig
- (* NOTE: FPVars are stored in an an ordered data-structure *)  
+ (* NOTE: FPVars are stored in an an ordered data structure *)  
   val add   : name -> (LF.typ * LF.dctx) -> unit
   val get   : name -> (LF.typ * LF.dctx)
   val clear : unit -> unit
@@ -141,7 +141,7 @@ module Var : sig
   }
 
   val mk_entry      : name -> entry
-  type t  (* NOTE: t is an ordered data-structure *)  
+  type t  (* NOTE: t is an ordered data structure *)  
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry
@@ -157,7 +157,7 @@ module CVar : sig
   }
 
   val mk_entry      : name -> entry
-  type t  (* NOTE: t is an ordered data-structure *)  
+  type t  (* NOTE: t is an ordered data structure *)  
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry

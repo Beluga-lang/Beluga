@@ -23,10 +23,6 @@ let dctxToHat cPsi =
     | DDec (cPsi', _) ->
         let (cVopt, i) = length cPsi' in
           (cVopt, i + 1)
-
-    | SigmaDec (cPsi', _) ->
-        let (cVopt, i) = length cPsi' in
-          (cVopt, i + 1)
   in
     length cPsi
 
@@ -55,12 +51,11 @@ let rec ctxShift cPsi k = match cPsi with
   | CtxVar psi ->
       CtxVar psi
 
+  | DDec (cPsi, TypDecl (x, Sigma tArec)) ->
+      DDec (ctxShift cPsi k, TypDecl (x, Sigma (sigmaShift tArec k)))
+
   | DDec (cPsi, TypDecl (x, tA)) ->
       DDec (ctxShift cPsi k, TypDecl (x, TClo (tA, Shift (NoCtxShift, k))))
-
-  | SigmaDec (cPsi, SigmaDecl (x, tArec)) ->
-      SigmaDec (ctxShift cPsi k, SigmaDecl (x, sigmaShift tArec k))
-
 
 (* ctxDec Psi k = x:A
  *
@@ -81,8 +76,6 @@ let ctxDec cPsi k =
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
 
-    | (SigmaDec (cPsi', SigmaDecl (_x, _tArec)), k') ->
-        ctxDec' (cPsi', k' - 1)
     (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in
     ctxDec' (cPsi, k)
@@ -101,10 +94,10 @@ let ctxSigmaDec cPsi k =
    * where Psi |- ^(k-k') : Psi'', 1 <= k' <= k
    *)
   let rec ctxDec' = function
-    | (SigmaDec (_cPsi', SigmaDecl (x, tArec)), 1) ->
+    | (DDec (_cPsi', TypDecl (x, Sigma tArec)), 1) ->
         SigmaDecl (x, sigmaShift tArec  k) (* ? -bp *)
 
-    | (SigmaDec (cPsi', _), k') ->
+    | (DDec (cPsi', TypDecl (_x, Sigma _)), k') ->
         ctxDec' (cPsi', k' - 1)
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
@@ -127,7 +120,6 @@ let rec ctxVar = function
   | Null                -> None
   | CtxVar   psi        -> Some psi
   | DDec     (cPsi, _x) -> ctxVar cPsi
-  | SigmaDec (cPsi, _x) -> ctxVar cPsi
 
 
 (* append cD1 cD2 = (cD1, cD2) *)
@@ -158,9 +150,7 @@ let rec length cD = match cD with
 let rec getNameDCtx cPsi k = match (cPsi, k) with
   | (DDec (_cPsi, TypDecl (x, _ )), 1) -> x
   | (DDec (_cPsi, TypDeclOpt x) , 1)   -> x
-  | (SigmaDec (_cPsi, SigmaDecl (x, _ )), 1 ) -> x
   | (DDec (cPsi, _ ) , k) -> getNameDCtx cPsi (k-1)
-  | (SigmaDec (cPsi, _ ) , k) -> getNameDCtx cPsi (k-1)
 
 let rec getNameMCtx cD k = match (cD, k) with 
   | (Dec (_cD, MDecl(u, _, _ )), 1) -> u 

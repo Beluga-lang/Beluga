@@ -213,6 +213,9 @@ let rec norm (tM, sigma) = match tM with
             (* other cases are impossible -- at least for now -bp *)
       end
 
+  | Root (loc, Proj (FPVar(p,r), k),  tS) ->
+      Root (loc, Proj (FPVar (p, normSub (LF.comp r sigma)), k), normSpine (tS, sigma))
+
   | Root (loc, Proj (PVar (Offset _i as q, s), k), tS) ->
       Root (loc, Proj (PVar (q, LF.comp s sigma), k), normSpine (tS, sigma))
 
@@ -280,6 +283,9 @@ and normTyp (tA, sigma) = match tA with
 
   | TClo (tA, s) ->
       normTyp (tA, LF.comp s sigma)
+ 
+  | Sigma recA ->
+      Sigma (normTypRec (recA, sigma))
 
 and normTypRec (recA, sigma) = match recA with
   | SigmaLast lastA ->
@@ -307,11 +313,13 @@ let rec normDCtx cPsi = match cPsi with
   | CtxVar psi ->
       CtxVar psi
 
+  | DDec (cPsi1, TypDecl (x, Sigma typrec)) ->
+      let cPsi1 = normDCtx cPsi1 in
+      let typrec = normTypRec (typrec, LF.id) in
+        DDec (cPsi1, TypDecl (x, Sigma typrec))
+
   | DDec (cPsi1, decl) ->
       DDec (normDCtx cPsi1, normDecl (decl, LF.id))
-
-  | SigmaDec (cPsi1, SigmaDecl (x, typrec)) ->
-      SigmaDec (normDCtx cPsi1, SigmaDecl (x, normTypRec (typrec, LF.id)))
 
 
 let rec normCDecl (decl, sigma) = match decl with
@@ -502,6 +510,7 @@ and whnfTyp (tA, sigma) = match tA with
   | Atom (loc, a, tS) -> (Atom (loc, a, SClo (tS, sigma)), LF.id)
   | PiTyp (_cD, _tB)  -> (tA, sigma)
   | TClo (tA, s)      -> whnfTyp (tA, LF.comp s sigma)
+  | Sigma _typRec      -> (tA, sigma)   (* ???? -jd *)
 
 
 (* ----------------------------------------------------------- *)
@@ -693,6 +702,9 @@ let rec convTyp' sA sB = match (sA, sB) with
       (* G |- A1[s1] = A2[s2] by typing invariant *)
       convTyp (tA1, s1) (tA2, s2) && convTyp (tB1, LF.dot1 s1) (tB2, LF.dot1 s2)
 
+  | ((Sigma typrec1, s1), (Sigma typrec2, s2)) ->
+      convTypRec (typrec1, s1) (typrec2, s2)
+
   | _ ->
       false
 
@@ -709,7 +721,7 @@ and convTyp sA sB = convTyp' (whnfTyp sA) (whnfTyp sB)
  * returns true iff recA and recB are convertible where
  *    cD ; cPsi |- [s]recA = [s']recB <= type
  *)
-let rec convTypRec sArec sBrec = match (sArec, sBrec) with
+and convTypRec sArec sBrec = match (sArec, sBrec) with
   | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
       convTyp (lastA, s) (lastB, s')
 
@@ -732,10 +744,10 @@ let rec convDCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (DDec (cPsi1, TypDecl (_, tA)), DDec (cPsi2, TypDecl (_, tB))) ->
       convTyp (tA, LF.id) (tB, LF.id) && convDCtx cPsi1 cPsi2
 
-  | (SigmaDec (cPsi , SigmaDecl(_, typrec )),
+(*  | (SigmaDec (cPsi , SigmaDecl(_, typrec )),
      SigmaDec (cPsi', SigmaDecl(_, typrec'))) ->
       convDCtx cPsi cPsi' && convTypRec (typrec, LF.id) (typrec', LF.id)
-
+*)
   | (_, _) ->
       false
 
@@ -750,7 +762,9 @@ let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
       convTyp (tA, LF.id) (tB, LF.id) && convCtx cPsi1 cPsi2
 
-let rec convSchElem (SchElem(cSome1, SigmaDecl(_, typRec1))) (SchElem(cSome2, SigmaDecl(_, typRec2))) =
+let rec convSchElem (SchElem(cSome1, typRec1))
+                    (SchElem(cSome2, typRec2))
+=
   convCtx cSome1 cSome2 && convTypRec (typRec1, LF.id) (typRec2, LF.id)
 
 (* convHatCtx((psiOpt, l), cPsi) = true iff |cPsi| = |Psihat|

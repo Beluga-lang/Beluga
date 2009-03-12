@@ -1165,21 +1165,29 @@ module Make (T : TRAIL) : UNIFY = struct
     let rec unifyTyp' cD0 (phat, sA, sB) = unifyTypW cD0 (phat, Whnf.whnfTyp sA, Whnf.whnfTyp sB)
 
     and unifyTypW cD0 (phat, sA, sB) = match (sA, sB) with
-      | ((Atom (_, a, tS1), s1), (Atom (_, b, tS2), s2))  ->
+      | ((Atom (_, a, tS1), s1),   (Atom (_, b, tS2), s2))  ->
           if a = b then
             unifySpine cD0 (phat, (tS1, s1), (tS2, s2))
           else
             raise (Unify "Type constant clash")
 
-      | ((PiTyp ((TypDecl (_x, tA1), _), tB1), s1), (PiTyp ((TypDecl (_y, tA2), _ ), tB2), s2)) -> (
+      | ((PiTyp ((TypDecl (_x, tA1), _), tB1), s1),   (PiTyp ((TypDecl (_y, tA2), _ ), tB2), s2)) -> (
           unifyTyp' cD0 (phat, (tA1, s1), (tA2, s2));
           unifyTyp' cD0 (phat, (tB1, dot1 s1), (tB2, dot1 s2))
         )
 
+      | ((Sigma typrec1, s1),   (Sigma typrec2, s2)) -> 
+          begin 
+            dprint (fun () -> "**** typrecs " ^
+                     "\n" ^ P.typRecToString Empty cD0 Null (typrec1, s1) ^
+                     "\n" ^ P.typRecToString Empty cD0 Null (typrec2, s2))
+          ; unifyTypRec' cD0 (phat, (typrec1, s1) ,  (typrec2, s2))
+          end
+
       | _ ->
           raise (Unify "Type clash")
 
-    let rec unifyTypRec' cD0 (phat, sArec, sBrec) = unifyTypRecW cD0 (phat, sArec, sBrec)
+    and unifyTypRec' cD0 (phat, sArec, sBrec) = unifyTypRecW cD0 (phat, sArec, sBrec)
 
     and unifyTypRecW cD0 (phat, srec1, srec2) = match (srec1, srec2) with
       | ((SigmaLast t1, s1) ,  (SigmaLast t2, s2)) ->
@@ -1207,10 +1215,6 @@ module Make (T : TRAIL) : UNIFY = struct
           let phat  = Context.dctxToHat cPsi1 in 
           (unifyDCtx cD0 cPsi1 cPsi2 ; 
            unifyTyp' cD0 (phat, (tA1, id) ,  (tA2, id)))
-      | (SigmaDec (cPsi1, SigmaDecl(_ , typrec1)) , SigmaDec (cPsi2, SigmaDecl(_ , typrec2))) -> 
-          let phat  = Context.dctxToHat cPsi1 in 
-          (unifyDCtx cD0 cPsi1 cPsi2 ; 
-           unifyTypRec' cD0 (phat, (typrec1, id) ,  (typrec2, id)))
       | _ -> raise (Unify "Context clash")
 
 
@@ -1277,7 +1281,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
     let unifyTyp1 cD0 (phat, sA, sB) = 
       (let _ = unifyTyp' cD0 (phat, sA, sB) in 
-       let _ = dprint (fun () -> "unifyTyp1: AWAKE CONSTRAINTS\n") in 
+       let _ = dprint (fun () -> "unifyTyp1: AWAKEN CONSTRAINTS\n") in 
       forceCnstr (nextCnstr ()))
 
 

@@ -52,7 +52,6 @@ module Ext : sig
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
     val fmt_ppr_lf_typ_rec : lvl -> formatter -> LF.typ_rec    -> unit
-    val fmt_ppr_lf_sigma_decl : lvl -> formatter -> LF.sigma_decl    -> unit
     val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx          -> unit
     val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
@@ -73,7 +72,6 @@ module Ext : sig
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
     val ppr_lf_typ_rec : LF.typ_rec    -> unit
-    val ppr_lf_sigma_decl : LF.sigma_decl    -> unit
     val ppr_lf_psi_hat    : LF.psi_hat       -> unit
     val ppr_lf_dctx       : LF.dctx          -> unit
     val ppr_lf_mctx       : LF.mctx          -> unit
@@ -119,7 +117,6 @@ module Int : sig
 
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
-    val fmt_ppr_lf_sigma_decl : LF.mctx -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sigma_decl -> unit
 
     (* val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.psi_hat  -> unit *)
     val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     -> unit
@@ -142,7 +139,6 @@ module Int : sig
 
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
-    val ppr_lf_sigma_decl : LF.mctx -> LF.mctx -> LF.dctx -> LF.sigma_decl    -> unit
 
     (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.mctx -> LF.dctx  -> unit

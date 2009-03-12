@@ -251,11 +251,12 @@ let rec cnstr_ctyp tau =  match tau  with
   | Comp.TypBox (tA, cPsi) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
 
 and cnstr_typ sA = match sA with
-  | (I.Atom  (_, _a, spine), s)  -> cnstr_spine (spine , s)
+  | (I.Atom  (_, _a, spine),  s)  -> cnstr_spine (spine , s)
 
-  | (I.PiTyp ((t_decl, _ ), tB), s) -> 
+  | (I.PiTyp ((t_decl, _ ), tB),  s) -> 
       cnstr_typ_decl (t_decl, s) && cnstr_typ (tB, LF.dot1 s)
 
+  | (I.Sigma t_rec,  s) -> cnstr_typ_rec (t_rec, s)
 
 and cnstr_term sM = match sM with
   | (I.Lam(_ , _x , tM), s) -> cnstr_term (tM, LF.dot1 s) 
@@ -299,19 +300,16 @@ and cnstr_dctx cPsi = match cPsi with
   | I.Null -> false
   | I.CtxVar _ -> false
   | I.DDec (cPsi, t_decl) -> cnstr_dctx cPsi && cnstr_typ_decl (t_decl, LF.id)
-  | I.SigmaDec (cPsi, s_decl) -> cnstr_dctx cPsi && cnstr_sigma_decl s_decl
 
 
 and cnstr_typ_decl st_decl = match st_decl with
   | (I.TypDecl (_ , tA), s) -> cnstr_typ (tA, s)
   | _ -> false
 
-and cnstr_sigma_decl s_decl = match s_decl with
-  | I.SigmaDecl (_, t_rec) -> cnstr_typ_rec t_rec
 
-and cnstr_typ_rec t_rec = match t_rec with
-  | I.SigmaLast tA -> cnstr_typ (tA, LF.id)
-  | I.SigmaElem (_, tA, t_rec) -> cnstr_typ (tA, LF.id) && cnstr_typ_rec t_rec
+and cnstr_typ_rec (t_rec, s) = match t_rec with
+  | I.SigmaLast tA -> cnstr_typ (tA, s)
+  | I.SigmaElem (_, tA, t_rec) -> cnstr_typ (tA, s) && cnstr_typ_rec (t_rec, s)
 
 
 
@@ -572,17 +570,24 @@ and collectHead cQ phat sH = match sH with
 
             I.Dec (cQ'', FPV (u, Some (tA, cPhi)))
 
+  | (I.Proj (head, _k),  s) ->
+      let cQ' = collectHead cQ phat (head, s)  in
+        cQ'
+
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
   | (I.Atom (_, _a, tS), s) ->
       collectSpine cQ phat (tS, s)
 
-  | (I.PiTyp ((I.TypDecl (_, tA), _ ), tB), s) ->
+  | (I.PiTyp ((I.TypDecl (_, tA), _ ), tB),  s) ->
       let cQ' = collectTyp cQ phat (tA, s) in
         collectTyp cQ' (cvar, offset + 1) (tB, LF.dot1 s)
 
-  | (I.TClo (tA, s'), s) ->
+  | (I.TClo (tA, s'),  s) ->
       collectTyp cQ phat (tA, LF.comp s' s)
+
+  | (I.Sigma typRec,  s) ->
+      collectTypRec cQ phat (typRec, s)
 
 
 and collectTypRec cQ ((cvar, offset) as phat) = function
@@ -609,10 +614,6 @@ and collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with
   | I.DDec(cPsi, I.TypDecl(_, tA)) ->
       let cQ' =  collectDctx cQ (cvar, offset - 1) cPsi in 
         collectTyp cQ' (cvar, offset - 1) (tA, LF.id)
-
-  | I.SigmaDec(cPsi, I.SigmaDecl(_, typRec)) ->
-      let cQ' =  collectDctx cQ (cvar, offset - 1) cPsi in 
-        collectTypRec cQ' (cvar, offset - 1) (typRec, LF.id)
 
 let rec collectMctx cQ cD = match cD with
   | I.Empty -> cQ
@@ -802,6 +803,11 @@ and abstractMVarTypW cQ offset sA = match sA with
       I.PiTyp ((I.TypDecl (x, abstractMVarTyp cQ offset (tA, s)), dep), 
                abstractMVarTyp cQ offset (tB, LF.dot1 s))
 
+  | (I.Sigma typRec,  s) ->
+      let typRec'   = abstractMVarTypRec cQ offset (typRec, s) in
+        I.Sigma typRec'
+
+
 and abstractMVarTypRec cQ offset = function
   | (I.SigmaLast tA, s) -> I.SigmaLast (abstractMVarTyp cQ offset (tA, s))
   | (I.SigmaElem(x, tA, typRec), s) ->
@@ -850,6 +856,10 @@ and abstractMVarHead cQ offset tH = match tH with
   | I.AnnH (_tH, _tA) ->
       raise NotImplemented
 
+  | I.Proj (head, k) ->
+      let head = abstractMVarHead cQ offset head in   (* ??? -jd *)
+        I.Proj (head, k)
+
   | I.PVar (I.Offset p , s) -> 
       I.PVar (I.Offset p, abstractMVarSub cQ offset s)
 
@@ -886,11 +896,6 @@ and abstractMVarDctx cQ offset cPsi = match cPsi with
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
         I.DDec (cPsi', I.TypDecl (x, tA'))
-
-  | I.SigmaDec (cPsi, I.SigmaDecl (x, typRec)) ->
-      let cPsi' = abstractMVarDctx cQ offset cPsi in
-      let typRec'   = abstractMVarTypRec cQ offset (typRec, LF.id) in
-        I.SigmaDec (cPsi', I.SigmaDecl (x, typRec'))
 
 and abstractMVarMctx cQ cD offset = match cD with
   | I.Empty -> I.Empty

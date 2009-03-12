@@ -38,6 +38,7 @@ module Ext : sig
       | Atom   of Loc.t * name * spine
       | ArrTyp of Loc.t * typ      * typ
       | PiTyp  of Loc.t * typ_decl * typ
+      | Sigma of Loc.t * typ_rec
 
     and normal =
       | Lam  of Loc.t * name * normal
@@ -65,15 +66,14 @@ module Ext : sig
       | Head     of head
       | Normal   of normal
 
-    and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
-      |  SigmaLast of typ                             (* ... . B *)
-      |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
+    and typ_rec =               (* Sigma x1:A1 ... xn:An. B *)
+      | SigmaLast of typ                          (* ... . B *)
+      | SigmaElem of name * typ * typ_rec         (* xk : Ak, ... *)
 
     and dctx =
       | Null
       | CtxVar   of name
       | DDec     of dctx * typ_decl
-      | SigmaDec of dctx * sigma_decl
 
     and tuple =
       | Last of normal
@@ -84,7 +84,7 @@ module Ext : sig
       | Dec of 'a ctx * 'a
 
     and sch_elem =
-      | SchElem of Loc.t * typ_decl ctx * sigma_decl
+      | SchElem of Loc.t * typ_decl ctx * typ_rec
 
     and schema =
       | Schema of sch_elem list
@@ -97,7 +97,7 @@ module Ext : sig
       | NamePrag of name * string * string option 
       | NotPrag
 
-  end
+  end (* Ext.LF *)
 
 
 
@@ -141,7 +141,7 @@ module Ext : sig
 (*           * exp_chk *)
 
 
-  end
+  end (* Ext.Comp *)
 
 
 
@@ -157,9 +157,9 @@ module Ext : sig
 
     type sgn = decl list
 
-  end
+  end (* Ext.Sgn *)
 
-end
+end (* Ext *)
 
 (** Internal Syntax *)
 module Int : sig
@@ -194,6 +194,7 @@ module Int : sig
     and typ =
       | Atom  of Loc.t option * cid_typ * spine
       | PiTyp of (typ_decl * depend) * typ
+      | Sigma of typ_rec
       | TClo  of (typ * sub)
       | TVar  of tvar * sub                
 
@@ -254,7 +255,6 @@ module Int : sig
       | Null
       | CtxVar   of ctx_var
       | DDec     of dctx * typ_decl
-      | SigmaDec of dctx * sigma_decl
 
     and tuple =
       | Last of normal
@@ -269,7 +269,7 @@ module Int : sig
       | Dec of 'a ctx * 'a
 
     and sch_elem =
-      | SchElem of typ_decl ctx * sigma_decl
+      | SchElem of typ_decl ctx * typ_rec
 
     and schema =
       | Schema of sch_elem list
@@ -295,7 +295,10 @@ module Int : sig
     type prag =
       | NamePrag of cid_typ 
       | NotPrag
-  end
+
+    (* getType head s_recA target 1 *)
+    val getType : head -> trec_clo -> int -> int -> tclo
+  end (* Int.LF *)
 
 
 
@@ -361,7 +364,7 @@ module Int : sig
     type gctx = ctyp_decl LF.ctx
     type tclo = typ  * msub
 
-  end
+  end (* Int.Comp *)
 
 
 
@@ -376,9 +379,9 @@ module Int : sig
 
     type sgn = decl list
 
-  end
+  end (* Int.Sgn *)
 
-end
+end (* Int *)
 
 (** Approximate Simple Syntax *)
 module Apx : sig
@@ -406,6 +409,7 @@ module Apx : sig
     and typ =
       | Atom  of Loc.t * cid_typ * spine
       | PiTyp of (typ_decl * depend) * typ
+      | Sigma of typ_rec
 
     and typ_rec =
       | SigmaLast of typ
@@ -449,7 +453,6 @@ module Apx : sig
       | Null
       | CtxVar   of ctx_var
       | DDec     of dctx * typ_decl
-      | SigmaDec of dctx * sigma_decl
 
     and ctx_var = 
       | CtxName   of name
@@ -461,13 +464,13 @@ module Apx : sig
       | Dec of 'a ctx * 'a
 
     and sch_elem =
-      | SchElem of typ_decl ctx * sigma_decl
+      | SchElem of typ_decl ctx * typ_rec
 
     and schema =
       | Schema of sch_elem list
 
     and psi_hat = (Int.LF.ctx_var) option * offset
-  end
+  end (* Apx.LF *)
 
   module Comp : sig
 
@@ -503,6 +506,7 @@ module Apx : sig
           * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
-  end
+  end (* Apx.Comp *)
 
-end
+end (* Apx *)
+

@@ -123,7 +123,6 @@ GLOBAL: sgn_eoi;
 
 
         ]
-
     ]
   ;
 
@@ -206,9 +205,10 @@ GLOBAL: sgn_eoi;
   lf_schema_elem:
     [
       [
-        some = lf_schema_some; arec = lf_typ_rec_toplevel ->
-          LF.SchElem (_loc, List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some,
-                 LF.SigmaDecl (Id.mk_name Id.NoName, arec))
+        some = lf_schema_some; arec = lf_typ_rec ->
+          LF.SchElem (_loc,
+                      List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some,
+                      arec)
       ]
     ]
   ;
@@ -223,17 +223,23 @@ GLOBAL: sgn_eoi;
    ] 
 ;
 
-  lf_typ_rec_toplevel:
+lf_typ_rec_block:
+[[
+      "block"; a_list = LIST1 lf_typ_rec_elem SEP ","; "."; a_last = lf_typ LEVEL "atomic"
+        -> (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last))
+]];
+
+lf_typ_rec:
+  [
     [
-      [
-        "block"; a_list = LIST1 lf_typ_rec_elem SEP ","; "."; a_last = lf_typ
-         -> List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last)
-      | 
+        b = lf_typ_rec_block
+        -> b
+    | 
         a = lf_typ
-         -> LF.SigmaLast a
-      ]
+        -> LF.SigmaLast a
     ]
-  ;
+  ]
+;
 
 
   lf_typ_rec_elem:
@@ -268,7 +274,7 @@ GLOBAL: sgn_eoi;
     [
       [
         "{"; hash = "#"; p = SYMBOL; "::"; 
-         tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]"; "}" ->
+         tA = (clf_typ LEVEL "sigma"); "["; cPsi = clf_dctx; "]"; "}" ->
                 LF.PDecl (_loc, Id.mk_name (Id.SomeString p), tA, cPsi)
 
 
@@ -298,6 +304,18 @@ GLOBAL: sgn_eoi;
           a = SYMBOL; ms = LIST0 (clf_term LEVEL "atomic") ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
+        ]
+    | "sigma"
+        [
+          "("; a = SELF; ")" ->
+            a    
+        | 
+          a = SYMBOL; ms = LIST0 (clf_term LEVEL "atomic") ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
+        |
+          typRec = lf_typ_rec_block
+          ->  LF.Sigma (_loc, typRec)
         ]
     ]
   ;
@@ -408,16 +426,18 @@ GLOBAL: sgn_eoi;
 
       |  x = SYMBOL; ":"; tA = clf_typ ->
           LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
-      |
-         x = SYMBOL; ":"; typRec = lf_typ_rec_toplevel ->
+(*      |
+         x = SYMBOL; ":"; typRec = lf_typ_rec ->
           LF.SigmaDec (LF.Null, LF.SigmaDecl (Id.mk_name (Id.SomeString x), typRec))
+*)
 
       |
         cPsi = clf_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->
           LF.DDec (cPsi, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
-      |
-        cPsi = clf_dctx; ","; x = SYMBOL; ":"; typRec = lf_typ_rec_toplevel ->
+(*      |
+        cPsi = clf_dctx; ","; x = SYMBOL; ":"; typRec = lf_typ_rec ->
           LF.SigmaDec (cPsi, LF.SigmaDecl (Id.mk_name (Id.SomeString x), typRec))
+*)
       ]
     ]
   ;

@@ -110,22 +110,19 @@ module LF = struct
         let TypDecl (_, tA) = ctxDec cPsi k' in
           tA
 
-    | Proj (BVar k', target) ->
-        let SigmaDecl (_, recA) = ctxSigmaDec cPsi k' in
-          (* getType traverses the type from left to right;
-             target is relative to the remaining suffix of the type *)
-        let rec getType s_recA target j = match (s_recA, target) with
-          | ((SigmaLast lastA, s), 1) ->
-              TClo (lastA, s)
-
-          | ((SigmaElem (_x, tA, _recA), s), 1) -> 
-              TClo (tA, s)
-
-          | ((SigmaElem (_x, _tA, recA), s), target) ->
-              let tPj = Root (None, Proj (BVar k', j), Nil) in
-                getType (recA, Dot (Obj tPj, s)) (target - 1) (j + 1)
+    | Proj (tuple_head, target) ->
+        let srecA = match tuple_head with
+          | BVar k' ->
+              let SigmaDecl (_, recA) = ctxSigmaDec cPsi k' in
+                (recA, LF.id)
+          | PVar (Offset p, s) ->
+              begin let (tTuple, cPsi') = Cwhnf.mctxPDec cD p in
+                checkSub cO cD cPsi s cPsi';
+                match tTuple with
+                    Sigma recA -> (recA, s)
+              end
         in
-          getType (recA, LF.id) target 1
+          TClo (getType tuple_head srecA target 1)
 
     (* Missing cases?  Tue Sep 30 22:09:27 2008 -bp
      *
@@ -184,23 +181,34 @@ module LF = struct
 
     (* SVar case to be added - bp *)
 
-    | (DDec (cPsi, _tX), Shift (psi, k), Null) ->
+    | (DDec (cPsi, _tX),  Shift (psi, k),  Null) ->
         if k > 0 then
           checkSub cO cD cPsi (Shift (psi, k - 1)) Null
         else
           raise (Error (None, SubIllTyped))
 
-    | (DDec (cPsi, _tX), Shift (phi, k), CtxVar psi) ->
+    | (DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi) ->
         if k > 0 then
           checkSub cO cD cPsi (Shift (phi, k - 1)) (CtxVar psi)
         else
-          raise (Violation ("Substitution illtyped: k = %s" ^ (string_of_int k)))
+          raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
           (* (SubIllTyped) *)
 
-    | (cPsi', Shift (psi, k), cPsi) ->
+    | (cPsi',  Shift (psi, k),  cPsi) ->
         checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
 
-    | (cPsi', Dot (Head h, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
+    | (cPsi',  Dot (Head (BVar w), t),  DDec (cPsi, TypDecl(_, Sigma arec))) ->
+        (* other heads of type Sigma disallowed -bp *)
+        let _ = checkSub cO cD cPsi' t cPsi
+          (* ensures that t is well-typed before comparing types BRec = [t]ARec *)
+        and SigmaDecl (_, brec) = ctxSigmaDec cPsi' w in
+          if not (Whnf.convTypRec (brec, LF.id) (arec, t)) then
+            raise (Violation "Sigma-type ill-typed")
+            (* (SigmaIllTyped (cD, cPsi', (brec, LF.id), (arec, t))) *)
+
+    (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
+
+    | (cPsi',  Dot (Head h, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
         (* changed order of subgoals here Sun Dec  2 12:14:27 2001 -fp *)
         let _   = checkSub cO cD cPsi' s' cPsi
           (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
@@ -208,7 +216,7 @@ module LF = struct
           if Whnf.convTyp (tA1, LF.id) (tA2, s') then
             ()
           else
-            let _ = Printf.printf " Inferred type: %s \n Expected type: %s \n\n"
+            let _ = Printf.printf " Inferred type: %s\n Expected type: %s\n\n"
               (P.typToString cO cD cPsi (tA1, LF.id))
               (P.typToString cO cD cPsi (tA2, s')) in
               raise (Error (None, SubIllTyped))
@@ -216,27 +224,13 @@ module LF = struct
                    raise (TypMismatch (cPsi', sM, (tA2, s'), (tA1, LF.id)))
                 *)
 
-    | (cPsi', Dot (Head (BVar w), t), SigmaDec (cPsi, (SigmaDecl (_, arec)))) ->
-        (* other heads of type Sigma disallowed -bp *)
-        let _ = checkSub cO cD cPsi' t cPsi
-          (* ensures that t is well-typed before comparing types BRec = [t]ARec *)
-        and SigmaDecl (_, brec) = ctxSigmaDec cPsi' w in
-          if Whnf.convTypRec (brec, LF.id) (arec, t) then
-            ()
-          else
-            raise (Violation "Sigma-type illtyped")
-            (* (SigmaIllTyped (cD, cPsi', (brec, LF.id), (arec, t))) *)
-
-    (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
-
-
-    | (cPsi', Dot (Obj tM, s'), DDec (cPsi, (TypDecl (_, tA2)))) ->
+    | (cPsi',  Dot (Obj tM, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
         (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
         let _ = checkSub cO cD cPsi' s' cPsi in
           (* ensures that s' is well-typed and [s']tA2 is well-defined *)
           check cO cD cPsi' (tM, LF.id) (tA2, s')
 
-    | (cPsi1, s, cPsi2) ->
+    | (cPsi1,  s,  cPsi2) ->
         Printf.printf "\n Check substitution: %s   |-    %s    <= %s  \n\n"
           (P.dctxToString cO cD cPsi1)
           (P.subToString cO cD cPsi1 s)
@@ -280,8 +274,8 @@ module LF = struct
    *
    * succeeds iff cD ; cPsi |- [s]tA <= type
    *)
-  let rec checkTyp' cO cD cPsi sA = match sA with
-    | (Atom (loc, a, tS), s) ->
+  let rec checkTyp' cO cD cPsi (tA, s) = match tA with
+    | Atom (loc, a, tS) ->
         (* FIXME -bp *)
         let tK = (Typ.get a).Typ.kind in
         begin try
@@ -294,9 +288,11 @@ module LF = struct
           raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, LF.id)))))
         end
 
-    | (PiTyp ((TypDecl (x, tA), _), tB), s) ->
+    | PiTyp ((TypDecl (x, tA), _), tB) ->
         checkTyp cO cD cPsi (tA, s);
         checkTyp cO cD (DDec (cPsi, TypDecl (x, TClo (tA, s)))) (tB, LF.dot1 s)
+
+    | Sigma arec -> checkTypRec cO cD cPsi (arec, s)
 
   and checkTyp cO cD cPsi sA = checkTyp' cO cD cPsi (Whnf.whnfTyp sA)
 
@@ -307,7 +303,7 @@ module LF = struct
    *
    * succeeds iff cO cD ; cPsi |- [s]recA <= type
    *)
-  let rec checkTypRec cO cD cPsi (typRec, s) = match typRec with
+  and checkTypRec cO cD cPsi (typRec, s) = match typRec with
     | SigmaLast lastA ->
         checkTyp cO cD cPsi (lastA, s)
 
@@ -343,16 +339,6 @@ module LF = struct
     | TypDecl (_, tA) -> checkTyp cO cD cPsi (tA, s)
 
 
-  (* checkSigmaDec cO cD cPsi (x:recA, s)
-   *
-   * Invariant:
-   *
-   * succeeds iff cO ; cD ; cPsi |- [s]recA <= type
-   *)
-  and checkSigmaDec cO cD cPsi (sigma_decl, s) = match sigma_decl with
-    | SigmaDecl (_, arec) -> checkTypRec cO cD cPsi (arec, s)
-
-
   (* checkDCtx cO cD cPsi
    *
    * Invariant:
@@ -364,10 +350,6 @@ module LF = struct
     | DDec (cPsi, tX)     ->
         checkDCtx cO cD cPsi;
         checkDec cO cD cPsi (tX, LF.id)
-
-    | SigmaDec (cPsi, tX) ->
-        checkDCtx cO cD cPsi;
-        checkSigmaDec cO cD cPsi (tX, LF.id)
 
     | CtxVar (CtxOffset psi_offset)  ->
         if psi_offset <= (Context.length cO) then
@@ -741,8 +723,18 @@ module Comp = struct
   *   sch = full schema, for error messages
   *   elements = elements to be tried
   *)
-  and checkTypeAgainstSchema cO cD cPsi tA sch =
-
+  and checkTypeAgainstSchema cO cD cPsi tA sch elements =
+    (* if tA is not a Sigma, "promote" it to a one-element typRec *)
+    let tArec =
+      match tA with
+        | I.Sigma tArec -> tArec
+        | nonsigma -> I.SigmaLast nonsigma
+    in
+    let _ = dprint (fun () ->
+                      "checkTypeAgainstSchema "
+                    ^ P.typRecToString cO cD cPsi (tArec, S.LF.id)
+                    ^ "  against  "
+                    ^ P.schemaToString (I.Schema elements)) in
     let rec projectCtxIntoDctx = function
       | I.Empty -> 
           I.Null
@@ -751,28 +743,31 @@ module Comp = struct
           I.DDec (projectCtxIntoDctx rest, last)
 
     and checkAgainstElement (I.SchElem (some_part, block_part)) = 
+      let _ = dprint (fun () -> "checkAgainstElement  "
+                        ^ P.typRecToString cO cD cPsi (block_part, S.LF.id)
+                        ^ "\n   " ^ P.schemaToString (I.Schema elements)) in
       match (some_part, block_part) with
-          (cSomeCtx, I.SigmaDecl (_name, I.SigmaLast elem1)) ->
+        | (cSomeCtx, elemRec) ->
             let dctx        = projectCtxIntoDctx cSomeCtx in
             let dctxSub     = ctxToSub dctx in
             let _           = dprint (fun () -> "checkAgainstElement  " ^ P.subToString cO cD cPsi dctxSub) in
-
             let phat        = dctxToHat cPsi in
-
-              dprint (fun () -> "***Unify.unifyTyp ("
+            begin
+              dprint (fun () -> "***Unify.unifyTypRec ("
                         ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
                         ^ "\n   " ^ P.typToString cO cD cPsi (tA, S.LF.id)  
-                        ^ "\n== " ^ P.typToString cO cD cPsi (elem1, dctxSub) );
+                        ^ "\n== " ^ P.typRecToString cO cD cPsi (elemRec, dctxSub) );
               try
                 (* Unify.unifyTyp cD (phat, (normedA, S.LF.id), (normedElem1, dctxSub)) *)
-                Unify.unifyTyp cD (phat, (tA, S.LF.id), (elem1, dctxSub))
+                Unify.unifyTypRec cD (phat, (tArec, S.LF.id), (elemRec, dctxSub))
               with exn ->
                 dprint (fun () -> "Type " 
                           ^ P.typToString cO cD cPsi (tA, S.LF.id) ^ " doesn't unify with " 
-                          ^ P.typToString cO cD cPsi (elem1, dctxSub));
+                          ^ P.typRecToString cO cD cPsi (elemRec, dctxSub));
                 raise exn
+            end
     in
-      function
+      match elements with
         | [] -> 
             raise (Violation ("Type " ^ P.typToString cO cD cPsi (tA, S.LF.id) ^ " doesn't check against schema " ^ P.schemaToString sch))
         | element :: elements ->
@@ -788,7 +783,7 @@ module Comp = struct
 
     and checkAgainstElement (I.SchElem (some_part, block_part)) =
       match (some_part, block_part) with
-          (cSomeCtx, I.SigmaDecl (_, sigma)) ->
+          (cSomeCtx, sigma) ->
             let dctx = projectCtxIntoDctx cSomeCtx in 
             let dctxSub = ctxToSub dctx in
             let _ = dprint (fun () -> "TypRec:checkAgainstElement  " ^ P.subToString cO cD dctx dctxSub) in
@@ -844,7 +839,7 @@ module Comp = struct
   and checkSchema cO cD cPsi (I.Schema elements as schema) =
     dprint (fun () -> "checkSchema " ^ P.octxToString cO ^ " ... " 
               ^ P.dctxToString cO cD cPsi ^ " against " ^ P.schemaToString schema);
-    print_string "\n WARNING: Schema checking not fully implemented\n";
+    print_string " WARNING: Schema checking not fully implemented\n";
     match cPsi with
       | I.Null -> ()
       | I.CtxVar phi ->
@@ -858,23 +853,14 @@ module Comp = struct
           in
           let lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi) in
           let I.Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
-            if List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements then
-              ()
-            else
+            if not (List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements) then
               raise (Error (E.CtxVarMismatch (cO, phi, schema)))
       | I.DDec (cPsi', decl) ->
           begin
-            checkSchema cO cD cPsi' schema;
-            match decl with
+            checkSchema cO cD cPsi' schema
+          ; match decl with
               | I.TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA schema elements
           end
-
-     | I.SigmaDec (cPsi', decl) ->
-         begin
-           checkSchema cO cD cPsi' schema;
-           match decl with
-             | I.SigmaDecl (_x, typRec) -> checkTypRecAgainstSchema cO cD cPsi' typRec schema elements
-         end
   
 end
 

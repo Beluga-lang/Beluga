@@ -60,11 +60,21 @@ module Cid = struct
     let rec gen_var_name tA = match tA with 
       | Int.LF.Atom (_, a, _ ) -> var_gen a
       | Int.LF.PiTyp(_, tA) -> gen_var_name tA
+      | Int.LF.Sigma typRec -> gen_var_name_typRec typRec
+
+    and gen_var_name_typRec = function
+      | Int.LF.SigmaLast tA -> gen_var_name tA
+      | Int.LF.SigmaElem(_, _, rest) -> gen_var_name_typRec rest
 
     let rec gen_mvar_name tA = match tA with 
       | Int.LF.Atom (_, a, _ ) -> mvar_gen a
       | Int.LF.PiTyp(_, tA)    -> gen_mvar_name tA
       | Int.LF.TClo(tA, _)     -> gen_mvar_name tA
+      | Int.LF.Sigma typRec    -> gen_mvar_name_typRec typRec
+
+    and gen_mvar_name_typRec = function
+      | Int.LF.SigmaLast tA -> gen_mvar_name tA
+      | Int.LF.SigmaElem(_, _, rest) -> gen_mvar_name_typRec rest
 
 
     let clear () =

@@ -164,7 +164,7 @@ let main () =
               abort_session ()
 
           | Check.LF.Violation str ->
-              printf "Error (\"Violation\") (Checking): %s\n@?" str;
+              printf "Error (\"Violation\") (Checking): %s\n" str;
               abort_session ()
 
           | Context.Error err ->
@@ -183,7 +183,7 @@ let main () =
               abort_session ()
 
           | Abstract.Error str ->
-              printf "Error (Abstraction): %s\n@?" str;
+              printf "Error (Abstraction): %s\n" str;
               abort_session ()
 
 

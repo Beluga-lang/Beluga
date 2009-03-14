@@ -94,11 +94,6 @@ module Ext = struct
       | NamePrag of name * string * string option 
       | NotPrag
 
-    let rec nth typRec n = match (typRec, n) with
-      | (SigmaLast  tA, 1) -> tA
-      | (SigmaLast _tA, _) -> raise (Failure "typRec nth")
-      | (SigmaElem(_,  tA, _rest), 1) -> tA
-      | (SigmaElem(_, _tA,  rest), n) -> nth rest (n - 1)
   end
 
 
@@ -316,7 +311,7 @@ module Int = struct
       | NamePrag of cid_typ 
       | NotPrag
 
-    (* getType traverses the type from left to right;
+    (* getType traverses the typ_rec from left to right;
        target is relative to the remaining suffix of the type *)
     let rec getType head s_recA target j = match (s_recA, target) with
       | ((SigmaLast lastA, s), 1) ->

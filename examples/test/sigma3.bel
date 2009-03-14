@@ -8,17 +8,29 @@ un : tp.
 schema w = block x:nat. nat;
 schema tps = tp;
 
-rec f : {g:(w)*} nat[g] -> nat[g] =
-  FN g => fn e =>
-    case e of
-{#p::(block x:nat. nat)[g]}
-      [g] #p.1 .. => [g] #p.2 ..
-;
+% rec f : {g:(w)*} nat[g] -> nat[g] =
+%   FN g => fn e =>
+%     case e of
+% {#p::(block x:nat. nat)[g]}
+%       [g] #p.1 .. => [g] #p.2 ..
+% ;
 
-rec ffff : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
-  FN g => FN h => fn eNat => fn eTp =>
-%    case eTp of
+% rec qqqq : nat[x:block y:nat.nat] -> nat[x:block y:nat.nat] =   fn eNat => case eNat of
+%       [x:block y:nat.nat] x.1 => [x] x.2
+% ;
+
+ rec ffff : {h:(tps)*} nat[h, extras:tp] -> nat[h] =
+   FN h => fn eNat =>
     case eNat of
-      [g] #p.1 .. => [g] z %[g] #p.1 ..
-%      [h] #p.1 .. => [g] z %[g] #p.1 ..
-;
+       [h, extras:tp] #pp .. => [h] #pp ..
+ ;
+
+
+
+% rec ffff : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
+%   FN g => FN h => fn eNat => fn eTp =>
+%    case eNat of
+%       [g] #pp.1 .. => [g] #pp.2 ..
+%
+% %%      case eTp of [h] #pp.1 .. => [g] z             % Should fail: tps not sigma at all
+% ;

@@ -8,29 +8,54 @@ un : tp.
 schema w = block x:nat. nat;
 schema tps = tp;
 
-% rec f : {g:(w)*} nat[g] -> nat[g] =
-%   FN g => fn e =>
-%     case e of
-% {#p::(block x:nat. nat)[g]}
-%       [g] #p.1 .. => [g] #p.2 ..
-% ;
+rec f : {g:(w)*} nat[g] -> nat[g] =
+  FN g => fn e =>
+    case e of
+{#p::(block x:nat. nat)[g]}
+      [g] #p.1 .. => [g] #p.2 ..
+;
 
-% rec qqqq : nat[x:block y:nat.nat] -> nat[x:block y:nat.nat] =   fn eNat => case eNat of
-%       [x:block y:nat.nat] x.1 => [x] x.2
-% ;
+rec qqqq : nat[x:block y:nat.nat] -> nat[x:block y:nat.nat] =   fn eNat => case eNat of
+       [x:block y:nat.nat] x.1 => [x] x.2
+;
 
- rec ffff : {h:(tps)*} nat[h, extras:tp] -> nat[h] =
+%not
+rec ffff1 : {h:(tps)*} nat[h, extras:tp] -> nat[h] =
    FN h => fn eNat =>
-    case eNat of
+     case eNat of
        [h, extras:tp] #pp .. => [h] #pp ..
- ;
+       % #pp must be a nat, but nat does not appear in contexts of the form [h, extras:tp]
+;
 
 
+%not
+rec ffff2 : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
+  FN g => FN h => fn eNat => fn eTp =>
+    case eNat of
+      [g] #pp.1 .. => [g] #pp ..      % type error: #pp is `block _:nat.nat', not `nat'
+;
 
-% rec ffff : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
-%   FN g => FN h => fn eNat => fn eTp =>
-%    case eNat of
-%       [g] #pp.1 .. => [g] #pp.2 ..
-%
-% %%      case eTp of [h] #pp.1 .. => [g] z             % Should fail: tps not sigma at all
-% ;
+rec ffff2-a : {h:(tps)*} tp[h] -> tp[h] =
+  FN h => fn eTp =>
+    case eTp of
+      [h] #q .. => [h] #q ..
+;
+
+%not
+rec ffff2-a-misspell : {h:(tps)*} tp[h] -> tp[h] =
+  FN h => fn eTp =>
+    case eTp of
+      [g] #q .. => [g] #q ..        % Unknown context variable in context: g
+;
+
+%not
+rec ffff3 : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
+  FN g => FN h => fn eNat => fn eTp =>
+    case eTp of [h] #pp.1 .. => [g] z             % Fails: tps doesn't include any Sigmas
+;
+
+rec ffff4 : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
+  FN g => FN h => fn eNat => fn eTp =>
+    case eNat of
+      [g] #pp'.1 .. => [g] #pp'.2 ..
+;

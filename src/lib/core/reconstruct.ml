@@ -97,7 +97,7 @@ let rec index_kind cvars bvars = function
 and index_typ cvars bvars = function
   | Ext.LF.Atom (loc, a, s) ->
       begin try 
-        let _        = dprint (fun () -> "\n Indexing type constant " ^ a.string_of_name ^ "\n") in 
+        let _        = dprint (fun () -> "Indexing type constant " ^ a.string_of_name) in 
         let a' = Typ.index_of_name a in
         and s' = index_spine cvars bvars s in
           Apx.LF.Atom (loc, a', s')
@@ -696,6 +696,15 @@ and lookupCtxVar = function
 
 and elTerm' recT cO cD cPsi r sP = match r with
   | Apx.LF.Root (loc,  Apx.LF.Proj ((Apx.LF.FPVar (p, s) as _head), k),  Apx.LF.Nil) as m ->
+      begin try
+        let (offset, (_tA, cPhi)) = Cwhnf.mctxPVarPos cD p  in
+          
+        let s'' = elSub recT cO cD cPsi s cPhi in
+          Int.LF.Root (Some loc,
+                       Int.LF.Proj (Int.LF.PVar (Int.LF.Offset offset, s''), k),
+                       Int.LF.Nil)
+            
+      with Cwhnf.Fmvar_not_found ->
         begin try
           let (_tA, cPhi) = FPVar.get p in
           let s'' = elSub recT cO cD cPsi s cPhi in
@@ -725,22 +734,23 @@ and elTerm' recT cO cD cPsi r sP = match r with
                    *)
                   FPVar.add p (tP, cPhi);
                   Int.LF.Root (Some loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k),  Int.LF.Nil)
-            
+                    
             | false ->
                 let q = Whnf.newPVar (cPsi, Int.LF.TClo sP) in
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (Some loc,  Int.LF.Proj (Int.LF.PVar (q, LF.id), k),  Int.LF.Nil)
+          end
         end
       end
-
+  
   | Apx.LF.Root (loc,  Apx.LF.Proj (tuple_r, k),  Apx.LF.Nil) ->
        let Int.LF.Root(_, internal_tuple_r, _) =
          elTerm' recT cO cD cPsi (Apx.LF.Root(loc, tuple_r, Apx.LF.Nil)) sP
       in
        let _ = dprint(fun () -> "elTerm' Proj\n"
-                       ^ "tP (under s) = " ^ P.typToString cO cD cPsi sP ^ "\n"
-                        ^ "        cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n"
-                        ^ "internal_tuple_r = " ^ P.headToString cO cD cPsi internal_tuple_r ^ "\n"
+                       ^ "    tP (under s) = " ^ P.typToString cO cD cPsi sP ^ "\n"
+                       ^ "            cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n"
+                       ^ "internal_tuple_r = " ^ P.headToString cO cD cPsi internal_tuple_r ^ "\n"
                      )
        in
          Int.LF.Root (Some loc,  Int.LF.Proj (internal_tuple_r, k),  Int.LF.Nil)
@@ -978,7 +988,8 @@ and elSub recT cO cD cPsi s cPhi = match (s, cPhi) with
             if psi = phi then
               Int.LF.Shift(Int.LF.NoCtxShift, d)
             else
-              raise (Violation "Id must be associated with same ctxvar")
+              raise (Violation ("elSub: Id must be associated with same ctxvar: "
+                              ^ "`" ^ P.dctxToString cO cD cPhi ^ "' does not match `" ^ P.dctxToString cO cD cPsi ^ "'"))
         | _ ->
             raise (Violation "Id must be associated with ctxvar")
       end
@@ -1635,10 +1646,11 @@ let rec recDCtx recT cO cD cPsi = match cPsi with
       recDec recT cO cD cPsi (tX, LF.id)
 
   | Int.LF.CtxVar (Int.LF.CtxOffset psi_offset)  ->
-      if psi_offset <= (Context.length cO) then
-        ()
-      else
-        raise (Violation "Context variable out of scope")
+      if psi_offset > (Context.length cO) then
+        raise (Violation ("Context variable out of scope in context: " ^ P.dctxToString cO cD cPsi))
+
+  | Int.LF.CtxVar (Int.LF.CtxName _c)  ->
+      raise (Violation ("Unknown context variable in context: " ^ P.dctxToString cO cD cPsi))
 
 let rec recCDecl recT cO cD cdecl = match cdecl with
   | Int.LF.MDecl (_u, tA, cPsi) ->
@@ -1661,7 +1673,7 @@ let rec recKind cD cPsi sK = match sK with
       ()
 
   | (Int.LF.PiKind ((Int.LF.TypDecl(_x, tA) as adec, _ ), tK), s) ->
-      recTyp PiRecon (Int.LF.Empty) cD cPsi (tA, s);
+      recTyp PiRecon Int.LF.Empty cD cPsi (tA, s);
       recKind cD (Int.LF.DDec (cPsi, LF.decSub adec s)) (tK, LF.dot1 s)
 
 
@@ -2090,13 +2102,13 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(loc, a, _spine) , _cPsi) 
                     with Unify.Unify msg ->
                        (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n"
                                   ^  "Inferred pattern type : "
-                                  ^  (P.dctxToString cO (Int.LF.Empty) cPsi') ^
+                                  ^  (P.dctxToString cO Int.LF.Empty cPsi') ^
                                   "    |-    " ^
-                                  (P.typToString cO (Int.LF.Empty) cPsi' sP) ^
+                                  (P.typToString cO Int.LF.Empty cPsi' sP) ^
                                   "\nExpected pattern type: "
-                                  ^ (P.dctxToString cO (Int.LF.Empty) cPsi') ^
+                                  ^ (P.dctxToString cO Int.LF.Empty cPsi') ^
                                   "     |-    " ^
-                                  (P.typToString cO (Int.LF.Empty) cPsi' (tP0, LF.id)))
+                                  (P.typToString cO Int.LF.Empty cPsi' (tP0, LF.id)))
                        ; raise (Violation "Pattern Type Clash (Approximate)")
                                         )
                    end 
@@ -2275,7 +2287,7 @@ let rec checkW cO cD cG e ttau = match (e , ttau) with
       let _         = dprint (fun () -> "Syn type of scrutinee in case statement\n") in 
         begin match C.cwhnfCTyp tau' with
           | (Int.Comp.TypBox (tA, cPsi),  t') ->
-              let _ = dprint (fun () -> "Check for left over constraints ... ") in 
+              let _ = dprint (fun () -> "Check for leftover constraints ... ") in 
                 let branches' = checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau, t) in
                   Int.Comp.Case (i, branches')
           | _ -> raise (Error (None, ValueRestriction (cO, cD, cG, i, tau')))
@@ -2285,9 +2297,9 @@ let rec checkW cO cD cG e ttau = match (e , ttau) with
       let (i, tau_t') = syn cO cD cG i in
         (* if C.convCTyp (tau,t) tau_t' then *)
         try
-          dprint (fun () -> "Unify computation-level types ...\n") ; 
+          dprint (fun () -> "Unifying computation-level types\n") ; 
           Unify.unifyCompTyp cD (tau, t) (tau_t');
-          dprint (fun () -> "Unify computation-level types done ...\n") ; 
+          dprint (fun () -> "Unified computation-level types\n") ; 
           (Int.Comp.Syn i)
         with _ ->
           raise (Error (None, CompIllTyped (cO, cD, cG, e, ttau)))
@@ -2355,21 +2367,16 @@ and syn cO cD cG e = match e with
         (Int.Comp.Ann (e', tau) , (tau, C.id))
 
 
-and checkBranches caseTyp cO cD cG branches tAbox ttau = match branches with
-  | [] -> []
-  | (branch :: branches) ->
-      let b = checkBranch caseTyp cO cD cG branch tAbox ttau in
-        b :: (checkBranches caseTyp cO cD cG branches tAbox ttau)
-
+and checkBranches caseTyp cO cD cG branches tAbox ttau =
+    List.map (fun branch -> checkBranch caseTyp cO cD cG branch tAbox ttau) branches
 
 and checkBranch caseTyp cO cD cG branch (tA, cPsi) (tau, t) =
   match branch with
     | Int.Comp.BranchBox (cD1, (phat, tM1, (tA1, cPsi1)), e1) ->
         let _ = Check.LF.check cO cD1 cPsi1 (tM1, LF.id) (tA1, LF.id) in
-       (* This is a double-check here, since reconstruction was
-        * done during elaboration of branch
+       (* This is a double-check, since reconstruction was done during elaboration of branch
         *)
-        let _ = dprint (fun () -> "Check Branch ....\n") in 
+        let _ = dprint (fun () -> "Check Branch...\n") in 
         let d1  = length cD1     in
         let _d  = length cD      in
         let t1  = mctxToMSub cD1 in    (* {cD1} |- t1 <= cD1             *)
@@ -2393,35 +2400,35 @@ and checkBranch caseTyp cO cD cG branch (tA, cPsi) (tau, t) =
         let tA'    = C.cnormTyp (tA, t') in 
 
         let _  = begin try
-                    (Unify.unifyDCtx (Int.LF.Empty) cPsi' cPsi1'
+                    (Unify.unifyDCtx Int.LF.Empty cPsi' cPsi1'
                    ; dprint (fun () -> "Unifying contexts done \n") ; 
-                    Unify.unifyTyp (Int.LF.Empty) (phat, (tA', LF.id), (tA1', LF.id)))
+                    Unify.unifyTyp Int.LF.Empty (phat, (tA', LF.id), (tA1', LF.id)))
                  with
                      Unify.Unify msg ->
-                       (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n"
-                                  ^  "Inferred pattern type : "
-                                  ^  (P.dctxToString cO  (Int.LF.Empty) cPsi1') ^
-                                  "    |-    " ^
-                                  (P.typToString cO (Int.LF.Empty) cPsi1' (tA1', LF.id)) ^
-                                  "\nExpected pattern type: "
-                                  ^ (P.dctxToString cO (Int.LF.Empty) cPsi') ^
-                                  "     |-    " ^
-                                  (P.typToString cO (Int.LF.Empty) cPsi' (tA', LF.id)))
-                       ; raise (Violation "Pattern Type Clash")
-                                        )
-                 end
+                       begin
+                         dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n"
+                                   ^ " Inferred pattern type: "
+                                   ^ P.dctxToString cO Int.LF.Empty cPsi1' ^
+                                   "    |-    " ^
+                                   P.typToString cO Int.LF.Empty cPsi1' (tA1', LF.id) ^
+                                   "\nExpected pattern type: "
+                                   ^ P.dctxToString cO Int.LF.Empty cPsi' ^
+                                   "    |-    " ^
+                                   P.typToString cO Int.LF.Empty cPsi' (tA', LF.id))
+                         ; raise (Violation "Pattern Type Clash")
+                       end
+         end(*try-with*)
         in
 
-      let _       = dprint (fun () -> "Pattern: (After unifying...)...\n" ^
-                  (P.dctxToString cO (Int.LF.Empty) cPsi1') ^ "\n   |-   \n    "  ^
+      let _       = dprint (fun () -> "Pattern (after unifying)...\n" ^
+                  (P.dctxToString cO Int.LF.Empty cPsi1') ^ "\n   |-   \n    "  ^
                   (P.normalToString cO Int.LF.Empty cPsi1' (tM1', LF.id)) ^ " \n has type " ^
-                  (P.typToString cO Int.LF.Empty cPsi1'  (tA1', LF.id)) ^ " \n\n") in
+                  (P.typToString cO Int.LF.Empty cPsi1'  (tA1', LF.id)) ^ "\n\n") in
 
         
         let (tc', cD1'') = Abstract.abstractMSub tc in  (* cD1' |- tc' <= cD, cD1 *)
 
-        let _ = dprint (fun () -> "Abstraction of pattern in branch done ... \n") in 
-
+        let _ = dprint (fun () -> "Abstraction of pattern in branch done...\n") in 
 
 
         let t'' = split tc' d1 in (* cD1' |- t'' <= cD  suffix *)
@@ -2435,19 +2442,19 @@ and checkBranch caseTyp cO cD cG branch (tA, cPsi) (tau, t) =
 
         let tau' = (tau, C.mcomp t t'')  in
 
-        let _ = dprint (fun () ->  "\nRecon: Check branch  \n" ^
-                        (P.mctxToString cO cD1'') ^ " ; \n " ^
-                        (P.gctxToString cO cD1'' cG1) ^ "  \n   |- \n " ^
-                        (P.expChkToString cO cD1'' cG1 e1') ^ "\n has type " ^
-                        (P.compTypToString cO cD1'' (Cwhnf.cnormCTyp tau')) ^ " \n\n" ) in
+        let _ = dprint (fun () ->  "Recon: Check branch\n" ^
+                        P.mctxToString cO cD1'' ^ " ;\n " ^
+                        P.gctxToString cO cD1'' cG1 ^ "\n   |- \n " ^
+                        P.expChkToString cO cD1'' cG1 e1' ^ "\n has type " ^
+                        P.compTypToString cO cD1'' (Cwhnf.cnormCTyp tau') ^ "\n" ) in
 
         let e1_r =  check cO cD1'' cG1 e1' tau' in
 
-        let _ = dprint (fun () -> "\nRecon (DONE): Check branch  \n " ^
-                        (P.mctxToString cO cD1'') ^ " ; \n " ^
-                        (P.gctxToString    cO cD1'' cG1) ^ "  \n   |- \n " ^
-                        (P.expChkToString  cO cD1'' cG1 e1_r) ^ "\n has type " ^
-                        (P.compTypToString cO cD1'' (Cwhnf.cnormCTyp tau')) ^ " \n\n" ) in
+        let _ = dprint (fun () -> "Recon (DONE): Check branch\n" ^
+                        P.mctxToString cO cD1'' ^ " ;\n " ^
+                        P.gctxToString    cO cD1'' cG1 ^ "\n   |- \n " ^
+                        P.expChkToString  cO cD1'' cG1 e1_r ^ "\n has type " ^
+                        P.compTypToString cO cD1'' (Cwhnf.cnormCTyp tau') ^ " \n" ) in
 
         let e1''   = try Cwhnf.invExp (e1_r, tc') 0 with
                       Cwhnf.NonInvertible ->
@@ -2461,45 +2468,44 @@ let recSgnDecl d =
     let _        = reset_fvarCnstr () in 
     match d with
   | Ext.Sgn.Typ (_, a, extK)   ->
-      let _        = dprint (fun () -> "\n Indexing type constant " ^ a.string_of_name ^ "\n") in
+      let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in
       let apxK     = index_kind (CVar.create ()) (BVar.create ()) extK in
       let _        = FVar.clear () in
-      let _        = dprint (fun () -> "\n Elaborating type constant " ^ a.string_of_name ^ "\n") in
+      let _        = dprint (fun () -> "\nElaborating type constant " ^ a.string_of_name) in
       let tK       = elKind Int.LF.Null apxK in
       let _        = solve_fvarCnstr PiRecon (*cO=*)Int.LF.Empty Int.LF.Empty !fvar_cnstr in
       let _        = reset_fvarCnstr () in
-      let _        = dprint (fun () -> "\n Reconstructing type constant " ^ a.string_of_name ^ "\n") in
+      let _        = dprint (fun () -> "\nReconstructing type constant " ^ a.string_of_name) in
       let _        = recKind Int.LF.Empty Int.LF.Null (tK, LF.id) in
       let (tK', i) = Abstract.abstrKind tK in
 
-      let _        = dprint (fun () ->  a.string_of_name ^ " : " ^  (P.kindToString Int.LF.Null (tK', LF.id)) ^ "\n") in 
+      let _        = dprint (fun () ->  a.string_of_name ^ " : " ^  (P.kindToString Int.LF.Null (tK', LF.id))) in 
       let _        = Check.LF.checkKind Int.LF.Empty Int.LF.Empty Int.LF.Null tK' in
       let _        = dprint (fun () ->  "DOUBLE CHECK for type constant " ^a.string_of_name ^
-                                        " successful! \n") in
+                                        " successful!") in
       let a'       = Typ.add (Typ.mk_entry a tK' i) in
         Int.Sgn.Typ (a', tK')
 
   | Ext.Sgn.Const (_, c, extT) ->
       let apxT     = index_typ (CVar.create ()) (BVar.create ()) extT in
-      let _        = dprint (fun () -> "\n Reconstructing term constant " ^ c.string_of_name ^ "\n") in
+      let _        = dprint (fun () -> "\nReconstructing term constant " ^ c.string_of_name ^ "\n") in
       let _        = FVar.clear () in
       let cO       = Int.LF.Empty in
       let tA       = elTyp PiRecon cO Int.LF.Empty Int.LF.Null apxT in
       let _        = solve_fvarCnstr PiRecon cO Int.LF.Empty !fvar_cnstr in
-      let _        = reset_fvarCnstr () in
       let cD       = Int.LF.Empty in
 
-      let _       = dprint (fun () -> "\n Elaboration of constant " ^ c.string_of_name ^ " : " ^
-                                       (P.typToString cO cD Int.LF.Null (tA, LF.id)) ^ "\n\n" ) in
+      let _       = dprint (fun () -> "\nElaboration of constant " ^ c.string_of_name ^ " : " ^
+                                       P.typToString cO cD Int.LF.Null (tA, LF.id)) in
 
       let _        = recTyp PiRecon cO cD Int.LF.Null (tA, LF.id) in
 
-      let _        = dprint (fun () -> "\n Reconstruction (without abstraction) of constant " ^
-                               c.string_of_name ^ ": " ^
-                               (P.typToString cO cD Int.LF.Null (tA, LF.id)) ^ " \n\n" ) in
+      let _        = dprint (fun () -> "\nReconstruction (without abstraction) of constant " ^
+                               c.string_of_name ^ " : " ^
+                               P.typToString cO cD Int.LF.Null (tA, LF.id)) in
 
       let (tA', i) = Abstract.abstrTyp tA in
-      let _        = dprint (fun () -> "\n Reconstruction (with abstraction) of constant: " ^
+      let _        = dprint (fun () -> "\nReconstruction (with abstraction) of constant: " ^
                                c.string_of_name ^ " : " ^
                                (P.typToString cO cD Int.LF.Null (tA', LF.id)) ^ "\n\n") in
       let _        = Check.LF.checkTyp Int.LF.Empty Int.LF.Empty Int.LF.Null (tA', LF.id) in
@@ -2529,13 +2535,13 @@ let recSgnDecl d =
   | Ext.Sgn.Rec (_, f, tau, e) ->
       (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
       let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) tau in
-      let _       = Printf.printf "\n Reconstructing function  %s\n" f.string_of_name  in
+      let _       = Printf.printf "Reconstructing function  %s\n" f.string_of_name  in
       let cD      = Int.LF.Empty in
       let cO      = Int.LF.Empty in
 
       let tau'    = elCompTyp cO cD apx_tau  in
 
-      let _        = Printf.printf "\n Elaboration of program type %s \n : %s \n\n" f.string_of_name
+      let _        = Printf.printf "Elaboration of function type %s \n : %s \n\n" f.string_of_name
                         (P.compTypToString cO cD tau') in  
 
       let _       = recCompTyp cO cD tau' in
@@ -2544,7 +2550,7 @@ let recSgnDecl d =
 
       let  _      = Check.Comp.checkTyp cO cD tau' in
 
-      let _       = Printf.printf "\n Checked computation type  %s  successfully\n\n"
+      let _       = Printf.printf "Checked computation type  %s  successfully\n\n"
                                   (P.compTypToString cO cD tau') in
 
 
@@ -2568,7 +2574,7 @@ let recSgnDecl d =
                                        (P.expChkToString cO cD cG e_r') ^ "\n\n") in
 
       let _       = Check.Comp.check cO cD  cG e_r' (tau', C.id) in
-      let _        = Printf.printf "\n DOUBLE CHECK of function  %s  successful!\n\n" f.string_of_name  in
+      let _        = Printf.printf "DOUBLE CHECK of function  %s  successful!\n\n" f.string_of_name  in
       let f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' ) in
         Int.Sgn.Rec (f', tau',  e_r' )
 
@@ -2587,17 +2593,17 @@ let recSgnDecl d =
 let rec recSgnDecls = function
   | [] -> []
 
-  | Ext.Sgn.Pragma(_, Ext.LF.NotPrag) :: notted_decl :: rest ->
+  | Ext.Sgn.Pragma(_, Ext.LF.NotPrag) :: not'd_decl :: rest ->
       (*   let internal_syntax_pragma = Int.Sgn.Pragma(Int.LF.NotPrag) in *)
-      let notted_decl_succeeds = 
+      let not'd_decl_succeeds = 
         begin try
-          (let _ = recSgnDecl notted_decl in
+          (let _ = recSgnDecl not'd_decl in
              true)
         with
             _ -> (print_string ("Reconstruction fails for %not'd declaration\n"); false)
         end
       in
-        if notted_decl_succeeds then
+        if not'd_decl_succeeds then
           raise (Violation ("UNSOUND: reconstruction succeeded for %not'd declaration"))
         else recSgnDecls rest
 
@@ -2605,7 +2611,13 @@ let rec recSgnDecls = function
       []
 
   | decl :: rest ->
+      let _        = FVar.clear () in
+      let _        = reset_fvarCnstr () in
       let internal_decl = recSgnDecl decl in
+      let _        = FVar.clear () in
+      let _        = reset_fvarCnstr () in
       let internal_rest = recSgnDecls rest in
+      let _        = FVar.clear () in
+      let _        = reset_fvarCnstr () in
         internal_decl :: internal_rest
 

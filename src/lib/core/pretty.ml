@@ -1152,7 +1152,7 @@ module Int = struct
             (fmt_ppr_lf_dctx cO cD 0) cPsi
 
       | LF.CDecl (name, schemaName) ->
-          fprintf ppf "{#%s :: %a}"
+          fprintf ppf "{%s :: %a}"
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 

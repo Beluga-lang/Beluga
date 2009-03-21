@@ -2611,13 +2611,7 @@ let rec recSgnDecls = function
       []
 
   | decl :: rest ->
-      let _        = FVar.clear () in
-      let _        = reset_fvarCnstr () in
       let internal_decl = recSgnDecl decl in
-      let _        = FVar.clear () in
-      let _        = reset_fvarCnstr () in
       let internal_rest = recSgnDecls rest in
-      let _        = FVar.clear () in
-      let _        = reset_fvarCnstr () in
         internal_decl :: internal_rest
 

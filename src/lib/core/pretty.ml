@@ -1152,7 +1152,7 @@ module Int = struct
             (fmt_ppr_lf_dctx cO cD 0) cPsi
 
       | LF.CDecl (name, schemaName) ->
-          fprintf ppf "{#%s :: %a}"
+          fprintf ppf "{%s :: %a}"
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
@@ -1640,14 +1640,14 @@ module Error = struct
           fprintf ppf "Sigma Type mismatch" (* TODO *)
 
       | KindMismatch (cD, cPsi, sS, sK) ->
-          fprintf ppf "ill kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
+          fprintf ppf "ill-kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
             (IP.kindToString cPsi sK)
             (IP.fmt_ppr_lf_spine (LF.Empty) cD cPsi std_lvl) (Whnf.normSpine sS)
             (IP.fmt_ppr_lf_dctx (LF.Empty) cD std_lvl) cPsi
 
       | TypMismatch (cO, cD, cPsi, sM, sA1, sA2) ->
           fprintf ppf
-            "ill typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n  in context:\n    %a"
+            "ill-typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n  in context:\n    %a"
             (IP.fmt_ppr_lf_typ cO cD cPsi    std_lvl) (Whnf.normTyp sA1)
             (IP.fmt_ppr_lf_typ cO cD cPsi    std_lvl) (Whnf.normTyp sA2)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) (Whnf.norm sM)
@@ -1655,7 +1655,7 @@ module Error = struct
 
       | IllTyped (cO, cD, cPsi, sM, sA) ->
           fprintf ppf
-            "ill typed expression\n  expected type: %a\n  for expression:\n    %a\n  in context:\n    %a"
+            "ill-typed expression\n  expected type: %a\n  for expression:\n    %a\n  in context:\n    %a"
             (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) (Whnf.norm sM)
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi 
@@ -1666,7 +1666,7 @@ module Error = struct
             (R.render_name x)
 
       | IllTypedIdSub ->
-          fprintf ppf "ill typed substitution" (* TODO *)
+          fprintf ppf "ill-typed substitution" (* TODO *)
 
       | ValueRestriction (cO, cD, cG, i, theta_tau) ->
           fprintf ppf
@@ -1677,21 +1677,21 @@ module Error = struct
 
       | CompIllTyped (cO, cD, cG, e, theta_tau) ->
           fprintf ppf
-            "ill typed expression\n  expected: %a\n  for expression: %a\n  in context:\n    %s"
+            "ill-typed expression\n  expected: %a\n  for expression: %a\n  in context:\n    %s"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Cwhnf.cnormCTyp theta_tau)
             (IP.fmt_ppr_cmp_exp_chk cO cD cG std_lvl) e
             "[no comp-level context printing yet]" (* TODO print context? *)
 
       | CompMismatch (cO, cD, cG, i, variant, theta_tau) ->
           fprintf ppf
-            "ill typed expression\n  expected: %s\n  inferred: %a\n  for expression: %a\n  in context:\n    %s"
+            "ill-typed expression\n  expected: %s\n  inferred: %a\n  for expression: %a\n  in context:\n    %s"
             (print_typeVariant variant)
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Cwhnf.cnormCTyp theta_tau)
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i
             "[no comp-level context printing yet]" (* TODO print context? *)
 
       | ConstraintsLeft ->
-          fprintf ppf "Constraint of functional type are not simplified" (* TODO *)
+          fprintf ppf "Constraints of functional type are not simplified" (* TODO *)
 
       | NotPatSub ->
           fprintf ppf "Not a pattern substitution" (* TODO *)

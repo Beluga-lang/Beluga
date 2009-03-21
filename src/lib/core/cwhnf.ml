@@ -314,67 +314,78 @@ and invert s =
      If tM is in cnormal form, then [|t|]tM is also in cnormal form. 
 
   *)
+and what_head = function
+  | LF.BVar _ -> "BVar"
+  | LF.Const _ -> "Const"
+  | LF.MVar _ -> "MVar"
+  | LF.PVar _ -> "PVar"
+  | LF.AnnH _ -> "AnnH"
+  | LF.Proj (head, k) -> "Proj " ^ what_head head ^ "." ^ string_of_int k
+  | LF.FVar _ -> "FVar"
+  | LF.FMVar _ -> "FMVar"
+  | LF.FPVar _ -> "FPVar"
 
 and cnorm (tM, t) = match tM with
     | LF.Lam (loc, y, tN)  -> LF.Lam (loc, y, cnorm (tN, t))
 
     | LF.Clo (tN, s)       -> LF.Clo(cnorm (tN, t), cnormSub(s, t))  
 
-    | LF.Root (loc, LF.BVar i, tS) -> LF.Root(loc, LF.BVar i, cnormSpine (tS, t))
+    | LF.Root (loc, head, tS) ->
 
-    (* Meta-variables *)
+        begin match head with
+          | LF.BVar i -> LF.Root(loc, LF.BVar i, cnormSpine (tS, t))
 
-    | LF.Root (loc, LF.MVar (LF.Offset k, r), tS)
-      -> 
-        begin match applyMSub k t with
-        | Comp.MV  k'            -> 
-            LF.Root (loc, LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
-            
-        | Comp.MObj (_phat,tM)   -> 
-            LF.Clo(Whnf.whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), S.id)))  
-            
-        (* other cases impossible *)
-        end 
+          (* Meta-variables *)
 
+          | LF.MVar (LF.Offset k, r) -> 
+              begin match applyMSub k t with
+                | Comp.MV  k'            -> 
+                    LF.Root (loc, LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
+                      
+                | Comp.MObj (_phat,tM)   -> 
+                    LF.Clo(Whnf.whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), S.id)))  
+                      
+              (* other cases impossible *)
+              end 
 
-    | LF.Root (_, LF.FMVar (u, r), _tS) ->
-        raise (FreeMVar (LF.FMVar (u,cnormSub (r, t))))
+          | LF.FMVar (u, r) ->
+              raise (FreeMVar (LF.FMVar (u,cnormSub (r, t))))
 
-    | LF.Root (_, LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r), _tS) -> 
-        (* We could normalize [r]tM *)
-        let tM' = Whnf.norm (tM, S.id) in 
-          cnorm (tM', t)
-          
-(*        LF.Root (LF.MVar(LF.Inst ({contents = Some (cnorm (tM, t))}, cPsi, tA, cnstr), 
-                         cnormSub (r, t)), cnormSpine (tS, t)) 
+          | LF.MVar (LF.Inst ({contents = Some _tM}, _cPsi, _tA, _cnstr), _r) -> 
+              (* We could normalize [r]tM *)
+              let tM' = Whnf.norm (tM, S.id) in 
+                cnorm (tM', t)
+                  
+          (*        LF.Root (LF.MVar(LF.Inst ({contents = Some (cnorm (tM, t))}, cPsi, tA, cnstr), 
+                    cnormSub (r, t)), cnormSpine (tS, t)) 
+                    
+          *)
+          (* CHECK HERE IF THERE ARE ANY LEFT OVER CONSTRAINTS! *)
+          | LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, cnstr) as u , r) ->
+              if constraints_solved (!cnstr) then 
+                (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
+                LF.Root (loc, LF.MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
+              else 
+                raise (Error "uninstiated meta-variables with unresolved constraints")
+                  
+                  
+          | LF.PVar (LF.PInst ({contents = None}, _cPsi, _tA, _ ) as p, r) -> 
+              LF.Root (loc, LF.PVar(p, cnormSub (r, t)), cnormSpine (tS, t)) 
 
-*)
-    (* CHECK HERE IF THERE ARE ANY LEFT OVER CONSTRAINTS! *)
-    | LF.Root (loc, LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, cnstr) as u , r), tS) -> 
-        if constraints_solved (!cnstr) then 
-        (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
-          LF.Root (loc, LF.MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
-        else 
-          raise (Error "uninstiated meta-variables with unresolved constraints")
-
-
-    | LF.Root (loc, LF.PVar (LF.PInst ({contents = None}, _cPsi, _tA, _ ) as p, r), tS) -> 
-        LF.Root (loc, LF.PVar(p, cnormSub (r, t)), cnormSpine (tS, t)) 
-
-    | LF.Root (loc, LF.PVar (LF.PInst ({contents = Some (LF.BVar x)}, _cPsi, _tA, _ ) , r), tS) -> 
-        begin match S.bvarSub x (cnormSub (r,t)) with
-	  | LF.Head h  ->  
-              LF.Root (loc, h, cnormSpine (tS, t))
-	  | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
-	end
-
-
-    | LF.Root (loc, LF.PVar (LF.PInst ({contents = Some (LF.PVar (q,s))}, _cPsi, _tA, _ ) , r), tS) -> 
-	LF.Root (loc, LF.PVar (q, (S.comp s (cnormSub (r,t)))), cnormSpine (tS, t))                 
+          | LF.PVar (LF.PInst ({contents = Some (LF.BVar x)}, _cPsi, _tA, _ ) , r) ->
+              begin match S.bvarSub x (cnormSub (r,t)) with
+                | LF.Head h  ->
+                    LF.Root (loc, h, cnormSpine (tS, t))
+                | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
+              end
 
 
-    (* Parameter variables *)
-    | LF.Root (loc, LF.PVar (LF.Offset k, r), tS)
+          | LF.PVar (LF.PInst ({contents = Some (LF.PVar (q,s))}, _cPsi, _tA, _ ) , r) ->
+              LF.Root (loc, LF.PVar (q, (S.comp s (cnormSub (r,t)))), cnormSpine (tS, t))           
+
+        (* Parameter variables *)
+          | LF.PVar (LF.Offset k, r)
+
         (* cD' ; cPsi' |- r <= cPsi1 
            cD          |- t <= cD'
  
@@ -382,109 +393,103 @@ and cnorm (tM, t) = match tM with
            where r' = [|t|] r
 
          *)
-      -> begin match applyMSub k t with
-        | Comp.MV  k'            -> LF.Root (loc, LF.PVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
-        | Comp.PObj (_phat, LF.BVar i) -> 
-	    begin match S.bvarSub i (cnormSub (r,t)) with
-	      | LF.Head h  -> LF.Root(loc, h, cnormSpine (tS, t))
-	      | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
-	    end
-        | Comp.PObj (_phat, LF.PVar(LF.Offset i, r')) -> 
-	    LF.Root (loc, LF.PVar(LF.Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
-
-        | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = None}, _, _, _ ) as p, r')) -> 
-	    LF.Root (loc, LF.PVar(p, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
-
-
-        | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.PVar (x, rx))}, _, _, _ ), r')) -> 
-	    LF.Root (loc, LF.PVar (x, S.comp rx (S.comp r' (cnormSub (r,t)))), cnormSpine (tS, t))
-
-        | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.BVar x)}, _, _, _ ), r')) -> 
-            begin match S.bvarSub x (cnormSub (r',t)) with
-	      | LF.Head (LF.BVar i)  ->  
+            -> begin match applyMSub k t with
+              | Comp.MV  k'            -> LF.Root (loc, LF.PVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
+              | Comp.PObj (_phat, LF.BVar i) -> 
                   begin match S.bvarSub i (cnormSub (r,t)) with
-	            | LF.Head h  -> LF.Root(loc, h, cnormSpine (tS, t))
-	            | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
-	          end
-              | LF.Head (LF.PVar(q, s)) -> LF.Root(loc, LF.PVar(q,  S.comp s (cnormSub (r,t))), cnormSpine (tS, t))
-                 (* Other case MObj _ should not happen -- ill-typed *)
-	    end
-
-      end
-
-    | LF.Root (_, LF.FPVar (p, r), _tS) ->
-        raise (FreeMVar (LF.FPVar (p, cnormSub (r, t))))
-
-    (* Ignore other cases for destructive (free) parameter variables *)
-
-    (* Constants *)
-    | LF.Root (loc, LF.Const c, tS)
-      -> LF.Root (loc, LF.Const c, cnormSpine (tS, t))
-
-    (* Free Variables *)
-    | LF.Root (loc, LF.FVar x, tS)        
-      -> (Printf.printf "Encountered a free variable!?\n" ; 
-          LF.Root (loc, LF.FVar x, cnormSpine (tS, t)))
-
-    (* Projections *)
-    | LF.Root (loc, LF.Proj (LF.BVar i, k), tS)
-      -> LF.Root (loc, LF.Proj (LF.BVar i, k), cnormSpine (tS, t))
-
-    | LF.Root (loc, LF.Proj (LF.PVar (LF.Offset j, s), tupleIndex), tS)
-        (* cD' ; cPsi' |- s <= cPsi1 *)
-        (* cD          |- t <= cD'   *)         
-      -> begin
-        let wrap head = LF.Proj (head, tupleIndex) in
-        let newHead =
-          match applyMSub j t with
-        | Comp.PObj (_phat, LF.BVar i)   -> 
-            (*  i <= phat *) 
-            begin match S.bvarSub i (cnormSub (s,t)) with
-              | LF.Head (LF.BVar j)      ->  LF.BVar j
-              | LF.Head (LF.PVar (p,r')) ->  LF.PVar (p, r')
-                    (* other cases should not happen; 
-                       term would be ill-typed *)
+                    | LF.Head h  -> LF.Root(loc, h, cnormSpine (tS, t))
+                    | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
+                  end
+              | Comp.PObj (_phat, LF.PVar(LF.Offset i, r')) -> 
+                  LF.Root (loc, LF.PVar(LF.Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
+                    
+              | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = None}, _, _, _ ) as p, r')) -> 
+                  LF.Root (loc, LF.PVar(p, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
+                    
+                    
+              | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.PVar (x, rx))}, _, _, _ ), r')) -> 
+                  LF.Root (loc, LF.PVar (x, S.comp rx (S.comp r' (cnormSub (r,t)))), cnormSpine (tS, t))
+                    
+              | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.BVar x)}, _, _, _ ), r')) -> 
+                  begin match S.bvarSub x (cnormSub (r',t)) with
+                    | LF.Head (LF.BVar i)  ->  
+                        begin match S.bvarSub i (cnormSub (r,t)) with
+                          | LF.Head h  -> LF.Root(loc, h, cnormSpine (tS, t))
+                          | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
+                        end
+                    | LF.Head (LF.PVar(q, s)) -> LF.Root(loc, LF.PVar(q,  S.comp s (cnormSub (r,t))), cnormSpine (tS, t))
+                        (* Other case MObj _ should not happen -- ill-typed *)
+                  end
+                    
             end
-        | Comp.PObj(_phat, LF.Proj (LF.PVar (LF.Offset i, s'),  otherTupleIndex)) -> 
-              LF.Proj (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))),  otherTupleIndex)
 
-        | Comp.PObj(_phat, LF.PVar (LF.Offset i, s')) ->
-              wrap (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))))
+          | LF.FPVar (p, r) ->
+              raise (FreeMVar (LF.FPVar (p, cnormSub (r, t))))
 
-        | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents= None}, _, _, _) as p, r')) -> 
-              wrap (LF.PVar (p, S.comp r' (cnormSub (s,t))))
+          | LF.Proj (LF.FPVar (_p, _r), _tupleIndex) as head ->
+              LF.Root (loc, head, cnormSpine(tS, t))
+(*              raise (FreeMVar (LF.FPVar (p, cnormSub (r, t)))) *)
 
-        | Comp.PObj(_phat, LF.PVar (LF.PInst _, _s')) ->
-              (print_string "cnorm ...PVar PInst {contents= Some ...}\n"; exit 2)
-        | Comp.PObj(_phat, LF.PVar (_, _s')) ->
-              (print_string "cnorm ...PVar ???\n"; exit 2)
+          (* Ignore other cases for destructive (free) parameter variables *)
+                
+          (* Constants *)
+          | LF.Const c
+            -> LF.Root (loc, LF.Const c, cnormSpine (tS, t))
+              
+          (* Free Variables *)
+          | LF.FVar x
+            -> (Printf.printf "Encountered a free variable!?\n" ; 
+                LF.Root (loc, LF.FVar x, cnormSpine (tS, t)))
 
-        | Comp.MV  k'            -> wrap (LF.PVar (LF.Offset k', cnormSub (s, t)))
+          (* Projections *)
+          | LF.Proj (LF.BVar i, k)
+            -> LF.Root (loc, LF.Proj (LF.BVar i, k), cnormSpine (tS, t))
 
-        | Comp.MObj _ ->             (print_string "mobj\n"; exit 2)
-        | Comp.PObj(_phat, LF.Proj (LF.FPVar (_, _s'), _k)) ->  (print_string "PObj FPVar\n"; exit 2)
-        | Comp.PObj(_phat, LF.Proj (LF.PVar (_, _S'), _k)) ->   (print_string "PObj PVar\n"; exit 2)
-        | Comp.PObj(_phat, LF.Proj _) ->   (print_string "PObj other proj\n"; exit 2)
-        | Comp.PObj(_phat, head) -> 
-            let what = match head with 
-              | LF.BVar _ -> "BVar"
-              | LF.Const _ -> "Const"
-              | LF.MVar _ -> "MVar"
-              | LF.PVar _ -> "PVar"
-              | LF.AnnH _ -> "AnnH"
-              | LF.Proj _ -> "Proj"
-              | LF.FVar _ -> "FVar"
-              | LF.FMVar _ -> "FMVar"
-              | LF.FPVar _ -> "FPVar"
-            in
-            (print_string ("QQQQ " ^ what ^  "\n"); exit 2)
-        | Comp.Undef  ->             (print_string "Undef\n"; exit 2)
-        in
-          LF.Root (loc, newHead, cnormSpine (tS, t))
-      end
+          | LF.Proj (LF.PVar (LF.Offset j, s), tupleIndex)
+              (* cD' ; cPsi' |- s <= cPsi1 *)
+              (* cD          |- t <= cD'   *)         
+            -> begin
+              let wrap head = LF.Proj (head, tupleIndex) in
+              let newHead =
+                match applyMSub j t with
+                  | Comp.PObj (_phat, LF.BVar i)   -> 
+                      (*  i <= phat *) 
+                      begin match S.bvarSub i (cnormSub (s,t)) with
+                        | LF.Head (LF.BVar j)      ->  LF.BVar j
+                        | LF.Head (LF.PVar (p,r')) ->  LF.PVar (p, r')
+                            (* other cases should not happen; 
+                               term would be ill-typed *)
+                      end
+                  | Comp.PObj(_phat, LF.Proj (LF.PVar (LF.Offset i, s'),  otherTupleIndex)) -> 
+                      LF.Proj (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))),  otherTupleIndex)
+                        
+                  | Comp.PObj(_phat, LF.PVar (LF.Offset i, s')) ->
+                      wrap (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))))
+                        
+                  | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents= None}, _, _, _) as p, r')) -> 
+                      wrap (LF.PVar (p, S.comp r' (cnormSub (s,t))))
+                        
+                  | Comp.PObj(_phat, LF.PVar (LF.PInst _, _s')) ->
+                      (print_string "cnorm ...PVar PInst {contents= Some ...}\n"; exit 2)
+                  | Comp.PObj(_phat, LF.PVar (_, _s')) ->
+                      (print_string "cnorm ...PVar ???\n"; exit 2)
 
-  (* Ignore other cases for destructive (free) parameter-variables *)
-
+                  | Comp.MV  k'            -> wrap (LF.PVar (LF.Offset k', cnormSub (s, t)))
+                      
+                  | Comp.MObj _ ->             (print_string "mobj\n"; exit 2)
+                  | Comp.PObj(_phat, LF.Proj (LF.FPVar (_, _s'), _k)) ->  (print_string "PObj FPVar\n"; exit 2)
+                  | Comp.PObj(_phat, LF.Proj (LF.PVar (_, _S'), _k)) ->   (print_string "PObj PVar\n"; exit 2)
+                  | Comp.PObj(_phat, LF.Proj _) ->   (print_string "PObj other proj\n"; exit 2)
+                  | Comp.PObj(_phat, head) -> 
+                        (print_string ("QQQQ " ^ what_head head ^  "\n"); exit 2)
+                  | Comp.Undef  ->             (print_string "Undef\n"; exit 2)
+              in
+                LF.Root (loc, newHead, cnormSpine (tS, t))
+            end
+          | head -> (print_string ("cnorm fallthru " ^ what_head head ^  "\n"); exit 2)
+        end
+      (* Ignore other cases for destructive (free) parameter-variables *)
+          
   and cnormSpine (tS, t) = match tS with
     | LF.Nil            -> LF.Nil
     | LF.App  (tN, tS)  -> LF.App (cnorm (tN, t), cnormSpine (tS, t))
@@ -506,7 +511,7 @@ and cnorm (tM, t) = match tM with
              LF.Head(LF.PVar(LF.Offset n, S.comp s' (cnormSub (r,t))))
           | Comp.PObj (_phat, LF.BVar j)    ->  S.bvarSub j (cnormSub (r,t))
           | Comp.MV k -> LF.Head(LF.PVar (LF.Offset k, cnormSub (r,t)))
-  	      (* other case MObj _ cannot happen *)
+              (* other case MObj _ cannot happen *)
         end
 
     | LF.Head (LF.MVar (LF.Offset i, r)) -> 
@@ -789,17 +794,16 @@ let rec mctxMDec cD' k =
 *)
 let rec mctxPDec cD k = 
   let rec lookup cD k' = match (cD, k') with
-    | (LF.Dec (_cD, LF.PDecl (_u, tA, cPsi)), 1)
+    | (LF.Dec (_cD, LF.PDecl (_u, tA, cPsi)),  1)
       -> (mshiftTyp tA k, mshiftDCtx cPsi k)
         
-    | (LF.Dec (_cD, LF.MDecl _), 1)
-      -> raise (Error "Expected parameter-variable; Found meta-variable")
-        
+    | (LF.Dec (_cD, LF.MDecl _),  1)
+      -> raise (Error "Expected parameter variable, but found meta-variable")
 
-    | (LF.Dec (cD, _), k')
+    | (LF.Dec (cD, _),  k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Error "Parameter-variable out of bounds")
+    | (_ , _ ) -> raise (Error "Parameter variable out of bounds")
   in 
     lookup cD k
 
@@ -1125,7 +1129,7 @@ let rec mctxPVarPos cD p =
           invTerm (tM', t) d
           
     | LF.Root (_, LF.MVar (LF.Inst ({contents = None}, _cPsi, _tA, _) , _r), _tS) -> 
-        raise (Error "Encountered Un-Instantiated MVar with reference ?\n") 
+        raise (Error "Encountered uninstantiated MVar with reference ...\n") 
         (* LF.Root (LF.MVar(u, invSub (r, t)), invSpine (tS, t))  *)
 
     (* Parameter variables *)
@@ -1145,9 +1149,11 @@ let rec mctxPVarPos cD p =
         in 
           LF.Root (loc, LF.PVar (LF.Offset k', invSub (r, t) d), invSpine (tS, t) d)
 
-    | LF.Root (_, LF.FPVar (p, r), _tS) ->
-        raise (FreeMVar 
-                 (LF.FPVar (p, invSub (r, t) d)))
+    | LF.Root (_, LF.FPVar (p, r), _tS)  ->  raise (FreeMVar 
+                                                      (LF.FPVar (p, invSub (r, t) d)))
+
+    | LF.Root (_, LF.Proj(LF.FPVar (p, r), _tupleIndex), _tS)  ->  raise (FreeMVar 
+                                                                            (LF.FPVar (p, invSub (r, t) d)))
 
     (* Ignore other cases for destructive (free) parameter variables *)
 
@@ -1175,7 +1181,7 @@ let rec mctxPVarPos cD p =
         in 
           LF.Root(loc, LF.Proj (LF.PVar (LF.Offset k', invSub (s,t) d), k), invSpine (tS, t) d)
 
-  (* Ignore other cases for destructive (free) parameter-variables *)
+  (* Ignore other cases for destructive (free) parameter variables *)
 
   and invSpine (tS, t) d = match tS with
     | LF.Nil            -> LF.Nil

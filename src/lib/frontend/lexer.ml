@@ -158,21 +158,75 @@ let rec lex_token loc = lexer
   | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
 
-(* Skip comments and advance the location reference. *)
-let skip_comment     loc = lexer
+let skip_nestable depth loc = lexer
+  | '\n' ->
+      loc := Loc.move_line 1 !loc
+  
+  | '%' [^'{' '%' '\n'] ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+  
+  | [^'\n' '%' '}' ]+ ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+  
+  | '}' [^'%' '\n'] ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+
+  | '}' '\n' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
+  
+  | '}' '%' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; if !depth <= 0 then 
+        ( print_string ("Parse error: \"}%\" with no comment to close\n");
+          raise Ulexing.Error )
+      else
+        depth := !depth - 1
+  
+  | '%' '{' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; depth := !depth + 1
+
+  | '%' '\n' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
+
+let skip_nested_comment loc = lexer
+  | '%' '{' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; let depth = ref 1 in
+(*      print_string ("nested comment\n") ; flush_all() ; *)
+      while !depth > 0 do
+(*        print_string ("NC-BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
+        skip_nestable depth loc lexbuf
+      done
+
+  | '}' '%' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; ( print_string ("Parse error: \"}%\" with no comment to close\n");
+          raise Ulexing.Error )
+
+
+(* Skip %...\n comments and advance the location reference. *)
+let skip_line_comment loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)
 (*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
-    | '%' ( [^ '\n' 'n'] [^ '\n']* )? '\n' ->
-(*        print_string ("BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ;    *)
-        loc := Loc.shift     (Ulexing.lexeme_length lexbuf - 1) !loc
-      ; loc := Loc.move_line 1                                  !loc
-(*      ; print_string ("AFT " ^ Loc.to_string !loc ^"\n") *)
+  | '%' ( [^ '\n' 'n' '{'] [^ '\n' ]* ) '\n' ->
+(*      print_string ("BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
+        (*      ; print_string ("AFT " ^ Loc.to_string !loc ^"\n") *)
+  
+  | '%' '\n' ->
+(*      print_string ("BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ;  *)
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
 
-(* Skip non-newline whitespaces and advance the location reference. *)
-let skip_whitespaces loc = lexer
+(* Skip non-newline whitespace and advance the location reference. *)
+let skip_whitespace loc = lexer
   | [ ' ' '\t' ]+         -> 
        (* print_string ("bef " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
-        loc := Loc.shift     (Ulexing.lexeme_length lexbuf)     !loc
+        loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 (*    ;    print_string ("aft " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
 
 
@@ -187,6 +241,7 @@ let skip_newlines    loc = lexer
 
 type skip_state =
   | Comment
+  | LineComment
   | Newline
   | Whitespace
 
@@ -196,12 +251,24 @@ let mk () = fun loc strm ->
   and state         = ref Newline
   and skip_failures = ref 0 (* used to break cycle *) in
   let rec skip ()   =
-    if !skip_failures < 3 then
+    if !skip_failures < 4 then
       match !state with
-        | Comment    ->
+        | Comment  ->
               begin
                 try
-                    skip_comment     loc_ref lexbuf
+                  skip_nested_comment loc_ref lexbuf
+                ; skip_failures := 0
+                with
+                  | Ulexing.Error ->
+                      incr skip_failures
+              end
+            ; state := LineComment
+            ; skip ()
+
+        | LineComment  ->
+              begin
+                try
+                    skip_line_comment loc_ref lexbuf
                   ; skip_failures := 0
                 with
                   | Ulexing.Error ->
@@ -225,7 +292,7 @@ let mk () = fun loc strm ->
         | Whitespace ->
               begin
                 try
-                    skip_whitespaces loc_ref lexbuf
+                    skip_whitespace loc_ref lexbuf
                   ; skip_failures := 0
                 with
                   | Ulexing.Error ->

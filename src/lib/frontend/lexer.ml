@@ -34,7 +34,7 @@ Beluga lexical categories:
 
          ABCDEFGHIJKLMNOPQRSTUVWXYZ
          abcdefghijklmnopqrstuvwxyz
-         !  $  &  '  *  +  -  /   : < = > ? @
+         !  $  &  '  *  +  -  /   : = ? @
          ^ _ ` | ~
          
         (and any other UTF-8 character above 127)
@@ -44,7 +44,7 @@ Beluga lexical categories:
          0 1 2 3 4 5 6 7 8 9
          ABCDEFGHIJKLMNOPQRSTUVWXYZ
          abcdefghijklmnopqrstuvwxyz
-         !  $  &  '  *  +  -  /   : < = > ? @
+         !  $  &  '  *  +  -  /   : = ? @
          ^ _ ` | ~
          #
          
@@ -68,7 +68,18 @@ Beluga lexical categories:
    character of an identifier:
 
        #
-          
+
+- Special rules for < and >,
+  intended to allow not only < g, x. U .. x > but <g, x. U .. x> too:
+
+     No letter can follow a <
+     No letter can PRECEDE a >
+     A symbol containing < and/or > can only contain:
+      
+         !  $  &  '  *  +  -  /   : = ? @
+         ^ ` | ~
+         # 
+
 - Integers
          
         Any sequence of '0'-'9' [generates token INTLIT]
@@ -81,14 +92,32 @@ Beluga lexical categories:
 (* Matches any printable utf-8 character that isn't reserved or a digit *)
 let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\#" '"'    (* exclude reserved characters *)
-                          '0'-'9'                 (*exclude digits *)
+                          '0'-'9'                 (* exclude digits *)
+                          "<>"                    (* exclude < and >, which can only be used with certain other characters *)
                        ]
 
 (* Matches any printable utf-8 character that isn't reserved *)
 let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
+                          "<>"                   (* exclude < and > *)
                        ]
 (* let regexp sym       = [^ '\000'-' '   "!\\#%()*,.:;=[]{|}+<>" ] *)
+
+let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
+                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
+                          'a'-'z'  'A'-'Z'
+                          "<>"
+                       ]
+
+let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
+                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
+                          'a'-'z'  'A'-'Z'
+                          '#'
+                          '0'-'9'
+                          "<>"
+                       ]
+
+let regexp letter = ['a'-'z' 'A'-'Z']
 
 let regexp digit       = [ '0'-'9' ]
 
@@ -149,11 +178,34 @@ let rec lex_token loc = lexer
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 
   | [ "%,.:;()[]{}" '\\' '#' '\"']  -> (* reserved character *)
+(* print_string ("RSV [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
          mk_tok_of_lexeme mk_keyword loc lexbuf
 
   | eof                       -> mk_tok           Token.EOI  loc lexbuf
 
-  | start_sym sym*            -> mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | ">" (sym | "<" | ">")*  ->
+(* print_string (">IN [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
+      mk_tok_of_lexeme mk_symbol  loc lexbuf
+
+  | start_angle_compatible (sym | "<" | ">")*  ->
+(* print_string ("SAC [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
+     mk_tok_of_lexeme mk_symbol  loc lexbuf
+
+  | start_sym
+     (sym
+     | "<"
+     | angle_compatible ">" (sym | "<" | ">")*
+     )*  ->
+(* print_string ("STS [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
+      mk_tok_of_lexeme mk_symbol  loc lexbuf
+
+  | "<" (angle_compatible | "<" | ">") (sym | "<" | ">")*  ->
+(* print_string ("< 1 [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
+      mk_tok_of_lexeme mk_symbol  loc lexbuf
+
+  | "<" (angle_compatible | "<" | ">")?  ->
+(* print_string ("< 2 [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
+      mk_tok_of_lexeme mk_symbol  loc lexbuf
 
   | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 

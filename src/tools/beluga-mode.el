@@ -215,6 +215,7 @@ Regexp match data 0 points to the chars."
     ("="       80  80)
     ("fn"     nil  75)
     ("FN"     nil  75)
+    ("mlam"   nil  75)
     ("=>"      70  70  "fn" "FN")
     ;; ("forall" nil  75)
     ;; ("end"      t nil  "case")

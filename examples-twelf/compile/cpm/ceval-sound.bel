@@ -10,7 +10,7 @@
 %%
 %% Proof: By complete induction on the structure of C.
 %%
-%% Note, we do not explicitely reason about the fact that
+%% Note, we do not explicitly reason about the fact that
 %% C' is a subderivation of C. This could be added as an extra argument. 
 %%
 %% Interesting part: We avoid the use of existentials by defining first a

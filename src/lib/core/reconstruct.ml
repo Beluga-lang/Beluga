@@ -503,10 +503,12 @@ let patSpine spine =
     patSpine' [] spine
 
 let rec mkShift recT cPsi = match recT with
-  | PiboxRecon -> Int.LF.Shift(Int.LF.NoCtxShift, 0)
+  | PiboxRecon -> 
+      Int.LF.Shift (Int.LF.NoCtxShift, 0)
+
   | PiRecon ->
-       let (None, d) = Context.dctxToHat cPsi in
-         Int.LF.Shift(Int.LF.NoCtxShift, d) 
+      let (None, d) = Context.dctxToHat cPsi in
+        Int.LF.Shift (Int.LF.NoCtxShift, d) 
 
 (* etaExpandMV moved to whnf.ml -jd 2009-02-01 *)
 
@@ -547,7 +549,6 @@ let rec synDom cPsi s = begin match s with
   | Apx.LF.Id ->
       begin match Context.dctxToHat cPsi with
         | (Some psi, d) ->
-            (* (Int.LF.CtxVar psi, Int.LF.Shift (Some psi, d)) *)
             (Int.LF.CtxVar psi, Int.LF.Shift (Int.LF.NoCtxShift, d))
 
         | (None, _d) ->
@@ -560,7 +561,7 @@ let rec synDom cPsi s = begin match s with
             (Int.LF.Null, Int.LF.Shift (Int.LF.CtxShift psi, d))
 
         | (None, d) ->
-             (Int.LF.Null , Int.LF.Shift (Int.LF.NoCtxShift, d))
+            (Int.LF.Null, Int.LF.Shift (Int.LF.NoCtxShift, d))
       end
 
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
@@ -871,7 +872,7 @@ and elTerm' recT cO cD cPsi r sP = match r with
              *)
 
             let (cPhi, s'') = synDom cPsi s in
-            let tP   = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in
+            let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in
               (* For type reconstruction to succeed, we must have
                * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                * This will be enforced during abstraction.

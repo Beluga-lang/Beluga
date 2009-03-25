@@ -670,12 +670,14 @@ and csub_sub cPsi phi (* k *) s = match s with
       if psi = phi then 
         begin match Context.dctxToHat cPsi with
           | (Some ctx_v, d) -> 
-              LF.Shift (LF.CtxShift ctx_v, k+d)
-          | (None, d) -> LF.Shift (LF.NoCtxShift, k+d)
+              LF.Shift (LF.CtxShift ctx_v, k + d)
+
+          | (None, d) ->
+              LF.Shift (LF.NoCtxShift, k + d)
         end
 
       else 
-        LF.Shift(LF.CtxShift (LF.CtxOffset psi), k)
+        LF.Shift (LF.CtxShift (LF.CtxOffset psi), k)
 
   | LF.Shift (LF.NegCtxShift (LF.CtxOffset psi), k) -> 
       if psi = phi then 
@@ -698,10 +700,8 @@ and csub_sub cPsi phi (* k *) s = match s with
 
         LF.Shift(LF.NegCtxShift (LF.CtxOffset psi), k)
 
-
-
   | LF.Dot (ft, s) -> 
-      LF.Dot(csub_front cPsi phi ft, csub_sub cPsi phi s)
+      LF.Dot (csub_front cPsi phi ft, csub_sub cPsi phi s)
 
 and csub_front cPsi k ft = match ft with
   | LF.Head h -> LF.Head (csub_head cPsi k h)
@@ -709,25 +709,24 @@ and csub_front cPsi k ft = match ft with
   | LF.Undef  -> LF.Undef
  
 let rec csub_ctyp cPsi k tau = match tau with
-  | Comp.TypBox (tA, cPhi) -> Comp.TypBox (csub_typ cPsi k tA, csub_dctx cPsi k cPhi )
+  | Comp.TypBox (tA, cPhi) -> 
+      Comp.TypBox (csub_typ cPsi k tA, csub_dctx cPsi k cPhi)
+
   | Comp.TypArr (tau1, tau2) -> 
-      Comp.TypArr (csub_ctyp cPsi k tau1, 
-                   csub_ctyp cPsi k tau2)
+      Comp.TypArr (csub_ctyp cPsi k tau1, csub_ctyp cPsi k tau2)
 
   | Comp.TypCross (tau1, tau2) -> 
-      Comp.TypCross (csub_ctyp cPsi k tau1, 
-                   csub_ctyp cPsi k tau2)
+      Comp.TypCross (csub_ctyp cPsi k tau1, csub_ctyp cPsi k tau2)
 
   | Comp.TypCtxPi (psi_decl, tau) -> 
-      Comp.TypCtxPi (psi_decl, csub_ctyp cPsi (k+1) tau)
+      Comp.TypCtxPi (psi_decl, csub_ctyp cPsi (k + 1) tau)
 
-  | Comp.TypPiBox ((LF.MDecl(u, tA, cPhi), dep), tau) -> 
-      Comp.TypPiBox ((LF.MDecl (u, tA, csub_dctx cPsi k cPhi), dep), 
+  | Comp.TypPiBox ((LF.MDecl (u, tA, cPhi), dep), tau) -> 
+      Comp.TypPiBox ((LF.MDecl (u, tA, csub_dctx cPsi k cPhi), dep),
                      csub_ctyp (cnormDCtx (cPsi, Comp.MShift 1)) k tau)
 
   | Comp.TypClo (tau, theta) -> 
-      Comp.TypClo (csub_ctyp cPsi k tau, 
-              csub_msub cPsi k theta)
+      Comp.TypClo (csub_ctyp cPsi k tau, csub_msub cPsi k theta)
 
 and csub_psihat cPsi k (ctxvar, offset) = match ctxvar with 
   | None -> (None, offset)

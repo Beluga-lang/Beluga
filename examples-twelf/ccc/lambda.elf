@@ -38,7 +38,7 @@ c_lam   : ({x: term _} conv (E x) (E' x)) -> conv (llam (\x . E x)) (llam (\x . 
 c_app   : conv E1 E1' -> conv E2 E2' -> conv (lapp E1 E2) (lapp E1' E2').
 
 % proper equations
-c_unit  : conv lunit E.
+c_unit  : conv lunit E. % not sure I understand that -rcog Mon Mar 23 23:59:51 EDT 2009
 c_prl   : conv (lfst (lpair E1 E2)) E1.
 c_prr   : conv (lsnd (lpair E1 E2)) E2.
 c_surj  : conv (lpair (lfst E) (lsnd E)) E.

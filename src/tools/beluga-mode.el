@@ -334,7 +334,7 @@ Possible return values:
                                    (beluga-backward-sexp
                                     (car tokinfo)
                                     ;; We append, so as to be more permissive
-                                    ;; w.r.t mismatched parenthesized elements.
+                                    ;; when parenthesized elements are mismatched.
                                     (append stops (cddr tokinfo)))))))
                 (case (car res)
                   ((t) res)

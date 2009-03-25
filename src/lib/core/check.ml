@@ -154,7 +154,7 @@ module LF = struct
     | Proj (tuple_head, target) ->
         let srecA = match tuple_head with
           | BVar k' ->
-              let SigmaDecl (_, recA) = ctxSigmaDec cPsi k' in
+              let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
                 (recA, LF.id)
           | PVar (Offset p, s) ->
               begin let (tTuple, cPsi') = Cwhnf.mctxPDec cD p in
@@ -263,7 +263,7 @@ module LF = struct
         (* other heads of type Sigma disallowed -bp *)
         let _ = checkSub cO cD cPsi' t cPsi
           (* ensures that t is well-typed before comparing types BRec = [t]ARec *)
-        and SigmaDecl (_, brec) = ctxSigmaDec cPsi' w in
+        and TypDecl (_, Sigma brec) = ctxSigmaDec cPsi' w in
           if not (Whnf.convTypRec (brec, LF.id) (arec, t)) then
             raise (Violation "Sigma-type ill-typed")
             (* (SigmaIllTyped (cD, cPsi', (brec, LF.id), (arec, t))) *)

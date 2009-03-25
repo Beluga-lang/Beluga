@@ -15,7 +15,7 @@ val dctxToHat   : dctx -> psi_hat
 val hatToDCtx   : psi_hat -> dctx
 (* Declaration Contexts *)
 val ctxDec      : dctx -> int -> typ_decl
-val ctxSigmaDec : dctx -> int -> sigma_decl
+val ctxSigmaDec : dctx -> int -> typ_decl
 val ctxVar      : dctx -> ctx_var option
 
 val append      : 'a ctx -> 'a ctx -> 'a ctx

@@ -80,6 +80,7 @@ let ctxDec cPsi k =
   in
     ctxDec' (cPsi, k)
 
+
 (* ctxSigmaDec (Psi, k,i) = x:A
  *
  * Invariant:
@@ -95,7 +96,7 @@ let ctxSigmaDec cPsi k =
    *)
   let rec ctxDec' = function
     | (DDec (_cPsi', TypDecl (x, Sigma tArec)), 1) ->
-        SigmaDecl (x, sigmaShift tArec  k) (* ? -bp *)
+        TypDecl (x, Sigma (sigmaShift tArec  k)) (* ? -bp *)
 
     | (DDec (cPsi', TypDecl (_x, Sigma _)), k') ->
         ctxDec' (cPsi', k' - 1)

@@ -26,9 +26,6 @@ module Ext : sig
     and typ_decl =
       | TypDecl of name * typ
 
-    and sigma_decl =
-      | SigmaDecl of name * typ_rec
-
     and ctyp_decl =
       | MDecl of Loc.t * name * typ  * dctx
       | PDecl of Loc.t * name * typ  * dctx
@@ -77,7 +74,7 @@ module Ext : sig
 
     and tuple =
       | Last of normal
-      | Cons of name * normal * tuple
+      | Cons of normal * tuple
 
     and 'a ctx =
       | Empty
@@ -178,9 +175,6 @@ module Int : sig
       | TypDecl of name * typ
       | TypDeclOpt of name
 
-    and sigma_decl =
-      | SigmaDecl of name * typ_rec
-
     and ctyp_decl =
       | MDecl of name * typ  * dctx
       | PDecl of name * typ  * dctx
@@ -258,7 +252,7 @@ module Int : sig
 
     and tuple =
       | Last of normal
-      | Cons of name * normal * tuple
+      | Cons of normal * tuple
 
     and ctx_var = 
       | CtxName   of name
@@ -399,9 +393,6 @@ module Apx : sig
     and typ_decl =
       | TypDecl of name * typ
 
-    and sigma_decl =
-      | SigmaDecl of name * typ_rec
-
     and ctyp_decl =
       | MDecl of  name * typ  * dctx
       | PDecl of  name * typ  * dctx
@@ -417,7 +408,7 @@ module Apx : sig
 
     and tuple =
       | Last of normal
-      | Cons of name * normal * tuple
+      | Cons of normal * tuple
 
     and normal =
       | Lam  of Loc.t * name * normal

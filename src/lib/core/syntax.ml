@@ -23,9 +23,6 @@ module Ext = struct
     and typ_decl =
       | TypDecl of name * typ
 
-    and sigma_decl =
-      | SigmaDecl of name * typ_rec
-
     and ctyp_decl =
       | MDecl of Loc.t * name * typ  * dctx
       | PDecl of Loc.t * name * typ  * dctx
@@ -69,7 +66,7 @@ module Ext = struct
 
     and tuple =
       | Last of normal
-      | Cons of name * normal * tuple
+      | Cons of normal * tuple
 
     and dctx =
       | Null
@@ -174,9 +171,6 @@ module Int = struct
     and typ_decl =                         (* LF Declarations                *)
       | TypDecl of name * typ              (* D := x:A                       *)
       | TypDeclOpt of name                 (*   |  x:_                       *)
-
-    and sigma_decl =
-      | SigmaDecl of name * typ_rec        (* x:Sigma x1:A1 .... xk:Ak       *)
 
     and ctyp_decl =                        (* Contextual Declarations        *)
       | MDecl of name * typ  * dctx        (* D ::= u::A[Psi]                *)
@@ -292,7 +286,7 @@ module Int = struct
 
     and tuple =
       | Last of normal
-      | Cons of name * normal * tuple
+      | Cons of normal * tuple
 
     and mctx     = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
@@ -422,9 +416,6 @@ module Apx = struct
     and typ_decl =
       | TypDecl of name * typ
 
-    and sigma_decl =
-      | SigmaDecl of name * typ_rec
-
     and ctyp_decl =
       | MDecl of  name * typ  * dctx
       | PDecl of  name * typ  * dctx
@@ -440,7 +431,7 @@ module Apx = struct
 
     and tuple =
       | Last of normal
-      | Cons of name * normal * tuple
+      | Cons of normal * tuple
 
     and normal =
       | Lam  of Loc.t * name * normal

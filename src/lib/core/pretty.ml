@@ -245,14 +245,27 @@ module Ext = struct
             (fmt_ppr_lf_typ_rec lvl) typRec
             (r_paren_if (lvl > 0))
 
+    and fmt_ppr_tuple lvl ppf = function
+      | LF.Last tM ->
+           fmt_ppr_lf_normal lvl ppf tM
+
+      | LF.Cons(tM, rest) ->
+           fprintf ppf "%a, %a"
+             (fmt_ppr_lf_normal lvl) tM
+             (fmt_ppr_tuple lvl) rest
+
     and fmt_ppr_lf_normal  lvl ppf = function
       | LF.Lam (_, x, tM) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s\\%s %a%s"
+            fprintf ppf "%s\\%s. %a%s"
               (l_paren_if cond)
               (R.render_name   x)
               (fmt_ppr_lf_normal lvl) tM
               (r_paren_if cond)
+
+      | LF.Tuple (_, tuple) ->
+         fprintf ppf "<%a>"
+           (fmt_ppr_tuple  lvl) tuple
 
       | LF.Root (_, h, LF.Nil) ->
           fprintf ppf "%a"
@@ -503,7 +516,7 @@ module Ext = struct
               (r_paren_if cond)
 
       | Comp.Pair (_, e1, e2) -> 
-            fprintf ppf "<%a , %a>"
+            fprintf ppf "< %a , %a >"
               (fmt_ppr_cmp_exp_chk 0) e1
               (fmt_ppr_cmp_exp_chk 0) e2
 
@@ -559,7 +572,7 @@ module Ext = struct
 
       | Comp.MApp (_, i, (pHat, tM)) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a [%a. %a]%s"
+            fprintf ppf "%s%a < %a. %a > %s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn 1) i
               (fmt_ppr_lf_psi_hat 0) pHat
@@ -817,7 +830,7 @@ module Int = struct
     and fmt_ppr_lf_normal cO cD cPsi lvl ppf = function
       | LF.Lam (_, x, m) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s\\%s . %a%s"
+            fprintf ppf "%s\\%s. %a%s"
               (l_paren_if cond)
               (R.render_name x)
               (fmt_ppr_lf_normal cO cD (LF.DDec(cPsi, LF.TypDeclOpt x))  0) m
@@ -1299,7 +1312,7 @@ module Int = struct
       | Comp.MApp (i, (pHat, tM)) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s%a @ <%a. %a>%s"
+            fprintf ppf "%s%a @ < %a. %a > %s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cO cD cG 1) i
               (fmt_ppr_lf_psi_hat cO 0) cPsi

@@ -1,0 +1,24 @@
+nat : type.
+z : nat.
+s : nat -> nat.
+
+list : nat -> type.
+nil : list z.
+cons : nat -> list N -> list (s N).
+
+expl : type.
+mkExpl : list N -> expl.
+
+schema xl = block x:nat. list x;
+
+rec listf : {g:(xl)*} nat[g] -> expl[g] =
+  FN g => fn n => case n of
+      [g] z => [g] mkExpl nil
+    | [g] s (N ..) => [g] mkExpl (cons (s (N ..)) nil)
+    | [g] #p.1 ..  => [g] mkExpl (#p.2 ..)
+;
+
+rec listg : {g:(xl)*} {N::nat[g]} expl[g] =
+  FN g => mlam N => case [g] (N ..) of
+      [g] #p.1 ..  => [g] mkExpl (#p.2 ..)
+;

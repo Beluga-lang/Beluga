@@ -301,7 +301,7 @@ lf_typ_rec:
           "("; a = SELF; ")" ->
             a    
         | 
-          a = SYMBOL; ms = LIST0 (clf_term LEVEL "atomic") ->
+          a = SYMBOL; ms = LIST0 clf_atom ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
         ]
@@ -310,7 +310,7 @@ lf_typ_rec:
           "("; a = SELF; ")" ->
             a    
         | 
-          a = SYMBOL; ms = LIST0 (clf_term LEVEL "atomic") ->
+          a = SYMBOL; ms = LIST0 clf_atom ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
         |
@@ -320,41 +320,76 @@ lf_typ_rec:
     ]
   ;
 
-  clf_term:
-    [ RIGHTA
-        [
-          "\\"; x = SYMBOL; "."; m = SELF ->
+  clf_atom:
+     [ RIGHTA
+       [
+          "\\"; x = SYMBOL; "."; m = clf_term_app ->
             LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), m)
+       ]
+
+    | "atomic"
+        [
+         (* u = UPSYMBOL; "["; sigma' = clf_sub_new; "]"   ->   
+                     LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
+          |  *)
+          u = UPSYMBOL ->
+            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil) 
+
+        |
+           "("; u = UPSYMBOL; sigma' = clf_sub_new; ")"   ->   
+            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil) 
+        |
+            h = clf_head ->
+             LF.Root (_loc, h, LF.Nil)               
+        | 
+            "_" -> 
+            LF.Root (_loc, LF.Hole _loc , LF.Nil)
+        | 
+           "("; m = clf_term_app; ")" ->
+             m
+        |
+           "<"; ms = LIST1 clf_term_app SEP ","; ">"  ->
+             let rec fold = function [m] -> LF.Last m
+                                    | m :: rest -> LF.Cons(m, fold rest)
+             in
+               LF.Tuple (_loc, fold ms)
+        ]
+     ]
+   ;
+
+  clf_term_x:
+    [  "atomic" 
+        [
+           a = clf_atom ->
+              a
+        |
+          u = UPSYMBOL ->
+            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil) 
+        |
+           u = UPSYMBOL ; sigma' = clf_sub_new ->
+              LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil) 
+        ]
+    ]
+  ;
+
+  clf_term_app:
+    [ LEFTA
+        [
+          h = clf_head; ms = LIST0 clf_atom ->
+            let spine = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              LF.Root (_loc, h, spine)
         ]
 
-    | LEFTA
+    | RIGHTA
         [
-          h = clf_head; ms = LIST0 (clf_term LEVEL "atomic") ->
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Root (_loc, h, sp)
+          t = clf_term_x  ->
+            t
         ]
 
     | "atomic" 
         [
-            (* u = UPSYMBOL; "["; sigma' = clf_sub_new; "]"   ->   
-                    LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil) *)
-
-          u = UPSYMBOL ->   
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil) 
-
-        |  "("; u = UPSYMBOL; sigma' = clf_sub_new; ")"   ->   
-                    LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil) 
-
-        |   h = clf_head ->
-             LF.Root (_loc, h, LF.Nil)
-               
-        | 
-            "_" -> 
-            LF.Root (_loc, LF.Hole _loc , LF.Nil)
-
-        | 
-           "("; m = SELF; ")" ->
-             m
+          t = clf_term_x  ->
+            t
         ]
     ]
   ;
@@ -389,7 +424,7 @@ lf_typ_rec:
           LF.Dot (_loc, sigma, LF.Head h)
 
       | 
-        sigma = SELF;  tM = clf_term -> 
+        sigma = SELF;  tM = clf_atom -> 
           LF.Dot (_loc, sigma, LF.Normal tM)
 
 
@@ -398,7 +433,7 @@ lf_typ_rec:
           LF.Dot (_loc, LF.EmptySub _loc, LF.Head h)
 
       | 
-          tM = clf_term -> 
+          tM = clf_atom -> 
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
 
 
@@ -525,7 +560,7 @@ lf_typ_rec:
 
        "let"; ctyp_decls = LIST0 clf_ctyp_decl; 
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
-       "["; pHat = clf_dctx ;"]"; tM = clf_term; 
+       "["; pHat = clf_dctx ;"]"; tM = clf_term_app; 
        tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi)];  
        "="; i = cmp_exp_syn; "in"; e' = SELF ->         
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
@@ -536,7 +571,7 @@ lf_typ_rec:
     | "atomic"
       [
         (* "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = clf_term; ")" ->   *)
-      "["; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "]"; tM = clf_term ->   
+      "["; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "]"; tM = clf_term_app ->   
           let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in
             Comp.Box (_loc, pHat, tM)
 
@@ -565,7 +600,7 @@ lf_typ_rec:
           Comp.CtxApp (_loc, i, cPsi)
 
       |
-        i = SELF; "<"; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = clf_term; ">" ->
+        i = SELF; "<"; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = clf_term_app; ">" ->
           let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in
             Comp.MApp (_loc, i, (pHat, tM))
       |
@@ -577,7 +612,7 @@ lf_typ_rec:
         x = SYMBOL ->
           Comp.Var (_loc, Id.mk_name (Id.SomeString x))
       | 
-      "["; cPsi = clf_dctx; "]"; tR = clf_term ->   
+      "["; cPsi = clf_dctx; "]"; tR = clf_term_app ->
             Comp.BoxVal (_loc, cPsi, tR)
 
       |
@@ -597,7 +632,7 @@ lf_typ_rec:
       [
         ctyp_decls = LIST0 clf_ctyp_decl; 
       (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")"; *)
-        "["; pHat = clf_dctx ;"]"; tM = clf_term; 
+        "["; pHat = clf_dctx ;"]"; tM = clf_term_app; 
          tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi)]; 
          "=>"; e = cmp_exp_chk ->  
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in

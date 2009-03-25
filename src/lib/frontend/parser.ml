@@ -549,7 +549,7 @@ lf_typ_rec:
         "mlam"; f = UPSYMBOL; "=>"; e = SELF ->
           Comp.MLam (_loc, Id.mk_name (Id.SomeString f), e)
       |
-        "case"; i = cmp_exp_syn; "of"; bs = LIST1 cmp_branch SEP "|" ->
+        "case"; i = cmp_exp_syn; "of"; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, i, bs)
 
       | 

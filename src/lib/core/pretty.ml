@@ -1137,7 +1137,7 @@ module Int = struct
             fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
               (l_paren_if cond)
               (R.render_name   x)
-              (fmt_ppr_lf_typ (LF.Empty) (LF.Empty) cPsi  0) a
+              (fmt_ppr_lf_typ LF.Empty LF.Empty cPsi  0) a
               (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
               (r_paren_if cond)
 
@@ -1145,7 +1145,7 @@ module Int = struct
           let cond = lvl > 0 in
             fprintf ppf "@[<1>%s%a -> %a%s@]"
               (l_paren_if cond)
-              (fmt_ppr_lf_typ (LF.Empty) (LF.Empty) cPsi  1) a
+              (fmt_ppr_lf_typ LF.Empty LF.Empty cPsi  1) a
               (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
               (r_paren_if cond)
 
@@ -1155,13 +1155,13 @@ module Int = struct
       | LF.MDecl (u, tA, cPsi) ->
           fprintf ppf "{%s :: %a[%a]}"
             (R.render_name u)
-            (fmt_ppr_lf_typ cO cD cPsi 0) tA
+            (fmt_ppr_lf_typ cO cD cPsi 2) tA
             (fmt_ppr_lf_dctx cO cD 0) cPsi
 
       | LF.PDecl (p, tA, cPsi) ->
           fprintf ppf "{#%s :: %a[%a]}"
             (R.render_name p)
-            (fmt_ppr_lf_typ cO cD cPsi 1) tA
+            (fmt_ppr_lf_typ cO cD cPsi 2) tA
             (fmt_ppr_lf_dctx cO cD 0) cPsi
 
       | LF.CDecl (name, schemaName) ->

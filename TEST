@@ -91,11 +91,12 @@ $INTERPRETER  \
     ../examples-twelf/compile/debruijn/sources.cfg \
     ../examples-twelf/compile/debruijn1/sources.cfg \
     ../examples-twelf/compile/cps/sources.cfg \
+    test/alpha.bel \
     test/sigma1.bel \
     test/sigma2.bel \
     test/sigma3.bel \
     test/sigma4.bel
-    
+
 #    notworking/eq-proof.bel \
 #
 #    LF/arith-unify.lf LF/tps-1.lf    ??

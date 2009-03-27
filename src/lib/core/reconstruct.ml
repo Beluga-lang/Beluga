@@ -174,7 +174,8 @@ and index_head cvars bvars = function
         let s'     = index_sub cvars bvars s in
           Apx.LF.PVar (offset, s')
       with Not_found ->
-        let s'     = index_sub cvars bvars s in
+        let _ = dprint (fun () -> "PVar Not_found " ^ R.render_name p)  in
+      let s'     = index_sub cvars bvars s in
           Apx.LF.FPVar (p, s')
       end
 
@@ -704,6 +705,7 @@ and lookupCtxVar = function
 and elTerm' recT cO cD cPsi r sP = match r with
   | Apx.LF.Root (loc,  Apx.LF.Proj ((Apx.LF.FPVar (p, s) as _head), k),  Apx.LF.Nil) as m ->
       begin try
+        let _ = dprint (fun () -> "1") in
         let (offset, (_tA, cPhi)) = Cwhnf.mctxPVarPos cD p  in
           
         let s'' = elSub recT cO cD cPsi s cPhi in
@@ -713,10 +715,12 @@ and elTerm' recT cO cD cPsi r sP = match r with
             
       with Cwhnf.Fmvar_not_found ->
         begin try
+        let _ = dprint (fun () -> "2") in
           let (_tA, cPhi) = FPVar.get p in
           let s'' = elSub recT cO cD cPsi s cPhi in
             Int.LF.Root (Some loc,  Int.LF.FPVar (p, s''),  Int.LF.Nil)
         with Not_found ->
+        let _ = dprint (fun () -> "3") in
           begin match isPatSub s with
             | true ->
                 let (_givenType, givenSub) = sP in
@@ -2497,6 +2501,8 @@ and checkBranch caseTyp cO cD cG branch (tA, cPsi) (tau, t) =
 
 let recSgnDecl d = 
     let _        = reset_fvarCnstr () in 
+    let _       = FMVar.clear () in
+    let _       = FPVar.clear () in
     match d with
   | Ext.Sgn.Typ (_, a, extK)   ->
       let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in

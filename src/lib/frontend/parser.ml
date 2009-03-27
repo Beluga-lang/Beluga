@@ -557,15 +557,14 @@ lf_typ_rec:
           Comp.LetPair (_loc, i, (Id.mk_name (Id.SomeString x), Id.mk_name (Id.SomeString y), e))
 
       |
-
-       "let"; ctyp_decls = LIST0 clf_ctyp_decl; 
+       "let"; ctyp_decls = LIST0 clf_ctyp_decl;
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
-       "["; pHat = clf_dctx ;"]"; tM = clf_term_app; 
-       tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi)];  
-       "="; i = cmp_exp_syn; "in"; e' = SELF ->         
+       "["; pHat = clf_dctx ;"]"; tM = clf_term_app;
+       tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi) ];
+       "="; i = cmp_exp_syn; "in"; e' = SELF
+       ->
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
           Comp.Case (_loc, i, [Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, tau), e')]) 
-
       ]
 
     | "atomic"

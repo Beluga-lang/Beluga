@@ -96,11 +96,12 @@ $INTERPRETER  \
     test/sigma3.bel \
     test/sigma4.bel
     
+#    notworking/eq-proof.bel \
+#
 #    LF/arith-unify.lf LF/tps-1.lf    ??
 #
 #    notworking/church-rosser.rec \
 #    notworking/cut-elim.bel \
-#    notworking/eq-proof.bel \
 #    notworking/fol-handbook.bel \
 #    notworking/tpcert.bel \
 #    notworking/tpeval.bel \

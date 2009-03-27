@@ -1,4 +1,4 @@
-% Given an expression e return the proof that e is always equal to itself
+% Given an expression e, return the proof that e is always equal to itself.
 % 
 % If e is an expression, then eq e e.
 
@@ -22,8 +22,8 @@ eq: exp -> exp -> type.
 eq_app : {E1:exp} {F1:exp} {E2:exp} {F2:exp}
          eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 
-eq_lam : {E:exp -> exp} {F:exp -> exp}
-             ({x:exp} eq x x -> eq (E x) (F x)) 
+eq_lam : {E : exp -> exp} {F : exp -> exp}
+             ({x : exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
  
 % schema w = some [x:exp] eq x x;
@@ -35,24 +35,19 @@ rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
  FN g => mlam U =>
 %  case exp_identity [g] ([g] (U ..)) of      %  case [g] U .. of         % match < g.  U > of
    case [g] (U ..) of
-%    [g] #p.1 .. => [g] #p.2 ..
-% % | [g] 5563 => [g] 1252
-% % |  [g] #p.1 .. => [g] #2 p ..
-
+    [g] #p.1 .. => [g] #p.2 ..
+%{
   | [g] lam \x. L .. x =>
       let
-        [g,e:block y:exp. eq y y] V .. e = eqfun [g,e:block q:exp. eq q q]  <g,e. L .. e.1>
+        [g,e:block y:exp. eq y y] V .. e = eqfun [g, e:block q:exp. eq q q] <g, e. L .. e.1>
       in
-%       [g] eq_lam \x. \w. V .. <x,w>
         [g] eq_lam \x. \w. (V .. <x,w>)
-%{
-   | [g] app (U1 ..) (U2 ..) => 
-      let
-        [g] V1 .. = eqfun [g] <g . U1 ..>
-        [g] V2 .. = eqfun [g] <g . U2 ..>
-      in
-        [g] eq_app (V1 ..) (V2 ..)
 }%
+   | [g] app (A1 ..) (A2 ..) =>
+      let [g] EQ1 .. : (eq X1 X2)[g] = eqfun [g] <g . A1 ..> in
+      let [g] EQ2 .. = eqfun [g] <g . A2 ..> in
+ eqfun [g] <g. app (A1 ..) (A2 ..)>
+%        [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
 
 % schema l = some [x:term] block equal x x;

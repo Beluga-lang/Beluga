@@ -190,13 +190,13 @@ module Ext = struct
       | LF.MDecl (_, u, tA, cPsi) ->
           fprintf ppf "{%s :: %a[%a]}"
             (R.render_name u)
-            (fmt_ppr_lf_typ  0) tA
+            (fmt_ppr_lf_typ  2) tA
             (fmt_ppr_lf_dctx 0) cPsi
 
       | LF.PDecl (_, p, tA, cPsi) ->
           fprintf ppf "{#%s :: %a[%a]}"
             (R.render_name p)
-            (fmt_ppr_lf_typ  0) tA
+            (fmt_ppr_lf_typ  2) tA
             (fmt_ppr_lf_dctx 0) cPsi
 
 
@@ -448,7 +448,7 @@ module Ext = struct
     and fmt_ppr_cmp_typ lvl ppf = function
       | Comp.TypBox (_, tA, cPsi) ->
           fprintf ppf "%a[%a]"
-            (fmt_ppr_lf_typ  1) tA
+            (fmt_ppr_lf_typ  2) tA
             (fmt_ppr_lf_dctx 0) cPsi
 
       | Comp.TypArr (_, tau1, tau2) ->
@@ -581,7 +581,7 @@ module Ext = struct
 
       | Comp.BoxVal (_,psi, tM) ->
           let cond = lvl > 1 in
-            fprintf ppf "%sboxVal (%a. %a)%s"
+            fprintf ppf "%sBoxVal [%a] %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_dctx 0) psi
               (fmt_ppr_lf_normal 0) tM
@@ -601,12 +601,12 @@ module Ext = struct
     and fmt_ppr_cmp_branches lvl ppf = function
       | [] -> ()
 
-      | b :: [] ->
+      | [b] ->
           fprintf ppf "%a"
             (fmt_ppr_cmp_branch 0) b
 
       | b :: bs ->
-          fprintf ppf "%a @ @[<0>| %a@]"
+          fprintf ppf "%a @ @[<0>|%a@]"
             (fmt_ppr_cmp_branch 0) b
             (fmt_ppr_cmp_branches lvl) bs
 
@@ -1046,18 +1046,18 @@ module Int = struct
             | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
                 fprintf ppf "%s : %a "
                   (R.render_name x)
-                  (fmt_ppr_lf_typ (LF.Empty) cD (LF.Null) 0) tA 
+                  (fmt_ppr_lf_typ LF.Empty cD LF.Null 0) tA 
 
             | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
                   fprintf ppf "%s : %a,@ "
                     (R.render_name x)
-                    (fmt_ppr_lf_typ (LF.Empty) cD cPsi 0) tA
+                    (fmt_ppr_lf_typ LF.Empty cD cPsi 0) tA
                 ; ppr_typ_decl_dctx cD ppf cPsi
           in
           let cPsi = projectCtxIntoDctx typDecls in 
             fprintf ppf "some [%a] block %a "
-              (ppr_typ_decl_dctx  (LF.Empty))  cPsi
-              (fmt_ppr_lf_typ_rec (LF.Empty) (LF.Empty) cPsi lvl) sgmDecl
+              (ppr_typ_decl_dctx  LF.Empty)  cPsi
+              (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi lvl) sgmDecl
 
 
     let rec fmt_ppr_lf_psi_hat cO _lvl ppf = function
@@ -1099,7 +1099,7 @@ module Int = struct
       | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
           fprintf ppf "%s : %a"
             (R.render_name x)
-            (fmt_ppr_lf_typ cO cD (LF.Null) 0) tA
+            (fmt_ppr_lf_typ cO cD LF.Null 0) tA
 
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
@@ -1124,7 +1124,7 @@ module Int = struct
       | LF.Dec (cO, ctyp_decl) ->
           fprintf ppf "%a, %a"
             (fmt_ppr_lf_octx 0) cO
-            (fmt_ppr_lf_ctyp_decl (LF.Empty) (LF.Empty) lvl) ctyp_decl
+            (fmt_ppr_lf_ctyp_decl LF.Empty LF.Empty lvl) ctyp_decl
 
 
 
@@ -1183,7 +1183,7 @@ module Int = struct
     let rec fmt_ppr_cmp_typ cO cD lvl ppf = function
       | Comp.TypBox (tA, cPsi) ->
           fprintf ppf "%a[%a]"
-            (fmt_ppr_lf_typ cO cD cPsi 1) tA
+            (fmt_ppr_lf_typ cO cD cPsi 2) tA
             (fmt_ppr_lf_dctx cO cD 0) cPsi
 
       | Comp.TypArr (tau1, tau2) ->
@@ -1216,7 +1216,7 @@ module Int = struct
             fprintf ppf "%s%a %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl cO cD 1) ctyp_decl
-              (fmt_ppr_cmp_typ cO (LF.Dec(cD, ctyp_decl)) 0) tau
+              (fmt_ppr_cmp_typ cO (LF.Dec(cD, ctyp_decl)) 2) tau
               (r_paren_if cond)
 
       | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo !"
@@ -1409,26 +1409,26 @@ module Int = struct
       | Sgn.Const (c, a) ->
           fprintf ppf "%s : %a.@.@?"
             (R.render_cid_term c)
-            (fmt_ppr_lf_typ (LF.Empty) (LF.Empty) (LF.Null) lvl)  a
+            (fmt_ppr_lf_typ LF.Empty LF.Empty LF.Null lvl)  a
 
       | Sgn.Typ (a, k) ->
           fprintf ppf "%s : %a.@.@?"
             (R.render_cid_typ  a)
-            (fmt_ppr_lf_kind (LF.Null) lvl) k
+            (fmt_ppr_lf_kind LF.Null lvl) k
 
       | Sgn.Schema (w, schema) ->
-          fprintf ppf "%s : %a;@.@?"
+          fprintf ppf "schema %s : %a;@.@?"
             (R.render_cid_schema  w)
             (fmt_ppr_lf_schema lvl) schema
 
       | Sgn.Rec (f, tau, e) ->
-          fprintf ppf "rec %s : %a = @ %a.@.@?"
+          fprintf ppf "rec %s : %a = @ %a ;@.@?"
             (R.render_cid_prog  f)
-            (fmt_ppr_cmp_typ (LF.Empty) (LF.Empty) lvl) tau
-            (fmt_ppr_cmp_exp_chk (LF.Empty) (LF.Empty) 
+            (fmt_ppr_cmp_typ LF.Empty LF.Empty lvl) tau
+            (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty 
                (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name ,  tau)))  lvl) e
 
-      | Sgn.Pragma (LF.NamePrag(_cid_tp)) ->  ()
+      | Sgn.Pragma (LF.NamePrag _cid_tp) ->  ()
  
  
 
@@ -1655,8 +1655,8 @@ module Error = struct
       | KindMismatch (cD, cPsi, sS, sK) ->
           fprintf ppf "ill-kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
             (IP.kindToString cPsi sK)
-            (IP.fmt_ppr_lf_spine (LF.Empty) cD cPsi std_lvl) (Whnf.normSpine sS)
-            (IP.fmt_ppr_lf_dctx (LF.Empty) cD std_lvl) cPsi
+            (IP.fmt_ppr_lf_spine LF.Empty cD cPsi std_lvl) (Whnf.normSpine sS)
+            (IP.fmt_ppr_lf_dctx LF.Empty cD std_lvl) cPsi
 
       | TypMismatch (cO, cD, cPsi, sM, sA1, sA2) ->
           fprintf ppf

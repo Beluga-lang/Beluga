@@ -1268,7 +1268,7 @@ module Int = struct
       | Comp.Box (pHat, tM) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx pHat in
-            fprintf ppf "%sbox (%a. %a)%s"
+            fprintf ppf "%s[%a] %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_psi_hat cO 0) cPsi
               (fmt_ppr_lf_normal cO cD cPsi 0) tM
@@ -1352,7 +1352,7 @@ module Int = struct
                   (fmt_ppr_lf_ctyp_decl cO cD 1) decl
           in
           let cD' = Context.append cD cD1 in 
-            fprintf ppf "%a @ box (%a . %a) : %a[%a] => @ @[<2>%a@]@ "
+            fprintf ppf "%a @ ([%a] %a) : %a[%a] => @ @[<2>%a@]@ "
               (ppr_ctyp_decls cO) cD1
               (fmt_ppr_lf_psi_hat cO 0) cPsi
               (fmt_ppr_lf_normal cO cD1 cPsi 0) tM

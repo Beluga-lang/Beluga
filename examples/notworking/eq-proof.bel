@@ -14,127 +14,137 @@
 % - also requires explicit use of "remove parameter x and u" in the
 %   definition of `extend' and the use of `extend' in `eqfun'
 
-exp: type.
+exp: type.    %name exp E x.
 app: exp -> exp -> exp.
 lam: (exp -> exp) -> exp.
 
-eq: exp -> exp -> type.
-eq_app : {E1:exp} {F1:exp} {E2:exp} {F2:exp}
+eq: exp -> exp -> type.   %name eq D u.
+eq_app : % {E1:exp} {F1:exp} {E2:exp} {F2:exp}
          eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 
-eq_lam : {E : exp -> exp} {F : exp -> exp}
+eq_lam : % {E : exp -> exp} {F : exp -> exp}
              ({x : exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
  
 % schema w = some [x:exp] eq x x;
 schema w = block x:exp. eq x x;
+% schema w = some [t:tp] block x:exp t. eq x x;
 
-% rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e ;
+rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e ;
 
 rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
  FN g => mlam U =>
 %  case exp_identity [g] ([g] (U ..)) of      %  case [g] U .. of         % match < g.  U > of
    case [g] (U ..) of
     [g] #p.1 .. => [g] #p.2 ..
-%{
   | [g] lam \x. L .. x =>
       let
         [g,e:block y:exp. eq y y] V .. e = eqfun [g, e:block q:exp. eq q q] <g, e. L .. e.1>
       in
-        [g] eq_lam \x. \w. (V .. <x,w>)
-}%
-   | [g] app (A1 ..) (A2 ..) =>
-      let [g] EQ1 .. : (eq X1 X2)[g] = eqfun [g] <g . A1 ..> in
-      let [g] EQ2 .. = eqfun [g] <g . A2 ..> in
- eqfun [g] <g. app (A1 ..) (A2 ..)>
-%        [g] eq_app (EQ1 ..) (EQ2 ..)
+        eqfun [g] <g. lam \x. L .. x>
+%        [g] eq_lam \x. \w. (V .. <x,w>)
+
+   | [g] app (A1 ..) (A2 ..)  : exp[g]=>
+      let [g] EQ1 .. : (eq (A1' ..) (A1' ..))[g] = eqfun [g] <g . A1 ..> in
+      let [g] EQ2 .. : (eq (A2' ..) (A2' ..))[g] = eqfun [g] <g . A2 ..> in
+%        eqfun [g] <g. app (A1 ..) (A2 ..)>
+        [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
 
-% schema l = some [x:term] block equal x x;
 
-% % General reflexivity rule is admissible in the equality definition
-% rec ref : {g:(l)*} {t::term[g]} (equal t[id(g)] t[id(g)])[g] = 
-%     FN g => mlam t => 
-%         case box(g. t[id(g)]) : term[g] of 
-%             [g] #p.1 ..  => box(g . snd p[id(g)])
-%           | [g] lam \x. U .. x => 
-%             let
-%                 [g, e:___] E .. e = 
-%                 ref [g, e:sigma(x:term) equal x x] <g, e. U[id(g), fst e]>
-%             in
-%                 box(g. eq_lam (lam  \x.U[id(g), x]) (lam  \x.U[id(g), x])
-%                 \x.\u. E[id(g), <x,u>])
-%             end
-%           | box(g. app U[id(g)] W[id(g)]) => 
-%             let 
-%                 box(g. E1[id(g)]) = ref [g] <g . U[id(g)]>
-%                 box(g. E2[id(g)]) = ref [g] <g . W[id(g)]>
-%             in
-%                 box(g. eq_app (app U[id(g)] W[id(g)]) (app U[id(g)] W[id(g)])
-%                 E1[id(g)] E2[id(g)])
-%             end;
 
-% % General transitivity is admissible
-% rec trans: {g:(l)*}{t::term[g]}{s::term[g]}{r::term[g]}    
-%    (equal t[id(g)] r[id(g)])[g] -> (equal r[id(g)] s[id(g)])[g]
-%     -> (equal t[id(g)] s[id(g)])[g] =
-%     FN g => mlam t => mlam s => mlam r =>
-%         fn e1 => fn e2 => 
-%             case (e1, e2) of 
-%                 (box(g. snd p[id(g)]) , e2) => e2
-%               | (box(g. eq_lam (lam \x.T[id(g), x]) (lam \x.S[id(g), x]) \x.\u. D1[id(g),x,u]),
-%                 box(g. eq_lam (lam \x.S[id(g), x]) (lam \x.R[id(g), x]) \x.\u. D2[id(g),x,u]))
-%                 let
-%                     box(g,b . E[id(g)]) = 
-%                     trans [g, b:sigma(x:exp) equal x x] 
-%                     <g,b. T[id(g), fst b]> <g,b. S[id(g), fst b]> <g,b. R[id(g), fst b]>
-%                     box(g, b . D1[id(g), fst b, snd b])
-%                     box(g, b . D2[id(g), fst b, snd b])
-%                 in
-%                     box(g . eq_lam (lam \x.T[id(g), x]) (lam \x.R[id(g), x])
-%                     \x.\u.E[id(g), (x,u)])
-%                 end
-%               | (box(g. eq_app (app T1[id(g)] T2[id(g)]) (app S1[id(g)] S2[id(g)]) 
-%                 D2[id(g)] D1[id(g)]),
-%                 box(g. eq_app (app S1[id(g)] S2[id(g)]) (app R1[id(g)] 
-%                 R2[id(g)])  F2[id(g)] F1[id(g)])) =>
-%                 let
-%                     box(g. E1[id(g)]) = trans [g] <g.T1[id(g)]> <g.S1[id(g)]> <g.R1[id(g)]>
-%                     box(g. D1[id(g)])  box(g. F1[id(g)])
-%                     box(g. E2[id(g)]) = trans [g] <g.T2[id(g)]> <g.S2[id(g)]> <g.R2[id(g)]
-%                     box(g. D2[id(g)])  box(g. F2[id(g)])
-%                 in
-%                     box(g. eq_app (app T1[id(g)] T2[id(g)]) (app R1[id(g)] R2[id(g)])
-%                     E1[id(g)]  E2[id(g)])
-%                 end;
 
-% equal: term -> term -> type.
-% e_l: ({x:term} eq x x -> eq (T x) (T' x)) -> eq (lam \x. T x) (lam \x. T' x).
-% e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
-% e_r: eq T T.
-% e_t: eq T' S -> eq T T' -> eq T S.
+%{
+schema l = some [x:term] block equal x x;
 
-% schema h = some [] block {x:term} {e: equal x x} {e':eq x x}; % where h < l 
+% General reflexivity rule is admissible in the equality definition
+rec ref : {g:(l)*} {t::term[g]} (equal t[id(g)] t[id(g)])[g] = 
+    FN g => mlam t => 
+        case box(g. t[id(g)]) : term[g] of 
+            [g] #p.1 ..  => box(g . snd p[id(g)])
+          | [g] lam \x. U .. x => 
+            let
+                [g, e:___] E .. e = 
+                ref [g, e:sigma(x:term) equal x x] <g, e. U[id(g), fst e]>
+            in
+                box(g. eq_lam (lam  \x.U[id(g), x]) (lam  \x.U[id(g), x])
+                \x.\u. E[id(g), <x,u>])
+            end
+          | box(g. app U[id(g)] W[id(g)]) => 
+            let 
+                box(g. E1[id(g)]) = ref [g] <g . U[id(g)]>
+                box(g. E2[id(g)]) = ref [g] <g . W[id(g)]>
+            in
+                box(g. eq_app (app U[id(g)] W[id(g)]) (app U[id(g)] W[id(g)])
+                E1[id(g)] E2[id(g)])
+            end;
+}%
 
-% ceq: {g:(h)*}{t::term[g]}{s::term[g]} (eq t[id(g)] s[\id(g)])[g] -> (equal  t[id(g)] s[id(g)])[g] 
+%{
+% General transitivity is admissible
+rec trans: {g:(l)*}{t::term[g]}{s::term[g]}{r::term[g]}    
+   (equal t[id(g)] r[id(g)])[g] -> (equal r[id(g)] s[id(g)])[g]
+    -> (equal t[id(g)] s[id(g)])[g] =
+    FN g => mlam t => mlam s => mlam r =>
+        fn e1 => fn e2 => 
+            case (e1, e2) of 
+                (box(g. snd p[id(g)]) , e2) => e2
+              | (box(g. eq_lam (lam \x.T[id(g), x]) (lam \x.S[id(g), x]) \x.\u. D1[id(g),x,u]),
+                box(g. eq_lam (lam \x.S[id(g), x]) (lam \x.R[id(g), x]) \x.\u. D2[id(g),x,u]))
+                let
+                    box(g,b . E[id(g)]) = 
+                    trans [g, b:sigma(x:exp) equal x x] 
+                    <g,b. T[id(g), fst b]> <g,b. S[id(g), fst b]> <g,b. R[id(g), fst b]>
+                    box(g, b . D1[id(g), fst b, snd b])
+                    box(g, b . D2[id(g), fst b, snd b])
+                in
+                    box(g . eq_lam (lam \x.T[id(g), x]) (lam \x.R[id(g), x])
+                    \x.\u.E[id(g), (x,u)])
+                end
+              | (box(g. eq_app (app T1[id(g)] T2[id(g)]) (app S1[id(g)] S2[id(g)]) 
+                D2[id(g)] D1[id(g)]),
+                box(g. eq_app (app S1[id(g)] S2[id(g)]) (app R1[id(g)] 
+                R2[id(g)])  F2[id(g)] F1[id(g)])) =>
+                let
+                    box(g. E1[id(g)]) = trans [g] <g.T1[id(g)]> <g.S1[id(g)]> <g.R1[id(g)]>
+                    box(g. D1[id(g)])  box(g. F1[id(g)])
+                    box(g. E2[id(g)]) = trans [g] <g.T2[id(g)]> <g.S2[id(g)]> <g.R2[id(g)]
+                    box(g. D2[id(g)])  box(g. F2[id(g)])
+                in
+                    box(g. eq_app (app T1[id(g)] T2[id(g)]) (app R1[id(g)] R2[id(g)])
+                    E1[id(g)]  E2[id(g)])
+                end;
+}%
 
-% rec ceq: {g:h2}{t::term[g]}{s::term[g]} (equal t[id(g)] s[\id(g)])[g] -> (eq t[id(g)] s[id(g)])[g] =
-%     FN g => mlam t => mlam s => fn E =>
-%         case E of 
-%             box(g. snd (snd p[id(g)])) => box(g. snd (fst p[id(g)]))
-%           | box(g. eq_r) => ref [g]  <g. t> % NOTE HERE WE NEED THE FACT THAT h <= l !!!
-%           | box(g. eq_tr T[id(g)] S[id(g)]  R[id(g)] D2[id(g)]  D1[id(g)]) => 
-%             let
-%                 box(g . E1[id(g)]) = ceq [g] <g. T[id(g)]> <g. S[id(g)]> box(g. D1[id(g)])
-%                 box(g . E2[id(g)]) = ceq [g] <g. S[id(g)]> <g. R[id(g)]> box(g. D2[id(g)])
-%             in
-%                 % NOTE HERE WE NEED THE FACT THAT h <= l !!!
-%                 tr [g] <g. T[id(g)]> <g. S[id(g)]> <g. R[id(g)]> box(g. E1[id(g)])  box(g. E2[id(g)])
-%             end
-%           | box(g eq_l (lam \x.U[x]) [x][u:equal x x] D[x,u]) => 
-%             let 
-%                 box(g, b. E[b]) = ceq [g, b:sigma(x:term) sigma(uv:equal x x) eq x x]
-%                 <g, b. U[fst b> box(g, b. D[fst b, snd (snd b)])
-%             in
-%                 box(g. eq_lam [x][v] E[(x,(equal x x, v))])
-%             end;
+%{
+equal: term -> term -> type.
+e_l: ({x:term} eq x x -> eq (T x) (T' x)) -> eq (lam \x. T x) (lam \x. T' x).
+e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
+e_r: eq T T.
+e_t: eq T' S -> eq T T' -> eq T S.
+
+schema h = some [] block {x:term} {e: equal x x} {e':eq x x}; % where h < l 
+
+ceq: {g:(h)*}{t::term[g]}{s::term[g]} (eq t[id(g)] s[\id(g)])[g] -> (equal  t[id(g)] s[id(g)])[g] 
+
+rec ceq: {g:h2}{t::term[g]}{s::term[g]} (equal t[id(g)] s[\id(g)])[g] -> (eq t[id(g)] s[id(g)])[g] =
+    FN g => mlam t => mlam s => fn E =>
+        case E of 
+            box(g. snd (snd p[id(g)])) => box(g. snd (fst p[id(g)]))
+          | box(g. eq_r) => ref [g]  <g. t> % NOTE HERE WE NEED THE FACT THAT h <= l !!!
+          | box(g. eq_tr T[id(g)] S[id(g)]  R[id(g)] D2[id(g)]  D1[id(g)]) => 
+            let
+                box(g . E1[id(g)]) = ceq [g] <g. T[id(g)]> <g. S[id(g)]> box(g. D1[id(g)])
+                box(g . E2[id(g)]) = ceq [g] <g. S[id(g)]> <g. R[id(g)]> box(g. D2[id(g)])
+            in
+                % NOTE HERE WE NEED THE FACT THAT h <= l !!!
+                tr [g] <g. T[id(g)]> <g. S[id(g)]> <g. R[id(g)]> box(g. E1[id(g)])  box(g. E2[id(g)])
+            end
+          | box(g eq_l (lam \x.U[x]) [x][u:equal x x] D[x,u]) => 
+            let 
+                box(g, b. E[b]) = ceq [g, b:sigma(x:term) sigma(uv:equal x x) eq x x]
+                <g, b. U[fst b> box(g, b. D[fst b, snd (snd b)])
+            in
+                box(g. eq_lam [x][v] E[(x,(equal x x, v))])
+            end;
+}%

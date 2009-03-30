@@ -12,6 +12,7 @@ open Error
 exception Error of error
 
 val dctxToHat   : dctx -> psi_hat
+val addToHat   : psi_hat -> psi_hat   (* Lengthen by one declaration *)
 val hatToDCtx   : psi_hat -> dctx
 (* Declaration Contexts *)
 val ctxDec      : dctx -> int -> typ_decl

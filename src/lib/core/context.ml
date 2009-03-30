@@ -11,21 +11,19 @@ open Error
 
 exception Error of error
 
-(* More appropriate: Psi into psihat  Sat Oct  4 11:44:55 2008 -bp *)
-let dctxToHat cPsi =
-  let rec length = function
-    | Null ->
-        (None, 0)
+let addToHat (ctxvarOpt, length) =
+  (ctxvarOpt, length + 1)
 
-    | CtxVar psi ->
-        (Some psi, 0)
+(* More appropriate: Psi into psihat  Oct  4 2008 -bp *)
+let rec dctxToHat = function
+  | Null ->
+      (None, 0)
 
-    | DDec (cPsi', _) ->
-        let (cVopt, i) = length cPsi' in
-          (cVopt, i + 1)
-  in
-    length cPsi
+  | CtxVar psi ->
+      (Some psi, 0)
 
+  | DDec (cPsi', _) ->
+      addToHat (dctxToHat cPsi')
 
 let rec hatToDCtx phat = match phat with 
   | (None,      0) -> LF.Null

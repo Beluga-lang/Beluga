@@ -12,7 +12,6 @@
    declared at the end of this file.
 *)
 
-open Context
 open Syntax.Int.LF
 open Syntax.Int
 open Trail
@@ -50,11 +49,12 @@ module type UNIFY = sig
 
   exception Unify of string
 
-  val unify    : mctx -> psi_hat * nclo * nclo -> unit (* raises  Unify *)
-  val unifyTyp : mctx -> psi_hat * tclo * tclo -> unit (* raises Unify *)
-  val unifyTypRec : mctx -> psi_hat * (typ_rec * sub) * (typ_rec * sub) -> unit (* raises Unify *)
-  val unifyDCtx:   mctx -> dctx -> dctx -> unit (* raises Unify *)
-  val unifyCompTyp : mctx -> (Comp.typ * Comp.msub) -> (Comp.typ * Comp.msub) -> unit (* raises Unify *)
+  (* All unify* functions return () on success and raise Unify on failure *)
+  val unify    : mctx -> psi_hat * nclo * nclo -> unit
+  val unifyTyp : mctx -> psi_hat * tclo * tclo -> unit
+  val unifyTypRec : mctx -> psi_hat * (typ_rec * sub) * (typ_rec * sub) -> unit
+  val unifyDCtx:   mctx -> dctx -> dctx -> unit
+  val unifyCompTyp : mctx -> (Comp.typ * Comp.msub) -> (Comp.typ * Comp.msub) -> unit
 
   type cvarRef =
     | MVarRef of normal option ref
@@ -755,6 +755,20 @@ module Make (T : TRAIL) : UNIFY = struct
                (dot1 s1' ,  DDec(cPsi1', TypDecl(x, TClo (tA, s1_i))))
         end
 
+
+    | (Dot (Head (Proj (BVar n, _projIndex)), s'), DDec(cPsi', TypDecl(x, tA))) ->
+   (* copied immediately preceding case for Head (BVar _)...is this right?  -jd *)
+        begin match bvarSub n ss with
+          | Undef -> 
+              let (s1', cPsi1') = pruneSub cD0 (phat, (s', cPsi'), ss, rOccur)  in 
+                (comp s1' shift, cPsi1')
+
+           | Head (BVar _n) ->
+              let (s1', cPsi1') = pruneSub cD0 (phat, (s', cPsi'), ss, rOccur) in
+              let s1_i = invert (Whnf.normSub s1') in      (* cPsi1' |- s1_i <= cPsi' *)
+               (dot1 s1' ,  DDec(cPsi1', TypDecl(x, TClo (tA, s1_i))))
+        end
+
     | (Dot (Obj tM, s'), DDec(cPsi', TypDecl(x, tA)))        ->
         (* below may raise NotInvertible *)
         (* let _tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in    *)
@@ -762,7 +776,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
         let (s1', cPsi1')  = pruneSub cD0 (phat, (s', cPsi'), ss, rOccur) in 
         let s1_i = invert (Whnf.normSub s1') in      (* cPsi1' |- s1_i <= cPsi' *)
-        (* We need to prune the type here as well; Mon Feb  9 14:39:47 2009 -bp *)
+        (* We need to prune the type here as well;  Feb  9  2009 -bp *)
         let tA' = pruneTyp cD0 (phat, (tA, id), s1_i, rOccur) in  
           (dot1 s1'  , DDec(cPsi1', TypDecl(x, tA'))) 
 
@@ -855,7 +869,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
                     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
 
-                    let _ = dprint (fun () -> let cPsi = (Context.hatToDCtx phat) in 
+                    let _ = dprint (fun () -> let cPsi = Context.hatToDCtx phat in 
                                       "UNIFY(1): " ^ 
                                               P.mctxToString Empty cD0 ^ "\n" ^
                                               P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
@@ -910,7 +924,7 @@ module Make (T : TRAIL) : UNIFY = struct
         let t' = comp t s2 in
           if isPatSub t' then
             try
-              let _ = dprint (fun () -> let cPsi = (Context.hatToDCtx phat) in 
+              let _ = dprint (fun () -> let cPsi = Context.hatToDCtx phat in 
                                 "UNIFY(3): " ^ 
                                   P.mctxToString Empty cD0 ^ "\n" ^
                                   P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
@@ -1202,18 +1216,19 @@ module Make (T : TRAIL) : UNIFY = struct
     and unifyTypRec' cD0 (phat, sArec, sBrec) = unifyTypRecW cD0 (phat, sArec, sBrec)
 
     and unifyTypRecW cD0 (phat, srec1, srec2) = match (srec1, srec2) with
-      | ((SigmaLast t1, s1) ,  (SigmaLast t2, s2)) ->
+      | ((SigmaLast t1, s1) ,   (SigmaLast t2, s2)) ->
           unifyTyp' cD0 (phat, (t1,s1), (t2,s2))
-
+      
       | ((SigmaElem (_x1, t1, rec1),  s1) ,   (SigmaElem (_x2, t2, rec2),  s2))  ->
            unifyTyp' cD0 (phat, (t1,s1), (t2,s2))
-         ; let s1' = dot1 s1
+         ; let phat' = Context.addToHat phat
+           and s1' = dot1 s1
            and s2' = dot1 s2 in
-             unifyTypRecW cD0 (phat, (rec1,s1'), (rec2,s2'))
-
-      | ((_, _s1) ,  (_, _s2)) ->
+             unifyTypRecW cD0 (phat', (rec1,s1'), (rec2,s2'))
+      
+      | ((_, _s1) ,   (_, _s2)) ->
           raise (Unify "TypRec length clash")
-
+   
 
    (* Unify pattern fragment, and force constraints after pattern unification succeeded *)
 

@@ -259,6 +259,9 @@ module LF = struct
     | (cPsi',  Shift (psi, k),  cPsi) ->
         checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
 
+(****
+This case should now be covered by the one below it
+
     | (cPsi',  Dot (Head (BVar w), t),  DDec (cPsi, TypDecl(_, Sigma arec))) ->
         (* other heads of type Sigma disallowed -bp *)
         let _ = checkSub cO cD cPsi' t cPsi
@@ -267,7 +270,7 @@ module LF = struct
           if not (Whnf.convTypRec (brec, LF.id) (arec, t)) then
             raise (Violation "Sigma-type ill-typed")
             (* (SigmaIllTyped (cD, cPsi', (brec, LF.id), (arec, t))) *)
-
+****)
     (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
 
     | (cPsi',  Dot (Head h, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
@@ -463,14 +466,15 @@ module LF = struct
             let phat        = dctxToHat cPsi in
             begin
               dprint (fun () -> "***Unify.unifyTypRec ("
-                        ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
-                        ^ "\n   " ^ P.typToString cO cD cPsi (tA, s)
-                        ^ "\n== " ^ P.typRecToString cO cD cPsi (elemRec, dctxSub) );
+                              ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
+                              ^ "\n   " ^ P.typToString cO cD cPsi (tA, s)
+                              ^ "\n== " ^ P.typRecToString cO cD cPsi (elemRec, dctxSub) );
               try
                 (* Unify.unifyTyp cD (phat, (normedA, LF.id), (normedElem1, dctxSub)) *)
                 Unify.unifyTypRec cD (phat, (tArec, LF.id), (elemRec, dctxSub))
               ; dprint (fun () -> "checkTypeAgainstElement\n"
-                                ^ "elemRec = " ^ P.typRecToString cO cD cPsi (elemRec, dctxSub))
+                                ^ "  elemRec = " ^ P.typRecToString cO cD cPsi (elemRec, dctxSub) ^ "\n"
+                                ^ "  succeeded.")
               with exn ->
                 dprint (fun () -> "Type " 
                           ^ P.typToString cO cD cPsi (tA, LF.id) ^ " doesn't unify with " 

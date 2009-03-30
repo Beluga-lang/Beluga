@@ -43,11 +43,11 @@ rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
       in
         eqfun [g] <g. lam \x. L .. x>
 %        [g] eq_lam \x. \w. (V .. <x,w>)
+% above still not accepted ---2009-03-30 jd
 
    | [g] app (A1 ..) (A2 ..)  : exp[g]=>
       let [g] EQ1 .. : (eq (A1' ..) (A1' ..))[g] = eqfun [g] <g . A1 ..> in
       let [g] EQ2 .. : (eq (A2' ..) (A2' ..))[g] = eqfun [g] <g . A2 ..> in
-%        eqfun [g] <g. app (A1 ..) (A2 ..)>
         [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
 

@@ -1381,7 +1381,7 @@ let rec solve_fvarCnstr recT cO cD cnstr = match cnstr with
  *)
 
 let rec recTerm recT cO cD  cPsi sM sA =
-       recTermW recT cO cD  cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
+  recTermW recT cO cD  cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
   | ((Int.LF.Lam (_, _, tM), s'),   (Int.LF.PiTyp ((tA, _ ), tB), s)) ->
@@ -1392,10 +1392,10 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
   | ((Int.LF.Root (loc, _, _), _) as sR,   (Int.LF.Atom _, _)) ->
       begin
         try
-          let _ = dprint (fun () -> "recTerm: expected " ^ 
-            P.mctxToString cO cD ^ "\n |- " ^ 
-            P.normalToString cO cD cPsi sR ^ "\n of type " ^ 
-            P.typToString cO cD cPsi sA ^ "\n"  ) in 
+          let _ = dprint (fun () -> "recTerm: " ^
+            P.mctxToString cO cD ^ "\n      |- " ^
+            P.normalToString cO cD cPsi sR ^ "\n       : " ^
+            P.typToString cO cD cPsi sA ^ "\n" ) in 
 
           let sP' = synTermW recT cO cD  cPsi sR in
 
@@ -1410,12 +1410,12 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
               raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP'))))
       with SpineMismatch ->
         raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
-      end 
-
+      end
+  
   | ((Int.LF.Root (loc, _, _), _),   _) ->
       (Printf.printf "recTerm: Root object of non-atomic type\n";
        raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA))))
-
+  
   | ((Int.LF.Lam (loc, _, _), _),   _) ->
       (Printf.printf "recTerm: Lam object of atomic type\n";
        raise (Error (loc, IllTyped (cO, cD, cPsi, sM, sA))))
@@ -1424,8 +1424,7 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
 and synTerm recT cO cD  cPsi sR =
    synTermW recT cO cD  cPsi (Whnf.whnf sR)
 
-and synTermW recT cO cD  cPsi ((root, s') as sR) =
-  match root with
+and synTermW recT cO cD  cPsi ((root, s') as sR) = match root with
     | Int.LF.Root (_, head, tS) ->
         let rec synHead = function
           | Int.LF.Const c ->
@@ -1567,65 +1566,117 @@ and synSpineW recT cO cD  cPsi sS sA = match (sS, sA) with
       raise SpineMismatch
 
 
-and recSub recT cO cD cPsi s cPhi = match (cPsi, s, cPhi) with
+and recSub recT cO cD cPsi_ s cPhi_ =
+  dprint (fun () -> "recSub \n  "
+            ^ P.dctxToString cO cD cPsi_ ^ "\n  "
+            ^ P.subToString cO cD cPsi_ s ^ "\n  "
+            ^ P.dctxToString cO cD cPhi_
+         );
+  match (cPsi_, s, cPhi_) with
 (*  | (Int.LF.Shift (_, _n), _cPhi) ->
       (* We may need to expand cPhi further if n =/= 0 *)
       ()
 *)
-    | (Int.LF.Null, Int.LF.Shift (Int.LF.NoCtxShift, 0), Int.LF.Null) -> ()
 
-    | (Int.LF.CtxVar psi, Int.LF.Shift (Int.LF.NoCtxShift, 0), Int.LF.CtxVar psi') ->
-        if psi = psi' then
-          ()
-        else
-          raise (Violation "Context variable mismatch")
+  (* Null  Null *)
+  | (Int.LF.Null,  Int.LF.Shift (Int.LF.NoCtxShift, 0),
+     Int.LF.Null) -> ()
 
-    | (Int.LF.CtxVar psi, Int.LF.Shift (Int.LF.CtxShift psi', 0), Int.LF.Null)  ->
-        if psi = psi' then
-          ()
-        else
-          raise (Violation "Context variable mismatch")
+  (* CtxVar  CtxVar *)
+  | (Int.LF.CtxVar psi,  Int.LF.Shift (Int.LF.NoCtxShift, 0),
+     Int.LF.CtxVar psi') ->
+      if psi = psi' then
+        ()
+      else
+        raise (Violation "Context variable mismatch")
 
-    | (Int.LF.Null, Int.LF.Shift (Int.LF.NegCtxShift psi, 0), Int.LF.CtxVar psi')  ->
-        if psi = psi' then
-          () 
-        else
-          raise (Violation "Substitution ill-typed -- negative shift on CtxVar")
+  (* CtxVar  Null *)
+  | (Int.LF.CtxVar psi,  Int.LF.Shift (Int.LF.CtxShift psi', 0),
+     Int.LF.Null)  ->
+      if psi = psi' then
+        ()
+      else
+        raise (Violation "Context variable mismatch")
 
-    | (Int.LF.DDec (cPsi, _tX), Int.LF.Shift (psi, k), Int.LF.Null)   ->
-        if k > 0 then
-          recSub recT cO cD  cPsi (Int.LF.Shift (psi, k - 1)) Int.LF.Null
-        else
-          raise (Violation "Substitution ill-typed")
+  (* Null  CtxVar *)          
+  | (Int.LF.Null,  Int.LF.Shift (Int.LF.NegCtxShift psi, 0),
+     Int.LF.CtxVar psi')  ->
+      if psi = psi' then
+        () 
+      else
+        raise (Violation "Substitution ill-typed -- negative shift on CtxVar")
 
-    | (Int.LF.DDec (cPsi, _tX), Int.LF.Shift (phi, k), Int.LF.CtxVar psi) ->
-        if k > 0 then
-          recSub recT cO cD  cPsi (Int.LF.Shift (phi, k - 1)) (Int.LF.CtxVar psi)
-        else
-          raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
-            (* (SubIllTyped) *)
+  (* (cPsi, _:tX)  Null *)
+  | (Int.LF.DDec (cPsi, _tX),  Int.LF.Shift (psi, k),
+     Int.LF.Null)   ->
+      if k > 0 then
+        recSub recT cO cD  cPsi (Int.LF.Shift (psi, k - 1)) Int.LF.Null
+      else
+        raise (Violation "Substitution ill-typed")
+  
+  (* (cPsi, _:tX)  CtxVar *)
+  | (Int.LF.DDec (cPsi, _tX),  Int.LF.Shift (phi, k),
+     Int.LF.CtxVar psi) ->
+      if k > 0 then
+        recSub recT cO cD  cPsi (Int.LF.Shift (phi, k - 1)) (Int.LF.CtxVar psi)
+      else
+        raise (Violation ("Substitution ill-typed; k = %s" ^ string_of_int k))
+          (* (SubIllTyped) *)
+  
+  (* cPsi  cPhi *)
+  | (cPsi,  Int.LF.Shift (psi, k),
+     cPhi) ->
+      let s' = (Int.LF.Dot (Int.LF.Head (Int.LF.BVar (k + 1)), Int.LF.Shift (psi, k + 1))) in
+        recSub recT cO cD  cPsi s' cPhi
+  
+  (* cPsi   (cPhi, _:tA) *)
+  | (cPsi,  Int.LF.Dot (Int.LF.Head (Int.LF.BVar x), rest),
+     Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA)))
+    ->
+      let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in
+      let _ = recSub recT cO cD  cPsi rest cPhi in 
+        Unify.unifyTyp cD (Context.dctxToHat cPsi, (tA', LF.id), (tA, rest))
 
-    | (cPsi', Int.LF.Shift (psi, k), cPsi) ->
-        let s' = (Int.LF.Dot (Int.LF.Head (Int.LF.BVar (k + 1)), Int.LF.Shift (psi, k + 1))) in
-          recSub recT cO cD  cPsi' s' cPsi
-
-
-    | (cPsi, Int.LF.Dot (Int.LF.Head Int.LF.BVar x, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) ->
+  (* cPsi   (cPhi, _:tA) *)
+  | (cPsi,  Int.LF.Dot (Int.LF.Head (Int.LF.Proj (Int.LF.BVar x, projIndex)), rest),
+     Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA)))
+    ->
+      begin 
+        dprint (fun () -> "recSub Proj \n  "
+                        ^ P.dctxToString cO cD cPsi ^ "\n  "
+                        ^ P.subToString cO cD cPsi s ^ "\n  "
+                        ^ P.dctxToString cO cD cPhi
+        );
         let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in
-        let _ = recSub recT cO cD  cPsi s cPhi in 
-          Unify.unifyTyp cD (Context.dctxToHat cPsi, (tA', LF.id), (tA, s))
+          dprint (fun () -> "  got type: " ^ P.typToString cO cD cPsi (tA', LF.id));
+          match Whnf.normTyp (tA', LF.id) with
+            | Int.LF.Sigma tA'rec ->
+                let _ = dprint (fun () -> "  got Sigma " ^ P.typRecToString cO cD cPsi (tA'rec, LF.id)) in
+                let sA' = Int.LF.getType (Int.LF.BVar x) (tA'rec, LF.id) projIndex 1 in
+                let _ = dprint (fun () -> "  got _." ^ string_of_int projIndex ^ " = " ^ P.typToString cO cD cPsi sA') in
+                let _   = recSub recT cO cD  cPsi rest cPhi in
+                  Unify.unifyTyp cD (Context.dctxToHat cPsi, sA', (tA, rest))              
+            
+            | tA' -> raise (Violation ("recSub _ (" ^ P.subToString cO cD cPsi s
+                                       ^ ") _; type " ^ P.typToString cO cD cPsi (tA', LF.id)))
+      end
 
-    | (cPsi, Int.LF.Dot (Int.LF.Obj tM, s), Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA))) ->
-        recSub  recT cO cD  cPsi s cPhi;
-        recTerm recT cO cD  cPsi (tM, LF.id) (tA, s)
+  (* cPsi  (cPhi, _:tA) *)
+  | (cPsi,  Int.LF.Dot (Int.LF.Obj tM, s),
+     Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA)))
+    ->
+      recSub  recT cO cD  cPsi s cPhi;
+      recTerm recT cO cD  cPsi (tM, LF.id) (tA, s)
+  
+  (* cPsi  ...Undef...  _ *)
+  | (_cPsi,  Int.LF.Dot (Int.LF.Undef, _s),
+     _) ->
+      raise (Error (None, LeftoverUndef))
+        
+  | _ ->
+      raise (Violation "Reconstruction of substitution undefined")
 
-    | (_cPsi, Int.LF.Dot (Int.LF.Undef, _s), _) ->
-        raise (Error (None, LeftoverUndef))
-
-    | _ ->
-        raise (Violation "Reconstruction of substitution undefined")
-
-  (* needs other cases for Head(h) where h = MVar, Const, etc. -bp *)
+  (* needs other cases for Head h where h = MVar, Const, etc. -bp *)
 
 let rec synKSpine loc recT cO cD  cPsi sS sK = match (sS, sK) with
   | ((Int.LF.Nil, _s), (Int.LF.Typ, _s')) -> ()
@@ -2317,18 +2368,21 @@ let rec checkW cO cD cG e ttau = match (e , ttau) with
         Int.Comp.Case (i, branches)
 
   (* Matching on data *)
-  | (Int.Comp.Case (i, branches), (tau, t)) ->
+  | (Int.Comp.Case (i, branches),  (tau, t)) ->
       let (i, tau') = syn cO cD cG i in
-      let _         = dprint (fun () -> "Syn type of scrutinee in case statement\n") in 
+      let _         = dprint (fun () -> "Synthesized type of scrutinee in case expression") in 
         begin match C.cwhnfCTyp tau' with
           | (Int.Comp.TypBox (tA, cPsi),  t') ->
-              let _ = dprint (fun () -> "Check for leftover constraints ... ") in 
-                let branches' = checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau, t) in
+              let _ = dprint (fun () -> "Checking for leftover constraints") in 
+                let branches' = checkBranches DataObj cO cD cG branches
+                                              (C.cnormTyp (tA, t'),  C.cnormDCtx (cPsi, t'))
+                                              (tau, t)
+                in
                   Int.Comp.Case (i, branches')
           | _ -> raise (Error (None, ValueRestriction (cO, cD, cG, i, tau')))
         end
 
-  | (Int.Comp.Syn i, (tau, t)) ->
+  | (Int.Comp.Syn i,  (tau, t)) ->
       let (i, tau_t') = syn cO cD cG i in
         (* if C.convCTyp (tau,t) tau_t' then *)
         try

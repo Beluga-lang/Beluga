@@ -137,6 +137,9 @@ let rec norm (tM, sigma) = match tM with
   | Lam (loc, y, tN) ->
       Lam (loc, y, norm (tN, LF.dot1 sigma))
 
+  | Tuple (loc, tuple) ->
+      Tuple (loc, normTuple (tuple, sigma))
+
   | Clo (tN, s) ->
       norm (tN, LF.comp s sigma)
 
@@ -185,9 +188,9 @@ let rec norm (tM, sigma) = match tM with
 
   | Root (loc, PVar (PInst ({ contents = Some (BVar i)}, _, _, _), r), tS) ->
       begin match LF.bvarSub i r with
-        | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
-        | Head (BVar x) -> Root (loc, BVar x, normSpine (tS, sigma))
-        | Head (head)   -> norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
+        | Obj tM        ->  reduce (tM, LF.id) (normSpine (tS, sigma))
+        | Head (BVar x) ->  Root (loc, BVar x, normSpine (tS, sigma))
+        | Head head     ->  norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
       end
 
   | Root (loc, PVar (PInst ({ contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS) ->
@@ -228,6 +231,13 @@ let rec norm (tM, sigma) = match tM with
   | Root (loc, FVar x, tS) ->
       Root (loc, FVar x, normSpine (tS, sigma))
 
+
+and normTuple (tuple, t) = match tuple with
+  | Last tM -> Last (norm (tM, t))
+  | Cons (tM, rest) ->
+      let tM' = norm (tM, t) in
+      let rest' = normTuple (rest, t) in
+        Cons (tM', rest')
 
 and normSpine (tS, sigma) = match tS with
   | Nil           -> Nil
@@ -289,7 +299,7 @@ and normTyp (tA, sigma) = match tA with
 
 and normTypRec (recA, sigma) = match recA with
   | SigmaLast lastA ->
-      SigmaLast (normTyp(lastA, sigma))
+      SigmaLast (normTyp (lastA, sigma))
 
   | SigmaElem (x, tA, recA') ->
       let tA = normTyp (tA, sigma) in
@@ -369,6 +379,8 @@ let rec normMCtx cD = match cD with
  *)
 let rec whnf sM = match sM with
   | (Lam _, _s) -> sM
+
+  | (Tuple _, _s) -> sM
 
   | (Clo (tN, s), s') -> whnf (tN, LF.comp s s')
 
@@ -573,6 +585,9 @@ and conv' sM sN = match (sM, sN) with
   | ((Lam (_, _, tM1), s1), (Lam (_, _, tM2), s2)) ->
       conv (tM1, LF.dot1 s1) (tM2, LF.dot1 s2)
 
+  | ((Tuple (_, tuple1), s1), (Tuple (_, tuple2), s2)) ->
+      convTuple (tuple1, s1) (tuple2, s2)
+
   | ((Root (_,AnnH (head, _tA), spine1), s1), sN) -> 
        conv' (Root (None, head, spine1), s1) sN
 
@@ -584,41 +599,50 @@ and conv' sM sN = match (sM, sN) with
 
   | _ -> false
 
+and convTuple (tuple1, s1) (tuple2, s2) = match (tuple1, tuple2) with
+  | (Last tM1,  Last tM2) ->
+      conv (tM1, s1) (tM2, s2)
+
+  | (Cons (tM1, tuple1),  Cons(tM2, tuple2)) ->
+         conv (tM1, s1) (tM2, s2)
+      && convTuple (tuple1, s1) (tuple2, s2)
+
+  | _ -> false
 
 and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
-        | (BVar k1, BVar k2) ->
-            k1 = k2
+  | (BVar k1, BVar k2) ->
+      k1 = k2
 
-        | (Const c1, Const c2) ->
-            c1 = c2
+  | (Const c1, Const c2) ->
+      c1 = c2
 
-        | (PVar (p, s'), PVar (q, s'')) ->
-            p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
-
-        | (FPVar (p, s'), FPVar (q, s'')) ->
-            p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
-
-        | (MVar (Offset u , s'), MVar (Offset w, s'')) ->
-            u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
-
-        | (MVar (Inst(u, _cPsi, _tA, _cnstr) , s'), MVar (Inst(w, _, _, _ ), s'')) ->
-            u == w && convSub (LF.comp s' s1) (LF.comp s'' s2)
-
-        | (FMVar (u, s'), FMVar (w, s'')) ->
-            u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
-
-        | (Proj (BVar k1, i), Proj (BVar k2, j)) ->
-            k1 = k2 && i = j
-
-        | (Proj (PVar (p, s'), i), Proj (PVar (q, s''), j)) ->
-            p = q && i = j && convSub (LF.comp s' s1) (LF.comp s'' s2)
-        (* additional case: p[x] = x ? -bp*)
-
-        | (FVar x, FVar y) ->
-            x = y
-
-        | (_, _) ->
-            false
+  | (PVar (p, s'), PVar (q, s'')) ->
+      p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
+  
+  | (FPVar (p, s'), FPVar (q, s'')) ->
+      p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
+  
+  | (MVar (Offset u , s'), MVar (Offset w, s'')) ->
+      u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+  
+  | (MVar (Inst(u, _cPsi, _tA, _cnstr) , s'), MVar (Inst(w, _, _, _ ), s'')) ->
+      u == w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+        
+  | (FMVar (u, s'), FMVar (w, s'')) ->
+      u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+          
+  | (Proj (BVar k1, i), Proj (BVar k2, j)) ->
+      k1 = k2 && i = j
+          
+  | (Proj (PVar (p, s'), i), Proj (PVar (q, s''), j)) ->
+      p = q && i = j && convSub (LF.comp s' s1) (LF.comp s'' s2)
+   (* additional case: p[x] = x ? -bp*)
+          
+  | (FVar x, FVar y) ->
+      x = y
+          
+  | (_, _) ->
+      false
 
 
 and convSpine spine1 spine2 = match (spine1, spine2) with

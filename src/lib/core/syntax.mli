@@ -298,17 +298,17 @@ module Int : sig
 
   module Comp : sig
 
-   type mfront =              
+   type mfront =
      | MObj of LF.psi_hat * LF.normal 
      | PObj of LF.psi_hat * LF.head
      | MV   of offset
      | Undef
 
-   type msub =                            
+   type msub =
      | MShift of int
      | MDot   of mfront * msub
 
-   type depend = 
+   type depend =
      | Implicit 
      | Explicit
 
@@ -351,7 +351,7 @@ module Int : sig
           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx))
           * exp_chk
 
-   type ctyp_decl = 
+   type ctyp_decl =
      | CTypDecl of name * typ
      | CTypDeclOpt of name 
     

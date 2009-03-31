@@ -85,8 +85,16 @@ and mshiftMFt ft n = match ft with
 
 and mshiftTerm tM n = match tM with
   | LF.Lam(loc, x, tN)  -> LF.Lam(loc, x, mshiftTerm tN n)
+  | LF.Tuple(loc, tuple)  -> LF.Tuple(loc, mshiftTuple tuple n)
   | LF.Root(loc, h, tS) -> LF.Root(loc, mshiftHead h n, mshiftSpine tS n)
   | LF.Clo(tM, s)  -> LF.Clo(mshiftTerm tM n, mshiftSub s n)
+
+and mshiftTuple tuple n = match tuple with
+  | LF.Last tM -> LF.Last (mshiftTerm tM n)
+  | LF.Cons (tM, rest) ->
+      let tMshifted = mshiftTerm tM n in
+      let restShifted = mshiftTuple rest n in
+        LF.Cons (tMshifted, restShifted)
 
 and mshiftHead h n = match h with
   | LF.MVar(LF.Offset k, s) -> LF.MVar(LF.Offset (k+n), mshiftSub s n)
@@ -326,9 +334,11 @@ and what_head = function
   | LF.FPVar _ -> "FPVar"
 
 and cnorm (tM, t) = match tM with
-    | LF.Lam (loc, y, tN)  -> LF.Lam (loc, y, cnorm (tN, t))
+    | LF.Lam (loc, y, tN)   -> LF.Lam (loc, y, cnorm (tN, t))
 
-    | LF.Clo (tN, s)       -> LF.Clo(cnorm (tN, t), cnormSub(s, t))  
+    | LF.Tuple (loc, tuple) -> LF.Tuple (loc, cnormTuple (tuple, t))
+
+    | LF.Clo (tN, s)        -> LF.Clo(cnorm (tN, t), cnormSub(s, t))  
 
     | LF.Root (loc, head, tS) ->
 
@@ -495,6 +505,12 @@ and cnorm (tM, t) = match tM with
     | LF.App  (tN, tS)  -> LF.App (cnorm (tN, t), cnormSpine (tS, t))
     | LF.SClo (tS, s)   -> LF.SClo(cnormSpine (tS, t), cnormSub (s, t))
 
+  and cnormTuple (tuple, t) = match tuple with
+    | LF.Last tM -> LF.Last (cnorm (tM, t))
+    | LF.Cons (tM, rest) ->
+        let tM' = cnorm (tM, t) in
+        let rest' = cnormTuple (rest, t) in
+          LF.Cons (tM', rest')
 
   and cnormSub (s, t) = match s with 
     | LF.Shift _         -> s
@@ -1105,6 +1121,8 @@ let rec mctxPVarPos cD p =
   let rec invTerm (tM, t) d = match tM with
     | LF.Lam (loc, y, tN)  -> LF.Lam (loc, y, invTerm (tN, t) d) 
 
+    | LF.Tuple (loc, tuple)  -> LF.Tuple (loc, invTuple (tuple, t) d)
+
     | LF.Clo (tN, s)       -> LF.Clo(invTerm (tN, t) d , invSub(s, t) d)  
 
     | LF.Root (loc, LF.BVar i, tS) -> LF.Root(loc, LF.BVar i, invSpine (tS, t) d)
@@ -1182,6 +1200,15 @@ let rec mctxPVarPos cD p =
           LF.Root(loc, LF.Proj (LF.PVar (LF.Offset k', invSub (s,t) d), k), invSpine (tS, t) d)
 
   (* Ignore other cases for destructive (free) parameter variables *)
+
+  and invTuple (tuple, t) d = match tuple with
+    | LF.Last tM ->
+        let invertedM = invTerm (tM, t) d in 
+          LF.Last invertedM
+    | LF.Cons (tM, tuple) ->
+        let invertedM = invTerm (tM, t) d in 
+        let invertedTuple = invTuple (tuple, t) d in
+          LF.Cons (invertedM, invertedTuple)
 
   and invSpine (tS, t) d = match tS with
     | LF.Nil            -> LF.Nil

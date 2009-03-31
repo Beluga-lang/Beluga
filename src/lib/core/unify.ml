@@ -1314,7 +1314,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     let unifyTyp cD0 (phat, sA, sB) =
-      let _ = dprint (fun () -> "CALLING UNIFYTYP\n" ) in 
+      let _ = dprint (fun () -> "CALLING UNIFYTYP" ) in 
       let cPsi = phatToDCtx phat in 
       let _ = dprint (fun () -> "unifyTyp:\n" ^  "  |- " ^ 
          P.typToString Empty cD0 cPsi sA ^ "\n     " ^ 
@@ -1325,8 +1325,8 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     let unifyTypRec1 cD0 (phat, sArec, sBrec) = 
-      (unifyTypRec' cD0 (phat, sArec, sBrec);
-      forceCnstr (nextCnstr ()))
+      unifyTypRec' cD0 (phat, sArec, sBrec);
+      forceCnstr (nextCnstr ())
 
     let unifyTypRec cD0 (phat, sArec, sBrec) =
       resetDelayedCnstrs ();

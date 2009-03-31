@@ -416,9 +416,19 @@ and collectTermW cQ ((cvar, offset) as phat) sM = match sM with
   | (I.Lam (_, _x, tM), s) ->
       collectTerm cQ (cvar, offset + 1) (tM, LF.dot1 s)
 
+  | (I.Tuple (_, tuple), s) ->
+      collectTuple cQ phat (tuple, s)
+
   | (I.Root (_, h, tS), s) ->
       let cQ' = collectHead cQ phat (h, s) in
         collectSpine cQ' phat (tS, s)
+
+and collectTuple cQ phat = function
+  | (I.Last tM, s) -> collectTerm cQ phat (tM, s)
+  | (I.Cons (tM, tuple), s) ->
+      let cQ' = collectTerm cQ phat (tM, s) in
+        collectTuple cQ' phat (tuple, s)
+
 
 (* collectSpine cQ phat (S, s) = cQ'
 
@@ -820,9 +830,21 @@ and abstractMVarTerm cQ offset sM = abstractMVarTermW cQ offset (Whnf.whnf sM)
 and abstractMVarTermW cQ offset sM = match sM with
   | (I.Lam (loc, x, tM), s) ->
       I.Lam (loc, x, abstractMVarTerm cQ offset (tM, LF.dot1 s))
+
+  | (I.Tuple (loc, tuple), s) ->
+      I.Tuple (loc, abstractMVarTuple cQ offset (tuple, s))
+
   | (I.Root (loc, tH, tS), s (* LF.id *)) ->
       I.Root (loc, abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
 
+and abstractMVarTuple cQ offset = function
+  | (I.Last tM, s) ->
+      let tM' = abstractMVarTerm cQ offset (tM, s) in
+        I.Last tM'
+  | (I.Cons (tM, tuple), s) ->
+      let tM' = abstractMVarTerm cQ offset (tM, s) in
+      let tuple' = abstractMVarTuple cQ offset (tuple, s) in
+      I.Cons (tM', tuple')
 
 and abstractMVarHead cQ offset tH = match tH with
   | I.BVar x ->

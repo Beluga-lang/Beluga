@@ -95,9 +95,10 @@ $INTERPRETER  \
     test/sigma1.bel \
     test/sigma2.bel \
     test/sigma3.bel \
-    test/sigma4.bel
-
-#    notworking/eq-proof.bel \
+    test/sigma4.bel \
+    notworking/eq-proof.bel
+# note: most of eq-proof.bel is commented out, so it should remain in notworking/
+ 
 #
 #    LF/arith-unify.lf LF/tps-1.lf    ??
 #

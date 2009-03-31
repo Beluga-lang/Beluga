@@ -73,13 +73,16 @@ module LF = struct
    * otherwise exception Error is raised
    *)
   let rec checkW cO cD cPsi sM sA = match (sM, sA) with
-    | ((Lam (_, _, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2)) -> 
+    | ((Lam (_, _, tM), s1),   (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2)) -> 
         check cO cD
           (DDec (cPsi, LF.decSub tX s2))
           (tM, LF.dot1 s1)
           (tB, LF.dot1 s2)
 
-    | ((Root (loc, h, tS), s (* id *)), (Atom _, _s')) ->
+    | ((Tuple (_, tuple), s1),   (Sigma typRec, s2)) -> 
+        checkTuple cO cD cPsi (tuple, s1) (typRec, s2)
+
+    | ((Root (loc, h, tS), s (* id *)),   (Atom _, _s')) ->
         (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
         let sA' = Whnf.whnfTyp (inferHead cO cD cPsi h, LF.id) in
           begin try
@@ -98,6 +101,18 @@ module LF = struct
 
   and check cO cD cPsi sM sA = checkW cO cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
+  and checkTuple cO cD cPsi (tuple, s1) (typRec, s2) = match (tuple, typRec) with
+    | (Last tM,   SigmaLast tA) ->
+        checkW cO cD cPsi (tM, s1) (tA, s2)
+
+    | (Cons (tM, restOfTuple),   SigmaElem (_x, tA, restOfTypRec)) ->
+        checkW cO cD cPsi (tM, s1) (tA, s2)
+      ; checkTuple cO cD cPsi
+          (restOfTuple, s1)
+          (restOfTypRec, Dot (Obj tM, s2))
+
+    | (_, _) ->
+        raise (Violation ("checkTuple arity mismatch"))
 
   (* synSpine cO cD cPsi sS sA = sP
    * 

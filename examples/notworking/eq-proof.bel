@@ -18,7 +18,7 @@ exp: type.    %name exp E x.
 app: exp -> exp -> exp.
 lam: (exp -> exp) -> exp.
 
-eq: exp -> exp -> type.   %name eq D u.
+eq: exp -> exp -> type.   %name eq Q u.
 eq_app : % {E1:exp} {F1:exp} {E2:exp} {F2:exp}
          eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 
@@ -30,24 +30,23 @@ eq_lam : % {E : exp -> exp} {F : exp -> exp}
 schema w = block x:exp. eq x x;
 % schema w = some [t:tp] block x:exp t. eq x x;
 
-rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e ;
+% rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e ;
 
 rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
  FN g => mlam U =>
 %  case exp_identity [g] ([g] (U ..)) of      %  case [g] U .. of         % match < g.  U > of
    case [g] (U ..) of
-    [g] #p.1 .. => [g] #p.2 ..
-  | [g] lam \x. L .. x =>
-      let
-        [g,e:block y:exp. eq y y] V .. e = eqfun [g, e:block q:exp. eq q q] <g, e. L .. e.1>
-      in
-        eqfun [g] <g. lam \x. L .. x>
-%        [g] eq_lam \x. \w. (V .. <x,w>)
-% above still not accepted ---2009-03-30 jd
+%  | [g] #p.1 .. => [g] #p.2 ..
 
+   | [g] lam \x. L .. x =>
+      let
+        [g,e:block yyy:exp. eq yyy yyy] V .. e = eqfun [g, e:block q:exp. eq q q] <g, e. L .. e.1>
+      in
+%        eqfun [g] <g. lam \x. L .. x>
+        [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
    | [g] app (A1 ..) (A2 ..)  : exp[g]=>
-      let [g] EQ1 .. : (eq (A1' ..) (A1' ..))[g] = eqfun [g] <g . A1 ..> in
-      let [g] EQ2 .. : (eq (A2' ..) (A2' ..))[g] = eqfun [g] <g . A2 ..> in
+      let [g] EQ1 .. = eqfun [g] <g . A1 ..> in
+      let [g] EQ2 .. = eqfun [g] <g . A2 ..> in
         [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
 

@@ -14,6 +14,8 @@ open Syntax.Int.LF
 
 module LF = struct
 
+  let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
+
   exception Error of string
 
   (**************************)
@@ -74,7 +76,7 @@ module LF = struct
         else
           (* (Printf.printf "s1 = %s \n s2 = %s\n\n"
              (P.subToString s1) (P.subToString s2) ; *)
-          raise (Error "Composition undefined \n")
+          raise (Error "Composition undefined")
 
     | (Shift (CtxShift psi , m), s2) ->
         let rec ctx_shift n s2 = match s2 with
@@ -93,7 +95,7 @@ module LF = struct
 
           | _ -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n"
                     (P.subToString s1) (P.subToString s2) ; *)
-              raise (Error "Composition undefined\n")
+              raise (Error "Composition undefined")
         in
           ctx_shift m s2
 
@@ -116,7 +118,7 @@ module LF = struct
         if psi = psi' then
           Shift (NoCtxShift, m)
         else
-          raise (Error "Composition not defined\n")
+          raise (Error "Composition not defined")
 
     (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
 
@@ -146,7 +148,7 @@ module LF = struct
 
     | (_s1, _s2) -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s    FAILED\n"
                        (P.subToString s1) (P.subToString s2) ;  *)
-        raise (Error "Composition not defined?\n")
+        raise (Error "Composition not defined?")
 
 
   (* bvarSub n s = Ft'
@@ -178,8 +180,19 @@ module LF = struct
     | Head (PVar (u, s')) -> Head (PVar (u, comp s' s))
 
     | Head (Proj (h, k))  ->
-        let Head h' = frontSub (Head h) s in
-          Head (Proj (h', k))
+        begin match frontSub (Head h) s with
+          | Head h' ->
+              Head (Proj (h', k))
+
+          | Obj (Tuple (_, tuple)) ->
+              let rec nth s = function
+                | (Last u, 1) -> (u, s)
+                | (Cons (u, _), 1) -> (u, s)
+                | (Cons (u, tuple), n) -> nth (Dot(Obj u, s)) (tuple, n - 1)
+              in
+(*                Obj (Clo (nth s (tuple, k))) *)
+                Obj (fst (nth s (tuple, k)))
+        end
 
     | Head (AnnH (h, a))  ->
         let Head h' = frontSub (Head h) s in

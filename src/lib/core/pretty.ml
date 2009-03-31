@@ -749,6 +749,7 @@ module Int = struct
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.nclo     -> string
     val headToString      : LF.mctx -> LF.mctx -> LF.dctx -> LF.head     -> string
+    val tupleToString      : LF.mctx -> LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> LF.mctx -> string
     val octxToString      : LF.mctx -> string
@@ -827,6 +828,15 @@ module Int = struct
             (fmt_ppr_lf_typ_rec cO cD cPsi lvl) typRec
             (r_paren_if (lvl > 0))
 
+    and fmt_ppr_tuple cO cD cPsi lvl ppf = function
+      | LF.Last tM ->
+           fmt_ppr_lf_normal cO cD cPsi lvl ppf tM
+
+      | LF.Cons(tM, rest) ->
+           fprintf ppf "%a, %a"
+             (fmt_ppr_lf_normal cO cD cPsi lvl) tM
+             (fmt_ppr_tuple cO cD cPsi lvl) rest
+
     and fmt_ppr_lf_normal cO cD cPsi lvl ppf = function
       | LF.Lam (_, x, m) ->
           let cond = lvl > 0 in
@@ -835,6 +845,10 @@ module Int = struct
               (R.render_name x)
               (fmt_ppr_lf_normal cO cD (LF.DDec(cPsi, LF.TypDeclOpt x))  0) m
               (r_paren_if cond)
+
+      | LF.Tuple (_, tuple) ->
+         fprintf ppf "<%a>"
+           (fmt_ppr_tuple cO cD cPsi lvl) tuple
 
       | LF.Root (_, h, LF.Nil) ->
           fprintf ppf "%a"
@@ -960,9 +974,9 @@ module Int = struct
                   let sym = String.uppercase (Gensym.VarData.gensym ()) in
                   *)
                   (* Not working -bp *)
-                  let sym = (match (Store.Cid.Typ.gen_mvar_name tA) with 
-                              | Some (vGen) -> vGen ()                    
-                              | None -> Gensym.MVarData.gensym ()) 
+                  let sym = match Store.Cid.Typ.gen_mvar_name tA with 
+                              | Some vGen -> vGen ()
+                              | None -> Gensym.MVarData.gensym ()
                   in 
                       InstHashtbl.replace inst_hashtbl u sym
                     ; fprintf ppf "?%s" sym
@@ -1438,6 +1452,7 @@ module Int = struct
     let ppr_lf_kind cPsi          = fmt_ppr_lf_kind cPsi          std_lvl std_formatter
     let ppr_lf_typ  cO cD cPsi    = fmt_ppr_lf_typ cO cD cPsi     std_lvl std_formatter
     let ppr_lf_normal cO cD cPsi  = fmt_ppr_lf_normal cO cD cPsi  std_lvl std_formatter
+    let ppr_tuple cO cD cPsi      = fmt_ppr_tuple cO cD cPsi    std_lvl std_formatter
     let ppr_lf_head cO cD cPsi    = fmt_ppr_lf_head cO cD cPsi    std_lvl std_formatter
     let ppr_lf_spine cO cD cPsi   = fmt_ppr_lf_spine cO cD cPsi   std_lvl std_formatter
     let ppr_lf_sub cO cD cPsi     = fmt_ppr_lf_sub cO cD cPsi     std_lvl std_formatter
@@ -1486,6 +1501,10 @@ module Int = struct
     let kindToString cPsi sK   = 
       let tK = Whnf.normKind sK in 
       fmt_ppr_lf_kind cPsi std_lvl str_formatter tK
+      ; flush_str_formatter ()
+
+    let tupleToString cO cD cPsi tuple = 
+      fmt_ppr_tuple cO cD cPsi std_lvl str_formatter tuple
       ; flush_str_formatter ()
 
     let headToString cO cD cPsi h = 

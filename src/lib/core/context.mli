@@ -18,6 +18,7 @@ val hatToDCtx   : psi_hat -> dctx
 val ctxDec      : dctx -> int -> typ_decl
 val ctxSigmaDec : dctx -> int -> typ_decl
 val ctxVar      : dctx -> ctx_var option
+val hasCtxVar   : dctx -> bool         (* true if ctxVar dctx = Some _ *)
 
 val append      : 'a ctx -> 'a ctx -> 'a ctx
 val length      : 'a ctx -> int

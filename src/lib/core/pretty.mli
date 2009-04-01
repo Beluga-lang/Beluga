@@ -12,6 +12,14 @@ type lvl
 
 val std_lvl : lvl
 
+module Control : sig
+  type substitution_style = Natural | DeBruijn
+
+  val substitutionStyle : substitution_style ref
+  val printImplicit : bool ref
+ 
+  val db : unit -> bool  (* true if !substitutionStyle = DeBruijn *)
+end
 
 module type CID_RENDERER = sig
 

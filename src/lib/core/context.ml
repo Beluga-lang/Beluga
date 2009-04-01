@@ -111,15 +111,18 @@ let ctxSigmaDec cPsi k =
  *
  * Invariant:
  *
- *   If Psi is a data-level context then
- *   return Some psi if context variable exists
- *   otherwise None
+ *   Given a data-level context Psi,
+ *    returns Some psi if Psi has the form  psi, ...
+ *    otherwise returns None
  *)
 let rec ctxVar = function
-  | Null                -> None
-  | CtxVar   psi        -> Some psi
-  | DDec     (cPsi, _x) -> ctxVar cPsi
+  | Null              -> None
+  | CtxVar psi        -> Some psi
+  | DDec   (cPsi, _x) -> ctxVar cPsi
 
+let hasCtxVar cPsi = match ctxVar cPsi with
+  | Some _ -> true
+  | None -> false
 
 (* append cD1 cD2 = (cD1, cD2) *)
 let rec append cD1 cD2 = match cD2 with

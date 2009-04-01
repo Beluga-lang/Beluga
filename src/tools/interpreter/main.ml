@@ -10,19 +10,42 @@ open Frontend
 open Printf
 
 let usage () =
-  let options = "    -d      turn all debugging off (default)\n"
-              ^ "    +d      turn all debugging on\n"
+  let options =
+"\
+ \    -d            turn all debugging printing off (default)\n\
+ \    +d            turn all debugging printing on\n\
+ \    -s=natural    print substitutions in a \"natural\" style (default)\n\
+ \    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n\
+ \    +implicit     print implicit arguments (default -- for now)\n\
+ \    -implicit     don't print implicit arguments\n\
+"
   in
     fprintf stderr
       "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
       Sys.argv.(0)   options
   ; exit 2
 
+module PC = Pretty.Control
+
 (* We should be using a library for this *)
-let process_option = function
+let process_option' arg = begin let f = function
   | "+d" -> Debug.showAll ()
   | "-d" -> Debug.showNone ()
+  | "-s=natural" -> PC.substitutionStyle := PC.Natural
+  | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn
+  | "+implicit" -> PC.printImplicit := true
+  | "-implicit" -> PC.printImplicit := false
   | _ -> usage ()
+in (* print_string (">>>> " ^ arg ^ "\n"); *) f arg
+end
+
+let process_option string =
+  if String.length string < 4 then
+    process_option' string
+  else
+    let first_part = String.sub string 0 2
+    and second_part = String.lowercase (String.sub string 2 (String.length string - 2)) in
+      process_option' (first_part ^ second_part)
 
 let rec process_options = function
   | [] -> []

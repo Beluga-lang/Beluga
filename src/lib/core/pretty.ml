@@ -30,7 +30,6 @@ open Format
 *)
 
 
-
 type lvl    = int
 
 let std_lvl = 0
@@ -45,6 +44,16 @@ let r_paren_if cond =
   if cond
   then ")"
   else ""
+
+
+module Control = struct
+  type substitution_style = Natural | DeBruijn
+
+  let substitutionStyle = ref Natural
+  let printImplicit = ref true
+
+  let db() = !substitutionStyle = DeBruijn
+end (* Control *)
 
 
 
@@ -416,7 +425,7 @@ module Ext = struct
     and fmt_ppr_lf_psi_hat _lvl ppf = function
       | []      -> ()
 
-      | x :: [] ->
+      | [x]     ->
           fprintf ppf "%s"
             (R.render_name x)
 
@@ -843,7 +852,7 @@ module Int = struct
             fprintf ppf "%s\\%s. %a%s"
               (l_paren_if cond)
               (R.render_name x)
-              (fmt_ppr_lf_normal cO cD (LF.DDec(cPsi, LF.TypDeclOpt x))  0) m
+              (fmt_ppr_lf_normal cO cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
               (r_paren_if cond)
 
       | LF.Tuple (_, tuple) ->
@@ -865,6 +874,10 @@ module Int = struct
       | LF.Clo(tM, s) -> fmt_ppr_lf_normal cO cD cPsi lvl ppf (Whnf.norm (tM, s))
 
     and fmt_ppr_lf_head cO cD cPsi lvl ppf head = 
+      let paren s = not (Control.db()) && lvl > 0 && (match s with
+        | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
+        | _ -> true)
+      in
       let rec fmt_head_with proj = function
       | LF.BVar x  ->
           fprintf ppf "%s%s"
@@ -877,16 +890,20 @@ module Int = struct
             proj
 
       | LF.MVar (c, s) ->
-          fprintf ppf "%a%s[%a]"
+          fprintf ppf "%s%a%s%a%s"
+            (l_paren_if (paren s))
             (fmt_ppr_lf_cvar cO cD lvl) c
             proj
             (fmt_ppr_lf_sub  cO cD cPsi lvl) s
+            (r_paren_if (paren s))
 
       | LF.PVar (c, s) ->
-          fprintf ppf "#%a%s[%a]"
+          fprintf ppf "%s#%a%s%a%s"
+            (l_paren_if (paren s))
             (fmt_ppr_lf_cvar cO cD lvl) c
             proj
             (fmt_ppr_lf_sub  cO cD cPsi lvl) s
+            (r_paren_if (paren s))
 
       | LF.FVar x ->
           fprintf ppf "%s%s"
@@ -894,16 +911,20 @@ module Int = struct
             proj
 
       | LF.FMVar (u, s) ->
-          fprintf ppf "%s%s[%a]"
+          fprintf ppf "%s%s%s%a%s"
+            (l_paren_if (paren s))
             (R.render_name u)
             proj
             (fmt_ppr_lf_sub cO cD cPsi lvl) s
+            (r_paren_if (paren s))
 
       | LF.FPVar (p, s) ->
-          fprintf ppf "#%s%s[%a]"
+          fprintf ppf "%s#%s%s%a%s"
+            (l_paren_if (paren s))
             (R.render_name p)
             proj
             (fmt_ppr_lf_sub cO cD cPsi lvl) s
+            (r_paren_if (paren s))
 
       | LF.Proj (head, k) ->
           fmt_head_with ("." ^ string_of_int k) head
@@ -920,30 +941,77 @@ module Int = struct
             (fmt_ppr_lf_normal  cO cD cPsi lvl) m
             (fmt_ppr_lf_spine   cO cD cPsi lvl) ms
 
-    and fmt_ppr_lf_sub  cO cD cPsi lvl ppf = function
-      | LF.Shift (LF.NoCtxShift,n) -> 
-          fprintf ppf "^%s"
-            (R.render_offset n)
+    and fmt_ppr_lf_sub cO cD cPsi lvl ppf s =
+      match !Control.substitutionStyle with
+        | Control.Natural -> fmt_ppr_lf_sub_natural cO cD cPsi lvl ppf s
+        | Control.DeBruijn -> fmt_ppr_lf_sub_deBruijn cO cD cPsi lvl ppf s
 
-      | LF.Shift (LF.CtxShift (LF.CtxOffset psi), n) -> 
-          fprintf ppf "^(ctxShift (%s) + %s)"
-            (R.render_ctx_var cO psi)
-            (R.render_offset n)
+    and fmt_ppr_lf_sub_natural cO cD cPsi lvl ppf s=
+      let print_front = fmt_ppr_lf_front cO cD cPsi 1 in
+      let hasCtxVar = match Context.ctxVar cPsi with Some _ -> true | None -> false in
+      let rec self lvl ppf =
+        function
+       (* Print ".." for a Shift when there is a context variable present,
+          and nothing otherwise *)
+        | LF.Shift _ when hasCtxVar      ->    fprintf ppf ".."
+        | LF.Shift _ when not hasCtxVar  ->    ()
+(*          fprintf ppf " <<<<<<<    %a    >>>>>>>"
+            (fmt_ppr_lf_dctx cO cD lvl) cPsi
+*)
+        | LF.SVar (c, s) ->
+            fprintf ppf "%a[%a]"
+              (fmt_ppr_lf_cvar cO cD lvl) c
+              (self lvl) s
+              
+        | LF.Dot (f, s) when hasCtxVar ->
+            fprintf ppf "%a %a"
+              (self lvl) s
+              print_front f
+              
+        | LF.Dot (f, LF.Shift _) when not hasCtxVar ->       (* No context variable, so just print the front *)
+            fprintf ppf "%a"
+              print_front f
+              
+        | LF.Dot (f, s) when not hasCtxVar ->
+            fprintf ppf "%a %a"
+              (self lvl) s
+              print_front f
+      in
+        match s with
+          | LF.Shift _ when not hasCtxVar ->  (* Print nothing at all, because the user would have written nothing at all *)
+              ()
+          | _ ->  (* For anything else, print a space first *)
+              fprintf ppf " %a"
+                (self lvl) s
 
-      | LF.Shift (LF.NegCtxShift (LF.CtxOffset psi), n) -> 
-          fprintf ppf "^(NegShift(%s) + %s)"
-            (R.render_ctx_var cO psi)
-            (R.render_offset n)
+    and fmt_ppr_lf_sub_deBruijn cO cD cPsi lvl ppf s =
+      let rec self lvl ppf = function
+        | LF.Shift (LF.NoCtxShift,n) ->
+            fprintf ppf "^%s"
+              (R.render_offset n)
 
-      | LF.SVar (c, s) ->
-          fprintf ppf "%a[%a]"
-            (fmt_ppr_lf_cvar cO cD lvl) c
-            (fmt_ppr_lf_sub cO cD cPsi lvl) s
+        | LF.Shift (LF.CtxShift (LF.CtxOffset psi), n) -> 
+            fprintf ppf "^(ctxShift (%s) + %s)"
+              (R.render_ctx_var cO psi)
+              (R.render_offset n)
 
-      | LF.Dot (f, s) ->
-          fprintf ppf "%a . %a"
-            (fmt_ppr_lf_front cO cD cPsi 1) f
-            (fmt_ppr_lf_sub cO cD cPsi lvl) s
+        | LF.Shift (LF.NegCtxShift (LF.CtxOffset psi), n) -> 
+            fprintf ppf "^(NegShift(%s) + %s)"
+              (R.render_ctx_var cO psi)
+              (R.render_offset n)
+
+        | LF.SVar (c, s) ->
+            fprintf ppf "%a[%a]"
+              (fmt_ppr_lf_cvar cO cD lvl) c
+              (self lvl) s
+
+        | LF.Dot (f, s) ->
+            fprintf ppf "%a . %a"
+              (fmt_ppr_lf_front cO cD cPsi 1) f
+              (self lvl) s
+      in
+        fprintf ppf "[%a]"
+          (self lvl) s
 
 
     and fmt_ppr_lf_front cO cD cPsi lvl ppf = function
@@ -1035,11 +1103,11 @@ module Int = struct
          fprintf ppf "%a"
            (ppr_elements cO cD cPsi) typrec
 
-    let rec projectCtxIntoDctx = function
+    and projectCtxIntoDctx = function
          |  LF.Empty -> LF.Null
          |  LF.Dec (rest, last) -> LF.DDec (projectCtxIntoDctx rest, last)
 
-    let rec fmt_ppr_lf_schema lvl ppf = function
+    and fmt_ppr_lf_schema lvl ppf = function
       | LF.Schema [] -> ()
 
       | LF.Schema (f :: []) ->
@@ -1074,16 +1142,11 @@ module Int = struct
               (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi lvl) sgmDecl
 
 
-    let rec fmt_ppr_lf_psi_hat cO _lvl ppf = function
+    and fmt_ppr_lf_psi_hat cO _lvl ppf = function
       | LF.Null   -> fprintf ppf "" 
 
-      | LF.CtxVar (LF.CtxName psi) ->
-          fprintf ppf "%s"
-            (R.render_name psi)          
-
-      | LF.CtxVar (LF.CtxOffset psi) ->
-          fprintf ppf "%s"
-            (R.render_ctx_var cO psi)          
+      | LF.CtxVar ctx_var ->
+          fmt_ppr_lf_ctx_var cO ppf ctx_var
 
       | LF.DDec (LF.Null, LF.TypDeclOpt x) ->
           fprintf ppf "%s"
@@ -1115,12 +1178,20 @@ module Int = struct
             (R.render_name x)
             (fmt_ppr_lf_typ cO cD LF.Null 0) tA
 
+      | LF.DDec (LF.Null, LF.TypDeclOpt x) ->
+          fprintf ppf "%s : _"
+            (R.render_name x)
+
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
             (fmt_ppr_lf_dctx cO cD 0) cPsi
             (R.render_name x)
             (fmt_ppr_lf_typ cO cD cPsi 0) tA
 
+      | LF.DDec (cPsi, LF.TypDeclOpt x) ->
+          fprintf ppf "%a, %s : _"
+            (fmt_ppr_lf_dctx cO cD 0) cPsi
+            (R.render_name x)
 
     and fmt_ppr_lf_mctx cO lvl ppf = function
       | LF.Empty ->
@@ -1370,7 +1441,7 @@ module Int = struct
               (ppr_ctyp_decls cO) cD1
               (fmt_ppr_lf_psi_hat cO 0) cPsi
               (fmt_ppr_lf_normal cO cD1 cPsi 0) tM
-              (fmt_ppr_lf_typ cO cD1 cPsi 0) tA
+              (fmt_ppr_lf_typ cO cD1 cPsi 2) tA
               (fmt_ppr_lf_dctx cO cD1 0) cPsi
               (fmt_ppr_cmp_exp_chk cO cD' cG 0) e
 

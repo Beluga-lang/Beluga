@@ -36,7 +36,7 @@ rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
  FN g => mlam U =>
 %  case exp_identity [g] ([g] (U ..)) of      %  case [g] U .. of         % match < g.  U > of
    case [g] (U ..) of
-%  | [g] #p.1 .. => [g] #p.2 ..
+  | [g] #p.1 .. => [g] #p.2 ..
 
    | [g] lam \x. L .. x =>
       let

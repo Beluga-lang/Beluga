@@ -852,7 +852,7 @@ module Int = struct
         | (LF.Nil, _) -> ms
         | (LF.App (_m, rest), n) -> dropSpineLeft rest (n - 1)
 
-      in let  deimplicitize_spine h ms = match h with
+      in let deimplicitize_spine h ms = match h with
         | LF.Const c ->
             let implicit_arguments = if !Control.printImplicit
                                      then 0
@@ -860,12 +860,14 @@ module Int = struct
             in
               dropSpineLeft ms implicit_arguments
 
-        | LF.MVar _            
+        | LF.MVar _
         | LF.BVar _
         | LF.PVar _
         | LF.FMVar _
         | LF.FPVar _
-        | LF.Proj _ ->
+        | LF.Proj _  
+        | LF.FVar _
+        | LF.AnnH _ ->
             ms
 
       in function

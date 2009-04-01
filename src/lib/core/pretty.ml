@@ -846,32 +846,55 @@ module Int = struct
              (fmt_ppr_lf_normal cO cD cPsi lvl) tM
              (fmt_ppr_tuple cO cD cPsi lvl) rest
 
-    and fmt_ppr_lf_normal cO cD cPsi lvl ppf = function
-      | LF.Lam (_, x, m) ->
-          let cond = lvl > 0 in
-            fprintf ppf "%s\\%s. %a%s"
-              (l_paren_if cond)
-              (R.render_name x)
-              (fmt_ppr_lf_normal cO cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
-              (r_paren_if cond)
+    and fmt_ppr_lf_normal cO cD cPsi lvl ppf =
+      let rec dropSpineLeft ms n = match (ms, n) with
+          (_, 0) -> ms
+        | (LF.Nil, _) -> ms
+        | (LF.App (_m, rest), n) -> dropSpineLeft rest (n - 1)
 
-      | LF.Tuple (_, tuple) ->
-         fprintf ppf "<%a>"
-           (fmt_ppr_tuple cO cD cPsi lvl) tuple
+      in let  deimplicitize_spine h ms = match h with
+        | LF.Const c ->
+            let implicit_arguments = if !Control.printImplicit
+                                     then 0
+                                     else Store.Cid.Term.get_implicit_arguments c
+            in
+              dropSpineLeft ms implicit_arguments
 
-      | LF.Root (_, h, LF.Nil) ->
-          fprintf ppf "%a"
-            (fmt_ppr_lf_head cO cD cPsi lvl) h
+        | LF.MVar _            
+        | LF.BVar _
+        | LF.PVar _
+        | LF.FMVar _
+        | LF.FPVar _
+        | LF.Proj _ ->
+            ms
 
-      | LF.Root (_, h, ms)  ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a%a%s"
-              (l_paren_if cond)
+      in function
+        | LF.Lam (_, x, m) ->
+            let cond = lvl > 0 in
+              fprintf ppf "%s\\%s. %a%s"
+                (l_paren_if cond)
+                (R.render_name x)
+                (fmt_ppr_lf_normal cO cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
+                (r_paren_if cond)
+
+        | LF.Tuple (_, tuple) ->
+           fprintf ppf "<%a>"
+             (fmt_ppr_tuple cO cD cPsi lvl) tuple
+
+        | LF.Root (_, h, LF.Nil) ->
+            fprintf ppf "%a"
               (fmt_ppr_lf_head cO cD cPsi lvl) h
-              (fmt_ppr_lf_spine cO cD cPsi 2)  ms
-              (r_paren_if cond)
 
-      | LF.Clo(tM, s) -> fmt_ppr_lf_normal cO cD cPsi lvl ppf (Whnf.norm (tM, s))
+        | LF.Root (_, h, ms)  ->
+            let cond = lvl > 1 in
+            let ms = deimplicitize_spine h ms in
+              fprintf ppf "%s%a%a%s"
+                (l_paren_if cond)
+                (fmt_ppr_lf_head cO cD cPsi lvl) h
+                (fmt_ppr_lf_spine cO cD cPsi 2)  ms
+                (r_paren_if cond)
+
+        | LF.Clo(tM, s) -> fmt_ppr_lf_normal cO cD cPsi lvl ppf (Whnf.norm (tM, s))
 
     and fmt_ppr_lf_head cO cD cPsi lvl ppf head = 
       let paren s = not (Control.db()) && lvl > 0 && (match s with

@@ -42,6 +42,7 @@ module Cid : sig
     type t
     val add           : entry -> cid_term
     val get           : cid_term -> entry
+    val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
     val clear         : unit -> unit
 

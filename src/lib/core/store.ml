@@ -116,7 +116,9 @@ module Cid = struct
         Hashtbl.replace directory e.name cid_tm;
         cid_tm
 
-    let get = DynArray.unsafe_get store
+    let get = DynArray.get store
+
+    let get_implicit_arguments c = (get c).implicit_arguments
 
     let clear () =
       DynArray.clear store;
@@ -154,7 +156,7 @@ module Cid = struct
         Hashtbl.replace directory e.name cid_tm;
         cid_tm
 
-    let get = DynArray.unsafe_get store
+    let get = DynArray.get store
 
     let get_schema name = (get name).schema
 
@@ -199,7 +201,7 @@ module Cid = struct
         Hashtbl.replace directory e.name cid_prog;
         cid_prog
 
-    let get = DynArray.unsafe_get store
+    let get = DynArray.get store
 
     let clear () =
       DynArray.clear store;

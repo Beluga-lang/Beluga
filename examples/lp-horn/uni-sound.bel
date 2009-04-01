@@ -6,8 +6,8 @@
 % rec i_sound: (focus A P)[ ] -> (pf (atom P))[u:pf A] = 
 
 % Context coercions necessary: 
-% schema canCtx = some [a:o] block assume a | x:i ; 
-% schema ndCtx = some [a:o] block assume a  | x:i ;
+% schema canCtx = some [a:o] assume a + i ; 
+% schema ndCtx = some [a:o] assume a  + i ;
 
 % coercion c2n : canCtx => ndCtx = 
 %  | {a:o} assume a => pf a 

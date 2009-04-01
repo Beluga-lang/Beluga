@@ -63,7 +63,7 @@ fn d => case d of
 
 
  | [ ] fev_s D1 =>  
-     let [ ] C1 = subcomp < . Ks > < . (prog add1 P ) > < . S > ([ ] D1) in    
+     let [ ] C1 = subcomp  < . Ks > < . (prog add1 P ) > < . S > ([ ] D1) in    
        append ([ ] to c_s C1) ([ ] to c_add1 id_step) 
 
 

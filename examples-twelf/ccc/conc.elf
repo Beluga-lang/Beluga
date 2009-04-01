@@ -26,27 +26,27 @@
 
 % worlds () (conc _ _).
 
-rec conc : (mor A B)[] -> (term A -> term B)[] =
+rec conc : (mor A B)[] -> (term B)[u:term A] =
     fn d => case d of
         [] idc =>
-           [] (\x . x)
+           [x] x
 
 % FIXME reconstruct:elBranch expect an atomic type for the argument of the match
 % here we are matching on argument of type (term A -> term B) ('let' gets transformed into a match)
 % same problem for pair and cur below
 % 
 %       | [] (@ F G) =>
-%            let [] M = conc ([] F) in
-%            let [] N = conc ([] G) in
-%                [] (\x . (M (N x)))
+%            let [x:term A] (M x)  = conc ([] F) in
+%            let [x:term A] (N x)  = conc ([] G) in
+%                [x] (M (N x))
 
       | [] drop =>
-           [] (\x . lunit)
+           [x] lunit
 
-%       | [] (pair F G) =>
-%            let [] M = conc ([] F) in
-%            let [] N = conc ([] G) in
-%                [] (\x . (lpair (M x) (N x)))
+       | [] (pair F G) : (mor A (cross B C))[ ]  =>
+            let [y:term A] (M y) : (term B)[y:term A] = conc ([] F) in 
+            let [x:term A] (N x) : (term C)[x:term A] = conc ([] G) in 
+                [x] lpair (M x) (N x)  % term (cross B C)[x:term A] 
 
 % FIXME problem in unification I do not really understand, same problem for snd and app below
 % 

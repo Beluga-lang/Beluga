@@ -1,6 +1,6 @@
 % general congruence: if e <-> e' then e2[e/x] <-> e2[e'/x]
 
-% cong : {M:term A -> term B} (conv E E' -> conv (M E) (M E')) -> type.
+% cong : {M:term A -> term B} conv E E' -> conv (M E) (M E') -> type.
 % 
 % cong_var  : cong (\x . x) (\c . c).
 % 
@@ -23,10 +23,17 @@
 %              <- cong (\x . E1 x) (\x . CP1 x)
 %              <- cong (\x . E2 x) (\x . CP2 x).
 
-rec cong : {M::(term A -> term B)[]} (conv E E' -> conv (M E) (M E'))[] =
+schema termCtx = some [A:obj] block (term A) | some [A:obj][E:term A][E':term A] block conv E E'.
+
+
+% for all M. conv E E' -> conv (M E) (M E')
+
+% 
+
+rec cong : {g:termCtx}{M::(term B)[g, x:term A]} ((conv E E')[g] -> (conv (M E) (M E'))[g]) =
 mlam M => case M of
-    [] (\x . x) =>
-       [] (\c . c)
+    [x:conv E E]  x =>
+       [c] c
 
   | [] (\x . lunit) =>
        [] (\c . c_refl)

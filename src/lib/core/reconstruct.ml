@@ -1461,11 +1461,10 @@ and recTuple loc recT cO cD cPsi (tuple, s') (typRec, s) =
       recTerm recT cO cD cPsi (tM, s') (tA, s)
 
   | (Int.LF.Cons (tM, restOfTuple),
-     Int.LF.SigmaElem (x, tA, restOfTypRec))
+     Int.LF.SigmaElem (_x, tA, restOfTypRec))
     ->
       recTerm recT cO cD cPsi (tM, s') (tA, s)
-    ; let extended_s = Int.LF.Dot (Int.LF.Obj ( (* Int.LF.Clo (tM, s') *) tM), s) in
-      let __cPsi = Int.LF.DDec (cPsi, LF.decSub (Int.LF.TypDecl(x, tA)) s) in
+    ; let extended_s = Int.LF.Dot (Int.LF.Obj (Int.LF.Clo (tM, s')), s) in
         recTermW recT cO cD cPsi
           (Int.LF.Tuple (loc, restOfTuple), s')
           (Int.LF.Sigma restOfTypRec, extended_s)
@@ -1530,7 +1529,7 @@ and synTermW recT cO cD  cPsi ((root, s') as sR) = match root with
                 dprint (fun () -> "synTermW\n"
                           ^ "  Proj(" ^ P.headToString cO cD cPsi tuple_head ^ ", #" ^ string_of_int k ^")"
                           ^ "  cO = " ^ P.octxToString cO) ;
-                let (getTypeArg, (tTuple, cPhi)) = match tuple_head with
+                let (headTuple, (tTuple, sTuple)) = match tuple_head with
                 | Int.LF.BVar x ->
                     let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
                       (Int.LF.BVar x
@@ -1558,10 +1557,10 @@ and synTermW recT cO cD  cPsi ((root, s') as sR) = match root with
                 match tTuple with
                   | Int.LF.Sigma typRec ->
                       let _ = dprint(fun () -> "tTuple Sigma") in
-                        Int.LF.getType getTypeArg (typRec, cPhi) k 1
+                        Int.LF.getType headTuple (typRec, sTuple) k 1
 
                   | _ -> raise (Violation ("synTermW Proj not Sigma --"
-                                          ^ P.typToString cO cD cPsi (tTuple, cPhi)))
+                                          ^ P.typToString cO cD cPsi (tTuple, sTuple)))
               end
           
           | Int.LF.FVar x ->
@@ -1702,16 +1701,16 @@ and recSub recT cO cD cPsi_ s cPhi_ =
         );
         let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in
           dprint (fun () -> "  got type: " ^ P.typToString cO cD cPsi (tA', LF.id));
-          match Whnf.normTyp (tA', LF.id) with
-            | Int.LF.Sigma tA'rec ->
+          match Whnf.whnfTyp (tA', LF.id) with
+            | (Int.LF.Sigma tA'rec, s') ->
                 let _ = dprint (fun () -> "  got Sigma " ^ P.typRecToString cO cD cPsi (tA'rec, LF.id)) in
-                let sA' = Int.LF.getType (Int.LF.BVar x) (tA'rec, LF.id) projIndex 1 in
+                let sA' = Int.LF.getType (Int.LF.BVar x) (tA'rec, s') projIndex 1 in
                 let _ = dprint (fun () -> "  got _." ^ string_of_int projIndex ^ " = " ^ P.typToString cO cD cPsi sA') in
                 let _   = recSub recT cO cD  cPsi rest cPhi in
                   Unify.unifyTyp cD (Context.dctxToHat cPsi, sA', (tA, rest))              
             
-            | tA' -> raise (Violation ("recSub _ (" ^ P.subToString cO cD cPsi s
-                                       ^ ") _; type " ^ P.typToString cO cD cPsi (tA', LF.id)))
+            | (tA',s') -> raise (Violation ("recSub _ (" ^ P.subToString cO cD cPsi s
+                                       ^ ") _; type " ^ P.typToString cO cD cPsi (tA', s')))
       end
 
   (* cPsi  (cPhi, _:tA) *)
@@ -1824,6 +1823,15 @@ let rec mshiftApxTerm m k d = match m with
       let h' = mshiftApxHead h k d in 
       let s' = mshiftApxSpine s k d in 
         Apx.LF.Root (loc, h', s')
+  | Apx.LF.Tuple (loc, tuple) -> 
+      Apx.LF.Tuple(loc, mshiftApxTuple tuple k d)
+
+and mshiftApxTuple tuple k d = match tuple with
+  | Apx.LF.Last m -> Apx.LF.Last (mshiftApxTerm m k d)
+  | Apx.LF.Cons (m, tuple) -> 
+      Apx.LF.Cons (mshiftApxTerm m k d,
+                   mshiftApxTuple tuple k d)
+
 
 and mshiftApxHead h k d = match h with
   | Apx.LF.MVar (offset, s) -> 

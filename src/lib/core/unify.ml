@@ -616,14 +616,16 @@ module Make (T : TRAIL) : UNIFY = struct
                          cD ; cPsi' |- t <= cPsi1
                          cD ; cPsi  |- s <= cPsi'
                          CD ; cPsi  |- comp t s <= cPsi1  and cD ; cPsi''|- ss <= cPsi
-                         s' = [ss]([s]t) and  cD ; cPsi'' |- s' <= cPsi'  *)
+                         s' = [ss]([s]t) and  cD ; cPsi'' |- s' <= cPsi1  *)
                       (* Mon Feb  9 14:38:08 2009 -bp : instead of simply computing the inverted
                          substitution, we now actually prune the substitution *)
                       (* let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
                          Root (loc, MVar (u, s'), Nil) *)
                       
                       let (idsub, cPsi2) = pruneSub  cD0 (phat, (Whnf.normSub (comp t s), cPsi1), ss, rOccur) in
-                        
+                      (* Psi1 |- idsub   : Psi2 
+                         Psi2 |- idsub_i : Psi1
+                       *)
                       let idsub_i = invert idsub in 
                       let v = Whnf.newMVar(cPsi2, TClo(tP, invert idsub_i)) in
                         
@@ -686,7 +688,7 @@ module Make (T : TRAIL) : UNIFY = struct
                       (* cD ; cPsi1 |- idsub <= cPsi2 *)
                     let p = Whnf.newPVar(cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1] tA)[cPsi2] *) in
                     let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) (* [|p[idsub] / q|] *) in
-                      returnHead (PVar(p, comp ss (comp t idsub)))
+                      returnHead (Proj (PVar(p, comp ss (comp t idsub)), i))
                   else (* s not patsub *)
                     let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
                       returnHead (Proj (PVar (q, s'), i))
@@ -1207,13 +1209,12 @@ module Make (T : TRAIL) : UNIFY = struct
             dprint (fun () -> "**** typrecs " ^
                      "\n" ^ P.typRecToString Empty cD0 Null (typrec1, s1) ^
                      "\n" ^ P.typRecToString Empty cD0 Null (typrec2, s2))
-          ; unifyTypRec' cD0 (phat, (typrec1, s1) ,  (typrec2, s2))
+          ; unifyTypRecW cD0 (phat, (typrec1, s1) ,  (typrec2, s2))
           end
 
       | _ ->
           raise (Unify "Type clash")
 
-    and unifyTypRec' cD0 (phat, sArec, sBrec) = unifyTypRecW cD0 (phat, sArec, sBrec)
 
     and unifyTypRecW cD0 (phat, srec1, srec2) = match (srec1, srec2) with
       | ((SigmaLast t1, s1) ,   (SigmaLast t2, s2)) ->
@@ -1325,7 +1326,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     let unifyTypRec1 cD0 (phat, sArec, sBrec) = 
-      unifyTypRec' cD0 (phat, sArec, sBrec);
+      unifyTypRecW cD0 (phat, sArec, sBrec);
       forceCnstr (nextCnstr ())
 
     let unifyTypRec cD0 (phat, sArec, sBrec) =

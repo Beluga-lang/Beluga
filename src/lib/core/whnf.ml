@@ -522,7 +522,7 @@ and whnfTyp (tA, sigma) = match tA with
   | Atom (loc, a, tS) -> (Atom (loc, a, SClo (tS, sigma)), LF.id)
   | PiTyp (_cD, _tB)  -> (tA, sigma)
   | TClo (tA, s)      -> whnfTyp (tA, LF.comp s sigma)
-  | Sigma _typRec      -> (tA, sigma)   (* ???? -jd *)
+  | Sigma _typRec      -> (tA, sigma) 
 
 
 (* ----------------------------------------------------------- *)

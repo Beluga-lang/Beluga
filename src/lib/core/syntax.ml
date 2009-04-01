@@ -306,7 +306,15 @@ module Int = struct
       | NotPrag
 
     (* getType traverses the typ_rec from left to right;
-       target is relative to the remaining suffix of the type *)
+       target is relative to the remaining suffix of the type 
+ 
+       getType head s_recA target j = (tA, s')
+       
+       if  Psi(head) = Sigma recA'
+           and [s]recA is a suffix of recA'
+       then
+           Psi |- [s']tA  <= type
+    *)
     let rec getType head s_recA target j = match (s_recA, target) with
       | ((SigmaLast lastA, s), 1) ->
           (lastA, s)
@@ -315,8 +323,8 @@ module Int = struct
           (tA, s)
             
       | ((SigmaElem (_x, _tA, recA), s), target) ->
-          let tPj = Root (None, Proj (head, j), Nil) in
-            getType head (recA, Dot (Obj tPj, s)) (target - 1) (j + 1)
+          let tPj = Proj (head, j) in
+            getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
   end
 
 

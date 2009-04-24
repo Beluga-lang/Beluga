@@ -67,7 +67,7 @@ mlam K => fn d => fn s => case d of
 
 
  | {D1:: (eval E1 (lam_val (\x. (E' x))))[ ]}
-   % {D2:: (eval E2 V2)[ ]}{D3:: (eval (E' V2) V)[ ] }
+   {D2:: (eval E2 V2)[ ]}{D3:: (eval (E' V2) V)[ ] }
    [ ] ev_app D3 D2 D1 : (eval (app E1 E2) V)[ ] =>  
    let [ ] S3 = ccp < . K >   ([ ] D3) s in 
    let [ ] S2 = ccp < . c K (\v. app2 (lam_val (\x. (E' x))) v) >     ([ ] D2) ([ ] << (<< S3 st_app2) st_return)  in 

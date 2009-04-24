@@ -81,15 +81,20 @@ fn c => case c of
 
  | [ ] (<< C' st_lam) => [ ] result (ev_lam) C'
 
- | [ ] (<< C1 st_app) =>
-   let [ ] result D1 (<< (<< C2 st_app1) st_return) :
-        (eval_step E1 (c K  (\x1. app1 x1 E2)) W)[ ]   = csd ([ ] C1) in 
-   let [ ] result D2 (<< (<< C3 st_app2) st_return) : 
-      (eval_step E2 (c K (\x2. app2 (lam_val (\x. (E1' x))) x2)) W)[ ]  = csd ([ ] C2) in 
-   let [ ] result D3 C' : 
-        (eval_step (E1' V2) K W)[ ]                    = csd ([ ] C3) in 
-
-    [ ] result (ev_app D3 D2 D1) C'   
+% PROBLEM: HIGH-ORDER Unification problem when we unify
+% scrutinee type and pattern type in the third case.
+% 
+%  eval_step (E1' V2) K W = eval_step (E1' V2) K W
+%
+% | [ ] (<< C1 st_app) =>
+%   let [ ] result D1 (<< (<< C2 st_app1) st_return) :
+%        (eval_step E1 (c K  (\x1. app1 x1 E2)) W)[ ]   = csd ([ ] C1) in 
+%   let [ ] result D2 (<< (<< C3 st_app2) st_return) : 
+%      (eval_step E2 (c K (\x2. app2 (lam_val (\x. (E1' x))) x2)) W)[ ]  = csd ([ ] C2) in 
+%   let [ ] result D3 C' : 
+%        (eval_step (E1' V2) K W)[ ]                    = csd ([ ] C3) in 
+%
+%    [ ] result (ev_app D3 D2 D1) C'   
 
  | [ ] (<< C1 st_letv) => 
      let [ ] result D1 (<< C2 st_return) :

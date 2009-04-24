@@ -139,7 +139,6 @@ let rec length cD = match cD with
   | Dec (cD', _) -> 1 + length cD'
 
 
-
 (* Lookup name in context
  * 
  * getNameDCtx cPsi k = x 

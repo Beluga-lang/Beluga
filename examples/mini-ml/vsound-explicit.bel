@@ -3,16 +3,16 @@
 %
 
 
-exp  : type.  
+exp  : type.    %name exp E.
 z    : exp.
 suc  : exp -> exp.
 letv : exp -> (exp -> exp) -> exp.
 
-value : exp -> type.
+value : exp -> type.  %name value F.
 v_z   : value z.
 v_s   : {E:exp} value E -> value (suc E).
 
-eval : exp -> exp -> type.
+eval : exp -> exp -> type.  %name eval D.
 ev_z : eval z z.
 ev_s : {E:exp} {V:exp} eval E V -> eval (suc E) (suc V).
 ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp} 
@@ -23,15 +23,15 @@ mlam E => mlam V => fn e =>
   case e of 
      [ ] ev_z : (eval z z)[ ] =>  [ ] v_z
 
-   | {E::exp[ ]}{V::exp[ ]}{D::(eval  E V)[ ]}
-     [ ] ev_s E V D : (eval (suc E) (suc V))[ ]
+   | {E1::exp[ ]}{V1::exp[ ]}{D::(eval  E1 V1)[ ]}
+     [ ] ev_s E1 V1 D : (eval (suc E1) (suc V1))[ ]
      => 
 
-     (case   (vs  <. E > <. V > ([ ] D)) of 
+     (case   (vs  <. E1 > <. V1 > ([ ] D)) of 
 
        {V'::exp[ ]}{F::(value V')[ ]}
         [ ] F : (value V')[ ] 
-        =>    [ ] v_s V F 
+        =>    [ ] v_s V1 F 
       )
 
    | {E1::exp[ ]} {E2::exp[x:exp]} {V1::exp[ ]} {V2::exp[ ]}

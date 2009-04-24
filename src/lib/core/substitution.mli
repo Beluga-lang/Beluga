@@ -36,5 +36,10 @@ module LF : sig
 
 (*  val compInv    : sub -> sub -> sub *)
 
+  (* ****************************** *)
+  (* Apply contextual substitution  *)
+  (* ****************************** *)
+  val isMId       : msub -> bool
+  val applyMSub   : Id.offset -> msub -> mfront
 end
 

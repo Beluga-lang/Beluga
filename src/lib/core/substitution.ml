@@ -222,6 +222,7 @@ module LF = struct
     | s             -> Dot (Head (BVar 1), comp s shift)
 
 
+
   (* decSub (x:tA) s = (x:tA[s])
    *
    * Invariant:
@@ -385,5 +386,39 @@ module LF = struct
  * and   D ; Psi' |- t <= Psi1
  *)
 (*  let compInv s w = comp s (invert w) *)
+
+  (* isMId t = B
+   *
+   * Invariant:
+   *
+   * If   cD |- t: cD', t weaken_msub
+   * then B holds
+   * iff t = id, cD' = cD
+   *)
+  let isMId t =
+    let rec isId' s k' = match s with
+      | MShift k   -> k = k'
+      | MDot (MV n, s') -> n = k' && isId' s' (k' + 1)
+      | _                       -> false
+    in
+      isId' t 0
+
+
+(* applyMSub n t = MFt'
+     
+   Invariant: 
+
+     If    D |- t <= D'    n-th element in D' = A[Psi]
+     then  Ft' = Ft_n      if  t = Ft_1 .. Ft_n .. ^0
+     and D ; [|t|]Psi |- Ft' <= [|t|]A
+  *)
+
+let rec applyMSub n t = 
+    begin match (n, t) with
+  | (1, MDot (ft, _t)) -> ft
+  | (n, MDot (_ft, t)) -> applyMSub (n - 1) t
+  | (n, MShift k)       -> MV (k + n)
+    end 
+
 
 end

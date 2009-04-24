@@ -2,7 +2,7 @@
 
 open Syntax.Int
 
-type typeVariant = Cross | Arrow | CtxPi | PiBox
+type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 
 type error =
   (* indexing errors *)
@@ -33,9 +33,12 @@ type error =
       LF.mctx * LF.mctx * LF.dctx             
       * LF.nclo * LF.tclo
 
+  | SpineIllTyped
+
   | LeftoverConstraints of Id.name     (* constraints left after 
                                           reconstruction of variable x        *)
   | IllTypedIdSub                      (* ???, not used yet                   *)
+
 
   (* Comp level typechecking errors *)
   | ValueRestriction of                (* pat. match. on a non-box expression *)
@@ -44,13 +47,23 @@ type error =
 
   | CompIllTyped of                    (* cO ; cD ; cG |- e <=/= tau_theta    *)
       LF.mctx * LF.mctx * Comp.gctx
-      * Comp.exp_chk * Comp.tclo
+      * Comp.exp_chk * Comp.tclo (* expected *) * Comp.tclo (*inferred *)
 
   | CompMismatch of                    (* cO ; cD ; cG |- i => tau_theta,     *)                             
       LF.mctx * LF.mctx * Comp.gctx    (* but tau_theta is of unexpected form *)
       * Comp.exp_syn
       * typeVariant (* expected *) 
       * Comp.tclo (* inferred*)
+
+  | CompPattMismatch of 
+      (* Pattern : inferred *)
+      (LF.mctx * LF.mctx * LF.dctx * LF.normal * LF.tclo) * 
+      (* Type of scrutinee : expected *)
+        (LF.mctx * LF.mctx * LF.dctx * LF.tclo)  
+
+  | CompFreeMVar     of  Id.name
+
+  | CompScrutineeTyp of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * LF.tclo * LF.dctx 
 
   | UnboundIdSub                       (* id sub used in empty omega context  *)
 

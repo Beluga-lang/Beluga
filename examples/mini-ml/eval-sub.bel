@@ -28,8 +28,8 @@ fn e =>
      [ ] suc V
 
 | [ ] app U W =>   
-  let [ ] lam (\ x. (V x))  =  eval ([ ] U) in 
-      eval ([ ] (V W))
+  let [ ] lam (\x. (V x))  =  eval ([ ] U) in 
+    eval ([ ] (V W))
     
         
 | [ ] lam (\x. (U x)) =>  e
@@ -62,7 +62,7 @@ fn e =>
     eval' ([ ] (V V2))
 
         
-| [ ] lam (\ x. (U x)) =>  e
+ | [ ] lam (\ x. U x) =>  e
 
 
 | [ ] letv W (\x. (U x)) => 

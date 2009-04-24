@@ -2,7 +2,7 @@
 
 open Syntax.Int
 
-type typeVariant = Cross | Arrow | CtxPi | PiBox
+type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 
 type error =
   | UnboundName      of Id.name
@@ -12,13 +12,20 @@ type error =
   | KindMismatch     of LF.mctx * LF.dctx * LF.sclo * (LF.kind * LF.sub)
   | TypMismatch      of LF.mctx * LF.mctx * LF.dctx * LF.nclo * LF.tclo * LF.tclo
   | IllTyped         of LF.mctx * LF.mctx * LF.dctx * LF.nclo * LF.tclo
+  | SpineIllTyped    
 
   | LeftoverConstraints of Id.name
   | IllTypedIdSub
 
   | ValueRestriction of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * Comp.tclo
-  | CompIllTyped     of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_chk * Comp.tclo
+  | CompIllTyped     of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_chk * Comp.tclo * Comp.tclo
   | CompMismatch     of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * typeVariant * Comp.tclo
+  | CompPattMismatch of (LF.mctx * LF.mctx * LF.dctx * LF.normal * LF.tclo) * 
+                        (LF.mctx * LF.mctx * LF.dctx * LF.tclo)  
+
+  | CompFreeMVar     of  Id.name
+  | CompScrutineeTyp of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * LF.tclo * LF.dctx 
+
   | UnboundIdSub
 
   | ConstraintsLeft

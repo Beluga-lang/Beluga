@@ -25,7 +25,7 @@ FILES[] =
         trail
         unify
         whnf
-        cwhnf
+
 
 # Declare one pseudo target for the package and one for the files it
 # contains

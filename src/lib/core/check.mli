@@ -14,6 +14,7 @@ module LF : sig
 
 
   val check       : mctx -> mctx -> dctx -> nclo -> tclo -> unit
+  val syn         : mctx -> mctx -> dctx -> nclo -> tclo
   val checkTyp    : mctx -> mctx -> dctx -> tclo         -> unit
   val checkKind   : mctx -> mctx -> dctx -> kind         -> unit
   val checkDCtx   : mctx -> mctx -> dctx                 -> unit
@@ -31,7 +32,7 @@ module Comp : sig
   open Syntax.Int.Comp
 
   exception Violation of string
-  exception Error of Error.error
+  exception Error of Syntax.Loc.t option * Error.error
 
   val check       : LF.mctx -> LF.mctx -> gctx -> exp_chk -> tclo -> unit
   val syn         : LF.mctx -> LF.mctx -> gctx -> exp_syn -> tclo

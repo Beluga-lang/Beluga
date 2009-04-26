@@ -3,11 +3,11 @@
 %
 % This example only uses weak higher-order abstract syntax.
 
-tp  : type.
+tp  : type.   %name tp T.
 nat : tp.
 bool: tp.
 
-exp : tp -> type.
+exp : tp -> type.  %name exp E.
 z   : exp nat.
 s   : exp nat -> exp nat.
 
@@ -62,7 +62,7 @@ FN g => mlam T => mlam TT => fn e =>
                (cntV [g, y:exp T1] < . T' >    < . T2 >    ([g,y,x] (U2 .. x y)))
 
    | {T'::tp[ ]} {U::(exp nat)[g, x:exp T']} {W::(exp nat)[g, x:exp T']}
-     [g,x : exp T1] add (U .. x) (W .. x)                   : (exp nat)[g, x: exp T'] =>
+     [g,x : exp T'] add (U .. x) (W .. x)                   : (exp nat)[g, x: exp T'] =>
           plus (cntV [g] < . T' > < . nat > ([g,x] (U .. x)))
                (cntV [g] < . T' > < . nat > ([g,x] (W .. x)))
 

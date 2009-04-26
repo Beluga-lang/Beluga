@@ -152,7 +152,7 @@ let main () =
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter
-                "Error (Reconstruction): %a@?"
+                "\nError (Reconstruction): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               abort_session ()
@@ -171,17 +171,18 @@ let main () =
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter
-                "Error (Type-Checking): %a@?"
+                "\nError (Type-Checking): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               abort_session ()
 
-          | Check.Comp.Error err ->
-              (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
+          | Check.Comp.Error (locOpt, err) ->
+             (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
+              printOptionalLocation locOpt;
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter
-                "Error (Checking): %a@?"
+                "\nError (Checking): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               abort_session ()
@@ -198,10 +199,11 @@ let main () =
               print_newline ();
               abort_session ()
 
-          | Whnf.Error err ->
+          | Whnf.Error (locOpt, err) ->
+              printOptionalLocation locOpt;
               Format.fprintf
                 Format.std_formatter
-                "Error (Whnf): %a\n@?"
+                "\nError (Whnf): %a\n@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               abort_session ()
 

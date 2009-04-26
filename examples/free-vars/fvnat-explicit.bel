@@ -24,18 +24,19 @@ FN g => mlam T => fn e =>
   | [g] tt           : (exp bool)[g]  => [g] nothing
   | [g] ff           : (exp bool)[g]  => [g] nothing
 
-  | {T'::tp[ ]} {#p::(exp T')[g]}
-     [g] (#p ..)     : (exp T')[g] => [g] something T' (#p ..)
+ | {T'::tp[ ]} {#p::(exp T')[g]}
+    [g] (#p ..)     : (exp T')[g] => [g] something T' (#p ..)
 
   | {U::(exp nat)[g]}
     [g] suc (U ..) : (exp nat)[g]   => free_var [g] < . nat >  ([g] (U ..))
 
-  | {U::(exp bool)[g]} {V::(exp bool)[g]}
-     [g] and (U ..) (V ..) : (exp bool)[g]  => 
+ | {U::(exp bool)[g]} {V::(exp bool)[g]}
+    [g] and (U ..) (V ..) : (exp bool)[g]  => 
 
        (case free_var [g] < . bool > ([g] (U ..)) of
           [g] nothing                : opt[g] => free_var [g] < . bool > ([g] (V ..))
 
        | {T'::tp[ ]} {#p::(exp T')[g]}
-          [g] something T' (#p ..) : opt[g] => [g] something T' (#p ..))
+          [g] something T' (#p ..) : opt[g] => [g] something T' (#p ..)
+	   )
 );

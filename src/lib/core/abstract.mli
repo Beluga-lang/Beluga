@@ -11,6 +11,7 @@ exception Error of string
 
 type free_var =
   (* Free variables (references): unnamed *)
+  | MMV of LF.head       
   | MV of LF.head       
   | PV of LF.head       
 
@@ -27,16 +28,16 @@ val abstrKind     : LF.kind -> LF.kind * Id.offset
 
 val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
 
-val abstractMSub  : Comp.msub -> Comp.msub * LF.mctx
+val abstractMSub  : LF.msub -> LF.msub * LF.mctx
 
 val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset
 
 val abstrExp      : Comp.exp_chk  -> Comp.exp_chk
-val abstrBranch   : (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) -> Comp.exp_chk  -> Comp.msub 
-                  -> LF.mctx * (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) * Comp.exp_chk * Comp.msub
+(* val abstrBranch   : (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) -> Comp.exp_chk  -> LF.msub 
+                  -> LF.mctx * (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) * Comp.exp_chk * LF.msub
 
-val abstrExpMSub  : Comp.exp_chk  -> Comp.msub -> LF.mctx * Comp.msub * Comp.exp_chk
-
+val abstrExpMSub  : Comp.exp_chk  -> LF.msub -> LF.mctx * LF.msub * Comp.exp_chk
+*)
 val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ
 

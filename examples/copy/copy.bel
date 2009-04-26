@@ -27,7 +27,6 @@ FN g =>
          [g] s (F ..))
 
     | [g] lam  (\x. (U .. x)) => 
-
        (let [g,x : term _ ] (V .. x) = copy [g, x:term _]   ([g,x] (U .. x))  in
 	  [g] lam  (\x. (V .. x)))
 

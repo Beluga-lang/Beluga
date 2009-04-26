@@ -165,7 +165,7 @@ module Int : sig
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.nclo     -> string
     val headToString      : LF.mctx -> LF.mctx -> LF.dctx -> LF.head     -> string
-    val tupleToString      : LF.mctx -> LF.mctx -> LF.dctx -> LF.tuple    -> string
+    val tupleToString     : LF.mctx -> LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> LF.mctx -> string
     val octxToString      : LF.mctx ->  string
@@ -176,7 +176,7 @@ module Int : sig
     val expSynToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
     val branchToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.branch   -> string
     val compTypToString   : LF.mctx -> LF.mctx -> Comp.typ      -> string
-    val msubToString      : LF.mctx -> LF.mctx -> Comp.msub     -> string
+    val msubToString      : LF.mctx -> LF.mctx -> LF.msub     -> string
 
   end
 

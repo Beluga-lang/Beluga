@@ -55,7 +55,7 @@ let rec constraints_solved cnstr = match cnstr with
 *)
 (*************************************)
 
-let id = Comp.MShift 0
+let m_id = LF.MShift 0
 
 (* mshift t n = t' 
 
@@ -66,21 +66,21 @@ let id = Comp.MShift 0
                                      and t' = t^n
 *)
 let rec mshift t n = match t with
-  | Comp.MShift k   ->  Comp.MShift (k+n)
+  | LF.MShift k   ->  LF.MShift (k+n)
 
-  | Comp.MDot(ft, t') -> Comp.MDot(mshiftMFt ft n, mshift t' n)
+  | LF.MDot(ft, t') -> LF.MDot(mshiftMFt ft n, mshift t' n)
 
 
 and mshiftMFt ft n = match ft with 
-  | Comp.MObj(phat, tM) -> 
-      Comp.MObj(phat, mshiftTerm tM n)   
+  | LF.MObj(phat, tM) -> 
+      LF.MObj(phat, mshiftTerm tM n)   
 
-  | Comp.PObj(phat, LF.PVar(LF.Offset k, s)) -> 
-     Comp.PObj(phat, LF.PVar(LF.Offset (k+n), s))
+  | LF.PObj(phat, LF.PVar(LF.Offset k, s)) -> 
+     LF.PObj(phat, LF.PVar(LF.Offset (k+n), s))
 
-  | Comp.PObj(_phat, LF.BVar _k) -> ft
+  | LF.PObj(_phat, LF.BVar _k) -> ft
 
-  | Comp.MV (u_offset) -> Comp.MV (u_offset + n)
+  | LF.MV (u_offset) -> LF.MV (u_offset + n)
 
 
 and mshiftTerm tM n = match tM with
@@ -152,10 +152,10 @@ and mshiftDCtx cPsi k = match cPsi with
 
  *)
   and mvar_dot1 t = 
-    Comp.MDot (Comp.MV 1, mshift t 1)
+    LF.MDot (LF.MV 1, mshift t 1)
 
   and pvar_dot1 t = 
-    Comp.MDot (Comp.MV 1, mshift t 1)
+    LF.MDot (LF.MV 1, mshift t 1)
 
 
 
@@ -179,13 +179,13 @@ and mshiftDCtx cPsi k = match cPsi with
 *)
 
 let rec mcomp t1 t2 = match (t1, t2) with
-  | (Comp.MShift 0, t)         -> t
-  | (t, Comp.MShift 0)         -> t
-  | (Comp.MShift n, Comp.MShift k) -> (Comp.MShift (n+k))
-  |  (Comp.MShift n, Comp.MDot (_mft, t))  -> 
-      mcomp (Comp.MShift (n-1)) t
-  | (Comp.MDot (mft, t), t') -> 
-      Comp.MDot (mfrontMSub mft t', mcomp t t')
+  | (LF.MShift 0, t)         -> t
+  | (t, LF.MShift 0)         -> t
+  | (LF.MShift n, LF.MShift k) -> (LF.MShift (n+k))
+  |  (LF.MShift n, LF.MDot (_mft, t))  -> 
+      mcomp (LF.MShift (n-1)) t
+  | (LF.MDot (mft, t), t') -> 
+      LF.MDot (mfrontMSub mft t', mcomp t t')
 
 
 (* mfrontMSub Ft t = Ft'
@@ -197,38 +197,38 @@ let rec mcomp t1 t2 = match (t1, t2) with
    and  D ; [|t|]Psi |- Ft' : [|t|]A
 *)
 and mfrontMSub ft t = match ft with
-  | Comp.MObj (phat, tM)     -> 
-        Comp.MObj (phat, cnorm(tM, t))
+  | LF.MObj (phat, tM)     -> 
+        LF.MObj (phat, cnorm(tM, t))
 
-  | Comp.PObj (_phat, LF.PVar (LF.Offset k, s))  -> 
+  | LF.PObj (_phat, LF.PVar (LF.Offset k, s))  -> 
       begin match applyMSub k t with
-        | Comp.PObj(phat, LF.BVar k') ->  
+        | LF.PObj(phat, LF.BVar k') ->  
             begin match S.bvarSub k' s with 
-              | LF.Head(LF.BVar j) -> Comp.PObj(phat, LF.BVar j)
-              | LF.Head(LF.PVar (q, s')) -> Comp.PObj(phat, LF.PVar(q, s'))
+              | LF.Head(LF.BVar j) -> LF.PObj(phat, LF.BVar j)
+              | LF.Head(LF.PVar (q, s')) -> LF.PObj(phat, LF.PVar(q, s'))
               (* no case for S.Head(MVar(u, s')) since u not guaranteed
                  to be of atomic type. *)
-              | LF.Obj tM      -> Comp.MObj(phat, tM)
+              | LF.Obj tM      -> LF.MObj(phat, tM)
             end 
-        | Comp.PObj(phat, LF.PVar (q, s')) -> Comp.PObj(phat, LF.PVar(q, S.comp s' s))
+        | LF.PObj(phat, LF.PVar (q, s')) -> LF.PObj(phat, LF.PVar(q, S.comp s' s))
 
-        | Comp.MV k'  -> Comp.PObj (_phat, LF.PVar (LF.Offset k', s))
+        | LF.MV k'  -> LF.PObj (_phat, LF.PVar (LF.Offset k', s))
           (* other cases impossible *)
       end
-  | Comp.PObj (_phat, LF.BVar _k)  -> ft
+  | LF.PObj (_phat, LF.BVar _k)  -> ft
 
-  | Comp.MV k -> 
+  | LF.MV k -> 
       begin match applyMSub k t with  (* DOUBLE CHECK - bp Wed Jan  7 13:47:43 2009 -bp *)
-        | Comp.PObj(phat, p) ->  Comp.PObj(phat, p)          
-        | Comp.MObj(phat, tM) ->  Comp.MObj(phat, tM)          
-        | Comp.MV k'         -> Comp.MV k'
+        | LF.PObj(phat, p) ->  LF.PObj(phat, p)          
+        | LF.MObj(phat, tM) ->  LF.MObj(phat, tM)          
+        | LF.MV k'         -> LF.MV k'
         (* other cases impossible *)
       end
 
-(*  | Comp.MV u -> 
+(*  | LF.MV u -> 
       begin match applyMSub u t with
-        | Comp.MObj(phat, tM) ->  Comp.MObj(phat, tM)          
-        | Comp.MV u'          ->  Comp.MV u'
+        | LF.MObj(phat, tM) ->  LF.MObj(phat, tM)          
+        | LF.MV u'          ->  LF.MV u'
         (* other cases impossible *)
       end
 *)
@@ -244,9 +244,9 @@ and mfrontMSub ft t = match ft with
 
 and applyMSub n t = 
     begin match (n, t) with
-  | (1, Comp.MDot (ft, _t)) -> ft
-  | (n, Comp.MDot (_ft, t)) -> applyMSub (n - 1) t
-  | (n, Comp.MShift k)       -> Comp.MV (k + n)
+  | (1, LF.MDot (ft, _t)) -> ft
+  | (n, LF.MDot (_ft, t)) -> applyMSub (n - 1) t
+  | (n, LF.MShift k)       -> LF.MV (k + n)
     end 
 
 
@@ -261,19 +261,19 @@ and applyMSub n t =
 *)
 and invert s =
   let rec lookup n s p = match s with
-    | Comp.MShift _                 -> None
-    | Comp.MDot (Comp.Undef, t')    -> lookup (n + 1) t' p
+    | LF.MShift _                 -> None
+    | LF.MDot (LF.MUndef, t')    -> lookup (n + 1) t' p
 
-    | Comp.MDot (Comp.MV k, t') ->
+    | LF.MDot (LF.MV k, t') ->
         if k = p then Some n
         else lookup (n + 1) t' p 
 
-    | Comp.MDot (Comp.MObj(_phat, LF.Root(_, LF.MVar (LF.Offset k, LF.Shift (_,0)), LF.Nil)), t') -> 
+    | LF.MDot (LF.MObj(_phat, LF.Root(_, LF.MVar (LF.Offset k, LF.Shift (_,0)), LF.Nil)), t') -> 
         if k = p then
           Some n
         else lookup (n + 1) t' p 
 
-    | Comp.MDot (Comp.PObj (_phat, LF.PVar (LF.Offset k, LF.Shift (_, 0))), t') -> 
+    | LF.MDot (LF.PObj (_phat, LF.PVar (LF.Offset k, LF.Shift (_, 0))), t') -> 
         if k = p then
           Some n
         else lookup (n + 1) t' p 
@@ -285,14 +285,14 @@ and invert s =
       | 0 -> ti
       | p ->
           let front = match lookup 1 s p with
-            | Some k -> Comp.MV k (* or Comp.MObj (phat, Root(MVar(Offset k), id), Nil)  *)
-            | None   -> Comp.Undef
+            | Some k -> LF.MV k (* or LF.MObj (phat, Root(MVar(Offset k), id), Nil)  *)
+            | None   -> LF.MUndef
           in
-            invert'' (p - 1) (Comp.MDot (front, ti)) in
+            invert'' (p - 1) (LF.MDot (front, ti)) in
 
     let rec invert' n t = match t with
-      | Comp.MShift p     -> invert'' p (Comp.MShift n)
-      | Comp.MDot (_, t') -> invert' (n + 1) t'
+      | LF.MShift p     -> invert'' p (LF.MShift n)
+      | LF.MDot (_, t') -> invert' (n + 1) t'
 
     in
       invert' 0 s
@@ -349,10 +349,10 @@ and cnorm (tM, t) = match tM with
 
           | LF.MVar (LF.Offset k, r) -> 
               begin match applyMSub k t with
-                | Comp.MV  k'            -> 
+                | LF.MV  k'            -> 
                     LF.Root (loc, LF.MVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
                       
-                | Comp.MObj (_phat,tM)   -> 
+                | LF.MObj (_phat,tM)   -> 
                     LF.Clo(Whnf.whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), S.id)))  
                       
               (* other cases impossible *)
@@ -404,23 +404,23 @@ and cnorm (tM, t) = match tM with
 
          *)
             -> begin match applyMSub k t with
-              | Comp.MV  k'            -> LF.Root (loc, LF.PVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
-              | Comp.PObj (_phat, LF.BVar i) -> 
+              | LF.MV  k'            -> LF.Root (loc, LF.PVar (LF.Offset k', cnormSub (r, t)), cnormSpine (tS, t))
+              | LF.PObj (_phat, LF.BVar i) -> 
                   begin match S.bvarSub i (cnormSub (r,t)) with
                     | LF.Head h  -> LF.Root(loc, h, cnormSpine (tS, t))
                     | LF.Obj tM  -> LF.Clo (Whnf.whnfRedex ((tM, S.id), (cnormSpine (tS, t), S.id)))
                   end
-              | Comp.PObj (_phat, LF.PVar(LF.Offset i, r')) -> 
+              | LF.PObj (_phat, LF.PVar(LF.Offset i, r')) -> 
                   LF.Root (loc, LF.PVar(LF.Offset i, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
                     
-              | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = None}, _, _, _ ) as p, r')) -> 
+              | LF.PObj (_phat, LF.PVar(LF.PInst ({contents = None}, _, _, _ ) as p, r')) -> 
                   LF.Root (loc, LF.PVar(p, S.comp r' (cnormSub (r,t))), cnormSpine (tS, t))
                     
                     
-              | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.PVar (x, rx))}, _, _, _ ), r')) -> 
+              | LF.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.PVar (x, rx))}, _, _, _ ), r')) -> 
                   LF.Root (loc, LF.PVar (x, S.comp rx (S.comp r' (cnormSub (r,t)))), cnormSpine (tS, t))
                     
-              | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.BVar x)}, _, _, _ ), r')) -> 
+              | LF.PObj (_phat, LF.PVar(LF.PInst ({contents = Some (LF.BVar x)}, _, _, _ ), r')) -> 
                   begin match S.bvarSub x (cnormSub (r',t)) with
                     | LF.Head (LF.BVar i)  ->  
                         begin match S.bvarSub i (cnormSub (r,t)) with
@@ -462,7 +462,7 @@ and cnorm (tM, t) = match tM with
               let wrap head = LF.Proj (head, tupleIndex) in
               let newHead =
                 match applyMSub j t with
-                  | Comp.PObj (_phat, LF.BVar i)   -> 
+                  | LF.PObj (_phat, LF.BVar i)   -> 
                       (*  i <= phat *) 
                       begin match S.bvarSub i (cnormSub (s,t)) with
                         | LF.Head (LF.BVar j)      ->  LF.BVar j
@@ -470,29 +470,29 @@ and cnorm (tM, t) = match tM with
                             (* other cases should not happen; 
                                term would be ill-typed *)
                       end
-                  | Comp.PObj(_phat, LF.Proj (LF.PVar (LF.Offset i, s'),  otherTupleIndex)) -> 
+                  | LF.PObj(_phat, LF.Proj (LF.PVar (LF.Offset i, s'),  otherTupleIndex)) -> 
                       LF.Proj (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))),  otherTupleIndex)
                         
-                  | Comp.PObj(_phat, LF.PVar (LF.Offset i, s')) ->
+                  | LF.PObj(_phat, LF.PVar (LF.Offset i, s')) ->
                       wrap (LF.PVar (LF.Offset i, S.comp s' (cnormSub (s,t))))
                         
-                  | Comp.PObj (_phat, LF.PVar(LF.PInst ({contents= None}, _, _, _) as p, r')) -> 
+                  | LF.PObj (_phat, LF.PVar(LF.PInst ({contents= None}, _, _, _) as p, r')) -> 
                       wrap (LF.PVar (p, S.comp r' (cnormSub (s,t))))
                         
-                  | Comp.PObj(_phat, LF.PVar (LF.PInst _, _s')) ->
+                  | LF.PObj(_phat, LF.PVar (LF.PInst _, _s')) ->
                       (print_string "cnorm ...PVar PInst {contents= Some ...}\n"; exit 2)
-                  | Comp.PObj(_phat, LF.PVar (_, _s')) ->
+                  | LF.PObj(_phat, LF.PVar (_, _s')) ->
                       (print_string "cnorm ...PVar ???\n"; exit 2)
 
-                  | Comp.MV  k'            -> wrap (LF.PVar (LF.Offset k', cnormSub (s, t)))
+                  | LF.MV  k'            -> wrap (LF.PVar (LF.Offset k', cnormSub (s, t)))
                       
-                  | Comp.MObj _ ->             (print_string "mobj\n"; exit 2)
-                  | Comp.PObj(_phat, LF.Proj (LF.FPVar (_, _s'), _k)) ->  (print_string "PObj FPVar\n"; exit 2)
-                  | Comp.PObj(_phat, LF.Proj (LF.PVar (_, _S'), _k)) ->   (print_string "PObj PVar\n"; exit 2)
-                  | Comp.PObj(_phat, LF.Proj _) ->   (print_string "PObj other proj\n"; exit 2)
-                  | Comp.PObj(_phat, head) -> 
+                  | LF.MObj _ ->             (print_string "mobj\n"; exit 2)
+                  | LF.PObj(_phat, LF.Proj (LF.FPVar (_, _s'), _k)) ->  (print_string "PObj FPVar\n"; exit 2)
+                  | LF.PObj(_phat, LF.Proj (LF.PVar (_, _S'), _k)) ->   (print_string "PObj PVar\n"; exit 2)
+                  | LF.PObj(_phat, LF.Proj _) ->   (print_string "PObj other proj\n"; exit 2)
+                  | LF.PObj(_phat, head) -> 
                         (print_string ("QQQQ " ^ what_head head ^  "\n"); exit 2)
-                  | Comp.Undef  ->             (print_string "Undef\n"; exit 2)
+                  | LF.MUndef  ->             (print_string "Undef\n"; exit 2)
               in
                 LF.Root (loc, newHead, cnormSpine (tS, t))
             end
@@ -523,30 +523,30 @@ and cnorm (tM, t) = match tM with
     | LF.Head (LF.Const _ )           -> ft
     | LF.Head (LF.PVar (LF.Offset i, r)) ->
         begin match applyMSub i t with
-          | Comp.PObj(_phat, LF.PVar(LF.Offset n, s')) -> 
+          | LF.PObj(_phat, LF.PVar(LF.Offset n, s')) -> 
              LF.Head(LF.PVar(LF.Offset n, S.comp s' (cnormSub (r,t))))
-          | Comp.PObj (_phat, LF.BVar j)    ->  S.bvarSub j (cnormSub (r,t))
-          | Comp.MV k -> LF.Head(LF.PVar (LF.Offset k, cnormSub (r,t)))
+          | LF.PObj (_phat, LF.BVar j)    ->  S.bvarSub j (cnormSub (r,t))
+          | LF.MV k -> LF.Head(LF.PVar (LF.Offset k, cnormSub (r,t)))
               (* other case MObj _ cannot happen *)
         end
 
     | LF.Head (LF.MVar (LF.Offset i, r)) -> 
         begin match applyMSub i t with
-          | Comp.MObj (_phat, tM)    -> LF.Obj(LF.Clo (tM, cnormSub (r,t)))
-          | Comp.MV k -> LF.Head(LF.MVar (LF.Offset k, cnormSub (r,t))) 
+          | LF.MObj (_phat, tM)    -> LF.Obj(LF.Clo (tM, cnormSub (r,t)))
+          | LF.MV k -> LF.Head(LF.MVar (LF.Offset k, cnormSub (r,t))) 
         end
 
     | LF.Head (LF.Proj (LF.BVar _, _))    -> ft
     | LF.Head (LF.Proj (LF.PVar (LF.Offset i, r), k)) -> 
         let r' = cnormSub (r,t) in 
         begin match applyMSub i t with
-          | Comp.PObj (_phat, LF.BVar j)  -> 
+          | LF.PObj (_phat, LF.BVar j)  -> 
               begin match S.bvarSub j r' with
                 | LF.Head(LF.BVar j') -> LF.Head(LF.Proj (LF.BVar j', k))
                 | LF.Head(LF.PVar (LF.Offset j, s')) -> LF.Head (LF.Proj (LF.PVar (LF.Offset j, s'), k))
                 (* other cases impossible for projections *)
               end
-          | Comp.PObj (_phat, LF.PVar(LF.Offset j, s'))   ->  
+          | LF.PObj (_phat, LF.PVar(LF.Offset j, s'))   ->  
               LF.Head(LF.Proj (LF.PVar(LF.Offset j, S.comp s' r'), k))
           (* other case MObj _ cannot happen *)
         end
@@ -587,33 +587,33 @@ and cnorm (tM, t) = match tM with
 
 
 let rec cnormMSub t = match t with
-  | Comp.MShift _n -> t
-  | Comp.MDot (Comp.MObj(phat, tM), t) -> 
-      Comp.MDot (Comp.MObj (phat, Whnf.norm (tM, S.id)), cnormMSub t) 
+  | LF.MShift _n -> t
+  | LF.MDot (LF.MObj(phat, tM), t) -> 
+      LF.MDot (LF.MObj (phat, Whnf.norm (tM, S.id)), cnormMSub t) 
 
-  | Comp.MDot (Comp.PObj(phat, LF.PVar(LF.Offset k, s)), t) -> 
-      Comp.MDot (Comp.PObj(phat, LF.PVar(LF.Offset k, s)), cnormMSub t)
+  | LF.MDot (LF.PObj(phat, LF.PVar(LF.Offset k, s)), t) -> 
+      LF.MDot (LF.PObj(phat, LF.PVar(LF.Offset k, s)), cnormMSub t)
 
 
-  | Comp.MDot (Comp.PObj(phat, LF.BVar k), t) -> 
-      Comp.MDot (Comp.PObj(phat, LF.BVar k), cnormMSub t)
+  | LF.MDot (LF.PObj(phat, LF.BVar k), t) -> 
+      LF.MDot (LF.PObj(phat, LF.BVar k), cnormMSub t)
 
-  | Comp.MDot (Comp.PObj(phat, LF.PVar(LF.PInst ({contents = None}, _cPsi, _tA, _ ) as p,  s)), t) -> 
-      Comp.MDot (Comp.PObj(phat, LF.PVar(p, s)), cnormMSub t)
+  | LF.MDot (LF.PObj(phat, LF.PVar(LF.PInst ({contents = None}, _cPsi, _tA, _ ) as p,  s)), t) -> 
+      LF.MDot (LF.PObj(phat, LF.PVar(p, s)), cnormMSub t)
 
-  | Comp.MDot(Comp.PObj(phat, LF.PVar (LF.PInst ({contents = Some (LF.BVar x)}, _cPsi, _tA, _ ) , r)), t) -> 
+  | LF.MDot(LF.PObj(phat, LF.PVar (LF.PInst ({contents = Some (LF.BVar x)}, _cPsi, _tA, _ ) , r)), t) -> 
         let t' = cnormMSub t in 
         begin match S.bvarSub x r with
           | LF.Head h  ->  
-             Comp.MDot (Comp.PObj(phat, h), t')
+             LF.MDot (LF.PObj(phat, h), t')
           | LF.Obj tM  -> 
-              Comp.MDot (Comp.MObj(phat,  Whnf.norm (tM, S.id)), t')
+              LF.MDot (LF.MObj(phat,  Whnf.norm (tM, S.id)), t')
         end
 
-  | Comp.MDot(Comp.PObj(phat, LF.PVar (LF.PInst ({contents = Some (LF.PVar (q,s))}, _cPsi, _tA, _ ) , r)), t) -> 
-      cnormMSub (Comp.MDot (Comp.PObj (phat, LF.PVar(q, S.comp s r)), t))
+  | LF.MDot(LF.PObj(phat, LF.PVar (LF.PInst ({contents = Some (LF.PVar (q,s))}, _cPsi, _tA, _ ) , r)), t) -> 
+      cnormMSub (LF.MDot (LF.PObj (phat, LF.PVar(q, S.comp s r)), t))
 
-  | Comp.MDot (Comp.MV u, t) -> Comp.MDot (Comp.MV u, cnormMSub t)
+  | LF.MDot (LF.MV u, t) -> LF.MDot (LF.MV u, cnormMSub t)
 
 
   
@@ -630,7 +630,7 @@ let rec cnormDCtx (cPsi, t) = match cPsi with
     | LF.Null       ->  LF.Null 
 
     | LF.CtxVar (LF.CtxOffset psi) -> 
-        LF.CtxVar (LF.CtxOffset psi) 
+        LF.CtxVar (LF.CtxOffset psi)
 
     | LF.CtxVar (LF.CtxName psi) -> 
         raise (FreeCtxVar psi)
@@ -739,7 +739,7 @@ let rec csub_ctyp cPsi k tau = match tau with
 
   | Comp.TypPiBox ((LF.MDecl (u, tA, cPhi), dep), tau) -> 
       Comp.TypPiBox ((LF.MDecl (u, tA, csub_dctx cPsi k cPhi), dep),
-                     csub_ctyp (cnormDCtx (cPsi, Comp.MShift 1)) k tau)
+                     csub_ctyp (cnormDCtx (cPsi, LF.MShift 1)) k tau)
 
   | Comp.TypClo (tau, theta) -> 
       Comp.TypClo (csub_ctyp cPsi k tau, csub_msub cPsi k theta)
@@ -773,17 +773,17 @@ and csub_dctx cPsi k cPhi =
     cPhi'
 
 and csub_msub cPsi k theta = match theta with 
-  | Comp.MShift n -> Comp.MShift n
-  | Comp.MDot (Comp.MObj (phihat , tM), theta) -> 
-      Comp.MDot (Comp.MObj (csub_psihat cPsi k phihat , tM), 
+  | LF.MShift n -> LF.MShift n
+  | LF.MDot (LF.MObj (phihat , tM), theta) -> 
+      LF.MDot (LF.MObj (csub_psihat cPsi k phihat , tM), 
                  csub_msub cPsi k theta)
 
-  | Comp.MDot (Comp.PObj (phihat , h), theta) -> 
-      Comp.MDot (Comp.PObj (csub_psihat cPsi k phihat , h), 
+  | LF.MDot (LF.PObj (phihat , h), theta) -> 
+      LF.MDot (LF.PObj (csub_psihat cPsi k phihat , h), 
                  csub_msub cPsi k theta)
 
-  | Comp.MDot (ft, theta) -> 
-      Comp.MDot (ft, csub_msub cPsi k theta)
+  | LF.MDot (ft, theta) -> 
+      LF.MDot (ft, csub_msub cPsi k theta)
       
 
 (* ************************************************* *)
@@ -933,12 +933,12 @@ let rec mctxPVarPos cD p =
         let tA' = Whnf.normTyp (cnormTyp(tA, t), S.id) in 
         let cPsi' = Whnf.normDCtx (cnormDCtx(cPsi, t)) in 
 
-          (Comp.TypBox(tA', cPsi') , id)
+          (Comp.TypBox(tA', cPsi') , m_id)
 
-          (* (Comp.TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t)), id)  *)
+          (* (Comp.TypBox(cnormTyp(tA, t), cnormDCtx(cPsi, t)), m_id)  *)
 
     | (Comp.TypSBox (cPsi, cPsi'), t)  
-      -> (Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t)), id)
+      -> (Comp.TypSBox(cnormDCtx(cPsi, t), cnormDCtx(cPsi', t)), m_id)
 
     | (Comp.TypArr (_tT1, _tT2), _t)   -> thetaT
 
@@ -1049,7 +1049,7 @@ let rec mctxPVarPos cD p =
 
   let rec normCtx cG = match cG with
     | LF.Empty -> LF.Empty
-    | LF.Dec(cG, Comp.CTypDecl (x, tau)) -> LF.Dec (normCtx cG, Comp.CTypDecl(x, normCTyp (cnormCTyp (tau, id))))
+    | LF.Dec(cG, Comp.CTypDecl (x, tau)) -> LF.Dec (normCtx cG, Comp.CTypDecl(x, normCTyp (cnormCTyp (tau, m_id))))
 
   let rec normMCtx cD = match cD with
     | LF.Empty -> LF.Empty
@@ -1082,30 +1082,30 @@ let rec mctxPVarPos cD p =
  
   let rec lookDom k t1 d =  
     let rec look t p = begin match t with
-      | Comp.MDot (Comp.MV k', t) -> 
+      | LF.MDot (LF.MV k', t) -> 
           if k > d then 
             if k' = (k-d) then Some (p +d)
             else look t (p+1)
           else 
             Some k
-      | Comp.MDot (Comp.MObj (_phat, LF.Root(_, LF.MVar (LF.Offset k', LF.Shift (_,0)), _ (* Nil *))), t) -> 
+      | LF.MDot (LF.MObj (_phat, LF.Root(_, LF.MVar (LF.Offset k', LF.Shift (_,0)), _ (* Nil *))), t) -> 
           if k > d then 
             if k' = (k-d) then Some (p+d)
             else look t (p+1)
           else Some k
 
-      | Comp.MDot (Comp.MObj (_phat, LF.Root(_, _, _)), t) -> 
+      | LF.MDot (LF.MObj (_phat, LF.Root(_, _, _)), t) -> 
           look t (p+1)
 
 
-    | Comp.MDot (Comp.PObj (_phat, LF.PVar (LF.Offset k', LF.Shift (_, 0))), t') -> 
+    | LF.MDot (LF.PObj (_phat, LF.PVar (LF.Offset k', LF.Shift (_, 0))), t') -> 
         if k > d then 
           if (k-d) = k' then
             Some (p+d)
           else look t' (p+1)
         else Some k
 
-    | Comp.MDot (Comp.Undef, t') -> look t' (p+1)
+    | LF.MDot (LF.MUndef, t') -> look t' (p+1)
 
       | _ -> None
 (*          (Printf.printf "InvExp: Looking up %s \n in substitution %s \n depth d = %s \n\n" 

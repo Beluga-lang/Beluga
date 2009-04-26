@@ -214,9 +214,11 @@ module LF = struct
 
       | CtxVar ctx_var ->
           begin let (Schema elems) as schema = Schema.get_schema (lookupCtxVarSchema cO ctx_var) in
-            try checkTypeAgainstSchema cO cD Null (TClo sA) schema elems
-              ; true
-            with _ -> false
+            try let _ = checkTypeAgainstSchema cO cD Null (TClo sA) schema elems in
+                true
+            with
+              | (Match_failure _) as exn -> raise exn
+              | _ -> false
           end
 
       | DDec (rest, TypDecl(_x, _tB)) ->
@@ -315,7 +317,7 @@ This case should now be covered by the one below it
           (P.dctxToString cO cD cPsi1)
           (P.subToString cO cD cPsi1 s)
           (P.dctxToString cO cD cPsi2);
-        raise (Violation "Substitution is ill-typed; This case should be impossible.\n")
+        raise (Violation "Substitution is ill-typed; this case should be impossible.\n")
 
   (*****************)
   (* Kind Checking *)
@@ -462,45 +464,48 @@ This case should now be covered by the one below it
         | element :: elements ->
             try
               checkTypeAgainstElement cO cD cPsi (tA, LF.id) element
-            with _ ->
-              checkTypeAgainstSchema cO cD cPsi tA sch elements
+            with 
+              | (Match_failure _) as exn -> raise exn
+              | _ -> checkTypeAgainstSchema cO cD cPsi tA sch elements
 
   and checkTypeAgainstElement cO cD cPsi (tA, s) (SchElem (some_part, block_part)) = 
     let tArec = match tA with
       | Sigma tArec -> tArec
       | nonsigma -> SigmaLast nonsigma in
+    let dctx        = projectCtxIntoDctx some_part in
+    let dctxSub     = ctxToSub dctx in
     let _ = dprint (fun () -> "checkTypeAgainstElement  "
                       ^ P.typToString cO cD cPsi (tA, s)
                       ^ "  against  "
-                      ^ P.typRecToString cO cD cPsi (block_part, LF.id)) in
-      match (some_part, block_part) with
-        | (cSomeCtx, elemRec) ->
-            let dctx        = projectCtxIntoDctx cSomeCtx in
-            let dctxSub     = ctxToSub dctx in
-            let _           = dprint (fun () -> "checkTypeAgainstElement  " ^ P.subToString cO cD cPsi dctxSub) in
-            let phat        = dctxToHat cPsi in
-            begin
-              dprint (fun () -> "***Unify.unifyTypRec ("
-                              ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
-                              ^ "\n   " ^ P.typToString cO cD cPsi (tA, s)
-                              ^ "\n== " ^ P.typRecToString cO cD cPsi (elemRec, dctxSub) );
-              try
-                (* Unify.unifyTyp cD (phat, (normedA, LF.id), (normedElem1, dctxSub)) *)
-                Unify.unifyTypRec cD (phat, (tArec, LF.id), (elemRec, dctxSub))
-              ; dprint (fun () -> "checkTypeAgainstElement\n"
-                                ^ "  elemRec = " ^ P.typRecToString cO cD cPsi (elemRec, dctxSub) ^ "\n"
-                                ^ "  succeeded.")
-              with exn ->
-                dprint (fun () -> "Type " 
-                          ^ P.typToString cO cD cPsi (tA, LF.id) ^ " doesn't unify with " 
-                          ^ P.typRecToString cO cD cPsi (elemRec, dctxSub));
-                raise exn
-            end
-
+                      ^ P.typRecToString cO cD cPsi (block_part, dctxSub)) in
+(*    let _           = dprint (fun () -> "checkTypeAgainstElement  " ^ P.subToString cO cD cPsi dctxSub) in *)
+    let phat        = dctxToHat cPsi in
+      begin
+        dprint (fun () -> "***Unify.unifyTypRec ("
+                        ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
+                        ^ "\n   " ^ P.typToString cO cD cPsi (tA, s)
+                        ^ "\n== " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) );
+        try
+          (* Unify.unifyTyp cD (phat, (normedA, LF.id), (normedElem1, dctxSub)) *)
+          Unify.unifyTypRec cD (phat, (tArec, LF.id), (block_part, dctxSub))
+        ; dprint (fun () -> "checkTypeAgainstElement\n"
+                            ^ "  block_part = " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n"
+                            ^ "  succeeded.")
+        ; (block_part, dctxSub)
+        with (Unify.Unify _) as exn ->
+          dprint (fun () -> "Type " 
+                    ^ P.typToString cO cD cPsi (tA, LF.id) ^ " doesn't unify with " 
+                    ^ P.typRecToString cO cD cPsi (block_part, dctxSub));
+          raise exn
+      end
+  
   and checkTypeAgainstElementProjection cO cD cPsi (tA, s) (head, k) (SchElem (some_part, block_part)) = 
     let kth_element_of_block_part (* : tclo *) = getType head (block_part, LF.id) k 1 in
     let kth_element_of_schelem = SchElem (some_part, SigmaLast (TClo kth_element_of_block_part)) in
+    let (_kth_element_inst, subst) =
       checkTypeAgainstElement cO cD cPsi (tA, s) kth_element_of_schelem
+    in
+      (block_part, subst)
 
 (****
   and checkTypRecAgainstSchema cO cD cPsi typRec sch =
@@ -578,7 +583,8 @@ This case should now be covered by the one below it
           begin
             checkSchema cO cD cPsi' schema
           ; match decl with
-              | TypDecl (_x, tA) -> checkTypeAgainstSchema cO cD cPsi' tA schema elements
+              | TypDecl (_x, tA) ->
+                  let _ = checkTypeAgainstSchema cO cD cPsi' tA schema elements in ()
           end
 
 end (* struct LF *)

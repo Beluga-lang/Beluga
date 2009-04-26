@@ -457,14 +457,14 @@ module Ext = struct
     and fmt_ppr_cmp_typ lvl ppf = function
       | Comp.TypBox (_, tA, cPsi) ->
           fprintf ppf "%a[%a]"
-            (fmt_ppr_lf_typ  2) tA
+            (fmt_ppr_lf_typ 2) tA
             (fmt_ppr_lf_dctx 0) cPsi
 
       | Comp.TypArr (_, tau1, tau2) ->
-          let cond = lvl > 0 in
+          let cond = lvl > 1 in
             fprintf ppf "%s%a -> %a%s"
               (l_paren_if cond)
-              (fmt_ppr_cmp_typ 1) tau1
+              (fmt_ppr_cmp_typ 2) tau1
               (fmt_ppr_cmp_typ 0) tau2
               (r_paren_if cond)
 
@@ -478,7 +478,7 @@ module Ext = struct
 
 
       | Comp.TypCtxPi (_, (psi, w), tau) ->
-          let cond = lvl > 0 in
+          let cond = lvl > 1 in
             fprintf ppf "%s{%s:(%s)*} %a%s"
               (l_paren_if cond)
               (R.render_name psi)
@@ -487,11 +487,11 @@ module Ext = struct
               (r_paren_if cond)
 
       | Comp.TypPiBox (_, ctyp_decl, tau) ->
-          let cond = lvl > 0 in
+          let cond = lvl > 1 in
             fprintf ppf "%s%a %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl 1) ctyp_decl
-              (fmt_ppr_cmp_typ 0) tau
+              (fmt_ppr_cmp_typ 1) tau
               (r_paren_if cond)
 
 
@@ -771,7 +771,7 @@ module Int = struct
     val compTypToString   : LF.mctx -> LF.mctx -> Comp.typ      -> string
     val msubToString      : LF.mctx -> LF.mctx -> Comp.msub     -> string
 
-  end
+  end (* Int.PRINTER *)
 
   (* Internal Syntax Pretty Printer Functor *)
   module Make = functor (R : CID_RENDERER) -> struct
@@ -1085,7 +1085,7 @@ module Int = struct
                   (* Should probably create a sep. generator for this -dwm *)
                   let sym = String.lowercase (Gensym.VarData.gensym ()) in
                       PInstHashtbl.replace pinst_hashtbl p sym
-                    ; fprintf ppf "#%s" sym
+                    ; fprintf ppf "%s" sym
           end
 
 
@@ -1151,7 +1151,7 @@ module Int = struct
                 fprintf ppf "" 
 
             | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
-                fprintf ppf "%s : %a "
+                fprintf ppf "%s : %a"
                   (R.render_name x)
                   (fmt_ppr_lf_typ LF.Empty cD LF.Null 0) tA 
 
@@ -1162,7 +1162,7 @@ module Int = struct
                 ; ppr_typ_decl_dctx cD ppf cPsi
           in
           let cPsi = projectCtxIntoDctx typDecls in 
-            fprintf ppf "some [%a] block %a "
+            fprintf ppf "some [%a] block %a"
               (ppr_typ_decl_dctx  LF.Empty)  cPsi
               (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi lvl) sgmDecl
 
@@ -1297,10 +1297,10 @@ module Int = struct
             (fmt_ppr_lf_dctx cO cD 0) cPsi
 
       | Comp.TypArr (tau1, tau2) ->
-          let cond = lvl > 0 in
+          let cond = lvl > 1 in
             fprintf ppf "%s%a -> %a%s"
               (l_paren_if cond)
-              (fmt_ppr_cmp_typ cO cD 1) tau1
+              (fmt_ppr_cmp_typ cO cD 2) tau1
               (fmt_ppr_cmp_typ cO cD 0) tau2
               (r_paren_if cond)
 
@@ -1313,7 +1313,7 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.TypCtxPi ((psi, w), tau) ->
-          let cond = lvl > 0 in
+          let cond = lvl > 1 in
             fprintf ppf "%s{%s:(%s)*} %a%s"
               (l_paren_if cond)
               (R.render_name psi)
@@ -1322,14 +1322,14 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.TypPiBox ((ctyp_decl, _ ), tau) ->
-          let cond = lvl > 0 in
+          let cond = lvl > 1 in
             fprintf ppf "%s%a %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl cO cD 1) ctyp_decl
-              (fmt_ppr_cmp_typ cO (LF.Dec(cD, ctyp_decl)) 2) tau
+              (fmt_ppr_cmp_typ cO (LF.Dec(cD, ctyp_decl)) 1) tau
               (r_paren_if cond)
 
-      | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo !"
+      | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo! "
 
     let rec fmt_ppr_cmp_exp_chk cO cD cG lvl ppf = function
       | Comp.Syn i ->
@@ -1434,7 +1434,7 @@ module Int = struct
             fprintf ppf "%s%a : %a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cO cD cG 1) e
-              (fmt_ppr_cmp_typ cO cD 2) tau
+              (fmt_ppr_cmp_typ cO cD 2) (Cwhnf.cnormCTyp (tau, Cwhnf.id))
               (r_paren_if cond)
 
 
@@ -1462,7 +1462,7 @@ module Int = struct
                   (fmt_ppr_lf_ctyp_decl cO cD 1) decl
           in
           let cD' = Context.append cD cD1 in 
-            fprintf ppf "%a @ ([%a] %a) : %a[%a] => @ @[<2>%a@]@ "
+            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ "
               (ppr_ctyp_decls cO) cD1
               (fmt_ppr_lf_psi_hat cO 0) cPsi
               (fmt_ppr_lf_normal cO cD1 cPsi 0) tM
@@ -1659,7 +1659,7 @@ module Int = struct
       fmt_ppr_cmp_msub cO cD std_lvl str_formatter s
       ; flush_str_formatter ()
 
-  end
+  end (* Int.Make *)
 
   (* Default CID_RENDERER for Internal Syntax using de Buijn indices *)
   module DefaultCidRenderer = struct
@@ -1677,7 +1677,7 @@ module Int = struct
     let render_offset      i   = string_of_int i
     let render_var   _cG   x   = string_of_int x
 
-  end
+  end (* Int.DefaultCidRenderer *)
 
  
  (* RENDERER for Internal Syntax using names *)
@@ -1720,14 +1720,14 @@ module Int = struct
           _ -> "FREE Var " ^ (string_of_int x)
       end
 
-  end
+  end (* Int.NamedRenderer *)
 
 
   (* Default Internal Syntax Pretty Printer Functor Instantiation *)
   (* module DefaultPrinter = Make (DefaultCidRenderer) *)
    module DefaultPrinter = Make (NamedRenderer) 
 
-end
+end (* Int *)
 
 
 module Error = struct
@@ -1848,4 +1848,5 @@ module Error = struct
   (* Default Error Pretty Printer Functor Instantiation *)
   module DefaultPrinter = Make (DefaultCidRenderer)
 
-end
+end (* Error *)
+

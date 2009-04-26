@@ -260,7 +260,7 @@ module FMVar = struct
 end
 
 
-(* Free parameter-variables *)
+(* Free parameter variables *)
 module FPVar = struct
 
   let store    = Hashtbl.create 0

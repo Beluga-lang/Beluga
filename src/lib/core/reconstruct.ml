@@ -33,6 +33,7 @@ module C     = Cwhnf
 
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
+module RR = Pretty.Int.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 
@@ -174,14 +175,14 @@ and index_head cvars bvars = function
         let s'     = index_sub cvars bvars s in
           Apx.LF.PVar (offset, s')
       with Not_found ->
-        let _ = dprint (fun () -> "PVar Not_found " ^ R.render_name p)  in
-      let s'     = index_sub cvars bvars s in
+        let _ = dprint (fun () -> "PVar Not_found " ^ R.render_name p) in
+        let s'     = index_sub cvars bvars s in
           Apx.LF.FPVar (p, s')
       end
 
   | Ext.LF.ProjPVar (loc, k, (p, s)) ->
-      let pvar = index_head cvars bvars (Ext.LF.PVar(loc, p, s)) in
-        Apx.LF.Proj(pvar, k)
+      let pvar = index_head cvars bvars (Ext.LF.PVar (loc, p, s)) in
+        Apx.LF.Proj (pvar, k)
 
   | Ext.LF.Hole _ -> Apx.LF.Hole
 
@@ -529,7 +530,7 @@ let rec isPatSub s = match s with
        false)
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) ->
-      (Printf.printf "Check apxSub is patSub: FAILED\n Encountered Obj !\n";
+      (Printf.printf "Check apxSub is patSub: FAILED\n Encountered Obj!\n";
        false)
 
 (*  | _ ->
@@ -708,7 +709,7 @@ and elTuple recT cO cD cPsi tuple (typRec, s) =
 
   | (_, _) -> raise (Violation ("elTuple arity mismatch"))
 
-and elFindInContext recT cO cD cPsi sP (head, k) ((Int.LF.Schema elements) as schema) =
+and elFindInContext recT cO cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elements) as schema) =
   let self = elFindInContext recT cO cD cPsi sP (head, k) in
   let _ = dprint (fun () -> "elFindInContext ... "
                     ^ P.typToString cO cD cPsi sP
@@ -718,8 +719,10 @@ and elFindInContext recT cO cD cPsi sP (head, k) ((Int.LF.Schema elements) as sc
       | [] -> None
       | (Int.LF.SchElem (_some_part, block_part)) as elem  ::  rest  ->
           try
-            Check.LF.checkTypeAgainstElementProjection cO cD cPsi sP (head, k) elem
-          ; Some block_part
+            let (typRec, subst) = Check.LF.checkTypeAgainstElementProjection cO cD cPsi sP (head, k) elem in
+            dprint (fun () -> "elFindInContext RESULT = "
+                            ^ P.typRecToString cO cD cPsi (block_part, s))
+          ; Some (typRec, subst) (* sP *)
           with _exn -> self (Int.LF.Schema rest)
 
 and lookupCtxVar = function
@@ -733,22 +736,19 @@ and lookupCtxVar = function
 and elTerm' recT cO cD cPsi r sP = match r with
   | Apx.LF.Root (loc,  Apx.LF.Proj ((Apx.LF.FPVar (p, s) as _head), k),  Apx.LF.Nil) as m ->
       begin try
-        let _ = dprint (fun () -> "1") in
         let (offset, (_tA, cPhi)) = Cwhnf.mctxPVarPos cD p  in
-          
+        
         let s'' = elSub recT cO cD cPsi s cPhi in
           Int.LF.Root (Some loc,
                        Int.LF.Proj (Int.LF.PVar (Int.LF.Offset offset, s''), k),
                        Int.LF.Nil)
-            
+      
       with Cwhnf.Fmvar_not_found ->
         begin try
-        let _ = dprint (fun () -> "2") in
           let (_tA, cPhi) = FPVar.get p in
           let s'' = elSub recT cO cD cPsi s cPhi in
             Int.LF.Root (Some loc,  Int.LF.FPVar (p, s''),  Int.LF.Nil)
         with Not_found ->
-        let _ = dprint (fun () -> "3") in
           begin match isPatSub s with
             | true ->
                 let (_givenType, givenSub) = sP in
@@ -757,23 +757,24 @@ and elTerm' recT cO cD cPsi r sP = match r with
                 let psi = match Context.ctxVar cPsi with Some psi -> psi in
                 let schemaOfP = Schema.get_schema (snd (lookupCtxVar cO psi)) in
                 let head' = Int.LF.FPVar (p, s'') in
-                let typrecFromSchema = match elFindInContext recT cO cD cPsi sP (head', k) schemaOfP with
+                let (typrecFromSchema, substFromSchema) = match elFindInContext recT cO cD cPsi sP (head', k) schemaOfP with
                   | None -> raise (Violation ("type sP not in psi's schema"))
-                  | Some typrec -> typrec in
+                  | Some (typrec, subst) -> (typrec, subst) in
                 let typeFromSchema = match typrecFromSchema with
                   | Int.LF.SigmaLast oneType -> oneType
                   | actualSigma -> Int.LF.Sigma actualSigma in
-                let tP          = Int.LF.TClo(Int.LF.TClo (typeFromSchema, givenSub), si) in
+                let tcloFromSchema = Int.LF.TClo (typeFromSchema, substFromSchema) in
+                let tP          = Int.LF.TClo (Int.LF.TClo (tcloFromSchema, givenSub), si) in
                 let _ = dprint (fun () -> "elTerm'    | (Apx.LF.Root (loc, Apx.LF.FPVar (p, s), []) as m) ->\n"
-                                        ^ "tP = " ^ P.typToString cO cD cPsi (tP, LF.id) ^ "\n"
-                                        ^ "cPhi = " ^ P.dctxToString cO cD cPhi) in
+                                        ^ "    tP = " ^ P.typToString cO cD cPsi (tP, LF.id) ^ "\n"
+                                        ^ "  cPhi = " ^ P.dctxToString cO cD cPhi) in
                   (* For type reconstruction to succeed, we must have
                    * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                    * This will be enforced during abstraction.
                    *)
                   FPVar.add p (tP, cPhi);
                   Int.LF.Root (Some loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k),  Int.LF.Nil)
-                    
+                  
             | false ->
                 let q = Whnf.newPVar (cPsi, Int.LF.TClo sP) in
                   add_fcvarCnstr (m, q);
@@ -1008,8 +1009,19 @@ and elClosedTerm' recT cO cD cPsi r = match r with
 
   (* TODO find a way to postpone type mismatch to reconstruction step *)
 
-and frontToString _cO _cD _cPsi = function
-  | Apx.LF.Head _head -> "head"
+and headToString cO cD cPsi = function
+  | Apx.LF.BVar x -> "BVar(" ^ RR.render_bvar cPsi x ^ ")"
+  | Apx.LF.Const c -> "Const(" ^ R.render_cid_term c ^ ")"
+  | Apx.LF.MVar (_offset, _sub) -> "MVar"
+  | Apx.LF.PVar (_offset, _sub) -> "PVar"
+  | Apx.LF.FMVar (name, _sub) -> "FMVar(" ^ RR.render_name name ^ ")"
+  | Apx.LF.FPVar (name, _sub) -> "FPVar(" ^ RR.render_name name ^ ")"
+  | Apx.LF.Proj (head, k) -> headToString cO cD cPsi head ^ "." ^ string_of_int k
+  | Apx.LF.Hole -> "Hole"
+  | Apx.LF.FVar name -> "FVar(" ^ R.render_name name ^ ")"
+
+and frontToString cO cD cPsi = function
+  | Apx.LF.Head head -> headToString cO cD cPsi head
   | Apx.LF.Obj (Apx.LF.Tuple _) -> "tuple"
   | Apx.LF.Obj _m -> "obj"
 
@@ -1065,12 +1077,12 @@ and elSub recT cO cD cPsi s cPhi =
       let s' = elSub recT cO cD cPsi s cPhi' in
       let m' = elTerm recT cO cD cPsi m (tA, s') in
         Int.LF.Dot (Int.LF.Obj m', s')
-
+(*
   | (Apx.LF.Dot _, Int.LF.Null) ->      raise (Violation ("elSub (Dot _, Null)"))
   | (Apx.LF.Dot _, Int.LF.DDec _) ->      raise (Violation ("elSub (Dot _, DDec _)"))
   | (Apx.LF.Dot _, Int.LF.CtxVar _) ->      raise (Violation ("elSub (Dot _, CtxVar _)"))
   | (Apx.LF.Id, Int.LF.Null) ->      raise (Violation ("elSub (Id, Null)"))
-
+*)
   | (_s, cPhi) ->
       raise (Violation ("elSub: " ^ " substitution incompatible w/ `" ^ P.dctxToString cO cD cPhi ^ "'"))
 
@@ -2258,8 +2270,8 @@ and elBranch cO cD cG branch (tau, theta) (Int.LF.Atom(loc, a, _spine) , _cPsi) 
                                   ^ P.typToString cO Int.LF.Empty cPsi' (tP0, LF.id))
                        ; raise (Violation "Pattern Type Clash (Approximate)")
                                         )
-                   end 
-      in            
+                   end
+      in
 
 
       let (cD1', cPsi1', (phat', tR1'), tP1') =
@@ -2723,7 +2735,7 @@ let recSgnDecl d =
 
       let _       = dprint (fun () ->  "\n Reconstructed function " ^  f.string_of_name ^
                                        "\n type: " ^  (P.compTypToString cO cD tau') ^ "\n  result: " ^
-                                       (P.expChkToString cO cD cG e_r') ^ "\n\n") in
+                                       (P.expChkToString cO cD cG (Cwhnf.cnormExp (e_r', C.id))) ^ "\n\n") in
 
       let _       = Check.Comp.check cO cD  cG e_r' (tau', C.id) in
       let _        = Printf.printf "DOUBLE CHECK of function  %s  successful!\n\n" f.string_of_name  in
@@ -2766,4 +2778,3 @@ let rec recSgnDecls = function
       let internal_decl = recSgnDecl decl in
       let internal_rest = recSgnDecls rest in
         internal_decl :: internal_rest
-

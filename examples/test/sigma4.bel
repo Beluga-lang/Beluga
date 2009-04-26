@@ -9,6 +9,7 @@ cons : nat -> list N -> list (s N).
 expl : type.
 mkExpl : list N -> expl.
 
+%{
 schema xl = block x:nat. list x;
 
 rec listf : {g:(xl)*} nat[g] -> expl[g] =
@@ -21,4 +22,32 @@ rec listf : {g:(xl)*} nat[g] -> expl[g] =
 rec listg : {g:(xl)*} {N::nat[g]} expl[g] =
   FN g => mlam N => case [g] (N ..) of
       [g] #p.1 ..  => [g] mkExpl (#p.2 ..)
+;
+
+schema ly = block l:list (s (s z)). nat;
+
+rec listg2 : {g:(ly)*} {M::nat[g]} {L::(list (M ..))[g]} expl[g] =
+  FN g => mlam M => mlam L => case [g] (L ..) of
+      [g] #p.1 ..  => [g] mkExpl (#p.1 ..)
+;
+
+
+schema ly = some [n:nat] block l:list n. nat;
+rec listg3 : {g:(ly)*} {M::nat[g]} {L::(list (M ..))[g]} expl[g] =
+  FN g => mlam M => mlam L => case [g] (L ..) of
+      [g] #p.1 ..  => [g] mkExpl (#p.1 ..)
+;
+}%
+
+schema ly = some [n:nat] block l:list n. nat;
+rec listg3 : {g:(ly)*} {L::(list z)[g]} nat[] =
+  FN g => mlam L => case [g] (L ..) of
+      [g] #p.1 ..  => [] z
+;
+
+
+schema lists-notblock = some [n:nat] list n;
+rec listg3 : {g:(lists-notblock)*} {L::(list z)[g]} nat[] =
+   FN g => mlam L => case [g] (L ..) of
+      [g] #p ..  => [] z
 ;

@@ -134,6 +134,7 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
        )
 ;
 
+%{
           % General transitivity is admissible
           rec trans: {g:(w)*} {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
              (eq (TT ..) (RR ..))[g]     % e1 : eq T R
@@ -161,7 +162,7 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
                     in
                         [g] eq_lam \x. \u. E .. <x, u>
                  )
-%{
+
            | [g] eq_app (T1 ..) (R1 ..) (T2 ..) (R2 ..)
                             (D1 ..) (D2 ..) =>
              (case e2 of
@@ -176,8 +177,8 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
                    [g] eq_app  (T1 ..) (S1 ..) (T2 ..) (S2 ..)
                           (E1 ..)  (E2 ..)
              )
-}%
           ;
+}%
 
 
 

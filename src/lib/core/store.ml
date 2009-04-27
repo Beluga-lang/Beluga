@@ -106,7 +106,7 @@ module Cid = struct
 
 
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
-    let directory = Hashtbl.create 0 (* FIXME: investigate better initial size *)
+    let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
 
@@ -146,7 +146,7 @@ module Cid = struct
 
 
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
-    let directory = Hashtbl.create 0 (* FIXME: investigate better initial size *)
+    let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
 
@@ -191,7 +191,7 @@ module Cid = struct
 
 
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
-    let directory = Hashtbl.create 0 (* FIXME: investigate better initial size *)
+    let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
 

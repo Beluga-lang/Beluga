@@ -187,6 +187,9 @@ module Int : sig
   (* Default CID_RENDERER for Internal Syntax *)
   module DefaultCidRenderer : CID_RENDERER
 
+  (* Named Renderer for Internal Syntax *)
+  module NamedRenderer : CID_RENDERER
+
   (* Default Internal Syntax Pretty Printer Functor Instantiation *)
   module DefaultPrinter : PRINTER
 

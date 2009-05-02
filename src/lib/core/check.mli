@@ -20,8 +20,8 @@ module LF : sig
   val checkDCtx   : mctx -> mctx -> dctx                 -> unit
 
   val checkSchema : mctx -> mctx -> dctx -> schema -> unit
-  val checkTypeAgainstElement : mctx -> mctx -> dctx -> tclo -> sch_elem -> unit
-  val checkTypeAgainstElementProjection : mctx -> mctx -> dctx -> tclo -> (head * int) -> sch_elem -> unit
+  val checkTypeAgainstElement : mctx -> mctx -> dctx -> tclo -> sch_elem ->  (typ_rec * sub)
+  val checkTypeAgainstElementProjection : mctx -> mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
 
 end
 

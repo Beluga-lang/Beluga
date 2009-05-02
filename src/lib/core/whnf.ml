@@ -28,6 +28,8 @@ exception NonInvertible
 exception Violation of string
 
 
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [10])
+
 let rec raiseType cPsi tA = match cPsi with
   | Null -> tA
   | DDec (cPsi', decl) ->
@@ -1125,17 +1127,19 @@ and whnf sM = match sM with
       (Root (loc, PVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
 
+  (* PVar None *)
   | (Root (loc, PVar (PInst({contents = None}, _cPsi, _tA, _ ) as p, r), tS), sigma) ->
       (Root (loc, PVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
 
   | (Root (loc, PVar (PInst({contents = Some (BVar x)}, _cPsi, _tA, _ ), r), tS), sigma) ->
         begin match LF.bvarSub x (LF.comp r sigma) with
-	  | Head h  ->  
+          | Head h  ->  
               (Root (loc, h, SClo(tS, sigma)), LF.id)
-	  | Obj tM  -> whnfRedex ((tM, LF.id),  (tS, sigma))
-	end
+          | Obj tM  -> whnfRedex ((tM, LF.id),  (tS, sigma))
+        end
 
+  (* PVar Some *)
   | (Root (loc, PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), r), tS), sigma) -> 
       whnf (Root (loc, PVar (q, LF.comp r' r), tS), sigma) 
 
@@ -1162,8 +1166,13 @@ and whnf sM = match sM with
   | (Root (loc, Proj (PVar (Offset _ as q, s), k), tS), sigma) ->
       (Root (loc, Proj (PVar (q, LF.comp s sigma), k), SClo (tS, sigma)), LF.id)
 
+  (* Proj PVar Some *)
   | (Root (loc, Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _), s), k), tS), sigma) ->
       whnf (Root (loc, Proj (PVar (q', LF.comp r' s), k), tS), sigma)
+
+  (* Proj PVar None *)
+  | (Root (loc, Proj (PVar (PInst({contents = None}, _cPsi, _tA, _ ) as p, r), projIndex), tS), sigma) ->
+      (Root (loc, Proj (PVar (p, LF.comp r sigma), projIndex), SClo (tS, sigma)), LF.id)
 
   (* see also Proj case near top *)
 
@@ -1171,6 +1180,10 @@ and whnf sM = match sM with
   | (Root (loc, FVar x, tS), sigma) ->
       (Root (loc, FVar x, SClo (tS, sigma)), LF.id)
 
+(*  | (Root (_, Proj (PVar (PInst ({contents = None}, _, _, _), _), _), _), _) -> (dprint (fun () -> "oops"); exit 1) *)
+  | (Root (_, Proj (PVar _, _), _), _) -> (dprint (fun () -> "oops"); exit 2)
+  | (Root (_, Proj (_, _), _), _) -> (dprint (fun () -> "oops"); exit 3)
+  | _ -> (dprint (fun () -> "oops"); exit 4)
 
 (* whnfRedex((tM,s1), (tS, s2)) = (R,s')
  *

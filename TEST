@@ -84,6 +84,7 @@ $INTERPRETER  \
     LF/tps.lf \
     ../examples-twelf/arith/sources.cfg \
     ../examples-twelf/alloc-sem/sources.cfg \
+    ../examples-twelf/cpsocc/sources.cfg \
     ../examples-twelf/compile/cls/sources.cfg \
     ../examples-twelf/compile/cls/test.cfg \
     ../examples-twelf/compile/cpm/sources.cfg \
@@ -91,12 +92,13 @@ $INTERPRETER  \
     ../examples-twelf/compile/debruijn/sources.cfg \
     ../examples-twelf/compile/debruijn1/sources.cfg \
     ../examples-twelf/compile/cps/sources.cfg \
+    ../examples-twelf/fol/sources.cfg \
     test/alpha.bel \
     test/sigma1.bel \
     test/sigma2.bel \
     test/sigma3.bel \
-    test/sigma4.bel 
-    test/implicit-obj.bel
+    test/sigma4.bel \
+    test/implicit-obj.bel \
     notworking/eq-proof.bel
 # note: most of eq-proof.bel is commented out, so it should remain in notworking/
  

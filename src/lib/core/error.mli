@@ -33,7 +33,12 @@ type error =
       LF.mctx * LF.mctx * LF.dctx             
       * LF.nclo * LF.tclo
 
+  | IllTypedElab     of LF.mctx * LF.mctx * LF.dctx * LF.tclo
+
   | SpineIllTyped
+
+  | EtaExpandBV        of Id.offset * LF.mctx * LF.mctx * LF.dctx * LF.tclo
+  | EtaExpandFV        of Id.name * LF.mctx * LF.mctx * LF.dctx * LF.tclo
 
   | LeftoverConstraints of Id.name     (* constraints left after 
                                           reconstruction of variable x        *)
@@ -64,6 +69,7 @@ type error =
   | CompFreeMVar     of  Id.name
 
   | CompScrutineeTyp of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * LF.tclo * LF.dctx 
+
 
   | UnboundIdSub                       (* id sub used in empty omega context  *)
 

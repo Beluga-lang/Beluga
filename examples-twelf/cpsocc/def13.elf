@@ -10,25 +10,25 @@ cstack_substC : (ccont -> ccont) -> (ccont -> cstack) -> (ccont -> ccont)
 %mode cstack_substE +E +Phi -E'.
 %mode cstack_substC +C +Phi -C'.
 
-csubst_cret : cstack_substE ([k:ccont]cret (C k) T) Phi 
-                            ([k:ccont]cret (C' k) T)
+csubst_cret : cstack_substE (\k.cret (C k) T) Phi 
+                            (\k.cret (C' k) T)
               <- cstack_substC C Phi C'.
 
-csubst_capp : cstack_substE ([k:ccont]capp T0 T1 (C k)) Phi 
-                            ([k:ccont]capp T0 T1 (C' k))
+csubst_capp : cstack_substE (\k.capp T0 T1 (C k)) Phi 
+                            (\k.capp T0 T1 (C' k))
               <- cstack_substC C Phi C'. 
 
-csubst_vlam : cstack_substC ([k:ccont]vlam [v:ctriv]E v k) Phi 
-                            ([k:ccont]vlam [v:ctriv]E' v k)
-              <- {v:ctriv}cstack_substE (E v) Phi (E' v).
+csubst_vlam : cstack_substC (\k.vlam (\v.E v k)) Phi 
+                            (\k.vlam (\v.E' v k))
+              <- {v:ctriv}cstack_substE (\k. E v k) Phi (\k. E' v k).
 
-csubst_k_init : cstack_substC ([k:ccont]k) ([k:ccont]cdot)
-                              ([k:ccont]k).
+csubst_k_init : cstack_substC (\k.k) (\k.cdot)
+                              (\k.k).
 
-csubst_k_vlam : cstack_substC ([k:ccont]k) 
-                              ([k:ccont]((Phi k) ; (vlam [v:ctriv]E v k))) 
-                              ([k:ccont]vlam [v:ctriv]E' v k)
-                <- {v:ctriv}cstack_substE (E v) Phi (E' v).
+csubst_k_vlam : cstack_substC (\k.k) 
+                              (\k.(ccons (Phi k)  (vlam (\v.E v k))))
+                              (\k.vlam (\v.E' v k))
+                <- {v:ctriv}cstack_substE (\k. E v k) Phi (\k. E' v k).
 
 % does this require a multiset extension? -fp
 %{

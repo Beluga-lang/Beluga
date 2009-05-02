@@ -12,7 +12,11 @@ type error =
   | KindMismatch     of LF.mctx * LF.dctx * LF.sclo * (LF.kind * LF.sub)
   | TypMismatch      of LF.mctx * LF.mctx * LF.dctx * LF.nclo * LF.tclo * LF.tclo
   | IllTyped         of LF.mctx * LF.mctx * LF.dctx * LF.nclo * LF.tclo
+  | IllTypedElab     of LF.mctx * LF.mctx * LF.dctx * LF.tclo
+
   | SpineIllTyped    
+  | EtaExpandBV      of Id.offset * LF.mctx * LF.mctx * LF.dctx * LF.tclo
+  | EtaExpandFV      of Id.name * LF.mctx * LF.mctx * LF.dctx * LF.tclo
 
   | LeftoverConstraints of Id.name
   | IllTypedIdSub

@@ -6,6 +6,6 @@ cvalDS : stack -> type.
 
 cvalDS_init : cvalDS dot.
 
-cvalDS_stack : cvalDS (Xi , T)
+cvalDS_stack : cvalDS (cons Xi  T)
                <- cvalT T  
                <- cvalDS Xi.

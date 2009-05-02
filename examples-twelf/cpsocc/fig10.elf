@@ -10,22 +10,22 @@ dstackT : stack -> ctriv -> ctriv -> stack -> type.
 %mode dstackE +Xi +E -A.
 %mode dstackT +Xi +T -T' -Xi'.
 
-dstack_klam : dstackR (klam E) A
+dstack_klam : dstackR (klam (\k. E k)) A
               <- {k:ccont}
                  {d:{xi:stack}{t:ctriv}{t':ctriv}
                     dstackT xi t t' dot
                     -> dstackE xi (cret k t) t'} 
                  dstackE dot (E k) A.
 
-dstack_cret_vlam : dstackE Xi (cret (vlam E) T) A
+dstack_cret_vlam : dstackE Xi (cret (vlam (\v. E v)) T) A
                    <- dstackT Xi T T' Xi'
                    <- ({v:ctriv}
-                       ({t:ctriv}{xi:stack}dstackT (xi , t) v t xi)
-                       -> dstackE (Xi' , T') (E v) A).
+                       ({t:ctriv}{xi:stack}dstackT (cons xi t) v t xi)
+                       -> dstackE (cons Xi'  T') (E v) A).
 
 dstack_capp : dstackE Xi (capp T0 T1 C) A
               <- dstackT Xi T1 T1' Xi1
-              <- dstackT Xi1 T0 (xlam [x:ctriv]klam (E x)) Xi0 
+              <- dstackT Xi1 T0 (xlam (\x.klam (\c. E x c))) Xi0 
               <- dstackE Xi0 (E T1' C) A.
 
 dstack_xlam : dstackT Xi (xlam R) (xlam R) Xi.

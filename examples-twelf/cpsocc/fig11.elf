@@ -6,6 +6,6 @@ vvalDS : stack -> stack -> type.
 
 vvalDS_init : vvalDS dot dot.
 
-vvalDS_stack : vvalDS (XXi , V) (Xi , T)
+vvalDS_stack : vvalDS (cons XXi  V) (cons Xi T)
                <- ({xi:stack}vvalT xi T xi)
                <- vvalDS XXi Xi.

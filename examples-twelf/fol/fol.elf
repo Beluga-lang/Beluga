@@ -10,19 +10,19 @@ o : type.
 atm : type.
 
 % Syntax: implication, plus a few constants.
-=> : o -> o -> o.  %infix right 10 =>.
-&  : o -> o -> o.  %infix right 11 &.
+imp : o -> o -> o.  % infix right 10 =>.
+and : o -> o -> o.  % infix right 11 &.
 true : o.
-` : atm -> o.
+atom : atm -> o.
 
 % Atomic deductions (for faster search)
 !^ : o -> type.
 !v : o -> type.
 
 trueI^ : !^ true.
-andI^ : !^ A -> !^ B -> !^ (A & B).
-andEvL : !v (A & B) -> !v A.
-andEvR : !v (A & B) -> !v B.
-impI^ : (!v A -> !^ B) -> !^ (A => B).
-impEv : !v (A => B) -> !^ A -> !v B.
-close : !v (` P) -> !^ (` P).
+andI^ : !^ A -> !^ B -> !^ (and A B).
+andEvL : !v (and A B) -> !v A.
+andEvR : !v (and A B) -> !v B.
+impI^ : (!v A -> !^ B) -> !^ (imp A B).
+impEv : !v (imp A B) -> !^ A -> !v B.
+close : !v (atom P) -> !^ (atom P).

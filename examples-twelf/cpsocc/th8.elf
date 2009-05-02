@@ -2,15 +2,15 @@
 %%%%% Theorem 8 : Preservation of Cont-validity under beta-reduction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-th8-1 : cvalE ([k:ccont]cret (vlam [v:ctriv]E v k) T) -> cvalE (E T) -> type.
+th8-1 : cvalE (\k. cret (vlam (\v. E v k)) T) -> cvalE (\c. E T c) -> type.
 
 %mode th8-1 +CVE -CVE'.
 
-th8-1_proof : th8-1 (cval_cret (cval_vlam CVE) CVT) 
+th8-1_proof : th8-1 (cval_cret (cval_vlam (\v.\cvt. CVE v cvt)) CVT) 
                       (CVE T CVT).
 
-th8-2 : cvalE ([k:ccont]capp (xlam [x:ctriv]klam (R x)) T (C k)) 
-         -> cvalE ([k:ccont]R T (C k)) 
+th8-2 : cvalE (\k.capp (xlam (\x.klam (\c.R x c))) T (C k)) 
+         -> cvalE (\k.R T (C k)) 
          -> type.
 
 %mode th8-2 +CVE -CVE'.
@@ -18,8 +18,8 @@ th8-2 : cvalE ([k:ccont]capp (xlam [x:ctriv]klam (R x)) T (C k))
 th8-2_proof : th8-2 (cval_capp 
                            CVC 
                            (cval_xlam 
-                                [x:ctriv][cvx:cvalT x]
-                                 cval_klam (CVE x cvx))
+                                (\x.\cvx.
+                                 cval_klam (CVE x cvx)))
                            CVT)
                       CVEreplCk
                <- lemma7_2b CVC

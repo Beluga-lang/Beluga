@@ -3,10 +3,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 lemma7_2b : cvalC C' -> cvalE E 
-            -> cvalE ([k:ccont]E (C' k)) -> type.
+            -> cvalE (\k.E (C' k)) -> type.
 
 lemma7_2d : cvalC C' -> cvalC C 
-            -> cvalC ([k:ccont]C (C' k)) -> type.
+            -> cvalC (\k.C (C' k)) -> type.
 
 %mode lemma7_2b +CVC' +CVE -CVE'.
 %mode lemma7_2d +CVC' +CVC -CVC''.
@@ -38,6 +38,4 @@ lemma7_2d_vlam : lemma7_2d CVC'
                               (CVE v cvv)
                               (CVEreplC'k v cvv).
 
-%terminates (CVE CVC)
-  (lemma7_2b _ CVE _)
-  (lemma7_2d _ CVC _).
+%terminates (CVE CVC)  (lemma7_2b _ CVE _)  (lemma7_2d _ CVC _).

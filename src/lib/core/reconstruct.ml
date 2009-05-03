@@ -2743,7 +2743,17 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
         
       let _    = begin try 
         Unify.unifyDCtx Int.LF.Empty cPsi' cPsi1' ;
-        Unify.unifyTyp  Int.LF.Empty (phat, (tP', LF.id), (tP1', LF.id))   
+        Unify.unifyTyp  Int.LF.Empty (phat, (tP', LF.id), (tP1', LF.id));
+        dprint (fun () -> "Unify successful: \n"
+                   ^  "Inferred pattern type : "
+                   ^  P.dctxToString cO Int.LF.Empty cPsi'
+                                  ^ "    |-    "
+                                  ^ P.typToString cO Int.LF.Empty cPsi1' (tP1', LF.id)
+                                  ^ "\nExpected pattern type: "
+                                  ^ P.dctxToString cO Int.LF.Empty cPsi'
+                                  ^ "     |-    "
+                                  ^ P.typToString cO Int.LF.Empty cPsi' (tP', LF.id))
+
       with Unify.Unify msg ->
         (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n"
                    ^  "Inferred pattern type : "
@@ -2760,6 +2770,7 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
                    end 
       in 
       (* cD1' |- t' <= cD' *)
+      let _ = dprint (fun () -> "synRefine [Substitution] t : " ^ "\n|-\n" ^ P.msubToString cO Int.LF.Empty (Whnf.cnormMSub t) ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
       let (t', cD1') = Abstract.abstractMSub t in 
       let _ = dprint (fun () -> "Scrutinee: \n" ^ P.mctxToString cO cD ^ " ; \n" ^ P.dctxToString cO cD cPsi ^ " |- " ^ P.typToString cO cD cPsi (tP, LF.id) ^ "\n") in 
       let _ = dprint (fun () -> "Pattern: \n" ^ P.mctxToString cO cD1 ^ " ; \n" ^ P.dctxToString cO cD1 cPsi1 ^ " |- " ^ P.typToString cO cD1 cPsi1 (tP1, LF.id) ^ "\n") in  

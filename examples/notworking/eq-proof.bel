@@ -14,6 +14,7 @@
 % - also requires explicit use of "remove parameter x and u" in the
 %   definition of `extend' and the use of `extend' in `eqfun'
 
+%{
 exp: type.    %name exp E x.
 app: exp -> exp -> exp.
 lam: (exp -> exp) -> exp.
@@ -48,7 +49,7 @@ rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
        let [g] EQ2 .. = eqfun [g] <g . A2 ..> in
           [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
-
+}%
 
 
 exp: type.    %name exp E x.
@@ -103,6 +104,7 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
 |
   {#p :: (block yy:exp. eq yy yy)[g]}
        [g] #p.2 .. => e2
+%{
 |
   {D1 :: (eq (TT ..) (RR ..))[g, b:block xx:exp. eq xx xx]}
    [g] eq_lam \x.\u. D1 .. <x, u> =>
@@ -132,6 +134,7 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
              [g] eq_app  (T1 ..) (S1 ..) (T2 ..) (S2 ..)
                     (E1 ..)  (E2 ..)
        )
+}%
 ;
 
 %{

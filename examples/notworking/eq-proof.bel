@@ -27,14 +27,12 @@ eq_lam : % {E : exp -> exp} {F : exp -> exp}
              ({x : exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
  
-% schema w = some [x:exp] eq x x;
+
 schema w = block x:exp. eq x x;
 
-% rec exp_identity : {g:(w)*} exp[g] -> exp[g] = FN g => fn e => e ;
 
 rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
  FN g => mlam U =>
-%  case exp_identity [g] ([g] (U ..)) of      %  case [g] U .. of         % match < g.  U > of
    case [g] (U ..) of
   | [g] #p.1 .. => [g] #p.2 ..
 
@@ -42,8 +40,7 @@ rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
       let
           [g,e:block yyy:exp. eq yyy yyy] V .. e = eqfun [g, e:block q:exp. eq q q] <g, e. L .. e.1>
       in
-%        eqfun [g] <g. lam \x. L .. x>
-          [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
+        [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
    | [g] app (A1 ..) (A2 ..)  : exp[g]=>
        let [g] EQ1 .. = eqfun [g] <g . A1 ..> in
        let [g] EQ2 .. = eqfun [g] <g . A2 ..> in
@@ -68,28 +65,31 @@ eq_lam : % {E : exp -> exp} {F : exp -> exp}
 schema w = block x:exp. eq x x;
 
 
+
+
 %{
-        % General reflexivity rule is admissible in the equality definition
-        rec ref : {g:(l)*} {t::exp[g]} (eq t[id(g)] t[id(g)])[g] = 
-            FN g => mlam t => 
-                case [g] t[id(g)]) : exp[g] of 
-                    [g] #p.1 ..  => box(g . #p.2 [id(g)])
-                  | [g] lam \x. U .. x => 
-                    let
-                        [g, e:___] E .. e = 
-                        ref [g, e:sigma(x:exp) eq x x] <g, e. U[id(g), fst e]>
-                    in
-                        [g] eq_lam (lam  \x.U[id(g), x]) (lam  \x.U[id(g), x])
-                        \x.\u. E[id(g), <x,u>])
-                    end
-                  | [g] app U[id(g)] W[id(g)]) => 
-                    let 
-                        [g] (E1 ..)) = ref [g] <g . U[id(g)]>
-                        [g] (E2 ..)) = ref [g] <g . W[id(g)]>
-                    in
-                        [g] eq_app (app U[id(g)] W[id(g)])
-                                      (app U[id(g)] W[id(g)])
-                                       (E1 ..) (E2 ..))
+schema l = some [x:term] block equal x x;
+% General reflexivity rule is admissible in the equality definition
+rec ref : {g:(l)*} {t::term[g]} (equal t[id(g)] t[id(g)])[g] = 
+    FN g => mlam t => 
+        case box(g. t[id(g)]) : term[g] of 
+            [g] #p.1 ..  => box(g . snd p[id(g)])
+          | [g] lam \x. U .. x => 
+            let
+                [g, e:___] E .. e = 
+                ref [g, e:sigma(x:term) equal x x] <g, e. U[id(g), fst e]>
+            in
+                box(g. eq_lam (lam  \x.U[id(g), x]) (lam  \x.U[id(g), x])
+                \x.\u. E[id(g), <x,u>])
+            end
+          | box(g. app U[id(g)] W[id(g)]) => 
+            let 
+                box(g. E1[id(g)]) = ref [g] <g . U[id(g)]>
+                box(g. E2[id(g)]) = ref [g] <g . W[id(g)]>
+            in
+                box(g. eq_app (app U[id(g)] W[id(g)]) (app U[id(g)] W[id(g)])
+                E1[id(g)] E2[id(g)])
+            end;
 }%
 
 % General transitivity is admissible
@@ -101,10 +101,9 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
   FN g => % mlam TT => mlam RR => mlam SS =>
     fn e1 => fn e2 =>
       case e1 of
-|
+% commented this next case out; it's not working for now. -bp
   {#p :: (block yy:exp. eq yy yy)[g]}
        [g] #p.2 .. => e2
-%{
 |
   {D1 :: (eq (TT ..) (RR ..))[g, b:block xx:exp. eq xx xx]}
    [g] eq_lam \x.\u. D1 .. <x, u> =>

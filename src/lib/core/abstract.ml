@@ -183,6 +183,33 @@ let length cPsi =
   let (_, n) = Context.dctxToHat cPsi in
     n
 
+
+(* Eta-expansion of bound variables which have function type *)
+let rec etaExpandHead loc h tA = 
+  let rec etaExpSpine k tS tA = begin match  tA with
+    | I.Atom _  -> (k, tS)
+        
+    | I.PiTyp (_ , tA') -> 
+        let tN = I.Root(loc, I.BVar k, I.Nil) in                   
+          etaExpSpine (k+1)  (I.App(tN, tS)) tA'
+  end in 
+    
+  let rec etaExpPrefix loc (tM, tA) = begin match tA with
+    | I.Atom _ -> tM
+    | I.PiTyp ((I.TypDecl (x, _ ), _ ) , tA') -> 
+        I.Lam (loc, x, etaExpPrefix loc (tM, tA')) 
+  end in
+    
+  let (k, tS') = etaExpSpine 1 (I.Nil) tA in 
+  let h'       =  begin match h with 
+                    | I.BVar x -> I.BVar (x+k-1)
+                    | I.FVar _ -> h 
+                  end  in
+    etaExpPrefix loc (I.Root(loc, h' , tS'), tA)   
+
+
+
+
 (* eqMMVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
@@ -766,8 +793,9 @@ and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
   | (I.Shift (I.NoCtxShift, k) , I.DDec(_cPsi', _dec)) ->
        subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (I.NoCtxShift, (k + 1))), cPsi) tS
 
-  | (I.Dot (I.Head (I.BVar k), s), I.DDec(cPsi', _dec)) -> 
-      subToSpine cQ offset  (s,cPsi') (I.App (I.Root (None, I.BVar k, I.Nil), tS))
+  | (I.Dot (I.Head (I.BVar k), s), I.DDec(cPsi', I.TypDecl (_, tA))) -> 
+      let tN = etaExpandHead None (I.BVar k) (Whnf.normTyp (tA, LF.id)) in 
+      subToSpine cQ offset  (s,cPsi') (I.App (tN, tS))
 
   | (I.Dot (I.Head (I.MVar (_u, _r)), _s) , I.DDec(_cPsi', _dec)) -> 
       (Printf.printf "SubToSpine encountered MVar as head\n";

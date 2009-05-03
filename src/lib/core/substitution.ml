@@ -176,6 +176,7 @@ module LF = struct
    *)
   and frontSub ft s = match ft with
     | Head (BVar n)       -> bvarSub n s
+    | Head (FVar _)       -> ft
     | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))
     | Head (PVar (u, s')) -> Head (PVar (u, comp s' s))
 

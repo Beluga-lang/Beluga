@@ -6,10 +6,10 @@ vvalMS : stack -> stack -> type.
 
 vvalMS_init : vvalMS dot dot.
 
-vvalMS_v : vvalMS (XXi , V) (Xi , V)
+vvalMS_v : vvalMS (cons XXi  V) (cons Xi  V)
             <- vvalMS XXi Xi.
 
-vvalMS_t : vvalMS (XXi , V) (Xi , T)
+vvalMS_t : vvalMS (cons XXi  V) (cons Xi  T)
             <- ({xi:stack}vvalT xi T xi)
             <- vvalMS XXi Xi.
 

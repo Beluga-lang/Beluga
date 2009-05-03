@@ -1762,8 +1762,8 @@ module Int = struct
 
 
   (* Default Internal Syntax Pretty Printer Functor Instantiation *)
-  (* module DefaultPrinter = Make (DefaultCidRenderer) *)
-   module DefaultPrinter = Make (NamedRenderer) 
+   module DefaultPrinter = Make (DefaultCidRenderer)  
+   (* module DefaultPrinter = Make (NamedRenderer)   *)
 
 end (* Int *)
 
@@ -1813,19 +1813,39 @@ module Error = struct
 
       | TypMismatch (cO, cD, cPsi, sM, sA1, sA2) ->
           fprintf ppf
-            "ill-typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n  in context:\n    %a"
+            "ill-typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n "
             (IP.fmt_ppr_lf_typ cO cD cPsi    std_lvl) (Whnf.normTyp sA1)
             (IP.fmt_ppr_lf_typ cO cD cPsi    std_lvl) (Whnf.normTyp sA2)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) (Whnf.norm sM)
-            (IP.fmt_ppr_lf_dctx cO cD std_lvl)        (Whnf.normDCtx cPsi)
+            (* (IP.fmt_ppr_lf_dctx cO cD std_lvl)        (Whnf.normDCtx cPsi) *)
 
 
       | IllTyped (cO, cD, cPsi, sM, sA) ->
           fprintf ppf
-            "ill-typed expression\n  expected type: %a\n  for expression:\n    %a\n  in context:\n    %a"
+            "ill-typed expression\n  expected type: %a\n  for expression:\n    %a\n "
             (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) (Whnf.norm sM)
-            (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi 
+            (* (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi  *)
+
+      | IllTypedElab (cO, cD, cPsi, sA) ->
+          fprintf ppf
+            "ill-typed expression\n  inferred type: %a \n "
+            (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
+
+
+
+      | EtaExpandBV (offset, cO, cD, cPsi, sA) -> 
+          fprintf ppf
+            "bound variable %s to has type %a \n and should be eta-expanded\n"
+            (R.render_offset offset)
+            (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
+
+
+      | EtaExpandFV (offset, cO, cD, cPsi, sA) -> 
+          fprintf ppf
+            "variable %s to has type %a \n and should be eta-expanded\n"
+            (R.render_name offset)
+            (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
 
 
       | SpineIllTyped -> 
@@ -1902,8 +1922,8 @@ module Error = struct
 
 
   (* Default CID_RENDERER for Errors *)
-  (* module DefaultCidRenderer = Int.DefaultCidRenderer *)
-     module DefaultCidRenderer = Int.NamedRenderer
+   (* module DefaultCidRenderer = Int.DefaultCidRenderer  *)
+      module DefaultCidRenderer = Int.NamedRenderer 
 
 
 

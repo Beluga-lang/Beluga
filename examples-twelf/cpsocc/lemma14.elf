@@ -2,28 +2,28 @@
 %%%%% Lemma 14 : Control-stack substitution
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-lemma14-1a : cvalCS ([k:ccont]((Phi k) ; (vlam [v:ctriv]E1 v k))) 
-             -> cvalE E 
-             -> ({v:ctriv}cstack_substE (E1 v) Phi (E1' v))
-             -> cstack_substE E 
-                              ([k:ccont]((Phi k) ; vlam [v:ctriv]E1 v k)) 
-                              ([k:ccont]E (vlam [v:ctriv]E1' v k))
+lemma14-1a : cvalCS (\k.(ccons (Phi k)  (vlam (\v.E1 v k))))
+             -> cvalE (\c. E c)
+             -> ({v:ctriv}cstack_substE (\k. E1 v k) Phi (\k. E1' v k))
+             -> cstack_substE (\c. E c)
+                              (\k. (ccons (Phi k)  (vlam (\v.E1 v k))))
+                              (\k. E (vlam (\v.E1' v k)))
              -> type.
 
 lemma14-1c : cvalE E 
-             -> cstack_substE E ([k:ccont]cdot) E 
+             -> cstack_substE E (\k.cdot) E 
              -> type.
 
-lemma14-2a : cvalCS ([k:ccont]((Phi k) ; (vlam [v:ctriv]E1 v k))) 
+lemma14-2a : cvalCS (\k.(ccons (Phi k) (vlam (\v.E1 v k))) )
              -> cvalC C
-             -> ({v:ctriv}cstack_substE (E1 v) Phi (E1' v))
+             -> ({v:ctriv}cstack_substE (\k. E1 v k) Phi (\k. E1' v k))
              -> cstack_substC C 
-                              ([k:ccont]((Phi k) ; vlam [v:ctriv]E1 v k)) 
-                              ([k:ccont]C (vlam [v:ctriv]E1' v k))
+                              (\k. (ccons (Phi k)  (vlam (\v. E1 v k)) ))
+                              (\k. C (vlam (\v.E1' v k)))
              -> type.
 
 lemma14-2b : cvalC C
-             -> cstack_substC C ([k:ccont]cdot) C
+             -> cstack_substC C (\k.cdot) C
              -> type.
 
 lemma14-1a_cret : lemma14-1a CVS 

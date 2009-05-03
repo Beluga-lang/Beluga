@@ -5,7 +5,7 @@
 cstack : type.
 
 cdot : cstack.               
-; : cstack -> ccont -> cstack.        %infix left 10 ; .
+ccons : cstack -> ccont -> cstack.        %infix left 10 ; .
 
 cstackR : croot -> ctriv -> type.
 cstackE : (ccont -> cstack) -> (ccont -> cexp) -> ctriv -> type.
@@ -15,29 +15,29 @@ cstackC : (ccont -> cstack) -> (ccont -> ccont) -> (ccont -> cstack) -> type.
 %mode cstackE +Phi +E -A.
 %mode cstackC +Phi +C -Phi'.
 
-cstack_klam : cstackR (klam E) A
-              <- cstackE ([k:ccont]cdot) E A.
+cstack_klam : cstackR (klam (\c. E c)) A
+              <- cstackE (\k. cdot) (\c. E c) A.
 
-cstack_cret_k_init : cstackE ([k:ccont]cdot) ([k:ccont]cret k T) T.
+cstack_cret_k_init : cstackE (\k. cdot) (\k.cret k T) T.
 
-cstack_cret_k_vlam : cstackE ([k:ccont]((Phi k) ; (vlam [v:ctriv]E v k))) 
-                             ([k:ccont]cret k T) 
+cstack_cret_k_vlam : cstackE (\k. ccons (Phi k)  (vlam (\v.E v k))) 
+                             (\k.cret k T) 
                              A
-                     <- cstackE Phi (E T) A.
+                     <- cstackE (\x. Phi x) (\v. E T v) A.
 
 
-cstack_cret_vlam_phi : cstackE Phi ([k:ccont]cret (vlam [v:ctriv]E v k) T) A
-                       <- cstackE Phi (E T) A.
+cstack_cret_vlam_phi : cstackE (\k. Phi k) (\k.cret (vlam (\v. E v k)) T) A
+                       <- cstackE (\k. Phi k) (\v. E T v) A.
 
-cstack_capp : cstackE Phi ([k:ccont]capp (xlam [x:ctriv]klam (E x)) T (C k)) A
-              <- cstackC Phi C Phi'
-              <- cstackE Phi' (E T) A.
+cstack_capp : cstackE (\x.Phi x) (\k.capp (xlam (\x. klam (\c. E x c))) T (C k)) A
+              <- cstackC (\x. Phi  x) C (\x. Phi' x)
+              <- cstackE (\x. Phi' x) (\v. E T v) A.
 
-cstack_phi_k : cstackC Phi ([k:ccont]k) Phi.
+cstack_phi_k : cstackC (\x. Phi x) (\k.k) (\x. Phi x).
 
 cstack_vlam : cstackC Phi 
-                      ([k:ccont]vlam (E k)) 
-                      ([k:ccont](Phi k) ; (vlam (E k))).
+                      (\k.vlam (E k)) 
+                      (\k.ccons (Phi k)  (vlam (E k))).
 
 
 %name cstackR CONTR.

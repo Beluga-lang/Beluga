@@ -10,6 +10,7 @@
 (* Weak Head Normalization,
  * Normalization, and alpha-conversion
  *)
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 
 open Context
 open Syntax.Int.LF
@@ -37,6 +38,38 @@ let rec raiseType cPsi tA = match cPsi with
 let rec emptySpine tS = match tS with
   | Nil -> true
   | SClo(tS, _s) -> emptySpine tS
+
+
+
+(* Eta-contract elements in substitutions *)
+let rec etaContract tM = begin match tM with 
+  | Root (_, BVar k, Nil) -> Head (BVar k) 
+  | Lam  _ as tMn -> 
+      let rec etaUnroll k tM = begin match tM with
+        | Lam (_ , _, tN) -> 
+            let _ = dprint (fun () -> "etaUnroll k ="  ^ string_of_int k ^ "\n") in 
+              etaUnroll (k+1) tN
+        |  _ ->  let _ = dprint (fun () -> "etaUnroll k ="  ^ string_of_int k ^ "\n") in  (k, tM) 
+      end in
+      let rec etaSpine k tS = begin match (k, tS) with
+        | (0, Nil) -> true
+        | (k', App(Root(_ , BVar x, Nil), tS')) -> 
+            if k' = x then etaSpine (k'-1)  tS'
+            else false
+      end in 
+        begin match etaUnroll 0 tMn with 
+          | (k, Root( _ , BVar x, tS)) -> 
+              (let _ = dprint (fun () -> "check etaSpine k ="  ^ string_of_int k ^ "\n") in 
+                 (if etaSpine k tS && x > k then 
+                    Head(BVar (x-k))
+                  else 
+                    Obj tMn))
+          | _ -> Obj tMn    
+        end 
+  | _  -> Obj tM
+ end
+
+
 
 
 (*************************************)
@@ -411,6 +444,7 @@ and norm (tM, sigma) = match tM with
         | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
         | Head (BVar k) -> Root (loc, BVar k, normSpine (tS, sigma))
         | Head head     -> norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
+        | Undef         -> raise (Violation ("Looking up " ^ string_of_int i ^ "\n"))
             (* Undef should not happen ! *)
       end
 
@@ -433,7 +467,7 @@ and norm (tM, sigma) = match tM with
 
   | Root (_, MVar (Inst ({ contents = Some tM}, _, _, _), r), tS) ->
       (* constraints associated with u must be in solved form *)
-      reduce (tM, LF.comp r sigma) (normSpine (tS, sigma))
+      reduce (norm (tM, LF.id), LF.comp r sigma) (normSpine (tS, sigma))
 
   | Root (loc, MVar (Inst ({contents = None}, _, Atom _, _) as u, r), tS) ->
       (* meta-variable is of atomic type; tS = Nil *)
@@ -537,10 +571,7 @@ and normSub s = match s with
 
 and normFt ft = match ft with
   | Obj tM ->
-      begin match norm (tM, LF.id) with
-        | Root (_, BVar k, Nil) -> Head (BVar k)
-        | tN                    -> Obj (tN)
-      end
+      etaContract(norm (tM, LF.id))
   | Head (BVar _k)                -> ft
   | Head (FVar _k)                -> ft
   | Head (MMVar (u, (t, s')))     -> Head (MMVar (u, (cnormMSub t, normSub s')))
@@ -551,6 +582,8 @@ and normFt ft = match ft with
   | Head (Proj (PVar (p, s'), k)) -> Head (Proj (PVar (p, normSub s'), k))
   | Head h                        -> Head h
   | Undef                         -> Undef  (* -bp Tue Dec 23 2008 : DOUBLE CHECK *)
+
+
 
 (* normType (tA, sigma) = tA'
  *
@@ -1353,11 +1386,17 @@ and convFront front1 front2 = match (front1, front2) with
   | (Obj tM, Obj tN) ->
       conv (tM, LF.id) (tN, LF.id)
 
-  | (Head head, Obj tN) ->
-      conv (Root (None, head, Nil), LF.id) (tN, LF.id)
+  | (Head BVar i, Obj tN) ->
+      begin match etaContract (norm (tN, LF.id)) with 
+        | Head (BVar k) -> i = k 
+        | _ -> false
+      end 
 
-  | (Obj tN, Head head) ->
-      conv (tN, LF.id) (Root (None, head, Nil), LF.id)
+  | (Obj tN, Head (BVar i)) ->
+      begin match etaContract (norm (tN, LF.id)) with 
+        | Head (BVar k) -> i = k 
+        | _ -> false
+      end 
 
   | (Undef, Undef) ->
       true

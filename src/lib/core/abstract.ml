@@ -142,6 +142,17 @@ let rec collectionToString cQ = match cQ with
       ^ P.typToString cO cD I.Null (tA , LF.id)
       ^ "\n"
 
+  | I.Dec(cQ, MMV ((I.MMVar (I.MInst(_r, cD, cPsi, tP, _c), _s)) as h)) -> 
+      let (ctx_var, tA) = raiseType cPsi tP in        
+      let cO = I.Empty in 
+       collectionToString cQ ^ " "
+     ^ P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)
+     ^ " : "
+     ^ ctxVarToString ctx_var
+     ^ " . "
+     ^ P.typToString cO cD I.Null (tA , LF.id)
+     ^ "\n"
+
   | I.Dec (cQ, FMV (u, Some (tP, cPhi))) -> 
       let cO = I.Empty in 
       let cD = I.Empty in 
@@ -161,15 +172,27 @@ let rec collectionToString cQ = match cQ with
      ^ ctxVarToString ctx_var ^ " . " ^ P.typToString cO cD I.Null (tA , LF.id)
      ^ "\n"
 
-  | I.Dec(cQ, FV (_n, None)) ->  collectionToString cQ ^ ",  FV _ . "
+  | I.Dec(cQ, FV (_n, None)) ->  collectionToString cQ ^ ",  FV _ .\n"
 
   | I.Dec(cQ, FV (n, Some tA)) -> 
       let cO = I.Empty in 
       let cD = I.Empty in       
-         collectionToString cQ ^ ",  FV " ^ n.string_of_name ^ " : "
-     ^"(" ^ P.typToString cO cD I.Null (tA, LF.id) ^ ")"
+        collectionToString cQ ^ ",  FV " ^ n.string_of_name ^ " : "
+      ^ "(" ^ P.typToString cO cD I.Null (tA, LF.id) ^ ")"
+      ^ "\n"
 
-let printCollection s = print_string (collectionToString s ^ "\n")
+  | I.Dec(cQ, FPV (n, Some (tA, cPsi))) -> 
+      let (ctx_var, tA') = raiseType cPsi tA in        
+      let cO = I.Empty in 
+      let cD = I.Empty in       
+        collectionToString cQ
+      ^ " FPV " ^ n.string_of_name ^ " : "
+      ^ ctxVarToString ctx_var ^ "." ^ P.typToString cO cD I.Null (tA', LF.id)
+      ^ "\n"
+
+let printCollection s = print_string (collectionToString s)
+
+
 
 (* exists p cQ = B
    where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
@@ -630,7 +653,7 @@ and collectHead cQ phat ((head, subst) as sH) =
                 ^ (match !r with None -> "None" | Some _r -> "Some _")) ;
       if constraints_solved cnstr then
         let cQ' = collectSub cQ phat (LF.comp s' s) in
-          if exists (eqPVar p) cQ' then
+          if exists (eqPVar p) cQ' then            
             cQ'
           else
             (*  checkEmpty !cnstrs ? -bp *)

@@ -1762,8 +1762,8 @@ module Int = struct
 
 
   (* Default Internal Syntax Pretty Printer Functor Instantiation *)
-   module DefaultPrinter = Make (DefaultCidRenderer)  
-   (* module DefaultPrinter = Make (NamedRenderer)   *)
+   (* module DefaultPrinter = Make (DefaultCidRenderer)   *)
+    module DefaultPrinter = Make (NamedRenderer)   
 
 end (* Int *)
 

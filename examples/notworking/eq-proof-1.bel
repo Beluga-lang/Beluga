@@ -47,6 +47,7 @@ rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
 ;
 
 
+
 exp: type.    %name exp E x.
 app: exp -> exp -> exp.
 lam: (exp -> exp) -> exp.
@@ -72,37 +73,34 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
   FN g => % mlam TT => mlam RR => mlam SS =>
     fn e1 => fn e2 =>
       case e1 of
-      | {#p :: (block yy:exp. eq yy yy)[g]}
-         [g] #p.2 .. => e2
 
-      | {D1 :: (eq (TT ..) (RR ..))[g, b:block xx:exp. eq xx xx]}
-         [g] eq_lam \x.\u. D1 .. <x, u> =>
-           (case e2 of
-              {D2 :: (eq (RR ..) (SS ..))[g, b:block xx:exp. eq xx xx]}
-              [g] eq_lam \xx.\uu. D2 .. <xx, uu> =>
-              let
-                  [g, b:block x:exp. eq x x] E .. b = 
-                     trans [g, b:block x':exp. eq x' x'] 
-                       ([g, b] D1 .. b)
-                       ([g, b] D2 .. b)
-              in
-                  [g] eq_lam \x. \u. E .. <x, u>
-           )
+|{#p :: (block yy:exp. eq yy yy)[g]}
+       [g] #p.2 .. => e2
 
-     | [g] eq_app (T1 ..) (R1 ..) (T2 ..) (R2 ..) (D1 ..) (D2 ..) =>
-           (case e2 of
-             [g] eq_app (R1 ..) (S1 ..) (R2 ..) (S2 ..)
-                    (F1 ..) (F2 ..) =>
-             let [g] E1 .. = trans [g]   % <g. T1 ..> <g. R1 ..> <g. S1 ..>
-                               ([g] D1 ..)  ([g] F1 ..)
-             in
-             let [g] E2 .. = trans [g]   % <g. T2 ..> <g. R2 ..> <g. S2 ..>
-                               ([g] D2 ..)  ([g] F2 ..)
-             in
-                 [g] eq_app  (T1 ..) (S1 ..) (T2 ..) (S2 ..)
-                        (E1 ..)  (E2 ..)
-           )
-}%
+| [g] eq_lam \x.\u. D1 .. x u =>
+   let [g] eq_lam \xx.\uu. D2 .. xx uu =  e2  in	
+   let [g, b:block x:exp. eq x x] E .. b = 
+     trans [g, b:block x':exp. eq x' x'] 
+         ([g, b] D1 .. b.1 b.2)
+         ([g, b] D2 .. b.1 b.2)
+    in
+      [g] eq_lam \x. \u. E .. <x, u>
+       
+
+     | [g] eq_app (T1 ..) (R1 ..) (T2 ..) (R2 ..)
+                      (D1 ..) (D2 ..) =>
+       (case e2 of
+         [g] eq_app (R1 ..) (S1 ..) (R2 ..) (S2 ..)
+                (F1 ..) (F2 ..) =>
+         let [g] E1 .. = trans [g]   % <g. T1 ..> <g. R1 ..> <g. S1 ..>
+                           ([g] D1 ..)  ([g] F1 ..)
+         in
+         let [g] E2 .. = trans [g]   % <g. T2 ..> <g. R2 ..> <g. S2 ..>
+                           ([g] D2 ..)  ([g] F2 ..)
+         in
+             [g] eq_app  (T1 ..) (S1 ..) (T2 ..) (S2 ..)
+                    (E1 ..)  (E2 ..)
+       )
 ;
 
 

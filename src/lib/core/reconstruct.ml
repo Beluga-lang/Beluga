@@ -634,7 +634,7 @@ let rec isPatSub s = match s with
       isPatSub s
 
   | Apx.LF.Dot (Apx.LF.Head _, _s) ->
-      (Printf.printf "Check apxSub is patSub: FAILED \n Encountered Head other than BVar!\n";
+      (Printf.printf "Check apxSub is patSub: FAILED\n Encountered Head other than BVar!\n";
        false)
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) ->
@@ -686,7 +686,7 @@ let rec synDom cPsi s = begin match s with
               (Int.LF.DDec (cPhi,
                             Int.LF.TypDecl (x, Int.LF.TClo(tA, Substitution.LF.invert s'))),
                Int.LF.Dot (Int.LF.Head(Int.LF.BVar k), s'))
-(*         | _ -> raise (Violation "Undefined bound variable \n") *)
+(*         | _ -> raise (Violation "Undefined bound variable\n") *)
       end
   | _ -> raise (Violation "Encountered non-pattern substitution")
 
@@ -1060,7 +1060,7 @@ and elTerm' recT cO cD cPsi r sP = match r with
            * meta-variables in cD. This will be enforced during abstraction *)
           
         let s'' = elSub recT cO cD cPsi s cPhi in
-        let _ = dprint (fun () -> "Not checking: \n"
+        let _ = dprint (fun () -> "Not checking:\n"
                           ^ "  Given type  sP = " ^ P.typToString cO cD cPsi sP ^ "\n"
                           ^ "  Inferred type  = " ^ P.typToString cO cD cPsi (tA, s'')) in
           (* We do not check here that tP approx. [s']tP' --
@@ -1415,7 +1415,7 @@ and elSpineSynth recT cD cPsi spine s' sP = match (spine, sP) with
       let tA' = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi,  (tA, LF.id), (Int.LF.MShift 0, ss)
                                      , Unify.MVarRef (ref None)) in 
       (* let tA' = Whnf.normTyp (tA, ss) in *)
-      let _ = dprint (fun () -> "elSpineSynth: PruneTyp done \n") in 
+      let _ = dprint (fun () -> "elSpineSynth: PruneTyp done\n") in 
 
       (*   cPsi |- s', x : cPsi', y:tA' *)
       let (tS, tB) = elSpineSynth recT cD cPsi spine (Int.LF.Dot (Int.LF.Head(Int.LF.BVar x), s')) sP in
@@ -1730,7 +1730,7 @@ and synTermW recT cO cD  cPsi ((root, s') as sR) = match root with
                                 P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) ^ "\n" ) in
               let _ = dprint (fun () -> "of type (Shift 0 ?)" ^
                                 P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, 0)) ^ "\n" ) in
-              let _ = dprint (fun () -> "in context \n" ^ P.dctxToString cO cD cPsi ^ "\n\n") in 
+              let _ = dprint (fun () -> "in context\n" ^ P.dctxToString cO cD cPsi ^ "\n\n") in 
               in 
               let s = mkShift PiRecon cPsi in 
                 (* synSpine recT cO cD  cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) *)
@@ -1837,7 +1837,7 @@ and recSub recT cO cD cPsi_ s cPhi_ =
      Int.LF.DDec (cPhi, Int.LF.TypDecl (_, tA)))
     ->
       begin 
-        dprint (fun () -> "recSub Proj \n  "
+        dprint (fun () -> "recSub Proj\n  "
                         ^ P.dctxToString cO cD cPsi ^ "\n  "
                         ^ P.subToString cO cD cPsi s ^ "\n  "
                         ^ P.dctxToString cO cD cPhi
@@ -1989,7 +1989,7 @@ and cnormApxTuple cO cD delta tuple t = match tuple with
 
 and cnormApxHead cO cD delta h t = match h with
   | Apx.LF.MVar (Apx.LF.Offset offset, s) ->
-      let _ = dprint (fun () -> "cnormApxHead : offset " ^ R.render_offset offset ^ " \n in cD = " ^ P.mctxToString cO cD ^ "\n") in 
+      let _ = dprint (fun () -> "cnormApxHead : offset " ^ R.render_offset offset ^ "\n in cD = " ^ P.mctxToString cO cD ^ "\n") in 
       let l_delta = lengthApxMCtx delta in 
       let offset' = (offset - l_delta)  in 
         if offset > l_delta then 
@@ -2048,13 +2048,13 @@ and cnormApxHead cO cD delta h t = match h with
         Apx.LF.PVar (Apx.LF.PInst (h', tA', cPhi'), s')
 
   | Apx.LF.FMVar(u, s) -> 
-      let _ = dprint (fun () -> "cnormApxHead : FMV " ^ R.render_name u ^ "\n") in 
+      let _ = dprint (fun () -> "cnormApxHead: FMV " ^ R.render_name u ^ "\n") in 
       Apx.LF.FMVar(u, cnormApxSub cO cD delta s t)
 
   | Apx.LF.FPVar(u, s) -> 
       Apx.LF.FPVar(u, cnormApxSub cO cD delta s t)
 
-  | _ -> (dprint (fun () -> "cnormApxHead : other \n") ; h)
+  | _ -> (dprint (fun () -> "cnormApxHead: other\n") ; h)
 
 and cnormApxSub cO cD delta s t = match s with
   | Apx.LF.EmptySub -> s
@@ -2758,7 +2758,7 @@ and recPattern cO delta psi m tPopt =
   let _       = dprint (fun () -> "recPattern: Reconstructed pattern...\n" ^
                           P.mctxToString cO cD' ^ "  ;   " ^
                           P.dctxToString cO cD' cPsi' ^ "\n   |-\n    "  ^
-                          P.normalToString cO cD' cPsi' (tR, LF.id) ^ " \n has type " ^
+                          P.normalToString cO cD' cPsi' (tR, LF.id) ^ "\n has type " ^
                           P.typToString cO cD' cPsi' (tP', LF.id) ^ "\n") in
 
 
@@ -2767,7 +2767,7 @@ and recPattern cO delta psi m tPopt =
   let _       = dprint (fun () -> "recPattern: Reconstructed pattern (AFTER ABSTRACTION)...\n" ^
                           P.mctxToString cO cD1' ^ "  ;   " ^
                           P.dctxToString cO cD1' cPsi1' ^ "\n   |-\n    "  ^
-                          P.normalToString cO cD1' cPsi1' (tR1', LF.id) ^ " \n has type " ^
+                          P.normalToString cO cD1' cPsi1' (tR1', LF.id) ^ "\n has type " ^
                           P.typToString cO cD1' cPsi1'  (tP1', LF.id) ^ "\n") in
     
   let n       = Context.length cD1' in
@@ -2809,7 +2809,7 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
 
       let phat   = Context.dctxToHat cPsi' in 
 
-      let _      = dprint (fun () -> "synRefine ... \n") in 
+      let _      = dprint (fun () -> "synRefine ...\n") in 
 
       let _  = begin match caseT with
                | IndexObj (_phat, tR') -> 
@@ -2821,7 +2821,7 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
                    end
                | DataObj -> ()
               end  in
-      let _      = dprint (fun () -> "SynRefine [Unify] : \n"
+      let _      = dprint (fun () -> "SynRefine [Unify]:\n"
                              ^  "Inferred pattenrn type : "
                              ^  P.dctxToString cO Int.LF.Empty cPsi'
                              ^ "    |-    "
@@ -2835,7 +2835,7 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
         Unify.unifyDCtx Int.LF.Empty cPsi' cPsi1' ;
         Unify.unifyTyp  Int.LF.Empty (phat, (tP', LF.id), (tP1', LF.id));
         dprint (fun () -> "Unify successful: \n"
-                   ^  "Inferred pattern type : "
+                   ^  "Inferred pattern type: "
                    ^  P.dctxToString cO Int.LF.Empty cPsi'
                                   ^ "    |-    "
                                   ^ P.typToString cO Int.LF.Empty cPsi1' (tP1', LF.id)
@@ -2846,7 +2846,7 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
 
       with Unify.Unify msg ->
         (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n"
-                   ^  "Inferred pattern type : "
+                   ^  "Inferred pattern type: "
                    ^  P.dctxToString cO Int.LF.Empty cPsi'
                                   ^ "    |-    "
                                   ^ P.typToString cO Int.LF.Empty cPsi1' (tP1', LF.id)
@@ -2860,11 +2860,11 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
                    end 
       in 
       (* cD1' |- t' <= cD' *)
-      let _ = dprint (fun () -> "synRefine [Substitution] t : " ^ "\n|-\n" ^ P.msubToString cO Int.LF.Empty (Whnf.cnormMSub t) ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
-      let (t', cD1') = Abstract.abstractMSub t in 
-      let _ = dprint (fun () -> "Scrutinee: \n" ^ P.mctxToString cO cD ^ " ; \n" ^ P.dctxToString cO cD cPsi ^ " |- " ^ P.typToString cO cD cPsi (tP, LF.id) ^ "\n") in 
-      let _ = dprint (fun () -> "Pattern: \n" ^ P.mctxToString cO cD1 ^ " ; \n" ^ P.dctxToString cO cD1 cPsi1 ^ " |- " ^ P.typToString cO cD1 cPsi1 (tP1, LF.id) ^ "\n") in  
-      let _ = dprint (fun () -> "synRefine [Substitution] : " ^ P.mctxToString cO cD1' ^ "\n|-\n" ^ P.msubToString cO cD1' t' ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
+      let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub t) in 
+      let _ = dprint (fun () -> "Scrutinee:\n" ^ P.mctxToString cO cD ^ " ;\n" ^ P.dctxToString cO cD cPsi ^ " |- " ^ P.typToString cO cD cPsi (tP, LF.id) ^ "\n") in 
+      let _ = dprint (fun () -> "Pattern:\n" ^ P.mctxToString cO cD1 ^ " ;\n" ^ P.dctxToString cO cD1 cPsi1 ^ " |- " ^ P.typToString cO cD1 cPsi1 (tP1, LF.id) ^ "\n") in  
+      let _ = dprint (fun () -> "synRefine [Substitution (BEFORE ABSTRACTION)]:\n " ^  P.msubToString cO Int.LF.Empty (Whnf.cnormMSub t) ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
+      let _ = dprint (fun () -> "synRefine [Substitution]: " ^ P.mctxToString cO cD1' ^ "\n|-\n" ^ P.msubToString cO cD1' t' ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
         (t', cD1')
 
 
@@ -2879,7 +2879,7 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
 
       let (t', cD1'') = synRefine (Some loc) cO caseTyp tM1' (cD, cPsi, tP) (cD1', cPsi1', tP1') in 
 
-      (* Note: e is in the scope of cD, cD1' – however, cD1' = cD1, cD0 !!   *)
+      (* Note: e is in the scope of cD, cD1' ; however, cD1' = cD1, cD0 !!   *)
 
       let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
       let cD'      = Context.append cD cD1' in 

@@ -221,6 +221,7 @@ let main () =
         | (Negative, Negative) -> (errors + 1, unsound, incomplete)
       in
         Store.clear ()
+      ; Gensym.reset ()
       ; try List.fold_left per_file (errors, unsound, incomplete) file_names
       with  SessionFatal spec -> return spec Negative
     in

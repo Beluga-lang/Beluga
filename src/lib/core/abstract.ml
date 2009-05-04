@@ -134,6 +134,18 @@ let rec printCollection cQ = match cQ with
          (ctxVarToString ctx_var)
          (P.typToString cO cD I.Null (tA , LF.id))
       )
+
+  | I.Dec(cQ, MMV ((I.MMVar (I.MInst(_r, cD, cPsi, tP, _c), _s)) as h)) -> 
+      let (ctx_var, tA) = raiseType cPsi tP in        
+      let cO = I.Empty in 
+      (printCollection cQ ; 
+       Printf.printf " %s : " 
+         (P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)) ;
+       Printf.printf " %s . %s \n" 
+         (ctxVarToString ctx_var)
+         (P.typToString cO cD I.Null (tA , LF.id))
+      )
+
   | I.Dec (cQ, FMV (u, Some (tP, cPhi))) -> 
       let cO = I.Empty in 
       let cD = I.Empty in 
@@ -165,6 +177,17 @@ let rec printCollection cQ = match cQ with
         (printCollection cQ ; 
          Printf.printf " FV %s : %s \n" n.string_of_name 
            (P.typToString cO cD (I.Null) (tA, LF.id)))
+
+  | I.Dec(cQ, FPV (n, Some (tA, cPsi))) -> 
+      let (ctx_var, tA') = raiseType cPsi tA in        
+      let cO = I.Empty in 
+      let cD = I.Empty in       
+        (printCollection cQ ; 
+         Printf.printf " FPV %s : %s.%s \n" n.string_of_name 
+           (ctxVarToString ctx_var)
+           (P.typToString cO cD (I.Null) (tA', LF.id))
+        )
+
 
 (* exists p cQ = B
    where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
@@ -622,7 +645,7 @@ and collectHead cQ phat sH = match sH with
   | (I.PVar (I.PInst (_r, cPsi, tA, {contents = cnstr}), s') as p, s) ->
       if constraints_solved cnstr then
         let cQ' = collectSub cQ phat (LF.comp s' s) in
-          if exists (eqPVar p) cQ' then
+          if exists (eqPVar p) cQ' then            
             cQ'
           else
             (*  checkEmpty !cnstrs ? -bp *)

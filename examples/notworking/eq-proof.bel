@@ -102,9 +102,12 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
       case e1 of
 
 % commented this next case out; it's not working for now. -bp
-%|
-%  {#p :: (block yy:exp. eq yy yy)[g]}
-%       [g] #p.2 .. => e2
+|
+  {#p :: (block yy:exp. eq yy yy)[g]}
+       [g] #p.2 .. => e2
+;
+
+%{
 |
   {D1 :: (eq (TT ..) (RR ..))[g, b:block xx:exp. eq xx xx]}
    [g] eq_lam \x.\u. D1 .. <x, u> =>
@@ -215,4 +218,5 @@ rec ceq: {g:(h2)*} {T::exp[g]}{S::exp[g]} (equal (T ..) (S ..))[g] -> (eq (T ..)
                   <g, b. U b.1> ([g, b] D b.1 b.3)
             in
                 [g] eq_lam \x.\v. E <x, equal x x, v>
+}%
 }%

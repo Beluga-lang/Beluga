@@ -2850,9 +2850,10 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
                    end 
       in 
       (* cD1' |- t' <= cD' *)
-      let (t', cD1') = Abstract.abstractMSub t in 
+      let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub t) in 
       let _ = dprint (fun () -> "Scrutinee: \n" ^ P.mctxToString cO cD ^ " ; \n" ^ P.dctxToString cO cD cPsi ^ " |- " ^ P.typToString cO cD cPsi (tP, LF.id) ^ "\n") in 
       let _ = dprint (fun () -> "Pattern: \n" ^ P.mctxToString cO cD1 ^ " ; \n" ^ P.dctxToString cO cD1 cPsi1 ^ " |- " ^ P.typToString cO cD1 cPsi1 (tP1, LF.id) ^ "\n") in  
+      let _ = dprint (fun () -> "synRefine [Substitution (BEFORE ABSTRACTION)] : \n " ^  P.msubToString cO Int.LF.Empty (Whnf.cnormMSub t) ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
       let _ = dprint (fun () -> "synRefine [Substitution] : " ^ P.mctxToString cO cD1' ^ "\n|-\n" ^ P.msubToString cO cD1' t' ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
         (t', cD1')
 

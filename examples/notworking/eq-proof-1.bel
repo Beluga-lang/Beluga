@@ -1,0 +1,139 @@
+% Given an expression e, return the proof that e is always equal to itself.
+% 
+% If e is an expression, then eq e e.
+
+% Author: Brigitte Pientka
+% Comments: 
+% - use of Sigma-types in context
+%
+% - in Delphin, this example requires a special function `extend' of
+%   type eqParamFun = <f:exp#> -> <eq f f> to keep track of the
+%   relationship between an introduced parameter and the fact that
+%   every parameter is equal to itself;
+%
+% - also requires explicit use of "remove parameter x and u" in the
+%   definition of `extend' and the use of `extend' in `eqfun'
+
+exp: type.    %name exp E x.
+app: exp -> exp -> exp.
+lam: (exp -> exp) -> exp.
+
+eq: exp -> exp -> type.   %name eq Q u.
+eq_app : % {E1:exp} {F1:exp} {E2:exp} {F2:exp}
+         eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
+
+eq_lam : % {E : exp -> exp} {F : exp -> exp}
+             ({x : exp} eq x x -> eq (E x) (F x)) 
+          -> eq (lam (\x. E x)) (lam (\x. F x)).
+ 
+
+schema w = block x:exp. eq x x;
+
+
+rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
+ FN g => mlam U =>
+   case [g] (U ..) of
+  | [g] #p.1 .. => [g] #p.2 ..
+
+  | [g] lam \x. L .. x =>
+      let
+          [g,e:block yyy:exp. eq yyy yyy] V .. e = eqfun [g, e:block q:exp. eq q q] <g, e. L .. e.1>
+      in
+        [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
+   | [g] app (A1 ..) (A2 ..)  : exp[g]=>
+       let [g] EQ1 .. = eqfun [g] <g . A1 ..> in
+       let [g] EQ2 .. = eqfun [g] <g . A2 ..> in
+          [g] eq_app (EQ1 ..) (EQ2 ..)
+;
+
+
+
+exp: type.    %name exp E x.
+app: exp -> exp -> exp.
+lam: (exp -> exp) -> exp.
+
+eq: exp -> exp -> type.   %name eq Q u.
+eq_app : {E1:exp} {F1:exp} {E2:exp} {F2:exp}
+         eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
+
+eq_lam : % {E : exp -> exp} {F : exp -> exp}
+             ({x : exp} eq x x -> eq (E x) (F x)) 
+          -> eq (lam (\x. E x)) (lam (\x. F x)).
+ 
+% schema w = some [x:exp] eq x x;
+schema w = block x:exp. eq x x;
+
+
+% General transitivity is admissible
+rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
+   (eq (TT ..) (RR ..))[g]     % e1 : eq T R
+-> (eq (RR ..) (SS ..))[g]     % e2 : eq R S
+-> (eq (TT ..) (SS ..))[g]    % result : eq T S
+=
+  FN g => % mlam TT => mlam RR => mlam SS =>
+    fn e1 => fn e2 =>
+      case e1 of
+
+|{#p :: (block yy:exp. eq yy yy)[g]}
+       [g] #p.2 .. => e2
+
+| [g] eq_lam \x.\u. D1 .. x u =>
+   let [g] eq_lam \xx.\uu. D2 .. xx uu =  e2  in	
+   let [g, b:block x:exp. eq x x] E .. b = 
+     trans [g, b:block x':exp. eq x' x'] 
+         ([g, b] D1 .. b.1 b.2)
+         ([g, b] D2 .. b.1 b.2)
+    in
+      [g] eq_lam \x. \u. E .. <x, u>
+       
+
+     | [g] eq_app (T1 ..) (R1 ..) (T2 ..) (R2 ..)
+                      (D1 ..) (D2 ..) =>
+       (case e2 of
+         [g] eq_app (R1 ..) (S1 ..) (R2 ..) (S2 ..)
+                (F1 ..) (F2 ..) =>
+         let [g] E1 .. = trans [g]   % <g. T1 ..> <g. R1 ..> <g. S1 ..>
+                           ([g] D1 ..)  ([g] F1 ..)
+         in
+         let [g] E2 .. = trans [g]   % <g. T2 ..> <g. R2 ..> <g. S2 ..>
+                           ([g] D2 ..)  ([g] F2 ..)
+         in
+             [g] eq_app  (T1 ..) (S1 ..) (T2 ..) (S2 ..)
+                    (E1 ..)  (E2 ..)
+       )
+;
+
+
+%{
+equal: exp -> exp -> type.
+e_l: ({x:exp} eq x x -> eq (T x) (T' x)) -> eq (lam \x. T x) (lam \x. T' x).
+e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
+e_r: eq T T.
+e_t: eq T' S -> eq T T' -> eq T S.
+
+schema h = some [] block x: exp, e: equal x x.  eq x x ; % where h < l 
+
+ceq: {g:(h)*}{t::exp[g]}{s::exp[g]} (eq (T ..) (S ..))[g] -> (equal (T ..) (S ..))[g] 
+
+rec ceq: {g:(h2)*} {T::exp[g]}{S::exp[g]} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[g] =
+    FN g => mlam T => mlam S => fn E =>
+        case E of 
+            [g] #p.3 .. => [g] #p.1 ..
+          | [g] eq_r => ref [g] <g. t>   % NOTE HERE WE NEED THE FACT THAT h <= l !!!
+          | [g] eq_tr (T ..) (S ..) (RR ..) (D2 ..) (D1 ..) => 
+            let
+                [g] E1 .. = ceq [g] <g. T ..> <g. S ..> ([g] D1 ..)
+            in let
+                [g] E2 .. = ceq [g] <g. S ..> <g. RR ..> ([g] D2 ..)
+            in
+                % NOTE HERE WE NEED THE FACT THAT h <= l !!!
+                tr [g] <g. T ..> <g. S ..> <g. RR ..> ([g] E1 ..)  ([g] E2 ..)
+            end
+          | [g] eq_l (lam \x.U[x]) \x.\u:equal x x. D x u) => 
+            let
+                [g, b. E b] = ceq [g, b:block x:exp, uv:equal x x. eq x x]
+                  <g, b. U b.1> ([g, b] D b.1 b.3)
+            in
+                [g] eq_lam \x.\v. E <x, equal x x, v>
+}%
+

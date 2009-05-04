@@ -732,8 +732,22 @@ module Make (T : TRAIL) : UNIFY = struct
               let si = invSub cD0 (phat, (s', cPsi'), ss, rOccur) in 
                 Dot(Undef, si) 
                   (* Mon Feb  9 14:37:27 2009 -bp : previously raise NotInvertible) *)
-          | ft    -> Dot (ft, invSub cD0 (phat, (s', cPsi'), ss, rOccur))
+          | ft   -> Dot (ft , invSub cD0 (phat, (s', cPsi'), ss, rOccur))
         end
+
+
+
+    | (Dot (Head (Proj (BVar n, k)), s'), DDec(cPsi', _dec)) ->
+        begin match bvarSub n ssubst with
+          | Undef -> 
+              let si = invSub cD0 (phat, (s', cPsi'), ss, rOccur) in 
+                Dot(Undef, si) 
+                  (* Mon Feb  9 14:37:27 2009 -bp : previously raise NotInvertible) *)
+          | Head(BVar m)  -> 
+              Dot (Head (Proj (BVar m, k)) , invSub cD0 (phat, (s', cPsi'), ss, rOccur))
+          | _ -> raise NotInvertible
+        end
+
 
     | (Dot (Obj tM, s'), DDec(cPsi', _dec))        ->
         (* below may raise NotInvertible *)
@@ -741,6 +755,7 @@ module Make (T : TRAIL) : UNIFY = struct
         let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in 
           Dot (Obj tM', invSub cD0 (phat, (s', cPsi'), ss, rOccur))
 
+    | _ -> (dprint (fun () -> "invSub -- undefined \n") ; raise (Error "invSub -- undefined"))
 
 
 
@@ -1072,11 +1087,14 @@ module Make (T : TRAIL) : UNIFY = struct
                   | MV v -> 
                       begin try 
                         let (_, _tA, cPsi1) = Whnf.mctxMDec cD0 u in 
+                        let _ = dprint (fun () -> "Found " ^ R.render_cvar cD0 u ^                                             "\n in context " ^ P.mctxToString Empty cD0 ^ "\n") in 
+                        let _ = dprint (fun () -> "comp t s = " ^ 
+                                          P.subToString Empty cD0 cPsi' (comp t s) ^ "\n cPsi1 = " ^ P.dctxToString Empty cD0 cPsi1 ^ "\n") in 
                         let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
                           returnHead (MVar (Offset v, s'))
                       with 
-                          _ -> raise_ (Unify ("ERROR: prune: Looking for " ^ R.render_cvar cD0 u ^ 
-                                               "\n in context " ^ P.mctxToString Empty cD0))
+                        | (Whnf.Violation msg) -> raise (Unify ("ERROR: prune: " ^ msg ^ "\n Looking for " ^ R.render_cvar cD0 u ^                                             "\n in context " ^ P.mctxToString Empty cD0))
+                        | _ -> raise (Unify ("ERROR: prune:  Looking for " ^ R.render_cvar cD0 u ^                                             "\n in context " ^ P.mctxToString Empty cD0))
                       end
                   | MUndef -> raise_ (Unify "Bound MVar dependency")
                 end 

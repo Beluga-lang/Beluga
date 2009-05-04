@@ -521,7 +521,7 @@ and norm (tM, sigma) = match tM with
   | Root (loc, Proj (BVar i, k), tS) ->
       begin match LF.bvarSub i sigma with
         | Head (BVar j)      -> Root (loc, Proj (BVar j, k), normSpine (tS, sigma))
-        | Head (PVar (p, s)) -> Root (loc, PVar (p, s)     , normSpine (tS, sigma))
+        | Head (PVar (p, s)) -> Root (loc, Proj (PVar (p, s), k), normSpine (tS, sigma))
             (* other cases are impossible -- at least for now -bp *)
       end
 
@@ -1060,6 +1060,7 @@ and whnf sM = match sM with
       begin match LF.bvarSub i sigma with
         | Obj tM        -> whnfRedex ((tM, LF.id), (tS, sigma))
         | Head (BVar k) -> (Root (loc, BVar k, SClo (tS,sigma)), LF.id)
+        | Head (Proj(BVar k, j)) -> (Root (loc, Proj(BVar k, j), SClo(tS, sigma)), LF.id)
         | Head head     -> whnf (Root (loc, head, SClo (tS,sigma)), LF.id)
             (* Undef should not happen! *)
       end

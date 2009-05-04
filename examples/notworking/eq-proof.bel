@@ -64,33 +64,6 @@ eq_lam : % {E : exp -> exp} {F : exp -> exp}
 schema w = block x:exp. eq x x;
 
 
-
-
-%{
-schema l = some [x:term] block equal x x;
-% General reflexivity rule is admissible in the equality definition
-rec ref : {g:(l)*} {t::term[g]} (equal t[id(g)] t[id(g)])[g] = 
-    FN g => mlam t => 
-        case box(g. t[id(g)]) : term[g] of 
-            [g] #p.1 ..  => box(g . snd p[id(g)])
-          | [g] lam \x. U .. x => 
-            let
-                [g, e:___] E .. e = 
-                ref [g, e:sigma(x:term) equal x x] <g, e. U[id(g), fst e]>
-            in
-                box(g. eq_lam (lam  \x.U[id(g), x]) (lam  \x.U[id(g), x])
-                \x.\u. E[id(g), <x,u>])
-            end
-          | box(g. app U[id(g)] W[id(g)]) => 
-            let 
-                box(g. E1[id(g)]) = ref [g] <g . U[id(g)]>
-                box(g. E2[id(g)]) = ref [g] <g . W[id(g)]>
-            in
-                box(g. eq_app (app U[id(g)] W[id(g)]) (app U[id(g)] W[id(g)])
-                E1[id(g)] E2[id(g)])
-            end;
-}%
-
 % General transitivity is admissible
 rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
    (eq (TT ..) (RR ..))[g]     % e1 : eq T R
@@ -101,13 +74,10 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
     fn e1 => fn e2 =>
       case e1 of
 
-% commented this next case out; it's not working for now. -bp
 |
   {#p :: (block yy:exp. eq yy yy)[g]}
        [g] #p.2 .. => e2
-;
 
-%{
 |
   {D1 :: (eq (TT ..) (RR ..))[g, b:block xx:exp. eq xx xx]}
    [g] eq_lam \x.\u. D1 .. <x, u> =>
@@ -138,53 +108,6 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
                     (E1 ..)  (E2 ..)
        )
 ;
-
-%{
-          % General transitivity is admissible
-          rec trans: {g:(w)*} {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
-             (eq (TT ..) (RR ..))[g]     % e1 : eq T R
-          -> (eq (RR ..) (SS ..))[g]     % e2 : eq R S
-          -> (eq (TT ..) (SS ..))[g]    % result : eq T S
-          =
-            FN g => mlam TT => mlam RR => mlam SS =>
-              fn e1 => fn e2 =>
-                case e1 of
-          |
-            {#p :: (block yy:exp. eq yy yy)[g]}
-                 [g] #p.2 .. => e2
-          |
-            {D1 :: (eq (TT ..) (RR ..))[g, b:block xx:exp. eq xx xx]}
-             [g] eq_lam \x.\u. D1 .. <x, u> : (eq (lam (\x. TT ..)) (lam (\x. RR ..)))[g] =>
-                 (case e2 of
-                    {D2 :: (eq (RR ..) (SS ..))[g, b:block xx:exp. eq xx xx]}
-                    [g] eq_lam \xx.\uu. D2 .. <xx, uu> : (eq (lam (\x. RR ..)) (lam (\x. SS ..)))[g] =>
-                    let
-                        [g, b:block x:exp. eq x x] E .. b = 
-                           trans [g, b:block x':exp. eq x' x'] 
-                             <g, b. TT .. > <g, b. RR .. > <g, b. SS .. >
-                             ([g, b] D1 .. b)
-                             ([g, b] D2 .. b)
-                    in
-                        [g] eq_lam \x. \u. E .. <x, u>
-                 )
-
-           | [g] eq_app (T1 ..) (R1 ..) (T2 ..) (R2 ..)
-                            (D1 ..) (D2 ..) =>
-             (case e2 of
-               [g] eq_app (R1 ..) (S1 ..) (R2 ..) (S2 ..)
-                      (F1 ..) (F2 ..) =>
-               let [g] E1 .. = trans [g] % <g. T1 ..> <g. R1 ..> <g. S1 ..>
-                                         ([g] D1 ..)  ([g] F1 ..)
-               in
-               let [g] E2 .. = trans [g] % <g. T2 ..> <g. R2 ..> <g. S2 ..>
-                                         ([g] D2 ..)  ([g] F2 ..)
-               in
-                   [g] eq_app  (T1 ..) (S1 ..) (T2 ..) (S2 ..)
-                          (E1 ..)  (E2 ..)
-             )
-          ;
-}%
-
 
 
 %{
@@ -219,4 +142,4 @@ rec ceq: {g:(h2)*} {T::exp[g]}{S::exp[g]} (equal (T ..) (S ..))[g] -> (eq (T ..)
             in
                 [g] eq_lam \x.\v. E <x, equal x x, v>
 }%
-}%
+

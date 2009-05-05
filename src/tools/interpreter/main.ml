@@ -223,7 +223,7 @@ let main () =
         Store.clear ()
       ; Gensym.reset ()
       ; try List.fold_left per_file (errors, unsound, incomplete) file_names
-      with  SessionFatal spec -> return spec Negative
+        with SessionFatal spec -> return spec Negative
     in
     (* Iterate the process for each file given on the command line *)
     let args   = List.tl (Array.to_list Sys.argv) in

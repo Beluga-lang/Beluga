@@ -1697,8 +1697,8 @@ and synTermW recT cO cD  cPsi ((root, s') as sR) = match root with
                 | Int.LF.FPVar (p, t) ->
                     let s1 = LF.comp t s' in
                     let (tA', cPhi) = FPVar.get p in
-                    let _ = dprint(fun()-> "FPVar   tA' = " ^ P.typToString cO cD cPsi (tA', t)) in
-                    let _ = dprint(fun()-> "FPVar  cPhi = " ^ P.dctxToString cO cD cPhi) in
+                    let _ = dprint (fun()-> "FPVar   tA' = " ^ P.typToString cO cD cPsi (tA', t)) in
+                    let _ = dprint (fun()-> "FPVar  cPhi = " ^ P.dctxToString cO cD cPhi) in
                       (* cPsi |- t : cPhi *)
                       recSub recT cO cD  cPsi s1 cPhi
                     ; (Int.LF.FPVar (p, t)
@@ -1716,8 +1716,7 @@ and synTermW recT cO cD  cPsi ((root, s') as sR) = match root with
           | Int.LF.FVar x ->
               (* x is in eta-expanded form and tA is closed
                * type of FVar x : A[cPsi'] and FVar x should be
-               * associated with a substitution, since tA is not always
-               * closed.
+               * associated with a substitution, since tA is not always closed.
                *
                * by invariant of whnf: s'  id
                *
@@ -1725,16 +1724,15 @@ and synTermW recT cO cD  cPsi ((root, s') as sR) = match root with
                *)
               let tA = FVar.get x in
               let _ = dprint (fun () -> "synTerm FVAR " ^ P.normalToString cO cD cPsi sR) in 
-              let (None , d) = Context.dctxToHat cPsi in
+              let (None, d) = Context.dctxToHat cPsi in
               let _ = dprint (fun () -> "of type " ^
-                                P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) ^ "\n" ) in
+                                P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) ^ "\n") in
               let _ = dprint (fun () -> "of type (Shift 0 ?)" ^
-                                P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, 0)) ^ "\n" ) in
+                                P.typToString cO cD cPsi (tA, Int.LF.Shift (Int.LF.NoCtxShift, 0)) ^ "\n") in
               let _ = dprint (fun () -> "in context\n" ^ P.dctxToString cO cD cPsi ^ "\n\n") in 
-              in 
               let s = mkShift PiRecon cPsi in 
                 (* synSpine recT cO cD  cPsi (tS, s') (tA, Int.LF.Shift (Int.LF.NoCtxShift, d)) *)
-                synSpine recT cO cD  cPsi (tS, s') (tA, s) 
+                synSpine recT cO cD  cPsi (tS, s') (tA, s)
         in
           synHead head
 

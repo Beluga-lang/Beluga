@@ -314,7 +314,7 @@ lf_typ_rec:
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
         |
-          typRec = lf_typ_rec_block
+          typRec = clf_typ_rec_block
           ->  LF.Sigma (_loc, typRec)
         ]
     ]
@@ -356,6 +356,30 @@ lf_typ_rec:
         ]
      ]
    ;
+
+
+
+  clf_typ_rec_block:
+    [[
+       "block"; a_list = LIST1 clf_typ_rec_elem SEP ","; "."; a_last = clf_typ LEVEL "atomic"
+         -> (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last))
+     ]];
+  
+
+  clf_typ_rec_elem:
+    [
+      [
+        x = SYMBOL; ":"; a = clf_typ
+         -> (Id.mk_name (Id.SomeString x), a)
+
+      | 
+        x = UPSYMBOL; ":"; a = lf_typ
+         -> (Id.mk_name (Id.SomeString x), a)
+
+      ]
+    ]
+  ;
+
 
   clf_term_x:
     [  "atomic" 

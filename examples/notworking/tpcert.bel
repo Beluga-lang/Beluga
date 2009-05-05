@@ -1,3 +1,8 @@
+tp   : type.
+nat  : tp.
+bool : tp.
+arr  : tp -> tp -> tp.
+
 term : type.
 z    : term.
 tt   : term.
@@ -6,10 +11,9 @@ suc  : term -> term.
 eq   : term -> term -> term.
 if   : term -> term -> term -> term.
 letv : term -> (term -> term) -> term.
+lam  : tp -> (term -> term) -> term.
 
-tp   : type.
-nat  : tp.
-bool : tp.
+
 
 oft  : term -> tp -> type.
 o_tt : oft tt bool.
@@ -19,8 +23,11 @@ o_s  : oft E nat -> oft (suc E) nat.
 o_if : oft E bool -> oft E1 T -> oft E2 T
     -> oft (if E E1 E2) T.
 
+o_lam: ({x:term} oft x T1 -> oft (E x) T2)
+       -> oft (lam T1 (\x. E x)) (arr T1 T2).
+
 o_let: oft E1 T1 -> ({x:term} oft x T1 -> oft (E2 x) T2)
-    -> oft (letv E1 (\x . E2 x)) T2.
+    -> oft (letv E1 (\x. E2 x)) T2.
 
 cert: term -> type.
 
@@ -36,12 +43,23 @@ rec infer : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
 
    | [g] tt    => [g] certify o_tt
 
-  % | [g] #p.1 ..  => [g] certify (#p.2 ..)
+ | {T :: tp[g]}{#p::(block x:term. oft x (T ..))[g]}
+   [g] #p.1 ..  => [g] certify (#p.2 ..)
 
-   | [g] letv (E1 ..) \x. E2 .. x =>
+ | [g] lam (T ..) \x. E .. x => 
+    case infer [g, b: block x:term. oft x (T ..)] <g, b. E .. b.1> of   
+     {T2::tp[]}{T::tp[]}
+     {D::(oft (E .. b.1) T2)[g, b: block x:term. oft x T]}
+      [g, b: block x:term. oft x T] certify (D .. b)
+      => [g] certify (o_lam (\x.\u. D .. <x,u>))
+
+%{ 
+ | [g] letv (E1 ..) (\x. (E2 .. x)) => 
      let [g] certify (D1 ..) = infer [g] <g. E1 ..>  in 
-     let [g, b:block x:term. oft x S1] certify (D2 .. b) = 
-             infer [g, b: block x:term . oft x S1] <g, b. E2 .. b.1>
-     in 
-         [g] certify o_l (D1 ..) \x.\u. D2 .. <x, u>
+     let [g, b: block x:term. oft x (S1 ..)] certify (D2 .. b) = 
+             % We don't know the type of E1 so we can't give it in the next line,
+             %  but writing _ leaves a free variable
+             infer [g, b: block x:term. oft x _ ] <g, b. E2 .. b.1> in 
+         [g]  certify o_let (D1 ..) (\x.\u. D2 .. <x, u>)
+}%
 ;

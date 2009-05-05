@@ -1221,10 +1221,12 @@ and elHead recT cO cD cPsi = function
       Int.LF.FVar x
 
   | Apx.LF.FMVar (u, s) ->
+      let _ = dprint (fun () -> "elHead FMVar " ) in
         let (offset, (_tP, cPhi)) = Whnf.mctxMVarPos cD u  in
         Int.LF.MVar (Int.LF.Offset offset, elSub recT cO cD cPsi s cPhi)
 
   | Apx.LF.FPVar (p, s) ->
+        let _ = dprint (fun () -> "elHead FPVar\n") in
       let (offset, (_tA, cPhi)) = Whnf.mctxPVarPos cD p  in
         Int.LF.PVar (Int.LF.Offset offset, elSub recT cO cD cPsi s cPhi)
 
@@ -2248,13 +2250,15 @@ let rec fmvApxTerm fMVs cO cD l_cd1 l_delta k m =   match m with
 
    (* We only allow free meta-variables of atomic type *)
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) ->
-      let _ = dprint (fun () -> "Indexing FMVar in branch: " ^ P.mctxToString cO cD ^ "\n" ^ 
+      let _ = dprint (fun () -> "(1) Indexing FMVar in branch: " ^ P.mctxToString cO cD ^ "\n" ^ 
                           R.render_name u  ^ "\n") in 
       let _ = dprint (fun () -> "fmvApxTerm (FMVar) l_cd1 = " ^ R.render_offset l_cd1 ^ "\n") in 
       let s' = fmvApxSub fMVs cO cD l_cd1 l_delta k s in 
       if List.mem u fMVs then 
           Apx.LF.Root (loc, Apx.LF.FMVar (u, s'), Apx.LF.Nil) 
       else 
+        let _ = dprint (fun () -> "(2) Indexing FMVar in branch: " ^ P.mctxToString cO cD ^ "\n" ^ 
+                          R.render_name u  ^ "\n") in 
         let (offset, (_tP, _cPhi)) = Whnf.mctxMVarPos cD u in
         let _ = dprint (fun () -> "Indexing FMVar in branch: " ^ P.mctxToString cO cD ^ "\n" ^ 
                           R.render_name u ^ " = " ^ R.render_offset (offset+k) ^ "\n") in 
@@ -2281,6 +2285,7 @@ and fmvApxHead fMVs cO cD l_cd1 l_delta k h = match h with
       if List.mem p fMVs then 
         Apx.LF.FPVar (p, s')
       else 
+        let _ = dprint (fun () -> "fmvApxHead FPVAR\n") in
         let (offset, (_tA, _cPhi)) = Whnf.mctxPVarPos cD p  in          
           Apx.LF.PVar (Apx.LF.Offset (offset+k), s')
         
@@ -2309,8 +2314,9 @@ and fmvApxHead fMVs cO cD l_cd1 l_delta k h = match h with
         if List.mem p fMVs then 
           Apx.LF.Proj (Apx.LF.FPVar (p, s'), j)
         else 
-            let (offset, (_tA, _cPhi)) = Whnf.mctxPVarPos cD p  in          
-              Apx.LF.Proj(Apx.LF.PVar (Apx.LF.Offset (offset + k), s'), j)
+          let _ = dprint (fun () -> "fmvApxHead Proj FPVar\n") in
+          let (offset, (_tA, _cPhi)) = Whnf.mctxPVarPos cD p  in          
+            Apx.LF.Proj(Apx.LF.PVar (Apx.LF.Offset (offset + k), s'), j)
 
   | Apx.LF.MVar (Apx.LF.MInst (tM, tP, cPhi), s) -> 
       let s' = fmvApxSub fMVs cO cD l_cd1 l_delta k s in

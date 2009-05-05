@@ -792,7 +792,7 @@ and cnorm (tM, t) = match tM with
               
           (* Free Variables *)
           | FVar x
-            -> (Printf.printf "Encountered a free variable!?\n" ; 
+            -> (dprint( fun () ->  "Encountered a free variable!?\n") ; 
                 Root (loc, FVar x, cnormSpine (tS, t)))
 
           (* Projections *)
@@ -1767,7 +1767,7 @@ let rec mctxMVarPos cD u =
               
     | Dec (cD, _) -> lookup cD (k+1)
 
-    | Empty  -> raise Fmvar_not_found
+    | Empty  -> (dprint (fun () -> "mctxMVarPos\n") ; raise Fmvar_not_found)
   in 
     lookup cD 1
 
@@ -1783,7 +1783,7 @@ let rec mctxPVarPos cD p =
               
     | Dec (cD, _) -> lookup cD (k+1)
 
-    | Empty  -> raise Fmvar_not_found
+    | Empty  -> (dprint (fun () -> "mctxPVarPos\n") ; raise Fmvar_not_found)
   in 
     lookup cD 1
 

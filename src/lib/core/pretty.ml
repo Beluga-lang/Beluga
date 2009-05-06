@@ -1900,6 +1900,9 @@ module Error = struct
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i
 
+      | CompTypAnn -> 
+          fprintf ppf "Type synthesis of term failed (use typing annotation)" 
+
       | ConstraintsLeft ->
           fprintf ppf "Constraints of functional type are not simplified" (* TODO *)
 

@@ -30,6 +30,8 @@ type error =
   | CompFreeMVar     of  Id.name
   | CompScrutineeTyp of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * LF.tclo * LF.dctx 
 
+  | CompTypAnn       
+
   | UnboundIdSub
 
   | ConstraintsLeft

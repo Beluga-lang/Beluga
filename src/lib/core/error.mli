@@ -70,6 +70,7 @@ type error =
 
   | CompScrutineeTyp of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * LF.tclo * LF.dctx 
 
+  | CompTypAnn
 
   | UnboundIdSub                       (* id sub used in empty omega context  *)
 

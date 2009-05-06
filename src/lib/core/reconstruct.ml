@@ -136,6 +136,40 @@ let rec etaExpandApxHead loc h tA =
     etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS'), tA)   
 
 
+let rec etaExpandApxTerm loc h tS tA = 
+  let rec etaExpApxSpine k tS tA = begin match  tA with
+    | Int.LF.Atom _  -> (k, tS)
+        
+    | Int.LF.PiTyp (_ , tA') -> 
+        let tN = Apx.LF.Root(loc, Apx.LF.BVar k, Apx.LF.Nil) in                   
+          etaExpApxSpine (k+1)  (Apx.LF.App(tN, tS)) tA'
+  end in 
+    
+  let rec etaExpApxPrefix loc (tM, tA) = begin match tA with
+    | Int.LF.Atom _ -> tM
+    | Int.LF.PiTyp ((Int.LF.TypDecl (x, _ ), _ ) , tA') -> 
+        Apx.LF.Lam (loc, x, etaExpApxPrefix loc (tM, tA')) 
+  end in
+    
+  let rec appendSpine tS1 tS2 = begin match tS1 with
+    | Apx.LF.Nil -> tS2
+    | Apx.LF.App (tM, tS) -> 
+        Apx.LF.App (tM, appendSpine tS tS2) 
+  end in 
+
+  let (k, tS') = etaExpApxSpine 1 (Apx.LF.Nil) tA in 
+  let tS''     = appendSpine tS tS' in 
+    
+  let h'       =  begin match h with 
+                    | Apx.LF.BVar x -> Apx.LF.BVar (x+k-1)
+                    |  _ -> h 
+                  end  in
+    etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS''), tA)   
+
+
+
+
+
 
 (* extend t1 t2 = t
  *
@@ -800,10 +834,13 @@ and elTermW recT cO cD cPsi m sA = match (m, sA) with
         elTerm recT cO cD cPsi n sA 
        (* raise (Error (Some loc, EtaExpandFV (k, cO, cD, cPsi, sA)))  *)
 
-  | (Apx.LF.Root (loc, _, _ ), _ ) -> 
-      raise (Error (Some loc, IllTypedElab (cO, cD, cPsi, sA))) 
+  | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) -> 
+      let n = etaExpandApxTerm loc h spine tA in 
+      let _ = dprint (fun () -> "etaExpandApxTerm  : " ^ P.typToString cO cD cPsi sA ^ "\n") in 
+        elTerm recT cO cD cPsi n sA
+      (* raise (Error (Some loc, IllTypedElab (cO, cD, cPsi, sA))) *)
 
-  | (Apx.LF.Lam (loc, _, _ ), _ ) -> 
+  | (Apx.LF.Lam (loc, _, _ ), _ ) ->  
       raise (Error (Some loc, IllTypedElab (cO, cD, cPsi, sA))) 
 
   | (Apx.LF.Tuple (loc, _ ),  _) ->

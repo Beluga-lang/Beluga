@@ -98,7 +98,7 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
 
 
 equal: exp -> exp -> type.
-e_l: ({x:exp} eq x x -> eq (T x) (T' x)) -> eq (lam \x. T x) (lam \x. T' x).
+e_l: ({x:exp} eq x x -> eq (T x) (T' x)) -> eq (lam (\x. T x)) (lam (\x. T' x)).
 e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
 e_r: eq T T.
 e_t: eq T' S -> eq T T' -> eq T S.

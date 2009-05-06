@@ -1850,7 +1850,7 @@ module Error = struct
 
       | SpineIllTyped -> 
           fprintf ppf
-            "ill-typed spine – not enough arguments supplied"
+            "ill-typed spine---not enough arguments supplied"
 
       | LeftoverConstraints x ->
           fprintf ppf

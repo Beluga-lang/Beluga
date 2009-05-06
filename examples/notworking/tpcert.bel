@@ -43,15 +43,15 @@ rec infer : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
 
    | [g] tt    => [g] certify o_tt
 
- | {T :: tp[g]}{#p::(block x:term. oft x (T ..))[g]}
+ | {T :: tp[g]} {#p::(block x:term. oft x (T ..))[g]}
    [g] #p.1 ..  => [g] certify (#p.2 ..)
 
  | [g] lam (T ..) \x. E .. x => 
     case infer [g, b: block x:term. oft x (T ..)] <g, b. E .. b.1> of   
-     {T2::tp[]}{T::tp[]}
+     {T2::tp[]} {T::tp[]}
      {D::(oft (E .. b.1) T2)[g, b: block x:term. oft x T]}
       [g, b: block x:term. oft x T] certify (D .. b)
-      => [g] certify (o_lam (\x.\u. D .. <x,u>))
+      => [g] certify (o_lam \x.\u. D .. <x, u>)
 
 %{ 
  | [g] letv (E1 ..) (\x. (E2 .. x)) => 

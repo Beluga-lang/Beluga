@@ -105,14 +105,15 @@ let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
 
 let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
-                          'a'-'z'  'A'-'Z'
+                          'a'-'z'  'A'-'Z' '\''
+                          '0'-'9'
                           "<>"
                        ]
 
 let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
                           'a'-'z'  'A'-'Z'
-                          '#'
+                          '#' '\''
                           '0'-'9'
                           "<>"
                        ]

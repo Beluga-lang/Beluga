@@ -15,12 +15,14 @@ fn x => fn y =>
      ;
 
 
- rec plus' : nat [ ] -> nat [ ] -> nat [ ] = 
-   fn x => 
-     case x of [ ] z  => (fn y => y)
-             | [ ] s U => 
+rec plus' : nat [ ] -> nat [ ] -> nat [ ] = 
+  fn x => 
+    case x of [ ] z  => (fn y => y)
+            | [ ] s U => 
  	    fn y => 
  	      (case	(plus' ([ ] U) y) of 
   	         [ ] V  => [ ] s V);
+
+
 
 

@@ -274,7 +274,14 @@ module LF = struct
       | Dot (Undef, s')         -> lookup (n + 1) s' p
       | Dot (Head (BVar k), s') ->
           if k = p then
-            Some n
+            Some (BVar n)
+          else
+            lookup (n + 1) s' p 
+
+      (* WRONG ... -bp,jd *)
+      | Dot (Head (Proj(BVar k, index)), s') ->
+          if k = p then
+            Some (Proj (BVar n, index))
           else
             lookup (n + 1) s' p in
 
@@ -282,7 +289,7 @@ module LF = struct
       | 0 -> si
       | p ->
           let front = match lookup 1 s p with
-            | Some k -> Head (BVar k)
+            | Some h -> Head h
             | None   -> Undef
           in
             invert'' (p - 1) (Dot (front, si)) in

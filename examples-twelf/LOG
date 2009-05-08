@@ -26,10 +26,10 @@ compile         Various compilers starting from Mini-ML
                                      Part 2: Bisimulation proof both directions done)
 
 cpsocc          CPS conversion and stack-based machines [in progress]
+                (Brigitte, Part 1 done)
 
 cut-elim        Cut elimination for intuitionistic and classical logic
-                (Darin -- some of it done in 
-                 examples/notworking/cut-elim.elf by Brigitte)
+                (* examples/notworking/cut-elim.elf by Brigitte)
 
 fol             Simple theorems in first-order logic
 

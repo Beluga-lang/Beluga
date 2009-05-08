@@ -143,10 +143,23 @@ module Make (T : TRAIL) : UNIFY = struct
         let rec checkBVar s' = match s' with
           | Shift (_ , k)           -> n <= k
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+          | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s 
           | Dot (Undef, s)          -> checkBVar s
           | _                       -> false
         in
           checkBVar s && isPatSub s
+
+    | Dot (Head(Proj(BVar n, index)), s) ->
+        let rec checkBVar s' = match s' with
+          | Shift (_ , k)           -> n <= k
+          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+          | Dot (Head (Proj(BVar n', index')), s) -> (n <> n' || index' <> index) && checkBVar s 
+          | Dot (Undef, s)          -> checkBVar s
+          | _                       -> false
+        in
+          checkBVar s && isPatSub s
+
+
 (*    | Dot (Obj tM , s)      -> 
         begin match tM with
           | Root(BVar n, tS) -> 
@@ -341,7 +354,8 @@ module Make (T : TRAIL) : UNIFY = struct
    | (Shift (psi, k), DDec (_, TypDecl (_x, _tA))) ->
        pruneCtx' (phat, (Dot (Head (BVar (k + 1)), Shift (psi, k + 1)), cPsi1), ss)
 
-   | (Dot (Head (BVar k), s), DDec (cPsi1, TypDecl (x, tA))) ->
+   | ((Dot (Head (BVar k), s), DDec (cPsi1, TypDecl (x, tA))) | (* or pattern *) 
+      (Dot (Head (Proj(BVar k, _)), s), DDec (cPsi1, TypDecl (x, tA))) ) ->
        let (s', cPsi2) = pruneCtx' (phat, (s, cPsi1), ss) in
          (* Ps1 |- s' <= Psi2 *)
        let ( _ , ssubst) = ss in 
@@ -350,11 +364,12 @@ module Make (T : TRAIL) : UNIFY = struct
                (* Psi1, x:tA |- s' <= Psi2 *)
                (comp s' shift, cPsi2)
 
-           | Head (BVar _n) ->
+           | (Head (BVar _n) | Head (Proj (BVar _n, _))) ->
                (* Psi1, x:A |- s' <= Psi2, x:([s']^-1 A) since
                   A = [s']([s']^-1 A) *)
                (dot1 s',  DDec(cPsi2, TypDecl(x, TClo(tA, invert (Whnf.normSub s')))))
          end
+
    | (Dot (Undef, t), DDec (cPsi1, _)) ->
        let (s', cPsi2) = pruneCtx' (phat, (t, cPsi1), ss) in
          (* sP1 |- s' <= cPsi2 *)
@@ -806,7 +821,7 @@ module Make (T : TRAIL) : UNIFY = struct
      and  s' patsub   s.t.  [s1]s'  = [s2]s' 
   *)
   let rec intersection (phat, (subst1, subst2), cPsi') = match (subst1, subst2, cPsi') with
-    | (Dot (Head (BVar k1), s1), Dot (Head (BVar k2), s2), DDec (cPsi', TypDecl (x, tA))) ->
+    | (Dot (Head (BVar k1), s1), Dot (Head (BVar k2), s2), DDec (cPsi', TypDecl (x, tA)))  ->
         let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
           (* D ; Psi' |- s' : Psi'' where Psi'' =< Psi' *)
           if k1 = k2 then
@@ -824,15 +839,41 @@ module Make (T : TRAIL) : UNIFY = struct
           else  (* k1 =/= k2 *)
             (comp s' shift, cPsi'') 
 
+    | (Dot (Head (Proj (BVar k1, index1)), s1), Dot (Head (Proj (BVar k2, index2)), s2), DDec (cPsi', TypDecl (x, tA)))  ->
+        let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
+          (* D ; Psi' |- s' : Psi'' where Psi'' =< Psi' *)
+          if k1 = k2 && index1 = index2 then
+            let ss' = invert (Whnf.normSub s') in
+              (* cD ; cPsi'' |- ss' <= cPsi' *)
+              (* by assumption:
+                 cD ; cPsi' |- tA <= type *)
+              (* tA'' = [(s')^-1]tA   and cPsi'' |- tA'' <= type *)
+
+            (* let tA'' = TClo (tA, ss') in *)
+            let tA'' = TClo (tA, ss') in
+
+              (dot1 s', DDec (cPsi'', TypDecl(x, tA''))) 
+              
+          else  (* k1 =/= k2 or index1 =/= index2 *)
+            (comp s' shift, cPsi'') 
+
 
     | (Dot (Undef, s1), Dot (Head (BVar _k2), s2), DDec (cPsi', TypDecl _)) ->
         let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
             (comp s' shift, cPsi'')
 
+    | (Dot (Undef, s1), Dot (Head (Proj(BVar _k2, _)), s2), DDec (cPsi', TypDecl _)) ->
+        let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
+            (comp s' shift, cPsi'')
+
+
     | (Dot (Head (BVar _k), s1), Dot (Undef, s2), DDec (cPsi', TypDecl _ )) ->
         let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
             (comp s' shift, cPsi'')
 
+    | (Dot (Head (Proj(BVar _k, _)), s1), Dot (Undef, s2), DDec (cPsi', TypDecl _ )) ->
+        let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
+            (comp s' shift, cPsi'')
 
     | (Dot (Undef, s1), Dot (Undef, s2), DDec (cPsi', TypDecl _)) ->
         let (s', cPsi'') = intersection (phat, (s1, s2), cPsi') in
@@ -1422,7 +1463,6 @@ module Make (T : TRAIL) : UNIFY = struct
               | (true, _) ->
                   (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
                   begin try
-
                     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
                     let tM2' = trail (fun () -> prune cD0 cPsi1 (phat, sM2, (MShift 0, ss1), MVarRef r1)) in 
                     (* sM2 = [ss1][s2]tM2 *) 

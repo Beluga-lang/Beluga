@@ -912,6 +912,11 @@ and cnorm (tM, t) = match tM with
         let r' = cnormSub (r,t) in 
           Head (Proj (PVar (p, r'), k))
 
+    | Head (Proj (MVar _ , _)) -> raise (Violation "Head MVar")
+    | Head (Proj (Const _ , _)) -> raise (Violation "Head Const")
+    | Head (Proj (Proj _ , _)) -> raise (Violation "Head Proj Proj")
+    | Head (Proj (MMVar _ , _)) -> raise (Violation "Head MMVar ")
+
     | Obj (tM) -> Obj(cnorm (tM, t))
 
     | Undef -> Undef

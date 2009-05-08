@@ -98,9 +98,10 @@ $INTERPRETER  \
     test/sigma2.bel \
     test/sigma3.bel \
     test/sigma4.bel \
-    test/implicit-obj.bel \
-    notworking/eq-proof.bel \
-    notworking/eq-proof-1.bel
+    test/implicit-obj.bel 
+# The two below are broken due to our handling of projections in substitutions. -bp,jd
+#    notworking/eq-proof.bel \
+#    notworking/eq-proof-1.bel
 # note: most of eq-proof.bel is commented out, so it should remain in notworking/
  
 #

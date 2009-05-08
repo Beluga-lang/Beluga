@@ -41,6 +41,7 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 exception NotImplemented
 exception Error of Syntax.Loc.t option * error
 exception SpineMismatch
+exception NotPatSpine
 
 exception Violation of string
 
@@ -87,6 +88,43 @@ let rec mctxToMSub cD = match cD with
       let phat = Context.dctxToHat cPsi in
         Int.LF.MDot (Int.LF.PObj (phat, Int.LF.PVar (p, LF.id)) , t)
 
+
+
+let rec shiftApxTerm k m = begin match m with
+  | Apx.LF.Lam (loc, x, m') -> Apx.LF.Lam(loc, x, shiftApxTerm (k+1) m')
+  | Apx.LF.Root (loc, h , spine) -> 
+      let h' = shiftApxHead k h in 
+      let spine' = shiftApxSpine k spine in 
+        Apx.LF.Root(loc, h', spine')
+end
+
+and shiftApxHead k h = begin match h with
+  | Apx.LF.BVar x -> Apx.LF.BVar (x+k)
+  | Apx.LF.FMVar (u, s) -> Apx.LF.FMVar (u, shiftApxSub k s)
+  | Apx.LF.FPVar (p, s) -> Apx.LF.FMVar (p, shiftApxSub k s)
+  | Apx.LF.MVar (u, s) -> Apx.LF.MVar (u, shiftApxSub k s)
+  | _ -> h
+end
+
+and shiftApxSpine k spine = begin match spine with
+  | Apx.LF.Nil -> spine
+  | Apx.LF.App (m, spine') -> 
+      let spine'' = shiftApxSpine k spine' in 
+        Apx.LF.App (shiftApxTerm k m, spine'') 
+end 
+  
+and shiftApxSub k s = begin match s with
+  | Apx.LF.EmptySub -> s
+  | Apx.LF.Id -> s
+  | Apx.LF.Dot(Apx.LF.Head h, s) -> 
+      let h' = shiftApxHead k h in 
+      let s' = shiftApxSub k s in
+        Apx.LF.Dot (Apx.LF.Head h', s')
+  | Apx.LF.Dot(Apx.LF.Obj m, s) -> 
+      let m' = shiftApxTerm k m in 
+      let s' = shiftApxSub k s in
+        Apx.LF.Dot (Apx.LF.Obj m', s')
+end
 
 (* Eta-expansion of bound variables which have function type *)
 let rec etaExpandHead loc h tA = 
@@ -148,9 +186,10 @@ let rec etaExpandApxTerm loc h tS tA =
   let rec etaExpApxPrefix loc (tM, tA) = begin match tA with
     | Int.LF.Atom _ -> tM
     | Int.LF.PiTyp ((Int.LF.TypDecl (x, _ ), _ ) , tA') -> 
+        let _ = dprint (fun () -> "eta - add Lam ") in
         Apx.LF.Lam (loc, x, etaExpApxPrefix loc (tM, tA')) 
   end in
-    
+
   let rec appendSpine tS1 tS2 = begin match tS1 with
     | Apx.LF.Nil -> tS2
     | Apx.LF.App (tM, tS) -> 
@@ -158,7 +197,9 @@ let rec etaExpandApxTerm loc h tS tA =
   end in 
 
   let (k, tS') = etaExpApxSpine 1 (Apx.LF.Nil) tA in 
-  let tS''     = appendSpine tS tS' in 
+  let _ = dprint (fun () -> "etaExpApxSpine k = " ^ string_of_int k )in
+  let tS''     = appendSpine (shiftApxSpine (k-1) tS) tS' in 
+  (* let tS''     = appendSpine tS tS' in  *)
     
   let h'       =  begin match h with 
                     | Apx.LF.BVar x -> Apx.LF.BVar (x+k-1)
@@ -630,19 +671,54 @@ let rec raiseType cPsi tA = match cPsi with
  *     s is a pattern spine (simple approximate),
  *     i.e. it consists of distinct bound variables
  *)
-let patSpine spine =
+let rec patSpine spine =
+  let _ = dprint (fun () -> "check pat spine") in
+  let rec etaUnroll k m= begin match m with
+    | Apx.LF.Lam (_ , _, n) -> 
+        let _ = dprint (fun () -> "etaUnroll k ="  ^ string_of_int k ^ "\n") in 
+          etaUnroll (k+1) n
+    |  _ ->  
+         let _ = dprint (fun () -> "etaUnroll k ="  ^ string_of_int k ^ "\n") in  
+           (k, m) 
+  end in
+         
   let rec patSpine' seen_vars spine = match spine with
     | Apx.LF.Nil ->
-        (true, 0)
+        (0, spine)
 
-    | Apx.LF.App (Apx.LF.Root (_, Apx.LF.BVar x, Apx.LF.Nil), spine) ->
+    | Apx.LF.App (Apx.LF.Root (loc, Apx.LF.BVar x, Apx.LF.Nil), spine) ->
         if not (List.mem x seen_vars) then
-          let (b,l) = patSpine' (x :: seen_vars) spine in
-            (b, l+1)
+          let _ = dprint (fun () -> "patSpine - Found BVar " ^ R.render_offset x) in 
+          let (k, p_spine) = patSpine' (x :: seen_vars) spine in
+            (k+1, Apx.LF.App (Apx.LF.Root (loc, Apx.LF.BVar x, Apx.LF.Nil), p_spine))
         else
-          (false, 0)
+          let _ = dprint (fun () -> "patSpine - AGAIN found BVar " ^ R.render_offset x) in  raise NotPatSpine
 
-    | _ -> (false, 0)
+    | Apx.LF.App (Apx.LF.Lam _ as m, spine) -> 
+        let _ = dprint (fun () -> "patSpine - Lam") in 
+        begin match etaUnroll 0 m with 
+          | (k, Apx.LF.Root( loc , Apx.LF.BVar x, spine')) -> 
+              (let _ = dprint (fun () -> "check etaSpine k ="  ^ string_of_int k ^ "\n") in 
+               let (l', _p_spine') = patSpine spine' in  
+                 (if l' = k && x > k then 
+                    let (l, p_spine) = patSpine'  ((x-k)::seen_vars) spine in 
+                      (l+1, Apx.LF.App(Apx.LF.Root(loc, Apx.LF.BVar (x-k), Apx.LF.Nil), p_spine))
+                  else 
+                    raise NotPatSpine)
+              )
+          | (k, Apx.LF.Root( loc , Apx.LF.FVar x, spine')) -> 
+              let _ = dprint (fun () -> "check etaSpine FV case") in
+              let (l', _p_spine') = patSpine spine' in  
+              let _ = dprint (fun () -> "k = " ^ string_of_int k ^ " l' = " ^ string_of_int l' )in 
+                (if l' = k  then 
+                   let (l, p_spine) = patSpine' seen_vars spine in 
+                     (l+1, Apx.LF.App(Apx.LF.Root(loc, Apx.LF.FVar x, Apx.LF.Nil), p_spine))
+                 else 
+                   raise NotPatSpine)                  
+          | _ ->  let _ = dprint (fun () -> " pat spine - foo" ) in raise NotPatSpine
+        end 
+    | _ ->  let _ = dprint (fun () -> "patSpine - ??") in raise NotPatSpine 
+
   in
     patSpine' [] spine
 
@@ -823,23 +899,25 @@ and elTermW recT cO cD cPsi m sA = match (m, sA) with
   | (Apx.LF.Tuple (loc, tuple),  (Int.LF.Sigma typRec, s)) ->
       let tuple' = elTuple recT cO cD cPsi tuple (typRec, s) in
         Int.LF.Tuple (Some loc, tuple')
-  
-  | (Apx.LF.Root (loc, Apx.LF.BVar x, _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
-      let n = etaExpandApxHead loc (Apx.LF.BVar x) tA in 
-        elTerm recT cO cD cPsi n sA
-      (* raise (Error (Some loc, EtaExpandBV (k, cO, cD, cPsi, sA))) *)
 
-  | (Apx.LF.Root (loc, Apx.LF.FVar k, _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
-       let n = etaExpandApxHead loc (Apx.LF.FVar k) tA  in 
-        elTerm recT cO cD cPsi n sA 
-       (* raise (Error (Some loc, EtaExpandFV (k, cO, cD, cPsi, sA)))  *)
 
   | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) -> 
       let n = etaExpandApxTerm loc h spine tA in 
       let _ = dprint (fun () -> "etaExpandApxTerm  : " ^ P.typToString cO cD cPsi sA ^ "\n") in 
         elTerm recT cO cD cPsi n sA
-      (* raise (Error (Some loc, IllTypedElab (cO, cD, cPsi, sA))) *)
+  
+(*  | (Apx.LF.Root (loc, Apx.LF.BVar x, _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
+      let n = etaExpandApxHead loc (Apx.LF.BVar x) tA in 
+        elTerm recT cO cD cPsi n sA
+      (* raise (Error (Some loc, EtaExpandBV (k, cO, cD, cPsi, sA))) *)
 
+
+      (* raise (Error (Some loc, IllTypedElab (cO, cD, cPsi, sA))) *)
+  | (Apx.LF.Root (loc, Apx.LF.FVar k, _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
+       let n = etaExpandApxHead loc (Apx.LF.FVar k) tA  in 
+        elTerm recT cO cD cPsi n sA 
+       (* raise (Error (Some loc, EtaExpandFV (k, cO, cD, cPsi, sA)))  *)
+*)
   | (Apx.LF.Lam (loc, _, _ ), _ ) ->  
       raise (Error (Some loc, IllTypedElab (cO, cD, cPsi, sA))) 
 
@@ -971,30 +1049,31 @@ and elTerm' recT cO cD cPsi r sP = match r with
         Int.LF.Root (Some loc, Int.LF.BVar x, tS)
 
   | Apx.LF.Root (loc, Apx.LF.Hole, spine) ->
-      let (patternSpine, _l) = patSpine spine in
-        if patternSpine then
-          let sshift = mkShift recT cPsi in
-          let (tS, tA) = elSpineSynth recT cD cPsi spine sshift sP in
-            (* For Beluga type reconstruction to succeed, we must have
-             *  cPsi |- tA <= type  and cPsi |- tS : tA <= [s]tP
-             *  This will be enforced during abstraction.
-             *)
-            (* For LF type reconstruction to succeed, we must have
-             *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
-             *  This will be enforced during abstraction.
-             *)
-            (* We could try to create u already lowered *)
-            begin match recT with
-              | PiRecon -> 
-                  let u =  Whnf.newMVar (cPsi, tA) in
-                    Int.LF.Root (Some loc, Int.LF.MVar(u, LF.id), tS)
+      begin try 
+      let (_l, pat_spine) = patSpine spine in
+      let sshift = mkShift recT cPsi in
+      let (tS, tA) = elSpineSynth recT cD cPsi pat_spine sshift sP in
+        (* For Beluga type reconstruction to succeed, we must have
+         *  cPsi |- tA <= type  and cPsi |- tS : tA <= [s]tP
+         *  This will be enforced during abstraction.
+         *)
+        (* For LF type reconstruction to succeed, we must have
+         *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
+         *  This will be enforced during abstraction.
+         *)
+        (* We could try to create u already lowered *)
+        begin match recT with
+          | PiRecon -> 
+              let u =  Whnf.newMVar (cPsi, tA) in
+                Int.LF.Root (Some loc, Int.LF.MVar(u, LF.id), tS)
               | PiboxRecon -> 
                   let u =  Whnf.newMMVar (cD, cPsi, tA) in
                     Int.LF.Root (Some loc, Int.LF.MMVar(u, (Whnf.m_id, LF.id)), tS)
             end
-        else
+      with NotPatSpine -> 
           (Printf.printf "elTerm' encountered hole with non-pattern spine\n";
            raise NotImplemented)
+      end
 
   | Apx.LF.Root (_loc, Apx.LF.MVar (Apx.LF.MInst (tN, _tP, cPhi), s'), Apx.LF.Nil) ->
       let s'' = elSub recT cO cD cPsi s' cPhi in
@@ -1038,21 +1117,24 @@ and elTerm' recT cO cD cPsi r sP = match r with
         let tS = elSpine loc recT cO cD cPsi spine (tA, s) in
           Int.LF.Root (Some loc, Int.LF.FVar x, tS)
       with Not_found ->
-        let (patternSpine, _l) = patSpine spine in
-          if patternSpine then
-            let s = mkShift recT cPsi in              
-            let (tS, tA) =  elSpineSynth recT cD cPsi spine s sP 
-            in 
-              (* For type reconstruction to succeed, we must have
-               *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
+        begin try
+        let (_l, p_spine) = patSpine spine in
+        let s = mkShift recT cPsi in              
+        let _ = dprint (fun () -> "elSpineSynth (FVar)") in
+        let (tS, tA) =  elSpineSynth recT cD cPsi p_spine s sP 
+        in 
+          (* For type reconstruction to succeed, we must have
+           *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
                *  This will be enforced during abstraction.
-               *)
-              FVar.add x tA;
-              Int.LF.Root (Some loc, Int.LF.FVar x, tS)
-          else
-            let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
-              add_fvarCnstr (m, v);
-              Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil)
+           *)
+          FVar.add x tA;
+          Int.LF.Root (Some loc, Int.LF.FVar x, tS)
+        with NotPatSpine -> 
+          (let _ = dprint (fun () -> "Not a pattern spine associated with " ^ R.render_name x ) in
+           let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
+             add_fvarCnstr (m, v);
+             Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil))
+        end
       end
 
   (* We only allow free meta-variables of atomic type *)
@@ -1413,7 +1495,7 @@ and elKSpine recT cO cD cPsi spine sK = match (spine, sK) with
       (Printf.printf "elKSpine: spine ill-kinded\n";
       raise NotImplemented )(* TODO postpone error to reconstruction phase *)
 
-(* elSpineSynth cD cPsi spine s' = (S, A')
+(* elSpineSynth cD cPsi p_spine s' = (S, A')
  *
  * Pre-condition:
  *   U = free variables

@@ -12,30 +12,30 @@ axiom^ : (neg A -> pos A -> @).
 
 andr^  : (pos A -> @)
 	  -> (pos B -> @)
-	  -> (pos (A and B) -> @).
+	  -> (pos (and A B) -> @).
 
 andl1^ : (neg A -> @)
-	  -> (neg (A and B) -> @).
+	  -> (neg (and A B) -> @).
 
 andl2^ : (neg B -> @)
-	  -> (neg (A and B) -> @).
+	  -> (neg (and A B) -> @).
 
 impr^  : (neg A -> pos B -> @)
-	  -> (pos (A imp B) -> @).
+	  -> (pos (imp A B) -> @).
 
 impl^  : (pos A -> @)
 	  -> (neg B -> @)
-	  -> (neg (A imp B) -> @).
+	  -> (neg (imp A B) -> @).
 
 orr1^  : (pos A -> @)
-	 -> (pos (A or B) -> @).
+	 -> (pos (or A B) -> @).
 
 orr2^  : (pos B -> @)
-	  -> (pos (A or B) -> @).
+	  -> (pos (or A B) -> @).
 
 orl^   : (neg A -> @)
 	 -> (neg B -> @)
-	 -> (neg (A or B) -> @).
+	 -> (neg (or A B) -> @).
 
 notr^  : (neg A -> @)
 	  -> (pos (not A) -> @).

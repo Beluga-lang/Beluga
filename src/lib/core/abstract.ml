@@ -543,11 +543,14 @@ and collectSub cQ phat s = match s with
   | (I.Shift _) -> cQ
   | (I.Dot (I.Head h, s)) ->
       let cQ1 =  collectSub cQ phat s in 
+      let _   = dprint (fun () -> "collectSub (Head) "  ) in
       let cQ2 = collectHead cQ1 phat (h, LF.id) in
         cQ2
 
   | (I.Dot (I.Obj tM, s)) ->
       let cQ1 =  collectSub cQ phat s in 
+      let _   = dprint (fun () -> "collectSub (term) M = "  ) in
+      let _   = dprint (fun () -> "collectSub (term) M = " ^ P.normalToString I.Empty I.Empty (Context.hatToDCtx phat) (tM, LF.id) ) in
       let cQ2 = collectTerm cQ1 phat (tM, LF.id) in
         cQ2
 
@@ -613,7 +616,9 @@ and collectHead cQ phat ((head, subst) as sH) =
 
   | (I.MVar (I.Inst (_r, cPsi, tA,  {contents = cnstr}), s') as u, s) ->
       if constraints_solved cnstr then
+      let _ = dprint (fun () -> "collectSub for MVar \n") in
       let cQ' = collectSub cQ phat (LF.comp s' s) in
+      let _ = dprint (fun () -> "collectSub for MVar done \n") in
         if exists (eqMVar u) cQ' then
           cQ'
         else
@@ -689,6 +694,7 @@ and collectHead cQ phat ((head, subst) as sH) =
             I.Dec (cQ'', FPV (u, Some (tA, cPhi)))
 
   | (I.Proj (head, _k),  s) ->
+      let _ = dprint (fun () -> "collectHead Proj \n") in 
       let cQ' = collectHead cQ phat (head, s)  in
         cQ'
 

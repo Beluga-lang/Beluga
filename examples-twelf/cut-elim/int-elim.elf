@@ -52,7 +52,7 @@ ce_forallr : ce (forallr* D1*) (forallr D1)
 	      <- {a:i} ce (D1* a) (D1 a).
 
 ce_foralll : ce (foralll* T D1* H) (foralll T D1 H)
-	      <- ({h1} ce (D1* h1) (D1 h1)).
+	      <- ({h1:hyp _ } ce (D1* h1) (D1 h1)).
 
 ce_existsr : ce (existsr* T D1*) (existsr T D1)
 	      <- ce D1* D1.

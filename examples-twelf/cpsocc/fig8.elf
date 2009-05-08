@@ -36,10 +36,14 @@ cstack_capp : cstackE (\x.Phi x) (\k.capp (xlam (\x. klam (\c. E x c))) T (C k))
 cstack_phi_k : cstackC (\x. Phi x) (\k.k) (\x. Phi x).
 
 cstack_vlam : cstackC Phi 
+                      (\k.vlam (\v. E v k)) 
+                      (\k.ccons (Phi k)  (vlam (\v. E v k))).
+
+
+%{cstack_vlam : cstackC Phi 
                       (\k.vlam (E k)) 
-                      (\k.ccons (Phi k)  (vlam (E k))).
-
-
+                      (\k.ccons (Phi k)  (vlam (  k))).
+}%
 %name cstackR CONTR.
 %name cstackE CONTE.
 %name cstackC CONTC.

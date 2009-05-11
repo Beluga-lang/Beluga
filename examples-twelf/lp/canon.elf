@@ -8,11 +8,11 @@ atm : pf A -> type.        % Atomic deductions
 %mode can +A +D.
 %mode atm +E.
 
-can_andi : can (A and B) (andi D E)
+can_andi : can (and A B) (andi D E)
 	    <- can A D
 	    <- can B E.
 
-can_impi : can (A imp B) (impi D)
+can_impi : can (imp A B) (impi D)
 	    <- {u:pf A} atm u -> can B (D u).
 
 can_truei : can (true) (truei).
@@ -27,13 +27,15 @@ atm_andel : atm (andel D) <- atm D.
 
 atm_ander : atm (ander D) <- atm D.
 
-atm_impe : atm (impe D (E : pf B))
+atm_impe : atm (impe D E)
 	    <- atm D
 	    <- can B E.
 
 atm_foralle : atm (foralle D T)
 	       <- atm D.
 
+%{
 %block l1 : some {A:o} block {u:pf A} {at:atm u}.
 %block l2 : block {a:i}.
 %worlds (l1 | l2) (can _ _) (atm _).
+}%

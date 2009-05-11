@@ -29,27 +29,35 @@ cpsocc          CPS conversion and stack-based machines [in progress]
                 (Brigitte, Part 1 done)
 
 cut-elim        Cut elimination for intuitionistic and classical logic
-                (* examples/notworking/cut-elim.elf by Brigitte)
+                ( Brigitte, part 1 )
 
 fol             Simple theorems in first-order logic
+	        (Brigitte, part 1 done)
+
 
 guide           Examples from Users' Guide
+                (Brigitte, part 1 done)
+
 
 handbook        Examples from article in Handbook of Automated Reasoning
-                (Giulia)
+                (Brigitte, part 1 done)
 
 incll           Meta-interpreter for int. non-commutative linear logic
 
 kolm            Kolmogorov translation from classical to intuitionistic logic
-                (Giulia)
+                (Brigitte, part 1 done)
+
 
 fj              The soundness of Featherweight Java
 
 lp              Logic programming, uniform derivations
-                (Darin)
+		(NOTE: Needs typing annotation for isc_all in uni_sound.elf 
+                       we need to add this to our implementation.
+		 )
+		(Brigitte part one done until uni-sound.elf)
 
 lp-horn         Horn fragment of logic program
-                (Darin -- partly already done by Brigitte see examples/lp-horn)
+                (partly already done by Brigitte see examples/lp-horn)
 
 mini-ml         Mini-ml, type preservation and related theorems
 

@@ -95,6 +95,8 @@ let newPVar (cPsi, tA) = PInst (ref None, cPsi, tA, ref [])
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
+
+
 let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
 
 
@@ -451,7 +453,8 @@ and norm (tM, sigma) = match tM with
   | Root (_, MMVar (MInst ({ contents = Some tM}, _, _, _, _),(t, r)), tS) ->
       (* constraints associated with u must be in solved form *)
       let tM' = cnorm (tM, t) in 
-      reduce (tM', LF.comp r sigma) (normSpine (tS, sigma))
+      let tM'' = norm (tM', r) in 
+      reduce (tM'', sigma) (normSpine (tS, sigma))
 
   | Root (loc, MMVar (MInst ({contents = None}, _, _, Atom _, _) as u, (t, r)), tS) ->
       (* meta-variable is of atomic type; tS = Nil *)
@@ -466,11 +469,11 @@ and norm (tM, sigma) = match tM with
       Root (loc, MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
   | Root (_, MVar (Inst ({ contents = Some tM}, _, _, _), r), tS) ->
-      (* constraints associated with u must be in solved form *)
-      reduce (norm (tM, LF.id), LF.comp r sigma) (normSpine (tS, sigma))
+      (* constraints associated with u must be in solved form *)      
+      reduce (norm (tM, r),  sigma) (normSpine (tS, sigma))
 
   | Root (loc, MVar (Inst ({contents = None}, _, Atom _, _) as u, r), tS) ->
-      (* meta-variable is of atomic type; tS = Nil *)
+      (* meta-variable is of atomic type; tS = Nil *)      
       Root (loc, MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
   | Root (loc, MVar (Inst ({contents = None} as r, cPsi, TClo (tA, s'), cnstr), s), tS) ->
@@ -575,6 +578,8 @@ and normFt ft = match ft with
   | Head (BVar _k)                -> ft
   | Head (FVar _k)                -> ft
   | Head (MMVar (u, (t, s')))     -> Head (MMVar (u, (cnormMSub t, normSub s')))
+  | Head (MVar (Inst ({ contents = Some tM}, _, _, _), s)) -> 
+      Obj(norm (tM, s)) 
   | Head (MVar (u, s'))           -> Head (MVar (u, normSub s'))
   | Head (FMVar (u, s'))          -> Head (FMVar (u, normSub s'))
   | Head (PVar (p, s'))           -> Head (PVar (p, normSub s'))
@@ -618,6 +623,8 @@ and normDecl (decl, sigma) = match decl with
   | TypDecl (x, tA) ->
       TypDecl (x, normTyp (tA, sigma))
 
+  | _ -> decl
+
 
 (* ********************************************************************* *)
 (* Normalization = applying simultaneous modal substitution   
@@ -645,7 +652,7 @@ and normDecl (decl, sigma) = match decl with
 and what_head = function
   | BVar _ -> "BVar"
   | Const _ -> "Const"
-  | MMVar _ -> "M²Var"
+  | MMVar _ -> "M^2Var"
   | MVar _ -> "MVar"
   | PVar _ -> "PVar"
   | AnnH _ -> "AnnH"
@@ -1107,7 +1114,7 @@ and whnf sM = match sM with
 
   | (Root (_, MVar (Inst ({contents = Some tM}, _cPsi, _tA, _), r), tS), sigma) ->
       (* constraints associated with u must be in solved form *)
-      let sR =  whnfRedex ((tM, LF.comp r sigma), (tS, sigma)) in
+      let sR =  whnfRedex ((norm(tM, r),  sigma), (tS, sigma)) in
         sR
 
   | (Root (loc, MVar (Inst ({contents = None} as uref, cPsi, tA, cnstr) as u, r), tS) as tM, sigma) ->

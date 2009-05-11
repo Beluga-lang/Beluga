@@ -1061,14 +1061,16 @@ and elTerm' recT cO cD cPsi r sP = match r with
          *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
          *  This will be enforced during abstraction.
          *)
-        (* We could try to create u already lowered *)
+        (* Potentially need to handle eta-expansion -bp *)
         begin match recT with
           | PiRecon -> 
-              let u =  Whnf.newMVar (cPsi, tA) in
-                Int.LF.Root (Some loc, Int.LF.MVar(u, LF.id), tS)
-              | PiboxRecon -> 
-                  let u =  Whnf.newMMVar (cD, cPsi, tA) in
-                    Int.LF.Root (Some loc, Int.LF.MMVar(u, (Whnf.m_id, LF.id)), tS)
+              (* let u =  Whnf.newMVar (cPsi, tA) in 
+                Int.LF.Root (Some loc, Int.LF.MVar(u, LF.id), tS) *)
+              let u =  Whnf.newMVar (Int.LF.Null, tA) in 
+                Int.LF.Root (Some loc, Int.LF.MVar(u, sshift), tS)
+          | PiboxRecon -> 
+              let u =  Whnf.newMMVar (cD, cPsi, tA) in
+                Int.LF.Root (Some loc, Int.LF.MMVar(u, (Whnf.m_id, LF.id)), tS)
             end
       with NotPatSpine -> 
           (Printf.printf "elTerm' encountered hole with non-pattern spine\n";
@@ -1699,8 +1701,9 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
         try         
           let sP' = synTermW recT cO cD  cPsi sR in         
           let _   = dprint (fun () -> "synTerm Root Done: " ^ P.normalToString cO cD cPsi sR ^ "\n") in 
-          let _   = dprint (fun () -> "expected:"  ^ P.typToString cO cD cPsi sP' ^ "\n") in 
-          let _   = dprint (fun () -> "inferred:    " ^ 
+          let _   = dprint (fun () -> "In context cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n") in
+          let _   = dprint (fun () -> "inferred:"  ^ P.typToString cO cD cPsi sP' ^ "\n") in 
+          let _   = dprint (fun () -> "expexted:    " ^ 
                         P.typToString cO cD cPsi sA  ^ "\n") in 
             try
               (Unify.unifyTyp cD  (Context.dctxToHat cPsi, sP', sA) ;
@@ -2019,9 +2022,12 @@ let rec recTyp recT cO cD  cPsi sA = recTypW recT cO cD  cPsi (Whnf.whnfTyp sA)
 
 and recTypW recT cO cD  cPsi sA = match sA with
   | (Int.LF.Atom (loc, a, tS),  s) ->
+      let _ = dprint (fun () -> "recTyp " ^ P.typToString cO cD cPsi sA ^ "\n") in 
       let tK = (Typ.get a).Typ.kind in
       let sshift = mkShift recT cPsi in 
-        synKSpine loc recT cO cD  cPsi (tS, s) (tK, sshift) 
+      let _ = synKSpine loc recT cO cD  cPsi (tS, s) (tK, sshift) in 
+      let _ = dprint (fun () -> "recTyp DONE " ^ P.typToString cO cD cPsi sA ^ "\n") in 
+        ()
 
 
 

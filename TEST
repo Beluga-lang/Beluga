@@ -92,7 +92,10 @@ $INTERPRETER  \
     ../examples-twelf/compile/debruijn/sources.cfg \
     ../examples-twelf/compile/debruijn1/sources.cfg \
     ../examples-twelf/compile/cps/sources.cfg \
+    ../examples-twelf/cut-elim/sources.cfg \
     ../examples-twelf/fol/sources.cfg \
+    ../examples-twelf/handbook/sources.cfg \
+    ../examples-twelf/kolm/sources.cfg \
     test/alpha.bel \
     test/sigma1.bel \
     test/sigma2.bel \

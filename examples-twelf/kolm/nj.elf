@@ -3,14 +3,14 @@
 % Intuitionistic, Natural Deduction
 nj : o -> type.
 
-nj_andi    : nj A -> nj B -> nj (A and B).
-nj_andel   : nj (A and B) -> nj A.
-nj_ander   : nj (A and B) -> nj B.
-nj_impi    : (nj A -> nj B) -> nj (A imp B).
-nj_impe    : nj (A imp B) -> nj A -> nj B.
-nj_oril    : nj A -> nj (A or B).
-nj_orir    : nj B -> nj (A or B).
-nj_ore     : nj (A or B) -> (nj A -> nj C) -> (nj B -> nj C) -> nj C.
+nj_andi    : nj A -> nj B -> nj (and A B).
+nj_andel   : nj (and A B) -> nj A.
+nj_ander   : nj (and A B) -> nj B.
+nj_impi    : (nj A -> nj B) -> nj (imp A B).
+nj_impe    : nj (imp A B) -> nj A -> nj B.
+nj_oril    : nj A -> nj (or A B).
+nj_orir    : nj B -> nj (or A B).
+nj_ore     : nj (or A B) -> (nj A -> nj C) -> (nj B -> nj C) -> nj C.
 nj_noti    : ({p:o} nj A -> nj p) -> nj (not A).
 nj_note    : nj (not A) -> {C:o} nj A -> nj C.
 nj_truei   : nj true.
@@ -29,12 +29,14 @@ nj_existse : nj (exists A) -> ({a:i} nj (A a) -> nj C) -> nj C.
 %                p
 %          ----------- noti^p^u
 %          (not not A)
-
+%{
 %theorem nj_dnotx_auto : forall* {A:o} exists {D:nj A -> nj (not not A)} true.
 %prove 10 {} (nj_dnotx_auto D).
 
 nj_dnotx = ([NJ] (nj_noti [p:o] [u:nj (not A)] (nj_note u p NJ))).
 
+ nj_dnotx = ([NJ] (nj_noti (\p. \u. (nj_note u p NJ)))).
+}%
 % Lemma 1: 
 % In intuitionistic logic we have the 
 % following derivation of (not not not A):- (not A)
@@ -52,11 +54,17 @@ nj_dnotx = ([NJ] (nj_noti [p:o] [u:nj (not A)] (nj_note u p NJ))).
 
 % %theorem nj_triple_neg_red_auto : forall* {A:o} forall {D:nj (not not not A)} exists {D':nj (not A)} true.
 % %prove 7 {} (nj_triple_neg_red_auto D D').
-
+%{
 nj_triple_neg_red = ([NJ] 
                        (nj_noti [q:o] [u:nj A] 
                           (nj_note NJ q (nj_dnotx u)))).
 
+nj_triple_neg_red = (\NJ. 
+                       (nj_noti (\q.\v.
+                          (nj_note NJ q (nj_noti (\p. \u. (nj_note u p v)))))).
+
+
+}%
 % Lemma 2:
 % In intuitionistic logic we have the following derivation
 % of (not not false) :- C
@@ -69,7 +77,7 @@ nj_triple_neg_red = ([NJ]
 %   not false            not not false [hyp]
 %   ------------------------------------------ note(C)
 %               C
-
+%{
 %theorem nj_dneg_falser_auto : forall* {A:o} exists {D:nj (not not false) -> {C:o} nj C} true.
 %prove 10 {} (nk_dnotx_auto D).
 
@@ -77,3 +85,6 @@ nj_dneg_falser = ([NJ1] [C] (nj_note
                                NJ1 C
                                (nj_noti ([p] [u:nj false] 
                                   (nj_falsee u))))).
+
+% (nj_note NJ1 C (nj_noti (\p.\u. (nj_falsee u)))).
+}%

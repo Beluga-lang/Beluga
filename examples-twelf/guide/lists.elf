@@ -12,8 +12,6 @@ appNil  : append nil K K.
 appCons : append (cons A L) K (cons A M)
 	   <- append L K M.
 
-%query 1 1
-append (cons true nil) (cons false nil) L.
+%query 1 1 append (cons true nil) (cons false nil) L.
 
-%query 1 1
-append (cons true (cons false nil)) (cons true nil) L.
+%query 1 1 append (cons true (cons false nil)) (cons true nil) L.

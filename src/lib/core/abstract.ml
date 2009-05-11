@@ -587,7 +587,7 @@ and collectHead cQ phat ((head, subst) as sH) =
         if exists (eqFVar name) cQ' then
           cQ'
         else
-          let tA  = FVar.get name in
+          let tA  = FVar.get name in            
             (* tA must be closed *)
             (* Since we only use abstraction on pure LF objects,
                there are no context variables; different abstraction
@@ -616,6 +616,8 @@ and collectHead cQ phat ((head, subst) as sH) =
 
   | (I.MVar (I.Inst (_r, cPsi, tA,  {contents = cnstr}), s') as u, s) ->
       if constraints_solved cnstr then
+        let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in 
+        let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in
       let _ = dprint (fun () -> "collectSub for MVar \n") in
       let cQ' = collectSub cQ phat (LF.comp s' s) in
       let _ = dprint (fun () -> "collectSub for MVar done \n") in

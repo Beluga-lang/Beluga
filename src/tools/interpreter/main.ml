@@ -101,7 +101,9 @@ let rec process_files = function
         else f in
       let cfg = open_in filename in
       let lines = accum_lines cfg in
-        (Session (process_lines (Filename.dirname f ^ "/") lines)) :: (process_files fs)
+        close_in cfg
+        ; (Session (process_lines (Filename.dirname f ^ "/") lines))
+       :: (process_files fs)
   | f :: fs               -> (Session [f]) :: process_files fs
 
 let main () =

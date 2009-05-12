@@ -684,4 +684,6 @@ let parse_channel ?(name = "<channel>") ~input entry =
 let parse_file ~name entry =
   let in_channel = Pervasives.open_in name in
   let stream     = Stream.of_channel in_channel in
-    parse_stream ~name:name ~input:stream entry
+  let result     = parse_stream ~name:name ~input:stream entry in
+     close_in in_channel
+   ; result

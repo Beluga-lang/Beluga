@@ -1797,6 +1797,9 @@ module Error = struct
       | UnboundName n ->
           fprintf ppf "unbound variable or constructor: %s" (R.render_name n)
 
+      | UnknownCidTyp n ->
+          fprintf ppf "unbound type constructor: %s" (R.render_cid_typ n)
+
       | CtxVarMismatch (cO, var, expected) ->
           fprintf ppf "Context variable %a doesn't check against schema %a"
             (IP.fmt_ppr_lf_ctx_var cO) var

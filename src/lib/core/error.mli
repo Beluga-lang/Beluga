@@ -7,6 +7,7 @@ type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 type error =
   (* indexing errors *)
   | UnboundName of Id.name
+  | UnknownCidTyp  of Id.cid_typ
 
   (* LF typechecking errors *)
   | CtxVarMismatch of LF.mctx          (* ???                                 *)

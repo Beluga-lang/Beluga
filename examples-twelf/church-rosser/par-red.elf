@@ -1,28 +1,28 @@
 %%% Parallel reduction in the untyped lambda calculus
 %%% Author: Frank Pfenning
 
-=> : term -> term -> type.  %infix none 10 =>.
-                            %name => R.
+pred : term -> term -> type.  %infix none 10 =>.
+                            %name pred R.
 
-beta : ({x:term} x => x -> M1 x => M1' x)
-     ->                      M2 => M2'
-     ->       (app (lam M1) M2) => M1' M2'.
+beta : ({x:term} pred x x -> pred (M1 x) (M1' x))
+     ->                      pred M2 M2'
+     ->       pred (app (lam M1) M2) (M1' M2').
 
-ap   :            M1 => M1'
-     ->           M2 => M2'
-     ->  (app M1 M2) => (app M1' M2').
+ap   :            pred M1 M1'
+     ->           pred M2 M2'
+     ->  pred (app M1 M2) (app M1' M2').
 
-lm   : ({x:term} x => x -> M x => M' x)
-     ->                  lam M => lam M'.
+lm   : ({x:term} pred x x -> pred (M x)  (M' x))
+     ->                  pred (lam M) (lam M').
 
 % Parallel, multi-step reduction
 
-=>* : term -> term -> type.  %infix none 10 =>*.
-                             %name =>* R*.
+pred* : term -> term -> type.  %infix none 10 =>*.
+                               %name pred* R*.
 
-id   :          M  =>* M.
+id*   :   pred* M  M.
 
-;    :  M  => M' -> M' =>* M'' ->  M  =>* M''.
+next    :  pred M  M' -> pred* M' M'' ->  pred* M  M''.
 
 %infix right 10 ;.
 
@@ -30,15 +30,15 @@ id   :          M  =>* M.
 
 % Parallel conversion
 
-<=> : term -> term -> type.  %infix none 10 <=>.
-                             %name <=> C.
+pred= : term -> term -> type.  %infix none 10 <=>.
+                             %name pred= C.
 
-reduce :  M  =>* M'
-       -> M  <=> M'.
+reduce :  pred*  M  M'
+       -> pred= M  M'.
 
-expand :  M  =>* M'
-       -> M' <=> M.
+expand :  pred* M  M'
+       -> pred= M'  M.
 
-;;     :  M  <=> M'
-       -> M' <=> M''
-       -> M  <=> M''.  %infix none 8 ;;.
+next=  :  pred= M  M'
+       -> pred= M' M''
+       -> pred= M  M''.  %infix none 8 ;;.

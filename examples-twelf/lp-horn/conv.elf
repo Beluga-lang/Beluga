@@ -29,11 +29,11 @@ toatm : pf A -> pf A -> type.        % Conversion to atomic form
 %name tocan TC.
 %name toatm TA.
 
-tc_and : tocan (A and B) D (andi D1' D2')
+tc_and : tocan (and A B) D (andi D1' D2')
 	  <- tocan A (andel D) D1'
 	  <- tocan B (ander D) D2'.
 
-tc_imp : tocan (A imp B) D (impi D')
+tc_imp : tocan (imp A B) D (impi D')
 	  <- {u:pf A} toatm u u -> tocan B (impe D u) (D' u).
 
 tc_true : tocan (true) D (truei).
@@ -48,7 +48,7 @@ tc_whr : tocan (atom P) D D'
 tc_atm : tocan (atom P) D D'
 	  <- toatm D D'.
 
-ta_impe : toatm (impe D (E : pf A)) (impe D' E')
+ta_impe : toatm (impe D E) (impe D' E')
 	   <- toatm D D'
 	   <- tocan A E E'.
 

@@ -8,8 +8,8 @@ o : type.
 %name o A.
 
 % Syntax: implication, plus a few constants.
-=> : o -> o -> o.  %infix right 10 =>.
-&  : o -> o -> o.  %infix right 11 &.
+imp : o -> o -> o.  %infix right 10 =>.
+and  : o -> o -> o.  %infix right 11 &.
 true : o.
 
 % Provability.
@@ -17,15 +17,15 @@ true : o.
 %name |- P.
 
 % Axioms.
-K : |- A => B => A.
-S : |- (A => B => C) => (A => B) => A => C.
-ONE : |- true.
-PAIR : |- A => B => A & B.
-LEFT : |- A & B => A.
-RIGHT : |- A & B => B.
+k : |- (imp A (imp B A)).
+s : |- (imp (imp A (imp B C))  (imp (imp A B) (imp A C))).
+one : |- true.
+pair : |- (imp A (imp B (and A B))).
+left : |- (imp (and A B)  A).
+right : |- (imp (and A B) B).
 
 % Inference Rule.
-MP : |- A => B -> |- A -> |- B. 
+mp : |- (imp A B) -> |- A -> |- B. 
 
 % Natural Deduction.
 
@@ -33,20 +33,20 @@ MP : |- A => B -> |- A -> |- B.
 %name ! D.
 
 trueI : ! true.
-andI  : ! A -> ! B -> ! A & B.
-andEL : ! A & B -> ! A.
-andER : ! A & B -> ! B.
-impliesI : (! A -> ! B) -> ! A => B.
-impliesE : ! A => B -> ! A -> ! B.
+andI  : ! A -> ! B -> ! (and A B).
+andEL : ! (and A B) -> ! A.
+andER : ! (and A B) -> ! B.
+impliesI : (! A -> ! B) -> ! (imp A B).
+impliesE : ! (imp A B) -> ! A -> ! B.
 
 % Normal deductions (for faster search)
 !^ : o -> type.
 !v : o -> type.
 
 trueI^ : !^ true.
-andI^ : !^ A -> !^ B -> !^ (A & B).
-andEvL : !v (A & B) -> !v A.
-andEvR : !v (A & B) -> !v B.
-impI^ : (!v A -> !^ B) -> !^ (A => B).
-impEv : !v (A => B) -> !^ A -> !v B.
+andI^ : !^ A -> !^ B -> !^ (and A B).
+andEvL : !v (and A B) -> !v A.
+andEvR : !v (and A B) -> !v B.
+impI^ : (!v A -> !^ B) -> !^ (imp A B).
+impEv : !v (imp A B) -> !^ A -> !v B.
 close : !v A -> !^ A.

@@ -4,13 +4,13 @@
 
 solve  : o -> type.       % solve goal formulas
 assume : o -> type.       % assume program formulas
->>     : o -> p -> type.  % immediate entailment
+entail : o -> p -> type.  % immediate entailment
 %infix none 8 >>.
 %name solve S.
 %name assume H.
-%name >> I.
+%name entail I.
 
-s_and  : solve (A1 and A2)
+s_and  : solve (and A1 A2)
 	  <- solve A1
 	  <- solve A2.
 
@@ -28,20 +28,20 @@ s_forall : solve (forall A1)
 
 s_atom : solve (atom P)
 	  <- assume A
-	  <- A >> P.
+	  <- entail A P.
 
-i_andl : A1 and A2 >> P
-	   <- A1 >> P.
+i_andl : entail (and A1 A2) P
+	   <- entail A1 P.
 
-i_andr : A1 and A2 >> P
-	   <- A2 >> P.
+i_andr : entail (and A1 A2) P
+	   <- entail A2 P.
 
-i_imp  : A2 imp A1 >> P
-	  <- A1 >> P
+i_imp  : entail (imp A2 A1) P
+	  <- entail A1 P
 	  <- solve A2.
 
 i_forall : {T:i}
-	     forall A1 >> P
-	     <- A1 T >> P.
+	     entail (forall A1) P
+	     <- entail (A1 T) P.
 
-i_atom : (atom P) >> P.
+i_atom : entail (atom P)  P.

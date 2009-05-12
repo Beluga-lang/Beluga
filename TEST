@@ -84,6 +84,8 @@ $INTERPRETER  \
     LF/tps.lf \
     ../examples-twelf/arith/sources.cfg \
     ../examples-twelf/alloc-sem/sources.cfg \
+    ../examples-twelf/ccc/sources.cfg \
+    ../examples-twelf/church-rosser/sources.cfg \
     ../examples-twelf/cpsocc/sources.cfg \
     ../examples-twelf/compile/cls/sources.cfg \
     ../examples-twelf/compile/cls/test.cfg \
@@ -96,6 +98,10 @@ $INTERPRETER  \
     ../examples-twelf/fol/sources.cfg \
     ../examples-twelf/handbook/sources.cfg \
     ../examples-twelf/kolm/sources.cfg \
+    ../examples-twelf/lp/sources.cfg \
+    ../examples-twelf/lp-horn/sources.cfg \
+    ../examples-twelf/mini-ml/sources.cfg \
+    ../examples-twelf/prop-calc/sources.cfg \
     test/alpha.bel \
     test/sigma1.bel \
     test/sigma2.bel \

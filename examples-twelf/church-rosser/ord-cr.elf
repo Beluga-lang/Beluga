@@ -1,7 +1,7 @@
 %%% The Church-Rosser theorem for ordinary reduction
 %%% Author: Frank Pfenning
 
-cr_ord : M <-> M'  ->  M -->* N  ->  M' -->* N  ->  type.
+cr_ord : <-> M M'  ->  -->* M N  ->  -->* M' N  ->  type.
 % %mode +{M} +{M'} +{C:M <-> M'}
 %       -{N} -{S*:M -->* N} -{S*':M' -->* N} cr_ord C S* S*'.
 %mode cr_ord +C -S* -S*'.

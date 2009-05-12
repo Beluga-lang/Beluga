@@ -4,7 +4,7 @@
 
 % Uniform proofs yield canonical deductions
 
-ss_can : s_sound (S : solve A) D -> can A D -> type.
+ss_can : s_sound S D -> can A D -> type.
 hs_atm : h_sound H D -> atm D -> type.
 is_atm : i_sound I D -> ({u:pf A} atm u -> atm (D u)) -> type.
 
@@ -30,21 +30,23 @@ ssc_atom : ss_can (ss_atom IS2 HS1) (can_atm (AT2 _ AT1))
 	    <- is_atm IS2 AT2.
 
 isc_andl : is_atm (is_andl IS1)
-	    ([u:pf (A and B)] [at:atm u] AT1 (andel u) (atm_andel at))
+	    (\u.\at. AT1 (andel u) (atm_andel at))
 	    <- is_atm IS1 AT1.
 
 isc_andr : is_atm (is_andr IS1)
-	    ([u:pf (A and B)] [at:atm u] AT1 (ander u) (atm_ander at))
+	    (\u.\at. AT1 (ander u) (atm_ander at))
 	    <- is_atm IS1 AT1.
 
 isc_imp  : is_atm (is_imp SS2 IS1)
-	    ([u:pf (A imp B)] [at:atm u] AT1 (impe u _) (atm_impe CN2 at))
+	    (\u.\at. AT1 (impe u _) (atm_impe CN2 at))
 	    <- is_atm IS1 AT1
 	    <- ss_can SS2 CN2.
 
+%{
 isc_forall : is_atm (is_forall IS1)
-	      ([u:pf (forall A)] [at:atm u] AT1 (foralle u _) (atm_foralle at))
+	      (\u.\at.AT1 (foralle u _) (atm_foralle at))
 	      <- is_atm IS1 AT1.
+}%
 
-isc_atom : is_atm (is_atom) ([u:pf (atom P)] [at:atm u] at).
+isc_atom : is_atm (is_atom) (\u.\at. at).
 

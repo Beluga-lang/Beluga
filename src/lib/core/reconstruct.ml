@@ -3439,16 +3439,19 @@ let recSgnDecl d =
         Int.Sgn.Rec (f', tau',  e_r' )
 
 
-  | Ext.Sgn.Pragma(_, Ext.LF.NamePrag (typ_name, m_name, v_name)) ->
-      begin match v_name with
-        | None ->
-            let cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None in
-              Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp))
-        | Some x ->
-            let cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
-                                                (Some (Gensym.VarData.name_gensym x)) in
-              Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp))
-      end
+  | Ext.Sgn.Pragma(loc, Ext.LF.NamePrag (typ_name, m_name, v_name)) ->
+      begin try 
+        begin match v_name with
+          | None ->
+              let cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None in
+                Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp))
+          | Some x ->
+              let cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
+                (Some (Gensym.VarData.name_gensym x)) in
+                Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp))
+        end
+      with _ -> raise (Error  (Some loc, UnboundName typ_name))
+      end 
 
 let rec recSgnDecls = function
   | [] -> []

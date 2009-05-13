@@ -69,7 +69,7 @@ module Ext : sig
 
     and dctx =
       | Null
-      | CtxVar   of name
+      | CtxVar   of Loc.t * name
       | DDec     of dctx * typ_decl
 
     and tuple =

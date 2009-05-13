@@ -439,7 +439,7 @@ module Ext = struct
       | LF.Null ->
           fprintf ppf ""
 
-      | LF.CtxVar psi ->
+      | LF.CtxVar (_ , psi) ->
           fprintf ppf "%s" (R.render_name psi)
 
       | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
@@ -1844,6 +1844,12 @@ module Error = struct
             (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
 
 
+      | EtaExpandFMV (offset, cO, cD, cPsi, sA) -> 
+          fprintf ppf
+            "meta-variable %s to has type %a \n and should be eta-expanded\n"
+            (R.render_name offset)
+            (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
+
       | EtaExpandFV (offset, cO, cD, cPsi, sA) -> 
           fprintf ppf
             "variable %s to has type %a \n and should be eta-expanded\n"
@@ -1888,9 +1894,12 @@ module Error = struct
 
       | CompPattMismatch ((cO, cD, cPsi, tM, sA) , (cO', cD', cPsi', sA')) ->
           fprintf ppf
-            "ill-typed pattern\n  expected: %a \n  inferred: %a\n  for expression: %a\n"  
-            (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
+            "ill-typed pattern\n  expected: %a[%a] \n  inferred: %a[%a]\n  for expression: [%a] %a\n"  
             (IP.fmt_ppr_lf_typ cO' cD' cPsi' std_lvl) (Whnf.normTyp sA')
+            (IP.fmt_ppr_lf_dctx cO' cD' std_lvl) (Whnf.normDCtx cPsi')
+            (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
+            (IP.fmt_ppr_lf_dctx cO' cD' std_lvl) (Whnf.normDCtx cPsi)
+            (IP.fmt_ppr_lf_dctx cO' cD' std_lvl) (Whnf.normDCtx cPsi)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) tM
 
       | CompFreeMVar u -> 

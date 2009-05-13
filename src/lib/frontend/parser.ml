@@ -481,7 +481,7 @@ lf_typ_rec:
 
       |
         psi = SYMBOL ->
-          LF.CtxVar (Id.mk_name (Id.SomeString psi))
+          LF.CtxVar (_loc, Id.mk_name (Id.SomeString psi))
 
       |  x = SYMBOL; ":"; tA = clf_typ ->
           LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))

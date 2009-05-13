@@ -174,7 +174,7 @@ let rec etaExpandApxHead loc h tA =
     etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS'), tA)   
 
 
-let rec etaExpandApxTerm loc h tS tA = 
+let rec etaExpandApxTerm  loc h tS tA = 
   let rec etaExpApxSpine k tS tA = begin match  tA with
     | Int.LF.Atom _  -> (k, tS)
         
@@ -206,6 +206,7 @@ let rec etaExpandApxTerm loc h tS tA =
                     |  _ -> h 
                   end  in
     etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS''), tA)   
+
 
 
 
@@ -411,12 +412,13 @@ let index_decl cvars bvars (Ext.LF.TypDecl(x, a)) =
 
 let rec index_dctx ctx_vars cvars bvars = function
   | Ext.LF.Null        -> (Apx.LF.Null , bvars)
-  | Ext.LF.CtxVar psi_name  ->
+  | Ext.LF.CtxVar (loc, psi_name)  ->
       begin try
         let offset = CVar.index_of_name ctx_vars psi_name in
           (Apx.LF.CtxVar (Apx.LF.CtxOffset offset) , bvars)
       with Not_found ->
-        (Apx.LF.CtxVar (Apx.LF.CtxName psi_name) , bvars)
+        raise (Error (Some loc, UnboundName psi_name))
+        (* (Apx.LF.CtxVar (Apx.LF.CtxName psi_name) , bvars) *)
       end
   | Ext.LF.DDec (psi, decl) ->
       let (psi', bvars') = index_dctx ctx_vars cvars bvars psi in
@@ -656,9 +658,8 @@ let reset_fvarCnstr () = (fvar_cnstr := [])
 (* Constraints for free metavariables and parameter variables  *)
 let fcvar_cnstr : ((Apx.LF.normal * Int.LF.cvar)  list) ref = ref []
 
-let add_fcvarCnstr  c = fvar_cnstr := c :: !fvar_cnstr
-
-let reset_fcvarCnstr () = (fvar_cnstr := [])
+let add_fcvarCnstr  c = fcvar_cnstr := c :: !fcvar_cnstr
+let reset_fcvarCnstr () = (fcvar_cnstr := [])
 
 let rec raiseType cPsi tA = match cPsi with
   | Int.LF.Null -> tA
@@ -762,14 +763,14 @@ let rec isPatSub s = match s with
  *
  *     cPsi |- s' <= cPhi
  *)
-let rec synDom cPsi s = begin match s with
+let rec synDom loc cPsi s = begin match s with
   | Apx.LF.Id ->
       begin match Context.dctxToHat cPsi with
         | (Some psi, d) ->
             (Int.LF.CtxVar psi, Int.LF.Shift (Int.LF.NoCtxShift, d))
 
         | (None, _d) ->
-            raise (Error (None, UnboundIdSub))
+            raise (Error (Some loc, UnboundIdSub))
       end
 
   | Apx.LF.EmptySub ->
@@ -784,7 +785,7 @@ let rec synDom cPsi s = begin match s with
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
       begin match Context.ctxDec cPsi k with
         | Int.LF.TypDecl (x, tA) ->
-            let (cPhi, s') = synDom cPsi s in
+            let (cPhi, s') = synDom loc cPsi s in
               (*  cPsi |- s <= cPhi
                *  cPsi |- tA <= type
                *  tA' = [s]^-1(tA)
@@ -900,6 +901,9 @@ and elTermW recT cO cD cPsi m sA = match (m, sA) with
       let tuple' = elTuple recT cO cD cPsi tuple (typRec, s) in
         Int.LF.Tuple (Some loc, tuple')
 
+  | (Apx.LF.Root (loc, Apx.LF.FMVar (x, _),  _spine),  (Int.LF.PiTyp _ , _s)) ->
+      raise (Error (Some loc, EtaExpandFMV (x, cO, cD, cPsi, sA)))
+
 
   | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) -> 
       let n = etaExpandApxTerm loc h spine tA in 
@@ -992,7 +996,7 @@ and elTerm' recT cO cD cPsi r sP = match r with
           begin match isPatSub s with
             | true ->
                 let (_givenType, givenSub) = sP in
-                let (cPhi, s'') = synDom cPsi s in
+                let (cPhi, s'') = synDom loc cPsi s in
                 let si          = Substitution.LF.invert s'' in
                 let psi = match Context.ctxVar cPsi with Some psi -> psi in
                 let schemaOfP = Schema.get_schema (snd (lookupCtxVar cO psi)) in
@@ -1157,7 +1161,7 @@ and elTerm' recT cO cD cPsi r sP = match r with
            * 2) [s]^-1 ([s']tP) is the type of u
            *)
           
-          let (cPhi, s'') = synDom cPsi s in
+          let (cPhi, s'') = synDom loc cPsi s in
           let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in
             (* For type reconstruction to succeed, we must have
              * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
@@ -1167,6 +1171,7 @@ and elTerm' recT cO cD cPsi r sP = match r with
             Int.LF.Root (Some loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
         else
           let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
+            dprint (fun () -> "Added FMVar constraint! ");
             add_fcvarCnstr (m, v);
             Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil)
       end
@@ -1194,7 +1199,7 @@ and elTerm' recT cO cD cPsi r sP = match r with
                 (* 1) given cPsi and s, synthesize the domain cPhi
                  * 2) [s]^-1 ([s']tP) is the type of u
                  *)
-                let (cPhi, s'') = synDom cPsi s in
+                let (cPhi, s'') = synDom loc cPsi s in
                 let si          = Substitution.LF.invert s'' in
                 let tP          = Int.LF.TClo( Int.LF.TClo sP, si) in
                 let _ = dprint (fun () -> "elTerm'    | (Apx.LF.Root (loc, Apx.LF.FPVar (p, s), spine) as m) ->\n"
@@ -1646,6 +1651,35 @@ let rec solve_fvarCnstr recT cO cD cnstr = match cnstr with
       end
  
 
+
+(* Solve free variable constraints *)
+
+let rec solve_fcvarCnstr cO cD cnstr = match cnstr with
+  | [] -> ()
+  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (r, cPsi, _, _)) :: cnstrs) ->
+      begin try
+        let (_tP, cPhi) = FMVar.get u in
+        let s'' = elSub PiboxRecon cO cD cPsi s cPhi in
+          r := Some (Int.LF.Root (Some loc, Int.LF.FMVar (u, s''), Int.LF.Nil));
+          solve_fcvarCnstr cO cD cnstrs
+      with Not_found ->
+        raise (Error (None, LeftoverConstraints u))
+      end
+
+  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (r, cPsi, _, _)) :: cnstrs) ->
+      begin try
+        let (tA, cPhi) = FPVar.get x in
+        let s'' = elSub PiboxRecon cO cD cPsi s cPhi in
+
+        (* let tS = elSpine cPsi spine (tA, LF.id) (tP,s) in *)
+        let tS = elSpine loc PiboxRecon cO cD cPsi spine (tA, s'') in
+          r := Some (Int.LF.Root (Some loc, Int.LF.FPVar (x,s''), tS));
+          solve_fcvarCnstr cO cD cnstrs
+      with Not_found ->
+        raise (Error (None, LeftoverConstraints x))
+      end
+
+
 (* ******************************************************************* *)
 (* PHASE 2 : Reconstruction *)
 
@@ -2064,7 +2098,7 @@ let rec recDCtx recT cO cD cPsi = match cPsi with
         raise (Violation ("Context variable out of scope in context: " ^ P.dctxToString cO cD cPsi))
 
   | Int.LF.CtxVar (Int.LF.CtxName _c)  ->
-      raise (Violation ("Unknown context variable in context: " ^ P.dctxToString cO cD cPsi))
+      raise (Violation ("Unknown context variable in context: " ^ P.dctxToString cO cD cPsi)) 
 
 let rec recCDecl recT cO cD cdecl = match cdecl with
   | Int.LF.MDecl (_u, tA, cPsi) ->
@@ -2850,6 +2884,10 @@ and recPattern cO delta psi m tPopt =
 
 
   let tR = elTerm' PiboxRecon cO cD' cPsi' m (tP', LF.id) in    
+
+  let _  = solve_fcvarCnstr cO cD' !fcvar_cnstr in 
+  let _  = reset_fcvarCnstr () in 
+
   let _   = dprint (fun () -> "recPattern: Elaborated pattern ...\n" ^
                       P.mctxToString cO cD' ^ "  ;   " ^
                       P.dctxToString cO cD' cPsi' ^ "\n   |-\n    "  ^
@@ -3316,9 +3354,6 @@ let rec recCompTyp cO cD tau = match tau with
 
   | Int.Comp.TypPiBox ((cdecl, _), tau) ->
       recCompTyp cO (Int.LF.Dec (cD, cdecl)) tau
-
-
-
 (* ------------------------------------------------------------------- *)
 
 let recSgnDecl d = 
@@ -3331,8 +3366,10 @@ let recSgnDecl d =
       let apxK     = index_kind (CVar.create ()) (BVar.create ()) extK in
       let _        = FVar.clear () in
       let _        = dprint (fun () -> "\nElaborating type constant " ^ a.string_of_name) in
-      let tK       = elKind Int.LF.Null apxK in
-      let _        = solve_fvarCnstr PiRecon (*cO=*)Int.LF.Empty Int.LF.Empty !fvar_cnstr in
+
+      let tK       =  elKind Int.LF.Null apxK in 
+      let _        =  solve_fvarCnstr PiRecon (*cO=*)Int.LF.Empty Int.LF.Empty !fvar_cnstr in
+
       let _        = reset_fvarCnstr () in
       let _        = dprint (fun () -> "\nReconstructing type constant " ^ a.string_of_name) in
       let _        = recKind Int.LF.Empty Int.LF.Null (tK, LF.id) in

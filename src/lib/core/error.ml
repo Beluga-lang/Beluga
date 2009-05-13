@@ -6,7 +6,7 @@ type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 
 type error =
   | UnboundName      of Id.name
-  | UnknownCidTyp       of Id.cid_typ
+  | UnknownCidTyp    of Id.cid_typ
 
   | CtxVarMismatch   of LF.mctx * LF.ctx_var * LF.schema
   | SigmaIllTyped    of LF.mctx * LF.mctx * LF.dctx * LF.trec_clo * LF.trec_clo
@@ -17,6 +17,7 @@ type error =
 
   | SpineIllTyped    
   | EtaExpandBV      of Id.offset * LF.mctx * LF.mctx * LF.dctx * LF.tclo
+  | EtaExpandFMV     of Id.name * LF.mctx * LF.mctx * LF.dctx * LF.tclo
   | EtaExpandFV      of Id.name * LF.mctx * LF.mctx * LF.dctx * LF.tclo
 
   | LeftoverConstraints of Id.name

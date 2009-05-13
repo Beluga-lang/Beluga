@@ -70,7 +70,7 @@ module Ext = struct
 
     and dctx =
       | Null
-      | CtxVar   of name
+      | CtxVar   of Loc.t * name
       | DDec     of dctx * typ_decl
 
     and 'a ctx =

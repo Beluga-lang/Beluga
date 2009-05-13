@@ -9,7 +9,6 @@ s    : term nat -> term nat.
 
 lam  : (term T -> term T') -> term (arrow T T').
 app  : term (arrow T T') -> term T -> term T'.
-
 schema tctx = some [t:tp] term t;
 % schema W = term nat;
 

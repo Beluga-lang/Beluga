@@ -39,6 +39,7 @@ type error =
   | SpineIllTyped
 
   | EtaExpandBV        of Id.offset * LF.mctx * LF.mctx * LF.dctx * LF.tclo
+  | EtaExpandFMV       of Id.name * LF.mctx * LF.mctx * LF.dctx * LF.tclo
   | EtaExpandFV        of Id.name * LF.mctx * LF.mctx * LF.dctx * LF.tclo
 
   | LeftoverConstraints of Id.name     (* constraints left after 

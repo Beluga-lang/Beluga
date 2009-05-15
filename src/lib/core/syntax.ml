@@ -224,9 +224,12 @@ module Int = struct
 
     and front =                            (* Fronts:                        *)
       | Head of head                       (* Ft ::= H                       *)
+      | Block of head * int                (*    | Block (h,i, length)       *)
       | Obj  of normal                     (*    | N                         *)
       | Undef                              (*    | _                         *)
 
+  (* Note: Block (h,i, l) represents a tuple of length l where the i-th 
+     position is instantiated with h; all other positions are undefined *)                         
 
                                           (* Contextual substitutions       *) 
    and mfront =                           (* Fronts:                        *)

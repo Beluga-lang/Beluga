@@ -250,6 +250,7 @@ and mshiftSub s n = match s with
 
 and mshiftFt ft n = match ft with
   | Head h -> Head (mshiftHead h n)
+  | Block (h,i) -> Block(mshiftHead h n, i)
   | Obj tM -> Obj (mshiftTerm tM n)
   | Undef  -> Undef
   
@@ -443,10 +444,11 @@ and norm (tM, sigma) = match tM with
 
   | Root (loc, BVar i, tS) ->
       begin match LF.bvarSub i sigma with
-        | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
+        | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma)) 
         | Head (BVar k) -> Root (loc, BVar k, normSpine (tS, sigma))
         | Head head     -> norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
         | Undef         -> raise (Violation ("Looking up " ^ string_of_int i ^ "\n"))
+        | Block _       -> raise (Violation ("Block should not happen! \n"))
             (* Undef should not happen ! *)
       end
 
@@ -470,14 +472,17 @@ and norm (tM, sigma) = match tM with
 
   | Root (_, MVar (Inst ({ contents = Some tM}, _, _, _), r), tS) ->
       (* constraints associated with u must be in solved form *)      
-      reduce (norm (tM, r),  sigma) (normSpine (tS, sigma))
+        reduce (norm (tM, r),  sigma) (normSpine (tS, sigma))  
+      (* reduce (norm (tM, LF.id), LF.comp r sigma) (normSpine (tS, sigma))   *)
 
   | Root (loc, MVar (Inst ({contents = None}, _, Atom _, _) as u, r), tS) ->
-      (* meta-variable is of atomic type; tS = Nil *)      
-      Root (loc, MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+      (* meta-variable is of atomic type; tS = Nil *)  
+      let s' =  normSub (LF.comp r sigma) in 
+      Root (loc, MVar (u, s'), normSpine (tS, sigma))
 
   | Root (loc, MVar (Inst ({contents = None} as r, cPsi, TClo (tA, s'), cnstr), s), tS) ->
-      norm (Root (loc, MVar (Inst (r, cPsi, normTyp (tA, s'), cnstr), s), tS), sigma)
+      let tAn = normTyp (tA, s') in 
+        norm (Root (loc, MVar (Inst (r, cPsi, tAn, cnstr), s), tS), sigma)
 
   | Root (_, MVar (Inst ({contents = None}, _, _tA, _) as u, _r), _tS) ->
       (* Meta-variable is not atomic and tA = Pi x:B1.B2
@@ -525,6 +530,11 @@ and norm (tM, sigma) = match tM with
       begin match LF.bvarSub i sigma with
         | Head (BVar j)      -> Root (loc, Proj (BVar j, k), normSpine (tS, sigma))
         | Head (PVar (p, s)) -> Root (loc, Proj (PVar (p, s), k), normSpine (tS, sigma))
+        | Block (h, k')      ->
+            if k = k' then
+              Root (loc, h, normSpine (tS, sigma))
+            else 
+              raise (Violation "[norm] Incompatible Block and Proj")
             (* other cases are impossible -- at least for now -bp *)
       end
 
@@ -584,8 +594,10 @@ and normFt ft = match ft with
   | Head (FMVar (u, s'))          -> Head (FMVar (u, normSub s'))
   | Head (PVar (p, s'))           -> Head (PVar (p, normSub s'))
   | Head (FPVar (p, s'))          -> Head (FPVar (p, normSub s'))
-  | Head (Proj (PVar (p, s'), k)) -> Head (Proj (PVar (p, normSub s'), k))
-  | Head h                        -> Head h
+  | Head (Proj (PVar (p, s'), k)) -> Head (Proj (PVar (p, normSub s'), k)) 
+  | Head h                        -> Head h 
+  | Block (BVar x, i)               -> Block(BVar x, i)
+
   | Undef                         -> Undef  (* -bp Tue Dec 23 2008 : DOUBLE CHECK *)
 
 
@@ -889,7 +901,7 @@ and cnorm (tM, t) = match tM with
         let r'  = cnormSub (r,t) in 
         let mr' = cnormMSub (mcomp mr t) in 
           Head (MMVar (u, (mr', r')))
-
+          
     | Head (MVar (Offset i, r)) -> 
         begin match LF.applyMSub i t with
           | MObj (_phat, tM)    -> Obj(Clo (tM, cnormSub (r,t)))
@@ -923,6 +935,12 @@ and cnorm (tM, t) = match tM with
     | Head (Proj (Const _ , _)) -> raise (Violation "Head Const")
     | Head (Proj (Proj _ , _)) -> raise (Violation "Head Proj Proj")
     | Head (Proj (MMVar _ , _)) -> raise (Violation "Head MMVar ")
+
+
+    | Block (h, i) -> begin match cnormFront (Head h, t) with
+        | Head h' -> Block (h', i) 
+        | _ -> raise (Violation "Head Block")
+      end
 
     | Obj (tM) -> Obj(cnorm (tM, t))
 
@@ -1074,7 +1092,7 @@ and whnf sM = match sM with
         | Head (BVar k) -> (Root (loc, BVar k, SClo (tS,sigma)), LF.id)
         | Head (Proj(BVar k, j)) -> (Root (loc, Proj(BVar k, j), SClo(tS, sigma)), LF.id)
         | Head head     -> whnf (Root (loc, head, SClo (tS,sigma)), LF.id)
-            (* Undef should not happen! *)
+            (* Undef and Block should not happen! *)
       end
 
   (* Meta^2-variable *)
@@ -1173,6 +1191,10 @@ and whnf sM = match sM with
       begin match LF.bvarSub i sigma with
         | Head (BVar j)      -> (Root (loc, Proj (BVar j, k)     , SClo (tS, sigma)), LF.id)
         | Head (PVar (q, s)) -> (Root (loc, Proj (PVar (q, s), k), SClo (tS, sigma)), LF.id)
+        | Block (h, k')      ->
+            if k = k' then (Root (loc, h, SClo (tS, sigma)), LF.id)
+            else 
+              raise (Violation "[whnf] Incompatible Block and Proj")
             (* other cases are impossible -- at least for now -bp *)
       end
 
@@ -1395,6 +1417,9 @@ and convFront front1 front2 = match (front1, front2) with
 
   | (Head (FVar x), Head (FVar y)) ->
       x = y
+
+  | (Block (h, i), Block (h', k)) ->
+      i = k && convHead (h, LF.id) (h', LF.id)
 
   | (Obj tM, Obj tN) ->
       conv (tM, LF.id) (tN, LF.id)

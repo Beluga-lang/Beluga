@@ -547,6 +547,14 @@ and collectSub cQ phat s = match s with
       let cQ2 = collectHead cQ1 phat (h, LF.id) in
         cQ2
 
+  | (I.Dot (I.Block (h, _index), s)) -> 
+      let cQ1 =  collectSub cQ phat s in 
+      let _   = dprint (fun () -> "collectSub (Block) "  ) in
+      let cQ2 = collectHead cQ1 phat (h, LF.id) in
+        cQ2
+
+
+
   | (I.Dot (I.Obj tM, s)) ->
       let cQ1 =  collectSub cQ phat s in 
       let _   = dprint (fun () -> "collectSub (term) M = "  ) in

@@ -40,10 +40,12 @@ rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
           [g,e:block yyy:exp. eq yyy yyy] V .. e = eqfun [g, e:block q:exp. eq q q] <g, e. L .. e.1>
       in
         [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
+
    | [g] app (A1 ..) (A2 ..)  : exp[g]=>
        let [g] EQ1 .. = eqfun [g] <g . A1 ..> in
        let [g] EQ2 .. = eqfun [g] <g . A2 ..> in
           [g] eq_app (EQ1 ..) (EQ2 ..)
+
 ;
 
 
@@ -102,7 +104,6 @@ rec trans: {g:(w)*} %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
                  [g] eq_app  (T1 ..) (S1 ..) (T2 ..) (S2 ..)
                         (E1 ..)  (E2 ..)
            )
-}%
 ;
 
 
@@ -138,4 +139,3 @@ rec ceq: {g:(h2)*} {T::exp[g]}{S::exp[g]} (equal (T ..) (S ..))[g] -> (eq (T ..)
             in
                 [g] eq_lam \x.\v. E <x, equal x x, v>
 }%
-

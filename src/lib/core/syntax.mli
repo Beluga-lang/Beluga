@@ -221,6 +221,7 @@ module Int : sig
 
     and front =
       | Head of head
+      | Block of head * int 
       | Obj  of normal
       | Undef
 

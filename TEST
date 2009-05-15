@@ -38,6 +38,8 @@ $INTERPRETER  \
     copy/copy-simple.bel \
     copy/copy-simple-explicit.bel \
     debruijn1/sources.cfg \
+    equal/eq-proof.bel \
+    equal/eq-proof-tuple.bel \
     free-vars/fvnat.bel \
     free-vars/fvnat-explicit.bel \
     lp-horn/sources.cfg \
@@ -49,6 +51,7 @@ $INTERPRETER  \
     mini-ml/vsound.bel \
     mini-ml/vsound-explicit.bel \
     small-step/lam.bel \
+    tpcert.bel \
     typed-eval/tpeval.bel \
     typed-eval/tpeval-explicit.bel \
     typed-eval/tpeval2.bel \
@@ -108,18 +111,12 @@ $INTERPRETER  \
     test/sigma3.bel \
     test/sigma4.bel \
     test/implicit-obj.bel 
-# The two below are broken due to our handling of projections in substitutions. -bp,jd
-#    notworking/eq-proof.bel \
-#    notworking/eq-proof-1.bel
-# note: most of eq-proof.bel is commented out, so it should remain in notworking/
- 
 #
 #    LF/arith-unify.lf LF/tps-1.lf    ??
 #
 #    notworking/church-rosser.rec \
 #    notworking/cut-elim.bel \
 #    notworking/fol-handbook.bel \
-#    notworking/tpcert.bel \
 #    notworking/tpeval.bel \
 #
 #

@@ -1543,6 +1543,8 @@ let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
       convTyp (tA, LF.id) (tB, LF.id) && convCtx cPsi1 cPsi2
 
+  | _ -> false
+
 let rec convSchElem (SchElem(cSome1, typRec1))
                     (SchElem(cSome2, typRec2))
 =

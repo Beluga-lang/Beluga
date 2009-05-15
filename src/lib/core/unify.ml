@@ -363,6 +363,10 @@ module Make (T : TRAIL) : UNIFY = struct
    | (MShift k, Dec (_, MDecl (_x, _tA, _cPsi))) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
+   | (MShift k, Dec (_, PDecl (_x, _tA, _cPsi))) ->
+       pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
+
+
    | (MDot (MV k, mt), Dec (cD1, MDecl (u, tA, cPsi))) ->
        let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
          (* cD1 |- mt' <= cD2 *)
@@ -402,7 +406,10 @@ module Make (T : TRAIL) : UNIFY = struct
          (* cD1 |- mt' <= cD2 *)
          (Whnf.mcomp mt' (MShift 1), cD2)
 
-  let pruneMCtx cD (t, cD1) ms = pruneMCtx' cD (Whnf.cnormMSub t, cD1) ms
+  let pruneMCtx cD (t, cD1) ms = 
+    let _ = dprint (fun () -> "pruneMCtx : cD = " ^ P.mctxToString Empty cD ) in
+    let _ = dprint (fun () -> "pruneMCtx : t = " ^ P.msubToString Empty cD t ^ "\n cD1 = " ^ P.mctxToString Empty cD1 ^ "\n") in
+      pruneMCtx' cD (Whnf.cnormMSub t, cD1) ms
 
 
   (* intersection (phat, (s1, s2), cPsi') = (s', cPsi'')

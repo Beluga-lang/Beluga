@@ -1747,8 +1747,11 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
             with Unify.Unify msg ->
               (Printf.printf "%s\n" msg;
               raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP'))))
-      with SpineMismatch ->
-        raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
+      with 
+        |  SpineMismatch ->
+             raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
+        | Violation msg -> 
+            (dprint (fun () -> "[synTerm] ERROR: " ^ msg ^ "\n") ;  raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA)))))
       end
   
   | ((Int.LF.Root (loc, _, _), _),   _) ->
@@ -1800,8 +1803,8 @@ and synTermW recT cO cD  cPsi ((root, s') as sR) = match root with
               (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
               (* Dealing with constraints is postponed, Dec  2 2008 -bp *)
               let s1 = LF.comp t s' in
-                recSub recT cO cD  cPsi s1 cPhi;
-                (tP', s1)
+                  recSub recT cO cD  cPsi s1 cPhi;
+                  (tP', s1)
 
           | Int.LF.MMVar (Int.LF.MInst (_r, _cD', cPhi', tP', _cnstr), (mt, t)) ->
               (* By invariant of whnf: tS = Nil  and r will be lowered and is uninstantiated *)
@@ -2028,11 +2031,11 @@ and recSub recT cO cD cPsi_ s cPhi_ =
       recSub  recT cO cD  cPsi s cPhi;
       recTerm recT cO cD  cPsi (tM, LF.id) (tA, s)
   
-  (* cPsi  ...Undef...  _ *)
+  (* cPsi  ...Undef...  _ 
   | (_cPsi,  Int.LF.Dot (Int.LF.Undef, _s),
      _) ->
       raise (Error (None, LeftoverUndef))
-        
+  *)        
   | _ ->
       raise (Violation "Reconstruction of substitution undefined")
 
@@ -2406,6 +2409,30 @@ and collectApxSpine fMVs s = match s with
       let fMVs' = collectApxSpine fMVs s in 
         collectApxTerm fMVs' m 
 
+and collectApxTyp fMVs a = match a with 
+  | Apx.LF.Atom (_ , _ , spine) -> collectApxSpine fMVs spine 
+  | Apx.LF.PiTyp ((tdecl, _ ) , a) -> 
+      let fMVs' = collectApxTypDecl fMVs tdecl in 
+        collectApxTyp fMVs' a 
+  | Apx.LF.Sigma t_rec -> collectApxTypRec fMVs t_rec
+
+and collectApxTypRec fMVs t_rec = match t_rec with
+  | Apx.LF.SigmaLast a -> collectApxTyp fMVs a
+  | Apx.LF.SigmaElem (_, a, t_rec) -> 
+      let fMVs' = collectApxTyp fMVs a in 
+        collectApxTypRec fMVs' t_rec
+
+and collectApxTypDecl fMVs (Apx.LF.TypDecl (_ , a))= 
+  collectApxTyp fMVs a
+
+and collectApxDCtx fMVs c_psi = match c_psi with
+  | Apx.LF.Null -> fMVs
+  | Apx.LF.CtxVar _ -> fMVs
+  | Apx.LF.DDec (c_psi', t_decl) ->
+      let fMVs' = collectApxDCtx fMVs c_psi' in
+        collectApxTypDecl fMVs' t_decl
+      
+
 
 (* Replace FMVars with appropriate de Bruijn index  
  * If a FMVar (of FPVar) occurs in fMVs do not replace it
@@ -2644,13 +2671,15 @@ and fmvApxBranches fMVs cO cD l_cd1 l_delta k branches = match branches with
 and fmvApxBranch fMVs cO cD l_cd1 l_delta k b = 
   (match b with
       | Apx.Comp.BranchBox (loc, delta, (psi1, m, Some (a, psi)), e) ->
-          let fMVb = collectApxTerm [] m in 
+          let fMVb' = collectApxTerm [] m in 
+          let fMVb  = collectApxDCtx fMVb' psi in
           let l    = lengthApxMCtx delta in 
             Apx.Comp.BranchBox (loc, delta, (psi1, m, Some (a, psi)),
                                 fmvApxExp (fMVs@fMVb) cO cD l_cd1 l_delta (k+l) e)
               
       | (Apx.Comp.BranchBox (loc, delta, (psi, r, None), e))  ->
-          let fMVb = collectApxTerm [] r in 
+          let fMVb' = collectApxTerm [] r in 
+          let fMVb  = collectApxDCtx fMVb' psi in
           let l    = lengthApxMCtx delta in 
             Apx.Comp.BranchBox (loc, delta, (psi, r, None),
                                 fmvApxExp (fMVs@fMVb) cO cD l_cd1 l_delta (k+l) e))

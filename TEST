@@ -37,6 +37,7 @@ $INTERPRETER  \
     copy/copy-explicit.bel \
     copy/copy-simple.bel \
     copy/copy-simple-explicit.bel \
+    cut-elim.bel
     debruijn1/sources.cfg \
     equal/eq-proof.bel \
     equal/eq-proof-tuple.bel \
@@ -110,7 +111,8 @@ $INTERPRETER  \
     test/sigma2.bel \
     test/sigma3.bel \
     test/sigma4.bel \
-    test/implicit-obj.bel 
+    test/implicit-obj.bel \
+    notworking/fol-handbook.bel 
 #
 #    LF/arith-unify.lf LF/tps-1.lf    ??
 #

@@ -424,7 +424,7 @@ module Apx : sig
       | Const of cid_term
       | MVar  of cvar * sub
       | Proj  of head * int
-      | Hole 
+      | Hole  
       | PVar  of cvar * sub
       | FVar  of name
       | FMVar of name * sub    

@@ -303,6 +303,7 @@ module Ext = struct
       | LF.Hole _ ->
           fprintf ppf "_"
 
+
       | LF.MVar (_, x, LF.EmptySub _) ->
           fprintf ppf "%s"
             (R.render_name x)
@@ -718,7 +719,7 @@ module Int = struct
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
-    (* val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.psi_hat  -> unit *)
+    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
     val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
@@ -1907,6 +1908,14 @@ module Error = struct
             (IP.fmt_ppr_lf_dctx cO' cD' std_lvl) (Whnf.normDCtx cPsi)
             (IP.fmt_ppr_lf_dctx cO' cD' std_lvl) (Whnf.normDCtx cPsi)
             (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) tM
+
+      | CompBoxCtxMismatch (cO, cD, cPsi, (phat, tM)) ->
+          fprintf ppf
+            "Expected: %a \n  in context %a \n Used in context %a\n "  
+            (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) tM 
+            (IP.fmt_ppr_lf_dctx cO cD std_lvl) (Whnf.normDCtx cPsi)
+            (IP.fmt_ppr_lf_psi_hat cO std_lvl) (Context.hatToDCtx phat)
+
 
       | CompFreeMVar u -> 
           fprintf ppf "Encountered free meta-variables %s \n"

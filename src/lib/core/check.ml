@@ -57,7 +57,7 @@ module LF = struct
           (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
         let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
   in
-    Dot (front, s)
+    Dot (front, LF.comp s LF.shift)
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
    *
@@ -497,8 +497,11 @@ This case should now be covered by the one below it
     let _ = dprint (fun () -> "checkTypeAgainstElement  "
                       ^ P.typToString cO cD cPsi (tA, s)
                       ^ "  against  "
-                      ^ P.typRecToString cO cD cPsi (block_part, dctxSub)) in
-(*    let _           = dprint (fun () -> "checkTypeAgainstElement  " ^ P.subToString cO cD cPsi dctxSub) in *)
+                      ^ P.typRecToString cO cD Null (block_part, dctxSub)) in
+    let _           = dprint (fun () -> "checkTypeAgainstElement  dctx = " ^ P.dctxToString cO Empty dctx) in 
+    let _           = dprint (fun () -> "checkTypeAgainstElement  dctxsub=" ^ P.subToString cO Empty Null dctxSub) in 
+    let _           = dprint (fun () -> "checkTypeAgainstElement  block_part=" ^ P.typRecToString cO Empty dctx (block_part, LF.id)) in 
+    let _           = dprint (fun () -> "checkTypeAgainstElement  block_part =" ^ P.typRecToString cO Empty Null (block_part, dctxSub)) in 
     let phat        = dctxToHat cPsi in
       begin
         dprint (fun () -> "***Unify.unifyTypRec ("

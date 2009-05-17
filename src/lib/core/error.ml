@@ -29,6 +29,8 @@ type error =
   | CompPattMismatch of (LF.mctx * LF.mctx * LF.dctx * LF.normal * LF.tclo) * 
                         (LF.mctx * LF.mctx * LF.dctx * LF.tclo)  
 
+  | CompBoxCtxMismatch  of LF.mctx * LF.mctx * LF.dctx * (LF.psi_hat * LF.normal)
+
   | CompFreeMVar     of  Id.name
   | CompScrutineeTyp of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * LF.tclo * LF.dctx 
 

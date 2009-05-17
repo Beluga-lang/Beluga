@@ -368,7 +368,8 @@ and index_head cvars bvars = function
       let pvar = index_head cvars bvars (Ext.LF.PVar (loc, p, s)) in
         Apx.LF.Proj (pvar, k)
 
-  | Ext.LF.Hole _ -> Apx.LF.Hole
+  | Ext.LF.Hole _loc -> 
+      Apx.LF.Hole
 
   | Ext.LF.MVar (_, u, s) ->
       begin try
@@ -531,11 +532,15 @@ let rec index_comptyp ctx_vars cvars  = function
       let (cdecl', cvars') = index_cdecl ctx_vars cvars cdecl in
         Apx.Comp.TypPiBox (cdecl', index_comptyp ctx_vars cvars' tau)
 
-  | Ext.Comp.TypCtxPi (_loc, (ctx_name, schema_name), tau)    ->
+  | Ext.Comp.TypCtxPi (loc, (ctx_name, schema_name), tau)    ->
+    begin try 
       let ctx_vars'        = CVar.extend ctx_vars (CVar.mk_entry ctx_name) in
       let schema_cid       = Schema.index_of_name schema_name in
-        (* if exception Not_Found is raised, it means schema_name does not exist *)
+        (* if exception Not_found is raised, it means schema_name does not exist *)
         Apx.Comp.TypCtxPi ((ctx_name, schema_cid), index_comptyp ctx_vars' cvars tau)
+    with 
+        Not_found -> raise (Error (Some loc, UnboundName schema_name))
+    end
 
 
 let rec index_exp ctx_vars cvars vars = function
@@ -908,6 +913,14 @@ and elTermW recT cO cD cPsi m sA = match (m, sA) with
   | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) -> 
       let n = etaExpandApxTerm loc h spine tA in 
       let _ = dprint (fun () -> "etaExpandApxTerm  : " ^ P.typToString cO cD cPsi sA ^ "\n") in 
+      let _ = dprint (fun () -> 
+                        let s = begin match h with
+                                   | Apx.LF.BVar _  -> "BVar _ "
+                                   | Apx.LF.MVar _  -> "MVar _ "
+                                   | Apx.LF.PVar _  -> "PVar _ "
+                                   |  _  -> "something else _ "
+                        end in 
+                          "etaExpandApxTerm: " ^ s ) in  
         elTerm recT cO cD cPsi n sA
   
 (*  | (Apx.LF.Root (loc, Apx.LF.BVar x, _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
@@ -1081,34 +1094,55 @@ and elTerm' recT cO cD cPsi r sP = match r with
            raise NotImplemented)
       end
 
-  | Apx.LF.Root (_loc, Apx.LF.MVar (Apx.LF.MInst (tN, _tP, cPhi), s'), Apx.LF.Nil) ->
-      let s'' = elSub recT cO cD cPsi s' cPhi in
-        Int.LF.Clo(tN, s'')
+  | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (tN, _tP, cPhi), s'), Apx.LF.Nil) ->
+      begin try
+        let s'' = elSub recT cO cD cPsi s' cPhi in
+          Int.LF.Clo(tN, s'')
+      with  Violation msg  -> 
+        dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+        raise (Error (Some loc, CompTypAnn ))
+      end
         
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset u, s'), spine) ->
-      let (_ , tA, cPhi) = Whnf.mctxMDec cD u in
-      let s'' = elSub recT cO cD cPsi s' cPhi in
-      let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
-        Int.LF.Root (Some loc, Int.LF.MVar (Int.LF.Offset u, s''), tS)
+      begin try
+        let (_ , tA, cPhi) = Whnf.mctxMDec cD u in
+        let s'' = elSub recT cO cD cPsi s' cPhi in
+        let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
+          Int.LF.Root (Some loc, Int.LF.MVar (Int.LF.Offset u, s''), tS)
+      with  Violation msg  -> 
+        dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+        raise (Error (Some loc, CompTypAnn ))
+      end
 
   | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), spine) ->
-      let s'' = elSub recT cO cD cPsi s' cPhi in
-      let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
-        begin match h with 
-          | Int.LF.BVar k -> 
-              begin match LF.bvarSub k s'' with 
-                | Int.LF.Head (Int.LF.BVar j) -> Int.LF.Root (Some loc, Int.LF.BVar j, tS)
-                | Int.LF.Head (Int.LF.PVar (p,r'))   -> Int.LF.Root (Some loc, Int.LF.PVar (p, LF.comp r' s''), tS)
-              end 
-          | Int.LF.PVar (p, r) -> Int.LF.Root (Some loc, Int.LF.PVar (p, LF.comp r s''), tS)
-        end 
+      begin try
+        let s'' = elSub recT cO cD cPsi s' cPhi in
+        let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
+          begin match h with 
+            | Int.LF.BVar k -> 
+                begin match LF.bvarSub k s'' with 
+                  | Int.LF.Head (Int.LF.BVar j) -> Int.LF.Root (Some loc, Int.LF.BVar j, tS)
+                  | Int.LF.Head (Int.LF.PVar (p,r'))   -> Int.LF.Root (Some loc, Int.LF.PVar (p, LF.comp r' s''), tS)
+                end 
+            | Int.LF.PVar (p, r) -> Int.LF.Root (Some loc, Int.LF.PVar (p, LF.comp r s''), tS)
+          end 
+      with  Violation msg  -> 
+        dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+        raise (Error (Some loc, CompTypAnn ))
+      end
 
 
   | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.Offset p,s'), spine) ->
-      let (_, tA, cPhi) = Whnf.mctxPDec cD p in
-      let s'' = elSub recT cO cD cPsi s' cPhi in
-      let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
-        Int.LF.Root (Some loc, Int.LF.PVar (Int.LF.Offset p, s''), tS)
+      begin try 
+        let (_, tA, cPhi) = Whnf.mctxPDec cD p in
+        let s'' = elSub recT cO cD cPsi s' cPhi in
+        let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
+          Int.LF.Root (Some loc, Int.LF.PVar (Int.LF.Offset p, s''), tS)
+      with Violation msg  -> 
+        dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+        raise (Error (Some loc, CompTypAnn ))
+      end
+
 
   | Apx.LF.Root (loc, Apx.LF.FVar x, spine) as m ->
    (* This case can only happen durin PiRecon *) 
@@ -1155,8 +1189,9 @@ and elTerm' recT cO cD cPsi r sP = match r with
            * this check is delayed to reconstruction *)
           Int.LF.Root (Some loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
 
-      with Not_found ->
-        if isPatSub s then
+      with 
+        | Not_found ->
+          if isPatSub s then
           (* 1) given cPsi and s synthesize the domain cPhi
            * 2) [s]^-1 ([s']tP) is the type of u
            *)
@@ -1174,6 +1209,10 @@ and elTerm' recT cO cD cPsi r sP = match r with
             dprint (fun () -> "Added FMVar constraint! ");
             add_fcvarCnstr (m, v);
             Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil)
+        | Violation msg  -> 
+            dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
+            raise (Error (Some loc, CompTypAnn ))
+
       end
 
 
@@ -1193,7 +1232,8 @@ and elTerm' recT cO cD cPsi r sP = match r with
            * this check is delayed to reconstruction *)
           Int.LF.Root (Some loc, Int.LF.FPVar (p, s''), elSpine loc recT cO cD cPsi spine (tA, s''))
       
-      with Not_found ->
+      with 
+        | Not_found ->
           begin match (spine, isPatSub s) with
             | (Apx.LF.Nil, true) ->
                 (* 1) given cPsi and s, synthesize the domain cPhi
@@ -1219,7 +1259,14 @@ and elTerm' recT cO cD cPsi r sP = match r with
             
             | (_, _) -> (Printf.printf "elTerm': FPVar with non-pattern spine\n" ; raise NotImplemented)
           end
+        | Violation msg  -> 
+            dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
+            raise (Error (Some loc, CompTypAnn ))
       end
+
+  | Apx.LF.Root (loc, _h, _s) -> 
+            raise (Error (Some loc, CompTypAnn ))
+
 
 and elClosedTerm' recT cO cD cPsi r = match r with
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
@@ -1236,20 +1283,35 @@ and elClosedTerm' recT cO cD cPsi r = match r with
         Int.LF.Root (Some loc, Int.LF.BVar x, tS)
 
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset u, s), spine) ->
-      let (_ , tA, cPhi) = Whnf.mctxMDec cD u in
-      let s'' = elSub recT cO cD cPsi s cPhi in
-      let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
-        Int.LF.Root (Some loc, Int.LF.MVar (Int.LF.Offset u, s''), tS)
+      begin try 
+        let (_ , tA, cPhi) = Whnf.mctxMDec cD u in
+        let s'' = elSub recT cO cD cPsi s cPhi in
+        let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
+          Int.LF.Root (Some loc, Int.LF.MVar (Int.LF.Offset u, s''), tS)
+      with Violation msg  -> 
+        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
+         raise (Error (Some loc, CompTypAnn ))
+      end
 
   | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.Offset p, s'), spine) ->
-      let (_, tA, cPhi) = Whnf.mctxPDec cD p in
-      let s'' = elSub recT cO cD cPsi s' cPhi in
-      let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
-        Int.LF.Root (Some loc, Int.LF.PVar (Int.LF.Offset p, s''), tS)
+      begin try
+        let (_, tA, cPhi) = Whnf.mctxPDec cD p in
+        let s'' = elSub recT cO cD cPsi s' cPhi in
+        let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
+          Int.LF.Root (Some loc, Int.LF.PVar (Int.LF.Offset p, s''), tS)
+      with Violation msg  -> 
+        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
+         raise (Error (Some loc, CompTypAnn ))
+      end
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (tM', tA, cPhi), s'), spine) -> 
-      let s'' = elSub recT cO cD cPsi s' cPhi in
-      let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
-        Whnf.reduce (tM', s'') tS 
+      begin try 
+        let s'' = elSub recT cO cD cPsi s' cPhi in
+        let tS = elSpine loc recT cO cD cPsi spine (tA, s'')  in
+          Whnf.reduce (tM', s'') tS 
+      with Violation msg  -> 
+        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
+         raise (Error (Some loc, CompTypAnn ))
+      end
 
   | Apx.LF.Root (loc, _ , _ ) ->
       raise (Error (Some loc, CompTypAnn ))
@@ -1334,7 +1396,7 @@ and elSub recT cO cD cPsi s cPhi =
 *)
 
   | (s, cPhi) ->
-      raise (Violation ("elSub: " ^ " substitution " ^ subToString cO cD cPsi s ^ " incompatible w/ `" ^ P.dctxToString cO cD cPhi ^ "'"))
+      raise (Violation ("elSub: substitution " ^ subToString cO cD cPsi s ^ " incompatible w/ `" ^ P.dctxToString cO cD cPhi ^ "'"))
 
 
 and elHead recT cO cD cPsi = function
@@ -1355,10 +1417,15 @@ and elHead recT cO cD cPsi = function
   | Apx.LF.FVar x ->
       Int.LF.FVar x
 
-  | Apx.LF.FMVar (u, s) ->
-      let _ = dprint (fun () -> "elHead FMVar " ) in
+  | Apx.LF.FMVar (u, s) ->      
+      begin try 
+        let _ = dprint (fun () -> "elHead FMVar " ) in
         let (offset, (_tP, cPhi)) = Whnf.mctxMVarPos cD u  in
         Int.LF.MVar (Int.LF.Offset offset, elSub recT cO cD cPsi s cPhi)
+      with Whnf.Fmvar_not_found -> 
+       raise (Error (None, UnboundName u))
+      end 
+
 
   | Apx.LF.FPVar (p, s) ->
         let _ = dprint (fun () -> "elHead FPVar\n") in
@@ -2451,12 +2518,15 @@ let rec fmvApxTerm fMVs cO cD l_cd1 l_delta k m =   match m with
       if List.mem u fMVs then 
           Apx.LF.Root (loc, Apx.LF.FMVar (u, s'), Apx.LF.Nil) 
       else 
-        let _ = dprint (fun () -> "(2) Indexing FMVar in branch: " ^ P.mctxToString cO cD ^ "\n" ^ 
+        begin try 
+          let _ = dprint (fun () -> "(2) Indexing FMVar in branch: " ^ P.mctxToString cO cD ^ "\n" ^ 
                           R.render_name u  ^ "\n") in 
-        let (offset, (_tP, _cPhi)) = Whnf.mctxMVarPos cD u in
-        let _ = dprint (fun () -> "Indexing FMVar in branch: " ^ P.mctxToString cO cD ^ "\n" ^ 
-                          R.render_name u ^ " = " ^ R.render_offset (offset+k) ^ "\n") in 
-          Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset (offset+k), s'), Apx.LF.Nil)     
+          let (offset, (_tP, _cPhi)) = Whnf.mctxMVarPos cD u in
+          let _ = dprint (fun () -> "Indexing FMVar in branch: " ^ P.mctxToString cO cD ^ "\n" ^ 
+                            R.render_name u ^ " = " ^ R.render_offset (offset+k) ^ "\n") in 
+            Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset (offset+k), s'), Apx.LF.Nil)     
+        with Whnf.Fmvar_not_found -> raise (Error (Some loc, UnboundName u))
+        end 
 
   | Apx.LF.Root (loc, h, s) -> 
       let _ = dprint (fun () -> "fmvApxTerm l_cd1 = " ^ R.render_offset l_cd1 ^ "\n") in 
@@ -3269,9 +3339,14 @@ and syn cO cD cG e = match e with
       let (i, tau') = syn cO cD cG e in
         begin match C.cwhnfCTyp tau' with
           | (Int.Comp.TypPiBox ((Int.LF.MDecl(_, tA, cPsi), _ (* Int.Comp.Explicit*) ), tau), t) ->
-              recTerm PiboxRecon cO cD (C.cnormDCtx (cPsi, t)) (tM, LF.id) (C.cnormTyp (tA, t), LF.id);
+              let _ = recTerm PiboxRecon cO cD (C.cnormDCtx (cPsi, t)) (tM, LF.id) (C.cnormTyp (tA, t), LF.id) in
               let t' = Int.LF.MDot(Int.LF.MObj (phat, tM), t) in
-                (Int.Comp.MApp (loc, i, (phat, tM)) , (tau, t'))
+                begin
+                  if phat = (Context.dctxToHat cPsi) then
+                    (Int.Comp.MApp (loc, i, (phat, tM)) , (tau, t'))
+                  else 
+                    raise (Error (loc, CompBoxCtxMismatch (cO, cD, cPsi, (phat, tM))))
+                end
           | _ ->
               raise (Error (loc, CompMismatch (cO, cD, cG, i, PiBox, tau')))
         end
@@ -3487,12 +3562,21 @@ let recSgnDecl d =
 
       let e'      = elExp cO cD cG apx_e (tau', C.m_id) in
 
-      let _       = Printf.printf "\n Elaboration of function  %s\n     type:  %s\n   result:  %s\n" f.string_of_name
-                         (P.compTypToString cO cD tau')
-                         (P.expChkToString cO cD cG e') in
+      let _       = dprint (fun () ->  "\n Elaboration of function " ^ f.string_of_name ^
+                             "\n   type: " ^ P.compTypToString cO cD tau' ^ 
+                              "\n   result:  " ^ 
+                              P.expChkToString cO cD cG e' ^ "\n") in
+
+      let e_r     = check  cO cD cG e' (tau', C.m_id) in 
 
 
-      let e_r     = check  cO cD cG e' (tau', C.m_id) in
+      let _       = dprint (fun () ->  "\n [AFTER reconstruction] Function " ^ f.string_of_name ^
+                             "\n   type: " ^ P.compTypToString cO cD tau' ^ 
+                              "\n   result:  " ^ 
+                              P.expChkToString cO cD cG e_r ^ "\n") in
+
+
+
       let e_r'    = Abstract.abstrExp e_r in
 
       let _       = dprint (fun () ->  "\n Reconstructed function " ^  f.string_of_name ^

@@ -344,6 +344,7 @@ lf_typ_rec:
         | 
             "_" -> 
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
+
         | 
            "("; m = clf_term_app; ")" ->
              m

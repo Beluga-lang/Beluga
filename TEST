@@ -37,7 +37,7 @@ $INTERPRETER  \
     copy/copy-explicit.bel \
     copy/copy-simple.bel \
     copy/copy-simple-explicit.bel \
-    cut-elim.bel
+    cut-elim.bel \
     debruijn1/sources.cfg \
     equal/eq-proof.bel \
     equal/eq-proof-tuple.bel \

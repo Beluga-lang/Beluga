@@ -1434,7 +1434,7 @@ let rec abstrExp e =
   let _cD'     = ctxToMCtx cQ' in  *)
     begin match cQ with 
         I.Empty -> e
-      | _       -> (Printf.printf "Impossible? Leftover free MVars-ref that are not already constrained?\n";
+      | _       -> ((* Printf.printf "Impossible? Leftover free MVars-ref that are not already constrained?\n";*)
                       raise (Error "Abstract: Encountered free MVars in computation-level expression"))
     end
 

@@ -2829,10 +2829,11 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
                      cG e (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (Some loc, u, e')
 
-  | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
-      let e' = elExp cO (Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))))
+  | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
+      let u' = Id.mk_name Id.NoName in
+      let e' = elExp cO (Int.LF.Dec (cD, Int.LF.MDecl (u', C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))))
                      cG e (tau, C.mvar_dot1 theta) in
-        Int.Comp.MLam (None, u, e')
+        Int.Comp.MLam (None,u' , e')
 
   | (Apx.Comp.Pair(loc, e1, e2), (Int.Comp.TypCross (tau1, tau2), theta)) ->
       let e1' = elExp cO cD cG e1 (tau1, theta) in

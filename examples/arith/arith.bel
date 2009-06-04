@@ -21,7 +21,20 @@ rec plus' : nat [ ] -> nat [ ] -> nat [ ] =
             | [ ] s U => 
  	    fn y => 
  	      (case	(plus' ([ ] U) y) of 
-  	         [ ] V  => [ ] s V);
+  	         [ ] V  => [ ] s V)
+;
+
+
+rec mult : nat [ ] -> nat [ ] -> nat [ ] = 
+fn x => fn y =>  
+  case x of 
+     [ ] z  => y 
+  |  [ ] s U  =>  
+     let 
+       [ ] V = mult ([ ] U ) y 
+     in 
+        plus ([ ] V) y
+     ;
 
 
 

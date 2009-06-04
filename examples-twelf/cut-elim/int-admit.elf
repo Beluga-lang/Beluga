@@ -103,7 +103,7 @@ car_andr : ca A D (\h. andr (E1 h) (E2 h)) (andr E1' E2')
 	    <- ca A D E1 E1'
 	    <- ca A D E2 E2'.
 
-car_andl1: ca A D (\h. andl1 (\h1. E1 h h1) H) (andl1 (\h. E1' h1) H)
+car_andl1: ca A D (\h. andl1 (\h1. E1 h h1) H) (andl1 (\h1. E1' h1) H)
 	    <- ({h1:hyp B1} ca A D (\h. E1 h h1) (E1' h1)).
 
 car_andl2: ca A D (\h. andl2 (\h1. E2 h h1) H) (andl2 (\h. E2' h) H)
@@ -115,6 +115,7 @@ car_impr : ca A D (\h. impr (\h1. E2 h h1)) (impr E2')
 car_impl : ca A D (\h. impl (E1 h) (\h1. E2 h h1) H) (impl E1' E2' H)
 	    <- ca A D E1 E1'
 	    <- ({h2:hyp B2} ca A D (\h. E2 h h2) (E2' h2)).
+
 
 car_orr1 : ca A D (\h. orr1 (E1 h)) (orr1 E1')
 	    <- ca A D E1 E1'.

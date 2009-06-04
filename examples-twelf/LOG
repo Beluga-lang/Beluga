@@ -31,7 +31,7 @@ cpsocc          CPS conversion and stack-based machines [in progress]
                 (Brigitte, Part 1 done)
 
 cut-elim        Cut elimination for intuitionistic and classical logic
-                ( Brigitte, part 1 )
+                ( Brigitte, part 1,  )
 
 fol             Simple theorems in first-order logic
 	        (Brigitte, part 1 done)
@@ -62,7 +62,7 @@ lp-horn         Horn fragment of logic program
                 (Brigitte part 1 done)
 
 mini-ml         Mini-ml, type preservation and related theorems
-                (Brigitte part 1 done)
+                (Brigitte part 1 done, part 2 done)
 
 modal           Examples of encoding modal logics in Twelf
                 (Joshua)
@@ -78,7 +78,7 @@ small-step      Brief tutorial on proving progress and preservation in Twelf
                  - lam.elf      
                  - system-f.elf 
                  - system-f-iso.elf
-		 (Brigitte part 1 done)
+		 (Brigitte part 1 done , part 2 done)
 
 
 tapl-ch13       A formalization of Chapter 13 from "Types and Programming Languages"

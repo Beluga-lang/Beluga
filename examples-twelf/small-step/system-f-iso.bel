@@ -142,7 +142,7 @@ fn d => fn ev => case d of
 % because otherwise left-over constraints. -bp 
 
 | {D::(has (E a) (T a)) [a:tp] }
-  [ ] is_# (is_tlam (\a. D a)) : (has (ann (tlam (\a. E a)) T2) (T T2))[ ]   => 
+  [ ] is_# (is_tlam (\a. D a))  : (has (ann (tlam (\a. E a)) T2) (T T2))[ ]   => 
   let [ ] ~>_#2 = ev in 
     [ ] D T2 
 
@@ -153,8 +153,8 @@ fn d => fn ev => case d of
 
 % without type annotation causes stack overflow! 
 % - bp
-| [ ] is_unroll (is_roll D) : 
-  (has (unroll _ (mu (\a. T a)))  (T (mu (\a. T a))))[ ] 
+| [ ] is_unroll (is_roll D)  
+  : (has (unroll _ (mu (\a. T a)))  (T (mu (\a. T a))))[ ] 
 % Full type annotation:
 %  (has (unroll (roll E (mu (\a. T a))) (mu (\a. T a)))  (T (mu (\a. T a))))[ ] 
   => 

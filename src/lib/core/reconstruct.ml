@@ -418,7 +418,7 @@ let rec index_dctx ctx_vars cvars bvars = function
         let offset = CVar.index_of_name ctx_vars psi_name in
           (Apx.LF.CtxVar (Apx.LF.CtxOffset offset) , bvars)
       with Not_found ->
-        raise (Error (Some loc, UnboundName psi_name))
+        raise (Error (Some loc, UnboundCtxName psi_name))
         (* (Apx.LF.CtxVar (Apx.LF.CtxName psi_name) , bvars) *)
       end
   | Ext.LF.DDec (psi, decl) ->
@@ -539,7 +539,7 @@ let rec index_comptyp ctx_vars cvars  = function
         (* if exception Not_found is raised, it means schema_name does not exist *)
         Apx.Comp.TypCtxPi ((ctx_name, schema_cid), index_comptyp ctx_vars' cvars tau)
     with 
-        Not_found -> raise (Error (Some loc, UnboundName schema_name))
+        Not_found -> raise (Error (Some loc, UnboundCtxSchemaName schema_name))
     end
 
 
@@ -587,7 +587,7 @@ and index_exp' ctx_vars cvars vars = function
       with Not_found -> try
         Apx.Comp.Const (Comp.index_of_name x)
       with Not_found ->
-        raise (Error (Some loc, UnboundName x))
+        raise (Error (Some loc, UnboundCompName x))
       end
 
   | Ext.Comp.Apply (loc, i, e) ->
@@ -1146,36 +1146,41 @@ and elTerm' recT cO cD cPsi r sP = match r with
 
   | Apx.LF.Root (loc, Apx.LF.FVar x, spine) as m ->
    (* This case can only happen durin PiRecon *) 
-      begin try
-        let tA = FVar.get x in
-          (* For type reconstruction to succeed, we must have
-           *
-           *  . |- tA <= type
-           *  This will be enforced during abstraction
-           *)
-        let s = mkShift recT cPsi in
-        let tS = elSpine loc recT cO cD cPsi spine (tA, s) in
-          Int.LF.Root (Some loc, Int.LF.FVar x, tS)
-      with Not_found ->
-        begin try
-        let (_l, p_spine) = patSpine spine in
-        let s = mkShift recT cPsi in              
-        let _ = dprint (fun () -> "elSpineSynth (FVar)") in
-        let (tS, tA) =  elSpineSynth recT cD cPsi p_spine s sP 
-        in 
-          (* For type reconstruction to succeed, we must have
-           *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
-               *  This will be enforced during abstraction.
-           *)
-          FVar.add x tA;
-          Int.LF.Root (Some loc, Int.LF.FVar x, tS)
-        with NotPatSpine -> 
-          (let _ = dprint (fun () -> "Not a pattern spine associated with " ^ R.render_name x ) in
-           let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
-             add_fvarCnstr (m, v);
-             Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil))
-        end
-      end
+      begin match recT with 
+        | PiRecon -> 
+            begin try
+              let tA = FVar.get x in
+                (* For type reconstruction to succeed, we must have
+                 *
+                 *  . |- tA <= type
+                 *  This will be enforced during abstraction
+                 *)
+              let s = mkShift recT cPsi in
+              let tS = elSpine loc recT cO cD cPsi spine (tA, s) in
+                Int.LF.Root (Some loc, Int.LF.FVar x, tS)
+            with Not_found ->
+              begin try
+                let (_l, p_spine) = patSpine spine in
+                let s = mkShift recT cPsi in              
+                let _ = dprint (fun () -> "elSpineSynth (FVar)") in
+                let (tS, tA) =  elSpineSynth recT cD cPsi p_spine s sP 
+                in 
+                  (* For type reconstruction to succeed, we must have
+                   *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
+                   *  This will be enforced during abstraction.
+                   *)
+                  FVar.add x tA;
+                  Int.LF.Root (Some loc, Int.LF.FVar x, tS)
+              with NotPatSpine -> 
+                (let _ = dprint (fun () -> "Not a pattern spine associated with " ^ R.render_name x ) in
+                 let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
+                   add_fvarCnstr (m, v);
+                   Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil))
+              end
+            end
+        | PiboxRecon -> raise (Error (Some loc, UnboundName x))
+      end 
+              
 
   (* We only allow free meta-variables of atomic type *)
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) as m ->

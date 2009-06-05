@@ -6,6 +6,9 @@ type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 
 type error =
   | UnboundName      of Id.name
+  | UnboundCtxName   of Id.name
+  | UnboundCtxSchemaName   of Id.name
+  | UnboundCompName  of Id.name
   | UnknownCidTyp    of Id.cid_typ
 
   | CtxVarMismatch   of LF.mctx * LF.ctx_var * LF.schema

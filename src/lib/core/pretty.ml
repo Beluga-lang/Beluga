@@ -1802,7 +1802,16 @@ module Error = struct
     (* Format Based Pretty Printers for Error messages *)
     let fmt_ppr ppf = function
       | UnboundName n ->
-          fprintf ppf "unbound variable or constructor: %s" (R.render_name n)
+          fprintf ppf "unbound data-level variable (ordinary or meta-variable) or constructor: %s" (R.render_name n)
+
+      | UnboundCtxName n ->
+          fprintf ppf "unbound context variable: %s" (R.render_name n)
+
+      | UnboundCtxSchemaName n ->
+          fprintf ppf "unbound context schema: %s" (R.render_name n)
+
+      | UnboundCompName n ->
+          fprintf ppf "unbound computation-level variable: %s" (R.render_name n)
 
       | UnknownCidTyp n ->
           fprintf ppf "unbound type constructor: %s" (R.render_cid_typ n)

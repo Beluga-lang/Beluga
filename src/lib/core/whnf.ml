@@ -811,8 +811,9 @@ and cnorm (tM, t) = match tM with
               
           (* Free Variables *)
           | FVar x
-            -> (dprint( fun () ->  "Encountered a free variable!?\n") ; 
-                Root (loc, FVar x, cnormSpine (tS, t)))
+            -> raise (Error (loc, UnboundName x))
+               (* (dprint( fun () ->  "Encountered a free variable!?\n") ; 
+                Root (loc, FVar x, cnormSpine (tS, t))) *)
 
           (* Projections *)
           | Proj (BVar i, k)

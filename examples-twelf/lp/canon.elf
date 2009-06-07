@@ -8,7 +8,7 @@ atm : pf A -> type.        % Atomic deductions
 %mode can +A +D.
 %mode atm +E.
 
-can_andi : can (and A B) (andi D E)
+can_andi : can (& A B) (andi D E)
 	    <- can A D
 	    <- can B E.
 

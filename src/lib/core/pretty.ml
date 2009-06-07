@@ -156,11 +156,21 @@ module Ext = struct
           fmt_ppr_pragma ppf pragma
 
 
-      | Sgn.Rec (_, f, tau, e) ->
-          fprintf ppf "rec %s : %a =@ %a;@.@?"
+      | Sgn.Rec (_, Comp.RecFun (f, tau, e)::recfuns) ->
+          let rec fmt_ppr_recfuns lvl ppf = function 
+            | [] -> fprintf ppf ";"
+            | Comp.RecFun (f, tau, e)::recfuns -> 
+                fprintf ppf "and %s : %a =@ %a @.@?\n%a @.@?"
+                  (R.render_name f)
+                  (fmt_ppr_cmp_typ lvl) tau
+                  (fmt_ppr_cmp_exp_chk lvl) e
+                  (fmt_ppr_recfuns lvl) recfuns 
+          in 
+            fprintf ppf "rec %s : %a =@ %a @.@?\n%a @.@?"
             (R.render_name f)
             (fmt_ppr_cmp_typ lvl) tau
             (fmt_ppr_cmp_exp_chk lvl) e
+            (fmt_ppr_recfuns lvl) recfuns 
 
       | Sgn.Schema (_, w, tW) ->
           fprintf ppf "schema %s = %a;@.@?"
@@ -380,15 +390,15 @@ module Ext = struct
             | LF.Empty -> ()
 
             | LF.Dec (LF.Empty, LF.TypDecl (x, tA)) ->
-                fprintf ppf "%s : %a"
+                fprintf ppf "., %s : %a"
                   (R.render_name x)
                   (fmt_ppr_lf_typ  0) tA
 
             | LF.Dec (xs, LF.TypDecl (x, tA)) ->
-                  fprintf ppf "%s : %a,@ "
+                  fprintf ppf "%a, %s : %a "
+                    ppr_typ_decl_ctx xs
                     (R.render_name x)
                     (fmt_ppr_lf_typ  0) tA
-                ; ppr_typ_decl_ctx ppf xs
           in
             fprintf ppf "some [%a] block %a"
               ppr_typ_decl_ctx            typDecls
@@ -1229,15 +1239,16 @@ module Int = struct
                 fprintf ppf "" 
 
             | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
-                fprintf ppf "%s : %a"
+                fprintf ppf "., %s : %a"
                   (R.render_name x)
                   (fmt_ppr_lf_typ LF.Empty cD LF.Null 0) tA 
 
             | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
-                  fprintf ppf "%s : %a,@ "
+                  fprintf ppf "%a, %s : %a"
+                    (ppr_typ_decl_dctx cD) cPsi
                     (R.render_name x)
                     (fmt_ppr_lf_typ LF.Empty cD cPsi 0) tA
-                ; ppr_typ_decl_dctx cD ppf cPsi
+
           in
           let cPsi = projectCtxIntoDctx typDecls in 
             fprintf ppf "some [%a] block %a"

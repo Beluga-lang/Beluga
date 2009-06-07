@@ -13,23 +13,23 @@ ca_axiom'r : ca' A D (\n. axiom' n P) (D P).
 ca_and1' :
   ca' A (\p1. D1' p1) (\n1. E1' n1) F
          -> ({n1:neg A}
-                ca' (and A B)
+                ca' (& A B)
                    (\p.
                        andr' (\p1. D1 p p1) (\p1. D2 p p1) p)
                    (\n. E1 n n1) (E1' n1))
          -> ({p1:pos A}
-                ca' (and A B) (\p. D1 p p1)
+                ca' (& A B) (\p. D1 p p1)
                    (\n. andl1' (\n1. E1 n n1) n) (D1' p1))
-         -> ca' (and A B)
+         -> ca' (& A B)
                (\p.
                    andr' (\p1. D1 p p1) (\p1. D2 p p1) p)
                (\n. andl1' (\n1. E1 n n1) n) F.
 
 ca_and2' :
-  ca' (and A B) (\p.andr' (D1 p) (D2 p) p) (\n. andl2' (E2 n) n) F
-     <- ({p2:pos B} ca' (and A B) (\p.D2 p p2) (\n. andl2' (E2 n) n) (D2' p2))
+  ca' (& A B) (\p.andr' (D1 p) (D2 p) p) (\n. andl2' (E2 n) n) F
+     <- ({p2:pos B} ca' (& A B) (\p.D2 p p2) (\n. andl2' (E2 n) n) (D2' p2))
      <- ({n2:neg B}
-	   ca' (and A B) (\p.andr' (D1 p) (D2 p) p)
+	   ca' (& A B) (\p.andr' (D1 p) (D2 p) p)
 	   (\n. E2 n n2) (E2' n2))
      <- ca' B (\p2. D2' p2) (\n2. E2' n2) F.
 

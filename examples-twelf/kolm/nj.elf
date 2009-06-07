@@ -3,9 +3,9 @@
 % Intuitionistic, Natural Deduction
 nj : o -> type.
 
-nj_andi    : nj A -> nj B -> nj (and A B).
-nj_andel   : nj (and A B) -> nj A.
-nj_ander   : nj (and A B) -> nj B.
+nj_andi    : nj A -> nj B -> nj (& A B).
+nj_andel   : nj (& A B) -> nj A.
+nj_ander   : nj (& A B) -> nj B.
 nj_impi    : (nj A -> nj B) -> nj (imp A B).
 nj_impe    : nj (imp A B) -> nj A -> nj B.
 nj_oril    : nj A -> nj (or A B).

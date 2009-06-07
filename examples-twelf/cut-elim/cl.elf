@@ -12,13 +12,13 @@ axiom' : (neg A -> pos A -> bot).
 
 andr'  : (pos A -> bot)
 	  -> (pos B -> bot)
-	  -> (pos (and A B) -> bot).
+	  -> (pos (& A B) -> bot).
 
 andl1' : (neg A -> bot)
-	  -> (neg (and A B) -> bot).
+	  -> (neg (& A B) -> bot).
 
 andl2' : (neg B -> bot)
-	  -> (neg (and A B) -> bot).
+	  -> (neg (& A B) -> bot).
 
 impr'  : (neg A -> pos B -> bot)
 	  -> (pos (imp A B) -> bot).

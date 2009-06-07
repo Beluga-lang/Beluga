@@ -135,6 +135,7 @@ module Ext = struct
 (*           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx)) *)
 (*           * exp_chk *)
 
+   type rec_fun = RecFun of name * typ * exp_chk
   end
 
 
@@ -146,7 +147,7 @@ module Ext = struct
       | Typ    of Loc.t * name * LF.kind
       | Schema of Loc.t * name * LF.schema
       | Pragma of Loc.t * LF.prag
-      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
+      | Rec    of Loc.t * Comp.rec_fun list
        
 
     type sgn = decl list
@@ -397,6 +398,7 @@ module Int = struct
       | BranchSBox of LF.mctx
           * (LF.dctx * LF.sub    * LF.dctx * (LF.msub * LF.mctx))
           * exp_chk
+
 
    type ctyp_decl = 
      | CTypDecl of name * typ

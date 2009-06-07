@@ -177,3 +177,7 @@ let rec getNameCtx cG k = match (cG, k) with
   | (Dec(cG, _ ) , k) -> getNameCtx cG (k-1)
 
 
+
+let rec projectCtxIntoDctx = function
+  | Empty            -> Null
+  | Dec (rest, last) -> DDec (projectCtxIntoDctx rest, last)

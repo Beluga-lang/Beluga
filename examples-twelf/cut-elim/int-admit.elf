@@ -12,15 +12,15 @@ ca_axiom_r : ca A D (\h. axiom h) D.
 
 %% Essential Conversions
 
-ca_and1 : ca (and A1 A2) (andr D1 D2) (\h. andl1 (\h1. E1 h h1) h) F
+ca_and1 : ca (& A1 A2) (andr D1 D2) (\h. andl1 (\h1. E1 h h1) h) F
 	   <- ({h1:hyp A1}
-		 ca (and A1 A2) (andr D1 D2)
+		 ca (& A1 A2) (andr D1 D2)
 		 (\h. E1 h h1) (E1' h1))
 	   <- ca A1 D1 E1' F.
 
-ca_and2 : ca (and A1 A2) (andr D1 D2) (\h. andl2 (\h1. E2 h h1) h) F
+ca_and2 : ca (& A1 A2) (andr D1 D2) (\h. andl2 (\h1. E2 h h1) h) F
 	   <- ({h2:hyp A2}
-		 ca (and A1 A2) (andr D1 D2)
+		 ca (& A1 A2) (andr D1 D2)
 		 (\h. E2 h h2) (E2' h2))
 	   <- ca A2 D2 E2' F.
 

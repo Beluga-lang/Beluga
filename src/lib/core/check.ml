@@ -595,7 +595,6 @@ This case should now be covered by the one below it
   and checkSchema cO cD cPsi (Schema elements as schema) =
     dprint (fun () -> "checkSchema " ^ P.octxToString cO ^ " ... " 
               ^ P.dctxToString cO cD cPsi ^ " against " ^ P.schemaToString schema);
-    print_string " WARNING: Schema checking not fully implemented\n";
     match cPsi with
       | Null -> ()
       | CtxVar phi ->
@@ -609,6 +608,16 @@ This case should now be covered by the one below it
               | TypDecl (_x, tA) ->
                   let _ = checkTypeAgainstSchema cO cD cPsi' tA schema elements in ()
           end
+
+
+  let rec checkSchemaWf (Schema elements ) = 
+    let rec checkElems elements = match elements with
+      | [] -> ()
+      | SchElem (cPsi, trec) :: els ->
+          checkTypRec Empty Empty (projectCtxIntoDctx cPsi) (trec, LF.id) 
+          ; checkElems els
+    in
+      checkElems elements
 
 end (* struct LF *)
 

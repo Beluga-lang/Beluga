@@ -12,13 +12,13 @@ axiom* : (hyp A -> conc* A).
 
 andr*  : conc* A
 	  -> conc* B
-	  -> conc* (and A B).
+	  -> conc* (& A B).
 
 andl1* : (hyp A -> conc* C)
-	  -> (hyp (and A B) -> conc* C).
+	  -> (hyp (& A B) -> conc* C).
 
 andl2* : (hyp B -> conc* C)
-	  -> (hyp (and A B) -> conc* C).
+	  -> (hyp (& A B) -> conc* C).
 
 impr*  : (hyp A -> conc* B)
 	  -> conc* (imp A B).

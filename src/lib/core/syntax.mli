@@ -138,6 +138,8 @@ module Ext : sig
 (*           * exp_chk *)
 
 
+   type rec_fun = RecFun of name * typ * exp_chk
+
   end (* Ext.Comp *)
 
 
@@ -149,7 +151,7 @@ module Ext : sig
       | Typ    of Loc.t * name * LF.kind
       | Schema of Loc.t * name * LF.schema
       | Pragma of Loc.t * LF.prag
-      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
+      | Rec    of Loc.t * Comp.rec_fun list
 
 
     type sgn = decl list

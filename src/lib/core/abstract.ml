@@ -438,6 +438,22 @@ let rec ctxToDctx cQ = match cQ with
       I.DDec (ctxToDctx cQ', I.TypDecl (x, tA))
 
 
+let rec ctxToCtx cQ = match cQ with
+  | I.Empty ->
+      I.Empty
+
+  | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
+      begin match raiseType cPsi tA with
+        | (None, tA') -> 
+            let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in 
+            I.Dec (ctxToCtx cQ', I.TypDecl (x, tA'))
+        | (Some _, _ ) -> raise (Error "ctxToCtx generates LF-ctx with context variable: should be impossible!")
+      end 
+  | I.Dec (cQ', FV (x, Some tA)) ->
+      (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in  *)
+      I.Dec (ctxToCtx cQ', I.TypDecl (x, tA))
+
+
 
 let rec ctxToMCtx cQ  = match cQ with
   | I.Empty ->
@@ -795,6 +811,16 @@ and abstractTypW cQ offset sA = match sA with
       I.PiTyp ((I.TypDecl (x, abstractTyp cQ offset (tA, s)), dep), 
                abstractTyp cQ (offset + 1) (tB, LF.dot1 s))
 
+
+and abstractTypRec cQ offset = function
+  | (I.SigmaLast tA, s) -> I.SigmaLast (abstractTyp cQ offset (tA, s))
+  | (I.SigmaElem(x, tA, typRec), s) ->
+      let tA = abstractTyp cQ offset (tA, s) in
+      let typRec = abstractTypRec cQ offset (typRec, LF.dot1 s) in
+        I.SigmaElem(x, tA, typRec)
+
+
+
 and abstractTerm cQ offset sM = abstractTermW cQ offset (Whnf.whnf sM)
 
 and abstractTermW cQ offset sM = match sM with
@@ -859,26 +885,28 @@ and abstractCtx cQ =  match cQ with
       I.Empty
 
   | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
-      let cQ'   = abstractCtx cQ in
-      let cPsi' = abstractDctx cQ cPsi in 
+      let cQ'   = abstractCtx cQ  in
+      let l     = length cPsi in 
+      let cPsi' = abstractDctx cQ cPsi l in 
       (* let  (_, depth)  = dctxToHat cPsi in   *)
       (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
-      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in 
+      let tA'   = abstractTyp cQ l (tA, LF.id) in 
 (*      let _     = Printf.printf "Abstraction: mvar r of type tA = %s\n in context = %s\n with substitution s = %s\n\n"
         (P.typToString I.Empty I.Empty cPsi (tA, LF.id))
         (P.dctxToString I.Empty I.Empty cPsi) 
         (P.subToString I.Empty I.Empty cPsi s) in *)
-      let s'    = abstractSub cQ (length cPsi) s in
+      let s'    = abstractSub cQ l s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV u')
 
   | I.Dec (cQ, PV (I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
-      let cQ'   = abstractCtx cQ in
-      let cPsi' = abstractDctx cQ cPsi in 
+      let cQ'   = abstractCtx cQ  in
+      let l     = length cPsi in 
+      let cPsi' = abstractDctx cQ cPsi l in 
       (* let  (_, depth)  = dctxToHat cPsi in   *)
       (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
-      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in 
-      let s'    = abstractSub cQ (length cPsi) s in
+      let tA'   = abstractTyp cQ l (tA, LF.id) in 
+      let s'    = abstractSub cQ l s in
       let p'    = I.PVar (I.PInst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', PV p')
 
@@ -889,14 +917,14 @@ and abstractCtx cQ =  match cQ with
 
 
 
-and abstractDctx cQ cPsi = match cPsi with
+and abstractDctx cQ cPsi l = match cPsi with
   | I.Null ->
       I.Null
   | I.CtxVar psi -> I.CtxVar psi
 
   | I.DDec (cPsi, I.TypDecl (x, tA)) ->
-      let cPsi' = abstractDctx cQ cPsi in
-      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in
+      let cPsi' = abstractDctx cQ cPsi (l-1) in
+      let tA'   = abstractTyp cQ (l-1) (tA, LF.id) in
         I.DDec (cPsi', I.TypDecl (x, tA'))
 
   (* other cases impossible in LF layer *)
@@ -1437,6 +1465,33 @@ let rec abstrExp e =
       | _       -> ((* Printf.printf "Impossible? Leftover free MVars-ref that are not already constrained?\n";*)
                       raise (Error "Abstract: Encountered free MVars in computation-level expression"))
     end
+
+(* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)
+let rec appDCtx cPsi1 cPsi2 = match cPsi2 with
+  | I.Null -> cPsi1
+  | I.DDec (cPsi2', dec) ->
+      let cPsi1' = appDCtx cPsi1 cPsi2' in 
+        I.Dec (cPsi1', dec)
+
+let rec abstrSchema (I.Schema elements) = 
+  let rec abstrElems elements = match elements with
+    | [] -> []
+    | Int.LF.SchElem (cPsi, trec) ::els ->         
+        let cPsi0 = Context.projectCtxIntoDctx cPsi in 
+        let cQ = collectDctx I.Empty (Context.dctxToHat I.Null) cPsi0 in 
+        let (_, l) as phat = Context.dctxToHat cPsi0 in 
+        let cQ = collectTypRec cQ phat (trec, LF.id) in 
+        let cQ' = abstractCtx cQ in 
+
+        let cPsi' = abstractDctx cQ' cPsi0  l in 
+        let trec' = abstractTypRec cQ' l (trec, LF.id) in 
+        let cPsi1 = ctxToCtx cQ' in 
+        let cPsi1' = appDCtx cPsi1 cPsi' in 
+
+        let els'  = abstrElems els in 
+          Int.LF.SchElem (cPsi1', trec') :: els'         
+  in 
+    I.Schema (abstrElems elements)
 
 
 (* REDUNDANT Tue Apr 21 09:52:37 2009 -bp 

@@ -132,13 +132,14 @@ let main () =
       in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
-            printf "## Pretty Printing External Syntax: %s ##\n" file_name;
-            print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;
+            (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
+            print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
             printf "\n## Type Reconstruction: %s ##\n" file_name;
 
 (*            let int_decls = List.map Reconstruct.recSgnDecl sgn in *)
-            let int_decls = Reconstruct.recSgnDecls sgn in
-              print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls;
+            let _int_decls = Reconstruct.recSgnDecls sgn in
+              (* print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls; *)
+              printf "\n## Type Reconstruction done: %s  ##\n" file_name;
               return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->

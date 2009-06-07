@@ -3,9 +3,9 @@
 % Classical, Natural Deduction
 nk : o -> type. 
 
-nk_andi    : nk A -> nk B -> nk (and A B).
-nk_andel   : nk (and A B) -> nk A.
-nk_ander   : nk (and A B) -> nk B.
+nk_andi    : nk A -> nk B -> nk (& A B).
+nk_andel   : nk (& A B) -> nk A.
+nk_ander   : nk (& A B) -> nk B.
 nk_impi    : (nk A -> nk B) -> nk (imp A B).
 nk_impe    : nk (imp A B) -> nk A -> nk B.
 nk_oril    : nk A -> nk (or A B).

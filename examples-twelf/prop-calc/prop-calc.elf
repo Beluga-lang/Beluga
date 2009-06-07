@@ -9,7 +9,7 @@ o : type.
 
 % Syntax: implication, plus a few constants.
 imp : o -> o -> o.  %infix right 10 =>.
-and  : o -> o -> o.  %infix right 11 &.
+&  : o -> o -> o.  %infix right 11 &.
 true : o.
 
 % Provability.
@@ -20,9 +20,9 @@ true : o.
 k : |- (imp A (imp B A)).
 s : |- (imp (imp A (imp B C))  (imp (imp A B) (imp A C))).
 one : |- true.
-pair : |- (imp A (imp B (and A B))).
-left : |- (imp (and A B)  A).
-right : |- (imp (and A B) B).
+pair : |- (imp A (imp B (& A B))).
+left : |- (imp (& A B)  A).
+right : |- (imp (& A B) B).
 
 % Inference Rule.
 mp : |- (imp A B) -> |- A -> |- B. 
@@ -33,9 +33,9 @@ mp : |- (imp A B) -> |- A -> |- B.
 %name ! D.
 
 trueI : ! true.
-andI  : ! A -> ! B -> ! (and A B).
-andEL : ! (and A B) -> ! A.
-andER : ! (and A B) -> ! B.
+andI  : ! A -> ! B -> ! (& A B).
+andEL : ! (& A B) -> ! A.
+andER : ! (& A B) -> ! B.
 impliesI : (! A -> ! B) -> ! (imp A B).
 impliesE : ! (imp A B) -> ! A -> ! B.
 
@@ -44,9 +44,9 @@ impliesE : ! (imp A B) -> ! A -> ! B.
 !v : o -> type.
 
 trueI^ : !^ true.
-andI^ : !^ A -> !^ B -> !^ (and A B).
-andEvL : !v (and A B) -> !v A.
-andEvR : !v (and A B) -> !v B.
+andI^ : !^ A -> !^ B -> !^ (& A B).
+andEvL : !v (& A B) -> !v A.
+andEvR : !v (& A B) -> !v B.
 impI^ : (!v A -> !^ B) -> !^ (imp A B).
 impEv : !v (imp A B) -> !^ A -> !v B.
 close : !v A -> !^ A.

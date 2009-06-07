@@ -35,7 +35,7 @@ toatm : pf A -> pf A -> type.        % Conversion to atomic form
 %mode tocan +A +D -D'.
 %mode toatm +E -E'.
 
-tc_and : tocan (and A B) D (andi D1' D2')
+tc_and : tocan (& A B) D (andi D1' D2')
 	  <- tocan A (andel D) D1'
 	  <- tocan B (ander D) D2'.
 

@@ -69,9 +69,12 @@ GLOBAL: sgn_eoi;
         "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
           Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
       |
-        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
-          Sgn.Rec (_loc, Id.mk_name (Id.SomeString f), tau, e)
+(*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
+          Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
+*)
 
+        "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
+          Sgn.Rec (_loc, f)
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
             Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
@@ -84,6 +87,7 @@ GLOBAL: sgn_eoi;
       ]
     ]
   ;
+
 
   lf_kind_or_typ:
     [
@@ -205,9 +209,9 @@ GLOBAL: sgn_eoi;
   lf_schema_elem:
     [
       [
-        some = lf_schema_some; arec = lf_typ_rec ->
+        some_arg = lf_schema_some; arec = lf_typ_rec ->
           LF.SchElem (_loc,
-                      List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some,
+                      List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg,
                       arec)
       ]
     ]
@@ -264,7 +268,6 @@ lf_typ_rec:
       ]
     ]
   ;
-
 
 
 (* ************************************************************************************** *)
@@ -561,6 +564,12 @@ lf_typ_rec:
     ]
   ;
 
+
+ cmp_rec:
+   [[
+     f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk -> Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)
+    ]]
+;
 
   cmp_exp_chk:
     [ "full"

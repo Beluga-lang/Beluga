@@ -5,6 +5,32 @@ bool: tp.
 exp : tp -> type.
 z   : exp nat.
 
+exp': type.
+z': exp'.
+
+oft: exp' -> tp -> type.
+
+of_z: oft z' nat.
+
+has: exp T -> tp -> type.
+
+has_z: has z nat.
+
+eval: exp T -> exp T -> type.
+
+ev_z: eval z z.
+
+schema evCtx2 = some [] eval E E;
+
+schema evTpCtx2 = some [] {x:exp T}has x T -> has z T;
+
+schema evTpCtx3 = some [s:tp, t:tp, e:exp s -> exp s] {x:exp s}has x t -> has (e x) t;
+
+schema evTpCtx4 = {x:exp'}oft x T -> oft F S;
+schema evTpCtx5 = {x:exp'}oft x T -> oft (E x) S;
+
+schema evCtx = some [ t:tp, e:exp t] eval e e;
+
 typist : {TT:tp} exp nat.
 
 tt  : exp bool.

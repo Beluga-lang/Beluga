@@ -12,13 +12,13 @@ axiom^ : (neg A -> pos A -> @).
 
 andr^  : (pos A -> @)
 	  -> (pos B -> @)
-	  -> (pos (and A B) -> @).
+	  -> (pos (& A B) -> @).
 
 andl1^ : (neg A -> @)
-	  -> (neg (and A B) -> @).
+	  -> (neg (& A B) -> @).
 
 andl2^ : (neg B -> @)
-	  -> (neg (and A B) -> @).
+	  -> (neg (& A B) -> @).
 
 impr^  : (neg A -> pos B -> @)
 	  -> (pos (imp A B) -> @).

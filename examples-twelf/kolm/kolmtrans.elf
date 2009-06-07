@@ -15,7 +15,7 @@ n = [p:o] (not not p).
 kolm : o -> o -> type.
 %mode kolm +A -A*.
 
-kolm_and    : kolm (and A B) (not (not (and A* B*)))
+kolm_and    : kolm (& A B) (not (not (& A* B*)))
     <- kolm A A*
     <- kolm B B*.
 
@@ -53,7 +53,7 @@ kolm_exists : kolm (exists A) (not (not (exists A*)))
 % induction on the derivation of the judgement that A is propositional.)
 prop : o -> type.
 
-and_prop   : prop A -> prop B -> prop (and A B).
+and_prop   : prop A -> prop B -> prop (& A B).
 imp_prop   : prop A -> prop B -> prop (imp A B).
 or_prop    : prop A -> prop B -> prop (or A B).
 not_prop   : prop A -> prop (not A).
@@ -69,7 +69,7 @@ false_prop : prop false.
 existskolm : {A:o} {A*:o} kolm A A* -> type.
 %mode existskolm +A -A* -K.
 
-existskolm_and   : existskolm (and A B) (not (not (and A* B*)))
+existskolm_and   : existskolm (& A B) (not (not (& A* B*)))
                               (kolm_and KB KA)
      <- existskolm A A* KA
      <- existskolm B B* KB.

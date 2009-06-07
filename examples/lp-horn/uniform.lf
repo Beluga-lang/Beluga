@@ -10,7 +10,7 @@ focus  : o -> p -> type.  % immediate entailment
 %name assume H.
 %name focus I.
 
-s_and  : solve (and A1 A2)
+s_and  : solve (& A1 A2)
 	  <- solve A1
 	  <- solve A2.
 
@@ -30,10 +30,10 @@ s_atom : solve (atom P)
 	  <- assume A
 	  <- focus A P.
 
-i_andl : focus (and A1 A2) P
+i_andl : focus (& A1 A2) P
 	   <- focus A1 P.
 
-i_andr : focus (and A1  A2) P
+i_andr : focus (& A1  A2) P
 	   <- focus A2 P.
 
 i_imp  : focus (imp A2 A1)  P

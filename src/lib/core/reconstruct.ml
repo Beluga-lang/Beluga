@@ -2901,10 +2901,13 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
           | _ -> raise (Error (Some loc, CompMismatch (cO, cD, cG, i', Box, tau_theta'))) 
               (* TODO postpone to reconstruction *)
         end
+  (* Error handling cases *)
+  | (Apx.Comp.Fun (loc, _x, _e),  tau_theta ) -> raise (Error (Some loc, CompFunMismatch (cO, cD, cG, tau_theta)))
+  | (Apx.Comp.CtxFun (loc, _psi_name, _e), tau_theta) -> raise (Error (Some loc, CompCtxFunMismatch (cO, cD, cG, tau_theta)))
+  | (Apx.Comp.MLam (loc, _u, _e), tau_theta) -> raise (Error (Some loc, CompMLamMismatch (cO, cD, cG, tau_theta)))
+  | (Apx.Comp.Pair(loc, _ , _ ), tau_theta) ->  raise (Error (Some loc, CompPairMismatch (cO, cD, cG, tau_theta)))
+  | (Apx.Comp.Box (loc, _, _ ) , tau_theta) ->  raise (Error (Some loc, CompBoxMismatch (cO, cD, cG, tau_theta)))
 
-  | _ ->
-      (Printf.printf "elExp: ill-typed\n";
-      raise NotImplemented (* TODO postpone error to reconstruction phase *))
 
 
 and elExp' cO cD cG i = match i with
@@ -3251,7 +3254,6 @@ and checkW cO cD cG e ttau = match (e , ttau) with
               let cG2 = Int.LF.Dec(cG1, Int.Comp.CTypDecl (y, Int.Comp.TypClo(tau2, t))) in
               let e'  = check cO cD cG2 e (tau, theta) in
                 Int.Comp.LetPair (loc, i', (x, y, e'))
-
           | _ -> raise (Error (loc, CompMismatch (cO, cD, cG, i', Cross, tau_theta')))
         end
 

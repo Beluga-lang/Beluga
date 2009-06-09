@@ -31,7 +31,7 @@ cpsocc          CPS conversion and stack-based machines [in progress]
                 (Brigitte, Part 1 done)
 
 cut-elim        Cut elimination for intuitionistic and classical logic
-                ( Brigitte, part 1,  )
+                ( Brigitte, part 1,  intuitionistic part 2 done )
 
 fol             Simple theorems in first-order logic
 	        (Brigitte, part 1 done)

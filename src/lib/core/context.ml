@@ -181,3 +181,11 @@ let rec getNameCtx cG k = match (cG, k) with
 let rec projectCtxIntoDctx = function
   | Empty            -> Null
   | Dec (rest, last) -> DDec (projectCtxIntoDctx rest, last)
+
+
+
+let rec lookup cG k = match (cG, k) with 
+  | (Dec (_cG', Comp.CTypDecl (_,  tau)), 1) ->  Some tau
+  | (Dec (_cG', _ ), 1) ->  None
+  | (Dec ( cG', _ ), k) ->
+      lookup cG' (k - 1)

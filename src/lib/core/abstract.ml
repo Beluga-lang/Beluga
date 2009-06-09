@@ -130,7 +130,7 @@ let rec printCollection cQ = match cQ with
       (printCollection cQ ; 
        Printf.printf " %s : " 
          (P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)) ;
-       Printf.printf " %s . %s \n" 
+         Printf.printf " %s . %s \n"
          (ctxVarToString ctx_var)
          (P.typToString cO cD I.Null (tA , LF.id))
       )
@@ -152,7 +152,7 @@ let rec printCollection cQ = match cQ with
       (printCollection cQ ; 
        Printf.printf " %s : " 
          (R.render_name u) ;
-       Printf.printf " %s [ %s ]\n" 
+       Printf.printf " %s [ %s ]\n"
          (P.typToString cO cD cPhi (tP, LF.id))
          (P.dctxToString cO cD cPhi)
       )

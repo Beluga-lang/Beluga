@@ -368,7 +368,9 @@ This case should now be covered by the one below it
    *
    * succeeds iff cD ; cPsi |- [s]tA <= type
    *)
-  and checkTyp' cO cD cPsi (tA, s) = match tA with
+  and checkTyp' cO cD cPsi (tA, s) = 
+
+    match tA with
     | Atom (loc, a, tS) ->
         (* FIXME -bp *)
         let tK = (Typ.get a).Typ.kind in
@@ -699,26 +701,31 @@ module Comp = struct
       | I.MShift 0     -> t1
       | I.MDot (ft, t) -> I.MDot (ft, ext t)
       (* other cases should be impossible *)
-    in ext t2
+    in ext t2;;
 
-  let rec checkTyp cO cD tau = match tau with
+
+  let rec checkTyp cO cD tau =
+
+    match tau with
+        
     | TypBox (_ , tA, cPsi) ->
         LF.checkDCtx cO cD cPsi;
         LF.checkTyp  cO cD cPsi (tA, S.LF.id)
-
+          
     | TypArr (tau1, tau2) ->
         checkTyp cO cD tau1;
         checkTyp cO cD tau2
-
+          
     | TypCross (tau1, tau2) ->
         checkTyp cO cD tau1;
         checkTyp cO cD tau2
-
+          
     | TypCtxPi ((psi_name, schema_cid), tau) ->
         checkTyp (I.Dec (cO, I.CDecl (psi_name, schema_cid))) cD tau
-
+          
     | TypPiBox ((cdecl, _), tau) ->
-        checkTyp cO (I.Dec (cD, cdecl)) tau
+        checkTyp cO (I.Dec (cD, cdecl)) tau;; 
+  
 
 
   (* check cO cD cG e (tau, theta) = ()
@@ -733,6 +740,7 @@ module Comp = struct
    *
    * otherwise exception Error is raised
    *)
+  
   let rec checkW cO cD cG e ttau = match (e , ttau) with
     | (Rec (_, f, e), (tau, t)) ->
         check cO cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t)))) e ttau
@@ -790,7 +798,7 @@ module Comp = struct
 
   and check cO cD cG e (tau, t) =
     dprint (fun () -> "check cO = " ^ P.octxToString cO);
-    checkW cO cD cG e (C.cwhnfCTyp (tau, t))
+    checkW cO cD cG e (C.cwhnfCTyp (tau, t));
 
   and syn cO cD cG e = match e with
     | Var x   -> (lookup cG x, C.m_id)
@@ -894,9 +902,11 @@ module Comp = struct
             end
 *) 
           in
-            check cO cD1' cG' e1 (tau, t'')
+            check cO cD1' cG' e1 (tau, t'');
   
 end
+  
+
 
 module Sgn = struct
 

@@ -12,9 +12,9 @@ vs_s      : vs (ev_s D1) (val_s P1)
 	     <- vs D1 P1.
 
 
-vs_case_z : vs (ev_case_z D2 D1) P2
+vs_match_z : vs (ev_match_z D2 D1) P2
 	     <- vs D2 P2.
-vs_case_s : vs (ev_case_s D3 D1) P3
+vs_match_s : vs (ev_match_s D3 D1) P3
 	     <- vs D3 P3.
 
 % Pairs

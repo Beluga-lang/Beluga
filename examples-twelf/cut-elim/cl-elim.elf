@@ -1,7 +1,7 @@
 %%% Cut Elimination in Classical Sequent Calculus
 %%% Author: Frank Pfenning
 
-ce' : @ -> # -> type.
+ce' : @ -> bot -> type.
 %mode ce' +E -F.
 
 ce_cut'  : ce' (cut^ D E) F
@@ -12,37 +12,37 @@ ce_cut'  : ce' (cut^ D E) F
 ce_axiom': ce' (axiom^ N P) (axiom' N P).
 
 ce_andr' : ce' (andr^ D1 D2 P) (andr' D1' D2' P)
-	    <- ({p1} ce' (D1 p1) (D1' p1))
-	    <- ({p2} ce' (D2 p2) (D2' p2)).
+	    <- ({p1 : pos _ } ce' (D1 p1) (D1' p1))
+	    <- ({p2 : pos _ } ce' (D2 p2) (D2' p2)).
 
 ce_andl1': ce' (andl1^ N1 N) (andl1' N1' N)
-	    <- ({n1} ce' (N1 n1) (N1' n1)).
+	    <- ({n1: neg _ } ce' (N1 n1) (N1' n1)).
 
 ce_andl2': ce' (andl2^ N2 N) (andl2' N2' N)
-	    <- ({n2} ce' (N2 n2) (N2' n2)).
+	    <- ({n2: neg _ } ce' (N2 n2) (N2' n2)).
 
 ce_impr' : ce' (impr^ D1 P) (impr' D1' P)
-	    <- ({n1}{p2} ce' (D1 n1 p2) (D1' n1 p2)).
+	    <- ({n1: neg _ }{p2: pos _ } ce' (D1 n1 p2) (D1' n1 p2)).
 
 ce_impl' : ce' (impl^ D1 D2 N) (impl' D1' D2' N)
-	    <- ({p1} ce' (D1 p1) (D1' p1))
-	    <- ({n2} ce' (D2 n2) (D2' n2)).
+	    <- ({p1:pos _ } ce' (D1 p1) (D1' p1))
+	    <- ({n2 : neg _ } ce' (D2 n2) (D2' n2)).
 
 ce_orr1' : ce' (orr1^ D1 P) (orr1' D1' P)
-	    <- ({p1} ce' (D1 p1) (D1' p1)).
+	    <- ({p1:pos _ } ce' (D1 p1) (D1' p1)).
 
 ce_orr2' : ce' (orr2^ D2 P) (orr2' D2' P)
-	    <- ({p2} ce' (D2 p2) (D2' p2)).
+	    <- ({p2 : pos _ } ce' (D2 p2) (D2' p2)).
 
 ce_orl'  : ce' (orl^ D1 D2 N) (orl' D1' D2' N)
-	    <- ({n1} ce' (D1 n1) (D1' n1))
-	    <- ({n2} ce' (D2 n2) (D2' n2)).
+	    <- ({n1 : neg _ } ce' (D1 n1) (D1' n1))
+	    <- ({n2 : neg _ } ce' (D2 n2) (D2' n2)).
 
 ce_notr' : ce' (notr^ D1 P) (notr' D1' P)
-	    <- ({n1} ce' (D1 n1) (D1' n1)).
+	    <- ({n1 : neg _ } ce' (D1 n1) (D1' n1)).
 
 ce_norl' : ce' (notl^ D1 N) (notl' D1' N)
-	    <- ({p1} ce' (D1 p1) (D1' p1)).
+	    <- ({p1:pos _ } ce' (D1 p1) (D1' p1)).
 
 ce_truer': ce' (truer^ P) (truer' P).
 
@@ -52,10 +52,10 @@ ce_forallr': ce' (forallr^ D1 P) (forallr' D1' P)
 	      <- ({a:i} {p1:pos (A1 a)} ce' (D1 a p1) (D1' a p1)).
 
 ce_foralll': ce' (foralll^ T D1 N) (foralll' T D1' N)
-	      <- ({n1} ce' (D1 n1) (D1' n1)).
+	      <- ({n1 : neg _ } ce' (D1 n1) (D1' n1)).
 
 ce_existsr': ce' (existsr^ T D1 P) (existsr' T D1' P)
-	      <- ({p1} ce' (D1 p1) (D1' p1)).
+	      <- ({p1:pos _ } ce' (D1 p1) (D1' p1)).
 
 ce_existsl': ce' (existsl^ D1 N) (existsl' D1' N)
 	      <- ({a:i} {n1:neg (A1 a)} ce' (D1 a n1) (D1' a n1)).

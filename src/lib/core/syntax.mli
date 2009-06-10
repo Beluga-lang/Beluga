@@ -69,7 +69,7 @@ module Ext : sig
 
     and dctx =
       | Null
-      | CtxVar   of name
+      | CtxVar   of Loc.t * name
       | DDec     of dctx * typ_decl
 
     and tuple =
@@ -138,6 +138,8 @@ module Ext : sig
 (*           * exp_chk *)
 
 
+   type rec_fun = RecFun of name * typ * exp_chk
+
   end (* Ext.Comp *)
 
 
@@ -149,7 +151,7 @@ module Ext : sig
       | Typ    of Loc.t * name * LF.kind
       | Schema of Loc.t * name * LF.schema
       | Pragma of Loc.t * LF.prag
-      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
+      | Rec    of Loc.t * Comp.rec_fun list
 
 
     type sgn = decl list
@@ -221,6 +223,7 @@ module Int : sig
 
     and front =
       | Head of head
+      | Block of head * int 
       | Obj  of normal
       | Undef
 
@@ -423,7 +426,7 @@ module Apx : sig
       | Const of cid_term
       | MVar  of cvar * sub
       | Proj  of head * int
-      | Hole 
+      | Hole  
       | PVar  of cvar * sub
       | FVar  of name
       | FMVar of name * sub    

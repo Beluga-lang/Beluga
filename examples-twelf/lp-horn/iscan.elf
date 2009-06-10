@@ -43,4 +43,3 @@ isa_ander : isatm (ta_ander TA1) (atm_ander AT1)
 isa_foralle : isatm (ta_foralle TA1) (atm_foralle AT1)
 	       <- isatm TA1 AT1.
 
-%worlds () (iscan _ _) (isatm _ _).

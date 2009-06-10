@@ -44,89 +44,91 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 %
 %   If G, u:hil A |- hil B then G |- hil (A imp B).
 %
-% NOTE: WE OMIT IMPLICIT TYPE ARGUMENTS a AND b IN THE SUBSEQUENT
-% PROGRAM FOR BETTER READABILITY 
 
-% schema w = some [ ] block i + some [ a:o ] block hil a;
+schema w =  i + some [ a:o ] hil a;
 
-% rec ded: {g:(w)*} {a1::o[g]} {b::o[g]}
-%    (hil b[id(g)])[g, u:hil a1[id(g)]] -> (hil (a1[id(g)] imp b[id(g)]))[g] = 
-% FN g => mlam a => mlam b => fn H =>  
-% case H of 
-%   box(g, u. p[id(g)]) =>  box(g. mp k p[id(g)])  % SPECIAL!
-% | box(g, u. u)  => box(g. (mp (mp s k) k)
-% | box(g, u. k)  => box(g. mp k k)
-% | box(g, u. n1) => box(g. mp k n1)
-% | box(g, u. n2) => box(g. mp k n2)
-% | box(g, u. f1 T[id(g)]) => box(g.  mp k (f1 T[id(g)]))
-% | box(g, u. f2) => box(g. mp k f2)
-% | box(g, u. (mp H1[id(g),u] H2[id(g),u])) => 
-%   let
-%       box(g.H2'[id(g)]) = ded [g] box(g,u. H2[id(g), u])
-%       box(g.H1'[id(g)]) = ded [g] box(g,u. H1[id(g), u])
-%   in
-%       box(g. (mp (mp s H1'[id(g)) H2'[id(g)])
-%   end
-% | box(g, u. ug (\x.A[id(g), u,x]) \x.H[id(g),x,u]) => 
-%   let
-%       box(g,x. H'[id(g),x]) = ded [g, x:i]  <g,x.A[id(g),x]> box(g, x,u. H[id(g), x, u])
-%   in
-%       box(g. mp f2 (ug  \x.H'[id(g),x]))
-%   end;
+ rec ded: {g:(w)*} 
+    (hil (B ..))[g, u:hil (A ..)] -> (hil (imp (A ..) (B ..)))[g] = 
+ FN g => fn h =>  
+ case h of 
+   [g, u: hil _ ] #p .. =>  [g] mp k #p ..  % SPECIAL!
+
+% Can only be done by giving type annotation to k or s in
+% the output; this is also done in the Twelf implementation
+% 
+% ded_id : ded ([u:hil A] u) (mp (mp s k) (k : hil (A imp (A imp A)))).
+% | [g, u: hil _ ] u     => [g] (mp (mp s k) k)
+ | [g, u: hil _ ] k  => [g] mp k k
+ | [g, u: hil _ ] n1 => [g] mp k n1
+ | [g, u: hil _ ] n2 => [g] mp k n2
+ | [g, u: hil _ ] f1 (T ..) => [g]  mp k (f1 (T ..))
+ | [g, u: hil _ ] f2 => [g] mp k f2
+
+ | [g, u: hil (A ..)] ug (\x. (H .. x u)) => 
+  let      
+    [g,x:i] (H' .. x) = 
+      ded [g, x:i]  ([g, x, u]  (H .. x u))
+  in
+     [g] mp f2 (ug  \x. (H' .. x))
+
+| {H1 :: (hil (imp (B1 ..) (B2 ..)))[g, u : hil (A ..)]}
+  {H2 :: (hil (B1 ..))[g, u : hil (A ..)]}
+  [g, u: hil (A ..) ] (mp (H1 .. u) (H2 .. u)) => 
+  let [g] H2' .. = ded [g] ([g,u] H2 .. u) in
+  let [g] H1' .. = ded [g] ([g,u] H1 .. u) in
+       [g] mp (mp s (H1' ..)) (H2' ..)
+
+;
 
 % % Theorem: If G |- nd A  where G = nd B1 .... nd Bn 
 % %          then G* |- hil A   where G' = hil B1 ... hil Bn
 
-% schema l = i + (some {A:o} block {u:nd A} {h:hil A}) + o; % where l < w 
+% schema l = i + o + some [a:o] block u:nd A . hil A ; % where l < w 
+% DOES NOT RAISE AN ERROR!!! -- THERE IS NO CHECK THAT A GIVEN SCHEMA
+% IS WELL-FORMED.
 
-% rec ndhil : {g:(l)*}{a::o[g]} (nd a[id(g)])[g] -> (hil a[id(g)])[g] =
-% FN g => mlam a => fn D => 
-% case D of 
-%   box(g. fst p[id(g)]) => box(g. snd p[id(g)])
-% | box(g. impi A[id(g)]  B[id(g)]  \u. D[id(g),u]) => 
-%   let 
-%       box(g,u.H[id(g),u]) = ndhil [g, u:Sigma u:nd A[id(g)].hil A[id(g)]] 
-%                                 < . B[id(g)]> box(g,u. D[id(g), fst u])
-%   in
-%     % NOTE HERE WE NEED THE FACT THAT l < w !!!
-%       ded [g] box(g,u.H[id(g),u]
-%   end
-% | box(g. impe A[id(g)] B[id(g)] D1[id(g)] D2[id(g)]) => 
-%   let
-%       box(g.H1[id(g)]) = ndhil [g] <g.A[id(g)]> <g.B[id(g)] box(g. D1[id(g)]		
-%       box(g.H2[id(g)]) = ndhil [g] <g.B[id(g)] box(g. D2[id(g)]		
-%   in 
-%       box(g. mp A[id(g)] B[id(g)] H1[id(g)] H2[id(g)])
-%   end
-% | box(g. noti \p.\u.D[id(g),p,u]) => 
-%   let
-%       box(g,w,p. H[id(g),w,p]) = ndhil [g, w:(nd A[id(g)] * hil A[id(g)],  p:o]
-%                            <g,w p.p> box(g,w,p. D[id(g),p, fst w])
-%       % NOTE HERE WE NEED THE FACT THAT l < w !!!
-%       box(g. H1'[id(g)]) = ded [g] <g. not A[id(g)> 
-%                              box(g,w. H[id(g),w, not A[id(g)]])
-%       % NOTE HERE WE NEED THE FACT THAT l < w !!!
-%       box(g. H1''[id(g)]) = ded [g] <g. A[id(g)]>
-%                              box(g,w. H[id(g),w, A[id(g)]])
-%   in 
-%       box(g. mp (mp n1 H1'[id(g)]) H1''[id(g)])
-%   end
-% | box(g. (note A[id(g)] D1[id(g)] C[id(g)] D2[id(g)]) => 
-%   let
-%       box(g. H1[id(g)]) = ndhil [g] <g.A[id(g)]> box(g.D1[id(g)]
-%       box(g. H2[id(g)]) = ndhil [g] <g.A[id(g)]> box(g.D2[id(g)]
-%   in
-%       box(g. mp (mp n2 H1[id(g)]) H2[id(g)])
-%   end
-% | box(g. alle (\x.A[id(t),x]) D1[id(g)] T[.]) => 
-%   let
-%       box(g.H1[id(g)]) =  ndhil [g] <g.A[id(g),T[.]]> D1[id(g)]
-%   in
-%       box(g .  mp (f1 T[.]) H1[id(g)])
-%   end
-% | box(g. alli \x. D[id(g), x]) => 
-%   let
-%       box(g,x.H[id(g),x]) =  ndhil [g, x:i] box(g, x. D[id(g),x])
-%   in
-%       box(g. ug \x.H[id(g),x])
-%   end;
+schema l = i + o + some [a:o] block u:nd a . hil a ; % where l < w 
+
+
+
+ rec ndhil : {g:(l)*} (nd (A ..))[g] -> (hil (A .. ))[g] =
+ FN g => fn d => 
+ case d of 
+   [g] (#p.1 ..) => [g] (#p.2 ..)
+%{
+ | [g] impi \u. D .. u => 
+   let [g,u: block x:nd (A ..). hil (A ..)] H .. u = 
+     ndhil [g, u:block x:nd (A ..).hil (A ..) ] ([g,u] D .. u.1)
+   in
+     % NOTE HERE WE NEED THE FACT THAT l < w !!!
+       ded [g] ([g,u] H .. u)
+}%
+
+ | [g] impe (D1 ..) (D2 ..) => 
+   let [g] H1 .. = ndhil [g] ([g] D1 ..) in		
+   let [g] H2 .. = ndhil [g] ([g] D2 ..) in 
+       [g] mp (H1 ..) (H2 ..)
+
+%{ | [g] noti \p.\u.D .. p u => 
+   let [g,p:o,w:nd (A ..)]  H .. w p = 
+     ndhil [g, p:o, w : block n:nd (A ..) . hil (A ..)]   ([g,p, w] D .. p w.1) in 
+       % NOTE HERE WE NEED THE FACT THAT l < w !!!
+   let [g] H1' .. = ded [g]  ([g,w] H .. w (not (A ..))) in 
+       % NOTE HERE WE NEED THE FACT THAT l < w !!!
+   let [g] H1'' .. = ded [g] ([g,w] H .. w (A ..)) in
+     [g] mp (mp n1 (H1' ..)) (H1'' ..)
+}%
+ | [g] note (D1 ..) (C ..) (D2 ..) => 
+   let [g] H1 ..   = ndhil [g]  ([g]D1 ..) in
+   let [g] H2 ..   = ndhil [g]  ([g]D2 ..) in
+     [g] mp (mp n2 (H1 ..)) (H2 ..)
+
+ | [g] alle  (D1 ..) T => 
+   let [g]H1 .. =  ndhil [g] ([g] D1 ..) in
+      [g] mp (f1 T) (H1 ..)
+
+ | [g] alli \x. D .. x => 
+   let [g,x:i] H .. x =  ndhil [g, x:i] ([g, x] D .. x) in 
+     [g] ug \x. (H .. x)
+
+;

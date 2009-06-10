@@ -6,8 +6,10 @@ alloc-sem       Simply Typed Lambda-Calculus with a small-step, allocation seman
 arith           Associativity and commutativity of unary addition (done)
 
 ccc             Cartesian-closed categories [incomplete]
+                (Renaud, Brigitte, Part 1 done)
 
 church-rosser   The Church-Rosser theorem for untyped lambda-calculus 
+		(Brigitte, part 1 done)
                 (Giulia)
 
 compile         Various compilers starting from Mini-ML
@@ -26,46 +28,72 @@ compile         Various compilers starting from Mini-ML
                                      Part 2: Bisimulation proof both directions done)
 
 cpsocc          CPS conversion and stack-based machines [in progress]
+                (Brigitte, Part 1 done)
 
 cut-elim        Cut elimination for intuitionistic and classical logic
-                (Darin -- some of it done in 
-                 examples/notworking/cut-elim.elf by Brigitte)
+                ( Brigitte, part 1,  intuitionistic part 2 done )
 
 fol             Simple theorems in first-order logic
+	        (Brigitte, part 1 done, part 2 done)
+
 
 guide           Examples from Users' Guide
+                (Brigitte, part 1 done)
+
 
 handbook        Examples from article in Handbook of Automated Reasoning
-                (Giulia)
+                (Brigitte, part 1 done)
 
 incll           Meta-interpreter for int. non-commutative linear logic
 
 kolm            Kolmogorov translation from classical to intuitionistic logic
-                (Giulia)
+                (Brigitte, part 1 done)
+
 
 fj              The soundness of Featherweight Java
 
 lp              Logic programming, uniform derivations
-                (Darin)
+		(NOTE: Needs typing annotation for isc_all in uni_sound.elf 
+                       we need to add this to our implementation.
+		 )
+		(Brigitte part 1 done)
 
 lp-horn         Horn fragment of logic program
-                (Darin -- partly already done by Brigitte see examples/lp-horn)
+                (Brigitte part 1 done)
 
 mini-ml         Mini-ml, type preservation and related theorems
+                (Brigitte part 1 done, part 2 done)
 
 modal           Examples of encoding modal logics in Twelf
                 (Joshua)
 
 polylam         Polymorphic lambda-calculus
+		(Brigitte part 1 done)
 
 prop-calc       Natural deduction and Hilbert propositional calculus
-                (Giulia)
+                (Brigitte part 1 done; 
+                 Giulia)
 
 small-step      Brief tutorial on proving progress and preservation in Twelf
-                 - lam.elf (Brigitte, already in examples/small-step/lam.bel ? -- double check)
+                 - lam.elf      
                  - system-f.elf 
                  - system-f-iso.elf
+		 (Brigitte part 1 done , part 2 done)
 
 
 tapl-ch13       A formalization of Chapter 13 from "Types and Programming Languages"
                 (Joshua) 
+
+
+------------------------------------------------
+In Twelf-1-5 we only find:
+
+arith/				   ccc/
+church-rosser/			   compile/
+cpsocc/				   cut-elim/
+fol/				   guide/
+handbook/			   incll/
+kolm/				   lp-horn/
+lp/				   mini-ml/
+polylam/			   prop-calc/
+tabled/				   units/

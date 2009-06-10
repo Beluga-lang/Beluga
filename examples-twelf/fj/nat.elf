@@ -185,7 +185,7 @@ nat_em_neq : nat_neq N M -> nat_em N M.
 %% It is defined in conjunction with nat_em_helper that
 %% takes care of the splitting issue.
 
-nat_excluded : {N}{M} nat_em N M -> type.
+nat_excluded : {N:nat}{M:nat} nat_em N M -> type.
 %mode (nat_excluded +N +M -NE).
 
 -: nat_excluded z z (nat_em_eq nat_refl).

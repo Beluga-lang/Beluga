@@ -17,7 +17,8 @@ methodName_nat : nat -> methodName.
 cn : nat -> className.
 
 % Object is the only pre-existing class, defined to be natural number zero.
-object : className = cn z.
+% -bp : Eliminated the use of definitions.
+% object : className = cn z.
 
 % Class name lists. Indexed by length 
 cnlist : nat -> type. %name cnlist CS cs. 
@@ -39,7 +40,8 @@ enil  : elist z.
 econs : exp -> elist N -> elist (s N).
 
 %% a simple expression
-unit : exp = new object enil.
+% -bp : Eliminated the use of definitions.
+% unit : exp = new (cn z) enil.
 
 
 % Expressions with binders (used for method bodies), indexed by className lists for
@@ -320,7 +322,7 @@ s_refl: subtyping CT C C.
 
 s_super : subtyping CT D E ->
           lookupClass CT C (class C D _ _) ->
-	       className_neq C object ->
+	       className_neq C (cn z) ->
         % -------------------------------------------
           subtyping CT C E.
 
@@ -332,12 +334,12 @@ s_super : subtyping CT D E ->
 fields : classTable -> className -> {N:nat} cnlist N -> type.
 %mode fields +CT +C -N -CS.
 
-f_obj : fields  _ object z cnnil.
+f_obj : fields  _ (cn z) z cnnil.
 
-f_class  : cnappend CS2 CS1 (CS3 : cnlist N) _ ->
+f_class  : cnappend CS2 CS1 (CS3 ) _ ->
            fields CT D _ CS2 ->
            lookupClass CT C (class C D CS1 _) ->
-           className_neq C object ->
+           className_neq C (cn z) ->
         % ---------------------------------------------------------------------
            fields CT C N CS3.
 
@@ -354,9 +356,10 @@ mtype :  {CT:classTable} methodName -> className ->
 %mode mtype +CT +M +C1 -CS -C2.
 
 %% method is found in this class.
-mt_class :   lookupMethod MT M (method C2 _ (BE : bexp CS)) ->
+mt_class :   lookupMethod MT M (method C2 _ (BE)) % BE : bexp CS)
+   ->
              lookupClass CT C1 (class _ _ _ MT) ->
-  			    className_neq C1 object -> 
+  			    className_neq C1 (cn z) -> 
            % ---------------------------------------------------
              mtype CT M C1 CS C2.
 
@@ -365,7 +368,7 @@ mt_class :   lookupMethod MT M (method C2 _ (BE : bexp CS)) ->
 mt_super : mtype CT M C2 CS C0 ->
            notInMT MT M ->        
            lookupClass CT C1 (class _ C2 _ MT) ->
-  	        className_neq C1 object -> 
+  	        className_neq C1 (cn z) -> 
          % ------------------------------------------------------
            mtype CT M C1 CS C0.
 
@@ -379,14 +382,14 @@ mbody :  classTable -> methodName -> className ->
 
 mb_class : lookupMethod MT M (method _ _ BE) ->
            lookupClass CT C1 (class _ _ _ MT) ->
-  		     className_neq C1 object -> 
+  		     className_neq C1 (cn z) -> 
          % ---------------------------------------------------
            mbody CT M C1 BE.
 
 mb_super : notInMT MT M ->        
            mbody CT M C2 BE ->
            lookupClass CT C1 (class _ C2 _ MT) ->
-  		     className_neq C1 object -> 
+  		     className_neq C1 (cn z) -> 
         % ------------------------------------------------------
            mbody CT M C1 BE.
 %worlds () (mbody C CT  M BE).
@@ -398,12 +401,12 @@ method_undefined : classTable -> methodName -> className -> type.
 %mode method_undefined +CT +M +C.
 %name method_undefined MU mu.
 
-mu_object : method_undefined CT M object.
+mu_object : method_undefined CT M (cn z).
 
 mu_super :  method_undefined CT M D ->
 			   notInMT MT M ->
             lookupClass CT C (class _ D _ MT) -> 
-			   className_neq C object -> 
+			   className_neq C (cn z) -> 
          % --------------------------------------------------
 				method_undefined CT M C.
 
@@ -463,11 +466,11 @@ tl_cons : subtyping CT C0 C ->
 typing_bexp : classTable -> bexp CS -> className -> className -> type.
 %% %mode typing_bexp +CT +BE +C -E.
 
-t_base : ({THIS:exp}{D:typing CT THIS C} typing CT (E THIS) E0) ->
+t_base : ({tHIS:exp}{d:typing CT tHIS C} typing CT (E tHIS) E0) ->
       % -----------------------------------------------------
          typing_bexp CT (base E) C E0.
 
-t_bind : ({XI:exp}{D:typing CT XI CI} typing_bexp CT (E XI) C E0) ->
+t_bind : ({xI:exp}{d:typing CT xI CI} typing_bexp CT (E xI) C E0) ->
       % -----------------------------------------------------
 	  typing_bexp CT (bind CI E) C E0.
 
@@ -493,7 +496,8 @@ t_method :     subtyping CT E0 C0
             -> override CT M D CS C0 	
 				-> lookupClass CT C (class C D FS MT) 
 	% ------------------------------------------------
-				-> method_typing CT M (method C0 M (BE: bexp CS)) C.   
+%				-> method_typing CT M (method C0 M (BE: bexp CS)) C.   
+				-> method_typing CT M (method C0 M BE) C.   
 
 method_table_typing : classTable -> methodTable -> className -> type.
 %% %mode method_table_typing +CT +MT +C.
@@ -502,7 +506,8 @@ mtt_nil  : method_table_typing CT mrnil C.
 
 mtt_cons : method_table_typing CT MT C 
 				-> method_typing CT M MD C
-				-> method_table_typing CT (mrcons (MD : methodDef M) MT MNI) C.
+%				-> method_table_typing CT (mrcons (MD : methodDef M) MT MNI) C.
+				-> method_table_typing CT (mrcons MD MT MNI) C.
 
 class_typing : classTable -> {C:className} classDef C -> type.
 % %mode class_typing +CT +C +CD.
@@ -510,7 +515,7 @@ class_typing : classTable -> {C:className} classDef C -> type.
 t_class :    fields CT D N DS   %% side effect of checking that 
 			                       %% D is either object or in CT.
           -> method_table_typing CT MT C
-          -> subtyping CT D object
+          -> subtyping CT D (cn z)
         % --------------------------------------------------------
           -> class_typing CT C (class C D FS MT).
 
@@ -520,9 +525,10 @@ ctt_nil : class_table_typing_help CT0  crnil.
 
 ctt_cons : class_table_typing_help CT0 CT 
 	   -> class_typing CT0 C CD 
-	   -> className_neq C object 
+	   -> className_neq C (cn z) 
           % --------------------------------------
-	   -> class_table_typing_help CT0 (crcons (CD : classDef C) CT CTI).
+%	   -> class_table_typing_help CT0 (crcons (CD : classDef C) CT CTI).
+	   -> class_table_typing_help CT0 (crcons CD CT CTI).
 
 class_table_typing : classTable -> type.
 % %mode class_table_typing +CT.
@@ -539,14 +545,15 @@ ctt : class_table_typing_help CT CT
 
 % Method body invocation helper
 % Given a method body a list of arguments and a this expression, perform the substitutions
-invoc : bexp (CS:cnlist N) -> elist N -> exp -> exp -> type.
+% invoc : bexp (CS:cnlist N) -> elist N -> exp -> exp -> type.
+invoc : bexp CS -> elist N -> exp -> exp -> type.
 %mode invoc +BT +TL +T1 -T2.
 
-invoc_base : invoc (base ([this:exp] E1 this)) enil E2 (E1 E2).
+invoc_base : invoc (base (\this. E1 this)) enil E2 (E1 E2).
 
 invoc_bind : invoc (BE E1) EL E2 E3 ->
            % --------------------------------------------------
-             invoc (bind _ ([x:exp] BE x)) (econs E1 EL) E2 E3.
+             invoc (bind _ (\x. BE x)) (econs E1 EL) E2 E3.
 
 %worlds () (invoc BE EL E1 E2).
 %unique invoc +BE +EL +E1 -1E2.
@@ -586,7 +593,8 @@ reduction : {CT:classTable} exp -> exp -> type.
 
 r_field : enth_opt N2 EL E ->
        % --------------------------------------------
-          reduction CT (fieldProj (new C (EL : elist N1)) N2) E.
+%          reduction CT (fieldProj (new C (EL : elist N1)) N2) E.
+          reduction CT (fieldProj (new C EL) N2) E.
           
 
 r_invk : value_list EL2 ->

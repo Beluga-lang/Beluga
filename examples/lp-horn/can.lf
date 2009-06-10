@@ -7,7 +7,7 @@ atm : pf A -> type.        % Atomic deductions
 %name atm AT.
 %%mode (can +A +P) (atm +P).
 
-can_andi : can (and A B) (andi E D)
+can_andi : can (& A B) (andi E D)
 	    <- can A D
 	    <- can B E.
 
@@ -69,7 +69,7 @@ toatm : pf A -> pf A -> type.        % Conversion to atomic form
 %name tocan TC.
 %name toatm TA.
 
-tc_and : tocan (and A B) D (andi D2' D1')
+tc_and : tocan (& A B) D (andi D2' D1')
 	  <- tocan A (andel D) D1'
 	  <- tocan B (ander D) D2'.
 

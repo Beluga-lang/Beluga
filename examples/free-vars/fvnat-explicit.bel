@@ -5,7 +5,7 @@ bool: tp.
 exp : tp -> type.
 z   : exp nat.
 suc : exp nat -> exp nat.
-and : exp bool -> exp bool -> exp bool.
+andalso : exp bool -> exp bool -> exp bool.
 tt  : exp bool.
 ff  : exp bool.
 
@@ -31,7 +31,7 @@ FN g => mlam T => fn e =>
     [g] suc (U ..) : (exp nat)[g]   => free_var [g] < . nat >  ([g] (U ..))
 
  | {U::(exp bool)[g]} {V::(exp bool)[g]}
-    [g] and (U ..) (V ..) : (exp bool)[g]  => 
+    [g] andalso (U ..) (V ..) : (exp bool)[g]  => 
 
        (case free_var [g] < . bool > ([g] (U ..)) of
           [g] nothing                : opt[g] => free_var [g] < . bool > ([g] (V ..))

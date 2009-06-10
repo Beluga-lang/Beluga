@@ -31,7 +31,7 @@ module Cid = struct
 
     (*  directory : {!(Id.name, Id.cid_type) Hashtbl.t} *)
     (*  directory keeps track of which cid a name is associated with
-        and provides a way to quickly look this information up. *)
+        and provides a way to quickly look up this information. *)
     let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
@@ -222,8 +222,8 @@ module BVar = struct
 
   let index_of_name store n =
     let rec loop i = function
-      | []        -> raise Not_found
-      | (e :: es) ->
+      | []      -> raise Not_found
+      | e :: es ->
           if e.name = n then
             i
           else

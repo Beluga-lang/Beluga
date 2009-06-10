@@ -33,13 +33,21 @@ let rec hatToDCtx phat = match phat with
         
 
 (* Declaration Contexts *)
-
+(*
 let rec sigmaShift typrec k = match typrec with
   | SigmaLast tA -> 
       SigmaLast (TClo (tA, Shift  (NoCtxShift, k)))
 
   | SigmaElem (x, tA, typrec) -> 
       SigmaElem (x, TClo (tA, Shift (NoCtxShift, k)), sigmaShift typrec (k (*+ 1*) ))
+*)
+let rec sigmaShift typrec s = match typrec with
+  | SigmaLast tA -> 
+      SigmaLast (TClo (tA, s))
+
+  | SigmaElem (x, tA, typrec) -> 
+      SigmaElem (x, TClo (tA, s), sigmaShift typrec (Substitution.LF. dot1 s))
+
 
 
 let rec ctxShift cPsi k = match cPsi with
@@ -50,7 +58,7 @@ let rec ctxShift cPsi k = match cPsi with
       CtxVar psi
 
   | DDec (cPsi, TypDecl (x, Sigma tArec)) ->
-      DDec (ctxShift cPsi k, TypDecl (x, Sigma (sigmaShift tArec k)))
+      DDec (ctxShift cPsi k, TypDecl (x, Sigma (sigmaShift tArec (Shift (NoCtxShift, k)))))
 
   | DDec (cPsi, TypDecl (x, tA)) ->
       DDec (ctxShift cPsi k, TypDecl (x, TClo (tA, Shift (NoCtxShift, k))))
@@ -94,7 +102,7 @@ let ctxSigmaDec cPsi k =
    *)
   let rec ctxDec' = function
     | (DDec (_cPsi', TypDecl (x, Sigma tArec)), 1) ->
-        TypDecl (x, Sigma (sigmaShift tArec  k)) (* ? -bp *)
+        TypDecl (x, Sigma (sigmaShift tArec  (Shift (NoCtxShift, k))))
 
     | (DDec (cPsi', TypDecl (_x, Sigma _)), k') ->
         ctxDec' (cPsi', k' - 1)
@@ -169,3 +177,15 @@ let rec getNameCtx cG k = match (cG, k) with
   | (Dec(cG, _ ) , k) -> getNameCtx cG (k-1)
 
 
+
+let rec projectCtxIntoDctx = function
+  | Empty            -> Null
+  | Dec (rest, last) -> DDec (projectCtxIntoDctx rest, last)
+
+
+
+let rec lookup cG k = match (cG, k) with 
+  | (Dec (_cG', Comp.CTypDecl (_,  tau)), 1) ->  Some tau
+  | (Dec (_cG', _ ), 1) ->  None
+  | (Dec ( cG', _ ), k) ->
+      lookup cG' (k - 1)

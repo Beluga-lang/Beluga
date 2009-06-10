@@ -8,11 +8,11 @@ r_total : {D:prog} resolve D P G -> type.
 % %mode r_total +D -R.
 %mode +{D:prog} +{P:p} -{G:goal} -{R:resolve D P G} r_total D R.
 
-rt_and : r_total (D1 and^ D2) (r_and R2 R1)
+rt_and : r_total (and^ D1 D2) (r_and R2 R1)
 	   <- r_total D1 R1
 	   <- r_total D2 R2.
 
-rt_imp : r_total (G2 imp^ D1) (r_imp R1)
+rt_imp : r_total (imp^ G2  D1) (r_imp R1)
 	   <- r_total D1 R1.
 
 rt_true : r_total (true^) (r_true).
@@ -29,7 +29,7 @@ rt_atom : r_total (atom^ Q) (r_atom).
 
 s'_comp : solve A -> gl A G -> solve' G -> type.
 h'_comp : assume A -> pg A D -> assume' D -> type.
-r_comp : A >> P -> pg A D -> resolve D P G -> solve' G -> type.
+r_comp : entail A P -> pg A D -> resolve D P G -> solve' G -> type.
 %mode s'_comp +S +GL -S'.
 %mode h'_comp +H -PG -H'.
 %mode r_comp +I +PG +R -S'.
@@ -47,8 +47,10 @@ s's_true : s'_comp (s_true) (gl_true) (s'_true).
 s's_forall : s'_comp (s_forall S1) (gl_forall GL1) (s'_forall S'1)
 	      <- {a:i} s'_comp (S1 a) (GL1 a) (S'1 a).
 
-s's_atom : s'_comp (s_atom (I2 : A >> P) H1) (gl_atom) (s'_atom S'3 R2 H'1)
-	    <- h'_comp H1 (PG1 : pg A D) H'1
+%s's_atom : s'_comp (s_atom (I2 : A >> P) H1) (gl_atom) (s'_atom S'3 R2 H'1)
+%	    <- h'_comp H1 (PG1 : pg A D) H'1
+s's_atom : s'_comp (s_atom I2  H1) (gl_atom) (s'_atom S'3 R2 H'1)
+	    <- h'_comp H1 PG1 H'1
 	    <- r_total D R2
 	    <- r_comp I2 PG1 R2 S'3.
 
@@ -68,6 +70,8 @@ rs'_forall : r_comp (i_forall T I1) (pg_forall PG1) (r_forall R1)
 
 rs'_atom : r_comp (i_atom) (pg_atom) (r_atom) (s'_eqp).
 
+
+%{
 %block l_h'_comp :
   some {A:o} {D:prog} {PG:pg A D}
   block {h:assume A} {h':assume' D}
@@ -80,3 +84,4 @@ rs'_atom : r_comp (i_atom) (pg_atom) (r_atom) (s'_eqp).
   (s'_comp S GL _)
   (h'_comp H _ _)
   (r_comp I PG R _).
+}%

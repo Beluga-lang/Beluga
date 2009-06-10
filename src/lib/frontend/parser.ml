@@ -69,9 +69,12 @@ GLOBAL: sgn_eoi;
         "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
           Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
       |
-        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
-          Sgn.Rec (_loc, Id.mk_name (Id.SomeString f), tau, e)
+(*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
+          Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
+*)
 
+        "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
+          Sgn.Rec (_loc, f)
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
             Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
@@ -84,6 +87,7 @@ GLOBAL: sgn_eoi;
       ]
     ]
   ;
+
 
   lf_kind_or_typ:
     [
@@ -205,9 +209,9 @@ GLOBAL: sgn_eoi;
   lf_schema_elem:
     [
       [
-        some = lf_schema_some; arec = lf_typ_rec ->
+        some_arg = lf_schema_some; arec = lf_typ_rec ->
           LF.SchElem (_loc,
-                      List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some,
+                      List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg,
                       arec)
       ]
     ]
@@ -266,7 +270,6 @@ lf_typ_rec:
   ;
 
 
-
 (* ************************************************************************************** *)
 (* Parsing of computations and LF terms occurring in computations                         *)
 
@@ -314,7 +317,7 @@ lf_typ_rec:
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
         |
-          typRec = lf_typ_rec_block
+          typRec = clf_typ_rec_block
           ->  LF.Sigma (_loc, typRec)
         ]
     ]
@@ -344,6 +347,7 @@ lf_typ_rec:
         | 
             "_" -> 
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
+
         | 
            "("; m = clf_term_app; ")" ->
              m
@@ -356,6 +360,30 @@ lf_typ_rec:
         ]
      ]
    ;
+
+
+
+  clf_typ_rec_block:
+    [[
+       "block"; a_list = LIST1 clf_typ_rec_elem SEP ","; "."; a_last = clf_typ LEVEL "atomic"
+         -> (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last))
+     ]];
+  
+
+  clf_typ_rec_elem:
+    [
+      [
+        x = SYMBOL; ":"; a = clf_typ
+         -> (Id.mk_name (Id.SomeString x), a)
+
+      | 
+        x = UPSYMBOL; ":"; a = lf_typ
+         -> (Id.mk_name (Id.SomeString x), a)
+
+      ]
+    ]
+  ;
+
 
   clf_term_x:
     [  "atomic" 
@@ -457,7 +485,7 @@ lf_typ_rec:
 
       |
         psi = SYMBOL ->
-          LF.CtxVar (Id.mk_name (Id.SomeString psi))
+          LF.CtxVar (_loc, Id.mk_name (Id.SomeString psi))
 
       |  x = SYMBOL; ":"; tA = clf_typ ->
           LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
@@ -536,6 +564,12 @@ lf_typ_rec:
     ]
   ;
 
+
+ cmp_rec:
+   [[
+     f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk -> Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)
+    ]]
+;
 
   cmp_exp_chk:
     [ "full"
@@ -660,4 +694,6 @@ let parse_channel ?(name = "<channel>") ~input entry =
 let parse_file ~name entry =
   let in_channel = Pervasives.open_in name in
   let stream     = Stream.of_channel in_channel in
-    parse_stream ~name:name ~input:stream entry
+  let result     = parse_stream ~name:name ~input:stream entry in
+     close_in in_channel
+   ; result

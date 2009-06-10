@@ -10,7 +10,7 @@ clo_s     : closed (s E)
 	     <- closed E.
 
 
-clo_case  : closed (case E1 E2 E3)
+clo_match  : closed (match E1 E2 E3)
 	     <- closed E1
 	     <- closed E2
 	     <- ({x:exp} closed x -> closed (E3 x)).
@@ -57,9 +57,9 @@ open : exp -> type.  %name open V.
 
 % Natural Numbers
 open_s     : open (s E) <- open E.
-open_case1 : open (case E1 E2 E3) <- open E1.
-open_case2 : open (case E1 E2 E3) <- open E2.
-open_case3 : open (case E1 E2 E3) <- ({x:exp} open (E3 x)).
+open_match1 : open (match E1 E2 E3) <- open E1.
+open_match2 : open (match E1 E2 E3) <- open E2.
+open_match3 : open (match E1 E2 E3) <- ({x:exp} open (E3 x)).
 
 % Pairs
 open_pair1 : open (pair E1 E2) <- open E1.

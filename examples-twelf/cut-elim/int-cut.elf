@@ -12,30 +12,30 @@ axiom* : (hyp A -> conc* A).
 
 andr*  : conc* A
 	  -> conc* B
-	  -> conc* (A and B).
+	  -> conc* (& A B).
 
 andl1* : (hyp A -> conc* C)
-	  -> (hyp (A and B) -> conc* C).
+	  -> (hyp (& A B) -> conc* C).
 
 andl2* : (hyp B -> conc* C)
-	  -> (hyp (A and B) -> conc* C).
+	  -> (hyp (& A B) -> conc* C).
 
 impr*  : (hyp A -> conc* B)
-	  -> conc* (A imp B).
+	  -> conc* (imp A B).
 
 impl*  : conc* A
 	  -> (hyp B -> conc* C)
-	  -> (hyp (A imp B) -> conc* C).
+	  -> (hyp (imp A B) -> conc* C).
 
 orr1*  : conc* A
-	  -> conc* (A or B).
+	  -> conc* (or A B).
 
 orr2*  : conc* B
-	  -> conc* (A or B).
+	  -> conc* (or A B).
 
 orl*   : (hyp A -> conc* C)
 	  -> (hyp B -> conc* C)
-	  -> (hyp (A or B) -> conc* C).
+	  -> (hyp (or A B) -> conc* C).
 
 notr*  : ({p:o} hyp A -> conc* p)
 	 -> conc* (not A).

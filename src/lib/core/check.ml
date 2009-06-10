@@ -57,7 +57,7 @@ module LF = struct
           (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
         let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
   in
-    Dot (front, s)
+    Dot (front, LF.comp s LF.shift)
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
    *
@@ -182,6 +182,8 @@ module LF = struct
         let srecA = match tuple_head with
           | BVar k' ->
               let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
+              let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n") in
+              let _ = dprint (fun () -> "Proj (" ^ R.render_offset k' ^ " , " ^  string_of_int target ^ ")" ^ " has type " ^ P.typRecToString cO cD cPsi (recA, LF.id) ^ "\n") in
                 (recA, LF.id)
           | PVar (Offset p, s) ->
               begin let (_, tTuple, cPsi') = Whnf.mctxPDec cD p in
@@ -190,7 +192,11 @@ module LF = struct
                     Sigma recA -> (recA, s)
               end
         in
-          TClo (getType tuple_head srecA target 1)
+        let (_tA, s) as sA = getType tuple_head srecA target 1 in 
+        let _ = dprint (fun () -> "getTyp ( " ^ P.headToString cO cD cPsi head ^ " ) = " ^ P.typToString cO cD cPsi sA ^ "\n") in 
+        let _ = dprint (fun () -> "s = " ^ P.subToString cO cD cPsi s ^ "\n") in
+          TClo sA
+
     
     | Const c ->
         (Term.get c).Term.typ
@@ -310,9 +316,11 @@ This case should now be covered by the one below it
           if Whnf.convTyp (tA1, LF.id) (tA2, s') then
             ()
           else
-            let _ = Printf.printf " Inferred type: %s\n Expected type: %s\n\n"
-              (P.typToString cO cD cPsi (tA1, LF.id))
-              (P.typToString cO cD cPsi (tA2, s')) in
+            let _ = Printf.printf "cPsi' = %s \n Head h = %s \n Inferred type: %s\n Expected type: %s\n\n"
+              (P.dctxToString cO cD cPsi')
+              (P.headToString cO cD cPsi' h)
+              (P.typToString cO cD cPsi' (tA1, LF.id))
+              (P.typToString cO cD cPsi' (tA2, s')) in
               raise (Error (None, SubIllTyped))
                 (* let sM = Root (None, h, Nil) in
                    raise (TypMismatch (cPsi', sM, (tA2, s'), (tA1, LF.id)))
@@ -491,8 +499,11 @@ This case should now be covered by the one below it
     let _ = dprint (fun () -> "checkTypeAgainstElement  "
                       ^ P.typToString cO cD cPsi (tA, s)
                       ^ "  against  "
-                      ^ P.typRecToString cO cD cPsi (block_part, dctxSub)) in
-(*    let _           = dprint (fun () -> "checkTypeAgainstElement  " ^ P.subToString cO cD cPsi dctxSub) in *)
+                      ^ P.typRecToString cO cD Null (block_part, dctxSub)) in
+    let _           = dprint (fun () -> "checkTypeAgainstElement  dctx = " ^ P.dctxToString cO Empty dctx) in 
+    let _           = dprint (fun () -> "checkTypeAgainstElement  dctxsub=" ^ P.subToString cO Empty Null dctxSub) in 
+    let _           = dprint (fun () -> "checkTypeAgainstElement  block_part=" ^ P.typRecToString cO Empty dctx (block_part, LF.id)) in 
+    let _           = dprint (fun () -> "checkTypeAgainstElement  block_part =" ^ P.typRecToString cO Empty Null (block_part, dctxSub)) in 
     let phat        = dctxToHat cPsi in
       begin
         dprint (fun () -> "***Unify.unifyTypRec ("
@@ -586,7 +597,6 @@ This case should now be covered by the one below it
   and checkSchema cO cD cPsi (Schema elements as schema) =
     dprint (fun () -> "checkSchema " ^ P.octxToString cO ^ " ... " 
               ^ P.dctxToString cO cD cPsi ^ " against " ^ P.schemaToString schema);
-    print_string " WARNING: Schema checking not fully implemented\n";
     match cPsi with
       | Null -> ()
       | CtxVar phi ->
@@ -600,6 +610,16 @@ This case should now be covered by the one below it
               | TypDecl (_x, tA) ->
                   let _ = checkTypeAgainstSchema cO cD cPsi' tA schema elements in ()
           end
+
+
+  let rec checkSchemaWf (Schema elements ) = 
+    let rec checkElems elements = match elements with
+      | [] -> ()
+      | SchElem (cPsi, trec) :: els ->
+          checkTypRec Empty Empty (projectCtxIntoDctx cPsi) (trec, LF.id) 
+          ; checkElems els
+    in
+      checkElems elements
 
 end (* struct LF *)
 

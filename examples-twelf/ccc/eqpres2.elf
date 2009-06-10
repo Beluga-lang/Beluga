@@ -11,11 +11,13 @@ etoc_sym   : etoc (sym EP) CF CF' (\x .c_sym (CP x))
               <- etoc EP CF' CF (\x . CP x).
 
 
-% FIXME parse error at CVF'
-etoc_comp  : etoc (eq_o EPF EPG) (ccomp CF CG) (ccomp CF' CG') (\x . c_trans (CPF (M x)) (CVF' x (CPG x)))
+
+etoc_comp  : {CG:conc _  (\e. M e)}
+             {CF':conc _ (\e. N' e)}
+	      etoc (eq_o EPF EPG) (ccomp CF CG) (ccomp CF' CG') (\x . c_trans (CPF (M x)) (CVF' x (CPG x)))
               <- etoc EPF CF CF' (\x . CPF x)
               <- etoc EPG CG CG' (\x . CPG x)
-              <- ({x: term _} cong N' ((\z . \w . CVF' z w) x)).
+              <- ({x: term _} cong N' (\w . CVF' x w)).
 
 etoc_pair  : etoc (eq_pair EPF EPG) (cpair CF CG) (cpair CF' CG')
               (\x . c_pair (CPF x) (CPG x))
@@ -35,13 +37,15 @@ etoc_prodl : etoc prod_l (ccomp cfst (cpair CF CG)) CF (\x . c_prl).
 etoc_prodr : etoc prod_r (ccomp csnd (cpair CF CG)) CG (\x . c_prr).
 etoc_produ : etoc prod_u (cpair (ccomp cfst CF) (ccomp csnd CF)) CF (\x . c_surj).
 
-% FIXME parse error at CC
-etoc_expe  : etoc exp_e (ccomp capp (cpair (ccomp (ccur CF) cfst) csnd)) CF
+
+etoc_expe  : {CF:conc F (\e. M e)}
+	      etoc exp_e (ccomp capp (cpair (ccomp (ccur CF) cfst) csnd)) CF
               (\x . c_trans (c_app c_prl c_prr) (c_trans c_beta (CC x c_surj)))
               <- {x: term _} cong M (CC x).
 
-% FIXME parse error at CC
-etoc_expu  : etoc exp_u (ccur (ccomp capp (cpair (ccomp CF cfst) csnd))) CF
+
+etoc_expu  : {CF:conc F (\e. M e)}
+	      etoc exp_u (ccur (ccomp capp (cpair (ccomp CF cfst) csnd))) CF
               (\x . c_trans (c_lam (\y . c_app (c_trans c_prl (CC x y c_prl)) (c_trans c_prr c_prr))) c_eta)
               <- {x: term _}{y: term _} cong M (CC x y).
 

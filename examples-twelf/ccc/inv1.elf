@@ -8,7 +8,8 @@ invcav   : absv G X F -> conc F (\x . M x) -> exp G N -> conv (M N) X -> type.
 
 invcav_x : invcav av_x csnd (exp_addv EP) c_prr.
 
-invcav_y : invcav (av_y AV) (ccomp CP cfst) (exp_addv EP) (c_trans (CC c_prl) CVP)
+invcav_y : {CP:conc _F1 (\e. M e)}
+	    invcav (av_y AV) (ccomp CP cfst) (exp_addv EP) (c_trans (CC c_prl) CVP)
             <- cong M (\x . CC x)
             <- invcav AV CP EP CVP.
 

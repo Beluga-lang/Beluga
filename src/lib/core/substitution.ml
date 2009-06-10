@@ -144,7 +144,8 @@ module LF = struct
          * where s :: Psi[Phi]  and |Psi| = k'
          * k = k' + k0
          *)
-        Dot (frontSub ft s', comp s s')
+        let h = frontSub ft s' in 
+        Dot (h, comp s s')
 
     | (_s1, _s2) -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s    FAILED\n"
                        (P.subToString s1) (P.subToString s2) ;  *)
@@ -175,16 +176,41 @@ module LF = struct
    * and  Psi |- Ft' : [s]A
    *)
   and frontSub ft s = match ft with
-    | Head (BVar n)       -> bvarSub n s
+    | Head (BVar n)       ->  bvarSub n s
     | Head (FVar _)       -> ft
-    | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))
+    | Head (MVar (u, s')) -> Head (MVar (u, comp s' s)) 
     | Head (PVar (u, s')) -> Head (PVar (u, comp s' s))
+
+    | Head (Proj (BVar n, k))  ->
+        begin match bvarSub n s with
+          | Head (BVar x) ->
+              Head (Proj (BVar x, k))
+
+          | Head (PVar _ as h) ->
+              Head (Proj (h, k))
+
+          | Block (BVar n, k') -> 
+              if k = k' then Head(BVar n)
+              else raise (Error "[frontSub] Proj-Block undefined ")
+
+          | Obj (Tuple (_, tuple)) ->
+              let rec nth s = function
+                | (Last u, 1) -> (u, s)
+                | (Cons (u, _), 1) -> (u, s)
+                | (Cons (u, tuple), n) -> nth (Dot(Obj u, s)) (tuple, n - 1)
+              in
+(*                Obj (Clo (nth s (tuple, k))) *)
+                Obj (fst (nth s (tuple, k)))
+        end
 
     | Head (Proj (h, k))  ->
         begin match frontSub (Head h) s with
           | Head h' ->
               Head (Proj (h', k))
 
+          | Block (BVar n, k') -> 
+              if k = k' then Head(BVar n)
+              else raise (Error "[frontSub] Proj-Block undefined ")
           | Obj (Tuple (_, tuple)) ->
               let rec nth s = function
                 | (Last u, 1) -> (u, s)
@@ -200,6 +226,17 @@ module LF = struct
           Head (AnnH (h', a))
 
     | Head (Const c)      -> Head (Const c)
+    | Block (BVar n, index) -> 
+        begin match bvarSub n s with 
+          | Head (BVar m) -> Block (BVar m, index)
+          | Head (Proj (BVar m, index')) -> 
+              if index = index' then Head (BVar m) else  
+                raise (Error "[frontSub] Block undefined ")
+
+          | _ ->  raise (Error "[frontSub] Block undefined ")
+        end
+
+
     | Obj u               -> Obj (Clo (u, s))
     | Undef               -> Undef
 
@@ -274,15 +311,29 @@ module LF = struct
       | Dot (Undef, s')         -> lookup (n + 1) s' p
       | Dot (Head (BVar k), s') ->
           if k = p then
-            Some n
+            Some (Head (BVar n))
           else
-            lookup (n + 1) s' p in
+            lookup (n + 1) s' p 
+
+      (* Attention -bp,jd *)
+      | Dot (Head (Proj(BVar k, index)), s') ->
+          if k = p then
+            Some (Block (BVar n, index))
+          else
+            lookup (n + 1) s' p 
+
+      | Dot (Block (BVar k, index), s') -> 
+          if k = p then
+            Some (Head (Proj (BVar n, index)))
+          else 
+            lookup (n+1) s' p
+    in
 
     let rec invert'' p si = match p with
       | 0 -> si
       | p ->
           let front = match lookup 1 s p with
-            | Some k -> Head (BVar k)
+            | Some h -> h
             | None   -> Undef
           in
             invert'' (p - 1) (Dot (front, si)) in

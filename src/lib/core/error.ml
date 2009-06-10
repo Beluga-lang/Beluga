@@ -6,6 +6,10 @@ type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 
 type error =
   | UnboundName      of Id.name
+  | UnboundCtxName   of Id.name
+  | UnboundCtxSchemaName   of Id.name
+  | UnboundCompName  of Id.name
+  | UnknownCidTyp    of Id.cid_typ
 
   | CtxVarMismatch   of LF.mctx * LF.ctx_var * LF.schema
   | SigmaIllTyped    of LF.mctx * LF.mctx * LF.dctx * LF.trec_clo * LF.trec_clo
@@ -16,6 +20,7 @@ type error =
 
   | SpineIllTyped    
   | EtaExpandBV      of Id.offset * LF.mctx * LF.mctx * LF.dctx * LF.tclo
+  | EtaExpandFMV     of Id.name * LF.mctx * LF.mctx * LF.dctx * LF.tclo
   | EtaExpandFV      of Id.name * LF.mctx * LF.mctx * LF.dctx * LF.tclo
 
   | LeftoverConstraints of Id.name
@@ -27,8 +32,19 @@ type error =
   | CompPattMismatch of (LF.mctx * LF.mctx * LF.dctx * LF.normal * LF.tclo) * 
                         (LF.mctx * LF.mctx * LF.dctx * LF.tclo)  
 
+  | CompBoxCtxMismatch  of LF.mctx * LF.mctx * LF.dctx * (LF.psi_hat * LF.normal)
+
   | CompFreeMVar     of  Id.name
   | CompScrutineeTyp of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * LF.tclo * LF.dctx 
+
+
+  | CompCtxFunMismatch of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
+  | CompFunMismatch    of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
+  | CompMLamMismatch   of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
+  | CompPairMismatch   of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
+  | CompBoxMismatch    of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
+
+  | CompTypAnn       
 
   | UnboundIdSub
 

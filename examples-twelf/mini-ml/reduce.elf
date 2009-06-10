@@ -2,14 +2,14 @@
 %infix none 10 ==>.
 %mode ==> +E -E'.
 
-red_z : case z E1 E2 ==> E1.
-red_s : case (s E) E1 E2 ==> E2 E.
-red_fst : fst (pair E1 E2) ==> E1.
-red_snd : snd (pair E1 E2) ==> E2.
-red_app : app (lam E1) E2 ==> E1 E2.
-red_letv : letv E1 E2 ==> E2 E1.
-red_letn : letn E1 E2 ==> E2 E1.
-red_fix : fix E ==> E (fix E).
+red_z    : ==> (match z E1 E2) E1.
+red_s    : ==> (match (s E) E1 E2)  (E2 E).
+red_fst  : ==> (fst (pair E1 E2))   E1.
+red_snd  : ==> (snd (pair E1 E2))   E2.
+red_app  : ==> (app (lam E1) E2)   (E1 E2).
+red_letv : ==> (letv E1 E2) (E2 E1).
+red_letn : ==> (letn E1 E2) (E2 E1).
+red_fix  : ==> (fix E)  (E (fix E)).
 
 %worlds () (==> D P).
 
@@ -22,34 +22,34 @@ red_fix : fix E ==> E (fix E).
 % Congruences
 % no red*_z
 
-red*_s : s E ==>* s E'
-	  <- E ==>* E'.
-red*_case : case E1 E2 E3 ==>* case E1' E2 E3
-	     <- E1 ==>* E1'.
-red*_pair1 : pair E1 E2 ==>* pair E1' E2
-	     <- E1 ==>* E1'.
-red*_pair2 : pair E1 E2 ==>* pair E1 E2'
-	      <- E2 ==>* E2'.
-red*_fst : fst E ==>* fst E'
-	    <- E ==>* E'.
-red*_snd : snd E ==>* snd E'
-	    <- E ==>* E'.
+red*_s : ==>* (s E)  (s E')
+	  <- ==>* E E'.
+red*_match : ==>* (match E1 E2 E3)  (match E1' E2 E3)
+	     <- ==>* E1 E1'.
+red*_pair1 : ==>* (pair E1 E2) (pair E1' E2)
+	     <- ==>* E1  E1'.
+red*_pair2 : ==>* (pair E1 E2) (pair E1 E2')
+	      <- ==>* E2 E2'.
+red*_fst : ==>* (fst E) (fst E')
+	    <- ==>* E E'.
+red*_snd : ==>* (snd E)  (snd E')
+	    <- ==>* E E'.
 % no red*_lam
-red*_app1 : app E1 E2 ==>* app E1' E2
-	     <- E1 ==>* E1'.
-red*_app2 : app E1 E2 ==>* app E1 E2'
-	     <- E2 ==>* E2'.
-red*_letv : letv E1 E2 ==>* letv E1' E2
-	     <- E1 ==>* E1'.
-red*_letn : letn E1 E2 ==>* letn E1' E2
-	     <- E1 ==>* E1'.
+red*_app1 : ==>* (app E1 E2) (app E1' E2)
+	     <- ==>* E1  E1'.
+red*_app2 : ==>* (app E1 E2)  (app E1 E2')
+	     <- ==>* E2 E2'.
+red*_letv : ==>* (letv E1 E2) (letv E1' E2)
+	     <- ==>* E1 E1'.
+red*_letn : ==>* (letn E1 E2) (letn E1' E2)
+	     <- ==>* E1 E1'.
 % no red*_fix
 
-red*_beta : E ==>* E'
-	     <- E ==> E'.
-red*_refl : E ==>* E.
-red*_trans : E ==>* E''
-	      <- E ==>* E'
-	      <- E' ==>* E''.
+red*_beta : ==>* E  E'
+	     <- ==> E E'.
+red*_refl : ==>* E E.
+red*_trans : ==>* E E''
+	      <- ==>* E E'
+	      <- ==>* E' E''.
 
 %worlds () (==>* D P).

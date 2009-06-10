@@ -2,45 +2,47 @@
 %%% implementation of type inference.
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
-of : exp -> tp -> type.  %name of P u.
-%mode of +E *T.
+oft : exp -> tp -> type.  %name oft P u.
+%mode oft +E *T.
 
 % Natural Numbers
-tp_z     : of z nat.
-tp_s     : of (s E) nat
-	    <- of E nat.
-tp_case  : of (case E1 E2 E3) T
-	    <- of E1 nat
-	    <- of E2 T
-	    <- ({x:exp} of x nat -> of (E3 x) T).
+tp_z     : oft z nat.
+tp_s     : oft (s E) nat
+	    <- oft E nat.
+tp_match  : oft (match E1 E2 E3) T
+	    <- oft E1 nat
+	    <- oft E2 T
+	    <- ({x:exp} oft x nat -> oft (E3 x) T).
 
 % Pairs
-tp_pair : of (pair E1 E2) (cross T1 T2)
-	   <- of E1 T1
-	   <- of E2 T2.
-tp_fst  : of (fst E) T1
-	   <- of E (cross T1 T2).
-tp_snd  : of (snd E) T2
-	   <- of E (cross T1 T2).
+tp_pair : oft (pair E1 E2) (cross T1 T2)
+	   <- oft E1 T1
+	   <- oft E2 T2.
+tp_fst  : oft (fst E) T1
+	   <- oft E (cross T1 T2).
+tp_snd  : oft (snd E) T2
+	   <- oft E (cross T1 T2).
 
 % Functions
-tp_lam : of (lam E) (arrow T1 T2)
-	  <- ({x:exp} of x T1 -> of (E x) T2).
-tp_app : of (app E1 E2) T1
-	  <- of E1 (arrow T2 T1)
-	  <- of E2 T2.
+tp_lam : oft (lam E) (arrow T1 T2)
+	  <- ({x:exp} oft x T1 -> oft (E x) T2).
+tp_app : oft (app E1 E2) T1
+	  <- oft E1 (arrow T2 T1)
+	  <- oft E2 T2.
 
 % Definitions
-tp_letv : of (letv E1 E2) T2
-	   <- of E1 T1
-	   <- ({x:exp} of x T1 -> of (E2 x) T2).
-tp_letn : of (letn E1 E2) T2
-	   <- of E1 T1
-	   <- of (E2 E1) T2.
+tp_letv : oft (letv E1 E2) T2
+	   <- oft E1 T1
+	   <- ({x:exp} oft x T1 -> oft (E2 x) T2).
+tp_letn : oft (letn E1 E2) T2
+	   <- oft E1 T1
+	   <- oft (E2 E1) T2.
 
 % Recursion
-tp_fix : of (fix E) T
-	  <- ({x:exp} of x T -> of (E x) T).
+tp_fix : oft (fix E) T
+	  <- ({x:exp} oft x T -> oft (E x) T).
 
-%block l : some {T:tp} block {x:exp} {d:of x T}.
-%worlds (l) (of E T).
+%{
+%block l : some {T:tp} block {x:exp} {d:oft x T}.
+%worlds (l) (oft E T).
+}%

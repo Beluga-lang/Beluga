@@ -29,8 +29,8 @@ forall : (i -> o) -> o.
 nd : o -> type.
 %name nd D u.
 
-impi    : (nd A -> nd B) -> nd (A imp B).
-impe    : nd (A imp B) -> nd A -> nd B.
+impi    : (nd A -> nd B) -> nd (imp A B).
+impe    : nd (imp A B) -> nd A -> nd B.
 
 noti    : ({p:o} nd A -> nd p) -> nd (not A).
 note    : nd (not A) -> {C:o} nd A -> nd C.
@@ -46,75 +46,75 @@ foralle : nd (forall A) -> {T:i} nd (A T).
 
 % Example
 
-_ : nd (A imp (B imp A))
+%{ _ : nd (imp A (imp B A))
   = (impi [u:nd A] impi [v:nd B] u).
-
+}%
 % Hilbert deductions
 
 hil : o -> type.  % Hilbert deductions
 %name hil H u.
 
-k : hil (A imp (B imp A)).
-s : hil ((A imp (B imp C)) imp ((A imp B) imp (A imp C))).
+k : hil (imp A (imp B A)).
+s : hil (imp (imp A (imp B C))  (imp (imp A B) (imp A C))).
 
-n1 : hil ((A imp (not B)) imp ((A imp B) imp (not A))).
-n2 : hil ((not A) imp (A imp B)).
+n1 : hil (imp (imp A (not B)) (imp (imp A B) (not A))).
+n2 : hil (imp (not A) (imp A B)).
 
-f1 : {T:i} hil ((forall [x:i] A x) imp (A T)).
-f2 : hil ((forall [x:i] (B imp A x)) imp (B imp forall [x:i] A x)).
+f1 : {T:i} hil (imp (forall (\x. A x))  (A T)).
+f2 : hil (imp (forall (\x. (imp B (A x))))  (imp B (forall A))).
 
-mp : hil (A imp B) -> hil A -> hil B.
-ug : ({a:i} hil (A a)) -> hil (forall [x:i] A x).
+mp : hil (imp A B) -> hil A -> hil B.
+ug : ({a:i} hil (A a)) -> hil (forall A).
 
 %worlds (li) (hil A).
 
 % Local reductions
 
-==>R : nd A -> nd A -> type.  %infix none 14 ==>R.
-%name ==>R R.
+reduce : nd A -> nd A -> type.  %infix none 14 ==>R.
+%name reduce R.
 
-redl_imp    : (impe (impi [u:nd A] D u) E) ==>R (D E).
-redl_not    : (note (noti [p:o] [u:nd A] D p u) C E) ==>R (D C E).
-redl_forall : (foralle (foralli [a:i] D a) T) ==>R (D T).
+redl_imp    : reduce (impe (impi (\u. D u)) E)  (D E).
+redl_not    : reduce (note (noti (\p.\u. D p u)) C E)  (D C E).
+redl_forall : reduce (foralle (foralli (\a. D a)) T)  (D T).
 
 % Local expansions
 
-==>E : nd A -> nd A -> type.  %infix none 14 ==>E.
-%name ==>E E.
+eta-expand : nd A -> nd A -> type.  %infix none 14 ==>E.
+%name eta-expand E.
 
-expl_imp    : {D:nd (A imp B)}  D ==>E (impi [u:nd A] impe D u).
-expl_not    : {D:nd (not A)}    D ==>E (noti [p:o] [u:nd A] note D p u).
-expl_forall : {D:nd (forall A)} D ==>E (foralli [a:i] foralle D a).
+expl_imp    : {D:nd (imp A B)}  eta-expand D  (impi (\u. impe D u)).
+expl_not    : {D:nd (not A)}    eta-expand D (noti (\p.\u. note D p u)).
+expl_forall : {D:nd (forall A)} eta-expand D (foralli (\a. foralle D a)).
 
 % Sequent calculus search result
 
-dn : nd (A imp not not A)
+%{dn : nd (imp A not not A)
    = (impi [u:nd A] noti [p:o] [w:nd (not A)] note w p u).
-
+}%
 % Translating Hilbert derivations to natural deductions
 
 hilnd : hil A -> nd A -> type.
 
-hnd_k : hilnd (k) (impi [u:nd A] impi [v:nd B] u).
-hnd_s : hilnd (s) (impi [u:nd (A imp B imp C)]
-		     impi [v:nd (A imp B)]
-		     impi [w:nd A] impe (impe u w) (impe v w)).
+hnd_k : hilnd (k) (impi (\u. impi (\v. u))).
+hnd_s : hilnd (s) (impi (\u.
+		     impi (\v.
+		     impi (\w. impe (impe u w) (impe v w))))).
 
-hnd_n1 : hilnd (n1) (impi [u:nd (A imp (not B))]
-			   impi [v:nd (A imp B)]
-			   noti [p:o] [w:nd A]
-			   note (impe u w) p (impe v w)).
+hnd_n1 : hilnd (n1) (impi (\u.
+			   impi (\v.
+			   noti (\p.\w.
+			   note (impe u w) p (impe v w))))).
 
-hnd_n2 : hilnd (n2) (impi [u:nd (not A)]
-			   impi [v:nd A] note u B v).
+hnd_n2 : hilnd (n2) (impi (\u.
+			   impi (\v. note u B v))).
 
 hnd_f1 :
-  hilnd (f1 T) (impi [u:nd (forall [x:i] A x)] foralle u T).
+  hilnd (f1 T) (impi (\u. foralle u T)).
 
 hnd_f2 :
-  hilnd (f2) (impi [u:nd (forall [x:i] (B imp A x))]
-		     impi [v:nd B]
-		     foralli [a:i] impe (foralle u a) v).
+  hilnd (f2) (impi (\u.
+		     impi (\v.
+		     foralli (\a. impe (foralle u a) v)))).
 
 hnd_mp : hilnd (mp H1 H2) (impe D1 D2)
 	  <- hilnd H1 D1
@@ -129,45 +129,46 @@ hnd_ug : hilnd (ug H1) (foralli D1)
 %covers hilnd +H -D.
 %total H (hilnd H _).
 
-%solve id' : 
-hilnd (mp (mp s k) k) (D:nd (A imp A)).
+%{solve id' : 
+hilnd (mp (mp s k) k) (D:nd (imp A A)).
 
-_ : nd (A imp A)
+_ : nd (imp A A)
   = (impe
 	(impe
 	    (impi
-		([u:nd (A imp (B imp A) imp A)]
+		([u:nd (imp A (imp B A) imp A)]
 		    impi
-		       ([v:nd (A imp B imp A)]
+		       ([v:nd (imp A imp B A)]
 			   impi ([w:nd A] impe (impe u w) (impe v w)))))
-	    (impi ([u:nd A] impi ([v:nd (B imp A)] u))))
+	    (impi ([u:nd A] impi ([v:nd (imp B A)] u))))
 	(impi ([u:nd A] impi ([v:nd B] u)))).
-
+}%
 %%% The deduction theorem for Hilbert derivations
 
-ded : (hil A -> hil B) -> hil (A imp B) -> type.
+ded : (hil A -> hil B) -> hil (imp A B) -> type.
 
-ded_id : ded ([u:hil A] u) (mp (mp s k) (k : hil (A imp (A imp A)))).
+% ded_id : ded (\u. u) (mp (mp s k) (k : hil (imp A (imp A A)))).
+ded_id : ded (\u. u) (mp (mp s k) k).
 
-ded_k  : ded ([u:hil A] k) (mp k k).
-ded_s  : ded ([u:hil A] s) (mp k s).
+ded_k  : ded (\u. k) (mp k k).
+ded_s  : ded (\u. s) (mp k s).
 
-ded_n1 : ded ([u:hil A] n1) (mp k n1).
-ded_n2 : ded ([u:hil A] n2) (mp k n2).
+ded_n1 : ded (\u. n1) (mp k n1).
+ded_n2 : ded (\u. n2) (mp k n2).
 
-ded_f1 : ded ([u:hil A] f1 T) (mp k (f1 T)).
-ded_f2 : ded ([u:hil A] f2) (mp k f2).
+ded_f1 : ded (\u. f1 T) (mp k (f1 T)).
+ded_f2 : ded (\u. f2) (mp k f2).
 
-ded_mp : ded ([u:hil A] mp (H1 u) (H2 u)) (mp (mp s H1') H2')
+ded_mp : ded (\u. mp (H1 u) (H2 u)) (mp (mp s H1') H2')
 	  <- ded H1 H1'
 	  <- ded H2 H2'.
 
-ded_ug : ded ([u:hil A] ug (H1 u)) (mp f2 (ug H1'))
-	  <- ({a:i} ded ([u:hil A] H1 u a) (H1' a)).
+ded_ug : ded (\u. ug (H1 u)) (mp f2 (ug H1'))
+	  <- ({a:i} ded (\u. H1 u a) (H1' a)).
 
-%block lded : some {A:o} block {u:nd A} {v:hil A}
+%{block lded : some {A:o} block {u:nd A} {v:hil A}
 	   {h:{C:o} ded ([w:hil C] v) (mp k v)}.
-
+}%
 %mode ded +H -H'.
 %worlds (li | lo | lded) (ded H H').
 %terminates H (ded H _).
@@ -180,7 +181,7 @@ ndhil : nd A -> hil A -> type.
 
 ndh_impi : ndhil (impi D1) H1'
 	    <- ({u:nd A1} {v:hil A1}
-		  ({C:o} ded ([w:hil C] v) (mp k v))
+		  ({c:o} ded (\w. v) (mp k v))
 		  -> ndhil u v
 		  -> ndhil (D1 u) (H1 v))
 	    <- ded H1 H1'.
@@ -191,7 +192,7 @@ ndh_impe : ndhil (impe D1 D2) (mp H1 H2)
 
 ndh_noti : ndhil (noti D1) (mp (mp n1 H1') H1'')
 	    <- ({p:o} {u:nd A1} {v:hil A1}
-		  ({C:o} ded ([w:hil C] v) (mp k v))
+		  ({c:o} ded (\w. v) (mp k v))
 		  -> ndhil u v
 		  -> ndhil (D1 p u) (H1 p v))
 	    <- ded (H1 (not A1)) H1'
@@ -208,9 +209,10 @@ ndh_foralle : ndhil (foralle D1 T) (mp (f1 T) H1)
 	       <- ndhil D1 H1.
 
 %mode ndhil +D -H.
-%block lndhil : some {A:o} block {u:nd A} {v:hil A}
+%{block lndhil : some {A:o} block {u:nd A} {v:hil A}
 	   {h:{C:o} ded ([w:hil C] v) (mp k v)}
 	   {nh:ndhil u v}.
+}%
 %worlds (li | lo | lndhil) (ndhil D H).
 %terminates D (ndhil D _).
 %covers ndhil +D -H.

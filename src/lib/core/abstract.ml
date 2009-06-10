@@ -17,10 +17,16 @@ module Comp = Int.Comp
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [6])
 
 exception NotImplemented
 
 exception Error of string
+
+let leftoverMeta2 =
+    "Leftover uninstantiated meta²-variable during reconstruction;\n"
+  ^ "the user needs to supply more information, since the type of\n"
+  ^ "a given expression is not uniquely determined."
 
 (* ******************************************************************* *)
 (* Abstraction:
@@ -119,14 +125,16 @@ let rec raiseKind cPsi tK = match cPsi with
 
 let ctxVarToString psi = match psi with
   | None -> " "
-  | (Some (I.CtxOffset k)) -> "Ctx_Var " ^ string_of_int k
+  | Some (I.CtxOffset k) -> "Ctx_Var " ^ string_of_int k
 
-let rec printCollection cQ = match cQ with
-  | I.Empty -> Printf.printf " \n end "
+let rec collectionToString cQ = match cQ with
+  | I.Empty -> ""
+
   | I.Dec(cQ, MV ((I.MVar (I.Inst(_r, cPsi, tP, _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tP in        
       let cO = I.Empty in 
       let cD = I.Empty in 
+<<<<<<< HEAD:src/lib/core/abstract.ml
       (printCollection cQ ; 
        Printf.printf " %s : " 
          (P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)) ;
@@ -134,21 +142,31 @@ let rec printCollection cQ = match cQ with
          (ctxVarToString ctx_var)
          (P.typToString cO cD I.Null (tA , LF.id))
       )
+=======
+        collectionToString cQ ^ " "
+      ^ P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)
+      ^ " : "
+      ^ ctxVarToString ctx_var
+      ^ " . "
+      ^ P.typToString cO cD I.Null (tA , LF.id)
+      ^ "\n"
+>>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:src/lib/core/abstract.ml
 
   | I.Dec(cQ, MMV ((I.MMVar (I.MInst(_r, cD, cPsi, tP, _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tP in        
       let cO = I.Empty in 
-      (printCollection cQ ; 
-       Printf.printf " %s : " 
-         (P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)) ;
-       Printf.printf " %s . %s \n" 
-         (ctxVarToString ctx_var)
-         (P.typToString cO cD I.Null (tA , LF.id))
-      )
+       collectionToString cQ ^ " "
+     ^ P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)
+     ^ " : "
+     ^ ctxVarToString ctx_var
+     ^ " . "
+     ^ P.typToString cO cD I.Null (tA , LF.id)
+     ^ "\n"
 
   | I.Dec (cQ, FMV (u, Some (tP, cPhi))) -> 
       let cO = I.Empty in 
       let cD = I.Empty in 
+<<<<<<< HEAD:src/lib/core/abstract.ml
       (printCollection cQ ; 
        Printf.printf " %s : " 
          (R.render_name u) ;
@@ -156,48 +174,52 @@ let rec printCollection cQ = match cQ with
          (P.typToString cO cD cPhi (tP, LF.id))
          (P.dctxToString cO cD cPhi)
       )
+=======
+       collectionToString cQ 
+     ^ " " ^ R.render_name u ^ " : "
+     ^ P.typToString cO cD cPhi (tP, LF.id)
+     ^ " [ "  ^ P.dctxToString cO cD cPhi ^ "]\n" 
+>>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:src/lib/core/abstract.ml
                           
   | I.Dec(cQ, PV ((I.PVar (I.PInst(_r, cPsi, tA', _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tA' in        
       let cO = I.Empty in 
       let cD = I.Empty in 
-      (printCollection cQ ; 
-       Printf.printf " %s : " 
-         (P.normalToString cO cD (I.Null) (I.Root(None, h, I.Nil), LF.id)) ;
-       Printf.printf " %s . %s \n" 
-         (ctxVarToString ctx_var)
-         (P.typToString cO cD (I.Null) (tA , LF.id))
-      )
+       collectionToString cQ 
+     ^ " " ^ P.normalToString cO cD I.Null (I.Root(None, h, I.Nil), LF.id) ^ " : "
+     ^ P.typToString cO cD I.Null (tA', LF.id)
+     ^ " : "
+     ^ ctxVarToString ctx_var ^ " . " ^ P.typToString cO cD I.Null (tA , LF.id)
+     ^ "\n"
 
-  | I.Dec(cQ, FV (_n, None)) -> (printCollection cQ ; Printf.printf " FV _ . ")
+  | I.Dec(cQ, FV (_n, None)) ->  collectionToString cQ ^ ",  FV _ .\n"
 
   | I.Dec(cQ, FV (n, Some tA)) -> 
       let cO = I.Empty in 
       let cD = I.Empty in       
-        (printCollection cQ ; 
-         Printf.printf " FV %s : %s \n" n.string_of_name 
-           (P.typToString cO cD (I.Null) (tA, LF.id)))
+        collectionToString cQ ^ ",  FV " ^ n.string_of_name ^ " : "
+      ^ "(" ^ P.typToString cO cD I.Null (tA, LF.id) ^ ")"
+      ^ "\n"
 
   | I.Dec(cQ, FPV (n, Some (tA, cPsi))) -> 
       let (ctx_var, tA') = raiseType cPsi tA in        
       let cO = I.Empty in 
       let cD = I.Empty in       
-        (printCollection cQ ; 
-         Printf.printf " FPV %s : %s.%s \n" n.string_of_name 
-           (ctxVarToString ctx_var)
-           (P.typToString cO cD (I.Null) (tA', LF.id))
-        )
+        collectionToString cQ
+      ^ " FPV " ^ n.string_of_name ^ " : "
+      ^ ctxVarToString ctx_var ^ "." ^ P.typToString cO cD I.Null (tA', LF.id)
+      ^ "\n"
+
+let printCollection s = print_string (collectionToString s)
+
 
 
 (* exists p cQ = B
    where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
 *)
-let exists p cQ =
-  let rec exists' cQ = match cQ with
-    | I.Empty        -> false
-    | I.Dec(cQ', y)  -> p y || exists' cQ'
-  in
-    exists' cQ
+let rec exists p = function
+  | I.Empty        -> false
+  | I.Dec(cQ', y)  -> p y || exists p cQ'
 
 (* length cPsi = |cPsi| *)
 let length cPsi = 
@@ -296,9 +318,9 @@ let rec constraints_solved cnstr = match cnstr with
       if Whnf.conv (tM, LF.id) (tN, LF.id) then 
         constraints_solved cnstrs
       else 
-        (Printf.printf "Encountered unsolved constraint:\n %s  =   %s \n\n"
-           (P.normalToString (I.Empty) (I.Empty) (phatToDCtx phat) (tM, LF.id))
-           (P.normalToString (I.Empty) (I.Empty) (phatToDCtx phat) (tN, LF.id));         
+        (Printf.printf "Encountered unsolved constraint:\n %s  =   %s\n\n"
+           (P.normalToString I.Empty I.Empty (phatToDCtx phat) (tM, LF.id))
+           (P.normalToString I.Empty I.Empty (phatToDCtx phat) (tN, LF.id));         
          false )
  | ({contents = I.Eqh (_cD, _phat, h1, h2)} :: cnstrs) -> 
       if Whnf.convHead (h1, LF.id) (h2, LF.id) then 
@@ -386,7 +408,7 @@ and cnstr_typ_rec (t_rec, s) = match t_rec with
 let rec index_of cQ n = 
   match (cQ, n) with
   | (I.Empty, _) ->
-      raise (Error "index_of for a free variable (FV, FMV, FPV, MV,  does not exist – should be impossible \n")  (* impossible due to invariant on collect *)
+      raise (Error "index_of for a free variable (FV, FMV, FPV, MV,  does not exist – should be impossible\n")  (* impossible due to invariant on collect *)
 
   | (I.Dec (cQ', MMV u1), MMV u2) ->
       (* TODO investigate the feasibility of having it start at 0 *)
@@ -436,6 +458,22 @@ let rec ctxToDctx cQ = match cQ with
       I.DDec (ctxToDctx cQ', I.TypDecl (x, tA))
 
 
+let rec ctxToCtx cQ = match cQ with
+  | I.Empty ->
+      I.Empty
+
+  | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
+      begin match raiseType cPsi tA with
+        | (None, tA') -> 
+            let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in 
+            I.Dec (ctxToCtx cQ', I.TypDecl (x, tA'))
+        | (Some _, _ ) -> raise (Error "ctxToCtx generates LF-ctx with context variable: should be impossible!")
+      end 
+  | I.Dec (cQ', FV (x, Some tA)) ->
+      (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in  *)
+      I.Dec (ctxToCtx cQ', I.TypDecl (x, tA))
+
+
 
 let rec ctxToMCtx cQ  = match cQ with
   | I.Empty ->
@@ -448,13 +486,13 @@ let rec ctxToMCtx cQ  = match cQ with
       I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi))
 
   | I.Dec (_cQ', MMV (I.MMVar (I.MInst (_, _cD, _cPsi, _tA, _), _s))) ->
-      raise (Error "Left-over uninstantiated meta²-variable during reconstruction – \n the user needs to supply more information, since the type of a given expression is not uniquely determined.")
+      raise (Error leftoverMeta2)
 
   | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) -> 
       let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in 
       I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi)) 
 
-  (* Can this case ever happen? – I don't think so. -bp *)
+  (* Can this case ever happen?  I don't think so. -bp *)
   | I.Dec (cQ', PV (I.PVar (I.PInst (_, cPsi, tA, _), _s))) -> 
       let p = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in   
       I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi))  
@@ -541,16 +579,27 @@ and collectSub cQ phat s = match s with
   | (I.Shift _) -> cQ
   | (I.Dot (I.Head h, s)) ->
       let cQ1 =  collectSub cQ phat s in 
+      let _   = dprint (fun () -> "collectSub (Head) "  ) in
       let cQ2 = collectHead cQ1 phat (h, LF.id) in
         cQ2
 
+  | (I.Dot (I.Block (h, _index), s)) -> 
+      let cQ1 =  collectSub cQ phat s in 
+      let _   = dprint (fun () -> "collectSub (Block) "  ) in
+      let cQ2 = collectHead cQ1 phat (h, LF.id) in
+        cQ2
+
+
+
   | (I.Dot (I.Obj tM, s)) ->
       let cQ1 =  collectSub cQ phat s in 
+      let _   = dprint (fun () -> "collectSub (term) M = "  ) in
+      let _   = dprint (fun () -> "collectSub (term) M = " ^ P.normalToString I.Empty I.Empty (Context.hatToDCtx phat) (tM, LF.id) ) in
       let cQ2 = collectTerm cQ1 phat (tM, LF.id) in
         cQ2
 
   | (I.Dot (I.Undef, s')) ->
-    (let _ = Printf.printf "Collect Sub encountered undef \n" in 
+    (let _ = Printf.printf "Collect Sub encountered undef\n" in 
           collectSub cQ phat  s')
 
 
@@ -567,7 +616,11 @@ and collectMSub cQ theta =  match theta with
       let cQ2 = collectHead cQ1 phat (h, LF.id) in 
         cQ2
 
-and collectHead cQ phat sH = match sH with
+and collectHead cQ phat ((head, subst) as sH) =
+  let _ = dprint (fun () -> "###collectHead  "
+                          ^ P.normalToString I.Empty I.Empty I.Null (I.Root(None, head, I.Nil), subst)
+                          ^ " \ncollection: " ^ collectionToString cQ) in
+    match sH with
 
   | (I.BVar _x, _s)  -> cQ
 
@@ -578,7 +631,7 @@ and collectHead cQ phat sH = match sH with
         if exists (eqFVar name) cQ' then
           cQ'
         else
-          let tA  = FVar.get name in
+          let tA  = FVar.get name in            
             (* tA must be closed *)
             (* Since we only use abstraction on pure LF objects,
                there are no context variables; different abstraction
@@ -607,18 +660,22 @@ and collectHead cQ phat sH = match sH with
 
   | (I.MVar (I.Inst (_r, cPsi, tA,  {contents = cnstr}), s') as u, s) ->
       if constraints_solved cnstr then
+        let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in 
+        let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in
+      let _ = dprint (fun () -> "collectSub for MVar \n") in
       let cQ' = collectSub cQ phat (LF.comp s' s) in
+      let _ = dprint (fun () -> "collectSub for MVar done \n") in
         if exists (eqMVar u) cQ' then
           cQ'
         else
-          (*  checkEmpty !cnstrs ? -bp *)
+          (*  checkEmpty !cnstrs? -bp *)
           let phihat = Context.dctxToHat cPsi in 
           let cQ1  = collectDctx cQ' phihat cPsi in 
           let cQ'' = collectTyp cQ1  phihat (tA, LF.id) in 
  
             I.Dec (cQ'', MV u) 
       else 
-        raise (Error "Left over constraints during abstraction")
+        raise (Error "Leftover constraints during abstraction")
 
   | (I.MMVar (I.MInst (_r, I.Empty, cPsi, tA,  {contents = cnstr}), (ms', s')) as u, s) ->
       if constraints_solved cnstr then
@@ -634,15 +691,17 @@ and collectHead cQ phat sH = match sH with
  
             I.Dec (cQ'', MMV u) 
       else 
-        raise (Error "Left over constraints during abstraction")
+        raise (Error "Leftover constraints during abstraction")
 
   | (I.MMVar (I.MInst (_r, _cD, _cPsi, _tA,  _), _),  _s) ->
-      raise (Error "Left-over uninstantiated meta²-variable during reconstruction – \n the user needs to supply more information, since the type of a given expression is not uniquely determined.")
+      raise (Error leftoverMeta2)
 
   | (I.MVar (I.Offset _k, s'), s) ->
        collectSub cQ phat (LF.comp s' s) 
       
-  | (I.PVar (I.PInst (_r, cPsi, tA, {contents = cnstr}), s') as p, s) ->
+  | (I.PVar (I.PInst (r, cPsi, tA, {contents = cnstr}), s') as p,  s) ->
+      dprint (fun () -> "###abstract  PVar  "
+                ^ (match !r with None -> "None" | Some _r -> "Some _")) ;
       if constraints_solved cnstr then
         let cQ' = collectSub cQ phat (LF.comp s' s) in
           if exists (eqPVar p) cQ' then            
@@ -655,13 +714,14 @@ and collectHead cQ phat sH = match sH with
             let cQ'' = collectTyp cQ1  psihat (tA, LF.id) in              
               I.Dec (cQ'', PV p) 
       else 
-        raise (Error "Left over constraints during abstraction")
+        raise (Error "Leftover constraints during abstraction")
 
   | (I.PVar (I.Offset _k, s'), s) ->
        collectSub cQ phat (LF.comp s' s) 
       
   | (I.FPVar (u, s'), s) ->
       let cQ' = collectSub cQ phat (LF.comp s' s) in
+      let _ = dprint (fun () -> "###abstract  FPVar  " ^ collectionToString cQ') in
         if exists (eqFPVar u) cQ' then
           cQ'
         else
@@ -680,6 +740,7 @@ and collectHead cQ phat sH = match sH with
             I.Dec (cQ'', FPV (u, Some (tA, cPhi)))
 
   | (I.Proj (head, _k),  s) ->
+      let _ = dprint (fun () -> "collectHead Proj \n") in 
       let cQ' = collectHead cQ phat (head, s)  in
         cQ'
 
@@ -770,6 +831,16 @@ and abstractTypW cQ offset sA = match sA with
       I.PiTyp ((I.TypDecl (x, abstractTyp cQ offset (tA, s)), dep), 
                abstractTyp cQ (offset + 1) (tB, LF.dot1 s))
 
+
+and abstractTypRec cQ offset = function
+  | (I.SigmaLast tA, s) -> I.SigmaLast (abstractTyp cQ offset (tA, s))
+  | (I.SigmaElem(x, tA, typRec), s) ->
+      let tA = abstractTyp cQ offset (tA, s) in
+      let typRec = abstractTypRec cQ offset (typRec, LF.dot1 s) in
+        I.SigmaElem(x, tA, typRec)
+
+
+
 and abstractTerm cQ offset sM = abstractTermW cQ offset (Whnf.whnf sM)
 
 and abstractTermW cQ offset sM = match sM with
@@ -812,7 +883,7 @@ and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
       subToSpine cQ offset  (s,cPsi') (I.App (tN, tS))
 
   | (I.Dot (I.Head (I.MVar (_u, _r)), _s) , I.DDec(_cPsi', _dec)) -> 
-      (Printf.printf "SubToSpine encountered MVar as head \n";
+      (Printf.printf "SubToSpine encountered MVar as head\n";
       raise NotImplemented)
       (* subToSpine cQ offset s (I.App (I.Root (I.BVar k, I.Nil), tS)) *)
 
@@ -834,26 +905,28 @@ and abstractCtx cQ =  match cQ with
       I.Empty
 
   | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
-      let cQ'   = abstractCtx cQ in
-      let cPsi' = abstractDctx cQ cPsi in 
+      let cQ'   = abstractCtx cQ  in
+      let l     = length cPsi in 
+      let cPsi' = abstractDctx cQ cPsi l in 
       (* let  (_, depth)  = dctxToHat cPsi in   *)
       (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
-      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in 
-(*      let _     = Printf.printf "Abstraction: mvar r of type tA = %s \n in context = %s \n with substitution s = %s\n\n"
+      let tA'   = abstractTyp cQ l (tA, LF.id) in 
+(*      let _     = Printf.printf "Abstraction: mvar r of type tA = %s\n in context = %s\n with substitution s = %s\n\n"
         (P.typToString I.Empty I.Empty cPsi (tA, LF.id))
         (P.dctxToString I.Empty I.Empty cPsi) 
         (P.subToString I.Empty I.Empty cPsi s) in *)
-      let s'    = abstractSub cQ (length cPsi) s in
+      let s'    = abstractSub cQ l s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV u')
 
   | I.Dec (cQ, PV (I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
-      let cQ'   = abstractCtx cQ in
-      let cPsi' = abstractDctx cQ cPsi in 
+      let cQ'   = abstractCtx cQ  in
+      let l     = length cPsi in 
+      let cPsi' = abstractDctx cQ cPsi l in 
       (* let  (_, depth)  = dctxToHat cPsi in   *)
       (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
-      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in 
-      let s'    = abstractSub cQ (length cPsi) s in
+      let tA'   = abstractTyp cQ l (tA, LF.id) in 
+      let s'    = abstractSub cQ l s in
       let p'    = I.PVar (I.PInst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', PV p')
 
@@ -864,14 +937,14 @@ and abstractCtx cQ =  match cQ with
 
 
 
-and abstractDctx cQ cPsi = match cPsi with
+and abstractDctx cQ cPsi l = match cPsi with
   | I.Null ->
       I.Null
   | I.CtxVar psi -> I.CtxVar psi
 
   | I.DDec (cPsi, I.TypDecl (x, tA)) ->
-      let cPsi' = abstractDctx cQ cPsi in
-      let tA'   = abstractTyp cQ (length cPsi) (tA, LF.id) in
+      let cPsi' = abstractDctx cQ cPsi (l-1) in
+      let tA'   = abstractTyp cQ (l-1) (tA, LF.id) in
         I.DDec (cPsi', I.TypDecl (x, tA'))
 
   (* other cases impossible in LF layer *)
@@ -963,7 +1036,7 @@ and abstractMVarHead cQ offset tH = match tH with
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MMVar (I.MInst(_r, _cD, _cPsi, _tP , _cnstr), (_ms, _s)) -> 
-      raise (Error "Left-over uninstantiated meta²-variable during reconstruction – \n the user needs to supply more information, since the type of a given expression is not uniquely determined.")
+      raise (Error leftoverMeta2)
 
   | I.MVar (I.Inst(_r, _cPsi, _tP , _cnstr), s) -> 
       let x = index_of cQ (MV tH) + offset in 
@@ -1050,20 +1123,19 @@ and abstractMVarCtx cQ =  match cQ with
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in 
       let s'    = abstractMVarSub cQ 0 s in
-        (* Do we need to consider the substitution s here ? -bp *)  
+        (* Do we need to consider the substitution s here? -bp *)  
       let u'    = I.MMVar (I.MInst (r, I.Empty, cPsi', tA', cnstr), (ms, s')) in
         I.Dec (cQ', MMV u')
 
   | I.Dec (_cQ, MMV (I.MMVar (I.MInst (_r, _cD, _cPsi, _tA, _cnstr), _s))) ->
-      raise (Error "Left-over uninstantiated meta²-variable during reconstruction – \n the user needs to supply more information, since the type of a given expression is not uniquely determined.")
-
+      raise (Error leftoverMeta2)
 
   | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractMVarCtx  cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in 
       let s'    = abstractMVarSub cQ 0 s in
-        (* Do we need to consider the substitution s here ? -bp *)  
+        (* Do we need to consider the substitution s here? -bp *)  
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV u')
 
@@ -1072,7 +1144,7 @@ and abstractMVarCtx cQ =  match cQ with
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0  (tA, LF.id) in 
       let s'    = abstractMVarSub cQ 0 s in
-        (* Do we need to consider the substitution s here ? -bp *)  
+        (* Do we need to consider the substitution s here? -bp *)  
       let p'    = I.PVar (I.PInst (r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', PV p')
 
@@ -1233,7 +1305,7 @@ and collectExp' cQ i = match i with
 
 and collectPattern cQ cD cPsi (phat, tM) tA = 
   let cQ1 = collectMctx cQ cD in 
-  (* let _    = Printf.printf "Start Collection of cPsi = %s \n" 
+  (* let _    = Printf.printf "Start Collection of cPsi = %s\n" 
   (   P.dctxToString cPsi) in  *)
   let cQ2 = collectDctx cQ1 phat cPsi in 
   (* let _ = Printf.printf "cQ2 (collection of cPsi)\n" in 
@@ -1410,9 +1482,36 @@ let rec abstrExp e =
   let _cD'     = ctxToMCtx cQ' in  *)
     begin match cQ with 
         I.Empty -> e
-      | _       -> (Printf.printf "Impossible? – Left-over free MVars-ref which are not already constraint?\n";
-                      raise (Error "Abstract: Encountered free MVars in computation-level expression\n"))
+      | _       -> ((* Printf.printf "Impossible? Leftover free MVars-ref that are not already constrained?\n";*)
+                      raise (Error "Abstract: Encountered free MVars in computation-level expression"))
     end
+
+(* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)
+let rec appDCtx cPsi1 cPsi2 = match cPsi2 with
+  | I.Null -> cPsi1
+  | I.DDec (cPsi2', dec) ->
+      let cPsi1' = appDCtx cPsi1 cPsi2' in 
+        I.Dec (cPsi1', dec)
+
+let rec abstrSchema (I.Schema elements) = 
+  let rec abstrElems elements = match elements with
+    | [] -> []
+    | Int.LF.SchElem (cPsi, trec) ::els ->         
+        let cPsi0 = Context.projectCtxIntoDctx cPsi in 
+        let cQ = collectDctx I.Empty (Context.dctxToHat I.Null) cPsi0 in 
+        let (_, l) as phat = Context.dctxToHat cPsi0 in 
+        let cQ = collectTypRec cQ phat (trec, LF.id) in 
+        let cQ' = abstractCtx cQ in 
+
+        let cPsi' = abstractDctx cQ' cPsi0  l in 
+        let trec' = abstractTypRec cQ' l (trec, LF.id) in 
+        let cPsi1 = ctxToCtx cQ' in 
+        let cPsi1' = appDCtx cPsi1 cPsi' in 
+
+        let els'  = abstrElems els in 
+          Int.LF.SchElem (cPsi1', trec') :: els'         
+  in 
+    I.Schema (abstrElems elements)
 
 
 (* REDUNDANT Tue Apr 21 09:52:37 2009 -bp 

@@ -3,35 +3,34 @@
 
 % Substitution lemma for parallel reduction
 
-subst : ({x:term} x => x -> M x => M' x)
-      -> N => N'
-      -> M N => M' N'
+subst : ({x:term} pred x x -> pred (M x) (M' x))
+      -> pred N N'
+      -> pred (M N) (M' N')
       -> type.
 %mode subst +R +S -S'.
 
-subst_idx : subst ([x:term] [idx: x => x] idx) S S.
+subst_idx : subst (\x.\idx. idx) S S.
 
-subst_beta : subst ([x:term] [idx: x => x] beta (R1 x idx) (R2 x idx))
+subst_beta : subst (\x.\idx. beta (R1 x idx) (R2 x idx))
                    S (beta R1' R2')
-           <- ({y:term} {idy: y => y}
-                 ({N}{N'}{S':N => N'} subst ([x:term] [idx: x => x] idy) S' idy)
-                 -> subst ([x:term] [idx: x => x] R1 x idx y idy)
-                          S (R1' y idy))
+           <- ({y:term} {idy: pred y y}
+		 subst (\x.\idx. idy) S' idy
+                 -> subst (\x.\idx. R1 x idx y idy)  S (R1' y idy))
            <- subst R2 S R2'.
 
-subst_ap  : subst ([x:term] [idx: x => x] ap (R1 x idx) (R2 x idx))
+subst_ap  : subst (\x.\idx. ap (R1 x idx) (R2 x idx))
                   S (ap R1' R2')
           <- subst R1 S R1'
           <- subst R2 S R2'.
 
-subst_lm  : subst ([x:term] [idx: x => x] lm (R1 x idx))
+subst_lm  : subst (\x.\idx. lm (R1 x idx))
                   S (lm R1')
-          <- ({y:term} {idy: y => y}
-                ({N}{N'}{S':N => N'}subst ([x:term] [idx: x => x] idy) S' idy)
-                -> subst ([x:term] [idx: x => x] R1 x idx y idy)
+          <- ({y:term} {idy: pred y  y}
+		   subst (\x.\idx. idy) S' idy 
+                -> subst (\x.\idx. R1 x idx y idy)
                          S (R1' y idy)).
 
-
+%{
 %block l1 : block {x:term} {idx: x => x}
 	     {hs: {N:term} {N':term} {S':N => N'}
 		   subst ([y:term][idy:y => y] idx) S' idx}.
@@ -39,10 +38,10 @@ subst_lm  : subst ([x:term] [idx: x => x] lm (R1 x idx))
 %covers subst +R +S -R'.
 %terminates R (subst R S _).
 %total R (subst R S _).
+}%
+% Diamond property for predallel reduction
 
-% Diamond property for parallel reduction
-
-dia : M => M'  ->  M => M''  ->  M' => N  ->  M'' => N  -> type.
+dia : pred M M'  ->  pred M M''  ->  pred M' N  ->  pred M'' N  -> type.
 % %mode +{M} +{M'} +{M''} +{R':M => M'} +{R'':M => M''}
 %      -{N} -{S':M' => N} -{S'':M'' => N} dia R' R'' S' S''.
 
@@ -53,8 +52,8 @@ dia : M => M'  ->  M => M''  ->  M' => N  ->  M'' => N  -> type.
 % b = beta, a = ap, l = lm,
 
 dia_bb : dia (beta R1' R2') (beta R1'' R2'') S' S''
-      <- ({x:term} {idx: x => x}
-	    ({N}{N'}{S':N => N'}subst ([y:term] [idy: y => y] idx) S' idx)
+      <- ({x:term} {idx: pred x x}
+	       subst (\y.\idy. idx) S' idx
             -> dia idx idx idx idx
             -> dia (R1' x idx) (R1'' x idx)
                    (S1' x idx) (S1'' x idx))
@@ -64,8 +63,8 @@ dia_bb : dia (beta R1' R2') (beta R1'' R2'') S' S''
 
 dia_bal : dia (beta R1' R2') (ap (lm R1'') R2'')
              S' (beta S1'' S2'')
-       <- ({x:term} {idx: x => x}
-	    ({N}{N'}{S':N => N'}subst ([y:term] [idy: y => y] idx) S' idx)
+       <- ({x:term} {idx: pred x x}
+	       subst (\y.\idy. idx) S' idx
              -> dia idx idx idx idx
              -> dia (R1' x idx) (R1'' x idx)
                     (S1' x idx) (S1'' x idx))
@@ -74,8 +73,8 @@ dia_bal : dia (beta R1' R2') (ap (lm R1'') R2'')
 
 dia_alb : dia (ap (lm R1') R2') (beta R1'' R2'')
              (beta S1' S2') S''
-       <- ({x:term} {idx: x => x}
-	    ({N}{N'}{S':N => N'}subst ([y:term] [idy: y => y] idx) S' idx)
+       <- ({x:term} {idx: pred x  x}
+	       subst (\y.\idy. idx) S' idx
              -> dia idx idx idx idx
              -> dia (R1' x idx) (R1'' x idx)
                     (S1' x idx) (S1'' x idx))
@@ -87,11 +86,12 @@ dia_aa  : dia (ap R1' R2') (ap R1'' R2'') (ap S1' S2') (ap S1'' S2'')
        <- dia R2' R2'' S2' S2''.
 
 dia_ll  : dia (lm R1') (lm R1'') (lm S1') (lm S1'')
-       <- ({x:term} {idx: x => x}
-	     ({N}{N'}{S':N => N'}subst ([y:term] [idy: y => y] idx) S' idx)
+       <- ({x:term} {idx: pred x x}
+		subst (\y.\idy. idx) S' idx
 	     -> dia idx idx idx idx
              -> dia (R1' x idx) (R1'' x idx) (S1' x idx) (S1'' x idx)).
 
+%{
 %block l2 : block {x:term} {idx:x => x}
 	     {hs: {N:term} {N':term} {S':N => N'} subst ([y:term][idy:y => y] idx) S' idx}
 	     {hd: dia idx idx idx idx}.
@@ -99,16 +99,17 @@ dia_ll  : dia (lm R1') (lm R1'') (lm S1') (lm S1'')
 %covers dia +R' +R'' -S' -S''.
 %terminates [R' R''] (dia R' R'' _ _).
 %total [R' R''] (dia R' R'' _ _).
+}%
 
-% The strip lemma for parallel reduction.
+% The strip lemma for predallel reduction.
 
-strip : M => M'  ->  M =>* M''  ->  M' =>* N  ->  M'' => N -> type.
+strip : pred M M'  ->  pred* M  M''  ->  pred* M' N  ->  pred M'' N -> type.
 % %mode +{M} +{M'} +{M''} +{R':M => M'} +{R'':M =>* M''}
 %       -{N} -{S*':M' =>* N} -{S'':M'' => N} strip R' R'' S*' S''.
 %mode strip +R' +R'' -S*' -S''.
 
-strip_id   : strip R' id id R'.
-strip_step : strip R' (R1'' ; R2*'') (S1' ; S2*') S''
+strip_id   : strip R' id* id* R'.
+strip_step : strip R' (next R1''  R2*'') (next S1'  S2*') S''
           <- dia R' R1'' S1' S1''
           <- strip S1'' R2*'' S2*' S''.
 
@@ -119,13 +120,12 @@ strip_step : strip R' (R1'' ; R2*'') (S1' ; S2*') S''
 
 % Confluence for parallel multi-step reduction.
 
-conf :  M =>* M'  ->  M =>* M''  ->  M' =>* N  ->  M'' =>* N -> type.
-% %mode +{M} +{M'} +{M''} +{R*':M =>* M'} +{R*'':M =>* M''}
-%      -{N} -{S*':M' =>* N} -{S*'':M'' =>* N} conf R*' R*'' S*' S*''.
+conf :  pred* M  M'  ->  pred* M  M''  ->  pred* M'  N  ->  pred* M'' N -> type.
+
 %mode conf +R*' +R*'' -S*' -S*''.
 
-conf_id   : conf id R*'' R*'' id.
-conf_step : conf (R1' ; R2*') R*'' S*' (S1'' ; S2*'')
+conf_id   : conf id* R*'' R*'' id*.
+conf_step : conf (next R1' R2*') R*'' S*' (next S1''  S2*'')
          <- strip R1' R*'' S1*' S1''
          <- conf R2*' S1*' S*' S2*''.
 
@@ -136,21 +136,14 @@ conf_step : conf (R1' ; R2*') R*'' S*' (S1'' ; S2*'')
 
 % Church-Rosser Theorem for parallel reduction
 
-cr :  M <=> M'  ->  M =>* N  ->  M' =>* N  -> type.
-% %mode +{M} +{M'} +{C:M <=> M'}
-%       -{N} -{S*:M =>* N} -{S*':M' =>* N} cr C S* S*'.
-%mode cr +C -S* -S*'.
+cr :  pred= M  M'  ->  pred* M  N  ->  pred* M'  N  -> type.
 
-cr_reduce  : cr (reduce R*) R* id.
-cr_expand  : cr (expand R*) id R*.
-cr_compose : cr (C1 ;; C2) S* S*'
+cr_reduce  : cr (reduce R*) R* id*.
+cr_expand  : cr (expand R*) id* R*.
+cr_compose : cr (next= C1  C2) S* S*'
           <- cr C1 S1* R1*
           <- cr C2 R2* S2*
           <- conf R1* R2* T1* T2*
           <- append S1* T1* S*
           <- append S2* T2* S*'.
 
-%worlds () (cr C S* S*').
-%covers cr +C -S* -S*'.
-%terminates C (cr C _ _).
-%total C (cr C _ _).

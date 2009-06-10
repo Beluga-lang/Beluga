@@ -5,33 +5,33 @@
 
 csolve : prog -> goal -> goal -> goal -> type.
 
-cs_and : csolve D (G1 and' G2) SC FC
-	  <- csolve D G1 (G2 and' SC) FC.
+cs_and : csolve D (and' G1 G2) SC FC
+	  <- csolve D G1 (and' G2 SC) FC.
 
-cs_true : csolve D (true') (G1 and' SC2) FC
+cs_true : csolve D (true') (and' G1 SC2) FC
 	   <- csolve D G1 SC2 FC.
 
 cs_true* : csolve D (true') (true') FC.
 
-cs_true' : csolve D (true') SC (G1 or' FC2)
+cs_true' : csolve D (true') SC (or' G1  FC2)
 	    <- csolve D G1 SC FC2.
 
 % csolve D (true') SC (false')  meta-fails.
 
-cs_eqp : csolve D (P == P) (G1 and' SC2) FC
+cs_eqp : csolve D (== P P) (and' G1  SC2) FC
 	  <- csolve D G1 SC2 FC.
 
-cs_eqp* : csolve D (P == P) (true') FC.
+cs_eqp* : csolve D (== P P) (true') FC.
 
-cs_eqp' : csolve D (Q == P) SC (G1 or' FC2)
+cs_eqp' : csolve D (== Q P) SC (or' G1 FC2)
 	   <- csolve D G1 SC FC2.
 
 % csolve D (Q == P) SC (false')  meta-fails.
 
-cs_or : csolve D (G1 or' G2) SC FC
-	 <- csolve D G1 SC (G2 or' FC).
+cs_or : csolve D (or' G1 G2) SC FC
+	 <- csolve D G1 SC (or' G2 FC).
 
-cs_false : csolve D (false') SC (G1 or' FC2)
+cs_false : csolve D (false') SC (or' G1 FC2)
 	    <- csolve D G1 SC FC2.
 
 % csolve D (false') SC (false')  meta-fails

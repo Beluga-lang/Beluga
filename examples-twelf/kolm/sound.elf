@@ -1,33 +1,11 @@
 % File: sound.elf
-
-% Translation of classical derivations to intuitionistic derivations of transformed formula.
-
-% (Soundness)   
-% (Gamma = a1:i,...,an:i,p1:o,...,pm:o
-%  Kappa = kolm p1 - - p1,...,kolm pm - - pm
-%  Psi   = nk A1,...,nk Ak
-%  Psi*  = nj A1*,...,nj Ak*
-%
-% Given: Gamma,Psi |- NK::nk A
-%        Gamma,Kappa |- sound Ai Ai' for i = 1,...,k.
-%    and Gamma,Kappa |- K::kolm A A*
-%
-% Then we have NJ such that
-% Gamma,Psi* |- NJ::nj A*
-
-% The induction is on the classical natural deduction NK of A.
-
-% Prover error: A proof could not be found
-%theorem sound_auto : forall* {A:o} {A*:o} forall {NK:nk A} {K:kolm A A*} 
-                       exists {NJ:nj A*} true.
-% %prove 8 NK (sound_auto NK K NJ).
-
 sound : nk A -> kolm A A* -> nj A* -> type.
 %mode sound +NK +K -NJ.
 
 % andi -- easy, andi and double negate
 sound_andi     : sound (nk_andi NKA NKB) (kolm_and KB KA) 
-                       (nj_dnotx (nj_andi NJA NJB))
+                       (nj_noti (\p. \u. (nj_note u p 
+			  (nj_andi NJA NJB))))
     <- sound NKA KA NJA
     <- sound NKB KB NJB.
 
@@ -45,48 +23,49 @@ sound_andi     : sound (nk_andi NKA NKB) (kolm_and KB KA)
 %                    --------- -I^q^u
 %                     - - A+
 
-sound_andel : sound (nk_andel (NK1:nk (A and B))) KA 
-                    (nj_noti ([q:o] [u:nj (not A+)]
+sound_andel : sound (nk_andel NK1) KA 
+                    (nj_noti (\q.\u.
                       (nj_note NJ1 q
-                        (nj_noti ([p:o] [v:nj ((n A+) and B*)]
+                        (nj_noti (\p.\v.
                           (nj_note (nj_andel v) p u))))))
     <- existskolm B B* KB
     <- sound NK1 (kolm_and KB KA) NJ1.  % NJ1::- - (- - A+ and B*)
 
+
 % as in previous case
-sound_ander : sound (nk_ander (NK1:nk (A and B))) KB
-                    (nj_noti ([q:o] [u:nj (not B+)]
+sound_ander : sound (nk_ander NK1) KB
+                    (nj_noti (\q.\u.
                       (nj_note NJ1 q
-                        (nj_noti ([p:o] [v:nj (A* and (n B+))]
+                        (nj_noti (\p.\v.
                           (nj_note (nj_ander v) p u))))))
     <- existskolm A A* KA
     <- sound NK1 (kolm_and KB KA) NJ1.  % NJ1::- - (A* and - - B+)
 
 % impi -- easy.  apply impi and double negate
 sound_impi : sound (nk_impi NKB) (kolm_imp KB KA) 
-                   (nj_dnotx (nj_impi NJB))
+                   (nj_noti (\p. \u. (nj_note u p (nj_impi NJB))))
     <- ({u:nk A} {v:nj A*} sound u KA v ->
           sound (NKB u) KB (NJB v)).
 
 % impe -- harder, same kind of playing with negation
 % as in other cases.
-sound_impe : sound (nk_impe NKI (NKA:nk A)) KB
-                   (nj_noti [q:o] [v:nj (not B+)]
+sound_impe : sound (nk_impe NKI NKA) KB
+                   (nj_noti (\q. \v.
                      (nj_note NJI q 
-                       (nj_noti [p:o] [u:nj (A* imp (n B+))]
-                         (nj_note (nj_impe u NJA) p v))))
+                       (nj_noti (\p.\u.
+                         (nj_note (nj_impe u NJA) p v))))))
     <- existskolm A A* KA
     <- sound NKA KA NJA
     <- sound NKI (kolm_imp KB KA) NJI.
 
-      
+
 % or-introductions are easy, we simply apply or-intro and double negate
 sound_oril : sound (nk_oril NK) (kolm_or KB KA)
-                   (nj_dnotx (nj_oril NJ))
+                   (nj_noti (\p. \u. (nj_note u p (nj_oril NJ))))
     <- sound NK KA NJ.
 
 sound_orir : sound (nk_orir NK) (kolm_or KB KA)
-                   (nj_dnotx (nj_orir NJ))
+                   (nj_noti (\p. \u. (nj_note u p (nj_orir NJ))))
     <- sound NK KB NJ.
 
 %                     ------     ------
@@ -105,11 +84,11 @@ sound_orir : sound (nk_orir NK) (kolm_or KB KA)
 %                        q
 %  ------------------------------------------ noti^q^v
 %                  - - C+
-sound_ore  : sound (nk_ore (NK:nk (A or B)) NKA NKB) KC 
-                   (nj_noti [q:o] [v:nj (not C+)]
+sound_ore  : sound (nk_ore NK NKA NKB) KC 
+                   (nj_noti (\q.\v.
                      (nj_note NJ q 
-                       (nj_noti [p:o] [u:nj (A* or B*)]
-                         (nj_note (nj_ore u NJA NJB) p v))))
+                       (nj_noti (\p.\u.
+                         (nj_note (nj_ore u NJA NJB) p v))))))
     <- existskolm A A* KA
     <- existskolm B B* KB
     <- sound NK (kolm_or KB KA) NJ
@@ -118,60 +97,70 @@ sound_ore  : sound (nk_ore (NK:nk (A or B)) NKA NKB) KC
     <- ({u:nk B} {v:nj B*} sound u KB v ->
           sound (NKB u) KC (NJB v)).
 
+
+
 % noti -- use Lemma 2 (nj_dneg_falser)  - - false |- q
 sound_noti : sound (nk_noti NK1) (kolm_not K)
-                   (nj_dnotx 
-                     (nj_noti ([q] [v:nj A*]
-                       (nj_dneg_falser (NJ1 false v) q))))
-    <- ({p} {u:nk A} {v:nj A*} {kp:kolm p (n p)} 
-        existskolm p (n p) kp ->
+                   (nj_noti (\p. \u. (nj_note u p 
+                     (nj_noti (\q.\v.
+                       (nj_note (NJ1 false v) q 
+			  (nj_noti (\p.\u. (nj_falsee u)))
+			  ) )))))
+    <- ({p:o} {u:nk A} {v:nj A*} {kp:kolm p (not (not p))} 
+        existskolm p (not (not p)) kp ->
         sound u K v ->
          sound (NK1 p u) kp (NJ1 p v)). % (NJ1 p v):nj (n p)
 
 % note -- use Lemma 1 to derive - - - A from - - - - - A
 % and apply note
-sound_note : sound (nk_note NK2 C (NK1:nk A)) KC 
-                   (nj_note (nj_triple_neg_red NJ2)
-                            (n C*) NJ1)
+sound_note : sound (nk_note NK2 C NK1) KC 
+                   (nj_note 
+		      (nj_noti 
+			 (\q.\v. nj_note NJ2 q (nj_noti (\p. \u. (nj_note u p v)))))
+                            (not (not C*)) NJ1)
       <- existskolm A A* KA
       <- sound NK2 (kolm_not KA) NJ2
       <- sound NK1 KA NJ1.
 
+
 % truei -- easy!
-sound_truei : sound nk_truei kolm_true (nj_dnotx nj_truei).
+sound_truei : sound nk_truei kolm_true (nj_noti (\p. \u. (nj_note u p nj_truei))).
 
 % falsee -- Use Lemma 2
 sound_falsee : sound (nk_falsee NK) KC
-                     (nj_dneg_falser NJ C*)
+                     (nj_note NJ C*
+			(nj_noti (\p.\u.
+                                  (nj_falsee u)))
+			)
     <- sound NK kolm_false NJ.
 
 % foralli -- easy, foralli and double negate
 sound_foralli : sound (nk_foralli NK) (kolm_forall KA)
-                      (nj_dnotx (nj_foralli NJ))
+                      (nj_noti (\p. \u. (nj_note u p (nj_foralli NJ))))
     <- ({a:i} sound (NK a) (KA a) (NJ a)).
 
 % foralle -- hard -- play with negations as usual
 sound_foralle : sound (nk_foralle NK T) (KA T)
-                      (nj_noti [q:o] [v:nj (not (A+ T))]
+                      (nj_noti (\q.\v.
                         (nj_note NJ q
-                          (nj_noti [p:o] [u:nj (forall ([x:i] (n (A+ x))))]
-                            (nj_note (nj_foralle u T) p v))))
-    <- existskolm (forall A) (n (forall ([x] (n (A+ x)))))
+                          (nj_noti (\p.\u.
+                            (nj_note (nj_foralle u T) p v))))))
+    <- existskolm (forall A) (not (not (forall (\x. (not (not (A+ x)))))))
                   (kolm_forall KA)
     <- sound NK (kolm_forall KA) NJ.
 
 % existsi -- easy, existsi and double negate
 sound_existi : sound (nk_existsi T NK) (kolm_exists KA) 
-                     (nj_dnotx (nj_existsi T NJ))
+                     (nj_noti (\p. \u. (nj_note u p (nj_existsi T NJ))))
     <- sound NK (KA T) NJ.
 
 % existse -- hard -- play around with negations (compare to ore)
-sound_existse : sound (nk_existse (NKEA:nk (exists A)) NKC) KC 
-                      (nj_noti [q:o] [v:nj (not C+)]
+sound_existse : sound (nk_existse NKEA NKC) KC 
+                      (nj_noti (\q.\v.
                         (nj_note NJnnEA q
-                          (nj_noti [p:o] [u:nj (exists A*)]
-                            (nj_note (nj_existse u NJC) p v))))
-    <- existskolm (exists A) (n (exists A*))
+                          (nj_noti (\p.\u.
+                            (nj_note (nj_existse u NJC) p v))))))
+    <- existskolm (exists A) (not (not (exists A*)))
                   (kolm_exists KA)
     <- sound NKEA (kolm_exists KA) NJnnEA
     <- ({a:i} {u:nk (A a)} {v:nj (A* a)}
@@ -187,14 +176,21 @@ sound_existse : sound (nk_existse (NKEA:nk (exists A)) NKC) KC
 % and again to obtain NJ'':nj (n n A+)
 % and finally to obtain NJ''':nj (n A+)
 % and that's what we want!
+
 sound_dnotr    : sound (nk_dnotr NK1) KA
-                       (nj_triple_neg_red
-                          (nj_triple_neg_red
-                             (nj_triple_neg_red NJ1)))
+                       (nj_noti (\q.\v. 
+                          (nj_note (nj_noti (\q2.\v2. 
+				    (nj_note (nj_noti (\q.\v.
+                                                (nj_note NJ1 q (nj_noti (\p. \u. (nj_note u p v)))
+                                                 )))
+                                                 q2 
+				       (nj_noti (\p. \u. (nj_note u p v2))))))
+			     q (nj_noti (\p. \u. (nj_note u p v)))			     
+			     )))
     <- sound NK1 (kolm_not (kolm_not KA)) NJ1.
 
 
-
+%{
 %block l1 : block {a:i}.
 %block l2 : some {A:o}{A*:o} block {NK': nk A}{K':kolm A A*}{NJ':nj A*}.
 %block l3 : some {A:o}{A*:o}{KA:kolm A A*}
@@ -218,4 +214,5 @@ sound_dnotr    : sound (nk_dnotr NK1) KA
 %terminates NK (sound NK K NJ).
 %worlds (l1 | l3 | l4) (sound _ _ _).
 % %covers (sound +NK +K -NJ).    % it really doesn't seem to cover check! --cs
+}%
 }%

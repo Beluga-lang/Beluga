@@ -105,21 +105,22 @@ let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
 
 let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
-                          'a'-'z'  'A'-'Z'
+                          'a'-'z'  'A'-'Z' '\''
+                          '0'-'9'
                           "<>"
                        ]
 
 let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
                           'a'-'z'  'A'-'Z'
-                          '#'
+                          '#' '\''
                           '0'-'9'
                           "<>"
                        ]
 
-let regexp letter = ['a'-'z' 'A'-'Z']
+let regexp letter = [ 'a'-'z' 'A'-'Z' ]
 
-let regexp digit       = [ '0'-'9' ]
+let regexp digit  = [ '0'-'9' ]
 
 (**************************************************)
 (* Location Update and Token Generation Functions *)
@@ -137,7 +138,7 @@ let mk_tok_of_lexeme tok_cons loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 (*  ; print_string ("mk_tok_of_lexeme ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
   ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
-(*  let _ = print_string ("TOKEN>> " ^ Token.to_string tok ^"\n") in *)
+(*  let _ = print_string ("TOKEN>> " ^ Token.to_string tok ^ "\n") in *)
       tok
 
 let mk_keyword s = Token.KEYWORD s
@@ -210,17 +211,19 @@ let rec lex_token loc = lexer
   | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
 
-let skip_nestable depth loc = lexer
+let skip_nestable depth loc =
+(*        print_string ("NEST " ^ Loc.to_string !loc ^ "\n")      ; *)
+lexer
   | '\n' ->
       loc := Loc.move_line 1 !loc
   
-  | '%' [^'{' '%' '\n'] ->
+  | '%'+ [^'{' '%' '\n'] ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
   
   | [^'\n' '%' '}' ]+ ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
   
-  | '}' [^'%' '\n'] ->
+  | '}' [^'%' '\n']+ ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 
   | '}' '\n' ->
@@ -235,11 +238,11 @@ let skip_nestable depth loc = lexer
       else
         depth := !depth - 1
   
-  | '%' '{' ->
+  | '%'+ '{' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; depth := !depth + 1
 
-  | '%' '\n' ->
+  | '%'+ '\n' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
 
@@ -250,7 +253,8 @@ let skip_nested_comment loc = lexer
 (*      print_string ("nested comment\n") ; flush_all() ; *)
       while !depth > 0 do
 (*        print_string ("NC-BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
-        skip_nestable depth loc lexbuf
+        skip_nestable depth loc lexbuf ;
+(*        print_string ("NC-AFT " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
       done
 
   | '}' '%' ->
@@ -264,22 +268,22 @@ let skip_line_comment loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)
 (*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
   | '%' ( [^ '\n' 'n' '{'] [^ '\n' ]* ) '\n' ->
-(*      print_string ("BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
+(*      print_string ("BEF " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
-        (*      ; print_string ("AFT " ^ Loc.to_string !loc ^"\n") *)
+(*    ; print_string ("AFT " ^ Loc.to_string !loc ^ "\n") *)
   
   | '%' '\n' ->
-(*      print_string ("BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ;  *)
+(*     print_string ("BEF " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
 
 (* Skip non-newline whitespace and advance the location reference. *)
 let skip_whitespace loc = lexer
   | [ ' ' '\t' ]+         -> 
-       (* print_string ("bef " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
+(*     print_string ("bef " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
         loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-(*    ;    print_string ("aft " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
+(*    ;   print_string ("aft " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
 
 
 (* Skip newlines and advance the location reference. *)

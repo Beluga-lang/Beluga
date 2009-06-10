@@ -95,6 +95,8 @@ let newPVar (cPsi, tA) = PInst (ref None, cPsi, tA, ref [])
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
+
+
 let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
 
 
@@ -248,6 +250,7 @@ and mshiftSub s n = match s with
 
 and mshiftFt ft n = match ft with
   | Head h -> Head (mshiftHead h n)
+  | Block (h,i) -> Block(mshiftHead h n, i)
   | Obj tM -> Obj (mshiftTerm tM n)
   | Undef  -> Undef
   
@@ -324,19 +327,19 @@ let rec mcomp t1 t2 = match (t1, t2) with
 *)
 and mfrontMSub ft t = match ft with
   | MObj (phat, tM)     -> 
-	MObj (phat, cnorm(tM, t))
+        MObj (phat, cnorm(tM, t))
 
   | PObj (_phat, PVar (Offset k, s))  -> 
       begin match LF.applyMSub k t with
         | PObj(phat, BVar k') ->  
-	    begin match LF.bvarSub k' s with 
-	      | Head(BVar j) -> PObj(phat, BVar j)
-	      | Head(PVar (q, s')) -> PObj(phat, PVar(q, s'))
-	      (* no case for LF.Head(MVar(u, s')) since u not guaranteed
-	         to be of atomic type. *)
-	      | Obj tM      -> MObj(phat, tM)
-	    end 
-	| PObj(phat, PVar (q, s')) -> PObj(phat, PVar(q, LF.comp s' s))
+            begin match LF.bvarSub k' s with 
+              | Head(BVar j) -> PObj(phat, BVar j)
+              | Head(PVar (q, s')) -> PObj(phat, PVar(q, s'))
+              (* no case for LF.Head(MVar(u, s')) since u not guaranteed
+                 to be of atomic type. *)
+              | Obj tM      -> MObj(phat, tM)
+            end 
+        | PObj(phat, PVar (q, s')) -> PObj(phat, PVar(q, LF.comp s' s))
 
         | MV k'  -> PObj (_phat, PVar (Offset k', s))
           (* other cases impossible *)
@@ -441,17 +444,19 @@ and norm (tM, sigma) = match tM with
 
   | Root (loc, BVar i, tS) ->
       begin match LF.bvarSub i sigma with
-        | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
+        | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma)) 
         | Head (BVar k) -> Root (loc, BVar k, normSpine (tS, sigma))
         | Head head     -> norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
         | Undef         -> raise (Violation ("Looking up " ^ string_of_int i ^ "\n"))
+        | Block _       -> raise (Violation ("Block should not happen! \n"))
             (* Undef should not happen ! *)
       end
 
   | Root (_, MMVar (MInst ({ contents = Some tM}, _, _, _, _),(t, r)), tS) ->
       (* constraints associated with u must be in solved form *)
       let tM' = cnorm (tM, t) in 
-      reduce (tM', LF.comp r sigma) (normSpine (tS, sigma))
+      let tM'' = norm (tM', r) in 
+      reduce (tM'', sigma) (normSpine (tS, sigma))
 
   | Root (loc, MMVar (MInst ({contents = None}, _, _, Atom _, _) as u, (t, r)), tS) ->
       (* meta-variable is of atomic type; tS = Nil *)
@@ -466,15 +471,18 @@ and norm (tM, sigma) = match tM with
       Root (loc, MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
   | Root (_, MVar (Inst ({ contents = Some tM}, _, _, _), r), tS) ->
-      (* constraints associated with u must be in solved form *)
-      reduce (norm (tM, LF.id), LF.comp r sigma) (normSpine (tS, sigma))
+      (* constraints associated with u must be in solved form *)      
+        reduce (norm (tM, r),  sigma) (normSpine (tS, sigma))  
+      (* reduce (norm (tM, LF.id), LF.comp r sigma) (normSpine (tS, sigma))   *)
 
   | Root (loc, MVar (Inst ({contents = None}, _, Atom _, _) as u, r), tS) ->
-      (* meta-variable is of atomic type; tS = Nil *)
-      Root (loc, MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
+      (* meta-variable is of atomic type; tS = Nil *)  
+      let s' =  normSub (LF.comp r sigma) in 
+      Root (loc, MVar (u, s'), normSpine (tS, sigma))
 
   | Root (loc, MVar (Inst ({contents = None} as r, cPsi, TClo (tA, s'), cnstr), s), tS) ->
-      norm (Root (loc, MVar (Inst (r, cPsi, normTyp (tA, s'), cnstr), s), tS), sigma)
+      let tAn = normTyp (tA, s') in 
+        norm (Root (loc, MVar (Inst (r, cPsi, tAn, cnstr), s), tS), sigma)
 
   | Root (_, MVar (Inst ({contents = None}, _, _tA, _) as u, _r), _tS) ->
       (* Meta-variable is not atomic and tA = Pi x:B1.B2
@@ -521,7 +529,12 @@ and norm (tM, sigma) = match tM with
   | Root (loc, Proj (BVar i, k), tS) ->
       begin match LF.bvarSub i sigma with
         | Head (BVar j)      -> Root (loc, Proj (BVar j, k), normSpine (tS, sigma))
-        | Head (PVar (p, s)) -> Root (loc, PVar (p, s)     , normSpine (tS, sigma))
+        | Head (PVar (p, s)) -> Root (loc, Proj (PVar (p, s), k), normSpine (tS, sigma))
+        | Block (h, k')      ->
+            if k = k' then
+              Root (loc, h, normSpine (tS, sigma))
+            else 
+              raise (Violation "[norm] Incompatible Block and Proj")
             (* other cases are impossible -- at least for now -bp *)
       end
 
@@ -575,12 +588,16 @@ and normFt ft = match ft with
   | Head (BVar _k)                -> ft
   | Head (FVar _k)                -> ft
   | Head (MMVar (u, (t, s')))     -> Head (MMVar (u, (cnormMSub t, normSub s')))
+  | Head (MVar (Inst ({ contents = Some tM}, _, _, _), s)) -> 
+      Obj(norm (tM, s)) 
   | Head (MVar (u, s'))           -> Head (MVar (u, normSub s'))
   | Head (FMVar (u, s'))          -> Head (FMVar (u, normSub s'))
   | Head (PVar (p, s'))           -> Head (PVar (p, normSub s'))
   | Head (FPVar (p, s'))          -> Head (FPVar (p, normSub s'))
-  | Head (Proj (PVar (p, s'), k)) -> Head (Proj (PVar (p, normSub s'), k))
-  | Head h                        -> Head h
+  | Head (Proj (PVar (p, s'), k)) -> Head (Proj (PVar (p, normSub s'), k)) 
+  | Head h                        -> Head h 
+  | Block (BVar x, i)               -> Block(BVar x, i)
+
   | Undef                         -> Undef  (* -bp Tue Dec 23 2008 : DOUBLE CHECK *)
 
 
@@ -618,6 +635,8 @@ and normDecl (decl, sigma) = match decl with
   | TypDecl (x, tA) ->
       TypDecl (x, normTyp (tA, sigma))
 
+  | _ -> decl
+
 
 (* ********************************************************************* *)
 (* Normalization = applying simultaneous modal substitution   
@@ -645,7 +664,7 @@ and normDecl (decl, sigma) = match decl with
 and what_head = function
   | BVar _ -> "BVar"
   | Const _ -> "Const"
-  | MMVar _ -> "M²Var"
+  | MMVar _ -> "M^2Var"
   | MVar _ -> "MVar"
   | PVar _ -> "PVar"
   | AnnH _ -> "AnnH"
@@ -792,8 +811,9 @@ and cnorm (tM, t) = match tM with
               
           (* Free Variables *)
           | FVar x
-            -> (Printf.printf "Encountered a free variable!?\n" ; 
-                Root (loc, FVar x, cnormSpine (tS, t)))
+            -> raise (Error (loc, UnboundName x))
+               (* (dprint( fun () ->  "Encountered a free variable!?\n") ; 
+                Root (loc, FVar x, cnormSpine (tS, t))) *)
 
           (* Projections *)
           | Proj (BVar i, k)
@@ -882,7 +902,7 @@ and cnorm (tM, t) = match tM with
         let r'  = cnormSub (r,t) in 
         let mr' = cnormMSub (mcomp mr t) in 
           Head (MMVar (u, (mr', r')))
-
+          
     | Head (MVar (Offset i, r)) -> 
         begin match LF.applyMSub i t with
           | MObj (_phat, tM)    -> Obj(Clo (tM, cnormSub (r,t)))
@@ -898,19 +918,30 @@ and cnorm (tM, t) = match tM with
         let r' = cnormSub (r,t) in 
         begin match LF.applyMSub i t with
           | PObj (_phat, BVar j)  -> 
-	      begin match LF.bvarSub j r' with
-		| Head(BVar j') -> Head(Proj (BVar j', k))
-		| Head(PVar (Offset j, s')) -> Head (Proj (PVar (Offset j, s'), k))
+              begin match LF.bvarSub j r' with
+                | Head(BVar j') -> Head(Proj (BVar j', k))
+                | Head(PVar (Offset j, s')) -> Head (Proj (PVar (Offset j, s'), k))
                 (* other cases impossible for projections *)
-	      end
-	  | PObj (_phat, PVar(Offset j, s'))   ->  
-	      Head(Proj (PVar(Offset j, LF.comp s' r'), k))
+              end
+          | PObj (_phat, PVar(Offset j, s'))   ->  
+              Head(Proj (PVar(Offset j, LF.comp s' r'), k))
           (* other case MObj _ cannot happen *)
         end
 
     | Head (Proj (PVar (p, r), k)) -> 
         let r' = cnormSub (r,t) in 
           Head (Proj (PVar (p, r'), k))
+
+    | Head (Proj (MVar _ , _)) -> raise (Violation "Head MVar")
+    | Head (Proj (Const _ , _)) -> raise (Violation "Head Const")
+    | Head (Proj (Proj _ , _)) -> raise (Violation "Head Proj Proj")
+    | Head (Proj (MMVar _ , _)) -> raise (Violation "Head MMVar ")
+
+
+    | Block (h, i) -> begin match cnormFront (Head h, t) with
+        | Head h' -> Block (h', i) 
+        | _ -> raise (Violation "Head Block")
+      end
 
     | Obj (tM) -> Obj(cnorm (tM, t))
 
@@ -967,11 +998,11 @@ and cnormMSub t = match t with
   | MDot(PObj(phat, PVar (PInst ({contents = Some (BVar x)}, _cPsi, _tA, _ ) , r)), t) -> 
         let t' = cnormMSub t in 
         begin match LF.bvarSub x r with
-	  | Head h  ->  
+          | Head h  ->  
              MDot (PObj(phat, h), t')
-	  | Obj tM  -> 
+          | Obj tM  -> 
               MDot (MObj(phat,  norm (tM, LF.id)), t')
-	end
+        end
 
   | MDot(PObj(phat, PVar (PInst ({contents = Some (PVar (q,s))}, _cPsi, _tA, _ ) , r)), t) -> 
       cnormMSub (MDot (PObj (phat, PVar(q, LF.comp s r)), t))
@@ -1060,8 +1091,9 @@ and whnf sM = match sM with
       begin match LF.bvarSub i sigma with
         | Obj tM        -> whnfRedex ((tM, LF.id), (tS, sigma))
         | Head (BVar k) -> (Root (loc, BVar k, SClo (tS,sigma)), LF.id)
+        | Head (Proj(BVar k, j)) -> (Root (loc, Proj(BVar k, j), SClo(tS, sigma)), LF.id)
         | Head head     -> whnf (Root (loc, head, SClo (tS,sigma)), LF.id)
-            (* Undef should not happen! *)
+            (* Undef and Block should not happen! *)
       end
 
   (* Meta^2-variable *)
@@ -1101,7 +1133,7 @@ and whnf sM = match sM with
 
   | (Root (_, MVar (Inst ({contents = Some tM}, _cPsi, _tA, _), r), tS), sigma) ->
       (* constraints associated with u must be in solved form *)
-      let sR =  whnfRedex ((tM, LF.comp r sigma), (tS, sigma)) in
+      let sR =  whnfRedex ((norm(tM, r),  sigma), (tS, sigma)) in
         sR
 
   | (Root (loc, MVar (Inst ({contents = None} as uref, cPsi, tA, cnstr) as u, r), tS) as tM, sigma) ->
@@ -1160,6 +1192,10 @@ and whnf sM = match sM with
       begin match LF.bvarSub i sigma with
         | Head (BVar j)      -> (Root (loc, Proj (BVar j, k)     , SClo (tS, sigma)), LF.id)
         | Head (PVar (q, s)) -> (Root (loc, Proj (PVar (q, s), k), SClo (tS, sigma)), LF.id)
+        | Block (h, k')      ->
+            if k = k' then (Root (loc, h, SClo (tS, sigma)), LF.id)
+            else 
+              raise (Violation "[whnf] Incompatible Block and Proj")
             (* other cases are impossible -- at least for now -bp *)
       end
 
@@ -1383,6 +1419,9 @@ and convFront front1 front2 = match (front1, front2) with
   | (Head (FVar x), Head (FVar y)) ->
       x = y
 
+  | (Block (h, i), Block (h', k)) ->
+      i = k && convHead (h, LF.id) (h', LF.id)
+
   | (Obj tM, Obj tN) ->
       conv (tM, LF.id) (tN, LF.id)
 
@@ -1504,6 +1543,8 @@ let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
 
   | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
       convTyp (tA, LF.id) (tB, LF.id) && convCtx cPsi1 cPsi2
+
+  | _ -> false
 
 let rec convSchElem (SchElem(cSome1, typRec1))
                     (SchElem(cSome2, typRec2))
@@ -1766,7 +1807,7 @@ let rec mctxMVarPos cD u =
               
     | Dec (cD, _) -> lookup cD (k+1)
 
-    | Empty  -> raise Fmvar_not_found
+    | Empty  -> (dprint (fun () -> "mctxMVarPos\n") ; raise Fmvar_not_found)
   in 
     lookup cD 1
 
@@ -1782,7 +1823,7 @@ let rec mctxPVarPos cD p =
               
     | Dec (cD, _) -> lookup cD (k+1)
 
-    | Empty  -> raise Fmvar_not_found
+    | Empty  -> (dprint (fun () -> "mctxPVarPos\n") ; raise Fmvar_not_found)
   in 
     lookup cD 1
 
@@ -2002,38 +2043,38 @@ let rec mctxPVarPos cD p =
   and convCTyp' thetaT1 thetaT2 = match (thetaT1, thetaT2) with 
     | ((Comp.TypBox (_, tA1, cPsi1), _t1), (Comp.TypBox (_, tA2, cPsi2), _t2)) (* t1 = t2 = id *)
       -> convDCtx cPsi1 cPsi2
-	&&
-	  convTyp (tA1, LF.id) (tA2, LF.id)
+        &&
+          convTyp (tA1, LF.id) (tA2, LF.id)
 
     | ((Comp.TypSBox (_, cPsi1, cPsi2), _t), (Comp.TypSBox (_, cPsi1', cPsi2'), _t'))  (* t1 = t2 = id *)
       -> convDCtx cPsi1 cPsi1'
-	&&
-	  convDCtx cPsi2 cPsi2'
+        &&
+          convDCtx cPsi2 cPsi2'
 
     | ((Comp.TypArr (tT1, tT2), t), (Comp.TypArr (tT1', tT2'), t')) 
       -> convCTyp (tT1, t) (tT1', t') 
-	&&
-	  convCTyp (tT2, t) (tT2', t')
+        &&
+          convCTyp (tT2, t) (tT2', t')
 
     | ((Comp.TypCross (tT1, tT2), t), (Comp.TypCross (tT1', tT2'), t')) 
       -> convCTyp (tT1, t) (tT1', t') 
-	&&
-	  convCTyp (tT2, t) (tT2', t')
+        &&
+          convCTyp (tT2, t) (tT2', t')
 
 
     | ((Comp.TypCtxPi ((_psi, cid_schema), tT1), t) , (Comp.TypCtxPi ((_psi', cid_schema'), tT1'), t'))
       -> cid_schema = cid_schema'
-	&& 
-	  convCTyp (tT1, t) (tT1', t')
+        && 
+          convCTyp (tT1, t) (tT1', t')
 
     | ((Comp.TypPiBox ((MDecl(_, tA, cPsi), dep), tT), t), (Comp.TypPiBox ((MDecl(_, tA', cPsi'), dep'), tT'), t'))
       -> dep = dep' 
         &&
           convTyp (cnormTyp (tA, t), LF.id) (cnormTyp (tA', t'), LF.id)
-	&&
-	  convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
-	&& 
-	  convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t') 
+        &&
+          convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
+        && 
+          convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t') 
 
 (* For now we omit PDecl, SDecl - bp *)
 

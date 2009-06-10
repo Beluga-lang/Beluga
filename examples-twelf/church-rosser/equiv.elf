@@ -3,11 +3,11 @@
 
 % If M => N then M -->* N.
 
-eq1 : M => N  ->  M -->* N  ->  type.
+eq1 : pred M N  ->  -->*  M N  ->  type.
 %mode eq1 +R -S*.
 
 eq1_beta : eq1 (beta R1 R2) S*
-         <- ({x:term} {eqx : x => x}
+         <- ({x:term} {eqx : pred x x}
                eq1 eqx id1 -> eq1 (R1 x eqx) (S1* x))
          <- lm1* S1* S1*'
          <- apl1* S1*' S1*''
@@ -24,29 +24,30 @@ eq1_ap : eq1 (ap R1 R2) S*
        <- appd S*' S*'' S*.
 
 eq1_lm : eq1 (lm R1) S*
-       <- ({x:term} {eqx : x => x}
+       <- ({x:term} {eqx : pred x x}
              eq1 eqx id1 -> eq1 (R1 x eqx) (S1* x))
        <- lm1* S1* S*.
 
+%{
 %block leq1 : block {x:term} {eqx:x => x} {e:eq1 eqx id1}.
 %worlds (leq1) (eq1 R S*).
 %covers eq1 +R -S*.
 %terminates R (eq1 R _).
 %total R (eq1 R _).
-
+}%
 % If M --> N then M => N.
 
-eq2 : M --> N  ->  M => N  ->  type.
+eq2 : --> M  N  -> pred M N  ->  type.
 %mode eq2 +R -S.
 
 eq2_beta1 : eq2 (beta1) (beta I1 I2)
-          <- ({x:term} {eqx : x => x}
+          <- ({x:term} {eqx : pred x x}
                 identity x eqx -> identity (M1 x) (I1 x eqx))
           <- identity M2 I2.
 
 % bug here in previous version
 eq2_lm1   : eq2 (lm1 R1) (lm S1)
-          <- ({x:term} {eqx : x => x}
+          <- ({x:term} {eqx : pred x x}
 		identity x eqx -> eq2 (R1 x) (S1 x eqx)).
 
 eq2_apl1  : eq2 (apl1 R1) (ap S1 I2)
@@ -64,11 +65,11 @@ eq2_apr1  : eq2 (apr1 R2) (ap I1 S2)
 
 % If M -->* N then M =>* N.
 
-eq3 : M -->* N  ->  M =>* N  ->  type.
+eq3 : -->* M N  ->  pred* M  N  ->  type.
 %mode eq3 +R* -S*.
 
-eq3_id : eq3 id1 id.
-eq3_step : eq3 (step1 R1 R2*) (S1 ; S2*)
+eq3_id : eq3 id1 id*.
+eq3_step : eq3 (step1 R1 R2*) (next S1 S2*)
          <- eq2 R1 S1
          <- eq3 R2* S2*.
 
@@ -79,11 +80,11 @@ eq3_step : eq3 (step1 R1 R2*) (S1 ; S2*)
 
 % If M =>* N then M -->* N.
 
-eq4 : M =>* N  ->  M -->* N  ->  type.
+eq4 : pred* M  N  -> -->*  M N  ->  type.
 %mode eq4 +R* -S*.
 
-eq4_id : eq4 id id1.
-eq4_step : eq4 (R1 ; R2*) S*
+eq4_id : eq4 id* id1.
+eq4_step : eq4 (next R1  R2*) S*
          <- eq1 R1 S1*
          <- eq4 R2* S2*
          <- appd S1* S2* S*.
@@ -95,7 +96,7 @@ eq4_step : eq4 (R1 ; R2*) S*
 
 % If M <=> N then M <-> N.
 
-eq5 : M <=> N  ->  M <-> N  ->  type.
+eq5 : pred= M N  ->  <-> M N  ->  type.
 %mode eq5 +C -C'.
 
 eq5_red   : eq5 (reduce R*) (red S*)
@@ -104,7 +105,7 @@ eq5_exp   : eq5 (expand R*) (sym (red S*))
           <- eq4 R* S*.
 % bug here (trans C1' C2') instead of (trans C2' C1')
 % Fri Dec 14 19:03:57 2001 -fp !!!
-eq5_trans : eq5 (C1 ;; C2) (trans C2' C1')
+eq5_trans : eq5 (next= C1 C2) (trans C2' C1')
           <- eq5 C1 C1'
           <- eq5 C2 C2'.
 
@@ -115,12 +116,12 @@ eq5_trans : eq5 (C1 ;; C2) (trans C2' C1')
 
 % If M <=> N then N <=> M.
 
-sym_pconv : M <=> N  ->  N <=> M  ->  type.
+sym_pconv : pred= M N  ->  pred= N M  ->  type.
 %mode sym_pconv +C -C'.
 
 spc_red   : sym_pconv (reduce R*) (expand R*).
 spc_exp   : sym_pconv (expand R*) (reduce R*).
-spc_trans : sym_pconv (C1 ;; C2) (C2' ;; C1')
+spc_trans : sym_pconv (next= C1 C2) (next= C2' C1')
           <- sym_pconv C1 C1'
           <- sym_pconv C2 C2'.
 
@@ -136,16 +137,16 @@ spc_trans : sym_pconv (C1 ;; C2) (C2' ;; C1')
 
 % If M <-> N then M <=> N.
 
-eq6 : M <-> N  ->  M <=> N  ->  type.
+eq6 : <-> M N  -> pred= M N  ->  type.
 %mode eq6 +C -C'.
 
-eq6_refl  : eq6 refl (reduce id).
+eq6_refl  : eq6 refl (reduce id*).
 eq6_sym   : eq6 (sym C1) C'
           <- eq6 C1 C1'
           <- sym_pconv C1' C'.
 % Bug here: (trans C1 C2)
 % Fri Dec 14 18:50:34 2001 -fp !!!
-eq6_trans : eq6 (trans C2 C1) (C1' ;; C2')
+eq6_trans : eq6 (trans C2 C1) (next= C1' C2')
           <- eq6 C1 C1'
           <- eq6 C2 C2'.
 eq6_red   : eq6 (red R*) (reduce S*)

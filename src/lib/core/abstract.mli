@@ -28,6 +28,8 @@ val abstrKind     : LF.kind -> LF.kind * Id.offset
 
 val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
 
+val abstrSchema   : LF.schema  -> LF.schema
+
 val abstractMSub  : LF.msub -> LF.msub * LF.mctx
 
 val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset

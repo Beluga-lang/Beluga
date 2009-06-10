@@ -5,7 +5,7 @@
 
 s_sound : solve A -> pf A -> type.
 h_sound : assume A -> pf A -> type.
-i_sound : A >> P -> (pf A -> pf (atom P)) -> type.
+i_sound : entail A P -> (pf A -> pf (atom P)) -> type.
 %name s_sound SS.
 %name h_sound HS.
 %name i_sound IS.
@@ -18,36 +18,24 @@ ss_and  : s_sound (s_and S2 S1) (andi D2 D1)
 	   <- s_sound S1 D1
 	   <- s_sound S2 D2.
 
-%{
-ss_imp  : s_sound (s_imp S1) (impi D1)
-	   <- {d:assume A} {u:pf A}
-	      h_sound d u -> s_sound (S1 d) (D1 u).
-}%
-
 ss_true : s_sound (s_true) (truei).
-
-%{
-ss_forall : s_sound (s_forall S1) (foralli D1)
-	     <- {a:i} s_sound (S1 a) (D1 a).
-}%
 
 ss_atom : s_sound (s_atom I2 H1) (D2 D1)
 	   <- h_sound H1 D1
 	   <- i_sound I2 D2.
 
-is_andl : i_sound (i_andl I1) ([u:pf (A1 and A2)] D1 (andel u))
+is_andl : i_sound (i_andl I1) (\u. D1 (andel u))
 	   <- i_sound I1 D1.
 
-is_andr : i_sound (i_andr I2) ([u:pf (A1 and A2)] D2 (ander u))
+is_andr : i_sound (i_andr I2) (\u. D2 (ander u))
 	   <- i_sound I2 D2.
 
-is_imp  : i_sound (i_imp S2 I1) ([u:pf (A2 imp A1)] D1 (impe u D2))
+is_imp  : i_sound (i_imp S2 I1) (\u. D1 (impe u D2))
 	   <- i_sound I1 D1
 	   <- s_sound S2 D2.
 
-is_forall : i_sound (i_forall T I1) ([u:pf (forall A1)] D1 (foralle u T))
+is_forall : i_sound (i_forall T I1) (\u. D1 (foralle u T))
 	     <- i_sound I1 D1.
 
-is_atom : i_sound (i_atom) ([u:pf (atom P)] u).
+is_atom : i_sound (i_atom) (\u. u).
 
-%worlds () (s_sound _ _) (h_sound _ _) (i_sound _ _).

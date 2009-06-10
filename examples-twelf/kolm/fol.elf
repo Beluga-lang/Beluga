@@ -5,7 +5,7 @@
 i : type.  %name i T.
 o : type.  %name o A.
 
-and    : o -> o -> o.   %infix right 11 and.
+&    : o -> o -> o.   %infix right 11 &.
 imp    : o -> o -> o.   %infix right 10 imp.
 or     : o -> o -> o.   %infix right 11 or.
 not    : o -> o.        %prefix 12 not.

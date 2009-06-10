@@ -3,14 +3,14 @@
 % Classical, Natural Deduction
 nk : o -> type. 
 
-nk_andi    : nk A -> nk B -> nk (A and B).
-nk_andel   : nk (A and B) -> nk A.
-nk_ander   : nk (A and B) -> nk B.
-nk_impi    : (nk A -> nk B) -> nk (A imp B).
-nk_impe    : nk (A imp B) -> nk A -> nk B.
-nk_oril    : nk A -> nk (A or B).
-nk_orir    : nk B -> nk (A or B).
-nk_ore     : nk (A or B) -> (nk A -> nk C) -> (nk B -> nk C) -> nk C.
+nk_andi    : nk A -> nk B -> nk (& A B).
+nk_andel   : nk (& A B) -> nk A.
+nk_ander   : nk (& A B) -> nk B.
+nk_impi    : (nk A -> nk B) -> nk (imp A B).
+nk_impe    : nk (imp A B) -> nk A -> nk B.
+nk_oril    : nk A -> nk (or A B).
+nk_orir    : nk B -> nk (or A B).
+nk_ore     : nk (or A B) -> (nk A -> nk C) -> (nk B -> nk C) -> nk C.
 nk_noti    : ({p:o} nk A -> nk p) -> nk (not A).
 nk_note    : nk (not A) -> {C:o} nk A -> nk C.
 nk_truei   : nk true.
@@ -32,8 +32,9 @@ nk_dnotr   : nk A
 %                p
 %          ----------- noti^p^u
 %          (not not A)
-
+%{
 %theorem nk_dnotx_auto : forall* {A:o} exists {D:nk A -> nk (not not A)} true.
 %prove 10 {} (nk_dnotx_auto D).
 
 nk_dnotx = ([NK] (nk_noti [p:o] [u:nk (not A)] (nk_note u p NK))).
+}%

@@ -9,6 +9,7 @@ module type GENSYM = sig
   val gensym : unit -> string
   val name_gensym : string -> (unit -> string)
 
+  val reset : unit -> unit
 end
 
 
@@ -17,3 +18,6 @@ end
 module VarData : GENSYM
 
 module MVarData : GENSYM
+
+val reset : unit -> unit
+

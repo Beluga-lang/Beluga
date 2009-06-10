@@ -70,7 +70,7 @@ module Ext = struct
 
     and dctx =
       | Null
-      | CtxVar   of name
+      | CtxVar   of Loc.t * name
       | DDec     of dctx * typ_decl
 
     and 'a ctx =
@@ -135,6 +135,7 @@ module Ext = struct
 (*           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx)) *)
 (*           * exp_chk *)
 
+   type rec_fun = RecFun of name * typ * exp_chk
   end
 
 
@@ -146,7 +147,7 @@ module Ext = struct
       | Typ    of Loc.t * name * LF.kind
       | Schema of Loc.t * name * LF.schema
       | Pragma of Loc.t * LF.prag
-      | Rec    of Loc.t * name * Comp.typ * Comp.exp_chk
+      | Rec    of Loc.t * Comp.rec_fun list
        
 
     type sgn = decl list
@@ -224,9 +225,12 @@ module Int = struct
 
     and front =                            (* Fronts:                        *)
       | Head of head                       (* Ft ::= H                       *)
+      | Block of head * int                (*    | Block (h,i, length)       *)
       | Obj  of normal                     (*    | N                         *)
       | Undef                              (*    | _                         *)
 
+  (* Note: Block (h,i, l) represents a tuple of length l where the i-th 
+     position is instantiated with h; all other positions are undefined *)                         
 
                                           (* Contextual substitutions       *) 
    and mfront =                           (* Fronts:                        *)
@@ -395,6 +399,7 @@ module Int = struct
           * (LF.dctx * LF.sub    * LF.dctx * (LF.msub * LF.mctx))
           * exp_chk
 
+
    type ctyp_decl = 
      | CTypDecl of name * typ
      | CTypDeclOpt of name
@@ -464,7 +469,7 @@ module Apx = struct
       | Const of cid_term
       | MVar  of cvar * sub
       | Proj  of head * int
-      | Hole 
+      | Hole   
       | PVar  of cvar * sub
       | FVar  of name
       | FMVar of name   * sub

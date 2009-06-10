@@ -18,18 +18,7 @@ ss_and  : s_sound (s_and S2 S1) (andi D2 D1)
 	   <- s_sound S1 D1
 	   <- s_sound S2 D2.
 
-%{
-ss_imp  : s_sound (s_imp S1) (impi D1)
-	   <- {d:assume A} {u:pf A}
-	      h_sound d u -> s_sound (S1 d) (D1 u).
-}%
-
 ss_true : s_sound (s_true) (truei).
-
-%{
-ss_forall : s_sound (s_forall S1) (foralli D1)
-	     <- {a:i} s_sound (S1 a) (D1 a).
-}%
 
 ss_atom : s_sound (s_atom I2 H1) (D2 D1)
 	   <- h_sound H1 D1
@@ -50,6 +39,3 @@ is_forall : i_sound (i_forall T I1) (\u. D1 (foralle u T))
 
 is_atom : i_sound (i_atom) (\u. u).
 
-%{
-%worlds () (s_sound _ _) (h_sound _ _) (i_sound _ _).
-}%

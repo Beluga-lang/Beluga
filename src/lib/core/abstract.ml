@@ -134,6 +134,15 @@ let rec collectionToString cQ = match cQ with
       let (ctx_var, tA) = raiseType cPsi tP in        
       let cO = I.Empty in 
       let cD = I.Empty in 
+<<<<<<< HEAD:src/lib/core/abstract.ml
+      (printCollection cQ ; 
+       Printf.printf " %s : " 
+         (P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)) ;
+         Printf.printf " %s . %s \n"
+         (ctxVarToString ctx_var)
+         (P.typToString cO cD I.Null (tA , LF.id))
+      )
+=======
         collectionToString cQ ^ " "
       ^ P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)
       ^ " : "
@@ -141,6 +150,7 @@ let rec collectionToString cQ = match cQ with
       ^ " . "
       ^ P.typToString cO cD I.Null (tA , LF.id)
       ^ "\n"
+>>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:src/lib/core/abstract.ml
 
   | I.Dec(cQ, MMV ((I.MMVar (I.MInst(_r, cD, cPsi, tP, _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tP in        
@@ -156,10 +166,20 @@ let rec collectionToString cQ = match cQ with
   | I.Dec (cQ, FMV (u, Some (tP, cPhi))) -> 
       let cO = I.Empty in 
       let cD = I.Empty in 
+<<<<<<< HEAD:src/lib/core/abstract.ml
+      (printCollection cQ ; 
+       Printf.printf " %s : " 
+         (R.render_name u) ;
+       Printf.printf " %s [ %s ]\n"
+         (P.typToString cO cD cPhi (tP, LF.id))
+         (P.dctxToString cO cD cPhi)
+      )
+=======
        collectionToString cQ 
      ^ " " ^ R.render_name u ^ " : "
      ^ P.typToString cO cD cPhi (tP, LF.id)
      ^ " [ "  ^ P.dctxToString cO cD cPhi ^ "]\n" 
+>>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:src/lib/core/abstract.ml
                           
   | I.Dec(cQ, PV ((I.PVar (I.PInst(_r, cPsi, tA', _c), _s)) as h)) -> 
       let (ctx_var, tA) = raiseType cPsi tA' in        

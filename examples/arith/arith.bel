@@ -12,9 +12,19 @@ fn x => fn y =>
        [ ] V = plus ([ ] U ) y 
      in 
         	 [ ] s V 
-     ;
+ 	;
 
+rec plus' : nat [ ] -> nat [ ] -> nat [ ] = 
+  fn x => 
+    case x of [ ] z  => (fn y => y)
+            | [ ] s U => 
+	    fn y => 
+	      (case	(plus' ([ ] U) y) of 
+ 	         [ ] V  => [ ] s V)
+	;
 
+<<<<<<< HEAD:examples/arith/arith.bel
+=======
 rec plus' : nat [ ] -> nat [ ] -> nat [ ] = 
   fn x => 
     case x of [ ] z  => (fn y => y)
@@ -37,5 +47,27 @@ fn x => fn y =>
      ;
 
 
+>>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:examples/arith/arith.bel
+
+rec mult : nat [ ] -> nat [ ] -> nat [ ] =
+fn x => fn y =>
+   case x of
+     [ ] z => [ ] z
+   | [ ] s U =>
+      let
+        [ ] V = mult ([ ] U) y
+      in
+		plus ([ ] V) y
+	;
 
 
+rec fact : nat [ ] -> nat [ ] =
+fn x =>
+   case x of 
+     [ ] z => [ ] s z
+   | [ ] s U => 
+      let 
+        [ ] V = fact ([ ] U)
+      in
+            mult ([ ] V) x
+	;

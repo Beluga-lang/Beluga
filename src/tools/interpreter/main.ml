@@ -18,6 +18,9 @@ let usage () =
  \    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n\
  \    +implicit     print implicit arguments (default -- for now)\n\
  \    -implicit     don't print implicit arguments\n\
+ \    -t            turn timing off (default)\n\
+ \    +t            print timing information\n\
+ \    +tfile        print timer in file \"time.txt\"\n\
 "
   in
     fprintf stderr
@@ -35,6 +38,10 @@ let process_option' arg = begin let f = function
   | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn
   | "+implicit" -> PC.printImplicit := true
   | "-implicit" -> PC.printImplicit := false
+  | "+t" -> Monitor.on := true
+  | "+tfile" -> Monitor.onf := true
+  | "-t" -> (Monitor.on := false;
+             Monitor.onf := false)
   | _ -> usage ()
 in (* print_string (">>>> " ^ arg ^ "\n"); *) f arg
 end
@@ -132,6 +139,18 @@ let main () =
       in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
+<<<<<<< HEAD:src/tools/interpreter/main.ml
+            printf "## Pretty Printing External Syntax: %s ##\n" file_name;
+            (*Comment the next line if you do not want a lot of comments*)
+            print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;
+            printf "\n## Type Reconstruction: %s ##\n" file_name;
+
+           (* let int_decls = List.map Reconstruct.recSgnDecl sgn in*)
+            let int_decls = Reconstruct.recSgnDecls sgn in
+              (*Comment the next line if you do not want a lot of comments*)
+              print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls;
+          
+=======
             (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
             print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
             printf "\n## Type Reconstruction: %s ##\n" file_name;
@@ -140,6 +159,7 @@ let main () =
             let _int_decls = Reconstruct.recSgnDecls sgn in
               (* print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls; *)
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
+>>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:src/tools/interpreter/main.ml
               return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
@@ -224,17 +244,22 @@ let main () =
         | (Negative, Negative) -> (errors + 1, unsound, incomplete)
       in
         Store.clear ()
+<<<<<<< HEAD:src/tools/interpreter/main.ml
+        ; try List.fold_left per_file (errors, unsound, incomplete) file_names
+        with  SessionFatal spec -> return spec Negative
+=======
       ; Gensym.reset ()
       ; try List.fold_left per_file (errors, unsound, incomplete) file_names
         with SessionFatal spec -> return spec Negative
+>>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:src/tools/interpreter/main.ml
     in
-    (* Iterate the process for each file given on the command line *)
+      (* Iterate the process for each file given on the command line *)
     let args   = List.tl (Array.to_list Sys.argv) in
     let files  = process_options args in
     let sessions = process_files files in
     let session_count = List.length sessions in
     let (error_count, unsound_count, incomplete_count) = List.fold_left per_session
-                         (0, 0, 0) (* initial number of: errors, unsounds, incompletes *)
+      (0, 0, 0) (* initial number of: errors, unsounds, incompletes *)
                          sessions in
     let plural count what suffix =
       string_of_int count ^ " "
@@ -242,16 +267,23 @@ let main () =
            what
          else
            what ^ suffix) in
-
+      
     let status_code = if unsound_count + incomplete_count = 0 then 0 else 1
     and message     = 
       let full =
         let sound = unsound_count = 0
         and complete = incomplete_count = 0 in
-       (if sound && complete then "#      OK!"
-        else (if sound then "" else "####    " ^ plural unsound_count "erroneously accepted (unsound)" "" ^ (if complete then "" else ", "))
+          (if sound && complete
+           then ( let _ = if (!Monitor.on || !Monitor.onf) then
+                    Monitor.print_timer ();
+                    Unify.print_trail ();
+                  in "#      OK!"
+                )            
+
+           else (if sound then "" else "####    " ^ plural unsound_count "erroneously accepted (unsound)" "" ^ (if complete then "" else ", "))
           ^(if complete then "" else "####    " ^ plural incomplete_count "erroneously rejected (incomplete)" ""))
-        ^ "\n"
+          ^ "\n"
+
       in match (session_count, error_count, unsound_count + incomplete_count) with
          | (1, 0, 0) -> ""
          | (1, 1, 1) -> "\n#### 1 error\n"
@@ -261,3 +293,4 @@ let main () =
       exit status_code
 
 let _ = main ()
+

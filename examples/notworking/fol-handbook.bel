@@ -90,7 +90,7 @@ schema w =  i + some [ a:o ] hil a;
 schema l = i + o + some [a:o] block u:nd a . hil a ; % where l < w 
 
 
-
+%{
  rec ndhil : {g:(l)*} (nd (A ..))[g] -> (hil (A .. ))[g] =
  FN g => fn d => 
  case d of 
@@ -132,3 +132,4 @@ schema l = i + o + some [a:o] block u:nd a . hil a ; % where l < w
      [g] ug \x. (H .. x)
 
 ;
+}%

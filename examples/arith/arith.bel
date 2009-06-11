@@ -23,8 +23,7 @@ rec plus' : nat [ ] -> nat [ ] -> nat [ ] =
  	         [ ] V  => [ ] s V)
 	;
 
-<<<<<<< HEAD:examples/arith/arith.bel
-=======
+
 rec plus' : nat [ ] -> nat [ ] -> nat [ ] = 
   fn x => 
     case x of [ ] z  => (fn y => y)
@@ -46,8 +45,6 @@ fn x => fn y =>
         plus ([ ] V) y
      ;
 
-
->>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:examples/arith/arith.bel
 
 rec mult : nat [ ] -> nat [ ] -> nat [ ] =
 fn x => fn y =>

@@ -20,7 +20,7 @@ BELUGA=`pwd`
 # echo BELUGA: $BELUGA
 
 # set $INTERPRETER to the executable
-INTERPRETER=$BELUGA/bin/interpreter
+INTERPRETER=$BELUGA/bin/interpreter 
 
 # set $X to the `beluga' examples directory
 X=$BELUGA/examples
@@ -33,7 +33,7 @@ cd $X
 # - Proofs written in Beluga (or an original Twelf example) are in test.cfg
 # 
 
-$INTERPRETER  \
+$INTERPRETER +t \
     $* \
     arith/arith.bel \
     count-var/cntvar.bel \

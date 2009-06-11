@@ -13,6 +13,7 @@ schema p_ctx = some [a:o] pf a;
 coercion s2p : s_ctx -> p_ctx = 
    some [a:o] assume a => pf a ;
 
+%{
 rec s_sound : {g:(s_ctx)*} (solve A)[g] -> (pf A)[s2p(g)] = 
 fn s => case s of 
  | [g] s_and (S2 ..) (S1 ..) => 
@@ -48,6 +49,8 @@ fn d => case d of
  | [g] i_atom => [s2p(g), u] u
 
  ;
+}%
+
 %{
 is_andr : i_sound (i_andr I2) (\u. D2 (ander u))
 	   <- i_sound I2 D2.

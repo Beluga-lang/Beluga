@@ -139,18 +139,6 @@ let main () =
       in
         try
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
-<<<<<<< HEAD:src/tools/interpreter/main.ml
-            printf "## Pretty Printing External Syntax: %s ##\n" file_name;
-            (*Comment the next line if you do not want a lot of comments*)
-            print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;
-            printf "\n## Type Reconstruction: %s ##\n" file_name;
-
-           (* let int_decls = List.map Reconstruct.recSgnDecl sgn in*)
-            let int_decls = Reconstruct.recSgnDecls sgn in
-              (*Comment the next line if you do not want a lot of comments*)
-              print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls;
-          
-=======
             (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
             print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
             printf "\n## Type Reconstruction: %s ##\n" file_name;
@@ -159,7 +147,6 @@ let main () =
             let _int_decls = Reconstruct.recSgnDecls sgn in
               (* print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls; *)
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
->>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:src/tools/interpreter/main.ml
               return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
@@ -244,14 +231,10 @@ let main () =
         | (Negative, Negative) -> (errors + 1, unsound, incomplete)
       in
         Store.clear ()
-<<<<<<< HEAD:src/tools/interpreter/main.ml
-        ; try List.fold_left per_file (errors, unsound, incomplete) file_names
-        with  SessionFatal spec -> return spec Negative
-=======
       ; Gensym.reset ()
       ; try List.fold_left per_file (errors, unsound, incomplete) file_names
         with SessionFatal spec -> return spec Negative
->>>>>>> bc9f758430957a204c9055e7621b4c613c57a64b:src/tools/interpreter/main.ml
+
     in
       (* Iterate the process for each file given on the command line *)
     let args   = List.tl (Array.to_list Sys.argv) in
@@ -276,7 +259,7 @@ let main () =
           (if sound && complete
            then ( let _ = if (!Monitor.on || !Monitor.onf) then
                     Monitor.print_timer ();
-                    Unify.print_trail ();
+                    Unify.print_trail (); 
                   in "#      OK!"
                 )            
 

@@ -231,8 +231,8 @@ module LF = struct
       | Null -> false
 
       | CtxVar ctx_var ->
-          begin let (Schema elems) as schema = Schema.get_schema (lookupCtxVarSchema cO ctx_var) in
-            try let _ = checkTypeAgainstSchema cO cD Null (TClo sA) schema elems in
+          begin let (Schema elems) = Schema.get_schema (lookupCtxVarSchema cO ctx_var) in
+            try let _ = checkTypeAgainstSchema cO cD Null (TClo sA) (* schema *) elems in
                 true
             with
               | (Match_failure _) as exn -> raise exn
@@ -472,23 +472,23 @@ This case should now be covered by the one below it
   *   sch = full schema, for error messages
   *   elements = elements to be tried
   *)
-  and checkTypeAgainstSchema cO cD cPsi tA sch elements =
+  and checkTypeAgainstSchema cO cD cPsi tA elements =
     (* if tA is not a Sigma, "promote" it to a one-element typRec *)
     let _ = dprint (fun () ->
                       "checkTypeAgainstSchema "
                     ^ P.typToString cO cD cPsi (tA, LF.id)
                     ^ "  against  "
-                    ^ P.schemaToString (Schema elements)) in
+                    ^ P.schemaToString (Schema elements)) 
     in
       match elements with
         | [] -> 
-            raise (Violation ("Type " ^ P.typToString cO cD cPsi (tA, LF.id) ^ " doesn't check against schema " ^ P.schemaToString sch))
+            raise (Violation ("Type " ^ P.typToString cO cD cPsi (tA, LF.id) ^ " doesn't check against schema " ^ P.schemaToString (Schema elements)))
         | element :: elements ->
             try
               checkTypeAgainstElement cO cD cPsi (tA, LF.id) element
             with 
               | (Match_failure _) as exn -> raise exn
-              | _ -> checkTypeAgainstSchema cO cD cPsi tA sch elements
+              | _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
   and checkTypeAgainstElement cO cD cPsi (tA, s) (SchElem (some_part, block_part)) = 
     let tArec = match tA with
@@ -532,44 +532,6 @@ This case should now be covered by the one below it
     in
       (block_part, subst)
 
-(****
-  and checkTypRecAgainstSchema cO cD cPsi typRec sch =
-    let rec projectCtxIntoDctx = function
-      |  Empty -> Null
-      |  Dec (rest, last) -> DDec (projectCtxIntoDctx rest, last)
-
-    and checkTypeAgainstElement (SchElem (some_part, block_part)) =
-      match (some_part, block_part) with
-          (cSomeCtx, sigma) ->
-            let dctx = projectCtxIntoDctx cSomeCtx in 
-            let dctxSub = ctxToSub dctx in
-            let _ = dprint (fun () -> "TypRec:checkTypeAgainstElement  " ^ P.subToString cO cD dctx dctxSub) in
-
-            let phat = dctxToHat cPsi in
-              dprint (fun () -> "***Unify.unifyTypRec (" ^ "\n   dctx = " 
-                        ^ P.dctxToString cO cD dctx ^ "\n   " 
-                        ^ P.typRecToString cO cD cPsi (typRec, LF.id) ^"\n== " 
-                        ^ P.typRecToString cO cD cPsi (sigma, dctxSub) );
-              try
-                Unify.unifyTypRec cD (phat, (typRec, LF.id), (sigma, dctxSub))
-              with exn ->  
-                dprint (fun () -> "TypRec " 
-                          ^ P.typRecToString cO cD cPsi (typRec, LF.id) ^ " doesn't unify with " 
-                          ^ P.typRecToString cO cD cPsi (sigma, dctxSub));
-                raise exn
-    in
-      function
-        | [] -> 
-            raise (Violation ("TypRec " 
-                          ^ P.typRecToString cO cD cPsi (typRec, LF.id) ^ " doesn't check against schema " 
-                          ^ P.schemaToString sch))
-
-        | element :: elements ->
-            try
-              checkTypeAgainstElement element
-            with _ ->
-              checkTypRecAgainstSchema cO cD cPsi typRec sch elements
-*****)
 
   (* The rule for checking a context against a schema is
    *
@@ -580,14 +542,14 @@ This case should now be covered by the one below it
    * so checking a context element against a context element is just equality.
    *)
   and checkElementAgainstElement _cO _cD elem1 elem2 =
-    let result =
-      Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in
-    let _ = dprint (fun () -> "checkElementAgainstElement "
-                      ^ P.schemaToString (Schema[elem1])
-                      ^ " <== "
-                      ^ P.schemaToString (Schema[elem2])
-                      ^ ":  "
-                      ^ string_of_bool result)
+      let result =
+        Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in
+      let _ = dprint (fun () -> "checkElementAgainstElement "
+                        ^ P.schemaToString (Schema[elem1])
+                        ^ " <== "
+                        ^ P.schemaToString (Schema[elem2])
+                        ^ ":  "
+                        ^ string_of_bool result)
     in result
 
   (* checkElementAgainstSchema cO cD sch_elem (elements : sch_elem list) *)
@@ -608,7 +570,7 @@ This case should now be covered by the one below it
             checkSchema cO cD cPsi' schema
           ; match decl with
               | TypDecl (_x, tA) ->
-                  let _ = checkTypeAgainstSchema cO cD cPsi' tA schema elements in ()
+                  let _ = checkTypeAgainstSchema cO cD cPsi' tA elements in ()
           end
 
 

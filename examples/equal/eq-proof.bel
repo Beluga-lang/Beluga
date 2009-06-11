@@ -24,6 +24,7 @@ eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 eq_lam :  ({x : exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
  
+
 schema eqCtx = block x:exp. eq x x;
 
 
@@ -43,17 +44,6 @@ rec eqfun : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
           [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
 
-
-
-exp: type.    %name exp E x.
-app: exp -> exp -> exp.
-lam: (exp -> exp) -> exp.
-
-eq: exp -> exp -> type.   %name eq Q u.
-eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
-
-eq_lam : ({x : exp} eq x x -> eq (E x) (F x)) 
-          -> eq (lam (\x. E x)) (lam (\x. F x)).
   
 
 % General transitivity is admissible

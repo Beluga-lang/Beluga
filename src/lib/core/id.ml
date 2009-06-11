@@ -10,6 +10,8 @@ type cid_term   = int
 
 type cid_schema = int
 
+type cid_coercion = int
+
 type cid_prog   = int
 
 type offset     = int

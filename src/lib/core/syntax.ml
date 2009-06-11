@@ -91,6 +91,11 @@ module Ext = struct
       | NamePrag of name * string * string option 
       | NotPrag
 
+    and co_typ = CoTyp of name * name 
+
+    and coercion   = co_branch list
+    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
+
   end
 
 
@@ -143,11 +148,12 @@ module Ext = struct
   module Sgn = struct
 
     type decl =
-      | Const  of Loc.t * name * LF.typ
-      | Typ    of Loc.t * name * LF.kind
-      | Schema of Loc.t * name * LF.schema
-      | Pragma of Loc.t * LF.prag
-      | Rec    of Loc.t * Comp.rec_fun list
+      | Const    of Loc.t * name * LF.typ
+      | Typ      of Loc.t * name * LF.kind
+      | Schema   of Loc.t * name * LF.schema
+      | Coercion of Loc.t * name * LF.co_typ * LF.coercion
+      | Pragma   of Loc.t * LF.prag
+      | Rec      of Loc.t * Comp.rec_fun list   
        
 
     type sgn = decl list
@@ -303,6 +309,15 @@ module Int = struct
                                            (*        | psi       *)
                                            (*        | .         *)
                                            (*        | Psihat, x *)
+
+
+    and co_typ = CoTyp of name * name      (* Coercion Type: name -> name *)
+
+    and coercion   = co_branch list        (* Coercion definition         *)
+    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
+                                           (* some [x1:A1,..xn:An] 
+                                            *   block y1:B1 .. yl:Bn => z1:C1 .. yl:Cl
+                                            *)  
 
     and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
       |  SigmaLast of typ                             (* ... . B *)
@@ -514,6 +529,12 @@ module Apx = struct
       | Schema of sch_elem list
 
     and psi_hat = (Int.LF.ctx_var) option * offset
+
+    and co_typ = CoTyp of name * name 
+
+    and coercion   = co_branch list
+    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
+
   end
 
   (** Approximate Computation Syntax *)

@@ -521,6 +521,18 @@ let index_schema (Ext.LF.Schema el_list) =
   Apx.LF.Schema (index_elements el_list)
 
 
+let rec index_coe c_list = match c_list with
+  | [] -> []
+  | Ext.LF.CoBranch (typ_ctx, trec1, trec2)  :: c_list' -> 
+    let cvars = CVar.create () in
+    let bvars = BVar.create () in
+    let (typ_ctx', bvars') = index_ctx cvars bvars typ_ctx in
+    let typ_rec1'          = index_typrec cvars bvars' trec1 in
+    let typ_rec2'          = index_typrec cvars bvars' trec2 in
+    let c_list'            = index_coe c_list' in
+       Apx.LF.CoBranch (typ_ctx', typ_rec1', typ_rec2') :: c_list'
+
+
 (* Translation of external computations into approximate computations *)
 let rec index_comptyp ctx_vars cvars  = function
   | Ext.Comp.TypBox (loc, a, psi)    ->
@@ -1669,6 +1681,19 @@ let rec elSchElem cO (Apx.LF.SchElem (ctx, typRec)) =
 
 let rec elSchema cO (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map (elSchElem cO) el_list)
+
+let rec elCoercion c_list = match c_list with
+  | [] -> []
+  | Apx.LF.CoBranch (typ_ctx, trec1, trec2) :: c_list' -> 
+    let cO = Int.LF.Empty in
+    let cD = Int.LF.Empty in
+   let el_ctx = elTypDeclCtx cO cD typ_ctx in
+   let dctx = projectCtxIntoDctx el_ctx in
+   let trec1' = elTypRec PiRecon cO cD dctx trec1 in
+   let trec2' = elTypRec PiRecon cO cD dctx trec2 in
+   let c_list' = elCoercion c_list' in 
+     Int.LF.CoBranch (el_ctx, trec1', trec2') :: c_list'
+
 
 let rec elDCtx recT cO cD psi = match psi with
   | Apx.LF.Null -> Int.LF.Null
@@ -3552,6 +3577,14 @@ let recSgnDecl d =
       let _        = Printf.printf "\nschema %s = %s.\n" (g.string_of_name) (P.schemaToString sW') in 
         (* Int.Sgn.Schema (g', sW) *) ()
 
+
+  | Ext.Sgn.Coercion (_ , co, Ext.LF.CoTyp(actx, bctx), c_body) -> 
+      let c_body'  = index_coe c_body in
+      let c_body'' = elCoercion c_body' in 
+      (Printf.printf "\ncoercion %s : %s -> %s =\n %s\n" 
+         (co.string_of_name) (actx.string_of_name) (bctx.string_of_name)
+         (P.coercionToString c_body'') ;
+      ())
 
   | Ext.Sgn.Rec (_, recFuns) ->
       (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)

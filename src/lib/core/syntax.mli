@@ -94,6 +94,12 @@ module Ext : sig
       | NamePrag of name * string * string option 
       | NotPrag
 
+
+    and co_typ = CoTyp of name * name 
+
+    and coercion  = co_branch list
+    and co_branch = CoBranch of typ_decl ctx * typ_rec * typ_rec
+
   end (* Ext.LF *)
 
 
@@ -147,11 +153,12 @@ module Ext : sig
   module Sgn : sig
 
     type decl =
-      | Const  of Loc.t * name * LF.typ
-      | Typ    of Loc.t * name * LF.kind
-      | Schema of Loc.t * name * LF.schema
-      | Pragma of Loc.t * LF.prag
-      | Rec    of Loc.t * Comp.rec_fun list
+      | Const    of Loc.t * name * LF.typ
+      | Typ      of Loc.t * name * LF.kind
+      | Schema   of Loc.t * name * LF.schema
+      | Coercion of Loc.t * name * LF.co_typ * LF.coercion
+      | Pragma   of Loc.t * LF.prag
+      | Rec      of Loc.t * Comp.rec_fun list
 
 
     type sgn = decl list
@@ -285,6 +292,11 @@ module Int : sig
       | Schema of sch_elem list
 
     and psi_hat = ctx_var option * offset
+
+    and co_typ = CoTyp of name * name 
+
+    and coercion   = co_branch list
+    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
 
     and typ_rec =
       |  SigmaLast of typ
@@ -472,6 +484,12 @@ module Apx : sig
       | Schema of sch_elem list
 
     and psi_hat = (Int.LF.ctx_var) option * offset
+
+    and co_typ = CoTyp of name * name 
+
+    and coercion   = co_branch list
+    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
+
   end (* Apx.LF *)
 
   module Comp : sig

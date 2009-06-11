@@ -54,7 +54,6 @@ eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 eq_lam : ({x : exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
   
-schema w = block x:exp. eq x x;
 
 
 % General transitivity is admissible
@@ -101,8 +100,8 @@ e_t: equal T' S -> equal T T' -> equal T S.
 
 schema equalCtx = some [] block x: exp, equal x x ;
 
-coercion equal2eq : equalCtx --> eqCtx =
-      block x:exp. equal x x --> block x:exp. eq x x.
+coercion equal2eq : equalCtx -> eqCtx =
+      block x:exp. equal x x => block x:exp. eq x x.
 
 % ceq: {g:(eqCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq(g)] 
 
@@ -111,7 +110,7 @@ rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq
   case E of 
 
 % HOW TO WRITE THIS CASE ??
-%  [g] #p.2 .. => [g] proj_1 (equal2eq(#p ..) 
+%  [g] #p.2 .. => [g] proj_1 (equal2eq(#p ..))
 % 
 
 | [g] eq_r (T .. )=> ref [equal2eq(g)] <equal2eq(g). T .. >   

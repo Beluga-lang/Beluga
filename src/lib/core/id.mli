@@ -17,6 +17,11 @@ type cid_term = int
 (** A constant identifier for schemas *)
 type cid_schema = int
 
+
+(** A constant identifier for coercions *)
+type cid_coercion = int
+
+
 (** A constant identifier for recursive computations/programs *)
 type cid_prog = int
 

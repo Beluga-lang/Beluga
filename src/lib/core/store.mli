@@ -85,6 +85,23 @@ module Cid : sig
 
   end
 
+  module Coercion : sig
+
+    type entry = private {
+      name   : name;
+      coercion : LF.coercion
+    }
+
+    val mk_entry        : name -> LF.coercion -> entry
+    type t
+    val add             : entry -> cid_coercion
+    val get             : cid_coercion -> entry
+    val get_coercion      : cid_coercion -> LF.coercion
+    val index_of_name   : name -> cid_coercion
+    val clear           : unit -> unit
+
+  end
+
 end
 
 val clear : unit -> unit

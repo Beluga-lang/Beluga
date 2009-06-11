@@ -87,11 +87,12 @@ schema w =  i + some [ a:o ] hil a;
 schema ndCtx  = i + o + some [a:o] nd a ; 
 schema hilCtx = i + o + some [a:o] hil a ;
 
-coercion nd2hil : ndCtx --> hilCtx = 
-              i --> i 
-    |         o --> o
-    |[a:o] nd a --> hil a ;
+coercion nd2hil : ndCtx -> hilCtx = 
+              i => i 
+    |         o => o
+    | some [a:o] nd a => hil a ;
 
+%{
  rec ndhil : {g:(ndCtx)*} (nd (A ..))[g] -> (hil (A .. ))[nd2hil(g)] =
  FN g => fn d => 
  case d of 
@@ -130,3 +131,4 @@ coercion nd2hil : ndCtx --> hilCtx =
      [nd2hil(g)] ug \x. (H .. x)
 
 ;
+}%

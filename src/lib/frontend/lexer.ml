@@ -1,3 +1,4 @@
+
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 module Loc   = Core.Syntax.Loc (*Camlp4.PreCast.Loc*)
@@ -164,6 +165,7 @@ let rec lex_token loc = lexer
   | "block"
   | "box" (* unused as of 2009-02-18 *)
   | "case"
+  | "coercion"
   | "fn"
   | "id"
   | "in"

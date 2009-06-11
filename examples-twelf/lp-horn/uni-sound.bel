@@ -10,8 +10,8 @@
 schema s_ctx = some [a:o] assume a;
 schema p_ctx = some [a:o] pf a;
 
-coercion s2p : s_ctx --> p_ctx = 
-      [a:o] assume a --> pf a ;
+coercion s2p : s_ctx -> p_ctx = 
+   some [a:o] assume a => pf a ;
 
 rec s_sound : {g:(s_ctx)*} (solve A)[g] -> (pf A)[s2p(g)] = 
 fn s => case s of 

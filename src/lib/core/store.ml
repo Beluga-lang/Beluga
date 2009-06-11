@@ -166,6 +166,45 @@ module Cid = struct
 
   end
 
+  module Coercion = struct
+
+    type entry = {
+      name   : Id.name;
+      coercion : Int.LF.coercion
+    }
+
+    let mk_entry n t = {
+      name   = n;
+      coercion = t
+    }
+
+    type t = Id.name DynArray.t
+
+    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name n = Hashtbl.find directory n
+
+    let add e =
+      let cid_tm = DynArray.length store in
+        DynArray.add store e;
+        Hashtbl.replace directory e.name cid_tm;
+        cid_tm
+
+    let get = DynArray.get store
+
+    let get_coercion name = (get name).coercion
+
+    let clear () =
+      DynArray.clear store;
+      Hashtbl.clear directory
+
+  end
+
 
   module Comp = struct
 

@@ -62,17 +62,18 @@ module type CID_RENDERER = sig
   open Id
   open Syntax.Int
 
-  val render_name       : name       -> string
-  val render_cid_typ    : cid_typ    -> string
-  val render_cid_term   : cid_term   -> string
-  val render_cid_schema : cid_schema -> string
-  val render_cid_prog   : cid_prog   -> string
-  val render_offset     : offset     -> string
+  val render_name         : name         -> string
+  val render_cid_typ      : cid_typ      -> string
+  val render_cid_term     : cid_term     -> string
+  val render_cid_schema   : cid_schema   -> string
+  val render_cid_coercion : cid_coercion -> string
+  val render_cid_prog     : cid_prog     -> string
+  val render_offset       : offset       -> string
 
-  val render_ctx_var    : LF.mctx    -> offset   -> string
-  val render_cvar       : LF.mctx    -> offset   -> string
-  val render_bvar       : LF.dctx    -> offset   -> string
-  val render_var        : Comp.gctx  -> var      -> string
+  val render_ctx_var      : LF.mctx    -> offset   -> string
+  val render_cvar         : LF.mctx    -> offset   -> string
+  val render_bvar         : LF.dctx    -> offset   -> string
+  val render_var          : Comp.gctx  -> var      -> string
 
 end
 
@@ -95,6 +96,7 @@ module Ext = struct
     val fmt_ppr_lf_sub        : lvl -> formatter -> LF.sub           -> unit
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
+    val fmt_ppr_lf_coercion   : lvl -> formatter -> LF.coercion      -> unit
     val fmt_ppr_lf_typ_rec : lvl -> formatter -> LF.typ_rec    -> unit
     val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx          -> unit
@@ -115,7 +117,8 @@ module Ext = struct
     val ppr_lf_sub        : LF.sub           -> unit
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
-    val ppr_lf_typ_rec : LF.typ_rec    -> unit
+    val ppr_lf_coercion   : LF.coercion      -> unit
+    val ppr_lf_typ_rec    : LF.typ_rec       -> unit
     val ppr_lf_psi_hat    : LF.psi_hat       -> unit
     val ppr_lf_dctx       : LF.dctx          -> unit
     val ppr_lf_mctx       : LF.mctx          -> unit
@@ -176,6 +179,13 @@ module Ext = struct
           fprintf ppf "schema %s = %a;@.@?"
             (R.render_name w)
             (fmt_ppr_lf_schema lvl) tW
+
+      | Sgn.Coercion (_, w, LF.CoTyp(w1, w2), cbody) ->
+          fprintf ppf "coercion %s : %s -> %s = %a;@.@?"
+            (R.render_name w)
+            (R.render_name w1)
+            (R.render_name w2)
+            (fmt_ppr_lf_coercion lvl) cbody
 
       | Sgn.Typ (_, a, k) ->
           fprintf ppf "%s : %a.@.@?"
@@ -386,23 +396,39 @@ module Ext = struct
 
     and fmt_ppr_lf_sch_elem lvl ppf = function
       | LF.SchElem (_, typDecls, sgmDecl) ->
-          let rec ppr_typ_decl_ctx ppf = function
-            | LF.Empty -> ()
-
-            | LF.Dec (LF.Empty, LF.TypDecl (x, tA)) ->
-                fprintf ppf "., %s : %a"
-                  (R.render_name x)
-                  (fmt_ppr_lf_typ  0) tA
-
-            | LF.Dec (xs, LF.TypDecl (x, tA)) ->
-                  fprintf ppf "%a, %s : %a "
-                    ppr_typ_decl_ctx xs
-                    (R.render_name x)
-                    (fmt_ppr_lf_typ  0) tA
-          in
-            fprintf ppf "some [%a] block %a"
+            fprintf ppf " some [%a] block %a"
               ppr_typ_decl_ctx            typDecls
               (fmt_ppr_lf_typ_rec lvl) sgmDecl
+
+    and fmt_ppr_lf_coercion lvl ppf = function
+      | [LF.CoBranch (t_ctx, trec1, trec2)] -> 
+          fprintf ppf "some [%a] block %a => %a "
+            ppr_typ_decl_ctx         t_ctx
+            (fmt_ppr_lf_typ_rec lvl) trec1
+            (fmt_ppr_lf_typ_rec lvl) trec2
+
+      | LF.CoBranch (t_ctx, trec1, trec2) :: c_list -> 
+          fprintf ppf "some [%a] block %a => %a @ @[<0>|%a@]"
+            ppr_typ_decl_ctx         t_ctx
+            (fmt_ppr_lf_typ_rec lvl) trec1
+            (fmt_ppr_lf_typ_rec lvl) trec2
+            (fmt_ppr_lf_coercion lvl) c_list
+
+
+     and ppr_typ_decl_ctx ppf = function
+       | LF.Empty -> ()
+           
+       | LF.Dec (LF.Empty, LF.TypDecl (x, tA)) ->
+           fprintf ppf "., %s : %a"
+             (R.render_name x)
+             (fmt_ppr_lf_typ  0) tA
+             
+       | LF.Dec (xs, LF.TypDecl (x, tA)) ->
+           fprintf ppf "%a, %s : %a "
+             ppr_typ_decl_ctx xs
+             (R.render_name x)
+             (fmt_ppr_lf_typ  0) tA
+
 
     and fmt_ppr_lf_typ_rec _lvl ppf typrec = 
        let ppr_element ppf suffix = function
@@ -670,7 +696,8 @@ module Ext = struct
     let ppr_lf_sub        = fmt_ppr_lf_sub        std_lvl std_formatter
     let ppr_lf_schema     = fmt_ppr_lf_schema     std_lvl std_formatter
     let ppr_lf_sch_elem   = fmt_ppr_lf_sch_elem   std_lvl std_formatter
-    let ppr_lf_typ_rec = fmt_ppr_lf_typ_rec std_lvl std_formatter
+    let ppr_lf_coercion   = fmt_ppr_lf_coercion   std_lvl std_formatter
+    let ppr_lf_typ_rec    = fmt_ppr_lf_typ_rec std_lvl std_formatter
     let ppr_lf_psi_hat    = fmt_ppr_lf_psi_hat    std_lvl std_formatter
     let ppr_lf_dctx       = fmt_ppr_lf_dctx       std_lvl std_formatter
     let ppr_lf_mctx       = fmt_ppr_lf_mctx       std_lvl std_formatter
@@ -687,10 +714,11 @@ module Ext = struct
 
     let render_name n     = n.string_of_name
     (* All the definitions below are irrelevant for printing external syntax *)
-    let render_cid_typ    = string_of_int
-    let render_cid_term   = string_of_int
-    let render_cid_schema = string_of_int
-    let render_cid_prog   = string_of_int
+    let render_cid_typ      = string_of_int
+    let render_cid_term     = string_of_int
+    let render_cid_schema   = string_of_int
+    let render_cid_coercion = string_of_int
+    let render_cid_prog     = string_of_int
 
     let render_ctx_var _cO g   =  string_of_int g
     let render_cvar    _cD u   =  string_of_int u
@@ -729,6 +757,8 @@ module Int = struct
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
+    val fmt_ppr_lf_coercion   : lvl -> formatter -> LF.coercion     -> unit
+
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
     val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.typ -> unit
@@ -750,6 +780,8 @@ module Int = struct
 
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
+
+    val ppr_lf_coercion   : LF.coercion      -> unit
 
     (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.mctx -> LF.dctx  -> unit
@@ -774,6 +806,7 @@ module Int = struct
     val octxToString      : LF.mctx -> string
 
     val schemaToString    : LF.schema     -> string 
+    val coercionToString  : LF.coercion   -> string 
     val gctxToString      : LF.mctx -> LF.mctx -> Comp.gctx  -> string
     val expChkToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
     val expSynToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
@@ -1228,32 +1261,49 @@ module Int = struct
               (fmt_ppr_lf_sch_elem lvl) f
 
       | LF.Schema (f :: fs) ->
-            fprintf ppf "%a@ +"
+            fprintf ppf "%a@ + "
               (fmt_ppr_lf_sch_elem lvl) f
           ; fmt_ppr_lf_schema lvl ppf (LF.Schema fs)
 
     and fmt_ppr_lf_sch_elem lvl ppf = function
       | LF.SchElem (typDecls, sgmDecl) ->
-          let rec ppr_typ_decl_dctx cD ppf = function
-            | LF.Null ->  
-                fprintf ppf "" 
-
-            | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
-                fprintf ppf "., %s : %a"
-                  (R.render_name x)
-                  (fmt_ppr_lf_typ LF.Empty cD LF.Null 0) tA 
-
-            | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
-                  fprintf ppf "%a, %s : %a"
-                    (ppr_typ_decl_dctx cD) cPsi
-                    (R.render_name x)
-                    (fmt_ppr_lf_typ LF.Empty cD cPsi 0) tA
-
-          in
           let cPsi = projectCtxIntoDctx typDecls in 
             fprintf ppf "some [%a] block %a"
               (ppr_typ_decl_dctx  LF.Empty)  cPsi
               (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi lvl) sgmDecl
+
+
+    and ppr_typ_decl_dctx cD ppf = function
+      | LF.Null ->  
+          fprintf ppf "" 
+            
+      | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
+          fprintf ppf "., %s : %a"
+            (R.render_name x)
+            (fmt_ppr_lf_typ LF.Empty cD LF.Null 0) tA 
+            
+      | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
+          fprintf ppf "%a, %s : %a"
+            (ppr_typ_decl_dctx cD) cPsi
+            (R.render_name x)
+            (fmt_ppr_lf_typ LF.Empty cD cPsi 0) tA
+
+    and fmt_ppr_lf_coercion lvl ppf = function
+      | [LF.CoBranch (t_ctx, trec1, trec2)] ->
+          let cPsi = projectCtxIntoDctx t_ctx in 
+          fprintf ppf " some [%a] block %a => %a"
+            (ppr_typ_decl_dctx  LF.Empty)  cPsi
+            (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec1
+            (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec2
+
+      | LF.CoBranch (t_ctx, trec1, trec2) :: c_list -> 
+          let cPsi = projectCtxIntoDctx t_ctx in 
+          fprintf ppf "some [%a] block %a => %a @ @[<0>|%a@]"
+            (ppr_typ_decl_dctx  LF.Empty)  cPsi
+            (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec1
+            (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec2
+            (fmt_ppr_lf_coercion lvl) c_list
+
 
 
     and fmt_ppr_lf_psi_hat cO _lvl ppf = function
@@ -1691,6 +1741,7 @@ module Int = struct
 
     let ppr_lf_schema             = fmt_ppr_lf_schema             std_lvl std_formatter
     let ppr_lf_sch_elem           = fmt_ppr_lf_sch_elem           std_lvl std_formatter
+    let ppr_lf_coercion           = fmt_ppr_lf_coercion           std_lvl std_formatter
 
     let ppr_lf_typ_rec cO cD cPsi = fmt_ppr_lf_typ_rec cO cD cPsi std_lvl std_formatter
 
@@ -1758,9 +1809,12 @@ module Int = struct
       fmt_ppr_lf_octx std_lvl str_formatter cO
         ; flush_str_formatter ()
 
-
     let schemaToString schema = 
       fmt_ppr_lf_schema std_lvl str_formatter schema
+      ; flush_str_formatter ()
+
+    let coercionToString coercion = 
+      fmt_ppr_lf_coercion std_lvl str_formatter coercion
       ; flush_str_formatter ()
 
     let gctxToString cO cD cG = 
@@ -1801,6 +1855,7 @@ module Int = struct
     let render_cid_typ    a    = render_name (Typ .get a).Typ .name
     let render_cid_term   c    = render_name (Term.get c).Term.name
     let render_cid_schema w    = render_name (Schema.get w).Schema.name
+    let render_cid_coercion w  = render_name (Coercion.get w).Coercion.name
     let render_cid_prog   f    = render_name (Comp.get f).Comp.name
     let render_ctx_var _cO g   =  string_of_int g
     let render_cvar    _cD u   = "mvar " ^ string_of_int u
@@ -1821,6 +1876,7 @@ module Int = struct
     let render_cid_typ     a   = render_name (Typ .get a).Typ .name
     let render_cid_term    c   = render_name (Term.get c).Term.name
     let render_cid_schema  w   = render_name (Schema.get w).Schema.name
+    let render_cid_coercion w  = render_name (Coercion.get w).Coercion.name
     let render_cid_prog    f   = render_name (Comp.get f).Comp.name
     let render_ctx_var cO g    =      
       begin try

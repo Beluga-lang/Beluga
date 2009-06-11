@@ -24,9 +24,10 @@ eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 eq_lam :  ({x : exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
  
-schema w = block x:exp. eq x x;
+schema eqCtx = block x:exp. eq x x;
 
-rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
+
+rec eqfun : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
  FN g => mlam U =>
    case [g] (U ..) of
   | [g] #p.1 .. => [g] #p.2 ..
@@ -54,11 +55,9 @@ eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 eq_lam : ({x : exp} eq x x -> eq (E x) (F x)) 
           -> eq (lam (\x. E x)) (lam (\x. F x)).
   
-schema w = block x:exp. eq x x;
-
 
 % General transitivity is admissible
-rec trans: {g:(w)*} 
+rec trans: {g:(eqCtx)*} 
    (eq (TT ..) (RR ..))[g]     % e1 : eq T R
 -> (eq (RR ..) (SS ..))[g]     % e2 : eq R S
 -> (eq (TT ..) (SS ..))[g]     % result : eq T S
@@ -97,10 +96,17 @@ e_l: ({x:exp} eq x x -> eq (T x) (T' x)) -> eq (lam (\x. T x)) (lam (\x. T' x)).
 e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
 e_r: eq T T.
 e_t: eq T' S -> eq T T' -> eq T S.
-%{
-schema h = some [] block x: exp, e: equal x x.  eq x x ; % where h < l 
 
-ceq: {g:(h)*}{T::exp[g]}{S::exp[g]} (eq (T ..) (S ..))[g] -> (equal (T ..) (S ..))[g] 
+
+%{
+schema equalCtx = some [] block x: exp, e: equal x x.  eq x x ; % where h < l 
+
+coercion equal2eq : equalCtx -> eqCtx = 
+ block x: exp, e: equal x x.  eq x x  => block x:exp. eq x x 
+;
+
+
+ceq: {g:(equalCtx)*}{T::exp[g]}{S::exp[g]} (eq (T ..) (S ..))[g] -> (equal (T ..) (S ..))[g] 
 
 rec ceq: {g:(h2)*} 
 	 (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[g] =

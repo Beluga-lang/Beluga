@@ -68,6 +68,13 @@ GLOBAL: sgn_eoi;
       |
         "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
           Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
+
+      |
+        "coercion"; w = SYMBOL; ":"; a_ctx = SYMBOL; "->"; b_ctx = SYMBOL; 
+        "="; OPT [ "|"]; bs = LIST1 co_branch SEP "|" ; ";" -> 
+          Sgn.Coercion (_loc, Id.mk_name (Id.SomeString w), 
+                        LF.CoTyp(Id.mk_name (Id.SomeString a_ctx), Id.mk_name (Id.SomeString b_ctx)), bs)
+
       |
 (*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
           Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
@@ -79,14 +86,24 @@ GLOBAL: sgn_eoi;
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
             Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
 
-      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
-            Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
+(*      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
+            Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x)) *)
 
       | "%not" ->
             Sgn.Pragma (_loc, LF.NotPrag)
       ]
     ]
   ;
+
+
+  co_branch: 
+   [ 
+      [
+
+        some_arg = lf_schema_some; arec = lf_typ_rec ; "=>"; brec = lf_typ_rec ->
+          LF.CoBranch (List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg, arec, brec)
+      ]
+   ];
 
 
   lf_kind_or_typ:

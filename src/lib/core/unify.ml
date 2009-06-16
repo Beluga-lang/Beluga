@@ -21,10 +21,10 @@ module R = Pretty.Int.DefaultCidRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 
-let numTrail = ref 0
+let numPruneSub = ref 0
 
 let print_trail () = 
-  Printf.printf "\nPass throw trail: %d times.\n" !numTrail
+  Printf.printf "\nPass throw trail: %d times.\n" !numPruneSub
     
 module type UNIFY = sig
   
@@ -268,7 +268,6 @@ module Make (T : TRAIL) : UNIFY = struct
      if the function raises an exception,
        backtrack and propagate the exception  *)
   let rec trail f =
-    numTrail := !numTrail+1;
     let _ = mark  () in
       try f () with e -> (unwind (); raise_ e)
         
@@ -1227,7 +1226,9 @@ module Make (T : TRAIL) : UNIFY = struct
         D ; cPsi'' |- [ss]s <= cPsi1'
    *)
 
-  and pruneSub cD0 cPsi (phat, (s, cPsi1), ss, rOccur) = match (s, cPsi1) with
+  and pruneSub cD0 cPsi (phat, (s, cPsi1), ss, rOccur) =
+    numPruneSub := !numPruneSub+1;
+    match (s, cPsi1) with
     | (Shift (psi, n), DDec(_cPsi', _dec)) ->       
         pruneSub cD0 cPsi (phat, (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1), ss, rOccur)
 

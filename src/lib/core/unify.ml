@@ -21,10 +21,10 @@ module R = Pretty.Int.DefaultCidRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 
-let numTrail = ref 0
+let numPruneSub = ref 0
 
 let print_trail () = 
-  Printf.printf "\nPass throw trail: %d times.\n" !numTrail
+  Printf.printf "\nPruneSub failed because notInvertible : %d times.\n" !numPruneSub
     
 module type UNIFY = sig
   
@@ -268,7 +268,6 @@ module Make (T : TRAIL) : UNIFY = struct
      if the function raises an exception,
        backtrack and propagate the exception  *)
   let rec trail f =
-    numTrail := !numTrail+1;
     let _ = mark  () in
       try f () with e -> (unwind (); raise_ e)
         
@@ -1227,9 +1226,18 @@ module Make (T : TRAIL) : UNIFY = struct
         D ; cPsi'' |- [ss]s <= cPsi1'
    *)
 
-  and pruneSub cD0 cPsi (phat, (s, cPsi1), ss, rOccur) = match (s, cPsi1) with
+  and pruneSub cD0 cPsi (phat, (s, cPsi1), ss, rOccur) = 
+    begin try 
+        pruneSub' cD0 cPsi (phat, (s, cPsi1), ss, rOccur)
+    with NotInvertible -> 
+      (numPruneSub := !numPruneSub + 1  ; 
+       raise NotInvertible)
+    end
+
+  and pruneSub' cD0 cPsi (phat, (s, cPsi1), ss, rOccur) =
+    match (s, cPsi1) with
     | (Shift (psi, n), DDec(_cPsi', _dec)) ->       
-        pruneSub cD0 cPsi (phat, (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1), ss, rOccur)
+        pruneSub' cD0 cPsi (phat, (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1), ss, rOccur)
 
     | (Shift (_psi, _n), Null) -> (id, Null)
 
@@ -1239,11 +1247,11 @@ module Make (T : TRAIL) : UNIFY = struct
         let (_, ssubst) = ss in 
         begin match bvarSub n ssubst with
           | Undef -> 
-              let (s1', cPsi1') = pruneSub cD0 cPsi (phat, (s', cPsi'), ss, rOccur)  in 
+              let (s1', cPsi1') = pruneSub' cD0 cPsi (phat, (s', cPsi'), ss, rOccur)  in 
                 (comp s1' shift, cPsi1')
 
            | Head (BVar _n) ->
-              let (s1', cPsi1') = pruneSub cD0 cPsi (phat, (s', cPsi'), ss, rOccur) in
+              let (s1', cPsi1') = pruneSub' cD0 cPsi (phat, (s', cPsi'), ss, rOccur) in
               let s1_i = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s1')) in      (* cPsi1' |- s1_i <= cPsi' *)
                (dot1 s1' ,  DDec(cPsi1', TypDecl(x, TClo (tA, s1_i))))
         end
@@ -1254,11 +1262,11 @@ module Make (T : TRAIL) : UNIFY = struct
       let (_ , ssubst) = ss in 
         begin match bvarSub n ssubst with
           | Undef -> 
-              let (s1', cPsi1') = pruneSub cD0 cPsi (phat, (s', cPsi'), ss, rOccur)  in 
+              let (s1', cPsi1') = pruneSub' cD0 cPsi (phat, (s', cPsi'), ss, rOccur)  in 
                 (comp s1' shift, cPsi1')
 
            | Head (BVar _n) ->
-              let (s1', cPsi1') = pruneSub cD0 cPsi (phat, (s', cPsi'), ss, rOccur) in
+              let (s1', cPsi1') = pruneSub' cD0 cPsi (phat, (s', cPsi'), ss, rOccur) in
               let s1_i = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s1')) in      (* cPsi1' |- s1_i <= cPsi' *)
                (dot1 s1' ,  DDec(cPsi1', TypDecl(x, TClo (tA, s1_i))))
         end
@@ -1268,14 +1276,14 @@ module Make (T : TRAIL) : UNIFY = struct
         (* let _tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in    *)
         let _tM' = prune cD0 cPsi1 (phat, (tM, id), ss, rOccur) in     
 
-        let (s1', cPsi1')  = pruneSub cD0 cPsi (phat, (s', cPsi'), ss, rOccur) in 
+        let (s1', cPsi1')  = pruneSub' cD0 cPsi (phat, (s', cPsi'), ss, rOccur) in 
         let s1_i = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s1')) in      (* cPsi1' |- s1_i <= cPsi' *)
         (* We need to prune the type here as well;  Feb  9  2009 -bp *)
         let tA' = pruneTyp cD0 cPsi1' (phat, (tA, id), (MShift 0, s1_i), rOccur) in  
           (dot1 s1'  , DDec(cPsi1', TypDecl(x, tA'))) 
 
    | (Dot (Undef, t), DDec (cPsi1, _)) ->
-       let (s1', cPsi1') = pruneSub cD0 cPsi (phat, (t, cPsi1), ss, rOccur) in
+       let (s1', cPsi1') = pruneSub' cD0 cPsi (phat, (t, cPsi1), ss, rOccur) in
          (comp s1' shift, cPsi1')
 
 

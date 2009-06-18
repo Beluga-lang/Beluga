@@ -458,16 +458,23 @@ module Ext = struct
          fprintf ppf "%a"
            (ppr_elements) typrec
 
-    and fmt_ppr_lf_psi_hat _lvl ppf = function
-      | []      -> ()
-
-      | [x]     ->
+    and fmt_ppr_lf_psi_elem _lvl ppf = function
+      | LF.VarName x     ->
           fprintf ppf "%s"
             (R.render_name x)
 
-      | x :: xs ->
-          fprintf ppf "%s : %a"
+      | LF.CoName (x,y)     ->
+          fprintf ppf "%s(%s)"
             (R.render_name x)
+            (R.render_name y)
+        
+
+    and fmt_ppr_lf_psi_hat _lvl ppf = function
+      | []      -> ()
+
+      | x :: xs ->
+          fprintf ppf "%a, %a"
+            (fmt_ppr_lf_psi_elem 0) x
             (fmt_ppr_lf_psi_hat 0) xs
 
 
@@ -1219,6 +1226,11 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_name psi)
 
+      | LF.CoCtx (co, c_var) -> 
+          fprintf ppf "%s(%a)"
+            (R.render_cid_coercion co)
+            (fmt_ppr_lf_ctx_var cO) c_var
+
 
     and fmt_ppr_lf_typ_rec cO cD cPsi _lvl ppf typrec = 
        let ppr_element cO cD cPsi ppf suffix = function
@@ -1945,6 +1957,9 @@ module Error = struct
     let fmt_ppr ppf = function
       | UnboundName n ->
           fprintf ppf "unbound data-level variable (ordinary or meta-variable) or constructor: %s" (R.render_name n)
+
+      | UnboundCoName n ->
+          fprintf ppf "unbound context coercion: %s" (R.render_name n)
 
       | UnboundCtxName n ->
           fprintf ppf "unbound context variable: %s" (R.render_name n)

@@ -15,6 +15,7 @@
 %   definition of `extend' and the use of `extend' in `eqfun'
 
 exp: type.    %name exp E x.
+z: exp.
 app: exp -> exp -> exp.
 lam: (exp -> exp) -> exp.
 
@@ -33,7 +34,8 @@ rec ref : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
 
   | [g] lam \x. L .. x =>
       let
-          [g,e:block yyy:exp. eq yyy yyy] V .. e = ref [g, e:block q:exp. eq q q] <g, e. L .. e.1>
+          [g,e:block yyy:exp. eq yyy yyy] V .. e = 
+            ref [g, e:block q:exp. eq q q] <g, e. L .. e.1>
       in
         [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
    | [g] app (A1 ..) (A2 ..)  : exp[g]=>
@@ -42,18 +44,6 @@ rec ref : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
           [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
 
-
-
-exp: type.    %name exp E x.
-app: exp -> exp -> exp.
-lam: (exp -> exp) -> exp.
-
-eq: exp -> exp -> type.   %name eq Q u.
-eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
-
-eq_lam : ({x : exp} eq x x -> eq (E x) (F x)) 
-          -> eq (lam (\x. E x)) (lam (\x. F x)).
-  
 
 
 % General transitivity is admissible
@@ -98,14 +88,83 @@ e_r: {T:exp}equal T T.
 e_t: equal T' S -> equal T T' -> equal T S.
 
 
-schema equalCtx = some [] block x: exp, equal x x ;
+schema equalCtx = some [] block x: exp. equal x x ;
 
-coercion equal2eq : equalCtx -> eqCtx =
-      block x:exp. equal x x => block x:exp. eq x x.
+coercionCtx equal2eq : equalCtx -> eqCtx  =
+      block x:exp. equal x x => block x:exp'. eq x x;
 
+
+coercionCtx equal2eq : equalCtx -> eqCtx =
+       equal T T => eq (equal2eq T) (equal2eq T);
+
+
+coercionTerm equal2eq : exp -> exp' =
+ lam => lam' 
+ app => app' ;
+
+
+
+coercionTerm equal2eq : equal T T -> eq (equal2eq T) (equal2eq T) =
+ eq_lam => e_lam
+ eq_app => e_app
+
+
+
+
+%{
+rec co2eq : {g:(equalCtx)*} (exp)[g] -> (block x:exp. equal x x)[equal2eq(g)] = 
+ FN g => fn e => case e of 
+ 
+  [g] p .. => [equal2eq(g)] < p .. , e_r (p ..) >
+| [g] z    => [equal2eq(g)] <z    , e_r z >
+| [g] app (E1 ..) (E2 ..) => 
+  let [equal2eq(g)] < F1 .. , D1 .. > = co2eq [g] ([g] E1 ..) in 
+  let [equal2eq(g)] < F2 .. , D2 .. > = co2eq [g] ([g] E2 ..) in 
+   [equal2eq(g)] < app (F1 ..), (F2 ..) , e_a (D2 ..) (D1 ..) >
+| [g] lam (\x. E .. x ) => 
+  let [equal2eq(g), u] <F .. u, D .. u > = co2eq [g, x:exp]
+
+
+morphism co2equal: 
+  {g:(equalCtx)*} (block x :exp. equal x x)[g] -> (block x:exp. eq x x)[equal2eq(g)] = 
+
+ [g] p .. => [equal2eq(g)] equal2eq(p) ..
+
+
+;
+
+% Problem: we can't use co2equal or co2eq on LF types...
+morphism co2eq : g:equalCtx . exp[g]  -> exp'[equal2eq(g)] = 
+  [g] p.1 ..  => [equal2eq(g)] (equal2eq p).1 ..
+| [g] lam \x. E .. x => 
+  let [equal2eq(g),u:block x:exp.eq x x] F .. u = 
+    co2eq [g, u:block x:exp.equal x x] ([g,u] E .. u.1) in 
+    [equal2eq(g)] lam' \x. F .. <x, eq_r x> 
+| [g] app (E1 ..) (E2 ..) => 
+  let [equal2eq(g)] F1 .. = co2eq [g] ([g] E1 .. ) in 
+  let [equal2eq(g)] F2 .. = co2eq [g] ([g] E2 .. ) in 
+    [g] app' (F1 ..) (F2 ..)
+
+
+rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] 
+        -> (eq ((co2eq [g] ([g] T ..))..) ((co2eq [g] ([g] S ..)) ..) [equal2eq(g)]  =
+
+
+OR: Substitutions should be thought of structure preserving mappings aka morphisms.?
+
+
+}%
 % ceq: {g:(eqCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq(g)] 
 
+% T::exp[g], S::exp[g]  ;   equal2eq(g) |-  T .. <= exp  so 
+% T::exp[g], S::exp[g]  ;   equal2eq(g) |-  .. <= g
 rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq(g)]  =
+ [equal2eq(g)] e_r z 
+;
+
+
+%{
+rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq equal2eq(T ..) equal2eq(S ..))[equal2eq(g)]  =
  FN g =>  fn E =>
   case E of 
 
@@ -125,3 +184,4 @@ rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq
     [equal2eq(g)] eq_lam (\x.\v. E <x, eq x x>)
 
 
+}%

@@ -1082,7 +1082,7 @@ module Make (T : TRAIL) : UNIFY = struct
                       (* let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
                          Root (loc, MVar (u, s'), Nil) *)
                       let _  = dprint(fun () -> "Pruning MVAR (1) - non pattern: pruneSub " ^ 
-                                        P.subToString Empty cD0 (Context.hatToDCtx phat) t) in
+                                        P.subToString Empty cD0 (Context.hatToDCtx phat) t) in                       
                       let (idsub, cPsi2) = pruneSub  cD0 cPsi' (phat, (t, cPsi1), ss, rOccur) in
                       (* Psi1 |- idsub   : Psi2 
                          Psi2 |- idsub_i : Psi1

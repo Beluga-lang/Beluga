@@ -419,6 +419,21 @@ let index_decl cvars bvars (Ext.LF.TypDecl(x, a)) =
 
 let rec index_dctx ctx_vars cvars bvars = function
   | Ext.LF.Null        -> (Apx.LF.Null , bvars)
+  | Ext.LF.CoCtx (loc, co_name, psi_name) -> 
+      let offset = begin try
+                     CVar.index_of_name ctx_vars psi_name 
+                  with Not_found ->
+                    raise (Error (Some loc, UnboundCtxName psi_name)) 
+                   end in
+      let cid_co = begin try 
+                     Coercion.index_of_name co_name 
+                   with Not_found -> 
+                     raise (Error (Some loc, UnboundCoName co_name))
+                   end in
+          (Apx.LF.CtxVar (Apx.LF.CoCtx (cid_co, Apx.LF.CtxOffset offset)) , bvars)
+        (* (Apx.LF.CtxVar (Apx.LF.CtxName psi_name) , bvars) *)
+
+
   | Ext.LF.CtxVar (loc, psi_name)  ->
       begin try
         let offset = CVar.index_of_name ctx_vars psi_name in
@@ -441,14 +456,15 @@ let index_psihat ctx_vars explicit_psihat =
 
   let rec index_hat bvars = function
     | [] -> (0, bvars)
-    | x :: psihat ->
+    | Ext.LF.VarName x :: psihat ->
         let bvars' = BVar.extend bvars (BVar.mk_entry x) in
         let (l, bvars'') = index_hat bvars' psihat in
           (l + 1, bvars'')
+    | _ ->  raise (Violation "Context Coercion must be applied to context variable which must occur at the beginning.\n")
   in
     begin match explicit_psihat with
       | [] -> ((None, 0), bv)
-      | x :: psihat ->
+      | Ext.LF.VarName x :: psihat ->
           begin try
             let ctx_var = CVar.index_of_name ctx_vars x in
             let (d, bvars) = index_hat bv psihat in
@@ -456,6 +472,16 @@ let index_psihat ctx_vars explicit_psihat =
           with Not_found ->
             let (d, bvars ) = index_hat bv explicit_psihat in
               ((None, d) , bvars)
+          end
+
+      | Ext.LF.CoName (co, psi) :: psihat ->
+          begin try
+            let ctx_var = CVar.index_of_name ctx_vars psi in
+            let cid_co  = Coercion.index_of_name co in 
+            let (d, bvars) = index_hat bv psihat in
+              ((Some (Int.LF.CoCtx(cid_co, Int.LF.CtxOffset (ctx_var))), d) , bvars)
+          with Not_found ->
+            raise (Violation "Context Coercion Error -- either coercion was not found or coercion was not applied to context variable\n")
           end
     end
 
@@ -1393,15 +1419,7 @@ and elSub recT cO cD cPsi s cPhi =
             raise (Violation "Id must be associated with ctxvar")
       end
 
-  | (Apx.LF.Dot (Apx.LF.Head Apx.LF.Hole, s),   Int.LF.DDec (cPhi', Int.LF.TypDecl(_x, tA))) ->
-      begin match tA with
-        | Int.LF.Atom _ ->
-            let s' = mkShift recT cPsi in
-            let ss = LF.invert s' in
-            let u  = Whnf.newMVar (cPsi, Int.LF.TClo(tA, ss)) in
-              Int.LF.Dot (Int.LF.Head (Int.LF.MVar(u, LF.id)), elSub recT cO cD cPsi s cPhi')
-        | _ -> raise (Violation "Omitted arguments must be of atomic type; eta-expansion needed")
-      end
+
 
   | (Apx.LF.Dot (Apx.LF.Head h, s),   Int.LF.DDec (cPhi', _decl)) ->
       (* NOTE: if decl = x:A, and cPsi(h) = A' s.t. A =/= A'
@@ -1698,12 +1716,16 @@ let rec elCoercion c_list  = match c_list with
    let c_list' = elCoercion c_list' in 
      Int.LF.CoBranch (el_ctx, trec1', trec2') :: c_list'
 
+let rec elCtxVar c_var = match c_var with 
+  | Apx.LF.CtxOffset offset  -> Int.LF.CtxOffset offset
+  | Apx.LF.CtxName psi       -> Int.LF.CtxName psi
+  | Apx.LF.CoCtx (co, c_var) -> Int.LF.CoCtx (co, elCtxVar c_var)
+
 
 let rec elDCtx recT cO cD psi = match psi with
   | Apx.LF.Null -> Int.LF.Null
 
-  | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) -> Int.LF.CtxVar (Int.LF.CtxOffset offset)
-  | Apx.LF.CtxVar (Apx.LF.CtxName psi)      -> Int.LF.CtxVar (Int.LF.CtxName psi)
+  | Apx.LF.CtxVar (c_var) -> Int.LF.CtxVar(elCtxVar c_var)
 
   | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
       let cPsi = elDCtx recT cO cD psi' in
@@ -3556,21 +3578,24 @@ let recSgnDecl d =
     
       let _        = FVar.clear () in
       let cO       = Int.LF.Empty in
-      let tA       = Monitor.timer ("Constant Elaboration", fun () -> (let tA = elTyp PiRecon cO Int.LF.Empty Int.LF.Null apxT in
-                                                                    solve_fvarCnstr PiRecon cO Int.LF.Empty !fvar_cnstr;
-                                                                    tA)) in
+      let tA       = Monitor.timer ("Constant Elaboration", 
+                                    fun () -> (let tA = elTyp PiRecon cO Int.LF.Empty Int.LF.Null apxT in
+                                                 solve_fvarCnstr PiRecon cO Int.LF.Empty !fvar_cnstr;
+                                                 tA)) in
       let cD       = Int.LF.Empty in
 
       let _        = dprint (fun () -> "\nElaboration of constant " ^ c.string_of_name ^ " : " ^
                                        P.typToString cO cD Int.LF.Null (tA, LF.id)) in
 
-      let _        = Monitor.timer ("Constant Reconstruction", fun () -> recTyp PiRecon cO cD Int.LF.Null (tA, LF.id)) in
+      let _        = Monitor.timer ("Constant Reconstruction", 
+                                    fun () -> recTyp PiRecon cO cD Int.LF.Null (tA, LF.id)) in
 
       let _        = dprint (fun () -> "\nReconstruction (without abstraction) of constant " ^
                                c.string_of_name ^ " : " ^
                                P.typToString cO cD Int.LF.Null (tA, LF.id)) in
 
-      let (tA', i) = Monitor.timer ("Constant Abstraction", fun () -> Abstract.abstrTyp tA) in
+      let (tA', i) = Monitor.timer ("Constant Abstraction", 
+                                    fun () -> Abstract.abstrTyp tA) in
 
       let _        = dprint (fun () -> "\nReconstruction (with abstraction) of constant: " ^
                                c.string_of_name ^ " : " ^
@@ -3611,6 +3636,9 @@ let recSgnDecl d =
       let c_body'' = elCoercion c_body' in 
       let (a_schema, b_schema)    = (Schema.index_of_name actx, Schema.index_of_name bctx)  in
       let _        = recCoercion c_body'' (a_schema, b_schema) in 
+      (* May need to add abstraction over reconstructed c_body'' *)
+      let _        = Coercion.add (Coercion.mk_entry co (Int.LF.CoTyp(a_schema, b_schema)) 
+                                                         c_body'') in 
       (Printf.printf "\ncoercion %s : %s -> %s =\n %s\n" 
          (co.string_of_name) (actx.string_of_name) (bctx.string_of_name)
          (P.coercionToString c_body'') ;

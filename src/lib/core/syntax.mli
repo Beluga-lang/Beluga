@@ -70,6 +70,7 @@ module Ext : sig
     and dctx =
       | Null
       | CtxVar   of Loc.t * name
+      | CoCtx    of Loc.t * name * name
       | DDec     of dctx * typ_decl
 
     and tuple =
@@ -86,7 +87,8 @@ module Ext : sig
     and schema =
       | Schema of sch_elem list
 
-    and psi_hat = name list
+    and psi_elem = VarName of name | CoName of name * name
+    and psi_hat = psi_elem list
 
     and mctx     = ctyp_decl ctx          
 
@@ -280,6 +282,7 @@ module Int : sig
     and ctx_var = 
       | CtxName   of name
       | CtxOffset of offset
+      | CoCtx    of cid_coercion * ctx_var
 
     and 'a ctx =
       | Empty
@@ -293,7 +296,7 @@ module Int : sig
 
     and psi_hat = ctx_var option * offset
 
-    and co_typ = CoTyp of name * name 
+    and co_typ = CoTyp of cid_schema * cid_schema
 
     and coercion   = co_branch list
     and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
@@ -471,7 +474,7 @@ module Apx : sig
     and ctx_var = 
       | CtxName   of name
       | CtxOffset of offset
-       
+      | CoCtx    of cid_coercion * ctx_var
 
     and 'a ctx =
       | Empty
@@ -485,7 +488,7 @@ module Apx : sig
 
     and psi_hat = (Int.LF.ctx_var) option * offset
 
-    and co_typ = CoTyp of name * name 
+    and co_typ = CoTyp of cid_schema * cid_schema
 
     and coercion   = co_branch list
     and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec

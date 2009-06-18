@@ -238,29 +238,32 @@ GLOBAL: sgn_eoi;
     [
       [
        "some"; "["; ahat_decls = LIST0 lf_ahat_decl SEP ","; "]" -> ahat_decls
-     | 
-       -> []
-     ] 
-   ] 
-;
+       | 
+          -> []
+      ] 
+    ] 
+  ;
 
-lf_typ_rec_block:
-[[
+  lf_typ_rec_block:
+    [
+      [
       "block"; a_list = LIST1 lf_typ_rec_elem SEP ","; "."; a_last = lf_typ LEVEL "atomic"
         -> (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last))
-]];
+      ]
+    ]
+  ;
 
-lf_typ_rec:
-  [
+  lf_typ_rec:
     [
+      [
         b = lf_typ_rec_block
         -> b
-    | 
+      | 
         a = lf_typ
         -> LF.SigmaLast a
+      ]
     ]
-  ]
-;
+  ;
 
 
   lf_typ_rec_elem:
@@ -285,6 +288,22 @@ lf_typ_rec:
       ]
     ]
   ;
+
+
+  lf_hat_elem :
+    [
+      [
+        x = SYMBOL ->
+        LF.VarName (Id.mk_name (Id.SomeString  x))
+
+      |
+        co = SYMBOL; "("; ctx_name = SYMBOL; ")" ->
+          LF.CoName (Id.mk_name (Id.SomeString co), Id.mk_name (Id.SomeString ctx_name) )
+          
+      ]
+    ]
+  ;
+
 
 
 (* ************************************************************************************** *)
@@ -504,6 +523,11 @@ lf_typ_rec:
         psi = SYMBOL ->
           LF.CtxVar (_loc, Id.mk_name (Id.SomeString psi))
 
+      |
+        co = SYMBOL; "("; psi = SYMBOL; ")" ->
+          LF.CoCtx (_loc, Id.mk_name (Id.SomeString co), Id.mk_name (Id.SomeString psi) )
+
+
       |  x = SYMBOL; ":"; tA = clf_typ ->
           LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
 (*      |
@@ -621,10 +645,12 @@ lf_typ_rec:
     | "atomic"
       [
         (* "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = clf_term; ")" ->   *)
-      "["; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "]"; tM = clf_term_app ->   
+ (*     "["; var = LIST0 [ x = SYMBOL -> x ] SEP ","; "]"; tM = clf_term_app ->   
           let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in
             Comp.Box (_loc, pHat, tM)
-
+ *)
+       "["; pHat = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "]"; tM = clf_term_app ->            
+            Comp.Box (_loc, pHat, tM)
       | 
         "(" ; e1 = SELF; p_or_a = cmp_pair_atom -> 
           begin match p_or_a with 
@@ -650,9 +676,9 @@ lf_typ_rec:
           Comp.CtxApp (_loc, i, cPsi)
 
       |
-        i = SELF; "<"; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = clf_term_app; ">" ->
-          let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in
-            Comp.MApp (_loc, i, (pHat, tM))
+        i = SELF; "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">" ->
+          (* let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in *)
+            Comp.MApp (_loc, i, (vars, tM))
       |
         i = SELF; e = cmp_exp_chk ->
           Comp.Apply (_loc, i, e)

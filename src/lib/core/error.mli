@@ -7,6 +7,7 @@ type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 type error =
   (* indexing errors *)
   | UnboundName of Id.name
+  | UnboundCoName    of Id.name
   | UnboundCtxName   of Id.name
   | UnboundCtxSchemaName   of Id.name
   | UnboundCompName  of Id.name

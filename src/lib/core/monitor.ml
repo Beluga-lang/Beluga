@@ -81,9 +81,10 @@ let writeTime (name, time) =
 let timer (name, f) = 
   if (!on || !onf) then
     (*  Printf.printf "In timer\n"; *)
-    let timeBef = Unix.gettimeofday() in
-    let result  = f() in
-    let timeAft = Unix.gettimeofday() in
+    let timeBef = Unix.gettimeofday() in 
+     let result  = f() in
+    let timeAft = Unix.gettimeofday() in 
+    (* let timeAft = Unix.times () in  *)
       writeTime (name, timeAft -. timeBef);
       result;
   else 

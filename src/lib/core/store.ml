@@ -170,11 +170,13 @@ module Cid = struct
 
     type entry = {
       name   : Id.name;
+      coTyp  : Int.LF.co_typ;
       coercion : Int.LF.coercion
     }
 
-    let mk_entry n t = {
+    let mk_entry n w t = {
       name   = n;
+      coTyp  = w;
       coercion = t
     }
 
@@ -198,6 +200,7 @@ module Cid = struct
     let get = DynArray.get store
 
     let get_coercion name = (get name).coercion
+    let get_coercionTyp name = (get name).coTyp
 
     let clear () =
       DynArray.clear store;

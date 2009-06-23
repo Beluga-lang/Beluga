@@ -1193,20 +1193,28 @@ let abstrKind tK =
   (* what is the purpose of phat? *)
   let empty_phat = (None, 0) in
   let cQ         = collectKind I.Empty empty_phat (tK, LF.id) in
-  let cQ'        = abstractCtx cQ in
-  let tK'        = abstractKind cQ' 0 (tK, LF.id) in
-  let cPsi       = ctxToDctx cQ' in
-    (raiseKind cPsi tK', length cPsi)
+    begin match cQ with
+        Int.LF.Empty -> (tK, 0)
+      | _       -> 
+          let cQ'        = abstractCtx cQ in
+          let tK'        = abstractKind cQ' 0 (tK, LF.id) in
+          let cPsi       = ctxToDctx cQ' in
+            (raiseKind cPsi tK', length cPsi)
+    end
 
 and abstrTyp tA =
   let empty_phat = (None, 0) in
   let cQ         = collectTyp I.Empty empty_phat (tA, LF.id) in
-  let cQ'        = abstractCtx cQ in
-  let tA'        = abstractTyp cQ' 0 (tA, LF.id) in
-  let cPsi       = ctxToDctx cQ' in
-    begin match raiseType cPsi tA' with 
-      | (None, tA'') -> (tA'', length cPsi)
-      | _            -> raise (Error "Abstraction not valid LF-type because of left-over context variable")
+    begin match cQ with 
+        Int.LF.Empty -> (tA, 0)
+      | _       -> 
+          let cQ'        = abstractCtx cQ in
+          let tA'        = abstractTyp cQ' 0 (tA, LF.id) in
+          let cPsi       = ctxToDctx cQ' in
+            begin match raiseType cPsi tA' with 
+              | (None, tA'') -> (tA'', length cPsi)
+              | _            -> raise (Error "Abstraction not valid LF-type because of left-over context variable")
+            end
     end 
 
 (* *********************************************************************** *)

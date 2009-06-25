@@ -1133,7 +1133,11 @@ and whnf sM = match sM with
 
   | (Root (_, MVar (Inst ({contents = Some tM}, _cPsi, _tA, _), r), tS), sigma) ->
       (* constraints associated with u must be in solved form *)
-      let sR =  whnfRedex ((norm(tM, r),  sigma), (tS, sigma)) in
+      let tM' = begin match r with
+                  | Shift (NoCtxShift, 0) -> tM 
+                  | _ -> norm(tM, r)
+                end  in 
+      let sR =  whnfRedex ((tM',  sigma), (tS, sigma)) in
         sR
 
   | (Root (loc, MVar (Inst ({contents = None} as uref, cPsi, tA, cnstr) as u, r), tS) as tM, sigma) ->

@@ -1,0 +1,335 @@
+test: 
+(app (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a nil))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+              
+                nil
+
+(@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a (@ a nil))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+) -> type.
+
+t200: test
+(
+   appcons
+      (appcons
+          (appcons
+              (appcons
+                  (appcons
+                      (appcons
+                          (appcons
+                              (appcons
+                                  (appcons
+                                      (appcons
+                                          
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons
+                        (appcons
+                            (appcons
+                                (appcons
+                                    (appcons
+                                        
+(appcons
+    (appcons
+        (appcons
+            (appcons
+                (appcons
+                    (appcons (appcons (appcons (appcons (appcons appnil)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))).

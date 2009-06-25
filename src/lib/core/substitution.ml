@@ -67,6 +67,13 @@ module LF = struct
          *)
         s2
 
+    | (s, Shift (NoCtxShift, 0)) ->
+        (*  Psi1 |- s1 : Psi   and Psi1 |- s2 : Psi1
+         *  therefore   Psi1 |- s1 : Psi  and s1 = s1 o s2
+         *)
+        s
+
+
     | (Shift (CtxShift psi, n), Shift (NegCtxShift psi', k)) ->
         (* psi, Psi |- s1 : .   and     Psi,Psi' |- s2 : psi, Psi
          * therefore  Psi,Psi' |- s : .
@@ -99,11 +106,6 @@ module LF = struct
         in
           ctx_shift m s2
 
-    | (s, Shift (NoCtxShift, 0)) ->
-        (*  Psi1 |- s1 : Psi   and Psi1 |- s2 : Psi1
-         *  therefore   Psi1 |- s1 : Psi  and s1 = s1 o s2
-         *)
-        s
 
     | (Shift (NegCtxShift psi, k), Shift (NoCtxShift, m)) ->
         (* Psi1 |- s1 : psi     and   Psi1, Psi |- s2 : Psi1

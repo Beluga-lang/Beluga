@@ -512,7 +512,7 @@ This case should now be covered by the one below it
                         ^ "\n== " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) );
         try
           (* Unify.unifyTyp cD (phat, (normedA, LF.id), (normedElem1, dctxSub)) *)
-          Unify.unifyTypRec cD (phat, (tArec, LF.id), (block_part, dctxSub))
+          Unify.unifyTypRec cD phat (tArec, LF.id) (block_part, dctxSub)
         ; dprint (fun () -> "checkTypeAgainstElement\n"
                             ^ "  block_part = " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n"
                             ^ "  succeeded.")

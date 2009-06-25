@@ -49,7 +49,7 @@ GLOBAL: sgn_eoi;
   symbol:
     [
       [
-        sym = SYMBOL -> sym
+        sym = SYMBOL -> sym 
       |
         sym = UPSYMBOL -> sym
       ]

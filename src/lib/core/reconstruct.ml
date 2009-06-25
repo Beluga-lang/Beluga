@@ -28,8 +28,8 @@ open Substitution
 open Error
 open Id
 
- (* module Unify = Unify.EmptyTrail *)
-module Unify = Unify.StdTrail
+(* module Unify = Unify.EmptyTrail  *)
+module Unify = Unify.StdTrail 
 module C     = Whnf
 
 module P = Pretty.Int.DefaultPrinter
@@ -1638,7 +1638,7 @@ and elKSpine recT cO cD cPsi spine sK = match (spine, sK) with
 and elSpineSynth recT cD cPsi spine s' sP = match (spine, sP) with
   | (Apx.LF.Nil, (_tP, _s))  ->
       let ss = LF.invert s' in
-      let tQ = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi, sP, (Int.LF.MShift 0, ss), Unify.MVarRef (ref None)) in 
+      let tQ = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) (Unify.MVarRef (ref None)) in 
       (* PROBLEM: [s'][ss] [s]P is not really P; in fact [ss][s]P may not exist;
        * We use pruning to ensure that [ss][s]P does exist
        *)
@@ -1659,8 +1659,8 @@ and elSpineSynth recT cD cPsi spine s' sP = match (spine, sP) with
       let _ = dprint (fun () -> "elSpineSynth: cPsi = " ^ 
                         P.dctxToString Int.LF.Empty cD cPsi ^ "\n") in 
 
-      let tA' = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi,  (tA, LF.id), (Int.LF.MShift 0, ss)
-                                     , Unify.MVarRef (ref None)) in 
+      let tA' = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi)  (tA, LF.id) (Int.LF.MShift 0, ss)
+                                     (Unify.MVarRef (ref None)) in 
       (* let tA' = Whnf.normTyp (tA, ss) in *)
       let _ = dprint (fun () -> "elSpineSynth: PruneTyp done\n") in 
 
@@ -1863,7 +1863,7 @@ and recTermW recT cO cD cPsi sM sA = match (sM, sA) with
           let _   = dprint (fun () -> "expexted:    " ^ 
                         P.typToString cO cD cPsi sA  ^ "\n") in 
             try
-              (Unify.unifyTyp cD  (Context.dctxToHat cPsi, sP', sA) ;
+              (Unify.unifyTyp cD  (Context.dctxToHat cPsi) sP' sA ;
               dprint (fun () -> "AFTER UNIFICATION:\nexpected:"  ^ P.typToString cO cD cPsi sP' ^ "\n") ; 
               dprint (fun () -> "inferred:    " ^ 
                         P.typToString cO cD cPsi sA  ^ "\n") ) 
@@ -2121,7 +2121,7 @@ and recSub recT cO cD cPsi_ s cPhi_ =
     ->
       let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in
       let _ = recSub recT cO cD  cPsi rest cPhi in 
-        Unify.unifyTyp cD (Context.dctxToHat cPsi, (tA', LF.id), (tA, rest))
+        Unify.unifyTyp cD (Context.dctxToHat cPsi) (tA', LF.id) (tA, rest)
 
   (* cPsi   (cPhi, _:tA) *)
   | (cPsi,  Int.LF.Dot (Int.LF.Head (Int.LF.Proj (Int.LF.BVar x, projIndex)), rest),
@@ -2141,7 +2141,7 @@ and recSub recT cO cD cPsi_ s cPhi_ =
                 let sA' = Int.LF.getType (Int.LF.BVar x) (tA'rec, s') projIndex 1 in
                 let _ = dprint (fun () -> "  got _." ^ string_of_int projIndex ^ " = " ^ P.typToString cO cD cPsi sA') in
                 let _   = recSub recT cO cD  cPsi rest cPhi in
-                  Unify.unifyTyp cD (Context.dctxToHat cPsi, sA', (tA, rest))              
+                  Unify.unifyTyp cD (Context.dctxToHat cPsi) sA' (tA, rest)              
             
             | (tA',s') -> raise (Violation ("recSub _ (" ^ P.subToString cO cD cPsi s
                                        ^ ") _; type " ^ P.typToString cO cD cPsi (tA', s')))
@@ -3167,8 +3167,8 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
 
       let _  = begin match caseT with
                | IndexObj (_phat, tR') -> 
-                   begin try Unify.unify cD1 (phat, (C.cnorm (tR', Whnf.mcomp mt (Int.LF.MShift n)), LF.id), 
-                                                    (tR1, LF.id)) 
+                   begin try Unify.unify cD1 phat (C.cnorm (tR', Whnf.mcomp mt (Int.LF.MShift n)), LF.id) 
+                                                    (tR1, LF.id) 
                    with Unify.Unify msg -> 
                      (dprint (fun () -> "Unify ERROR: " ^  msg  ^ "\n") ; 
                       raise (Violation "Pattern matching on index argument failed"))
@@ -3187,7 +3187,7 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
         
       let _    = begin try 
         Unify.unifyDCtx Int.LF.Empty cPsi' cPsi1' ;
-        Unify.unifyTyp  Int.LF.Empty (phat, (tP', LF.id), (tP1', LF.id));
+        Unify.unifyTyp  Int.LF.Empty phat (tP', LF.id) (tP1', LF.id);
         dprint (fun () -> "Unify successful: \n"
                    ^  "Inferred pattern type: "
                    ^  P.dctxToString cO Int.LF.Empty cPsi'
@@ -3605,7 +3605,7 @@ let recSgnDecl d =
                                     fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Empty Int.LF.Null (tA', LF.id)) in
 
       let _c'       = Term.add (Term.mk_entry c tA' i) in
-      let _        = Printf.printf "\n %s : %s ." (c.string_of_name) (P.typToString cO cD  Int.LF.Null (tA', LF.id)) in
+      (* let _        = Printf.printf "\n %s : %s ." (c.string_of_name) (P.typToString cO cD  Int.LF.Null (tA', LF.id)) in *)
         (* Int.Sgn.Const (c', tA') *) 
         ()       
 
@@ -3712,11 +3712,11 @@ let recSgnDecl d =
         begin match recFuns with
           | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
               let (e_r' , tau') = reconFun f e in 
-              let _       = Printf.printf  "\n\nrec %s : %s =\n %s \n"
+              (* let _       = Printf.printf  "\n\nrec %s : %s =\n %s \n"
                 (R.render_name f)
                 (P.compTypToString cO cD tau') 
                 (P.expChkToString cO cD cG (Whnf.cnormExp (e_r', C.m_id))) in 
-                
+              *)  
               let _       = dprint (fun () ->  "DOUBLE CHECK of function " ^    f.string_of_name ^  " successful!\n\n" ) in
                 
               let _f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' )   in

@@ -43,7 +43,7 @@ val abstrExpMSub  : Comp.exp_chk  -> LF.msub -> LF.mctx * LF.msub * Comp.exp_chk
 val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ
 
-val collectTerm'   : (LF.psi_hat * LF.normal) -> free_var LF.ctx
+val collectTerm'   : (LF.psi_hat * LF.normal) -> (free_var LF.ctx * LF.normal)
 val printCollection : free_var LF.ctx -> unit
 
 val printFreeMVars : LF.psi_hat -> LF.normal -> unit   

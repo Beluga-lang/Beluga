@@ -561,10 +561,12 @@ and normTuple (tuple, t) = match tuple with
       let rest' = normTuple (rest, t) in
         Cons (tM', rest')
 
-and normSpine (tS, sigma) = match tS with
-  | Nil           -> Nil
-  | App  (tN, tS) -> App (norm (tN, sigma), normSpine (tS, sigma))
-  | SClo (tS, s)  -> normSpine (tS, LF.comp s sigma)
+and normSpine (tS, sigma) = 
+   begin match tS with
+     | Nil           -> Nil
+     | App  (tN, tS) -> App (norm (tN, sigma), normSpine (tS, sigma))
+     | SClo (tS, s)  -> normSpine (tS, LF.comp s sigma)
+   end
 
 (*  reduce(sM, tS) = M'
  *
@@ -610,7 +612,7 @@ and normFt ft = match ft with
  *    tA' = [sigma]tA
  *    cD ; G' |- tA' <= type   and tA' is in normal form
  *)
-and normTyp (tA, sigma) = match tA with
+and normTyp (tA, sigma) =  match tA with
   | Atom (loc, a, tS) ->
       Atom (loc, a, normSpine (tS, sigma))
 
@@ -1135,10 +1137,11 @@ and whnf sM = match sM with
       (* constraints associated with u must be in solved form *)
       let tM' = begin match r with
                   | Shift (NoCtxShift, 0) -> tM 
-                  | _ -> norm(tM, r)
+                  | _ ->   norm(tM, r) (* this can be expensive -bp *)
                 end  in 
-      let sR =  whnfRedex ((tM',  sigma), (tS, sigma)) in
-        sR
+     (* it does not work to call whnfRedex ((tM, LF.comp r sigma), (tS, sigma)) -bp *)
+      let sR =  whnfRedex ((tM',  sigma), (tS, sigma)) in 
+        sR 
 
   | (Root (loc, MVar (Inst ({contents = None} as uref, cPsi, tA, cnstr) as u, r), tS) as tM, sigma) ->
       (* note: we could split this case based on tA;
@@ -1267,7 +1270,7 @@ and whnfTyp (tA, sigma) = match tA with
 
 
 (* ----------------------------------------------------------- *)
-(* Check whegher constraints  *)
+(* Check whether constraints are solved *)
 and constraints_solved cnstr = match cnstr with
   | [] -> true
   | ({contents = Queued} :: cnstrs) -> 

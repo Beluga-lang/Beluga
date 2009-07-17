@@ -15,8 +15,9 @@ rec f : {g:(w)*} nat[g] -> nat[g] =
       [g] #p.1 .. => [g] #p.2 ..
 ;
 
-rec qqqq : nat[x:block y:nat.nat] -> nat[x:block y:nat.nat] =   fn eNat => case eNat of
-       [x:block y:nat.nat] x.1 => [x] x.2
+rec qqqq : nat[x:block y:nat.nat] -> nat[x:block y:nat.nat] =   
+fn eNat => case eNat of
+  [x:block y:nat.nat] x.1 => [x] x.2
 ;
 
 %not

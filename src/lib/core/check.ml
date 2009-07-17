@@ -187,6 +187,7 @@ module LF = struct
                 (recA, LF.id)
           | PVar (Offset p, s) ->
               begin let (_, tTuple, cPsi') = Whnf.mctxPDec cD p in
+
                 checkSub cO cD cPsi s cPsi';
                 match tTuple with
                     Sigma recA -> (recA, s)

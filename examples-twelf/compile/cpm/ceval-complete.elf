@@ -40,18 +40,23 @@ ccp : eval E V
 %%lex {D} ccp D _ _.
 
 % Natural Numbers
+
 ccp_z : ccp (ev_z) C' (<< C' st_z).
 
 ccp_s : ccp (ev_s D1) C' (<< C1 st_s)
 	 <- ccp D1 (<< C' st_return) C1.
 
-ccp_match_z : ccp (ev_match_z D2 D1) C' (<< C1 st_match)
+
+ccp_match_z : % {C1 : mstep (st (c K15 (\v. match1 v E27 (\x. E26 x))) (ev E28)) (answer V47)}
+                 ccp (ev_match_z D2 D1) C' (<< C1 st_match)
 	      <- ccp D2 C' C2
 	      <- ccp D1 (<< (<< C2 st_match1_z) st_return) C1.
 
-ccp_match_s : ccp (ev_match_s D3 D1) C' (<< C1 st_match)
+
+ ccp_match_s : ccp (ev_match_s D3 D1) C' (<< C1 st_match)
 	      <- ccp D3 C' C3
 	      <- ccp D1 (<< (<< C3 st_match1_s) st_return) C1.
+
 
 % Pairs
 ccp_pair : ccp (ev_pair D2 D1) C' (<< C1 st_pair)

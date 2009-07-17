@@ -263,6 +263,8 @@ module Int : sig
     and tvar = 
       | TInst   of typ option ref * dctx * kind * cnstr list ref
 
+    and typ_free_var = Type of typ | TypVar of tvar
+
     and constrnt =
       | Queued
       | Eqn of mctx * psi_hat * normal * normal

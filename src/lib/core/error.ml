@@ -16,6 +16,7 @@ type error =
   | SigmaIllTyped    of LF.mctx * LF.mctx * LF.dctx * LF.trec_clo * LF.trec_clo
   | KindMismatch     of LF.mctx * LF.dctx * LF.sclo * (LF.kind * LF.sub)
   | TypMismatch      of LF.mctx * LF.mctx * LF.dctx * LF.nclo * LF.tclo * LF.tclo
+  | TypMismatchElab  of LF.mctx * LF.mctx * LF.dctx * LF.tclo * LF.tclo
   | IllTyped         of LF.mctx * LF.mctx * LF.dctx * LF.nclo * LF.tclo
   | IllTypedElab     of LF.mctx * LF.mctx * LF.dctx * LF.tclo
 

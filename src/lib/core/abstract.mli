@@ -44,6 +44,7 @@ val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ ->
                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ
 
 val collectTerm'   : (LF.psi_hat * LF.normal) -> (free_var LF.ctx * LF.normal)
+val closedTyp      : (LF.dctx * LF.typ) -> bool
 val printCollection : free_var LF.ctx -> unit
 
 val printFreeMVars : LF.psi_hat -> LF.normal -> unit   

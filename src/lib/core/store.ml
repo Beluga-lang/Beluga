@@ -283,10 +283,46 @@ end
 (* Free Bound Variables *)
 module FVar = struct
 
-  let store    = Hashtbl.create 0
+(*
+  let store    = Hashtbl.create 25
   let add      = Hashtbl.add store
   let get      = Hashtbl.find store
   let clear () = Hashtbl.clear store
+
+*)
+
+  let store    = ref []
+
+  let add x tA = 
+    let rec update str = match str with
+      | ((y, tA')::str') -> 
+          if x = y then 
+            begin match (tA, tA') with 
+              | (Int.LF.Type tB, 
+                 Int.LF.TypVar (Int.LF.TInst ({contents = None} as r, _, _, {contents = []}))) -> 
+                  (r := Some tB ; 
+                  (x, Int.LF.Type tB)::str')
+            end 
+          else 
+            (y, tA'):: update str'
+      | [] -> [(x, tA)]
+    in 
+      store := update (!store)
+    
+
+  let get x    = 
+    let rec lookup str = match str with
+      | ((y, tA)::str') -> 
+          if x = y then tA else lookup str'
+      | _ -> raise Not_found
+    in 
+      lookup (!store)
+
+
+  let clear () = (store := [])
+
+  let fvar_list () = !store
+
 
 end
 

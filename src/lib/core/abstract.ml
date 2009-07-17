@@ -615,7 +615,7 @@ and collectHead cQ phat ((head, _subst) as sH) =
       if exists (eqFVar name) cQ then
         (cQ, I.FVar name)
       else
-        let tA  = FVar.get name in            
+        let Int.LF.Type tA  = FVar.get name in            
         let (cQ', tA') = collectTyp cQ (None, 0) (tA, LF.id) in 
             (* tA must be closed *)
             (* Since we only use abstraction on pure LF objects,
@@ -646,19 +646,19 @@ and collectHead cQ phat ((head, _subst) as sH) =
   | (I.MVar (I.Inst (q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
       if constraints_solved cnstr then
         (* let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in 
-        let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in
-      let _ = dprint (fun () -> "collectSub for MVar \n") in *)
-      let (cQ', sigma) = collectSub cQ phat s' in
-      (* let _ = dprint (fun () -> "collectSub for MVar done \n") in *)
-        if exists (eqMVar u) cQ' then
-          (cQ', I.MVar(r, sigma))
-        else
-          (*  checkEmpty !cnstrs? -bp *)
-          let phihat = Context.dctxToHat cPsi in 
-          let (cQ1, cPsi')  = collectDctx cQ' phihat cPsi in 
-          let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
-          let v = I.MVar (I.Inst (q, cPsi', tA',  c), sigma) in 
-            (I.Dec (cQ'', MV v) , v)
+           let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in
+           let _ = dprint (fun () -> "collectSub for MVar \n") in *)
+        let (cQ', sigma) = collectSub cQ phat s' in
+          (* let _ = dprint (fun () -> "collectSub for MVar done \n") in *)
+          if exists (eqMVar u) cQ' then
+            (cQ', I.MVar(r, sigma))
+          else
+            (*  checkEmpty !cnstrs? -bp *)
+            let phihat = Context.dctxToHat cPsi in 
+            let (cQ1, cPsi')  = collectDctx cQ' phihat cPsi in 
+            let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
+            let v = I.MVar (I.Inst (q, cPsi', tA',  c), sigma) in 
+              (I.Dec (cQ'', MV v) , v)
       else 
         raise (Error "Leftover constraints during abstraction")
 
@@ -1223,9 +1223,10 @@ let abstrKind tK =
 
 and abstrTyp tA =
   let empty_phat = (None, 0) in
+
   let (cQ, tA')       = collectTyp I.Empty empty_phat (tA, LF.id) in
    begin match cQ with 
-        Int.LF.Empty -> (Printf.printf "\n Nothing to abstract." ; (tA', 0))
+        Int.LF.Empty -> (tA', 0)
       | _       -> 
           let cQ'        = abstractCtx cQ in
           let tA2        = abstractTyp cQ' 0 (tA', LF.id) in
@@ -1580,3 +1581,24 @@ let rec printFreeMVars phat tM =
 
 
 let collectTerm' (phat, tM ) = collectTerm I.Empty  phat (tM, LF.id) 
+
+let rec fvarInCollection cQ = begin match cQ with
+  | I.Empty -> false
+  | I.Dec(_cQ, FV (_, None)) ->  true
+  | I.Dec(cQ, FV (_, Some (tA))) -> 
+       let (cQ',_ ) = collectTyp I.Empty (None, 0) (tA, LF.id) in 
+         begin match cQ' with 
+             Int.LF.Empty -> (print_string "empty" ; fvarInCollection cQ)
+           | _ -> true
+         end 
+         
+
+  | I.Dec(cQ, _ ) -> fvarInCollection cQ
+end
+     
+
+
+let closedTyp (cPsi, tA) = 
+  let (cQ1, _ ) = collectDctx I.Empty (None, 0) cPsi in 
+  let (cQ2, _ ) = collectTyp cQ1 (Context.dctxToHat cPsi) (tA, LF.id) in 
+    not (fvarInCollection cQ2)

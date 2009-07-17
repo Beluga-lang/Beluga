@@ -34,6 +34,9 @@ type error =
       * LF.tclo (* expected *) 
       * LF.tclo (* inferred *)
 
+  | TypMismatchElab  of LF.mctx 
+      * LF.mctx * LF.dctx * LF.tclo (* expected *) * LF.tclo (* inferred *)
+
   | IllTyped of                        (* cO ; cD ; cPsi |- sM <=/= sA        *)
       LF.mctx * LF.mctx * LF.dctx             
       * LF.nclo * LF.tclo

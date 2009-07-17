@@ -278,6 +278,8 @@ module Int = struct
     and tvar =
       | TInst   of typ option ref * dctx * kind * cnstr list ref
 
+    and typ_free_var = Type of typ | TypVar of tvar
+
     and constrnt =                          (* Constraint                     *)
       | Queued                              (* constraint ::= Queued          *)
       | Eqn of mctx * psi_hat * normal * normal

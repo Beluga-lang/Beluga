@@ -8,8 +8,8 @@ o : type.
 %name o A.
 
 % Syntax: implication, plus a few constants.
-imp : o -> o -> o.  %infix right 10 =>.
-&  : o -> o -> o.  %infix right 11 &.
+imp : o -> o -> o.  % infix right 10 =>.
+&  : o -> o -> o.   % infix right 11 &.
 true : o.
 
 % Provability.

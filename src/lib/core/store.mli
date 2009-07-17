@@ -129,9 +129,10 @@ end
 
 module FVar : sig
  (* NOTE: FVars are stored in an an ordered data structure *)  
-  val add   : name -> LF.typ -> unit
-  val get   : name -> LF.typ
+  val add   : name -> LF.typ_free_var -> unit
+  val get   : name -> LF.typ_free_var
   val clear : unit -> unit
+  val fvar_list : unit -> (Id.name * LF.typ_free_var) list 
 
 end
 

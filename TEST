@@ -45,8 +45,8 @@ $INTERPRETER +t \
     copy/copy-simple-explicit.bel \
     cut-elim.bel \
     debruijn1/sources.cfg \
-    equal/eq-proof.bel \
     equal/eq-proof-tuple.bel \
+    equal/eq-proof.bel \
     free-vars/fvnat.bel \
     free-vars/fvnat-explicit.bel \
     lp-horn/sources.cfg \
@@ -58,10 +58,6 @@ $INTERPRETER +t \
     mini-ml/vsound.bel \
     mini-ml/vsound-explicit.bel \
     small-step/lam.bel \
-    tpcert.bel \
-    typed-eval/tpeval.bel \
-    typed-eval/tpeval-explicit.bel \
-    typed-eval/tpeval2.bel \
     test/backarrow.bel \
     test/case1.bel \
     test/case1-explicit.bel \
@@ -76,6 +72,10 @@ $INTERPRETER +t \
     test/test-simple.bel \
     test/test-simple-explicit.bel \
     test/schema.bel \
+    tpcert.bel \
+    typed-eval/tpeval.bel \
+    typed-eval/tpeval-explicit.bel \
+    typed-eval/tpeval2.bel \
     LF/arith.lf \
     LF/arith-rec1.lf \
     LF/lambda.lf \
@@ -121,7 +121,15 @@ $INTERPRETER +t \
     test/implicit-obj.bel \
     notworking/fol-handbook.bel 
 #
+#    
+#   
+#     
+
+#
+
 #    LF/arith-unify.lf LF/tps-1.lf    ??
+#
+#
 #
 #    notworking/church-rosser.rec \
 #    notworking/cut-elim.bel \

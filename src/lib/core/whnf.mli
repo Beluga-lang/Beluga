@@ -35,6 +35,7 @@ val convTyp     : tclo         -> tclo         -> bool
 val convTypRec  : trec_clo     -> trec_clo     -> bool
 val convSchElem : sch_elem     -> sch_elem     -> bool
 val convSub     : sub          -> sub          -> bool
+val convMSub    : msub         -> msub         -> bool
 val convDCtx    : dctx         -> dctx         -> bool
 val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 
@@ -114,3 +115,5 @@ val csub_msub  : dctx -> int -> msub -> msub
 val closed     : nclo -> bool
 val closedTyp  : tclo -> bool
 val closedDCtx : dctx -> bool
+
+val constraints_solved : cnstr list -> bool

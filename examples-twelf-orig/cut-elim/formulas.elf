@@ -8,7 +8,7 @@ i : type.  % individuals
 o : type.  % formulas
 %name o A. % B C % more than one currently disallowed
 
-&    : o -> o -> o.    
+&      : o -> o -> o.    
 imp    : o -> o -> o.
 or     : o -> o -> o.
 not    : o -> o.     

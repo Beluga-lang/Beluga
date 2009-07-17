@@ -103,6 +103,6 @@ vval_dapp : cps_vvE (vval_kappa (\t.\vvt. VVTE t vvt) (\v.\vvt. VVVE v vvt)) (cp
                 
 vval_dlam : cps_vvT (cps_dlam (\x.\x'.\cps. CR x x' cps)) (\xi. (vval_xlam (\x.\vvx. VVR x vvx)))
             <- ({x:dtriv}{x':ctriv}{cX:cpsT x x'}{vVX:{xi:stack}vvalT xi x' xi}
-                cps_vvT cX vVX -> cps_vvR (CR x x' cX) (vVR x' vVX)).
+                cps_vvT cX vVX -> cps_vvR (CR x x' cX) (VVR x' vVX)).
 
 %terminates (CR CE CT)  (cps_vvR CR _)  (cps_vvE _ CE _)  (cps_vvT CT _).

@@ -1,0 +1,56 @@
+%theorem m-append : forall* {M:term}{M':term}{M'':term}
+		   forall  {D1: M =>* M'} {D2: M' =>* M''} 
+                   exists  {E: M =>* M''} 
+                   true.
+%prove 4 [D1 D2] (m-append D1 D2 _).
+
+%{
+%theorem m-identity : forall {M:term}
+		     exists {D: M => M}
+		     true.
+%assert (m-identity _ _).
+}%
+
+
+%theorem m-subst : forall* {M: term -> term}{M': term -> term}
+		          {N: term}{N':term}
+		  forall  {D1: {x:term} x => x -> M x => M' x}
+		          {D2: N => N'}
+		  exists  {E:  M N => M' N'}
+        	  true.
+%assert (m-subst _ _ _).
+
+
+
+%theorem m-dia : forallG (pi {x: term} {idx : x => x})
+		forall* {M:term}{M':term}{M'':term}
+		forall  {D1: M => M'} {D2: M => M''}
+		exists  {N:term}{E1: M' => N}{E2 : M'' => N}
+		true.
+%prove 4 [D1 D2] (m-dia D1 D2 _ _ _).
+
+%{
+%assert (m-dia _ _ _ _ _).
+
+%theorem m-strip : forall* {M:term}{M':term}{M'':term}
+		forall  {D1: M => M'} {D2: M =>* M''} 
+	        exists  {N:term} {E1: M' =>* N} {E2: M'' => N}
+		true.
+% %prove 7  [D2] (m-strip _ D2 _ _ _).
+
+% doesn't work because we need residual lemmas
+%assert (m-strip _ _ _ _ _).
+
+%theorem m-conf : forall* {M:term} {M':term} {M'':term} 
+	          forall {R*':M =>* M'} {R*'':M =>* M''}
+                  exists {N:term} {S*':M' =>* N} {S*'':M'' =>* N}
+		  true.
+% %prove 4 D1 (m-conf D1 _ _ _ _).
+%assert (m-conf _ _ _ _ _).
+
+%theorem m-cr : forall* {M:term} {M':term} 
+		forall  {C:M <=> M'}
+		exists  {N:term} {S*:M =>* N} {S*':M' =>* N}
+		true.
+%prove 4 D (m-cr D _ _ _).
+}%

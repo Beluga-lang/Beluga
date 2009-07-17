@@ -1,0 +1,18 @@
+%%% Mini-ML types.
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+tp : type.  %name tp T.
+
+nat   : tp.				% Natural Numbers
+cross : tp -> tp -> tp.			% Pairs
+arrow : tp -> tp -> tp.			% Functions
+all : (tp -> tp) -> tp.			% Polymorphism
+
+% For the examples, we introduce an abbreviation
+=> : tp -> tp -> tp
+   = [a] [b] arrow a b.
+%infix right 10 =>.
+
+* : tp -> tp -> tp
+  = [a] [b] cross a b.
+%infix right 9 *.

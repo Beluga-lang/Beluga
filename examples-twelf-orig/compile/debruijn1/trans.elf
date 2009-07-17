@@ -1,0 +1,24 @@
+%%% Translation to representation using de Bruijn indices
+%%% Version restricted to pure lambda-calculus
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+trans  : env -> exp' -> exp -> type.  % name trans C.
+vtrans : val -> exp -> type.          % name vtrans U.
+
+%%%  Functions
+tr_lam : trans K (lam' F) (lam ([x] E x))
+	    <- {w:val} {x:exp}
+		  vtrans w x -> trans (cons K w) F (E x).
+tr_app : trans K (app' F1 F2) (app E1 E2)
+	    <- trans K F1 E1
+	    <- trans K F2 E2.
+
+% Variables
+tr_1  : trans (cons K W) one E <- vtrans W E.
+tr_^  : trans (cons K W) (shift F) E <- trans K F E.
+
+% Values
+vtr_lam : vtrans (clo K (lam' F)) (lam ([x] E x))
+	   <- trans K (lam' F) (lam ([x] E x)).
+
+

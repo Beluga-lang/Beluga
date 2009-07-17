@@ -1,0 +1,56 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Definition 3 + 6 + Figure 5 : Var-validity of cps terms
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+stack : type.
+
+dot : stack.
+cons   : stack -> ctriv -> stack.             % infix left 10 , .
+% moved from lemma9.elf Thu Mar 10 20:45:28 2005 -fp
+
+& : stack -> stack -> stack. % infix left 10 & .
+
+vvalR : croot -> type.                     %name vvalR VVR.
+vvalE : stack -> cexp -> type.             
+vvalT : stack -> ctriv -> stack -> type.   
+vvalC : stack -> ccont -> type.            
+vvalK : stack -> (ctriv -> cexp) -> type.            
+
+%mode vvalR +R.
+%mode vvalE +Xi +E.
+%mode vvalT +Xi +T -Xi'.
+%mode vvalC +Xi +C.
+%mode vvalK +Xi +K.
+
+vval_klam : vvalR (klam ([x] E x))
+            <- ({k:ccont}vvalC dot k -> vvalE dot (E k)).
+
+vval_capp : vvalE Xi (capp T0 T1 C)
+            <- vvalT Xi T1 Xi1
+            <- vvalT Xi1 T0 Xi0
+            <- vvalC Xi0 C.
+
+vval_cret : vvalE Xi (cret C T)
+            <- vvalT Xi T Xi'
+            <- vvalC Xi' C.
+
+vval_xlam : vvalT Xi (xlam ([x] R x)) Xi
+            <- ({x:ctriv}({xi':stack}vvalT xi' x xi') -> vvalR (R x)).
+
+vval_vlam : vvalC Xi (vlam ([x] E x))
+            <- ({v:ctriv}({xi':stack}vvalT (cons xi' v) v xi') 
+                -> vvalE (cons Xi v) (E v)).
+
+vval_kappa : vvalK Xi ([x] Kappa x)
+             <- ({v:ctriv}({xi':stack}vvalT (cons xi'  v) v xi') 
+                -> vvalE (cons Xi v) (Kappa v))
+             <- ({t:ctriv}({xi':stack}vvalT xi' t xi') 
+                -> vvalE Xi (Kappa t)).      
+
+%name vvalE VVE. 
+%name vvalT VVT.
+%name vvalC VVC.
+%name vvalK VVK.
+
+%terminates (R E T C) (vvalR R) (vvalE _ E) (vvalT _ T _)  (vvalC _ C).
+%terminates K (vvalK _ K).

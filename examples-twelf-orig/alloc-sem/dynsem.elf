@@ -1,0 +1,64 @@
+%%% Simply Typed Lambda Calculus w/ small-step, allocation semantics
+%%% Author: Matthew Fluet (June 2005)
+%%% dynsem.elf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Dynamic Semantics
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+step           : st -> exp -> st -> exp -> type.
+%name step DStep.
+%mode step +S1 +E1 -S2 -E2.
+
+lam_alloc_step : step S (lam_e Tx ([x] F x)) S' (loc_e L')
+		  <- st_alloc S (lam_v Tx ([x] F x)) S' L'.
+app_ctxt1_step : step S (app_e E1 E2) S' (app_e E1' E2)
+		  <- step S E1 S' E1'.
+app_ctxt2_step : step S (app_e (loc_e L1) E2) S' (app_e (loc_e L1) E2')
+		  <- step S E2 S' E2'.
+app_beta_step  : step S (app_e (loc_e L1) (loc_e L2)) S (F1' (loc_e L2))
+		  <- st_lookup S L1 (lam_v Tx ([x] F1' x)).
+
+unit_alloc_step
+               : step S (unit_e) S' (loc_e L')
+		  <- st_alloc S (unit_v) S' L'.
+letunit_ctxt_step 
+               : step S (letunit_e E1 E2) S' (letunit_e E1' E2)
+		  <- step S E1 S' E1'.
+letunit_beta_step 
+               : step S (letunit_e (loc_e L1) E2) S E2
+		  <- st_lookup S L1 (unit_v).
+
+pair_ctxt1_step
+               : step S (pair_e E1 E2) S' (pair_e E1' E2)
+		  <- step S E1 S' E1'.
+pair_ctxt2_step
+               : step S (pair_e (loc_e L1) E2) S' (pair_e (loc_e L1) E2')
+		  <- step S E2 S' E2'.
+pair_alloc_step
+               : step S (pair_e (loc_e L1) (loc_e L2)) S' (loc_e L')
+		  <- st_alloc S (pair_v L1 L2) S' L'.
+
+letpair_ctxt_step
+               : step S (letpair_e E1 ([x][y] F2 x y)) S' (letpair_e E1' ([x] [y] F2 x y))
+		  <- step S E1 S' E1'.
+
+letpair_beta_step 
+               : step S (letpair_e (loc_e L1) ([x] [y] F2 x y)) S (F2 (loc_e L11) (loc_e L12))
+		  <- st_lookup S L1 (pair_v L11 L12).
+
+%terminates E1 (step _ E1 _ _).
+%worlds () (step _ _ _ _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+mstep           : st -> exp -> st -> exp -> type.
+%name mstep DSteps.
+
+refl_mstep     : mstep S E S E.
+trans_mstep    : mstep S1 E1 S3 E3
+		  <- mstep S1 E1 S2 E2 
+		  <- mstep S2 E2 S3 E3.
+step_mstep     : mstep S1 E1 S2 E2
+		  <- step S1 E1 S2 E2.

@@ -1,0 +1,150 @@
+%query 1 *
+{P:p} {Q:p} solve (atom P imp atom Q imp (atom P and atom Q)).
+
+%query 1 *
+{P:p} {Q:p} solve (atom P imp atom Q imp atom P).
+
+%{
+sigma [G : {P:p} {Q:p} solve (atom P imp atom Q imp atom P)]
+ {P:p} {Q:p} s_sound (G P Q) (D P Q).
+}%
+
+%query 1 *
+{P:p} {Q:p}
+s_sound
+  (s_imp ([H1:assume (atom P)] s_imp ([H2:assume (atom Q)] s_atom i_atom H1)))
+  (D P Q).
+
+%query 1 *
+{P} {Q} can _ (impi [u:pf (atom P)] impi [u1:pf (atom Q)] u).
+
+%{
+sigma [G : {P:p} {Q:p} solve (atom P imp atom Q imp atom P)]
+sigma [GS : {P:p} {Q:p} s_sound (G P Q) (D P Q)]
+ {P:p} {Q:p} ss_can (GS P Q) (CN P Q).
+}%
+%query 1 *
+{P:p} {Q:p}
+ss_can
+  (ss_imp
+     ([d:assume (atom P)] [u:pf (atom P)] [HS1:h_sound d u]
+	ss_imp
+	([d1:assume (atom Q)] [u1:pf (atom Q)] [HS2:h_sound d1 u1]
+	   ss_atom is_atom HS1)))
+  (CN P Q).
+
+%{
+sigma [G : solve ((atom q0 imp atom r0 imp atom s0) imp (atom q0 imp atom r0)
+	imp (atom q0 imp atom s0))]
+sigma [GS : s_sound G D]
+ gs_can GS CN.
+}%
+
+%query 1 *
+solve ((atom q0 imp atom r0 imp atom s0) imp (atom q0 imp atom r0)
+	imp (atom q0 imp atom s0)).
+
+%query 1 *
+s_sound
+  (s_imp
+      ([H1:assume (atom q0 imp atom r0 imp atom s0)]
+          s_imp
+             ([H2:assume (atom q0 imp atom r0)]
+                 s_imp
+                    ([H3:assume (atom q0)]
+                        s_atom
+                           (i_imp (s_atom i_atom H3)
+                               (i_imp
+                                   (s_atom (i_imp (s_atom i_atom H3) i_atom) H2)
+                                   i_atom))
+                           H1))))
+D.
+
+%query 1 *
+ss_can
+  (ss_imp
+      ([d:assume (atom q0 imp atom r0 imp atom s0)]
+          [u:pf (atom q0 imp atom r0 imp atom s0)] [HS1:h_sound d u]
+          ss_imp
+             ([d1:assume (atom q0 imp atom r0)] [u1:pf (atom q0 imp atom r0)]
+                 [HS2:h_sound d1 u1]
+                 ss_imp
+                    ([d2:assume (atom q0)] [u2:pf (atom q0)] [HS3:h_sound d2 u2]
+                        ss_atom
+                           (is_imp (ss_atom is_atom HS3)
+                               (is_imp
+                                   (ss_atom
+                                       (is_imp (ss_atom is_atom HS3) is_atom)
+                                       HS2)
+                                   is_atom))
+                           HS1))))
+  CN.
+
+
+
+% next should fail (only classically valid)
+
+%query 0 *
+solve (((atom q0 imp atom r0) imp atom q0) imp atom q0).
+
+% next should give inf. many answers
+%query * 15
+solve ((atom q0 imp atom q0) imp atom q0 imp atom q0).
+
+% next does not terminate.
+%{
+solve (atom q0 imp (atom q0 imp atom q0) imp atom q0).
+}%
+
+%query 1 *
+solve (atom (plus (s (s 0)) (s (s (s 0))) Z)).
+
+%query 5 *
+solve (atom (plus X Y (s (s (s (s 0)))))).
+
+% An ill-typed query.
+
+% solve (atom (plus 0 s Z)).
+
+% Peirce's law.
+% should fail
+%query 0 *
+{q:p} {r:p} solve (((atom q imp atom r) imp atom q) imp atom q).
+
+% Resolution
+
+%query 1 *
+{X:i} {Y:i}
+resolve (atom^ (double 0 0) and^
+	   (forall^ [X] forall^ [Y]
+	      atom' (double X Y) imp^ atom^ (double (s X) (s (s Y)))))
+ (double X Y) (G X Y).
+
+%query 0 *
+{a:i -> p} {b:p}
+solve' (((forall' [x] atom'(a(x))) imp^ atom^(b))
+	  imp' (exists' [x] (atom^(a(x)) imp' atom'(b)))).
+
+% Continuations
+
+%query 1 *
+top_solve (atom^ (double 0 0) and^
+	   (forall^ [X] forall^ [Y]
+	      atom' (double X Y) imp^ atom^ (double (s X) (s (s Y)))))
+(atom' (double 0 Y)).
+
+%query 1 *
+top_solve (atom^ (double 0 0) and^
+	   (forall^ [X] forall^ [Y]
+	      atom' (double X Y) imp^ atom^ (double (s X) (s (s Y)))))
+(atom' (double X (s (s 0)))).
+
+%query 3 *
+top_solve ((forall^ [Y] atom^ (plus 0 Y Y))
+	     and^
+	     (forall^ [X] forall^ [Y] forall^ [Z]
+		atom' (plus X Y Z) imp^ atom^ (plus (s X) Y (s Z))))
+(atom' (plus X Y (s (s 0)))).
+
+%query 2 *
+top_solve true^ (true' or' true').

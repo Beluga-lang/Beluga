@@ -1,0 +1,6 @@
+%%% Simply Typed Lambda Calculus w/ small-step, allocation semantics
+%%% Author: Matthew Fluet (June 2005)
+%%% absurdum.elf
+
+absurd    : type.   % name absurd bot.
+%freeze absurd.

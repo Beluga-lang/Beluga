@@ -1,0 +1,5 @@
+% These can be executed in configuration sources1.cfg
+
+_ = ev_case_z z (s z) ([x:exp] z) (s z) ev_z (ev_s z z ev_z)
+  : eval (case z (s z) ([x:exp] z)) (s z).
+

@@ -1,0 +1,41 @@
+% First Order Logic Signature.
+
+i : type.  %name i T.
+o : type.  %name o A.
+
+&    : o -> o -> o.     %infix right 11 &.
+imp    : o -> o -> o.   %infix right 10 imp.
+or     : o -> o -> o.   %infix right 11 or.
+not    : o -> o.        %prefix 12 not.
+true   : o.
+false  : o.
+forall : (i -> o) -> o.
+exists : (i -> o) -> o. 
+
+
+% Intuitionistic, Natural Deduction
+nd : o -> type.
+
+nd_andi    : nd A -> nd B -> nd (& A B).
+nd_andel   : nd (& A B) -> nd A.
+nd_ander   : nd (& A B) -> nd B.
+nd_impi    : (nd A -> nd B) -> nd (imp A B).
+nd_impe    : nd (imp A B) -> nd A -> nd B.
+nd_oril    : nd A -> nd (or A B).
+nd_orir    : nd B -> nd (or A B).
+nd_ore     : nd (or A B) -> (nd A -> nd C) -> (nd B -> nd C) -> nd C.
+nd_noti    : ({p:o} nd A -> nd p) -> nd (not A).
+nd_note    : nd (not A) -> {C:o} nd A -> nd C.
+nd_truei   : nd true.
+nd_falsee  : nd false -> nd C.
+nd_foralli : ({a:i} nd (A a)) -> nd (forall A).
+nd_foralle : nd (forall A) -> {T:i} nd (A T).
+nd_existsi : {T:i} nd (A T) -> nd (exists A).
+nd_existse : nd (exists A) -> ({a:i} nd (A a) -> nd C) -> nd C.
+
+
+% Proof translations:
+
+equiv: nd A -> nd B -> type.
+
+e_q: equiv (nd_foralli (\a. nd_andi (D a) E)) (nd_andi (nd_foralli D) E) .

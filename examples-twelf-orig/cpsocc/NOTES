@@ -1,0 +1,6 @@
+Notes made during the conversion from Elf to Twelf 1.2
+Frank Pfenning
+
+. missing at end of declarations
+[x:_] illegal => replace by [x]
+{y:A} is not operational => replace by A -> in queries

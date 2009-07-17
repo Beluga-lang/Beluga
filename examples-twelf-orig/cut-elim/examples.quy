@@ -1,0 +1,109 @@
+%%% Most examples here are just proof-checking
+%%% Those will eventually work again.
+
+
+% Example 1
+_ = ((forall [x:i] (A x imp B)) imp ((exists [x:i] A x) imp B)) : o.
+
+% sequent derivation
+_ =
+([A:i -> o] [B:o]
+   impr [h1:hyp (forall [x:i] A x imp B)]
+   (impr [h2:hyp (exists [x:i] A x)]
+      (existsl ([a:i] [h3:hyp (A a)]
+		  foralll a ([h4:hyp (A a imp B)]
+			       impl (axiom h3)
+			       ([h5:hyp B] axiom h5)
+			       h4)
+		  h1)
+	 h2)))
+:
+{A:i -> o} {B:o}
+   conc ((forall [x:i] (A x imp B)) imp ((exists [x:i] A x) imp B)).
+
+
+% Example 2
+_ =
+((exists [x:i] (A x or B x)) imp ((exists [x:i] A x) or (exists [x:i] B x))) : o.
+
+% sequent derivation
+_ = 
+([A:i -> o] [B:i -> o]
+   impr [h1:hyp (exists [x:i] (A x or B x))]
+   (existsl ([a:i] [h2:hyp (A a or B a)]
+	       (orl ([h3:hyp (A a)] orr1 (existsr a (axiom h3)))
+		  ([h4:hyp (B a)] orr2 (existsr a (axiom h4)))
+		  h2))
+      h1))
+:
+{A:i -> o} {B:i -> o}
+conc ((exists [x:i] (A x or B x)) imp (exists [x:i] A x) or (exists [x:i] B x)).
+
+% Example 3
+_ = (A' or B') imp (B' or A') : o.
+
+_ = 
+([A':o] [B':o]
+   impr [h1:hyp (A' or B')]
+   (orl ([h2:hyp A'] orr2 (axiom h2))
+      ([h3:hyp B'] orr1 (axiom h3))
+      h1))
+:
+{A:o} {B:o}
+conc ((A or B) imp (B or A)).
+
+% Example 4
+% Admissibility applied to Examples 2 and (instance of) 3
+
+% Below seems like a bug---there should not be constraints on
+% F remaining.
+
+%{
+%query 1 *
+{A:i -> o} {B:i -> o}
+{h1:hyp (exists [x:i] (A x or B x))}
+ca
+((exists [x:i] A x) or (exists [x:i] B x))
+(existsl ([a:i] [h2:hyp (A a or B a)]
+	    (orl ([h3:hyp (A a)] orr1 (existsr a (axiom h3)))
+	       ([h4:hyp (B a)] orr2 (existsr a (axiom h4)))
+	       h2))
+   h1)
+([h:hyp ((exists [x:i] A x) or (exists [x:i] B x))]
+   (orl ([h2:hyp (exists [x:i] A x)] orr2 (axiom h2))
+      ([h3:hyp (exists [x:i] B x)] orr1 (axiom h3))
+      h))
+(F A B h1).
+}%
+% Example 5 (Classical Logic)
+_ = 
+([A:o] [p:pos (A or not A)]
+   orr1' ([p1:pos A]
+	    orr2' ([p2:pos (not A)]
+		     notr' ([n1:neg A] axiom' n1 p1)
+		     p2)
+	    p)
+   p)
+:
+{A:o} pos (A or not A) -> #.
+
+% Example 6 (Classical Logic)
+_ =
+([A:i -> o]
+   [n:neg (not (forall [x] A x))]
+   [p:pos (exists [x] not (A x))]
+   notl' ([p1:pos (forall [x] A x)]
+	    forallr' ([a:i] [p2:pos (A a)]
+			existsr' a ([p3:pos (not (A a))]
+				      notr' ([n1:neg (A a)]
+					       axiom' n1 p2)
+				      p3)
+			p)
+	    p1)
+   n)
+:
+{A:i -> o}
+   neg (not (forall [x] A x))
+   -> pos (exists [x] not (A x))
+   -> #.
+

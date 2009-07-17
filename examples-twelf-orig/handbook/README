@@ -1,0 +1,19 @@
+First-Order Logic
+Fragment with implication, negation, universal quantification.
+
+Author: Frank Pfenning
+
+This code is from the article
+
+  Logical Frameworks
+  Handbook of Automated Reasoning
+  Alan Robinson and Andrei Voronkov, editors
+  Chapter XXI
+  Elsevier Science and MIT Press
+  In preparation
+
+Until the handbook is published, this article is available at
+
+  http://www.cs.cmu.edu/~fp/www/papers/handbook00.ps
+  http://www.cs.cmu.edu/~fp/www/papers/handbook00.pdf
+

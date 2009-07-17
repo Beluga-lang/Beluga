@@ -1,0 +1,41 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Lemma 7 : Preservation of cont-validity under substitution
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+lemma7_2b : cvalC C' -> cvalE E 
+            -> cvalE ([k]E (C' k)) -> type.
+
+lemma7_2d : cvalC C' -> cvalC C 
+            -> cvalC ([k]C (C' k)) -> type.
+
+%mode lemma7_2b +CVC' +CVE -CVE'.
+%mode lemma7_2d +CVC' +CVC -CVC''.
+
+lemma7_2b_capp : lemma7_2b CVC' 
+                           (cval_capp CVC CVT0 CVT1)
+                           (cval_capp CVCreplC'k CVT0 CVT1)
+                 <- lemma7_2d CVC' 
+                              CVC 
+                              CVCreplC'k.
+                
+
+lemma7_2b_cret : lemma7_2b CVC'
+                           (cval_cret CVC CT)
+                           (cval_cret CVCreplC'k CT)
+                 <- lemma7_2d CVC' 
+                              CVC 
+                              CVCreplC'k.
+
+lemma7_2d_k : lemma7_2d CVC'
+                        cval_k
+                        CVC'.
+                 
+lemma7_2d_vlam : lemma7_2d CVC'
+                           (cval_vlam CVE)
+                           (cval_vlam CVEreplC'k)
+                 <- {v:ctriv}{cvv:cvalT v}
+                    lemma7_2b CVC'
+                              (CVE v cvv)
+                              (CVEreplC'k v cvv).
+
+%terminates (CVE CVC)  (lemma7_2b _ CVE _)  (lemma7_2d _ CVC _).

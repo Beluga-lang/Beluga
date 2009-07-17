@@ -1,0 +1,48 @@
+%%% The result of conversion to canonical form is canonical.
+%%% Author: Frank Pfenning
+
+iscan : tocan A D D' -> can A D' -> type.
+isatm : toatm D D' -> atm D' -> type.
+%mode iscan +TC -CN.
+%mode isatm +TA -AT.
+
+
+isc_and : iscan (tc_and TC2 TC1) (can_andi CN2 CN1)
+	   <- iscan TC1 CN1
+	   <- iscan TC2 CN2.
+
+isc_imp : iscan (tc_imp TC1) (can_impi CN1)
+	   <- {u:pf A} {ta:toatm u u} {at:atm u}
+	      isatm ta at -> iscan (TC1 u ta) (CN1 u at).
+
+isc_true : iscan (tc_true) (can_truei).
+
+isc_forall : iscan (tc_forall TC1) (can_foralli CN1)
+	       <- {a:i} iscan (TC1 a) (CN1 a).
+
+isc_whr : iscan (tc_whr TC1 WHR) CN1
+	   <- iscan TC1 CN1.
+
+isc_atm : iscan (tc_atm TA1) (can_atm AT1)
+	   <- isatm TA1 AT1.
+
+isa_impe : isatm (ta_impe TC2 TA1) (atm_impe CN2 AT1)
+	    <- isatm TA1 AT1
+	    <- iscan TC2 CN2.
+
+isa_andel : isatm (ta_andel TA1) (atm_andel AT1)
+	     <- isatm TA1 AT1.
+
+isa_ander : isatm (ta_ander TA1) (atm_ander AT1)
+	     <- isatm TA1 AT1.
+
+isa_foralle : isatm (ta_foralle TA1) (atm_foralle AT1)
+	       <- isatm TA1 AT1.
+
+%{
+%block l_isatm :  some {A:o} block {u:pf A} {ta:toatm u u} {at:atm u} {is:isatm ta at}.
+%block l_i : block {a:i}.
+
+%worlds (l_i | l_isatm ) (isatm _ _) (iscan _ _).
+%total (TA TC) (isatm TA CA) (iscan TC CN).
+}%

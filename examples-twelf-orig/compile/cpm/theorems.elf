@@ -1,0 +1,29 @@
+% Continuation style small step semantics refines the big step semantics
+
+ccf : eval E V
+       -> ({K} {W} K # (return V) =>* (answer W) -> K # (ev E) =>* (answer W))
+       -> type.
+
+%mode ccf +D -C.
+%lex {D} ccf D _.
+
+
+% Completeness Proof implies  Soundness Proof
+
+peq : csd C D C'
+       -> ccp D C' C
+       -> type.
+
+%mode peq +SD -CP.  
+%lex {SD} peq SD _.
+
+
+% Soundness Proof implies Completeness Proof
+
+peqr : ccp D C' C
+       -> csd C D C'
+       -> type.
+
+%mode peqr +CP -SD.  
+%lex {CP} peqr CP _.
+

@@ -1,0 +1,16 @@
+%%% Reverse direction
+%%% Convert the Hilbert Calculus into Natural deduction
+
+combdefn : |- A -> ! A -> type.
+%mode  combdefn +D -F.
+ 
+cdK     : combdefn K (impliesI [p] impliesI [q] p).
+cdS     : combdefn S (impliesI [p] impliesI [q] impliesI [r]
+                         (impliesE (impliesE p r) (impliesE q r))).
+cdONE   : combdefn ONE trueI.
+cdPAIR  : combdefn PAIR (impliesI [p] impliesI [q] andI p q).
+cdLEFT  : combdefn LEFT (impliesI [p] andEL p).
+cdRIGHT : combdefn RIGHT (impliesI [p] andER p).
+cdMP    : combdefn (MP P Q) (impliesE P' Q')
+             <- combdefn P P'
+             <- combdefn Q Q'.

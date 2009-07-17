@@ -1,0 +1,81 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Theorem 10 : Var-validity under beta-reduction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+th10-1 : vvalE Xi (cret (vlam E) T) -> vvalE Xi (E T) -> type.
+%mode th10-1 +VVE -VVE'.
+
+th10-2 : ({k:ccont}{vvk:vvalC dot k}
+          vvalE Xi (capp (xlam ([x]klam ([c] E x c))) T (C k)))
+         -> cvalE ([k]capp (xlam ([x]klam ([c] E x c))) T (C k))
+         -> ({xi:stack}vvalT xi T xi)
+         -> ({k:ccont}{vvk:vvalC dot k}
+             vvalE Xi (E T (C k)))
+         -> type.
+%mode th10-2 +VVE +CE +CT -VVE'.
+
+% original from belmina
+% needs to be asserted where a new v is introduced, not here.
+%{
+th10-1_t : {v:ctriv}{vvv:{xi:stack}vvalT (xi , v) v xi}
+           th10-1 (vval_cret (vval_vlam VVE) (vvv Xi))
+                  (VVE v vvv).
+}%
+
+% original from belmina
+%{
+th10-1_c : th10-1 (vval_cret (vval_vlam VVE) (VVT Xi))
+                  VVE'
+           <- lemma9-1b ([v:ctriv]app_init) 
+                         VVE
+                         VVT
+                         app_init
+                         VVE'.
+}%
+
+th10-1_c : th10-1 (vval_cret (vval_vlam ([v][vv] VVE v vv)) (vval_xlam ([x][vvt] VVR x vvt)))
+                  VVE'
+           <- lemma9-1b ([v]app_init) 
+                         ([v][vv] VVE v vv)
+                         ([xi] vval_xlam ([x][vvt] VVR x vvt))
+                         app_init
+                         VVE'.
+
+th10-2_proof :
+({k:ccont} {vvk:vvalC dot k}
+          lemma9-3a
+             ([k1] [vvk1] VVE T ([x] VVT x) k1 vvk1)
+             (CVE T CVT) (VVC k vvk) app_init (VVE' k vvk))
+         -> th10-2
+               ([k] [vvk]
+                   vval_capp (VVC k vvk)
+                      (vval_xlam
+                          ([x] [vvx]
+                              vval_klam
+                                 ([k2][vvc]
+                                     VVE x vvx k2 vvc)))
+                      (VVT Xi))
+               (cval_capp CVC
+                   (cval_xlam ([x] [cvx] cval_klam (CVE x cvx)))
+                   CVT)
+               ([xi] VVT xi) ([k] [vvk] VVE' k vvk).
+
+%{
+th10-2_proof : th10-2 ([k][vvk]
+                        vval_capp (VVC k vvk) 
+                                  (vval_xlam ([x][vvx]
+                                              vval_klam (VVE x vvx)) )
+                                  (VVT Xi))
+                      (cval_capp CVC (cval_xlam ([x][cvx]
+                                                 cval_klam (CVE x cvx))) CVT)
+                      VVT
+                      VVE'
+               <- {k:ccont}{vvk:vvalC dot k}
+                  lemma9-3a (VVE T VVT)
+                             (CVE T CVT)
+                             (VVC k vvk)
+                             app_init
+                             (VVE' k vvk).
+}%
+%terminates {} (th10-1 _ _).
+%terminates {} (th10-2 _ _ _ _).

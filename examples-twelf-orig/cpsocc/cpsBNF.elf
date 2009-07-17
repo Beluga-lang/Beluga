@@ -1,0 +1,18 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% BNF of continuation-passing style terms
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+croot : type.   %name croot CROOT.
+cexp  : type.   %name cexp CEXP.
+ctriv : type.   %name ctriv CTRIV.
+ccont : type.   %name ccont CCONT.
+
+klam : (ccont -> cexp) -> croot.
+
+capp : ctriv -> ctriv -> ccont -> cexp.
+
+cret : ccont -> ctriv -> cexp.
+
+xlam : (ctriv -> croot) -> ctriv.
+
+vlam : (ctriv -> cexp) -> ccont.

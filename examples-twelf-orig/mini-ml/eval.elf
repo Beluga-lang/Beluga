@@ -1,0 +1,49 @@
+%%% Mini-ML Natural Semantics
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+eval : exp -> exp -> type.  %name eval D.
+%mode eval +E -V.
+
+% Natural Numbers
+ev_z      : eval z z.
+ev_s      : eval (s E) (s V)
+	     <- eval E V.
+ev_match_z : eval (match E1 E2 E3) V
+	     <- eval E1 z
+	     <- eval E2 V.
+ev_match_s : eval (match E1 E2 E3) V
+	     <- eval E1 (s V1')
+	     <- eval (E3 V1') V.
+
+% Pairs
+ev_pair : eval (pair E1 E2) (pair V1 V2)
+	   <- eval E1 V1
+	   <- eval E2 V2.
+ev_fst  : eval (fst E) V1
+	   <- eval E (pair V1 V2).
+ev_snd  : eval (snd E) V2
+	   <- eval E (pair V1 V2).
+
+% Functions
+ev_lam : eval (lam E) (lam E).
+ev_app : eval (app E1 E2) V
+	  <- eval E1 (lam E1')
+	  <- eval E2 V2
+	  <- eval (E1' V2) V.
+
+% Definitions
+ev_letv : eval (letv E1 E2) V
+	   <- eval E1 V1
+	   <- eval (E2 V1) V.
+ev_letn : eval (letn E1 E2) V
+	   <- eval (E2 E1) V.
+
+% Recursion
+ev_fix  : eval (fix E) V
+	   <- eval (E (fix E)) V.
+
+%{
+%worlds () (eval D V).
+% terminates E (eval E V).
+%covers eval +E -V.
+}%

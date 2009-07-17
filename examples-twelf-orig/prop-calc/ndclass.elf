@@ -1,0 +1,29 @@
+nd : o -> type.
+
+impE : nd (A => B) -> nd A 
+         -> nd B.
+impI : (nd A -> nd B)
+	-> nd (A => B).
+
+
+
+examplebb = impI ([u:nd A] impI ([v:nd B] u)).
+
+ndI : o -> type.
+ndE : o -> type.
+
+impE : ndE (A => B) -> ndI A 
+         -> ndE B.
+impI : (ndE A -> ndI B)
+	-> ndI (A => B).
+
+a : o.
+IE  : ndE a -> ndI a.
+
+nat : type.
+z: nat.
+s : nat -> nat.
+
+add : nat -> nat -> nat -> type.
+addz: add z N N.
+adds: add M N L -> add (s M) N (s L).

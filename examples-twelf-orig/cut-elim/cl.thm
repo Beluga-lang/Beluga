@@ -1,0 +1,6 @@
+%%% Termination of cut-elimination
+
+%terminates {A [D E]}
+(ca' A D E _).
+
+%terminates D (ce' D _).

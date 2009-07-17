@@ -1,0 +1,184 @@
+%%% 
+%%% Author : Frank Pfenning, Brigitte Pientka
+%%% sample programs for binary arithmentic and 
+%%% refinement types. 
+
+% Examples from paper + own examples
+% to do: 
+% seperate out unprovable queries / provable queries
+% 
+
+itp = (nat => nat => nat  & nat => pos => nat & pos => nat => nat & pos => pos => pos).
+
+shiftl = lam [x] 
+	  case x e ([y] ((y 0) 0)) ([y] ((y 1) 0)).
+
+inc = fix [inc] lam [n]
+       case n
+       (e 1)
+       ([x] x 1)
+       ([x] (app inc x) 0).
+
+std = fix [std] lam [n]
+       case n
+       (e)
+       ([x] case (app std x)
+	  (e)
+	  ([y] y 0 0)
+	  ([y] y 1 0))			% y' 0 0 => type error!
+       ([x] (app std x) 1).
+
+
+test1 = let (e 1 # pos) [x] x 0.
+
+test2 = let (e 0 # nat) [x] x 1.
+
+plus =
+let ((fix [inc] lam [n]
+	case n
+	(e 1)
+	([x] x 1)
+	([x] (app inc x) 0)) # nat => pos & bit => bit)
+[inc]
+ fix [plus] lam [n]
+	case n
+	(lam [m] m)
+	([x] lam [m] case m
+	   (x 0)
+	   ([y] (app (app plus x) y) 0)
+	   ([y] (app (app plus x) y) 1))
+	([x] lam [m] case m
+	   (x 1)
+	   ([y] (app (app plus x) y) 1)
+	   ([y] (app inc (app (app plus x) y)) 0)).
+
+
+plus' =
+let ((fix [inc] lam [n]
+	case n
+	(e 1)
+	([x] x 1)
+	([x] (app inc x) 0)) # nat => pos)
+[inc]
+ fix [plus] lam [n] lam [m]
+	case n
+	m
+	([x] case m
+	   (x 0)
+	   ([y] (app (app plus x) y) 0)	% *81
+	       % _ nat => nat => nat
+	       % x ^ pos, y ^ pos, app (app (plus x) y) _ pos -- *3
+               % _ nat => pos => pos
+               % x ^ pos, y ^ pos, app (app (plus x) y) _ pos -- *3
+               % _ pos => nat => pos
+               % x ^ pos, y ^ pos, app (app (plus x) y) _ pos -- *3
+               % _ pos => pos => pos
+               % x ^ pos, y ^ pos, app (app (plus x) y) _ pos -- *3
+	   ([y] (app (app plus x) y) 1)) % *16
+	       % _ nat => nat => nat
+               % x ^ pos, y ^ nat, app (app (plus x) y) _ nat -- * 2
+               % _ nat => pos => pos
+	       % x ^ pos, y ^ nat, app (app (plus x) y) _ nat -- * 2
+               % _ pos => nat => pos
+	       % x ^ pos, y ^ nat, app (app (plus x) y) _ nat -- * 2
+               % _ pos => pos => pos
+	       % x ^ pos, y ^ nat, app (app (plus x) y) _ nat -- * 2
+	([x] case m
+	   (x 1)
+	   ([y] (app (app plus x) y) 1) % *16
+	   ([y] (app inc (app (app plus x) y)) 0)). % *1
+
+% Too many solutions? 20736 = 81 * 16 * 16 * 1
+% zero => zero
+mult = 
+let (shiftl # ((nat => nat) & (pos => pos) & (bit => bit) & (pos => nat)))
+[shiftl]
+ (let (plus # (nat => nat => nat & nat => pos => pos &
+		 pos => nat => pos & pos => pos => pos))
+    [plus] 
+      fix [mult] lam [n] lam [m]
+         case m 
+              e 
+              ([x] (app shiftl (app (app mult n) x)))
+              ([x] (app shiftl (app (app plus n) (app (app mult n) x))))).
+
+mult' = 
+let (shiftl # (bit => bit & pos => pos))
+[shiftl]
+ (let (plus # (bit => bit => bit))
+    [plus] 
+      fix [mult] lam [n] lam [m]
+         case m 
+              e 
+              ([x] (app shiftl (app (app mult n) x)))
+              ([x] (app shiftl (app (app plus n) (app (app mult n) x))))).
+
+
+
+square = 
+let (mult # ((pos => nat => nat) & (nat => nat => nat) & (nat => pos => nat) & (pos => pos => pos)))
+ [mult] 
+    lam [m] (app (app mult m) m).
+
+square' = 
+let (mult' # bit => bit => bit)
+ [mult] 
+    lam [m] (app (app mult m) m).
+
+ge = 
+fix [ge] lam [n] lam [m]
+ case n 
+      (case m true ([y] false) ([y] false))
+      ([x] case m false ([y] (app (app ge x) y)) ([y] (app (app ge x) y)))
+      ([x] case m false ([y] (app (app ge x) y)) ([y] (app (app ge x) y))).
+
+
+sub' = 
+let ((fix [inc] lam [n]
+	case n
+	(e 1)
+	([x] x 1)
+	([x] (app inc x) 0)) # zero => pos & zero => nat & pos => pos & nat => nat & nat => pos & bit => bit)     
+[inc]
+  fix [sub] lam [n] lam [m]
+	case n 
+	e
+	([x] case m (x 0) ([y] (app (app sub x) y) 0)
+	   ([y] (app (app sub x) (app inc y)) 1))
+	([x] case m (x 1) ([y] (app (app sub x) y) 1)
+	   ([y] (app (app sub x) y) 0)).
+
+
+sub = 
+let ((fix [inc] lam [n]
+	case n
+	(e 1)
+	([x] x 1)
+	([x] (app inc x) 0)) # zero => pos & 
+                               zero => nat & 
+                               pos => pos & 
+                               nat => nat & 
+                               nat => pos & 
+                               bit => bit)      
+[inc]
+ let (sub' # nat => zero => nat & 
+             zero => nat => zero & 
+             bit => bit => bit)
+  [sub] 
+    let (std # zero => zero & 
+               nat => nat & 
+               pos => pos & 
+               bit => nat & bit => bit)
+       [std] lam [n] lam [m] (app std (app (app sub n) m)).
+
+
+%{
+% sub' produces a bit number,i.e. it might have leading zeros!
+% sub standardizes the result of sub', i.e. we get a nat (without leading zeros)
+}%
+
+% comment:
+% usually would compute with the twocomplement
+% and use addition? but this requires a fixed length
+% of the binary representation; this representation
+% ensures no leading zeros? 

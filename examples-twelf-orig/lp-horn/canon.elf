@@ -1,0 +1,38 @@
+%%% Canonical forms for natural deductions.
+%%% Author: Frank Pfenning
+
+can : {A:o} pf A -> type.  % Canonical deductions
+atm : pf A -> type.        % Atomic deductions
+%name can CN.
+%name atm AT.
+%mode (can +A +P) (atm +P).
+
+can_andi : can (& A B) (andi D E)
+	    <- can A D
+	    <- can B E.
+
+%{
+can_impi : can (imp A B) (impi D)
+	    <- {u:pf A} atm u -> can B (D u).
+}%
+can_truei : can (true) (truei).
+
+%{
+can_foralli : can (forall A) (foralli D)
+	       <- {a:i} can (A a) (D a).
+
+}%
+can_atm : can (atom P) D
+	    <- atm D.
+
+atm_andel : atm (andel D) <- atm D.
+
+atm_ander : atm (ander D) <- atm D.
+
+atm_impe : atm (impe D E)
+	    <- atm D
+	    <- can B E.
+
+atm_foralle : atm (foralle D T)
+	       <- atm D.
+

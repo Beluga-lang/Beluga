@@ -1,0 +1,74 @@
+%%% Simply Typed Lambda Calculus w/ small-step, allocation semantics
+%%% Author: Matthew Fluet (June 2005)
+%%% dynsem-elf.elf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Dynamic Semantics Lemmas
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+dynsem_step_preserves_wf : st_wf S1 -> step S1 E1 S2 E2 -> st_wf S2 -> type.
+
+%mode dynsem_step_preserves_wf +DSWf1 +DStep -DSWf2.
+
+-lam_alloc     : dynsem_step_preserves_wf DSWf (lam_alloc_step DStAlloc) DSWf'
+		  <- st_alloc_preserves_wf DSWf DStAlloc DSWf'.
+
+-app_ctxt1     : dynsem_step_preserves_wf DSWf (app_ctxt1_step DStep) DSWf'
+		  <- dynsem_step_preserves_wf DSWf DStep DSWf'.
+
+-app_ctxt2     : dynsem_step_preserves_wf DSWf (app_ctxt2_step DStep) DSWf'
+		  <- dynsem_step_preserves_wf DSWf DStep DSWf'.
+
+-app_beta      : dynsem_step_preserves_wf DSWf (app_beta_step _) DSWf.
+
+-unit_alloc    : dynsem_step_preserves_wf DSWf (unit_alloc_step DStAlloc) DSWf'
+		  <- st_alloc_preserves_wf DSWf DStAlloc DSWf'.
+
+-letunit_ctxt  : dynsem_step_preserves_wf DSWf (letunit_ctxt_step DStep) DSWf'
+		  <- dynsem_step_preserves_wf DSWf DStep DSWf'.
+
+-letunit_beta  : dynsem_step_preserves_wf DSWf (letunit_beta_step _) DSWf.
+
+-pair_ctxt1    : dynsem_step_preserves_wf DSWf (pair_ctxt1_step DStep) DSWf'
+		  <- dynsem_step_preserves_wf DSWf DStep DSWf'.
+
+-pair_ctxt2    : dynsem_step_preserves_wf DSWf (pair_ctxt2_step DStep) DSWf'
+		  <- dynsem_step_preserves_wf DSWf DStep DSWf'.
+
+-pair_alloc    : dynsem_step_preserves_wf DSWf (pair_alloc_step DStAlloc) DSWf'
+		  <- st_alloc_preserves_wf DSWf DStAlloc DSWf'.
+
+-letpair_ctxt  : dynsem_step_preserves_wf DSWf (letpair_ctxt_step DStep) DSWf'
+		  <- dynsem_step_preserves_wf DSWf DStep DSWf'.
+
+-letpair_beta  : % {S:st_lookup S1 L1 (pair_v L3 L2)}
+%		  {S:st_lookup _ _ _}  
+		  dynsem_step_preserves_wf DSWf (letpair_beta_step S) DSWf.
+
+
+
+%terminates DStep (dynsem_step_preserves_wf _ DStep _).
+%worlds () (dynsem_step_preserves_wf _ _ _).
+%covers dynsem_step_preserves_wf +DSWf1 +DStep -DSWf2.
+%total DStep (dynsem_step_preserves_wf _ DStep _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+dynsem_mstep_preserves_wf : st_wf S1 -> mstep S1 E1 S2 E2 -> st_wf S2 -> type.
+
+%mode dynsem_mstep_preserves_wf +DSWf1 +DSteps -DSWf2.
+
+-refl          : dynsem_mstep_preserves_wf DSWf (refl_mstep) DSWf.
+
+-trans         : dynsem_mstep_preserves_wf DSWf1 (trans_mstep DSteps23 DSteps12) DSWf3
+		  <- dynsem_mstep_preserves_wf DSWf1 DSteps12 DSWf2
+		  <- dynsem_mstep_preserves_wf DSWf2 DSteps23 DSWf3.
+
+-step          : dynsem_mstep_preserves_wf DSWf (step_mstep DStep) DSWf'
+		  <- dynsem_step_preserves_wf DSWf DStep DSWf'.
+
+%terminates DSteps (dynsem_mstep_preserves_wf _ DSteps _).
+%worlds () (dynsem_mstep_preserves_wf _ _ _).
+%covers dynsem_mstep_preserves_wf +DSWf1 +DSteps -DSWf2.
+%total DSteps (dynsem_mstep_preserves_wf _ DSteps _).

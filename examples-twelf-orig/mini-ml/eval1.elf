@@ -1,0 +1,61 @@
+% The literal translation of the LF signature into Elf
+% This is not operationally adequate, because of the
+% wrong order of subgoals.
+
+eval : exp -> exp -> type.
+
+% Natural Numbers
+ev_z : eval z z.
+
+ev_s : {E:exp} {V:exp}
+	eval E V
+	-> eval (s E) (s V).
+
+ev_case_z : {E1:exp} {E2:exp} {E3:exp -> exp} {V:exp}
+	     eval E1 z
+	     -> eval E2 V
+	     -> eval (case E1 E2 E3) V.
+
+ev_case_s : {E1:exp} {E2:exp} {E3:exp -> exp} {V1':exp} {V:exp}
+	     eval E1 (s V1')
+	     -> eval (E3 V1') V
+	     -> eval (case E1 E2 E3) V.
+
+% Pairs
+ev_pair : {E1:exp} {E2:exp} {V1:exp} {V2:exp}
+	   eval E1 V1
+	   -> eval E2 V2
+	   -> eval (pair E1 E2) (pair V1 V2).
+
+ev_fst : {E:exp} {V1:exp} {V2:exp}
+	  eval E (pair V1 V2)
+	  -> eval (fst E) V1.
+
+ev_snd : {E:exp} {V1:exp} {V2:exp}
+	  eval E (pair V1 V2)
+	  -> eval (snd E) V2.
+
+% Functions
+ev_lam : {E:exp -> exp}
+	  eval (lam E) (lam E).
+
+ev_app : {E1:exp} {E2:exp} {E1':exp -> exp} {V2:exp} {V:exp}
+	  eval E1 (lam E1')
+	  -> eval E2 V2
+	  -> eval (E1' V2) V
+	  -> eval (app E1 E2) V.
+
+% Definitions
+ev_letv : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp}
+	   eval E1 V1
+	   -> eval (E2 V1) V
+	   -> eval (letv E1 E2) V.
+
+ev_letn : {E1:exp} {E2:exp -> exp} {V:exp}
+	   eval (E2 E1) V
+	   -> eval (letn E1 E2) V.
+
+% Recursion
+ev_fix : {E:exp -> exp} {V:exp}
+	  eval (E (fix E)) V
+	  -> eval (fix E) V.

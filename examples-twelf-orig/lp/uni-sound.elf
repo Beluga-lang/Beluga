@@ -1,0 +1,119 @@
+%%% Soundness of uniform proofs
+%%% Also shows correspondence to canonical deductions
+%%% Author: Frank Pfenning
+
+% Soundness of uniform proofs
+
+s_sound : solve A -> pf A -> type.
+h_sound : assume A -> pf A -> type.
+i_sound : entail A P -> (pf A -> pf (atom P)) -> type.
+%name s_sound SS.
+%name h_sound HS.
+%name i_sound IS.
+%mode s_sound +S -D.
+%mode h_sound +H -D.
+%mode i_sound +I -D.
+
+ss_and  : s_sound (s_and S2 S1) (andi D1 D2)
+	   <- s_sound S1 D1
+	   <- s_sound S2 D2.
+
+ss_imp  : s_sound (s_imp S1) (impi D1)
+	   <- {d:assume A} {u:pf A}
+	      h_sound d u -> s_sound (S1 d) (D1 u).
+
+ss_true : s_sound (s_true) (truei).
+
+ss_forall : s_sound (s_forall S1) (foralli D1)
+	     <- {a:i} s_sound (S1 a) (D1 a).
+
+ss_atom : s_sound (s_atom I2 H1) (D2 D1)
+	   <- h_sound H1 D1
+	   <- i_sound I2 D2.
+
+is_andl : i_sound (i_andl I1) (\u. D1 (andel u))
+	   <- i_sound I1 D1.
+
+is_andr : i_sound (i_andr I2) (\u. D2 (ander u))
+	   <- i_sound I2 D2.
+
+is_imp  : i_sound (i_imp S2 I1) (\u. D1 (impe u D2))
+	   <- i_sound I1 D1
+	   <- s_sound S2 D2.
+
+is_forall : i_sound (i_forall T I1) (\u. D1 (foralle u T))
+	     <- i_sound I1 D1.
+
+is_atom : i_sound (i_atom) (\u. u).
+
+%{
+%block l_h_sound : some {A:o} block {d:assume A} {u:pf A} {hs:h_sound d u}.
+%worlds (l_i | l_h_sound) (s_sound S D) (h_sound H U) (i_sound I D'').
+%total (S H I) (s_sound S _) (h_sound H _) (i_sound I _).
+}%
+% Uniform proofs yield canonical deductions
+
+ss_can : s_sound S D -> can A D -> type.
+hs_atm : h_sound H D -> atm D -> type.
+is_atm : i_sound I D -> ({u:pf A} atm u -> atm (D u)) -> type.
+%mode ss_can +SS -CN.
+%mode hs_atm +HS -AT.
+%mode is_atm +IS -AT.
+
+ssc_and  : ss_can (ss_and SS2 SS1) (can_andi CN2 CN1)
+	    <- ss_can SS1 CN1
+	    <- ss_can SS2 CN2.
+
+ssc_imp  : ss_can (ss_imp SS1) (can_impi CN1)
+	    <- ({d:assume A} {u:pf A} {hs:h_sound d u} {at:atm u}
+	       hs_atm hs at -> ss_can (SS1 d u hs) (CN1 u at)).
+
+ssc_true : ss_can (ss_true) (can_truei).
+
+ssc_forall : ss_can (ss_forall SS1) (can_foralli CN1)
+	      <- {a:i} ss_can (SS1 a) (CN1 a).
+
+ssc_atom : ss_can (ss_atom IS2 HS1) (can_atm (AT2 _ AT1))
+	    <- hs_atm HS1 AT1
+	    <- is_atm IS2 AT2.
+
+
+isc_andl : % {IS1:i_sound I1 (\d. D1 d)} 
+           is_atm (is_andl IS1)
+	    (\u. \at. AT1 (andel u) (atm_andel at))
+	    <- is_atm IS1 (\u. \at. AT1 u at).
+
+
+
+isc_andr : is_atm (is_andr IS1)
+	    (\u.\at. AT1 (ander u) (atm_ander at))
+	    <- is_atm IS1 AT1.
+
+isc_imp  : is_atm (is_imp SS2 IS1)
+	    (\u.\at. AT1 (impe u _) (atm_impe CN2 at))
+	    <- is_atm IS1 AT1
+	    <- ss_can SS2 CN2.
+
+isc_atom : is_atm (is_atom) (\u.\at. at).
+
+
+
+%{
+REQUIRES SOME TYPING ANNOTATION 
+In Twelf:       ([u:pf (forall A)] [at:atm u] AT1 (foralle u _) (atm_foralle at))
+isc_forall : is_atm (is_forall IS1)
+	      (\u.\at. AT1 (foralle u T1) (atm_foralle at))
+	      <- is_atm IS1 AT1.
+
+}%
+
+%{
+%block l_hs_atm :
+  some {A:o}
+  block {d:assume A} {u:pf A} {hs:h_sound d u} {at:atm u}
+        {hsa:hs_atm hs at}.
+%worlds (l_i | l_hs_atm)
+  (ss_can SS CN) (hs_atm HS AT) (is_atm IS AT').
+%total (SS HS IS)
+  (ss_can SS CN) (hs_atm HS AT) (is_atm IS AT').
+}%

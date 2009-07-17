@@ -1,0 +1,622 @@
+elem : type.
+nat : type.
+z : nat.
+s: nat -> nat.
+
+a : elem.
+b : elem.
+c : elem.
+
+
+list :  type.
+nil : list.
+@ : elem -> list -> list.
+%  %infix right 10 @.
+
+% app : list N -> list M -> list M' -> type.
+% app : list N -> list M -> list (N + M) -> type.
+app : list -> list -> list -> type.
+appnil : app nil K K.
+appcons : app (@ X L) K (@ X M)
+	   <- app L K M.
+
+%{
+rec  ex1 : (app (@ a (@ a (@ a nil))) (@ a (@ a nil))  (@ a (@ a (@ a (@ a (@ a nil))))))[ ] =
+  [ ] appcons (appcons (appcons appnil)) 
+;
+
+
+
+
+test: (app (@ a (@ a (@ a nil))) (@ a (@ a nil))  (@ a (@ a (@ a (@ a (@ a nil)))))) -> type.
+
+ex1: test (appcons (appcons (appcons appnil))).
+
+}%
+
+
+%{
+%query 1 * D : app (a @ a @ a @ nil) (b @ b @ nil) M. 
+%query 1 * D : app M (b @ b @ nil) (a @ a @ a @ b @ b @ nil).
+%query 1 * D : app (a @ a @ a @ nil)  M (a @ a @ a @ b @ b @ nil).
+
+ex1 : app nil nil nil = appnil.
+
+
+l100 = a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ nil.
+
+
+l500 = a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ nil.
+
+
+l1000 = a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ nil.
+
+%%%%%
+l1500 = a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ nil.
+
+%%%% 2000
+l2000 = a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ 
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ nil.
+
+
+%%%%%
+l3000 = a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ nil.
+
+%%%% 4000
+l4000 = a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ 
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ 
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ nil.
+
+}%

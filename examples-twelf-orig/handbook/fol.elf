@@ -1,0 +1,223 @@
+%%% First-Order Logic
+%%% Fragment with implication, negation, universal quantification.
+%%%
+%%% Author: Frank Pfenning
+%%%
+%%% This code is from the article
+%%%
+%%%   Logical Frameworks
+%%%   Handbook of Automated Reasoning
+%%%   Alan Robinson and Andrei Voronkov, editors
+%%%   Chapter 16
+%%%   Elsevier Science and MIT Press
+%%%   In preparation
+%%%
+
+i : type.  % individuals
+o : type.  % formulas
+%name i T x.
+%name o A p.
+
+% Formulas
+%%% infix right 10 imp.
+%%% prefix 12 not.
+imp    : o -> o -> o.  
+not    : o -> o.
+forall : (i -> o) -> o.
+
+% Natural deductions
+
+nd : o -> type. % name nd D u.
+
+impi    : (nd A -> nd B) -> nd (imp A B).
+impe    : nd (imp A B) -> nd A -> nd B.
+
+noti    : ({p:o} nd A -> nd p) -> nd (not A).
+note    : nd (not A) -> {C:o} nd A -> nd C.
+
+foralli : ({a:i} nd (A a)) -> nd (forall A).
+foralle : nd (forall A) -> {T:i} nd (A T).
+
+%block lnd : some {A:o} block {u:nd A}.
+%block lo : block {p:o}.
+%block li : block {a:i}.
+
+%worlds (lnd | lo | li) (nd A).
+
+% Example
+
+%{ _ : nd (imp A (imp B A))
+  = (impi [u:nd A] impi [v:nd B] u).
+}%
+% Hilbert deductions
+
+hil : o -> type.  % Hilbert deductions
+%name hil H u.
+
+k : hil (imp A (imp B A)).
+s : hil (imp (imp A (imp B C))  (imp (imp A B) (imp A C))).
+
+n1 : hil (imp (imp A (not B)) (imp (imp A B) (not A))).
+n2 : hil (imp (not A) (imp A B)).
+
+f1 : {T:i} hil (imp (forall ([x] A x))  (A T)).
+f2 : hil (imp (forall ([x] (imp B (A x))))  (imp B (forall A))).
+
+mp : hil (imp A B) -> hil A -> hil B.
+ug : ({a:i} hil (A a)) -> hil (forall A).
+
+%worlds (li) (hil A).
+
+% Local reductions
+
+reduce : nd A -> nd A -> type.  % infix none 14 ==>R.
+%name reduce R.
+
+redl_imp    : reduce (impe (impi ([u] D u)) E)  (D E).
+redl_not    : reduce (note (noti ([p][u] D p u)) C E)  (D C E).
+redl_forall : reduce (foralle (foralli ([a] D a)) T)  (D T).
+
+% Local expansions
+
+eta-expand : nd A -> nd A -> type.  % infix none 14 ==>E.
+%name eta-expand E.
+
+expl_imp    : {D:nd (imp A B)}  eta-expand D  (impi ([u] impe D u)).
+expl_not    : {D:nd (not A)}    eta-expand D (noti ([p][u] note D p u)).
+expl_forall : {D:nd (forall A)} eta-expand D (foralli ([a] foralle D a)).
+
+% Sequent calculus search result
+
+%{dn : nd (imp A not not A)
+   = (impi [u:nd A] noti [p:o] [w:nd (not A)] note w p u).
+}%
+% Translating Hilbert derivations to natural deductions
+
+hilnd : hil A -> nd A -> type.
+
+hnd_k : hilnd (k) (impi ([u] impi ([v] u))).
+hnd_s : hilnd (s) (impi ([u]
+		     impi ([v]
+		     impi ([w] impe (impe u w) (impe v w))))).
+
+hnd_n1 : hilnd (n1) (impi ([u]
+			   impi ([v]
+			   noti ([p][w]
+			   note (impe u w) p (impe v w))))).
+
+hnd_n2 : hilnd (n2) (impi ([u]
+			   impi ([v] note u B v))).
+
+hnd_f1 :
+  hilnd (f1 T) (impi ([u] foralle u T)).
+
+hnd_f2 :
+  hilnd (f2) (impi ([u]
+		     impi ([v]
+		     foralli ([a] impe (foralle u a) v)))).
+
+hnd_mp : hilnd (mp H1 H2) (impe D1 D2)
+	  <- hilnd H1 D1
+	  <- hilnd H2 D2.
+
+hnd_ug : hilnd (ug H1) (foralli D1)
+	    <- ({a:i} hilnd (H1 a) (D1 a)).
+
+%{
+%mode hilnd +H -D.
+%worlds (li) (hilnd H D).
+%terminates H (hilnd H _).
+%covers hilnd +H -D.
+%total H (hilnd H _).
+}%
+%{solve id' : 
+hilnd (mp (mp s k) k) (D:nd (imp A A)).
+
+_ : nd (imp A A)
+  = (impe
+	(impe
+	    (impi
+		([u:nd (imp A (imp B A) imp A)]
+		    impi
+		       ([v:nd (imp A imp B A)]
+			   impi ([w:nd A] impe (impe u w) (impe v w)))))
+	    (impi ([u:nd A] impi ([v:nd (imp B A)] u))))
+	(impi ([u:nd A] impi ([v:nd B] u)))).
+}%
+%%% The deduction theorem for Hilbert derivations
+
+ded : (hil A -> hil B) -> hil (imp A B) -> type.
+
+% ded_id : ded ([u] u) (mp (mp s k) (k : hil (imp A (imp A A)))).
+ded_id : ded ([u] u) (mp (mp s k) k).
+
+ded_k  : ded ([u] k) (mp k k).
+ded_s  : ded ([u] s) (mp k s).
+
+ded_n1 : ded ([u] n1) (mp k n1).
+ded_n2 : ded ([u] n2) (mp k n2).
+
+ded_f1 : ded ([u] f1 T) (mp k (f1 T)).
+ded_f2 : ded ([u] f2) (mp k f2).
+
+ded_mp : ded ([u] mp (H1 u) (H2 u)) (mp (mp s H1') H2')
+	  <- ded H1 H1'
+	  <- ded H2 H2'.
+
+ded_ug : ded ([u] ug (H1 u)) (mp f2 (ug H1'))
+	  <- ({a:i} ded ([u] H1 u a) (H1' a)).
+
+%{block lded : some {A:o} block {u:nd A} {v:hil A}
+	   {h:{C:o} ded ([w:hil C] v) (mp k v)}.
+}%
+%{
+%mode ded +H -H'.
+%worlds (li | lo | lded) (ded H H').
+%terminates H (ded H _).
+%covers ded +H -H'.
+%total H (ded H _).
+}%
+
+%%% Mapping natural deductions to Hilbert derivations.
+
+ndhil : nd A -> hil A -> type.
+
+ndh_impi : ndhil (impi D1) H1'
+	    <- ({u:nd A1} {v:hil A1}
+		  ({c:o} ded ([w] v) (mp k v))
+		  -> ndhil u v
+		  -> ndhil (D1 u) (H1 v))
+	    <- ded H1 H1'.
+
+ndh_impe : ndhil (impe D1 D2) (mp H1 H2)
+	    <- ndhil D1 H1
+	    <- ndhil D2 H2.
+
+ndh_noti : ndhil (noti D1) (mp (mp n1 H1') H1'')
+	    <- ({p:o} {u:nd A1} {v:hil A1}
+		  ({c:o} ded ([w] v) (mp k v))
+		  -> ndhil u v
+		  -> ndhil (D1 p u) (H1 p v))
+	    <- ded (H1 (not A1)) H1'
+	    <- ded (H1 A1) H1''.
+
+ndh_note : ndhil (note D1 C D2) (mp (mp n2 H1) H2)
+	    <- ndhil D1 H1
+	    <- ndhil D2 H2.
+
+ndh_foralli : ndhil (foralli D1) (ug H1)
+	       <- ({a:i} ndhil (D1 a) (H1 a)).
+
+ndh_foralle : ndhil (foralle D1 T) (mp (f1 T) H1)
+	       <- ndhil D1 H1.
+
+% mode ndhil +D -H.
+%{ block lndhil : some {A:o} block {u:nd A} {v:hil A}
+	   {h:{C:o} ded ([w:hil C] v) (mp k v)}
+	   {nh:ndhil u v}.
+
+%worlds (li | lo | lndhil) (ndhil D H).
+%terminates D (ndhil D _).
+%covers ndhil +D -H.
+%total D (ndhil D _).
+}%

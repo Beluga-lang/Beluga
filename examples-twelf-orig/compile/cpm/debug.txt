@@ -1,0 +1,117 @@
+In the original version during recTerm:
+
+unifyTyp:
+  |- step (st ?Y1728 (ev (match ?X1728 ?Z1728 (\x. ?Y1729 x)))) 
+          (st (c ?Y1728 (\x1. match1 x1 ?Z1728 (\x. ?Y1729 x))) (ev ?X1728))
+
+     step ?Z1727 (st (c ?X1877 (\v. ?Z1874 v)) (ev ?Z1875))
+
+
+for (st_match ?Y1728 ?X1728 ?Z1728 (\V5. ?Y1729))
+
+
+
+
+
+
+--------------------------------------------------------------------------------------------------------------
+
+Error (Type-Checking): ill-typed expression
+  expected: step (st (c K15 (\v. match1 v E28 (\x. E27 x))) (return z_val)) (st K15 (match1 z_val E28 (\x. E26 x)))
+  inferred: step (st (c K15 (\v. match1 v E28 (\x. E27 x))) (return z_val)) (st K15 (match1 z_val E28 (\x. E27 x)))
+  for expression: st_return K15 (\V11. match1 V11 E28 (\x. E27 x)) z_val
+
+Elaboration:
+(st (c ?Z527 (\v. match1 v ?Y527 (\x. ?Y528 x))) (return z_val))
+(st ?Z527 (match1 z_val ?Y527 (\x. ?Z505 x)))
+
+
+Reconstruction
+(st (c ?X548 (\v. match1 v ?Y549 (\x. ?X549 x))) (return z_val))
+(st ?X548 (match1 z_val ?Y549 (\x. ?X549 x)))
+
+
+
+
+(st K15   (match1 z_val E27   (\x. E26 x)))
+
+
+Elaboration of constant ccp_match_z : 
+ccp ?X527 z_val (c ?Z527 (\v. match1 v ?Y527 (\x. ?Y528 x))) ?X528 D1 
+    (<< (st ?Z527 (match1 z_val ?Y527 (\x. ?Z505 x))) (answer ?X528) 
+        (st (c ?Z527 (\v. match1 v ?Y527 (\x. ?Y528 x))) (return z_val)) 
+        (<< (st ?Z527 (ev ?Y527)) (answer ?X528) (st ?Z527 (match1 z_val ?Y527 (\x. ?Z505 x))) C2 (st_match1_z ?Z527 ?Y527 (\V6. ?Z505)))
+        (st_return ?Z527 (\V11. match1 V11 ?Y527 (\x. ?Y528 x)) z_val))
+         C1 -> 
+ ccp ?Y527 ?Y520 ?Z527 ?X528 D2 C' C2 -> ccp (match ?X527 ?Y527 (\x. ?Y528 x)) ?Y520 ?Z527 ?X528 (ev_match_z ?Y527 ?Y520 ?X527 (\V. ?Y528 V) D2 D1) C' (<< (st (c ?Z527 (\v. match1 v ?Y527 (\x. ?Y528 x))) (ev ?X527)) (answer ?X528) (st ?Z527 (ev (match ?X527 ?Y527 (\x. ?Y528 x)))) C1 (st_match ?Z527 ?X527 ?Y527 (\V5. ?Y528 V5)))
+
+
+Reconstruction (without abstraction) of constant ccp_match_z : 
+ccp ?Z548 z_val (c ?X548 (\v. match1 v ?Y549 (\x. ?X549 x))) ?Z549 D1 
+    (<< (st ?X548 (match1 z_val ?Y549 (\x. ?X549 x))) (answer ?Z549) 
+        (st (c ?X548 (\v. match1 v ?Y549 (\x. ?X549 x))) (return z_val)) 
+        (<< (st ?X548 (ev ?Y549)) (answer ?Z549) (st ?X548 (match1 z_val ?Y549 (\x. ?X549 x))) C2 (st_match1_z ?X548 ?Y549 (\V6. ?X549))) 
+        (st_return ?X548 (\V11. match1 V11 ?Y549 (\x. ?X549 x)) z_val)) 
+        C1 -> 
+ ccp ?Y549 ?X543 ?X548 ?Z549 D2 C' C2 -> ccp (match ?Z548 ?Y549 (\x. ?X549 x)) ?X543 ?X548 ?Z549 (ev_match_z ?Y549 ?X543 ?Z548 (\V. ?X549 V) D2 D1) C' (<< (st (c ?X548 (\v. match1 v ?Y549 (\x. ?X549 x))) (ev ?Z548)) (answer ?Z549) (st ?X548 (ev (match ?Z548 ?Y549 (\x. ?X549 x)))) C1 (st_match ?X548 ?Z548 ?Y549 (\V5. ?X549 V5)))
+
+Reconstruction (with abstraction) of constant: ccp_match_z : {E28 : exp} 
+ {K15 : cont} 
+  {E27 : exp} 
+   {E26 : {V6 : val}  exp} 
+    {V47 : val} 
+     {D1 : eval E28 z_val} 
+      {C2 : mstep (st K15 (ev E27)) (answer V47)} 
+
+       {C1 : mstep (st (c K15 (\v. match1 v E27 (\x. E26 x))) (ev E28)) (answer V47)} 
+
+        {V46 : val} 
+         {D2 : eval E27 V46} 
+          {C' : mstep (st K15 (return V46)) (answer V47)} 
+ccp E28 z_val (c K15 (\v. match1 v E27 (\x. E26 x))) V47 
+  D1
+  (<< (st K15 (match1 z_val E27 (\x. E26 x))) (answer V47) (st (c K15 (\v. match1 v E27 (\x. E26 x))) (return z_val)) 
+      (<< (st K15 (ev E27)) (answer V47) (st K15 (match1 z_val E27 (\x. E26 x))) 
+          C2 (st_match1_z 
+                  K15 E27 (\V6. E26 V6))) 
+        (st_return 
+            K15 (\V11. match1 V11 E27 (\x. E26 x)) z_val))
+   C1 -> 
+            ccp E27 V46 K15 V47 D2 C' C2 ->
+ccp (match E28 E27 (\x. E26 x)) V46 K15 V47 
+    (ev_match_z E27 V46 E28 (\V. E26 V) D2 D1) 
+    C' 
+   (<< (st (c K15 (\v. match1 v E27 (\x. E26 x))) (ev E28)) (answer V47) (st K15 (ev (match E28 E27 (\x. E26 x)))) 
+      C1 
+      (st_match K15 E28 E27 (\V5. E26 V5)))
+
+
+
+WRONG ...
+Reconstruction (with abstraction) of constant: ccp_match_z : {E29 : exp} 
+ {K15 : cont} 
+  {E28 : exp} 
+   {E27 : {V : val}  exp} 
+    {V47 : val} 
+     {D1 : eval E29 z_val} 
+      {E26 : {V6 : val}  exp} 
+       {C2 : mstep (st K15 (ev E28)) (answer V47)} 
+        {C1 : mstep (st (c K15 (\v. match1 v E28 (\x. E27 x))) (ev E29)) (answer V47)} 
+         {V46 : val} 
+          {D2 : eval E28 V46} 
+           {C' : mstep (st K15 (return V46)) (answer V47)} 
+ccp E29 z_val (c K15 (\v. match1 v E28 (\x. E27 x))) V47 
+  D1 
+  (<< (st K15 (match1 z_val E28 (\x. E26 x))) (answer V47) (st (c K15 (\v. match1 v E28 (\x. E27 x))) (return z_val)) 
+       (<< (st K15 (ev E28)) (answer V47) (st K15 (match1 z_val E28 (\x. E26 x))) 
+            C2 (st_match1_z K15 E28 (\V6. E26 V6))) 
+             (st_return 
+                K15 (\V11. match1 V11 E28 (\x. E27 x)) z_val)) 
+ C1 -> 
+ccp E28 V46 K15 V47 D2 C' C2 -> 
+ccp (match E29 E28 (\x. E27 x)) V46 K15 V47 
+  (ev_match_z E28 V46 E29 (\V. E27 V) D2 D1) 
+  C' 
+  (<< (st (c K15 (\v. match1 v E28 (\x. E27 x))) (ev E29)) (answer V47) (st K15 (ev (match E29 E28 (\x. E27 x)))) 
+       C1 
+       (st_match K15 E29 E28 (\V5. E27 V5)))

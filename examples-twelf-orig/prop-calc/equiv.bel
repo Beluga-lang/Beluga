@@ -1,0 +1,145 @@
+%%% A most naive version of translation from natural deductions
+%%% into a proof in the Hilbert-style system and vice versa.
+%%% Expresses the equivalence of the two systems.
+%%% Author: Frank Pfenning
+
+% abs implements bracket abstraction which amounts to
+% the computational content of the deduction theorem.
+%{
+abs : (|- A -> |- B) -> |- (imp A B) -> type.
+
+% aID	  : abs ([x] x) (mp (mp s k) k).
+aONE	  : abs (\x. one) (mp k one).
+aPAIR	  : abs (\x. pair) (mp k pair).
+aLEFT	  : abs (\x. left) (mp k left).
+aRIGHT	  : abs (\x. right) (mp k right).
+aK	  : abs (\x. k) (mp k k).
+aS	  : abs (\x. s) (mp k s).
+aMP	  : abs (\x. mp (P x) (Q x)) (mp (mp s P') Q')
+	      <- abs P P' <- abs Q Q'.
+}%
+
+schema |-ctx =  |- A.
+
+rec abs: {g:(|-ctx)*}(|- (B .. ))[g, u: |- A] -> (|- imp (A ..) (B ..))[g] = 
+ FN g => fn d => case d of
+  | [g,x: |- (A ..)] x       => [g] mp (mp s k) k
+  | [g,x: |- (A ..)] #p ..   => [g] mp k (#p ..)
+  | [g,x: |- _     ] pair    => [g] mp k pair
+  | [g,x: |- _     ] left    => [g] mp k left
+  | [g,x: |- _     ] right   => [g] mp k right
+  | [g,x: |- _     ] k       => [g] mp k k
+  | [g,x: |- _     ]  mp (P .. x) (Q .. x) => 
+    let [g] P' .. = abs [g] ([g,x] P .. x) in 
+    let [g] Q' .. = abs [g] ([g,x] Q .. x) in 
+     [g] mp (mp s (P' ..)) (Q' ..)
+  
+;
+
+% comb does the translation from natural deduction to Hilbert deductions,
+% appealing to the deduction theorem in case of implies-introduction
+% which requires hypothetical reasoning.
+
+
+
+%{comb : ! A -> |- A -> type.
+%mode comb +D -F.
+
+ctrue     : comb trueI one.
+candI     : comb (andI P Q) (mp (mp pair P') Q') <- comb P P' <- comb Q Q'.
+candEL    : comb (andEL P)  (mp left P')	 <- comb P P'.
+candER    : comb (andER P)  (mp right P')	 <- comb P P'.
+cimpliesI : comb (impliesI PP) Q
+            <- ({x:! _ }{y: |- _ } comb x y
+%	                -> ({B:o} abs (\z. y) (mp k y))
+	                -> (abs (\z. y) (mp k y))
+		        -> comb (PP x) (PP' y))
+	    <- abs PP' Q.
+cimpliesE : comb (impliesE P Q) (mp P' Q')
+	    <- comb P P'
+	    <- comb Q Q'.
+}%
+
+
+schema !ctx = some [a:o] ! a;
+coercion !to|- : !ctx -> |-ctx = 
+            [a:o] ! a => |- a;
+
+rec comb: {g:!ctx} (! (A ..))[g] -> (|- (A ..))[!to|-(g)] = 
+FN g => fn d => case d of 
+  
+  [g] #p .. => [!to|-(g)] !to|-(#p ..)
+
+| [g] trueI => [!to|-(g)] one 
+
+|[g] andI (P ..) (Q ..) => 
+ let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in 
+ let [!to|-(g)] Q' .. = comb [g] ([g] Q .. ) in 
+   [!to|-(g)] mp (mp pair (P' ..)) (Q' ..)
+
+|[g] andEL (P ..)  => 
+ let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in 
+  [!to|-(g)] mp left (P' ..)
+|[g] andER (P ..)  => 
+ let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in 
+  [!to|-(g)] mp right (P' ..)
+
+|[g] impliesI (PP ..) =>
+ let [!to|-(g), y:|- _ ] PP' .. y = comb [g, x:! _ ] ([g, x] PP .. x) in 
+    abs [!to|-(g)] ([!to|-(g), y] PP' .. y)
+
+|[g] impliesE (P ..) (Q ..) => 
+  let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in 
+ let [!to|-(g)] Q' .. = comb [g] ([g] Q .. ) in 
+   [!to|-(g)] mp (P' ..) (Q' ..)  
+
+;
+
+
+% Now the translation from Hilbert deduction into natural deductions.
+% This simply gives the definition of the (proof) combinators as lambda-terms.
+
+
+coercion |-to! : |-ctx –-> !ctx = 
+            [a:o] |- a –-> ! a ;
+
+%{combdefn : |- A -> ! A -> type.
+%mode  combdefn +D -F.
+
+cdK     : combdefn k (impliesI (\p. impliesI (\q. p))).
+cdS	: combdefn s (impliesI (\p. impliesI (\q. impliesI (\r.
+		         (impliesE (impliesE p r) (impliesE q r)))))).
+cdONE   : combdefn one trueI.
+cdPAIR  : combdefn pair (impliesI (\p. impliesI (\q. andI p q))).
+cdLEFT  : combdefn left (impliesI (\p. andEL p)).
+cdRIGHT : combdefn right (impliesI (\p. andER p)).
+cdMP    : combdefn (mp P Q) (impliesE P' Q')
+	     <- combdefn P P'
+	     <- combdefn Q Q'.
+
+}%
+
+rec combdefn : {g:(|-ctx)*} (|- (A ..))[g] -> (! (A .. ))[|-to!(g)] = 
+FN g => fn d => case d of 
+
+ | [g] #p .. => [|-to!(g)] |-to!(#p ..)
+
+ | [g] k =>  [|-to!(g)] impliesI (\p. impliesI (\q. p))
+ | [g] s => [|-to!(g)] impliesI (\p. impliesI (\q. impliesI (\r.
+		         (impliesE (impliesE p r) (impliesE q r)))))
+
+ | [g] one => [|-to!(g)] trueI
+
+ | [g] pair =>  [|-to!(g)] impliesI (\p. impliesI (\q. andI p q))
+ | [g] left =>  [|-to!(g)] impliesI (\p. andEL p)
+ | [g] right =>  [|-to!(g)] impliesI (\p. andER p)
+
+ | [g] mp (P ..) (Q ..) => 
+   let [|-to!(g)] P' .. = combdefn [g] ([g] P .. ) in 
+   let [|-to!(g)] Q' .. = combdefn [g] ([g] Q .. ) in 
+     [|-to!(g)] impliesE (P' ..) (Q' ..)
+
+;
+
+%%% Decidability proof for theorem  HD -> ND
+%terminates D (combdefn D _).

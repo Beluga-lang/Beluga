@@ -1,0 +1,29 @@
+set chatter 0
+Timers.reset 
+make examples-twelf-orig/arith/sources.cfg
+reset
+make examples-twelf-orig/alloc-sem/sources.cfg
+reset
+make examples-twelf-orig/ccc/sources.cfg
+reset
+make examples-twelf-orig/cpsocc/sources.cfg 
+reset
+make examples-twelf-orig/cut-elim/sources.cfg 
+reset
+make examples-twelf-orig/church-rosser/sources.cfg
+reset
+make examples-twelf-orig/compile/cpm/sources.cfg
+reset
+make examples-twelf-orig/compile/cls/sources.cfg
+reset
+make examples-twelf-orig/compile/debruijn/sources.cfg
+reset
+make examples-twelf-orig/compile/debruijn1/sources.cfg
+reset
+make examples-twelf-orig/fol/sources.cfg 
+reset
+make examples-twelf-orig/handbook/sources.cfg 
+reset
+make examples-twelf-orig/kolm/sources.cfg 
+reset
+Timers.show

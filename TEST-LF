@@ -48,14 +48,15 @@ $INTERPRETER +t \
     ../examples-twelf/cut-elim/sources.cfg \
     ../examples-twelf/fol/sources.cfg \
     ../examples-twelf/handbook/sources.cfg \
-    ../examples-twelf/kolm/sources.cfg 
+    ../examples-twelf/kolm/sources.cfg \
+    ../examples-twelf/lp/sources.cfg \
+    ../examples-twelf/lp-horn/sources.cfg \
+    ../examples-twelf/mini-ml/sources.cfg \
+    ../examples-twelf/mini-ml/test.cfg \
+    ../examples-twelf/prop-calc/sources.cfg
 
-#
-#     ../examples-twelf/lp/sources.cfg \
-#     ../examples-twelf/lp-horn/sources.cfg \
-#     ../examples-twelf/mini-ml/sources.cfg \
-#     ../examples-twelf/mini-ml/test.cfg \
-#     ../examples-twelf/prop-calc/sources.cfg \
+
+
 #     notworking/fol-handbook.bel 
 
 #    ../examples-twelf/compile/cls/test.cfg \

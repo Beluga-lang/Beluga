@@ -5,16 +5,15 @@ ceval : cexp -> cval -> type.
 
 ceval_vl : ceval (vl+ V) V.
 
-ceval_match_z : ceval (match+ z+ E2 (\x. E3 x)) V
+ceval_case_z : ceval (case+ z+ E2 E3) V
 	       <- ceval E2 V.
-ceval_match_s : ceval (match+ (s+ V1') E2 (\x. E3 x)) V
+ceval_case_s : ceval (case+ (s+ V1') E2 E3) V
 		<- ceval (E3 V1') V.
 
-ceval_fst : ceval (fst+ (pair+ V1 V2) (\v. K v)) V
+ceval_fst : ceval (fst+ (pair+ V1 V2) K) V
 	     <- ceval (K V1) V.
-ceval_snd : ceval (snd+ (pair+ V1 V2) (\v. K v)) V
+ceval_snd : ceval (snd+ (pair+ V1 V2) K) V
 	     <- ceval (K V2) V.
 
-ceval_app : {E1':cval -> (cval -> cexp) -> cexp}
-	     ceval (app+ (lam+ (\x.\k. E1' x (\v. k v))) V2 (\v. K v)) V
-	     <- ceval (E1' V2 (\v. K v)) V.
+ceval_app : ceval (app+ (lam+ E1') V2 K) V
+	     <- ceval (E1' V2 K) V.

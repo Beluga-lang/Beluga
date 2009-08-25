@@ -1,29 +1,43 @@
 set chatter 0
 Timers.reset 
-make examples-twelf-orig/arith/sources.cfg
+OS.chDir ../../logic/beluga/examples-twelf-orig/
+
+make arith/sources.cfg
 reset
-make examples-twelf-orig/alloc-sem/sources.cfg
+make alloc-sem/sources.cfg
 reset
-make examples-twelf-orig/ccc/sources.cfg
+make ccc/sources.cfg
 reset
-make examples-twelf-orig/cpsocc/sources.cfg 
+make church-rosser/sources.cfg
 reset
-make examples-twelf-orig/cut-elim/sources.cfg 
+make cpsocc/sources.cfg 
 reset
-make examples-twelf-orig/church-rosser/sources.cfg
+make compile/cls/sources.cfg
 reset
-make examples-twelf-orig/compile/cpm/sources.cfg
+make compile/cpm/sources.cfg
 reset
-make examples-twelf-orig/compile/cls/sources.cfg
+make compile/debruijn/sources.cfg
 reset
-make examples-twelf-orig/compile/debruijn/sources.cfg
+make compile/debruijn1/sources.cfg
 reset
-make examples-twelf-orig/compile/debruijn1/sources.cfg
+make compile/cps/sources.cfg
 reset
-make examples-twelf-orig/fol/sources.cfg 
+make cut-elim/sources.cfg 
 reset
-make examples-twelf-orig/handbook/sources.cfg 
+make fol/sources.cfg 
 reset
-make examples-twelf-orig/kolm/sources.cfg 
+make handbook/sources.cfg 
+reset
+make kolm/sources.cfg 
+reset
+make lp/sources.cfg
+reset
+make lp-horn/sources.cfg
+reset
+make mini-ml/sources.cfg
+reset
+make mini-ml/test.cfg
+reset
+make prop-calc/sources.cfg
 reset
 Timers.show

@@ -8,7 +8,7 @@ tpp : forall* {E: exp} {V: exp} {T: tp}
        forall {D: eval E V} {P: of E T} 
        exists {Q: of V T} true.
 
-% prove 1 D (tpp D _ _).
+%prove 6 D (tpp D _ _).
 
 % Partial verification of generated proof
 %terminates D (tpp D _ _).

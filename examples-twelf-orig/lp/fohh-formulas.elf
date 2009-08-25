@@ -7,11 +7,11 @@ pg : o -> prog -> type.
 
 gl_atom : gl (atom P) (atom' P).
 
-gl_and : gl (& A1 A2) (and' G1 G2)
+gl_and : gl (A1 & A2) (G1 and' G2)
 	  <- gl A1 G1
 	  <- gl A2 G2.
 
-gl_imp : gl (imp A2 A1) (imp' D2 G1)
+gl_imp : gl (A2 imp A1) (D2 imp' G1)
 	  <- gl A1 G1
 	  <- pg A2 D2.
 
@@ -22,11 +22,11 @@ gl_forall : gl (forall A1) (forall' G1)
 
 pg_atom : pg (atom P) (atom^ P).
 
-pg_and : pg (& A1 A2) (and^ G1 G2)
+pg_and : pg (A1 & A2) (G1 and^ G2)
 	  <- pg A1 G1
 	  <- pg A2 G2.
 
-pg_imp : pg (imp A2 A1) (imp^ G2 D1)
+pg_imp : pg (A2 imp A1) (G2 imp^ D1)
 	  <- pg A1 D1
 	  <- gl A2 G2.
 

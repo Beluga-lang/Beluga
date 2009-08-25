@@ -23,8 +23,8 @@ whr_impe  : whr (impe D E) (impe D' E)
 whr_foralle : whr (foralle D T) (foralle D' T)
 	       <- whr D D'.
 
-%worlds () (whr _ _).
 %terminates D (whr D _).
+%worlds () (whr _ _).
 
 % Conversion to canonical and atomic form.
 
@@ -35,11 +35,11 @@ toatm : pf A -> pf A -> type.        % Conversion to atomic form
 %mode tocan +A +D -D'.
 %mode toatm +E -E'.
 
-tc_and : tocan (& A B) D (andi D1' D2')
+tc_and : tocan (A & B) D (andi D1' D2')
 	  <- tocan A (andel D) D1'
 	  <- tocan B (ander D) D2'.
 
-tc_imp : tocan (imp A B) D (impi D')
+tc_imp : tocan (A imp B) D (impi D')
 	  <- {u:pf A} toatm u u -> tocan B (impe D u) (D' u).
 
 tc_true : tocan (true) D (truei).
@@ -54,7 +54,7 @@ tc_whr : tocan (atom P) D D'
 tc_atm : tocan (atom P) D D'
 	  <- toatm D D'.
 
-ta_impe : toatm (impe D E) (impe D' E')
+ta_impe : toatm (impe D (E : pf A)) (impe D' E')
 	   <- toatm D D'
 	   <- tocan A E E'.
 

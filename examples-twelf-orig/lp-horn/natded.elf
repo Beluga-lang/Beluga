@@ -10,7 +10,7 @@ p : type.  % atomic formulas
 %name p P. % Q
 
 atom   : p -> o.
-&    : o -> o -> o.  %infix right 11 &.
+and    : o -> o -> o.  %infix right 11 and.
 imp    : o -> o -> o.  %infix right 10 imp.
 true   : o.
 forall : (i -> o) -> o.
@@ -18,12 +18,12 @@ forall : (i -> o) -> o.
 pf : o -> type.  % natural deductions
 %name pf D. % E
 
-andi    : pf A -> pf B -> pf (& A B).
-andel   : pf (& A B) -> pf A.
-ander   : pf (& A B) -> pf B.
+andi    : pf A -> pf B -> pf (A and B).
+andel   : pf (A and B) -> pf A.
+ander   : pf (A and B) -> pf B.
 
-impi    : (pf A -> pf B) -> pf (imp A B).
-impe    : pf (imp A B) -> pf A -> pf B.
+impi    : (pf A -> pf B) -> pf (A imp B).
+impe    : pf (A imp B) -> pf A -> pf B.
 
 truei   : pf (true).
 

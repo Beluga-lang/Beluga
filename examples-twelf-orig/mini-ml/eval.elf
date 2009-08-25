@@ -8,10 +8,10 @@ eval : exp -> exp -> type.  %name eval D.
 ev_z      : eval z z.
 ev_s      : eval (s E) (s V)
 	     <- eval E V.
-ev_match_z : eval (match E1 E2 E3) V
+ev_case_z : eval (case E1 E2 E3) V
 	     <- eval E1 z
 	     <- eval E2 V.
-ev_match_s : eval (match E1 E2 E3) V
+ev_case_s : eval (case E1 E2 E3) V
 	     <- eval E1 (s V1')
 	     <- eval (E3 V1') V.
 
@@ -42,8 +42,6 @@ ev_letn : eval (letn E1 E2) V
 ev_fix  : eval (fix E) V
 	   <- eval (E (fix E)) V.
 
-%{
 %worlds () (eval D V).
 % terminates E (eval E V).
 %covers eval +E -V.
-}%

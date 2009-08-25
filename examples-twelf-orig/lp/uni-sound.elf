@@ -6,7 +6,7 @@
 
 s_sound : solve A -> pf A -> type.
 h_sound : assume A -> pf A -> type.
-i_sound : entail A P -> (pf A -> pf (atom P)) -> type.
+i_sound : A >> P -> (pf A -> pf (atom P)) -> type.
 %name s_sound SS.
 %name h_sound HS.
 %name i_sound IS.
@@ -31,29 +31,29 @@ ss_atom : s_sound (s_atom I2 H1) (D2 D1)
 	   <- h_sound H1 D1
 	   <- i_sound I2 D2.
 
-is_andl : i_sound (i_andl I1) (\u. D1 (andel u))
+is_andl : i_sound (i_andl I1) ([u:pf (A1 & A2)] D1 (andel u))
 	   <- i_sound I1 D1.
 
-is_andr : i_sound (i_andr I2) (\u. D2 (ander u))
+is_andr : i_sound (i_andr I2) ([u:pf (A1 & A2)] D2 (ander u))
 	   <- i_sound I2 D2.
 
-is_imp  : i_sound (i_imp S2 I1) (\u. D1 (impe u D2))
+is_imp  : i_sound (i_imp S2 I1) ([u:pf (A2 imp A1)] D1 (impe u D2))
 	   <- i_sound I1 D1
 	   <- s_sound S2 D2.
 
-is_forall : i_sound (i_forall T I1) (\u. D1 (foralle u T))
+is_forall : i_sound (i_forall T I1) ([u:pf (forall A1)] D1 (foralle u T))
 	     <- i_sound I1 D1.
 
-is_atom : i_sound (i_atom) (\u. u).
+is_atom : i_sound (i_atom) ([u:pf (atom P)] u).
 
-%{
-%block l_h_sound : some {A:o} block {d:assume A} {u:pf A} {hs:h_sound d u}.
+%block l_h_sound :
+ some {A:o} block {d:assume A} {u:pf A} {hs:h_sound d u}.
 %worlds (l_i | l_h_sound) (s_sound S D) (h_sound H U) (i_sound I D'').
 %total (S H I) (s_sound S _) (h_sound H _) (i_sound I _).
-}%
+
 % Uniform proofs yield canonical deductions
 
-ss_can : s_sound S D -> can A D -> type.
+ss_can : s_sound (S : solve A) D -> can A D -> type.
 hs_atm : h_sound H D -> atm D -> type.
 is_atm : i_sound I D -> ({u:pf A} atm u -> atm (D u)) -> type.
 %mode ss_can +SS -CN.
@@ -77,37 +77,25 @@ ssc_atom : ss_can (ss_atom IS2 HS1) (can_atm (AT2 _ AT1))
 	    <- hs_atm HS1 AT1
 	    <- is_atm IS2 AT2.
 
-
-isc_andl : % {IS1:i_sound I1 (\d. D1 d)} 
-           is_atm (is_andl IS1)
-	    (\u. \at. AT1 (andel u) (atm_andel at))
-	    <- is_atm IS1 (\u. \at. AT1 u at).
-
-
+isc_andl : is_atm (is_andl IS1)
+	    ([u:pf (A & B)] [at:atm u] AT1 (andel u) (atm_andel at))
+	    <- is_atm IS1 AT1.
 
 isc_andr : is_atm (is_andr IS1)
-	    (\u.\at. AT1 (ander u) (atm_ander at))
+	    ([u:pf (A & B)] [at:atm u] AT1 (ander u) (atm_ander at))
 	    <- is_atm IS1 AT1.
 
 isc_imp  : is_atm (is_imp SS2 IS1)
-	    (\u.\at. AT1 (impe u _) (atm_impe CN2 at))
+	    ([u:pf (A imp B)] [at:atm u] AT1 (impe u _) (atm_impe CN2 at))
 	    <- is_atm IS1 AT1
 	    <- ss_can SS2 CN2.
 
-isc_atom : is_atm (is_atom) (\u.\at. at).
-
-
-
-%{
-REQUIRES SOME TYPING ANNOTATION 
-In Twelf:       ([u:pf (forall A)] [at:atm u] AT1 (foralle u _) (atm_foralle at))
 isc_forall : is_atm (is_forall IS1)
-	      (\u.\at. AT1 (foralle u T1) (atm_foralle at))
+	      ([u:pf (forall A)] [at:atm u] AT1 (foralle u _) (atm_foralle at))
 	      <- is_atm IS1 AT1.
 
-}%
+isc_atom : is_atm (is_atom) ([u:pf (atom P)] [at:atm u] at).
 
-%{
 %block l_hs_atm :
   some {A:o}
   block {d:assume A} {u:pf A} {hs:h_sound d u} {at:atm u}
@@ -116,4 +104,3 @@ isc_forall : is_atm (is_forall IS1)
   (ss_can SS CN) (hs_atm HS AT) (is_atm IS AT').
 %total (SS HS IS)
   (ss_can SS CN) (hs_atm HS AT) (is_atm IS AT').
-}%

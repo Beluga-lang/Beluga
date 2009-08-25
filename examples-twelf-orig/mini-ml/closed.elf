@@ -10,7 +10,7 @@ clo_s     : closed (s E)
 	     <- closed E.
 
 
-clo_match  : closed (match E1 E2 E3)
+clo_case  : closed (case E1 E2 E3)
 	     <- closed E1
 	     <- closed E2
 	     <- ({x:exp} closed x -> closed (E3 x)).
@@ -43,9 +43,9 @@ clo_letn : closed (letn E1 E2)
 clo_fix : closed (fix E)
 	     <- ({x:exp} closed x -> closed (E x)).
 
+%terminates E (closed E).
 %block lc : block {x:exp} {u:closed x}.
 %worlds (lc) (closed E).
-%terminates E (closed E).
 %covers closed +E.
 %total E (closed E).
 
@@ -57,9 +57,9 @@ open : exp -> type.  %name open V.
 
 % Natural Numbers
 open_s     : open (s E) <- open E.
-open_match1 : open (match E1 E2 E3) <- open E1.
-open_match2 : open (match E1 E2 E3) <- open E2.
-open_match3 : open (match E1 E2 E3) <- ({x:exp} open (E3 x)).
+open_case1 : open (case E1 E2 E3) <- open E1.
+open_case2 : open (case E1 E2 E3) <- open E2.
+open_case3 : open (case E1 E2 E3) <- ({x:exp} open (E3 x)).
 
 % Pairs
 open_pair1 : open (pair E1 E2) <- open E1.
@@ -81,8 +81,8 @@ open_letn2 : open (letn E1 E2) <- ({x:exp} open (E2 x)).
 % Recursion
 open_fix : open (fix E) <- ({x:exp} open (E x)).
 
+%terminates E (open E).
 %block lo : block {x:exp}.
 %worlds (lo) (open E).
-%terminates E (open E).
 % next reports z and #lo_x as missing
 % %covers open +E.

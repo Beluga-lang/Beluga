@@ -39,12 +39,14 @@ case x of
 % if  G, x: exp T |-  U .. x ==> n1
 % if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
 
-rec cntV : {g:(expCtx)*} (exp (S .. x))[g, x:exp (T ..)] -> (exp nat) [ ] =
+rec cntV : {g:(expCtx)*}  exp (S .. x)[g, x:exp (T ..)] -> (exp nat) [ ] =
 FN g => 
  fn e =>
-  case e of
+  case e of  % e : exp (S .. x) [g, x:exp (T ..)]
 
-    [g,x : exp _ ] tt          => [ ] z
+   | {T'::tp[g]}
+     [g,x : exp (T' ..) ] tt  
+     => [ ] z
 
   | [g,x : exp _ ] (#p .. )    => [ ] z
 
@@ -53,7 +55,9 @@ FN g =>
 
   | [g,x : exp _ ] z           => [ ] z
 
-  | [g,x : exp _ ] s (W .. x)  => cntV [g] ([g,x] (W .. x))
+  | [g,x : exp _ ] (U .. )  => [ ] z
+
+  | [g,x : exp _ ] s (W .. x)  => cntV [g]  ([g,x] (W .. x))
 %
 %
 %  NOT WORKING IF WE OMIT T1 ..  since from the pattern we simply infer

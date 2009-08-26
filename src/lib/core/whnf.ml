@@ -2036,6 +2036,9 @@ let rec mctxPVarPos cD p =
     | Dec(cD, PDecl(p, tA, cPsi)) -> 
         Dec (normMCtx cD, PDecl (p, normTyp (tA, LF.id), normDCtx cPsi))
 
+    | Dec(cD, decl) -> 
+        Dec(normMCtx cD, decl)
+
 
   (* ----------------------------------------------------------- *)
   (* Conversion: Convertibility modulo alpha for 

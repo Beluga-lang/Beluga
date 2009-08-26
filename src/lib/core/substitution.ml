@@ -5,10 +5,6 @@
     @author Brigitte Pientka
 *)
 
-(*
-  module P = Pretty.Int.DefaultPrinter
-  module R = Pretty.Int.DefaultCidRenderer
-*)
 
 open Syntax.Int.LF
 
@@ -83,7 +79,7 @@ module LF = struct
         else
           (* (Printf.printf "s1 = %s \n s2 = %s\n\n"
              (P.subToString s1) (P.subToString s2) ; *)
-          raise (Error "Composition undefined")
+          raise (Error "Composition undefined - 1 ")
 
     | (Shift (CtxShift psi , m), s2) ->
         let rec ctx_shift n s2 = match s2 with
@@ -102,7 +98,7 @@ module LF = struct
 
           | _ -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n"
                     (P.subToString s1) (P.subToString s2) ; *)
-              raise (Error "Composition undefined")
+              raise (Error "Composition undefined - 2 ")
         in
           ctx_shift m s2
 
@@ -120,7 +116,7 @@ module LF = struct
         if psi = psi' then
           Shift (NoCtxShift, m)
         else
-          raise (Error "Composition not defined")
+          raise (Error "Composition not defined - 3")
 
     (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
 

@@ -259,7 +259,6 @@ let main () =
           (if sound && complete
            then ( let _ = if (!Monitor.on || !Monitor.onf) then
                     Monitor.print_timer ();
-                    Unify.print_trail (); 
                   in "#      OK!"
                 )            
 

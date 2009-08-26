@@ -585,6 +585,7 @@ and collectSub cQ phat s = match s with
 
   | (I.Dot (I.Undef, s')) ->
     (let _ = Printf.printf "Collect Sub encountered undef\n" in 
+     (* -bp Aug 24, 2009 BUG: If the substitution includes an undef one would need to prune the type of the MVAR with which this substitution is associate. *)  
           collectSub cQ phat  s')
 
 
@@ -593,6 +594,7 @@ and collectMSub cQ theta =  match theta with
   | I.MShift _n -> (cQ , theta)
   | I.MDot(I.MObj(phat, tM), t) -> 
       let (cQ1, t') =  collectMSub cQ t in 
+      let _ = dprint (fun () -> "Collect MObj  -- \n") in
       let (cQ2, tM') = collectTerm cQ1 phat (tM, LF.id) in 
         (cQ2 , I.MDot (I.MObj (phat, tM'), t'))
 
@@ -1192,9 +1194,13 @@ let rec abstrMSub cQ t =
     abstrMSub' t 
 
 and abstractMSub  t =  
+  let _ = dprint (fun () -> "Collecting MSub .. \n") in 
   let (cQ, t')  = collectMSub I.Empty t in
+  let _ = dprint (fun () -> "Collect MSub done \n") in 
   let cQ' = abstractMVarCtx cQ in
+  let _ = dprint (fun () -> "AbstractMVarCtx  done \n") in 
   let t''  = abstrMSub cQ' t' in
+  let _ = dprint (fun () -> "AbstrMSub done \n") in 
   let cD'  = ctxToMCtx cQ' in  
     (t'' , cD')  
 

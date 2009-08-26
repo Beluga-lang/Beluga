@@ -486,25 +486,25 @@ This case should now be covered by the one below it
             raise (Violation ("Type " ^ P.typToString cO cD cPsi (tA, LF.id) ^ " doesn't check against schema " ^ P.schemaToString (Schema elements)))
         | element :: elements ->
             try
-              checkTypeAgainstElement cO cD cPsi (tA, LF.id) element
+              instanceOfSchElem cO cD cPsi (tA, LF.id) element
             with 
               | (Match_failure _) as exn -> raise exn
               | _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
-  and checkTypeAgainstElement cO cD cPsi (tA, s) (SchElem (some_part, block_part)) = 
+  and instanceOfSchElem cO cD cPsi (tA, s) (SchElem (some_part, block_part)) = 
     let tArec = match tA with
       | Sigma tArec -> tArec
       | nonsigma -> SigmaLast nonsigma in
     let dctx        = projectCtxIntoDctx some_part in
     let dctxSub     = ctxToSub dctx in
-    let _ = dprint (fun () -> "checkTypeAgainstElement  "
+    let _ = dprint (fun () -> "instanceOfSchElem  "
                       ^ P.typToString cO cD cPsi (tA, s)
                       ^ "  against  "
                       ^ P.typRecToString cO cD Null (block_part, dctxSub)) in
-    let _           = dprint (fun () -> "checkTypeAgainstElement  dctx = " ^ P.dctxToString cO Empty dctx) in 
-    let _           = dprint (fun () -> "checkTypeAgainstElement  dctxsub=" ^ P.subToString cO Empty Null dctxSub) in 
-    let _           = dprint (fun () -> "checkTypeAgainstElement  block_part=" ^ P.typRecToString cO Empty dctx (block_part, LF.id)) in 
-    let _           = dprint (fun () -> "checkTypeAgainstElement  block_part =" ^ P.typRecToString cO Empty Null (block_part, dctxSub)) in 
+    let _           = dprint (fun () -> "instanceOfSchElem  dctx = " ^ P.dctxToString cO Empty dctx) in 
+    let _           = dprint (fun () -> "instanceOfSchElem  dctxsub=" ^ P.subToString cO Empty Null dctxSub) in 
+    let _           = dprint (fun () -> "instanceOfSchElem  block_part=" ^ P.typRecToString cO Empty dctx (block_part, LF.id)) in 
+    let _           = dprint (fun () -> "instanceOfSchElem  block_part =" ^ P.typRecToString cO Empty Null (block_part, dctxSub)) in 
     let phat        = dctxToHat cPsi in
       begin
         dprint (fun () -> "***Unify.unifyTypRec ("
@@ -514,7 +514,7 @@ This case should now be covered by the one below it
         try
           (* Unify.unifyTyp cD (phat, (normedA, LF.id), (normedElem1, dctxSub)) *)
           Unify.unifyTypRec cD phat (tArec, LF.id) (block_part, dctxSub)
-        ; dprint (fun () -> "checkTypeAgainstElement\n"
+        ; dprint (fun () -> "instanceOfSchElem\n"
                             ^ "  block_part = " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n"
                             ^ "  succeeded.")
         ; (block_part, dctxSub)
@@ -525,13 +525,13 @@ This case should now be covered by the one below it
           raise exn
       end
   
-  and checkTypeAgainstElementProjection cO cD cPsi (tA, s) (head, k) (SchElem (some_part, block_part)) = 
-    let kth_element_of_block_part (* : tclo *) = getType head (block_part, LF.id) k 1 in
-    let kth_element_of_schelem = SchElem (some_part, SigmaLast (TClo kth_element_of_block_part)) in
-    let (_kth_element_inst, subst) =
-      checkTypeAgainstElement cO cD cPsi (tA, s) kth_element_of_schelem
+  and instanceOfSchElemProj cO cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) = 
+    let tA_k (* : tclo *) = getType var (trec, LF.id) k 1 in
+    let (_tA'_k, subst) =
+      instanceOfSchElem cO cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (TClo tA_k)))
+      (* tA'_k = [subst] (tA_k) = [s]tA *)
     in
-      (block_part, subst)
+      (trec, subst) 
 
 
   (* The rule for checking a context against a schema is

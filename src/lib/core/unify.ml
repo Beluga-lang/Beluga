@@ -23,8 +23,9 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 
 let numPruneSub = ref 0
 
-let print_trail () = 
-  Printf.printf "\nPruneSub failed because notInvertible : %d times.\n" !numPruneSub
+(* let print_trail () = 
+   Printf.printf "\nPruneSub failed because notInvertible : %d times.\n" !numPruneSub *)
+  
     
 module type UNIFY = sig
   
@@ -424,8 +425,6 @@ module Make (T : TRAIL) : UNIFY = struct
          (Whnf.mcomp mt' (MShift 1), cD2)
 
   let pruneMCtx cD (t, cD1) ms = 
-    let _ = dprint (fun () -> "pruneMCtx : cD = " ^ P.mctxToString Empty cD ) in
-    let _ = dprint (fun () -> "pruneMCtx : t = " ^ P.msubToString Empty cD t ^ "\n cD1 = " ^ P.mctxToString Empty cD1 ^ "\n") in
       pruneMCtx' cD (Whnf.cnormMSub t, cD1) ms
 
 
@@ -1368,9 +1367,26 @@ module Make (T : TRAIL) : UNIFY = struct
         let tB' = pruneTyp cD0 cPsi phat (tB, dot1 s) (mss, dot1 ss) rOccur in 
           PiTyp((TypDecl(x, tA'), dep), tB')
 
+    | (PiTyp ((TypDeclOpt x, dep), tB), s) -> 
+        let tB' = pruneTyp cD0 cPsi phat (tB, dot1 s) (mss, dot1 ss) rOccur in 
+          PiTyp ((TypDeclOpt x, dep), tB')
+
+    | (Sigma typ_rec, s) -> 
+        let typ_rec' = pruneTypRec  cD0 cPsi phat (typ_rec, s) (mss, ss) rOccur in 
+          Sigma typ_rec'
+
   and pruneTyp cD0 cPsi1 phat sA ss rOccur = 
     let _ : (msub * sub) = ss in 
       pruneTypW cD0 cPsi1 phat (Whnf.whnfTyp sA) ss rOccur
+
+
+  and pruneTypRec cD0 cPsi phat (typ_rec, s) (mss, ss) rOccur = match (typ_rec, s) with
+    | (SigmaLast tA, s) -> SigmaLast (pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur)
+    | (SigmaElem (x, tA, typ_rec'), s) -> 
+      let tA' = pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur in 
+      let typ_rec'' = pruneTypRec cD0 cPsi phat (typ_rec', dot1 s) (mss, dot1 ss) rOccur in 
+        SigmaElem (x, tA', typ_rec'')
+
 
 
   and pruneDCtx cD0 cPsi mtt rOccur = match cPsi with
@@ -1546,20 +1562,6 @@ module Make (T : TRAIL) : UNIFY = struct
         *)
         let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
-        (* let cPsi = Context.hatToDCtx phat in 
-        let _ = dprint (fun () -> 
-                          "UNIFY MVAR - MVAR CASE \n" ^ 
-                            "t1' = " ^ P.subToString Empty cD0 cPsi t1' ^ 
-                            "\nt2' = " ^  P.subToString Empty cD0 cPsi t2') in 
-        let _ = dprint (fun () -> "\nUnify :"  
-                            ^ P.normalToString Empty cD0 cPsi sM1 ^ "\n with type: " ^ 
-                              P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.typToString Empty cD0 cPsi1 (tP1 , id)
-                             ^ "\n and " ^ 
-                              P.normalToString Empty cD0 cPsi sM2 ^  "\n with type: " ^ 
-                              P.dctxToString Empty cD0 cPsi2 ^ " |- " ^ P.typToString Empty cD0 cPsi2 (tP2 , id)
-                             
-) in *)
-
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isPatSub t1' , isPatSub t2') with                
               | (true, true) ->                 
@@ -1712,8 +1714,8 @@ module Make (T : TRAIL) : UNIFY = struct
            meta^2-variables are lowered during whnf, s1 = s2 = id
            r1 and r2 are uninstantiated  (None)
         *)
-        let t1' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t1 s1))    (* cD ; cPsi |- t1' <= cPsi1 *)
-        and t2' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t2 s2)) in (* cD ; cPsi |- t2' <= cPsi2 *)
+        let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
+        and t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
         in
           if r1 == r2 then (* by invariant:  cD1 = cD2, cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with                
@@ -1721,15 +1723,13 @@ module Make (T : TRAIL) : UNIFY = struct
                   if Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then 
                     ()
                   else 
-                    let (s', cPsi') = intersection phat (Monitor.timer ("Normalisation", fun () -> Whnf.normSub t1'))
-                      (Monitor.timer ("Normalisation", fun () ->  Whnf.normSub t2'))
-                      cPsi1 in
+                    let (s', cPsi') = intersection phat (Whnf.normSub t1') (Whnf.normSub t2') cPsi1 in
                       (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
                          then cD ; cPsi1 |- s' <= cPsi' *)
                     let (mt', cD') = m_intersection (Whnf.cnormMSub mt1) (Whnf.cnormMSub mt2) cD1 in              
                       (* if cD |- mt1 <= cD1 and cD |- mt2 <= cD1 
                          then cD1 |- mt' <= cD' *)
-                    let ss'  = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')) in
+                    let ss'  = invert (Whnf.normSub s') in
                       (* if cD ; cPsi1 |- s' <= cPsi' 
                          then cD ; cPsi' |- ss' <= cPsi1 *)
                     let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
@@ -1908,7 +1908,7 @@ module Make (T : TRAIL) : UNIFY = struct
         else raise_ (Unify "Parameter variable clash")
 
     | (PVar (PInst (q, _, _, cnstr), s1) as h1, BVar k2) ->
-        let s1' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub s1) in 
+        let s1' = Whnf.normSub s1 in 
         if isPatSub s1' then
           match bvarSub k2 (invert s1') with
             | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
@@ -1921,7 +1921,7 @@ module Make (T : TRAIL) : UNIFY = struct
           addConstraint (cnstr, ref (Eqh (cD0, phat, h1, BVar k2)))
 
     | (BVar k1, (PVar (PInst (q, _, _, cnstr), s2) as h1)) ->
-        let s2' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub s2) in 
+        let s2' = Whnf.normSub s2 in 
         if isPatSub s2' then
           match bvarSub k1 (invert s2') with
             | Head (BVar k1') -> instantiatePVar (q, BVar k1', !cnstr)
@@ -1934,8 +1934,8 @@ module Make (T : TRAIL) : UNIFY = struct
         (* check s1', and s2' are pattern substitutions; possibly generate constraints
            check intersection (s1', s2'); possibly prune;
            check q1 = q2 *)
-        let s1' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub s1') in 
-        let s2' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub s2') in 
+        let s1' = Whnf.normSub s1' in 
+        let s2' = Whnf.normSub s2' in 
         if q1 == q2 then (* cPsi1 = _cPsi2 *)
           match (isPatSub s1' ,  isPatSub s2') with
             | (true, true) ->
@@ -1944,7 +1944,7 @@ module Make (T : TRAIL) : UNIFY = struct
                      then cD ; cPsi1 |- s' <= cPsi' *)
                   (* cPsi' =/= Null ! otherwise no instantiation for
                      parameter variables exists *)
-                let ss' = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')) in
+                let ss' = invert (Whnf.normSub s') in
                   (* cD ; cPsi' |- [s']^-1(tA1) <= type *)
                 let w = Whnf.newPVar (cPsi', TClo(tA1, ss')) in
                   (* w::[s'^-1](tA1)[cPsi'] in cD'            *)
@@ -1966,7 +1966,7 @@ module Make (T : TRAIL) : UNIFY = struct
                       then cPsi2 |- s' <= cPsi' and [ss](s2' (s')) exists *)
                    (* cPsi' =/= Null ! otherwise no instantiation for
                       parameter variables exists *)
-                 let p = Whnf.newPVar (cPsi', TClo(tA2, invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')))) in
+                 let p = Whnf.newPVar (cPsi', TClo(tA2, invert (Whnf.normSub s'))) in
                    (* p::([s'^-1]tA2)[cPsi'] and
                       [|cPsi2.p[s'] / q2 |](q2[s2']) = p[[s2'] s']
 
@@ -2016,9 +2016,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     | (_h1 , _h2 ) ->
-        ((* dprint (fun () -> "UNIFY: " ^ P.headToString Empty cD0 (Context.hatToDCtx phat) h1 ^ " == " 
-                   ^ P.headToString Empty cD0 (Context.hatToDCtx phat) h2) ; *)
-         raise_ (Unify "Head clash"))
+        raise_ (Unify "Head clash")
 
 
     (* unifySpine mflag cD0 (phat, (tS1, s1), (tS2, s2)) = ()

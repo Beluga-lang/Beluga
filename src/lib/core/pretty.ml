@@ -1430,6 +1430,14 @@ module Int = struct
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
+      | LF.MDeclOpt name -> 
+          fprintf ppf "{%s :: _ }"
+            (R.render_name name)
+
+
+      | LF.PDeclOpt name -> 
+          fprintf ppf "{%s :: _ }"
+            (R.render_name name)
 
     (* Computation-level *)
 
@@ -2091,6 +2099,7 @@ module Error = struct
             (IP.fmt_ppr_lf_psi_hat cO std_lvl) (Context.hatToDCtx phat)
 
 
+
       | CompFreeMVar u -> 
           fprintf ppf "Encountered free meta-variables %s \n"
             (R.render_name u)
@@ -2122,6 +2131,11 @@ module Error = struct
           fprintf ppf "Expected product type ; Found %a \n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
+      | CompSynMismatch (cO, cD, theta_tau, theta_tau') ->
+          fprintf ppf
+            "Expected type : %a \n Inferred type  %a \n  "  
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau')
 
       | CompTypAnn -> 
           fprintf ppf "Type synthesis of term failed (use typing annotation)" 

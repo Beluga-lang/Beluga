@@ -87,6 +87,7 @@ type error =
   | CompMLamMismatch   of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
   | CompPairMismatch   of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
   | CompBoxMismatch    of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
+  | CompSynMismatch    of  LF.mctx * LF.mctx * Comp.tclo (* expected *) * Comp.tclo (* inferred *)
 
   | CompTypAnn
 

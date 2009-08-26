@@ -200,10 +200,10 @@ module Int = struct
       | TClo  of (typ * sub)               (*   | TClo(A,s)                  *)
 
 
-    and normal =                           (* normal terms                   *)
-      | Lam  of Loc.t option * name * normal (* M ::= \x.M                     *)
-      | Root of Loc.t option * head * spine  (*   | h . S                      *)
-      | Clo  of (normal * sub)             (*   | Clo(N,s)                   *)
+    and normal =                            (* normal terms                   *)
+      | Lam  of Loc.t option * name * normal(* M ::= \x.M                     *)
+      | Root of Loc.t option * head * spine (*   | h . S                      *)
+      | Clo  of (normal * sub)              (*   | Clo(N,s)                   *)
       | Tuple of Loc.t option * tuple
 
     and head =

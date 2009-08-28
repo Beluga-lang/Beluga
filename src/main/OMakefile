@@ -1,13 +1,14 @@
 # -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
 # Declare the directories we need to include other libraries from
-OCAMLINCLUDES +=  +camlp4 ../../lib/core ../../lib/frontend
+# OCAMLINCLUDES +=  +camlp4 ../../lib/core ../../lib/frontend
+OCAMLINCLUDES +=  +camlp4 ../core
 
 # Declare the names of the libraries we depend on
 OCAML_LIBS[]  +=
         camlp4lib
-        ../../lib/core/beluga-core
-        ../../lib/frontend/beluga-frontend
+        ../core/beluga-core
+#        ../../lib/frontend/beluga-frontend
 
 # Declare the name of the program
 PROGRAM = interpreter

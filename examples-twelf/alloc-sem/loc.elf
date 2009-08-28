@@ -15,4 +15,4 @@ loc_lt         : loc -> loc -> type.
 loc_lt_        : loc_lt (mkLoc N1) (mkLoc N2)
 		  <- nat_lt N1 N2.
 %terminates {} (loc_lt _ _).
-%worlds () (loc_lt _ _).
+% worlds () (loc_lt _ _).

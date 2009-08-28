@@ -21,8 +21,8 @@ a_3   : acker (s X) (s Y) Z
 	 <- acker (s X) Y Z'
 	 <- acker X Z' Z.
 
-%worlds () (acker _ _ _).
-%compile acker.
+% worlds () (acker _ _ _).
+% compile acker.
 
 %% arg1 = (s (s (s z))).
 %% arg2 = (s (s (s (s (s z))))).

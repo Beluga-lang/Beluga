@@ -19,4 +19,4 @@ nat_lt_z       : nat_lt z_nat (s_nat _).
 nat_lt_s       : nat_lt (s_nat N1) (s_nat N2)
 		  <- nat_lt N1 N2.
 %terminates N1 (nat_lt N1 _).
-%worlds () (nat_lt _ _).
+% worlds () (nat_lt _ _).

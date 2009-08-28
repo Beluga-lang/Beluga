@@ -20,7 +20,7 @@ BELUGA=`pwd`
 # echo BELUGA: $BELUGA
 
 # set $INTERPRETER to the executable
-INTERPRETER=$BELUGA/bin/interpreter 
+INTERPRETER=$BELUGA/bin/interpreter
 
 # set $X to the `beluga' examples directory
 X=$BELUGA/examples
@@ -52,34 +52,7 @@ $INTERPRETER +t \
     ../examples-twelf/lp/sources.cfg \
     ../examples-twelf/lp-horn/sources.cfg \
     ../examples-twelf/mini-ml/sources.cfg \
-    ../examples-twelf/mini-ml/test.cfg \
     ../examples-twelf/prop-calc/sources.cfg
 
 
 
-#     notworking/fol-handbook.bel 
-
-#    ../examples-twelf/compile/cls/test.cfg \
-#    ../examples-twelf/compile/cpm/test.cfg \
-#     tpcert.bel \
-#     equal/eq-proof-tuple.bel \
-#     equal/eq-proof.bel \
-#
-#    test/alpha.bel \
-#    test/sigma1.bel \
-#    test/sigma2.bel \
-#    test/sigma3.bel \
-#    test/sigma4.bel \
-#    test/implicit-obj.bel \
-#    LF/arith-unify.lf LF/tps-1.lf    ??
-#
-#
-#
-#    notworking/church-rosser.rec \
-#    notworking/cut-elim.bel \
-#    notworking/fol-handbook.bel \
-#    notworking/tpeval.bel \
-#
-#
-# *** Needs to be updated for new syntax: ***
-#    @tests/fvnat.rec

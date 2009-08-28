@@ -1,43 +1,60 @@
-set chatter 0
+set chatter 1
 Timers.reset 
-OS.chDir ../../logic/beluga/examples-twelf-orig/
+OS.chDir examples-twelf-orig/
 
+reset
 make arith/sources.cfg
+Timers.show
 reset
 make alloc-sem/sources.cfg
+Timers.show
 reset
 make ccc/sources.cfg
+Timers.show
 reset
 make church-rosser/sources.cfg
+Timers.show
 reset
 make cpsocc/sources.cfg 
+Timers.show
 reset
 make compile/cls/sources.cfg
+Timers.show
 reset
 make compile/cpm/sources.cfg
+Timers.show
 reset
 make compile/debruijn/sources.cfg
+Timers.show
 reset
 make compile/debruijn1/sources.cfg
+Timers.show
 reset
 make compile/cps/sources.cfg
+Timers.show
 reset
 make cut-elim/sources.cfg 
+Timers.show
 reset
 make fol/sources.cfg 
+Timers.show
 reset
 make handbook/sources.cfg 
+Timers.show
 reset
 make kolm/sources.cfg 
+Timers.show
 reset
 make lp/sources.cfg
+Timers.show
 reset
 make lp-horn/sources.cfg
+Timers.show
 reset
 make mini-ml/sources.cfg
-reset
-make mini-ml/test.cfg
+Timers.show
 reset
 make prop-calc/sources.cfg
-reset
 Timers.show
+reset
+

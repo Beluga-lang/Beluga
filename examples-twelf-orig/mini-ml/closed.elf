@@ -83,6 +83,6 @@ open_fix : open (fix E) <- ({x:exp} open (E x)).
 
 %terminates E (open E).
 %block lo : block {x:exp}.
-%worlds (lo) (open E).
+% worlds (lo) (open E).
 % next reports z and #lo_x as missing
 % %covers open +E.

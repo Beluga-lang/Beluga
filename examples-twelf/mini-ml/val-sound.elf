@@ -2,7 +2,7 @@
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
 vs : eval E V -> value V -> type.
-%mode vs +D -P.
+% mode vs +D -P.
 
 % Natural Numbers
 
@@ -42,7 +42,7 @@ vs_letn : vs (ev_letn D2) P2
 vs_fix : vs (ev_fix D1) P1
 	  <- vs D1 P1.
 
-%worlds () (vs D P).
-%terminates D (vs D _).
-%covers vs +D -P.
-%total D (vs D _).
+% worlds () (vs D P).
+% terminates D (vs D _).
+% covers vs +D -P.
+% total D (vs D _).

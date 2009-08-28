@@ -47,9 +47,9 @@ vmount(-l, src, .build)
         $(if $(not $(file-exists bin)),               \
           $(mkdir bin))                               \
         $(if $(not $(file-exists bin/interpreter)),   \
-          $(symlink .build/tools/interpreter/interpreter, bin/interpreter)) \
+          $(symlink .build/main/interpreter, bin/interpreter)) \
         $(if $(not $(file-exists bin/interpreter.run)),   \
-          $(symlink .build/tools/interpreter/interpreter.run, bin/interpreter.run))
+          $(symlink .build/main/interpreter.run, bin/interpreter.run))
 
 clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))

@@ -43,6 +43,6 @@ vs_fix : vs (ev_fix D1) P1
 	  <- vs D1 P1.
 
 %terminates D (vs D _).
-%worlds () (vs D P).
-%covers vs +D -P.
-%total D (vs D _).
+% worlds () (vs D P).
+% covers vs +D -P.
+% total D (vs D _).

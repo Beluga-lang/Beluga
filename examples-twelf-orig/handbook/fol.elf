@@ -27,7 +27,7 @@ forall : (i -> o) -> o.
 
 % Natural deductions
 
-nd : o -> type. % name nd D u.
+nd : o -> type. %name nd D u.
 
 impi    : (nd A -> nd B) -> nd (imp A B).
 impe    : nd (imp A B) -> nd A -> nd B.
@@ -42,7 +42,7 @@ foralle : nd (forall A) -> {T:i} nd (A T).
 %block lo : block {p:o}.
 %block li : block {a:i}.
 
-%worlds (lnd | lo | li) (nd A).
+% worlds (lnd | lo | li) (nd A).
 
 % Example
 
@@ -66,7 +66,7 @@ f2 : hil (imp (forall ([x] (imp B (A x))))  (imp B (forall A))).
 mp : hil (imp A B) -> hil A -> hil B.
 ug : ({a:i} hil (A a)) -> hil (forall A).
 
-%worlds (li) (hil A).
+% worlds (li) (hil A).
 
 % Local reductions
 

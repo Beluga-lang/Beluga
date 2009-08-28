@@ -20,8 +20,8 @@ st_wf_cons_cons
 		 loc_lt L' L
 		  -> st_wf (cons_st L V (cons_st L' V' S')).
 %terminates S (st_wf S).
-%worlds () (st_wf _).
-%covers st_wf +S.
+% worlds () (st_wf _).
+% covers st_wf +S.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Store Lookup
@@ -33,7 +33,7 @@ st_lookup_miss : st_lookup S' L V ->
                  loc_lt L L'
                   -> st_lookup (cons_st L' V' S') L V.
 %terminates S (st_lookup S _ _).
-%worlds () (st_lookup _ _ _).
+% worlds () (st_lookup _ _ _).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Store Alloc

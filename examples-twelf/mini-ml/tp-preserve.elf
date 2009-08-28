@@ -51,7 +51,7 @@ tps_fix : tps (ev_fix D1) (tp_fix P1) Q1
 
 
 %%% Termination of type preservation judgment
-%worlds () (tps D _ _).
-%terminates D (tps D _ _).
-%covers tps +D +P -Q.
-%total D (tps D P _).
+% worlds () (tps D _ _).
+% terminates D (tps D _ _).
+% covers tps +D +P -Q.
+% total D (tps D P _).

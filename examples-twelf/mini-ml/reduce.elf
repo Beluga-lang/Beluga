@@ -1,6 +1,6 @@
 ==> : exp -> exp -> type.		%name ==> R.
-%infix none 10 ==>.
-%mode ==> +E -E'.
+% infix none 10 ==>.
+% mode ==> +E -E'.
 
 red_z    : ==> (match z E1 E2) E1.
 red_s    : ==> (match (s E) E1 E2)  (E2 E).
@@ -11,13 +11,13 @@ red_letv : ==> (letv E1 E2) (E2 E1).
 red_letn : ==> (letn E1 E2) (E2 E1).
 red_fix  : ==> (fix E)  (E (fix E)).
 
-%worlds () (==> D P).
+% worlds () (==> D P).
 
 
 % The weakly congruent, reflexive, transitive closure of ==>*
 ==>* : exp -> exp -> type.		%name ==>* R*.
-%infix none 10 ==>*.
-%mode ==>* +E -E'.
+% infix none 10 ==>*.
+% mode ==>* +E -E'.
 
 % Congruences
 % no red*_z
@@ -52,4 +52,4 @@ red*_trans : ==>* E E''
 	      <- ==>* E E'
 	      <- ==>* E' E''.
 
-%worlds () (==>* D P).
+% worlds () (==>* D P).

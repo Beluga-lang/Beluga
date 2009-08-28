@@ -24,7 +24,7 @@ whr_foralle : whr (foralle D T) (foralle D' T)
 	       <- whr D D'.
 
 %terminates D (whr D _).
-%worlds () (whr _ _).
+% worlds () (whr _ _).
 
 % Conversion to canonical and atomic form.
 

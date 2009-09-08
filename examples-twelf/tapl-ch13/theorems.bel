@@ -52,17 +52,16 @@ rec wt_same_length_store_check :
    {L::(length_heap H N)[]}
      (length_store S2 N)[]
 = mlam C => mlam L =>
- case [] C of
- | [] check_wt_nil   => 
-    (case []L of []length_heap_nil    => []length_store_nil)
-% |
-%    [] check_wt_cons C' _ => (case []L of []length_heap_cons H' =>
-%      let [] S = wt_same_length_store_check <.C'> <.H'> in
-%        [] length_store_cons S)
+ case []C of
+ | [] check_wt_nil        => (case []L of []length_heap_nil => []length_store_nil)
+ | [] check_wt_cons C' T => (case []L of []length_heap_cons H' =>
+      let []S = wt_same_length_store_check <.C'> <.H'> in
+        []length_store_cons S)
 ;
 
 %{
--: wt_same_length_store_check C H S  ->  wt_same_length_store_check
+-: wt_same_length_store_check C H S  ->
+   wt_same_length_store_check
       (check_wt_cons C _)
       (length_heap_cons H)
       (length_store_cons S)

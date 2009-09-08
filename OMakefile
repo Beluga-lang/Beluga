@@ -23,7 +23,7 @@ OCAMLPACKS[] =
 OCAMLFLAGS = $(if $(DEBUG), -w Ae  -warn-error Ap \
                           , -w Aep -warn-error A)
 
-# 3. Debugging information in compiled code (-g)  (It is never useful to turn this off. -jd)
+# 3. Debugging information in byte-compiled code (-g)  (It is never useful to turn this off. -jd)
 OCAMLFLAGS += -g
 
 # Flags to pass to the native-code compiler
@@ -39,6 +39,10 @@ OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
 # Map the src dir onto the build dir
 vmount(-l, src, .build)
+if $(not $(file-exists .build/core))
+  mkdir .build/core
+if $(not $(file-exists .build/main))
+  mkdir .build/main
 
 # Include the fake .build subdirectory
 .SUBDIRS: .build

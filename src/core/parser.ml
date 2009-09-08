@@ -103,10 +103,12 @@ GLOBAL: sgn_eoi;
    [ 
       [
 
-        some_arg = lf_schema_some; arec = lf_typ_rec ; "=>"; brec = lf_typ_rec ->
-          LF.CoBranch (List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg, arec, brec)
+        some_arg = lf_schema_some; arec = lf_typ_rec ; "=>"; brec_opt = lf_typ_rec_opt ->
+          LF.CoBranch (List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg, arec, brec_opt)
       ]
    ];
+
+
 
 
   lf_kind_or_typ:
@@ -179,6 +181,7 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
+
   lf_term:
     [ RIGHTA
         [ 
@@ -247,6 +250,18 @@ GLOBAL: sgn_eoi;
     ] 
   ;
 
+
+  lf_typ_rec_opt:
+   [
+     [
+       b = lf_typ_rec      -> Some b
+
+     | 
+       b = "_"             -> None
+     ]
+   ]
+  ;
+
   lf_typ_rec_block:
     [
       [
@@ -256,6 +271,7 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
+ 
   lf_typ_rec:
     [
       [
@@ -343,7 +359,7 @@ GLOBAL: sgn_eoi;
           "("; a = SELF; ")" ->
             a    
         | 
-          a = SYMBOL; ms = LIST0 clf_atom ->
+          a = SYMBOL; ms = LIST0 clf_normal ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
         ]
@@ -352,7 +368,7 @@ GLOBAL: sgn_eoi;
           "("; a = SELF; ")" ->
             a    
         | 
-          a = SYMBOL; ms = LIST0 clf_atom ->
+          a = SYMBOL; ms = LIST0 clf_normal ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
         |
@@ -362,7 +378,7 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
-  clf_atom:
+  clf_normal:
      [ RIGHTA
        [
           "\\"; x = SYMBOL; "."; m = clf_term_app ->
@@ -427,7 +443,7 @@ GLOBAL: sgn_eoi;
   clf_term_x:
     [  "atomic" 
         [
-           a = clf_atom ->
+           a = clf_normal ->
               a
         |
           u = UPSYMBOL ->
@@ -442,7 +458,7 @@ GLOBAL: sgn_eoi;
   clf_term_app:
     [ LEFTA
         [
-          h = clf_head; ms = LIST0 clf_atom ->
+          h = clf_head; ms = LIST0 clf_normal ->
             let spine = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Root (_loc, h, spine)
         ]
@@ -464,17 +480,27 @@ GLOBAL: sgn_eoi;
   clf_head:
     [
       [
-        "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
-                LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
+
+        co = SYMBOL; "("; "#"; p = SYMBOL; ")"; "." ; k = INTLIT;  sigma = clf_sub_new ->
+          LF.CoPVar(_loc, Id.mk_name (Id.SomeString co), 
+                    Id.mk_name (Id.SomeString p),  int_of_string k, sigma)
+
+
+      | co = SYMBOL; "("; "#"; p = SYMBOL; ")"; sigma = clf_sub_new ->
+          LF.CoPVar(_loc, Id.mk_name (Id.SomeString co), 
+                    Id.mk_name (Id.SomeString p), 0, sigma)
+
+      |  "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
+          LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
-                LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+          LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
       |
         x = SYMBOL; "."; k = INTLIT ->
-                LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
+          LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
       |
         x = SYMBOL ->
-                LF.Name (_loc, Id.mk_name (Id.SomeString x))
+         LF.Name (_loc, Id.mk_name (Id.SomeString x))
       ]
     ]
   ;
@@ -483,15 +509,19 @@ GLOBAL: sgn_eoi;
   clf_sub_new:
     [
       [
-        "."; "."  ->
+          "."; "."  ->
           LF.Id (_loc) 
+
+
+       | co = SYMBOL; "("; "."; "." ; ")"  -> 
+           LF.CoId (_loc, Id.mk_name (Id.SomeString co)  )
 
       | 
         sigma = SELF;   h = clf_head -> 
           LF.Dot (_loc, sigma, LF.Head h)
 
       | 
-        sigma = SELF;  tM = clf_atom -> 
+        sigma = SELF;  tM = clf_normal -> 
           LF.Dot (_loc, sigma, LF.Normal tM)
 
 
@@ -500,7 +530,7 @@ GLOBAL: sgn_eoi;
           LF.Dot (_loc, LF.EmptySub _loc, LF.Head h)
 
       | 
-          tM = clf_atom -> 
+          tM = clf_normal -> 
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
 
 

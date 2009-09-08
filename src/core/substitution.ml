@@ -57,7 +57,83 @@ module LF = struct
    * then s' patsub
    *)
   let rec comp s1 s2 = match (s1, s2) with
-    | (Shift (NoCtxShift , 0), s2) ->
+(*    | (CoShift (Coe co_id, NoCtxShift, 0), s2) ->  *)
+        (* c(g) |- s1 : g             u:hil A |- x/x : x:nd A
+           Psi  |- s2 : c(g)  where s2 = hil_imp ... /u
+
+           Cannot be really defined Tue Sep  1 20:31:46 2009 -bp 
+        *)
+
+    | (CoShift (Coe co_cid, NoCtxShift, 0), CoShift (InvCoe co_cid', NoCtxShift, 0)) -> 
+        (* c(g) |- s1 : g             u:hil A |- x/x : x:nd A
+           g    |- s2 : c(g)  where s2 = x/u   *)
+
+        if co_cid = co_cid' then 
+          Shift (NoCtxShift , 0)
+        else 
+          raise (Error "Composition for CoShifts undefined - 1 ")
+
+    | (CoShift (InvCoe co_cid', NoCtxShift, 0), CoShift (Coe co_cid, NoCtxShift, 0) ) -> 
+        (* g     |- s1 : c(g)             u:hil A |- x/x : x:nd A
+           c(g)  |- s2 : g  where s2 = x/u   *)
+
+        if co_cid = co_cid' then 
+          Shift (NoCtxShift , 0)
+        else 
+          raise (Error "Composition for CoShifts undefined - 2")
+
+    | (CoShift (Coe co_cid, CtxShift psi, d), s2) -> 
+        let rec ctx_shift n s2 = match s2 with
+          | Dot(_ft, s) -> ctx_shift (n - 1) s
+              (*  c(psi), Psi |- s1 : .   and Psi2 |- s2. ft : c(psi), Psi  *) 
+
+          | CoShift (Coe co_cid', NoCtxShift, k) -> 
+              (*  c(psi), Psi |- s1 : .   and (c'(c(psi)), Psi), Psi2 |- s2 : c(psi), Psi
+               *  c'(c(psi)), Psi, Psi2 |-  s : .
+               *)          
+              CoShift (Coe co_cid' , CtxShift (CoCtx (co_cid, psi)), k + n)
+            
+
+          | CoShift (Coe co_cid', NegCtxShift _psi, k) -> 
+              (* c(psi), Psi |- s1 : .    and Psi, Psi' |- s2 : c(psi), Psi
+               * Psi, Psi' |- s1 o s2 : .
+               *)
+            if co_cid = co_cid' then
+             Shift (NoCtxShift, k + n)
+            else 
+              raise (Error "CoShift Composition undefined - 2")
+
+          | CoShift (InvCoe co_cid', NoCtxShift, d) ->  
+              (* c(psi), Psi |- s1 : .    and psi, Psi' |- s2 : c(psi), Psi
+               * psi, Psi' |- s1 o s2 : .
+               *)
+            if co_cid = co_cid' then 
+             CoShift (Coe co_cid, CtxShift psi, d+n)
+            else 
+              raise (Error "CoShift Composition undefined - 3")
+
+          | Shift (NoCtxShift, k) ->
+              (* c(psi), Psi |- s1 : .  and   c(psi), Psi, Psi' |- s2 <= c(psi), Psi 
+                  c(psi), Psi, Psi' |- s : . 
+               *) 
+              
+              CoShift (Coe co_cid, NoCtxShift, k+n)
+
+
+          | Shift (NegCtxShift _psi, k) ->
+              (* c(psi), Psi |- s1 : .  and   Psi, Psi' |- s2 <= c(psi), Psi 
+                  Psi, Psi' |- s : . 
+               *)             
+              Shift (NoCtxShift, k+n)
+
+          | _ -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n"
+                    (P.subToString s1) (P.subToString s2) ; *)
+              raise (Error "CoShift Composition undefined - 5 ")
+        in
+          ctx_shift d s2
+
+      
+    | (Shift (NoCtxShift , 0), s2) -> 
         (*  Psi |- s1 : Psi   and Psi2 |- s2 : Psi
          *  therefore   Psi2 |- s2 : Psi  and s2 = s1 o s2
          *)
@@ -77,8 +153,6 @@ module LF = struct
         if psi = psi' then
           Shift (NoCtxShift, n+k)
         else
-          (* (Printf.printf "s1 = %s \n s2 = %s\n\n"
-             (P.subToString s1) (P.subToString s2) ; *)
           raise (Error "Composition undefined - 1 ")
 
     | (Shift (CtxShift psi , m), s2) ->
@@ -95,13 +169,16 @@ module LF = struct
               (* psi, Psi |- s1 : .    and Psi, Psi' |- s2 : psi, Psi
                * Psi, Psi' |- s1 o s2 : .
                *)
+          | CoShift (Coe co_cid, NoCtxShift, d) -> CoShift (Coe co_cid, CtxShift psi, d+n)
+              (* psi, Psi |- s1 : .    and c(psi), Psi' |- s2 : psi, Psi
+               * c(psi), Psi' |- s1 o s2 : .
+               *)
 
           | _ -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n"
                     (P.subToString s1) (P.subToString s2) ; *)
               raise (Error "Composition undefined - 2 ")
         in
           ctx_shift m s2
-
 
     | (Shift (NegCtxShift psi, k), Shift (NoCtxShift, m)) ->
         (* Psi1 |- s1 : psi     and   Psi1, Psi |- s2 : Psi1
@@ -131,6 +208,9 @@ module LF = struct
     | (Shift (psi,n), Dot (_ft, s)) ->
         comp (Shift (psi, n - 1)) s
 
+    | (CoShift (co, psi,n), Dot (_ft, s)) ->
+        comp (CoShift (co, psi, n - 1)) s
+
     | (SVar (s, tau), s2) ->
         SVar (s, comp tau s2)
 
@@ -145,8 +225,35 @@ module LF = struct
         let h = frontSub ft s' in 
         Dot (h, comp s s')
 
-    | (_s1, _s2) -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s    FAILED\n"
-                       (P.subToString s1) (P.subToString s2) ;  *)
+    | (CoShift (Coe co_cid, NoCtxShift, d), CoShift (Coe _co_cid, NoCtxShift, _d) ) -> 
+        raise (Error ("Composition not defined: 1 CoShift d =/=0 d = " ^ string_of_int d))
+
+    | (Shift (NoCtxShift, n), , CoShift (Coe co_cid, NoCtxShift, d)) -> 
+        (* psi, Psi0,Psi1 |- s1 : psi,Psi0  and  c(psi), Psi0, Psi1, Psi2 |- s2 <= psi, Psi0,Psi1 *)
+        CoShift (Coe co_cid, NoCtxShift, d+n)
+
+    | (CoShift (Coe co_cid, NoCtxShift, k) ,  Shift (NoCtxShift, d )) -> 
+        (* c(psi), Psi |- s1 : psi   and    c(psi), cPsi, Psi' |- s2 <= c(psi), Psi *)
+        CoShift (Coe co_cid, NoCtxShift, k + d)
+
+    | (CoShift (InvCoe co_cid', NoCtxShift, n) , Shift (NoCtxShift, d) ) -> 
+        (* g, cPsi  |- s1 : c(g)            
+           g, cPsi, cPsi'  |- s2 : g, cPsi   *)
+        CoShift (InvCoe co_cid', NoCtxShift, n+d)
+
+    | (Shift (NoCtxShift, n), , CoShift (InvCoe co_cid, NoCtxShift, d)) -> 
+        (* c(psi), Psi0,Psi1 |- s1 : c(psi),Psi0  and  psi, Psi0, Psi1, Psi2 |- s2 <= c(psi), Psi0,Psi1 *)
+        CoShift (InvCoe co_cid, NoCtxShift, d+n)
+
+    | (CoShift (InvCoe co_cid', NoCtxShift, n) , CoShift (Coe co_cid, NoCtxShift, d) ) -> 
+        (* g, cPsi  |- s1 : c(g)     c(g), cPsi, cPsi' |-   s2 : g, cPsi   
+        *)
+        if co_cid' = co_cid then 
+          Shift(NoCtxShift, d+n)
+        else
+         raise (Error "CoShift (InvCoe ) Composition not defined?")
+
+    | (_s1, _s2) -> 
         raise (Error "Composition not defined?")
 
 
@@ -163,6 +270,7 @@ module LF = struct
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
     | (n, Shift (_ , k)) -> Head (BVar (n + k))
+    | (n, CoShift (_ , _, k)) -> Head (BVar (n + k))
 
 
   (* frontSub Ft s = Ft'
@@ -306,6 +414,7 @@ module LF = struct
   let invert s =
     let rec lookup n s p = match s with
       | Shift _                 -> None
+      | CoShift _               -> None
       | Dot (Undef, s')         -> lookup (n + 1) s' p
       | Dot (Head (BVar k), s') ->
           if k = p then
@@ -337,6 +446,15 @@ module LF = struct
             invert'' (p - 1) (Dot (front, si)) in
 
     let rec invert' n s = match s with
+      | CoShift (Coe co_cid, NoCtxShift, p) -> 
+          (*  c(g), Psi |- s <= g  where |Psi| = d
+              g         |- c^-1(id), undef, ... undef <= c(g), Psi
+           *)
+          invert'' p (CoShift  (InvCoe co_cid, NoCtxShift, n))
+
+      | CoShift (InvCoe co_cid, NoCtxShift, p) -> 
+          invert'' p (CoShift  (Coe co_cid, NoCtxShift, n))
+
       | Shift (NoCtxShift, p) ->
           invert'' p (Shift (NoCtxShift, n))
 

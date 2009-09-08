@@ -176,7 +176,7 @@ module Cid = struct
 
     let mk_entry n w t = {
       name   = n;
-      coTyp  = w;
+      coTyp  = w; (* CoTyp (a_schema, b_schema) *)
       coercion = t
     }
 

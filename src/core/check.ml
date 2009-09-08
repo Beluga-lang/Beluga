@@ -153,13 +153,24 @@ module LF = struct
         raise SpineMismatch
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
-  and lookupCtxVar = function
-    | Empty -> raise (Violation ("Context variable not found"))
-    | Dec (cO, CDecl (psi, schemaName)) -> function
-        | CtxName phi when psi = phi -> (psi, schemaName)
-        | (CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
-        | CtxOffset 1                -> (psi, schemaName)
-        | CtxOffset n                -> lookupCtxVar cO (CtxOffset (n - 1))
+and lookupCtxVar cO ctx_var' = 
+    let rec get_cvar ctx_var = match ctx_var with
+      | CtxName _ ->  ctx_var
+      | CtxOffset _ -> ctx_var
+      | CoCtx (_co, ctx_var')   -> 
+          get_cvar ctx_var'
+    in 
+    let cvar = get_cvar ctx_var' in 
+      match cO with
+        | Empty -> raise (Violation ("Context variable not found"))
+        | Dec (cO, CDecl (psi, schemaName)) ->      
+            begin match cvar with 
+              | CtxName phi when psi = phi ->  (psi, schemaName)
+              | (CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
+              | CtxOffset 1                -> (psi, schemaName)
+              | CtxOffset n                -> lookupCtxVar cO (CtxOffset (n - 1))
+                  
+            end 
 
   and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)
 
@@ -227,6 +238,28 @@ module LF = struct
     | FVar _ ->
         raise (Error (None, LeftoverFVar))
 
+    | CoPVar (co_cid, Offset p, j, s) -> 
+        let (_, tA, cPhi) = Whnf.mctxPDec cD p in
+        let cPhi' = Ctxsub.applyCtxCoe co_cid cD cPhi in 
+        let _     = checkSub cO cD cPsi s cPhi' in 
+        let typRec = match tA with Sigma typRec -> typRec
+                            | _ -> SigmaLast tA in 
+          (* cD ; cPhi |- typRec               *)
+        let sB = match Ctxsub.coeTypRec (Coercion.get_coercion co_cid) cD (cPhi, (typRec, LF.id)) with
+                     (SigmaLast nonsigma, s) -> (nonsigma, s)
+                   | (tBrec, s) -> (Sigma tBrec, s)
+          in 
+          (* cD ; cPhi |- sB               *)
+        let h = PVar (Offset p, LF.comp (Ctxsub.coerceSub (Coe co_cid) LF.id) s) in 
+
+        let tB'   = Ctxsub.coerceTyp (Coe co_cid) sB in
+          (* cD ; cPhi' |- tB'               *)
+        let sB_j  = match tB' with Sigma tBrec -> getType h (tBrec, s) j 1 
+                                 | _ -> (tB', s) in
+          TClo(sB_j)
+
+
+
   and canAppear cO cD cPsi sA =
     match cPsi with
       | Null -> false
@@ -265,13 +298,35 @@ module LF = struct
           raise (Violation "Context variable mismatch")
             (* (CtxVarMisMatch (psi, psi')) *)
 
-    | (CtxVar psi, Shift (CtxShift (psi'), 0), Null) ->
+    | (CtxVar (CtxOffset _ as psi), Shift (CtxShift (psi'), 0), Null) ->
         if psi = psi' then
           ()
         else
           raise (Error (None, SubIllTyped))
 
-    | (Null, Shift (NegCtxShift (psi'), 0), CtxVar psi) ->
+    | (CtxVar (CoCtx (coe_cid, psi)), CoShift (Coe cid_coe', NoCtxShift, 0), CtxVar psi') ->
+        let CoTyp(_a_schema, b_schema) = Coercion.get_coercionTyp coe_cid in 
+          if checkCoercion cO (psi, b_schema) psi' then ()
+          else 
+               raise (Violation ("checkSub: Cannot coerce " ^ P.dctxToString cO cD cPsi' ^ 
+                                   " \n to " ^ P.dctxToString cO cD cPsi ^ "\n"))
+
+    | (CtxVar psi', CoShift (InvCoe cid_coe', NoCtxShift, 0), CtxVar (CoCtx (coe_cid, psi))) ->
+        let CoTyp(_a_schema, b_schema) = Coercion.get_coercionTyp coe_cid in 
+          if checkCoercion cO (psi, b_schema) psi' then ()
+          else 
+               raise (Violation ("checkSub: Cannot coerce " ^ P.dctxToString cO cD cPsi' ^ 
+                                   " \n to " ^ P.dctxToString cO cD cPsi ^ "\n"))
+
+(*
+    | (CtxVar (CoCtx (cid_coe, psi)), CoShift (cid_coe', CtxShift (psi'), 0), Null) ->
+        if psi = psi' then
+          ()
+        else
+          raise (Error (None, SubIllTyped))
+
+*)
+    | (Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi)) ->
         if psi = psi' then
           ()
         else
@@ -292,8 +347,18 @@ module LF = struct
           raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
           (* (SubIllTyped) *)
 
+    | (DDec (cPsi, _tX),  CoShift (co, phi, k),  CtxVar psi) ->
+        if k > 0 then
+          checkSub cO cD cPsi (CoShift (co, phi, k - 1)) (CtxVar psi)
+        else
+          raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
+          (* (SubIllTyped) *)
+
     | (cPsi',  Shift (psi, k),  cPsi) ->
         checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
+
+    | (cPsi',  CoShift (co, psi, k),  cPsi) ->
+        checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), CoShift (co, psi, k + 1))) cPsi
 
 (****
 This case should now be covered by the one below it
@@ -310,7 +375,6 @@ This case should now be covered by the one below it
     (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
 
     | (cPsi',  Dot (Head h, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
-        (* changed order of subgoals here Sun Dec  2 12:14:27 2001 -fp *)
         let _   = checkSub cO cD cPsi' s' cPsi
           (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
         and tA1 = inferHead cO cD cPsi' h in
@@ -444,6 +508,38 @@ This case should now be covered by the one below it
     | TypDecl (_, tA) -> checkTyp cO cD cPsi (tA, s)
 
 
+  (* checkCoercion psi phi = bool
+
+     Assuming cO |- psi ctx   and  cO |- phi ctx,
+     checkCoercion psi phi returns true 
+     if  psi = (C1 o ... o Cn))(phi) 
+     
+
+  *)
+ and checkCoercion cO (psi, schema) phi = 
+    (psi = phi) || 
+      (match psi with
+         | CoCtx (coe_cid,psi') -> 
+             let CoTyp(a_schema, b_schema) = Coercion.get_coercionTyp coe_cid in 
+               if b_schema = schema then 
+                 let _ = (print_string ("[checkCoercion] psi' = " ^ P.dctxToString cO Empty (CtxVar psi')  ^ " : " ^ R.render_cid_schema a_schema ^ " check against " ^ P.dctxToString cO Empty (CtxVar phi) ^ "\n") ; flush_all ()) in 
+                   checkCoercion cO (psi' , a_schema) phi
+               else 
+                 raise (Violation "[CheckCoercion] Coercion composition ill-formed")
+         | _ -> raise (Violation ("[CheckCoercion] Failed"))
+      )
+
+  and synCtxSchema cO phi = match phi with
+    | CtxOffset k -> Context.lookupSchema cO k 
+    | CoCtx (cid_coe, psi) -> 
+        let CoTyp(a_schema, b_schema) = Coercion.get_coercionTyp cid_coe in 
+        let schema = synCtxSchema cO psi in 
+          if a_schema = schema then 
+            b_schema
+          else 
+            raise (Violation ("[SynCtxSchema] Coercion composition ill-formed"))
+
+
   (* checkDCtx cO cD cPsi
    *
    * Invariant:
@@ -456,11 +552,15 @@ This case should now be covered by the one below it
         checkDCtx cO cD cPsi;
         checkDec cO cD cPsi (tX, LF.id)
 
-    | CtxVar (CtxOffset psi_offset)  ->
+(*    | CtxVar (CtxOffset psi_offset)  ->
         if psi_offset <= (Context.length cO) then
           ()
         else
           raise (Violation "Context variable out of scope")
+*)
+    | CtxVar psi -> 
+        let _ = synCtxSchema cO psi in 
+          ()
 
 (* other cases should be impossible -bp *)
 
@@ -492,35 +592,29 @@ This case should now be covered by the one below it
               | _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
   and instanceOfSchElem cO cD cPsi (tA, s) (SchElem (some_part, block_part)) = 
-    let tArec = match tA with
-      | Sigma tArec -> tArec
-      | nonsigma -> SigmaLast nonsigma in
+    let sArec = match Whnf.whnfTyp (tA, s) with
+      | (Sigma tArec,s') -> 
+          (tArec, s') 
+      | (nonsigma, s') -> 
+          (SigmaLast nonsigma, s') in
     let dctx        = projectCtxIntoDctx some_part in
     let dctxSub     = ctxToSub dctx in
-    let _ = dprint (fun () -> "instanceOfSchElem  "
-                      ^ P.typToString cO cD cPsi (tA, s)
-                      ^ "  against  "
-                      ^ P.typRecToString cO cD Null (block_part, dctxSub)) in
-    let _           = dprint (fun () -> "instanceOfSchElem  dctx = " ^ P.dctxToString cO Empty dctx) in 
-    let _           = dprint (fun () -> "instanceOfSchElem  dctxsub=" ^ P.subToString cO Empty Null dctxSub) in 
-    let _           = dprint (fun () -> "instanceOfSchElem  block_part=" ^ P.typRecToString cO Empty dctx (block_part, LF.id)) in 
-    let _           = dprint (fun () -> "instanceOfSchElem  block_part =" ^ P.typRecToString cO Empty Null (block_part, dctxSub)) in 
     let phat        = dctxToHat cPsi in
       begin
         dprint (fun () -> "***Unify.unifyTypRec ("
                         ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
-                        ^ "\n   " ^ P.typToString cO cD cPsi (tA, s)
+                        ^ "\n   " ^ (* P.typToString cO cD cPsi (tA, s) *)
+                  P.typRecToString cO cD cPsi sArec 
                         ^ "\n== " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) );
         try
-          (* Unify.unifyTyp cD (phat, (normedA, LF.id), (normedElem1, dctxSub)) *)
-          Unify.unifyTypRec cD phat (tArec, LF.id) (block_part, dctxSub)
+          Unify.unifyTypRec cD phat sArec (block_part, dctxSub) 
         ; dprint (fun () -> "instanceOfSchElem\n"
                             ^ "  block_part = " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n"
                             ^ "  succeeded.")
         ; (block_part, dctxSub)
         with (Unify.Unify _) as exn ->
           dprint (fun () -> "Type " 
-                    ^ P.typToString cO cD cPsi (tA, LF.id) ^ " doesn't unify with " 
+                    ^ P.typRecToString cO cD cPsi sArec ^ " doesn't unify with " 
                     ^ P.typRecToString cO cD cPsi (block_part, dctxSub));
           raise exn
       end
@@ -562,10 +656,19 @@ This case should now be covered by the one below it
               ^ P.dctxToString cO cD cPsi ^ " against " ^ P.schemaToString schema);
     match cPsi with
       | Null -> ()
-      | CtxVar phi ->
+      | CtxVar ((CtxOffset _ ) as phi) ->
           let Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
             if not (List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements) then
               raise (Error (None, CtxVarMismatch (cO, phi, schema)))
+      | CtxVar (CoCtx(coe_cid, psi) as phi)   -> 
+          let CoTyp(a_schema_cid, b_schema_cid) = Coercion.get_coercionTyp coe_cid in 
+          let (a_schema, b_schema) = (Schema.get_schema a_schema_cid, Schema.get_schema b_schema_cid) in 
+            if b_schema = schema then 
+              checkSchema cO cD (CtxVar psi) a_schema
+            else 
+              raise
+                 (Error (None, CtxVarMismatch (cO, phi, schema)))
+
       | DDec (cPsi', decl) ->
           begin
             checkSchema cO cD cPsi' schema
@@ -584,7 +687,61 @@ This case should now be covered by the one below it
     in
       checkElems elements
 
-end (* struct LF *)
+  (* checkMSub cD ms cD' = () 
+  
+     if cD |- ms <= cD' then checkMSub succeeds.
+ 
+  *)
+  let rec checkMSub cO cD ms cD' = match (ms, cD') with
+    | (MShift k, Empty) ->  
+        if (Context.length cD) = k then () 
+        else 
+          raise (Violation ("Contextual substitution ill-typed - 1"))
+    | (MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi))) -> 
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+        let tA'   = Whnf.cnormTyp (tA, ms) in
+        (check cO cD cPsi' (tM, LF.id) (tA', LF.id) ; 
+         checkMSub cO cD ms cD1')
+
+    | (MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi))) -> 
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+        let tA'   = Whnf.cnormTyp (tA, ms) in
+        let (_, tA1, cPsi1) = Whnf.mctxMDec cD u in 
+          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', LF.id) (tA1, LF.id) then 
+                     checkMSub cO cD ms cD1'
+          else 
+            raise (Violation ("Contextual substitution ill-typed - 2 "))
+
+    | (MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi))) -> 
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+        let tA'   = Whnf.cnormTyp (tA, ms) in
+        let (_, tA1, cPsi1) = Whnf.mctxPDec cD p in 
+          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', LF.id) (tA1, LF.id) then 
+            checkMSub cO cD ms cD1'
+          else 
+            raise (Violation ("Contextual substitution ill-typed - 3 "))
+
+    | (MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi))) -> 
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+        let tA'   = Whnf.cnormTyp (tA, ms) in
+          (begin match h with
+            | BVar k -> 
+                let TypDecl (_, tB) = ctxDec cPsi' k in 
+                  if Whnf.convTyp (tB, LF.id) (tA', LF.id) then ()
+            | PVar _ -> 
+                let tB = inferHead cO cD cPsi' h in 
+                  if Whnf.convTyp (tB, LF.id) (tA', LF.id) then ()
+            | Proj _ -> 
+                let tB = inferHead cO cD cPsi' h in 
+                  if Whnf.convTyp (tB, LF.id) (tA', LF.id) then ()
+          end ;
+          checkMSub cO cD ms cD1')
+    | (_, _ ) -> 
+        raise (Violation ("Contextual substitution ill-typed ?\n ms = " ^ P.msubToString cO cD ms 
+                         ^ "\n cD' = " ^ P.mctxToString cO cD ^ "\n"))
+
+
+end (* struct LF*)
 
 module Comp = struct
 
@@ -802,7 +959,7 @@ module Comp = struct
     | CtxApp (loc, e, cPsi) ->
         begin match C.cwhnfCTyp (syn cO cD cG e) with
           | (TypCtxPi ((_psi, w) , tau), t) ->
-              let tau1 = Whnf.csub_ctyp cPsi 1 (Whnf.cnormCTyp (tau,t)) in
+              let tau1 = Ctxsub.csub_ctyp cD cPsi 1 (Whnf.cnormCTyp (tau,t)) in
                 LF.checkSchema cO cD cPsi (Schema.get_schema w);
                  (* (tau', t') *)
                  (tau1, C.m_id)                
@@ -825,14 +982,32 @@ module Comp = struct
   and checkBranches caseTyp cO cD cG branches tAbox ttau =
     List.iter (fun branch -> checkBranch caseTyp cO cD cG branch tAbox ttau) branches
 
-  and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
+(*  and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
     match branch with
       | BranchBox (cD1,  (cPsi1, (I.Root(loc, _, _ ) as tR1), (t1', cD1')),  e1) ->
-          let t' = Whnf.mvar_dot t cD1 in 
-          (* cD |- t <= cD0 and  cD, cD1 |- t <= cD0   *)
+          (* By invariant: cD1' |- t1' <= cD, cD1 *)
+          let _         = LF.checkMSub cO cD1' t1' (Context.append cD cD1) in  
+          let (tP1,s1)  = LF.syn cO cD1 cPsi1 (tR1, S.LF.id)  in 
 
+          (* Apply to the type tP1[Psi1] the refinement substitution t1' *)
+          (* cD1 ; cPsi1 |- tM1 <= tA1 
+           * cD1'  |- t1' <= cD, cD1  and 
+           * cD, cD1 |- MShift (n+n1) . u_n . ... . u₁  <= cD1
+           *       t1 = MShift (n+n1) . u_n . ... . u₁  
+           *) 
           let n1  = length cD1 in 
           let n   = length cD  in 
+          let t1  =  Whnf.mvar_dot (I.MShift n) cD1 in   
+          (* cD1' |- t1_b <= cD1  where t1_b is the refinement substitution we apply to the pattern 
+                                  and its context and type
+           *)
+          let t1_b      = Whnf.mcomp t1 t1' in 
+          (* cD1'          |- cPsi1' ctx   where cPsi1' is the context of the pattern *)
+          (* cD1' ; cPsi1' |- sP1' <- type  where sP1'  is the type of the pattern    *)
+          let sP1'      = (Whnf.cnormTyp (tP1, t1_b), Whnf.cnormSub (s1, t1_b)) in 
+          let cPsi1'    = Whnf.cnormDCtx (cPsi1, t1_b) in  
+
+          (* Apply to the type of the scrutinee tP[Psi] the refinement substitution t1' *)
           (* cD |- cPsi ctx  and cD, cD1 |- MShift n1 <= cD
            *                 and cD1'    |- t1'       <= cD, CD1
            *               then  cD1' |- t1'' <= cD
@@ -841,20 +1016,13 @@ module Comp = struct
           let cPsi' = Whnf.cnormDCtx (cPsi, t1'') in  
           let tP'   = Whnf.cnormTyp (tP, t1'') in 
 
-          (* cD1 ; cPsi1 |- tM1 <= tA1 
-           * cD1'  |- t1' <= cD, cD1  and 
-           * cD, cD1 |- MShift (n+n1) . u_n . ... . u₁  <= cD1
-           *       t1 = MShift (n+n1) . u_n . ... . u₁  
+          (* Verify that the refinement substitution t1' 
+           * makes the type of the pattern equal to the type of the scrutinee 
            * 
            * and cD1' |- |[t1'']|cPsi = |[t1]|cPs1
-           * and cD1' ; |[t1]|cPsi1 |-  |[t1]|tA1 <= type
+           * and cD1' ; |[t1]|cPsi1 |-  |[t1]|tP1 <= type
            * and cD1' ; |[t1]|cPsi1 |- |[t1]|tP1 = |[t1'']|tP
            *)
-          let t1        =  Whnf.mvar_dot (I.MShift n) cD1 in
-          let (tP1,s1)  = LF.syn cO cD1 cPsi1 (tR1, S.LF.id)  in 
-          let t1_b      = Whnf.mcomp t1 t1' in 
-          let sP1'      = (Whnf.cnormTyp (tP1, t1_b), Whnf.cnormSub (s1, t1_b)) in 
-          let cPsi1'    = Whnf.cnormDCtx (cPsi1, t1_b) in 
 
           let  _    = (if Whnf.convDCtx cPsi1' cPsi'
                          && Whnf.convTyp sP1' (tP', S.LF.id)
@@ -862,8 +1030,14 @@ module Comp = struct
                        else raise (Error (loc, E.CompPattMismatch ((cO, cD1, cPsi1, tR1, (tP1,s1)), 
                                                                    (cO, cD, cPsi, (tP, S.LF.id)))))) in 
 
+          (* let t' = Whnf.mvar_dot t cD1 in  
+             let t''  = Whnf.mcomp t' t1'' in *)
+          (* if cD |- t <= cD0 then
+             cD, cD1 |- t' <= cD0, cD1  *)
+
+
           let cG' = Whnf.cnormCtx (cG, t1'') in 
-          let t''  = Whnf.mcomp t' t1'' in 
+          let t'' = Whnf.mcomp t t1'' in
 
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
                         P.mctxToString cO cD1 ^ " . " ^ 
@@ -872,21 +1046,32 @@ module Comp = struct
                             "\n has type "  ^ P.compTypToString cO cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
                        ) in
                  
-(*         let _  =  
-            begin match caseTyp with
-              | IndexObj (_phat, tM') ->  (* this is to be done during reconstruction so it is already incorporated into t1' *)
-                  begin try
-                    Unify.unify cD1 (phat, (C.cnorm (tM', t'), S.LF.id), (tM1, S.LF.id)) 
-                  with Unify.Unify msg -> 
-                    Printf.printf "Unify ERROR: %s \n"  msg;
-                    raise (Violation "Pattern matching on index argument failed") 
-                  end
-              | DataObj -> ()
-            end
-*) 
           in
             check cO cD1' cG' e1 (tau, t'');
-  
+*)
+  and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
+    match branch with
+      | BranchBox (cD1',  (_phat, (I.Root(loc, _, _ ) as tR1), t1),  e1) ->
+          (* By invariant: cD1' |- t1 <= cD *)
+          let _         = LF.checkMSub cO cD1' t1 cD in  
+          let tP1   = Whnf.cnormTyp (tP, t1) in 
+          let cPsi1 = Whnf.cnormDCtx (cPsi, t1) in
+          let _  = LF.check cO cD1' cPsi1 (tR1, S.LF.id)  (tP1, S.LF.id) in 
+
+          let cG' = Whnf.cnormCtx (cG, t1) in 
+          let t'' = Whnf.mcomp t t1 in
+
+          let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
+                        P.mctxToString cO cD1' ^ " . " ^ 
+                        P.normalToString cO cD1' cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
+                            P.expChkToString cO cD1' cG' e1 ^ 
+                            "\n has type "  ^ P.compTypToString cO cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
+                       ) in
+                 
+          in
+            check cO cD1' cG' e1 (tau, t'');
+
+
 end
   
 

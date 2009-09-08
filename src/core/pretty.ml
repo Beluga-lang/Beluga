@@ -78,669 +78,6 @@ module type CID_RENDERER = sig
 end
 
 
-module Ext = struct
-
-  open Id
-  open Syntax.Ext
-  (* External Syntax Printer Signature *)
-  module type PRINTER = sig
-
-    (* Contextual Format Based Pretty Printers *)
-    val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl         -> unit
-    val fmt_ppr_lf_kind       : lvl -> formatter -> LF.kind          -> unit
-    val fmt_ppr_lf_ctyp_decl  : lvl -> formatter -> LF.ctyp_decl     -> unit
-    val fmt_ppr_lf_typ        : lvl -> formatter -> LF.typ           -> unit
-    val fmt_ppr_lf_normal     : lvl -> formatter -> LF.normal        -> unit
-    val fmt_ppr_lf_head       : lvl -> formatter -> LF.head          -> unit
-    val fmt_ppr_lf_spine      : lvl -> formatter -> LF.spine         -> unit
-    val fmt_ppr_lf_sub        : lvl -> formatter -> LF.sub           -> unit
-    val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema        -> unit
-    val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem      -> unit
-    val fmt_ppr_lf_coercion   : lvl -> formatter -> LF.coercion      -> unit
-    val fmt_ppr_lf_typ_rec : lvl -> formatter -> LF.typ_rec    -> unit
-    val fmt_ppr_lf_psi_hat    : lvl -> formatter -> LF.psi_hat       -> unit
-    val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx          -> unit
-    val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ         -> unit
-    val fmt_ppr_cmp_exp_chk   : lvl -> formatter -> Comp.exp_chk     -> unit
-    val fmt_ppr_cmp_exp_syn   : lvl -> formatter -> Comp.exp_syn     -> unit
-    val fmt_ppr_cmp_branches  : lvl -> formatter -> Comp.branch list -> unit
-    val fmt_ppr_cmp_branch    : lvl -> formatter -> Comp.branch      -> unit
-
-    (* Regular Pretty Printers *)
-    val ppr_sgn_decl      : Sgn.decl         -> unit
-    val ppr_lf_kind       : LF.kind          -> unit
-    val ppr_lf_ctyp_decl  : LF.ctyp_decl     -> unit
-    val ppr_lf_typ        : LF.typ           -> unit
-    val ppr_lf_normal     : LF.normal        -> unit
-    val ppr_lf_head       : LF.head          -> unit
-    val ppr_lf_spine      : LF.spine         -> unit
-    val ppr_lf_sub        : LF.sub           -> unit
-    val ppr_lf_schema     : LF.schema        -> unit
-    val ppr_lf_sch_elem   : LF.sch_elem      -> unit
-    val ppr_lf_coercion   : LF.coercion      -> unit
-    val ppr_lf_typ_rec    : LF.typ_rec       -> unit
-    val ppr_lf_psi_hat    : LF.psi_hat       -> unit
-    val ppr_lf_dctx       : LF.dctx          -> unit
-    val ppr_lf_mctx       : LF.mctx          -> unit
-    val ppr_cmp_typ       : Comp.typ         -> unit
-    val ppr_cmp_exp_chk   : Comp.exp_chk     -> unit
-    val ppr_cmp_exp_syn   : Comp.exp_syn     -> unit
-    val ppr_cmp_branches  : Comp.branch list -> unit
-    val ppr_cmp_branch    : Comp.branch      -> unit
-
-  end
-
-
-  (* External Syntax Pretty Printer Functor *)
-  module Make = functor (R : CID_RENDERER) -> struct
-
-    let fmt_ppr_pragma ppf = function
-      | LF.NamePrag(typ, mv_name, None) -> 
-          fprintf ppf "%%name %s %s.@.@?"
-            (R.render_name    typ)
-             mv_name
-
-      | LF.NamePrag(typ, mv_name, Some v_name) -> 
-          fprintf ppf "%%name %s %s %s.@.@?"
-            (R.render_name  typ)
-             mv_name v_name
-
-      | LF.NotPrag -> 
-          fprintf ppf "%%not@."
-
-    (* Contextual Format Based Pretty Printers *)
-    let rec fmt_ppr_sgn_decl lvl ppf = function
-      | Sgn.Const (_, c, a) ->
-          fprintf ppf "%s : %a.@.@?"
-            (R.render_name    c)
-            (fmt_ppr_lf_typ lvl) a
-
-      | Sgn.Pragma (_, pragma) ->
-          fmt_ppr_pragma ppf pragma
-
-
-      | Sgn.Rec (_, Comp.RecFun (f, tau, e)::recfuns) ->
-          let rec fmt_ppr_recfuns lvl ppf = function 
-            | [] -> fprintf ppf ";"
-            | Comp.RecFun (f, tau, e)::recfuns -> 
-                fprintf ppf "and %s : %a =@ %a @.@?\n%a @.@?"
-                  (R.render_name f)
-                  (fmt_ppr_cmp_typ lvl) tau
-                  (fmt_ppr_cmp_exp_chk lvl) e
-                  (fmt_ppr_recfuns lvl) recfuns 
-          in 
-            fprintf ppf "rec %s : %a =@ %a @.@?\n%a @.@?"
-            (R.render_name f)
-            (fmt_ppr_cmp_typ lvl) tau
-            (fmt_ppr_cmp_exp_chk lvl) e
-            (fmt_ppr_recfuns lvl) recfuns 
-
-      | Sgn.Schema (_, w, tW) ->
-          fprintf ppf "schema %s = %a;@.@?"
-            (R.render_name w)
-            (fmt_ppr_lf_schema lvl) tW
-
-      | Sgn.Coercion (_, w, LF.CoTyp(w1, w2), cbody) ->
-          fprintf ppf "coercion %s : %s -> %s = %a;@.@?"
-            (R.render_name w)
-            (R.render_name w1)
-            (R.render_name w2)
-            (fmt_ppr_lf_coercion lvl) cbody
-
-      | Sgn.Typ (_, a, k) ->
-          fprintf ppf "%s : %a.@.@?"
-            (R.render_name a)
-            (fmt_ppr_lf_kind lvl) k
-
-
-
-    and fmt_ppr_lf_kind lvl ppf = function
-      | LF.Typ _ ->
-          fprintf ppf "type"
-
-      | LF.ArrKind (_, a, k) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[%s%a -> %a%s@]"
-              (l_paren_if cond)
-              (fmt_ppr_lf_typ   1) a
-              (fmt_ppr_lf_kind  0) k
-              (r_paren_if cond)
-
-      | LF.PiKind (_, LF.TypDecl (x, a), k) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
-              (l_paren_if cond)
-              (R.render_name   x)
-              (fmt_ppr_lf_typ   0) a
-              (fmt_ppr_lf_kind  0) k
-              (r_paren_if cond)
-
-    and fmt_ppr_lf_ctyp_decl _lvl ppf = function
-      | LF.MDecl (_, u, tA, cPsi) ->
-          fprintf ppf "{%s :: %a[%a]}"
-            (R.render_name u)
-            (fmt_ppr_lf_typ  2) tA
-            (fmt_ppr_lf_dctx 0) cPsi
-
-      | LF.PDecl (_, p, tA, cPsi) ->
-          fprintf ppf "{#%s :: %a[%a]}"
-            (R.render_name p)
-            (fmt_ppr_lf_typ  2) tA
-            (fmt_ppr_lf_dctx 0) cPsi
-
-
-    and fmt_ppr_lf_mctx lvl ppf = function
-      | LF.Empty ->
-          fprintf ppf "."
-
-      | LF.Dec (cD, ctyp_decl) ->
-          fprintf ppf "%a, %a"
-            (fmt_ppr_lf_mctx  0) cD
-            (fmt_ppr_lf_ctyp_decl lvl) ctyp_decl
-
-    and fmt_ppr_lf_typ  lvl ppf = function
-      | LF.Atom (_, a, LF.Nil) ->
-          fprintf ppf "%s"
-            (R.render_name a)
-
-      | LF.Atom (_, a, ms) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%s%a%s"
-              (l_paren_if cond)
-              (R.render_name     a)
-              (fmt_ppr_lf_spine  2) ms
-              (r_paren_if cond)
-
-      | LF.ArrTyp (_, a, b) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[%s%a -> %a%s@]"
-              (l_paren_if cond)
-              (fmt_ppr_lf_typ  1) a
-              (fmt_ppr_lf_typ  0) b
-              (r_paren_if cond)
-
-      | LF.PiTyp (_, LF.TypDecl (x, a), b) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
-              (l_paren_if cond)
-              (R.render_name  x)
-              (fmt_ppr_lf_typ  0) a
-              (fmt_ppr_lf_typ  0) b
-              (r_paren_if cond)
-
-      | LF.Sigma (_, typRec) ->
-          fprintf ppf "%sblock %a%s"
-            (l_paren_if (lvl > 0))
-            (fmt_ppr_lf_typ_rec lvl) typRec
-            (r_paren_if (lvl > 0))
-
-    and fmt_ppr_tuple lvl ppf = function
-      | LF.Last tM ->
-           fmt_ppr_lf_normal lvl ppf tM
-
-      | LF.Cons(tM, rest) ->
-           fprintf ppf "%a, %a"
-             (fmt_ppr_lf_normal lvl) tM
-             (fmt_ppr_tuple lvl) rest
-
-    and fmt_ppr_lf_normal  lvl ppf = function
-      | LF.Lam (_, x, tM) ->
-          let cond = lvl > 0 in
-            fprintf ppf "%s\\%s. %a%s"
-              (l_paren_if cond)
-              (R.render_name   x)
-              (fmt_ppr_lf_normal lvl) tM
-              (r_paren_if cond)
-
-      | LF.Tuple (_, tuple) ->
-         fprintf ppf "<%a>"
-           (fmt_ppr_tuple  lvl) tuple
-
-      | LF.Root (_, h, LF.Nil) ->
-          fprintf ppf "%a"
-            (fmt_ppr_lf_head  lvl) h
-
-      | LF.Root (_, h, ms)  ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a%a%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_head  lvl) h
-              (fmt_ppr_lf_spine  2)  ms
-              (r_paren_if cond)
-
-
-
-    and fmt_ppr_lf_head  _lvl ppf = function
-      | LF.Name (_, x) ->
-          fprintf ppf "%s"
-            (R.render_name x)
-
-      | LF.ProjName (_, k, x) ->
-          fprintf ppf "%s.%d"
-            (R.render_name x)
-            k
-
-      | LF.Hole _ ->
-          fprintf ppf "_"
-
-
-      | LF.MVar (_, x, LF.EmptySub _) ->
-          fprintf ppf "%s"
-            (R.render_name x)
-
-      | LF.MVar (_, x, sigma) ->
-          fprintf ppf "(%s %a)"
-            (R.render_name x)
-            (fmt_ppr_lf_sub 0) sigma
-
-      | LF.PVar (_, x, LF.EmptySub _) ->
-          fprintf ppf "#%s"
-            (R.render_name x)
-
-      | LF.PVar (_, x, sigma) ->
-          fprintf ppf "(#%s %a)"
-            (R.render_name x)
-            (fmt_ppr_lf_sub 0) sigma
-
-      | LF.ProjPVar (_, k, (x, LF.EmptySub _)) ->
-          fprintf ppf "#%s.%d"
-            (R.render_name x)
-            k
-
-      | LF.ProjPVar (_, k, (x, sigma)) ->
-          fprintf ppf "(#%s.%d %a)"
-            (R.render_name x)
-            k
-            (fmt_ppr_lf_sub 0) sigma
-
-
-    and fmt_ppr_lf_spine lvl ppf = function
-      | LF.Nil ->
-          fprintf ppf ""
-
-      | LF.App (_, m, ms) ->
-          fprintf ppf " %a%a"
-            (fmt_ppr_lf_normal lvl) m
-            (fmt_ppr_lf_spine  lvl) ms
-
-
-
-    and fmt_ppr_lf_sub _lvl ppf = function
-      | LF.EmptySub _ -> ()
-
-      | LF.Dot (_, sigma, LF.Normal tM) ->
-          fprintf ppf "%a %a"
-          (fmt_ppr_lf_sub 0) sigma
-          (fmt_ppr_lf_normal 0) tM
-
-      | LF.Dot (_, sigma, LF.Head h) ->
-          fprintf ppf "%a %a"
-          (fmt_ppr_lf_sub 0) sigma
-          (fmt_ppr_lf_head 0) h
-
-      | LF.Id _ ->
-          fprintf ppf ".."
-
-
-    and fmt_ppr_lf_schema lvl ppf = function
-      | LF.Schema [] -> ()
-
-      | LF.Schema [f] ->
-            fprintf ppf "%a"
-              (fmt_ppr_lf_sch_elem lvl) f
-
-      | LF.Schema (f :: fs) ->
-            fprintf ppf "%a@ +"
-              (fmt_ppr_lf_sch_elem lvl) f
-          ; fmt_ppr_lf_schema lvl ppf (LF.Schema fs)
-
-    and fmt_ppr_lf_sch_elem lvl ppf = function
-      | LF.SchElem (_, typDecls, sgmDecl) ->
-            fprintf ppf " some [%a] block %a"
-              ppr_typ_decl_ctx            typDecls
-              (fmt_ppr_lf_typ_rec lvl) sgmDecl
-
-    and fmt_ppr_lf_coercion lvl ppf = function
-      | [LF.CoBranch (t_ctx, trec1, trec2)] -> 
-          fprintf ppf "some [%a] block %a => %a "
-            ppr_typ_decl_ctx         t_ctx
-            (fmt_ppr_lf_typ_rec lvl) trec1
-            (fmt_ppr_lf_typ_rec lvl) trec2
-
-      | LF.CoBranch (t_ctx, trec1, trec2) :: c_list -> 
-          fprintf ppf "some [%a] block %a => %a @ @[<0>|%a@]"
-            ppr_typ_decl_ctx         t_ctx
-            (fmt_ppr_lf_typ_rec lvl) trec1
-            (fmt_ppr_lf_typ_rec lvl) trec2
-            (fmt_ppr_lf_coercion lvl) c_list
-
-
-     and ppr_typ_decl_ctx ppf = function
-       | LF.Empty -> ()
-           
-       | LF.Dec (LF.Empty, LF.TypDecl (x, tA)) ->
-           fprintf ppf "., %s : %a"
-             (R.render_name x)
-             (fmt_ppr_lf_typ  0) tA
-             
-       | LF.Dec (xs, LF.TypDecl (x, tA)) ->
-           fprintf ppf "%a, %s : %a "
-             ppr_typ_decl_ctx xs
-             (R.render_name x)
-             (fmt_ppr_lf_typ  0) tA
-
-
-    and fmt_ppr_lf_typ_rec _lvl ppf typrec = 
-       let ppr_element ppf suffix = function
-       | (x, tA) ->
-              fprintf ppf "%s:%a%s"
-                (R.render_name x)
-                (fmt_ppr_lf_typ 0) tA
-               suffix
-       in let rec ppr_elements ppf = function
-         | LF.SigmaLast tA -> fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA
-         | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) -> 
-             begin 
-               ppr_element ppf ". " (x, tA1); 
-               fprintf ppf "%a" (fmt_ppr_lf_typ 0) tA2 
-             end
-         | LF.SigmaElem (x, tA, tAs)  -> 
-             begin 
-               ppr_element ppf ", " (x, tA); 
-               ppr_elements ppf  tAs 
-             end
-  (*             | tA :: tAs -> *)
-  (*                   fprintf ppf "%a,@ %a" *)
-  (*                     (fmt_ppr_lf_typ cD cPsi 0) tA *)
-  (*                     ppr_typ_rec        tAs *)
-  (*                fprintf ppf "Sigma %a. %a" *)
-       in
-         fprintf ppf "%a"
-           (ppr_elements) typrec
-
-    and fmt_ppr_lf_psi_elem _lvl ppf = function
-      | LF.VarName x     ->
-          fprintf ppf "%s"
-            (R.render_name x)
-
-      | LF.CoName (x,y)     ->
-          fprintf ppf "%s(%s)"
-            (R.render_name x)
-            (R.render_name y)
-        
-
-    and fmt_ppr_lf_psi_hat _lvl ppf = function
-      | []      -> ()
-
-      | x :: xs ->
-          fprintf ppf "%a, %a"
-            (fmt_ppr_lf_psi_elem 0) x
-            (fmt_ppr_lf_psi_hat 0) xs
-
-
-
-    and fmt_ppr_lf_dctx _lvl ppf = function
-      | LF.Null ->
-          fprintf ppf ""
-
-      | LF.CtxVar (_ , psi) ->
-          fprintf ppf "%s" (R.render_name psi)
-
-      | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
-          fprintf ppf "%s : %a"
-            (R.render_name x)
-            (fmt_ppr_lf_typ 0) tA
-
-      | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
-          fprintf ppf "%a, %s : %a"
-            (fmt_ppr_lf_dctx 0) cPsi
-            (R.render_name x)
-            (fmt_ppr_lf_typ  0) tA
-
-    and fmt_ppr_cmp_typ lvl ppf = function
-      | Comp.TypBox (_, tA, cPsi) ->
-          fprintf ppf "%a[%a]"
-            (fmt_ppr_lf_typ 2) tA
-            (fmt_ppr_lf_dctx 0) cPsi
-
-      | Comp.TypArr (_, tau1, tau2) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a -> %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_typ 2) tau1
-              (fmt_ppr_cmp_typ 0) tau2
-              (r_paren_if cond)
-
-      | Comp.TypCross (_, tau1, tau2) ->
-          let cond = lvl > 0 in
-            fprintf ppf "%s%a * %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_typ 1) tau1
-              (fmt_ppr_cmp_typ 0) tau2
-              (r_paren_if cond)
-
-
-      | Comp.TypCtxPi (_, (psi, w), tau) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s{%s:(%s)*} %a%s"
-              (l_paren_if cond)
-              (R.render_name psi)
-              (R.render_name w)
-              (fmt_ppr_cmp_typ 0) tau
-              (r_paren_if cond)
-
-      | Comp.TypPiBox (_, ctyp_decl, tau) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_ctyp_decl 1) ctyp_decl
-              (fmt_ppr_cmp_typ 1) tau
-              (r_paren_if cond)
-
-
-
-    and fmt_ppr_cmp_exp_chk lvl ppf = function
-      | Comp.Syn (_, i) ->
-          fmt_ppr_cmp_exp_syn lvl ppf i
-
-      | Comp.Fun (_, x, e) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]"
-              (l_paren_if cond)
-              (R.render_name x)
-              (fmt_ppr_cmp_exp_chk 0) e
-              (r_paren_if cond)
-
-      | Comp.CtxFun (_, x, e) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[<2>%sFN %s =>@ %a%s@]"
-              (l_paren_if cond)
-              (R.render_name x)
-              (fmt_ppr_cmp_exp_chk 0) e
-              (r_paren_if cond)
-
-      | Comp.MLam (_, x, e) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[<2>%smlam %s =>@ %a%s@]"
-              (l_paren_if cond)
-              (R.render_name x)
-              (fmt_ppr_cmp_exp_chk 0) e
-              (r_paren_if cond)
-
-      | Comp.Pair (_, e1, e2) -> 
-            fprintf ppf "< %a , %a >"
-              (fmt_ppr_cmp_exp_chk 0) e1
-              (fmt_ppr_cmp_exp_chk 0) e2
-
-
-      | Comp.LetPair(_, i, (x, y, e)) -> 
-          let cond = lvl > 1 in
-            fprintf ppf "@[<2>%slet <%s,%s> = %a @ in %a%s@]"
-              (l_paren_if cond)
-              (R.render_name x)
-              (R.render_name y)
-              (fmt_ppr_cmp_exp_syn 0) i
-              (fmt_ppr_cmp_exp_chk 0) e
-              (r_paren_if cond)
-
-      | Comp.Box (_, pHat, tM) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s [%a] %a %s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat 0) pHat
-              (fmt_ppr_lf_normal 0) tM
-              (r_paren_if cond)
-
-      | Comp.Case (_, i, bs) ->
-          let cond = lvl > 1 in
-            fprintf ppf "@[<2>%scase %a @ of@[<-1>%a@]%s@]"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn 0) i
-              (fmt_ppr_cmp_branches 0) bs
-              (r_paren_if cond)
-
-
-
-    and fmt_ppr_cmp_exp_syn lvl ppf = function
-      | Comp.Var (_, x) ->
-          fprintf ppf "%s"
-            (R.render_name x)
-
-      | Comp.Apply (_, i, e) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn 1) i
-              (fmt_ppr_cmp_exp_chk 2) e
-              (r_paren_if cond)
-
-      | Comp.CtxApp (_, i, cPsi) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a [%a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn 1) i
-              (fmt_ppr_lf_dctx 0) cPsi
-              (r_paren_if cond)
-
-      | Comp.MApp (_, i, (pHat, tM)) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a < %a. %a > %s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn 1) i
-              (fmt_ppr_lf_psi_hat 0) pHat
-              (fmt_ppr_lf_normal 0) tM
-              (r_paren_if cond)
-
-      | Comp.BoxVal (_,psi, tM) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%sBoxVal [%a] %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_dctx 0) psi
-              (fmt_ppr_lf_normal 0) tM
-              (r_paren_if cond)
-
-
-      | Comp.Ann (_, e, tau) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a : %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_chk 1) e
-              (fmt_ppr_cmp_typ 2) tau
-              (r_paren_if cond)
-
-
-
-    and fmt_ppr_cmp_branches lvl ppf = function
-      | [] -> ()
-
-      | [b] ->
-          fprintf ppf "%a"
-            (fmt_ppr_cmp_branch 0) b
-
-      | b :: bs ->
-          fprintf ppf "%a @ @[<0>|%a@]"
-            (fmt_ppr_cmp_branch 0) b
-            (fmt_ppr_cmp_branches lvl) bs
-
-
-
-    and fmt_ppr_cmp_branch _lvl ppf = function
-      | Comp.BranchBox (_, ctyp_decls, (psi, tM, tau), e) ->
-          let rec ppr_ctyp_decls ppf = function
-            | LF.Empty             -> fprintf ppf ""
-
-            | LF.Dec (cD, decl) ->
-                fprintf ppf "%a @ %a"
-                   ppr_ctyp_decls  cD
-                  (fmt_ppr_lf_ctyp_decl 1) decl
-          in 
-          begin match tau with
-            | None -> 
-                fprintf ppf "%a@ [%a] %a => @ @[<3>%a@]"
-                   ppr_ctyp_decls ctyp_decls
-                  (fmt_ppr_lf_dctx 0) psi
-                  (fmt_ppr_lf_normal 0) tM
-                  (fmt_ppr_cmp_exp_chk 0) e
-
-            | Some (tA, cPsi) -> 
-                fprintf ppf "%a@ [%a] %a : %a[%a] => @ @[<3>%a@]"
-                   ppr_ctyp_decls ctyp_decls
-                  (fmt_ppr_lf_dctx 0) psi
-                  (fmt_ppr_lf_normal 0) tM
-                  (fmt_ppr_lf_typ  0) tA
-                  (fmt_ppr_lf_dctx 0) cPsi
-                  (fmt_ppr_cmp_exp_chk 0) e
-          end 
-
-    (* Regular Pretty Printers *)
-    let ppr_sgn_decl      = fmt_ppr_sgn_decl      std_lvl std_formatter
-    let ppr_lf_kind       = fmt_ppr_lf_kind       std_lvl std_formatter
-    let ppr_lf_ctyp_decl  = fmt_ppr_lf_ctyp_decl  std_lvl std_formatter
-    let ppr_lf_typ        = fmt_ppr_lf_typ        std_lvl std_formatter
-    let ppr_lf_normal     = fmt_ppr_lf_normal     std_lvl std_formatter
-    let ppr_lf_head       = fmt_ppr_lf_head       std_lvl std_formatter
-    let ppr_lf_spine      = fmt_ppr_lf_spine      std_lvl std_formatter
-    let ppr_lf_sub        = fmt_ppr_lf_sub        std_lvl std_formatter
-    let ppr_lf_schema     = fmt_ppr_lf_schema     std_lvl std_formatter
-    let ppr_lf_sch_elem   = fmt_ppr_lf_sch_elem   std_lvl std_formatter
-    let ppr_lf_coercion   = fmt_ppr_lf_coercion   std_lvl std_formatter
-    let ppr_lf_typ_rec    = fmt_ppr_lf_typ_rec std_lvl std_formatter
-    let ppr_lf_psi_hat    = fmt_ppr_lf_psi_hat    std_lvl std_formatter
-    let ppr_lf_dctx       = fmt_ppr_lf_dctx       std_lvl std_formatter
-    let ppr_lf_mctx       = fmt_ppr_lf_mctx       std_lvl std_formatter
-    let ppr_cmp_typ       = fmt_ppr_cmp_typ       std_lvl std_formatter
-    let ppr_cmp_exp_chk   = fmt_ppr_cmp_exp_chk   std_lvl std_formatter
-    let ppr_cmp_exp_syn   = fmt_ppr_cmp_exp_syn   std_lvl std_formatter
-    let ppr_cmp_branches  = fmt_ppr_cmp_branches  std_lvl std_formatter
-    let ppr_cmp_branch    = fmt_ppr_cmp_branch    std_lvl std_formatter
-
-  end
-
-  (* Default CID_RENDERER for External Syntax *)
-  module DefaultCidRenderer = struct
-
-    let render_name n     = n.string_of_name
-    (* All the definitions below are irrelevant for printing external syntax *)
-    let render_cid_typ      = string_of_int
-    let render_cid_term     = string_of_int
-    let render_cid_schema   = string_of_int
-    let render_cid_coercion = string_of_int
-    let render_cid_prog     = string_of_int
-
-    let render_ctx_var _cO g   =  string_of_int g
-    let render_cvar    _cD u   =  string_of_int u
-    let render_bvar  _cPsi i   = string_of_int i
-    let render_offset      i   = string_of_int i
-    let render_var   _cG   x   = string_of_int x
-
-  end
-
-  (* Default External Syntax Pretty Printer Functor Instantiation *)
-  module DefaultPrinter = Make (DefaultCidRenderer)
-
-end
-
-
 module Int = struct
 
   open Id
@@ -807,7 +144,7 @@ module Int = struct
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.mctx -> LF.dctx -> LF.nclo     -> string
     val headToString      : LF.mctx -> LF.mctx -> LF.dctx -> LF.head     -> string
-    val tupleToString      : LF.mctx -> LF.mctx -> LF.dctx -> LF.tuple    -> string
+    val tupleToString     : LF.mctx -> LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> LF.mctx -> string
     val octxToString      : LF.mctx -> string
@@ -1019,6 +356,16 @@ module Int = struct
 
       | LF.Proj (head, k) ->
           fmt_head_with ("." ^ string_of_int k) head
+
+      | LF.CoPVar (co_cid, p, k, s) ->
+          fprintf ppf "%s%s#%a%s.%s%a"
+            (R.render_cid_coercion co_cid)
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_cvar cO cD lvl) p
+            (r_paren_if (paren s))
+            (string_of_int k)
+            (fmt_ppr_lf_sub  cO cD cPsi lvl) s
+
       in
         fmt_head_with "" head
 
@@ -1047,10 +394,15 @@ module Int = struct
         | LF.Shift _ when hasCtxVar     ->    fprintf ppf ".."
         | LF.Shift _ when not hasCtxVar  ->    () 
 
+        | LF.CoShift (LF.Coe co_cid, _ , _ )  ->    
+                fprintf ppf "%s(..)" 
+                  (R.render_cid_coercion co_cid)
 (*          fprintf ppf " <<<<<<<    %a    >>>>>>>"
             (fmt_ppr_lf_dctx cO cD lvl) cPsi
 *)
-
+        | LF.CoShift (LF.InvCoe co_cid , _ , _ )   ->    
+                fprintf ppf "-%s(..)" 
+                  (R.render_cid_coercion co_cid)
         | LF.SVar (c, s) ->
             fprintf ppf "%a[%a]"
               (fmt_ppr_lf_cvar cO cD lvl) c
@@ -1079,6 +431,19 @@ module Int = struct
 
     and fmt_ppr_lf_sub_deBruijn cO cD cPsi lvl ppf s =
       let rec self lvl ppf = function
+        | LF.CoShift (LF.Coe co_cid, LF.NoCtxShift,n) ->
+
+            fprintf ppf "co(%s)^%s"
+              (R.render_cid_coercion co_cid)
+              (R.render_offset n)
+
+
+        | LF.CoShift (LF.InvCoe co_cid, LF.NoCtxShift,n) ->
+
+            fprintf ppf "co(-%s)^%s"
+              (R.render_cid_coercion co_cid)
+              (R.render_offset n)
+
         | LF.Shift (LF.NoCtxShift,n) ->
             fprintf ppf "^%s"
               (R.render_offset n)
@@ -1301,14 +666,20 @@ module Int = struct
             (fmt_ppr_lf_typ LF.Empty cD cPsi 0) tA
 
     and fmt_ppr_lf_coercion lvl ppf = function
-      | [LF.CoBranch (t_ctx, trec1, trec2)] ->
+      | [LF.CoBranch (t_ctx, trec1, Some trec2)] ->
           let cPsi = projectCtxIntoDctx t_ctx in 
           fprintf ppf " some [%a] block %a => %a"
             (ppr_typ_decl_dctx  LF.Empty)  cPsi
             (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec1
             (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec2
 
-      | LF.CoBranch (t_ctx, trec1, trec2) :: c_list -> 
+      | [LF.CoBranch (t_ctx, trec1, None)] ->
+          let cPsi = projectCtxIntoDctx t_ctx in 
+          fprintf ppf " some [%a] block %a => _"
+            (ppr_typ_decl_dctx  LF.Empty)  cPsi
+            (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec1
+
+      | LF.CoBranch (t_ctx, trec1, Some trec2) :: c_list -> 
           let cPsi = projectCtxIntoDctx t_ctx in 
           fprintf ppf "some [%a] block %a => %a @ @[<0>|%a@]"
             (ppr_typ_decl_dctx  LF.Empty)  cPsi
@@ -1316,6 +687,12 @@ module Int = struct
             (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec2
             (fmt_ppr_lf_coercion lvl) c_list
 
+      | LF.CoBranch (t_ctx, trec1, None) :: c_list -> 
+          let cPsi = projectCtxIntoDctx t_ctx in 
+          fprintf ppf "some [%a] block %a => _ @ @[<0>|%a@]"
+            (ppr_typ_decl_dctx  LF.Empty)  cPsi
+            (fmt_ppr_lf_typ_rec LF.Empty LF.Empty cPsi 0) trec1
+            (fmt_ppr_lf_coercion lvl) c_list
 
 
     and fmt_ppr_lf_psi_hat cO _lvl ppf = function
@@ -1641,7 +1018,7 @@ module Int = struct
 
 
     and fmt_ppr_cmp_branch cO cD cG _lvl ppf = function
-      | Comp.BranchBox (cD1, (cPsi, tM, (t, cD1')), e) ->
+      | Comp.BranchBox (cD1', (phat, tM, t), e) ->
           let rec ppr_ctyp_decls cO ppf = function
             | LF.Empty             -> fprintf ppf ""
 
@@ -1650,19 +1027,19 @@ module Int = struct
                   (ppr_ctyp_decls cO) cD
                   (fmt_ppr_lf_ctyp_decl cO cD 1) decl
           in
-          let cD0 = Context.append cD cD1 in  
+          let cPsi = phatToDCtx phat in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
             fprintf ppf "%a @ ([%a] %a) @ : %a  => @ @[<2>%a@]@ "
-              (ppr_ctyp_decls cO) cD1
-              (fmt_ppr_lf_dctx cO cD1 0) cPsi
-              (fmt_ppr_lf_normal cO cD1 cPsi 0) tM
-              (* (fmt_ppr_lf_msub cO cD1' 2) t  *)
-              (fmt_ppr_refinement cO cD1' cD0 2) t
+              (ppr_ctyp_decls cO) cD1'
+              (fmt_ppr_lf_psi_hat cO 0) cPsi
+              (fmt_ppr_lf_normal cO cD1' cPsi 0) tM
+              (* (fmt_ppr_lf_msub cO cD1' 2) t   *)
+              (fmt_ppr_refinement cO cD1' cD 2) t
               (* NOTE: Technically: cD |- cG ctx and 
                *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
                * -bp
                *) 
-              (fmt_ppr_cmp_exp_chk cO cD1' cG 1) e
+              (fmt_ppr_cmp_exp_chk cO cD1' (Whnf.cnormCtx (cG, t)) 1) e
 
 
     (* cD |- t : cD'  *)

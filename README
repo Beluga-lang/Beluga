@@ -39,58 +39,77 @@ not Ocaml.  `ocaml-notes` contains information relevant such people.
 
 src
 ---
+  OMakefile
+  
 
-    Makefile            make driver for ocamlbuild
-    _tags               ocamlbuild configuration for local directory
-    beluga.mltop        Beluga-specific toplevel target
-    core.mlpack         Target to pack core/* into Target module
-    frontend.mlpack     Target to pack frontend/* into Frontend module
-    interpreter.mlpack  Target to pack interperter/* into Interpreter module
-    myocamlbuild.ml     Custom ocamlbuild plugin
+src/core:
+---------
 
+   debug.mli    OMakefile~                 substitution.ml
+abstract.mli  error.ml     parser.ml                  substitution.mli
+check.ml      error.mli    parser.mli                 syntax.ml
+check.mli     gensym.ml    pretty.ml                  syntax.mli
+common.ml     gensym.mli   pretty.mli                 token.ml
+common.mli    id.ml        reconstruct-Aug26.09.ml    trail.ml
+config.ml     id.mli       reconstruct-July13.ml      trail.mli
+context.ml    lexer.ml     reconstruct.ml             unify.ml
+context.mli   lexer.mli    reconstruct.mli            whnf.ml
+cwhnf.ml      monitor.ml   reconstruct-opt-July13.ml  whnf.mli
+cwhnf.mli     monitor.mli  store.ml
+debug.ml      OMakefile    store.mli
 
-core
-----
-
-    _tags               ocamlbuild configuration for local directory
+    abstract.ml         Abstraction
+    abstract.mli
+    check.ml            Typechecking
+    check.mli           ...
+    common.ml
+    common.mli
     config.ml           State configuration for Core
-    core.odocl          Target to generate Core documentation
+    cwhnf.ml            Contextual Weak head normalization
+    cwhnf.mli
+    debug.ml            Debuggin flags
+    error.ml
+    error.mli           Error handling
+ 
     gensym.ml           Unique symbol generation
     gensym.mli          ...
     id.ml               Identifiers, used for variables, constants, etc.
-    id.mli              ...
-    normalize.ml        Normalization
-    normalize.mli       ...
+    id.mli              ... 
+    lexer.ml            Lexer
+    lexer.mli  
+    monitor.ml          Timing 
+    monitor.mli
+    parser.ml           Parser
+    parser.mli
+    pretty.ml           Pretty printing
+    pretty.mli 
+    reconstruct.ml      Type reconstruction for LF and computations
+    reconstruct.mli
     store.ml            Variable store, maps ids to variable information
     store.mli           ...
+    substitution.ml     Explicit substitution operations (ordinary and contextual)
+    substitution.mli
     syntax.ml           Syntax for the LF and computation layer of Beluga
-    typecheck.ml        Typechecking
-    typecheck.mli       ...
+    syntax.mli
+    token.ml            Tokens for parsing
+    trail.ml            Trailing meta-variables for backtracking
+    trail.mli
+    unify.ml            Higher-order unification
+    whnf.ml             Weak-head normalization
+    whnf.mli        
 
 
 
-frontend
---------
-
-    _tags               ocamlbuild configuration for local directories
-    frontend.odocl      Target to generate Frontend documentation
-    lexer.ml            Beluga lexer
-    lexer.mli           ...
-    parser.ml           Beluga parser
-    token.ml            Tokens for lexing
-
-
-
-interpreter
+src/main
 -----------
 
-    _tags               ocamlbuild configuration for local directories
-    interpreter.odocl   Target to generate Interpreter documentation
+   OMakefile
+   main.ml              Main top level
 
 
 tools
 -----
-
+  beluga-mode.el        Emacs mode for Beluga programs
 
 
 Project Description <a id="02"/>

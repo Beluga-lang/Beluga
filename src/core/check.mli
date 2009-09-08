@@ -22,9 +22,16 @@ module LF : sig
   val checkSchemaWf : schema -> unit
   val checkSchema : mctx -> mctx -> dctx -> schema -> unit
 
+  val checkCoercion : mctx -> ctx_var * Id.cid_schema -> ctx_var -> bool
+  val synCtxSchema  : mctx -> ctx_var -> Id.cid_schema
+
   val checkTypeAgainstSchema: mctx -> mctx -> dctx -> typ -> sch_elem list -> (typ_rec * sub)
   val instanceOfSchElem     : mctx -> mctx -> dctx -> tclo -> sch_elem ->  (typ_rec * sub)
   val instanceOfSchElemProj : mctx -> mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
+
+  val checkMSub   : mctx -> mctx -> msub -> mctx -> unit
+
+  val lookupCtxVarSchema: mctx -> ctx_var -> Id.cid_schema
 
 end
 

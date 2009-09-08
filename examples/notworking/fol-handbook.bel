@@ -45,9 +45,9 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 %   If G, u:hil A |- hil B then G |- hil (A imp B).
 %
 
-schema w =  i + some [ a:o ] hil a;
+schema hilCtx =  i + some [ a:o ] hil a;
 
- rec ded: {g:(w)*} 
+ rec ded: {g:(hilCtx)*} 
     (hil (B ..))[g, u:hil (A ..)] -> (hil (imp (A ..) (B ..)))[g] = 
  FN g => fn h =>  
  case h of 
@@ -87,27 +87,33 @@ schema w =  i + some [ a:o ] hil a;
 % DOES NOT RAISE AN ERROR!!! -- THERE IS NO CHECK THAT A GIVEN SCHEMA
 % IS WELL-FORMED.
 
-schema l = i + o + some [a:o] block u:nd a . hil a ; % where l < w 
+schema ndCtx = i + o + some [a:o] nd a ; % where hilCtx < ndCtx
+
+coercion n2h : ndCtx -> hilCtx = 
+  i => i
+| some [a:o] nd a => hil a
+;
 
 
-%{
- rec ndhil : {g:(l)*} (nd (A ..))[g] -> (hil (A .. ))[g] =
+ rec ndhil : {g:(ndCtx)*} (nd (A ..))[g] -> (hil (A n2h(..)))[n2h(g)] =
  FN g => fn d => 
  case d of 
-   [g] (#p.1 ..) => [g] (#p.2 ..)
-%{
+   % A::o[g]. #p::(nd A ..)[g] 
+   [g] (#p ..) => [n2h(g)] (n2h(#p) ..)
+   %                  n2h(#p): (hil A n2h(..))[n2h(g)]
+   %
  | [g] impi \u. D .. u => 
-   let [g,u: block x:nd (A ..). hil (A ..)] H .. u = 
-     ndhil [g, u:block x:nd (A ..).hil (A ..) ] ([g,u] D .. u.1)
+    let [n2h(g),u: hil _ ] H .. u = 
+	ndhil [g, u:nd _ ] ([g,u] D .. u)
    in
      % NOTE HERE WE NEED THE FACT THAT l < w !!!
-       ded [g] ([g,u] H .. u)
-}%
+       ded [n2h(g)] ([n2h(g),u] H .. u)
+
 
  | [g] impe (D1 ..) (D2 ..) => 
-   let [g] H1 .. = ndhil [g] ([g] D1 ..) in		
-   let [g] H2 .. = ndhil [g] ([g] D2 ..) in 
-       [g] mp (H1 ..) (H2 ..)
+   let [n2h(g)] H1 .. = ndhil [g] ([g] D1 ..) in		
+   let [n2h(g)] H2 .. = ndhil [g] ([g] D2 ..) in 
+       [n2h(g)] mp (H1 ..) (H2 ..)
 
 %{ | [g] noti \p.\u.D .. p u => 
    let [g,p:o,w:nd (A ..)]  H .. w p = 
@@ -118,18 +124,21 @@ schema l = i + o + some [a:o] block u:nd a . hil a ; % where l < w
    let [g] H1'' .. = ded [g] ([g,w] H .. w (A ..)) in
      [g] mp (mp n1 (H1' ..)) (H1'' ..)
 }%
- | [g] note (D1 ..) (C ..) (D2 ..) => 
-   let [g] H1 ..   = ndhil [g]  ([g]D1 ..) in
-   let [g] H2 ..   = ndhil [g]  ([g]D2 ..) in
-     [g] mp (mp n2 (H1 ..)) (H2 ..)
 
- | [g] alle  (D1 ..) T => 
-   let [g]H1 .. =  ndhil [g] ([g] D1 ..) in
-      [g] mp (f1 T) (H1 ..)
+ | [g] note (D1 ..) (C ..) (D2 ..) => 
+   let [n2h(g)] H1 ..   = ndhil [g]  ([g]D1 ..) in
+   let [n2h(g)] H2 ..   = ndhil [g]  ([g]D2 ..) in
+     [n2h(g)] mp (mp n2 (H1 ..)) (H2 ..)
+
+ | [g] alle  (D1 ..) (T ..) => 
+   let [n2h(g)]H1 .. =  ndhil [g] ([g] D1 ..) in
+      [n2h(g)] mp (f1 (T n2h(..))) (H1 ..)  
+      % subordination necessary otherwise we don't know that T n2h(..) is valid
+
 
  | [g] alli \x. D .. x => 
-   let [g,x:i] H .. x =  ndhil [g, x:i] ([g, x] D .. x) in 
-     [g] ug \x. (H .. x)
+   let [n2h(g),x:i] H .. x =  ndhil [g, x:i] ([g, x] D .. x) in 
+     [n2h(g)] ug \x. (H .. x)
 
 ;
-}%
+

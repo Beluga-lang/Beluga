@@ -109,9 +109,6 @@ val normCTyp   : Comp.typ  -> Comp.typ
 
 val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
 
-val csub_ctyp  : dctx -> int -> Comp.typ -> Comp.typ
-val csub_msub  : dctx -> int -> msub -> msub
-
 val closed     : nclo -> bool
 val closedTyp  : tclo -> bool
 val closedDCtx : dctx -> bool

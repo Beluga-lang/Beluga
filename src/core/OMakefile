@@ -12,6 +12,7 @@ FILES[] =
         common
         config
         context
+        ctxsub
         debug
         error
         gensym

@@ -12,6 +12,7 @@ type error =
   | UnboundCtxSchemaName   of Id.name
   | UnboundCompName  of Id.name
   | UnknownCidTyp  of Id.cid_typ
+  | CoercionMismatch of Id.cid_coercion (* expected *) * Id.cid_coercion (* found *)
 
   (* LF typechecking errors *)
   | CtxVarMismatch of LF.mctx          (* ???                                 *)
@@ -52,6 +53,7 @@ type error =
   | LeftoverConstraints of Id.name     (* constraints left after 
                                           reconstruction of variable x        *)
   | IllTypedIdSub                      (* ???, not used yet                   *)
+  | IllTypedCoIdSub                    (* ???, not used yet                   *)
 
 
   (* Comp level typechecking errors *)

@@ -358,7 +358,8 @@ and cnstr_head h = match h with
 
 
 and cnstr_sub s = match s with
-  | I.Shift _ -> false
+  | I.Shift _   -> false
+  | I.CoShift _ -> false
   | I.Dot (I.Head h , s) -> cnstr_head h && cnstr_sub s
   | I.Dot (I.Obj tM , s) -> cnstr_term (tM, LF.id) && cnstr_sub s
   | I.Dot (I.Undef, s')  -> cnstr_sub s'
@@ -564,6 +565,7 @@ and collectSpine cQ phat sS = match sS with
 *)
 and collectSub cQ phat s = match s with
   | (I.Shift _) -> (cQ, s)
+  | (I.CoShift _ ) -> (cQ, s)
   | (I.Dot (I.Head h, s)) ->
       let (cQ1, s') =  collectSub cQ phat s in 
       (* let _   = dprint (fun () -> "collectSub (Head) "  ) in *)
@@ -686,6 +688,26 @@ and collectHead cQ phat ((head, _subst) as sH) =
   | (I.MVar (I.Offset k, s'), s) ->
       let (cQ', sigma) = collectSub cQ phat (LF.comp s' s)  in 
         (cQ', I.MVar (I.Offset k, sigma))
+
+  | (I.FPVar (u, s'), _s) ->
+      let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in
+      (* let _ = dprint (fun () -> "###abstract  FPVar  " ^ collectionToString cQ') in *)
+        if exists (eqFPVar u) cQ' then
+          (cQ', I.FPVar (u, sigma))
+        else
+          let (tA, cPhi)  = FPVar.get u in
+            (* tA must be closed with respect to cPhi *)
+            (* Since we only use abstraction on pure LF objects,
+               there are no context variables; different abstraction
+               is necessary for handling computation-level expressions,
+               and LF objects which occur in computations. *)
+
+          let phihat = Context.dctxToHat cPhi in 
+
+          let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
+          let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
+
+            (I.Dec (cQ'', FPV (u, Some (tA', cPhi'))), I.FPVar (u, sigma))
       
   | (I.PVar (I.PInst (r, cPsi, tA, ({contents = cnstr} as c)), s') as p,  s) ->
       (*dprint (fun () -> "###abstract  PVar  "
@@ -710,13 +732,18 @@ and collectHead cQ phat ((head, _subst) as sH) =
       let (cQ', sigma) =  collectSub cQ phat s' (* (LF.comp s' s) *) in 
         (cQ', I.PVar (I.Offset k, sigma))
       
-  | (I.FPVar (u, s'), _s) ->
-      let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in
-      (* let _ = dprint (fun () -> "###abstract  FPVar  " ^ collectionToString cQ') in *)
-        if exists (eqFPVar u) cQ' then
-          (cQ', I.FPVar (u, sigma))
+
+  | (I.Proj (head, k),  s) ->
+      (* let _ = dprint (fun () -> "collectHead Proj \n") in  *)
+      let (cQ', h') = collectHead cQ phat (head, s)  in
+        (cQ' , I.Proj (h', k))
+
+  | (I.CoFPVar (co_cid, p, j, s'), _s) ->
+      let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in 
+        if exists (eqFPVar p) cQ' then
+          (cQ', I.CoFPVar (co_cid, p, j, sigma))
         else
-          let (tA, cPhi)  = FPVar.get u in
+          let (tA, cPhi)  = FPVar.get p in
             (* tA must be closed with respect to cPhi *)
             (* Since we only use abstraction on pure LF objects,
                there are no context variables; different abstraction
@@ -728,12 +755,31 @@ and collectHead cQ phat ((head, _subst) as sH) =
           let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
           let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
 
-            (I.Dec (cQ'', FPV (u, Some (tA', cPhi'))), I.FPVar (u, sigma))
+            (I.Dec (cQ'', FPV (p, Some (tA', cPhi'))), I.CoFPVar (co_cid, p, j, sigma))
+      
+  | (I.CoPVar (co_cid, (I.PInst (r, cPsi, tA, ({contents = cnstr} as c)) as p), j, s'),  s) ->
 
-  | (I.Proj (head, k),  s) ->
-      (* let _ = dprint (fun () -> "collectHead Proj \n") in  *)
-      let (cQ', h') = collectHead cQ phat (head, s)  in
-        (cQ' , I.Proj (h', k))
+      if constraints_solved cnstr then
+        let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in
+          if exists (eqPVar (I.PVar (p, sigma))) cQ' then            
+            (cQ', I.CoPVar (co_cid, p, j, sigma))
+          else
+            (*  checkEmpty !cnstrs ? -bp *)
+            let psihat = Context.dctxToHat cPsi in 
+              
+            let (cQ1, cPsi')  = collectDctx cQ' psihat cPsi in 
+            let (cQ'', tA') = collectTyp cQ1  psihat (tA, LF.id) in              
+            let p' = I.PVar (I.PInst (r, cPsi', tA', c), sigma) in 
+              (I.Dec (cQ'', PV p') , I.CoPVar (co_cid, I.PInst (r, cPsi', tA', c), j, sigma))
+               
+      else 
+        raise (Error "Leftover constraints during abstraction")
+
+  | (I.CoPVar (co_cid, I.Offset k, j, s'), _s) ->
+      let (cQ', sigma) =  collectSub cQ phat s' (* (LF.comp s' s) *) in 
+        (cQ', I.CoPVar (co_cid, I.Offset k, j, sigma))
+      
+
 
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
@@ -951,8 +997,9 @@ and abstractDctx cQ cPsi l = match cPsi with
   (* other cases impossible in LF layer *)
 
 and abstractSub cQ offset s = match s with
-  | I.Shift _ ->
-      s
+  | I.Shift _   -> s
+      
+  | I.CoShift _ -> s
 
   | I.Dot (I.Head tH, s) ->
       I.Dot (I.Head (abstractHead cQ offset tH), abstractSub cQ offset s)
@@ -1066,6 +1113,17 @@ and abstractMVarHead cQ offset tH = match tH with
   | I.PVar (I.Offset p , s) -> 
       I.PVar (I.Offset p, abstractMVarSub cQ offset s)
 
+  | I.CoPVar (co_cid, I.Offset p , j, s) -> 
+      I.CoPVar (co_cid, I.Offset p, j, abstractMVarSub cQ offset s)
+
+
+  | I.CoPVar (co_cid, (I.PInst(_r, _cPsi, _tA , _cnstr) as p), j, s) -> 
+      let x = index_of cQ (PV (I.PVar (p,s))) + offset in 
+        I.CoPVar (co_cid, I.Offset x, j, abstractMVarSub cQ offset s)
+
+  | I.CoFPVar (co_cid, p, j, s) -> 
+      let x = index_of cQ (FPV (p, None)) + offset in 
+        I.CoPVar (co_cid, I.Offset x, j, abstractMVarSub cQ offset s)
 
   (* other cases impossible for object level *)
 and abstractMVarSpine cQ offset sS = match sS with
@@ -1080,8 +1138,8 @@ and abstractMVarSpine cQ offset sS = match sS with
 
 
 and abstractMVarSub cQ offset s = match s with
-  | I.Shift _ ->
-      s
+  | I.Shift _   ->     s
+  | I.CoShift _ ->     s
 
   | I.Dot (I.Head tH, s) ->
       I.Dot (I.Head (abstractMVarHead cQ offset tH), abstractMVarSub cQ offset s)

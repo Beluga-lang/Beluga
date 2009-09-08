@@ -82,47 +82,38 @@ rec trans: {g:(eqCtx)*}
 
 
 equal: exp -> exp -> type.
-e_l: ({x:exp} eq x x -> eq (T x) (T' x)) -> eq (lam (\x. T x)) (lam (\x. T' x)).
-e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
-e_r: eq T T.
-e_t: eq T' S -> eq T T' -> eq T S.
+e_l: ({x:exp} equal x x -> equal (T x) (T' x)) -> equal (lam (\x. T x)) (lam (\x. T' x)).
+e_a: equal T2 S2  -> equal T1 S1 -> equal (app T1 T2) (app S1 S2).
+e_r: equal T T.
+e_t: equal T R -> equal R S -> equal T S.
 
 
-%{
-schema equalCtx = some [] block x: exp, e: equal x x.  eq x x ; 
 
-coercion equal2eq : equalCtx -> eqCtx = 
- block x: exp, e: equal x x.  eq x x  => block x:exp. eq x x 
+schema equalCtx =  block x: exp.  equal x x ; 
+
+coercion e2eq : equalCtx -> eqCtx = 
+ block x: exp. equal x x  => block x:exp. eq x x;
+
+
+rec ceq: {g:(equalCtx)*}
+         (equal (T ..) (S ..))[g] -> (eq (T e2eq(..)) (S e2eq(..)))[e2eq(g)]  =
+FN g => fn e => case e of 
+| [g] #p.2 .. => [e2eq(g)] e2eq(#p).2 ..
+| [g] e_r => ref [e2eq(g)] <e2eq(g). _  >   
+| [g] e_a (D2 ..) (D1 ..) => 
+    let [e2eq(g)] F1 .. = ceq [g] ([g] D1 ..) in 
+    let [e2eq(g)] F2 .. = ceq [g] ([g] D2 ..) in 
+      [e2eq(g)] eq_app (F1 ..) (F2 ..)
+
+| [g] e_l (\x.(\u. (D .. x u))) => 
+  let
+     [e2eq(g),b:block x:exp. eq x x] F .. b = 
+        ceq [g, b:block x:exp.equal x x]   ([g, b] D .. b.1 b.2)
+  in
+     [e2eq(g)] eq_lam (\x.\v. F .. <x,v>)
+					
+| [g] e_t (D1 ..) (D2 ..) => 
+  let [e2eq(g)] F2 .. = ceq [g] ([g] D2 ..) in 
+  let [e2eq(g)] F1 .. = ceq [g] ([g] D1 ..) in 
+    trans [e2eq(g)] ([e2eq(g)] F1 ..)  ([e2eq(g)] F2 ..)           
 ;
-
-
-ceq: {g:(equalCtx)*}{T::exp[g]}{S::exp[g]} (eq (T ..) (S ..))[g] -> (equal (T ..) (S ..))[g] 
-
-rec ceq: {g:(h2)*} 
-	 (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[g] =
-    FN g => mlam T => mlam S => fn E =>
-        case E of 
-            [g] #p.3 .. => [g] #p.1 ..
-          | [g] eq_r => ref [equal2eq(g)] <equal2eq(g). T equal2eq(..) >   
-							  % NOTE HERE WE NEED THE FACT THAT h <= l !!!
-							  % WE NEED SUBORDINATION HERE ...
-          | [g] eq_tr (T ..) (S ..) (RR ..) (D2 ..) (D1 ..) => 
-            let
-                [g] E1 .. = ceq [g] <g. T ..> <g. S ..> ([g] D1 ..)
-            in let
-                [g] E2 .. = ceq [g] <g. S ..> <g. RR ..> ([g] D2 ..)
-            in
-                % NOTE HERE WE NEED THE FACT THAT h <= l !!!
-		% WE NEED SUBORDINATION HERE ...
-                tr [equal2eq(g)] 
-                   <equal2eq(g). T equal2eq(..) > <equal2eq(g). S equal2eq(..)> 
-  		   <equal2eq(g). RR equal2eq(..)> ([equal2eq(g)] E1 equal2eq(..))  ([equal2eq(g)] E2 (equal2eq(..)))
-            end
-          | [g] eq_l (lam \x.U[x]) \x.\u:equal x x. D x u) => 
-            let
-                [g, b. E b] = ceq [g, b:block x:exp, uv:equal x x. eq x x]
-                  <g, b. U b.1> ([g, b] D b.1 b.3)
-            in
-                [g] eq_lam \x.\v. E <x, equal x x, v>
-}%
-

@@ -10,161 +10,6 @@ open Id
 
 module Loc = Camlp4.PreCast.Loc
 
-(** External Syntax *)
-module Ext = struct
-  (** External LF Syntax *)
-  module LF = struct
-
-    type kind =
-      | Typ     of Loc.t
-      | ArrKind of Loc.t * typ      * kind
-      | PiKind  of Loc.t * typ_decl * kind
-
-    and typ_decl =
-      | TypDecl of name * typ
-
-    and ctyp_decl =
-      | MDecl of Loc.t * name * typ  * dctx
-      | PDecl of Loc.t * name * typ  * dctx
-(*       | SDecl of Loc.t * name * dctx * dctx *)
-
-    and typ =
-      | Atom   of Loc.t * name * spine
-      | ArrTyp of Loc.t * typ      * typ
-      | PiTyp  of Loc.t * typ_decl * typ
-      | Sigma of Loc.t * typ_rec
-
-    and normal =
-      | Lam  of Loc.t * name * normal
-      | Root of Loc.t * head * spine
-      | Tuple of Loc.t * tuple
-
-    and head =
-      | Name  of Loc.t * name
-      | MVar  of Loc.t * name * sub
-      | Hole  of Loc.t 
-      | PVar  of Loc.t * name * sub
-      | ProjName  of Loc.t * int * name
-      | ProjPVar  of Loc.t * int * (name * sub)
-
-    and spine =
-      | Nil
-      | App of Loc.t * normal * spine
-
-    and sub =
-      | EmptySub of Loc.t
-      | Dot      of Loc.t * sub * front
-      | Id       of Loc.t
-
-    and front =
-      | Head     of head
-      | Normal   of normal
-
-    and typ_rec =
-      | SigmaLast of typ
-      | SigmaElem of name * typ * typ_rec
-
-    and tuple =
-      | Last of normal
-      | Cons of normal * tuple
-
-    and dctx =
-      | Null
-      | CtxVar   of Loc.t * name
-      | CoCtx    of Loc.t * name * name
-      | DDec     of dctx * typ_decl
-
-    and 'a ctx =
-      | Empty
-      | Dec of 'a ctx * 'a
-
-    and sch_elem =
-      | SchElem of Loc.t * typ_decl ctx * typ_rec
-
-    and schema =
-      | Schema of sch_elem list
-
-
-    and psi_elem = VarName of name | CoName of name * name
-    and psi_hat = psi_elem list
-
-    and mctx     = ctyp_decl ctx          
-
-    and prag =
-      | NamePrag of name * string * string option 
-      | NotPrag
-
-    and co_typ = CoTyp of name * name 
-
-    and coercion   = co_branch list
-    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
-
-  end
-
-
-  (** External Computation Syntax *)
-  module Comp = struct
-
-    type typ =                                     (* Computation-level types *)
-      | TypBox   of Loc.t * LF.typ  * LF.dctx      (* tau ::= A[Psi]          *)
-(*    | TypSBox  of LF.dctx * LF.dctx              (\*    | Phi[Psi]      *\) *)
-      | TypArr   of Loc.t * typ * typ              (*     | tau -> tau        *)
-      | TypCross of Loc.t * typ * typ              (*     | tau * tau        *)
-      | TypCtxPi of Loc.t * (name * name) * typ    (*     | Pi psi:(w)*. tau  *)
-      | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *)
-
-    and exp_chk =                            (* Computation-level expressions *)
-       | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
-       | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
-       | CtxFun of Loc.t * name * exp_chk         (*    | FN f => e           *)
-       | MLam   of Loc.t * name * exp_chk         (*    | mlam f => e         *)
-       | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
-       | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
-                                                  (*    | let (x,y) = i in e  *)
-       | Box    of Loc.t * LF.psi_hat * LF.normal (*    | box (Psi hat. M)    *)
-(*        | SBox   of LF.psi_hat * LF.sub *)
-       | Case   of Loc.t * exp_syn * branch list  (*    | case i of branches *)
-
-    and exp_syn =
-       | Var    of Loc.t * name                   (*  i ::= x                 *)
-       | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
-       | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)
-       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
-                                                  (*    | i [Psi hat. M]      *)
-       | BoxVal of Loc.t * LF.dctx * LF.normal 
-       | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
-
-    and branch =
-      | BranchBox of Loc.t * LF.mctx
-          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
-          * exp_chk
-
-(*       | BranchSBox of LF.ctyp_decl LF.ctx *)
-(*           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx)) *)
-(*           * exp_chk *)
-
-   type rec_fun = RecFun of name * typ * exp_chk
-  end
-
-
-  (** External Signature Syntax *)
-  module Sgn = struct
-
-    type decl =
-      | Const    of Loc.t * name * LF.typ
-      | Typ      of Loc.t * name * LF.kind
-      | Schema   of Loc.t * name * LF.schema
-      | Coercion of Loc.t * name * LF.co_typ * LF.coercion
-      | Pragma   of Loc.t * LF.prag
-      | Rec      of Loc.t * Comp.rec_fun list   
-       
-
-    type sgn = decl list
-
-  end
-
-end
-
 (** Internal Syntax *)
 module Int = struct
   (** Internal LF Syntax *)
@@ -214,13 +59,19 @@ module Int = struct
       | PVar  of cvar * sub                (*   | p[s]                       *)
       | AnnH  of head * typ                (*   | (H:A)                      *)
       | Proj  of head * int                (*   | x.k | #p.k s               *)
+      | CoPVar of cid_coercion * cvar * int * sub
+                                           (*   | c(#p)[s] | c(#p.k)[s]      *)
 
-      | FVar  of name                      (* free variable for type
+      | FVar  of name                      (* free variable for type 
                                               reconstruction                 *)
-      | FMVar of name * sub                (* free meta-variable for type
+      | FMVar of name * sub                (* free meta-variable for type 
                                               reconstruction                 *)
       | FPVar of name * sub                (* free parameter variable for type
                                               reconstruction                 *)
+      | CoFPVar of cid_coercion * name * int * sub
+                                           (* free coerced parameter for type
+                                              reconstruction                 *)
+                                           (*   | c(#p)[s] | c(#p.k)[s]      *)
 
     and spine =                            (* spine                          *)
       | Nil                                (* S ::= Nil                      *)
@@ -229,14 +80,21 @@ module Int = struct
 
     and sub =                              (* Substitutions                  *)
       | Shift of ctx_offset * offset       (* sigma ::= ^(psi,n)             *)
+      | CoShift of id_coercion * ctx_offset * offset 
+                                           (*       | coe^(coe_cid,psi,n)    *)
       | SVar  of cvar * sub                (*       | s[sigma]               *)
       | Dot   of front * sub               (*       | Ft . s                 *)
+
+    and id_coercion = 
+      | Coe of cid_coercion 
+      | InvCoe of cid_coercion
 
     and front =                            (* Fronts:                        *)
       | Head of head                       (* Ft ::= H                       *)
       | Block of head * int                (*    | Block (h,i, length)       *)
       | Obj  of normal                     (*    | N                         *)
       | Undef                              (*    | _                         *)
+
 
   (* Note: Block (h,i, l) represents a tuple of length l where the i-th 
      position is instantiated with h; all other positions are undefined *)                         
@@ -321,7 +179,7 @@ module Int = struct
                                            (* Coercion Type: cid_schema -> cid_schema *)
 
     and coercion   = co_branch list        (* Coercion definition         *)
-    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
+    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec option
                                            (* some [x1:A1,..xn:An] 
                                             *   block y1:B1 .. yl:Bn => z1:C1 .. yl:Cl
                                             *)  
@@ -414,7 +272,8 @@ module Int = struct
 
     and branch =
       | BranchBox  of LF.mctx
-          * (LF.dctx * LF.normal * (LF.msub * LF.mctx))
+(*          * (LF.dctx * LF.normal * (LF.msub * LF.mctx)) *)
+          * (LF.psi_hat * LF.normal * LF.msub) 
           * exp_chk
 
       | BranchSBox of LF.mctx
@@ -446,6 +305,168 @@ module Int = struct
   end
 
 end
+
+
+
+
+(** External Syntax *)
+module Ext = struct
+  (** External LF Syntax *)
+  module LF = struct
+
+    type kind =
+      | Typ     of Loc.t
+      | ArrKind of Loc.t * typ      * kind
+      | PiKind  of Loc.t * typ_decl * kind
+
+    and typ_decl =
+      | TypDecl of name * typ
+
+    and ctyp_decl =
+      | MDecl of Loc.t * name * typ  * dctx
+      | PDecl of Loc.t * name * typ  * dctx
+(*       | SDecl of Loc.t * name * dctx * dctx *)
+
+    and typ =
+      | Atom   of Loc.t * name * spine
+      | ArrTyp of Loc.t * typ      * typ
+      | PiTyp  of Loc.t * typ_decl * typ
+      | Sigma of Loc.t * typ_rec
+
+    and normal =
+      | Lam  of Loc.t * name * normal
+      | Root of Loc.t * head * spine
+      | Tuple of Loc.t * tuple
+
+    and head =
+      | Name  of Loc.t * name
+      | MVar  of Loc.t * name * sub
+      | Hole  of Loc.t 
+      | PVar  of Loc.t * name * sub
+      | ProjName  of Loc.t * int * name
+      | ProjPVar  of Loc.t * int * (name * sub)
+      | CoPVar of Loc.t * name * name * int * sub
+
+    and spine =
+      | Nil
+      | App of Loc.t * normal * spine
+
+    and sub =
+      | EmptySub of Loc.t
+      | Dot      of Loc.t * sub * front
+      | Id       of Loc.t
+      | CoId     of Loc.t * name 
+
+    and front =
+      | Head     of head
+      | Normal   of normal
+
+    and typ_rec =
+      | SigmaLast of typ
+      | SigmaElem of name * typ * typ_rec
+
+    and tuple =
+      | Last of normal
+      | Cons of normal * tuple
+
+    and dctx =
+      | Null
+      | CtxVar   of Loc.t * name
+      | CoCtx    of Loc.t * name * name
+      | DDec     of dctx * typ_decl
+
+    and 'a ctx =
+      | Empty
+      | Dec of 'a ctx * 'a
+
+    and sch_elem =
+      | SchElem of Loc.t * typ_decl ctx * typ_rec
+
+    and schema =
+      | Schema of sch_elem list
+
+
+    and psi_elem = VarName of name | CoName of name * name
+    and psi_hat = psi_elem list
+
+    and mctx     = ctyp_decl ctx          
+
+    and prag =
+      | NamePrag of name * string * string option 
+      | NotPrag
+
+    and co_typ = CoTyp of name * name 
+
+    and coercion   = co_branch list
+    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec option
+
+  end
+
+
+  (** External Computation Syntax *)
+  module Comp = struct
+
+    type typ =                                     (* Computation-level types *)
+      | TypBox   of Loc.t * LF.typ  * LF.dctx      (* tau ::= A[Psi]          *)
+(*    | TypSBox  of LF.dctx * LF.dctx              (\*    | Phi[Psi]      *\) *)
+      | TypArr   of Loc.t * typ * typ              (*     | tau -> tau        *)
+      | TypCross of Loc.t * typ * typ              (*     | tau * tau        *)
+      | TypCtxPi of Loc.t * (name * name) * typ    (*     | Pi psi:(w)*. tau  *)
+      | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *)
+
+    and exp_chk =                            (* Computation-level expressions *)
+       | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
+       | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
+       | CtxFun of Loc.t * name * exp_chk         (*    | FN f => e           *)
+       | MLam   of Loc.t * name * exp_chk         (*    | mlam f => e         *)
+       | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
+       | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
+                                                  (*    | let (x,y) = i in e  *)
+       | Box    of Loc.t * LF.psi_hat * LF.normal (*    | box (Psi hat. M)    *)
+(*        | SBox   of LF.psi_hat * LF.sub *)
+       | Case   of Loc.t * exp_syn * branch list  (*    | case i of branches *)
+
+    and exp_syn =
+       | Var    of Loc.t * name                   (*  i ::= x                 *)
+       | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
+       | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)
+       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
+                                                  (*    | i [Psi hat. M]      *)
+       | BoxVal of Loc.t * LF.dctx * LF.normal 
+       | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
+
+    and branch =
+      | BranchBox of Loc.t * LF.mctx
+          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
+          * exp_chk
+
+(*       | BranchSBox of LF.ctyp_decl LF.ctx *)
+(*           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx)) *)
+(*           * exp_chk *)
+
+   type rec_fun = RecFun of name * typ * exp_chk
+  end
+
+
+  (** External Signature Syntax *)
+  module Sgn = struct
+
+    type decl =
+      | Const    of Loc.t * name * LF.typ
+      | Typ      of Loc.t * name * LF.kind
+      | Schema   of Loc.t * name * LF.schema
+      | Coercion of Loc.t * name * LF.co_typ * LF.coercion
+      | Pragma   of Loc.t * LF.prag
+      | Rec      of Loc.t * Comp.rec_fun list   
+       
+
+    type sgn = decl list
+
+  end
+
+end
+
+
 
 (** Approximate Syntax *)
 module Apx = struct
@@ -496,6 +517,8 @@ module Apx = struct
       | FVar  of name
       | FMVar of name   * sub
       | FPVar of name   * sub
+      | CoFPVar of cid_coercion * name * int * sub
+      | CoPVar of cid_coercion * cvar * int * sub
 
     and spine =
       | Nil
@@ -504,6 +527,7 @@ module Apx = struct
     and sub =
       | EmptySub
       | Id
+      | CoId  of Loc.t * cid_coercion
       | Dot   of front * sub
 
     and front =
@@ -540,9 +564,10 @@ module Apx = struct
     and co_typ = CoTyp of cid_schema * cid_schema
 
     and coercion   = co_branch list
-    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec
+    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec option
 
   end
+
 
   (** Approximate Computation Syntax *)
   module Comp = struct

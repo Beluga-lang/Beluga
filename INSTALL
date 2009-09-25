@@ -4,7 +4,7 @@ This document describes the compilation and installation procedures
 for Beluga.
 
 
-*      [Pre-requisites](#01)
+*      [Prerequisites](#01)
 
        *        [GODI](#02)
        *        [GODI Installation Instructions](#03)
@@ -12,13 +12,13 @@ for Beluga.
 *      [Building](#04)
 
 
-Pre-requisites <a id="01"/>
+Prerequisites <a id="01"/>
 ==============
 
 Debian
 ------
 
-Under Debian GNU/Linux, all the necessary prerequisites can be installed
+Under Debian Linux, all the necessary prerequisites can be installed
 with just the following command:
 
 # apt-get install ocaml omake ocaml-findlib libextlib-ocaml-dev libounit-ocaml-dev ocaml-ulex
@@ -33,31 +33,26 @@ Generic
  giving up in despair, see the following section about the OCaml GODI
  distribution.*
 
-* [ocaml 3.10][0101] or greater
-* [extlib][0102]
-* [ulex][0103]
-* [omake][0104]
+ocaml 3.10 or greater:  http://caml.inria.fr/download.en.html
+extlib:                 http://code.google.com/p/ocaml-extlib/downloads/list
+ulex:                   http://www.cduce.org/download.html#side
+omake:                  http://omake.metaprl.org/index.html
 
-[0101]: http://caml.inria.fr/download.en.html
-[0102]: http://code.google.com/p/ocaml-extlib/downloads/list
-[0103]: http://www.cduce.org/download.html#side
-[0104]: http://omake.metaprl.org/index.html
-
-GODI <a id="02"/>
+GODI
 ----
 
 The above list of required packages may seem excessive and you may
 feel that you shouldn't have to manually download and install five or
-more separate packages to compile this software.  We agree with you.
+more separate packages to compile this software. 
+
 That's why, rather than downloading the extremely barebones OCaml
-compiler, you can instead download the OCaml [GODI][godi] distribution
-and have it automatically take care of downloading and installing the
-necessary packages for you.
+compiler, you can instead download the OCaml GODI] distribution
+and have it download and install the necessary packages for you.
 
-[godi]: http://godi.camlcity.org/godi/index.html
+ http://godi.camlcity.org/godi/index.html
 
 
-GODI Installation Instructions <a id="03"/>
+GODI Installation Instructions
 ------------------------------
 
 1. Download the most recent GODI tarball, e.g.,
@@ -81,8 +76,7 @@ GODI Installation Instructions <a id="03"/>
        export PATH=~/local/GODI/bin:~/local/GODI/sbin:$PATH
        export MANPATH=~/local/GODI/man:$MANPATH
 
-6. Either reload your terminal, or refresh your shell configuration,
-   e.g.,
+6. Either restart your terminal, or refresh your shell configuration,
 
        $ source ~/.profile
 
@@ -106,22 +100,22 @@ GODI Installation Instructions <a id="03"/>
    fundamental packages.  Once the second bootstrap phase has
    completed, you have a basic GODI installation.
 
-8. Now we will install the Beluga dependencies mentioned above.  To do
-   so, run the following commands:
+8. Now we will install the Beluga dependencies mentioned above:
 
        $ godi_wish -build godi-extlib -build godi-ulex -build godi-omake
 
        $ godi_perform -wishes
 
    You should now see GODI begin to build and install the packages.
-   This part should go pretty quickly.  Once this stage finishes, you
-   are ready to follow the build instructions below for Beluga itself.
+   Once this stage finishes, you are ready to follow the build
+   instructions below for Beluga itself.
 
 
 
-Building <a id="04"/>
+Building
 ========
 
-The supported way to build Beluga currently is via OMake.  So just install
-the dependencies and then run "omake", after which you'll have an
+Install the dependencies and then run "omake", after which you'll have an
 "interpreter" executable in the "bin" directory.
+
+TODO: note about bytecode / native

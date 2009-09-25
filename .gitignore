@@ -8,6 +8,5 @@
 .DS_Store
 .build
 .omake*
+release
 bin
-src/tools/interpreter/interpreter
-src/tests/test-harness

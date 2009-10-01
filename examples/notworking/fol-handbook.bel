@@ -102,6 +102,11 @@ coercion n2h : ndCtx -> hilCtx =
    [g] (#p ..) => [n2h(g)] (n2h(#p) ..)
    %                  n2h(#p): (hil A n2h(..))[n2h(g)]
    %
+   %  #p: ndCtx -> nd A
+   %  How can we use #p instead of a function hCtx -> hil A
+   %  bool -> bool    instead of a function  int -> int
+   %
+   %  int < bool (inputs)      bool < int (return)
  | [g] impi \u. D .. u => 
     let [n2h(g),u: hil _ ] H .. u = 
 	ndhil [g, u:nd _ ] ([g,u] D .. u)

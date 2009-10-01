@@ -82,10 +82,13 @@ rec trans: {g:(eqCtx)*}
 
 
 equal: exp -> exp -> type.
-e_l: ({x:exp} equal x x -> equal (T x) (T' x)) -> equal (lam (\x. T x)) (lam (\x. T' x)).
-e_a: equal T2 S2  -> equal T1 S1 -> equal (app T1 T2) (app S1 S2).
+e_l: ({x:exp} equal x x -> equal (T x) (T' x)) 
+     -> equal (lam (\x. T x)) (lam (\x. T' x)).
+e_a: equal T2 S2  -> equal T1 S1 
+     -> equal (app T1 T2) (app S1 S2).
 e_r: equal T T.
-e_t: equal T R -> equal R S -> equal T S.
+e_t: equal T R -> equal R S 
+     b-> equal T S.
 
 
 

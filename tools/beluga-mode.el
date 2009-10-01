@@ -87,9 +87,9 @@ and `unicode'."
           ("->"    . ?→)
           ("<-"    . ?←)
           ("=>"    . ?⇒)
-          ("::"    . ?∷)
-          ;; (".." . ?…) ; Actually "..."
-          (".."    . ?‥)
+          ;; ("::"    . ?∷)
+          (".." . ?…) ; Actually "..."
+          ;;(".."    . ?‥)
           ;; ("forall" . ?∀)
           )))
   "Alist mapping Beluga symbols to chars.

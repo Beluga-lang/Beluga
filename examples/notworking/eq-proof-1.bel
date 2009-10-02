@@ -1,0 +1,122 @@
+% Given an expression e, return the proof that e is always equal to itself.
+% 
+% If e is an expression, then eq e e.
+
+% Author: Brigitte Pientka
+% Comments: 
+% - use of Sigma-types in context
+%
+% - in Delphin, this example requires a special function `extend' of
+%   type eqParamFun = <f:exp#> -> <eq f f> to keep track of the
+%   relationship between an introduced parameter and the fact that
+%   every parameter is equal to itself;
+%
+% - also requires explicit use of "remove parameter x and u" in the
+%   definition of `extend' and the use of `extend' in `eqfun'
+
+exp: type.    %name exp E x.
+app: exp -> exp -> exp.
+lam: (exp -> exp) -> exp.
+
+eq: exp -> exp -> type.   %name eq Q u.
+eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
+
+eq_lam :  ({x : exp} eq x x -> eq (E x) (F x)) 
+          -> eq (lam (\x. E x)) (lam (\x. F x)).
+ 
+
+schema eqCtx = block x:exp. eq x x;
+
+
+rec ref : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
+ FN g => mlam U =>
+   case [g] (U ..) of
+  | [g] #p.1 .. => [g] #p.2 ..
+
+  | [g] lam \x. L .. x =>
+      let
+          [g,e:block yyy:exp. eq yyy yyy] V .. e = ref [g, e:block q:exp. eq q q] <g, e. L .. e.1>
+      in
+        [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
+   | [g] app (A1 ..) (A2 ..)  : exp[g]=>
+       let [g] EQ1 .. = ref [g] <g . A1 .. > in
+       let [g] EQ2 .. = ref [g] <g . A2 .. > in
+          [g] eq_app (EQ1 ..) (EQ2 ..)
+;
+
+  
+
+% General transitivity is admissible
+rec trans: {g:(eqCtx)*} 
+   (eq (TT ..) (RR ..))[g]     % e1 : eq T R
+-> (eq (RR ..) (SS ..))[g]     % e2 : eq R S
+-> (eq (TT ..) (SS ..))[g]     % result : eq T S
+=
+  FN g => 
+    fn e1 => fn e2 =>
+      case e1 of
+
+|{#p :: (block yy:exp. eq yy yy)[g]}
+       [g] #p.2 .. => e2
+
+| [g] eq_lam \x.\u. D1 .. x u =>
+   let [g] eq_lam \xx.\uu. D2 .. xx uu =  e2  in	
+   let [g, b:block x:exp. eq x x] E .. b = 
+     trans [g, b:block x':exp. eq x' x'] 
+         ([g, b] D1 .. b.1 b.2)
+         ([g, b] D2 .. b.1 b.2)
+    in
+      [g] eq_lam \x. \u. E .. <x, u>
+       
+     | [g] eq_app (D1 ..) (D2 ..) =>
+       (case e2 of
+         [g] eq_app (F1 ..) (F2 ..) =>
+         let [g] E1 .. = trans [g]  ([g] D1 ..)  ([g] F1 ..)
+         in
+         let [g] E2 .. = trans [g]  ([g] D2 ..)  ([g] F2 ..)
+         in
+             [g] eq_app  (E1 ..)  (E2 ..)
+       )
+;
+
+
+
+equal: exp -> exp -> type.
+e_l: ({x:exp} equal x x -> equal (T x) (T' x)) 
+     -> equal (lam (\x. T x)) (lam (\x. T' x)).
+e_a: equal T2 S2  -> equal T1 S1 
+     -> equal (app T1 T2) (app S1 S2).
+e_r: equal T T.
+e_t: equal T R -> equal R S 
+     b-> equal T S.
+
+
+
+schema equalCtx =  block x: exp.  equal x x ; 
+
+coercion e2eq : equalCtx -> eqCtx = 
+ block x: exp. equal x x  => block x:exp. eq x x;
+
+
+rec ceq: {g:(equalCtx)*}
+         (equal (T ..) (S ..))[g] -> (eq (T e2eq(..)) (S e2eq(..)))[e2eq(g)]  =
+FN g => fn e => case e of 
+| [g] #p.2 .. => [e2eq(g)] e2eq(#p).2 ..
+| [g] e_r => ref [e2eq(g)] <e2eq(g). _  >   
+| [g] e_a (D2 ..) (D1 ..) => 
+    let [e2eq(g)] F1 .. = ceq [g] ([g] D1 ..) in 
+    let [e2eq(g)] F2 .. = ceq [g] ([g] D2 ..) in 
+      [e2eq(g)] eq_app (F1 ..) (F2 ..)
+
+| [g] e_l (\x.(\u. (D .. x u))) => 
+  let
+     [e2eq(g),b:block x:exp. eq x x] F .. b = 
+        ceq [g, b:block x:exp.equal x x]   ([g, b] D .. b.1 b.2)
+  in
+     [e2eq(g)] eq_lam (\x.\v. F .. <x,v>)
+					
+| [g] e_t (D1 ..) (D2 ..) => 
+  let [e2eq(g)] F2 .. = ceq [g] ([g] D2 ..) in 
+  let [e2eq(g)] F1 .. = ceq [g] ([g] D1 ..) in 
+    trans [e2eq(g)] ([e2eq(g)] F1 ..)  ([e2eq(g)] F2 ..)           
+;

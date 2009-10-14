@@ -1707,7 +1707,6 @@ module Make (T : TRAIL) : UNIFY = struct
                                             P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
                                             P.normalToString Empty cD0 cPsi sM2 ^ "\n") in        *)      
               let sM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss) (MVarRef r)) in
-              in
                 instantiateMVar (r, sM2', !cnstrs) 
             with
               | NotInvertible ->
@@ -1754,7 +1753,7 @@ module Make (T : TRAIL) : UNIFY = struct
            r1 and r2 are uninstantiated  (None)
         *)
         let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
-        and t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
+        and t2' = Whnf.normSub (comp t2 s2)    (* cD ; cPsi |- t2' <= cPsi2 *)
         in
           if r1 == r2 then (* by invariant:  cD1 = cD2, cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with                

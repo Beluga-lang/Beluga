@@ -223,12 +223,12 @@ module LF = struct
          * k = k' + k0
          *)
         let h = frontSub ft s' in 
-        Dot (h, comp s s')
+          Dot (h, comp s s')
 
-    | (CoShift (Coe co_cid, NoCtxShift, d), CoShift (Coe _co_cid, NoCtxShift, _d) ) -> 
+    | (CoShift (Coe co_cid, NoCtxShift, d) ,  CoShift (Coe _co_cid, NoCtxShift, _d) ) -> 
         raise (Error ("Composition not defined: 1 CoShift d =/=0 d = " ^ string_of_int d))
 
-    | (Shift (NoCtxShift, n), , CoShift (Coe co_cid, NoCtxShift, d)) -> 
+    | (Shift (NoCtxShift, n) ,  CoShift (Coe co_cid, NoCtxShift, d)) -> 
         (* psi, Psi0,Psi1 |- s1 : psi,Psi0  and  c(psi), Psi0, Psi1, Psi2 |- s2 <= psi, Psi0,Psi1 *)
         CoShift (Coe co_cid, NoCtxShift, d+n)
 
@@ -236,22 +236,22 @@ module LF = struct
         (* c(psi), Psi |- s1 : psi   and    c(psi), cPsi, Psi' |- s2 <= c(psi), Psi *)
         CoShift (Coe co_cid, NoCtxShift, k + d)
 
-    | (CoShift (InvCoe co_cid', NoCtxShift, n) , Shift (NoCtxShift, d) ) -> 
+    | (CoShift (InvCoe co_cid', NoCtxShift, n) ,  Shift (NoCtxShift, d) ) -> 
         (* g, cPsi  |- s1 : c(g)            
            g, cPsi, cPsi'  |- s2 : g, cPsi   *)
         CoShift (InvCoe co_cid', NoCtxShift, n+d)
 
-    | (Shift (NoCtxShift, n), , CoShift (InvCoe co_cid, NoCtxShift, d)) -> 
+    | (Shift (NoCtxShift, n) ,  CoShift (InvCoe co_cid, NoCtxShift, d)) -> 
         (* c(psi), Psi0,Psi1 |- s1 : c(psi),Psi0  and  psi, Psi0, Psi1, Psi2 |- s2 <= c(psi), Psi0,Psi1 *)
         CoShift (InvCoe co_cid, NoCtxShift, d+n)
 
-    | (CoShift (InvCoe co_cid', NoCtxShift, n) , CoShift (Coe co_cid, NoCtxShift, d) ) -> 
+    | (CoShift (InvCoe co_cid', NoCtxShift, n) ,  CoShift (Coe co_cid, NoCtxShift, d) ) -> 
         (* g, cPsi  |- s1 : c(g)     c(g), cPsi, cPsi' |-   s2 : g, cPsi   
         *)
         if co_cid' = co_cid then 
           Shift(NoCtxShift, d+n)
         else
-         raise (Error "CoShift (InvCoe ) Composition not defined?")
+          raise (Error "CoShift (InvCoe ) Composition not defined?")
 
     | (_s1, _s2) -> 
         raise (Error "Composition not defined?")

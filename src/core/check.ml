@@ -56,8 +56,7 @@ module LF = struct
         let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in
           (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
         let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
-  in
-    Dot (front, LF.comp s LF.shift)
+          Dot (front, LF.comp s LF.shift)
 
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
    *
@@ -1066,11 +1065,9 @@ module Comp = struct
                         P.normalToString cO cD1' cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
                             P.expChkToString cO cD1' cG' e1 ^ 
                             "\n has type "  ^ P.compTypToString cO cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
-                       ) in
-                 
+                       )
           in
-            check cO cD1' cG' e1 (tau, t'');
-
+            check cO cD1' cG' e1 (tau, t'')
 
 end
   
@@ -1111,7 +1108,7 @@ module Sgn = struct
           Comp.check cO cD cG e (tau, Whnf.m_id);
           check_sgn_decls decls
 
-    | Syntax.Int.Sgn.Pragma (_a, ) :: decls ->
+    | Syntax.Int.Sgn.Pragma (_a) :: decls ->
         check_sgn_decls decls
 
 end

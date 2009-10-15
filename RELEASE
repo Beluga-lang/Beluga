@@ -73,7 +73,7 @@ cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further'
 sleep 1
 echo 'Building archive' $release.tar
-tar zcvf $release.tar.gz $release || ( echo 'tar failed' ; exit 1 )
+tar zcf $release.tar.gz $release || ( echo 'tar failed' ; exit 1 )
 echo
 ls -l $release.tar.gz
 echo

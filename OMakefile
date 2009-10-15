@@ -12,6 +12,7 @@ OCAMLPACKS[] =
         extlib
         oUnit
         ulex
+        dynlink
 
 # Compile with debugging options?  This enables:
 #

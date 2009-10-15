@@ -47,8 +47,7 @@ module Unify = Unify.EmptyTrail
         let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in
           (* let u = newMVar (Null ,  TClo( tA, s)) in *)
         let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
-  in
-    Dot (front, LF.comp s LF.shift)
+          Dot (front, LF.comp s LF.shift)
 
 
 
@@ -169,26 +168,26 @@ and csub_psihat cPsi k (ctxvar, offset) = match ctxvar with
 
   | Some (CoCtx (co_cid, phi)) -> 
       let rec subst phi = match phi with
-	| CtxOffset psi -> 
-	    if k = psi then 
-	      let (psivar, psi_offset) = dctxToHat cPsi in 
-		(psivar, psi_offset + offset)
-	    else 
-	      (ctxvar, offset)
-	| CoCtx (co_cid', phi') -> 
-	    (* This again assumes we preserve the length of the context
-	       by applying the coercion *)
-	    let (phi1_opt, offset1) = subst phi' in 
-	      match phi1_opt with
-		  None -> (None, offset1)
-		| Some phi1 -> 
-		    (Some (CoCtx (co_cid', phi1)), offset1)
+        | CtxOffset psi -> 
+            if k = psi then 
+              let (psivar, psi_offset) = dctxToHat cPsi in 
+                (psivar, psi_offset + offset)
+            else 
+              (ctxvar, offset)
+        | CoCtx (co_cid', phi') -> 
+            (* This again assumes we preserve the length of the context
+               by applying the coercion *)
+            let (phi1_opt, offset1) = subst phi' in 
+              match phi1_opt with
+                  None -> (None, offset1)
+                | Some phi1 -> 
+                    (Some (CoCtx (co_cid', phi1)), offset1)
       in 
       let (psivar_opt, offset) = subst phi in 
-	match psivar_opt with
-	    None -> (None, offset)
-	  | Some psivar -> 
-	      (Some (CoCtx(co_cid, psivar)), offset)
+        match psivar_opt with
+            None -> (None, offset)
+          | Some psivar -> 
+              (Some (CoCtx(co_cid, psivar)), offset)
 (* ******************************************************************** *)
 (* Shift term (type etc.) to the new context                            *)
 (* coerceTerm co_cid cPsi (tM, s) = sN where co_cid(cPsi) |- sN *)
@@ -223,7 +222,7 @@ and coerceHead co_cid h = match h with
 and coerceSub co_cid s = match s with
   | Dot(Head h, s') -> 
       Dot(Head (coerceHead co_cid h), coerceSub co_cid s')
-	
+        
   | Dot (Block (h,i), s) -> 
       Dot(Block (coerceHead co_cid h,i),  coerceSub co_cid s)
 
@@ -282,14 +281,14 @@ and coeTypRec coe_list cD (cPsi, sArec)  = match coe_list with
          begin try 
            Unify.matchTypRec cD phat sArec (trec1, s);
            begin match trec2opt with
-	       Some trec2 -> (trec2, s) 
+               Some trec2 -> (trec2, s) 
            (* cPsi |- [s]trec2   *) 
            (* NOTE in general: We need to find a substitution s' s.t. cPhi |- s' <= cPsi 
               and eventually return [s']([s]trec2)
               This here assumes that the coercion is a one-to-one mapping.
            *)
-	     | None -> raise (Violation "Coercion drops elements – not implemented")
-	   end 
+             | None -> raise (Violation "Coercion drops elements – not implemented")
+           end 
          with _ -> coeTypRec c_list cD (cPsi, sArec)
          end
 
@@ -401,10 +400,10 @@ and csub_ctxCoe co_cid cD (phi,k) cPsi = match phi with
       else (CtxVar phi, false)
   | CoCtx (co_cid', phi') -> 
       let (cPsi', flag) = csub_ctxCoe co_cid' cD (phi',k) cPsi in 
-	if flag then 
-	  ((applyCtxCoe co_cid cD cPsi') , true)
-	else
-	  (cPsi', false)
+        if flag then 
+          ((applyCtxCoe co_cid cD cPsi') , true)
+        else
+          (cPsi', false)
 
 and csub_dctx cD cPsi k cPhi = 
   let rec csub_dctx' cPhi = match cPhi with 
@@ -415,7 +414,7 @@ and csub_dctx cD cPsi k cPhi =
               if k = offset then 
                 (cPsi, true) else (CtxVar phi, false)
           | CoCtx (co_cid , phi') -> 
-	      csub_ctxCoe co_cid cD (phi',k) cPsi 
+              csub_ctxCoe co_cid cD (phi',k) cPsi 
         in 
           check_ctx_var phi 
 

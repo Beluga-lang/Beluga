@@ -363,7 +363,7 @@ and index_typ cvars bvars = function
   | Ext.LF.Atom (loc, a, s) ->
       begin try 
         let _        = dprint (fun () -> "Indexing type constant " ^ a.string_of_name) in 
-        let a' = Typ.index_of_name a in
+        let a' = Typ.index_of_name a
         and s' = index_spine cvars bvars s in
           Apx.LF.Atom (loc, a', s')
       with Not_found ->
@@ -817,7 +817,7 @@ and index_branch ctx_vars cvars vars branch = match branch with
  *  elTyp  cD cPsi a = A'
  *)
 
-(* ******************************************************************* *)`
+(* ******************************************************************* *)
 (* Free variable constraints:
  *
  * fvar_cnstr  C := . | Root (FVar X, tS) & C

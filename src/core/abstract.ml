@@ -1093,7 +1093,7 @@ and abstractMVarHead cQ offset tH = match tH with
   | I.MVar (I.Offset x , s) -> 
       I.MVar (I.Offset x, abstractMVarSub cQ offset s) 
 
-  |  I.FMVar (u, s) ->  -> 
+  |  I.FMVar (u, s) ->
       let x = index_of cQ (FMV (u, None)) + offset in 
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 

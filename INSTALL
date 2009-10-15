@@ -3,17 +3,15 @@
 This document describes the compilation and installation procedures
 for Beluga.
 
+*      [Prerequisites]
+       *        [GODI]
+       *        [GODI Installation Instructions]
 
-*      [Prerequisites](#01)
-
-       *        [GODI](#02)
-       *        [GODI Installation Instructions](#03)
-
-*      [Building](#04)
+*      [Building]
 
 
-Prerequisites <a id="01"/>
-==============
+Prerequisites
+=============
 
 Debian
 ------
@@ -111,11 +109,24 @@ GODI Installation Instructions
    instructions below for Beluga itself.
 
 
-
 Building
 ========
 
 Install the dependencies and then run "omake", after which you'll have an
 "interpreter" executable in the "bin" directory.
 
-TODO: note about bytecode / native
+
+Native code compilation
+========================
+
+If Beluga seems too slow, try using the OCaml native code compiler:
+
+  omake NATIVE_ENABLED=true 
+
+This typically results in about a 6x speedup.  Note, however, that if you
+ever need to run `omake clean', you should pass the same option:
+
+  omake NATIVE_ENABLED=true clean
+
+Running `omake clean' without setting NATIVE_ENABLED may not properly
+remove the native code.

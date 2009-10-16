@@ -98,7 +98,6 @@ cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further'
 sleep 1
 
-echo suppress: $suppress
 if [ $suppress = SUPPRESS ]; then
   echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'
   exit 3

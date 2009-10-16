@@ -1,6 +1,15 @@
 #!/bin/sh
 
+suppress=NO
+git status 2> /dev/null | egrep 'Changed but not updated|Changes to be committed' > /dev/null \
+  && suppress=SUPPRESS
 
+if [ $suppress = SUPPRESS ]; then
+   echo
+   echo '`git status'"'"' reports changed files.'
+   echo 'This script will continue, but will not build a final .tar.gz file.'
+   echo
+fi
 
 # release=./release
 echo 'Version number is:'
@@ -88,8 +97,17 @@ sleep 2
 cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further'
 sleep 1
+
+echo suppress: $suppress
+if [ $suppress = SUPPRESS ]; then
+  echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'
+  exit 3
+fi
+
+sleep 1
 echo 'Building archive' $release.tar
 tar zcf $release.tar.gz $release || ( echo 'tar failed' ; exit 1 )
 echo
 ls -l $release.tar.gz
 echo
+echo "Release built.  Don't forget to "'`'"git push' if needed."

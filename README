@@ -4,14 +4,14 @@ This document describes the Beluga source code, including a
 description of the source code structure and a description of the
 Beluga project.
 
-*      [Structure](#01)
+*      [Structure]
 
-*      [Project Description](#02)
+*      [Project Description]
 
-       *        [Contextual Modal Type Theory](#03)
+       *        [Contextual Modal Type Theory]
 
 
-Structure <a id="01"/>
+Structure
 =========
 
 
@@ -24,19 +24,6 @@ beluga
     TODO.text           List of tasks to be completed
 
 
-doc
----
-
-Various papers describing Contextual Modal Type Theory.
-
-
-ocaml-notes
------------
-
-Many of the programmers on this project were experienced with SML but
-not Ocaml.  `ocaml-notes` contains information relevant such people.
-
-
 src
 ---
   OMakefile
@@ -44,20 +31,6 @@ src
 
 src/core:
 ---------
-
-   debug.mli    OMakefile~                 substitution.ml
-abstract.mli  error.ml     parser.ml                  substitution.mli
-check.ml      error.mli    parser.mli                 syntax.ml
-check.mli     gensym.ml    pretty.ml                  syntax.mli
-common.ml     gensym.mli   pretty.mli                 token.ml
-common.mli    id.ml        reconstruct-Aug26.09.ml    trail.ml
-config.ml     id.mli       reconstruct-July13.ml      trail.mli
-context.ml    lexer.ml     reconstruct.ml             unify.ml
-context.mli   lexer.mli    reconstruct.mli            whnf.ml
-cwhnf.ml      monitor.ml   reconstruct-opt-July13.ml  whnf.mli
-cwhnf.mli     monitor.mli  store.ml
-debug.ml      OMakefile    store.mli
-
     abstract.ml         Abstraction
     abstract.mli
     check.ml            Typechecking
@@ -65,9 +38,13 @@ debug.ml      OMakefile    store.mli
     common.ml
     common.mli
     config.ml           State configuration for Core
+    context.ml          Contexts 
+    context.mli         
+    ctxsub.ml           Context substitutions
+    ctxsub.mli          
     cwhnf.ml            Contextual Weak head normalization
     cwhnf.mli
-    debug.ml            Debuggin flags
+    debug.ml            Debugging flags
     error.ml
     error.mli           Error handling
  
@@ -86,7 +63,7 @@ debug.ml      OMakefile    store.mli
     reconstruct.ml      Type reconstruction for LF and computations
     reconstruct.mli
     store.ml            Variable store, maps ids to variable information
-    store.mli           ...
+    store.mli           
     substitution.ml     Explicit substitution operations (ordinary and contextual)
     substitution.mli
     syntax.ml           Syntax for the LF and computation layer of Beluga
@@ -112,12 +89,51 @@ tools
   beluga-mode.el        Emacs mode for Beluga programs
 
 
-Project Description <a id="02"/>
+Project Description
 ===================
 
 
-Contextual Modal Type Theory <a id="03"/>
-----------------------------
+  Our main interest in this project is to investigate programming 
+and reasoning with data structures that provide support for binders. 
+Many object languages include binding constructs, and it is striking 
+that functional languages still lack direct support for binders and 
+common tricky operations such as renaming, capture-avoiding substitution,
+ and fresh name generation.
+
+We advocate the use of higher-order abstract syntax (HOAS) where we 
+represent binders in the object language with binders in the meta-language. 
+One of the key benefits is that we not only get support for renaming 
+and fresh name generation, but also for capture-avoiding substitution. 
+While HOAS encodings have played an important role in mechanizing the 
+meta-theory of programming languages, it has been difficult to incorporate 
+HOAS encodings directly into functional programming. 
+
+The Beluga implementation provides an implementation of the logical
+framework LF, and in addition a functional programming environment
+which supports dependent types and analyzing LF data via pattern 
+matching. It is a completely new implementation effort. Its
+implementation of the logical framework LF in OCaml shares, adapts and 
+extends some fundamental ideas from the Twelf system. The functional
+programming environment which is built on top of the logical framework
+LF is a completely new implementation based on previous theoretical
+ideas presented in [Pientka:POPL08] and [PientkaDunfield:PPDP08]. 
 
 
+Publications
+============
 
+  * Brigitte Pientka and Joshua Dunfield. 
+    Programming with proofs and explicit contexts. 
+    In ACM SIGPLAN Symposium on Principles and Practice of Declarative 
+    Programming (PPDP'08), pages 163-173. ACM Press, July 2008. 
+
+  * Joshua Dunfield and Brigitte Pientka. 
+    Case analysis of higher-order data. 
+    In International Workshop on Logical Frameworks and Meta-Languages: 
+    Theory and Practice (LFMTP'08). Elsevier, June 2008.
+
+  * Brigitte Pientka. 
+    A type-theoretic foundation for programming with higher-order abstract 
+    syntax and first-class substitutions. 
+    In 35th ACM Symposium on Principles of Programming Languages (POPL'08), 
+    pages 371-382. ACM Press, January 2008. 

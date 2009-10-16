@@ -28,8 +28,6 @@ cp -a \
  STYLE \
  TEST \
  TEST-LF \
- TEST-TWELF \
- TODO \
  $release
 
 mkdir $release/bin
@@ -55,6 +53,11 @@ echo Deleting useless files:
 useless="`find . -print | egrep '~|.DS_Store'`"
 echo rm $useless
 rm $useless
+
+# Remove examples not yet ready for public consumption
+rm -rf examples/notworking
+rm -rf examples/cfg
+rm -rf examples/beluga
 
 echo Copying $release to $release-sandbox
 cd ..

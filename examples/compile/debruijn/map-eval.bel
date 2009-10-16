@@ -1,7 +1,7 @@
 %%% Mapping evaluations to evaluations in environments.
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
-%%% Aapted to Beluga: Brigitte Pientka
+%%% Adapted to Beluga: Brigitte Pientka
 
 % To return a pair: feval K F W * vtrans W V we define the
 % following constructor. This avoids not only computation-level pairs

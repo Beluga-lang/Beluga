@@ -116,6 +116,9 @@ FN g => mlam A' => fn d => fn e => case e of
   
 ;
 
+
+% Original Twelf implementation 
+%
 % ca : {A:o} conc A -> (hyp A -> conc C) -> conc C -> type.
 % %mode ca +A +D +E -F.
 % 

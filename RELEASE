@@ -1,5 +1,7 @@
 #!/bin/sh
 
+
+
 # release=./release
 echo 'Version number is:'
 echo
@@ -59,18 +61,29 @@ rm -rf examples/notworking
 rm -rf examples/cfg
 rm -rf examples/beluga
 
-echo Copying $release to $release-sandbox
+echo "Copying $release to $release-sandbox"
 cd ..
 cp -a $release $release-sandbox
 
 cd $release-sandbox
-echo Running omake
+echo 'Running omake'
 omake || ( echo 'omake failed; aborting release' ; exit 1 )
 
-echo Running TEST
+echo 'Running TEST'
 ./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
 
-echo 'TEST exit value 0; check output for signs of trouble'
+omake clean
+omake NATIVE_ENABLED=true clean
+
+echo
+echo 'Running omake NATIVE_ENABLED=true'
+sleep 1
+omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
+
+echo 'Running TEST (native code)'
+./TEST || ( echo 'TEST (native code) failed; aborting release' ; exit 1 )
+
+echo ; echo 'TEST exit value 0; check output for signs of trouble'
 sleep 2
 cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further'

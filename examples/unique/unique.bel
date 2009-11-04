@@ -1,0 +1,72 @@
+% Definition of types and expressions
+tp: type.  %name tp T.
+arr: tp -> tp -> tp.
+nat: tp.
+
+exp: type. %name exp E.
+lam : tp -> (exp -> exp) -> exp.
+app : exp -> exp -> exp.
+
+% Typing judgment
+hastype: exp -> tp -> type. %name hastype H.
+
+h_lam: ({x:exp}hastype x T1 -> hastype (E x) T2)
+	-> hastype (lam T1 E) (arr T1 T2).
+	  
+h_app: hastype E1 (arr T2 T) -> hastype E2 T2
+       -> hastype (app E1 E2) T.
+
+% Equality predicate
+eq: tp -> tp -> type.
+e_arr:  eq T1 S1 -> eq T2 S2
+	-> eq (arr T1 T2) (arr S1 S2).
+
+e_nat: eq nat nat.
+
+
+% Reflexivity is admissible:
+% Theorem: For all types T:tp, eq T T.
+rec refl : {T::tp[ ]}(eq T T)[ ] = 
+mlam T => case [ ] T of 
+ | [ ] nat => [ ] e_nat 
+ | [ ] arr T1 T2 => 
+   let [ ] D1 = refl < . T1 > in 
+   let [ ] D2 = refl < . T2 > in 
+     [ ] e_arr D1 D2
+;			 
+
+
+% Uniqueness of typing
+%{Theorem: 
+  If  G |- hastype E T  and G |- hastype E T'  
+  then  equal T T'.
+
+Proof by induction on E.
+}%
+
+schema tctx =  some [t:tp] block x:exp. hastype x t;
+
+rec unique : {g:(tctx)*}{E::exp[g]} (hastype (E ..) T)[g] -> (hastype (E ..) T')[g] 
+	     ->  (eq T T')[ ] = 
+FN g => mlam E => fn d => fn f => case ([g] E .. ) of 
+| [g] app (E1 .. ) (E2 .. ) => 
+  let [g] h_app (D1 ..) (D2 ..) = d in 
+  let [g] h_app (F1 ..) (F2 ..) = f in 
+  let [ ] e_arr C1 C2 = unique [g] <g . E1 .. > ([g] D1 ..) ([g] F1 ..) in    
+    [ ] C2  						 
+
+| [g] lam T1 (\x. E .. x) => 
+  let [g] h_lam (\x.(\u. D .. x u)) = d in 
+  let [g] h_lam (\x.(\u. F .. x u)) = f in 
+  let [ ] C2 = unique [g,b: block x:exp. hastype x T1] 
+		      <g,b. (E .. b.1) > ([g,b] D .. b.1 b.2) ([g,b] F .. b.1 b.2) in 
+ let [ ] C1 = refl < . T1 > in 
+   [ ] e_arr C1 C2 
+
+| [g] #p.1 .. => 
+  let [g] #q.2 .. = d  in  % d : hastype #p.1 T
+  let [g] #r.2 .. = f  in  % f : hastype #p.1 T'
+    refl < . _ >
+
+;
+

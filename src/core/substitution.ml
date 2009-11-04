@@ -345,8 +345,10 @@ module LF = struct
 
     | Obj u               -> Obj (Clo (u, s))
     | Undef               -> Undef
+    | Head (FPVar (_n, _ )) -> ft
+    | Head (MMVar (_n, _ )) -> raise (Error "[frontSub] mmvar undefined ")
 
-
+        
   (* dot1 (s) = s'
    *
    * Invariant:

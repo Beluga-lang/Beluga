@@ -294,15 +294,15 @@ let rec constraints_solved cnstr = match cnstr with
   | [] -> true
   | ({contents = I.Queued} :: cnstrs) -> 
       constraints_solved cnstrs 
-  | ({contents = I.Eqn (_cD, phat, tM, tN)} :: cnstrs) -> 
+  | ({contents = I.Eqn (_cD, cPsi, tM, tN)} :: cnstrs) -> 
       if Whnf.conv (tM, LF.id) (tN, LF.id) then 
         constraints_solved cnstrs
       else 
         (Printf.printf "Encountered unsolved constraint:\n %s  =   %s\n\n"
-           (P.normalToString I.Empty I.Empty (phatToDCtx phat) (tM, LF.id))
-           (P.normalToString I.Empty I.Empty (phatToDCtx phat) (tN, LF.id));         
+           (P.normalToString I.Empty I.Empty cPsi (tM, LF.id))
+           (P.normalToString I.Empty I.Empty cPsi (tN, LF.id));         
          false )
- | ({contents = I.Eqh (_cD, _phat, h1, h2)} :: cnstrs) -> 
+ | ({contents = I.Eqh (_cD, _cPsi, h1, h2)} :: cnstrs) -> 
       if Whnf.convHead (h1, LF.id) (h2, LF.id) then 
         constraints_solved cnstrs
       else false 

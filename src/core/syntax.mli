@@ -118,8 +118,8 @@ module Int : sig
 
     and constrnt =
       | Queued
-      | Eqn of mctx * psi_hat * normal * normal
-      | Eqh of mctx * psi_hat * head * head
+      | Eqn of mctx * dctx * normal * normal
+      | Eqh of mctx * dctx * head * head
 
     and cnstr    = constrnt ref
 

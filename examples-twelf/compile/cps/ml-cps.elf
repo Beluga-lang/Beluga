@@ -25,8 +25,9 @@ cmp_fst : cmp (fst E) (\v. K v) E'
 cmp_snd : cmp (snd E) (\v. K v) E'
 	   <- cmp E (\x. snd+ x (\v. K v)) E'.
 
-cmp_lam : {E':cval -> (cval -> cexp) -> cexp}
-	   cmp (lam (\x. E x)) (\v. K v) (K (lam+ (\v. \k. E' v (\v'. k v'))))
+cmp_lam : 
+%	   cmp (lam (\x. E x)) (\v. K v) (K (lam+ (\v. (\k. E' v  k))))
+	   cmp (lam (\x. E x)) (\v. K v) (K (lam+ E'))
 	   <- ({x:exp} {x':cval}
 		 ({k':cval -> cexp} cmp x (\v. k' v) (k' x'))
 		 -> {k:cval -> cexp}

@@ -13,8 +13,6 @@ if   : term -> term -> term -> term.
 letv : term -> (term -> term) -> term.
 lam  : tp -> (term -> term) -> term.
 
-
-
 oft  : term -> tp -> type.
 o_tt : oft tt bool.
 o_ff : oft ff bool.
@@ -38,7 +36,16 @@ certify' : {T:tp}cert E
        <- oft E T.
 
 schema tpCtx = some [t:tp] block x:term. oft x t;
+%{
+rec infer : {g:(tpCtx)*} {U :: term[g]} (cert U[^0])[g] =
+ FN g =>
+  mlam U => 
+    case [g] U[^0] : term[g] 
+      of  {Z :: tp[g]}  {#z10 :: (block x:term. oft x Z[^1])[g]} 
+       ([g] #z10.1[^0])  : g . #z10.1[^0] = U ,   => 
+       [g] certify #z10.1[^0] Z[^0] #z10.2[^0]  
 
+}%
 rec infer : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
   FN g => mlam U =>
    case [g] U .. of
@@ -46,22 +53,22 @@ rec infer : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
 
    | [g] tt    => [g] certify o_tt
 
- | {T :: tp[g]} {#p::(block x:term. oft x (T ..))[g]}
-   [g] #p.1 ..  => [g] certify (#p.2 ..)
+   | [g] #p.1 ..  => [g] certify (#p.2 ..)
 
  | [g] lam (T ..) \x. E .. x => 
-    case infer [g, b: block x:term. oft x (T ..)] <g, b. E .. b.1> of   
+    (case infer [g, b: block x:term. oft x (T ..)] <g, b. E .. b.1> of   
      {T2::tp[]} {T::tp[]}
      {D::(oft (E .. b.1) T2)[g, b: block x:term. oft x T]}
       [g, b: block x:term. oft x T] certify (D .. b)
       => [g] certify (o_lam \x.\u. D .. <x, u>)
+    )
 
-%{ 
- | [g] letv (E1 ..) (\x. (E2 .. x)) => 
+%{ | [g] letv (E1 ..) (\x. (E2 .. x)) => 
      let [g] certify (D1 ..) = infer [g] <g. E1 ..>  in 
      let [g, b: block x:term. oft x (S1 ..)] certify (D2 .. b) = 
              % We don't know the type of E1 so we can't give it in the next line,
              %  but writing _ leaves a free variable
+	     % This is fixed in the version below by making T explicit in the definition of certify.
              infer [g, b: block x:term. oft x _ ] <g, b. E2 .. b.1> in 
          [g]  certify o_let (D1 ..) (\x.\u. D2 .. <x, u>)
 }%
@@ -71,12 +78,11 @@ rec infer : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
 rec infer' : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
   FN g => mlam U =>
    case [g] U .. of
-     [g] z     => [g] certify' nat o_z
+ | [g] z     => [g] certify' nat o_z
 
-   | [g] tt    => [g] certify' bool o_tt
+ | [g] tt    => [g] certify' bool o_tt
 
- | {T :: tp[ ]} {#p::(block x:term. oft x T)[g]}
-   [g] #p.1 ..  => [g] certify' T  (#p.2 ..)
+ | [g] #p.1 ..  => [g] certify' _   (#p.2 ..)
 
  | [g] lam T \x. E .. x => 
    let [g, b: block x:term. oft x T1] certify' T2 (D .. b) = 
@@ -87,8 +93,6 @@ rec infer' : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
  | [g] letv (E1 ..) (\x. (E2 .. x)) => 
      let [g] certify' T1 (D1 ..) = infer' [g] <g. E1 ..>  in 
      let [g, b: block x:term. oft x (S1 ..)] certify' T2 (D2 .. b) = 
-             % We don't know the type of E1 so we can't give it in the next line,
-             %  but writing _ leaves a free variable
              infer' [g, b: block x:term. oft x T1 ] <g, b. E2 .. b.1> in 
          [g]  certify' T2 (o_let (D1 ..) (\x.\u. D2 .. <x, u>))
 

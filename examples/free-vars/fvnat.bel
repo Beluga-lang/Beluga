@@ -24,33 +24,32 @@ rec free_var : {g:(w)*} (exp (T ..))[g] -> opt[g] =
 FN g  => % mlam T  => 
  fn e => 
  case e of
-    [g] z             => [g] nothing
-  | [g] tt            => [g] nothing
-  | [g] ff            => [g] nothing
+  [g] z         => [g] nothing
+| [g] tt        => [g] nothing
+| [g] ff        => [g] nothing
+ 
+| [g] (#p ..)    => [g] something  (#p ..)
 
-  | [g] (#p ..) 
-    => [g] something  (#p ..)
+| [g] suc (U ..) => free_var [g] ([g] (U ..))
 
-  | [g] suc (U ..)  => free_var [g] ([g] (U ..))
+| [g] andalso (U ..) (V ..)  => 
+  (case free_var [g] ([g] (U ..)) of
+     [g] nothing   => free_var [g] ([ ] (V ..))
+   | [g] something  (#p ..)  => [ ] something  (#p ..))
 
-   | [g] andalso (U ..) (V ..)  => 
-        (case free_var [g] ([g] (U ..)) of
-           [g] nothing   => free_var [g] ([ ] (V ..))
-         | [g] something  (#p ..)  => [ ] something  (#p ..))
+| [g] app (U ..) (V ..)  => 
+    (case free_var [g] ([g] (U ..)) of
+       [g] nothing   => free_var [g] ([g] (V ..))
+     | [g] something  (#p ..)  => [g] something  (#p ..))
 
-   | [g] app (U ..) (V ..)  => 
-        (case free_var [g] ([g] (U ..)) of
-           [g] nothing   => free_var [g] ([g] (V ..))
-         | [g] something  (#p ..)  => [g] something  (#p ..))
+| [g] lam (\x . (U .. x)) => 
 
-   | [g] lam (\x . (U .. x)) => 
-
-      (case (free_var [g, x:exp _ ] ([g, x] (U .. x))) of 
-         [g, x: exp _ ] nothing       => [ ] nothing
-       | [g, x: exp _ ] something x   => [ ] nothing
+   (case (free_var [g, x:exp _ ] ([g, x] (U .. x))) of 
+      [g, x: exp _ ] nothing       => [ ] nothing
+    | [g, x: exp _ ] something x   => [ ] nothing
            % technically we need to initiate backtracking
-       | [g, x: exp _ ] something (#p ..) => [ ] something (#p ..)
-       )
+    | [g, x: exp _ ] something (#p ..) => [ ] something (#p ..)
+   )
 ;
 
 

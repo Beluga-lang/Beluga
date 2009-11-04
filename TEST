@@ -76,6 +76,8 @@ $INTERPRETER +t \
     typed-eval/tpeval.bel \
     typed-eval/tpeval-explicit.bel \
     typed-eval/tpeval2.bel \
+    unique/unique.bel \
+    unique/unique-eval.bel \
     LF/arith.lf \
     LF/arith-rec1.lf \
     LF/lambda.lf \

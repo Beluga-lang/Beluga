@@ -140,9 +140,9 @@ module Int = struct
 
     and constrnt =                          (* Constraint                     *)
       | Queued                              (* constraint ::= Queued          *)
-      | Eqn of mctx * psi_hat * normal * normal
+      | Eqn of mctx * dctx * normal * normal
                                             (*            | Psi |-(M1 == M2)  *)
-      | Eqh of mctx * psi_hat * head * head (*            | Psi |-(H1 == H2)  *)
+      | Eqh of mctx * dctx * head * head    (*            | Psi |-(H1 == H2)  *)
 
     and cnstr = constrnt ref
 

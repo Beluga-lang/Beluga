@@ -445,8 +445,8 @@ and norm (tM, sigma) = match tM with
   | Root (loc, BVar i, tS) ->
       begin match LF.bvarSub i sigma with
         | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma)) 
-        | Head (BVar k) -> Root (loc, BVar k, normSpine (tS, sigma))
-        | Head head     -> norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
+        | Head (BVar k) ->  Root (loc, BVar k, normSpine (tS, sigma))
+        | Head head     ->  norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
         | Undef         -> raise (Violation ("Looking up " ^ string_of_int i ^ "\n"))
         | Block _       -> raise (Violation ("Block should not happen! \n"))
             (* Undef should not happen ! *)
@@ -577,7 +577,9 @@ and normTuple (tuple, t) = match tuple with
 and normSpine (tS, sigma) = 
    begin match tS with
      | Nil           -> Nil
-     | App  (tN, tS) -> App (norm (tN, sigma), normSpine (tS, sigma))
+     | App  (tN, tS) -> 
+         let tN' =  norm (tN, sigma) in
+         App (tN', normSpine (tS, sigma))
      | SClo (tS, s)  -> normSpine (tS, LF.comp s sigma)
    end
 
@@ -641,7 +643,8 @@ and normTyp (tA, sigma) =  match tA with
 
 and normTypRec (recA, sigma) = match recA with
   | SigmaLast lastA ->
-      SigmaLast (normTyp (lastA, sigma))
+      let tA = normTyp (lastA, sigma) in 
+      SigmaLast tA
 
   | SigmaElem (x, tA, recA') ->
       let tA = normTyp (tA, sigma) in

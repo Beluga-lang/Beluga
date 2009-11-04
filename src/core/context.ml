@@ -128,6 +128,8 @@ let rec ctxVar = function
   | CtxVar psi        -> Some psi
   | DDec   (cPsi, _x) -> ctxVar cPsi
 
+
+
 let hasCtxVar cPsi = match ctxVar cPsi with
   | Some _ -> true
   | None -> false

@@ -58,6 +58,49 @@ module LF = struct
         let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
           Dot (front, LF.comp s LF.shift)
 
+
+let rec ctxShift cPsi = begin match cPsi with
+  | Null              -> Shift (NoCtxShift , 0 )
+  | CtxVar psi        -> Shift (CtxShift psi, 0)
+  | DDec   (cPsi, _x) -> 
+      match  ctxShift cPsi with
+          Shift (cshift, n)  -> Shift (cshift, n+1)
+  end
+
+  (* ctxToSub' cPhi cPsi = s 
+
+     if x1:A1, ... xn:An = cPsi
+     then D = u1:A1[cPhi], ... un:An[cPhi]
+
+     s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
+  *)
+  let rec ctxToSub' cPhi cPsi = match cPsi with
+    | Null -> LF.id
+    | DDec (cPsi', TypDecl (_, tA)) ->
+        let s = ((ctxToSub' cPhi cPsi') : sub) in
+          (* For the moment, assume tA atomic. *)
+          (* lower tA? *)
+          (* A = A_1 -> ... -> A_n -> P
+
+             create cPhi = A_1, ..., A_n
+             \x_1. ... \x_n. u[id]
+             u::P[cPhi]
+
+             already done in reconstruct.ml
+             let (_, d) = Context.dctxToHat cPsi in
+             let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift d) in
+             in elSpineIW
+          *)
+        (* let (_, phat') = Context.dctxToHat cPsi' in*)
+        (* let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in *)
+
+        (* let u     = Whnf.etaExpandMV Null (tA, s) LF.id in *)
+          (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
+        let u     = Whnf.etaExpandMV cPhi (tA, LF.comp s (ctxShift cPhi)) LF.id in 
+        let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
+          Dot (front, LF.comp s LF.shift)
+
+
   (* check cO cD cPsi (tM, s1) (tA, s2) = ()
    *
    * Invariant:
@@ -591,22 +634,32 @@ This case should now be covered by the one below it
               | _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
   and instanceOfSchElem cO cD cPsi (tA, s) (SchElem (some_part, block_part)) = 
+    let _ = dprint (fun () -> "instanceOfSchElem ... \n") in 
     let sArec = match Whnf.whnfTyp (tA, s) with
       | (Sigma tArec,s') -> 
           (tArec, s') 
       | (nonsigma, s') -> 
           (SigmaLast nonsigma, s') in
+    let _ = dprint (fun () -> ("tA =" ^ P.typToString cO cD cPsi (tA, s) ^ " \n")) in 
     let dctx        = projectCtxIntoDctx some_part in
-    let dctxSub     = ctxToSub dctx in
-    let phat        = dctxToHat cPsi in
+      
+    let dctxSub     = ctxToSub' cPsi dctx in
+
+    (* let phat        = dctxToHat cPsi in *)
+
+    let _ =  dprint (fun () -> "***Unify.unifyTypRec (" 
+                        ^ "\n   cPsi = " ^ P.dctxToString cO cD cPsi
+                        ^ "\n   dctx = " ^ P.dctxToString cO cD dctx  
+                        ^ "\n   " ^  P.typToString cO cD cPsi (tA, s) ) in
+    let _ = dprint (fun () -> "dctxSub = " ^ P.subToString cO cD cPsi dctxSub ^ "\n") in
+      (* P.typRecToString cO cD cPsi sArec  *)
+(*    let _ = dprint (fun () -> 
+                         "\n== " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ) in  *)
+    let _ = dprint (fun () ->  "== " ) in 
+    let _ = dprint (fun () -> P.typRecToString cO cD cPsi (block_part, dctxSub) ) in
       begin
-        dprint (fun () -> "***Unify.unifyTypRec ("
-                        ^ "\n   dctx = " ^ P.dctxToString cO cD dctx
-                        ^ "\n   " ^ (* P.typToString cO cD cPsi (tA, s) *)
-                  P.typRecToString cO cD cPsi sArec 
-                        ^ "\n== " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) );
         try
-          Unify.unifyTypRec cD phat sArec (block_part, dctxSub) 
+          Unify.unifyTypRec cD cPsi sArec (block_part, dctxSub) 
         ; dprint (fun () -> "instanceOfSchElem\n"
                             ^ "  block_part = " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n"
                             ^ "  succeeded.")
@@ -620,6 +673,7 @@ This case should now be covered by the one below it
   
   and instanceOfSchElemProj cO cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) = 
     let tA_k (* : tclo *) = getType var (trec, LF.id) k 1 in
+    let _ = dprint (fun () -> "instanceOfSchElemProj ... ") in
     let (_tA'_k, subst) =
       instanceOfSchElem cO cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (TClo tA_k)))
       (* tA'_k = [subst] (tA_k) = [s]tA *)

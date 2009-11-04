@@ -277,9 +277,9 @@ and coeTypRec coe_list cD (cPsi, sArec)  = match coe_list with
   | (CoBranch (some_part, trec1, trec2opt)::c_list) -> 
        let dctx  = projectCtxIntoDctx some_part in
        let s     = ctxToSub dctx in
-       let phat  = dctxToHat cPsi in
+       (* let phat  = dctxToHat cPsi in*)
          begin try 
-           Unify.matchTypRec cD phat sArec (trec1, s);
+           Unify.matchTypRec cD cPsi sArec (trec1, s);
            begin match trec2opt with
                Some trec2 -> (trec2, s) 
            (* cPsi |- [s]trec2   *) 
@@ -347,9 +347,9 @@ and invcoeTypRec coe_list cD (cPsi, sArec)  = match coe_list with
   | (CoBranch (some_part, trec1, Some trec2)::c_list) -> 
        let dctx  = projectCtxIntoDctx some_part in
        let s     = ctxToSub dctx in
-       let phat  = dctxToHat cPsi in
+       (* let phat  = dctxToHat cPsi in*)
          begin try 
-           Unify.matchTypRec cD phat sArec (trec2, s);
+           Unify.matchTypRec cD cPsi sArec (trec2, s);
            (trec1, s)
          with _ -> invcoeTypRec c_list cD (cPsi, sArec)
          end

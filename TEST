@@ -30,12 +30,22 @@ cd $X
 # We use the following conventions:
 #
 # - Pure LF signatures (and original converted Twelf example) are in files sources.cfg
-# - Proofs written in Beluga (or an original Twelf example) are in test.cfg
-# 
+# - Proofs written in Beluga are in test.cfg
+# - Files ending in .bel contain Beluga programs
 
 $INTERPRETER +t \
     $* \
     arith/arith.bel \
+    compile/cls/sources.cfg \
+    compile/cls/test.cfg \
+    compile/cpm/sources.cfg \
+    compile/cpm/test.cfg \
+    compile/debruijn/sources.cfg \
+    compile/debruijn/test.cfg \
+    compile/debruijn1/sources.cfg \
+    compile/debruijn1/test.cfg \
+    compile/cps/sources.cfg \
+    compile/cxm/sources.cfg \
     count-var/cntvar.bel \
     count-var/cntvar-explicit.bel \
     count-var/cntvar-2.bel \
@@ -47,6 +57,8 @@ $INTERPRETER +t \
     debruijn1/sources.cfg \
     equal/eq-proof-tuple.bel \
     equal/eq-proof.bel \
+    fol/sources.cfg \
+    fol/test.cfg \
     free-vars/fvnat.bel \
     free-vars/fvnat-explicit.bel \
     lp-horn/sources.cfg \
@@ -58,6 +70,8 @@ $INTERPRETER +t \
     mini-ml/vsound.bel \
     mini-ml/vsound-explicit.bel \
     small-step/lam.bel \
+    small-step/system-f.bel \
+    small-step/system-f-iso.bel \
     test/backarrow.bel \
     test/case1.bel \
     test/case1-explicit.bel \
@@ -121,23 +135,3 @@ $INTERPRETER +t \
     test/sigma3.bel \
     test/sigma4.bel \
     test/implicit-obj.bel 
-#    notworking/fol-handbook.bel 
-#
-#    
-#   
-#     
-
-#
-
-#    LF/arith-unify.lf LF/tps-1.lf    ??
-#
-#
-#
-#    notworking/church-rosser.rec \
-#    notworking/cut-elim.bel \
-#    notworking/fol-handbook.bel \
-#    notworking/tpeval.bel \
-#
-#
-# *** Needs to be updated for new syntax: ***
-#    @tests/fvnat.rec

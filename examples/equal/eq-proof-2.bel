@@ -28,20 +28,17 @@ eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
 schema eqCtx = block x:exp. eq x x;
 
 rec ref : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
- FN g => mlam U =>
-   case [g] (U ..) of
-  | [g] #p.1 .. => [g] #p.2 ..
+ FN g => mlam U => case [g] (U ..) of
+| [g] #p.1 .. => [g] #p.2 ..
 
-  | [g] lam \x. L .. x =>
-      let
-          [g,e:block yyy:exp. eq yyy yyy] V .. e = 
-            ref [g, e:block q:exp. eq q q] <g, e. L .. e.1>
-      in
-        [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
-   | [g] app (A1 ..) (A2 ..)  : exp[g]=>
-       let [g] EQ1 .. = ref [g] <g . A1 ..> in
-       let [g] EQ2 .. = ref [g] <g . A2 ..> in
-          [g] eq_app (EQ1 ..) (EQ2 ..)
+| [g] lam \x. L .. x =>
+  let [g,e:block y:exp. eq y y] V .. e = 
+      ref [g, e:block q:exp. eq q q] <g, e. L .. e.1> in
+    [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
+| [g] app (A1 ..) (A2 ..)  : exp[g]=>
+  let [g] EQ1 .. = ref [g] <g . A1 ..> in
+  let [g] EQ2 .. = ref [g] <g . A2 ..> in
+    [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
 
 
@@ -52,31 +49,24 @@ rec trans: {g:(eqCtx)*}
 -> (eq (RR ..) (SS ..))[g]     % e2 : eq R S
 -> (eq (TT ..) (SS ..))[g]     % result : eq T S
 =
-  FN g => 
-    fn e1 => fn e2 =>
-      case e1 of
+FN g => fn e1 => fn e2 => case e1 of
 
-|{#p :: (block yy:exp. eq yy yy)[g]}
-       [g] #p.2 .. => e2
+| [g] #p.2 .. => e2
 
 | [g] eq_lam \x.\u. D1 .. x u =>
-   let [g] eq_lam \xx.\uu. D2 .. xx uu =  e2  in	
-   let [g, b:block x:exp. eq x x] E .. b = 
-     trans [g, b:block x':exp.fol.bel eq x' x'] 
-         ([g, b] D1 .. b.1 b.2)
-         ([g, b] D2 .. b.1 b.2)
-    in
-      [g] eq_lam \x. \u. E .. <x, u>
+  let [g] eq_lam \x.\u. D2 .. x u =  e2  in	
+  let [g, b:block x:exp. eq x x] E .. b = 
+    trans [g, b:block x':exp. eq x' x'] 
+        ([g, b] D1 .. b.1 b.2)
+        ([g, b] D2 .. b.1 b.2)
+  in
+    [g] eq_lam \x. \u. E .. <x, u>
        
-     | [g] eq_app (D1 ..) (D2 ..) =>
-       (case e2 of
-         [g] eq_app (F1 ..) (F2 ..) =>
-         let [g] E1 .. = trans [g]  ([g] D1 ..)  ([g] F1 ..)
-         in
-         let [g] E2 .. = trans [g]  ([g] D2 ..)  ([g] F2 ..)
-         in
-             [g] eq_app  (E1 ..)  (E2 ..)
-       )
+| [g] eq_app (D1 ..) (D2 ..) =>
+  let [g] eq_app (F1 ..) (F2 ..) = e2 in 
+  let [g] E1 .. = trans [g]  ([g] D1 ..)  ([g] F1 ..) in
+  let [g] E2 .. = trans [g]  ([g] D2 ..)  ([g] F2 ..) in
+    [g] eq_app  (E1 ..)  (E2 ..)
 ;
 
 
@@ -87,8 +77,9 @@ e_a: equal T2 S2  -> equal T1 S1 -> equal (app T1 T2) (app S1 S2).
 e_r: {T:exp}equal T T.
 e_t: equal T' S -> equal T T' -> equal T S.
 
-
 schema equalCtx = some [] block x: exp. equal x x ;
+%{
+
 
 coercionCtx equal2eq : equalCtx -> eqCtx  =
       block x:exp. equal x x => block x:exp'. eq x x;
@@ -109,7 +100,7 @@ coercionTerm equal2eq : equal T T -> eq (equal2eq T) (equal2eq T) =
  eq_app => e_app
 
 
-
+}%
 
 %{
 rec co2eq : {g:(equalCtx)*} (exp)[g] -> (block x:exp. equal x x)[equal2eq(g)] = 
@@ -154,6 +145,7 @@ OR: Substitutions should be thought of structure preserving mappings aka morphis
 
 
 }%
+%{
 % ceq: {g:(eqCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq(g)] 
 
 % T::exp[g], S::exp[g]  ;   equal2eq(g) |-  T .. <= exp  so 
@@ -162,7 +154,7 @@ rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq
  [equal2eq(g)] e_r z 
 ;
 
-
+}%
 %{
 rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq equal2eq(T ..) equal2eq(S ..))[equal2eq(g)]  =
  FN g =>  fn E =>

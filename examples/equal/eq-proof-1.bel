@@ -29,19 +29,18 @@ schema eqCtx = block x:exp. eq x x;
 
 
 rec ref : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
- FN g => mlam U =>
-   case [g] (U ..) of
-  | [g] #p.1 .. => [g] #p.2 ..
+FN g => mlam U => case [g] (U ..) of
+| [g] #p.1 .. => [g] #p.2 ..
 
-  | [g] lam \x. L .. x =>
-      let
-          [g,e:block yyy:exp. eq yyy yyy] V .. e = ref [g, e:block q:exp. eq q q] <g, e. L .. e.1>
-      in
-        [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
-   | [g] app (A1 ..) (A2 ..)  : exp[g]=>
-       let [g] EQ1 .. = ref [g] <g . A1 .. > in
-       let [g] EQ2 .. = ref [g] <g . A2 .. > in
-          [g] eq_app (EQ1 ..) (EQ2 ..)
+| [g] lam \x. L .. x =>
+  let [g,b:block y:exp. eq y y] V .. b = 
+         ref [g, b:block y:exp. eq y y] <g, b. L .. b.1>
+  in
+   [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
+| [g] app (A1 ..) (A2 ..) =>
+  let [g] EQ1 .. = ref [g] <g . A1 .. > in
+  let [g] EQ2 .. = ref [g] <g . A2 .. > in
+    [g] eq_app (EQ1 ..) (EQ2 ..)
 ;
 
   
@@ -52,31 +51,24 @@ rec trans: {g:(eqCtx)*}
 -> (eq (RR ..) (SS ..))[g]     % e2 : eq R S
 -> (eq (TT ..) (SS ..))[g]     % result : eq T S
 =
-  FN g => 
-    fn e1 => fn e2 =>
-      case e1 of
+FN g =>  fn e1 => fn e2 => case e1 of
 
-|{#p :: (block yy:exp. eq yy yy)[g]}
-       [g] #p.2 .. => e2
+| [g] #p.2 .. => e2
 
 | [g] eq_lam \x.\u. D1 .. x u =>
-   let [g] eq_lam \xx.\uu. D2 .. xx uu =  e2  in	
-   let [g, b:block x:exp. eq x x] E .. b = 
+  let [g] eq_lam \x.\u. D2 .. x u =  e2  in	
+  let [g, b:block x:exp. eq x x] E .. b = 
      trans [g, b:block x':exp. eq x' x'] 
          ([g, b] D1 .. b.1 b.2)
          ([g, b] D2 .. b.1 b.2)
-    in
-      [g] eq_lam \x. \u. E .. <x, u>
+  in
+   [g] eq_lam \x. \u. E .. <x, u>
        
-     | [g] eq_app (D1 ..) (D2 ..) =>
-       (case e2 of
-         [g] eq_app (F1 ..) (F2 ..) =>
-         let [g] E1 .. = trans [g]  ([g] D1 ..)  ([g] F1 ..)
-         in
-         let [g] E2 .. = trans [g]  ([g] D2 ..)  ([g] F2 ..)
-         in
-             [g] eq_app  (E1 ..)  (E2 ..)
-       )
+| [g] eq_app (D1 ..) (D2 ..) =>
+   let [g] eq_app (F1 ..) (F2 ..) = e2 in 
+   let [g] E1 .. = trans [g]  ([g] D1 ..)  ([g] F1 ..) in
+   let [g] E2 .. = trans [g]  ([g] D2 ..)  ([g] F2 ..) in
+     [g] eq_app  (E1 ..)  (E2 ..)
 ;
 
 
@@ -88,10 +80,12 @@ e_a: equal T2 S2  -> equal T1 S1
      -> equal (app T1 T2) (app S1 S2).
 e_r: equal T T.
 e_t: equal T R -> equal R S 
-     b-> equal T S.
+     -> equal T S.
 
 
-
+%{
+% NOT WORKING BELOW 
+% REQUIRES CONTEXT COERCIONS/ SUBSUMPTION
 schema equalCtx =  block x: exp.  equal x x ; 
 
 coercion e2eq : equalCtx -> eqCtx = 
@@ -120,3 +114,4 @@ FN g => fn e => case e of
   let [e2eq(g)] F1 .. = ceq [g] ([g] D1 ..) in 
     trans [e2eq(g)] ([e2eq(g)] F1 ..)  ([e2eq(g)] F2 ..)           
 ;
+}%

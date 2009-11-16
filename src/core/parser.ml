@@ -79,6 +79,10 @@ GLOBAL: sgn_eoi;
                         LF.CoTyp(Id.mk_name (Id.SomeString a_ctx), Id.mk_name (Id.SomeString b_ctx)), bs)
 
       |
+        "let"; x = SYMBOL; "="; i = cmp_exp_syn;  ";" ->
+          Sgn.Val (_loc, Id.mk_name (Id.SomeString x), i)
+
+      |
 (*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
           Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
 *)

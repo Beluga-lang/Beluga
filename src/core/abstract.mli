@@ -9,16 +9,18 @@ open Syntax.Int
 
 exception Error of string
 
+type marker = Pure | Impure 
+
 type free_var =
   (* Free variables (references): unnamed *)
-  | MMV of LF.head       
-  | MV of LF.head       
-  | PV of LF.head       
+  | MMV of marker * LF.head       
+  | MV  of marker * LF.head       
+  | PV  of marker * LF.head       
 
   (* Free named variables *)
-  | FV of Id.name * LF.typ option 
-  | FMV of Id.name * (LF.typ * LF.dctx) option 
-  | FPV of Id.name * (LF.typ * LF.dctx) option 
+  | FV  of marker * Id.name * LF.typ option 
+  | FMV of marker * Id.name * (LF.typ * LF.dctx) option 
+  | FPV of marker * Id.name * (LF.typ * LF.dctx) option 
 
 
 

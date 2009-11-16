@@ -86,6 +86,12 @@ let leftoverMeta2 =
 
 *)
 
+type occurrence = Yes | No | Cycle
+
+(* marker will indicate whether the type of the variable is already clean,
+   i.e. the meta-variables and free variables occurring the type had been
+   collected *)
+type marker = Pure | Impure 
 
 type free_var =
   (* Free variables (references): unnamed *)
@@ -94,21 +100,21 @@ type free_var =
      respective MMVar, MVar and PVar; the substitution associated with an
      MMVar, MVar and PVar is irrelevant here *)
 
-  | MMV of I.head         (* Y ::= u[ms,s]   where h = MMVar(u, cD, Psi, P, _)  
-                             and    cD' ; Psi' |- u[ms, s] <= [ms ; s]P      *)
-  | MV of I.head          (* Y ::= u[s]   where h = MVar(u, Psi, P, _)  
-                             and    cD' ; Psi' |- u[s] <= [s]P               *)
-  | PV of I.head          (*    |  p[s]   where h = PVar(p, Psi, A, _)
-                             and    cD' ; Psi' |- p[s] <= [s]A               *)
+  | MMV of marker * I.head         (* Y ::= u[ms,s]   where h = MMVar(u, cD, Psi, P, _)  
+                                      and    cD' ; Psi' |- u[ms, s] <= [ms ; s]P      *)
+  | MV of marker * I.head          (* Y ::= u[s]   where h = MVar(u, Psi, P, _)  
+                                      and    cD' ; Psi' |- u[s] <= [s]P               *)
+  | PV of marker * I.head          (*    |  p[s]   where h = PVar(p, Psi, A, _)
+                                     and    cD' ; Psi' |- p[s] <= [s]A               *)
 
   (* Free named variables *)
-  | FV of Id.name * I.typ option 
+  | FV of marker * Id.name * I.typ option 
                                 (*     | (F, A)                  . |- F <= A *)
 
-  | FMV of Id.name * (I.typ * I.dctx) option 
+  | FMV of marker * Id.name * (I.typ * I.dctx) option 
                      (*     | (F, (A, cPsi))                  cPsi |- F <= A *)
 
-  | FPV of Id.name * (I.typ * I.dctx) option 
+  | FPV of marker * Id.name * (I.typ * I.dctx) option 
                      (*     | (F, (A, cPsi))                  cPsi |- F <= A *)
 
 
@@ -130,7 +136,7 @@ let ctxVarToString psi = match psi with
 let rec collectionToString cQ = match cQ with
   | I.Empty -> ""
 
-  | I.Dec(cQ, MV ((I.MVar (I.Inst(_r, cPsi, tP, _c), _s)) as h)) -> 
+  | I.Dec(cQ, MV (Pure, (I.MVar (I.Inst(_r, cPsi, tP, _c), _s) as h))) -> 
       let (ctx_var, tA) = raiseType cPsi tP in        
       let cO = I.Empty in 
       let cD = I.Empty in 
@@ -142,7 +148,7 @@ let rec collectionToString cQ = match cQ with
       ^ P.typToString cO cD I.Null (tA , LF.id)
       ^ "\n"
 
-  | I.Dec(cQ, MMV ((I.MMVar (I.MInst(_r, cD, cPsi, tP, _c), _s)) as h)) -> 
+  | I.Dec(cQ, MMV (_ , (I.MMVar (I.MInst(_r, cD, cPsi, tP, _c), _s) as h))) -> 
       let (ctx_var, tA) = raiseType cPsi tP in        
       let cO = I.Empty in 
        collectionToString cQ ^ " "
@@ -153,7 +159,7 @@ let rec collectionToString cQ = match cQ with
      ^ P.typToString cO cD I.Null (tA , LF.id)
      ^ "\n"
 
-  | I.Dec (cQ, FMV (u, Some (tP, cPhi))) -> 
+  | I.Dec (cQ, FMV (_ , u, Some (tP, cPhi))) -> 
       let cO = I.Empty in 
       let cD = I.Empty in 
        collectionToString cQ 
@@ -161,7 +167,7 @@ let rec collectionToString cQ = match cQ with
      ^ P.typToString cO cD cPhi (tP, LF.id)
      ^ " [ "  ^ P.dctxToString cO cD cPhi ^ "]\n" 
                           
-  | I.Dec(cQ, PV ((I.PVar (I.PInst(_r, cPsi, tA', _c), _s)) as h)) -> 
+  | I.Dec(cQ, PV (_ , (I.PVar (I.PInst(_r, cPsi, tA', _c), _s) as h))) -> 
       let (ctx_var, tA) = raiseType cPsi tA' in        
       let cO = I.Empty in 
       let cD = I.Empty in 
@@ -172,16 +178,16 @@ let rec collectionToString cQ = match cQ with
      ^ ctxVarToString ctx_var ^ " . " ^ P.typToString cO cD I.Null (tA , LF.id)
      ^ "\n"
 
-  | I.Dec(cQ, FV (_n, None)) ->  collectionToString cQ ^ ",  FV _ .\n"
+  | I.Dec(cQ, FV (_marker, _n, None)) ->  collectionToString cQ ^ ",  FV _ .\n"
 
-  | I.Dec(cQ, FV (n, Some tA)) -> 
+  | I.Dec(cQ, FV (_marker, n, Some tA)) -> 
       let cO = I.Empty in 
       let cD = I.Empty in       
         collectionToString cQ ^ ",  FV " ^ n.string_of_name ^ " : "
       ^ "(" ^ P.typToString cO cD I.Null (tA, LF.id) ^ ")"
       ^ "\n"
 
-  | I.Dec(cQ, FPV (n, Some (tA, cPsi))) -> 
+  | I.Dec(cQ, FPV (_marker, n, Some (tA, cPsi))) -> 
       let (ctx_var, tA') = raiseType cPsi tA in        
       let cO = I.Empty in 
       let cD = I.Empty in       
@@ -196,15 +202,43 @@ let printCollection s = print_string (collectionToString s)
 
 (* exists p cQ = B
    where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
+
 *)
 let rec exists p = function
-  | I.Empty        -> false
+  | I.Empty        -> false  
   | I.Dec(cQ', y)  -> p y || exists p cQ'
+
+(* checkOccurrence p cQ = result
+
+   If the first occurrence of Y in cQ s.t. p(Y) = Some Pure, then Yes
+   If the first occurrence of Y:Impure in cQ s.t. p(Y) = Some Impure then Cycle
+   otherwise No 
+    
+*)
+type occurrs = Yes | No | Cycle
+
+let rec checkOccurrence p = function
+  | I.Empty        -> No
+  | I.Dec(cQ', y)  -> 
+    match p y with 
+      | No -> checkOccurrence p cQ'
+      | result -> result
 
 (* length cPsi = |cPsi| *)
 let length cPsi = 
   let (_, n) = Context.dctxToHat cPsi in
     n
+
+let rec lengthCollection cQ = match cQ with
+  | I.Empty        -> 0
+  | I.Dec (cQ', MMV(Impure, _ )) -> lengthCollection cQ'
+  | I.Dec (cQ', MV(Impure, _ )) -> lengthCollection cQ'
+  | I.Dec (cQ', PV(Impure, _ )) -> lengthCollection cQ'
+  | I.Dec (cQ', FV(Impure, _ , _ )) -> lengthCollection cQ'
+  | I.Dec (cQ', FMV(Impure, _ , _ )) -> lengthCollection cQ'
+  | I.Dec (cQ', FPV(Impure, _ , _ )) -> lengthCollection cQ'
+  | I.Dec (cQ', _ )  -> 1 + lengthCollection cQ'
+
 
 
 (* Eta-expansion of bound variables which have function type *)
@@ -237,18 +271,24 @@ let rec etaExpandHead loc h tA =
    where B iff mV and mV' represent same variable
 *)
 let rec eqMMVar mmV1 mmV2 = match (mmV1, mmV2) with
-  | (I.MMVar (I.MInst (r1, _, _, _, _), _s) , MMV (I.MMVar (I.MInst (r2, _, _, _, _), _s'))) -> 
-       r1 == r2
-  | _ -> false
+  | (I.MMVar (I.MInst (r1, _, _, _, _), _s) , MMV (marker , I.MMVar (I.MInst (r2, _, _, _, _), _s'))) -> 
+      if r1 == r2 then 
+        match marker with Pure -> Yes  | Impure -> Cycle
+      else 
+        No
+  | _ -> No
 
 
 (* eqMVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
 let rec eqMVar mV1 mV2 = match (mV1, mV2) with
-  | (I.MVar (I.Inst (r1, _, _, _), _s) , MV (I.MVar (I.Inst (r2, _, _, _), _s'))) -> 
-       r1 == r2
-  | _ -> false
+  | (I.MVar (I.Inst (r1, _, _, _), _s) , MV (marker , I.MVar (I.Inst (r2, _, _, _), _s'))) -> 
+       if r1 == r2 then 
+         match marker with Pure -> Yes | Impure -> Cycle
+       else 
+         No
+  | _ -> No
 
 
 
@@ -256,32 +296,46 @@ let rec eqMVar mV1 mV2 = match (mV1, mV2) with
    where B iff mV and mV' represent same variable
 *)
 let rec eqPVar mV1 mV2 = match (mV1, mV2) with
-  | (I.PVar (I.PInst (r1, _, _, _), _s) , PV (I.PVar (I.PInst (r2, _, _, _), _s'))) -> 
-       r1 == r2
-  | _ -> false
+  | (I.PVar (I.PInst (r1, _, _, _), _s) , PV (marker , I.PVar (I.PInst (r2, _, _, _), _s'))) -> 
+       if r1 == r2 then
+         match marker with Pure -> Yes | Impure -> Cycle
+       else 
+         No
+  | _ -> No
 
 (* eqFVar n fV' = B
    where B iff n and fV' represent same variable
 *)
 let rec eqFVar n1 fV2 = match (n1, fV2) with
-  | (n1 ,  FV (n2, _)) -> (n1 = n2)
-  | _ -> false
+  | (n1 ,  FV (marker, n2, _)) -> 
+      if n1 = n2 then
+        match marker with Pure -> Yes | Impure -> Cycle
+      else No
+  | _ -> No
 
 
 (* eqFMVar n fV' = B
    where B iff n and fV' represent same variable
 *)
 let rec eqFMVar n1 fV2 = match (n1, fV2) with
-  | (n1 ,  FMV (n2, _)) -> (n1 = n2)
-  | _ -> false
+  | (n1 ,  FMV (marker, n2, _)) -> 
+      if n1 = n2 then
+        match marker with Pure -> Yes | Impure -> Cycle
+      else 
+        No
+  | _ -> No
 
 
 (* eqFPVar n fV' = B
    where B iff n and fV' represent same variable
 *)
 let rec eqFPVar n1 fV2 = match (n1, fV2) with
-  | (n1 ,  FPV (n2, _)) -> (n1 = n2)
-  | _ -> false
+  | (n1 ,  FPV (marker, n2, _ )) -> 
+      if n1 = n2 then
+        match marker with Pure -> Yes | Impure -> Cycle
+      else 
+        No
+  | _ -> No
 
 
 let rec phatToDCtx phat = match phat with 
@@ -389,29 +443,68 @@ and cnstr_typ_rec (t_rec, s) = match t_rec with
 let rec index_of cQ n = 
   match (cQ, n) with
   | (I.Empty, _) ->
-      raise (Error "index_of for a free variable (FV, FMV, FPV, MV,  does not exist – should be impossible\n")  (* impossible due to invariant on collect *)
+      raise (Error "index_of for a free variable (FV, FMV, FPV, MV,  does not exist – should be impossible\n")
+            (* impossible due to invariant on collect *)
 
-  | (I.Dec (cQ', MMV u1), MMV u2) ->
-      (* TODO investigate the feasibility of having it start at 0 *)
-      if eqMMVar u1 (MMV u2) then 1 else (index_of cQ' n) + 1 
+  | (I.Dec (cQ', MMV(Impure, _ )), _ ) -> 
+      index_of cQ' n
 
-  | (I.Dec (cQ', MV u1), MV u2) ->
-      (* TODO investigate the feasibility of having it start at 0 *)
-      if eqMVar u1 (MV u2) then 1 else (index_of cQ' n) + 1 
+  | (I.Dec (cQ', MV(Impure, _ )), _ ) -> 
+      index_of cQ' n
 
-  | (I.Dec (cQ', PV p1), PV p2) ->
-      (* TODO investigate the feasibility of having it start at 0 *)
-      if eqPVar p1 (PV p2) then 1 else (index_of cQ' n) + 1 
+  | (I.Dec (cQ', PV(Impure, _ )), _ ) -> 
+      index_of cQ' n
 
-  | (I.Dec (cQ', FV (f1, _)), FV (f2, tA)) ->
-      if eqFVar f1 (FV (f2, tA)) then 1 else (index_of cQ' n) + 1
+  | (I.Dec (cQ', FMV(Impure, _ , _ )), _ ) -> 
+      index_of cQ' n
 
-  | (I.Dec (cQ', FMV (u1, _)), FMV (u2, tA_cPsi)) ->
-      if eqFMVar u1 (FMV (u2, tA_cPsi)) then 1 else (index_of cQ' n) + 1
+  | (I.Dec (cQ', FPV(Impure, _ , _ )), _ ) -> 
+      index_of cQ' n
 
-  | (I.Dec (cQ', FPV (p1, _)), FPV (p2, tA_cPsi)) ->
-      if eqFPVar p1 (FPV (p2, tA_cPsi)) then 1 else (index_of cQ' n) + 1
+  | (I.Dec (cQ', FV(Impure, _ , _ )), _ ) -> 
+      index_of cQ' n
 
+  | (I.Dec (cQ', MMV (Pure, u1)), MMV (Pure, u2)) ->
+      begin match eqMMVar u1 (MMV (Pure, u2)) with
+        | Yes -> 1 
+        | No  -> (index_of cQ' n) + 1
+        | Cycle -> raise (Error "Cyclic dependency among meta²-variables and free variables")
+      end
+
+  | (I.Dec (cQ', MV (Pure, u1)), MV (Pure, u2)) ->
+      begin match eqMVar u1 (MV (Pure, u2)) with
+        | Yes -> 1 
+        | No ->  (index_of cQ' n) + 1 
+        | Cycle -> raise (Error "Cyclic dependency among meta-variables and free variables")
+      end
+
+  | (I.Dec (cQ', PV (Pure, p1)), PV (Pure, p2)) ->
+      begin match eqPVar p1 (PV (Pure, p2)) with
+        | Yes -> 1 
+        | No -> (index_of cQ' n) + 1 
+        | Cycle -> raise (Error "Cyclic dependency among parameter-variables and free variables")
+      end
+
+  | (I.Dec (cQ', FV (Pure, f1, _)), FV (Pure, f2, tA)) ->
+      begin match eqFVar f1 (FV (Pure, f2, tA)) with
+        | Yes -> 1 
+        | No  -> (index_of cQ' n) + 1
+        | Cycle -> raise (Error "Cyclic dependency among free variables")
+      end
+
+  | (I.Dec (cQ', FMV (Pure, u1, _)), FMV (Pure, u2, tA_cPsi)) ->
+      begin match eqFMVar u1 (FMV (Pure, u2, tA_cPsi)) with
+        | Yes -> 1 
+        | No -> (index_of cQ' n) + 1
+        | Cycle -> raise (Error "Cyclic dependency among free meta-variables")
+      end
+
+  | (I.Dec (cQ', FPV (Pure, p1, _)), FPV (Pure, p2, tA_cPsi)) ->
+      begin match eqFPVar p1 (FPV (Pure, p2, tA_cPsi)) with
+        | Yes -> 1 
+        | No  -> (index_of cQ' n) + 1
+        | Cycle -> raise (Error "Cyclic dependency among free parameter-variables")
+      end
 
   | (I.Dec (cQ', _), _) ->
       (index_of cQ' n) + 1
@@ -427,14 +520,20 @@ let rec ctxToDctx cQ = match cQ with
   | I.Empty ->
       I.Null
 
-  | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
+  | I.Dec (cQ', MV (Impure, _ )) ->
+      ctxToDctx cQ'
+
+  | I.Dec (cQ', FV (Impure, _ , _ )) ->
+      ctxToDctx cQ'
+
+  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
       begin match raiseType cPsi tA with
         | (None, tA') -> 
             let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in 
             I.DDec (ctxToDctx cQ', I.TypDecl (x, tA'))
         | (Some _, _ ) -> raise (Error "ctxToDctx generates LF-dctx with context variable: should be impossible!")
       end 
-  | I.Dec (cQ', FV (x, Some tA)) ->
+  | I.Dec (cQ', FV (Pure, x, Some tA)) ->
       (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in  *)
       I.DDec (ctxToDctx cQ', I.TypDecl (x, tA))
 
@@ -443,16 +542,24 @@ let rec ctxToCtx cQ = match cQ with
   | I.Empty ->
       I.Empty
 
-  | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
+  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_, cPsi, tA, _), _s))) ->
       begin match raiseType cPsi tA with
         | (None, tA') -> 
             let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in 
             I.Dec (ctxToCtx cQ', I.TypDecl (x, tA'))
         | (Some _, _ ) -> raise (Error "ctxToCtx generates LF-ctx with context variable: should be impossible!")
       end 
-  | I.Dec (cQ', FV (x, Some tA)) ->
+  | I.Dec (cQ', FV (Pure, x, Some tA)) ->
       (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in  *)
       I.Dec (ctxToCtx cQ', I.TypDecl (x, tA))
+
+  | I.Dec (cQ', FV (Impure, _x, _ )) ->
+    ctxToCtx cQ'
+
+  | I.Dec (cQ', MV (Impure, _u )) ->
+    ctxToCtx cQ'
+
+
 
 
 
@@ -462,32 +569,37 @@ let rec ctxToMCtx cQ  = match cQ with
 
   (* The case where cD is not empty, and an meta²-variable is uninstantiated
      should never happen. -bp *)
-  | I.Dec (cQ', MMV (I.MMVar (I.MInst (_, I.Empty, cPsi, tA, _), _s))) ->
+  | I.Dec (cQ', MMV (Pure, I.MMVar (I.MInst (_, I.Empty, cPsi, tA, _), _s))) ->
       let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in 
       I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi))
 
-  | I.Dec (_cQ', MMV (I.MMVar (I.MInst (_, _cD, _cPsi, _tA, _), _s))) ->
+  | I.Dec (_cQ', MMV (Pure, I.MMVar (I.MInst (_, _cD, _cPsi, _tA, _), _s))) ->
       raise (Error leftoverMeta2)
 
-  | I.Dec (cQ', MV (I.MVar (I.Inst (_, cPsi, tA, _), _s))) -> 
+  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_, cPsi, tA, _), _s))) -> 
       let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in 
       I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi)) 
 
   (* Can this case ever happen?  I don't think so. -bp *)
-  | I.Dec (cQ', PV (I.PVar (I.PInst (_, cPsi, tA, _), _s))) -> 
+  | I.Dec (cQ', PV (Pure, I.PVar (I.PInst (_, cPsi, tA, _), _s))) -> 
       let p = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in   
       I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi))  
 
-  | I.Dec (cQ', FMV (u, Some (tA, cPsi))) ->
+  | I.Dec (cQ', FMV (Pure, u, Some (tA, cPsi))) ->
       I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi)) 
 
-  | I.Dec (cQ', FPV (p, Some (tA, cPsi))) ->
+  | I.Dec (cQ', FPV (Pure, p, Some (tA, cPsi))) ->
       I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi))
 
   (* this case should not happen -bp *)
-(* | I.Dec (cQ', FV (_, Some tA)) ->
-      I.Dec (ctxToMCtx cQ', I.MDecl (Id.mk_name Id.NoName, tA, I.Null))
-*)
+   | I.Dec (cQ', FV (_, _, Some tA)) ->
+      raise (Error "[Bug] Free variables in computation-level reconstruction")
+
+   | I.Dec (cQ', FPV(Impure, _, _ )) -> 
+       ctxToMCtx cQ'
+
+   | I.Dec (cQ', FMV(Impure, _, _ )) -> 
+       ctxToMCtx cQ'
 
 
 (* collectTerm cQ phat (tM,s) = cQ'
@@ -606,9 +718,6 @@ and collectMSub cQ theta =  match theta with
         (cQ2, I.MDot (I.PObj (phat, h'), t'))
 
 and collectHead cQ phat ((head, _subst) as sH) =
-  (* let _ = dprint (fun () -> "###collectHead  "
-                          ^ P.normalToString I.Empty I.Empty I.Null (I.Root(None, head, I.Nil), subst)
-                          ^ " \ncollection: " ^ collectionToString cQ) in *)
     match sH with
 
   | (I.BVar _x, _s)  -> (cQ, head)
@@ -616,69 +725,84 @@ and collectHead cQ phat ((head, _subst) as sH) =
   | (I.Const _c, _s) -> (cQ, head)
 
   | (I.FVar name, _s) ->
-      if exists (eqFVar name) cQ then
-        (cQ, I.FVar name)
-      else
-        let Int.LF.Type tA  = FVar.get name in            
-        let (cQ', tA') = collectTyp cQ (None, 0) (tA, LF.id) in 
-            (* tA must be closed *)
-            (* Since we only use abstraction on pure LF objects,
-               there are no context variables; different abstraction
-               is necessary for handling computation-level expressions,
-               and LF objects which occur in computations. *)
-            (I.Dec (cQ', FV (name, Some tA')) , I.FVar name)
+      begin match checkOccurrence (eqFVar name) cQ with 
+        | Yes -> (cQ, I.FVar name)
+        | No -> 
+            let Int.LF.Type tA  = FVar.get name in            
+            let (cQ', tA') = collectTyp (I.Dec(cQ, FV(Impure, name, None))) (None, 0) (tA, LF.id) in 
+              (* tA must be closed *)
+              (* Since we only use abstraction on pure LF objects,
+                 there are no context variables; different abstraction
+                 is necessary for handling computation-level expressions,
+                 and LF objects which occur in computations. *)
+              (I.Dec (cQ', FV (Pure, name, Some tA')) , I.FVar name)
+        | Cycle -> raise (Error "Cyclic dependency among free variables")
+      end 
 
 
   | (I.FMVar (u, s'), s) ->
-      let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in
-        if exists (eqFMVar u) cQ' then
-          (cQ', I.FMVar (u, sigma))
-        else
-          let (tA, cPhi)  = FMVar.get u in
-          let phihat = Context.dctxToHat cPhi in 
-
-          let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
-          let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
-
-            (* tA must be closed with respect to cPhi *)
-            (* Since we only use abstraction on pure LF objects,
-               there are no context variables; different abstraction
-               is necessary for handling computation-level expressions,
-               and LF objects which occur in comp utations. *)
-            (I.Dec (cQ'', FMV (u, Some (tA', cPhi'))), I.FMVar (u, sigma))
+        begin match checkOccurrence (eqFMVar u) cQ with
+          | Yes ->    
+              let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in (cQ', I.FMVar (u, sigma))
+          | No -> 
+              let (cQ0, sigma) = collectSub cQ phat (LF.comp s' s) in
+              let (tA, cPhi)  = FMVar.get u in
+              let phihat = Context.dctxToHat cPhi in 
+              let cQ' = I.Dec(cQ0, FMV(Impure, u, None)) in                 
+              let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
+              let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
+                (* tA must be closed with respect to cPhi *)
+                (* Since we only use abstraction on pure LF objects,
+                   there are no context variables; different abstraction
+                   is necessary for handling computation-level expressions,
+                   and LF objects which occur in comp utations. *)
+                (I.Dec (cQ'', FMV (Pure, u, Some (tA', cPhi'))), I.FMVar (u, sigma))
+          | Cycle -> raise (Error "Cyclic dependency among free meta-variables")
+      end 
 
   | (I.MVar (I.Inst (q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
       if constraints_solved cnstr then
-        (* let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in 
+         let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in 
            let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in
-           let _ = dprint (fun () -> "collectSub for MVar \n") in *)
-        let (cQ', sigma) = collectSub cQ phat s' in
+           let _ = dprint (fun () -> "collectSub for MVar \n") in 
           (* let _ = dprint (fun () -> "collectSub for MVar done \n") in *)
-          if exists (eqMVar u) cQ' then
-            (cQ', I.MVar(r, sigma))
-          else
-            (*  checkEmpty !cnstrs? -bp *)
-            let phihat = Context.dctxToHat cPsi in 
-            let (cQ1, cPsi')  = collectDctx cQ' phihat cPsi in 
-            let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
-            let v = I.MVar (I.Inst (q, cPsi', tA',  c), sigma) in 
-              (I.Dec (cQ'', MV v) , v)
+          begin match checkOccurrence (eqMVar u) cQ with
+            | Yes -> 
+                let (cQ', sigma) = collectSub cQ phat s' in
+                  (cQ', I.MVar(r, sigma))
+            | No -> 
+                (*  checkEmpty !cnstrs? -bp *)
+                let (cQ0, sigma) = collectSub cQ phat s' in
+                let cQ' = I.Dec(cQ0, MV(Impure, u)) in
+                let phihat = Context.dctxToHat cPsi in 
+                let (cQ1, cPsi')  = collectDctx cQ' phihat cPsi in 
+                let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
+                let v = I.MVar (I.Inst (q, cPsi', tA',  c), sigma) in 
+                  (I.Dec (cQ'', MV (Pure, v)) , v)
+            | Cycle -> raise (Error "Cyclic dependency among meta-variables")
+          end 
       else 
         raise (Error "Leftover constraints during abstraction")
 
   | (I.MMVar (I.MInst (q, I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
       if constraints_solved cnstr then
-        let (cQ0, ms1) = collectMSub cQ ms' in 
-        let (cQ', sigma) = collectSub cQ0 phat s' in
-        if exists (eqMMVar u) cQ' then 
-          (cQ', I.MMVar(r, (ms1, sigma)))
-        else
-          (*  checkEmpty !cnstrs ? -bp *)
-          let phihat = Context.dctxToHat cPsi in 
-          let (cQ1, cPsi')  = collectDctx cQ' phihat cPsi in 
-          let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
-          let v = I.MMVar (I.MInst (q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in 
-            (I.Dec (cQ'', MMV v) , v)
+          begin match checkOccurrence (eqMMVar u) cQ with
+            | Yes -> 
+                let (cQ0, ms1) = collectMSub cQ ms' in 
+                let (cQ', sigma) = collectSub cQ0 phat s' in
+                  (cQ', I.MMVar(r, (ms1, sigma)))
+            | No  ->  (*  checkEmpty !cnstrs ? -bp *)
+                let (cQ0, ms1) = collectMSub cQ ms' in 
+                let (cQ2, sigma) = collectSub cQ0 phat s' in
+
+                let cQ' = I.Dec(cQ2, MMV(Impure, u)) in 
+                let phihat = Context.dctxToHat cPsi in 
+                let (cQ1, cPsi')  = collectDctx cQ' phihat cPsi in 
+                let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
+                let v = I.MMVar (I.MInst (q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in 
+                  (I.Dec (cQ'', MMV (Pure, v)) , v)
+            | Cycle -> raise (Error "Cyclic dependency among meta²-variables")
+          end 
       else 
         raise (Error "Leftover constraints during abstraction")
 
@@ -690,41 +814,50 @@ and collectHead cQ phat ((head, _subst) as sH) =
         (cQ', I.MVar (I.Offset k, sigma))
 
   | (I.FPVar (u, s'), _s) ->
-      let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in
       (* let _ = dprint (fun () -> "###abstract  FPVar  " ^ collectionToString cQ') in *)
-        if exists (eqFPVar u) cQ' then
-          (cQ', I.FPVar (u, sigma))
-        else
-          let (tA, cPhi)  = FPVar.get u in
-            (* tA must be closed with respect to cPhi *)
-            (* Since we only use abstraction on pure LF objects,
-               there are no context variables; different abstraction
-               is necessary for handling computation-level expressions,
-               and LF objects which occur in computations. *)
-
-          let phihat = Context.dctxToHat cPhi in 
-
-          let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
-          let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
-
-            (I.Dec (cQ'', FPV (u, Some (tA', cPhi'))), I.FPVar (u, sigma))
+        begin match checkOccurrence (eqFPVar u) cQ with
+          | Yes -> 
+              let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in 
+                (cQ', I.FPVar (u, sigma))
+          | No  -> 
+              let (cQ2, sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in                
+              let (tA, cPhi)  = FPVar.get u in
+                (* tA must be closed with respect to cPhi *)
+                (* Since we only use abstraction on pure LF objects,
+                   there are no context variables; different abstraction
+                   is necessary for handling computation-level expressions,
+                   and LF objects which occur in computations. *)
+                
+              let phihat = Context.dctxToHat cPhi in 
+              let cQ' = I.Dec(cQ2, FPV(Impure, u, None)) in 
+              let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
+              let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
+                (I.Dec (cQ'', FPV (Pure, u, Some (tA', cPhi'))), I.FPVar (u, sigma))
+          | Cycle -> raise (Error "Cyclic dependency among free parameter-variables")
+        end 
+          
       
   | (I.PVar (I.PInst (r, cPsi, tA, ({contents = cnstr} as c)), s') as p,  s) ->
       (*dprint (fun () -> "###abstract  PVar  "
                 ^ (match !r with None -> "None" | Some _r -> "Some _")) ; *)
       if constraints_solved cnstr then
-        let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in
-          if exists (eqPVar p) cQ' then            
-            (cQ', I.PVar (I.PInst (r, cPsi, tA, c), sigma))
-          else
-            (*  checkEmpty !cnstrs ? -bp *)
-            let psihat = Context.dctxToHat cPsi in 
-              
-            let (cQ1, cPsi')  = collectDctx cQ' psihat cPsi in 
-            let (cQ'', tA') = collectTyp cQ1  psihat (tA, LF.id) in              
-            let p' = I.PVar (I.PInst (r, cPsi', tA', c), sigma) in 
-              (I.Dec (cQ'', PV p') , p')
-               
+        begin match checkOccurrence (eqPVar p) cQ with
+          | Yes -> 
+              let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in 
+                (cQ', I.PVar (I.PInst (r, cPsi, tA, c), sigma))
+            | No -> 
+                (*  checkEmpty !cnstrs ? -bp *)
+                let (cQ2, sigma) = collectSub cQ phat (LF.comp s' s) in               
+                let cQ' = (I.Dec(cQ2, PV(Impure, p))) in 
+                let psihat = Context.dctxToHat cPsi in 
+                  
+                let (cQ1, cPsi')  = collectDctx cQ' psihat cPsi in 
+                let (cQ'', tA') = collectTyp cQ1  psihat (tA, LF.id) in
+
+                let p' = I.PVar (I.PInst (r, cPsi', tA', c), sigma) in 
+                  (I.Dec (cQ'', PV (Pure, p')) , p')
+            | Cycle -> raise (Error "Cyclic dependency among parameter-variables")
+          end                
       else 
         raise (Error "Leftover constraints during abstraction")
 
@@ -739,39 +872,47 @@ and collectHead cQ phat ((head, _subst) as sH) =
         (cQ' , I.Proj (h', k))
 
   | (I.CoFPVar (co_cid, p, j, s'), _s) ->
-      let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in 
-        if exists (eqFPVar p) cQ' then
-          (cQ', I.CoFPVar (co_cid, p, j, sigma))
-        else
-          let (tA, cPhi)  = FPVar.get p in
-            (* tA must be closed with respect to cPhi *)
-            (* Since we only use abstraction on pure LF objects,
-               there are no context variables; different abstraction
-               is necessary for handling computation-level expressions,
-               and LF objects which occur in computations. *)
+      begin match checkOccurrence (eqFPVar p) cQ with
+        | Yes -> 
+            let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in  
+                (cQ', I.CoFPVar (co_cid, p, j, sigma))
+        | No  -> 
+            let (cQ2, sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in  
+            let (tA, cPhi)  = FPVar.get p in
+                (* tA must be closed with respect to cPhi *)
+                (* Since we only use abstraction on pure LF objects,
+                   there are no context variables; different abstraction
+                   is necessary for handling computation-level expressions,
+                   and LF objects which occur in computations. *)
+                
+            let phihat = Context.dctxToHat cPhi in 
+            let cQ' = I.Dec(cQ2, FPV(Impure, p, None)) in 
+            let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
+            let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in               
+              (I.Dec (cQ'', FPV (Pure, p, Some (tA', cPhi'))), I.CoFPVar (co_cid, p, j, sigma))
 
-          let phihat = Context.dctxToHat cPhi in 
-
-          let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
-          let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
-
-            (I.Dec (cQ'', FPV (p, Some (tA', cPhi'))), I.CoFPVar (co_cid, p, j, sigma))
+          | Cycle -> raise (Error "Cyclic dependency among coerced free parameter-variables")
+        end          
       
   | (I.CoPVar (co_cid, (I.PInst (r, cPsi, tA, ({contents = cnstr} as c)) as p), j, s'),  s) ->
-
       if constraints_solved cnstr then
-        let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in
-          if exists (eqPVar (I.PVar (p, sigma))) cQ' then            
-            (cQ', I.CoPVar (co_cid, p, j, sigma))
-          else
-            (*  checkEmpty !cnstrs ? -bp *)
-            let psihat = Context.dctxToHat cPsi in 
-              
-            let (cQ1, cPsi')  = collectDctx cQ' psihat cPsi in 
-            let (cQ'', tA') = collectTyp cQ1  psihat (tA, LF.id) in              
-            let p' = I.PVar (I.PInst (r, cPsi', tA', c), sigma) in 
-              (I.Dec (cQ'', PV p') , I.CoPVar (co_cid, I.PInst (r, cPsi', tA', c), j, sigma))
-               
+
+        begin match checkOccurrence (eqPVar (I.PVar (p, s'))) cQ with
+          | Yes -> 
+              let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in 
+                (cQ', I.CoPVar (co_cid, p, j, sigma))
+            | No  -> 
+                (*  checkEmpty !cnstrs ? -bp *)
+              let (cQ2, sigma) = collectSub cQ phat (LF.comp s' s) in 
+              let cQ' = I.Dec(cQ2, PV(Impure, I.PVar(p,s'))) in 
+              let psihat = Context.dctxToHat cPsi in 
+                  
+              let (cQ1, cPsi')  = collectDctx cQ' psihat cPsi in 
+              let (cQ'', tA') = collectTyp cQ1  psihat (tA, LF.id) in              
+              let p' = I.PVar (I.PInst (r, cPsi', tA', c), sigma) in 
+                (I.Dec (cQ'', PV (Pure, p')) , I.CoPVar (co_cid, I.PInst (r, cPsi', tA', c), j, sigma))
+            | Cycle -> raise (Error "Cyclic dependency among coerced parameter-variables")
+          end               
       else 
         raise (Error "Leftover constraints during abstraction")
 
@@ -896,7 +1037,7 @@ and abstractTermW cQ offset sM = match sM with
 
   | (I.Root (loc, (I.MVar (I.Inst (_r, cPsi, _tP, _cnstr), s) as tH), _tS (* Nil *)), _s (* LF.id *)) -> 
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
-      let x = index_of cQ (MV tH) + offset in 
+      let x = index_of cQ (MV (Pure, tH)) + offset in 
         I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)     
 
   | (I.Root (loc, tH, tS), s (* LF.id *)) ->
@@ -911,7 +1052,7 @@ and abstractHead cQ offset tH = match tH with
       I.Const c
 
   | I.FVar n ->
-      I.BVar ((index_of cQ (FV (n, None))) + offset)
+      I.BVar ((index_of cQ (FV (Pure, n, None))) + offset)
 
   | I.AnnH (_tH, _tA) ->
       raise NotImplemented
@@ -950,8 +1091,15 @@ and abstractSpine cQ offset sS = match sS with
 and abstractCtx cQ =  match cQ with
   | I.Empty ->
       I.Empty
+  | I.Dec (cQ, MV (Impure, _ )) ->
+      abstractCtx cQ
+  | I.Dec (cQ, PV (Impure, _ )) ->
+      abstractCtx cQ
 
-  | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
+  | I.Dec (cQ, FV (Impure, _ , _ )) ->
+      abstractCtx cQ
+
+  | I.Dec (cQ, MV (Pure, I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractCtx cQ  in
       let l     = length cPsi in 
       let cPsi' = abstractDctx cQ cPsi l in 
@@ -964,9 +1112,9 @@ and abstractCtx cQ =  match cQ with
         (P.subToString I.Empty I.Empty cPsi s) in *)
       let s'    = abstractSub cQ l s in
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
-        I.Dec (cQ', MV u')
+        I.Dec (cQ', MV (Pure, u'))
 
-  | I.Dec (cQ, PV (I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
+  | I.Dec (cQ, PV (Pure, I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractCtx cQ  in
       let l     = length cPsi in 
       let cPsi' = abstractDctx cQ cPsi l in 
@@ -975,12 +1123,12 @@ and abstractCtx cQ =  match cQ with
       let tA'   = abstractTyp cQ l (tA, LF.id) in 
       let s'    = abstractSub cQ l s in
       let p'    = I.PVar (I.PInst (r, cPsi', tA', cnstr), s') in
-        I.Dec (cQ', PV p')
+        I.Dec (cQ', PV (Pure, p'))
 
-  | I.Dec (cQ, FV (f, Some tA)) ->
-      let tA' = abstractTyp cQ 0 (tA, LF.id) in
+  | I.Dec (cQ, FV (Pure, f, Some tA)) ->
       let cQ' = abstractCtx cQ in
-        I.Dec (cQ', FV (f, Some tA'))
+      let tA' = abstractTyp cQ 0 (tA, LF.id) in
+        I.Dec (cQ', FV (Pure, f, Some tA'))
 
 
 
@@ -1072,36 +1220,36 @@ and abstractMVarHead cQ offset tH = match tH with
       I.BVar x
 
   | I.PVar (I.PInst(_r, _cPsi, _tA , _cnstr), s) -> 
-      let x = index_of cQ (PV tH) + offset in 
+      let x = index_of cQ (PV (Pure, tH)) + offset in 
         I.PVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.FPVar (p, s) -> 
-      let x = index_of cQ (FPV (p, None)) + offset in 
+      let x = index_of cQ (FPV (Pure, p, None)) + offset in 
         I.PVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MMVar (I.MInst(_r, I.Empty, _cPsi, _tP , _cnstr), (_ms, s)) -> 
-      let x = index_of cQ (MMV tH) + offset in 
+      let x = index_of cQ (MMV (Pure, tH)) + offset in 
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MMVar (I.MInst(_r, _cD, _cPsi, _tP , _cnstr), (_ms, _s)) -> 
       raise (Error leftoverMeta2)
 
   | I.MVar (I.Inst(_r, _cPsi, _tP , _cnstr), s) -> 
-      let x = index_of cQ (MV tH) + offset in 
+      let x = index_of cQ (MV (Pure, tH)) + offset in 
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MVar (I.Offset x , s) -> 
       I.MVar (I.Offset x, abstractMVarSub cQ offset s) 
 
   |  I.FMVar (u, s) ->
-      let x = index_of cQ (FMV (u, None)) + offset in 
+      let x = index_of cQ (FMV (Pure, u, None)) + offset in 
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.Const c ->
       I.Const c
 
   | I.FVar n ->
-      I.BVar ((index_of cQ (FV (n, None))) + offset)
+      I.BVar ((index_of cQ (FV (Pure, n, None))) + offset)
 
   | I.AnnH (_tH, _tA) ->
       raise NotImplemented
@@ -1118,11 +1266,11 @@ and abstractMVarHead cQ offset tH = match tH with
 
 
   | I.CoPVar (co_cid, (I.PInst(_r, _cPsi, _tA , _cnstr) as p), j, s) -> 
-      let x = index_of cQ (PV (I.PVar (p,s))) + offset in 
+      let x = index_of cQ (PV (Pure, I.PVar (p,s))) + offset in 
         I.CoPVar (co_cid, I.Offset x, j, abstractMVarSub cQ offset s)
 
   | I.CoFPVar (co_cid, p, j, s) -> 
-      let x = index_of cQ (FPV (p, None)) + offset in 
+      let x = index_of cQ (FPV (Pure, p, None)) + offset in 
         I.CoPVar (co_cid, I.Offset x, j, abstractMVarSub cQ offset s)
 
   (* other cases impossible for object level *)
@@ -1177,65 +1325,79 @@ and abstractMVarMctx cQ cD offset = match cD with
 and abstractMVarCtx cQ =  match cQ with
   | I.Empty -> I.Empty
 
-  | I.Dec (cQ, MMV (I.MMVar (I.MInst (r, I.Empty, cPsi, tA, cnstr), (ms, s)))) ->
+  | I.Dec (cQ, MMV (Pure, I.MMVar (I.MInst (r, I.Empty, cPsi, tA, cnstr), (ms, s)))) ->
       let cQ'   = abstractMVarCtx  cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in 
       let s'    = abstractMVarSub cQ 0 s in
         (* Do we need to consider the substitution s here? -bp *)  
       let u'    = I.MMVar (I.MInst (r, I.Empty, cPsi', tA', cnstr), (ms, s')) in
-        I.Dec (cQ', MMV u')
+        I.Dec (cQ', MMV (Pure, u'))
 
-  | I.Dec (_cQ, MMV (I.MMVar (I.MInst (_r, _cD, _cPsi, _tA, _cnstr), _s))) ->
+  | I.Dec (_cQ, MMV (Pure, I.MMVar (I.MInst (_r, _cD, _cPsi, _tA, _cnstr), _s))) ->
       raise (Error leftoverMeta2)
 
-  | I.Dec (cQ, MV (I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
+  | I.Dec (cQ, MV (Pure, I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractMVarCtx  cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in 
       let s'    = abstractMVarSub cQ 0 s in
         (* Do we need to consider the substitution s here? -bp *)  
       let u'    = I.MVar (I.Inst (r, cPsi', tA', cnstr), s') in
-        I.Dec (cQ', MV u')
+        I.Dec (cQ', MV (Pure, u'))
 
-  | I.Dec (cQ, PV (I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
+  | I.Dec (cQ, PV (Pure, I.PVar (I.PInst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractMVarCtx  cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0  (tA, LF.id) in 
       let s'    = abstractMVarSub cQ 0 s in
         (* Do we need to consider the substitution s here? -bp *)  
       let p'    = I.PVar (I.PInst (r, cPsi', tA', cnstr), s') in
-        I.Dec (cQ', PV p')
+        I.Dec (cQ', PV (Pure, p'))
 
-  | I.Dec (cQ, FMV (u, Some (tA, cPsi))) ->
+  | I.Dec (cQ, FMV (Pure, u, Some (tA, cPsi))) ->
       let cQ'   = abstractMVarCtx cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in
 
-        I.Dec (cQ', FMV (u, Some (tA', cPsi')))
+        I.Dec (cQ', FMV (Pure, u, Some (tA', cPsi')))
 
 
-  | I.Dec (cQ, FPV (u, Some (tA, cPsi))) ->
+  | I.Dec (cQ, FPV (Pure, u, Some (tA, cPsi))) ->
       let cQ'   = abstractMVarCtx  cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in
 
-        I.Dec (cQ', FPV (u, Some (tA', cPsi')))
+        I.Dec (cQ', FPV (Pure, u, Some (tA', cPsi')))
 
+  | I.Dec (cQ, MV (Impure, _u)) ->
+      abstractMVarCtx  cQ 
+
+  | I.Dec (cQ, PV (Impure, _u)) ->
+      abstractMVarCtx  cQ 
+
+  | I.Dec (cQ, MMV (Impure, _u)) ->
+      abstractMVarCtx  cQ 
+
+  | I.Dec (cQ, FPV (Impure, _q, _)) ->
+      abstractMVarCtx  cQ 
+
+  | I.Dec (cQ, FMV (Impure, _u, _)) ->
+      abstractMVarCtx  cQ 
 
   | I.Dec (_cQ, FV _) ->
         (* This case is hit in e.g.  ... f[g, x:block y:tp. exp unk], where unk is an unknown identifier;
          * is it ever hit on correct code?  -jd 2009-02-12 
          * No. This case should not occur in correct code - bp 
          *)
-      raise (Error "abstractMVarCtx(_, FV _): unknown identifier in program?")
+      raise (Error "[Abstraction] unknown identifier in program?")
 
 
 (* Cases for: FMV, FPV *)
 
 
 let rec abstrMSub cQ t = 
-  let l = Context.length cQ in 
+  let l = lengthCollection cQ in 
   let rec abstrMSub' t = 
     match t with
       | I.MShift n -> I.MShift (n+l)
@@ -1648,8 +1810,8 @@ let collectTerm' (phat, tM ) = collectTerm I.Empty  phat (tM, LF.id)
 
 let rec fvarInCollection cQ = begin match cQ with
   | I.Empty -> false
-  | I.Dec(_cQ, FV (_, None)) ->  true
-  | I.Dec(cQ, FV (_, Some (tA))) -> 
+  | I.Dec(_cQ, FV (_, _, None)) ->  true
+  | I.Dec(cQ, FV (_, _, Some (tA))) -> 
        let (cQ',_ ) = collectTyp I.Empty (None, 0) (tA, LF.id) in 
          begin match cQ' with 
              Int.LF.Empty -> (print_string "empty" ; fvarInCollection cQ)

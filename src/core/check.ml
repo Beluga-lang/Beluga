@@ -127,6 +127,7 @@ let rec ctxShift cPsi = begin match cPsi with
     | ((Root (loc, _h, _tS), _s (* id *)),   (Atom _, _s')) ->
         (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
           begin try
+            let _ = dprint (fun () -> "[check] " ^ P.normalToString cO cD cPsi sM ^ " <= " ^ P.typToString cO cD cPsi sA ) in
             let sP = syn' cO cD cPsi sM in 
               if not (Whnf.convTyp sP sA) then
                 raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP)))
@@ -156,8 +157,8 @@ let rec ctxShift cPsi = begin match cPsi with
         raise (Violation ("checkTuple arity mismatch"))
 
 
-  and syn' cO cD cPsi (Root (_loc, h, tS), s (* id *)) = 
-    let sA' = Whnf.whnfTyp (inferHead cO cD cPsi h, LF.id) in
+  and syn' cO cD cPsi (Root (loc, h, tS), s (* id *)) = 
+    let sA' = Whnf.whnfTyp (inferHead loc cO cD cPsi h, LF.id) in
       synSpine cO cD cPsi (tS, s) sA'       
         
 
@@ -216,7 +217,7 @@ and lookupCtxVar cO ctx_var' =
 
   and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)
 
-  (* inferHead cO cD cPsi h = tA
+  (* inferHead loc cO cD cPsi h = tA
    *
    * Invariant:
    *
@@ -225,7 +226,7 @@ and lookupCtxVar cO ctx_var' =
    * where cO cD ; cPsi |- tA <= type
    * else exception Error is raised.
    *)
-  and inferHead cO cD cPsi head = match head with
+  and inferHead loc cO cD cPsi head = match head with
     | BVar k' ->
         let (_, _l) = dctxToHat cPsi in
         let TypDecl (_, tA) = ctxDec cPsi k' in
@@ -235,13 +236,14 @@ and lookupCtxVar cO ctx_var' =
         let srecA = match tuple_head with
           | BVar k' ->
               let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
-              let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n") in
-              let _ = dprint (fun () -> "Proj (" ^ R.render_offset k' ^ " , " ^  string_of_int target ^ ")" ^ " has type " ^ P.typRecToString cO cD cPsi (recA, LF.id) ^ "\n") in
+              let _ = dprint (fun () -> "[InferHead] " ^ P.dctxToString cO cD cPsi) in
+              let _ = dprint (fun () -> "|-  " ^  P.headToString cO cD cPsi head ^ "\n" ^ 
+                                " where " ^ P.headToString cO cD cPsi tuple_head ^ " has type " ^ P.typRecToString cO cD cPsi (recA, LF.id) ^ "\n") in
                 (recA, LF.id)
           | PVar (Offset p, s) ->
               begin let (_, tTuple, cPsi') = Whnf.mctxPDec cD p in
 
-                checkSub cO cD cPsi s cPsi';
+                checkSub loc cO cD cPsi s cPsi';
                 match tTuple with
                     Sigma recA -> (recA, s)
               end
@@ -258,13 +260,13 @@ and lookupCtxVar cO ctx_var' =
     | MVar (Offset u, s) ->
         (* cD ; cPsi' |- tA <= type *)
         let (_, tA, cPsi') = Whnf.mctxMDec cD u in
-          checkSub cO cD cPsi s cPsi' ;
+          checkSub loc cO cD cPsi s cPsi' ;
           TClo (tA, s)
     
     | PVar (Offset p, s) ->
         (* cD ; cPsi' |- tA <= type *)
         let (_, tA, cPsi') = Whnf.mctxPDec cD p in
-          checkSub cO cD cPsi s cPsi' ;
+          checkSub loc cO cD cPsi s cPsi' ;
           dprint (fun () -> "check: cPsi' (context of pvar)    = " ^ P.dctxToString cO cD cPsi') ;
           dprint (fun () -> "check:  cPsi (context in pattern) = " ^ P.dctxToString cO cD cPsi) ;
           dprint (fun () -> "check: synthesizing " ^ P.typToString cO cD cPsi (tA, s) ^ " for PVar") ;
@@ -283,7 +285,7 @@ and lookupCtxVar cO ctx_var' =
     | CoPVar (co_cid, Offset p, j, s) -> 
         let (_, tA, cPhi) = Whnf.mctxPDec cD p in
         let cPhi' = Ctxsub.applyCtxCoe co_cid cD cPhi in 
-        let _     = checkSub cO cD cPsi s cPhi' in 
+        let _     = checkSub loc cO cD cPsi s cPhi' in 
         let typRec = match tA with Sigma typRec -> typRec
                             | _ -> SigmaLast tA in 
           (* cD ; cPhi |- typRec               *)
@@ -323,13 +325,13 @@ and lookupCtxVar cO ctx_var' =
                      somewhat gratuitously, as p .. x y when the context variable schema
                      doesn't include elements of type sA, but x or y do have type sA *)
 
-  (* checkSub cO cD cPsi s cPsi' = ()
+  (* checkSub loc cO cD cPsi s cPsi' = ()
    *
    * Invariant:
    *
    * succeeds iff cO cD ; cPsi |- s : cPsi'
    *)
-  and checkSub cO cD cPsi s cPsi' = match (cPsi, s, cPsi') with
+  and checkSub loc cO cD cPsi s cPsi' = match (cPsi, s, cPsi') with
     | (Null, Shift (NoCtxShift, 0), Null) ->
         ()
 
@@ -378,29 +380,29 @@ and lookupCtxVar cO ctx_var' =
 
     | (DDec (cPsi, _tX),  Shift (psi, k),  Null) ->
         if k > 0 then
-          checkSub cO cD cPsi (Shift (psi, k - 1)) Null
+          checkSub loc cO cD cPsi (Shift (psi, k - 1)) Null
         else
           raise (Error (None, SubIllTyped))
 
     | (DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi) ->
         if k > 0 then
-          checkSub cO cD cPsi (Shift (phi, k - 1)) (CtxVar psi)
+          checkSub loc cO cD cPsi (Shift (phi, k - 1)) (CtxVar psi)
         else
           raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
           (* (SubIllTyped) *)
 
     | (DDec (cPsi, _tX),  CoShift (co, phi, k),  CtxVar psi) ->
         if k > 0 then
-          checkSub cO cD cPsi (CoShift (co, phi, k - 1)) (CtxVar psi)
+          checkSub loc cO cD cPsi (CoShift (co, phi, k - 1)) (CtxVar psi)
         else
           raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
           (* (SubIllTyped) *)
 
     | (cPsi',  Shift (psi, k),  cPsi) ->
-        checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
+        checkSub loc cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
 
     | (cPsi',  CoShift (co, psi, k),  cPsi) ->
-        checkSub cO cD cPsi' (Dot (Head (BVar (k + 1)), CoShift (co, psi, k + 1))) cPsi
+        checkSub loc cO cD cPsi' (Dot (Head (BVar (k + 1)), CoShift (co, psi, k + 1))) cPsi
 
 (****
 This case should now be covered by the one below it
@@ -417,25 +419,25 @@ This case should now be covered by the one below it
     (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
 
     | (cPsi',  Dot (Head h, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
-        let _   = checkSub cO cD cPsi' s' cPsi
+        let _   = checkSub loc cO cD cPsi' s' cPsi
           (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
-        and tA1 = inferHead cO cD cPsi' h in
+        and tA1 = inferHead loc cO cD cPsi' h in
           if Whnf.convTyp (tA1, LF.id) (tA2, s') then
             ()
           else
-            let _ = Printf.printf "cPsi' = %s \n Head h = %s \n Inferred type: %s\n Expected type: %s\n\n"
+            let _ = Printf.printf "[checkSub] cPsi' = %s \n Head h = %s \n Inferred type: %s\n Expected type: %s\n\n"
               (P.dctxToString cO cD cPsi')
               (P.headToString cO cD cPsi' h)
               (P.typToString cO cD cPsi' (tA1, LF.id))
               (P.typToString cO cD cPsi' (tA2, s')) in
-              raise (Error (None, SubIllTyped))
+              raise (Error (loc, SubIllTyped))
                 (* let sM = Root (None, h, Nil) in
                    raise (TypMismatch (cPsi', sM, (tA2, s'), (tA1, LF.id)))
                 *)
 
     | (cPsi',  Dot (Obj tM, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
         (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
-        let _ = checkSub cO cD cPsi' s' cPsi in
+        let _ = checkSub loc cO cD cPsi' s' cPsi in
           (* ensures that s' is well-typed and [s']tA2 is well-defined *)
           check cO cD cPsi' (tM, LF.id) (tA2, s')
 
@@ -782,10 +784,10 @@ This case should now be covered by the one below it
                 let TypDecl (_, tB) = ctxDec cPsi' k in 
                   if Whnf.convTyp (tB, LF.id) (tA', LF.id) then ()
             | PVar _ -> 
-                let tB = inferHead cO cD cPsi' h in 
+                let tB = inferHead None cO cD cPsi' h in 
                   if Whnf.convTyp (tB, LF.id) (tA', LF.id) then ()
             | Proj _ -> 
-                let tB = inferHead cO cD cPsi' h in 
+                let tB = inferHead None cO cD cPsi' h in 
                   if Whnf.convTyp (tB, LF.id) (tA', LF.id) then ()
           end ;
           checkMSub cO cD ms cD1')

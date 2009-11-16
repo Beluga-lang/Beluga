@@ -1169,9 +1169,7 @@ module Int = struct
         ; flush_str_formatter ()
 
     let typRecToString cO cD cPsi typrec_clo = 
-      let _ = print_string "NormTypRec ..." in
       let typrec = Whnf.normTypRec typrec_clo in 
-      let _ = print_string "NormTypRec done" in
       fmt_ppr_lf_typ_rec cO cD cPsi std_lvl str_formatter typrec
       ; flush_str_formatter () 
 
@@ -1339,6 +1337,7 @@ module Error = struct
       | Arrow -> "'A -> 'B"
       | CtxPi -> "{_:schema} 'A"
       | PiBox -> "{_::'A} 'B"
+      | Box   -> "[ ] A"
 
     (* Format Based Pretty Printers for Error messages *)
     let fmt_ppr ppf = function

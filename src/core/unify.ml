@@ -1495,7 +1495,7 @@ module Make (T : TRAIL) : UNIFY = struct
                            else 
                              (cPsi1, x, tA)
                        end in 
-                     let  (cPsi1_i, y, tAi) = unroll index' cPsi1 t_rec  in 
+                     let  (cPsi1_i, y, tAi) = unroll 1 cPsi1 t_rec  in 
                        (* cPsi1, x1:A1, ... x(i-1):A(i-1) |- tAi <= type *)                         
                        (* cPsi1, x1:A1, ... x_(i-1):A(i-1) |- s_psi <= cPsi1 *)
                      let si_psi = invert (Shift (NoCtxShift, index'-1)) in 

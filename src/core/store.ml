@@ -211,6 +211,33 @@ module Cid = struct
 
   module Comp = struct
 
+(*    type val_entry = {
+      name            : Id.name;
+      val_exp         : Int.Comp.exp_syn
+    }
+
+    type rec_entry = {
+      name               : Id.name;
+      implicit_arguments : int;
+      typ                : Int.Comp.typ;
+      prog               : Int.Comp.exp_chk
+    }
+
+    type entry = | ValExp of val_entry | Rec of rec_entry
+
+    let mk_rec_entry n t i e = Rec {
+      name               = n;
+      implicit_arguments = i;
+      typ                = t;
+      prog               = e
+    }
+
+    let mk_val_entry n i = ValExp {
+      name           = n;
+      val_exp        = i
+    }
+*)
+
     type entry = {
       name               : Id.name;
       implicit_arguments : int;
@@ -218,13 +245,13 @@ module Cid = struct
       prog               : Int.Comp.exp_chk
     }
 
-    let mk_entry n t i e = {
+
+    let mk_entry n t i e =  {
       name               = n;
       implicit_arguments = i;
       typ                = t;
       prog               = e
     }
-
 
     type t = Id.name DynArray.t
 
@@ -248,6 +275,8 @@ module Cid = struct
     let clear () =
       DynArray.clear store;
       Hashtbl.clear directory
+
+
 
   end
 

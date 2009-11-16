@@ -458,6 +458,7 @@ module Ext = struct
       | Coercion of Loc.t * name * LF.co_typ * LF.coercion
       | Pragma   of Loc.t * LF.prag
       | Rec      of Loc.t * Comp.rec_fun list   
+      | Val      of Loc.t * name * Comp.exp_syn 
        
 
     type sgn = decl list

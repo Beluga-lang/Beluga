@@ -58,12 +58,16 @@ module Cid : sig
       prog               : Comp.exp_chk
     }
 
-    val mk_entry      : name -> Comp.typ -> int -> Comp.exp_chk -> entry
+    val mk_entry  : name -> Comp.typ -> int -> Comp.exp_chk -> entry 
+
     type t
+
     val add           : entry -> cid_prog
     val get           : cid_prog -> entry
     val index_of_name : name -> cid_prog
+
     val clear         : unit -> unit
+
 
   end
 

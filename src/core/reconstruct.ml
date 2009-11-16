@@ -2753,7 +2753,7 @@ let rec fmvApxTerm fMVs cO cD l_cd1 l_delta k m =   match m with
         begin try 
           let (offset, (_tP, _cPhi)) = Whnf.mctxMVarPos cD u in
             Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset (offset+k), s'), Apx.LF.Nil)     
-        with Whnf.Fmvar_not_found -> raise (Error (Some loc, UnboundName u))
+        with Whnf.Fmvar_not_found -> (dprint (fun () -> "[fmvApxTerm] UnboundName") ; raise (Error (Some loc, UnboundName u)))
         end 
 
   | Apx.LF.Root (loc, h, s) -> 
@@ -3043,7 +3043,8 @@ and fmvApxBranch fMVs cO cD l_cd1 l_delta k b =
   (match b with
       | Apx.Comp.BranchBox (loc, delta, (psi1, m, Some (a, psi)), e) ->
           let fMVb' = collectApxTerm [] m in 
-          let fMVb  = collectApxDCtx fMVb' psi in
+          let fMVb1  = collectApxDCtx fMVb' psi in
+          let fMVb  = collectApxTyp fMVb1 a in
           let l    = lengthApxMCtx delta in 
             Apx.Comp.BranchBox (loc, delta, (psi1, m, Some (a, psi)),
                                 fmvApxExp (fMVs@fMVb) cO cD l_cd1 l_delta (k+l) e)
@@ -3830,6 +3831,9 @@ let recSgnDecl d =
          (co.string_of_name) (actx.string_of_name) (bctx.string_of_name)
          (P.coercionToString c_body'') ;
       ())
+
+
+  | Ext.Sgn.Val (_, x, i) -> ()
 
   | Ext.Sgn.Rec (_, recFuns) ->
       (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)

@@ -23,21 +23,19 @@ fn e =>
 
 (case e of
 
-  [ ] suc U  =>
-   let [ ] V = eval ([ ] U) in 
-     [ ] suc V
+| [ ] z => [ ] z
+| [ ] suc U  =>
+  let [ ] V = eval ([ ] U) in 
+    [ ] suc V
 
 | [ ] app U W =>   
   let [ ] lam (\x. (V x))  =  eval ([ ] U) in 
-    eval ([ ] (V W))
-    
+    eval ([ ] (V W))  
         
 | [ ] lam (\x. (U x)) =>  e
 
-
 | [ ] letn W (\x. (U x))  => 
        eval ([ ] (U W))
-
 
 | [ ] fix (\x. (U x))  =>  
 

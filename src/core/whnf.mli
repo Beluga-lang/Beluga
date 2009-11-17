@@ -34,6 +34,7 @@ val convHead    : (head * sub) -> (head * sub) -> bool
 val convTyp     : tclo         -> tclo         -> bool
 val convTypRec  : trec_clo     -> trec_clo     -> bool
 val convSchElem : sch_elem     -> sch_elem     -> bool
+val prefixSchElem : sch_elem     -> sch_elem     -> bool
 val convSub     : sub          -> sub          -> bool
 val convMSub    : msub         -> msub         -> bool
 val convDCtx    : dctx         -> dctx         -> bool

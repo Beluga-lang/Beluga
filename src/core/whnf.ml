@@ -1616,10 +1616,42 @@ let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
 
   | _ -> false
 
-let rec convSchElem (SchElem(cSome1, typRec1))
-                    (SchElem(cSome2, typRec2))
-=
+let rec convSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
   convCtx cSome1 cSome2 && convTypRec (typRec1, LF.id) (typRec2, LF.id)
+
+let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
+  | (_ , Empty) ->
+      true
+
+  | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
+      convTyp (tA, LF.id) (tB, LF.id) && convCtx cPsi1 cPsi2
+
+  | _ -> false
+
+
+(* convPrefixTypRec((recA,s), (recB,s'))
+ *
+ * Given: cD ; Psi1 |- recA <= type   and cD ; Psi2 |- recB  <= type
+ *        cD ; cPsi  |- s <= cPsi       and cD ; cPsi  |- s' <= Psi2
+ *
+ * returns true iff recA and recB are convertible where
+ *    cD ; cPsi |-   [s']recB is a prefix of [s]recA
+ *)
+and convPrefixTypRec sArec sBrec = match (sArec, sBrec) with
+  | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
+      convTyp (lastA, s) (lastB, s')
+
+  | ((SigmaElem (_xA, tA, _recA), s), (SigmaLast tB, s')) ->
+      convTyp (tA, s) (tB, s')
+
+  | ((SigmaElem (_xA, tA, recA), s), (SigmaElem(_xB, tB, recB), s')) ->
+      convTyp (tA, s) (tB, s') && convPrefixTypRec (recA, LF.dot1 s) (recB, LF.dot1 s')
+
+  | (_, _) -> (* lengths differ *)
+      false
+
+let rec prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) = 
+  convPrefixCtx cSome1 cSome2 && convPrefixTypRec (typRec1, LF.id) (typRec2, LF.id)
 
 (* convHatCtx((psiOpt, l), cPsi) = true iff |cPsi| = |Psihat|
  *

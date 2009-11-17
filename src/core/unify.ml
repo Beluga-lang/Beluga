@@ -2060,6 +2060,31 @@ module Make (T : TRAIL) : UNIFY = struct
                  (* neither s1' nor s2' are patsub *)
                  addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))))
 
+    | (Proj(BVar k, i) , PVar (PInst (q1, _cPsi1, _tA1, cnstr1), s1)) ->
+        let s1' = Whnf.normSub s1 in 
+         if isPatSub s1' then
+           let ss' = invert (Whnf.normSub s1') in
+             begin match bvarSub k ss' with
+               | Head (BVar k') ->
+                   instantiatePVar (q1, Proj(BVar k', i), !cnstr1)
+               | _ -> raise_ (Unify "parameter variable =/= projection of bound variable ")
+             end 
+         else 
+           addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))) 
+
+    | (PVar (PInst (q1, _cPsi1, _tA1, cnstr1), s1), Proj(BVar k, i)) ->
+        let s1' = Whnf.normSub s1 in 
+         if isPatSub s1' then
+           let ss' = invert (Whnf.normSub s1') in
+             begin match bvarSub k ss' with
+               | Head (BVar k') ->
+                   instantiatePVar (q1, Proj(BVar k', i), !cnstr1)
+               | _ -> raise_ (Unify "parameter variable =/= projection of bound variable ")
+             end
+         else 
+           addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))) 
+             
+
     | (Proj (h1, i1),  Proj (h2, i2)) ->
         if i1 = i2 then
           unifyHead mflag cD0 cPsi h1 h2
@@ -2068,16 +2093,16 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | (Proj (PVar (PInst (q, _, _, cnstr), s1), projIndex) as h1, BVar k2) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
-          (print_string "humped1\n"; raise_ (Unify "111"))
+          (print_string "Unification of projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
 
     | (BVar k2, Proj (PVar (PInst (q, cPsi2, tA2, cnstr), s1), projIndex) as h1) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
-           (print_string "humped2\n"; raise_ (Unify "1112"))
+           (print_string "Unification of projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
 
     | (FVar _, Proj (PVar _, _)) ->
         (print_string "humped3\n"; raise_ (Unify "333"))
 
-    | (_, Proj (PVar _, _)) ->
+    | (_ , Proj (PVar _, _)) ->
         (print_string "humped4\n"; raise_ (Unify "333"))
 
 

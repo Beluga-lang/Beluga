@@ -693,7 +693,8 @@ This case should now be covered by the one below it
    *)
   and checkElementAgainstElement _cO _cD elem1 elem2 =
       let result =
-        Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in
+(*         Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in *)
+         Whnf.prefixSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in 
       let _ = dprint (fun () -> "checkElementAgainstElement "
                         ^ P.schemaToString (Schema[elem1])
                         ^ " <== "

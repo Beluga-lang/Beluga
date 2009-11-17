@@ -77,103 +77,33 @@ e_a: equal T2 S2  -> equal T1 S1 -> equal (app T1 T2) (app S1 S2).
 e_r: {T:exp}equal T T.
 e_t: equal T' S -> equal T T' -> equal T S.
 
-schema equalCtx = some [] block x: exp. equal x x ;
-%{
+schema equalCtx = some [] block x: exp, u:eq x x . equal x x ;
 
+rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[g]  =
+ FN g =>  fn e => case e of 
+| [g] #p.3 .. => [g] #p.2 ..
 
-coercionCtx equal2eq : equalCtx -> eqCtx  =
-      block x:exp. equal x x => block x:exp'. eq x x;
+| [g] e_r (T .. )=> ref [g] <g. _ >   
 
+| [g] e_t (D2 ..) (D1 ..) => 
+  let [g] F2 .. = ceq [g] ([g] D2 ..) in 
+  let [g] F1 .. = ceq [g] ([g] D1 ..) in 
+    trans [g] ([g] F1 ..)  ([g] F2 ..)           
 
-coercionCtx equal2eq : equalCtx -> eqCtx =
-       equal T T => eq (equal2eq T) (equal2eq T);
+| [g] e_l (\x.(\u. (D .. x u))) => 
+  let {F:: (eq (R .. x) (Q .. x))[g, x:exp, u: eq x x]}
+     [g,b:block x:exp,u:eq x x . equal x x] F .. b.1 b.2 = 
+        ceq [g, b:block x:exp, u:eq x x . equal x x]   ([g, b] D .. b.1 b.3)
+  in
+     [g] eq_lam (\x.\v. F .. x v)
 
-
-coercionTerm equal2eq : exp -> exp' =
- lam => lam' 
- app => app' ;
-
-
-
-coercionTerm equal2eq : equal T T -> eq (equal2eq T) (equal2eq T) =
- eq_lam => e_lam
- eq_app => e_app
-
-
-}%
-
-%{
-rec co2eq : {g:(equalCtx)*} (exp)[g] -> (block x:exp. equal x x)[equal2eq(g)] = 
- FN g => fn e => case e of 
- 
-  [g] p .. => [equal2eq(g)] < p .. , e_r (p ..) >
-| [g] z    => [equal2eq(g)] <z    , e_r z >
-| [g] app (E1 ..) (E2 ..) => 
-  let [equal2eq(g)] < F1 .. , D1 .. > = co2eq [g] ([g] E1 ..) in 
-  let [equal2eq(g)] < F2 .. , D2 .. > = co2eq [g] ([g] E2 ..) in 
-   [equal2eq(g)] < app (F1 ..), (F2 ..) , e_a (D2 ..) (D1 ..) >
-| [g] lam (\x. E .. x ) => 
-  let [equal2eq(g), u] <F .. u, D .. u > = co2eq [g, x:exp]
-
-
-morphism co2equal: 
-  {g:(equalCtx)*} (block x :exp. equal x x)[g] -> (block x:exp. eq x x)[equal2eq(g)] = 
-
- [g] p .. => [equal2eq(g)] equal2eq(p) ..
-
+| [g] e_a (D2 ..) (D1 ..) => 
+    let [g] F1 .. = ceq [g] ([g] D1 ..) in 
+    let [g] F2 .. = ceq [g] ([g] D2 ..) in 
+      [g] eq_app (F1 ..) (F2 ..)
 
 ;
 
-% Problem: we can't use co2equal or co2eq on LF types...
-morphism co2eq : g:equalCtx . exp[g]  -> exp'[equal2eq(g)] = 
-  [g] p.1 ..  => [equal2eq(g)] (equal2eq p).1 ..
-| [g] lam \x. E .. x => 
-  let [equal2eq(g),u:block x:exp.eq x x] F .. u = 
-    co2eq [g, u:block x:exp.equal x x] ([g,u] E .. u.1) in 
-    [equal2eq(g)] lam' \x. F .. <x, eq_r x> 
-| [g] app (E1 ..) (E2 ..) => 
-  let [equal2eq(g)] F1 .. = co2eq [g] ([g] E1 .. ) in 
-  let [equal2eq(g)] F2 .. = co2eq [g] ([g] E2 .. ) in 
-    [g] app' (F1 ..) (F2 ..)
 
-
-rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] 
-        -> (eq ((co2eq [g] ([g] T ..))..) ((co2eq [g] ([g] S ..)) ..) [equal2eq(g)]  =
-
-
-OR: Substitutions should be thought of structure preserving mappings aka morphisms.?
-
-
-}%
-%{
-% ceq: {g:(eqCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq(g)] 
-
-% T::exp[g], S::exp[g]  ;   equal2eq(g) |-  T .. <= exp  so 
-% T::exp[g], S::exp[g]  ;   equal2eq(g) |-  .. <= g
-rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[equal2eq(g)]  =
- [equal2eq(g)] e_r z 
+rec ceq_main: (equal T S)[ ] -> (eq T S)[ ] =  fn e =>  ceq [ ] e
 ;
-
-}%
-%{
-rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq equal2eq(T ..) equal2eq(S ..))[equal2eq(g)]  =
- FN g =>  fn E =>
-  case E of 
-
-% HOW TO WRITE THIS CASE ??
-%  [g] #p.2 .. => [g] proj_1 (equal2eq(#p ..))
-% 
-
-| [g] eq_r (T .. )=> ref [equal2eq(g)] <equal2eq(g). T .. >   
-
-| [g] eq_tr (D2 ..) (D1 ..) => 
-  let [equal2eq(g)] E1 .. = ceq [g] ([g] D1 ..) in 
-  let [equal2eq(g)] E2 .. = ceq [g] ([g] D2 ..) in
-     tr [equal2eq(g)] ([equal2eq(g)] E1 ..)  ([equal2eq(g)] E2 ..)
-
-| [g] eq_l (\x.\u. D  .. x u) => 
-  let [equal2eq(g), b: block x:exp. eq x x] E .. b = ceq [g, b:block x:exp, uv:equal x x] ([g, b] D .. b.1 b.2) in
-    [equal2eq(g)] eq_lam (\x.\v. E <x, eq x x>)
-
-
-}%

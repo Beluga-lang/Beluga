@@ -1167,6 +1167,8 @@ and elTuple recT  cO cD cPsi tuple (typRec, s) =
       end
   
   and instanceOfSchElemProj cO cD cPsi (tA, s) (var, k) (Int.LF.SchElem (cPhi, trec)) = 
+    let _ = dprint (fun () -> "instanceOfSchElemProj ... getType " ^ string_of_int k ) in 
+    let _ = dprint (fun () -> " of " ^ P.typRecToString cO cD cPsi (trec, LF.id)) in
     let tA_k (* : tclo *) = Int.LF.getType var (trec, LF.id) k 1 in
     let _ = dprint (fun () -> "instanceOfSchElemProj ... ") in
     let (_tA'_k, subst) =
@@ -1187,12 +1189,14 @@ and synSchemaElem recT  cO cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elem
       | [] -> None
       | (Int.LF.SchElem (_some_part, block_part)) as elem  ::  rest  ->
           try
+            let _ = dprint (fun () -> "[instanceOfSchElemProj ] ... ") in
             let (typRec, subst) = instanceOfSchElemProj cO cD cPsi sP (head, k) elem in 
               (* Check.LF.instanceOfSchElemProj cO cD cPsi sP (head, k) elem in *)
             dprint (fun () -> "synSchemaElem RESULT = "
                             ^ P.typRecToString cO cD cPsi (typRec, subst))
           ; Some (typRec, subst) (* sP *)
           with Unify.Unify _  -> self (Int.LF.Schema rest)
+            | Not_found -> self (Int.LF.Schema rest) 
 (*
 and lookupCtxVar cO ctx_var = match cO with
   | Int.LF.Empty -> raise (Violation ("Context variable not found"))

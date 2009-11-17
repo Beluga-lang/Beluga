@@ -694,7 +694,7 @@ This case should now be covered by the one below it
   and checkElementAgainstElement _cO _cD elem1 elem2 =
       let result =
 (*         Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in *)
-         Whnf.prefixSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in 
+         Whnf.prefixSchElem elem2 elem1 (* (cSome1 = cSome2) && (block1 = block2)  *) in 
       let _ = dprint (fun () -> "checkElementAgainstElement "
                         ^ P.schemaToString (Schema[elem1])
                         ^ " <== "
@@ -707,6 +707,11 @@ This case should now be covered by the one below it
   and checkElementAgainstSchema cO cD sch_elem elements =
     List.exists (checkElementAgainstElement cO cD sch_elem) elements
 
+(*  and subset f list = 
+    begin match list with [] -> true
+      | elem::elems -> f elem 
+*)    
+
   and checkSchema cO cD cPsi (Schema elements as schema) =
     dprint (fun () -> "checkSchema " ^ P.octxToString cO ^ " ... " 
               ^ P.dctxToString cO cD cPsi ^ " against " ^ P.schemaToString schema);
@@ -714,7 +719,8 @@ This case should now be covered by the one below it
       | Null -> ()
       | CtxVar ((CtxOffset _ ) as phi) ->
           let Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
-            if not (List.for_all (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements) then
+(*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements) then *)
+            if not (List.for_all (fun elem -> checkElementAgainstSchema cO cD elem phiSchemaElements) elements ) then
               raise (Error (None, CtxVarMismatch (cO, phi, schema)))
       | CtxVar (CoCtx(coe_cid, psi) as phi)   -> 
           let CoTyp(a_schema_cid, b_schema_cid) = Coercion.get_coercionTyp coe_cid in 

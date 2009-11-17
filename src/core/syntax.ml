@@ -230,6 +230,7 @@ module Int = struct
       | ((SigmaElem (_x, _tA, recA), s), target) ->
           let tPj = Proj (head, j) in
             getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
+      | _ -> raise Not_found
   end
 
 

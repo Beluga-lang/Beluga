@@ -1,0 +1,129 @@
+% Natural Deduction - Hilbert Translation
+% adapted from Handbook article on Logical Frameworks
+% by F. Pfenning
+%
+% Author: Brigitte Pientka
+
+i : type.  % individual
+o : type.  % formulas
+
+imp : o -> o -> o.  
+all : (i -> o) -> o.
+not  : o -> o.     
+
+nd : o -> type. % Natural deduction
+impi : (nd A -> nd B) -> nd (imp A B).
+impe : nd (imp A B) -> nd A -> nd B.
+noti : ({p:o} nd A -> nd p) -> nd (not A).
+note : nd (not A) -> {C:o} nd A -> nd C.
+alli : ({a:i} nd (A a)) -> nd (all (\x. A x)).
+alle : nd (all (\x. A x)) -> {T:i} nd (A T).
+
+hil : o -> type.  % Hilbert deductions
+k  : hil (imp A (imp B A)).
+s  : hil (imp (imp A (imp B C)) (imp (imp A B) (imp A C))).
+n1 : hil (imp (imp A (not B)) (imp (imp A B) (not A))).
+n2 : hil (imp (not A) (imp A B)).
+f1 : {T:i} hil (imp (all (\x.A x)) (A T)).
+f2 : hil (imp (all (\x.(imp B  (A x))))  (imp B (all (\x.A x)))).
+mp : hil (imp A B) -> hil A -> hil B.
+ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
+
+% Implementation of the Deduction Theorem
+%
+%   If G, u:hil A |- hil B then G |- hil (A imp B).
+%
+
+schema hilCtx =  i + some [ a:o ] hil a ;
+
+rec trivial_imp : {g:(hilCtx)*}{A::o[g]}(hil (imp (A ..) (imp (A ..) (A ..))))[g] = 
+ FN g => mlam A => [g] k ; 
+
+rec ded: {g:(hilCtx)*} (hil (B ..))[g, u:hil (A ..)] -> (hil (imp (A ..) (B ..)))[g] = 
+ FN g => fn h =>  case h of 
+| [g, u: hil _ ] #p .. =>  [g] mp k (#p ..)  % SPECIAL!
+
+% Can only be done by giving type annotation to k or s in
+% the output; this is also done in the Twelf implementation
+% 
+% ded_id : ded ([u:hil A] u) (mp (mp s k) (k : hil (A imp (A imp A)))).
+% we define a little lemma trivial_imp which generates proofs of the right form.
+ | [g, u: hil (A ..)] u    => 
+   let [g] D .. = trivial_imp [g] <g. A .. > in [g] (mp (mp s k) (D ..)) 
+ | [g, u: hil _ ] k  => [g] mp k k
+ | [g, u: hil _ ] n1 => [g] mp k n1
+ | [g, u: hil _ ] n2 => [g] mp k n2
+ | [g, u: hil _ ] f1 (T ..) => [g]  mp k (f1 (T ..))
+ | [g, u: hil _ ] f2 => [g] mp k f2
+
+ | [g, u: hil (A ..)] ug (\x. (H .. x u)) => 
+  let      
+    [g,x:i] (H' .. x) = 
+      ded [g, x:i]  ([g, x, u]  (H .. x u))
+  in
+     [g] mp f2 (ug  \x. (H' .. x))
+
+| {H1 :: (hil (imp (B1 ..) (B2 ..)))[g, u : hil (A ..)]}
+  {H2 :: (hil (B1 ..))[g, u : hil (A ..)]}
+  [g, u: hil (A ..) ] (mp (H1 .. u) (H2 .. u)) => 
+  let [g] H2' .. = ded [g] ([g,u] H2 .. u) in
+  let [g] H1' .. = ded [g] ([g,u] H1 .. u) in
+       [g] mp (mp s (H1' ..)) (H2' ..)
+
+;
+
+% % Theorem: If G |- nd A  where G = nd B1 .... nd Bn 
+% %          then G* |- hil A   where G' = hil B1 ... hil Bn
+
+% schema l = i + o + some [a:o] block u:nd A . hil A ; % where l < w 
+% DOES NOT RAISE AN ERROR!!! -- THERE IS NO CHECK THAT A GIVEN SCHEMA
+% IS WELL-FORMED.
+
+schema ndhilCtx = i + o + some [a:o] block u:hil a . nd a; 
+
+
+rec ndhil : {g:(ndhilCtx)*} (nd (A ..))[g] -> (hil (A ..))[g] =
+ FN g => fn d => 
+ case d of 
+| [g] (#p.2 ..) => [g] (#p.1 ..)
+
+| {B1::o[g]}{B2::o[g]}{D::(nd (B2 ..))[g, u: nd (B1 ..)]}
+  [g] impi \u. D .. u => 
+  let {H::(hil (A2 ..))[g, u:hil (A1 ..)]}
+      [g,b: block u: hil (A1 ..) . nd (A1 ..) ] H .. b.1 = 
+    ndhil [g, b:block u:hil (B1 ..) . nd (B1 ..) ] ([g,b] D .. b.2)
+  in
+    ded [g] ([g,u] H .. u)
+
+| [g] note (D1 ..) (C ..) (D2 ..) => 
+  let [g] H1 ..   = ndhil [g]  ([g]D1 ..) in
+  let [g] H2 ..   = ndhil [g]  ([g]D2 ..) in
+    [g] mp (mp n2 (H1 ..)) (H2 ..)
+
+| [g] alle  (D1 ..) (T ..) => 
+  let [g]H1 .. =  ndhil [g] ([g] D1 ..) in
+    [g] mp (f1 (T ..)) (H1 ..)  
+
+| [g] alli \x. D .. x => 
+  let [g,x:i] H .. x =  ndhil [g, x:i] ([g, x] D .. x) in 
+    [g] ug \x. (H .. x)
+
+
+| [g] impe (D1 ..) (D2 ..) => 
+  let [g] H1 .. = ndhil [g] ([g] D1 ..) in		
+  let [g] H2 .. = ndhil [g] ([g] D2 ..) in 
+    [g] mp (H1 ..) (H2 ..)
+
+| {B1::o[g]}{D:: (nd p)[g, u:nd (B1 ..), p:o]}
+  [g] noti (\p.(\u.(D .. u p))) => 
+  let {H::(hil p)[g, u: hil (A ..), p:o]}
+      [g,w:block u:hil (A ..). nd (A ..),p:o]  H .. w.1 p = 
+      ndhil [g, w : block u:hil (B1 ..) . nd (B1 ..), p:o]   ([g,w,p] D .. w.2 p) in 
+  let [g] H1' ..  = ded [g] ([g,u] H .. u (not (A ..))) in 
+  let [g] H1'' .. = ded [g] ([g,u] H .. u (A ..)) in
+    [g] mp (mp n1 (H1' ..)) (H1'' ..)
+;
+
+
+rec ndhil_main : (nd A)[ ] -> (hil A)[ ] = 
+ fn d => ndhil [ ] d ;

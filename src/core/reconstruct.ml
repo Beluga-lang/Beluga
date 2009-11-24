@@ -2466,9 +2466,17 @@ and cnormApxHead cO cD delta h (cD'', t) = match h with
       let h' = begin match h with 
                | Int.LF.BVar _ -> h 
                | Int.LF.PVar (Int.LF.Offset q, s1) -> 
-                   let Int.LF.MV q' = LF.applyMSub q t in 
-                   let s1' = Whnf.cnormSub (s1, t) in 
-                     Int.LF.PVar (Int.LF.Offset q', s1') 
+                   begin match LF.applyMSub q t with 
+                     | Int.LF.MV q' -> 
+                         let s1' = Whnf.cnormSub (s1, t) in 
+                           Int.LF.PVar (Int.LF.Offset q', s1') 
+                     | Int.LF.PObj (_phat, Int.LF.PVar (p,s')) -> 
+                         let s1' = Whnf.cnormSub (s1, t) in 
+                           Int.LF.PVar (p, s1')
+                   end 
+               | Int.LF.PVar (Int.LF.PInst ({contents = _ }, _cPsi, _tA, _ ) as p ,s1) -> 
+                   Int.LF.PVar (p, Whnf.cnormSub (s1, t))
+
                end in 
         Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h', tA', cPhi'), s'), j)
         
@@ -2909,6 +2917,11 @@ and fmvApxHead fMVs cO cD l_cd1 l_delta k h = match h with
                            | Int.LF.MV k' -> Int.LF.PVar (Int.LF.Offset k' ,s1')
                                (* other cases are impossible *)
                          end 
+                   (* | Int.LF.PVar (Int.LF.PInst ({contents = Some h1} , _cPsi, _tA, _ ), s1) -> 
+                       Int.LF.PVar (h1, Whnf.cnormMSub (s1, r)) *)
+
+                   | Int.LF.PVar (Int.LF.PInst ({contents = _ }, _cPsi, _tA, _ ) as p ,s1) -> 
+                       Int.LF.PVar (p, Whnf.cnormSub (s1, r))
                    end in 
         Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s'), j)  
 
@@ -3564,7 +3577,7 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
       let cD'    = Context.append cD cD1 in                   (*         cD'  = cD, cD1     *)
       let _      = dprint (fun () -> "[synRefine] cD' = " ^ P.mctxToString cO cD' ^ "\n") in 
       let t      = mctxToMSub cD'  in                         (*         .  |- t   <= cD'   *) 
-      let _      = dprint (fun () -> "[synRefine] mctxToMSub cD' = t = " ^ 
+      let _      = dprint (fun () -> "[synRefine] mctxToMSub .  |- t <= cD' " ^ 
                              P.msubToString cO  Int.LF.Empty (Whnf.cnormMSub t) ^ "\n") in 
       let n      = Context.length cD1 in 
       let m      = Context.length cD in 
@@ -3572,29 +3585,39 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
       (* cD, cD1 |- MShift n <= cD  
          .       |- t        <= cD, cD1
          .       |- mt       <= cD
+
        *)
       let t1     = Whnf.mvar_dot (Int.LF.MShift m) cD1 in
       (* cD, cD1 |- t1 <= cD1 *)
-      let mt1    = Whnf.mcomp t1 t in
-                                                              (*         .  |- mt1 <= cD1   *)
+      let mt1    = Whnf.mcomp t1 t in                         (*         .  |- mt1 <= cD1   *)
 
-      let cPsi'  = Whnf.cnormDCtx (cPsi, mt) in              (*         .  |- cPsi' ctx    *)
-      let cPsi1' = Whnf.cnormDCtx (cPsi1, mt1) in             (*         .  |- cPsi1 ctx    *)
-      let tP'    = Whnf.cnormTyp (tP, mt) in                 (* . ; cPsi'  |- tP'  <= type *)
-      let tP1'   = Whnf.cnormTyp (tP1, mt1) in                (* . ; cPsi1' |- tP1' <= type *)
-
+      let cPsi'  = Whnf.cnormDCtx (cPsi, mt) in               (*         .  |- cPsi' ctx    *)
+      let mt'    = Whnf.mcomp mt (Int.LF.MShift n) in         (*       cD1  |- mt' <= cD    *)
       (* let phat   = Context.dctxToHat cPsi' in *)
 
       let _  = begin match caseT with
                | IndexObj (_phat, tR') -> 
-                   begin try Unify.unify cD1 cPsi' (C.cnorm (tR', Whnf.mcomp mt (Int.LF.MShift n)), LF.id) 
-                                                    (tR1, LF.id) 
+                   begin try 
+                     (dprint (fun () -> "Pattern matching on index object ...");
+                      Unify.unify cD1 cPsi' (C.cnorm (tR', mt'), LF.id) 
+                                                    (tR1, LF.id) )
+
+                      (* cD1  |- mt^n <= cD 
+                           .  |- t1   <= cD1   – obtained from t = t',t1
+                        
+                       *)
                    with Unify.Unify msg -> 
                      (dprint (fun () -> "Unify ERROR: " ^  msg  ^ "\n") ; 
                       raise (Violation "Pattern matching on index argument failed"))
                    end
                | DataObj -> ()
               end  in
+     
+      let mt''   = Whnf.mcomp mt' mt1 in                      (*         .  |- mt'' <=  cD  *)
+      let cPsi'  = Whnf.cnormDCtx (cPsi, mt'') (* mt *) in    (*         .  |- cPsi' ctx    *)
+      let cPsi1' = Whnf.cnormDCtx (cPsi1, mt1) in             (*         .  |- cPsi1 ctx    *)
+      let tP'    = Whnf.cnormTyp (tP, mt'') (* mt *) in         (* . ; cPsi'  |- tP'  <= type *) 
+      let tP1'   = Whnf.cnormTyp (tP1, mt1) in                (* . ; cPsi1' |- tP1' <= type *)
         
       let _    = begin try 
         Unify.unifyDCtx Int.LF.Empty cPsi' cPsi1' ;
@@ -3625,7 +3648,9 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
                    end 
       in 
       (* cD1' |- t' <= cD' *)
-      let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub t) in 
+      (* NOTE: if we refine an index object, then t may actually only make sense in cD1 ... *)
+      let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub t) in  
+
       let rec drop t l_delta1 = match (l_delta1, t) with
         | (0, t) -> t
         | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in 
@@ -3633,10 +3658,21 @@ and synRefine loc cO caseT tR1 (cD, cPsi, tP) (cD1, cPsi1, tP1) =
       let t0   = drop t' n in  (* cD1' |- t0 <= cD *)
       let tR1' = Whnf.cnorm (tR1, Whnf.mcomp t1 t') in 
         (* cD1' ; cPsi1' |- tR1 <= tP1' *)
-      let _ = dprint (fun () -> "synRefine [Substitution (BEFORE ABSTRACTION)]:\n " ^  
+      let _ = dprint (fun () -> "synRefine [Substitution (AFTER ABSTRACTION)](0):\n " ^  
+                        P.msubToString cO cD1' (Whnf.cnormMSub t0) ^ "\n <= " ^ P.mctxToString cO cD ^ "\n") in 
+
+      let _ = dprint (fun () -> "synRefine [Substitution (BEFORE ABSTRACTION)](1):\n " ^  
                         P.msubToString cO Int.LF.Empty (Whnf.cnormMSub t) ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
+
+      let _ = dprint (fun () -> "synRefine [Substitution (BEFORE ABSTRACTION)](2):\n " ^  
+                        P.msubToString cO cD1 (Whnf.cnormMSub t) ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
+
+      let _ = dprint (fun () -> "synRefine [Substitution (BEFORE ABSTRACTION)](3):\n " ^  
+                        P.msubToString cO Int.LF.Empty  (Whnf.cnormMSub (Whnf.mcomp (Whnf.cnormMSub t) mt1)) ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
+
       let _ = dprint (fun () -> "synRefine [Substitution]: " ^ P.mctxToString cO cD1' ^ 
                         "\n|-\n" ^ P.msubToString cO cD1' t' ^ "\n <= " ^ P.mctxToString cO cD' ^ "\n") in 
+
         (t0, t', cD1', tR1')
 
 and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, theta) = match branch with
@@ -3837,7 +3873,24 @@ let recSgnDecl d =
       ())
 
 
-  | Ext.Sgn.Val (_, x, i) -> ()
+  | Ext.Sgn.Val (loc, x, i) -> 
+        let fvars = [] in 
+        let apx_i   = index_exp' (CVar.create ()) (CVar.create ()) (Var.create ()) fvars i in
+        let cO      = Int.LF.Empty in
+        let cD      = Int.LF.Empty in
+        let cG      = Int.LF.Empty in 
+        let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> elExp' cO cD cG apx_i ) in
+        let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
+        let _       = Unify.resetGlobalCnstrs () in 
+        let tau'    = Whnf.cnormCTyp (tau, theta) in 
+        let _       = dprint (fun () ->  "\n [AFTER Reconstruction] let " ^ x.string_of_name ^
+                             "\n   : " ^ P.compTypToString cO cD tau' ^ 
+                              "\n  =  " ^ 
+                              P.expSynToString cO cD cG i' ^ "\n") in
+
+        let _i''    = Monitor.timer ("Value Abstraction", fun () -> Abstract.abstrExp (Int.Comp.Syn (Some loc, i'))) in
+          ()
+
 
   | Ext.Sgn.Rec (_, recFuns) ->
       (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)

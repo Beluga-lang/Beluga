@@ -446,7 +446,9 @@ This case should now be covered by the one below it
           (P.dctxToString cO cD cPsi1)
           (P.subToString cO cD cPsi1 s)
           (P.dctxToString cO cD cPsi2);
-        raise (Violation "Substitution is ill-typed; this case should be impossible.\n")
+        raise (Error (loc, SubIllTyped))
+
+(* (Violation "Substitution is ill-typed; this case should be impossible.\n")*)
 
   (*****************)
   (* Kind Checking *)
@@ -799,8 +801,11 @@ This case should now be covered by the one below it
           end ;
           checkMSub cO cD ms cD1')
     | (_, _ ) -> 
-        raise (Violation ("Contextual substitution ill-typed ?\n ms = " ^ P.msubToString cO cD ms 
-                         ^ "\n cD' = " ^ P.mctxToString cO cD ^ "\n"))
+        raise (Violation ("Contextual substitution ill-typed ?\n " ^ 
+                            P.mctxToString cO cD ^ " |- " ^ 
+                            P.msubToString cO cD ms ^ " <= "  
+                         ^ " = " ^ P.mctxToString cO cD' ^ "\n"))
+
 
 
 end (* struct LF*)

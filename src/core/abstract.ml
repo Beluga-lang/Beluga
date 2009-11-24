@@ -1740,8 +1740,10 @@ let rec abstrExp e =
     begin match cQ with 
         I.Empty -> e'
       | _       -> ((* Printf.printf "Impossible? Leftover free MVars-ref that are not already constrained?\n";*)
-                      raise (Error "Abstract: Encountered free MVars in computation-level expression"))
+                      raise (Error "[Abstract] Left-over meta-variables in computation-level expression; provide a type annotation"))
     end
+
+
 
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)
 let rec appDCtx cPsi1 cPsi2 = match cPsi2 with

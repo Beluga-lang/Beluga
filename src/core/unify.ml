@@ -734,6 +734,16 @@ module Make (T : TRAIL) : UNIFY = struct
         Root (loc, invHead  cD0 (phat, head , ss, rOccur),
               invSpine cD0 (phat, (tS, s), ss, rOccur))
 
+    | (Tuple(loc, trec), s) -> 
+         Tuple(loc, invTuple cD0 (phat, (trec,s), ss, rOccur))
+
+  and invTuple cD0 (phat, trec, ss, rOccur) = match trec with
+    | (Last tM,s)  -> Last (invNorm cD0 (phat, (tM,s), ss, rOccur)) 
+    | (Cons (tM, trec'), s) -> 
+        let tN = invNorm cD0 (phat, (tM,s), ss, rOccur) in 
+        let trec'' = invTuple cD0 (phat, (trec',s), ss, rOccur) in 
+          Cons (tN, trec'')
+
   and invSpine cD0 (phat, spine, ss, rOccur) = match spine with
     | (Nil          , _s) -> Nil
     | (App (tM, tS) ,  s) ->
@@ -1176,14 +1186,13 @@ module Make (T : TRAIL) : UNIFY = struct
                       let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) in
                         (* [|p[idsub] / q|] *)
                         (* h = p[[ssubst] ([t] idsub)] *)
-                        returnNeutral (PVar(p, comp ssubst (comp t idsub)))
+                        returnNeutral (PVar(p, comp (comp t idsub) ssubst))
                     else (* s not patsub *)
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                         returnNeutral (PVar (q, s'))
                         
             | Proj (PVar (PInst (r, cPsi1, tA, cnstrs) as q, t), i)  (* s = id *) ->
-                let _ = dprint (fun () -> "Prune proj-pvar PInst ") in 
-                let _ = dprint (fun () ->  P.headToString Empty cD0 (Context.hatToDCtx phat) head ^ "\n") in 
+                (* let _ = dprint (fun () -> "Prune proj-pvar PInst ") in *)
                 let t = Whnf.normSub t in 
                 if eq_cvarRef (PVarRef r) rOccur then
                   raise_ (Unify "Parameter variable occurrence")
@@ -1193,7 +1202,9 @@ module Make (T : TRAIL) : UNIFY = struct
                       (* cD ; cPsi1 |- idsub <= cPsi2 *)
                     let p = Whnf.newPVar(cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1] tA)[cPsi2] *) in
                     let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) (* [|p[idsub] / q|] *) in
-                      returnNeutral (Proj (PVar(p, comp ssubst (comp t idsub)), i))
+                    let s_comp = comp (comp t idsub) ssubst in  
+                      returnNeutral (Proj (PVar(p, s_comp), i))  
+
                   else (* s not patsub *)
                     let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                       returnNeutral (Proj (PVar (q, s'), i))
@@ -1704,15 +1715,27 @@ module Make (T : TRAIL) : UNIFY = struct
         let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s1)) in
           if isPatSub t' then
             try
-              let ss = invert t' in
-              (* let _ = dprint (fun () -> 
+              (let ss = invert t' in
+              let _ = dprint (fun () -> 
                                           "UNIFY(2): " ^
                                             P.mctxToString Empty cD0 ^ "\n    " ^
                                             P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
-                                            P.normalToString Empty cD0 cPsi sM2 ^ "\n") in        *)      
+                                            P.normalToString Empty cD0 cPsi sM2 ^ "\n") in              
               let phat = Context.dctxToHat cPsi in 
-              let sM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss) (MVarRef r)) in
-                instantiateMVar (r, sM2', !cnstrs) 
+              let _ = dprint (fun () -> "Pruning substitution: " ^ P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.subToString Empty cD0 cPsi1 ss ^ " <= " ^ P.dctxToString Empty cD0 cPsi) in 
+              let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss) (MVarRef r)) in
+              let _ = dprint (fun () -> 
+                                          "UNIFY(2) – AFTER PRUNING : " ^
+                                            P.mctxToString Empty cD0 ^ "\n    " ^
+                                            P.normalToString Empty cD0 cPsi1 (tM2', id) ^ "\n") in              
+              let r = instantiateMVar (r, tM2', !cnstrs) in 
+              let _ = dprint (fun () -> 
+                                          "UNIFY(2) [RESULT]: " ^
+                                            P.mctxToString Empty cD0 ^ "\n    " ^
+                                            P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
+                                            P.normalToString Empty cD0 cPsi sM2 ^ "\n") in              
+                r
+              ) 
             with
               | NotInvertible ->
                   Printf.printf "Added constraints: NotInvertible: \n"
@@ -1723,12 +1746,12 @@ module Make (T : TRAIL) : UNIFY = struct
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
     
     (* normal-MVar case *)
-    | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (r, cPsi1, _tP1, cnstrs), t), _tS), s2) as sM2)) ->
+    | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (r, cPsi1, tP1, cnstrs), t), _tS), s2) as sM2)) ->
         let t' = Monitor.timer ("Normalisation" , fun () -> Whnf.normSub (comp t s2) ) in
 
           if isPatSub t' then
             try
-              (*let _ = dprint (fun () -> 
+            let _ = dprint (fun () -> 
                                 "UNIFY(3): " ^ 
                                   P.mctxToString Empty cD0 ^ "\n" ^
                                   P.normalToString Empty cD0 cPsi sM1  ^
@@ -1736,7 +1759,7 @@ module Make (T : TRAIL) : UNIFY = struct
                                   P.normalToString Empty cD0 cPsi sM2
                                 ^ " : " ^ P.typToString Empty cD0 cPsi (tP1, t') ^ 
                                   "\n") in 
-              *)  
+                
               let ss = Monitor.timer ("Normalisation", fun () -> invert (Whnf.normSub t')) in
               let phat = Context.dctxToHat cPsi in 
               let sM1' = trail (fun () -> prune cD0 cPsi1 phat sM1 (MShift 0, ss) (MVarRef r)) in

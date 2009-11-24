@@ -346,6 +346,16 @@ and mfrontMSub ft t = match ft with
       end
   | PObj (_phat, BVar _k)  -> ft
 
+  | PObj (phat, PVar (PInst ({contents = Some (BVar x)}, _cPsi, _tA, _ ) , r))  -> 
+      begin match LF.bvarSub x (cnormSub (r,t)) with
+        | Head (BVar k)  ->  PObj (phat, BVar k)
+        | Head (PVar (q,s))  ->  PObj (phat, PVar (q,s))
+        | Obj tM  -> MObj (phat, tM)
+      end 
+
+  | PObj (phat, PVar (PInst ({contents = None}, _cPsi, _tA, _ ), r)) -> 
+      ft
+      
   | MV k -> 
       begin match LF.applyMSub k t with  (* DOUBLE CHECK - bp Wed Jan  7 13:47:43 2009 -bp *)
         | PObj(phat, p) ->  PObj(phat, p)          
@@ -837,6 +847,14 @@ and cnorm (tM, t) = match tM with
                 Root (loc, FVar x, cnormSpine (tS, t))) *)
 
           (* Projections *)
+          | Proj (PVar (PInst ({contents = None}, _cPsi, _tA, _ ) as p, r), k) -> 
+              Root (loc, Proj( PVar(p, cnormSub (r, t)), k), cnormSpine (tS, t))
+
+          | Proj (PVar (PInst ({contents = Some (BVar x)}, _cPsi, _tA, _ ), r), k) -> 
+              begin match LF.bvarSub x (cnormSub (r,t)) with
+                | Head h  -> cnorm (Root (loc, Proj (h, k), tS), t)
+              end
+
           | Proj (BVar i, k)
             -> Root (loc, Proj (BVar i, k), cnormSpine (tS, t))
 

@@ -2273,6 +2273,8 @@ module Make (T : TRAIL) : UNIFY = struct
       | ((Sigma typ_rec1, s1), (Sigma typ_rec2, s2)) -> 
           unifyTypRecW mflag cD0 cPsi (typ_rec1, s1) (typ_rec2, s2)
 
+      | _ ->  raise_ (Unify "Type mismatch")
+
 
     and unifyTypRecW mflag cD0 cPsi srec1 srec2 = match (srec1, srec2) with
       | ((SigmaLast t1, s1) ,   (SigmaLast t2, s2)) ->

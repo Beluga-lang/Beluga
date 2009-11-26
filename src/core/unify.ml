@@ -2371,6 +2371,8 @@ module Make (T : TRAIL) : UNIFY = struct
             | Queued (* in process elsewhere *) ->  forceCnstr mflag (nextCnstr ())
             | Eqn (cD, cPsi, tM1, tM2) ->
                 let _ = solveConstraint cnstr in 
+(*                let tM1' = Whnf.norm (tM1, id) in 
+                let tM2' = Whnf.norm (tM2, id) in  *)
                   (dprint (fun () ->  "Solve constraint: " ^ P.normalToString Empty cD cPsi (tM1, id)  ^  
                         " = " ^ P.normalToString Empty cD cPsi (tM2, id) ^ "\n");
                    if Whnf.conv (tM1, id) (tM2, id) then dprint (fun () ->  "Constraints are trivial ... " )

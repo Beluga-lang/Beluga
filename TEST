@@ -112,6 +112,7 @@ $INTERPRETER +t \
     ../examples-twelf/alloc-sem/sources.cfg \
     ../examples-twelf/ccc/sources.cfg \
     ../examples-twelf/church-rosser/sources.cfg \
+    ../examples-twelf/church-rosser/test.cfg \
     ../examples-twelf/cpsocc/sources.cfg \
     ../examples-twelf/compile/cls/sources.cfg \
     ../examples-twelf/compile/cls/test.cfg \

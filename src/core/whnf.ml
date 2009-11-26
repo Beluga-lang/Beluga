@@ -10,6 +10,8 @@
 (* Weak Head Normalization,
  * Normalization, and alpha-conversion
  *)
+
+
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
 
 open Context
@@ -766,11 +768,11 @@ and cnorm (tM, t) = match tM with
           *)
           (* CHECK HERE IF THERE ARE ANY LEFT OVER CONSTRAINTS! *)
           | MVar (Inst ({contents = None}, _cPsi, _tA, cnstr) as u , r) ->
-              if constraints_solved (!cnstr) then 
+              (* if constraints_solved (!cnstr) then *)
                 (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
                 Root (loc, MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
-              else 
-                raise (Violation "uninstiated meta-variables with unresolved constraints")
+(*              else 
+                raise (Violation "uninstiated meta-variables with unresolved constraints")*)
                   
                   
           | PVar (PInst ({contents = None}, _cPsi, _tA, _ ) as p, r) -> 
@@ -2140,15 +2142,15 @@ and etaExpandMV' cPsi sA  s' = match sA with
  *
  *  cD ; cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMMV cD cPsi sA s' = etaExpandMMV' cD cPsi (whnfTyp sA)  s'
+let rec etaExpandMMV loc cD cPsi sA s' = etaExpandMMV' loc cD cPsi (whnfTyp sA)  s'
 
-and etaExpandMMV' cD cPsi sA  s' = match sA with
+and etaExpandMMV' loc cD cPsi sA  s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
       let u = newMMVar (cD , cPsi, TClo(tP,s)) in
-        Root (None, MMVar (u, (m_id, s')), Nil)
+        Root (loc, MMVar (u, (m_id, s')), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (None, x, etaExpandMMV cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
+      Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
  
 
 let rec closed sM = closedW (whnf sM) 

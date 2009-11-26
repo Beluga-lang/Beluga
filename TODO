@@ -3,12 +3,8 @@
 
 CRITICAL
 ========
-*  1/01/09 :: Support for mutual recursive computations
 
 * 28/12/08 :: Error messages from type reconstruction  -bp
-
-* 10/23/08 :: Several cases of variable shadowing, might want to
-              consider during code-walk.  -dwm
 
 
 IMPORTANT
@@ -25,25 +21,7 @@ IMPORTANT
 
 *  1/4/08  :: Unification: Are cases for proj necessary? -bp
 
-* 10/25/08 :: Make pretty printer break line late rather than early.
-              -dwm
-
-* 10/25/08 :: Fix pretty printing of internal syntax to show names
-              rather than cids.  -dwm
-
-* 10/25/08 :: Many invariants / comments written in different styles,
-              making them harder to read.  Should revisit as group.
-              -dwm
-
 * 10/24/08 :: Add unify.mli.  -dwm
-
-* 10/23/08 :: Investigate magic parens, i.e., Foo of (bar * baz)
-              vs. Foo of bar * baz.  -dwm
-
-* 10/22/08 :: Add target for debugging, add documentation on how to
-              use.  -dwm
-
-* 10/15/08 :: Cleanup Makefile.  -dwm
 
 * 10/14/08 :: Consider a way to use labels to clean up pretty printer
               interface.  May be possible pass std_formatter and
@@ -57,30 +35,9 @@ MINOR
 
 * 29/12/08 :: Printing of open terms
 
-
-* 10/25/08 :: SigmaDec and SigmaDecl are a bit close together...  -dwm
-
-* 10/25/08 :: Should probably make clo type abbreviations actual
-              datatypes with constructors.  Clearer this way, esp. since we are
-              currying functions.  -dwm
-
-* 10/25/08 :: Functions that just tuple back up all of their arguments
-              should maybe use f = function.  -dwm
-
-* 10/25/08 :: Some functions named with ' and 1.  What's the
-              difference / significance?  -dwm
-
-* 10/25/08 :: Many of the longer pattern cases could probably be
-              greatly simplified using pattern guards.  Investigate.
-              -dwm
-
-* 10/25/08 :: Could we call cD cDel to go better with cPsi?  -dwm
-
 * 10/16/08 :: Add proper interface for token.ml.  Some tricky bits
               with the Camlp4 sig.  -dwm
 
 * 10/15/08 :: Investigate gensym, think about wrap around.  -dwm
 
 * 10/12/08 :: Fix documentation generation.  -dwm
-
-* 10/12/08 :: Naming Scheme for Brigitte's code.  -bp

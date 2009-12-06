@@ -1,4 +1,4 @@
-% Translation CCC combinators -> lambda-terms in Beluga
+% Translation CCC combinators -> lambda-terms (in Beluga)
 
 rec conc : (mor A B)[] -> (term B)[u:term A] =
     fn d => case d of

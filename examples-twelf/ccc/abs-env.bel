@@ -1,0 +1,53 @@
+env : obj -> type.
+
+empty : env one.
+addv  : env P -> term A -> env (cross P A).
+
+schema ctx = some [a:obj] term a;
+
+% pops one element from e
+rec pop : {g:(ctx)*} (env (cross P A))[g, x:term A] -> (env P)[g] =
+    FN g => fn e => case e of
+        [g, x:term A] (addv G X) => [g] G;
+        
+
+% we keep the environment around for the type
+rec absv : {g:(ctx)*} (env A)[g] -> (term B)[g] -> (mor A B)[] =
+    FN g => fn e => fn t => case t of
+        [g, x:term A] x => [] snd
+
+      | [g, x:term A] (#p ..) =>
+            let [g] G .. = pop [g, x:term A] e in
+            let [] M = absv [g] ([g] G ..) t in
+                [] (@ M fst);
+
+rec abse : {g:(ctx)*} (env A)[g] -> (term B)[g] -> (mor A B)[] =
+    FN g => fn e => fn t => case t of
+        [g] lunit => 
+          [] drop
+
+      | [g] #p .. =>
+          absv [g] e t
+
+      | [g] (lpair E1 E2) : (term (cross B C))[g] =>
+          let [] F1 : (mor A B)[] = abse [g] e ([g] E1) in
+          let [] F2 : (mor A C)[] = abse [g] e ([g] E2) in
+              [] (pair F1 F2)
+
+      | [g] (lfst E) : (term B)[g] =>
+          let [] F : (mor A (cross B C))[] = abse [g] e ([g] E) in
+              [] (@ fst F)
+
+      | [g] (lsnd E) : (term C)[g] =>
+          let [] F : (mor A (cross B C))[] = abse [g] e ([g] E) in
+              [] (@ snd F)
+
+      | [g] (llam \x . E x) : (term (arrow B C))[g] =>
+          let [g] G .. = e in
+          let [] F = abse [g, x: term B] ([g, x] (addv (G ..) x)) ([g, x] (E x)) in
+              [] (cur F)
+
+      | [g] (lapp E1 E2) : (term B)[g] =>
+           let [] F1 : (mor A (arrow B C))[] = abse [g] e ([g] E1) in
+           let [] F2 : (mor A B)[] = abse [g] e ([g] E2) in
+               [] (@ app (pair F1 F2));

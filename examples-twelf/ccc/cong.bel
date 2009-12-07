@@ -1,40 +1,43 @@
-% % general congruence: if e <-> e' then e2[e/x] <-> e2[e'/x]
+% general congruence: if E <-> E' then M[E/x] <-> M[E'/x]
 
-% cong : {M:term A -> term B} conv E E' -> conv (M E) (M E') -> type.
+schema ctx = some [a:obj] term a;
 
-% cong_var  : cong (\x . x) (\c . c).
+rec cong : {g:(ctx)*} {M::(term B)[g, x:term A]} (conv (E ..) (E' ..))[g] -> (conv (M .. (E ..)) (M .. (E' ..)))[g] =
+   FN g => mlam M => fn c => case ([g,x:term _] M .. x) of
 
-% cong_unit : cong (\x . lunit) (\c . c_refl).
+    | [g, x:term A] x => 
+      c
+      
+      % | {#p:: (term B)[g]} [g, x:term A] #p .. => [g] c_refl
+    | [g, x:term A] #p .. => 
+      [g] c_refl
+      
+    | [g, x:term A] lunit => 
+      [g] c_refl
 
-% cong_pair : cong (\x . lpair (E1 x) (E2 x)) (\c . c_pair (CP1 c) (CP2 c))
-%              <- cong (\x . E1 x) (\x . CP1 x)
-%              <- cong (\x . E2 x) (\x . CP2 x).
+    | [g, x:term A] (lpair (E1 .. x) (E2 .. x)) =>
+      let [g] (CP1 ..) = cong [g] <g, x . E1 .. x> c in
+      let [g] (CP2 ..) = cong [g] <g, x . E2 .. x> c in
+          [g] (c_pair (CP1 ..) (CP2 ..))
+ 
+    | [g, x:term A] (lfst (E .. x)) => 
+      let [g] (CP ..) = cong [g] <g, x . E .. x> c in
+          [g] (c_fst (CP ..))
 
-% cong_fst  : cong (\x . lfst (E x)) (\c . c_fst (CP c))
-%              <- cong (\x . E x) (\x . CP x).
+    | [g, x:term A] (lsnd (E .. x)) => 
+      let [g] (CP ..) = cong [g] <g, x . E .. x> c in
+          [g] (c_snd (CP ..))
 
-% cong_snd  : cong (\x . lsnd (E x)) (\c . c_snd (CP c))
-%              <- cong (\x . E x) (\x . CP x).
+% cong_lam : cong (\x . (llam (\y . E x y))) (\c . (c_lam (\y . (CP c y))))
+%             <- ({y: term _} cong (\x . y) (\c . c_refl) -> cong (\x . E x y) (\c . CP c y)).
 
-% cong_lam  : cong (\x . (llam (\y . E x y))) (\c . (c_lam (\y . (CP c y))))
-%              <- ({y: term _} cong (\x . y) (\c . c_refl) -> cong (\x . E x y) (\c . CP c y)).
+    | [g, x:term A] (llam (\y . E .. x y)) =>
+      let [g, y:term _] (CP .. y) = cong [g, y:term _] <g, y, x . E .. x y> c in
+          [g] (c_lam (\y . CP .. y))
 
-% cong_app  : cong (\x . lapp (E1 x) (E2 x)) (\c . c_app (CP1 c) (CP2 c))
-%              <- cong (\x . E1 x) (\x . CP1 x)
-%              <- cong (\x . E2 x) (\x . CP2 x).
-
-schema termCtx = some [A:obj] block (term A) | some [A:obj][E:term A][E':term A] block conv E E'.
-
-
-% for all M. conv E E' -> conv (M E) (M E')
-
-% 
-
-rec cong : {g:termCtx}{M::(term B)[g, x:term A]} ((conv E E')[g] -> (conv (M E) (M E'))[g]) =
-mlam M => case M of
-    [x:conv E E]  x =>
-       [c] c
-
-  | [] (\x . lunit) =>
-       [] (\c . c_refl)
+ 
+    | [g, x:term A] (lapp (E1 .. x) (E2 .. x)) =>
+      let [g] (CP1 ..) = cong [g] <g, x . E1 .. x> in
+      let [g] (CP2 ..) = cong [g] <g, x . E2 .. x> in
+          [g] (c_app (CP1 ..) (CP2 ..))
 ;

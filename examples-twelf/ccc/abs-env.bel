@@ -12,12 +12,12 @@ rec pop : {g:(ctx)*} (env (cross P A))[g, x:term A] -> (env P)[g] =
         
 
 % we keep the environment around for the type
-rec absv : {g:(ctx)*} (env A)[g] -> (term B)[g] -> (mor A B)[] =
+rec absv : {g:(ctx)*} (env P)[g, x:term A] -> (term B)[g, x:term A] -> (mor P B)[] =
     FN g => fn e => fn t => case t of
         [g, x:term A] x => [] snd
 
       | [g, x:term A] (#p ..) =>
-            let [g] G .. = pop [g, x:term A] e in
+            let [g] G .. = pop [g] e in
             let [] M = absv [g] ([g] G ..) t in
                 [] (@ M fst);
 

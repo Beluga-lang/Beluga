@@ -2471,7 +2471,7 @@ module Make (T : TRAIL) : UNIFY = struct
             | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs 
             |  Eqn (cD, cPsi, tM1, tM2) ->
                  let _ = solveConstraint c in 
-                   (Printf.printf "Solve global constraint:\n " ; 
+                   (dprint (fun () ->  "Solve global constraint:\n ") ; 
                     dprint (fun () ->  P.normalToString Empty cD cPsi (tM1, id)  ^  
                         " = " ^ P.normalToString Empty cD cPsi (tM2, id) ^ "\n");
                    unify1 Unification cD cPsi (tM2, id) (tM1, id);

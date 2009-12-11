@@ -98,7 +98,6 @@ and csub_sub cPsi phi (* k *) s = match s with
       if psi = phi then 
         begin match Context.dctxToHat cPsi with
           | (Some ctx_v, d) -> 
-              let _ = print_string ("[csub] Shift " ^ string_of_int d ^ "\n") in
               Shift (CtxShift ctx_v, k + d)
 
           | (None, d) ->
@@ -106,7 +105,6 @@ and csub_sub cPsi phi (* k *) s = match s with
         end
 
       else 
-        let _ = print_string ("[csub] IMPOSSIBLE \n") in
         Shift (CtxShift (CtxOffset psi), k)
 
   | Shift (NegCtxShift (CtxOffset psi), k) -> 

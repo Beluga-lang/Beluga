@@ -309,7 +309,7 @@ module Int = struct
             proj
 
       | LF.MMVar (c, (ms, s)) ->
-          fprintf ppf "%s?%a%s[%a]%a%s"
+          fprintf ppf "%s%a%s[%a]%a%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_mmvar cO lvl) c
             proj
@@ -541,7 +541,8 @@ module Int = struct
           end
        
       | LF.MInst ({ contents = Some m}, cD, cPsi, _, _) ->
-          fprintf ppf "MMV SOME %a"
+          (* fprintf ppf "MMV SOME %a" *)
+          fprintf ppf " %a"
             (fmt_ppr_lf_normal cO cD cPsi lvl) m
 
     and fmt_ppr_lf_cvar _cO cD _lvl ppf = function
@@ -1483,7 +1484,7 @@ module Error = struct
             (R.render_name u)
 
       | CompScrutineeTyp (cO, cD, cG, i, sP, cPsi) -> 
-          fprintf ppf "Type %a[%a] of scrutinee %a is not closed\n"
+          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some bound variable dependencies cannot happen.\n"
             (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sP)
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i

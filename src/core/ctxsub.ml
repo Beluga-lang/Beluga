@@ -93,12 +93,12 @@ and csub_spine cPsi k tS = match tS with
 *)
 and csub_sub cPsi phi (* k *) s = match s with
   | Shift (NoCtxShift, _k) -> s
-  | CoShift (_co_cid , NoCtxShift, _k) -> s
 
   | Shift (CtxShift (CtxOffset psi), k) -> 
       if psi = phi then 
         begin match Context.dctxToHat cPsi with
           | (Some ctx_v, d) -> 
+              let _ = print_string ("[csub] Shift " ^ string_of_int d ^ "\n") in
               Shift (CtxShift ctx_v, k + d)
 
           | (None, d) ->
@@ -106,6 +106,7 @@ and csub_sub cPsi phi (* k *) s = match s with
         end
 
       else 
+        let _ = print_string ("[csub] IMPOSSIBLE \n") in
         Shift (CtxShift (CtxOffset psi), k)
 
   | Shift (NegCtxShift (CtxOffset psi), k) -> 
@@ -151,7 +152,7 @@ let rec csub_ctyp cD cPsi k tau = match tau with
       Syntax.Int.Comp.TypCtxPi (psi_decl, csub_ctyp cD cPsi (k + 1) tau)
 
   | Syntax.Int.Comp.TypPiBox ((MDecl (u, tA, cPhi), dep), tau) -> 
-      let mdecl = MDecl (u, tA, csub_dctx cD cPsi k cPhi) in 
+      let mdecl = MDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi) in 
       Syntax.Int.Comp.TypPiBox ((mdecl, dep),
                      csub_ctyp (Dec(cD, mdecl)) (Whnf.cnormDCtx (cPsi, MShift 1)) k tau)
 

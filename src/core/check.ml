@@ -127,7 +127,8 @@ let rec ctxShift cPsi = begin match cPsi with
     | ((Root (loc, _h, _tS), _s (* id *)),   (Atom _, _s')) ->
         (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
           begin try
-            let _ = dprint (fun () -> "[check] " ^ P.normalToString cO cD cPsi sM ^ " <= " ^ P.typToString cO cD cPsi sA ) in
+            let _ = dprint (fun () -> "[check] " ^ P.normalToString cO cD cPsi sM ^ 
+                              " <= " ^ P.typToString cO cD cPsi sA ) in
             let sP = syn' cO cD cPsi sM in 
               if not (Whnf.convTyp sP sA) then
                 raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP)))
@@ -260,6 +261,9 @@ and lookupCtxVar cO ctx_var' =
     | MVar (Offset u, s) ->
         (* cD ; cPsi' |- tA <= type *)
         let (_, tA, cPsi') = Whnf.mctxMDec cD u in
+        let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cO cD cPsi head ) in 
+        let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cO cD cPsi ^ "   |-   " ^ 
+                          P.subToString cO cD cPsi s ^ " <= " ^ P.dctxToString cO cD cPsi') in
           checkSub loc cO cD cPsi s cPsi' ;
           TClo (tA, s)
     

@@ -113,3 +113,26 @@ FN g => mlam E => fn d => fn f => case ([g] E .. ) of
     [ ] e_ref 			  
 
 ;
+
+% Equality predicate
+equal: tp -> tp -> type.
+e_ref: equal T T.
+
+rec unique3 : {g:(tctx)*}(hastype (E ..) T)[g] -> (hastype (E ..) T')[g] 
+	     ->  (equal T T')[ ] = 
+FN g =>  fn d => fn f => case d of 
+| [g] h_app (D1 ..) (D2 ..) =>
+  let [g] h_app (F1 ..) (F2 ..) = f in 
+  let [ ] e_ref  = unique3 [g] ([g] D1 ..) ([g] F1 ..) in    
+    [ ] e_ref   						 
+
+| [g] h_lam (\x.(\u. D .. x u)) =>
+  let [g] h_lam (\x.(\u. F .. x u)) = f in 
+  let [ ] e_ref = unique3 [g,b: block x:exp. hastype x _ ] 
+		       ([g,b] D .. b.1 b.2) ([g,b] F .. b.1 b.2) in 
+   [ ] e_ref  
+
+| [g] #q.2 .. =>           % d : hastype #p.1 T
+  let [g] #r.2 .. = f  in  % f : hastype #p.1 T'
+    [ ] e_ref 			  
+;

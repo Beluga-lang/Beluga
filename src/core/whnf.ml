@@ -103,7 +103,7 @@ let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
 
 
 
-(* newMVar (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
+(* newMMVar (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
  *
  * Invariant:
  *
@@ -111,7 +111,15 @@ let newMVar (cPsi, tA) = Inst (ref None, cPsi, tA, ref [])
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
-let newMMVar (cD, cPsi, tA) = MInst (ref None, cD, cPsi, tA, ref [])
+let newMMVar (cD, cPsi, tA) = 
+  (* flatten blocks in cPsi, and create appropriate indices in tA 
+     together with an appropriate substitution which moves us between 
+     the flattened cPsi_f and cPsi. 
+
+     this will allow to later prune MMVars. 
+     Tue Dec  1 09:49:06 2009 -bp 
+   *)
+  MInst (ref None, cD, cPsi, tA, ref [])
 
 
 
@@ -2184,7 +2192,7 @@ and closedSub s = match s with
 and closedFront ft = match ft with
   | Head h -> closedHead h
   | Obj tM -> closed (tM, LF.id)
-  | Undef  -> true
+  | Undef  -> false
 
 
 let rec closedTyp sA = closedTypW (whnfTyp sA) 

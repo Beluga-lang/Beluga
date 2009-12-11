@@ -148,6 +148,19 @@ let rec collectionToString cQ = match cQ with
       ^ P.typToString cO cD I.Null (tA , LF.id)
       ^ "\n"
 
+  | I.Dec(cQ, MV (Impure , (I.MVar (I.Inst(_r, cPsi, tP, _c), _s) as h))) -> 
+      let (ctx_var, tA) = raiseType cPsi tP in        
+      let cO = I.Empty in 
+      let cD = I.Empty in 
+        collectionToString cQ ^ " ["
+      ^ P.normalToString cO cD I.Null  (I.Root(None, h, I.Nil), LF.id)
+      ^ " : "
+      ^ ctxVarToString ctx_var
+      ^ " . "
+      ^ P.typToString cO cD I.Null (tA , LF.id)
+      ^ " ] \n"
+      
+
   | I.Dec(cQ, MMV (_ , (I.MMVar (I.MInst(_r, cD, cPsi, tP, _c), _s) as h))) -> 
       let (ctx_var, tA) = raiseType cPsi tP in        
       let cO = I.Empty in 
@@ -196,7 +209,10 @@ let rec collectionToString cQ = match cQ with
       ^ ctxVarToString ctx_var ^ "." ^ P.typToString cO cD I.Null (tA', LF.id)
       ^ "\n"
 
-let printCollection s = print_string (collectionToString s)
+  | I.Dec(cQ, MMV ( _, _ )) -> "MMV _ ? " 
+  | I.Dec(_cQ, _ ) -> " ?? " 
+
+let printCollection s = print_string (collectionToString s) 
 
 
 
@@ -236,8 +252,15 @@ let rec lengthCollection cQ = match cQ with
   | I.Dec (cQ', PV(Impure, _ )) -> lengthCollection cQ'
   | I.Dec (cQ', FV(Impure, _ , _ )) -> lengthCollection cQ'
   | I.Dec (cQ', FMV(Impure, _ , _ )) -> lengthCollection cQ'
-  | I.Dec (cQ', FPV(Impure, _ , _ )) -> lengthCollection cQ'
-  | I.Dec (cQ', _ )  -> 1 + lengthCollection cQ'
+  | I.Dec (cQ', FPV(Impure, _ , _ )) -> lengthCollection cQ' 
+
+(*  | I.Dec (cQ', MMV(Pure, _ )) -> lengthCollection cQ' + 1 
+  | I.Dec (cQ', MV(Pure, _ )) -> lengthCollection cQ'+ 1 
+  | I.Dec (cQ', PV(Pure, _ )) -> lengthCollection cQ'+ 1 
+  | I.Dec (cQ', FV(Pure, _ , _ )) -> lengthCollection cQ' + 1 
+  | I.Dec (cQ', FMV(Pure, _ , _ )) -> lengthCollection cQ' + 1 
+  | I.Dec (cQ', FPV(Pure, _ , _ )) -> lengthCollection cQ' + 1  *)
+  | I.Dec (cQ', _ )  -> lengthCollection cQ' + 1 
 
 
 
@@ -708,7 +731,7 @@ and collectMSub cQ theta =  match theta with
   | I.MShift _n -> (cQ , theta)
   | I.MDot(I.MObj(phat, tM), t) -> 
       let (cQ1, t') =  collectMSub cQ t in 
-      let _ = dprint (fun () -> "Collect MObj  -- \n") in
+      let _ = dprint (fun () -> "Collect MObj  -- \n" ) in
       let (cQ2, tM') = collectTerm cQ1 phat (tM, LF.id) in 
         (cQ2 , I.MDot (I.MObj (phat, tM'), t'))
 
@@ -784,7 +807,7 @@ and collectHead cQ phat ((head, _subst) as sH) =
       else 
         raise (Error "Leftover constraints during abstraction")
 
-  | (I.MMVar (I.MInst (q, I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
+  | (I.MMVar (I.MInst ({contents = None} as q, I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
       if constraints_solved cnstr then
           begin match checkOccurrence (eqMMVar u) cQ with
             | Yes -> 
@@ -1416,9 +1439,11 @@ let rec abstrMSub cQ t =
 and abstractMSub  t =  
   let _ = dprint (fun () -> "Collecting MSub .. \n") in 
   let (cQ, t')  = collectMSub I.Empty t in
+  let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
   let _ = dprint (fun () -> "Collect MSub done \n") in 
-  let cQ' = abstractMVarCtx cQ in
+  let cQ' = abstractMVarCtx cQ in 
   let _ = dprint (fun () -> "AbstractMVarCtx  done \n") in 
+
   let t''  = abstrMSub cQ' t' in
   let _ = dprint (fun () -> "AbstrMSub done \n") in 
   let cD'  = ctxToMCtx cQ' in  

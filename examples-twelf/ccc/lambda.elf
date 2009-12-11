@@ -33,8 +33,9 @@ c_sym   : conv E E' -> conv E' E.
 % congruence
 c_fst   : conv E E' -> conv (lfst E) (lfst E').
 c_snd   : conv E E' -> conv (lsnd E) (lsnd E').
+
 c_pair  : conv E1 E1' -> conv E2 E2' -> conv (lpair E1 E2) (lpair E1' E2').
-c_lam   : ({x: term _} conv (E x) (E' x)) -> conv (llam (\x . E x)) (llam (\x . E' x)).
+c_lam   : ({x: term A1} conv (E x) (E' x)) -> conv (llam (\x . E x)) (llam (\x . E' x)).
 c_app   : conv E1 E1' -> conv E2 E2' -> conv (lapp E1 E2) (lapp E1' E2').
 
 % proper equations

@@ -885,7 +885,7 @@ module Int = struct
             fprintf ppf "@[<2>%smlam %s => @ %a%s@]"
               (l_paren_if cond)
               (R.render_name x)
-              (fmt_ppr_cmp_exp_chk cO (LF.Dec(cD, LF.MDeclOpt x)) cG 0) e
+              (fmt_ppr_cmp_exp_chk cO (LF.Dec(cD, LF.MDeclOpt x)) (Whnf.cnormCtx (cG, LF.MShift 1)) 0) e
               (r_paren_if cond)
 
       | Comp.Pair (_, e1, e2) -> 
@@ -1453,11 +1453,11 @@ module Error = struct
 
       | CompMismatch (cO, cD, cG, i, variant, theta_tau) ->
           fprintf ppf
-            "ill-typed expression\n  expected: %s\n  inferred: %a\n  for expression: %a\n  in context:\n    %s"
-            (print_typeVariant variant)
-            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
+            (* "ill-typed expression\n  expected: %s\n  inferred: %a\n  for expression: %a\n  in context:\n    %s" *)
+            "ill-typed expression\n  inferred: %a\n  for expression: %a\n "
+            (* (print_typeVariant variant)*) 
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau) 
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i
-            "[no comp-level context printing yet]" (* TODO print context? *)
 
 
       | CompPattMismatch ((cO, cD, cPsi, tM, sA) , (cO', cD', cPsi', sA')) ->

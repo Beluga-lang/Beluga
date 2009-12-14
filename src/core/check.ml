@@ -964,7 +964,7 @@ module Comp = struct
 
     | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
         check cO (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
-          cG   e (tau, C.mvar_dot1 t)
+          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->
         check cO cD cG e1 (tau1, t);

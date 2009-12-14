@@ -24,9 +24,10 @@ rec cong : {g:(ctx)*} {M::(term B)[g, x:term A]} (conv (E ..) (E' ..))[g] -> (co
       [g, x:term A'] (lsnd (N .. x)) => 
       let [g] (LC ..) = cong [g] <g, x . N .. x> c in
           [g] (c_snd (LC ..))
-    | [g, x:term A'] (llam B1 B2 (\y . N .. y x)) =>
+
+    | [g, x:term A'] llam (\y. N .. y x) =>
       let [g] D ..  = c in  
-      let [g, y:term B1'] (CP .. y) = cong [g, y:term B1] <g, y, x . N .. y x > ([g,y] D .. ) in
+      let [g, y:term B1'] (CP .. y) = cong [g, y:term _] <g, y, x . N .. y x > ([g,y] D .. ) in
           [g] (c_lam  (\y . CP .. y ))
 
 

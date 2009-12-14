@@ -3226,14 +3226,18 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
         Int.Comp.CtxFun (Some loc, psi_name, e')
 
   | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi), Int.Comp.Explicit), tau), theta))  ->
-      let e' = elExp cO (Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))))
-                     cG e (tau, C.mvar_dot1 theta) in
-        Int.Comp.MLam (Some loc, u, e')
+      let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in 
+      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in 
+      let e' = elExp cO cD' cG' e (tau, C.mvar_dot1 theta) in 
+        Int.Comp.MLam (Some loc, u, e') 
+
+
 
   | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
       let u' = Id.mk_name Id.NoName in
+      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in 
       let e' = elExp cO (Int.LF.Dec (cD, Int.LF.MDecl (u', C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))))
-                     cG e (tau, C.mvar_dot1 theta) in
+                     cG' e (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (None,u' , e')
 
   | (Apx.Comp.Pair(loc, e1, e2), (Int.Comp.TypCross (tau1, tau2), theta)) ->
@@ -3256,7 +3260,6 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
 
 
   | (Apx.Comp.Box (loc, psihat, tM), (Int.Comp.TypBox (_loc, tA, cPsi), theta)) ->
-      let _ = dprint (fun () -> "[elExp] Box" ) in
       let tM' = elTerm PiboxRecon cO cD (C.cnormDCtx (cPsi, theta)) tM (C.cnormTyp (tA, theta), LF.id) in
       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
       let _        = Unify.resetGlobalCnstrs () in 
@@ -3264,7 +3267,6 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
 
   | (Apx.Comp.Case (loc, i, branches), tau_theta) ->
       let (i', tau_theta') = genMApp loc cD (elExp' cO cD cG i) in
-      (* let (i', tau_theta')   = syn cO cD cG i' in *)
         begin match (i', C.cwhnfCTyp tau_theta') with
           | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ), 
              (Int.Comp.TypBox (_, tP, cPsi) as tau', t (* m_id *))) ->
@@ -3272,7 +3274,8 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
               let _        = Unify.resetGlobalCnstrs () in 
 
               (* let _ = recTerm PiboxRecon cO cD cPsi (tR, LF.id) (tP, LF.id) in *)
-              (if Whnf.closed (tR, LF.id) then 
+              (if Whnf.closed (tR, LF.id)  then 
+                 (* && Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi && Whnf.closedGCtx cG ? *)
                 let branches' = List.map (function b -> 
                                             elBranch (IndexObj(phat, tR))
                                               cO cD cG b (tP, cPsi) tau_theta) branches in
@@ -3282,24 +3285,23 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
               )
 
           | (i, (Int.Comp.TypBox (_, tP, cPsi), _mid)) -> 
-              (if Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi then 
+              (if Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi && Whnf.closedGCtx cG then 
                  let _      = dprint (fun () -> "[elExp]" 
                              ^ "Contexts cD  = " ^ P.mctxToString cO cD ^ "\n"
                              ^  "Context of expected pattern type : "
                              ^  P.dctxToString cO cD cPsi 
                              ^ "\n") in
 
-                let branches' = List.map (function b -> 
-                                            elBranch DataObj
-                                              cO cD cG b (tP, cPsi) tau_theta) branches in
-                  Int.Comp.Case (Some loc, i, branches')
+                let branches' = List.map (function b ->  elBranch DataObj cO cD cG b (tP, cPsi) tau_theta )  branches in
+                  Int.Comp.Case (Some loc, i, branches') 
+                
               else 
                 raise (Error (Some loc, CompScrutineeTyp (cO, cD, cG, i', (tP, LF.id), cPsi)))
               )
 
-          | _ -> raise (Error (Some loc, CompMismatch (cO, cD, cG, i', Box, tau_theta'))) 
-              (* TODO postpone to reconstruction *)
+          | _ -> raise (Error (Some loc, CompMismatch (cO, cD, cG, i', Box, tau_theta')))
         end
+  (* TODO postpone to reconstruction *)
   (* Error handling cases *)
   | (Apx.Comp.Fun (loc, _x, _e),  tau_theta ) -> raise (Error (Some loc, CompFunMismatch (cO, cD, cG, tau_theta)))
   | (Apx.Comp.CtxFun (loc, _psi_name, _e), tau_theta) -> raise (Error (Some loc, CompCtxFunMismatch (cO, cD, cG, tau_theta)))
@@ -3335,7 +3337,6 @@ and elExp' cO cD cG i = match i with
               let cPsi'  = elDCtx PiboxRecon cO cD cPsi in
               let theta' = Ctxsub.csub_msub cPsi' 1 theta in
               let tau'   = Ctxsub.csub_ctyp cD cPsi' 1 tau in
-              let _ = dprint (fun () -> "CtxApp Type " ^ P.compTypToString cO cD (C.cnormCTyp (tau', theta'))) in
                 (Int.Comp.CtxApp (Some loc, i', cPsi'), (tau', theta'))
 
           | _ -> 
@@ -3810,8 +3811,15 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
       *)
       let e'      =  cnormApxExp cO cD' Apx.LF.Empty e1  (cD1'', t1) in  
       (* Note: e' is in the scope of cD1''  *)
+      let _       = dprint (fun () -> "[cnormApxExp] done") in  
+      let _       = dprint (fun () -> "cG = " ^ P.gctxToString cO cD cG ^ "\n") in 
+      let _       = dprint (fun () -> "t' = " ^ P.msubToString cO cD1'' t' ^ "\n") in 
+      let _       = dprint (fun () -> "cD = " ^ P.mctxToString cO cD ^ "\n") in 
+
 
       let cG'     = Whnf.cnormCtx (cG,  t') in 
+      let _       = dprint (fun () -> "[|t'|]cG = " ^ P.gctxToString cO cD1'' cG' ^ "\n") in 
+      let _       = dprint (fun () -> "[cnormCtx] done") in 
       let ttau'   = (tau, Whnf.mcomp theta t') in 
       let _       = dprint (fun () -> "[elBranch] Elaborate branch [BEFORE REFINING TARGET TYPE]\n" ^
                               "against " ^ P.compTypToString cO cD (C.cnormCTyp (tau,theta))

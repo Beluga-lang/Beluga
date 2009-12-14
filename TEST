@@ -69,6 +69,8 @@ $INTERPRETER +t \
     mini-ml/tps.bel \
     mini-ml/vsound.bel \
     mini-ml/vsound-explicit.bel \
+    path/path.bel \
+    path/path-typed.bel \
     small-step/lam.bel \
     small-step/system-f.bel \
     small-step/system-f-iso.bel \

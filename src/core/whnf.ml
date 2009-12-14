@@ -2220,3 +2220,23 @@ let rec closedDCtx cPsi = match cPsi with
   | CtxVar _ -> true
   | DDec (cPsi' , tdecl) -> closedDCtx cPsi' && closedDecl (tdecl, LF.id)
   
+
+let rec closedCTyp cT = match cT with
+  | Comp.TypBox (_ , tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi 
+  | Comp.TypArr (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2 
+  | Comp.TypCross (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2 
+  | Comp.TypCtxPi ((_n, _schema), cT) -> closedCTyp cT
+  | Comp.TypPiBox ((ctyp_decl, _ ), cT) -> 
+      closedCTyp cT && closedCDecl ctyp_decl  
+  | Comp.TypClo (cT, t) -> closedCTyp(cnormCTyp (cT, t))  (* to be improved Sun Dec 13 11:45:15 2009 -bp *)
+
+and closedCDecl ctyp_decl = match ctyp_decl with  
+  | MDecl(_, tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi 
+  | PDecl(_, tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi 
+  | _ -> true
+
+let rec closedGCtx cG = match cG with 
+  | Empty -> true
+  | Dec(cG, Comp.CTypDecl(_ , cT)) -> 
+      closedCTyp cT && closedGCtx cG
+  | Dec(cG, Comp.CTypDeclOpt _ ) -> closedGCtx cG

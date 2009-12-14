@@ -113,5 +113,6 @@ val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
 val closed     : nclo -> bool
 val closedTyp  : tclo -> bool
 val closedDCtx : dctx -> bool
+val closedGCtx : Comp.gctx -> bool
 
 val constraints_solved : cnstr list -> bool

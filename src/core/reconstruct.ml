@@ -3811,20 +3811,8 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
       *)
       let e'      =  cnormApxExp cO cD' Apx.LF.Empty e1  (cD1'', t1) in  
       (* Note: e' is in the scope of cD1''  *)
-      let _       = dprint (fun () -> "[cnormApxExp] done") in  
-      let _       = dprint (fun () -> "cG = " ^ P.gctxToString cO cD cG ^ "\n") in 
-      let _       = dprint (fun () -> "t' = " ^ P.msubToString cO cD1'' t' ^ "\n") in 
-      let _       = dprint (fun () -> "cD = " ^ P.mctxToString cO cD ^ "\n") in 
-
-
       let cG'     = Whnf.cnormCtx (cG,  t') in 
-      let _       = dprint (fun () -> "[|t'|]cG = " ^ P.gctxToString cO cD1'' cG' ^ "\n") in 
-      let _       = dprint (fun () -> "[cnormCtx] done") in 
       let ttau'   = (tau, Whnf.mcomp theta t') in 
-      let _       = dprint (fun () -> "[elBranch] Elaborate branch [BEFORE REFINING TARGET TYPE]\n" ^
-                              "against " ^ P.compTypToString cO cD (C.cnormCTyp (tau,theta))
-                           ) in 
-
       let _       = dprint (fun () -> "[elBranch] Elaborate branch \n" ^
                              P.mctxToString cO cD1'' ^ "  ;  " ^
                              P.gctxToString cO cD1'' cG' ^ "\n      |-\n" ^
@@ -3835,11 +3823,11 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
       let _       = FPVar.clear () in
 
       let phat    = Context.dctxToHat cPsi1' in 
-      let _       = dprint (fun () -> "elBranch: Elaborated branch" ^
+(*      let _       = dprint (fun () -> "elBranch: Elaborated branch" ^
                              P.mctxToString cO cD1'' ^ "  ;  " ^
                              P.gctxToString cO cD1'' cG' ^ "\n      |-\n" ^
-                             P.expChkToString cO cD1'' cG' eE' ^ "\n") in
-
+                             P.expChkToString cO cD1'' cG' eE' ^ "\n") in 
+*)
         Int.Comp.BranchBox (cD1'', (phat, tR1', t'), eE')
 
 (*

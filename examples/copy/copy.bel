@@ -1,4 +1,5 @@
 tp: type.   %name tp T.
+bool: tp.
 nat: tp.
 arrow: tp -> tp -> tp.
 
@@ -35,3 +36,12 @@ FN g => fn e => case e of
 ;
 
 
+ let t = copy [ ] ([ ] z) ;
+ let t = copy [x:term nat ] ([x] x);
+ let t = copy [x:term _ ] ([x] s x);
+ let t : (term (arrow nat nat))[ ] = 
+     copy [ ] ([ ] lam \x. x);
+ let t : (term (arrow (arrow bool nat) (arrow bool nat)))[ ] 
+     = copy [ ] ([ ] lam \x. (lam \y. app x y));
+ let t = copy [y:term (arrow (arrow (arrow bool nat) (arrow bool nat)) nat)] ([y] app y (lam \x. (lam \y. app x y)));
+ let t = copy [y:term nat,x:term bool] ([x,y] s x);

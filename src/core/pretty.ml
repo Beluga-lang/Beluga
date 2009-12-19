@@ -1483,30 +1483,30 @@ module Error = struct
             (R.render_name u)
 
       | CompScrutineeTyp (cO, cD, cG, i, sP, cPsi) -> 
-          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some bound variable dependencies cannot happen.\n"
+          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some variable dependencies cannot happen. This error may indicate that some implicit arguments which are reconstructed should be restricted. \n"
             (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sP)
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i
 
 
       | CompCtxFunMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Expected Pictx type ; Found %a \n"
+          fprintf ppf "Found Ctx abstraction ; but found type %a \n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompFunMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Expected arrow type ; Found %a \n"
+          fprintf ppf "Found function abstraction; but found type %a \n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompMLamMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Expected Pibox type ; Found %a \n"
+          fprintf ppf "Found MLam abstraction ; but found type %a \n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompBoxMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Expected box type ; Found %a \n"
+          fprintf ppf "Found Box-expression ; but found type %a \n "
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompPairMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Expected product type ; Found %a \n"
+          fprintf ppf "Found tuple ; but found type %a \n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompSynMismatch (cO, cD, theta_tau, theta_tau') ->

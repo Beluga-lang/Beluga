@@ -6,11 +6,11 @@ rec cong : {g:(ctx)*} {M::(term B)[g, x:term A]} (conv (E ..) (E' ..))[g] -> (co
    FN g => mlam M => fn c => 
     case ([g,x:term _] M .. x) of
     | [g, x:term A]  x   =>      c      
-    | [g, x:term A] #p .. =>  [g] c_refl
+    | [g, x:term _ ] #p .. =>  [g] c_refl
       
     | [g, x:term A] lunit => [g] c_refl
 
-    | [g, x:term A'] (lpair (M1 .. x) (M2 .. x))  =>
+    | [g, x:term A] (lpair (M1 .. x) (M2 .. x))  =>
       let [g] LC1 ..  = cong [g] <g, x . M1 .. x> c in
       let [g] LC2 ..  = cong [g] <g, x . M2 .. x> c in
         [g] (c_pair (LC1 ..) (LC2 ..))

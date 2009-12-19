@@ -16,6 +16,8 @@ exception Violation of string
 
 val csub_ctyp  : mctx -> dctx -> int -> Comp.typ -> Comp.typ
 val csub_msub  : dctx -> int -> msub -> msub
+val csub_exp_chk : dctx -> int -> Comp.exp_chk -> Comp.exp_chk
+val csub_exp_syn : dctx -> int -> Comp.exp_syn -> Comp.exp_syn
 
 
 val applyCtxCoe    : Id.cid_coercion -> mctx -> dctx -> dctx

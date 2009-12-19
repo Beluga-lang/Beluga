@@ -49,8 +49,9 @@ rec eval' : exp[ ] -> exp[ ] =
 fn e => 
 
 (case e of
+|  [ ] z      => [ ] z
 
-  [ ] suc U  =>
+|  [ ] suc U  =>
    let [ ] V  = eval' ([ ] U) in 
      [ ] suc V
 
@@ -68,3 +69,13 @@ fn e =>
     eval' ([ ] (U V))
 
 );
+
+
+let x = eval' ([ ] z) ;
+
+
+let y = eval' ([ ] suc z) ;
+
+let x = eval' ([ ] app (lam \x. suc x) (suc z)) ;
+
+let x = eval' ([ ] letv (app (lam \x. suc x) (suc z)) (\y. suc y)) ;

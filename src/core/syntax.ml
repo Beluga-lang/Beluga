@@ -274,7 +274,7 @@ module Int = struct
     and branch =
       | BranchBox  of LF.mctx
 (*          * (LF.dctx * LF.normal * (LF.msub * LF.mctx)) *)
-          * (LF.psi_hat * LF.normal * LF.msub) 
+          * (LF.dctx * LF.normal * LF.msub) 
           * exp_chk
 
       | BranchSBox of LF.mctx

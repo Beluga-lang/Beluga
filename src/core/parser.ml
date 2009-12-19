@@ -716,9 +716,11 @@ GLOBAL: sgn_eoi;
         i = SELF; "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">" ->
           (* let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in *)
             Comp.MApp (_loc, i, (vars, tM))
+
       |
         i = SELF; e = cmp_exp_chk ->
-          Comp.Apply (_loc, i, e)
+          Comp.Apply (_loc, i, e)  
+
       ]
     | "atomic"
       [

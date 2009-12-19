@@ -3176,7 +3176,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
         let _ = dprint (fun () -> "          of type : " ^ P.dctxToString Int.LF.Empty cD cPsi' ^ " |- " ^ P.typToString Int.LF.Empty cD cPsi' (tA',LF.id)) in 
         genMApp loc cD ((Int.Comp.MApp (Some loc, i, (psihat, tM'))), (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)))
 
-  | _ -> (i, tau_t)
+  | _ ->  (i, tau_t)
 
 let rec elCompTyp cO cD tau = match tau with
   | Apx.Comp.TypBox (loc, a, psi) ->
@@ -3207,7 +3207,8 @@ let rec elExp cO cD cG e theta_tau = elExpW cO cD cG e (C.cwhnfCTyp theta_tau)
 
 and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
   | (Apx.Comp.Syn (loc, i), (tau,t)) ->
-      let (i', tau_t') = genMApp loc cD (elExp' cO cD cG i) in
+      let (i1,tau1) = elExp' cO cD cG i in 
+      let (i', tau_t') = genMApp loc cD (i1, tau1) in
         begin try
           dprint (fun () -> "Unifying computation-level types\n") ; 
           Unify.unifyCompTyp cD (tau, t) (tau_t');
@@ -3316,12 +3317,15 @@ and elExp' cO cD cG i = match i with
       (Int.Comp.Var offset, (lookup cG offset, C.m_id))
 
   | Apx.Comp.Const prog ->
-      (Int.Comp.Const prog, ((Comp.get prog).Comp.typ, C.m_id))
+     (Int.Comp.Const prog, ((Comp.get prog).Comp.typ, C.m_id))
+       
 
   | Apx.Comp.Apply (loc, i, e) ->
       let (i', tau_theta') = genMApp loc cD (elExp' cO cD cG i) in
         begin match tau_theta' with
           | (Int.Comp.TypArr (tau2, tau), theta) ->
+              let _ = dprint (fun () -> "[elExp'] Inferred type for i' " ^ P.expSynToString cO cD cG i' ) in
+              let _ = dprint (fun () -> "[elExp'] Check argument has type " ^ P.compTypToString cO cD (Whnf.cnormCTyp (tau2,theta))) in
               let e' = elExp cO cD cG e (tau2, theta) in
                 (Int.Comp.Apply (Some loc, i', e'), (tau, theta))
 
@@ -3822,13 +3826,14 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
       let _       = FMVar.clear () in
       let _       = FPVar.clear () in
 
-      let phat    = Context.dctxToHat cPsi1' in 
+(*      let phat    = Context.dctxToHat cPsi1' in *)
 (*      let _       = dprint (fun () -> "elBranch: Elaborated branch" ^
                              P.mctxToString cO cD1'' ^ "  ;  " ^
                              P.gctxToString cO cD1'' cG' ^ "\n      |-\n" ^
                              P.expChkToString cO cD1'' cG' eE' ^ "\n") in 
-*)
         Int.Comp.BranchBox (cD1'', (phat, tR1', t'), eE')
+*)
+        Int.Comp.BranchBox (cD1'', (cPsi1', tR1', t'), eE')
 
 (*
 (* ******************************************************************* *)
@@ -3983,7 +3988,16 @@ let recSgnDecl d =
                               "\n  =  " ^ 
                               P.expSynToString cO cD cG i' ^ "\n") in
 
-        let _i''    = Monitor.timer ("Value Abstraction", fun () -> Abstract.abstrExp (Int.Comp.Syn (Some loc, i'))) in
+        let i''    = Monitor.timer ("Function Abstraction", fun () -> Abstract.abstrExp (Int.Comp.Syn (Some loc, i'))) in
+        let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cO cD  cG i'' (tau', C.m_id)) in
+
+        let v  =   Opsem.eval i''  in 
+        let _       = Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
+                (R.render_name x)
+                (P.compTypToString cO cD tau') 
+                (P.expChkToString cO cD cG i'') 
+                (P.expChkToString cO cD cG v) in 
+        let _x = Comp.add (Comp.mk_entry x tau' 0 v) in 
           ()
 
 

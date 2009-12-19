@@ -17,6 +17,7 @@ FILES[] =
         error
         gensym
         id
+        opsem
         parser
         pretty
         reconstruct

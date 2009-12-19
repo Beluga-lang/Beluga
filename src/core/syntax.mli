@@ -218,7 +218,7 @@ module Int : sig
 
     and branch =
       | BranchBox  of LF.mctx
-          * (LF.psi_hat * LF.normal * LF.msub)
+          * (LF.dctx * LF.normal * LF.msub)
           * exp_chk
 
       | BranchSBox of LF.mctx

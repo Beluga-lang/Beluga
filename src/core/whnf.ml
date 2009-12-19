@@ -1986,11 +1986,15 @@ let rec mctxPVarPos cD p =
   BROKEN 
 
   *)
-  and cnormBranch (Comp.BranchBox (cD', (phat, tM, t), e) , _theta) = 
-    (* cD' |- t <= cD    and   FMV(e) = cD' while cD0 |- theta <= cD0' 
-     * Hence, no substitution into e at this point. 
+  and cnormBranch (Comp.BranchBox (cD', (cPsi, tM, t), e) , theta) = 
+    (* cD' |- t <= cD    and   FMV(e) = cD' while 
+       cD' |- theta' <= cD0
+       cD0' |- theta <= cD0 
+     * Hence, no substitution into e at this point – thechnicallly, we
+     * need to unify theta' and theta and then create a new cD'' under which the
+     * branch makes sense
      *)
-      Comp.BranchBox (cD', (phat, norm (tM, LF.id), (cnormMSub t)), cnormExp (e, m_id))
+      Comp.BranchBox (cD', (cPsi, norm (tM, LF.id), (cnormMSub t)), cnormExp (e, m_id))
     
 
   let rec cwhnfCtx (cG, t) = match cG with 

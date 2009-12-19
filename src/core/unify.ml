@@ -65,6 +65,7 @@ module type UNIFY = sig
   val unifyTypRec : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
   val unifyDCtx:   mctx -> dctx -> dctx -> unit
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
+  val unifyMSub    : msub  -> msub -> unit
 
   val matchTerm    : mctx -> dctx -> nclo -> nclo -> unit 
   val matchTyp     : mctx -> dctx -> tclo -> tclo -> unit 
@@ -2391,9 +2392,7 @@ module Make (T : TRAIL) : UNIFY = struct
             )
 
 
-
    (* **************************************************************** *)
-
     let rec unify1 mflag cD0 cPsi sM1 sM2 =
       unifyTerm mflag cD0 cPsi sM1 sM2;
       dprint (fun () -> "Force constraint ... \n") ; 
@@ -2488,7 +2487,27 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     let unify cD0 cPsi sM sN = 
-      unify' Unification cD0 cPsi sM sN
+      let _ = dprint (fun () -> "Unify " ^ P.normalToString Empty cD0 cPsi sM ^ "\n with \n" ^ P.normalToString Empty Empty cPsi sN ) in 
+      let _ =  unify' Unification cD0 cPsi sM sN in 
+      let _ = dprint (fun () -> "Unify DONE " ^ P.normalToString Empty cD0 cPsi sM ^ "\n ==  \n" ^ P.normalToString Empty Empty cPsi sN ) in 
+        ()
+
+
+
+   (* **************************************************************** *)
+
+    let rec unifyMSub ms mt = match (ms, mt) with
+      | (MShift k, MShift k') -> () (* if k = k' then () 
+        else raise (Unify "Contextual substitutions not of the same length") *)
+      | (MDot ( _ , ms), MShift k) -> 
+          unifyMSub ms (MShift (k-1))
+      | (MShift k, MDot ( _ , ms)) -> 
+          unifyMSub ms (MShift (k-1))
+      | (MDot (MObj (phat, tM), ms'), MDot (MObj(phat', tM'), mt')) -> 
+          (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ; 
+           unifyMSub ms' mt')
+
+   (* **************************************************************** *)
 
     let unifyTypRec cD0 cPsi sArec sBrec =
         unifyTypRec' Unification cD0 cPsi sArec sBrec 

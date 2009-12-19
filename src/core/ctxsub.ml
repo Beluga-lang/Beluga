@@ -18,6 +18,8 @@ open Error
 exception Error of Syntax.Loc.t option * error
 exception Violation of string
 
+module Comp = Syntax.Int.Comp
+
 module Unify = Unify.EmptyTrail
 
   (* ctxToSub cPsi:
@@ -415,9 +417,7 @@ and csub_dctx cD cPsi k cPhi =
           | CoCtx (co_cid , phi') -> 
               csub_ctxCoe co_cid cD (phi',k) cPsi 
         in 
-          check_ctx_var phi 
-
-    
+          check_ctx_var phi     
 
     | DDec (cPhi, TypDecl (x, tA)) ->   
         let (cPhi', b) = csub_dctx' cPhi in 
@@ -430,6 +430,26 @@ and csub_dctx cD cPsi k cPhi =
   in 
   let(cPhi', _ ) = csub_dctx' cPhi in 
     cPhi'
+
+and csub_mctx cPsi k cD = match cD with
+  | Empty -> Empty
+  | Dec(cD', MDecl(n, tA, cPhi)) -> 
+      let cD''   = csub_mctx cPsi k cD'  in 
+      let tA' = csub_typ cPsi k tA in 
+      let cPhi' = csub_dctx cD'' cPsi k cPhi in 
+        Dec(cD'', MDecl(n, tA', cPhi'))
+  | Dec(cD', PDecl(n, tA, cPhi)) -> 
+      let cD''   = csub_mctx cPsi k cD'  in 
+      let tA' = csub_typ cPsi k tA in 
+      let cPhi' = csub_dctx cD'' cPsi k cPhi in 
+        Dec(cD'', PDecl(n, tA', cPhi'))
+  | Dec(cD', MDeclOpt n) ->
+      let cD''   = csub_mctx cPsi k cD'  in 
+        Dec(cD'', MDeclOpt n)
+  | Dec(cD', PDeclOpt n) ->
+      let cD''   = csub_mctx cPsi k cD'  in 
+        Dec(cD'',PDeclOpt n)
+
 
 and csub_msub cPsi k theta = match theta with 
   | MShift n -> MShift n
@@ -444,3 +464,72 @@ and csub_msub cPsi k theta = match theta with
   | MDot (ft, theta) -> 
       MDot (ft, csub_msub cPsi k theta)
       
+
+
+let rec csub_exp_chk cPsi k e' = 
+  match e' with 
+  | Comp.Syn (loc, i) -> 
+      Comp.Syn(loc, csub_exp_syn cPsi k i)
+  | Comp.Rec (loc, n, e) -> 
+      Comp.Rec(loc, n, csub_exp_chk cPsi k e)
+  | Comp.Fun (loc, n, e) -> 
+      Comp.Fun(loc, n, csub_exp_chk cPsi k e)
+  | Comp.CtxFun (loc, n, e) -> 
+      Comp.CtxFun(loc, n, csub_exp_chk cPsi (k+1) e)
+  | Comp.MLam (loc, u, e) -> 
+      Comp.MLam(loc, u, csub_exp_chk cPsi k e)
+  | Comp.Pair (loc, e1, e2) -> 
+      let e1' = csub_exp_chk cPsi k e1 in 
+      let e2' = csub_exp_chk cPsi k e2 in 
+        Comp.Pair (loc, e1', e2')
+
+  | Comp.LetPair (loc, i, (x,y,e)) -> 
+      let i1 = csub_exp_syn cPsi k i in 
+      let e1 = csub_exp_chk cPsi k e in 
+        Comp.LetPair (loc, i1, (x,y,e1))
+
+  | Comp.Box (loc, phat, tM) -> 
+      let phat' = csub_psihat cPsi k phat in 
+      let tM'   = csub_norm cPsi k tM in 
+        Comp.Box (loc, phat', tM')
+
+  | Comp.Case (loc, i, branches) -> 
+      let i1 = csub_exp_syn cPsi k i in 
+      let branches' = List.map (fun b -> csub_branch cPsi k b) branches in 
+        Comp.Case (loc, i1, branches')
+
+and csub_exp_syn cPsi k i' = match i' with
+  | Comp.Const _c -> i'
+  | Comp.Var _    -> i'
+  | Comp.Apply (loc, i, e) -> 
+      let i1 = csub_exp_syn cPsi k i in 
+      let e1 = csub_exp_chk cPsi k e in 
+        Comp.Apply (loc, i1, e1)
+  | Comp.CtxApp (loc, i, cPhi) -> 
+      let cPhi' = csub_dctx Empty (*dummy *) cPsi k cPhi in 
+      let i1    = csub_exp_syn cPsi k i in 
+        Comp.CtxApp (loc, i1, cPhi')
+
+  | Comp.MApp (loc, i, (phat, tM)) -> 
+      let i1 = csub_exp_syn cPsi k i in 
+      let tM' = csub_norm cPsi k tM  in
+      let phat' = csub_psihat cPsi k phat in 
+        Comp.MApp (loc, i1, (phat', tM'))
+
+  | Comp.Ann (e, tau) -> 
+      let e' = csub_exp_chk cPsi k e in 
+      let tau' = csub_ctyp Empty (*dummy *) cPsi k tau in 
+        Comp.Ann (e', tau')
+        
+
+and csub_branch cPsi k branch = match branch with 
+  | Comp.BranchBox (cD, (cPhi, tM, ms), e) -> 
+      let cPhi' = csub_dctx Empty (*dummy *) cPsi k cPhi in 
+      let tM'   = csub_norm cPsi k tM in 
+      let ms'   = csub_msub cPsi k ms in 
+      let e'    = csub_exp_chk cPsi k e in 
+      let cD'   = csub_mctx cPsi k cD in 
+        Comp.BranchBox (cD', (cPhi', tM', ms'), e')
+
+
+

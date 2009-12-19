@@ -38,17 +38,15 @@ fn x => fn y =>
 
 
 rec eval : (exp T)[ ] -> (exp T)[ ] = 
- fn e => 
-  case e of 
-    [ ] tt => [ ] tt
+ fn e => case e of 
+  | [ ] tt => [ ] tt
 
   | [ ] ff => [ ] ff
 
   | [ ] z  => [ ] z
 
   | [ ] suc U => 
-    let [ ] V  = eval ([ ] U) in [ ] suc V
-     
+    let [ ] V  = eval ([ ] U) in [ ] suc V   
 
   | [ ]  eq U V =>
     equal (eval ([ ] U))  (eval  ([ ] V))
@@ -60,5 +58,25 @@ rec eval : (exp T)[ ] -> (exp T)[ ] =
      )
 
    | [ ] letv  U (\x . (W x))  =>
-   let [ ] V = eval  ([ ] U) in eval ([ ] (W V))
+   let [ ] V = eval ([ ] U) in eval ([ ] (W V))
 ;
+
+let y1 = eval ([ ] suc z) ;
+%{
+let x1 = eval ([ ] z) ;
+
+
+
+let y2 = eval ([ ] tt);
+
+let y3 = eval ([ ] iff tt (suc z) z) ;
+
+let a1 = equal ([ ] suc z) ([ ] suc z) ;
+let a2 = equal (eval ([ ] suc z)) (eval ([ ] suc z)) ;
+
+let a2 = (equal y1) y1;
+
+let y4 = eval ([ ] eq (suc z) (suc z)) ;
+
+let y5 = eval ([ ] letv (iff tt (suc z) z) (\y. iff (eq y (suc z)) (suc y) y)) ;
+

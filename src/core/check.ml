@@ -1122,7 +1122,7 @@ module Comp = struct
 *)
   and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
     match branch with
-      | BranchBox (cD1',  (_phat, (I.Root(loc, _, _ ) as tR1), t1),  e1) ->
+      | BranchBox (cD1',  (_cPsi1, (I.Root(loc, _, _ ) as tR1), t1),  e1) ->
           (* By invariant: cD1' |- t1 <= cD *)
           let _         = LF.checkMSub cO cD1' t1 cD in  
           let tP1   = Whnf.cnormTyp (tP, t1) in 

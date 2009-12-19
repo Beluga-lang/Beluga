@@ -1019,7 +1019,7 @@ module Int = struct
 
 
     and fmt_ppr_cmp_branch cO cD cG _lvl ppf = function
-      | Comp.BranchBox (cD1', (phat, tM, t), e) ->
+      | Comp.BranchBox (cD1', (cPsi, tM, t), e) ->
           let rec ppr_ctyp_decls cO ppf = function
             | LF.Empty             -> fprintf ppf ""
 
@@ -1028,7 +1028,6 @@ module Int = struct
                   (ppr_ctyp_decls cO) cD
                   (fmt_ppr_lf_ctyp_decl cO cD 1) decl
           in
-          let cPsi = phatToDCtx phat in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
             fprintf ppf "%a @ ([%a] %a) @ : %a  => @ @[<2>%a@]@ "
               (ppr_ctyp_decls cO) cD1'
@@ -1046,8 +1045,8 @@ module Int = struct
     (* cD |- t : cD'  *)
 
     and fmt_ppr_refinement cO cD cD0 lvl ppf t = begin match (t, cD0) with
-      | (LF.MShift _, _ ) ->
-          fprintf ppf "" 
+      | (LF.MShift k, _ ) ->
+          fprintf ppf "^%s" (string_of_int k)
 
       | (LF.MDot (f, s), LF.Dec(cD', decl)) -> 
           fprintf ppf "%a@ ,@ %a"
@@ -1385,7 +1384,7 @@ module Error = struct
 
       | TypMismatchElab (cO, cD, cPsi, sA1, sA2) ->
           fprintf ppf
-            "ill-typed expression\n  expected: %a\n  inferred: %a\n \n "
+            "ill-typed expression\n  expected: %a\n  inferred: %a\n "
             (IP.fmt_ppr_lf_typ cO cD cPsi    std_lvl) (Whnf.normTyp sA1)
             (IP.fmt_ppr_lf_typ cO cD cPsi    std_lvl) (Whnf.normTyp sA2)
             (* (IP.fmt_ppr_lf_dctx cO cD std_lvl)        (Whnf.normDCtx cPsi) *)
@@ -1446,7 +1445,7 @@ module Error = struct
 
       | CompIllTyped (cO, cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
           fprintf ppf
-            "ill-typed expression\n  expected: %a\n  for expression: %a\n  inferred:%a    \n"
+            "ill-typed expression\n  expected: %a\n  for expression: %a\n  inferred:%a    \n Note: Computation-level applications are not automatically left-associative but require parenthesis."
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau) 
             (IP.fmt_ppr_cmp_exp_chk cO cD cG std_lvl) e
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau') 
@@ -1454,7 +1453,7 @@ module Error = struct
       | CompMismatch (cO, cD, cG, i, variant, theta_tau) ->
           fprintf ppf
             (* "ill-typed expression\n  expected: %s\n  inferred: %a\n  for expression: %a\n  in context:\n    %s" *)
-            "ill-typed expression\n  inferred: %a\n  for expression: %a\n "
+            "ill-typed expression\n  inferred: %a\n  for expression: %a\n \n Note: Computation-level applications are not automatically left-associative but require parenthesis."
             (* (print_typeVariant variant)*) 
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau) 
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i

@@ -18,10 +18,10 @@ Structure
 beluga
 ------
 
-    INSTALL.text        Compilation and installation instructions
-    README.text         Current file
-    STYLE.text          Comments on stylistic conventions
-    TODO.text           List of tasks to be completed
+    INSTALL             Compilation and installation instructions
+    README              Current file
+    STYLE               Comments on stylistic conventions
+    TODO                List of tasks to be completed
 
 
 src

@@ -205,10 +205,8 @@ and eval_branch (phat, tM) (BranchBox (cD, (cPsi' , tM', theta'), e)) (theta, et
 
 
 let rec eval i  =  
-  let _ = dprint (fun () -> "\n\nSTART EVALUATION \n\n") in
+  let _ = dprint (fun () -> "\n\nSTART EVALUATION\n") in
   begin match eval_chk i (I.LF.MShift 0, Empty) with
     | ConstValue cid -> Syn(None, Const cid)
     | BoxValue (phat, tM) -> Box(None, phat, tM)
   end
-
-

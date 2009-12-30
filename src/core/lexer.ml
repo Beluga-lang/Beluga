@@ -59,10 +59,10 @@ Beluga lexical categories:
          <  >
          ->  <-   =>
          FN
-         block  case  fn  id  in
+         block  case  coercion  fn  id  in
          let  mlam  of
          rec  schema  some  type
-         %name
+         %name %not
 
      presently reserved but unused:           box
 

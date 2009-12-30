@@ -242,6 +242,7 @@ module Int = struct
      | Implicit
      | Explicit
 
+
    type typ =
       | TypBox   of Loc.t option * LF.typ  * LF.dctx
       | TypSBox  of Loc.t option * LF.dctx * LF.dctx
@@ -250,6 +251,18 @@ module Int = struct
       | TypCtxPi of (name * cid_schema) * typ
       | TypPiBox of (LF.ctyp_decl * depend) * typ
       | TypClo   of typ *  LF.msub
+
+   type env = 
+     | Empty
+     | Cons of value * env
+
+   and value = 
+     | FunValue   of (Loc.t option * name * exp_chk) * LF.msub * env 
+     | RecValue   of (cid_prog * exp_chk) * LF.msub * env 
+     | MLamValue  of (Loc.t option * name * exp_chk) * LF.msub * env
+     | CtxValue   of (Loc.t option * name * exp_chk) * LF.msub * env
+     | BoxValue   of LF.psi_hat * LF.normal 
+     | ConstValue of cid_prog
 
     and exp_chk =
       | Syn    of Loc.t option * exp_syn
@@ -262,6 +275,7 @@ module Int = struct
       | Box    of Loc.t option * LF.psi_hat * LF.normal
       | SBox   of Loc.t option * LF.psi_hat * LF.sub
       | Case   of Loc.t option * exp_syn * branch list
+      | Value  of value 
 
     and exp_syn =
       | Var    of offset
@@ -270,6 +284,7 @@ module Int = struct
       | CtxApp of Loc.t option * exp_syn * LF.dctx
       | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
       | Ann    of exp_chk * typ
+      | 
 
     and branch =
       | BranchBox  of LF.mctx

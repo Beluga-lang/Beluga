@@ -1941,7 +1941,8 @@ let rec mctxPVarPos cD p =
     | (Comp.Case (loc, i, branches), t) -> 
         Comp.Case (loc, cnormExp' (i,t), 
                    List.map (function b -> cnormBranch (b, t)) branches)
-    
+
+    | (Comp.Value v, _ ) -> Comp.Value v
  
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i 

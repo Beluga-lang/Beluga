@@ -77,6 +77,8 @@ and check : {g:(expCtx)*} {E :: exp [g]} {T :: tp []} boolean[] =
     [] false
 ;
 
-% let r1 = (check []) ;       % Match_failure("opsem.ml", 209, 8)
-% let r2 = (check []) <. suc (suc z)>;   % Match_failure("opsem.ml", 209, 8)
-let r3 = (check []) <. suc (suc z)> <. even>;   % OK
+let r1 = (check []) ; 
+let r2 = (check []) <. suc (suc z)>;  
+let r3 = (check []) <. suc (suc z)> <. even>;  
+let r4 = r2 <. even>;
+let r5 = r1 <. suc (suc z)> <. even>;

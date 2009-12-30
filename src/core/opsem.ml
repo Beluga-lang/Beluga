@@ -30,26 +30,10 @@ exception Violation  of string
 exception BranchMismatch
 
 
-type env = 
-  | Empty
-  | Cons of value * env
-
-and value = 
-  | FunValue   of (Loc.t option * name * exp_chk) * I.LF.msub * env 
-  | RecValue   of (cid_prog * exp_chk) * I.LF.msub * env 
-  | MLamValue  of (Loc.t option * name * exp_chk) * I.LF.msub * env
-  | CtxValue   of (Loc.t option * name * exp_chk) * I.LF.msub * env
-  | BoxValue   of I.LF.psi_hat * I.LF.normal 
-  | ConstValue of cid_prog
-
-
 let rec length_env env = begin match env with
   | Empty -> 0
   | Cons(_ , env') -> length_env env' + 1
 end
-
-
-
 
 let rec lookupValue x env = begin match (x, env) with
   | (1, Cons (v, env'))  -> v 
@@ -57,6 +41,52 @@ let rec lookupValue x env = begin match (x, env) with
   (* otherwise undefined *)
 end 
 
+
+
+(* ******************************************************************************* *)
+(* Substitution for computation-level bound variables
+
+   If D ; G |- e <= tau   and   . |- theta <= D   and   . |- eta <= [|theta|]G 
+   then     [eta][|theta|]e
+
+  Code below is broken ... 
+
+let rec subst_chk offset e eta = match e with 
+  | Syn (loc, i)         -> Syn(loc, subst_syn offset i eta)
+  | Fun (loc, f, e)      -> Fun (loc, f, subst_chk (offset+1) e eta)
+  | CtxFun (loc, psi, e) -> CtxFun (loc, psi, subst_chk offset e eta)
+  | Pair (loc, e1, e2)   -> 
+     Pair(loc, subst_chk offset e1 eta, subst_chk offset e2 eta)
+  | LetPair (loc, i, (x,y, e)) -> 
+      LetPair(loc, subst_syn offset i eta, 
+              (x,y, subst_chk (offset+2) e eta))
+  | Box(_loc, _phat, _tM) -> e 
+  | SBox _ -> e 
+  | Case (loc, i, branches) -> 
+      Case (loc, subst_syn offset i eta, subst_branches offest branches eta)
+
+and subst_syn offset i eta = match i with 
+  | Var x -> 
+  | Const c -> Const c
+  | Apply (loc, i, e) -> 
+      Apply (loc, subst_syn offset i eta, subst_chk offset e eta)
+  | MApp (loc, i, (phat,tM)) -> 
+      MApp (loc, subst_syn offset i eta, (phat, tM))
+  | CtxApp (loc, i, cPsi) -> 
+      CtxApp (loc, subst_syn offset i eta, cPsi)
+  | Ann (e, tau) -> Ann (subst_chk offset e eta, tau)
+
+
+and subst_branch offset branch eta = match branch with
+  | BranchBox (cD, pattern, e) -> 
+      BranchBox (cD, pattern, subst_chk offset e eta)
+
+and subst_branches offset branches eta = 
+  List.map (fun b -> subst_branch offset b eta) branches
+*)
+
+
+(* ******************************************************************************* *)
 
 let rec mctxToMSub cD = match cD with
   | Int.LF.Empty -> C.m_id
@@ -143,6 +173,7 @@ let rec eval_syn i theta_eta =
 
   | Ann (e, _tau) -> 
       eval_chk e theta_eta
+
     
 
 and eval_chk e theta_eta =  
@@ -169,6 +200,8 @@ and eval_chk e theta_eta =
 	      let _ = dprint (fun () -> "[eval_syn] Evaluated scrutinee ...") in 
 	      eval_branches (phat,tM) (branches, theta_eta)
 	  | _ -> raise (Violation "Expected BoxValue for case"))
+
+      | Value v -> v
 
 and eval_branches (phat,tM) (branches, theta_eta) = match branches with 
   | [] -> raise (Violation "Missing branch - Non-exhaustive pattern match") 
@@ -209,4 +242,5 @@ let rec eval i  =
   begin match eval_chk i (I.LF.MShift 0, Empty) with
     | ConstValue cid -> Syn(None, Const cid)
     | BoxValue (phat, tM) -> Box(None, phat, tM)
+    | v -> Value v
   end

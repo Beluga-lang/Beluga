@@ -186,45 +186,59 @@ module Int : sig
      | Implicit 
      | Explicit
 
-    type typ =
-      | TypBox   of Loc.t option * LF.typ * LF.dctx
-      | TypSBox  of Loc.t option * LF.dctx * LF.dctx
-      | TypArr   of typ * typ
-      | TypCross of typ * typ
-      | TypCtxPi of (name * cid_schema) * typ
-      | TypPiBox of (LF.ctyp_decl * depend) * typ
-      | TypClo   of typ * LF.msub
 
+   type typ =
+     | TypBox   of Loc.t option * LF.typ * LF.dctx
+     | TypSBox  of Loc.t option * LF.dctx * LF.dctx
+     | TypArr   of typ * typ
+     | TypCross of typ * typ
+     | TypCtxPi of (name * cid_schema) * typ
+     | TypPiBox of (LF.ctyp_decl * depend) * typ
+     | TypClo   of typ * LF.msub
+         
 
-    and exp_chk =
-       | Syn     of Loc.t option * exp_syn
-       | Rec     of Loc.t option * name * exp_chk
-       | Fun     of Loc.t option * name * exp_chk
-       | CtxFun  of Loc.t option * name * exp_chk
-       | MLam    of Loc.t option * name * exp_chk
-       | Pair    of Loc.t option * exp_chk * exp_chk     
-       | LetPair of Loc.t option * exp_syn * (name * name * exp_chk) 
-       | Box     of Loc.t option * LF.psi_hat * LF.normal
-       | SBox    of Loc.t option * LF.psi_hat * LF.sub
-       | Case    of Loc.t option * exp_syn * branch list
+   type env = 
+     | Empty
+     | Cons of value * env
 
-    and exp_syn =
-       | Var    of offset
-       | Const  of cid_prog
-       | Apply  of Loc.t option * exp_syn * exp_chk
-       | CtxApp of Loc.t option * exp_syn * LF.dctx
-       | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
-       | Ann    of exp_chk * typ 
-
-    and branch =
-      | BranchBox  of LF.mctx
-          * (LF.dctx * LF.normal * LF.msub)
-          * exp_chk
-
-      | BranchSBox of LF.mctx
-          * (LF.dctx * LF.sub    * LF.dctx * (LF.msub * LF.mctx))
-          * exp_chk
-
+   and value = 
+     | FunValue   of (Loc.t option * name * exp_chk) * LF.msub * env 
+     | RecValue   of (cid_prog * exp_chk) * LF.msub * env 
+     | MLamValue  of (Loc.t option * name * exp_chk) * LF.msub * env
+     | CtxValue   of (Loc.t option * name * exp_chk) * LF.msub * env
+     | BoxValue   of LF.psi_hat * LF.normal 
+     | ConstValue of cid_prog
+         
+   and exp_chk =
+     | Syn     of Loc.t option * exp_syn
+     | Rec     of Loc.t option * name * exp_chk
+     | Fun     of Loc.t option * name * exp_chk
+     | CtxFun  of Loc.t option * name * exp_chk
+     | MLam    of Loc.t option * name * exp_chk
+     | Pair    of Loc.t option * exp_chk * exp_chk     
+     | LetPair of Loc.t option * exp_syn * (name * name * exp_chk) 
+     | Box     of Loc.t option * LF.psi_hat * LF.normal
+     | SBox    of Loc.t option * LF.psi_hat * LF.sub
+     | Case    of Loc.t option * exp_syn * branch list
+     | Value   of value
+         
+   and exp_syn =
+     | Var    of offset
+     | Const  of cid_prog
+     | Apply  of Loc.t option * exp_syn * exp_chk
+     | CtxApp of Loc.t option * exp_syn * LF.dctx
+     | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
+     | Ann    of exp_chk * typ 
+         
+   and branch =
+     | BranchBox  of LF.mctx
+         * (LF.dctx * LF.normal * LF.msub)
+         * exp_chk
+         
+     | BranchSBox of LF.mctx
+         * (LF.dctx * LF.sub    * LF.dctx * (LF.msub * LF.mctx))
+         * exp_chk
+         
    type ctyp_decl =
      | CTypDecl of name * typ
      | CTypDeclOpt of name 

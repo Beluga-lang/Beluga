@@ -921,6 +921,13 @@ module Int = struct
               (fmt_ppr_cmp_branches cO cD cG 0) bs
               (r_paren_if cond)
 
+      | Comp.Value (Comp.FunValue _ ) -> fprintf ppf " fn "
+      | Comp.Value (Comp.RecValue _ ) -> fprintf ppf " rec "
+      | Comp.Value (Comp.MLamValue _ ) -> fprintf ppf " mlam "
+      | Comp.Value (Comp.CtxValue _ ) -> fprintf ppf " FN "
+      | Comp.Value (Comp.BoxValue _ ) -> fprintf ppf " box "
+      | Comp.Value (Comp.ConstValue _ ) -> fprintf ppf " const "
+
     and strip_mapp_args cO cD cG i = 
       if !Control.printImplicit then 
         i 

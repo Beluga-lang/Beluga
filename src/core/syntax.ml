@@ -284,7 +284,6 @@ module Int = struct
       | CtxApp of Loc.t option * exp_syn * LF.dctx
       | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
       | Ann    of exp_chk * typ
-      | 
 
     and branch =
       | BranchBox  of LF.mctx

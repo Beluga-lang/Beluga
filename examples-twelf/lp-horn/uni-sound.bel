@@ -3,7 +3,6 @@
 	coercion as a separate judgement
 
         h_sound : assume A -> pf A)[ ] 
-
 }%
 
 % Soundness of uniform proofs

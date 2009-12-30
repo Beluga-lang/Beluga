@@ -190,10 +190,10 @@ and eval_branch (phat, tM) (BranchBox (cD, (cPsi' , tM', theta'), e)) (theta, et
     begin try
       (dprint (fun () -> "Unify msub: theta =  " ^ 
 		 P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta) ) ; 
-       dprint (fun () -> "Unify Refinement  theta_k = " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta_k)) ; 
+       dprint (fun () -> "Unify Refinement  theta_k = " ^ 
+                 P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta_k)) ; 
 	Unify.unifyMSub theta theta_k ; 
-       dprint (fun () -> "After unification: theta =  " ^ 
-		 P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta) ) ; 
+       dprint (fun () -> "After unification: theta =  " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta) ) ; 
        dprint (fun () -> "     theta_k = " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta_k)) ; 
        Unify.unify I.LF.Empty cPsi' (tM, LF.id) (C.cnorm (tM', mt), LF.id) ;
        dprint (fun () -> "\n[eval_chk] body with  mt = " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub mt)) ; 

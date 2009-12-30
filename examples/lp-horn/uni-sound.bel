@@ -5,9 +5,12 @@
 % rec h_sound: (assume A)[ ] -> (pf A)[ ] = 
 % rec i_sound: (focus A P)[ ] -> (pf (atom P))[u:pf A] = 
 
-% Context coercions necessary: 
-% schema canCtx = some [a:o] assume a + i ; 
-% schema ndCtx = some [a:o] assume a  + i ;
+
+schema ctx = some [a:o] block u: assume a . pf a + i ; 
+
+rec i_sound : {g:(ctx)*}(focus (A ..) (P ..))[g] -> (pf (atom (P ..)))
+and s_sound : {g:(ctx)*}(solve (A ..))[g] -> (pf (A ..))[g] = 
+
 
 % coercion c2n : canCtx => ndCtx = 
 %  | {a:o} assume a => pf a 

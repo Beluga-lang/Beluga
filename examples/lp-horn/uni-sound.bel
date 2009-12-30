@@ -8,14 +8,8 @@
 
 schema ctx = some [a:o] block u: assume a . pf a + i ; 
 
-rec i_sound : {g:(ctx)*}(focus (A ..) (P ..))[g] -> (pf (atom (P ..)))
-and s_sound : {g:(ctx)*}(solve (A ..))[g] -> (pf (A ..))[g] = 
-
-
-% coercion c2n : canCtx => ndCtx = 
-%  | {a:o} assume a => pf a 
-%  |       o        => o
-%;
+% rec i_sound : {g:(ctx)*}(focus (A ..) (P ..))[g] -> (pf (atom (P ..)))
+% and s_sound : {g:(ctx)*}(solve (A ..))[g] -> (pf (A ..))[g] = 
 
 % rec s_sound : {g:(canCtx)*} (solve A)[g] -> (pf A)[c2n(g)] = 
 

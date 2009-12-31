@@ -11,7 +11,6 @@ isc_and : iscan (tc_and TC2 TC1) (can_andi CN2 CN1)
 	   <- iscan TC1 CN1
 	   <- iscan TC2 CN2.
 
-
 isc_imp : iscan (tc_imp (\u. \ta. (TC1 u ta))) (can_impi (\u. \at. (CN1 u at)))
 	   <- {u:pf A} {ta:toatm u u} {at:atm u}
 	      isatm ta at -> iscan (TC1 u ta) (CN1 u at).

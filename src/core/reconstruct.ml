@@ -2938,7 +2938,6 @@ and fmvApxHead fMVs cO cD l_cd1 l_delta k h = match h with
         Apx.LF.MVar (Apx.LF.MInst (tM',tP',cPhi') , s') 
 
   | Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s) -> 
-      let _ = Printf.printf "fmvApx PVar MInst ?\n" in 
       let s' = fmvApxSub fMVs cO cD l_cd1 l_delta k s in
       let rec mvar_dot t l_delta = match l_delta with
         | 0 -> t
@@ -2962,7 +2961,7 @@ and fmvApxHead fMVs cO cD l_cd1 l_delta k h = match h with
         Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s')  
 
   | Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s), j) -> 
-      let _ = Printf.printf "fmvApx PVar MInst ?\n" in 
+      (* let _ = Printf.printf "fmvApx PVar MInst ?\n" in  *)
       let s' = fmvApxSub fMVs cO cD l_cd1 l_delta k s in
       let rec mvar_dot t l_delta = match l_delta with
         | 0 -> t

@@ -1,0 +1,67 @@
+% Variable counting (see Pientka [POPL'08])
+% Author:  Brigitte Pientka
+%
+% This example only uses weak higher-order abstract syntax.
+
+exp : type.   %name exp E x.
+z   : exp.
+s   : exp -> exp.
+
+tt  : exp.
+add : exp -> exp -> exp.
+letv: exp -> (exp  -> exp) -> exp.
+
+
+
+schema expCtx = exp;
+
+
+rec plus : exp [ ] -> exp [ ] -> exp [ ] =
+fn x => fn y =>
+case x of
+  [ ] z    => y
+
+| [ ] s U  =>
+  let [ ] V = plus ([ ] U) y in ([ ] s V);
+
+% G, x:exp T |-  z  ==>  0
+% G, x:exp T |-  tt  ==>  0
+% G, x:exp T |-  x  ==>  1
+% G, x:exp T |-  y  ==>  0   y =/= x 
+% G, x:exp T |-  s (U .. x) ==> n   if G, x:exp T |- U  ==> n
+% G, x:exp T |-  s U  ==> n   if G, x:exp T |- U  ==> n
+% G, x:exp T |-  letv (U .. x) (\y. V .. x y) ===> n1 + n2
+% if  G, x: exp T |-  U .. x ==> n1
+% if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
+
+rec cntV : {g:(expCtx)*}  exp [g, x:exp] -> exp [ ] =
+FN g => 
+ fn e =>
+  case e of 
+
+   | [g,x:exp ] tt  
+     => [ ] z
+
+  | [g,x:exp] #p ..    => [ ] z
+
+  | [g,x:exp] x       => [ ] s z
+
+
+  | [g,x:exp ] z      => [ ] z
+
+  | [g,x:exp] (U .. )  => [ ] z
+
+  | [g,x:exp] s (W .. x)  => cntV [g]  ([g,x] (W .. x))
+
+  | [g,x:exp] letv (U1 .. x) (\y . (U2 .. x y)) =>
+      plus  (cntV [g]         ([g,x] (U1 .. x))) 
+            (cntV [g, y:exp]  ([g,y,x] (U2 .. x y)))
+
+  | [g,x:exp] add (U .. x) (W .. x)  =>
+     plus (cntV [g] ([g,x] (U .. x)))
+          (cntV [g] ([g,x] (W .. x)))
+
+;
+
+
+ 

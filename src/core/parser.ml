@@ -486,16 +486,7 @@ GLOBAL: sgn_eoi;
     [
       [
 
-        co = SYMBOL; "("; "#"; p = SYMBOL; ")"; "." ; k = INTLIT;  sigma = clf_sub_new ->
-          LF.CoPVar(_loc, Id.mk_name (Id.SomeString co), 
-                    Id.mk_name (Id.SomeString p),  int_of_string k, sigma)
-
-
-      | co = SYMBOL; "("; "#"; p = SYMBOL; ")"; sigma = clf_sub_new ->
-          LF.CoPVar(_loc, Id.mk_name (Id.SomeString co), 
-                    Id.mk_name (Id.SomeString p), 0, sigma)
-
-      |  "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
+        "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->

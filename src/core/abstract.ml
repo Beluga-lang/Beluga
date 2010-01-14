@@ -1333,6 +1333,7 @@ and abstractMVarMctx cQ cD offset = match cD with
   | I.Empty -> I.Empty
 
   | I.Dec(cD, I.MDecl(u, tA, cPsi)) -> 
+      let _ = dprint (fun () -> "abstractMVarMctx : FMV " ^ R.render_name u  ^ "\n") in
       let cD' = abstractMVarMctx cQ cD (offset - 1) in
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
@@ -1379,6 +1380,7 @@ and abstractMVarCtx cQ =  match cQ with
         I.Dec (cQ', PV (Pure, p'))
 
   | I.Dec (cQ, FMV (Pure, u, Some (tA, cPsi))) ->
+      let _ = dprint (fun () -> "abstractMVarCtx : FMV " ^ R.render_name u  ^ "\n") in
       let cQ'   = abstractMVarCtx cQ in
       let cPsi' = abstractMVarDctx cQ 0 cPsi in 
       let tA'   = abstractMVarTyp cQ 0 (tA, LF.id) in

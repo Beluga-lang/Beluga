@@ -444,6 +444,7 @@ module Apx : sig
     and ctyp_decl =
       | MDecl of  name * typ  * dctx
       | PDecl of  name * typ  * dctx
+      | MDeclOpt of name
 
     and typ =
       | Atom  of Loc.t * cid_typ * spine

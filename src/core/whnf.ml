@@ -907,36 +907,6 @@ and cnorm (tM, t) = match tM with
                 Root (loc, newHead, cnormSpine (tS, t))
             end
 
-          | CoPVar (co_cid, Offset j, k, s) -> 
-              let h' =
-                begin match LF.applyMSub j t with
-                  | PObj (_phat, BVar i)   -> 
-                      (*  i <= phat *) 
-                      begin match LF.bvarSub i (cnormSub (s,t)) with
-                        | Head (BVar j)      ->  Proj(BVar j, k)
-                        | Head (PVar (p,r')) ->  Proj(PVar (p, r'), k)
-                            (* other cases should not happen; 
-                               term would be ill-typed *)
-                      end
-                  | PObj(_phat, PVar (Offset i, s')) ->
-                       CoPVar (co_cid, Offset i, k, LF.comp s' (cnormSub (s,t)))
-                        
-                  | PObj (_phat, PVar(PInst ({contents= None}, _, _, _) as p, r')) -> 
-                       CoPVar (co_cid, p, j, LF.comp r' (cnormSub (s,t)))
-                  | MV  u'            -> 
-                      CoPVar (co_cid, Offset u', k, cnormSub (s, t))
-                end
-              in
-                Root (loc, h', cnormSpine (tS, t))
-
-
-
-          | CoPVar (_co_cid, PInst ({contents=None}, _ , _, _ ), _k, _s) -> 
-              raise (Violation ("cnormSub case for CoPVar (PInst) – to be implemented\n"))
-
-          | CoFPVar (_co_cid, _name, _k, _s) -> 
-              raise (Violation ("cnormSub case for CoFPVar – to be implemented\n"))
-
           | head -> (print_string ("cnorm fallthru " ^ what_head head ^  "\n"); exit 2)
         end
       (* Ignore other cases for destructive (free) parameter-variables *)
@@ -1770,7 +1740,10 @@ let rec mctxPDec cD k =
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, PDecl (p, tA, cPsi)),  1)
       -> (p, mshiftTyp tA k, mshiftDCtx cPsi k)
-        
+
+(*    | (Dec (_cD, MDecl (p, tA, cPsi)),  1)
+      -> (p, mshiftTyp tA k, mshiftDCtx cPsi k)
+*)        
     | (Dec (_cD, MDecl  _),  1)
       -> raise (Violation ("Expected parameter variable, but found meta-variable"))
 
@@ -1793,7 +1766,7 @@ let rec mctxMVarPos cD u =
               
     | Dec (cD, _) -> lookup cD (k+1)
 
-    | Empty  -> (dprint (fun () -> "mctxMVarPos\n") ; raise Fmvar_not_found)
+    | Empty  -> (dprint (fun () -> "mctxMVarPos \n") ; raise Fmvar_not_found)
   in 
     lookup cD 1
 

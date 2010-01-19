@@ -59,7 +59,18 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
+  rarr: [[ "->" -> ()
+         | "→" -> () ]];  (* Unicode right arrow (HTML &rarr;) *)
 
+  rArr:  [[ "=>" -> ()
+         | "⇒" -> () ]];  (* Unicode double right arrow (HTML &rArr;) *)
+
+  dots: [[ "."; "." -> ()
+         | "…" -> () ]];  (* Unicode ellipsis (HTML &hellip;) *)
+
+  gLambda: [[ "FN" -> ()
+         | "Λ" -> () ]];  (* Unicode capital Lambda (HTML &Lambda;) *)
+  
   sgn_decl:
     [
       [
@@ -73,7 +84,7 @@ GLOBAL: sgn_eoi;
           Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
 
       |
-        "coercion"; w = SYMBOL; ":"; a_ctx = SYMBOL; "->"; b_ctx = SYMBOL; 
+        "coercion"; w = SYMBOL; ":"; a_ctx = SYMBOL; rarr; b_ctx = SYMBOL; 
         "="; OPT [ "|"]; bs = LIST1 co_branch SEP "|" ; ";" -> 
           Sgn.Coercion (_loc, Id.mk_name (Id.SomeString w), 
                         LF.CoTyp(Id.mk_name (Id.SomeString a_ctx), Id.mk_name (Id.SomeString b_ctx)), bs)
@@ -108,7 +119,7 @@ GLOBAL: sgn_eoi;
    [ 
       [
 
-        some_arg = lf_schema_some; arec = lf_typ_rec ; "=>"; brec_opt = lf_typ_rec_opt ->
+        some_arg = lf_schema_some; arec = lf_typ_rec ; rArr; brec_opt = lf_typ_rec_opt ->
           LF.CoBranch (List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg, arec, brec_opt)
       ]
    ];
@@ -127,7 +138,7 @@ GLOBAL: sgn_eoi;
              end
 
         |
-           a2 = lf_typ LEVEL "atomic"; "->"; k_or_a = SELF ->
+           a2 = lf_typ LEVEL "atomic"; rarr; k_or_a = SELF ->
              begin match k_or_a with
                | Kind k -> Kind (LF.ArrKind (_loc, a2, k))
                | Typ  a -> Typ  (LF.ArrTyp  (_loc, a2, a))
@@ -163,7 +174,7 @@ GLOBAL: sgn_eoi;
            "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF ->
              LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
         |
-           a2 = SELF; "->"; a = SELF ->
+           a2 = SELF; rarr; a = SELF ->
              LF.ArrTyp (_loc, a2, a)
 
         ]
@@ -355,7 +366,7 @@ GLOBAL: sgn_eoi;
            "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF ->
              LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
         |
-           a2 = SELF; "->"; a = SELF ->
+           a2 = SELF; rarr; a = SELF ->
              LF.ArrTyp (_loc, a2, a)
         ]
 
@@ -505,11 +516,11 @@ GLOBAL: sgn_eoi;
   clf_sub_new:
     [
       [
-          "."; "."  ->
+          dots  ->
           LF.Id (_loc) 
 
 
-       | co = SYMBOL; "("; "."; "." ; ")"  -> 
+       | co = SYMBOL; "("; dots ; ")"  -> 
            LF.CoId (_loc, Id.mk_name (Id.SomeString co)  )
 
       | 
@@ -588,7 +599,7 @@ GLOBAL: sgn_eoi;
           Comp.TypPiBox (_loc, ctyp_decl, tau)
 
       |
-        tau1 = SELF; "->"; tau2 = SELF ->
+        tau1 = SELF; rarr; tau2 = SELF ->
           Comp.TypArr (_loc, tau1, tau2)
 
       ]
@@ -644,13 +655,13 @@ GLOBAL: sgn_eoi;
   cmp_exp_chk:
     [ "full"
       [
-         "fn"; f = SYMBOL; "=>"; e = SELF ->
+         "fn"; f = SYMBOL; rArr; e = SELF ->
            Comp.Fun (_loc, Id.mk_name (Id.SomeString f), e)
       |
-        "FN"; f = SYMBOL; "=>"; e = SELF ->
+        gLambda; f = SYMBOL; rArr; e = SELF ->
           Comp.CtxFun (_loc, Id.mk_name (Id.SomeString f), e)
       |
-        "mlam"; f = UPSYMBOL; "=>"; e = SELF ->
+        "mlam"; f = UPSYMBOL; rArr; e = SELF ->
           Comp.MLam (_loc, Id.mk_name (Id.SomeString f), e)
       |
         "case"; i = cmp_exp_syn; "of"; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
@@ -741,7 +752,7 @@ GLOBAL: sgn_eoi;
       (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")"; *)
         "["; pHat = clf_dctx ;"]"; tM = clf_term_app; 
          tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi)]; 
-         "=>"; e = cmp_exp_chk ->  
+         rArr; e = cmp_exp_chk ->  
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
             Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, tau), e)
       ]

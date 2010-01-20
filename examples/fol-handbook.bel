@@ -81,7 +81,6 @@ rec ded: {g:(hilCtx)*} (hil (B ..))[g, u:hil (A ..)] -> (hil (imp (A ..) (B ..))
 
 schema ndhilCtx = i + o + some [a:o] block u:hil a . nd a; 
 
-
 rec ndhil : {g:(ndhilCtx)*} (nd (A ..))[g] -> (hil (A ..))[g] =
  FN g => fn d => 
  case d of 

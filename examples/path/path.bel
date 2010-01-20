@@ -42,10 +42,18 @@ FN g => mlam M => mlam N => fn f => case [g] M .. of
        = f <g. (left done)> ([g] p_left p_done) in 
 
     let [g] e_ref = eqPath [g] <g. M2 .. > <g. (N2 ..)  > 
-  			   (mlam Q => fn iq => let [g] p_done = iq in [g] p_done ) in  	 
-
+      (mlam Q => fn iq => let [g] D .. = iq in 
+           let [g] p_right (D' ..) : (is_path (right (Q' .. )) (app (N1 ..) (N2 ..)))[g] 
+              = f < g. (right (Q ..)) > ([g] p_right (D .. )) in 
+		[g] D' ..   )
+    in  	 
     let [g] e_ref  = eqPath [g] <g. M1 .. > <g. (N1 ..)  >
-                           (mlam R => fn ip => let [g] p_done = ip in [g] p_done ) in  	
+		       (mlam Q => fn iq => 
+                        let [g] D .. = iq in 
+			let [g] p_left (D' ..) : (is_path (left (Q' .. )) (app (N1 ..) (N2 ..)))[g] 
+              = f < g. (left (Q ..)) > ([g] p_left (D .. )) in 
+		[g] D' ..   )
+    in  	 
 			 
     [g] e_ref
 
@@ -60,11 +68,17 @@ FN g => mlam M => mlam N => fn f => case [g] M .. of
 
   let [g,b:block x:tm, q:path . is_path q x] e_ref = 
        eqPath [g, b:block x:tm, q:path. is_path q x] <g,b. M' .. b.1 > <g,b. N' .. b.1 > 
-              (mlam R => fn ip => let [g,b:block x:tm, q:path. is_path q x] p_done = ip in 
-				  [g,b] p_done)
+       (mlam Q => fn ip =>
+         let {Qs:: path[g,p:path]}
+             [g,b:block x:tm, q:path. is_path q x] Qs .. b.2 = [g,b:block x:tm, q:path. is_path q x] Q .. b in  % strengthening
+         let [g,b:block x:tm, q:path. is_path q x] D .. b = ip in 
+         let [g] p_lam (\x.\q.\iq. D' .. x q iq) : (is_path (bind (\q. Q' .. q)) (lam (\x. N' .. x)))[g] =  
+           f < g. bind (\q. Qs .. q) >  ([g] p_lam (\x.\q.\iq. D .. <x,q,iq> )  ) in
+             [g,b] D' .. b.1 b.2 b.3
+       )
+
   in 
       [g] e_ref
-
 ;
 
 %{

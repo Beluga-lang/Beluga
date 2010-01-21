@@ -55,6 +55,7 @@ type error =
 
   | ConstraintsLeft
   | NotPatSub
+  | NotPatternSpine
 
   | LeftoverUndef
   | SubIllTyped

@@ -1048,12 +1048,15 @@ let rec elKind  cPsi k = match k with
  *)
 and elTyp recT  cO cD cPsi a = match a with
   | Apx.LF.Atom (loc, a, s) ->
-      let tK = (Typ.get a).Typ.kind in
-      let i  = (Typ.get a).Typ.implicit_arguments in
-      let s'  = mkShift recT cPsi in 
-(* let s' = LF.id in *)
-      let tS = elKSpineI recT  cO cD cPsi s i (tK, s') in
-        Int.LF.Atom (Some loc, a, tS)
+      begin try
+        let tK = (Typ.get a).Typ.kind in
+        let i  = (Typ.get a).Typ.implicit_arguments in
+        let s'  = mkShift recT cPsi in 
+          (* let s' = LF.id in *)
+        let tS = elKSpineI recT  cO cD cPsi s i (tK, s') in
+          Int.LF.Atom (Some loc, a, tS)            
+      with  _ -> raise (Error (Some loc, SpineIllTyped ))
+      end
 
   | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a), dep), b) ->
       let dep'  = match dep with Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
@@ -1314,7 +1317,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
 
   | Apx.LF.Root (loc, Apx.LF.Hole, spine) ->
       begin try 
-      let (_l, pat_spine) = patSpine spine in
+      (let (_l, pat_spine) = patSpine spine in
       let sshift = mkShift recT cPsi in
       let (tS, tA) = elSpineSynth recT  cD cPsi pat_spine sshift sP in
         (* For Beluga type reconstruction to succeed, we must have
@@ -1335,10 +1338,9 @@ and elTerm' recT  cO cD cPsi r sP = match r with
           | PiboxRecon -> 
               let u =  Whnf.newMMVar (cD, cPsi, tA) in
                 Int.LF.Root (Some loc, Int.LF.MMVar(u, (Whnf.m_id, LF.id)), tS)
-            end
-      with NotPatSpine -> 
-          (Printf.printf "elTerm' encountered hole with non-pattern spine\n";
-           raise NotImplemented)
+        end)
+      with NotPatSpine ->          
+           raise (Error (Some loc, NotPatternSpine))
       end
   (* We only allow free meta-variables of atomic type *)
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) as m ->
@@ -1438,7 +1440,9 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (Some loc, Int.LF.PVar (q, LF.id), Int.LF.Nil)
             
-            | (_, _) -> ((*Printf.printf "elTerm': FPVar with spine\n" ;*) raise NotImplemented)
+            | (_, _) ->  raise (Error (Some loc, NotPatternSpine))
+
+                   (* (Printf.printf "elTerm': FPVar with spine\n" ; raise NotImplemented)*)
           end
         | Violation msg  -> 
             dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
@@ -2006,7 +2010,7 @@ and elKSpine recT  cO cD cPsi spine sK = match (spine, sK) with
         Int.LF.App (tM, tS)
 
   | ( _, _) ->
-      ((*.printf "elKSpine: spine ill-kinded\n";*)
+      ((*Printf.printf "elKSpine: spine ill-kinded\n"; *)
       raise NotImplemented )(* TODO postpone error to reconstruction phase *)
 
 (* elSpineSynth cD cPsi p_spine s' = (S, A')

@@ -98,6 +98,7 @@ type error =
   (* whnf errors *)
   | ConstraintsLeft                    (* unclear if this can be raised       *)
   | NotPatSub                          (* ???                                 *)
+  | NotPatternSpine
 
   (* beluga errors *)
   | LeftoverUndef                      (* encountered Undef after unification *)

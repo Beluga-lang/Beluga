@@ -1531,6 +1531,9 @@ module Error = struct
       | NotPatSub ->
           fprintf ppf "Not a pattern substitution" (* TODO *)
 
+      | NotPatternSpine ->
+          fprintf ppf "non-pattern spine – cannot reconstruct the type of a variable or hole" (* TODO *)
+
       | LeftoverUndef ->
           fprintf ppf "Undef left after unification" (* FIXME this is a beluga error *)
 

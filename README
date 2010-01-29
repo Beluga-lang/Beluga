@@ -4,11 +4,24 @@ This document describes the Beluga source code, including a
 description of the source code structure and a description of the
 Beluga project.
 
+*      [Version History]
 *      [Structure]
-
 *      [Project Description]
-
        *        [Contextual Modal Type Theory]
+
+
+Version History
+===============
+
+    0.1-20090925        First public release of Beluga
+
+    0.1-20091016        First version to compile under OCaml 3.11 (as well as 3.10)
+
+    0.1-20091215        Support for context subsumption
+
+    0.2-20100122        `interpreter' now typechecks _and interprets_ Beluga code;
+                        improved error messages; improved Unicode support
+
 
 
 Structure
@@ -34,7 +47,7 @@ src/core:
     abstract.ml         Abstraction
     abstract.mli
     check.ml            Typechecking
-    check.mli           ...
+    check.mli           
     common.ml
     common.mli
     config.ml           State configuration for Core
@@ -49,9 +62,9 @@ src/core:
     error.mli           Error handling
  
     gensym.ml           Unique symbol generation
-    gensym.mli          ...
+    gensym.mli          
     id.ml               Identifiers, used for variables, constants, etc.
-    id.mli              ... 
+    id.mli               
     lexer.ml            Lexer
     lexer.mli  
     monitor.ml          Timing 
@@ -137,3 +150,4 @@ Publications
     syntax and first-class substitutions. 
     In 35th ACM Symposium on Principles of Programming Languages (POPL'08), 
     pages 371-382. ACM Press, January 2008. 
+

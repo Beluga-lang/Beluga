@@ -495,7 +495,6 @@ This case should now be covered by the one below it
 
     match tA with
     | Atom (loc, a, tS) ->
-        (* FIXME -bp *)
         let tK = (Typ.get a).Typ.kind in
         begin try
           let (tK', _s) = synKSpine cO cD cPsi (tS, s) (tK, LF.id) in
@@ -935,8 +934,11 @@ module Comp = struct
         checkTyp (I.Dec (cO, I.CDecl (psi_name, schema_cid))) cD tau
           
     | TypPiBox ((cdecl, _), tau) ->
-        checkTyp cO (I.Dec (cD, cdecl)) tau;; 
-  
+        checkTyp cO (I.Dec (cD, cdecl)) tau 
+
+    | TypBool -> ()
+
+;;
 
 
   (* check cO cD cG e (tau, theta) = ()
@@ -1046,9 +1048,23 @@ module Comp = struct
               raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.CtxPi, (tau,t))))
         end
 
-    | (Ann (e, tau)) ->
+    | Ann (e, tau) ->
         check cO cD cG e (tau, C.m_id);
         (tau, C.m_id)
+
+    | Equal(loc, i1, i2) -> 
+         let ttau1 = syn cO cD cG i1 in 
+         let ttau2 = syn cO cD cG i2 in            
+           if Whnf.convCTyp ttau1 ttau2 then 
+             begin match (Whnf.cwhnfCTyp ttau1) with 
+               | (TypBox _ , _ ) ->  (TypBool, C.m_id)
+               | (TypBool, _ )   ->  (TypBool, C.m_id)
+               | _               ->  raise (Error (loc, E.CompEqTyp (cO, cD, ttau1))) 
+             end
+
+           else 
+             raise (Error(loc, E.CompEqMismatch (cO, cD, ttau1, ttau2 )))
+
 
   and checkBranches caseTyp cO cD cG branches tAbox ttau =
     List.iter (fun branch -> checkBranch caseTyp cO cD cG branch tAbox ttau) branches

@@ -1793,26 +1793,26 @@ let rec mctxPVarPos cD p =
   (* ***************************************** *)
 
   let rec normCTyp tau = match tau with 
-    | (Comp.TypBox (loc, tA, cPsi))     
+    | Comp.TypBox (loc, tA, cPsi)     
       -> Comp.TypBox(loc, normTyp(tA, LF.id), normDCtx cPsi)
 
-    | (Comp.TypSBox (loc, cPsi, cPsi')) 
+    | Comp.TypSBox (loc, cPsi, cPsi') 
       -> Comp.TypSBox(loc, normDCtx cPsi, normDCtx cPsi')
 
-    | (Comp.TypArr (tT1, tT2))   -> 
+    | Comp.TypArr (tT1, tT2)   -> 
         Comp.TypArr (normCTyp tT1, normCTyp tT2)
 
-    | (Comp.TypCross (tT1, tT2))   -> 
+    | Comp.TypCross (tT1, tT2)   -> 
         Comp.TypCross (normCTyp tT1, normCTyp tT2)
 
-    | (Comp.TypCtxPi (ctx_dec , tau))      -> 
+    | Comp.TypCtxPi (ctx_dec , tau)      -> 
          Comp.TypCtxPi (ctx_dec, normCTyp tau)
 
-    | (Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau))    -> 
+    | Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau)    -> 
         Comp.TypPiBox ((MDecl (u, normTyp (tA, LF.id), normDCtx cPsi), dep),
                        normCTyp tau)
 
-
+    | Comp.TypBool -> Comp.TypBool
 
   let rec cnormCTyp thetaT = 
     begin match thetaT with 
@@ -1840,6 +1840,8 @@ let rec mctxPVarPos cD p =
 
         | (Comp.TypClo (tT, t'), t)        -> 
               cnormCTyp (tT, mcomp t' t)
+
+        | (Comp.TypBool, _t) -> Comp.TypBool
       end 
 
 
@@ -1879,6 +1881,8 @@ let rec mctxPVarPos cD p =
     | (Comp.TypPiBox (_, _) , _)       -> thetaT
 
     | (Comp.TypClo (tT, t'), t)        -> cwhnfCTyp (tT, mcomp t' t)
+
+    | (Comp.TypBool, _t)               -> thetaT
 
 
   (* WHNF and Normalization for computation-level terms to be added -bp *)
@@ -1930,6 +1934,11 @@ let rec mctxPVarPos cD p =
         Comp.MApp (loc, cnormExp' (i, t), (psihat, (norm (cnorm (tM, t), LF.id))))
 
     | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), Comp.TypClo (tau, mcomp t' t))
+
+    | (Comp.Equal (loc, i1, i2), t) -> 
+        let i1' = cnormExp' (i1, t) in 
+        let i2' = cnormExp' (i2, t) in 
+         (Comp.Equal (loc, i1', i2'))
 
 
 
@@ -2044,6 +2053,10 @@ let rec mctxPVarPos cD p =
           convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
         && 
           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t') 
+
+    | ((Comp.TypBool, _t ), (Comp.TypBool, _t')) -> true
+
+    | ( _ , _ ) -> false
 
 (* For now we omit PDecl, SDecl - bp *)
 

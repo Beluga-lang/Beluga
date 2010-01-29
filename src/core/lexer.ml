@@ -61,7 +61,8 @@ Beluga lexical categories:
          FN
          block  case  coercion  fn  id  in
          let  mlam  of
-         rec  schema  some  type
+         rec  schema  some  type 
+         bool
          %name %not
 
      presently reserved but unused:           box
@@ -161,10 +162,12 @@ let rec lex_token loc = lexer
   | "<-"
   | "::"
   | "=>"
+  | "=="
   | "FN"
 (*  | "Sigma" *)
   | "block"
   | "box" (* unused as of 2009-02-18 *)
+  | "Bool"
   | "case"
   | "coercion"
   | "fn"

@@ -624,6 +624,8 @@ GLOBAL: sgn_eoi;
          tA = clf_typ (*LEVEL "atomic"*); "["; cPsi = clf_dctx; "]" ->
            Comp.TypBox (_loc, tA, cPsi)
 
+      | tA = "Bool" -> Comp.TypBool 
+
       |
         "("; tau = SELF; ")" ->
           tau
@@ -689,7 +691,14 @@ GLOBAL: sgn_eoi;
           let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in
             Comp.Box (_loc, pHat, tM)
  *)
-       "["; pHat = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "]"; tM = clf_term_app ->            
+       
+(*       Attempt to support parsing of equality with contextual objects 
+
+          "["; cPsi = clf_dctx; "]"; tR = clf_term_app ; "==" ; i2 = cmp_exp_syn ->
+
+            Comp.Syn (_loc, Comp.Equal(_loc, Comp.BoxVal (_loc, cPsi, tR), i2))
+*)
+        "["; pHat = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "]"; tM = clf_term_app ->            
             Comp.Box (_loc, pHat, tM)
       | 
         "(" ; e1 = SELF; p_or_a = cmp_pair_atom -> 
@@ -720,6 +729,10 @@ GLOBAL: sgn_eoi;
           (* let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in *)
             Comp.MApp (_loc, i, (vars, tM))
 
+
+      | i1 = SELF; "=="; i2 = SELF -> 
+          Comp.Equal(_loc, i1, i2)
+
       |
         i = SELF; e = cmp_exp_chk ->
           Comp.Apply (_loc, i, e)  
@@ -729,6 +742,7 @@ GLOBAL: sgn_eoi;
       [
         x = SYMBOL ->
           Comp.Var (_loc, Id.mk_name (Id.SomeString x))
+
       | 
       "["; cPsi = clf_dctx; "]"; tR = clf_term_app ->
             Comp.BoxVal (_loc, cPsi, tR)

@@ -195,6 +195,7 @@ module Int : sig
      | TypCtxPi of (name * cid_schema) * typ
      | TypPiBox of (LF.ctyp_decl * depend) * typ
      | TypClo   of typ * LF.msub
+     | TypBool
          
 
    type env = 
@@ -229,6 +230,7 @@ module Int : sig
      | CtxApp of Loc.t option * exp_syn * LF.dctx
      | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
      | Ann    of exp_chk * typ 
+     | Equal  of Loc.t option * exp_syn * exp_syn
          
    and branch =
      | BranchBox  of LF.mctx
@@ -370,6 +372,7 @@ module Ext : sig
       | TypCross of Loc.t * typ * typ
       | TypCtxPi of Loc.t * (name * name) * typ  
       | TypPiBox of Loc.t * LF.ctyp_decl * typ   
+      | TypBool
 
 
     and exp_chk =
@@ -390,6 +393,7 @@ module Ext : sig
        | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) 
        | BoxVal of Loc.t * LF.dctx * LF.normal 
        | Ann    of Loc.t * exp_chk * typ                   
+       | Equal   of Loc.t * exp_syn * exp_syn
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
@@ -533,6 +537,7 @@ module Apx : sig
       | TypCross of typ * typ
       | TypCtxPi of (name * cid_schema) * typ
       | TypPiBox of LF.ctyp_decl * typ
+      | TypBool
 
     and exp_chk =
        | Syn     of Loc.t * exp_syn
@@ -553,6 +558,7 @@ module Apx : sig
        | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M]   *)
        | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (psihat. tR) *)
        | Ann    of exp_chk * typ                              (* e : tau          *)
+       | Equal  of Loc.t  * exp_syn * exp_syn
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx

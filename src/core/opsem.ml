@@ -174,7 +174,10 @@ let rec eval_syn i theta_eta =
   | Ann (e, _tau) -> 
       eval_chk e theta_eta
 
-    
+
+(*  | Equal(_, i1, i2) -> 
+      let 
+*)  
 
 and eval_chk e theta_eta =  
   let (theta,eta) = theta_eta in 

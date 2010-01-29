@@ -23,7 +23,7 @@ s'_true : solve' (true').
 s'_forall : solve' (forall' G1)
 	    <- {a:i} solve' (G1 a).
 
-s'_eqp : solve' (== P P).
+s'_eqp : solve' (eq P P).
 
 s'_orl : solve' (or' G1  G2)
 	  <- solve' G1.
@@ -52,4 +52,4 @@ r_true : resolve (true^) P (false').
 r_forall : resolve (forall^ D1) P (exists' G1)
 	     <- {a:i} resolve (D1 a) P (G1 a).
 
-r_atom : resolve (atom^ Q) P (== Q P).
+r_atom : resolve (atom^ Q) P (eq Q P).

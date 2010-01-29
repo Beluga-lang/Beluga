@@ -237,11 +237,9 @@ module Int = struct
  (** Internal Computation Syntax *)
   module Comp = struct
 
-
    type depend =  
      | Implicit
      | Explicit
-
 
    type typ =
       | TypBox   of Loc.t option * LF.typ  * LF.dctx
@@ -251,6 +249,7 @@ module Int = struct
       | TypCtxPi of (name * cid_schema) * typ
       | TypPiBox of (LF.ctyp_decl * depend) * typ
       | TypClo   of typ *  LF.msub
+      | TypBool
 
    type env = 
      | Empty
@@ -262,7 +261,7 @@ module Int = struct
      | MLamValue  of (Loc.t option * name * exp_chk) * LF.msub * env
      | CtxValue   of (Loc.t option * name * exp_chk) * LF.msub * env
      | BoxValue   of LF.psi_hat * LF.normal 
-     | ConstValue of cid_prog
+     | ConstValue of cid_prog   
 
     and exp_chk =
       | Syn    of Loc.t option * exp_syn
@@ -284,6 +283,7 @@ module Int = struct
       | CtxApp of Loc.t option * exp_syn * LF.dctx
       | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
       | Ann    of exp_chk * typ
+      | Equal  of Loc.t option * exp_syn * exp_syn
 
     and branch =
       | BranchBox  of LF.mctx
@@ -425,9 +425,10 @@ module Ext = struct
       | TypBox   of Loc.t * LF.typ  * LF.dctx      (* tau ::= A[Psi]          *)
 (*    | TypSBox  of LF.dctx * LF.dctx              (\*    | Phi[Psi]      *\) *)
       | TypArr   of Loc.t * typ * typ              (*     | tau -> tau        *)
-      | TypCross of Loc.t * typ * typ              (*     | tau * tau        *)
+      | TypCross of Loc.t * typ * typ              (*     | tau * tau         *)
       | TypCtxPi of Loc.t * (name * name) * typ    (*     | Pi psi:(w)*. tau  *)
       | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *)
+      | TypBool                                    (*     | Bool              *)
 
     and exp_chk =                            (* Computation-level expressions *)
        | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
@@ -441,6 +442,7 @@ module Ext = struct
 (*        | SBox   of LF.psi_hat * LF.sub *)
        | Case   of Loc.t * exp_syn * branch list  (*    | case i of branches *)
 
+
     and exp_syn =
        | Var    of Loc.t * name                   (*  i ::= x                 *)
        | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
@@ -449,6 +451,7 @@ module Ext = struct
                                                   (*    | i [Psi hat. M]      *)
        | BoxVal of Loc.t * LF.dctx * LF.normal 
        | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
+       | Equal  of Loc.t * exp_syn * exp_syn
 
     and branch =
       | BranchBox of Loc.t * LF.mctx
@@ -595,6 +598,7 @@ module Apx = struct
       | TypCross   of typ * typ
       | TypCtxPi   of (name * cid_schema) * typ
       | TypPiBox   of LF.ctyp_decl * typ
+      | TypBool
 
     and exp_chk =
        | Syn    of Loc.t * exp_syn
@@ -615,6 +619,7 @@ module Apx = struct
        | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M] *)
        | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (Psi. tR)  *)
        | Ann    of exp_chk * typ                              (* e : tau        *)
+       | Equal  of Loc.t  * exp_syn * exp_syn
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx

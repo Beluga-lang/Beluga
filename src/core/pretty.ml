@@ -860,6 +860,8 @@ module Int = struct
 
       | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo! "
 
+      | Comp.TypBool -> fprintf ppf "Bool"
+
     let rec fmt_ppr_cmp_exp_chk cO cD cG lvl ppf = function
       | Comp.Syn (_, i) ->
           fmt_ppr_cmp_exp_syn cO cD cG lvl ppf (strip_mapp_args cO cD cG i)
@@ -1010,6 +1012,13 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cO cD cG 1) e
               (fmt_ppr_cmp_typ cO cD 2) (Whnf.cnormCTyp (tau, Whnf.m_id))
               (r_paren_if cond)
+
+
+
+      | Comp.Equal (_, i1, i2) -> 
+            fprintf ppf "%a == %a"
+              (fmt_ppr_cmp_exp_syn cO cD cG 1) i1
+              (fmt_ppr_cmp_exp_syn cO cD cG 1) i2 
 
 
     and fmt_ppr_cmp_branches cO cD cG lvl ppf = function
@@ -1340,11 +1349,11 @@ module Error = struct
     module IP = Int.Make (R)
 
     let print_typeVariant = function
-      | Cross -> "'A * 'B"
-      | Arrow -> "'A -> 'B"
-      | CtxPi -> "{_:schema} 'A"
-      | PiBox -> "{_::'A} 'B"
-      | Box   -> "[ ] A"
+      | Cross -> "product type"
+      | Arrow -> "function type"
+      | CtxPi -> "context abstraction"
+      | PiBox -> "dependent function type"
+      | Box   -> "contextual type"
 
     (* Format Based Pretty Printers for Error messages *)
     let fmt_ppr ppf = function
@@ -1460,10 +1469,12 @@ module Error = struct
       | CompMismatch (cO, cD, cG, i, variant, theta_tau) ->
           fprintf ppf
             (* "ill-typed expression\n  expected: %s\n  inferred: %a\n  for expression: %a\n  in context:\n    %s" *)
-            "ill-typed expression\n  inferred: %a\n  for expression: %a\n \n Note: Computation-level applications are not automatically left-associative but require parenthesis."
-            (* (print_typeVariant variant)*) 
+            "ill-typed expression\n  inferred: %a\n  for expression: %a\n 
+             Beluga believes it should be a %s 
+\n Note: Computation-level applications are not automatically left-associative but require parenthesis."
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau) 
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i
+            (print_typeVariant variant)
 
 
       | CompPattMismatch ((cO, cD, cPsi, tM, sA) , (cO', cD', cPsi', sA')) ->
@@ -1521,6 +1532,20 @@ module Error = struct
             "Expected type : %a \n Inferred type  %a \n  "  
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau')
+
+
+      | CompEqMismatch (cO, cD, ttau1, ttau2) -> 
+          fprintf ppf
+            "Type mismatch on equality:\nComparing objects of type : %a \n with objects of type  %a \n  "  
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp ttau1)
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp ttau2)
+
+
+      | CompEqTyp (cO, cD, ttau) -> 
+          fprintf ppf
+            "Equality comparison only possible at base types; \nFound objects of type : %a \n "  
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp ttau)
+
 
       | CompTypAnn -> 
           fprintf ppf "Type synthesis of term failed (use typing annotation)" 

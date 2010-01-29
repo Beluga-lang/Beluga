@@ -90,6 +90,8 @@ type error =
   | CompPairMismatch   of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
   | CompBoxMismatch    of  LF.mctx * LF.mctx * Comp.gctx  * Comp.tclo 
   | CompSynMismatch    of  LF.mctx * LF.mctx * Comp.tclo (* expected *) * Comp.tclo (* inferred *)
+  | CompEqMismatch     of  LF.mctx * LF.mctx * Comp.tclo (* arg1 *) * Comp.tclo (* arg2 *)
+  | CompEqTyp          of  LF.mctx * LF.mctx * Comp.tclo 
 
   | CompTypAnn
 

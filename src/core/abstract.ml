@@ -1521,6 +1521,7 @@ let rec collectCompTyp cQ tau = match tau with
       let (cQ3, tau')  = collectCompTyp cQ2 tau in 
         (cQ3 , Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep ), tau'))
 
+  | Comp.TypBool  -> (cQ, tau)
 
 let rec collectExp cQ e = match e with 
   | Comp.Syn (loc, i) -> 
@@ -1588,6 +1589,12 @@ and collectExp' cQ i = match i with
         (cQ'', Comp.Ann  (e', tau'))
 
 
+  | Comp.Equal (loc, i1, i2) -> 
+     let (cQ', i1') = collectExp' cQ i1  in 
+     let (cQ'', i2') = collectExp' cQ' i2  in 
+       (cQ'', Comp.Equal(loc, i1', i2'))
+
+
 and collectPattern cQ cD cPsi (phat, tM) tA = 
   let (cQ1, cD') = collectMctx cQ cD in 
   (* let _    = Printf.printf "Start Collection of cPsi = %s\n" 
@@ -1642,6 +1649,8 @@ let rec abstractMVarCompTyp cQ offset tau = match tau with
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
       let tau'  = abstractMVarCompTyp cQ (offset+1) tau in 
         Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep), tau')
+
+  | Comp.TypBool -> Comp.TypBool
 
 (* REDUNDANT Tue Apr 21 09:50:08 2009 -bp 
 let rec abstractMVarExp cQ offset e = match e with

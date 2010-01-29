@@ -18,15 +18,15 @@ cs_true' : csolve D (true') SC (or' G1  FC2)
 
 % csolve D (true') SC (false')  meta-fails.
 
-cs_eqp : csolve D (== P P) (and' G1  SC2) FC
+cs_eqp : csolve D (eq P P) (and' G1  SC2) FC
 	  <- csolve D G1 SC2 FC.
 
-cs_eqp* : csolve D (== P P) (true') FC.
+cs_eqp* : csolve D (eq P P) (true') FC.
 
-cs_eqp' : csolve D (== Q P) SC (or' G1 FC2)
+cs_eqp' : csolve D (eq Q P) SC (or' G1 FC2)
 	   <- csolve D G1 SC FC2.
 
-% csolve D (Q == P) SC (false')  meta-fails.
+% csolve D (Q eq P) SC (false')  meta-fails.
 
 cs_or : csolve D (or' G1 G2) SC FC
 	 <- csolve D G1 SC (or' G2 FC).

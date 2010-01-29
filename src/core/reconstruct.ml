@@ -743,6 +743,7 @@ let rec index_comptyp ctx_vars cvars  fvars =
         Not_found -> raise (Error (Some loc, UnboundCtxSchemaName schema_name))
     end
 
+  | Ext.Comp.TypBool -> Apx.Comp.TypBool
 
 let rec index_exp ctx_vars cvars vars fvars = function
   | Ext.Comp.Syn (loc , i)   ->
@@ -774,8 +775,9 @@ let rec index_exp ctx_vars cvars vars fvars = function
 
   | Ext.Comp.Box (loc, psihat, m) ->
       let (psihat', bvars) = index_psihat ctx_vars psihat in
-      let (m', _ ) = index_term cvars bvars fvars m in 
+      let (m', _ ) = index_term cvars bvars [] (* fvars *) m in  
         Apx.Comp.Box (loc, psihat', m')
+
 
   | Ext.Comp.Case (loc, i, branches) ->
       let i' = index_exp' ctx_vars cvars vars fvars i in
@@ -809,14 +811,18 @@ and index_exp' ctx_vars cvars vars fvars = function
         Apx.Comp.MApp (loc, i', (psihat', m'))
 
   | Ext.Comp.BoxVal (loc, psi, m) ->
-      let (psi', bvars, _ ) = index_dctx ctx_vars cvars  (BVar.create ()) fvars psi in
+      let (psi', bvars, _ ) = index_dctx ctx_vars cvars  (BVar.create ()) [] (* fvars *) psi in
       let (m', _ ) = index_term cvars bvars fvars m in 
-        Apx.Comp.BoxVal (loc, psi', m')
+        Apx.Comp.BoxVal (loc, psi', m') 
 
   | Ext.Comp.Ann (_loc, e, tau) ->
       Apx.Comp.Ann (index_exp  ctx_vars cvars vars fvars e,
                          index_comptyp ctx_vars cvars fvars tau)
 
+  | Ext.Comp.Equal (loc, i, i') ->
+      let i1 = index_exp' ctx_vars cvars vars fvars i in 
+      let i2 = index_exp' ctx_vars cvars vars fvars i' in 
+        Apx.Comp.Equal (loc, i1, i2)
 
 and index_branch ctx_vars cvars vars fvars branch = match branch with
   | (Ext.Comp.BranchBox(loc, delta, (psi1, m, Some (a, psi)), e)) ->
@@ -3038,6 +3044,8 @@ let rec elCompTyp cO cD tau = match tau with
       let tau'   = elCompTyp cO (Int.LF.Dec (cD, cdecl')) tau in
         Int.Comp.TypPiBox ((cdecl', Int.Comp.Explicit), tau')
 
+  | Apx.Comp.TypBool -> Int.Comp.TypBool
+
 let rec elExp cO cD cG e theta_tau = elExpW cO cD cG e (C.cwhnfCTyp theta_tau)
 
 and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
@@ -3104,6 +3112,8 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
         else 
           raise (Error (Some loc, CompBoxCtxMismatch (cO, cD, cPsi, (psihat, tM'))))
 
+
+  
 
   | (Apx.Comp.Case (loc, i, branches), tau_theta) ->
       let (i', tau_theta') = genMApp loc cD (elExp' cO cD cG i) in
@@ -3217,6 +3227,15 @@ and elExp' cO cD cG i = match i with
       let tau' = elCompTyp cO cD tau in
       let e'   = elExp cO cD cG e (tau', C.m_id) in
         (Int.Comp.Ann (e', tau'), (tau', C.m_id))
+
+
+  | Apx.Comp.Equal (loc, i1, i2) -> 
+      let (i1', ttau1) = elExp' cO cD cG i1 in 
+      let (i2', ttau2) = elExp' cO cD cG i2 in 
+        if Whnf.convCTyp ttau1 ttau2 then 
+          (Int.Comp.Equal (Some loc, i1', i2'), (Int.Comp.TypBool, C.m_id))
+        else 
+          raise (Error(Some loc, CompEqMismatch (cO, cD, ttau1, ttau2 )))
 
 
 (* We don't check that each box-expression has approximately

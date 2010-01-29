@@ -2391,6 +2391,8 @@ module Make (T : TRAIL) : UNIFY = struct
              unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
             )
 
+      | ((Comp.TypBool, _ ), (Comp.TypBool, _ )) -> ()
+
 
    (* **************************************************************** *)
     let rec unify1 mflag cD0 cPsi sM1 sM2 =

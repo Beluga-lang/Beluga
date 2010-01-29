@@ -13,6 +13,7 @@ if   : term -> term -> term -> term.
 letv : term -> (term -> term) -> term.
 lam  : tp -> (term -> term) -> term.
 
+
 oft  : term -> tp -> type.
 o_tt : oft tt bool.
 o_ff : oft ff bool.
@@ -23,7 +24,6 @@ o_if : oft E bool -> oft E1 T -> oft E2 T
 
 o_lam: ({x:term} oft x T1 -> oft (E x) T2)
        -> oft (lam T1 (\x. E x)) (arr T1 T2).
-
 o_let: oft E1 T1 -> ({x:term} oft x T1 -> oft (E2 x) T2)
     -> oft (letv E1 (\x. E2 x)) T2.
 

@@ -27,6 +27,55 @@ type pair_or_atom =
   | Atom
 
 
+type mixtyp =
+  |  MTArr of Loc.t * mixtyp * mixtyp
+  |  MTCross of Loc.t * mixtyp * mixtyp
+  |  MTCtxPi of  Loc.t * (Id.name * Id.name) * mixtyp
+  |  MTBool of Loc.t
+  |  MTBox of Loc.t * mixtyp * LF.dctx
+  |  MTPiBox of Loc.t * LF.ctyp_decl * mixtyp
+  |  MTPiTyp of Loc.t * LF.typ_decl * mixtyp
+  |  MTAtom of Loc.t * Id.name * LF.spine
+
+type whichmix = LFMix of LF.typ | CompMix of Comp.typ
+
+exception MixErr of Loc.t
+
+let mixloc = function
+  |  MTArr(l, _, _) -> l
+  |  MTCross(l, _, _) -> l
+  |  MTCtxPi(l, _, _) -> l
+  |  MTBool l -> l
+  |  MTBox(l, _, _) -> l
+  |  MTPiBox(l, _, _) -> l
+  |  MTPiTyp(l, _, _) -> l
+  |  MTAtom(l, _, _) -> l
+
+(* unmix : mixtyp -> whichmix *  *)
+let rec unmix = function
+  |  MTArr(l, mt1, mt2) -> begin match (unmix mt1, unmix mt2) with
+                                  | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
+                                  | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
+                                  | (_, _) -> raise (MixErr (mixloc mt2))
+                           end
+  |  MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
+  |  MTCtxPi(l, (sym1, sym2), mt0) -> CompMix(Comp.TypCtxPi(l, (sym1, sym2), toComp mt0))
+  |  MTBool l -> CompMix(Comp.TypBool)
+  |  MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
+  |  MTPiBox(l, cdecl, mt0) -> CompMix(Comp.TypPiBox(l, cdecl, toComp mt0))
+  |  MTPiTyp(l, tdecl, mt0) -> LFMix(LF.PiTyp(l, tdecl, toLF mt0))
+  |  MTAtom(l, name, spine) -> LFMix(LF.Atom(l, name, spine))
+
+and toLF mt = match unmix mt with
+  |  LFMix lf -> lf
+  |  _ -> raise (MixErr (mixloc mt))
+
+and toComp mt = match unmix mt with
+  |  CompMix c -> c
+  |  _ -> raise (MixErr (mixloc mt))
+
+
+
 (*******************************)
 (* Global Grammar Entry Points *)
 (*******************************)
@@ -599,51 +648,12 @@ GLOBAL: sgn_eoi;
 (* ************************************************************************************** *)
 
   cmp_typ:
-    [ "full" RIGHTA
-      [
-        "{"; psi = SYMBOL; ":"; "("; w = SYMBOL; ")"; "*"; "}"; tau = SELF ->
-          Comp.TypCtxPi (_loc, (Id.mk_name (Id.SomeString psi), Id.mk_name (Id.SomeString w)), tau)
-      |
-        ctyp_decl = clf_ctyp_decl; tau = SELF ->
-          Comp.TypPiBox (_loc, ctyp_decl, tau)
-
-      |
-        tau1 = SELF; rarr; tau2 = SELF ->
-          Comp.TypArr (_loc, tau1, tau2)
-
-      ]
-
-    | 
-        LEFTA 
-      [
-
-        tau1 = SELF; "*"; tau2 = SELF ->
-          Comp.TypCross (_loc, tau1, tau2)
-
-      ]
-
-
-    | 
-        "atomic"
-      [
-        "("; tA = clf_typ (*LEVEL "atomic"*); ")" ; "["; cPsi = clf_dctx; "]" ->
-          Comp.TypBox (_loc, tA, cPsi)
-
-      | 
-         tA = clf_typ (*LEVEL "atomic"*); "["; cPsi = clf_dctx; "]" ->
-           Comp.TypBox (_loc, tA, cPsi)
-
-      | tA = "Bool" -> Comp.TypBool 
-
-      |
-        "("; tau = SELF; ")" ->
-          tau
-      ]
-
-
-    ] 
-  ;
-
+     [[
+         m = mixtyp  ->  try  toComp m
+                         with MixErr l ->
+                           (print_string ("Syntax error: Computation-level type used where LF type is expected (" ^ Loc.to_string l ^ ")\n");
+                            raise (MixErr l))
+     ]];
 
   cmp_pair_atom : 
     [
@@ -793,6 +803,53 @@ GLOBAL: sgn_eoi;
       ]
     ]
   ;
+
+
+
+
+
+  mixtyp:
+    [ RIGHTA
+      [
+        "{"; psi = SYMBOL; ":"; "("; w = SYMBOL; ")"; "*"; "}"; mixtau = SELF ->
+          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi), Id.mk_name (Id.SomeString w)), mixtau)
+      |
+        ctyp_decl = clf_ctyp_decl; mixtau = SELF ->
+          MTPiBox (_loc, ctyp_decl, mixtau)
+      |
+        mixtau1 = SELF; rarr; mixtau2 = SELF ->
+          MTArr (_loc, mixtau1, mixtau2) 
+      |
+        "{"; x = SYMBOL; ":"; a2 = clf_typ; "}"; mixa = SELF ->
+            MTPiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), mixa)
+      ] 
+     | 
+        LEFTA 
+      [
+
+        tau1 = SELF; "*"; tau2 = SELF ->
+          MTCross (_loc, tau1, tau2)
+
+      ]
+     | 
+      "atomic"
+      [
+         mixtA = mixtyp (*LEVEL "atomic"*); "["; cPsi = clf_dctx; "]" ->
+           MTBox (_loc, mixtA, cPsi)
+
+      | tA = "Bool" -> MTBool _loc
+
+      |
+        "("; mixtau = mixtyp; ")" ->
+          mixtau
+
+      | 
+          a = SYMBOL; ms = LIST0 clf_normal ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              MTAtom (_loc, Id.mk_name (Id.SomeString a), sp)
+    ] 
+  ] ;
+
 
 END
 

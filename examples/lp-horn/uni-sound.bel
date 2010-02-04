@@ -13,7 +13,7 @@ FN g => fn s => case s of
 
 | [g] s_true => [g] truei
 
- | [g] s_atom (S ..) (#p.1 ..) => 
+| [g] s_atom (S ..) (#p.1 ..) => 
      let [g,u:pf _ ] D .. u = i_sound [g] ([g] S ..) in 
      [g] D .. (#p.2 ..)    
 

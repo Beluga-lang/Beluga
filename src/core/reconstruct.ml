@@ -44,7 +44,8 @@ let rec what_head = function
   | Apx.LF.BVar _ -> "BVar"
   | Apx.LF.Const _ -> "Const"
   | Apx.LF.MVar _ -> "MVar"
-  | Apx.LF.PVar _ -> "PVar"
+  | Apx.LF.PVar (Apx.LF.Offset _ , _ ) -> "PVar Offset "
+  | Apx.LF.PVar (Apx.LF.PInst _ , _ ) -> "PVar PInst "
   | Apx.LF.Proj (head, k) -> "Proj " ^ what_head head ^ "." ^ string_of_int k
   | Apx.LF.FVar _ -> "FVar"
   | Apx.LF.FMVar _ -> "FMVar"
@@ -1778,32 +1779,16 @@ and elSub loc recT  cO cD cPsi s cPhi =
       (* NOTE: if decl = x:A, and cPsi(h) = A' s.t. A =/= A'
        *       we will fail during reconstruction / type checking
        *)
-      let h' = elHead loc recT  cO cD cPsi h in 
+      let (h', sA') = elHead loc recT  cO cD cPsi h in 
       let s' = elSub  loc recT  cO cD cPsi s cPhi' in 
-      let sA' =   begin match h' with
-        | Int.LF.BVar x -> 
-            let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in
-              (tA' , LF.id)
-        | Int.LF.Proj (Int.LF.BVar x, projIndex) -> 
-            let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in
-             begin match Whnf.whnfTyp (tA', LF.id) with
-                | (Int.LF.Sigma tA'rec, s') ->
-                    Int.LF.getType (Int.LF.BVar x) (tA'rec, s') projIndex 1 
-                | (tA',s') -> raise (Violation ("[elSub] expected Sigma type  " 
-                                               ^ "found type " ^ P.typToString cO cD cPsi (tA', s')))
-             end
-        | Int.LF.Const c -> 
-            let tA = (Term.get c).Term.typ in
-              (tA, LF.id)
-        | Int.LF.FVar x -> raise (Error (Some loc, UnboundName x))
-        end       
-      in 
       begin try 
         (
           Unify.unifyTyp cD cPsi sA' (tA, s');
           Int.LF.Dot (Int.LF.Head h', s'))
-      with _ -> 
-        raise (Error (Some loc , TypMismatchElab (cO, cD, cPsi, sA', (tA, s'))))
+      with 
+        | Error (loc, msg) -> raise (Error (loc, msg))
+        |  _ -> 
+           raise (Error (Some loc , TypMismatchElab (cO, cD, cPsi, sA', (tA, s'))))
       end
 
 
@@ -1817,15 +1802,18 @@ and elSub loc recT  cO cD cPsi s cPhi =
 
 and elHead loc recT  cO cD cPsi = function
   | Apx.LF.BVar x ->
-      Int.LF.BVar x
+      let Int.LF.TypDecl (_, tA') = Context.ctxDec cPsi x in
+        (Int.LF.BVar x,  (tA' , LF.id))
 
   | Apx.LF.Const c ->
-      Int.LF.Const c
+      let tA = (Term.get c).Term.typ in
+        (Int.LF.Const c , (tA, LF.id))
 
   | Apx.LF.MVar (Apx.LF.Offset u, s) ->
       begin try
-        let (_ , _tA, cPhi) = Whnf.mctxMDec cD u in
-          Int.LF.MVar (Int.LF.Offset u, elSub loc recT  cO cD cPsi s cPhi)
+        let (_ , tA, cPhi) = Whnf.mctxMDec cD u in
+        let s'  = elSub loc recT  cO cD cPsi s cPhi in 
+          (Int.LF.MVar (Int.LF.Offset u, s') , (tA, s'))
       with Violation msg  -> 
         dprint (fun () -> "[elHead] Violation: " ^ msg ^ "\n") ; 
          raise (Error (Some loc, CompTypAnn ))
@@ -1833,33 +1821,55 @@ and elHead loc recT  cO cD cPsi = function
 
   | Apx.LF.PVar (Apx.LF.Offset p, s) ->
       begin try 
-        let (_, _tA, cPhi) = Whnf.mctxPDec cD p in 
-          Int.LF.PVar (Int.LF.Offset p, elSub loc recT  cO cD cPsi s cPhi)
+        let (_, tA, cPhi) = Whnf.mctxPDec cD p in 
+        let s' = elSub loc recT  cO cD cPsi s cPhi in 
+          (Int.LF.PVar (Int.LF.Offset p, s') , (tA, s'))
       with Violation msg  -> 
         dprint (fun () -> "[elHead] Violation: " ^ msg ^ "\n") ; 
         raise (Error (Some loc, CompTypAnn ))
       end
 
-  | Apx.LF.FVar x ->
-      Int.LF.FVar x
+  | Apx.LF.PVar (Apx.LF.PInst (Int.LF.PVar (p,r), tA, cPhi), s) -> 
+      begin try
+        let s' = elSub loc recT  cO cD cPsi s cPhi in 
+        let r' = LF.comp r s' in 
+         (Int.LF.PVar (p, r') , (tA, r')) 
+      with Violation msg -> 
+        dprint (fun () -> "[elHead] Violation: " ^ msg ^ "\n") ; 
+        raise (Error (Some loc, CompTypAnn ))
+      end
+      
 
-  | Apx.LF.FMVar (u, s) ->      
+  | Apx.LF.FVar x ->
+      raise (Error (Some loc, UnboundName x))
+      (* Int.LF.FVar x *)
+
+  | Apx.LF.FMVar (u, s) ->       
       begin try 
-        let (offset, (_tP, cPhi)) = Whnf.mctxMVarPos cD u  in
-        Int.LF.MVar (Int.LF.Offset offset, elSub loc recT  cO cD cPsi s cPhi)
+        let (offset, (tP, cPhi)) = Whnf.mctxMVarPos cD u  in
+        let s' = elSub loc recT  cO cD cPsi s cPhi in 
+         (Int.LF.MVar (Int.LF.Offset offset,s'), (tP, s'))
       with Whnf.Fmvar_not_found -> 
        raise (Error (None, UnboundName u))
       end 
 
-
   | Apx.LF.FPVar (p, s) ->
-      let (offset, (_tA, cPhi)) = Whnf.mctxPVarPos cD p  in
-        Int.LF.PVar (Int.LF.Offset offset, elSub loc recT  cO cD cPsi s cPhi)
+      let (offset, (tA, cPhi)) = Whnf.mctxPVarPos cD p  in
+      let s' = elSub loc recT  cO cD cPsi s cPhi in 
+        (Int.LF.PVar (Int.LF.Offset offset, s') , (tA, s'))
 
   | Apx.LF.Proj (head, i) ->
-      let head' = elHead loc recT  cO cD cPsi head in
-        Int.LF.Proj (head', i)
+      let (head', sA) = elHead loc recT  cO cD cPsi head in
+      let sAi = begin match Whnf.whnfTyp sA with
+                 | (Int.LF.Sigma tA'rec, s') ->
+                     Int.LF.getType head' (tA'rec, s') i 1 
+                 | (tA',s') -> raise (Violation ("[elHead] expected Sigma type  " 
+                                                 ^ "found type " ^ P.typToString cO cD cPsi (tA', s')))
+                end
+      in
+        (Int.LF.Proj (head', i) , sAi )
 
+  | h -> raise (Violation (what_head h ))
 
 (* elSpineI  recT  cO cD cPsi spine i sA  = (S : sP)
  * elSpineIW recT  cO cD cPsi spine i sA  = (S : sP)

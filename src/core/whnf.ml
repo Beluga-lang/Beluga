@@ -973,6 +973,7 @@ and cnorm (tM, t) = match tM with
               end
           | PObj (_phat, PVar(Offset j, s'))   ->  
               Head(Proj (PVar(Offset j, LF.comp s' r'), k))
+          | MV j' -> Head (Proj (PVar (Offset j', r'), k))             
           (* other case MObj _ cannot happen *)
         end
 

@@ -262,6 +262,7 @@ module Int = struct
      | CtxValue   of (Loc.t option * name * exp_chk) * LF.msub * env
      | BoxValue   of LF.psi_hat * LF.normal 
      | ConstValue of cid_prog   
+     | BoolValue  of bool
 
     and exp_chk =
       | Syn    of Loc.t option * exp_syn
@@ -274,6 +275,7 @@ module Int = struct
       | Box    of Loc.t option * LF.psi_hat * LF.normal
       | SBox   of Loc.t option * LF.psi_hat * LF.sub
       | Case   of Loc.t option * exp_syn * branch list
+      | If     of Loc.t option * exp_syn * exp_chk * exp_chk
       | Value  of value 
 
     and exp_syn =
@@ -284,6 +286,8 @@ module Int = struct
       | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
       | Ann    of exp_chk * typ
       | Equal  of Loc.t option * exp_syn * exp_syn
+      | Boolean of bool
+
 
     and branch =
       | BranchBox  of LF.mctx
@@ -440,8 +444,8 @@ module Ext = struct
                                                   (*    | let (x,y) = i in e  *)
        | Box    of Loc.t * LF.psi_hat * LF.normal (*    | box (Psi hat. M)    *)
 (*        | SBox   of LF.psi_hat * LF.sub *)
-       | Case   of Loc.t * exp_syn * branch list  (*    | case i of branches *)
-
+       | Case   of Loc.t * exp_syn * branch list  (*    | case i of branches   *)
+       | If of Loc.t * exp_syn * exp_chk * exp_chk(*    | if i then e1 else e2 *)   
 
     and exp_syn =
        | Var    of Loc.t * name                   (*  i ::= x                 *)
@@ -452,6 +456,8 @@ module Ext = struct
        | BoxVal of Loc.t * LF.dctx * LF.normal 
        | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
        | Equal  of Loc.t * exp_syn * exp_syn
+       | Boolean of Loc.t * bool
+
 
     and branch =
       | BranchBox of Loc.t * LF.mctx
@@ -610,6 +616,7 @@ module Apx = struct
                                                   (* let (x,y) = i in e  *)
        | Box    of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
        | Case   of Loc.t * exp_syn * branch list
+       | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
     and exp_syn =
        | Var    of offset                                     (* x              *)
@@ -620,6 +627,8 @@ module Apx = struct
        | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (Psi. tR)  *)
        | Ann    of exp_chk * typ                              (* e : tau        *)
        | Equal  of Loc.t  * exp_syn * exp_syn
+       | Boolean of Loc.t * bool
+
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx

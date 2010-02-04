@@ -502,6 +502,15 @@ GLOBAL: sgn_eoi;
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+
+      |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
+          LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
+      |
+         "("; "#"; p = SYMBOL;  sigma = clf_sub_new ; ")" ->
+          LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+
+
+
       |
         x = SYMBOL; "."; k = INTLIT ->
           LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
@@ -665,9 +674,18 @@ GLOBAL: sgn_eoi;
       |
         "mlam"; f = UPSYMBOL; rArr; e = SELF ->
           Comp.MLam (_loc, Id.mk_name (Id.SomeString f), e)
+
+      |
+        "mlam"; hash = "#"; p = SYMBOL; rArr; e = SELF ->
+          Comp.MLam (_loc, Id.mk_name (Id.SomeString p), e)
+
+
       |
         "case"; i = cmp_exp_syn; "of"; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, i, bs)
+
+      | "if"; i = cmp_exp_syn; "then"; e1 = SELF ; "else"; e2 = SELF -> 
+          Comp.If (_loc, i, e1, e2)
 
       | 
         "let"; "("; x = SYMBOL; ","; y = SYMBOL; ")"; "="; i = cmp_exp_syn;  "in"; e = SELF ->
@@ -742,6 +760,9 @@ GLOBAL: sgn_eoi;
       [
         x = SYMBOL ->
           Comp.Var (_loc, Id.mk_name (Id.SomeString x))
+
+      | "ttrue" -> Comp.Boolean (_loc, true)
+      | "ffalse" -> Comp.Boolean (_loc, false)
 
       | 
       "["; cPsi = clf_dctx; "]"; tR = clf_term_app ->

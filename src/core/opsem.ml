@@ -175,9 +175,22 @@ let rec eval_syn i theta_eta =
       eval_chk e theta_eta
 
 
-(*  | Equal(_, i1, i2) -> 
-      let 
-*)  
+  | Equal(_, i1, i2) -> 
+    let v1 = eval_syn i1 theta_eta in 
+    let v2 = eval_syn i2 theta_eta in  
+    (* begin match (eval_syn i1 theta_eta , eval_syn i2 theta_eta )  with *)
+    begin match (v1, v2)  with
+          | (BoxValue (psihat, tM), BoxValue ( _ , tN)) ->  
+              if Whnf.conv (tM, LF.id) (tN, LF.id) then 
+                BoolValue true
+              else 
+                BoolValue false 
+
+          | ( _ , _ ) -> raise (Violation "Expected atomic object") 
+        end 
+
+  | Boolean b -> BoolValue b 
+
 
 and eval_chk e theta_eta =  
   let (theta,eta) = theta_eta in 
@@ -205,6 +218,12 @@ and eval_chk e theta_eta =
 	  | _ -> raise (Violation "Expected BoxValue for case"))
 
       | Value v -> v
+      | If (_, i, e1, e2) -> 
+          begin match eval_syn i theta_eta with 
+            | BoolValue true -> eval_chk e1 theta_eta 
+            | BoolValue false -> eval_chk e2 theta_eta 
+          end
+                
 
 and eval_branches (phat,tM) (branches, theta_eta) = match branches with 
   | [] -> raise (Violation "Missing branch - Non-exhaustive pattern match") 
@@ -245,5 +264,6 @@ let rec eval i  =
   begin match eval_chk i (I.LF.MShift 0, Empty) with
     | ConstValue cid -> Syn(None, Const cid)
     | BoxValue (phat, tM) -> Box(None, phat, tM)
+    | BoolValue b -> Syn(None, Boolean b)
     | v -> Value v
   end

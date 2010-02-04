@@ -862,7 +862,7 @@ module Int = struct
 
       | Comp.TypBool -> fprintf ppf "Bool"
 
-    let rec fmt_ppr_cmp_exp_chk cO cD cG lvl ppf = function
+    let rec fmt_ppr_cmp_exp_chk cO cD cG lvl ppf = function 
       | Comp.Syn (_, i) ->
           fmt_ppr_cmp_exp_syn cO cD cG lvl ppf (strip_mapp_args cO cD cG i)
 
@@ -921,6 +921,15 @@ module Int = struct
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cO cD cG 0) (strip_mapp_args cO cD cG i)
               (fmt_ppr_cmp_branches cO cD cG 0) bs
+              (r_paren_if cond)
+
+      | Comp.If (_, i, e1, e2) -> 
+          let cond = lvl > 1 in
+            fprintf ppf "@[<2>%sif %a @[<-1>then %a @]else %a%s@]"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_syn cO cD cG 0) (strip_mapp_args cO cD cG i)
+              (fmt_ppr_cmp_exp_chk cO cD cG 0) e1
+              (fmt_ppr_cmp_exp_chk cO cD cG 0) e2
               (r_paren_if cond)
 
       | Comp.Value (Comp.FunValue _ ) -> fprintf ppf " fn "
@@ -1019,6 +1028,13 @@ module Int = struct
             fprintf ppf "%a == %a"
               (fmt_ppr_cmp_exp_syn cO cD cG 1) i1
               (fmt_ppr_cmp_exp_syn cO cD cG 1) i2 
+
+      | Comp.Boolean true -> 
+          fprintf ppf "true"
+
+      | Comp.Boolean false -> 
+          fprintf ppf "false"
+
 
 
     and fmt_ppr_cmp_branches cO cD cG lvl ppf = function
@@ -1520,7 +1536,11 @@ module Error = struct
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompBoxMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Found Box-expression ; but found type %a \n "
+          fprintf ppf "Found Box-expression which does not have type %a \n "
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
+
+      | CompIfMismatch (cO, cD, _cG, theta_tau) -> 
+          fprintf ppf "Guard of the if-expression does not have type bool; it has type %a \n "
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompPairMismatch (cO, cD, _cG, theta_tau) -> 

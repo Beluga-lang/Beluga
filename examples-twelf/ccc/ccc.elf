@@ -17,7 +17,7 @@ idc : mor A A.
 
 % equations
 refl : eq F F.
-then : eq F F' -> eq F' F'' -> eq F F''.
+trans : eq F F' -> eq F' F'' -> eq F F''.
 sym  : eq F F' -> eq F' F.
 
 eq_o : eq F F' -> eq G G' -> eq (@ F G) (@ F' G').

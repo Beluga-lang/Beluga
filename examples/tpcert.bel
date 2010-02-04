@@ -9,7 +9,7 @@ tt   : term.
 ff   : term.
 suc  : term -> term.
 eq   : term -> term -> term.
-if   : term -> term -> term -> term.
+if_then_else : term -> term -> term -> term.
 letv : term -> (term -> term) -> term.
 lam  : tp -> (term -> term) -> term.
 
@@ -20,7 +20,7 @@ o_ff : oft ff bool.
 o_z  : oft z nat.
 o_s  : oft E nat -> oft (suc E) nat.
 o_if : oft E bool -> oft E1 T -> oft E2 T
-    -> oft (if E E1 E2) T.
+    -> oft (if_then_else E E1 E2) T.
 
 o_lam: ({x:term} oft x T1 -> oft (E x) T2)
        -> oft (lam T1 (\x. E x)) (arr T1 T2).

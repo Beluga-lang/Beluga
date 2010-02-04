@@ -3,7 +3,7 @@ etoc : eq F F' -> conc F (\x . M x) -> conc F' (\x . M' x) -> ({x: term _} conv 
 
 etoc_refl  : etoc refl CF CF (\x . c_refl).
 
-etoc_then  : etoc (then EP1 EP2) CF CF' (\x . c_trans (CP1 x) (CP2 x))
+etoc_trans  : etoc (trans EP1 EP2) CF CF' (\x . c_trans (CP1 x) (CP2 x))
               <- etoc EP1 CF CF'' (\x . CP1 x)
               <- etoc EP1 CF'' CF' (\x . CP2 x).
 

@@ -784,6 +784,13 @@ let rec index_exp ctx_vars cvars vars fvars = function
       let branches' = List.map (function b -> index_branch ctx_vars cvars vars fvars b) branches in
         Apx.Comp.Case (loc, i', branches')
 
+
+  | Ext.Comp.If (loc, i, e1, e2) -> 
+      let i' = index_exp' ctx_vars cvars vars fvars i in
+      let e1' = index_exp ctx_vars cvars vars fvars e1 in
+      let e2' = index_exp ctx_vars cvars vars fvars e2 in
+        Apx.Comp.If(loc, i', e1', e2')
+
 and index_exp' ctx_vars cvars vars fvars = function
   | Ext.Comp.Var (loc, x) ->
       begin try
@@ -823,6 +830,9 @@ and index_exp' ctx_vars cvars vars fvars = function
       let i1 = index_exp' ctx_vars cvars vars fvars i in 
       let i2 = index_exp' ctx_vars cvars vars fvars i' in 
         Apx.Comp.Equal (loc, i1, i2)
+
+  | Ext.Comp.Boolean (loc , b) -> Apx.Comp.Boolean (loc, b)
+
 
 and index_branch ctx_vars cvars vars fvars branch = match branch with
   | (Ext.Comp.BranchBox(loc, delta, (psi1, m, Some (a, psi)), e)) ->
@@ -1270,7 +1280,8 @@ and elTerm' recT  cO cD cPsi r sP = match r with
             | _ -> (Printf.printf "Unification Error \n" ;
                     raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
           end
-      with _ -> (Printf.printf "BVar lookup error \n" ; raise (Violation "Not Found"))
+      with _ -> raise (Error (Some loc, CompTypAnn))
+        (* (Printf.printf "BVar lookup error \n" ; raise (Violation "Not Found")) *)
 
       end
 
@@ -1522,6 +1533,10 @@ and elTerm' recT  cO cD cPsi r sP = match r with
         begin try
           let _   = dprint (fun () -> "[elTerm] Apx-mvar : Expected type: " ^ P.typToString cO cD cPsi sP ^ "\n") in 
           let _   = dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s'') ^ "\n") in 
+          let _   = dprint (fun () -> "[elTerm] s'' = " ^ P.subToString cO cD cPsi s'' ^ "\n") in 
+          let _   = dprint (fun () -> "[elTerm] tQ " ^ P.typToString cO cD cPhi (tQ, LF.id) ^ "\n") in 
+          let _   = dprint (fun () -> "[elTerm] cPhi = " ^ P.dctxToString cO cD cPhi ^ "\n") in
+          let _   = dprint (fun () -> "[elTerm] tN = " ^ P.normalToString cO cD cPhi (tN, LF.id) ^ "\n") in
           let _   = dprint (fun () -> "[elTerm] cD   = " ^ P.mctxToString cO cD ^ "\n") in 
           let _   = dprint (fun () -> "[elTerm] cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n") in
 
@@ -1744,32 +1759,6 @@ and elSub loc recT  cO cD cPsi s cPhi =
         | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
       end
 
-  | (Apx.LF.CoId (loc, coe_cid), Int.LF.CtxVar phi) ->
-      begin match Context.dctxToHat cPsi with
-        | (Some (Int.LF.CoCtx(coe_cid', psi)), d) ->
-             if coe_cid = coe_cid'  then 
-               (* check coercions maps phi to psi *)
-               (*               let schema2 = Context.lookupSchema cO c2 in *)
-               let Int.LF.CoTyp(_a_schema, b_schema) = Coercion.get_coercionTyp coe_cid in 
-               (* let schema = Check.LF.synCtxSchema cO phi in 
-               let _ = (print_string ("[SynCtxSchema] schema = " ^ R.render_cid_schema schema ^ " of phi = " ^ P.dctxToString cO cD cPhi ^ "\n") ; flush_all ()) in
-               let _ = (print_string ("coercion :  " ^ R.render_cid_schema a_schema ^ " –> " ^ R.render_cid_schema b_schema ^ "\n") ; flush_all ()) in
-               let _ = (print_string ("[checkCoercion] psi = " ^ P.dctxToString cO cD cPsi  ^ " : " ^ R.render_cid_schema a_schema ^  "\n") ; flush_all ()) in *)
-                 (if Check.LF.checkCoercion cO (psi, b_schema) phi  then                    
-                   Int.LF.CoShift(Int.LF.Coe coe_cid, Int.LF.NoCtxShift, d)
-                 else 
-               raise (Violation ("elSub: Cannot coerce " ^ P.dctxToString cO cD cPhi ^ 
-                                   " \n to " ^ P.dctxToString cO cD cPsi ^ "\n")))
-             else 
-               raise (Violation ("elSub: coe_Id must be associated with same coercion on ctxvar: \n" ^ 
-                                   "Found context coercion " ^ R.render_cid_coercion coe_cid ^ 
-                                   "\nExpected: " ^ R.render_cid_coercion coe_cid' ^ "\n"))
-        | (None, _ ) -> 
-               raise (Violation ("elSub: coe_Id must be associated with same coercion on ctxvar: \n" ^ 
-                                   "Found countext" ^ P.dctxToString cO cD cPsi ^ " \n and coercion " ^
-                                   R.render_cid_coercion coe_cid ^ "\n")) 
-      end
-
   | (Apx.LF.Id, Int.LF.CtxVar phi) ->
       begin match Context.dctxToHat cPsi with
         | (Some psi, d) ->
@@ -1823,20 +1812,8 @@ and elSub loc recT  cO cD cPsi s cPhi =
       let m' = elTerm recT  cO cD cPsi m (tA, s') in
         Int.LF.Dot (Int.LF.Obj m', s')
 
-
   | (_s, cPhi) ->
-
-(*        let rec p_sub s = match s with Apx.LF.EmptySub -> " . "  
-          | Apx.LF.Id -> " id " | 
-          Apx.LF.Dot(Apx.LF.Head h , s') -> ("Dot "^ what_head h) ^ p_sub s'| _ -> " _ " in 
-      let s_string = p_sub s in
-*)
       raise (Error (Some loc, IllTypedIdSub))
-
-        (* (Violation ("elSub: substitution is ill-typed : range " ^ 
-                          P.dctxToString cO cD cPsi ^ "\n domain " ^ P.dctxToString cO cD cPhi ^ "\n" ^  
-                       "s = " ^ s_string ^ "\n"))
-        *)
 
 and elHead loc recT  cO cD cPsi = function
   | Apx.LF.BVar x ->
@@ -2342,9 +2319,14 @@ and cnormApxHead cO cD delta h (cD'', t) = match h with
       let h' = begin match h with 
                | Int.LF.BVar _ -> h 
                | Int.LF.PVar (Int.LF.Offset q, s1) -> 
-                   let Int.LF.MV q' = LF.applyMSub q t in 
-                   let s1' = Whnf.cnormSub (s1, t) in 
-                     Int.LF.PVar (Int.LF.Offset q', s1') 
+                   begin match LF.applyMSub q t with 
+                     | Int.LF.MV q' -> 
+                         let s1' = Whnf.cnormSub (s1, t) in 
+                           Int.LF.PVar (Int.LF.Offset q', s1') 
+                     | Int.LF.PObj (_hat, Int.LF.PVar (Int.LF.Offset q', s2)) -> 
+                         let s1' = Whnf.cnormSub (s1, t) in 
+                           Int.LF.PVar (Int.LF.Offset q', LF.comp s1' s2) 
+                   end
                end in 
         Apx.LF.PVar (Apx.LF.PInst (h', tA', cPhi'), s')
 
@@ -2492,6 +2474,13 @@ let rec cnormApxExp cO cD delta e (cD'', t) = match e with
   | Apx.Comp.Case (loc, i, branch) -> 
       Apx.Comp.Case (loc, cnormApxExp' cO cD delta i (cD'', t), cnormApxBranches cO cD delta branch (cD'', t))
 
+  | Apx.Comp.If(loc, i, e1, e2) -> 
+      let i' =  cnormApxExp' cO cD delta i (cD'', t) in 
+      let e1' = cnormApxExp cO cD delta e1 (cD'', t) in 
+      let e2' = cnormApxExp cO cD delta e2 (cD'', t) in 
+        Apx.Comp.If(loc, i', e1', e2')
+
+
 and cnormApxExp' cO cD delta i cDt = match i with
   | Apx.Comp.Var _x -> i
   | Apx.Comp.Const _c -> i
@@ -2520,6 +2509,12 @@ and cnormApxExp' cO cD delta i cDt = match i with
         Apx.Comp.Ann (e', tau')
     
 *)
+
+  | Apx.Comp.Boolean (loc, b) -> Apx.Comp.Boolean(loc, b)
+  | Apx.Comp.Equal (loc, i1, i2) -> 
+    let i1' = cnormApxExp' cO cD delta i1 cDt in 
+    let i2' = cnormApxExp' cO cD delta i2 cDt in 
+      Apx.Comp.Equal (loc, i1', i2')
 
 
 and cnormApxBranches cO cD delta branches cDt = match branches with
@@ -2928,6 +2923,12 @@ let rec fmvApxExp fMVs cO cD l_cd1 l_delta k e = match e with
       Apx.Comp.Box (loc, phat, fmvApxTerm fMVs cO cD l_cd1 l_delta k m)
   | Apx.Comp.Case (loc, i, branch) -> 
       Apx.Comp.Case (loc, fmvApxExp' fMVs cO cD l_cd1 l_delta k i, fmvApxBranches fMVs cO cD l_cd1 l_delta k branch)
+  | Apx.Comp.If (loc, i, e1, e2) -> 
+      let i' = fmvApxExp' fMVs cO cD l_cd1 l_delta k i in 
+      let e1' = fmvApxExp  fMVs cO cD l_cd1 l_delta k e1 in 
+      let e2' = fmvApxExp  fMVs cO cD l_cd1 l_delta k e2 in 
+        Apx.Comp.If (loc, i', e1', e2')
+
 
 and fmvApxExp' fMVs cO cD l_cd1 l_delta k i = match i with
   | Apx.Comp.Var _x -> i
@@ -2957,6 +2958,12 @@ and fmvApxExp' fMVs cO cD l_cd1 l_delta k i = match i with
         Apx.Comp.Ann (e', tau')
     
 *)
+
+  | Apx.Comp.Boolean (loc, b) -> Apx.Comp.Boolean (loc, b)
+  | Apx.Comp.Equal (loc, i1, i2) -> 
+      let i1' = fmvApxExp' fMVs cO cD l_cd1 l_delta k i1 in 
+      let i2' = fmvApxExp' fMVs cO cD l_cd1 l_delta k i2 in 
+        Apx.Comp.Equal (loc, i1', i2')
 
 
 and fmvApxBranches fMVs cO cD l_cd1 l_delta k branches = match branches with
@@ -3103,17 +3110,16 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
         end
 
 
-  | (Apx.Comp.Box (loc, psihat, tM), (Int.Comp.TypBox (_loc, tA, cPsi), theta)) ->
-      let tM' = elTerm PiboxRecon cO cD (C.cnormDCtx (cPsi, theta)) tM (C.cnormTyp (tA, theta), LF.id) in
-      let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
-      let _        = Unify.resetGlobalCnstrs () in 
-        if psihat = Context.dctxToHat cPsi then
+  | (Apx.Comp.Box (loc, psihat, tM), ((Int.Comp.TypBox (_loc, tA, cPsi), theta) as tau_theta)) ->
+      if psihat = Context.dctxToHat cPsi then
+        let tM' = elTerm PiboxRecon cO cD (C.cnormDCtx (cPsi, theta)) tM (C.cnormTyp (tA, theta), LF.id) in
+        let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
+        let _        = Unify.resetGlobalCnstrs () in 
           Int.Comp.Box (Some loc, psihat, tM')
-        else 
-          raise (Error (Some loc, CompBoxCtxMismatch (cO, cD, cPsi, (psihat, tM'))))
-
-
-  
+      else 
+        (* raise (Error (Some loc, CompBoxCtxMismatch (cO, cD, cPsi, (psihat, tM')))) *)
+        raise (Error (Some loc, CompBoxMismatch (cO, cD, cG, tau_theta))) 
+ 
 
   | (Apx.Comp.Case (loc, i, branches), tau_theta) ->
       let (i', tau_theta') = genMApp loc cD (elExp' cO cD cG i) in
@@ -3151,6 +3157,16 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
 
           | _ -> raise (Error (Some loc, CompMismatch (cO, cD, cG, i', Box, tau_theta')))
         end
+  | (Apx.Comp.If (loc, i, e1, e2), tau_theta) -> 
+      let (i', tau_theta') = genMApp loc cD (elExp' cO cD cG i) in
+        begin match C.cwhnfCTyp tau_theta' with 
+          | (Int.Comp.TypBool , _ ) -> 
+              let e1' = elExp cO cD cG e1 tau_theta in 
+              let e2' = elExp cO cD cG e2 tau_theta in 
+                Int.Comp.If (Some loc, i', e1', e2')
+          | _  -> raise (Error (Some loc, CompIfMismatch (cO, cD, cG, tau_theta')))
+        end
+
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
   | (Apx.Comp.Fun (loc, _x, _e),  tau_theta ) -> raise (Error (Some loc, CompFunMismatch (cO, cD, cG, tau_theta)))
@@ -3210,6 +3226,19 @@ and elExp' cO cD cG i = match i with
                raise (Error (Some loc, CompTypAnn ))
              end 
 
+(*          Sun Jan 31 21:11:56 2010 -bp 
+            | (Int.Comp.TypPiBox ((Int.LF.PDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
+             begin try 
+              (* m = PVar or BVar of Proj *)
+              (* tM' really is a head ... if we would allow  Root (_, PVar _ , Nil) then this wouldn't be normal. *) 
+              let tM'    = elTerm' PiboxRecon cO cD (C.cnormDCtx (cPsi, theta)) m (C.cnormTyp (tA, theta), LF.id) in
+              let theta' = Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta) in
+                (Int.Comp.MApp (Some loc, i', (psihat, tM')), (tau, theta'))  (* Change this into PApp ... *)
+             with Violation msg -> 
+               dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+               raise (Error (Some loc, CompTypAnn ))
+             end 
+*)
           | _ ->
               raise (Error (Some loc, CompMismatch (cO, cD, cG, i', PiBox, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
@@ -3230,12 +3259,15 @@ and elExp' cO cD cG i = match i with
 
 
   | Apx.Comp.Equal (loc, i1, i2) -> 
-      let (i1', ttau1) = elExp' cO cD cG i1 in 
-      let (i2', ttau2) = elExp' cO cD cG i2 in 
+      let (i1', ttau1) = genMApp loc cD (elExp' cO cD cG i1) in 
+      let (i2', ttau2) = genMApp loc cD (elExp' cO cD cG i2) in 
         if Whnf.convCTyp ttau1 ttau2 then 
           (Int.Comp.Equal (Some loc, i1', i2'), (Int.Comp.TypBool, C.m_id))
         else 
           raise (Error(Some loc, CompEqMismatch (cO, cD, ttau1, ttau2 )))
+
+  | Apx.Comp.Boolean (_ , b)  -> (Int.Comp.Boolean b, (Int.Comp.TypBool, C.m_id))
+
 
 
 (* We don't check that each box-expression has approximately

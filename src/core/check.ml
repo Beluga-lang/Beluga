@@ -1009,6 +1009,14 @@ module Comp = struct
         else
           raise (Error (loc, E.CompIllTyped (cO, cD, cG, e, (tau,t), ttau')))
 
+    | (If (loc, i, e1, e2), (tau,t)) -> 
+        begin match C.cwhnfCTyp (syn cO cD cG i) with
+          | (TypBool , _ ) -> 
+              (check cO cD cG e1 (tau,t) ; 
+               check cO cD cG e1 (tau,t) )
+          | tau_theta' -> raise (Error (loc, E.CompIfMismatch (cO, cD, cG, tau_theta')))
+        end 
+
   and check cO cD cG e (tau, t) =
     dprint (fun () -> "check cO = " ^ P.octxToString cO);
     checkW cO cD cG e (C.cwhnfCTyp (tau, t));
@@ -1064,6 +1072,11 @@ module Comp = struct
 
            else 
              raise (Error(loc, E.CompEqMismatch (cO, cD, ttau1, ttau2 )))
+
+    | Boolean _  -> (TypBool, C.m_id)
+
+
+
 
 
   and checkBranches caseTyp cO cD cG branches tAbox ttau =

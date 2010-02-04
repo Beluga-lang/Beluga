@@ -3,17 +3,17 @@
 % <F,G> o H = <F o H, G o H>
 distp : eq (@ (pair F G) H) (pair (@ F H) (@ G H)) -> type.
 
-distp1 : distp (then (sym prod_u) (eq_pair (then ass (eq_o prod_l refl)) (then ass (eq_o prod_r refl)))).
+distp1 : distp (trans (sym prod_u) (eq_pair (trans ass (eq_o prod_l refl)) (trans ass (eq_o prod_r refl)))).
 
 % app o <cur(F) o G, H> = F o <G, H>
 appl : eq (@ app (pair (@ (cur F) G) H)) (@ F (pair G H)) -> type.
 
-appl1 : appl (then (eq_o refl (then (eq_pair (then (eq_o refl (sym prod_l)) ass) (sym prod_r)) (sym DP)))
-                (then ass (eq_o exp_e refl)))
+appl1 : appl (trans (eq_o refl (trans (eq_pair (trans (eq_o refl (sym prod_l)) ass) (sym prod_r)) (sym DP)))
+                (trans ass (eq_o exp_e refl)))
          <- distp DP.
 
 % cur(F) o G = cur (F o <G o fst,snd>)
 distc : eq (@ (cur F) G) (cur (@ F (pair (@ G fst) snd))) -> type.
 
-distc1 : distc (then (sym exp_u) (eq_cur (then (eq_o refl (eq_pair (sym ass) refl)) AP)))
+distc1 : distc (trans (sym exp_u) (eq_cur (trans (eq_o refl (eq_pair (sym ass) refl)) AP)))
           <- appl AP.

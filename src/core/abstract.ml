@@ -1563,6 +1563,11 @@ let rec collectExp cQ e = match e with
       let (cQ2, branches') = collectBranches cQ' branches in 
         (cQ2, Comp.Case (loc, i', branches'))
 
+  | Comp.If (loc, i, e1, e2) -> 
+      let (cQ', i') = collectExp' cQ i in 
+      let (cQ1, e1') = collectExp cQ' e1 in 
+      let (cQ2, e2') = collectExp cQ1 e2 in
+        (cQ2, Comp.If (loc, i', e1', e2'))
 
 and collectExp' cQ i = match i with
   | Comp.Var _x -> (cQ , i)
@@ -1588,11 +1593,12 @@ and collectExp' cQ i = match i with
       let (cQ'', tau') = collectCompTyp cQ' tau in 
         (cQ'', Comp.Ann  (e', tau'))
 
-
   | Comp.Equal (loc, i1, i2) -> 
      let (cQ', i1') = collectExp' cQ i1  in 
      let (cQ'', i2') = collectExp' cQ' i2  in 
        (cQ'', Comp.Equal(loc, i1', i2'))
+
+  | Comp.Boolean b -> (cQ, Comp.Boolean b)
 
 
 and collectPattern cQ cD cPsi (phat, tM) tA = 

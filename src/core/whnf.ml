@@ -1920,6 +1920,10 @@ let rec mctxPVarPos cD p =
                    List.map (function b -> cnormBranch (b, t)) branches)
 
     | (Comp.Value v, _ ) -> Comp.Value v
+
+    | (Comp.If (loc, i, e1, e2), t) -> 
+        Comp.If (loc, cnormExp' (i,t),  
+                 cnormExp (e1, t), cnormExp (e2, t))
  
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i 
@@ -1940,6 +1944,7 @@ let rec mctxPVarPos cD p =
         let i2' = cnormExp' (i2, t) in 
          (Comp.Equal (loc, i1', i2'))
 
+    | (Comp.Boolean b, t) -> Comp.Boolean(b)
 
 
   (* cnormBranch (BranchBox (cD, (psihat, tM, (tA, cPsi)), e), theta) = 

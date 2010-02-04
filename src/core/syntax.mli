@@ -209,7 +209,8 @@ module Int : sig
      | CtxValue   of (Loc.t option * name * exp_chk) * LF.msub * env
      | BoxValue   of LF.psi_hat * LF.normal 
      | ConstValue of cid_prog
-         
+     | BoolValue  of bool
+  
    and exp_chk =
      | Syn     of Loc.t option * exp_syn
      | Rec     of Loc.t option * name * exp_chk
@@ -221,6 +222,7 @@ module Int : sig
      | Box     of Loc.t option * LF.psi_hat * LF.normal
      | SBox    of Loc.t option * LF.psi_hat * LF.sub
      | Case    of Loc.t option * exp_syn * branch list
+     | If      of Loc.t option * exp_syn * exp_chk * exp_chk
      | Value   of value
          
    and exp_syn =
@@ -231,6 +233,7 @@ module Int : sig
      | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
      | Ann    of exp_chk * typ 
      | Equal  of Loc.t option * exp_syn * exp_syn
+     | Boolean of bool
          
    and branch =
      | BranchBox  of LF.mctx
@@ -385,6 +388,7 @@ module Ext : sig
        | Box     of Loc.t * LF.psi_hat * LF.normal 
 (*        | SBox   of LF.psi_hat * LF.sub *)
        | Case    of Loc.t * exp_syn * branch list 
+       | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
     and exp_syn =
        | Var    of Loc.t * name                  
@@ -394,6 +398,8 @@ module Ext : sig
        | BoxVal of Loc.t * LF.dctx * LF.normal 
        | Ann    of Loc.t * exp_chk * typ                   
        | Equal   of Loc.t * exp_syn * exp_syn
+       | Boolean of Loc.t * bool
+
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
@@ -549,6 +555,7 @@ module Apx : sig
                                           (* let (x,y) = i in e  *)
        | Box     of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
        | Case    of Loc.t * exp_syn * branch list
+       | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
     and exp_syn =
        | Var    of offset                                     (* x                *)
@@ -559,6 +566,8 @@ module Apx : sig
        | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (psihat. tR) *)
        | Ann    of exp_chk * typ                              (* e : tau          *)
        | Equal  of Loc.t  * exp_syn * exp_syn
+       | Boolean of Loc.t * bool
+
 
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx

@@ -1,0 +1,218 @@
+% Various examples 
+% Exploring programming within the simply-typed fragment of Beluga
+% 
+% Author: Brigitte Pientka
+
+
+nat: type.
+z: nat.
+suc: nat -> nat.
+
+term: type.
+lam   : (term -> term) -> term.
+app   : term -> term -> term.
+letv  : term -> (term -> term) -> term.
+const : nat -> term.
+
+schema ctx = term ;
+
+rec add: nat [ ] -> nat [ ] -> nat [ ] = 
+fn m => fn n => case m of 
+| [ ] z => n 
+| [ ] suc M => 
+  let [ ] K = (add ([ ] M)) n  in 
+   [ ] suc K
+;
+
+rec size : {g:(ctx)*} term[g] -> nat[ ] = 
+FN g => fn t => case t of 
+| [g] #p .. => [ ] suc z
+| [g] lam \x. T .. x => 
+  let [ ] K = size [g,x:term] ([g,x] T .. x ) in 
+   [ ] suc K
+
+| [g] app (T ..) (U ..) => 
+  let [ ] N = add (size [g] ([g] T ..)) 
+                  (size [g] ([g] U ..)) in 
+   [ ] suc N
+      
+
+| [g] letv (T ..) (\x. U .. x) => 
+  let [ ] N =   add (size [g] ([g] T ..))
+		    (size [g,x:term] ([g,x] U .. x)) in 
+   [ ] suc N
+
+| [g] const I => [ ] suc z
+;
+
+
+let r   = add ([ ] suc z) ([ ] suc z) ;
+let s2  = size [ ] ([ ] lam \x. (const z)) ;
+let s2' = size [ ] ([ ] lam \x. x) ;
+let s4  = size [ ] ([ ] lam \x. app x (const z)) ;
+let s3  = size [ ] ([ ] app (const z) (const (suc z)));
+
+%{
+% Output of the interpreter: 
+%
+% let r : nat[] = add  ([] suc z)  ([] suc z)  
+%  ===>  [] suc (suc z) 
+%
+%
+% let s2 : nat[] = size  []  ([] lam (\x. const z))  
+%  ===>  [] suc (suc z) 
+%
+%
+% let s2' : nat[] = size  []  ([] lam (\x. x))  
+%  ===>  [] suc (suc z) 
+%
+%
+% let s4 : nat[] = size  []  ([] lam (\x. app x (const z)))  
+%  ===>  [] suc (suc (suc (suc z))) 
+%
+%
+% let s3 : nat[] = size  []  ([] app (const z) (const (suc z)))  
+%  ===>  [] suc (suc (suc z)) 
+%
+}%
+
+
+list: type.
+nil: list.
+cons: term -> list -> list.
+
+
+rec append: {g:(ctx)*} list [g] -> list [g] -> list [g] = 
+FN g => fn l1 => fn l2 => case l1 of 
+| [g] nil => l2 
+| [g] cons (X ..) (L ..) => 
+  let [g] L' .. = (append [g] ([g] L ..)) l2 in 
+    [g] cons (X ..) (L' ..)
+;
+
+
+% There is no way to guarantee that lists contain only variables
+% unless we explictly keep track of this fact via a hypothetical judgment
+% i.e., introduce extra judgment var:term -> type and change lists to
+% keep track of var T instead of terms.
+% This is however also not really necessary to remove an element from a list.
+% see rm' function.
+
+rec rm : {g:(ctx)*} list[g,x:term] -> list[g] =
+FN g => fn l => case l of 
+| [g,x:term] nil => [g] nil
+| [g,x:term] cons x (L .. x)  => 
+    rm [g] ([g,x] L .. x) 
+
+ | [g,x:term] cons (#p .. ) (L .. x) => 
+  let [g] L' .. = rm [g] ([g,x] L .. x) in    
+   [g] cons (#p ..) (L' ..)
+
+;
+
+
+% OR more generally ... 
+
+rec rm' : {g:(ctx)*} list[g,x:term] -> list[g] =
+FN g => fn l => case l of 
+| [g,x:term] nil => [g] nil
+
+% the next case succeeds if x does not occur in U 
+| [g,x:term] cons (U .. ) (L .. x) => 
+  let [g] L' .. = rm' [g] ([g,x] L .. x) in    
+   [g] cons (U ..) (L' ..)
+
+% this case hence succeeds if x does occur in U 
+| [g,x:term] cons (U .. x) (L .. x)  => 
+    rm' [g] ([g,x] L .. x) 
+;
+
+
+rec fv : {g:(ctx)*} term[g] -> list [g] = 
+FN g => fn t => case t of 
+| [g] const I => [g] nil 
+| [g] #p ..    => [g] cons (#p ..) nil
+| [g] app (T1 ..) (T2 ..) => 
+  append [g] (fv [g] ([g] T1 ..)) 
+          (fv [g] ([g] T2 ..))
+
+| [g] lam \x. T .. x => 
+  let [g,x:term] L .. x = fv [g,x:term] ([g,x] T .. x) in 
+    rm' [g] ([g,x] L .. x) 
+
+| [g] letv (T1 ..) (\x. T2 .. x) => 
+  let [g] L1 .. = fv [g] ([g] T1 .. ) in 
+  let [g,x:term] L2 .. x = fv [g,x:term] ([g,x] T2 .. x) in 
+  append [g] ([g] L1 .. ) 
+             (rm' [g] ([g,x] L2 .. x))
+;
+
+
+
+% Micro-type checker
+tp:type.
+nt: tp.
+arr: tp -> tp -> tp.
+
+tm: type.
+lamt   : tp -> (tm -> tm) -> tm.
+apply  : tm -> tm -> tm.
+cnst   : nat -> tm.
+
+
+env: type.
+empty: env.
+push: tm -> tp -> env -> env.
+
+
+opt: type.
+nothing: opt.
+just: tp -> opt.
+
+schema tms = tm ; 
+
+
+rec memb: {g:(tms)*} tm[g] -> env[g] -> opt [] = 
+FN g => fn e => fn l => case l of 
+| [g] empty => [ ] nothing
+| [g] push (E' .. ) T (L .. ) => 
+  if e == ([g] E' .. ) then 
+    [ ] just T 
+  else 
+    let [g] E .. = e in          % necessary because of stupidity of the parser
+    memb [g] ([g] E .. ) ([g] L .. )  
+
+;
+
+% If anyone is around to help me understand how to allow backtracking
+% using ulex, this problem (and some others...) may be easily fixed...
+
+
+rec typing: {g:(tms)*} tm[g] -> env[g] -> opt [ ] = 
+FN g => fn e => fn l => let [g] L .. = l in   % stupidity of the parser again 
+case e of 
+| [g] #p ..  =>  memb [g] ([g] #p .. ) ([g] L .. )
+
+| [g] lamt T (\x. M .. x) => 
+  typing [g,x:tm] ([g,x] M .. x) ([g,x] push x T (L .. ))
+
+| [g] apply (M1 .. ) (M2 .. ) => 
+  (case (typing [g] ([g] M1 .. ) ([g] L .. )) of 
+     | [ ] just (arr T2 T) => 
+       (case (typing [g] ([g] M2 .. ) ([g] L .. )) of 
+         | [ ] just T2' => 
+           if ([ ] T2) == ([ ] T2') then 
+             [ ] just T 
+           else
+             [ ] nothing
+           
+
+         | [ ] nothing => [ ] nothing
+
+       )
+     | [ ] U => [ ] nothing
+  )
+;
+
+
+% using dependent types probably avoids explicit look-ups and environments

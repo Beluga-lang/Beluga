@@ -1,0 +1,87 @@
+% 
+% Author: Brigitte Pientka
+% Adapted from Twelf's POPL tutorial
+
+
+% Types
+tp  : type.                %name tp T.
+o   : tp.
+arr : tp -> tp -> tp.          
+
+% Intrinsically well-typed expressions
+exp   : tp -> type.        %name exp E.
+value : tp -> type.
+app   : exp (arr A B) -> exp A -> exp B.
+lam   : (value A -> exp B) -> value (arr A B).
+ret   : value A -> exp A.
+
+% Cps expression (target of the cps translation)
+% Intrinsically well-typed
+contra : type.
+cvalue : tp -> type.
+ccont  : tp -> type.
+capp   : cvalue (arr A B) -> cvalue A -> ccont B -> contra.
+clam   : (cvalue A -> ccont B -> contra) -> cvalue (arr A B).
+cconti : (cvalue A -> contra) -> ccont A.
+cthrow : ccont A -> cvalue A -> contra.
+
+
+% Translating values to cvalues 
+% and expressions to ...
+
+schema ctx = some [a:tp] block x:value a. cvalue a ;
+
+rec cps : {g:(ctx)*} (value A)[g] -> (cvalue A)[g] = 
+FN g => fn v =>  case v of 
+| [g] #p.1 .. =>  [g] #p.2 .. 
+
+| {E::(exp A1)[g, x:value A2]}
+  [g] lam \x. E .. x => 
+  let  {E'::contra[g, x':cvalue A, k:ccont B]}
+       [g, b:block x:value A . cvalue A, k:ccont B] E' .. b.2 k =
+    cpse [g, b:block x:value A2 . cvalue A2 ] 
+         ([g,b] E .. b.1)
+   in
+     [g] clam \v.\c. E' .. v c
+
+
+and cpse : {g:(ctx)*}(exp A)[g] -> contra[g,k:ccont A] = 
+FN g => fn e => case e of 
+| [g] ret (V .. ) => 
+  let [g] V' .. = cps [g] ([g] V .. ) in 
+    [g,k] cthrow k (V' .. )
+
+| [g] app (E1 .. ) (E2 .. ) => 
+  let [g,k:ccont (arr B A)] E1' .. k = cpse [g] ([g] E1 .. ) in 
+  let [g,k:ccont B']        E2' .. k = cpse [g] ([g] E2 .. ) in 
+   [g, k] (E1' .. (cconti (\f. E2' .. (cconti (\x. capp f x k)))))
+
+;
+
+%{
+
+% Twelf version from POPL Tutorial
+
+cps : value A -> cvalue A -> type.
+%mode cps +X1 -X2.
+
+cpse : exp A -> (ccont A -> contra) -> type.
+%mode cpse +X1 -X2.
+
+cps/lam : cps (lam (E:value A -> exp B))
+              (clam (E':cvalue A -> ccont B -> contra))
+           <- ({x:value A}{x':cvalue A} cps x x' -> cpse (E x) (E' x')).
+
+cpse/app : cpse (app (E1:exp (B => A)) (E2:exp B))
+                ([c:ccont A] E1' (cconti ([f:cvalue (B => A)]
+                                            E2' (cconti([x:cvalue B]
+                                                          capp f x c)))))
+            <- cpse E1 (E1':ccont (B => A) -> contra)
+            <- cpse E2 (E2':ccont B -> contra).
+cpse/ret : cpse (ret (V:value A)) ([c:ccont A] cthrow c V')
+            <- cps V (V':cvalue A).
+
+%block cpsb : some {A : tp} block {x : value A} {x' : cvalue A} {d : cps x x'}.
+%worlds (cpsb) (cps _ _) (cpse _ _).
+%total (E V) (cps E _) (cpse V _).
+}%

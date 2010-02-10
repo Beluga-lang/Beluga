@@ -673,43 +673,49 @@ GLOBAL: sgn_eoi;
     ]]
 ;
 
-  cmp_exp_chk:
-    [ "full"
-      [
-         "fn"; f = SYMBOL; rArr; e = SELF ->
+cmp_exp_chk:
+ [ LEFTA [
+    e = cmp_exp_chkX   ->   e
+  | i = cmp_exp_syn    ->   Comp.Syn (_loc, i)
+ ]];
+
+(* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
+cmp_exp_chkX:
+    [ LEFTA
+      [  "fn"; f = SYMBOL; rArr; e = cmp_exp_chk ->
            Comp.Fun (_loc, Id.mk_name (Id.SomeString f), e)
-      |
-        gLambda; f = SYMBOL; rArr; e = SELF ->
+
+      | gLambda; f = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.CtxFun (_loc, Id.mk_name (Id.SomeString f), e)
-      |
-        "mlam"; f = UPSYMBOL; rArr; e = SELF ->
+
+      | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, Id.mk_name (Id.SomeString f), e)
 
-      |
-        "mlam"; hash = "#"; p = SYMBOL; rArr; e = SELF ->
+      | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, Id.mk_name (Id.SomeString p), e)
 
-
-      |
-        "case"; i = cmp_exp_syn; "of"; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
+      | "case"; i = cmp_exp_syn; "of"; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, i, bs)
 
-      | "if"; i = cmp_exp_syn; "then"; e1 = SELF ; "else"; e2 = SELF -> 
+      | "if"; i = cmp_exp_syn; "then"; e1 = cmp_exp_chk ; "else"; e2 = cmp_exp_chk -> 
           Comp.If (_loc, i, e1, e2)
 
-      | 
-        "let"; "("; x = SYMBOL; ","; y = SYMBOL; ")"; "="; i = cmp_exp_syn;  "in"; e = SELF ->
+      | "let"; "("; x = SYMBOL; ","; y = SYMBOL; ")"; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
           Comp.LetPair (_loc, i, (Id.mk_name (Id.SomeString x), Id.mk_name (Id.SomeString y), e))
 
-      |
-       "let"; ctyp_decls = LIST0 clf_ctyp_decl;
+      | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
        "["; pHat = clf_dctx ;"]"; tM = clf_term_app;
        tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi) ];
-       "="; i = cmp_exp_syn; "in"; e' = SELF
+       "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk
        ->
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
           Comp.Case (_loc, i, [Comp.BranchBox (_loc, ctyp_decls', (pHat, tM, tau), e')]) 
+      | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> 
+          begin match p_or_a with 
+            | Pair e2 ->   Comp.Pair (_loc, e1, e2)
+            | Atom    ->   e1
+          end 
       ]
 
     | "atomic"
@@ -729,65 +735,96 @@ GLOBAL: sgn_eoi;
         "["; pHat = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "]"; tM = clf_term_app ->            
             Comp.Box (_loc, pHat, tM)
       | 
-        "(" ; e1 = SELF; p_or_a = cmp_pair_atom -> 
+        "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> 
           begin match p_or_a with 
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
             | Atom    ->   e1
           end 
-      |
-        i = cmp_exp_syn ->
-          Comp.Syn (_loc, i)
 (*      |
         "("; e = SELF; ")" ->
           e
 *)
       ]
-    ]
-  ;
+ ];
 
 
-  cmp_exp_syn:
-    [ "full"
-      [
-        i = SELF; "["; cPsi = clf_dctx; "]" ->
-          Comp.CtxApp (_loc, i, cPsi)
+(* isuffix: something that can follow an i; returns a function that takes the i it follows,
+  and returns the appropriate synthesizing expression *)
+isuffix:
+ [ LEFTA [
+     "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))
+   | "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">"   ->  (fun i -> Comp.MApp (_loc, i, (vars, tM)))
+   | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
+   | x = SYMBOL   ->  (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name (Id.SomeString x)))))
+   | "ttrue"      ->   (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, true))))
+   | "ffalse"     ->   (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, false))))
+   | e = cmp_exp_chkX   ->   (fun i -> Comp.Apply(_loc, i, e))
+ ]];
 
-      |
-        i = SELF; "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">" ->
-          (* let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in *)
-            Comp.MApp (_loc, i, (vars, tM))
+cmp_exp_syn:
+ [ LEFTA [
+    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   ->  ((*print_string ("BOXVAL: " ^ Comp.synToString(Comp.BoxVal (_loc, cPsi, tR)) ^ "\n"); *)  Comp.BoxVal (_loc, cPsi, tR))
+   | h = SELF; s = isuffix  ->  s(h)
+   | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
+       Comp.Apply (_loc, h, begin match p_or_a with 
+                                    | Pair e2 ->   Comp.Pair (_loc, e, e2)
+                                    | Atom    ->   e
+                            end)
+   | x = SYMBOL ->  Comp.Var (_loc, Id.mk_name (Id.SomeString x))
+   | "ttrue"    ->   Comp.Boolean (_loc, true)
+   | "ffalse"   ->   Comp.Boolean (_loc, false)
+   | "("; i = SELF; ")"   ->   i
+ ]];
 
+(******
+                      cmp_exp_syn:
+                        [ LEFTA
+                          [
+                            i = SELF; e = cmp_exp_chk ->
+                           (print_string("APPLY: " ^ Comp.synToString (Comp.Apply(_loc, i, e)) ^ "\n");
+                              Comp.Apply (_loc, i, e))
+                          |
+                            i = SELF; "["; cPsi = clf_dctx; "]" ->
+                              (print_string("CTXAPP: " ^ Comp.synToString (Comp.CtxApp(_loc, i, cPsi)) ^ "\n");
+                              Comp.CtxApp (_loc, i, cPsi))
+                    (*      |
+                              "("; i = SELF; "["; cPsi = clf_dctx; "]"; ")" ->
+                              (print_string("(CTXAPP): " ^ Comp.synToString (Comp.CtxApp(_loc, i, cPsi)) ^ "\n");
+                              Comp.CtxApp (_loc, i, cPsi))
+                    *)
 
-      | i1 = SELF; "=="; i2 = SELF -> 
-          Comp.Equal(_loc, i1, i2)
+                          |
+                            i = SELF; "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">" ->
+                              (* let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in *)
+                                Comp.MApp (_loc, i, (vars, tM))
 
-      |
-        i = SELF; e = cmp_exp_chk ->
-          Comp.Apply (_loc, i, e)  
+                          | i1 = SELF; "=="; i2 = SELF -> 
+                               Comp.Equal(_loc, i1, i2)
 
-      ]
-    | "atomic"
-      [
-        x = SYMBOL ->
-          Comp.Var (_loc, Id.mk_name (Id.SomeString x))
+                          ]
 
-      | "ttrue" -> Comp.Boolean (_loc, true)
-      | "ffalse" -> Comp.Boolean (_loc, false)
+                        | "atomic"
+                          [
+                            x = SYMBOL ->
+                              Comp.Var (_loc, Id.mk_name (Id.SomeString x))
 
-      | 
-      "["; cPsi = clf_dctx; "]"; tR = clf_term_app ->
-            Comp.BoxVal (_loc, cPsi, tR)
+                          | "ttrue" -> Comp.Boolean (_loc, true)
+                          | "ffalse" -> Comp.Boolean (_loc, false)
+                          | 
 
-      |
-(*         e = cmp_exp_chk; ":"; tau = cmp_typ -> *)
-(*           Comp.Ann (_loc, e, tau) *)
-(*       | *)
-        "("; i = SELF; ")" ->
-          i
-      ]
-    ]
-  ;
-
+                          "["; cPsi = clf_dctx; "]"; tR = clf_term_app ->
+                                Comp.BoxVal (_loc, cPsi, tR)
+                          |
+                    (*                    e = cmp_exp_chk; ":"; tau = cmp_typ ->
+                                              Comp.Ann (_loc, e, tau)
+                                          |
+                    *)
+                            "("; i = SELF; ")" ->
+                              i
+                          ]
+                        ]
+                      ;
+*****)
 
 
   cmp_branch:

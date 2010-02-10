@@ -57,7 +57,7 @@ FN g =>
 
   | [g,x : exp _ ] (U .. )  => [ ] z
 
-  | [g,x : exp _ ] s (W .. x)  => cntV [g]  ([g,x] (W .. x))
+  | [g,x : exp _ ] s (W .. x)  => cntV [g] ([g,x] (W .. x))
 %
 %
 %  NOT WORKING IF WE OMIT T1 ..  since from the pattern we simply infer

@@ -413,6 +413,8 @@ module Ext : sig
 
    type rec_fun = RecFun of name * typ * exp_chk
 
+   val synToString : exp_syn -> string
+   val chkToString : exp_chk -> string
   end (* Ext.Comp *)
 
 

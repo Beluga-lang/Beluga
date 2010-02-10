@@ -469,6 +469,29 @@ module Ext = struct
 (*           * exp_chk *)
 
    type rec_fun = RecFun of name * typ * exp_chk
+
+(* Useful for debugging the parser, but there should be a better place for them... *)
+   let rec synToString = function
+       | Var    (_loc,  _) -> "Var"
+       | Apply  (_loc,  syn, chk) -> "Apply(" ^ synToString syn ^ ", " ^ chkToString chk ^ ")"
+       | CtxApp (_loc,  syn, _dctx) -> "CtxApp(" ^ synToString syn ^ ", _dctx)"
+       | MApp   (_loc,  syn, (_, _)) -> "MApp(" ^ synToString syn ^ ", ...)"
+       | BoxVal (_loc, _, _) -> "BoxVal(...)"
+       | Ann    (_loc, chk, _) -> "Ann(" ^ chkToString chk ^ ", _)"
+       | Equal   (_loc,  syn1, syn2) -> "Equal("  ^ synToString syn1 ^ " == " ^ synToString syn2 ^ ")"
+       | Boolean (_loc, _) -> "Boolean(_)"
+      
+   and chkToString = function
+       | Syn     (_loc,  syn) -> "Syn(" ^ synToString syn ^ ")"
+       | Fun     (_loc, _, chk) -> "Fun(_, " ^ chkToString chk ^ ")"
+       | CtxFun  (_loc, _, chk) ->  "CtxFun(_, " ^ chkToString chk ^ ")"
+       | MLam    (_loc, _, chk) ->  "MLam(_, " ^ chkToString chk ^ ")"
+       | Pair    (_loc, chk1, chk2) ->  "Fun(_, " ^ chkToString chk1 ^ ", " ^ chkToString chk2 ^ ")"
+       | LetPair (_loc, syn, (_, _, chk)) -> "LetPair(" ^ synToString syn ^", (_, _, " ^ chkToString chk ^ "))"
+       | Box     (_loc, _, _) -> "Box(...)"
+       | Case    (_loc, syn, _) -> "Case(" ^ synToString syn ^ " of ...)"
+       | If      (_loc, syn, chk1, chk2) -> "If(" ^ synToString syn ^ " Then " ^  chkToString chk1 ^ " Else " ^ chkToString chk2 ^ ")"
+
   end
 
 

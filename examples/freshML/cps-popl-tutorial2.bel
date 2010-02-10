@@ -32,8 +32,8 @@ FN g => fn v => case v of
 | {E::(exp B)[g, x:value A]} % Explicit type annotation for E is necessary                             
   [g] lam \x. E .. x =>        % because we need the type A in the recursive call
 
-  let {E'::contra[g, v:cvalue A, c: (cvalue B -> contra)]}    % Explicit type annotation is necessary
-                                                              % because we cannot infer the type of E' due to b.2
+  let % {E'::contra[g, v:cvalue A, c: (cvalue B -> contra)]}    % Explicit type annotation is necessary
+                                                                % because we cannot infer the type of E' due to b.2
       [g, b:block x:value A . cvalue A, c:cvalue B -> contra] E' .. b.2 c =   
       cpse [g,b:block x:value A . cvalue A] ([g, b] E .. b.1 ) in 
     [g] clam \v.\c. E' .. v c

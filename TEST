@@ -61,6 +61,10 @@ $INTERPRETER +t \
     fol/test.cfg \
     free-vars/fvnat.bel \
     free-vars/fvnat-explicit.bel \
+    freshML/term.bel \
+    freshML/cps.bel \
+    freshML/cps-popl-tutorial1.bel \
+    freshML/cps-popl-tutorial2.bel \
     lp-horn/sources.cfg \
     mini-ml/eval-sub-1.bel \
     mini-ml/eval-sub-1-explicit.bel \

@@ -2162,10 +2162,10 @@ module Make (T : TRAIL) : UNIFY = struct
            (print_string "Unification of projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
 
     | (FVar _, Proj (PVar _, _)) ->
-        (print_string "humped3\n"; raise_ (Unify "333"))
+        (print_string "[UnifyHead] Unify Free Variable with Projection on Parameter variable \n"; raise_ (Unify "Projection parameter variable =/= free variable"))
 
-    | (_ , Proj (PVar _, _)) ->
-        (print_string "humped4\n"; raise_ (Unify "333"))
+    | (PVar _ , Proj (PVar _, _)) ->
+        (print_string "[UnifyHead] Projection on a Parameter variable \n"; raise_ (Unify "333"))
 
 
     | (_h1 , _h2 ) ->
@@ -2210,7 +2210,7 @@ module Make (T : TRAIL) : UNIFY = struct
           else raise_ (Error "CoSubstitutions not well-typed")
 
       | (Shift (psi, n), Shift (phi, k)) -> 
-          if n = k && psi = phi then () else raise_ (Error "Substitutions not well-typed")
+          if  n = k && psi = phi then () else raise_ (Error "Substitutions not well-typed")
 
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2)) 
         -> if s1 = s2 then 

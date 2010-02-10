@@ -68,6 +68,16 @@ let rec csub_typ cPsi k tA = match tA with
   | TClo (tA, s) -> 
      TClo (csub_typ cPsi k tA, csub_sub cPsi k s)
 
+  | Sigma trec -> Sigma (csub_trec cPsi k trec)
+
+
+and csub_trec cPsi k trec = match trec with 
+  | SigmaLast tA -> SigmaLast (csub_typ cPsi k tA)
+  | SigmaElem (x, tA, trec) -> 
+      let tA' = csub_typ cPsi k tA in 
+      let trec' = csub_trec cPsi k trec in 
+       SigmaElem (x, tA', trec')
+
 and csub_norm cPsi k tM = match tM with
   | Lam (loc, x, tN)  -> Lam (loc, x, csub_norm cPsi k tN)
 

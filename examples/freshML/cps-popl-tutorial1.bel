@@ -12,10 +12,10 @@ arr : tp -> tp -> tp.
 exp   : tp -> type.        %name exp E.
 value : tp -> type.
 app   : exp (arr A B) -> exp A -> exp B.
-lam   : (value A -> exp B) -> value (arr A B).
+lam   : {A:tp}(value A -> exp B) -> value (arr A B).
 ret   : value A -> exp A.
 
-% Cps expression (target of the cps translation)
+% CPS expression (target of the cps translation)
 % Intrinsically well-typed
 contra : type.
 cvalue : tp -> type.
@@ -35,9 +35,8 @@ rec cps : {g:(ctx)*} (value A)[g] -> (cvalue A)[g] =
 FN g => fn v =>  case v of 
 | [g] #p.1 .. =>  [g] #p.2 .. 
 
-| {E::(exp A1)[g, x:value A2]}
-  [g] lam \x. E .. x => 
-  let  {E'::contra[g, x':cvalue A, k:ccont B]}
+| [g] lam A2 \x. E .. x => 
+  let  % {E'::contra[g, x':cvalue A, k:ccont B]}
        [g, b:block x:value A . cvalue A, k:ccont B] E' .. b.2 k =
     cpse [g, b:block x:value A2 . cvalue A2 ] 
          ([g,b] E .. b.1)
@@ -57,6 +56,23 @@ FN g => fn e => case e of
    [g, k] (E1' .. (cconti (\f. E2' .. (cconti (\x. capp f x k)))))
 
 ;
+
+
+let id_fun = ([ ] lam o \x. ret x) ;
+
+let r0 = cps [b:block x:value o . cvalue o] ([b] b.1) ;
+
+rec test : Bool -> contra[b:block x:value o . cvalue o, k:ccont o] = 
+fn x => let [b:block x:value o . cvalue o] V' b = cps [b:block x:value o . cvalue o] ([b] b.1) in 
+	[b,k] cthrow k (V' b) ; 
+
+let r1' = test ttrue ; 
+
+let r1 = cpse [b:block x:value o . cvalue o] ([b] ret b.1) ;
+
+
+% let r2 = cps [ ] ([ ] lam o \x. ret x) ;
+
 
 %{
 

@@ -215,14 +215,16 @@ module Cid = struct
       name               : Id.name;
       implicit_arguments : int;
       typ                : Int.Comp.typ;
-      prog               : Int.Comp.exp_chk
+      prog               : Int.Comp.exp_chk;
+      mut_rec            : Id.name list
     }
 
-    let mk_entry n t i e =  {
+    let mk_entry n t i e n_list =  {
       name               = n;
       implicit_arguments = i;
       typ                = t;
-      prog               = e
+      prog               = e;
+      mut_rec            = n_list  (* names of function with which n is mutual recursive *)
     }
 
     type t = Id.name DynArray.t

@@ -180,7 +180,7 @@ FN g => fn e => fn l => case l of
     [ ] just T 
   else 
     let [g] E .. = e in          % necessary because of stupidity of the parser
-    memb [g] ([g] E .. ) ([g] L .. )  
+      memb [g] ([g] E .. ) ([g] L .. )  
 
 ;
 

@@ -5,17 +5,6 @@
    @author Brigitte Pientka
 *)
 
-(* TODO
- *
- * - Extension to deal with schemas
- * - Checking Schemas
- *
- * - Extension to handle sigma-types
- *    -> need to change data-type definition for typ_rec
- *
- * - Cycle detection?
- * - Code walk for reconstruction
- *)
 
 open Store
 open Store.Cid
@@ -39,6 +28,10 @@ exception Error of Syntax.Loc.t option * error
 exception Violation of string
 exception SpineMismatch
 exception NotPatSpine
+
+let rec conv_listToString clist = match clist with 
+  | [] -> " "
+  | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
 
 let rec what_head = function
   | Apx.LF.BVar _ -> "BVar"
@@ -64,6 +57,11 @@ type typAnn    = FullTyp of Apx.LF.typ | PartialTyp of cid_typ
 type free_cvars = 
     FMV of Id.name | FPV of Id.name
 
+
+(* let rec remove_name n n_list - match n_list with 
+  | [ ] -> [ ] 
+  | n'::n_list' -> if n = n' then n_list else n'::(remove_name n n_list')
+*)
 
 let rec lookup_fv fvars m = begin  match (fvars, m) with 
      ([], _ ) -> false
@@ -198,8 +196,6 @@ let rec isPatSub s = match s with
   | Apx.LF.EmptySub ->
       true
 
-  | Apx.LF.CoId _ -> true
-
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar _k), s) ->
       isPatSub s
 
@@ -217,6 +213,172 @@ let rec isPatSub s = match s with
   | Apx.LF.Dot (Apx.LF.Head _, _s) -> false
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
+
+
+
+
+(* -------------------------------------------------------------*)
+(* isProjPatSub s = true *)
+let rec isProjPatSub s = match s with
+  | Apx.LF.Id -> true
+
+  | Apx.LF.EmptySub -> true
+
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
+      isProjPatSub s
+
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar _k,_j)), s) ->
+     isProjPatSub s
+
+  | Apx.LF.Dot (Apx.LF.Head _, _s) -> false
+
+  | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
+
+
+(* ************************************************************************ *)
+let rec new_index k conv_list = match (conv_list, k) with
+    | (d::conv_list', 1 ) -> d
+    | (d::conv_list', _ ) -> d + new_index (k-1) conv_list'
+
+let rec strans_norm sM conv_list = strans_normW (Whnf.whnf sM) conv_list 
+and strans_normW (tM, s) conv_list = match tM with
+  | Int.LF.Lam(loc,x, tN) -> let tN' = strans_norm (tN, LF.dot1 s) (1::conv_list) in 
+      Int.LF.Lam(loc, x, tN')
+  | Int.LF.Root(loc, h, tS) -> 
+      let h' = strans_head h conv_list in 
+      let tS' = strans_spine (tS, s) conv_list in 
+        Int.LF.Root(loc, h', tS')
+
+and strans_head h conv_list = match h with
+  | Int.LF.BVar x -> Int.LF.BVar (new_index x conv_list)
+  | Int.LF.MVar(u,sigma) -> Int.LF.MVar(u, strans_sub sigma conv_list )
+  | Int.LF.PVar (p, sigma) -> Int.LF.PVar(p, strans_sub sigma conv_list )
+  | Int.LF.Proj (Int.LF.BVar x, j) -> 
+    let x' = (new_index x conv_list) - j + 1  in 
+      Int.LF.BVar x'
+  | Int.LF.Const c -> Int.LF.Const c
+  | Int.LF.FVar x -> Int.LF.FVar x
+  | Int.LF.FMVar (u,s) -> Int.LF.FMVar (u, strans_sub s conv_list)
+  | Int.LF.FPVar (u,s) -> Int.LF.FPVar (u, strans_sub s conv_list)
+  | Int.LF.MMVar  (u, (ms, s)) -> 
+      let ms' = strans_msub ms conv_list in 
+      let s'  = strans_sub s conv_list in 
+        Int.LF.MMVar (u, (ms', s'))
+
+and strans_msub ms conv_list = match ms with 
+  | Int.LF.MShift k -> Int.LF.MShift k 
+  | Int.LF.MDot (mf , ms) -> 
+      let mf' = strans_mfront mf conv_list in 
+      let ms' = strans_msub ms conv_list in 
+        Int.LF.MDot (mf',ms')
+
+and strans_mfront mf conv_list = match mf with
+  | Int.LF.MObj (phat, tM) -> 
+      Int.LF.MObj (phat, strans_norm (tM, LF.id) conv_list )
+  | Int.LF.PObj (phat, h) -> 
+      Int.LF.PObj (phat, strans_head h conv_list)
+  | Int.LF.MV u -> Int.LF.MV u 
+  | Int.LF.MUndef -> Int.LF.MUndef
+
+  
+and strans_sub s conv_list = match s with
+  | Int.LF.Shift (ctx_offset, offset) -> 
+      let offset' = List.fold_left (fun x -> fun y -> x + y) 0 conv_list in 
+      let _ = dprint (fun () -> "conv_list = " ^ conv_listToString conv_list ) in
+      let _ = dprint (fun () -> "Old offset " ^ string_of_int offset ) in 
+      let _ = dprint (fun () -> "New offset " ^ string_of_int offset') in 
+        Int.LF.Shift (ctx_offset, offset')
+  | Int.LF.Dot (ft, s) -> 
+      Int.LF.Dot (strans_front ft conv_list, strans_sub s conv_list)
+
+and strans_front ft  conv_list = match ft with
+  | Int.LF.Head h -> Int.LF.Head (strans_head h conv_list)
+  | Int.LF.Block (h,i) -> Int.LF.Block (strans_head h conv_list, i)
+  | Int.LF.Obj tM -> Int.LF.Obj (strans_norm (tM, LF.id) conv_list)
+  | Int.LF.Undef -> Int.LF.Undef 
+        
+
+and strans_spine (tS,s) conv_list = match tS with 
+  | Int.LF.Nil -> Int.LF.Nil
+  | Int.LF.SClo (tS',s') -> strans_spine (tS', LF.comp s' s) conv_list 
+  | Int.LF.App (tM, tS) -> 
+    let tM' = strans_norm (tM, s) conv_list in 
+    let tS' = strans_spine (tS, s) conv_list in 
+      Int.LF.App (tM', tS')
+
+
+let rec strans_typ sA conv_list = strans_typW (Whnf.whnfTyp sA) conv_list
+and strans_typW (tA,s) conv_list = match tA with
+  | Int.LF.Atom (loc, a, tS ) -> 
+     Int.LF.Atom (loc, a, strans_spine (tS, s) conv_list )
+
+  | Int.LF.PiTyp ((Int.LF.TypDecl(x, tA), dep), tB) -> 
+    let tA' = strans_typ (tA, s) conv_list in 
+    let tB' = strans_typ (tB, LF.dot1 s) (1::conv_list) in 
+      Int.LF.PiTyp ((Int.LF.TypDecl(x,tA'), dep), tB')
+
+  (* no sigma types allowed *)
+
+
+let rec flattenSigmaTyp cPsi strec conv_list = match strec with
+  | (Int.LF.SigmaLast tA, s) -> 
+      let tA' = strans_typ (tA,s) conv_list in 
+     (Int.LF.DDec (cPsi, Int.LF.TypDecl (Id.mk_name Id.NoName, tA')), 1)
+
+  | (Int.LF.SigmaElem (x, tA, trec), s) -> 
+      let tA' = strans_typ (tA,s) conv_list in 
+      let (cPhi, k) = flattenSigmaTyp (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA'))) (trec, LF.dot1 s)  (1::conv_list) in
+        (cPhi, k+1)
+                                          
+
+(* flattenDCtx cPsi = (cPsi'  ,  L )
+
+   if   O ; D |- cPsi   
+        and cPsi contains Sigma-types
+
+   then
+        O ; D |- cPsi'  where all Sigma-types in cPsi have been flattened.
+        L is a vector i.e. pos(i,L) = n  where n denotes the length of the type tA 
+        for element i
+
+
+   Example:  cPsi = ., Sigma x:A.B, y:A, Sigma w1:A , w2:A . A  
+       then flattenDCtx cPsi = (cPsi', L)
+       where  cPsi' = ., x:A, x':B, y:A, w1:A, w2:A, w3:A
+                L   =    [3,1,2]  (note reverse order since contexts are built in reverse order.
+
+
+*)
+
+
+let rec flattenDCtx cPsi = match cPsi with 
+  | Int.LF.Null -> (Int.LF.Null , [])
+  | Int.LF.CtxVar psi -> (Int.LF.CtxVar psi , [] )
+  | Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA)) -> 
+      let (cPhi, conv_list) = flattenDCtx cPsi' in 
+        match Whnf.whnfTyp (tA, LF.id) with 
+          | (Int.LF.Sigma trec, s) -> let (cPhi', k) = flattenSigmaTyp cPhi (trec,s) conv_list in (cPhi', k::conv_list)
+          | _          -> (Int.LF.DDec(cPhi, Int.LF.TypDecl(x, strans_typ (tA, LF.id) conv_list)), 1::conv_list)
+              
+
+
+
+let rec flattenProjPat s conv_list = match s with
+  | Apx.LF.Id -> Apx.LF.Id
+  | Apx.LF.EmptySub -> Apx.LF.EmptySub
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) -> 
+      let s' = flattenProjPat s conv_list in 
+        Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar (new_index k conv_list )), s')
+
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k, j)), s) ->
+      let s' = flattenProjPat s conv_list in 
+      let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ string_of_int j ^ "\n") in 
+      let k' = (new_index k conv_list) - j + 1  in
+        Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k'), s')
+
+ (* these are the only cases which can happen *)
+
+
 
 (* -------------------------------------------------------------*)
 
@@ -960,18 +1122,6 @@ let rec synDom cD loc cPsi s = begin match s with
             (Int.LF.Null, Int.LF.Shift (Int.LF.NoCtxShift, d))
       end
 
-  | Apx.LF.CoId(loc, co_cid) -> 
-      begin match Context.dctxToHat cPsi with
-        | (Some (Int.LF.CoCtx (co_cid', psi)), d) ->
-             if co_cid = co_cid' then 
-               (Int.LF.CtxVar psi,  Int.LF.CoShift (Int.LF.Coe co_cid, Int.LF.NoCtxShift, d))
-             else 
-               raise (Error (Some loc, CoercionMismatch (co_cid, co_cid')))
-        | (_ , d) ->
-             raise (Error (Some loc, IllTypedCoIdSub))
-       end
-
-
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
       begin match Context.ctxDec cPsi k with
         | Int.LF.TypDecl (x, tA) ->
@@ -1401,10 +1551,40 @@ and elTerm' recT  cO cD cPsi r sP = match r with
              *)
             FMVar.add u (tP, cPhi);
             Int.LF.Root (Some loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
-        else
-          let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
-            add_fcvarCnstr (m, v);
-            Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil)
+          else
+           if isProjPatSub s then 
+             let _ = dprint (fun () -> "isProjPatSub ... " ) in 
+             let (flat_cPsi, conv_list) = flattenDCtx cPsi in  
+             let _ = dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cO cD flat_cPsi ^ "\n") in 
+             let _ = dprint (fun () -> "conv_list " ^ conv_listToString conv_list ) in 
+             let flat_s = flattenProjPat s conv_list in 
+             let _ = dprint (fun () -> "flattenProjPat done " ) in
+
+             let (cPhi, s'') = synDom cD loc flat_cPsi flat_s in 
+             let ss =  Substitution.LF.invert s'' in  
+
+             let tP' = strans_typ sP conv_list in 
+             let _ = dprint (fun () -> "[synDom] Prune type " ^ P.typToString Int.LF.Empty cD cPsi sP ) in  
+             let _ = dprint (fun () -> "[synDom] Prune flattened type " ^ P.typToString Int.LF.Empty cD cPhi (tP', LF.id) ) in  
+             let _ = dprint (fun () -> "         with respect to ss = " ^ P.subToString Int.LF.Empty cD cPhi ss ) in  
+
+             let tP = Unify.pruneTyp cD flat_cPsi (*?*) 
+                         (Context.dctxToHat flat_cPsi) (tP', LF.id) (Int.LF.MShift 0, ss) (Unify.MVarRef (ref None)) in 
+
+             let sorig = elSub loc recT cO cD cPsi s cPhi in
+             let _ = dprint (fun () -> "sorig = " ^ P.subToString cO cD cPsi sorig ^ "\n") in 
+            (* For type reconstruction to succeed, we must have
+             * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
+             * This will be enforced during abstraction.
+             *)
+            FMVar.add u (tP, cPhi); 
+            Int.LF.Root (Some loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
+
+            else 
+              let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
+                add_fcvarCnstr (m, v);
+                Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil)
+
         | Violation msg  -> 
             dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
             raise (Error (Some loc, CompTypAnn ))
@@ -3128,7 +3308,9 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
           Int.Comp.Box (Some loc, psihat, tM')
       else 
         (* raise (Error (Some loc, CompBoxCtxMismatch (cO, cD, cPsi, (psihat, tM')))) *)
-        raise (Error (Some loc, CompBoxMismatch (cO, cD, cG, tau_theta))) 
+        (let (_ , k) = psihat in 
+           dprint (fun () -> "cPsi = " ^ P.dctxToString cO cD cPsi  ^ "\n psihat  = " ^ string_of_int k ^ "\n") ; 
+           raise (Error (Some loc, CompBoxMismatch (cO, cD, cG, tau_theta))) )
  
 
   | (Apx.Comp.Case (loc, i, branches), tau_theta) ->
@@ -3902,7 +4084,7 @@ let recSgnDecl d =
                 (P.compTypToString cO cD tau') 
                 (P.expChkToString cO cD cG i'') 
                 (P.expChkToString cO cD cG v) in 
-        let _x = Comp.add (Comp.mk_entry x tau' 0 v) in 
+        let _x = Comp.add (Comp.mk_entry x tau' 0 v []) in 
           ()
 
 
@@ -3938,7 +4120,7 @@ let recSgnDecl d =
                 (P.compTypToString cO cD tau') 
                 (P.expChkToString cO cD cG i'') 
                 (P.expChkToString cO cD cG v) in 
-        let _x = Comp.add (Comp.mk_entry x tau' 0 v) in 
+        let _x = Comp.add (Comp.mk_entry x tau' 0 v []) in 
           ()
 
 
@@ -3948,7 +4130,7 @@ let recSgnDecl d =
       let cO      = Int.LF.Empty in
 
       let rec preprocess l = match l with 
-        | [] -> (Int.LF.Empty, Var.create ())
+        | [] -> (Int.LF.Empty, Var.create (), [])
         | Ext.Comp.RecFun (f, tau, _e) :: lf -> 
         let fvars = [] in 
         let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) fvars tau in
@@ -3967,13 +4149,13 @@ let recSgnDecl d =
         let _       = FMVar.clear () in
         let _       = FPVar.clear () in
 
-        let (cG, vars) = preprocess lf in 
+        let (cG, vars, n_list) = preprocess lf in 
           (* check that names are unique ? *)
-          (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f))
+          (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list )
 
       in
 
-      let (cG , vars') = preprocess recFuns in 
+      let (cG , vars', n_list ) = preprocess recFuns in 
     
       let reconFun f e = 
         let fvars = [] in 
@@ -4016,7 +4198,7 @@ let recSgnDecl d =
 
             let _       = dprint (fun () ->  "DOUBLE CHECK of function " ^    f.string_of_name ^  " successful!\n\n" ) in
 
-            let _f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' )   in
+            let _f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list)   in
              reconRecFun lf 
       in 
         begin match recFuns with
@@ -4030,12 +4212,10 @@ let recSgnDecl d =
               
               let _       = dprint (fun () ->  "DOUBLE CHECK of function " ^    f.string_of_name ^  " successful!\n\n" ) in
                 
-              let _f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' )   in
+              let _f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list)   in
                 reconRecFun lf 
           | _ -> raise (Violation "No recursive function defined\n")
         end
-
-        (* Int.Sgn.Rec (f', tau',  e_r' ) *)
 
 
   | Ext.Sgn.Pragma(loc, Ext.LF.NamePrag (typ_name, m_name, v_name)) ->

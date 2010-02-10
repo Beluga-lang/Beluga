@@ -55,10 +55,11 @@ module Cid : sig
       name               : name;
       implicit_arguments : int;
       typ                : Comp.typ;
-      prog               : Comp.exp_chk
+      prog               : Comp.exp_chk;
+      mut_rec            : name list
     }
 
-    val mk_entry  : name -> Comp.typ -> int -> Comp.exp_chk -> entry 
+    val mk_entry  : name -> Comp.typ -> int -> Comp.exp_chk -> name list -> entry 
 
     type t
 

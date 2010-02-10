@@ -83,8 +83,8 @@ and subst_branch offset branch eta = match branch with
 
 and subst_branches offset branches eta = 
   List.map (fun b -> subst_branch offset b eta) branches
-*)
 
+*)
 
 (* ******************************************************************************* *)
 
@@ -107,6 +107,17 @@ let rec mctxToMSub cD = match cD with
 
 
 
+let rec add_mrecs n_list theta eta = begin match n_list with 
+  | [] ->  eta
+  | n'::n_list' -> 
+      let cid' = Comp.index_of_name n' in 
+      let e' = (Comp.get cid').Comp.prog in 
+      let eta' = add_mrecs n_list' theta eta in 
+	(dprint (fun () -> "[eval_syn] found – extend environment with rec. prog."  ^ R.render_cid_prog cid'  ^ "\n");
+         Cons(RecValue ((cid', e'), theta, eta) ,eta'))
+end
+ 
+
 (* eval e (theta, eta) = v 
 
 where  cD ; cG |- e <= wf_exp
@@ -122,17 +133,31 @@ let rec eval_syn i theta_eta =
 		   P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta)) in
     match i with  
   | Const cid -> 
-      let e = (Comp.get cid).Comp.prog in 
-      eval_chk  e (theta, Cons(RecValue ((cid, e), theta, eta) ,eta))
+      let n_list = (Comp.get cid).Comp.mut_rec in
+      let e = (Comp.get cid).Comp.prog in   
+      let rec add_mrecs n_list = match n_list with 
+        | [] ->  eta
+        | n'::n_list' -> 
+            let cid' = Comp.index_of_name n' in 
+            let e' = (Comp.get cid').Comp.prog in 
+            let eta' = add_mrecs n_list' in 
+	      (dprint (fun () -> "[eval_syn] Const " ^   R.render_cid_prog cid' ^ " found – extend environment with rec. prog. \n");
+                Cons(RecValue ((cid', e'), theta, eta) ,eta'))
+      in 
+        eval_chk e (theta, (add_mrecs n_list))
+
 
   | Var x     -> 
       let _ = dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment") in 
 	begin match lookupValue x eta with	   
-	  | RecValue ((cid,e'), theta', eta') as w -> 
-	      dprint (fun () -> "[eval_syn] Var case : Lookup found RecValue\n");
-	      dprint (fun () -> "\n[eval_syn] with  theta' = " ^ 
-		   P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta'));
-	      eval_chk e' (theta',Cons(w, eta'))
+	  | RecValue ((cid,e'), theta', eta') -> 
+              let n_list = (Comp.get cid).Comp.mut_rec in
+              let eta'' = add_mrecs n_list theta' eta' in  
+	        (* dprint (fun () -> "[eval_syn] Var case : Lookup found RecValue " ^   R.render_cid_prog cid ^ "\n");
+	        dprint (fun () -> "\n[eval_syn] with  theta' = " ^ 
+		          P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta')); *)
+                (* eval_chk e' (theta',Cons(w, eta'))) *)
+                (eval_chk e' (theta',eta''))
 	  | v -> v
 	end 
 
@@ -213,7 +238,7 @@ and eval_chk e theta_eta =
       | Case(_, i, branches) ->  
 	(match eval_syn i theta_eta with
 	  | BoxValue (phat, tM) -> 	  
-	      let _ = dprint (fun () -> "[eval_syn] Evaluated scrutinee ...") in 
+	      let _ = dprint (fun () -> "[eval_syn] Evaluated scrutinee: " ^ P.normalToString I.LF.Empty I.LF.Empty (Context.hatToDCtx phat) (tM, LF.id)) in 
 	      eval_branches (phat,tM) (branches, theta_eta)
 	  | _ -> raise (Violation "Expected BoxValue for case"))
 

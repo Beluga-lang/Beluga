@@ -651,7 +651,8 @@ GLOBAL: sgn_eoi;
      [[
          m = mixtyp  ->  try  toComp m
                          with MixErr l ->
-                           (print_string ("Syntax error: Computation-level type used where LF type is expected (" ^ Loc.to_string l ^ ")\n");
+                           (print_string ("Syntax error: Computation-level type used where LF type is expected (" ^ 
+                                            Loc.to_string l ^ ")\n");
                             raise (MixErr l))
      ]];
 
@@ -720,12 +721,6 @@ GLOBAL: sgn_eoi;
             Comp.Box (_loc, pHat, tM)
  *)
        
-(*       Attempt to support parsing of equality with contextual objects 
-
-          "["; cPsi = clf_dctx; "]"; tR = clf_term_app ; "==" ; i2 = cmp_exp_syn ->
-
-            Comp.Syn (_loc, Comp.Equal(_loc, Comp.BoxVal (_loc, cPsi, tR), i2))
-*)
         "["; pHat = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "]"; tM = clf_term_app ->            
             Comp.Box (_loc, pHat, tM)
       | 

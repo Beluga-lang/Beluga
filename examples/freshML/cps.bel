@@ -49,7 +49,7 @@ case e of
    [g] K .. (lam+ (\v.\k. E' .. v k))				    
 
 | [g] app (E1 ..) (E2 .. ) => 
-    let {E2'::cexp[g, x1':cval]}                % Type annotation necessary because E' not applied to pattern sub      
+    let % {E2'::cexp[g, x1':cval]}                % Type annotation necessary because E' not applied to pattern sub      
         [g,b:block x1:exp,x1':cval . (cval -> cexp)] E2' .. b.2 =  
         cmp [g,b:block x1:exp,x1':cval .(cval -> cexp)]
             ([g,b] E1 .. ) ([g,b,x2] app+ b.2 x2 (\v. K .. v)) in 

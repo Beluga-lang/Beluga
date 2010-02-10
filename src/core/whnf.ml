@@ -567,23 +567,20 @@ and norm (tM, sigma) = match tM with
   | Root (loc, Proj (PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), s), k), tS) ->
       norm (Root (loc, Proj (PVar (q, LF.comp r' s), k), tS), sigma)
 
+  | Root (loc, Proj (PVar (PInst ({contents = Some (BVar i)}, _, _, _), s), k), tS) ->
+      begin match LF.bvarSub i s with
+        (* | Obj tM     ->  impossible *)
+        | Head (BVar x) ->  Root (loc, Proj(BVar x, k), normSpine (tS, sigma))
+        | Head (PVar (q,r'))  ->  norm (Root (loc, Proj(PVar (q, LF.comp r' s), k), tS) , sigma)
+      end
+
+
   | Root (loc, Proj (PVar (PInst ({contents = None}, _, _, _) as q, s), k), tS) ->
       Root (loc, Proj (PVar (q, normSub (LF.comp s sigma)), k), normSpine (tS, sigma))
 
   | Root (loc, FVar x, tS) ->
       Root (loc, FVar x, normSpine (tS, sigma))
 
-  | Root (loc, CoFPVar(co_cid, p, k, r),  tS) ->
-      Root (loc, CoFPVar (co_cid, p, k, normSub (LF.comp r sigma)), normSpine (tS, sigma))
-
-  | Root (loc, CoPVar (co_cid, ((Offset _i) as q), k, s), tS) ->
-      Root (loc, CoPVar (co_cid, q, k, LF.comp s sigma), normSpine (tS, sigma))
-
-  | Root (loc, CoPVar (co_cid, PInst ({contents = Some (PVar (q, r'))}, _, _, _), k, s), tS) ->
-      norm (Root (loc, CoPVar (co_cid, q, k, LF.comp r' s), tS), sigma)
-
-  | Root (loc, CoPVar (co_cid, (PInst ({contents = None}, _, _, _) as q), k, s), tS) ->
-      Root (loc, CoPVar (co_cid, q, k, normSub (LF.comp s sigma)), normSpine (tS, sigma))
 
 
 
@@ -878,8 +875,8 @@ and cnorm (tM, t) = match tM with
                   | PObj (_phat, BVar i)   -> 
                       (*  i <= phat *) 
                       begin match LF.bvarSub i (cnormSub (s,t)) with
-                        | Head (BVar j)      ->  BVar j
-                        | Head (PVar (p,r')) ->  PVar (p, r')
+                        | Head (BVar j)      ->  wrap (BVar j)
+                        | Head (PVar (p,r')) ->  wrap (PVar (p, r') )
                             (* other cases should not happen; 
                                term would be ill-typed *)
                       end
@@ -907,7 +904,7 @@ and cnorm (tM, t) = match tM with
                 Root (loc, newHead, cnormSpine (tS, t))
             end
 
-          | head -> (print_string ("cnorm fallthru " ^ what_head head ^  "\n"); exit 2)
+          | head -> (print_string ("[cnorm] non-exhaustive match : missing case for " ^ what_head head ^  "\n"); exit 2)
         end
       (* Ignore other cases for destructive (free) parameter-variables *)
           
@@ -2219,6 +2216,7 @@ let rec closedDCtx cPsi = match cPsi with
   
 
 let rec closedCTyp cT = match cT with
+  | Comp.TypBool -> true
   | Comp.TypBox (_ , tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi 
   | Comp.TypArr (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2 
   | Comp.TypCross (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2 

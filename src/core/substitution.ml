@@ -200,17 +200,13 @@ module LF = struct
           | Head (PVar _ as h) ->
               Head (Proj (h, k))
 
-          | Block (BVar n, k') -> 
-              if k = k' then Head(BVar n)
-              else raise (Error "[frontSub] Proj-Block undefined ")
-
           | Obj (Tuple (_, tuple)) ->
               let rec nth s = function
                 | (Last u, 1) -> (u, s)
                 | (Cons (u, _), 1) -> (u, s)
                 | (Cons (u, tuple), n) -> nth (Dot(Obj u, s)) (tuple, n - 1)
               in
-(*                Obj (Clo (nth s (tuple, k))) *)
+(*              Obj (Clo (nth s (tuple, k))) *)
                 Obj (fst (nth s (tuple, k)))
         end
 
@@ -219,16 +215,13 @@ module LF = struct
           | Head h' ->
               Head (Proj (h', k))
 
-          | Block (BVar n, k') -> 
-              if k = k' then Head(BVar n)
-              else raise (Error "[frontSub] Proj-Block undefined ")
           | Obj (Tuple (_, tuple)) ->
               let rec nth s = function
                 | (Last u, 1) -> (u, s)
                 | (Cons (u, _), 1) -> (u, s)
                 | (Cons (u, tuple), n) -> nth (Dot(Obj u, s)) (tuple, n - 1)
               in
-(*                Obj (Clo (nth s (tuple, k))) *)
+(*              Obj (Clo (nth s (tuple, k))) *)
                 Obj (fst (nth s (tuple, k)))
         end
 
@@ -237,17 +230,6 @@ module LF = struct
           Head (AnnH (h', a))
 
     | Head (Const c)      -> Head (Const c)
-    | Block (BVar n, index) -> 
-        begin match bvarSub n s with 
-          | Head (BVar m) -> Block (BVar m, index)
-          | Head (Proj (BVar m, index')) -> 
-              if index = index' then Head (BVar m) else  
-                raise (Error "[frontSub] Block undefined ")
-
-          | _ ->  raise (Error "[frontSub] Block undefined ")
-        end
-
-
     | Obj u               -> Obj (Clo (u, s))
     | Undef               -> Undef
     | Head (FPVar (_n, _ )) -> ft
@@ -327,19 +309,6 @@ module LF = struct
             Some (Head (BVar n))
           else
             lookup (n + 1) s' p 
-
-      (* Attention -bp,jd *)
-      | Dot (Head (Proj(BVar k, index)), s') ->
-          if k = p then
-            Some (Block (BVar n, index))
-          else
-            lookup (n + 1) s' p 
-
-      | Dot (Block (BVar k, index), s') -> 
-          if k = p then
-            Some (Head (Proj (BVar n, index)))
-          else 
-            lookup (n+1) s' p
     in
 
     let rec invert'' p si = match p with

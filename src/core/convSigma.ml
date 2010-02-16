@@ -76,7 +76,6 @@ and strans_sub s conv_list = match s with
 
 and strans_front ft  conv_list = match ft with
   | Int.LF.Head h -> Int.LF.Head (strans_head h conv_list)
-  | Int.LF.Block (h,i) -> Int.LF.Block (strans_head h conv_list, i)
   | Int.LF.Obj tM -> Int.LF.Obj (strans_norm (tM, LF.id) conv_list)
   | Int.LF.Undef -> Int.LF.Undef 
         

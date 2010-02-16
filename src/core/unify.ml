@@ -160,42 +160,8 @@ module Make (T : TRAIL) : UNIFY = struct
         in
           checkBVar s && isPatSub s
 
-(*    | Dot (Head(Proj(BVar n, index)), s) ->
-        let rec checkBVar s' = match s' with
-          | Shift (_ , k)           -> n <= k
-          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
-          | Dot (Head (Proj(BVar n', index')), s) -> (n <> n' || index' <> index) && checkBVar s 
-          | Dot (Undef, s)          -> checkBVar s
-          | _                       -> false
-        in
-          checkBVar s && isPatSub s
-*)
-
-(*    | Dot (Obj tM , s)      -> 
-        begin match tM with
-          | Root(BVar n, tS) -> 
-              let rec checkBVar s' = match s' with
-                | Shift k                 -> n <= k
-                | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
-                | Dot (Undef, s)          -> checkBVar s
-                | _                       -> false
-              in
-                emptySpine tS && checkBVar s && isPatSub s
-          | _ -> false
-        end 
-*)    
     | Dot (Undef, s)        -> isPatSub s
-    | Dot (Block (BVar n, index), s) -> 
-        let rec checkBVar s' = match s' with
-          | Shift (_ , k)           -> n <= k
-          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
-          | Dot (Head (Proj(BVar n', index')), s) -> (n <> n' || index' <> index) && checkBVar s 
-          | Dot (Undef, s)          -> checkBVar s
-          | Dot (Block (BVar n', index'), s) -> 
-              (n <> n' || index' <> index) && checkBVar s 
-          | _                       -> false
-        in
-          checkBVar s && isPatSub s
+
     | _                     -> false
     end 
 
@@ -234,32 +200,7 @@ module Make (T : TRAIL) : UNIFY = struct
         in
           checkBVar s && isProjPatSub s
 
-
-(*    | Dot (Obj tM , s)      -> 
-        begin match tM with
-          | Root(BVar n, tS) -> 
-              let rec checkBVar s' = match s' with
-                | Shift k                 -> n <= k
-                | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
-                | Dot (Undef, s)          -> checkBVar s
-                | _                       -> false
-              in
-                emptySpine tS && checkBVar s && isPatSub s
-          | _ -> false
-        end 
-*)    
     | Dot (Undef, s)        -> isProjPatSub s
-    | Dot (Block (BVar n, index), s) -> 
-        let rec checkBVar s' = match s' with
-          | Shift (_ , k)           -> n <= k
-          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
-          | Dot (Head (Proj(BVar n', index')), s) -> (n <> n' || index' <> index) && checkBVar s 
-          | Dot (Undef, s)          -> checkBVar s
-          | Dot (Block (BVar n', index'), s) -> 
-              (n <> n' || index' <> index) && checkBVar s 
-          | _                       -> false
-        in
-          checkBVar s && isProjPatSub s
     | _                     -> false
     end 
 
@@ -1562,39 +1503,7 @@ module Make (T : TRAIL) : UNIFY = struct
            | Head (BVar _n) ->
                (* Psi1, x:A |- s' <= Psi2, x:([s']^-1 A) since
                   A = [s']([s']^-1 A) *)
-               (dot1 s',  DDec(cPsi2, TypDecl(x, TClo(tA, invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s'))))))
-           | Block (BVar _n, index') -> 
-               begin match tA with
-                 | Sigma t_rec -> 
-                     let rec unroll index cPsi1 t_rec =  
-                       begin match t_rec with
-                       | SigmaLast tA -> 
-                           if index' = index then (cPsi1, Id.mk_name Id.NoName ,tA)
-                           else 
-                             raise (Error "[pruneCtx] Block index out of bounds")
-                       | SigmaElem (x, tA, trec) -> 
-                           if index < index' then 
-                             unroll (index+1)  (DDec (cPsi1, TypDecl(x, tA))) trec 
-                           else 
-                             (cPsi1, x, tA)
-                       end in 
-                     let  (cPsi1_i, y, tAi) = unroll 1 cPsi1 t_rec  in 
-                       (* cPsi1, x1:A1, ... x(i-1):A(i-1) |- tAi <= type *)                         
-                       (* cPsi1, x1:A1, ... x_(i-1):A(i-1) |- s_psi <= cPsi1 *)
-                     let si_psi = invert (Shift (NoCtxShift, index'-1)) in 
-                       (* cPsi1 |- si_psi : cPsi1, x1:A1, ... x_(i-1):A(i-1) *)
-
-                      
-                     let tAi' = pruneTyp Empty cPsi1 (Context.dctxToHat cPsi1_i) (tAi, id) (MShift 0, si_psi) 
-                                                      (MVarRef (ref None)) (* dummy *) in  
-                       (* cPsi1 |- tAi' <= type *)
-                     let si' = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')) in 
-                       (* cPsi2 |- si' <= cPsi1 *)
-                       (Dot(Head (Proj (BVar 1 , index')), comp s' shift), 
-                        DDec (cPsi2, TypDecl(y, TClo(tAi', si'))))
-                 | _ -> raise (Error "[pruneCtx] Ill-typed substitution block")
-
-               end
+               (dot1 s',  DDec(cPsi2, TypDecl(x, TClo(tA, invert (Whnf.normSub s')))))
          end
               
 
@@ -1610,35 +1519,13 @@ module Make (T : TRAIL) : UNIFY = struct
            | Head (BVar _n) ->
                (* Psi1, x:A |- s' <= Psi2, x:([s']^-1 A) since
                   A = [s']([s']^-1 A) *)
-               (dot1 s',  DDec(cPsi2, TypDecl(x, TClo(tA, invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s'))))))
-           | Block (BVar _n, index') -> 
-               if index = index' then
-                 (* keep this declaration *)
-                 (dot1 s',  DDec(cPsi2, TypDecl(x, TClo(tA, invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s'))))))
-               else 
-                 (* prune this declaration *)
-                 (comp s' shift, cPsi2)                 
+               (dot1 s',  DDec(cPsi2, TypDecl(x, TClo(tA, invert (Whnf.normSub s')))))
          end
 
    | (Dot (Undef, t), DDec (cPsi1, _)) ->
        let (s', cPsi2) = pruneCtx' phat (t, cPsi1) ss in
          (* sP1 |- s' <= cPsi2 *)
          (comp s' shift, cPsi2)
-
-
-   | (Dot (Block (BVar k,  _index), t), DDec (cPsi1, TypDecl (x, tA) )) ->
-       let (s', cPsi2) = pruneCtx' phat (t, cPsi1) ss in
-       let ( _ , ssubst) = ss in 
-         begin match bvarSub k ssubst with
-           | Undef          ->
-               (* Psi1, x:tA |- s' <= Psi2 *)
-               (comp s' shift, cPsi2)
-
-           | Head (BVar _n) ->
-               (* Psi1, x:A |- s' <= Psi2, x:([s']^-1 A) since
-                  A = [s']([s']^-1 A) *)
-               (dot1 s',  DDec(cPsi2, TypDecl(x, TClo(tA, invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s'))))))
-         end
 
 
   and pruneCtx phat (t, cPsi1) ss = pruneCtx' phat (Whnf.normSub t, cPsi1) ss

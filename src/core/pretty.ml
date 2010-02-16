@@ -441,11 +441,6 @@ module Int = struct
           fprintf ppf "%a"
             (fmt_ppr_lf_head cO cD cPsi lvl) h
 
-      | LF.Block (h, index) -> 
-          fprintf ppf "(block %a,%s)"
-            (fmt_ppr_lf_head cO cD cPsi lvl) h
-            (string_of_int index)
-
       | LF.Obj m ->
           fprintf ppf "%a"
             (fmt_ppr_lf_normal cO cD cPsi lvl) m

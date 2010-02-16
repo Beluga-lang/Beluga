@@ -705,22 +705,16 @@ and collectSub cQ phat s = match s with
       let (cQ2, h') = collectHead cQ1 phat (h, LF.id) in
         (cQ2, I.Dot(I.Head h', s'))
 
-  | (I.Dot (I.Block (h, index), s)) -> 
-      let (cQ1, s') =  collectSub cQ phat s in 
-      (* let _   = dprint (fun () -> "collectSub (Block) "  ) in *)
-      let (cQ2, h') = collectHead cQ1 phat (h, LF.id) in
-        (cQ2 , I.Dot (I.Block (h', index), s'))
-
   | (I.Dot (I.Obj tM, s)) ->
       let (cQ1,s') =  collectSub cQ phat s in 
-      (* let _   = dprint (fun () -> "collectSub (term) M = "  ) in
-      let _   = dprint (fun () -> "collectSub (term) M = " ^ P.normalToString I.Empty I.Empty (Context.hatToDCtx phat) (tM, LF.id) ) in *)
       let (cQ2, tM') = collectTerm cQ1 phat (tM, LF.id) in
         (cQ2, I.Dot (I.Obj tM', s'))
 
   | (I.Dot (I.Undef, s')) ->
     (let _ = Printf.printf "Collect Sub encountered undef\n" in 
-     (* -bp Aug 24, 2009 BUG: If the substitution includes an undef one would need to prune the type of the MVAR with which this substitution is associate. *)  
+       (* -bp Aug 24, 2009 BUG: If the substitution includes an undef
+          one would need to prune the type of the MVAR with which this
+          substitution is associate. *)    
           collectSub cQ phat  s')
 
 

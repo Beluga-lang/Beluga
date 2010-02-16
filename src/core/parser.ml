@@ -133,12 +133,6 @@ GLOBAL: sgn_eoi;
           Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
 
       |
-        "coercion"; w = SYMBOL; ":"; a_ctx = SYMBOL; rarr; b_ctx = SYMBOL; 
-        "="; OPT [ "|"]; bs = LIST1 co_branch SEP "|" ; ";" -> 
-          Sgn.Coercion (_loc, Id.mk_name (Id.SomeString w), 
-                        LF.CoTyp(Id.mk_name (Id.SomeString a_ctx), Id.mk_name (Id.SomeString b_ctx)), bs)
-
-      |
         "let"; x = SYMBOL; tau = OPT [ ":"; tau = cmp_typ -> tau] ; 
         "="; i = cmp_exp_syn;  ";" ->
           Sgn.Val (_loc, Id.mk_name (Id.SomeString x), tau, i)
@@ -162,16 +156,6 @@ GLOBAL: sgn_eoi;
       ]
     ]
   ;
-
-
-  co_branch: 
-   [ 
-      [
-
-        some_arg = lf_schema_some; arec = lf_typ_rec ; rArr; brec_opt = lf_typ_rec_opt ->
-          LF.CoBranch (List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg, arec, brec_opt)
-      ]
-   ];
 
 
 
@@ -316,7 +300,7 @@ GLOBAL: sgn_eoi;
   ;
 
 
-  lf_typ_rec_opt:
+(*  lf_typ_rec_opt:
    [
      [
        b = lf_typ_rec      -> Some b
@@ -326,7 +310,7 @@ GLOBAL: sgn_eoi;
      ]
    ]
   ;
-
+*)
   lf_typ_rec_block:
     [
       [

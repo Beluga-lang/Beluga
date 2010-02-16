@@ -7,12 +7,10 @@ type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 type error =
   (* indexing errors *)
   | UnboundName of Id.name
-  | UnboundCoName    of Id.name
   | UnboundCtxName   of Id.name
   | UnboundCtxSchemaName   of Id.name
   | UnboundCompName  of Id.name
   | UnknownCidTyp  of Id.cid_typ
-  | CoercionMismatch of Id.cid_coercion (* expected *) * Id.cid_coercion (* found *)
 
   (* LF typechecking errors *)
   | CtxVarMismatch of LF.mctx          (* ???                                 *)
@@ -25,11 +23,7 @@ type error =
 
   | KindMismatch   of LF.mctx * LF.dctx * LF.sclo  * (LF.kind * LF.sub)
 
-      (* cO ; cD ; cPsi |- sA <=/= Typ                 *)
-(*  | TypMismatch    of LF.mctx * LF.mctx *  LF.dctx        (* cO ; cD ; cPsi |- sR => sP but sP =/= sA      *)
-                     * LF.nclo * LF.tclo (* expected *) * LF.tclo (* inferred *)
- *)
- 
+
   | TypMismatch of LF.mctx             (* cO ; cD ; cPsi |- sR => sP          *)
       * LF.mctx *  LF.dctx * LF.nclo   (* but sP =/= sA                       *)
       * LF.tclo (* expected *) 
@@ -53,7 +47,7 @@ type error =
   | LeftoverConstraints of Id.name     (* constraints left after 
                                           reconstruction of variable x        *)
   | IllTypedIdSub                      (* ???, not used yet                   *)
-  | IllTypedCoIdSub                    (* ???, not used yet                   *)
+
 
 
   (* Comp level typechecking errors *)

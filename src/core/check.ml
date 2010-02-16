@@ -197,24 +197,17 @@ let rec ctxShift cPsi = begin match cPsi with
         raise SpineMismatch
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
-and lookupCtxVar cO ctx_var' = 
-    let rec get_cvar ctx_var = match ctx_var with
-      | CtxName _ ->  ctx_var
-      | CtxOffset _ -> ctx_var
-      | CoCtx (_co, ctx_var')   -> 
-          get_cvar ctx_var'
-    in 
-    let cvar = get_cvar ctx_var' in 
-      match cO with
-        | Empty -> raise (Violation ("Context variable not found"))
-        | Dec (cO, CDecl (psi, schemaName)) ->      
-            begin match cvar with 
-              | CtxName phi when psi = phi ->  (psi, schemaName)
-              | (CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
-              | CtxOffset 1                -> (psi, schemaName)
-              | CtxOffset n                -> lookupCtxVar cO (CtxOffset (n - 1))
-                  
-            end 
+and lookupCtxVar cO cvar = 
+    match cO with
+      | Empty -> raise (Violation ("Context variable not found"))
+      | Dec (cO, CDecl (psi, schemaName)) ->      
+          begin match cvar with 
+            | CtxName phi when psi = phi ->  (psi, schemaName)
+            | (CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
+            | CtxOffset 1                -> (psi, schemaName)
+            | CtxOffset n                -> lookupCtxVar cO (CtxOffset (n - 1))
+                
+          end 
 
   and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)
 
@@ -286,27 +279,6 @@ and lookupCtxVar cO ctx_var' =
     | FVar _ ->
         raise (Error (None, LeftoverFVar))
 
-    | CoPVar (co_cid, Offset p, j, s) -> 
-        let (_, tA, cPhi) = Whnf.mctxPDec cD p in
-        let cPhi' = Ctxsub.applyCtxCoe co_cid cD cPhi in 
-        let _     = checkSub loc cO cD cPsi s cPhi' in 
-        let typRec = match tA with Sigma typRec -> typRec
-                            | _ -> SigmaLast tA in 
-          (* cD ; cPhi |- typRec               *)
-        let sB = match Ctxsub.coeTypRec (Coercion.get_coercion co_cid) cD (cPhi, (typRec, LF.id)) with
-                     (SigmaLast nonsigma, s) -> (nonsigma, s)
-                   | (tBrec, s) -> (Sigma tBrec, s)
-          in 
-          (* cD ; cPhi |- sB               *)
-        let h = PVar (Offset p, LF.comp (Ctxsub.coerceSub (Coe co_cid) LF.id) s) in 
-
-        let tB'   = Ctxsub.coerceTyp (Coe co_cid) sB in
-          (* cD ; cPhi' |- tB'               *)
-        let sB_j  = match tB' with Sigma tBrec -> getType h (tBrec, s) j 1 
-                                 | _ -> (tB', s) in
-          TClo(sB_j)
-
-
 
   and canAppear cO cD cPsi sA =
     match cPsi with
@@ -352,28 +324,7 @@ and lookupCtxVar cO ctx_var' =
         else
           raise (Error (None, SubIllTyped))
 
-    | (CtxVar (CoCtx (coe_cid, psi)), CoShift (Coe cid_coe', NoCtxShift, 0), CtxVar psi') ->
-        let CoTyp(_a_schema, b_schema) = Coercion.get_coercionTyp coe_cid in 
-          if checkCoercion cO (psi, b_schema) psi' then ()
-          else 
-               raise (Violation ("checkSub: Cannot coerce " ^ P.dctxToString cO cD cPsi' ^ 
-                                   " \n to " ^ P.dctxToString cO cD cPsi ^ "\n"))
 
-    | (CtxVar psi', CoShift (InvCoe cid_coe', NoCtxShift, 0), CtxVar (CoCtx (coe_cid, psi))) ->
-        let CoTyp(_a_schema, b_schema) = Coercion.get_coercionTyp coe_cid in 
-          if checkCoercion cO (psi, b_schema) psi' then ()
-          else 
-               raise (Violation ("checkSub: Cannot coerce " ^ P.dctxToString cO cD cPsi' ^ 
-                                   " \n to " ^ P.dctxToString cO cD cPsi ^ "\n"))
-
-(*
-    | (CtxVar (CoCtx (cid_coe, psi)), CoShift (cid_coe', CtxShift (psi'), 0), Null) ->
-        if psi = psi' then
-          ()
-        else
-          raise (Error (None, SubIllTyped))
-
-*)
     | (Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi)) ->
         if psi = psi' then
           ()
@@ -395,18 +346,10 @@ and lookupCtxVar cO ctx_var' =
           raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
           (* (SubIllTyped) *)
 
-    | (DDec (cPsi, _tX),  CoShift (co, phi, k),  CtxVar psi) ->
-        if k > 0 then
-          checkSub loc cO cD cPsi (CoShift (co, phi, k - 1)) (CtxVar psi)
-        else
-          raise (Violation ("Substitution ill-typed: k = %s" ^ (string_of_int k)))
-          (* (SubIllTyped) *)
 
     | (cPsi',  Shift (psi, k),  cPsi) ->
         checkSub loc cO cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
 
-    | (cPsi',  CoShift (co, psi, k),  cPsi) ->
-        checkSub loc cO cD cPsi' (Dot (Head (BVar (k + 1)), CoShift (co, psi, k + 1))) cPsi
 
 (****
 This case should now be covered by the one below it
@@ -557,37 +500,7 @@ This case should now be covered by the one below it
     | TypDecl (_, tA) -> checkTyp cO cD cPsi (tA, s)
 
 
-  (* checkCoercion psi phi = bool
-
-     Assuming cO |- psi ctx   and  cO |- phi ctx,
-     checkCoercion psi phi returns true 
-     if  psi = (C1 o ... o Cn))(phi) 
-     
-
-  *)
- and checkCoercion cO (psi, schema) phi = 
-    (psi = phi) || 
-      (match psi with
-         | CoCtx (coe_cid,psi') -> 
-             let CoTyp(a_schema, b_schema) = Coercion.get_coercionTyp coe_cid in 
-               if b_schema = schema then 
-                 let _ = (print_string ("[checkCoercion] psi' = " ^ P.dctxToString cO Empty (CtxVar psi')  ^ " : " ^ R.render_cid_schema a_schema ^ " check against " ^ P.dctxToString cO Empty (CtxVar phi) ^ "\n") ; flush_all ()) in 
-                   checkCoercion cO (psi' , a_schema) phi
-               else 
-                 raise (Violation "[CheckCoercion] Coercion composition ill-formed")
-         | _ -> raise (Violation ("[CheckCoercion] Failed"))
-      )
-
-  and synCtxSchema cO phi = match phi with
-    | CtxOffset k -> Context.lookupSchema cO k 
-    | CoCtx (cid_coe, psi) -> 
-        let CoTyp(a_schema, b_schema) = Coercion.get_coercionTyp cid_coe in 
-        let schema = synCtxSchema cO psi in 
-          if a_schema = schema then 
-            b_schema
-          else 
-            raise (Violation ("[SynCtxSchema] Coercion composition ill-formed"))
-
+  and synCtxSchema cO (CtxOffset k) =  Context.lookupSchema cO k 
 
   (* checkDCtx cO cD cPsi
    *
@@ -727,14 +640,6 @@ This case should now be covered by the one below it
 (*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements) then *)
             if not (List.for_all (fun elem -> checkElementAgainstSchema cO cD elem phiSchemaElements) elements ) then
               raise (Error (None, CtxVarMismatch (cO, phi, schema)))
-      | CtxVar (CoCtx(coe_cid, psi) as phi)   -> 
-          let CoTyp(a_schema_cid, b_schema_cid) = Coercion.get_coercionTyp coe_cid in 
-          let (a_schema, b_schema) = (Schema.get_schema a_schema_cid, Schema.get_schema b_schema_cid) in 
-            if b_schema = schema then 
-              checkSchema cO cD (CtxVar psi) a_schema
-            else 
-              raise
-                 (Error (None, CtxVarMismatch (cO, phi, schema)))
 
       | DDec (cPsi', decl) ->
           begin

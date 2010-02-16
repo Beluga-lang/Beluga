@@ -86,7 +86,7 @@ rec append: {g:(ctx)*} list [g] -> list [g] -> list [g] =
 FN g => fn l1 => fn l2 => case l1 of 
 | [g] nil => l2 
 | [g] cons (X ..) (L ..) => 
-  let [g] L' .. = (append [g] ([g] L ..)) l2 in 
+  let [g] L' .. = append [g] ([g] L ..) l2 in 
     [g] cons (X ..) (L' ..)
 ;
 
@@ -179,27 +179,24 @@ FN g => fn e => fn l => case l of
   if e == ([g] E' .. ) then 
     [ ] just T 
   else 
-    let [g] E .. = e in          % necessary because of stupidity of the parser
-      memb [g] ([g] E .. ) ([g] L .. )  
-
+    memb [g] e ([g] L .. )  
 ;
-
-% If anyone is around to help me understand how to allow backtracking
-% using ulex, this problem (and some others...) may be easily fixed...
 
 
 rec typing: {g:(tms)*} tm[g] -> env[g] -> opt [ ] = 
-FN g => fn e => fn l => let [g] L .. = l in   % stupidity of the parser again 
+FN g => fn e => fn l => 
 case e of 
-| [g] #p ..  =>  memb [g] ([g] #p .. ) ([g] L .. )
+| [g] #p ..  =>  memb [g] ([g] #p .. ) l
 
 | [g] lamt T (\x. M .. x) => 
-  typing [g,x:tm] ([g,x] M .. x) ([g,x] push x T (L .. ))
+  let [g] L .. = l in  
+    typing [g,x:tm] ([g,x] M .. x) ([g,x] push x T (L .. ))
 
 | [g] apply (M1 .. ) (M2 .. ) => 
-  (case (typing [g] ([g] M1 .. ) ([g] L .. )) of 
+%  (case (typing [g] ([g] M1 .. ) ([g] L .. )) of 
+  (case typing [g] ([g] M1 .. ) l of 
      | [ ] just (arr T2 T) => 
-       (case (typing [g] ([g] M2 .. ) ([g] L .. )) of 
+       (case typing [g] ([g] M2 .. ) l of 
          | [ ] just T2' => 
            if ([ ] T2) == ([ ] T2') then 
              [ ] just T 

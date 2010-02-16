@@ -23,101 +23,89 @@ module Int = struct
       | Typ
       | PiKind of (typ_decl * depend) * kind
 
-    and typ_decl =                         (* LF Declarations                *)
-      | TypDecl of name * typ              (* D := x:A                       *)
-      | TypDeclOpt of name                 (*   |  x:_                       *)
+    and typ_decl =                              (* LF Declarations                *)
+      | TypDecl of name * typ                   (* D := x:A                       *)
+      | TypDeclOpt of name                      (*   |  x:_                       *)
 
-    and ctyp_decl =                        (* Contextual Declarations        *)
-      | MDecl of name * typ  * dctx        (* D ::= u::A[Psi]                *)
-      | PDecl of name * typ  * dctx        (*   |   p::A[Psi]                *)
-      | SDecl of name * dctx * dctx        (*   |   s::A[Psi]                *)
+    and ctyp_decl =                             (* Contextual Declarations        *)
+      | MDecl of name * typ  * dctx             (* D ::= u::A[Psi]                *)
+      | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
+      | SDecl of name * dctx * dctx             (*   |   s::A[Psi]                *)
       | CDecl of name * cid_schema
       | MDeclOpt of name 
       | PDeclOpt of name 
       | CDeclOpt of name 
 
-                                           (* Potentially, A is Sigma type? *)
+                                                (* Potentially, A is Sigma type? *)
 
-    and typ =                              (* LF level                       *)
+    and typ =                                   (* LF level                       *)
       | Atom  of Loc.t option * cid_typ * spine (* A ::= a M1 ... Mn              *)
-      | PiTyp of (typ_decl * depend) * typ (*   | Pi x:A.B                   *)
+      | PiTyp of (typ_decl * depend) * typ      (*   | Pi x:A.B                   *)
       | Sigma of typ_rec
-      | TClo  of (typ * sub)               (*   | TClo(A,s)                  *)
+      | TClo  of (typ * sub)                    (*   | TClo(A,s)                  *)
 
 
-    and normal =                            (* normal terms                   *)
-      | Lam  of Loc.t option * name * normal(* M ::= \x.M                     *)
-      | Root of Loc.t option * head * spine (*   | h . S                      *)
-      | Clo  of (normal * sub)              (*   | Clo(N,s)                   *)
+    and normal =                                (* normal terms                   *)
+      | Lam  of Loc.t option * name * normal    (* M ::= \x.M                     *)
+      | Root of Loc.t option * head * spine     (*   | h . S                      *)
+      | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
       | Tuple of Loc.t option * tuple
 
     and head =
-      | BVar  of offset                    (* H ::= x                        *)
-      | Const of cid_term                  (*   | c                          *)
-      | MMVar of mm_var * (msub * sub)     (*   | u[t ; s]                   *)
-      | MVar  of cvar * sub                (*   | u[s]                       *)
-      | PVar  of cvar * sub                (*   | p[s]                       *)
-      | AnnH  of head * typ                (*   | (H:A)                      *)
-      | Proj  of head * int                (*   | x.k | #p.k s               *)
-      | CoPVar of cid_coercion * cvar * int * sub
-                                           (*   | c(#p)[s] | c(#p.k)[s]      *)
+      | BVar  of offset                         (* H ::= x                        *)
+      | Const of cid_term                       (*   | c                          *)
+      | MMVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
+      | MVar  of cvar * sub                     (*   | u[s]                       *)
+      | PVar  of cvar * sub                     (*   | p[s]                       *)
+      | AnnH  of head * typ                     (*   | (H:A)                      *)
+      | Proj  of head * int                     (*   | x.k | #p.k s               *)
 
-      | FVar  of name                      (* free variable for type 
-                                              reconstruction                 *)
-      | FMVar of name * sub                (* free meta-variable for type 
-                                              reconstruction                 *)
-      | FPVar of name * sub                (* free parameter variable for type
-                                              reconstruction                 *)
-      | CoFPVar of cid_coercion * name * int * sub
-                                           (* free coerced parameter for type
-                                              reconstruction                 *)
-                                           (*   | c(#p)[s] | c(#p.k)[s]      *)
+      | FVar  of name                           (* free variable for type 
+                                                   reconstruction                 *)
+      | FMVar of name * sub                     (* free meta-variable for type 
+                                                   reconstruction                 *)
+      | FPVar of name * sub                     (* free parameter variable for type
+                                                  reconstruction                 *)
 
-    and spine =                            (* spine                          *)
-      | Nil                                (* S ::= Nil                      *)
-      | App  of normal * spine             (*   | M . S                      *)
-      | SClo of (spine * sub)              (*   | SClo(S,s)                  *)
+    and spine =                                 (* spine                          *)
+      | Nil                                     (* S ::= Nil                      *)
+      | App  of normal * spine                  (*   | M . S                      *)
+      | SClo of (spine * sub)                   (*   | SClo(S,s)                  *)
 
-    and sub =                              (* Substitutions                  *)
-      | Shift of ctx_offset * offset       (* sigma ::= ^(psi,n)             *)
-      | CoShift of id_coercion * ctx_offset * offset 
-                                           (*       | coe^(coe_cid,psi,n)    *)
-      | SVar  of cvar * sub                (*       | s[sigma]               *)
-      | Dot   of front * sub               (*       | Ft . s                 *)
+    and sub =                                   (* Substitutions                  *)
+      | Shift of ctx_offset * offset            (* sigma ::= ^(psi,n)             *)
+      | SVar  of cvar * sub                     (*       | s[sigma]               *)
+      | Dot   of front * sub                    (*       | Ft . s                 *)
 
-    and id_coercion = 
-      | Coe of cid_coercion 
-      | InvCoe of cid_coercion
-
-    and front =                            (* Fronts:                        *)
-      | Head of head                       (* Ft ::= H                       *)
-      | Block of head * int                (*    | Block (h,i, length)       *)
-      | Obj  of normal                     (*    | N                         *)
-      | Undef                              (*    | _                         *)
+    and front =                                 (* Fronts:                        *)
+      | Head of head                            (* Ft ::= H                       *)
+      | Block of head * int                     (*    | Block (h,i, length)       *)
+      | Obj  of normal                          (*    | N                         *)
+      | Undef                                   (*    | _                         *)
 
 
   (* Note: Block (h,i, l) represents a tuple of length l where the i-th 
      position is instantiated with h; all other positions are undefined *)                         
 
-                                          (* Contextual substitutions       *) 
-   and mfront =                           (* Fronts:                        *)
-     | MObj of psi_hat * normal           (* Mft::= Psihat.N                *)
-     | PObj of psi_hat * head             (*    | Psihat.p[s] | Psihat.x    *)
-     | MV   of offset                     (*    | u//u | p//p               *)
+                                               (* Contextual substitutions       *) 
+   and mfront =                                (* Fronts:                        *)
+     | MObj of psi_hat * normal                (* Mft::= Psihat.N                *)
+     | PObj of psi_hat * head                  (*    | Psihat.p[s] | Psihat.x    *)
+     | MV   of offset                          (*    | u//u | p//p               *)
      | MUndef
 
 
-   and msub =                             (* Contextual substitutions       *)
-     | MShift of int                      (* theta ::= ^n                   *)
-     | MDot   of mfront * msub            (*       | MFt . theta            *)
+   and msub =                                  (* Contextual substitutions       *)
+     | MShift of int                           (* theta ::= ^n                   *)
+     | MDot   of mfront * msub                 (*       | MFt . theta            *)
 
     and ctx_offset = 
       | CtxShift of ctx_var
       | NoCtxShift
       | NegCtxShift of ctx_var
 
-    and cvar =                             (* Contextual Variables           *)
-      | Offset of offset                   (* Bound Variables                *)
+    and cvar =                                  (* Contextual Variables           *)
+      | Offset of offset                        (* Bound Variables                *)
       | Inst   of normal option ref * dctx * typ * cnstr list ref
           (* D ; Psi |- M <= A
              provided constraint *)
@@ -127,7 +115,7 @@ module Int = struct
       | CInst  of dctx   option ref * cid_schema
           (* D |- Psi : schema   *)
 
-    and mm_var  =                             (* Meta² Variables            *)
+    and mm_var  =                               (* Meta² Variables                *)
       | MInst   of normal option ref * mctx * dctx * typ * cnstr list ref
           (* D ; Psi |- M <= A
              provided constraint *)
@@ -138,23 +126,22 @@ module Int = struct
 
     and typ_free_var = Type of typ | TypVar of tvar
 
-    and constrnt =                          (* Constraint                     *)
-      | Queued                              (* constraint ::= Queued          *)
+    and constrnt =                             (* Constraint                     *)
+      | Queued                                 (* constraint ::= Queued          *)
       | Eqn of mctx * dctx * normal * normal
-                                            (*            | Psi |-(M1 == M2)  *)
-      | Eqh of mctx * dctx * head * head    (*            | Psi |-(H1 == H2)  *)
+                                               (*            | Psi |-(M1 == M2)  *)
+      | Eqh of mctx * dctx * head * head       (*            | Psi |-(H1 == H2)  *)
 
     and cnstr = constrnt ref
 
-    and dctx =                             (* LF Context                     *)
-      | Null                               (* Psi ::= .                      *)
-      | CtxVar   of ctx_var                (* | psi                          *)
-      | DDec     of dctx * typ_decl        (* | Psi, x:A   or x:block ...    *)
+    and dctx =                                 (* LF Context                     *)
+      | Null                                   (* Psi ::= .                      *)
+      | CtxVar   of ctx_var                    (* | psi                          *)
+      | DDec     of dctx * typ_decl            (* | Psi, x:A   or x:block ...    *)
 
     and ctx_var = 
       | CtxName   of name
       | CtxOffset of offset
-      | CoCtx     of cid_coercion * ctx_var 
 
     and 'a ctx =                           (* Generic context declaration    *)
       | Empty                              (* Context                        *)
@@ -174,15 +161,6 @@ module Int = struct
                                            (*        | .         *)
                                            (*        | Psihat, x *)
 
-
-    and co_typ = CoTyp of cid_schema * cid_schema
-                                           (* Coercion Type: cid_schema -> cid_schema *)
-
-    and coercion   = co_branch list        (* Coercion definition         *)
-    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec option
-                                           (* some [x1:A1,..xn:An] 
-                                            *   block y1:B1 .. yl:Bn => z1:C1 .. yl:Cl
-                                            *)  
 
     and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
       |  SigmaLast of typ                             (* ... . B *)
@@ -502,7 +480,6 @@ module Ext = struct
       | Const    of Loc.t * name * LF.typ
       | Typ      of Loc.t * name * LF.kind
       | Schema   of Loc.t * name * LF.schema
-      | Coercion of Loc.t * name * LF.co_typ * LF.coercion
       | Pragma   of Loc.t * LF.prag
       | Rec      of Loc.t * Comp.rec_fun list   
       | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn 

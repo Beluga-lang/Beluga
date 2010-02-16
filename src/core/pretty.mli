@@ -30,7 +30,6 @@ module type CID_RENDERER = sig
   val render_cid_typ      : cid_typ    -> string
   val render_cid_term     : cid_term   -> string
   val render_cid_schema   : cid_schema -> string
-  val render_cid_coercion : cid_coercion -> string
   val render_cid_prog     : cid_prog   -> string
   val render_offset       : offset     -> string
 
@@ -64,8 +63,6 @@ module Int : sig
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
-    val fmt_ppr_lf_coercion   : lvl -> formatter -> LF.coercion     -> unit
-
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
     val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.typ -> unit
@@ -87,7 +84,6 @@ module Int : sig
 
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
-    val ppr_lf_coercion   : LF.coercion      -> unit
 
     (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.mctx -> LF.dctx  -> unit
@@ -112,7 +108,6 @@ module Int : sig
     val octxToString      : LF.mctx ->  string
 
     val schemaToString    : LF.schema     -> string 
-    val coercionToString  : LF.coercion   -> string 
     val gctxToString      : LF.mctx -> LF.mctx -> Comp.gctx  -> string
     val expChkToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
     val expSynToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string

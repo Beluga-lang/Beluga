@@ -42,15 +42,13 @@ case e of
   cmp [g] ([g] E .. ) ([g,x] K .. (s+ x))
 
 | [g] lam \x. E .. x => 
-  let {E'::(cexp)[g,x':cval,k':cval -> cexp]}   % Type annotation necessary because E' not applied to pattern sub      
-      [g,b:block x:exp,x':cval . (cval -> cexp)] E' .. b.2 b.3 = 
+  let [g,b:block x:exp,x':cval . (cval -> cexp)] E' .. b.2 b.3 = 
       cmp [g,b:block x:exp,x':cval . (cval -> cexp)] 
          ([g,b] E .. b.1) ([g,b,x1] b.3 x1) in 
    [g] K .. (lam+ (\v.\k. E' .. v k))				    
 
 | [g] app (E1 ..) (E2 .. ) => 
-    let % {E2'::cexp[g, x1':cval]}                % Type annotation necessary because E' not applied to pattern sub      
-        [g,b:block x1:exp,x1':cval . (cval -> cexp)] E2' .. b.2 =  
+    let [g,b:block x1:exp,x1':cval . (cval -> cexp)] E2' .. b.2 =  
         cmp [g,b:block x1:exp,x1':cval .(cval -> cexp)]
             ([g,b] E1 .. ) ([g,b,x2] app+ b.2 x2 (\v. K .. v)) in 
      cmp [g] ([g] E1 .. ) ([g,x1'] E2' .. x1' )

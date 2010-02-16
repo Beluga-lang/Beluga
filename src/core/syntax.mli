@@ -60,11 +60,9 @@ module Int : sig
       | PVar  of cvar * sub
       | AnnH  of head * typ
       | Proj  of head * int
-      | CoPVar of cid_coercion * cvar * int * sub
       | FVar  of name
       | FMVar of name * sub
       | FPVar of name * sub
-      | CoFPVar of cid_coercion * name * int * sub
 
     and spine =
       | Nil
@@ -73,13 +71,8 @@ module Int : sig
 
     and sub =
       | Shift of ctx_offset * offset
-      | CoShift of id_coercion * ctx_offset * offset 
       | SVar  of cvar * sub
       | Dot   of front * sub
-
-    and id_coercion = 
-      | Coe of cid_coercion 
-      | InvCoe of cid_coercion
 
     and front =
       | Head of head
@@ -135,7 +128,6 @@ module Int : sig
     and ctx_var = 
       | CtxName   of name
       | CtxOffset of offset
-      | CoCtx    of cid_coercion * ctx_var
 
     and 'a ctx =
       | Empty
@@ -148,11 +140,6 @@ module Int : sig
       | Schema of sch_elem list
 
     and psi_hat = ctx_var option * offset
-
-    and co_typ = CoTyp of cid_schema * cid_schema
-
-    and coercion   = co_branch list
-    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec option
 
     and typ_rec =
       |  SigmaLast of typ
@@ -425,7 +412,6 @@ module Ext : sig
       | Const    of Loc.t * name * LF.typ
       | Typ      of Loc.t * name * LF.kind
       | Schema   of Loc.t * name * LF.schema
-      | Coercion of Loc.t * name * LF.co_typ * LF.coercion
       | Pragma   of Loc.t * LF.prag
       | Rec      of Loc.t * Comp.rec_fun list
       | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn 

@@ -150,7 +150,6 @@ module Make (T : TRAIL) : UNIFY = struct
     (* let s = (Whnf.normSub s) in  *)
     begin match s with
     | Shift (_,_k)              -> true
-    | CoShift _                 -> true
     | Dot (Head(BVar n), s) ->
         let rec checkBVar s' = match s' with
           | Shift (_ , k)           -> n <= k
@@ -161,7 +160,7 @@ module Make (T : TRAIL) : UNIFY = struct
         in
           checkBVar s && isPatSub s
 
-    | Dot (Head(Proj(BVar n, index)), s) ->
+(*    | Dot (Head(Proj(BVar n, index)), s) ->
         let rec checkBVar s' = match s' with
           | Shift (_ , k)           -> n <= k
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
@@ -170,7 +169,7 @@ module Make (T : TRAIL) : UNIFY = struct
           | _                       -> false
         in
           checkBVar s && isPatSub s
-
+*)
 
 (*    | Dot (Obj tM , s)      -> 
         begin match tM with
@@ -197,6 +196,70 @@ module Make (T : TRAIL) : UNIFY = struct
           | _                       -> false
         in
           checkBVar s && isPatSub s
+    | _                     -> false
+    end 
+
+  (* isProjPatSub s = B
+
+     Invariant:
+
+     If    Psi |- s : Psi' 
+     and   s = n1 .. nm ^k
+     then  B iff  n1, .., nm pairwise distinct
+     and  ni <= k or ni = _ for all 1 <= i <= m
+
+     *** includes possibly projections ***
+  *)
+  let rec isProjPatSub s = 
+    (* let s = (Whnf.normSub s) in  *)
+    begin match s with
+    | Shift (_,_k)              -> true
+    | Dot (Head(BVar n), s) ->
+        let rec checkBVar s' = match s' with
+          | Shift (_ , k)           -> n <= k
+          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+          | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s 
+          | Dot (Undef, s)          -> checkBVar s
+          | _                       -> false
+        in
+          checkBVar s && isProjPatSub s
+
+    | Dot (Head(Proj(BVar n, index)), s) ->
+        let rec checkBVar s' = match s' with
+          | Shift (_ , k)           -> n <= k
+          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+          | Dot (Head (Proj(BVar n', index')), s) -> (n <> n' || index' <> index) && checkBVar s 
+          | Dot (Undef, s)          -> checkBVar s
+          | _                       -> false
+        in
+          checkBVar s && isProjPatSub s
+
+
+(*    | Dot (Obj tM , s)      -> 
+        begin match tM with
+          | Root(BVar n, tS) -> 
+              let rec checkBVar s' = match s' with
+                | Shift k                 -> n <= k
+                | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+                | Dot (Undef, s)          -> checkBVar s
+                | _                       -> false
+              in
+                emptySpine tS && checkBVar s && isPatSub s
+          | _ -> false
+        end 
+*)    
+    | Dot (Undef, s)        -> isProjPatSub s
+    | Dot (Block (BVar n, index), s) -> 
+        let rec checkBVar s' = match s' with
+          | Shift (_ , k)           -> n <= k
+          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+          | Dot (Head (Proj(BVar n', index')), s) -> (n <> n' || index' <> index) && checkBVar s 
+          | Dot (Undef, s)          -> checkBVar s
+          | Dot (Block (BVar n', index'), s) -> 
+              (n <> n' || index' <> index) && checkBVar s 
+          | _                       -> false
+        in
+          checkBVar s && isProjPatSub s
     | _                     -> false
     end 
 
@@ -1310,18 +1373,9 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Shift (psi, n), DDec(_cPsi', _dec)) ->       
         pruneSub' cD0 cPsi phat (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur 
 
-    | (CoShift (co, psi, n), DDec(_cPsi', _dec)) ->       
-        pruneSub' cD0 cPsi phat (Dot (Head (BVar (n + 1)), CoShift (co, psi, n + 1)), cPsi1) ss rOccur 
-
     | (Shift (_psi, _n), Null) -> (id, Null)
 
     | (Shift (_psi', _n), CtxVar psi) -> (id, CtxVar psi)
-
-    | (CoShift (Coe _co, _psi, _n), CtxVar psi) ->  (id, CtxVar psi)
-      (* c(psi), Psi |- s <= psi *)
-
-    | (CoShift (InvCoe _co, _psi, _n), CtxVar psi) ->  (id, CtxVar psi)
-      (* psi, Psi |- s <= c(psi) *)
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', TypDecl(x, tA))) ->
         let (_, ssubst) = ss in 
@@ -1492,18 +1546,8 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Shift (_, _k), CtxVar psi) ->
         (id, CtxVar psi)
 
-    | (CoShift ((* InvCoe *)_, _, _k), Null) ->
-        (id, Null)
-
-
-    | (CoShift (_, _, _k), CtxVar psi) ->
-        (id, CtxVar psi)
-
    | (Shift (psi, k), DDec (_, TypDecl (_x, _tA))) ->
        pruneCtx' phat (Dot (Head (BVar (k + 1)), Shift (psi, k + 1)), cPsi1) ss
-
-   | (CoShift (co_cid, psi, k), DDec (_, TypDecl (_x, _tA))) ->
-       pruneCtx' phat (Dot (Head (BVar (k + 1)), CoShift (co_cid, psi, k + 1)), cPsi1) ss
 
 
    | (Dot (Head (BVar k), s), DDec (cPsi1, TypDecl (x, tA))) ->
@@ -1642,10 +1686,17 @@ module Make (T : TRAIL) : UNIFY = struct
         *)
         let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
+        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar :"  
+                          ^ P.normalToString Empty cD0 cPsi sM1 ^ "\n with type: " ^ 
+                          P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.typToString Empty cD0 cPsi1 (tP1 , id)
+                          ^ "\n and " ^ 
+                          P.normalToString Empty cD0 cPsi sM2 ^  "\n with type: " ^ 
+                          P.dctxToString Empty cD0 cPsi2 ^ " |- " ^ P.typToString Empty cD0 cPsi2 (tP2 , id) ) in
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
-            match (isPatSub t1' , isPatSub t2') with                
+            match (isProjPatSub t1' , isProjPatSub t2') with                 
+(*            match (isPatSub t1' , isPatSub t2') with                 *)
               | (true, true) ->                 
-                  if Whnf.convSub t1' t2' then 
+                  if Whnf.convSub t1' t2' then  
                     () 
                   else 
                     let phat = Context.dctxToHat cPsi in 
@@ -1665,7 +1716,7 @@ module Make (T : TRAIL) : UNIFY = struct
                       instantiateMVar (r1, Root(None, MVar(w, s'),Nil), !cnstrs1)
                         
               | (true, false) ->
-                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                    addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
               | (false, true) ->
                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
               | (false, false) ->
@@ -1733,9 +1784,46 @@ module Make (T : TRAIL) : UNIFY = struct
                         ; addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1))))
                   end
               | (false , false) ->
-                  (* neither t1' nor t2' are pattern substitutions *)
-                  let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
-                   addConstraint (cnstrs1, cnstr)
+                  (* Check if t1' or t2' are proj-patt sub *)
+                  begin match  (isProjPatSub t1' , isProjPatSub t2') with
+                    | ( _ , true ) -> 
+                        begin try 
+                          let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+                          let phat = Context.dctxToHat flat_cPsi in 
+                          let t_flat = ConvSigma.strans_sub t2' conv_list in 
+                          let tM1'   = ConvSigma.strans_norm sM1 conv_list in 
+                          let ss = invert t_flat in
+                          let sM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (MShift 0, ss) (MVarRef r2)) in
+                            instantiateMVar (r2, sM1', !cnstrs2) 
+                        with
+                          | NotInvertible ->
+                              (Printf.printf "Added constraints: NotInvertible: \n" ;
+                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                        end
+
+
+                    | ( true , _ ) -> 
+                        begin try 
+                          let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+                          let phat = Context.dctxToHat flat_cPsi in 
+                          let t_flat = ConvSigma.strans_sub t1' conv_list in 
+                          let tM2'   = ConvSigma.strans_norm sM2 conv_list in 
+                          let ss = invert t_flat in
+                          let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (MShift 0, ss) (MVarRef r1)) in
+                            instantiateMVar (r1, sM2', !cnstrs1) 
+                        with
+                          | NotInvertible ->
+                              (Printf.printf "Added constraints: NotInvertible: \n" ;
+                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                        end
+
+
+                    | ( false , false ) -> 
+                        (* neither t1' nor t2' are pattern substitutions *)
+                        let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
+                          addConstraint (cnstrs1, cnstr)
+
+                  end 
             end
 
     (* MVar-normal case *)
@@ -1768,7 +1856,23 @@ module Make (T : TRAIL) : UNIFY = struct
               | NotInvertible ->
                   Printf.printf "Added constraints: NotInvertible: \n"
                 ; addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
-           else
+            else
+              if isProjPatSub t' then 
+                begin try 
+                  let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+                  let phat = Context.dctxToHat flat_cPsi in 
+                  let t_flat = ConvSigma.strans_sub t' conv_list in 
+                  let tM2'   = ConvSigma.strans_norm sM2 conv_list in 
+                  let ss = invert t_flat in
+                  let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (MShift 0, ss) (MVarRef r)) in
+                    instantiateMVar (r, sM2', !cnstrs) 
+                with
+                  | NotInvertible ->
+                      (Printf.printf "Added constraints: NotInvertible: \n" ;
+                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+              end
+            else 
+
              (dprint (fun () -> "Add constraint: MVAR-Normal case" ^ P.normalToString Empty cD0 cPsi sM1  ^ 
                         " = " ^ P.normalToString Empty cD0 cPsi sM2 ^ "\n");
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
@@ -1797,6 +1901,21 @@ module Make (T : TRAIL) : UNIFY = struct
                   (Printf.printf "Added constraints: NotInvertible: \n" ;
                   addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
           else            
+            if isProjPatSub t' then 
+              begin try 
+                let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+                let phat = Context.dctxToHat flat_cPsi in 
+                let t_flat = ConvSigma.strans_sub t' conv_list in 
+                let tM1'   = ConvSigma.strans_norm sM1 conv_list in 
+                let ss = invert t_flat in
+                let sM1' = trail (fun () -> prune cD0 cPsi1 phat (tM1', id) (MShift 0, ss) (MVarRef r)) in
+                  instantiateMVar (r, sM1', !cnstrs) 
+              with
+              | NotInvertible ->
+                  (Printf.printf "Added constraints: NotInvertible: \n" ;
+                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+              end
+            else 
             (dprint (fun () -> "Add constraint: Normal-MVar case");
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
 
@@ -1813,7 +1932,7 @@ module Make (T : TRAIL) : UNIFY = struct
         and t2' = Whnf.normSub (comp t2 s2)    (* cD ; cPsi |- t2' <= cPsi2 *)
         in
           if r1 == r2 then (* by invariant:  cD1 = cD2, cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
-            match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with                
+            match (isPatMSub mt1, isProjPatSub t1' , isPatMSub mt2, isProjPatSub t2') with                
               | (true, true, true, true) -> 
                   if Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then 
                     ()
@@ -1859,7 +1978,8 @@ module Make (T : TRAIL) : UNIFY = struct
                       
 
               | (true, true, _, false) ->
-                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                  (* t2' is not a pattern substitution *)
+                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *) 
 
               | (true, true, false, _ ) ->
                   addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
@@ -1868,7 +1988,9 @@ module Make (T : TRAIL) : UNIFY = struct
                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *)
 
               | (_, false, _, _) ->
-                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *)
+                  (* t1' is not a pattern substitution *)
+
+                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *) 
 
           else
             begin match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with
@@ -1921,10 +2043,58 @@ module Make (T : TRAIL) : UNIFY = struct
                         (Printf.printf "Added constraints: NotInvertible: \n" 
                         ; addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1))))
                   end
-              | (_ , _ , _ , _) ->
-                  (* neither t1' nor t2' are pattern substitutions *)
+(*              | ( _ , false , _ , _ ) -> 
+                  (* neither t1' is not pattern substitutions – add projPat case *)
                   let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
                    addConstraint (cnstrs1, cnstr)
+
+              | ( _ , _ , _ , false ) -> 
+                  (* neither t2' is not pattern substitutions - add projPat case *)
+                  let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
+                   addConstraint (cnstrs1, cnstr)
+*)
+              | (_ , _ , _ , _) ->
+                  begin match  (isProjPatSub t1' , isProjPatSub t2') with
+                    | ( _ , true ) -> 
+                        begin try 
+                          let mtt2 = Whnf.m_invert (Whnf.cnormMSub mt2) in 
+                          let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+                          let phat = Context.dctxToHat flat_cPsi in 
+                          let t_flat = ConvSigma.strans_sub t2' conv_list in 
+                          let tM1'   = ConvSigma.strans_norm sM1 conv_list in 
+                          let ss = invert t_flat in
+                          let sM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (mtt2, ss) (MVarRef r2)) in
+                            instantiateMMVar (r2, sM1', !cnstrs2) 
+                        with
+                          | NotInvertible ->
+                              (Printf.printf "Added constraints: NotInvertible: \n" ;
+                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                        end
+
+
+                    | ( true, _ ) -> 
+                        begin try 
+                          let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in 
+                          let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+                          let phat = Context.dctxToHat flat_cPsi in 
+                          let t_flat = ConvSigma.strans_sub t1' conv_list in 
+                          let tM2'   = ConvSigma.strans_norm sM2 conv_list in 
+                          let ss = invert t_flat in
+                          let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (mtt1, ss) (MVarRef r1)) in
+                            instantiateMMVar (r1, sM2', !cnstrs1) 
+                        with
+                          | NotInvertible ->
+                              (Printf.printf "Added constraints: NotInvertible: \n" ;
+                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                        end
+
+
+
+                    | ( _ , _ ) -> 
+                        (* neither t1' nor t2' are pattern substitutions *)
+                        let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
+                          addConstraint (cnstrs1, cnstr)
+                  end
             end
 
 
@@ -1932,7 +2102,7 @@ module Make (T : TRAIL) : UNIFY = struct
     | ((Root (_, MMVar (MInst (r, _cD,  cPsi1, _tP, cnstrs), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         let t' = Whnf.normSub (comp t s1) in
           if isPatSub t' && isPatMSub mt then
-            try
+            begin try
               let ss  = invert t' in
               let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in 
               let _ = dprint (fun () -> 
@@ -1949,6 +2119,23 @@ module Make (T : TRAIL) : UNIFY = struct
               | NotInvertible ->
                   (Printf.printf "Added constraints: NotInvertible: \n"
                   ; addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+            end 
+          else 
+            (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)           
+            if isProjPatSub t' && isPatMSub mt then
+              begin try
+                let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+                let phat = Context.dctxToHat flat_cPsi in 
+                let t_flat = ConvSigma.strans_sub t' conv_list in 
+                let tM2'   = ConvSigma.strans_norm sM2 conv_list in 
+                let ss = invert t_flat in
+                let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in                   
+                let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (mtt, ss) (MMVarRef r)) in
+                  instantiateMMVar (r, sM2', !cnstrs)                          
+              with | NotInvertible -> 
+                (Printf.printf "Added constraints: NotInvertible: \n" ;
+                 addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+              end
           else            
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
 
@@ -1973,8 +2160,23 @@ module Make (T : TRAIL) : UNIFY = struct
               | NotInvertible ->
                   (Printf.printf "Added constraints: NotInvertible: \n" ;
                   addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-          else            
-             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+          else 
+            (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)           
+            if isProjPatSub t' && isPatMSub mt then
+            try
+              let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+              let phat = Context.dctxToHat flat_cPsi in 
+              let t_flat = ConvSigma.strans_sub t' conv_list in 
+              let tM1'   = ConvSigma.strans_norm sM1 conv_list in 
+              let ss = invert t_flat in
+              let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in 
+              let sM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (mtt, ss) (MMVarRef r)) in
+                instantiateMMVar (r, sM1', !cnstrs)                          
+            with | NotInvertible -> 
+              (Printf.printf "Added constraints: NotInvertible: \n" ;
+               addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+            else        
+              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
 
 
     | ((Root(_, h1,tS1), s1), (Root(_, h2, tS2), s2)) ->
@@ -2205,9 +2407,6 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     and unifySub mflag cD0 cPsi s1 s2 = match (s1, s2) with 
-      | (CoShift (co, psi, n), CoShift (co', phi, n')) -> 
-          if n = n' && co = co' && psi = phi then () 
-          else raise_ (Error "CoSubstitutions not well-typed")
 
       | (Shift (psi, n), Shift (phi, k)) -> 
           if  n = k && psi = phi then () else raise_ (Error "Substitutions not well-typed")
@@ -2225,18 +2424,10 @@ module Make (T : TRAIL) : UNIFY = struct
           -> 
            unifySub mflag cD0 cPsi (Dot (Head (BVar (n+1)), Shift (psi, n+1))) s2
 
-      | (CoShift (co_cid, psi, n), Dot(Head BVar _k, _s')) 
-          -> 
-           unifySub mflag cD0 cPsi (Dot (Head (BVar (n+1)), CoShift (co_cid, psi, n+1))) s2
-
       | (Dot(Head BVar _k, _s'), Shift (psi, n)) 
           ->  
             unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (psi, n+1)))
 
-      | (Dot(Head BVar _k, _s'), CoShift (co_cid, psi, n)) 
-          ->  
-            unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), CoShift (co_cid, psi, n+1)))
-          
       |  _
         -> raise_ (Error (
                             "Substitution mismatch :\n " ^ P.dctxToString Empty cD0 cPsi 

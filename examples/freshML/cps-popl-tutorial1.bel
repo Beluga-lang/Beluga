@@ -36,8 +36,7 @@ FN g => fn v =>  case v of
 | [g] #p.1 .. =>  [g] #p.2 .. 
 
 | [g] lam A2 \x. E .. x => 
-  let  % {E'::contra[g, x':cvalue A, k:ccont B]}
-       [g, b:block x:value A . cvalue A, k:ccont B] E' .. b.2 k =
+  let  [g, b:block x:value A . cvalue A, k:ccont B] E' .. b.2 k =
     cpse [g, b:block x:value A2 . cvalue A2 ] 
          ([g,b] E .. b.1)
    in
@@ -70,8 +69,9 @@ let r1' = test ttrue ;
 
 let r1 = cpse [b:block x:value o . cvalue o] ([b] ret b.1) ;
 
+let r2 = cps [ ] ([ ] lam o \x. ret x) ;
 
-% let r2 = cps [ ] ([ ] lam o \x. ret x) ;
+let r3 = cps [ ] ([ ] (lam (arr (arr o o) o) (\x. app (ret x) (ret (lam o (\x. ret x )))))) ;
 
 
 %{

@@ -101,10 +101,7 @@ module LF = struct
               (* psi, Psi |- s1 : .    and Psi, Psi' |- s2 : psi, Psi
                * Psi, Psi' |- s1 o s2 : .
                *)
-          | CoShift (Coe co_cid, NoCtxShift, d) -> CoShift (Coe co_cid, CtxShift psi, d+n)
-              (* psi, Psi |- s1 : .    and c(psi), Psi' |- s2 : psi, Psi
-               * c(psi), Psi' |- s1 o s2 : .
-               *)
+
 
           | _ -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n"
                     (P.subToString s1) (P.subToString s2) ; *)
@@ -179,7 +176,6 @@ module LF = struct
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
     | (n, Shift (_ , k)) -> Head (BVar (n + k))
-    | (n, CoShift (_ , _, k)) -> Head (BVar (n + k))
 
 
   (* frontSub Ft s = Ft'
@@ -424,10 +420,10 @@ module LF = struct
   let isId s =
     let rec isId' s k' = match s with
       | Shift (NoCtxShift, k)   -> k = k'
-      | Dot (Head (BVar n), s') -> n = k' && isId' s' (k' + 1)
+      | Dot (Head (BVar n), s') -> n = (k' + 1) && isId' s' (k' + 1)
       | _                       -> false
     in
-      isId' s 0
+      isId' s 0 
 
 
 (* cloInv (U, w) = U[w^-1]

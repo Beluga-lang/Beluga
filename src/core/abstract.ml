@@ -436,7 +436,6 @@ and cnstr_head h = match h with
 
 and cnstr_sub s = match s with
   | I.Shift _   -> false
-  | I.CoShift _ -> false
   | I.Dot (I.Head h , s) -> cnstr_head h && cnstr_sub s
   | I.Dot (I.Obj tM , s) -> cnstr_term (tM, LF.id) && cnstr_sub s
   | I.Dot (I.Undef, s')  -> cnstr_sub s'
@@ -700,7 +699,6 @@ and collectSpine cQ phat sS = match sS with
 *)
 and collectSub cQ phat s = match s with
   | (I.Shift _) -> (cQ, s)
-  | (I.CoShift _ ) -> (cQ, s)
   | (I.Dot (I.Head h, s)) ->
       let (cQ1, s') =  collectSub cQ phat s in 
       (* let _   = dprint (fun () -> "collectSub (Head) "  ) in *)
@@ -893,57 +891,6 @@ and collectHead cQ phat ((head, _subst) as sH) =
       (* let _ = dprint (fun () -> "collectHead Proj \n") in  *)
       let (cQ', h') = collectHead cQ phat (head, s)  in
         (cQ' , I.Proj (h', k))
-
-  | (I.CoFPVar (co_cid, p, j, s'), _s) ->
-      begin match checkOccurrence (eqFPVar p) cQ with
-        | Yes -> 
-            let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in  
-                (cQ', I.CoFPVar (co_cid, p, j, sigma))
-        | No  -> 
-            let (cQ2, sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in  
-            let (tA, cPhi)  = FPVar.get p in
-                (* tA must be closed with respect to cPhi *)
-                (* Since we only use abstraction on pure LF objects,
-                   there are no context variables; different abstraction
-                   is necessary for handling computation-level expressions,
-                   and LF objects which occur in computations. *)
-                
-            let phihat = Context.dctxToHat cPhi in 
-            let cQ' = I.Dec(cQ2, FPV(Impure, p, None)) in 
-            let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
-            let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in               
-              (I.Dec (cQ'', FPV (Pure, p, Some (tA', cPhi'))), I.CoFPVar (co_cid, p, j, sigma))
-
-          | Cycle -> raise (Error "Cyclic dependency among coerced free parameter-variables")
-        end          
-      
-  | (I.CoPVar (co_cid, (I.PInst (r, cPsi, tA, ({contents = cnstr} as c)) as p), j, s'),  s) ->
-      if constraints_solved cnstr then
-
-        begin match checkOccurrence (eqPVar (I.PVar (p, s'))) cQ with
-          | Yes -> 
-              let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in 
-                (cQ', I.CoPVar (co_cid, p, j, sigma))
-            | No  -> 
-                (*  checkEmpty !cnstrs ? -bp *)
-              let (cQ2, sigma) = collectSub cQ phat (LF.comp s' s) in 
-              let cQ' = I.Dec(cQ2, PV(Impure, I.PVar(p,s'))) in 
-              let psihat = Context.dctxToHat cPsi in 
-                  
-              let (cQ1, cPsi')  = collectDctx cQ' psihat cPsi in 
-              let (cQ'', tA') = collectTyp cQ1  psihat (tA, LF.id) in              
-              let p' = I.PVar (I.PInst (r, cPsi', tA', c), sigma) in 
-                (I.Dec (cQ'', PV (Pure, p')) , I.CoPVar (co_cid, I.PInst (r, cPsi', tA', c), j, sigma))
-            | Cycle -> raise (Error "Cyclic dependency among coerced parameter-variables")
-          end               
-      else 
-        raise (Error "Leftover constraints during abstraction")
-
-  | (I.CoPVar (co_cid, I.Offset k, j, s'), _s) ->
-      let (cQ', sigma) =  collectSub cQ phat s' (* (LF.comp s' s) *) in 
-        (cQ', I.CoPVar (co_cid, I.Offset k, j, sigma))
-      
-
 
 
 and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
@@ -1170,8 +1117,6 @@ and abstractDctx cQ cPsi l = match cPsi with
 and abstractSub cQ offset s = match s with
   | I.Shift _   -> s
       
-  | I.CoShift _ -> s
-
   | I.Dot (I.Head tH, s) ->
       I.Dot (I.Head (abstractHead cQ offset tH), abstractSub cQ offset s)
 
@@ -1284,17 +1229,6 @@ and abstractMVarHead cQ offset tH = match tH with
   | I.PVar (I.Offset p , s) -> 
       I.PVar (I.Offset p, abstractMVarSub cQ offset s)
 
-  | I.CoPVar (co_cid, I.Offset p , j, s) -> 
-      I.CoPVar (co_cid, I.Offset p, j, abstractMVarSub cQ offset s)
-
-
-  | I.CoPVar (co_cid, (I.PInst(_r, _cPsi, _tA , _cnstr) as p), j, s) -> 
-      let x = index_of cQ (PV (Pure, I.PVar (p,s))) + offset in 
-        I.CoPVar (co_cid, I.Offset x, j, abstractMVarSub cQ offset s)
-
-  | I.CoFPVar (co_cid, p, j, s) -> 
-      let x = index_of cQ (FPV (Pure, p, None)) + offset in 
-        I.CoPVar (co_cid, I.Offset x, j, abstractMVarSub cQ offset s)
 
   (* other cases impossible for object level *)
 and abstractMVarSpine cQ offset sS = match sS with
@@ -1310,7 +1244,6 @@ and abstractMVarSpine cQ offset sS = match sS with
 
 and abstractMVarSub cQ offset s = match s with
   | I.Shift _   ->     s
-  | I.CoShift _ ->     s
 
   | I.Dot (I.Head tH, s) ->
       I.Dot (I.Head (abstractMVarHead cQ offset tH), abstractMVarSub cQ offset s)

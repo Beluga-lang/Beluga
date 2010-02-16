@@ -12,6 +12,7 @@ open Syntax
 open Substitution
 open Error
 open Id
+open ConvSigma
 
 (* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail 
@@ -43,8 +44,8 @@ let rec what_head = function
   | Apx.LF.FVar _ -> "FVar"
   | Apx.LF.FMVar _ -> "FMVar"
   | Apx.LF.FPVar _ -> "FPVar"
-  | Apx.LF.CoFPVar _ -> "CoFPVar"
-  | Apx.LF.CoPVar _ -> "CoPVar"
+
+
 
 exception Violation of string
 
@@ -234,132 +235,6 @@ let rec isProjPatSub s = match s with
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
 
-
-(* ************************************************************************ *)
-let rec new_index k conv_list = match (conv_list, k) with
-    | (d::conv_list', 1 ) -> d
-    | (d::conv_list', _ ) -> d + new_index (k-1) conv_list'
-
-let rec strans_norm sM conv_list = strans_normW (Whnf.whnf sM) conv_list 
-and strans_normW (tM, s) conv_list = match tM with
-  | Int.LF.Lam(loc,x, tN) -> let tN' = strans_norm (tN, LF.dot1 s) (1::conv_list) in 
-      Int.LF.Lam(loc, x, tN')
-  | Int.LF.Root(loc, h, tS) -> 
-      let h' = strans_head h conv_list in 
-      let tS' = strans_spine (tS, s) conv_list in 
-        Int.LF.Root(loc, h', tS')
-
-and strans_head h conv_list = match h with
-  | Int.LF.BVar x -> Int.LF.BVar (new_index x conv_list)
-  | Int.LF.MVar(u,sigma) -> Int.LF.MVar(u, strans_sub sigma conv_list )
-  | Int.LF.PVar (p, sigma) -> Int.LF.PVar(p, strans_sub sigma conv_list )
-  | Int.LF.Proj (Int.LF.BVar x, j) -> 
-    let x' = (new_index x conv_list) - j + 1  in 
-      Int.LF.BVar x'
-  | Int.LF.Const c -> Int.LF.Const c
-  | Int.LF.FVar x -> Int.LF.FVar x
-  | Int.LF.FMVar (u,s) -> Int.LF.FMVar (u, strans_sub s conv_list)
-  | Int.LF.FPVar (u,s) -> Int.LF.FPVar (u, strans_sub s conv_list)
-  | Int.LF.MMVar  (u, (ms, s)) -> 
-      let ms' = strans_msub ms conv_list in 
-      let s'  = strans_sub s conv_list in 
-        Int.LF.MMVar (u, (ms', s'))
-
-and strans_msub ms conv_list = match ms with 
-  | Int.LF.MShift k -> Int.LF.MShift k 
-  | Int.LF.MDot (mf , ms) -> 
-      let mf' = strans_mfront mf conv_list in 
-      let ms' = strans_msub ms conv_list in 
-        Int.LF.MDot (mf',ms')
-
-and strans_mfront mf conv_list = match mf with
-  | Int.LF.MObj (phat, tM) -> 
-      Int.LF.MObj (phat, strans_norm (tM, LF.id) conv_list )
-  | Int.LF.PObj (phat, h) -> 
-      Int.LF.PObj (phat, strans_head h conv_list)
-  | Int.LF.MV u -> Int.LF.MV u 
-  | Int.LF.MUndef -> Int.LF.MUndef
-
-  
-and strans_sub s conv_list = match s with
-  | Int.LF.Shift (ctx_offset, offset) -> 
-      let offset' = List.fold_left (fun x -> fun y -> x + y) 0 conv_list in 
-      let _ = dprint (fun () -> "conv_list = " ^ conv_listToString conv_list ) in
-      let _ = dprint (fun () -> "Old offset " ^ string_of_int offset ) in 
-      let _ = dprint (fun () -> "New offset " ^ string_of_int offset') in 
-        Int.LF.Shift (ctx_offset, offset')
-  | Int.LF.Dot (ft, s) -> 
-      Int.LF.Dot (strans_front ft conv_list, strans_sub s conv_list)
-
-and strans_front ft  conv_list = match ft with
-  | Int.LF.Head h -> Int.LF.Head (strans_head h conv_list)
-  | Int.LF.Block (h,i) -> Int.LF.Block (strans_head h conv_list, i)
-  | Int.LF.Obj tM -> Int.LF.Obj (strans_norm (tM, LF.id) conv_list)
-  | Int.LF.Undef -> Int.LF.Undef 
-        
-
-and strans_spine (tS,s) conv_list = match tS with 
-  | Int.LF.Nil -> Int.LF.Nil
-  | Int.LF.SClo (tS',s') -> strans_spine (tS', LF.comp s' s) conv_list 
-  | Int.LF.App (tM, tS) -> 
-    let tM' = strans_norm (tM, s) conv_list in 
-    let tS' = strans_spine (tS, s) conv_list in 
-      Int.LF.App (tM', tS')
-
-
-let rec strans_typ sA conv_list = strans_typW (Whnf.whnfTyp sA) conv_list
-and strans_typW (tA,s) conv_list = match tA with
-  | Int.LF.Atom (loc, a, tS ) -> 
-     Int.LF.Atom (loc, a, strans_spine (tS, s) conv_list )
-
-  | Int.LF.PiTyp ((Int.LF.TypDecl(x, tA), dep), tB) -> 
-    let tA' = strans_typ (tA, s) conv_list in 
-    let tB' = strans_typ (tB, LF.dot1 s) (1::conv_list) in 
-      Int.LF.PiTyp ((Int.LF.TypDecl(x,tA'), dep), tB')
-
-  (* no sigma types allowed *)
-
-
-let rec flattenSigmaTyp cPsi strec conv_list = match strec with
-  | (Int.LF.SigmaLast tA, s) -> 
-      let tA' = strans_typ (tA,s) conv_list in 
-     (Int.LF.DDec (cPsi, Int.LF.TypDecl (Id.mk_name Id.NoName, tA')), 1)
-
-  | (Int.LF.SigmaElem (x, tA, trec), s) -> 
-      let tA' = strans_typ (tA,s) conv_list in 
-      let (cPhi, k) = flattenSigmaTyp (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA'))) (trec, LF.dot1 s)  (1::conv_list) in
-        (cPhi, k+1)
-                                          
-
-(* flattenDCtx cPsi = (cPsi'  ,  L )
-
-   if   O ; D |- cPsi   
-        and cPsi contains Sigma-types
-
-   then
-        O ; D |- cPsi'  where all Sigma-types in cPsi have been flattened.
-        L is a vector i.e. pos(i,L) = n  where n denotes the length of the type tA 
-        for element i
-
-
-   Example:  cPsi = ., Sigma x:A.B, y:A, Sigma w1:A , w2:A . A  
-       then flattenDCtx cPsi = (cPsi', L)
-       where  cPsi' = ., x:A, x':B, y:A, w1:A, w2:A, w3:A
-                L   =    [3,1,2]  (note reverse order since contexts are built in reverse order.
-
-
-*)
-
-
-let rec flattenDCtx cPsi = match cPsi with 
-  | Int.LF.Null -> (Int.LF.Null , [])
-  | Int.LF.CtxVar psi -> (Int.LF.CtxVar psi , [] )
-  | Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA)) -> 
-      let (cPhi, conv_list) = flattenDCtx cPsi' in 
-        match Whnf.whnfTyp (tA, LF.id) with 
-          | (Int.LF.Sigma trec, s) -> let (cPhi', k) = flattenSigmaTyp cPhi (trec,s) conv_list in (cPhi', k::conv_list)
-          | _          -> (Int.LF.DDec(cPhi, Int.LF.TypDecl(x, strans_typ (tA, LF.id) conv_list)), 1::conv_list)
-              
 
 
 
@@ -726,20 +601,6 @@ let index_decl cvars bvars fvars (Ext.LF.TypDecl(x, a)) =
 
 let rec index_dctx ctx_vars cvars bvars fvars = function
   | Ext.LF.Null        -> (Apx.LF.Null , bvars, fvars)
-  | Ext.LF.CoCtx (loc, co_name, psi_name) -> 
-      let offset = begin try
-                     CVar.index_of_name ctx_vars psi_name 
-                  with Not_found ->
-                    raise (Error (Some loc, UnboundCtxName psi_name)) 
-                   end in
-      let cid_co = begin try 
-                     Coercion.index_of_name co_name 
-                   with Not_found -> 
-                     raise (Error (Some loc, UnboundCoName co_name))
-                   end in
-          (Apx.LF.CtxVar (Apx.LF.CoCtx (cid_co, Apx.LF.CtxOffset offset)) , bvars, fvars)
-        (* (Apx.LF.CtxVar (Apx.LF.CtxName psi_name) , bvars) *)
-
 
   | Ext.LF.CtxVar (loc, psi_name)  ->
       begin try
@@ -779,16 +640,6 @@ let index_psihat ctx_vars explicit_psihat =
           with Not_found ->
             let (d, bvars ) = index_hat bv explicit_psihat in
               ((None, d) , bvars)
-          end
-
-      | Ext.LF.CoName (co, psi) :: psihat ->
-          begin try
-            let ctx_var = CVar.index_of_name ctx_vars psi in
-            let cid_co  = Coercion.index_of_name co in 
-            let (d, bvars) = index_hat bv psihat in
-              ((Some (Int.LF.CoCtx(cid_co, Int.LF.CtxOffset (ctx_var))), d) , bvars)
-          with Not_found ->
-            raise (Violation "Context Coercion Error -- either coercion was not found or coercion was not applied to context variable\n")
           end
     end
 
@@ -855,24 +706,6 @@ and index_el (Ext.LF.SchElem (_, typ_ctx, typ_rec)) =
 
 let index_schema (Ext.LF.Schema el_list) =
   Apx.LF.Schema (index_elements el_list)
-
-
-let rec index_coe c_list = match c_list with
-  | [] -> []
-  | Ext.LF.CoBranch (typ_ctx, trec1, trec2_opt)  :: c_list' -> 
-    let cvars = CVar.create () in
-    let bvars = BVar.create () in
-    let fvars = [] in 
-    let (typ_ctx', bvars', _ ) = index_ctx cvars bvars fvars typ_ctx in
-    let (typ_rec1', _ )        = index_typrec cvars bvars' fvars trec1 in
-    let typ_rec2'_opt          = 
-      match trec2_opt with 
-          None -> None 
-        | Some trec2 -> 
-            let (trec2', _ ) = index_typrec cvars bvars' fvars trec2 in 
-              Some trec2' in
-    let c_list'            = index_coe c_list' in
-       Apx.LF.CoBranch (typ_ctx', typ_rec1', typ_rec2'_opt) :: c_list'
 
 
 (* Translation of external computations into approximate computations *)
@@ -1553,6 +1386,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
             Int.LF.Root (Some loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
           else
            if isProjPatSub s then 
+             let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name ) in
              let _ = dprint (fun () -> "isProjPatSub ... " ) in 
              let (flat_cPsi, conv_list) = flattenDCtx cPsi in  
              let _ = dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cO cD flat_cPsi ^ "\n") in 
@@ -1577,6 +1411,10 @@ and elTerm' recT  cO cD cPsi r sP = match r with
              * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
              * This will be enforced during abstraction.
              *)
+             let _ = dprint (fun () -> "Type of mvar " ^ u.string_of_name ^ ":" ^ 
+                               P.typToString cO cD cPhi (tP, LF.id) ^ " [ " ^ 
+                               P.dctxToString cO cD cPhi ^ " ] ") in
+ 
             FMVar.add u (tP, cPhi); 
             Int.LF.Root (Some loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
 
@@ -2265,24 +2103,11 @@ let rec elSchElem cO (Apx.LF.SchElem (ctx, typRec)) =
 let rec elSchema cO (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map (elSchElem cO) el_list)
 
-let rec elCoercion c_list  = match c_list with
-  | [] -> []
-  | Apx.LF.CoBranch (typ_ctx, trec1, trec2_opt) :: c_list' -> 
-    let cO = Int.LF.Empty in
-    let cD = Int.LF.Empty in
-
-   let el_ctx = elTypDeclCtx cO cD typ_ctx in
-   let dctx = projectCtxIntoDctx el_ctx in
-
-   let trec1' = elTypRec PiRecon cO cD dctx trec1 in
-   let trec2'_opt = match trec2_opt with None -> None | Some trec2 -> Some (elTypRec PiRecon cO cD dctx trec2) in
-   let c_list' = elCoercion c_list' in 
-     Int.LF.CoBranch (el_ctx, trec1', trec2'_opt) :: c_list'
 
 let rec elCtxVar c_var = match c_var with 
   | Apx.LF.CtxOffset offset  -> Int.LF.CtxOffset offset
   | Apx.LF.CtxName psi       -> Int.LF.CtxName psi
-  | Apx.LF.CoCtx (co, c_var) -> Int.LF.CoCtx (co, elCtxVar c_var)
+
 
 
 let rec elDCtx recT  cO cD psi = match psi with
@@ -2901,14 +2726,6 @@ and fmvApxHead fMVs cO cD l_cd1 l_delta k h = match h with
           let (offset, (_tA, _cPhi)) = Whnf.mctxPVarPos cD p  in          
             Apx.LF.Proj(Apx.LF.PVar (Apx.LF.Offset (offset + k), s'), j)
  
-  | Apx.LF.CoFPVar(co_cid, p,j,s) -> 
-      let s' = fmvApxSub fMVs cO cD l_cd1 l_delta k s in
-      let _ = dprint (fun () -> "fmvApxHead (CoFPVar ) : j = " ^ string_of_int j ^ "\n") in
-        if List.mem p fMVs then 
-          Apx.LF.CoFPVar (co_cid, p, j, s')
-        else 
-          let (offset, (_tA, _cPhi)) = Whnf.mctxPVarPos cD p  in          
-            Apx.LF.CoPVar(co_cid, Apx.LF.Offset (offset + k), j, s')
         
   (* bound meta-variables / parameters *)
   | Apx.LF.MVar (Apx.LF.Offset offset, s) ->
@@ -2932,12 +2749,6 @@ and fmvApxHead fMVs cO cD l_cd1 l_delta k h = match h with
         else
           Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset offset, s'), j)        
 
-  | Apx.LF.CoPVar(co_cid, Apx.LF.Offset offset,j,s) -> 
-      let s' = fmvApxSub fMVs cO cD l_cd1 l_delta k s in
-        if offset > (l_delta+k) then 
-          Apx.LF.CoPVar (co_cid, Apx.LF.Offset (offset + l_cd1), j,  s')
-        else
-          Apx.LF.CoPVar (co_cid, Apx.LF.Offset offset, j, s')
 
   (* approx. terms may already contain valid LF objects due to 
      applying the refinement substitution eagerly to the body of
@@ -3017,34 +2828,11 @@ and fmvApxHead fMVs cO cD l_cd1 l_delta k h = match h with
                    end in 
         Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s'), j)  
 
-    | Apx.LF.CoPVar (co_cid, Apx.LF.PInst (h, tA, cPhi), j,  s) -> 
-      let s' = fmvApxSub fMVs cO cD l_cd1 l_delta k s in
-      let rec mvar_dot t l_delta = match l_delta with
-        | 0 -> t
-        | l_delta' -> 
-            mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
-      in 
-      (* cD',cD0 ; cPhi |- h => tA   where cD',cD0 = cD
-             cD1, cD0   |- mvar_dot (MShift l_cd1) cD0 <= cD0  
-         cD',cD1,cD0    |- mvar_dot (MShift l_cd1) cD0 <= cD', cD0
-       *)
-      let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in 
-      let h'     = begin match h with
-                   | Int.LF.BVar _k -> h
-                   | Int.LF.PVar (Int.LF.Offset k ,s1) -> 
-                       let s1' =  Whnf.cnormSub (s1, r) in 
-                         begin match LF.applyMSub k r with
-                           | Int.LF.MV k' -> Int.LF.PVar (Int.LF.Offset k' ,s1')
-                               (* other cases are impossible *)
-                         end 
-                   end in 
-        Apx.LF.CoPVar (co_cid, Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), j, s')  
   | _ ->  h
 
 and fmvApxSub fMVs cO cD l_cd1 l_delta k s = match s with
   | Apx.LF.EmptySub -> s
   | Apx.LF.Id       -> s
-  | Apx.LF.CoId _   -> s
   | Apx.LF.Dot (Apx.LF.Head h, s) -> 
       let h' = fmvApxHead fMVs cO cD l_cd1 l_delta k h in 
       let s' = fmvApxSub fMVs cO cD l_cd1 l_delta k s in 
@@ -3185,19 +2973,40 @@ and fmvApxBranch fMVs cO cD l_cd1 l_delta k b =
  * type a U1 ... Un 
  *)
 let mgTyp cD cPsi a kK =
-  let rec genSpine sK = match sK with
+  let (flat_cPsi, conv_list) = flattenDCtx cPsi in  
+  let s_proj   = gen_conv_sub conv_list in
+
+  let rec genSpine sK = match sK with 
     | (Int.LF.Typ, _s) ->
         Int.LF.Nil
 
-    | (Int.LF.PiKind ((Int.LF.TypDecl (_, tA1), _ ), kK), s) ->
+(*    | (Int.LF.PiKind ((Int.LF.TypDecl (_, tA1), _ ), kK), s) ->
         let u  = Whnf.newMMVar (cD, cPsi , Int.LF.TClo (tA1,s)) in
         let h  = Int.LF.MMVar (u, (Whnf.m_id, LF.id)) in 
-        let tR = Int.LF.Root (None, h, Int.LF.Nil) in
-        let _ = dprint (fun () -> "Generated meta²-variable " ^ P.normalToString Int.LF.Empty cD cPsi (tR, LF.id)) in 
-        let _ = dprint (fun () -> "of type : " ^ P.dctxToString Int.LF.Empty cD cPsi ^ " |- " ^ P.typToString Int.LF.Empty cD cPsi (tA1,s)) in 
-        (* let tS = genSpine (kK, Int.LF.Dot (Int.LF.Head h, s)) in *)
-        let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in
+        let tR = Int.LF.Root (None, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
+        let _ = dprint (fun () -> "Generated meta²-variable " ^ 
+                          P.normalToString Int.LF.Empty cD cPsi (tR, LF.id)) in 
+        let _ = dprint (fun () -> "of type : " ^ P.dctxToString Int.LF.Empty cD cPsi ^ 
+                          " |- " ^ P.typToString Int.LF.Empty cD cPsi (tA1,s)) in 
+        let tS = genSpine (kK, Int.LF.Dot (Int.LF.Head h, s)) in 
+        (* let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in  (* -bp would not work if h is functional type *) *)
           Int.LF.App (tR, tS)
+*)
+    | (Int.LF.PiKind ((Int.LF.TypDecl (_, tA1), _ ), kK), s) ->
+        let tA1' = strans_typ (tA1, s) conv_list in
+        let u  = Whnf.newMMVar (cD, flat_cPsi , tA1') in
+        let h  = Int.LF.MMVar (u, (Whnf.m_id, s_proj)) in 
+        let tR = Int.LF.Root (None, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
+        let _ = dprint (fun () -> "Generated meta²-variable " ^ 
+                          P.normalToString Int.LF.Empty cD cPsi (tR, LF.id)) in 
+        let _ = dprint (fun () -> "of type : " ^ P.dctxToString Int.LF.Empty cD flat_cPsi ^ 
+                          " |- " ^ P.typToString Int.LF.Empty cD flat_cPsi (tA1',LF.id)) in 
+        let _ = dprint (fun () -> "orig type : " ^ P.dctxToString Int.LF.Empty cD cPsi ^ 
+                          " |- " ^ P.typToString Int.LF.Empty cD cPsi (tA1,s)) in 
+        let tS = genSpine (kK, Int.LF.Dot (Int.LF.Head h, s)) in 
+        (* let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in  (* -bp would not work if h is functional type *) *)
+          Int.LF.App (tR, tS)
+
   in
     Int.LF.Atom (None, a, genSpine (kK, LF.id))
 
@@ -3210,9 +3019,13 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
       let tA'   = C.cnormTyp (tA, theta) in 
 
       let tM'     = Whnf.etaExpandMMV (Some loc) cD  cPsi' (tA', LF.id) LF.id in
-        let _ = dprint (fun () -> "[genMApp] Generated meta²-variable " ^ P.normalToString Int.LF.Empty cD cPsi (tM', LF.id)) in 
-        let _ = dprint (fun () -> "          of type : " ^ P.dctxToString Int.LF.Empty cD cPsi' ^ " |- " ^ P.typToString Int.LF.Empty cD cPsi' (tA',LF.id)) in 
-        genMApp loc cD ((Int.Comp.MApp (Some loc, i, (psihat, tM'))), (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)))
+        let _ = dprint (fun () -> "[genMApp] Generated meta²-variable " ^ 
+                          P.normalToString Int.LF.Empty cD cPsi (tM', LF.id)) in 
+        let _ = dprint (fun () -> "          of type : " ^ 
+                          P.dctxToString Int.LF.Empty cD cPsi' ^ " |- " ^ 
+                          P.typToString Int.LF.Empty cD cPsi' (tA',LF.id)) in 
+        genMApp loc cD ((Int.Comp.MApp (Some loc, i, (psihat, tM'))), 
+                        (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)))
 
   | _ ->  (i, tau_t)
 
@@ -3488,6 +3301,7 @@ and recPattern cO delta psi m tPopt =
                       let tP' = elTyp PiboxRecon cO cD' cPsi' a  in 
                         (* recTyp PiboxRecon cO cD' cPsi' (tP', LF.id) ;*) tP'
                   | PartialTyp a  -> 
+                      let _ = dprint (fun () -> "[mgTyp] Generate mg type in context " ^ P.dctxToString cO cD' cPsi' ) in
                       mgTyp cD' cPsi' a (Typ.get a).Typ.kind   
                 end in
 
@@ -4044,20 +3858,6 @@ let recSgnDecl d =
       let _g'         = Schema.add (Schema.mk_entry g sW') in
       let _        = Printf.printf "\nschema %s = %s.\n" (g.string_of_name) (P.schemaToString sW') in 
         (* Int.Sgn.Schema (g', sW) *) ()
-
-
-  | Ext.Sgn.Coercion (_ , co, Ext.LF.CoTyp(actx, bctx), c_body) -> 
-      let c_body'  = index_coe c_body in
-      let c_body'' = elCoercion c_body' in 
-      let (a_schema, b_schema)    = (Schema.index_of_name actx, Schema.index_of_name bctx)  in
-      (* let _        = recCoercion c_body'' (a_schema, b_schema) in  *)
-      (* May need to add abstraction over reconstructed c_body'' *)
-      let _        = Coercion.add (Coercion.mk_entry co (Int.LF.CoTyp(a_schema, b_schema)) 
-                                                         c_body'') in 
-      (Printf.printf "\ncoercion %s : %s -> %s =\n %s\n" 
-         (co.string_of_name) (actx.string_of_name) (bctx.string_of_name)
-         (P.coercionToString c_body'') ;
-      ())
 
 
   | Ext.Sgn.Val (loc, x, None, i) -> 

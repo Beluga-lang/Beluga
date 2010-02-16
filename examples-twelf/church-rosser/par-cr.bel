@@ -11,7 +11,8 @@ rec subst : {g:(ctx)*}
 FN g => fn d => fn e => case d of 
 | [g, x:term, u:pred x x] u => e
 
-| [g, x:term, u:pred x x] #p.2 .. => [g] #p.2 ..
+| % {#p::(block x:term. pred x x)[g]}
+   [g, x:term, u:pred x x] #p.2 .. => [g] #p.2 ..
 
 | [g, x:term, u:pred x x] ap (R1 .. x u) (R2 .. x u) => 
     let [g] R1' .. = subst [g] ([g,x,u] R1 .. x u) e in 

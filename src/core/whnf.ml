@@ -254,7 +254,6 @@ and mshiftTypRec typRec n = match typRec with
 
 and mshiftSub s n = match s with
   | Shift (_,_k) -> s
-  | CoShift _    -> s
   | SVar(Offset k, s) -> SVar(Offset (k+n), mshiftSub s n)
   | Dot(ft, s) -> Dot (mshiftFt ft n, mshiftSub s n)
 
@@ -614,7 +613,6 @@ and reduce sM spine = match (sM, spine) with
 
 and normSub s = match s with
   | Shift _      -> s
-  | CoShift _    -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
 
 and normFt ft = match ft with
@@ -708,8 +706,8 @@ and what_head = function
   | FVar _ -> "FVar"
   | FMVar _ -> "FMVar"
   | FPVar _ -> "FPVar"
-  | CoFPVar _ -> "CoFPVar"
-  | CoPVar _ -> "CoPVar"
+
+
 
 and cnorm (tM, t) = match tM with
     | Lam (loc, y, tN)   -> Lam (loc, y, cnorm (tN, t))
@@ -922,7 +920,6 @@ and cnorm (tM, t) = match tM with
 
   and cnormSub (s, t) = match s with 
     | Shift _         -> s
-    | CoShift _       -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
      (* substitution variables ignored for how -bp *)
 
@@ -1261,20 +1258,6 @@ and whnf sM = match sM with
   | (Root (loc, Proj (PVar (PInst({contents = None}, _cPsi, _tA, _ ) as p, r), projIndex), tS), sigma) ->
       (Root (loc, Proj (PVar (p, LF.comp r sigma), projIndex), SClo (tS, sigma)), LF.id)
 
-
-  (* Coercion Parameter *)
-  | (Root (loc, CoPVar (co_cid, (Offset _ as q), k, s), tS), sigma) ->
-      (Root (loc, CoPVar (co_cid, q, k, LF.comp s sigma), SClo (tS, sigma)), LF.id)
-
-  (* Proj PVar Some *)
-  | (Root (loc, CoPVar (co_cid, PInst ({contents = Some (PVar (q', r'))}, _, _, _), k, s), tS), sigma) ->
-      whnf (Root (loc, CoPVar (co_cid, q', k, LF.comp r' s), tS), sigma)
-
-  (* Proj PVar None *)
-  | (Root (loc, CoPVar (co_cid, (PInst({contents = None}, _cPsi, _tA, _ ) as p), k, r), tS), sigma) ->
-      (Root (loc, CoPVar (co_cid, p, k, LF.comp r sigma), SClo (tS, sigma)), LF.id)
-
-
   (* Free variables *)
   | (Root (loc, FVar x, tS), sigma) ->
       (Root (loc, FVar x, SClo (tS, sigma)), LF.id)
@@ -1438,9 +1421,6 @@ and convSpine spine1 spine2 = match (spine1, spine2) with
 and convSub subst1 subst2 = match (subst1, subst2) with
   | (Shift (psi,n), Shift (psi', k)) ->
       n = k && psi = psi'
-
-  | (CoShift (co, psi,n), CoShift (co', psi', k)) ->
-      n = k && psi = psi' & co = co'
 
   | (SVar (Offset s1, sigma1), SVar (Offset s2, sigma2)) ->
       s1 = s2 && convSub sigma1 sigma2
@@ -1707,9 +1687,7 @@ let rec cnormDCtx (cPsi, t) = match cPsi with
     | DDec(cPsi, decl) ->  
         DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
 
-    | CtxVar (CoCtx (cid_coe, psi)) -> 
-        let CtxVar psi' = cnormDCtx (CtxVar psi, t) in 
-        CtxVar (CoCtx (cid_coe, psi'))
+
 
 
 (* ************************************************* *)
@@ -2180,7 +2158,6 @@ and closedSpine (tS,s) = match tS with
 
 and closedSub s = match s with
   | Shift _ -> true
-  | CoShift _ -> true
   | Dot (ft, s) -> closedFront ft && closedSub s
 
 and closedFront ft = match ft with

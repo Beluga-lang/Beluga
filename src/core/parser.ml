@@ -30,7 +30,7 @@ type pair_or_atom =
 type mixtyp =
   |  MTArr of Loc.t * mixtyp * mixtyp
   |  MTCross of Loc.t * mixtyp * mixtyp
-  |  MTCtxPi of  Loc.t * (Id.name * Id.name) * mixtyp
+  |  MTCtxPi of  Loc.t * (Id.name * Id.name * Comp.depend) * mixtyp
   |  MTBool of Loc.t
   |  MTBox of Loc.t * mixtyp * LF.dctx
   |  MTPiBox of Loc.t * LF.ctyp_decl * mixtyp
@@ -59,7 +59,7 @@ let rec unmix = function
                                   | (_, _) -> raise (MixErr (mixloc mt2))
                            end
   |  MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
-  |  MTCtxPi(l, (sym1, sym2), mt0) -> CompMix(Comp.TypCtxPi(l, (sym1, sym2), toComp mt0))
+  |  MTCtxPi(l, (sym1, sym2, dep), mt0) -> CompMix(Comp.TypCtxPi(l, (sym1, sym2, dep), toComp mt0))
   |  MTBool l -> CompMix(Comp.TypBool)
   |  MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
   |  MTPiBox(l, cdecl, mt0) -> CompMix(Comp.TypPiBox(l, cdecl, toComp mt0))
@@ -561,10 +561,6 @@ GLOBAL: sgn_eoi;
           dots  ->
           LF.Id (_loc) 
 
-
-       | co = SYMBOL; "("; dots ; ")"  -> 
-           LF.CoId (_loc, Id.mk_name (Id.SomeString co)  )
-
       | 
         sigma = SELF;   h = clf_head -> 
           LF.Dot (_loc, sigma, LF.Head h)
@@ -828,7 +824,8 @@ cmp_exp_syn:
     [ RIGHTA
       [
         "{"; psi = SYMBOL; ":"; "("; w = SYMBOL; ")"; "*"; "}"; mixtau = SELF ->
-          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi), Id.mk_name (Id.SomeString w)), mixtau)
+          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi), Id.mk_name (Id.SomeString w), Comp.Explicit), mixtau)
+
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->
           MTPiBox (_loc, ctyp_decl, mixtau)

@@ -264,7 +264,7 @@ and eval_branches (phat,tM) (branches, theta_eta) = match branches with
 	eval_branches (phat,tM) (branches, theta_eta))
       end
 
-and eval_branch (phat, tM) (BranchBox (cD, (cPsi' , tM', theta'), e)) (theta, eta) = 
+and eval_branch (phat, tM) (BranchBox (_cO, cD, (cPsi' , tM', theta', _delta), e)) (theta, eta) = 
   let mt      = mctxToMSub cD in 
   let theta_k = Whnf.mcomp theta' mt in 
     begin try

@@ -114,6 +114,7 @@ module Int : sig
     val branchToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.branch   -> string
     val compTypToString   : LF.mctx -> LF.mctx -> Comp.typ      -> string
     val msubToString      : LF.mctx -> LF.mctx -> LF.msub     -> string
+    val csubToString      : LF.mctx -> LF.csub                -> string
 
   end
 

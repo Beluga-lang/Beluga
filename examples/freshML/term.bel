@@ -8,6 +8,7 @@ nat: type.
 z: nat.
 suc: nat -> nat.
 
+
 term: type.
 lam   : (term -> term) -> term.
 app   : term -> term -> term.
@@ -164,13 +165,11 @@ env: type.
 empty: env.
 push: tm -> tp -> env -> env.
 
-
 opt: type.
 nothing: opt.
 just: tp -> opt.
 
 schema tms = tm ; 
-
 
 rec memb: {g:(tms)*} tm[g] -> env[g] -> opt [] = 
 FN g => fn e => fn l => case l of 
@@ -192,8 +191,7 @@ case e of
   let [g] L .. = l in  
     typing [g,x:tm] ([g,x] M .. x) ([g,x] push x T (L .. ))
 
-| [g] apply (M1 .. ) (M2 .. ) => 
-%  (case (typing [g] ([g] M1 .. ) ([g] L .. )) of 
+%{ | [g] apply (M1 .. ) (M2 .. ) => 
   (case typing [g] ([g] M1 .. ) l of 
      | [ ] just (arr T2 T) => 
        (case typing [g] ([g] M2 .. ) l of 
@@ -209,6 +207,7 @@ case e of
        )
      | [ ] U => [ ] nothing
   )
+}%
 ;
 
 

@@ -1899,7 +1899,7 @@ let rec mctxPVarPos cD p =
     | (Comp.Boolean b, t) -> Comp.Boolean(b)
 
 
-  (* cnormBranch (BranchBox (cD, (psihat, tM, (tA, cPsi)), e), theta) = 
+  (* cnormBranch (BranchBox (cO, cD, (psihat, tM, (tA, cPsi)), e), theta, cs) = 
 
      If  cD1 ; cG |- BranchBox (cD, (psihat, tM, (tA, cPsi)), e) <= [|theta|]tau
 
@@ -1926,7 +1926,7 @@ let rec mctxPVarPos cD p =
   BROKEN 
 
   *)
-  and cnormBranch (Comp.BranchBox (cD', (cPsi, tM, t), e) , theta) = 
+  and cnormBranch (Comp.BranchBox (cO, cD', (cPsi, tM, t,cs), e) , theta) = 
     (* cD' |- t <= cD    and   FMV(e) = cD' while 
        cD' |- theta' <= cD0
        cD0' |- theta <= cD0 
@@ -1934,7 +1934,7 @@ let rec mctxPVarPos cD p =
      * need to unify theta' and theta and then create a new cD'' under which the
      * branch makes sense
      *)
-      Comp.BranchBox (cD', (cPsi, norm (tM, LF.id), (cnormMSub t)), cnormExp (e, m_id))
+      Comp.BranchBox (cO, cD', (cPsi, norm (tM, LF.id), (cnormMSub t), cs), cnormExp (e, m_id))
     
 
   let rec cwhnfCtx (cG, t) = match cG with 
@@ -1997,7 +1997,7 @@ let rec mctxPVarPos cD p =
           convCTyp (tT2, t) (tT2', t')
 
 
-    | ((Comp.TypCtxPi ((_psi, cid_schema), tT1), t) , (Comp.TypCtxPi ((_psi', cid_schema'), tT1'), t'))
+    | ((Comp.TypCtxPi ((_psi, cid_schema, _ ), tT1), t) , (Comp.TypCtxPi ((_psi', cid_schema', _ ), tT1'), t'))
       -> cid_schema = cid_schema'
         && 
           convCTyp (tT1, t) (tT1', t')
@@ -2173,7 +2173,7 @@ let rec closedCTyp cT = match cT with
   | Comp.TypBox (_ , tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi 
   | Comp.TypArr (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2 
   | Comp.TypCross (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2 
-  | Comp.TypCtxPi ((_n, _schema), cT) -> closedCTyp cT
+  | Comp.TypCtxPi (_ctx_decl, cT) -> closedCTyp cT
   | Comp.TypPiBox ((ctyp_decl, _ ), cT) -> 
       closedCTyp cT && closedCDecl ctyp_decl  
   | Comp.TypClo (cT, t) -> closedCTyp(cnormCTyp (cT, t))  (* to be improved Sun Dec 13 11:45:15 2009 -bp *)

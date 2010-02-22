@@ -8,6 +8,7 @@ un : tp.
 schema w = block x:nat. nat;
 schema tps = tp;
 
+
 rec f : {g:(w)*} nat[g] -> nat[g] =
   FN g => fn e =>
     case e of
@@ -42,12 +43,13 @@ rec ffff2-a : {h:(tps)*} tp[h] -> tp[h] =
       [h] #q .. => [h] #q ..
 ;
 
-%not
+% not
 rec ffff2-a-misspell : {h:(tps)*} tp[h] -> tp[h] =
   FN h => fn eTp =>
     case eTp of
       [g] #q .. => [g] #q ..        % Unknown context variable in context: g
 ;
+
 
 %not
 rec ffff3 : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
@@ -55,8 +57,10 @@ rec ffff3 : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
     case eTp of [h] #pp.1 .. => [g] z             % Fails: tps doesn't include any Sigmas
 ;
 
-rec ffff4 : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
-  FN g => FN h => fn eNat => fn eTp =>
+
+rec ffff4 : {h:(tps)*}{g:(w)*}  nat[g] -> tp[h] -> nat[g] =
+  FN h => FN g => fn eNat => fn eTp =>
     case eNat of
       [g] #pp'.1 .. => [g] #pp'.2 ..
 ;
+

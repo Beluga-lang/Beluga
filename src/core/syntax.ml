@@ -89,12 +89,15 @@ module Int = struct
      | MV   of offset                          (*    | u//u | p//p               *)
      | MUndef
 
-
    and msub =                                  (* Contextual substitutions       *)
      | MShift of int                           (* theta ::= ^n                   *)
      | MDot   of mfront * msub                 (*       | MFt . theta            *)
 
-    and ctx_offset = 
+   and csub =                                  (* Context substitutions          *)
+     | CShift of int                           (* delta ::= ^n                   *)
+     | CDot   of dctx * csub                   (*       | cPsi .delta            *)
+
+   and ctx_offset = 
       | CtxShift of ctx_var
       | NoCtxShift
       | NegCtxShift of ctx_var
@@ -107,8 +110,6 @@ module Int = struct
       | PInst  of head   option ref * dctx * typ * cnstr list ref
           (* D ; Psi |- H => A
              provided constraint *)
-      | CInst  of dctx   option ref * cid_schema
-          (* D |- Psi : schema   *)
 
     and mm_var  =                               (* Meta² Variables                *)
       | MInst   of normal option ref * mctx * dctx * typ * cnstr list ref
@@ -137,6 +138,9 @@ module Int = struct
     and ctx_var = 
       | CtxName   of name
       | CtxOffset of offset
+      | CInst  of dctx  option ref * cid_schema option * (mctx * mctx)
+          (* D |- Psi : schema   *)
+
 
     and 'a ctx =                           (* Generic context declaration    *)
       | Empty                              (* Context                        *)
@@ -219,7 +223,7 @@ module Int = struct
       | TypSBox  of Loc.t option * LF.dctx * LF.dctx
       | TypArr   of typ * typ
       | TypCross of typ * typ
-      | TypCtxPi of (name * cid_schema) * typ
+      | TypCtxPi of (name * cid_schema * depend) * typ
       | TypPiBox of (LF.ctyp_decl * depend) * typ
       | TypClo   of typ *  LF.msub
       | TypBool
@@ -263,9 +267,8 @@ module Int = struct
 
 
     and branch =
-      | BranchBox  of LF.mctx
-(*          * (LF.dctx * LF.normal * (LF.msub * LF.mctx)) *)
-          * (LF.dctx * LF.normal * LF.msub) 
+      | BranchBox  of LF.mctx * LF.mctx
+          * (LF.dctx * LF.normal * LF.msub * LF.csub) 
           * exp_chk
 
       | BranchSBox of LF.mctx
@@ -337,7 +340,6 @@ module Ext = struct
       | PVar  of Loc.t * name * sub
       | ProjName  of Loc.t * int * name
       | ProjPVar  of Loc.t * int * (name * sub)
-      | CoPVar of Loc.t * name * name * int * sub
 
     and spine =
       | Nil
@@ -347,7 +349,7 @@ module Ext = struct
       | EmptySub of Loc.t
       | Dot      of Loc.t * sub * front
       | Id       of Loc.t
-      | CoId     of Loc.t * name 
+
 
     and front =
       | Head     of head
@@ -379,7 +381,7 @@ module Ext = struct
 
 
     and psi_elem = VarName of name | CoName of name * name
-    and psi_hat = psi_elem list
+    and psi_hat  = psi_elem list
 
     and mctx     = ctyp_decl ctx          
 
@@ -387,23 +389,23 @@ module Ext = struct
       | NamePrag of name * string * string option 
       | NotPrag
 
-    and co_typ = CoTyp of name * name 
-
-    and coercion   = co_branch list
-    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec option
-
   end
 
 
   (** External Computation Syntax *)
   module Comp = struct
 
+   type depend =  
+     | Implicit
+     | Explicit
+
     type typ =                                     (* Computation-level types *)
       | TypBox   of Loc.t * LF.typ  * LF.dctx      (* tau ::= A[Psi]          *)
 (*    | TypSBox  of LF.dctx * LF.dctx              (\*    | Phi[Psi]      *\) *)
       | TypArr   of Loc.t * typ * typ              (*     | tau -> tau        *)
       | TypCross of Loc.t * typ * typ              (*     | tau * tau         *)
-      | TypCtxPi of Loc.t * (name * name) * typ    (*     | Pi psi:(w)*. tau  *)
+      | TypCtxPi of Loc.t * (name * name * depend) * typ 
+                                                   (*     | Pi psi:(w)*. tau  *)
       | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *)
       | TypBool                                    (*     | Bool              *)
 
@@ -538,8 +540,6 @@ module Apx = struct
       | FVar  of name
       | FMVar of name   * sub
       | FPVar of name   * sub
-      | CoFPVar of cid_coercion * name * int * sub
-      | CoPVar of cid_coercion * cvar * int * sub
 
     and spine =
       | Nil
@@ -548,7 +548,6 @@ module Apx = struct
     and sub =
       | EmptySub
       | Id
-      | CoId  of Loc.t * cid_coercion
       | Dot   of front * sub
 
     and front =
@@ -568,7 +567,6 @@ module Apx = struct
     and ctx_var = 
       | CtxName   of name
       | CtxOffset of offset
-      | CoCtx    of cid_coercion * ctx_var       
 
     and 'a ctx =
       | Empty
@@ -582,22 +580,21 @@ module Apx = struct
 
     and psi_hat = (Int.LF.ctx_var) option * offset
 
-    and co_typ = CoTyp of cid_schema * cid_schema
-
-    and coercion   = co_branch list
-    and co_branch  = CoBranch of typ_decl ctx * typ_rec * typ_rec option
-
   end
 
 
   (** Approximate Computation Syntax *)
   module Comp = struct
 
+   type depend =  
+     | Implicit
+     | Explicit
+
     type typ =
       | TypBox     of Loc.t * LF.typ  * LF.dctx
       | TypArr     of typ * typ
       | TypCross   of typ * typ
-      | TypCtxPi   of (name * cid_schema) * typ
+      | TypCtxPi   of (name * cid_schema * depend) * typ
       | TypPiBox   of LF.ctyp_decl * typ
       | TypBool
 

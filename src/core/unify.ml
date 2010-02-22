@@ -60,10 +60,11 @@ module type UNIFY = sig
   exception Unify of string
 
   (* All unify* functions return () on success and raise Unify on failure *)
-  val unify    : mctx -> dctx  -> nclo  -> nclo -> unit
-  val unifyTyp : mctx -> dctx  -> tclo  -> tclo -> unit
-  val unifyTypRec : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
-  val unifyDCtx:   mctx -> dctx -> dctx -> unit
+  val unify        : mctx -> dctx  -> nclo  -> nclo -> unit
+  val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
+  val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
+  val unifyDCtx    : mctx -> mctx -> dctx -> dctx -> unit
+
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
 
@@ -2166,7 +2167,7 @@ module Make (T : TRAIL) : UNIFY = struct
           (match (isPatSub s1' , isPatSub s2') with
              | (true, true) ->
                  (* no occurs check necessary, because s1' and s2' are pattern subs. *)
-                 let _ = (unifyDCtx' mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
+                 let _ = (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
                           unifyTyp mflag cD0 cPsi1 (tA1, id) (tA2, id)) in 
                  let ss = invert s1' in
                  let phat = Context.dctxToHat cPsi in 
@@ -2186,7 +2187,7 @@ module Make (T : TRAIL) : UNIFY = struct
                     instantiatePVar (q1, PVar(p, comp ss (comp s2' s')), !cnstr1))
 
              | (true, false) ->
-                 let _ = (unifyDCtx' mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
+                 let _ = (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
                           unifyTyp mflag cD0 cPsi1 (tA1, id) (tA2, id)) in 
 
                   (* only s1' is a pattern sub
@@ -2198,7 +2199,7 @@ module Make (T : TRAIL) : UNIFY = struct
                    instantiatePVar (q1, PVar(q2',s'), !cnstr1)
 
              | (false, true) ->
-                 let _ = (unifyDCtx' mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
+                 let _ = (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
                           unifyTyp mflag cD0 cPsi1 (tA1, id) (tA2, id)) in 
 
                  (* only s2' is a pattern sub *)
@@ -2418,7 +2419,7 @@ module Make (T : TRAIL) : UNIFY = struct
    
 
    (* Unify pattern fragment, and force constraints after pattern unification succeeded *)
-   and unifyDCtx' mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
+ and unifyDCtx1 mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 
       (* | (CtxVar (CtxOffset psi1) , CtxVar (CtxOffset psi2)) -> *)
@@ -2428,7 +2429,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
       | (DDec (cPsi1, TypDecl(_ , tA1)) , DDec (cPsi2, TypDecl(_ , tA2))) -> 
-            unifyDCtx' mflag cD0 cPsi1 cPsi2 ; 
+            unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
             unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id)
       | _ -> raise_ (Unify "Context clash")
 
@@ -2440,7 +2441,7 @@ module Make (T : TRAIL) : UNIFY = struct
     and unifyCompTypW cD tau_t tau_t' = match (tau_t,  tau_t') with
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) -> 
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in 
-          (unifyDCtx' Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
+          (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
            unifyTyp Unification cD cPsi1 (Whnf.cnormTyp (tA, t), id)  (Whnf.cnormTyp (tA', t'), id)
           )
 
@@ -2464,7 +2465,7 @@ module Make (T : TRAIL) : UNIFY = struct
           let  tAn'  = Whnf.cnormTyp (tA', t') in 
           let cPsin  = Whnf.cnormDCtx (cPsi, t) in 
           let cPsin' = Whnf.cnormDCtx (cPsi', t') in 
-            (unifyDCtx' Unification cD cPsin cPsin' ; 
+            (unifyDCtx1 Unification cD cPsin cPsin' ; 
              unifyTyp Unification cD cPsin (tAn, id)  (tAn', id)   ;
              unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
             )
@@ -2596,11 +2597,8 @@ module Make (T : TRAIL) : UNIFY = struct
       unifyTyp' Unification cD0 cPsi sA sB
 
 
-    let unifyDCtx cD0 cPsi1 cPsi2 =
-      unifyDCtx' Unification cD0 cPsi1 cPsi2
-
-    let matchDCtx cD0 cPsi1 cPsi2 = 
-      unifyDCtx' Matching cD0 cPsi1 cPsi2
+    let unifyDCtx cO cD0 cPsi1 cPsi2 =
+      unifyDCtx1 Unification cD0 cPsi1 cPsi2 
 
     let matchTerm cD0 cPsi sM sN = 
       unify' Matching cD0 cPsi sM sN

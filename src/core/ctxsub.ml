@@ -20,13 +20,13 @@ exception Violation of string
 
 module Comp = Syntax.Int.Comp
 
-module Unify = Unify.EmptyTrail
+
 
   (* ctxToSub cPsi:
    *
    * generates, based on cPsi, a substitution suitable for unification
    *
-   * Currently broken: assumes all types in cPsi are atomic
+   * Assumes all types in cPsi are atomic -bp
    *)
   let rec ctxToSub cPsi = match cPsi with
     | Null -> LF.id
@@ -289,13 +289,355 @@ and csub_exp_syn cPsi k i' = match i' with
         
 
 and csub_branch cPsi k branch = match branch with 
-  | Comp.BranchBox (cD, (cPhi, tM, ms), e) -> 
-      let cPhi' = csub_dctx Empty (*dummy *) cPsi k cPhi in 
+  | Comp.BranchBox (cO, cD, (cPhi, tM, ms, cs), e) -> 
+    (* currently we ignore the extra binding of context variables
+       Feb 17 2010 - bp *)
+      let cPhi' = csub_dctx Empty (*dummy *) cPsi k cPhi in  
       let tM'   = csub_norm cPsi k tM in 
       let ms'   = csub_msub cPsi k ms in 
       let e'    = csub_exp_chk cPsi k e in 
       let cD'   = csub_mctx cPsi k cD in 
-        Comp.BranchBox (cD', (cPhi', tM', ms'), e')
+        Comp.BranchBox (cO, cD', (cPhi', tM', ms', cs), e')
 
 
 
+
+(* Normalizing terms and types with csub, i.e. a substitution for context variables *)
+
+
+
+let id_csub cO = 
+  let rec gen_id cO k = match cO with
+  | Empty -> CShift k 
+  | Dec (cO', CDecl(_psi, _sW)) -> 
+      CDot(CtxVar (CtxOffset (k+1)), gen_id cO' (k+1) )
+  | Dec (cO', CDeclOpt _ ) -> 
+      CDot(CtxVar (CtxOffset (k+1)), gen_id cO' (k+1) )
+  in 
+    gen_id cO 0
+
+
+
+(*
+
+  x,y,z  |-  f(x,z) = y    instantiate y = 2 
+
+   x,z   | x, f(x,z), z    lower all indices > 2 namely 3 by 1.
+
+
+*)
+
+let rec apply_csub (CtxOffset offset) cs =  
+  let rec apply offset cs = begin match (offset, cs) with
+    | (n, CShift k)         -> CtxVar (CtxOffset (n + k))
+    | (1, CDot (cPsi, cs')) -> cPsi
+    | (n, CDot (_ , cs'))   -> apply (n-1) cs' 
+  end
+  in 
+    apply offset cs
+
+
+let rec ccomp cs1 cs2 = match (cs1, cs2) with
+  | (CShift 0, cs) -> cs
+  | (cs, CShift 0) -> cs
+  | (CShift n, CShift m) -> CShift (n+m)
+  | (CShift n, CDot (_ft, cs)) ->
+        ccomp (CShift (n - 1)) cs
+
+  | (CDot (cPsi, cs1'), cs2') -> 
+      CDot (ctxnorm_dctx (cPsi, cs2'),  ccomp cs1' cs2')
+
+and cdot1 cs = match cs with
+  | CShift 0 -> cs
+  | cs -> CDot ( CtxVar (CtxOffset 1), ccomp cs (CShift 1))
+
+and ctxnorm (tM, cs) = match tM with
+  | Lam (loc,y,tN) -> Lam (loc, y, ctxnorm (tN, cs))
+  | Tuple (loc, tuple) -> Tuple (loc, ctxnorm_tuple (tuple, cs)) 
+  | Clo (tN, s) -> Clo (ctxnorm (tN, cs), ctxnorm_sub (s, cs))
+  | Root( loc, h, tS) -> 
+      Root (loc, ctxnorm_head (h, cs), ctxnorm_spine (tS, cs))
+
+and ctxnorm_tuple (tuple, t) = match tuple with
+  | Last tM -> Last (ctxnorm (tM, t))
+  | Cons (tM, rest) ->
+      let tM' = ctxnorm (tM, t) in
+      let rest' = ctxnorm_tuple (rest, t) in
+        Cons (tM', rest')
+
+
+and ctxnorm_head (h,cs) = match h with
+  | MVar (u, s) -> MVar (u, ctxnorm_sub (s, cs))
+  | PVar (p, s) -> PVar (p, ctxnorm_sub (s, cs))
+  | MMVar (u, (t,s)) -> MMVar (u, (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs)))
+  | Proj(PVar (p,s), k) -> 
+      Proj(PVar (p, ctxnorm_sub (s, cs)), k)
+  | _ -> h 
+
+and ctxnorm_spine (tS, cs) = match tS with
+  | Nil -> Nil
+  | App (tN, tS) -> App (ctxnorm (tN, cs) , ctxnorm_spine (tS, cs))
+  | SClo (tS, s) -> SClo (ctxnorm_spine (tS, cs), ctxnorm_sub (s, cs))
+
+and ctxnorm_sub (s, cs) = match s with
+  | Shift (NoCtxShift, _k) -> s
+  | Shift (CtxShift ctxvar, k) -> 
+      begin match apply_csub ctxvar cs with
+        | CtxVar cvar -> Shift (CtxShift cvar, k)
+        | Null        -> Shift (NoCtxShift, k)
+        | DDec _ as cPsi -> 
+            begin match Context.dctxToHat cPsi with
+              | (Some ctx_v, d) -> 
+                  Shift (CtxShift ctx_v, k + d)
+                    
+              | (None, d) ->
+                  Shift (NoCtxShift, k + d)
+            end
+      end
+
+  | Shift (NegCtxShift ctxvar, k) -> 
+      begin match apply_csub ctxvar cs with
+        | CtxVar cvar -> Shift (NegCtxShift cvar, k)
+        | Null        -> Shift (NoCtxShift, k)
+        | DDec _ as cPsi -> 
+            let rec undef_sub d s = 
+              if d = 0 then s 
+              else undef_sub (d-1) (Dot(Undef, s)) 
+            in 
+              begin match Context.dctxToHat cPsi with
+                | (Some ctx_v, d) -> 
+                    (* Psi |- s : psi  and psi not in Psi and |Psi| = k 
+                     * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi 
+                     *)                      
+                    undef_sub d (Shift (NegCtxShift ctx_v, k))
+                      
+                | (None, d) -> undef_sub d (Shift (NoCtxShift, k))
+                    
+              end
+
+      end
+
+  | Dot (ft, s) -> Dot (ctxnorm_ft (ft, cs) , ctxnorm_sub (s, cs))
+
+and ctxnorm_ft (ft, cs) = match ft with 
+  | Head h  -> Head (ctxnorm_head (h, cs))
+  | Obj tN  -> Obj (ctxnorm (tN, cs))
+  | Undef   -> Undef
+
+
+and ctxnorm_msub (ms, cs) = match ms with
+  | MShift k -> MShift k
+  | MDot (mf, ms') -> 
+      MDot (ctxnorm_mft (mf,cs)  ,  ctxnorm_msub (ms', cs))
+
+and ctxnorm_mft (mf, cs) = match mf with
+  | MObj (phat, tM) -> MObj (phat, ctxnorm (tM,cs))
+  | PObj (phat, h)  -> PObj (phat, ctxnorm_head (h ,cs))
+  | _ -> mf
+
+
+and ctxnorm_typ (tA, cs) = match tA with
+  | Atom (loc, a, tS) -> Atom (loc, a, ctxnorm_spine (tS, cs))
+  | PiTyp ((TypDecl (x, tA), dep), tB) -> 
+      PiTyp ((TypDecl (x, ctxnorm_typ (tA, cs)), dep), ctxnorm_typ (tB, cs))
+  | TClo (tA, s) -> 
+      TClo (ctxnorm_typ (tA, cs), ctxnorm_sub (s, cs))
+  | Sigma trec -> 
+      Sigma (ctxnorm_trec (trec, cs))
+
+and ctxnorm_trec (trec, cs) = match trec with
+  | SigmaLast tA -> SigmaLast (ctxnorm_typ (tA, cs))
+  | SigmaElem (x, tA, trec) -> 
+      SigmaElem (x, ctxnorm_typ (tA, cs), ctxnorm_trec (trec, cs))
+
+
+and ctxnorm_dctx (cPsi, cs) = match cPsi with 
+  | Null -> Null
+  | DDec (cPsi', TypDecl (x, tA)) -> 
+      DDec (ctxnorm_dctx (cPsi', cs), TypDecl (x, ctxnorm_typ (tA, cs)))
+  | CtxVar ctxvar -> begin match apply_csub ctxvar cs with
+      | CtxVar cvar -> CtxVar cvar
+      | Null        -> Null 
+      | DDec _ as cPhi -> 
+          cPhi
+    end
+
+let rec ctxnorm_psihat (phat, cs) = match phat with
+  | (None , _ ) -> phat
+  | (Some cvar, k) -> 
+      begin match Context.dctxToHat (apply_csub cvar cs) with
+        | (None, i) -> (None, k+i)
+        | (Some cvar', i) -> (Some cvar', i+k)
+      end
+
+
+let rec ctxnorm_mctx (cD, cs) = match cD with
+  | Empty -> Empty
+  | Dec(cD', cdec) -> 
+      Dec (ctxnorm_mctx (cD', cs), ctxnorm_cdec (cdec, cs))
+
+and ctxnorm_cdec (cdec, cs) = match cdec with
+  | MDecl (u, tA, cPsi) -> 
+      MDecl(u, ctxnorm_typ (tA, cs), ctxnorm_dctx (cPsi, cs))
+  | PDecl (u, tA, cPsi) -> 
+      PDecl(u, ctxnorm_typ (tA, cs), ctxnorm_dctx (cPsi, cs))
+  | MDeclOpt _ -> cdec
+  | PDeclOpt _ -> cdec
+
+
+
+let rec ctxnorm_ctyp (cT, cs) = match cT with
+  | Comp.TypBool -> Comp.TypBool
+  | Comp.TypBox (loc, tA, cPsi) -> 
+     Comp.TypBox (loc, ctxnorm_typ (tA, cs), ctxnorm_dctx (cPsi, cs))
+  | Comp.TypArr (cT1, cT2) -> 
+      Comp.TypArr (ctxnorm_ctyp (cT1, cs), ctxnorm_ctyp (cT2, cs))
+  | Comp.TypCross (cT1, cT2) -> 
+      Comp.TypCross (ctxnorm_ctyp (cT1, cs), ctxnorm_ctyp (cT2, cs))
+  | Comp.TypPiBox ((cdecl, dep), cT) -> 
+      Comp.TypPiBox ((ctxnorm_cdec (cdecl, cs), dep), 
+                     ctxnorm_ctyp (cT, cs))
+  | Comp.TypCtxPi (ctx_dec, cT) -> 
+     Comp.TypCtxPi (ctx_dec, ctxnorm_ctyp (cT, cdot1 cs))
+  | Comp.TypClo (cT, t) -> 
+      Comp.TypClo (ctxnorm_ctyp (cT, cs), ctxnorm_msub (t, cs))
+
+
+
+let rec ctxnorm_gctx (cG, cs) = match cG with
+  | Empty -> Empty
+  | Dec(cG, Comp.CTypDecl (x, cT)) -> 
+      Dec(ctxnorm_gctx (cG, cs), Comp.CTypDecl (x, ctxnorm_ctyp (cT, cs)))
+
+
+let rec lookupSchema cO psi_offset = match (cO, psi_offset) with
+  | (Dec (_cO, CDecl (_, cid_schema)), 1) -> Some (cid_schema)
+  | (Dec (cO, _) , i) -> 
+      lookupSchema cO (i-1)
+  | _ -> None
+
+
+(* instantiate  1 with 2    1/1  2/2    
+           2/1  2/2   but we just eliminated the first declaration so
+           1/1  1/2   i.e. lower all indices >=1 by 1.
+                 |cO| = 2  –-> |cO'| = 1 *)
+(* instantiate  2 with 1    1/1  1/2 *)
+let rec inst_csub cPsi2 offset' csub cO = 
+  let rec update_octx cO1 offset sW = 
+    begin match (cO1, offset) with
+      | (Dec (cO', CDeclOpt psi_name ), 1) ->      
+          let _ = print_string ("Updated schema \n") in
+           Dec(cO', CDecl (psi_name, sW ))
+      | (Dec (cO', cdec), k) -> 
+          Dec(update_octx cO' (k-1) sW, cdec)  
+    end in
+
+let rec check_schema_known cPsi2 cO = 
+    let Some (CtxOffset psi2_offset) = Context.ctxVar cPsi2 in
+      begin match lookupSchema cO psi2_offset with 
+          None   -> 
+            let _ = print_string ("Schema not known for " ^ string_of_int psi2_offset ^ "\n") in
+            let Some sW = lookupSchema cO offset' in 
+            let _ = print_string ("Found schema for " ^ string_of_int offset' ^ "\n") in
+              update_octx cO psi2_offset sW
+        | Some _ ->   let _ = print_string ("Schema known for " ^ string_of_int psi2_offset ^ "\n")
+          in cO
+      end in
+
+
+  let rec decrement_csub cs  = 
+    begin match cs with
+      | CShift k -> CShift (k-1)
+      | CDot (cPsi, cs) -> CDot (ctxnorm_dctx (cPsi, CShift(-1)), decrement_csub cs)
+    end in 
+
+  let rec inst  offset csub cO' = 
+    begin match (offset, csub, cO') with 
+      | (1, CDot(_ , cs), Dec(cO', _ ) ) -> 
+          (* cO |-  cPsi2      and   cO_new |- cs : cO' *)
+          (*  lower all indices > offset' in Psi2 by k *)
+          let cPsi2' = ctxnorm_dctx (cPsi2, CShift(-1)) in 
+          let cs'    = decrement_csub cs in 
+          (cO', CDot (cPsi2', cs'))
+
+      | (n, CDot(ft, cs), Dec(cO', ((CDecl _ ) as dec))) -> 
+          let (cO', cs') = inst (n-1) cs cO' in 
+            (Dec(cO', dec), CDot(ft, cs'))
+
+    end 
+    in 
+  let cO' = check_schema_known cPsi2 cO in 
+     inst offset' csub cO'
+    
+
+
+(*
+Not needed for now? 
+Wed Feb 17 16:35:22 2010 -bp 
+
+let rec ctxnorm_exp_chk (e', cs) = 
+  match e' with 
+  | Comp.Syn (loc, i) -> 
+      Comp.Syn(loc, ctxnorm_exp_syn (i, cs))
+  | Comp.Rec (loc, n, e) -> 
+      Comp.Rec(loc, n, ctxnorm_exp_chk (e,cs))
+  | Comp.Fun (loc, n, e) -> 
+      Comp.Fun(loc, n, ctxnorm_exp_chk (e, cs))
+  | Comp.CtxFun (loc, n, e) -> 
+      Comp.CtxFun(loc, n, ctxnorm_exp_chk (e, Ctxsub.cdot1 cs))
+  | Comp.MLam (loc, u, e) -> 
+      Comp.MLam(loc, u, ctxnorm_exp_chk (e, cs))
+  | Comp.Pair (loc, e1, e2) -> 
+      let e1' = ctxnorm_exp_chk (e1,cs) in 
+      let e2' = ctxnorm_exp_chk (e2, cs) in 
+        Comp.Pair (loc, e1', e2')
+
+  | Comp.LetPair (loc, i, (x,y,e)) -> 
+      let i1 = ctxnorm_exp_syn (i, cs) in 
+      let e1 = ctxnorm_exp_chk (e, cs) in 
+        Comp.LetPair (loc, i1, (x,y,e1))
+
+  | Comp.Box (loc, phat, tM) -> 
+      let phat' = ctxnorm_psihat (phat, cs) in 
+      let tM'   = ctxnorm (tM, cs) in 
+        Comp.Box (loc, phat', tM')
+
+  | Comp.Case (loc, i, branches) -> 
+      let i1 = ctxnorm_exp_syn (i,cs) in 
+      let branches' = List.map (fun b -> csub_branch (b,cs)) branches in 
+        Comp.Case (loc, i1, branches')
+
+and ctxnorm_exp_syn (i',cs) = match i' with
+  | Comp.Const _c -> i'
+  | Comp.Var _    -> i'
+  | Comp.Apply (loc, i, e) -> 
+      let i1 = ctxnorm_exp_syn (i,cs) in 
+      let e1 = ctxnorm_exp_chk (e,cs) in 
+        Comp.Apply (loc, i1, e1)
+  | Comp.CtxApp (loc, i, cPhi) -> 
+      let cPhi' = ctxnormb_dctx (cPhi, cs) in 
+      let i1    = ctxnorm_exp_syn (i, cs) in 
+        Comp.CtxApp (loc, i1, cPhi')
+
+  | Comp.MApp (loc, i, (phat, tM)) -> 
+      let i1 = ctxnorm_exp_syn (i,cs) in 
+      let tM' = ctxnorm (tM, cs)  in
+      let phat' = ctxnorm_psihat (phat, cs) in 
+        Comp.MApp (loc, i1, (phat', tM'))
+
+  | Comp.Ann (e, tau) -> 
+      let e' = ctxnorm_exp_chk (e, cs) in 
+      let tau' = ctxnorm_ctyp (tau, cs) in 
+        Comp.Ann (e', tau')
+        
+
+and ctxnorm_branch (branch,cs') = match branch with 
+  | Comp.BranchBox (cO, cD, (cPhi, tM, ms, cs), e) -> 
+    (* technically, we need to unify cs and cs'
+       Feb 17 2010 - bp *)
+        Comp.BranchBox (cO, cD, (cPhi, tM, ms, cs), e)
+
+
+
+
+*)

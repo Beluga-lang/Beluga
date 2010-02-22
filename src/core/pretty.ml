@@ -152,6 +152,7 @@ module Int = struct
     val branchToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.branch   -> string
     val compTypToString   : LF.mctx -> LF.mctx -> Comp.typ      -> string
     val msubToString      : LF.mctx -> LF.mctx -> LF.msub     -> string
+    val csubToString      : LF.mctx -> LF.csub     -> string
 
   end (* Int.PRINTER *)
 
@@ -449,6 +450,16 @@ module Int = struct
           fprintf ppf "_"
 
 
+    and fmt_ppr_lf_csub cO lvl ppf = function
+      | LF.CShift k ->
+          fprintf ppf "^%s" (string_of_int k)
+
+      | LF.CDot (cPsi, cs) ->
+          fprintf ppf "%a@ ,@ %a"
+            (fmt_ppr_lf_dctx cO LF.Empty 0) cPsi
+            (fmt_ppr_lf_csub cO lvl) cs
+
+
     and fmt_ppr_lf_msub cO cD lvl ppf = function
       | LF.MShift k ->
           fprintf ppf "^%s" (string_of_int k)
@@ -740,6 +751,10 @@ module Int = struct
       | LF.PDeclOpt name -> 
           fprintf ppf "{%s :: _ }"
             (R.render_name name)
+      | LF.CDeclOpt name -> 
+          fprintf ppf "{%s :: _ }"
+            (R.render_name name)
+
 
     (* Computation-level *)
 
@@ -765,7 +780,7 @@ module Int = struct
               (fmt_ppr_cmp_typ cO cD 0) tau2
               (r_paren_if cond)
 
-      | Comp.TypCtxPi ((psi, w), tau) ->
+      | Comp.TypCtxPi ((psi, w, _ ), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s{%s:(%s)*} %a%s"
               (l_paren_if cond)
@@ -975,7 +990,7 @@ module Int = struct
 
 
     and fmt_ppr_cmp_branch cO cD cG _lvl ppf = function
-      | Comp.BranchBox (cD1', (cPsi, tM, t), e) ->
+      | Comp.BranchBox (cO', cD1', (cPsi, tM, t, cs), e) ->
           let rec ppr_ctyp_decls cO ppf = function
             | LF.Empty             -> fprintf ppf ""
 
@@ -985,12 +1000,14 @@ module Int = struct
                   (fmt_ppr_lf_ctyp_decl cO cD 1) decl
           in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
-            fprintf ppf "%a @ ([%a] %a) @ : %a  => @ @[<2>%a@]@ "
-              (ppr_ctyp_decls cO) cD1'
-              (fmt_ppr_lf_psi_hat cO 0) cPsi
-              (fmt_ppr_lf_normal cO cD1' cPsi 0) tM
+            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ "
+              (fmt_ppr_lf_octx 0) cO'
+              (ppr_ctyp_decls cO') cD1'
+              (fmt_ppr_lf_psi_hat cO' 0) cPsi
+              (fmt_ppr_lf_normal cO' cD1' cPsi 0) tM
               (* (fmt_ppr_lf_msub cO cD1' 2) t   *)
-              (fmt_ppr_refinement cO cD1' cD 2) t
+              (fmt_ppr_refinement cO' cD1' cD 2) t
+              (fmt_ppr_lf_csub cO' 0) cs
               (* NOTE: Technically: cD |- cG ctx and 
                *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
                * -bp
@@ -1089,6 +1106,7 @@ module Int = struct
     let ppr_lf_front cO cD cPsi   = fmt_ppr_lf_front cO cD cPsi   std_lvl std_formatter
     let ppr_lf_msub cO  cD        = fmt_ppr_lf_msub cO cD         std_lvl std_formatter
     let ppr_lf_mfront cO cD       = fmt_ppr_lf_mfront cO cD       std_lvl std_formatter
+    let ppr_lf_csub cO            = fmt_ppr_lf_csub cO            std_lvl std_formatter
 
     let ppr_lf_cvar cO cD         = fmt_ppr_lf_cvar cO cD         std_lvl std_formatter
 
@@ -1190,6 +1208,10 @@ module Int = struct
 
     let msubToString cO cD   s    = 
       fmt_ppr_lf_msub cO cD std_lvl str_formatter s
+      ; flush_str_formatter ()
+
+    let csubToString cO cs    = 
+      fmt_ppr_lf_csub cO std_lvl str_formatter cs
       ; flush_str_formatter ()
 
   end (* Int.Make *)

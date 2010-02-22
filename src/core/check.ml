@@ -267,7 +267,8 @@ and lookupCtxVar cO cvar =
           dprint (fun () -> "check: cPsi' (context of pvar)    = " ^ P.dctxToString cO cD cPsi') ;
           dprint (fun () -> "check:  cPsi (context in pattern) = " ^ P.dctxToString cO cD cPsi) ;
           dprint (fun () -> "check: synthesizing " ^ P.typToString cO cD cPsi (tA, s) ^ " for PVar") ;
-          
+          dprint (fun () -> "check: [Show OCtx] cO = " ^ P.octxToString cO ) ; 
+          dprint (fun () -> "check: [Show MCtx] cD = " ^ P.mctxToString cO cD) ;  
           (* Check that something of type tA could possibly appear in cPsi *)
           if not (canAppear cO cD cPsi (tA, s)) then
             raise (Violation ("Parameter variable of type " ^ P.typToString cO cD cPsi (tA, s)
@@ -835,7 +836,7 @@ module Comp = struct
         checkTyp cO cD tau1;
         checkTyp cO cD tau2
           
-    | TypCtxPi ((psi_name, schema_cid), tau) ->
+    | TypCtxPi ((psi_name, schema_cid, _ ), tau) ->
         checkTyp (I.Dec (cO, I.CDecl (psi_name, schema_cid))) cD tau
           
     | TypPiBox ((cdecl, _), tau) ->
@@ -866,7 +867,7 @@ module Comp = struct
     | (Fun (_, x, e), (TypArr (tau1, tau2), t)) ->
         check cO cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t)))) e (tau2, t)
 
-    | (CtxFun (_, psi, e) , (TypCtxPi ((_psi, schema), tau), t)) ->
+    | (CtxFun (_, psi, e) , (TypCtxPi ((_psi, schema, _ ), tau), t)) ->
         check (I.Dec(cO, I.CDecl(psi, schema))) cD cG e (tau, t)
 
     | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
@@ -944,7 +945,7 @@ module Comp = struct
 
     | CtxApp (loc, e, cPsi) ->
         begin match C.cwhnfCTyp (syn cO cD cG e) with
-          | (TypCtxPi ((_psi, w) , tau), t) ->
+          | (TypCtxPi ((_psi, w, _ ) , tau), t) ->
               let tau1 = Ctxsub.csub_ctyp cD cPsi 1 (Whnf.cnormCTyp (tau,t)) in
                 LF.checkSchema cO cD cPsi (Schema.get_schema w);
                  (* (tau', t') *)
@@ -1056,24 +1057,25 @@ module Comp = struct
 *)
   and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
     match branch with
-      | BranchBox (cD1',  (_cPsi1, (I.Root(loc, _, _ ) as tR1), t1),  e1) ->
+      | BranchBox (cO1', cD1',  (_cPsi1, (I.Root(loc, _, _ ) as tR1), t1, cs),  e1) ->
           (* By invariant: cD1' |- t1 <= cD *)
-          let _         = LF.checkMSub cO cD1' t1 cD in  
-          let tP1   = Whnf.cnormTyp (tP, t1) in 
-          let cPsi1 = Whnf.cnormDCtx (cPsi, t1) in
-          let _  = LF.check cO cD1' cPsi1 (tR1, S.LF.id)  (tP1, S.LF.id) in 
+          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  
+          let tP1   = Whnf.cnormTyp (Ctxsub.ctxnorm_typ (tP, cs), t1) in 
+          let cPsi1 = Whnf.cnormDCtx (Ctxsub.ctxnorm_dctx (cPsi, cs), t1) in
+          let _  = LF.check cO1' cD1' cPsi1 (tR1, S.LF.id)  (tP1, S.LF.id) in 
 
-          let cG' = Whnf.cnormCtx (cG, t1) in 
+          let cG' = Whnf.cnormCtx (Ctxsub.ctxnorm_gctx (cG, cs), t1) in 
           let t'' = Whnf.mcomp t t1 in
 
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.mctxToString cO cD1' ^ " . " ^ 
-                        P.normalToString cO cD1' cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
-                            P.expChkToString cO cD1' cG' e1 ^ 
-                            "\n has type "  ^ P.compTypToString cO cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
+                        P.octxToString cO1' ^ " ; \n" ^ 
+                        P.mctxToString cO1' cD1' ^ " ;\n " ^ 
+                        P.normalToString cO1' cD1' cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
+                            P.expChkToString cO1' cD1' cG' e1 ^ 
+                            "\n has type "  ^ P.compTypToString cO1' cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
                        )
           in
-            check cO cD1' cG' e1 (tau, t'')
+            check cO1' cD1' cG' e1 (tau, t'')
 
 end
   

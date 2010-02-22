@@ -1547,10 +1547,10 @@ and collectPattern cQ cD cPsi (phat, tM) tA =
 
 
 and collectBranch cQ branch = match branch with
-  | Comp.BranchBox (cD, pat, e) -> 
+  | Comp.BranchBox (cO, cD, pat, e) -> 
       (* pat and cD cannot contain any free meta-variables *)
       let (cQ', e') =  collectExp cQ e in 
-        (cQ', Comp.BranchBox (cD, pat, e') )
+        (cQ', Comp.BranchBox (cO, cD, pat, e') )
 
 and collectBranches cQ branches = match branches with 
   | [] -> (cQ, [])

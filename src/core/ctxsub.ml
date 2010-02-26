@@ -455,6 +455,8 @@ and ctxnorm_dctx (cPsi, cs) = match cPsi with
   | Null -> Null
   | DDec (cPsi', TypDecl (x, tA)) -> 
       DDec (ctxnorm_dctx (cPsi', cs), TypDecl (x, ctxnorm_typ (tA, cs)))
+  | CtxVar (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx)) -> 
+      ctxnorm_dctx (cPhi, cs)
   | CtxVar ctxvar -> begin match apply_csub ctxvar cs with
       | CtxVar cvar -> CtxVar cvar
       | Null        -> Null 
@@ -540,8 +542,7 @@ let rec check_schema_known cPsi2 cO =
             let Some sW = lookupSchema cO offset' in 
             let _ = print_string ("Found schema for " ^ string_of_int offset' ^ "\n") in
               update_octx cO psi2_offset sW
-        | Some _ ->   let _ = print_string ("Schema known for " ^ string_of_int psi2_offset ^ "\n")
-          in cO
+        | Some _ ->  cO
       end in
 
 

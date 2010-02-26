@@ -22,9 +22,14 @@ type kind_or_typ =
   | Typ  of LF.typ
 
 
+type dctx_or_hat = 
+  | Dctx of LF.dctx
+  | Hat of LF.psi_hat
+
 type pair_or_atom =
   | Pair of Comp.exp_chk
   | Atom
+
 
 
 type mixtyp =
@@ -358,21 +363,17 @@ GLOBAL: sgn_eoi;
   ;
 
 
-  lf_hat_elem :
+(*  lf_hat_elem :
     [
       [
         x = SYMBOL ->
-        LF.VarName (Id.mk_name (Id.SomeString  x))
-
-      |
-        co = SYMBOL; "("; ctx_name = SYMBOL; ")" ->
-          LF.CoName (Id.mk_name (Id.SomeString co), Id.mk_name (Id.SomeString ctx_name) )
+          Id.mk_name (Id.SomeString  x)
           
       ]
     ]
   ;
 
-
+*)
 
 (* ************************************************************************************** *)
 (* Parsing of computations and LF terms occurring in computations                         *)
@@ -601,11 +602,6 @@ GLOBAL: sgn_eoi;
         psi = SYMBOL ->
           LF.CtxVar (_loc, Id.mk_name (Id.SomeString psi))
 
-      |
-        co = SYMBOL; "("; psi = SYMBOL; ")" ->
-          LF.CoCtx (_loc, Id.mk_name (Id.SomeString co), Id.mk_name (Id.SomeString psi) )
-
-
       |  x = SYMBOL; ":"; tA = clf_typ ->
           LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
 (*      |
@@ -623,6 +619,38 @@ GLOBAL: sgn_eoi;
       ]
     ]
   ;
+
+
+
+  clf_hat_or_dctx:
+    [
+      [
+         -> Hat [ ]
+        
+      |    x = SYMBOL -> 
+            Hat ([Id.mk_name (Id.SomeString x)])
+
+      |   x = SYMBOL; ":"; tA = clf_typ ->
+          Dctx (LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
+      |
+        cPsi = clf_hat_or_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->
+          begin match cPsi with 
+            | Hat [ ] -> Dctx (LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
+            | Hat [g] -> Dctx (LF.DDec (LF.CtxVar (_loc, g), LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
+            | Dctx cPsi' -> Dctx (LF.DDec (cPsi', LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
+          end
+
+      | phat = clf_hat_or_dctx; "," ; y = SYMBOL  ->
+          begin match phat with 
+            | Hat phat -> Hat (phat @ [Id.mk_name (Id.SomeString y)])
+          end
+       
+      ]
+    ]
+  ;
+
+
+
 
 
 (* ************************************************************************************** *)
@@ -701,14 +729,25 @@ cmp_exp_chkX:
 
     | "atomic"
       [
-        (* "box"; "("; vars = LIST0 [ x = SYMBOL -> x ] SEP ","; "."; tM = clf_term; ")" ->   *)
- (*     "["; var = LIST0 [ x = SYMBOL -> x ] SEP ","; "]"; tM = clf_term_app ->   
-          let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in
-            Comp.Box (_loc, pHat, tM)
- *)
-       
-        "["; pHat = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "]"; tM = clf_term_app ->            
-            Comp.Box (_loc, pHat, tM)
+              
+        (* "["; pHat = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "]"; tM = clf_term_app ->             
+            Comp.Box (_loc, pHat, tM)  *)
+
+        "["; phat_or_psi = clf_hat_or_dctx ; "]" ; tM = clf_term_app ->             
+          begin match phat_or_psi with
+            | Dctx cPsi ->  Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tM)) 
+            | Hat phat  ->                 Comp.Box (_loc, phat, tM) 
+      end
+
+
+
+      (*        "["; pHat = clf_hat; "]"; tM = clf_term_app ->            
+            Comp.Box (_loc, pHat, tM) *)
+
+(*      | "["; cPsi = clf_dctx; "]"; tR = clf_term_app   ->   
+          (Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tR))) 
+
+*)
       | 
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> 
           begin match p_or_a with 
@@ -728,17 +767,33 @@ cmp_exp_chkX:
 isuffix:
  [ LEFTA [
      "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))
-   | "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">"   ->  (fun i -> Comp.MApp (_loc, i, (vars, tM)))
+(*   | "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">"   ->  
+       (fun i -> Comp.MApp (_loc, i, (vars, tM))) *)
+
+ | "<"; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; ">"   ->  
+     begin match phat_or_psi with
+       | Dctx cPsi ->  (fun i -> Comp.MAnnApp (_loc, i, (cPsi, tM)))
+       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, (phat, tM)))
+     end
+
+
+
    | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
-   | x = SYMBOL   ->  (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name (Id.SomeString x)))))
-   | "ttrue"      ->   (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, true))))
-   | "ffalse"     ->   (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, false))))
-   | e = cmp_exp_chkX   ->   (fun i -> Comp.Apply(_loc, i, e))
+   | x = SYMBOL   ->  
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name (Id.SomeString x)))))
+   | "ttrue"      ->   
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, true))))
+   | "ffalse"     ->   
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, false))))
+   | e = cmp_exp_chkX   ->   
+       (fun i -> Comp.Apply(_loc, i, e))
  ]];
 
 cmp_exp_syn:
  [ LEFTA [
-    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   ->  ((*print_string ("BOXVAL: " ^ Comp.synToString(Comp.BoxVal (_loc, cPsi, tR)) ^ "\n"); *)  Comp.BoxVal (_loc, cPsi, tR))
+    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   ->  
+      ((*print_string ("BOXVAL: " ^ Comp.synToString(Comp.BoxVal (_loc, cPsi, tR)) ^ "\n"); *)  
+        Comp.BoxVal (_loc, cPsi, tR))
    | h = SELF; s = isuffix  ->  s(h)
    | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
        Comp.Apply (_loc, h, begin match p_or_a with 
@@ -825,6 +880,10 @@ cmp_exp_syn:
       [
         "{"; psi = SYMBOL; ":"; "("; w = SYMBOL; ")"; "*"; "}"; mixtau = SELF ->
           MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi), Id.mk_name (Id.SomeString w), Comp.Explicit), mixtau)
+
+
+      | "{"; psi = SYMBOL; ":";  w = SYMBOL; "}"; mixtau = SELF ->
+          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi), Id.mk_name (Id.SomeString w), Comp.Implicit), mixtau)
 
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->

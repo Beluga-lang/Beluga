@@ -1449,6 +1449,7 @@ let rec collectCompTyp cQ tau = match tau with
         (cQ3 , Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep ), tau'))
 
   | Comp.TypBool  -> (cQ, tau)
+  | Comp.TypClo _ -> (dprint (fun () -> " collectCTyp – TypClo missing ") ; raise NotImplemented)
 
 let rec collectExp cQ e = match e with 
   | Comp.Syn (loc, i) -> 

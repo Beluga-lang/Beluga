@@ -131,7 +131,7 @@ module Int : sig
     and ctx_var = 
       | CtxName   of name
       | CtxOffset of offset
-      | CInst  of dctx option ref * cid_schema option * (mctx * mctx)
+      | CInst  of dctx option ref * cid_schema * mctx * mctx
 
     and 'a ctx =
       | Empty
@@ -319,7 +319,6 @@ module Ext : sig
     and dctx =
       | Null
       | CtxVar   of Loc.t * name
-      | CoCtx    of Loc.t * name * name
       | DDec     of dctx * typ_decl
 
     and tuple =
@@ -336,8 +335,7 @@ module Ext : sig
     and schema =
       | Schema of sch_elem list
 
-    and psi_elem = VarName of name | CoName of name * name
-    and psi_hat = psi_elem list
+    and psi_hat = name list
 
     and mctx     = ctyp_decl ctx          
 
@@ -382,6 +380,7 @@ module Ext : sig
        | Apply  of Loc.t * exp_syn * exp_chk     
        | CtxApp of Loc.t * exp_syn * LF.dctx     
        | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) 
+       | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) 
        | BoxVal of Loc.t * LF.dctx * LF.normal 
        | Ann    of Loc.t * exp_chk * typ                   
        | Equal   of Loc.t * exp_syn * exp_syn
@@ -546,6 +545,7 @@ module Apx : sig
        | Apply  of Loc.t * exp_syn * exp_chk                  (* i e              *)
        | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]          *)
        | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M]   *)
+       | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]       *)
        | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (psihat. tR) *)
        | Ann    of exp_chk * typ                              (* e : tau          *)
        | Equal  of Loc.t  * exp_syn * exp_syn

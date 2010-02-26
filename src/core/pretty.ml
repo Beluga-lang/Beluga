@@ -554,7 +554,14 @@ module Int = struct
 
 
 
-    and fmt_ppr_lf_ctx_var cO ppf = function
+    and fmt_ppr_lf_ctx_var cO ppf = function     
+      | LF.CInst ({contents = None}, _schema, _cO, _cD) -> 
+          fprintf ppf "g?"
+
+      | LF.CInst ({contents = Some cPsi}, _schema, cO', cD') -> 
+          fprintf ppf "%a"
+          (fmt_ppr_lf_dctx cO' cD' 0) cPsi
+
       | LF.CtxOffset psi ->
           fprintf ppf "%s"
             (R.render_ctx_var cO psi)
@@ -1166,7 +1173,7 @@ module Int = struct
 
 
     let dctxToString cO cD cPsi = 
-      let cPsi' = Whnf.normDCtx cPsi in 
+      let cPsi' = Whnf.normDCtx (Whnf.cnormDCtx (cPsi, Whnf.m_id)) in 
         fmt_ppr_lf_dctx cO cD std_lvl str_formatter cPsi'
         ; flush_str_formatter ()
 

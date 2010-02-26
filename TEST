@@ -36,6 +36,8 @@ cd $X
 $INTERPRETER +t \
     $* \
     arith/arith.bel \
+    church-rosser/test.cfg \
+    church-rosser/test-crec.cfg \
     compile/cls/sources.cfg \
     compile/cls/test.cfg \
     compile/cpm/sources.cfg \
@@ -47,25 +49,38 @@ $INTERPRETER +t \
     compile/cps/sources.cfg \
     compile/cxm/sources.cfg \
     count-var/cntvar.bel \
+    count-var/cntvar-crec.bel \
     count-var/cntvar-explicit.bel \
+    count-var/cntvar-simple.bel \
+    count-var/cntvar-simple-crec.bel \
     count-var/cntvar-2.bel \
     copy/copy.bel \
+    copy/copy-crec.bel \
     copy/copy-explicit.bel \
     copy/copy-simple.bel \
+    copy/copy-simple-crec.bel \
     copy/copy-simple-explicit.bel \
     cut-elim.bel \
+    cut-elim-crec.bel \
     debruijn1/sources.cfg \
     equal/eq-proof-tuple.bel \
     equal/eq-proof.bel \
+    equal/eq-proof-full-crec.bel \
     fol/sources.cfg \
     fol/test.cfg \
     free-vars/fvnat.bel \
+    free-vars/fvnat-crec.bel \
     free-vars/fvnat-explicit.bel \
     freshML/term.bel \
+    freshML/term-crec.bel \
     freshML/cps.bel \
+    freshML/cps-crec.bel \
     freshML/cps-popl-tutorial1.bel \
+    freshML/cps-popl-tutorial1-crec.bel \
     freshML/cps-popl-tutorial2.bel \
+    freshML/cps-popl-tutorial2-crec.bel \
     lp-horn/sources.cfg \
+    lp-horn/test-crec.cfg \
     mini-ml/eval-sub-1.bel \
     mini-ml/eval-sub-1-explicit.bel \
     mini-ml/eval-sub.bel \
@@ -78,6 +93,8 @@ $INTERPRETER +t \
     small-step/lam.bel \
     small-step/system-f.bel \
     small-step/system-f-iso.bel \
+    subject-red.bel \
+    subject-red-crec.bel \
     test/backarrow.bel \
     test/case1.bel \
     test/case1-explicit.bel \
@@ -97,6 +114,7 @@ $INTERPRETER +t \
     typed-eval/tpeval-explicit.bel \
     typed-eval/tpeval2.bel \
     unique/unique.bel \
+    unique/unique-crec.bel \
     unique/unique-eval.bel \
     LF/arith.lf \
     LF/arith-rec1.lf \

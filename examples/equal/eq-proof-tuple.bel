@@ -29,7 +29,6 @@ eq_lam : % {E : exp -> exp} {F : exp -> exp}
 
 schema w = block x:exp. eq x x;
 
-
 rec eqfun : {g:(w)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
  FN g => mlam U =>
    case [g] (U ..) of

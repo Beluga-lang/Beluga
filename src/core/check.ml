@@ -636,6 +636,8 @@ This case should now be covered by the one below it
               ^ P.dctxToString cO cD cPsi ^ " against " ^ P.schemaToString schema);
     match cPsi with
       | Null -> ()
+      | CtxVar (CInst ({contents = Some cPhi}, _, _, _ )) -> 
+          checkSchema cO cD cPhi schema
       | CtxVar ((CtxOffset _ ) as phi) ->
           let Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
 (*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements) then *)

@@ -1,0 +1,160 @@
+    arith/arith.bel				Beluga Example - empty contexts
+
+    church-rosser/test.cfg \                    Beluga Example: with contexts and reconstruction for 
+    church-rosser/test-crec.cfg \		meta-variables associated with projection-pattern
+
+    compile/cls/sources.cfg \                	Twelf Example
+    compile/cls/test.cfg \  			Beluga Example: completeness proof; advanced unification
+    			 			illustrates that we cannot infer as many implicit argument
+						statically because patterns must be "closed" and we cannot 
+						propagate information we learn later backwards.
+
+    compile/cpm/sources.cfg \			Twelf Example
+    compile/cpm/test.cfg \  			Beluga Example: 
+    			 			 completeness and soundness proof
+
+    compile/debruijn/sources.cfg \              Twelf Example
+    compile/debruijn/test.cfg \	 		Beluga example: Mapping evaluations to evaluations in env.
+                                                MISSING: other direction
+
+    compile/debruijn1/sources.cfg \		Twelf example
+    compile/debruijn1/test.cfg \  		Beluga example: Both directions (mapping evaluations to 
+    			       			evaluations in environments and vice versa) 
+						(the previous example in directory debruijn is contained here.
+
+    compile/cps/sources.cfg \                   Twelf example (no proofs)
+    compile/cxm/sources.cfg \			Twelf example (no proofs)
+
+    count-var/cntvar.bel \			Beluga examples: simple use of contexts
+    count-var/cntvar-explicit.bel \
+    count-var/cntvar-2.bel \
+
+    copy/copy.bel \				Belgua examples: simple use of contexts                      
+    copy/copy-crec.bel \
+    copy/copy-explicit.bel \
+    copy/copy-simple.bel \
+    copy/copy-simple-crec.bel \
+    copy/copy-simple-explicit.bel \
+
+
+    cut-elim.bel \				Beluga examples: fairly straightfoward    
+    cut-elim-crec.bel \				use of contexts  
+
+    debruijn1/sources.cfg \			Beluga example: empty contexts
+    			  			Proof that evaluations map to evaluations in env.
+						Version restricted to lambda-calculus (should be moved to
+						compile dir)
+
+    equal/eq-proof-tuple.bel \                  Beluga examples: use of context subsumption,
+    equal/eq-proof.bel \                        use of sophisticated pattern variable reconstruction in 
+    equal/eq-proof-full-crec \                  the presence of projections, use of context reconstruction
+
+    fol/sources.cfg \                           Twelf example
+    fol/test.cfg \  				Beluga examples: no recursion; mostly definitions.      
+
+    free-vars/fvnat.bel \                       Beluga examples: simple contexts, context reconstruction
+    free-vars/fvnat-crec.bel \
+    free-vars/fvnat-explicit.bel \
+
+
+    freshML/term.bel \				Beluga examples: uses context, context reconstruction
+    freshML/term-crec.bel \
+    freshML/cps.bel \
+    freshML/cps-crec.bel \
+    freshML/cps-popl-tutorial1.bel \
+    freshML/cps-popl-tutorial1-crec.bel \
+    freshML/cps-popl-tutorial2.bel \
+    freshML/cps-popl-tutorial2-crec.bel \
+
+    lp-horn/sources.cfg \			Beluga examples: uses contexts
+    lp-horn/test-crec.cfg \			Beluga examples: uses context reconstruction
+
+    mini-ml/eval-sub-1.bel \			Beluga examples: empty contexts
+    mini-ml/eval-sub-1-explicit.bel \
+    mini-ml/eval-sub.bel \
+    mini-ml/eval-sub-explicit.bel \
+    mini-ml/tps.bel \
+    mini-ml/vsound.bel \
+    mini-ml/vsound-explicit.bel \
+
+    path/path.bel \                             Beluga example: cannot use context reconstruction
+    path/path-typed.bel \			because we induct on implicit arg.
+
+    small-step/lam.bel \			Beluga example: empty contexts
+    small-step/system-f.bel \
+    small-step/system-f-iso.bel \
+
+    subject-red.bel \				Beluga example: context reconstruction
+    subject-red-crec.bel \
+
+    test/backarrow.bel \
+    test/case1.bel \
+    test/case1-explicit.bel \
+    test/case2.bel \
+    test/case2-explicit.bel \
+    test/cross.bel \
+    test/dependency.bel \
+    test/id.bel \
+    test/id-simple.bel \
+    test/id-explicit.bel \
+    test/test.bel \
+    test/test-simple.bel \
+    test/test-simple-explicit.bel \
+    test/schema.bel \
+
+    tpcert.bel \				Beluga example: recursion over implicit arg. 
+    	       					hence no context reconstruction
+
+    typed-eval/tpeval.bel \			Beluga example: empty contexts
+    typed-eval/tpeval-explicit.bel \
+    typed-eval/tpeval2.bel \
+
+    unique/unique.bel \				Beluga example: context reconstruction for version
+    unique/unique-eval.bel \			where we induct on derivation instead of implicit arg.
+
+    LF/arith.lf \
+    LF/arith-rec1.lf \
+    LF/lambda.lf \
+    LF/lambda-rec.lf \
+    LF/simple-typing.lf \
+    LF/lam-tp-rec.lf \
+    LF/cut-elim.lf \
+    LF/kindtest.lf \
+    LF/mini-ml.lf \
+    LF/mini-ml-rec.lf \
+    LF/vsound.lf \
+    LF/vsound-rec.lf \
+    LF/tpeval.lf \
+    LF/tpeval-rec.lf \
+    LF/tpcert.lf \
+    LF/tps.lf \
+    ../examples-twelf/arith/sources.cfg \
+    ../examples-twelf/alloc-sem/sources.cfg \
+    ../examples-twelf/ccc/sources.cfg \
+
+    ../examples-twelf/church-rosser/sources.cfg \
+    ../examples-twelf/church-rosser/test.cfg \
+
+    ../examples-twelf/cpsocc/sources.cfg \
+    ../examples-twelf/compile/cls/sources.cfg \
+    ../examples-twelf/compile/cls/test.cfg \
+    ../examples-twelf/compile/cpm/sources.cfg \
+    ../examples-twelf/compile/cpm/test.cfg \
+    ../examples-twelf/compile/debruijn/sources.cfg \
+    ../examples-twelf/compile/debruijn1/sources.cfg \
+    ../examples-twelf/compile/cps/sources.cfg \
+    ../examples-twelf/cut-elim/sources.cfg \
+    ../examples-twelf/fol/sources.cfg \
+    ../examples-twelf/handbook/sources.cfg \
+    ../examples-twelf/kolm/sources.cfg \
+    ../examples-twelf/lp/sources.cfg \
+    ../examples-twelf/lp-horn/sources.cfg \
+    ../examples-twelf/mini-ml/sources.cfg \
+    ../examples-twelf/mini-ml/test.cfg \
+    ../examples-twelf/prop-calc/sources.cfg \
+    test/alpha.bel \
+    test/sigma1.bel \
+    test/sigma2.bel \
+    test/sigma3.bel \
+    test/sigma4.bel \
+    test/implicit-obj.bel \

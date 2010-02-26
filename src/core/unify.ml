@@ -249,6 +249,7 @@ module Make (T : TRAIL) : UNIFY = struct
   type action =
     | InstNormal of normal option ref
     | InstHead   of head   option ref
+    | InstCtx    of dctx   option ref
     | Add        of cnstr list ref
     | Solve      of cnstr * constrnt   (* FIXME: names *)
 
@@ -304,6 +305,12 @@ module Make (T : TRAIL) : UNIFY = struct
         delayedCnstrs := cnstrL;
         Some cnstr
 
+
+  let rec instantiateCtxVar (ctx_ref, cPsi) =
+    ctx_ref := Some cPsi;
+    T.log globalTrail (InstCtx ctx_ref)
+
+
   let rec instantiatePVar (q, head, cnstrL) =
     q := Some head;
     T.log globalTrail (InstHead q);
@@ -316,6 +323,7 @@ module Make (T : TRAIL) : UNIFY = struct
     T.log globalTrail (InstNormal u);
     delayedCnstrs := cnstrL @ !delayedCnstrs;
     globalCnstrs := cnstrL @ !globalCnstrs
+
 
 
   let rec instantiateMMVar (u, tM, cnstrL) =
@@ -2422,7 +2430,13 @@ module Make (T : TRAIL) : UNIFY = struct
  and unifyDCtx1 mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 
-      (* | (CtxVar (CtxOffset psi1) , CtxVar (CtxOffset psi2)) -> *)
+      | (CtxVar (CInst (cvar_ref , _schema, _cO, _cD)) , cPsi) -> 
+           instantiateCtxVar (cvar_ref, cPsi)
+
+      | (cPsi , CtxVar (CInst (cvar_ref , _schema, _cO, _cD) )) -> 
+           instantiateCtxVar (cvar_ref, cPsi)
+
+
       | (CtxVar  psi1_var , CtxVar psi2_var) -> 
           if psi1_var = psi2_var then () 
           else raise_ (Unify "CtxVar clash")

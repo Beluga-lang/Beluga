@@ -4,7 +4,6 @@
 CRITICAL
 ========
 
-* 28/12/08 :: Error messages from type reconstruction  -bp
 
 
 IMPORTANT
@@ -18,26 +17,3 @@ IMPORTANT
 
 * 28/12/08 :: Naming convention: Use names provided in signature
                 -bp
-
-*  1/4/08  :: Unification: Are cases for proj necessary? -bp
-
-* 10/24/08 :: Add unify.mli.  -dwm
-
-* 10/14/08 :: Consider a way to use labels to clean up pretty printer
-              interface.  May be possible pass std_formatter and
-              std_lvl in as default arguments.  -dwm
-
-
-MINOR
-=====
-
-* 29/12/08 :: Apply substition when printing instanciated MVar's  
-
-* 29/12/08 :: Printing of open terms
-
-* 10/16/08 :: Add proper interface for token.ml.  Some tricky bits
-              with the Camlp4 sig.  -dwm
-
-* 10/15/08 :: Investigate gensym, think about wrap around.  -dwm
-
-* 10/12/08 :: Fix documentation generation.  -dwm

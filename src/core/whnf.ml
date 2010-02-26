@@ -909,6 +909,31 @@ and cnorm (tM, t) = match tM with
           Cons (tM', rest')
 
   and cnormSub (s, t) = match s with 
+    | Shift (CtxShift (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)), k) -> 
+        begin match Context.dctxToHat cPhi with
+          | (Some ctx_v, d) -> 
+              Shift (CtxShift ctx_v, k + d)
+          | (None, d) ->
+              Shift (NoCtxShift, k + d)
+        end
+
+    | Shift (NegCtxShift (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)), k) -> 
+        let rec undef_sub d s = 
+          if d = 0 then s 
+          else undef_sub (d-1) (Dot(Undef, s)) 
+        in 
+          begin match Context.dctxToHat cPhi with
+          | (Some ctx_v, d) -> 
+          (* Phi |- s : psi  and psi not in Psi and |Psi| = k 
+           * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi 
+           *)                      
+              undef_sub d (Shift (NegCtxShift ctx_v, k))
+
+          | (None, d) -> undef_sub d (Shift (NoCtxShift, k))
+
+          end
+              
+
     | Shift _         -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
      (* substitution variables ignored for how -bp *)
@@ -1654,6 +1679,10 @@ let convHatCtx ((cvar, l), cPsi) =
 let rec cnormDCtx (cPsi, t) = match cPsi with
     | Null       ->  Null 
 
+    | CtxVar (CInst ({contents = None} , _schema, _octx, _mctx )) -> cPsi
+
+    | CtxVar (CInst ({contents = Some cPhi} ,_schema, _octx, _mctx)) -> cPhi
+
     | CtxVar (CtxOffset psi) -> 
         CtxVar (CtxOffset psi) 
 
@@ -1664,6 +1693,15 @@ let rec cnormDCtx (cPsi, t) = match cPsi with
         DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
 
 
+
+let rec cnorm_psihat phat = match phat with
+  | (None , _ ) -> phat
+  | (Some (CInst ({contents = Some cPsi}, _schema, _cO, _cD)),  k) -> 
+      begin match Context.dctxToHat cPsi with
+        | (None, i) -> (None, k+i)
+        | (Some cvar', i) -> (Some cvar', i+k)
+      end
+  |  _ -> phat
 
 
 (* ************************************************* *)
@@ -1837,6 +1875,8 @@ let rec mctxPVarPos cD p =
     | (Comp.TypBool, _t)               -> thetaT
 
 
+
+
   (* WHNF and Normalization for computation-level terms to be added -bp *)
 
   (* cnormExp (e, t) = e' 
@@ -1865,7 +1905,9 @@ let rec mctxPVarPos cD p =
     | (Comp.LetPair (loc, i, (x, y, e)), t) -> 
         Comp.LetPair (loc, cnormExp' (i, t), (x, y, cnormExp (e, t)))
 
-    | (Comp.Box (loc, psihat, tM), t) -> Comp.Box (loc, psihat, norm (cnorm (tM, t), LF.id))
+    | (Comp.Box (loc, psihat, tM), t) -> 
+        Comp.Box (loc, cnorm_psihat psihat, 
+                  norm (cnorm (tM, t), LF.id))
 
     | (Comp.Case (loc, i, branches), t) -> 
         Comp.Case (loc, cnormExp' (i,t), 
@@ -1887,9 +1929,9 @@ let rec mctxPVarPos cD p =
     | (Comp.CtxApp (loc, i, cPsi), t) -> Comp.CtxApp (loc, cnormExp' (i, t), normDCtx (cnormDCtx (cPsi, t)))
 
     | (Comp.MApp (loc, i, (psihat, tM)), t) -> 
-        Comp.MApp (loc, cnormExp' (i, t), (psihat, (norm (cnorm (tM, t), LF.id))))
+        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat, (norm (cnorm (tM, t), LF.id))))
 
-    | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), Comp.TypClo (tau, mcomp t' t))
+    | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), cnormCTyp (tau, mcomp t' t))
 
     | (Comp.Equal (loc, i1, i2), t) -> 
         let i1' = cnormExp' (i1, t) in 
@@ -2164,6 +2206,7 @@ and closedDecl (tdecl, s) = match tdecl with
 
 let rec closedDCtx cPsi = match cPsi with
   | Null     -> true
+  | CtxVar (CInst ({contents = None}, _, _, _)) -> false
   | CtxVar _ -> true
   | DDec (cPsi' , tdecl) -> closedDCtx cPsi' && closedDecl (tdecl, LF.id)
   

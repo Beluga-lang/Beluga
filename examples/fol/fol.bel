@@ -44,8 +44,8 @@ rec uncurry' : ( !^ (imp
 ;
 
 
-rec split : !^ (imp (imp (atom P) (& (atom Q)  (atom R))) 
-                    (& (imp (atom P) (atom Q))  (imp (atom P) (atom R))))[ ] = 
+rec split : (!^ (imp (imp (atom P) (& (atom Q)  (atom R))) 
+                    (& (imp (atom P) (atom Q))  (imp (atom P) (atom R)))))[ ] = 
  [ ] impI^ (\w.  (andI^   
        (impI^  (\u.(close  (andEvL  (impEv w (close u))    )  ) ) )
        (impI^  (\u.(close  (andEvR  (impEv w (close u))    )  ) ) )      
@@ -54,8 +54,8 @@ rec split : !^ (imp (imp (atom P) (& (atom Q)  (atom R)))
 ;
 
 
-rec join :  !^ (imp (& (imp (atom P) (atom Q))  (imp (atom P) (atom R)))
-                    (imp (atom P) (& (atom Q)  (atom R))) )[ ] = 
+rec join :  (!^ (imp (& (imp (atom P) (atom Q))  (imp (atom P) (atom R)))
+                    (imp (atom P) (& (atom Q)  (atom R))) ))[ ] = 
 [ ] impI^ ( \w. impI^ (\u. (andI^   
           (close   (impEv (andEvL w) (close u) ))
           (close   (impEv (andEvR w) (close u) ))

@@ -127,8 +127,8 @@ fn d => fn f => case d of
   let [ ] e_ref  = unique3 ([g] D1 ..) ([g] F1 ..) in    
     [ ] e_ref   						 
 
-| [g] t_lam (\x.(\u. D .. x u)) =>
-  let [g] t_lam (\x.(\u. F .. x u)) = f in 
+| [g] t_lam \x.\u. D .. x u =>
+  let [g] t_lam \x.\u. F .. x u = f in 
   let [ ] e_ref = unique3 ([g,b: block x:exp. type_of x _ ] D .. b.1 b.2) ([g,b] F .. b.1 b.2) in 
    [ ] e_ref  
 

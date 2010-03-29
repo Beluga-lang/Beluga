@@ -22,10 +22,13 @@ val csub_exp_syn : dctx -> int -> Comp.exp_syn -> Comp.exp_syn
 
 val ctxnorm_typ : typ  * csub -> typ
 val ctxnorm     : normal * csub -> normal
+val ctxnorm_sub : sub * csub    -> sub
 val ctxnorm_psihat: psi_hat * csub -> psi_hat
 val ctxnorm_dctx: dctx * csub -> dctx
 val ctxnorm_mctx: mctx * csub -> mctx
 val ctxnorm_gctx: Comp.gctx * csub -> Comp.gctx
+val ctxnorm_ctyp : Comp.typ  * csub -> Comp.typ
+val ctxnorm_exp_chk : Comp.exp_chk  * csub -> Comp.exp_chk
 
 val ctxnorm_msub: msub * csub -> msub
 
@@ -35,3 +38,5 @@ val apply_csub  : ctx_var -> csub -> dctx
 
 val inst_csub   : dctx -> Id.offset -> csub -> mctx (* cO *) -> (mctx * csub)
 val ccomp       : csub -> csub -> csub
+
+val ctxnorm_csub : csub -> csub

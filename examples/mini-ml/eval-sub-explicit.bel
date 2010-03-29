@@ -55,7 +55,7 @@ fn e =>
 
 
 % Call-By-Value 
-rec eval' : (exp)[ ] -> (exp)[ ] = 
+rec eval' : exp[ ] -> exp[ ] = 
 fn e => 
 
 (case e of

@@ -112,7 +112,7 @@ fn d => fn ev => case d of
 % because otherwise left-over constraints. -bp 
 % Twelf proof also requires type annotation.
 | {D::(has (E a) (T a)) [a:tp] }
-  [ ] is_# (is_lAM (\a. D a)) : (has (ann _ T2) (T T2))[ ]   => 
+  [ ] is_# (is_lAM (\a. D a))  : (has (ann _ T2) (T T2))[ ]   => 
   let [ ] ~>_#2 = ev in 
     [ ] D T2 
 

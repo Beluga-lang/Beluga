@@ -72,6 +72,7 @@ module Int : sig
     and sub =
       | Shift of ctx_offset * offset
       | SVar  of cvar * sub
+      | FSVar of name * sub
       | Dot   of front * sub
 
     and front =
@@ -180,24 +181,25 @@ module Int : sig
 
    type typ =
      | TypBox   of Loc.t option * LF.typ * LF.dctx
-     | TypSBox  of Loc.t option * LF.dctx * LF.dctx
+     | TypSub   of Loc.t option * LF.dctx * LF.dctx
      | TypArr   of typ * typ
      | TypCross of typ * typ
      | TypCtxPi of (name * cid_schema * depend) * typ
      | TypPiBox of (LF.ctyp_decl * depend) * typ
      | TypClo   of typ * LF.msub
-     | TypBool
+     | TypBool  
          
+   type contextual_obj = NormObj of LF.normal | NeutObj of LF.head | SubstObj of LF.sub 
 
    type env = 
      | Empty
      | Cons of value * env
 
    and value = 
-     | FunValue   of (Loc.t option * name * exp_chk) * LF.msub * env 
-     | RecValue   of (cid_prog * exp_chk) * LF.msub * env 
-     | MLamValue  of (Loc.t option * name * exp_chk) * LF.msub * env
-     | CtxValue   of (Loc.t option * name * exp_chk) * LF.msub * env
+     | FunValue   of (Loc.t option * name * exp_chk) * LF.csub * LF.msub * env 
+     | RecValue   of (cid_prog * exp_chk) * LF.csub  * LF.msub * env 
+     | MLamValue  of (Loc.t option * name * exp_chk) * LF.csub * LF.msub * env
+     | CtxValue   of (Loc.t option * name * exp_chk) * LF.csub * LF.msub * env
      | BoxValue   of LF.psi_hat * LF.normal 
      | ConstValue of cid_prog
      | BoolValue  of bool
@@ -221,7 +223,7 @@ module Int : sig
      | Const  of cid_prog
      | Apply  of Loc.t option * exp_syn * exp_chk
      | CtxApp of Loc.t option * exp_syn * LF.dctx
-     | MApp   of Loc.t option * exp_syn * (LF.psi_hat * LF.normal)
+     | MApp   of Loc.t option * exp_syn * (LF.psi_hat * contextual_obj)
      | Ann    of exp_chk * typ 
      | Equal  of Loc.t option * exp_syn * exp_syn
      | Boolean of bool
@@ -231,8 +233,8 @@ module Int : sig
          * (LF.dctx * LF.normal * LF.msub * LF.csub)
          * exp_chk
          
-     | BranchSBox of LF.mctx
-         * (LF.dctx * LF.sub    * LF.dctx * (LF.msub * LF.mctx))
+     | BranchSBox of LF.mctx * LF.mctx
+         * (LF.dctx * LF.sub    * LF.msub * LF.csub)
          * exp_chk
          
    type ctyp_decl =
@@ -278,13 +280,16 @@ module Ext : sig
     and ctyp_decl =
       | MDecl of Loc.t * name * typ  * dctx
       | PDecl of Loc.t * name * typ  * dctx
-(*       | SDecl of Loc.t * name * dctx * dctx *)
+      | SDecl of Loc.t * name * dctx * dctx
+      | CDecl of Loc.t * name * name
+
 
     and typ =
       | Atom   of Loc.t * name * spine
       | ArrTyp of Loc.t * typ      * typ
       | PiTyp  of Loc.t * typ_decl * typ
-      | Sigma of Loc.t * typ_rec
+      | Sigma  of Loc.t * typ_rec
+      | Ctx    of Loc.t * dctx 
 
     and normal =
       | Lam  of Loc.t * name * normal
@@ -298,6 +303,7 @@ module Ext : sig
       | PVar  of Loc.t * name * sub
       | ProjName  of Loc.t * int * name
       | ProjPVar  of Loc.t * int * (name * sub)         
+      | SVar  of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
 
     and spine =
       | Nil
@@ -355,7 +361,7 @@ module Ext : sig
 
     type typ =                            
       | TypBox   of Loc.t * LF.typ  * LF.dctx     
-(*    | TypSBox  of LF.dctx * LF.dctx             *)
+      | TypSub   of Loc.t * LF.dctx * LF.dctx             
       | TypArr   of Loc.t * typ * typ             
       | TypCross of Loc.t * typ * typ
       | TypCtxPi of Loc.t * (name * name * depend) * typ  
@@ -371,7 +377,7 @@ module Ext : sig
        | Pair    of Loc.t * exp_chk * exp_chk
        | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
        | Box     of Loc.t * LF.psi_hat * LF.normal 
-(*        | SBox   of LF.psi_hat * LF.sub *)
+       | SBox    of Loc.t * LF.psi_hat * LF.sub 
        | Case    of Loc.t * exp_syn * branch list 
        | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
@@ -388,13 +394,13 @@ module Ext : sig
 
 
     and branch =
-      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
+      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx 
           * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
           * exp_chk
 
-(*       | BranchSBox of LF.ctyp_decl LF.ctx *)
-(*           * (LF.psi_hat * LF.sub    * (LF.dctx * LF.dctx)) *)
-(*           * exp_chk *)
+      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx 
+          * (LF.dctx * LF.sub    * LF.dctx option) 
+          * exp_chk 
 
 
    type rec_fun = RecFun of name * typ * exp_chk
@@ -442,6 +448,8 @@ module Apx : sig
       | MDecl of  name * typ  * dctx
       | PDecl of  name * typ  * dctx
       | MDeclOpt of name
+      | SDecl of  name * dctx * dctx
+      | CDecl of name * cid_schema
 
     and typ =
       | Atom  of Loc.t * cid_typ * spine
@@ -479,7 +487,9 @@ module Apx : sig
     and sub =
       | EmptySub
       | Id
-      | Dot   of front * sub
+      | Dot  of front * sub
+      | SVar of cvar * sub
+      | FSVar of name * sub
 
     and front =
       | Head of head
@@ -521,6 +531,7 @@ module Apx : sig
 
     type typ =
       | TypBox   of Loc.t * LF.typ  * LF.dctx
+      | TypSub   of Loc.t * LF.dctx * LF.dctx
       | TypArr   of typ * typ
       | TypCross of typ * typ
       | TypCtxPi of (name * cid_schema * depend) * typ
@@ -529,13 +540,14 @@ module Apx : sig
 
     and exp_chk =
        | Syn     of Loc.t * exp_syn
-       | Fun     of Loc.t * name * exp_chk         (* fn   f => e         *)
-       | CtxFun  of Loc.t * name * exp_chk         (* FN   f => e         *)
-       | MLam    of Loc.t * name * exp_chk         (* mlam f => e         *)
-       | Pair    of Loc.t * exp_chk * exp_chk      (* (e1 , e2)           *)
+       | Fun     of Loc.t * name * exp_chk              (* fn   f => e           *)
+       | CtxFun  of Loc.t * name * exp_chk              (* FN   f => e           *)
+       | MLam    of Loc.t * name * exp_chk              (* mlam u => e           *)
+       | Pair    of Loc.t * exp_chk * exp_chk           (* (e1 , e2)             *)
        | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
-                                          (* let (x,y) = i in e  *)
-       | Box     of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
+                                                        (* let (x,y) = i in e    *)
+       | Box     of Loc.t * LF.psi_hat * LF.normal      (* box (Psi hat. M)      *)
+       | SBox    of Loc.t * LF.psi_hat * LF.sub         (* sbox (Psi hat. sigma) *)
        | Case    of Loc.t * exp_syn * branch list
        | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
@@ -553,8 +565,11 @@ module Apx : sig
 
 
     and branch =
-      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
+      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx
           * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
+          * exp_chk
+      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx
+          * (LF.dctx * LF.sub * LF.dctx option)
           * exp_chk
 
   end (* Apx.Comp *)

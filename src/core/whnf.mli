@@ -81,6 +81,7 @@ val invTerm    : normal    * msub -> int -> normal
 *)
 val mctxMDec   : mctx -> int -> Id.name * typ * dctx
 val mctxPDec   : mctx -> int -> Id.name * typ * dctx
+val mctxSDec   : mctx -> int -> Id.name * dctx * dctx
 
 
 val mctxMVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
@@ -88,6 +89,7 @@ val mctxPVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
 
 
 val cnorm      : normal * msub -> normal
+val cnormHead : head * msub -> head
 val cnormSub   : sub * msub -> sub
 val cnormTyp   : typ  * msub -> typ
 val cnormTypRec: typ_rec * msub -> typ_rec
@@ -96,6 +98,7 @@ val cnormDCtx  : dctx * msub -> dctx
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 
 val cnormMSub  : msub -> msub
+val cnormCSub  : (csub * msub) -> csub
 
 val cnormCTyp  : Comp.typ * msub -> Comp.typ
 val cwhnfCTyp  : Comp.typ * msub -> Comp.typ * msub

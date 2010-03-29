@@ -21,6 +21,7 @@ module LF : sig
 
   val checkSchemaWf : schema -> unit
   val checkSchema : mctx -> mctx -> dctx -> schema -> unit
+  val subsumes    : mctx -> ctx_var -> ctx_var -> bool
 
   val synCtxSchema  : mctx -> ctx_var -> Id.cid_schema
 

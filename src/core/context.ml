@@ -10,6 +10,8 @@ open Syntax.Int
 open Error 
 
 exception Error of error
+exception NoTypAvailable
+
 
 let addToHat (ctxvarOpt, length) =
   (ctxvarOpt, length + 1)
@@ -81,6 +83,9 @@ let ctxDec cPsi k =
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
+
+    | (DDec (cPsi', TypDeclOpt _ ) , 1 ) -> 
+        raise NoTypAvailable
 
     (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in

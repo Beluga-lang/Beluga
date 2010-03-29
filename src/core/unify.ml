@@ -67,6 +67,7 @@ module type UNIFY = sig
 
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
+  val unifyCSub    : csub  -> csub -> unit
 
   val matchTerm    : mctx -> dctx -> nclo -> nclo -> unit 
   val matchTyp     : mctx -> dctx -> tclo -> tclo -> unit 
@@ -1185,6 +1186,7 @@ module Make (T : TRAIL) : UNIFY = struct
                                                P.mctxToString Empty cD0))
                       end
                   | MUndef -> raise_ (Unify "[Prune] Bound MVar dependency")
+                  | _      -> raise_ (Unify "[Prune] MObj / PObj dependency")
                 end 
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
@@ -2118,11 +2120,16 @@ module Make (T : TRAIL) : UNIFY = struct
     | (PVar (PInst (q, _cPsi1, tA1, cnstr), s1) as h1, BVar k2) ->
         let s1' = Whnf.normSub s1 in 
         if isPatSub s1' then
-          let TypDecl(_ , tA2) = Context.ctxDec cPsi k2 in 
-          let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, id) in 
-          match bvarSub k2 (invert s1') with
-            | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
-            | _               -> raise_ (Unify "Parameter violation")
+          (begin try             
+            let TypDecl(_ , tA2) = Context.ctxDec cPsi k2 in 
+              unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, id)
+          with Context.NoTypAvailable -> ()
+          end ; 
+            dprint (fun () -> "unfyHead bvar -pvar ") ;
+            begin match bvarSub k2 (invert s1') with
+                | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
+                | _               -> raise_ (Unify "Parameter violation")
+            end )
         else
           (* example: q[q[x,y],y] = x  should succeed
                       q[q[x,y],y] = y  should fail
@@ -2133,12 +2140,18 @@ module Make (T : TRAIL) : UNIFY = struct
     | (BVar k1, (PVar (PInst (q, _cPsi2, tA2, cnstr), s2) as h1)) ->
         (let s2' = Whnf.normSub s2 in 
         if isPatSub s2' then
-          let TypDecl(_ , tA1) = Context.ctxDec cPsi k1 in 
-          let _ = unifyTyp mflag cD0 cPsi (tA1, id) (tA2, s2') in 
-          match bvarSub k1 (invert s2') with
-            | Head (BVar k1') -> 
-               instantiatePVar (q, BVar k1', !cnstr)
-            | _               -> raise_ (Unify "Parameter violation")
+          (begin try 
+             let _ = dprint (fun () -> "unfyHead bvar -pvar ") in
+            let TypDecl(_ , tA1) = Context.ctxDec cPsi k1 in 
+              unifyTyp mflag cD0 cPsi (tA1, id) (tA2, s2') 
+          with Context.NoTypAvailable -> () end ;
+            dprint (fun () -> "unfyHead bvar -pvar ") ;
+           begin match bvarSub k1 (invert s2') with
+                | Head (BVar k1') -> 
+                    instantiatePVar (q, BVar k1', !cnstr)
+                | _               -> raise_ (Unify "Parameter violation")
+           end )
+            
         else
           addConstraint (cnstr, ref (Eqh (cD0, cPsi, BVar k1, h1)))
         )
@@ -2305,7 +2318,8 @@ module Make (T : TRAIL) : UNIFY = struct
     and unifySub mflag cD0 cPsi s1 s2 = match (s1, s2) with 
 
       | (Shift (psi, n), Shift (phi, k)) -> 
-          if  n = k && psi = phi then () else raise_ (Error "Substitutions not well-typed")
+          if  n = k && psi = phi then () 
+            else raise_ (Error "Substitutions not well-typed")
 
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2)) 
         -> if s1 = s2 then 
@@ -2390,7 +2404,8 @@ module Make (T : TRAIL) : UNIFY = struct
           if a = b then
             unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
           else
-            raise_ (Unify "Type constant clash")
+            ( dprint (fun () -> "UnifyTyp " ^ P.typToString Empty cD0 cPsi sA ^ " ==== " ^ P.typToString Empty cD0 cPsi sB) ; 
+            raise_ (Unify "Type constant clash"))
 
       | ((PiTyp ((TypDecl(x, tA1), dep), tA2), s1), (PiTyp ((TypDecl(_x, tB1), _dep), tB2), s2)) -> 
           unifyTyp mflag cD0 cPsi (tA1, s1) (tB1, s2) ;
@@ -2445,7 +2460,9 @@ module Make (T : TRAIL) : UNIFY = struct
       | (DDec (cPsi1, TypDecl(_ , tA1)) , DDec (cPsi2, TypDecl(_ , tA2))) -> 
             unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
             unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id)
-      | _ -> raise_ (Unify "Context clash")
+      | _ -> 
+          (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ P.dctxToString Empty cD0 cPsi1 ^ " cPsi2 = " ^ P.dctxToString Empty cD0 cPsi2 ) ; 
+raise_ (Unify "Context clash"))
 
 
    (* **************************************************************** *)
@@ -2591,16 +2608,40 @@ module Make (T : TRAIL) : UNIFY = struct
 
    (* **************************************************************** *)
 
-    let rec unifyMSub ms mt = match (ms, mt) with
+    let rec unifyMSub' ms mt = match (ms, mt) with
+      (* the next three cases are questionable
+         they are needed to allow for weakening, i.e. we use a function
+         which makes sense in a stronger environment *)
       | (MShift k, MShift k') -> () (* if k = k' then () 
-        else raise (Unify "Contextual substitutions not of the same length") *)
+        else raise (Unify "Contextual substitutions not of the same length") *) 
       | (MDot ( _ , ms), MShift k) -> 
-          unifyMSub ms (MShift (k-1))
+          unifyMSub' ms (MShift (k-1))
       | (MShift k, MDot ( _ , ms)) -> 
-          unifyMSub ms (MShift (k-1))
+          unifyMSub' ms (MShift (k-1))
       | (MDot (MObj (phat, tM), ms'), MDot (MObj(phat', tM'), mt')) -> 
           (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ; 
-           unifyMSub ms' mt')
+           unifyMSub' ms' mt')
+      | (MDot (PObj (phat, h), ms'), MDot (PObj(_phat', h'), mt')) -> 
+          (dprint (fun () -> "[unifyMSub] Pob "); 
+          (unifyHead Unification Empty (Context.hatToDCtx phat) h h'; 
+           unifyMSub' ms' mt'))
+
+    let rec unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
+
+
+
+    let rec unifyCSub cs ct = match (cs, ct) with
+      | (CShift _k, CShift _k') -> ()
+      | (CDot ( _ , cs), CShift k) -> 
+          unifyCSub cs (CShift (k-1))
+      | (CShift k, CDot ( _ , cs)) -> 
+          unifyCSub cs (CShift (k-1))
+
+      | (CDot (cPsi, cs), CDot (cPhi, ct)) -> 
+          (unifyDCtx1 Unification Empty cPsi cPhi ; 
+           unifyCSub cs ct )
+ 
+
 
    (* **************************************************************** *)
 

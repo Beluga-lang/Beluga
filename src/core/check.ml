@@ -29,6 +29,9 @@ module LF = struct
   exception SpineMismatch
 
 
+
+
+
   (* ctxToSub cPsi:
    *
    * generates, based on cPsi, a substitution suitable for unification
@@ -130,8 +133,12 @@ let rec ctxShift cPsi = begin match cPsi with
             let _ = dprint (fun () -> "[check] " ^ P.normalToString cO cD cPsi sM ^ 
                               " <= " ^ P.typToString cO cD cPsi sA ) in
             let sP = syn' cO cD cPsi sM in 
-              if not (Whnf.convTyp sP sA) then
-                raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP)))
+            let _ = dprint (fun () -> "[check] synthesized " ^ P.normalToString cO cD cPsi sM ^ 
+                              " => " ^ P.typToString cO cD cPsi sP ) in
+            let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in 
+              if not (Whnf.convTyp  (tP', LF.id) (tQ', LF.id)) then 
+                (dprint (fun () -> "here!") ; 
+                raise (Error (loc, TypMismatch (cO, cD, cPsi, sM, sA, sP))))
           with SpineMismatch ->
             raise (Error (loc, (IllTyped (cO, cD, cPsi, sM, sA))))
           end
@@ -312,11 +319,23 @@ and lookupCtxVar cO cvar =
     | (Null, Shift (NoCtxShift, 0), Null) ->
         ()
 
+    | (cPhi, SVar (Offset offset, s'), CtxVar psi')  ->
+        begin try
+        let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in 
+          if cPhi1 = CtxVar psi' then 
+            checkSub loc cO cD cPsi s' cPsi1
+          else 
+            raise (Error (loc, SubIllTyped ))
+        with 
+          | _ -> raise (Error (loc, SubIllTyped ))
+        end 
+
     | (CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi')  ->
-        if psi = psi' then
+        (* if psi = psi' then *)
+        if subsumes cO psi' psi then
           ()
         else
-          raise (Violation "Context variable mismatch")
+          raise (Error (loc, CtxVarDiffer (cO, psi, psi')))
             (* (CtxVarMisMatch (psi, psi')) *)
 
     | (CtxVar (CtxOffset _ as psi), Shift (CtxShift (psi'), 0), Null) ->
@@ -641,8 +660,10 @@ This case should now be covered by the one below it
       | CtxVar ((CtxOffset _ ) as phi) ->
           let Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
 (*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements) then *)
-            if not (List.for_all (fun elem -> checkElementAgainstSchema cO cD elem phiSchemaElements) elements ) then
-              raise (Error (None, CtxVarMismatch (cO, phi, schema)))
+(*            if not (List.for_all (fun elem -> checkElementAgainstSchema cO cD elem phiSchemaElements) elements ) then *)
+            if (List.exists (fun elem -> checkElementAgainstSchema cO cD elem phiSchemaElements) elements ) then ()
+              else
+                raise (Error (None, CtxVarMismatch (cO, phi, schema)))
 
       | DDec (cPsi', decl) ->
           begin
@@ -651,6 +672,15 @@ This case should now be covered by the one below it
               | TypDecl (_x, tA) ->
                   let _ = checkTypeAgainstSchema cO cD cPsi' tA elements in ()
           end
+
+
+ (* If subsumes cO psi phi succeeds then there exists a wk_sub s.t. psi |- wk_sub   : phi  *)
+and subsumes cO psi phi = match (psi, phi) with
+  | (CtxOffset psi_var , CtxOffset phi_var) -> 
+      let Schema psi_selem = Schema.get_schema (lookupCtxVarSchema cO psi) in 
+      let Schema phi_selem = Schema.get_schema (lookupCtxVarSchema cO phi) in 
+        List.for_all (fun elem -> checkElementAgainstSchema cO Empty elem phi_selem) psi_selem  
+  | _ -> false
 
 
   let rec checkSchemaWf (Schema elements ) = 
@@ -829,6 +859,10 @@ module Comp = struct
     | TypBox (_ , tA, cPsi) ->
         LF.checkDCtx cO cD cPsi;
         LF.checkTyp  cO cD cPsi (tA, S.LF.id)
+
+    | TypSub (_ , cPhi, cPsi) ->
+        LF.checkDCtx cO cD cPsi;
+        LF.checkDCtx cO cD cPhi
           
     | TypArr (tau1, tau2) ->
         checkTyp cO cD tau1;
@@ -876,6 +910,14 @@ module Comp = struct
         check cO (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
+    | (MLam (_, u, e), (TypPiBox ((I.PDecl(_u, tA, cPsi), _), tau), t)) ->
+        check cO (I.Dec(cD, I.PDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
+          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
+
+    | (MLam (_, u, e), (TypPiBox ((I.SDecl(_u, cPhi, cPsi), _), tau), t)) ->
+        check cO (I.Dec(cD, I.SDecl(u, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t))))
+          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
+
     | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->
         check cO cD cG e1 (tau1, t);
         check cO cD cG e2 (tau2, t)
@@ -890,14 +932,32 @@ module Comp = struct
 
     | (Box (_, _phat, tM), (TypBox (_, tA, cPsi), t)) ->
         begin try
+(*        Already done during cwhnfCTyp ... -bp
           let cPsi' = C.cnormDCtx (cPsi, t) in
           let tA'   = C.cnormTyp (tA, t) in
-            LF.check cO cD  cPsi' (tM, S.LF.id) (tA', S.LF.id)
+*)
+            LF.check cO cD  cPsi (tM, S.LF.id) (tA, S.LF.id)
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
+    | (SBox (loc , _phat, sigma), (TypSub (_, cPhi, cPsi), t)) ->
+        begin try
+            LF.checkSub loc cO cD  cPsi sigma cPhi
+        with Whnf.FreeMVar (I.FMVar (u, _ )) ->
+          raise (Violation ("Free meta-variable " ^ (R.render_name u)))
+        end
 
+(*    | (SBox (loc , phat, sigma), tau_t) ->
+        raise (Violation  ("Found SBox " ^ P.subToString cO cD (Context.hatToDCtx phat) sigma ^ 
+                             "\n supposed to have type " ^ P.compTypToString cO cD (Whnf.cnormCTyp tau_t) ^ "\n"))
+
+
+    | (Box (loc , phat, tM), tau_t) ->
+        raise (Violation  ("Found Box " ^ P.normalToString cO cD (Context.hatToDCtx phat) (tM, S.LF.id) ^ 
+                             "\n supposed to have type " ^ P.compTypToString cO cD (Whnf.cnormCTyp tau_t) ^ "\n"))
+
+*)
     | (Case (_loc, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
         let _  = LF.check cO cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
         let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in 
@@ -955,13 +1015,21 @@ module Comp = struct
           | (tau, t) -> 
               raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.CtxPi, (tau,t))))
         end
-    | MApp (loc, e, (phat, tM)) ->
-        begin match C.cwhnfCTyp (syn cO cD cG e) with
-          | (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t) ->
+    | MApp (loc, e, (phat, cObj)) ->
+        begin match (cObj, C.cwhnfCTyp (syn cO cD cG e)) with
+          | (NormObj tM, (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t)) ->
               LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
               (tau, I.MDot(I.MObj (phat, tM), t))
-          | (tau, t) -> 
-              raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.CtxPi, (tau,t))))
+
+          | (NeutObj h, (TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
+              let tB = LF.inferHead loc cO cD cPsi h in 
+                if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
+                  (tau, I.MDot(I.PObj (phat, h), t))
+                else 
+                  raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.PiBox, (tau,t))))
+
+          | (_ , (tau, t)) -> 
+              raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.PiBox, (tau,t))))
         end
 
     | Ann (e, tau) ->
@@ -1062,22 +1130,27 @@ module Comp = struct
       | BranchBox (cO1', cD1',  (_cPsi1, (I.Root(loc, _, _ ) as tR1), t1, cs),  e1) ->
           (* By invariant: cD1' |- t1 <= cD *)
           let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  
-          let tP1   = Whnf.cnormTyp (Ctxsub.ctxnorm_typ (tP, cs), t1) in 
-          let cPsi1 = Whnf.cnormDCtx (Ctxsub.ctxnorm_dctx (cPsi, cs), t1) in
+          let tP1   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tP, t1), cs) in 
+          let cPsi1 = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi, t1), cs)in
+
           let _  = LF.check cO1' cD1' cPsi1 (tR1, S.LF.id)  (tP1, S.LF.id) in 
+
 
           let cG' = Whnf.cnormCtx (Ctxsub.ctxnorm_gctx (cG, cs), t1) in 
           let t'' = Whnf.mcomp t t1 in
 
+          let tau  = Whnf.cnormCTyp (tau, t'') in
+          let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
                         P.octxToString cO1' ^ " ; \n" ^ 
                         P.mctxToString cO1' cD1' ^ " ;\n " ^ 
                         P.normalToString cO1' cD1' cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
                             P.expChkToString cO1' cD1' cG' e1 ^ 
-                            "\n has type "  ^ P.compTypToString cO1' cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
+                            "\n has type "  ^ P.compTypToString cO1' cD1' tau' ^ "\n" 
                        )
           in
-            check cO1' cD1' cG' e1 (tau, t'')
+
+            check cO1' cD1' cG' e1 (tau', Whnf.m_id)
 
 end
   

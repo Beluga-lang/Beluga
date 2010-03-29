@@ -188,7 +188,7 @@ let rec lex_token loc = lexer
   | "%not"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 
-  | [ "%,.:;()[]{}" '\\' '#' '\"']  -> (* reserved character *)
+  | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
 (* print_string ("RSV [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
          mk_tok_of_lexeme mk_keyword loc lexbuf
 

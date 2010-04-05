@@ -25,7 +25,7 @@ fn a => fn b =>
 )
 ;
 
-rec eval : (exp)[ ] -> nat[ ] = 
+rec eval : exp[ ] -> nat[ ] = 
 fn e => 
 (case e of
    {U::nat[ ]} [ ] num U : exp [ ] => ([ ] U)

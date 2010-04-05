@@ -49,6 +49,17 @@ fn e => case e of
     [g,c] E1' .. (\f. E2' .. (\x. capp f x c))
 
 ;
+
+cval: type.
+cv: cvalue T -> cval.
+
+rec eval : contra [ ] -> cval [ ] = 
+fn e => case e of 
+ | [ ] capp (clam \v.\k. E v k)  Cv2  (\x. K x) => 
+     eval ([ ] E Cv2 (\x. K x))
+;
+
+
 %{
 % Twelf Solution
 

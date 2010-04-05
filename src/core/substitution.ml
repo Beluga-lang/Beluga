@@ -14,6 +14,7 @@ module LF = struct
 
   exception Error of string
 
+
   (**************************)
   (* Explicit Substitutions *)
   (**************************)
@@ -82,10 +83,10 @@ module LF = struct
         (* psi, Psi |- s1 : .   and     Psi,Psi' |- s2 : psi, Psi
          * therefore  Psi,Psi' |- s : .
          *)
-        if psi = psi' then 
+        (* if psi = psi' then   *)
           Shift (NoCtxShift, n+k)
-        else
-        raise (Error "Composition undefined (1) : encountered different context variables! ")
+(*        else
+        raise (Error "Composition undefined (1) : encountered different context variables! ")*)
 
     | (Shift (CtxShift psi , m), s2) ->
         let rec ctx_shift n s2 = match s2 with
@@ -119,10 +120,10 @@ module LF = struct
         (* . |- s1 : psi     and  psi,Psi' |- s2 : .
          *  therefore   psi, Psi' |- s : psi      where s = s1 o s2
          *)
-        if psi = psi' then
+        (* if psi = psi' then *)
           Shift (NoCtxShift, m)
-        else
-          raise (Error "Composition not defined (3) : encountered different context variables")
+        (*else
+          raise (Error "Composition not defined (3) : encountered different context variables")*)
 
 
     (*    | (Shift (psi, n), SVar (s, tau)) -> Shift (|Psi''|) *)

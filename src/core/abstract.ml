@@ -389,6 +389,7 @@ let rec constraints_solved cnstr = match cnstr with
 (* Check that a synthesized computation-level type is free of constraints *)
 let rec cnstr_ctyp tau =  match tau  with
   | Comp.TypBox (_, tA, cPsi) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
+  | Comp.TypSub (_, cPhi, cPsi) -> cnstr_dctx cPhi && cnstr_dctx cPsi
 
 and cnstr_typ sA = match sA with
   | (I.Atom  (_, _a, spine),  s)  -> cnstr_spine (spine , s)
@@ -698,24 +699,27 @@ and collectSpine cQ phat sS = match sS with
 
 *)
 and collectSub cQ phat s = match s with
-  | (I.Shift _) -> (cQ, s)
-  | (I.Dot (I.Head h, s)) ->
+  | I.Shift _ -> (cQ, s)
+  | I.Dot (I.Head h, s) ->
       let (cQ1, s') =  collectSub cQ phat s in 
       (* let _   = dprint (fun () -> "collectSub (Head) "  ) in *)
       let (cQ2, h') = collectHead cQ1 phat (h, LF.id) in
         (cQ2, I.Dot(I.Head h', s'))
 
-  | (I.Dot (I.Obj tM, s)) ->
+  | I.Dot (I.Obj tM, s) ->
       let (cQ1,s') =  collectSub cQ phat s in 
       let (cQ2, tM') = collectTerm cQ1 phat (tM, LF.id) in
         (cQ2, I.Dot (I.Obj tM', s'))
 
-  | (I.Dot (I.Undef, s')) ->
+  | I.Dot (I.Undef, s') ->
     (let _ = Printf.printf "Collect Sub encountered undef\n" in 
        (* -bp Aug 24, 2009 BUG: If the substitution includes an undef
           one would need to prune the type of the MVAR with which this
           substitution is associate. *)    
           collectSub cQ phat  s')
+
+  | I.SVar (I.Offset _offset, s) -> 
+       collectSub cQ phat s
 
 
 (* collectMSub cQ theta = cQ' *) 
@@ -1201,7 +1205,10 @@ and abstractMVarHead cQ offset tH = match tH with
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MVar (I.Offset x , s) -> 
-      I.MVar (I.Offset x, abstractMVarSub cQ offset s) 
+      let l = Context.length cQ in 
+      if x > offset then I.MVar(I.Offset ( x+ l), abstractMVarSub cQ offset s)
+      else  
+        I.MVar (I.Offset x, abstractMVarSub cQ offset s) 
 
   |  I.FMVar (u, s) ->
       let x = index_of cQ (FMV (Pure, u, None)) + offset in 
@@ -1221,7 +1228,10 @@ and abstractMVarHead cQ offset tH = match tH with
         I.Proj (head, k)
 
   | I.PVar (I.Offset p , s) -> 
-      I.PVar (I.Offset p, abstractMVarSub cQ offset s)
+      let l = Context.length cQ in 
+      if p > offset then  I.PVar (I.Offset (p+l), abstractMVarSub cQ offset s)
+      else 
+        I.PVar (I.Offset p, abstractMVarSub cQ offset s)
 
 
   (* other cases impossible for object level *)
@@ -1244,6 +1254,20 @@ and abstractMVarSub cQ offset s = match s with
 
   | I.Dot (I.Obj tM, s) ->
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub cQ offset s)
+
+  | I.SVar (I.Offset s, sigma) -> 
+      I.SVar (I.Offset s, abstractMVarSub cQ offset sigma)
+
+(*  | I.FSVar (s, sigma) -> 
+      let x = index_of cQ (FSV (Pure, s, None)) + offset in 
+        I.SVar (I.Offset x, abstractMVarSub cQ offset sigma)
+*)
+
+
+and abstractMVarCSub cQ d cs = match cs with
+  | I.CShift n -> I.CShift n
+  | I.CDot (cPsi, cs') -> 
+      I.CDot (abstractMVarDctx cQ d cPsi , abstractMVarCSub cQ d cs')
 
 
 and abstractMVarDctx cQ offset cPsi = match cPsi with
@@ -1427,6 +1451,12 @@ let rec collectCompTyp cQ tau = match tau with
       let (cQ'', tA')  = collectTyp cQ' phat (tA, LF.id) in 
         (cQ'', Comp.TypBox (loc, tA', cPsi'))
 
+  | Comp.TypSub (loc, cPhi, cPsi) -> 
+      let phat = Context.dctxToHat cPsi in 
+      let (cQ', cPsi') = collectDctx cQ phat cPsi in 
+      let (cQ'', cPhi') = collectDctx cQ phat cPhi in 
+        (cQ'', Comp.TypSub (loc, cPhi', cPsi'))
+
   | Comp.TypArr (tau1, tau2) -> 
       let (cQ1, tau1') = collectCompTyp cQ tau1 in 
       let (cQ2, tau2') = collectCompTyp cQ1 tau2 in 
@@ -1447,6 +1477,23 @@ let rec collectCompTyp cQ tau = match tau with
       let (cQ2, tA')    = collectTyp cQ1 phat (tA, LF.id) in 
       let (cQ3, tau')  = collectCompTyp cQ2 tau in 
         (cQ3 , Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep ), tau'))
+
+
+  | Comp.TypPiBox ((I.PDecl(u, tA, cPsi), dep ), tau) -> 
+      let phat = Context.dctxToHat cPsi in 
+      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
+      let (cQ2, tA')    = collectTyp cQ1 phat (tA, LF.id) in 
+      let (cQ3, tau')  = collectCompTyp cQ2 tau in 
+        (cQ3 , Comp.TypPiBox ((I.PDecl(u, tA', cPsi'), dep ), tau'))
+
+
+  | Comp.TypPiBox ((I.SDecl(u, cPhi, cPsi), dep ), tau) -> 
+      let phat = Context.dctxToHat cPsi in 
+      let phat' = Context.dctxToHat cPhi in 
+      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
+      let (cQ2, cPhi')    = collectDctx cQ1 phat' cPhi in 
+      let (cQ3, tau')  = collectCompTyp cQ2 tau in 
+        (cQ3 , Comp.TypPiBox ((I.SDecl(u, cPhi', cPsi'), dep ), tau'))
 
   | Comp.TypBool  -> (cQ, tau)
   | Comp.TypClo _ -> (dprint (fun () -> " collectCTyp – TypClo missing ") ; raise NotImplemented)
@@ -1486,6 +1533,11 @@ let rec collectExp cQ e = match e with
       let (cQ', tM') = collectTerm  cQ  phat (tM, LF.id)  in 
         (cQ', Comp.Box (loc, phat, tM') )
 
+
+  | Comp.SBox (loc, phat, sigma) -> 
+      let (cQ', sigma') = collectSub  cQ  phat sigma  in 
+        (cQ', Comp.SBox (loc, phat, sigma') )
+
   | Comp.Case (loc, i, branches) -> 
       let (cQ', i') = collectExp' cQ i in 
       let (cQ2, branches') = collectBranches cQ' branches in 
@@ -1511,10 +1563,17 @@ and collectExp' cQ i = match i with
       let (cQ'', cPsi') = collectDctx cQ' phat cPsi in 
         (cQ'', Comp.CtxApp (loc, i', cPsi'))
 
-  | Comp.MApp (loc, i, (phat, tM)) -> 
+  | Comp.MApp (loc, i, (phat, cObj)) -> 
       let (cQ', i') = collectExp' cQ i  in 
-      let (cQ'', tM') = collectTerm cQ' phat (tM, LF.id) in 
-        (cQ'', Comp.MApp (loc, i', (phat, tM')))
+      let (cQ'', cObj') = begin match cObj with 
+                              | Comp.NormObj tM -> 
+                                  let (cQ'', tM') = collectTerm cQ' phat (tM, LF.id)  in (cQ'', Comp.NormObj tM') 
+                              | Comp.NeutObj h  -> 
+                                  let (cQ'', h')  = collectHead cQ' phat (h, LF.id)   in (cQ'', Comp.NeutObj h')
+                              | Comp.SubstObj s -> 
+                                  let (cQ'', s')  = collectSub cQ' phat s             in (cQ'', Comp.SubstObj s')
+                         end in 
+        (cQ'', Comp.MApp (loc, i', (phat, cObj')))
 
   | Comp.Ann  (e, tau) -> 
       let (cQ', e') = collectExp cQ e in 
@@ -1546,6 +1605,17 @@ and collectPattern cQ cD cPsi (phat, tM) tA =
 
 
 
+and collectSubPattern cQ cD cPsi sigma cPhi = 
+  let (cQ1, cD')    = collectMctx cQ cD in 
+  let phat = Context.dctxToHat cPsi in 
+  let (cQ2, cPsi')  = collectDctx cQ1 phat cPsi in 
+  let (cQ3, cPhi')  = collectDctx cQ2 phat cPhi in 
+  let (cQ4, sigma') = collectSub  cQ3 phat sigma in 
+
+    (cQ4, cD', cPsi', sigma', cPhi')
+
+
+
 
 and collectBranch cQ branch = match branch with
   | Comp.BranchBox (cO, cD, pat, e) -> 
@@ -1567,6 +1637,11 @@ let rec abstractMVarCompTyp cQ offset tau = match tau with
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
         Comp.TypBox (loc, tA', cPsi')      
 
+  | Comp.TypSub (loc, cPhi, cPsi) -> 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+      let cPhi' = abstractMVarDctx cQ offset cPhi in 
+        Comp.TypSub (loc, cPhi', cPsi')      
+
   | Comp.TypArr (tau1, tau2) -> 
       Comp.TypArr (abstractMVarCompTyp cQ offset tau1, 
                    abstractMVarCompTyp cQ offset tau2)
@@ -1583,6 +1658,19 @@ let rec abstractMVarCompTyp cQ offset tau = match tau with
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
       let tau'  = abstractMVarCompTyp cQ (offset+1) tau in 
         Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep), tau')
+
+  | Comp.TypPiBox ((I.PDecl(u, tA, cPsi), dep), tau) -> 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+      let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
+      let tau'  = abstractMVarCompTyp cQ (offset+1) tau in 
+        Comp.TypPiBox ((I.PDecl(u, tA', cPsi'), dep), tau')
+
+
+  | Comp.TypPiBox ((I.SDecl(u, cPhi, cPsi), dep), tau) -> 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+      let cPhi' = abstractMVarDctx cQ offset cPhi in 
+      let tau'  = abstractMVarCompTyp cQ (offset+1) tau in 
+        Comp.TypPiBox ((I.SDecl(u, cPhi', cPsi'), dep), tau')
 
   | Comp.TypBool -> Comp.TypBool
 
@@ -1686,22 +1774,46 @@ let rec abstrCompTyp tau =
     (raiseCompTyp cD' tau', Context.length cD')
 
 
+
+
+
 (*  
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
    2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA
  
 *)
-let rec abstrPattern cD1 cPsi1  (phat, tM) tA =  
+let rec abstrPattern cD1 cPsi1  (phat, tM) tA (cs1, cs)=  
   let (cQ, cD1', cPsi1', (phat, tM'), tA')  = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in
   let cQ'     = abstractMVarCtx cQ in 
   let offset  = Context.length cD1' in 
-  let cPsi2  = abstractMVarDctx cQ' offset cPsi1' in 
+  let cPsi2   = abstractMVarDctx cQ' offset cPsi1' in 
   let tM2     = abstractMVarTerm cQ' offset (tM', LF.id) in
   let tA2     = abstractMVarTyp  cQ' offset (tA', LF.id) in 
-  let cD2    = abstractMVarMctx cQ' cD1' (offset-1) in 
+  let cD2     = abstractMVarMctx cQ' cD1' (offset-1) in 
+  let cs1'    = abstractMVarCSub cQ' offset cs1 in
+  let cs'     = abstractMVarCSub cQ' offset cs in
   let cD'     = ctxToMCtx cQ' in 
   let cD      = Context.append cD' cD2 in 
-    (cD, cPsi2, (phat, tM2), tA2)
+    (cD, cPsi2, (phat, tM2), tA2, cs1', cs')
+
+
+
+(*  
+   1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
+   2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA
+ 
+*)
+let rec abstrSubPattern cD1 cPsi1  sigma cPhi1 =  
+  let (cQ, cD1', cPsi1', sigma', cPhi1')  = collectSubPattern I.Empty cD1 cPsi1 sigma cPhi1 in
+  let cQ'      = abstractMVarCtx cQ in 
+  let offset   = Context.length cD1' in 
+  let cPsi2    = abstractMVarDctx cQ' offset cPsi1' in 
+  let sigma2   = abstractMVarSub cQ' offset sigma' in
+  let cPhi2    = abstractMVarDctx cQ' offset cPhi1' in 
+  let cD2      = abstractMVarMctx cQ' cD1' (offset-1) in 
+  let cD'      = ctxToMCtx cQ' in 
+  let cD       = Context.append cD' cD2 in 
+    (cD, cPsi2, sigma2, cPhi2)
     
 
 

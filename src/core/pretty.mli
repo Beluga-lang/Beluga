@@ -112,9 +112,9 @@ module Int : sig
     val expChkToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
     val expSynToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
     val branchToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.branch   -> string
-    val compTypToString   : LF.mctx -> LF.mctx -> Comp.typ      -> string
-    val msubToString      : LF.mctx -> LF.mctx -> LF.msub     -> string
-    val csubToString      : LF.mctx -> LF.csub                -> string
+    val compTypToString   : LF.mctx -> LF.mctx -> Comp.typ   -> string
+    val msubToString      : LF.mctx -> LF.mctx -> LF.msub    -> string
+    val csubToString      : LF.mctx -> LF.mctx -> LF.csub    -> string
 
   end
 

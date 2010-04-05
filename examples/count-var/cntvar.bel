@@ -39,7 +39,7 @@ case x of
 % if  G, x: exp T |-  U .. x ==> n1
 % if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
 
-rec cntV : {g:(expCtx)*}  exp (S .. x)[g, x:exp (T ..)] -> (exp nat) [ ] =
+rec cntV : {g:(expCtx)*}  (exp (S .. x))[g, x:exp (T ..)] -> (exp nat) [ ] =
 FN g => 
  fn e =>
   case e of  % e : exp (S .. x) [g, x:exp (T ..)]

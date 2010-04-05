@@ -79,6 +79,9 @@ $INTERPRETER +t \
     freshML/cps-popl-tutorial1-crec.bel \
     freshML/cps-popl-tutorial2.bel \
     freshML/cps-popl-tutorial2-crec.bel \
+    freshML/cconv-cheney.bel \
+    freshML/debruijn-1.bel \
+    freshML/conv-untyped.bel \
     lp-horn/sources.cfg \
     lp-horn/test-crec.cfg \
     mini-ml/eval-sub-1.bel \

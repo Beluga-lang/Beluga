@@ -11,17 +11,17 @@ open Printf
 
 let usage () =
   let options =
-"\
- \    -d            turn all debugging printing off (default)\n\
- \    +d            turn all debugging printing on\n\
- \    -s=natural    print substitutions in a \"natural\" style (default)\n\
- \    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n\
- \    +implicit     print implicit arguments (default -- for now)\n\
- \    -implicit     don't print implicit arguments\n\
- \    -t            turn timing off (default)\n\
- \    +t            print timing information\n\
- \    +tfile        print timer in file \"time.txt\"\n\
-"
+          "    -d            turn all debugging printing off (default)\n"
+        ^ "    +d            turn all debugging printing on\n"
+        ^ "    -s=natural    print substitutions in a \"natural\" style (default)\n"
+        ^ "    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n"
+        ^ "    +implicit     print implicit arguments (default -- for now)\n"
+        ^ "    -implicit     don't print implicit arguments\n"
+        ^ "    -t            turn timing off (default)\n"
+        ^ "    +t            print timing information\n"
+        ^ "    +tfile        print timing information to file \"time.txt\"\n"
+        ^ "    -coverage     turn off coverage checker (default, since coverage checker is incomplete)\n"
+        ^ "    +coverage     turn on coverage checker (experimental)\n"
   in
     fprintf stderr
       "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
@@ -42,6 +42,8 @@ let process_option' arg = begin let f = function
   | "+tfile" -> Monitor.onf := true
   | "-t" -> (Monitor.on := false;
              Monitor.onf := false)
+  | "+coverage" -> Coverage.enableCoverage := true
+  | "-coverage" -> Coverage.enableCoverage := false
   | _ -> usage ()
 in (* print_string (">>>> " ^ arg ^ "\n"); *) f arg
 end

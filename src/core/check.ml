@@ -862,14 +862,14 @@ module Comp = struct
    * otherwise exception Error is raised
    *)
   
-  let rec checkW cO cD cG e ttau = match (e , ttau) with
+  let rec checkW cO cD (cG : ctyp_decl I.ctx) e ttau = match (e, ttau) with
     | (Rec (_, f, e), (tau, t)) ->
         check cO cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t)))) e ttau
 
     | (Fun (_, x, e), (TypArr (tau1, tau2), t)) ->
         check cO cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t)))) e (tau2, t)
 
-    | (CtxFun (_, psi, e) , (TypCtxPi ((_psi, schema, _ ), tau), t)) ->
+    | (CtxFun (_, psi, e), (TypCtxPi ((_psi, schema, _ ), tau), t)) ->
         check (I.Dec(cO, I.CDecl(psi, schema))) cD cG e (tau, t)
 
     | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
@@ -900,12 +900,14 @@ module Comp = struct
 
     | (Case (_loc, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
         let _  = LF.check cO cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
-        let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in 
-          checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t) 
+        let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
+          (* coverage check here too? -jd *)
+          checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t)
 
     | (Case (loc, i, branches), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG i) with
-          | (TypBox (_, tA, cPsi),  t') -> 
+          | (TypBox (_, tA, cPsi),  t') ->
+              Coverage.covers cO cD cG branches (tA, cPsi);
               checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
           | (tau',t') -> raise (Error (loc, E.CompMismatch(cO, cD, cG, i, E.Box, (tau', t'))))
         end

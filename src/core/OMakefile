@@ -13,6 +13,7 @@ FILES[] =
         config
         context
         convSigma
+        coverage
         ctxsub
         debug
         error

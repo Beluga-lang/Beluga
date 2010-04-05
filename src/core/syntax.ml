@@ -151,16 +151,16 @@ module Int = struct
       | SchElem of typ_decl ctx * typ_rec    (* Pi    x1:A1 ... xn:An.
                                               Sigma y1:B1 ... yk:Bk. B       *)
                                            (* Sigma-types not allowed in Ai  *)
-
+    
     and schema =
       | Schema of sch_elem list
-
+    
     and psi_hat = ctx_var option * offset  (* Psihat ::=         *)
                                            (*        | psi       *)
                                            (*        | .         *)
                                            (*        | Psihat, x *)
-
-
+    
+    
     and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
       |  SigmaLast of typ                             (* ... . B *)
       |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)

@@ -3251,8 +3251,8 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
         begin match (i', C.cwhnfCTyp tau_theta') with
           | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ), 
              (Int.Comp.TypBox (_, tP, cPsi) as tau', t (* m_id *))) ->
-              let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
-              let _        = Unify.resetGlobalCnstrs () in 
+              let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
+              let _ = Unify.resetGlobalCnstrs () in 
 
               (* let _ = recTerm PiboxRecon cO cD cPsi (tR, LF.id) (tP, LF.id) in *)
               (if Whnf.closed (tR, LF.id)  then 
@@ -3273,8 +3273,10 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
                              ^  P.dctxToString cO cD cPsi 
                              ^ "\n") in
 
-                let branches' = List.map (function b ->  elBranch DataObj cO cD cG b (tP, cPsi) tau_theta )  branches in
-                  Int.Comp.Case (Some loc, i, branches') 
+                let internal_branches = List.map (function b -> elBranch DataObj cO cD cG b (tP, cPsi) tau_theta ) branches in
+                let internal_case_exp = Int.Comp.Case (Some loc, i, internal_branches) in
+(*                  Coverage.covers cO cD cG internal_branches (tP, cPsi);         moved to check.ml  -jd 2010-04-05 *)
+                  internal_case_exp
                 
               else 
                 raise (Error (Some loc, CompScrutineeTyp (cO, cD, cG, i', (tP, LF.id), cPsi)))

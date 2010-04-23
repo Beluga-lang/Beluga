@@ -39,7 +39,8 @@ type mixtyp =
   |  MTBox of Loc.t * mixtyp * LF.dctx
   |  MTSub of Loc.t * LF.dctx * LF.dctx
   |  MTPiBox of Loc.t * LF.ctyp_decl * mixtyp
-  |  MTPiTyp of Loc.t * LF.typ_decl * mixtyp
+(* -bp Pi-types should not occur in computation-level types 
+  |  MTPiTyp of Loc.t * LF.typ_decl * mixtyp *)
   |  MTAtom of Loc.t * Id.name * LF.spine
 
 type whichmix = LFMix of LF.typ | CompMix of Comp.typ
@@ -54,7 +55,7 @@ let mixloc = function
   |  MTBox(l, _, _) -> l
   |  MTSub(l, _, _) -> l
   |  MTPiBox(l, _, _) -> l
-  |  MTPiTyp(l, _, _) -> l
+(*  |  MTPiTyp(l, _, _) -> l *)
   |  MTAtom(l, _, _) -> l
 
 (* unmix : mixtyp -> whichmix *  *)
@@ -70,7 +71,7 @@ let rec unmix = function
   |  MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
   |  MTSub(l, dctx1, dctx) -> CompMix(Comp.TypSub(l, dctx1, dctx))
   |  MTPiBox(l, cdecl, mt0) -> CompMix(Comp.TypPiBox(l, cdecl, toComp mt0))
-  |  MTPiTyp(l, tdecl, mt0) -> LFMix(LF.PiTyp(l, tdecl, toLF mt0))
+(*  |  MTPiTyp(l, tdecl, mt0) -> LFMix(LF.PiTyp(l, tdecl, toLF mt0)) *)
   |  MTAtom(l, name, spine) -> LFMix(LF.Atom(l, name, spine))
 
 and toLF mt = match unmix mt with
@@ -382,7 +383,9 @@ GLOBAL: sgn_eoi;
 (* ************************************************************************************** *)
 (* Parsing of computations and LF terms occurring in computations                         *)
 
-clf_decl:
+
+
+  clf_decl:
   [
     [
       x = SYMBOL; ":"; tA = clf_typ -> LF.TypDecl (Id.mk_name (Id.SomeString x), tA)
@@ -939,7 +942,23 @@ cmp_exp_syn:
   ;
 
 
+(*   boxtyp :
+   [
+     [
 
+         a = SYMBOL;  "["; cPsi = clf_dctx; "]" ->
+              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi )
+
+     | 
+          "("; a = SYMBOL;  ms = LIST0 clf_normal; ")"; "["; cPsi = clf_dctx; "]" ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
+
+
+     ]
+   ]
+  ;
+*)
 
 
   mixtyp:
@@ -960,9 +979,10 @@ cmp_exp_syn:
       |
         mixtau1 = SELF; rarr; mixtau2 = SELF ->
           MTArr (_loc, mixtau1, mixtau2) 
-      |
+(*    |
         "{"; x = SYMBOL; ":"; a2 = clf_typ; "}"; mixa = SELF ->
             MTPiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), mixa)
+*)
       ] 
      | 
         LEFTA 
@@ -981,11 +1001,25 @@ cmp_exp_syn:
 *)
          tA = "Bool" -> MTBool _loc
 
+
       |
-        "("; mixtau = mixtyp; ")" ->
-          mixtau
+        "("; mixtau = mixtyp ; ")" ->
+           mixtau 
 
 
+      |   "(" ; a = SYMBOL;  "["; cPsi = clf_dctx; "]" ; rarr; mixtau2 = mixtyp ; ")" -> 
+              MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ), 
+                    mixtau2)
+
+      |   a = SYMBOL;  "["; cPsi = clf_dctx; "]" -> 
+              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi )
+
+      | 
+          "("; a = SYMBOL;  ms = LIST0 clf_normal; ")"; "["; cPsi = clf_dctx; "]" ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
+
+      
       | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" -> 
           let cPhi0 = LF.Null in 
             MTSub (_loc, cPhi0, cPsi)
@@ -1008,15 +1042,6 @@ cmp_exp_syn:
           let cPhi0 = LF.CtxVar (_loc, Id.mk_name (Id.SomeString psi)) in
           let cPhi = List.fold_left (fun d ds -> LF.DDec(d, ds)) cPhi0 decls in 
             MTSub (_loc, cPhi, cPsi)
-
-     | 
-          a = SYMBOL;  "["; cPsi = clf_dctx; "]" ->
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi )
-
-     | 
-          "("; a = SYMBOL;  ms = LIST0 clf_normal; ")"; "["; cPsi = clf_dctx; "]" ->
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
 
 
 (*      | 

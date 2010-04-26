@@ -42,3 +42,6 @@ val toFlags : int list -> flags
 val show : flags -> unit    (* Set the types of output to be printed *)
 val showAll : unit -> unit
 val showNone : unit -> unit
+
+val indent : int -> unit
+val outdent : int -> unit

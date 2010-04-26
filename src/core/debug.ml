@@ -25,11 +25,21 @@ let showAll () =
 let showNone () =
     show (toFlags [])
 
+let level = ref 0
+
+let indent n = level := !level + n
+let outdent n = level := !level - n
+
+let print_level_spaces() =
+  let rec p n = if n < 1 then () else (print_string " "; p (n - 1))
+  in
+     p (!level)
+
 let print flags f =
     if flags land !r_flags == 0 then 
         ()
     else
-        (print_string (f() ^ "\n")
+        (print_level_spaces(); print_string (f() ^ "\n")
        ; flush_all())
 
 let prnt flags s =

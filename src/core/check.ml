@@ -1133,7 +1133,7 @@ module Comp = struct
           (* By invariant: cD1' |- t1 <= cD *)
           let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  
           let tP1   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tP, t1), cs) in 
-          let cPsi1 = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi, t1), cs)in
+          let cPsi1 = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi, t1), cs) in
 
           let _  = LF.check cO1' cD1' cPsi1 (tR1, S.LF.id)  (tP1, S.LF.id) in 
 

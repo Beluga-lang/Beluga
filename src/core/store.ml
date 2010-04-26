@@ -12,7 +12,8 @@ module Cid = struct
       implicit_arguments : int;
       kind               : Int.LF.kind;
       var_generator      : (unit -> string) option;
-      mvar_generator      : (unit -> string) option;
+      mvar_generator     : (unit -> string) option;
+      mutable constructors : Id.cid_term list
     }
 
     let mk_entry n k i = {
@@ -21,6 +22,7 @@ module Cid = struct
       kind               = k;
       var_generator      = None;
       mvar_generator     = None;
+      constructors       = []
     }
 
     type t = Id.name DynArray.t
@@ -47,9 +49,13 @@ module Cid = struct
     let addNameConvention cid_name var_name_generator mvar_name_generator =
       let cid_tp = index_of_name cid_name in 
       let entry = get cid_tp in
-      let new_entry = {name = entry.name ; implicit_arguments = entry.implicit_arguments ; 
-                       kind = entry.kind ; var_generator = var_name_generator; 
-                       mvar_generator =  mvar_name_generator} in 
+      let new_entry = {name   = entry.name ;
+                        implicit_arguments = entry.implicit_arguments ; 
+                        kind  = entry.kind ;
+                        var_generator  = var_name_generator; 
+                        mvar_generator =  mvar_name_generator;
+                        constructors   = []
+                      } in 
         (DynArray.set store cid_tp new_entry ; 
          cid_tp)
 
@@ -76,7 +82,10 @@ module Cid = struct
       | Int.LF.SigmaLast tA -> gen_mvar_name tA
       | Int.LF.SigmaElem(_, _, rest) -> gen_mvar_name_typRec rest
 
-
+    let addConstructor typ c =
+      let e = get typ in
+        e.constructors <- c :: e.constructors
+    
     let clear () =
       DynArray.clear store;
       Hashtbl.clear directory
@@ -110,10 +119,11 @@ module Cid = struct
 
     let index_of_name n = Hashtbl.find directory n
 
-    let add e =
+    let add e_typ e =
       let cid_tm = DynArray.length store in
         DynArray.add store e;
         Hashtbl.replace directory e.name cid_tm;
+        Typ.addConstructor e_typ cid_tm;
         cid_tm
 
     let get = DynArray.get store

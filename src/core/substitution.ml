@@ -149,14 +149,14 @@ module LF = struct
        raise (Error "Composition not defined? - Shift CtxShift")
 *)
     | (Shift (NoCtxShift , k ), Shift (NegCtxShift _, _ )) -> 
-        raise (Error ("Composition not defined? - NoCtxShift " ^ string_of_int k ^ " o Shift NegCtx?"))
+        raise (Error ("Composition not defined? NoCtxShift " ^ string_of_int k ^ " o Shift NegCtx?"))
 
 
     | (Shift (NoCtxShift , k ), Shift (CtxShift _, _ )) -> 
     (*  psi, x:A |- s1 <= psi  
                  |-    <= psi, x:A
      *)
-        raise (Error ("Composition not defined? - NoCtxShift " ^ string_of_int k ^ " o Shift CtxShift ?"))
+        raise (Error ("Composition not defined? NoCtxShift " ^ string_of_int k ^ " o Shift CtxShift?"))
 
 
 

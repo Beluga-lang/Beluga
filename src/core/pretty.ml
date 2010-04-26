@@ -12,21 +12,21 @@ open Format
 (* Explanation of formatting markup:
 
    "@[" opens a box (open_box 0).  You may specify more information
-   with an argument, e.g., "@[<hov n>" is equivalent to open_hovbox n
+          with an argument, e.g., "@[<hov n>" is equivalent to open_hovbox n
 
    "@]" closes a box (close_box ())
 
    "@ " outputs a breakable space (print_space ())
 
-   "@," output a break hint (print_cut ())
+   "@," outputs a break hint (print_cut ())
 
-   "@." end the pretty-printing, closing all boxes still opened
-   (print_newline ())
+   "@." ends the pretty-printing, closing all boxes still opened
+          (print_newline ())
 
-   "@;<n m>" emit a "full" break hint (print_break n m)
+   "@;<n m>" emits a "full" break hint (print_break n m)
 
-   "@?" output pending material in the pretty-printer queue
-   (print_flush ())
+   "@?" outputs pending material in the pretty-printer queue
+          (print_flush ())
 *)
 
 

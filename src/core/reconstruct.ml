@@ -4260,6 +4260,10 @@ let recSgnDecl d =
   | Ext.Sgn.Const (_, c, extT) ->
       let fvars    = [] in 
       let (apxT, _ ) = index_typ (CVar.create ()) (BVar.create ()) fvars extT in
+      let rec yankType = function
+                         | Apx.LF.Atom(_loc, a, _spine) -> a
+                         | Apx.LF.PiTyp ((_, _), t) -> yankType t in
+      let constructedType = yankType apxT in
       let _          = dprint (fun () -> "\nReconstructing term constant " ^ c.string_of_name ^ "\n") in
     
       let _        = FVar.clear () in
@@ -4293,8 +4297,7 @@ let recSgnDecl d =
 
       let _        = Monitor.timer ("Constant Check", 
                                     fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Empty Int.LF.Null (tA', LF.id)) in
-
-      let _c'       = Term.add (Term.mk_entry c tA' i) in
+      let _c'       = Term.add constructedType (Term.mk_entry c tA' i) in
       (* let _        = Printf.printf "\n %s : %s ." (c.string_of_name) (P.typToString cO cD  Int.LF.Null (tA', LF.id)) in *)
         (* Int.Sgn.Const (c', tA') *) 
         ()       

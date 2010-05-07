@@ -66,6 +66,8 @@ exception NonInvertible
 val m_id   : msub
 val mshift: msub -> int -> msub
 val mshiftTerm: normal -> int -> normal
+val mshiftHead: head -> int -> head
+val mshiftSpine: spine -> int -> spine
 val mshiftTyp : typ  -> int -> typ
 
 val mvar_dot1  : msub -> msub
@@ -90,6 +92,7 @@ val mctxPVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
 
 val cnorm      : normal * msub -> normal
 val cnormHead : head * msub -> head
+val cnormSpine : spine * msub -> spine
 val cnormSub   : sub * msub -> sub
 val cnormTyp   : typ  * msub -> typ
 val cnormTypRec: typ_rec * msub -> typ_rec

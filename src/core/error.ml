@@ -64,6 +64,8 @@ type error =
   | NotPatSub
   | NotPatternSpine
 
+  | NoCover
+
   | LeftoverUndef
   | SubIllTyped
   | LeftoverFVar

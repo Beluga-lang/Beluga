@@ -12,7 +12,7 @@ open Substitution
 open Id
 
 (* module Unify = Unify.EmptyTrail  *)
-module Unify = Unify.StdTrail 
+module Unify = Unify.StdTrail
 module C     = Whnf
 module I     = Syntax.Int
 

@@ -2,8 +2,8 @@
 
 (** A `name' represents the original named representation of a
     variable.  These are used primarily during parsing and pretty
-    printing.  Names should never be constructed directly.  See
-    `mk_name'. *)
+    printing.  Names should never be constructed directly.
+    See `mk_name'. *)
 type name     = private {
   string_of_name : string
 }

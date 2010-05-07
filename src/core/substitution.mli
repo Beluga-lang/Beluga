@@ -42,4 +42,3 @@ module LF : sig
   val isMId       : msub -> bool
   val applyMSub   : Id.offset -> msub -> mfront
 end
-

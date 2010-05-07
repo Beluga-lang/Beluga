@@ -1614,7 +1614,12 @@ module Error = struct
           fprintf ppf "Not a pattern substitution" (* TODO *)
 
       | NotPatternSpine ->
-          fprintf ppf "non-pattern spine – cannot reconstruct the type of a variable or hole" (* TODO *)
+          fprintf ppf "non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *)
+
+
+      | NoCover ->
+          fprintf ppf "Coverage checking failed"
+
 
       | LeftoverUndef ->
           fprintf ppf "Undef left after unification" (* FIXME this is a beluga error *)

@@ -3702,7 +3702,7 @@ and elExp' cO cD cG i = match i with
  * TODO double check -bp
  *)
 (* NOTE: Any context variable occurring in delta, psihat, a, psi is bound
- *  in cO !  So delta (and cD' and cD) do not contain it!
+ *  in cO!  So delta (and cD' and cD) do not contain it!
  *)
 
 and recPattern cO cD cPsi omega delta psi m tPopt = 
@@ -4063,7 +4063,7 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
       *)
       let (cs1, cs') = (Whnf.cnormCSub (cs1, t1) , Whnf.cnormCSub (cs', t1) ) in 
       (* *************** Synthesize Refinement Substitution *************************)
-      (* Note: e is in the scope of cD, cD0 ; however, cD1' = cD1, cD0 !!   *)
+      (* Note: e is in the scope of cD, cD0; however, cD1' = cD1, cD0 !!   *)
       (*       e is in the scope of cO_ext *)
       let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
       let l_o1     = l_cO' - l_omega  in   (* l_cd1 is the length of cD1 *) 
@@ -4095,7 +4095,7 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
                             Whnf.cnormCTyp(
                               (Whnf.cnormCTyp (Whnf.cnormCTyp (tau, theta),  (Int.LF.MShift l_cd1')) , 
                                                   t1)) , 
-                                        cs'                                                                        
+                                        cs'                
                                                        ))) ; 
                dprint (fun () -> "t'   = " ^ P.msubToString cO' cD1'' t' )) in
 

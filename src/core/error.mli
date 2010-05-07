@@ -104,7 +104,10 @@ type error =
   | NotPatSub                          (* ???                                 *)
   | NotPatternSpine
 
-  (* beluga errors *)
+  (* Coverage errors *)
+  | NoCover
+
+  (* Beluga errors *)
   | LeftoverUndef                      (* encountered Undef after unification *)
   | SubIllTyped                        (* TODO                                *)
   | LeftoverFVar                       (* encountered FVar after 

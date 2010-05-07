@@ -694,11 +694,10 @@ and normDecl (decl, sigma) = match decl with
 (* ********************************************************************* *)
 (* Normalization = applying simultaneous modal substitution   
 
-     Applying the modal substitution t to an normal LF term tM 
-     yields again a normal term. This corresponds to normalizing the 
-     term [|t|]tM.  
-
+     Applying the modal substitution t to a normal LF term tM 
+     yields a normal term. This corresponds to normalizing the term [|t|]tM.
 *)
+
   (* 
      cnorm (tM,t) = [|t|]tM 
 
@@ -788,13 +787,13 @@ and cnorm (tM, t) = match tM with
                     cnormSub (r, t)), cnormSpine (tS, t)) 
                     
           *)
-          (* CHECK HERE IF THERE ARE ANY LEFT OVER CONSTRAINTS! *)
+          (* CHECK HERE IF THERE ARE ANY LEFTOVER CONSTRAINTS! *)
           | MVar (Inst ({contents = None}, _cPsi, _tA, cnstr) as u , r) ->
               (* if constraints_solved (!cnstr) then *)
-                (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
+                (* raise (Error "Encountered Uninstantiated MVar with reference ?\n") *)
                 Root (loc, MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
 (*              else 
-                raise (Violation "uninstiated meta-variables with unresolved constraints")*)
+                raise (Violation "uninstantiated meta-variables with unresolved constraints")*)
                   
                   
           | PVar (PInst ({contents = None}, _cPsi, _tA, _ ) as p, r) -> 
@@ -935,7 +934,7 @@ and cnorm (tM, t) = match tM with
       (* Ignore other cases for destructive (free) parameter-variables *)
   
 (* cnormHead (h,t) = h' 
-   requires that h is a head such as bound variable or parameter variable associated with patter sub 
+   requires that h is a head such as bound variable or parameter variable associated with pattern sub 
    or projection of the previous two
  *)
   and cnormHead (h, t) = begin match h with 

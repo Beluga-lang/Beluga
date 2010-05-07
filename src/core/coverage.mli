@@ -10,3 +10,5 @@ val covers  : LF.mctx
            -> Comp.branch list
            -> (LF.typ * LF.dctx)
            -> unit
+
+exception NoCover

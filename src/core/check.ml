@@ -967,7 +967,10 @@ module Comp = struct
     | (Case (loc, i, branches), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG i) with
           | (TypBox (_, tA, cPsi),  t') ->
-              Coverage.covers cO cD cG branches (tA, cPsi);
+              begin try Coverage.covers cO cD cG branches (tA, cPsi)
+                    with Coverage.NoCover -> (Printf.printf "Coverage checking failed\n";
+                                              raise (Error (loc, E.NoCover)))
+              end;
               checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
           | (tau',t') -> raise (Error (loc, E.CompMismatch(cO, cD, cG, i, E.Box, (tau', t'))))
         end

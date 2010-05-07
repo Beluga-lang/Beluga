@@ -274,7 +274,7 @@ module Make (T : TRAIL) : UNIFY = struct
   (begin match cnstr with
     | {contents= (Eqn (cD0, cPsi, Clo sM, Clo sN))} -> 
         dprint (fun () -> "Add constraint: " ^ P.normalToString Empty cD0 cPsi sM  ^ 
-                   " = " ^ P.normalToString Empty cD0 cPsi sN ^ "\n")
+                   " = " ^ P.normalToString Empty cD0 cPsi sN)
     | _ -> () end ; 
    cnstrs := cnstr :: !cnstrs;
    T.log globalTrail (Add cnstrs))
@@ -934,7 +934,7 @@ module Make (T : TRAIL) : UNIFY = struct
         let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in 
           Dot (Obj tM', invSub cD0 phat (s', cPsi') ss rOccur)
 
-    | _ -> (dprint (fun () -> "invSub -- undefined \n") ; raise (Error "invSub -- undefined"))
+    | _ -> (dprint (fun () -> "invSub -- undefined") ; raise (Error "invSub -- undefined"))
 
 
 
@@ -1169,7 +1169,7 @@ module Make (T : TRAIL) : UNIFY = struct
                           
 
             | MVar (Offset u, t)   (* tS = Nil,   s = id *) ->
-                (dprint (fun () -> "Pruning bound meta-variable ..") ;
+                (dprint (fun () -> "Pruning bound meta-variable...") ;
                 begin match applyMSub u ms with 
                   | MV v -> 
                       begin try 
@@ -1265,7 +1265,7 @@ module Make (T : TRAIL) : UNIFY = struct
             | BVar k  (* s = id *) ->
                 begin match bvarSub k ssubst with
                   | Undef                -> raise_ (Unify ("[Prune] Bound variable dependency : " ^ 
-                                                      "head = " ^ P.headToString Empty cD0 cPsi' head ^ "\n" ))
+                                                      "head = " ^ P.headToString Empty cD0 cPsi' head))
                   | Head (BVar _k as h') ->
                       returnNeutral h'
                 end
@@ -1626,7 +1626,7 @@ module Make (T : TRAIL) : UNIFY = struct
                               P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.typToString Empty cD0 cPsi1 (tP1 , id)
                              ^ "\n and " ^ 
                               P.normalToString Empty cD0 cPsi sM2 ^  "\n with type: " ^ 
-                              P.dctxToString Empty cD0 cPsi2 ^ " |- " ^ P.typToString Empty cD0 cPsi2 (tP2 , id) ^ "\n Generate constraint \n"
+                              P.dctxToString Empty cD0 cPsi2 ^ " |- " ^ P.typToString Empty cD0 cPsi2 (tP2 , id) ^ "\n Generate constraint\n"
                           );
                    addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *))
           else
@@ -1734,20 +1734,20 @@ module Make (T : TRAIL) : UNIFY = struct
                                           "UNIFY(2): " ^
                                             P.mctxToString Empty cD0 ^ "\n    " ^
                                             P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
-                                            P.normalToString Empty cD0 cPsi sM2 ^ "\n") in              
+                                            P.normalToString Empty cD0 cPsi sM2) in              
               let phat = Context.dctxToHat cPsi in 
               let _ = dprint (fun () -> "Pruning substitution: " ^ P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.subToString Empty cD0 cPsi1 ss ^ " <= " ^ P.dctxToString Empty cD0 cPsi) in 
               let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss) (MVarRef r)) in
               let _ = dprint (fun () -> 
                                           "UNIFY(2) – AFTER PRUNING : " ^
                                             P.mctxToString Empty cD0 ^ "\n    " ^
-                                            P.normalToString Empty cD0 cPsi1 (tM2', id) ^ "\n") in              
+                                            P.normalToString Empty cD0 cPsi1 (tM2', id)) in              
               let r = instantiateMVar (r, tM2', !cnstrs) in 
               let _ = dprint (fun () -> 
                                           "UNIFY(2) [RESULT]: " ^
                                             P.mctxToString Empty cD0 ^ "\n    " ^
                                             P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
-                                            P.normalToString Empty cD0 cPsi sM2 ^ "\n") in              
+                                            P.normalToString Empty cD0 cPsi sM2) in              
                 r
               ) 
             with
@@ -1772,7 +1772,7 @@ module Make (T : TRAIL) : UNIFY = struct
             else 
 
              (dprint (fun () -> "Add constraint: MVAR-Normal case" ^ P.normalToString Empty cD0 cPsi sM1  ^ 
-                        " = " ^ P.normalToString Empty cD0 cPsi sM2 ^ "\n");
+                        " = " ^ P.normalToString Empty cD0 cPsi sM2);
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
     
     (* normal-MVar case *)
@@ -1787,8 +1787,7 @@ module Make (T : TRAIL) : UNIFY = struct
                                   P.normalToString Empty cD0 cPsi sM1  ^
                                   "\n    " ^
                                   P.normalToString Empty cD0 cPsi sM2
-                                ^ " : " ^ P.typToString Empty cD0 cPsi (tP1, t') ^ 
-                                  "\n") in 
+                                ^ " : " ^ P.typToString Empty cD0 cPsi (tP1, t')) in 
                 
               let ss = Monitor.timer ("Normalisation", fun () -> invert (Whnf.normSub t')) in
               let phat = Context.dctxToHat cPsi in 
@@ -2111,7 +2110,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | (FMVar (u, s) , FMVar(u', s')) ->         
         if u = u' then unifySub mflag cD0 cPsi s s' 
-        else raise_ (Unify "Bound MVar clash") 
+        else raise_ (Unify "Bound MVar clash")
 
     | (PVar (Offset k, s) , PVar(Offset k', s')) -> 
         if k = k' then unifySub mflag cD0 cPsi s s' 
@@ -2507,14 +2506,14 @@ raise_ (Unify "Context clash"))
    (* **************************************************************** *)
     let rec unify1 mflag cD0 cPsi sM1 sM2 =
       unifyTerm mflag cD0 cPsi sM1 sM2;
-      dprint (fun () -> "Force constraint ... \n") ; 
+      dprint (fun () -> "Forcing constraint...") ; 
       forceCnstr mflag (nextCnstr ())
 
     (* NOTE: We sometimes flip the position when we generate constraints
        if matching requires that the first argument is fixed then this may
        become problematic if we are outside the pattern fragment -bp *)
     and forceCnstr mflag constrnt = match constrnt with
-      | None       -> dprint (fun () -> "All constraints forced ... ")   (* all constraints are forced *)
+      | None       -> dprint (fun () -> "All constraints forced.")   (* all constraints are forced *)
       | Some cnstr ->
           begin match !cnstr with
             | Queued (* in process elsewhere *) ->  forceCnstr mflag (nextCnstr ())

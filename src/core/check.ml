@@ -795,9 +795,9 @@ module Comp = struct
 
   module P = Pretty.Int.DefaultPrinter
 
-  type caseType  = IndexObj of I.psi_hat * I.normal | DataObj 
-
-  (*  module Unif = Unify.UnifyNoTrail *)
+  type caseType =
+    | IndexObj of I.psi_hat * I.normal
+    | DataObj 
 
   exception Violation of string
   exception Error of Syntax.Loc.t option * E.error

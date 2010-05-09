@@ -122,6 +122,7 @@ let new_name string =
 
 
 let emptySub = Substitution.LF.id (* LF.Shift (LF.NoCtxShift, 0) *)
+let emptyMSub = Whnf.m_id
 
 
 (* getConstructorsAndTypes : Id.cid_typ -> (Id.cid_term * LF.typ) list
@@ -163,9 +164,16 @@ let rec appendToSpine spine tM = match spine with
    App-Pi
    App-Sigma *)
 let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k = match tA with
-  | LF.PiTyp ((LF.TypDecl(x, tA1), _depend), tA2) ->   (* rule App-Pi *)
+  | LF.PiTyp (((LF.TypDecl(x, tA1)) as x_decl, _depend), tA2) ->   (* rule App-Pi *)
+      let cPsi_x = LF.DDec(cPsi, x_decl) in
+      let _ = dprint (fun () -> "App-Pi(0): " ^ P.typToString cO cD cPsi_x (tA2, emptySub)) in
       obj (strategy, shift, cO, cD, cPsi) tA1
         (fun (strategy, shift, cO, cD, _cPsi) tM tA1 ->
+           let _ = dprint (fun () -> "App-Pi(tM): " ^ P.normalToString cO cD cPsi (tM, emptySub)) in
+           let tA2 = shift.typ tA2 in
+           let substitution = LF.Dot(LF.Obj ((*Context.dctxToHat cPsi,*) tM), emptySub) in
+           let tA2_tM = Whnf.normTyp (tA2, substitution) in
+           let _ = dprint (fun () -> "App-Pi(1): " ^ P.typToString cO cD cPsi (tA2_tM, emptySub)) in
            app (strategy,
                 noop_shift (* we apply the shift to everything here,
                               so we must reset it or we'll overshift *),
@@ -174,23 +182,36 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k = match tA with
                 cPsi)
                (shift.head tR,
                 appendToSpine (shift.spine spine) tM,
-                (* [M/x] *) (shift.typ tA2))
+                tA2_tM)
                (shift.typ tP)
                k)
 (*
   | LF.Sigma typ_rec ->     (* rule App-Sigma *)
 *)
-  | LF.Atom(loc, a, typeSpine) as _tQ ->
-      let _ = Debug.indent 2 in
-      (* Assume, INCORRECTLY, that tQ and tP unify *)
-      let cD' = cD in
-      let theta_tR = tR in   (* WRONG *)
-      let theta_tP = tP in   (* WRONG *)
-      let theta_Psi = cPsi in   (* WRONG *)
-        k (strategy, shift, cO, cD', theta_Psi) (LF.Root(loc, theta_tR, spine)) (theta_tP);
-        Debug.outdent 2
-        (* probably wrong: not passing theta along *)
-
+  | LF.Atom(loc, a, typeSpine) as tQ ->
+      begin
+        Debug.indent 2;
+        let unifyLeft = (tQ, emptySub) in 
+        let unifyRight = (tP, emptySub) in 
+        dprint (fun () -> "App-??unify: " ^ P.typToString cO cD cPsi unifyLeft ^ " =?= "
+                             ^ P.typToString cO cD cPsi unifyRight);
+        try
+            U.unifyTyp cD cPsi unifyLeft unifyRight;
+            let cD' = cD in
+            let theta_tR = tR in   (* WRONG *)
+            let theta_tP = tP in   (* WRONG *)
+            let theta_Psi = cPsi in   (* WRONG *)
+              k (strategy, shift, cO, cD', theta_Psi) (LF.Root(loc, theta_tR, spine)) (theta_tP);
+              Debug.outdent 2
+              (* probably wrong: not passing theta along *)          
+        with
+          U.Unify s ->   (* rule App-slashunify *)
+            (dprint (fun () -> "type  " ^ P.typToString cO cD cPsi unifyLeft ^ "  does not unify with  "
+                             ^ P.typToString cO cD cPsi unifyRight ^ ";");
+             dprint (fun () -> " ignoring  " ^ P.headToString cO cD cPsi tR ^ "  as impossible");
+             Debug.outdent 2;
+             ()  (* succeed *))
+      end
 
 (*
   Obj-split rule (Fig. 6)
@@ -220,12 +241,12 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
   (dprnt "obj_no_split";
    Debug.indent 2;
    let tP = LF.Atom(loc, a, spine) in
-   let cO = cO in
    let cPsi1 = cPsi in
    let decl  = LF.MDecl(new_name "NOSPLIT", tP, cPsi1) in
    let cDWithVar = LF.Dec(cD, decl) in
    let tR1 : LF.head = LF.MVar(LF.Offset 1, Substitution.LF.id)  in
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
+   let _ = dprint (fun () -> "obj_no_split: " ^ P.normalToString cO cDWithVar cPsi1 (tM1, emptySub)) in
    k (strategy, bump_shift 1 shift, cO, cDWithVar, cPsi1)
      tM1
      tP;

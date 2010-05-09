@@ -7,8 +7,8 @@
 
 
 (* The functor itself is called Make (hence Unify.Make to other
-   modules); the instantiations UnifyTrail and UnifyNoTrail (hence
-   Unify.UnifyTrail and Unify.UnifyNoTrail to other modules) are
+   modules); the instantiations EmptyTrail and StdTrail (hence
+   Unify.EmptyTrail and Unify.UnifyStdTrail to other modules) are
    declared at the end of this file.
 *)
 
@@ -1554,20 +1554,18 @@ module Make (T : TRAIL) : UNIFY = struct
              hat(cPsi) = phat
 
         unify phat (tN,s) (tM,s') succeeds if there exists a
-        contextual substitution theta s.t.
+        contextual substitution theta such that
 
         [|theta|]([s1]tN) = [|theta|]([s2]tM) where cD' |- theta <= cD.
 
-       instantiation theta is applied as an effect and () is returned.
-       otherwise exception Unify is raised.
+       Also, applies instantiation theta as an effect, and returns ().
+       Otherwise, raises exception Unify.
 
-       Post-Condition: cD' includes new and possibly updated
-                       contextual variables;
+       Postcondition: cD' includes new and possibly updated contextual variables;
 
-       Other effects: MVars in cD' may have been lowered and pruned; Constraints
-       may be added for non-patterns.
+       Other effects: MVars in cD' may have been lowered and pruned;
+                      Constraints may be added for non-patterns.
   *)
-
 
   let rec unifyTerm  mflag cD0 cPsi sN sM = unifyTerm'  mflag cD0 cPsi (Whnf.whnf sN) (Whnf.whnf sM)
 
@@ -1584,7 +1582,7 @@ module Make (T : TRAIL) : UNIFY = struct
         *)
         let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
-        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar :"  
+        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar:"  
                           ^ P.normalToString Empty cD0 cPsi sM1 ^ "\n with type: " ^ 
                           P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.typToString Empty cD0 cPsi1 (tP1 , id)
                           ^ "\n and " ^ 
@@ -2124,7 +2122,7 @@ module Make (T : TRAIL) : UNIFY = struct
               unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, id)
           with Context.NoTypAvailable -> ()
           end ; 
-            dprint (fun () -> "unfyHead bvar -pvar ") ;
+            dprint (fun () -> "unifyHead bvar -pvar ") ;
             begin match bvarSub k2 (invert s1') with
                 | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
                 | _               -> raise_ (Unify "Parameter violation")
@@ -2140,11 +2138,11 @@ module Make (T : TRAIL) : UNIFY = struct
         (let s2' = Whnf.normSub s2 in 
         if isPatSub s2' then
           (begin try 
-             let _ = dprint (fun () -> "unfyHead bvar -pvar ") in
+             let _ = dprint (fun () -> "unifyHead bvar -pvar ") in
             let TypDecl(_ , tA1) = Context.ctxDec cPsi k1 in 
               unifyTyp mflag cD0 cPsi (tA1, id) (tA2, s2') 
           with Context.NoTypAvailable -> () end ;
-            dprint (fun () -> "unfyHead bvar -pvar ") ;
+            dprint (fun () -> "unifyHead bvar -pvar ") ;
            begin match bvarSub k1 (invert s2') with
                 | Head (BVar k1') -> 
                     instantiatePVar (q, BVar k1', !cnstr)
@@ -2157,7 +2155,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | (PVar (PInst (q1, cPsi1, tA1, cnstr1) as q1', s1'),
        PVar (PInst (q2, cPsi2, tA2, cnstr2) as q2', s2')) ->
-        (* check s1', and s2' are pattern substitutions; possibly generate constraints
+        (* check s1' and s2' are pattern substitutions; possibly generate constraints;
            check intersection (s1', s2'); possibly prune;
            check q1 = q2 *)        
         let s1' = Whnf.normSub s1' in 
@@ -2265,17 +2263,17 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | (Proj (PVar (PInst (q, _, _, cnstr), s1), projIndex) as h1, BVar k2) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
-          (print_string "Unification of projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
+          (print_string "Unifying projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
 
     | (BVar k2, Proj (PVar (PInst (q, cPsi2, tA2, cnstr), s1), projIndex) as h1) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
-           (print_string "Unification of projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
+           (print_string "Unifying projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
 
     | (FVar _, Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Unify Free Variable with Projection on Parameter variable \n"; raise_ (Unify "Projection parameter variable =/= free variable"))
+        (print_string "[UnifyHead] Unify Free Variable with Projection on Parameter variable\n"; raise_ (Unify "Projection parameter variable =/= free variable"))
 
     | (PVar _ , Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Projection on a Parameter variable \n"; raise_ (Unify "333"))
+        (print_string "[UnifyHead] Projection on a Parameter variable\n"; raise_ (Unify "333"))
 
 
     | (_h1 , _h2 ) ->
@@ -2491,12 +2489,12 @@ raise_ (Unify "Context clash"))
 
       | ((Comp.TypPiBox ((MDecl(u, tA, cPsi), _ ), tau), t), 
          (Comp.TypPiBox ((MDecl(_, tA', cPsi'), _ ), tau'), t')) -> 
-          let  tAn   = Whnf.cnormTyp (tA, t)  in
-          let  tAn'  = Whnf.cnormTyp (tA', t') in 
-          let cPsin  = Whnf.cnormDCtx (cPsi, t) in 
-          let cPsin' = Whnf.cnormDCtx (cPsi', t') in 
-            (unifyDCtx1 Unification cD cPsin cPsin' ; 
-             unifyTyp Unification cD cPsin (tAn, id)  (tAn', id)   ;
+          let tAn    = Whnf.cnormTyp (tA, t) in
+          let tAn'   = Whnf.cnormTyp (tA', t') in
+          let cPsin  = Whnf.cnormDCtx (cPsi, t) in
+          let cPsin' = Whnf.cnormDCtx (cPsi', t') in
+            (unifyDCtx1 Unification cD cPsin cPsin';
+             unifyTyp Unification cD cPsin (tAn, id)  (tAn', id);
              unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
             )
 
@@ -2523,9 +2521,9 @@ raise_ (Unify "Context clash"))
                 let tM2' = Whnf.norm (tM2, id) in  *)
                   (dprint (fun () ->  "Solve constraint: " ^ P.normalToString Empty cD cPsi (tM1, id)  ^  
                         " = " ^ P.normalToString Empty cD cPsi (tM2, id) ^ "\n");
-                   if Whnf.conv (tM1, id) (tM2, id) then dprint (fun () ->  "Constraints are trivial ... " )
+                   if Whnf.conv (tM1, id) (tM2, id) then dprint (fun () ->  "Constraints are trivial...")
                    else 
-                     (dprint (fun () ->  "Use unification on them... " );
+                     (dprint (fun () ->  "Use unification on them...");
                       unify1 mflag cD cPsi (tM2, id) (tM1, id);
                       dprint (fun () ->  "Solved constraint (DONE): " ^ 
                                 P.normalToString Empty cD cPsi (tM1, id)  ^ 
@@ -2533,10 +2531,10 @@ raise_ (Unify "Context clash"))
                   )
             | Eqh (cD, cPsi, h1, h2)   ->
                 let _ = solveConstraint cnstr in 
-                  (dprint (fun () -> "Solve constraint (H) : " ^ P.headToString Empty cD cPsi h1  ^ 
+                  (dprint (fun () -> "Solve constraint (H): " ^ P.headToString Empty cD cPsi h1  ^ 
                         " = " ^ P.headToString Empty cD cPsi h2 ^ "\n");
                   unifyHead mflag cD cPsi h1 h2 ;
-                  dprint (fun () -> "Solved constraint (H) : " ^ P.headToString Empty cD cPsi h1  ^ 
+                  dprint (fun () -> "Solved constraint (H): " ^ P.headToString Empty cD cPsi h1  ^ 
                         " = " ^ P.headToString Empty cD cPsi h2 ^ "\n"))
           end 
                   
@@ -2547,7 +2545,7 @@ raise_ (Unify "Context clash"))
             | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs 
             |  Eqn (cD, cPsi, tM1, tM2) ->
                  let _ = solveConstraint c in 
-                   (dprint (fun () ->  "Solve global constraint:\n ") ; 
+                   (dprint (fun () ->  "Solve global constraint:\n") ; 
                     dprint (fun () ->  P.normalToString Empty cD cPsi (tM1, id)  ^  
                         " = " ^ P.normalToString Empty cD cPsi (tM2, id) ^ "\n");
                    unify1 Unification cD cPsi (tM2, id) (tM1, id);
@@ -2555,10 +2553,10 @@ raise_ (Unify "Context clash"))
                         " = " ^ P.normalToString Empty cD cPsi (tM2, id) ^ "\n"))
             | Eqh (cD, cPsi, h1, h2)   ->
                 let _ = solveConstraint c in 
-                  (dprint (fun () -> "Solve global constraint (H) : " ^ P.headToString Empty cD cPsi h1  ^ 
+                  (dprint (fun () -> "Solve global constraint (H): " ^ P.headToString Empty cD cPsi h1  ^ 
                         " = " ^ P.headToString Empty cD cPsi h2 ^ "\n");
                   unifyHead Unification cD cPsi h1 h2 ;
-                  dprint (fun () -> "Solved global constraint (H) : " ^ P.headToString Empty cD cPsi h1  ^ 
+                  dprint (fun () -> "Solved global constraint (H): " ^ P.headToString Empty cD cPsi h1  ^ 
                         " = " ^ P.headToString Empty cD cPsi h2 ^ "\n"))
 
 
@@ -2568,25 +2566,20 @@ raise_ (Unify "Context clash"))
       unify1 mflag cD0 cPsi sM1 sM2
 
     let unifyTyp1 mflag cD0 cPsi sA sB = 
-      let _ = unifyTyp mflag cD0 cPsi sA sB in 
-        (forceCnstr mflag (nextCnstr ())   ; 
-         dprint (fun () -> "Forcing Cnstr DONE\n"))
+      unifyTyp mflag cD0 cPsi sA sB;
+      forceCnstr mflag (nextCnstr ());
+      dprint (fun () -> "Forcing Cnstr DONE")
          
 
     let unifyTyp' mflag cD0 cPsi sA sB =
-      let _ = dprint (fun () -> 
-                          "UnifyTyp' " ^
-                          P.typToString Empty cD0 cPsi sA ^ "\n     " ^ 
-                            P.typToString Empty cD0 cPsi sB  ^ "\n") in 
-       let _ = (resetDelayedCnstrs (); 
-                unifyTyp1 mflag cD0 cPsi sA sB) in   
-       let _ = dprint (fun () -> "After unifyTyp'") in 
-      let _ = dprint (fun () ->       
-                          "sA = " ^ 
-                          P.typToString Empty cD0 cPsi sA ^ "\n     ") in 
-      let _ = dprint (fun () ->  
-                            P.typToString Empty cD0 cPsi sB  ^ "\n") in 
-         ()
+       dprint (fun () -> "UnifyTyp' " ^
+                         P.typToString Empty cD0 cPsi sA ^ "\n     " ^ 
+                         P.typToString Empty cD0 cPsi sB);
+       resetDelayedCnstrs (); 
+       unifyTyp1 mflag cD0 cPsi sA sB;
+       dprint (fun () -> "After unifyTyp'");
+       dprint (fun () -> "sA = " ^ P.typToString Empty cD0 cPsi sA ^ "\n     ");
+       dprint (fun () -> P.typToString Empty cD0 cPsi sB)
 
     let unifyTypRec1 mflag cD0 cPsi sArec sBrec = 
       unifyTypRecW mflag cD0 cPsi sArec sBrec;
@@ -2598,19 +2591,18 @@ raise_ (Unify "Context clash"))
 
 
     let unify cD0 cPsi sM sN = 
-      let _ = dprint (fun () -> "Unify " ^ P.normalToString Empty cD0 cPsi sM ^ "\n with \n" ^ P.normalToString Empty Empty cPsi sN ) in 
-      let _ =  unify' Unification cD0 cPsi sM sN in 
-      let _ = dprint (fun () -> "Unify DONE " ^ P.normalToString Empty cD0 cPsi sM ^ "\n ==  \n" ^ P.normalToString Empty Empty cPsi sN ) in 
-        ()
-
+      dprint (fun () -> "Unify " ^ P.normalToString Empty cD0 cPsi sM
+                      ^ "\n with \n" ^ P.normalToString Empty Empty cPsi sN);
+      unify' Unification cD0 cPsi sM sN;
+      dprint (fun () -> "Unify DONE: " ^ P.normalToString Empty cD0 cPsi sM ^ "\n ==  \n" ^ P.normalToString Empty Empty cPsi sN)
 
 
    (* **************************************************************** *)
 
     let rec unifyMSub' ms mt = match (ms, mt) with
-      (* the next three cases are questionable
-         they are needed to allow for weakening, i.e. we use a function
-         which makes sense in a stronger environment *)
+      (* the next three cases are questionable;
+         they are needed to allow for weakening, i.e. using a function
+         that makes sense in a stronger environment *)
       | (MShift k, MShift k') -> () (* if k = k' then () 
         else raise (Unify "Contextual substitutions not of the same length") *) 
       | (MDot ( _ , ms), MShift k) -> 
@@ -2662,10 +2654,9 @@ raise_ (Unify "Context clash"))
 
     let matchTyp cD0 cPsi sA sB = 
       unifyTyp' Matching cD0 cPsi sA sB
-
- 
       
 end
+
 
 module EmptyTrail = Make (EmptyTrail)
 module StdTrail   = Make (StdTrail)

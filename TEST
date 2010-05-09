@@ -24,7 +24,7 @@ X=$BELUGA/examples
 cd $X
 
 
- # We use the following conventions:
+# We use the following conventions:
 #
 # - Pure LF signatures (and original converted Twelf example) are in files sources.cfg
 # - Proofs written in Beluga are in test.cfg

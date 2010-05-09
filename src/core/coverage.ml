@@ -15,6 +15,20 @@ module R = Pretty.Int.DefaultCidRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [15])
 
+let covby_counter = ref 0
+
+(* tryList : ('a -> 'b) -> 'a list -> 'b
+ *
+ * tryList f xs = f(x) for the first x in xs for which f returns a value;
+ * otherwise, raises the last exception raised by f.
+ *
+ * Precondition: xs non-nil
+ *)
+let rec tryList f = function
+    | [last] -> f last
+    | first :: rest -> (try f first with _ -> tryList f rest)
+    | [] -> (dprnt ("tryList precondition violated");
+             raise (Match_failure ("", 0, 0)))
 
 (* COPIED from opsem.ml *)
 let rec cctxToCSub cO cD cPsi = match cO with
@@ -80,7 +94,9 @@ type strategy = {
   depth : int
 }
 
-let absurd_strategy = {depth = 1}
+let strategyToString s = "{" ^ "depth = " ^ string_of_int s.depth ^ "}"
+
+let naive_strategy depth = {depth = depth}
 let decrement_depth = function {depth = d} -> {depth = d - 1}
 
 let split_switch strategy (split, noSplit) =
@@ -248,7 +264,9 @@ and obj (strategy, shift, cO, cD, cPsi) tA k = match tA with
  *
  * Succeeds if the term   cD; cPsi |- tM   is covered by   cD'; cPsi' |- tR'
  *)
-let covered_by branch (cO, cD, cPsi) tM tA = match branch with
+let covered_by branch (cO, cD, cPsi) tM tA =
+  covby_counter := !covby_counter + 1;
+  match branch with
   | BranchBox (cO', cD', (cPsi', tR', msub', csub'), _body) ->
       (* under cO / cO' ?
          Pi cD. box(?. tM) : tA[cPsi]  =.  Pi cD'. box(?. tR') : ?[?]   *)
@@ -304,6 +322,53 @@ let rec covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA = match br
       try covered_by branch (cO, cD, cPsi) tM tA
       with NoCover -> covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA
 
+(* why doesn't ocaml have List.tabulate? *)
+(* tabulate : int -> (int -> 'a) -> 'a list
+ *
+ * tabulate n f = [f(0); f(1); ...; f(n -1)]
+ *)
+let tabulate n f =
+  let rec tabulate n acc =
+    if n <= 0 then acc
+    else tabulate (n - 1) (f(n - 1) :: acc)
+  in
+    tabulate n []
+
+
+
+let rec maxSpine low f = function
+  | LF.Nil -> low
+  | LF.App(tM, spine) ->
+      let f_tM = f tM in 
+        max f_tM (maxSpine f_tM f spine)
+
+let rec maxTuple f = function
+  | LF.Last tM -> f tM
+  | LF.Cons(tM, tuple) -> max (f tM) (maxTuple f tuple)
+
+and depth = function
+  | LF.Lam(_, _, tM) -> 1 + depth tM
+  | LF.Root(_, head, spine) -> 1 + (maxSpine (depthHead head) depth spine)
+  | LF.Clo(tM, _) -> depth tM
+  | LF.Tuple(_, tuple) -> 1 + maxTuple depth tuple
+
+and depthHead = function
+  | LF.BVar _ -> 1
+  | LF.Const _ -> 1
+  | LF.MMVar _ -> 1
+  | LF.MVar _ -> 1
+  | LF.PVar _ -> 1
+  | LF.AnnH (head, _) -> depthHead head
+  | LF.Proj (head, _) -> depthHead head
+
+let depth_branch = function
+  | BranchBox (_cO', _cD', (_cPsi', tM', _msub', _csub'), _body) ->
+      depth tM'
+
+let rec maxDepth branches = match branches with
+  | [] -> 0
+  | branch :: branches -> max (depth_branch branch) (maxDepth branches)
+
 
 (* covers : Int.LF.mctx -> Int.LF.mctx -> Int.Comp.ctyp_decl LF.ctx -> Int.Comp.branch list -> (Int.LF.typ * Int.LF.dctx) -> unit
  *
@@ -313,20 +378,34 @@ let rec covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA = match br
  *
  * Also returns () if the !enableCoverage flag is false.
  *)
+let finish() =
+  dprint (fun () -> "covby_counter = " ^ string_of_int !covby_counter);
+  Debug.outdent 2
+
 let covers cO cD cG branches (tA, cPsi) =
   if not (!enableCoverage) then ()
   else
-   (Debug.indent 2;
-    begin try
-      dprint (fun () -> "coverage check a case with "
-                          ^ string_of_int (List.length branches) ^ " branch(es)");
+    begin
+      covby_counter := 0;
+      Debug.indent 2;
+      let cutoff = maxDepth branches in
+      let _ = dprint (fun () -> "cutoff depth = " ^ string_of_int cutoff) in
+      let strategies = tabulate cutoff naive_strategy in
+        try
+          dprint (fun () -> "coverage check a case with "
+                              ^ string_of_int (List.length branches) ^ " branch(es)");
 
-      obj (absurd_strategy, noop_shift, cO, cD, cPsi)
-          tA
-          (covered_by_set branches);
+          tryList
+            (fun strategy -> begin
+                               print_string ("trying strategy " ^ strategyToString strategy ^ "\n");
+                               obj (strategy, noop_shift, cO, cD, cPsi)
+                                   tA
+                                   (covered_by_set branches)
+                             end)
+            strategies;
 
-      dprint (fun () -> "## COVERS ##");
-    with
-      NoCover -> (Debug.outdent 2; raise NoCover)
-    end;
-    Debug.outdent 2)
+          dprint (fun () -> "## COVERS ##");
+          finish()
+        with
+          NoCover -> (finish(); raise NoCover)
+    end

@@ -1,0 +1,20 @@
+term :  type.
+z    : term.
+suc  : term -> term.
+app  : term -> term -> term.    
+%  lam  : (term -> term) -> term.
+
+schema termCtx = some [] term;
+
+rec copy : {g:(termCtx)*} term[g] -> term[g] =
+FN g => fn e =>
+ (case e of
+  | [g]  z     => [g] z
+  | [g] suc (U ..) => let [g] V .. = copy [g] ([g] U ..) in [g] suc (V .. )
+  | [g] (#p ..) => [g] (#p ..)
+%  | [g] lam (\ x. ( U .. x)) => %    let [g,x : term] (V .. x) = copy [g, x:term]  ([g,x] (U .. x))  in        %      [g] lam (\x. (V ..  x))
+  | [g] app (U ..) (V ..)  => 
+    let [g] (U' ..)  = copy [g] ([g] (U ..)) in 
+    let [g] (V' ..)  = copy [g] ([g] (V ..)) in 
+       [g] app (U' ..) (V' ..)
+);

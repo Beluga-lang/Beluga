@@ -1,0 +1,11 @@
+term :  type.
+z    : term.
+
+schema termCtx = some [] term;
+
+rec copy : {g:(termCtx)*} term[g] -> term[g] =
+FN g => fn e =>
+ (case e of
+  | [g]  z     => [g] z
+);
+

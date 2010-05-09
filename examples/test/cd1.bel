@@ -1,0 +1,12 @@
+nat : type.
+z   : nat.
+suc : nat -> nat.
+
+list : nat -> type.
+nil : list z.
+cons : list N -> list (suc N).
+
+rec nillist : (list z)[] -> nat[] = fn e =>
+  case e of
+  | [] nil         => [] z
+;

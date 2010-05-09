@@ -1,0 +1,19 @@
+term :  type.
+z    : term.
+trip  : term -> term -> term
+      -> term.
+
+schema termCtx = some [] term;
+
+rec fff : term[] -> term[] = fn e =>
+  case e of
+  | [] z         => [] z
+
+  | [] trip (trip U1 U2 U3) V W => [] z
+  | [] trip U (trip V1 V2 V3) W => [] z
+  | [] trip U V (trip W1 W2 W3) => [] z
+
+  | [] trip U z W => [] z
+  | [] trip z V W => [] z
+  | [] trip U V z => [] z
+;

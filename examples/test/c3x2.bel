@@ -1,0 +1,12 @@
+term :  type.
+z    : term.
+suc  : term -> term.
+
+schema termCtx = some [] term;
+
+%not
+rec copy : term[] -> term[] = fn e =>
+  case e of
+%  | []  z     => [] z
+  | [] suc U => let [] V = copy ([] U) in [] suc V
+;

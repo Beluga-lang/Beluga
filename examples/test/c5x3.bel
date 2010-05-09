@@ -1,0 +1,13 @@
+term :  type.
+z    : term.
+fiver  : term -> term -> term -> term -> term
+      -> term.
+
+schema termCtx = some [] term;
+
+%not
+rec fff : term[] -> term[] = fn e =>
+  case e of
+  | [] z         => [] z
+  | [] fiver U V z X Y => [] z
+;

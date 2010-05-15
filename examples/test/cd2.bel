@@ -6,7 +6,7 @@ list : nat -> type.
 cons : list N -> list (suc N).
 nil : list z.
 
-rec conslist : (list (suc G))[] -> nat[] = fn e =>
+rec conslist : {G'::nat[]} (list (suc G'))[] -> nat[] = mlam G => fn e =>
   case e of
   | [] cons T          => [] z
 ;

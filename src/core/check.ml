@@ -574,15 +574,15 @@ This case should now be covered by the one below it
               | _ -> checkTypeAgainstSchema cO cD cPsi tA elements
 
   and instanceOfSchElem cO cD cPsi (tA, s) (SchElem (some_part, block_part)) = 
-    let _ = dprint (fun () -> "instanceOfSchElem ... \n") in 
+    let _ = dprint (fun () -> "instanceOfSchElem...") in 
     let sArec = match Whnf.whnfTyp (tA, s) with
       | (Sigma tArec,s') -> 
           (tArec, s') 
       | (nonsigma, s') -> 
           (SigmaLast nonsigma, s') in
-    let _ = dprint (fun () -> ("tA =" ^ P.typToString cO cD cPsi (tA, s) ^ " \n")) in 
+    let _ = dprint (fun () -> "tA =" ^ P.typToString cO cD cPsi (tA, s)) in 
     let dctx        = projectCtxIntoDctx some_part in
-      
+    
     let dctxSub     = ctxToSub' cPsi dctx in
 
     (* let phat        = dctxToHat cPsi in *)
@@ -605,15 +605,15 @@ This case should now be covered by the one below it
                             ^ "  succeeded.")
         ; (block_part, dctxSub)
         with (Unify.Unify _) as exn ->
-          dprint (fun () -> "Type " 
-                    ^ P.typRecToString cO cD cPsi sArec ^ " doesn't unify with " 
+          dprint (fun () -> "Type  "
+                    ^ P.typRecToString cO cD cPsi sArec ^ "  doesn't unify with  "
                     ^ P.typRecToString cO cD cPsi (block_part, dctxSub));
           raise exn
       end
   
   and instanceOfSchElemProj cO cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) = 
     let tA_k (* : tclo *) = getType var (trec, LF.id) k 1 in
-    let _ = dprint (fun () -> "instanceOfSchElemProj ... ") in
+    let _ = dprint (fun () -> "instanceOfSchElemProj...") in
     let (_tA'_k, subst) =
       instanceOfSchElem cO cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (TClo tA_k)))
       (* tA'_k = [subst] (tA_k) = [s]tA *)
@@ -633,13 +633,13 @@ This case should now be covered by the one below it
       let result =
 (*         Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in *)
          Whnf.prefixSchElem elem2 elem1 (* (cSome1 = cSome2) && (block1 = block2)  *) in 
-      let _ = dprint (fun () -> "checkElementAgainstElement "
-                        ^ P.schemaToString (Schema[elem1])
-                        ^ " <== "
-                        ^ P.schemaToString (Schema[elem2])
-                        ^ ":  "
-                        ^ string_of_bool result)
-    in result
+        dprint (fun () -> "checkElementAgainstElement "
+                         ^ P.schemaToString (Schema[elem1])
+                         ^ " <== "
+                         ^ P.schemaToString (Schema[elem2])
+                         ^ ":  "
+                         ^ string_of_bool result);
+        result
 
   (* checkElementAgainstSchema cO cD sch_elem (elements : sch_elem list) *)
   and checkElementAgainstSchema cO cD sch_elem elements =

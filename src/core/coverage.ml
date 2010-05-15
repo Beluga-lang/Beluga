@@ -26,9 +26,11 @@ let covby_counter = ref 0
  *)
 let rec tryList f = function
     | [last] -> f last
-    | first :: rest -> (try f first with _ -> tryList f rest)
+    | first :: rest -> (try f first with Match_failure (s, x, y) -> raise (Match_failure (s, x, y))
+                                       | _ -> tryList f rest)
     | [] -> (dprnt ("tryList precondition violated");
              raise (Match_failure ("", 0, 0)))
+
 
 (* COPIED from opsem.ml *)
 let rec cctxToCSub cO cD cPsi = match cO with
@@ -163,7 +165,11 @@ let rec appendToSpine spine tM = match spine with
    App-unify
    App-Pi
    App-Sigma *)
-let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k = match tA with
+let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k =
+  let _ = dprint (fun () -> "App: tR = " ^ P.headToString cO cD cPsi tR ^ "\n"
+                          ^ "App: tA = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
+                          ^ "App: tP = " ^ P.typToString cO cD cPsi (tP, emptySub)) in
+  match tA with
   | LF.PiTyp (((LF.TypDecl(x, tA1)) as x_decl, _depend), tA2) ->   (* rule App-Pi *)
       let cPsi_x = LF.DDec(cPsi, x_decl) in
       let _ = dprint (fun () -> "App-Pi(0): " ^ P.typToString cO cD cPsi_x (tA2, emptySub)) in
@@ -195,12 +201,15 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k = match tA with
         let unifyRight = (tP, emptySub) in 
         dprint (fun () -> "App-??unify: " ^ P.typToString cO cD cPsi unifyLeft ^ " =?= "
                              ^ P.typToString cO cD cPsi unifyRight);
+(*        let xxxUnifyTyp cD cPsi left right = match (left, right) with
+              | (LF.Atom(_, _, spine1),  LF.Atom(_, _, spine2)) ->
+*)                  
         try
             U.unifyTyp cD cPsi unifyLeft unifyRight;
             let cD' = cD in
-            let theta_tR = tR in   (* WRONG *)
-            let theta_tP = tP in   (* WRONG *)
-            let theta_Psi = cPsi in   (* WRONG *)
+            let theta_tR = tR in   (* wrong *)
+            let theta_tP = tP in   (* wrong *)
+            let theta_Psi = cPsi in   (* wrong *)
               k (strategy, shift, cO, cD', theta_Psi) (LF.Root(loc, theta_tR, spine)) (theta_tP);
               Debug.outdent 2
               (* probably wrong: not passing theta along *)          
@@ -218,6 +227,8 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k = match tA with
 *)
 and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
   let _ = dprint (fun () -> "obj_split: ") in
+  let _ = dprint (fun () -> "--      a: " ^ R.render_cid_typ a) in
+  let _ = dprint (fun () -> "--  spine: " ^ P.spineToString cO cD cPsi (spine, emptySub)) in
   (* ... PVars premises ... *)
   (* ... App<x_1> thru App<x_k> premises ... *)
   let constructorsWithTypes = getConstructorsAndTypes a in
@@ -226,11 +237,15 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
   let callApp (c, cSig) =
         dprint (fun () -> "checking if " ^ R.render_cid_term c ^ " is covered");
         Debug.indent 2;
-        app (decrement_depth strategy, shift, cO, cD, cPsi)
-            (LF.Const c, LF.Nil, cSig)
-            (LF.Atom(loc, a, spine))
-            k;
-        Debug.outdent 2
+        dprint (fun () -> "--original type: " ^ P.typToString cO cD cPsi (cSig, emptySub));
+        let (cSig, offset) = Abstract.abstrTyp cSig in
+        let shift = bump_shift offset shift in
+          dprint (fun () -> "--abstracted type: " ^ P.typToString cO cD cPsi (cSig, emptySub));
+          app (decrement_depth strategy, shift, cO, cD, cPsi)
+              (LF.Const c, LF.Nil, cSig)
+              (LF.Atom(loc, a, spine))
+              k;
+          Debug.outdent 2
   in
     List.iter callApp constructorsWithTypes
 
@@ -255,7 +270,10 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
 (*
  * Obj-Pi; Obj-Sigma; call to Obj-split/Obj-no-split
  *)
-and obj (strategy, shift, cO, cD, cPsi) tA k = match tA with
+and obj (strategy, shift, cO, cD, cPsi) tA k =
+  let _ = dprint (fun () -> "obj: ") in
+  let _ = dprint (fun () -> "--tA: " ^ P.typToString cO cD cPsi (tA, emptySub)) in
+  match tA with
 (*
   | LF.PiTyp ((TypDecl(name, tA1), depend) as typdecl, tA2) ->   (* rule Obj-Pi *)
       obj cO cD (*extend cPsi *)cPsi tA2

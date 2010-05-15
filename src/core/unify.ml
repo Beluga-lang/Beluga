@@ -346,13 +346,12 @@ module Make (T : TRAIL) : UNIFY = struct
          memory cells for contextual variables.
 
 
-     phat : a context of LF bound variables, without their typing
+     phat: a context of LF bound variables, without their typing
           annotations. While technically cPsi (or hat (cPsi) = phat) does
-          not play a role in the unification algorithm itself, this
-          will allow us to print normal terms and their types if
-          they do not unify.
+          not play a role in the unification algorithm itself, it allows
+          us to print normal terms and their types if they do not unify.
 
-     tM : normal term that only contains MVar (MInst _, t) and
+     tM: normal term that only contains MVar (MInst _, t) and
           PVar (PInst _, t), that is, all meta-variables and parameter
           variables are subject to instantiation. There are no bound
           contextual variables present, i.e. MVar (Offset _, t),
@@ -2573,7 +2572,7 @@ raise_ (Unify "Context clash"))
 
     let unifyTyp' mflag cD0 cPsi sA sB =
        dprint (fun () -> "UnifyTyp' " ^
-                         P.typToString Empty cD0 cPsi sA ^ "\n     " ^ 
+                         P.typToString Empty cD0 cPsi sA ^ "\n          " ^ 
                          P.typToString Empty cD0 cPsi sB);
        resetDelayedCnstrs (); 
        unifyTyp1 mflag cD0 cPsi sA sB;

@@ -35,12 +35,27 @@ let print_level_spaces() =
   in
      p (!level)
 
+let rec print_noticing_newlines s x len =
+  if x >= len then ()
+  else
+    let ch = String.get s x in
+     (if ch = '\n' then
+        (print_string "\n";
+         print_level_spaces())
+      else
+        print_char ch);
+      print_noticing_newlines s (x + 1) len
+        
+
 let print flags f =
     if flags land !r_flags == 0 then 
         ()
     else
-        (print_level_spaces(); print_string (f() ^ "\n")
-       ; flush_all())
+        (print_level_spaces();
+         let s = f() in
+           print_noticing_newlines s 0 (String.length s);
+           print_string "\n";
+           flush_all())
 
 let prnt flags s =
     print flags (fun () -> s)

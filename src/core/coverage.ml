@@ -201,9 +201,6 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k =
         let unifyRight = (tP, emptySub) in 
         dprint (fun () -> "App-??unify: " ^ P.typToString cO cD cPsi unifyLeft ^ " =?= "
                              ^ P.typToString cO cD cPsi unifyRight);
-(*        let xxxUnifyTyp cD cPsi left right = match (left, right) with
-              | (LF.Atom(_, _, spine1),  LF.Atom(_, _, spine2)) ->
-*)                  
         try
             U.unifyTyp cD cPsi unifyLeft unifyRight;
             let cD' = cD in
@@ -237,15 +234,12 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
   let callApp (c, cSig) =
         dprint (fun () -> "checking if " ^ R.render_cid_term c ^ " is covered");
         Debug.indent 2;
-        dprint (fun () -> "--original type: " ^ P.typToString cO cD cPsi (cSig, emptySub));
-        let (cSig, offset) = Abstract.abstrTyp cSig in
-        let shift = bump_shift offset shift in
-          dprint (fun () -> "--abstracted type: " ^ P.typToString cO cD cPsi (cSig, emptySub));
-          app (decrement_depth strategy, shift, cO, cD, cPsi)
-              (LF.Const c, LF.Nil, cSig)
-              (LF.Atom(loc, a, spine))
-              k;
-          Debug.outdent 2
+        dprint (fun () -> "--type cSig: " ^ P.typToString cO cD cPsi (cSig, emptySub));
+        app (decrement_depth strategy, shift, cO, cD, cPsi)
+            (LF.Const c, LF.Nil, cSig)
+            (LF.Atom(loc, a, spine))
+            k;
+        Debug.outdent 2
   in
     List.iter callApp constructorsWithTypes
 

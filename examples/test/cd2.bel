@@ -10,3 +10,9 @@ rec conslist : {G'::nat[]} (list (suc G'))[] -> nat[] = mlam G => fn e =>
   case e of
   | [] cons T          => [] z
 ;
+
+%not
+rec badlist : {G'::nat[]} (list (suc G'))[] -> nat[] = mlam G => fn e =>
+  case e of
+  | [] nil          => [] z
+;

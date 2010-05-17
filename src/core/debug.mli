@@ -45,3 +45,5 @@ val showNone : unit -> unit
 
 val indent : int -> unit
 val outdent : int -> unit
+val pushIndentationLevel : unit -> unit
+val popIndentationLevel : unit -> unit

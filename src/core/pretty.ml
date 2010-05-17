@@ -1283,7 +1283,7 @@ module Int = struct
 
   end (* Int.Make *)
 
-  (* Default CID_RENDERER for Internal Syntax using de Buijn indices *)
+  (* Default CID_RENDERER for Internal Syntax using de Bruijn indices *)
   module DefaultCidRenderer = struct
 
     open Store.Cid

@@ -40,3 +40,19 @@ val inst_csub   : dctx -> Id.offset -> csub -> mctx (* cO *) -> (mctx * csub)
 val ccomp       : csub -> csub -> csub
 
 val ctxnorm_csub : csub -> csub
+
+
+(* Moved from reconstruct.ml: *)
+
+val ctxShift : dctx -> sub
+
+(* ctxToSub' cD cPhi cPsi = s 
+
+   if x1:A1, ... xn:An = cPsi
+   then D = u1:A1[cPhi], ... un:An[cPhi]
+
+   s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
+*)
+val ctxToSub' : mctx -> dctx -> dctx -> sub
+
+val mctxToMSub : mctx -> msub

@@ -11,7 +11,7 @@ module Constructors = Store.Cid.Term
 
 module U = Unify.EmptyTrail   (* is EmptyTrail the right one to use?  -jd *)
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.DefaultCidRenderer
+module R = Pretty.Int.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [15])
 
@@ -32,32 +32,8 @@ let rec tryList f = function
              raise (Match_failure ("", 0, 0)))
 
 
-(* COPIED from opsem.ml *)
-let rec cctxToCSub cO cD cPsi = match cO with
-  | LF.Empty -> LF.CShift 0
-  | LF.Dec (cO, LF.CDecl (_psi, schema)) -> 
-      let ctxVar = LF.CtxVar (LF.CInst (ref None, schema, cO, cD)) in
-      let cs = cctxToCSub cO cD cPsi in 
-        LF.CDot (ctxVar, cs)
-
-(* COPIED from opsem.ml *)
-let rec mctxToMSub cD = match cD with
-  | LF.Empty -> Whnf.m_id
-  | LF.Dec (cD', LF.MDecl(_, tA, cPsi)) ->
-      let t     = mctxToMSub cD' in
-      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
-      let tA'   = Whnf.cnormTyp (tA, t) in
-      let u     = Whnf.newMVar (cPsi', tA') in
-      let phat  = Context.dctxToHat cPsi' in
-        LF.MDot (LF.MObj (phat, LF.Root (None, LF.MVar (u, Substitution.LF.id), LF.Nil)) , t)
-
-  | LF.Dec(cD', LF.PDecl(_, tA, cPsi)) ->
-      let t    = mctxToMSub cD' in
-      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
-      let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
-      let phat = Context.dctxToHat cPsi' in
-        LF.MDot (LF.PObj (phat, LF.PVar (p, Substitution.LF.id)) , t)
-
+let cctxToCSub = Opsem.cctxToCSub
+let mctxToMSub = Ctxsub.mctxToMSub
 
 
 (*
@@ -150,6 +126,21 @@ let rec dprintCTs cO cD cPsi = function
                    ^ " : " ^ P.typToString cO cD cPsi (cSig, emptySub));
               dprintCTs cO cD cPsi rest)
 
+
+(* getConcretesAndTypes : LF.dctx -> (LF.head * LF.typ) list
+ *
+ * Given a type (e.g. nat), return the type's constructors along with their types
+ * (e.g. [(z, nat), (suc, nat -> nat)])
+ *)
+let getConcretesAndTypes cPsi =
+  let rec inner n = function
+    | LF.Null -> []
+    | LF.CtxVar _ -> []
+    | LF.DDec (cPsi, LF.TypDecl(x, tA)) -> (LF.BVar n, tA) :: inner (n+1) cPsi
+  in
+    List.rev (inner 1 cPsi)
+
+
 (* appendToSpine : LF.spine -> LF.normal -> LF.spine
  *
  * (It would be more efficient to avoid using this function, but it allows a more
@@ -158,6 +149,9 @@ let rec dprintCTs cO cD cPsi = function
 let rec appendToSpine spine tM = match spine with
         | LF.Nil -> LF.App(tM, LF.Nil)
         | LF.App(tM1, spine) -> LF.App(tM1, appendToSpine spine tM)
+
+
+
 
 (* Rules deriving `App<R>(A > P) |> J':
 
@@ -197,6 +191,9 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k =
   | LF.Atom(loc, a, typeSpine) as tQ ->
       begin
         Debug.indent 2;
+        let msub = mctxToMSub cD in
+        let tQ = Whnf.cnormTyp (tQ, msub) in
+(*        let tP = Whnf.cnormTyp (tP, msub) in *)
         let unifyLeft = (tQ, emptySub) in 
         let unifyRight = (tP, emptySub) in 
         dprint (fun () -> "App-??unify: " ^ P.typToString cO cD cPsi unifyLeft ^ " =?= "
@@ -219,19 +216,32 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k =
              ()  (* succeed *))
       end
 
-(*
-  Obj-split rule (Fig. 6)
-*)
+(* obj_split:   Obj-split rule (Fig. 6)
+ *)
 and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
-  let _ = dprint (fun () -> "obj_split: ") in
+  let _ = dprint (fun () -> "obj_split: cPsi = " ^ P.dctxToString cO cD cPsi) in
   let _ = dprint (fun () -> "--      a: " ^ R.render_cid_typ a) in
   let _ = dprint (fun () -> "--  spine: " ^ P.spineToString cO cD cPsi (spine, emptySub)) in
-  (* ... PVars premises ... *)
-  (* ... App<x_1> thru App<x_k> premises ... *)
+  (* PVars premises: *)
+    (* UNIMPLEMENTED *)
+  (* App<x_1> thru App<x_k> premises: *)
+  let concretesWithTypes = getConcretesAndTypes cPsi in
+    (* UNIMPLEMENTED *)
+  (* App<c_1> thru App<c_n> premises: *)
   let constructorsWithTypes = getConstructorsAndTypes a in
   let _ = dprnt "constructors with types: " in
   let _ = dprintCTs cO cD cPsi constructorsWithTypes in
-  let callApp (c, cSig) =
+  let callAppOnConcrete (LF.BVar x, xTyp) =
+        dprint (fun () -> "checking if " ^ R.render_bvar cPsi x ^ " is covered");
+        Debug.indent 2;
+        dprint (fun () -> "--type xTyp: " ^ P.typToString cO cD cPsi (xTyp, emptySub));
+        app (decrement_depth strategy, shift, cO, cD, cPsi)
+            (LF.BVar x, LF.Nil, xTyp)
+            (LF.Atom(loc, a, spine))
+            k;
+        Debug.outdent 2
+
+  and callAppOnConstructor (c, cSig) =
         dprint (fun () -> "checking if " ^ R.render_cid_term c ^ " is covered");
         Debug.indent 2;
         dprint (fun () -> "--type cSig: " ^ P.typToString cO cD cPsi (cSig, emptySub));
@@ -241,7 +251,8 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
             k;
         Debug.outdent 2
   in
-    List.iter callApp constructorsWithTypes
+    List.iter callAppOnConcrete concretesWithTypes;
+    List.iter callAppOnConstructor constructorsWithTypes
 
 (*
  * Obj-no-split / "MVars" rule
@@ -413,13 +424,14 @@ let rec maxDepth branches = match branches with
  *)
 let finish() =
   dprint (fun () -> "covby_counter = " ^ string_of_int !covby_counter);
-  Debug.outdent 2
+  Debug.popIndentationLevel()
 
 let covers cO cD cG branches (tA, cPsi) =
   if not (!enableCoverage) then ()
   else
     begin
       covby_counter := 0;
+      Debug.pushIndentationLevel();
       Debug.indent 2;
       let cutoff = maxDepth branches in
       let _ = dprint (fun () -> "cutoff depth = " ^ string_of_int cutoff) in

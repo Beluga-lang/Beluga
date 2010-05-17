@@ -86,7 +86,7 @@ and subst_branches offset branches eta =
 
 *)
 
-(* ******************************************************************************* *)
+(* ********************************************************************* *)
 let rec cctxToCSub cO cD cPsi = match cO with
   | Int.LF.Empty -> I.LF.CShift 0
   | Int.LF.Dec (cO, Int.LF.CDecl (_psi, schema)) -> 
@@ -94,24 +94,7 @@ let rec cctxToCSub cO cD cPsi = match cO with
       let cs = cctxToCSub cO cD cPsi in 
         I.LF.CDot (ctxVar, cs)
 
-let rec mctxToMSub cD = match cD with
-  | Int.LF.Empty -> C.m_id
-  | Int.LF.Dec (cD', Int.LF.MDecl(_, tA, cPsi)) ->
-      let t     = mctxToMSub cD' in
-      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
-      let tA'   = Whnf.cnormTyp (tA, t) in
-      let u     = Whnf.newMVar (cPsi', tA') in
-      let phat  = Context.dctxToHat cPsi' in
-        Int.LF.MDot (Int.LF.MObj (phat, Int.LF.Root (None, Int.LF.MVar (u, LF.id), Int.LF.Nil)) , t)
-
-  | Int.LF.Dec(cD', Int.LF.PDecl(_, tA, cPsi)) ->
-      let t    = mctxToMSub cD' in
-      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
-      let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
-      let phat = Context.dctxToHat cPsi' in
-        Int.LF.MDot (Int.LF.PObj (phat, Int.LF.PVar (p, LF.id)) , t)
-
-
+let mctxToMSub = Ctxsub.mctxToMSub
 
 let rec add_mrecs n_list cs theta eta = begin match n_list with 
   | [] ->  eta
@@ -119,7 +102,7 @@ let rec add_mrecs n_list cs theta eta = begin match n_list with
       let cid' = Comp.index_of_name n' in 
       let e' = (Comp.get cid').Comp.prog in 
       let eta' = add_mrecs n_list' cs theta eta in 
-	(dprint (fun () -> "[eval_syn] found – extend environment with rec. prog."  ^ R.render_cid_prog cid'  ^ "\n");
+	(dprint (fun () -> "[eval_syn] found -- extend environment with rec. prog."  ^ R.render_cid_prog cid'  ^ "\n");
          dprint (fun () -> "[eval_syn] add to eta with cs = " ^ P.csubToString I.LF.Empty I.LF.Empty (Ctxsub.ctxnorm_csub cs));
          Cons(RecValue ((cid', e'), cs, theta, eta) ,eta'))
 end

@@ -815,6 +815,7 @@ module Comp = struct
     | (tc, 0) -> tc
     | (I.MDot (_ft, t), d) -> split t (d - 1)
 
+(*** moved to Ctxsub
   let rec mctxToMSub cD = match cD with
     | I.Empty -> 
         C.m_id
@@ -824,14 +825,16 @@ module Comp = struct
         let cPsi' = Whnf.cnormDCtx (cPsi, t) in
         let tA'   = Whnf.cnormTyp (tA, t) in
         let u     = Whnf.newMVar (cPsi', tA') in
-        let phat  = Context.dctxToHat cPsi in
+        let phat  = Context.dctxToHat cPsi (*** cPsi' or cPsi? ***) in
           I.MDot (I.MObj (phat, I.Root (None, I.MVar (u, S.LF.id), I.Nil)), t)
 
     | I.Dec (cD', I.PDecl(_, tA, cPsi)) ->
         let t    = mctxToMSub cD' in
         let p    = Whnf.newPVar (Whnf.cnormDCtx (cPsi, t),  Whnf.cnormTyp (tA, t)) in
-        let phat = Context.dctxToHat cPsi in
+        let phat = Context.dctxToHat cPsi in  (*** cPsi' or cPsi? ***)
           I.MDot (I.PObj (phat, I.PVar (p, S.LF.id)), t)
+***)
+  let mctxToMSub = Ctxsub.mctxToMSub
 
   (* extend t1 t2 = t
    *

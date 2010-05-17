@@ -742,3 +742,72 @@ and ctxnorm_branch (branch,cs') = match branch with
     (* technically, we need to unify cs and cs' 
        Feb 17 2010 - bp *) 
         Comp.BranchBox (cO, cD, (cPhi, tM, ms, cs), e) 
+
+
+
+
+
+
+(*
+ * Following functions moved from reconstruct.ml; may need to be reorganized further
+ *  -jd 2010-05-16
+ *)
+
+let rec ctxShift cPsi = match cPsi with
+  | Null              -> Shift (NoCtxShift , 0 )
+  | CtxVar psi        -> Shift (CtxShift psi, 0)
+  | DDec   (cPsi, _x) -> 
+      let Shift(cshift, n) = ctxShift cPsi in
+        Shift (cshift, n+1)
+
+
+(* ctxToSub' cD cPhi cPsi = s 
+
+   if x1:A1, ... xn:An = cPsi
+   then D = u1:A1[cPhi], ... un:An[cPhi]
+
+   s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
+*)
+let rec ctxToSub' cD cPhi cPsi = match cPsi with
+  | Null -> Substitution.LF.id
+  | DDec (cPsi', TypDecl (_, tA)) ->
+      let s = ((ctxToSub' cD cPhi cPsi') : sub) in
+        (* For the moment, assume tA atomic. *)
+        (* lower tA? *)
+        (* A = A_1 -> ... -> A_n -> P
+
+           create cPhi = A_1, ..., A_n
+           \x_1. ... \x_n. u[id]
+           u::P[cPhi]
+
+           already done in reconstruct.ml
+           let (_, d) = dctxToHat cPsi in
+           let tN     = etaExpandMV Null (tA, s) (Shift d) in
+           in elSpineIW
+        *)
+      (* let (_, phat') = dctxToHat cPsi' in*)
+      (* let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in *)
+
+      (* let u     = Whnf.etaExpandMV Null (tA, s) LF.id in *)
+        (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
+      let u     = Whnf.etaExpandMMV None cD cPhi (tA, Substitution.LF.comp s (ctxShift cPhi)) Substitution.LF.id in 
+      let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
+        Dot (front, Substitution.LF.comp s Substitution.LF.shift)
+
+
+let rec mctxToMSub cD = match cD with
+  | Empty -> Whnf.m_id
+  | Dec (cD', MDecl(_, tA, cPsi)) ->
+      let t     = mctxToMSub cD' in
+      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
+      let tA'   = Whnf.cnormTyp (tA, t) in
+      let u     = Whnf.newMVar (cPsi', tA') in
+      let phat  = Context.dctxToHat cPsi' in
+        MDot (MObj (phat, Root (None, MVar (u, Substitution.LF.id), Nil)) , t)
+
+  | Dec(cD', PDecl(_, tA, cPsi)) ->
+      let t    = mctxToMSub cD' in
+      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
+      let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
+      let phat = dctxToHat cPsi' in
+        MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)

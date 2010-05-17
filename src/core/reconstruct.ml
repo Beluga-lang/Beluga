@@ -125,47 +125,9 @@ let rec projectCtxIntoDctx = function
   | Int.LF.Dec (rest, last) -> Int.LF.DDec (projectCtxIntoDctx rest, last)
 
 
-let rec ctxShift cPsi = begin match cPsi with
-  | Int.LF.Null              -> Int.LF.Shift (Int.LF.NoCtxShift , 0 )
-  | Int.LF.CtxVar psi        -> Int.LF.Shift (Int.LF.CtxShift psi, 0)
-  | Int.LF.DDec   (cPsi, _x) -> 
-      match  ctxShift cPsi with
-          Int.LF.Shift (cshift, n)  -> Int.LF.Shift (cshift, n+1)
-  end
+let ctxShift = Ctxsub.ctxShift
 
-
-  (* ctxToSub' cPhi cPsi = s 
-
-     if x1:A1, ... xn:An = cPsi
-     then D = u1:A1[cPhi], ... un:An[cPhi]
-
-     s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
-  *)
-  let rec ctxToSub' cD cPhi cPsi = match cPsi with
-    | Int.LF.Null -> LF.id
-    | Int.LF.DDec (cPsi', Int.LF.TypDecl (_, tA)) ->
-        let s = ((ctxToSub' cD cPhi cPsi') : Int.LF.sub) in
-          (* For the moment, assume tA atomic. *)
-          (* lower tA? *)
-          (* A = A_1 -> ... -> A_n -> P
-
-             create cPhi = A_1, ..., A_n
-             \x_1. ... \x_n. u[id]
-             u::P[cPhi]
-
-             already done in reconstruct.ml
-             let (_, d) = Context.dctxToHat cPsi in
-             let tN     = etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift d) in
-             in elSpineIW
-          *)
-        (* let (_, phat') = Context.dctxToHat cPsi' in*)
-        (* let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in *)
-
-        (* let u     = Whnf.etaExpandMV Null (tA, s) LF.id in *)
-          (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-        let u     = Whnf.etaExpandMMV None cD cPhi (tA, LF.comp s (ctxShift cPhi)) LF.id in 
-        let front = (Int.LF.Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : Int.LF.front) in
-          Int.LF.Dot (front, LF.comp s LF.shift)
+let ctxToSub' = Ctxsub.ctxToSub'
 
 
 
@@ -309,23 +271,7 @@ let rec lookupFun cG f = match cG with
       if f = f' then tau else         
       lookupFun cG' f
 
-let rec mctxToMSub cD = match cD with
-  | Int.LF.Empty -> C.m_id
-  | Int.LF.Dec (cD', Int.LF.MDecl(_, tA, cPsi)) ->
-      let t     = mctxToMSub cD' in
-      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
-      let tA'   = Whnf.cnormTyp (tA, t) in
-      let u     = Whnf.newMVar (cPsi', tA') in
-      let phat  = Context.dctxToHat cPsi' in
-        Int.LF.MDot (Int.LF.MObj (phat, Int.LF.Root (None, Int.LF.MVar (u, LF.id), Int.LF.Nil)) , t)
-
-  | Int.LF.Dec(cD', Int.LF.PDecl(_, tA, cPsi)) ->
-      let t    = mctxToMSub cD' in
-      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
-      let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
-      let phat = Context.dctxToHat cPsi' in
-        Int.LF.MDot (Int.LF.PObj (phat, Int.LF.PVar (p, LF.id)) , t)
-
+let mctxToMSub = Ctxsub.mctxToMSub
 
 (* -------------------------------------------------------------*)
 (* EtaExpansion of approximate terms *)

@@ -10,3 +10,10 @@ rec nillist : (list z)[] -> nat[] = fn e =>
   case e of
   | [] nil         => [] z
 ;
+
+% following rejected by reconstruction, doesn't reach coverage
+%not
+rec nillistBad : (list z)[] -> nat[] = fn e =>
+  case e of
+  | [] cons U        => [] z
+;

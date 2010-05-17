@@ -181,7 +181,7 @@ let rec raiseType cPsi tA = match cPsi with
  *     i.e. it consists of distinct bound variables
  *)
 let rec patSpine spine =
-  let _ = dprint (fun () -> "check pat spine") in
+  let _ = dprint (fun () -> "[reconstruct.ml] check pat spine") in
   let rec etaUnroll k m= begin match m with
     | Apx.LF.Lam (_ , _, n) ->  etaUnroll (k+1) n
     |  _ ->  (k, m) 
@@ -220,7 +220,8 @@ let rec patSpine spine =
     | _ ->  raise NotPatSpine 
 
   in
-    patSpine' [] spine
+  let s = patSpine' [] spine in 
+    (dprint (fun () -> "[check pat spine] done" ) ; s)
 
 let rec mkShift recT cPsi = match recT with
   | PiboxRecon -> 
@@ -1410,14 +1411,18 @@ and elTerm' recT  cO cD cPsi r sP = match r with
            tR)
         with 
          | Unify.Unify msg ->
-             (Printf.printf "%s\n" msg;
+             (Printf.printf "\nUnification Error: %s\n\n" msg;
               raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
          | Unify.Error msg -> 
-             (Printf.printf "Hidden %s \n This may indicates the following problem: \n a contextual variable was inferred with the most general type\n however subsequently, it is required to have a more restrictive type, \ni.e., where certain bound variable dependencies cannot occur.\n\n" msg;
+             (Printf.printf "\nHidden %s \n This may indicates the following problem: \n a contextual variable was inferred with the most general type\n however subsequently, it is required to have a more restrictive type, \ni.e., where certain bound variable dependencies cannot occur.\n\n" msg;
               raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
-         | _ ->
+         | Unify.NotInvertible -> 
+            (Printf.printf "\nUnification Error : NotInvertible \n\n" ;
+             raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
+(*         | _ ->
             (Printf.printf "Non-Unification Error (1)\n" ;
              raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
+*)
         end
 
   | Apx.LF.Root (loc, Apx.LF.BVar x, spine) ->
@@ -1480,6 +1485,8 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                  let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in  
                     add_fvarCnstr (tAvar, m, v);
                    Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil))
+                | _  ->                 
+                raise (Error (Some loc, IllTypedElab (cO, cD, cPsi, sP)))
               end
             end
         | PiboxRecon -> raise (Error (Some loc, UnboundName x))
@@ -2293,6 +2300,7 @@ and elSpineSynth recT  cD cPsi spine s' sP = match (spine, sP) with
       let (tS, tB) = elSpineSynth recT  cD cPsi spine (Int.LF.Dot (Int.LF.Head(Int.LF.BVar x), s')) sP in
         (*  cPsi |- tS : [s', x]tB <= sP  *)
         (*  cPsi, y:A |- tB' <= type  *)
+      let _ = dprint (fun () -> "elSpineSynth done \n") in 
       let tB' =  Int.LF.PiTyp ((Int.LF.TypDecl (Id.mk_name (Id.BVarName (Typ.gen_var_name tA')), tA'), 
                                 Int.LF.Maybe), tB) in 
 

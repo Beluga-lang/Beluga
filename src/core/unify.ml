@@ -58,6 +58,7 @@ module type UNIFY = sig
   val intersection : psi_hat -> sub -> sub -> dctx -> (sub * dctx)
 
   exception Unify of string
+  exception NotInvertible
 
   (* All unify* functions return () on success and raise Unify on failure *)
   val unify        : mctx -> dctx  -> nclo  -> nclo -> unit

@@ -378,8 +378,13 @@ module Int = struct
         function
        (* Print ".." for a Shift when there is a context variable present,
           and nothing otherwise *)
-        | LF.Shift _ when hasCtxVar     ->    fprintf ppf ".."
-        | LF.Shift _ when not hasCtxVar  ->    () 
+       (* above is WRONG *)
+        | LF.Shift (LF.NoCtxShift, _) when hasCtxVar -> fprintf ppf ".."
+        | LF.Shift (LF.NoCtxShift, _) when not hasCtxVar -> ()
+        | LF.Shift (LF.CtxShift _, _) when hasCtxVar     ->    ()
+        | LF.Shift (LF.CtxShift _, _) when not hasCtxVar     -> fprintf ppf "????"
+        | LF.Shift (LF.NegCtxShift _, _) when hasCtxVar  -> fprintf ppf ".."    (* ??? *)
+        | LF.Shift (LF.NegCtxShift _, _) when not hasCtxVar  ->    ()    (* ??? *)
 
         | LF.SVar (c, s) ->
             fprintf ppf "#%a[%a]"

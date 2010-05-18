@@ -1,0 +1,12 @@
+term :  type.
+z    : term.
+suc  : term -> term.
+
+schema termCtx = some [] term;
+
+%not
+rec fffConcreteOmittedFromMVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
+FN g => fn e =>
+  case e of
+  | [g, x:term]  V .. => [g] z
+;

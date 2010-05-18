@@ -263,8 +263,8 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    let tP = LF.Atom(loc, a, spine) in
    let cPsi1 = cPsi in
    let decl  = LF.MDecl(new_name "NOSPLIT", tP, cPsi1) in
-   let cDWithVar = LF.Dec(cD, decl) in
-   let tR1 : LF.head = LF.MVar(LF.Offset 1, Substitution.LF.id)  in
+   let (cDWithVar, declOffset) = (LF.Dec(cD, decl), 1) in
+   let tR1 : LF.head = LF.MVar(LF.Offset declOffset, Substitution.LF.identity cPsi1)  in
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
    let _ = dprint (fun () -> "obj_no_split: " ^ P.normalToString cO cDWithVar cPsi1 (tM1, emptySub)) in
    k (strategy, bump_shift 1 shift, cO, cDWithVar, cPsi1)
@@ -350,10 +350,10 @@ let covered_by branch (cO, cD, cPsi) tM tA =
       try
         dprnt ("About to call matchTerm:");
         dprnt ("  matchTerm ");
-        dprint (fun () -> "    D = " ^ P.mctxToString cO matchD);
-        dprint (fun () -> "  Psi = " ^ P.dctxToString cO matchD matchPsi);
-        dprint (fun () -> " left = " ^ P.normalToString cO matchD matchPsi matchLeft);
-        dprint (fun () -> "right = " ^ P.normalToString cO matchD matchPsi matchRight);
+        dprint (fun () -> "    D = " ^ P.mctxToString cO matchD ^ "\n"
+                        ^ "  Psi = " ^ P.dctxToString cO matchD matchPsi ^ "\n"
+                        ^ " left = " ^ P.normalToString cO matchD matchPsi matchLeft ^ "\n"
+                        ^ "right = " ^ P.normalToString cO matchD matchPsi matchRight);
         U.matchTerm matchD matchPsi matchLeft matchRight;
         dprint (fun () -> "MATCHED");
         Debug.outdent 2

@@ -16,17 +16,14 @@ FN g => fn e =>
 
   | [g]  #p ..   => [g] z
 ;
-
 }%
-
+%{
 %not
 rec fffForgotConcreteVarCase : {g:(termCtx)*} term[g, x:term] -> term[g] =
 FN g => fn e =>
   case e of
   | [g, x:term]  z     => [g] z
-
   | [g, x:term]  suc (U .. x)   => [g] z
-
   | [g, x:term]  #p ..   => [g] z
 ;
 
@@ -34,12 +31,38 @@ rec fffConcreteOK : {g:(termCtx)*} term[g, x:term] -> term[g] =
 FN g => fn e =>
   case e of
   | [g, x:term]  z     => [g] z
-
   | [g, x:term]  suc (U .. x)   => [g] z
-
   | [g, x:term]  #p ..   => [g] z
-
   | [g, x:term]  x   => [g] z
+;
+
+
+rec fffConcreteIncludedInMVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
+FN g => fn e =>
+  case e of
+  | [g, x:term]  U .. x => [g] z
+;
+
+%not
+rec fffNo-g-MVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
+FN g => fn e =>
+  case e of
+  | [g, x:term]  U x => [g] z
+;
+
+%not
+rec fffEmptyMVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
+FN g => fn e =>
+  case e of
+  | [g, x:term]  U => [g] z
+;
+}%
+
+%not
+rec fffConcreteOmittedFromMVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
+FN g => fn e =>
+  case e of
+  | [g, x:term]  U .. => [g] z
 ;
 
 %{

@@ -379,13 +379,12 @@ module LF = struct
         strengthen (Dot (Head (BVar (n + 1)), Shift (psi, n + 1))) cPsi
 
 
-  (* isId s = B
+  (* isId : sub -> bool
    *
    * Invariant:
    *
-   * If   Psi |- s: Psi', s weakensub
-   * then B holds
-   * iff s = id, Psi' = Psi
+   * Given   Psi |- s: Psi', s weakensub
+   * isId s  returns true iff  s = id and Psi' = Psi.
    *)
   let isId s =
     let rec isId' s k' = match s with
@@ -447,14 +446,28 @@ module LF = struct
      If    D |- t <= D'    n-th element in D' = A[Psi]
      then  Ft' = Ft_n      if  t = Ft_1 .. Ft_n .. ^0
      and D ; [|t|]Psi |- Ft' <= [|t|]A
-  *)
+ *)
+let rec applyMSub n t = match (n, t) with
+    | (1, MDot (ft, _t)) -> ft
+    | (n, MDot (_ft, t)) -> applyMSub (n - 1) t
+    | (n, MShift k)       -> MV (k + n)
 
-let rec applyMSub n t = 
-    begin match (n, t) with
-  | (1, MDot (ft, _t)) -> ft
-  | (n, MDot (_ft, t)) -> applyMSub (n - 1) t
-  | (n, MShift k)       -> MV (k + n)
-    end 
+
+
+
+  (* identity : dctx -> sub
+   *
+   * identity cPsi = id(cPsi),
+   * e.g.
+   *      identity (psi, x:A, y:B) = Dot(Head (BVar 1, Dot(Head(BVar 2, Shift(NoCtxShift, 2)))))
+   *)
+  let identity cPsi =
+    let rec inner n = function
+    | Null -> Shift(NoCtxShift, n)
+    | CtxVar _ -> Shift(NoCtxShift, n)
+    | DDec(cPsi, _) -> let n = n + 1 in Dot(Head (BVar n), inner n cPsi)
+    in
+      inner 0 cPsi
 
 
 end

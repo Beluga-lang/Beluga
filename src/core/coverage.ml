@@ -85,6 +85,12 @@ let hang shiftFn shifter thing =
   HANGER (fun laterShifter -> shiftFn thing (laterShifter.n - shifter.n))
 let hang = (hang : ('a -> int -> 'a) -> shifter -> 'a -> 'a hanger)
 
+let shiftHead arg n = Whnf.cnormHead(arg, LF.MShift n)
+let shiftSpine arg n = Whnf.cnormSpine(arg, LF.MShift n)
+let shiftNormal arg n = Whnf.cnorm(arg, LF.MShift n)
+let shiftTyp arg n = Whnf.cnormTyp(arg, LF.MShift n)
+let shiftDCtx arg n = Whnf.cnormDCtx(arg, LF.MShift n)
+
 let hangHead = hang Whnf.mshiftHead
 let hangSpine = hang Whnf.mshiftSpine
 let hangNormal = hang Whnf.mshiftTerm
@@ -265,17 +271,17 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tAAA) tP k =
            and spine = cut hungSpine shift'
            and tA2 = cut hungA2 shift' (*???*)
            and tP = cut hungP shift' in
-           let _ = dprint (fun () -> "App-Pi(tM):   " ^ P.normalToString cO cD cPsi (tM, emptySub)) in
-           let _ = dprint (fun () -> "App-Pi(tA2)SH:" ^ P.typToString cO cD cPsi_x (tA2, emptySub)) in
+           let _ = dprint (fun () -> "App-Pi(tM):    " ^ P.normalToString cO cD cPsi (tM, emptySub)) in
+           let _ = dprint (fun () -> "App-Pi(tA2)SH: " ^ P.typToString cO cD cPsi_x (tA2, emptySub)) in
            let substitution = LF.Dot(LF.Obj ((*Context.dctxToHat cPsi,*) tM), emptySub) in
            let tA2_tM = Whnf.normTyp (tA2, substitution) in
-           let _ = dprint (fun () -> "App-Pi(1): " ^ P.typToString cO cD cPsi (tA2_tM, emptySub)) in
+           let _ = dprint (fun () -> "App-Pi(1):     " ^ P.typToString cO cD cPsi (tA2_tM, emptySub)) in
 
-           let _ = dprint (fun () -> "App-Pi(tR)SH:    " ^ P.headToString cO cD cPsi tR) in
+           let _ = dprint (fun () -> "App-Pi(tR):    " ^ P.headToString cO cD cPsi tR) in
 
-           let _ = dprint (fun () -> "App-Pi(spine)SH: " ^ P.spineToString cO cD cPsi (spine, emptySub)) in
+           let _ = dprint (fun () -> "App-Pi(spine): " ^ P.spineToString cO cD cPsi (spine, emptySub)) in
 
-           let _ = dprint (fun () -> "App-Pi(tP)SH:    " ^ P.typToString cO cD cPsi (tP, emptySub)) in
+           let _ = dprint (fun () -> "App-Pi(tP):    " ^ P.typToString cO cD cPsi (tP, emptySub)) in
            app (strategy,
                 shift' (* we apply the shift to everything here,
                               so we must reset it or we'll overshift  --- NO! *),
@@ -288,16 +294,46 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tAAA) tP k =
                 tP
                k)
 
-  | LF.Sigma typ_rec ->     (* rule App-Sigma *)
+  | LF.Sigma typRec ->     (* rule App-Sigma *)
       begin
-        dprint (fun () -> "App-Sigma UNIMPLEMENTED");
-        exit 222
+        let appSigmaComponent (sA, index) =
+          let tA = Whnf.normTyp sA in
+            dprint (fun () -> "cPsi(UNSH)= " ^ P.dctxToString cO cD cPsi);
+(*                      let cPsi = Whnf.mshiftDCtx cPsi 1 in *)
+            dprint (fun () -> "App-Sigma 1 (index = " ^ string_of_int index ^ ")\n"
+                            ^ "--cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n"
+                            ^ "--  tR = " ^ P.headToString cO cD cPsi tR ^ "\n"
+                            ^ "--  sA = " ^ P.typToString cO cD cPsi sA ^ "\n"
+                            ^ "--  tA = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
+                            ^ "--  tP = " ^ P.typToString cO cD cPsi (tP, emptySub));
+            if try
+              U.unifyTyp cD cPsi (tP, emptySub) (tA, emptySub);
+              true
+            with U.Unify s ->
+              begin
+                dprnt "appSigmaComponent unify error; this component impossible";
+                false
+              end
+            then begin
+              dprint (fun () -> "App-Sigma 2a\n"
+                              ^ "--cD          = " ^ P.mctxToString cO cD ^ "\n"
+                              ^ "--tA under cD = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
+                              ^ "--tP under cD = " ^ P.typToString cO cD cPsi (tP, emptySub));
+              Debug.indent 2;
+              app (decrement_depth strategy, shift, cO, cD, cPsi)
+                  (LF.Proj(tR, index), LF.Nil, tA)
+                  tP
+                  k;
+              Debug.outdent 2
+            end else ()
+        in
+          iterTypRec appSigmaComponent (tR, (typRec, emptySub))
       end
 
   | LF.Atom(loc, a, typeSpine) as tQ ->
       begin
         Debug.indent 2;
-        let _ = dprint (fun () -> P.mctxToString cO cD) in
+        let _ = dprint (fun () -> "LF.Atom _; cD = " ^ P.mctxToString cO cD) in
         let msub = mctxToMSub cD in
         let tQ = Whnf.cnormTyp (tQ, msub) in
 (*        let tP = Whnf.cnormTyp (tP, msub) in *)
@@ -368,16 +404,15 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
           | LF.SigmaLast tA ->
               begin
               let tA = Whnf.normTyp (tA, some_part_dctxSub) in
-              let pdecl  = LF.PDecl(new_name "p@", tA, cPsi) in
-              let tA = Whnf.mshiftTyp tA 1 in
-(*              let cPsi = Whnf.mshiftDCtx cPsi 1 in *)
-              let spine = Whnf.mshiftSpine spine 1 in
+              let name = new_name "p@" in
+              let _ = dprint (fun () -> "SigmaLast: created parameter \"" ^ R.render_name name ^ "\"") in
+              let pdecl  = LF.PDecl(name, tA, cPsi) in
               let (cDWithPVar, _pdeclOffset) = (LF.Dec(cD, pdecl), 1) in
                 dprint (fun () -> "pvar SigmaLast 1\n"
-                          ^ "tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
-                          ^ " P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
+                          ^ "tA = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
+                          ^ " P = " ^ P.typToString cO cD cPsi (LF.Atom(loc, a, spine), emptySub));
                 if try
-                  U.unifyTyp cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub) (tA, emptySub);
+                  U.unifyTyp cD cPsi (LF.Atom(loc, a, spine), emptySub) (tA, emptySub);
                   true
                 with U.Unify s ->
                   begin
@@ -385,11 +420,13 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                     false
                   end
                 then begin
+                  let tA = shiftTyp tA 1 in
+                  let spine = shiftSpine spine 1 in
+                  (*              let cPsi = Whnf.mshiftDCtx cPsi 1 in *)
                   dprint (fun () -> "pvar SigmaLast 2\n"
                             ^ "tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
                             ^ " P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
                     dprint (fun () -> "pvar SigmaLast 2\n"
-                                          ^ "--cDWithPVar = " ^ P.mctxToString cO cDWithPVar ^ "\n"
                                           ^ "--tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
                                           ^ "-- P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
                     Debug.indent 2;
@@ -404,21 +441,21 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
               begin
                 let callAppOnComponent (sA, index) =
                   let tA = Whnf.normTyp sA in
-                      let typRec = Whnf.normTypRec (typRec, some_part_dctxSub) in
-                      let pdecl  = LF.PDecl(new_name "P@", LF.Sigma typRec, cPsi) in
-(*                      let tA = Whnf.mshiftTyp tA 1 in*)
-                      let spine = Whnf.mshiftSpine spine 1 in
-                      let (cDWithPVar, _pdeclOffset) = (LF.Dec(cD, pdecl), 1) in
+                  let typRec = Whnf.normTypRec (typRec, some_part_dctxSub) in
+                  let name = new_name "P@" in
+                  let _ = dprint (fun () -> "SigmaElem: created parameter \"" ^ R.render_name name ^ "\"") in
+                  let pdecl  = LF.PDecl(name, LF.Sigma typRec, cPsi) in
+                  let (cDWithPVar, _pdeclOffset) = (LF.Dec(cD, pdecl), 1) in
                     dprint (fun () -> "cPsi(UNSH)= " ^ P.dctxToString cO cDWithPVar cPsi);
 (*                      let cPsi = Whnf.mshiftDCtx cPsi 1 in *)
                     dprint (fun () -> "pvar SigmaElem 1 (index = " ^ string_of_int index ^ ")\n"
                                     ^ "cPsi = " ^ P.dctxToString cO cDWithPVar cPsi ^ "\n"
                                     ^ "head = " ^ P.headToString cO cDWithPVar cPsi head ^ "\n"
                                     ^ "sA(UNSHIFTED!!) = " ^ P.typToString cO cDWithPVar cPsi sA ^ "\n"
-                                    ^ "tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
-                                    ^ " P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
+                                    ^ "tA = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
+                                    ^ " P = " ^ P.typToString cO cD cPsi (LF.Atom(loc, a, spine), emptySub));
                     if try
-                      U.unifyTyp cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub) (tA, emptySub);
+                      U.unifyTyp cD cPsi (LF.Atom(loc, a, spine), emptySub) (tA, emptySub);
                       true
                     with U.Unify s ->
                       begin
@@ -426,7 +463,16 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                         false
                       end
                     then begin
+                      dprint (fun () -> "pvar SigmaElem 2a\n"
+                                        ^ "--cD         = " ^ P.mctxToString cO cD ^ "\n"
+                                        ^ "--cDWithPVar = " ^ P.mctxToString cO cDWithPVar ^ "\n"
+                                        ^ "--tA, unshifted, in cD = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
+                                        ^ "--tA, unshifted, in cDWithPVar = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
+                                        ^ "-- P, unshifted, in cDWithPVar = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
+                      let tA = shiftTyp tA 1 in
+                      let spine = shiftSpine spine 1 in
                         dprint (fun () -> "pvar SigmaElem 2\n"
+                                        ^ "--cD         = " ^ P.mctxToString cO cD ^ "\n"
                                         ^ "--cDWithPVar = " ^ P.mctxToString cO cDWithPVar ^ "\n"
                                         ^ "--tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
                                         ^ "-- P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
@@ -448,7 +494,11 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
         dprint (fun () -> "--the variable's type is: " ^ P.typToString cO cD cPsi (xTyp, emptySub));
         begin
           match xTyp with
-            | LF.Sigma _ -> dprint (fun () -> "--skipping it because it's a block")
+            | LF.Sigma _ -> (* dprint (fun () -> "--skipping it because it's a block") *)
+                app (decrement_depth strategy, shift, cO, cD, cPsi)
+                    (LF.BVar x, LF.Nil, xTyp)
+                    (LF.Atom(loc, a, spine))
+                    k
             | _ ->
                 app (decrement_depth strategy, shift, cO, cD, cPsi)
                     (LF.BVar x, LF.Nil, xTyp)
@@ -484,7 +534,7 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    let tP = LF.Atom(loc, a, spine) in
    let cPsi1 = cPsi in
    let decl  = LF.MDecl(new_name "NOSPLIT", tP, cPsi1) in
-   let tP = Whnf.mshiftTyp tP 1 in
+   let tP = shiftTyp tP 1 in
    let (cDWithVar, declOffset) = (LF.Dec(cD, decl), 1) in
    let tR1 : LF.head = LF.MVar(LF.Offset declOffset, Substitution.LF.identity cPsi1)  in
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
@@ -578,10 +628,10 @@ let covered_by branch (cO, cD, cPsi) tM tA =
 (* let _ct1' = Ctxsub.ctxnorm_csub ct' in *)
       let ct1 = Ctxsub.ctxnorm_csub ct in
       let mt = mctxToMSub (Ctxsub.ctxnorm_mctx (cD', ct1)) in 
-      let _ = dprint (fun () -> "**tR' = "
+      let _ = dprint (fun () -> "--tR' in cD'        = "
                               ^ P.normalToString cO' cD' cPsi' (tR', emptySub)) in
       let tR' = Whnf.cnorm (Ctxsub.ctxnorm (tR', ct1), mt) in
-      let _ = dprint (fun () -> "$$tR' = "
+      let _ = dprint (fun () -> "--tR' in cDConjoint = "
                               ^ P.normalToString cO' cDConjoint cPsi' (tR', emptySub)) in
 (* let _mt1' = Whnf.cnormMSub mt in *)
       let cPsi' = Ctxsub.ctxnorm_dctx (cPsi', ct1) in
@@ -594,8 +644,6 @@ let covered_by branch (cO, cD, cPsi) tM tA =
                     ^ ") : " ^ P.typToString cO cD cPsi (tA, emptySub)
                     ^ "["    ^ P.dctxToString cO cD cPsi ^ "]") in
       let _ = dprnt  (" COVERED-BY ") in
-      let _ = dprint (fun () -> "$$tR' = "
-                              ^ P.normalToString cO' cDConjoint cPsi' (tR', emptySub)) in
       let _ = dprint (fun () -> P.octxToString cO' ^ " |- Pi " ^ P.mctxToString cO' cD'
                               ^ " box(Psihat. " ^ ""
                               ^ P.normalToString cO' cDConjoint cPsi' (tR', emptySub)

@@ -770,14 +770,14 @@ and cnorm (tM, t) = match tM with
                 | MObj (_phat,tM)   -> 
                     reduce (tM, cnormSub (r, t)) (cnormSpine (tS, t))  
                     (* Clo(whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), LF.id)))  *)
-
-            (* jd 2010-05-24; makes coverage checking count-var/cntvar.bel "work";
-               might be nonsense *)
+(*
+            (* jd 2010-05-24: makes coverage checking count-var/cntvar.bel "work"; might be nonsense
+               jd 2010-05-25: probably nonsense, no longer needed anyway *)
                 | PObj  (_phat, head) ->
                        cnorm (Root(loc, PVar (Offset k, r), tS), t)
 (*                 ===  norm(Root(loc, head, Nil), cnormSub (r, t)) *)
 (*                ===   reduce (Root(loc, head, Nil), cnormSub (r, t)) (cnormSpine (tS, t)) *)
-
+*)
               (* other cases impossible *)
               end 
 
@@ -856,13 +856,7 @@ and cnorm (tM, t) = match tM with
                   end
 
               | PObj (_phat, _) -> (print_string "whnf PObj 827 crash\n"; exit 189)
-              | MObj (_phat, Root(_, PVar(Offset _, _), _)) -> (print_string "whnf MObj 827 crash -- PVar Offset\n"; exit 190)
-              | MObj (_phat, Root(_, PVar(PInst _, _), _)) -> (print_string "whnf MObj 827 crash -- PVar PInst\n"; exit 190)
-              | MObj (_phat, Root(_, MVar(Inst({contents = None}, _, _, _), _), _)) -> (print_string "whnf MObj 827 crash -- MVar Inst None\n"; exit 190)
-              | MObj (_phat, Root(_, MVar(Inst({contents = Some (Root (_, head, _))}, _, _, _), _), _)) -> (print_string "whnf MObj 827 crash -- MVar Inst Some Root\n"; exit 190)
-              | MObj (_phat, Root(_, MVar(Inst({contents = Some normal}, _, _, _), _), _)) -> (print_string "whnf MObj 827 crash -- MVar Inst Some\n"; exit 190)
               | MObj (_phat, Root(_, MVar _, _)) -> (print_string "whnf MObj 827 crash -- MVar\n"; exit 190)
-                    
             end
 
           | FPVar (p, r) -> Root(loc, FPVar (p, cnormSub (r,t)), cnormSpine (tS, t)) 

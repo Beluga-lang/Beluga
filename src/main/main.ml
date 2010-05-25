@@ -151,7 +151,6 @@ let main () =
             let _int_decls = Reconstruct.recSgnDecls sgn in
               (* print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls; *)
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-              printf "%s" (Error.getInformation());
               return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
@@ -277,6 +276,7 @@ let main () =
          | (_, _, _) -> "\n#### " ^ plural session_count "session" "s" ^ ":\n" ^ full
     in
       print_string message;
+      printf "%s" (Error.getInformation());
       exit status_code
 
 let _ = main ()

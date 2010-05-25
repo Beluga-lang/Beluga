@@ -30,6 +30,10 @@ open Format
 *)
 
 
+let locToString loc =
+  Parser.Grammar.Loc.print Format.str_formatter loc;
+  flush_str_formatter()
+
 type lvl    = int
 
 let std_lvl = 0
@@ -1558,13 +1562,13 @@ module Error = struct
             (R.render_name u)
 
       | CompScrutineeTyp (cO, cD, cG, i, sP, cPsi) -> 
-          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some variable dependencies cannot happen. This error may indicate that some implicit arguments which are reconstructed should be restricted. \n"
+          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some variable dependencies cannot happen. This error may indicate that some implicit arguments that are reconstructed should be restricted.\n"
             (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sP)
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i
 
       | CompScrutineeSubTyp (cO, cD, cG, i, cPsi, cPhi) -> 
-          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some variable dependencies cannot happen. This error may indicate that some implicit arguments which are reconstructed should be restricted. \n"
+          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some variable dependencies cannot happen. This error may indicate that some implicit arguments that are reconstructed should be restricted.\n"
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPhi
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) cPsi
             (IP.fmt_ppr_cmp_exp_syn cO cD cG std_lvl) i
@@ -1583,13 +1587,13 @@ module Error = struct
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompBoxMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Found Box-expression which does not have type %a \n "
+          fprintf ppf "Found Box-expression that does not have type %a \n "
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
 
       | CompSBoxMismatch (cO, cD, _cG, cPsi, cPhi) ->
           fprintf ppf
-            "Found substitution which does not have type %a[%a]\n" 
+            "Found substitution that does not have type %a[%a]\n" 
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) (Whnf.normDCtx cPsi)
             (IP.fmt_ppr_lf_dctx cO cD std_lvl) (Whnf.normDCtx cPhi)
 
@@ -1598,30 +1602,30 @@ module Error = struct
 
 
       | CompIfMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Guard of the if-expression does not have type bool; it has type %a \n "
+          fprintf ppf "Guard of if-expression does not have type bool; it has type %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompPairMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Found tuple ; but found type %a \n"
+          fprintf ppf "Found tuple ; but found type %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompSynMismatch (cO, cD, theta_tau, theta_tau') ->
           fprintf ppf
-            "Expected type : %a \n Inferred type  %a \n  "  
+            "Expected type  %a\n Inferred type  %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau')
 
 
       | CompEqMismatch (cO, cD, ttau1, ttau2) -> 
           fprintf ppf
-            "Type mismatch on equality:\nComparing objects of type : %a \n with objects of type  %a \n  "  
+            "Type mismatch on equality:\nComparing objects of type  %a\n with objects of type  %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp ttau1)
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp ttau2)
 
 
       | CompEqTyp (cO, cD, ttau) -> 
           fprintf ppf
-            "Equality comparison only possible at base types; \nFound objects of type : %a \n "  
+            "Equality comparison only possible at base types;\nfound objects of type  %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp ttau)
 
 
@@ -1629,13 +1633,13 @@ module Error = struct
           fprintf ppf "Type synthesis of term failed (use typing annotation)" 
 
       | ConstraintsLeft ->
-          fprintf ppf "Constraints of functional type are not simplified" (* TODO *)
+          fprintf ppf "Constraints of functional type were not simplified" (* TODO *)
 
       | NotPatSub ->
           fprintf ppf "Not a pattern substitution" (* TODO *)
 
       | NotPatternSpine ->
-          fprintf ppf "non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *)
+          fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *)
 
 
       | NoCover ->
@@ -1649,7 +1653,7 @@ module Error = struct
           fprintf ppf "Substitution not well-typed"  (* TODO *)
 
       | UnboundIdSub ->
-          fprintf ppf "identity substitution used without context variable"
+          fprintf ppf "Identity substitution used without context variable"
 
     (* Regular Pretty Printers *)
     let ppr = fmt_ppr std_formatter
@@ -1667,4 +1671,3 @@ module Error = struct
   module DefaultPrinter = Make (DefaultCidRenderer)
 
 end (* Error *)
-

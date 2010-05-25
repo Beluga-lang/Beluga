@@ -3,6 +3,8 @@
 open Syntax.Int
 
 val enableCoverage : bool ref
+val warningOnly : bool ref
+val no_covers : int ref
 
 val covers  : LF.mctx
            -> LF.mctx

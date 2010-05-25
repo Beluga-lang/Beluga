@@ -136,6 +136,9 @@ let split_switch strategy (split, noSplit) =
 exception NoCover
 
 let enableCoverage = ref false
+let warningOnly = ref false
+let no_covers = ref 0
+
 
 (* Generating names for Obj-no-split (MVars) *)
 let counter = ref 0
@@ -559,8 +562,15 @@ let covered_by branch (cO, cD, cPsi) tM tA =
          Pi cD. box(?. tM) : tA[cPsi]  =.  Pi cD'. box(?. tR') : ?[?]   *)
       let _ = dprnt "covered_by" in
       let _ = Debug.indent 2 in
+
+      let _ = dprint (fun () -> "--tR' = "
+                              ^ P.normalToString cO' cD' cPsi' (tR', emptySub)) in
       
       let cDConjoint = Context.append cD cD' in
+      let _ = dprint (fun () -> "--cDConjoint = "
+                              ^ P.mctxToString cO' cDConjoint) in
+      let _ = dprint (fun () -> "--cDConjoint = "
+                              ^ P.mctxToString cO cDConjoint) in
 
       let ct = cctxToCSub cO' cD' cPsi' in 
 (* let ct' = Ctxsub.ccomp csub' ct in *)
@@ -568,19 +578,24 @@ let covered_by branch (cO, cD, cPsi) tM tA =
 (* let _ct1' = Ctxsub.ctxnorm_csub ct' in *)
       let ct1 = Ctxsub.ctxnorm_csub ct in
       let mt = mctxToMSub (Ctxsub.ctxnorm_mctx (cD', ct1)) in 
-      let tR1' = Whnf.cnorm (Ctxsub.ctxnorm (tR', ct1), mt) in
+      let _ = dprint (fun () -> "**tR' = "
+                              ^ P.normalToString cO' cD' cPsi' (tR', emptySub)) in
+      let tR' = Whnf.cnorm (Ctxsub.ctxnorm (tR', ct1), mt) in
+      let _ = dprint (fun () -> "$$tR' = "
+                              ^ P.normalToString cO' cDConjoint cPsi' (tR', emptySub)) in
 (* let _mt1' = Whnf.cnormMSub mt in *)
       let cPsi' = Ctxsub.ctxnorm_dctx (cPsi', ct1) in
 
-      let tR' = tR1' in
 
       let tM_shifted = Whnf.cnorm (tM, LF.MShift (Context.length cD'))  in
-      
+
       let _ = dprint (fun () -> P.octxToString cO ^ " |- Pi " ^ P.mctxToString cO cD
                     ^ " box(Psihat. " ^ P.normalToString cO cDConjoint cPsi (tM_shifted, emptySub)
                     ^ ") : " ^ P.typToString cO cD cPsi (tA, emptySub)
                     ^ "["    ^ P.dctxToString cO cD cPsi ^ "]") in
       let _ = dprnt  (" COVERED-BY ") in
+      let _ = dprint (fun () -> "$$tR' = "
+                              ^ P.normalToString cO' cDConjoint cPsi' (tR', emptySub)) in
       let _ = dprint (fun () -> P.octxToString cO' ^ " |- Pi " ^ P.mctxToString cO' cD'
                               ^ " box(Psihat. " ^ ""
                               ^ P.normalToString cO' cDConjoint cPsi' (tR', emptySub)
@@ -690,5 +705,5 @@ let covers cO cD cG branches (tA, cPsi) =
           dprint (fun () -> "## COVERS ##");
           finish()
         with
-          NoCover -> (finish(); raise NoCover)
+          NoCover -> (finish(); no_covers := !no_covers + 1; raise NoCover)
     end

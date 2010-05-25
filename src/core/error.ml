@@ -69,3 +69,15 @@ type error =
   | LeftoverUndef
   | SubIllTyped
   | LeftoverFVar
+
+
+let information = ref []
+
+let getInformation () =
+  match List.rev !information with
+    | [] -> ""
+    | information ->
+        (List.fold_left (fun acc s -> acc ^ "\n" ^ s) "" information) ^ "\n"
+
+let addInformation message =
+  information := message :: !information

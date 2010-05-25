@@ -12,6 +12,8 @@ type lvl
 
 val std_lvl : lvl
 
+val locToString : Parser.Grammar.Loc.t -> string
+
 module Control : sig
   type substitution_style = Natural | DeBruijn
 

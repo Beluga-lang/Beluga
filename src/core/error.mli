@@ -112,3 +112,9 @@ type error =
   | SubIllTyped                        (* TODO                                *)
   | LeftoverFVar                       (* encountered FVar after 
                                           reconstruction                      *)
+
+
+val getInformation : unit -> string
+
+val addInformation : string -> unit
+

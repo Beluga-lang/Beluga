@@ -22,6 +22,7 @@ let usage () =
         ^ "    +tfile        print timing information to file \"time.txt\"\n"
         ^ "    -coverage     turn off coverage checker (default, since coverage checker is incomplete)\n"
         ^ "    +coverage     turn on coverage checker (experimental)\n"
+        ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
   in
     fprintf stderr
       "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
@@ -43,6 +44,7 @@ let process_option' arg = begin let f = function
   | "-t" -> (Monitor.on := false;
              Monitor.onf := false)
   | "+coverage" -> Coverage.enableCoverage := true
+  | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true)
   | "-coverage" -> Coverage.enableCoverage := false
   | _ -> usage ()
 in (* print_string (">>>> " ^ arg ^ "\n"); *) f arg
@@ -149,6 +151,7 @@ let main () =
             let _int_decls = Reconstruct.recSgnDecls sgn in
               (* print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls; *)
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
+              printf "%s" (Error.getInformation());
               return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->

@@ -771,11 +771,12 @@ and cnorm (tM, t) = match tM with
                     reduce (tM, cnormSub (r, t)) (cnormSpine (tS, t))  
                     (* Clo(whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), LF.id)))  *)
 
-            (* jd 2010-05-24; cargo cult programming; makes count-var/cntvar.bel "work" *)
+            (* jd 2010-05-24; makes coverage checking count-var/cntvar.bel "work";
+               might be nonsense *)
                 | PObj  (_phat, head) ->
                        cnorm (Root(loc, PVar (Offset k, r), tS), t)
-(*                    norm(Root(loc, head, Nil), cnormSub (r, t)) *)
-(*                ====    reduce (Root(loc, head, Nil), cnormSub (r, t)) (cnormSpine (tS, t)) *)
+(*                 ===  norm(Root(loc, head, Nil), cnormSub (r, t)) *)
+(*                ===   reduce (Root(loc, head, Nil), cnormSub (r, t)) (cnormSpine (tS, t)) *)
 
               (* other cases impossible *)
               end 

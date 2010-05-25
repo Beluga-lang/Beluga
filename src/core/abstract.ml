@@ -905,6 +905,7 @@ and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
       collectTyp cQ phat (tA, LF.comp s' s)
 
   | (I.Sigma typRec,  s) ->
+      let _ = dprint (fun () -> "Collect free vars in Sigma type") in 
       let (cQ', typRec') = collectTypRec cQ phat (typRec, s) in 
         (cQ', I.Sigma typRec')
 
@@ -1589,17 +1590,18 @@ and collectExp' cQ i = match i with
 
 
 and collectPattern cQ cD cPsi (phat, tM) tA = 
-  let (cQ1, cD') = collectMctx cQ cD in 
-  (* let _    = Printf.printf "Start Collection of cPsi = %s\n" 
-  (   P.dctxToString cPsi) in  *)
+  let (cQ1, cD') = collectMctx cQ cD in
+(*   let _    = Printf.printf "Start Collection of cPsi -- cQ1 = \n" *)
+(*  (   P.dctxToString cPsi) *)
+  let _   = printCollection cQ1 in  
   let (cQ2, cPsi') = collectDctx cQ1 phat cPsi in 
-  (* let _ = Printf.printf "cQ2 (collection of cPsi)\n" in 
-     let _   = printCollection cQ2 in  *)
+(*  let _ = Printf.printf "cQ2 (collection of cPsi)\n" in *)
+(*  let _   = printCollection cQ2 in  *)
   let (cQ3, tM') = collectTerm cQ2 phat (tM, LF.id) in 
-  (* let _ = Printf.printf "cQ3 (collection of cPsi)\n" in 
-     let _   = printCollection cQ3 in  *)
+(*  let _ = Printf.printf "cQ3 (collection of cPsi)\n" in 
+   let _   = printCollection cQ3 in  *)
   let (cQ4, tA') = collectTyp cQ3 phat (tA, LF.id) in 
-  (* let _ = Printf.printf "cQ4 (collection of cPsi)\n" in 
+(*   let _ = Printf.printf "cQ4 (collection of cPsi)\n" in 
   let _   = printCollection cQ4 in  *)
     (cQ4, cD', cPsi', (phat, tM'), tA')
 

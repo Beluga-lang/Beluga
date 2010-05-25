@@ -1,0 +1,20 @@
+bool : type.
+
+term :type.
+z    : term.
+suc  : term -> term.
+eq : term -> term -> bool.
+
+schema termCtx = term;
+schema boolCtx = bool;
+
+% Example showing the need for subordination.
+% The pattern  eq U V  covers *all* eq-terms because the context contains
+%   only bools, which cannot appear in terms.
+
+rec fff : {g:(boolCtx)*} bool[g, xx : bool] -> term[] =
+FN g => fn e =>
+  case e of
+  | [g, xx : bool]  eq U V   => [] z
+  | [g, xx : bool]  #p .. xx   => [] z
+;

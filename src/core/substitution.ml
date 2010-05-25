@@ -10,7 +10,7 @@ open Syntax.Int.LF
 
 module LF = struct
 
-  let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
+  let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [13])
 
   exception Error of string
 
@@ -466,6 +466,21 @@ let rec applyMSub n t = match (n, t) with
     | Null -> Shift(NoCtxShift, n)
     | CtxVar _ -> Shift(NoCtxShift, n)
     | DDec(cPsi, _) -> let n = n + 1 in Dot(Head (BVar n), inner n cPsi)
+    in
+      inner 0 cPsi
+
+
+  (* justCtxVar : dctx -> sub
+   *
+   * justCtxVar cPsi = id[\psi]  where \psi is cPsi's context variable
+   * e.g.
+   *      justCtxVar (psi, x:A, y:B) = Shift(NoCtxShift, 2)
+   *)
+  let justCtxVar cPsi =
+    let rec inner n = function
+    | Null -> Shift(NoCtxShift, n)
+    | CtxVar _ -> Shift(NoCtxShift, n)
+    | DDec(cPsi, _) -> let n = n + 1 in inner n cPsi
     in
       inner 0 cPsi
 

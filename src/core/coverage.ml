@@ -13,9 +13,30 @@ module U = Unify.EmptyTrail   (* is EmptyTrail the right one to use?  -jd *)
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.NamedRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [15])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [29])
 
 let covby_counter = ref 0
+
+
+(* why doesn't ocaml have List.tabulate? *)
+(* tabulate : int -> (int -> 'a) -> 'a list
+ *
+ * tabulate n f = [f(0); f(1); ...; f(n -1)]
+ *)
+let tabulate n f =
+  let rec tabulate n acc =
+    if n <= 0 then acc
+    else tabulate (n - 1) (f(n - 1) :: acc)
+  in
+    tabulate n []
+
+(* range : int -> (int -> unit) -> unit
+ *
+ * range n f  equivalent to  (f(0); f(1); ...; f(n -1))
+ *)
+let range n (f : int -> unit) =
+  let _ = tabulate n f in
+    ()
 
 (* tryList : ('a -> 'b) -> 'a list -> 'b
  *
@@ -43,30 +64,55 @@ let mctxToMSub = Ctxsub.mctxToMSub
  * before Delta was extended.
  *)
 type shifter = {
+  n : int
+}
+
+type 'a hanger = HANGER of (shifter -> 'a)
+
+(*
   head : LF.head -> LF.head;
   spine : LF.spine -> LF.spine;
   normal : LF.normal -> LF.normal;
   typ : LF.typ -> LF.typ
+*)
+
+let noop_shift = {
+  n = 0
 }
 
-let noop_shift = {head = (fun h -> h);
-                  spine = (fun s -> s);
-                  normal = (fun tM -> tM);
-                  typ = (fun t -> t)}
 
+let hang shiftFn shifter thing =
+  HANGER (fun laterShifter -> shiftFn thing (laterShifter.n - shifter.n))
+let hang = (hang : ('a -> int -> 'a) -> shifter -> 'a -> 'a hanger)
+
+let hangHead = hang Whnf.mshiftHead
+let hangSpine = hang Whnf.mshiftSpine
+let hangNormal = hang Whnf.mshiftTerm
+let hangTyp = hang Whnf.mshiftTyp
+let hangDCtx = hang Whnf.mshiftDCtx
+
+let cut (HANGER f) laterShifter = f laterShifter
+
+let cut = (cut : 'a hanger -> shifter -> 'a)
+
+
+
+(*
 let bump_shift n shift =
   {head = (fun h -> Whnf.mshiftHead (shift.head h) n);
    spine = (fun spine -> Whnf.mshiftSpine (shift.spine spine) n);
    normal = (fun tM -> Whnf.mshiftTerm (shift.normal tM) n);
    typ = (fun t -> Whnf.mshiftTyp (shift.typ t) n)
   }
+*)
+let bump_shift increment shifter = {n = shifter.n + increment}
+
 
 (*
  * type strategy  ---Coverage strategy
  *
  * This type represents the strategy (or the state of the strategy) to use.
  * Currently, this just has a `depth'.
- * (And the depth is, absurdly, a constant!)
  *)
 type strategy = {
   depth : int
@@ -141,6 +187,37 @@ let getConcretesAndTypes cPsi =
     List.rev (inner 1 cPsi)
 
 
+(* getParameterSchemaElems : LF.mctx -> LF.dctx -> LF.sch_elem list
+ * getParameterSchemaElems cO cPsi
+ *    = [F_1, ..., F_n]   if cPsi has a context variable of schema F_1 + ... + F_n
+ *    = []                if cPsi has no context variable
+ *)
+let getParameterSchemaElems cO cPsi = 
+  match Context.ctxVar cPsi with
+    | None -> []
+    | Some psi ->
+        let LF.Schema elems = Store.Cid.Schema.get_schema (Context.lookupCtxVarSchema cO psi) in 
+          elems
+
+let rec lenTypRec = function
+  | LF.SigmaLast _ -> 1
+  | LF.SigmaElem (_x, _tA, typRec) -> 1 + lenTypRec typRec
+  
+let rec iterTypRec f (head, s_recA) =
+  let typRec = Whnf.normTypRec s_recA in
+(*  let _ = dprint (fun () -> "iterTypRec>>> " ^ string_of_int (lenTypRec typRec)) in *)
+  let len = lenTypRec typRec in
+    range
+      len
+      (fun m ->
+         let m = len - m in  (* range counts down, but it's more intuitive to start from 0 *)
+         let _ = dprint (fun () -> "iterTypRec>>> m = " ^ string_of_int m ^ " (len = " ^string_of_int len ^ ")") in
+         let sA = LF.getType head (typRec, emptySub) m 1 in
+           f (sA, m))
+
+let iterTypRec = (iterTypRec : (LF.tclo * int -> 'a) -> (LF.head * LF.trec_clo) -> 'a)
+
+
 (* appendToSpine : LF.spine -> LF.normal -> LF.spine
  *
  * (It would be more efficient to avoid using this function, but it allows a more
@@ -159,38 +236,65 @@ let rec appendToSpine spine tM = match spine with
    App-unify
    App-Pi
    App-Sigma *)
-let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k =
+let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tAAA) tP k =
   let _ = dprint (fun () -> "App: tR = " ^ P.headToString cO cD cPsi tR ^ "\n"
-                          ^ "App: tA = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
+                          ^ "App: tA = " ^ P.typToString cO cD cPsi (tAAA, emptySub) ^ "\n"
                           ^ "App: tP = " ^ P.typToString cO cD cPsi (tP, emptySub)) in
-  match tA with
+  match tAAA with
   | LF.PiTyp (((LF.TypDecl(x, tA1)) as x_decl, _depend), tA2) ->   (* rule App-Pi *)
+      let hungPsi = hangDCtx shift cPsi
+      and hungtR = hangHead shift tR
+      and hungSpine = hangSpine shift spine
+      and hungA2 = hangTyp shift tA2
+      and hungP = hangTyp shift tP in
+
       let cPsi_x = LF.DDec(cPsi, x_decl) in
-      let _ = dprint (fun () -> "App-Pi(0): " ^ P.typToString cO cD cPsi_x (tA2, emptySub)) in
+      let _ = dprint (fun () -> "App-Pi: tA = PiTyp(" ^ R.render_name x ^ ":"
+                                   ^ P.typToString cO cD cPsi (tA1, emptySub) ^ "), " 
+                                   ^ P.typToString cO cD cPsi_x (tA2, emptySub) ^ ")") in
+(*      let _ = dprint (fun () -> "App-Pi(0): tA2 = " ^ P.typToString cO cD cPsi_x (tA2, emptySub)) in *)
+      let _ = dprint (fun () -> "App-Pi: calling obj to generate instances of "
+                        ^ P.typToString cO cD cPsi (tA1, emptySub)) in
       obj (strategy, shift, cO, cD, cPsi) tA1
-        (fun (strategy, shift, cO, cD, _cPsi) tM tA1 ->
-           let _ = dprint (fun () -> "App-Pi(tM): " ^ P.normalToString cO cD cPsi (tM, emptySub)) in
-           let tA2 = shift.typ tA2 in
+        (fun (strategy, shift', cO, cD, _cPsi) tM _tA1 ->
+           let cPsi = cut hungPsi shift'
+           and tR = cut hungtR shift'
+           and spine = cut hungSpine shift'
+           and tA2 = cut hungA2 shift' (*???*)
+           and tP = cut hungP shift' in
+           let _ = dprint (fun () -> "App-Pi(tM):   " ^ P.normalToString cO cD cPsi (tM, emptySub)) in
+           let _ = dprint (fun () -> "App-Pi(tA2)SH:" ^ P.typToString cO cD cPsi_x (tA2, emptySub)) in
            let substitution = LF.Dot(LF.Obj ((*Context.dctxToHat cPsi,*) tM), emptySub) in
            let tA2_tM = Whnf.normTyp (tA2, substitution) in
            let _ = dprint (fun () -> "App-Pi(1): " ^ P.typToString cO cD cPsi (tA2_tM, emptySub)) in
+
+           let _ = dprint (fun () -> "App-Pi(tR)SH:    " ^ P.headToString cO cD cPsi tR) in
+
+           let _ = dprint (fun () -> "App-Pi(spine)SH: " ^ P.spineToString cO cD cPsi (spine, emptySub)) in
+
+           let _ = dprint (fun () -> "App-Pi(tP)SH:    " ^ P.typToString cO cD cPsi (tP, emptySub)) in
            app (strategy,
-                noop_shift (* we apply the shift to everything here,
-                              so we must reset it or we'll overshift *),
+                shift' (* we apply the shift to everything here,
+                              so we must reset it or we'll overshift  --- NO! *),
                 cO,
                 cD,
                 cPsi)
-               (shift.head tR,
-                appendToSpine (shift.spine spine) tM,
+               (tR,
+                appendToSpine spine tM,
                 tA2_tM)
-               (shift.typ tP)
+                tP
                k)
-(*
+
   | LF.Sigma typ_rec ->     (* rule App-Sigma *)
-*)
+      begin
+        dprint (fun () -> "App-Sigma UNIMPLEMENTED");
+        exit 222
+      end
+
   | LF.Atom(loc, a, typeSpine) as tQ ->
       begin
         Debug.indent 2;
+        let _ = dprint (fun () -> P.mctxToString cO cD) in
         let msub = mctxToMSub cD in
         let tQ = Whnf.cnormTyp (tQ, msub) in
 (*        let tP = Whnf.cnormTyp (tP, msub) in *)
@@ -216,33 +320,142 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA) tP k =
              ()  (* succeed *))
       end
 
+
+
 (* obj_split:   Obj-split rule (Fig. 6)
  *)
 and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
   let _ = dprint (fun () -> "obj_split: cPsi = " ^ P.dctxToString cO cD cPsi) in
   let _ = dprint (fun () -> "--      a: " ^ R.render_cid_typ a) in
   let _ = dprint (fun () -> "--  spine: " ^ P.spineToString cO cD cPsi (spine, emptySub)) in
+
   (* PVars premises: *)
-    (* UNIMPLEMENTED *)
+  let sch_elems = getParameterSchemaElems cO cPsi in
+
   (* App<x_1> thru App<x_k> premises: *)
   let concretesWithTypes = getConcretesAndTypes cPsi in
-    (* UNIMPLEMENTED *)
+
   (* App<c_1> thru App<c_n> premises: *)
   let constructorsWithTypes = getConstructorsAndTypes a in
   let _ = dprnt "constructors with types: " in
   let _ = dprintCTs cO cD cPsi constructorsWithTypes in
-  let callAppOnConcrete (LF.BVar x, xTyp) =
-        dprint (fun () -> "checking if " ^ R.render_bvar cPsi x ^ " is covered");
+
+  let callAppOnPVar (LF.SchElem (some_part(*\Theta*), typRec (*\Sigma \Phi. A_{j+1}*) ) as sch_elem) =
+    dprint (fun () -> "checking if parameter(s) from schema element  " ^ P.schElemToString sch_elem ^ "  are covered");
+
+    let Some _psi = Context.ctxVar cPsi in
+
+    let some_part_dctx = Context.projectCtxIntoDctx some_part in     
+    let some_part_dctxSub = Ctxsub.ctxToSub' cD cPsi some_part_dctx in
+(*
+    let callOnProjection part 
+    let sArec = (LF.SigmaLast nonsigma, emptySub) in
+
+
+      dprint (fun () -> "sArec  = " ^ P.typRecToString cO cD cPsi sArec
+                ^ "\n" ^ "typRec = " ^ P.typRecToString cO cD cPsi (typRec, some_part_dctxSub));
+      U.unifyTypRec cD cPsi sArec (typRec, some_part_dctxSub);
+*)
+
+      (* let \sigma = --- in *)
+      (* let \Delta_\Theta = --- in *)
+      let id_psi = Substitution.LF.justCtxVar cPsi in
+      let head = LF.PVar (LF.Offset 1, id_psi) in
+        match typRec with
+          | LF.SigmaLast tA ->
+              begin
+              let tA = Whnf.normTyp (tA, some_part_dctxSub) in
+              let pdecl  = LF.PDecl(new_name "p@", tA, cPsi) in
+              let tA = Whnf.mshiftTyp tA 1 in
+(*              let cPsi = Whnf.mshiftDCtx cPsi 1 in *)
+              let spine = Whnf.mshiftSpine spine 1 in
+              let (cDWithPVar, _pdeclOffset) = (LF.Dec(cD, pdecl), 1) in
+                dprint (fun () -> "pvar SigmaLast 1\n"
+                          ^ "tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
+                          ^ " P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
+                if try
+                  U.unifyTyp cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub) (tA, emptySub);
+                  true
+                with U.Unify s ->
+                  begin
+                    dprnt "callOnComponent unify error; this component impossible";
+                    false
+                  end
+                then begin
+                  dprint (fun () -> "pvar SigmaLast 2\n"
+                            ^ "tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
+                            ^ " P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
+                    dprint (fun () -> "pvar SigmaLast 2\n"
+                                          ^ "--cDWithPVar = " ^ P.mctxToString cO cDWithPVar ^ "\n"
+                                          ^ "--tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
+                                          ^ "-- P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
+                    Debug.indent 2;
+                    app (decrement_depth strategy, bump_shift 1 shift, cO, cDWithPVar, cPsi)
+                      (head, LF.Nil, tA)
+                      (LF.Atom(loc, a, spine))
+                      k;
+                    Debug.outdent 2
+                end else ()
+              end
+          | LF.SigmaElem _ ->
+              begin
+                let callAppOnComponent (sA, index) =
+                  let tA = Whnf.normTyp sA in
+                      let typRec = Whnf.normTypRec (typRec, some_part_dctxSub) in
+                      let pdecl  = LF.PDecl(new_name "P@", LF.Sigma typRec, cPsi) in
+(*                      let tA = Whnf.mshiftTyp tA 1 in*)
+                      let spine = Whnf.mshiftSpine spine 1 in
+                      let (cDWithPVar, _pdeclOffset) = (LF.Dec(cD, pdecl), 1) in
+                    dprint (fun () -> "cPsi(UNSH)= " ^ P.dctxToString cO cDWithPVar cPsi);
+(*                      let cPsi = Whnf.mshiftDCtx cPsi 1 in *)
+                    dprint (fun () -> "pvar SigmaElem 1 (index = " ^ string_of_int index ^ ")\n"
+                                    ^ "cPsi = " ^ P.dctxToString cO cDWithPVar cPsi ^ "\n"
+                                    ^ "head = " ^ P.headToString cO cDWithPVar cPsi head ^ "\n"
+                                    ^ "sA(UNSHIFTED!!) = " ^ P.typToString cO cDWithPVar cPsi sA ^ "\n"
+                                    ^ "tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
+                                    ^ " P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
+                    if try
+                      U.unifyTyp cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub) (tA, emptySub);
+                      true
+                    with U.Unify s ->
+                      begin
+                        dprnt "callOnComponent unify error; this component impossible";
+                        false
+                      end
+                    then begin
+                        dprint (fun () -> "pvar SigmaElem 2\n"
+                                        ^ "--cDWithPVar = " ^ P.mctxToString cO cDWithPVar ^ "\n"
+                                        ^ "--tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
+                                        ^ "-- P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
+                        Debug.indent 2;
+                        app (decrement_depth strategy, bump_shift 1 shift, cO, cDWithPVar, cPsi)
+                          (LF.Proj(head, index), LF.Nil, tA)
+                          (LF.Atom(loc, a, spine))
+                          k;
+                        Debug.outdent 2
+                    end else ()
+                in
+                  iterTypRec callAppOnComponent (head, (typRec, some_part_dctxSub    ))
+              end
+
+  
+  and callAppOnConcrete (LF.BVar x, xTyp) =
+        dprint (fun () -> "checking if bound variable \"" ^ R.render_bvar cPsi x ^ "\" is covered");
         Debug.indent 2;
-        dprint (fun () -> "--type xTyp: " ^ P.typToString cO cD cPsi (xTyp, emptySub));
-        app (decrement_depth strategy, shift, cO, cD, cPsi)
-            (LF.BVar x, LF.Nil, xTyp)
-            (LF.Atom(loc, a, spine))
-            k;
+        dprint (fun () -> "--the variable's type is: " ^ P.typToString cO cD cPsi (xTyp, emptySub));
+        begin
+          match xTyp with
+            | LF.Sigma _ -> dprint (fun () -> "--skipping it because it's a block")
+            | _ ->
+                app (decrement_depth strategy, shift, cO, cD, cPsi)
+                    (LF.BVar x, LF.Nil, xTyp)
+                    (LF.Atom(loc, a, spine))
+                    k
+        end;
         Debug.outdent 2
 
   and callAppOnConstructor (c, cSig) =
-        dprint (fun () -> "checking if " ^ R.render_cid_term c ^ " is covered");
+        dprint (fun () -> "checking if constructor \"" ^ R.render_cid_term c ^ "\" is covered");
         Debug.indent 2;
         dprint (fun () -> "--type cSig: " ^ P.typToString cO cD cPsi (cSig, emptySub));
         app (decrement_depth strategy, shift, cO, cD, cPsi)
@@ -251,8 +464,13 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
             k;
         Debug.outdent 2
   in
+    List.iter callAppOnPVar sch_elems;
     List.iter callAppOnConcrete concretesWithTypes;
     List.iter callAppOnConstructor constructorsWithTypes
+
+
+
+
 
 (*
  * Obj-no-split / "MVars" rule
@@ -263,30 +481,54 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    let tP = LF.Atom(loc, a, spine) in
    let cPsi1 = cPsi in
    let decl  = LF.MDecl(new_name "NOSPLIT", tP, cPsi1) in
+   let tP = Whnf.mshiftTyp tP 1 in
    let (cDWithVar, declOffset) = (LF.Dec(cD, decl), 1) in
    let tR1 : LF.head = LF.MVar(LF.Offset declOffset, Substitution.LF.identity cPsi1)  in
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
-   let _ = dprint (fun () -> "obj_no_split: " ^ P.normalToString cO cDWithVar cPsi1 (tM1, emptySub)) in
+   let _ = dprint (fun () -> "obj_no_split:\n"
+                           ^ "--cDWithVar = " ^ P.mctxToString cO cDWithVar ^ "\n"
+                           ^ "--tM1 (instance) = " ^ P.normalToString cO cDWithVar cPsi1 (tM1, emptySub) ^ "\n"
+                           ^ "--tP  = " ^ P.typToString cO cDWithVar cPsi1 (tP, emptySub) ^ "\n"
+                           ^ "--tR1 = " ^ P.headToString cO cDWithVar cPsi1 tR1) in
    k (strategy, bump_shift 1 shift, cO, cDWithVar, cPsi1)
      tM1
      tP;
    Debug.outdent 2)
 
+
+
 (*
  * Obj-Pi; Obj-Sigma; call to Obj-split/Obj-no-split
  *)
 and obj (strategy, shift, cO, cD, cPsi) tA k =
-  let _ = dprint (fun () -> "obj: ") in
-  let _ = dprint (fun () -> "--tA: " ^ P.typToString cO cD cPsi (tA, emptySub)) in
+  let _ = dprint (fun () -> "obj: " ^ "\n"
+                          ^ "--tA: " ^ P.typToString cO cD cPsi (tA, emptySub)) in
   match tA with
-(*
-  | LF.PiTyp ((TypDecl(name, tA1), depend) as typdecl, tA2) ->   (* rule Obj-Pi *)
-      obj cO cD (*extend cPsi *)cPsi tA2
-          (fun cO cD _cPsi tM tA ->
-             k cO cD cPsi (Lam(None, name, tM)) (PiTyp(typdecl, tA2)))
+  | LF.PiTyp ((LF.TypDecl(name, tA1) as typdecl, depend), tA2) ->   (* rule Obj-Pi *)
+      (dprint (fun () -> "PiTyp");
+       Debug.indent 2;
+       let hungPsi = hangDCtx shift cPsi in
+       let hungA1 = hangTyp shift tA1 in
+       let extended_cPsi = LF.DDec(cPsi, typdecl) in
+         obj (strategy, shift, cO, cD, extended_cPsi)
+             tA2
+             (fun (strategy, shift, cO, cD, _extended_cPsi) tM tA2 ->
+                let cPsi = cut hungPsi shift in
+                let tA1 = cut hungA1 shift in
+                let typdecl = LF.TypDecl(name, tA1) in
+                k (strategy, shift, cO, cD, cPsi)
+                  (LF.Lam(None, name, tM))
+                  (LF.PiTyp((typdecl, depend), tA2)));
+         Debug.outdent 2)
 
+(*
   | LF.Sigma typ_rec ->  (* rule Obj-Sigma *)
 *)
+  | LF.Sigma _typ_rec ->
+      (dprint (fun () -> "Sigma");
+       Debug.indent 2;
+       exit 222(*;
+       Debug.outdent 2*))
 
   | LF.Atom (loc, a, spine) ->    (* rule Obj-split *)
      (Debug.indent 2;
@@ -303,6 +545,7 @@ and obj (strategy, shift, cO, cD, cPsi) tA k =
       Debug.outdent 2)
 
 
+
 (*
  * covered_by  BranchBox(cO', cD', (cPsi', tR', msub', csub'), _body) (cO, cD, cPsi) tM tA
  *
@@ -314,19 +557,19 @@ let covered_by branch (cO, cD, cPsi) tM tA =
   | BranchBox (cO', cD', (cPsi', tR', msub', csub'), _body) ->
       (* under cO / cO' ?
          Pi cD. box(?. tM) : tA[cPsi]  =.  Pi cD'. box(?. tR') : ?[?]   *)
-      let _ = dprnt  ("covered_by") in
+      let _ = dprnt "covered_by" in
       let _ = Debug.indent 2 in
-
+      
       let cDConjoint = Context.append cD cD' in
 
       let ct = cctxToCSub cO' cD' cPsi' in 
-      let ct' = Ctxsub.ccomp csub' ct in
-      let _ = U.unifyCSub csub' ct'  in 
-      let _ct1' = Ctxsub.ctxnorm_csub ct' in
+(* let ct' = Ctxsub.ccomp csub' ct in *)
+(* let _ = U.unifyCSub csub' ct'  in   (* ......... *) *)
+(* let _ct1' = Ctxsub.ctxnorm_csub ct' in *)
       let ct1 = Ctxsub.ctxnorm_csub ct in
       let mt = mctxToMSub (Ctxsub.ctxnorm_mctx (cD', ct1)) in 
       let tR1' = Whnf.cnorm (Ctxsub.ctxnorm (tR', ct1), mt) in
-      let _mt1' = Whnf.cnormMSub mt in
+(* let _mt1' = Whnf.cnormMSub mt in *)
       let cPsi' = Ctxsub.ctxnorm_dctx (cPsi', ct1) in
 
       let tR' = tR1' in
@@ -344,7 +587,7 @@ let covered_by branch (cO, cD, cPsi) tM tA =
                               ^ ") : " ^ P.msubToString cO' cD' msub'
                               ^ "[" ^ P.csubToString cO' cD' csub' ^ "]") in
       let matchD = cDConjoint in
-      let matchPsi = cPsi in
+      let matchPsi = (****cPsi****) cPsi' in
       let matchLeft = (tM_shifted, emptySub) in
       let matchRight = (tR', emptySub) in
       try
@@ -357,7 +600,10 @@ let covered_by branch (cO, cD, cPsi) tM tA =
         U.matchTerm matchD matchPsi matchLeft matchRight;
         dprint (fun () -> "MATCHED");
         Debug.outdent 2
-      with U.Unify s -> (dprnt "no match";Debug.outdent 2; raise NoCover)
+      with U.Unify s -> (dprnt "no match";
+                         Debug.outdent 2;
+                         raise NoCover)
+
 
 
 let rec covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA = match branches with
@@ -365,18 +611,6 @@ let rec covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA = match br
   | branch :: branches ->
       try covered_by branch (cO, cD, cPsi) tM tA
       with NoCover -> covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA
-
-(* why doesn't ocaml have List.tabulate? *)
-(* tabulate : int -> (int -> 'a) -> 'a list
- *
- * tabulate n f = [f(0); f(1); ...; f(n -1)]
- *)
-let tabulate n f =
-  let rec tabulate n acc =
-    if n <= 0 then acc
-    else tabulate (n - 1) (f(n - 1) :: acc)
-  in
-    tabulate n []
 
 
 
@@ -407,7 +641,7 @@ and depthHead = function
 
 let depth_branch = function
   | BranchBox (_cO', _cD', (_cPsi', tM', _msub', _csub'), _body) ->
-      depth tM'
+      1 + depth tM'
 
 let rec maxDepth branches = match branches with
   | [] -> 0
@@ -442,10 +676,14 @@ let covers cO cD cG branches (tA, cPsi) =
 
           tryList
             (fun strategy -> begin
-                               print_string ("trying strategy " ^ strategyToString strategy ^ "\n");
-                               obj (strategy, noop_shift, cO, cD, cPsi)
-                                   tA
-                                   (covered_by_set branches)
+                               Debug.pushIndentationLevel();
+                               print_string ("trying strategy " ^ strategyToString strategy ^ "\n"); flush_all();
+                               begin try obj (strategy, noop_shift, cO, cD, cPsi)
+                                     tA
+                                     (covered_by_set branches)
+                               with exn -> (Debug.popIndentationLevel(); raise exn)
+                               end;
+                               Debug.popIndentationLevel()
                              end)
             strategies;
 

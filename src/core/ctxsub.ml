@@ -283,11 +283,12 @@ let rec ctxnorm_csub cs = match cs with
       CDot (ctxnorm_dctx (cPsi, CShift 0), ctxnorm_csub cs)
 
 
-let rec lookupSchema cO psi_offset = match (cO, psi_offset) with
+let rec lookupSchemaOpt cO psi_offset = match (cO, psi_offset) with
   | (Dec (_cO, CDecl (_, cid_schema)), 1) -> Some (cid_schema)
   | (Dec (cO, _) , i) -> 
-      lookupSchema cO (i-1)
+      lookupSchemaOpt cO (i-1)
   | _ -> None
+
 
 
 (* ************************************************* *)
@@ -635,9 +636,9 @@ let rec inst_csub cPsi2 offset' csub cO =
 let rec check_schema_known cPsi2 cO = 
   begin match Context.ctxVar cPsi2 with
     | Some (CtxOffset psi2_offset) -> 
-      begin match lookupSchema cO psi2_offset with 
+      begin match lookupSchemaOpt cO psi2_offset with 
           None   -> 
-            let Some sW = lookupSchema cO offset' in 
+            let Some sW = lookupSchemaOpt cO offset' in 
               update_octx cO psi2_offset sW
         | Some _ ->  cO
       end 

@@ -22,7 +22,7 @@ module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 module RR = Pretty.Int.NamedRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 exception NotImplemented
 exception Error of Syntax.Loc.t option * error
@@ -1332,17 +1332,8 @@ and synSchemaElem recT  cO cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elem
           ; Some (typRec, subst) (* sP *)
           with Unify.Unify _  -> self (Int.LF.Schema rest)
             | Not_found -> self (Int.LF.Schema rest) 
-(*
-and lookupCtxVar cO ctx_var = match cO with
-  | Int.LF.Empty -> raise (Violation ("Context variable not found"))
-  | Int.LF.Dec (cO, Int.LF.CDecl (psi, schemaName)) -> 
-      begin match ctx_var with 
-      | Int.LF.CtxName phi when psi = phi -> (psi, schemaName)
-      | (Int.LF.CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
-      | Int.LF.CtxOffset 1                -> (psi, schemaName)
-      | Int.LF.CtxOffset n                -> lookupCtxVar cO (Int.LF.CtxOffset (n - 1))
-      end 
-*)
+
+
 and elTerm' recT  cO cD cPsi r sP = match r with
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
@@ -1632,7 +1623,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                 let (cPhi, s'') = synDom cD loc cPsi s in
                 let si          = Substitution.LF.invert s'' in
                 let Some psi =  Context.ctxVar cPsi in
-                let schema = Schema.get_schema (Check.LF.lookupCtxVarSchema cO psi) in 
+                let schema = Schema.get_schema (Context.lookupCtxVarSchema cO psi) in 
                 let h = Int.LF.FPVar (p, s'') in
                 let (typRec, s_inst) = 
                   begin match synSchemaElem recT  cO cD cPsi sP (h, k) schema with

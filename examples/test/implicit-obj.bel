@@ -28,10 +28,10 @@ mlam T => fn e => case [ ] T of
    [ ] nat => (case e of [ ] z   => [ ] z 
                        | [ ] suc U => e
                        | [ ] suc U => let [ ] V = typeCase < . nat > ([ ] U) in [ ] suc V
-		 ) 
+              ) 
  | [ ] bool => (case e of [ ] tt   => [ ] tt
                         | [ ]  ff  => [ ] ff
-		 ) 
+               ) 
 
  | [ ] arr S' S => 
    let [ ] lam (\x. (E x)) = e  in [ ] lam (\x. (E x))

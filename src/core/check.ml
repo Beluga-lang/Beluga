@@ -10,7 +10,7 @@
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [3])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [5])
 
 
 module LF = struct
@@ -204,19 +204,6 @@ let rec ctxShift cPsi = begin match cPsi with
         raise SpineMismatch
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
-and lookupCtxVar cO cvar = 
-    match cO with
-      | Empty -> raise (Violation ("Context variable not found"))
-      | Dec (cO, CDecl (psi, schemaName)) ->      
-          begin match cvar with 
-            | CtxName phi when psi = phi ->  (psi, schemaName)
-            | (CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
-            | CtxOffset 1                -> (psi, schemaName)
-            | CtxOffset n                -> lookupCtxVar cO (CtxOffset (n - 1))
-                
-          end 
-
-  and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)
 
   (* inferHead loc cO cD cPsi h = tA
    *

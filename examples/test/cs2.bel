@@ -1,0 +1,75 @@
+tp : type.
+nat : tp.
+
+term : tp -> type.
+z    : term nat.
+suc  : term nat -> term nat.
+
+
+schema termCtx = some [t:tp] block galaga:term t, gargravarr:term t. term t;
+
+
+rec fff : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
+FN g => fn e =>
+  case e of
+  | [g]  z     => [g] z
+  | [g]  suc (U ..)   => [g] z
+  | [g]  #p.1 ..   => [g] z
+  | [g]  #p.3 ..   => [g] z
+  | [g]  #p.2 ..   => [g] z
+;
+
+%not
+rec fffRedundantWrongProjCases : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
+FN g => fn e =>
+  case e of
+  | [g]  z     => [g] z
+  | [g]  suc (U ..)   => [g] z
+  | [g]  #p.2 ..   => [g] z
+  | [g]  #p.1 ..   => [g] z
+  | [g]  #p.2 ..   => [g] z
+;
+
+
+%not
+rec fffRedundantWrongProjCases' : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
+FN g => fn e =>
+  case e of
+  | [g]  z     => [g] z
+  | [g]  #p.1 ..   => [g] z
+  | [g]  suc (U ..)   => [g] z
+  | [g]  #p.1 ..   => [g] z
+  | [g]  #p.3 ..   => [g] z
+  | [g]  #p.3 ..   => [g] z
+;
+
+
+
+%not
+rec fffForgotBothProjCases : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
+FN g => fn e =>
+  case e of
+  | [g]  z     => [g] z
+  | [g]  suc (U ..)   => [g] z
+  | [g]  #p.2 ..   => [g] z
+;
+
+%not
+rec fffForgot1stProjCase : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
+FN g => fn e =>
+  case e of
+  | [g]  z     => [g] z
+  | [g]  suc (U ..)   => [g] z
+  | [g]  #p.2 ..   => [g] z
+  | [g]  #p.3 ..   => [g] z
+;
+
+%not
+rec fffForgot2ndProjCase : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
+FN g => fn e =>
+  case e of
+  | [g]  z     => [g] z
+  | [g]  suc (U ..)   => [g] z
+  | [g]  #p.1 ..   => [g] z
+  | [g]  #p.3 ..   => [g] z
+;

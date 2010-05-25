@@ -3,9 +3,47 @@ z    : term.
 
 schema termCtx = some [] term;
 
-rec copy : {g:(termCtx)*} term[g] -> term[g] =
+%not
+rec copyBad : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>
  (case e of
   | [g]  z     => [g] z
 );
 
+rec copyGood : {g:(termCtx)*} term[g] -> term[g] =
+FN g => fn e =>
+ (case e of
+  | [g]  z     => [g] z
+  | [g]  #p .. => [g] #p ..
+);
+
+%not
+rec copyXBad1 : {g:(termCtx)*} term[g, x:term] -> term[g, x:term] =
+FN g => fn e =>
+ (case e of
+  | [g,x:term]  z     => [g,x:term] z
+  | [g,x:term]  x     => [g,x:term] x
+);
+
+%not
+rec copyXBad2 : {g:(termCtx)*} term[g, x:term] -> term[g, x:term] =
+FN g => fn e =>
+ (case e of
+  | [g,x:term]  z     => [g,x:term] z
+  | [g,x:term]  #p .. => [g,x:term] #p ..
+);
+
+rec copyXGood : {g:(termCtx)*} term[g] -> term[g] =
+FN g => fn e =>
+ (case e of
+  | [g,x:term]  z     => [g,x:term] z
+  | [g,x:term]  x     => [g,x:term] x
+  | [g,x:term]  #p .. => [g,x:term] #p ..
+);
+
+rec copyXGood2 : {g:(termCtx)*} term[g] -> term[g] =
+FN g => fn e =>
+ (case e of
+  | [g,x:term]  z     => [g,x:term] z
+  | [g,x:term]  #p .. x => [g,x:term] #p .. x
+);

@@ -108,6 +108,7 @@ module Int : sig
     val octxToString      : LF.mctx ->  string
 
     val schemaToString    : LF.schema     -> string 
+    val schElemToString   : LF.sch_elem   -> string 
     val gctxToString      : LF.mctx -> LF.mctx -> Comp.gctx  -> string
     val expChkToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
     val expSynToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string

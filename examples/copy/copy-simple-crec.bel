@@ -7,9 +7,11 @@ lam  : (term -> term) -> term.
 
 schema termCtx = some [] term;
 
-rec copy' : term [ ] -> term [ ] = 
- fn t =>  case t of [ ] lam (\x . x) => t
-;
+% Doesn't cover, and not used below.  Commented out  -jd 2010-05-23
+%
+% rec copy' : term [ ] -> term [ ] = 
+%  fn t =>  case t of [ ] lam (\x . x) : term[ ] => t
+% ;
 
 rec copy : {g:termCtx} term[g] -> term[g] =
 fn e => case e of

@@ -22,7 +22,7 @@ module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 module RR = Pretty.Int.NamedRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
 
 exception NotImplemented
 exception Error of Syntax.Loc.t option * Error.error

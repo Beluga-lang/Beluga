@@ -12,7 +12,7 @@
  *)
 
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [17])
 
 open Context
 open Syntax.Int.LF
@@ -30,7 +30,7 @@ exception NonInvertible
 exception Violation of string
 
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [10])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [18])
 
 let rec raiseType cPsi tA = match cPsi with
   | Null -> tA
@@ -757,7 +757,7 @@ and cnorm (tM, t) = match tM with
                 let t'' = cnormMSub (mcomp t' t) in 
                 Root (loc, MMVar(u, (t'', r')), cnormSpine (tS, t)) 
               (* else 
-                raise (Violation "uninstiated meta-variables with unresolved constraints") *)
+                raise (Violation "uninstantiated meta-variables with unresolved constraints") *)
 
 
           (* Meta-variables *)
@@ -770,7 +770,13 @@ and cnorm (tM, t) = match tM with
                 | MObj (_phat,tM)   -> 
                     reduce (tM, cnormSub (r, t)) (cnormSpine (tS, t))  
                     (* Clo(whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), LF.id)))  *)
-                      
+
+            (* jd 2010-05-24; cargo cult programming; makes count-var/cntvar.bel "work" *)
+                | PObj  (_phat, head) ->
+                       cnorm (Root(loc, PVar (Offset k, r), tS), t)
+(*                    norm(Root(loc, head, Nil), cnormSub (r, t)) *)
+(*                ====    reduce (Root(loc, head, Nil), cnormSub (r, t)) (cnormSpine (tS, t)) *)
+
               (* other cases impossible *)
               end 
 
@@ -847,6 +853,14 @@ and cnorm (tM, t) = match tM with
                     | Head (PVar(q, s)) -> Root(loc, PVar(q,  LF.comp s (cnormSub (r,t))), cnormSpine (tS, t))
                         (* Other case MObj _ should not happen -- ill-typed *)
                   end
+
+              | PObj (_phat, _) -> (print_string "whnf PObj 827 crash\n"; exit 189)
+              | MObj (_phat, Root(_, PVar(Offset _, _), _)) -> (print_string "whnf MObj 827 crash -- PVar Offset\n"; exit 190)
+              | MObj (_phat, Root(_, PVar(PInst _, _), _)) -> (print_string "whnf MObj 827 crash -- PVar PInst\n"; exit 190)
+              | MObj (_phat, Root(_, MVar(Inst({contents = None}, _, _, _), _), _)) -> (print_string "whnf MObj 827 crash -- MVar Inst None\n"; exit 190)
+              | MObj (_phat, Root(_, MVar(Inst({contents = Some (Root (_, head, _))}, _, _, _), _), _)) -> (print_string "whnf MObj 827 crash -- MVar Inst Some Root\n"; exit 190)
+              | MObj (_phat, Root(_, MVar(Inst({contents = Some normal}, _, _, _), _), _)) -> (print_string "whnf MObj 827 crash -- MVar Inst Some\n"; exit 190)
+              | MObj (_phat, Root(_, MVar _, _)) -> (print_string "whnf MObj 827 crash -- MVar\n"; exit 190)
                     
             end
 
@@ -1128,9 +1142,9 @@ and cnorm (tM, t) = match tM with
            SigmaElem (x, tA, cnormTypRec (recA', t))
 
   and cnormDecl (decl, t) = match decl with
-      TypDecl (x, tA) -> 
+    | TypDecl (x, tA) -> 
           TypDecl (x, cnormTyp (tA, t))
-
+    | TypDeclOpt x -> TypDeclOpt x    (* jd 2010-05-22: +d fails otherwise *)
 
 and cnormMSub t = match t with
   | MShift _n -> t

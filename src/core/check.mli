@@ -31,8 +31,6 @@ module LF : sig
 
   val checkMSub   : mctx -> mctx -> msub -> mctx -> unit
 
-  val lookupCtxVarSchema: mctx -> ctx_var -> Id.cid_schema
-
 end
 
 

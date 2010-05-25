@@ -56,3 +56,7 @@ val ctxShift : dctx -> sub
 val ctxToSub' : mctx -> dctx -> dctx -> sub
 
 val mctxToMSub : mctx -> msub
+
+
+(* lookupSchemaOpt cO psi_offset *)
+(* val lookupSchemaOpt : mctx -> int -> schema option *)

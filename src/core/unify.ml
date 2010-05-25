@@ -19,7 +19,7 @@ open Trail
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [15])
 
 let numPruneSub = ref 0
 
@@ -1584,11 +1584,12 @@ module Make (T : TRAIL) : UNIFY = struct
         let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
         let _ = dprint (fun () ->  "\n[Unify] MVar-MVar:"  
-                          ^ P.normalToString Empty cD0 cPsi sM1 ^ "\n with type: " ^ 
-                          P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.typToString Empty cD0 cPsi1 (tP1 , id)
-                          ^ "\n and " ^ 
-                          P.normalToString Empty cD0 cPsi sM2 ^  "\n with type: " ^ 
-                          P.dctxToString Empty cD0 cPsi2 ^ " |- " ^ P.typToString Empty cD0 cPsi2 (tP2 , id) ) in
+                                 ^ P.normalToString Empty cD0 cPsi sM1 ^ "\n with type: "
+                                 ^ P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.typToString Empty cD0 cPsi1 (tP1 , id)
+                                 ^ "\n and "
+                                 ^ P.normalToString Empty cD0 cPsi sM2 ^  "\n with type: "
+                                 ^ P.dctxToString Empty cD0 cPsi2 ^ " |- " ^ P.typToString Empty cD0 cPsi2 (tP2 , id)) in
+
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isProjPatSub t1' , isProjPatSub t2') with                 
 (*            match (isPatSub t1' , isPatSub t2') with                 *)
@@ -1728,7 +1729,7 @@ module Make (T : TRAIL) : UNIFY = struct
         let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s1)) in
           if isPatSub t' then
             try
-              (let ss = invert t' in
+              let ss = invert t' in
               let _ = dprint (fun () -> 
                                           "UNIFY(2): " ^
                                             P.mctxToString Empty cD0 ^ "\n    " ^
@@ -1738,7 +1739,7 @@ module Make (T : TRAIL) : UNIFY = struct
               let _ = dprint (fun () -> "Pruning substitution: " ^ P.dctxToString Empty cD0 cPsi1 ^ " |- " ^ P.subToString Empty cD0 cPsi1 ss ^ " <= " ^ P.dctxToString Empty cD0 cPsi) in 
               let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss) (MVarRef r)) in
               let _ = dprint (fun () -> 
-                                          "UNIFY(2) – AFTER PRUNING : " ^
+                                          "UNIFY(2) -- AFTER PRUNING: " ^
                                             P.mctxToString Empty cD0 ^ "\n    " ^
                                             P.normalToString Empty cD0 cPsi1 (tM2', id)) in              
               let r = instantiateMVar (r, tM2', !cnstrs) in 
@@ -1748,7 +1749,6 @@ module Make (T : TRAIL) : UNIFY = struct
                                             P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
                                             P.normalToString Empty cD0 cPsi sM2) in              
                 r
-              ) 
             with
               | NotInvertible ->
                   Printf.printf "Added constraints: NotInvertible: \n"
@@ -1768,25 +1768,24 @@ module Make (T : TRAIL) : UNIFY = struct
                       (Printf.printf "Added constraints: NotInvertible: \n" ;
                        addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
               end
-            else 
-
-             (dprint (fun () -> "Add constraint: MVAR-Normal case" ^ P.normalToString Empty cD0 cPsi sM1  ^ 
-                        " = " ^ P.normalToString Empty cD0 cPsi sM2);
+            else
+             (dprint (fun () -> "Add constraint: MVAR-Normal case"
+                              ^ P.normalToString Empty cD0 cPsi sM1
+                              ^ " = " ^ P.normalToString Empty cD0 cPsi sM2);
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
     
     (* normal-MVar case *)
     | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (r, cPsi1, tP1, cnstrs), t), _tS), s2) as sM2)) ->
-        let t' = Monitor.timer ("Normalisation" , fun () -> Whnf.normSub (comp t s2) ) in
+        let t' = Monitor.timer ("Normalisation" , fun () -> Whnf.normSub (comp t s2)) in
 
           if isPatSub t' then
             try
-            let _ = dprint (fun () -> 
-                                "UNIFY(3): " ^ 
-                                  P.mctxToString Empty cD0 ^ "\n" ^
-                                  P.normalToString Empty cD0 cPsi sM1  ^
-                                  "\n    " ^
-                                  P.normalToString Empty cD0 cPsi sM2
-                                ^ " : " ^ P.typToString Empty cD0 cPsi (tP1, t')) in 
+              let _ = dprint (fun () -> 
+                                "UNIFY(3): " ^
+                                  P.mctxToString Empty cD0 ^ "\n        " ^
+                                  P.normalToString Empty cD0 cPsi sM1 ^ "\n        " ^
+                                  P.normalToString Empty cD0 cPsi sM2 ^
+                                  " : " ^ P.typToString Empty cD0 cPsi (tP1, t')) in 
                 
               let ss = Monitor.timer ("Normalisation", fun () -> invert (Whnf.normSub t')) in
               let phat = Context.dctxToHat cPsi in 
@@ -2143,42 +2142,41 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | (PVar (PInst (q, _cPsi1, tA1, cnstr), s1) as h1, BVar k2) ->
         let s1' = Whnf.normSub s1 in 
-        if isPatSub s1' then
-          (begin try             
-            let TypDecl(_ , tA2) = Context.ctxDec cPsi k2 in 
-              unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, id)
-          with Context.NoTypAvailable -> ()
-          end ; 
-            dprint (fun () -> "unifyHead bvar -pvar ") ;
+          if isPatSub s1' then
+           (begin try             
+               let TypDecl(_ , tA2) = Context.ctxDec cPsi k2 in 
+                 unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, id)
+            with Context.NoTypAvailable -> ()
+            end;
+            dprint (fun () -> "unifyHead bvar - pvar ") ;
             begin match bvarSub k2 (invert s1') with
-                | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
-                | _               -> raise_ (Unify "Parameter violation")
-            end )
-        else
-          (* example: q[q[x,y],y] = x  should succeed
-                      q[q[x,y],y] = y  should fail
-             This will be dealt with when solving constraints.
-          *)
-          addConstraint (cnstr, ref (Eqh (cD0, cPsi, h1, BVar k2)))
+                  | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
+                  | _               -> raise_ (Unify "Parameter violation")
+            end)
+          else
+            (* example: q[q[x,y],y] = x  should succeed
+                        q[q[x,y],y] = y  should fail
+               This will be dealt with when solving constraints.
+            *)
+            addConstraint (cnstr, ref (Eqh (cD0, cPsi, h1, BVar k2)))
 
     | (BVar k1, (PVar (PInst (q, _cPsi2, tA2, cnstr), s2) as h1)) ->
-        (let s2' = Whnf.normSub s2 in 
-        if isPatSub s2' then
-          (begin try 
-             let _ = dprint (fun () -> "unifyHead bvar -pvar ") in
-            let TypDecl(_ , tA1) = Context.ctxDec cPsi k1 in 
-              unifyTyp mflag cD0 cPsi (tA1, id) (tA2, s2') 
-          with Context.NoTypAvailable -> () end ;
-            dprint (fun () -> "unifyHead bvar -pvar ") ;
-           begin match bvarSub k1 (invert s2') with
+        let s2' = Whnf.normSub s2 in 
+          if isPatSub s2' then
+            begin
+              begin try
+                let _ = dprint (fun () -> "unifyHead bvar -pvar ") in
+                let TypDecl(_ , tA1) = Context.ctxDec cPsi k1 in 
+                  unifyTyp mflag cD0 cPsi (tA1, id) (tA2, s2') 
+              with Context.NoTypAvailable -> () end;
+              dprint (fun () -> "unifyHead bvar -pvar ");
+              match bvarSub k1 (invert s2') with
                 | Head (BVar k1') -> 
                     instantiatePVar (q, BVar k1', !cnstr)
-                | _               -> raise_ (Unify "Parameter violation")
-           end )
-            
-        else
-          addConstraint (cnstr, ref (Eqh (cD0, cPsi, BVar k1, h1)))
-        )
+                | _ -> raise_ (Unify "Parameter violation")
+             end
+          else
+            addConstraint (cnstr, ref (Eqh (cD0, cPsi, BVar k1, h1)))
 
     | (PVar (PInst (q1, cPsi1, tA1, cnstr1) as q1', s1'),
        PVar (PInst (q2, cPsi2, tA2, cnstr2) as q2', s2')) ->
@@ -2290,17 +2288,76 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | (Proj (PVar (PInst (q, _, _, cnstr), s1), projIndex) as h1, BVar k2) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
-          (print_string "Unifying projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
+          (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
+           raise_ (Unify "Projection parameter variable =/= bound variable"))
 
     | (BVar k2, Proj (PVar (PInst (q, cPsi2, tA2, cnstr), s1), projIndex) as h1) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
-           (print_string "Unifying projection of parameter with bound variable currently disallowed\n"; raise_ (Unify "Projection parameter variable =/= bound variable"))
+           (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
+            raise_ (Unify "Projection parameter variable =/= bound variable"))
 
     | (FVar _, Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Unify Free Variable with Projection on Parameter variable\n"; raise_ (Unify "Projection parameter variable =/= free variable"))
+        (print_string "[UnifyHead] Unify Free Variable with Projection on Parameter variable\n";
+         raise_ (Unify "Projection parameter variable =/= free variable"))
 
     | (PVar _ , Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Projection on a Parameter variable\n"; raise_ (Unify "333"))
+        (print_string "[UnifyHead] Projection on a Parameter variable\n";
+         raise_ (Unify "PVar =/= Proj PVar"))
+
+    | ((PVar (Offset _k, _s1)) as sM1,   ((PVar (PInst (r, cPsi1, tP1, cnstrs), t)) as sM2)) ->
+(*
+    | ((_tM1, _s1) as s1,      ((Root (_, MVar (Inst (r, cPsi1, tP1, cnstrs), t), _tS), s2) as sM2)) ->
+*)
+        let t' = t in
+          if isPatSub t' then
+            try
+              let _ = dprint (fun () -> 
+                                "UNIFYHEAD(3): " ^
+                                  P.mctxToString Empty cD0 ^ "\n        " ^
+                                  P.headToString Empty cD0 cPsi sM1 ^ "\n        " ^
+                                  P.headToString Empty cD0 cPsi sM2 ^
+                                  " : " ^ P.typToString Empty cD0 cPsi (tP1, t')) in                 
+              let _ss = invert (Whnf.normSub t') in
+              let _phat = Context.dctxToHat cPsi in
+              let sM1' = sM1 in 
+(*              let sM1' = trail (fun () -> prune cD0 cPsi1 phat sM1 (MShift 0, ss) (PVarRef r)) in *)
+                instantiatePVar (r, sM1', !cnstrs)
+            with
+              | NotInvertible ->
+                  (Printf.printf "Pruning failed -- NotInvertible:\n" ;
+                  (* Printf.printf "Added constraints: NotInvertible:\n" ;
+                     addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
+                   raise_ (Unify "NotInvertible")
+                  )
+          else            
+            if isProjPatSub t' then 
+              begin try 
+                let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
+                let _phat = Context.dctxToHat flat_cPsi in 
+                let t_flat = ConvSigma.strans_sub t' conv_list in 
+(*                let _tM1'   = ConvSigma.strans_head sM1 conv_list in  *)
+                let _ss = invert t_flat in
+(*                let sM1' = trail (fun () -> prune cD0 cPsi1 phat (tM1', id) (MShift 0, ss) (MVarRef r)) in*)
+                let sM1' = sM1 in
+                  instantiatePVar (r, sM1', !cnstrs) 
+              with
+              | NotInvertible ->
+                  ((* Printf.printf "Added constraints: NotInvertible: \n" ;
+                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
+                    Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                    raise_ (Unify "NotInvertible")
+                  )
+              end
+            else 
+             (dprint (fun () -> "Supposed to add constraint?: FAKE ``Normal-MVar'' case");
+              raise_ (Unify "NotInvertible"))
+(*        (print_string "[UnifyHead] PVar(Offset,_) - PVar (PInst,_)\n";
+         raise_ (Unify "PVar Offset - PVar PInst"))
+*)
+
+    | (PVar (PInst _, _s1),  PVar (Offset k, _s2)) ->
+        (print_string "[UnifyHead] PVar(PInst,_) - PVar (Offset,_)\n";
+         raise_ (Unify "PVar Inst - PVar Offset"))
 
 
     | (_h1 , _h2 ) ->
@@ -2603,7 +2660,7 @@ raise_ (Unify "Context clash"))
 
     let unifyTyp' mflag cD0 cPsi sA sB =
        dprint (fun () -> "UnifyTyp' " ^
-                         P.typToString Empty cD0 cPsi sA ^ "\n          " ^ 
+                         P.typToString Empty cD0 cPsi sA ^ "\n          " ^
                          P.typToString Empty cD0 cPsi sB);
        resetDelayedCnstrs (); 
        unifyTyp1 mflag cD0 cPsi sA sB;

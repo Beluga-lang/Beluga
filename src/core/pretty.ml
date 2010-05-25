@@ -144,7 +144,8 @@ module Int = struct
     val mctxToString      : LF.mctx -> LF.mctx -> string
     val octxToString      : LF.mctx -> string
 
-    val schemaToString    : LF.schema     -> string 
+    val schemaToString    : LF.schema     -> string
+    val schElemToString   : LF.sch_elem   -> string
 
     val gctxToString      : LF.mctx -> LF.mctx -> Comp.gctx  -> string
     val expChkToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
@@ -363,7 +364,7 @@ module Int = struct
 
       | LF.App (m, ms) ->
           fprintf ppf " %a%a"
-            (fmt_ppr_lf_normal  cO cD cPsi lvl) m
+            (fmt_ppr_lf_normal  cO cD cPsi (lvl + 1)) m
             (fmt_ppr_lf_spine   cO cD cPsi lvl) ms
 
     and fmt_ppr_lf_sub cO cD cPsi lvl ppf s =
@@ -1236,14 +1237,25 @@ module Int = struct
         fmt_ppr_lf_normal cO cD cPsi std_lvl str_formatter tM
         ; flush_str_formatter ()
 
+    let attempt message f =
+      try
+        f()
+      with
+        | Match_failure (file, line, column) ->
+            (print_string ("pretty.ml attempt: \"" ^ message ^ "\" crashed: "
+                           ^ file ^ " " ^ string_of_int line ^ " " ^ string_of_int column ^ "\n");
+             exit 230)
+        | _ -> (print_string ("pretty.ml attempt: \"" ^ message ^ "\" crashed.\n");
+                exit 231)
 
-    let dctxToString cO cD cPsi = 
-      let cPsi' = Whnf.normDCtx (Whnf.cnormDCtx (cPsi, Whnf.m_id)) in 
-        fmt_ppr_lf_dctx cO cD std_lvl str_formatter cPsi'
-        ; flush_str_formatter ()
+    let dctxToString cO cD cPsi =
+      let (cPsi', notice) = try (Whnf.cnormDCtx (cPsi, Whnf.m_id),  "") with _ -> (cPsi, "{dctxToString: Whnf.cnormDCtx crashed}") in
+      let cPsi' = attempt "dctxToString whnf" (fun () -> Whnf.normDCtx cPsi) in
+       notice ^ (fmt_ppr_lf_dctx cO cD std_lvl str_formatter cPsi';
+                 flush_str_formatter ())
 
     let mctxToString cO cD = 
-      let cD' = Whnf.normMCtx cD in 
+      let cD' = attempt "mctxToString normMCtx" (fun () -> Whnf.normMCtx cD) in 
       fmt_ppr_lf_mctx cO std_lvl str_formatter cD'
         ; flush_str_formatter ()
 
@@ -1253,6 +1265,10 @@ module Int = struct
 
     let schemaToString schema = 
       fmt_ppr_lf_schema std_lvl str_formatter schema
+      ; flush_str_formatter ()
+
+    let schElemToString sch_elem = 
+      fmt_ppr_lf_sch_elem std_lvl str_formatter sch_elem
       ; flush_str_formatter ()
 
     let gctxToString cO cD cG = 

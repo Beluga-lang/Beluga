@@ -197,17 +197,20 @@ module Int = struct
            and [s]recA is a suffix of recA'
        then
            Psi |- [s']tA  <= type
+
+       CLIENTS: pass 1 for the last argument j
     *)
     let rec getType head s_recA target j = match (s_recA, target) with
       | ((SigmaLast lastA, s), 1) ->
           (lastA, s)
-            
+      
       | ((SigmaElem (_x, tA, _recA), s), 1) -> 
           (tA, s)
-            
+      
       | ((SigmaElem (_x, _tA, recA), s), target) ->
           let tPj = Proj (head, j) in
             getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
+      
       | _ -> raise Not_found
   end
 

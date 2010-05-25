@@ -42,6 +42,9 @@ module LF : sig
   val isMId       : msub -> bool
   val applyMSub   : Id.offset -> msub -> mfront
 
-  (* identity:  id(--) function  (jd 2010-05-17)*)
+  (* identity:  id(Psi) function  (jd 2010-05-17)*)
   val identity : dctx -> sub
+
+  (* justCtxVar:  id(\psi)  *)
+  val justCtxVar : dctx -> sub
 end

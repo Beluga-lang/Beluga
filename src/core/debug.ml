@@ -19,6 +19,16 @@ let rec toFlags = function
        else 
          (toFlags xs) lor (1 lsl x)
 
+let flagsToString flags =
+  let rec seq n =
+    if n > 30 then ""
+    else (if flags land (1 lsl n) <> 0 then string_of_int n ^ ";" else "")
+       ^ seq (n + 1)
+  in
+    if flags = lnot 0 then "[all]"
+    else if flags = 0 then "[none]"
+    else "[" ^ seq 0 ^ "]"
+
 let showAll () =
     show (lnot 0)
 
@@ -59,7 +69,13 @@ let print flags f =
         ()
     else
         (print_level_spaces();
-         let s = f() in
+         let s = try f()
+                 with
+                   | Match_failure stuff -> (print_string ("*** Match_failure exception raised inside function passed to dprint ***\n*** Goodbye. ***" ^ flagsToString flags ^ "\n");
+                                             exit 200)
+                   | exn -> (print_string ("*** WARNING: EXCEPTION RAISED INSIDE FUNCTION PASSED TO dprint *** " ^ flagsToString flags ^ "\n");
+                             flush_all();
+                             raise exn) in
            print_noticing_newlines s 0 (String.length s);
            print_string "\n";
            flush_all())

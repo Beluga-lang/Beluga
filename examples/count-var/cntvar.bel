@@ -27,7 +27,12 @@ case x of
   [ ] z    => y
 
 | [ ] s U  =>
-  let [ ] V = plus ([ ] U) y in ([ ] s V);
+  let [ ] V = plus ([ ] U) y in ([ ] s V)
+
+% formerly missing cases (jd 2010-05-23):
+| [ ] add U V => plus ([ ] U) ([ ] V)
+| [ ] W => let [ ] V = y in [ ] add W V
+;
 
 % G, x:exp T |-  z  ==>  0
 % G, x:exp T |-  tt  ==>  0
@@ -76,8 +81,4 @@ FN g =>
    | [g,x: exp _ ] add (U .. x) (W .. x)  =>
      plus (cntV [g] ([g,x] (U .. x)))
           (cntV [g] ([g,x] (W .. x)))
-
 ;
-
-
- 

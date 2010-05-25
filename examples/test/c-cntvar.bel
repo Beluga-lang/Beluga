@@ -1,0 +1,25 @@
+tp  : type.   %  name tp T.
+nat : tp.
+
+exp : tp -> type.  %  name exp E x.
+zero   : exp nat.
+s   : exp nat -> exp nat.
+
+schema expCtx = some [t:tp] exp t;
+
+
+rec cntV : {g:(expCtx)*}  (exp (S .. xxx))[g, xxx : exp (T ..)] -> (exp nat)[] =
+FN g => 
+ fn e =>
+  case e of  % e : exp (S .. x) [g, x:exp (T ..)]
+
+  | [g, xx: exp TTT ] zero           => [ ] zero
+
+  | [g, xx : exp _ ] #p ..    => [ ] zero
+
+  | [g,x : exp _ ] x           => [ ] zero
+
+%  | [g,x : exp _ ] U ..  => [ ] zero
+
+  | [g,x : exp _ ] s (W .. x)  => [ ] zero
+;

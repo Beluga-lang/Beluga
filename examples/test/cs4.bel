@@ -1,0 +1,25 @@
+irrel : type.
+irrel_ctor : irrel.
+
+tp : type.
+nat : tp.
+
+term : tp -> type.
+z    : term nat.
+suc  : term nat -> term nat.
+
+
+schema termCtx = some [t:tp] block firstpart:term t, wasted:irrel. term t;
+
+
+rec fff : {g:(termCtx)*} (term nat)[g, b : block yyy:term nat, www:irrel. term nat] -> (term nat)[] =
+FN g => fn e =>
+  case e of
+  | [g, b:block yyy:term nat, www:irrel. term nat]  z     => [] z
+  | [g, b:block yyy:term nat, www:irrel. term nat]  suc (U ..)   => [] z
+%  | [g, b:block yyy:term nat, www:irrel. term nat]  #p.1 ..   => [] z      % Match_failure("substitution.ml", 197, 14)
+%  | [g, b:block yyy:term nat, www:irrel. term nat]  #p.1 .. b   => [] z   % adding the b is OK
+%{
+  | [g, b:block yyy:term nat, www:irrel. term nat]  #p.3 ..   => [] z
+}%
+;

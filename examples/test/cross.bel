@@ -10,9 +10,9 @@ app  : exp -> exp -> exp.
 
 tp : type.  %name tp T.
 
-nat   : tp.				% Natural Numbers
-cross : tp -> tp -> tp.			% Pairs
-arrow : tp -> tp -> tp.			% Functions
+nat   : tp.                             % Natural Numbers
+cross : tp -> tp -> tp.                 % Pairs
+arrow : tp -> tp -> tp.                 % Functions
 
 
 rec testPairs : exp [ ] -> exp [ ] * tp [ ] = 

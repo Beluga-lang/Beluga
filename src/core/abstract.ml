@@ -17,7 +17,7 @@ module Comp = Int.Comp
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [6])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [3])
 
 exception NotImplemented
 

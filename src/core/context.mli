@@ -34,4 +34,6 @@ val projectCtxIntoDctx : typ_decl ctx -> dctx
 
 val lookup : Comp.gctx -> int -> Comp.typ option
 
-val lookupSchema: mctx -> int -> Id.cid_schema
+val lookupSchema : mctx -> int -> Id.cid_schema
+val lookupCtxVar : mctx -> ctx_var -> Id.name * Id.cid_schema
+val lookupCtxVarSchema : mctx -> ctx_var -> Id.cid_schema

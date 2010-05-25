@@ -12,7 +12,7 @@ module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 module RR = Pretty.Int.NamedRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [4])
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [7])
 
 let rec conv_listToString clist = match clist with 
   | [] -> " "
@@ -39,6 +39,10 @@ and strans_head h conv_list = match h with
   | Int.LF.Proj (Int.LF.BVar x, j) -> 
     let x' = (new_index x conv_list) - j + 1  in 
       Int.LF.BVar x'
+
+  | Int.LF.Proj (Int.LF.PVar (p, sigma), j) -> 
+      Int.LF.Proj (Int.LF.PVar (p, strans_sub sigma conv_list), j)
+
   | Int.LF.Const c -> Int.LF.Const c
   | Int.LF.FVar x -> Int.LF.FVar x
   | Int.LF.FMVar (u,s) -> Int.LF.FMVar (u, strans_sub s conv_list)

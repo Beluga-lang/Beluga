@@ -159,4 +159,4 @@ $INTERPRETER +t \
     test/sigma2.bel \
     test/sigma3.bel \
     test/sigma4.bel \
-    test/implicit-obj.bel \
+    test/implicit-obj.bel

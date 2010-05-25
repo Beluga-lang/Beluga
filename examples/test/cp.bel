@@ -1,0 +1,29 @@
+term :  type.
+z    : term.
+suc  : term -> term.
+
+
+schema termCtx = some [] term;
+
+
+rec fff : {g:(termCtx)*} term[g] -> term[g] =
+FN g => fn e =>
+  case e of
+  | [g]  z     => [g] z
+
+  | [g]  suc (U ..)   => [g] z
+
+  | [g]  #p ..   => [g] z
+;
+
+
+%not
+rec fffForgotParamVarCase : {g:(termCtx)*} term[g] -> term[g] =
+FN g => fn e =>
+  case e of
+  | [g]  z     => [g] z
+
+  | [g]  suc (U ..)   => [g] z
+
+%%%  | [g]  #p ..   => [g] z
+;

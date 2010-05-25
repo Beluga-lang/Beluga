@@ -11,6 +11,7 @@ open Error
 
 exception Error of error
 exception NoTypAvailable
+exception Violation of string
 
 
 let addToHat (ctxvarOpt, length) =
@@ -202,3 +203,17 @@ let rec lookupSchema cO psi_offset = match (cO, psi_offset) with
   | (Dec (_cO, CDecl (_, cid_schema)), 1) -> cid_schema
   | (Dec (cO, _) , i) -> 
       lookupSchema cO (i-1)
+
+
+and lookupCtxVar cO cvar = 
+    match cO with
+      | Empty -> raise (Violation "Context variable not found")
+      | Dec (cO, CDecl (psi, schemaName)) ->      
+          begin match cvar with 
+            | CtxName phi when psi = phi ->  (psi, schemaName)
+            | (CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
+            | CtxOffset 1                -> (psi, schemaName)
+            | CtxOffset n                -> lookupCtxVar cO (CtxOffset (n - 1))
+          end 
+
+and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)

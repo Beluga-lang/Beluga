@@ -16,14 +16,17 @@ module Cid = struct
       mutable constructors : Id.cid_term list
     }
 
-    let mk_entry n k i = {
-      name               = n;
-      implicit_arguments = i;
-      kind               = k;
-      var_generator      = None;
-      mvar_generator     = None;
-      constructors       = []
-    }
+    let entry_list  = ref []
+
+    let mk_entry n k i =
+      {
+        name               = n;
+        implicit_arguments = i;
+        kind               = k;
+        var_generator      = None;
+        mvar_generator     = None;
+        constructors       = []
+      }
 
     type t = Id.name DynArray.t
 
@@ -42,6 +45,7 @@ module Cid = struct
       let cid_tp = DynArray.length store in
         DynArray.add store e;
         Hashtbl.replace directory e.name cid_tp;
+        entry_list := cid_tp :: !entry_list;
         cid_tp
 
     let get = DynArray.get store
@@ -87,6 +91,7 @@ module Cid = struct
         e.constructors <- c :: e.constructors
     
     let clear () =
+      entry_list := [];
       DynArray.clear store;
       Hashtbl.clear directory
 

@@ -151,6 +151,7 @@ let main () =
             let _int_decls = Reconstruct.recSgnDecls sgn in
               (* print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls; *)
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
+              Subord.dump_subord();
               return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->

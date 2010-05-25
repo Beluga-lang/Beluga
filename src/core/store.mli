@@ -16,7 +16,9 @@ module Cid : sig
       mvar_generator     : (unit -> string) option;
       mutable constructors : Id.cid_term list
     }
-
+    
+    val entry_list : cid_typ list ref
+    
     val mk_entry          : name -> LF.kind -> int -> entry
     type t
     val add               : entry -> cid_typ

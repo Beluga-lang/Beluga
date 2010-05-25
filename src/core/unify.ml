@@ -1825,7 +1825,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
     (* MMVar-MMVar case *)
     | (((Root (_, MMVar (MInst (r1,  cD1, cPsi1,  tP1, cnstrs1), (mt1, t1)), _tS1) as _tM1), s1) as sM1,
-       (((Root (_, MMVar (MInst (r2, _cD2, cPsi2, _tP2, cnstrs2), (mt2, t2)), _tS2) as _tM2), s2) as sM2)) ->
+       (((Root (_, MMVar (MInst (r2, _cD2, cPsi2, tP2, cnstrs2), (mt2, t2)), _tS2) as _tM2), s2) as sM2)) ->
         (* by invariant of whnf:
            meta^2-variables are lowered during whnf, s1 = s2 = id
            r1 and r2 are uninstantiated  (None)
@@ -1902,26 +1902,25 @@ module Make (T : TRAIL) : UNIFY = struct
                    *)
                   
                   begin try
-
                     let ss1  = invert t1' in
                       (* cD ; cPsi1 |- ss1 <= cPsi *)
                     let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in 
                       (* cD1 |- mtt1 <= cD *)
-                    (* let _ = dprint (fun () -> 
-                                      "UNIFY(1): " ^ 
+                     let _ = dprint (fun () -> 
+                                      "UNIFY(1 a): " ^ 
                                               P.mctxToString Empty cD0 ^ "\n" ^
                                               P.normalToString Empty cD0 cPsi sM1  
                                       ^ " : " ^ P.typToString Empty cD0 cPsi (tP1, t1') ^ 
                                         "\n    " ^
                                               P.normalToString Empty cD0 cPsi sM2 
                                       ^ " : " ^ P.typToString Empty cD0 cPsi (tP2, t2')  
-                                      ^ "\n") in *)
+                                      ^ "\n") in 
                     let phat = Context.dctxToHat cPsi in 
                     let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (mtt1, ss1) (MVarRef r1)) in 
                     (* sM2 = [ss1][s2]tM2 *) 
 
                     (instantiateMMVar (r1, tM2', !cnstrs1)  ; 
-                    dprint (fun () -> "Instantiated with new meta²-variable " ^ 
+                    dprint (fun () -> "Instantiated with sM1 with pruned tM2' " ^ 
                                         P.normalToString Empty cD0 cPsi sM1) )
 
                   with
@@ -1938,6 +1937,17 @@ module Make (T : TRAIL) : UNIFY = struct
                     let mtt2 = Whnf.m_invert (Whnf.cnormMSub mt2) in 
                       (* cD1 |- mtt1 <= cD *)
                     let phat = Context.dctxToHat cPsi in 
+
+                     let _ = dprint (fun () -> 
+                                      "UNIFY(1 b): " ^ 
+                                              P.mctxToString Empty cD0 ^ "\n" ^
+                                              P.normalToString Empty cD0 cPsi sM1  
+                                      ^ " : " ^ P.typToString Empty cD0 cPsi (tP1, t1') ^ 
+                                        "\n    " ^
+                                              P.normalToString Empty cD0 cPsi sM2 
+                                      ^ " : " ^ P.typToString Empty cD0 cPsi (tP2, t2')  
+                                      ^ "\n") in 
+
 
                     let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (mtt2, ss2) (MVarRef r2)) in
                       (instantiateMMVar (r2, tM1', !cnstrs2) ;                    
@@ -1971,6 +1981,17 @@ module Make (T : TRAIL) : UNIFY = struct
                           let t_flat = ConvSigma.strans_sub t2' conv_list in 
                           let tM1'   = ConvSigma.strans_norm sM1 conv_list in 
                           let ss = invert t_flat in
+
+                     let _ = dprint (fun () -> 
+                                      "UNIFY(1 c (proj-sub)): " ^ 
+                                              P.mctxToString Empty cD0 ^ "\n" ^
+                                              P.normalToString Empty cD0 cPsi sM1  
+                                      ^ " : " ^ P.typToString Empty cD0 cPsi (tP1, t1') ^ 
+                                        "\n    " ^
+                                              P.normalToString Empty cD0 cPsi sM2 
+                                      ^ " : " ^ P.typToString Empty cD0 cPsi (tP2, t2')  
+                                      ^ "\n") in 
+
                           let sM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (mtt2, ss) (MVarRef r2)) in
                             instantiateMMVar (r2, sM1', !cnstrs2) 
                         with

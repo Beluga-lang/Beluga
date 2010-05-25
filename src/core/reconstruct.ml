@@ -1266,12 +1266,12 @@ and elTuple recT  cO cD cPsi tuple (typRec, s) =
 
 
   and instanceOfSchElem cO cD cPsi (tA, s) (Int.LF.SchElem (some_part, block_part)) = 
-    let _ = dprint (fun () -> "instanceOfSchElem ... \n") in 
+    let _ = dprint (fun () -> "[instanceOfSchElem] Begin \n") in 
     let sArec = match Whnf.whnfTyp (tA, s) with
       | (Int.LF.Sigma tArec,s') ->  (tArec, s') 
       | (nonsigma, s')          ->  (Int.LF.SigmaLast nonsigma, s') in
     let _ = dprint (fun () -> ("tA =" ^ P.typToString cO cD cPsi (tA, s) ^ " \n")) in 
-    let dctx        = projectCtxIntoDctx some_part in     
+    let dctx        = projectCtxIntoDctx some_part in  
     let dctxSub     = ctxToSub' cD cPsi dctx in
 
     (* let phat        = dctxToHat cPsi in *)
@@ -1281,14 +1281,15 @@ and elTuple recT  cO cD cPsi tuple (typRec, s) =
                         ^ "\n   dctx = " ^ P.dctxToString cO cD dctx  
                         ^ "\n   " ^  P.typToString cO cD cPsi (tA, s) ) in
     let _ = dprint (fun () -> "dctxSub = " ^ P.subToString cO cD cPsi dctxSub ^ "\n") in
-      (* P.typRecToString cO cD cPsi sArec  *)
-(*    let _ = dprint (fun () -> 
-                         "\n== " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ) in  *)
+
+    let _ = dprint (fun () ->  P.typRecToString cO cD cPsi sArec ) in  
     let _ = dprint (fun () ->  "== " ) in 
-    (* let _ = dprint (fun () -> P.typRecToString cO cD cPsi (block_part, dctxSub) )  in*)
+    let _ = dprint (fun () -> P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n" )  in
+    let tBrec  = Whnf.normTypRec (block_part, dctxSub) in 
+    let tArec  = Whnf.normTypRec sArec in 
       begin
         try
-          Unify.unifyTypRec cD cPsi sArec (block_part, dctxSub) 
+          Unify.unifyTypRec cD cPsi (tArec,LF.id) (tBrec, LF.id) 
         ; dprint (fun () -> "instanceOfSchElem\n"
                             ^ "  block_part = " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n"
                             ^ "  succeeded.")
@@ -1298,14 +1299,16 @@ and elTuple recT  cO cD cPsi tuple (typRec, s) =
 (*          dprint (fun () ->  P.typRecToString cO cD cPsi (block_part, dctxSub) *)
           raise exn )
           | exn -> 
-              (dprint (fun () -> " -2- "); raise exn)
+              (dprint (fun () -> "[instanceOfSchElem] Non-Unify ERROR -2- "); raise exn)
       end
   
   and instanceOfSchElemProj cO cD cPsi (tA, s) (var, k) (Int.LF.SchElem (cPhi, trec)) = 
-    let _ = dprint (fun () -> "instanceOfSchElemProj ... getType " ^ string_of_int k ) in 
-    let _ = dprint (fun () -> " of " ^ P.typRecToString cO cD cPsi (trec, LF.id)) in
-    let tA_k (* : tclo *) = Int.LF.getType var (trec, LF.id) k 1 in
-    let _ = dprint (fun () -> "instanceOfSchElemProj ... ") in
+    let _ = dprint (fun () -> "[instanceOfSchElemProj] getType of " ^ string_of_int k ^ ". argument\n") in 
+    let cPhi'  = projectCtxIntoDctx cPhi in  
+    let _ = dprint (fun () -> " of " ^ P.typRecToString cO cD cPhi' (trec, LF.id)) in
+    let _ = dprint (fun () -> " var = " ^ P.headToString cO cD cPsi var) in
+    let tA_k (* : tclo *) = Int.LF.getType var (trec, LF.id) k 1 in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence,eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)
+    let _ = dprint (fun () -> "[instanceOfSchElemProj] retrieved the type  " ^ P.typToString cO cD cPhi' tA_k) in
     let (_tA'_k, subst) =
       instanceOfSchElem cO cD cPsi (tA, s) (Int.LF.SchElem (cPhi, Int.LF.SigmaLast (Int.LF.TClo tA_k)))
       (* tA'_k = [subst] (tA_k) = [s]tA *)
@@ -1318,7 +1321,7 @@ and elTuple recT  cO cD cPsi tuple (typRec, s) =
 and synSchemaElem recT  cO cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elements) as schema) =
   let self = synSchemaElem recT  cO cD cPsi sP (head, k) in 
   let _ = dprint (fun () -> "synSchemaElem ... head = " ^ P.headToString cO cD cPsi head ^ " Projection " ^ string_of_int k ^ "\n") in
-  let _ = dprint (fun () -> "synSchemaElem ... " ^ P.typToString cO cD cPsi sP
+  let _ = dprint (fun () -> "[synSchemaElem]  " ^ P.typToString cO cD cPsi sP
                     ^ "  schema= " ^ P.schemaToString schema) in
     match elements with
       | [] -> None
@@ -1631,34 +1634,28 @@ and elTerm' recT  cO cD cPsi r sP = match r with
             | (true, Apx.LF.Nil) ->
                 let (cPhi, s'') = synDom cD loc cPsi s in
                 let si          = Substitution.LF.invert s'' in
+                let tP = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) sP 
+                                (Int.LF.MShift 0, si) (Unify.MVarRef (ref None)) in 
+
                 let Some psi =  Context.ctxVar cPsi in
                 let schema = Schema.get_schema (Check.LF.lookupCtxVarSchema cO psi) in 
-                let h = Int.LF.FPVar (p, s'') in
+                let h = Int.LF.FPVar (p, LF.id) in
                 let (typRec, s_inst) = 
-                  begin match synSchemaElem recT  cO cD cPsi sP (h, k) schema with
-                  | None -> raise (Violation ("type sP = " ^ P.typToString cO cD cPsi sP ^ " not in schema " ^ 
+                  begin match synSchemaElem recT  cO cD cPhi (tP, LF.id) (h, k) schema with
+                  | None -> raise (Violation ("type sP = " ^ P.typToString cO cD cPhi (tP, LF.id) ^ " not in schema " ^ 
                                              P.schemaToString schema))
-                  | Some (typrec, subst) -> (typrec, subst) 
+                  | Some (typrec, subst) -> (typrec, subst)  
                   end in       
-                let tB  = 
-                  begin match typRec with
+                let tB  =  
+                  begin match typRec with 
                   | Int.LF.SigmaLast tA -> 
-                      (dprint (fun () -> "synType for PVar: [SigmaLast]" ^ P.typToString cO cD cPsi (tA, s_inst) ^ "\n"); tA)
+                      (dprint (fun () -> "synType for PVar: [SigmaLast]" ^ P.typToString cO cD cPhi (tA, s_inst) ^ "\n"); tA) 
                   | typRec' -> 
-                      (dprint (fun () -> "synType for PVar: [SigmaElem]" ^ P.typRecToString cO cD cPsi (typRec', s_inst) ^ "\n") ; 
+                      (dprint (fun () -> "synType for PVar: [SigmaElem]" ^ P.typRecToString cO cD cPhi (typRec', s_inst) ^ "\n") ; 
                        Int.LF.Sigma typRec' )
-                  end in
+                  end in 
 
-                (* tB = Sigma x1:A1 ... xn:An.A(n+1) 
-                   and [s_inst][proj_1 h/x_1 ... proj_(k-1) h/x_(k-1)] A_k = sP
-                *)
-                let tB' = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) (tB, s_inst)
-                                        (Int.LF.MShift 0, si) (Unify.MVarRef (ref None)) in 
-
-                 (* r is a pruning substitution s.t. [si]([|r|]tB) = tB' and 
-                    where     cPhi |- si <= cPsi
-                 *)
-                  FPVar.add p (tB', cPhi);
+                  FPVar.add p (Int.LF.TClo(tB, s_inst), cPhi);
                   Int.LF.Root (Some loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k),  Int.LF.Nil) 
                   
             | (false, Apx.LF.Nil) ->

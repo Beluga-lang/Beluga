@@ -64,7 +64,7 @@ type error =
   | NotPatSub
   | NotPatternSpine
 
-  | NoCover
+  | NoCover of string
 
   | LeftoverUndef
   | SubIllTyped

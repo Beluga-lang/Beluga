@@ -17,6 +17,8 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [29])
 
 let covby_counter = ref 0
 
+exception NoCover of (unit -> string)
+
 
 (* why doesn't ocaml have List.tabulate? *)
 (* tabulate : int -> (int -> 'a) -> 'a list
@@ -121,25 +123,26 @@ let bump_shift increment shifter = {n = shifter.n + increment}
  * Currently, this just has a `depth'.
  *)
 type strategy = {
-  depth : int
+  maxDepth : int;
+  currDepth : int
 }
 
-let strategyToString s = "{" ^ "depth = " ^ string_of_int s.depth ^ "}"
+let strategyToString s = "{" ^ "maxDepth = " ^ string_of_int s.maxDepth
+                             ^ "; currDepth = " ^ string_of_int s.currDepth ^ "}"
 
-let naive_strategy depth = {depth = depth}
-let decrement_depth = function {depth = d} -> {depth = d - 1}
+let naive_strategy depth = {maxDepth = depth; currDepth = 0}
+let increment_depth strategy = {strategy with currDepth = strategy.currDepth + 1}
 
 let split_switch strategy (split, noSplit) =
-  let shouldSplit strategy = strategy.depth > 0 in
-    if shouldSplit strategy then
-     (let strategyInSplit = strategy in
-        split strategyInSplit)
+  let couldSplit strategy = strategy.currDepth < strategy.maxDepth in
+    if couldSplit strategy then
+      (try   (* Even if the strategy permits us to split, try not splitting, because if it happens
+                      to succeed we can save a lot of time *)
+         noSplit strategy
+       with NoCover _ -> split strategy)
     else
-      (let strategyInNoSplit = strategy in
-        noSplit strategyInNoSplit)
+      noSplit strategy
 
-
-exception NoCover
 
 let enableCoverage = ref false
 let warningOnly = ref false
@@ -320,7 +323,7 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tAAA) tP k =
                               ^ "--tA under cD = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
                               ^ "--tP under cD = " ^ P.typToString cO cD cPsi (tP, emptySub));
               Debug.indent 2;
-              app (decrement_depth strategy, shift, cO, cD, cPsi)
+              app (increment_depth strategy, shift, cO, cD, cPsi)
                   (LF.Proj(tR, index), LF.Nil, tA)
                   tP
                   k;
@@ -430,7 +433,7 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                                           ^ "--tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
                                           ^ "-- P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
                     Debug.indent 2;
-                    app (decrement_depth strategy, bump_shift 1 shift, cO, cDWithPVar, cPsi)
+                    app (increment_depth strategy, bump_shift 1 shift, cO, cDWithPVar, cPsi)
                       (head, LF.Nil, tA)
                       (LF.Atom(loc, a, spine))
                       k;
@@ -442,7 +445,7 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                 let callAppOnComponent (sA, index) =
                   let tA = Whnf.normTyp sA in
                   let typRec = Whnf.normTypRec (typRec, some_part_dctxSub) in
-                  let name = new_name "P@" in
+                  let name = new_name "p@" in
                   let _ = dprint (fun () -> "SigmaElem: created parameter \"" ^ R.render_name name ^ "\"") in
                   let pdecl  = LF.PDecl(name, LF.Sigma typRec, cPsi) in
                   let (cDWithPVar, _pdeclOffset) = (LF.Dec(cD, pdecl), 1) in
@@ -477,7 +480,7 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                                         ^ "--tA = " ^ P.typToString cO cDWithPVar cPsi (tA, emptySub) ^ "\n"
                                         ^ "-- P = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), emptySub));
                         Debug.indent 2;
-                        app (decrement_depth strategy, bump_shift 1 shift, cO, cDWithPVar, cPsi)
+                        app (increment_depth strategy, bump_shift 1 shift, cO, cDWithPVar, cPsi)
                           (LF.Proj(head, index), LF.Nil, tA)
                           (LF.Atom(loc, a, spine))
                           k;
@@ -495,12 +498,12 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
         begin
           match xTyp with
             | LF.Sigma _ -> (* dprint (fun () -> "--skipping it because it's a block") *)
-                app (decrement_depth strategy, shift, cO, cD, cPsi)
+                app (increment_depth strategy, shift, cO, cD, cPsi)
                     (LF.BVar x, LF.Nil, xTyp)
                     (LF.Atom(loc, a, spine))
                     k
             | _ ->
-                app (decrement_depth strategy, shift, cO, cD, cPsi)
+                app (increment_depth strategy, shift, cO, cD, cPsi)
                     (LF.BVar x, LF.Nil, xTyp)
                     (LF.Atom(loc, a, spine))
                     k
@@ -511,7 +514,7 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
         dprint (fun () -> "checking if constructor \"" ^ R.render_cid_term c ^ "\" is covered");
         Debug.indent 2;
         dprint (fun () -> "--type cSig: " ^ P.typToString cO cD cPsi (cSig, emptySub));
-        app (decrement_depth strategy, shift, cO, cD, cPsi)
+        app (increment_depth strategy, shift, cO, cD, cPsi)
             (LF.Const c, LF.Nil, cSig)
             (LF.Atom(loc, a, spine))
             k;
@@ -589,7 +592,9 @@ and obj (strategy, shift, cO, cD, cPsi) tA k =
          (begin
            (* Split *)
            fun strategy ->  
-            obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k
+            obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine)
+              (fun (strategy', shift, cO, cD, cPsi) b c ->   (* Restore the previous strategy, including strategy.currDepth *)
+                 k (strategy, shift, cO, cD, cPsi) b c)
           end, begin
            (* Don't split *)
            fun strategy ->
@@ -665,15 +670,19 @@ let covered_by branch (cO, cD, cPsi) tM tA =
         Debug.outdent 2
       with U.Unify s -> (dprnt "no match";
                          Debug.outdent 2;
-                         raise NoCover)
+                         raise (NoCover (fun () -> "---inner NoCover escaped---")))
 
 
 
 let rec covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA = match branches with
-  | [] -> raise NoCover
+  | [] -> raise (NoCover (fun () -> "Term not covered: " ^ P.normalToString cO cD cPsi (tM, emptySub)))
   | branch :: branches ->
-      try covered_by branch (cO, cD, cPsi) tM tA
-      with NoCover -> covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA
+      try covered_by branch (cO, cD, cPsi) tM tA;
+        dprint (fun () -> "Term covered:  " ^ P.normalToString cO cD cPsi (tM, emptySub)
+                  ^ "  covered by  "
+                  ^ (match branch with BranchBox (cO', cD', (cPsi', tR', _msub', _csub'), _body) ->
+                          P.normalToString cO' cD' cPsi' (tR', emptySub)))
+      with NoCover _ -> covered_by_set branches (strategy, shift, cO, cD, cPsi) tM tA
 
 
 
@@ -753,5 +762,5 @@ let covers cO cD cG branches (tA, cPsi) =
           dprint (fun () -> "## COVERS ##");
           finish()
         with
-          NoCover -> (finish(); no_covers := !no_covers + 1; raise NoCover)
+          NoCover messageFn -> (finish(); no_covers := !no_covers + 1; raise (NoCover messageFn))
     end

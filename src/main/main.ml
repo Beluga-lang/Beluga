@@ -23,6 +23,7 @@ let usage () =
         ^ "    -coverage     turn off coverage checker (default, since coverage checker is incomplete)\n"
         ^ "    +coverage     turn on coverage checker (experimental)\n"
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
+        ^ "    +printSubord  print subordination relation (experimental)\n"
   in
     fprintf stderr
       "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
@@ -31,7 +32,7 @@ let usage () =
 
 module PC = Pretty.Control
 
-(* We should be using a library for this *)
+(* We should use a library for this *)
 let process_option' arg = begin let f = function
   | "+d" -> Debug.showAll ()
   | "-d" -> Debug.showNone ()
@@ -46,6 +47,7 @@ let process_option' arg = begin let f = function
   | "+coverage" -> Coverage.enableCoverage := true
   | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true)
   | "-coverage" -> Coverage.enableCoverage := false
+  | "+printsubord" -> Subord.dump := true
   | _ -> usage ()
 in (* print_string (">>>> " ^ arg ^ "\n"); *) f arg
 end
@@ -142,6 +144,7 @@ let main () =
       let abort_session () = raise (SessionFatal spec)
       in
         try
+          (* Subord.clearMemoTable();   (* obsolete *) *)
           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
             (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
             print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
@@ -151,7 +154,7 @@ let main () =
             let _int_decls = Reconstruct.recSgnDecls sgn in
               (* print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls; *)
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-              Subord.dump_subord();
+              if !Subord.dump then Subord.dump_subord();
               return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->

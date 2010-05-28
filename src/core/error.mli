@@ -105,7 +105,7 @@ type error =
   | NotPatternSpine
 
   (* Coverage errors *)
-  | NoCover
+  | NoCover of string
 
   (* Beluga errors *)
   | LeftoverUndef                      (* encountered Undef after unification *)

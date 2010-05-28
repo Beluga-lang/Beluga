@@ -958,18 +958,18 @@ module Comp = struct
         begin match C.cwhnfCTyp (syn cO cD cG i) with
           | (TypBox (_, tA, cPsi),  t') ->
               begin try Coverage.covers cO cD cG branches (tA, cPsi)
-                    with Coverage.NoCover ->
+                    with Coverage.NoCover messageFn ->
                       begin
-                        Printf.printf ("\n## Doesn't cover: ##\n");
+                      let locString = Pretty.locOptToString loc in
+                        Printf.printf "\n## Case expression doesn't cover: ##\n##   %s\n##   %s\n\n"
+                                      locString
+                                      (messageFn());
                         if !Coverage.warningOnly then
-                          (match loc with
-                             | None     -> ()
-                             | Some loc ->
-                                 let loc = Pretty.locToString loc in
-                                   print_string (loc ^ "\n\n");
-                                   Error.addInformation ("WARNING: Cases didn't cover: " ^ loc))
+                          (print_string (locString ^ "\n\n");
+                           Error.addInformation ("WARNING: Cases didn't cover: " ^ locString
+                                                ^ "\n" ^ messageFn()))
                         else
-                          raise (Error (loc, E.NoCover))
+                          raise (Error (loc, E.NoCover (messageFn())))
                       end
               end;
               checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)

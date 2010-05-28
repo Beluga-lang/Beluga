@@ -1,12 +1,11 @@
 (*
  *  monitor.ml
  *
- *  Made by (Kirchner DIMITRI)
+ *  Made by Dimitri Kirchner
  *  Login   <dimitri@logic-3.CS.McGill.CA>
  *
- *  Started on  Wed May  6 11:13:24 2009 Kirchner DIMITRI
- *  Last update Mon Jn 15 11:13:24 2009 Kirchner DIMITRI
- *
+ *  Started on  Wed May  6 11:13:24 2009 Dimitri Kirchner
+ *  Last update Mon Jun 15 11:13:24 2009 Dimitri Kirchner
  *)
 
 (*
@@ -26,7 +25,7 @@ let valeurs_utime = Array.make 17 0. ;;
 let valeurs_stime = Array.make 17 0. ;;
 
 
-(* @brief Initialise the array named "etapes" to the differents steps. *)
+(* @brief Initialise the array named "etapes" to the different steps. *)
 let init_tab () = 
   etapes.(0) <- "Constant Elaboration";
   etapes.(1) <- "Constant Reconstruction";

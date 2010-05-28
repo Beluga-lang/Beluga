@@ -34,6 +34,10 @@ let locToString loc =
   Parser.Grammar.Loc.print Format.str_formatter loc;
   flush_str_formatter()
 
+let locOptToString = function
+  | None -> "???"
+  | Some loc -> locToString loc
+
 type lvl    = int
 
 let std_lvl = 0
@@ -1642,8 +1646,8 @@ module Error = struct
           fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *)
 
 
-      | NoCover ->
-          fprintf ppf "Coverage checking failed"
+      | NoCover message ->
+          fprintf ppf "Coverage checking failed: %s" message
 
 
       | LeftoverUndef ->

@@ -13,4 +13,4 @@ val covers  : LF.mctx
            -> (LF.typ * LF.dctx)
            -> unit
 
-exception NoCover
+exception NoCover of (unit -> string)

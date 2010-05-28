@@ -14,7 +14,7 @@ module Cid = struct
       var_generator      : (unit -> string) option;
       mvar_generator     : (unit -> string) option;
       mutable constructors : Id.cid_term list;
-      mutable subordinates : bool DynArray.t
+      mutable subordinates : BitSet.t
     }
     
     let entry_list  = ref []
@@ -27,7 +27,7 @@ module Cid = struct
         var_generator      = None;
         mvar_generator     = None;
         constructors       = [];
-        subordinates       = DynArray.create ()
+        subordinates       = BitSet.empty ()
       }
 
     type t = Id.name DynArray.t
@@ -61,9 +61,9 @@ module Cid = struct
                         var_generator  = var_name_generator; 
                         mvar_generator =  mvar_name_generator;
                         constructors   = [];
-                        subordinates   = DynArray.create()
+                        subordinates   = BitSet.empty()
                       } in 
-        (DynArray.set store cid_tp new_entry ; 
+        (DynArray.set store cid_tp new_entry; 
          cid_tp)
 
 
@@ -103,15 +103,18 @@ module Cid = struct
 
     let subord_iter f arr =
       DynArray.iteri (fun n flag -> if flag then f n) arr
+
+    let subord_iter f arr =
+      Enum.iter f (BitSet.enum arr)
  
     (* add the subordination:  b-terms can contain a-terms *)
     let rec addSubord a b =
       let a_e = get a in
       let b_e = get b in
-        if subord_read b_e.subordinates a then
+        if (*subord_read*) BitSet.is_set b_e.subordinates a then
           ()
         else
-          (subord_write b_e.subordinates a;
+          ((*subord_write*) BitSet.set b_e.subordinates a;
            (* Take transitive closure:
               If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
            subord_iter (fun aa -> addSubord aa b) a_e.subordinates)
@@ -139,7 +142,7 @@ module Cid = struct
 
     let is_subordinate_to a b =
       let a_e = get a in
-        subord_read a_e.subordinates b
+        (*subord_read*)BitSet.is_set a_e.subordinates b
 
   end
 

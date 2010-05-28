@@ -15,7 +15,7 @@ module Cid : sig
       var_generator      : (unit -> string) option;
       mvar_generator     : (unit -> string) option;
       mutable constructors : Id.cid_term list;
-      mutable subordinates : bool DynArray.t;
+      mutable subordinates : BitSet.t
     }
     
     val entry_list : Id.cid_typ list ref

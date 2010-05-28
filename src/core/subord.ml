@@ -35,8 +35,8 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [28])
  *)
 
 let dump_subord () =
-  print_string ("## Dumping subordination relation ##\n");
-  print_string ("## The number of types is " ^ string_of_int (List.length !Types.entry_list) ^ "\n");
+  Printf.printf "## Dumping subordination relation (over %d types)##\n"
+                (List.length !Types.entry_list);
   let typeList = List.rev (!Types.entry_list) in
   let dump_entry a b =
     if Types.is_subordinate_to a b then

@@ -6,11 +6,23 @@ val enableCoverage : bool ref
 val warningOnly : bool ref
 val no_covers : int ref
 
-val covers  : LF.mctx
-           -> LF.mctx
-           -> Comp.ctyp_decl LF.ctx
-           -> Comp.branch list
-           -> (LF.typ * LF.dctx)
-           -> unit
+type problem
+val make : Parser.Grammar.Loc.t option
+        -> Syntax.case_pragma
+        -> LF.mctx            (* cO *)
+        -> LF.mctx            (* cD *)
+        -> Comp.branch list   (* branches *)
+        -> (LF.typ * LF.dctx) (* type of object being case-analyzed *)
+        -> problem
+
+type coverage_result =
+  | Success
+  | Failure of (unit -> string)
 
 exception NoCover of (unit -> string)
+
+val clear  : unit -> unit
+val stage  : problem -> unit
+val force  : (coverage_result -> 'a) -> 'a list
+
+val covers : problem -> coverage_result

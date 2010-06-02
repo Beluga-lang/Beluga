@@ -4,9 +4,9 @@ suc  : term -> term.
 
 schema termCtx = some [] term;
 
-%not
+
 rec fffConcreteOmittedFromMVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g, x:term]  V .. => [g] z
 ;

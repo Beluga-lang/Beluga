@@ -10,6 +10,9 @@ open Id
 
 module Loc = Camlp4.PreCast.Loc
 
+type case_pragma = RegularCase | PragmaNotCase
+
+
 (** Internal Syntax *)
 module Int = struct
   (** Internal LF Syntax *)
@@ -215,6 +218,7 @@ module Int = struct
   end
 
 
+
  (** Internal Computation Syntax *)
   module Comp = struct
 
@@ -247,40 +251,39 @@ module Int = struct
      | ConstValue of cid_prog   
      | BoolValue  of bool
 
-    and exp_chk =
-      | Syn    of Loc.t option * exp_syn
-      | Rec    of Loc.t option * name * exp_chk
-      | Fun    of Loc.t option * name * exp_chk
-      | CtxFun of Loc.t option * name * exp_chk
-      | MLam   of Loc.t option * name * exp_chk
-      | Pair   of Loc.t option * exp_chk * exp_chk     
-      | LetPair of Loc.t option * exp_syn * (name * name * exp_chk) 
-      | Box    of Loc.t option * LF.psi_hat * LF.normal
-      | SBox   of Loc.t option * LF.psi_hat * LF.sub
-      | Case   of Loc.t option * exp_syn * branch list
-      | If     of Loc.t option * exp_syn * exp_chk * exp_chk
-      | Value  of value 
+   and exp_chk =
+     | Syn    of Loc.t option * exp_syn
+     | Rec    of Loc.t option * name * exp_chk
+     | Fun    of Loc.t option * name * exp_chk
+     | CtxFun of Loc.t option * name * exp_chk
+     | MLam   of Loc.t option * name * exp_chk
+     | Pair   of Loc.t option * exp_chk * exp_chk     
+     | LetPair of Loc.t option * exp_syn * (name * name * exp_chk) 
+     | Box    of Loc.t option * LF.psi_hat * LF.normal
+     | SBox   of Loc.t option * LF.psi_hat * LF.sub
+     | Case   of Loc.t option * case_pragma * exp_syn * branch list
+     | If     of Loc.t option * exp_syn * exp_chk * exp_chk
+     | Value  of value 
 
-    and exp_syn =
-      | Var    of offset
-      | Const  of cid_prog
-      | Apply  of Loc.t option * exp_syn * exp_chk
-      | CtxApp of Loc.t option * exp_syn * LF.dctx
-      | MApp   of Loc.t option * exp_syn * (LF.psi_hat * contextual_obj)
-      | Ann    of exp_chk * typ
-      | Equal  of Loc.t option * exp_syn * exp_syn
-      | Boolean of bool
+   and exp_syn =
+     | Var    of offset
+     | Const  of cid_prog
+     | Apply  of Loc.t option * exp_syn * exp_chk
+     | CtxApp of Loc.t option * exp_syn * LF.dctx
+     | MApp   of Loc.t option * exp_syn * (LF.psi_hat * contextual_obj)
+     | Ann    of exp_chk * typ
+     | Equal  of Loc.t option * exp_syn * exp_syn
+     | Boolean of bool
 
 
-    and branch =
-      | BranchBox  of LF.mctx * LF.mctx
-          * (LF.dctx * LF.normal * LF.msub * LF.csub) 
-          * exp_chk
+   and branch =
+     | BranchBox  of LF.mctx * LF.mctx
+         * (LF.dctx * LF.normal * LF.msub * LF.csub) 
+         * exp_chk
 
-      | BranchSBox of LF.mctx * LF.mctx
-          * (LF.dctx * LF.sub * LF.msub * LF.csub)
-          * exp_chk
-
+     | BranchSBox of LF.mctx * LF.mctx
+         * (LF.dctx * LF.sub * LF.msub * LF.csub)
+         * exp_chk
 
    type ctyp_decl = 
      | CTypDecl of name * typ
@@ -424,7 +427,7 @@ module Ext = struct
                                                   (*    | let (x,y) = i in e  *)
        | Box    of Loc.t * LF.psi_hat * LF.normal (*    | box (Psi hat. M)    *)
        | SBox   of Loc.t * LF.psi_hat * LF.sub 
-       | Case   of Loc.t * exp_syn * branch list  (*    | case i of branches   *)
+       | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
        | If of Loc.t * exp_syn * exp_chk * exp_chk(*    | if i then e1 else e2 *)   
 
     and exp_syn =
@@ -470,7 +473,7 @@ module Ext = struct
        | Pair    (_loc, chk1, chk2) ->  "Fun(_, " ^ chkToString chk1 ^ ", " ^ chkToString chk2 ^ ")"
        | LetPair (_loc, syn, (_, _, chk)) -> "LetPair(" ^ synToString syn ^", (_, _, " ^ chkToString chk ^ "))"
        | Box     (_loc, _, _) -> "Box(...)"
-       | Case    (_loc, syn, _) -> "Case(" ^ synToString syn ^ " of ...)"
+       | Case    (_loc, _, syn, _) -> "Case(" ^ synToString syn ^ " of ...)"
        | If      (_loc, syn, chk1, chk2) -> "If(" ^ synToString syn ^ " Then " ^  chkToString chk1 ^ " Else " ^ chkToString chk2 ^ ")"
 
   end
@@ -620,7 +623,7 @@ module Apx = struct
                                                   (* let (x,y) = i in e  *)
        | Box    of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
        | SBox   of Loc.t * LF.psi_hat * LF.sub    (* box (Psi hat. M)    *)
-       | Case   of Loc.t * exp_syn * branch list
+       | Case   of Loc.t * case_pragma * exp_syn * branch list
        | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
     and exp_syn =

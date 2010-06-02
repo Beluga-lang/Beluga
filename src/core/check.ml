@@ -948,31 +948,18 @@ module Comp = struct
                              "\n supposed to have type " ^ P.compTypToString cO cD (Whnf.cnormCTyp tau_t) ^ "\n"))
 
 *)
-    | (Case (_loc, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
+    | (Case (_loc, _prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
         let _  = LF.check cO cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
         let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
-          (* coverage check here too? -jd *)
+          (* coverage check here too?  -jd *)
           checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t)
 
-    | (Case (loc, i, branches), (tau, t)) -> 
+    | (Case (loc, prag, i, branches), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG i) with
           | (TypBox (_, tA, cPsi),  t') ->
-              begin try Coverage.covers cO cD cG branches (tA, cPsi)
-                    with Coverage.NoCover messageFn ->
-                      begin
-                      let locString = Pretty.locOptToString loc in
-                        Printf.printf "\n## Case expression doesn't cover: ##\n##   %s\n##   %s\n\n"
-                                      locString
-                                      (messageFn());
-                        if !Coverage.warningOnly then
-                          (print_string (locString ^ "\n\n");
-                           Error.addInformation ("WARNING: Cases didn't cover: " ^ locString
-                                                ^ "\n" ^ messageFn()))
-                        else
-                          raise (Error (loc, E.NoCover (messageFn())))
-                      end
-              end;
-              checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
+              let problem = Coverage.make loc prag cO cD branches (tA, cPsi) in
+                Coverage.stage problem;
+                checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
           | (tau',t') -> raise (Error (loc, E.CompMismatch(cO, cD, cG, i, E.Box, (tau', t'))))
         end
 

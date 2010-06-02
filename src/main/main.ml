@@ -154,8 +154,17 @@ let main () =
             let _int_decls = Reconstruct.recSgnDecls sgn in
               (* print_sgn Pretty.Int.DefaultPrinter.ppr_sgn_decl int_decls; *)
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-              if !Subord.dump then Subord.dump_subord();
-              return Positive
+              let _ = Coverage.force
+                (function
+                  | Coverage.Success -> ()
+                  | Coverage.Failure messageFn ->
+                      if !Coverage.warningOnly then
+                        Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn())
+                      else
+                        raise (Coverage.NoCover messageFn)
+                ) in
+                if !Subord.dump then Subord.dump_subord();
+                return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
               Parser.Grammar.Loc.print Format.std_formatter loc;
@@ -189,7 +198,7 @@ let main () =
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter
-                "\nError (Type-Checking): %a@?"
+                "\nError (Type-checking): %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               abort_session ()
@@ -229,6 +238,10 @@ let main () =
               printf "Error (Abstraction): %s\n" str;
               abort_session ()
 
+          | Coverage.NoCover strFn ->
+              printf "Error (Coverage): %sn" (strFn());
+              abort_session ()
+
 
     in
     let per_session (errors, unsound, incomplete) (Session file_names) =
@@ -239,6 +252,7 @@ let main () =
         | (Negative, Negative) -> (errors + 1, unsound, incomplete)
       in
         Store.clear ()
+      ; Coverage.clear ()
       ; Gensym.reset ()
       ; try List.fold_left per_file (errors, unsound, incomplete) file_names
         with SessionFatal spec -> return spec Negative

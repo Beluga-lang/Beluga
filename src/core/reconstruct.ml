@@ -838,10 +838,10 @@ let rec index_exp ctx_vars cvars vars fvars = function
       let (s', _ ) = index_sub cvars bvars [] s in 
         Apx.Comp.SBox (loc, psihat', s')
 
-  | Ext.Comp.Case (loc, i, branches) ->
+  | Ext.Comp.Case (loc, prag, i, branches) ->
       let i' = index_exp' ctx_vars cvars vars fvars i in
       let branches' = List.map (function b -> index_branch ctx_vars cvars vars fvars b) branches in
-        Apx.Comp.Case (loc, i', branches')
+        Apx.Comp.Case (loc, prag, i', branches')
 
 
   | Ext.Comp.If (loc, i, e1, e2) -> 
@@ -2672,8 +2672,8 @@ let rec cnormApxExp cO cD delta e (cD'', t) cs = match e with
       Apx.Comp.SBox (loc, phat', cnormApxSub cO cD delta s (cD'', t) cs)
 
 
-  | Apx.Comp.Case (loc, i, branch) -> 
-      Apx.Comp.Case (loc, cnormApxExp' cO cD delta i (cD'', t) cs, cnormApxBranches cO cD delta branch (cD'', t) cs)
+  | Apx.Comp.Case (loc, prag, i, branch) -> 
+      Apx.Comp.Case (loc, prag, cnormApxExp' cO cD delta i (cD'', t) cs, cnormApxBranches cO cD delta branch (cD'', t) cs)
 
   | Apx.Comp.If(loc, i, e1, e2) -> 
       let i' =  cnormApxExp' cO cD delta i (cD'', t) cs in 
@@ -3114,8 +3114,8 @@ let rec fmvApxExp fMVs cO cD ((l_cd1, l_delta, k) as d_param) ((l_o1, l_omega, k
   | Apx.Comp.SBox(loc, phat, s) -> 
       Apx.Comp.SBox (loc, fmvApxHat o_param phat, fmvApxSub fMVs cO cD d_param o_param s)
 
-  | Apx.Comp.Case (loc, i, branch) -> 
-      Apx.Comp.Case (loc, fmvApxExp' fMVs cO cD d_param o_param i, 
+  | Apx.Comp.Case (loc, prag, i, branch) -> 
+      Apx.Comp.Case (loc, prag, fmvApxExp' fMVs cO cD d_param o_param i, 
                           fmvApxBranches fMVs cO cD d_param o_param branch)
   | Apx.Comp.If (loc, i, e1, e2) -> 
       let i' = fmvApxExp' fMVs cO cD d_param o_param i in 
@@ -3410,7 +3410,7 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
            raise (Error (Some loc, CompSBoxMismatch (cO, cD, cG, (C.cnormDCtx (cPhi, theta)), (C.cnormDCtx (cPsi, theta)))) ))
  
 
-  | (Apx.Comp.Case (loc, i, branches), tau_theta) ->
+  | (Apx.Comp.Case (loc, prag, i, branches), tau_theta) ->
       let (i', tau_theta') = genMApp loc cO cD (elExp' cO cD cG i) in
         begin match (i', C.cwhnfCTyp tau_theta') with
           | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ), 
@@ -3424,7 +3424,7 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
                 let branches' = List.map (function b -> 
                                             elBranch (IndexObj(phat, tR))
                                               cO cD cG b (tP, cPsi) tau_theta) branches in
-                  Int.Comp.Case (Some loc, i', branches')
+                  Int.Comp.Case (Some loc, prag, i', branches')
               else 
                 raise (Error (Some loc, ValueRestriction (cO, cD, cG, i', (tau',t))))
               )
@@ -3438,7 +3438,7 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
                              ^ "\n") in
 
                 let internal_branches = List.map (function b -> elBranch DataObj cO cD cG b (tP, cPsi) tau_theta ) branches in
-                let internal_case_exp = Int.Comp.Case (Some loc, i, internal_branches) in
+                let internal_case_exp = Int.Comp.Case (Some loc, prag, i, internal_branches) in
 (*                  Coverage.covers cO cD cG internal_branches (tP, cPsi);         moved to check.ml  -jd 2010-04-05 *)
                   internal_case_exp
                 
@@ -3459,7 +3459,7 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
                                           ^ "\n") in
 
                 let branches' = List.map (function b ->  elSBranch cO cD cG b (cPsi, cPhi) tau_theta )  branches in
-                  Int.Comp.Case (Some loc, i, branches') 
+                  Int.Comp.Case (Some loc, prag, i, branches') 
                 
               else 
                 raise (Error (Some loc, CompScrutineeSubTyp (cO, cD, cG, i', cPsi, cPhi)))
@@ -3828,7 +3828,7 @@ and synRefine loc cO' caseT (cD, cD1) tR1 (cPsi, tP) (cPsi1, tP1) =
     let _  = begin match caseT with
                | IndexObj (_phat, tR') -> 
                    begin try 
-                     (dprint (fun () -> "Pattern matching on index object ...");
+                     (dprint (fun () -> "Pattern matching on index object...");
                       Unify.unify Int.LF.Empty cPsi'(C.cnorm (tR',  t),  LF.id) 
                                                     (C.cnorm (tR1, mt1), LF.id))
                    with Unify.Unify msg -> 
@@ -3838,7 +3838,7 @@ and synRefine loc cO' caseT (cD, cD1) tR1 (cPsi, tP) (cPsi1, tP1) =
                | DataObj -> ()
               end  in
     
-
+    
     let cPsi'  = Whnf.cnormDCtx (cPsi, t) (* t *) in        (* cO' ;     .  |- cPsi' ctx    *)
     let cPsi1' = Whnf.cnormDCtx (cPsi1, mt1) in             (* cO' ;     .  |- cPsi1 ctx    *)
     let tP'    = Whnf.cnormTyp (tP, t) (* t *) in           (* cO' ; . ; cPsi'  |- tP'  <= type *) 
@@ -4021,7 +4021,7 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
                                " \n <= " ^ P.mctxToString cO cD ^ "\n") in 
       let _        = dprint (fun () -> "Refinement: " ^  P.mctxToString cO' cD1'' ^ 
                                "\n |- \n " ^ P.msubToString cO cD1'' t1 ^ 
-                               " = t1 \n") in 
+                               " = t1\n") in 
 
       (*  if cD,cD0     |- e apx_exp   and  cD1' = cD1, cD0 
           then cD, cD1' |- e1 apx_exp
@@ -4061,7 +4061,7 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
       let _       = FPVar.clear () in   
           Int.Comp.BranchBox (cO', cD1'', (cPsi1'', tR1', t', cs'), eE')
 
-(* Before context matching ... *)
+(* Before context matching... *)
 
 (*        if psi_hat = psi1_hat then *)
 (*           Int.Comp.BranchBox (cO', cD1'', (cPsi1'', tR1', t', cs'), eE')*)

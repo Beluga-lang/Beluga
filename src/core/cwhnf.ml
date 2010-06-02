@@ -981,8 +981,9 @@ let rec mctxPVarPos cD p =
 
     | (Comp.Box (psihat, tM), t) -> Comp.Box (psihat, Whnf.norm (cnorm (tM, t), S.id))
 
-    | (Comp.Case (i, branches), t) -> 
-        Comp.Case (cnormExp' (i,t), 
+    | (Comp.Case (i, prag, branches), t) -> 
+        Comp.Case (cnormExp' (i,t),
+                   prag,
                    List.map (function b -> cnormBranch (b, t)) branches)
   
   

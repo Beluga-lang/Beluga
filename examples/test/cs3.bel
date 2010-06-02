@@ -22,10 +22,10 @@ FN g => fn e =>
 ;
 
 
-%not
+
 rec fffRedundantWrongProjCases : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g]  z     => [g] z
   | [g]  suc (U ..)   => [g] z
   | [g]  #p.1 ..   => [g] z
@@ -33,18 +33,18 @@ FN g => fn e =>
 ;
 
 
-%not
+
 rec fffForgotBothProjCases : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g]  z     => [g] z
   | [g]  suc (U ..)   => [g] z
 ;
 
-%not
+
 rec fffForgot1stProjCase : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g]  z     => [g] z
   | [g]  suc (U ..)   => [g] z
   | [g]  #p.3 ..   => [g] z

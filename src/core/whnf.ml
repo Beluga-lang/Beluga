@@ -2078,8 +2078,8 @@ let rec mctxPVarPos cD p =
         Comp.SBox (loc, cnorm_psihat psihat, 
                   normSub (cnormSub (sigma, t)))
 
-    | (Comp.Case (loc, i, branches), t) -> 
-        Comp.Case (loc, cnormExp' (i,t), 
+    | (Comp.Case (loc, prag, i, branches), t) -> 
+        Comp.Case (loc, prag, cnormExp' (i,t), 
                    List.map (function b -> cnormBranch (b, t)) branches)
 
     | (Comp.Value v, _ ) -> Comp.Value v

@@ -12,6 +12,7 @@ open Id
 
 module Loc : Camlp4.Sig.Loc
 
+type case_pragma = RegularCase | PragmaNotCase
 
 (** Internal Syntax *)
 module Int : sig
@@ -214,7 +215,7 @@ module Int : sig
      | LetPair of Loc.t option * exp_syn * (name * name * exp_chk) 
      | Box     of Loc.t option * LF.psi_hat * LF.normal
      | SBox    of Loc.t option * LF.psi_hat * LF.sub
-     | Case    of Loc.t option * exp_syn * branch list
+     | Case    of Loc.t option * case_pragma * exp_syn * branch list
      | If      of Loc.t option * exp_syn * exp_chk * exp_chk
      | Value   of value
          
@@ -378,7 +379,7 @@ module Ext : sig
        | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
        | Box     of Loc.t * LF.psi_hat * LF.normal 
        | SBox    of Loc.t * LF.psi_hat * LF.sub 
-       | Case    of Loc.t * exp_syn * branch list 
+       | Case    of Loc.t * case_pragma * exp_syn * branch list 
        | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
     and exp_syn =
@@ -548,7 +549,7 @@ module Apx : sig
                                                         (* let (x,y) = i in e    *)
        | Box     of Loc.t * LF.psi_hat * LF.normal      (* box (Psi hat. M)      *)
        | SBox    of Loc.t * LF.psi_hat * LF.sub         (* sbox (Psi hat. sigma) *)
-       | Case    of Loc.t * exp_syn * branch list
+       | Case    of Loc.t * case_pragma * exp_syn * branch list
        | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
     and exp_syn =

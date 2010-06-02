@@ -16,4 +16,4 @@ FN g => fn e =>
   | [g]  z     => [g] z
   | [g] suc (U ..) => let [g] V .. = copy [g] ([g] U ..) in [g] suc (V .. )
 );
-%}
+}%

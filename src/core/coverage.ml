@@ -17,6 +17,25 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [29])
 
 let covby_counter = ref 0
 
+type problem = {loc : Parser.Grammar.Loc.t option;
+                prag : Syntax.case_pragma;
+                cO : LF.mctx;
+                cD : LF.mctx;
+                branches : Comp.branch list;
+                domain : (LF.typ * LF.dctx)}
+
+let make loc prag cO cD branches domain =
+  {loc= loc;
+   prag= prag;
+   cO= cO;
+   cD= cD;
+   branches= branches;
+   domain= domain}
+
+type coverage_result =
+  | Success
+  | Failure of (unit -> string)
+
 exception NoCover of (unit -> string)
 
 
@@ -454,7 +473,7 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                     dprint (fun () -> "pvar SigmaElem 1 (index = " ^ string_of_int index ^ ")\n"
                                     ^ "cPsi = " ^ P.dctxToString cO cDWithPVar cPsi ^ "\n"
                                     ^ "head = " ^ P.headToString cO cDWithPVar cPsi head ^ "\n"
-                                    ^ "sA(UNSHIFTED!!) = " ^ P.typToString cO cDWithPVar cPsi sA ^ "\n"
+                                    ^ "sA(UNSHIFTED) = " ^ P.typToString cO cDWithPVar cPsi sA ^ "\n"
                                     ^ "tA = " ^ P.typToString cO cD cPsi (tA, emptySub) ^ "\n"
                                     ^ " P = " ^ P.typToString cO cD cPsi (LF.Atom(loc, a, spine), emptySub));
                     if try
@@ -539,7 +558,9 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    let decl  = LF.MDecl(new_name "NOSPLIT", tP, cPsi1) in
    let tP = shiftTyp tP 1 in
    let (cDWithVar, declOffset) = (LF.Dec(cD, decl), 1) in
-   let tR1 : LF.head = LF.MVar(LF.Offset declOffset, Substitution.LF.identity cPsi1)  in
+(*   let sub = Substitution.LF.identity cPsi1 in *)
+   let sub = Subord.thin (cO, cD) (tP, cPsi) in
+   let tR1 : LF.head = LF.MVar(LF.Offset declOffset, sub)  in
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
    let _ = dprint (fun () -> "obj_no_split:\n"
                            ^ "--cDWithVar = " ^ P.mctxToString cO cDWithVar ^ "\n"
@@ -723,44 +744,76 @@ let rec maxDepth branches = match branches with
 (* covers : Int.LF.mctx -> Int.LF.mctx -> Int.Comp.ctyp_decl LF.ctx -> Int.Comp.branch list -> (Int.LF.typ * Int.LF.dctx) -> unit
  *
  * covers cO cD cG branches (tA, cPsi)
- *   returns () if the patterns in `branches' cover all values of tA[cPsi];
- *   otherwise, raises NoCover
+ *   returns Success if the patterns in `branches' cover all values of tA[cPsi];
+ *   otherwise, returns Failure messageFn where messageFn() is an appropriate error message.
  *
- * Also returns () if the !enableCoverage flag is false.
+ * Also returns Success if the !enableCoverage flag is false.
  *)
 let finish() =
   dprint (fun () -> "covby_counter = " ^ string_of_int !covby_counter);
   Debug.popIndentationLevel()
 
-let covers cO cD cG branches (tA, cPsi) =
-  if not (!enableCoverage) then ()
+let covers problem =
+  if not (!enableCoverage) then Success
   else
-    begin
+    let (tA, cPsi) = problem.domain in
       covby_counter := 0;
       Debug.pushIndentationLevel();
       Debug.indent 2;
-      let cutoff = maxDepth branches in
+      let cutoff = maxDepth problem.branches in
       let _ = dprint (fun () -> "cutoff depth = " ^ string_of_int cutoff) in
       let strategies = tabulate cutoff naive_strategy in
         try
           dprint (fun () -> "coverage check a case with "
-                              ^ string_of_int (List.length branches) ^ " branch(es)");
+                              ^ string_of_int (List.length problem.branches) ^ " branch(es)");
 
           tryList
-            (fun strategy -> begin
-                               Debug.pushIndentationLevel();
-                               print_string ("trying strategy " ^ strategyToString strategy ^ "\n"); flush_all();
-                               begin try obj (strategy, noop_shift, cO, cD, cPsi)
-                                     tA
-                                     (covered_by_set branches)
-                               with exn -> (Debug.popIndentationLevel(); raise exn)
-                               end;
-                               Debug.popIndentationLevel()
-                             end)
+            (fun strategy -> 
+               Debug.pushIndentationLevel();
+               dprint (fun () -> "trying strategy " ^ strategyToString strategy);
+               begin try obj (strategy, noop_shift, problem.cO, problem.cD, cPsi)
+                             tA
+                             (covered_by_set problem.branches)
+               with exn -> (Debug.popIndentationLevel(); raise exn)
+               end;
+               Debug.popIndentationLevel())
             strategies;
 
           dprint (fun () -> "## COVERS ##");
-          finish()
+          finish();
+          begin match problem.prag with
+                | Syntax.RegularCase -> Success
+                | Syntax.PragmaNotCase ->
+                    Failure (fun () -> 
+                               Printf.sprintf "\n## Case expression covers, UNSOUNDLY: ##\n##   %s\n##\n\n"
+                                        (Pretty.locOptToString problem.loc))
+          end
         with
-          NoCover messageFn -> (finish(); no_covers := !no_covers + 1; raise (NoCover messageFn))
-    end
+          NoCover messageFn ->
+            begin
+              finish();
+              no_covers := !no_covers + 1;
+              match problem.prag with
+                | Syntax.RegularCase ->
+                    Failure (fun () -> 
+                               Printf.sprintf "\n## Case expression doesn't cover: ##\n##   %s\n##   %s\n\n"
+                                              (Pretty.locOptToString problem.loc)
+                                              (messageFn()))
+                | Syntax.PragmaNotCase ->
+                   (Printf.printf "\n## Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %s\n##   %s\n\n"
+                                  (Pretty.locOptToString problem.loc)
+                                  (messageFn());
+                    Success)
+            end
+
+
+let problems = ref ([] : problem list)
+
+let clear () =
+  problems := []
+
+let stage problem =
+  problems := problem::!problems
+
+let force f =
+  List.map (fun problem -> f (covers problem)) (List.rev !problems)

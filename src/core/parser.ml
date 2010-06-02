@@ -738,6 +738,12 @@ cmp_exp_chk:
   | i = cmp_exp_syn    ->   Comp.Syn (_loc, i)
  ]];
 
+case_pragma:
+ [[
+    "%not" -> Syntax.PragmaNotCase
+  | -> Syntax.RegularCase
+ ]];
+
 (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
 cmp_exp_chkX:
     [ LEFTA
@@ -756,8 +762,8 @@ cmp_exp_chkX:
       | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, Id.mk_name (Id.SomeString p), e)
 
-      | "case"; i = cmp_exp_syn; "of"; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
-          Comp.Case (_loc, i, bs)
+      | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
+          Comp.Case (_loc, prag, i, bs)
 
       | "if"; i = cmp_exp_syn; "then"; e1 = cmp_exp_chk ; "else"; e2 = cmp_exp_chk -> 
           Comp.If (_loc, i, e1, e2)
@@ -772,7 +778,7 @@ cmp_exp_chkX:
        "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk
        ->
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-          Comp.Case (_loc, i, [Comp.BranchBox (_loc,  ctyp_decls', (pHat, tM, tau), e')]) 
+          Comp.Case (_loc, Syntax.RegularCase, i, [Comp.BranchBox (_loc,  ctyp_decls', (pHat, tM, tau), e')]) 
       | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> 
           begin match p_or_a with 
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)

@@ -5,9 +5,8 @@ fiver  : term -> term -> term -> term -> term
 
 schema termCtx = some [] term;
 
-%not
 rec fff : term[] -> term[] = fn e =>
-  case e of
+  case e of %not
   | [] z         => [] z
   | [] fiver U V z X Y => [] z
 ;

@@ -543,10 +543,10 @@ let rec csub_exp_chk cPsi k e' =
       let e2' = csub_exp_chk cPsi k e2 in 
        Comp.If (loc, i', e1', e2')
 
-  | Comp.Case (loc, i, branches) -> 
+  | Comp.Case (loc, prag, i, branches) -> 
       let i1 = csub_exp_syn cPsi k i in 
       let branches' = List.map (fun b -> csub_branch cPsi k b) branches in 
-        Comp.Case (loc, i1, branches')
+        Comp.Case (loc, prag, i1, branches')
 
 and csub_exp_syn cPsi k i' = match i' with
   | Comp.Const _c -> i'
@@ -710,10 +710,10 @@ let rec ctxnorm_exp_chk (e', cs) =
       let tM'   = ctxnorm (tM, cs) in 
         Comp.Box (loc, phat', tM')
 
-  | Comp.Case (loc, i, branches) -> 
+  | Comp.Case (loc, prag, i, branches) -> 
       let i1 = ctxnorm_exp_syn (i,cs) in 
       let branches' = List.map (fun b -> ctxnorm_branch (b,cs)) branches in 
-        Comp.Case (loc, i1, branches')
+        Comp.Case (loc, prag, i1, branches')
 
 and ctxnorm_exp_syn (i',cs) = match i' with
   | Comp.Const _c -> i'

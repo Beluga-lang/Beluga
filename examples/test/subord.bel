@@ -9,12 +9,20 @@ schema termCtx = term;
 schema boolCtx = bool;
 
 % Example showing the need for subordination.
-% The pattern  eq U V  covers *all* eq-terms because the context contains
-%   only bools, which cannot appear in terms.
+% The pattern  eq U V  covers *all* terms of type `eq' because the context contains
+%   only bools, which cannot appear in terms of type `term'.
 
 rec fff : {g:(boolCtx)*} bool[g, xx : bool] -> term[] =
 FN g => fn e =>
   case e of
-  | [g, xx : bool]  eq U V   => [] z
+%{
+  | [g, xx : bool]  U     => [] z         % Shift(CtxShift _, 1)
+  | [g, xx : bool]  U ..     => [] z      % Shift(NoCtxShift, 1)
+  | [g, xx : bool]  U .. xx     => [] z  % Dot(xx,  Shift(NoCtxShift _, 1))
+  | [g, xx : bool]  U xx     => [] z     % Dot(xx,  Shift(CtxShift _, 1))
+}%
+  | [g, xx : bool]  eq U V     => [] z
+%  | [g, xx : bool]  eq (U ..) V     => [] z
+%  | [g, xx : bool]  eq (U ..) (V .. xx)     => [] z
   | [g, xx : bool]  #p .. xx   => [] z
 ;

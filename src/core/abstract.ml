@@ -1539,10 +1539,10 @@ let rec collectExp cQ e = match e with
       let (cQ', sigma') = collectSub  cQ  phat sigma  in 
         (cQ', Comp.SBox (loc, phat, sigma') )
 
-  | Comp.Case (loc, i, branches) -> 
+  | Comp.Case (loc, prag, i, branches) -> 
       let (cQ', i') = collectExp' cQ i in 
       let (cQ2, branches') = collectBranches cQ' branches in 
-        (cQ2, Comp.Case (loc, i', branches'))
+        (cQ2, Comp.Case (loc, prag, i', branches'))
 
   | Comp.If (loc, i, e1, e2) -> 
       let (cQ', i') = collectExp' cQ i in 

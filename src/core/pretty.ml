@@ -912,10 +912,11 @@ module Int = struct
 
 
 
-      | Comp.Case (_, i, bs) ->
+      | Comp.Case (_, prag, i, bs) ->
           let cond = lvl > 1 in
-            fprintf ppf "@[<2>%scase %a @ of@[<-1>%a@]%s@]"
+            fprintf ppf "@[<2>%s%scase %a @ of@[<-1>%a@]%s@]"
               (l_paren_if cond)
+              (match prag with Syntax.RegularCase -> "" | Syntax.PragmaNotCase -> " %not ")
               (fmt_ppr_cmp_exp_syn cO cD cG 0) (strip_mapp_args cO cD cG i)
               (fmt_ppr_cmp_branches cO cD cG 0) bs
               (r_paren_if cond)

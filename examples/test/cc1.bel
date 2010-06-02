@@ -6,7 +6,7 @@ suc  : term -> term.
 
 schema termCtx = some [] term;
 
-%{
+
 rec fff : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>
   case e of
@@ -17,10 +17,9 @@ FN g => fn e =>
   | [g]  #p ..   => [g] z
 ;
 
-%not
 rec fffForgotConcreteVarCase : {g:(termCtx)*} term[g, x:term] -> term[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g, x:term]  z     => [g] z
   | [g, x:term]  suc (U .. x)   => [g] z
   | [g, x:term]  #p ..   => [g] z
@@ -41,7 +40,7 @@ FN g => fn e =>
   case e of
   | [g, x:term]  U .. x => [g] z
 ;
-}%
+
 
 rec fffNo-g-MVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
 FN g => fn e =>
@@ -49,24 +48,24 @@ FN g => fn e =>
   | [g, x:term]  U x => [g] z       % x could refer to vars in g, so this is effectively like U .. x
 ;
 
-%not
+
 rec fffEmptyMVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g, x:term]  U => [g] z
 ;
 
-%not
+
 rec fffConcreteOmittedFromMVar : {g:(termCtx)*} term[g, x:term] -> term[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g, x:term]  U .. => [g] z
 ;
 
-%not
+
 rec fffSplitCasesBad : {g:(termCtx)*} term[g, x:term] -> term[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g, x:term]  U ..   => [g] z
   | [g, x:term]  x      => [g] z
   % Doesn't cover suc (suc x)
@@ -81,18 +80,14 @@ FN g => fn e =>
 ;
 
 
-%{
-%not
 rec fffForgotParamVarCase : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g]  z     => [g] z
 
   | [g]  suc (U ..)   => [g] z
-
-  | [g]  #p ..   => [g] z
 ;
-}%
+
 
 %{
     rec fff : {g:(termCtx)*} term[g, x:term, y:term] -> term[g] =

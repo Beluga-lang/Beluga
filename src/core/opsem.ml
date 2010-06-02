@@ -49,7 +49,7 @@ end
    If D ; G |- e <= tau   and   . |- theta <= D   and   . |- eta <= [|theta|]G 
    then     [eta][|theta|]e
 
-  Code below is broken ... 
+  Code below is broken... 
 
 let rec subst_chk offset e eta = match e with 
   | Syn (loc, i)         -> Syn(loc, subst_syn offset i eta)
@@ -113,9 +113,7 @@ end
 where  cD ; cG |- e <= wf_exp
        .       |- theta <= cD
        .  ; .  |- eta   <= [|theta|]cG
-
 *)
-
 
 let rec eval_syn i theta_eta = 
   let (cs, theta, eta ) = theta_eta in
@@ -268,7 +266,7 @@ and eval_chk e theta_eta =
           let tM'   = C.cnorm (Ctxsub.ctxnorm (tM, cs) , theta) in 
           (dprint (fun () -> "[BoxValue] :  " ^ P.expChkToString I.LF.Empty I.LF.Empty I.LF.Empty (Box(loc, phat', tM')) ^ "\n");
 	   BoxValue (phat' , tM'))
-      | Case(_, i, branches) ->  
+      | Case(_, _prag, i, branches) ->  
 	(match eval_syn i theta_eta with
 	  | BoxValue (phat, tM) -> 	  
 	      let _ = (dprint (fun () -> "[eval_syn] EVALUATED SCRUTINEE: " ^ 
@@ -298,7 +296,7 @@ and eval_branches (phat,tM) (branches, theta_eta) = match branches with
 		   P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta)) ;  
 	eval_branch (phat,tM) b  theta_eta
       with BranchMismatch -> 
-	(dprint (fun () -> "[eval_branches] Try next branch ...");
+	(dprint (fun () -> "[eval_branches] Try next branch...");
 	 dprint (fun () -> "\n[eval_branches] with  theta = " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta)) ; 
 	eval_branches (phat,tM) (branches, theta_eta))
       end

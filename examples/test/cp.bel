@@ -17,10 +17,10 @@ FN g => fn e =>
 ;
 
 
-%not
+
 rec fffForgotParamVarCase : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>
-  case e of
+  case e of %not
   | [g]  z     => [g] z
 
   | [g]  suc (U ..)   => [g] z

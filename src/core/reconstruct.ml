@@ -435,7 +435,7 @@ let rec apxget_ctxvar psi  = match psi with
 
 let rec index_of cQ n = match cQ with
   | [] -> 
-      raise (Violation "index_of for a free variable does not exist – should be impossible\n")  
+      raise (Violation "index_of for a free variable does not exist -- should be impossible")
         (* impossible due to invariant on collect *)
   | (x, _ )::cQ' -> if x = n then 1 else (index_of cQ' n) + 1
 
@@ -741,7 +741,7 @@ let rec index_comptyp ctx_vars cvars  fvars =
         let Ext.LF.Atom (_ , name, Ext.LF.Nil) = a in 
         let offset = CVar.index_of_name ctx_vars name in           
         let (psi', _ , _ ) = index_dctx ctx_vars cvars (BVar.create ()) fvars psi in
-        let _ = dprint (fun () -> "Indexing TypSub – turning TypBox into TypSub") in
+        let _ = dprint (fun () -> "Indexing TypSub -- turning TypBox into TypSub") in
           Apx.Comp.TypSub (loc, Apx.LF.CtxVar (Apx.LF.CtxOffset offset), psi')
       with _  -> 
         let (psi', bvars', _ ) = index_dctx ctx_vars cvars (BVar.create ()) fvars psi in
@@ -1786,8 +1786,15 @@ and elTerm' recT  cO cD cPsi r sP = match r with
 
   | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), k), spine) ->
       begin try
-        let recA      = match tA with Int.LF.Sigma recA -> recA | _ -> 
-          dprint (fun () -> "Type of Parameter variable " ^ P.headToString cO cD cPhi h ^ "not a Sigma-Type – yet used with Projection; Found " ^ P.typToString cO cD cPhi (tA, LF.id) ^ "\n illtyped\n") ;  raise (Violation "Type of Parameter variable not a Sigma-Type – yet used with Projection; illtyped\n") in 
+        let recA =
+              match tA with
+              | Int.LF.Sigma recA -> recA
+              | _ -> 
+                  dprint (fun () -> "Type of Parameter variable " ^ P.headToString cO cD cPhi h
+                                  ^ "not a Sigma-Type, yet used with Projection; found "
+                                  ^ P.typToString cO cD cPhi (tA, LF.id) ^ "\n ill-typed") ;
+                  raise (Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
+        in 
         let s''       = elSub loc recT  cO cD cPsi s' cPhi in
         let sA        = Int.LF.getType h (recA, s'') k 1 in 
         let (tS, sQ ) = elSpine loc recT  cO cD cPsi spine sA  in
@@ -2450,7 +2457,7 @@ and cnormApxHead cO cD delta h (cD'', t) cs = match h with
             | Int.LF.MObj (_phat, tM) -> 
 
                 let (_u, tP, cPhi) = Whnf.mctxMDec cD offset' in
-                 (* Bug fix – drop elements l_delta elements from t -bp, Aug 24, 2009
+                 (* Bug fix -- drop elements l_delta elements from t -bp, Aug 24, 2009
                     Given cD'' |- t : cD, l_delta 
                     produce t' s.t. cD'' |- t' : cD   and t',t_delta = t
 
@@ -2483,12 +2490,11 @@ and cnormApxHead cO cD delta h (cD'', t) cs = match h with
           begin match LF.applyMSub offset t with
             | Int.LF.MV offset' ->  Apx.LF.PVar (Apx.LF.Offset offset', cnormApxSub cO cD delta s (cD'', t) cs)
             | Int.LF.PObj (_phat, h) -> 
-                let _ = dprint (fun () -> "[cnormApxTerm] ApplyMSub done – resulted in PObj  ") in 
+                let _ = dprint (fun () -> "[cnormApxTerm] ApplyMSub done -- resulted in PObj") in 
                 let (_ , tP, cPhi) = Whnf.mctxPDec cD offset' in
-                  (* Bug fix – drop elements l_delta elements from t -bp, Aug 24, 2009
+                  (* Bug fix -- drop elements l_delta elements from t -bp, Aug 24, 2009
                      Given cD'' |- t : cD, l_delta 
                      produce t' s.t. cD'' |- t' : cD   and t',t_delta = t
-                     
                   *)
                 let rec drop t l_delta = match (l_delta, t) with
                   | (0, t) -> t
@@ -2541,16 +2547,15 @@ and cnormApxHead cO cD delta h (cD'', t) cs = match h with
                                          cnormApxSub cO cD delta s (cD'', t) cs), 
                             j)
             | Int.LF.PObj (_phat, h) -> 
-                let _ = dprint (fun () -> "[cnormApxTerm] Proj - case: ApplyMSub done – resulted in PObj  ") in 
+                let _ = dprint (fun () -> "[cnormApxTerm] Proj - case: ApplyMSub done -- resulted in PObj  ") in 
 
                 let _ = dprint (fun () -> "[cnormApxTerm] offset' = " ^ string_of_int offset' ^ "\n") in
                 let _ = dprint (fun () -> "[cnormApxTerm] offset = " ^ string_of_int offset ^ "\n") in
                 let (_ , tP, cPhi) = Whnf.mctxPDec cD offset' in
                 let _ = dprint (fun () -> "[cnormApxTerm] tP = " ^ P.typToString cO cD cPhi (tP, LF.id) ^ "\n") in
-                  (* Bug fix – drop elements l_delta elements from t -bp, Aug 24, 2009
+                  (* Bug fix -- drop elements l_delta elements from t -bp, Aug 24, 2009
                      Given cD'' |- t : cD, l_delta 
                      produce t' s.t. cD'' |- t' : cD   and t',t_delta = t
-                     
                   *)
                 let rec drop t l_delta = match (l_delta, t) with
                   | (0, t) -> t
@@ -2564,7 +2569,7 @@ and cnormApxHead cO cD delta h (cD'', t) cs = match h with
             | Int.LF.MObj (phat, tM) -> 
                 (dprint (fun () -> "[cnormApxTerm] MObj :" ^ 
                            P.normalToString cO cD (Context.hatToDCtx phat) (tM, LF.id) ^ "\n") ; 
-                 raise (Violation "MObj found – expected PObj"))
+                 raise (Violation "MObj found -- expected PObj"))
           end
         else 
           Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset offset, cnormApxSub cO cD delta s (cD'', t) cs), j)
@@ -2652,7 +2657,7 @@ let rec cnormApxExp cO cD delta e (cD'', t) cs = match e with
   | Apx.Comp.Syn (loc, i)       -> Apx.Comp.Syn (loc, cnormApxExp' cO cD delta i (cD'', t) cs)
   | Apx.Comp.Fun (loc, f, e)    -> Apx.Comp.Fun (loc, f, cnormApxExp cO cD delta e (cD'', t) cs)
   | Apx.Comp.CtxFun (loc, g, e) -> Apx.Comp.CtxFun (loc, g, cnormApxExp cO cD delta e (cD'', t) (Ctxsub.cdot1 cs))
-  | Apx.Comp.MLam (loc, u, e)   -> (dprint (fun () -> "cnormApxExp – could be PLam") ; 
+  | Apx.Comp.MLam (loc, u, e)   -> (dprint (fun () -> "cnormApxExp -- could be PLam") ; 
       Apx.Comp.MLam (loc, u, cnormApxExp cO cD (Apx.LF.Dec(delta, Apx.LF.MDeclOpt u)) e (Int.LF.Dec (cD'', Int.LF.MDeclOpt u), Whnf.mvar_dot1 t) cs) )
   | Apx.Comp.Pair (loc, e1, e2) -> 
       let e1' = cnormApxExp cO cD delta e1 (cD'', t) cs in 
@@ -2755,13 +2760,13 @@ and cnormApxBranch cO cD delta b (cD'', t) cs =
   in 
     (match b with
       | Apx.Comp.BranchBox (loc, omega, delta', (psi1 , m, Some (a, psi)), e) ->
-          (* |omega| = k  –> shift cs by k ERROR bp *)
+          (* |omega| = k  --> shift cs by k ERROR bp *)
           let cs' = (match (apxget_ctxvar psi1 ) with | None -> cs | Some _ -> Ctxsub.cdot1 cs) in 
             Apx.Comp.BranchBox (loc, omega, delta', (psi1, m, Some (a, psi)),
                                 cnormApxExp cO cD (append delta delta') e ((append_mctx cD'' delta'), (mvar_dot_apx t delta')) cs')
               
       | (Apx.Comp.BranchBox (loc, omega, delta', (psi, r, None), e))  ->        
-          (* |omega| = k  –> shift cs by k ERROR bp *)
+          (* |omega| = k  --> shift cs by k ERROR bp *)
           let cs' = (match (apxget_ctxvar psi) with None -> cs | Some _ -> Ctxsub.cdot1 cs) in 
             Apx.Comp.BranchBox (loc, omega, delta', (psi, r, None),
                                 cnormApxExp cO cD (append delta delta') e ((append_mctx cD'' delta'), mvar_dot_apx t delta') cs'))

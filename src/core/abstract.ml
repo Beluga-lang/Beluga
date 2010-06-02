@@ -466,7 +466,7 @@ and cnstr_typ_rec (t_rec, s) = match t_rec with
 let rec index_of cQ n = 
   match (cQ, n) with
   | (I.Empty, _) ->
-      raise (Error "index_of for a free variable (FV, FMV, FPV, MV,  does not exist – should be impossible\n")
+      raise (Error "index_of for a free variable (FV, FMV, FPV, MV) does not exist -- should be impossible")
             (* impossible due to invariant on collect *)
 
   | (I.Dec (cQ', MMV(Impure, _ )), _ ) -> 
@@ -1497,7 +1497,8 @@ let rec collectCompTyp cQ tau = match tau with
         (cQ3 , Comp.TypPiBox ((I.SDecl(u, cPhi', cPsi'), dep ), tau'))
 
   | Comp.TypBool  -> (cQ, tau)
-  | Comp.TypClo _ -> (dprint (fun () -> " collectCTyp – TypClo missing ") ; raise NotImplemented)
+  | Comp.TypClo _ -> (dprint (fun () -> "collectCTyp -- TypClo missing");
+                      raise NotImplemented)
 
 let rec collectExp cQ e = match e with 
   | Comp.Syn (loc, i) -> 

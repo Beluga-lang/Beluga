@@ -134,7 +134,7 @@ let rec eval_syn i theta_eta =
             let eta' = add_mrecs n_list' in 
 	      (dprint (fun () -> "[eval_syn] Const " ^ 
                          R.render_cid_prog cid' ^ 
-                         " found – extend environment with rec. prog. \n");
+                         " found -- extend environment with rec. prog. \n");
                 Cons(RecValue ((cid', e'), cs, theta, eta) ,eta'))
       in 
       let _ = dprint (fun () -> "EVALUATE " ) in

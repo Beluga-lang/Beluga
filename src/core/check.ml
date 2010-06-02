@@ -766,7 +766,7 @@ module Comp = struct
      *   a context Omega
      *
      * - Applying substitution for context variables; does it make sense to
-     *   deal with it lazily? – It seems complicated to handle lazy context substitutions
+     *   deal with it lazily?   It seems complicated to handle lazy context substitutions
      *   AND lazy msubs.
      *
      *  If we keep them in Delta, we need to rewrite mctxToMSub for example;

@@ -801,7 +801,7 @@ let rec mctxMDec cD' k =
     | (LF.Dec (cD, _), k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Error ("Meta-variable out of bounds – looking for " ^ (string_of_int k) ^ "in context n"))
+    | (_ , _ ) -> raise (Error ("Meta-variable out of bounds -- looking for " ^ (string_of_int k) ^ "in context n"))
   in 
     lookup cD' k
 

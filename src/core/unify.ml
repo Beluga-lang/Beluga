@@ -1961,12 +1961,12 @@ module Make (T : TRAIL) : UNIFY = struct
                              )
                   end
 (*              | ( _ , false , _ , _ ) -> 
-                  (* neither t1' is not pattern substitutions – add projPat case *)
+                  (* neither t1' is not pattern substitutions -- add projPat case *)
                   let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
                    addConstraint (cnstrs1, cnstr)
 
               | ( _ , _ , _ , false ) -> 
-                  (* neither t2' is not pattern substitutions - add projPat case *)
+                  (* neither t2' is not pattern substitutions -- add projPat case *)
                   let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
                    addConstraint (cnstrs1, cnstr)
 *)

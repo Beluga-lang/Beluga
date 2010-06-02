@@ -622,7 +622,7 @@ let id_csub cO =
 (* instantiate  2 with 3    1/1  2/2  3/3  
        1/1   3/2  3/3   but we just eliminated the first declaration so
            1/1  2/2   i.e. lower all indices >=2 by 1.
-                 |cO| = 2  –-> |cO'| = 1 *)
+                 |cO| = 2  ---> |cO'| = 1 *)
 (* instantiate  2 with 1    1/1  1/2 *)
 let rec inst_csub cPsi2 offset' csub cO = 
   let rec update_octx cO1 offset sW = 
@@ -643,7 +643,7 @@ let rec check_schema_known cPsi2 cO =
         | Some _ ->  cO
       end 
 
-    | None -> raise (Violation "Encountered context variable – but it stands for the empty context " )
+    | None -> raise (Violation "Encountered context variable, but it stands for the empty context")
   end
 in
   let rec decrement_csub cs  = 

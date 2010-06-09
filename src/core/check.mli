@@ -1,5 +1,3 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
    modified: Joshua Dunfield

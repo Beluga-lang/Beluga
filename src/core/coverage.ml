@@ -123,15 +123,6 @@ let cut (HANGER f) laterShifter = f laterShifter
 let cut = (cut : 'a hanger -> shifter -> 'a)
 
 
-
-(*
-let bump_shift n shift =
-  {head = (fun h -> Whnf.mshiftHead (shift.head h) n);
-   spine = (fun spine -> Whnf.mshiftSpine (shift.spine spine) n);
-   normal = (fun tM -> Whnf.mshiftTerm (shift.normal tM) n);
-   typ = (fun t -> Whnf.mshiftTyp (shift.typ t) n)
-  }
-*)
 let bump_shift increment shifter = {n = shifter.n + increment}
 
 
@@ -139,7 +130,6 @@ let bump_shift increment shifter = {n = shifter.n + increment}
  * type strategy  ---Coverage strategy
  *
  * This type represents the strategy (or the state of the strategy) to use.
- * Currently, this just has a `depth'.
  *)
 type strategy = {
   maxDepth : int;

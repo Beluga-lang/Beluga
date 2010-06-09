@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
 
@@ -1084,7 +1084,7 @@ let rec synDom cD loc cPsi s = begin match s with
               (Int.LF.DDec (cPhi,
                             Int.LF.TypDecl (x, tA')),
                Int.LF.Dot (Int.LF.Head(Int.LF.BVar k), s'))
-(*         | _ -> raise (Violation "Undefined bound variable\n") *)
+(*         | _ -> raise (Violation "Undefined bound variable") *)
       end
 
    | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k,j)), s) ->
@@ -1108,7 +1108,7 @@ let rec synDom cD loc cPsi s = begin match s with
               (Int.LF.DDec (cPhi,
                             Int.LF.TypDecl (x, Int.LF.TClo sQ)),
                Int.LF.Dot (Int.LF.Head(Int.LF.Proj(Int.LF.BVar k, j)), s'))
-         | _ -> raise (Violation "Undefined bound variable\n") 
+         | _ -> raise (Violation "Undefined bound variable") 
       end
 
 
@@ -1354,10 +1354,10 @@ and elTerm' recT  cO cD cPsi r sP = match r with
              (Printf.printf "\nUnification Error: %s\n\n" msg;
               raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
          | Unify.Error msg -> 
-             (Printf.printf "\nHidden %s \n This may indicates the following problem: \n a contextual variable was inferred with the most general type\n however subsequently, it is required to have a more restrictive type, \ni.e., where certain bound variable dependencies cannot occur.\n\n" msg;
+             (Printf.printf "\nHidden %s\n  This may indicate the following problem:\n  a contextual variable was inferred with the most general type,\n  but subsequently it must have a more restrictive type,\n  i.e., where certain bound variable dependencies cannot occur.\n\n" msg;
               raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
          | Unify.NotInvertible -> 
-            (Printf.printf "\nUnification Error : NotInvertible \n\n" ;
+            (Printf.printf "\nUnification Error: NotInvertible\n\n";
              raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
 (*         | _ ->
             (Printf.printf "Non-Unification Error (1)\n" ;
@@ -1375,7 +1375,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
           with Unify.Unify msg ->
             (Printf.printf "%s\n" msg;
              raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
-             | _ -> (Printf.printf "Non-Unification Error (2) \n" ;
+             | _ -> (Printf.printf "Non-Unification Error (2)\n" ;
                     raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ)))) 
           end
       with _ -> raise (Error (Some loc, CompTypAnn))
@@ -1541,7 +1541,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                 Int.LF.Root (Some loc, Int.LF.MVar (v, LF.id), Int.LF.Nil)
 
         | Violation msg  -> 
-            dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
+            dprint (fun () -> "[elClosedTerm] Violation: " ^ msg) ; 
             raise (Error (Some loc, CompTypAnn ))
 
       end
@@ -1599,7 +1599,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                    (* (Printf.printf "elTerm': FPVar with spine\n" ; raise NotImplemented)*)
           end
         | Violation msg  -> 
-            dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
+            dprint (fun () -> "[elClosedTerm] Violation: " ^ msg) ;
             raise (Error (Some loc, CompTypAnn ))
       end
 
@@ -1662,7 +1662,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (tN, tQ, cPhi), s'), Apx.LF.Nil) ->
       let s'' = elSub loc recT  cO cD cPsi s' cPhi in
         begin try
-          let _   = dprint (fun () -> "[elTerm] Apx-mvar : Expected type: " ^ P.typToString cO cD cPsi sP ^ "\n") in 
+          let _   = dprint (fun () -> "[elTerm] Apx-mvar: Expected type: " ^ P.typToString cO cD cPsi sP ^ "\n") in 
           let _   = dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s'') ^ "\n") in 
           (* This case only applies to Beluga; MInst are introduced during cnormApxTerm. *)
           ( Unify.unifyTyp cD  cPsi (tQ, s'') sP ; 
@@ -1671,19 +1671,19 @@ and elTerm' recT  cO cD cPsi r sP = match r with
             dprint (fun () -> "tN = " ^ P.normalToString cO cD cPsi (tN, s''));
            Int.LF.Clo(tN, s''))
       with  Violation msg  -> 
-        (dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
-         dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cO cD cPsi (tN,s'') ^ "\n");
+        (dprint (fun () -> "[elTerm] Violation: " ^ msg) ;
+         dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cO cD cPsi (tN,s''));
          raise (Error (Some loc, CompTypAnn )))
         |  Unify.Unify msg  -> 
-             dprint (fun () -> "[elTerm] Unification Violation: " ^ msg ^ "\n") ; 
-             dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cO cD cPsi (tN,s'') ^ "\n");
-             dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cO cD cPsi sP ^ "\n");
-             dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s'') ^ "\n");
-             dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cO cD ^ "\n");
+             dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
+             dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cO cD cPsi (tN,s''));
+             dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cO cD cPsi sP);
+             dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s''));
+             dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cO cD);
              raise (Error (Some loc, CompTypAnn ))
         | _ ->               (Printf.printf "Unification Error (7)\n" ;
-             dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cO cD cPsi (tN,s'') ^ "\n");
-             dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s'') ^ " does not match expected type \n");
+             dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cO cD cPsi (tN,s''));
+             dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s'') ^ " does not match expected type");
 (*             dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cO cD cPsi sP ^ "\n");*) 
 (*             dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cO cD ^ "\n"); *)
                               raise (Error (Some loc, CompTypAnn ))
@@ -1706,7 +1706,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
               raise (Error (Some loc, TypMismatch (cO, cD, cPsi, (tR, LF.id), sQ, sP))))
           end
       with  Violation msg  -> 
-        dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+        dprint (fun () -> "[elTerm] Violation: " ^ msg);
         raise (Error (Some loc, CompTypAnn ))
       end
 
@@ -1745,7 +1745,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
              raise (Error (Some loc, TypMismatch (cO, cD, cPsi, (tR, LF.id), sQ, sP))))
           end
       with Violation msg  -> 
-        dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+        dprint (fun () -> "[elTerm] Violation: " ^ msg);
         raise (Error (Some loc, CompTypAnn ))
       end
 
@@ -1851,8 +1851,8 @@ and elClosedTerm' recT  cO cD cPsi r = match r with
         let (tS, sQ ) = elSpine loc recT  cO cD cPsi spine (tA, s'')  in
           (Int.LF.Root (Some loc, Int.LF.MVar (Int.LF.Offset u, s''), tS) , sQ)
       with Violation msg  -> 
-        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
-         raise (Error (Some loc, CompTypAnn ))
+        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
+         raise (Error (Some loc, CompTypAnn))
       end
 
   | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.Offset p, s'), spine) ->
@@ -1862,7 +1862,7 @@ and elClosedTerm' recT  cO cD cPsi r = match r with
         let (tS, sQ ) = elSpine loc recT  cO cD cPsi spine (tA, s'')  in
           (Int.LF.Root (Some loc, Int.LF.PVar (Int.LF.Offset p, s''), tS) , sQ)
       with Violation msg  -> 
-        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
+        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
          raise (Error (Some loc, CompTypAnn ))
       end
 
@@ -1873,8 +1873,8 @@ and elClosedTerm' recT  cO cD cPsi r = match r with
         let (tS, sQ ) = elSpine loc recT  cO cD cPsi spine (tA, s'')  in
           (Int.LF.Root(Some loc, Int.LF.PVar (p0, LF.comp s0 s''), tS)  , sQ)
       with Violation msg  -> 
-        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
-         raise (Error (Some loc, CompTypAnn ))
+        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
+         raise (Error (Some loc, CompTypAnn))
       end
 
 
@@ -1884,8 +1884,8 @@ and elClosedTerm' recT  cO cD cPsi r = match r with
         let (tS, sQ ) = elSpine loc recT  cO cD cPsi spine (tA, s'')  in
           (Whnf.reduce (tM', s'') tS  , sQ)
       with Violation msg  -> 
-        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg ^ "\n") ; 
-         raise (Error (Some loc, CompTypAnn ))
+        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
+         raise (Error (Some loc, CompTypAnn))
       end
 
   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , k),  spine) ->
@@ -1910,8 +1910,8 @@ and elClosedTerm' recT  cO cD cPsi r = match r with
   | Apx.LF.Lam (loc, _, _ ) -> 
       raise (Error (Some loc, CompTypAnn ))
 
-  | _ -> (dprint (fun () -> "[elClosedTerm] Violation ? ") ; 
-                raise (Error (None, CompTypAnn )))
+  | _ -> (dprint (fun () -> "[elClosedTerm] Violation ? ");
+                raise (Error (None, CompTypAnn)))
 
 
 
@@ -2001,7 +2001,7 @@ and elHead loc recT  cO cD cPsi = function
         let s'  = elSub loc recT  cO cD cPsi s cPhi in 
           (Int.LF.MVar (Int.LF.Offset u, s') , (tA, s'))
       with Violation msg  -> 
-        dprint (fun () -> "[elHead] Violation: " ^ msg ^ "\n") ; 
+        dprint (fun () -> "[elHead] Violation: " ^ msg);
          raise (Error (Some loc, CompTypAnn ))
       end 
 
@@ -2011,7 +2011,7 @@ and elHead loc recT  cO cD cPsi = function
         let s' = elSub loc recT  cO cD cPsi s cPhi in 
           (Int.LF.PVar (Int.LF.Offset p, s') , (tA, s'))
       with Violation msg  -> 
-        dprint (fun () -> "[elHead] Violation: " ^ msg ^ "\n") ; 
+        dprint (fun () -> "[elHead] Violation: " ^ msg);
         raise (Error (Some loc, CompTypAnn ))
       end
 
@@ -2021,7 +2021,7 @@ and elHead loc recT  cO cD cPsi = function
         let r' = LF.comp r s' in 
          (Int.LF.PVar (p, r') , (tA, r')) 
       with Violation msg -> 
-        dprint (fun () -> "[elHead] Violation: " ^ msg ^ "\n") ; 
+        dprint (fun () -> "[elHead] Violation: " ^ msg);
         raise (Error (Some loc, CompTypAnn ))
       end
       
@@ -2055,7 +2055,7 @@ and elHead loc recT  cO cD cPsi = function
       in
         (Int.LF.Proj (head', i) , sAi )
 
-  | h -> raise (Violation (what_head h ))
+  | h -> raise (Violation (what_head h))
 
 (* elSpineI  recT  cO cD cPsi spine i sA  = (S : sP)
  * elSpineIW recT  cO cD cPsi spine i sA  = (S : sP)
@@ -2645,7 +2645,8 @@ let rec cnormApxDCtx cO cD delta psi (cDt : Syntax.Int.LF.mctx * Syntax.Int.LF.m
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) -> 
       begin match Ctxsub.apply_csub (Int.LF.CtxOffset offset) cs with
         | Int.LF.CtxVar (Int.LF.CtxOffset psi0) -> Apx.LF.CtxVar (Apx.LF.CtxOffset psi0)
-        | _ -> (dprint (fun () -> "[cnormApxDCtx" ) ; raise NotImplemented)
+        | Int.LF.Null ->  (dprint (fun () -> "[cnormApxDCtx Null"); raise NotImplemented)
+        | Int.LF.DDec _ -> (dprint (fun () -> "[cnormApxDCtx DDec"); raise NotImplemented)
       end
   | Apx.LF.DDec (psi, t_decl) -> 
       let psi' = cnormApxDCtx cO cD delta psi cDt cs in  
@@ -3218,7 +3219,7 @@ let mgTyp cD cPsi a kK =
         let u  = Whnf.newMMVar (cD, cPsi , Int.LF.TClo (tA1,s)) in
         let h  = Int.LF.MMVar (u, (Whnf.m_id, LF.id)) in 
         let tR = Int.LF.Root (None, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
-        let _ = dprint (fun () -> "Generated meta²-variable " ^ 
+        let _ = dprint (fun () -> "Generated meta^2-variable " ^ 
                           P.normalToString Int.LF.Empty cD cPsi (tR, LF.id)) in 
         let _ = dprint (fun () -> "of type : " ^ P.dctxToString Int.LF.Empty cD cPsi ^ 
                           " |- " ^ P.typToString Int.LF.Empty cD cPsi (tA1,s)) in 
@@ -3231,7 +3232,7 @@ let mgTyp cD cPsi a kK =
         let u  = Whnf.newMMVar (cD, flat_cPsi , tA1') in
         let h  = Int.LF.MMVar (u, (Whnf.m_id, s_proj)) in 
         let tR = Int.LF.Root (None, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
-        let _ = dprint (fun () -> "Generated meta²-variable " ^ 
+        let _ = dprint (fun () -> "Generated meta^2-variable " ^ 
                           P.normalToString Int.LF.Empty cD cPsi (tR, LF.id)) in 
         let _ = dprint (fun () -> "of type : " ^ P.dctxToString Int.LF.Empty cD flat_cPsi ^ 
                           " |- " ^ P.typToString Int.LF.Empty cD flat_cPsi (tA1',LF.id)) in 
@@ -3253,7 +3254,7 @@ and genMAppW loc cO cD (i, tau_t) = match tau_t with
       let tA'   = C.cnormTyp (tA, theta) in 
 
       let tM'   = Whnf.etaExpandMMV (Some loc) cD  cPsi' (tA', LF.id) LF.id in
-        let _   = dprint (fun () -> "[genMApp] Generated meta²-variable " ^ 
+        let _   = dprint (fun () -> "[genMApp] Generated meta^2-variable " ^ 
                           P.normalToString cO cD cPsi (tM', LF.id)) in 
         let _   = dprint (fun () -> "          of type : " ^ 
                           P.dctxToString cO cD cPsi' ^ " |- " ^ 
@@ -3552,7 +3553,7 @@ and elExp' cO cD cG i = match i with
               let theta' = Int.LF.MDot (Int.LF.MObj (psihat', tM'), theta) in
                 (Int.Comp.MApp (Some loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta'))
              with Violation msg -> 
-               dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+               dprint (fun () -> "[elTerm] Violation: " ^ msg);
                raise (Error (Some loc, CompTypAnn ))
              end 
 
@@ -3576,12 +3577,12 @@ and elExp' cO cD cG i = match i with
                             raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi', sA', sB))))
                          end 
                    | _ -> 
-                       (dprint (fun () -> "[elTerm] Violation: Not a head  \n") ; 
-                        raise (Error (Some loc, CompTypAnn )))
+                       (dprint (fun () -> "[elTerm] Violation: Not a head");
+                        raise (Error (Some loc, CompTypAnn)))
                  end  
                with Violation msg -> 
-                 dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
-                 raise (Error (Some loc, CompTypAnn ))
+                 dprint (fun () -> "[elTerm] Violation: " ^ msg);
+                 raise (Error (Some loc, CompTypAnn))
                end 
 
 
@@ -3605,7 +3606,7 @@ and elExp' cO cD cG i = match i with
               let theta' = Int.LF.MDot (Int.LF.MObj (psihat', tM'), theta) in
                 (Int.Comp.MApp (Some loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta'))
              with Violation msg -> 
-               dprint (fun () -> "[elTerm] Violation: " ^ msg ^ "\n") ; 
+               dprint (fun () -> "[elTerm] Violation: " ^ msg);
                raise (Error (Some loc, CompTypAnn ))
              end 
           | _ ->
@@ -3711,7 +3712,7 @@ and recPattern cO cD cPsi omega delta psi m tPopt =
                       mgTyp cD' cPsi' a (Typ.get a).Typ.kind   
                 end in
 
-  let _ = dprint (fun () -> ("[recPattern] Reconstruction of pattern ... type = " ^ 
+  let _ = dprint (fun () -> ("[recPattern] Reconstruction of pattern... type = " ^ 
                                P.typToString cO cD' cPsi' (tP', LF.id) ^ "\n")) in
   let tR = elTerm' PiboxRecon cO' cD' cPsi' m (tP', LF.id) in    
 
@@ -3720,7 +3721,7 @@ and recPattern cO cD cPsi omega delta psi m tPopt =
   let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
   let _        = Unify.resetGlobalCnstrs () in 
 
-  let _   = dprint (fun () -> "recPattern: Elaborated pattern ...\n" ^ P.mctxToString cO' cD' ^ "  ;   " ^
+  let _   = dprint (fun () -> "recPattern: Elaborated pattern...\n" ^ P.mctxToString cO' cD' ^ "  ;   " ^
                       P.dctxToString cO' cD' cPsi' ^ "\n   |-\n    "  ^ P.normalToString cO' cD' cPsi' (tR, LF.id) ^ 
                       "\n has type " ^ P.typToString  cO' cD' cPsi' (tP', LF.id) ^ "\n") in
  
@@ -3817,32 +3818,32 @@ and recPattern cO cD cPsi omega delta psi m tPopt =
 and synRefine loc cO' caseT (cD, cD1) tR1 (cPsi, tP) (cPsi1, tP1) =
   begin try 
     let cD'    = Context.append cD cD1 in                   (*         cD'  = cD, cD1     *)
-    let _      = dprint (fun () -> "[synRefine] cD' = " ^ P.mctxToString cO' cD' ^ "\n") in 
+    let _      = dprint (fun () -> "[synRefine] cD' = " ^ P.mctxToString cO' cD') in 
     let t      = mctxToMSub cD'  in                         (*         .  |- t   <= cD'   *) 
     let _      = dprint (fun () -> "[synRefine] mctxToMSub .  |- t <= cD' " ^ 
-                             P.msubToString cO'  Int.LF.Empty (Whnf.cnormMSub t) ^ "\n") in 
+                             P.msubToString cO'  Int.LF.Empty (Whnf.cnormMSub t)) in 
     let n      = Context.length cD1 in 
     let m      = Context.length cD in 
-
+    
     let t1     = Whnf.mvar_dot (Int.LF.MShift m) cD1 in
       (* cD, cD1 |- t1 <= cD1 *)
     let mt1    = Whnf.mcomp t1 t in                          (*         .  |- mt1 <= cD1   *)
-
+    
     let cPsi'  = Whnf.cnormDCtx (cPsi, t) in                 (*         .  |- cPsi' ctx    *)
     
     let _  = begin match caseT with
                | IndexObj (_phat, tR') -> 
                    begin try 
                      (dprint (fun () -> "Pattern matching on index object...");
-                      Unify.unify Int.LF.Empty cPsi'(C.cnorm (tR',  t),  LF.id) 
-                                                    (C.cnorm (tR1, mt1), LF.id))
+                      Unify.unify Int.LF.Empty cPsi' (C.cnorm (tR',  t),  LF.id) 
+                                                     (C.cnorm (tR1, mt1), LF.id))
                    with Unify.Unify msg -> 
-                     (dprint (fun () -> "Unify ERROR: " ^  msg  ^ "\n") ; 
+                     (dprint (fun () -> "Unify ERROR: " ^ msg);
                       raise (Violation "Pattern matching on index argument failed"))
                    end
                | DataObj -> ()
-              end  in
-    
+             end
+    in
     
     let cPsi'  = Whnf.cnormDCtx (cPsi, t) (* t *) in        (* cO' ;     .  |- cPsi' ctx    *)
     let cPsi1' = Whnf.cnormDCtx (cPsi1, mt1) in             (* cO' ;     .  |- cPsi1 ctx    *)
@@ -3854,18 +3855,18 @@ and synRefine loc cO' caseT (cD, cD1) tR1 (cPsi, tP) (cPsi1, tP1) =
     let _  = begin try 
           Unify.unifyDCtx cO' (Int.LF.Empty) cPsi'  cPsi1' ;
           Unify.unifyTyp  cO' cPsi' (tP', LF.id) (tP1', LF.id); 
-          dprint (fun () -> "Unify successful: \n" ^  "Inferred pattern type: "
+          dprint (fun () -> "Unify successful: \n" ^  "  Inferred pattern type: "
                     ^  P.dctxToString cO' Int.LF.Empty cPsi1' ^ "    |-    "
                     ^ P.typToString cO' Int.LF.Empty cPsi1' (tP1', LF.id)
-                    ^ "\nExpected pattern type: "
-                    ^ P.dctxToString cO' Int.LF.Empty  cPsi1' ^ "     |-    "
+                    ^ "\n  Expected pattern type: "
+                    ^ P.dctxToString cO' Int.LF.Empty  cPsi1' ^ "    |-    "
                     ^ P.typToString cO' Int.LF.Empty cPsi1' (tP', LF.id))           
         with Unify.Unify msg ->
-           (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n" ^  "Inferred pattern type: "
+           (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n" ^  "  Inferred pattern type: "
                    ^  P.dctxToString cO' Int.LF.Empty cPsi1' ^ "    |-    "
                    ^ P.typToString cO' Int.LF.Empty cPsi1' (tP1', LF.id)
-                   ^ "\nExpected pattern type: "
-                   ^ P.dctxToString cO' Int.LF.Empty cPsi' ^ "     |-    "
+                   ^ "\n  Expected pattern type: "
+                   ^ P.dctxToString cO' Int.LF.Empty cPsi' ^ "    |-    "
                    ^ P.typToString cO' Int.LF.Empty cPsi' (tP', LF.id))
              ; 
             raise (Error (loc, CompPattMismatch ((cO', cD1, cPsi1, tR1, (tP1, LF.id)), 
@@ -3875,8 +3876,14 @@ and synRefine loc cO' caseT (cD, cD1) tR1 (cPsi, tP) (cPsi1, tP1) =
     in 
     let _ = dprint (fun () -> "AbstractMSub ..") in 
       (* cD1' |- t' <= cD' *)
-    let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub t)in 
-
+    let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub t) in 
+(*  experimental attempt to improve displayed names of meta-variables  -jd
+    let _ = dprint (fun () -> "--proper  cD' = " ^ P.mctxToString cO' cD') in
+    let _ = dprint (fun () -> "--renamed cD1' = " ^ P.mctxToString cO' cD1') in
+    let _ = dprint (fun () -> "--renamer (t') = " ^ P.msubToString cO' cD' t') in
+    let cD1' = if Ctxsub.isomorphic cD1' cD' then cD' else cD1' in
+    let _ = dprint (fun () -> "--possibly unrenamed cD1' = " ^ P.mctxToString cO' cD1') in
+*)
       (* let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub (Whnf.mcomp t mt1)) in  *)
 
     let rec drop t l_delta1 = match (l_delta1, t) with
@@ -4017,17 +4024,17 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
       (*       e is in the scope of cO_ext *)
       let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
       let l_o1     = l_cO' - l_omega  in   (* l_cd1 is the length of cD1 *) 
-      let cD'      = Context.append cD cD1' in  
-
-      let e1       = fmvApxExp [] cO' cD' (l_cd1, l_delta, 0) (l_o1, l_omega, 0) e in   
-
+      let cD'      = Context.append cD cD1' in
+      
+      let e1       = fmvApxExp [] cO' cD' (l_cd1, l_delta, 0) (l_o1, l_omega, 0) e in
+      
       let _        = dprint (fun () -> "Refinement: " ^  P.mctxToString cO' cD1'' ^ 
                                "\n |- \n " ^ P.msubToString cO cD1'' t' ^ 
-                               " \n <= " ^ P.mctxToString cO cD ^ "\n") in 
+                               " \n <= " ^ P.mctxToString cO cD ^ "\n") in
       let _        = dprint (fun () -> "Refinement: " ^  P.mctxToString cO' cD1'' ^ 
                                "\n |- \n " ^ P.msubToString cO cD1'' t1 ^ 
-                               " = t1\n") in 
-
+                               " = t1\n") in
+      
       (*  if cD,cD0     |- e apx_exp   and  cD1' = cD1, cD0 
           then cD, cD1' |- e1 apx_exp
       *)
@@ -4255,11 +4262,11 @@ let recSgnDecl d =
   | Ext.Sgn.Schema (_, g, schema) ->
       (* let _       = Printf.printf "\n Indexing schema  %s  \n" g.string_of_name  (P.fmt_ppr_lf_schema  in   *)
       let apx_schema = index_schema schema in
-      let _        = dprint (fun () -> "\nReconstructing schema " ^  g.string_of_name ^ "\n") in
-      let cO        = Int.LF.Empty in
+      let _        = dprint (fun () -> "\nReconstructing schema " ^ g.string_of_name ^ "\n") in
+      let cO       = Int.LF.Empty in
       let _        = FVar.clear () in
-      let sW         = elSchema cO apx_schema in
-      let _        = dprint (fun () -> "\nElaboration of schema " ^ g.string_of_name ) in 
+      let sW       = elSchema cO apx_schema in
+      let _        = dprint (fun () -> "\nElaborating schema " ^ g.string_of_name ) in 
       (* let _        = dprint (fun () -> " \n = " ^   (P.schemaToString sW) ^ "\n\n") in  *)
 
       let _        = solve_fvarCnstr PiRecon (*cO=*)Int.LF.Empty Int.LF.Empty !fvar_cnstr in
@@ -4268,14 +4275,15 @@ let recSgnDecl d =
       let _        = reset_fvarCnstr () in
       let _        = Unify.resetGlobalCnstrs () in 
 
-      (* let _          = recSchemaWf sW in *)
-      let sW'        = Abstract.abstrSchema sW in 
-      let _          = Check.LF.checkSchemaWf sW' in
-      let _        = dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful\n" )  in
-      let _g'         = Schema.add (Schema.mk_entry g sW') in
-      let _        = Printf.printf "\nschema %s = %s.\n" (g.string_of_name) (P.schemaToString sW') in 
+      (* let _        = recSchemaWf sW in *)
+      let sW'      = Abstract.abstrSchema sW in 
+      let _        = Check.LF.checkSchemaWf sW' in
+      let _        = dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" )  in
+      let _g'      = Schema.add (Schema.mk_entry g sW') in
+      let _        = Format.printf "\nschema %s = @[%a@].@."
+                                   (g.string_of_name)
+                                   (P.fmt_ppr_lf_schema Pretty.std_lvl) sW' in
         (* Int.Sgn.Schema (g', sW) *) ()
-
 
   | Ext.Sgn.Val (loc, x, None, i) -> 
         let fvars = [] in 
@@ -4334,7 +4342,7 @@ let recSgnDecl d =
         let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cO cD  cG i'' (tau', C.m_id)) in
 
         let v  =   Opsem.eval i''  in 
-        let _       = Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
+        let _       = Printf.printf  "\n\nlet %s : %s = %s\n ===>  %s\n"
                 (R.render_name x)
                 (P.compTypToString cO cD tau') 
                 (P.expChkToString cO cD cG i'') 
@@ -4410,7 +4418,7 @@ let recSgnDecl d =
         | [] -> ()
         | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
             let (e_r' , tau') = reconFun f e in 
-            let _       = Printf.printf  "and %s : %s = \n %s \n"
+            let _       = Printf.printf  "and %s : %s =\n %s\n"
             (R.render_name f)
             (P.compTypToString cO cD tau') 
             (P.expChkToString cO cD cG e_r')
@@ -4424,17 +4432,16 @@ let recSgnDecl d =
         begin match recFuns with
           | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
               let (e_r' , tau') = reconFun f e in 
-              let _       = Printf.printf  "\n\nrec %s : %s =\n %s \n"
-                (R.render_name f)
-                (P.compTypToString cO cD tau') 
-                (P.expChkToString cO cD cG e_r')
-                (* (P.expChkToString cO cD cG (Whnf.cnormExp (e_r', C.m_id))) *) in 
+                Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
+                  (R.render_name f)
+                  (P.fmt_ppr_cmp_typ cO cD Pretty.std_lvl) (Whnf.normCTyp tau')
+                  (P.fmt_ppr_cmp_exp_chk cO cD cG Pretty.std_lvl) (Whnf.cnormExp (e_r', Whnf.m_id));
               
-              let _       = dprint (fun () ->  "DOUBLE CHECK of function " ^    f.string_of_name ^  " successful!\n\n" ) in
-                
+              let _       = dprint (fun () ->  "DOUBLE CHECK of function " ^    f.string_of_name ^  " successful!\n" ) in
+              
               let _f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list)   in
                 reconRecFun lf 
-          | _ -> raise (Violation "No recursive function defined\n")
+          | _ -> raise (Violation "No recursive function defined")
         end
 
 
@@ -4457,7 +4464,6 @@ let rec recSgnDecls = function
 
   | [] -> ()
 
-
   | Ext.Sgn.Pragma(_, Ext.LF.NotPrag) :: not'd_decl :: rest ->
       (*   let internal_syntax_pragma = Int.Sgn.Pragma(Int.LF.NotPrag) in *)
       let not'd_decl_succeeds = 
@@ -4465,7 +4471,8 @@ let rec recSgnDecls = function
           (let _ = recSgnDecl not'd_decl in
              true)
         with
-            _ -> (print_string ("Reconstruction fails for %not'd declaration\n"); false)
+            _ -> (print_string ("Reconstruction fails for %not'd declaration\n");
+                  false)
         end
       in
         if not'd_decl_succeeds then
@@ -4478,6 +4485,3 @@ let rec recSgnDecls = function
   | decl :: rest ->
       recSgnDecl decl;
       recSgnDecls rest
-
-
-

@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
    @author Brigitte Pientka
@@ -1061,9 +1061,9 @@ module Comp = struct
           (* Apply to the type tP1[Psi1] the refinement substitution t1' *)
           (* cD1 ; cPsi1 |- tM1 <= tA1 
            * cD1'  |- t1' <= cD, cD1  and 
-           * cD, cD1 |- MShift (n+n1) . u_n . ... . u₁  <= cD1
-           *       t1 = MShift (n+n1) . u_n . ... . u₁  
-           *) 
+           * cD, cD1 |- MShift (n+n1) . u_n . ... . u_1  <= cD1
+           *       t1 = MShift (n+n1) . u_n . ... . u_1  
+           *)
           let n1  = length cD1 in 
           let n   = length cD  in 
           let t1  =  Whnf.mvar_dot (I.MShift n) cD1 in   

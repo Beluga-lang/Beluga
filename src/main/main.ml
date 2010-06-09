@@ -24,6 +24,7 @@ let usage () =
         ^ "    +coverage     turn on coverage checker (experimental)\n"
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
         ^ "    +printSubord  print subordination relation (experimental)\n"
+        ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
   in
     fprintf stderr
       "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
@@ -32,40 +33,49 @@ let usage () =
 
 module PC = Pretty.Control
 
-(* We should use a library for this *)
-let process_option' arg = begin let f = function
-  | "+d" -> Debug.showAll ()
-  | "-d" -> Debug.showNone ()
-  | "-s=natural" -> PC.substitutionStyle := PC.Natural
-  | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn
-  | "+implicit" -> PC.printImplicit := true
-  | "-implicit" -> PC.printImplicit := false
-  | "+t" -> Monitor.on := true
-  | "+tfile" -> Monitor.onf := true
+let process_option' arg rest = begin let f = function
+  (* these strings must be lowercase *)
+  | "+d" -> (Debug.showAll (); rest)
+  | "-d" -> (Debug.showNone (); rest)
+  | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
+  | "-s=debruijn" -> (PC.substitutionStyle := PC.DeBruijn; rest)
+  | "+implicit" -> (PC.printImplicit := true; rest)
+  | "-implicit" -> (PC.printImplicit := false; rest)
+  | "+t" -> (Monitor.on := true; rest)
+  | "+tfile" -> (Monitor.onf := true; rest)
   | "-t" -> (Monitor.on := false;
-             Monitor.onf := false)
-  | "+coverage" -> Coverage.enableCoverage := true
-  | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true)
-  | "-coverage" -> Coverage.enableCoverage := false
-  | "+printsubord" -> Subord.dump := true
+             Monitor.onf := false;
+             rest)
+  | "+coverage" -> (Coverage.enableCoverage := true; rest)
+  | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true; rest)
+  | "-coverage" -> (Coverage.enableCoverage := false; rest)
+  | "+printsubord" -> (Subord.dump := true; rest)
+  | "-width" -> (match rest with [] -> (print_string "-width needs an argument\n"; exit 2)
+                               | arg::rest -> (try let width = int_of_string arg in
+                                                 Format.set_margin (max 40 width);
+                                                 rest
+                                               with Failure "int_of_string" ->
+                                                      print_string "-width needs a numeric argument\n"; exit 2))
   | _ -> usage ()
-in (* print_string (">>>> " ^ arg ^ "\n"); *) f arg
+in (* print_string (">>>> " ^ arg ^ "\n"); *)
+  f arg
 end
 
-let process_option string =
+let process_option string rest =
   if String.length string < 4 then
-    process_option' string
+    process_option' string rest
   else
+    (* preserve case of first 2 characters; lowercase following *)
     let first_part = String.sub string 0 2
     and second_part = String.lowercase (String.sub string 2 (String.length string - 2)) in
-      process_option' (first_part ^ second_part)
+      process_option' (first_part ^ second_part) rest
 
 let rec process_options = function
   | [] -> []
   | arg :: rest ->
       let first = String.get arg 0 in
         if first = '-' or first = '+' then
-         (process_option arg; process_options rest)
+          process_options (process_option arg rest)
         else  (* reached end of options: return this and remaining arguments *)
           arg :: rest
 
@@ -297,5 +307,5 @@ let main () =
       printf "%s" (Error.getInformation());
       exit status_code
 
+let _ = Format.set_margin 86
 let _ = main ()
-

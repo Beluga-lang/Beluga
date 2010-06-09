@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
    @author Brigitte Pientka
@@ -1874,7 +1874,7 @@ module Make (T : TRAIL) : UNIFY = struct
                       *)
                     let _ = instantiateMMVar (r1, Root(None, MMVar(w, (mt', s')), Nil), !cnstrs1) in 
 
-                     dprint (fun () -> "Instantiated with new meta²-variable " ^ 
+                     dprint (fun () -> "Instantiated with new meta^2-variable " ^ 
                                         P.normalToString Empty cD0 cPsi sM1)
                       
 
@@ -1950,13 +1950,13 @@ module Make (T : TRAIL) : UNIFY = struct
 
                     let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (mtt2, ss2) (MVarRef r2)) in
                       (instantiateMMVar (r2, tM1', !cnstrs2) ;                    
-                       dprint (fun () -> "Instantiated with new meta²-variable " ^ 
+                       dprint (fun () -> "Instantiated with new meta^2-variable " ^ 
                                         P.normalToString Empty cD0 cPsi sM2) )
                   with
                     | NotInvertible ->
                         ( (* Printf.printf "Added constraints: NotInvertible: \n" 
                         ; addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))*)
-                    Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                    Printf.printf "Pruning failed -- NotInvertible:\n" ;
                     raise_ (Unify "NotInvertible")
                              )
                   end
@@ -2040,20 +2040,20 @@ module Make (T : TRAIL) : UNIFY = struct
               let ss  = invert t' in
               let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in 
               let _ = dprint (fun () -> 
-                                "UNIFY(2): MMVar-Normal \n" ^ 
+                                "UNIFY(2): MMVar-Normal\n" ^ 
                                   P.mctxToString Empty cD0 ^ "\n" ^ 
                                   P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
                                   P.normalToString Empty cD0 cPsi sM2 ^ "\n") in  
               let phat = Context.dctxToHat cPsi in 
               let sM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (mtt, ss) (MMVarRef r)) in
                 (instantiateMMVar (r, sM2', !cnstrs) ;
-                 dprint (fun () -> "Instantiated with new meta²-variable " ^ 
+                 dprint (fun () -> "Instantiated with new meta^2-variable " ^ 
                                         P.normalToString Empty cD0 cPsi sM1))
             with
               | NotInvertible ->
                   ( (* Printf.printf "Added constraints: NotInvertible: \n"
                        ; addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
-                    Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                    Printf.printf "Pruning failed -- NotInvertible:\n" ;
                     raise_ (Unify "NotInvertible"))
             end 
           else 
@@ -2071,7 +2071,7 @@ module Make (T : TRAIL) : UNIFY = struct
               with | NotInvertible -> 
                 ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                     addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
-                  Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                  Printf.printf "Pruning failed -- NotInvertible:\n" ;
                   raise_ (Unify "NotInvertible"))
               end
           else            

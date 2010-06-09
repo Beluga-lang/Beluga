@@ -1,5 +1,3 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 (** A location, to be paired with a token during lexical analysis.
     Used for localized error reporting, etc. *)
 module Loc : Camlp4.Sig.Loc

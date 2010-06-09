@@ -1,5 +1,3 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
    modified: Joshua Dunfield
@@ -57,6 +55,7 @@ val ctxToSub' : mctx -> dctx -> dctx -> sub
 
 val mctxToMSub : mctx -> msub
 
+val isomorphic : mctx -> mctx -> bool
 
 (* lookupSchemaOpt cO psi_offset *)
 (* val lookupSchemaOpt : mctx -> int -> schema option *)

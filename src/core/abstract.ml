@@ -241,7 +241,7 @@ let rec checkOccurrence p = function
       | result -> result
 
 (* length cPsi = |cPsi| *)
-let length cPsi = 
+let length cPsi =
   let (_, n) = Context.dctxToHat cPsi in
     n
 

@@ -22,7 +22,7 @@ val hasCtxVar   : dctx -> bool         (* true if ctxVar dctx = Some _ *)
 
 val append      : 'a ctx -> 'a ctx -> 'a ctx
 val length      : 'a ctx -> int
-
+val dctxLength  : dctx -> int    (* number of concrete variables *)
 
 val getNameDCtx : dctx -> int -> Id.name
 val getNameMCtx : mctx -> int -> Id.name

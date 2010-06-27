@@ -65,11 +65,11 @@ module type UNIFY = sig
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
   val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
   val unifyDCtx    : mctx -> mctx -> dctx -> dctx -> unit
-
+  
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
   val unifyCSub    : csub  -> csub -> unit
-
+  
   val matchTerm    : mctx -> dctx -> nclo -> nclo -> unit 
   val matchTyp     : mctx -> dctx -> tclo -> tclo -> unit 
   val matchTypRec  : mctx -> dctx -> (typ_rec * sub) -> (typ_rec * sub) -> unit 
@@ -2419,9 +2419,25 @@ module Make (T : TRAIL) : UNIFY = struct
 
     and unifySub mflag cD0 cPsi s1 s2 = match (s1, s2) with 
 
-      | (Shift (psi, n), Shift (phi, k)) -> 
-          if  n = k && psi = phi then () 
-            else raise_ (Error "Substitutions not well-typed")
+      | (Shift (psi, n), Shift (phi, k)) ->
+          let rec compatible_cv = function
+            | (CtxName n1,  CtxName n2) -> n1 = n2
+            | (CtxOffset off1,  CtxOffset off2) -> off1 = off2
+            | (CInst ({contents=None}, _, _, _),  _) -> true
+            | (_,  CInst ({contents=None}, _, _, _)) -> true
+            | (CInst ({contents=Some (CtxVar ctx_var1)}, _, _, _),  ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
+            | (ctx_var1,  CInst ({contents=Some (CtxVar ctx_var2)}, _, _, _)) -> compatible_cv (ctx_var1, ctx_var2)
+            | (_, _) -> false
+          and compatible = function
+            | (NoCtxShift, NoCtxShift) -> true
+            | (CtxShift ctx_var1, CtxShift ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
+            | (NegCtxShift ctx_var1, NegCtxShift ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
+            | (_, _) -> false
+          in
+            if n = k && compatible (psi, phi) then
+              () 
+            else
+              raise_ (Error "Substitutions not well-typed")
 
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2)) 
         -> if s1 = s2 then 

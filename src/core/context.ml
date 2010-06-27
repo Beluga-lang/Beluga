@@ -155,6 +155,12 @@ let rec length cD = match cD with
   | Dec (cD', _) -> 1 + length cD'
 
 
+let rec dctxLength = function
+  | Null           -> 0
+  | CtxVar _       -> 0
+  | DDec (cPsi, _) -> 1 + dctxLength cPsi
+
+
 (* Lookup name in context
  * 
  * getNameDCtx cPsi k = x 

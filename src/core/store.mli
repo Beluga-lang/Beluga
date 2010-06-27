@@ -15,7 +15,8 @@ module Cid : sig
       var_generator      : (unit -> string) option;
       mvar_generator     : (unit -> string) option;
       mutable constructors : Id.cid_term list;
-      mutable subordinates : BitSet.t
+      mutable subordinates : BitSet.t;
+      mutable typesubordinated : BitSet.t
     }
     
     val entry_list : Id.cid_typ list ref
@@ -31,7 +32,10 @@ module Cid : sig
     val addConstructor : cid_typ -> cid_term -> LF.typ -> unit
     val clear             : unit -> unit
 
-    val is_subordinate_to  : cid_typ -> cid_typ -> bool
+    (* see subord.ml for an explanation of term-level subordination
+         and type-level subordination *)
+    val is_subordinate_to  : cid_typ -> cid_typ -> bool       (* term-level *)
+    val is_typesubordinate_to  : cid_typ -> cid_typ -> bool   (* type-level (dependent arguments) *)
   end
 
 

@@ -13,7 +13,7 @@ FN g =>
  fn e =>
   case e of  % e : exp (S .. x) [g, x:exp (T ..)]
 
-  | [g, xx: exp TTT ] zero           => [ ] zero
+  | [g, xx: exp (TTT ..) ] zero           => [ ] zero
 
   | [g, xx : exp _ ] #p ..    => [ ] zero
 

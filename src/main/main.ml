@@ -23,7 +23,7 @@ let usage () =
         ^ "    -coverage     turn off coverage checker (default, since coverage checker is incomplete)\n"
         ^ "    +coverage     turn on coverage checker (experimental)\n"
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
-        ^ "    +printSubord  print subordination relation (experimental)\n"
+        ^ "    +printSubord  print subordination relations (experimental)\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
   in
     fprintf stderr
@@ -173,7 +173,8 @@ let main () =
                       else
                         raise (Coverage.NoCover messageFn)
                 ) in
-                if !Subord.dump then Subord.dump_subord();
+                if !Subord.dump then (Subord.dump_subord();
+                                      Subord.dump_typesubord());
                 return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
@@ -249,7 +250,7 @@ let main () =
               abort_session ()
 
           | Coverage.NoCover strFn ->
-              printf "Error (Coverage): %sn" (strFn());
+              printf "Error (Coverage): %s" (strFn());
               abort_session ()
 
 

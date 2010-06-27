@@ -25,7 +25,7 @@ module Int = struct
     type kind =
       | Typ
       | PiKind of (typ_decl * depend) * kind
-
+    
     and typ_decl =                              (* LF Declarations                *)
       | TypDecl of name * typ                   (* D := x:A                       *)
       | TypDeclOpt of name                      (*   |  x:_                       *)

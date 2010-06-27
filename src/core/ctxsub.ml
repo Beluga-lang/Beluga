@@ -19,7 +19,7 @@ exception Violation of string
 
 module Comp = Syntax.Int.Comp
 
-
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [12])
 
 
   (* ctxToSub cPsi:
@@ -795,9 +795,11 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
       (* let u     = Whnf.etaExpandMV Null (tA, s) LF.id in *)
         (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-      let u     = Whnf.etaExpandMMV None cD cPhi (tA, Substitution.LF.comp s (ctxShift cPhi)) Substitution.LF.id in 
+      let composition = Substitution.LF.comp s (ctxShift cPhi) in
+      let u     = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in 
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
-        Dot (front, Substitution.LF.comp s Substitution.LF.shift)
+      let shifted = Substitution.LF.comp s Substitution.LF.shift in
+        Dot (front, shifted)
 
 
 let rec mctxToMSub cD = match cD with

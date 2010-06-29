@@ -18,6 +18,7 @@ schema depdep-ctx = depdep tt deptt + depdep ff depff;
 schema bool-ctx = bool;
 
 %{
+% these examples require context variable splitting, not yet implemented
 rec depsplit : {g:bool-ctx} bool[g]  ->  bool[ ] =
 fn d => case d of 
  | [h, x:bool] U .. => [] tt

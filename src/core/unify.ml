@@ -2310,19 +2310,19 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Proj (PVar (PInst (q, _, _, cnstr), s1), projIndex) as h1, BVar k2) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
           (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-           raise_ (Unify "Projection parameter variable =/= bound variable"))
+           raise_ (Unify "Projection of parameter variable =/= bound variable"))
 
     | (BVar k2, Proj (PVar (PInst (q, cPsi2, tA2, cnstr), s1), projIndex) as h1) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
            (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-            raise_ (Unify "Projection parameter variable =/= bound variable"))
+            raise_ (Unify "Projection of parameter variable =/= bound variable"))
 
     | (FVar _, Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Unify Free Variable with Projection on Parameter variable\n";
-         raise_ (Unify "Projection parameter variable =/= free variable"))
+        (print_string "[UnifyHead] Unify free variable with projection of parameter variable\n";
+         raise_ (Unify "Projection of parameter variable =/= free variable"))
 
     | (PVar _ , Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Projection on a Parameter variable\n";
+        (print_string "[UnifyHead] Projection of a parameter variable\n";
          raise_ (Unify "PVar =/= Proj PVar"))
 
     | ((PVar (Offset _k, _s1)) as sM1,   ((PVar (PInst (r, cPsi1, tP1, cnstrs), t)) as sM2)) ->

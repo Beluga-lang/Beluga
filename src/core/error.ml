@@ -11,6 +11,8 @@ type error =
   | UnboundCompName  of Id.name
   | UnknownCidTyp    of Id.cid_typ
 
+  | FrozenType of Id.cid_typ
+
   | CtxVarMismatch   of LF.mctx * LF.ctx_var * LF.schema
   | CtxVarDiffer     of LF.mctx * LF.ctx_var * LF.ctx_var
 
@@ -69,6 +71,9 @@ type error =
   | LeftoverUndef
   | SubIllTyped
   | LeftoverFVar
+
+exception Error of Syntax.Loc.t option * error
+exception Violation of string
 
 
 let information = ref []

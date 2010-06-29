@@ -948,18 +948,21 @@ module Comp = struct
                              "\n supposed to have type " ^ P.compTypToString cO cD (Whnf.cnormCTyp tau_t) ^ "\n"))
 
 *)
-    | (Case (_loc, _prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
+    | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
         let _  = LF.check cO cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
         let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
-          (* coverage check here too?  -jd *)
-          checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t)
+        let problem = Coverage.make loc prag cO cD branches cA in
+          (* Coverage.stage problem; *)
+          checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t);
+          Coverage.process problem
 
     | (Case (loc, prag, i, branches), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG i) with
           | (TypBox (_, tA, cPsi),  t') ->
               let problem = Coverage.make loc prag cO cD branches (tA, cPsi) in
-                Coverage.stage problem;
-                checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
+(*                Coverage.stage problem; *)
+                checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t);
+                Coverage.process problem
           | (tau',t') -> raise (Error (loc, E.CompMismatch(cO, cD, cG, i, E.Box, (tau', t'))))
         end
 

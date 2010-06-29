@@ -108,6 +108,7 @@ let rec thin (cO, cD) (tP, cPsi) =
   let rec inner n basis cPsi =
     let rec relevant = function
         | Atom(_, a, _spine) as tQ ->
+            Types.freeze a;
             if List.exists (includes a) basis then
               [tQ]
             else

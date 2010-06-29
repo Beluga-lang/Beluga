@@ -106,7 +106,7 @@ let is_cfg file_name =
 
 let rec accum_lines input =
   try
-    let res = input_line input in Printf.printf "%s\n" res; res :: accum_lines input
+    let res = input_line input in printf "%s\n" res; res :: accum_lines input
   with
     | End_of_file -> []
 
@@ -173,8 +173,8 @@ let main () =
                       else
                         raise (Coverage.NoCover messageFn)
                 ) in
-                if !Subord.dump then (Subord.dump_subord();
-                                      Subord.dump_typesubord());
+                if !Subord.dump then (Subord.dump_subord() (* ;
+                                      Subord.dump_typesubord() *) );
                 return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
@@ -185,7 +185,7 @@ let main () =
               print_newline ();
               abort_session ()
 
-          | Reconstruct.Error (locOpt, err) ->
+          | Error.Error (locOpt, err) ->
               printOptionalLocation locOpt;
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
@@ -195,7 +195,7 @@ let main () =
               print_newline ();
               abort_session ()
 
-          | Reconstruct.Violation str ->
+          | Error.Violation str ->
               Format.fprintf
                 Format.std_formatter
                 "Error (\"Violation\") (Reconstruction): %s\n@?"

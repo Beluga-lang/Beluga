@@ -13,6 +13,8 @@ type error =
   | UnknownCidTyp  of Id.cid_typ
 
   (* LF typechecking errors *)
+  | FrozenType of Id.cid_typ
+
   | CtxVarMismatch of LF.mctx          (* ???                                 *)
       * LF.ctx_var * LF.schema
 
@@ -112,6 +114,10 @@ type error =
   | SubIllTyped                        (* TODO                                *)
   | LeftoverFVar                       (* encountered FVar after 
                                           reconstruction                      *)
+
+
+exception Error of Syntax.Loc.t option * error
+exception Violation of string
 
 
 val getInformation : unit -> string

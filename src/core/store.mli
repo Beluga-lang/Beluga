@@ -9,16 +9,19 @@ module Cid : sig
   module Typ : sig
 
     type entry = private {
-      name               : name;
-      implicit_arguments : int;
-      kind               : LF.kind;
-      var_generator      : (unit -> string) option;
-      mvar_generator     : (unit -> string) option;
+      name                 : name;
+      implicit_arguments   : int;
+      kind                 : LF.kind;
+      var_generator        : (unit -> string) option;
+      mvar_generator       : (unit -> string) option;
+      mutable frozen       : bool;
       mutable constructors : Id.cid_term list;
       mutable subordinates : BitSet.t;
       mutable typesubordinated : BitSet.t
     }
     
+    val freeze : cid_typ -> unit
+
     val entry_list : Id.cid_typ list ref
     
     val mk_entry          : name -> LF.kind -> int -> entry
@@ -29,7 +32,7 @@ module Cid : sig
     val gen_mvar_name     : LF.typ -> (unit -> string) option 
     val get               : cid_typ -> entry
     val index_of_name     : name -> cid_typ
-    val addConstructor : cid_typ -> cid_term -> LF.typ -> unit
+    val addConstructor : Syntax.Loc.t option -> cid_typ -> cid_term -> LF.typ -> unit
     val clear             : unit -> unit
 
     (* see subord.ml for an explanation of term-level subordination
@@ -49,7 +52,7 @@ module Cid : sig
 
     val mk_entry      : name -> LF.typ -> int -> entry
     type t
-    val add           : cid_typ -> entry -> cid_term
+    val add           : Syntax.Loc.t option -> cid_typ -> entry -> cid_term
     val get           : cid_term -> entry
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term

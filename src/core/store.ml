@@ -8,11 +8,12 @@ module Cid = struct
   module Typ = struct
 
     type entry = {
-      name               : Id.name;
-      implicit_arguments : int;
-      kind               : Int.LF.kind;
-      var_generator      : (unit -> string) option;
-      mvar_generator     : (unit -> string) option;
+      name                 : Id.name;
+      implicit_arguments   : int;
+      kind                 : Int.LF.kind;
+      var_generator        : (unit -> string) option;
+      mvar_generator       : (unit -> string) option;
+      mutable frozen       : bool;
       mutable constructors : Id.cid_term list;
       mutable subordinates : BitSet.t;
       mutable typesubordinated : BitSet.t
@@ -27,6 +28,7 @@ module Cid = struct
         kind               = kind;
         var_generator      = None;
         mvar_generator     = None;
+        frozen             = false;
         constructors       = [];
         subordinates       = BitSet.empty ();
         typesubordinated   = BitSet.empty ()
@@ -46,6 +48,9 @@ module Cid = struct
     let index_of_name n = Hashtbl.find directory n
     
     let get = DynArray.get store
+
+    let freeze a =
+          (get a).frozen <- true
     
     let addNameConvention cid_name var_name_generator mvar_name_generator =
       let cid_tp = index_of_name cid_name in 
@@ -55,6 +60,7 @@ module Cid = struct
                        kind  = entry.kind ;
                        var_generator    = var_name_generator; 
                        mvar_generator   =  mvar_name_generator;
+                       frozen             = entry.frozen;
                        constructors     = entry.constructors;
                        subordinates     = entry.subordinates;
                        typesubordinated = entry.typesubordinated
@@ -107,7 +113,7 @@ module Cid = struct
     let rec addSubord a b =
       let a_e = get a in
       let b_e = get b in
-      let _ = print_string ("addSubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in
+(*      let _ = print_string ("addSubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in *)
         if BitSet.is_set b_e.subordinates a then
           ()
         else
@@ -116,13 +122,13 @@ module Cid = struct
               If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
            subord_iter (fun aa -> addSubord aa b) a_e.subordinates;
           );
-      subord_iter (fun bb -> addTypesubord a bb) b_e.typesubordinated
+(*        subord_iter (fun bb -> addTypesubord a bb) b_e.typesubordinated    *)
 
     (* add the type-level subordination:  b-types can contain a-terms *)
     and addTypesubord a b =
       let a_e = get a in
       let b_e = get b in
-      let _ = print_string ("addTypesubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in
+(*      let _ = print_string ("addTypesubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in *)
         if BitSet.is_set a_e.typesubordinated b then
           ()
         else
@@ -170,11 +176,14 @@ module Cid = struct
           inspect (acc @ (inspect [] tA1)) tA2
     (*  | Sigma _ -> *)
 
-    let addConstructor typ c tA =
-      let e = get typ in
-      let _ = e.constructors <- c :: e.constructors in
-      let _ = inspect [] tA in
-        ()
+    let addConstructor loc typ c tA =
+      let entry = get typ in
+        if entry.frozen then
+          raise (Error.Error (loc, Error.FrozenType typ))
+        else
+          let _ = entry.constructors <- c :: entry.constructors in
+          let _ = inspect [] tA in
+            ()
     
     let clear () =
       entry_list := [];
@@ -218,11 +227,11 @@ module Cid = struct
 
     let index_of_name name = Hashtbl.find directory name
 
-    let add e_typ entry =
+    let add loc e_typ entry =
       let cid_tm = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tm;
-        Typ.addConstructor e_typ cid_tm entry.typ;
+        Typ.addConstructor loc e_typ cid_tm entry.typ;
         cid_tm
 
     let get = DynArray.get store

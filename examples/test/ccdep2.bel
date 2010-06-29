@@ -47,8 +47,6 @@ FN g => fn d => case d of
  | [g, xx:dep ff tt] UU2 .. xx => [] ff
  | [g, xx:dep tt tt] UU3 .. xx => [] ff
  | [g, xx:dep ff ff] UU4 .. xx => [] ff
-% | [g, xx:dep WW ff] UU4 .. xx => [] ff
-% | [g, xx:dep ff ZZ] UU4 .. xx => [] ff
 ;
 
 rec depsplitWrong3 : {g:(dep-ctx)*} (bool)[g, x : dep T1 T2]  ->  bool[ ] =

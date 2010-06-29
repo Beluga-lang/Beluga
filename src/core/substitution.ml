@@ -358,12 +358,10 @@ module LF = struct
       invert' 0 s
 
 
-  (* strengthen t Psi = Psi'
+  (* strengthen s Psi = Psi'
    *
-   * Invariant:
-   *
-   * If   D ; Psi'' |- t : Psi  (* and t is a pattern sub *)
-   * then D ; Psi'  |- t : Psi  and cPsi' subcontext of cPsi
+   * If   D ; Psi'' |- s : Psi  (* and s is a pattern sub *)
+   * then D ; Psi'  |- s : Psi  and Psi' subcontext of Psi
    *)
   let rec strengthen s cPsi = match (s, cPsi) with
     | (Shift (NoCtxShift, _ (* 0 *)), Null) ->

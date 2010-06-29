@@ -1464,8 +1464,8 @@ module Error = struct
       | CtxPi -> "context abstraction"
       | PiBox -> "dependent function type"
       | Box   -> "contextual type"
-
-    (* Format Based Pretty Printers for Error messages *)
+    
+    (* Format-based printing of error messages *)
     let fmt_ppr ppf = function
       | UnboundName n ->
           fprintf ppf "unbound data-level variable (ordinary or meta-variable) or constructor: %s" (R.render_name n)
@@ -1481,6 +1481,9 @@ module Error = struct
 
       | UnknownCidTyp n ->
           fprintf ppf "unbound type constructor: %s" (R.render_cid_typ n)
+
+      | FrozenType n ->
+          fprintf ppf "type %s was frozen by a previous case analysis; can't declare a new constructor here" (R.render_cid_typ n)
 
       | CtxVarMismatch (cO, var, expected) ->
           fprintf ppf "Context variable %a doesn't check against schema %a"

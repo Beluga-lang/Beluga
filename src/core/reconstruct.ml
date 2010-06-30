@@ -571,6 +571,10 @@ and index_head cvars bvars fvars = function
             (Apx.LF.FMVar (u, s') , FMV u :: fvars')
         end
 
+  | Ext.LF.SVar (loc, n, _sigma) -> 
+      let _        = dprint (fun () -> "Indexing head : SVar " ^ n.string_of_name) in 
+        raise (Error (Some loc, UnboundName n))
+
 and index_spine cvars bvars fvars = function
   | Ext.LF.Nil ->
       (Apx.LF.Nil , fvars)
@@ -949,6 +953,7 @@ and index_branch ctx_vars cvars vars fvars branch = match branch with
                         with Not_found ->
                           let _ = dprint (fun () -> "SVar Not_found " ^ R.render_name s) in
                           let (sigma', fvars')     = index_sub cvars bvars fvars sigma in
+                          let _ = dprint (fun () -> "Created FSVar " ^ R.render_name s) in
                             (Apx.LF.FSVar (s, sigma') , FSV s :: fvars' )
                         end in 
 

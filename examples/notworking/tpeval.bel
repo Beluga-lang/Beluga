@@ -16,12 +16,21 @@ z    : exp nat.
 suc  : exp nat -> exp nat.
 eq   : exp nat -> exp nat -> exp bool.
 
-if   : {T:tp} exp bool -> exp T -> exp T -> exp T.
+iff  : {T:tp} exp bool -> exp T -> exp T -> exp T.
 letv : {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
-% schema W = some [T:tp] block exp t;
+schema ctx = some [t:tp] exp t;
 
-% rec eval : {g:(W)*} {T::tp[]} (exp T[.])[g] -> [g][] -> (exp T[.])[] =
+ rec eval : {g:ctx} (exp bool)[g] -> g[ ] -> (exp bool)[ ] =
+fn e => fn env => [ ] tt ;
+
+ rec eval : {g:ctx} (exp bool)[g] -> g[ ] -> (exp bool)[ ] =
+fn e => fn env => 
+ let [g] E .. = e in 
+ let [ ] #S[..] = env in [ ] E #S[..]
+;
+    
+
 % FN g => fn e => fn r => let sbox S[.] = r in
 %     case e of 
 %         box(g. z) : (exp nat)[g] => box( . z)

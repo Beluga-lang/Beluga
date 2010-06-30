@@ -131,6 +131,8 @@ fn d => fn f => case d of
    [ ] e_ref  
 
 | [g] #q.2 .. =>           % d : type_of #q.1 T
-  let [g] #r.2 .. = f  in  % f : type_of #q.1 T'
+  let [g] #r.2 .. = f  in  % f : type_of #r.1 T'
     [ ] e_ref                     
 ;
+% #q: block x:exp. type_of x T         #q.1 = #r.1  #
+% #r: block x:exp. type_of x T'

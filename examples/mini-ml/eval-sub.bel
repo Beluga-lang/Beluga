@@ -6,7 +6,6 @@
 
 exp: type.
 
-
 z   : exp.
 suc : exp -> exp.
 app : exp -> exp -> exp.
@@ -16,13 +15,9 @@ letv: exp -> (exp -> exp) -> exp.
 fix : (exp -> exp) -> exp. 
 
 
-
 % Call-By-Name evaluation 
 rec eval : exp[ ] -> exp[ ] = 
-fn e => 
-
-(case e of
-
+fn e =>  case e of
 | [ ] z => [ ] z
 | [ ] suc U  =>
   let [ ] V = eval ([ ] U) in 
@@ -34,48 +29,23 @@ fn e =>
         
 | [ ] lam (\x. (U x)) =>  e
 
+| [ ] letv W (\x. U x ) => 
+  let [ ] V1 = eval ([ ] W) in 
+    eval ([ ] U V1) 
+
 | [ ] letn W (\x. (U x))  => 
-       eval ([ ] (U W))
+   eval ([ ] (U W))
 
 | [ ] fix (\x. (U x))  =>  
-
-       eval ([ ] (U (fix (\ x. (U x)))))
-
-);
+   eval ([ ] (U (fix (\ x. (U x)))))
+;
 
 
-% Call-By-Value 
-rec eval' : exp[ ] -> exp[ ] = 
-fn e => 
-
-(case e of
-|  [ ] z      => [ ] z
-
-|  [ ] suc U  =>
-   let [ ] V  = eval' ([ ] U) in 
-     [ ] suc V
-
-| [ ] app U W => 
-  let [ ] lam (\x. (V x))  = eval' ([ ] U) in 
-  let [ ] V2               = eval' ([ ] W) in 
-    eval' ([ ] (V V2))
-
-        
- | [ ] lam (\ x. U x) =>  e
+let x = eval ([ ] z) ;
 
 
-| [ ] letv W (\x. (U x)) => 
-  let [ ] V = eval' ([ ] W) in 
-    eval' ([ ] (U V))
+let y = eval ([ ] suc z) ;
 
-);
+let x = eval ([ ] app (lam \x. suc x) (suc z)) ;
 
-
-let x = eval' ([ ] z) ;
-
-
-let y = eval' ([ ] suc z) ;
-
-let x = eval' ([ ] app (lam \x. suc x) (suc z)) ;
-
-let x = eval' ([ ] letv (app (lam \x. suc x) (suc z)) (\y. suc y)) ;
+let x = eval ([ ] letv (app (lam \x. suc x) (suc z)) (\y. suc y)) ;

@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
 
@@ -198,7 +198,7 @@ and lowerMVar1 u sA = match (u, sA) with
  *           if n = 0, u = u' and no effect occurs.
  *
  * FIXME MVar spine is not elaborated consistently with lowering
- *   –- Tue Dec 16 00:19:06 EST 2008
+ *   -- Tue Dec 16 00:19:06 EST 2008
  *)
 and lowerMVar = function
   | Inst (_r, _cPsi, tA, { contents = [] }) as u ->
@@ -996,7 +996,7 @@ and cnorm (tM, t) = match tM with
     | Proj(BVar i, k) -> Proj (BVar i, k)
     | Proj(PVar (p,r), k) -> 
         begin match cnormHead (PVar (p,r), t)  with
-          | Proj _ -> raise (Violation "Nested projections – this is ill-typed ")
+          | Proj _ -> raise (Violation "Nested projections -- this is ill-typed")
           | h      -> Proj (h, k)
         end
 
@@ -1850,7 +1850,7 @@ let rec mctxMDec cD' k =
     | (Dec (cD, _), k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Violation ("Meta-variable out of bounds – looking for " ^ (string_of_int k) ^ "in context "))
+    | (_ , _ ) -> raise (Violation ("Meta-variable out of bounds -- looking for " ^ string_of_int k ^ "in context"))
   in 
     lookup cD' k
 
@@ -1882,12 +1882,12 @@ let rec mctxSDec cD' k =
       -> (u,mshiftDCtx cPhi k, mshiftDCtx cPsi k)
         
     | (Dec (_cD, PDecl _), 1)
-      -> raise (Violation "Expected substitution-variable; Found parameter variable")
+      -> raise (Violation "Expected substitution variable; Found parameter variable")
       
     | (Dec (cD, _), k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Violation ("Substitution-variable out of bounds – looking for " ^ (string_of_int k) ^ "in context "))
+    | (_ , _ ) -> raise (Violation ("Substitution variable out of bounds -- looking for " ^ string_of_int k ^ "in context "))
   in 
     lookup cD' k
 
@@ -2152,7 +2152,7 @@ let rec mctxPVarPos cD p =
     (* cD' |- t <= cD    and   FMV(e) = cD' while 
        cD' |- theta' <= cD0
        cD0' |- theta <= cD0 
-     * Hence, no substitution into e at this point – thechnicallly, we
+     * Hence, no substitution into e at this point -- technically, we
      * need to unify theta' and theta and then create a new cD'' under which the
      * branch makes sense
      *)

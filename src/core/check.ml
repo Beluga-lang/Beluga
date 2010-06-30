@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
    @author Brigitte Pientka
@@ -766,7 +766,7 @@ module Comp = struct
      *   a context Omega
      *
      * - Applying substitution for context variables; does it make sense to
-     *   deal with it lazily? – It seems complicated to handle lazy context substitutions
+     *   deal with it lazily?   It seems complicated to handle lazy context substitutions
      *   AND lazy msubs.
      *
      *  If we keep them in Delta, we need to rewrite mctxToMSub for example;
@@ -948,18 +948,21 @@ module Comp = struct
                              "\n supposed to have type " ^ P.compTypToString cO cD (Whnf.cnormCTyp tau_t) ^ "\n"))
 
 *)
-    | (Case (_loc, _prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
+    | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
         let _  = LF.check cO cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
         let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
-          (* coverage check here too?  -jd *)
-          checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t)
+        let problem = Coverage.make loc prag cO cD branches cA in
+          (* Coverage.stage problem; *)
+          checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t);
+          Coverage.process problem
 
     | (Case (loc, prag, i, branches), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cO cD cG i) with
           | (TypBox (_, tA, cPsi),  t') ->
               let problem = Coverage.make loc prag cO cD branches (tA, cPsi) in
-                Coverage.stage problem;
-                checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t)
+(*                Coverage.stage problem; *)
+                checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t);
+                Coverage.process problem
           | (tau',t') -> raise (Error (loc, E.CompMismatch(cO, cD, cG, i, E.Box, (tau', t'))))
         end
 
@@ -1061,9 +1064,9 @@ module Comp = struct
           (* Apply to the type tP1[Psi1] the refinement substitution t1' *)
           (* cD1 ; cPsi1 |- tM1 <= tA1 
            * cD1'  |- t1' <= cD, cD1  and 
-           * cD, cD1 |- MShift (n+n1) . u_n . ... . u₁  <= cD1
-           *       t1 = MShift (n+n1) . u_n . ... . u₁  
-           *) 
+           * cD, cD1 |- MShift (n+n1) . u_n . ... . u_1  <= cD1
+           *       t1 = MShift (n+n1) . u_n . ... . u_1  
+           *)
           let n1  = length cD1 in 
           let n   = length cD  in 
           let t1  =  Whnf.mvar_dot (I.MShift n) cD1 in   

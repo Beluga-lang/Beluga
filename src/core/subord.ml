@@ -1,10 +1,10 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
    Printing the subordination relation.
    Computing the relation is done in store.ml, as constructors are added.
-   Also has `thin', which uses subordination to remove irrelevant parts of
-    a context.
+   Also has `thin', which uses subordination to generate a substitution that
+    doesn't use irrelevant parts of a context.
    
    @author Joshua Dunfield
 *)
@@ -35,22 +35,62 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [28])
  *    "h-terms can contain g-terms"
  *    "h is subordinate to g"
  *    "g subordinates h"
+ *
+ * In addition, we define---separately from the "h-terms can contain g-terms"
+ * relation---a _type subordination_ relation that says whether a type can contain
+ * terms of another type.  For example, in the usual dependent indexing of lists by
+ * their length, we have
+ *
+ *     list : nat -> type.
+ *
+ * Therefore "list-types can contain nat-terms", or equivalently,
+ *
+ *   "list is type-subordinate to nat"
+ *   "nat type-subordinates list"
+ *
+ * Note that while term-level subordination is transitive---if terms of type k can
+ * include terms of type h, and terms of type h can include terms of type g, then
+ * terms of type k can include terms of type g---type-level subordination is *not*
+ * a transitive relation.
+ *
+ *     list : nat -> type.
+ *     t : list (suc (suc zero)) -> type.
+ *
+ * t is type-subordinate to list, and list is type-subordinate to nat, but t is *not*
+ * type-subordinate to nat, because the dependent type arguments to t don't
+ * include nat-terms.
+ *
+ * -jd 2010-06
  *)
 
 let dump_subord () =
-  Printf.printf "## Dumping subordination relation (over %d types)##\n"
+  Printf.printf "## Dumping subordination relation (over %d types) ##\n"
                 (List.length !Types.entry_list);
   let typeList = List.rev (!Types.entry_list) in
   let dump_entry a b =
-    if Types.is_subordinate_to a b then
-      print_string (R.render_cid_typ b ^ " ")
-    else ()
+    if Types.is_subordinate_to a b then print_string (R.render_cid_typ b ^ " ")
+
   in let dump_line a =
       print_string ("--   " ^ R.render_cid_typ a ^ "  |>  ");
       List.iter (dump_entry a) typeList;
       print_string ("\n")
   in
     List.iter (fun a -> dump_line a) typeList
+
+let dump_typesubord () =
+  Printf.printf "## Dumping type-level subordination relation (over %d types) ##\n"
+                (List.length !Types.entry_list);
+  let typeList = List.rev (!Types.entry_list) in
+  let dump_entry a b =
+    if Types.is_typesubordinate_to a b then print_string (R.render_cid_typ b ^ " ")
+
+  in let dump_line a =
+      print_string ("--[type]   " ^ R.render_cid_typ a ^ "  |>  ");
+      List.iter (dump_entry a) typeList;
+      print_string ("\n")
+  in
+    List.iter (fun a -> dump_line a) typeList
+
 
 
 let null = function [] -> true
@@ -68,6 +108,7 @@ let rec thin (cO, cD) (tP, cPsi) =
   let rec inner n basis cPsi =
     let rec relevant = function
         | Atom(_, a, _spine) as tQ ->
+            Types.freeze a;
             if List.exists (includes a) basis then
               [tQ]
             else
@@ -103,6 +144,5 @@ let rec thin (cO, cD) (tP, cPsi) =
               | [] -> inner n basis cPsi
               | nonempty -> Dot(Head (BVar n), inner n (nonempty @ basis) cPsi)
             end
-
   in
     inner 0 [tP] cPsi

@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (** Contexts
 
@@ -153,6 +153,12 @@ let rec append cD1 cD2 = match cD2 with
 let rec length cD = match cD with
   | Empty        -> 0
   | Dec (cD', _) -> 1 + length cD'
+
+
+let rec dctxLength = function
+  | Null           -> 0
+  | CtxVar _       -> 0
+  | DDec (cPsi, _) -> 1 + dctxLength cPsi
 
 
 (* Lookup name in context

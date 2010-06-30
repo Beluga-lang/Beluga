@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (** Substitutions
 
@@ -80,8 +80,8 @@ module LF = struct
         Shift (NoCtxShift, n + m)
 
     | (Shift (CtxShift psi, n), Shift (NegCtxShift psi', k)) ->
-        (* psi, Psi |- s1 : .   and     Psi,Psi' |- s2 : psi, Psi
-         * therefore  Psi,Psi' |- s : .
+        (* Psi{n},Psi'{k} |- s2 : psi, Psi{n}    and   psi, Psi{n} |- s1 : .
+         * therefore  Psi{n},Psi'{k} |- s : .
          *)
         (* if psi = psi' then   *)
           Shift (NoCtxShift, n+k)
@@ -148,16 +148,30 @@ module LF = struct
 (*    | (Shift (CtxShift _, _ ), _s2) -> 
        raise (Error "Composition not defined? - Shift CtxShift")
 *)
-    | (Shift (NoCtxShift , k ), Shift (NegCtxShift _, _ )) -> 
-        raise (Error ("Composition not defined? NoCtxShift " ^ string_of_int k ^ " o Shift NegCtx?"))
 
-
-    | (Shift (NoCtxShift , k ), Shift (CtxShift _, _ )) -> 
-    (*  psi, x:A |- s1 <= psi  
-                 |-    <= psi, x:A
+    | (Shift (NoCtxShift, k1), Shift (NegCtxShift psi2, k2)) -> 
+    (*
+     * If      psi, k1, k2 |- s2 : k1              k1 |-  s1 : .
+     * then s'  =  s1 o s2
+     * and   psi, k1, k2  |- s1 o s2 : .
      *)
-        raise (Error ("Composition not defined? NoCtxShift " ^ string_of_int k ^ " o Shift CtxShift?"))
+        Shift (NegCtxShift psi2, k1 + k2)     (* ADDED -jd 2010-06-25 *)
+        (*
+        raise (Error ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o Shift NegCtx?"))
+        *)
 
+
+    | (Shift (NoCtxShift, k1 ), Shift (CtxShift psi2, k2 )) -> 
+    (*  psi, x:A |- s1 <= psi
+                 |-    <= psi, x:A
+     * If      k1, k2     |- s2 : psi, k1           psi,  k1  |- s1 : psi
+     * then s'  =  s1 o s2
+     * and   k1, k2     |- s1 o s2 : psi
+     *)
+        Shift (CtxShift psi2, k1 + k2)           (* ADDED -jd 2010-06-24 *)
+        (*
+        raise (Error ("Composition not defined? NoCtxShift " ^ string_of_int k ^ " o Shift CtxShift?"))
+        *)
 
 
     | (_s1, _s2) -> 
@@ -344,12 +358,10 @@ module LF = struct
       invert' 0 s
 
 
-  (* strengthen t Psi = Psi'
+  (* strengthen s Psi = Psi'
    *
-   * Invariant:
-   *
-   * If   D ; Psi'' |- t : Psi  (* and t is a pattern sub *)
-   * then D ; Psi'  |- t : Psi  and cPsi' subcontext of cPsi
+   * If   D ; Psi'' |- s : Psi  (* and s is a pattern sub *)
+   * then D ; Psi'  |- s : Psi  and Psi' subcontext of Psi
    *)
   let rec strengthen s cPsi = match (s, cPsi) with
     | (Shift (NoCtxShift, _ (* 0 *)), Null) ->

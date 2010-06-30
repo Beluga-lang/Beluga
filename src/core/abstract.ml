@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
    @author Renaud Germain
@@ -24,7 +24,7 @@ exception NotImplemented
 exception Error of string
 
 let leftoverMeta2 =
-    "Leftover uninstantiated meta²-variable during reconstruction;\n"
+    "Leftover uninstantiated meta^2-variable during reconstruction;\n"
   ^ "the user needs to supply more information, since the type of\n"
   ^ "a given expression is not uniquely determined."
 
@@ -241,7 +241,7 @@ let rec checkOccurrence p = function
       | result -> result
 
 (* length cPsi = |cPsi| *)
-let length cPsi = 
+let length cPsi =
   let (_, n) = Context.dctxToHat cPsi in
     n
 
@@ -466,7 +466,7 @@ and cnstr_typ_rec (t_rec, s) = match t_rec with
 let rec index_of cQ n = 
   match (cQ, n) with
   | (I.Empty, _) ->
-      raise (Error "index_of for a free variable (FV, FMV, FPV, MV,  does not exist – should be impossible\n")
+      raise (Error "index_of for a free variable (FV, FMV, FPV, MV) does not exist -- should be impossible")
             (* impossible due to invariant on collect *)
 
   | (I.Dec (cQ', MMV(Impure, _ )), _ ) -> 
@@ -491,7 +491,7 @@ let rec index_of cQ n =
       begin match eqMMVar u1 (MMV (Pure, u2)) with
         | Yes -> 1 
         | No  -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error "Cyclic dependency among meta²-variables and free variables")
+        | Cycle -> raise (Error "Cyclic dependency among meta^2-variables and free variables")
       end
 
   | (I.Dec (cQ', MV (Pure, u1)), MV (Pure, u2)) ->
@@ -590,7 +590,7 @@ let rec ctxToMCtx cQ  = match cQ with
   | I.Empty ->
       I.Empty
 
-  (* The case where cD is not empty, and an meta²-variable is uninstantiated
+  (* The case where cD is not empty and a meta^2-variable is uninstantiated
      should never happen. -bp *)
   | I.Dec (cQ', MMV (Pure, I.MMVar (I.MInst (_, I.Empty, cPsi, tA, _), _s))) ->
       let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in 
@@ -820,7 +820,7 @@ and collectHead cQ phat ((head, _subst) as sH) =
                 let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
                 let v = I.MMVar (I.MInst (q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in 
                   (I.Dec (cQ'', MMV (Pure, v)) , v)
-            | Cycle -> raise (Error "Cyclic dependency among meta²-variables")
+            | Cycle -> raise (Error "Cyclic dependency among meta^2-variables")
           end 
       else 
         raise (Error "Leftover constraints during abstraction")
@@ -1497,7 +1497,8 @@ let rec collectCompTyp cQ tau = match tau with
         (cQ3 , Comp.TypPiBox ((I.SDecl(u, cPhi', cPsi'), dep ), tau'))
 
   | Comp.TypBool  -> (cQ, tau)
-  | Comp.TypClo _ -> (dprint (fun () -> " collectCTyp – TypClo missing ") ; raise NotImplemented)
+  | Comp.TypClo _ -> (dprint (fun () -> "collectCTyp -- TypClo missing");
+                      raise NotImplemented)
 
 let rec collectExp cQ e = match e with 
   | Comp.Syn (loc, i) -> 

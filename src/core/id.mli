@@ -1,7 +1,7 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (** A `name' represents the original named representation of a
-    variable.  These are used primarily during parsing and pretty
+    variable.  These are primarily used in parsing and pretty-
     printing.  Names should never be constructed directly.
     See `mk_name'. *)
 type name     = private {

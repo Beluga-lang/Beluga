@@ -50,7 +50,6 @@ src/core:
     check.mli           
     common.ml
     common.mli
-    config.ml           State configuration for Core
     context.ml          Contexts 
     context.mli         
     ctxsub.ml           Context substitutions

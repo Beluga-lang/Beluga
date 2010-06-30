@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
    @author Brigitte Pientka
@@ -65,11 +65,11 @@ module type UNIFY = sig
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
   val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
   val unifyDCtx    : mctx -> mctx -> dctx -> dctx -> unit
-
+  
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
   val unifyCSub    : csub  -> csub -> unit
-
+  
   val matchTerm    : mctx -> dctx -> nclo -> nclo -> unit 
   val matchTyp     : mctx -> dctx -> tclo -> tclo -> unit 
   val matchTypRec  : mctx -> dctx -> (typ_rec * sub) -> (typ_rec * sub) -> unit 
@@ -1874,7 +1874,7 @@ module Make (T : TRAIL) : UNIFY = struct
                       *)
                     let _ = instantiateMMVar (r1, Root(None, MMVar(w, (mt', s')), Nil), !cnstrs1) in 
 
-                     dprint (fun () -> "Instantiated with new meta²-variable " ^ 
+                     dprint (fun () -> "Instantiated with new meta^2-variable " ^ 
                                         P.normalToString Empty cD0 cPsi sM1)
                       
 
@@ -1950,23 +1950,23 @@ module Make (T : TRAIL) : UNIFY = struct
 
                     let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (mtt2, ss2) (MVarRef r2)) in
                       (instantiateMMVar (r2, tM1', !cnstrs2) ;                    
-                       dprint (fun () -> "Instantiated with new meta²-variable " ^ 
+                       dprint (fun () -> "Instantiated with new meta^2-variable " ^ 
                                         P.normalToString Empty cD0 cPsi sM2) )
                   with
                     | NotInvertible ->
                         ( (* Printf.printf "Added constraints: NotInvertible: \n" 
                         ; addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))*)
-                    Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                    Printf.printf "Pruning failed -- NotInvertible:\n" ;
                     raise_ (Unify "NotInvertible")
                              )
                   end
 (*              | ( _ , false , _ , _ ) -> 
-                  (* neither t1' is not pattern substitutions – add projPat case *)
+                  (* neither t1' is not pattern substitutions -- add projPat case *)
                   let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
                    addConstraint (cnstrs1, cnstr)
 
               | ( _ , _ , _ , false ) -> 
-                  (* neither t2' is not pattern substitutions - add projPat case *)
+                  (* neither t2' is not pattern substitutions -- add projPat case *)
                   let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in                    
                    addConstraint (cnstrs1, cnstr)
 *)
@@ -2040,20 +2040,20 @@ module Make (T : TRAIL) : UNIFY = struct
               let ss  = invert t' in
               let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in 
               let _ = dprint (fun () -> 
-                                "UNIFY(2): MMVar-Normal \n" ^ 
+                                "UNIFY(2): MMVar-Normal\n" ^ 
                                   P.mctxToString Empty cD0 ^ "\n" ^ 
                                   P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
                                   P.normalToString Empty cD0 cPsi sM2 ^ "\n") in  
               let phat = Context.dctxToHat cPsi in 
               let sM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (mtt, ss) (MMVarRef r)) in
                 (instantiateMMVar (r, sM2', !cnstrs) ;
-                 dprint (fun () -> "Instantiated with new meta²-variable " ^ 
+                 dprint (fun () -> "Instantiated with new meta^2-variable " ^ 
                                         P.normalToString Empty cD0 cPsi sM1))
             with
               | NotInvertible ->
                   ( (* Printf.printf "Added constraints: NotInvertible: \n"
                        ; addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
-                    Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                    Printf.printf "Pruning failed -- NotInvertible:\n" ;
                     raise_ (Unify "NotInvertible"))
             end 
           else 
@@ -2071,7 +2071,7 @@ module Make (T : TRAIL) : UNIFY = struct
               with | NotInvertible -> 
                 ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                     addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
-                  Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                  Printf.printf "Pruning failed -- NotInvertible:\n" ;
                   raise_ (Unify "NotInvertible"))
               end
           else            
@@ -2310,19 +2310,19 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Proj (PVar (PInst (q, _, _, cnstr), s1), projIndex) as h1, BVar k2) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
           (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-           raise_ (Unify "Projection parameter variable =/= bound variable"))
+           raise_ (Unify "Projection of parameter variable =/= bound variable"))
 
     | (BVar k2, Proj (PVar (PInst (q, cPsi2, tA2, cnstr), s1), projIndex) as h1) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
            (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-            raise_ (Unify "Projection parameter variable =/= bound variable"))
+            raise_ (Unify "Projection of parameter variable =/= bound variable"))
 
     | (FVar _, Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Unify Free Variable with Projection on Parameter variable\n";
-         raise_ (Unify "Projection parameter variable =/= free variable"))
+        (print_string "[UnifyHead] Unify free variable with projection of parameter variable\n";
+         raise_ (Unify "Projection of parameter variable =/= free variable"))
 
     | (PVar _ , Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Projection on a Parameter variable\n";
+        (print_string "[UnifyHead] Projection of a parameter variable\n";
          raise_ (Unify "PVar =/= Proj PVar"))
 
     | ((PVar (Offset _k, _s1)) as sM1,   ((PVar (PInst (r, cPsi1, tP1, cnstrs), t)) as sM2)) ->
@@ -2419,9 +2419,25 @@ module Make (T : TRAIL) : UNIFY = struct
 
     and unifySub mflag cD0 cPsi s1 s2 = match (s1, s2) with 
 
-      | (Shift (psi, n), Shift (phi, k)) -> 
-          if  n = k && psi = phi then () 
-            else raise_ (Error "Substitutions not well-typed")
+      | (Shift (psi, n), Shift (phi, k)) ->
+          let rec compatible_cv = function
+            | (CtxName n1,  CtxName n2) -> n1 = n2
+            | (CtxOffset off1,  CtxOffset off2) -> off1 = off2
+            | (CInst ({contents=None}, _, _, _),  _) -> true
+            | (_,  CInst ({contents=None}, _, _, _)) -> true
+            | (CInst ({contents=Some (CtxVar ctx_var1)}, _, _, _),  ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
+            | (ctx_var1,  CInst ({contents=Some (CtxVar ctx_var2)}, _, _, _)) -> compatible_cv (ctx_var1, ctx_var2)
+            | (_, _) -> false
+          and compatible = function
+            | (NoCtxShift, NoCtxShift) -> true
+            | (CtxShift ctx_var1, CtxShift ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
+            | (NegCtxShift ctx_var1, NegCtxShift ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
+            | (_, _) -> false
+          in
+            if n = k && compatible (psi, phi) then
+              () 
+            else
+              raise_ (Error "Substitutions not well-typed")
 
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2)) 
         -> if s1 = s2 then 

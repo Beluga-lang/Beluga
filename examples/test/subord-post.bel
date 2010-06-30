@@ -21,9 +21,9 @@ FN g => fn e =>
   | [g, xx : bool]  #p .. xx   => [] z
 ;
 
-after : term -> bool -> term.
+after : term -> bool -> bool.
 
-rec fff : {g:(boolCtx)*} bool[g, xx : bool] -> term[] =
+rec fff2 : {g:(boolCtx)*} bool[g, xx : bool] -> term[] =
 FN g => fn e =>
   case e of
   | [g, xx : bool]  eq (U .. xx) (V .. xx)     => [] z

@@ -30,17 +30,21 @@ FN g => fn e =>
   | [g,x:term]  #p .. => [g,x:term] #p ..
 );
 
+%{
+% uses context matching, temporarily disabled   -jd 2010-06-26
 rec copyXGood : {g:(termCtx)*} term[g] -> term[g] =
+FN g => fn e =>
+ (case e of
+  | [g,x:term]  z     => [g,x:term] z
+  | [g,x:term]  #p .. x => [g,x:term] #p .. x
+);
+
+% uses context matching, temporarily disabled   -jd 2010-06-26
+rec copyXGood2 : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>
  (case e of
   | [g,x:term]  z     => [g,x:term] z
   | [g,x:term]  x     => [g,x:term] x
   | [g,x:term]  #p .. => [g,x:term] #p ..
 );
-
-rec copyXGood2 : {g:(termCtx)*} term[g] -> term[g] =
-FN g => fn e =>
- (case e of
-  | [g,x:term]  z     => [g,x:term] z
-  | [g,x:term]  #p .. x => [g,x:term] #p .. x
-);
+}%

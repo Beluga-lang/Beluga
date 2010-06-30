@@ -30,7 +30,7 @@ schema eqCtx = block x:exp. eq x x;
 
 rec ref : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
  FN g => mlam U =>
-   case [g] (U ..) of
+   case [g] U .. of
   | [g] #p.1 .. => [g] #p.2 ..
 
   | [g] lam \x. L .. x =>
@@ -38,7 +38,8 @@ rec ref : {g:(eqCtx)*} {U::exp[g]} (eq (U ..) (U ..))[g] =
           [g,e:block yyy:exp. eq yyy yyy] V .. e = ref [g, e:block q:exp. eq q q] <g, e. L .. e.1>
       in
         [g] eq_lam \x. \w. (V .. <x, w>)  % : eq (L .. x) (L .. x)
-   | [g] app (A1 ..) (A2 ..)  : exp[g]=>
+
+   | [g] app (A1 ..) (A2 ..) : exp[g]=>
        let [g] EQ1 .. = ref [g] <g . A1 .. > in
        let [g] EQ2 .. = ref [g] <g . A2 .. > in
           [g] eq_app (EQ1 ..) (EQ2 ..)
@@ -67,8 +68,8 @@ rec trans: {g:(eqCtx)*}
          ([g, b] D2 .. b.1 b.2)
     in
       [g] eq_lam \x. \u. E .. <x, u>
-       
-     | [g] eq_app (D1 ..) (D2 ..) =>
+
+| [g] eq_app (D1 ..) (D2 ..) =>
        (case e2 of
          [g] eq_app (F1 ..) (F2 ..) =>
          let [g] E1 .. = trans [g]  ([g] D1 ..)  ([g] F1 ..)
@@ -79,9 +80,13 @@ rec trans: {g:(eqCtx)*}
        )
 ;
 
+
+
+%{
 equal: exp -> exp -> type.
+
 e_l: ({x:exp} eq x x -> eq (T x) (T' x)) -> eq (lam (\x. T x)) (lam (\x. T' x)).
 e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
 e_r: eq T T.
 e_t: eq T' S -> eq T T' -> eq T S.
-
+}%

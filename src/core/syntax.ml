@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
    @author Brigitte Pientka
@@ -25,7 +25,7 @@ module Int = struct
     type kind =
       | Typ
       | PiKind of (typ_decl * depend) * kind
-
+    
     and typ_decl =                              (* LF Declarations                *)
       | TypDecl of name * typ                   (* D := x:A                       *)
       | TypDeclOpt of name                      (*   |  x:_                       *)
@@ -115,7 +115,7 @@ module Int = struct
           (* D ; Psi |- H => A
              provided constraint *)
 
-    and mm_var  =                               (* Meta² Variables                *)
+    and mm_var  =                               (* Meta^2 Variables                *)
       | MInst   of normal option ref * mctx * dctx * typ * cnstr list ref
           (* D ; Psi |- M <= A
              provided constraint *)

@@ -1,4 +1,4 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 open Syntax
 
@@ -8,28 +8,32 @@ module Cid = struct
   module Typ = struct
 
     type entry = {
-      name               : Id.name;
-      implicit_arguments : int;
-      kind               : Int.LF.kind;
-      var_generator      : (unit -> string) option;
-      mvar_generator     : (unit -> string) option;
+      name                 : Id.name;
+      implicit_arguments   : int;
+      kind                 : Int.LF.kind;
+      var_generator        : (unit -> string) option;
+      mvar_generator       : (unit -> string) option;
+      mutable frozen       : bool;
       mutable constructors : Id.cid_term list;
-      mutable subordinates : BitSet.t
+      mutable subordinates : BitSet.t;
+      mutable typesubordinated : BitSet.t
     }
     
     let entry_list  = ref []
 
-    let mk_entry n k i =
+    let mk_entry name kind implicit_arguments =
       {
-        name               = n;
-        implicit_arguments = i;
-        kind               = k;
+        name               = name;
+        implicit_arguments = implicit_arguments;
+        kind               = kind;
         var_generator      = None;
         mvar_generator     = None;
+        frozen             = false;
         constructors       = [];
-        subordinates       = BitSet.empty ()
+        subordinates       = BitSet.empty ();
+        typesubordinated   = BitSet.empty ()
       }
-
+    
     type t = Id.name DynArray.t
 
     (*  store : {!entry DynArray.t} *)
@@ -43,25 +47,23 @@ module Cid = struct
     
     let index_of_name n = Hashtbl.find directory n
     
-    let add e =
-      let cid_tp = DynArray.length store in
-        DynArray.add store e;
-        Hashtbl.replace directory e.name cid_tp;
-        entry_list := cid_tp :: !entry_list;
-        cid_tp
-    
     let get = DynArray.get store
+
+    let freeze a =
+          (get a).frozen <- true
     
     let addNameConvention cid_name var_name_generator mvar_name_generator =
       let cid_tp = index_of_name cid_name in 
       let entry = get cid_tp in
       let new_entry = {name   = entry.name ;
-                        implicit_arguments = entry.implicit_arguments ; 
-                        kind  = entry.kind ;
-                        var_generator  = var_name_generator; 
-                        mvar_generator =  mvar_name_generator;
-                        constructors   = [];
-                        subordinates   = BitSet.empty()
+                       implicit_arguments = entry.implicit_arguments ; 
+                       kind  = entry.kind ;
+                       var_generator    = var_name_generator; 
+                       mvar_generator   =  mvar_name_generator;
+                       frozen             = entry.frozen;
+                       constructors     = entry.constructors;
+                       subordinates     = entry.subordinates;
+                       typesubordinated = entry.typesubordinated
                       } in 
         (DynArray.set store cid_tp new_entry; 
          cid_tp)
@@ -111,17 +113,62 @@ module Cid = struct
     let rec addSubord a b =
       let a_e = get a in
       let b_e = get b in
-        if (*subord_read*) BitSet.is_set b_e.subordinates a then
+(*      let _ = print_string ("addSubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in *)
+        if BitSet.is_set b_e.subordinates a then
           ()
         else
-          ((*subord_write*) BitSet.set b_e.subordinates a;
+          (BitSet.set b_e.subordinates a;
            (* Take transitive closure:
               If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
-           subord_iter (fun aa -> addSubord aa b) a_e.subordinates)
+           subord_iter (fun aa -> addSubord aa b) a_e.subordinates;
+          );
+(*        subord_iter (fun bb -> addTypesubord a bb) b_e.typesubordinated    *)
+
+    (* add the type-level subordination:  b-types can contain a-terms *)
+    and addTypesubord a b =
+      let a_e = get a in
+      let b_e = get b in
+(*      let _ = print_string ("addTypesubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in *)
+        if BitSet.is_set a_e.typesubordinated b then
+          ()
+        else
+          (BitSet.set a_e.typesubordinated b;
+           (* If b-types can contain a-terms, then b-types can contain everything a-terms can contain. *)
+           subord_iter (fun bb -> addTypesubord bb a) b_e.subordinates)
+    
+    let updateTypesubord cid entry =
+      let rec doTypDecl = function
+            Int.LF.TypDecl(_name, typ) -> doTyp typ
+      and doTyp = function
+        | Int.LF.Atom (_loc, a, _spine) ->
+            addTypesubord a cid
+        | Int.LF.PiTyp ((typdecl, _depend), typ) ->
+            doTypDecl typdecl;
+            doTyp typ
+          
+      and update = function
+        | Int.LF.Typ -> ()
+        | Int.LF.PiKind ((typdecl, _depend), kind) ->
+            doTypDecl typdecl;
+            update kind
+(*          List.iter (fun dependentArgType -> addTypesubord dependentArgType cid_tp) typesubords;
+*)
+      in
+        update entry.kind
 
 
+
+    let add entry =
+      let cid_tp = DynArray.length store in
+        DynArray.add store entry;
+        Hashtbl.replace directory entry.name cid_tp;
+        entry_list := cid_tp :: !entry_list;
+        updateTypesubord cid_tp entry;
+        cid_tp
+    
+    
     let rec inspect acc = function
-      | Int.LF.Atom(_, b, _spine) ->
+      | Int.LF.Atom(_, b, spine) ->
           List.iter (fun acc1 -> addSubord acc1 b) acc;
           [b]
 
@@ -129,11 +176,14 @@ module Cid = struct
           inspect (acc @ (inspect [] tA1)) tA2
     (*  | Sigma _ -> *)
 
-    let addConstructor typ c tA =
-      let e = get typ in
-      let _ = e.constructors <- c :: e.constructors in
-      let _ = inspect [] tA in
-        ()
+    let addConstructor loc typ c tA =
+      let entry = get typ in
+        if entry.frozen then
+          raise (Error.Error (loc, Error.FrozenType typ))
+        else
+          let _ = entry.constructors <- c :: entry.constructors in
+          let _ = inspect [] tA in
+            ()
     
     let clear () =
       entry_list := [];
@@ -143,6 +193,10 @@ module Cid = struct
     let is_subordinate_to a b =
       let a_e = get a in
         (*subord_read*)BitSet.is_set a_e.subordinates b
+
+    let is_typesubordinate_to a b =
+      let b_e = get b in
+        (*subord_read*)BitSet.is_set b_e.typesubordinated a
 
   end
 
@@ -171,13 +225,13 @@ module Cid = struct
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0
 
-    let index_of_name n = Hashtbl.find directory n
+    let index_of_name name = Hashtbl.find directory name
 
-    let add e_typ e =
+    let add loc e_typ entry =
       let cid_tm = DynArray.length store in
-        DynArray.add store e;
-        Hashtbl.replace directory e.name cid_tm;
-        Typ.addConstructor e_typ cid_tm e.typ;
+        DynArray.add store entry;
+        Hashtbl.replace directory entry.name cid_tm;
+        Typ.addConstructor loc e_typ cid_tm entry.typ;
         cid_tm
 
     let get = DynArray.get store
@@ -198,9 +252,9 @@ module Cid = struct
       schema : Int.LF.schema
     }
 
-    let mk_entry n t = {
-      name   = n;
-      schema = t
+    let mk_entry name schema = {
+      name   = name;
+      schema = schema
     }
 
     type t = Id.name DynArray.t
@@ -214,10 +268,10 @@ module Cid = struct
 
     let index_of_name n = Hashtbl.find directory n
 
-    let add e =
+    let add entry =
       let cid_tm = DynArray.length store in
-        DynArray.add store e;
-        Hashtbl.replace directory e.name cid_tm;
+        DynArray.add store entry;
+        Hashtbl.replace directory entry.name cid_tm;
         cid_tm
 
     let get = DynArray.get store
@@ -242,12 +296,12 @@ module Cid = struct
       mut_rec            : Id.name list
     }
 
-    let mk_entry n t i e n_list =  {
-      name               = n;
-      implicit_arguments = i;
-      typ                = t;
-      prog               = e;
-      mut_rec            = n_list  (* names of function with which n is mutual recursive *)
+    let mk_entry name typ implicit_arguments exp name_list =  {
+      name               = name;
+      implicit_arguments = implicit_arguments;
+      typ                = typ;
+      prog               = exp;
+      mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
     }
 
     type t = Id.name DynArray.t
@@ -273,11 +327,10 @@ module Cid = struct
       DynArray.clear store;
       Hashtbl.clear directory
 
-
-
   end
-
 end
+
+
 
 (* LF Bound variables *)
 module BVar = struct
@@ -305,6 +358,8 @@ module BVar = struct
   let get          = List.nth
 
 end
+
+
 
 (* Free Bound Variables *)
 module FVar = struct
@@ -353,6 +408,7 @@ module FVar = struct
 end
 
 
+
 (* Free meta-variables *)
 module FMVar = struct
 
@@ -364,6 +420,7 @@ module FMVar = struct
 end
 
 
+
 (* Free parameter variables *)
 module FPVar = struct
 
@@ -373,6 +430,7 @@ module FPVar = struct
   let clear () = Hashtbl.clear store
 
 end
+
 
 
 (* Computation-level variables *)
@@ -400,6 +458,8 @@ module Var = struct
   let get          = List.nth
 
 end
+
+
 
 (* Contextual variables *)
 module CVar = struct

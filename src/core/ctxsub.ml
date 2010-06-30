@@ -1,9 +1,8 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 (**
 
    @author Brigitte Pientka
-
 *)
 
 (* Context substitution  *)
@@ -20,7 +19,7 @@ exception Violation of string
 
 module Comp = Syntax.Int.Comp
 
-
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [12])
 
 
   (* ctxToSub cPsi:
@@ -622,7 +621,7 @@ let id_csub cO =
 (* instantiate  2 with 3    1/1  2/2  3/3  
        1/1   3/2  3/3   but we just eliminated the first declaration so
            1/1  2/2   i.e. lower all indices >=2 by 1.
-                 |cO| = 2  –-> |cO'| = 1 *)
+                 |cO| = 2  ---> |cO'| = 1 *)
 (* instantiate  2 with 1    1/1  1/2 *)
 let rec inst_csub cPsi2 offset' csub cO = 
   let rec update_octx cO1 offset sW = 
@@ -631,48 +630,53 @@ let rec inst_csub cPsi2 offset' csub cO =
            Dec(cO', CDecl (psi_name, sW ))
       | (Dec (cO', cdec), k) -> 
           Dec(update_octx cO' (k-1) sW, cdec)  
-    end in
+    end
+  in
+  let check_schema_known cPsi2 cO = 
+    begin match Context.ctxVar cPsi2 with
+      | Some (CtxOffset psi2_offset) -> 
+        begin match lookupSchemaOpt cO psi2_offset with 
+            None   -> 
+              let Some sW = lookupSchemaOpt cO offset' in 
+                update_octx cO psi2_offset sW
+          | Some _ -> cO
+        end 
 
-let rec check_schema_known cPsi2 cO = 
-  begin match Context.ctxVar cPsi2 with
-    | Some (CtxOffset psi2_offset) -> 
-      begin match lookupSchemaOpt cO psi2_offset with 
-          None   -> 
-            let Some sW = lookupSchemaOpt cO offset' in 
-              update_octx cO psi2_offset sW
-        | Some _ ->  cO
-      end 
-
-    | None -> raise (Violation "Encountered context variable – but it stands for the empty context " )
-  end
-in
+      | None ->
+          cO
+          (* raise (Violation "Encountered context variable, but it stands for the empty context") *)
+    end
+  in
   let rec decrement_csub cs  = 
-    begin match cs with
-      | CShift k -> CShift (k-1)
-      | CDot (cPsi, cs) -> CDot (ctxnorm_dctx (cPsi, CShift(-1)), decrement_csub cs)
-    end in 
-
-  let rec inst  cvar_replaced offset csub cO' = 
-    begin match (offset, csub, cO') with 
-      | (1, CDot(_ , cs), Dec(cO', _ ) ) -> 
+      begin match cs with
+        | CShift k -> CShift (k-1)
+        | CDot (cPsi, cs) -> CDot (ctxnorm_dctx (cPsi, CShift(-1)), decrement_csub cs)
+      end
+  in
+  let rec inst cvar_replaced offset csub cO' = 
+    match (offset, csub, cO') with 
+      | (1,  CDot(_ , cs),  Dec(cO', _ ) ) -> 
           (* cO |-  cPsi2      and   cO_new |- cs : cO' *)
           (*  lower all indices > offset' in Psi2 by k *) 
-(*          let cPsi2' = ctxnorm_dctx (cPsi2, CShift(-1)) in  *)
-          let cPsi2' = (match Context.dctxToHat cPsi2  with 
+  (*          let cPsi2' = ctxnorm_dctx (cPsi2, CShift(-1)) in  *)
+          let cPsi2' = match Context.dctxToHat cPsi2  with 
                      | (Some (CtxOffset k) , _ ) -> 
                          if cvar_replaced < k then ctxnorm_dctx (cPsi2, CShift(-1))
                          else cPsi2
                      | _ -> cPsi2
-                       )in
+          in
           let cs'    = decrement_csub cs in 
-          (cO', CDot (cPsi2', cs'))   
+            (cO', CDot (cPsi2', cs'))   
 
-      | (n, CDot(ft, cs), Dec(cO', ((CDecl _ ) as dec))) -> 
+(*
+      | (n, CDot(_, cs),  Empty) -> inst cvar_replaced n cs cO'
+      | (1, CShift _,  Empty) -> (Empty, csub)
+*)
+
+      | (n,  CDot(ft, cs),  Dec(cO', ((CDecl _ ) as dec))) -> 
           let (cO', cs') = inst cvar_replaced (n-1) cs cO' in 
             (Dec(cO', dec), CDot(ft, cs'))
-
-    end 
-    in 
+  in 
   let cO' = check_schema_known cPsi2 cO in 
      inst offset' offset' csub cO'
 
@@ -680,7 +684,7 @@ in
 
 
 (*
-Not needed for now?  - Also broken in the case of branches
+Not needed for now?  Also broken in the case of branches
 Wed Feb 17 16:35:22 2010 -bp 
 *)
 let rec ctxnorm_exp_chk (e', cs) = 
@@ -791,9 +795,11 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
       (* let u     = Whnf.etaExpandMV Null (tA, s) LF.id in *)
         (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-      let u     = Whnf.etaExpandMMV None cD cPhi (tA, Substitution.LF.comp s (ctxShift cPhi)) Substitution.LF.id in 
+      let composition = Substitution.LF.comp s (ctxShift cPhi) in
+      let u     = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in 
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
-        Dot (front, Substitution.LF.comp s Substitution.LF.shift)
+      let shifted = Substitution.LF.comp s Substitution.LF.shift in
+        Dot (front, shifted)
 
 
 let rec mctxToMSub cD = match cD with
@@ -812,3 +818,25 @@ let rec mctxToMSub cD = match cD with
       let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
+
+let rec isomorphic cD1 cD2 = match (cD1, cD2) with
+  | (Empty, Empty) -> true
+  | (Empty, _) -> false
+  | (_, Empty) -> false
+  | (Dec(cD1', dec1),  Dec(cD2', dec2)) ->
+       isomorphic cD1' cD2' && isomorphic_ctyp_decl dec1 dec2
+
+and isomorphic_ctyp_decl dec1 dec2 = match (dec1, dec2) with
+  | (MDecl(_, tA1, dctx1),  MDecl(_, tA2, dctx2)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2
+  | (PDecl(_, tA1, dctx1),  PDecl(_, tA2, dctx2)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2
+  | (SDecl(_, dctx1A, dctx1B),  SDecl(_, dctx2A, dctx2B)) -> isomorphic_dctx dctx1A dctx2A && isomorphic_dctx dctx2A dctx2B
+  | (CDecl _, CDecl _) -> false  (* unsupported *)
+  | (MDeclOpt _, MDeclOpt _) -> true
+  | (PDeclOpt _, PDeclOpt _) -> true
+  | (CDeclOpt _, CDeclOpt _) -> false  (* unsupported *)
+  | (_, _) -> false
+      
+and isomorphic_dctx dctx1 dctx2 = (dctx1 = dctx2) (* match (dctx1, dctx2) with *)
+
+and isomorphic_typ tA1 tA2 = (tA1 = tA2)
+;; (* ocaml, what's wrong with you? *)

@@ -99,12 +99,12 @@ let null = function [] -> true
 let normify f normer =
   fun tA -> f (normer (tA, Substitution.LF.id))
 
-let rec thin (cO, cD) (tP, cPsi) = 
 
-  let includes a = function
-      | Atom(_, b, _spine) -> Types.is_subordinate_to b a
+let includes a = function
+  | Atom(_, b, _spine) -> Types.is_subordinate_to b a
+
+let rec thin (cO, cD) (tP, cPsi) = 
 (*      | PiTyp((TypDecl(_x, tA1), _), tA2) -> Types.is_subordinate_to b a *)
-  in
   let rec inner n basis cPsi =
     let rec relevant = function
         | Atom(_, a, _spine) as tQ ->
@@ -137,6 +137,29 @@ let rec thin (cO, cD) (tP, cPsi) =
             Shift(NoCtxShift, n)
           else
             Shift(CtxShift psi, n)
+
+      | DDec(cPsi, TypDecl(_name, Sigma typRec)) ->
+          let n = n + 1 in
+          let size = blockLength typRec in
+          let rec walk k (basis, acc) =
+            if k > size then (basis, acc)
+            else
+              let tA = Whnf.normTyp (getType (BVar n) (typRec, Substitution.LF.id) k 1) in
+              let (basis, acc) =
+                match relevant tA with
+                  | [] -> (basis, acc)
+                  | nonempty ->
+                      (nonempty @ basis,
+                       Head (Proj (BVar n, k)) :: acc)
+              in
+                walk (k + 1) (basis, acc)
+          in
+          let (basis, components) = walk 1 (basis, []) in
+          let rest = inner n basis cPsi in
+(*            if List.length components = size then   (* all components included; just put the block instead *)
+              Dot(Head (BVar n), rest)
+            else *)
+              List.fold_right (fun h s -> Dot(h, s)) components rest
 
       | DDec(cPsi, TypDecl(_name, tA)) ->
           let n = n + 1 in

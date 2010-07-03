@@ -34,8 +34,8 @@ and strans_normW (tM, s) conv_list = match tM with
 
 and strans_head h conv_list = match h with
   | Int.LF.BVar x -> Int.LF.BVar (new_index x conv_list)
-  | Int.LF.MVar(u,sigma) -> Int.LF.MVar(u, strans_sub sigma conv_list )
-  | Int.LF.PVar (p, sigma) -> Int.LF.PVar(p, strans_sub sigma conv_list )
+  | Int.LF.MVar (u, sigma) -> Int.LF.MVar(u, strans_sub sigma conv_list)
+  | Int.LF.PVar (p, sigma) -> Int.LF.PVar(p, strans_sub sigma conv_list)
   | Int.LF.Proj (Int.LF.BVar x, j) -> 
     let x' = (new_index x conv_list) - j + 1  in 
       Int.LF.BVar x'
@@ -128,14 +128,11 @@ let rec flattenSigmaTyp cPsi strec conv_list = match strec with
         for element i
 
 
-   Example:  cPsi = ., Sigma x:A.B, y:A, Sigma w1:A , w2:A . A  
+   Example:  cPsi  =  .,  Sigma x:A.B,  y:A,  Sigma w1:A  w2:A. A  
        then flattenDCtx cPsi = (cPsi', L)
        where  cPsi' = ., x:A, x':B, y:A, w1:A, w2:A, w3:A
-                L   =    [3,1,2]  (note reverse order since contexts are built in reverse order.
-
-
+                L   =    [3,1,2]    (note reverse order since contexts are built in reverse order)
 *)
-
 
 let rec flattenDCtx cPsi = match cPsi with 
   | Int.LF.Null -> (Int.LF.Null , [])

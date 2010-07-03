@@ -191,6 +191,10 @@ module Int = struct
       | NamePrag of cid_typ 
       | NotPrag
 
+    let rec blockLength = function
+      | SigmaLast _ -> 1
+      | SigmaElem(_x, _tA, recA) -> 1 + blockLength recA
+
     (* getType traverses the typ_rec from left to right;
        target is relative to the remaining suffix of the type 
  

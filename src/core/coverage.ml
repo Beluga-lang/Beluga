@@ -10,6 +10,7 @@ module Types = Store.Cid.Typ
 module Constructors = Store.Cid.Term
 
 module U = Unify.EmptyTrail   (* is EmptyTrail the right one to use?  -jd *)
+(*module U = Unify.StdTrail*)
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.NamedRenderer
 
@@ -597,7 +598,9 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    let tP = shiftTyp tP 1 in
    let (cDWithVar, declOffset) = (LF.Dec(cD, decl), 1) in
 (*   let sub = Substitution.LF.identity cPsi1 in *)
+   dprint (fun () -> "before thin: " ^ P.dctxToString cO cD cPsi);
    let sub = Subord.thin (cO, cD) (tP, cPsi) in
+   dprint (fun () -> "thin-subst.: " ^ P.subToString cO cD cPsi sub);
    let tR1 : LF.head = LF.MVar(LF.Offset declOffset, sub)  in
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
    let _ = dprint (fun () -> "obj_no_split:\n"

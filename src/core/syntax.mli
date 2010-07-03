@@ -169,6 +169,8 @@ module Int : sig
 
     (* getType head s_recA target 1 *)
     val getType : head -> trec_clo -> int -> int -> tclo
+
+    val blockLength : typ_rec -> int
   end (* Int.LF *)
 
 

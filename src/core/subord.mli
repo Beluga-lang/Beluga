@@ -15,4 +15,4 @@ val dump_typesubord : unit -> unit
  * If all parts of cPsi are potentially relevant in tP, then `thin' behaves as
  *  Substitution.identity.
  *)
-val thin : (mctx * mctx) -> (typ * dctx) -> sub
+val thin : (mctx * mctx) -> (typ * dctx) -> (sub * dctx)

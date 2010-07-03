@@ -26,6 +26,8 @@ FN g => fn d => fn e => case d of
           ([g,b, x, u] R1 .. b.1 b.2 x u) ([g, b] S .. ) in 
   [g] lm \y.\v. R1' .. <y,v>
 
+
+
 | [g, x:term, u:pred x x] beta (\y.\v. (R1 .. y v x u)) (R2 .. x u) =>
   let [g] R2' .. = subst [g] ([g, x, u] R2 .. x u) e in 
   let [g] S .. = e in 

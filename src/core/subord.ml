@@ -103,6 +103,16 @@ let normify f normer =
 let includes a = function
   | Atom(_, b, _spine) -> Types.is_subordinate_to b a
 
+(* thin (cO, cD) (tP, cPsi) = (s, cPsi')
+
+   if  cO ; cD |- cPsi ctx
+       cO ; cD ; cPsi |- tP <= type
+   then
+       cO ; cD |- cPsi' ctx 
+       cO ; cD; cPsi|- s : cPsi'
+
+
+*)
 let rec thin (cO, cD) (tP, cPsi) = 
 (*      | PiTyp((TypDecl(_x, tA1), _), tA2) -> Types.is_subordinate_to b a *)
   let rec inner n basis cPsi =
@@ -130,15 +140,15 @@ let rec thin (cO, cD) (tP, cPsi) =
 
     in
       match cPsi with
-      | Null -> Shift(NoCtxShift, n)
+      | Null -> (Shift(NoCtxShift, n), Null)
 
       | CtxVar psi ->
           if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) then
-            Shift(NoCtxShift, n)
+            (Shift(NoCtxShift, n), CtxVar psi)
           else
-            Shift(CtxShift psi, n)
+            (Shift(CtxShift psi, n), Null)
 
-      | DDec(cPsi, TypDecl(_name, Sigma typRec)) ->
+(*      | DDec(cPsi, TypDecl(_name, Sigma typRec)) ->
           let n = n + 1 in
           let size = blockLength typRec in
           let rec walk k (basis, acc) =
@@ -160,12 +170,19 @@ let rec thin (cO, cD) (tP, cPsi) =
               Dot(Head (BVar n), rest)
             else *)
               List.fold_right (fun h s -> Dot(h, s)) components rest
-
-      | DDec(cPsi, TypDecl(_name, tA)) ->
-          let n = n + 1 in
+*)
+      | DDec(cPsi, TypDecl(name, tA)) ->
+          (*          let n = n + 1 in*)
             begin match relevant tA with
-              | [] -> inner n basis cPsi
-              | nonempty -> Dot(Head (BVar n), inner n (nonempty @ basis) cPsi)
+              | [] -> 
+                  let (thin_s, cPsi') = inner (n+1) basis cPsi in 
+(*                    (Substitution.LF.comp thin_s  (Shift (NoCtxShift, 1)) ,cPsi') *)
+                    (thin_s  ,cPsi')
+              | nonempty -> 
+                  let (thin_s, cPsi') = inner (n+1) (nonempty @ basis) cPsi in 
+                  (* cPsi |- thin_s <= cPsi' *) 
+                  let thin_s_inv      = Substitution.LF.invert thin_s in 
+                    (Dot(Head (BVar n), thin_s) , DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
             end
   in
-    inner 0 [tP] cPsi
+    inner 1 (* 0 *) [tP] cPsi

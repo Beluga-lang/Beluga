@@ -19,12 +19,13 @@
 
 eval_step: exp -> cont -> val -> type.
 
-result : eval_step E K W
-      <- mstep (st K (return V))  (answer W)
+result : eval_step E K W 
+      <- mstep (st K (return V))  (answer W) 
       <- eval E V.
 
-rec csd : (mstep (st K (ev E)) (answer W))[ ]
-       -> (eval_step E K W)[ ] = 
+rec csd : 
+          (mstep (st K (ev E)) (answer W) )[ ]
+       -> (eval_step E K W )[ ] = 
 fn c => case c of 
 
   [ ] << C' st_z => [ ] result ev_z C'

@@ -5,6 +5,7 @@
 
 open Syntax.Int
 open Syntax.Int.Comp
+open ConvSigma
 
 module Types = Store.Cid.Typ
 module Constructors = Store.Cid.Term
@@ -121,7 +122,7 @@ let hangNormal = hang Whnf.mshiftTerm
 let hangTyp = hang Whnf.mshiftTyp
 let hangDCtx = hang Whnf.mshiftDCtx
 
-let cut (HANGER f) laterShifter = f laterShifter
+let cut (HANGER f) laterShifter = f laterShifter 
 
 let cut = (cut : 'a hanger -> shifter -> 'a)
 
@@ -593,8 +594,26 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    dprnt "obj_no_split";
    Debug.indent 2;
    let tP = LF.Atom(loc, a, spine) in
-   let cPsi1 = cPsi in
-   let decl  = LF.MDecl(new_name "NOSPLIT", tP, cPsi1) in
+   let (flat_cPsi, conv_list) = flattenDCtx cPsi in  
+   let s_proj   = gen_conv_sub conv_list in
+   let tP' = strans_typ (tP, Substitution.LF.id) conv_list in
+
+   let target_tP = shiftTyp tP 1 in  (* (tP, MShift 1) *)
+   dprint (fun () -> "before thin: " ^ P.dctxToString cO cD flat_cPsi);
+   let (thin_sub, thin_cPsi) = Subord.thin (cO, cD) (tP', flat_cPsi) in
+   (* flat_cPsi |- thin_sub : thin_cPsi *)
+   (* flat_cPsi |- tP' type              *)
+   let inv_thin_sub = Substitution.LF.invert thin_sub in 
+   dprint (fun () -> "s_proj: " ^ P.subToString cO cD cPsi s_proj);
+   dprint (fun () -> "thin-subst.: " ^ P.subToString cO cD flat_cPsi thin_sub);
+   let decl  = LF.MDecl(new_name "NOSPLIT", LF.TClo(tP', inv_thin_sub), thin_cPsi) in 
+   let cDWithVar = LF.Dec(cD, decl) in
+
+   let tR1 : LF.head = LF.MVar(LF.Offset 1, Substitution.LF.comp thin_sub s_proj)  in
+
+   (* old code - joshua 
+      let cPsi1 = cPsi in 
+   let decl  = LF.MDecl(new_name "NOSPLIT", tP, cPsi1) in 
    let tP = shiftTyp tP 1 in
    let (cDWithVar, declOffset) = (LF.Dec(cD, decl), 1) in
 (*   let sub = Substitution.LF.identity cPsi1 in *)
@@ -602,16 +621,18 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    let sub = Subord.thin (cO, cD) (tP, cPsi) in
    dprint (fun () -> "thin-subst.: " ^ P.subToString cO cD cPsi sub);
    let tR1 : LF.head = LF.MVar(LF.Offset declOffset, sub)  in
+   *) 
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
    let _ = dprint (fun () -> "obj_no_split:\n"
                            ^ "--cDWithVar = " ^ P.mctxToString cO cDWithVar ^ "\n"
-                           ^ "--tM1 (instance) = " ^ P.normalToString cO cDWithVar cPsi1 (tM1, emptySub) ^ "\n"
-                           ^ "--tP  = " ^ P.typToString cO cDWithVar cPsi1 (tP, emptySub) ^ "\n"
-                           ^ "--tR1 = " ^ P.headToString cO cDWithVar cPsi1 tR1) in
+                           ^ "--tM1 (instance) = " ^ P.normalToString cO cDWithVar cPsi (tM1, emptySub) ^ "\n"
+                           ^ "--tP  = " ^ P.typToString cO cDWithVar cPsi (tP, emptySub) ^ "\n"
+                           ^ "--tR1 = " ^ P.headToString cO cDWithVar cPsi tR1) in
    Debug.outdent 2;
-   k (strategy, bump_shift 1 shift, cO, cDWithVar, cPsi1)
+   k (strategy, bump_shift 1 shift, cO, cDWithVar, cPsi (* cPsi1 *))
      tM1
-     tP
+     target_tP
+     (* tP*)
 
 
 

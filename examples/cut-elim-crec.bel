@@ -25,6 +25,47 @@ foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C).
 
 schema ctx = some [a: o] hyp a + i + o;
 
+rec lemma: {g:ctx}(conc (C ..))[g, u:hyp true] -> (conc (C .. ))[g] = 
+fn d => case d of 
+| [g,h:hyp true] truer  => [g] truer 
+| [g,h:hyp true] axiom (H ..) => [g] axiom (H ..) 
+| [g,h:hyp true] axiom h => [g] truer
+| [g,h:hyp true] impr (\v. D .. v h) => 
+  let [g,v:hyp _] E .. v = lemma ([g,v:hyp _, h:hyp true] D .. v h) in 
+   [g] impr (\v. E .. v)
+
+| [g,h:hyp true] notr (\p.\v. D .. p v h) => 
+  let [g,p:o, v:hyp _ ] E .. p v = lemma ([g, p:o, v:hyp _, h:hyp true] D .. p v h) in 
+   [g] notr (\p.\v. E .. p v)
+
+| [g,h:hyp true] forallr (\a. D .. a h) => 
+  let [g,a:i] E .. a = lemma ([g,a:i, h:hyp true] D .. a h) in 
+   [g] forallr (\a. E .. a)
+
+| [g,h:hyp true] impl (D1 .. h) (\y. D2 .. y h) (H ..) => 
+  let [g] E1 .. = lemma ([g, h:hyp true] D1 .. h) in 
+  let [g,y:hyp _ ] E2 .. y = lemma ([g,y:hyp _ , h:hyp true] D2 .. y h) in 
+   [g] impl (E1 ..) (\y. E2 .. y) (H ..)
+
+
+| [g,h:hyp true] impl (D1 .. h) (\y. D2 .. y h) (H ..) => 
+  let [g] E1 .. = lemma ([g, h:hyp true] D1 .. h) in 
+  let [g,y:hyp _ ] E2 .. y = lemma ([g,y:hyp _ , h:hyp true] D2 .. y h) in 
+   [g] impl (E1 ..) (\y. E2 .. y) (H ..)
+
+| [g,h:hyp true] notl (D1 .. h) (H ..) => 
+  let [g] E1 .. = lemma ([g, h:hyp true] D1 .. h) in 
+   [g] notl (E1 ..) (H ..)
+
+| [g,h:hyp true] foralll (T ..) (\y. D1 .. y h) (H ..) => 
+  let [g, v: hyp _ ] E1 .. v = lemma ([g, v: hyp _ , h:hyp true] D1 .. v h) in 
+   [g] foralll (T .. ) (\y. E1 .. y) (H ..)
+ 
+;
+
+
+
+
 rec ca : {g:ctx}{A::o[g]} (conc (A ..))[g] -> (conc (C ..))[g, u: hyp (A .. )] 
        -> (conc (C ..))[g] =
 mlam A' => fn d => fn e => case e of 
@@ -103,6 +144,7 @@ mlam A' => fn d => fn e => case e of
  | [g, h:hyp (A ..)] E .. h => 
    case d of 
     | [g] axiom (H ..) =>   [g] E .. (H ..)
+
     | [g] impl (D1 .. ) (\h2. D2 .. h2) (H ..) => 
       let [g,h2: hyp (B2 ..)] D2' .. h2 = ca <g,h2: hyp _ . A .. > ([g,h2] D2 .. h2) ([g,h2,h] E .. h) in 
        [g] impl (D1 ..) (\h2. D2' .. h2) (H ..)
@@ -113,6 +155,12 @@ mlam A' => fn d => fn e => case e of
     | [g] foralll (T ..) (\h1. D1 .. h1) (H ..) =>
       let [g,h1: hyp _ ] D1' .. h1 = ca <g,h1:hyp _ . A ..> ([g,h1] D1 .. h1) ([g,h1,h] E .. h) in 
         [g] foralll (T .. ) (\h1. D1' .. h1) (H ..)
+
+    | [g] truer =>  lemma ([g, h: hyp (A ..)] E .. h) 
+%{      let [g,h:hyp true] F ..  = [g, h: hyp true] E .. h in 
+        [g] F .. 
+
+}%
 
 ;
 

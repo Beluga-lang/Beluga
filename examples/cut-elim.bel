@@ -8,14 +8,14 @@ o : type.  % formulas
 
 imp    : o -> o -> o.
 not    : o -> o.
-true   : o.
+% true   : o.
 forall : (i -> o) -> o.
 
 hyp  : o -> type.  % Hypotheses (left)
 conc : o -> type.  % Conclusion (right)
 
 axiom   : (hyp A -> conc A).
-truer   : conc (true).
+% truer   : conc (true).
 impr    : (hyp A -> conc B) -> conc (imp A B).
 impl    : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C).
 notr    : ({p:o}hyp A -> conc p) -> conc (not A).
@@ -24,6 +24,7 @@ forallr : ({a:i} conc (A a)) -> conc (forall (\x. A x)).
 foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C).
 
 schema ctx = some [a: o] hyp a + i + o;
+
 
 rec ca : {g:(ctx)*}{A::o[g]} (conc (A ..))[g] -> (conc (C ..))[g, u: hyp (A .. )] 
        -> (conc (C ..))[g] =
@@ -61,7 +62,7 @@ FN g => mlam A' => fn d => fn e => case e of
    let [g] E1' .. = (ca [g] <g . A .. > d) ([g, h] E1 .. h) in 
      [g] notl (E1' ..) (H ..)
 
- | [g,h: hyp (A ..)] truer => [g] truer
+% | [g,h: hyp (A ..)] truer => [g] truer
 
  | [g,h:hyp (A ..)] forallr (\a. E1 .. a h) =>
    let [g] D .. = d in
@@ -100,6 +101,7 @@ FN g => mlam A' => fn d => fn e => case e of
    in 
     ca [g] <g. A1 .. (T ..)> ([g] D1 .. (T ..)) ([g,h2] E1' .. h2)
 
+
  | [g, h:hyp (A ..)] E .. h => 
    case d of 
     | [g] axiom (H ..) =>   [g] E .. (H ..)
@@ -113,10 +115,8 @@ FN g => mlam A' => fn d => fn e => case e of
     | [g] foralll (T ..) (\h1. D1 .. h1) (H ..) =>
       let [g,h1: hyp _ ] D1' .. h1 = ca [g, h1:hyp _ ] <g,h1. A ..> ([g,h1] D1 .. h1) ([g,h1,h] E .. h) in 
         [g] foralll (T .. ) (\h1. D1' .. h1) (H ..)
-  
+
 ;
-
-
 % Original Twelf implementation 
 %
 % ca : {A:o} conc A -> (hyp A -> conc C) -> conc C -> type.

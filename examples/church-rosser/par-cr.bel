@@ -48,10 +48,7 @@ FN g => fn d => fn e => case d of
   let [g] beta (\y.\v. R1' .. y v) (R2' ..)  = e in 
   let [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in 
 
-  let   {M0::term[g,y:term]}{M1::term[g,y:term]}{H1::term[g,y:term]}
-        {S1 :: (pred (M0 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
-        {S1':: (pred (M1 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
-          [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
+  let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
       dia [g, b:block y:term. pred y y] ([g, b] R1a .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in 
 
     let [g] S'' .. = subst [g] ([g, y, v] S1' .. <y, v>) ([g] S2' ..) in 
@@ -68,9 +65,9 @@ FN g => fn d => fn e => case d of
 
      let  [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in 
 
-     let   {M0::term[g,y:term]}{M1::term[g,y:term]}{H1::term[g,y:term]}
-           {S1 :: (pred (M0 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
-           {S1':: (pred (M1 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
+     let %  {M0::term[g,y:term]}{M1::term[g,y:term]}{H1::term[g,y:term]}
+         %  {S1 :: (pred (M0 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
+         %  {S1':: (pred (M1 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
           [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
       dia [g, b:block y:term. pred y y] ([g, b] R1 .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in 
 

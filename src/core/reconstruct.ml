@@ -25,8 +25,8 @@ module RR = Pretty.Int.NamedRenderer
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 exception NotImplemented
-exception Error of Syntax.Loc.t option * error
-exception Violation of string
+(* exception Error of Syntax.Loc.t option * error
+exception Violation of string *)
 exception SpineMismatch
 exception NotPatSpine
 
@@ -1591,7 +1591,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                    * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                    * This will be enforced during abstraction.
                    *)
-                  FPVar.add p (tP, cPhi);
+                  FPVar.add p ((Whnf.normTyp (tP,LF.id)),  cPhi);
                   Int.LF.Root (Some loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
             
             | (Apx.LF.Nil, false) ->
@@ -1612,9 +1612,13 @@ and elTerm' recT  cO cD cPsi r sP = match r with
   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), k), spine) as m ->
       (* Other case where spine is not empty is not implemented -bp *)
         begin try          
-          let (Int.LF.Sigma typRec, cPhi) = FPVar.get p in
+          let _ = dprint (fun () -> "[Reconstruct Projection Parameter] " ^ p.string_of_name ) in 
+(*          let (tA, cPhi) = FPVar.get p in *)
+          let ((Int.LF.Sigma typRec) as tA, cPhi) = FPVar.get p in 
+          let _ = dprint (fun () -> "      with type " ^ P.typToString cO cD cPhi (tA, LF.id) ^ "[" ^ P.dctxToString cO cD cPhi ^ "]") in 
           let s'' = elSub loc recT  cO cD cPsi s cPhi in
-          let sA = Int.LF.getType  (Int.LF.FPVar (p, s'')) (typRec, s'') k 1 in 
+(*          let Int.LF.Sigma typRec = tA *)
+          let sA = Int.LF.getType  (Int.LF.FPVar (p, s'')) (typRec, s'') k 1 in  
           let (tS, sQ ) = elSpine loc recT  cO cD cPsi spine (Int.LF.TClo sA, s'')  in
             begin try
               (Unify.unifyTyp cD cPsi (Int.LF.TClo sQ, s'') sP ;
@@ -1650,8 +1654,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                       (dprint (fun () -> "synType for PVar: [SigmaElem]" ^ P.typRecToString cO cD cPhi (typRec', s_inst) ^ "\n") ; 
                        Int.LF.Sigma typRec' )
                   end in 
-
-                  FPVar.add p (Int.LF.TClo(tB, s_inst), cPhi);
+                  FPVar.add p ((Whnf.normTyp (tB, s_inst)), cPhi);
                   Int.LF.Root (Some loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k),  Int.LF.Nil) 
                   
             | (false, Apx.LF.Nil) ->

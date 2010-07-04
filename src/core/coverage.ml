@@ -19,12 +19,12 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [29])
 
 let covby_counter = ref 0
 
-type problem = {loc : Parser.Grammar.Loc.t option;
-                prag : Syntax.case_pragma;
+type problem = {loc : Parser.Grammar.Loc.t option;    
+                prag : Syntax.case_pragma;           (* indicates if %not appeared after ``case...of'' *)
                 cO : LF.mctx;
                 cD : LF.mctx;
                 branches : Comp.branch list;
-                domain : (LF.typ * LF.dctx)}
+                domain : (LF.typ * LF.dctx)}         (* type and context of scrutinee *)
 
 let make loc prag cO cD branches domain =
   {loc= loc;
@@ -130,6 +130,20 @@ let cut = (cut : 'a hanger -> shifter -> 'a)
 let bump_shift increment shifter = {n = shifter.n + increment}
 
 
+
+(* Coverage is done in 3 phases:
+ *
+ *   1. ContextDependentArgumentsPhase
+ *        possibly split on arguments to dependent types in the context
+ *
+ *   2. ContextVariablePhase: (NOT YET IMPLEMENTED)
+ *        possibly split context variables
+ * 
+ *   3. TermPhase:
+ *        possibly split the object (term)
+ *
+ *  The LFMTP '08 paper only describes TermPhase.
+ *)
 type phase =
     ContextDependentArgumentsPhase
   | ContextVariablePhase
@@ -550,7 +564,7 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                            k arg1 arg2 arg3)
                   end else ()
               in
-                iterTypRec callAppOnComponent (head, (typRec, some_part_dctxSub    ))
+                iterTypRec callAppOnComponent (head, (typRec, some_part_dctxSub))
             end
 
   
@@ -808,9 +822,6 @@ let rec contextDep_split (strategy, shift, cO, cD, cPsi) k =
                         continue (strategy, shift', cO, cD, LF.DDec (new_cPsi', LF.TypDecl (name, tConcrete))) k)
         end
 
-(*  let sch_elems = getSchemaElems cO cPsi in
-  let splits = ... in
-*)
 
 
 and contextDep (strategy, shift, cO, cD, cPsi) k =

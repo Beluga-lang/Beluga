@@ -2134,8 +2134,14 @@ module Make (T : TRAIL) : UNIFY = struct
               addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
 
 
-    | ((Root(_, h1,tS1), s1), (Root(_, h2, tS2), s2)) ->
+    | (((Root(_, h1,tS1), s1) as sM1), ((Root(_, h2, tS2), s2) as sM2)) ->
         dprnt "(020) Root-Root";
+        let _ = dprint (fun () -> 
+                          "UNIFY: normal - normal (non MVar cases) " ^ 
+                            P.mctxToString Empty cD0 ^ "\n" ^
+                            P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
+                            P.normalToString Empty cD0 cPsi sM2 ^ "\n") in 
+
         (* s1 = s2 = id by whnf *)
         unifyHead  mflag cD0 cPsi h1 h2;
         unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
@@ -2170,6 +2176,11 @@ module Make (T : TRAIL) : UNIFY = struct
     | (FMVar (u, s) , FMVar(u', s')) ->         
         if u = u' then unifySub mflag cD0 cPsi s s' 
         else raise_ (Unify "Bound MVar clash")
+
+    | (FPVar (q, s), FPVar (p, s'))
+        ->   (if p = q then 
+                unifySub mflag cD0 cPsi s s' 
+              else raise_ (Error "Front FPVar mismatch"))
 
     | (PVar (Offset k, s) , PVar(Offset k', s')) -> 
         if k = k' then unifySub mflag cD0 cPsi s s' 
@@ -2221,6 +2232,7 @@ module Make (T : TRAIL) : UNIFY = struct
         let s1' = Whnf.normSub s1' in 
         let s2' = Whnf.normSub s2' in 
         if q1 == q2 then (* cPsi1 = _cPsi2 *)
+          (let _ = dprint (fun () -> "[unifyHead] PVar (PInst) = PVar(PInst) " ) in
           match (isPatSub s1' ,  isPatSub s2') with
             | (true, true) ->
                 let phat = Context.dctxToHat cPsi in 
@@ -2240,7 +2252,7 @@ module Make (T : TRAIL) : UNIFY = struct
             | (true, false) ->
                 addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head1, head2))) (*XXX double-check *)
             | (false, _) ->
-                addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *)
+                addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *))
         else
           (match (isPatSub s1' , isPatSub s2') with
              | (true, true) ->
@@ -2316,8 +2328,10 @@ module Make (T : TRAIL) : UNIFY = struct
              
 
     | (Proj (h1, i1),  Proj (h2, i2)) ->
+        let _ = dprint (fun () -> "[unifyHead] Proj - Proj ") in 
         if i1 = i2 then
-          unifyHead mflag cD0 cPsi h1 h2
+          (dprint (fun () -> "[unifyHead] " ^ P.headToString Empty cD0 cPsi h1 ^ " === " ^ P.headToString Empty cD0 cPsi h2 ) ;
+          unifyHead mflag cD0 cPsi h1 h2 )
         else
           raise_ (Unify ("(Proj) Index clash: " ^ string_of_int i1 ^ " /= " ^ string_of_int i2))
 

@@ -574,7 +574,8 @@ and norm (tM, sigma) = match tM with
   | Root (loc, Proj (BVar i, k), tS) ->
       begin match LF.bvarSub i sigma with
         | Head (BVar j)      -> Root (loc, Proj (BVar j, k), normSpine (tS, sigma))
-        | Head (PVar (p, s)) -> Root (loc, Proj (PVar (p, s), k), normSpine (tS, sigma))
+        | Head (PVar (p, s)) ->  norm (Root (loc, Proj (PVar (p, s), k), SClo (tS, sigma)), LF.id)
+                (* Root (loc, Proj (PVar (p, s), k), normSpine (tS, sigma)) *)
       end
 
   | Root (loc, Proj (FPVar(p,r), k),  tS) ->
@@ -585,6 +586,9 @@ and norm (tM, sigma) = match tM with
 
   | Root (loc, Proj (PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), s), k), tS) ->
       norm (Root (loc, Proj (PVar (q, LF.comp r' s), k), tS), sigma)
+
+  | Root (loc, Proj (PVar (PInst ({contents = Some (FPVar (q, r'))}, _, _, _), s), k), tS) ->
+      norm (Root (loc, Proj (FPVar (q, LF.comp r' s), k), tS), sigma)
 
   | Root (loc, Proj (PVar (PInst ({contents = Some (BVar i)}, _, _, _), s), k), tS) ->
       begin match LF.bvarSub i s with
@@ -1347,6 +1351,9 @@ and whnf sM = match sM with
   | (Root (loc, PVar (PInst ({contents = Some (PVar (q, r'))}, _, _, _), r), tS), sigma) -> 
       whnf (Root (loc, PVar (q, LF.comp r' r), tS), sigma) 
 
+  | (Root (loc, PVar (PInst ({contents = Some (FPVar (q, r'))}, _, _, _), r), tS), sigma) -> 
+      whnf (Root (loc, FPVar (q, LF.comp r' r), tS), sigma) 
+
 
   | (Root (loc, FPVar (p, r), tS), sigma) ->
       (Root (loc, FPVar (p, LF.comp r sigma), SClo (tS, sigma)), LF.id)
@@ -1372,6 +1379,25 @@ and whnf sM = match sM with
   (* Proj PVar Some *)
   | (Root (loc, Proj (PVar (PInst ({contents = Some (PVar (q', r'))}, _, _, _), s), k), tS), sigma) ->
       whnf (Root (loc, Proj (PVar (q', LF.comp r' s), k), tS), sigma)
+
+
+  | (Root (loc, Proj (PVar (PInst ({contents = Some (BVar x)}, _, _, _), r), k), tS), sigma) ->
+        begin match LF.bvarSub x (LF.comp r sigma) with
+          | Head (BVar x)  ->  
+              (Root (loc, Proj (BVar x, k), SClo(tS, sigma)), LF.id)
+          | Head (PVar (q,r')) -> 
+                    whnf (Root (loc, Proj (PVar (q, LF.comp r' r), k), SClo(tS, sigma)), LF.id)
+          | Head (FPVar (q,r')) -> 
+                    whnf (Root (loc, Proj (FPVar (q, LF.comp r' r), k), SClo(tS, sigma)), LF.id)
+
+        end
+
+
+
+
+
+  | (Root (loc, Proj (PVar (PInst ({contents = Some (FPVar (q', r'))}, _, _, _), s), k), tS), sigma) ->
+      whnf (Root (loc, Proj (FPVar (q', LF.comp r' s), k), tS), sigma)
 
   (* Proj PVar None *)
   | (Root (loc, Proj (PVar (PInst({contents = None}, _cPsi, _tA, _ ) as p, r), projIndex), tS), sigma) ->

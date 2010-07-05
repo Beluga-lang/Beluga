@@ -192,6 +192,7 @@ let naive_strategy (depth, contextLength, contextDepth) =
        phase = ContextDependentArgumentsPhase}
 
 let increment_depth strategy =
+(*     print_string ("increment_depth --> " ^ string_of_int (strategy.currDepth + 1) ^ "\n"); flush_all(); *)
       {strategy with currDepth = strategy.currDepth + 1}
 
 let increment_context_length strategy =
@@ -622,7 +623,7 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    dprint (fun () -> "thin-subst.: " ^ P.subToString cO cD flat_cPsi thin_sub);
    let decl  = LF.MDecl(new_name "NOSPLIT", LF.TClo(tP', inv_thin_sub), thin_cPsi) in 
    let cDWithVar = LF.Dec(cD, decl) in
-
+   
    let tR1 : LF.head = LF.MVar(LF.Offset 1, Substitution.LF.comp thin_sub s_proj)  in
 
    (* old code - joshua 
@@ -635,18 +636,24 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    let sub = Subord.thin (cO, cD) (tP, cPsi) in
    dprint (fun () -> "thin-subst.: " ^ P.subToString cO cD cPsi sub);
    let tR1 : LF.head = LF.MVar(LF.Offset declOffset, sub)  in
-   *) 
+
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
    let _ = dprint (fun () -> "obj_no_split:\n"
                            ^ "--cDWithVar = " ^ P.mctxToString cO cDWithVar ^ "\n"
                            ^ "--tM1 (instance) = " ^ P.normalToString cO cDWithVar cPsi (tM1, emptySub) ^ "\n"
                            ^ "--tP  = " ^ P.typToString cO cDWithVar cPsi (tP, emptySub) ^ "\n"
                            ^ "--tR1 = " ^ P.headToString cO cDWithVar cPsi tR1) in
+   *) 
+   print_string "*";
+   let tM1 = LF.Root(loc, tR1, LF.Nil) in
+   dprint (fun () -> "obj_no_split:\n"
+                   ^ "--cDWithVar = " ^ P.mctxToString cO cDWithVar);
+   dprint (fun () -> "--tM1 (instance) = " ^ P.normalToString cO cDWithVar cPsi (tM1, emptySub));
+   dprint (fun () -> "--target_tP = " ^ P.typToString cO cDWithVar cPsi (target_tP, emptySub));
    Debug.outdent 2;
    k (strategy, bump_shift 1 shift, cO, cDWithVar, cPsi (* cPsi1 *))
      tM1
-     target_tP
-     (* tP*)
+     target_tP  (* tP*)
 
 
 
@@ -1040,7 +1047,7 @@ let covers problem =
           tryList
             (fun strategy ->
                Debug.pushIndentationLevel();
-               dprint (fun () -> "trying strategy " ^ strategyToString strategy);
+               print_string ((fun () -> "trying strategy " ^ strategyToString strategy)() ^ "\n");
                begin try
                            let shift = noop_shift in
                            let tA = hangTyp shift tA in

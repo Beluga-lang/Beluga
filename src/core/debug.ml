@@ -70,8 +70,10 @@ let print flags f =
     else
         (print_level_spaces();
          let s = try f()
-                 with
-                   | Match_failure stuff -> (print_string ("*** Match_failure exception raised inside function passed to dprint ***\n*** Goodbye. ***" ^ flagsToString flags ^ "\n");
+         with
+                   | Match_failure (file, line, column) -> (print_string ("*** Match_failure("
+                           ^ file ^ ", " ^ string_of_int line ^ ", " ^ string_of_int column ^ ")"
+                           ^ " exception raised inside function passed to dprint ***\n*** Goodbye. ***" ^ flagsToString flags ^ "\n");
                                              exit 200)
                    | exn -> (print_string ("*** WARNING: EXCEPTION RAISED INSIDE FUNCTION PASSED TO dprint *** " ^ flagsToString flags ^ "\n");
                              flush_all();

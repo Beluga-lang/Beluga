@@ -1381,6 +1381,7 @@ and whnf sM = match sM with
       whnf (Root (loc, Proj (PVar (q', LF.comp r' s), k), tS), sigma)
 
 
+
   | (Root (loc, Proj (PVar (PInst ({contents = Some (BVar x)}, _, _, _), r), k), tS), sigma) ->
         begin match LF.bvarSub x (LF.comp r sigma) with
           | Head (BVar x)  ->  
@@ -1389,10 +1390,7 @@ and whnf sM = match sM with
                     whnf (Root (loc, Proj (PVar (q, LF.comp r' r), k), SClo(tS, sigma)), LF.id)
           | Head (FPVar (q,r')) -> 
                     whnf (Root (loc, Proj (FPVar (q, LF.comp r' r), k), SClo(tS, sigma)), LF.id)
-
         end
-
-
 
 
 

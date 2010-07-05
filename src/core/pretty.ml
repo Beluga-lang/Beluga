@@ -255,6 +255,9 @@ module Int = struct
             (fmt_ppr_lf_typ_rec cO cD cPsi lvl) typRec
             (r_paren_if (lvl > 0))
 
+
+      | _ -> fprintf ppf "???UNKNOWN???@ "
+
     and fmt_ppr_tuple cO cD cPsi lvl ppf = function
       | LF.Last tM ->
            fmt_ppr_lf_normal cO cD cPsi lvl ppf tM
@@ -1302,7 +1305,7 @@ module Int = struct
         fmt_ppr_lf_normal cO cD cPsi std_lvl str_formatter tM
         ; flush_str_formatter ()
 
-    let attempt message f =
+    let attempt message f fallback =
       try
         f()
       with
@@ -1311,18 +1314,18 @@ module Int = struct
                            ^ file ^ " " ^ string_of_int line ^ " " ^ string_of_int column ^ "\n");
              exit 230)
         | _ -> (print_string ("pretty.ml attempt: \"" ^ message ^ "\" crashed.\n");
-                exit 231)
+                fallback (*exit 231*) )
 
     let dctxToString cO cD cPsi =
       let (cPsi', notice) = try (Whnf.cnormDCtx (cPsi, Whnf.m_id),  "")
                             with _ -> (cPsi, "{dctxToString: Whnf.cnormDCtx crashed}")
       in
-      let cPsi' = attempt "dctxToString whnf" (fun () -> Whnf.normDCtx cPsi) in
+      let cPsi' = attempt "dctxToString whnf" (fun () -> Whnf.normDCtx cPsi') cPsi' in
        notice ^ (fmt_ppr_lf_dctx cO cD std_lvl str_formatter cPsi';
                  flush_str_formatter ())
 
     let mctxToString cO cD = 
-      let cD' = attempt "mctxToString normMCtx" (fun () -> Whnf.normMCtx cD) in 
+      let cD' = attempt "mctxToString normMCtx" (fun () -> Whnf.normMCtx cD) cD in 
       fmt_ppr_lf_mctx cO std_lvl str_formatter cD'
         ; flush_str_formatter ()
 

@@ -1795,7 +1795,7 @@ module Make (T : TRAIL) : UNIFY = struct
                 instantiateMVar (r, sM1', !cnstrs) 
             with
               | NotInvertible ->
-                  (Printf.printf "Pruning failed -- NotInvertible\n" ;
+                  ((* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
                   (* Printf.printf "Added constraints: NotInvertible: \n" ;
                      addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
                    raise_ (Unify "NotInvertible")

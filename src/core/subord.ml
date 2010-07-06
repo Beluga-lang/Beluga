@@ -113,7 +113,7 @@ let includes a = function
 *)
 let rec thin (cO, cD) (tP, cPsi) = 
 (*      | PiTyp((TypDecl(_x, tA1), _), tA2) -> Types.is_subordinate_to b a *)
-  let rec inner n basis cPsi =
+  let rec inner basis cPsi =
     let rec relevant = function
         | Atom(_, a, _spine) as tQ ->
             Types.freeze a;
@@ -138,6 +138,34 @@ let rec thin (cO, cD) (tP, cPsi) =
 
     in
       match cPsi with
+        | Null -> (Shift(NoCtxShift, 0), Null) (* cPsi_orig |- shift(noCtx, n) : . *)
+
+        | CtxVar psi -> 
+          if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) then
+            (Shift(NoCtxShift, 0), CtxVar psi)
+          else
+            (Shift(CtxShift psi, 0), Null) 
+
+        | DDec(cPsi, TypDecl(name, tA)) ->
+            begin match relevant tA with
+              | [] -> 
+                  let (thin_s, cPsi') = inner  basis cPsi in 
+                  (* cPsi |- thin_s : cPsi' *)
+                    (Substitution.LF.comp thin_s  (Shift (NoCtxShift, 1)) ,cPsi') 
+                  (* cPsi, x:tA |- thin_s ^ 1 : cPsi' *)
+              | nonempty -> 
+                  let (thin_s, cPsi') = inner (nonempty @ basis) cPsi in 
+                  (* cPsi |- thin_s <= cPsi' *) 
+                  (* cPsi,x:tA |- dot1 thin_s <= cPsi', x:tA'  where tA = [thin_s]([thin_s_inv]tA) *) 
+                  let thin_s_inv      = Substitution.LF.invert thin_s in 
+                    (Substitution.LF.dot1 thin_s , DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
+            end
+  in
+    inner [tP] cPsi
+
+
+
+(*      match cPsi with
       | Null -> (Shift(NoCtxShift, n), Null)
 
       | CtxVar psi ->
@@ -182,5 +210,4 @@ let rec thin (cO, cD) (tP, cPsi) =
                   let thin_s_inv      = Substitution.LF.invert thin_s in 
                     (Dot(Head (BVar n), thin_s) , DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
             end
-  in
-    inner 1 (* 0 *) [tP] cPsi
+*)

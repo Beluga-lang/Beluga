@@ -1328,7 +1328,8 @@ module Int = struct
                  flush_str_formatter ())
 
     let mctxToString cO cD = 
-      let cD' = attempt "mctxToString normMCtx" (fun () -> Whnf.normMCtx cD) cD in 
+(*      let cD' = attempt "mctxToString normMCtx" (fun () -> Whnf.normMCtx cD) cD in  *)
+      let cD' = Whnf.normMCtx cD in 
       fmt_ppr_lf_mctx cO std_lvl str_formatter cD'
         ; flush_str_formatter ()
 

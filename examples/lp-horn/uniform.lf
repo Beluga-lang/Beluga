@@ -14,16 +14,16 @@ s_and  : solve (& A1 A2)
 	  <- solve A1
 	  <- solve A2.
 
-s_imp  : solve (imp A2 A1)
+%{ s_imp  : solve (imp A2 A1)
 	  <- (assume A2 -> solve A1).
-
+}%
 
 s_true : solve (true).
 
 
-s_forall : solve (forall (\x. A1 x))
+%{ s_forall : solve (forall (\x. A1 x))
 	    <- {a:i} solve (A1 a).
-
+}%
 
 s_atom : solve (atom P)
 	  <- assume A

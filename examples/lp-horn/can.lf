@@ -11,18 +11,21 @@ can_andi : can (& A B) (andi E D)
 	    <- can A D
 	    <- can B E.
 
-
+%{
+% not necessary in horn fragment
 can_impi : can (imp A B) (impi (\u. D u))
 	    <- {u:pf A} atm u -> can B (D u).
-
+}%
 
 can_truei : can (true) (truei).
 
 
+%{
+% not necessary in horn fragment
 can_foralli : can (forall (\x. A x)) (foralli (\x. D x))
 	       <- {a:i} can (A a) (D a).
 
-
+}%
 can_atm : can (atom P) D
 	    <- atm D.
 

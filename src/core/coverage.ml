@@ -621,7 +621,12 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
    let inv_thin_sub = Substitution.LF.invert thin_sub in 
    dprint (fun () -> "s_proj: " ^ P.subToString cO cD cPsi s_proj);
    dprint (fun () -> "thin-subst.: " ^ P.subToString cO cD flat_cPsi thin_sub);
-   let decl  = LF.MDecl(new_name "NOSPLIT", LF.TClo(tP', inv_thin_sub), thin_cPsi) in 
+   let tP_thinned = Whnf.normTyp (tP', inv_thin_sub) in 
+   dprint (fun () -> "NOSPLIT-MVAR has type " ^ P.typToString cO cD thin_cPsi (tP_thinned, Substitution.LF.id ));
+   dprint (fun () -> "in thinned context " ^ P.dctxToString cO cD thin_cPsi ^ "\n");
+(*   let decl  = LF.MDecl(new_name "NOSPLIT", LF.TClo(tP', inv_thin_sub), thin_cPsi) in *)
+   let decl  = LF.MDecl(new_name "NOSPLIT", tP_thinned, thin_cPsi) in 
+   dprint (fun () -> "thin_sub o s_proj = " ^ P.subToString cO cD cPsi (Substitution.LF.comp thin_sub s_proj));
    let cDWithVar = LF.Dec(cD, decl) in
    
    let tR1 : LF.head = LF.MVar(LF.Offset 1, Substitution.LF.comp thin_sub s_proj)  in

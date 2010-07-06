@@ -94,6 +94,8 @@ fn d => case d of
    let [ ] C2 = subcomp < . Ks > < . prog getsnd P >  < . S > ([ ] D2) in 
      append ([ ] to c_snd C2) ([ ] to c_getsnd id_step)
 
+ | [ ] fev_lam => [ ] to c_lam id_step
+
  |  {D1:: (feval K F1 (clo K' (lam' F1')))[ ]}
     {D2:: (feval K F2 W2)[ ]}
     {D3:: (feval (vcons K' W2) F1' W)[ ]}

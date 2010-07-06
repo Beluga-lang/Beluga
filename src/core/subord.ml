@@ -109,9 +109,7 @@ let includes a = function
        cO ; cD ; cPsi |- tP <= type
    then
        cO ; cD |- cPsi' ctx 
-       cO ; cD; cPsi|- s : cPsi'
-
-
+       cO ; cD; cPsi |- s : cPsi'
 *)
 let rec thin (cO, cD) (tP, cPsi) = 
 (*      | PiTyp((TypDecl(_x, tA1), _), tA2) -> Types.is_subordinate_to b a *)

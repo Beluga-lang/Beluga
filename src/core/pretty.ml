@@ -255,8 +255,11 @@ module Int = struct
             (fmt_ppr_lf_typ_rec cO cD cPsi lvl) typRec
             (r_paren_if (lvl > 0))
 
+      | LF.TClo (typ, s) ->
+          fprintf ppf "TClo(%a,@ %a)"
+            (fmt_ppr_lf_typ cO cD cPsi lvl) typ
+            (fmt_ppr_lf_sub cO cD cPsi lvl) s
 
-      | _ -> fprintf ppf "???UNKNOWN???@ "
 
     and fmt_ppr_tuple cO cD cPsi lvl ppf = function
       | LF.Last tM ->

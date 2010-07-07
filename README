@@ -22,6 +22,9 @@ Version History
     0.2-20100122        `interpreter' now typechecks _and interprets_ Beluga code;
                         improved error messages; improved Unicode support
 
+    0.3-20100707        Support for context reconstruction (e.g.: examples/cut-elim-crec.bel);
+                        includes a coverage checker (EXPERIMENTAL)
+    
 
 
 Structure
@@ -52,14 +55,15 @@ src/core:
     common.mli
     context.ml          Contexts 
     context.mli         
+    coverage.ml         Coverage checking
+    coverage.mli
     ctxsub.ml           Context substitutions
     ctxsub.mli          
     cwhnf.ml            Contextual Weak head normalization
     cwhnf.mli
     debug.ml            Debugging flags
     error.ml
-    error.mli           Error handling
- 
+    error.mli           Error handling 
     gensym.ml           Unique symbol generation
     gensym.mli          
     id.ml               Identifiers, used for variables, constants, etc.
@@ -74,8 +78,10 @@ src/core:
     pretty.mli 
     reconstruct.ml      Type reconstruction for LF and computations
     reconstruct.mli
-    store.ml            Variable store, maps ids to variable information
+    store.ml            Variable store, maps ids to variable information, computing subordination
     store.mli           
+    subord.ml           Using and displaying the subordination relation
+    subord.mli
     substitution.ml     Explicit substitution operations (ordinary and contextual)
     substitution.mli
     syntax.ml           Syntax for the LF and computation layer of Beluga
@@ -88,12 +94,11 @@ src/core:
     whnf.mli        
 
 
-
 src/main
 -----------
 
    OMakefile
-   main.ml              Main top level
+   main.ml              Main top-level
 
 
 tools
@@ -101,16 +106,17 @@ tools
   beluga-mode.el        Emacs mode for Beluga programs
 
 
+
 Project Description
 ===================
 
 
-  Our main interest in this project is to investigate programming 
+Our main interest in this project is to investigate programming 
 and reasoning with data structures that provide support for binders. 
 Many object languages include binding constructs, and it is striking 
 that functional languages still lack direct support for binders and 
 common tricky operations such as renaming, capture-avoiding substitution,
- and fresh name generation.
+and fresh name generation.
 
 We advocate the use of higher-order abstract syntax (HOAS) where we 
 represent binders in the object language with binders in the meta-language. 
@@ -133,6 +139,12 @@ ideas presented in [Pientka:POPL08] and [PientkaDunfield:PPDP08].
 
 Publications
 ============
+
+  * Brigitte Pientka and Joshua Dunfield.
+    Beluga: a framework for programming and reasoning with deductive systems
+    (system description).
+    In International Joint Conference on Automated Reasoning (IJCAR'10),
+    July 2010.
 
   * Brigitte Pientka and Joshua Dunfield. 
     Programming with proofs and explicit contexts. 

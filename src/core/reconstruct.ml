@@ -623,7 +623,7 @@ let rec index_dctx ctx_vars cvars bvars fvars = function
       let (decl', bvars'', fvars'')  = index_decl cvars bvars' fvars' decl in
         (Apx.LF.DDec (psi', decl'), bvars'', fvars'')
 
-(* Order of psihat ? -bp
+(* Order of psihat? -bp
    It's not clear how to know that the last name is a bound variable
    or if it is a name of a context variable...
 *)
@@ -4281,7 +4281,7 @@ let recSgnDecl d =
         let _        = Check.LF.checkSchemaWf sW' in
         let _        = dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" )  in
         let _g'      = Schema.add (Schema.mk_entry g sW') in
-        let _        = Format.printf "\nschema %s = @[%a@].@."
+        let _        = Format.printf "\nschema %s = @[%a@];@."
                                      (g.string_of_name)
                                      (P.fmt_ppr_lf_schema Pretty.std_lvl) sW' in
           (* Int.Sgn.Schema (g', sW) *) ()

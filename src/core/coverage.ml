@@ -482,7 +482,6 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                     ^ "+++ cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n"
                     ^ "+++ some_part_dctx = " ^ P.dctxToString cO cD some_part_dctx);
     let some_part_dctxSub = Ctxsub.ctxToSub' cD cPsi some_part_dctx in
-    dprnt "asdf";
     let id_psi = Substitution.LF.justCtxVar cPsi in
     let head = LF.PVar (LF.Offset 1, id_psi) in
       match typRec with
@@ -649,7 +648,7 @@ and obj_no_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
                            ^ "--tP  = " ^ P.typToString cO cDWithVar cPsi (tP, emptySub) ^ "\n"
                            ^ "--tR1 = " ^ P.headToString cO cDWithVar cPsi tR1) in
    *) 
-   print_string "*";
+(*   print_string "*"; *)
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
    dprint (fun () -> "obj_no_split:\n"
                    ^ "--cDWithVar = " ^ P.mctxToString cO cDWithVar);
@@ -1052,7 +1051,7 @@ let covers problem =
           tryList
             (fun strategy ->
                Debug.pushIndentationLevel();
-               print_string ((fun () -> "trying strategy " ^ strategyToString strategy)() ^ "\n");
+               dprint (fun () -> "trying strategy " ^ strategyToString strategy);
                begin try
                            let shift = noop_shift in
                            let tA = hangTyp shift tA in

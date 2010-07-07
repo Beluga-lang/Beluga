@@ -10,7 +10,6 @@ FILES[] =
         abstract
         check
         common
-        config
         context
         convSigma
         subord
@@ -32,7 +31,7 @@ FILES[] =
         unify
         whnf
         monitor
-        
+
 
 # Declare one pseudo target for the package and one for the files it
 # contains

@@ -1686,6 +1686,7 @@ module Make (T : TRAIL) : UNIFY = struct
                   begin match  (isProjPatSub t1' , isProjPatSub t2') with
                     | ( _ , true ) -> 
                         begin try 
+                          let _ = dprint (fun () -> "about to call flattenDCtx from unify.ml projpatsub case; cPsi = " ^ P.dctxToString Empty cD0 cPsi) in
                           let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
                           let phat = Context.dctxToHat flat_cPsi in 
                           let t_flat = ConvSigma.strans_sub t2' conv_list in 
@@ -1701,7 +1702,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
                     | ( true , _ ) -> 
-                        begin try 
+                        begin try
                           let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
                           let phat = Context.dctxToHat flat_cPsi in 
                           let t_flat = ConvSigma.strans_sub t1' conv_list in 
@@ -1805,7 +1806,6 @@ module Make (T : TRAIL) : UNIFY = struct
               begin try 
                 dprnt "isProjPatSub";
                 let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in 
-                dprnt "isProjPatSub - 1(2?3?4?)";
                 let phat = Context.dctxToHat flat_cPsi in 
                 let t_flat = ConvSigma.strans_sub t' conv_list in 
                 let tM1'   = ConvSigma.strans_norm sM1 conv_list in

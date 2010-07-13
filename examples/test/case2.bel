@@ -9,7 +9,7 @@ schema w = some [ ] nat;
 
 rec copynat : {g:(w)*} nat[g] -> nat[g] =
    FN g => fn e =>
-     case e of [g] z => [g] z
-             | [g] suc (U ..) => copynat [g] ([g]  (U ..))
-    
+     case e of %not
+       [g] z => [g] z 
+     | [g] suc (U ..) => copynat [g] ([g]  (U ..))
 ;

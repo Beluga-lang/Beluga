@@ -11,13 +11,13 @@ schema tps = tp;
 
 rec f : {g:(w)*} nat[g] -> nat[g] =
   FN g => fn e =>
-    case e of
-{#p::(block x:nat. nat)[g]}
+    case e of  %not
+     {#p::(block x:nat. nat)[g]}
       [g] #p.1 .. => [g] #p.2 ..
 ;
 
 rec qqqq : nat[x:block y:nat.nat] -> nat[x:block y:nat.nat] =   
-fn eNat => case eNat of
+fn eNat => case eNat of %not
   [x:block y:nat.nat] x.1 => [x] x.2
 ;
 
@@ -39,14 +39,14 @@ rec ffff2 : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
 
 rec ffff2-a : {h:(tps)*} tp[h] -> tp[h] =
   FN h => fn eTp =>
-    case eTp of
+    case eTp of %not
       [h] #q .. => [h] #q ..
 ;
 
 % not
 rec ffff2-a-misspell : {h:(tps)*} tp[h] -> tp[h] =
   FN h => fn eTp =>
-    case eTp of
+    case eTp of %not
       [g] #q .. => [g] #q ..        % Unknown context variable in context: g
 ;
 
@@ -54,13 +54,14 @@ rec ffff2-a-misspell : {h:(tps)*} tp[h] -> tp[h] =
 %not
 rec ffff3 : {g:(w)*} {h:(tps)*} nat[g] -> tp[h] -> nat[g] =
   FN g => FN h => fn eNat => fn eTp =>
-    case eTp of [h] #pp.1 .. => [g] z             % Fails: tps doesn't include any Sigmas
+    case eTp of
+     [h] #pp.1 .. => [g] z             % Fails: tps doesn't include any Sigmas
 ;
 
 
 rec ffff4 : {h:(tps)*}{g:(w)*}  nat[g] -> tp[h] -> nat[g] =
   FN h => FN g => fn eNat => fn eTp =>
-    case eNat of
+    case eNat of %not
       [g] #pp'.1 .. => [g] #pp'.2 ..
 ;
 

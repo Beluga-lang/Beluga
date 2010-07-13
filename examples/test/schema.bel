@@ -43,10 +43,8 @@ rec expnatter : {g:(expCtx)*} (exp nat) [g] -> (exp nat) [ ] =
 
 rec cntV : {g:(expCtx)*} (exp nat) [g] -> (exp nat) [ ] =
 FN g => fn e =>
- case e of
+ case e of %not
    {T1::tp[ ]}
    [g] typist T1 : (exp nat)[g] =>
-
       expnatter [g, x:exp T1] ([g, x] typist T1)
-
 ;

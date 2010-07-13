@@ -9,8 +9,9 @@ schema w = nat;
 
 rec copynat : {g:(w)*} nat[g] -> nat[g] =
 FN g => fn e =>
- case e of [g] z : nat[g] => [g] z
-         | {U::nat[g]}
-            [g] suc (U ..) : nat[g] => copynat [g] ([g] (U ..))
+ case e of %not
+    [g] z : nat[g] => [g] z
+  | {U::nat[g]}
+     [g] suc (U ..) : nat[g] => copynat [g] ([g] (U ..))
     
 ;

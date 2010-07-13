@@ -957,7 +957,7 @@ let rec maxTuple f = function
   | LF.Cons(tM, tuple) -> max (f tM) (maxTuple f tuple)
 
 and depth = function
-  | LF.Lam(_, _, tM) -> 1 + depth tM
+  | LF.Lam(_, _, tM) -> 1 + depth tM   (* should probably just be   depth tM   -jd *)
   | LF.Root(_, head, spine) -> 1 + (maxSpine (depthHead head) depth spine)
   | LF.Clo(tM, _) -> depth tM
   | LF.Tuple(_, tuple) -> 1 + maxTuple depth tuple

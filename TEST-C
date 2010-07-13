@@ -27,7 +27,7 @@ cd $X
 # The following contain nonexhaustive cases, and are, correctly, rejected
 
 echo 'interesting(?) nonexhaustive cases: '
-echo $INTERPRETER +warncover $* \
+$INTERPRETER +warncover $* \
     count-var/cntvar-crec.bel  \
     count-var/cntvar-explicit.bel \
     count-var/cntvar-simple.bel \
@@ -42,34 +42,29 @@ echo $INTERPRETER +warncover $* \
     freshML/cps-popl-tutorial2.bel \
     freshML/cps-popl-tutorial2-crec.bel  \
     freshML/term-crec.bel \
-    test/alpha.bel \
     test/schema.bel \
-    test/sigma3.bel \
-    test/case1.bel \
-    test/case1-explicit.bel \
-    test/case2.bel \
-    test/case2-explicit.bel \
     test/cross.bel \
-    test/id-simple.bel \
-    test/implicit-obj.bel \
-    test/test-simple-explicit.bel \
     mini-ml/eval-sub.bel \
     mini-ml/eval-sub-explicit.bel \
     typed-eval/tpeval.bel \
     typed-eval/tpeval-explicit.bel \
     typed-eval/tpeval2.bel
 
+sleep 2
+echo
+
+echo BROKEN: \
+    lp-horn/sources.cfg \
+    lp-horn/test-crec.cfg
+
+sleep 2
+echo
 
 # The following don't cover for unknown reasons
 $INTERPRETER +coverage $* \
-    lp-horn/sources.cfg \
-    lp-horn/test-crec.cfg \
-    path/path.bel \
     path/path-typed.bel \
-    mini-ml/tps.bel \
     church-rosser/test.cfg \
     church-rosser/test-crec.cfg \
-    compile/cls/test.cfg \
     compile/debruijn/test.cfg \
     cut-elim.bel \
     cut-elim-crec.bel \
@@ -82,6 +77,7 @@ $INTERPRETER +coverage $* \
     ../examples-twelf/church-rosser/test.cfg \
     ../examples-twelf/compile/cls/test.cfg
 
+exit 2
 
 echo 'Pausing after uninvestigated examples...'
 sleep 2
@@ -96,26 +92,38 @@ echo $INTERPRETER +coverage $* \
 
 echo OK:
 $INTERPRETER +coverage $* \
+    path/path.bel \
+    test/alpha.bel \
+    test/case1.bel \
+    test/case1-explicit.bel \
+    test/case2.bel \
+    test/case2-explicit.bel \
+    test/id-simple.bel \
+    test/implicit-obj.bel \
+    test/sigma3.bel \
+    test/test-simple-explicit.bel \
     mini-ml/eval-sub-1.bel \
     mini-ml/eval-sub-1-explicit.bel \
+    mini-ml/tps.bel \
     mini-ml/vsound.bel \
     mini-ml/vsound-explicit.bel \
-    compile/debruijn1/test.cfg \
-    compile/debruijn1/sources.cfg \
     arith/arith.bel \
     compile/cls/sources.cfg \
+    compile/cls/test.cfg \
     compile/cpm/sources.cfg \
     compile/cpm/test.cfg \
-    compile/debruijn/sources.cfg \
     compile/cps/sources.cfg \
     compile/cxm/sources.cfg \
-    count-var/cntvar.bel \
+    compile/debruijn/sources.cfg \
+    compile/debruijn1/test.cfg \
+    compile/debruijn1/sources.cfg \
     copy/copy.bel \
     copy/copy-crec.bel \
     copy/copy-explicit.bel \
     copy/copy-simple.bel \
     copy/copy-simple-crec.bel \
     copy/copy-simple-explicit.bel \
+    count-var/cntvar.bel \
     debruijn1/sources.cfg \
     equal/eq-proof-tuple.bel \
     equal/eq-proof.bel \

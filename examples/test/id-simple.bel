@@ -18,7 +18,7 @@ rec identity : nat [ ] -> nat [ ] =
 
  rec plus : nat [ ] -> nat [ ] -> nat [ ] = 
  fn x => fn y => 
-  case x of 
+  case x of %not
      [ ] z  => y
   |  [ ] s U  => 
      let 
@@ -30,7 +30,7 @@ rec identity : nat [ ] -> nat [ ] =
 
  rec plus' : nat [ ] -> nat [ ] -> nat [ ] = 
    fn x => fn y => 
-     case x of 
+     case x of %not
        [ ] z  => y
      | [ ] s U => 
        let [ ] V = plus' ([ ] U) y in 

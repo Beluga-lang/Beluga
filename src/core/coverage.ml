@@ -10,8 +10,8 @@ open ConvSigma
 module Types = Store.Cid.Typ
 module Constructors = Store.Cid.Term
 
+(* replace with Unify.NoTrail? *)
 module U = Unify.EmptyTrail   (* is EmptyTrail the right one to use?  -jd *)
-(*module U = Unify.StdTrail*)
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.NamedRenderer
 
@@ -976,7 +976,6 @@ let rec maxfun f = function
   | x :: xs -> let f_x = f x in max f_x (maxfun f xs)
 
 
-
 let rec maxTypRec f = function
   | LF.SigmaLast tA -> f tA
   | LF.SigmaElem(_x, tA, typRec) ->
@@ -1053,17 +1052,17 @@ let covers problem =
                Debug.pushIndentationLevel();
                dprint (fun () -> "trying strategy " ^ strategyToString strategy);
                begin try
-                           let shift = noop_shift in
-                           let tA = hangTyp shift tA in
-                             contextDep (strategy, shift, problem.cO, problem.cD, cPsi)
-                               (fun (strategy, shift', cO, cD, cPsi) ->
-                                  dprint (fun () -> "contextDep generated cPsi = " ^ P.dctxToString cO cD cPsi);
-                                  dprint (fun () -> "strategy.phase := ContextVariablePhase");
-                                  let strategy = {strategy with phase = ContextVariablePhase} in
-                                  let tA = cut tA shift' in
-                                    context (strategy, shift', cO, cD, cPsi)
-                                            tA
-                                            (covered_by_set problem.branches))
+                 let shift = noop_shift in
+                 let tA = hangTyp shift tA in
+                   contextDep (strategy, shift, problem.cO, problem.cD, cPsi)
+                     (fun (strategy, shift', cO, cD, cPsi) ->
+                        dprint (fun () -> "contextDep generated cPsi = " ^ P.dctxToString cO cD cPsi);
+                        dprint (fun () -> "strategy.phase := ContextVariablePhase");
+                        let strategy = {strategy with phase = ContextVariablePhase} in
+                        let tA = cut tA shift' in
+                          context (strategy, shift', cO, cD, cPsi)
+                            tA
+                            (covered_by_set problem.branches))
                with exn -> (Debug.popIndentationLevel(); raise exn)
                end;
                Debug.popIndentationLevel())

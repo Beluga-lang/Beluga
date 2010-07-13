@@ -138,7 +138,7 @@ let rec thin (cO, cD) (tP, cPsi) =
 
     in
       match cPsi with
-        | Null -> (Shift(NoCtxShift, 0), Null) (* cPsi_orig |- shift(noCtx, n) : . *)
+        | Null -> (Shift(NoCtxShift, 0), Null) (* cPsi |- shift(noCtx, n) : . *)
 
         | CtxVar psi -> 
           if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) then
@@ -153,8 +153,8 @@ let rec thin (cO, cD) (tP, cPsi) =
                   (* cPsi |- thin_s : cPsi' *)
                     (Substitution.LF.comp thin_s  (Shift (NoCtxShift, 1)) ,cPsi') 
                   (* cPsi, x:tA |- thin_s ^ 1 : cPsi' *)
-              | nonempty -> 
-                  let (thin_s, cPsi') = inner (nonempty @ basis) cPsi in 
+              | nonempty_list -> 
+                  let (thin_s, cPsi') = inner (nonempty_list @ basis) cPsi in 
                   (* cPsi |- thin_s <= cPsi' *) 
                   (* cPsi,x:tA |- dot1 thin_s <= cPsi', x:tA'  where tA = [thin_s]([thin_s_inv]tA) *) 
                   let thin_s_inv      = Substitution.LF.invert thin_s in 
@@ -164,50 +164,3 @@ let rec thin (cO, cD) (tP, cPsi) =
     inner [tP] cPsi
 
 
-
-(*      match cPsi with
-      | Null -> (Shift(NoCtxShift, n), Null)
-
-      | CtxVar psi ->
-          if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) then
-            (Shift(NoCtxShift, n), CtxVar psi)
-          else
-            (Shift(CtxShift psi, n), Null)
-
-(*      | DDec(cPsi, TypDecl(_name, Sigma typRec)) ->
-          let n = n + 1 in
-          let size = blockLength typRec in
-          let rec walk k (basis, acc) =
-            if k > size then (basis, acc)
-            else
-              let tA = Whnf.normTyp (getType (BVar n) (typRec, Substitution.LF.id) k 1) in
-              let (basis, acc) =
-                match relevant tA with
-                  | [] -> (basis, acc)
-                  | nonempty ->
-                      (nonempty @ basis,
-                       Head (Proj (BVar n, k)) :: acc)
-              in
-                walk (k + 1) (basis, acc)
-          in
-          let (basis, components) = walk 1 (basis, []) in
-          let rest = inner n basis cPsi in
-(*            if List.length components = size then   (* all components included; just put the block instead *)
-              Dot(Head (BVar n), rest)
-            else *)
-              List.fold_right (fun h s -> Dot(h, s)) components rest
-*)
-      | DDec(cPsi, TypDecl(name, tA)) ->
-          (*          let n = n + 1 in*)
-            begin match relevant tA with
-              | [] -> 
-                  let (thin_s, cPsi') = inner (n+1) basis cPsi in 
-(*                    (Substitution.LF.comp thin_s  (Shift (NoCtxShift, 1)) ,cPsi') *)
-                    (thin_s  ,cPsi')
-              | nonempty -> 
-                  let (thin_s, cPsi') = inner (n+1) (nonempty @ basis) cPsi in 
-                  (* cPsi |- thin_s <= cPsi' *) 
-                  let thin_s_inv      = Substitution.LF.invert thin_s in 
-                    (Dot(Head (BVar n), thin_s) , DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
-            end
-*)

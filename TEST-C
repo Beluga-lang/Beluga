@@ -66,7 +66,6 @@ $INTERPRETER +coverage $* \
     church-rosser/test.cfg \
     church-rosser/test-crec.cfg \
     compile/debruijn/test.cfg \
-    cut-elim.bel \
     cut-elim-crec.bel \
     free-vars/fvnat-explicit.bel \
     small-step/system-f.bel \
@@ -76,8 +75,6 @@ $INTERPRETER +coverage $* \
     tpcert.bel \
     ../examples-twelf/church-rosser/test.cfg \
     ../examples-twelf/compile/cls/test.cfg
-
-exit 2
 
 echo 'Pausing after uninvestigated examples...'
 sleep 2
@@ -124,6 +121,7 @@ $INTERPRETER +coverage $* \
     copy/copy-simple-crec.bel \
     copy/copy-simple-explicit.bel \
     count-var/cntvar.bel \
+    cut-elim.bel \
     debruijn1/sources.cfg \
     equal/eq-proof-tuple.bel \
     equal/eq-proof.bel \

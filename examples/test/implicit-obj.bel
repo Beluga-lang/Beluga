@@ -23,6 +23,9 @@ letv :  exp T1 -> (exp T1 -> exp T2) -> exp T2.
 lam  : (exp T1 -> exp T2) -> exp (arr T1 T2).
 
 
+
+
+
 rec typeCase : {T::tp[ ]} (exp T)[ ] -> (exp T)[ ] = 
 mlam T => fn e => case [ ] T of  
    [ ] nat => (case e of [ ] z   => [ ] z 

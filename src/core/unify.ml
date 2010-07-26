@@ -1174,6 +1174,7 @@ module Make (T : TRAIL) : UNIFY = struct
                   | MV v -> 
                       begin try 
                         let (_, _tA, cPsi1) = Whnf.mctxMDec cD0 u in 
+                        (* let _ = dprint (fun () ->  ) in  *)
                         let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in                         
                           returnNeutral (MVar (Offset v, s'))
                       with 

@@ -283,8 +283,7 @@ let rec dprintCTs cO cD cPsi = function
 
 (* getConcretesAndTypes : LF.dctx -> (LF.head * LF.typ) list
  *
- * Given a type (e.g. nat), return the type's constructors along with their types
- * (e.g. [(z, nat), (suc, nat -> nat)])
+ * In what context does the output make sense? - Shift LF.typ argument appropriately... -bp
  *)
 let getConcretesAndTypes cPsi =
   let rec inner n = function
@@ -311,6 +310,7 @@ let rec lenTypRec = function
   | LF.SigmaLast _ -> 1
   | LF.SigmaElem (_x, _tA, typRec) -> 1 + lenTypRec typRec
  
+
 let rec iterTypRec f (head, s_recA) =
   let typRec = Whnf.normTypRec s_recA in
 (*  let _ = dprint (fun () -> "iterTypRec>>> " ^ string_of_int (lenTypRec typRec)) in *)
@@ -344,6 +344,12 @@ let rec appendToSpine spine tM = match spine with
    App-unify
    App-Pi
    App-Sigma *)
+(* 
+
+   cO ; cD ; cG |-   Pi cD_i . pat -> body  <=_{P[Psi]}  tau
+
+   cO ; cD, cD1 |- MShift shift <= cD 
+*)
 let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA0) tP k =
   let _ = dprint (fun () -> "App: tR = " ^ P.headToString cO cD cPsi tR ^ "\n"
                           ^ "App: tA = " ^ P.typToString cO cD cPsi (tA0, emptySub) ^ "\n"

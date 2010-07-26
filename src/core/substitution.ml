@@ -151,8 +151,8 @@ module LF = struct
 
     | (Shift (NoCtxShift, k1), Shift (NegCtxShift psi2, k2)) -> 
     (*
-     * If      psi, k1, k2 |- s2 : k1              k1 |-  s1 : .
-     * then s'  =  s1 o s2
+     * If      psi, k1, k2 |- s2 : k1             psi2,k1   |-  s1 : psi2
+     * then s'  =  s1 o s2                           k1?  |-  s2 : psi2, k1 
      * and   psi, k1, k2  |- s1 o s2 : .
      *)
         Shift (NegCtxShift psi2, k1 + k2)     (* ADDED -jd 2010-06-25 *)
@@ -161,9 +161,10 @@ module LF = struct
         *)
 
 
+    (*  Psi, Psi' |- Shift n : Psi    |Psi'| = n    *)
     | (Shift (NoCtxShift, k1 ), Shift (CtxShift psi2, k2 )) -> 
-    (*  psi, x:A |- s1 <= psi
-                 |-    <= psi, x:A
+    (*  x1:A1 ...  xk1:Ak1 |- s1 <=  .
+                           |-    <= x1:A1 ...  xk1:Ak1
      * If      k1, k2     |- s2 : psi, k1           psi,  k1  |- s1 : psi
      * then s'  =  s1 o s2
      * and   k1, k2     |- s1 o s2 : psi

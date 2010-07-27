@@ -14,6 +14,19 @@ open Substitution
 open Store.Cid
 open Error
 
+let rec subToString = function
+  | Shift(CtxShift _, n) -> "Shift(CtxShift _, " ^ string_of_int n ^ ")"
+  | Shift(NoCtxShift, n) -> "Shift(NoCtxShift, " ^ string_of_int n ^ ")"
+  | Shift(NegCtxShift _, n) -> "Shift(NegCtxShift _, " ^ string_of_int n ^ ")"
+  | SVar _ -> "SVar(_,_)"
+  | FSVar _ -> "FSVar(_,_)"
+  | Dot(front, s) -> "Dot(" ^ frontToString front ^ ", " ^ subToString s ^ ")"
+
+and frontToString = function
+  | Head h -> "Head _"
+  | Obj tM -> "Obj _"
+  | Undef -> "Undef"
+
 exception Error of Syntax.Loc.t option * error
 exception Violation of string
 
@@ -776,7 +789,11 @@ let rec ctxShift cPsi = match cPsi with
 let rec ctxToSub' cD cPhi cPsi = match cPsi with
   | Null -> Substitution.LF.id
   | DDec (cPsi', TypDecl (_, tA)) ->
+dprnt"aaa";
+Debug.indent 2;
       let s = ((ctxToSub' cD cPhi cPsi') : sub) in
+Debug.outdent 2;
+dprint(fun () -> "s = " ^ subToString s);
         (* For the moment, assume tA atomic. *)
         (* lower tA? *)
         (* A = A_1 -> ... -> A_n -> P
@@ -795,11 +812,17 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
       (* let u     = Whnf.etaExpandMV Null (tA, s) LF.id in *)
         (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
+      dprint(fun () -> "ctxShift cPhi = " ^ subToString (ctxShift cPhi));
       let composition = Substitution.LF.comp s (ctxShift cPhi) in
+      dprint(fun () -> "composition = " ^ subToString composition);
       let u     = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in 
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
+      dprnt"qq";
       let shifted = Substitution.LF.comp s Substitution.LF.shift in
-        Dot (front, shifted)
+      dprint(fun () -> "shifted = " ^ subToString shifted);
+      let result = Dot(front, shifted) in
+      dprint(fun () -> "result = " ^ subToString result);
+        result
 
 
 let rec mctxToMSub cD = match cD with
@@ -819,6 +842,10 @@ let rec mctxToMSub cD = match cD with
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
 
+
+(* The following functions are from an attempt to improve printing of meta-variables;
+   the idea was to check if the result of applying a substitution produced an "equivalent"
+   context, and if so, to use the original names.  -jd 2010-07 *)
 let rec isomorphic cD1 cD2 = match (cD1, cD2) with
   | (Empty, Empty) -> true
   | (Empty, _) -> false
@@ -839,4 +866,4 @@ and isomorphic_ctyp_decl dec1 dec2 = match (dec1, dec2) with
 and isomorphic_dctx dctx1 dctx2 = (dctx1 = dctx2) (* match (dctx1, dctx2) with *)
 
 and isomorphic_typ tA1 tA2 = (tA1 = tA2)
-;; (* ocaml, what's wrong with you? *)
+;; (* ocaml is unhappy without the ;; *)

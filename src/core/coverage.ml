@@ -481,7 +481,9 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
     dprint (fun () -> "+++   cD =  " ^ P.mctxToString cO cD ^ "\n"
                     ^ "+++ cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n"
                     ^ "+++ some_part_dctx = " ^ P.dctxToString cO cD some_part_dctx);
+dprnt"aa";
     let some_part_dctxSub = Ctxsub.ctxToSub' cD cPsi some_part_dctx in
+dprnt"ab";
     let id_psi = Substitution.LF.justCtxVar cPsi in
     let head = LF.PVar (LF.Offset 1, id_psi) in
       match typRec with
@@ -922,9 +924,10 @@ let covered_by branch (cO, cD, cPsi) tM tA =
                         ^ "  Psi = " ^ P.dctxToString cO matchD matchPsi ^ "\n"
                         ^ " left = " ^ P.normalToString cO matchD matchPsi matchLeft ^ "\n"
                         ^ "right = " ^ P.normalToString cO matchD matchPsi matchRight);
-
-        U.matchTerm matchD matchPsi matchLeft matchRight;
-
+        
+        U.disallowUndefineds (fun () ->
+                                U.matchTerm matchD matchPsi matchLeft matchRight);
+        
         dprint (fun () -> "MATCHED");
         Debug.outdent 2
       with U.Unify s -> (dprnt "no match";

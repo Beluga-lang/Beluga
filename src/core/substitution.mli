@@ -7,6 +7,8 @@ open Syntax.Int.LF
 
 module LF : sig
 
+  exception NotComposable of string
+
   (**************************)
   (* Explicit substitutions *)
   (**************************)

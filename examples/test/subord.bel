@@ -12,6 +12,7 @@ schema boolCtx = bool;
 % The pattern  eq U V  covers *all* terms of type `eq' because the context contains
 %   only bools, which cannot appear in terms of type `term'.
 
+%{
 rec fff : {g:(boolCtx)*} bool[g, xx : bool] -> term[] =
 FN g => fn e =>
   case e of
@@ -26,3 +27,24 @@ FN g => fn e =>
 %  | [g, xx : bool]  eq (U ..) (V .. xx)     => [] z
   | [g, xx : bool]  #p .. xx   => [] z
 ;
+
+
+rec fff2 : {g:(termCtx)*} term[g, xx : bool] -> term[] =
+FN g => fn e =>
+  case e of
+  | [g, xx : bool]  z     => [] z
+  | [g, xx : bool]  suc (U ..)   => [] z
+  | [g, xx : bool]  #p ..   => [] z
+;
+}%
+
+rec fff2Wrong : {g:(termCtx)*} term[g, xx : bool] -> term[] =
+FN g => fn e =>
+  case e of %not
+  | [g, xx : bool]  z      => [] z
+  | [g, xx : bool]  suc U  => [] z
+  | [g, xx : bool]  #p ..  => [] z
+;
+
+% let crash = fff2Wrong [y:term] ([y:term, xx:bool] suc (suc y))
+% ;

@@ -13,7 +13,7 @@ module LF = struct
   let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [13])
 
   exception Error of string
-
+  exception NotComposable of string
 
   (**************************)
   (* Explicit Substitutions *)
@@ -80,7 +80,7 @@ module LF = struct
         Shift (NoCtxShift, n + m)
 
     | (Shift (CtxShift psi, n), Shift (NegCtxShift psi', k)) ->
-        (* Psi{n},Psi'{k} |- s2 : psi, Psi{n}    and   psi, Psi{n} |- s1 : .
+        (* Psi{n}, Psi'{k} |- s2 : psi, Psi{n}    and   psi, Psi{n} |- s1 : .
          * therefore  Psi{n},Psi'{k} |- s : .
          *)
         (* if psi = psi' then   *)
@@ -106,7 +106,7 @@ module LF = struct
 
           | _ -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n"
                     (P.subToString s1) (P.subToString s2) ; *)
-              raise (Error "Composition undefined - 2 ")
+              raise (NotComposable "Composition undefined - 2")
         in
           ctx_shift m s2
 
@@ -146,36 +146,39 @@ module LF = struct
           Dot (h, comp s s')
 
 (*    | (Shift (CtxShift _, _ ), _s2) -> 
-       raise (Error "Composition not defined? - Shift CtxShift")
+       raise (Error "Composition not defined?  Shift CtxShift")
 *)
 
     | (Shift (NoCtxShift, k1), Shift (NegCtxShift psi2, k2)) -> 
     (*
-     * If      psi, k1, k2 |- s2 : k1              k1 |-  s1 : .
-     * then s'  =  s1 o s2
-     * and   psi, k1, k2  |- s1 o s2 : .
+     * s2 = Shift(NegCtxShift psi2, k2)               s1 = Shift(NoCtxShift, k1)
+     *    k1, k2 |- s2 : psi, k1              psi, k1 |-  s1 : psi
+     *
+     *    k1, k2 |- s1 o s2 : psi
+     * 
+     *  s1 o s2 = Shift(NegCtxShift psi2, k1 + k2)
      *)
         Shift (NegCtxShift psi2, k1 + k2)     (* ADDED -jd 2010-06-25 *)
-        (*
-        raise (Error ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o Shift NegCtx?"))
-        *)
-
+(*
+        raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o NegCtxShift?"))
+*)
 
     | (Shift (NoCtxShift, k1 ), Shift (CtxShift psi2, k2 )) -> 
-    (*  psi, x:A |- s1 <= psi
-                 |-    <= psi, x:A
-     * If      k1, k2     |- s2 : psi, k1           psi,  k1  |- s1 : psi
-     * then s'  =  s1 o s2
-     * and   k1, k2     |- s1 o s2 : psi
+    (*
+     * s2 = Shift(CtxShift psi2, k2)               s1 = Shift(NoCtxShift, k1)
+     *      psi, k1, k2     |- s2 : k1           k1  |- s1 : .
+     *
+     *      psi, k1, k2     |- s1 o s2 : .
+     *
+     *  s1 o s2 = Shift(CtxShift psi2, k1 + k2)
      *)
         Shift (CtxShift psi2, k1 + k2)           (* ADDED -jd 2010-06-24 *)
-        (*
-        raise (Error ("Composition not defined? NoCtxShift " ^ string_of_int k ^ " o Shift CtxShift?"))
-        *)
+
+(*        raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o CtxShift " ^ string_of_int k2 ^ "?")) *)
 
 
     | (_s1, _s2) -> 
-        raise (Error "Composition not defined?")
+        raise (NotComposable "Composition not defined?")
 
 
   (* bvarSub n s = Ft'

@@ -33,6 +33,7 @@ and cmpai: {g:(c_ctx)*}{D::(pf (A ..))[g]}(atm (D ..))[g] ->
 	       (solve (atom q))[g, q:p, u:focus (A ..) q] = 
 FN g => mlam D => fn at => case ([g] D .. ) of 
   | [g] #p.2 .. => [g,q,u] s_atom u (#p.1 ..) 
+
   | [g] andel (D1 .. ) =>
     let [g]  atm_andel (CN1 .. ) = at in 
     let [g,q:p, i: focus (& (B1 ..) (B2 ..))  q] I1 .. q i = cmpai [g] <g . D1 .. > ([g] CN1 ..) in 

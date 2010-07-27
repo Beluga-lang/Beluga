@@ -26,9 +26,10 @@ foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C).
 schema ctx = some [a: o] hyp a + i + o;
 
 ass: o -> o -> type.
-assume: {A:o}conc A -> (hyp A -> conc C) -> ass A C.
+assume: {A:o}conc A -> (hyp A -> conc C) -> ass A C i.
 
-
+% (assum A D (\h. E h))
+%  {A:o} conc A -> (hyp A -> conc C) -> conc C. 
 rec ca : {g:ctx} (ass (A ..) (C ..))[g]  -> (conc (C ..))[g] =
 fn e => case e of 
 | [g] assume (A ..)             (axiom (H ..))      (\h.E .. h)                            => [g] (E .. (H ..))

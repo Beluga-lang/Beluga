@@ -10,8 +10,8 @@ open ConvSigma
 module Types = Store.Cid.Typ
 module Constructors = Store.Cid.Term
 
+(* replace with Unify.NoTrail? *)
 module U = Unify.EmptyTrail   (* is EmptyTrail the right one to use?  -jd *)
-(*module U = Unify.StdTrail*)
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.NamedRenderer
 
@@ -283,8 +283,7 @@ let rec dprintCTs cO cD cPsi = function
 
 (* getConcretesAndTypes : LF.dctx -> (LF.head * LF.typ) list
  *
- * Given a type (e.g. nat), return the type's constructors along with their types
- * (e.g. [(z, nat), (suc, nat -> nat)])
+ * In what context does the output make sense? - Shift LF.typ argument appropriately... -bp
  *)
 let getConcretesAndTypes cPsi =
   let rec inner n = function
@@ -311,6 +310,7 @@ let rec lenTypRec = function
   | LF.SigmaLast _ -> 1
   | LF.SigmaElem (_x, _tA, typRec) -> 1 + lenTypRec typRec
  
+
 let rec iterTypRec f (head, s_recA) =
   let typRec = Whnf.normTypRec s_recA in
 (*  let _ = dprint (fun () -> "iterTypRec>>> " ^ string_of_int (lenTypRec typRec)) in *)
@@ -344,6 +344,12 @@ let rec appendToSpine spine tM = match spine with
    App-unify
    App-Pi
    App-Sigma *)
+(* 
+
+   cO ; cD ; cG |-   Pi cD_i . pat -> body  <=_{P[Psi]}  tau
+
+   cO ; cD, cD1 |- MShift shift <= cD 
+*)
 let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA0) tP k =
   let _ = dprint (fun () -> "App: tR = " ^ P.headToString cO cD cPsi tR ^ "\n"
                           ^ "App: tA = " ^ P.typToString cO cD cPsi (tA0, emptySub) ^ "\n"
@@ -979,7 +985,6 @@ let rec maxfun f = function
   | x :: xs -> let f_x = f x in max f_x (maxfun f xs)
 
 
-
 let rec maxTypRec f = function
   | LF.SigmaLast tA -> f tA
   | LF.SigmaElem(_x, tA, typRec) ->
@@ -1056,17 +1061,17 @@ let covers problem =
                Debug.pushIndentationLevel();
                dprint (fun () -> "trying strategy " ^ strategyToString strategy);
                begin try
-                           let shift = noop_shift in
-                           let tA = hangTyp shift tA in
-                             contextDep (strategy, shift, problem.cO, problem.cD, cPsi)
-                               (fun (strategy, shift', cO, cD, cPsi) ->
-                                  dprint (fun () -> "contextDep generated cPsi = " ^ P.dctxToString cO cD cPsi);
-                                  dprint (fun () -> "strategy.phase := ContextVariablePhase");
-                                  let strategy = {strategy with phase = ContextVariablePhase} in
-                                  let tA = cut tA shift' in
-                                    context (strategy, shift', cO, cD, cPsi)
-                                            tA
-                                            (covered_by_set problem.branches))
+                 let shift = noop_shift in
+                 let tA = hangTyp shift tA in
+                   contextDep (strategy, shift, problem.cO, problem.cD, cPsi)
+                     (fun (strategy, shift', cO, cD, cPsi) ->
+                        dprint (fun () -> "contextDep generated cPsi = " ^ P.dctxToString cO cD cPsi);
+                        dprint (fun () -> "strategy.phase := ContextVariablePhase");
+                        let strategy = {strategy with phase = ContextVariablePhase} in
+                        let tA = cut tA shift' in
+                          context (strategy, shift', cO, cD, cPsi)
+                            tA
+                            (covered_by_set problem.branches))
                with exn -> (Debug.popIndentationLevel(); raise exn)
                end;
                Debug.popIndentationLevel())

@@ -15,8 +15,8 @@ module Cid = struct
       mvar_generator       : (unit -> string) option;
       mutable frozen       : bool;
       mutable constructors : Id.cid_term list;
-      mutable subordinates : BitSet.t;
-      mutable typesubordinated : BitSet.t
+      mutable subordinates : BitSet.t;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
+      mutable typesubordinated : BitSet.t (* unused at the moment *)
     }
     
     let entry_list  = ref []
@@ -59,8 +59,8 @@ module Cid = struct
                        implicit_arguments = entry.implicit_arguments ; 
                        kind  = entry.kind ;
                        var_generator    = var_name_generator; 
-                       mvar_generator   =  mvar_name_generator;
-                       frozen             = entry.frozen;
+                       mvar_generator   = mvar_name_generator;
+                       frozen           = entry.frozen;
                        constructors     = entry.constructors;
                        subordinates     = entry.subordinates;
                        typesubordinated = entry.typesubordinated
@@ -90,40 +90,51 @@ module Cid = struct
     and gen_mvar_name_typRec = function
       | Int.LF.SigmaLast tA -> gen_mvar_name tA
       | Int.LF.SigmaElem(_, _, rest) -> gen_mvar_name_typRec rest
-    
- 
-    let subord_read arr i =
-      if i >= DynArray.length arr then
-        false
-      else DynArray.get arr i
+   
 
-    let rec subord_write arr i =
-      if i >= DynArray.length arr then
-        (DynArray.add arr false;
-         subord_write arr i)
-      else DynArray.set arr i true
+    (* Subordination array:
 
-    let subord_iter f arr =
-      DynArray.iteri (fun n flag -> if flag then f n) arr
+       Subordination information is stored in a bit array.
+       if cid is a subordinate of this entry, then the cid-th bit is set 
 
+       We store subordination information as a adjacency matrix, i.e.
+       the row corresponding to one type familly contains *all* cids
+       it can depend on.          
+
+    *)
+    (* subord_iter f arr = ()    
+
+       if f: int -> ()    and  
+          arr is a  bit array describing a subordination relation
+       then 
+          f is applied to each cid which is in the subordination relation
+    *)
     let subord_iter f arr =
       Enum.iter f (BitSet.enum arr)
  
     (* add the subordination:  b-terms can contain a-terms *)
+    (* addSubord a b = ()
+        
+       Let a,b be cid for type constructors. 
+       Terms of type family b can contain terms of type family a.
+     *)
     let rec addSubord a b =
       let a_e = get a in
       let b_e = get b in
-(*      let _ = print_string ("addSubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in *)
         if BitSet.is_set b_e.subordinates a then
+          (* a is already in the subordinate relation for b, i.e. b depends on a *)
           ()
         else
+          (* a is not yet in the subordinate relation for b, i.e. b depends on a *)
           (BitSet.set b_e.subordinates a;
            (* Take transitive closure:
               If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
+           (* Call below could be replaced by
+              subord_iter (fun aa -> BitSet.set b_e subordinates aa) a_e.subordinates *)
            subord_iter (fun aa -> addSubord aa b) a_e.subordinates;
-          );
-(*        subord_iter (fun bb -> addTypesubord a bb) b_e.typesubordinated    *)
+          )
 
+(* At the moment not relevant: may or may not be correct / unused code 
     (* add the type-level subordination:  b-types can contain a-terms *)
     and addTypesubord a b =
       let a_e = get a in
@@ -156,24 +167,24 @@ module Cid = struct
       in
         update entry.kind
 
+*)
 
-
-    let add entry =
+    let add entry = 
       let cid_tp = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tp;
         entry_list := cid_tp :: !entry_list;
-        updateTypesubord cid_tp entry;
+(*        updateTypesubord cid_tp entry; *)
         cid_tp
     
     
     let rec inspect acc = function
       | Int.LF.Atom(_, b, spine) ->
-          List.iter (fun acc1 -> addSubord acc1 b) acc;
+          List.iter (fun acc1 -> addSubord acc1 b) acc; 
           [b]
 
-      | Int.LF.PiTyp((Int.LF.TypDecl(_name, tA1), _depend), tA2) ->      
-          inspect (acc @ (inspect [] tA1)) tA2
+      | Int.LF.PiTyp((Int.LF.TypDecl(_name, tA1), _depend), tA2) ->       
+          inspect (acc @ (inspect [] tA1)) tA2 
     (*  | Sigma _ -> *)
 
     let addConstructor loc typ c tA =
@@ -183,6 +194,7 @@ module Cid = struct
         else
           let _ = entry.constructors <- c :: entry.constructors in
           let _ = inspect [] tA in
+          (* type families occuring tA are added to the subordination relation *)
             ()
     
     let clear () =

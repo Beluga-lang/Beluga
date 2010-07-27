@@ -163,6 +163,7 @@ module LF = struct
         raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o NegCtxShift?"))
 *)
 
+    (*  Psi, Psi' |- Shift n : Psi    |Psi'| = n    *)
     | (Shift (NoCtxShift, k1 ), Shift (CtxShift psi2, k2 )) -> 
     (*
      * s2 = Shift(CtxShift psi2, k2)               s1 = Shift(NoCtxShift, k1)

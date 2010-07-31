@@ -1,6 +1,7 @@
 term :  type.
 z    : term.
 
+
 schema termCtx = some [] term;
 
 rec copyBad : {g:(termCtx)*} term[g] -> term[g] =

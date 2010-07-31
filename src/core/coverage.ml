@@ -10,8 +10,7 @@ open ConvSigma
 module Types = Store.Cid.Typ
 module Constructors = Store.Cid.Term
 
-(* replace with Unify.NoTrail? *)
-module U = Unify.EmptyTrail   (* is EmptyTrail the right one to use?  -jd *)
+module U = Unify.EmptyTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.NamedRenderer
 
@@ -133,25 +132,25 @@ let bump_shift increment shifter = {n = shifter.n + increment}
 
 (* Coverage is done in 3 phases:
  *
- *   1. ContextDependentArgumentsPhase
- *        possibly split on arguments to dependent types in the context
- *
- *   2. ContextVariablePhase: (NOT YET IMPLEMENTED)
+ *   1. ContextVariablePhase: (NOT YET IMPLEMENTED)
  *        possibly split context variables
  * 
+ *   2. ContextDependentArgumentsPhase
+ *        possibly split on arguments to dependent types in the context
+ *
  *   3. TermPhase:
  *        possibly split the object (term)
  *
  *  The LFMTP '08 paper only describes TermPhase.
  *)
 type phase =
-    ContextDependentArgumentsPhase
   | ContextVariablePhase
+  | ContextDependentArgumentsPhase
   | TermPhase
 
 let phaseToString = function
-  | ContextDependentArgumentsPhase -> "ContextDependentArgumentsPhase"
   | ContextVariablePhase -> "ContextVariablePhase"
+  | ContextDependentArgumentsPhase -> "ContextDependentArgumentsPhase"
   | TermPhase -> "TermPhase"
   
 
@@ -189,7 +188,7 @@ let naive_strategy (depth, contextLength, contextDepth) =
        currContextLength = 0;
        maxContextDepth = contextDepth;
        currContextDepth = 0;
-       phase = ContextDependentArgumentsPhase}
+       phase = ContextVariablePhase}
 
 let increment_depth strategy =
 (*     print_string ("increment_depth --> " ^ string_of_int (strategy.currDepth + 1) ^ "\n"); flush_all(); *)
@@ -468,8 +467,8 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
 
   (* PVars premises,  App<x_1> thru App<x_k> premises: *)
   let (sch_elems, concretesWithTypes) = match strategy.phase with
-                                        | ContextDependentArgumentsPhase -> ([], [])
                                         | ContextVariablePhase -> ([], [])
+                                        | ContextDependentArgumentsPhase -> ([], [])
                                         | TermPhase -> (getSchemaElems cO cPsi, getConcretesAndTypes cPsi)
   in
 
@@ -712,32 +711,6 @@ and obj (strategy, shift, cO, cD, cPsi) tA k =
          end)
 
 
-let context_split (strategy, shift, cO, cD, cPsi) tA k =
-  obj (increment_context_length strategy, shift, cO, cD, cPsi) tA k
-(*  let sch_elems = getSchemaElems cO cPsi in
-  let splits = ... in
-*)
-
-
-let context (strategy, shift, cO, cD, cPsi) tA k =
-   (Debug.indent 2;
-    context_split_switch strategy
-       (begin
-         (* Split *)
-         fun strategy -> 
-          context_split (strategy, shift, cO, cD, cPsi) tA
-            (fun (strategy', shift, cO, cD, cPsi) b c ->   (* Restore the previous strategy, including strategy.currDepth *)
-               k (strategy, shift, cO, cD, cPsi) b c)
-        end, begin
-         (* Don't split *)
-         fun strategy ->
-           dprint (fun () -> "strategy.phase := TermPhase");
-           let strategy = {strategy with phase = TermPhase} in
-             obj (strategy, shift, cO, cD, cPsi) tA k
-       end);
-    Debug.outdent 2)
-
-
 let rec contextDep_split (strategy, shift, cO, cD, cPsi) k =
   let continue (strategy, shift, cO, cD, cPsi) k =
         k (increment_context_depth strategy, shift, cO, cD, cPsi) in
@@ -842,7 +815,6 @@ let rec contextDep_split (strategy, shift, cO, cD, cPsi) k =
         end
 
 
-
 and contextDep (strategy, shift, cO, cD, cPsi) k =
 (*           k (strategy, shift, cO, cD, cPsi) *)
     Debug.indent 2;
@@ -862,6 +834,32 @@ and contextDep (strategy, shift, cO, cD, cPsi) k =
            k (strategy, shift, cO, cD, cPsi)
        end)
 
+
+let rec context_split (strategy, shift, cO, cD, cPsi) k =
+(*  obj (increment_context_length strategy, shift, cO, cD, cPsi) tA k *)
+   context (increment_context_length strategy, shift, cO, cD, cPsi) k
+(*  let sch_elems = getSchemaElems cO cPsi in
+  let splits = ... in
+*)
+
+and context (strategy, shift, cO, cD, cPsi) k =
+   (Debug.indent 2;
+    context_split_switch strategy
+       (begin
+         (* Split *)
+         fun strategy -> 
+          context_split (strategy, shift, cO, cD, cPsi)
+            (fun (strategy', shift, cO, cD, cPsi) ->   (* Restore the previous strategy, including strategy.currDepth *)
+               k (strategy, shift, cO, cD, cPsi))
+        end, begin
+         (* Don't split *)
+         fun strategy ->
+           dprint (fun () -> "strategy.phase := ContextDependentArgumentsPhase");
+           let strategy = {strategy with phase = ContextDependentArgumentsPhase} in
+(*             obj (strategy, shift, cO, cD, cPsi) ===tA=== k *)
+             contextDep (strategy, shift, cO, cD, cPsi) k
+       end);
+    Debug.outdent 2)
 
 
 (*
@@ -1063,15 +1061,20 @@ let covers problem =
                begin try
                  let shift = noop_shift in
                  let tA = hangTyp shift tA in
-                   contextDep (strategy, shift, problem.cO, problem.cD, cPsi)
+                   context (strategy, shift, problem.cO, problem.cD, cPsi)
                      (fun (strategy, shift', cO, cD, cPsi) ->
-                        dprint (fun () -> "contextDep generated cPsi = " ^ P.dctxToString cO cD cPsi);
-                        dprint (fun () -> "strategy.phase := ContextVariablePhase");
-                        let strategy = {strategy with phase = ContextVariablePhase} in
+                        dprint (fun () -> "context generated cPsi = " ^ P.dctxToString cO cD cPsi);
+                        dprint (fun () -> "strategy.phase := ContextDependentArgumentsPhase");
+                        let strategy = {strategy with phase = ContextDependentArgumentsPhase} in
                         let tA = cut tA shift' in
-                          context (strategy, shift', cO, cD, cPsi)
-                            tA
-                            (covered_by_set problem.branches))
+                          contextDep (strategy, shift', cO, cD, cPsi)
+                            (fun (strategy, shift'', cO, cD, cPsi) ->
+                               dprint (fun () -> "context generated cPsi = " ^ P.dctxToString cO cD cPsi);
+                               dprint (fun () -> "strategy.phase := TermPhase");
+                               let strategy = {strategy with phase = TermPhase} in
+                               obj (strategy, shift'', cO, cD, cPsi)
+                                   tA
+                                   (covered_by_set problem.branches)))
                with exn -> (Debug.popIndentationLevel(); raise exn)
                end;
                Debug.popIndentationLevel())

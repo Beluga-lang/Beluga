@@ -787,13 +787,15 @@ let rec ctxShift cPsi = match cPsi with
    s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
 *)
 let rec ctxToSub' cD cPhi cPsi = match cPsi with
-  | Null -> Substitution.LF.id
+  | Null ->
+      (* Substitution.LF.id  --changed 2010-07-26*)
+      ctxShift cPhi
+
   | DDec (cPsi', TypDecl (_, tA)) ->
-dprnt"aaa";
-Debug.indent 2;
+      Debug.indent 2;
       let s = ((ctxToSub' cD cPhi cPsi') : sub) in
-Debug.outdent 2;
-dprint(fun () -> "s = " ^ subToString s);
+      Debug.outdent 2;
+      dprint (fun () -> "s = " ^ subToString s);
         (* For the moment, assume tA atomic. *)
         (* lower tA? *)
         (* A = A_1 -> ... -> A_n -> P
@@ -809,19 +811,19 @@ dprint(fun () -> "s = " ^ subToString s);
         *)
       (* let (_, phat') = dctxToHat cPsi' in*)
       (* let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in *)
-
       (* let u     = Whnf.etaExpandMV Null (tA, s) LF.id in *)
-        (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-      dprint(fun () -> "ctxShift cPhi = " ^ subToString (ctxShift cPhi));
+        (* let u = Whnf.newMVar (Null ,  TClo(tA, s)) in *)
+(* following 3 lines removed, 2010-07-26
       let composition = Substitution.LF.comp s (ctxShift cPhi) in
-      dprint(fun () -> "composition = " ^ subToString composition);
+      dprint (fun () -> "composition = " ^ subToString composition);
       let u     = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in 
+*)
+      let u     = Whnf.etaExpandMMV None cD cPhi (tA, s) Substitution.LF.id in 
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
-      dprnt"qq";
       let shifted = Substitution.LF.comp s Substitution.LF.shift in
-      dprint(fun () -> "shifted = " ^ subToString shifted);
+      dprint (fun () -> "shifted = " ^ subToString shifted);
       let result = Dot(front, shifted) in
-      dprint(fun () -> "result = " ^ subToString result);
+      dprint (fun () -> "result = " ^ subToString result);
         result
 
 

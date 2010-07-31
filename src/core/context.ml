@@ -196,6 +196,32 @@ let rec projectCtxIntoDctx = function
   | Empty            -> Null
   | Dec (rest, last) -> DDec (projectCtxIntoDctx rest, last)
 
+(*
+let typdeclToCtypdecl cPsi = function
+  | TypDecl (name, typ) -> MDecl(name, typ, cPsi)
+  | TypDeclOpt name -> MDeclOpt name
+
+let rec typdeclCtxToMctx cPsi = function
+  | Empty            -> Empty
+  | Dec (rest, last) -> Dec (typdeclCtxToMctx (DDec(cPsi, rest))
+                                              typdeclToCtypdecl cPsi last)
+      *)
+
+(* Given cPsi = g, ...,
+   return cPsi = g, x:A, ... *)
+let splitContextVariable cPsi new_typ_decl =
+  let rec inner = function
+    | CtxVar ctx_var -> DDec(CtxVar ctx_var, new_typ_decl)
+    | DDec (cPsi, concrete) -> DDec(inner cPsi, concrete)
+  in
+    inner cPsi
+
+let emptyContextVariable cPsi =
+  let rec inner = function
+    | CtxVar ctx_var -> Null
+    | DDec (cPsi, concrete) -> DDec(inner cPsi, concrete)
+  in
+    inner cPsi
 
 
 let rec lookup cG k = match (cG, k) with 

@@ -84,7 +84,6 @@ sleep 1
 # The following use context matching, and are currently (incompletely) rejected
 echo 'would be rejected (context matching):'
 echo $INTERPRETER +coverage $* \
-    freshML/cconv-cheney.bel \
     freshML/debruijn-1.bel
 
 echo OK:
@@ -128,8 +127,9 @@ $INTERPRETER +coverage $* \
     equal/eq-proof-full-crec.bel \
     fol/sources.cfg \
     fol/test.cfg \
-    freshML/term.bel \
+    freshML/cconv-cheney.bel \
     freshML/conv-untyped.bel \
+    freshML/term.bel \
     small-step/lam.bel \
     subject-red.bel \
     subject-red-crec.bel \

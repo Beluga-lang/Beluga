@@ -7,7 +7,7 @@ s: nat -> nat.
 % Types
 tp  : type.                %name tp T.
 o   : tp.
-arr : tp -> tp -> tp.          
+arr : tp -> tp -> tp.
 
 
 % Intrinsically well-typed expressions
@@ -31,51 +31,52 @@ schema tctx = tp;
 
 rec vhoas2db : {g:ctx} (value S)[g]  -> (exp' S)[ ] = 
 fn v =>  case v of 
- | [h,x:value T] x => [ ] one 
+% | [h,ttt:tp] V .. => vhoas2db ([h] V ..)    % attempt to handle case of g = h,_:tp
+
+ | [h,x:value T] x => [ ] one
+
  | {#p::(value S')[h]} % This is necessary in the absence of subordination, since we need S' to be closed.
-   [h,x:value T] #p ..  => 
-   let [ ] Db = vhoas2db ([h] #p ..) in 
-     [ ] shift Db
- | [g] lam T (\x. E .. x) => 
-   let [ ] F  =  hoas2db ([g,x:value T ] E .. x ) in 
+   [h,x:value T] #p ..  =>
+     let [ ] Db = vhoas2db ([h] #p ..) in 
+       [ ] shift Db
+
+ | [g] lam T (\x. E .. x) =>
+   let [ ] F  =  hoas2db ([g,x:value T ] E .. x) in 
      [ ] lam' T F
 
 and hoas2db : {g:ctx} (exp T)[g] ->  (exp' T)[ ] = 
-fn e =>  case e of 
- | [g] app (E1 .. ) (E2 .. ) =>
-   let [ ] F1 = hoas2db ([g] E1 ..)  in 
-   let [ ] F2 = hoas2db ([g] E2 ..)  in 
-     [ ] app' F1 F2
- | [g] ret (V ..) => 
-   vhoas2db ([g] V .. )   
+  fn e =>  case e of 
+   | [g] app (E1 .. ) (E2 .. ) =>
+     let [ ] F1 = hoas2db ([g] E1 ..)  in 
+     let [ ] F2 = hoas2db ([g] E2 ..)  in 
+       [ ] app' F1 F2
+   | [g] ret (V ..) => 
+     vhoas2db ([g] V ..)
 ;
 
 
 rec db2vhoas : {g:ctx} (exp' T)[g] -> (value T)[g] = 
-fn e => case e of 
-| [h,x:value T] one : (exp' T)[h,x:value T] => 
-    [h,x:value T] x
+  fn e => case e of 
+  | [h,x:value T] one : (exp' T)[h,x:value T] => 
+      [h,x:value T] x
 
-| {E::(exp' S)[ ]}
-   [h,x:value T] shift E => 
-  let [h] F .. = db2vhoas ([h] E)  in 
-    [h,x:value T] F ..
+  | {E::(exp' S)[ ]}
+     [h,x:value T] shift E => 
+    let [h] F .. = db2vhoas ([h] E)  in 
+      [h,x:value T] F ..
 
-| [h] lam' T E => 
-    let [g,x:value T] F .. x = db2hoas  ([h, x:value T] E) in 
-      [g] lam T (\x. F .. x)
+  | [h] lam' T E => 
+      let [g,x:value T] F .. x = db2hoas  ([h, x:value T] E) in 
+        [g] lam T (\x. F .. x)
 
- and db2hoas : {g:ctx} (exp' T)[g] -> (exp T)[g] = 
- fn e => case e of 
- | [g] app' E1 E2 =>
-   let [g] F1 .. = db2hoas ([g] E1 )  in 
-   let [g] F2 .. = db2hoas ([g] E2 ) in 
-     [g] app (F1 ..) (F2 ..)
-
+and db2hoas : {g:ctx} (exp' T)[g] -> (exp T)[g] = 
+  fn e => case e of 
+  | [g] app' E1 E2 =>
+    let [g] F1 .. = db2hoas ([g] E1) in
+    let [g] F2 .. = db2hoas ([g] E2) in
+      [g] app (F1 ..) (F2 ..)
 ;
 
 
 rec tohoas : (exp' T)[ ] -> (exp T)[ ] = 
 fn e => db2hoas e ;
-
-

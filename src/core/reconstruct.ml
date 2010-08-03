@@ -1694,7 +1694,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
              dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s'') ^ " does not match expected type");
 (*             dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cO cD cPsi sP ^ "\n");*) 
 (*             dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cO cD ^ "\n"); *)
-                              raise (Error (Some loc, CompTypAnn ))
+                              raise (Error (Some loc, CompTypAnn))
                    )
       end
         
@@ -1708,14 +1708,15 @@ and elTerm' recT  cO cD cPsi r sP = match r with
             (Unify.unifyTyp cD cPsi sQ sP ; 
             tR) 
             with Unify.Unify msg ->
-              (Printf.printf "%s\n" msg;
-              raise (Error (Some loc, TypMismatch (cO, cD, cPsi, (tR, LF.id), sQ, sP))))
-              | _ ->               (Printf.printf "Unification Error (7)\n" ;
-              raise (Error (Some loc, TypMismatch (cO, cD, cPsi, (tR, LF.id), sQ, sP))))
+                   (Printf.printf "%s\n" msg;
+                    raise (Error (Some loc, TypMismatch (cO, cD, cPsi, (tR, LF.id), sQ, sP))))
+              | _ ->
+                  (Printf.printf "Unification Error (7)\n" ;
+                   raise (Error (Some loc, TypMismatch (cO, cD, cPsi, (tR, LF.id), sQ, sP))))
           end
-      with  Violation msg  -> 
+      with Violation msg ->
         dprint (fun () -> "[elTerm] Violation: " ^ msg);
-        raise (Error (Some loc, CompTypAnn ))
+        raise (Error (Some loc, CompTypAnn))
       end
 
   (* Reconstruction for parameter variables *)
@@ -1918,7 +1919,7 @@ and elClosedTerm' recT  cO cD cPsi r = match r with
   | Apx.LF.Lam (loc, _, _ ) -> 
       raise (Error (Some loc, CompTypAnn ))
 
-  | _ -> (dprint (fun () -> "[elClosedTerm] Violation ? ");
+  | _ -> (dprint (fun () -> "[elClosedTerm] Violation?");
                 raise (Error (None, CompTypAnn)))
 
 
@@ -1943,7 +1944,7 @@ and elSub loc recT  cO cD cPsi s cPhi =
                   Int.LF.SVar (Int.LF.Offset offset, s')
               else raise (Error (Some loc, SubIllTyped))
       with 
-          _ -> raise (Error (Some loc, SubIllTyped ))
+          _ -> raise (Error (Some loc, SubIllTyped))
       end 
 
 
@@ -1981,7 +1982,7 @@ and elSub loc recT  cO cD cPsi s cPhi =
       with 
         | Error (loc, msg) -> raise (Error (loc, msg))
         |  _ -> 
-           raise (Error (Some loc , TypMismatchElab (cO, cD, cPsi, sA', (tA, s'))))
+             raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sA', (tA, s'))))
       end
 
 
@@ -3276,7 +3277,7 @@ and genMAppW loc cO cD (i, tau_t) = match tau_t with
       let tau''  = Ctxsub.csub_ctyp cD ctxVar 1 tau' in 
         genMApp loc cO cD  ((Int.Comp.CtxApp (Some loc, i, ctxVar)), (tau'', C.m_id))
 
-  | _ ->  (i, tau_t)
+  | _ -> (i, tau_t)
 
 let rec elCompTyp cO cD tau = match tau with
   | Apx.Comp.TypBox (loc, a, psi) ->

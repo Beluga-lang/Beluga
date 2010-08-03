@@ -31,7 +31,9 @@ module type UNIFY = sig
   type unifTrail
 
   exception Error of string
-
+  
+  val disallowUndefineds : (unit -> 'a) -> 'a
+  
   (* trailing of variable instantiation *)
 
   val reset  : unit -> unit
@@ -58,7 +60,7 @@ module type UNIFY = sig
 
   exception Unify of string
   exception NotInvertible
-
+  
   (* All unify* functions return () on success and raise Unify on failure *)
   val unify        : mctx -> dctx  -> nclo  -> nclo -> unit
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
@@ -95,8 +97,77 @@ module Make (T : TRAIL) : UNIFY = struct
   exception Unify of string
 
   exception NotInvertible
-
+  
   exception Error of string
+
+  type undefined_flag =
+    | UndefsOK
+    | NoUndefs
+  let r_undefined = ref UndefsOK
+  let disallowUndefineds f =
+    let old_flag = !r_undefined in
+      try
+        r_undefined := NoUndefs;
+        let result = f() in
+          r_undefined := old_flag;
+          result
+      with
+        exn -> (r_undefined := old_flag;
+                raise exn)
+
+  let raise_undefined () = raise (Unify "Undefined")
+
+  let rec screenUndefs = function
+    | Lam(_, _, tM) -> screenUndefs tM
+    | Root(_, head, spine) -> (screenUndefsHead head;
+                               screenUndefsSpine spine)
+    | Clo(tM, s) -> (screenUndefs tM;
+                     screenUndefsSub s)
+    | Tuple(_, tuple) -> screenUndefsTuple tuple
+
+  and screenUndefsHead = function
+    | BVar _ -> ()
+    | Const _ -> ()
+    | MMVar(_, (_msub, s)) -> screenUndefsSub s
+    | MVar(_, s) -> screenUndefsSub s
+    | PVar(_, s) -> screenUndefsSub s
+    | FMVar(_, s) -> screenUndefsSub s
+    | FPVar(_, s) -> screenUndefsSub s
+    | AnnH(h, _) -> screenUndefsHead h
+    | Proj(h, _k) -> screenUndefsHead h
+    | FVar _ -> ()
+
+  and screenUndefsSpine = function
+    | Nil -> ()
+    | App(tM, spine) -> (screenUndefs tM; screenUndefsSpine spine)
+    | SClo(spine, s) -> (screenUndefsSpine spine; screenUndefsSub s)
+
+  and screenUndefsSub = function
+    | Shift(NegCtxShift _, _) -> raise_undefined()
+    | Shift(_, _) -> ()
+    | SVar(_, s) -> screenUndefsSub s
+    | FSVar(_, s) -> screenUndefsSub s
+    | Dot(front, s) -> (screenUndefsFront front; screenUndefsSub s)
+
+  and screenUndefsFront = function
+    | Head h -> screenUndefsHead h
+    | Obj tM -> screenUndefs tM
+    | Undef -> raise_undefined()
+
+  and screenUndefsTuple = function
+    | Last tM -> screenUndefs tM
+    | Cons(tM, tuple) -> (screenUndefs tM; screenUndefsTuple tuple)
+
+  (* screen : ('a -> unit) -> 'a -> unit
+   * screen f x : if r_undefined says undefs are OK, do nothing;
+   *              otherwise call f x.
+   * f should be one of the screenUndefs* functions.
+   *)
+  let screen f x =
+    match !r_undefined with
+      | UndefsOK -> ()
+      | NoUndefs -> f x
+  
 
   let raise_ exn =
     begin match exn with
@@ -314,13 +385,15 @@ module Make (T : TRAIL) : UNIFY = struct
 
   let rec instantiatePVar (q, head, cnstrL) =
     q := Some head;
+    screen screenUndefsHead head;
     T.log globalTrail (InstHead q);
     delayedCnstrs := cnstrL @ !delayedCnstrs
 
 
   let rec instantiateMVar (u, tM, cnstrL) =
-   (*  u := Some (Whnf.norm (tM, id)); *)    
-     u := Some tM; 
+    (*  u := Some (Whnf.norm (tM, id)); *)
+    screen screenUndefs tM;
+    u := Some tM;
     T.log globalTrail (InstNormal u);
     delayedCnstrs := cnstrL @ !delayedCnstrs;
     globalCnstrs := cnstrL @ !globalCnstrs
@@ -1174,8 +1247,13 @@ module Make (T : TRAIL) : UNIFY = struct
                   | MV v -> 
                       begin try 
                         let (_, _tA, cPsi1) = Whnf.mctxMDec cD0 u in 
-                        (* let _ = dprint (fun () ->  ) in  *)
-                        let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in                         
+                        let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                        let (_, ssSubst) = ss in
+                          dprint (fun () -> "##       s  = " ^ P.subToString Empty cD0 cPsi' s);
+                          dprint (fun () -> "##       t  = " ^ P.subToString Empty cD0 cPsi' t);
+                          dprint (fun () -> "##       ss = " ^ P.subToString Empty cD0 cPsi' ssSubst);
+                          dprint (fun () -> "##       s' = " ^ P.subToString Empty cD0 cPsi' s');
+                          dprint (fun () -> "## comp t s = " ^ P.subToString Empty cD0 cPsi' (comp t s));
                           returnNeutral (MVar (Offset v, s'))
                       with 
                         | Whnf.Violation msg -> 
@@ -1785,17 +1863,18 @@ module Make (T : TRAIL) : UNIFY = struct
             try
               dprnt "isPatSub";
               let _ = dprint (fun () -> 
-                                "UNIFY(3): " ^
+                                "UNIFY (3): " ^
                                   P.mctxToString Empty cD0 ^ "\n        " ^
                                   P.normalToString Empty cD0 cPsi sM1 ^ "\n        " ^
                                   P.normalToString Empty cD0 cPsi sM2 ^
                                   " : " ^ P.typToString Empty cD0 cPsi (tP1, t')) in 
-                
+
               let ss = Monitor.timer ("Normalisation", fun () -> invert (Whnf.normSub t')) in
               let phat = Context.dctxToHat cPsi in 
               let sM1' = trail (fun () -> prune cD0 cPsi1 phat sM1 (MShift 0, ss) (MVarRef r)) in
                 instantiateMVar (r, sM1', !cnstrs) 
             with
+              | NotComposable _ -> raise_ (Unify "NotComposable")
               | NotInvertible ->
                   ((* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
                   (* Printf.printf "Added constraints: NotInvertible: \n" ;

@@ -21,7 +21,6 @@ schema sctx = term ;
    this is the environment passing variant; the abstraction in the
    target language will always expect a tuple where the first argument
    is the code and followed by other arguments representing the environment.
-
 }%
 rec cconv : {g:sctx}{g':tctx} term[g] -> target[g'] -> target[g'] = 
 fn t => fn e => case t of 

@@ -96,12 +96,11 @@ let dump_typesubord () =
 let null = function [] -> true
                    | _ -> false
 
+(* Apply the `normer' function with the identity substitution,
+   then call `f' on the result *)
 let normify f normer =
-  fun tA -> f (normer (tA, Substitution.LF.id))
+  fun thing -> f (normer (thing, Substitution.LF.id))
 
-
-let includes a = function
-  | Atom(_, b, _spine) -> Types.is_subordinate_to b a
 
 (* thin (cO, cD) (tP, cPsi) = (s, cPsi')
 
@@ -111,16 +110,30 @@ let includes a = function
        cO ; cD |- cPsi' ctx 
        cO ; cD; cPsi |- s : cPsi'
 *)
+
+let rec separate sep f xs = match xs with
+  | [] -> ""
+  | [x] -> f x
+  | h::t -> f h ^sep ^ separate sep f t
+
 let rec thin (cO, cD) (tP, cPsi) = 
 (*      | PiTyp((TypDecl(_x, tA1), _), tA2) -> Types.is_subordinate_to b a *)
-  let rec inner basis cPsi =
+
+  (* The `basis' is the set of type families needed.
+     Initially, it is `b' where tP = Atom(_, b, _). *)
+  let rec inner (basis : Id.cid_typ list) cPsi =
+    let basisToString basis = separate ", " (fun type_in_basis -> R.render_cid_typ type_in_basis) basis in
     let rec relevant = function
-        | Atom(_, a, _spine) as tQ ->
+        | Atom(_, a, _spine) ->
             Types.freeze a;
-            if List.exists (includes a) basis then
-              [tQ]
+            if List.exists (fun type_in_basis -> Types.is_subordinate_to type_in_basis a) basis then
+              (* there is some `b' in basis such that `a'-terms can appear in `b'-terms, that is,
+                 `a'-terms can appear in something we need *)
+              [a]
             else
-              []
+              (
+                dprint (fun () -> "Denying that " ^ R.render_cid_typ a ^ " can appear in any of the following: " ^ basisToString basis);
+              [])
         | PiTyp((TypDecl(_x, tA1), _), tA2) ->
             norm_relevant tA1 @ norm_relevant tA2
         | Sigma typRec -> norm_relevantTypRec typRec
@@ -138,29 +151,29 @@ let rec thin (cO, cD) (tP, cPsi) =
 
     in
       match cPsi with
-        | Null -> (Shift(NoCtxShift, 0), Null) (* cPsi |- shift(noCtx, n) : . *)
+        | Null -> (Shift(NoCtxShift, 0),  Null) (* cPsi |- shift(noCtx, n) : . *)
 
         | CtxVar psi -> 
-          if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) then
-            (Shift(NoCtxShift, 0), CtxVar psi)
-          else
-            (Shift(CtxShift psi, 0), Null) 
+            if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) then
+              ( (*print_string "Keeping context variable\n"; *)
+                 (Shift(NoCtxShift, 0),  CtxVar psi))
+            else
+              ( (*print_string ("Denying that the context variable is relevant to anything in " ^ basisToString basis ^ "\n"); *)
+               (Shift(CtxShift psi, 0),  Null) )
 
         | DDec(cPsi, TypDecl(name, tA)) ->
             begin match relevant tA with
               | [] -> 
                   let (thin_s, cPsi') = inner  basis cPsi in 
                   (* cPsi |- thin_s : cPsi' *)
-                    (Substitution.LF.comp thin_s  (Shift (NoCtxShift, 1)) ,cPsi') 
+                    (Substitution.LF.comp thin_s (Shift (NoCtxShift, 1)),  cPsi') 
                   (* cPsi, x:tA |- thin_s ^ 1 : cPsi' *)
               | nonempty_list -> 
                   let (thin_s, cPsi') = inner (nonempty_list @ basis) cPsi in 
                   (* cPsi |- thin_s <= cPsi' *) 
                   (* cPsi,x:tA |- dot1 thin_s <= cPsi', x:tA'  where tA = [thin_s]([thin_s_inv]tA) *) 
                   let thin_s_inv      = Substitution.LF.invert thin_s in 
-                    (Substitution.LF.dot1 thin_s , DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
+                    (Substitution.LF.dot1 thin_s,  DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
             end
   in
-    inner [tP] cPsi
-
-
+    inner (match tP with Atom(_, a, _spine) -> [a]) cPsi

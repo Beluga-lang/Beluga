@@ -797,7 +797,8 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
   | DDec (cPsi', TypDecl (_, tA)) ->
       Debug.indent 2;
       let s = ((ctxToSub' cD cPhi cPsi') : sub) in
-      Debug.outdent 2;
+      (* cD ; cPhi |- s : cPsi' *)
+         Debug.outdent 2;
       dprint (fun () -> "s = " ^ subToString s);
         (* For the moment, assume tA atomic. *)
         (* lower tA? *)
@@ -823,9 +824,12 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 *)
       let u     = Whnf.etaExpandMMV None cD cPhi (tA, s) Substitution.LF.id in 
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
-      let shifted = Substitution.LF.comp s Substitution.LF.shift in
-      dprint (fun () -> "shifted = " ^ subToString shifted);
-      let result = Dot(front, shifted) in
+      (* cD ; cPhi |- s : cPsi' *)
+      (* cD ; cPhi |- u[id] : [s]tA *)
+      (* cD ; cPhi |- Dot(s, Obj u) : cPsi', x:tA *)
+      (* let shifted = Substitution.LF.comp s Substitution.LF.shift in*)
+      (* dprint (fun () -> "shifted = " ^ subToString shifted);*)
+      let result = Dot(front, s) in
       dprint (fun () -> "result = " ^ subToString result);
         result
 

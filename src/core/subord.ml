@@ -132,7 +132,7 @@ let rec thin (cO, cD) (tP, cPsi) =
               [a]
             else
               (
-              print_string ("Denying that " ^ R.render_cid_typ a ^ " can appear in any of the following: " ^ basisToString basis ^ "\n");
+                dprint (fun () -> "Denying that " ^ R.render_cid_typ a ^ " can appear in any of the following: " ^ basisToString basis);
               [])
         | PiTyp((TypDecl(_x, tA1), _), tA2) ->
             norm_relevant tA1 @ norm_relevant tA2
@@ -155,10 +155,10 @@ let rec thin (cO, cD) (tP, cPsi) =
 
         | CtxVar psi -> 
             if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) then
-              (print_string "Keeping context variable\n";
+              ( (*print_string "Keeping context variable\n"; *)
                  (Shift(NoCtxShift, 0),  CtxVar psi))
             else
-              (print_string ("Denying that the context variable is relevant to anything in " ^ basisToString basis ^ "\n");
+              ( (*print_string ("Denying that the context variable is relevant to anything in " ^ basisToString basis ^ "\n"); *)
                (Shift(CtxShift psi, 0),  Null) )
 
         | DDec(cPsi, TypDecl(name, tA)) ->

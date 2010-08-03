@@ -54,6 +54,8 @@ sleep 2
 echo
 
 echo BROKEN: \
+    cut-elim.bel \
+    equal/eq-proof-tuple.bel \
     lp-horn/sources.cfg \
     lp-horn/test-crec.cfg
 
@@ -120,9 +122,7 @@ $INTERPRETER +coverage $* \
     copy/copy-simple-crec.bel \
     copy/copy-simple-explicit.bel \
     count-var/cntvar.bel \
-    cut-elim.bel \
     debruijn1/sources.cfg \
-    equal/eq-proof-tuple.bel \
     equal/eq-proof.bel \
     equal/eq-proof-full-crec.bel \
     fol/sources.cfg \

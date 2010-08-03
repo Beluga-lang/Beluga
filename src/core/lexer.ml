@@ -164,16 +164,16 @@ let rec lex_token loc = lexer
   | "=>"
   | "=="
   | "FN"
-(*  | "Sigma" *)
+  | "and"   (* missing, added 2010-07-31 *)
   | "block"
-  | "box" (* unused as of 2009-02-18 *)
+(*  | "box"    unused as of 2009-02-18; removed 2010-07-31 *)
   | "Bool"
   | "case"
   | "fn"
   | "else"
-  | "id"
-  | "in"
+(*  | "id"   removed 2010-07-31 *)
   | "if"  
+  | "in"
   | "let"
   | "mlam"  (* was missing -- added 2009-02-18 *)
   | "of"

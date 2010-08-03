@@ -81,11 +81,26 @@ let cctxToCSub = Opsem.cctxToCSub
 let mctxToMSub = Ctxsub.mctxToMSub
 
 
-(*
- * type shifter  ---Shifter
+(* type shifter
  *
  * Shifter passed into the continuation, to fix indices in things created
  * before Delta was extended.
+ *
+ * shifter.n = (length of the "current" cD)
+ *           - (length of the original cD passed to the coverage checker)
+ *
+ * This field `n' is not accessed except inside shift*, hang*, and bump_shift.
+ * 
+ * To use a shifter, one "hangs" (suspends) a shiftable object (head, spine, normal, LF.typ, or dctx)
+ * along with the current shifter, by calling hangHead, hangSpine, etc.  The result has
+ * type 'a hanger, where 'a is head, spine, etc.
+ *
+ * Inside a passed continuation (or in any other situation where cD may have grown unpredictably),
+ * the hanger can be "cut" (forced) to yield a properly shifted object that makes sense in the new cD.
+ *
+ * In most of the coverage checker, the hanger let-binding shadows the unshifted object's
+ * binding, so that ocaml gives a type error if you try to use the object without
+ * shifting it properly.
  *)
 type shifter = {
   n : int
@@ -93,17 +108,10 @@ type shifter = {
 
 type 'a hanger = HANGER of (shifter -> 'a)
 
-(*
-  head : LF.head -> LF.head;
-  spine : LF.spine -> LF.spine;
-  normal : LF.normal -> LF.normal;
-  typ : LF.typ -> LF.typ
-*)
 
 let noop_shift = {
   n = 0
 }
-
 
 let hang shiftFn shifter thing =
   HANGER (fun laterShifter -> shiftFn thing (laterShifter.n - shifter.n))
@@ -130,9 +138,9 @@ let bump_shift increment shifter = {n = shifter.n + increment}
 
 
 
-(* Coverage is done in 3 phases:
+(* Coverage has 3 phases:
  *
- *   1. ContextVariablePhase: (NOT YET IMPLEMENTED)
+ *   1. ContextVariablePhase:
  *        possibly split context variables
  * 
  *   2. ContextDependentArgumentsPhase
@@ -160,13 +168,13 @@ let phaseToString = function
  * This type represents the strategy---really the *state* and the strategy---being used.
  *)
 type strategy = {
+  phase : phase;
   maxDepth : int;
   currDepth : int;
   maxContextVariableDepth : int;
   currContextVariableDepth : int;
   maxContextDepth : int;
-  currContextDepth : int;
-  phase : phase
+  currContextDepth : int
 }
 
 let strategyToString s = "{" ^ "maxDepth = " ^ string_of_int s.maxDepth
@@ -190,16 +198,56 @@ let naive_strategy (depth, contextVariableDepth, contextDepth) =
        currContextDepth = 0;
        phase = ContextVariablePhase}
 
-let increment_depth strategy =
-(*     print_string ("increment_depth --> " ^ string_of_int (strategy.currDepth + 1) ^ "\n"); flush_all(); *)
-      {strategy with currDepth = strategy.currDepth + 1}
-
-let increment_context_length strategy =
+let increment_context_variable_depth strategy =
       {strategy with currContextVariableDepth = strategy.currContextVariableDepth + 1}
 
 let increment_context_depth strategy =
       {strategy with currContextDepth = strategy.currContextDepth + 1}
 
+let increment_depth strategy =
+(*     print_string ("increment_depth --> " ^ string_of_int (strategy.currDepth + 1) ^ "\n"); flush_all(); *)
+      {strategy with currDepth = strategy.currDepth + 1}
+
+
+
+(* context_split_switch,
+ * contextDep_split_switch,
+ * split_switch
+ * : strategy -> ((strategy -> 'a) * (strategy -> 'a)) -> 'a
+ *
+ * Given a strategy and a pair of functions (split, noSplit),
+ *  check whether the current depth is less than the maximum depth.
+ * If so, try noSplit (because not splitting is faster than splitting);
+ *  if NoCover is raised, call split.
+ * If we have reached the maximum depth, call noSplit.
+ *
+ * The "current depth" and "maximum depth" above vary:
+ *
+ *  context_split_switch     uses  strategy.{curr,max}ContextVariableDepth
+ *  contextDep_split_switch  uses  strategy.{curr,max}ContextDepth
+ *  split_switch             uses  strategy.{curr,max}Depth
+ *
+ * NOTE: these functions do not increment the depth.
+ *)
+let context_split_switch strategy (split, noSplit) =
+  let couldSplit strategy = strategy.currContextVariableDepth < strategy.maxContextVariableDepth in
+    if couldSplit strategy then
+      (try   (* Even if the strategy permits us to split, try not splitting, because if it happens
+                  to succeed we can save a lot of time *)
+         noSplit strategy
+       with NoCover _ -> split strategy)
+    else
+      noSplit strategy
+
+let contextDep_split_switch strategy (split, noSplit) =
+  let couldSplit strategy = strategy.currContextDepth < strategy.maxContextDepth in
+    if couldSplit strategy then
+      (try   (* Even if the strategy permits us to split, try not splitting, because if it happens
+                  to succeed we can save a lot of time *)
+         noSplit strategy
+       with NoCover _ -> split strategy)
+    else
+      noSplit strategy
 
 let split_switch strategy (split, noSplit) =
   let couldSplit strategy = strategy.currDepth < strategy.maxDepth in
@@ -216,38 +264,25 @@ let split_switch strategy (split, noSplit) =
       noSplit strategy
 
 
-let context_split_switch strategy (split, noSplit) =
-  let couldSplit strategy = strategy.currContextVariableDepth < strategy.maxContextVariableDepth in
-    if couldSplit strategy then
-      (try   (* Even if the strategy permits us to split, try not splitting, because if it happens
-                  to succeed we can save a lot of time *)
-         noSplit strategy
-       with NoCover _ -> split strategy)
-    else
-      noSplit strategy
+
+(* Flags
+ *)
+let enableCoverage = ref false  (* true iff coverage should be checked *)
+let warningOnly = ref false     (* true iff failed coverage should generate a warning *)
+let no_covers = ref 0           (* number of times coverage checking has yielded a negative result *)
 
 
-let contextDep_split_switch strategy (split, noSplit) =
-  let couldSplit strategy = strategy.currContextDepth < strategy.maxContextDepth in
-    if couldSplit strategy then
-      (try   (* Even if the strategy permits us to split, try not splitting, because if it happens
-                  to succeed we can save a lot of time *)
-         noSplit strategy
-       with NoCover _ -> split strategy)
-    else
-      noSplit strategy
-
-
-let enableCoverage = ref false
-let warningOnly = ref false
-let no_covers = ref 0
-
-
-(* Generating names for Obj-no-split (MVars) *)
+(* Generating meta-variable and parameter variable names,
+ *  e.g. for Obj-no-split (MVars)
+ *)
 let counter = ref 0
-let new_name string =
+
+let new_parameter_name string =
    counter := !counter + 1;
-   Id.mk_name (Id.SomeString (String.uppercase string ^ string_of_int !counter))
+   Id.mk_name (Id.SomeString (string ^ string_of_int !counter))
+
+let new_name string =
+   new_parameter_name (String.uppercase string)
 
 
 
@@ -285,12 +320,15 @@ let rec dprintCTs cO cD cPsi = function
  * In what context does the output make sense?  Shift LF.typ result appropriately... -bp
  *)
 let getConcretesAndTypes cPsi =
-  let rec inner n = function
+  let rec inner n s = function
     | LF.Null -> []
     | LF.CtxVar _ -> []
-    | LF.DDec (cPsi, LF.TypDecl(x, tA)) -> (LF.BVar n, tA) :: inner (n+1) cPsi
+    | LF.DDec (cPsi, LF.TypDecl(x, tA)) ->
+        let s = Substitution.LF.comp (Substitution.LF.shift) s in
+        let tA = Whnf.normTyp (tA, s) in
+          (LF.BVar n, tA) :: inner (n+1) s cPsi
   in
-    List.rev (inner 1 cPsi)
+    List.rev (inner 1 Substitution.LF.id cPsi)
 
 
 (* getSchemaElems : LF.mctx -> LF.dctx -> LF.sch_elem list
@@ -495,7 +533,7 @@ dprnt"ab";
         | LF.SigmaLast tA ->
             begin
             let tA = Whnf.normTyp (tA, some_part_dctxSub) in
-            let name = new_name "p@" in
+            let name = new_parameter_name "p@" in
 (*            let _ = dprint (fun () -> "SigmaLast: created parameter \"" ^ R.render_name name ^ "\"") in *)
             let pdecl  = LF.PDecl(name, tA, cPsi) in
             let (cDWithPVar, _pdeclOffset) = (LF.Dec(cD, pdecl), 1) in
@@ -531,7 +569,7 @@ dprnt"ab";
               let callAppOnComponent (sA, index) =
                 let tA = Whnf.normTyp sA in
                 let typRec = Whnf.normTypRec (typRec, some_part_dctxSub) in
-                let name = new_name "p@" in
+                let name = new_parameter_name "p@" in
                 let _ = dprint (fun () -> "SigmaElem: created parameter \"" ^ R.render_name name ^ "\"") in
                 let pdecl  = LF.PDecl(name, LF.Sigma typRec, cPsi) in
                 let (cDWithPVar, _pdeclOffset) = (LF.Dec(cD, pdecl), 1) in
@@ -816,7 +854,6 @@ let rec contextDep_split (strategy, shift, cO, cD, cPsi) k =
 
 
 and contextDep (strategy, shift, cO, cD, cPsi) k =
-(*           k (strategy, shift, cO, cD, cPsi) *)
     Debug.indent 2;
     contextDep_split_switch strategy
        (begin
@@ -836,14 +873,13 @@ and contextDep (strategy, shift, cO, cD, cPsi) k =
 
 
 let rec context_split (strategy, shift, cO, cD, cPsi) k =
-  (* obj (increment_context_length strategy, shift, cO, cD, cPsi) tA k *)
   (* If cPsi = g, cConcrete  then:
      Call `context' with cPsi := g, _:tA1, cConcrete
      then with cPsi :=gh, _:tA2, cConcrete
      etc.,
      where the schema of g is tA1 + tA2 + ...
   *)
-  let strategy = increment_context_length strategy in
+  let strategy = increment_context_variable_depth strategy in
   let check (LF.SchElem(some_part_ctx, schema_rec)) =
     (* let cD2 = some_part_ctx, converted to mctx;
        let cDMerged = cD2 appended to cD;
@@ -876,7 +912,6 @@ let rec context_split (strategy, shift, cO, cD, cPsi) k =
     | elems ->
         List.iter check elems;
         context (strategy, shift, cO, cD, Context.emptyContextVariable cPsi) k
-(*        context (strategy, shift, cO, cD, cPsi) k *)
   in
     split (getSchemaElems cO cPsi)
 
@@ -894,7 +929,6 @@ and context (strategy, shift, cO, cD, cPsi) k =
          fun strategy ->
            dprint (fun () -> "strategy.phase := ContextDependentArgumentsPhase");
            let strategy = {strategy with phase = ContextDependentArgumentsPhase} in
-(*             obj (strategy, shift, cO, cD, cPsi) ===tA=== k *)
              contextDep (strategy, shift, cO, cD, cPsi) k
        end);
     Debug.outdent 2)
@@ -1091,7 +1125,8 @@ let covers problem =
       let strategies = tabulate cutoff (fun depth -> naive_strategy (depth, variableDepth, dep)) in
         try
           dprint (fun () -> "Coverage checking a case with "
-                              ^ string_of_int (List.length problem.branches) ^ " branch(es)");
+                          ^ string_of_int (List.length problem.branches) ^ " branch(es) at:\n"
+                          ^ Pretty.locOptToString problem.loc);
           tryList
             (fun strategy ->
                Debug.pushIndentationLevel();

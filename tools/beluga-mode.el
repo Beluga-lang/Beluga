@@ -152,8 +152,8 @@ Regexp match data 0 points to the chars."
 (defvar beluga-syntax-fundec-re "^[ \t]*rec\\>")
 
 (defvar beluga-font-lock-keywords
-  `(,(concat (regexp-opt '("FN" "fn" "case" "of" "rec" "schema" "in" "Sigma"
-                           "block" "let" "some" "type" "if" "then" "else") 'words)
+  `(,(concat (regexp-opt '("FN" "and" "block" "case" "fn" "else" "if" "in" "let" "mlam"
+                           "of" "rec" "schema" "some" "then" "type" "ttrue" "ffalse" "%name" "%not") 'words)
              "\\|\\\\")
     (,(concat "^\\(" beluga-syntax-id-re "\\)[ \t\n]*:\\([^.]*\\<type\\>[ \t\n]*.\\)?")
      ;; This is a regexp that can span multiple lines, so it may not

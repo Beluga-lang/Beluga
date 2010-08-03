@@ -772,6 +772,9 @@ let rec ctxShift cPsi = match cPsi with
    then D = u1:A1[cPhi], ... un:An[cPhi]
 
    s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
+
+if  ctxToSub'  cD cPhi cPsi = s then    cD ; cPhi |- s : cPsi
+
 *)
 let rec ctxToSub' cD cPhi cPsi = match cPsi with
   | Null -> Substitution.LF.id

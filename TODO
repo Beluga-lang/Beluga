@@ -9,11 +9,17 @@ CRITICAL
 IMPORTANT
 =========
 
-* 01/01/09 :: Clean up opening modules -bp
-              (Int.LF.  and Int.Comp should never be open at the same time!)
+* 28/08/10 :: First pass of type reconstruction should infer the shape of types
+              for type labels
+* 28/08/10 :: Handling of definitions and abbreviations
+* 28/08/10 :: Type reconstruction contexts (revisit)
 
 * 28/12/08 :: Printing named representation of variables in
                addition to de Bruijn index representation -bp
 
 * 28/12/08 :: Naming convention: Use names provided in signature
                 -bp
+
+* 01/01/09 :: Clean up opening modules -bp
+              (Int.LF.  and Int.Comp should never be open at the same time!)
+

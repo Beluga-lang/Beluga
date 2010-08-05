@@ -8,6 +8,7 @@ PACK    = Core
 # Declare the files the package will contain
 FILES[] =
         abstract
+        lfcheck
         check
         common
         context

@@ -50,6 +50,13 @@ fn d => case d of  %not
 }%
 
 
+rec depsplitWrong1asdfasdfadsf : {g:(dep-ctx)*} (bool)[g, x : dep T]  ->  bool[ ] =
+FN g => fn d => case d of %not
+ | [g, xx:dep ff] UU .. xx => [] ff
+;
+
+
+
 rec depsplitWrong1 : {g:(dep-ctx)*} (bool)[g, x : dep T]  ->  bool[ ] =
 FN g => fn d => case d of %not
  | [g, xx:dep ff] UU .. xx => [] ff

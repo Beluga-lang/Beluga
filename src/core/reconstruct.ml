@@ -1675,8 +1675,8 @@ and elTerm' recT  cO cD cPsi r sP = match r with
           (* This case only applies to Beluga; MInst are introduced during cnormApxTerm. *)
           ( Unify.unifyTyp cD  cPsi (tQ, s'') sP ; 
             dprint (fun () -> "[elTerm] reconstruction of mvar done ");
-            dprint (fun () -> " sQ = " ^ P.typToString cO cD cPsi (tQ,s'') ^ " == " ^ P.typToString cO cD cPsi sP) ; 
-            dprint (fun () -> "tN = " ^ P.normalToString cO cD cPsi (tN, s''));
+            dprint (fun () -> "  sQ = " ^ P.typToString cO cD cPsi (tQ,s'') ^ " == " ^ P.typToString cO cD cPsi sP) ; 
+            dprint (fun () -> "  tN = " ^ P.normalToString cO cD cPsi (tN, s''));
            Int.LF.Clo(tN, s''))
       with  Violation msg  -> 
         (dprint (fun () -> "[elTerm] Violation: " ^ msg) ;
@@ -1976,10 +1976,9 @@ and elSub loc recT  cO cD cPsi s cPhi =
       let (h', sA') = elHead loc recT  cO cD cPsi h in 
       let s' = elSub  loc recT  cO cD cPsi s cPhi' in 
       begin try 
-        (
           Unify.unifyTyp cD cPsi sA' (tA, s');
-          Int.LF.Dot (Int.LF.Head h', s'))
-      with 
+          Int.LF.Dot (Int.LF.Head h', s')
+      with
         | Error (loc, msg) -> raise (Error (loc, msg))
         |  _ -> 
              raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sA', (tA, s'))))

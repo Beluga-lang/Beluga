@@ -158,7 +158,7 @@ let rec collectionToString cQ = match cQ with
       ^ ctxVarToString ctx_var
       ^ " . "
       ^ P.typToString cO cD I.Null (tA , LF.id)
-      ^ " ] \n"
+      ^ " ]\n"
       
 
   | I.Dec(cQ, MMV (_ , (I.MMVar (I.MInst(_r, cD, cPsi, tP, _c), _s) as h))) -> 
@@ -727,7 +727,7 @@ and collectMSub cQ theta =  match theta with
   | I.MShift _n -> (cQ , theta)
   | I.MDot(I.MObj(phat, tM), t) -> 
       let (cQ1, t') =  collectMSub cQ t in 
-      let _ = dprint (fun () -> "Collect MObj  -- \n" ) in
+      let _ = dprint (fun () -> "Collect MObj--\n" ) in
       let (cQ2, tM') = collectTerm cQ1 phat (tM, LF.id) in 
         (cQ2 , I.MDot (I.MObj (phat, tM'), t'))
 
@@ -782,9 +782,8 @@ and collectHead cQ phat ((head, _subst) as sH) =
   | (I.MVar (I.Inst (q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
       if constraints_solved cnstr then
          let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in 
-           let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in
-           let _ = dprint (fun () -> "collectSub for MVar \n") in 
-          (* let _ = dprint (fun () -> "collectSub for MVar done \n") in *)
+         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in
+         let _ = dprint (fun () -> "collectSub for MVar\n") in 
           begin match checkOccurrence (eqMVar u) cQ with
             | Yes -> 
                 let (cQ', sigma) = collectSub cQ phat s' in
@@ -886,7 +885,7 @@ and collectHead cQ phat ((head, _subst) as sH) =
       
 
   | (I.Proj (head, k),  s) ->
-      (* let _ = dprint (fun () -> "collectHead Proj \n") in  *)
+      (* let _ = dprint (fun () -> "collectHead Proj\n") in  *)
       let (cQ', h') = collectHead cQ phat (head, s)  in
         (cQ' , I.Proj (h', k))
 
@@ -1391,15 +1390,15 @@ let rec abstrMSub cQ t =
     abstrMSub' t 
 
 and abstractMSub  t =  
-  let _ = dprint (fun () -> "Collecting MSub .. \n") in 
+  let _ = dprint (fun () -> "Collecting MSub\n") in 
   let (cQ, t')  = collectMSub I.Empty t in
   let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
-  let _ = dprint (fun () -> "Collect MSub done \n") in 
+  let _ = dprint (fun () -> "Collect MSub done\n") in 
   let cQ' = abstractMVarCtx cQ in 
-  let _ = dprint (fun () -> "AbstractMVarCtx  done \n") in 
+  let _ = dprint (fun () -> "AbstractMVarCtx done\n") in 
 
   let t''  = abstrMSub cQ' t' in
-  let _ = dprint (fun () -> "AbstrMSub done \n") in 
+  let _ = dprint (fun () -> "AbstrMSub done\n") in 
   let cD'  = ctxToMCtx cQ' in  
     (t'' , cD')  
 
@@ -1592,7 +1591,7 @@ and collectExp' cQ i = match i with
 
 and collectPattern cQ cD cPsi (phat, tM) tA = 
   let (cQ1, cD') = collectMctx cQ cD in
-(*   let _    = Printf.printf "Start Collection of cPsi -- cQ1 = \n" *)
+(*   let _    = Printf.printf "Start Collection of cPsi -- cQ1 =\n" *)
 (*  (   P.dctxToString cPsi) *)
   let _   = printCollection cQ1 in  
   let (cQ2, cPsi') = collectDctx cQ1 phat cPsi in 

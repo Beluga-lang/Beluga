@@ -640,9 +640,9 @@ This case should now be covered by the one below it
           let Schema phiSchemaElements = Schema.get_schema (lookupCtxVarSchema cO phi) in
 (*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cO cD phiElem elements) phiSchemaElements) then *)
 (*            if not (List.for_all (fun elem -> checkElementAgainstSchema cO cD elem phiSchemaElements) elements ) then *)
-            if (List.exists (fun elem -> checkElementAgainstSchema cO cD elem phiSchemaElements) elements ) then ()
-              else
-                raise (Error (None, CtxVarMismatch (cO, phi, schema)))
+            if List.exists (fun elem -> checkElementAgainstSchema cO cD elem phiSchemaElements) elements then ()
+            else
+              raise (Error (None, CtxVarMismatch (cO, phi, schema)))
 
       | DDec (cPsi', decl) ->
           begin
@@ -653,7 +653,7 @@ This case should now be covered by the one below it
           end
 
 
- (* If subsumes cO psi phi succeeds then there exists a wk_sub s.t. psi |- wk_sub   : phi  *)
+ (* If subsumes cO psi phi succeeds then there exists  wk_sub  such that  psi |- wk_sub : phi  *)
 and subsumes cO psi phi = match (psi, phi) with
   | (CtxOffset psi_var , CtxOffset phi_var) -> 
       let Schema psi_selem = Schema.get_schema (lookupCtxVarSchema cO psi) in 

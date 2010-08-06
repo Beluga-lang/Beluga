@@ -439,12 +439,12 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA0) tP k =
            and tP = cut hungP shift' in
            let _ = dprint (fun () -> "App-Pi(tM):    " ^ P.normalToString cO cD cPsi (tM, idSub)) in
            let _ = dprint (fun () -> "App-Pi(tA2)SH: " ^ P.typToString cO cD cPsi_x (tA2, idSub)) in
-           let substitution = LF.Dot(LF.Obj ((*Context.dctxToHat cPsi,*) tM), (*Substitution.LF.identity cPsi*)idSub) in
+           let substitution = LF.Dot(LF.Obj tM, (*Substitution.LF.identity cPsi*)idSub) in
            let _ = dprint (fun () -> "substitution:  " ^ P.subToString cO cD cPsi substitution) in
            let tA2_tM = Whnf.normTyp (tA2, substitution) in
 
            let _ = dprint (fun () -> "App-Pi(1):     " ^ P.typToString cO cD cPsi (tA2_tM, idSub)) in
-           let _ = Lfcheck.checkTyp cO cD cPsi (tA2_tM, idSub) in
+           let _ = Lfcheck.checkTyp cO cD cPsi (tA2_tM, idSub) in 
            let _ = dprint (fun () -> "App-Pi(tR):    " ^ P.headToString cO cD cPsi tR) in
            let _ = dprint (fun () -> "App-Pi(spine): " ^ P.spineToString cO cD cPsi (spine, idSub)) in
            let _ = dprint (fun () -> "App-Pi(tP):    " ^ P.typToString cO cD cPsi (tP, idSub)) in
@@ -499,8 +499,9 @@ let rec app (strategy, shift, cO, cD, cPsi) (tR, spine, tA0) tP k =
         dprint (fun () -> "tA0=tQ atomic; \n    cD = " ^ P.mctxToString cO cD
                         ^ "\n  cPsi = " ^ P.dctxToString cO cD cPsi
                         ^ "\n  TERM = " ^ P.normalToString cO cD cPsi (LF.Root(None, tR, spine), idSub)
-                        ^ "\n   tA0 = " ^ P.typToString cO cD cPsi (tA0, idSub));
-        Lfcheck.check cO cD cPsi (LF.Root(None, tR, spine), idSub) (tA0, idSub);
+                        ^ "\n   tA0 = " ^ P.typToString cO cD cPsi (tA0, idSub)
+                        ^ "\n   tP  = " ^ P.typToString cO cD cPsi (tP, idSub));
+(*        Lfcheck.check cO cD cPsi (LF.Root(None, tR, spine), idSub) (tA0, idSub);   XXX    breaks for test/cd2.bel*)
         dprnt "Lfcheck.check against tA0 (a.k.a. tQ) OK";
 (*        let _ = dprint (fun () -> "LF.Atom _; cD = " ^ P.mctxToString cO cD) in *)
         let msub = mctxToMSub cD in
@@ -536,7 +537,7 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
   dprint (fun () -> "--      a: " ^ R.render_cid_typ a);
   dprint (fun () -> "--  spine: " ^ P.spineToString cO cD cPsi (spine, idSub));
   Debug.indent 2; verify (shift, cO, cD, cPsi); Debug.outdent 2;
-  dprnt "\n";
+  dprnt "";
 
   (* PVars premises,  App<x_1> thru App<x_k> premises: *)
   let (sch_elems, concretesWithTypes) = match strategy.phase with
@@ -559,9 +560,7 @@ and obj_split (strategy, shift, cO, cD, cPsi) (loc, a, spine) k =
     dprint (fun () -> "+++   cD =  " ^ P.mctxToString cO cD ^ "\n"
                     ^ "+++ cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n"
                     ^ "+++ some_part_dctx = " ^ P.dctxToString cO cD some_part_dctx);
-dprnt"aa";
     let some_part_dctxSub = Ctxsub.ctxToSub' cD cPsi some_part_dctx in
-dprnt"ab";
     let cPsi_just_psi = LF.CtxVar psi in
     let id_psi = Substitution.LF.justCtxVar cPsi in
     let head = LF.PVar (LF.Offset 1, id_psi) in

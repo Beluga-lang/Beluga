@@ -212,11 +212,11 @@ let rec typdeclCtxToMctx cPsi = function
 let splitContextVariable cPsi new_typ_decl =
   let rec inner = function
     | CtxVar ctx_var -> DDec(CtxVar ctx_var, new_typ_decl)
-    | DDec (cPsi, concrete) -> DDec(inner cPsi, concrete)
+    | DDec (cPsi, concrete) -> DDec(inner cPsi, concrete) 
   in
     inner cPsi
 
-let emptyContextVariable cPsi =
+let emptyContextVariable cPsi = (* wrong *)
   let rec inner = function
     | CtxVar ctx_var -> Null
     | DDec (cPsi, concrete) -> DDec(inner cPsi, concrete)

@@ -26,7 +26,7 @@ foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C).
 schema ctx = some [a: o] hyp a + i + o;
 
 ass: o -> o -> type.
-assume: {A:o}conc A -> (hyp A -> conc C) -> ass A C i.
+assume: {A:o}conc A -> (hyp A -> conc C) -> ass A C.
 
 % (assum A D (\h. E h))
 %  {A:o} conc A -> (hyp A -> conc C) -> conc C. 

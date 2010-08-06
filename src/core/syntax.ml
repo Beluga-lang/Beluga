@@ -329,6 +329,7 @@ module Ext = struct
 
     and typ_decl =
       | TypDecl of name * typ
+(*      | TypDeclOpt of name  *)
 
     and ctyp_decl =
       | MDecl of Loc.t * name * typ  * dctx

@@ -81,7 +81,7 @@ and `unicode'."
    ;; Or a unicode font.
    (and (fboundp 'decode-char)
 	(memq beluga-font-lock-symbols '(t unicode))
-	'(("not"   . ?¬)
+	'(;;("not"   . ?¬)
           ;; ("fn"    . ?λ)
           ("FN"    . ?Λ)
           ("Sigma" . ?Σ)
@@ -189,7 +189,7 @@ Regexp match data 0 points to the chars."
   (when buffer-file-name
     (set (make-local-variable 'compile-command)
          ;; Quite dubious, but it's the intention that counts.
-         (concat "/home/bpientka/complogic/beluga/bin/interpreter " (shell-quote-argument buffer-file-name))))
+         (concat "/home/prof/bpientka/complogic/beluga/bin/interpreter " (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
   (comment-normalize-vars)
   ;; Used by indentation and navigation code.

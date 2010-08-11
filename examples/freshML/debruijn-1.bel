@@ -26,13 +26,10 @@ shift  : exp' A -> exp' A.  % ^
 lam'   : {A:tp}exp' B  -> exp' (arr A B).
 app'   : exp' (arr A B) -> exp' A -> exp' B.
 
-schema ctx = value T + tp;
-schema tctx = tp;
+schema ctx = value T ;
 
 rec vhoas2db : {g:ctx} (value S)[g]  -> (exp' S)[ ] = 
 fn v =>  case v of 
-% | [h,ttt:tp] V .. => vhoas2db ([h] V ..)    % attempt to handle case of g = h,_:tp
-
  | [h,x:value T] x => [ ] one
 
  | {#p::(value S')[h]} % This is necessary in the absence of subordination, since we need S' to be closed.

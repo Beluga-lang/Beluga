@@ -306,9 +306,7 @@ and mshiftDCtx cPsi k = match cPsi with
    then t' = u. (mshift t 1)  
        and  for all A s.t.  D' ; Psi |- A : type
 
-     D, u::[|t|](A[Psi]) |- t' : D', A[Psi]
-
-
+              D, u::[|t|](A[Psi]) |- t' : D', A[Psi]
  *)
   and mvar_dot1 t = 
     MDot (MV 1, mshift t 1)
@@ -1004,6 +1002,9 @@ and cnorm (tM, t) = match tM with
           | h      -> Proj (h, k)
         end
 
+    | Const _ -> raise (Violation "cnormHead Const")
+    | MVar _ -> raise (Violation "cnormHead MVar")
+    | _      -> raise (Violation "cnormHead ???")
   end 
         
 
@@ -1807,10 +1808,10 @@ let convHatCtx ((cvar, l), cPsi) =
      this information. Hence, it is not clear how to deal with the case 
      comp (MShift n) t   (where t =/= MShift m). 
 
-
+      ---??? but there is a constructor Syntax.LF.MShift of int... -jd 2010-08-10
+   
    - We decided to not provide a constructor Id in msub
      (for similar reasons)
-
 *)
   
 (* ************************************************* *)
@@ -1906,7 +1907,7 @@ let rec mctxSDec cD' k =
       -> (u,mshiftDCtx cPhi k, mshiftDCtx cPsi k)
         
     | (Dec (_cD, PDecl _), 1)
-      -> raise (Violation "Expected substitution variable; Found parameter variable")
+      -> raise (Violation "Expected substitution variable; found parameter variable")
       
     | (Dec (cD, _), k')
       -> lookup cD (k' - 1)
@@ -1950,10 +1951,10 @@ let rec mctxPVarPos cD p =
     lookup cD 1
 
 
-  (* ***************************************** *)
-  (* Contextual weak head normal form for 
-     computation-level types                   *)
-  (* ***************************************** *)
+  (******************************************
+     Contextual weak head normal form for 
+     computation-level types
+   ******************************************)
 
   let rec normCTyp tau = match tau with 
     | Comp.TypBox (loc, tA, cPsi)     
@@ -2034,8 +2035,7 @@ let rec mctxPVarPos cD p =
      cD        |- t2 <= cD2
 
      cD        |- [|t2|]cG2 = [|t1|]cG1 = cG'
-     cD ; cG'  |- [|t2|]tT2 = [|t1|]tT2 = tT 
-     
+     cD ; cG'  |- [|t2|]tT2 = [|t1|]tT2 = tT      
   *)
 
 
@@ -2172,7 +2172,8 @@ let rec mctxPVarPos cD p =
   BROKEN 
 
   *)
-  and cnormBranch (Comp.BranchBox (cO, cD', (cPsi, tM, t,cs), e) , theta) = 
+  and cnormBranch = function
+    | (Comp.BranchBox (cO, cD', (cPsi, Comp.NormalPattern(tM, e), t, cs)),  theta) ->
     (* cD' |- t <= cD    and   FMV(e) = cD' while 
        cD' |- theta' <= cD0
        cD0' |- theta <= cD0 
@@ -2180,8 +2181,17 @@ let rec mctxPVarPos cD p =
      * need to unify theta' and theta and then create a new cD'' under which the
      * branch makes sense
      *)
-      Comp.BranchBox (cO, cD', (cPsi, norm (tM, LF.id), (cnormMSub t), cs), cnormExp (e, m_id))
-    
+      Comp.BranchBox (cO, cD', (cPsi,
+                                Comp.NormalPattern (norm (tM,LF.id), cnormExp (e,m_id)),
+                                cnormMSub t,
+                                cs))
+
+    | (Comp.BranchBox (cO, cD', (cPsi, Comp.EmptyPattern, t, cs)),  theta) ->
+          Comp.BranchBox (cO, cD', (cPsi,
+                                    Comp.EmptyPattern,
+                                    cnormMSub t,
+                                    cs))
+        
 
   let rec cwhnfCtx (cG, t) = match cG with 
     | Empty  -> Empty

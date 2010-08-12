@@ -22,6 +22,7 @@ let usage () =
         ^ "    +tfile        print timing information to file \"time.txt\"\n"
         ^ "    -coverage     turn off coverage checker (default, since coverage checker is incomplete)\n"
         ^ "    +coverage     turn on coverage checker (experimental)\n"
+        ^ "    +covDepth nn  \"extra\" depth for coverage checker\n"
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
         ^ "    +printSubord  print subordination relations (experimental)\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
@@ -49,6 +50,12 @@ let process_option' arg rest = begin let f = function
   | "+coverage" -> (Coverage.enableCoverage := true; rest)
   | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true; rest)
   | "-coverage" -> (Coverage.enableCoverage := false; rest)
+  | "-covdepth" -> (match rest with [] -> (print_string "-covDepth needs an argument\n"; exit 2)
+                               | arg::rest -> (try let extraDepth = int_of_string arg in
+                                                 Coverage.extraDepth := extraDepth;
+                                                 rest
+                                               with Failure "int_of_string" ->
+                                                      print_string "-covDepth needs a numeric argument\n"; exit 2))
   | "+printsubord" -> (Subord.dump := true; rest)
   | "-width" -> (match rest with [] -> (print_string "-width needs an argument\n"; exit 2)
                                | arg::rest -> (try let width = int_of_string arg in

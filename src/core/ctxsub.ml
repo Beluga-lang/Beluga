@@ -603,15 +603,23 @@ and csub_exp_syn cPsi k i' = match i' with
   | Comp.Boolean b -> Comp.Boolean b
 
 and csub_branch cPsi k branch = match branch with 
-  | Comp.BranchBox (cO, cD, (cPhi, tM, ms, cs), e) -> 
+  | Comp.BranchBox (cO, cD, (cPhi, Comp.NormalPattern(pattern, e), ms, cs)) -> 
     (* currently we ignore the extra binding of context variables
        Feb 17 2010 - bp *)
       let cPhi' = csub_dctx Empty (*dummy *) cPsi k cPhi in  
-      let tM'   = csub_norm cPsi k tM in 
+      let pattern' = csub_norm cPsi k pattern in
       let ms'   = csub_msub cPsi k ms in 
       let e'    = csub_exp_chk cPsi k e in 
       let cD'   = csub_mctx cPsi k cD in 
-        Comp.BranchBox (cO, cD', (cPhi', tM', ms', cs), e')
+        Comp.BranchBox (cO, cD', (cPhi', Comp.NormalPattern(pattern', e'), ms', cs))
+
+  | Comp.BranchBox (cO, cD, (cPhi, Comp.EmptyPattern, ms, cs)) -> 
+    (* currently we ignore the extra binding of context variables
+       Feb 17 2010 - bp *)
+      let cPhi' = csub_dctx Empty (*dummy *) cPsi k cPhi in  
+      let ms'   = csub_msub cPsi k ms in 
+      let cD'   = csub_mctx cPsi k cD in 
+        Comp.BranchBox (cO, cD', (cPhi', Comp.EmptyPattern, ms', cs))
 
 
 
@@ -756,10 +764,10 @@ and ctxnorm_exp_syn (i',cs) = match i' with
         Comp.Ann (e', tau')
         
 and ctxnorm_branch (branch,cs') = match branch with  
-  | Comp.BranchBox (cO, cD, (cPhi, tM, ms, cs), e) ->  
+  | Comp.BranchBox (cO, cD, (cPhi, pattern, ms, cs)) ->  
     (* technically, we need to unify cs and cs' 
        Feb 17 2010 - bp *) 
-        Comp.BranchBox (cO, cD, (cPhi, tM, ms, cs), e) 
+        Comp.BranchBox (cO, cD, (cPhi, pattern, ms, cs))
 
 
 

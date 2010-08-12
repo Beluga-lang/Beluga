@@ -215,19 +215,16 @@ let rec ctxShift cPsi = begin match cPsi with
               let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
               let _ = dprint (fun () -> "[InferHead] " ^ P.dctxToString cO cD cPsi) in
               let _ = dprint (fun () -> "|-  " ^  P.headToString cO cD cPsi head ^ "\n" ^ 
-                                " where " ^ P.headToString cO cD cPsi tuple_head ^ " has type " ^ P.typRecToString cO cD cPsi (recA, LF.id) ^ "\n") in
+                                " where " ^ P.headToString cO cD cPsi tuple_head ^ " has type " ^ P.typRecToString cO cD cPsi (recA, LF.id)) in
                 (recA, LF.id)
           | PVar (Offset p, s) ->
-              begin let (_, tTuple, cPsi') = Whnf.mctxPDec cD p in
-
+              let (_, Sigma recA, cPsi') = Whnf.mctxPDec cD p in
                 checkSub loc cO cD cPsi s cPsi';
-                match tTuple with
-                    Sigma recA -> (recA, s)
-              end
+                (recA, s)
         in
         let (_tA, s) as sA = getType tuple_head srecA target 1 in 
-        let _ = dprint (fun () -> "getTyp ( " ^ P.headToString cO cD cPsi head ^ " ) = " ^ P.typToString cO cD cPsi sA ^ "\n") in 
-        let _ = dprint (fun () -> "s = " ^ P.subToString cO cD cPsi s ^ "\n") in
+          dprint (fun () -> "getType (" ^ P.headToString cO cD cPsi head ^ ") = " ^ P.typToString cO cD cPsi sA);
+          dprint (fun () -> "s = " ^ P.subToString cO cD cPsi s);
           TClo sA
 
     
@@ -570,7 +567,7 @@ This case should now be covered by the one below it
                         ^ "\n   cPsi = " ^ P.dctxToString cO cD cPsi
                         ^ "\n   dctx = " ^ P.dctxToString cO cD dctx  
                         ^ "\n   " ^  P.typToString cO cD cPsi (tA, s) ) in
-    let _ = dprint (fun () -> "dctxSub = " ^ P.subToString cO cD cPsi dctxSub ^ "\n") in
+    let _ = dprint (fun () -> "dctxSub = " ^ P.subToString cO cD cPsi dctxSub) in
       (* P.typRecToString cO cD cPsi sArec  *)
 (*    let _ = dprint (fun () -> 
                          "\n== " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ) in  *)
@@ -681,6 +678,7 @@ and subsumes cO psi phi = match (psi, phi) with
         if (Context.length cD) = k then () 
         else 
           raise (Violation ("Contextual substitution ill-typed - 1"))
+
     | (MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi))) -> 
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
         let tA'   = Whnf.cnormTyp (tA, ms) in
@@ -718,10 +716,11 @@ and subsumes cO psi phi = match (psi, phi) with
             | Proj _ -> 
                 let tB = inferHead None cO cD cPsi' h in 
                   if Whnf.convTyp (tB, LF.id) (tA', LF.id) then ()
-          end ;
-          checkMSub cO cD ms cD1')
+           end ;
+           checkMSub cO cD ms cD1')
+
     | (_, _ ) -> 
-        raise (Violation ("Contextual substitution ill-typed ?\n " ^ 
+        raise (Violation ("Contextual substitution ill-typed\n " ^ 
                             P.mctxToString cO cD ^ " |- " ^ 
                             P.msubToString cO cD ms ^ " <= "  
-                         ^ " = " ^ P.mctxToString cO cD' ^ "\n"))
+                         ^ " = " ^ P.mctxToString cO cD'))

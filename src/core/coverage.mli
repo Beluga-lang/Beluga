@@ -4,6 +4,7 @@ open Syntax.Int
 
 val enableCoverage : bool ref
 val warningOnly : bool ref
+val extraDepth : int ref
 val no_covers : int ref
 
 type problem

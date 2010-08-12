@@ -230,15 +230,19 @@ module Int : sig
      | Ann    of exp_chk * typ 
      | Equal  of Loc.t option * exp_syn * exp_syn
      | Boolean of bool
+
          
-   and branch =
-     | BranchBox  of LF.mctx * LF.mctx
-         * (LF.dctx * LF.normal * LF.msub * LF.csub)
-         * exp_chk
-         
-     | BranchSBox of LF.mctx * LF.mctx
-         * (LF.dctx * LF.sub    * LF.msub * LF.csub)
-         * exp_chk
+    and branch_pattern =
+       | NormalPattern of LF.normal * exp_chk
+       | EmptyPattern
+    
+    and branch =
+      | BranchBox of LF.mctx * LF.mctx
+          * (LF.dctx * branch_pattern * LF.msub * LF.csub)
+      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
+          * (LF.dctx * LF.sub * LF.msub * LF.csub)
+          * exp_chk
+
          
    type ctyp_decl =
      | CTypDecl of name * typ
@@ -396,14 +400,16 @@ module Ext : sig
        | Boolean of Loc.t * bool
 
 
+    and branch_pattern =
+       | NormalPattern of LF.normal * exp_chk
+       | EmptyPattern
+    
     and branch =
-      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx 
-          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
+      | BranchBox of Loc.t * LF.mctx
+          * (LF.dctx * branch_pattern * (LF.typ * LF.dctx) option)
+      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx
+          * (LF.dctx * LF.sub * LF.dctx option)
           * exp_chk
-
-      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx 
-          * (LF.dctx * LF.sub    * LF.dctx option) 
-          * exp_chk 
 
 
    type rec_fun = RecFun of name * typ * exp_chk
@@ -567,15 +573,17 @@ module Apx : sig
        | Boolean of Loc.t * bool
 
 
+    and branch_pattern =
+       | NormalPattern of LF.normal * exp_chk
+       | EmptyPattern
+    
     and branch =
-      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx
-          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
-          * exp_chk
-      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx
+      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
+          * (LF.dctx * branch_pattern * (LF.typ * LF.dctx) option)
+      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
           * (LF.dctx * LF.sub * LF.dctx option)
           * exp_chk
 
   end (* Apx.Comp *)
 
 end (* Apx *)
-

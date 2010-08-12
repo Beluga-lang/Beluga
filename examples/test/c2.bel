@@ -26,19 +26,19 @@ FN g => fn e =>
 
 rec copyXBad2 : {g:(termCtx)*} term[g, x:term] -> term[g, x:term] =
 FN g => fn e =>
- (case e of %not
-  | [g,x:term]  z     => [g,x:term] z
-  | [g,x:term]  #p .. => [g,x:term] #p ..
-);
+ case e of %not
+ | [g,x:term]  z     => [g,x:term] z
+ | [g,x:term]  #p .. => [g,x:term] #p ..
+;
 
 
 rec copyXGood : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>
- (case e of
+  case e of
   | [g,x:term]  z     => [g,x:term] z
   | [g,x:term]  #p .. x => [g,x:term] #p .. x
   | [g]  z => [g] z
-);
+;
 
 rec copyXGood2 : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>

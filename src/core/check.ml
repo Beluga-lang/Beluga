@@ -399,7 +399,7 @@ module Comp = struct
 *)
   and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
     match branch with
-      | BranchBox (cO1', cD1',  (_cPsi1, (I.Root(loc, _, _ ) as tR1), t1, cs),  e1) ->
+      | BranchBox  (cO1',  cD1',  (_cPsi1, NormalPattern(I.Root(loc, _, _ ) as tR1, e1),  t1,  cs)) ->
           (* By invariant: cD1' |- t1 <= cD *)
           let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  
           let tP1   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tP, t1), cs) in 
@@ -421,8 +421,23 @@ module Comp = struct
                             "\n has type "  ^ P.compTypToString cO1' cD1' tau' ^ "\n" 
                        )
           in
-
             check cO1' cD1' cG' e1 (tau', Whnf.m_id)
+
+      | BranchBox (cO1', cD1',  (_cPsi1, EmptyPattern, t1, cs)) ->
+          (* By invariant: cD1' |- t1 <= cD *)
+          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  
+
+          let t'' = Whnf.mcomp t t1 in
+
+          let tau  = Whnf.cnormCTyp (tau, t'') in
+          let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
+          let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
+                        P.octxToString cO1' ^ " ; \n" ^ 
+                        P.mctxToString cO1' cD1' ^ " ;\n " ^ 
+                        "{} (EmptyPattern)" ^
+                            "\n has type "  ^ P.compTypToString cO1' cD1' tau')
+          in
+            ()
 
 end
   

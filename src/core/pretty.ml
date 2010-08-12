@@ -533,7 +533,7 @@ module Int = struct
             (fmt_ppr_lf_head cO cD cPsi lvl) h
 
       | LF.MV k ->
-          fprintf ppf "MV %s "
+          fprintf ppf "MV %s"
             (R.render_cvar cD k)
 
       | LF.MUndef -> 
@@ -1124,9 +1124,20 @@ module Int = struct
             (fmt_ppr_cmp_branch cO cD cG 0) b
             (fmt_ppr_cmp_branches cO cD cG lvl) bs
 
+    and fmt_ppr_pattern cO' cD1' cPsi ppf = function
+      | Comp.NormalPattern (tM, _) -> fmt_ppr_lf_normal cO' cD1' cPsi 0 ppf tM
+      | Comp.EmptyPattern ->fprintf ppf "@[{}@]"
 
+    and fmt_ppr_patternOpt cO' cD1' cPsi ppf = function
+      | Some tM -> fmt_ppr_lf_normal cO' cD1' cPsi 0 ppf tM
+      | None ->fprintf ppf "@[{}@]"
+
+    and fmt_ppr_branch_body cO' cD1' cG t ppf = function
+      | Comp.NormalPattern (_, e) -> fmt_ppr_cmp_exp_chk cO' cD1' (Whnf.cnormCtx (cG, t)) 1 ppf e
+      | Comp.EmptyPattern -> ()
+    
     and fmt_ppr_cmp_branch cO cD cG _lvl ppf = function
-      | Comp.BranchBox (cO', cD1', (cPsi, tM, t, cs), e) ->
+      | Comp.BranchBox (cO', cD1', (cPsi, pattern, t, cs)) ->
           let rec ppr_ctyp_decls' cO ppf = function
             | LF.Dec (LF.Empty, decl) ->
                 fprintf ppf "%a"
@@ -1141,11 +1152,11 @@ module Int = struct
           in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
 (*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
-            fprintf ppf "@ @[<v2>| @[<v0>%a%a@[([%a] %a) @ : %a ; %a@]  => @]@ @[<2>@ %a@]@]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a%a@[([%a] %a)@ : %a ; %a@]  => @]@ @[<2>@ %a@]@]@ "
               (frugal_lf_octx 0) cO'
               (ppr_ctyp_decls cO') cD1'
               (fmt_ppr_lf_psi_hat cO' 0) cPsi
-              (fmt_ppr_lf_normal cO' cD1' cPsi 0) tM
+              (fmt_ppr_pattern cO' cD1' cPsi) pattern
                  (* this point is where the " : " is in the string above *)
               (* (fmt_ppr_lf_msub cO cD1' 2) t   *)
               (fmt_ppr_refinement cO' cD1' cD 2) t
@@ -1154,7 +1165,8 @@ module Int = struct
                *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
                * -bp
                *) 
-              (fmt_ppr_cmp_exp_chk cO' cD1' (Whnf.cnormCtx (cG, t)) 1) e
+              (fmt_ppr_branch_body cO' cD1' cG t) pattern
+(*              (fmt_ppr_cmp_exp_chk cO' cD1' (Whnf.cnormCtx (cG, t)) 1) e *)
 
 
     (* cD |- t : cD'  *)
@@ -1601,7 +1613,7 @@ module Error = struct
             (print_typeVariant variant)
 
 
-      | CompPattMismatch ((cO, cD, cPsi, tM, sA) , (cO', cD', cPsi', sA')) ->
+      | CompPattMismatch ((cO, cD, cPsi, pattern, sA) , (cO', cD', cPsi', sA')) ->
           fprintf ppf
             "ill-typed pattern\n  expected: %a[%a] \n  inferred: %a[%a]\n  for expression: [%a] %a\n"  
             (IP.fmt_ppr_lf_typ cO' cD' cPsi' std_lvl) (Whnf.normTyp sA')
@@ -1609,7 +1621,7 @@ module Error = struct
             (IP.fmt_ppr_lf_typ cO cD cPsi std_lvl) (Whnf.normTyp sA)
             (IP.fmt_ppr_lf_dctx cO' cD' std_lvl) (Whnf.normDCtx cPsi)
             (IP.fmt_ppr_lf_dctx cO' cD' std_lvl) (Whnf.normDCtx cPsi)
-            (IP.fmt_ppr_lf_normal cO cD cPsi std_lvl) tM
+            (IP.fmt_ppr_patternOpt cO' cD' cPsi) pattern
 
 
       | CompSubPattMismatch ((cO, cD, cPsi, sigma, cPhi) , (cO', cD', cPsi', cPhi')) ->

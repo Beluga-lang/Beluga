@@ -1620,10 +1620,14 @@ and collectSubPattern cQ cD cPsi sigma cPhi =
 
 
 and collectBranch cQ branch = match branch with
-  | Comp.BranchBox (cO, cD, pat, e) -> 
+  | Comp.BranchBox (cO, cD, (dctx, Comp.NormalPattern(pat, e), msub, csub)) -> 
       (* pat and cD cannot contain any free meta-variables *)
-      let (cQ', e') =  collectExp cQ e in 
-        (cQ', Comp.BranchBox (cO, cD, pat, e') )
+      let (cQ', e') = collectExp cQ e in 
+        (cQ', Comp.BranchBox (cO, cD, (dctx, Comp.NormalPattern(pat, e'), msub, csub)))
+
+  | Comp.BranchBox (cO, cD, (dctx, Comp.EmptyPattern, msub, csub)) -> 
+      (* pat and cD cannot contain any free meta-variables *)
+        (cQ, Comp.BranchBox (cO, cD, (dctx, Comp.EmptyPattern, msub, csub)))
 
 and collectBranches cQ branches = match branches with 
   | [] -> (cQ, [])

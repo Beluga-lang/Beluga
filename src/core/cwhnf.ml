@@ -140,16 +140,13 @@ and mshiftDCtx cPsi k = match cPsi with
 
 
 (* mvar_dot1 psihat t = t'
-   Invariant:
 
    If  cO ;  cD |- t : D'
 
-   then t' = u. (mshift t 1)  
-       and  for all A s.t.  D' ; Psi |- A : type
+   then t' = u . (mshift t 1)  
+        and  for all A such that  D' ; Psi |- A : type,
 
-     D, u::[|t|](A[Psi]) |- t' : D', A[Psi]
-
-
+               D, u::[|t|](A[Psi])  |-  t'  :  D', A[Psi]
  *)
   and mvar_dot1 t = 
     LF.MDot (LF.MV 1, mshift t 1)

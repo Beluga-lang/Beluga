@@ -34,7 +34,7 @@ type error =
   | ValueRestriction of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * Comp.tclo
   | CompIllTyped     of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_chk * Comp.tclo * Comp.tclo
   | CompMismatch     of LF.mctx * LF.mctx * Comp.gctx * Comp.exp_syn * typeVariant * Comp.tclo
-  | CompPattMismatch of (LF.mctx * LF.mctx * LF.dctx * LF.normal * LF.tclo) * 
+  | CompPattMismatch of (LF.mctx * LF.mctx * LF.dctx * LF.normal option * LF.tclo) * 
                         (LF.mctx * LF.mctx * LF.dctx * LF.tclo)  
 
   | CompSubPattMismatch of (LF.mctx * LF.mctx * LF.dctx * LF.sub * LF.dctx) * 

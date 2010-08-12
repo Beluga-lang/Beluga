@@ -287,52 +287,56 @@ and eval_branches (phat,tM) (branches, theta_eta) = match branches with
            dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta)) ; 
           eval_branches (phat,tM) (branches, theta_eta))
 
-and eval_branch (phat, tM) (BranchBox (cO, cD, (cPsi' , tM', theta', cs'), e)) (cs, theta, eta) = 
-  try
-    let _ = dprint (fun () -> "[eval_branch] cO = " ^ P.octxToString cO ^ "\n  cs = " ^ P.csubToString I.LF.Empty I.LF.Empty cs ) in
-    let ct      = cctxToCSub cO cD cPsi' in 
-    let ct'     = Ctxsub.ccomp cs' ct in 
-    let _ = dprint (fun () -> "Unify msub: cs =  "
-                            ^ P.csubToString I.LF.Empty I.LF.Empty (Ctxsub.ctxnorm_csub cs) ^ "\n"
-                            ^ "Unify Refinement  ct' = "
-                            ^ P.csubToString I.LF.Empty I.LF.Empty (Ctxsub.ctxnorm_csub ct')) in
-  
-    let _       = Unify.unifyCSub cs ct'  in 
-    let ct1'    = Ctxsub.ctxnorm_csub ct' in    (* unused, except in dprints?   -jd *)
-    let ct1     = Ctxsub.ctxnorm_csub ct in 
+and eval_branch (phat, tM) (BranchBox (cO, cD, (cPsi', pattern', theta', cs'))) (cs, theta, eta) =
+  match pattern' with
+  | EmptyPattern -> raise (Violation "Case {}-pattern -- coverage checking is off or broken")
+  | NormalPattern (tM', e) ->
+    try
+      let _ = dprint (fun () -> "[eval_branch] cO = " ^ P.octxToString cO ^ "\n  cs = " ^ P.csubToString I.LF.Empty I.LF.Empty cs ) in
 
-    let _ = dprint (fun () -> "Unify Refinement  ct1' = "
-                            ^ P.csubToString I.LF.Empty I.LF.Empty  ct1' ^ "\n"
-                            ^ "Unify Refinement  ct1 = "
-                            ^ P.csubToString I.LF.Empty I.LF.Empty ct1) in 
-      
-    let mt      = mctxToMSub (Ctxsub.ctxnorm_mctx (cD,ct1)) in 
-    let theta_k = Whnf.mcomp (Ctxsub.ctxnorm_msub (theta', ct1)) mt in 
-      
-    let _ = dprint (fun () -> "Unify msub: theta =  "
-                            ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta) ^ "\n"
-                            ^ "Unify Refinement  theta_k = "
-                            ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta_k)) in
-    
-    let _        = Unify.unifyMSub theta theta_k  in 
-    
-    let _ =  (dprint (fun () -> "After unification: theta =  " ) ; 
-              dprint (fun () ->  P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta) ) ; 
-              dprint (fun () -> "     theta_k = " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta_k)) ) in
-    
-    let tM1' = C.cnorm (Ctxsub.ctxnorm (tM', ct1), mt) in 
-    let mt1'  = Whnf.cnormMSub mt  in 
-    let cPsi' = Ctxsub.ctxnorm_dctx (cPsi', ct1) in 
-    
-    let _     = Unify.unify I.LF.Empty cPsi' (tM, LF.id) (tM1', LF.id)  in 
-    let _     = dprint (fun () -> "[eval_chk] body with mt = "
-                                ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub mt1') ^ "\n"
-                                ^ "  and ct1' = " ^ P.csubToString I.LF.Empty  I.LF.Empty ct1' ^ "\n"
-                                ^ "PATTERN MATCH  " ^ P.expChkToString I.LF.Empty I.LF.Empty I.LF.Empty (Box(None, phat, tM)) ^ " SUCCESSFUL") in
+      let ct      = cctxToCSub cO cD cPsi' in 
+      let ct'     = Ctxsub.ccomp cs' ct in 
+      let _ = dprint (fun () -> "Unify msub: cs =  "
+                              ^ P.csubToString I.LF.Empty I.LF.Empty (Ctxsub.ctxnorm_csub cs) ^ "\n"
+                              ^ "Unify Refinement  ct' = "
+                              ^ P.csubToString I.LF.Empty I.LF.Empty (Ctxsub.ctxnorm_csub ct')) in
 
-         eval_chk e (ct1, mt1', eta) 
- with 
-     Unify.Unify _ -> raise BranchMismatch
+      let _       = Unify.unifyCSub cs ct'  in 
+      let ct1'    = Ctxsub.ctxnorm_csub ct' in    (* unused, except in dprints?   -jd *)
+      let ct1     = Ctxsub.ctxnorm_csub ct in 
+
+      let _ = dprint (fun () -> "Unify Refinement  ct1' = "
+                              ^ P.csubToString I.LF.Empty I.LF.Empty  ct1' ^ "\n"
+                              ^ "Unify Refinement  ct1 = "
+                              ^ P.csubToString I.LF.Empty I.LF.Empty ct1) in 
+
+      let mt      = mctxToMSub (Ctxsub.ctxnorm_mctx (cD,ct1)) in 
+      let theta_k = Whnf.mcomp (Ctxsub.ctxnorm_msub (theta', ct1)) mt in 
+
+      let _ = dprint (fun () -> "Unify msub: theta =  "
+                              ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta) ^ "\n"
+                              ^ "Unify Refinement  theta_k = "
+                              ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta_k)) in
+
+      let _        = Unify.unifyMSub theta theta_k  in 
+
+      let _ =  (dprint (fun () -> "After unification: theta =  " ) ; 
+                dprint (fun () ->  P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta) ) ; 
+                dprint (fun () -> "     theta_k = " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub theta_k)) ) in
+
+      let tM1' = C.cnorm (Ctxsub.ctxnorm (tM', ct1), mt) in 
+      let mt1'  = Whnf.cnormMSub mt  in 
+      let cPsi' = Ctxsub.ctxnorm_dctx (cPsi', ct1) in 
+
+      let _     = Unify.unify I.LF.Empty cPsi' (tM, LF.id) (tM1', LF.id)  in 
+      let _     = dprint (fun () -> "[eval_chk] body with mt = "
+                                  ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub mt1') ^ "\n"
+                                  ^ "  and ct1' = " ^ P.csubToString I.LF.Empty  I.LF.Empty ct1' ^ "\n"
+                                  ^ "PATTERN MATCH  " ^ P.expChkToString I.LF.Empty I.LF.Empty I.LF.Empty (Box(None, phat, tM)) ^ " SUCCESSFUL") in
+
+           eval_chk e (ct1, mt1', eta) 
+    with 
+        Unify.Unify _ -> raise BranchMismatch
 
 
 

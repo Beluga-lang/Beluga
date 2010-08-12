@@ -204,7 +204,6 @@ GLOBAL: sgn_eoi;
                | Typ  a -> Typ  (LF.ArrTyp  (_loc, a2, a))
              end
 
-
         ]
     ]
   ;
@@ -778,7 +777,7 @@ cmp_exp_chkX:
        "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk
        ->
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-          Comp.Case (_loc, Syntax.RegularCase, i, [Comp.BranchBox (_loc,  ctyp_decls', (pHat, tM, tau), e')]) 
+          Comp.Case (_loc, Syntax.RegularCase, i, [Comp.BranchBox (_loc,  ctyp_decls', (pHat, Comp.NormalPattern (tM, e'), tau))]) 
       | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> 
           begin match p_or_a with 
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
@@ -922,27 +921,38 @@ cmp_exp_syn:
                       ;
 *****)
 
+  cmp_branch_pattern:
+    [
+      [
+        tM = clf_term_app -> Some tM
+     |
+        "{"; "}" -> None
+      ]
+    ]
+  ;
 
   cmp_branch:
     [
       [
         ctyp_decls = LIST0 clf_ctyp_decl; 
       (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")"; *)
-        "["; pHat = clf_dctx ;"]"; tM = clf_term_app; 
+        "["; pHat = clf_dctx ;"]"; pattern = cmp_branch_pattern;
          tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi)]; 
-         rArr; e = cmp_exp_chk ->  
+         rest = OPT [rArr; e = cmp_exp_chk -> e] ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-            Comp.BranchBox (_loc,  ctyp_decls', (pHat, tM, tau), e)
-
-      |         
+           (match (pattern, rest) with
+              | (Some tM, Some e)  -> Comp.BranchBox (_loc, ctyp_decls', (pHat, Comp.NormalPattern (tM, e), tau))
+              | (None, None) ->  Comp.BranchBox (_loc, ctyp_decls', (pHat, Comp.EmptyPattern, tau))
+              | (Some _tM, None) -> (print_string ("Syntax error: missing body of case branch\n"); raise (MixErr _loc))
+              | (None, Some _e) -> (print_string ("Syntax error: can't have a body with an empty pattern \"{}\"\n"); raise (MixErr _loc)))
+      |
           ctyp_decls = LIST0 clf_ctyp_decl; 
       (* "sbox"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")"; *)
         "["; cPsi = clf_dctx ;"]"; sigma = clf_sub_new;  
          cPhi = OPT [ ":"; cPhi = clf_dctx -> cPhi ] ; 
          rArr; e = cmp_exp_chk ->  
            let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-            Comp.BranchSBox (_loc,  ctyp_decls', (cPsi, sigma, cPhi), e)
-
+            Comp.BranchSBox (_loc, ctyp_decls', (cPsi, sigma, cPhi), e)
       ]
     ]
   ;

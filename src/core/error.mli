@@ -70,9 +70,9 @@ type error =
       * Comp.tclo (* inferred*)
 
   | CompPattMismatch of 
-      (* Pattern : inferred *)
-      (LF.mctx * LF.mctx * LF.dctx * LF.normal * LF.tclo) * 
-      (* Type of scrutinee : expected *)
+      (* Pattern: inferred *)
+      (LF.mctx * LF.mctx * LF.dctx * LF.normal option(*None for {} (EmptyPattern)*) * LF.tclo) * 
+      (* Type of scrutinee: expected *)
         (LF.mctx * LF.mctx * LF.dctx * LF.tclo)  
 
   | CompSubPattMismatch of (LF.mctx * LF.mctx * LF.dctx * LF.sub * LF.dctx) * 

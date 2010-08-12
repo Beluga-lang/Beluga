@@ -5,9 +5,10 @@ term : tp -> type.
 z    : term nat.
 suc  : term nat -> term nat.
 
+blivit : type.
+blivit_con: blivit.
 
 schema termCtx = some [t:tp] block x:term t. term t;
-
 
 rec fff : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
 FN g => fn e =>
@@ -17,6 +18,7 @@ FN g => fn e =>
   | [g]  #p.1 ..   => [g] z
   | [g]  #p.2 ..   => [g] z
 ;
+
 
 
 rec fffRedundantWrongProjCases : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =

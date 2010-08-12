@@ -173,7 +173,7 @@ module Int = struct
       | Last of normal
       | Cons of normal * tuple
 
-    and mctx     = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
+    and mctx = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
 
     (**********************)
@@ -280,14 +280,19 @@ module Int = struct
      | Boolean of bool
 
 
-   and branch =
-     | BranchBox  of LF.mctx * LF.mctx
-         * (LF.dctx * LF.normal * LF.msub * LF.csub) 
-         * exp_chk
+         
+    and branch_pattern =
+       | NormalPattern of LF.normal * exp_chk
+       | EmptyPattern
+    
+    and branch =
+      | BranchBox of LF.mctx * LF.mctx
+          * (LF.dctx * branch_pattern * LF.msub * LF.csub)
 
-     | BranchSBox of LF.mctx * LF.mctx
-         * (LF.dctx * LF.sub * LF.msub * LF.csub)
-         * exp_chk
+      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
+          * (LF.dctx * LF.sub * LF.msub * LF.csub)
+          * exp_chk
+
 
    type ctyp_decl = 
      | CTypDecl of name * typ
@@ -396,7 +401,7 @@ module Ext = struct
 
     and psi_hat  = name list
 
-    and mctx     = ctyp_decl ctx          
+    and mctx = ctyp_decl ctx          
 
     and prag =
       | NamePrag of name * string * string option 
@@ -448,14 +453,18 @@ module Ext = struct
        | Boolean of Loc.t * bool
 
 
+    and branch_pattern =
+       | NormalPattern of LF.normal * exp_chk
+       | EmptyPattern
+    
     and branch =
-      | BranchBox of Loc.t * LF.mctx 
-          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
+      | BranchBox of Loc.t * LF.mctx
+          * (LF.dctx * branch_pattern * (LF.typ * LF.dctx) option)
+
+      | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx
+          * (LF.dctx * LF.sub * LF.dctx option)
           * exp_chk
 
-       | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx 
-           * (LF.dctx * LF.sub    * LF.dctx option) 
-           * exp_chk 
 
    type rec_fun = RecFun of name * typ * exp_chk
 
@@ -643,11 +652,14 @@ module Apx = struct
        | Equal  of Loc.t  * exp_syn * exp_syn
        | Boolean of Loc.t * bool
 
-
+    and branch_pattern =
+       | NormalPattern of LF.normal * exp_chk
+       | EmptyPattern
+    
     and branch =
       | BranchBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
-          * (LF.dctx * LF.normal * (LF.typ * LF.dctx) option)
-          * exp_chk
+          * (LF.dctx * branch_pattern * (LF.typ * LF.dctx) option)
+
       | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
           * (LF.dctx * LF.sub * LF.dctx option)
           * exp_chk

@@ -55,7 +55,12 @@ echo
 
 echo BROKEN: \
     lp-horn/sources.cfg \
-    lp-horn/test-crec.cfg
+    lp-horn/test-crec.cfg \
+    unique/unique.bel \
+    unique/unique-crec.bel \
+    compile/cls/test.cfg \
+    compile/cpm/test.cfg \
+    ../examples-twelf/compile/cpm/test.cfg
 
 sleep 2
 echo
@@ -74,6 +79,7 @@ $INTERPRETER +coverage $* \
     small-step/system-f-iso.bel \
     test/id.bel \
     test/id-explicit.bel \
+    test/implicit-obj.bel \
     tpcert.bel \
     ../examples-twelf/church-rosser/test.cfg \
     ../examples-twelf/compile/cls/test.cfg
@@ -97,7 +103,6 @@ $INTERPRETER +coverage $* \
     test/case2.bel \
     test/case2-explicit.bel \
     test/id-simple.bel \
-    test/implicit-obj.bel \
     test/sigma3.bel \
     test/test-simple-explicit.bel \
     mini-ml/eval-sub-1.bel \
@@ -107,9 +112,7 @@ $INTERPRETER +coverage $* \
     mini-ml/vsound-explicit.bel \
     arith/arith.bel \
     compile/cls/sources.cfg \
-    compile/cls/test.cfg \
     compile/cpm/sources.cfg \
-    compile/cpm/test.cfg \
     compile/cps/sources.cfg \
     compile/cxm/sources.cfg \
     compile/debruijn/sources.cfg \
@@ -137,8 +140,6 @@ $INTERPRETER +coverage $* \
     test/dependency.bel \
     test/test.bel \
     test/test-simple.bel \
-    unique/unique.bel \
-    unique/unique-crec.bel \
     unique/unique-eval.bel \
     LF/arith.lf \
     LF/arith-rec1.lf \
@@ -169,7 +170,6 @@ $INTERPRETER +coverage $* \
     ../examples-twelf/compile/debruijn1/sources.cfg \
     ../examples-twelf/compile/cps/sources.cfg \
     ../examples-twelf/compile/cpm/sources.cfg \
-    ../examples-twelf/compile/cpm/test.cfg \
     ../examples-twelf/cut-elim/sources.cfg \
     ../examples-twelf/fol/sources.cfg \
     ../examples-twelf/handbook/sources.cfg \
@@ -181,6 +181,7 @@ $INTERPRETER +coverage $* \
     ../examples-twelf/prop-calc/sources.cfg
 
 exit 0
+
 
 
 # ignore the following

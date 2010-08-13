@@ -1,0 +1,438 @@
+%{ 
+  CH 3:  Untyped arithmetic expressions
+  Author: Brigitte Pientka
+
+  Big-step semantics together with the proof 
+  that the big step rules are equivalent to the
+  small-step rules.
+
+
+  Here we ensure that in the small-step semantics,
+  we only use the rule s_pred_succ and s_iszero_succ 
+  when we have a value. 
+
+
+}%
+
+%{
+  BIG-STEP EVALUATION RULES
+}%
+
+eval: term -> term -> type.
+
+ev_true  : 
+  eval true true.
+ev_false : 
+  eval false false.
+ev_switch_true: 
+  eval M true -> eval M1 V 
+  -> eval (switch M M1 M2) V.
+ev_switch_false: 
+  eval M false -> eval M2 V 
+  -> eval (switch M M1 M2) V.
+
+ev_z     : 
+  eval z z.
+ev_succ  :
+  eval M V 
+-> eval (succ M) (succ V).
+
+ev_pred_zero:
+  eval N z 
+->  eval (pred N) z.
+ev_pred_succ:
+  eval N (succ V)
+-> eval (pred N) V.
+
+ev_iszero_zero: 
+  eval N z
+-> eval (iszero N) true.
+
+ev_iszero_succ: 
+  eval N (succ V)
+-> eval (iszero N) false.
+
+% ---------------------------------------------------------- %
+%{
+  DEFINITION OF VALUES
+
+  Comment: 
+  -------
+  This definition of values is a little bit more
+  liberal than the one previously used in the file 
+  evaluation-correct.bel 
+
+  For example, we accept here value (succ true). This is to
+  ease the subsequent proof of correctness between big-step
+  and small-step semantics. 
+   
+  Partly, these issues arise, because we are working in an
+  untyped setting.
+
+  Exercise: 
+  --------
+  Explain how proving value soundness fails
+  when we use the definition of values given in
+  file evaluation-correct.bel
+   
+}%
+value     : term -> type.
+
+v_true : value true.
+v_false: value false.
+v_z    : value z.
+v_s    : value N -> value (succ N).
+
+% ---------------------------------------------------------- %
+
+%{
+Lemma: Value Soundness
+}%
+
+rec vsound : (eval E V)[ ] -> (value V)[ ] = 
+fn d => case d of 
+| [ ] ev_true   => [ ] v_true
+| [ ] ev_false  => [ ] v_false
+| [ ] ev_z      => [ ] v_z
+| [ ] ev_succ D => 
+  let [ ] V = vsound ([ ] D) in
+    [ ] v_s V
+| [ ] ev_switch_true D D1 => 
+  vsound ([ ] D1) 
+| [ ] ev_switch_false D D2 => 
+  vsound ([ ] D2) 
+| [ ] ev_pred_zero _ => 
+    [ ] v_z
+
+| [ ] ev_pred_succ D => 
+  let [ ] v_s V =  vsound ([ ] D) in 
+    [ ] V
+
+| [ ] ev_iszero_zero _ => 
+    [ ] v_true
+
+| [ ] ev_iszero_succ D => 
+    [ ] v_false
+;
+
+rec vself : (value V)[ ] -> (eval V V)[ ] = 
+fn v => case v of 
+| [ ] v_true  => [ ] ev_true
+| [ ] v_false => [ ] ev_false
+| [ ] v_z     => [ ] ev_z 
+| [ ] v_s V   => 
+  let [ ] D = vself ([ ] V) in 
+    [ ] ev_succ D
+
+;
+
+
+% ---------------------------------------------------------- %
+%{
+  REVISED SMALL-STEP EVALUATION RULES
+}%
+
+% Small-step operational semantics
+step: term -> term -> type. 
+s_switch_true:  
+   step (switch true T2 T3)    T2.
+
+s_switch_false:
+   step (switch false T2 T3)   T3.
+
+s_switch:
+   step T1 T1'
+-> step (switch T1 T2 T3)      (switch T1' T2 T3).
+
+s_succ:
+   step T T' 
+-> step (succ T) (succ T').
+
+s_pred_zero:
+   step (pred z) z.
+
+s_pred_succ:
+  value N ->
+  step (pred (succ N)) N.
+
+s_pred:
+   step T T'  
+-> step (pred T) (pred T').
+
+s_iszero_zero:
+   step (iszero z) true.
+
+s_iszero_succ:
+   value N 
+-> step (iszero (succ N)) false.
+
+s_iszero:
+  step M N 
+-> step (iszero M) (iszero N).
+
+
+% -------------------------------------------------------- %
+%{ 
+ Multi-step evaluation rules 
+}%
+mstep: term -> term -> type.
+
+m_step : step M N' -> mstep N' N
+     -> mstep M N.   
+
+m_ref  : mstep M M.   % Reflexive
+
+% -------------------------------------------------------- %
+
+%{
+Admissibility of transitivity for mstep:
+}%
+
+rec m_trans : (mstep M N')[ ] -> (mstep N' N)[ ] -> (mstep M N)[ ] = 
+fn ms1 => fn ms2 => case ms1 of 
+| [ ] m_ref  => ms2 
+| [ ] m_step  S1 MS1 => 
+  let [ ] MS1' = m_trans ([ ] MS1) ms2 in 
+    [ ] m_step S1 MS1'
+;
+
+
+% ---------------------------------------------------------- %
+% LEMMAS
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (switch T T2 T3) (switch T' T2 T3).
+
+}%
+
+rec mstep_switch : 
+  {T2::term[ ]}{T3::term[ ]}
+  (mstep T T')[ ] ->
+  (mstep (switch T T2 T3) (switch T' T2 T3))[ ] = 
+mlam T2 => mlam T3 => 
+fn ms => case ms of 
+| [ ] m_ref => [ ] m_ref
+| [ ] m_step S MS => 
+  let [ ] MS' = mstep_switch < . T2 > < . T3 > ([ ] MS) in 
+  [ ] m_step (s_switch S) MS'
+
+;
+
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (succ T) (succ T').
+
+}%
+
+rec mstep_succ :
+ (mstep M M')[ ] -> (mstep (succ M) (succ M') )[ ] =
+fn ms => case ms of 
+| [ ] m_ref => [ ] m_ref
+| [ ] m_step S MS => 
+  let [ ] MS' = mstep_succ ([ ] MS) in 
+    [ ] m_step (s_succ S) MS'
+;
+
+
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (pred T) (pred T').
+
+}%
+
+rec mstep_pred :
+  (mstep M M')[ ] -> (mstep (pred M) (pred M'))[ ] =
+fn ms => case ms of 
+| [ ] m_ref => [ ] m_ref
+| [ ] m_step S MS => 
+  let [ ] MS' = mstep_pred ([ ] MS) in 
+    [ ] m_step (s_pred S) MS'
+;
+
+
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (iszero T) (iszero T').
+
+}%
+
+rec mstep_iszero :
+ (mstep M M')[ ] -> (mstep (iszero M) (iszero M') )[ ] =
+fn ms => case ms of 
+| [ ] m_ref => [ ] m_ref
+| [ ] m_step S MS => 
+  let [ ] MS' = mstep_iszero ([ ] MS) in 
+    [ ] m_step (s_iszero S) MS'
+;
+
+
+
+% ---------------------------------------------------------- %
+%{
+
+THEOREM:
+
+big_to_small : If eval M V then mstep M V 
+
+}% 
+
+rec big_to_small : (eval M V)[ ] -> (mstep M V)[ ] =
+fn d => case d of 
+| [ ] ev_true  => [ ] m_ref
+| [ ] ev_false => [ ] m_ref
+
+| [ ] ev_switch_true D D1 : (eval (switch M M1 M2) V) [ ] => 
+  let [ ] Mtrue  = big_to_small ([ ] D) in   
+    % Mtrue : multi_step M true
+  let [ ] MS     = mstep_switch < . M1 > < . M2 > ([ ] Mtrue ) in 
+    % MS : multi_step (switch M M1 M2) (switch true M1 M2)
+  let [ ] MS1    = big_to_small ([ ] D1) in   
+    % MS1 : multi_step  M1 V
+   m_trans ([ ] MS) ([ ] m_step s_switch_true MS1) 
+
+
+ | [ ] ev_switch_false D D1 : (eval (switch M M1 M2) V) [ ] => 
+  let [ ] Mfalse  = big_to_small ([ ] D) in   
+    % Mfalse : multi_step M false
+  let [ ] MS     = mstep_switch < . M1 > < . M2 > ([ ] Mfalse ) in 
+    % MS : multi_step (switch M M1 M2) (switch false M1 M2)
+  let [ ] MS1    = big_to_small ([ ] D1) in   
+    % MS1 : multi_step  M1 V
+    m_trans ([ ] MS) ([ ] m_step  s_switch_false MS1)
+
+
+| [ ] ev_z        => [ ] m_ref
+
+| [ ] ev_succ D   => 
+  let [ ] MS   = big_to_small ([ ] D) in 
+    % MS: multi_step N V 
+    mstep_succ ([ ] MS)
+
+| [ ] ev_pred_zero D => 
+  let [ ] Mzero = big_to_small ([ ] D) in 
+    % Mzero: multi_step M z 
+  let [ ] MS    = mstep_pred ([ ] Mzero) in 
+    % MS   : multi_step (pred M)  (pred z)
+    m_trans ([ ] MS) ([ ] m_step s_pred_zero m_ref)
+
+
+| [ ] ev_pred_succ D => 
+  let [ ] v_s V     = vsound ([ ] D) in 
+  let [ ] Msucc = big_to_small ([ ] D) in 
+    % Msucc : multi_step M (succ V) 
+  let [ ] MS    = mstep_pred ([ ] Msucc) in 
+    % MS    : multi_step (pred M) (pred (succ V))
+    m_trans ([ ] MS) ([ ] m_step (s_pred_succ V)  m_ref)
+
+
+| [ ] ev_iszero_zero D => 
+  let [ ] Mzero = big_to_small ([ ] D) in 
+    % Mzero : multi_step M zero
+  let [ ] MS    = mstep_iszero ([ ] Mzero) in 
+    % MS    : multi_step (iszero M) (iszero z)
+    m_trans ([ ] MS) ([ ] m_step s_iszero_zero m_ref)
+
+| [ ] ev_iszero_succ D => 
+  let [ ] v_s V = vsound ([ ] D) in 
+  let [ ] Msucc = big_to_small ([ ] D) in 
+    % Msucc : multi_step M (succ V)
+  let [ ] MS    = mstep_iszero ([ ] Msucc) in 
+    % MS    : multi_step (iszero M) (iszero (succ V))
+    m_trans ([ ] MS) ([ ] m_step (s_iszero_succ V) m_ref)
+
+;
+
+
+
+% ---------------------------------------------------------- %
+%{
+
+THEOREM:
+small-to-big: If mstep M V and value V then eval M V
+}%
+
+%{
+Values evaluate to themselves.
+}%
+
+
+rec vs : (value V)[ ] -> (mstep V V)[ ] = 
+fn v => case v of 
+| [ ] v_true => [ ] m_ref
+| [ ] v_false => [ ] m_ref
+| [ ] v_z     => [ ] m_ref
+| [ ] v_s V => 
+  let [ ] m_ref = vs ([ ] V) in [ ] m_ref
+;
+
+%{
+  Inversion lemmas
+}%
+rec iszero_zero_inv : (mstep (iszero M) true)[ ] -> (mstep M z)[ ] =
+fn d => case d of 
+| [ ] m_step s_iszero_zero MS =>   [ ] m_ref
+| [ ] m_step (s_iszero S) MS  =>   
+  let [ ] Mzero = iszero_zero_inv ([ ] MS) in 
+    [ ] m_step S Mzero
+
+;
+
+%{
+ there exists a V s.t.  mstep M (succ V).
+}%
+exists_succ_value: term -> type.
+msteps_to_succ : mstep M (succ V) -> value (succ V)
+		 -> exists_succ_value M.
+
+rec iszero_succ_inv : (mstep (iszero M) false)[ ] -> (exists_succ_value M)[ ] =
+fn d => case d of 
+| [ ] m_step (s_iszero_succ D) MS =>   
+  [ ] msteps_to_succ m_ref (v_s D)
+
+| [ ] m_step (s_iszero S) MS  =>   
+  let [ ] msteps_to_succ Msucc Vsuc = iszero_succ_inv ([ ] MS) in 
+    [ ] msteps_to_succ (m_step S Msucc) Vsuc
+;
+ 
+impossible: type.
+
+rec iszero_zero : (mstep (iszero M) z)[ ] -> impossible [ ] =
+fn ms => case ms of 
+| [ ] m_step (s_iszero S) MS => 
+   iszero_zero ([ ] MS) 
+
+% Any other cases are impossible.
+;
+
+    
+
+
+
+rec small_to_big : {M::term[ ]}(mstep M V)[ ] -> (value V)[ ] -> (eval M V)[ ] =
+mlam M => fn ms => fn v => case [ ] M of 
+| [ ] z     => 
+  let [ ] m_ref = ms in vself v 
+
+| [ ] iszero M => 
+  (case v of 
+  | [ ] v_true => 
+    let [ ] Mzero = iszero_zero_inv ms in 
+    let [ ] Dzero = small_to_big < . M > ([ ] Mzero) ([ ] v_z) in 
+      [ ] ev_iszero_zero Dzero
+
+  | [ ] v_false => 
+    let [ ] msteps_to_succ Msucc Vsucc = iszero_succ_inv ms in 
+    let [ ] Dsucc = small_to_big < . M > ([ ] Msucc) ([ ] Vsucc) in 
+      [ ] ev_iszero_succ Dsucc
+
+%{  | [ ] v_z     => 
+      case iszero_zero ms of {}
+  
+}%
+
+)
+;

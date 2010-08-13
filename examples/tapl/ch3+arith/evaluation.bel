@@ -4,7 +4,22 @@
 
   EVALUATION RULES AND META-THEORY
 
+  EXTENSION WITH NUMBERS (includes a proof attempt to 
+  proving every evaluation sequence terminates and yields a value,
+  which is in fact a false statement!)
+
+  CORRECT SOLUTION: see evaluation-corrected.bel
+
 }%
+
+% Values
+value     : term -> type.
+
+v_true : value true.
+v_false: value false.
+v_z    : value z.
+v_s    : value N -> value (succ N).
+
 
 % Small-step operational semantics
 step: term -> term -> type.
@@ -18,6 +33,30 @@ e_switch_false:
 e_switch:
    step T1 T1'
 -> step (switch T1 T2 T3)      (switch T1' T2 T3).
+
+e_succ:
+   step T T' 
+-> step (succ T) (succ T').
+
+e_pred_zero:
+   step (pred z) z.
+
+e_pred_succ:
+  step (pred (succ N)) N.
+
+e_pred:
+   step T T'
+-> step (pred T) (pred T').
+
+e_iszero_zero:
+   step (iszero z) true.
+
+e_iszero_succ:
+   step (iszero (succ N)) false.
+
+e_iszero:
+   step M N
+-> step (iszero M) (iszero N).
 
 
 % Example:
@@ -40,11 +79,12 @@ let d : (step (switch (switch (switch true false false)
 = [ ] e_switch (e_switch e_switch_true) ;
 
 
-% Values
-value: term -> type.
+let e1 : (step (pred (succ (pred z))) (pred (succ z))) [ ] 
+= [ ] e_pred (e_succ e_pred_zero) ;
 
-v_true : value true.
-v_false: value false.
+
+let e2 : (step (pred (succ (pred z))) (pred z)) [ ] 
+= [ ] e_pred_succ ;
 
 
 equal: term -> term -> type.
@@ -69,6 +109,27 @@ fn s => case s of
 | [ ] andalso (e_switch D)     (e_switch E)     =>
   let [ ] ref        = det ([ ] andalso D E) in 
     [ ] ref
+
+| [ ] andalso (e_succ D)        (e_succ F)   => 
+  let [ ] ref = det ([ ] andalso D F) in 
+    [ ] ref
+
+| [ ] andalso (e_pred_zero)     (e_pred_zero) =>
+    [ ] ref
+
+| [ ] andalso (e_pred D)         (e_pred F)   =>
+    let [ ] ref = det ([ ] andalso D F) in 
+    [ ] ref
+
+| [ ] andalso (e_iszero_zero)    (e_iszero_zero) =>
+    [ ] ref
+
+| [ ] andalso (e_iszero_succ)    (e_iszero_succ)  =>
+    [ ] ref
+
+| [ ] andalso (e_iszero D)       (e_iszero F)     =>
+   let [ ] ref = det ([ ] andalso D F) in 
+     [ ] ref
 ;
 
 
@@ -100,6 +161,15 @@ fn v => fn s => case v of
 | [ ] v_false => 
     let  [ ] m_ref = s in
       [ ] ref
+
+| [ ] v_z     => 
+  let [ ] m_ref = s in 
+    [ ] ref
+
+| [ ] v_s V   => 
+  let [ ] m_ref = s in 
+    [ ] ref
+
 ;
 
 % -------------------------------------------------------- %
@@ -184,11 +254,32 @@ fn ms =>  case ms of
 % -------------------------------------------------------- %
 %{ 
 Termination of Evaluation
+
+We want to prove the following theorem:
+
+THEOREM: For every term, there exists an evaluation sequence 
+ which leads to a value.
+
+NOTE: THIS THEOREM IS FALSE - THERE ARE TERMS WHICH ARE
+  STUCK SUCH AS (succ false).
+  THIS IS MERELY TO HIGHLIGHT A PROOF ATTEMPT, WHICH GOES
+  WRONG AND IS CAUGHT BE COVERAGE.
+
 }%
 
 steps_to_val: term -> type.
 result: multi_step T T' -> value T' 
    -> steps_to_val T.
+
+
+% ---------------------------------------------------------- %
+% LEMMAS
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (switch T T2 T3) (switch T' T2 T3).
+
+}%
 
 rec mstep_switch : 
   {T2::term[ ]}{T3::term[ ]}
@@ -206,6 +297,56 @@ fn ms => case ms of
     [ ] ms_tr MS1' MS2'
 ;
 
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (succ T) (succ T').
+
+}%
+
+rec mstep_succ :
+ (multi_step M M')[ ] -> (multi_step (succ M) (succ M') )[ ] =
+fn ms => case ms of 
+| [ ] ms_ref => [ ] ms_ref
+| [ ] ms_step S => 
+    [ ] ms_step (e_succ S)
+| [ ] ms_tr MS1 MS2 => 
+  let [ ] MS1' = mstep_succ ([ ] MS1) in 
+  let [ ] MS2' = mstep_succ ([ ] MS2) in 
+    [ ] ms_tr MS1' MS2'
+;
+
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (pred T) (pred T').
+
+}%
+
+
+rec mstep_pred :
+  (multi_step M M')[ ] -> (multi_step (pred M) (pred M'))[ ] =
+fn ms => case ms of 
+| [ ] ms_ref => [ ] ms_ref
+| [ ] ms_step S => 
+    [ ] ms_step (e_pred S)
+| [ ] ms_tr MS1 MS2 => 
+  let [ ] MS1' = mstep_pred ([ ] MS1) in 
+  let [ ] MS2' = mstep_pred ([ ] MS2) in 
+    [ ] ms_tr MS1' MS2'
+;
+
+% ---------------------------------------------------------- %
+%{
+
+ MAIN THEOREM: 
+
+ For every term, there exists an evaluation sequence 
+ which leads to a value.
+
+ THIS IS A PROOF ATTEMPT -- THE FUNCTION BELOW IS NOT A PROOF!
+
+}%
 
 %{
  Evaluation terminates with a value
@@ -232,11 +373,34 @@ mlam M => case [ ] M of
    | [ ] result MS v_false => 
        let [ ] result MS2 V2 = terminate < . T2 > in 
        let [ ] MS'           = mstep_switch < . T1 > < . T2 > ([ ] MS) in 
-       [ ] result (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2
-
-
-       
+       [ ] result (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2    
   )
-	  
+
+| [ ] z => 
+    [ ] result ms_ref v_z
+
+| [ ] succ N => 
+    let [ ] result MS V = terminate < . N > in 
+    let [ ] MS'         = mstep_succ ([ ] MS) in 
+    [ ] result MS' (v_s V)
+
+| [ ] pred M       => 
+  (case terminate < . M > of 
+   | [ ] result MS v_z => 
+     let [ ] MS'         = mstep_pred ([ ] MS) in 
+       [ ] result (ms_tr MS' (ms_step (e_pred_zero))) v_z
+   | [ ] result MS (v_s V) => 
+     let [ ] MS'         = mstep_pred ([ ] MS) in 
+       [ ] result (ms_tr MS' (ms_step (e_pred_succ))) V
+  %NOTE : this will not cover since M could evaluate to true
+  %
+  %       which is also a value; but then we are stuck.
+  %       so the statement is not true anymore and needs to be generalized.
+  %       it could only be proven of well-typed expressions.
+  % 
+  %FIX : see evaluation-corrected.bel
+
+  )
+      
 
 ;

@@ -1,0 +1,109 @@
+%{ 
+  CH 3:  Untyped arithmetic expressions
+  Author: Brigitte Pientka
+
+  IMPLEMENTING AN INTERPRETER
+
+  We interpret the small-step evaluation rules
+  as a specification for an interpreter.
+   
+
+}%
+
+term_or_undef: type.
+next_term  : term -> term_or_undef .
+undef      : term_or_undef.
+
+yes_or_no: type.
+yes: yes_or_no.
+no : yes_or_no.
+
+rec is_num_value? : term [ ] -> yes_or_no [ ] = 
+fn m => case m of 
+| [ ] z      => [ ] yes
+| [ ] succ V => is_num_value? ([ ] V) 
+| [ ] _      => [ ] no
+;
+
+
+rec step : term [ ] -> term_or_undef [ ] =
+fn m => case m of 
+| [ ] switch true  T2 T3 => [ ] next_term T2
+| [ ] switch false T2 T3 => [ ] next_term T3
+| [ ] switch T1 T2 T3 => 
+  (case step ([ ] T1) of
+    | [ ] next_term T1'   => [ ] next_term (switch T1' T2 T3)
+    | [ ] _               => [ ] undef
+  )
+
+| [ ] succ N => 
+  (case step ([ ] N) of
+   | [ ] next_term N'  => [ ] next_term (succ N')
+   | [ ] _             => [ ] undef
+  )
+
+| [ ] pred z        => [ ] next_term z
+| [ ] pred (succ N) => 
+  (case is_num_value? ([ ] N) of 
+   | [ ] yes =>  [ ] next_term N
+   | [ ] no  =>  
+     (case step ([ ] N) of 
+      | [ ] next_term N' => [ ] next_term (pred (succ N'))
+      | [ ] _            => [ ] undef
+     ) 
+  )
+
+| [ ] pred N => 
+  (case step ([ ] N) of
+   | [ ] next_term N'  => [ ] next_term (pred N')
+   | [ ] _             => [ ] undef
+  )
+
+| [ ] iszero z       => [ ] next_term true
+| [ ] iszero (succ N) => 
+  (case is_num_value? ([ ] N) of 
+   | [ ] yes   =>  [ ] next_term false
+   | [ ] no    => 
+     (case step ([ ] N) of 
+       | [ ] next_term M'  => [ ] next_term (iszero (succ M'))
+       | [ ] undef         => [ ] undef
+     )
+  )
+
+| [ ] iszero M => 
+  (case step ([ ] M) of 
+   | [ ] next_term M'  => [ ] next_term (iszero M')
+   | [ ] undef         => [ ] undef
+  )
+;
+
+
+val_or_error: type.
+val   : term -> val_or_error .
+error : val_or_error.
+
+
+rec is_value? : term [ ] -> yes_or_no [ ] = 
+fn m => case m of 
+| [ ] true      => [ ] yes
+| [ ] false     => [ ] yes
+| [ ] M         => is_num_value? ([ ] M) 
+;
+
+
+rec mstep : term [ ] -> val_or_error [ ] = 
+fn m => case is_value? m of 
+| [ ] yes => let [ ] M = m in [ ] val M  
+| [ ] no  => 
+  (case step m of 
+   | [ ] next_term M' => mstep ([ ] M')
+   | [ ] undef        => [ ] error
+  ) 
+;
+
+
+let r' = mstep ([ ] (switch (switch (switch true false false)
+                               true 
+                               true)
+                       false 
+                       false) ) ;

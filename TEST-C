@@ -58,9 +58,16 @@ echo BROKEN: \
     lp-horn/test-crec.cfg \
     unique/unique.bel \
     unique/unique-crec.bel \
-    compile/cls/test.cfg \
     compile/cpm/test.cfg \
     ../examples-twelf/compile/cpm/test.cfg
+
+# reasons broken:
+#    lp-horn/sources.cfg \    # ill-typed substitution
+#    lp-horn/test-crec.cfg \   # ill-typed substitution
+#    unique/unique.bel \      # Error: (#H18.1 ..) (T63 )     (#p@132.1 ..) (T63 )
+#    unique/unique-crec.bel \  # Error: (#H18.1 ..) (T63 )     (#p@132.1 ..) (T63 )
+#    compile/cpm/test.cfg \   # (after 148s) Error (Abstraction): Leftover constraints during abstraction
+#    ../examples-twelf/compile/cpm/test.cfg # (after 132s) Error (Abstraction): Leftover constraints during abstraction
 
 sleep 2
 echo
@@ -112,6 +119,7 @@ $INTERPRETER +coverage $* \
     mini-ml/vsound-explicit.bel \
     arith/arith.bel \
     compile/cls/sources.cfg \
+    compile/cls/test.cfg \
     compile/cpm/sources.cfg \
     compile/cps/sources.cfg \
     compile/cxm/sources.cfg \

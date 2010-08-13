@@ -3,9 +3,118 @@
    @author Joshua Dunfield
 *)
 
+
+(* Coverage has 3 phases:
+ 
+    1. ContextVariablePhase:
+         possibly split context variables
+  
+    2. ContextDependentArgumentsPhase:
+         possibly split on arguments to dependent types in the context
+ 
+    3. TermPhase:
+         possibly split the object (term)
+ 
+   The LFMTP '08 paper only describes phase 3 (TermPhase).
+   
+   In each phase, splitting is limited by a maximum depth
+   (phase 1: maxContextVariableDepth; phase 2: maxContextDepth; phase 3: maxDepth).
+   These maximums are computed from the branches, as follows:
+
+   1. ContextVariablePhase: the length of the longest context in a branch,
+        less the length of the scrutinee's context.  For example:
+        
+             case e of     % e : term[g, x:nat]
+               [g, y:nat, x:nat] pat1 => ...
+             | [g, z:nat, y:nat, x:nat] pat2 => ...
+             | [g, x:nat] pat3 =>
+
+       Here, the second branch is the longest with 3 bound variable declarations, but
+       `g' only needs to be split twice, since x:nat is already in the type of e:
+
+           length of longest context - length of scrutinee context = 3 - 1 = 2.
+   
+   2. ContextDependentArgumentsPhase: the depth of the deepest dependent type in a
+        branch context.  [to be described]
+
+   3. TermPhase: the depth of the deepest pattern in a branch.  Example:
+
+             case e of
+               [g] U .. => ...
+
+       There is no need to split; the computed depth is 0.
+
+             case e of
+               [g] #p .. => ...
+             | [g] U .. => ...
+       
+       There is still no need to split, since the case U .. covers everything, but the depth
+       of the pattern  #p ..  is 1, so the computed depth is 1.
+
+             case e of
+               [g] succ (succ (succ zero)) => ...
+             | [g] U .. => ...
+
+       Again there is no need to split, but the depth of the first pattern is
+
+              depth(zero) + 1 + 1 + 1 = 1 + 3 = 4
+
+       so the computed depth is 4.
+       
+       Currently, 1 is added to the term depth; this is needed for some examples,
+       but it is not understood why.  Thus, the depth used for the first example
+       ([g] U ..) is 1, not 0.
+  
+   Coverage consists of a series of searches; if any search succeeds, then coverage
+   succeeds.
+   Even when the computed term depth is quite high, coverage first tries using
+   a lower search depth, starting with 0.  Thus, for the [g] succ (succ (succ zero)) example,
+   coverage will succeed very quickly because of the [g] U .. branch.  If coverage
+   cannot be shown, the maximum search depth is increased by 1 until it reaches the
+   computed term depth.  If coverage cannot be shown even at the computed term depth,
+   coverage fails entirely.
+
+   During each search, the decision of whether or not to split is made as follows:
+
+     - If the current depth is >= the maximum depth for this search (which, again,
+         could be less than the computed term depth), do not split; try to show coverage
+         for a meta-variable (e.g., for the first example show that [g] NOSPLIT1 .. is covered).
+         Otherwise:
+
+     - Try not splitting -- perhaps we don't need to split at this point, and it saves a lot of
+        time if we don't.  If we can't show coverage (exception NoCover raised), then split.
+   
+   For a pattern of an n-ary constructor, coverage traverses the term from left to right.
+   Since we attempt to show coverage without splitting, and then backtrack to the last
+   choice point, we effectively split from right to left.  For example, given a constructor
+
+      add : nat -> nat -> nat.
+
+   then we first try to show that  [g] add (NS1 ..) (NS2 ..)  is covered.  If this fails, the last
+   choice was on whether to split NS2, so we next try to show that
+
+           add (NS1 ..) (#p ..)
+           add (NS1 ..) zero
+           add (NS1 ..) (succ (NS3 ..))
+           add (NS1 ..) (add (NS4 ..) (NS5 ..))
+
+   are covered.  But say that all of these fail, because we didn't split NS1.  So after
+   generating all the above, we discard them and return to split NS1:
+
+           add (#p ..) (NS6 ..)
+           add zero (NS6 ..)
+           add (succ (NS7 ..)) (NS6 ..)
+           add (add (NS8 ..) (NS9 ..)) (NS6 ..)
+
+   Now for each of these splits, we will try to show coverage without splitting NS6,
+   but if necessary will split it as well.  In the worst case we have to show that each of
+   the 16 combinations of the arguments splits.
+*)
+
+
+
 open Syntax.Int
 open Syntax.Int.Comp
-open ConvSigma
 
 module Types = Store.Cid.Typ
 module Constructors = Store.Cid.Term
@@ -189,19 +298,6 @@ let verify (ms, cO, cD, cPsi) =
 
 
 
-(* Coverage has 3 phases:
- *
- *   1. ContextVariablePhase:
- *        possibly split context variables
- * 
- *   2. ContextDependentArgumentsPhase
- *        possibly split on arguments to dependent types in the context
- *
- *   3. TermPhase:
- *        possibly split the object (term)
- *
- *  The LFMTP '08 paper only describes TermPhase.
- *)
 type phase =
   | ContextVariablePhase
   | ContextDependentArgumentsPhase
@@ -240,7 +336,7 @@ let strategyToString s = "{" ^ "maxDepth = " ^ string_of_int s.maxDepth
                              ^ "phase = " ^ phaseToString s.phase
                              ^ "}"
 
-let naive_strategy (depth, contextVariableDepth, contextDepth) =
+let new_strategy (depth, contextVariableDepth, contextDepth) =
       {maxDepth = depth;
        currDepth = 0;
        maxContextVariableDepth = contextVariableDepth;
@@ -524,9 +620,12 @@ let rec app (strategy, (ms : LF.msub), cO, cD, cPsi) (tR, spine, tA0) tP k =
                             ^ "--  sA = " ^ P.typToString cO cD cPsi sA ^ "\n"
                             ^ "--  tA = " ^ P.typToString cO cD cPsi (tA, idSub) ^ "\n"
                             ^ "--  tP = " ^ P.typToString cO cD cPsi (tP, idSub));
+            let abstractor_msub = mctxToMSub cD in
+            let unifyLeft  = (Whnf.cnormTyp (tP, abstractor_msub), idSub) in
+            let unifyRight = (Whnf.cnormTyp (tA, abstractor_msub), idSub) in
             if try
               (* XXX broken *)
-              U.unifyTyp cD cPsi (tP, idSub) (tA, idSub);
+              U.unifyTyp LF.Empty cPsi unifyLeft unifyRight;
               true
             with U.Unify s ->
               begin
@@ -534,14 +633,21 @@ let rec app (strategy, (ms : LF.msub), cO, cD, cPsi) (tR, spine, tA0) tP k =
                 false
               end
             then begin
-              dprint (fun () -> "App-Sigma 2a\n"
-                              ^ "--cD          = " ^ P.mctxToString cO cD ^ "\n"
-                              ^ "--tA under cD = " ^ P.typToString cO cD cPsi (tA, idSub) ^ "\n"
-                              ^ "--tP under cD = " ^ P.typToString cO cD cPsi (tP, idSub));
-              app (increment_depth strategy, ms, cO, cD, cPsi) (* do we need to increment depth here? *)
-                  (LF.Proj(tR, index), LF.Nil, tA)
-                  tP
-                  k;
+              let (theta, cDAbstracted) = Abstract.abstractMSub abstractor_msub in
+              let cD = cDAbstracted in
+              let cPsi = sDCtx cPsi theta in
+              let tR = sHead tR theta in
+              let tA = sTyp tA theta in
+              let tP = sTyp tP theta in
+            
+                dprint (fun () -> "App-Sigma 2a\n"
+                                ^ "--cD          = " ^ P.mctxToString cO cD ^ "\n"
+                                ^ "--tA under cD = " ^ P.typToString cO cD cPsi (tA, idSub) ^ "\n"
+                                ^ "--tP under cD = " ^ P.typToString cO cD cPsi (tP, idSub));
+                app (increment_depth strategy, Whnf.mcomp ms theta, cO, cD, cPsi) (* do we need to increment depth here? *)
+                    (LF.Proj(tR, index), LF.Nil, tA)
+                    tP
+                    k;
             end else ()
         in
           iterTypRec appSigmaComponent (tR, (typRec, idSub))
@@ -761,10 +867,10 @@ and obj_split (strategy, (ms : LF.msub), cO, cD, cPsi) (loc, a, spine) k =
                                       ^ "--cDWithPVar = " ^ P.mctxToString cO cDWithPVar ^ "\n"
                                       ^ "--tA' = " ^ P.typToString cO cDWithPVar cPsi (tA', idSub) ^ "\n"
                                       ^ "-- P  = " ^ P.typToString cO cDWithPVar cPsi (LF.Atom(loc, a, spine), idSub));
-(*                      Lfcheck.checkTyp cO cDWithPVar cPsi (tA', idSub);
+                      Lfcheck.checkTyp cO cDWithPVar cPsi (tA', idSub);
                       dprnt "tA' OK (2)";
                       Lfcheck.checkTyp cO cDWithPVar cPsi (LF.Atom(loc, a, spine), idSub);
-                      dprnt "P OK"; *)
+                      dprnt "P OK";
                       Debug.indent 2;
                       app (strategy, ms2, cO, cDWithPVar, cPsi)
                         (LF.Proj(head, index), LF.Nil, tA')
@@ -781,7 +887,7 @@ and obj_split (strategy, (ms : LF.msub), cO, cD, cPsi) (loc, a, spine) k =
   and callAppOnConcrete (LF.BVar x, xTyp) =
         dprint (fun () -> "checking if bound variable \"" ^ R.render_bvar cPsi x ^ "\" is covered");
         dprint (fun () -> "--the variable's type is: " ^ P.typToString cO cD cPsi (xTyp, idSub));
-        app (increment_depth strategy, ms, cO, cD, cPsi)
+        app (strategy, ms, cO, cD, cPsi)
             (LF.BVar x, LF.Nil, xTyp)
             (LF.Atom(loc, a, spine))
             k
@@ -790,7 +896,7 @@ and obj_split (strategy, (ms : LF.msub), cO, cD, cPsi) (loc, a, spine) k =
   and callAppOnConstructor (c, cSig) =
         dprint (fun () -> "checking if constructor \"" ^ R.render_cid_term c ^ "\" is covered");
         dprint (fun () -> "--type cSig: " ^ P.typToString cO cD cPsi (cSig, idSub));
-        app (increment_depth strategy, ms, cO, cD, cPsi)
+        app (strategy, ms, cO, cD, cPsi)
             (LF.Const c, LF.Nil, cSig)
             (LF.Atom(loc, a, spine))
             k
@@ -810,9 +916,9 @@ and obj_no_split (strategy, ms, cO, cD, cPsi) (loc, a, spine) k =
    Debug.indent 2;
    verify (ms, cO, cD, cPsi);
    let tP = LF.Atom(loc, a, spine) in
-   let (flat_cPsi, conv_list) = flattenDCtx cPsi in  
-   let s_proj   = gen_conv_sub conv_list in
-   let tP' = strans_typ (tP, Substitution.LF.id) conv_list in
+   let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in  
+   let s_proj = ConvSigma.gen_conv_sub conv_list in
+   let tP' = ConvSigma.strans_typ (tP, Substitution.LF.id) conv_list in
 
    let target_tP = shiftTyp tP 1 in  (* (tP, MShift 1) *)
    dprint (fun () -> "before thin: " ^ P.dctxToString cO cD flat_cPsi);
@@ -848,15 +954,7 @@ and obj_no_split (strategy, ms, cO, cD, cPsi) (loc, a, spine) k =
 
    dprint (fun () -> "\nobj_no_split -- verify cDWithVar |- cPsi");
    verify (Whnf.mcomp ms addVar_msub, cO, cDWithVar, cPsi);
-   dprint (fun () -> "obj_no_split -- verified cDWithVar |- cPsi\n");
 
-   (* old code - joshua 
-   let _ = dprint (fun () -> "obj_no_split:\n"
-                           ^ "--cDWithVar = " ^ P.mctxToString cO cDWithVar ^ "\n"
-                           ^ "--tM1 (instance) = " ^ P.normalToString cO cDWithVar cPsi (tM1, idSub) ^ "\n"
-                           ^ "--tP  = " ^ P.typToString cO cDWithVar cPsi (tP, idSub) ^ "\n"
-                           ^ "--tR1 = " ^ P.headToString cO cDWithVar cPsi tR1) in
-   *) 
 (*   print_string "*"; *)
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
    dprint (fun () -> "obj_no_split:\n"
@@ -1269,7 +1367,7 @@ let rec dependentDepth_dctx = function
 let depth_branch = function
   | BranchBox (_cO', _cD', (_cPsi', EmptyPattern, _msub', _csub')) ->
       1 + 1
-
+  
   | BranchBox (_cO', _cD', (_cPsi', NormalPattern (tM', _body), _msub', _csub')) ->
       1 + depth tM'
 
@@ -1313,7 +1411,7 @@ let covers problem =
       let _ = dprint (fun () -> "cutoff depth                = " ^ string_of_int cutoff) in
       let _ = dprint (fun () -> "max context variable depth  = " ^ string_of_int variableDepth) in
       let _ = dprint (fun () -> "max dependent depth         = " ^ string_of_int dep) in
-      let strategies = tabulate cutoff (fun depth -> naive_strategy (depth, variableDepth, dep)) in
+      let strategies = tabulate cutoff (fun depth -> new_strategy (depth, variableDepth, dep)) in
         try
           dprint (fun () -> "Coverage checking a case with "
                           ^ string_of_int (List.length problem.branches) ^ " branch(es) at:\n"

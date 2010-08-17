@@ -8,14 +8,19 @@
   as a specification for an interpreter.
 }%
 
-rec eval : term [ ] -> term [ ] =
+final_value:  type.
+no_result: final_value.
+result: term -> final_value.
+
+rec eval : term [ ] -> final_value [ ] =
 fn m => case m of 
-| [ ] true  => [ ] true
-| [ ] false => [ ] false
+| [ ] true  => [ ] result true
+| [ ] false => [ ] result false
 | [ ] switch T1 T2 T3 => 
   (case eval ([ ] T1) of
-    | [ ] true  => eval ([ ] T2)
-    | [ ] false => eval ([ ] T3)
+    | [ ] result true  => eval ([ ] T2)
+    | [ ] result false => eval ([ ] T3)
+    | [ ] _            => [ ] no_result
   )
 ;
 

@@ -68,6 +68,7 @@ echo BROKEN: \
 #    unique/unique-crec.bel \  # Error: (#H18.1 ..) (T63 )     (#p@132.1 ..) (T63 )
 #    compile/cpm/test.cfg \   # (after 148s) Error (Abstraction): Leftover constraints during abstraction
 #    ../examples-twelf/compile/cpm/test.cfg # (after 132s) Error (Abstraction): Leftover constraints during abstraction
+#      equal/eq-proof-tuple.bel \     # very slow (15 minutes, gave up)
 
 sleep 2
 echo
@@ -75,7 +76,6 @@ echo
 # The following don't cover for unknown reasons
 $INTERPRETER +coverage $* \
     cut-elim.bel \
-    equal/eq-proof-tuple.bel \
     path/path-typed.bel \
     church-rosser/test.cfg \
     church-rosser/test-crec.cfg \

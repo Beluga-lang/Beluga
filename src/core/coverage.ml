@@ -3,6 +3,8 @@
    @author Joshua Dunfield
 *)
 
+let nn = ref 0
+
 
 (* Coverage has 3 phases:
  
@@ -633,7 +635,7 @@ let rec app (strategy, (ms : LF.msub), cO, cD, cPsi) (tR, spine, tA0) tP k =
                 false
               end
             then begin
-              let (theta, cDAbstracted) = Abstract.abstractMSub abstractor_msub in
+              let (theta, cDAbstracted) = (try Abstract.abstractMSub abstractor_msub with Abstract.Error s -> raise (NoCover (fun () -> "Abstraction failed: " ^ s))) in
               let cD = cDAbstracted in
               let cPsi = sDCtx cPsi theta in
               let tR = sHead tR theta in
@@ -644,7 +646,7 @@ let rec app (strategy, (ms : LF.msub), cO, cD, cPsi) (tR, spine, tA0) tP k =
                                 ^ "--cD          = " ^ P.mctxToString cO cD ^ "\n"
                                 ^ "--tA under cD = " ^ P.typToString cO cD cPsi (tA, idSub) ^ "\n"
                                 ^ "--tP under cD = " ^ P.typToString cO cD cPsi (tP, idSub));
-                app (increment_depth strategy, Whnf.mcomp ms theta, cO, cD, cPsi) (* do we need to increment depth here? *)
+                app (strategy, Whnf.mcomp ms theta, cO, cD, cPsi)
                     (LF.Proj(tR, index), LF.Nil, tA)
                     tP
                     k;
@@ -677,7 +679,7 @@ let rec app (strategy, (ms : LF.msub), cO, cD, cPsi) (tR, spine, tA0) tP k =
         try
           U.unifyTyp LF.Empty cPsi unifyLeft unifyRight;
           Debug.outdent 2;
-          let (theta, cDAbstracted) = Abstract.abstractMSub abstractor_msub in
+          let (theta, cDAbstracted) = (try Abstract.abstractMSub abstractor_msub with Abstract.Error s -> raise (NoCover (fun () -> "Abstraction failed: " ^ s))) in
           let cD = cDAbstracted in
           let cPsi = sDCtx cPsi theta in
           let tR = sHead tR theta in
@@ -697,6 +699,12 @@ let rec app (strategy, (ms : LF.msub), cO, cD, cPsi) (tR, spine, tA0) tP k =
 (* obj_split:   Obj-split rule (Fig. 6)
  *)
 and obj_split (strategy, (ms : LF.msub), cO, cD, cPsi) (loc, a, spine) k =
+(*  (
+    print_string"*";
+   (if !nn mod 80 = 0 then print_string ("\n" ^ R.render_cid_typ a ^ " . " ^ P.spineToString cO cD cPsi (spine, idSub)));
+   (if !nn mod 20 = 0 then flush_all());
+   nn := !nn + 1
+  ); *)
   Debug.indent 4; let k = fun arg1 arg2 arg3 -> (Debug.outdent 4; k arg1 arg2 arg3) in
 
   let strategy = increment_depth strategy in
@@ -955,7 +963,6 @@ and obj_no_split (strategy, ms, cO, cD, cPsi) (loc, a, spine) k =
    dprint (fun () -> "\nobj_no_split -- verify cDWithVar |- cPsi");
    verify (Whnf.mcomp ms addVar_msub, cO, cDWithVar, cPsi);
 
-(*   print_string "*"; *)
    let tM1 = LF.Root(loc, tR1, LF.Nil) in
    dprint (fun () -> "obj_no_split:\n"
                    ^ "--cDWithVar = " ^ P.mctxToString cO cDWithVar);
@@ -1210,6 +1217,7 @@ and context (strategy, ms, cO, cD, cPsi) k =
          (* Don't split *)
          fun strategy ->
            dprint (fun () -> "strategy.phase := ContextDependentArgumentsPhase");
+(*           print_string ((fun () -> "strategy.phase := ContextDependentArgumentsPhase\n")()); *)
            let strategy = {strategy with phase = ContextDependentArgumentsPhase} in
              contextDep (strategy, ms, cO, cD, cPsi) k
        end);
@@ -1323,10 +1331,10 @@ let rec maxTuple f = function
   | LF.Cons(tM, tuple) -> max (f tM) (maxTuple f tuple)
 
 and depth = function
-  | LF.Lam(_, _, tM) -> 1 + depth tM   (* should probably just be   depth tM   -jd *)
-  | LF.Root(_, head, spine) -> 1 + (maxSpine (depthHead head) depth spine)
-  | LF.Clo(tM, _) -> depth tM
-  | LF.Tuple(_, tuple) -> 1 + maxTuple depth tuple
+  | LF.Lam(_, _, tM) -> (*1 +*) depth tM   (* should probably just be   depth tM   -jd *)
+  | LF.Root(_, head, spine) -> (*1 +*) (maxSpine (depthHead head) depth spine)
+(*  | LF.Clo(tM, _) -> depth tM *)
+  | LF.Tuple(_, tuple) -> (*1 +*) maxTuple depth tuple
 
 and depthHead = function
   | LF.BVar _ -> 1
@@ -1404,7 +1412,7 @@ let covers problem =
       covby_counter := 0;
       Debug.pushIndentationLevel();
       Debug.indent 2;
-      let cutoff = max 1 (maxDepth problem.branches + !extraDepth)
+      let cutoff = max 1 (maxDepth problem.branches + 1 + !extraDepth)
       and variableDepth = maxContextVariableDepth cPsi problem.branches
       and dep = maxDependentDepth problem.branches
       in
@@ -1416,10 +1424,14 @@ let covers problem =
           dprint (fun () -> "Coverage checking a case with "
                           ^ string_of_int (List.length problem.branches) ^ " branch(es) at:\n"
                           ^ Pretty.locOptToString problem.loc);
+(*          print_string ((fun () -> "Coverage checking a case with "
+                          ^ string_of_int (List.length problem.branches) ^ " branch(es) at:\n"
+                          ^ Pretty.locOptToString problem.loc^"\n")());flush_all(); *)
           tryList
             (fun strategy ->
                Debug.pushIndentationLevel();
                dprint (fun () -> "trying strategy " ^ strategyToString strategy);
+(*               print_string ((fun () -> "trying strategy " ^ strategyToString strategy^"\n")());flush_all(); *)
                begin try
                  original_cD_length := Context.length problem.cD;
 (*                 let tA = hangTyp shift tA in *)
@@ -1433,6 +1445,7 @@ let covers problem =
                             (fun (strategy, ms'', cO, cD, cPsi) ->
                                dprint (fun () -> "context generated cPsi = " ^ P.dctxToString cO cD cPsi);
                                dprint (fun () -> "strategy.phase := TermPhase");
+(*           print_string ((fun () -> "strategy.phase := TermPhase (toplevel)\n")());flush_all(); *)
                                let strategy = {strategy with phase = TermPhase} in
                                obj (strategy, ms'', cO, cD, cPsi)
                                    tA

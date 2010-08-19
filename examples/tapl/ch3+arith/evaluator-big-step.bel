@@ -42,7 +42,7 @@ fn m => case m of
   (case eval ([ ] M) of 
    | [ ] val z         => [ ] val true
    | [ ] val (succ _ ) => [ ] val false
-   | [ ] error         => [ ] error
+   | [ ] _             => [ ] error
   )
 ;
 

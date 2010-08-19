@@ -75,6 +75,9 @@ fn m => case m of
    | [ ] next_term M'  => [ ] next_term (iszero M')
    | [ ] undef         => [ ] undef
   )
+
+| [ ] _ => [ ] undef
+
 ;
 
 

@@ -25,14 +25,15 @@ ev_switch_false:
 ev_z     : 
   eval z z.
 ev_succ  :
-  eval M V 
+  eval M V -> nat_value V 
 -> eval (succ M) (succ V).
 
 ev_pred_zero:
   eval N z 
 ->  eval (pred N) z.
+
 ev_pred_succ:
-  eval N (succ V)
+  eval N (succ V) -> nat_value V 
 -> eval (pred N) V.
 
 ev_iszero_zero: 
@@ -40,10 +41,51 @@ ev_iszero_zero:
 -> eval (iszero N) true.
 
 ev_iszero_succ: 
-  eval N (succ V)
+  eval N (succ V)  -> nat_value V 
 -> eval (iszero N) false.
 
 
+
+% ---------------------------------------------------------- %
+
+
+%{
+Lemma: Value Soundness
+}%
+
+rec vsound : (eval E V)[ ] -> (value V)[ ] = 
+fn d => case d of 
+| [ ] ev_true   => [ ] v_true
+| [ ] ev_false  => [ ] v_false
+| [ ] ev_z      => [ ] v_num (v_z)
+| [ ] ev_succ D V =>  [ ] v_num (v_s V)
+| [ ] ev_switch_true D D1 => 
+  vsound ([ ] D1) 
+| [ ] ev_switch_false D D2 => 
+  vsound ([ ] D2) 
+| [ ] ev_pred_zero _ => 
+    [ ] v_num v_z
+
+| [ ] ev_pred_succ D V => 
+    [ ] v_num V
+
+| [ ] ev_iszero_zero _ => 
+    [ ] v_true
+
+| [ ] ev_iszero_succ D _ => 
+    [ ] v_false
+;
+
+rec vself : (value V)[ ] -> (eval V V)[ ] = 
+fn v => case v of 
+| [ ] v_true  => [ ] ev_true
+| [ ] v_false => [ ] ev_false
+| [ ] v_num v_z     => [ ] ev_z 
+| [ ] v_num (v_s V)   => 
+  let [ ] D = vself ([ ] v_num V) in 
+    [ ] ev_succ D V
+
+;
 
 % ---------------------------------------------------------- %
 %{
@@ -81,7 +123,7 @@ fn d => case d of
 
 | [ ] ev_z        => [ ] ms_ref
 
-| [ ] ev_succ D   => 
+| [ ] ev_succ D  _ => 
   let [ ] MS   = big_to_small ([ ] D) in 
     % MS: multi_step N V 
     mstep_succ ([ ] MS)
@@ -93,12 +135,12 @@ fn d => case d of
     % MS   : multi_step (pred M)  (pred z)
     [ ] ms_tr MS (ms_step e_pred_zero)
 
-| [ ] ev_pred_succ D => 
-  let [ ] Msucc = big_to_small ([ ] D) in 
+| [ ] ev_pred_succ D V => 
+  let [ ] Msucc = big_to_small ([ ] D) in   
     % Msucc : multi_step M (succ V) 
   let [ ] MS    = mstep_pred ([ ] Msucc) in 
     % MS    : multi_step (pred M) (pred (succ V))
-    [ ] ms_tr MS (ms_step e_pred_succ)
+    [ ] ms_tr MS (ms_step (e_pred_succ V))
 
 | [ ] ev_iszero_zero D => 
   let [ ] Mzero = big_to_small ([ ] D) in 
@@ -108,35 +150,18 @@ fn d => case d of
     [ ] ms_tr MS (ms_step e_iszero_zero)
 
 
-| [ ] ev_iszero_succ D => 
+| [ ] ev_iszero_succ D V => 
   let [ ] Msucc = big_to_small ([ ] D) in 
     % Msucc : multi_step M (succ V)
   let [ ] MS    = mstep_iszero ([ ] Msucc) in 
     % MS    : multi_step (iszero M) (iszero (succ V))
-    [ ] ms_tr MS (ms_step e_iszero_succ)
+    [ ] ms_tr MS (ms_step (e_iszero_succ V))
 ;
 
 
 % ---------------------------------------------------------- %
 %{
    Theorem 2) : If mstep M V and value V then eval M V
-
-
-This theorem doesn't hold; for example 
-mstep (iszero (succ N)) false    but
-if N isn't a number, but (switch zero zero zero) then 
-the big-step semantics could get stuck while the
-small step semantics simply returns false, since it
-may never inspect N. 
-
-There are two solutions to this problem:
-1) restrict small step semantics such that
-  congruence rules are only applied when we don't have
-  a value
-2) make big-step evaluation more liberal. 
-
-1) is preferred, since in 2) we succeed evaluating 
-expressions which aren't even well-typed.
 
 }%
 

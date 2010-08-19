@@ -339,7 +339,7 @@ let strategyToString s = "{" ^ "maxDepth = " ^ string_of_int s.maxDepth
                              ^ "}"
 
 let new_strategy (depth, contextVariableDepth, contextDepth) =
-      {maxDepth = depth;
+      {maxDepth = depth ;
        currDepth = 0;
        maxContextVariableDepth = contextVariableDepth;
        currContextVariableDepth = 0;

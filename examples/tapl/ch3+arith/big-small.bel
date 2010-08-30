@@ -1,17 +1,14 @@
-%{ 
-  CH 3:  Untyped arithmetic expressions
-  Author: Brigitte Pientka
+% 
+%{
+ CH 3:  Untyped arithmetic expressions
 
+  Author: Brigitte Pientka
   Big-step semantics together with the proof 
   that the big step rules are equivalent to the
   small-step rules.
-
-
   Here we ensure that in the small-step semantics,
   we only use the rule s_pred_succ and s_iszero_succ 
   when we have a value. 
-
-
 }%
 
 %{
@@ -114,6 +111,12 @@ fn d => case d of
 | [ ] ev_iszero_succ D => 
     [ ] v_false
 ;
+
+
+%{
+  For all values V, there is a derivation eval V V.
+}%
+
 
 rec vself : (value V)[ ] -> (eval V V)[ ] = 
 fn v => case v of 
@@ -366,73 +369,239 @@ fn v => case v of
 | [ ] v_false => [ ] m_ref
 | [ ] v_z     => [ ] m_ref
 | [ ] v_s V => 
-  let [ ] m_ref = vs ([ ] V) in [ ] m_ref
+  let [ ] _  = vs ([ ] V) in [ ] m_ref
 ;
+
+
+eq : term -> term -> type.
+ref: eq M M.
 
 %{
-  Inversion lemmas
-}%
-rec iszero_zero_inv : (mstep (iszero M) true)[ ] -> (mstep M z)[ ] =
-fn d => case d of 
-| [ ] m_step s_iszero_zero MS =>   [ ] m_ref
-| [ ] m_step (s_iszero S) MS  =>   
-  let [ ] Mzero = iszero_zero_inv ([ ] MS) in 
-    [ ] m_step S Mzero
 
+ If S : mstep (pred E)  V 
+ then 
+    either S_1: mstep E zero   and   eq zero V .
+       where S_1 < S
+    or S_1: mstep E (succ NV)  and   eq NV V 
+       where S_1 < S
+
+ In the implementation below, we don't encode the fact
+ that S_1 is smaller than S.				 
+}%
+
+split_pred_seq: term -> term -> type.
+
+pred_subseq_zero : mstep M z -> mstep z V 
+		   -> split_pred_seq M V.
+
+pred_subseq_succ : mstep M (succ NV) -> value NV -> mstep NV V
+		   -> split_pred_seq M V.
+
+rec pred_lemma : (mstep (pred M) V)[ ] -> (value V)[ ]  
+			 -> (split_pred_seq M V) [ ] =
+fn s => fn v => case s of 
+| [ ] m_step (s_pred S) MS =>    % MS : mstep (pred M')  V
+  (case pred_lemma ([ ] MS) v of 
+   | [ ] pred_subseq_zero M2zero Zero2V => 
+     % M2zero : mstep M' zero      and     Zero=V : eq zero V
+     [ ] pred_subseq_zero (m_step S M2zero) Zero2V
+
+   | [ ] pred_subseq_succ M2succ NV Succ2V => 
+     [ ] pred_subseq_succ (m_step S M2succ) NV Succ2V
+     )
+| [ ] m_step s_pred_zero MS => 
+    [ ] pred_subseq_zero m_ref MS
+
+| [ ] m_step (s_pred_succ V) MS =>
+    [ ] pred_subseq_succ m_ref V MS
+
+| [ ] m_ref => (case v of [ ] {})
 ;
+
+
 
 %{
- there exists a V s.t.  mstep M (succ V).
+
+ If S : mstep (succ E)  V 
+ then 
+     S_1: mstep E V'   and   value V' and mstep (suc V') V .
+     (and S_1 < S)
+  
+
+ In the implementation below, we don't encode the fact
+ that S_1 is smaller than S.				 
 }%
-exists_succ_value: term -> type.
-msteps_to_succ : mstep M (succ V) -> value (succ V)
-		 -> exists_succ_value M.
 
-rec iszero_succ_inv : (mstep (iszero M) false)[ ] -> (exists_succ_value M)[ ] =
-fn d => case d of 
-| [ ] m_step (s_iszero_succ D) MS =>   
-  [ ] msteps_to_succ m_ref (v_s D)
+split_succ_seq: term -> term -> type.
 
-| [ ] m_step (s_iszero S) MS  =>   
-  let [ ] msteps_to_succ Msucc Vsuc = iszero_succ_inv ([ ] MS) in 
-    [ ] msteps_to_succ (m_step S Msucc) Vsuc
-;
- 
-impossible: type.
+succ_subseq : mstep M V' -> value V' -> mstep (succ V') V
+		   -> split_succ_seq M V.
 
-rec iszero_zero : (mstep (iszero M) z)[ ] -> impossible [ ] =
-fn ms => case ms of 
-| [ ] m_step (s_iszero S) MS => 
-   iszero_zero ([ ] MS) 
+rec succ_lemma : (mstep (succ M) V)[ ] -> (value V)[ ]  
+			 -> (split_succ_seq M V) [ ] =
+fn ms => fn v => case ms of 
+| [ ] m_ref => 
+  let [ ] v_s V     = v in 
+  let [ ] Vself     = vs ([ ] V) in 
+   [ ] succ_subseq Vself V m_ref
 
-% Any other cases are impossible.
+| [ ] m_step (s_succ S) MS => 
+  let [ ] succ_subseq MS' V' Suc2V = succ_lemma ([ ] MS) v in 
+    [ ] succ_subseq (m_step S MS') V' Suc2V
 ;
 
-    
 
 
+
+%{
+
+ If S : mstep (iszero E)  V 
+ then 
+    either S_1: mstep E zero   and   S_2 : mstep true V 
+       where S_1 < S
+    or S_1: mstep E (succ NV)  and NV value and S_2 : mstep false V 
+       where S_1 < S
+
+ In the implementation below, we don't encode the fact
+ that S_1 is smaller than S.				 
+}%
+
+split_iszero_seq: term -> term -> type.
+
+iszero_subseq_zero : mstep M z -> mstep true V 
+		   -> split_iszero_seq M V.
+
+iszero_subseq_succ : mstep M (succ NV) -> value NV -> mstep false V
+		   -> split_iszero_seq M V.
+
+rec iszero_lemma : (mstep (iszero M) V)[ ] -> (value V)[ ]  
+			 -> (split_iszero_seq M V) [ ] =
+fn s => fn v => case s of 
+| [ ] m_step (s_iszero S) MS =>    % MS : mstep (pred M')  V
+  (case iszero_lemma ([ ] MS) v of 
+     | [ ] iszero_subseq_zero M2zero True2V => 
+	 % M2zero : mstep M' zero      and     true2V : mstep true V
+	 [ ] iszero_subseq_zero (m_step S M2zero) True2V
+
+     | [ ] iszero_subseq_succ M2succ NV False2V => 
+	 [ ] iszero_subseq_succ (m_step S M2succ) NV False2V
+     )
+| [ ] m_step s_iszero_zero MS => 
+    [ ] iszero_subseq_zero m_ref MS
+
+| [ ] m_step (s_iszero_succ V) MS =>
+    [ ] iszero_subseq_succ m_ref V MS
+
+| [ ] m_ref => (case v of [ ] {})
+;
+
+
+
+split_switch_seq: term -> term -> term -> term -> type.
+
+switch_subseq_true: mstep M true -> mstep M1 V
+		    -> split_switch_seq M M1 M2 V.
+
+switch_subseq_false: mstep M false -> mstep M2 V
+		    -> split_switch_seq M M1 M2 V.
+
+
+rec switch_lemma : (mstep (switch M M1 M2) V)[ ] -> (value V)[ ]  
+			 -> (split_switch_seq M M1 M2 V) [ ] =
+fn s => fn v => case s of 
+| [ ] m_step (s_switch S) MS =>    % MS : mstep (pred M')  V
+  (case switch_lemma ([ ] MS) v of 
+     | [ ] switch_subseq_true M2zero M1V => 
+	 % M2zero : mstep M' zero      and     M1V : mstep M1 V
+	 [ ] switch_subseq_true (m_step S M2zero) M1V
+
+     | [ ] switch_subseq_false M2succ M2V => 
+	 [ ] switch_subseq_false (m_step S M2succ) M2V
+     )
+| [ ] m_step s_switch_true MS => 
+    [ ] switch_subseq_true m_ref MS
+
+| [ ] m_step s_switch_false MS =>
+    [ ] switch_subseq_false m_ref MS
+
+| [ ] m_ref => (case v of [ ] {})
+;
+
+impossible : type.
+rec values_dont_step : (step M M')[ ] -> (value M )[ ] -> impossible [ ]= 
+fn s => fn v => case v of 
+| [ ] v_true    => (case s of [ ] {} )
+| [ ] v_false   => (case s of [ ] {} )
+| [ ] v_z => (case s of [ ] {} )
+| [ ] (v_s V) => 
+    (case s of [ ] s_succ D => 
+		values_dont_step ([ ] D) ([ ] V))
+;
+
+rec values_mstep_to_themselves: (value V)[ ] -> (mstep V V')[ ] -> (eq V V')[ ] =
+fn v => fn ms => case ms of 
+ | [ ] m_ref => [ ] ref
+ | [ ] m_step S MS => case (values_dont_step ([ ] S) v) of [ ] {}
+;
 
 rec small_to_big : {M::term[ ]}(mstep M V)[ ] -> (value V)[ ] -> (eval M V)[ ] =
-mlam M => fn ms => fn v => case [ ] M of 
-| [ ] z     => 
-  let [ ] m_ref = ms in vself v 
+mlam M => fn ms => fn v => case ([ ] M) of 
+% | [ ] z     =>  vself v 
+| [ ] switch M M1 M2 => 
+    (case switch_lemma  ms v of
+       | [ ] switch_subseq_true M2true M1V => 
+	   let [ ] D  = small_to_big < . M  > ([ ] M2true) ([ ] v_true) in 
+	   let [ ] D1 = small_to_big < . M1 > ([ ] M1V) v in 
+	   [ ] ev_switch_true D D1
+       | [ ] switch_subseq_false M2false M2V => 
+	   let [ ] D  = small_to_big < . M  > ([ ] M2false) ([ ] v_false) in 
+	   let [ ] D2 = small_to_big < . M2 > ([ ] M2V) v in 
+	   [ ] ev_switch_false D D2
+    )
+
+| [ ] pred M => 
+  (case pred_lemma ms v of 
+     | [ ] pred_subseq_zero Mzero m_ref  =>  % Mzero : mstep M zero 
+       let [ ] D = small_to_big < . M >  ([ ] Mzero) ([ ] v_z) in 
+         [ ] ev_pred_zero D				      
+
+     | [ ] pred_subseq_succ Msucc NV MS  =>   % Msuc : mstep M (succ NV)
+       let [ ] D = small_to_big < . M > ([ ] Msucc) ([ ] v_s NV) in 
+       let [ ] ref = values_mstep_to_themselves ([ ] NV) ([ ] MS) in 
+  	 [ ] ev_pred_succ D
+  ) 
 
 | [ ] iszero M => 
-  (case v of 
-  | [ ] v_true => 
-    let [ ] Mzero = iszero_zero_inv ms in 
-    let [ ] Dzero = small_to_big < . M > ([ ] Mzero) ([ ] v_z) in 
-      [ ] ev_iszero_zero Dzero
+  (case iszero_lemma ms v of 
+     | [ ] iszero_subseq_zero Mzero m_ref => 
+       let [ ] D = small_to_big < . M > ([ ] Mzero) ([ ] v_z) in 
+         [ ] ev_iszero_zero D 				      
+     | [ ] iszero_subseq_succ Msuc NV m_ref => 
+       let [ ] D = small_to_big < . M > ([ ] Msuc) ([ ] v_s NV) in 
+         [ ] ev_iszero_succ D
+  )
 
-  | [ ] v_false => 
-    let [ ] msteps_to_succ Msucc Vsucc = iszero_succ_inv ms in 
-    let [ ] Dsucc = small_to_big < . M > ([ ] Msucc) ([ ] Vsucc) in 
-      [ ] ev_iszero_succ Dsucc
+| [ ] succ M => 
+  (case succ_lemma ms v of 
+  | [ ] succ_subseq MS NV MS' => 
+    let [ ] ref = values_mstep_to_themselves ([ ] v_s NV) ([ ] MS') in 
+    let [ ] D   = small_to_big < . M > ([ ] MS) ([ ] NV) in 
+      [ ] ev_succ D
 
-%{  | [ ] v_z     => 
-      case iszero_zero ms of {}
-  
-}%
+  ) 
 
-)
+| [ ] true => 
+  let [ ] m_ref = ms in 
+    vself v 
+
+| [ ] false => 
+  let [ ] m_ref = ms in 
+    vself v 
+
+| [ ] z => 
+  let [ ] m_ref = ms in 
+    vself v 
+
 ;
+
+

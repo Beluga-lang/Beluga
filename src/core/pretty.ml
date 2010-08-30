@@ -182,6 +182,7 @@ module Int = struct
     val msubToString      : LF.mctx -> LF.mctx -> LF.msub     -> string
     val csubToString      : LF.mctx -> LF.mctx -> LF.csub     -> string
 
+
   end (* Int.PRINTER *)
 
   (* Internal Syntax Pretty Printer Functor *)
@@ -499,14 +500,64 @@ module Int = struct
           fprintf ppf "_"
 
 
-    and fmt_ppr_lf_csub cO cD lvl ppf = function
+    and fmt_ppr_csub_refinement cO cD cO_orig lvl ppf cs = begin match (cs, cO_orig) with 
+      | (LF.CShift k, _ ) ->
+          (match !Control.substitutionStyle with
+            | Control.Natural -> fprintf ppf ""
+            | Control.DeBruijn -> fprintf ppf "^%s" (string_of_int k))
+
+      | (LF.CDot (cPsi, LF.CShift k), LF.Dec(cO', decl)) -> 
+           let g = begin match decl with 
+                     | LF.CDecl (g, _ ) -> g 
+                     | LF.CDeclOpt g    -> g 
+                   end  
+           in
+             (match !Control.substitutionStyle with
+                | Control.Natural -> 
+                    fprintf ppf "%a = %s"
+                      (fmt_ppr_lf_dctx cO cD 0) cPsi
+                      (R.render_name g)
+                | Control.DeBruijn -> 
+                    fprintf ppf "%a = %s @ ,@ ^%s"
+                      (fmt_ppr_lf_dctx cO cD 0) cPsi 
+                      (R.render_name g)
+                      (string_of_int k)
+             )
+
+      | (LF.CDot (cPsi, cs) , LF.Dec (cO', decl)) ->
+           let g = begin match decl with 
+                     | LF.CDecl (g, _ ) -> g 
+                     | LF.CDeclOpt g    -> g 
+                   end  
+           in 
+             fprintf ppf "%a = %s @ ,@ %a"
+               (fmt_ppr_lf_dctx cO cD 0) cPsi
+               (R.render_name g)
+               (fmt_ppr_csub_refinement cO cD cO' lvl) cs
+    end
+
+    and fmt_ppr_lf_csub cO cD lvl ppf cs = begin match cs with 
       | LF.CShift k ->
-          fprintf ppf "^%s" (string_of_int k)
+          (match !Control.substitutionStyle with
+            | Control.Natural -> fprintf ppf ""
+            | Control.DeBruijn -> fprintf ppf "^%s" (string_of_int k))
+
+      | LF.CDot (cPsi, LF.CShift k) -> 
+          (match !Control.substitutionStyle with
+                | Control.Natural -> 
+                    fprintf ppf "%a"
+                      (fmt_ppr_lf_dctx cO cD 0) cPsi
+                | Control.DeBruijn -> 
+                    fprintf ppf "%a @ ,@ ^%s"
+                      (fmt_ppr_lf_dctx cO cD 0) cPsi 
+                      (string_of_int k)
+             )
 
       | LF.CDot (cPsi, cs) ->
-          fprintf ppf "%a@ ,@ %a"
+          fprintf ppf "%a @ ,@ %a"
             (fmt_ppr_lf_dctx cO cD 0) cPsi
             (fmt_ppr_lf_csub cO cD lvl) cs
+    end
 
 
     and fmt_ppr_lf_msub cO cD lvl ppf = function
@@ -1160,7 +1211,7 @@ module Int = struct
                  (* this point is where the " : " is in the string above *)
               (* (fmt_ppr_lf_msub cO cD1' 2) t   *)
               (fmt_ppr_refinement cO' cD1' cD 2) t
-              (fmt_ppr_lf_csub cO' cD1' 0) cs
+              (fmt_ppr_csub_refinement cO' cD1' cO 0) cs
               (* NOTE: Technically: cD |- cG ctx and 
                *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
                * -bp
@@ -1173,7 +1224,20 @@ module Int = struct
 
     and fmt_ppr_refinement cO cD cD0 lvl ppf t = begin match (t, cD0) with
       | (LF.MShift k, _ ) ->
-          fprintf ppf "^%s" (string_of_int k)
+          (match !Control.substitutionStyle with
+            | Control.Natural -> fprintf ppf ""
+            | Control.DeBruijn -> fprintf ppf "^%s" (string_of_int k))
+
+      | (LF.MDot (f, LF.MShift k), LF.Dec(cD', decl)) -> 
+          (match !Control.substitutionStyle with
+            | Control.Natural ->
+                fprintf ppf "%a"
+                  (fmt_ppr_refine_elem cO cD decl 1) f
+            | Control.DeBruijn -> 
+                fprintf ppf "%a@ ,@ ^%s"
+                  (fmt_ppr_refine_elem cO cD decl 1) f
+                  (string_of_int k))
+
 
       | (LF.MDot (f, s), LF.Dec(cD', decl)) -> 
           fprintf ppf "%a@ ,@ %a"
@@ -1263,6 +1327,8 @@ module Int = struct
     let ppr_lf_msub cO  cD        = fmt_ppr_lf_msub cO cD         std_lvl std_formatter
     let ppr_lf_mfront cO cD       = fmt_ppr_lf_mfront cO cD       std_lvl std_formatter
     let ppr_lf_csub cO cD         = fmt_ppr_lf_csub cO cD         std_lvl std_formatter
+    let ppr_csub_refinement cO cD  cO' = fmt_ppr_csub_refinement
+                                                    cO cD cO'     std_lvl std_formatter
 
     let ppr_lf_cvar cO cD         = fmt_ppr_lf_cvar cO cD         std_lvl std_formatter
 

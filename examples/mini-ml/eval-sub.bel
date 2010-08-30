@@ -4,7 +4,7 @@
 %   Author: Brigitte Pientka
 %
 
-exp: type.
+exp: type. %name exp E.
 
 z   : exp.
 suc : exp -> exp.
@@ -19,25 +19,25 @@ fix : (exp -> exp) -> exp.
 rec eval : exp[ ] -> exp[ ] = 
 fn e =>  case e of
 | [ ] z => [ ] z
-| [ ] suc U  =>
-  let [ ] V = eval ([ ] U) in 
-    [ ] suc V
+| [ ] suc E  =>
+  let [ ] E' = eval ([ ] E) in 
+    [ ] suc E'
 
-| [ ] app U W =>   
-  let [ ] lam (\x. (V x))  =  eval ([ ] U) in 
-    eval ([ ] (V W))  
+| [ ] app E1 E2 =>   
+  let [ ] lam (\x. E x)  =  eval ([ ] E1) in 
+    eval ([ ] (E E2))  
         
-| [ ] lam (\x. (U x)) =>  e
+| [ ] lam (\x. (E x)) =>  e
 
-| [ ] letv W (\x. U x ) => 
-  let [ ] V1 = eval ([ ] W) in 
-    eval ([ ] U V1) 
+| [ ] letv E1 (\x. E2 x ) => 
+  let [ ] V1 = eval ([ ] E1) in 
+    eval ([ ] E2 V1) 
 
-| [ ] letn W (\x. (U x))  => 
-   eval ([ ] (U W))
+| [ ] letn E1 (\x. E2 x)  => 
+   eval ([ ] (E2 E1))
 
-| [ ] fix (\x. (U x))  =>  
-   eval ([ ] (U (fix (\ x. (U x)))))
+| [ ] fix (\x. E x)  =>  
+   eval ([ ] E (fix (\ x. E x)))
 ;
 
 

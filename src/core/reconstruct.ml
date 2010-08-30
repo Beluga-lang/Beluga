@@ -3398,15 +3398,15 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
       let e' = elExp (Int.LF.Dec (cO, Int.LF.CDecl (psi_name, schema_cid))) cD cG e (tau, theta) in
         Int.Comp.CtxFun (None, psi_name, e')
 
-  | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
-      let u' = Id.mk_name Id.NoName in
+  | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
+      (* let u' = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA)) in *)
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in 
-      let e' = elExp cO (Int.LF.Dec (cD, Int.LF.MDecl (u', C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))))
+      let e' = elExp cO (Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta)))) 
                      cG' e (tau, C.mvar_dot1 theta) in
-        Int.Comp.MLam (None,u' , e')
+        Int.Comp.MLam (None,u , e')
 
   | (e, (Int.Comp.TypPiBox((Int.LF.PDecl(_u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
-      let u' = Id.mk_name Id.NoName in
+      let u' = Id.mk_name (Id.PVarName None) in 
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in 
       let e' = elExp cO (Int.LF.Dec (cD, Int.LF.PDecl (u', C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))))
                      cG' e (tau, C.mvar_dot1 theta) in
@@ -3479,8 +3479,9 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
               (if Whnf.closed (tR, LF.id)  then 
                  (* && Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi && Whnf.closedGCtx cG ? *)
                 let branches' = List.map (function b -> 
-                                            elBranch (IndexObj(phat, tR))
-                                              cO cD cG b (tP, cPsi) tau_theta) branches in
+                                            let b = elBranch (IndexObj(phat, tR))
+                                                             cO cD cG b (tP, cPsi) tau_theta in 
+                                              Gensym.MVarData.reset () ; b) branches in
                   Int.Comp.Case (Some loc, prag, i', branches')
               else 
                 raise (Error (Some loc, ValueRestriction (cO, cD, cG, i', (tau',t))))
@@ -3494,7 +3495,9 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
                              ^  P.dctxToString cO cD cPsi 
                              ^ "\n") in
 
-                let internal_branches = List.map (function b -> elBranch DataObj cO cD cG b (tP, cPsi) tau_theta ) branches in
+                let internal_branches = List.map (function b -> 
+                                                    let b = elBranch DataObj cO cD cG b (tP, cPsi) tau_theta
+                                                    in  Gensym.MVarData.reset () ; b) branches in
                 let internal_case_exp = Int.Comp.Case (Some loc, prag, i, internal_branches) in
 (*                  Coverage.covers cO cD cG internal_branches (tP, cPsi);         moved to check.ml  -jd 2010-04-05 *)
                   internal_case_exp

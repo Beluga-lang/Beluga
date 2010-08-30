@@ -131,13 +131,13 @@ Theorem: if step T T1 and step T T2 then equal T1 T2.
 steps_to_terms: term -> term -> term -> type.
 andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
-impossible : type.
+not_possible : type.
 
-rec values_dont_step : (step M M')[ ] -> (value M )[ ] -> impossible [ ]= 
+rec values_dont_step : (step M M')[ ] -> (value M )[ ] -> not_possible [ ]= 
 fn s => fn v => case v of 
-| [ ] v_true    => (case s of [ ] {} )
-| [ ] v_false   => (case s of [ ] {} )
-| [ ] v_num v_z => (case s of [ ] {} )
+| [ ] v_true    => impossible s in [ ]
+| [ ] v_false   => impossible s in [ ]
+| [ ] v_num v_z => impossible s in [ ] 
 | [ ] v_num (v_s V) => 
     (case s of [ ] e_succ D => 
 		values_dont_step ([ ] D) ([ ] v_num V))
@@ -159,23 +159,23 @@ fn s => case s of
 | [ ] andalso (e_pred D)          (e_pred F)          =>
     let [ ] ref = det ([ ] andalso D F) in  [ ] ref
 
-% Impossible cases for pred
+% Not_Possible cases for pred
 | [ ] andalso (e_pred D)          (e_pred_succ V )    =>
-   (case values_dont_step ([ ] D) ([ ] v_num (v_s V)) of [ ] {})
+   impossible values_dont_step ([ ] D) ([ ] v_num (v_s V)) in [ ]
 | [ ] andalso (e_pred_succ V )       (e_pred D)       =>
-   (case values_dont_step ([ ] D) ([ ] v_num (v_s V)) of [ ] {})
+   impossible values_dont_step ([ ] D) ([ ] v_num (v_s V)) in [ ]
   
 | [ ] andalso (e_iszero_zero)     (e_iszero_zero)     => [ ] ref
 | [ ] andalso (e_iszero_succ _ )  (e_iszero_succ _)   => [ ] ref
 | [ ] andalso (e_iszero D)        (e_iszero F)        =>
    let [ ] ref = det ([ ] andalso D F) in  [ ] ref
 
-% Impossible cases for iszero
+% Not_Possible cases for iszero
 | [ ] andalso (e_iszero_succ V )  (e_iszero F)        => 
-   (case values_dont_step ([ ] F) ([ ] v_num (v_s V)) of [ ] {})
+   impossible values_dont_step ([ ] F) ([ ] v_num (v_s V)) in [ ]
 
 | [ ] andalso (e_iszero D)        (e_iszero_succ V )  => 
-   (case values_dont_step ([ ] D) ([ ] v_num (v_s V)) of [ ] {})
+   impossible values_dont_step ([ ] D) ([ ] v_num (v_s V)) in [ ]
 
 ;
 
@@ -217,7 +217,7 @@ fn v => fn s => case v of
   (case s of 
    | [ ] m_ref => [ ] ref 
    | [ ] m_step S MS => 
-     case values_dont_step ([ ] S) v of [ ] {}
+     impossible values_dont_step ([ ] S) v in [ ]
   )
 
 ;
@@ -248,7 +248,7 @@ fn ms => fn vn1 => fn vn2 => case ms of
    [ ] ref
 
 | [ ] andalso' (m_ref )       (m_step S MS)   => 
-  (case values_dont_step ([ ] S)  vn1 of [ ] {})
+  (impossible values_dont_step ([ ] S)  vn1 in [ ])
 
 ;
 

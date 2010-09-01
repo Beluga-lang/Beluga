@@ -175,6 +175,10 @@ Regexp match data 0 points to the chars."
     ("Functions"
      ,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)") 1)))
 
+(defun beluga-selected-interpreter ()
+  "get the selected interpreter, allows to set the var beluga-interpreter-path to select an interpreter"
+  (if (boundp 'beluga-interpreter-path) beluga-interpreter-path "/home/bpientka/complogic/beluga/bin/interpreter"))
+
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.bel\\'" . beluga-mode))
@@ -189,7 +193,7 @@ Regexp match data 0 points to the chars."
   (when buffer-file-name
     (set (make-local-variable 'compile-command)
          ;; Quite dubious, but it's the intention that counts.
-         (concat "/home/bpientka/complogic/beluga/bin/interpreter " (shell-quote-argument buffer-file-name))))
+         (concat (beluga-selected-interpreter) " " (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
   (comment-normalize-vars)
   ;; Used by indentation and navigation code.

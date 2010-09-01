@@ -60,6 +60,7 @@ Beluga lexical categories:
          ->  <-   =>
          FN
          block  case  fn  id  in
+         impossible
          let  mlam  of
          rec  schema  some  type 
          bool
@@ -172,8 +173,9 @@ let rec lex_token loc = lexer
   | "fn"
   | "else"
 (*  | "id"   removed 2010-07-31 *)
-  | "if"  
-  | "in"
+  | "if"
+  | "impossible"
+  | "in"      
   | "let"
   | "mlam"  (* was missing -- added 2009-02-18 *)
   | "of"

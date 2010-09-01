@@ -4,11 +4,11 @@
 %
 % TODO extend with functions and function application
 
-tp   : type.
+tp   : type. %name tp T.
 nat  : tp.
 bool : tp.
 
-exp  : tp -> type.  
+exp  : tp -> type.  %name exp E.
 
 tt   : exp bool.
 ff   : exp bool.
@@ -26,12 +26,12 @@ fn x => fn y =>
     [ ] z  => 
       (case y of
           [ ] z     => [ ] tt
-        | [ ] suc U => [ ] ff)
+        | [ ] suc E => [ ] ff)
 
-  | [ ] suc U => 
+  | [ ] suc E => 
       (case y of
          [ ]  z      => [ ] ff
-      |  [ ]  suc V  => equal ([ ] U) ([ ] V))
+      |  [ ]  suc V  => equal ([ ] E) ([ ] V))
 ;
 
 
@@ -45,20 +45,20 @@ rec eval : (exp T)[ ] -> (exp T)[ ] =
 
   | [ ] z  => [ ] z
 
-  | [ ] suc U => 
-    let [ ] V  = eval ([ ] U) in [ ] suc V   
+  | [ ] suc E => 
+    let [ ] V  = eval ([ ] E) in [ ] suc V   
 
-  | [ ]  eq U V =>
-    equal (eval ([ ] U))  (eval  ([ ] V))
+  | [ ]  eq E1 E2 =>
+    equal (eval ([ ] E1))  (eval  ([ ] E2))
 
-  | [ ] iff  U V W  =>
-    (case eval ([ ] U) of
-       [ ] tt => eval ([ ] V)
-     | [ ] ff => eval ([ ] W)
+  | [ ] iff  E E1 E2  =>
+    (case eval ([ ] E) of
+       [ ] tt => eval ([ ] E1)
+     | [ ] ff => eval ([ ] E2)
      )
 
-   | [ ] letv  U (\x . (W x))  =>
-   let [ ] V = eval ([ ] U) in eval ([ ] (W V))
+   | [ ] letv  E (\x . (E1 x))  =>
+   let [ ] V = eval ([ ] E) in eval ([ ] (E1 V))
 ;
 
 let y1 = eval ([ ] suc z) ;

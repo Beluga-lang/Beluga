@@ -1,9 +1,13 @@
 -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
 
-CRITICAL
+WISHES
 ========
-
+* 28/08/10 :: Allow type annotations in Beluga programs; in particular
+              allow them on the top-level as in 
+ 
+              let t = [ ] z 
+              let r = (let [ ] T = t in [ ] succ T) ;
 
 
 IMPORTANT

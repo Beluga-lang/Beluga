@@ -149,7 +149,7 @@ Regexp match data 0 points to the chars."
               keep)))))))
 
 (defvar beluga-syntax-id-re "[[:alpha:]_][[:alnum:]_']*")
-(defvar beluga-syntax-fundec-re "^[ \t]*rec\\>")
+(defvar beluga-syntax-fundec-re "^[ \t]*\\(rec\\|and\\)\\>")
 
 (defvar beluga-font-lock-keywords
   `(,(concat (regexp-opt '("FN" "and" "block" "case" "fn" "else" "if" "in" "let" "mlam"
@@ -162,7 +162,7 @@ Regexp match data 0 points to the chars."
      (1 (if (match-end 2)
             font-lock-type-face font-lock-variable-name-face)))
     (,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)")
-     (1 font-lock-function-name-face))
+     (2 font-lock-function-name-face))
     ,@(beluga-font-lock-symbols-keywords)))
 
 (defvar beluga-imenu-generic-expression

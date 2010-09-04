@@ -149,7 +149,7 @@ Regexp match data 0 points to the chars."
               keep)))))))
 
 (defvar beluga-syntax-id-re "[[:alpha:]_][[:alnum:]_']*")
-(defvar beluga-syntax-fundec-re "^[ \t]*rec\\>")
+(defvar beluga-syntax-fundec-re "^[ \t]*\\(rec\\|and\\)\\>")
 
 (defvar beluga-font-lock-keywords
   `(,(concat (regexp-opt '("FN" "and" "block" "case" "fn" "else" "if" "in" "let" "mlam" "impossible"
@@ -162,7 +162,7 @@ Regexp match data 0 points to the chars."
      (1 (if (match-end 2)
             font-lock-type-face font-lock-variable-name-face)))
     (,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)")
-     (1 font-lock-function-name-face))
+     (2 font-lock-function-name-face))
     ,@(beluga-font-lock-symbols-keywords)))
 
 (defvar beluga-imenu-generic-expression
@@ -174,6 +174,10 @@ Regexp match data 0 points to the chars."
      ,(concat "^\\(" beluga-syntax-id-re "\\)[ \t\n]*:[^.]*\\<type\\>[ \t\n]*.") 1)
     ("Functions"
      ,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)") 1)))
+
+(defun beluga-selected-interpreter ()
+  "get the selected interpreter, allows to set the var beluga-interpreter-path to select an interpreter"
+  (if (boundp 'beluga-interpreter-path) beluga-interpreter-path "/home/bpientka/complogic/beluga/bin/interpreter"))
 
 
 ;;;###autoload
@@ -189,7 +193,7 @@ Regexp match data 0 points to the chars."
   (when buffer-file-name
     (set (make-local-variable 'compile-command)
          ;; Quite dubious, but it's the intention that counts.
-         (concat "/home/bpientka/complogic/beluga/bin/interpreter " (shell-quote-argument buffer-file-name))))
+         (concat (beluga-selected-interpreter) " " (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
   (comment-normalize-vars)
   ;; Used by indentation and navigation code.

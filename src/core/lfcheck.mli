@@ -22,4 +22,4 @@
   val instanceOfSchElem     : mctx -> mctx -> dctx -> tclo -> sch_elem ->  (typ_rec * sub)
   val instanceOfSchElemProj : mctx -> mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
 
-  val checkMSub   : mctx -> mctx -> msub -> mctx -> unit
+  val checkMSub   : mctx -> mctx -> csub * msub -> mctx -> unit

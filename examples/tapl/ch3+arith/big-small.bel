@@ -1,14 +1,14 @@
-% 
 %{
  CH 3:  Untyped arithmetic expressions
 
   Author: Brigitte Pientka
-  Big-step semantics together with the proof 
-  that the big step rules are equivalent to the
-  small-step rules.
-  Here we ensure that in the small-step semantics,
-  we only use the rule s_pred_succ and s_iszero_succ 
-  when we have a value. 
+
+  Big-step semantics together with
+
+   - Value soundness proof
+
+   - Soundness and completeness proof
+     with respect to the small-step semantics
 }%
 
 %{

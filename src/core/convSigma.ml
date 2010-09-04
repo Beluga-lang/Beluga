@@ -43,6 +43,9 @@ and strans_head h conv_list = match h with
   | Int.LF.Proj (Int.LF.PVar (p, sigma), j) -> 
       Int.LF.Proj (Int.LF.PVar (p, strans_sub sigma conv_list), j)
 
+  | Int.LF.Proj (Int.LF.FPVar (p, sigma), j) -> 
+      Int.LF.Proj (Int.LF.FPVar (p, strans_sub sigma conv_list), j)
+
   | Int.LF.Const c -> Int.LF.Const c
   | Int.LF.FVar x -> Int.LF.FVar x
   | Int.LF.FMVar (u,s) -> Int.LF.FMVar (u, strans_sub s conv_list)

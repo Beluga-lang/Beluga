@@ -399,34 +399,41 @@ module Comp = struct
 *)
   and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
     match branch with
-      | BranchBox  (cO1',  cD1',  (_cPsi1, NormalPattern(I.Root(loc, _, _ ) as tR1, e1),  t1,  cs)) ->
+      | BranchBox  (cO1',  cD1',  (cPsi1', NormalPattern(I.Root(loc, _, _ ) as tR1, e1),  
+                                   t1,  cs)) ->
+          let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
           (* By invariant: cD1' |- t1 <= cD *)
-          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  
           let tP1   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tP, t1), cs) in 
-          let cPsi1 = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi, t1), cs) in
-
-          let _  = LF.check cO1' cD1' cPsi1 (tR1, S.LF.id)  (tP1, S.LF.id) in 
-
-
-          let cG' = Whnf.cnormCtx (Ctxsub.ctxnorm_gctx (cG, cs), t1) in 
+(*          let cPsi1 = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi, t1), cs) in *)
+          let cG' = Ctxsub.ctxnorm_gctx (Whnf.cnormCtx (cG, t1), cs) in 
           let t'' = Whnf.mcomp t t1 in
 
           let tau  = Whnf.cnormCTyp (tau, t'') in
           let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
                         P.octxToString cO1' ^ " ; \n" ^ 
-                        P.mctxToString cO1' cD1' ^ " ;\n " ^ 
-                        P.normalToString cO1' cD1' cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
+                        P.mctxToString cO1' cD1' ^ " ;\n [" ^ 
+                        P.dctxToString cO1' cD1' cPsi1' ^ "] \n" ^
+                        P.normalToString cO1' cD1' cPsi1' (tR1, S.LF.id) ^ 
+                            "\n " ^ P.msubToString cO1' cD1' t1 ^  
+                            " ; \n " ^ P.csubToString cO1' cD1' cs ^  
+                            "\n  =>  " ^ 
                             P.expChkToString cO1' cD1' cG' e1 ^ 
                             "\n has type "  ^ P.compTypToString cO1' cD1' tau' ^ "\n" 
-                       )
-          in
+                       ) in
+          let _ = dprint (fun () -> "\nChecking refinement substitution\n") in         
+(*          let _ = dprint (fun () -> "Domain [cs]cD : " ^ P.mctxToString cO1' (Ctxsub.ctxnorm_mctx (cD,cs)) ^ "\n") in 
+          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in   *)
+          let _     = LF.checkMSub cO1' cD1' (cs, t1) cD in   
+          let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in            
+          let _  = LF.check cO1' cD1' cPsi1' (tR1, S.LF.id)  (tP1, S.LF.id) in   
+
             check cO1' cD1' cG' e1 (tau', Whnf.m_id)
 
       | BranchBox (cO1', cD1',  (_cPsi1, EmptyPattern, t1, cs)) ->
           (* By invariant: cD1' |- t1 <= cD *)
-          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  
-
+(*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  *)
+          let _     = LF.checkMSub cO1' cD1' (cs, t1) cD in  
           let t'' = Whnf.mcomp t t1 in
 
           let tau  = Whnf.cnormCTyp (tau, t'') in

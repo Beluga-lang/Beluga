@@ -1871,8 +1871,14 @@ module Make (T : TRAIL) : UNIFY = struct
 
               let ss = Monitor.timer ("Normalisation", fun () -> invert (Whnf.normSub t')) in
               let phat = Context.dctxToHat cPsi in 
-              let sM1' = trail (fun () -> prune cD0 cPsi1 phat sM1 (MShift 0, ss) (MVarRef r)) in
-                instantiateMVar (r, sM1', !cnstrs) 
+              let tM1' = trail (fun () -> prune cD0 cPsi1 phat sM1 (MShift 0, ss) (MVarRef r)) in
+              let _ = dprint (fun () -> "UNIFY (3) : INSTANTIATE! \n" ^
+                                P.normalToString Empty cD0 cPsi sM2 ^ "\n with " ^ 
+                                P.normalToString Empty cD0 cPsi1 (tM1', id) ^ "\n in context cPsi1 = " ^ 
+                                P.dctxToString Empty cD0 cPsi1
+                             ) in
+
+                instantiateMVar (r, tM1', !cnstrs) 
             with
               | NotComposable _ -> raise_ (Unify "NotComposable")
               | NotInvertible ->

@@ -3478,26 +3478,36 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
               (* let _ = recTerm PiboxRecon cO cD cPsi (tR, LF.id) (tP, LF.id) in *)
               (if Whnf.closed (tR, LF.id)  then 
                  (* && Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi && Whnf.closedGCtx cG ? *)
-                let branches' = List.map (function b -> 
-                                            let b = elBranch (IndexObj(phat, tR))
-                                                             cO cD cG b (tP, cPsi) tau_theta in 
-                                              Gensym.MVarData.reset () ; b) branches in
+                let branches' = List.map 
+                                (function b -> 
+                                   let _ = dprint (fun () -> "[elBranch - IndexObj] in context cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n") in
+                                   let b = elBranch (IndexObj(phat, tR))
+                                                   cO cD cG b (tP, cPsi) tau_theta in 
+                                     Gensym.MVarData.reset () ; b)
+                                branches in
                   Int.Comp.Case (Some loc, prag, i', branches')
               else 
                 raise (Error (Some loc, ValueRestriction (cO, cD, cG, i', (tau',t))))
               )
 
           | (i, (Int.Comp.TypBox (_, tP, cPsi), _mid)) -> 
+
               (if Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi && Whnf.closedGCtx cG then 
                  let _      = dprint (fun () -> "[elExp]" 
                              ^ "Contexts cD  = " ^ P.mctxToString cO cD ^ "\n"
-                             ^  "Context of expected pattern type : "
+                             ^ "Expected Pattern has type :" ^
+                                        P.typToString cO cD cPsi (tP, LF.id)           
+                             ^  "\n Context of expected pattern type : "
                              ^  P.dctxToString cO cD cPsi 
                              ^ "\n") in
 
-                let internal_branches = List.map (function b -> 
-                                                    let b = elBranch DataObj cO cD cG b (tP, cPsi) tau_theta
-                                                    in  Gensym.MVarData.reset () ; b) branches in
+                let internal_branches = List.map 
+                                        (function b -> 
+                                           let _ = dprint (fun () -> "[elBranch - DataObj] in context cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n") in
+                                           let b = elBranch DataObj 
+                                                         cO cD cG b (tP, cPsi) tau_theta
+                                           in  Gensym.MVarData.reset () ; b) 
+                                        branches in
                 let internal_case_exp = Int.Comp.Case (Some loc, prag, i, internal_branches) in
 (*                  Coverage.covers cO cD cG internal_branches (tP, cPsi);         moved to check.ml  -jd 2010-04-05 *)
                   internal_case_exp
@@ -3717,19 +3727,23 @@ and recPattern cO cD cPsi omega delta psi m tPopt =
   let l = Context.length cD' in 
 
   let _ = dprint (fun () -> "[recPattern] cPsi' = " ^ P.dctxToString cO1 cD' cPsi' ) in
+  let _ = dprint (fun () -> "[recPattern] cPsi = " ^ P.dctxToString cO cD cPsi ) in
 
   let cvar1Opt = Context.ctxVar cPsi' in 
-  let cO_ext = begin match cvar1Opt with 
-                   | None -> cO
+  let (cO_ext,k) = begin match cvar1Opt with 
+                   | None -> (cO, 0)
                    | Some (Int.LF.CtxOffset _ ) -> 
                        begin match cO1 with
-                         | Int.LF.Dec(Int.LF.Empty, cdecl) -> Int.LF.Dec(cO, cdecl)
-                         | _ -> Int.LF.Dec(cO, Int.LF.CDeclOpt (Id.mk_name (Id.NoName)))
+                         | Int.LF.Dec(Int.LF.Empty, cdecl) -> (Int.LF.Dec(cO, cdecl) , 1)
+ 
+                         | _ -> (Int.LF.Dec(cO, Int.LF.CDeclOpt (Id.mk_name (Id.NoName))), 1)
+                             (* can this case ever happen? Thu Sep  2 12:57:46 2010 -bp *)
                        end
-                   | Some (Int.LF.CtxName psi_name ) -> Int.LF.Dec(cO, Int.LF.CDeclOpt psi_name)
+                   | Some (Int.LF.CtxName psi_name ) -> (Int.LF.Dec(cO, Int.LF.CDeclOpt psi_name) , 1)
                   end in
+
   let cs     = Ctxsub.id_csub cO_ext in 
-  let cPsi0  = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi,Int.LF.MShift l), Int.LF.CShift 1) in 
+  let cPsi0  = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi,Int.LF.MShift l), Int.LF.CShift k) in 
   let _ = dprint (fun () -> "unifyDCtx : cPsi0 = " ^ P.dctxToString cO_ext Int.LF.Empty cPsi0 ^ 
                     " \n   cPsi' = " ^ P.dctxToString cO_ext Int.LF.Empty cPsi' ^ "\n") in 
   let (cO', cs) = unifyDCtx cPsi0 cPsi' (cs, cO_ext) in 
@@ -4121,6 +4135,7 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
                      | Some (at, _psi) ->  FullTyp at
                    end in
       let _ = dprint (fun () -> "[elBranch] Reconstruction of pattern ... ") in
+      let _ = dprint (fun () -> "context cPsi = " ^ P.dctxToString cO cD cPsi ^ "...\n") in
       (* ***************  RECONSTRUCT PATTERN BEGIN *************** *)
       let (((l_cd1', l_delta), (l_cO', l_omega),
            cO', cD1', cPsi1', pattern', tP1', cs1, cs'),  e) =

@@ -1206,7 +1206,8 @@ module Int = struct
             fprintf ppf "@ @[<v2>| @[<v0>%a%a@[([%a] %a)@ : %a ; %a@]  => @]@ @[<2>@ %a@]@]@ "
               (frugal_lf_octx 0) cO'
               (ppr_ctyp_decls cO') cD1'
-              (fmt_ppr_lf_psi_hat cO' 0) cPsi
+              (* (fmt_ppr_lf_psi_hat cO' 0) cPsi *)
+              (fmt_ppr_lf_dctx cO' cD1' 0) cPsi 
               (fmt_ppr_pattern cO' cD1' cPsi) pattern
                  (* this point is where the " : " is in the string above *)
               (* (fmt_ppr_lf_msub cO cD1' 2) t   *)

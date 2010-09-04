@@ -34,7 +34,7 @@ module Comp = Syntax.Int.Comp
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [12])
 
-
+(* seems broken Sat Sep  4 12:25:07 2010 -bp 
   (* ctxToSub cPsi:
    *
    * generates, based on cPsi, a substitution suitable for unification
@@ -63,7 +63,7 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [12])
           (* let u = newMVar (Null ,  TClo( tA, s)) in *)
         let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
           Dot (front, LF.comp s LF.shift)
-
+*)
 
 (* ***************************************************)
 (* Ctx normalization                                 *)

@@ -88,6 +88,12 @@
    Contains a substitution-based interpreter which only evaluates well-typed expressions
    It includes tt, ff, z, suc, iff, eq, letv  
 
+- polylam
+
+  * normal.bel
+
+    converts an expression in a simply typed lambda calculus to a 
+    normal form (changing the representation to a value only representation)
 
 Notworking
 ------------------

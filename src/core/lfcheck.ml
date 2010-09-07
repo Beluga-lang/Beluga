@@ -242,10 +242,48 @@ let rec ctxShift cPsi = begin match cPsi with
                           P.subToString cO cD cPsi s ^ " <= " ^ P.dctxToString cO cD cPsi') in
           checkSub loc cO cD cPsi s cPsi' ;
           TClo (tA, s)
-    
+
+    | MVar (Inst ({contents = None}, cPsi', tA, _cnstr), s) -> 
+        let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cO cD cPsi head ) in 
+        let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cO cD cPsi ^ "   |-   " ^ 
+                          P.subToString cO cD cPsi s ^ " <= " ^ P.dctxToString cO cD cPsi') in
+          checkSub loc cO cD cPsi s cPsi' ;
+          TClo (tA, s)
+
+    | MMVar (MInst ({contents = None}, cD' , cPsi', tA, _cnstr) , (t', r)) -> 
+	let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cO cD cPsi head ) in 
+	let _ = dprint (fun () -> " cO = " ^ P.octxToString cO) in 
+	let _ = dprint (fun () -> " cD = " ^ P.mctxToString cO cD) in 
+	let _ = dprint (fun () -> " t' = " ^ P.msubToString cO cD t' ) in 
+	let _ = dprint (fun () -> " cD' = " ^ P.mctxToString cO cD') in 
+	let _ = checkMSub cO cD (CShift 0, t') cD'  in 
+	let _ = dprint (fun () -> "[inferHead] MMVar - msub done \n") in 
+	  checkSub loc cO cD cPsi r (Whnf.cnormDCtx (cPsi', t')) ;
+          TClo(Whnf.cnormTyp (tA, t'), r)
+
+  
     | PVar (Offset p, s) ->
         (* cD ; cPsi' |- tA <= type *)
         let (_, tA, cPsi') = Whnf.mctxPDec cD p in
+          dprnt "[inferHead] PVar case";
+          dprint (fun () -> "[inferHead] PVar case:    s = " ^ P.subToString cO cD cPsi s);
+          dprint (fun () -> "check: cPsi' (context of pvar)    = " ^ P.dctxToString cO cD cPsi' ^ "\n"
+                         ^ "check:  cPsi (context in pattern) = " ^ P.dctxToString cO cD cPsi ^ "\n"
+                         ^ "check: synthesizing " ^ P.typToString cO cD cPsi (tA, s) ^ " for PVar" ^ "\n"
+                         ^ "check: cO = " ^ P.octxToString cO ^ "\n"
+                         ^ "check: cD = " ^ P.mctxToString cO cD);
+          checkSub loc cO cD cPsi s cPsi';
+          (* Check that something of type tA could possibly appear in cPsi *)
+          if not (canAppear cO cD cPsi (tA, s)) then
+            raise (Violation ("Parameter variable of type " ^ P.typToString cO cD cPsi (tA, s)
+                            ^ "\ncannot possibly appear in context " ^ P.dctxToString cO cD cPsi)) ;
+          
+          (* Return p's type from cD *)
+          TClo (tA, s)
+
+
+  | PVar (PInst ({contents = None}, cPsi', tA, _ ) , s) ->
+        (* cD ; cPsi' |- tA <= type *)
           dprnt "[inferHead] PVar case";
           dprint (fun () -> "[inferHead] PVar case:    s = " ^ P.subToString cO cD cPsi s);
           dprint (fun () -> "check: cPsi' (context of pvar)    = " ^ P.dctxToString cO cD cPsi' ^ "\n"
@@ -667,7 +705,7 @@ and subsumes cO psi phi = match (psi, phi) with
   | _ -> false
 
 
-  let rec checkSchemaWf (Schema elements ) = 
+and checkSchemaWf (Schema elements ) = 
     let rec checkElems elements = match elements with
       | [] -> ()
       | SchElem (cPsi, trec) :: els ->
@@ -681,11 +719,16 @@ and subsumes cO psi phi = match (psi, phi) with
      if cD |- ms <= cD' then checkMSub succeeds.
  
   *)
-  let rec checkMSub cO cD (cs, ms) cD' = match (ms, cD') with
+and checkMSub cO cD (cs, ms) cD' = match (ms, cD') with
     | (MShift k, Empty) ->  
         if (Context.length cD) = k then () 
         else 
           raise (Violation ("Contextual substitution ill-typed - 1"))
+
+    | (MShift k, cD') -> 
+	if k >= 0 then 
+	  checkMSub cO cD (cs, MDot (MV (k+1), MShift (k+1))) cD'
+	else raise (Violation ("Contextual substitution ill-formed"))
 
     | (MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi))) -> 
         let cPsi' = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx  (cPsi, ms), cs) in 

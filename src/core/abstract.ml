@@ -375,9 +375,9 @@ let rec constraints_solved cnstr = match cnstr with
       if Whnf.conv (tM, LF.id) (tN, LF.id) then 
         constraints_solved cnstrs
       else 
-        (Printf.printf "Encountered unsolved constraint:\n %s  =   %s\n\n"
-           (P.normalToString I.Empty I.Empty cPsi (tM, LF.id))
-           (P.normalToString I.Empty I.Empty cPsi (tN, LF.id));         
+        (dprint (fun () -> "Encountered unsolved constraint:\n" ^   
+           P.normalToString I.Empty I.Empty cPsi (tM, LF.id) ^ " == " ^ 
+           P.normalToString I.Empty I.Empty cPsi (tN, LF.id) ^ "\n\n") ;         
          false )
  | ({contents = I.Eqh (_cD, _cPsi, h1, h2)} :: cnstrs) -> 
       if Whnf.convHead (h1, LF.id) (h2, LF.id) then 

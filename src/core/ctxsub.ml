@@ -34,11 +34,12 @@ module Comp = Syntax.Int.Comp
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [12])
 
-(* seems broken Sat Sep  4 12:25:07 2010 -bp 
+(* broken
   (* ctxToSub cPsi:
    *
    * generates, based on cPsi, a substitution suitable for unification
-   *
+   * s.t. if . ; . |- cPsi dctx then  cO ; . ;  cPhi |- s : cPsi
+   * 
    * Assumes all types in cPsi are atomic -bp
    *)
   let rec ctxToSub cPsi = match cPsi with
@@ -118,7 +119,12 @@ and ctxnorm_tuple (tuple, t) = match tuple with
 and ctxnorm_head (h,cs) = match h with
   | MVar (u, s) -> MVar (u, ctxnorm_sub (s, cs))
   | PVar (p, s) -> PVar (p, ctxnorm_sub (s, cs))
-  | MMVar (u, (t,s)) -> MMVar (u, (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs)))
+  | MMVar (MInst({contents = None} as u, cD, cPsi, tA, cnstr), (t,s)) -> 
+      (* cnstr must be empty *)
+      MMVar (MInst (u,ctxnorm_mctx (cD, cs), ctxnorm_dctx (cPsi, cs), ctxnorm_typ (tA, cs), cnstr)
+               , (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs)))
+
+(*  | MMVar (u, (t,s)) -> MMVar (u, (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs))) *)
   | Proj(PVar (p,s), k) -> 
       Proj(PVar (p, ctxnorm_sub (s, cs)), k)
   | _ -> h 
@@ -250,7 +256,7 @@ and ctxnorm_psihat (phat, cs) = match phat with
       end
 
 
-let rec ctxnorm_mctx (cD, cs) = match cD with
+and ctxnorm_mctx (cD, cs) = match cD with
   | Empty -> Empty
   | Dec(cD', cdec) -> 
       Dec (ctxnorm_mctx (cD', cs), ctxnorm_cdec (cdec, cs))
@@ -264,6 +270,23 @@ and ctxnorm_cdec (cdec, cs) = match cdec with
   | PDeclOpt _ -> cdec
 
 
+(* would still require that cD is ordered in
+   such a way that MVars with empty context are first.
+
+and ctxnorm_mctx' (cD, cs) k = match cD with
+  | Empty -> Empty
+  | Dec(cD', cdec) -> 
+      Dec (ctxnorm_mctx' (cD', cs) (k+1), ctxnorm_cdec' (cdec, cs) (k+1))
+
+and ctxnorm_cdec' (cdec, cs) ms = match cdec with
+  | MDecl (u, tA, cPsi) -> 
+      MDecl(u, ctxnorm_typ (tA, cnorm (cs, MShift -k)), ctxnorm_dctx' (cPsi, (cnorm (cs, MShift -1)))
+  | PDecl (u, tA, cPsi) -> 
+      PDecl(u, ctxnorm_typ (tA, cs), ctxnorm_dctx' (cPsi, cs))
+  | MDeclOpt _ -> cdec
+  | PDeclOpt _ -> cdec
+
+*)
 
 let rec ctxnorm_ctyp (cT, cs) = match cT with
   | Comp.TypBool -> Comp.TypBool
@@ -787,14 +810,65 @@ let rec ctxShift cPsi = match cPsi with
         Shift (cshift, n+1)
 
 
+
+(* ctxToSub_mclosed cD psi cPsi = (cD', s)
+
+   if x1:A1, ... xn:An = cPsi  and 
+       . ; cD |- cPsi dctx
+       
+
+      cD, cD_ext ; psi  |-  s : cPsi
+   then 
+
+   s.t. cD, cD_ext; psi |- u1[id]/x1 ... un[id]/xn : cPsi
+    and where cD_ext = u1:A1[psi], ... un:An[psi]
+
+if  ctxToSub_mclosed  cD psi cPsi = (cD',s) then    
+   cD' ; psi |- s : cPsi
+
+*)
+let rec ctxToSub_mclosed cD psi cPsi = 
+  let rec toSub cPsi =  match cPsi with
+    | Null ->
+      (* Substitution.LF.id  --changed 2010-07-26*)
+      (cD, ctxShift psi, 0)
+            
+    | DDec (cPsi', TypDecl (_, (Atom _  as tA))) ->
+        Debug.indent 2;
+      let (cD', s, k) = toSub cPsi' in  (* cD' ; psi |- s : cPsi' *)
+        Debug.outdent 2;
+        dprint (fun () -> "s = " ^ subToString s);
+        (* For the moment, assume tA atomic. *)
+
+      let u     = Root(None, MVar(Offset 1,  Substitution.LF.id), Nil) in 
+        (* cD' ; psi |- s : cPsi' *)
+        (* cD' ; psi |- u[id] : [s]tA *)
+      let tA'   = TClo(tA, s) in 
+      (* cD ; cPhi |- Dot(s, Obj u) : cPsi', x:tA *)
+      let shifted = Substitution.LF.comp s Substitution.LF.shift in
+      (* dprint (fun () -> "shifted = " ^ subToString shifted);*)
+      let result = Dot(Obj u, shifted) in
+      let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in 
+        dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result);
+        (Dec (cD', MDecl(u_name , tA', psi)), result, k+1)
+  in
+    toSub cPsi
+
+
+
+
+
 (* ctxToSub' cD cPhi cPsi = s 
 
    if x1:A1, ... xn:An = cPsi
-   then D = u1:A1[cPhi], ... un:An[cPhi]
+      . ; . |- cPsi dctx
+      cD    |- cPhi dctx
+    
+   then D = u1:A1[cD ; cPhi], ... un:An[cD ; cPhi]
 
-   s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
+   s.t. D; cPhi |- u1[m_id ; id]/x1 ... un[m_id]/xn : cPsi
 
-if  ctxToSub'  cD cPhi cPsi = s then    cD ; cPhi |- s : cPsi
+   and  cD ; cPhi |- s : cPsi
 
 *)
 let rec ctxToSub' cD cPhi cPsi = match cPsi with

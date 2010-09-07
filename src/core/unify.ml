@@ -2317,11 +2317,20 @@ module Make (T : TRAIL) : UNIFY = struct
            check q1 = q2 *)        
         let s1' = Whnf.normSub s1' in 
         let s2' = Whnf.normSub s2' in 
+        let _ = dprint (fun () -> "[unifyHead] PVar (PInst) = PVar(PInst) " ) in
         if q1 == q2 then (* cPsi1 = _cPsi2 *)
-          (let _ = dprint (fun () -> "[unifyHead] PVar (PInst) = PVar(PInst) " ) in
+          (let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 = q2 " ) in
           match (isPatSub s1' ,  isPatSub s2') with
             | (true, true) ->
                 let phat = Context.dctxToHat cPsi in 
+                let _ = dprint (fun () -> "[unifyHead] " ^ P.headToString Empty cD0 cPsi head1 ^ 
+                                  " === " ^ P.headToString Empty cD0 cPsi head2 ) in
+                let _ = dprint (fun () -> "compute intersection of") in 
+                let _ = dprint (fun () -> "s1'" ^ P.subToString LF.Empty cD0 cPsi s1') in 
+                let _ = dprint (fun () -> "s2'" ^ P.subToString LF.Empty cD0 cPsi s2') in
+                let _ = dprint (fun () -> "domain cPsi1: " ^ P.dctxToString LF.Empty cD0 cPsi1) in
+                let _ = dprint (fun () -> "domain cPsi1: " ^ P.dctxToString LF.Empty cD0 cPsi2) in
+                let _ = dprint (fun () -> "target cPsi: " ^ P.dctxToString LF.Empty cD0 cPsi) in
                 let (s', cPsi') = intersection phat s1' s2' cPsi1 in
                   (* if cD ; cPsi |- s1' <= cPsi1 and cD ; cPsi |- s2' <= cPsi1
                      then cD ; cPsi1 |- s' <= cPsi' *)
@@ -2340,18 +2349,31 @@ module Make (T : TRAIL) : UNIFY = struct
             | (false, _) ->
                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *))
         else
-          (match (isPatSub s1' , isPatSub s2') with
+          (let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in
+            match (isPatSub s1' , isPatSub s2') with
              | (true, true) ->
+                let _ = dprint (fun () -> "[unifyHead] " ^ P.headToString Empty cD0 cPsi head1 ^ 
+                                  " === " ^ P.headToString Empty cD0 cPsi head2 ) in
+                let _ = dprint (fun () -> "q1 .  cPsi1: " ^ P.dctxToString LF.Empty cD0 cPsi1) in
+                let _ = dprint (fun () -> "q2 .  cPsi2: " ^ P.dctxToString LF.Empty cD0 cPsi2) in
+                let _ = dprint (fun () -> "q1 .  tA1  : " ^ P.typToString Empty cD0 cPsi1 (tA1, id)) in 
+                let _ = dprint (fun () -> "q2 .  tA2  : " ^ P.typToString Empty cD0 cPsi2 (tA2, id)) in 
+
                  (* no occurs check necessary, because s1' and s2' are pattern subs. *)
                  let _ = (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
                           unifyTyp mflag cD0 cPsi1 (tA1, id) (tA2, id)) in 
+                 let _ = dprint (fun () -> "Unification of the types and contexts done ... \n") in 
+                 (* at this point: s1' = s2'    ! *)
                  let ss = invert s1' in
-                 let phat = Context.dctxToHat cPsi in 
+                  let _ = dprint (fun () -> "Inverted s1' " ^ P.subToString Empty cD0 cPsi ss ) in 
+                 let phat = Context.dctxToHat cPsi in  
                  let (s', cPsi') = pruneCtx phat (s2', cPsi2) (MShift 0, ss) in
+                   (*
                    (* if   cPsi  |- s2' <= cPsi2  and cPsi1 |- ss <= cPsi
                       then cPsi2 |- s' <= cPsi' and [ss](s2' (s')) exists *)
                    (* cPsi' =/= Null ! otherwise no instantiation for
                       parameter variables exists *)
+                 *)
                  let p = Whnf.newPVar (cPsi', TClo(tA2, invert (Whnf.normSub s'))) in
                    (* p::([s'^-1]tA2)[cPsi'] and
                       [|cPsi2.p[s'] / q2 |](q2[s2']) = p[[s2'] s']
@@ -2360,7 +2382,8 @@ module Make (T : TRAIL) : UNIFY = struct
                       and   cPsi |- p[[s2'] s'] : [s2'][s'][s'^-1] tA2
                       and [s2'][s'][s'^-1] tA2  = [s2']tA2 *)
                    (instantiatePVar (q2, PVar(p, s'), !cnstr2);
-                    instantiatePVar (q1, PVar(p, comp ss (comp s2' s')), !cnstr1))
+                    instantiatePVar (q1, PVar(p, s'), !cnstr1);
+                    (* instantiatePVar (q1, PVar(p, comp ss (comp s2' s')), !cnstr1)*))
 
              | (true, false) ->
                  let _ = (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)

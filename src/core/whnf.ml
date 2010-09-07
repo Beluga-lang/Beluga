@@ -327,7 +327,6 @@ and mshiftDCtx cPsi k = match cPsi with
 
 
 
-
 (* comp t1 t2 = t'
 
    Invariant:
@@ -1114,7 +1113,7 @@ and cnorm (tM, t) = match tM with
     | Undef -> Undef
         
           
-  (* cnormType (tA, t) = tA'
+  (* cnormTyp (tA, t) = tA'
 
      If cD' ; cPsi  |- tA <= type
      cD |- t <= cD'

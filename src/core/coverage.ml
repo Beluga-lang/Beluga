@@ -1453,11 +1453,11 @@ let rec covered_by_set branches (strategy, cs, ms, cO, cD, cPsi) tM tA =
     )
 
 
-let rec maxSpine low f = function
-  | LF.Nil -> low
+let rec maxSpine f = function
+  | LF.Nil -> 0
   | LF.App(tM, spine) ->
-      let f_tM = f tM in
-        max f_tM (maxSpine f_tM f spine)
+      let depth_tM = f tM in
+        max depth_tM (maxSpine f spine)
 
 let rec maxTuple f = function
   | LF.Last tM -> f tM
@@ -1465,7 +1465,7 @@ let rec maxTuple f = function
 
 and depth = function
   | LF.Lam(_, _, tM) -> (*1 +*) depth tM   (* should probably just be   depth tM   -jd *)
-  | LF.Root(_, head, spine) -> (*1 +*) (maxSpine (depthHead head) depth spine)
+  | LF.Root(_, head, spine) -> (*1 +*) (depthHead head) + (maxSpine depth spine)
 (*  | LF.Clo(tM, _) -> depth tM *)
   | LF.Tuple(_, tuple) -> (*1 +*) maxTuple depth tuple
 
@@ -1489,7 +1489,7 @@ let rec maxTypRec f = function
 
 
 let rec dependentDepth = function
-  | LF.Atom(_loc, _a, spine) -> maxSpine 1 depth spine
+  | LF.Atom(_loc, _a, spine) -> 1 + maxSpine depth spine
   | LF.PiTyp ((typdecl, _depend), tA) ->
       1 + dependentDepth tA
   | LF.Sigma typ_rec -> 1 + maxTypRec dependentDepth typ_rec
@@ -1507,10 +1507,14 @@ let rec dependentDepth_dctx = function
 
 let depth_branch = function
   | BranchBox (_cO', _cD', (_cPsi', EmptyPattern, _msub', _csub')) ->
-      1 + 1
+      (dprint (fun () -> "depth of EmptyPattern = 1");
+       1)
   
-  | BranchBox (_cO', _cD', (_cPsi', NormalPattern (tM', _body), _msub', _csub')) ->
-      1 + depth tM'
+  | BranchBox (cO', cD', (cPsi', NormalPattern (tM', _body), _msub', _csub')) ->
+      let d = depth tM' in
+      (dprint (fun () -> "depth of NormalPattern " ^ P.normalToString cO' cD' cPsi' (tM', Substitution.LF.id)
+                       ^ " = " ^ string_of_int (1 + d));
+       d)
 
 let length_branch cPsi = function
   | BranchBox (_cO', _cD', (cPhi', _pattern, _msub', _csub')) ->

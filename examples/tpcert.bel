@@ -1,90 +1,92 @@
-tp   : type.
+tp   : type.  %name tp T.
 nat  : tp.
 bool : tp.
 arr  : tp -> tp -> tp.
 
-term : type.
+term : type.  %name term M.
 z    : term.
 tt   : term.
 ff   : term.
 suc  : term -> term.
-eq   : term -> term -> term.
-if_then_else : term -> term -> term -> term.
 letv : term -> (term -> term) -> term.
 lam  : tp -> (term -> term) -> term.
+app  : term -> term -> term.
 
-
-oft  : term -> tp -> type.
+oft  : term -> tp -> type.  %name oft D.
 o_tt : oft tt bool.
 o_ff : oft ff bool.
 o_z  : oft z nat.
 o_s  : oft E nat -> oft (suc E) nat.
-o_if : oft E bool -> oft E1 T -> oft E2 T
-    -> oft (if_then_else E E1 E2) T.
-
 o_lam: ({x:term} oft x T1 -> oft (E x) T2)
        -> oft (lam T1 (\x. E x)) (arr T1 T2).
+
+o_app:    oft E1 (arr T2 T) -> oft E2 T2
+       -> oft (app E1 E2) T.
+
 o_let: oft E1 T1 -> ({x:term} oft x T1 -> oft (E2 x) T2)
     -> oft (letv E1 (\x. E2 x)) T2.
 
 cert: term -> type.
 
-certify : cert E 
-       <- oft E T.
+certify : {T:tp}oft E T -> cert E.
 
-certify' : {T:tp}cert E 
-       <- oft E T.
+ill_tp: type.
+bot: ill_tp.
+cert_illtyped: ill_tp -> cert E.
 
 schema tpCtx = some [t:tp] block x:term. oft x t;
 
-rec infer : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
-  FN g => mlam U =>
-   case [g] U .. of
-     [g] z     => [g] certify o_z
-
-   | [g] tt    => [g] certify o_tt
-
-   | [g] #p.1 ..  => [g] certify (#p.2 ..)
-
- | [g] lam (T ..) \x. E .. x => 
-    (case infer [g, b: block x:term. oft x (T ..)] <g, b. E .. b.1> of   
-     {T2::tp[]} {T::tp[]}
-     {D::(oft (E .. b.1) T2)[g, b: block x:term. oft x T]}
-      [g, b: block x:term. oft x T] certify (D .. b)
-      => [g] certify (o_lam \x.\u. D .. <x, u>)
-    )
-
-%{ | [g] letv (E1 ..) (\x. (E2 .. x)) => 
-     let [g] certify (D1 ..) = infer [g] <g. E1 ..>  in 
-     let [g, b: block x:term. oft x (S1 ..)] certify (D2 .. b) = 
-             % We don't know the type of E1 so we can't give it in the next line,
-             %  but writing _ leaves a free variable
-	     % This is fixed in the version below by making T explicit in the definition of certify.
-             infer [g, b: block x:term. oft x _ ] <g, b. E2 .. b.1> in 
-         [g]  certify o_let (D1 ..) (\x.\u. D2 .. <x, u>)
-}%
-;
-
+rec equal : tp [ ] -> tp [ ] -> Bool = 
+fn t => fn s => s == t ; 
 
 rec infer' : {g:(tpCtx)*} {U::term[g]} (cert (U ..))[g] =
-  FN g => mlam U =>
+FN g => mlam U =>
    case [g] U .. of
- | [g] z     => [g] certify' nat o_z
+ | [g] z     => [g] certify nat o_z 
 
- | [g] tt    => [g] certify' bool o_tt
+ | [g] tt    => [g] certify bool o_tt 
+ | [g] ff    => [g] certify bool o_ff
 
- | [g] #p.1 ..  => [g] certify' _   (#p.2 ..)
+ | [g] suc (E ..) => 
+   (case infer' [g] < g. E .. >  of 
+    | [g] certify nat (D ..) => [g] certify nat (o_s (D ..))
+    | [g] _                 => [g] cert_illtyped bot
+  )
+
+ | [g] #p.1 ..  => [g] certify _   (#p.2 ..)  
 
  | [g] lam T \x. E .. x => 
-   let [g, b: block x:term. oft x T1] certify' T2 (D .. b) = 
-         infer' [g, b: block x:term. oft x T] <g, b. E .. b.1> 
-   in
-   	 [g] certify' (arr T1 T2) (o_lam \x.\u. D .. <x, u>)
+   (case    infer' [g, b: block x:term. oft x T] < g,b . E .. b.1>    of
+    | [g, b:block x:term. oft x T1] cert_illtyped bot  => [g] cert_illtyped bot
 
+    | [g, b: block x:term. oft x T1] certify T2 (D .. b)  =>  
+   	[g] certify (arr T1 T2) (o_lam \x.\u. D .. <x, u>)  
+    )
+
+ | [g] app (E1 ..) (E2 ..) =>
+   (case infer'  [g] < g . E1 .. > of 
+    | [g] certify (arr T2 T) (D1 ..) => 
+      (case infer'  [g] < g . E2 .. >   of
+       | {D2:: (oft (E2 ..) t)[g, t:tp]}
+	 [g] certify T2' (D2 .. T2') =>  	   
+	 if equal ([ ] T2) ([ ] T2')  
+	  then [g] certify T (o_app (D1 ..) (D2 .. T2))
+	 else [g] cert_illtyped bot
+       | [g] _ => [g] cert_illtyped bot
+       )
+    | [g] _ => [g] cert_illtyped bot
+    )
+   
  | [g] letv (E1 ..) (\x. (E2 .. x)) => 
-     let [g] certify' T1 (D1 ..) = infer' [g] <g. E1 ..>  in 
-     let [g, b: block x:term. oft x (S1 ..)] certify' T2 (D2 .. b) = 
-             infer' [g, b: block x:term. oft x T1 ] <g, b. E2 .. b.1> in 
-         [g]  certify' T2 (o_let (D1 ..) (\x.\u. D2 .. <x, u>))
+   (case infer'  [g] <g. E1 ..> of
+    |[g] certify T1 (D1 ..)  => 
+      (case infer' [g, b: block x:term. oft x T1] < g,b . E2 .. b.1> of 
+       | [g, b: block x:term. oft x (S1 ..)] certify T2 (D2 .. b)  =>
+           [g]  certify T2 (o_let (D1 ..) (\x.\u. D2 .. <x, u>))
+       | [g, b: block x:term. oft x (S1 ..)] cert_illtyped bot => 
+	   [g] cert_illtyped bot
+      )
+    | [g] cert_illtyped bot => 	   [g] cert_illtyped bot
+   )
 
 ;

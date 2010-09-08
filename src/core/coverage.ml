@@ -628,7 +628,8 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
             (let (theta, cD') = 
 	       (try Abstract.abstractMSub (Whnf.cnormMSub msub_ref )
 		with Abstract.Error s -> 
-		  raise (NoCover (fun () -> "Abstraction failed: " ^ s))) in
+		  raise (NoCover (fun () -> "Abstraction failed: " ^ s ^ 
+				    "\n This indicates that generated patterns contained unification-problems outside the decidable pattern fragment; \n there are two solutions: try setting the coverage depth higher or prove by hand that some cases are impossible") )) in
              let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
              let LF.Root(None,h', _ ) = Whnf.cnorm (LF.Root(None, h, LF.Nil),  theta) in
              let tA' = Whnf.cnormTyp (tA, theta) in
@@ -675,7 +676,9 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
           Debug.outdent 2;
           let (theta, cD') = (try Abstract.abstractMSub (Whnf.cnormMSub msub_ref)
 			      with Abstract.Error s -> 
-				raise (NoCover (fun () -> "Abstraction failed: " ^ s))) in
+				raise (NoCover (fun () -> "Abstraction failed: " ^ s ^ 
+				    "\n This indicates that generated patterns contained unification-problems outside the decidable pattern fragment; \n there are two solutions: try setting the coverage depth higher or prove by hand that some cases are impossible"
+					       ))) in
           let cPsi'  = Whnf.cnormDCtx (cPsi, theta) in
           let tR'    = Whnf.cnorm (LF.Root (loc, h, spine), theta) in 
 	  (* let tP'    = Whnf.cnormTyp (tP, theta) in  *)
@@ -792,7 +795,10 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
 	       false)
 	   )
         then 
-          (let (theta, cD'_ext) = Abstract.abstractMSub (Whnf.cnormMSub msub_ref)  in 
+          (let (theta, cD'_ext) = 
+	     (try Abstract.abstractMSub (Whnf.cnormMSub msub_ref)  
+	      with Abstract.Error s -> 		  raise (NoCover (fun () -> "Abstraction failed: " ^ s ^ 
+				    "\n This indicates that generated patterns contained unification-problems outside the decidable pattern fragment; \n there are two solutions: try setting the coverage depth higher or prove by hand that some cases are impossible") ))    in 
              dprint (fun () -> "**** cD'_ext = " ^ P.mctxToString cO cD'_ext);
             let cPsi'  = Whnf.cnormDCtx (cPsi', theta) in
             let spine' = Whnf.cnormSpine (spine', theta) in
@@ -860,7 +866,12 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
                     end
 		 )
               then begin
-                let (theta, cD'_ext) = Abstract.abstractMSub (Whnf.cnormMSub msub_ref)  in 
+                let (theta, cD'_ext) = (try Abstract.abstractMSub (Whnf.cnormMSub msub_ref)  
+					with Abstract.Error s -> 
+					  raise (NoCover (fun () -> "Abstraction failed: " ^ s ^ 
+							    "\n This indicates that generated patterns contained unification-problems outside the decidable pattern fragment; \n there are two solutions: try setting the coverage depth higher or prove by hand that some cases are impossible") )
+				       )
+		in 
                   dprint (fun () -> "**** cD'_ext = " ^ P.mctxToString cO cD'_ext);
                 (* let cD'_ext = Whnf.normMCtx cD'_ext in *)
 		let cPsi'  = Whnf.cnormDCtx (cPsi', theta) in

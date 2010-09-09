@@ -527,8 +527,8 @@ fn s => fn v => case s of
 | [ ] m_ref => (case v of [ ] {})
 ;
 
-impossible : type.
-rec values_dont_step : (step M M')[ ] -> (value M )[ ] -> impossible [ ]= 
+empty : type.
+rec values_dont_step : (step M M')[ ] -> (value M )[ ] -> empty [ ]= 
 fn s => fn v => case v of 
 | [ ] v_true    => (case s of [ ] {} )
 | [ ] v_false   => (case s of [ ] {} )

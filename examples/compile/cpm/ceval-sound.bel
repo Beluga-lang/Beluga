@@ -34,7 +34,7 @@ fn c => case c of
   let [ ] result D1 (<< C' st_return)  = csd ([ ] C1) in 
    [ ] result (ev_s D1) C'
 
- | [ ] << C1 st_match  => 
+%{ | [ ] << C1 st_match  => 
    % % step (st K (ev (match E1 E2 (\x. E3 x))))
    % % mstep (st (c K  (\x1. match1 x1 E2 (\x. E3 x))) (ev E1))  ==>* mstep (st K (ev E) (answer W)
    % % 
@@ -60,7 +60,7 @@ fn c => case c of
        let [ ] result D3 C' = csd ([ ] C3) in 
         [ ] result (ev_match_s D3 D1) C'			     
    )
-
+}%
  | [ ] (<< C1 st_pair) => 
     let [ ] result D1 (<< (<< C2 st_pair1) st_return) : 
             (eval_step E1 (c K  (\x1. pair1 x1 E2)) W)[ ] = csd ([ ] C1) in 

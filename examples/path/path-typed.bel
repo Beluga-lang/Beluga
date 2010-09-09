@@ -36,9 +36,9 @@ p_done: is_path done M.
 
 eq: exp -> exp -> type.  %name eq E.
 e_ref: eq T T.
-e_lam: ({x:exp}eq x x -> eq (E x) (E' x))
+%{e_lam: ({x:exp}eq x x -> eq (E x) (E' x))
         -> eq (lam T E) (lam T E'). 
-
+}%
 schema ctx = some [t:tp] block x:exp, p:path, u:type_of x t . is_path p x ; 
 
 %{
@@ -85,8 +85,15 @@ FN g => mlam M => mlam N => fn f => case [g] M .. of
   let [g,b:block x:exp, q:path,u:type_of x T'' . is_path q x] e_ref = 
        eqPath [g, b:block x:exp, q:path, u:type_of x T' . is_path q x] 
 	      <g,b. M' .. b.1 > <g,b. N' .. b.1 > 
-              (mlam R => fn ip => let [g,b:block x:exp, q:path, u:type_of x T' . is_path q x] p_done = ip in 
-				  [g,b] p_done)
+(mlam Q => fn ip =>
+         let {Qs:: path[g,p:path]}
+             [g, b:block x:exp, q:path, u:type_of x T'. is_path q x] Qs .. b.2 = 
+	        [g, b:block x:exp, q:path,u:type_of x T'. is_path q x] Q .. b in  % strengthening
+         let [g, b:block x:exp, q:path, u:type_of x T'. is_path q x] D .. b = ip in 
+         let [g] p_lam (\x.\q.\u.\iq. D' .. x q u iq) : (is_path (bind T' (\q. Q' .. q)) (lam _ (\x. N' .. x)))[g] =  
+           f < g. bind _ (\q. Qs .. q) >  ([g] p_lam (\x.\q.\u.\iq. D .. <x,q,u,iq> )  ) in
+             [g,b] D' .. b.1 b.2 b.3 b.4
+       )
   in 
       [g] e_ref
 

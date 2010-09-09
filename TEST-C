@@ -34,6 +34,8 @@ $INTERPRETER +warncover $* \
     count-var/cntvar-simple-crec.bel \
     count-var/cntvar-2.bel \
     compile/debruijn/test.cfg \
+    cut-elim.bel \
+    cut-elim-crec.bel \
     freshML/cps.bel \
     freshML/cps-crec.bel \
     freshML/cps-popl-tutorial1.bel \
@@ -69,13 +71,9 @@ echo BROKEN: \
 sleep 2
 echo
 
-# The following don't cover for unknown reasons - actually cut-elim.bel and cut-elim-crec.bel
-# will not cover; check cut-elim-crec-cover.bel instead
-# however it will return an error when we run it with warncover flag
+# The following don't cover for unknown reasons; this last example probably shouldn't cover.
 $INTERPRETER +coverage $* \
-    cut-elim.bel \
-    cut-elim-crec.bel \
-    path/path-typed.bel \
+
 
 
 echo 'Pausing after uninvestigated examples...'
@@ -91,6 +89,7 @@ echo $INTERPRETER +coverage $* \
 echo OK:
 $INTERPRETER +coverage $* \
     path/path.bel \
+    path/path-typed.bel \
     test/alpha.bel \
     test/case1.bel \
     test/case1-explicit.bel \
@@ -166,6 +165,10 @@ $INTERPRETER +coverage $* \
     test/sigma1.bel \
     test/sigma2.bel \
     test/sigma4.bel \
+    tapl/ch3/sources.cfg \
+    tapl/ch3+arith/sources-corrected.cfg \
+    tapl/ch3+arith/big-small.cfg \
+    tapl/ch3+arith/det.cfg \
     ../examples-twelf/arith/sources.cfg \
     ../examples-twelf/alloc-sem/sources.cfg \
     ../examples-twelf/ccc/sources.cfg \

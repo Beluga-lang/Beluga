@@ -159,7 +159,8 @@ module LF = struct
      *  s1 o s2 = Shift(NegCtxShift psi2, k1 + k2)
      *)
 (*        Shift (NegCtxShift psi2, k1 + k2)     (* ADDED -jd 2010-06-25 *) *)
-        raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o NegCtxShift?"))
+        raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ 
+                                " o NegCtxShift " ^ string_of_int k2 ^ "\n")) 
 
     (*  Psi, Psi' |- Shift n : Psi    |Psi'| = n    *)
     | (Shift (NoCtxShift, k1 ), Shift (CtxShift psi2, k2 )) -> 
@@ -268,6 +269,7 @@ module LF = struct
   (* Sat Feb 14 10:16:16 1998 -fp *)
   and dot1 s = match s with
     | Shift (CtxShift _ , 0) -> Dot (Head (BVar 1), comp s shift)
+    | Shift (NegCtxShift _ , 0) -> Dot (Head (BVar 1), comp s shift)
     | Shift (_ , 0) -> s 
     | s             -> Dot (Head (BVar 1), comp s shift)
 

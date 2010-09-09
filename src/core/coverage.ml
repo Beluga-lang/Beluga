@@ -657,7 +657,7 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
         dprint (fun () -> "tA0=tQ atomic; \n    cD = " ^ P.mctxToString cO cD
                         ^ "\n  cPsi = " ^ P.dctxToString cO cD cPsi
                         ^ "\n  TERM = " ^ P.normalToString cO cD cPsi (LF.Root(None, h, spine), idSub)
-                        ^ "\n   tA0 = " ^ P.typToString cO cD cPsi (tA0, idSub)
+                        ^ "\n   tQ = tA0 = " ^ P.typToString cO cD cPsi (tA0, idSub)
                         ^ "\n   tP  = " ^ P.typToString cO cD cPsi (tP, idSub));
         Lfcheck.check cO cD cPsi (LF.Root(None, h, spine), idSub) (tA0, idSub);   (* used to break for test/cd2.bel*)
         dprnt "Lfcheck.check against tA0 (a.k.a. tQ) OK";
@@ -673,8 +673,10 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
           U.unifyTyp LF.Empty  cPsi_ref unifyLeft unifyRight;
           dprint (fun () -> "[AFTER UNIFYTYP]\n unifyLeft = " ^ P.typToString cO LF.Empty cPsi_ref unifyLeft );
           dprint (fun () -> "unifyRight = " ^ P.typToString cO LF.Empty cPsi_ref unifyRight );
+	  dprint (fun () -> "instantiated msub = " ^ P.msubToString cO LF.Empty msub_ref);
+	  dprint (fun () -> "instantiated normalized msub = " ^ P.msubToString cO LF.Empty (Whnf.cnormMSub msub_ref));
           Debug.outdent 2;
-          let (theta, cD') = (try Abstract.abstractMSub (Whnf.cnormMSub msub_ref)
+          let (theta, cD') = (try Abstract.abstractMSub (Whnf.cnormMSub msub_ref) 
 			      with Abstract.Error s -> 
 				raise (NoCover (fun () -> "Abstraction failed: " ^ s ^ 
 				    "\n This indicates that generated patterns contained unification-problems outside the decidable pattern fragment; \n there are two solutions: try setting the coverage depth higher or prove by hand that some cases are impossible"
@@ -683,6 +685,10 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
           let tR'    = Whnf.cnorm (LF.Root (loc, h, spine), theta) in 
 	  (* let tP'    = Whnf.cnormTyp (tP, theta) in  *)
 	  let tQ'    = Whnf.cnormTyp(tQ, theta) in (* tP' = tQ' by invariant *)
+	  let _      = (dprint (fun () -> "[AFTER ABSTRACTION UNIFYTYP] \n");
+			dprint (fun () -> "cPsi' = " ^ P.dctxToString cO cD' cPsi' );
+			dprint (fun () -> "tR' = " ^ P.normalToString cO cD' cPsi' (tR', idSub));
+			dprint (fun () -> "tQ' = " ^ P.typToString cO cD' cPsi' (tQ', idSub))) in 
             k (strategy, cs, Whnf.mcomp ms theta, cO, cD', cPsi') tR' tQ' (* tP_uninst *)
 			       
         with

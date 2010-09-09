@@ -724,7 +724,9 @@ and collectSub cQ phat s = match s with
 
 (* collectMSub cQ theta = cQ' *) 
 and collectMSub cQ theta =  match theta with 
-  | I.MShift _n -> (cQ , theta)
+  | I.MShift _n -> 
+      let _ = dprint (fun () -> "[collectMSub] done --\n" ) in 
+              (cQ , theta)
   | I.MDot(I.MObj(phat, tM), t) -> 
       let (cQ1, t') =  collectMSub cQ t in 
       let _ = dprint (fun () -> "Collect MObj--\n" ) in
@@ -781,8 +783,8 @@ and collectHead cQ phat ((head, _subst) as sH) =
 
   | (I.MVar (I.Inst (q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
       if constraints_solved cnstr then
-         let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in 
-         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in
+         let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in  
+         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in 
          let _ = dprint (fun () -> "collectSub for MVar\n") in 
           begin match checkOccurrence (eqMVar u) cQ with
             | Yes -> 

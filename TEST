@@ -95,6 +95,8 @@ $INTERPRETER +t \
     small-step/system-f-iso.bel \
     subject-red.bel \
     subject-red-crec.bel \
+    tapl/ch3/sources.cfg \
+    tapl/ch3+arith/sources-corrected.cfg \
     test/backarrow.bel \
     test/case1.bel \
     test/case1-explicit.bel \

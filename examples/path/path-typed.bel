@@ -57,10 +57,17 @@ FN g => mlam M => mlam N => fn f => case [g] M .. of
        = f <g. (left done)> ([g] p_left p_done) in 
 
     let [g] e_ref = eqPath [g] <g. M2 .. > <g. (N2 ..)  > 
-  			   (mlam Q => fn iq => let [g] p_done = iq in [g] p_done ) in  	 
+  		     (mlam Q => fn iq => let [g] D .. = iq in 
+                      let [g] p_right (D' ..) : (is_path (right (Q' .. )) (app (N1 ..) (N2 ..)))[g] 
+			  = f < g. (right (Q ..)) > ([g] p_right (D .. ))  in
+						 [g] D' ..   )  in
 
     let [g] e_ref  = eqPath [g] <g. M1 .. > <g. (N1 ..)  >
-                           (mlam R => fn ip => let [g] p_done = ip in [g] p_done ) in  	
+                       (mlam Q => fn iq => 
+                        let [g] D .. = iq in 
+			let [g] p_left (D' ..) : (is_path (left (Q' .. )) (app (N1 ..) (N2 ..)))[g] 
+			    = f < g. (left (Q ..)) > ([g] p_left (D .. )) in 
+				     [g] D' ..   ) in 
 			 
     [g] e_ref
 

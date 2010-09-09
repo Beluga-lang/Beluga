@@ -36,7 +36,7 @@ FN g => mlam T => fn e =>
        (case free_var [g] < . bool > ([g] (U ..)) of
           [g] nothing                  : opt[g] => free_var [g] < . bool > ([g] (V ..))
 
-       | {T'::tp[ ]} {#p::(exp T')[g]}
-          [g] something T' (#p ..) : opt[g] => [g] something T' (#p ..)
+       | {T'::tp[ ]} {U::(exp T')[g]}
+          [g] something T' (U ..) : opt[g] => [g] something T' (U ..)
        )
 );

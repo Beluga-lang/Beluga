@@ -1908,7 +1908,7 @@ module Make (T : TRAIL) : UNIFY = struct
               | NotInvertible ->
                   ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                        addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
-                    Printf.printf "Pruning failed -- NotInvertible\n" ;
+                    (* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
                     raise_ (Unify "NotInvertible")
                   )
               end
@@ -2023,7 +2023,7 @@ module Make (T : TRAIL) : UNIFY = struct
                     | NotInvertible ->
                         ((* Printf.printf "Added constraints: NotInvertible: \n "
                             ; addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
-                    Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                    (* Printf.printf "Pruning failed -  NotInvertible: \n" ; *)
                     raise_ (Unify "NotInvertible")
                         )
                   end
@@ -2053,7 +2053,7 @@ module Make (T : TRAIL) : UNIFY = struct
                     | NotInvertible ->
                         ( (* Printf.printf "Added constraints: NotInvertible: \n" 
                         ; addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))*)
-                    Printf.printf "Pruning failed -- NotInvertible:\n" ;
+                    (* Printf.printf "Pruning failed -- NotInvertible:\n" ;*)
                     raise_ (Unify "NotInvertible")
                              )
                   end
@@ -2094,7 +2094,7 @@ module Make (T : TRAIL) : UNIFY = struct
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                                addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*) 
-                                Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                                (* Printf.printf "Pruning failed -  NotInvertible: \n" ; *)
                                 raise_ (Unify "NotInvertible")
                               ) 
                         end
@@ -2114,7 +2114,7 @@ module Make (T : TRAIL) : UNIFY = struct
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*) 
-                                Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                                (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
                                 raise_ (Unify "NotInvertible")
                               )
                         end
@@ -2151,7 +2151,7 @@ module Make (T : TRAIL) : UNIFY = struct
               | NotInvertible ->
                   ( (* Printf.printf "Added constraints: NotInvertible: \n"
                        ; addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
-                    Printf.printf "Pruning failed -- NotInvertible:\n" ;
+                    (* Printf.printf "Pruning failed -- NotInvertible:\n" ;*)
                     raise_ (Unify "NotInvertible"))
             end 
           else 
@@ -2169,7 +2169,7 @@ module Make (T : TRAIL) : UNIFY = struct
               with | NotInvertible -> 
                 ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                     addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
-                  Printf.printf "Pruning failed -- NotInvertible:\n" ;
+                  (* Printf.printf "Pruning failed -- NotInvertible:\n" ; *)
                   raise_ (Unify "NotInvertible"))
               end
           else            
@@ -2197,7 +2197,7 @@ module Make (T : TRAIL) : UNIFY = struct
               | NotInvertible ->
                   ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
-                    Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                    (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
                     raise_ (Unify "NotInvertible"))
           else 
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)           
@@ -2214,7 +2214,7 @@ module Make (T : TRAIL) : UNIFY = struct
             with | NotInvertible -> 
               ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
-                Printf.printf "Pruning failed -  NotInvertible: \n" ;
+                (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
                 raise_ (Unify "NotInvertible"))
             else        
               addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
@@ -2482,7 +2482,7 @@ module Make (T : TRAIL) : UNIFY = struct
                 instantiatePVar (r, sM1', !cnstrs)
             with
               | NotInvertible ->
-                  (Printf.printf "Pruning failed -- NotInvertible\n" ;
+                  ((* Printf.printf "Pruning failed -- NotInvertible\n" ;*)
                   (* Printf.printf "Added constraints: NotInvertible:\n" ;
                      addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))*)
                    raise_ (Unify "NotInvertible")
@@ -2502,7 +2502,7 @@ module Make (T : TRAIL) : UNIFY = struct
               | NotInvertible ->
                   ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                        addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
-                    Printf.printf "Pruning failed -- NotInvertible\n";
+                    (* Printf.printf "Pruning failed -- NotInvertible\n";*)
                     raise_ (Unify "NotInvertible")
                   )
               end

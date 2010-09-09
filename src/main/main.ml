@@ -173,13 +173,17 @@ let main () =
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
               let _ = Coverage.force
                 (function
-                  | Coverage.Success -> ()
+                  | Coverage.Success -> 
+                     ()
                   | Coverage.Failure messageFn ->
                       if !Coverage.warningOnly then
-                        Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn())
+                        Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn()) 
                       else
                         raise (Coverage.NoCover messageFn)
                 ) in
+                if !Coverage.enableCoverage then 
+                  printf "\n## Coverage checking done: %s  ##\n" file_name 
+                else ();
                 if !Subord.dump then (Subord.dump_subord() (* ;
                                       Subord.dump_typesubord() *) );
                 return Positive

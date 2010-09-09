@@ -33,8 +33,7 @@ $INTERPRETER +warncover $* \
     count-var/cntvar-simple.bel \
     count-var/cntvar-simple-crec.bel \
     count-var/cntvar-2.bel \
-    free-vars/fvnat.bel \
-    free-vars/fvnat-crec.bel \
+    compile/debruijn/test.cfg \
     freshML/cps.bel \
     freshML/cps-crec.bel \
     freshML/cps-popl-tutorial1.bel \
@@ -48,48 +47,36 @@ $INTERPRETER +warncover $* \
     mini-ml/eval-sub-explicit.bel \
     typed-eval/tpeval.bel \
     typed-eval/tpeval-explicit.bel \
-    typed-eval/tpeval2.bel
+    typed-eval/tpeval2.bel \
+    lp-horn/sources.cfg \
+    lp-horn/test-crec.cfg \
+    test/id.bel \
+    test/id-explicit.bel \
+    test/implicit-obj.bel 
 
 sleep 2
 echo
 
 echo BROKEN: \
-    lp-horn/sources.cfg \
-    lp-horn/test-crec.cfg \
-    unique/unique.bel \
-    unique/unique-crec.bel \
     compile/cpm/test.cfg \
     ../examples-twelf/compile/cpm/test.cfg
 
 # reasons broken:
-#    lp-horn/sources.cfg \    # ill-typed substitution
-#    lp-horn/test-crec.cfg \   # ill-typed substitution
-#    unique/unique.bel \      # Error: (#H18.1 ..) (T63 )     (#p@132.1 ..) (T63 )
-#    unique/unique-crec.bel \  # Error: (#H18.1 ..) (T63 )     (#p@132.1 ..) (T63 )
 #    compile/cpm/test.cfg \   # (after 148s) Error (Abstraction): Leftover constraints during abstraction
 #    ../examples-twelf/compile/cpm/test.cfg # (after 132s) Error (Abstraction): Leftover constraints during abstraction
-#      equal/eq-proof-tuple.bel \     # very slow (15 minutes, gave up)
+
 
 sleep 2
 echo
 
-# The following don't cover for unknown reasons
+# The following don't cover for unknown reasons - actually cut-elim.bel and cut-elim-crec.bel
+# will not cover; check cut-elim-crec-cover.bel instead
+# however it will return an error when we run it with warncover flag
 $INTERPRETER +coverage $* \
     cut-elim.bel \
-    path/path-typed.bel \
-    church-rosser/test.cfg \
-    church-rosser/test-crec.cfg \
-    compile/debruijn/test.cfg \
     cut-elim-crec.bel \
-    free-vars/fvnat-explicit.bel \
-    small-step/system-f.bel \
-    small-step/system-f-iso.bel \
-    test/id.bel \
-    test/id-explicit.bel \
-    test/implicit-obj.bel \
-    tpcert.bel \
-    ../examples-twelf/church-rosser/test.cfg \
-    ../examples-twelf/compile/cls/test.cfg
+    path/path-typed.bel \
+
 
 echo 'Pausing after uninvestigated examples...'
 sleep 2
@@ -118,6 +105,8 @@ $INTERPRETER +coverage $* \
     mini-ml/vsound.bel \
     mini-ml/vsound-explicit.bel \
     arith/arith.bel \
+    church-rosser/test.cfg \
+    church-rosser/test-crec.cfg \
     compile/cls/sources.cfg \
     compile/cls/test.cfg \
     compile/cpm/sources.cfg \
@@ -126,6 +115,7 @@ $INTERPRETER +coverage $* \
     compile/debruijn/sources.cfg \
     compile/debruijn1/test.cfg \
     compile/debruijn1/sources.cfg \
+    cut-elim-crec-cover.bel \
     copy/copy.bel \
     copy/copy-crec.bel \
     copy/copy-explicit.bel \
@@ -138,17 +128,25 @@ $INTERPRETER +coverage $* \
     equal/eq-proof-full-crec.bel \
     fol/sources.cfg \
     fol/test.cfg \
+    free-vars/fvnat-explicit.bel \
+    free-vars/fvnat.bel \
+    free-vars/fvnat-crec.bel \
     freshML/cconv-cheney.bel \
     freshML/conv-untyped.bel \
     freshML/term.bel \
     small-step/lam.bel \
+    small-step/system-f.bel \
+    small-step/system-f-iso.bel \
     subject-red.bel \
     subject-red-crec.bel \
+    tpcert.bel \
     test/backarrow.bel \
     test/dependency.bel \
     test/test.bel \
     test/test-simple.bel \
     unique/unique-eval.bel \
+    unique/unique.bel \
+    unique/unique-crec.bel \
     LF/arith.lf \
     LF/arith-rec1.lf \
     LF/lambda.lf \
@@ -172,6 +170,8 @@ $INTERPRETER +coverage $* \
     ../examples-twelf/alloc-sem/sources.cfg \
     ../examples-twelf/ccc/sources.cfg \
     ../examples-twelf/church-rosser/sources.cfg \
+    ../examples-twelf/church-rosser/test.cfg \
+    ../examples-twelf/compile/cls/test.cfg \
     ../examples-twelf/cpsocc/sources.cfg \
     ../examples-twelf/compile/cls/sources.cfg \
     ../examples-twelf/compile/debruijn/sources.cfg \

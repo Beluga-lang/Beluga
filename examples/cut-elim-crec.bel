@@ -1,5 +1,7 @@
 % Cut-admissibility as a function
 % Author: Brigitte Pientka
+% This proof does not coverage check
+% See cut-elim-crec-cover.bel .
 
 i : type.  % individuals
 %name i S.

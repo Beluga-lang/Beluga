@@ -267,7 +267,8 @@ module LF = struct
   (* roughly 15% on standard suite for Twelf 1.1 *)
   (* Sat Feb 14 10:16:16 1998 -fp *)
   and dot1 s = match s with
-    | Shift (_ , 0) -> s
+    | Shift (CtxShift _ , 0) -> Dot (Head (BVar 1), comp s shift)
+    | Shift (_ , 0) -> s 
     | s             -> Dot (Head (BVar 1), comp s shift)
 
 

@@ -60,11 +60,9 @@ case s of
       [ ] is_app D1 D2'
  
  | [ ] s_app3 V => 
-	(case d of 
-	| [ ] is_app (is_lam (\x. (\d. (D1 x d)))) D2 =>          [ ] (D1 _ D2)
-        | [ ] {}     % explicitely stating all other cases are impossible, forces
-	             % the coverage checker to split further ?
-	)
+   let [ ] is_app (is_lam (\x. (\d. (D1 x d)))) D2 = d in 
+     [ ] (D1 _ D2)
+	
 ;
 
 
@@ -96,7 +94,6 @@ fn d =>
           | [ ] val VL2      =>  
             let [ ] value_lam	= [ ] VL1 in 			     
 	    [ ] step_to (s_app3 VL2)
-	
 	 )
        )
 | [ ] is_lam (\x. (\d. (D1 x d)))  =>  [ ] val value_lam

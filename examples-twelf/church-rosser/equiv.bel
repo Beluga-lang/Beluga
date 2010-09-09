@@ -10,6 +10,7 @@ FN g => [g] step1 beta1 id1
 
 rec eq1: {g:(ctx)*} (pred (M ..) (N ..))[g] -> (-->* (M ..) (N ..))[g] = 
 FN g => fn r => case r of 
+| [g] #p.2 .. => [g] id1
 | % {R1::(pred (M1 .. x) (M1' .. x))[g, x:term, u:pred x x] }
   % {R2::(pred (M2 ..) (M2' ..))[g]}
   [g] beta (\x.\u. R1 .. x u) (R2 ..) => 
@@ -113,6 +114,14 @@ fn r => case r of
 | [ ] reduce R* => 
   let [ ] S* = eq4 [ ] ([ ] R*) in 
     [ ] red S*
+| [ ] expand R* =>
+  let [ ] S* = eq4 [] ([] R*) in 
+    [ ] sym (red S*)
+
+ | [ ] next= R' R'' => 
+   let [ ] C1' = eq5 ([ ] R') in 
+   let [ ] C2' = eq5 ([ ] R'') in 
+     [ ] trans C2' C1'
 
 ;
 

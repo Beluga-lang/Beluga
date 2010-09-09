@@ -412,7 +412,7 @@ let split_switch strategy (split, noSplit) =
  *)
 let enableCoverage = ref false  (* true iff coverage should be checked *)
 let warningOnly = ref false     (* true iff failed coverage should generate a warning *)
-let extraDepth = ref 0          (* amount of split depth, in addition to the supposedly adequate amount *)
+let extraDepth = ref 1          (* amount of split depth, in addition to the supposedly adequate amount *)
 let no_covers = ref 0           (* number of times coverage checking has yielded a negative result *)
 
 
@@ -566,7 +566,7 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
       let _ = dprint (fun () -> "App-Pi: tA = PiTyp(" ^ R.render_name x ^ ":"
                                    ^ P.typToString cO cD cPsi (tA1, idSub) ^ "), \n                    "
                                    ^ P.typToString cO cD cPsi_x (tA2, idSub) ^ ")") in
-(*      let _ = dprint (fun () -> "App-Pi(0): tA2 = " ^ P.typToString cO cD cPsi_x (tA2, idSub)) in *)
+(*      let _ = dprint (fun () -> "App-Pi(0): tA2 = " ^ P.typToString cO cD cPsi_x (tA2, idSub)) in  *)
       let _ = dprint (fun () -> "App-Pi: calling obj to generate instances of "
                         ^ P.typToString cO cD cPsi (tA1, idSub)) in
       obj (strategy, idCSub, idMSub, cO, cD, cPsi) tA1
@@ -955,13 +955,23 @@ and obj_no_split (strategy, cs, ms, cO, cD, cPsi) (loc, a, spine) k =
 
    dprint (fun () -> "before thin: " ^ P.dctxToString cO cD flat_cPsi);
 
+   (* this is wrong here ... -bp 
+      Example: flat_cPsi = g, T1 : i
+               thin_cPsi = T1:i
+
+      then thin_sub should be : 1. CtxShift(g)+1   
+         and not CtxShift(g) + 0
+   *)
    let (thin_sub, thin_cPsi) = Subord.thin (cO, cD) (tP', flat_cPsi) in
 
    (* flat_cPsi |- thin_sub : thin_cPsi *)
    (* flat_cPsi |- tP' type              *)
    let inv_thin_sub = Substitution.LF.invert thin_sub in 
    dprint (fun () -> "s_proj: " ^ P.subToString cO cD cPsi s_proj);
-   dprint (fun () -> "thin-subst.: " ^ P.subToString cO cD flat_cPsi thin_sub);
+   dprint (fun () -> "thin-subst.: \n      " ^ 
+	     P.dctxToString cO cD flat_cPsi ^ "   |-   \n        " ^ 
+	     P.subToString cO cD flat_cPsi thin_sub ^ "   : " ^ 
+	  P.dctxToString cO cD thin_cPsi);
    dprint (fun () -> "tP:          " ^ P.typToString cO cD cPsi (tP, idSub));
    let tP_thinned = Whnf.normTyp (tP', inv_thin_sub) in 
    let name = new_name "NOSPLIT" in
@@ -990,7 +1000,8 @@ and obj_no_split (strategy, cs, ms, cO, cD, cPsi) (loc, a, spine) k =
 
    dprint (fun () -> "obj_no_split:\n"
                    ^ "--cD; = " ^ P.mctxToString cO cD');
-   dprint (fun () -> "--tM1 (instance) = " ^ P.normalToString cO cD' cPsi' (tR1, idSub));
+   dprint (fun () -> "–-cPsi' = " ^ P.dctxToString cO cD' cPsi' );
+   dprint (fun () -> "--tR1 (instance) = " ^ P.normalToString cO cD' cPsi' (tR1, idSub));
    dprint (fun () -> "--target_tP = " ^ P.typToString cO cD' cPsi' (target_tP, idSub));
    Debug.outdent 2;
    k (strategy, cs, Whnf.mcomp ms (LF.MShift 1), cO, cD', cPsi')

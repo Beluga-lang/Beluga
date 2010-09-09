@@ -55,9 +55,3 @@ ev_vtrans: ev_vtr E W
 	    <- eval E V.
 
 
-%{
-rec map_eval' : (trans K F E)[ ] -> (feval K F W)[ ] -> (ev_vtrans E W)[ ] = 
-fn c => fn d => case d of 
-
- [ ] fev_1 => let [ ] tr_1 C1 = c in  
-}%

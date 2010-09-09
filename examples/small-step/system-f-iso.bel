@@ -136,26 +136,19 @@ fn d => fn ev => case ev of
     [ ] is_@ D1 D2'
  )
 | [ ] ~>_@3 V => 
- (case d of 
-  | [ ] is_@ (is_lam (\x. (\d. (D1' x d)))) D2 => [ ] D1' _ D2
-  | [ ] {}
- )
+  let [ ] is_@ (is_lam (\x. (\d. (D1' x d)))) D2 = d in  [ ] D1' _ D2
+
 | [ ] (~>_#1 EV) => 
  (let [ ] is_# D  = d in 
   let [ ] D'         = pres ([ ] D) ([ ] EV) in 
     [ ] is_# D'       
  )
 | [ ] ~>_#2 => 
-  (case d of 
-   | {D'::(has (E a) (T a)) [a:tp] }
-     [ ] is_# (is_tlam (\a. D' a))  : (has (ann _ T2) (T T2))[ ] => [ ] D' T2 
-   | [ ] {}
-   )
+  let  {D'::(has (E a) (T a)) [a:tp] }
+     [ ] is_# (is_tlam (\a. D' a))  : (has (ann _ T2) (T T2))[ ] = d in [ ] D' T2 
 
 | [ ] ~>_unroll2 VL => 
-  (case d of [ ] is_unroll (is_roll D)   =>  [ ] D
-           | [ ] {}
-  )
+  let [ ] is_unroll (is_roll D)  = d in  [ ] D
 
 | [ ] ~>_unroll1 EV => 
   (let [ ] is_unroll D = d in 

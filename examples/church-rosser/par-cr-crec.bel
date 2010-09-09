@@ -37,7 +37,68 @@ fn d => fn e => case d of
 
 dia_prop: term -> term  -> type.
 dia_result: {N:term}pred M' N -> pred M'' N -> dia_prop M' M''.
-   
+
+rec dia : {g:ctx} (pred (M ..) (M1 ..))[g] -> (pred (M ..) (M2 ..))[g]
+          -> (dia_prop (M1 ..) (M2 ..))[g] = 
+fn d => fn e => case d of 
+| [g] ap (R1 ..) (R2 ..) => 
+  (case e of 
+   | [g] beta (\y.\v. R1' .. y v) (R2' ..)  => 
+     let [g] lm \y.\v. R1a .. y v = [g] R1 .. in 
+     let [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia ([g] R2 ..) ([g] R2' ..) in 
+
+     let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
+       dia ([g, b:block y:term. pred y y]  R1a .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in 
+     let [g] S'' .. = subst ([g, y, v] S1' .. <y, v>) ([g] S2' ..) in 
+       [g] (dia_result (H1 .. (H2 ..)) (beta (\y.\v. S1 .. <y, v>) (S2 ..)) (S'' ..))
+   | [g] ap (R1' ..) (R2' ..) => 
+    let [g] dia_result (N1 .. ) (S1 ..) (S1' ..) = dia ([g] R1 ..) ([g] R1' ..) in 
+    let [g] dia_result (N2 ..) (S2 ..) (S2' ..) = dia ([g] R2 ..) ([g] R2' ..) in 
+      [g] dia_result (app (N1 ..) (N2 ..)) (ap (S1 ..) (S2 ..)) (ap (S1' ..) (S2' ..))
+   )
+| [g] beta (\y.\v. R1 .. y v) (R2 ..) =>
+  (case e of 
+   | [g] beta (\y.\v. R1' .. y v) (R2' ..) => 
+
+     (let  [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia ([g] R2 ..) ([g] R2' ..) in 
+
+     let %  {M0::term[g,y:term]}{M1::term[g,y:term]}{H1::term[g,y:term]}
+         %  {S1 :: (pred (M0 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
+         %  {S1':: (pred (M1 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
+          [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
+      dia ([g, b:block y:term. pred y y] R1 .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in 
+
+     let [g] S .. = subst  ([g,y,v] S1 .. <y,v>) ([g] S2 ..) in 
+     let [g] S' .. = subst ([g,y,v] S1' .. <y,v>) ([g] S2' ..) in 
+       [g] dia_result _  (S ..) (S' ..)
+	   )
+  | [g] ap (R1' ..) (R2' ..) => 
+    (case [g] R1' ..  of 
+     | [g] lm \y.\v. R1'' .. y v => 
+	 let [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia ([g] R2 ..) ([g] R2' ..) in 
+
+	 let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
+      dia ([g, b:block y:term. pred y y]  R1 .. b.1 b.2) ([g,b] R1'' .. b.1 b.2) in 
+
+	 let [g] S .. = subst ([g,y,v] S1 .. <y,v>) ([g] S2 ..) in 
+	 [g] dia_result _ (S ..) (beta (\y.\v. S1' .. <y,v>) (S2' ..))
+     | [g] {}  % prove explicitely that other cases is impossible
+    )
+  )
+| [g] lm (\y.\v. R1 .. y v) => 
+  let [g] lm (\y.\v. R1' .. y v) = e in 
+  let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
+     dia ([g, b:block y:term. pred y y]  R1 .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in 
+
+  [g] dia_result _ (lm (\y.\v. S1 .. <y,v>)) (lm (\y.\v. S1' .. <y,v>))
+
+| [g] #p.2 .. => 
+   let 
+       [g] #q.2 .. = e in [g] dia_result _ (#q.2 ..) (#q.2 ..)
+
+;
+
+%{   
 rec dia : {g:ctx} (pred (M ..) (M1 ..))[g] -> (pred (M ..) (M2 ..))[g]
           -> (dia_prop (M1 ..) (M2 ..))[g] = 
 fn d => fn e => case d of 
@@ -103,7 +164,7 @@ fn d => fn e => case d of
        [g] #q.2 .. = e in [g] dia_result _ (#q.2 ..) (#q.2 ..)
 
 ;
-
+}%
 strip_prop: term -> term -> type.
 strip_result: pred* M' N -> pred M'' N 
 	      -> strip_prop M' M''.

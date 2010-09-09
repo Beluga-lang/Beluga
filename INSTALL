@@ -100,7 +100,7 @@ GODI Installation Instructions
 
 8. Now we will install the Beluga dependencies mentioned above:
 
-       $ godi_wish -build godi-extlib -build godi-ulex -build godi-omake
+       $ godi_wish -build godi-extlib -build godi-ulex -build godi-omake -build godi-ounit
 
        $ godi_perform -wishes
 

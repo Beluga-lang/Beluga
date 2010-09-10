@@ -60,7 +60,7 @@ fn c => case c of
        let [ ] result D3 C' = csd ([ ] C3) in 
         [ ] result (ev_match_s D3 D1) C'			     
    )
-}%
+
  | [ ] (<< C1 st_pair) => 
     let [ ] result D1 (<< (<< C2 st_pair1) st_return) : 
             (eval_step E1 (c K  (\x1. pair1 x1 E2)) W)[ ] = csd ([ ] C1) in 
@@ -107,6 +107,7 @@ fn c => case c of
        [ ] result (ev_fix D1) C'
 
 | [ ] (<< C' st_vl) => [ ] result ev_vl C'
+}%
 ;
 
 
@@ -116,3 +117,4 @@ fn c => let [ ] cev C = c in
           [ ] D
 ;					      
  
+

@@ -254,7 +254,7 @@ let sDCtx cPsi msub = Whnf.cnormDCtx (cPsi, msub)
              Lfcheck.checkDCtx cO cD cPsi)
 *)
 
-let verify (cs, ms, cO, cD, cPsi) =
+let verify (cs, ms, cO, cD, cPsi) = 
 (* NO --- WRONG
   (* 1. Verify cO; cD |- ms : original_cD *)
   dprint (fun () -> "checkMSub cO;\n"
@@ -264,10 +264,11 @@ let verify (cs, ms, cO, cD, cPsi) =
   Lfcheck.checkMSub cO cD ms !original_cD;
 *)
   (* 2. Verify cO; cD |- cPsi well-formed dctx *)
-  dprint (fun () -> "checkDCtx cO;\n"
+(* commented out for now *)
+   dprint (fun () -> "checkDCtx cO;\n"
                   ^ "   cD = " ^ P.mctxToString cO cD ^ "\n"
                   ^ " cPsi = " ^ P.dctxToString cO cD cPsi);
-  Lfcheck.checkDCtx cO cD cPsi
+  Lfcheck.checkDCtx cO cD cPsi  
 
 
 (* strengthen_mctx cD = (cD' , msub)
@@ -552,10 +553,11 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
                           ^ "App: tA0 = " ^ P.typToString cO cD cPsi (tA0, idSub) ^ "\n"
                           ^ "App: tP  = " ^ P.typToString cO cD cPsi (tP, idSub) ^ "\n"
                           ^ "   in cPsi = " ^ P.dctxToString cO cD cPsi ) in
-  Lfcheck.checkTyp cO cD cPsi (tA0, idSub);
+(*  Thu Sep  9 13:24:30 2010 -bp 
+    Lfcheck.checkTyp cO cD cPsi (tA0, idSub);
   dprnt "checkTyp tA0 OK";
   Lfcheck.checkTyp cO cD cPsi (tP, idSub);
-  dprnt "checkTyp tP OK";
+  dprnt "checkTyp tP OK";*)
 (*  always fails because not eta-expanded
    Lfcheck.check cO cD cPsi (LF.Root(None, h, spine), idSub) (tA0, idSub);
   dprnt "check OK";
@@ -584,7 +586,9 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
            let tA2_tM = Whnf.normTyp (tA2, substitution) in
 
            let _ = dprint (fun () -> "App-Pi(1):     " ^   P.typToString cO cD cPsi (tA2_tM, idSub)) in
+(* Thu Sep  9 13:24:39 2010 -bp 
            let _ = Lfcheck.checkTyp cO cD cPsi (tA2_tM, idSub) in 
+*)
            let _ = dprint (fun () -> "App-Pi(h):    " ^    P.headToString cO cD cPsi h') in
            let _ = dprint (fun () -> "App-Pi(spine): " ^   P.spineToString cO cD cPsi (spine', idSub)) in
            let _ = dprint (fun () -> "App-Pi(tP):    " ^   P.typToString cO cD cPsi (tP', idSub)) in
@@ -619,7 +623,14 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
 		              Corrected some of the typing invariants.
 		              but no example to really test it *)
             U.unifyTyp LF.Empty cPsi_ref unifyLeft unifyRight;
-            true
+            U.forceGlobalCnstr (!U.globalCnstrs);
+            U.resetGlobalCnstrs () ; true
+            (* (if !U.globalCnstrs = [] then  true else 
+	       U.resetGlobalCnstrs;
+	       raise (NoCover (fun () -> "Leftover global constraints during unification\n")
+	    )) 
+	    *)
+	    
           with U.Unify s ->
             (dprnt "appSigmaComponent unify error; this component impossible";
               false
@@ -659,8 +670,9 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
                         ^ "\n  TERM = " ^ P.normalToString cO cD cPsi (LF.Root(None, h, spine), idSub)
                         ^ "\n   tQ = tA0 = " ^ P.typToString cO cD cPsi (tA0, idSub)
                         ^ "\n   tP  = " ^ P.typToString cO cD cPsi (tP, idSub));
-        Lfcheck.check cO cD cPsi (LF.Root(None, h, spine), idSub) (tA0, idSub);   (* used to break for test/cd2.bel*)
-        dprnt "Lfcheck.check against tA0 (a.k.a. tQ) OK";
+(* Thu Sep  9 13:24:52 2010 -bp 
+  Lfcheck.check cO cD cPsi (LF.Root(None, h, spine), idSub) (tA0, idSub);   (* used to break for test/cd2.bel*)
+        dprnt "Lfcheck.check against tA0 (a.k.a. tQ) OK"; *)
         let msub_ref = mctxToMSub cD in
           dprint (fun () -> "LF.Atom tQ = " ^ P.typToString cO cD cPsi (tQ, idSub));
         let unifyLeft =  (Whnf.cnormTyp (tQ, msub_ref), idSub) in
@@ -675,6 +687,10 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
           dprint (fun () -> "unifyRight = " ^ P.typToString cO LF.Empty cPsi_ref unifyRight );
 	  dprint (fun () -> "instantiated msub = " ^ P.msubToString cO LF.Empty msub_ref);
 	  dprint (fun () -> "instantiated normalized msub = " ^ P.msubToString cO LF.Empty (Whnf.cnormMSub msub_ref));
+          U.forceGlobalCnstr (!U.globalCnstrs);
+          U.resetGlobalCnstrs ();
+          (*  (if !U.globalCnstrs = [] then () 
+	     else raise (NoCover (fun () -> "Leftover global constraints during unification\n"))) *)
           Debug.outdent 2;
           let (theta, cD') = (try Abstract.abstractMSub (Whnf.cnormMSub msub_ref) 
 			      with Abstract.Error s -> 
@@ -758,7 +774,9 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
     let _      = dprint (fun () -> "typRec = " ^ P.typRecToString cO cD_ext cvar_psi (typRec, idSub)) in 
     let cPsi'  = Whnf.cnormDCtx (cPsi, LF.MShift offset) in 
     let id_psi = Substitution.LF.justCtxVar cPsi' in   
+(* Thu Sep  9 13:24:59 2010 -bp 
     let _ = Lfcheck.checkSub None cO cD_ext cPsi' id_psi cvar_psi in 
+*)
 
    (* cO ; cD_ext        ; cPsi' |- id_psi : cvar_psi 
       cO ; cD_ext, pdecl ; cPsi' |- id_psi : cvar_psi 
@@ -795,7 +813,10 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
 		 target-type of the pattern, i.e. if this pvar is a 
 		 valid pattern of the target-type *)
 	      U.unifyTyp LF.Empty cPsi_inst (unifyLeft, idSub) (unifyRight, idSub);
-	      true
+              U.forceGlobalCnstr (!U.globalCnstrs);
+              U.resetGlobalCnstrs (); true
+              (* (if !U.globalCnstrs = [] then  true 
+	       else raise (NoCover (fun () -> "Leftover global constraints during unification\n"))) *)
 	    with U.Unify s ->
 	      (dprnt "callOnComponent: types didn't unify; last component impossible";
 	       false)
@@ -864,7 +885,11 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
             
               if (try
                    U.unifyTyp LF.Empty cPsi_inst (unifyLeft, idSub) (unifyRight, idSub);
-                   true
+		    U.forceGlobalCnstr (!U.globalCnstrs);
+		    U.resetGlobalCnstrs (); true
+		    (*(if !U.globalCnstrs = [] then  true else 
+		       U.resetGlobalCnstrs;
+		       raise (NoCover (fun () -> "Leftover global constraints during unification\n")))*)
 		  with U.Unify s ->
                     begin
                       dprnt "callOnComponent: types didn't unify; this component impossible";
@@ -901,10 +926,13 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
                   dprint (fun () -> "pvar SigmaElem 2a\n"
                                       ^ "--cD'_ext = " ^ P.mctxToString cO cD'_ext ^ "\n");
                   dprnt "tA' OK (1)";
-                Lfcheck.checkTyp cO cD'_ext cPsi' (tA', idSub);
+
+(* Thu Sep  9 13:25:07 2010 -bp 
+  Lfcheck.checkTyp cO cD'_ext cPsi' (tA', idSub);
                 dprnt "tA' OK (2)";
                 Lfcheck.checkTyp cO cD'_ext cPsi' (LF.Atom(loc, a, spine'), idSub);
                 dprnt "P OK";
+*)
                 Debug.indent 2;
                 app (strategy, cs, ms2, cO, cD'_ext, cPsi')
                   (LF.Proj(h, index), LF.Nil, tA')

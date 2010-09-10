@@ -2224,8 +2224,8 @@ module Make (T : TRAIL) : UNIFY = struct
         dprnt "(020) Root-Root";
         let _ = dprint (fun () -> 
                           "UNIFY: normal - normal (non MVar cases) " ^ 
-                            P.mctxToString Empty cD0 ^ "\n" ^
-                            P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
+                            P.mctxToString Empty cD0 ^ "      |-    " ^
+                            P.normalToString Empty cD0 cPsi sM1 ^ "           ==       " ^
                             P.normalToString Empty cD0 cPsi sM2 ^ "\n") in 
 
         (* s1 = s2 = id by whnf *)

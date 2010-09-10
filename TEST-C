@@ -60,7 +60,6 @@ sleep 2
 echo
 
 echo BROKEN: \
-    compile/cpm/test.cfg \
     ../examples-twelf/compile/cpm/test.cfg
 
 # reasons broken:
@@ -75,7 +74,6 @@ echo
 $INTERPRETER +coverage $* \
 
 
-
 echo 'Pausing after uninvestigated examples...'
 sleep 2
 echo 'continuing'
@@ -87,7 +85,7 @@ echo $INTERPRETER +coverage $* \
     freshML/debruijn-1.bel
 
 echo OK:
-$INTERPRETER +coverage $* \
+$INTERPRETER +t +coverage $* \
     path/path.bel \
     path/path-typed.bel \
     test/alpha.bel \
@@ -108,7 +106,7 @@ $INTERPRETER +coverage $* \
     church-rosser/test-crec.cfg \
     compile/cls/sources.cfg \
     compile/cls/test.cfg \
-    compile/cpm/sources.cfg \
+    compile/cpm/test.cfg \
     compile/cps/sources.cfg \
     compile/cxm/sources.cfg \
     compile/debruijn/sources.cfg \

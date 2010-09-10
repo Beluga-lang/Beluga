@@ -8,12 +8,15 @@ eval : exp -> val -> type.  %name eval D.
 ev_z       : eval z z_val.
 ev_s       : eval (s E) (s_val V)
 	      <- eval E V.
+
+
 ev_match_z  : eval (match E1 E2 (\x. E3 x)) V
 	      <- eval E1 z_val
 	      <- eval E2 V.
 ev_match_s  : eval (match E1 E2 (\x. E3 x)) V
 	      <- eval E1 (s_val V1')
 	      <- eval (E3 V1') V.
+
 
 % Pairs
 ev_pair : eval (pair E1 E2) (pair_val V1 V2)
@@ -41,6 +44,7 @@ ev_letn : eval (letn E1 (\x. E2 x)) V
 % Recursion
 ev_fix  : eval (fix (\x. E x)) V
 	     <- eval (E (fix (\x. E x))) V.
+
 
 % Values
 ev_vl : eval (vl V) V.

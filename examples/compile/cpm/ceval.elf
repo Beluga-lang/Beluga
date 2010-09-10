@@ -12,6 +12,7 @@ st_z : step (st K  (ev z))
 st_s : step (st K (ev (s E)))
 	(st (c K (\x. return (s_val x))) (ev E)).
 
+
 st_match : step (st K (ev (match E1 E2 (\x. E3 x))))
              (st (c K  (\x1. match1 x1 E2 (\x. E3 x))) (ev E1)).
 
@@ -20,6 +21,8 @@ st_match1_z : step (st K  (match1 z_val E2 (\x. E3 x)))
 
 st_match1_s : step (st K (match1 (s_val V1') E2 (\x. E3 x)))
                 (st K (ev (E3 V1'))).
+
+
 
 % Pairs
 st_pair : step (st K (ev (pair E1 E2))) 
@@ -39,6 +42,7 @@ st_snd   : step (st K (ev (snd E)))
 
 st_snd1 : step (st K (snd1 (pair_val V1 V2)))
 	   (st K (return V2)).
+
 
 % Functions
 st_lam : step (st K (ev (lam (\x. E x))))
@@ -67,7 +71,8 @@ st_vl : step (st K (ev (vl V)))
 	 (st K  (return V)).
 
 % Return Instructions
-st_return : step (st (c K (\v. C v)) (return V)) (st K  (C V)).
+st_return : {C: val -> inst}{K:cont}
+	     step (st (c K (\v. C v)) (return V)) (st K  (C V)).
 st_init   : step (st init (return V))  (answer V).
 
 %%% Multi-Step Computation

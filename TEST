@@ -26,9 +26,12 @@ cd $X
 
 # We use the following conventions:
 #
-# - Pure LF signatures (and original converted Twelf example) are in files sources.cfg
+# - Pure LF signatures (and original converted Twelf example)
+#   are in files sources.cfg
 # - Proofs written in Beluga are in test.cfg
 # - Files ending in .bel contain Beluga programs
+# - Coverage checking: compile/cpm/test.cfg takes very long.
+#   be patient.
 
 $INTERPRETER +t \
     $* \
@@ -37,7 +40,6 @@ $INTERPRETER +t \
     church-rosser/test-crec.cfg \
     compile/cls/sources.cfg \
     compile/cls/test.cfg \
-    compile/cpm/sources.cfg \
     compile/cpm/test.cfg \
     compile/debruijn/sources.cfg \
     compile/debruijn/test.cfg \

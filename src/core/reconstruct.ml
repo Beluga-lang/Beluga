@@ -58,7 +58,14 @@ type typAnn    = FullTyp of Apx.LF.typ | PartialTyp of cid_typ
 type free_cvars = 
     FMV of Id.name | FPV of Id.name | FSV of Id.name
 
-
+let rec pruningTyp locOpt cD cPsi phat sA (ms, ss)  = 
+  if Substitution.LF.isId ss then 
+    Whnf.normTyp sA 
+  else 
+    begin try
+      Unify.pruneTyp cD cPsi phat sA (ms, ss) (Unify.MVarRef (ref None))
+    with _ -> raise (Error (locOpt, PruningFailed) )
+    end 
 
 
 let rec unify_phat psihat ctx_var = 
@@ -192,6 +199,7 @@ let rec mkShift recT cPsi = match recT with
   | PiRecon ->
       let (None, d) = Context.dctxToHat cPsi in
         Int.LF.Shift (Int.LF.NoCtxShift, d) 
+
 
 
 (* isPatSub s = bool *)
@@ -1095,12 +1103,11 @@ let rec synDom cD loc cPsi s = begin match s with
                *  Wed Jan 14 13:51:11 2009 -bp
                *)
             let ss = Substitution.LF.invert s' in 
-            let tA' = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) (tA, LF.id) 
-                                     (Int.LF.MShift 0, ss) (Unify.MVarRef (ref None)) in
+            let tA' = pruningTyp (Some loc) cD cPsi (*?*) (Context.dctxToHat cPsi) (tA, LF.id)  (Int.LF.MShift 0, ss)  in
               (Int.LF.DDec (cPhi,
                             Int.LF.TypDecl (x, tA')),
                Int.LF.Dot (Int.LF.Head(Int.LF.BVar k), s'))
-(*         | _ -> raise (Violation "Undefined bound variable") *)
+(*       | _ -> raise (Violation "Undefined bound variable") *)
       end
 
    | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k,j)), s) ->
@@ -1116,8 +1123,8 @@ let rec synDom cD loc cPsi s = begin match s with
                *)
             let ss = Substitution.LF.invert s' in 
 
-            let Int.LF.Sigma typRec = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) (tB, LF.id) 
-                                     (Int.LF.MShift 0, ss) (Unify.MVarRef (ref None)) in
+            let Int.LF.Sigma typRec = 
+              pruningTyp (Some loc) cD cPsi (*?*) (Context.dctxToHat cPsi) (tB, LF.id) (Int.LF.MShift 0, ss)  in
 
             let sQ = Int.LF.getType  (Int.LF.BVar k) (typRec, LF.id) k 1 in 
 
@@ -1367,13 +1374,13 @@ and elTerm' recT  cO cD cPsi r sP = match r with
            tR)
         with 
          | Unify.Unify msg ->
-             (Printf.printf "\nUnification Error: %s\n\n" msg;
+             ((* Printf.printf "\nUnification Error: %s\n\n" msg; *)
               raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
          | Unify.Error msg -> 
              (Printf.printf "\nHidden %s\n  This may indicate the following problem:\n  a contextual variable was inferred with the most general type,\n  but subsequently it must have a more restrictive type,\n  i.e., where certain bound variable dependencies cannot occur.\n\n" msg;
               raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
          | Unify.NotInvertible -> 
-            (Printf.printf "\nUnification Error: NotInvertible\n\n";
+            ((* Printf.printf "\nUnification Error: NotInvertible\n\n"; *)
              raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, sP, sQ))))
 (*         | _ ->
             (Printf.printf "Non-Unification Error (1)\n" ;
@@ -1506,17 +1513,18 @@ and elTerm' recT  cO cD cPsi r sP = match r with
           let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name ) in
           let (cPhi, s'') = synDom cD loc cPsi s in
           let ss =  Substitution.LF.invert s'' in 
-
           let _ = dprint (fun () -> "[synDom] Prune type " ^ P.typToString Int.LF.Empty cD cPsi sP ) in 
           let _ = dprint (fun () -> "         with respect to ss = " ^ P.subToString Int.LF.Empty cD cPhi ss ) in 
-          let tP = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) (Unify.MVarRef (ref None)) in
-         (* let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in *)
-            (* For type reconstruction to succeed, we must have
-             * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
-             * This will be enforced during abstraction.
-             *)
-            FMVar.add u (tP, cPhi);
-            Int.LF.Root (Some loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
+(*            begin try  *)
+              let tP = pruningTyp (Some loc) cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
+                (* let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in *)
+                (* For type reconstruction to succeed, we must have
+                 * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
+                 * This will be enforced during abstraction.
+                 *)
+                FMVar.add u (tP, cPhi);
+                Int.LF.Root (Some loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
+(*            with _ -> raise (Error (Some loc,  *)
           else
            if isProjPatSub s then 
              let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name ) in
@@ -1535,8 +1543,8 @@ and elTerm' recT  cO cD cPsi r sP = match r with
              let _ = dprint (fun () -> "[synDom] Prune flattened type " ^ P.typToString Int.LF.Empty cD cPhi (tP', LF.id) ) in  
              let _ = dprint (fun () -> "         with respect to ss = " ^ P.subToString Int.LF.Empty cD cPhi ss ) in  
 
-             let tP = Unify.pruneTyp cD flat_cPsi (*?*) 
-                         (Context.dctxToHat flat_cPsi) (tP', LF.id) (Int.LF.MShift 0, ss) (Unify.MVarRef (ref None)) in 
+             let tP = pruningTyp (Some loc) cD flat_cPsi (*?*) 
+                         (Context.dctxToHat flat_cPsi) (tP', LF.id) (Int.LF.MShift 0, ss)  in 
 
              let sorig = elSub loc recT cO cD cPsi s cPhi in
              let _ = dprint (fun () -> "sorig = " ^ P.subToString cO cD cPsi sorig ^ "\n") in 
@@ -1595,8 +1603,8 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                 (* Need to check that the inferred type for p is indeed in cPsi's schema -bp *)
                 let (cPhi, s'') = synDom cD loc cPsi s in
                 let si          = Substitution.LF.invert s'' in
-                let tP = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) sP 
-                                (Int.LF.MShift 0, si) (Unify.MVarRef (ref None)) in
+                let tP = pruningTyp (Some loc) cD cPsi (*?*) (Context.dctxToHat cPsi) sP 
+                                (Int.LF.MShift 0, si)  in
                 (* let tP          = Whnf.normTyp (Int.LF.TClo sP, si) in*)
                   (* For type reconstruction to succeed, we must have
                    * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
@@ -1645,8 +1653,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
             | (true, Apx.LF.Nil) ->
                 let (cPhi, s'') = synDom cD loc cPsi s in
                 let si          = Substitution.LF.invert s'' in
-                let tP = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) sP 
-                                (Int.LF.MShift 0, si) (Unify.MVarRef (ref None)) in 
+                let tP = pruningTyp (Some loc) cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, si)  in 
 
                 let Some psi =  Context.ctxVar cPsi in
                 let schema = Schema.get_schema (Context.lookupCtxVarSchema cO psi) in 
@@ -2237,7 +2244,7 @@ and elKSpine recT  cO cD cPsi spine sK = match (spine, sK) with
 and elSpineSynth recT  cD cPsi spine s' sP = match (spine, sP) with
   | (Apx.LF.Nil, (_tP, _s))  ->
       let ss = LF.invert s' in
-      let tQ = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) (Unify.MVarRef (ref None)) in 
+      let tQ = pruningTyp None cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in 
       (* PROBLEM: [s'][ss] [s]P is not really P; in fact [ss][s]P may not exist;
        * We use pruning to ensure that [ss][s]P does exist
        *)
@@ -2251,8 +2258,7 @@ and elSpineSynth recT  cD cPsi spine s' sP = match (spine, sP) with
       let ss = LF.invert s' in
       (* let tA' = Whnf.normTyp (tA, ss) in *)
       (* Is [ss]A  always guaranteed to exist? - No. Use pruning to ensure it does exist. *)
-      let tA' = Unify.pruneTyp cD cPsi (*?*) (Context.dctxToHat cPsi)  (tA, LF.id) (Int.LF.MShift 0, ss)
-                                     (Unify.MVarRef (ref None)) in 
+      let tA' = pruningTyp (Some loc) cD cPsi (*?*) (Context.dctxToHat cPsi)  (tA, LF.id) (Int.LF.MShift 0, ss) in 
 
       let _ = dprint (fun () -> "elSpineSynth: PruneTyp done\n") in 
 

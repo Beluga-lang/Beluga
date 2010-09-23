@@ -24,9 +24,11 @@ exception NotImplemented
 exception Error of string
 
 let leftoverMeta2 =
-    "Leftover uninstantiated meta^2-variable during reconstruction;\n"
-  ^ "the user needs to supply more information, since the type of\n"
-  ^ "a given expression is not uniquely determined."
+    "Encountered meta^2-variable which we cannot abstract over because they depend on meta-variables;\n"
+  ^ "the user needs to supply more information, since the type of a given expression is not uniquely determined.\n\n" ^ 
+    "Meta^2-variables are introduced during type reconstruction; if you explicitely quantify over some meta-variables, then\n" ^ 
+    "these meta-variables will impose constraints on meta^2-variables and we may not be able to abstract over the meta^2-variables.\n\n" ^
+    "The solution is either not to specify any meta-variables explicitely or specify all of them.\n"
 
 (* ******************************************************************* *)
 (* Abstraction:
@@ -172,7 +174,7 @@ let rec collectionToString cQ = match cQ with
      ^ P.typToString cO cD I.Null (tA , LF.id)
      ^ "\n"
 
-  | I.Dec (cQ, FMV (_ , u, Some (tP, cPhi))) -> 
+  | I.Dec (cQ, FMV (Pure, u, Some (tP, cPhi))) -> 
       let cO = I.Empty in 
       let cD = I.Empty in 
        collectionToString cQ 
@@ -210,9 +212,12 @@ let rec collectionToString cQ = match cQ with
       ^ "\n"
 
   | I.Dec(cQ, MMV ( _, _ )) -> "MMV _ ? " 
+  | I.Dec(cQ, FMV (Impure , u, None)) -> "FMV "  ^ R.render_name u ^ " (impure) " 
   | I.Dec(_cQ, _ ) -> " ?? " 
 
-let printCollection s = print_string (collectionToString s) 
+let printCollection s = 
+  (print_string "Print Collection of contextual variables:\n";
+   print_string (collectionToString s) )
 
 
 
@@ -783,8 +788,8 @@ and collectHead cQ phat ((head, _subst) as sH) =
 
   | (I.MVar (I.Inst (q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
       if constraints_solved cnstr then
-         let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in  
-         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in 
+(*         let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in  
+         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in  *)
          let _ = dprint (fun () -> "collectSub for MVar\n") in 
           begin match checkOccurrence (eqMVar u) cQ with
             | Yes -> 
@@ -1595,16 +1600,16 @@ and collectPattern cQ cD cPsi (phat, tM) tA =
   let (cQ1, cD') = collectMctx cQ cD in
 (*   let _    = Printf.printf "Start Collection of cPsi -- cQ1 =\n" *)
 (*  (   P.dctxToString cPsi) *)
-  let _   = printCollection cQ1 in  
+(*  let _   = printCollection cQ1 in   *)
   let (cQ2, cPsi') = collectDctx cQ1 phat cPsi in 
-(*  let _ = Printf.printf "cQ2 (collection of cPsi)\n" in *)
-(*  let _   = printCollection cQ2 in  *)
+(*  let _ = Printf.printf "\ncQ2 (collection of cPsi)\n" in 
+  let _   = printCollection cQ2 in  *)
   let (cQ3, tM') = collectTerm cQ2 phat (tM, LF.id) in 
-(*  let _ = Printf.printf "cQ3 (collection of cPsi)\n" in 
-   let _   = printCollection cQ3 in  *)
+(*  let _ = Printf.printf "\ncQ3 (collection of cPsi)\n" in
+   let _   = printCollection cQ3 in   *)
   let (cQ4, tA') = collectTyp cQ3 phat (tA, LF.id) in 
 (*   let _ = Printf.printf "cQ4 (collection of cPsi)\n" in 
-  let _   = printCollection cQ4 in  *)
+  let _   = printCollection cQ4 in   *)
     (cQ4, cD', cPsi', (phat, tM'), tA')
 
 

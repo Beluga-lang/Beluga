@@ -1571,6 +1571,9 @@ module Error = struct
       | FrozenType n ->
           fprintf ppf "type %s was frozen by a previous case analysis; can't declare a new constructor here" (R.render_cid_typ n)
 
+      | PruningFailed -> 
+          fprintf ppf "Pruning a type failed; this can happen when you have some free meta-variables whose type cannot be inferred." 
+
       | CtxVarMismatch (cO, var, expected) ->
           fprintf ppf "Context variable %a doesn't check against schema %a"
             (IP.fmt_ppr_lf_ctx_var cO) var

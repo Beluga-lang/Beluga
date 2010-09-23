@@ -1533,7 +1533,6 @@ module Make (T : TRAIL) : UNIFY = struct
     let _ : (msub * sub) = ss in 
       pruneTypW cD0 cPsi1 phat (Whnf.whnfTyp sA) ss rOccur
 
-
   and pruneTypRec cD0 cPsi phat (typ_rec, s) (mss, ss) rOccur = match (typ_rec, s) with
     | (SigmaLast tA, s) -> SigmaLast (pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur)
     | (SigmaElem (x, tA, typ_rec'), s) -> 

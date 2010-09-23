@@ -11,6 +11,8 @@ type error =
   | UnboundCompName  of Id.name
   | UnknownCidTyp    of Id.cid_typ
 
+  | PruningFailed
+
   | FrozenType of Id.cid_typ
 
   | CtxVarMismatch   of LF.mctx * LF.ctx_var * LF.schema

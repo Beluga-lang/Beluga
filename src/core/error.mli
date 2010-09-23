@@ -11,6 +11,9 @@ type error =
   | UnboundCtxSchemaName   of Id.name
   | UnboundCompName  of Id.name
   | UnknownCidTyp  of Id.cid_typ
+  
+  (* Type reconstruction Error for Reconstructing Patterns *)
+  | PruningFailed
 
   (* LF typechecking errors *)
   | FrozenType of Id.cid_typ

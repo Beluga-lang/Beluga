@@ -1288,61 +1288,62 @@ and elTuple recT  cO cD cPsi tuple (typRec, s) =
   | (_, _) -> raise (Violation ("elTuple arity mismatch"))
 
 
-  and instanceOfSchElem cO cD cPsi (tA, s) (Int.LF.SchElem (some_part, block_part)) = 
+  and instanceOfSchElem loc cO cD cPsi (tA, s) (some_part, sB) = 
     let _ = dprint (fun () -> "[instanceOfSchElem] Begin \n") in 
-    let sArec = match Whnf.whnfTyp (tA, s) with
+   (* let sArec = match Whnf.whnfTyp (tA, s) with
       | (Int.LF.Sigma tArec,s') ->  (tArec, s') 
-      | (nonsigma, s')          ->  (Int.LF.SigmaLast nonsigma, s') in
+      | (nonsigma, s')          ->  (Int.LF.SigmaLast nonsigma, s') in *)
     let _ = dprint (fun () -> ("tA =" ^ P.typToString cO cD cPsi (tA, s) ^ " \n")) in 
     let dctx        = projectCtxIntoDctx some_part in  
     let dctxSub     = ctxToSub' cD cPsi dctx in
 
     (* let phat        = dctxToHat cPsi in *)
 
-    let _ =  dprint (fun () -> "***Unify.unifyTypRec (" 
+    let _ =  dprint (fun () -> "***Unify.unifyTyp (" 
                         ^ "\n   cPsi = " ^ P.dctxToString cO cD cPsi
                         ^ "\n   dctx = " ^ P.dctxToString cO cD dctx  
                         ^ "\n   " ^  P.typToString cO cD cPsi (tA, s) ) in
     let _ = dprint (fun () -> "dctxSub = " ^ P.subToString cO cD cPsi dctxSub ^ "\n") in
 
-    let _ = dprint (fun () ->  P.typRecToString cO cD cPsi sArec ) in  
+    let _ = dprint (fun () ->  P.typToString cO cD cPsi (tA,s)) in  
     let _ = dprint (fun () ->  "== " ) in 
-    let _ = dprint (fun () -> P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n" )  in
-    let tBrec  = Whnf.normTypRec (block_part, dctxSub) in 
-    let tArec  = Whnf.normTypRec sArec in 
+    let _ = dprint (fun () -> P.typToString cO cD cPsi (Int.LF.TClo sB, dctxSub) ^ "\n" )  in
+    let nB  = Whnf.normTyp (Int.LF.TClo sB, dctxSub) in 
+    let nA  = Whnf.normTyp (tA,s) in 
       begin
         try
-          Unify.unifyTypRec cD cPsi (tArec,LF.id) (tBrec, LF.id) 
+          Unify.unifyTyp cD cPsi (nA, LF.id) (nB, LF.id) 
         ; dprint (fun () -> "instanceOfSchElem\n"
-                            ^ "  block_part = " ^ P.typRecToString cO cD cPsi (block_part, dctxSub) ^ "\n"
+                            ^ "  block_part = " ^ P.typToString cO cD cPsi (Int.LF.TClo sB, dctxSub) ^ "\n"
                             ^ "  succeeded.")
-        ; (block_part, dctxSub)
-        with (Unify.Unify _) as exn ->
-          (dprint (fun () -> "Type " ^ P.typRecToString cO cD cPsi sArec ^ " doesn't unify with schema element\n");
-(*          dprint (fun () ->  P.typRecToString cO cD cPsi (block_part, dctxSub) *)
-          raise exn )
+        ; (Int.LF.TClo sB, dctxSub)
+        with (Unify.Unify _)  ->
+          (dprint (fun () -> "Type " ^ P.typToString cO cD cPsi (tA,s) ^ " doesn't unify with schema element\n");
+(*          dprint (fun () ->  P.typRecToString cO cD cPsi (block_part, dctxSub)) *)
+           
+             raise (Error (Some loc, TypMismatchElab (cO, cD, cPsi, (nA, LF.id), (nB, LF.id)))))
           | exn -> 
               (dprint (fun () -> "[instanceOfSchElem] Non-Unify ERROR -2- "); raise exn)
       end
   
-  and instanceOfSchElemProj cO cD cPsi (tA, s) (var, k) (Int.LF.SchElem (cPhi, trec)) = 
+  and instanceOfSchElemProj loc cO cD cPsi (tA, s) (var, k) (Int.LF.SchElem (cPhi, trec)) = 
     let _ = dprint (fun () -> "[instanceOfSchElemProj] getType of " ^ string_of_int k ^ ". argument\n") in 
     let cPhi'  = projectCtxIntoDctx cPhi in  
     let _ = dprint (fun () -> " of " ^ P.typRecToString cO cD cPhi' (trec, LF.id)) in
     let _ = dprint (fun () -> " var = " ^ P.headToString cO cD cPsi var) in
-    let tA_k (* : tclo *) = Int.LF.getType var (trec, LF.id) k 1 in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence,eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)
-    let _ = dprint (fun () -> "[instanceOfSchElemProj] retrieved the type  " ^ P.typToString cO cD cPhi' tA_k) in
+    let sA_k (* : tclo *) = Int.LF.getType var (trec, LF.id) k 1 in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence,eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)
+    let _ = dprint (fun () -> "[instanceOfSchElemProj] retrieved the type  " ^ P.typToString cO cD cPhi' sA_k) in
     let (_tA'_k, subst) =
-      instanceOfSchElem cO cD cPsi (tA, s) (Int.LF.SchElem (cPhi, Int.LF.SigmaLast (Int.LF.TClo tA_k)))
-      (* tA'_k = [subst] (tA_k) = [s]tA *)
+      instanceOfSchElem loc cO cD cPsi (tA, s) (cPhi, sA_k)
+      (* tA'_k = [subst] (sA_k) = [s]tA *)
     in
       (trec, subst) 
 
 
 
 (* Synthesize the type for a free parameter variable *)
-and synSchemaElem recT  cO cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elements) as schema) =
-  let self = synSchemaElem recT  cO cD cPsi sP (head, k) in 
+and synSchemaElem loc recT  cO cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elements) as schema) =
+  let self = synSchemaElem loc recT  cO cD cPsi sP (head, k) in 
   let _ = dprint (fun () -> "synSchemaElem ... head = " ^ P.headToString cO cD cPsi head ^ " Projection " ^ string_of_int k ^ "\n") in
   let _ = dprint (fun () -> "[synSchemaElem]  " ^ P.typToString cO cD cPsi sP
                     ^ "  schema= " ^ P.schemaToString schema) in
@@ -1351,8 +1352,8 @@ and synSchemaElem recT  cO cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elem
       | (Int.LF.SchElem (_some_part, block_part)) as elem  ::  rest  ->
           try
             let _ = dprint (fun () -> "[instanceOfSchElemProj ] ... ") in
-            let (typRec, subst) = instanceOfSchElemProj cO cD cPsi sP (head, k) elem in 
-              (* Check.LF.instanceOfSchElemProj cO cD cPsi sP (head, k) elem in *)
+            let (typRec, subst) = instanceOfSchElemProj loc cO cD cPsi sP (head, k) elem in 
+              (* Check.LF.instanceOfSchElemProj loc cO cD cPsi sP (head, k) elem in *)
             dprint (fun () -> "synSchemaElem RESULT = "
                             ^ P.typRecToString cO cD cPsi (typRec, subst))
           ; Some (typRec, subst) (* sP *)
@@ -1659,7 +1660,7 @@ and elTerm' recT  cO cD cPsi r sP = match r with
                 let schema = Schema.get_schema (Context.lookupCtxVarSchema cO psi) in 
                 let h = Int.LF.FPVar (p, LF.id) in
                 let (typRec, s_inst) = 
-                  begin match synSchemaElem recT  cO cD cPhi (tP, LF.id) (h, k) schema with
+                  begin match synSchemaElem loc recT  cO cD cPhi (tP, LF.id) (h, k) schema with
                   | None -> raise (Violation ("type sP = " ^ P.typToString cO cD cPhi (tP, LF.id) ^ " not in schema " ^ 
                                              P.schemaToString schema))
                   | Some (typrec, subst) -> (typrec, subst)  

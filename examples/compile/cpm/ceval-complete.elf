@@ -44,43 +44,43 @@ ccp : eval E V
 ccp_z : ccp (ev_z) C' (<< C' st_z).
 
 ccp_s : ccp (ev_s D1) C' (<< C1 st_s)
-	 <- ccp D1 (<< C' st_return) C1.
+	 <- ccp D1 (<< C' (st_return _ _)) C1.
 
 
 ccp_match_z : % {C1 : mstep (st (c K15 (\v. match1 v E27 (\x. E26 x))) (ev E28)) (answer V47)}
                  ccp (ev_match_z D2 D1) C' (<< C1 st_match)
 	      <- ccp D2 C' C2
-	      <- ccp D1 (<< (<< C2 st_match1_z) st_return) C1.
+	      <- ccp D1 (<< (<< C2 st_match1_z) (st_return _ _)) C1.
 
 
  ccp_match_s : ccp (ev_match_s D3 D1) C' (<< C1 st_match)
 	      <- ccp D3 C' C3
-	      <- ccp D1 (<< (<< C3 st_match1_s) st_return) C1.
+	      <- ccp D1 (<< (<< C3 st_match1_s) (st_return _ _)) C1.
 
 
 % Pairs
 ccp_pair : ccp (ev_pair D2 D1) C' (<< C1 st_pair)
-	    <- ccp D2 (<< C' st_return) C2
-	    <- ccp D1 (<< (<< C2 st_pair1) st_return) C1.
+	    <- ccp D2 (<< C' (st_return _ _)) C2
+	    <- ccp D1 (<< (<< C2 st_pair1) (st_return _ _)) C1.
 
 ccp_fst : ccp (ev_fst D1) C' (<< C1 st_fst)
-	   <- ccp D1 (<< (<< C' st_fst1) st_return) C1.
+	   <- ccp D1 (<< (<< C' st_fst1) (st_return _ _)) C1.
 
 ccp_snd : ccp (ev_snd D1) C' (<< C1  st_snd)
-	   <- ccp D1 (<< (<< C' st_snd1) st_return) C1.
+	   <- ccp D1 (<< (<< C' st_snd1) (st_return _ _)) C1.
 
 % Functions
 ccp_lam : ccp (ev_lam) C' (<< C' st_lam).
 
 ccp_app : ccp (ev_app D3 D2 D1) C' (<< C1  st_app)
 	   <- ccp D3 C' C3
-	   <- ccp D2 (<< (<< C3 st_app2) st_return) C2
-	   <- ccp D1 (<< (<< C2  st_app1) st_return) C1.
+	   <- ccp D2 (<< (<< C3 st_app2) (st_return _ _)) C2
+	   <- ccp D1 (<< (<< C2  st_app1) (st_return _ _)) C1.
 
 % Definitions
 ccp_letv : ccp (ev_letv D2 D1) C' (<< C1  st_letv)
 	    <- ccp D2 C' C2
-	    <- ccp D1 (<< C2 st_return) C1.
+	    <- ccp D1 (<< C2 (st_return _ _)) C1.
 
 ccp_letn : ccp (ev_letn D1) C' (<< C1  st_letn)
 	    <- ccp D1 C' C1.

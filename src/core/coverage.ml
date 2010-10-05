@@ -987,7 +987,8 @@ and obj_no_split (strategy, cs, ms, cO, cD, cPsi) (loc, a, spine) k =
    let s_proj = ConvSigma.gen_conv_sub conv_list in
    let tP'    = ConvSigma.strans_typ (tP, Substitution.LF.id) conv_list in
 
-   dprint (fun () -> "before thin: " ^ P.dctxToString cO cD flat_cPsi);
+   dprint (fun () -> "before thin: cPsi =" ^ P.dctxToString cO cD flat_cPsi);
+   dprint (fun () -> "before thin: tP' =" ^ P.typToString cO cD flat_cPsi (tP', Substitution.LF.id));
 
    (* this is wrong here ... -bp 
       Example: flat_cPsi = g, T1 : i

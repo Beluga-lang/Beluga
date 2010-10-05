@@ -25,38 +25,38 @@ csd : mstep (st K (ev E)) (answer W)
 csd_z : csd (<< C' st_z) (ev_z) C'.
 
 csd_s : csd (<< C1 st_s) (ev_s D1) C'
-	 <- csd C1 D1 (<< C' st_return).
+	 <- csd C1 D1 (<< C' (st_return _ _)).
 
 csd_match_z : csd (<< C1 st_match) (ev_match_z D2 D1) C'
-	      <- csd C1 D1 (<< (<< C2 st_match1_z) st_return)
+	      <- csd C1 D1 (<< (<< C2 st_match1_z) (st_return _ _))
 	      <- csd C2 D2 C'.
 
 csd_match_s : csd (<< C1 st_match) (ev_match_s D3 D1) C'
-	      <- csd C1 D1 (<< (<< C3 st_match1_s)  st_return)
+	      <- csd C1 D1 (<< (<< C3 st_match1_s)  (st_return _ _))
 	      <- csd C3 D3 C'.
 
 % Pairs
 csd_pair : csd (<< C1 st_pair) (ev_pair D2 D1) C'
-	    <- csd C1 D1 (<< (<< C2 st_pair1) st_return)
-	    <- csd C2 D2 (<< C' st_return).
+	    <- csd C1 D1 (<< (<< C2 st_pair1) (st_return _ _))
+	    <- csd C2 D2 (<< C' (st_return _ _)).
 
 csd_fst : csd (<< C1 st_fst) (ev_fst D1) C'
-	   <- csd C1 D1 (<< (<< C' st_fst1) st_return).
+	   <- csd C1 D1 (<< (<< C' st_fst1) (st_return _ _)).
 
 csd_snd : csd (<< C1 st_snd) (ev_snd D1) C'
-	   <- csd C1 D1 (<< (<< C' st_snd1) st_return).
+	   <- csd C1 D1 (<< (<< C' st_snd1) (st_return _ _)).
 
 % Functions
 csd_lam : csd (<< C' st_lam) (ev_lam) C'.
 
 csd_app : csd (<< C1 st_app) (ev_app D3 D2 D1) C'
-	   <- csd C1 D1 (<< (<< C2 st_app1) st_return)
-	   <- csd C2 D2 (<< (<< C3 st_app2) st_return)
+	   <- csd C1 D1 (<< (<< C2 st_app1) (st_return _ _))
+	   <- csd C2 D2 (<< (<< C3 st_app2) (st_return _ _))
 	   <- csd C3 D3 C'.
 
 % Definitions
 csd_letv : csd (<< C1 st_letv) (ev_letv D2 D1) C'
-	    <- csd C1 D1 (<< C2 st_return)
+	    <- csd C1 D1 (<< C2 (st_return _ _))
 	    <- csd C2 D2 C'.
 
 csd_letn : csd (<< C1 st_letn) (ev_letn D1) C'

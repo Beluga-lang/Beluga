@@ -62,6 +62,7 @@ echo
 echo BROKEN: \
     ../examples-twelf/compile/cpm/test.cfg
 
+#    compile/cpm/test.cfg \
 # reasons broken:
 #    compile/cpm/test.cfg \   # (after 148s) Error (Abstraction): Leftover constraints during abstraction
 #    ../examples-twelf/compile/cpm/test.cfg # (after 132s) Error (Abstraction): Leftover constraints during abstraction
@@ -106,8 +107,8 @@ $INTERPRETER +t +coverage $* \
     church-rosser/test-crec.cfg \
     compile/cls/sources.cfg \
     compile/cls/test.cfg \
-    compile/cpm/test.cfg \
     compile/cps/sources.cfg \
+    compile/cpm/test.cfg \
     compile/cxm/sources.cfg \
     compile/debruijn/sources.cfg \
     compile/debruijn1/test.cfg \

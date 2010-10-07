@@ -1,0 +1,23 @@
+%{
+
+  Example illustrating that we currently do not reconstruct
+  type labels.
+
+}%
+exp: type.
+lam: (exp -> exp) -> exp.
+
+tp: type.
+arr: tp -> tp -> tp.
+
+oft: exp -> tp -> type.
+t_lam: ({x:exp} oft x T -> oft (M x) S)
+       -> oft (lam M) (arr T S).
+
+schema ctx = exp ;
+
+rec copy : {g:ctx} exp[g] -> exp[g] = 
+fn e => case e of 
+| [g] lam \x. M .. x => copy ([g, x:exp] M .. x)
+;
+

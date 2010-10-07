@@ -25,6 +25,8 @@ Version History
     0.3-20100707        Support for context reconstruction (e.g.: examples/cut-elim-crec.bel);
                         includes a coverage checker (EXPERIMENTAL)
     
+    0.3-20101007        Coverage checker; improved error messages, parser and emacs mode; 
+    
 
 
 Structure

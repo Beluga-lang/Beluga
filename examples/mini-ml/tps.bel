@@ -86,8 +86,8 @@ fn f => fn d =>
     let [ ] tp_s C    =   tps ([ ] F) ([ ] D) in 
      tps ([ ] F2) ([ ] (D2 _ C))
 
-  | [ ] ev_lam =>  
-    let [ ] tp_lam (\x. \u. (D x u)) = d in d
+  | [ ] ev_lam =>   d
+%    let [ ] tp_lam (\x. \u. (D x u)) = d in d
 
 
    | [ ] ev_app F1 F2 F3 => 

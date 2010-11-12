@@ -48,5 +48,5 @@ FN g => fn t => case t of
 
 rec foo : term [ ] -> term [ ] = 
 fn t => case t of
- | [ ] lam \x. E .. x => t 
+ | [ ] lam E => t 
 ;

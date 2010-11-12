@@ -403,7 +403,31 @@ let rec etaExpandApxTerm  loc h tS tA =
     etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS''), tA)   
 
 (* -------------------------------------------------------------*)
+  let rec addPrefix loc m tA = 
+    begin match tA with
+      | Int.LF.Atom _ -> m
+      | Int.LF.PiTyp ((Int.LF.TypDecl (x, _ ) , _ ) , tA') -> 
+          let _ = dprint (fun () -> "eta FMV - add Lam ") in             
+        Apx.LF.Lam (loc, x, addPrefix loc m tA')
+    end 
+  let rec etaExpSub k s tA = begin match tA with
+    | Int.LF.Atom _ -> (k, s)
+    | Int.LF.PiTyp (_ , tA') -> 
+        let (k',s') = etaExpSub (k+1) s tA' in 
+       (k'-1, Apx.LF.Dot(Apx.LF.Head(Apx.LF.BVar(k')),s'))
+  end 
 
+  let rec etaExpandFMV  loc (Apx.LF.FMVar (x, s)) tA = 
+    let ( _ , s') = etaExpSub 0 s tA  in 
+      addPrefix loc (Apx.LF.Root(loc, Apx.LF.FMVar(x, s'), Apx.LF.Nil)) tA
+
+  let rec etaExpandMV loc (Apx.LF.MVar (x,s)) tA = 
+    let ( _ , s') = etaExpSub 0 s tA  in 
+      addPrefix loc (Apx.LF.Root(loc, Apx.LF.MVar(x, s'), Apx.LF.Nil)) tA
+
+
+
+(* -------------------------------------------------------------*)
 let rec lookup cG k = match (cG, k) with
   | (Int.LF.Dec(_cG', Int.Comp.CTypDecl (_, tau)), 1) ->   tau
   | (Int.LF.Dec( cG', Int.Comp.CTypDecl (_, _tau)), k) ->
@@ -1256,9 +1280,14 @@ and elTermW recT  cO cD cPsi m sA = match (m, sA) with
       let tuple' = elTuple recT  cO cD cPsi tuple (typRec, s) in
         Int.LF.Tuple (Some loc, tuple')
 
-  | (Apx.LF.Root (loc, Apx.LF.FMVar (x, _),  _spine),  (Int.LF.PiTyp _ , _s)) ->
-      raise (Error (Some loc, EtaExpandFMV (x, cO, cD, cPsi, sA)))
+  | (Apx.LF.Root (loc, Apx.LF.FMVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
+      let n = etaExpandFMV loc (Apx.LF.FMVar (x,s)) tA in 
+        elTerm recT cO cD cPsi n sA
+(*      raise (Error (Some loc, EtaExpandFMV (x, cO, cD, cPsi, sA))) *)
 
+  | (Apx.LF.Root (loc, Apx.LF.MVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
+      let n = etaExpandMV loc (Apx.LF.MVar (x,s)) tA in 
+        elTerm recT cO cD cPsi n sA
 
   | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) -> 
       let n = etaExpandApxTerm loc h spine tA in 

@@ -18,6 +18,6 @@ schema ctx = exp ;
 
 rec copy : {g:ctx} exp[g] -> exp[g] = 
 fn e => case e of 
-| [g] lam \x. M .. x => copy ([g, x:exp] M .. x)
+| [h] lam (\x. M .. x) => copy ([h, x:exp] M .. x)
 ;
 

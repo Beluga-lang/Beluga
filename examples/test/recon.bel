@@ -23,7 +23,7 @@ app: exp (arr T1 T2) -> exp T1 -> exp T2.
 % | [ ] lam (\x. (F x))  => [ ] lam (\x. (F x))
 % ;
 
-
+%{
 rec test0 : (exp T)[ ] -> (exp T)[ ] = 
  fn e => case e of 
   [ ] lam (\x. (E x)) => 
@@ -32,13 +32,13 @@ rec test0 : (exp T)[ ] -> (exp T)[ ] =
      | [ ] lam (\x. F) => [ ] lam (\x. F)
 ;
  
-
+}%
 tExp: type.
 
 exS : tExp
     <- exp S.
 
-
+%{
 rec test1 : (exp T)[ ] -> tExp[ ] = 
 fn e => case e of 
  [ ] lam (\x. (E x)) => 
@@ -68,3 +68,7 @@ rec test3 :  (exp T)[ ] -> tExp[ ] =
 %           [ ] exS (lam (\x. x)) % Error free uninstantiated variables left.
 %   ;
  
+
+}%
+rec test4 : (exp T)[] -> tExp [] = 
+fn e => case [] z of [] U => [] exS U ;

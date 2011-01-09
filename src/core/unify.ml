@@ -2279,7 +2279,7 @@ module Make (T : TRAIL) : UNIFY = struct
                  unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, id)
             with Context.NoTypAvailable -> ()
             end;
-            dprint (fun () -> "unifyHead bvar - pvar ") ;
+            dprint (fun () -> "\n unifyHead bvar - pvar \n") ;
             begin match bvarSub k2 (invert s1') with
                   | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
                   | _               -> raise_ (Unify "Parameter violation")
@@ -2296,7 +2296,7 @@ module Make (T : TRAIL) : UNIFY = struct
           if isPatSub s2' then
             begin
               begin try
-                let _ = dprint (fun () -> "unifyHead bvar -pvar ") in
+                let _ = dprint (fun () -> "\n unifyHead bvar -pvar \n") in
                 let TypDecl(_ , tA1) = Context.ctxDec cPsi k1 in 
                   unifyTyp mflag cD0 cPsi (tA1, id) (tA2, s2') 
               with Context.NoTypAvailable -> () end;
@@ -2461,7 +2461,7 @@ module Make (T : TRAIL) : UNIFY = struct
         (print_string "[UnifyHead] Projection of a parameter variable\n";
          raise_ (Unify "PVar =/= Proj PVar"))
 
-    | ((PVar (Offset _k, _s1)) as sM1,   ((PVar (PInst (r, cPsi1, tP1, cnstrs), t)) as sM2)) ->
+    | ((PVar (Offset k, s1)) as sM1,   ((PVar (PInst (r, cPsi1, tP1, cnstrs), t)) as sM2)) ->
 (*
     | ((_tM1, _s1) as s1,      ((Root (_, MVar (Inst (r, cPsi1, tP1, cnstrs), t), _tS), s2) as sM2)) ->
 *)
@@ -2474,10 +2474,11 @@ module Make (T : TRAIL) : UNIFY = struct
                                   P.headToString Empty cD0 cPsi sM1 ^ "\n        " ^
                                   P.headToString Empty cD0 cPsi sM2 ^
                                   " : " ^ P.typToString Empty cD0 cPsi (tP1, t')) in                 
-              let _ss = invert (Whnf.normSub t') in
+              let ss = invert (Whnf.normSub t') in
               let _phat = Context.dctxToHat cPsi in
-              let sM1' = sM1 in 
-(*              let sM1' = trail (fun () -> prune cD0 cPsi1 phat sM1 (MShift 0, ss) (PVarRef r)) in *)
+(*              let sM1' = sM1 in  *)
+              let sM1' = PVar (Offset k, comp s1 ss) in 
+(*              let sM1' = trail (fun () -> prune cD0 cPsi1 phat sM1 (MShift  0,ss) (PVarRef r)) in  *)
                 instantiatePVar (r, sM1', !cnstrs)
             with
               | NotInvertible ->
@@ -2493,9 +2494,9 @@ module Make (T : TRAIL) : UNIFY = struct
                 let _phat = Context.dctxToHat flat_cPsi in 
                 let t_flat = ConvSigma.strans_sub t' conv_list in 
 (*                let _tM1'   = ConvSigma.strans_head sM1 conv_list in  *)
-                let _ss = invert t_flat in
+                let ss = invert t_flat in
 (*                let sM1' = trail (fun () -> prune cD0 cPsi1 phat (tM1', id) (MShift 0, ss) (MVarRef r)) in*)
-                let sM1' = sM1 in
+                let sM1' = PVar (Offset k, comp s1 ss) in
                   instantiatePVar (r, sM1', !cnstrs) 
               with
               | NotInvertible ->

@@ -163,7 +163,7 @@ let tabulate n f =
   in
     tabulate n []
 
-
+(*
 (* range : int -> (int -> unit) -> unit
  *
  * range n f  equivalent to  (f(0); f(1); ...; f(n -1))
@@ -171,7 +171,7 @@ let tabulate n f =
 let range n (f : int -> unit) =
   let _ = tabulate n f in
     ()
-
+*)
 
 (* tryList : ('a -> 'b) -> 'a list -> 'b
  *
@@ -333,6 +333,11 @@ let strategyToString s = "{" ^ "maxDepth = " ^ string_of_int s.maxDepth
                              ^ "phase = " ^ phaseToString s.phase
                              ^ "}"
 
+let rec strategyListToString slist = match slist with
+  | []    -> ""
+  | s::sl -> strategyToString s ^ "\n" ^ strategyListToString sl
+
+
 let new_strategy (depth, contextVariableDepth, contextDepth) =
       {maxDepth = depth ;
        currDepth = 0;
@@ -394,18 +399,17 @@ let contextDep_split_switch strategy (split, noSplit) =
       noSplit strategy
 
 let split_switch strategy (split, noSplit) =
-  let couldSplit strategy = strategy.currDepth < strategy.maxDepth in
-    if couldSplit strategy then
-      begin try   (* Even if the strategy permits us to split, try not splitting, because if it happens
+  if strategy.currDepth <= strategy.maxDepth then
+    begin try   (* Even if the strategy permits us to split, try not splitting, because if it happens
                       to succeed we can save a lot of time *)
-         Debug.pushIndentationLevel();
-         let result = noSplit strategy in
-         Debug.popIndentationLevel();
-         result
-      with NoCover _ -> (Debug.popIndentationLevel(); split strategy)
-      end
-    else
-      noSplit strategy
+      Debug.pushIndentationLevel();
+      let result = noSplit strategy in
+        Debug.popIndentationLevel();
+        result
+    with NoCover _ -> (Debug.popIndentationLevel(); split strategy)
+    end
+  else
+    noSplit strategy
 
 
 
@@ -413,7 +417,7 @@ let split_switch strategy (split, noSplit) =
  *)
 let enableCoverage = ref false  (* true iff coverage should be checked *)
 let warningOnly = ref false     (* true iff failed coverage should generate a warning *)
-let extraDepth = ref 1          (* amount of split depth, in addition to the supposedly adequate amount *)
+let extraDepth = ref 0          (* amount of split depth, in addition to the adequate amount *)
 let no_covers = ref 0           (* number of times coverage checking has yielded a negative result *)
 
 
@@ -429,12 +433,9 @@ let new_parameter_name string =
 let new_name string =
    new_parameter_name (String.uppercase string)
 
-
-
 let idSub = Substitution.LF.id (* LF.Shift (LF.NoCtxShift, 0) *)
 let idMSub = Whnf.m_id
 let idCSub = LF.CShift 0
-
 
 (* getConstructorsAndTypes : Id.cid_typ -> (Id.cid_term * LF.typ) list
  *
@@ -461,14 +462,14 @@ let rec dprintCTs cO cD cPsi = function
               dprintCTs cO cD cPsi rest)
 
 
-(* getConcretesAndTypes : LF.dctx -> (LF.head * LF.typ) list
+(* getBVarAndTypes : LF.dctx -> (LF.head * LF.typ) list
  *
-   getConcretesAndTypes cPsi = L 
+   getBVarAndTypes cPsi = L 
 
    for each x:tA in cPsi,   (x, tA) is in L  and  cPsi |- tA : type
 
  *)
-let getConcretesAndTypes cPsi =
+let getBVarAndTypes cPsi =
   let rec inner n s = function
   (* where   cPsi |- s : cPsi' *)
     | LF.Null -> []
@@ -511,15 +512,11 @@ let rec lenTypRec = function
 *)
 let rec iterTypRec f (head, s_recA) =
   let typRec = Whnf.normTypRec s_recA in
-(*  let _ = dprint (fun () -> "iterTypRec>>> " ^ string_of_int (lenTypRec typRec)) in *)
-  let len = lenTypRec typRec in
-    range
-      len
-      (fun m ->
-         let m = len - m in  (* range counts down, but it's more intuitive to start from 0 *)
-         let sA = LF.getType head (typRec, idSub) m 1 in
-           dprint (fun () -> "iterTypRec>>> m = " ^ string_of_int m ^ " (len = " ^string_of_int len ^ ")");
-           f (sA, m))
+  let len = lenTypRec typRec in   (* len = |typRec| *)  
+  for m = 1 to len do 
+    let sA = LF.getType head (typRec, idSub) m 1 in
+      f (sA, m)
+  done
 
 let iterTypRec = (iterTypRec : (LF.tclo * int -> unit) -> (LF.head * LF.trec_clo) -> unit)
 
@@ -572,7 +569,7 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
       let _ = dprint (fun () -> "App-Pi: calling obj to generate instances of "
                         ^ P.typToString cO cD cPsi (tA1, idSub)) in
       obj (strategy, idCSub, idMSub, cO, cD, cPsi) tA1
-        (fun (strategy, cs, ms', cO, cD, cPsi) tM _tA1 ->
+        (fun (strategy', cs, ms', cO, cD, cPsi) tM _tA1 ->
 (*           let ms = Substitution.LF.comp ms' ms in *)
            let LF.Root(None, h', spine') = Whnf.cnorm (LF.Root(None, h, spine), ms') in
            let tA2 = Whnf.cnormTyp (tA2, ms') in
@@ -584,7 +581,6 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
            let _ = dprint (fun () -> "substitution:  " ^ 
 			     P.subToString cO cD cPsi substitution) in
            let tA2_tM = Whnf.normTyp (tA2, substitution) in
-
            let _ = dprint (fun () -> "App-Pi(1):     " ^   P.typToString cO cD cPsi (tA2_tM, idSub)) in
 (* Thu Sep  9 13:24:39 2010 -bp 
            let _ = Lfcheck.checkTyp cO cD cPsi (tA2_tM, idSub) in 
@@ -592,7 +588,7 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
            let _ = dprint (fun () -> "App-Pi(h):    " ^    P.headToString cO cD cPsi h') in
            let _ = dprint (fun () -> "App-Pi(spine): " ^   P.spineToString cO cD cPsi (spine', idSub)) in
            let _ = dprint (fun () -> "App-Pi(tP):    " ^   P.typToString cO cD cPsi (tP', idSub)) in
-           app (strategy, cs, 
+           app (strategy', cs, 
                 Whnf.mcomp ms ms',  (* continue from the original cD_orig *)
                 cO, 
                 cD, 
@@ -718,31 +714,18 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
 
 
 
-(* obj_split:   Obj-split rule (Fig. 6)
- *)
+(* obj_split:   Obj-split rule (Fig. 6)  *)
 and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, spine) k =
-(*  (
-    print_string"*";
-   (if !nn mod 80 = 0 then print_string ("\n" ^ R.render_cid_typ a ^ " . " ^ P.spineToString cO cD cPsi (spine, idSub)));
-   (if !nn mod 20 = 0 then flush_all());
-   nn := !nn + 1
-  ); *)
   Debug.indent 4; let k = fun arg1 arg2 arg3 -> (Debug.outdent 4; k arg1 arg2 arg3) in
 
   let strategy = increment_depth strategy in
-
-  dprint (fun () -> "obj_split: in cPsi = " ^ P.dctxToString cO cD cPsi);
-  dprint (fun () -> "--      a: " ^ R.render_cid_typ a);
-  dprint (fun () -> "--  spine: " ^ P.spineToString cO cD cPsi (spine, idSub));
-  Debug.indent 2; verify (cs, ms, cO, cD, cPsi); Debug.outdent 2;
-  dprnt "";
 
   (* PVars premises,  App<x_1> thru App<x_k> premises: *)
   let (sch_elems, concretesWithTypes) = 
     match strategy.phase with
       | ContextVariablePhase -> ([], [])
       | ContextDependentArgumentsPhase -> ([], [])
-      | TermPhase -> (getSchemaElems cO cPsi, getConcretesAndTypes cPsi)
+      | TermPhase -> (getSchemaElems cO cPsi, getBVarAndTypes cPsi)
   in
   
   (* App<c_1> thru App<c_n> premises: *)
@@ -759,58 +742,52 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
 	             ^ P.schElemToString sch_elem ^ "  are covered");
 
     let Some psi = Context.ctxVar cPsi in
+    let cvar_psi = LF.CtxVar psi in
     
     let dctx = Context.projectCtxIntoDctx some_part in
-    dprint (fun () -> "+++   cD =  " ^ P.mctxToString cO cD ^ "\n"
-                    ^ "+++ cPsi = " ^ P.dctxToString cO cD cPsi ^ "\n"
-                    ^ "+++ dctx = " ^ P.dctxToString cO LF.Empty dctx);
-
-    let cvar_psi = LF.CtxVar psi in
-
     let (cD_ext, dctxSub, offset) = Ctxsub.ctxToSub_mclosed cD cvar_psi dctx in
     (* cO; cD_ext; psi |- dctxSub : dctx  *)
     let typRec = Whnf.normTypRec (typRec, dctxSub) in
     (* cO ; cD_ext ; psi |- typRec *)
     let _      = dprint (fun () -> "typRec = " ^ P.typRecToString cO cD_ext cvar_psi (typRec, idSub)) in 
-    let cPsi'  = Whnf.cnormDCtx (cPsi, LF.MShift offset) in 
-    let id_psi = Substitution.LF.justCtxVar cPsi' in   
-(* Thu Sep  9 13:24:59 2010 -bp 
-    let _ = Lfcheck.checkSub None cO cD_ext cPsi' id_psi cvar_psi in 
-*)
 
-   (* cO ; cD_ext        ; cPsi' |- id_psi : cvar_psi 
-      cO ; cD_ext, pdecl ; cPsi' |- id_psi : cvar_psi 
-      cO ; cD_ext ; cvar_psi |- dctxSub : dctx *)
-    dprnt "checkSub OK";
+    let pdecl  = (match typRec with LF.SigmaLast tA -> LF.PDecl (new_parameter_name "p@", tA, cvar_psi)
+                                  | LF.SigmaElem _  -> LF.PDecl (new_parameter_name "p@", LF.Sigma typRec, cvar_psi)
+		 ) in 
+    
+    let cD_ext_pdecl = LF.Dec(cD_ext, pdecl) in
+    let _ = dprint (fun () -> "cD_ext_pdecl = " ^ P.mctxToString cO cD_ext_pdecl )in
+	  
+    let cPsi'  = Whnf.cnormDCtx (cPsi, LF.MShift (offset + 1)) in 
+    let id_psi = Substitution.LF.justCtxVar cPsi' in     
+      (* cO ; cD_ext, pdec   ; cPsi' |- id_psi : cvar_psi  *)
 
-    let head = LF.PVar (LF.Offset 1, id_psi) in
-      match typRec with
-      | LF.SigmaLast tA ->
-       (dprint (fun () -> "pvar SigmaLast 00000\n" ^ "cD = " ^ P.mctxToString cO cD);
-        let tA' = Whnf.normTyp (tA, id_psi) in   
-          (* cO ; cD_ext ; cPsi' |- tA : type *)
-        let name = new_parameter_name "p@" in
-        let _ = dprint (fun () -> "SigmaLast: created parameter \"" ^ R.render_name name ^ "\"") in
-        let pdecl  = LF.PDecl(name, tA, cvar_psi) in
-        let cD_ext_pdecl = LF.Dec(cD_ext, pdecl) in
-	let _ = dprint (fun () -> "cD_ext_pdecl = " ^ P.mctxToString cO cD_ext_pdecl )in
-        let tA'    = Whnf.cnormTyp (tA', LF.MShift 1)  in
-        let spine'  = Whnf.cnormSpine (spine, LF.MShift (offset + 1)) in
-        let cPsi'  = Whnf.cnormDCtx (cPsi', LF.MShift 1) in
-        (*   cO ; cD_ext, pdecl  |- cPsi' dctx
-             cO ; cD_ext, pdecl ; cPsi' |- tA'     : type
-             cO ; cD_ext, pdecl ; cPsi' |- a spine : type
-        *)
+    let head    = LF.PVar (LF.Offset 1, id_psi) in
+    let typRec' = Whnf.normTypRec (Whnf.cnormTypRec (typRec, LF.MShift 1), id_psi) in
+     (* cO ; cD_ext, pdec ; cPsi'  |- p[id_psi] : [id_psi](typRec[|MShift 1|]) 
+        or to put it differently
+       cO ; cD_ext, pdec ; cPsi'  |- head : typRec' 
+      *)
+
+    let spine' = Whnf.cnormSpine (spine, LF.MShift (offset + 1)) in 
+      (*  cO ; cD_ext, pdecl ; cPsi' |- a spine : type                          *)
+      (*  we are expected to generate a coverage goal of type a spine           *)
+      (* we try to generate sutiable coverage goals from the parameter variable *)
+      match  typRec' with
+      | LF.SigmaLast tA -> 
+       ((* cO ; cD_ext, pdec ; cPsi' |- tA : type *)
+        (* cO ; cD_ext, pdec ; cPsi' |- p[id_psi] : tA'  *)
+        (* p[id_psi] : tA' is the coverage goal generated from the context schema *) 
+        
         let msub_ref  = Ctxsub.mctxToMSub cD_ext_pdecl in
-        let unifyLeft = Whnf.cnormTyp (LF.Atom(loc, a, spine'), msub_ref) in
-        let unifyRight = Whnf.cnormTyp (tA', msub_ref) in
+        let unifyLeft = Whnf.cnormTyp (LF.Atom(loc, a, spine'), msub_ref) in 
+        let unifyRight = Whnf.cnormTyp (tA, msub_ref) in
         let cPsi_inst  = Whnf.cnormDCtx (cPsi', msub_ref) in 
           dprint (fun () -> "pvar SigmaLast 1\n"
 		    ^ "   tA' = " ^ P.typToString cO LF.Empty cPsi_inst (unifyRight, idSub) ^ "\n"
 		    ^ "     P = " ^ P.typToString cO LF.Empty cPsi_inst (unifyLeft, idSub));
         if (try
-              (* check whether the pvar's type is compatible with the 
-		 target-type of the pattern, i.e. if this pvar is a 
+              (* check whether the pvar's type is compatible with the target-type of the pattern, i.e. if this pvar is a 
 		 valid pattern of the target-type *)
 	      U.unifyTyp LF.Empty cPsi_inst (unifyLeft, idSub) (unifyRight, idSub);
               U.forceGlobalCnstr (!U.globalCnstrs);
@@ -826,15 +803,15 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
 	     (try Abstract.abstractMSub (Whnf.cnormMSub msub_ref)  
 	      with Abstract.Error s -> 		  raise (NoCover (fun () -> "Abstraction failed: " ^ s ^ 
 				    "\n This indicates that generated patterns contained unification-problems outside the decidable pattern fragment; \n there are two solutions: try setting the coverage depth higher or prove by hand that some cases are impossible") ))    in 
-             dprint (fun () -> "**** cD'_ext = " ^ P.mctxToString cO cD'_ext);
+             dprint (fun () -> "**** [Abstracted cD_ext, pdec] cD'_ext = " ^ P.mctxToString cO cD'_ext);
             let cPsi'  = Whnf.cnormDCtx (cPsi', theta) in
             let spine' = Whnf.cnormSpine (spine', theta) in
-            let tA'    = Whnf.cnormTyp (tA', theta) in
+            let tA'    = Whnf.cnormTyp (tA, theta) in
               (* build ground instantiated objects *) 
 
             let ms2 = Whnf.mcomp (Whnf.mcomp ms (LF.MShift (offset+1))) theta in 
 
-              Debug.indent 2; dprint (fun () -> "PVars; verify, before calling app");
+             Debug.indent 2; dprint (fun () -> "PVars; verify, before calling app");
               verify (cs, ms2, cO, cD'_ext, cPsi'); Debug.outdent 2;
               dprint (fun () -> "pvar SigmaLast 2\n"
                         ^ "--cD'_ext = " ^ P.mctxToString cO cD'_ext ^ "\n"
@@ -846,7 +823,7 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
               Debug.indent 2;
               app (strategy, cs, ms2, cO, cD'_ext, cPsi')
                   (Whnf.cnormHead (head,theta), LF.Nil, tA')   
-                  (LF.Atom(loc, a, spine'))
+                  (LF.Atom(loc, a, spine'))  
                   (fun arg1 arg2 arg3 -> Debug.outdent 2;
                                          k arg1 arg2 arg3)
           )
@@ -856,33 +833,14 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
           begin
           let callAppOnComponent ((tA,s), index) =
             let tA' = Whnf.normTyp (tA, s) in
-              dprint (fun () -> "pvar SigmaElem: tA = " ^ P.typToString cO cD_ext cPsi' (tA', idSub));
-            let name = new_parameter_name "p@" in
-            let _ = dprint (fun () -> "SigmaElem: created parameter \"" ^ R.render_name name ^ "\"") in
-            let pdecl    = LF.PDecl(name, Whnf.normTyp(LF.Sigma typRec, id_psi), cvar_psi) in
-            let cD_ext_pdecl = LF.Dec(cD_ext, pdecl) in
+              dprint (fun () -> "pvar SigmaElem: tA = " ^ P.typToString cO cD_ext_pdecl cPsi' (tA', idSub));
+            (* cO ; cD_ext, pdec ; cPsi' |- proj(head, index) : [s]tA *)
 
-            let cPsi' = Whnf.cnormDCtx (cPsi', LF.MShift 1) in
-              dprint (fun () -> "    tA' = " ^ P.typToString cO cD_ext_pdecl cPsi' (tA', idSub));
-            let spine' = Whnf.cnormSpine (spine, LF.MShift (offset + 1)) in
-              (*   cO ; cD_ext, pdecl  |- cPsi' dctx
-		   cO ; cD_ext, pdecl ; cPsi' |- tA'     : type
-		   cO ; cD_ext, pdecl ; cPsi' |- a spine : type
-              *)
             let msub_ref  = Ctxsub.mctxToMSub cD_ext_pdecl in                
-	      dprint (fun () -> "Created msub_ref : " ^ P.msubToString cO LF.Empty msub_ref);
-	      dprint (fun () -> " cD_ext_pdecl : " ^ P.mctxToString cO cD_ext_pdecl );
             let cPsi_inst  = Whnf.cnormDCtx (cPsi', msub_ref) in 
-	      dprint (fun () -> "cPsi_inst = " ^ P.dctxToString cO LF.Empty cPsi_inst);
             let unifyLeft = Whnf.cnormTyp (LF.Atom(loc, a, spine'), msub_ref) in
-              dprint (fun () -> "    unifyLeft = Atom(_, a, spine') = " );
-	      dprint (fun () -> P.typToString cO LF.Empty cPsi_inst (unifyLeft, idSub));
-	      dprint (fun () -> "   tA' = "); 
-     	      dprint (fun () -> P.typToString cO cD_ext_pdecl cPsi' (tA', idSub));
             let unifyRight = Whnf.cnormTyp (tA', msub_ref) in
-	      dprint (fun () -> "   unifyRight = tA' = "); 
-     	      dprint (fun () -> P.typToString cO LF.Empty cPsi_inst (unifyRight, idSub));
-            
+           
               if (try
                    U.unifyTyp LF.Empty cPsi_inst (unifyLeft, idSub) (unifyRight, idSub);
 		    U.forceGlobalCnstr (!U.globalCnstrs);
@@ -903,36 +861,14 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
 							    "\n This indicates that generated patterns contained unification-problems outside the decidable pattern fragment; \n there are two solutions: try setting the coverage depth higher or prove by hand that some cases are impossible") )
 				       )
 		in 
-                  dprint (fun () -> "**** cD'_ext = " ^ P.mctxToString cO cD'_ext);
-                (* let cD'_ext = Whnf.normMCtx cD'_ext in *)
-		let cPsi'  = Whnf.cnormDCtx (cPsi', theta) in
+                  dprint (fun () -> "****  [Abstracted cD_ext, pdec] cD'_ext = " ^ P.mctxToString cO cD'_ext);
+		  (* building ground instantiated objects *) 
+ 		let cPsi'  = Whnf.cnormDCtx (cPsi', theta) in
 		let spine' = Whnf.cnormSpine (spine', theta) in
 		let tA'    = Whnf.cnormTyp (tA', theta) in
-		  (* build ground instantiated objects *) 
 
 		let ms2 = Whnf.mcomp (Whnf.mcomp ms (LF.MShift (offset+1))) theta in 
                 let h   = Whnf.cnormHead (head, theta) in 
-		let sA1 = LF.getType head (typRec, idSub) 1 1 in
-		let sA2 = LF.getType head (typRec, idSub) 2 1 in
-                  dprint (fun () -> "pvar SigmaElem 1 (index = " ^ string_of_int index ^ ")\n"
-		    ^ "cPsi' " ^ P.dctxToString cO cD'_ext cPsi' ^ "\n"
-                    ^ "head = " ^ P.headToString cO cD'_ext cPsi' h ^ "\n"
-                    ^ "typRec = " ^ P.typRecToString cO cD'_ext cPsi' (typRec, idSub) ^ "\n"
-		    ^ "tA1 = " ^ P.typToString cO cD'_ext cPsi' sA1 ^ "\n"
-		    ^ "tA2 = " ^ P.typToString cO cD'_ext cPsi' sA2 ^ "\n"
-                    ^ "tA' = " ^ P.typToString cO cD'_ext cPsi' (tA', idSub) ^ "\n"
-                    ^ " P = " ^ P.typToString cO cD'_ext cPsi (LF.Atom(loc, a, spine'), idSub));
-		  
-                  dprint (fun () -> "pvar SigmaElem 2a\n"
-                                      ^ "--cD'_ext = " ^ P.mctxToString cO cD'_ext ^ "\n");
-                  dprnt "tA' OK (1)";
-
-(* Thu Sep  9 13:25:07 2010 -bp 
-  Lfcheck.checkTyp cO cD'_ext cPsi' (tA', idSub);
-                dprnt "tA' OK (2)";
-                Lfcheck.checkTyp cO cD'_ext cPsi' (LF.Atom(loc, a, spine'), idSub);
-                dprnt "P OK";
-*)
                 Debug.indent 2;
                 app (strategy, cs, ms2, cO, cD'_ext, cPsi')
                   (LF.Proj(h, index), LF.Nil, tA')
@@ -942,7 +878,7 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
                      k arg1 arg2 arg3)
               end else ()
           in
-            iterTypRec callAppOnComponent (head, (Whnf.cnormTypRec (typRec, LF.MShift 1) , id_psi))
+            iterTypRec callAppOnComponent (head, (typRec', idSub))
           end
 
   
@@ -956,12 +892,12 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
       k
 
 
-  and callAppOnConstructor (c, cSig) =
+  and callAppOnConstructor (c, tA) =
     dprint (fun () -> "checking if constructor \"" ^ 
 	      R.render_cid_term c ^ "\" is covered");
-    dprint (fun () -> "--type cSig: " ^ P.typToString cO cD cPsi (cSig, idSub));
+    dprint (fun () -> "-- type of constructor : Sig(c) = tA: " ^ P.typToString cO cD cPsi (tA, idSub));
     app (strategy, cs, ms, cO, cD, cPsi)
-      (LF.Const c, LF.Nil, cSig)
+      (LF.Const c, LF.Nil, tA)
       (LF.Atom(loc, a, spine))
       k
   in
@@ -1081,12 +1017,8 @@ and obj (strategy, cs, ms, cO, cD, cPsi) tA k =
      split_switch strategy
        (begin (* Split *)
           fun strategy ->	     
-	     dprint (fun () -> "Calling obj_split:\n -- Trapping cPsi = " ^ 
-		       P.dctxToString cO cD cPsi);
-	     dprint (fun () -> "--      a: " ^ R.render_cid_typ a);
-	     dprint (fun () -> "--  spine: " ^ 
-		       P.spineToString cO cD cPsi (spine, idSub));
-
+	     dprint (fun () -> "Calling obj_split:\n --  " ^ 
+		       P.typToString cO cD cPsi (tA, idSub) ^ "[" ^ P.dctxToString cO cD cPsi ^ "]");
              obj_split (strategy, cs, idMSub, cO, cD, cPsi) (loc, a, spine)
                (fun (strategy', cs', ms', cO, cD, cPsi) b c ->   
 		  (* Restore the previous strategy, including strategy.currDepth *)
@@ -1399,73 +1331,87 @@ let covered_by branch (cO, cD, cPsi) tM tA =
   | BranchBox (cO', cD', (cPsi', NormalPattern (tR', _body), msub', csub')) ->
       (* under cO / cO' ?
          Pi cD. box(?. tM) : tA[cPsi]  =.  Pi cD'. box(?. tR') : ?[?]   *)
-      dprnt "covered_by";
+      dprnt ("covered_by – " ^ "**********covby_counter = " ^ string_of_int !covby_counter ^ "***************");
       Debug.indent 2;
       dprint (fun () -> "--cPsi' = " ^ P.dctxToString cO' cD' cPsi' ^ "\n"
                       ^ "--  tR' = " ^ P.normalToString cO' cD' cPsi' (tR', idSub) ^ "\n"
                       ^ "--msub' = " ^ P.msubToString cO' cD' msub' ^ "\n"
                       ^ "--csub' = " ^ P.csubToString cO' cD' csub');
       
-      let cDConjoint = Context.append cD cD' in
-      dprint (fun () -> "--cDConjoint = " ^ P.mctxToString cO cDConjoint ^ "\n"
-                     ^  "--cPsi  = " ^ P.dctxToString cO cD cPsi ^ "\n"
-                     ^ "--cPsi' = " ^ P.dctxToString cO cDConjoint cPsi');
-      
       let ct = cctxToCSub cO' cD' cPsi' in
-(* let ct' = Ctxsub.ccomp csub' ct in (* AAA *) *)
-(* let _ct1' = Ctxsub.ctxnorm_csub ct' in *)
       let ct1 = Ctxsub.ctxnorm_csub ct in
       let mt = mctxToMSub (Ctxsub.ctxnorm_mctx (cD', ct1)) in
-      let tR' = Whnf.cnorm (Ctxsub.ctxnorm (tR', ct1), mt) in
-(*      let _ = dprint (fun () -> "--tR' in cDConjoint = "
-                              ^ P.normalToString cO' cDConjoint cPsi' (tR', idSub)) in *)
-(* let _mt1' = Whnf.cnormMSub mt in *)
-      let cPsi' = Ctxsub.ctxnorm_dctx (cPsi', ct1) in
-      
-      let shift_unprimed = LF.MShift (Context.length cD') in
-      let tM_shifted = Whnf.cnorm (tM, shift_unprimed)  in
-      
+      let tR_pat = Whnf.cnorm (Ctxsub.ctxnorm (tR', ct1), mt) in
+      let cPsi_pat = Whnf.cnormDCtx (Ctxsub.ctxnorm_dctx (cPsi', ct1) , mt) in
+     
       let _ = dprint (fun () -> P.octxToString cO ^ " |- Pi " ^ P.mctxToString cO cD
-                    ^ " box(Psihat. " ^ P.normalToString cO cDConjoint cPsi (tM_shifted, idSub)
+                    ^ " box(Psihat. " ^ P.normalToString cO cD cPsi (tM, idSub)
                     ^ ") : " ^ P.typToString cO cD cPsi (tA, idSub)
                     ^ "["    ^ P.dctxToString cO cD cPsi ^ "]") in
       let _ = dprnt  (" COVERED-BY ") in
       let _ = dprint (fun () -> P.octxToString cO' ^ " |- Pi " ^ P.mctxToString cO' cD'
                               ^ " box(" ^ P.dctxToString cO' cD' cPsi' ^ " . " ^ ""
-                              ^ P.normalToString cO' cDConjoint cPsi' (tR', idSub)
-                              ^ ") : " ^ P.msubToString cO' cD' msub'
-                              ^ "[" ^ P.csubToString cO' cD' csub' ^ "]") in
-      let matchD = cDConjoint in
-      let matchPsi = cPsi' in
-      let matchLeft = (tM_shifted, idSub) in
-      let matchRight = (tR', idSub) in
-      
-      let cPsi' = Whnf.cnormDCtx (cPsi', mt) in
+                              ^ P.normalToString cO' cD' cPsi' (tR', idSub)
+                              ^ ") : " ^ 
+                              P.msubToString cO' cD' msub'
+                              ^ " ; \n " ^ P.csubToString cO' cD' csub' ^ "\n") in
 
-      let cPsi = Whnf.cnormDCtx (cPsi, shift_unprimed) in
-      try
-        dprint (fun () -> " cPsi  = " ^ P.dctxToString cO cDConjoint cPsi ^ "\n"
-                        ^ " cPsi' = " ^ P.dctxToString cO cDConjoint cPsi');
+      let _ = (dprnt ("Type of coverage goal:\n   ");
+               dprint (fun () -> "    D = " ^ P.mctxToString cO cD ^ "\n"
+                      ^ "  Psi = " ^ P.dctxToString cO cD cPsi ^ "\n"
+                      ^ " cov_goal_type = " ^ P.typToString cO cD cPsi (tA, idSub) ^ "\n"  
+		   )) in  
+ 
+      let tA_pat   =  Whnf.normTyp (Lfcheck.syn cO' cD' cPsi' (tR', idSub)) in 
 
-        U.unifyDCtx cO' cDConjoint cPsi cPsi';
-        
-        dprnt ("About to call:\n  matchTerm ");
-        dprint (fun () -> "    D = " ^ P.mctxToString cO matchD ^ "\n"
-                        ^ "  Psi = " ^ P.dctxToString cO matchD matchPsi ^ "\n"
-                        ^ " left = " ^ P.normalToString cO matchD matchPsi matchLeft ^ "\n"
-                        ^ "right = " ^ P.normalToString cO matchD matchPsi matchRight);
-        
-        U.disallowUndefineds (fun () ->
-				(* NOTE: mathLeft and matchRight do not necessarily have
-				   the same type, according to the specificed typing
-				   invariants. *)
-                                U.matchTerm matchD matchPsi matchLeft matchRight);
-        
-        dprint (fun () -> "MATCHED");
-        Debug.outdent 2
-      with U.Unify s -> (dprnt "no match";
-                         Debug.outdent 2;
-                         raise (NoCover (fun () -> "---inner NoCover escaped---")))
+      let _ = (dprnt ("Type of pattern:\n   ");
+               dprint (fun () -> "    D' = " ^ P.mctxToString cO' cD' ^ "\n"
+                      ^ "  Psi' = " ^ P.dctxToString cO' cD' cPsi' ^ "\n"
+                      ^ " cov_goal_type = " ^ P.typToString cO' cD' cPsi' (tA_pat, idSub) ^ "\n"  
+		   )) in  
+
+      let tA_pat_inst = Whnf.cnormTyp (Ctxsub.ctxnorm_typ (tA_pat, ct1), mt) in 
+(*      let mshift_cD = LF.MShift (Context.length cD) in*)
+
+      (* check that tA_covGoal is an instance of tA_pattern *)
+	try
+            dprint (fun () -> " cPsi_covgoal  = " ^ P.dctxToString cO cD cPsi ^
+ 		       "\n" ^ " cPsi_pattern  = " ^ P.dctxToString cO cD cPsi_pat);
+	    
+            U.unifyDCtx cO cD cPsi cPsi_pat;
+
+
+            dprnt ("About to call:\n  matchTyp ");
+            dprint (fun () -> "    D = " ^ P.mctxToString cO cD ^ "\n"
+                      ^ "  Psi = " ^ P.dctxToString cO cD cPsi ^ "\n"
+                      ^ " cov_goal_type = " ^ P.typToString cO cD cPsi (tA, idSub) ^ "\n"  
+                       ^ "pattern_type = " ^ P.typToString cO cD cPsi_pat  (tA_pat_inst, idSub)); 
+           
+            U.matchTyp cD cPsi (tA, idSub) (tA_pat_inst, idSub);
+
+            dprnt ("About to call:\n  matchTerm ");
+            dprint (fun () -> "    D = " ^ P.mctxToString cO cD ^ "\n"
+                      ^ "  Psi = " ^ P.dctxToString cO cD cPsi ^ "\n"
+                      ^ " cov_goal = " ^ P.normalToString cO cD cPsi (tM, idSub) ^ "\n"
+                      ^ "pattern = " ^ P.normalToString cO cD cPsi_pat (tR_pat, idSub));
+            
+            U.disallowUndefineds (fun () ->
+				    (* NOTE: mathLeft and matchRight do not necessarily have
+				       the same type, according to the specificed typing
+				       invariants. *)
+                                    U.matchTerm cD cPsi (tM, idSub) (tR_pat, idSub));
+            
+            dprint (fun () -> "MATCHED");
+            Debug.outdent 2
+	  with U.Unify s -> (dprnt "no match";
+                             Debug.outdent 2;
+                             raise (NoCover (fun () -> "---inner NoCover escaped---")))
+(*	else 
+          (dprint (fun () -> "CONV FAILED ");
+	  raise (NoCover (fun () -> "Types of the two objects not convertible
+	---inner NoCover escaped---")))
+*)
+	
 
 
 (* covered_by_set branches (strategy, cs, ms, cO, cD, cPsi) tM tA 
@@ -1489,15 +1435,22 @@ let rec covered_by_set branches (strategy, cs, ms, cO, cD, cPsi) tM tA =
                                   ^ P.normalToString cO cD cPsi (tM, idSub)))
   | branch :: branches ->
     (try covered_by branch (cO, cD, cPsi) tM tA;
-      dprint (fun () -> "Term covered:  " ^ P.normalToString cO cD cPsi (tM, idSub)
+      dprint (fun () -> "Term covered:  " ^ P.normalToString cO cD cPsi (tM, idSub) ^ "  of type " ^ 
+		P.typToString cO cD cPsi (tA, idSub)
         ^ "  covered by  "
-       ^ match branch 
+       ^ (match branch 
          with BranchBox (cO', cD', (cPsi', NormalPattern (tR', _body), _msub', _csub')) ->
-            P.normalToString cO' cD' cPsi' (tR', idSub))
+            P.normalToString cO' cD' cPsi' (tR', idSub))  ^ "\n Strategy : "
+	^ strategyToString strategy 
+)
       with 
         NoCover _ -> covered_by_set branches (strategy, cs, ms, cO, cD, cPsi) tM tA
     )
 
+
+
+
+(* Compute the depth of a term / type  / context *)
 
 let rec maxSpine f = function
   | LF.Nil -> 0
@@ -1516,10 +1469,10 @@ and depth = function
   | LF.Tuple(_, tuple) -> (*1 +*) maxTuple depth tuple
 
 and depthHead = function
-  | LF.BVar _ -> 1
+  | LF.BVar _ -> 0 (* bp: why count it as 11 *)
   | LF.Const _ -> 1
-  | LF.MVar _ -> 0
-  | LF.PVar _ -> 1
+  | LF.MVar _ -> 0 
+  | LF.PVar _ -> 0 (*bp: why count it as 1 ? *)
   | LF.AnnH (head, _) -> depthHead head
   | LF.Proj (head, _) -> depthHead head
 
@@ -1616,6 +1569,7 @@ else
   let _ = dprint (fun () -> "max context variable depth  = " ^ string_of_int variableDepth) in
   let _ = dprint (fun () -> "max dependent depth         = " ^ string_of_int dep) in
   let strategies = tabulate cutoff (fun depth -> new_strategy (depth, variableDepth, dep)) in
+(*  let _ = print_string ("Try the following strategies : \n " ^ strategyListToString strategies ^ "\n") in  *)
   try
     dprint (fun () -> "Coverage checking a case with "
               ^ string_of_int (List.length problem.branches)  
@@ -1654,7 +1608,14 @@ else
 		       let strategy = {strategy with phase = TermPhase} in
                          obj (strategy, cs'', ms'', cO'', cD'', cPsi'')
                            tA''
-                           (covered_by_set problem.branches)))
+                           (fun cov_ctx cov_goal cov_type -> 
+			      (* let (strategy, _cs, _ms, _cO, _cD, _cPsi) = cov_ctx in *)
+			      let result = covered_by_set problem.branches cov_ctx cov_goal cov_type 
+			      in 
+				
+				  (*print_string ("Covered by Strategy : \n " ^  (strategyToString strategy ) ^ "\n"); *)
+				 result)
+		    ))
            with exn -> (Debug.popIndentationLevel(); raise exn)
            end;
            Debug.popIndentationLevel())
@@ -1689,7 +1650,9 @@ else
 
 let process problem =
   match covers problem with
-  | Success -> ()
+  | Success -> 
+
+()
   | Failure messageFn ->
       if !warningOnly then
         Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn())

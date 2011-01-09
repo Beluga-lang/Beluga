@@ -934,7 +934,8 @@ and cnorm (tM, t) = match tM with
                       wrap (PVar (x, LF.comp (LF.comp r0 r') (cnormSub (s,t))))
 
                   | MV  k'            -> wrap (PVar (Offset k', cnormSub (s, t)))
-                      
+                  | _  -> (print_string ("[cnorm] non-exhaustive match : applying msub to "                                                                                 ^ what_head head ^  " is undefined ? \n"); 
+                           exit 2)                      
               in
                 Root (loc, newHead, cnormSpine (tS, t))
             end

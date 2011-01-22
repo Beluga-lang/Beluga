@@ -1,0 +1,7 @@
+let val x = true
+in
+  let val x = 1
+  in
+    x + 5
+  end
+end;

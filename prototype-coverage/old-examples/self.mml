@@ -1,0 +1,4 @@
+let fun should_not_typecheck (x : int) : int = should_not_typecheck
+in
+  should_not_typecheck
+end;

@@ -1,0 +1,1 @@
+let val (x,y) = (2 + 1, 2 * 50) in x * x * y end;

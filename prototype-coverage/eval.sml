@@ -53,14 +53,14 @@ structure Eval :> EVAL = struct
 
   fun member x l = List.exists (fn y => y = x) l
 
-  fun union ([], l) = []
+  fun union ([], l) = l
     | union (x :: t, l) = 
       if member x l then
         union (t,l)
       else
         x :: union (t,l)
 
-  fun unionList sets = foldr (fn (s1,s2) => union(s1, s2)) [] sets
+  fun unionList sets = foldr (fn (s1, s2) => union(s1, s2)) [] sets
 
   fun delete (vlist,[]) = []
     | delete (vlist, h :: t) = 
@@ -71,6 +71,11 @@ structure Eval :> EVAL = struct
                         M.Val (_, name) => [name]
                       | M.Valtuple(_, names) => names
                       | M.Datatype _ => []
+
+  fun boundVarsPattern (M.Varpat x) = [x]
+    | boundVarsPattern (M.Tuplepat ps) = unionList (map boundVarsPattern ps)
+    | boundVarsPattern (M.Valconpat (_, p)) = boundVarsPattern p
+    | boundVarsPattern _ = []
 
   fun varsDecs [] = ([], [])
     | varsDecs (dec1::decs) =
@@ -114,7 +119,15 @@ structure Eval :> EVAL = struct
                        union(freeVars e1, freeVars e2)
                      | M.Anno(e, _) =>
                        freeVars e
-                     | M.Case _ => []
+                     | M.Case (e, cs) =>
+                       let val fs = map (fn (p, e') =>
+                                            ((boundVarsPattern p), (freeVars e')))
+                                        cs
+                           val fs = map delete fs
+                       in
+                         union (freeVars e, unionList fs)
+                       end
+                                         
                      | M.Valcon (x, e) => union ([x], freeVars e)
                      | M.Valcon0 x => [x]
 
@@ -216,15 +229,26 @@ structure Eval :> EVAL = struct
             M.Rec (y, t, e)
           else
             if member y (freeVars e') then
-              let
-                val (y, e1) = rename (y,e)
+              let val (y, e1) = rename (y, e)
               in
                 M.Rec (y, t, subst s e1)
               end
             else
               M.Rec (y, t, subst s e)
 
-        | M.Case (e, cs) => M.Int 1
+        | M.Case (e, cs) =>
+          let fun substClauses _ [] = []
+                | substClauses (s as (e', x)) ((p, e) :: cs) =
+                  let val bound = boundVarsPattern p
+                  in
+                    if member x bound then
+                      (p, e) :: substClauses s cs
+                    else
+                      (p, subst s e) :: substClauses s cs
+                  end
+          in
+            M.Case (subst s e, substClauses s cs)
+          end
         | M.Valcon (n, e) => M.Valcon (n, subst s e)
         | e as M.Valcon0 _ => e
   in
@@ -334,8 +358,8 @@ structure Eval :> EVAL = struct
         | e as M.Int _ => e
         | e as M.Bool _ => e
         | e as M.Valcon0 _ => e
+        | e as M.Valcon _ => e
 
-        | M.Valcon (n, arg) => M.Valcon (n, eval arg)
         | M.Var x => raise Stuck ("Free variable (" ^ x ^ ") during evaluation")
 
         | recursiveExp as M.Rec (f, t, e) =>
@@ -389,32 +413,39 @@ structure Eval :> EVAL = struct
             | _ => raise Stuck "Apply: e1 evaluated to non-function"
           end
 
-        | M.Case _ => raise Stuck "Case: not implemented"
+        | M.Case (e, cs) =>
+          let exception MatchError
+              fun match e p =
+                  case (e, p) of
+                    (e, M.Varpat x) => [(e, x)]
+                  | (M.Int i, M.Intpat j) =>
+                    if i = j then [] else raise MatchError
+                  | (M.Bool b, M.Boolpat c) =>
+                    if b = c then [] else raise MatchError
+                  | (M.Tuple es, M.Tuplepat ps) =>
+                    if length es = length ps then
+                      foldl (op @)
+                            []
+                            (map (fn (e, p) => match e p)
+                                 (ListPair.zip (es, ps)))
+                    else
+                      raise MatchError
+                  | (M.Valcon (x, e'), M.Valconpat (y, p')) =>
+                    if x = y then match e' p' else raise MatchError
+                  | (M.Valcon0 x, M.Valcon0pat y) =>
+                    if x = y then [] else raise MatchError
+                  | _ => raise MatchError
 
-  (*
-   let in case eval e1 of
-            Fn (x, body) =>
-            let val v2 = eval e2
-                val body = subst (v2, x) body
-            in 
-              eval body
-            end
-          | Anno(v1, tau) => 
-            let in case tau of
-                     T.Arrow(domain, range) =>
-                     let val v2 = eval e2
-                         val v2' = dynamic_check (v2, domain)
-                         val result = eval (Apply (v1, v2'))
-                         val result' = dynamic_check (result, range)
-                     in
-                       result'
-                     end
-                   | _ => raise Stuck "Apply: Impossible annotation on function"
-            end
-          | _ => raise Stuck "Apply: e1 evaluated to non-function"
-   end  
-   *)
+              fun patternMatch _ [] =
+                  raise Stuck "Case: non-exhausitve pattern matching"
+                | patternMatch e ((p, body) :: rest) =
+                  ((match e p), body)
+                  handle MatchError => patternMatch e rest
 
+              val (bindings, body) = patternMatch (eval e) cs
+          in
+            eval (substList bindings body)
+          end
   in
     bigstep_depth := !bigstep_depth - 1;
     if !verbose >= 1 then

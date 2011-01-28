@@ -1,6 +1,7 @@
-(* COMP 302, Winter 2010
- * Assignment 5
- * Sample Solution
+(* TODO:
+ * - in function `subst': rename variables in the clauses of
+ *   CASE expression to avoid capturing of the free variables in
+ *   the expression being substituted in.
  *)
 
 (* Evaluation of MinML expressions via big step semantics *)

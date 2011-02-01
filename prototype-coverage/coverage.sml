@@ -1,23 +1,11 @@
 signature COVERAGE = sig
 
-  datatype dt = BuiltIn of Type.tp
-              | DataType of vc list
-
-       and vc = VC of MinML.name * dt list
-
-  datatype goal = Goal of Type.tp * goalStatus * goalShape
-
-       and goalStatus = Sat | Unsat
-
-       and goalShape = Leaf | Branch of goal list
-
-  val cover : goal -> MinML.pattern -> goal
+  exception CoverageError of string
 
 end; (* signature COVERAGE *)
 
 structure Coverage  = struct
 
-  exception Unimplemented
   exception CoverageError of string
 
   structure M = MinML
@@ -36,7 +24,6 @@ structure Coverage  = struct
                 | Valcon0Goal of M.name
                 | TrueGoal
                 | FalseGoal
-                | SatGoal
 
        (* and goalStatus = Sat | Unsat *)
 
@@ -45,6 +32,39 @@ structure Coverage  = struct
   type context = dt list
 
   val ctx = [DataType ("nat", [VC ("z", []), VC ("succ", [Dummy "nat"])])]
+  val ps = [M.Valconpat ("succ", M.Valconpat ("succ", M.Varpat "x")),
+            M.Valcon0pat "z"]
+  val ps2 = [M.Valconpat ("succ", M.Valconpat ("succ", M.Varpat "x")),
+             M.Valconpat ("succ", M.Varpat "x"),
+             M.Valcon0pat "z"]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   exception NotFoundCoverage
   fun lookup [] _ = raise NotFoundCoverage
@@ -73,37 +93,73 @@ structure Coverage  = struct
       end
     | split _ = raise CoverageError "function Coverage.split: impossible"
 
-  fun allSat gs = List.all (fn SatGoal => true | _ => false) gs
-
-  fun cover SatGoal _ = SatGoal
-    | cover (Goal _) (M.Varpat _) = SatGoal
-    | cover (g as Goal T.Int) p = g (* won't split int pattern,
-                                     * requires a catch-all pattern at the end
-                                     *)
-    | cover (g as Goal _) p = cover (split g) p
-    | cover (BranchGoal gs) p =
-      let val gs = map (fn g => cover g p) gs
-      in
-        if allSat gs then SatGoal
-        else BranchGoal gs
-      end
-    | cover (TupleGoal gs) (M.Tuplepat ps) =
+  (* expand : goal -> MinML.pattern -> goal
+   * Given a goal and a pattern, furthur split the goal as needed
+   *)
+  fun expand (g as Goal _) (M.Varpat _) = g
+    | expand (g as Goal _) p = expand (split g) p
+    | expand (BranchGoal gs) p = BranchGoal (map (fn g => expand g p) gs)
+    | expand (TupleGoal gs) (M.Tuplepat ps) =
       if length gs = length ps then
-        let val gs' = map (fn (g, p) => cover g p) (ListPair.zip (gs, ps))
-        in
-          if allSat gs' then SatGoal
-          else TupleGoal gs'
-        end
+        TupleGoal (map (fn (g, p) => expand g p) (ListPair.zip (gs, ps)))
       else
-        TupleGoal gs
-    | cover (g as ValconGoal (n, gg)) (M.Valconpat (n', p)) =
-      if n = n' then cover gg p
+        raise CoverageError "coverage.sml 82: impossible"
+    | expand (g as ValconGoal (n, gg)) (M.Valconpat (n', p)) =
+      if n = n' then ValconGoal (n, expand gg p)
       else g
-    | cover (g as Valcon0Goal n) (M.Valcon0pat n') =
-      if n = n' then SatGoal else g
-    | cover TrueGoal (M.Boolpat true) = SatGoal
-    | cover FalseGoal (M.Boolpat false) = SatGoal
-    | cover g _ = g
+    | expand g _ = g
 
-  fun foo x = true
+  fun expandGoal g [] = g
+    | expandGoal g (p :: ps) = expandGoal (expand g p) ps
+
+  (* flatten : goal -> goal list
+   * eliminate BranchGoal to produce a list of coverage goals
+   *)
+  fun flatten (BranchGoal gs) = foldl (op @) [] (map flatten gs)
+    | flatten (TupleGoal []) = [TupleGoal []]
+    | flatten (TupleGoal (g1 :: gs)) =
+      let val g1s = flatten g1
+          val rest = flatten (TupleGoal gs)
+      in
+        foldl (op @) [] (map (fn g => map (fn TupleGoal gs' => TupleGoal (g :: gs')) rest)
+                             g1s)
+      end
+    | flatten (ValconGoal (n, g)) = map (fn g => ValconGoal (n, g)) (flatten g)
+    | flatten g = [g]
+
+  (* cover : MinML.pattern -> goal -> bool
+   * Given a pattern and a goal (with out branches), return true iff the pattern covers
+   * the goal
+   *)
+  fun cover (M.Varpat _) _ = true
+    | cover (M.Boolpat true) TrueGoal = true
+    | cover (M.Boolpat false) FalseGoal = true
+    | cover (M.Tuplepat ps) (TupleGoal gs) =
+      List.all (fn (p, g) => cover p g) (ListPair.zip (ps, gs))
+    | cover (M.Valconpat (n, p)) (ValconGoal (n', g)) = (n = n' andalso cover p g)
+    | cover (M.Valcon0pat n) (Valcon0Goal n') = n = n'
+    | cover _ _ = false
+
+  fun coverageCheck _ [] = true
+    | coverageCheck [] _ = false
+    | coverageCheck (p :: ps) gs = coverageCheck ps (List.filter (not o (cover p)) gs)
+
+  fun coverageCheckProgram ctx exp =
+      let val cc = coverageCheckProgram ctx
+      in
+        case exp of
+          M.If (e, e1, e2) => (cc e; cc e1; cc e2)
+        | M.Tuple es => (map cc es; ())
+        | M.Fn (_, body) => cc body
+        | M.Rec (_, _, body) => cc body
+        | M.Apply (e1, e2) => (cc e1; cc e2)
+        | M.Anno (e, _) => cc e
+        | M.Valcon (_, e) => cc e
+
 end (* structure Coverage *)
+
+(*
+val gt2 = expandGoal (Goal (Type.Tycon "nat")) ps2;
+val gs2 = flatten gt2;
+val res = coverageCheck ps2 gs2;
+*)

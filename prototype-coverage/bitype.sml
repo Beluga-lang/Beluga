@@ -20,19 +20,22 @@ structure Typecheck :> TYPECHECK = struct
 
   open Type
   structure M = MinML
+  structure C = Coverage
 
-  datatype context = Ctx of (M.name * tp) list
+  datatype context = Ctx of ((M.name * tp) list * C.dt list)
 
-  val empty = Ctx []
+  val empty = Ctx ([], [])
 
   exception Unimplemented
 
   exception NotFound
+  fun dtctx (Ctx (_, dts)) = dts
   fun assoc x [] = raise NotFound
     | assoc x ((y, r)::rest) = if x = y then r else assoc x rest
 
-  fun lookup (Ctx list) x = assoc x list
-  fun extend (Ctx list) (x, v) = Ctx((x, v)::list)
+  fun lookup (Ctx (ts, _)) x = assoc x ts
+  fun extend (Ctx (ts, dts)) (x, v) = Ctx ((x, v) :: ts, dts)
+  fun extend_dt (Ctx (ts, dts)) dt  = Ctx (ts, dt :: dts)
 
   fun extend_list ctx [] = ctx
     | extend_list ctx ((x, v)::pairs) = extend_list (extend ctx (x, v)) pairs
@@ -109,16 +112,11 @@ structure Typecheck :> TYPECHECK = struct
       | M.Case (e, cs) =>
         let val t = synth ctx e
             val (patterns, clauses) = ListPair.unzip cs
-
             fun checkpat ctx p t =
                 case (p, t) of
                   (M.Varpat x, t) => [(x, t)]
                 | (M.Intpat _, Int) => []
-                | (M.Intpat _, _) =>
-                  fail "Pattern of wrong type inside CASE expression"
                 | (M.Boolpat _, Bool) => []
-                | (M.Boolpat _, _) =>
-                  fail "Pattern of wrong type inside CASE expression"
                 | (M.Tuplepat ps, Product ts) =>
                   if length ps = length ts then
                     foldl (fn ((p, t), bs) => (checkpat ctx p t) @ bs)
@@ -126,8 +124,6 @@ structure Typecheck :> TYPECHECK = struct
                           (ListPair.zip (ps, ts))
                   else
                     fail "Pattern of wrong type inside CASE expression"
-                | (M.Tuplepat ps, t) =>
-                  fail "Pattern of wrong type inside CASE expression"
                 | (M.Valconpat (x, p), Tycon y) =>
                   let val tp = lookup ctx x
                   in
@@ -139,8 +135,6 @@ structure Typecheck :> TYPECHECK = struct
                         fail "Pattern of wrong type inside CASE expression"
                     | _ => fail "Pattern of wrong type inside CASE expression"
                   end
-                | (M.Valconpat (x, p), _) =>
-                  fail "Pattern of wrong type inside CASE expression"
                 | (M.Valcon0pat x, Tycon y) =>
                   let val tp = lookup ctx x
                   in
@@ -150,7 +144,7 @@ structure Typecheck :> TYPECHECK = struct
                       else fail "Pattern of wrong type inside CASE expression"
                     | _ => fail "Pattern of wrong type inside CASE expression"
                   end
-                | (M.Valcon0pat _, _) =>
+                | _ =>
                   fail "Pattern of wrong type inside CASE expression"
 
             fun synthclause [] = []
@@ -158,9 +152,13 @@ structure Typecheck :> TYPECHECK = struct
                 (synth (extend_list ctx (checkpat ctx p t)) e) :: (synthclause cs)
 
             val clausesType = synthclause cs
+            val goals = C.flatten (C.expandGoal (dtctx ctx) (C.Goal t) patterns)
         in
           if List.all (fn x => Type.eq (x, hd clausesType)) clausesType then
-            hd clausesType
+            if C.coverageCheck patterns goals then
+              hd clausesType
+            else
+              fail "Patterns don't cover all cases"
           else
             fail "Type of clauses don't agree"
         end
@@ -246,8 +244,21 @@ structure Typecheck :> TYPECHECK = struct
                         in
                           bind_valcons ctx_dec vs
                         end
+
+                    fun build_dt ((name, ts) :: vs) =
+                        C.VC (name, map (fn Int => C.BuiltIn Int
+                                        | Bool => C.BuiltIn Bool
+                                        | Tycon x => C.Dummy x
+                                        | _ => fail "bitype.sml: 256")
+                                      ts)
+                        :: build_dt vs
+                      | build_dt [] = []
+                        
+                    val tmp = bind_valcons ctx vs
+                    val dt = C.DataType (t, build_dt vs)
+                    val result = extend_dt tmp dt
                 in
-                  bind_valcons ctx vs
+                  result
                 end
       in
         bind ctx_dec rest

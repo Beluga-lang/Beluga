@@ -38,43 +38,15 @@ structure Coverage  = struct
              M.Valconpat ("succ", M.Varpat "x"),
              M.Valcon0pat "z"]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   exception NotFoundCoverage
   fun lookup [] _ = raise NotFoundCoverage
     | lookup (DataType (n, vcs) :: ds) x =
       if n = x then vcs else lookup ds x
     | lookup (_ :: ds) x = lookup ds x
 
-  fun split (Goal T.Bool) = BranchGoal [TrueGoal, FalseGoal]
-    | split (Goal (T.Product ts)) = TupleGoal (map (fn t => Goal t) ts)
-    | split (Goal (T.Tycon t)) =
+  fun split ctx (Goal T.Bool) = BranchGoal [TrueGoal, FalseGoal]
+    | split ctx (Goal (T.Product ts)) = TupleGoal (map (fn t => Goal t) ts)
+    | split ctx (Goal (T.Tycon t)) =
       let val vcs = lookup ctx t
 
           fun dt2goal (BuiltIn t) = Goal t
@@ -91,26 +63,26 @@ structure Coverage  = struct
       in
         BranchGoal gs
       end
-    | split _ = raise CoverageError "function Coverage.split: impossible"
+    | split _ _ = raise CoverageError "function Coverage.split: impossible"
 
   (* expand : goal -> MinML.pattern -> goal
    * Given a goal and a pattern, furthur split the goal as needed
    *)
-  fun expand (g as Goal _) (M.Varpat _) = g
-    | expand (g as Goal _) p = expand (split g) p
-    | expand (BranchGoal gs) p = BranchGoal (map (fn g => expand g p) gs)
-    | expand (TupleGoal gs) (M.Tuplepat ps) =
+  fun expand ctx (g as Goal _) (M.Varpat _) = g
+    | expand ctx (g as Goal _) p = expand ctx (split ctx g) p
+    | expand ctx (BranchGoal gs) p = BranchGoal (map (fn g => expand ctx g p) gs)
+    | expand ctx (TupleGoal gs) (M.Tuplepat ps) =
       if length gs = length ps then
-        TupleGoal (map (fn (g, p) => expand g p) (ListPair.zip (gs, ps)))
+        TupleGoal (map (fn (g, p) => expand ctx g p) (ListPair.zip (gs, ps)))
       else
         raise CoverageError "coverage.sml 82: impossible"
-    | expand (g as ValconGoal (n, gg)) (M.Valconpat (n', p)) =
-      if n = n' then ValconGoal (n, expand gg p)
+    | expand ctx (g as ValconGoal (n, gg)) (M.Valconpat (n', p)) =
+      if n = n' then ValconGoal (n, expand ctx gg p)
       else g
-    | expand g _ = g
+    | expand _ g _ = g
 
-  fun expandGoal g [] = g
-    | expandGoal g (p :: ps) = expandGoal (expand g p) ps
+  fun expandGoal ctx g [] = g
+    | expandGoal ctx g (p :: ps) = expandGoal ctx (expand ctx g p) ps
 
   (* flatten : goal -> goal list
    * eliminate BranchGoal to produce a list of coverage goals
@@ -121,7 +93,9 @@ structure Coverage  = struct
       let val g1s = flatten g1
           val rest = flatten (TupleGoal gs)
       in
-        foldl (op @) [] (map (fn g => map (fn TupleGoal gs' => TupleGoal (g :: gs')) rest)
+        foldl (op @) [] (map (fn g => map (fn TupleGoal gs' => TupleGoal (g :: gs')
+                                            | _ => raise CoverageError "coverage.sml: 97")
+                                          rest)
                              g1s)
       end
     | flatten (ValconGoal (n, g)) = map (fn g => ValconGoal (n, g)) (flatten g)
@@ -142,7 +116,8 @@ structure Coverage  = struct
 
   fun coverageCheck _ [] = true
     | coverageCheck [] _ = false
-    | coverageCheck (p :: ps) gs = coverageCheck ps (List.filter (not o (cover p)) gs)
+    | coverageCheck (p :: ps) gs = coverageCheck ps
+                                                 (List.filter (not o (cover p)) gs)
 
   fun coverageCheckProgram ctx exp =
       let val cc = coverageCheckProgram ctx
@@ -155,6 +130,9 @@ structure Coverage  = struct
         | M.Apply (e1, e2) => (cc e1; cc e2)
         | M.Anno (e, _) => cc e
         | M.Valcon (_, e) => cc e
+        | M.Primop (p, es) => (map cc es; ())
+        | e => ()
+      end
 
 end (* structure Coverage *)
 

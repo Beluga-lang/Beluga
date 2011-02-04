@@ -56,10 +56,8 @@ structure Eval :> EVAL = struct
 
   fun union ([], l) = l
     | union (x :: t, l) = 
-      if member x l then
-        union (t,l)
-      else
-        x :: union (t,l)
+      if member x l then union (t,l)
+      else x :: union (t,l)
 
   fun unionList sets = foldr (fn (s1, s2) => union(s1, s2)) [] sets
 
@@ -121,19 +119,16 @@ structure Eval :> EVAL = struct
                      | M.Anno(e, _) =>
                        freeVars e
                      | M.Case (e, cs) =>
-                       let val fs = map (fn (p, e') =>
-                                            ((boundVarsPattern p), (freeVars e')))
+                       let val bsfs = map (fn (p, e') => ((boundVarsPattern p), (freeVars e')))
                                         cs
-                           val fs = map delete fs
+                           val fs = map delete bsfs
                        in
                          union (freeVars e, unionList fs)
                        end
-                                         
-                     | M.Valcon (x, e) => union ([x], freeVars e)
-                     | M.Valcon0 x => [x]
-
-  fun freeVariables (e) = freeVars (e)
-
+                     | M.Valcon (x, e) => freeVars e
+                     | M.Valcon0 _ => []
+                     (* | M.Valcon (x, e) => union ([x], freeVars e) *)
+                     (* | M.Valcon0 x => [x] *)
 
   (* Substitution 
    *
@@ -169,8 +164,7 @@ structure Eval :> EVAL = struct
         | M.Let ([], e2) => M.Let ([], subst s e2)
 
         | M.Let(dec1::decs, e2) =>
-          let
-            val rest = M.Let(decs, e2)
+          let val rest = M.Let(decs, e2)
           in 
             case dec1 of
               M.Val (exp, name) =>
@@ -190,9 +184,8 @@ structure Eval :> EVAL = struct
               end
 
             | M.Valtuple(exp, names) =>
-              let
-                val (names', rest) = renameListAsNeeded names e' rest
-                val exp = subst s exp
+              let val (names', rest) = renameListAsNeeded names e' rest
+                  val exp = subst s exp
               in
                 if member x names then
                   M.Let(M.Valtuple(exp, names) :: decs, e2)
@@ -217,8 +210,7 @@ structure Eval :> EVAL = struct
             M.Fn (y, e)
           else
             if member y (freeVars e') then
-              let
-                val (y,e1) = rename (y,e)
+              let val (y,e1) = rename (y,e)
               in
                 M.Fn (y, subst s e1)
               end
@@ -265,15 +257,14 @@ structure Eval :> EVAL = struct
       subst (x,e') (substList pairs e)
 
   and substType (s as (e',x)) t =
-      let
-        val result = 
-            case t of
-              T.Arrow (t1, t2) => T.Arrow (substType s t1, substType s t2)
-            | T.Product ts => T.Product (List.map (substType s) ts)
-            | T.Int => T.Int
-            | T.Bool => T.Bool
-            | T.Awesome => T.Awesome
-            | T.Tycon x => T.Tycon x
+      let val result = 
+              case t of
+                T.Arrow (t1, t2) => T.Arrow (substType s t1, substType s t2)
+              | T.Product ts => T.Product (List.map (substType s) ts)
+              | T.Int => T.Int
+              | T.Bool => T.Bool
+              | T.Awesome => T.Awesome
+              | T.Tycon x => T.Tycon x
       in
         if !verbose >= 2 then
           print ("substType: " ^ Print.expToString e' ^ " for " ^ x ^ " in "
@@ -353,7 +344,6 @@ structure Eval :> EVAL = struct
     val _ = bigstep_depth := !bigstep_depth + 1
     val result = 
         case exp of
-
           (* Values evaluate to themselves... *)
           e as M.Fn _ => e
         | e as M.Int _ => e
@@ -405,9 +395,8 @@ structure Eval :> EVAL = struct
           let in
             case eval e1 of
               M.Fn (x, body) =>
-              let
-                val v2 = eval e2
-                val body = subst (v2, x) body
+              let val v2 = eval e2
+                  val body = subst (v2, x) body
               in
                 eval body
               end

@@ -4,7 +4,7 @@ signature COVERAGE = sig
 
   datatype dt = BuiltIn of Type.tp
               | DataType of (MinML.name * vc list)
-              | Dummy of MinML.name
+              | Dummy of MinML.name (* used in value constructors to avoid infinite loop *)
 
        and vc = VC of MinML.name * dt list
 
@@ -12,7 +12,7 @@ signature COVERAGE = sig
                 | BranchGoal of goal list
                 | TupleGoal of goal list
                 | ValconGoal of MinML.name * goal
-                | Valcon0Goal of MinML.name
+                | Valcon0Goal of MinML.name (* nullary value constructor *)
                 | TrueGoal
                 | FalseGoal
 
@@ -33,7 +33,7 @@ structure Coverage :> COVERAGE = struct
 
   datatype dt = BuiltIn of Type.tp
               | DataType of (M.name * vc list)
-              | Dummy of M.name
+              | Dummy of M.name (* used in value constructors to avoid infinite loop *)
 
        and vc = VC of M.name * dt list
 
@@ -41,7 +41,7 @@ structure Coverage :> COVERAGE = struct
                 | BranchGoal of goal list
                 | TupleGoal of goal list
                 | ValconGoal of M.name * goal
-                | Valcon0Goal of M.name
+                | Valcon0Goal of M.name (* nullary value constructor *)
                 | TrueGoal
                 | FalseGoal
 
@@ -60,6 +60,10 @@ structure Coverage :> COVERAGE = struct
       if n = x then vcs else lookup ds x
     | lookup (_ :: ds) x = lookup ds x
 
+  (* split : context -> goal -> goal
+   * take a context, a goal of form (Goal t),
+   * return a goal of form (BranchGoal gs)
+   *)
   fun split ctx (Goal T.Bool) = BranchGoal [TrueGoal, FalseGoal]
     | split ctx (Goal (T.Product ts)) = TupleGoal (map (fn t => Goal t) ts)
     | split ctx (Goal (T.Tycon t)) =
@@ -79,19 +83,19 @@ structure Coverage :> COVERAGE = struct
       in
         BranchGoal gs
       end
-    | split _ _ = raise CoverageError "coverage.sml: 82"
+    | split _ _ = raise CoverageError "coverage.sml: 82, wrong goal to split"
 
   (* expand : context -> goal -> MinML.pattern -> goal
    * Given a contex, a goal and a pattern, furthur split the goal as needed
    *)
   fun expand ctx (g as Goal _) (M.Varpat _) = g
-    | expand ctx (g as Goal _) p = expand ctx (split ctx g) p
+    | expand ctx (g as Goal _) p = expand ctx (split ctx g) p (* split returns a BranchGoal *)
     | expand ctx (BranchGoal gs) p = BranchGoal (map (fn g => expand ctx g p) gs)
     | expand ctx (TupleGoal gs) (M.Tuplepat ps) =
       if length gs = length ps then
         TupleGoal (map (fn (g, p) => expand ctx g p) (ListPair.zip (gs, ps)))
       else
-        raise CoverageError "coverage.sml 82: impossible"
+        raise CoverageError "coverage.sml 82: shouldn't happen, since already typechecked"
     | expand ctx (g as ValconGoal (n, gg)) (M.Valconpat (n', p)) =
       if n = n' then ValconGoal (n, expand ctx gg p)
       else g
@@ -103,11 +107,12 @@ structure Coverage :> COVERAGE = struct
     | expandGoal ctx g (p :: ps) = expandGoal ctx (expand ctx g p) ps
 
   (* flatten : goal -> goal list
-   * eliminate BranchGoal to produce a list of coverage goals
+   * eliminate BranchGoal to produce a list of coverage goals (without branch)
    *)
   fun flatten (BranchGoal gs) = foldl (op @) [] (map flatten gs)
     | flatten (TupleGoal []) = [TupleGoal []]
     | flatten (TupleGoal (g1 :: gs)) =
+      (* maybe this part can made to be more efficient? *)
       let val g1s = flatten g1
           val rest = flatten (TupleGoal gs)
       in

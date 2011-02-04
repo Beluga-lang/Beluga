@@ -34,7 +34,7 @@ signature MINML = sig
            Val of exp * name                  (* val x = e *)
          | Valtuple of exp * (name list)      (* val (x1,...,xN) = e *)
          | Datatype of (name * (name * Type.tp list) list)
-       (* type name with a list of clause, each clause consists of a value constructor
+       (* Datatype name with a list of clause, each clause consists of a value constructor
         * and a list of argument types
         *)
 
@@ -44,7 +44,7 @@ signature MINML = sig
          | Boolpat of bool
          | Tuplepat of pattern list
          | Valconpat of (name * pattern)
-         | Valcon0pat of name
+         | Valcon0pat of name                 (* nullary value constructor pattern *)
 
   type tp = Type.tp
             

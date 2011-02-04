@@ -2,9 +2,29 @@ signature COVERAGE = sig
 
   exception CoverageError of string
 
+  datatype dt = BuiltIn of Type.tp
+              | DataType of (MinML.name * vc list)
+              | Dummy of MinML.name
+
+       and vc = VC of MinML.name * dt list
+
+  datatype goal = Goal of Type.tp
+                | BranchGoal of goal list
+                | TupleGoal of goal list
+                | ValconGoal of MinML.name * goal
+                | Valcon0Goal of MinML.name
+                | TrueGoal
+                | FalseGoal
+
+  type context = dt list
+
+  val expandGoal : context -> goal -> MinML.pattern list -> goal
+  val flatten : goal -> goal list
+  val coverageCheck : MinML.pattern list -> goal list -> bool
+
 end; (* signature COVERAGE *)
 
-structure Coverage  = struct
+structure Coverage :> COVERAGE = struct
 
   exception CoverageError of string
 
@@ -25,10 +45,6 @@ structure Coverage  = struct
                 | TrueGoal
                 | FalseGoal
 
-       (* and goalStatus = Sat | Unsat *)
-
-       and goalShape = Leaf | Branch of goal list
-
   type context = dt list
 
   val ctx = [DataType ("nat", [VC ("z", []), VC ("succ", [Dummy "nat"])])]
@@ -39,7 +55,7 @@ structure Coverage  = struct
              M.Valcon0pat "z"]
 
   exception NotFoundCoverage
-  fun lookup [] _ = raise NotFoundCoverage
+  fun lookup [] _ = raise CoverageError "Datatype not found in environment"
     | lookup (DataType (n, vcs) :: ds) x =
       if n = x then vcs else lookup ds x
     | lookup (_ :: ds) x = lookup ds x
@@ -63,10 +79,10 @@ structure Coverage  = struct
       in
         BranchGoal gs
       end
-    | split _ _ = raise CoverageError "function Coverage.split: impossible"
+    | split _ _ = raise CoverageError "coverage.sml: 82"
 
-  (* expand : goal -> MinML.pattern -> goal
-   * Given a goal and a pattern, furthur split the goal as needed
+  (* expand : context -> goal -> MinML.pattern -> goal
+   * Given a contex, a goal and a pattern, furthur split the goal as needed
    *)
   fun expand ctx (g as Goal _) (M.Varpat _) = g
     | expand ctx (g as Goal _) p = expand ctx (split ctx g) p
@@ -81,6 +97,8 @@ structure Coverage  = struct
       else g
     | expand _ g _ = g
 
+  (* expandGoal : contex -> goal -> pattern list -> goal
+   *)
   fun expandGoal ctx g [] = g
     | expandGoal ctx g (p :: ps) = expandGoal ctx (expand ctx g p) ps
 
@@ -114,25 +132,14 @@ structure Coverage  = struct
     | cover (M.Valcon0pat n) (Valcon0Goal n') = n = n'
     | cover _ _ = false
 
+  (* coverageCheck : pattern list -> goal list -> bool
+   * Given a list of patterns and a list of goals, check if the patterns covers
+   * all the goals
+   *)
   fun coverageCheck _ [] = true
     | coverageCheck [] _ = false
     | coverageCheck (p :: ps) gs = coverageCheck ps
                                                  (List.filter (not o (cover p)) gs)
-
-  fun coverageCheckProgram ctx exp =
-      let val cc = coverageCheckProgram ctx
-      in
-        case exp of
-          M.If (e, e1, e2) => (cc e; cc e1; cc e2)
-        | M.Tuple es => (map cc es; ())
-        | M.Fn (_, body) => cc body
-        | M.Rec (_, _, body) => cc body
-        | M.Apply (e1, e2) => (cc e1; cc e2)
-        | M.Anno (e, _) => cc e
-        | M.Valcon (_, e) => cc e
-        | M.Primop (p, es) => (map cc es; ())
-        | e => ()
-      end
 
 end (* structure Coverage *)
 

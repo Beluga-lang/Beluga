@@ -100,8 +100,7 @@ structure Parse :> PARSE = struct
    * and s' the unprocessed tail of r
    *)
   and parse_program r =
-      let
-        val (e, s) = parse_exp (S.delay (fn () => S.Cons r))
+      let val (e, s) = parse_exp (S.delay (fn () => S.Cons r))
       in
         (e, match L.SEMICOLON s)
       end

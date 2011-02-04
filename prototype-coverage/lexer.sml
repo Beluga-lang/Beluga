@@ -97,20 +97,17 @@ structure Lexer :> LEXER = struct
    * function, folding them into a result.
    *)
   fun foldfamily test base combine wrap (c, ins) =
-      let
-        fun ff b s =
-            case next s of
-              (c, ss) =>
-              if test c then
-                ff (combine (c, b)) ss
-              else (wrap b, s)
+      let fun ff b s =
+              case next s of
+                (c, ss) =>
+                if test c then ff (combine (c, b)) ss
+                else (wrap b, s)
       in
         ff (combine (c, base)) ins
       end
 
   fun gatherWhile p (acc, s) =
-      let
-        val (ch, s') = next s
+      let val (ch, s') = next s
       in
         (* if p ch then gatherWhile p (acc @ [ch], s') *)
         (* else (acc, s) *)
@@ -150,8 +147,7 @@ structure Lexer :> LEXER = struct
     | token (#":", s) = (COLON, s)
     | token (c, s) =
       if Char.isDigit c then
-        let
-          val (chars, s) = readNum ([c], s)
+        let val (chars, s) = readNum ([c], s)
         in
           (NUMBER (Option.valOf (Int.fromString (implode chars))), s)
         end
@@ -224,8 +220,7 @@ structure Lexer :> LEXER = struct
                end
       end
     | lex' (S.Cons r) =
-      let
-        val (t, s) = token r
+      let val (t, s) = token r
       in 
         S.Cons (keywords t, lex s)
       end

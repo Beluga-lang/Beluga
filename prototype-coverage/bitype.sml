@@ -144,8 +144,7 @@ structure Typecheck :> TYPECHECK = struct
                       else fail "Pattern of wrong type inside CASE expression"
                     | _ => fail "Pattern of wrong type inside CASE expression"
                   end
-                | _ =>
-                  fail "Pattern of wrong type inside CASE expression"
+                | _ => fail "Pattern of wrong type inside CASE expression"
 
             fun synthclause [] = []
               | synthclause ((p, e) :: cs) =
@@ -235,6 +234,7 @@ structure Typecheck :> TYPECHECK = struct
               | M.Datatype (t, vs) =>
                 let fun lst2tp [t] = t
                       | lst2tp ts = Product ts
+
                     fun bind_valcons ctx [] = ctx
                       | bind_valcons ctx (v::vs) =
                         let val ctx_dec =

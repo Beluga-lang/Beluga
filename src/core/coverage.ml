@@ -64,9 +64,7 @@ let nn = ref 0
 
        so the computed depth is 4.
        
-       Currently, 1 is added to the term depth; this is needed for some examples,
-       but it is not understood why.  Thus, the depth used for the first example
-       ([g] U ..) is 1, not 0.
+       Thus, the depth used for the first example ([g] U ..) is 1, not 0.
   
    Coverage consists of a series of searches; if any search succeeds, then coverage
    succeeds.
@@ -79,7 +77,7 @@ let nn = ref 0
 
    During each search, the decision of whether or not to split is made as follows:
 
-     - If the current depth is >= the maximum depth for this search (which, again,
+     - If the current depth is > the maximum depth for this search (which, again,
          could be less than the computed term depth), do not split; try to show coverage
          for a meta-variable (e.g., for the first example show that [g] NOSPLIT1 .. is covered).
          Otherwise:
@@ -135,15 +133,15 @@ type problem = {loc : Parser.Grammar.Loc.t option;
                 cO : LF.mctx;
                 cD : LF.mctx;
                 branches : Comp.branch list;
-                domain : (LF.typ * LF.dctx)}         (* type and context of scrutinee *)
+                ctype : (LF.typ * LF.dctx)}         (* type and context of scrutinee *)
 
-let make loc prag cO cD branches domain =
+let make loc prag cO cD branches cA =
   {loc= loc;
    prag= prag;
    cO= cO;
    cD= cD;
    branches= branches;
-   domain= domain}
+   ctype = cA}
 
 type coverage_result =
   | Success
@@ -186,6 +184,8 @@ let rec tryList f = function
                                        | _ -> tryList f rest)
     | [] -> (dprnt ("tryList precondition violated");
              failwith "tryList")
+
+
 
 
 let cctxToCSub = Opsem.cctxToCSub
@@ -356,6 +356,34 @@ let increment_context_depth strategy =
 let increment_depth strategy =
 (*     print_string ("increment_depth --> " ^ string_of_int (strategy.currDepth + 1) ^ "\n"); flush_all(); *)
       {strategy with currDepth = strategy.currDepth + 1}
+
+let increment_maxdepth strategy =
+(*     print_string ("increment_depth --> " ^ string_of_int (strategy.currDepth + 1) ^ "\n"); flush_all(); *)
+      {strategy with maxDepth = strategy.maxDepth + 1}
+
+let try_strategy (cutoff, variableDepth, dep) f = 
+  let rec cycle d = 
+    begin
+      if d <= cutoff then
+      (let strategy = new_strategy (d, variableDepth, dep) in 
+       let _ = print_string ("**** Trying splitting strategy " ^  strategyToString strategy ^ "*****\n\n") in 
+       let _        = dprint (fun () -> "trying strategy " ^ strategyToString strategy) in
+	 begin try 
+	   Debug.pushIndentationLevel();
+	   f strategy ;
+	   Debug.popIndentationLevel()
+	 with _ -> (Debug.popIndentationLevel() ; 
+		    print_string ("\n Try one more ... maxDepth = " ^
+		      string_of_int strategy.maxDepth ^ "\n") ;  cycle (d+1) 
+(*		     raise (NoCover (fun () -> "No Cover\n"))*)
+		   )
+       end) 
+    else 
+      raise (NoCover (fun () -> "Cutoff " ^ string_of_int cutoff ^ " reached"))
+    end
+  in
+    (if cutoff = 0 then cycle 0
+    else  cycle (cutoff - 1))
 
 
 
@@ -718,10 +746,10 @@ let rec app (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (h, spine, 
 and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, spine) k =
   Debug.indent 4; let k = fun arg1 arg2 arg3 -> (Debug.outdent 4; k arg1 arg2 arg3) in
 
-  let strategy = increment_depth strategy in
+  let strategy = increment_depth strategy in  
 
   (* PVars premises,  App<x_1> thru App<x_k> premises: *)
-  let (sch_elems, concretesWithTypes) = 
+  let (sch_elems, bvarsWithTypes) = 
     match strategy.phase with
       | ContextVariablePhase -> ([], [])
       | ContextDependentArgumentsPhase -> ([], [])
@@ -903,7 +931,7 @@ and obj_split (strategy, (cs : LF.csub), (ms : LF.msub), cO, cD, cPsi) (loc, a, 
   in
     List.iter callAppOnConstructor constructorsWithTypes;
     List.iter callAppOnPVar sch_elems;
-    List.iter callAppOnConcrete concretesWithTypes
+    List.iter callAppOnConcrete bvarsWithTypes
 
 
 (*
@@ -1014,22 +1042,44 @@ and obj (strategy, cs, ms, cO, cD, cPsi) tA k =
      (* cO ; cD ; cPsi |- tA  
 	cO  |- cs : cO'   and  cO ; cD |- ms : cD'
       *)
-     split_switch strategy
+      (if strategy.currDepth <= strategy.maxDepth then
+	 begin try   (* Even if the strategy permits us to split, try not splitting, because if it happens
+                       to succeed we can save a lot of time *)
+	   Debug.pushIndentationLevel();
+	   let result =  obj_no_split (strategy, cs, ms, cO, cD, cPsi) (loc, a, spine) k in 
+             Debug.popIndentationLevel();
+             result
+	 with 
+	     NoCover _ -> (Debug.popIndentationLevel(); 
+			   dprint (fun () -> "Calling obj_split:\n --  " ^ 
+				     P.typToString cO cD cPsi (tA, idSub) ^ "["
+				     ^ P.dctxToString cO cD cPsi ^ "]");
+			   obj_split (strategy, cs, idMSub, cO, cD, cPsi) (loc, a, spine)
+			     (fun (strategy', cs', ms', cO, cD, cPsi) tR tP ->   
+				(* Restore the previous strategy, including strategy.currDepth *)
+			       verify (cs', Whnf.mcomp ms ms', cO, cD, cPsi);
+				k (strategy, cs', Whnf.mcomp ms ms', cO, cD, cPsi) tR tP))
+	 end
+       else
+	 obj_no_split (strategy, cs, ms, cO, cD, cPsi) (loc, a, spine) k
+      )
+
+(*     split_switch strategy
        (begin (* Split *)
           fun strategy ->	     
 	     dprint (fun () -> "Calling obj_split:\n --  " ^ 
 		       P.typToString cO cD cPsi (tA, idSub) ^ "[" ^ P.dctxToString cO cD cPsi ^ "]");
              obj_split (strategy, cs, idMSub, cO, cD, cPsi) (loc, a, spine)
-               (fun (strategy', cs', ms', cO, cD, cPsi) b c ->   
+               (fun (strategy', cs', ms', cO, cD, cPsi) tR tP ->   
 		  (* Restore the previous strategy, including strategy.currDepth *)
                   verify (cs', Whnf.mcomp ms ms', cO, cD, cPsi);
-                  k (strategy, cs', Whnf.mcomp ms ms', cO, cD, cPsi) b c)
+                  k (strategy, cs', Whnf.mcomp ms ms', cO, cD, cPsi) tR tP)
           end, begin
            (* Don't split *)
            fun strategy ->
              obj_no_split (strategy, cs, ms, cO, cD, cPsi) (loc, a, spine) k
          end)
-
+*)
 
 let rec contextDep_split (strategy, cs, ms, cO, cD, cPsi) k =
   let continue (strategy, cs, ms, cO, cD, cPsi) k =
@@ -1435,7 +1485,9 @@ let rec covered_by_set branches (strategy, cs, ms, cO, cD, cPsi) tM tA =
                                   ^ P.normalToString cO cD cPsi (tM, idSub)))
   | branch :: branches ->
     (try covered_by branch (cO, cD, cPsi) tM tA;
-      dprint (fun () -> "Term covered:  " ^ P.normalToString cO cD cPsi (tM, idSub) ^ "  of type " ^ 
+       print_string ("\nCovered at depth = " ^ string_of_int strategy.currDepth
+                     ^ " — maxDepth = " ^ string_of_int strategy.maxDepth ^ "\n"); 
+      print_string ("\nTerm covered:  " ^ P.normalToString cO cD cPsi (tM, idSub) ^ "  of type " ^ 
 		P.typToString cO cD cPsi (tA, idSub)
         ^ "  covered by  "
        ^ (match branch 
@@ -1469,7 +1521,7 @@ and depth = function
   | LF.Tuple(_, tuple) -> (*1 +*) maxTuple depth tuple
 
 and depthHead = function
-  | LF.BVar _ -> 0 (* bp: why count it as 11 *)
+  | LF.BVar _ -> 0 (* bp: why count it as 1 *)
   | LF.Const _ -> 1
   | LF.MVar _ -> 0 
   | LF.PVar _ -> 0 (*bp: why count it as 1 ? *)
@@ -1547,7 +1599,7 @@ let finish() =
 
   problem  = {loc: loc ; prag : pragma ; 
               cO : LF.mctx ; cD : LF.mctx ;
-              branches ; domain : tA[cPsi] }
+              branches ; ctype : tA[cPsi] }
 
   where   cO ; cD ; cPsi |- tA  
   
@@ -1556,74 +1608,60 @@ let covers problem =
 if not (!enableCoverage) 
   then Success
 else
-  let (tA, cPsi) = problem.domain in
-  let _ = (dprint (fun () -> "[covers] cPsi = " ^ 
-		     P.dctxToString problem.cO problem.cD cPsi);
-	   dprint (fun () -> "           tA = " ^ 
-		     P.typToString problem.cO problem.cD cPsi (tA,idSub) )) in   
+  let (tA, cPsi) = problem.ctype in
+  let _ = (dprint (fun () -> "[covers] cPsi = " ^ P.dctxToString problem.cO problem.cD cPsi);
+	   dprint (fun () -> "           tA = " ^ P.typToString problem.cO problem.cD cPsi (tA,idSub) )) in   
   let _ = (covby_counter := 0; Debug.pushIndentationLevel(); Debug.indent 2) in 
-  let cutoff = max 1 (maxDepth problem.branches + 1 + !extraDepth) in
+  let cutoff = maxDepth problem.branches in
   let variableDepth = maxContextVariableDepth cPsi problem.branches in
   let dep = maxDependentDepth problem.branches  in
   let _ = dprint (fun () -> "cutoff depth                = " ^ string_of_int cutoff) in
   let _ = dprint (fun () -> "max context variable depth  = " ^ string_of_int variableDepth) in
   let _ = dprint (fun () -> "max dependent depth         = " ^ string_of_int dep) in
-  let strategies = tabulate cutoff (fun depth -> new_strategy (depth, variableDepth, dep)) in
-(*  let _ = print_string ("Try the following strategies : \n " ^ strategyListToString strategies ^ "\n") in  *)
+(*  let strategies = tabulate cutoff (fun depth -> new_strategy (depth, variableDepth, dep)) in*)
   try
     dprint (fun () -> "Coverage checking a case with "
               ^ string_of_int (List.length problem.branches)  
 	      ^ " branch(es) at:\n"
               ^ Pretty.locOptToString problem.loc);
-    tryList
-      (fun strategy ->
-         Debug.pushIndentationLevel();
-         dprint (fun () -> "trying strategy " ^ strategyToString strategy);
-         begin try
-           context (strategy, idCSub, idMSub, problem.cO, problem.cD, cPsi)
-             (fun (strategy, cs', ms', cO', cD', cPsi') ->
-                (* cO' |- cs' : problem.cO
-                   cO' ; cD' |- ms' : [cs']problem.cD  *)
-                let _ = (dprint (fun () -> "new context generated cPsi' = " 
-				   ^ P.dctxToString cO' cD' cPsi') ;
-			 dprint (fun () -> "cD' = " ^ P.mctxToString cO' cD' )) in
-                let tA' = Ctxsub.ctxnorm_typ ((sTyp tA ms'), cs') in
-		let _  = dprint (fun () -> "tA' = " ^ 
-				   P.typToString cO' cD' cPsi' (tA', idSub) )  in
-                let _  = dprint (fun () -> "strategy.phase := " ^ 
-				   "ContextDependentArgumentsPhase") in
-                let strategy = {strategy with phase = ContextDependentArgumentsPhase} in 
-                  (* cO' ; cD' ; cPsi' |- tA' *)
-                  contextDep (strategy, cs', ms', cO', cD', cPsi')
-                    (fun (strategy, cs'', ms'', cO'', cD'', cPsi'') ->
-                       (*  cO''        |- cs'' : cO' 
-                           cO'' ; cD'' |- ms'' : [cs'']cD' *)
-                       let _ = dprint (fun () -> "context generated cPsi'' = " ^ 
-					 P.dctxToString cO'' cD'' cPsi'') in 
- 		       let _ = dprint (fun () -> "cD'' = " ^ P.mctxToString cO'' cD'' ) in
-		       let tA'' = Ctxsub.ctxnorm_typ ((sTyp tA ms''), cs'') in
-		       let _    = dprint (fun () -> "tA'' = " 
-					    ^ P.typToString cO'' cD'' cPsi'' (tA'',idSub)) in 
-                       let _    = dprint (fun () -> "strategy.phase := TermPhase") in
-		       let strategy = {strategy with phase = TermPhase} in
-                         obj (strategy, cs'', ms'', cO'', cD'', cPsi'')
-                           tA''
-                           (fun cov_ctx cov_goal cov_type -> 
-			      (* let (strategy, _cs, _ms, _cO, _cD, _cPsi) = cov_ctx in *)
-			      let result = covered_by_set problem.branches cov_ctx cov_goal cov_type 
-			      in 
-				
-				  (*print_string ("Covered by Strategy : \n " ^  (strategyToString strategy ) ^ "\n"); *)
-				 result)
-		    ))
-           with exn -> (Debug.popIndentationLevel(); raise exn)
-           end;
-           Debug.popIndentationLevel())
-        strategies;
+    try_strategy (cutoff, variableDepth, dep)
+     (fun strategy ->
+        context (strategy, idCSub, idMSub, problem.cO, problem.cD, cPsi)
+          (fun (strategy, cs', ms', cO', cD', cPsi') ->
+             (* cO' |- cs' : problem.cO
+                cO' ; cD' |- ms' : [cs']problem.cD  *)
+             let _ = (dprint (fun () -> "new context generated cPsi' = " ^ P.dctxToString cO' cD' cPsi') ;
+		      dprint (fun () -> "cD' = " ^ P.mctxToString cO' cD' )) in
+             let tA' = Ctxsub.ctxnorm_typ ((sTyp tA ms'), cs') in
+	     let _  = dprint (fun () -> "tA' = " ^ P.typToString cO' cD' cPsi' (tA', idSub) )  in
+             let _  = dprint (fun () -> "strategy.phase := " ^ "ContextDependentArgumentsPhase") in
+             let strategy = {strategy with phase = ContextDependentArgumentsPhase} in 
+               (* cO' ; cD' ; cPsi' |- tA' *)
+               contextDep (strategy, cs', ms', cO', cD', cPsi')
+                 (fun (strategy, cs'', ms'', cO'', cD'', cPsi'') ->
+                    (*  cO''        |- cs'' : cO' 
+                        cO'' ; cD'' |- ms'' : [cs'']cD' *)
+                    let _ = dprint (fun () -> "context generated cPsi'' = " ^ P.dctxToString cO'' cD'' cPsi'') in 
+ 		    let _ = dprint (fun () -> "cD'' = " ^ P.mctxToString cO'' cD'' ) in
+		    let tA'' = Ctxsub.ctxnorm_typ ((sTyp tA ms''), cs'') in
+		    let _    = dprint (fun () -> "tA'' = "  ^ P.typToString cO'' cD'' cPsi'' (tA'',idSub)) in 
+                    let _    = dprint (fun () -> "strategy.phase := TermPhase") in
+		    let strategy = {strategy with phase = TermPhase} in
+                      obj (strategy, cs'', ms'', cO'', cD'', cPsi'')
+                        tA''
+                        (fun cov_ctx cov_goal cov_type -> 			   
+			   covered_by_set problem.branches cov_ctx cov_goal cov_type 
+			)
+		 )
+	  )
+     )
+    ;
 
-      dprint (fun () -> "## COVERS ##");
-      finish();
-      begin match problem.prag with
+    dprint (fun () -> "## COVERS ##");
+    dprint (fun () -> "covby_counter = " ^ string_of_int !covby_counter);
+    Debug.popIndentationLevel() ;
+
+    begin match problem.prag with
         | Syntax.RegularCase -> Success
         | Syntax.PragmaNotCase ->
             Failure (fun () ->

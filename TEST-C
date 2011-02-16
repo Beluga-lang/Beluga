@@ -87,6 +87,7 @@ echo $INTERPRETER +coverage $* \
 
 
 #     compile/cpm/test.cfg \
+
 echo OK:
 $INTERPRETER +t +coverage $* \
     path/path.bel \

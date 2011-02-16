@@ -1200,7 +1200,7 @@ module Make (T : TRAIL) : UNIFY = struct
                           (* may raise NotInvertible *)
                           
 
-            | MVar (Inst (r, cPsi1, tP, cnstrs) as _u, t) ->  (* s = id *)
+            | MVar (Inst (r, cPsi1, tP, cnstrs) as u, t) ->  (* s = id *)
                 let tM = Root(loc, head, tS) in
                 let t  = Whnf.normSub (comp t s) in 
                   (* by invariant: MVars are lowered since tM is in whnf *)
@@ -1227,15 +1227,19 @@ module Make (T : TRAIL) : UNIFY = struct
                          s' = [ssubst]([s]t) and  cD ; cPsi'' |- s' <= cPsi1  *)
                       (* Mon Feb  9 14:38:08 2009 -bp : instead of simply computing the inverted
                          substitution, we now actually prune the substitution *)
-                      (* let s' = invSub cD0 (phat, (comp t s, cPsi1), ss, rOccur) in
-                         Root (loc, MVar (u, s'), Nil) *)
-                       
-                      let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
+                      (*
+                        let s' = invSub cD0 phat (comp t s, cPsi1)  ss rOccur in
+                          Root (loc, MVar (u, s'), Nil) 
+                      *)
+                       let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
                       (* Psi1 |- idsub   : Psi2 
                          Psi2 |- idsub_i : Psi1
                        *)
+                        (* could maybe just prune tP and cPsi1 ? 
+                           29 Jan, 2011  -bp  *)
                       let idsub_i = invert idsub in 
                       let v = Whnf.newMVar(cPsi2, TClo(tP, idsub_i)) in 
+                      let _ = print_string ("prune non-pattern sub s  where u[s] \n") in
                       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in 
                         Clo(tM, comp s ssubst)
                           (* may raise NotInvertible *)

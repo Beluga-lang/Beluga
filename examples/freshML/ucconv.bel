@@ -1,0 +1,67 @@
+% This is the pseudo code for a simple, untyped closure conversion in beluga. 
+
+%term is the source language
+term: type.
+elam:(term -> term) -> term. 
+eapp:term -> term -> term.
+elet:term -> (term -> term) -> term.
+
+
+%targer is the target language
+target:type.
+tunit: target. %used as nil to list with pairs
+tfst: target -> target.
+tsnd: target -> target.
+tpair: target -> target -> target.
+tapp: target -> target -> target -> target.
+tlam: (target -> target -> target) -> target.
+tlet: target -> (target -> target) -> target.
+
+
+schema ctx = term;
+schema tctx = target;
+
+
+%list of term
+fvlist: type.
+nil:fvlist.
+cons: term -> fvlist -> fvlist.
+
+rec append:{g:ctx}fvlist[g] -> fvlist [g] -> fvlist [g] =
+    fn a => fn b => case a of
+         [g]nil => b
+         |[g]cons E Ta => let [g]B' = append ([g]Ta) b in
+                                   [g]cons E B'
+;
+
+%outer conversion
+%rec convert:{g:ctx}{h:tctx} (term [g] -> target [h]) -> term [g] -> target [h] = 
+
+
+%
+%rec b_map:{g:ctx}{h:tctx} (term [g] -> target [h]) -> fvlist[g] ->target [h,x:target] -> (term [g] -> target [h,x:target]) =
+
+%Apply mapping to the free variable list(similar to built)
+rec b_env:{g:ctx}{h:tctx} (term [g] -> target [h]) -> fvlist[g] -> target[] =
+fn map => fn fvar => case fvar of
+                [g]nil => [] tunit
+               |[g]cons E Ta => let [h]E' = map ([g]E) in
+                                let [h]Ta' = b_env map ([g]Ta) in
+                               [h]tpair E' Ta'
+
+;
+
+rec fvar:{g:ctx} term[g] -> fvlist[g] =
+ fn e => case e of
+     [b,x:term] x => [b,x:term] nil
+    |[g] (#p ..) => [g]cons (#p ..) nil
+    |[g] elam (\x.(U..x)) => let [g,x:term]L = fvar ([g,x:term] (U..x)) in
+                           [g] L
+                           
+   |[g] eapp (U..) (V..) => let [g]FVU = fvar ([g]U..) in
+			 let [g]FVV = fvar ([g]V..) in
+                          append ([g]FVU) ([g]FVV)
+   |[g] elet (U..) (\x.(V..x)) => let [g]FVU = fvar ([g]U..) in
+                               let [g,x:term]FVV = fvar ([g,x:term]V..x) in
+                                  append ([g]FVU) ([g]FVV)
+;

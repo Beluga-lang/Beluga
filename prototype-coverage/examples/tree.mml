@@ -1,0 +1,13 @@
+let
+  datatype tree = Node of int * tree * tree | Empty
+  datatype treelist = Cons of tree * treelist | Nil
+  val x = Node (2, Node (1, Empty, Empty), Node (3, Empty, Empty))
+  val y = Node (6, Node (5, Empty, Empty), Node (7, Empty, Empty))
+  val z = Node (4, x, y)
+  val a = Cons (x, Cons (y, Cons (z, Nil)))
+in
+  case x of
+    Empty => 0
+  | Node (a, b, c) => a
+  | Node (1, Empty, y) => 1
+end;

@@ -4636,10 +4636,12 @@ let recSgnDecl d =
           begin match recFuns with
             | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
                 let (e_r' , tau') = reconFun f e in 
-                  Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
+                  (* Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
                     (R.render_name f)
                     (P.fmt_ppr_cmp_typ cO cD Pretty.std_lvl) (Whnf.normCTyp tau')
-                    (P.fmt_ppr_cmp_exp_chk cO cD cG Pretty.std_lvl) (Whnf.cnormExp (e_r', Whnf.m_id));
+                    (P.fmt_ppr_cmp_exp_chk cO cD cG Pretty.std_lvl)
+                     (Whnf.cnormExp (e_r', Whnf.m_id)); 
+                  *)
 
                 let _       = dprint (fun () ->  "DOUBLE CHECK of function " ^    f.string_of_name ^  " successful!\n" ) in
 

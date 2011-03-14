@@ -1,0 +1,31 @@
+let
+  datatype list = C of int * list | Nil
+
+  fun map : ((int -> int) -> list -> list) foo =
+      fn l => case l of
+                Nil => Nil
+              | C (x, xs) => C (foo x, map foo xs)
+
+  fun filter : ((int -> bool) -> list -> list) pred =
+      fn l => case l of
+                Nil => Nil
+              | C (x, xs) => if pred x then C (x, filter pred xs) else filter pred xs
+
+  fun foldl : ((int -> int -> int) -> int -> list -> int) combine =
+      fn init => fn l => case l of
+                              Nil => init
+                            | C (x, xs) => foldl combine (combine init x) xs
+
+  fun even : (int -> bool) x = if x = 0 then
+                                 true
+                               else if x < 0 then
+                                 false
+                               else
+                                 even (x - 2)
+
+  fun sum : (int -> int -> int) x = fn y => x + y
+
+  val l = C (0, C (1, C (2, C (3, C (4, C (5, C (6, C (7, C (8, C (9, Nil))))))))))
+in
+  (foldl sum 0 (filter even (map (fn x => x + 1) l))) = 30 (* should be 30 *)
+end;

@@ -1,0 +1,31 @@
+(* Mixing intersections and conditionals;
+  don't try to make this work.  *)
+
+let fun nonnegative (x : int) : bool = ~1 < x
+    fun positive (x : int) : bool = 0 < x
+    fun repeat :
+        int|nonnegative  (* number of iterations -- can't be negative *)
+     -> (* Intersection type expresses various behaviours: *)
+          (* 1. General behaviour, without conditions *)  
+      (
+         ((int -> int) -> int -> int)
+
+          (* 2. Behaviour when called with a function that returns positive *)
+      &  ((int -> int|positive) -> int -> int|positive)
+
+          (* 3. Behaviour when called with a function that takes and returns positive *)
+      &  ((int|positive -> int|positive) -> int|positive -> int|positive)
+      )
+          n =
+              fn f => fn x =>
+                if n = 0 then x
+                else repeat (n - 1) f (f(x))
+
+  val r1 = repeat 50 (fn x => x - 1) 0
+(*
+  val r3 = (repeat 6 (fn y => 50) 30) : int|positive
+  val r2 = (repeat 4 (fn z => 1 + z * 2) 100) : int|positive
+*)
+in
+  (r1, r1, r1)
+end;

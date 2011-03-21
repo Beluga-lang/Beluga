@@ -1,0 +1,12 @@
+(* NOTE: This example will not work until you fully implement subtyping *)
+
+let val record1 = {x = 30, y = 55}
+    val record2 = {pointless = (), absurd = ()}
+    fun translate : ({x : int} & {y : int}) -> ({x : int} & {y : int}) -> ({x : int} & {y :int})
+         p1
+         = fn p2 =>  {x = p1.x + p2.x,
+                      y = p1.y + p2.y}
+in
+  translate {x= 30, y = 20} {x= 0, y = 5}
+end
+;

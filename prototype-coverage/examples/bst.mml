@@ -1,0 +1,34 @@
+let
+  datatype bst = Node of int * bst * bst
+               | Empty
+
+  datatype list = C of int * list | Nil
+
+  fun insert : (int -> bst -> bst) x =
+      fn t => case t of
+                Empty => Node (x, Empty, Empty)
+              | Node (y, l, r) =>
+                if x < y then Node (y, insert x l, r)
+                else if x = y then Node (y, l, r)
+                else Node (y, l, insert x r)
+
+  fun append : (list -> list -> list) l1 =
+      fn l2 => case l1 of
+                 Nil => l2
+               | C (x, l') => C (x, append l' l2)
+
+  fun flatten : (bst -> list) t =
+      case t of
+        Empty => Nil
+      | Node (x, l, r) => append (flatten l) (C (x, flatten r)) 
+
+  fun buildBST : (list -> bst -> bst) l =
+      fn t => case l of
+                Nil => t
+              | C (x, xs) => buildBST xs (insert x t)
+
+  val l = C (4, C (2, C (6, C (1, C (3, C (5, C (7, Nil)))))))
+
+in
+  flatten (buildBST l Empty)
+end;

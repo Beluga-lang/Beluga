@@ -1,5 +1,6 @@
 % Untyped closure conversion in beluga. 
 %current states:
+%b_map gives context clash
 %convert is a stub
 %
 %
@@ -18,8 +19,8 @@ tunit: target. %used as nil to list with pairs
 tfst: target -> target.
 tsnd: target -> target.
 tpair: target -> target -> target.
-tapp: target -> target -> target -> target.
-tlam: (target -> target -> target) -> target.
+tapp: target -> target -> target.
+tlam: (target -> target) -> target.
 tlet: target -> (target -> target) -> target.
 
 
@@ -110,22 +111,24 @@ rec fvar:{g:ctx} term[g] -> fvlist[g] =
 ;
 
 %outer conversion
-%rec convert:{g:ctx}{h:tctx} (term [g] -> target [h]) -> term [g] -> target [h] = 
-%  fn map => fn e => case e of
-%         [g]elet (U..) (\x.(V..x)) => let [h](U'..) = convert map ([g]U..) in
-%				   %let [h,x:target] (M'..) = extmap map x in
-%				   let [h](V'..) = convert map ([g]V..x) in
-%                                    [h]tlet (U'..) (\x. V'..x)
-%       |[g]eapp (U..) (V..) => let [h](U'..) = convert map ([g]U..) in
-%			    let [h](V'..) = convert map ([g]V..) in
-%			    let [h](U1'..) = [h]tfst (U'..) in
-%			    let [h](U2'..) = [h]tsnd (U'..) in
-%			    [h] tapp (U1'..) (U2'..) (V'..)
-%       |[g]elam (\x.(U..x)) => %let [h,x:target] (M'..) = extmap map x in
-%                            let [h,y':target,x':target] U' y x = convert map ([g,x:term]U x) in 
-%			     let [g](FV..) = fvar e in
-%			     let [h](T1..) = [h] tabs(\y.\x.(U'..y x)) in
-%			     let [](T2..) = b_env [h] map ([g]FV..) in
-%                              [h]tpair (T1..) (T2..)
-%; 
+%? -> Wrap app in tlet
+%  -> Keep 2-lam, 3-arg app or 1-lam with pair
+rec convert:{g:ctx}{h:(tctx)*} (term [g] -> target [h]) -> term [g] -> target [h] = 
+    FN h => fn map => fn e => case e of
+		    [g]#p.. => map ([g]#p..)
+		    |[g]eapp (U..) (V..) => let [h](U'..) = convert [h] map ([g]U..) in
+			     	   	    let [h](V'..) = convert [h] map ([g]V..) in
+			   [h] tapp (tfst (U'..)) (tpair (tsnd (U'..)) (V'..))
+			   %[h] tlet ...?
+		  |[g]elam (\x.(U..x)) => 
+		  	   	       	let [h,x:target] U'..x = convert  [h,x:target] (e_map [h] map) ([g,x:term]U..x) in 
+					let [g](FV..) = fvar e in
+					let [h](T2..) = b_env [h] map ([g]FV..) in
+					[h]tpair (tlam (\x.(U'..x))) (T2..)
+		  |[g]elet (U..) (\x.(V..x)) => let [h](U'..) = convert [h] map ([g]U..) in
+					     let [h,x:target] V'..x = convert [h,x:target] (e_map [h] map) ([g,x:term]V..x) in
+					     [h] tlet (U'..) (\x.(V'..x))
+; 
 
+ 
+let t3 = convert [ ] (fn e => ([ ] tunit)) ( [ ] elam (\x.(elam (\y. eapp x y))));

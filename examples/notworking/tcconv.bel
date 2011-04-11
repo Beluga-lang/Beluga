@@ -1,94 +1,121 @@
-% Untyped closure conversion.
+% Type-preserving closure conversion.
 % Author: Olivier Savary B. 
 %
 % current state
 %--------------------
-% not working
-% Fatal error: exception Whnf.Fmvar_not_found
+% Not Working
+% Just started filling ucconv with types
+% 
 %
 %
+tp: type.
+arr: tp-> tp -> tp.
+code: tp->tp->tp.
+cross: tp->tp->tp.
+unit:tp.
 
 
-
- %term is the source language
- term: type.
- elam:(term -> term) -> term. 
- eapp:term -> term -> term.
- elet:term -> (term -> term) -> term.
+%term is the source language
+term: tp → type.
+elam: (term T → term S) → term (arr T S).
+eapp: term (arr T S) → term T → term S.
+elet: term T → (term T → term S) → term S.
 
  %targer is the target language
- target:type.
- tunit: target. %used as nil to list with pairs
- tfst: target -> target.
- tsnd: target -> target.
- tpair: target -> target -> target.
- tapp: target -> target -> target. %app is wrapped in topen
- tlam: (target -> target) -> target. %lam is wrapped in tpack
- tlet: target -> (target -> target) -> target.
- tpack: target -> target.
- topen: target -> (target -> target) -> target.
+target: tp → type.
+tunit: target unit.
+tfst: target (cross T S) →      target T.
+tsnd: target (cross T S) → target S.
+tpair: target T → target S → target (cross T S).
+tlam: (target T → target S) → term (code T S).
+tlet: target T → (target T → target S) → target S.
+tpack: target cross( (code (cross T E) S) E)
+       → target (arr T S).  % \exists E.                                                                                          
+topen: target (arr T S)
+       → (target (cross( (code (cross T E)) S) E) → target S' )
+       → target S'.
 
- nat: type.
- z:nat.
- suc: nat -> nat.
+%natural                                                                                                                          
+nat: type.
+z:nat.
+suc:nat→nat.
 
- %list of term
- fvlist: type.
- nil:fvlist.
- cons: term -> fvlist -> fvlist.
+%list of term                                                                                                                     
+fvlist: tp → type.
+nil: fvlist unit.
+cons: term T → fvlist S → fvlist (cross T S).
 
- schema ctx = term;
- schema tctx = target;
+%proof that append T S append the element from T to S.                                                                            
+app_tp: tp → tp → tp → type.
+tunit_app: app_tp tunit R R.
+tcross_app: app_tp T' S R
+            → app_tp (cross T T') S (cross T R).
 
- rec append:{g:ctx}fvlist[g] -> fvlist [g] -> fvlist [g] =
+%Lookup the type of a projection in makeproj.                                                                                     
+lookup_tp: nat → tp → tp → type.
+nil_lookup: lookup_tp N unit unit.
+last_lookup: lookup_tp z (cross T S) T.
+next_lookup: lookup_tp N S R
+             → lookup_tp (suc N) (cross T S) R.
+
+%existencials for list, used in append, remove.                                                                                   
+efvlist: type.
+eFV: fvlist R → efvlist.
+
+
+ schema ctx = term T;
+ schema tctx = target T;
+
+ rec append:{g:ctx} fvlist S [g] -> fvlist T [g] -> efvlist [g] =
      fn a => fn b => case a of
 	  [g]nil => b
 	  |[g]cons (E..) (Ta..) => let [g](B'..) = append ([g]Ta..) b in
 				    [g]cons (E..) (B'..)
  ;
 
+
+ rec remove:{g:ctx}(fvlist R[g,x:term T]) -> efvlist[g] =
+ fn l => case l of
+	  [g,x:term T]nil => [g]nil
+	|[g,x:term T]cons x (L..x) => remove([g,x:term T]L..x)
+	|[g,x:term T]cons (#p..) (L..x) => 
+	   let [g] (L'..) = remove ([g,x:term T]L..x) in
+				   [g]cons (#p..) (L'..)
+ ;
+
  %makeproj return the nth project of pair y
  %makeproj n = tfst( ... (tfst y))
- rec makeproj': nat []  -> target[xenv:target] =
+ rec makeproj': nat []  -> (tp_lookup N S R) -> (target R [xenv:target S] )=
      fn n => case n of
 		 []z => [xenv:target] (tfst xenv)
 	       |[]suc M => let  [xenv:target]N = makeproj'([]M) in
 		      [xenv:target] tsnd N
  ;
 
- rec makeproj: nat [] -> target[xenv:target] = 
-     fn n => let [xenv:target] T = makeproj' n in
-	    [xenv:target] tfst T
+ rec makeproj: nat [] -> (tp_lookup N S R) -> (target R [xenv:target S] )= 
+     fn n => let [xenv:target S] T = makeproj' n in
+	    [xenv:target S] tfst T
  ;
 
 
-
- rec remove:{g:ctx}fvlist[g,x:term] -> fvlist[g] =
- fn l => case l of
-	  [g,x:term]nil => [g]nil
-	|[g,x:term]cons x (L..x) => remove([g,x:term]L..x)
-	|[g,x:term]cons (#p..) (L..x) => 
-	   let [g] (L'..) = remove ([g,x:term]L..x) in
-				   [g]cons (#p..) (L'..)
- ;
 
  %Extend the mapping with id function, used for the local variable in lam and let.
- rec e_map:{g:ctx}{h:(tctx)*} (term [g] -> target[h])  ->  (term[g,x:term] -> target[h,x:target]) = 
+ rec e_map:{g:ctx}{h:(tctx)*} (term T [g] -> target T [h])  ->  (term T[g,x:term S] -> target T[h,x:target S]) = 
   FN h => fn map => 
 	      fn e' => case e' of
-			|[g,x:term] x => [h,x:target] x
-			|[g,x:term](#p..) => let [h](F..) = map([g]#p..) in 
-					  [h,x:target](F..)
+			|[g,x:term S] x => [h,x:target S] x
+			|[g,x:term S](#p..) => let [h](F..) = map([g]#p..) in 
+					  [h,x:target S](F..)
  ;
 
  %Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
  %Resulting should be a term closed under the environement tuple xenv and the local variable x.
- rec b_map:{g:ctx}(term [g,x:term] -> target [xenv:target]) -> fvlist[g] -> nat[] -> (term [g,x:term] -> target [xenv:target]) =
+ rec b_map:{g:ctx}(term T[g,x:term S] -> target T[xenv:target G]) -> fvlist R[g] -> nat[] -> (term T [g,x:term S] -> target T [xenv:target P]) =
      fn map => fn l => fn n => case l of
 			      [g] nil => (fn e =>
 					   case e of
-					     |[g,x:term] x => [xenv:target] (tsnd xenv)
-					     |[g,x:term](#p..) => map ([g,x:term]#p..)
+					     |[g,x:term S] x => [xenv:target P] (tsnd xenv)
+					     |[g,x:term S](#p..) => map ([g,x:term S]#p..)
 					)
 			    |[g]cons (X..) (L..) =>
 			       let []N = n in
@@ -103,7 +130,7 @@
 
 
  %Build the environement tuble xenv that will be packed next to a lam. Map should contain the idmapping from x:term to x:target at this stage.
- rec b_env:{g:ctx}{h:(tctx)*} (term [g] -> target [h]) -> fvlist[g] -> target[h] =
+ rec b_env:{g:ctx}{h:(tctx)*} (term T[g] -> target T[h]) -> fvlist R[g] -> target R[h] =
    FN h => fn map => fn fvar => case fvar of
 		 [g]nil => [h]tunit
 		|[g]cons (E..) (Ta..) => let [h](E'..) = map ([g]E..) in
@@ -113,7 +140,7 @@
  ;
 
 
- rec fvar:{g:ctx} term[g] -> fvlist[g] =
+ rec fvar:{g:ctx} term [g] -> fvlist[g] =
   fn e => case e of
       [g] (#p ..) => [g]cons (#p ..) nil
      |[g] elam (\x.(U..x)) => let [g,x:term](L..x) = fvar ([g,x:term] (U..x)) in
@@ -139,7 +166,7 @@
  %	   6 Pack the target(5) and xenv(2) in a closure                  [h] tpack tpair(\xenv.E',T..)
  %
  %
- rec convert:{g:ctx}{h:(tctx)*} (term [g] -> target [h]) -> term [g] -> target [h] = 
+ rec convert:{g:ctx}{h:(tctx)*} (term T[g] -> target T[h]) -> (term S[g]) -> (target S[h]) = 
      FN h => fn map => fn e => case e of
 		     [g]#p.. => map ([g]#p..)
 		     |[g]eapp (U..) (V..) => let [h](U'..) = convert [h] map ([g]U..) in

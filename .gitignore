@@ -1,6 +1,6 @@
 *.elc
 *.a
-*.cm*
+*.cm?*
 *.o
 *.opt
 *.omc

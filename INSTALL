@@ -35,6 +35,7 @@ ocaml 3.10 or greater:  http://caml.inria.fr/download.en.html
 extlib:                 http://code.google.com/p/ocaml-extlib/downloads/list
 ulex:                   http://www.cduce.org/download.html#side
 omake:                  http://omake.metaprl.org/index.html
+ounit:                  http://ounit.forge.ocamlcore.org/
 
 GODI
 ----

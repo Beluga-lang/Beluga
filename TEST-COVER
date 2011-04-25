@@ -1,0 +1,160 @@
+#!/bin/sh
+
+# TEST-COVER: tests Beluga coverage (B. Pientka)
+# Wed Mar  9 09:49:33 2011 -bp 
+# Usage: TEST-COVER [options]
+#
+# For timing, should be run with printing statements commented in the code
+# so printing is supresed.
+
+# [options], if given, are passed to Beluga.
+# Example: TEST-COVER +d
+
+
+# set $BELUGA to an absolute path to the toplevel .../beluga directory
+#
+pwd=`pwd`
+BELUGA=`dirname $pwd/$0`
+cd $BELUGA
+BELUGA=`pwd`
+# echo BELUGA: $BELUGA
+
+# set $INTERPRETER to the executable
+INTERPRETER=$BELUGA/bin/interpreter 
+
+# set $X to the `beluga' examples directory
+X=$BELUGA/examples
+cd $X
+
+# The following contain nonexhaustive cases with empty contexts
+
+echo 'nonexhaustive cases:  (empty contexts)'
+$INTERPRETER -noprint +t +warncover $* \
+    compile/debruijn/test.cfg \
+    mini-ml/eval-sub.bel \
+    mini-ml/eval-sub-explicit.bel \
+    tapl/ch6/evaluator.bel \
+    tapl/ch3+arith/sources.cfg \
+    typed-eval/tpeval.bel \
+    typed-eval/tpeval-explicit.bel \
+    typed-eval/tpeval2.bel 
+
+
+sleep 1
+
+
+# The following contain exhaustive cases with empty contexts
+echo 'covering cases:  (empty contexts)'
+$INTERPRETER -noprint +t +coverage $* \
+    arith/arith.bel \
+    compile/cls/test.cfg \
+    compile/debruijn1/test.cfg \
+    debruijn1/sources.cfg \
+    fol/test.cfg \
+    test/id-simple.bel \
+    typed-eval/tpeval-val.bel \
+    mini-ml/eval-sub-1.bel \
+    mini-ml/eval-sub-1-explicit.bel \
+    mini-ml/vsound.bel \
+    mini-ml/vsound-explicit.bel \
+    mini-ml/tps.bel \
+    coverage/arith.bel  \
+    coverage/list.bel  \
+    small-step/lam.bel \
+    small-step/system-f.bel \
+    small-step/system-f-iso.bel \
+    tapl/ch6/small-step.bel \
+    tapl/ch14.bel \
+    tapl/ch14-b.bel \
+    test/id-simple.bel \
+    unique/unique-eval.bel 
+
+sleep 1
+
+# NOTE: tapl/ch6/small-step.bel 
+# has unresolved unification constraints, unless we prioritize splitting on
+# dep. (explicit) argument first.
+
+
+# The following contain cases with empty contexts and 
+# we prove that the resulting open coverage goals are 
+# trivially proven to be impossible
+
+echo 'covering cases with trivially proven open coverage goals (empty contexts): '
+$INTERPRETER -noprint +t +coverage $* \
+    compile/cpm/test.cfg \
+    tapl/ch3/sources.cfg \
+    tapl/ch3+arith/sources-corrected.cfg \
+    tapl/ch3+arith/big-small.cfg \
+    tapl/ch3+arith/det.cfg \
+    tapl/ch6/tps.bel 
+
+sleep 1
+
+echo 'CASES WITH NON-EMPTY CONTEXT: '
+
+# The following contain exhaustive cases with empty contexts
+
+echo 'nonexhaustive cases: (non-empty contexts)'
+$INTERPRETER -noprint +t +warncover $* \
+    count-var/cntvar-crec.bel  \
+    count-var/cntvar-explicit.bel \
+    count-var/cntvar-simple.bel \
+    count-var/cntvar-simple-crec.bel \
+    count-var/cntvar-2.bel \
+    cut-elim.bel \
+    cut-elim-crec.bel \
+    freshML/term-crec.bel 
+
+sleep 1
+
+echo 'covering cases with non-empty context: '
+$INTERPRETER -noprint +t +coverage $* \
+    copy/copy.bel \
+    copy/copy-crec.bel \
+    copy/copy-explicit.bel \
+    copy/copy-simple.bel \
+    copy/copy-simple-crec.bel \
+    copy/copy-simple-explicit.bel \
+    cut-elim-crec-cover.bel \
+    church-rosser/test.cfg \
+    church-rosser/test-crec.cfg \
+    church-rosser/test-crec-cover.cfg \
+    free-vars/fvnat-explicit.bel \
+    free-vars/fvnat.bel \
+    free-vars/fvnat-crec.bel \
+    freshML/conv-untyped.bel \
+    freshML/term.bel \
+    freshML/cps.bel \
+    freshML/cps-crec.bel \
+    freshML/cps-popl-tutorial1.bel \
+    freshML/cps-popl-tutorial1-crec.bel \
+    freshML/cps-popl-tutorial2.bel \
+    freshML/cps-popl-tutorial2-crec.bel  \
+    equal/eq-proof.bel \
+    equal/eq-proof-full-crec.bel \
+    lp-horn/test-crec.cfg \
+    path/path.bel \
+    path/path-typed.bel \
+    test/case1.bel \
+    test/case1-explicit.bel \
+    test/case2.bel \
+    test/case2-explicit.bel \
+    test/test-simple-explicit.bel \
+    test/test-simple.bel \
+    test/sigma4.bel \
+    test/sigma3.bel \
+    test/alpha.bel \
+    tpcert.bel 
+
+sleep 1
+echo 'covering cases requiring context splits: '
+$INTERPRETER -noprint +t +coverage $* \
+    test/test-ctxmatching.bel \
+    test/test-depctxmatching.bel \
+    freshML/debruijn-uniform.bel \
+    freshML/debruijn-1a.bel
+
+
+
+exit 0

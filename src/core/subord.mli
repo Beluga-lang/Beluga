@@ -16,3 +16,5 @@ val dump_typesubord : unit -> unit
  *  Substitution.identity.
  *)
 val thin : (mctx * mctx) -> (typ * dctx) -> (sub * dctx)
+
+val thin' :  mctx -> Id.cid_typ -> dctx -> (sub * dctx)

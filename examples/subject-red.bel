@@ -36,8 +36,6 @@ s_app2: step (app M N) (app M' N')
 schema tctx = tp + some [t:tp] block x:exp,u:type_of x t, v:step x x . notLam x;
 
 
-
-
 % Prove: If G |- type_of M T  and  G |- step M M' then  G |- type_of M' T
 rec tps': {g:(tctx)*}(type_of (M ..) (T ..))[g] -> (step (M ..) (N ..))[g]
          -> (type_of (N ..) (T ..))[g] =							      

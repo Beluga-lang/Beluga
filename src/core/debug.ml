@@ -4,6 +4,8 @@
  * For interface, see debug.mli
  *)
 
+let chatter : int ref =  ref 1
+
 type flags = int
 
 let r_flags : flags ref = ref 0

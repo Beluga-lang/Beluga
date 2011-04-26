@@ -91,6 +91,7 @@ m_ref  : mstep M M.   % Reflexive
  Lemma: if value N and mstep N M then  equal N M.
 
 }%
+
 rec lemma_val_2 : (value N)[ ] -> (mstep N M)[ ] -> (equal M N)[ ] =
 fn v => fn s => case v of 
 | [ ] v_true => 
@@ -111,6 +112,9 @@ fn v => fn s => case v of
     let  [ ] m_ref = s in
       [ ] ref
 ;
+
+
+
 
 absurd : type.
 rec values_dont_step : (value N)[ ] -> (step N M)[ ] -> absurd [ ] = 
@@ -270,3 +274,4 @@ mlam M => case [ ] M of
 	  
 
 ;
+

@@ -720,8 +720,9 @@ and collectSub cQ phat s = match s with
     (let _ = Printf.printf "Collect Sub encountered undef\n" in 
        (* -bp Aug 24, 2009 BUG: If the substitution includes an undef
           one would need to prune the type of the MVAR with which this
-          substitution is associate. *)    
-          collectSub cQ phat  s')
+          substitution is associated. *)    
+     let (cQ1, s) = collectSub cQ phat  s' in 
+       (cQ1, I.Dot (I.Undef, s)))
 
   | I.SVar (I.Offset _offset, s) -> 
        collectSub cQ phat s
@@ -729,12 +730,9 @@ and collectSub cQ phat s = match s with
 
 (* collectMSub cQ theta = cQ' *) 
 and collectMSub cQ theta =  match theta with 
-  | I.MShift _n -> 
-      let _ = dprint (fun () -> "[collectMSub] done --\n" ) in 
-              (cQ , theta)
+  | I.MShift _n ->  (cQ , theta)
   | I.MDot(I.MObj(phat, tM), t) -> 
       let (cQ1, t') =  collectMSub cQ t in 
-      let _ = dprint (fun () -> "Collect MObj--\n" ) in
       let (cQ2, tM') = collectTerm cQ1 phat (tM, LF.id) in 
         (cQ2 , I.MDot (I.MObj (phat, tM'), t'))
 
@@ -788,9 +786,9 @@ and collectHead cQ phat ((head, _subst) as sH) =
 
   | (I.MVar (I.Inst (q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
       if constraints_solved cnstr then
-(*         let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in  
-         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in  *)
-         let _ = dprint (fun () -> "collectSub for MVar\n") in 
+         let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty I.Empty cPsi (tA, LF.id) ) in  
+(*         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in  *)
+(*         let _ = dprint (fun () -> "collectSub for MVar\n") in  *)
           begin match checkOccurrence (eqMVar u) cQ with
             | Yes -> 
                 let (cQ', sigma) = collectSub cQ phat s' in
@@ -814,10 +812,12 @@ and collectHead cQ phat ((head, _subst) as sH) =
           begin match checkOccurrence (eqMMVar u) cQ with
             | Yes -> 
                 let (cQ0, ms1) = collectMSub cQ ms' in 
+                let _ = dprint (fun () ->  "Collect sub (1) \n") in
                 let (cQ', sigma) = collectSub cQ0 phat s' in
                   (cQ', I.MMVar(r, (ms1, sigma)))
             | No  ->  (*  checkEmpty !cnstrs ? -bp *)
                 let (cQ0, ms1) = collectMSub cQ ms' in 
+                let _ = dprint (fun () ->  "Collect sub (2) \n") in
                 let (cQ2, sigma) = collectSub cQ0 phat s' in
 
                 let cQ' = I.Dec(cQ2, MMV(Impure, u)) in 
@@ -835,6 +835,7 @@ and collectHead cQ phat ((head, _subst) as sH) =
       raise (Error leftoverMeta2)
 
   | (I.MVar (I.Offset k, s'), s) ->
+      let _ = dprint (fun () ->  "Collect sub (3) \n") in
       let (cQ', sigma) = collectSub cQ phat (LF.comp s' s)  in 
         (cQ', I.MVar (I.Offset k, sigma))
 
@@ -1265,6 +1266,8 @@ and abstractMVarSub cQ offset s = match s with
   | I.SVar (I.Offset s, sigma) -> 
       I.SVar (I.Offset s, abstractMVarSub cQ offset sigma)
 
+  | I.Dot (I.Undef, s) -> 
+      I.Dot (I.Undef, abstractMVarSub cQ offset s)
 (*  | I.FSVar (s, sigma) -> 
       let x = index_of cQ (FSV (Pure, s, None)) + offset in 
         I.SVar (I.Offset x, abstractMVarSub cQ offset sigma)
@@ -1779,15 +1782,13 @@ let raiseExp cD e =
     roll e
 
 
+
 let rec abstrCompTyp tau = 
   let (cQ, tau1)  = collectCompTyp I.Empty tau in 
   let cQ'  = abstractMVarCtx cQ in 
   let tau' = abstractMVarCompTyp cQ' 0 tau1 in 
   let cD'  = ctxToMCtx cQ' in 
     (raiseCompTyp cD' tau', Context.length cD')
-
-
-
 
 
 (*  
@@ -1925,3 +1926,26 @@ let closedTyp (cPsi, tA) =
   let (cQ1, _ ) = collectDctx I.Empty (None, 0) cPsi in 
   let (cQ2, _ ) = collectTyp cQ1 (Context.dctxToHat cPsi) (tA, LF.id) in 
     not (fvarInCollection cQ2)
+
+
+(* We abstract over the MVars in cPsi, tM, and tA *)
+let abstrCovGoal cPsi tM tA ms = 
+  let phat = Context.dctxToHat cPsi in 
+  let (cQ0 , ms') = collectMSub I.Empty ms in 
+  let (cQ1, cPsi') = collectDctx cQ0 phat cPsi in 
+  let (cQ2, tA') = collectTyp cQ1 phat (tA, LF.id) in 
+  let (cQ3, tM')   = collectTerm cQ2 phat (tM, LF.id) in 
+
+
+  let cQ'     = abstractMVarCtx cQ3 in 
+
+  let ms0     = abstrMSub cQ' ms' in 
+  let cPsi0   = abstractMVarDctx cQ' 0 cPsi' in 
+  let tM0     = abstractMVarTerm cQ' 0 (tM', LF.id) in
+  let tA0     = abstractMVarTyp  cQ' 0 (tA', LF.id) in 
+
+  let cD0     = ctxToMCtx cQ' in 
+
+    (cD0, cPsi0, tM0, tA0, ms0)
+
+

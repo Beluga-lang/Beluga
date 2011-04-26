@@ -117,6 +117,7 @@ FN g => mlam A' => fn d => fn e => case e of
         [g] foralll (T .. ) (\h1. D1' .. h1) (H ..)
 
 ;
+
 % Original Twelf implementation 
 %
 % ca : {A:o} conc A -> (hyp A -> conc C) -> conc C -> type.

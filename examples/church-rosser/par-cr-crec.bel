@@ -82,7 +82,7 @@ fn d => fn e => case d of
 
 	 let [g] S .. = subst ([g,y,v] S1 .. <y,v>) ([g] S2 ..) in 
 	 [g] dia_result _ (S ..) (beta (\y.\v. S1' .. <y,v>) (S2' ..))
-     | [g] {}  % prove explicitely that other cases is impossible
+%     | [g] {}  % prove explicitely that other cases is impossible
     )
   )
 | [g] lm (\y.\v. R1 .. y v) => 

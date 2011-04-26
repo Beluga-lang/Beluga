@@ -87,7 +87,7 @@ fn e =>
  let [ ] E = e in 
  let [arg':target, xve:target] T = 
      convert ([ ] enil) ([x] E) in 
-   [ ] T
+   [ ] T 
 ;
 
 

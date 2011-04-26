@@ -770,15 +770,18 @@ and cnorm (tM, t) = match tM with
                       
                 | MObj (_phat,tM)   -> 
                     reduce (tM, cnormSub (r, t)) (cnormSpine (tS, t))  
-                    (* Clo(whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), LF.id)))  *)
-(*
-            (* jd 2010-05-24: makes coverage checking count-var/cntvar.bel "work"; might be nonsense
-               jd 2010-05-25: probably nonsense, no longer needed anyway *)
-                | PObj  (_phat, head) ->
-                       cnorm (Root(loc, PVar (Offset k, r), tS), t)
-(*                 ===  norm(Root(loc, head, Nil), cnormSub (r, t)) *)
-(*                ===   reduce (Root(loc, head, Nil), cnormSub (r, t)) (cnormSpine (tS, t)) *)
-*)
+                    (* Clo(whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS,
+                    t), LF.id)))  *)
+                | PObj (_phat, h) -> 
+                    let tS' = cnormSpine (tS, t) in 
+                      begin match h with 
+                        | BVar i -> (match LF.bvarSub i (cnormSub (r,t)) with 
+                            | Obj tM        -> reduce (tM, LF.id) tS'
+                            | Head (BVar k) ->  Root (loc, BVar k, tS')
+                            | Head head     ->  Root (loc, head, tS')
+                            | Undef         -> raise (Violation ("Looking up " ^ string_of_int i ^ "\n")))
+                        | PVar (p, r') -> Root (loc, PVar (p, r') , tS')
+                      end
               (* other cases impossible *)
               end 
 
@@ -1002,7 +1005,7 @@ and cnorm (tM, t) = match tM with
           | h      -> Proj (h, k)
         end
 
-    | Const _ -> raise (Violation "cnormHead Const")
+    | Const k -> Const k
     | MVar _ -> raise (Violation "cnormHead MVar")
     | _      -> raise (Violation "cnormHead ???")
   end 
@@ -2363,6 +2366,7 @@ let rec etaExpandMV cPsi sA s' = etaExpandMV' cPsi (whnfTyp sA)  s'
 
 and etaExpandMV' cPsi sA  s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
+      
       let u = newMVar (cPsi, TClo(tP,s)) in
         Root (None, MVar (u, s'), Nil)
 

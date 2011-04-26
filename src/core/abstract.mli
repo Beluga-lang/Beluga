@@ -30,6 +30,9 @@ val abstrKind     : LF.kind -> LF.kind * Id.offset
 
 val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
 
+val abstrCovGoal  : LF.dctx -> LF.normal -> LF.typ -> LF.msub -> 
+                      LF.mctx * LF.dctx * LF.normal * LF.typ * LF.msub
+
 val abstrSchema   : LF.schema  -> LF.schema
 
 val abstractMSub  : LF.msub -> LF.msub * LF.mctx
@@ -42,6 +45,8 @@ val abstrExp      : Comp.exp_chk  -> Comp.exp_chk
 
 val abstrExpMSub  : Comp.exp_chk  -> LF.msub -> LF.mctx * LF.msub * Comp.exp_chk
 *)
+
+
 val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> (LF.csub * LF.csub) -> 
                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ * LF.csub * LF.csub
 

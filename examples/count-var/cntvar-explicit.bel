@@ -13,8 +13,8 @@ s   : exp nat -> exp nat.
 
 tt  : exp bool.
 
-add : exp nat -> exp nat -> exp nat.
-letv: {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
+% add : exp nat -> exp nat -> exp nat.
+% letv: {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 schema expCtx = some [t:tp] exp t;
 
@@ -29,6 +29,8 @@ fn x => fn y =>
     (case (plus ([ ] U) y) of
        {V::(exp nat)[ ]} 
         [ ] V : (exp nat)[ ]     =>  ([ ] s V))
+  | {U::(exp nat)[]} 
+     []  U    => y
 )
 ;
 
@@ -53,7 +55,7 @@ FN g => mlam T => mlam TT => fn e =>
       [g,x: exp T'] s (U .. x)  : (exp nat) [g,x: exp T'] => 
           cntV [g] <. T' >  < . nat >   ([g,x] (U .. x))
 
-   | {T'::tp[ ]} {T1::tp[ ]} {T2::tp[ ]} 
+%{   | {T'::tp[ ]} {T1::tp[ ]} {T2::tp[ ]} 
      {U1::(exp T1)[g, x:exp T']} {U2::(exp T2)[g, x:exp T', y:exp T1]}
 
       [g,x: exp T'] letv T1 T2 (U1 .. x) (\y . (U2 .. x y)) : (exp T2)[g, x:exp T'] =>
@@ -65,6 +67,6 @@ FN g => mlam T => mlam TT => fn e =>
      [g,x : exp T'] add (U .. x) (W .. x)                   : (exp nat)[g, x: exp T'] =>
           plus (cntV [g] < . T' > < . nat > ([g,x] (U .. x)))
                (cntV [g] < . T' > < . nat > ([g,x] (W .. x)))
-
+}%
 ;
 

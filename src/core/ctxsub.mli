@@ -54,7 +54,9 @@ val ctxShift : dctx -> sub
 val ctxToSub' : mctx -> dctx -> dctx -> sub
 val ctxToSub_mclosed : mctx  -> dctx -> dctx -> mctx * sub * int
 
-val mctxToMSub : mctx -> msub
+val mctxToMSub  : mctx -> msub
+val mctxToMMSub : mctx -> mctx -> msub
+val cctxToCSub  : mctx -> mctx -> csub
 
 val isomorphic : mctx -> mctx -> bool
 

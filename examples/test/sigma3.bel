@@ -8,6 +8,16 @@ un : tp.
 schema w = block x:nat. nat;
 schema tps = tp;
 
+rec f : {g:(w)*} nat[g] -> nat[g] =
+  FN g => fn e =>
+    case e of  %not
+%     {#p::(block x:nat. nat)[g]}
+% | [g] #p.1 .. => [g] z
+| [g] #p.2 .. => [g] z
+| [g] z => e
+| [g] s (N .. ) => e
+;
+
 
 rec f : {g:(w)*} nat[g] -> nat[g] =
   FN g => fn e =>
@@ -64,4 +74,5 @@ rec ffff4 : {h:(tps)*}{g:(w)*}  nat[g] -> tp[h] -> nat[g] =
     case eNat of %not
       [g] #pp'.1 .. => [g] #pp'.2 ..
 ;
+
 

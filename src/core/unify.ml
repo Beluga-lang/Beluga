@@ -1206,6 +1206,7 @@ let disallowUndefineds f =
                           (* may raise NotInvertible *)
                           
 
+
             | MVar (Inst (r, cPsi1, tP, cnstrs) (*as u*), t) ->  (* s = id *)
                 let tM = Root(loc, head, tS) in
                 let t  = Whnf.normSub (comp t s) in 

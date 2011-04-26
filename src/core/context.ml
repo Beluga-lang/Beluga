@@ -85,8 +85,11 @@ let ctxDec cPsi k =
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
 
-    | (DDec (cPsi', TypDeclOpt _ ) , 1 ) -> 
+    | (DDec (cPsi', TypDeclOpt _ ), 1) -> 
         raise NoTypAvailable
+
+    | (DDec (cPsi', _), k') ->
+        ctxDec' (cPsi', k'-1)
 
     (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in

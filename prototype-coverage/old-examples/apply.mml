@@ -1,5 +1,0 @@
-let fun apply : (int -> int) -> int -> int f =
-          fn x => f(x)
-in
-  apply (fn x => x * 3) 100
-end;

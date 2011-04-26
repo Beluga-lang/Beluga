@@ -13,9 +13,9 @@ FN g => fn tc => case tc of
 
 |[g] tc_true => [g] can_truei
 
-%{ 
- |[g] tc_imp (\u.\ta. TC1 .. u ta) => 
- let {CN1:: (can (B ..) (D1 .. u v))[g,u:pf (A ..), v: atm u]}
+%{
+|[g] tc_imp (\u.\ta. TC1 .. u ta) => 
+ let % {CN1:: (can (B ..) (D1 .. u v))[g,u:pf (A ..), v: atm u]}
      [g, b:block u:pf (A ..), v:toatm u u . atm u] CN1 .. b.1 b.3 = 
      iscan [g, b:block u:pf _ , v:toatm u u . atm u] ([g,b] TC1 .. b.1 b.2) in 
   [g] can_impi (\u.\at. CN1 .. u at)
@@ -24,7 +24,9 @@ FN g => fn tc => case tc of
 |[g] tc_forall (\a. TC1 .. a) => 
  let [g,a:i] CN1 .. a = iscan [g,a:i] ([g,a] TC1 .. a) in 
    [g] can_foralli (\a. CN1 .. a)
+
 }%
+
 |[g] tc_whr (TC1 ..) (WHR ..) => 
    iscan [g] ([g] TC1 .. )
 
@@ -34,6 +36,7 @@ FN g => fn tc => case tc of
 
 and isatm : {g:(i_ctx)*} (toatm (D ..) (D' ..))[g]   -> (atm (D' ..))[g] = 
 FN g => fn ta => case ta of 
+| [g] #p.2 .. => [g] #p.3 .. 
 |[g] ta_andel (TA1 ..) => 
  let [g] AT1 .. = isatm [g] ([g] TA1 ..) in 
    [g] atm_andel (AT1..)

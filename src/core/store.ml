@@ -134,9 +134,10 @@ module Cid = struct
            subord_iter (fun aa -> addSubord aa b) a_e.subordinates;
           )
 
-(* At the moment not relevant: may or may not be correct / unused code 
+(*
+(* At the moment not relevant: may or may not be correct / unused code *)
     (* add the type-level subordination:  b-types can contain a-terms *)
-    and addTypesubord a b =
+     and addTypesubord a b =
       let a_e = get a in
       let b_e = get b in
 (*      let _ = print_string ("addTypesubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in *)
@@ -166,26 +167,32 @@ module Cid = struct
 *)
       in
         update entry.kind
-
 *)
+   
+    let rec inspect acc = function
+      | Int.LF.Atom(_, b, spine) ->
+          List.iter (fun a -> addSubord a b) acc ; [b]
 
+      | Int.LF.PiTyp((Int.LF.TypDecl(_name, tA1), _depend), tA2) ->       
+          inspect (acc @ (inspect [] tA1)) tA2 
+    (*  | Sigma _ -> *)
+
+
+    let rec inspectKind cid_tp acc = function
+      | Int.LF.Typ -> 
+          List.iter (fun a -> addSubord a cid_tp) acc
+      | Int.LF.PiKind((Int.LF.TypDecl(_name, tA1), _depend), tK2) ->       
+          inspectKind cid_tp (acc @ (inspect [] tA1)) tK2 
+    
     let add entry = 
       let cid_tp = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tp;
         entry_list := cid_tp :: !entry_list;
-(*        updateTypesubord cid_tp entry; *)
+        inspectKind cid_tp [] entry.kind; 
         cid_tp
     
-    
-    let rec inspect acc = function
-      | Int.LF.Atom(_, b, spine) ->
-          List.iter (fun acc1 -> addSubord acc1 b) acc; 
-          [b]
 
-      | Int.LF.PiTyp((Int.LF.TypDecl(_name, tA1), _depend), tA2) ->       
-          inspect (acc @ (inspect [] tA1)) tA2 
-    (*  | Sigma _ -> *)
 
     let addConstructor loc typ c tA =
       let entry = get typ in
@@ -194,7 +201,11 @@ module Cid = struct
         else
           let _ = entry.constructors <- c :: entry.constructors in
           let _ = inspect [] tA in
-          (* type families occuring tA are added to the subordination relation *)
+          (* type families occuring tA are added to the subordination relation 
+             BP: This insepction should be done once for each type family - not
+                 when adding a constructor; some type families do not have
+                 constructors, and it is redundant to compute it multiple times.             
+          *)
             ()
     
     let clear () =

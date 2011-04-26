@@ -58,17 +58,24 @@ Theorem: if step T T1 and step T T2 then equal T1 T2.
 
 }%
 
-steps_to_terms: term -> term -> term -> type.
-andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
+rec det : (step T T1)[ ] -> (step T T2)[ ] -> (equal T1 T2)[ ] =
+fn s1 => fn s2 => case s1 of 
+| [ ] e_switch_true  => 
+    (case s2 of [ ] e_switch_true  =>  [ ] ref
+%	     | [ ] e_switch D     =>  impossible ([ ] D) in [ ]
+    )
+ 
+| [ ] e_switch_false  =>
+  (case  s2 of [ ] e_switch_false =>  [ ] ref
+%	     | [ ] e_switch D     => impossible ([ ] D) in []
+  )
 
-
-rec det : (steps_to_terms T T1 T2)[ ] -> (equal T1 T2)[ ] =
-fn s => case s of 
-| [ ] andalso (e_switch_true)  (e_switch_true)  =>  [ ] ref
-| [ ] andalso (e_switch_false) (e_switch_false) =>  [ ] ref
-| [ ] andalso (e_switch D)     (e_switch E)     =>
-  let [ ] ref        = det ([ ] andalso D E) in 
-    [ ] ref
+| [ ] e_switch D => 
+  (case s2 of 
+   | [ ] e_switch E  =>
+       let [ ] ref        = det ([ ] D) ([] E) in  [ ] ref
+   | [ ] e_switch_false => impossible ([ ] D) in []
+  | [ ] e_switch_true  => impossible ([ ] D) in [])
 ;
 
 
@@ -91,7 +98,6 @@ m_ref  : mstep M M.   % Reflexive
  Lemma: if value N and mstep N M then  equal N M.
 
 }%
-
 rec lemma_val_2 : (value N)[ ] -> (mstep N M)[ ] -> (equal M N)[ ] =
 fn v => fn s => case v of 
 | [ ] v_true => 
@@ -102,6 +108,7 @@ fn v => fn s => case v of
     let  [ ] m_ref = s in
       [ ] ref
 ;
+
 rec lemma_val_1 : (value N)[ ] -> (mstep N M)[ ] -> (equal N M)[ ] =
 fn v => fn s => case v of 
 | [ ] v_true => 
@@ -113,10 +120,8 @@ fn v => fn s => case v of
       [ ] ref
 ;
 
-
-
-
 absurd : type.
+
 rec values_dont_step : (value N)[ ] -> (step N M)[ ] -> absurd [ ] = 
 fn v => fn s => case v of 
 | [ ] v_true => impossible s in [ ] 
@@ -134,28 +139,28 @@ If mstep M N  and mstep M N'  then equal N N'.
 msteps_to_terms: term -> term -> term -> type.
 andalso': mstep M M1 -> mstep M M2 -> msteps_to_terms M M1 M2.
 
-rec unique : (msteps_to_terms M N1 N2)[ ] 
+rec unique : (mstep M N1)[ ] -> (mstep M N2)[ ] 
              -> (value N1)[ ] -> (value N2)[ ] 			      
 	     -> (equal N1 N2)[ ] =
-fn ms => fn vn1 => fn vn2 => case ms of 
-| [ ] andalso' (m_step S1 MS1) (m_ref) => 
-  (case vn2 of 
-     | [ ] v_true  => impossible [ ] S1 in [ ] 
-     | [ ] v_false => impossible [ ] S1 in [ ] 
-  )
-% Alternatively:
-%  impossible values_dont_step vn2 ([ ] S1) in [ ]
-| [ ] andalso' (m_step S1 MS1) (m_step S2 MS2) => 
-  let [ ] ref = det ([ ] andalso S1 S2) in
-    unique ([ ] andalso' MS1 MS2) vn1 vn2
-
-| [ ] andalso' (m_ref )       (m_ref )   => 
-   [ ] ref
-
-| [ ] andalso' (m_ref )       (m_step S2 MS2) => 
-  (case vn1 of 
-     | [ ] v_true  => impossible [ ] S2 in [ ] 
-     | [ ] v_false => impossible [ ] S2 in [ ] 
+fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of 
+| [ ] m_step S1 MS1 => 
+  (case ms2 of 
+   | [ ] m_ref => (case vn2 of 
+		    | [ ] v_true  => impossible [ ] S1 in [ ] 
+		    | [ ] v_false => impossible [ ] S1 in [ ] 
+		 )
+   | [ ] m_step S2 MS2 =>
+     let [ ] ref = det ([ ] S1) ([ ] S2) in
+       unique ([ ] MS1) ([] MS2) vn1 vn2
+   )
+| [ ] m_ref    => 
+  (case ms2 of 
+     | [] m_ref  =>  [ ] ref
+     | [] m_step S2 MS2 =>  
+	 (case vn1 of 
+	    | [ ] v_true  => impossible [ ] S2 in [ ] 
+	    | [ ] v_false => impossible [ ] S2 in [ ] 
+	 )
   ) 
 
 %{  let [ ] V1 = vn1 in 

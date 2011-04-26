@@ -17,8 +17,7 @@ v_true : value true.
 v_false: value false.
 
 v_num  : num_value N -> value N.
-v_z    : num_value z.
-v_s    : num_value N -> num_value (succ N).
+v_z    : num_value z.v_s    : num_value N -> num_value (succ N).
 
 
 % ---------------------------------------------------------- %

@@ -50,7 +50,7 @@ FN g => fn t => case t of
 % let r   = add ([ ] suc z) ([ ] suc z) ;
 % let s2  = size [ ] ([ ] lam \x. (const z)) ;
 % let s2' = size [ ] ([ ] lam \x. x) ;
- let s4  = size [ ] ([ ] lam \x. app x (const z)) ;
+% let s4  = size [ ] ([ ] lam \x. app x (const z)) ;
 % let s3  = size [ ] ([ ] app (const z) (const (suc z)));
 
 %{

@@ -22,7 +22,8 @@ fn d => fn c => case c of
    | [ ] vtr_lam (tr_lam (\w. \x. \v. (C2 w x v))) => 
        let [ ] ev_lam = d in 
        [ ] ev_vtrans (fev_1) (vtr_lam (tr_lam (\w. \x. \v. (C2 w x v))))
-   | [ ] {})
+%   | [ ] {}
+  )
 
 | [ ] tr_^ C1 => 
   let [ ] ev_vtrans  D1' U1 = (map_eval d) ([ ] C1) in 
@@ -40,7 +41,7 @@ fn d => fn c => case c of
 	let [ ] ev_vtrans D2' U2 = (map_eval ([ ] D2)) ([ ] C2) in 
 	let [ ] ev_vtrans D3' U3 = (map_eval ([ ] D3)) ([ ] (C3 _ _ U2)) in 
 	[ ] ev_vtrans (fev_app D3' D2' D1') U3 
-    | [ ] {}
+%    | [ ] {}
    )
 %{   (case map_eval ([ ] D1) ([ ] C1) of 
     | [ ] fev_vtrans D1' (vtr_lam (tr_lam (\w. \x. \v. (C3 w x v)))) =>
@@ -50,7 +51,7 @@ fn d => fn c => case c of
     | [ ] {}
    )
 }% 
-| [ ] {}       
+% | [ ] {}       
    ;
 
 
@@ -72,7 +73,7 @@ fn c => fn d => case c of
      | [ ] vtr_lam (tr_lam (\w. \x. \v. (C2 w x v))) => 
 	 let [ ] fev_1 = d in
 	 [ ] ev_vtrans (ev_lam) (vtr_lam (tr_lam (\w. \x. \v. (C2 w x v))))
-     | [ ] {}
+%     | [ ] {}
   ) 
 
 | [ ] tr_lam (\w. \x. \u. (C1 w x u)) => 
@@ -90,7 +91,7 @@ fn c => fn d => case c of
        let [ ] ev_vtrans D2 U2  = map_eval' ([ ] C2) ([ ] D2')  in 
        let [ ] ev_vtrans D3 U3  = map_eval' ([ ] (C3 _ _ U2)) ([ ] D3') in 
        [ ] ev_vtrans (ev_app D3 D2 D1) U3
-     | [ ] {}
+%     | [ ] {}
     )
 ;
    

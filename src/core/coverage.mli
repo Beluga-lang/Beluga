@@ -4,10 +4,10 @@ open Syntax.Int
 
 val enableCoverage : bool ref
 val warningOnly : bool ref
-val extraDepth : int ref
 val no_covers : int ref
 
 type problem
+
 val make : Parser.Grammar.Loc.t option
         -> Syntax.case_pragma
         -> LF.mctx            (* cO *)

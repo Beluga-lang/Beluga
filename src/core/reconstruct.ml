@@ -22,6 +22,7 @@ module P = Pretty.Int.DefaultPrinter
 module R = Pretty.Int.DefaultCidRenderer
 module RR = Pretty.Int.NamedRenderer
 
+
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 exception NotImplemented
@@ -75,14 +76,14 @@ let rec unify_phat psihat ctx_var =
           | ((Some (c_var)) , d') -> 
               if d = d' then
                 (cref := Some (Int.LF.CtxVar (c_var))  ; true)
-              else 
-                (dprint (fun () -> "[unify_phat] unify ctx_var with a full context");
+              else                 
+                (dprint (fun () -> "[unify_phat - 1] unify ctx_var with a full context");
                  raise NotImplemented)
           | (None , d') -> 
               if d = d' then 
                 (cref := Some (Int.LF.Null) ; true)
               else 
-                (dprint (fun () -> "[unify_phat] unify ctx_var with a full context");
+                (dprint (fun () -> "[unify_phat - 2] unify ctx_var with a full context");
                  raise NotImplemented)
         end 
 
@@ -4484,9 +4485,10 @@ let recSgnDecl d =
         let _        = Check.LF.checkSchemaWf sW' in
         let _        = dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" )  in
         let _g'      = Schema.add (Schema.mk_entry g sW') in
-        let _        = Format.printf "\nschema %s = @[%a@];@."
+        let _        = if (!Debug.chatter) == 0 then () 
+        else (Format.printf "\nschema %s = @[%a@];@."
                                      (g.string_of_name)
-                                     (P.fmt_ppr_lf_schema Pretty.std_lvl) sW' in
+                                     (P.fmt_ppr_lf_schema Pretty.std_lvl) sW') in
           (* Int.Sgn.Schema (g', sW) *) ()
 
     | Ext.Sgn.Val (loc, x, None, i) -> 
@@ -4510,11 +4512,12 @@ let recSgnDecl d =
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cO cD  cG i'' (tau', C.m_id)) in
 
           let v  =   Opsem.eval i''  in 
-          let _       = Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
+          let _       = if (!Debug.chatter) == 0 then () 
+          else (Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
                   (R.render_name x)
                   (P.compTypToString cO cD tau') 
                   (P.expChkToString cO cD cG i'') 
-                  (P.expChkToString cO cD cG v) in 
+                  (P.expChkToString cO cD cG v)) in 
           let _x = Comp.add (Comp.mk_entry x tau' 0 v []) in 
             ()
 
@@ -4546,11 +4549,12 @@ let recSgnDecl d =
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cO cD  cG i'' (tau', C.m_id)) in
 
           let v  =   Opsem.eval i''  in
-          let _       = Printf.printf  "\nlet %s : %s = %s\n===>  %s\n"
+          let _       = if (!Debug.chatter) == 0 then () 
+          else (Printf.printf  "\nlet %s : %s = %s\n===>  %s\n"
                                        (R.render_name x)
                                        (P.compTypToString cO cD tau') 
                                        (P.expChkToString cO cD cG i'') 
-                                       (P.expChkToString cO cD cG v) in 
+                                       (P.expChkToString cO cD cG v)) in 
           let _x = Comp.add (Comp.mk_entry x tau' 0 v []) in 
             ()
 
@@ -4614,39 +4618,55 @@ let recSgnDecl d =
 
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in  
 
-          let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cO cD  cG e_r' (tau', C.m_id)) in
+          let _       = Monitor.timer ("Function Check", fun () -> 
+                                         Check.Comp.check cO cD  cG e_r' (tau', C.m_id)                                   
+                                      ) in
              (e_r' , tau')
         in 
 
         let rec reconRecFun recFuns = match recFuns with
           | [] -> ()
           | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
-              let (e_r' , tau') = reconFun f e in 
-              let _       = Printf.printf  "and %s : %s =\n %s\n"
-              (R.render_name f)
-              (P.compTypToString cO cD tau') 
-              (P.expChkToString cO cD cG e_r')
-              (* (P.expChkToString cO cD cG (Whnf.cnormExp (e_r', C.m_id)) ) *) in 
-
-              let _       = dprint (fun () ->  "DOUBLE CHECK of function " ^    f.string_of_name ^  " successful!\n\n" ) in
-
-              let _f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list)   in
-               reconRecFun lf 
+              (let (e_r' , tau') = reconFun f e in 
+                 (if (!Debug.chatter) == 0 then () 
+                  else (Printf.printf  "and %s : %s =\n %s\n"
+                          (R.render_name f)
+                          (P.compTypToString cO cD tau') 
+                          (P.expChkToString cO cD cG e_r')))
+                    (* (P.expChkToString cO cD cG (Whnf.cnormExp (e_r', C.m_id)) ) *); 
+                  
+                 (if !Coverage.enableCoverage then 
+                    Printf.printf "\n## Coverage checking done: %s  ##\n"  
+                      (R.render_name f)
+                  else ()) ; 
+                 dprint (fun () ->  "DOUBLE CHECK of function " ^    
+                           f.string_of_name ^  " successful!\n\n" ) ; 
+                 
+                 let _ = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list) in 
+                   reconRecFun lf 
+              )
         in 
           begin match recFuns with
             | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
                 let (e_r' , tau') = reconFun f e in 
-                  (* Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
-                    (R.render_name f)
-                    (P.fmt_ppr_cmp_typ cO cD Pretty.std_lvl) (Whnf.normCTyp tau')
-                    (P.fmt_ppr_cmp_exp_chk cO cD cG Pretty.std_lvl)
+                (if (!Debug.chatter) == 0 then () 
+                else Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
+                     (R.render_name f)
+                     (P.fmt_ppr_cmp_typ cO cD Pretty.std_lvl) (Whnf.normCTyp tau')
+                     (P.fmt_ppr_cmp_exp_chk cO cD cG Pretty.std_lvl) 
                      (Whnf.cnormExp (e_r', Whnf.m_id)); 
-                  *)
+                  if !Coverage.enableCoverage then 
+                    (if !Debug.chatter = 0 then () else
+                      Printf.printf "\n## Coverage checking done: %s  ##\n"  
+                        (R.render_name f))
+                  else () ;                   
+                  dprint (fun () ->  "DOUBLE CHECK of function " ^    
+                            f.string_of_name ^  " successful!\n" )  ;
 
-                let _       = dprint (fun () ->  "DOUBLE CHECK of function " ^    f.string_of_name ^  " successful!\n" ) in
+                  let _ = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list) in
 
-                let _f'      = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list)   in
-                  reconRecFun lf 
+                reconRecFun lf 
+                )
             | _ -> raise (Violation "No recursive function defined")
           end
 
@@ -4677,7 +4697,8 @@ let rec recSgnDecls = function
           (let _ = recSgnDecl not'd_decl in
              true)
         with
-            _ -> (print_string ("Reconstruction fails for %not'd declaration\n");
+            _ -> ((if (!Debug.chatter) == 0 then () 
+                  else print_string ("Reconstruction fails for %not'd declaration\n"));
                   false)
         end
       in

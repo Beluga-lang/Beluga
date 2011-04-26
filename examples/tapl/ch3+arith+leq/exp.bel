@@ -1,0 +1,42 @@
+%{ 
+  CH 3:  Untyped arithmetic expressions
+  Author: Brigitte Pientka
+
+  SYNTAX
+}%
+
+
+term  : type.
+true  : term.
+false : term.
+switch: term -> term -> term -> term.
+z     : term.
+succ  : term -> term.
+pred  : term -> term.
+iszero: term -> term.
+
+leq   : term -> term -> term.
+
+
+% Examples : Valid Terms
+
+let v1 = [ ] switch false z (succ z) ;
+let v2 = [ ] iszero (pred (succ z))  ;
+
+% The following is still a valid term
+% although we may want to identify it as 
+% ill-typed later. So far, we only are concerned
+% with syntax.
+
+let v3 = [ ] switch (succ z) (succ z) false  ;  
+
+% Examples : Invalid Terms 
+% (use keyword %not to say that the subsequent line is not true)
+
+%not
+let w1 = [ ] iszero ;
+
+%not
+let w2 = [ ] switch z z ;
+
+

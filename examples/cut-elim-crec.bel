@@ -120,16 +120,6 @@ mlam A' => fn d => fn e => case e of
    in 
      [g] foralll (T ..) (\h1. E1' .. h1) (H ..)
 
- | [g, h:hyp (imp (A1 ..) (A2 ..))] impl (E1 .. h) (\h2. E2 .. h h2) h  => 
-   let [g] impr \h1. D2 .. h1  = d in 
-   let [g] E1' .. = ca  <g. A' .. > d ([g,h ] E1 .. h) in 
-   let [g,h2: hyp (A2 ..)] E2' .. h2 = 
-     ca <g,h2 : hyp (A2 ..). A' .. >  
-       ([g,h2]  impr \h1. D2 .. h1) ([g,h2,h] E2 .. h h2) in 
-   let [g] D2' .. = ca  <g . A1 .. > ([g] E1' .. ) ([g,h1] D2 .. h1) in 
-     ca  <g . A2 .. > ([g] D2' .. ) ([g,h2] E2' .. h2)  
-
-
  | [g, h:hyp (not (A1 ..))] notl (E1 .. h) h =>   
    let [g] notr \p.\h2. (D1 .. p h2)  = d in 
    let [g] F1 .. = ca  <g . A' .. > d  ([g,h] E1 .. h) in 
@@ -142,6 +132,16 @@ mlam A' => fn d => fn e => case e of
      ca  <g,h2 : hyp _ . A' ..>  ([g,h2] forallr \a. D1 .. a)   ([g, h2, h] E1 .. h h2)
    in 
     ca < g. A1 .. (T ..) > ([g] D1 .. (T ..)) ([g,h2] E1' .. h2)
+
+
+ | [g, h:hyp (imp (A1 ..) (A2 ..))] impl (E1 .. h) (\h2. E2 .. h h2) h  => 
+   let [g] impr \h1. D2 .. h1  = d in 
+   let [g] E1' .. = ca  <g. A' .. > d ([g,h ] E1 .. h) in 
+   let [g,h2: hyp (A2 ..)] E2' .. h2 = 
+     ca <g,h2 : hyp (A2 ..). A' .. >  
+       ([g,h2]  impr \h1. D2 .. h1) ([g,h2,h] E2 .. h h2) in 
+   let [g] D2' .. = ca  <g . A1 .. > ([g] E1' .. ) ([g,h1] D2 .. h1) in 
+     ca  <g . A2 .. > ([g] D2' .. ) ([g,h2] E2' .. h2)  
 
  | [g, h:hyp (A ..)] E .. h => 
    case d of 
@@ -161,8 +161,8 @@ mlam A' => fn d => fn e => case e of
     | [g] truer =>  lemma ([g, h: hyp (A ..)] E .. h) 
 %{      let [g,h:hyp true] F ..  = [g, h: hyp true] E .. h in 
         [g] F .. 
-
 }%
+
 
 ;
 

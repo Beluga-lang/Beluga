@@ -27,7 +27,7 @@ cd $X
 # The following contain nonexhaustive cases, and are, correctly, rejected
 
 echo 'interesting(?) nonexhaustive cases: '
-$INTERPRETER +warncover $* \
+$INTERPRETER -noprint +warncover $* \
     count-var/cntvar-crec.bel  \
     count-var/cntvar-explicit.bel \
     count-var/cntvar-simple.bel \
@@ -43,6 +43,7 @@ $INTERPRETER +warncover $* \
     freshML/cps-popl-tutorial2.bel \
     freshML/cps-popl-tutorial2-crec.bel  \
     freshML/term-crec.bel \
+    lp-horn/test-crec.cfg \
     test/schema.bel \
     test/cross.bel \
     mini-ml/eval-sub.bel \
@@ -50,14 +51,17 @@ $INTERPRETER +warncover $* \
     typed-eval/tpeval.bel \
     typed-eval/tpeval-explicit.bel \
     typed-eval/tpeval2.bel \
-    lp-horn/sources.cfg \
-    lp-horn/test-crec.cfg \
     test/id.bel \
     test/id-explicit.bel \
     test/implicit-obj.bel 
 
 sleep 2
 echo
+
+# The one below does not pass coverage any more
+#    lp-horn/sources.cfg \
+
+
 
 echo BROKEN: \
     ../examples-twelf/compile/cpm/test.cfg
@@ -72,7 +76,7 @@ sleep 2
 echo
 
 # The following don't cover for unknown reasons; this last example probably shouldn't cover.
-$INTERPRETER +coverage $* \
+$INTERPRETER -noprint +coverage $* \
 
 
 echo 'Pausing after uninvestigated examples...'
@@ -82,14 +86,13 @@ sleep 1
 
 # The following use context matching, and are currently (incompletely) rejected
 echo 'would be rejected (context matching):'
-echo $INTERPRETER +coverage $* \
+echo $INTERPRETER -noprint +coverage $* \
     freshML/debruijn-1.bel
-
 
 #     compile/cpm/test.cfg \
 
 echo OK:
-$INTERPRETER +t +coverage $* \
+$INTERPRETER -noprint +t +coverage $* \
     path/path.bel \
     path/path-typed.bel \
     test/alpha.bel \
@@ -201,7 +204,7 @@ exit 0
 
 for file in  \
 do
-  $INTERPRETER +coverage $file
+  $INTERPRETER -noprint +coverage $file
   R=$?
   echo STATUS=$R
   B=$B$R

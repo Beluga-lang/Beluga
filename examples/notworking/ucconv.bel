@@ -6,7 +6,6 @@
 % not working
 % Fatal error: exception Whnf.Fmvar_not_found
 %
-%
 
 
 
@@ -83,6 +82,7 @@
 
  %Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
  %Resulting should be a term closed under the environement tuple xenv and the local variable x.
+
  rec b_map:{g:ctx}(term [g,x:term] -> target [xenv:target]) -> fvlist[g] -> nat[] -> (term [g,x:term] -> target [xenv:target]) =
      fn map => fn l => fn n => case l of
 			      [g] nil => (fn e =>
@@ -98,6 +98,7 @@
 					   b_map map ([g]L..) ([]suc N) e
 				       
 			       )
+
  ;
 
 
@@ -111,6 +112,7 @@
 				[h]tpair (E'..) (Ta'..)
 
  ;
+
 
 
  rec fvar:{g:ctx} term[g] -> fvlist[g] =
@@ -127,6 +129,7 @@
 				let [g,x:term](FVV..) = fvar ([g,x:term]V..x) in
 				let [g](FVV'..) = remove([g,x:term]FVV..) in
 				   append ([g]FVU..) ([g]FVV'..)
+
  ;
 
  %outer conversion
@@ -139,6 +142,7 @@
  %	   6 Pack the target(5) and xenv(2) in a closure                  [h] tpack tpair(\xenv.E',T..)
  %
  %
+
  rec convert:{g:ctx}{h:(tctx)*} (term [g] -> target [h]) -> term [g] -> target [h] = 
      FN h => fn map => fn e => case e of
 		     [g]#p.. => map ([g]#p..)
@@ -160,3 +164,4 @@
 
  
 let t3 = convert [ ] (fn e => ([ ] tunit)) ( [ ] elam (\x.(elam (\y. eapp x y))));
+

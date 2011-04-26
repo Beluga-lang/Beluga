@@ -55,8 +55,8 @@ val raiseType   : dctx -> typ -> typ
 (* Other operations *)
 (*************************************)
 
-val etaExpandMV  : dctx -> tclo -> sub -> normal
-val etaExpandMMV : Syntax.Loc.t option -> mctx -> dctx -> tclo -> sub -> normal
+val etaExpandMV     : dctx -> tclo -> sub -> normal
+val etaExpandMMV    : Syntax.Loc.t option -> mctx -> dctx -> tclo -> sub -> normal
 
 exception Fmvar_not_found
 exception FreeMVar of head

@@ -18,7 +18,8 @@ rec plus : (exp nat) [ ] -> (exp nat) [ ] -> (exp nat) [ ] =
 fn x => fn y => case x of
 | [ ] z    => y
 | [ ] s U  =>
-  let [ ] V = plus ([ ] U) y in ([ ] s V)
+  (let [ ] V = plus ([ ] U) y in ([ ] s V))
+| []  U    => y
 ;
 
 % G, x:exp T |-  z  ==>  0
@@ -33,18 +34,20 @@ fn x => fn y => case x of
 
 rec cntV : {g:expCtx}  (exp (S .. x))[g, x:exp (T ..)] -> (exp nat) [ ] =
 fn e => case e of 
-| [g,x : exp _ ]  tt        => [ ] z
-| [g,x : exp _ ] (#p .. )    => [ ] z
-| [g,x : exp _ ]  x         => [ ] s z
-| [g,x : exp _ ]  z         => [ ] z
-| [g,x : exp _ ] (U .. )     => [ ] z
-| [g,x : exp _ ] s (W .. x)  => cntV ([g,x] W .. x)
-| [g,x : exp _ ] letv (T1 ..)  (U1 .. x) (\y . (U2 .. x y)) =>
+ | [g,x : exp _ ]  tt        => [ ] z
+  | [g,x : exp _ ] (#p .. )    => [ ] z
+  | [g,x : exp _ ]  x         => [ ] s z
+  | [g,x : exp _ ]  z         => [ ] z
+% | [g,x : exp _ ] (U .. )     => [ ] z
+ | [g,x : exp _ ] s (W .. x)  => cntV ([g,x] W .. x)
+ | [g,x : exp _ ] letv (T1 ..)  (U1 .. x) (\y . (U2 .. x y)) => 
    plus  (cntV ([g,x] U1 .. x)) 
          (cntV ([g,y:exp _ ,x:exp _ ] U2 .. x y))
+
 | [g,x: exp _ ] add (U .. x) (W .. x)  =>
    plus (cntV ([g,x] U .. x))
         (cntV ([g,x] W .. x))
+
 ;
 
 

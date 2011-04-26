@@ -111,7 +111,7 @@ fn d =>  case d of
 
            | [ ] val VL2     =>  [ ] step_to (s_app3 VL2) 
 	    )
-      | [ ] {}  % Prove explicitely that the other cases are impossible
+%      | [ ] {}  % Prove explicitely that the other cases are impossible
        )
 | [ ] is_lam (\x. (\d. (D1 x d)))  =>  [ ] val value_lam
 ;

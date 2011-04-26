@@ -1,4 +1,0 @@
-let val f = let val ten = 10 in (fn y => ten) : int -> int end
-in
-  f 55
-end;

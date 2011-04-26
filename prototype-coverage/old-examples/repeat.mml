@@ -1,8 +1,0 @@
-let fun repeat : int -> (int -> int) -> int -> int n =
-          fn f => fn x =>
-            if n = 0 then x
-            else repeat (n - 1) f (f(x))
-in
- repeat 4 (fn z => z * 2) 100
- (* expected result: 100 * 2 * 2 * 2 * 2 = 1600 *)
-end;

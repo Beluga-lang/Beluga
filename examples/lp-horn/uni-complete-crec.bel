@@ -4,6 +4,10 @@
 
 schema c_ctx = some [a:o] block u: assume a, v:pf a . atm v ; 
 
+atomic_prfs : o -> type.
+andalso : {D:pf A} atm D
+    -> atomic_prfs A.
+
 rec cmpcs: {g:c_ctx}(can (A ..) (D ..) )[g] -> (solve (A ..) )[g] = 
 fn cn => case cn of
 |[g] can_andi (CN2 ..) (CN1 ..) => 
@@ -16,7 +20,7 @@ fn cn => case cn of
 | {D::(pf (atom (P ..)))[g]} 
   {AT1::(atm (D ..))[g]}
   [g] can_atm (AT1 ..) => 
-  let [g,q:p,u:focus (A ..) q] I1 .. q u = cmpai [g] <g . D .. > ([g] AT1 .. ) in
+  let [g,q:p,u:focus (A ..) q] I1 .. q u = cmpai ([g] andalso (D .. ) (AT1 .. )) in
     [g] I1 .. (P ..) (i_atom)
 
 %{ % This case is only not necessary for the Horn fragment 
@@ -29,30 +33,26 @@ fn cn => case cn of
      [g] s_imp (\v. S1 .. v )
 }%
 
-and cmpai: {g:(c_ctx)*}{D::(pf (A ..))[g]}(atm (D ..))[g] -> 
+and cmpai: {g:c_ctx}(atomic_prfs (A ..))[g] -> 
 	       (solve (atom q))[g, q:p, u:focus (A ..) q] = 
-FN g => mlam D => fn at => case ([g] D .. ) of 
-  | [g] #p.2 .. => [g,q,u] s_atom u (#p.1 ..) 
+fn at => case at of 
+  | [g] andalso (#p.2 .. ) (#p.3 ..) => [g,q,u] s_atom u (#p.1 ..) 
 
-  | [g] andel (D1 .. ) =>
-    let [g]  atm_andel (CN1 .. ) = at in 
-    let [g,q:p, i: focus (& (B1 ..) (B2 ..))  q] I1 .. q i = cmpai [g] <g . D1 .. > ([g] CN1 ..) in 
+  | [g] andalso (andel (D1 .. )) (atm_andel (CN1 .. )) =>
+    let [g,q:p, i: focus (& (B1 ..) (B2 ..))  q] I1 .. q i = cmpai  ([g] andalso (D1 ..) (CN1 ..)) in 
       [g,q,i] I1 .. q (i_andl i)
 
-  | [g] ander (D1 .. ) =>
-    let [g] atm_ander (CN1 .. ) = at in 
-    let [g,q:p, i: focus (& (B1 ..) (B2 ..))  q] I1 .. q i = cmpai [g] <g . D1 .. > ([g] CN1 ..) in 
+  | [g] andalso (ander (D1 .. )) (atm_ander (CN1 .. )) =>
+    let [g,q:p, i: focus (& (B1 ..) (B2 ..))  q] I1 .. q i = cmpai ([g]  andalso (D1 .. ) (CN1 ..)) in 
       [g,q,i] I1 .. q (i_andr i)
 
-  | [g] impe (D1 ..) (D2 ..) =>
-    let [g] atm_impe (CN2 ..) (AT1 ..) = at in 
-    let [g,q:p, u:focus (A ..) q] I1 .. q u = cmpai [g] <g. D1 .. > ([g] AT1 ..) in 
+  | [g] andalso (impe (D1 ..) (D2 ..)) (atm_impe (CN2 ..) (AT1 ..)) =>
+    let [g,q:p, u:focus (A ..) q] I1 .. q u = cmpai ([g] andalso (D1 .. ) (AT1 ..)) in 
     let [g] S2 .. = cmpcs ([g] CN2 ..) in 
       [g,q,i] I1 .. q (i_imp (S2 ..) i )
 
-  | [g] foralle (D1 ..) T => 
-    let [g] atm_foralle (AT1 ..) = at in 
-    let [g,q:p, i: focus (A ..) q] I1 .. q i = cmpai [g] <g.D1 .. > ([g] AT1 ..) in 
+  | [g] andalso ( foralle (D1 ..) T) (atm_foralle (AT1 ..)) => 
+    let [g,q:p, i: focus (A ..) q] I1 .. q i = cmpai ([g] andalso (D1 .. ) (AT1 ..)) in 
       [g,q,i] I1 .. q (i_forall T i)
 
 ;

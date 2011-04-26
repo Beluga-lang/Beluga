@@ -255,6 +255,11 @@ and ctxnorm_psihat (phat, cs) = match phat with
         | (Some cvar', i) -> (Some cvar', i+k)
       end
 
+(* The function below only works, if cs is a renaming substitution;
+   if cs contains itself proper context with dependently typed declarations
+   which make sense in cD itself, then we need to appropriately shift them 
+- bp
+*)
 
 and ctxnorm_mctx (cD, cs) = match cD with
   | Empty -> Empty
@@ -268,6 +273,9 @@ and ctxnorm_cdec (cdec, cs) = match cdec with
       PDecl(u, ctxnorm_typ (tA, cs), ctxnorm_dctx (cPsi, cs))
   | MDeclOpt _ -> cdec
   | PDeclOpt _ -> cdec
+
+
+
 
 
 (* would still require that cD is ordered in
@@ -841,13 +849,15 @@ let rec ctxToSub_mclosed cD psi cPsi =
         (* For the moment, assume tA atomic. *)
 
       let u     = Root(None, MVar(Offset 1,  Substitution.LF.id), Nil) in 
+
         (* cD' ; psi |- s : cPsi' *)
         (* cD' ; psi |- u[id] : [s]tA *)
+
       let tA'   = TClo(tA, s) in 
-      (* cD ; cPhi |- Dot(s, Obj u) : cPsi', x:tA *)
-      let shifted = Substitution.LF.comp s Substitution.LF.shift in
-      (* dprint (fun () -> "shifted = " ^ subToString shifted);*)
-      let result = Dot(Obj u, shifted) in
+      (* cD', u: _   ; psi |- s : cPsi', x:tA *)
+      let s' = Whnf.cnormSub (s, MShift 1) in 
+      let result = Dot(Obj u, s') in
+
       let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in 
         dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result);
         (Dec (cD', MDecl(u_name , tA', psi)), result, k+1)
@@ -932,6 +942,39 @@ let rec mctxToMSub cD = match cD with
       let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
+
+
+
+
+
+let rec mctxToMMSub cD0 cD = match cD with
+  | Empty -> MShift (Context.length cD0)   
+  | Dec (cD', MDecl(_, tA, cPsi)) ->
+      let t     = mctxToMMSub cD0 cD' in
+      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
+      let tA'   = Whnf.cnormTyp (tA, t) in
+      let u     = Whnf.newMMVar (cD0, cPsi', tA') in
+      let phat  = Context.dctxToHat cPsi' in
+        MDot (MObj (phat, Root (None, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil)) , t)
+
+  | Dec(cD', PDecl(_, tA, cPsi)) ->
+     (* This is somewhat a hack...  *)
+      let t    = mctxToMSub cD' in
+      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
+      let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
+      let phat = dctxToHat cPsi' in
+        MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
+
+
+
+
+let rec cctxToCSub cO cD = match cO with
+  | Empty -> CShift 0
+  | Dec (cO, CDecl (_psi, schema)) -> 
+      let ctxVar = CtxVar (CInst (ref None, schema, cO, cD)) in
+      let cs = cctxToCSub cO cD  in 
+        CDot (ctxVar, cs)
+
 
 
 (* The following functions are from an attempt to improve printing of meta-variables;

@@ -1,6 +1,7 @@
-(* TODO
- * - check if patterns are linear
- *)
+(*
+* Name : Shen Chen Xu
+* Id   : 260375681
+*)
 signature TYPECHECK = sig
 
   type context  (* Context of typing assumptions; example: x : int, p : bool *)

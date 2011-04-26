@@ -1200,7 +1200,8 @@ module Make (T : TRAIL) : UNIFY = struct
                           (* may raise NotInvertible *)
                           
 
-            | MVar (Inst (r, cPsi1, tP, cnstrs) as u, t) ->  (* s = id *)
+
+            | MVar (Inst (r, cPsi1, tP, cnstrs), t) ->  (* s = id *)
                 let tM = Root(loc, head, tS) in
                 let t  = Whnf.normSub (comp t s) in 
                   (* by invariant: MVars are lowered since tM is in whnf *)

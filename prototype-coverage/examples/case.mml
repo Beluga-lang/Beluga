@@ -1,22 +1,11 @@
 let
-(*
   datatype stuff = Number of int | YesNo of bool
   datatype morestuff = Triple of stuff * stuff * stuff
                      | Pair of stuff * stuff
                      | Single of stuff
-*)
-  val x = false
-  val y = false
 in
-  case (x, y) of
-    (true, false) => 0
-  | (false, true ) => 1
-  | (true, true) => 2
-  | (false, false) => 3
-(*
   case Triple (YesNo true, Number 7, YesNo false) of
     Triple (YesNo false, x, y) => false
   | Triple (Number 1, YesNo false, Number 3) => false
   | Triple (YesNo x, Number 7, YesNo false) => x
-*)
 end;

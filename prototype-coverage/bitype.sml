@@ -63,8 +63,6 @@ structure Typecheck :> TYPECHECK = struct
   fun synth ctx exp = case exp of
       M.Int _ => Int
     | M.Bool _ => Bool
-    | M.Valcon _ => fail "wtf"
-    | M.Valcon0 _ => fail "wtf2"
     | M.Primop(po, exps) =>
          let val poType as Arrow(domain, range) = primopType po
              val productizedExps = case exps of [one] => one
@@ -106,7 +104,7 @@ structure Typecheck :> TYPECHECK = struct
         synth ctx_decs exp
       end
 
-    | M.Case (e, cs) =>
+    | M.Case (e, cs) => (* fail "Case: not implemented" *)
       let val t = synth ctx e
           val (patterns, clauses) = ListPair.unzip cs
 
@@ -114,20 +112,16 @@ structure Typecheck :> TYPECHECK = struct
               case (p, t) of
                 (M.Varpat x, t) => [(x, t)]
               | (M.Intpat _, Int) => []
-              | (M.Intpat _, _) =>
-                fail "Pattern of wrong type inside CASE expression"
+              | (M.Intpat _, _) => fail "115: Pattern type error"
               | (M.Boolpat _, Bool) => []
-              | (M.Boolpat _, _) =>
-                fail "Pattern of wrong type inside CASE expression"
+              | (M.Boolpat _, _) => fail "117: Pattern type error"
               | (M.Tuplepat ps, Product ts) =>
                 if length ps = length ts then
                   foldl (fn ((p, t), bs) => (checkpat ctx p t) @ bs)
                         []
                         (ListPair.zip (ps, ts))
-                else
-                  fail "Pattern of wrong type inside CASE expression"
-              | (M.Tuplepat ps, t) =>
-                fail "Pattern of wrong type inside CASE expression"
+                else raise fail "123: Pattern type error"
+              | (M.Tuplepat ps, t) => fail ("Fail to check pattern against " ^ Type.toString t)
               | (M.Valconpat (x, p), Tycon y) =>
                 let val tp = lookup ctx x
                 in
@@ -136,27 +130,22 @@ structure Typecheck :> TYPECHECK = struct
                     if range = y then
                       checkpat ctx p domain
                     else
-                      fail "Pattern of wrong type inside CASE expression"
-                  | _ => fail "Pattern of wrong type inside CASE expression"
+                      fail "129: Pattern type error"
+                  | _ => fail "130: Pattern type error"
                 end
-              | (M.Valconpat (x, p), _) =>
-                fail "Pattern of wrong type inside CASE expression"
+              | (M.Valconpat (x, p), _) => fail "130: Pattern type error"
               | (M.Valcon0pat x, Tycon y) =>
                 let val tp = lookup ctx x
                 in
                   case tp of
                     Tycon xt =>
-                    if xt = y then []
-                    else fail "Pattern of wrong type inside CASE expression"
-                  | _ => fail "Pattern of wrong type inside CASE expression"
+                    if xt = y then [] else fail "135: Pattern type error"
+                  | _ => fail "136: Pattern type error"
                 end
-              | (M.Valcon0pat _, _) =>
-                fail "Pattern of wrong type inside CASE expression"
-
+              | (M.Valcon0pat _, _) => fail "138: Pattern type error"
           fun synthclause [] = []
             | synthclause ((p, e) :: cs) =
               (synth (extend_list ctx (checkpat ctx p t)) e) :: (synthclause cs)
-
           val clausesType = synthclause cs
       in
         if List.all (fn x => Type.eq (x, hd clausesType)) clausesType then
@@ -164,20 +153,8 @@ structure Typecheck :> TYPECHECK = struct
         else
           fail "Type of clauses don't agree"
       end
-
-    | M.If (e, e1, e2) =>
-      let val _ = check ctx e Type.Bool
-          val t1 = synth ctx e1
-          val t2 = synth ctx e2
-      in
-        if Type.eq (t1, t2) then
-          t1
-        else
-          fail "Different types synthesized for THEN clause and ELSE clause"
-      end
-
-    | x =>
-      fail ("Can't synthesize type for expression: " ^ Print.expToString x)
+    
+    | _ => fail "Can't synthesize type"
 
   (* check : context -> M.exp -> tp -> unit
    *

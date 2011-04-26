@@ -218,20 +218,17 @@ structure Parse :> PARSE = struct
                       case next s' of
                         (L.DARROW, _) => (M.Valcon0pat x, s')
                       | (L.COMMA, _) => (M.Valcon0pat x, s')
-                      (* | (L.VAR y, s) => *)
-                      (*   if startsLower y then *)
-                      (*     (M.Valconpat (x, M.Varpat y), s) *)
-                      (*   else *)
-                      (*     (M.Valconpat (x, M.Valcon0pat y), s) *)
-                      (* | (L.LPAREN, s) => *)
-                      (*   let val (p, s) = parse_pattern s' *)
-                      (*   in *)
-                      (*     (M.Valconpat (x, p), s) *)
-                      (*   end *)
-                      | _ => let val (p, s) = parse_pattern s'
-                             in
-                               (M.Valconpat (x, p), s)
-                             end
+                      | (L.VAR y, s) =>
+                        if startsLower y then
+                          (M.Valconpat (x, M.Varpat y), s)
+                        else
+                          (M.Valconpat (x, M.Valcon0pat y), s)
+                      | (L.LPAREN, s) =>
+                        let val (p, s) = parse_pattern s'
+                        in
+                          (M.Valconpat (x, p), s)
+                        end
+                      | _ => raise Error "parse.sml: 236"
                     end
                 end
               | (L.NUMBER i, s') => (M.Intpat i, s')

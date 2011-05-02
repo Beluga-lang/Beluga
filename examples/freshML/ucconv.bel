@@ -1,0 +1,177 @@
+% Untyped closure conversion.
+% Author: Olivier Savary B. 
+%
+% current state
+%--------------------
+% Reconstructing
+% Need to compare test results with previous cconv.
+% Fatal error: exception Whnf.Fmvar_not_found
+% (add to tracker with example; problem was a free variable)
+%
+
+
+
+ %term is the source language
+ term: type.
+ elam:(term -> term) -> term. 
+ eapp:term -> term -> term.
+ elet:term -> (term -> term) -> term.
+
+ %targer is the target language
+ target:type.
+ tunit: target. %used as nil to list with pairs
+ tfst: target -> target.
+ tsnd: target -> target.
+ tpair: target -> target -> target.
+ tapp: target -> target -> target. %app is wrapped in topen
+ tlam: (target -> target) -> target. %lam is wrapped in tpack
+ tlet: target -> (target -> target) -> target.
+ tpack: target -> target.
+ topen: target -> (target -> target) -> target.
+
+ nat: type.
+ z:nat.
+ suc: nat -> nat.
+
+ %list of term
+ fvlist: type.
+ nil:fvlist.
+ cons: term -> fvlist -> fvlist.
+
+ schema ctx = term;
+ schema tctx = target;
+
+ rec append:{g:ctx}fvlist[g] -> fvlist [g] -> fvlist [g] =
+     fn a => fn b => case a of
+	  [g]nil => b
+	  |[g]cons (E..) (Ta..) => let [g](B'..) = append ([g]Ta..) b in
+				    [g]cons (E..) (B'..)
+ ;
+
+ %makeproj return the nth project of pair y
+ %makeproj n = tfst( ... (tfst y))
+ rec makeproj': nat []  -> target[xenv:target] =
+     fn n => case n of
+		 []z => [xenv:target] (tfst xenv)
+	       |[]suc M => let  [xenv:target]N = makeproj'([]M) in
+		      [xenv:target] tsnd N
+ ;
+
+ rec makeproj: nat [] -> target[xenv:target] = 
+     fn n => let [xenv:target] T xenv = makeproj' n in
+	    [xenv:target] tfst (T xenv) 
+ ;
+
+
+
+ rec remove:{g:ctx}fvlist[g,x:term] -> fvlist[g] =
+ fn l => case l of
+	  [g,x:term]nil => [g]nil
+	|[g,x:term]cons x (L..x) => remove([g,x:term]L..x)
+	|[g,x:term]cons (#p..) (L..x) => 
+	   let [g] (L'..) = remove ([g,x:term]L..x) in
+				   [g]cons (#p..) (L'..)
+ ;
+
+ %Extend the mapping with id function, used for the local variable in lam and let.
+ rec e_map:{g:ctx}{h:(tctx)*} (term [g] -> target[h])  ->  (term[g,x:term] -> target[h,x:target]) = 
+  FN h => fn map => 
+	      fn e' => case e' of
+			|[g,x:term] x => [h,x:target] x
+			|[g,x:term](#p..) => let [h](F..) = map([g]#p..) in 
+					  [h,x:target](F..)
+ ;
+
+ %Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
+ %Resulting should be a term closed under the environement tuple xenv and the local variable x.
+
+rec b_map:{g:ctx}(term [g,x:term] -> target [xenv:target]) -> fvlist[g] -> nat[] -> 
+	  (term [g,x:term] -> target [xenv:target]) =
+fn map => fn l => fn n => case l of
+| [g] nil => (fn e => case e of
+	       |[g,x:term] x => [xenv:target] (tsnd xenv)
+	       |[g,x:term](#p..) => map ([g,x:term]#p..)
+	    )
+|[g]cons (X..) (L..) =>
+ let []N = n in
+ (% fn e => if (([g]X..) == ([g] #p..)) then
+   fn e => if (([g,x:term] X..) == e) then
+	 makeproj ([]N)
+	 else 
+	 b_map map ([g]L..) ([]suc N) e		      
+ )
+ ;
+
+
+
+ %Build the environement tuble xenv that will be packed next to a lam. Map should contain the idmapping from x:term to x:target at this stage.
+rec b_env:{g:ctx}{h:(tctx)*} (term [g] -> target [h]) -> fvlist[g] -> target[h] =
+FN h => fn map => fn fvar => case fvar of
+| [g]nil => [h]tunit
+| [g]cons (E..) (Ta..) => 
+  let [h](E'..) = map ([g]E..) in
+  let [h](Ta'..) = b_env [h] map ([g]Ta..) in
+  [h]tpair (E'..) (Ta'..)
+
+ ;
+
+
+rec fvar:{g:ctx} term[g] -> fvlist[g] =
+fn e => case e of
+| [g] (#p ..) => [g]cons (#p ..) nil
+| [g] elam (\x.(U..x)) => 
+  let [g,x:term](L..x) = fvar ([g,x:term] (U..x)) in
+  let [g](L'..) = remove([g,x:term] L..x) in
+    [g] (L'..)
+
+| [g] eapp (U..) (V..) => 
+  let [g](FVU..) = fvar ([g]U..) in
+  let [g](FVV..) = fvar ([g]V..) in
+    append ([g]FVU..) ([g]FVV..)
+
+|[g] elet (U..) (\x.(V..x)) => 
+ let [g](FVU..) = fvar ([g]U..) in
+ let [g,x:term](FVV..) = fvar ([g,x:term]V..x) in
+ let [g](FVV'..) = remove([g,x:term]FVV..) in
+   append ([g]FVU..) ([g]FVV'..)
+ ;
+
+ %outer conversion
+ %lam case:                                                               [g] \x.E..x
+ %         1 Get free variables
+ %     	   2 Build environement tuple xenv                                [h] T..:target  
+ %	   3 Build  a map from freevar to local and proj of xenv      
+ %	   4 Convert recursively inside the lam, closed under xenv        [xenv:target] E'..xenv x
+ %	   5 Weaken the resulting target with exterior context            [h,xenv:target] E'..xenv x
+ %	   6 Pack the target(5) and xenv(2) in a closure                  [h] tpack tpair(\xenv.E',T..)
+ %
+ %
+
+rec convert:{g:ctx}{h:(tctx)*} (term [g] -> target [h]) -> term [g] -> target [h] = 
+FN h => fn map => fn e => case e of
+| [g]#p.. => map ([g]#p..)
+| [g]eapp (U..) (V..) => 
+  let [h](U'..) = convert [h] map ([g]U..) in
+  let [h](V'..) = convert [h] map ([g]V..) in
+  [h] topen (U'..) 
+      \xenv. tapp (tfst xenv) (tpair (tsnd xenv) (V'..))
+
+|[g]elam (\x.(U..x)) => 
+ let [g]FV.. = fvar e in	
+ let [xenv:target] U' xenv = 
+     convert [xenv:target] 
+	     (b_map (fn e => ([xenv:target] tunit)) ([g](FV..)) ([] z)) 
+	     ([g,x:term]U..x) in 
+let [h](T2..) = b_env [h] map ([g]FV..) in
+  [h]tpack( tpair (tlam (\xenv. U' xenv)) (T2..))
+
+|[g]elet (U..) (\x.(V..x)) => 
+ let [h](U'..) = convert [h] map ([g]U..) in
+ let [h,x:target] V'..x = convert [h,x:target] (e_map [h] map) ([g,x:term]V..x) in
+ [h] tlet (U'..) (\x.(V'..x))
+; 
+
+let t1 = convert [ ] (fn e => ([ ] tunit)) ( [] elam (\x.(x)));
+let t2 = convert [ ] (fn e => ([ ] tunit)) ( [] elet (elam (\y.y)) (\x.x));
+let t3 = convert [ ] (fn e => ([ ] tunit)) ( [ ] elam (\x.(elam (\y. eapp x y))));
+

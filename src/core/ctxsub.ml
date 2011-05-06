@@ -117,6 +117,8 @@ and ctxnorm_tuple (tuple, t) = match tuple with
 
 
 and ctxnorm_head (h,cs) = match h with
+  | FMVar (u, s) -> FMVar (u, ctxnorm_sub (s, cs))
+  | FPVar (u, s) -> FPVar (u, ctxnorm_sub (s, cs))
   | MVar (u, s) -> MVar (u, ctxnorm_sub (s, cs))
   | PVar (p, s) -> PVar (p, ctxnorm_sub (s, cs))
   | MMVar (MInst({contents = None} as u, cD, cPsi, tA, cnstr), (t,s)) -> 
@@ -127,6 +129,8 @@ and ctxnorm_head (h,cs) = match h with
 (*  | MMVar (u, (t,s)) -> MMVar (u, (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs))) *)
   | Proj(PVar (p,s), k) -> 
       Proj(PVar (p, ctxnorm_sub (s, cs)), k)
+  | Proj(FPVar (p,s), k) -> 
+      Proj(FPVar (p, ctxnorm_sub (s, cs)), k)
   | _ -> h 
 
 and ctxnorm_spine (tS, cs) = match tS with

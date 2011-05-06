@@ -31,6 +31,77 @@ exception Violation of string *)
 exception SpineMismatch
 exception NotPatSpine
 
+(* etaExpandMVstr cPsi sA  = tN
+ *
+ *  cPsi   |- [s]A <= typ
+ *  cPsi   |- ss  <= cPsi' 
+ *  cPsi'  |- tN   <= [s'][s]A
+ *)
+
+
+let rec etaExpandMVstr loc cO cPsi sA  = etaExpandMVstr' loc cO cPsi (Whnf.whnfTyp sA)  
+
+and etaExpandMVstr' loc cO cPsi sA  = match sA with
+  | (Int.LF.Atom (_, a, _tS) as tP, s) ->
+      let (cPhi, conv_list) = ConvSigma.flattenDCtx cPsi in  
+      let s_proj = ConvSigma.gen_conv_sub conv_list in
+      let tQ    = ConvSigma.strans_typ (tP, s) conv_list in
+      (*  cPsi |- s_proj : cPhi
+          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+
+      let (ss', cPhi') = Subord.thin' cO a cPhi in  
+      (* cPhi |- ss' : cPhi' *)
+      let ssi' = LF.invert ss' in
+      (* cPhi' |- ssi : cPhi *) 
+      (* cPhi' |- [ssi]tQ    *)
+      let u = Whnf.newMVar (cPhi', Int.LF.TClo(tQ,ssi')) in
+      (* cPhi |- ss'    : cPhi' 
+         cPsi |- s_proj : cPhi 
+         cPsi |- comp  ss' s_proj   : cPhi' *)
+      let ss_proj = LF.comp ss' s_proj in 
+        Int.LF.Root (loc, Int.LF.MVar (u, ss_proj), Int.LF.Nil)   
+
+  | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
+      Int.LF.Lam (loc, x, etaExpandMVstr loc cO (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) )
+
+
+
+
+(* etaExpandMMV loc cO cD cPsi sA  = tN
+ *
+ *  cO ; cD ; cPsi   |- [s]A <= typ
+ *
+ *  cO ; cD ; cPsi   |- tN   <= [s]A
+ *)
+let rec etaExpandMMVstr loc cO cD cPsi sA  = etaExpandMMVstr' loc cO cD cPsi (Whnf.whnfTyp sA) 
+
+and etaExpandMMVstr' loc cO cD cPsi sA  = match sA with
+  | (Int.LF.Atom (_, a, _tS) as tP, s) ->
+      let (cPhi, conv_list) = ConvSigma.flattenDCtx cPsi in  
+      let s_proj = ConvSigma.gen_conv_sub conv_list in
+      let tQ    = ConvSigma.strans_typ (tP, s) conv_list in
+      (*  cPsi |- s_proj : cPhi
+          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+
+      let (ss', cPhi') = Subord.thin' cO a cPhi in  
+      (* cPhi |- ss' : cPhi' *)
+      let ssi' = LF.invert ss' in
+      (* cPhi' |- ssi : cPhi *) 
+      (* cPhi' |- [ssi]tQ    *)
+      let u = Whnf.newMMVar (cD, cPhi', Int.LF.TClo(tQ,ssi')) in
+      (* cPhi |- ss'    : cPhi' 
+         cPsi |- s_proj : cPhi 
+         cPsi |- comp  ss' s_proj   : cPhi' *)
+      let ss_proj = LF.comp ss' s_proj in 
+        Int.LF.Root (loc, Int.LF.MMVar (u, (Whnf.m_id, ss_proj)), Int.LF.Nil)   
+
+  | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
+      Int.LF.Lam (loc, x, etaExpandMMVstr loc cO cD (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) )
+
+
+
+
+
 let rec conv_listToString clist = match clist with 
   | [] -> " "
   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
@@ -556,7 +627,7 @@ and index_term cvars bvars fvars = function
 
 and index_head cvars bvars fvars = function
   | Ext.LF.Name (_, n) ->
-      let _        = dprint (fun () -> "Indexing name " ^ n.string_of_name) in 
+      (* let _        = dprint (fun () -> "Indexing name " ^ n.string_of_name) in *)
       begin try
         (Apx.LF.BVar (BVar.index_of_name bvars n) , fvars)
       with Not_found -> try
@@ -777,7 +848,8 @@ let rec index_comptyp ctx_vars cvars  fvars =
       begin try 
         let Ext.LF.Atom (_ , name, Ext.LF.Nil) = a in 
         let offset = CVar.index_of_name ctx_vars name in           
-        let (psi', _ , _ ) = index_dctx ctx_vars cvars (BVar.create ()) fvars psi in
+        let (psi', _ , _ ) = index_dctx ctx_vars cvars (BVar.create ()) fvars
+          psi in
         let _ = dprint (fun () -> "Indexing TypSub -- turning TypBox into TypSub") in
           Apx.Comp.TypSub (loc, Apx.LF.CtxVar (Apx.LF.CtxOffset offset), psi')
       with _  -> 
@@ -2163,7 +2235,8 @@ and elSpineIW loc recT  cO cD cPsi spine i sA  =
            *)
           (* let (_, d) = Context.dctxToHat cPsi in
           let tN     = Whnf.etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift(Int.LF.NoCtxShift, d)) in   *)
-          let tN     = Whnf.etaExpandMV cPsi (tA, s) LF.id in
+          let tN     = Whnf.etaExpandMV cPsi (tA, s) LF.id in 
+
           let (spine', sP) = elSpineI loc recT  cO cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
 
@@ -2175,7 +2248,8 @@ and elSpineIW loc recT  cO cD cPsi spine i sA  =
            *
            * s.t.  cPsi |- \x1...\xn. u[id] => [id]A  where cPsi |- id : cPsi
            *)
-          let tN     = Whnf.etaExpandMMV (Some loc) cD cPsi (tA, s) LF.id in
+           let tN     = Whnf.etaExpandMMV (Some loc) cD cPsi (tA, s) LF.id in 
+          (* let tN     = etaExpandMMVstr (Some loc) cO cD cPsi (tA, s) in *)
 
           let (spine', sP) = elSpineI loc recT  cO cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
@@ -2230,7 +2304,8 @@ and elKSpineI recT  cO cD cPsi spine i sK =
             Int.LF.App (tN, spine')
       | ((Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s), PiboxRecon) ->
           (* let sshift = mkShift recT cPsi in *)
-          let tN     = Whnf.etaExpandMMV None cD cPsi (tA, s) LF.id in
+          let tN     = Whnf.etaExpandMMV None cD cPsi (tA, s) LF.id in 
+          (* let tN = etaExpandMMVstr None cO cD cPsi (tA, s) in  *)
           let spine' = elKSpineI recT  cO cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
 
@@ -3288,9 +3363,9 @@ and fmvApxBranch fMVs cO cD (l_cd1, l_delta, k) o_param b =
 (* Given a type-level constant a of type K , it will generate the most general
  * type a U1 ... Un 
  *)
-let mgTyp cD cPsi a kK =
+let mgTyp cO cD cPsi a kK =
   let (flat_cPsi, conv_list) = flattenDCtx cPsi in  
-  let s_proj   = gen_conv_sub conv_list in
+    let s_proj   = gen_conv_sub conv_list in
 
   let rec genSpine sK = match sK with 
     | (Int.LF.Typ, _s) ->
@@ -3308,23 +3383,30 @@ let mgTyp cD cPsi a kK =
         (* let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in  (* -bp would not work if h is functional type *) *)
           Int.LF.App (tR, tS)
 *)
+
     | (Int.LF.PiKind ((Int.LF.TypDecl (_, tA1), _ ), kK), s) ->
         let tA1' = strans_typ (tA1, s) conv_list in
         let u  = Whnf.newMMVar (cD, flat_cPsi , tA1') in
         let h  = Int.LF.MMVar (u, (Whnf.m_id, s_proj)) in 
-        let tR = Int.LF.Root (None, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
+        let tR = Int.LF.Root (None, h, Int.LF.Nil) in  (* -bp needs to be
+          eta-expanded *)
+
+        (* let tR = etaExpandMMVstr None cO cD cPsi (tA1, s) in  *)
+
         let _ = dprint (fun () -> "Generated meta^2-variable " ^ 
-                          P.normalToString Int.LF.Empty cD cPsi (tR, LF.id)) in 
-        let _ = dprint (fun () -> "of type : " ^ P.dctxToString Int.LF.Empty cD flat_cPsi ^ 
+                          P.normalToString cO cD cPsi (tR, LF.id)) in 
+        let _ = dprint (fun () -> "of type : " ^ P.dctxToString cO cD flat_cPsi ^ 
                           " |- " ^ P.typToString Int.LF.Empty cD flat_cPsi (tA1',LF.id)) in 
-        let _ = dprint (fun () -> "orig type : " ^ P.dctxToString Int.LF.Empty cD cPsi ^ 
-                          " |- " ^ P.typToString Int.LF.Empty cD cPsi (tA1,s)) in 
-        let tS = genSpine (kK, Int.LF.Dot (Int.LF.Head h, s)) in 
-        (* let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in  (* -bp would not work if h is functional type *) *)
+        let _ = dprint (fun () -> "orig type : " ^ P.dctxToString cO cD cPsi ^ 
+                          " |- " ^ P.typToString cO cD cPsi (tA1,s)) in 
+        let tS = genSpine (kK, Int.LF.Dot (Int.LF.Head h, s)) in  
+        (* let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in  *)
           Int.LF.App (tR, tS)
 
   in
     Int.LF.Atom (None, a, genSpine (kK, LF.id))
+
+
 
 let rec genMApp loc cO cD (i, tau_t) = genMAppW loc cO cD (i, Whnf.cwhnfCTyp tau_t)
 
@@ -3334,7 +3416,8 @@ and genMAppW loc cO cD (i, tau_t) = match tau_t with
       let cPsi' = C.cnormDCtx (cPsi, theta) in 
       let tA'   = C.cnormTyp (tA, theta) in 
 
-      let tM'   = Whnf.etaExpandMMV (Some loc) cD  cPsi' (tA', LF.id) LF.id in
+      let tM'   = Whnf.etaExpandMMV (Some loc) cD  cPsi' (tA', LF.id) LF.id in 
+      (* let tM'   = etaExpandMMVstr (Some loc) cO cD  cPsi' (tA', LF.id) in *)
         let _   = dprint (fun () -> "[genMApp] Generated meta^2-variable " ^ 
                           P.normalToString cO cD cPsi (tM', LF.id)) in 
         let _   = dprint (fun () -> "          of type : " ^ 
@@ -3756,15 +3839,23 @@ and elExp' cO cD cG i = match i with
 (* NOTE: Any context variable occurring in delta, psihat, a, psi is bound
  *  in cO!  So delta (and cD' and cD) do not contain it!
  *)
+(*
+   recPattern cO cD cPsi omega delta psi m tPopt = 
 
+  Assumptions: 
+      cO ; cD ; cPsi |- tPopt
+      omega ; delta ; psi |- m 
+
+*)
 and recPattern cO cD cPsi omega delta psi m tPopt = 
-  let cO1     = elCCtx omega in 
+  let cO1     = elCCtx omega in  
   let cD'     = elMCtx  PiboxRecon cO1 delta in
   let cPsi'   = elDCtx  PiboxRecon cO1 cD' psi in
   let l = Context.length cD' in 
 
-  let _ = dprint (fun () -> "[recPattern] cPsi' = " ^ P.dctxToString cO1 cD' cPsi' ) in
-  let _ = dprint (fun () -> "[recPattern] cPsi = " ^ P.dctxToString cO cD cPsi ) in
+
+  let _ = dprint (fun () -> "[recPattern] cO    = " ^ P.octxToString cO) in 
+  let _ = dprint (fun () -> "[recPattern] (outside scrutinee) cPsi = " ^ P.dctxToString cO cD cPsi ) in
 
   let cvar1Opt = Context.ctxVar cPsi' in 
   let (cO_ext,k) = begin match cvar1Opt with 
@@ -3778,7 +3869,8 @@ and recPattern cO cD cPsi omega delta psi m tPopt =
                        end
                    | Some (Int.LF.CtxName psi_name ) -> (Int.LF.Dec(cO, Int.LF.CDeclOpt psi_name) , 1)
                   end in
-
+  let _ = dprint (fun () -> "[recPattern] (specified pattern) cPsi' = " ^ 
+                    P.dctxToString cO_ext cD'  cPsi' ) in
   let cs     = Ctxsub.id_csub cO_ext in 
   let cPsi0  = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi,Int.LF.MShift l), Int.LF.CShift k) in 
   let _ = dprint (fun () -> "unifyDCtx : cPsi0 = " ^ P.dctxToString cO_ext Int.LF.Empty cPsi0 ^ 
@@ -3797,11 +3889,14 @@ and recPattern cO cD cPsi omega delta psi m tPopt =
               | (Some _ , Int.LF.CDot (c_psi , cs') ) -> (cs'  , Int.LF.CDot(c_psi, Int.LF.CShift l_cO'))
             end  in
 
-  let _ = dprint (fun () -> "cs' = " ^ P.csubToString cO' cD1_joint cs' ) in 
-  let _ = dprint (fun () -> "cs1 = " ^ P.csubToString cO' cD1_joint cs1 ) in 
-
-  let cPsi'  = Ctxsub.ctxnorm_dctx (cPsi', cs1) in 
-  let cD'    = Ctxsub.ctxnorm_mctx (cD', cs1) in 
+(*  let _ = dprint (fun () -> "cs' = " ^ P.csubToString cO' cD1_joint cs' ) in 
+    let _ = dprint (fun () -> "cs1 = " ^ P.csubToString cO' cD1_joint cs1 ) in 
+*)
+ let _ = dprint (fun () -> "cs = " ^ P.csubToString cO' cD1_joint cs ) in 
+  (* let cPsi'  = Ctxsub.ctxnorm_dctx (cPsi', cs1) in *)
+  (*   let cD'    = Ctxsub.ctxnorm_mctx (cD', cs1) in *)
+  let cPsi'  = Ctxsub.ctxnorm_dctx (cPsi', cs) in
+  let cD'    = Ctxsub.ctxnorm_mctx (cD', cs) in 
 
   let _ = (dprint (fun () -> "[recPattern] cO'= " ^ P.octxToString cO');
            dprint (fun () -> "[recPattern] " ^ P.mctxToString cO' cD' ^ " [ " ^ P.dctxToString cO' cD' cPsi' ^ "]")) in
@@ -3814,7 +3909,7 @@ and recPattern cO cD cPsi omega delta psi m tPopt =
                   | PartialTyp a  -> 
                       let _ = dprint (fun () -> "[mgTyp] Generate mg type in context " ^ 
                                         P.dctxToString cO' cD' cPsi' ) in
-                      mgTyp cD' cPsi' a (Typ.get a).Typ.kind   
+                      mgTyp cO' cD' cPsi' a (Typ.get a).Typ.kind   
                 end in
 
   let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of type  " ^ 
@@ -3900,7 +3995,7 @@ and recEmptyPattern cO cD cPsi omega delta psi tPopt =
                   | PartialTyp a  -> 
                       let _ = dprint (fun () -> "[mgTyp] Generate mg type in context " ^ 
                                         P.dctxToString cO' cD' cPsi' ) in
-                      mgTyp cD' cPsi' a (Typ.get a).Typ.kind   
+                      mgTyp cO' cD' cPsi' a (Typ.get a).Typ.kind   
                 end in
 
   let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of type  " ^ 

@@ -95,6 +95,7 @@ fn l => case l of
 
 %makeproj return the nth project of pair y
 %makeproj n = tfst( ... (tfst y))
+
 rec makeproj': nat []  -> (lookup_tp N S R)[] -> (target R)[xenv:target S] =
 fn n => fn p => case n of
 | []z => [xenv:target S] (tfst xenv)
@@ -205,3 +206,4 @@ FN h => fn map => fn e => case e of
 ; 
 
  
+

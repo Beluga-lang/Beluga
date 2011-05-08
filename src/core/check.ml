@@ -188,6 +188,10 @@ module Comp = struct
         check cO cD cG e1 (tau1, t);
         check cO cD cG e2 (tau2, t)
 
+    | (Let (_, i, (x, e)), (tau, t)) ->
+        let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau, t))) in
+          check cO cD cG' e (tau,t)
+
     | (LetPair (_, i, (x, y, e)), (tau, t)) ->
         begin match C.cwhnfCTyp (syn cO cD cG i) with
           | (TypCross (tau1, tau2), t') ->

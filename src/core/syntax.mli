@@ -215,6 +215,7 @@ module Int : sig
      | MLam    of Loc.t option * name * exp_chk
      | Pair    of Loc.t option * exp_chk * exp_chk     
      | LetPair of Loc.t option * exp_syn * (name * name * exp_chk) 
+     | Let     of Loc.t option * exp_syn * (name * exp_chk)
      | Box     of Loc.t option * LF.psi_hat * LF.normal
      | SBox    of Loc.t option * LF.psi_hat * LF.sub
      | Case    of Loc.t option * case_pragma * exp_syn * branch list
@@ -383,6 +384,7 @@ module Ext : sig
        | MLam    of Loc.t * name * exp_chk         
        | Pair    of Loc.t * exp_chk * exp_chk
        | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
+       | Let     of Loc.t * exp_syn * (name * exp_chk)
        | Box     of Loc.t * LF.psi_hat * LF.normal 
        | SBox    of Loc.t * LF.psi_hat * LF.sub 
        | Case    of Loc.t * case_pragma * exp_syn * branch list 
@@ -551,10 +553,12 @@ module Apx : sig
        | Syn     of Loc.t * exp_syn
        | Fun     of Loc.t * name * exp_chk              (* fn   f => e           *)
        | CtxFun  of Loc.t * name * exp_chk              (* FN   f => e           *)
-       | MLam    of Loc.t * name * exp_chk              (* mlam u => e           *)
+       | MLam    of Loc.t * name * exp_chk              (* mlam u =>  e          *)
        | Pair    of Loc.t * exp_chk * exp_chk           (* (e1 , e2)             *)
        | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
                                                         (* let (x,y) = i in e    *)
+       | Let     of Loc.t * exp_syn * (name * exp_chk)
+                                                        (* let x = i in e        *)
        | Box     of Loc.t * LF.psi_hat * LF.normal      (* box (Psi hat. M)      *)
        | SBox    of Loc.t * LF.psi_hat * LF.sub         (* sbox (Psi hat. sigma) *)
        | Case    of Loc.t * case_pragma * exp_syn * branch list

@@ -249,6 +249,11 @@ and eval_chk e theta_eta =
           dprint (fun () -> "[FunValue] created: cs = " ^ P.csubToString I.LF.Empty I.LF.Empty cs);
           dprint (fun () -> "[FunValue] created: theta = " ^ P.msubToString I.LF.Empty I.LF.Empty (Whnf.cnormMSub (Ctxsub.ctxnorm_msub (theta,cs))));
           FunValue ((loc, n, e'), cs, (Whnf.cnormMSub (Ctxsub.ctxnorm_msub (theta, cs))), eta)
+
+      | Let (loc, i, (x, e)) -> 
+          let w = eval_syn i theta_eta in 
+            eval_chk e (cs, theta, Cons (w, eta))
+
       | Box(loc, phat, tM) -> 
           let phat' = Ctxsub.ctxnorm_psihat (phat,cs) in 
           let tM'   = C.cnorm (Ctxsub.ctxnorm (tM, cs) , theta) in 

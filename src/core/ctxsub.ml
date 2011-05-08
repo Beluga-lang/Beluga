@@ -579,6 +579,11 @@ let rec csub_exp_chk cPsi k e' =
       let e1 = csub_exp_chk cPsi k e in 
         Comp.LetPair (loc, i1, (x,y,e1))
 
+  | Comp.Let (loc, i, (x,e)) -> 
+      let i1 = csub_exp_syn cPsi k i in 
+      let e1 = csub_exp_chk cPsi k e in 
+        Comp.Let (loc, i1, (x,e1))
+
   | Comp.Box (loc, phat, tM) -> 
       let phat' = csub_psihat cPsi k phat in 
       let tM'   = csub_norm cPsi k tM in 

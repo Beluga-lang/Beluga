@@ -2097,6 +2097,9 @@ let rec mctxPVarPos cD p =
     | (Comp.LetPair (loc, i, (x, y, e)), t) -> 
         Comp.LetPair (loc, cnormExp' (i, t), (x, y, cnormExp (e, t)))
 
+    | (Comp.Let (loc, i, (x, e)), t) -> 
+        Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
+
     | (Comp.Box (loc, psihat, tM), t) -> 
         Comp.Box (loc, cnorm_psihat psihat, 
                   norm (cnorm (tM, t), LF.id))

@@ -976,6 +976,9 @@ let rec mctxPVarPos cD p =
     | (Comp.LetPair (i, (x, y, e)), t) -> 
         Comp.LetPair (cnormExp' (i, t), (x, y, cnormExp (e, t)))
 
+    | (Comp.Let (i, (x, e)), t) -> 
+        Comp.Let (cnormExp' (i, t), (x, cnormExp (e, t)))
+
     | (Comp.Box (psihat, tM), t) -> Comp.Box (psihat, Whnf.norm (cnorm (tM, t), S.id))
 
     | (Comp.Case (i, prag, branches), t) -> 

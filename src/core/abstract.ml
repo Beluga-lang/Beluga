@@ -1536,6 +1536,11 @@ let rec collectExp cQ e = match e with
       let (cQ2, e') = collectExp cQi e in 
         (cQ2, Comp.LetPair (loc, i', (x, y, e')))
 
+  | Comp.Let (loc, i, (x, e)) -> 
+      let (cQi, i') = collectExp' cQ i in 
+      let (cQ2, e') = collectExp cQi e in 
+        (cQ2, Comp.Let (loc, i', (x, e')))
+
   | Comp.CtxFun (loc, psi, e) -> 
       let (cQ', e') = collectExp cQ e in 
         (cQ', Comp.CtxFun (loc, psi, e'))

@@ -263,6 +263,7 @@ module Int = struct
      | MLam   of Loc.t option * name * exp_chk
      | Pair   of Loc.t option * exp_chk * exp_chk     
      | LetPair of Loc.t option * exp_syn * (name * name * exp_chk) 
+     | Let    of Loc.t option * exp_syn * (name * exp_chk)
      | Box    of Loc.t option * LF.psi_hat * LF.normal
      | SBox   of Loc.t option * LF.psi_hat * LF.sub
      | Case   of Loc.t option * case_pragma * exp_syn * branch list
@@ -435,6 +436,8 @@ module Ext = struct
        | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
        | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
                                                   (*    | let (x,y) = i in e  *)
+       | Let    of Loc.t * exp_syn * (name * exp_chk)
+                                                  (*    | let x = i in e      *)
        | Box    of Loc.t * LF.psi_hat * LF.normal (*    | box (Psi hat. M)    *)
        | SBox   of Loc.t * LF.psi_hat * LF.sub 
        | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
@@ -485,7 +488,8 @@ module Ext = struct
        | CtxFun  (_loc, _, chk) ->  "CtxFun(_, " ^ chkToString chk ^ ")"
        | MLam    (_loc, _, chk) ->  "MLam(_, " ^ chkToString chk ^ ")"
        | Pair    (_loc, chk1, chk2) ->  "Fun(_, " ^ chkToString chk1 ^ ", " ^ chkToString chk2 ^ ")"
-       | LetPair (_loc, syn, (_, _, chk)) -> "LetPair(" ^ synToString syn ^", (_, _, " ^ chkToString chk ^ "))"
+       | LetPair (_loc, syn, (_, _, chk)) -> "LetPair(" ^ synToString syn ^",  (_, _, " ^ chkToString chk ^ "))"
+       | Let (_loc, syn, (_, chk)) -> "Let(" ^ synToString syn ^",  (_, " ^ chkToString chk ^ "))"
        | Box     (_loc, _, _) -> "Box(...)"
        | Case    (_loc, _, syn, _) -> "Case(" ^ synToString syn ^ " of ...)"
        | If      (_loc, syn, chk1, chk2) -> "If(" ^ synToString syn ^ " Then " ^  chkToString chk1 ^ " Else " ^ chkToString chk2 ^ ")"
@@ -635,6 +639,8 @@ module Apx = struct
        | Pair   of Loc.t * exp_chk * exp_chk      (* (e1 , e2)           *)
        | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
                                                   (* let (x,y) = i in e  *)
+       | Let    of Loc.t * exp_syn * (name * exp_chk)
+                                                  (* let x = i in e      *)
        | Box    of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
        | SBox   of Loc.t * LF.psi_hat * LF.sub    (* box (Psi hat. M)    *)
        | Case   of Loc.t * case_pragma * exp_syn * branch list

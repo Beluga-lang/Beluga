@@ -109,6 +109,7 @@ $INTERPRETER +t \
     test/id.bel \
     test/id-simple.bel \
     test/id-explicit.bel \
+    test/test-letexp.bel \
     test/test.bel \
     test/test-simple.bel \
     test/test-simple-explicit.bel \

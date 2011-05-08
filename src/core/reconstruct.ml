@@ -917,6 +917,12 @@ let rec index_exp ctx_vars cvars vars fvars = function
       let e' = index_exp ctx_vars cvars vars2 fvars e in
         Apx.Comp.LetPair(loc, i', (x,y,e'))
 
+  | Ext.Comp.Let (loc, i, (x, e)) ->
+      let i' = index_exp' ctx_vars cvars vars fvars i in
+      let vars1 = Var.extend vars (Var.mk_entry x) in
+      let e' = index_exp ctx_vars cvars vars1 fvars e in
+        Apx.Comp.Let (loc, i', (x,e'))
+
   (* SVars are parsed as terms but are actually substitutions *)
   | Ext.Comp.Box (loc1, psihat, Ext.LF.Root(loc2, Ext.LF.SVar(loc3,s, sigma), spine)) -> 
       let (psihat' , bvars) = index_psihat ctx_vars psihat in 
@@ -2800,6 +2806,11 @@ let rec cnormApxExp cO cD delta e (cD'', t) cs = match e with
       let e' = cnormApxExp  cO cD delta e (cD'', t) cs in 
         Apx.Comp.LetPair (loc, i', (x,y, e')) 
 
+  | Apx.Comp.Let (loc, i, (x, e)) -> 
+      let i' = cnormApxExp' cO cD delta i (cD'', t) cs in 
+      let e' = cnormApxExp  cO cD delta e (cD'', t) cs in 
+        Apx.Comp.Let (loc, i', (x, e')) 
+
   | Apx.Comp.Box(loc, phat, m) -> 
       let phat' = Ctxsub.ctxnorm_psihat (phat, cs) in 
       Apx.Comp.Box (loc, phat', cnormApxTerm cO cD delta m (cD'', t) cs)
@@ -3255,6 +3266,10 @@ let rec fmvApxExp fMVs cO cD ((l_cd1, l_delta, k) as d_param) ((l_o1, l_omega, k
       let i' = fmvApxExp' fMVs cO cD d_param o_param i in 
       let e' = fmvApxExp  fMVs cO cD d_param o_param e in 
         Apx.Comp.LetPair (loc, i', (x,y, e')) 
+  | Apx.Comp.Let (loc, i, (x, e)) -> 
+      let i' = fmvApxExp' fMVs cO cD d_param o_param i in 
+      let e' = fmvApxExp  fMVs cO cD d_param o_param e in 
+        Apx.Comp.Let (loc, i', (x, e')) 
 
   | Apx.Comp.Box(loc, phat, m) -> 
       Apx.Comp.Box (loc, fmvApxHat o_param phat, fmvApxTerm fMVs cO cD d_param o_param m)
@@ -3550,6 +3565,11 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
               (* TODO postpone to reconstruction *)
         end
 
+  | (Apx.Comp.Let (loc, i, (x, e)), (tau, theta)) ->
+      let (i', (tau',theta')) = elExp' cO cD cG i in
+      let cG1 = Int.LF.Dec (cG, Int.Comp.CTypDecl (x,  Int.Comp.TypClo (tau',theta'))) in      
+      let e'  =  elExp cO cD cG1 e (tau, theta) in
+        Int.Comp.Let (Some loc, i', (x,  e'))
 
   | (Apx.Comp.Box (loc, psihat, tM), ((Int.Comp.TypBox (_loc, tA, cPsi), theta) as tau_theta)) ->
    (* if psihat = Context.dctxToHat cPsi then *)

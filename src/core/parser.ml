@@ -773,7 +773,11 @@ cmp_exp_chkX:
           Comp.If (_loc, i, e1, e2)
 
       | "let"; "("; x = SYMBOL; ","; y = SYMBOL; ")"; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
-          Comp.LetPair (_loc, i, (Id.mk_name (Id.SomeString x), Id.mk_name (Id.SomeString y), e))
+          Comp.LetPair (_loc, i, (Id.mk_name (Id.SomeString x), Id.mk_name
+          (Id.SomeString y), e))
+
+      | "let";  x = SYMBOL; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
+          Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)

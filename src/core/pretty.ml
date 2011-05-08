@@ -993,6 +993,16 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cO cD (LF.Dec(LF.Dec(cG, Comp.CTypDeclOpt x), Comp.CTypDeclOpt y)) 0) e
               (r_paren_if cond)
 
+
+      | Comp.Let(_, i, (x, e)) -> 
+          let cond = lvl > 1 in
+            fprintf ppf "@[<2>%slet %s = %a@ in %a%s@]"
+              (l_paren_if cond)
+              (R.render_name x)
+              (fmt_ppr_cmp_exp_syn cO cD cG 0) (strip_mapp_args cO cD cG i)
+              (fmt_ppr_cmp_exp_chk cO cD (LF.Dec(cG, Comp.CTypDeclOpt x)) 0) e
+              (r_paren_if cond)
+
       | Comp.Box (_ , pHat, tM) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx pHat in

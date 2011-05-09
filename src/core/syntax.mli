@@ -497,7 +497,7 @@ module Apx : sig
 
     and sub =
       | EmptySub
-      | Id
+      | Id    of ctx_var 
       | Dot  of front * sub
       | SVar of cvar * sub
       | FSVar of name * sub

@@ -577,7 +577,7 @@ module Apx = struct
 
     and sub =
       | EmptySub
-      | Id
+      | Id    of ctx_var
       | Dot   of front * sub
       | SVar  of cvar * sub
       | FSVar of name * sub
@@ -610,7 +610,8 @@ module Apx = struct
     and schema =
       | Schema of sch_elem list
 
-    and psi_hat = (Int.LF.ctx_var) option * offset
+   and psi_hat = (Int.LF.ctx_var) option * offset 
+
 
   end
 

@@ -46,3 +46,8 @@ fn x => case x of
   let [ ] V = fact ([ ] U)  in
      mult ([ ] V) x
 ;
+
+let x = plus ([]z) ([] s z) ;
+let y = fact ([] s (s z));
+let w = fact ([] s (s (s z)));
+

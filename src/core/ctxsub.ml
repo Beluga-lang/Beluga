@@ -427,7 +427,8 @@ and csub_sub cPsi phi (* k *) s = match s with
         (if psi < phi then Shift(NegCtxShift (CtxOffset psi), k)
          else Shift(NegCtxShift (CtxOffset (psi-1)), k)
         )
-
+  | Shift (CtxShift _ , k) -> s
+  | Shift (NegCtxShift _ , k) -> s
   | Dot (ft, s) -> 
       Dot (csub_front cPsi phi ft, csub_sub cPsi phi s)
 

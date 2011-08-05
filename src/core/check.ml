@@ -283,11 +283,19 @@ module Comp = struct
 
     | CtxApp (loc, e, cPsi) ->
         begin match C.cwhnfCTyp (syn cO cD cG e) with
-          | (TypCtxPi ((_psi, w, _ ) , tau), t) ->
-              let tau1 = Ctxsub.csub_ctyp cD cPsi 1 (Whnf.cnormCTyp (tau,t)) in
+          | ((TypCtxPi ((_psi, w, _ ) , tau), t) as tt) ->
+              let theta' = Ctxsub.csub_msub cPsi 1 t in
+              let tau'   = Ctxsub.csub_ctyp cD cPsi 1 tau in               
+
+              (* let tau1 = Ctxsub.csub_ctyp cD cPsi 1 (Whnf.cnormCTyp (tau,t))    in *)
                 LF.checkSchema cO cD cPsi (Schema.get_schema w);
-                 (* (tau', t') *)
-                 (tau1, C.m_id)                
+                (dprint (fun () -> "[check: syn] CtxApp : tau = " ^ 
+                                 P.compTypToString cO cD (Whnf.cnormCTyp tt) ); 
+                 dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cO cD cPsi );
+                 dprint (fun () -> "[check: syn] tau1 = " ^
+                          P.compTypToString cO cD (Whnf.cnormCTyp (tau', theta') ))) ; 
+                 (tau', theta') 
+                 (* (tau1, C.m_id)                 *)
           | (tau, t) -> 
               raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.CtxPi, (tau,t))))
         end

@@ -238,7 +238,6 @@ module Cid = struct
       typ                = t
     }
 
-
     type t = Id.name DynArray.t
 
     (*  store : entry DynArray.t *)

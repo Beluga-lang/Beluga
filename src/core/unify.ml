@@ -2190,16 +2190,16 @@ let disallowUndefineds f =
 
     (* normal-MMVar case *)
     | ((_tM1, _s1) as sM1, ((Root (_, MMVar (MInst (r, _cD, cPsi2, _tP, cnstrs), (mt, t)), _tS), s2) as sM2)) ->
-(*        dprnt "(012) _-MMVar"; *)
+        dprnt "(012) _-MMVar"; 
         let t' = Whnf.normSub (comp t s2) in
           if isPatSub t' && isPatMSub mt then
             try
-(*               let _ = dprint (fun () -> 
+               let _ = dprint (fun () -> 
                                 "UNIFY(3): normal-MMVar" ^ 
                                   P.mctxToString Empty cD0 ^ "\n" ^
                                   P.normalToString Empty cD0 cPsi sM1 ^ "\n    " ^
                                   P.normalToString Empty cD0 cPsi sM2 ^ "\n") in 
-*)              
+              
               let ss = invert t' in
               let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in 
               let phat = Context.dctxToHat cPsi in 
@@ -2207,7 +2207,7 @@ let disallowUndefineds f =
                 instantiateMMVar (r, sM1', !cnstrs)               
             with
               | NotInvertible ->
-                  ((* Printf.printf "Added constraints: NotInvertible: \n" ; *)
+                  ( Printf.printf "Added constraints: NotInvertible: \n" ; 
                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
                     (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
                     (* raise_ (Unify "NotInvertible")*)
@@ -2741,6 +2741,7 @@ raise_ (Unify "Context clash"))
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) -> 
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in 
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
+           dprint (fun () -> "Unifying contexts done");
            unifyTyp Unification cD cPsi1 (Whnf.cnormTyp (tA, t), id)  (Whnf.cnormTyp (tA', t'), id)
           )
 

@@ -115,9 +115,6 @@ type refinement_cands =
   | SomeCtxCands of refinement_candidate list
 
 
-
-
-
 let rec lower cPsi sA = match sA with 
   | (LF.Atom (_ , a, _tS), s) -> (cPsi , Whnf.whnfTyp sA)
   | (LF.PiTyp ((decl, _ ), tB), s) -> lower (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s)
@@ -1352,8 +1349,11 @@ let rec extract_patterns tA branch_patt = match branch_patt with
       ( (cO, cD),  NeutPatt (cPsi, tR, (Whnf.cnormTyp (Ctxsub.ctxnorm_typ (tA, cs) ,ms), S.LF.id)) )
   | BranchBox (cO, cD, (cPsi, EmptyPattern, ms, cs)) -> 
       ( (cO, cD), EmptyPatt (cPsi, (Whnf.cnormTyp (Ctxsub.ctxnorm_typ (tA, cs),ms), S.LF.id)) )
-      
 
+
+(* initialize_coverage problem = 
+      
+*)
 let rec initialize_coverage problem = 
 
   let (tA, cPsi) = problem.ctype in 
@@ -1458,7 +1458,9 @@ let check_coverage_success problem  =
               branches ; ctype : tA[cPsi] }
 
   where   cO ; cD ; cPsi |- tA  
-  
+
+  Succeeds, if there is at least one pattern which covers elements of type tA[Psi] 
+  Fails, otherwise
 *)
 let covers problem =
 if not (!enableCoverage) 
@@ -1481,7 +1483,7 @@ else
 
     dprint (fun () -> "Initial coverage problem \n" ^ covproblemsToString cov_problems ) ; 
     
-    check_coverage cov_problems ;  (* there exist at least one cov_problems  which is solved *) 
+    check_coverage cov_problems ;  (* there exist all cov_problems are solved *) 
     let r            = List.length (!open_cov_goals) in 
     let revisited_og = revisit_opengoals (!open_cov_goals) in 
     let r'           = List.length (revisited_og) in 

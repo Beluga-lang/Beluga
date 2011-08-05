@@ -404,7 +404,8 @@ and csub_sub cPsi phi (* k *) s = match s with
         (if psi < phi then 
            Shift (CtxShift (CtxOffset psi), k)
          else 
-           Shift (CtxShift (CtxOffset (psi-1)), k))
+            Shift (CtxShift (CtxOffset (psi-1)), k)) 
+
 
   | Shift (NegCtxShift (CtxOffset psi), k) -> 
       if psi = phi then 
@@ -498,8 +499,11 @@ and csub_dctx cD cPsi k cPhi =
     | CtxVar (CtxOffset offset') ->         
         if offset' = k then 
           (cPsi, true) else 
-            (if offset' < k then (CtxVar (CtxOffset offset'), false)
-             else (CtxVar (CtxOffset (offset' - 1)), false))
+            (if offset' < k then 
+               (dprint (fun () -> "[csub_dctx] 0" ); 
+               (CtxVar (CtxOffset offset'), false))
+             else 
+               (dprint (fun () -> "[csub_dctx] 1") ; (CtxVar (CtxOffset (offset' - 1)), false)))
 
     | CtxVar (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx)) ->         
         csub_dctx' cPhi
@@ -514,7 +518,10 @@ and csub_dctx cD cPsi k cPhi =
           let tA' = csub_typ cPsi k tA in 
           (DDec (cPhi', TypDecl(x, tA')), b)
         else 
-          (DDec(cPhi', TypDecl (x, tA)), b)
+          let _ = dprint (fun () -> "[csub_dctx] 2") in 
+          let tA' = csub_typ cPsi k tA in 
+            (DDec(cPhi', TypDecl (x, tA')), b)
+(*            (DDec(cPhi', TypDecl (x, tA)), b) *)
 
     | DDec (cPhi, TypDeclOpt x) ->   
         let (cPhi', b) = csub_dctx' cPhi in 

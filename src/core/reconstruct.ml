@@ -3647,6 +3647,10 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
       let _ = dprint (fun () -> "[elExp] Syn done: " ^ 
                         P.compTypToString cO cD (Whnf.cnormCTyp tau1))  in 
       let (i', tau_t') = genMApp loc cO cD (i1, tau1) in 
+      let _ = dprint (fun () -> "[elExp] Unify computation-level types: \n" ^
+                        P.compTypToString cO cD (Whnf.cnormCTyp tau_t') ^ " == "
+                        ^ 
+                        P.compTypToString cO cD (Whnf.cnormCTyp (tau,t) )) in 
         begin try
           dprint (fun () -> "Unifying computation-level types\n") ; 
           Unify.unifyCompTyp cD (tau, t) (tau_t');
@@ -3911,7 +3915,12 @@ and elExp' cO cD cG i = match i with
              begin try 
               let tM'    = elTerm PiboxRecon cO cD cPsi' m (C.cnormTyp (tA, theta), LF.id) in
               let theta' = Int.LF.MDot (Int.LF.MObj (psihat', tM'), theta) in
-                (Int.Comp.MApp (Some loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta'))
+              (dprint (fun () -> "[elSyn] MApp : tau = " ^ 
+                                 P.compTypToString cO cD (Whnf.cnormCTyp tau_theta' )); 
+                 dprint (fun () -> "[elSyn] tM  = " ^ P.normalToString cO cD cPsi' (tM', LF.id) );
+                 dprint (fun () -> "[elSyn] tau_theta = " ^
+                          P.compTypToString cO cD (Whnf.cnormCTyp (tau, theta'))) ; 
+                (Int.Comp.MApp (Some loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta')))
              with Violation msg -> 
                dprint (fun () -> "[elTerm] Violation: " ^ msg);
                raise (Error (Some loc, CompTypAnn ))

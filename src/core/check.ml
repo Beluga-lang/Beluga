@@ -188,8 +188,9 @@ module Comp = struct
         check cO cD cG e1 (tau1, t);
         check cO cD cG e2 (tau2, t)
 
-    | (Let (_, i, (x, e)), (tau, t)) ->
-        let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau, t))) in
+    | (Let (_, i, (x, e)), (tau, t)) ->          
+        let (tau', t') =  C.cwhnfCTyp (syn cO cD cG i) in
+        let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau', t'))) in
           check cO cD cG' e (tau,t)
 
     | (LetPair (_, i, (x, y, e)), (tau, t)) ->
@@ -275,6 +276,12 @@ module Comp = struct
     | Apply (loc , e1, e2) ->
         begin match C.cwhnfCTyp (syn cO cD cG e1) with
           | (TypArr (tau2, tau), t) ->
+              dprint (fun () -> "[SYN: APPLY ] synthesized type  " ^
+                          P.compTypToString cO cD (Whnf.cnormCTyp (TypArr (tau2,
+        tau), t) ));
+              dprint (fun () -> ("[check: APPLY] argument has appropriate type " ^
+                                       P.expChkToString cO cD cG e2));
+              dprint (fun () -> "[check: APPLY] cG " ^ P.gctxToString cO cD cG );
               check cO cD cG e2 (tau2, t);
               (tau, t)
           | (tau, t) -> 

@@ -188,6 +188,7 @@ let rec lex_token loc = lexer
   | "ffalse"
   | "%name"
   | "%not"
+  | "%query"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 
   | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
@@ -279,7 +280,7 @@ let skip_nested_comment loc = lexer
 let skip_line_comment loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)
 (*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
-  | '%' ( [^ '\n' 'n' '{'] [^ '\n' ]* ) '\n' ->
+  | '%' ( [^ '\n' 'n' 'q' '{'] [^ '\n' ]* ) '\n' ->
 (*      print_string ("BEF " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc

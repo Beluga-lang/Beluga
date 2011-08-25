@@ -507,7 +507,7 @@ module Ext = struct
       | Pragma   of Loc.t * LF.prag
       | Rec      of Loc.t * Comp.rec_fun list   
       | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn 
-       
+      | Query    of Loc.t * LF.typ
 
     type sgn = decl list
 

@@ -4953,6 +4953,39 @@ let recSgnDecl d =
           end
 
 
+    | Ext.Sgn.Query (loc, extT) ->
+      let fvars    = [] in
+      let (apxT, _ ) = index_typ (CVar.create ()) (None, BVar.create ()) fvars extT in
+      let _          = dprint (fun () -> "Reconstructing query.") in
+
+      let _        = FVar.clear () in
+      let cO       = Int.LF.Empty in
+      let tA       = Monitor.timer ("Constant Elaboration",
+                                    fun () -> (let tA = elTyp PiRecon cO Int.LF.Empty Int.LF.Null apxT in
+                                               solve_fvarCnstr PiRecon cO Int.LF.Empty !fvar_cnstr;
+                                               tA)) in
+      let cD       = Int.LF.Empty in
+
+
+      let _        = dprint (fun () -> "\nElaboration of query : " ^
+        P.typToString cO cD Int.LF.Null (tA, LF.id)) in
+
+      let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+
+      let (tA', i) = Monitor.timer ("Constant Abstraction",
+                                    fun () -> Abstract.abstrTyp tA) in
+
+      let _        = reset_fvarCnstr () in
+      let _        = Unify.resetGlobalCnstrs () in
+      let _        = dprint (fun () -> "\nReconstruction (with abstraction) of query: " ^
+        (P.typToString cO cD Int.LF.Null (tA', LF.id)) ^ "\n\n") in
+
+      let _        = Monitor.timer ("Constant Check",
+                                    fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Empty Int.LF.Null (tA', LF.id)) in
+      let _c'       = Logic.storeQueryTyp (tA', i) in
+      ()
+
+
     | Ext.Sgn.Pragma(loc, Ext.LF.NamePrag (typ_name, m_name, v_name)) ->
         begin try 
           begin match v_name with

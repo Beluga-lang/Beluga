@@ -154,13 +154,16 @@ GLOBAL: sgn_eoi;
           Sgn.Rec (_loc, f)
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
-            Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
+        Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
 
 (*      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
             Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x)) *)
 
+      | "%query"; a = lf_typ; "." ->
+        Sgn.Query (_loc, a)
+
       | "%not" ->
-            Sgn.Pragma (_loc, LF.NotPrag)
+        Sgn.Pragma (_loc, LF.NotPrag)
       ]
     ]
   ;

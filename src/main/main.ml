@@ -27,6 +27,7 @@ let usage () =
         ^ "    +printSubord  print subordination relations (experimental)\n"
         ^ "    -noprint      turn printing off\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
+        ^ "    -logic        turn on logic programming engine\n"
   in
     fprintf stderr
       "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
@@ -66,6 +67,7 @@ let process_option' arg rest = begin let f = function
                                                  rest
                                                with Failure "int_of_string" ->
                                                       print_string "-width needs a numeric argument\n"; exit 2))
+  | "-logic" -> (Logic.logicEnabled := true ; rest)
   | _ -> usage ()
 in (* print_string (">>>> " ^ arg ^ "\n"); *)
   f arg
@@ -180,6 +182,8 @@ let main () =
 
 (*            let int_decls = List.map Reconstruct.recSgnDecl sgn in *)
             let _int_decls = Reconstruct.recSgnDecls sgn in
+
+            Logic.buildPersist () ;
 
               if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;

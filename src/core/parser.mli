@@ -12,7 +12,7 @@ module Grammar : Camlp4.Sig.Grammar.Static
 
 
 (** Grammar entry for an entire LF Signature *)
-val sgn_eoi : Ext.Sgn.sgn Grammar.Entry.t
+val section_eoi : file Grammar.Entry.t
 
 (** Parse a stream and return a signature *)
 val parse_stream :

@@ -19,6 +19,8 @@ type t =
   | SYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | INTLIT  of string
+  | DECLA
+  | LINES
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"
@@ -26,6 +28,7 @@ let to_string = function
   | SYMBOL  s -> Printf.sprintf "SYMBOL %S"  s
   | UPSYMBOL  s -> Printf.sprintf "UPSYMBOL %S"  s
   | INTLIT s ->  Printf.sprintf "INTEGER %S"  s
+  | LINES -> Printf.sprintf "LINES"
 
 (** Pretty print a token using {!Format} functionality. *)
 let print ppf x = Format.pp_print_string ppf (to_string x)
@@ -48,6 +51,8 @@ let extract_string = function
   | SYMBOL  s -> s
   | UPSYMBOL  s -> s
   | INTLIT  s -> s
+  | LINES ->  invalid_arg ("Cannot extract string from token: " ^
+                     to_string EOI)
 
 
 

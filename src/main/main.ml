@@ -8,6 +8,7 @@
 open Core
 (* open Frontend *)
 open Printf
+open Marshal
 
 let usage () =
   let options =
@@ -25,7 +26,6 @@ let usage () =
         ^ "    +covdepth nn  \"extra\" depth for coverage checker\n"
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
         ^ "    +printSubord  print subordination relations (experimental)\n"
-        ^ "    -noprint      turn printing off\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
   in
     fprintf stderr
@@ -59,7 +59,6 @@ let process_option' arg rest = begin let f = function
                                                       print_string "-covDepth needs a numeric argument\n"; exit 2))
 *)
   | "+printsubord" -> (Subord.dump := true; rest)
-  | "-noprint"     -> (Debug.chatter := 0; rest)
   | "-width" -> (match rest with [] -> (print_string "-width needs an argument\n"; exit 2)
                                | arg::rest -> (try let width = int_of_string arg in
                                                  Format.set_margin (max 40 width);
@@ -148,6 +147,7 @@ let rec process_files = function
     :: (process_files fs)
   | f :: fs               -> (Session [f]) :: process_files fs
 
+
 let main () =
   if Array.length Sys.argv < 2 then
     usage ()
@@ -174,14 +174,13 @@ let main () =
       in
         try
           (* Subord.clearMemoTable();   (* obsolete *) *)
-          let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
-            if !Debug.chatter = 0 then () else
-              printf "\n## Type Reconstruction: %s ##\n" file_name;  
-
-(*            let int_decls = List.map Reconstruct.recSgnDecl sgn in *)
-            let _int_decls = Reconstruct.recSgnDecls sgn in
-
-              if !Debug.chatter = 0 then () else
+          let sgn = Parser.parse_file ~name:file_name Parser.section_eoi in
+            (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
+            print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
+            printf "\n## SASyLF parsing: %s ##\n" file_name;
+        
+            let tSgn = Reconstruct.sectionDecls sgn in
+            let _int_decls = Reconstruct.recSgnDecls tSgn in
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
               let _ = Coverage.force
                 (function
@@ -194,11 +193,11 @@ let main () =
                         raise (Coverage.NoCover messageFn)
                 ) in
                 if !Coverage.enableCoverage then 
-                  (if !Debug.chatter = 0 then () else
-                  printf "\n## Coverage checking done: %s  ##\n" file_name )
+                  (printf "\n## Coverage checking done: %s  ##\n" file_name )
                 else ();
                 if !Subord.dump then (Subord.dump_subord() (* ;
                                       Subord.dump_typesubord() *) );
+            
                 return Positive
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
@@ -274,8 +273,7 @@ let main () =
               abort_session ()
 
           | Coverage.NoCover strFn ->
-              (* printf "Error (Coverage): %s" (strFn());  *)
-              printf "%s" (strFn()); 
+              printf "Error (Coverage): %s" (strFn());
               abort_session ()
 
 
@@ -317,7 +315,7 @@ let main () =
           (if sound && complete
            then ( let _ = if (!Monitor.on || !Monitor.onf) then
                     Monitor.print_timer ();
-                  in  (if !Debug.chatter = 0 then "" else "#      OK!")
+                  in "#      OK!"
                 )            
 
            else (if sound then "" else "####    " ^ plural unsound_count "erroneously accepted (unsound)" "" ^ (if complete then "" else ", "))

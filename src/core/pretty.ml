@@ -1409,12 +1409,12 @@ module Int = struct
                 fallback (*exit 231*) )
 
     let dctxToString cO cD cPsi =
-      let (cPsi', notice) = try (Whnf.cnormDCtx (cPsi, Whnf.m_id),  "")
-                            with _ -> (cPsi, "{dctxToString: Whnf.cnormDCtx crashed}")
+      let (cPsi', notice) =  try (Whnf.cnormDCtx (cPsi, Whnf.m_id),  "")
+                            with _ -> (cPsi, "{dctxToString: Whnf.cnormDCtx    crashed}") 
       in
-      let cPsi' = attempt "dctxToString whnf" (fun () -> Whnf.normDCtx cPsi') cPsi' in
+      let cPsi' = attempt "dctxToString whnf" (fun () -> Whnf.normDCtx cPsi') cPsi' in 
        notice ^ (fmt_ppr_lf_dctx cO cD std_lvl str_formatter cPsi';
-                 flush_str_formatter ())
+                 flush_str_formatter ()) 
 
     let mctxToString cO cD = 
 (*      let cD' = attempt "mctxToString normMCtx" (fun () -> Whnf.normMCtx cD) cD in  *)

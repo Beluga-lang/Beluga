@@ -1,5 +1,5 @@
 (* module Logic *)
-
+(* author: Costin Badescu *)
 module S = Substitution
 
 open Syntax.Int

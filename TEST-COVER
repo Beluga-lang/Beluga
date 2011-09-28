@@ -23,7 +23,8 @@ BELUGA=`pwd`
 INTERPRETER=$BELUGA/bin/interpreter 
 
 # set $X to the `beluga' examples directory
-X=$BELUGA/examples
+
+  X=$BELUGA/examples
 cd $X
 
 # The following contain nonexhaustive cases with empty contexts

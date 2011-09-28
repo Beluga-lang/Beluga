@@ -22,6 +22,10 @@ let idCSub = LF.CShift 0
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [29])
 
+let printOptionalLocation locOpt = match locOpt with
+        | None     -> Format.fprintf Format.std_formatter "<unknown location>"
+        | Some loc -> Parser.Grammar.Loc.print Format.std_formatter loc
+
 (* Generating meta-variable and parameter variable names,
  *  e.g. for Obj-no-split (MVars)
  *)
@@ -272,8 +276,9 @@ let rec goalsToString ogoals k = match ogoals with
   | [] -> ""
   | ((cO,cD), cPsi, tM) :: ogoals -> 
       "\n(" ^ string_of_int k ^ ")   " ^ 
+        P.mctxToString cO cD ^ "\n " ^ 
 	P.dctxToString cO cD cPsi ^ "\n   |-  " ^
-	P.normalToString cO cD cPsi (tM, S.LF.id) ^ 
+	P.normalToString cO cD cPsi (tM, S.LF.id) ^ "\n" ^ 
 	goalsToString ogoals (k+1) 
 
 
@@ -302,7 +307,7 @@ let rec pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with
 	let LF.TypDecl (_y, tA') = Context.ctxDec cPsi' k' in 
 	  Yes ((tA,idSub), (tA', idSub)) 
       else No
-  | (LF.PVar _ , LF.BVar k)  -> No (* SplitCand  *)
+  | (LF.PVar _ , LF.BVar k)  -> SplitCand
   | (LF.BVar k , LF.PVar _ ) -> Inst 
   | (LF.PVar _ , LF.PVar _ ) -> Inst 
 
@@ -740,10 +745,13 @@ let rec solve' (cO, cD) (matchCand, ms, cs) cOD_p mCands sCands = match matchCan
 	  let cPsi_p' = Whnf.cnormDCtx (Ctxsub.ctxnorm_dctx (cPsi_p, cs), ms) in 
 	  let tR_p'   = Whnf.cnorm (Ctxsub.ctxnorm (tR_p, cs), ms) in 
 	  let tA_p'   = Whnf.cnormTyp (Ctxsub.ctxnorm_typ (Whnf.normTyp sA_p, cs), ms) in 
-	  let _       = (dprint (fun () -> "[solve] " ^ P.dctxToString cO cD cPsi ^ "    ==    " ^ P.dctxToString cO cD cPsi_p' );
-			 dprint (fun () -> "        " ^ P.typToString cO cD cPsi sA ^ "    ==    " ^ P.typToString cO cD cPsi (tA_p', S.LF.id)) ;
+	  let _       = (dprint (fun () -> "[solve] " ^ P.dctxToString cO cD  cPsi ^ 
+				   "    ==    " ^ P.dctxToString cO cD cPsi_p' );
+			 dprint (fun () -> "        " ^ P.typToString cO cD cPsi sA ^ 
+				   "    ==    " ^ P.typToString cO cD cPsi (tA_p', S.LF.id)) ;
 			 dprint (fun () -> "        " ^ 
-				   P.normalToString cO cD cPsi (tR, S.LF.id) ^ "    ==    " ^ P.normalToString cO cD cPsi (tR_p', S.LF.id))) in 
+				   P.normalToString cO cD cPsi (tR, S.LF.id) ^ 
+				   "    ==    " ^ P.normalToString cO cD cPsi (tR_p', S.LF.id))) in 
 	    
 	    begin try
 	      U.unifyDCtx cO cD cPsi cPsi_p' ;
@@ -753,6 +761,7 @@ let rec solve' (cO, cD) (matchCand, ms, cs) cOD_p mCands sCands = match matchCan
 	    with
 	      (* should this case betaken care of  during pre_match phase ? *)
 	      |U.Unify "Context clash" -> 
+		 let _ = print_string "Unification of pre-solved equation failed due to context mis-match - initiate context matching" in 
 	      	let sc = SplitCtx (cPsi , cPsi_p) in 
 		let _ = dprint (fun () -> "Initiate context splitting: " ^ P.dctxToString cO cD cPsi ^ " == " ^ 
 		  P.dctxToString cO cD cPsi_p' ^ " \n") in 
@@ -1294,7 +1303,42 @@ let rec check_all f l = (match l with
 
 let rec check_covproblem cov_problem = 
   let ( (cO , cD ) , candidates, cg) = cov_problem in 
-  let rec existsCandidate candidates nCands =  match candidates with
+  let rec existsCandidate candidates nCands open_cg =  match candidates with
+    | [] -> 
+	let cov_prob' = ( (cO, cD ), nCands, cg)  in 
+	  (* there were candidates – refine coverage problem *)
+	  open_cov_goals := open_cg @ !open_cov_goals;
+	  check_coverage (refine cov_prob')
+    | ((Cand (cOD_p, matchCand, splitCand )) as c) :: cands ->  
+	(match splitCand with 
+	   |  [] -> 
+		let ( (cO , cD ) , _candidates, (cPhi, tM)) = cov_problem in 
+		let _ = dprint (fun () -> "Check whether " ^ P.dctxToString cO  cD  cPhi ^ " |- " 
+				  ^ P.normalToString cO cD cPhi (tM, S.LF.id) ^
+				  " is covered?\n") in 
+		(match solve (cO, cD) cOD_p matchCand with 
+		   | Solved -> (* No new splitting candidates and all match
+				  candidates are satisfied *) 
+	       let ( (cO , cD ) , _ , (cPhi, tM)) = cov_problem in 
+		 dprint (fun () -> "[check_covproblem] COVERED " ^ P.dctxToString cO cD
+			   cPhi ^ " |- " ^ P.normalToString cO cD cPhi (tM, S.LF.id)) ; 
+		       (* Coverage succeeds *)   ()
+		   | PossSolvable cand -> 
+		       (* Some equations in matchCand cannot be solved by hounif;
+			  they will be resurrected as new splitting candidates *)
+		       existsCandidate cands (cand :: nCands) open_cg
+		   | NotSolvable -> (* match candidates were not solvable; this candidate gives rise to coverage failure ? *)
+		       let ( (cO , cD ) , _candidates, (cPhi, tM)) = cov_problem in 
+		       let open_goal = ((cO, cD), cPhi,  tM) in 
+	               (* open_cov_goals := ((cO, cD), cPhi,  tM)::!open_cov_goals ;  *)
+		       existsCandidate cands nCands  (open_goal::open_cg)
+		) 
+	   | _ ->  existsCandidate cands  (c :: nCands)  open_cg
+	)
+  in 
+    existsCandidate candidates [] []
+
+(*  let rec existsCandidate candidates nCands =  match candidates with
     | [] -> 
 	let cov_prob' = ( (cO, cD ), nCands, cg)  in 
 	  (* there were candidates – refine coverage problem *)
@@ -1318,7 +1362,7 @@ let rec check_covproblem cov_problem =
 	)
   in 
     existsCandidate candidates []
-
+*)
 and check_coverage cov_problem_list = 
 
   check_all (function  cov_prob -> check_covproblem cov_prob )   cov_problem_list
@@ -1414,12 +1458,14 @@ let rec check_emptiness cO cD = match cD with
       end 
 
 let rec revisit_opengoals ogoals = begin match ogoals with
-  | [] -> []
+  | [] -> ([], [])
   | (((cO, cD), _cPsi, _tM) as og) :: ogoals -> 
       if check_emptiness cO cD then 
-	revisit_opengoals ogoals
+        let (oglist , trivial_list) = revisit_opengoals ogoals in 
+	  (oglist, og::trivial_list)
       else 
-	og :: revisit_opengoals ogoals
+	let (oglist, trivial_list) = revisit_opengoals ogoals in 
+	  (og :: oglist, trivial_list)
 end 
 
 let check_coverage_success problem  =  
@@ -1484,12 +1530,18 @@ else
     dprint (fun () -> "Initial coverage problem \n" ^ covproblemsToString cov_problems ) ; 
     
     check_coverage cov_problems ;  (* there exist all cov_problems are solved *) 
-    let r            = List.length (!open_cov_goals) in 
-    let revisited_og = revisit_opengoals (!open_cov_goals) in 
+    let o_cg         = !open_cov_goals in 
+    let r            = List.length  o_cg in 
+    let (revisited_og, trivial_og) = revisit_opengoals o_cg in 
     let r'           = List.length (revisited_og) in 
 
     if r  > r' then 
-      print_string "\n(Some) coverage goals were trivially proven to be impossible.\n" 
+      (print_string "\n(Some) coverage goals were trivially proven to be impossible.\n" ;
+      print_string ("CASES TRIVIALLY COVERED in line " ^ 
+		      Pretty.locOptToString  problem.loc  
+		      ^ " : " ^ string_of_int (List.length (trivial_og)) ^ " \n" )
+(* opengoalsToString trivial_og *)
+)
     else () ; 
 
     open_cov_goals :=  revisited_og ; 

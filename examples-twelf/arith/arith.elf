@@ -11,6 +11,10 @@ p_z : plus z Y Y.
 p_s : plus (s X) Y (s Z)
        <- plus X Y Z.
 
+%query  (plus z (s (s z)) N).
+%query  (plus (s (s z)) (s (s z)) N).
+
+%{
 acker : nat -> nat -> nat -> type.
 %mode acker +X +Y -Z.
 
@@ -32,3 +36,4 @@ a_3   : acker (s X) (s Y) Z
 % fquery (acker arg1 arg2 Z).
 
 
+}%

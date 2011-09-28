@@ -9,7 +9,7 @@ open Syntax.Int
 module Options = struct
 
   (* Enable the logic programming engine (disabled by default). *)
-  let enableLogic = ref false
+  let enableLogic = ref true
 
   (* Control verbosity level: 
        0 => No output.
@@ -24,7 +24,7 @@ module Options = struct
   let askSolution = ref false
 
   (* Type check the proof terms. *)
-  let checkProofs = ref true
+  let checkProofs = ref false
 
   (* Interrupt solver after time limit expires. *)
   let timeOut = ref (Some 5) (* sec. *)
@@ -263,14 +263,18 @@ module Convert = struct
      the abstracted existential variables into a substitution while
      storing the MVars into a list `xs' for immediate access.
   *)
-  let typToQuery (tM, i) =
-    let rec typToQuery' (tM, i) s xs = match tM with
+  let typToQuery (tA, i) =
+    let rec typToQuery' (tA, i) s xs = match tA with
       | LF.PiTyp ((LF.TypDecl (x, tA), LF.Maybe), tB) when i > 0 ->
-        let tA' = etaExpand LF.Null (tA, s) in
-        typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tA', s))
-          ((x, tA') :: xs)
-      | _ -> ((typToGoal tM (0, 0, 0), s), tM, s, xs)
-    in typToQuery' (tM, i) S.id []
+        let tN' = etaExpand LF.Null (tA, s) in
+        typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s))
+          ((x, tN') :: xs)
+      | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs)
+    in typToQuery' (tA, i) S.id []
+
+  let rec solToSub xs = match xs with
+    | [] -> S.id
+    | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
 
 end
 
@@ -765,13 +769,20 @@ module Frontend = struct
     let check cPsi tM s = Lfcheck.check LF.Empty LF.Empty 
       cPsi (tM, S.id) (sgnQuery.skinnyTyp, s) in
     
+ 
     (* Initial success continuation. *)
     let scInit (cPsi, tM) =
-      ignore (incr solutions) ;
+    (printf "Show query type:  %s  \n Show inst type: %s\n"
+	       (P.typToString cPsi  (sgnQuery.skinnyTyp, !querySub) )
+	       (P.typToString cPsi  (sgnQuery.skinnyTyp, Convert.solToSub sgnQuery.instMVars) )
+    ;
+
+     ignore (incr solutions)) ;    
+
 
       (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs then
-        check cPsi tM !querySub
+        check cPsi tM (Convert.solToSub sgnQuery.instMVars) (* !querySub *)
       else () ;
 
       (* Print MVar instantiations. *)

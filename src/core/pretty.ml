@@ -1740,7 +1740,7 @@ module Error = struct
 
 
       | CompCtxFunMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Found Ctx abstraction, but found type %a\n"
+          fprintf ppf "Found Ctx abstraction, but expected type %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompFunMismatch (cO, cD, _cG, theta_tau) -> 
@@ -1748,7 +1748,7 @@ module Error = struct
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompMLamMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Found MLam abstraction, but found type %a\n"
+          fprintf ppf "Found MLam abstraction, but expected type %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompBoxMismatch (cO, cD, _cG, theta_tau) -> 
@@ -1771,7 +1771,7 @@ module Error = struct
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompPairMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Found tuple, but found type %a\n"
+          fprintf ppf "Found tuple, but expected type %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompSynMismatch (cO, cD, theta_tau, theta_tau') ->

@@ -159,8 +159,12 @@ GLOBAL: sgn_eoi;
 (*      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
             Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x)) *)
 
-      | "%query"; a = lf_typ; "." ->
-        Sgn.Query (_loc, a)
+      | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
+        if Option.is_some x then
+          let p = Id.mk_name (Id.SomeString (Option.get x)) in
+          Sgn.Query (_loc, Some p, a, e, t)
+        else
+          Sgn.Query (_loc, None, a, e, t)
 
       | "%not" ->
         Sgn.Pragma (_loc, LF.NotPrag)
@@ -168,8 +172,13 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
-
-
+  bound:
+    [
+      [ "*" -> None
+      | k = INTLIT -> Some (int_of_string k)
+      ]
+    ]
+  ;
 
   lf_kind_or_typ:
     [

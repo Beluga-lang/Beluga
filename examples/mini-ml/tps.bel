@@ -62,7 +62,8 @@ tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
 	   oft E1 T1  
         -> oft (letv E1 (\ x . E2 x)) T2.
 
-
+% Gives type-checking error, 'Substitution not well-typed'
+%query * 5 P : oft X nat -> oft (suc X) nat.
 
 % Type preservation proof
 rec tps :  (eval E V)[ ] -> (oft E T)[ ]

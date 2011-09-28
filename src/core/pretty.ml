@@ -1744,7 +1744,7 @@ module Error = struct
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompFunMismatch (cO, cD, _cG, theta_tau) -> 
-          fprintf ppf "Found function abstraction, but found type %a\n"
+          fprintf ppf "Found function abstraction, but expected type %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp theta_tau)
 
       | CompMLamMismatch (cO, cD, _cG, theta_tau) -> 

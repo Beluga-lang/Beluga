@@ -401,6 +401,7 @@ let disallowUndefineds f =
      u := Some (Whnf.norm (tM, id)); 
 (*    screen screenUndefs tM;
     u := Some tM; *)
+    print_endline (P.normalToString LF.Empty LF.Empty LF.Null (tM, id)) ;
     T.log globalTrail (InstNormal u);
     delayedCnstrs := cnstrL @ !delayedCnstrs;
     globalCnstrs := cnstrL @ !globalCnstrs

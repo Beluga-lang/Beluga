@@ -1,7 +1,13 @@
 open Syntax.Int
 
-val logicEnabled : bool ref
+module Options :
+sig
+  val enableLogic : bool ref
+end
 
-val storeQueryTyp : LF.typ * Id.offset -> unit
-val buildPersist : unit -> unit
+type bound = int option
+
+val storeQuery : Id.name option -> LF.typ * Id.offset -> bound -> bound -> unit
+val runLogic : unit -> unit
+
 

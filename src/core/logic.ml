@@ -1,6 +1,5 @@
 (* module Logic *)
 (* author: Costin Badescu *)
-module S = Substitution
 
 module S = Substitution.LF
 open Printf

@@ -67,7 +67,7 @@ let process_option' arg rest = begin let f = function
                                                  rest
                                                with Failure "int_of_string" ->
                                                       print_string "-width needs a numeric argument\n"; exit 2))
-  | "-logic" -> (Logic.logicEnabled := true ; rest)
+  | "-logic" -> (Logic.Options.enableLogic := true ; rest)
   | _ -> usage ()
 in (* print_string (">>>> " ^ arg ^ "\n"); *)
   f arg
@@ -183,8 +183,6 @@ let main () =
 (*            let int_decls = List.map Reconstruct.recSgnDecl sgn in *)
             let _int_decls = Reconstruct.recSgnDecls sgn in
 
-            Logic.buildPersist () ;
-
               if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
               let _ = Coverage.force
@@ -196,14 +194,19 @@ let main () =
                         Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn()) 
                       else
                         raise (Coverage.NoCover messageFn)
-                ) in
+                ) in 
+              begin
                 if !Coverage.enableCoverage then 
                   (if !Debug.chatter = 0 then () else
-                  printf "\n## Coverage checking done: %s  ##\n" file_name )
+                      printf "\n## Coverage checking done: %s  ##\n" file_name )
                 else ();
                 if !Subord.dump then (Subord.dump_subord() (* ;
                                       Subord.dump_typesubord() *) );
+                print_newline () ;
+                Logic.runLogic () ;
                 return Positive
+              end
+
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
               Parser.Grammar.Loc.print Format.std_formatter loc;

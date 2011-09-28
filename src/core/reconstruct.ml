@@ -4953,7 +4953,7 @@ let recSgnDecl d =
           end
 
 
-    | Ext.Sgn.Query (loc, extT) ->
+    | Ext.Sgn.Query (loc, name, extT, expected, tries) ->
       let fvars    = [] in
       let (apxT, _ ) = index_typ (CVar.create ()) (None, BVar.create ()) fvars extT in
       let _          = dprint (fun () -> "Reconstructing query.") in
@@ -4982,7 +4982,7 @@ let recSgnDecl d =
 
       let _        = Monitor.timer ("Constant Check",
                                     fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Empty Int.LF.Null (tA', LF.id)) in
-      let _c'       = Logic.storeQueryTyp (tA', i) in
+      let _c'       = Logic.storeQuery name (tA', i) expected tries in
       ()
 
 

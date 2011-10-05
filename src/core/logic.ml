@@ -772,13 +772,7 @@ module Frontend = struct
  
     (* Initial success continuation. *)
     let scInit (cPsi, tM) =
-    (printf "Show query type:  %s  \n Show inst type: %s\n"
-	       (P.typToString cPsi  (sgnQuery.skinnyTyp, !querySub) )
-	       (P.typToString cPsi  (sgnQuery.skinnyTyp, Convert.solToSub sgnQuery.instMVars) )
-    ;
-
-     ignore (incr solutions)) ;    
-
+      ignore (incr solutions) ;
 
       (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs then

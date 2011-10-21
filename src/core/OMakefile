@@ -8,6 +8,7 @@ PACK    = Core
 # Declare the files the package will contain
 FILES[] =
         abstract
+        ast
         lfcheck
         check
         common
@@ -24,10 +25,13 @@ FILES[] =
         parser
         pretty
         reconstruct
+        slexer
+        sparser
         store
         substitution
         syntax
         trail
+        transform
         token
         unify
         whnf

@@ -9,7 +9,6 @@
 open Id
 
 
-
 module Loc : Camlp4.Sig.Loc
 
 type case_pragma = RegularCase | PragmaNotCase

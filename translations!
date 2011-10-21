@@ -1,0 +1,18 @@
+September 29, 10:27 am Sasybel successfully translated it's fist theorem!
+
+## Type Reconstruction: sum1.bel ##
+
+rec zless : (less z (s z))[] = 
+[] l_one z
+
+## Type Reconstruction done: sum1.bel  ##
+
+
+## SASyLF parsing: nat.slf ##
+
+rec zless : (less z (s z))[] = 
+[] l_one z
+
+## Type Reconstruction done: nat.slf  ##
+
+

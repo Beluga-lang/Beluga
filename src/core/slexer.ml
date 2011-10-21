@@ -1,13 +1,13 @@
-
+(* modified de keywords for SASyLF *)
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 (* module Loc   = Core.Syntax.Loc (*Camlp4.PreCast.Loc*) *)
 module Loc   = Syntax.Loc (*Camlp4.PreCast.Loc*) 
 module Token = Token
 module Error = Camlp4.Struct.EmptyError
-let out_channel = open_out "lexing.out";
-open Printf
+let out_channel = open_out "lexing.out"
 
+(* file has been modified for sasy ":" is no longer a reserved character and many other changes *)
 (*
 Beluga lexical categories:
 
@@ -59,13 +59,12 @@ Beluga lexical categories:
          |   !
          =  +  *
          <  >
-         ->  <-   =>
+         ->  <-  
          FN
-         block  case  fn  id  in
+         block  case  id  
          impossible
-         let  mlam  of
+         mlam  of
          rec  schema  some  type 
-         bool
          %name %not
 
      presently reserved but unused:           box
@@ -99,28 +98,24 @@ Beluga lexical categories:
 let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\#" '"'    (* exclude reserved characters *)
                           '0'-'9'                 (* exclude digits *)
-                          "<>"                    (* exclude < and >, which can only be used with certain other characters *)
                        ]
 
 (* Matches any printable utf-8 character that isn't reserved *)
 let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
-                          "<>"                   (* exclude < and > *)
+                          "%,.:;()[]{}\\" '"'  (* exclude reserved characters, but include # *)
                        ]
 
 let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
-                          'a'-'z'  'A'-'Z' '\''
+                          'a'-'z'  '\''
                           '0'-'9'
-                          "<>"
                        ]
 
 let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
-                          'a'-'z'  'A'-'Z'
+                          'a'-'z' 
                           '#' '\''
                           '0'-'9'
-                          "<>"
                        ]
 
 let regexp letter = [ 'a'-'z' 'A'-'Z' ]
@@ -134,16 +129,11 @@ let regexp digit  = [ '0'-'9' ]
 (* Make a {!Token.t} taking no arguments and advance the {!Loc.t ref}. *)
 let mk_tok tok loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-(*  ; print_string ("mk_tok ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
   ; tok
 
-(* Make a {!Token.t} taking a {!string} argument for the current
-   lexeme and advance the {!Loc.t ref}. *)
 let mk_tok_of_lexeme tok_cons loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-(*  ; print_string ("mk_tok_of_lexeme ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
   ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
-(*  let _ = print_string ("TOKEN>> " ^ Token.to_string tok ^ "\n") in *)
       tok
 
 let mk_keyword s = Token.KEYWORD s
@@ -152,6 +142,8 @@ let mk_symbol  s = Token.SYMBOL  s
 
 let mk_integer  s = Token.INTLIT s
 
+let mk_lines = Token.LINES
+
 (**********)
 (* Lexers *)
 (**********)
@@ -159,135 +151,118 @@ let mk_integer  s = Token.INTLIT s
 (** @see http://www.cduce.org/ulex/ See [ulex] for details *)
 
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
-let rec lex_token loc = lexer
-  | "->" (*->  output_string out_channel "lex token   \n";*)
+let rec lex_token loc = lexer 
   | "<-"
-  | "::"
   | "=>"
   | "=="
   | "FN"
   | "and"   (* missing, added 2010-07-31 *)
   | "block"
-  | "Bool"
-  | "case"
-  | "fn"
-  | "else"
-  | "if"
   | "impossible"
-  | "in"      
-  | "let"
   | "mlam"  (* was missing -- added 2009-02-18 *)
-  | "of"
   | "rec"
   | "schema"
   | "some"
-  | "then"
   | "type"
-  | "ttrue"
-  | "ffalse"
   | "%name"
   | "%not"
+  | ["--"]+ -> output_string out_channel "made a token of lines \n"; mk_tok Token.LINES  loc lexbuf
+  | "::=" -> output_string out_channel "made a token of declaration sign \n"; mk_tok Token.DECLA  loc lexbuf
+  | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
+         mk_tok_of_lexeme mk_keyword loc lexbuf
+(********)
+  | eof  -> output_string out_channel "made a token of end of file but too stupid to make one of lines \n"; mk_tok Token.EOI  loc lexbuf
 
-  | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> mk_tok_of_lexeme mk_keyword loc lexbuf 
 
-  | eof                       -> mk_tok           Token.EOI  loc lexbuf
-
-  | ">" (sym | "<" | ">")*  -> mk_tok_of_lexeme mk_symbol  loc lexbuf 
-
-  | start_angle_compatible (sym | "<" | ">")*  -> output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lex_token start angle compatible  \n";
+  | start_angle_compatible (sym | "<" | ">")*  ->
      mk_tok_of_lexeme mk_symbol  loc lexbuf
 
   | start_sym
      (sym
      | "<"
      | angle_compatible ">" (sym | "<" | ">")*
-     )*  -> output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lex_token start sym  \n";
+     )*  ->
       mk_tok_of_lexeme mk_symbol  loc lexbuf
 
-  | "<" (angle_compatible | "<" | ">") (sym | "<" | ">")*  -> output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lex_token angle compatible sym \n";
+  | "<" (angle_compatible | "<" | ">") (sym | "<" | ">")*  ->
       mk_tok_of_lexeme mk_symbol  loc lexbuf
 
-  | "<" (angle_compatible | "<" | ">")?  -> output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lex_token angle compatible  \n";
+  | "<" (angle_compatible | "<" | ">")?  ->
       mk_tok_of_lexeme mk_symbol  loc lexbuf
 
-  | digit+   -> output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lex_token digit+  \n";
-                mk_tok_of_lexeme mk_integer loc lexbuf
+  | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
+
+
 
 
 let skip_nestable depth loc =
 lexer
-  | '\n' -> output_string out_channel "crazy comment 1 \n";
+  | '\n' -> output_string out_channel "new line 1 \n";
       loc := Loc.move_line 1 !loc
   
-  | '%'+ [^'{' '%' '\n'] -> output_string out_channel "crazy comment 2 \n";
+  | '%'+ [^'{' '%' '\n'] -> output_string out_channel "new line 2 \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
   
-  | [^'\n' '%' '}' ]+ -> output_string out_channel "crazy comment 3 \n";
+  | [^'\n' '/' '*' ]+ -> output_string out_channel "new line 3 \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
   
-  | '}' [^'%' '\n']+ -> output_string out_channel "crazy comment 4 \n";
+  | '}' [^'%' '\n']+ -> output_string out_channel "new line 4 \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 
-  | '}' '\n' -> output_string out_channel "crazy comment 5 \n";
+  | '}' '\n' -> output_string out_channel "new line 5 \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
   
-  | '}' '%' -> output_string out_channel "crazy comment 6 \n";
+  | '*' '/' -> output_string out_channel "ending of comment \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; if !depth <= 0 then 
-        ( print_string ("Parse error: \"}%\" with no comment to close\n");
+        ( print_string ("Parse error: \"}%\" with no comment to close 1  \n");
           raise Ulexing.Error )
       else
         depth := !depth - 1
   
-  | '%'+ '{' -> output_string out_channel "crazy comment 7 \n";
+  | '%'+ '{' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; depth := !depth + 1
 
-  | '%'+ '\n' -> output_string out_channel "crazy comment 8 \n";
+  | '%'+ '\n' -> output_string out_channel "new line 6 \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
 
+
 let skip_nested_comment loc = lexer
-  | '%' '{' -> output_string out_channel "crazy comment 11 \n";
+  | ['/' '*']+ -> output_string out_channel "beginning of comment \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-    ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf 1 in skip nested comment \n"
     ; let depth = ref 1 in
       while !depth > 0 do
         skip_nestable depth loc lexbuf ;
       done
 
-  | '}' '%' -> output_string out_channel "crazy comment 12 \n";
+  | '*' '/' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-    ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf 1 in skip nested comment \n"
-    ; ( print_string ("Parse error: \"}%\" with no comment to close\n");
+    ; ( print_string ("Parse error: \"}%\" with no comment to close 2\n");
           raise Ulexing.Error )
-
 
 (* Skip %...\n comments and advance the location reference. *)
 let skip_line_comment loc = lexer
-  | '%' ( [^ '\n' 'n' '{'] [^ '\n' ]* ) '\n' -> output_string out_channel "crazy comment 9 \n";
+  | "//" ( [^ '\n' 'n' '*'] [^ '\n' ]* ) '\n' -> output_string out_channel "new line 7 \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
-      ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf 2 in skipcomment \n"
     ; loc := Loc.move_line 1 !loc
   
-  | '%' '\n' -> output_string out_channel "crazy comment 10 \n";
+  | '%' '\n' -> output_string out_channel "new line 8 \n";
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
-     ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf 1 in skipcomment \n"
     ; loc := Loc.move_line 1 !loc
 
 (* Skip non-newline whitespace and advance the location reference. *)
 let skip_whitespace loc = lexer
   | [ ' ' '\t' ]+         -> 
         loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-        ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf in skipwhite space \n"
 
 
 (* Skip newlines and advance the location reference. *)
 let skip_newlines    loc = lexer
-  | '\n'+                 ->
+  | '\n'+                 -> output_string out_channel "new line 9 \n";
         loc := Loc.move_line (Ulexing.lexeme_length lexbuf) !loc
-
 (******************)
 (* Lexer Creation *)
 (******************)
@@ -298,7 +273,7 @@ type skip_state =
   | Newline
   | Whitespace
 
-let mk () = fun loc strm -> 
+let mk () = fun loc strm ->
   let lexbuf        = Ulexing.from_utf8_stream strm
   and loc_ref       = ref loc
   and state         = ref Newline
@@ -311,7 +286,6 @@ let mk () = fun loc strm ->
                 try
                   skip_nested_comment loc_ref lexbuf
                 ; skip_failures := 0
-                ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf in comment \n"
                 with
                   | Ulexing.Error ->
                       incr skip_failures
@@ -324,7 +298,6 @@ let mk () = fun loc strm ->
                 try
                     skip_line_comment loc_ref lexbuf
                   ; skip_failures := 0
-                  ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf in linecomment \n"
                 with
                   | Ulexing.Error ->
                       incr skip_failures
@@ -332,12 +305,12 @@ let mk () = fun loc strm ->
             ; state := Newline
             ; skip ()
 
-        | Newline    ->
+        | Newline    -> 
               begin
                 try
                     skip_newlines    loc_ref lexbuf
+                  ; output_string out_channel "new line 10 \n"
                   ; skip_failures := 0
-                  ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf in newline \n"
                 with
                   | Ulexing.Error ->
                       incr skip_failures
@@ -349,8 +322,8 @@ let mk () = fun loc strm ->
               begin
                 try
                     skip_whitespace loc_ref lexbuf
+                  ; output_string out_channel "white space \n"
                   ; skip_failures := 0
-                  ; output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf in whitespace \n"
                 with
                   | Ulexing.Error ->
                       incr skip_failures
@@ -359,15 +332,15 @@ let mk () = fun loc strm ->
             ; skip ()
     else
       skip_failures := 0 in
-  let next _    =
+  let next _    =  output_string out_channel "test 1 \n";
     try
-        skip ()
+        skip () ;  output_string out_channel "test 2 \n"
       ; let tok = Some (lex_token loc_ref lexbuf, !loc_ref) in
-          output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf in next _ \n";
+          output_string out_channel (Ulexing.latin1_lexeme lexbuf) ; output_string out_channel " : lexbuf \n";
           skip ()
         ; tok
     with
       | Ulexing.Error ->
           None
  in
-    Stream.from next
+     output_string out_channel "test 3 \n"; Stream.from next

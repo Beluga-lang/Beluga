@@ -33,10 +33,13 @@ let usage () =
       Sys.argv.(0)   options
   ; exit 2
 
+let usasy = ref false
+
 module PC = Pretty.Control
 
 let process_option' arg rest = begin let f = function
   (* these strings must be lowercase *)
+  | "+sasy" -> (usasy := true; rest)
   | "+d" -> (Debug.showAll (); rest)
   | "-d" -> (Debug.showNone (); rest)
   | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
@@ -51,13 +54,6 @@ let process_option' arg rest = begin let f = function
   | "+coverage" -> (Coverage.enableCoverage := true; rest)
   | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true; rest)
   | "-coverage" -> (Coverage.enableCoverage := false; rest)
-(*  | "+covdepth" -> (match rest with [] -> (print_string "-covDepth needs an argument\n"; exit 2)
-                               | arg::rest -> (try let extraDepth = int_of_string arg in
-                                                 Coverage.extraDepth := extraDepth;
-                                                 rest
-                                               with Failure "int_of_string" ->
-                                                      print_string "-covDepth needs a numeric argument\n"; exit 2))
-*)
   | "+printsubord" -> (Subord.dump := true; rest)
   | "-width" -> (match rest with [] -> (print_string "-width needs an argument\n"; exit 2)
                                | arg::rest -> (try let width = int_of_string arg in
@@ -149,6 +145,10 @@ let rec process_files = function
 
 
 let main () =
+  let args   = List.tl (Array.to_list Sys.argv) in
+  let files  = process_options args in
+  let sessions = process_files files in
+  let session_count = List.length sessions in
   if Array.length Sys.argv < 2 then
     usage ()
   else
@@ -174,12 +174,18 @@ let main () =
       in
         try
           (* Subord.clearMemoTable();   (* obsolete *) *)
-          let sgn = Parser.parse_file ~name:file_name Parser.section_eoi in
+         (* let args   = List.tl (Array.to_list Sys.argv) in
+          let files  = process_options args in 
+          let args   = List.tl (Array.to_list Sys.argv) in
+          let files  = process_options args in*)
+         (* let asasy   = List.tl (Array.to_list Sys.argv) in
+          process_sasy asasy;*) if !usasy then
+          let sgn = Sparser.parse_file ~name:file_name Sparser.section_eoi in
             (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
             print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
             printf "\n## SASyLF parsing: %s ##\n" file_name;
         
-            let tSgn = Reconstruct.sectionDecls sgn in
+            let tSgn = Transform.sectionDecls sgn in
             let _int_decls = Reconstruct.recSgnDecls tSgn in
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
               let _ = Coverage.force
@@ -199,6 +205,34 @@ let main () =
                                       Subord.dump_typesubord() *) );
             
                 return Positive
+           else 
+           let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
+            if !Debug.chatter = 0 then () else
+              printf "\n## Type Reconstruction: %s ##\n" file_name;  
+
+(*            let int_decls = List.map Reconstruct.recSgnDecl sgn in *)
+            let _int_decls = Reconstruct.recSgnDecls sgn in
+
+              if !Debug.chatter = 0 then () else
+              printf "\n## Type Reconstruction done: %s  ##\n" file_name;
+              let _ = Coverage.force
+                (function
+                  | Coverage.Success -> 
+                     ()
+                  | Coverage.Failure messageFn ->
+                      if !Coverage.warningOnly then
+                        Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn()) 
+                      else
+                        raise (Coverage.NoCover messageFn)
+                ) in
+                if !Coverage.enableCoverage then 
+                  (if !Debug.chatter = 0 then () else
+                  printf "\n## Coverage checking done: %s  ##\n" file_name )
+                else ();
+                if !Subord.dump then (Subord.dump_subord() (* ;
+                                      Subord.dump_typesubord() *) );
+                return Positive
+
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
               Parser.Grammar.Loc.print Format.std_formatter loc;
@@ -293,10 +327,10 @@ let main () =
 
     in
       (* Iterate the process for each file given on the command line *)
-    let args   = List.tl (Array.to_list Sys.argv) in
+    (*let args   = List.tl (Array.to_list Sys.argv) in
     let files  = process_options args in
     let sessions = process_files files in
-    let session_count = List.length sessions in
+    let session_count = List.length sessions in*)
     let (error_count, unsound_count, incomplete_count) = List.fold_left per_session
       (0, 0, 0) (* initial number of: errors, unsounds, incompletes *)
                          sessions in

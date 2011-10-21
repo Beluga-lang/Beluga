@@ -19,7 +19,7 @@ type t =
   | SYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | INTLIT  of string
-   | DECLA
+  | DECLA
   | LINES
 
 let to_string = function
@@ -51,6 +51,8 @@ let extract_string = function
   | SYMBOL  s -> s
   | UPSYMBOL  s -> s
   | INTLIT  s -> s
+  | LINES ->  invalid_arg ("Cannot extract string from token: " ^
+                     to_string EOI)
 
 
 

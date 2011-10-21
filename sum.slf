@@ -1,0 +1,161 @@
+terminals z s lam
+syntax
+
+n ::= z
+  | s n
+
+syntax 
+
+e ::= z
+  | s e
+  | x
+  | lam \ x . e[x]
+
+judgment value: n value;
+
+-------------- val-z
+z value;
+
+judgment value: n + n = n;
+
+-------------- sum-z
+z + (N ) = (N) ;
+
+N1 + N2 = N3 ;
+------------------------ sum-s
+(s N1) + N2 = (s N3) ;
+/*
+judgment less : n < n ;
+
+------------ less-one
+n < (s n) ;
+
+n1 < n3 ;
+n3 < n2 ;
+------------ less-transitive
+n1 < n2 ;
+*/
+theorem plus1 : forall n exists n + (s z) = (s n);
+
+x : n + (s z) = (s n) by induction on n : 
+
+case z is
+	   d2: (z) + (s z) = (s z) 	by rule sum-z
+end case
+
+case s n' is
+	               d3 : n' + (s z) = (s n') by induction hypothesis on n'
+                       d4 : (s n') + (s z) = (s s n')  by rule sum-s on d3
+end case
+
+end induction
+end theorem
+/*
+theorem n_plus_3 : forall n exists (s (s (s (z)))) + n = (s (s (s n)))
+	
+d1 : (z) + n = n by rule sum-z
+d2 : (s (z)) + n = (s n) by rule sum-s on d1
+d3 : (s(s (z))) + n = (s s n)	by rule sum-s on d2
+d4 : (s(s(s (z)))) + n = (s s s n) by rule sum-s on d3
+														
+end theorem
+
+theorem z_less_s_z_autosolve : exists z < s z 
+
+dsolve : z < s z by rule less-one
+
+end theorem
+
+theorem one_plus_1_equals_s_n : exists (s (z)) + (s (z)) = (s s z);
+
+d1 : (s (z)) + (s (z)) = (s s z ) by lemma n_plus_1_equals_s_n on (s z)
+
+end theorem
+
+theorem sn_plus_1_equals_ss_n : forall n exists (s (z)) + (s (n)) = (s s n)
+
+d1 : (s (z)) + (s (n)) = (s s n) by lemma n_plus_1_equals_s_n on (s n)
+
+end theorem
+
+
+theorem sum-z-rh : forall n  exists n + (z) = n 
+
+d1 : n + (z) = n  by induction on n : 
+
+case z is
+	   d2: (z) + (z) = (z) 	by rule sum-z
+end case
+
+case s n' is
+	               d3 : n' + (z) = n' by induction hypothesis on n'
+                       d4 : (s n') + (z) = (s n')  by rule sum-s on d3
+end case
+
+end induction
+
+end theorem
+
+
+theorem sum-s-rh : forall d1 : n1 + n2 = n3 exists n1 + (s n2) = (s n3)
+
+d2 : n1 + (s n2) = s n3 by induction on d1 :
+
+case rule
+
+--------------------- sum-z
+dzc : (z) + n = n ;
+
+is
+
+dz1 : (z) + (s n) = (s n) by rule sum-z
+
+end case
+
+
+case rule
+
+dsp : n1' + n2 = n3';
+---------------------------- sum-s
+dsc : (s n1') + n2 = (s n3');
+
+is
+
+ds1 : n1' + (s n2) = (s n3')  by induction hypothesis on dsp
+ds2 : (s n1') + (s n2) = (s s n3') by rule sum-s on ds1
+
+end case
+end induction
+end theorem
+
+theorem sum-commutes : forall d1 : n1 + n2 = n3 exists n2 + n1 = n3
+
+d2 : n2 + n1 = n3 by induction on d1 :
+
+case rule
+
+-------------------- sum-z
+dzc: (z) + n = n ;
+
+is
+
+dz1 : n + (z) = n by theorem sum-z-rh on n
+
+end case
+
+
+case rule
+
+dsp : n1' + n2 = n3';
+------------------------------ sum-s
+dsc : (s n1') + n2 = (s n3');
+
+is
+
+ds1 : n2 + n1' = n3' by induction hypothesis on dsp
+ds2 : n2 + (s n1') = (s n3') by theorem sum-s-rh on ds1
+
+end case
+end induction
+end theorem
+*/

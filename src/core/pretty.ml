@@ -1563,6 +1563,7 @@ module Error = struct
     
     (* Format-based printing of error messages *)
     let fmt_ppr ppf = function
+      | CtxReconstruct -> fprintf ppf "Type reconstruction in the presence of multiple contexts and pattern matching on contexts is not implemented"
       | UnboundName n ->
           fprintf ppf "unbound data-level variable (ordinary or meta-variable) or constructor: %s" (R.render_name n)
 

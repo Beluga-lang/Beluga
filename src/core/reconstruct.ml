@@ -1443,7 +1443,7 @@ and elTyp recT  cO cD cPsi a = match a with
           (* let s' = LF.id in *)
         let tS = elKSpineI recT  cO cD cPsi s i (tK, s') in
           Int.LF.Atom (Some loc, a, tS)            
-      with  _ -> raise (Error (Some loc, SpineIllTyped ))
+      with  exn  ->  raise (Error (Some loc, SpineIllTyped ))
       end
 
   | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a), dep), b) ->
@@ -1945,11 +1945,19 @@ and elTerm' recT  cO cD cPsi r sP = match r with
         end
 
   (* Reconstruction for meta-variables  *)
-  | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (tN, tQ, cPhi), s'), Apx.LF.Nil) ->
-      let s'' = elSub loc recT  cO cD cPsi s' cPhi in
-        begin try
+  | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (tN, tQ, cPhi), s'), Apx.LF.Nil)  ->
+          let _ = dprint (fun () -> "[elTerm] Projected type of already reconstructed object which is embedded into an approximate object:\n                  " ^ P.dctxToString cO cD cPhi ^ " |- " ^ P.normalToString cO cD cPhi (tN, LF.id) ^ " : " ^ P.typToString cO cD cPhi (tQ, LF.id)) in 
+          let _ = dprint (fun () -> " in cD = " ^ P.mctxToString cO cD ) in
+
+          let s'' = elSub loc recT  cO cD cPsi s' cPhi in
+
+          let _ = dprint (fun () -> "[elTerm] " ^ P.dctxToString cO cD cPsi ^ " |- " ^ P.subToString cO cD cPsi s'' ^ " : " ^ P.dctxToString cO cD cPhi ) in 
+
           let _   = dprint (fun () -> "[elTerm] Apx-mvar: Expected type: " ^ P.typToString cO cD cPsi sP ^ "\n") in 
-          let _   = dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s'') ^ "\n") in 
+          let _   = dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cO cD cPsi (tQ, s'') ^ "\n") in  
+          let _   = dprint (fun () -> "[elTerm] where cO = " ^ P.octxToString cO
+          ) in
+            begin try
           (* This case only applies to Beluga; MInst are introduced during cnormApxTerm. *)
           ( Unify.unifyTyp cD  cPsi (tQ, s'') sP ; 
             dprint (fun () -> "[elTerm] reconstruction of mvar done ");
@@ -2268,8 +2276,16 @@ and elSub loc recT  cO cD cPsi s cPhi =
       let m' = elTerm recT  cO cD cPsi m (tA, s') in
         Int.LF.Dot (Int.LF.Obj m', s')
 
-  | (_s, cPhi) ->
-      raise (Error (Some loc, IllTypedIdSub))
+  | (s, cPhi) ->
+      (dprint (fun () -> 
+                 let s = begin match s with 
+                   | Apx.LF.Dot _ -> "Dot _ " 
+                   | Apx.LF.EmptySub -> " . " 
+                   | Apx.LF.Id _ -> " .. " 
+                 end in 
+                   "Expected substitution : " ^ P.dctxToString cO cD cPsi  ^ 
+                     " |- " ^ s ^ " : " ^ P.dctxToString cO cD cPhi) ;
+       raise (Error (Some loc, IllTypedIdSub)))
 
 
 and elHead loc recT  cO cD cPsi = function
@@ -2751,6 +2767,7 @@ and cnormApxHead cO cD delta h (cD'', t) cs = match h with
 
                     Must do the same for PVARs
                   *)
+(*                let (tP, cPhi) = (Ctxsub.ctxnorm_typ (tP, cs), Ctxsub.ctxnorm_dctx (cPhi, cs)) in  *)
                 let rec drop t l_delta = match (l_delta, t) with
                   | (0, t) -> t
                   | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in 
@@ -2766,6 +2783,7 @@ and cnormApxHead cO cD delta h (cD'', t) cs = match h with
 
   | Apx.LF.MVar (Apx.LF.MInst (tM, tP, cPhi), s) -> 
       let tM' = Whnf.cnorm (tM,t) in 
+      (* let (tP, cPhi) = (Ctxsub.ctxnorm_typ (tP, cs) , Ctxsub.ctxnorm_dctx (cPhi, cs)) in  *)
       let (tP', cPhi')  = (Whnf.cnormTyp (tP, t), Whnf.cnormDCtx (cPhi, t)) in 
 
       let s' = cnormApxSub cO cD delta s (cD'', t) cs in  
@@ -2939,7 +2957,7 @@ let rec cnormApxDCtx cO cD delta psi (cDt : Syntax.Int.LF.mctx * Syntax.Int.LF.m
       begin match Ctxsub.apply_csub (Int.LF.CtxOffset offset) cs with
         | Int.LF.CtxVar (Int.LF.CtxOffset psi0) -> Apx.LF.CtxVar (Apx.LF.CtxOffset psi0)
         | Int.LF.Null ->  (dprint (fun () -> "[cnormApxDCtx Null"); raise NotImplemented)
-        | Int.LF.DDec _ -> (dprint (fun () -> "[cnormApxDCtx DDec"); raise NotImplemented)
+        | Int.LF.DDec _ -> (dprint (fun () -> "[cnormApxDCtx DDec]"); raise NotImplemented)
       end
   | Apx.LF.DDec (psi, t_decl) -> 
       let psi' = cnormApxDCtx cO cD delta psi cDt cs in  
@@ -2950,7 +2968,9 @@ let rec cnormApxDCtx cO cD delta psi (cDt : Syntax.Int.LF.mctx * Syntax.Int.LF.m
 let rec cnormApxExp cO cD delta e (cD'', t) cs = match e with
   | Apx.Comp.Syn (loc, i)       -> Apx.Comp.Syn (loc, cnormApxExp' cO cD delta i (cD'', t) cs)
   | Apx.Comp.Fun (loc, f, e)    -> Apx.Comp.Fun (loc, f, cnormApxExp cO cD delta e (cD'', t) cs)
-  | Apx.Comp.CtxFun (loc, g, e) -> Apx.Comp.CtxFun (loc, g, cnormApxExp cO cD delta e (cD'', t) (Ctxsub.cdot1 cs))
+  | Apx.Comp.CtxFun (loc, g, e) -> 
+      (* let (cD'', t) = (Ctxsub.ctxnorm_mctx (cD'', Int.LF.CShift 1) , Ctxsub.ctxnorm_msub (t, Int.LF.CShift 1)) in *)
+        Apx.Comp.CtxFun (loc, g, cnormApxExp cO cD delta e (cD'', t) (Ctxsub.cdot1 cs))
   | Apx.Comp.MLam (loc, u, e)   -> (dprint (fun () -> "cnormApxExp -- could be PLam") ; 
       Apx.Comp.MLam (loc, u, cnormApxExp cO cD (Apx.LF.Dec(delta, Apx.LF.MDeclOpt u)) e (Int.LF.Dec (cD'', Int.LF.MDeclOpt u), Whnf.mvar_dot1 t) cs) )
   | Apx.Comp.Pair (loc, e1, e2) -> 
@@ -2994,9 +3014,13 @@ and cnormApxExp' cO cD delta i cDt cs = match i with
       let e' = cnormApxExp cO cD delta e cDt cs in 
         Apx.Comp.Apply (loc, i', e')
   | Apx.Comp.CtxApp (loc, i, psi) -> 
-      let i' = cnormApxExp' cO cD delta i cDt cs in 
-      let psi' = cnormApxDCtx cO cD delta psi cDt cs in 
-        Apx.Comp.CtxApp (loc, i', psi')
+      begin try
+        let i' = cnormApxExp' cO cD delta i cDt cs in 
+        let psi' = cnormApxDCtx cO cD delta psi cDt cs in 
+          Apx.Comp.CtxApp (loc, i', psi')
+      with NotImplemented -> 
+        raise (Error  (Some loc, CtxReconstruct))
+      end 
 
   | Apx.Comp.MApp (loc, i, (phat, m)) -> 
       let i' = cnormApxExp' cO cD delta i cDt cs in 
@@ -3004,15 +3028,24 @@ and cnormApxExp' cO cD delta i cDt cs = match i with
         Apx.Comp.MApp (loc, i', (phat, m'))
 
   | Apx.Comp.MAnnApp (loc, i, (psi, m)) -> 
-      let i' = cnormApxExp' cO cD delta i cDt cs in 
-      let psi' = cnormApxDCtx cO cD delta psi cDt cs in 
-      let m' = cnormApxTerm cO cD delta m cDt cs in
-        Apx.Comp.MAnnApp (loc, i', (psi', m'))
+      begin try
+        let i' = cnormApxExp' cO cD delta i cDt cs in 
+        let psi' = cnormApxDCtx cO cD delta psi cDt cs in 
+        let m' = cnormApxTerm cO cD delta m cDt cs in
+          Apx.Comp.MAnnApp (loc, i', (psi', m'))
+      with NotImplemented -> 
+        raise (Error  (Some loc, CtxReconstruct))
+      end 
+
 
   | Apx.Comp.BoxVal (loc, psi, m) -> 
-      let psi' = cnormApxDCtx cO cD delta psi cDt cs in 
-      let m'   = cnormApxTerm cO cD delta m cDt cs in 
-        Apx.Comp.BoxVal (loc, psi', m')
+      begin try
+        let psi' = cnormApxDCtx cO cD delta psi cDt cs in 
+        let m'   = cnormApxTerm cO cD delta m cDt cs in 
+          Apx.Comp.BoxVal (loc, psi', m')
+      with NotImplemented -> 
+        raise (Error  (Some loc, CtxReconstruct))
+      end 
 
 (*  | Apx.Comp.Ann (e, tau) -> 
       let e' = cnormApxExp e cDt in 
@@ -3665,7 +3698,9 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
         Int.Comp.Fun (Some loc, x, e')
 
   | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
-      let e' = elExp (Int.LF.Dec (cO, Int.LF.CDecl (psi_name, schema_cid))) cD cG e (tau, theta) in
+      let cD' = Ctxsub.ctxnorm_mctx (cD, Int.LF.CShift 1) in 
+        let cG' = Ctxsub.ctxnorm_gctx (cG, Int.LF.CShift 1) in 
+      let e' = elExp (Int.LF.Dec (cO, Int.LF.CDecl (psi_name, schema_cid))) cD' cG' e (tau, theta) in
         Int.Comp.CtxFun (Some loc, psi_name, e')
 
   | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi), Int.Comp.Explicit), tau), theta))  ->

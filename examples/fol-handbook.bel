@@ -114,7 +114,7 @@ rec ndhil : {g:(ndhilCtx)*} (nd (A ..))[g] -> (hil (A ..))[g] =
   let [g] H2 .. = ndhil [g] ([g] D2 ..) in 
     [g] mp (H1 ..) (H2 ..)
 
-| {B1::o[g]}{D:: (nd p)[g, u:nd (B1 ..), p:o]}
+|  {B1::o[g]}{D:: (nd p)[g, u:nd (B1 ..), p:o]}
   [g] noti (\p.(\u.(D .. u p))) => 
   let {H::(hil p)[g, u: hil (A ..), p:o]}
       [g,w:block u:hil (A ..). nd (A ..),p:o]  H .. w.1 p = 

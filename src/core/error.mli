@@ -5,6 +5,7 @@ open Syntax.Int
 type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 
 type error =
+  | CtxReconstruct 
   (* indexing errors *)
   | UnboundName of Id.name
   | UnboundCtxName   of Id.name

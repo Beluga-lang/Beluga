@@ -397,6 +397,11 @@ module Index = struct
   let iterQueries f =
     DynArray.iter (fun q -> f q) queries
 
+  (* clearIndex () = ()
+     Empty the local storage.
+  *)
+  let clearIndex () = DynArray.clear queries ; Hashtbl.clear types
+
 end
 
 
@@ -846,6 +851,8 @@ let runLogic () =
         Printer.printSignature ()
       else () ;
       (* Solve! *)
-      Index.iterQueries Frontend.solve
+      Index.iterQueries Frontend.solve ;
+      (* Clear the local storage.  *)
+      Index.clearIndex ()
     end
   else () (* NOP *)

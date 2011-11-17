@@ -3699,7 +3699,7 @@ and elExpW cO cD cG e theta_tau = match (e, theta_tau) with
 
   | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
       let cD' = Ctxsub.ctxnorm_mctx (cD, Int.LF.CShift 1) in 
-        let cG' = Ctxsub.ctxnorm_gctx (cG, Int.LF.CShift 1) in 
+      let cG' = Ctxsub.ctxnorm_gctx (cG, Int.LF.CShift 1) in 
       let e' = elExp (Int.LF.Dec (cO, Int.LF.CDecl (psi_name, schema_cid))) cD' cG' e (tau, theta) in
         Int.Comp.CtxFun (Some loc, psi_name, e')
 

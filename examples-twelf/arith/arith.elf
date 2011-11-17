@@ -11,8 +11,9 @@ p_z : plus z Y Y.
 p_s : plus (s X) Y (s Z)
        <- plus X Y Z.
 
-%query  (plus z (s (s z)) N).
-%query  (plus (s (s z)) (s (s z)) N).
+%{ query  (plus z (s (s z)) N).
+query  (plus (s (s z)) (s (s z)) N).
+}%
 
 %{
 acker : nat -> nat -> nat -> type.

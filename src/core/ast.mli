@@ -120,7 +120,6 @@ and statement =
 and proof = 
   | Proof of Loc.t * tpremise * vName * argument list      (* a proof in SASyLF is an induction statement and a list of arguments; dt: e value by induction on ds ... arguments *)
   | PRule of Loc.t * tpremise * proof * vName list
-  | Induction of Loc.t * name
   | InductionHyp of Loc.t
   | CaseAn of Loc.t * tpremise * vName list * argument list
   | PTheorem of Loc.t * tName 

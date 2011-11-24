@@ -42,12 +42,12 @@ x : n + (s z) = (s n) by induction on n :
 case z is
 	   d2: (z) + (s z) = (s z) 	by rule sum-z
 end case
-
+/*
 case s n' is
 	               d3 : n' + (s z) = (s n') by induction hypothesis on n'
                        d4 : (s n') + (s z) = (s s n')  by rule sum-s on d3
 end case
-
+*/
 end induction
 end theorem
 /*

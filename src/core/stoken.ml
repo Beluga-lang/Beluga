@@ -51,8 +51,8 @@ let extract_string = function
   | SYMBOL  s -> s
   | UPSYMBOL  s -> s
   | INTLIT  s -> s
-  | LINES ->  invalid_arg ("Cannot extract string from token: " ^
-                     to_string EOI)
+ (* | LINES ->  invalid_arg ("Cannot extract string from token: " ^
+                     to_string EOI)*)
 
 
 

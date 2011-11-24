@@ -80,7 +80,7 @@ GLOBAL: section_eoi;
  prod:
     [
       [
-         a = typ; DECLA; la = LIST1 alternative SEP "|" -> output_string out_channel "prod typ \n"; Production(_loc, a, la)
+         a = typ; `DECLA; la = LIST1 alternative SEP "|" -> output_string out_channel "prod typ \n"; Production(_loc, a, la)
 
       ]
     ]
@@ -174,10 +174,10 @@ typ:
  rules:
     [
       [
-          LINES; a = SYMBOL; p = premise -> output_string out_channel "rule only conclusion \n"; Rule(_loc, [], RName(a), p)
+          `LINES; a = SYMBOL; p = premise -> output_string out_channel "rule only conclusion \n"; Rule(_loc, [], RName(a), p)
 
       |
-         lp = LIST1 premise; LINES; a = SYMBOL; p = premise -> output_string out_channel "rule \n"; Rule(_loc, lp, RName(a), p)
+         lp = LIST1 premise; `LINES; a = SYMBOL; p = premise -> output_string out_channel "rule \n"; Rule(_loc, lp, RName(a), p)
          
       ]
     ]
@@ -258,6 +258,14 @@ typ:
                                                                                                                  TPremisse(_loc, Some(PName(a)), Some(PContext(la)), b)
 
       |
+         a = UPSYMBOL; ":"; b = var_alternative -> output_string out_channel "tpremise symbol var_alt symbol \n"; 
+                                                            TPremisse(_loc, Some(PName(a)), None, b)
+
+      |
+         a = UPSYMBOL; ":"; "gamma,"; la = LIST0 var_alternative SEP ","; "|-"; b = var_alternative-> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+                                                                                                                 TPremisse(_loc, Some(PName(a)), Some(PContext(la)), b)
+
+      |
          a = var_alternative -> output_string out_channel "tpremise var_alt symbol \n"; 
                                             TPremisse(_loc, None, None, a)
 
@@ -312,6 +320,10 @@ var_name:
     [
       [
          vn = SYMBOL -> output_string out_channel vn; output_string out_channel " : var_name \n"; VName(vn)
+
+      |
+
+         vn = UPSYMBOL -> output_string out_channel vn; output_string out_channel " : var_name \n"; VName(vn)
       ]
     ]
   ;  

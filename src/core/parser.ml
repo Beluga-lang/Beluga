@@ -444,11 +444,11 @@ GLOBAL: sgn_eoi;
 
     | "atomic"
         [
-          u = UPSYMBOL ->  output_string out_channel "clf_normal : atomic UPSYMBOL "; output_char out_channel '\n';
+          u = UPSYMBOL ->  output_string out_channel u; output_string out_channel ": clf_normal : atomic UPSYMBOL "; output_char out_channel '\n';
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil) 
 
         |
-           "("; u = UPSYMBOL; sigma' = clf_sub_new; ")"   ->  output_string out_channel "clf_normal : atomic ( UPSYMBOL clf_sub_new ) "; output_char out_channel '\n'; 
+           "("; u = UPSYMBOL; sigma' = clf_sub_new; ")"   ->  output_string out_channel u; output_string out_channel " :clf_normal : atomic ( UPSYMBOL clf_sub_new ) "; output_char out_channel '\n'; 
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil) 
         |
             h = clf_head -> output_string out_channel "clf_normal : atomic clf-head "; output_char out_channel '\n';
@@ -739,13 +739,16 @@ cmp_exp_chkX:
           Comp.LetPair (_loc, i, (Id.mk_name (Id.SomeString x), Id.mk_name (Id.SomeString y), e))
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
-       (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
+
        "["; pHat = clf_dctx ;"]"; tM = clf_term_app;
        tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi) ];
        "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk
        -> output_string out_channel "case_exp_chkX : LEFTA let ..... "; output_char out_channel '\n';
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
+
           Comp.Case (_loc, Syntax.RegularCase, i, [Comp.BranchBox (_loc,  ctyp_decls', (pHat, Comp.NormalPattern (tM, e'), tau))]) 
+
+
       | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> output_string out_channel "case_exp_chkX : LEFTA ( cmp_exp_chk cmp_pair_atom"; output_char out_channel '\n';
           begin match p_or_a with 
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
@@ -811,24 +814,24 @@ isuffix:
 
 cmp_exp_syn:
  [ LEFTA [
-    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   -> output_string out_channel "cmp_exp_syn : LEFTA [ clf_hat_dctx ] clf_term_app"; output_char out_channel '\n'; 
+    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   -> output_string out_channel "cmp_exp_syn : LEFTA [ clf_hat_dctx ] clf_term_app \n";  
       ((*print_string ("BOXVAL: " ^ Comp.synToString(Comp.BoxVal (_loc, cPsi, tR)) ^ "\n"); *)  
         Comp.BoxVal (_loc, cPsi, tR))
-   | h = SELF; s = isuffix  -> output_string out_channel "cmp_exp_syn : LEFTA SELF isuffixe"; output_char out_channel '\n'; s(h)
+   | h = SELF; s = isuffix  -> output_string out_channel "cmp_exp_syn : LEFTA SELF isuffixe \n";  s(h)
    | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
        Comp.Apply (_loc, h, begin match p_or_a with 
-                                    | Pair e2 -> output_string out_channel "cmp_exp_syn : LEFTA SELF ( cmp_exp_chk cmp_pair_atom Pair"; output_char out_channel '\n';
+                                    | Pair e2 -> output_string out_channel "cmp_exp_syn : LEFTA SELF ( cmp_exp_chk cmp_pair_atom Pair \n"; 
                                           Comp.Pair (_loc, e, e2)
-                                    | Atom    -> output_string out_channel "cmp_exp_syn : LEFTA SELF ( cmp_exp_chk cmp_pair_atom Atom"; output_char out_channel '\n'; 
+                                    | Atom    -> output_string out_channel "cmp_exp_syn : LEFTA SELF ( cmp_exp_chk cmp_pair_atom Atom \n";  
                                                   e
                             end)
-   | x = SYMBOL -> output_string out_channel "cmp_exp_syn : LEFTA SYMBOL"; output_char out_channel '\n'; 
+   | x = SYMBOL -> output_string out_channel x; output_string out_channel " : cmp_exp_syn : LEFTA SYMBOL \n";
                 Comp.Var (_loc, Id.mk_name (Id.SomeString x))
-   | "ttrue"    ->  output_string out_channel "cmp_exp_syn : LEFTA ttrue"; output_char out_channel '\n';
+   | "ttrue"    ->  output_string out_channel "cmp_exp_syn : LEFTA ttrue \n";
                  Comp.Boolean (_loc, true)
-   | "ffalse"   -> output_string out_channel "cmp_exp_syn : LEFTA ffalse"; output_char out_channel '\n';  
+   | "ffalse"   -> output_string out_channel "cmp_exp_syn : LEFTA ffalse \n";
                 Comp.Boolean (_loc, false)
-   | "("; i = SELF; ")"   -> output_string out_channel "cmp_exp_syn : LEFTA (SELF)"; output_char out_channel '\n';  i
+   | "("; i = SELF; ")"   -> output_string out_channel "cmp_exp_syn : LEFTA (SELF) \n";  i
  ]];
 
   cmp_branch_pattern:

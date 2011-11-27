@@ -17,13 +17,6 @@ open Token
 
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
-let rec last l = begin match List.rev l with
-  | [] -> None
-  | h::t -> Some (h, t)
-end 
-
-
-
 type kind_or_typ =
   | Kind of LF.kind
   | Typ  of LF.typ
@@ -36,10 +29,6 @@ type dctx_or_hat =
 type pair_or_atom =
   | Pair of Comp.exp_chk
   | Atom
-
-type ctx_or_cobj = 
-  | MetaObj of LF.normal
-  | CtxObj
 
 
 type mixtyp =
@@ -344,15 +333,9 @@ GLOBAL: sgn_eoi;
   lf_typ_rec_block:
     [
       [
-      "block"; a_list = LIST1 lf_typ_rec_elem SEP "," 
-        (* ","; _u=SYMBOL; ":"; a_last = clf_typ LEVEL "atomic" *)
-        -> 
-          begin match  last a_list with
-          | Some ((_ , a_last) , a_list) -> 
-              (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) 
-                (List.rev a_list) (LF.SigmaLast a_last))
-        end 
-      ] 
+      "block"; a_list = LIST1 lf_typ_rec_elem SEP ","; "."; a_last = lf_typ LEVEL "atomic"
+        -> (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last))
+      ]
     ]
   ;
 
@@ -426,23 +409,23 @@ GLOBAL: sgn_eoi;
   clf_ctyp_decl:
     [
       [
-        "{"; hash = "#"; p = SYMBOL; ":"; 
-         "["; cPsi = clf_dctx; "."; tA = clf_typ LEVEL "atomic";  "]"; "}" ->
-           LF.PDecl (_loc, Id.mk_name (Id.SomeString p), tA, cPsi)
+        "{"; hash = "#"; p = SYMBOL; "::"; 
+         tA = (clf_typ LEVEL "sigma"); "["; cPsi = clf_dctx; "]"; "}" ->
+                LF.PDecl (_loc, Id.mk_name (Id.SomeString p), tA, cPsi)
 
       | 
-        "{"; hash = "#"; s = UPSYMBOL; ":"; 
+        "{"; hash = "#"; s = UPSYMBOL; "::"; 
          cPhi = clf_dctx; "["; cPsi = clf_dctx; "]"; "}" ->
                 LF.SDecl (_loc, Id.mk_name (Id.SomeString s), cPhi, cPsi)
 
 
       | 
-          "{";  u = UPSYMBOL; ":"; 
-         "["; cPsi = clf_dctx; "."; tA = clf_typ LEVEL "atomic";  "]"; "}" ->
+          "{";  u = UPSYMBOL; "::"; 
+         tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]"; "}" ->
            LF.MDecl (_loc, Id.mk_name (Id.SomeString u), tA, cPsi)
 
       |
-          "{"; psi = SYMBOL; ":"; w = SYMBOL; "}" -> 
+          "{"; psi = SYMBOL; ":"; "("; w = SYMBOL; ")"; "*"; "}" -> 
             LF.CDecl (_loc, Id.mk_name (Id.SomeString psi), Id.mk_name (Id.SomeString w))
 
       ]
@@ -542,14 +525,8 @@ GLOBAL: sgn_eoi;
 
   clf_typ_rec_block:
     [[
-       "block"; a_list = LIST1 clf_typ_rec_elem SEP "," 
-       (* ; "."; a_last = clf_typ LEVEL "atomic" *)
-         -> begin match  last a_list with
-          | Some ((_ , a_last) , a_list) -> 
-              (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) 
-                 (List.rev a_list) (LF.SigmaLast a_last))
-        end 
-
+       "block"; a_list = LIST1 clf_typ_rec_elem SEP ","; "."; a_last = clf_typ LEVEL "atomic"
+         -> (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest)) a_list (LF.SigmaLast a_last))
      ]];
   
 
@@ -787,10 +764,8 @@ cmp_exp_chkX:
       | gLambda; f = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.CtxFun (_loc, Id.mk_name (Id.SomeString f), e)
 
-      | "mlam"; f = SYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.CtxFun (_loc, Id.mk_name (Id.SomeString f), e)
-
-      | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk ->
+(*      | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk -> *)
+      | "mlam"; f = symbol; rArr; e = cmp_exp_chk -> 
           Comp.MLam (_loc, Id.mk_name (Id.SomeString f), e)
 
       | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
@@ -819,8 +794,8 @@ cmp_exp_chkX:
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
-       "["; pHat = clf_dctx ;"."; tM = clf_term_app; "]";
-       tau = OPT [ ":"; "["; cPsi = clf_dctx; "."; tA = clf_typ LEVEL "atomic";  "]" -> (tA, cPsi) ];
+       "["; pHat = clf_dctx ;"]"; tM = clf_term_app;
+       tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi) ];
        "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk
        ->
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
@@ -835,28 +810,32 @@ cmp_exp_chkX:
     | "atomic"
       [
               
-        "["; phat_or_psi = clf_hat_or_dctx ; "." ; tM = clf_term_app;  "]"  ->             
+        (* "["; pHat = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "]"; tM = clf_term_app ->             
+            Comp.Box (_loc, pHat, tM)  *)
+
+        "["; phat_or_psi = clf_hat_or_dctx ; "]" ; tM = clf_term_app ->             
           begin match phat_or_psi with
             | Dctx cPsi ->  Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tM)) 
             | Hat phat  ->                 Comp.Box (_loc, phat, tM) 
       end
 
-
-(*        "["; phat_or_psi = clf_hat_or_dctx ; " . " ; tM = clf_term_app; "]" ->             
-          begin match phat_or_psi with
-            | Dctx cPsi ->  Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tM)) 
-            | Hat phat  ->                 Comp.Box (_loc, phat, tM) 
-      end
-*)
-(*      | 
+      | 
           "["; phat_or_psi = clf_hat_or_dctx ; "]" ; sigma = clf_sub_new ->             
           begin match phat_or_psi with
 (*            | Dctx cPsi ->  Comp.Syn(_loc, Comp.SBoxVal (_loc, cPsi, tM))  *)
             | Hat phat  ->                 Comp.SBox (_loc, phat, sigma) 
           end
-*)
 
-       | 
+
+
+      (*        "["; pHat = clf_hat; "]"; tM = clf_term_app ->            
+            Comp.Box (_loc, pHat, tM) *)
+
+      (*      | "["; cPsi = clf_dctx; "]"; tR = clf_term_app   ->   
+          (Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tR))) 
+
+      *)
+      | 
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> 
           begin match p_or_a with 
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
@@ -870,47 +849,21 @@ cmp_exp_chkX:
  ];
 
 
-
 (* isuffix: something that can follow an i; returns a function that takes the i it follows,
   and returns the appropriate synthesizing expression *)
 isuffix:
  [ LEFTA [
+     "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))
+(*   | "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">"   ->  
+       (fun i -> Comp.MApp (_loc, i, (vars, tM))) *)
 
- "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT ["."; tM = clf_term_app -> tM ]; "]"   ->  
-     begin match (phat_or_psi , mobj) with 
-       | (Dctx cPsi, Some tM)   -> (fun i -> Comp.MAnnApp (_loc, i, (cPsi,  tM)))
-       | (Hat phat, Some tM)    -> (fun i -> Comp.MApp (_loc, i, (phat, tM)))
-       | (Dctx cPsi, None)      -> (fun i -> Comp.CtxApp(_loc, i, cPsi)) 
-       | ( Hat [psi] , None)    -> (fun i -> Comp.CtxApp(_loc, i, LF.CtxVar (_loc, psi)))
-         | ( _ , _   )      ->  raise (MixErr _loc)
-     end 
-
-(* | "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))   *)
-(*   "["; phat_or_psi = clf_hat_or_dctx; "]" ->   
-     begin match phat_or_psi with 
-       | Dctx cPsi -> (fun i -> Comp.CtxApp(_loc, i, cPsi))
-       | Hat phat -> raise (MixErr _loc)
-     end 
-
- | "["; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; "]"   ->  
-     begin match phat_or_psi with
-       | Dctx cPsi  -> (fun i -> Comp.MAnnApp (_loc, i, (cPsi,  tM)))
-       | Hat phat   -> (fun i -> Comp.MApp (_loc, i, (phat, tM)))
-     end 
-*)
  | "<"; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; ">"   ->  
      begin match phat_or_psi with
        | Dctx cPsi ->  (fun i -> Comp.MAnnApp (_loc, i, (cPsi, tM)))
        | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, (phat, tM)))
      end
 
-(* | "["; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; "]"   ->  
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MAnnApp (_loc, i, (cPsi, tM)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, (phat, tM)))
-     end
 
-*)
 
    | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
    | x = SYMBOL   ->  
@@ -925,11 +878,7 @@ isuffix:
 
 cmp_exp_syn:
  [ LEFTA [
-(*    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   ->  
-      ((*print_string ("BOXVAL: " ^ Comp.synToString(Comp.BoxVal (_loc, cPsi, tR)) ^ "\n"); *)  
-        Comp.BoxVal (_loc, cPsi, tR))
-*)
-   "["; cPsi = clf_dctx; "."; tR = clf_term_app ; "]" ->  
+    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   ->  
       ((*print_string ("BOXVAL: " ^ Comp.synToString(Comp.BoxVal (_loc, cPsi, tR)) ^ "\n"); *)  
         Comp.BoxVal (_loc, cPsi, tR))
    | h = SELF; s = isuffix  ->  s(h)
@@ -1009,8 +958,8 @@ cmp_exp_syn:
       [
         ctyp_decls = LIST0 clf_ctyp_decl; 
       (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")"; *)
-        "["; pHat = clf_dctx ;"."; pattern = cmp_branch_pattern;  "]";
-         tau = OPT [ ":"; "["; cPsi = clf_dctx; "."; tA = clf_typ LEVEL "atomic"; "]" -> (tA, cPsi)]; 
+        "["; pHat = clf_dctx ;"]"; pattern = cmp_branch_pattern;
+         tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi)]; 
          rest = OPT [rArr; e = cmp_exp_chk -> e] ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
            (match (pattern, rest) with
@@ -1053,12 +1002,16 @@ cmp_exp_syn:
   mixtyp:
     [ RIGHTA
       [
-        "{"; psi = SYMBOL; ":";  w = SYMBOL; "}"; mixtau = SELF ->
+        "{"; psi = SYMBOL; ":"; "("; w = SYMBOL; ")"; "*"; "}"; mixtau = SELF ->
           MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi), 
                           Id.mk_name (Id.SomeString w), Comp.Explicit), mixtau)
 
+      (* ( ) used to pass arguments explicitely *) 
+      |  "("; psi = SYMBOL; ":"; w = SYMBOL; ")"; mixtau = SELF ->
+          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi), 
+                          Id.mk_name (Id.SomeString w), Comp.Explicit), mixtau)
 
-  | "("; psi = SYMBOL; ":";  w = SYMBOL; ")"; mixtau = SELF ->
+      | "{"; psi = SYMBOL; ":";  w = SYMBOL; "}"; mixtau = SELF ->
           MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi), 
                           Id.mk_name (Id.SomeString w), Comp.Implicit), mixtau)
 
@@ -1096,17 +1049,17 @@ cmp_exp_syn:
            mixtau 
 
 
-      |   "(" ; "[";  cPsi = clf_dctx; "."; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" -> 
+      |   "(" ; a = SYMBOL;  "["; cPsi = clf_dctx; "]" ; rarr; mixtau2 = mixtyp ; ")" -> 
               MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ), 
-                    mixtau2) 
+                    mixtau2)
 
-      (*   |   "["; cPsi = clf_dctx;  "."; a = SYMBOL;  "]" -> 
+      |   a = SYMBOL;  "["; cPsi = clf_dctx; "]" -> 
               MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi )
-      *)
+
       | 
-          "["; cPsi = clf_dctx; "."; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
+          "("; a = SYMBOL;  ms = LIST0 clf_normal; ")"; "["; cPsi = clf_dctx; "]" ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) 
+              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
 
       
       | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" -> 

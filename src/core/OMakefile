@@ -23,6 +23,7 @@ FILES[] =
 	logic
         opsem
         parser
+        parserRelease
         pretty
         reconstruct
         store

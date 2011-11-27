@@ -181,6 +181,9 @@ module Int : sig
      | Implicit 
      | Explicit
 
+   type meta_typ = 
+     | MetaTyp of LF.typ * LF.dctx
+     | MetaSchema of cid_schema 
 
    type typ =
      | TypBox   of Loc.t option * LF.typ * LF.dctx
@@ -541,6 +544,10 @@ module Apx : sig
      | Implicit
      | Explicit
 
+   type meta_obj = 
+     | MetaCtx of LF.dctx 
+     | MetaObj of LF.psi_hat * LF.normal
+
     type typ =
       | TypBox   of Loc.t * LF.typ  * LF.dctx
       | TypSub   of Loc.t * LF.dctx * LF.dctx
@@ -570,7 +577,7 @@ module Apx : sig
        | Const  of cid_prog                                   (* c                *)
        | Apply  of Loc.t * exp_syn * exp_chk                  (* i e              *)
        | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]          *)
-       | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) (* i [Psi hat. M]   *)
+       | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi hat. M]   *)
        | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]       *)
        | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (psihat. tR) *)
        | Ann    of exp_chk * typ                              (* e : tau          *)

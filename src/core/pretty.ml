@@ -1794,6 +1794,20 @@ module Error = struct
             "Equality comparison only possible at base types;\nfound objects of type  %a\n"
             (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp ttau)
 
+      | CompAppMismatch (cO, cD, (Comp.MetaTyp (tP, cPsi), tau)) -> 
+          fprintf ppf
+            "Expected contextual object ( Psi . M ) of type   %a\n"
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp (Comp.TypBox(None, tP, cPsi), tau))
+
+      | CompMAppMismatch (cO, cD, (Comp.MetaTyp (tA, cPsi), tau)) -> 
+          fprintf ppf
+            "Expected contextual object ( Psi . M ) of type   %a\n"
+            (IP.fmt_ppr_cmp_typ cO cD std_lvl) (Whnf.cnormCTyp (Comp.TypBox(None, tA, cPsi), tau))
+
+      | CompMAppMismatch (cO, cD, (Comp.MetaSchema cid_schema, tau)) -> 
+          fprintf ppf
+            "Expected context of schema  %s\n"
+            (R.render_cid_schema cid_schema)
 
       | CompTypAnn -> 
           fprintf ppf "Type synthesis of term failed (use typing annotation)" 

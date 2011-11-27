@@ -100,6 +100,8 @@ type error =
   | CompSynMismatch    of  LF.mctx * LF.mctx * Comp.tclo (* expected *) * Comp.tclo (* inferred *)
   | CompEqMismatch     of  LF.mctx * LF.mctx * Comp.tclo (* arg1 *) * Comp.tclo (* arg2 *)
   | CompEqTyp          of  LF.mctx * LF.mctx * Comp.tclo 
+  | CompMAppMismatch   of  LF.mctx * LF.mctx * (Comp.meta_typ * LF.msub)
+  | CompAppMismatch   of  LF.mctx * LF.mctx * (Comp.meta_typ * LF.msub)
 
   | CompTypAnn
 

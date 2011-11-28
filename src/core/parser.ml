@@ -108,15 +108,15 @@ let sgn_eoi = Grammar.Entry.mk "sig_eoi"
 EXTEND Grammar
 GLOBAL: sgn_eoi;
 
-  sgn_eoi:
+(*  sgn_eoi:
     [
       [
-         decls = LIST0 sgn_decl; `EOI ->
-           decls
+(*          decls = LIST0 sgn_decl; `EOI -> *)
+           decls = sgn_decls; `EOI  -> decls
       ]
     ]
   ;
-
+*)
   symbol:
     [
       [
@@ -138,23 +138,45 @@ GLOBAL: sgn_eoi;
 
   gLambda: [[ "FN" -> ()
          | "Λ" -> () ]];  (* Unicode capital Lambda (HTML &Lambda;) *)
+
+ sgn_eoi:
+   [
+     [ decl = sgn_decl; decls = SELF -> decl @ decls
+     | `EOI -> []
+     ]
+   ]
+;
+
+  sgn_lf_typ : 
+    [
+      [ a = SYMBOL; ":"; tA = lf_typ ->
+          Sgn.Const   (_loc, Id.mk_name (Id.SomeString a), tA)
+      ]
+    ]
+;
   
   sgn_decl:
     [
       [
          a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ; "." ->
            begin match k_or_a with
-             | Kind k -> Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)
-             | Typ  a -> Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)
+             | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
+             | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
            end
+
+      |
+        "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
+        const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
+          Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+            
       |
         "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
-          Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
+          [Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)]
 
       |
         "let"; x = SYMBOL; tau = OPT [ ":"; tau = cmp_typ -> tau] ; 
         "="; i = cmp_exp_syn;  ";" ->
-          Sgn.Val (_loc, Id.mk_name (Id.SomeString x), tau, i)
+          [Sgn.Val (_loc, Id.mk_name (Id.SomeString x), tau, i)]
 
       |
 (*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
@@ -162,10 +184,10 @@ GLOBAL: sgn_eoi;
 *)
 
         "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
-          Sgn.Rec (_loc, f)
+          [Sgn.Rec (_loc, f)]
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
-        Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
+        [Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
 
 (*      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." -> 
             Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x)) *)
@@ -173,12 +195,12 @@ GLOBAL: sgn_eoi;
       | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
         if Option.is_some x then
           let p = Id.mk_name (Id.SomeString (Option.get x)) in
-          Sgn.Query (_loc, Some p, a, e, t)
+          [Sgn.Query (_loc, Some p, a, e, t)]
         else
-          Sgn.Query (_loc, None, a, e, t)
+          [Sgn.Query (_loc, None, a, e, t)]
 
       | "%not" ->
-        Sgn.Pragma (_loc, LF.NotPrag)
+        [Sgn.Pragma (_loc, LF.NotPrag)]
       ]
     ]
   ;
@@ -231,10 +253,37 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
+
+
+  lf_kind:
+    [
+      RIGHTA
+        [
+           "{"; x = symbol; ":"; a2 = lf_typ; "}"; k = SELF ->
+             LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), k)
+
+        |
+           a2 = lf_typ LEVEL "atomic"; rarr; k = SELF ->
+             LF.ArrKind (_loc, a2, k)
+
+        | 
+          "type" -> LF.Typ _loc
+        ]
+
+    | LEFTA
+        [
+
+          k = SELF; "<-"; a2 = lf_typ LEVEL "atomic" ->
+            LF.ArrKind (_loc, a2, k)
+
+        ]
+    ]
+  ;
+
   lf_typ:
     [ RIGHTA
         [
-           "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF ->
+           "{"; x = symbol; ":"; a2 = SELF; "}"; a = SELF ->
              LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
         |
            a2 = SELF; rarr; a = SELF ->
@@ -344,7 +393,7 @@ GLOBAL: sgn_eoi;
   lf_typ_rec_block:
     [
       [
-      "block"; a_list = LIST1 lf_typ_rec_elem SEP "," 
+      "block"; OPT "("; a_list = LIST1 lf_typ_rec_elem SEP "," ; OPT ")"
         (* ","; _u=SYMBOL; ":"; a_last = clf_typ LEVEL "atomic" *)
         -> 
           begin match  last a_list with
@@ -542,7 +591,7 @@ GLOBAL: sgn_eoi;
 
   clf_typ_rec_block:
     [[
-       "block"; a_list = LIST1 clf_typ_rec_elem SEP "," 
+       "block"; OPT "("; a_list = LIST1 clf_typ_rec_elem SEP "," ; OPT ")"
        (* ; "."; a_last = clf_typ LEVEL "atomic" *)
          -> begin match  last a_list with
           | Some ((_ , a_last) , a_list) -> 

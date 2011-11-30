@@ -172,7 +172,7 @@ GLOBAL: sgn_eoi;
            a2 = lf_typ LEVEL "atomic"; rarr; k_or_a = SELF ->
              begin match k_or_a with
                | Kind k -> output_string out_channel "lf_kind_or_typ rarr self kind"; output_char out_channel '\n'; Kind (LF.ArrKind (_loc, a2, k))
-               | Typ  a -> output_string out_channel "lf_kind_or_typ rarr self type \n ";  Typ  (LF.ArrTyp  (_loc, a2, a))
+               | Typ  a -> output_string out_channel "lf_kind_or_typ rarr self type \n";  Typ  (LF.ArrTyp  (_loc, a2, a))
              end
 
         | 

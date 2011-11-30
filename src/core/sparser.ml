@@ -226,6 +226,10 @@ typ:
       |
          t1 = UPSYMBOL; "["; la = LIST1 SELF SEP ","; "]"; b = OPT [ var_alternative ] -> output_string out_channel t1; output_string out_channel " : var_alt fn [] \n";  
                                                                                         VAltFn(_loc, VName(t1), VLa(la), b)
+
+      |
+         t1 = SYMBOL; "["; la = LIST1 SELF SEP ","; "]"; b = OPT [ var_alternative ] -> output_string out_channel t1; output_string out_channel " : var_alt fn [] \n";  
+                                                                                        VAltFn(_loc, VName(t1), VLa(la), b)
  
       |
          a = SYMBOL; "\\"; v1 = var_alternative -> output_string out_channel a; output_string out_channel " : var_alt 4 \n"; VAltLam(_loc, AName(a), v1)
@@ -236,9 +240,9 @@ typ:
       | (* confusion with the = sign, check in reconstruct that the last alt is = *)
          "let"; a = var_alternative; (*"="; b = SELF;*) "in"; c = SELF -> output_string out_channel "valt let \n"; let d = VAltBin(_loc, c) in let b = append a d in VAltLet(_loc,b) 
 
-      (*|
+      |
          a = var_alternative; ":"; b = SYMBOL -> output_string out_channel "var_alt 6 \n"; 
-                                                 VAltOft(_loc, a, VName(b)) *)
+                                                 VAltOft(_loc, a, VName(b)) 
     
       |
          "Gamma,"; la = LIST1 var_alternative SEP "," -> output_string out_channel "var_alt 7 \n";

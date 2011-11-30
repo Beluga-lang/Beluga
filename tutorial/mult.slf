@@ -1,0 +1,25 @@
+/* Tutorial example by Marie B.Langlois */
+
+terminals z suc lambda lit plus iff single double 
+
+syntax 
+
+nat ::= z
+| suc nat
+
+syntax
+
+bool ::= true | false
+
+syntax
+/* Now we will create expressions that refer to different types. */
+exp ::= lit nat
+/* In the rules we are goint to be able to specify that the exp in plus must be lit nat.*/
+| plus exp exp
+/* This alternative models a regular if  then  else statement, since if is a reserved word it has been replaced with iff, which has nothing to do with if and only if. */
+| iff bool exp exp
+| x
+| y 
+/* Two lambda terms one with 1 variable and the second with 2. */
+| single \ x . exp[x] 
+| double \ x y . exp[x] exp[x,y]

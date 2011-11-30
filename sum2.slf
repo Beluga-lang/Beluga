@@ -1,0 +1,91 @@
+/* lju = [(value,["value"]),(sum,["+","="]),(less,["<"])] lsym = ["value","+","=","<"] */
+
+terminals z s lam
+syntax
+
+n ::= z
+  | s n
+/*
+syntax 
+
+e ::= z
+  | s e
+  | x
+  | lam \ x . e[x]
+*/
+judgment value: n value;
+
+-------------- val-z
+z value;
+
+judgment sum: n + n = n;
+
+-------------------- sum-z
+/*(N : nat)*/ z + (N ) = (N) ;
+
+N1 + N2 = N3 ;
+------------------------ sum-s
+(s N1) + N2 = (s N3) ;
+
+judgment less : n < n ;
+
+------------ less-one
+n < (s n) ;
+
+n1 < n3 ;
+n3 < n2 ;
+------------ less-transitive
+n1 < n2 ;
+
+theorem z_less_s_z: exists z < (s z) ;
+
+dsolve : z < (s z) by rule less-one
+
+end theorem
+
+theorem plus1 : forall N exists N + (s z) = (s N);
+
+x : N + (s z) = (s N) by induction on N : 
+
+case z is
+	   d2: (z) + (s z) = (s z) 	by rule sum-z
+end case
+
+case (s N) is
+	               F : N + (s z) = (s N) by induction hypothesis on N
+                       d4 : (s N) + (s N) = (s (s N))  by rule sum-s on F
+end case
+
+end induction
+end theorem 
+/*
+theorem sum-s-rh : forall d1 : n1 + n2 = n3 exists n1 + (s n2) = (s n3)
+
+d2 : n1 + (s n2) = s n3 by induction on d1 :
+
+case rule
+
+--------------------- sum-z
+dzc : (z) + n = n ;
+
+is
+
+dz1 : (z) + (s n) = (s n) by rule sum-z
+
+end case
+
+
+case rule
+
+dsp : n1' + n2 = n3';
+---------------------------- sum-s
+dsc : (s n1') + n2 = (s n3');
+
+is
+
+ds1 : n1' + (s n2) = (s n3')  by induction hypothesis on dsp
+ds2 : (s n1') + (s n2) = (s s n3') by rule sum-s on ds1
+
+end case
+end induction
+end theorem */

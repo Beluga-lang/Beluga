@@ -242,7 +242,7 @@ let rec valtsPar l lsym a =
                                   Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString n)), valts l lsym va)
 
     | VAltFn(l1, VName(n1), VLa(lva), vao) -> output_string out_channel n1; output_string out_channel " valtspar valtfn\n"; 
-                                              (**assuming only 1 element in list *) let Some(va1) = valtslist lva in
+                                              let Some(va1) = valtslist lva in
                                                 (begin match vao with
                                                    | None -> Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1)
                                                    | Some(VAltBin(l2, va)) -> output_string out_channel " valtspar valtfn valtbin else \n";
@@ -252,8 +252,10 @@ let rec valtsPar l lsym a =
                                                    | Some(a2) -> Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym a2)
                                                  end)
 
-    | VAltLet(l, va) -> output_string out_channel " valts valtfn\n"; 
-                             Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString "letv")), valts l lsym va)
+    | VAltLet(l, va) -> output_string out_channel " valts valtfn\n"; let lsym1 = "="::lsym in
+                             Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString "letv")), valts l lsym1 va)
+
+    | VAltOft _ -> raise (Error ("Valtoft")) 
 
     | _ -> let s = locToString(l) in let s1 = s ^ "Not implemented yet (in valtsPar)." in raise (Error (s1)) 
 
@@ -315,7 +317,7 @@ and valts l lsym va =
 
     | VAltBin(l1,va) -> raise (Error ("Problem from binding")) 
 
-    | _ -> raise (Error ("Not implemented yet (in valts).")) 
+    | _ -> let s = locToString(l) in let s1 = s ^ " Not implemented yet (in valts)." in raise (Error (s1))
 
 (* function that deals with the list of premises *)
 
@@ -326,12 +328,12 @@ let rec judges' jn lsym lp l2 va =
                Ext.LF.ArrTyp(l2, Ext.LF.Atom(l2, Id.mk_name(Id.SomeString jn), valts l3 lsym va1), judges' jn lsym t l2 va)
 
 (* string list -> rule list -> Ext.Sgn.decl list *)
-let rec judges jn lsym lr = 
+let rec judges jn lsym lr = output_string out_channel "judges \n";
    match lr with
     | [] -> []
     | h::t -> let Rule(l1, a, RName(s), Premisse(l2, b, c, va)) = h in let JName(s1) = jn in
               begin match a with
-                | [] -> output_string out_channel  s; output_string out_channel " judges [] s s1 \n";  
+                | [] -> output_string out_channel  s; output_string out_channel " judges [] s s1 \n";
                         let lv = [Ext.Sgn.Const(l1, Id.mk_name(Id.SomeString s), Ext.LF.Atom(l2, Id.mk_name(Id.SomeString s1), valts l2 lsym va))] 
                         in lv @ judges jn lsym t
                 | la -> let lv = [Ext.Sgn.Const(l1, Id.mk_name(Id.SomeString s), judges' s1 lsym la l2 va)] in lv @ judges jn lsym t
@@ -483,7 +485,7 @@ let stmt_to_prove l lt st lju lsym =
                                                          Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null))
                                                          ,Some("N"))
 
-                                    | _ -> raise (Error ("Sorry, try again later."))
+                                    | _ -> let s = locToString(l) in let s1 = "Sorry, try again later. " ^ s in raise (Error (s1)) 
                                   )
 
     | Exist (l1, p) -> (begin match p with

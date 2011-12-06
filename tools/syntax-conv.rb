@@ -1,5 +1,18 @@
 #!/usr/bin/env ruby
 
+class String
+  def gsub_ignore_comments!(pat, replacement)
+    pat = Regexp.new("(?:(?<comment>(?m:%\{.*?\}%)|%.*?$)|#{pat.source})", pat.options)
+    current, post = "", self
+    while pat =~ post do
+      pre, s, post = $`, $&, $'
+      s.gsub!(pat, replacement) unless $~[:comment]
+      current <<= pre << s
+    end
+    self.replace (current << post)
+  end
+end
+
 class Block
   attr_reader :content
 

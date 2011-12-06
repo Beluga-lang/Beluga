@@ -26,16 +26,16 @@ end
 class CompBlock < Block
 
   def mogrify!()
-    content.gsub!(/(?<leadin>(::|->|:|\})\s*)(?<obj>[^\{\}]*?)\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin> [\k<ctx>. \k<obj>]')
-    content.gsub! /\(\s*\[\s*(?<ctx>[^\.]*?)\s*\]\s*(?<obj>((?<pobj>\(([^()]+|\g<pobj>)*\))|[^()])+)\s*\)/m,
+    content.gsub_ignore_comments!(/(?<leadin>(::|->|:|\})\s*)(?<obj>[^\{\}]*?)\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin> [\k<ctx>. \k<obj>]')
+    content.gsub_ignore_comments! /\(\s*\[\s*(?<ctx>[^\.]*?)\s*\]\s*(?<obj>((?<pobj>\(([^()]+|\g<pobj>)*\))|[^()])+)\s*\)/m,
                   '[\k<ctx>. \k<obj>]'
-    content.gsub! /(?<leadin>=\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*in)/m, '\k<leadin>[\<ctx>. \k<obj>]\k<leadout>'
-    content.gsub! /(?<leadin>case\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*of)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
-    content.gsub! /\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|=>|=|\|))/m, '[\k<ctx>. \k<obj>]\k<leadout>'
-    content.gsub! /<(?<cobj>.*?)>/m, '[\k<cobj>]'
-    content.gsub! /\{(?<ctx>\s*.*?:\s*)\((?<ctxtyp>.*?)\)\*\s*\}/m, '{\k<ctx>\k<ctxtyp>}'
-    content.gsub! /FN/, 'mlam'
-    content.gsub! /::/, ':'
+    content.gsub_ignore_comments! /(?<leadin>=\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*in)/m, '\k<leadin>[\<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /(?<leadin>case\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*of)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|=>|=|\|))/m, '[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /<(?<cobj>.*?)>/m, '[\k<cobj>]'
+    content.gsub_ignore_comments! /\{(?<ctx>\s*.*?:\s*)\((?<ctxtyp>.*?)\)\*\s*\}/m, '{\k<ctx>\k<ctxtyp>}'
+    content.gsub_ignore_comments! /FN/, 'mlam'
+    content.gsub_ignore_comments! /::/, ':'
     self
   end
 end

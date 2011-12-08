@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 
 class String
-  def gsub_ignore_comments!(pat, replacement)
+  def gsub_ignore_comments!(pat, *replacement, &block)
     pat = Regexp.new("(?:(?<comment>(?m:%\{.*?\}%)|%.*?$)|#{pat.source})", pat.options)
     current, post = "", self
     while pat =~ post do
       pre, s, post = $`, $&, $'
-      s.gsub!(pat, replacement) unless $~[:comment]
+      s.gsub!(pat, *replacement, &block) unless $~[:comment]
       current <<= pre << s
     end
     self.replace (current << post)
@@ -36,6 +36,10 @@ class CompBlock < Block
     content.gsub_ignore_comments! /\{(?<ctx>\s*.*?:\s*)\((?<ctxtyp>.*?)\)\*\s*\}/m, '{\k<ctx>\k<ctxtyp>}'
     content.gsub_ignore_comments! /FN/, 'mlam'
     content.gsub_ignore_comments! /::/, ':'
+    content.gsub_ignore_comments! /schema.*?;/ do |s|
+      s.gsub! /\./, ','
+      s.gsub! /((?:block|,)\s*)([^,;:]+)(\s*)(?=(,|;))/, '\1_t:\2\3'
+    end
     self
   end
 end

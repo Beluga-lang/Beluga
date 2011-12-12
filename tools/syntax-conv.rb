@@ -27,20 +27,42 @@ end
 class CompBlock < Block
 
   def mogrify!()
-    content.gsub_ignore_comments!(/(?<leadin>(::|->|:|\})\s*)(?<obj>[^\{\}]*?)\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin> [\k<ctx>. \k<obj>]')
+    content.gsub_ignore_comments! /schema\s.*?;/m do |s|
+      s.gsub_ignore_comments! /\./, ','
+      s.gsub! /((?:block\s|,)\s*)([^,;\[\]]+)/m do |s|
+        s.gsub /^((?:block\s|,)\s*)([^:]+)$/m, '\1_t:\2'
+      end
+    end
+    content.gsub_ignore_comments! /block\s[^;]*?\]/m do |s|
+      s.gsub_ignore_comments! /\./, ','
+      s.gsub! /((?:block\s|,)\s*)([^,;\[\]]+)/m do |s|
+        s.gsub /^((?:block\s|,)\s*)([^:]+)$/m, '\1_t:\2'
+      end
+    end
+    content.gsub_ignore_comments! /rec\s.*?=/m do |s|
+      s.gsub_ignore_comments! /(?<leadin>(::|->|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin> [\k<ctx>. \k<obj>]'
+      s.gsub_ignore_comments! /\{(?<leadin>\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)(?<ctxtyp>[^\*\{\}:]*?)(?<leadout>\s*)\}/m, '(\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>)'
+      s.gsub_ignore_comments! /(?<leadin>\{\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)\((?<ctxtyp>[^\*\{\}:]*?)\)\*(?<leadout>\s*\})/m, '\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>'
+    end
+    content.gsub_ignore_comments! /(=.*?;)/m do |s|
+      s.gsub_ignore_comments! /\{.*?\}/m do |s|
+        s.gsub_ignore_comments! /(?<leadin>(::|->|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin> [\k<ctx>. \k<obj>]'
+      end
+    end
+    content.gsub_ignore_comments! /\|.*?=>/ do |s|
+      s.gsub_ignore_comments! /(?<leadin>:\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\](?<leadout>\s*=>)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    end
     content.gsub_ignore_comments! /\(\s*\[\s*(?<ctx>[^\.]*?)\s*\]\s*(?<obj>((?<pobj>\(([^()]+|\g<pobj>)*\))|[^()])+)\s*\)/m,
-                  '[\k<ctx>. \k<obj>]'
-    content.gsub_ignore_comments! /(?<leadin>=\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*in)/m, '\k<leadin>[\<ctx>. \k<obj>]\k<leadout>'
+                                 '[\k<ctx>. \k<obj>]'
+    content.gsub_ignore_comments! /(?<leadin>let\s+(\{.*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*=)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /(?<leadin>=\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*in)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     content.gsub_ignore_comments! /(?<leadin>case\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*of)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
-    content.gsub_ignore_comments! /\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|=>|=|\|))/m, '[\k<ctx>. \k<obj>]\k<leadout>'
-    content.gsub_ignore_comments! /<(?<cobj>.*?)>/m, '[\k<cobj>]'
-    content.gsub_ignore_comments! /\{(?<ctx>\s*.*?:\s*)\((?<ctxtyp>.*?)\)\*\s*\}/m, '{\k<ctx>\k<ctxtyp>}'
+    content.gsub_ignore_comments! /(?<leadin>\|\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(:|=>))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /(?<leadin>(=>|in\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    # content.gsub_ignore_comments! /\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|=>|=|:|\|))/m, '[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /<(?<ctx>[^<>]*?)\.(?<obj>[^<>]*?)>/m, '[\k<ctx>.\k<obj>]'
     content.gsub_ignore_comments! /FN/, 'mlam'
     content.gsub_ignore_comments! /::/, ':'
-    content.gsub_ignore_comments! /schema.*?;/ do |s|
-      s.gsub! /\./, ','
-      s.gsub! /((?:block|,)\s*)([^,;:]+)(\s*)(?=(,|;))/, '\1_t:\2\3'
-    end
     self
   end
 end

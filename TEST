@@ -33,6 +33,10 @@ cd $X
 # - Coverage checking: compile/cpm/test.cfg takes very long.
 #   be patient.
 
+# The file below has already partially new syntax and doesn't work 
+# with the old syntax anymore. -bp
+#   tapl/ch3+arith/sources-corrected.cfg \
+
 $INTERPRETER +t \
     $* \
     arith/arith.bel \
@@ -98,7 +102,6 @@ $INTERPRETER +t \
     subject-red.bel \
     subject-red-crec.bel \
     tapl/ch3/sources.cfg \
-    tapl/ch3+arith/sources-corrected.cfg \
     test/backarrow.bel \
     test/case1.bel \
     test/case1-explicit.bel \

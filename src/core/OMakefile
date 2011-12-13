@@ -24,11 +24,15 @@ FILES[] =
         opsem
         parser
         parserRelease
+        pragma
         pretty
         reconstruct
         store
         substitution
         syntax
+        synext
+        synapx
+        synint
         trail
         token
         unify

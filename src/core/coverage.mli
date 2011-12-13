@@ -9,7 +9,7 @@ val no_covers : int ref
 type problem
 
 val make : Parser.Grammar.Loc.t option
-        -> Syntax.case_pragma
+        -> Pragma.case_pragma
         -> LF.mctx            (* cO *)
         -> LF.mctx            (* cD *)
         -> Comp.branch list   (* branches *)

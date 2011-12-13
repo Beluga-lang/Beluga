@@ -46,7 +46,7 @@ let new_name string =
 (* Coverage problem *)
 
 type problem = {loc : Parser.Grammar.Loc.t option;    
-                prag : Syntax.case_pragma;           (* indicates if %not appeared after ``case...of'' *)
+                prag : Pragma.case_pragma;           (* indicates if %not appeared after ``case...of'' *)
                 cO : LF.mctx;
                 cD : LF.mctx;
                 branches : Comp.branch list;
@@ -1471,7 +1471,7 @@ end
 let check_coverage_success problem  =  
 (Debug.popIndentationLevel() ;        
  begin match problem.prag with
-   | Syntax.RegularCase -> 
+   | Pragma.RegularCase -> 
        if !open_cov_goals = [] then 
 	 (dprint (fun () -> "## COVERS ##");
 	  Success)
@@ -1482,7 +1482,7 @@ let check_coverage_success problem  =
                      (Pretty.locOptToString problem.loc)
                      ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) ))
 
-   | Syntax.PragmaNotCase ->
+   | Pragma.PragmaNotCase ->
        if !open_cov_goals = [] then 
 	 Failure (fun () ->
                     Printf.sprintf "\n##   Case expression covers : ##\n##   %s\n##\n\n"

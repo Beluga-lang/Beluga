@@ -20,12 +20,14 @@ FILES[] =
         error
         gensym
         id
+        index
 	logic
         opsem
         parser
         parserRelease
         pretty
         reconstruct
+        recsgn
         store
         substitution
         syntax

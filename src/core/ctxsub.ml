@@ -448,8 +448,48 @@ and csub_front cPsi k ft = match ft with
 
 *)
 
- 
-let rec csub_ctyp cD cPsi k tau = match tau with
+
+
+let rec csub_meta_obj cD cPsi k mO = match mO with 
+  | Syntax.Int.Comp.MetaCtx (loc, cPhi) -> 
+      let cPhi' = csub_dctx cD cPsi k cPhi in 
+        Syntax.Int.Comp.MetaCtx (loc, cPhi')
+  | Syntax.Int.Comp.MetaObj (loc, phat, tM) -> 
+      let phat' = csub_psihat cPsi k phat in 
+      let tM'   = csub_norm cPsi k tM in 
+        Syntax.Int.Comp.MetaObj (loc, phat', tM') 
+
+
+and csub_meta_spine cD cPsi k mS = match mS with 
+  | Syntax.Int.Comp.MetaNil -> Syntax.Int.Comp.MetaNil
+  | Syntax.Int.Comp.MetaApp (mO, mS) -> 
+      let mO' = csub_meta_obj cD cPsi k mO in 
+      let mS' = csub_meta_spine cD cPsi k mS in 
+        Syntax.Int.Comp.MetaApp (mO', mS')
+
+and csub_ckind cD cPsi k cK = begin match cK with 
+  | Syntax.Int.Comp.Ctype _ -> cK
+  | Syntax.Int.Comp.PiKind (loc, (cdecl, dep), cK') -> 
+      begin match cdecl with 
+        | Syntax.Int.LF.CDecl _ -> 
+            let cK' = csub_ckind cD (ctxnorm_dctx (cPsi, CShift 1)) (k+1) cK' in 
+              Syntax.Int.Comp.PiKind (loc, (cdecl, dep), cK')
+        | Syntax.Int.LF.MDecl (u, tA, cPhi) -> 
+            let mdecl = MDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi) in 
+            let cK'    = csub_ckind (Dec(cD, mdecl)) (Whnf.cnormDCtx (cPsi, MShift 1)) k cK' in 
+              Syntax.Int.Comp.PiKind (loc, (mdecl, dep), cK')
+        | Syntax.Int.LF.PDecl (u, tA, cPhi) -> 
+            let pdecl = PDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi) in 
+            let cK'    = csub_ckind (Dec(cD, pdecl)) (Whnf.cnormDCtx (cPsi, MShift 1)) k cK' in 
+              Syntax.Int.Comp.PiKind (loc, (pdecl, dep), cK')
+      end
+end 
+
+and csub_ctyp cD cPsi k tau = match tau with
+  | Syntax.Int.Comp.TypBase (loc, c, mS) -> 
+      let mS' = csub_meta_spine cD cPsi k mS in 
+        Syntax.Int.Comp.TypBase (loc, c, mS')
+
   | Syntax.Int.Comp.TypBool ->
       Syntax.Int.Comp.TypBool 
 

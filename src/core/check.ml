@@ -117,11 +117,65 @@ module Comp = struct
       (* other cases should be impossible *)
     in ext t2;;
 
+  let rec checkMetaObj cO cD cM cTt = match  (cM, cTt) with 
+  | (MetaCtx (loc, cPsi), (MetaSchema  w, _)) -> 
+      LF.checkSchema cO cD cPsi (Schema.get_schema w)
 
-  let rec checkTyp cO cD tau =
+  | (MetaObj (loc, phat, tM), (MetaTyp (tA, cPsi), t)) ->  
+      LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+  | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->  
+      LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)  
+;
+         
+    (* The case for parameter types should be handled separately, for better error messages -bp *)
 
-    match tau with
+
+and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with 
+  | (MetaNil , (Ctype _ , _ )) -> ()
+  | (MetaApp (mO, mS), (PiKind (_, (cdecl, Explicit), cK) , t)) -> 
+      begin match cdecl with 
+        | I.CDecl (_psi, schema_cid) -> 
+            let MetaCtx (_, cPsi) = mO in 
+            let theta' = Ctxsub.csub_msub cPsi 1 t in
+            let cK'   = Ctxsub.csub_ckind cD cPsi 1 cK in               
+              checkMetaObj cO cD mO (MetaSchema schema_cid , t); 
+              checkMetaSpine cO cD mS (cK', theta')
+
+        | I.MDecl (_u, tA, cPsi) -> 
+            let MetaObj (loc, psihat, tM) = mO in 
+              checkMetaObj cO cD mO (MetaTyp (tA, cPsi), t) ;
+              checkMetaSpine cO cD mS (cK, I.MDot (I.MObj(psihat, tM), t)) 
+    end
+
+
+  let rec checkCDecl cO cD cdecl = match cdecl with 
+    | I.CDecl (_, schema_cid ) -> 
+        begin try 
+          let _ = Schema.get_schema schema_cid in ()
+        with _ -> raise (Violation "Schema undefined")
+        end
+    | I.MDecl (_, tA, cPsi) -> 
+        LF.checkDCtx cO cD cPsi;
+        LF.checkTyp  cO cD cPsi (tA, S.LF.id)
+    | I.PDecl (_, tA, cPsi) -> 
+        LF.checkDCtx cO cD cPsi;
+        LF.checkTyp  cO cD cPsi (tA, S.LF.id)
+              
+
+  let rec checkKind cO cD cK = match cK with
+    | Ctype _ -> ()
+    | PiKind (_, ((I.CDecl _ ) as cdecl,dep), cK) -> 
+        checkCDecl cO cD cdecl;
+        checkKind (I.Dec(cO, cdecl)) cD cK
+    | PiKind (_, (cdecl,dep), cK) -> 
+        checkCDecl cO cD cdecl;
+        checkKind cO (I.Dec(cD, cdecl)) cK
         
+  let rec checkTyp cO cD tau =  match tau with
+    | TypBase (loc, c, mS) -> 
+        let cK = (CompTyp.get c).CompTyp.kind in
+          checkMetaSpine cO cD mS (cK , C.m_id)
+
     | TypBox (_ , tA, cPsi) ->
         LF.checkDCtx cO cD cPsi;
         LF.checkTyp  cO cD cPsi (tA, S.LF.id)
@@ -142,6 +196,7 @@ module Comp = struct
         checkTyp (I.Dec (cO, I.CDecl (psi_name, schema_cid))) cD tau
           
     | TypPiBox ((cdecl, _), tau) ->
+        checkCDecl cO cD cdecl;
         checkTyp cO (I.Dec (cD, cdecl)) tau 
 
     | TypBool -> ()
@@ -418,6 +473,51 @@ module Comp = struct
 *)
   and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
     match branch with
+      | EmptyBranch (loc, cO1', cD1', PatEmpty (loc', _cPsi), (t1, cs)) -> 
+          (* By invariant: cD1' |- t1 <= cD *)
+(*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  *)
+          let _     = LF.checkMSub cO1' cD1' (cs, t1) cD in  
+          let t'' = Whnf.mcomp t t1 in
+
+          let tau  = Whnf.cnormCTyp (tau, t'') in
+          let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
+          let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
+                        P.octxToString cO1' ^ " ; \n" ^ 
+                        P.mctxToString cO1' cD1' ^ " ;\n " ^ 
+                        "{} (EmptyPattern)" ^
+                            "\n has type "  ^ P.compTypToString cO1' cD1' tau')
+          in
+            ()
+
+      | Branch (loc, cO1', cD1', PatMetaObj (loc', mO), (t1, cs), e1) -> 
+          let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
+          (* By invariant: cD1' |- t1 <= cD *)
+          let tP1   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tP, t1), cs) in 
+          let cPsi1 = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi, t1), cs) in 
+          let cG' = Ctxsub.ctxnorm_gctx (Whnf.cnormCtx (cG, t1), cs) in 
+          let t'' = Whnf.mcomp t t1 in
+
+          let tau  = Whnf.cnormCTyp (tau, t'') in
+          let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
+          let _ = dprint (fun () -> "\nCheckBranch with pattern\n")
+                       (* P.octxToString cO1' ^ " ; \n" ^ 
+                        P.mctxToString cO1' cD1' ^ " ;\n [" ^ 
+                        P.dctxToString cO1' cD1' cPsi1' ^ "] \n" ^
+                        P.normalToString cO1' cD1' cPsi1' (tR1, S.LF.id) ^ 
+                            "\n " ^ P.msubToString cO1' cD1' t1 ^  
+                            " ; \n " ^ P.csubToString cO1' cD1' cs ^  
+                            "\n  =>  " ^ 
+                            P.expChkToString cO1' cD1' cG' e1 ^ 
+                            "\n has type "  ^ P.compTypToString cO1' cD1' tau' ^ "\n" *)
+                        in
+          let _ = dprint (fun () -> "\nChecking refinement substitution\n") in          
+(*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in   *)
+          let _     = LF.checkMSub cO1' cD1' (cs, t1) cD in   
+          let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in            
+          let _  = checkMetaObj cO1' cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in   
+
+            check cO1' cD1' cG' e1 (tau', Whnf.m_id)
+
       | BranchBox  (cO1',  cD1',  (cPsi1', NormalPattern(I.Root(loc, _, _ ) as tR1, e1),  
                                    t1,  cs)) ->
           let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in

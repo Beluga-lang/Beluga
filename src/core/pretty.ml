@@ -90,6 +90,7 @@ module type CID_RENDERER = sig
   open Syntax.Int
 
   val render_name         : name         -> string
+  val render_cid_comp_typ : cid_typ      -> string
   val render_cid_typ      : cid_typ      -> string
   val render_cid_term     : cid_term     -> string
   val render_cid_schema   : cid_schema   -> string
@@ -129,6 +130,7 @@ module Int = struct
 
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
     val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     -> unit
+    val fmt_ppr_cmp_kind      : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
@@ -152,6 +154,7 @@ module Int = struct
     (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.mctx -> LF.dctx  -> unit
     val ppr_lf_mctx       : LF.mctx -> LF.mctx -> unit 
+    val ppr_cmp_kind      : LF.mctx -> LF.mctx -> Comp.kind -> unit
     val ppr_cmp_typ       : LF.mctx -> LF.mctx -> Comp.typ -> unit
     val ppr_cmp_exp_chk   : LF.mctx -> LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit
     val ppr_cmp_exp_syn   : LF.mctx -> LF.mctx -> Comp.gctx -> Comp.exp_syn -> unit
@@ -178,6 +181,7 @@ module Int = struct
     val expChkToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
     val expSynToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
     val branchToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.branch   -> string
+    val compKindToString  : LF.mctx -> LF.mctx -> Comp.kind  -> string
     val compTypToString   : LF.mctx -> LF.mctx -> Comp.typ      -> string
     val msubToString      : LF.mctx -> LF.mctx -> LF.msub     -> string
     val csubToString      : LF.mctx -> LF.mctx -> LF.csub     -> string
@@ -863,8 +867,6 @@ module Int = struct
             (fmt_ppr_lf_dctx cO cD 0) cPhi
             (fmt_ppr_lf_dctx cO cD 0) cPsi
 
-
-
       | LF.CDecl (name, schemaName) ->
           fprintf ppf "{%s :: %a}"
             (R.render_name name)
@@ -884,8 +886,60 @@ module Int = struct
 
 
     (* Computation-level *)
+    let rec fmt_ppr_cmp_kind cO cD lvl ppf = function
+      | Comp.Ctype _ -> fprintf ppf "ctype"
+      | Comp.PiKind (_, (LF.CDecl(_ , _ ) as ctyp_decl, _dep) , cK) -> 
+          let cond = lvl > 0 in
+            fprintf ppf "@[<1>%s%a@ %a%s@]"
+              (l_paren_if cond)
+              (fmt_ppr_lf_ctyp_decl cO cD 1) ctyp_decl
+              (fmt_ppr_cmp_kind (LF.Dec(cO, ctyp_decl)) cD 1) cK
+              (r_paren_if cond)
+      | Comp.PiKind (_, (ctyp_decl, _dep), cK) -> 
+          let cond = lvl > 0 in
+            fprintf ppf "@[<1>%s%a@ %a%s@]"
+              (l_paren_if cond)
+              (fmt_ppr_lf_ctyp_decl cO cD 1) ctyp_decl
+              (fmt_ppr_cmp_kind cO (LF.Dec(cD, ctyp_decl)) 1) cK
+              (r_paren_if cond)
+
+    let rec fmt_ppr_meta_spine cO cD lvl ppf = function 
+      | Comp.MetaNil ->           
+          fprintf ppf ""
+      | Comp.MetaApp (mO, mS) -> 
+          fprintf ppf " %a%a"
+            (fmt_ppr_meta_obj  cO cD (lvl + 1)) mO
+            (fmt_ppr_meta_spine   cO cD lvl) mS
+
+    and fmt_ppr_meta_obj cO cD lvl ppf = function  
+      | Comp.MetaCtx (_, cPsi) -> 
+            fprintf ppf "[%a]"
+              (fmt_ppr_lf_dctx cO cD 0) cPsi
+      | Comp.MetaObj (_, phat, tM) ->
+          let cond = lvl > 1 in
+          let cPsi = phatToDCtx phat in
+            fprintf ppf "%s[%a. %a]%s"
+              (l_paren_if cond)
+               (fmt_ppr_lf_psi_hat cO 0) cPsi
+              (fmt_ppr_lf_normal cO cD cPsi 0) tM
+              (r_paren_if cond)
+      | Comp.MetaObjAnn (_, cPsi, tM) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s[%a. %a]%s"
+              (l_paren_if cond)
+               (fmt_ppr_lf_psi_hat cO 0) cPsi
+              (fmt_ppr_lf_normal cO cD cPsi 0) tM
+              (r_paren_if cond)
 
     let rec fmt_ppr_cmp_typ cO cD lvl ppf = function
+      | Comp.TypBase (_, c, mS)-> 
+          let cond = lvl > 1 in
+            fprintf ppf "%s%s%a%s"
+              (l_paren_if cond)
+              (R.render_cid_comp_typ c)
+              (fmt_ppr_meta_spine cO cD 2) mS
+              (r_paren_if cond)
+
       | Comp.TypBox (_, tA, cPsi) ->
           fprintf ppf "%a[%a]"
             (fmt_ppr_lf_typ cO cD cPsi 2) tA
@@ -1170,7 +1224,20 @@ module Int = struct
       | Comp.Boolean false -> 
           fprintf ppf "false"
 
-
+    and fmt_ppr_cmp_branch_prefix cO _lvl ppf = function 
+      | LF.Empty -> ()
+      | other -> 
+          (let rec fmt_ppr_ctyp_decls' cO ppf = function
+            | LF.Dec (LF.Empty, decl) ->
+                fprintf ppf "%a"
+                  (fmt_ppr_lf_ctyp_decl cO LF.Empty 1) decl
+            | LF.Dec (cD, decl) ->
+                fprintf ppf "%a @ %a"
+                  (fmt_ppr_ctyp_decls' cO) cD
+                  (fmt_ppr_lf_ctyp_decl cO cD 1) decl
+          in             
+            fprintf ppf "@[%a@]@ " (fmt_ppr_ctyp_decls' cO) other 
+          )
 
     and fmt_ppr_cmp_branches cO cD cG lvl ppf = function
       | [] -> ()
@@ -1198,6 +1265,20 @@ module Int = struct
       | Comp.EmptyPattern -> ()
     
     and fmt_ppr_cmp_branch cO cD cG _lvl ppf = function
+      | Comp.Branch (_, cO', cD1', Comp.PatMetaObj (_, mO), (t,cs), e) -> 
+          fprintf ppf "@ @[<v2>| @[<v0>%a%a@[[%a  : %a ; %a] @]  => @]@ @[<2>@ %a@]@]@ "
+            (frugal_lf_octx 0) cO'
+            (fmt_ppr_cmp_branch_prefix cO' 0) cD1'
+            (fmt_ppr_meta_obj cO' cD1' 0) mO
+            (* this point is where the " : " is in the string above *)
+            (fmt_ppr_refinement cO' cD1' cD 2) t
+            (fmt_ppr_csub_refinement cO' cD1' cO 0) cs
+            (* NOTE: Technically: cD |- cG ctx and 
+             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+             * -bp
+             *) 
+            (fmt_ppr_cmp_exp_chk cO' cD1' (Whnf.cnormCtx (cG, t)) 1) e
+
       | Comp.BranchBox (cO', cD1', (cPsi, pattern, t, cs)) ->
           let rec ppr_ctyp_decls' cO ppf = function
             | LF.Dec (LF.Empty, decl) ->
@@ -1353,6 +1434,7 @@ module Int = struct
     let ppr_lf_mctx cO            = fmt_ppr_lf_mctx cO            std_lvl std_formatter
     let ppr_lf_octx               = fmt_ppr_lf_octx               std_lvl std_formatter
     let ppr_cmp_gctx cO cD        = fmt_ppr_cmp_gctx cO cD        std_lvl std_formatter
+    let ppr_cmp_kind cO cD        = fmt_ppr_cmp_kind cO cD        std_lvl std_formatter
     let ppr_cmp_typ cO cD         = fmt_ppr_cmp_typ cO cD         std_lvl std_formatter
     let ppr_cmp_exp_chk cO cD cG  = fmt_ppr_cmp_exp_chk cO cD cG  std_lvl std_formatter
     let ppr_cmp_exp_syn cO cD cG  = fmt_ppr_cmp_exp_syn cO cD cG  std_lvl std_formatter
@@ -1457,6 +1539,11 @@ module Int = struct
         fmt_ppr_cmp_typ cO cD std_lvl str_formatter tau'
         ; flush_str_formatter ()
 
+    let compKindToString cO cD cK  = 
+(*      let cK' = Whnf.normCKind cK in  *)
+        fmt_ppr_cmp_kind cO cD std_lvl str_formatter cK
+        ; flush_str_formatter ()
+
     let msubToString cO cD   s    = 
       fmt_ppr_lf_msub cO cD std_lvl str_formatter s
       ; flush_str_formatter ()
@@ -1473,7 +1560,8 @@ module Int = struct
     open Store.Cid
 
     let render_name       n    = n.string_of_name
-    let render_cid_typ    a    = render_name (Typ .get a).Typ .name
+    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_typ    a    = render_name (Typ.get a).Typ.name
     let render_cid_term   c    = render_name (Term.get c).Term.name
     let render_cid_schema w    = render_name (Schema.get w).Schema.name
     let render_cid_prog   f    = render_name (Comp.get f).Comp.name
@@ -1493,7 +1581,8 @@ module Int = struct
     open Store
 
     let render_name        n   = n.string_of_name
-    let render_cid_typ     a   = render_name (Typ .get a).Typ .name
+    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_typ     a   = render_name (Typ.get a).Typ.name
     let render_cid_term    c   = render_name (Term.get c).Term.name
     let render_cid_schema  w   = render_name (Schema.get w).Schema.name
     let render_cid_prog    f   = render_name (Comp.get f).Comp.name
@@ -1832,6 +1921,10 @@ module Error = struct
       | SubIllTyped ->
           fprintf ppf "Substitution not well-typed"  (* TODO *)
 
+      | PatCtxRequired -> 
+          fprintf ppf "The context in a pattern must be a proper context where variable declaration must carry its type.\n" 
+      | CompEmptyPattBranch -> 
+          fprintf ppf "If the pattern in a branch is empty, there should be no branch body\n" 
       | UnboundIdSub ->
           fprintf ppf "Identity substitution used without context variable"
 

@@ -181,11 +181,26 @@ module Int : sig
      | Implicit 
      | Explicit
 
+   type  kind = 
+     | Ctype of Loc.t
+     | PiKind  of Loc.t option * (LF.ctyp_decl * depend) * kind
+
    type meta_typ = 
      | MetaTyp of LF.typ * LF.dctx
      | MetaSchema of cid_schema 
 
+   type meta_obj = 
+     | MetaCtx of Loc.t option * LF.dctx 
+     | MetaObj of Loc.t option * LF.psi_hat * LF.normal
+     | MetaObjAnn of Loc.t option * LF.dctx * LF.normal
+
+   type meta_spine = 
+     | MetaNil 
+     | MetaApp of meta_obj * meta_spine
+     (* MetaSClo of meta_spine * msub *)
+
    type typ =
+     | TypBase of Loc.t option * cid_comp_typ * meta_spine
      | TypBox   of Loc.t option * LF.typ * LF.dctx
      | TypSub   of Loc.t option * LF.dctx * LF.dctx
      | TypArr   of typ * typ
@@ -236,18 +251,36 @@ module Int : sig
      | Boolean of bool
 
          
+   and pattern = 
+     | PatEmpty  of Loc.t * LF.dctx 
+     | PatMetaObj of Loc.t * meta_obj
+     | PatConst of Loc.t * name * pattern_spine
+     | PatVar   of Loc.t * name
+     | PatPair  of Loc.t * pattern * pattern
+     | PatTrue  of Loc.t 
+     | PatFalse of Loc.t 
+     | PatAnn   of Loc.t * pattern * typ
+
+   and pattern_spine = 
+     | PatNil
+     | PatApp of Loc.t * pattern * pattern_spine 
+
+
     and branch_pattern =
-       | NormalPattern of LF.normal * exp_chk
-       | EmptyPattern
+      | NormalPattern of LF.normal * exp_chk
+      | EmptyPattern
     
     and branch =
+      | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx *  LF.ctyp_decl LF.ctx  
+          * pattern * (LF.msub * LF.csub)
+      | Branch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx  
+          * pattern * (LF.msub * LF.csub) * exp_chk 
       | BranchBox of LF.mctx * LF.mctx
           * (LF.dctx * branch_pattern * LF.msub * LF.csub)
       | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
           * (LF.dctx * LF.sub * LF.msub * LF.csub)
           * exp_chk
 
-         
    type ctyp_decl =
      | CTypDecl of name * typ
      | CTypDeclOpt of name 
@@ -264,6 +297,9 @@ module Int : sig
     type decl =
       | Typ   of cid_typ  * LF.kind
       | Const of cid_term * LF.typ
+      | CompTyp  of Loc.t * name * Comp.kind
+      | CompConst of Loc.t * name * Comp.typ
+      | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
       | Schema of cid_schema * LF.schema
       | Rec    of cid_prog   * Comp.typ * Comp.exp_chk
       | Pragma of LF.prag
@@ -362,22 +398,38 @@ module Ext : sig
 
   end (* Ext.LF *)
 
-
-
   module Comp : sig
 
    type depend =  
      | Implicit
      | Explicit
 
+   type meta_obj = 
+     | MetaCtx of Loc.t * LF.dctx 
+     | MetaObj of Loc.t * LF.psi_hat * LF.normal
+     | MetaObjAnn of Loc.t * LF.dctx * LF.normal
+
+   type meta_spine = 
+     | MetaNil 
+     | MetaApp of meta_obj * meta_spine
+
+
+   type meta_typ = 
+     | MetaSchema of Loc.t * name
+     | MetaTyp of Loc.t * LF.dctx * LF.typ
+     | MetaParamTyp of Loc.t * LF.dctx * LF.typ
+
     type typ =                            
-      | TypBox   of Loc.t * LF.typ  * LF.dctx     
-      | TypSub   of Loc.t * LF.dctx * LF.dctx             
-      | TypArr   of Loc.t * typ * typ             
-      | TypCross of Loc.t * typ * typ
-      | TypCtxPi of Loc.t * (name * name * depend) * typ  
-      | TypPiBox of Loc.t * LF.ctyp_decl * typ   
-      | TypBool
+     | TypBase of Loc.t option * name * meta_spine
+     | TypBox   of Loc.t * LF.typ  * LF.dctx     
+     | TypPBox  of Loc.t * LF.typ  * LF.dctx      
+     | TypCtx   of Loc.t * name 
+     | TypSub   of Loc.t * LF.dctx * LF.dctx             
+     | TypArr   of Loc.t * typ * typ             
+     | TypCross of Loc.t * typ * typ
+     | TypCtxPi of Loc.t * (name * name * depend) * typ  
+     | TypPiBox of Loc.t * LF.ctyp_decl * typ   
+     | TypBool
 
 
     and exp_chk =
@@ -389,12 +441,14 @@ module Ext : sig
        | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
        | Let     of Loc.t * exp_syn * (name * exp_chk)
        | Box     of Loc.t * LF.psi_hat * LF.normal 
+       | CtxBox  of Loc.t * LF.dctx  
        | SBox    of Loc.t * LF.psi_hat * LF.sub 
        | Case    of Loc.t * case_pragma * exp_syn * branch list 
        | If      of Loc.t * exp_syn * exp_chk * exp_chk
 
     and exp_syn =
        | Var    of Loc.t * name                  
+       | Const  of Loc.t * name
        | Apply  of Loc.t * exp_syn * exp_chk     
        | CtxApp of Loc.t * exp_syn * LF.dctx     
        | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal) 
@@ -403,39 +457,63 @@ module Ext : sig
        | Ann    of Loc.t * exp_chk * typ                   
        | Equal   of Loc.t * exp_syn * exp_syn
        | Boolean of Loc.t * bool
-
-
-    and branch_pattern =
-       | NormalPattern of LF.normal * exp_chk
-       | EmptyPattern
     
+    and pattern =
+      | PatEmpty  of Loc.t * LF.dctx  
+      | PatMetaObj of Loc.t * meta_obj
+      | PatConst of Loc.t * name * pattern_spine
+      | PatVar   of Loc.t * name
+      | PatPair  of Loc.t * pattern * pattern
+      | PatTrue  of Loc.t 
+      | PatFalse of Loc.t 
+      | PatAnn   of Loc.t * pattern * typ
+          
+    and pattern_spine = 
+      | PatNil
+      | PatApp of Loc.t * pattern * pattern_spine 
+
     and branch =
-      | BranchBox of Loc.t * LF.mctx
+      | EmptyBranch of Loc.t *  LF.ctyp_decl LF.ctx * pattern 
+      | Branch of Loc.t * LF.ctyp_decl LF.ctx * pattern * exp_chk 
+      (* The following two are from the old implementation and will be removed eventually; 
+         and replaced by the more general notion of patterns and branches above -bp *)
+      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx
           * (LF.dctx * branch_pattern * (LF.typ * LF.dctx) option)
       | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx
           * (LF.dctx * LF.sub * LF.dctx option)
           * exp_chk
 
+    (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns -bp *)
+    and branch_pattern =
+       | NormalPattern of LF.normal * exp_chk
+       | EmptyPattern
+
 
    type rec_fun = RecFun of name * typ * exp_chk
 
+   type  kind = 
+     | Ctype of Loc.t
+(*     | ArrKind of Loc.t * meta_typ  * kind *)
+     | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
+
    val synToString : exp_syn -> string
    val chkToString : exp_chk -> string
+
   end (* Ext.Comp *)
-
-
 
   module Sgn : sig
 
     type decl =
       | Const    of Loc.t * name * LF.typ
       | Typ      of Loc.t * name * LF.kind
+      | CompTyp  of Loc.t * name * Comp.kind 
+      | CompConst of Loc.t * name * Comp.typ 
+      | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
       | Schema   of Loc.t * name * LF.schema
       | Pragma   of Loc.t * LF.prag
       | Rec      of Loc.t * Comp.rec_fun list
       | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn 
       | Query    of Loc.t * name option * LF.typ * int option * int option
-
 
     type sgn = decl list
 
@@ -544,18 +622,28 @@ module Apx : sig
      | Implicit
      | Explicit
 
+   type  kind = 
+     | Ctype of Loc.t
+     | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
+
    type meta_obj = 
-     | MetaCtx of LF.dctx 
-     | MetaObj of LF.psi_hat * LF.normal
+     | MetaCtx of Loc.t option * LF.dctx 
+     | MetaObj of Loc.t option * LF.psi_hat * LF.normal
+     | MetaObjAnn of Loc.t option * LF.dctx * LF.normal
+
+   type meta_spine = 
+     | MetaNil 
+     | MetaApp of meta_obj * meta_spine
 
     type typ =
-      | TypBox   of Loc.t * LF.typ  * LF.dctx
-      | TypSub   of Loc.t * LF.dctx * LF.dctx
-      | TypArr   of typ * typ
-      | TypCross of typ * typ
-      | TypCtxPi of (name * cid_schema * depend) * typ
-      | TypPiBox of LF.ctyp_decl * typ
-      | TypBool
+     | TypBase of Loc.t option * cid_comp_typ * meta_spine
+     | TypBox   of Loc.t * LF.typ  * LF.dctx
+     | TypSub   of Loc.t * LF.dctx * LF.dctx
+     | TypArr   of typ * typ
+     | TypCross of typ * typ
+     | TypCtxPi of (name * cid_schema * depend) * typ
+     | TypPiBox of LF.ctyp_decl * typ
+     | TypBool
 
     and exp_chk =
        | Syn     of Loc.t * exp_syn
@@ -584,17 +672,40 @@ module Apx : sig
        | Equal  of Loc.t  * exp_syn * exp_syn
        | Boolean of Loc.t * bool
 
+   and pattern = 
+     | PatEmpty of Loc.t * LF.dctx 
+     | PatMetaObj of Loc.t * meta_obj
+     | PatConst of Loc.t * name * pattern_spine
+     | PatVar   of Loc.t * name
+     | PatPair  of Loc.t * pattern * pattern
+     | PatTrue  of Loc.t 
+     | PatFalse of Loc.t 
+     | PatAnn   of Loc.t * pattern * typ
 
-    and branch_pattern =
-       | NormalPattern of LF.normal * exp_chk
-       | EmptyPattern
+   and pattern_spine = 
+     | PatNil
+     | PatApp of Loc.t * pattern * pattern_spine 
     
     and branch =
-      | BranchBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
+      | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern 
+      | Branch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern * exp_chk 
+      (* The following two are from the old implementation and will be removed eventually; 
+         and replaced by the more general notion of patterns and branches above;
+         it remains currently so we can still use the old parser without modifications
+         -bp *)
+      | BranchBox of Loc.t *  LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
           * (LF.dctx * branch_pattern * (LF.typ * LF.dctx) option)
       | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
           * (LF.dctx * LF.sub * LF.dctx option)
           * exp_chk
+
+    (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;
+       it remains currently so we can still use the old parser without modifications -bp *)
+    and branch_pattern =
+       | NormalPattern of LF.normal * exp_chk
+       | EmptyPattern
+
+
 
   end (* Apx.Comp *)
 

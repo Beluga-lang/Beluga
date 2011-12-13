@@ -59,6 +59,44 @@ module Cid : sig
     val clear         : unit -> unit
   end
 
+  module CompTyp : sig
+
+    type entry = private {
+      name               : name;
+      implicit_arguments : int;
+      kind               : Comp.kind;
+      mutable constructors : cid_comp_const list
+    }
+
+    val mk_entry  : name -> Comp.kind -> int -> entry 
+
+    type t
+
+    val add           : entry -> cid_comp_typ
+    val get           : cid_comp_typ -> entry
+    val index_of_name : name -> cid_comp_typ
+    val clear         : unit -> unit
+  end
+
+
+  module CompConst : sig
+
+    type entry = private {
+      name               : name;
+      implicit_arguments : int;
+      typ                : Comp.typ
+    }
+
+    val mk_entry      : name -> Comp.typ -> int -> entry
+    type t
+    val add           : entry -> cid_comp_const
+    val get           : cid_comp_const -> entry
+    val get_implicit_arguments : cid_comp_const -> int
+    val index_of_name : name -> cid_comp_const
+    val clear         : unit -> unit
+  end
+
+
 
   module Comp : sig
 

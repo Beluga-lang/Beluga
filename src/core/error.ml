@@ -65,6 +65,9 @@ type error =
 
   | CompTypAnn       
 
+  | PatCtxRequired
+  | CompEmptyPattBranch
+
   | UnboundIdSub
 
   | ConstraintsLeft

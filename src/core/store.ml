@@ -2,7 +2,6 @@
 
 open Syntax
 
-
 module Cid = struct
 
   module Typ = struct
@@ -306,6 +305,88 @@ module Cid = struct
 
   end
 
+  module CompTyp = struct 
+    type entry = {
+      name                : Id.name;
+      implicit_arguments  : int;
+      kind                : Int.Comp.kind;
+      mutable constructors: Id.cid_comp_const list 
+    }
+
+    let entry_list  = ref []
+
+    let mk_entry name kind implicit_arguments  =  {
+      name               = name;
+      implicit_arguments = implicit_arguments;
+      kind               = kind;
+      constructors       = []
+    }
+
+    type t = Id.name DynArray.t
+
+    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name n = Hashtbl.find directory n
+
+    let add e =
+      let cid_comp_typ = DynArray.length store in
+        DynArray.add store e;
+        Hashtbl.replace directory e.name cid_comp_typ;
+        cid_comp_typ
+
+    let get = DynArray.get store
+
+    let clear () =
+      DynArray.clear store;
+      Hashtbl.clear directory
+  end 
+
+
+  module CompConst = struct 
+    type entry = {
+      name                : Id.name;
+      implicit_arguments  : int;
+      typ                : Int.Comp.typ
+    }
+
+
+    let mk_entry name tau implicit_arguments  =  {
+      name               = name;
+      implicit_arguments = implicit_arguments;
+      typ               = tau
+    }
+
+    type t = Id.name DynArray.t
+
+
+    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name n = Hashtbl.find directory n
+
+    let add entry =
+      let cid_comp_const = DynArray.length store in
+        DynArray.add store entry;
+        Hashtbl.replace directory entry.name cid_comp_const;
+        cid_comp_const
+
+    let get = DynArray.get store
+
+    let get_implicit_arguments c = (get c).implicit_arguments
+
+    let clear () =
+      DynArray.clear store;
+      Hashtbl.clear directory
+  end 
 
 
   module Comp = struct
@@ -515,4 +596,6 @@ let clear () =
   Cid.Typ.clear ();
   Cid.Term.clear ();
   Cid.Schema.clear ();
+  Cid.CompTyp.clear ();
+  Cid.CompConst.clear ();
   Cid.Comp.clear ()

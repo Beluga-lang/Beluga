@@ -1454,7 +1454,53 @@ and abstrTyp tA =
 (* *********************************************************************** *)
 (* Abstract over computations *)
 (* *********************************************************************** *)
+let rec collectCDecl cQ cdecl = match cdecl with 
+  | I.MDecl (u, tA, cPsi) -> 
+      let phat = Context.dctxToHat cPsi in 
+      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
+      let (cQ2, tA')    = collectTyp cQ1 phat (tA, LF.id) in 
+        (cQ2, I.MDecl (u, tA', cPsi') )
+  | I.PDecl (u, tA, cPsi) -> 
+      let phat = Context.dctxToHat cPsi in 
+      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
+      let (cQ2, tA')    = collectTyp cQ1 phat (tA, LF.id) in 
+        (cQ2, I.PDecl (u, tA', cPsi')) 
+  | I.CDecl _ -> (cQ, cdecl)
+  
+
+let rec collectCompKind cQ cK = match cK with 
+  | Comp.Ctype _ -> (cQ, cK)
+  | Comp.PiKind (loc, (cdecl, dep), cK1) ->
+      let (cQ' , cdecl') = collectCDecl cQ cdecl in 
+      let (cQ'', cK2)    = collectCompKind cQ' cK1 in 
+        (cQ'', Comp.PiKind (loc, (cdecl', dep), cK2) )
+
+let rec collect_meta_obj cQ cM = match cM with 
+  | Comp.MetaCtx (loc, cPsi) -> 
+      let phat = Context.dctxToHat cPsi in  
+      let (cQ', cPsi') = collectDctx cQ phat cPsi in 
+        (cQ', Comp.MetaCtx (loc, cPsi'))
+  | Comp.MetaObj (loc, phat, tM) -> 
+      let (cQ', tM') = collectTerm cQ phat (tM, LF.id) in 
+        (cQ', Comp.MetaObj (loc, phat, tM'))
+(*  | Comp.MetaObjAnn (loc, cPsi, tM) -> 
+      let phat = Context.dctxToHat cPsi in 
+      let (cQ', cPsi') = index_dctx cQ phat cPsi in 
+      let (cQ'', tM') = collectTerm cQ' phat (tM, LF.id) in 
+        (cQ'', Comp.MetaObjAnn (loc, cPsi', tM'))
+*)
+and collect_meta_spine cQ cS = match cS with 
+  | Comp.MetaNil -> (cQ, Comp.MetaNil)
+  | Comp.MetaApp (cM, cS) -> 
+      let (cQ', cM') = collect_meta_obj cQ cM in 
+      let (cQ'', cS') = collect_meta_spine cQ' cS in 
+        (cQ'', Comp.MetaApp (cM', cS'))
+
 let rec collectCompTyp cQ tau = match tau with
+  | Comp.TypBase (loc, a, ms) -> 
+      let (cQ', ms') = collect_meta_spine cQ ms in 
+        (cQ', Comp.TypBase (loc, a, ms'))
+
   | Comp.TypBox (loc, tA, cPsi) -> 
       let phat = Context.dctxToHat cPsi in 
       let (cQ', cPsi') = collectDctx cQ phat cPsi in 
@@ -1635,6 +1681,12 @@ and collectSubPattern cQ cD cPsi sigma cPhi =
 
 
 and collectBranch cQ branch = match branch with
+  | Comp.Branch (loc, cO, cD, pat, (msub, csub), e) -> 
+      (* pat and cD cannot contain any free meta-variables *)
+      let (cQ', e') = collectExp cQ e in 
+        (cQ', Comp.Branch (loc, cO, cD, pat, (msub, csub), e'))
+  | Comp.EmptyBranch _  -> 
+        (cQ, branch)
   | Comp.BranchBox (cO, cD, (dctx, Comp.NormalPattern(pat, e), msub, csub)) -> 
       (* pat and cD cannot contain any free meta-variables *)
       let (cQ', e') = collectExp cQ e in 
@@ -1651,8 +1703,42 @@ and collectBranches cQ branches = match branches with
       let (cQ2, branches') =  collectBranches cQ' branches in 
         (cQ2, b'::branches')
 
+let rec abstractMVarCdecl cQ offset cdecl = match cdecl with 
+  | I.MDecl (u, tA, cPsi) -> 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+      let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
+        I.MDecl(u, tA', cPsi')
+  | I.PDecl (p, tA, cPsi) -> 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+      let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
+        I.PDecl(p, tA', cPsi')
+  | I.CDecl _ -> cdecl 
+
+let rec abstractMVarCompKind cQ offset cK = match cK with 
+  | Comp.Ctype _loc -> cK
+  | Comp.PiKind (loc, (cdecl, dep), cK) -> 
+      let cK'  = abstractMVarCompKind cQ (offset+1) cK in 
+      let cdecl' = abstractMVarCdecl cQ offset cdecl in 
+        Comp.PiKind (loc, (cdecl', dep), cK')
+
+let rec abstractMVarMetaObj cQ offset cM = match cM with
+  | Comp.MetaCtx (loc, cPsi) -> 
+      let cPsi' = abstractMVarDctx cQ offset cPsi in 
+        Comp.MetaCtx (loc, cPsi') 
+  | Comp.MetaObj (loc, phat, tM) -> 
+      let tM' = abstractMVarTerm  cQ  offset (tM, LF.id) in 
+        Comp.MetaObj (loc, phat, tM')
+and abstractMVarMetaSpine cQ offset cS = match cS with 
+  | Comp.MetaNil -> Comp.MetaNil
+  | Comp.MetaApp (cM, cS) -> 
+      let cM' = abstractMVarMetaObj cQ offset cM in 
+      let cS' = abstractMVarMetaSpine cQ offset cS in 
+        Comp.MetaApp (cM', cS')
 
 let rec abstractMVarCompTyp cQ offset tau = match tau with 
+  | Comp.TypBase (loc, a, cS) -> 
+      let cS' = abstractMVarMetaSpine cQ offset cS in 
+        Comp.TypBase (loc, a , cS')
   | Comp.TypBox (loc, tA, cPsi) -> 
       let cPsi' = abstractMVarDctx cQ offset cPsi in 
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in 
@@ -1772,6 +1858,19 @@ let raiseCompTyp cD tau =
   in 
     roll tau 
 
+let raiseCompKind cD cK = 
+  let rec roll cK = match cK with
+    | Comp.PiKind (loc, (cdecl, dep), cK') -> 
+        Comp.PiKind (loc, (cdecl, dep), roll cK')
+    | _ -> (print_string "[roll]\n" ; raisePiBox cD cK)
+
+  and raisePiBox cD cK = match cD with
+    | I.Empty -> cK
+    | I.Dec(cD', mdecl) -> 
+        raisePiBox cD' (Comp.PiKind (None, (mdecl, Comp.Implicit), cK))
+  in 
+    roll cK
+
 
 let raiseExp cD e = 
   let rec roll e = match e with
@@ -1787,6 +1886,17 @@ let raiseExp cD e =
     roll e
 
 
+let rec abstrCompKind cK = 
+  let (cQ, cK1)  = collectCompKind I.Empty cK in 
+  let _ = print_string "\n[collectCompKind] done " in 
+  let cQ'  = abstractMVarCtx cQ in 
+  let cK' = abstractMVarCompKind cQ' 0 cK1 in 
+  let _ = print_string "\n[abstractMVarCompKind] done " in 
+  let cD'  = ctxToMCtx cQ' in 
+  let _ = print_string "\n[ctxToMCtx] done " in 
+  let cK2 = raiseCompKind cD' cK' in 
+  let _ = print_string "\n[raiseCompKind] done " in 
+    (cK2, Context.length cD')
 
 let rec abstrCompTyp tau = 
   let (cQ, tau1)  = collectCompTyp I.Empty tau in 

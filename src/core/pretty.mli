@@ -30,6 +30,7 @@ module type CID_RENDERER = sig
   open Syntax.Int
 
   val render_name         : name       -> string
+  val render_cid_comp_typ : cid_comp_typ  -> string
   val render_cid_typ      : cid_typ    -> string
   val render_cid_term     : cid_term   -> string
   val render_cid_schema   : cid_schema -> string
@@ -67,7 +68,8 @@ module Int : sig
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
-    val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     -> unit
+    val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     ->  unit
+    val fmt_ppr_cmp_kind       : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
@@ -91,6 +93,7 @@ module Int : sig
     (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.mctx -> LF.dctx  -> unit
     val ppr_lf_mctx       : LF.mctx -> LF.mctx -> unit
+    val ppr_cmp_kind      : LF.mctx -> LF.mctx -> Comp.kind -> unit
     val ppr_cmp_typ       : LF.mctx -> LF.mctx -> Comp.typ -> unit
     val ppr_cmp_exp_chk   : LF.mctx -> LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit
     val ppr_cmp_exp_syn   : LF.mctx -> LF.mctx -> Comp.gctx -> Comp.exp_syn -> unit
@@ -116,6 +119,7 @@ module Int : sig
     val expChkToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
     val expSynToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
     val branchToString    : LF.mctx -> LF.mctx -> Comp.gctx  -> Comp.branch   -> string
+    val compKindToString  : LF.mctx -> LF.mctx -> Comp.kind  -> string
     val compTypToString   : LF.mctx -> LF.mctx -> Comp.typ   -> string
     val msubToString      : LF.mctx -> LF.mctx -> LF.msub    -> string
     val csubToString      : LF.mctx -> LF.mctx -> LF.csub    -> string

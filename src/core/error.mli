@@ -104,6 +104,8 @@ type error =
   | CompAppMismatch   of  LF.mctx * LF.mctx * (Comp.meta_typ * LF.msub)
 
   | CompTypAnn
+  | PatCtxRequired
+  | CompEmptyPattBranch
 
   | UnboundIdSub                       (* id sub used in empty omega context  *)
 

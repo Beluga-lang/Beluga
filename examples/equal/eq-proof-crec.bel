@@ -31,11 +31,9 @@ schema equalCtx = block x: exp, u:eq x x, v: equal x x
 
 rec ref : {g:eqCtx} {U:[g . exp]} [g . eq (U ..) (U ..)] =
 mlam g => mlam U => case [g . U ..] of
-
  | [g .  #p.1 .. ] => [g . #p.2 .. ]
-
  | [g . lam \x. L .. x ] =>
-  let [g,e:block y:exp, u:eq y y . V .. e] = ref [g, e:block q:exp,u:eq q q]  [g,e .  L .. e.1]  in
+  let [g,e:block (y:exp, u:eq y y) . V .. e] = ref [g, e:block q:exp,u:eq q q]  [g,e .  L .. e.1]  in
    [g . eq_lam \x. \w. V .. <x, w> ]
 
 | [g . app (A1 ..) (A2 ..)] =>
@@ -52,8 +50,7 @@ rec trans: (g:eqCtx)
 =
 fn e1 => fn e2 => case e1 of
 
-|{#p : [g . block yy:exp, uu:eq yy yy]}
- [g . #p.2 .. ] => e2
+| [g . #p.2 .. ] => e2
        
 | [g . eq_app (D1 ..) (D2 ..)] =>
    (case e2 of
@@ -65,8 +62,8 @@ fn e1 => fn e2 => case e1 of
 
 | [g . eq_lam \x.\u. D1 .. x u] =>
    let [g . eq_lam \x.\u. D2 .. x u] =  e2  in	
-   let [g, b:block x:exp, u:eq x x . E .. b] = 
-     trans [g, b:block x:exp, u:eq x x . D1 .. b.1 b.2]
+   let [g, b:block (x:exp, u:eq x x) . E .. b] = 
+     trans [g, b:block (x:exp, u:eq x x) . D1 .. b.1 b.2]
            [g, b . D2 .. b.1 b.2]
     in
       [g . eq_lam \x. \u. E .. <x, u>]

@@ -23,7 +23,6 @@ let rec last l = begin match List.rev l with
 end 
 
 
-
 type kind_or_typ =
   | Kind of LF.kind
   | Typ  of LF.typ
@@ -37,51 +36,93 @@ type pair_or_atom =
   | Pair of Comp.exp_chk
   | Atom
 
-type ctx_or_cobj = 
-  | MetaObj of LF.normal
-  | CtxObj
+type clf_pattern = 
+  | PatEmpty of Loc.t
+  | PatCLFTerm of Loc.t * LF.normal
 
 
 type mixtyp =
-  |  MTArr of Loc.t * mixtyp * mixtyp
-  |  MTCross of Loc.t * mixtyp * mixtyp
-  |  MTCtxPi of  Loc.t * (Id.name * Id.name * Comp.depend) * mixtyp
-  |  MTBool of Loc.t
-  |  MTBox of Loc.t * mixtyp * LF.dctx
-  |  MTSub of Loc.t * LF.dctx * LF.dctx
-  |  MTPiBox of Loc.t * LF.ctyp_decl * mixtyp
+  | MTCompKind of Loc.t
+  | MTBase of Loc.t * Id.name * Comp.meta_spine 
+  | MTArr of Loc.t * mixtyp * mixtyp
+  | MTCross of Loc.t * mixtyp * mixtyp
+  | MTCtxPi of  Loc.t * (Id.name * Id.name * Comp.depend) * mixtyp
+  | MTBool of Loc.t
+  | MTBox of Loc.t * mixtyp * LF.dctx
+  | MTPBox of Loc.t * mixtyp * LF.dctx
+  | MTCtx of Loc.t * Id.name 
+  | MTSub of Loc.t * LF.dctx * LF.dctx
+  | MTPiBox of Loc.t * LF.ctyp_decl * mixtyp
 (* -bp Pi-types should not occur in computation-level types 
   |  MTPiTyp of Loc.t * LF.typ_decl * mixtyp *)
-  |  MTAtom of Loc.t * Id.name * LF.spine
+  | MTAtom of Loc.t * Id.name * LF.spine
 
-type whichmix = LFMix of LF.typ | CompMix of Comp.typ
+type whichmix = LFMix of LF.typ | CompMix of Comp.typ | CompKindMix of Comp.kind
 
 exception MixErr of Loc.t
+exception PatternError of Loc.t
 
 let mixloc = function
+  |  MTCompKind l -> l 
   |  MTArr(l, _, _) -> l
   |  MTCross(l, _, _) -> l
   |  MTCtxPi(l, _, _) -> l
   |  MTBool l -> l
   |  MTBox(l, _, _) -> l
+  |  MTPBox(l, _, _) -> l
+  |  MTCtx(l, _) -> l
   |  MTSub(l, _, _) -> l
   |  MTPiBox(l, _, _) -> l
 (*  |  MTPiTyp(l, _, _) -> l *)
   |  MTAtom(l, _, _) -> l
+  |  MTBase(l, _, _) -> l
 
 (* unmix : mixtyp -> whichmix *  *)
 let rec unmix = function
-  |  MTArr(l, mt1, mt2) -> begin match (unmix mt1, unmix mt2) with
+  | MTCompKind l -> CompKindMix (Comp.Ctype l)
+  | MTBase (l, a, ms) -> CompMix(Comp.TypBase (Some l, a, ms))
+  | MTArr(l, mt1, mt2) -> begin match (unmix mt1, unmix mt2) with
                                   | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
                                   | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
+
+                                  | (CompMix c1, CompKindMix c2) -> 
+                                      let x = Id.mk_name (Id.NoName) in 
+                                      let (l, cdecl) =   (match c1 with 
+                                          | Comp.TypBox (l, tA, cPsi) -> (l, LF.MDecl(l, x, tA, cPsi))
+                                          | Comp.TypPBox (l, tA, cPsi) -> (l, LF.PDecl (l, x, tA, cPsi))
+                                          | Comp.TypCtx (l, schema)    -> (l, LF.CDecl (l, x, schema))
+                                                  )
+                                       in 
+                                       CompKindMix(Comp.PiKind(l, (cdecl, Comp.Explicit), c2))
+(*                                       let mT =   (match c1 with 
+                                          | Comp.TypBox (l, tA, cPsi) -> Comp.MetaTyp (l, cPsi, tA)
+                                          | Comp.TypPBox (l, tA, cPsi) -> Comp.MetaParamTyp (l, cPsi, tA)
+                                          | Comp.TypCtx (l, schema)    -> Comp.MetaSchema (l, schema)
+                                                  )
+                                       in 
+                                       CompKindMix(Comp.ArrKind(l, mT, c2))*)
+
                                   | (_, _) -> raise (MixErr (mixloc mt2))
                            end
-  |  MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
-  |  MTCtxPi(l, (sym1, sym2, dep), mt0) -> CompMix(Comp.TypCtxPi(l, (sym1, sym2, dep), toComp mt0))
+  | MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
+  | MTCtxPi(l, (sym1, sym2, dep), mt0) -> 
+       begin match unmix mt0 with 
+         | CompKindMix mk -> CompKindMix(Comp.PiKind (l, (LF.CDecl (l, sym1, sym2), dep), mk))
+         | CompMix mt -> CompMix (Comp.TypCtxPi(l, (sym1, sym2, dep), mt))
+         | _ -> raise (MixErr (mixloc mt0))
+       end 
   |  MTBool l -> CompMix(Comp.TypBool)
+  |  MTCtx  (l, schema) -> CompMix(Comp.TypCtx (l, schema))
+  |  MTPBox(l, mt0, dctx) -> CompMix(Comp.TypPBox(l, toLF mt0, dctx))
   |  MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
   |  MTSub(l, dctx1, dctx) -> CompMix(Comp.TypSub(l, dctx1, dctx))
-  |  MTPiBox(l, cdecl, mt0) -> CompMix(Comp.TypPiBox(l, cdecl, toComp mt0))
+  |  MTPiBox(l, cdecl, mt0) -> 
+       begin match unmix mt0 with 
+         | CompKindMix mk -> CompKindMix (Comp.PiKind(l, (cdecl, Comp.Explicit), mk))
+         | CompMix mt -> CompMix(Comp.TypPiBox(l, cdecl, mt))
+         | _ -> raise (MixErr (mixloc mt0))
+       end
+
 (*  |  MTPiTyp(l, tdecl, mt0) -> LFMix(LF.PiTyp(l, tdecl, toLF mt0)) *)
   |  MTAtom(l, name, spine) -> LFMix(LF.Atom(l, name, spine))
 
@@ -91,7 +132,23 @@ and toLF mt = match unmix mt with
 
 and toComp mt = match unmix mt with
   |  CompMix c -> c
-  |  _ -> raise (MixErr (mixloc mt))
+  | CompKindMix c -> (let l = mixloc mt in 
+                        print_string ("Syntax error: Found Computation-level kind\n              Expected: computation-level type  \n " );
+                      raise (MixErr l))
+  |  _ -> (let l = mixloc mt in 
+             print_string ("Syntax error: Found LF-type\n              Expected: computation-level type     \n");
+             raise (MixErr l))
+
+
+and toCompKind k = match unmix k with
+  |  CompKindMix c -> c
+  | CompMix c -> (let l = mixloc k in 
+                    print_string ("Syntax error: Found Computation-level type\n              Expected: computation-level kind   \n");
+                      raise (MixErr l))
+  |  _ -> (let l = mixloc k in 
+             print_string ("Syntax error: Found LF-type\n              Expected: computation-level kind \n ");
+
+           raise (MixErr l))
 
 
 
@@ -155,6 +212,16 @@ GLOBAL: sgn_eoi;
     ]
 ;
   
+
+  sgn_comp_typ :
+    [
+      [
+        a = UPSYMBOL; ":"; tau = cmp_typ -> 
+          Sgn.CompConst (_loc, Id.mk_name (Id.SomeString a), tau)
+      ]
+    ];
+
+
   sgn_decl:
     [
       [
@@ -169,6 +236,13 @@ GLOBAL: sgn_eoi;
         const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
           Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
             
+
+      | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ;  c_decls = LIST0 sgn_comp_typ SEP "|"; ";"  
+           -> 
+            Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+
+      | "type"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" -> 
+          [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
       |
         "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
           [Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)]
@@ -513,20 +587,6 @@ GLOBAL: sgn_eoi;
           "("; a = SELF; ")" ->
             a    
 
-(*        |   
-            cPsi = clf_dctx ->
-              LF.Ctx (_loc, cPsi)
-
-        (* Contexts occurring as types *)
-        | " . " -> LF.Ctx(_loc, LF.Null)
-
-        |  x = SYMBOL; ":"; tA = clf_typ ->
-             LF.Ctx(_loc, LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
-
-        | cPsi = clf_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->
-          LF.Ctx(_loc, LF.DDec (cPsi, LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
-
-*)
         | 
            a = SYMBOL; ms = LIST0 clf_normal -> 
              let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in 
@@ -787,14 +847,30 @@ GLOBAL: sgn_eoi;
 
 
 (* ************************************************************************************** *)
+(*
+ meta_obj: 
+   [
+     [
+       
+
+     ]
+   ];
+
+*)
+
+cmp_kind:
+  [
+    [ 
+      k = mixtyp -> try toCompKind k 
+                    with MixErr l -> (print_string ("at  location  " ^ Loc.to_string l) ; raise (MixErr l))
+    ]
+  ];
+
 
   cmp_typ:
      [[
-         m = mixtyp  ->  try  toComp m
-                         with MixErr l ->
-                           (print_string ("Syntax error: Computation-level type used where LF type is expected (" ^ 
-                                            Loc.to_string l ^ ")\n");
-                            raise (MixErr l))
+         m = mixtyp  -> try toComp m 
+                    with MixErr l -> (print_string ("at  location  " ^ Loc.to_string l) ; raise (MixErr l))
      ]];
 
   cmp_pair_atom : 
@@ -925,12 +1001,13 @@ cmp_exp_chkX:
 isuffix:
  [ LEFTA [
 
- "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT ["."; tM = clf_term_app -> tM ]; "]"   ->  
+  "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT ["."; tM = clf_term_app -> tM ]; "]"   ->  
      begin match (phat_or_psi , mobj) with 
        | (Dctx cPsi, Some tM)   -> (fun i -> Comp.MAnnApp (_loc, i, (cPsi,  tM)))
        | (Hat phat, Some tM)    -> (fun i -> Comp.MApp (_loc, i, (phat, tM)))
        | (Dctx cPsi, None)      -> (fun i -> Comp.CtxApp(_loc, i, cPsi)) 
        | ( Hat [psi] , None)    -> (fun i -> Comp.CtxApp(_loc, i, LF.CtxVar (_loc, psi)))
+       | ( Hat [ ]   , None)    -> (fun i -> Comp.CtxApp(_loc, i, LF.Null))
          | ( _ , _   )      ->  raise (MixErr _loc)
      end 
 
@@ -964,6 +1041,8 @@ isuffix:
    | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
    | x = SYMBOL   ->  
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name (Id.SomeString x)))))
+   | x = UPSYMBOL   ->  
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Const (_loc, Id.mk_name (Id.SomeString x)))))
    | "ttrue"      ->   
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, true))))
    | "ffalse"     ->   
@@ -987,6 +1066,7 @@ cmp_exp_syn:
                                     | Pair e2 ->   Comp.Pair (_loc, e, e2)
                                     | Atom    ->   e
                             end)
+   | x = UPSYMBOL ->  Comp.Const (_loc, Id.mk_name (Id.SomeString x))
    | x = SYMBOL ->  Comp.Var (_loc, Id.mk_name (Id.SomeString x))
    | "ttrue"    ->   Comp.Boolean (_loc, true)
    | "ffalse"   ->   Comp.Boolean (_loc, false)
@@ -1043,17 +1123,80 @@ cmp_exp_syn:
                       ;
 *****)
 
-  cmp_branch_pattern:
+
+(* pattern spine: something that can follow a constructor; returns a function
+  that takes the constructor it follows,
+  and returns the appropriate synthesizing expression *)
+
+clf_pattern : 
     [
       [
-        tM = clf_term_app -> Some tM
+        tM = clf_term_app -> PatCLFTerm (_loc, tM)
      |
-        "{"; "}" -> None
+        "{"; "}" -> PatEmpty _loc
       ]
     ]
   ;
 
+
+  cmp_branch_pattern:
+    [
+      [
+        "["; cPsi = clf_dctx ; mobj = OPT ["."; tM = clf_pattern -> tM ]; "]" ;
+         tau = OPT [ ":"; "["; cPsi = clf_dctx; "."; tA = clf_typ LEVEL "atomic"; "]" -> Comp.TypBox(_loc,tA, cPsi)] 
+          ->   
+              begin match  mobj with 
+            | Some (PatEmpty _loc')   -> 
+                (match tau with None -> Comp.PatEmpty (_loc', cPsi)
+                   | Some tau -> Comp.PatAnn (_loc', Comp.PatEmpty (_loc', cPsi), tau)
+                )
+            | Some (PatCLFTerm (_loc', tM))   -> 
+                (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (_loc',  cPsi,  tM))
+                  | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaObjAnn (_loc, cPsi,    tM)), tau))
+
+            | None -> 
+                (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaCtx (_loc,  cPsi))
+                  | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaCtx (_loc, cPsi)), tau))
+              end 
+
+     | "ttrue" -> Comp.PatTrue (_loc) 
+     | "ffalse" -> Comp.PatFalse (_loc) 
+     | x = SYMBOL ->  Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
+     | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) -> 
+         let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s Comp.PatNil in 
+           Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
+     | "("; p = SELF; ")"   ->  p 
+      ]
+    ]
+  ;
+
+
+
   cmp_branch:
+    [
+      [
+        ctyp_decls = LIST0 clf_ctyp_decl; 
+        pattern = cmp_branch_pattern;
+         rest = OPT [rArr; e = cmp_exp_chk -> e] ->
+          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
+           (match rest with
+              | Some e  -> Comp.Branch (_loc, ctyp_decls', pattern, e)
+              | None    ->  Comp.EmptyBranch (_loc, ctyp_decls', pattern)
+           )
+(*      |
+          ctyp_decls = LIST0 clf_ctyp_decl; 
+      (* "sbox"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")"; *)
+        "["; cPsi = clf_dctx ;"]"; sigma = clf_sub_new;  
+         cPhi = OPT [ ":"; cPhi = clf_dctx -> cPhi ] ; 
+         rArr; e = cmp_exp_chk ->  
+           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
+            Comp.BranchSBox (_loc, ctyp_decls', (cPsi, sigma, cPhi), e)
+*)
+      ]
+    ]
+  ;
+
+(*  cmp_branch:
     [
       [
         ctyp_decls = LIST0 clf_ctyp_decl; 
@@ -1079,7 +1222,7 @@ cmp_exp_syn:
     ]
   ;
 
-
+*)
 (*   boxtyp :
    [
      [
@@ -1098,6 +1241,23 @@ cmp_exp_syn:
   ;
 *)
 
+  meta_obj:
+    [
+      [  
+
+        "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT ["."; tM = clf_term_app -> tM ]; "]"   ->  
+          begin match (phat_or_psi , mobj) with 
+            | (Dctx cPsi, Some tM)   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
+            | (Hat phat, Some tM)    -> Comp.MetaObj (_loc, phat, tM)
+            | (Dctx cPsi, None)      -> Comp.MetaCtx (_loc, cPsi)
+            | ( Hat [psi] , None)    -> Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi))
+            | ( Hat [ ]   , None)    -> Comp.MetaCtx (_loc, LF.Null)
+            | ( _ , _   )      ->  raise (MixErr _loc)
+          end 
+            (* Anything else should raise a meaningful parse error that a
+               meta_obj is expected *)
+      ]
+    ];
 
   mixtyp:
     [ RIGHTA
@@ -1134,28 +1294,51 @@ cmp_exp_syn:
      | 
       "atomic"
       [
-(*         mixtA = mixtyp (*LEVEL "atomic"*); "["; cPsi = clf_dctx; "]" ->
-           MTBox (_loc, mixtA, cPsi)
-*)
-         tA = "Bool" -> MTBool _loc
 
+        tA = "Bool" -> MTBool _loc
 
+      | tK = "ctype" -> MTCompKind _loc
+
+      | 
+          a = UPSYMBOL; ms = LIST0 meta_obj  ->
+            let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms  Comp.MetaNil in
+              MTBase (_loc, Id.mk_name (Id.SomeString a), sp)
+
+      | a = SYMBOL -> 
+          MTCtx (_loc, Id.mk_name (Id.SomeString a))
       |
         "("; mixtau = mixtyp ; ")" ->
            mixtau 
 
-
       |   "(" ; "[";  cPsi = clf_dctx; "."; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" -> 
               MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ), 
+                    mixtau2) 
+
+      |   "(" ; "#"; "[";  cPsi = clf_dctx; "."; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" -> 
+              MTArr(_loc, MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ), 
                     mixtau2) 
 
       (*   |   "["; cPsi = clf_dctx;  "."; a = SYMBOL;  "]" -> 
               MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi )
       *)
       | 
+          "#";"["; cPsi = clf_dctx; "."; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) 
+
+
+      | 
+          "["; cPsi = clf_dctx; "."; "("; a = SYMBOL;  ms = LIST0 clf_normal; ")"; "]"  ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) 
+
+
+      | 
           "["; cPsi = clf_dctx; "."; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) 
+
+
 
       
       | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" -> 

@@ -1958,8 +1958,22 @@ let rec mctxPVarPos cD p =
      Contextual weak head normal form for 
      computation-level types
    ******************************************)
+  let rec normMetaObj mO = match mO with
+    | Comp.MetaCtx (loc, cPsi) -> 
+        Comp.MetaCtx (loc, normDCtx cPsi)
+    | Comp.MetaObj (loc, phat, tM) -> 
+        Comp.MetaObj (loc, phat, norm (tM, LF.id))
+    | Comp.MetaObjAnn (loc, cPsi, tM) -> 
+        Comp.MetaObjAnn (loc, normDCtx cPsi, norm (tM, LF.id))
+
+  and normMetaSpine mS = match mS with
+    | Comp.MetaNil -> mS
+    | Comp.MetaApp (mO, mS) -> 
+        Comp.MetaApp (normMetaObj mO, normMetaSpine mS)
 
   let rec normCTyp tau = match tau with 
+    | Comp.TypBase (loc, c, mS) -> 
+        Comp.TypBase (loc, c, normMetaSpine mS)
     | Comp.TypBox (loc, tA, cPsi)     
       -> Comp.TypBox(loc, normTyp(tA, LF.id), normDCtx cPsi)
 
@@ -1989,43 +2003,57 @@ let rec mctxPVarPos cD p =
 
     | Comp.TypBool -> Comp.TypBool
 
+  let rec cnormMetaObj (mO,t) = match mO with
+    | Comp.MetaCtx (loc, cPsi) -> 
+        Comp.MetaCtx (loc, cnormDCtx (cPsi,t))
+    | Comp.MetaObj (loc, phat, tM) -> 
+        Comp.MetaObj (loc, phat, cnorm (tM, t))
+
+  and cnormMetaSpine (mS,t) = match mS with
+    | Comp.MetaNil -> mS
+    | Comp.MetaApp (mO, mS) -> 
+        Comp.MetaApp (cnormMetaObj (mO,t), cnormMetaSpine (mS,t))
+
   let rec cnormCTyp thetaT = 
     begin match thetaT with 
-        | (Comp.TypBox (loc, tA, cPsi), t) -> 
-            let tA'   = normTyp (cnormTyp(tA, t), LF.id) in 
-            let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in 
-              Comp.TypBox(loc, tA', cPsi')
+      | (Comp.TypBase (loc, a, mS), t) ->  
+          let mS' = cnormMetaSpine (mS, t) in 
+            Comp.TypBase (loc, a, mS')
+      | (Comp.TypBox (loc, tA, cPsi), t) -> 
+          let tA'   = normTyp (cnormTyp(tA, t), LF.id) in 
+          let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in 
+            Comp.TypBox(loc, tA', cPsi')
+              
+      | (Comp.TypSub (loc, cPsi, cPsi'), t) -> 
+          Comp.TypSub (loc, cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))
+            
+      | (Comp.TypArr (tT1, tT2), t)   -> 
+          Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
 
-        | (Comp.TypSub (loc, cPsi, cPsi'), t) -> 
-            Comp.TypSub (loc, cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))
+      | (Comp.TypCross (tT1, tT2), t)   -> 
+          Comp.TypCross (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
+            
+            
+      | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
+          Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
+            
+      | (Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau), t)    -> 
+          Comp.TypPiBox ((MDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
+                         cnormCTyp (tau, mvar_dot1 t))
+            
+      | (Comp.TypPiBox ((PDecl(u, tA, cPsi) , dep), tau), t)    -> 
+          Comp.TypPiBox ((PDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
+                         cnormCTyp (tau, mvar_dot1 t))
+            
+      | (Comp.TypPiBox ((SDecl(u, cPhi, cPsi) , dep), tau), t)    -> 
+          Comp.TypPiBox ((SDecl (u, cnormDCtx (cPhi, t), cnormDCtx (cPsi, t)), dep), 
+                         cnormCTyp (tau, mvar_dot1 t))
 
-        | (Comp.TypArr (tT1, tT2), t)   -> 
-            Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
-
-        | (Comp.TypCross (tT1, tT2), t)   -> 
-            Comp.TypCross (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
-
-
-        | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
-              Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
-
-        | (Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau), t)    -> 
-              Comp.TypPiBox ((MDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
-                             cnormCTyp (tau, mvar_dot1 t))
-
-        | (Comp.TypPiBox ((PDecl(u, tA, cPsi) , dep), tau), t)    -> 
-              Comp.TypPiBox ((PDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
-                             cnormCTyp (tau, mvar_dot1 t))
-
-        | (Comp.TypPiBox ((SDecl(u, cPhi, cPsi) , dep), tau), t)    -> 
-              Comp.TypPiBox ((SDecl (u, cnormDCtx (cPhi, t), cnormDCtx (cPsi, t)), dep), 
-                             cnormCTyp (tau, mvar_dot1 t))
-
-        | (Comp.TypClo (tT, t'), t)        -> 
-              cnormCTyp (tT, mcomp t' t)
-
-        | (Comp.TypBool, _t) -> Comp.TypBool
-      end 
+      | (Comp.TypClo (tT, t'), t)        -> 
+          cnormCTyp (tT, mcomp t' t)
+            
+      | (Comp.TypBool, _t) -> Comp.TypBool
+    end 
 
 
   (* cwhnfCTyp (tT1, t1) = (tT2, t2)
@@ -2043,6 +2071,10 @@ let rec mctxPVarPos cD p =
 
 
   let rec cwhnfCTyp thetaT = match thetaT with 
+    | (Comp.TypBase (loc, c, mS) , t) -> 
+        let mS' = normMetaSpine (cnormMetaSpine (mS, t)) in 
+          (Comp.TypBase (loc, c, mS'), m_id)
+
     | (Comp.TypBox (loc, tA, cPsi), t)     
       -> 
         let tA' = normTyp (cnormTyp(tA, t), LF.id) in 
@@ -2179,6 +2211,20 @@ let rec mctxPVarPos cD p =
 
   *)
   and cnormBranch = function
+    | (Comp.Branch (loc, cO, cD, Comp.PatMetaObj (loc', mO), (t,cs), e), theta) -> 
+    (* cD' |- t <= cD    and   FMV(e) = cD' while 
+       cD' |- theta' <= cD0
+       cD0' |- theta <= cD0 
+     * Hence, no substitution into e at this point -- technically, we
+     * need to unify theta' and theta and then create a new cD'' under which the
+     * branch makes sense
+     *)
+        Comp.Branch (loc, cO, cD, Comp.PatMetaObj (loc', normMetaObj mO), (cnormMSub t, cs), 
+                     cnormExp (e, m_id))
+    | (Comp.Branch (loc, cO, cD, pat, (t,cs), e) , theta) -> 
+        (* there may be issues since we do not normalize pat *)
+        Comp.Branch (loc, cO, cD, pat, (cnormMSub t, cs), cnormExp (e, m_id))
+
     | (Comp.BranchBox (cO, cD', (cPsi, Comp.NormalPattern(tM, e), t, cs)),  theta) ->
     (* cD' |- t <= cD    and   FMV(e) = cD' while 
        cD' |- theta' <= cD0
@@ -2237,16 +2283,36 @@ let rec mctxPVarPos cD p =
   *)
 
 
+
+  let rec convMetaObj mO mO' = match (mO , mO) with
+    | (Comp.MetaCtx (_loc, cPsi) , Comp.MetaCtx (_ , cPsi'))  -> 
+        convDCtx  cPsi cPsi'
+    | (Comp.MetaObj (_, _phat, tM) , Comp.MetaObj (_, _phat', tM')) -> 
+        conv (tM, LF.id) (tM', LF.id)
+    | _ -> false
+
+  and convMetaSpine mS mS' = match (mS, mS') with
+    | (Comp.MetaNil , Comp.MetaNil) -> true
+    | (Comp.MetaApp (mO, mS) , Comp.MetaApp (mO', mS')) -> 
+        convMetaObj mO mO' && convMetaSpine mS mS'
+
   (* convCTyp (tT1, t1) (tT2, t2) = true iff [|t1|]tT1 = [|t2|]tT2 *)
 
   let rec convCTyp thetaT1 thetaT2 = convCTyp' (cwhnfCTyp thetaT1) (cwhnfCTyp thetaT2)
 
   and convCTyp' thetaT1 thetaT2 = match (thetaT1, thetaT2) with 
+    | ((Comp.TypBase (_, c1, mS1), _t1), (Comp.TypBase (_, c2, mS2), _t2)) ->  
+          if c1 = c2 then 
+            (* t1 = t2 = id by invariant *)
+            convMetaSpine mS1 mS2
+          else false
+
     | ((Comp.TypBox (_, tA1, cPsi1), _t1), (Comp.TypBox (_, tA2, cPsi2), _t2)) (* t1 = t2 = id *)
-      -> convDCtx cPsi1 cPsi2
+      -> 
+        convDCtx cPsi1 cPsi2
         &&
           convTyp (tA1, LF.id) (tA2, LF.id)
-
+       
     | ((Comp.TypSub (_, cPsi1, cPsi2), _t), (Comp.TypSub (_, cPsi1', cPsi2'), _t'))  (* t1 = t2 = id *)
       -> convDCtx cPsi1 cPsi1'
         &&
@@ -2456,8 +2522,18 @@ let rec closedDCtx cPsi = match cPsi with
   | DDec (cPsi' , tdecl) -> closedDCtx cPsi' && closedDecl (tdecl, LF.id)
   
 
+let rec closedMetaSpine mS = match mS with
+  | Comp.MetaNil -> true
+  | Comp.MetaApp (mO, mS) -> 
+      closedMetaObj mO && closedMetaSpine mS
+
+and closedMetaObj mO = match mO with
+  | Comp.MetaCtx (_, cPsi) -> closedDCtx cPsi 
+  | Comp.MetaObj (_, _phat, tM) -> closed (tM, LF.id)
+
 let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true
+  | Comp.TypBase (_, _c, mS) -> closedMetaSpine mS 
   | Comp.TypBox (_ , tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi 
   | Comp.TypSub (_ , cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi 
   | Comp.TypArr (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2 

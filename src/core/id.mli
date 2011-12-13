@@ -21,6 +21,11 @@ type cid_schema = int
 (** A constant identifier for coercions *)
 type cid_coercion = int
 
+(** A constant identifier for computation-level data-types *)
+type cid_comp_typ = int
+
+(** A constant identifier for computation-level constructors *)
+type cid_comp_const = int
 
 (** A constant identifier for recursive computations/programs *)
 type cid_prog = int

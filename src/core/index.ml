@@ -923,3 +923,12 @@ and index_branch ctx_vars mvars vars (fmvars, fvars) branch = match branch with
               Apx.Comp.BranchBox (loc, omega, delta', (psi1', Apx.Comp.NormalPattern (m', e'), None))
                 
       end
+
+let kind = index_kind
+let typ = index_typ
+let term = index_term
+let schema = index_schema
+let compkind = index_compkind
+let comptyp = index_comptyp
+let exp = index_exp
+let exp' = index_exp'

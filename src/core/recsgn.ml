@@ -1,5 +1,4 @@
 open Id
-open Index
 open Reconstruct
 open Store
 open Store.Cid
@@ -17,7 +16,7 @@ let recSgnDecl d =
     | Ext.Sgn.CompTypAbbrev (_, a, _cK, _cT) -> print_string "Not implemented yet\n"
     | Ext.Sgn.CompTyp (_ , a, extK) -> 
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
-        let apxK = index_compkind (CVar.create ()) (CVar.create ()) [] extK in 
+        let apxK = Index.compkind (CVar.create ()) (CVar.create ()) [] extK in 
         let _ = FVar.clear () in 
         let _ = dprint (fun () -> "\nElaborating data-type declaration " ^ a.string_of_name) in 
         let cK = Monitor.timer ("CType Elaboration" , 
@@ -46,7 +45,7 @@ let recSgnDecl d =
     | Ext.Sgn.CompConst (_ , c, tau) -> 
         let fmvars    = [] in 
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
-        let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) fmvars tau in
+        let apx_tau = Index.comptyp (CVar.create ()) (CVar.create ()) fmvars tau in
         let cO      = Int.LF.Empty in
         let cD      = Int.LF.Empty in
         let _ = dprint (fun () -> "\nElaborating data-type constructor " ^ c.string_of_name) in 
@@ -62,7 +61,7 @@ let recSgnDecl d =
     | Ext.Sgn.Typ (_, a, extK)   ->
         let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in
         let fvars    = [] in 
-        let (apxK, _ ) = index_kind (CVar.create ()) (None, BVar.create ()) fvars extK in
+        let (apxK, _ ) = Index.kind (CVar.create ()) (None, BVar.create ()) fvars extK in
         let _        = FVar.clear () in
 
         let _        = dprint (fun () -> "\nElaborating type constant " ^ a.string_of_name) in
@@ -96,7 +95,7 @@ let recSgnDecl d =
 
     | Ext.Sgn.Const (loc, c, extT) ->
         let fvars    = [] in 
-        let (apxT, _ ) = index_typ (CVar.create ()) (None, BVar.create ()) fvars extT in
+        let (apxT, _ ) = Index.typ (CVar.create ()) (None, BVar.create ()) fvars extT in
         let rec get_type_family = function
                            | Apx.LF.Atom(_loc, a, _spine) -> a
                            | Apx.LF.PiTyp ((_, _), t) -> get_type_family t in
@@ -141,7 +140,7 @@ let recSgnDecl d =
 
     | Ext.Sgn.Schema (_, g, schema) ->
         (* let _       = Printf.printf "\n Indexing schema  %s  \n" g.string_of_name  (P.fmt_ppr_lf_schema  in   *)
-        let apx_schema = index_schema schema in
+        let apx_schema = Index.schema schema in
         let _        = dprint (fun () -> "\nReconstructing schema " ^ g.string_of_name ^ "\n") in
         let cO       = Int.LF.Empty in
         let _        = FVar.clear () in
@@ -168,7 +167,7 @@ let recSgnDecl d =
 
     | Ext.Sgn.Val (loc, x, None, i) -> 
           let fvars = ([],[]) in 
-          let apx_i   = index_exp' (CVar.create ()) (CVar.create ()) (Var.create ()) fvars i in
+          let apx_i   = Index.exp' (CVar.create ()) (CVar.create ()) (Var.create ()) fvars i in
           let cO      = Int.LF.Empty in
           let cD      = Int.LF.Empty in
           let cG      = Int.LF.Empty in 
@@ -199,7 +198,7 @@ let recSgnDecl d =
 
     | Ext.Sgn.Val (loc, x, Some tau, i) -> 
           let fvars = ([],[]) in 
-          let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) [] tau in
+          let apx_tau = Index.comptyp (CVar.create ()) (CVar.create ()) [] tau in
           let cO      = Int.LF.Empty in
           let cD      = Int.LF.Empty in
           let cG      = Int.LF.Empty in 
@@ -209,7 +208,7 @@ let recSgnDecl d =
           let (tau', _imp) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.abstrCompTyp tau') in
           let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cO cD tau') in
 
-          let apx_i   = index_exp' (CVar.create ()) (CVar.create ()) (Var.create ()) fvars i in
+          let apx_i   = Index.exp' (CVar.create ()) (CVar.create ()) (Var.create ()) fvars i in
 
           let i'      = Monitor.timer ("Function Elaboration", fun () -> elExp cO cD cG (Apx.Comp.Syn(loc, apx_i)) (tau', C.m_id)) in
           let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
@@ -243,7 +242,7 @@ let recSgnDecl d =
           | [] -> (Int.LF.Empty, Var.create (), [])
           | Ext.Comp.RecFun (f, tau, _e) :: lf -> 
           let fvars = [] in 
-          let apx_tau = index_comptyp (CVar.create ()) (CVar.create ()) fvars tau in
+          let apx_tau = Index.comptyp (CVar.create ()) (CVar.create ()) fvars tau in
           let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
           let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> elCompTyp cO cD apx_tau)  in
           let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
@@ -269,7 +268,7 @@ let recSgnDecl d =
 
         let reconFun f e = 
           let fvars = ([],[]) in 
-          let apx_e   = index_exp (CVar.create ()) (CVar.create ()) vars' fvars e in
+          let apx_e   = Index.exp (CVar.create ()) (CVar.create ()) vars' fvars e in
           let _       = dprint (fun () -> "\n  Indexing  exp done \n") in
           let tau'    = lookupFun cG f in 
           let e'      = Monitor.timer ("Function Elaboration", fun () -> elExp cO cD cG apx_e (tau', C.m_id)) in
@@ -348,7 +347,7 @@ let recSgnDecl d =
 
     | Ext.Sgn.Query (loc, name, extT, expected, tries) ->
       let fvars    = [] in
-      let (apxT, _ ) = index_typ (CVar.create ()) (None, BVar.create ()) fvars extT in
+      let (apxT, _ ) = Index.typ (CVar.create ()) (None, BVar.create ()) fvars extT in
       let _          = dprint (fun () -> "Reconstructing query.") in
 
       let _        = FVar.clear () in

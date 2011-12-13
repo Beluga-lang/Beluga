@@ -13,8 +13,6 @@ open Substitution
 open Id
 open ConvSigma
 
-open Index
-
 (* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail 
 module C     = Whnf

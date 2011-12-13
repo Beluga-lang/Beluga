@@ -193,8 +193,8 @@ let main () =
             if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction: %s ##\n" file_name;  
 
-(*            let int_decls = List.map Reconstruct.recSgnDecl sgn in *)
-            let _int_decls = Reconstruct.recSgnDecls sgn in
+(*            let int_decls = List.map Recsgn.recSgnDecl sgn in *)
+            let _int_decls = Recsgn.recSgnDecls sgn in
 
               if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;

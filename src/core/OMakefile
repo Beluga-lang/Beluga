@@ -20,6 +20,7 @@ FILES[] =
         error
         gensym
         id
+        index
 	logic
         opsem
         parser
@@ -27,6 +28,7 @@ FILES[] =
         pragma
         pretty
         reconstruct
+        recsgn
         store
         substitution
         syntax

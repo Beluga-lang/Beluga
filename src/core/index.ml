@@ -924,11 +924,10 @@ and index_branch ctx_vars mvars vars (fmvars, fvars) branch = match branch with
                 
       end
 
-let kind = index_kind
-let typ = index_typ
-let term = index_term
-let schema = index_schema
-let compkind = index_compkind
-let comptyp = index_comptyp
-let exp = index_exp
-let exp' = index_exp'
+let kind     = index_kind (CVar.create ()) (None, BVar.create ()) []
+let typ      = index_typ  (CVar.create ()) (None, BVar.create ()) []
+let schema   = index_schema
+let compkind = index_compkind (CVar.create ()) (CVar.create ()) []
+let comptyp  = index_comptyp   (CVar.create ()) (CVar.create ()) []
+let exp      = fun vars -> fun e -> index_exp (CVar.create ()) (CVar.create ()) vars ([],[]) e
+let exp'     = fun vars -> fun i -> index_exp' (CVar.create ()) (CVar.create ()) vars ([],[]) i

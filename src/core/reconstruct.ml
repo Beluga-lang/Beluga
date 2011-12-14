@@ -338,10 +338,7 @@ let rec lengthApxMCtx cD = match cD with
   | Apx.LF.Dec (cD, _) -> 1 + lengthApxMCtx cD
 
 
-let rec lookupFun cG f = match cG with
-  | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->  
-      if f = f' then tau else         
-      lookupFun cG' f
+
 
 let mctxToMSub = Ctxsub.mctxToMSub
 
@@ -4359,15 +4356,19 @@ and elBranch caseTyp cO cD cG branch (Int.LF.Atom(_, a, _) as tP , cPsi) (tau, t
           raise (Error.Error (Some loc, Error.CompSubPattMismatch ((cO, cD1'', cPsi1'', sigma1', cPhi1'), 
                                                     (cO, cD, cPsi, cPhi)))) 
 *)
-(*
-    (* check cO cD cG e (tau, theta) = ()
-     *
-     * If  cO ; cD ; cG |- e wf-exp
-     * and cO ; cD |- theta <= cD'
-     * and cO ; cD'|- tau <= c_typ
-     * returns ()
-     * if  cO ; cD ; cG |- e <= [|t|]tau
-     *
-     * otherwise raises exception Error
-     *)
-*)
+
+(* ******************************************************************************* *)
+(* TOP LEVEL                                                                       *)
+
+let solve_fvarCnstr rectyp = 
+  solve_fvarCnstr rectyp (*cO=*)Int.LF.Empty Int.LF.Empty !fvar_cnstr
+
+
+let kind = elKind Int.LF.Null
+let typ rectyp apxT =
+    elTyp rectyp Int.LF.Empty Int.LF.Empty Int.LF.Null apxT 
+let schema   = elSchema Int.LF.Empty 
+let compkind = elCompKind Int.LF.Empty Int.LF.Empty
+let comptyp  = elCompTyp  Int.LF.Empty Int.LF.Empty
+let exp      = elExp Int.LF.Empty Int.LF.Empty 
+let exp'     = elExp' Int.LF.Empty Int.LF.Empty 

@@ -1,8 +1,8 @@
-type free_cvars
+type fcvars
 
-val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * free_cvars list
+val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * fcvars 
 
-val typ      : Syntax.Ext.LF.typ -> Syntax.Apx.LF.typ * free_cvars list
+val typ      : Syntax.Ext.LF.typ -> Syntax.Apx.LF.typ * fcvars 
 
 val schema   : Syntax.Ext.LF.schema -> Syntax.Apx.LF.schema
 

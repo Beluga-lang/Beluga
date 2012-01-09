@@ -22,7 +22,6 @@ module RR = Pretty.Int.NamedRenderer
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 exception NotImplemented
-exception SpineMismatch
 
 
 let rec projectCtxIntoDctx = function
@@ -103,8 +102,6 @@ and etaExpandMMVstr' loc cO cD cPsi sA  = match sA with
       Int.LF.Lam (loc, x, etaExpandMMVstr loc cO cD (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) )
 
 
-exception Violation of string
-
 type caseType  = IndexObj of Int.LF.psi_hat * Int.LF.normal | DataObj
 
 type typAnn    = FullTyp of Apx.LF.typ | PartialTyp of cid_typ
@@ -138,7 +135,7 @@ and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
 
       | (Int.LF.CtxVar  psi1_var , Int.LF.CtxVar psi2_var) -> 
           if psi1_var = psi2_var then () 
-          else raise (Violation "[unifyDctx] CtxVar clash")
+          else raise (Error.Violation "[unifyDctx] CtxVar clash")
 
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , tA1)) , 
@@ -152,7 +149,7 @@ and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
           (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ 
                      P.dctxToString cD cPsi1 ^ 
                      " cPsi2 = " ^ P.dctxToString cD cPsi2 ) ; 
-           raise (Violation "[unifyDCtx] Context clash"))
+           raise (Error.Violation "[unifyDCtx] Context clash"))
 
 (* let rec remove_name n n_list - match n_list with 
   | [ ] -> [ ] 
@@ -948,7 +945,7 @@ and elExp' cD cG i = match i with
                            dprint (fun () -> "[elSyn] tau_theta = " ^
                                      P.compTypToString cD (Whnf.cnormCTyp (tau, theta'))) ; 
                            (Int.Comp.MApp (Some loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta')))
-                      with Violation msg -> 
+                      with Error.Violation msg -> 
                         dprint (fun () -> "[elTerm] Violation: " ^ msg);
                         raise (Error.Error (Some loc, Error.CompTypAnn ))
                       end 
@@ -977,7 +974,7 @@ and elExp' cD cG i = match i with
                        (dprint (fun () -> "[elTerm] Violation: Not a head");
                       raise (Error.Error (Some loc, Error.CompMAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
                  end  
-               with Violation msg -> 
+               with Error.Violation msg -> 
                  dprint (fun () -> "[elTerm] Violation: " ^ msg);
                  raise (Error.Error (Some loc, Error.CompTypAnn))
                end 
@@ -1014,7 +1011,7 @@ and elExp' cD cG i = match i with
                                          Int.Comp.Box(loc, psihat, tM')) in  
                         dprint (fun () -> "[elExp] MApp Reconstructed: " ^
                                          P.expSynToString cD cG i); (i , (tau, theta))
-                      with Violation msg -> 
+                      with Error.Violation msg -> 
                         dprint (fun () -> "[elTerm] Violation: " ^ msg);
                         raise (Error.Error (loc, Error.CompAppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
                       end 
@@ -1049,7 +1046,7 @@ and elExp' cD cG i = match i with
               let tM'    = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m (C.cnormTyp (tA, theta), LF.id) in
               let theta' = Int.LF.MDot (Int.LF.MObj (psihat', tM'), theta) in
                 (Int.Comp.MApp (Some loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta'))
-             with Violation msg -> 
+             with Error.Violation msg -> 
                dprint (fun () -> "[elTerm] Violation: " ^ msg);
                raise (Error.Error (Some loc, Error.CompTypAnn ))
              end 
@@ -1077,7 +1074,7 @@ and elExp' cD cG i = match i with
                        (dprint (fun () -> "[elTerm] Violation: Not a head");
                       raise (Error.Error (Some loc, Error.CompMAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
                end  
-                with Violation msg -> 
+                with Error.Violation msg -> 
                   dprint (fun () -> "[elTerm] Violation: " ^ msg);
                   raise (Error.Error (Some loc, Error.CompTypAnn ))
               end 
@@ -1108,7 +1105,7 @@ and elExp' cD cG i = match i with
                     dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^ 
                               P.expSynToString cD cG i ^ "\n"); (i , (tau, theta))
 
-                with Violation msg -> 
+                with Error.Violation msg -> 
                   dprint (fun () -> "[elTerm] Violation: " ^ msg);
                   raise (Error.Error (Some loc, Error.CompAppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
                 end 
@@ -1281,7 +1278,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
           Unify.unifyDCtx (Int.LF.Empty) cPsi' cPsi_s;
           (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi'))
         with Unify.Unify _msg -> 
-          raise (Violation "Context mismatch in pattern")
+          raise (Error.Violation "Context mismatch in pattern")
         end
   | (Apx.Comp.PatVar (loc, name, x) , (tau, theta)) -> 
       (Int.LF.Dec(cG, Int.Comp.CTypDecl (name, Int.Comp.TypClo (tau, theta))),

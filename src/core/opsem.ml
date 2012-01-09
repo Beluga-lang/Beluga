@@ -16,8 +16,6 @@ module RR = Pretty.Int.NamedRenderer
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
 
 exception NotImplemented
-exception Error of Syntax.Loc.t option * Error.error
-exception Violation  of string
 exception BranchMismatch
 
 
@@ -101,14 +99,14 @@ let rec eval_syn i theta_eta =
                      );
 
               eval_chk e' (theta1, Comp.Cons (w2,eta1))
-          | _ -> raise (Violation "Expected FunValue")
+          | _ -> raise (Error.Violation "Expected FunValue")
         end
 
   | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
       begin match eval_syn i' theta_eta with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
             eval_chk e' (LF.MDot (LF.MObj (phat, Whnf.cnorm (tM, theta)), theta1), eta1)
-        | _ -> raise (Violation "Expected MLamValue")
+        | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
 
@@ -116,7 +114,7 @@ let rec eval_syn i theta_eta =
       begin match eval_syn i' theta_eta with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
             eval_chk e' (LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
-        | _ -> raise (Violation "Expected MLamValue")
+        | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
   | Comp.CtxApp (_, i', cPsi) ->
@@ -129,7 +127,7 @@ let rec eval_syn i theta_eta =
               dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
               dprint (fun () -> "[CtxApp] theta1' = " ^ P.msubToString LF.Empty  theta1');
               eval_chk e' (theta1', eta1)
-        | _ -> raise (Violation "Expected CtxValue")
+        | _ -> raise (Error.Violation "Expected CtxValue")
       end
 
   | Comp.Ann (e, _tau) ->
@@ -147,11 +145,10 @@ let rec eval_syn i theta_eta =
                     else
                       Comp.BoolValue false
 
-              | ( _ , _ ) -> raise (Violation "Expected atomic object")
+              | ( _ , _ ) -> raise (Error.Violation "Expected atomic object")
         end
 
   | Comp.Boolean b -> Comp.BoolValue b
-
 
 and eval_chk e theta_eta =
   let (theta,eta) = theta_eta in
@@ -185,7 +182,7 @@ and eval_chk e theta_eta =
                                 P.expChkToString LF.Empty LF.Empty (Comp.Box (None, phat, tM))
                              );
               eval_branches (phat,tM) (branches, theta_eta)
-          | _ -> raise (Violation "Expected BoxValue for case")
+          | _ -> raise (Error.Violation "Expected BoxValue for case")
           end
 
       | Comp.Value v -> v
@@ -195,9 +192,8 @@ and eval_chk e theta_eta =
             | Comp.BoolValue false -> eval_chk e2 theta_eta
           end
 
-
 and eval_branches (phat,tM) (branches, theta_eta) = match branches with
-  | [] -> raise (Violation "Missing branch -- Non-exhaustive pattern match")
+  | [] -> raise (Error.Violation "Missing branch -- Non-exhaustive pattern match")
   | b::branches ->
       let (theta, _ ) = theta_eta in
         try
@@ -212,7 +208,7 @@ and eval_branches (phat,tM) (branches, theta_eta) = match branches with
 and eval_branch (phat, tM) branch (theta, eta) =
   match branch with
     | Comp.EmptyBranch (loc, cD, pat, t) ->
-      raise (Violation "Case {}-pattern -- coverage checking is off or broken")
+      raise (Error.Violation "Case {}-pattern -- coverage checking is off or broken")
     | Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', (Comp.MetaObj (loc'', phat, tM))), theta', e) ->
       eval_branch
         (phat, tM)

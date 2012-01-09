@@ -9,11 +9,6 @@ open Syntax.Int.LF
 open Syntax.Int
 open Context 
 
-open Error
-
-exception Error of Syntax.Loc.t option * error
-exception Violation of string
-
 
 val whnf       : nclo -> nclo
 val whnfTyp    : tclo -> tclo

@@ -1301,7 +1301,7 @@ let disallowUndefineds f =
 *)
                           returnNeutral (MVar (Offset v, s'))
                       with 
-                        | Whnf.Violation msg -> 
+                        | Error.Violation msg -> 
                             raise (Unify ("ERROR: prune: " ^ msg ^ 
                                           "\n Looking for " ^ R.render_cvar cD0 u ^ 
                                           "\n in context " ^ P.mctxToString cD0))

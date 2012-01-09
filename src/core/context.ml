@@ -9,9 +9,7 @@ open Syntax.Int.LF
 open Syntax.Int
 open Error 
 
-exception Error of error
 exception NoTypAvailable
-exception Violation of string
 
 
 let addToHat (ctxvarOpt, length) =

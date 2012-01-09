@@ -5,6 +5,7 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [5])
 
 open Context
 open Store.Cid
+open Substitution
 open Syntax.Int.LF
 open Error
 
@@ -12,8 +13,6 @@ module Print = Pretty.Int.DefaultPrinter
 
 module Unify = Unify.EmptyTrail
 
-exception Violation of string
-exception Error of Syntax.Loc.t option * error
 exception SpineMismatch
 
 

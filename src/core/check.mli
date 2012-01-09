@@ -7,10 +7,6 @@ module LF : sig
 
   open Syntax.Int.LF
 
-  exception Violation of string
-  exception Error of Syntax.Loc.t option * Error.error
-
-
   val check       : mctx -> dctx -> nclo -> tclo -> unit
   val syn         : mctx -> dctx -> nclo -> tclo
   val checkTyp    : mctx -> dctx -> tclo         -> unit
@@ -34,9 +30,6 @@ module Comp : sig
 
   open Syntax.Int
   open Syntax.Int.Comp
-
-  exception Violation of string
-  exception Error of Syntax.Loc.t option * Error.error
 
   val check       : LF.mctx -> gctx -> exp_chk -> tclo -> unit
   val syn         : LF.mctx -> gctx -> exp_syn -> tclo

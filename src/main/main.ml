@@ -196,7 +196,7 @@ let main () =
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter
-                "\nError (Reconstruction): %a@?"
+                "\nError: %a@?"
                 Pretty.Error.DefaultPrinter.fmt_ppr err;
               print_newline ();
               abort_session ()
@@ -204,55 +204,9 @@ let main () =
           | Error.Violation str ->
               Format.fprintf
                 Format.std_formatter
-                "Error (\"Violation\") (Reconstruction): %s\n@?"
+                "Internal error (please report as a bug): %s\n@?"
                 str;
               print_newline ();
-              abort_session ()
-
-
-          | Check.LF.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Type-checking): %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Check.Comp.Error (locOpt, err) ->
-             (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
-              printOptionalLocation locOpt;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Checking): %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Check.LF.Violation str ->
-              printf "Error (\"Violation\") (Checking): %s\n" str;
-              abort_session ()
-
-          | Context.Error err ->
-              Format.fprintf
-                Format.std_formatter
-                "Error (Context): %a\n@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Whnf.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Whnf): %a\n@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              abort_session ()
-
-          | Abstract.Error str ->
-              printf "Error (Abstraction): %s\n" str;
               abort_session ()
 
           | Coverage.NoCover strFn ->

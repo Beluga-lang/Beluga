@@ -20,14 +20,10 @@ open Syntax.Int
 open Substitution
 open Error
 
-exception Error of Syntax.Loc.t option * error
 
 exception Fmvar_not_found
 exception FreeMVar of head
 exception NonInvertible 
-
-exception Violation of string
-
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [18])
 

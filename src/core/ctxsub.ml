@@ -28,9 +28,6 @@ and frontToString = function
   | Obj tM -> "Obj _"
   | Undef -> "Undef"
 
-exception Error of Syntax.Loc.t option * error
-exception Violation of string
-
 module Comp = Syntax.Int.Comp
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [12])

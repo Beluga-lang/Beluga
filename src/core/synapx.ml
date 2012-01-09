@@ -24,9 +24,9 @@ module LF = struct
     | MDecl of  name * typ  * dctx
     | PDecl of  name * typ  * dctx
     | MDeclOpt of name
+    | CDeclOpt of name
     | SDecl of name * dctx * dctx
     | CDecl of name * cid_schema
-
 
   and typ =
     | Atom  of Loc.t * cid_typ * spine
@@ -89,6 +89,8 @@ module LF = struct
   and 'a ctx =
     | Empty
     | Dec of 'a ctx * 'a
+
+  and mctx = ctyp_decl ctx 
 
   and sch_elem =
     | SchElem of typ_decl ctx * typ_rec
@@ -162,8 +164,9 @@ module Comp = struct
  and pattern = 
    | PatEmpty of Loc.t * LF.dctx 
    | PatMetaObj of Loc.t * meta_obj
-   | PatConst of Loc.t * name * pattern_spine
-   | PatVar   of Loc.t * name
+   | PatConst of Loc.t * cid_comp_const * pattern_spine
+   | PatFVar   of Loc.t * name
+   | PatVar   of Loc.t * offset
    | PatPair  of Loc.t * pattern * pattern
    | PatTrue  of Loc.t 
    | PatFalse of Loc.t 

@@ -8,7 +8,9 @@ PACK    = Core
 # Declare the files the package will contain
 FILES[] =
         abstract
+        apxnorm
         lfcheck
+        lfrecon
         check
         common
         context

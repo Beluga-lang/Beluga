@@ -11,6 +11,7 @@ module LF = struct
   type depend =
     | No       
     | Maybe        
+    
 
   type kind =
     | Typ
@@ -24,7 +25,7 @@ module LF = struct
     | MDecl of name * typ  * dctx             (* D ::= u::A[Psi]                *)
     | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
     | SDecl of name * dctx * dctx             (*   |   s::A[Psi]                *)
-    | CDecl of name * cid_schema 
+    | CDecl of name * cid_schema * depend
     | MDeclOpt of name 
     | PDeclOpt of name 
     | CDeclOpt of name 
@@ -80,7 +81,8 @@ module LF = struct
  and mfront =                                (* Fronts:                        *)
    | MObj of psi_hat * normal                (* Mft::= Psihat.N                *)
    | PObj of psi_hat * head                  (*    | Psihat.p[s] | Psihat.x    *)
-   | MV   of offset                          (*    | u//u | p//p               *)
+   | CObj of dctx                            (*    | Psi                       *)         
+   | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
    | MUndef
 
  and msub =                                  (* Contextual substitutions       *)
@@ -132,9 +134,9 @@ module LF = struct
   and ctx_var = 
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of dctx option ref * cid_schema * mctx * mctx
+    | CInst  of dctx option ref * cid_schema * mctx * mctx (* delete both mctx
+							      contexts *)
         (* D |- Psi : schema   *)
-
 
   and 'a ctx =                           (* Generic context declaration    *)
     | Empty                              (* Context                        *)
@@ -219,8 +221,8 @@ end
 module Comp = struct
 
  type depend =  
-   | Implicit
-   | Explicit
+   | Implicit   (* Maybe *)
+   | Explicit   (* No *)
 
  type  kind = 
    | Ctype of Loc.t
@@ -299,9 +301,10 @@ module Comp = struct
 
  and pattern = 
    | PatEmpty  of Loc.t * LF.dctx 
-   | PatMetaObj of Loc.t * meta_obj
-   | PatConst of Loc.t * name * pattern_spine
-   | PatVar   of Loc.t * name
+   | PatMetaObj of Loc.t option * meta_obj
+   | PatConst of Loc.t * cid_comp_const * pattern_spine
+   | PatFVar   of Loc.t * name
+   | PatVar   of Loc.t * offset
    | PatPair  of Loc.t * pattern * pattern
    | PatTrue  of Loc.t 
    | PatFalse of Loc.t 

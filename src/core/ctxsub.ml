@@ -331,7 +331,7 @@ let rec ctxnorm_csub cs = match cs with
 
 
 let rec lookupSchemaOpt cO psi_offset = match (cO, psi_offset) with
-  | (Dec (_cO, CDecl (_, cid_schema)), 1) -> Some (cid_schema)
+  | (Dec (_cO, CDecl (_, cid_schema, _)), 1) -> Some (cid_schema)
   | (Dec (cO, _) , i) -> 
       lookupSchemaOpt cO (i-1)
   | _ -> None
@@ -719,7 +719,7 @@ and csub_branch cPsi k branch = match branch with
 let id_csub cO = 
   let rec gen_id cO k = match cO with
   | Empty -> CShift k 
-  | Dec (cO', CDecl(_psi, _sW)) -> 
+  | Dec (cO', CDecl(_psi, _sW, _)) -> 
       CDot(CtxVar (CtxOffset (k+1)), gen_id cO' (k+1) )
   | Dec (cO', CDeclOpt _ ) -> 
       CDot(CtxVar (CtxOffset (k+1)), gen_id cO' (k+1) )
@@ -736,7 +736,7 @@ let rec inst_csub cPsi2 offset' csub cO =
   let rec update_octx cO1 offset sW = 
     begin match (cO1, offset) with
       | (Dec (cO', CDeclOpt psi_name ), 1) ->      
-           Dec(cO', CDecl (psi_name, sW ))
+           Dec(cO', CDecl (psi_name, sW, Maybe ))
       | (Dec (cO', cdec), k) -> 
           Dec(update_octx cO' (k-1) sW, cdec)  
     end
@@ -1000,6 +1000,10 @@ let rec mctxToMSub cD = match cD with
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
 
+  | Dec (cD', CDecl(_, sW, _)) -> 
+      let t = mctxToMSub cD' in 
+      let cvar = Whnf.newCVar sW in 
+        MDot (CObj (CtxVar cvar), t)
 
 
 
@@ -1027,7 +1031,7 @@ let rec mctxToMMSub cD0 cD = match cD with
 
 let rec cctxToCSub cO cD = match cO with
   | Empty -> CShift 0
-  | Dec (cO, CDecl (_psi, schema)) -> 
+  | Dec (cO, CDecl (_psi, schema, _)) -> 
       let ctxVar = CtxVar (CInst (ref None, schema, cO, cD)) in
       let cs = cctxToCSub cO cD  in 
         CDot (ctxVar, cs)

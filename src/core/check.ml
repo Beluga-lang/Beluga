@@ -117,142 +117,146 @@ module Comp = struct
       (* other cases should be impossible *)
     in ext t2;;
 
-  let rec checkMetaObj cO cD cM cTt = match  (cM, cTt) with 
+  let rec checkMetaObj cD cM cTt = match  (cM, cTt) with 
   | (MetaCtx (loc, cPsi), (MetaSchema  w, _)) -> 
-      LF.checkSchema cO cD cPsi (Schema.get_schema w)
+      LF.checkSchema cD cPsi (Schema.get_schema w)
 
   | (MetaObj (loc, phat, tM), (MetaTyp (tA, cPsi), t)) ->  
-      LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+      LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
   | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->  
-      LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)  
+      LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)  
 ;
          
     (* The case for parameter types should be handled separately, for better error messages -bp *)
 
 
-and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with 
+and checkMetaSpine cD mS cKt  = match (mS, cKt) with 
   | (MetaNil , (Ctype _ , _ )) -> ()
   | (MetaApp (mO, mS), (PiKind (_, (cdecl, Explicit), cK) , t)) -> 
       begin match cdecl with 
-        | I.CDecl (_psi, schema_cid) -> 
+        | I.CDecl (_psi, schema_cid, I.No) -> 
             let MetaCtx (_, cPsi) = mO in 
             let theta' = Ctxsub.csub_msub cPsi 1 t in
             let cK'   = Ctxsub.csub_ckind cD cPsi 1 cK in               
-              checkMetaObj cO cD mO (MetaSchema schema_cid , t); 
-              checkMetaSpine cO cD mS (cK', theta')
+              checkMetaObj cD mO (MetaSchema schema_cid , t); 
+              checkMetaSpine cD mS (cK', theta')
 
         | I.MDecl (_u, tA, cPsi) -> 
             let MetaObj (loc, psihat, tM) = mO in 
-              checkMetaObj cO cD mO (MetaTyp (tA, cPsi), t) ;
-              checkMetaSpine cO cD mS (cK, I.MDot (I.MObj(psihat, tM), t)) 
+              checkMetaObj cD mO (MetaTyp (tA, cPsi), t) ;
+              checkMetaSpine cD mS (cK, I.MDot (I.MObj(psihat, tM), t)) 
     end
 
 
-  let rec checkCDecl cO cD cdecl = match cdecl with 
-    | I.CDecl (_, schema_cid ) -> 
+  let rec checkCDecl cD cdecl = match cdecl with 
+    | I.CDecl (_, schema_cid, _ ) -> 
         begin try 
           let _ = Schema.get_schema schema_cid in ()
         with _ -> raise (Violation "Schema undefined")
         end
     | I.MDecl (_, tA, cPsi) -> 
-        LF.checkDCtx cO cD cPsi;
-        LF.checkTyp  cO cD cPsi (tA, S.LF.id)
+        LF.checkDCtx cD cPsi;
+        LF.checkTyp  cD cPsi (tA, S.LF.id)
     | I.PDecl (_, tA, cPsi) -> 
-        LF.checkDCtx cO cD cPsi;
-        LF.checkTyp  cO cD cPsi (tA, S.LF.id)
+        LF.checkDCtx cD cPsi;
+        LF.checkTyp  cD cPsi (tA, S.LF.id)
               
 
-  let rec checkKind cO cD cK = match cK with
+  let rec checkKind cD cK = match cK with
     | Ctype _ -> ()
-    | PiKind (_, ((I.CDecl _ ) as cdecl,dep), cK) -> 
-        checkCDecl cO cD cdecl;
-        checkKind (I.Dec(cO, cdecl)) cD cK
+    | PiKind (_, ((I.CDecl _ ) as cdecl, dep), cK) -> 
+        checkCDecl cD cdecl;
+        checkKind (I.Dec(cD, cdecl)) cK
     | PiKind (_, (cdecl,dep), cK) -> 
-        checkCDecl cO cD cdecl;
-        checkKind cO (I.Dec(cD, cdecl)) cK
+        checkCDecl cD cdecl;
+        checkKind (I.Dec(cD, cdecl)) cK
         
-  let rec checkTyp cO cD tau =  match tau with
+  let rec checkTyp cD tau =  match tau with
     | TypBase (loc, c, mS) -> 
         let cK = (CompTyp.get c).CompTyp.kind in
-          checkMetaSpine cO cD mS (cK , C.m_id)
+          checkMetaSpine cD mS (cK , C.m_id)
 
     | TypBox (_ , tA, cPsi) ->
-        LF.checkDCtx cO cD cPsi;
-        LF.checkTyp  cO cD cPsi (tA, S.LF.id)
+        let _ = dprint (fun () -> "[checkTyp] TypBox " ^ 
+                          P.compTypToString cD  tau ) in 
+        LF.checkDCtx cD cPsi;
+        LF.checkTyp  cD cPsi (tA, S.LF.id)
 
     | TypSub (_ , cPhi, cPsi) ->
-        LF.checkDCtx cO cD cPsi;
-        LF.checkDCtx cO cD cPhi
+        LF.checkDCtx cD cPsi;
+        LF.checkDCtx cD cPhi
           
     | TypArr (tau1, tau2) ->
-        checkTyp cO cD tau1;
-        checkTyp cO cD tau2
+        checkTyp cD tau1;
+        checkTyp cD tau2
           
     | TypCross (tau1, tau2) ->
-        checkTyp cO cD tau1;
-        checkTyp cO cD tau2
+        checkTyp cD tau1;
+        checkTyp cD tau2
           
-    | TypCtxPi ((psi_name, schema_cid, _ ), tau) ->
-        checkTyp (I.Dec (cO, I.CDecl (psi_name, schema_cid))) cD tau
+    | TypCtxPi ((psi_name, schema_cid, dep ), tau) ->
+        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in 
+        checkTyp (I.Dec (cD, I.CDecl (psi_name, schema_cid, dep'))) tau
           
     | TypPiBox ((cdecl, _), tau) ->
-        checkCDecl cO cD cdecl;
-        checkTyp cO (I.Dec (cD, cdecl)) tau 
+        checkCDecl cD cdecl;
+        checkTyp (I.Dec (cD, cdecl)) tau 
 
     | TypBool -> ()
 
 ;;
 
 
-  (* check cO cD cG e (tau, theta) = ()
+  (* check cD cG e (tau, theta) = ()
    *
    * Invariant:
    *
-   * If  cO ; cD ; cG |- e wf-exp
-   * and cO ; cD |- theta <= cD'
-   * and cO ; cD'|- tau <= c_typ
+   * If  ; cD ; cG |- e wf-exp
+   * and ; cD |- theta <= cD'
+   * and ; cD'|- tau <= c_typ
    * returns ()
-   * if  cO ; cD ; cG |- e <= [|t|]tau
+   * if  ; cD ; cG |- e <= [|t|]tau
    *
    * otherwise exception Error is raised
    *)
   
-  let rec checkW cO cD (cG : ctyp_decl I.ctx) e ttau = match (e, ttau) with
+  let rec checkW cD (cG : ctyp_decl I.ctx) e ttau = match (e, ttau) with
     | (Rec (_, f, e), (tau, t)) ->
-        check cO cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t)))) e ttau
+        check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t)))) e ttau
 
     | (Fun (_, x, e), (TypArr (tau1, tau2), t)) ->
-        check cO cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t)))) e (tau2, t)
+        check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t)))) e (tau2, t)
 
-    | (CtxFun (_, psi, e), (TypCtxPi ((_psi, schema, _ ), tau), t)) ->
-        check (I.Dec(cO, I.CDecl(psi, schema))) cD cG e (tau, t)
+    | (CtxFun (_, psi, e), (TypCtxPi ((_psi, schema, dep ), tau), t)) ->
+        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in 
+        check (I.Dec(cD, I.CDecl(psi, schema, dep')))  cG e (tau, C.mvar_dot1 t)
 
     | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
-        check cO (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
+        check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (MLam (_, u, e), (TypPiBox ((I.PDecl(_u, tA, cPsi), _), tau), t)) ->
-        check cO (I.Dec(cD, I.PDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
+        check (I.Dec(cD, I.PDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (MLam (_, u, e), (TypPiBox ((I.SDecl(_u, cPhi, cPsi), _), tau), t)) ->
-        check cO (I.Dec(cD, I.SDecl(u, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t))))
+        check (I.Dec(cD, I.SDecl(u, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t))))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->
-        check cO cD cG e1 (tau1, t);
-        check cO cD cG e2 (tau2, t)
+        check cD cG e1 (tau1, t);
+        check cD cG e2 (tau2, t)
 
     | (Let (_, i, (x, e)), (tau, t)) ->          
-        let (tau', t') =  C.cwhnfCTyp (syn cO cD cG i) in
+        let (tau', t') =  C.cwhnfCTyp (syn cD cG i) in
         let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau', t'))) in
-          check cO cD cG' e (tau,t)
+          check cD cG' e (tau,t)
 
     | (LetPair (_, i, (x, y, e)), (tau, t)) ->
-        begin match C.cwhnfCTyp (syn cO cD cG i) with
+        begin match C.cwhnfCTyp (syn cD cG i) with
           | (TypCross (tau1, tau2), t') ->
               let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t'))), CTypDecl (y, TypClo(tau2, t'))) in
-                check cO cD cG' e (tau,t)
+                check cD cG' e (tau,t)
           | _ -> raise (Violation "Case scrutinee not of boxed type")
         end
 
@@ -262,66 +266,65 @@ and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with
           let cPsi' = C.cnormDCtx (cPsi, t) in
           let tA'   = C.cnormTyp (tA, t) in
 *)
-            LF.check cO cD  cPsi (tM, S.LF.id) (tA, S.LF.id)
+            LF.check cD  cPsi (tM, S.LF.id) (tA, S.LF.id)
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
     | (SBox (loc , _phat, sigma), (TypSub (_, cPhi, cPsi), t)) ->
         begin try
-            LF.checkSub loc cO cD  cPsi sigma cPhi
+            LF.checkSub loc cD  cPsi sigma cPhi
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
 (*    | (SBox (loc , phat, sigma), tau_t) ->
-        raise (Violation  ("Found SBox " ^ P.subToString cO cD (Context.hatToDCtx phat) sigma ^ 
-                             "\n supposed to have type " ^ P.compTypToString cO cD (Whnf.cnormCTyp tau_t) ^ "\n"))
+        raise (Violation  ("Found SBox " ^ P.subToString cD (Context.hatToDCtx phat) sigma ^ 
+                             "\n supposed to have type " ^ P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ "\n"))
 
 
     | (Box (loc , phat, tM), tau_t) ->
-        raise (Violation  ("Found Box " ^ P.normalToString cO cD (Context.hatToDCtx phat) (tM, S.LF.id) ^ 
-                             "\n supposed to have type " ^ P.compTypToString cO cD (Whnf.cnormCTyp tau_t) ^ "\n"))
+        raise (Violation  ("Found Box " ^ P.normalToString cD (Context.hatToDCtx phat) (tM, S.LF.id) ^ 
+                             "\n supposed to have type " ^ P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ "\n"))
 
 *)
     | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
-        let _  = LF.check cO cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
+        let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
         let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
-        let problem = Coverage.make loc prag cO cD branches cA in
+        let problem = Coverage.make loc prag Syntax.Int.LF.Empty cD branches cA in
           (* Coverage.stage problem; *)
-          checkBranches (IndexObj (phat, tR)) cO cD cG branches cA (tau, t);
+          checkBranches (IndexObj (phat, tR)) cD cG branches cA (tau, t);
           Coverage.process problem
 
     | (Case (loc, prag, i, branches), (tau, t)) -> 
-        begin match C.cwhnfCTyp (syn cO cD cG i) with
+        begin match C.cwhnfCTyp (syn cD cG i) with
           | (TypBox (_, tA, cPsi),  t') ->
-              let problem = Coverage.make loc prag cO cD branches (tA, cPsi) in
+              let problem = Coverage.make loc prag Syntax.Int.LF.Empty cD branches (tA, cPsi) in
 (*                Coverage.stage problem; *)
-                checkBranches DataObj cO cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t);
+                checkBranches DataObj cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t);
                 Coverage.process problem
-          | (tau',t') -> raise (Error (loc, E.CompMismatch(cO, cD, cG, i, E.Box, (tau', t'))))
+          | (tau',t') -> raise (Error (loc, E.CompMismatch(cD, cG, i, E.Box, (tau', t'))))
         end
 
     | (Syn (loc, i), (tau, t)) ->
-        let ttau' = (syn cO cD cG i) in 
+        let ttau' = (syn cD cG i) in 
         if C.convCTyp (tau,t)  ttau' then 
           ()
         else
-          raise (Error (loc, E.CompIllTyped (cO, cD, cG, e, (tau,t), ttau')))
+          raise (Error (loc, E.CompIllTyped (cD, cG, e, (tau,t), ttau')))
 
     | (If (loc, i, e1, e2), (tau,t)) -> 
-        begin match C.cwhnfCTyp (syn cO cD cG i) with
+        begin match C.cwhnfCTyp (syn cD cG i) with
           | (TypBool , _ ) -> 
-              (check cO cD cG e1 (tau,t) ; 
-               check cO cD cG e1 (tau,t) )
-          | tau_theta' -> raise (Error (loc, E.CompIfMismatch (cO, cD, cG, tau_theta')))
+              (check cD cG e1 (tau,t) ; 
+               check cD cG e1 (tau,t) )
+          | tau_theta' -> raise (Error (loc, E.CompIfMismatch (cD, cG, tau_theta')))
         end 
 
-  and check cO cD cG e (tau, t) =
-    dprint (fun () -> "check cO = " ^ P.octxToString cO);
-    checkW cO cD cG e (C.cwhnfCTyp (tau, t));
+  and check cD cG e (tau, t) =
+    checkW cD cG e (C.cwhnfCTyp (tau, t));
 
-  and syn cO cD cG e = match e with
+  and syn cD cG e = match e with
     | Var x   -> (lookup cG x, C.m_id)
         (* !!!! MAY BE WRONG since only . |- ^0 : .   and not cD |- ^0 : cD !!! *)
 
@@ -329,71 +332,67 @@ and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with
         ((Comp.get prog).Comp.typ, C.m_id)
 
     | Apply (loc , e1, e2) ->
-        begin match C.cwhnfCTyp (syn cO cD cG e1) with
+        begin match C.cwhnfCTyp (syn cD cG e1) with
           | (TypArr (tau2, tau), t) ->
               dprint (fun () -> "[SYN: APPLY ] synthesized type  " ^
-                          P.compTypToString cO cD (Whnf.cnormCTyp (TypArr (tau2,
+                          P.compTypToString cD (Whnf.cnormCTyp (TypArr (tau2,
         tau), t) ));
               dprint (fun () -> ("[check: APPLY] argument has appropriate type " ^
-                                       P.expChkToString cO cD cG e2));
-              dprint (fun () -> "[check: APPLY] cG " ^ P.gctxToString cO cD cG );
-              check cO cD cG e2 (tau2, t);
+                                       P.expChkToString cD cG e2));
+              dprint (fun () -> "[check: APPLY] cG " ^ P.gctxToString cD cG );
+              check cD cG e2 (tau2, t);
               (tau, t)
           | (tau, t) -> 
-              raise (Error (loc, E.CompMismatch (cO, cD, cG, e1, E.Arrow, (tau,t))))
+              raise (Error (loc, E.CompMismatch (cD, cG, e1, E.Arrow, (tau,t))))
         end
 
     | CtxApp (loc, e, cPsi) ->
-        begin match C.cwhnfCTyp (syn cO cD cG e) with
+        begin match C.cwhnfCTyp (syn cD cG e) with
           | ((TypCtxPi ((_psi, w, _ ) , tau), t) as tt) ->
-              let theta' = Ctxsub.csub_msub cPsi 1 t in
-              let tau'   = Ctxsub.csub_ctyp cD cPsi 1 tau in               
-
-              (* let tau1 = Ctxsub.csub_ctyp cD cPsi 1 (Whnf.cnormCTyp (tau,t))    in *)
-                LF.checkSchema cO cD cPsi (Schema.get_schema w);
-                (dprint (fun () -> "[check: syn] CtxApp : tau = " ^ 
-                                 P.compTypToString cO cD (Whnf.cnormCTyp tt) ); 
-                 dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cO cD cPsi );
-                 dprint (fun () -> "[check: syn] tau1 = " ^
-                          P.compTypToString cO cD (Whnf.cnormCTyp (tau', theta') ))) ; 
-                 (tau', theta') 
-                 (* (tau1, C.m_id)                 *)
+              let theta' = I.MDot (I.CObj (cPsi), t) in
+              LF.checkSchema cD cPsi (Schema.get_schema w);
+              (dprint (fun () -> "[check: syn] CtxApp : tau = " ^ 
+                         P.compTypToString cD (Whnf.cnormCTyp tt) ); 
+               dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
+               dprint (fun () -> "[check: syn] tau1 = " ^
+                          P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ; 
+                 (tau, theta') 
           | (tau, t) -> 
-              raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.CtxPi, (tau,t))))
+              raise (Error (loc, E.CompMismatch (cD, cG, e, E.CtxPi, (tau,t))))
         end
     | MApp (loc, e, (phat, cObj)) ->
-        begin match (cObj, C.cwhnfCTyp (syn cO cD cG e)) with
+        begin match (cObj, C.cwhnfCTyp (syn cD cG e)) with
           | (NormObj tM, (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t)) ->
-              LF.check cO cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
+              LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
               (tau, I.MDot(I.MObj (phat, tM), t))
 
           | (NeutObj h, (TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
-              let tB = LF.inferHead loc cO cD cPsi h in 
+              let tB = LF.inferHead loc cD cPsi h in 
                 if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
                   (tau, I.MDot(I.PObj (phat, h), t))
                 else 
-                  raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.PiBox, (tau,t))))
+                  raise (Error (loc, E.CompMismatch (cD, cG, e, E.PiBox, (tau,t))))
 
           | (_ , (tau, t)) -> 
-              raise (Error (loc, E.CompMismatch (cO, cD, cG, e, E.PiBox, (tau,t))))
+              raise (Error (loc, E.CompMismatch (cD, cG, e, E.PiBox, (tau,t))))
         end
 
     | Ann (e, tau) ->
-        check cO cD cG e (tau, C.m_id);
+        check cD cG e (tau, C.m_id);
         (tau, C.m_id)
 
     | Equal(loc, i1, i2) -> 
-         let ttau1 = syn cO cD cG i1 in 
-         let ttau2 = syn cO cD cG i2 in            
+         let ttau1 = syn cD cG i1 in 
+         let ttau2 = syn cD cG i2 in            
            if Whnf.convCTyp ttau1 ttau2 then 
              begin match (Whnf.cwhnfCTyp ttau1) with 
                | (TypBox _ , _ ) ->  (TypBool, C.m_id)
                | (TypBool, _ )   ->  (TypBool, C.m_id)
-               | _               ->  raise (Error (loc, E.CompEqTyp (cO, cD, ttau1))) 
+               | _               ->  raise (Error (loc, E.CompEqTyp (cD, ttau1))) 
              end
 
            else 
-             raise (Error(loc, E.CompEqMismatch (cO, cD, ttau1, ttau2 )))
+             raise (Error(loc, E.CompEqMismatch (cD, ttau1, ttau2 )))
 
     | Boolean _  -> (TypBool, C.m_id)
 
@@ -401,15 +400,15 @@ and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with
 
 
 
-  and checkBranches caseTyp cO cD cG branches tAbox ttau =
-    List.iter (fun branch -> checkBranch caseTyp cO cD cG branch tAbox ttau) branches
+  and checkBranches caseTyp cD cG branches tAbox ttau =
+    List.iter (fun branch -> checkBranch caseTyp cD cG branch tAbox ttau) branches
 
-(*  and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
+(*  and checkBranch _caseTyp cD cG branch (tP, cPsi) (tau, t) =
     match branch with
       | BranchBox (cD1,  (cPsi1, (I.Root(loc, _, _ ) as tR1), (t1', cD1')),  e1) ->
           (* By invariant: cD1' |- t1' <= cD, cD1 *)
-          let _         = LF.checkMSub cO cD1' t1' (Context.append cD cD1) in  
-          let (tP1,s1)  = LF.syn cO cD1 cPsi1 (tR1, S.LF.id)  in 
+          let _         = LF.checkMSub cD1' t1' (Context.append cD cD1) in  
+          let (tP1,s1)  = LF.syn cD1 cPsi1 (tR1, S.LF.id)  in 
 
           (* Apply to the type tP1[Psi1] the refinement substitution t1' *)
           (* cD1 ; cPsi1 |- tM1 <= tA1 
@@ -449,8 +448,8 @@ and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with
           let  _    = (if Whnf.convDCtx cPsi1' cPsi'
                          && Whnf.convTyp sP1' (tP', S.LF.id)
                        then  ()
-                       else raise (Error (loc, E.CompPattMismatch ((cO, cD1, cPsi1, tR1, (tP1,s1)), 
-                                                                   (cO, cD, cPsi, (tP, S.LF.id)))))) in 
+                       else raise (Error (loc, E.CompPattMismatch ((cD1, cPsi1, tR1, (tP1,s1)), 
+                                                                   (cD, cPsi, (tP, S.LF.id)))))) in 
 
           (* let t' = Whnf.mvar_dot t cD1 in  
              let t''  = Whnf.mcomp t' t1'' in *)
@@ -462,34 +461,33 @@ and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with
           let t'' = Whnf.mcomp t t1'' in
 
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.mctxToString cO cD1 ^ " . " ^ 
-                        P.normalToString cO cD1 cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
-                            P.expChkToString cO cD1' cG' e1 ^ 
-                            "\n has type "  ^ P.compTypToString cO cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
+                        P.mctxToString cD1 ^ " . " ^ 
+                        P.normalToString cD1 cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
+                            P.expChkToString cD1' cG' e1 ^ 
+                            "\n has type "  ^ P.compTypToString cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
                        ) in
                  
           in
-            check cO cD1' cG' e1 (tau, t'');
+            check cD1' cG' e1 (tau, t'');
 *)
-  and checkBranch _caseTyp cO cD cG branch (tP, cPsi) (tau, t) =
+  and checkBranch _caseTyp cD cG branch (tP, cPsi) (tau, t) =
     match branch with
-      | EmptyBranch (loc, cO1', cD1', PatEmpty (loc', _cPsi), (t1, cs)) -> 
+      | EmptyBranch (loc, _cO1', cD1', PatEmpty (loc', _cPsi), (t1, cs)) -> 
           (* By invariant: cD1' |- t1 <= cD *)
 (*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  *)
-          let _     = LF.checkMSub cO1' cD1' (cs, t1) cD in  
+          let _     = LF.checkMSub cD1' (cs, t1) cD in  
           let t'' = Whnf.mcomp t t1 in
 
           let tau  = Whnf.cnormCTyp (tau, t'') in
           let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.octxToString cO1' ^ " ; \n" ^ 
-                        P.mctxToString cO1' cD1' ^ " ;\n " ^ 
+                        P.mctxToString cD1' ^ " ;\n " ^ 
                         "{} (EmptyPattern)" ^
-                            "\n has type "  ^ P.compTypToString cO1' cD1' tau')
+                            "\n has type "  ^ P.compTypToString cD1' tau')
           in
             ()
 
-      | Branch (loc, cO1', cD1', PatMetaObj (loc', mO), (t1, cs), e1) -> 
+      | Branch (loc, _cO1', cD1', PatMetaObj (loc', mO), (t1, cs), e1) -> 
           let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
           (* By invariant: cD1' |- t1 <= cD *)
           let tP1   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tP, t1), cs) in 
@@ -500,25 +498,24 @@ and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with
           let tau  = Whnf.cnormCTyp (tau, t'') in
           let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n")
-                       (* P.octxToString cO1' ^ " ; \n" ^ 
-                        P.mctxToString cO1' cD1' ^ " ;\n [" ^ 
-                        P.dctxToString cO1' cD1' cPsi1' ^ "] \n" ^
-                        P.normalToString cO1' cD1' cPsi1' (tR1, S.LF.id) ^ 
-                            "\n " ^ P.msubToString cO1' cD1' t1 ^  
-                            " ; \n " ^ P.csubToString cO1' cD1' cs ^  
+                       (* 
+                        P.mctxToString1' cD1' ^ " ;\n [" ^ 
+                        P.dctxToString1' cD1' cPsi1' ^ "] \n" ^
+                        P.normalToString1' cD1' cPsi1' (tR1, S.LF.id) ^ 
+                            "\n " ^ P.msubToString1' cD1' t1 ^  
                             "\n  =>  " ^ 
-                            P.expChkToString cO1' cD1' cG' e1 ^ 
-                            "\n has type "  ^ P.compTypToString cO1' cD1' tau' ^ "\n" *)
+                            P.expChkToString1' cD1' cG' e1 ^ 
+                            "\n has type "  ^ P.compTypToString1' cD1' tau' ^ "\n" *)
                         in
           let _ = dprint (fun () -> "\nChecking refinement substitution\n") in          
 (*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in   *)
-          let _     = LF.checkMSub cO1' cD1' (cs, t1) cD in   
+          let _     = LF.checkMSub  cD1' (cs, t1) cD in   
           let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in            
-          let _  = checkMetaObj cO1' cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in   
+          let _  = checkMetaObj cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in   
 
-            check cO1' cD1' cG' e1 (tau', Whnf.m_id)
+            check cD1' cG' e1 (tau', Whnf.m_id)
 
-      | BranchBox  (cO1',  cD1',  (cPsi1', NormalPattern(I.Root(loc, _, _ ) as tR1, e1),  
+      | BranchBox  (_cO1',  cD1',  (cPsi1', NormalPattern(I.Root(loc, _, _ ) as tR1, e1),  
                                    t1,  cs)) ->
           let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
           (* By invariant: cD1' |- t1 <= cD *)
@@ -530,38 +527,35 @@ and checkMetaSpine cO cD mS cKt  = match (mS, cKt) with
           let tau  = Whnf.cnormCTyp (tau, t'') in
           let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.octxToString cO1' ^ " ; \n" ^ 
-                        P.mctxToString cO1' cD1' ^ " ;\n [" ^ 
-                        P.dctxToString cO1' cD1' cPsi1' ^ "] \n" ^
-                        P.normalToString cO1' cD1' cPsi1' (tR1, S.LF.id) ^ 
-                            "\n " ^ P.msubToString cO1' cD1' t1 ^  
-                            " ; \n " ^ P.csubToString cO1' cD1' cs ^  
+                        P.mctxToString cD1' ^ " ;\n [" ^ 
+                        P.dctxToString cD1' cPsi1' ^ "] \n" ^
+                        P.normalToString cD1' cPsi1' (tR1, S.LF.id) ^ 
+                            "\n " ^ P.msubToString cD1' t1 ^  
                             "\n  =>  " ^ 
-                            P.expChkToString cO1' cD1' cG' e1 ^ 
-                            "\n has type "  ^ P.compTypToString cO1' cD1' tau' ^ "\n" 
+                            P.expChkToString cD1' cG' e1 ^ 
+                            "\n has type "  ^ P.compTypToString cD1' tau' ^ "\n" 
                        ) in
           let _ = dprint (fun () -> "\nChecking refinement substitution\n") in         
-(*          let _ = dprint (fun () -> "Domain [cs]cD : " ^ P.mctxToString cO1' (Ctxsub.ctxnorm_mctx (cD,cs)) ^ "\n") in 
-          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in   *)
-          let _     = LF.checkMSub cO1' cD1' (cs, t1) cD in   
+(*          let _ = dprint (fun () -> "Domain [cs]cD : " ^ P.mctxToString (Ctxsub.ctxnorm_mctx (cD,cs)) ^ "\n") in 
+          let _     = LF.checkMSub cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in   *)
+          let _     = LF.checkMSub cD1' (cs, t1) cD in   
           let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in            
-          let _  = LF.check cO1' cD1' cPsi1' (tR1, S.LF.id)  (tP1, S.LF.id) in   
+          let _  = LF.check cD1' cPsi1' (tR1, S.LF.id)  (tP1, S.LF.id) in   
 
-            check cO1' cD1' cG' e1 (tau', Whnf.m_id)
+            check cD1' cG' e1 (tau', Whnf.m_id)
 
-      | BranchBox (cO1', cD1',  (_cPsi1, EmptyPattern, t1, cs)) ->
+      | BranchBox (_cO1', cD1',  (_cPsi1, EmptyPattern, t1, cs)) ->
           (* By invariant: cD1' |- t1 <= cD *)
 (*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  *)
-          let _     = LF.checkMSub cO1' cD1' (cs, t1) cD in  
+          let _     = LF.checkMSub cD1' (cs, t1) cD in  
           let t'' = Whnf.mcomp t t1 in
 
           let tau  = Whnf.cnormCTyp (tau, t'') in
           let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.octxToString cO1' ^ " ; \n" ^ 
-                        P.mctxToString cO1' cD1' ^ " ;\n " ^ 
+                        P.mctxToString cD1' ^ " ;\n " ^ 
                         "{} (EmptyPattern)" ^
-                            "\n has type "  ^ P.compTypToString cO1' cD1' tau')
+                            "\n has type "  ^ P.compTypToString cD1' tau')
           in
             ()
 
@@ -577,31 +571,27 @@ module Sgn = struct
 
     | Syntax.Int.Sgn.Typ (_a, tK) :: decls ->
         let cD   = Syntax.Int.LF.Empty in
-        let cO   = Syntax.Int.LF.Empty in
         let cPsi = Syntax.Int.LF.Null in
-          LF.checkKind cO cD cPsi tK;
+          LF.checkKind cD cPsi tK;
           check_sgn_decls decls
 
     | Syntax.Int.Sgn.Const (_c, tA) :: decls ->
         let cD   = Syntax.Int.LF.Empty in
-        let cO   = Syntax.Int.LF.Empty in
         let cPsi = Syntax.Int.LF.Null in
-          LF.checkTyp cO cD cPsi (tA, Substitution.LF.id);
+          LF.checkTyp cD cPsi (tA, Substitution.LF.id);
           check_sgn_decls decls
 
     | Syntax.Int.Sgn.Schema (_w, schema) :: decls ->
         let cD   = Syntax.Int.LF.Empty in
-        let cO   = Syntax.Int.LF.Empty in
         let cPsi = Syntax.Int.LF.Null in
-          LF.checkSchema cO cD cPsi schema;
+          LF.checkSchema cD cPsi schema;
           check_sgn_decls decls
 
     | Syntax.Int.Sgn.Rec (f, tau, e) :: decls ->
         let cD = Syntax.Int.LF.Empty in
-        let cO = Syntax.Int.LF.Empty in
         let cG = Syntax.Int.LF.Empty in
-          Comp.checkTyp cO cD tau;
-          Comp.check cO cD cG e (tau, Whnf.m_id);         
+          Comp.checkTyp cD tau;
+          Comp.check cD cG e (tau, Whnf.m_id);         
           check_sgn_decls decls 
 
     | Syntax.Int.Sgn.Pragma (_a) :: decls ->

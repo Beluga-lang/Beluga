@@ -413,13 +413,13 @@ module Printer = struct
   let nameToString x = x.Id.string_of_name
 
   let dctxToString cPsi =
-    P.dctxToString LF.Empty LF.Empty cPsi
+    P.dctxToString LF.Empty cPsi
 
   let typToString cPsi sM =
-    P.typToString LF.Empty LF.Empty cPsi sM
+    P.typToString LF.Empty cPsi sM
 
   let normalToString cPsi sM =
-    P.normalToString LF.Empty LF.Empty cPsi sM
+    P.normalToString LF.Empty cPsi sM
 
   let declToString cPsi (tD, s) = match tD with
     | LF.TypDeclOpt x -> 
@@ -771,7 +771,7 @@ module Frontend = struct
     let solutions = ref 0 in
 
     (* Type checking function. *)
-    let check cPsi tM s = Lfcheck.check LF.Empty LF.Empty 
+    let check cPsi tM s = Lfcheck.check LF.Empty 
       cPsi (tM, S.id) (sgnQuery.skinnyTyp, s) in
     
  

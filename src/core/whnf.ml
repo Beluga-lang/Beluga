@@ -24,7 +24,6 @@ exception Error of Syntax.Loc.t option * error
 
 exception Fmvar_not_found
 exception FreeMVar of head
-exception FreeCtxVar of Id.name
 exception NonInvertible 
 
 exception Violation of string
@@ -105,6 +104,10 @@ let rec etaContract tM = begin match tM with
 (*************************************)
 (* Creating new contextual variables *)
 (*************************************)
+(* newCVar sW = psi
+ *
+ *)
+let newCVar (sW) = CInst (ref None, sW, Empty, Empty)
 
 (* newPVar (cPsi, tA) = p
  *
@@ -231,6 +234,9 @@ let rec mshift t n = match t with
 
 
 and mshiftMFt ft n = match ft with 
+  | CObj(cPsi) -> 
+      CObj(mshiftDCtx cPsi n)
+   
   | MObj(phat, tM) -> 
       MObj(phat, mshiftTerm tM n)   
 
@@ -292,6 +298,7 @@ and mshiftFt ft n = match ft with
   
 and mshiftDCtx cPsi k = match cPsi with
   | Null -> Null
+  | CtxVar (CtxOffset offset) -> CtxVar (CtxOffset (offset + k))
   | CtxVar _ -> cPsi
   | DDec(cPsi', TypDecl(x, tA)) -> 
       DDec(mshiftDCtx cPsi' k, TypDecl(x, mshiftTyp tA k))
@@ -388,11 +395,15 @@ and mfrontMSub ft t = match ft with
 
   | PObj (phat, PVar (PInst ({contents = None}, _cPsi, _tA, _ ), r)) -> 
       ft
+
+
+  | CObj (cPsi) -> CObj (cnormDCtx (cPsi, t))
       
   | MV k -> 
       begin match LF.applyMSub k t with  (* DOUBLE CHECK - bp Wed Jan  7 13:47:43 2009 -bp *)
         | PObj(phat, p) ->  PObj(phat, p)          
         | MObj(phat, tM) ->  MObj(phat, tM)          
+        | CObj(cPsi) -> CObj (cPsi)
         | MV k'         -> MV k'
         (* other cases impossible *)
       end
@@ -422,6 +433,11 @@ and m_invert s =
 
     | MDot (MV k, t') ->
         if k = p then Some n
+        else lookup (n + 1) t' p 
+
+    | MDot (CObj(CtxVar (CtxOffset k)), t') -> 
+        if k = p then
+          Some n
         else lookup (n + 1) t' p 
 
     | MDot (MObj(_phat, Root(_, MVar (Offset k, Shift (_,0)), Nil)), t') -> 
@@ -1149,14 +1165,51 @@ and cnorm (tM, t) = match tM with
           TypDecl (x, cnormTyp (tA, t))
     | TypDeclOpt x -> TypDeclOpt x    (* jd 2010-05-22: +d fails otherwise *)
 
+
+
+  (* cnormDCtx (cPsi, t) = cPsi 
+
+   If cO ; cD  |- cPsi lf-dctx
+      cO ; cD' |-  t_d <= cO ; cD
+   then 
+      cO  ; cD' |- [|t|]cPsi 
+
+  *)
+  and cnormDCtx (cPsi, t) = match cPsi with
+    | Null       ->  Null 
+
+    | CtxVar (CInst ({contents = None} , _schema, _octx, _mctx )) -> cPsi
+
+    | CtxVar (CInst ({contents = Some cPhi} ,_schema, _octx, _mctx)) -> 
+        cnormDCtx (cPhi, t)
+
+    | CtxVar (CtxOffset psi) -> 
+        begin match LF.applyMSub psi t with
+          | CObj (cPsi') -> cPsi'
+          | MV k -> CtxVar (CtxOffset k)
+        end
+
+
+    | CtxVar (CtxName psi) -> CtxVar (CtxName psi)
+
+
+    | DDec(cPsi, decl) ->  
+        DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
+
+
+
 and cnormMSub t = match t with
   | MShift _n -> t
   | MDot (MObj(phat, tM), t) -> 
       MDot (MObj (phat, norm (tM, LF.id)), cnormMSub t) 
 
+  | MDot (CObj (cPsi), t) -> 
+        let t' = cnormMSub t in 
+        let cPsi' = normDCtx cPsi in 
+          MDot (CObj cPsi' , t')
+
   | MDot (PObj(phat, PVar(Offset k, s)), t) -> 
       MDot (PObj(phat, PVar(Offset k, s)), cnormMSub t)
-
 
   | MDot (PObj(phat, BVar k), t) -> 
       MDot (PObj(phat, BVar k), cnormMSub t)
@@ -1191,11 +1244,14 @@ and normKind sK = match sK with
       PiKind ((normDecl (decl, s), dep), normKind (tK, LF.dot1 s))
 
 and normDCtx cPsi = match cPsi with
-  | Null ->
-      Null
+  | Null -> Null
 
-  | CtxVar psi ->
-      CtxVar psi
+  | CtxVar (CInst ({contents = None} , _schema, _octx, _mctx )) -> cPsi
+      
+  | CtxVar (CInst ({contents = Some cPhi} ,_schema, _octx, _mctx)) -> 
+      normDCtx cPhi
+
+  | CtxVar psi -> CtxVar psi
 
   | DDec (cPsi1, TypDecl (x, Sigma typrec)) ->
       let cPsi1 = normDCtx cPsi1 in
@@ -1213,8 +1269,8 @@ and normCDecl (decl, sigma) = match decl with
   | PDecl (x, tA, cPsi) ->
       PDecl (x, normTyp (tA, sigma) , normDCtx cPsi)
 
-  | CDecl (x, schema) ->
-      CDecl (x, schema)
+  | CDecl (x, schema, dep) ->
+      CDecl (x, schema, dep)
 
 
   | SDecl (s, cPhi, cPsi) -> 
@@ -1654,15 +1710,14 @@ and convMSub subst1 subst2 = match (subst1, subst2) with
       false
 
 and convMFront front1 front2 = match (front1, front2) with
+  | (CObj cPsi, CObj cPhi) ->
+      convDCtx cPsi cPhi
   | (MObj (_phat, tM), MObj(_, tN)) ->
       conv (tM, LF.id) (tN, LF.id)
-
   | (PObj (phat, BVar k), PObj (phat', BVar k')) ->
       phat = phat' && k = k'
-
   | (PObj (phat, PVar(p,s)), PObj (phat', PVar(q, s'))) ->
       phat = phat' && p = q && convSub s s'
-
   | (_, _) ->
       false
 
@@ -1816,41 +1871,27 @@ let convHatCtx ((cvar, l), cPsi) =
    - We decided to not provide a constructor Id in msub
      (for similar reasons)
 *)
+
+
   
 (* ************************************************* *)
-(* cnormDCtx (cPsi, t) = cPsi 
 
-   If cO ; cD  |- cPsi lf-dctx
-      cO ; cD' |-  t_d <= cO ; cD
-   then 
-      cO  ; cD' |- [|t|]cPsi 
-
-*)
-let rec cnormDCtx (cPsi, t) = match cPsi with
-    | Null       ->  Null 
-
-    | CtxVar (CInst ({contents = None} , _schema, _octx, _mctx )) -> cPsi
-
-    | CtxVar (CInst ({contents = Some cPhi} ,_schema, _octx, _mctx)) -> cPhi
-
-    | CtxVar (CtxOffset psi) -> 
-        CtxVar (CtxOffset psi) 
-
-    | CtxVar (CtxName psi) -> 
-        raise (FreeCtxVar psi)
-
-    | DDec(cPsi, decl) ->  
-        DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
-
-
-
-let rec cnorm_psihat phat = match phat with
+let rec cnorm_psihat (phat: psi_hat) t = match phat with
   | (None , _ ) -> phat
   | (Some (CInst ({contents = Some cPsi}, _schema, _cO, _cD)),  k) -> 
       begin match Context.dctxToHat cPsi with
         | (None, i) -> (None, k+i)
         | (Some cvar', i) -> (Some cvar', i+k)
       end
+  | (Some (CtxOffset offset), k) -> 
+      begin match LF.applyMSub offset t with 
+        | CObj(cPsi) -> 
+            begin match Context.dctxToHat (cPsi) with
+              | (None, i) -> (None, k+i)
+              | (Some cvar', i) -> (Some cvar', i+k)
+            end
+        | MV offset' -> (Some (CtxOffset offset'), k)
+      end 
   |  _ -> phat
 
 
@@ -1860,6 +1901,7 @@ let rec cnormCSub (cs, t) = begin match cs with
   | CDot (cPsi, cs) -> 
       CDot (cnormDCtx (cPsi, t) , cnormCSub (cs, t))
 end 
+
 
 
 
@@ -1895,6 +1937,10 @@ let rec mctxPDec cD k =
 *)        
     | (Dec (_cD, MDecl  _),  1)
       -> raise (Violation ("Expected parameter variable, but found meta-variable"))
+    | (Dec (_cD, CDecl  _),  1)
+      -> raise (Violation ("Expected parameter variable, but found context variable"))
+    | (Dec (_cD, SDecl  _),  1)
+      -> raise (Violation ("Expected parameter variable, but found substitution variable"))
 
     | (Dec (cD, _),  k')
       -> lookup cD (k' - 1)
@@ -1911,7 +1957,11 @@ let rec mctxSDec cD' k =
         
     | (Dec (_cD, PDecl _), 1)
       -> raise (Violation "Expected substitution variable; found parameter variable")
-      
+    | (Dec (_cD, MDecl _), 1)
+      -> raise (Violation "Expected substitution variable; found meta-variable")
+    | (Dec (_cD, CDecl _), 1)
+      -> raise (Violation "Expected substitution variable; found context-variable")
+
     | (Dec (cD, _), k')
       -> lookup cD (k' - 1)
 
@@ -1920,7 +1970,39 @@ let rec mctxSDec cD' k =
     lookup cD' k
 
 
+(*
+*)
+let rec mctxCDec cD k = 
+  let rec lookup cD k' = match (cD, k') with
+    | (Dec (_cD, CDecl (psi, sW, dep)),  1)
+      -> (psi, sW)
 
+    | (Dec (_cD, MDecl  _),  1)
+      -> raise (Violation ("Expected context variable, but found meta-variable"))
+    | (Dec (_cD, PDecl  _),  1)
+      -> raise (Violation ("Expected context variable, but found parameter-variable"))
+    | (Dec (_cD, SDecl  _),  1)
+      -> raise (Violation ("Expected context variable, but found substitution-variable"))
+    | (Dec (cD, _),  k')
+      -> lookup cD (k' - 1)
+
+    | (_ , _ ) -> raise (Violation "Context variable out of bounds")
+  in 
+    lookup cD k
+
+let rec mctxCVarPos cD psi = 
+  let rec lookup cD k = match cD  with
+    | Dec (cD, CDecl(phi, s_cid, _))    -> 
+        if psi = phi then 
+          (k, s_cid)
+        else 
+          lookup cD (k+1)
+              
+    | Dec (cD, _) -> lookup cD (k+1)
+
+    | Empty  -> (dprint (fun () -> "mctxCVarPos \n") ; raise Fmvar_not_found)
+  in 
+    lookup cD 1
 
 
 let rec mctxMVarPos cD u = 
@@ -1936,8 +2018,6 @@ let rec mctxMVarPos cD u =
     | Empty  -> (dprint (fun () -> "mctxMVarPos \n") ; raise Fmvar_not_found)
   in 
     lookup cD 1
-
-
 
 let rec mctxPVarPos cD p = 
   let rec lookup cD k = match cD  with
@@ -2035,18 +2115,24 @@ let rec mctxPVarPos cD p =
             
             
       | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
-          Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, t))
+          Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, mvar_dot1 t))
             
       | (Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau), t)    -> 
-          Comp.TypPiBox ((MDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
+          let tA'   = normTyp (cnormTyp(tA, t), LF.id) in 
+          let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in 
+          Comp.TypPiBox ((MDecl (u, tA', cPsi'), dep), 
                          cnormCTyp (tau, mvar_dot1 t))
             
       | (Comp.TypPiBox ((PDecl(u, tA, cPsi) , dep), tau), t)    -> 
-          Comp.TypPiBox ((PDecl (u, cnormTyp (tA, t), cnormDCtx (cPsi, t)), dep), 
+          let tA'   = normTyp (cnormTyp(tA, t), LF.id) in 
+          let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in 
+          Comp.TypPiBox ((PDecl (u, tA', cPsi'), dep), 
                          cnormCTyp (tau, mvar_dot1 t))
             
       | (Comp.TypPiBox ((SDecl(u, cPhi, cPsi) , dep), tau), t)    -> 
-          Comp.TypPiBox ((SDecl (u, cnormDCtx (cPhi, t), cnormDCtx (cPsi, t)), dep), 
+          let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in 
+          let cPhi' = normDCtx (cnormDCtx(cPhi, t)) in 
+          Comp.TypPiBox ((SDecl (u, cPhi', cPsi'), dep), 
                          cnormCTyp (tau, mvar_dot1 t))
 
       | (Comp.TypClo (tT, t'), t)        -> 
@@ -2120,7 +2206,8 @@ let rec mctxPVarPos cD p =
 
     | (Comp.Fun (loc, x, e), t) -> Comp.Fun (loc, x, cnormExp (e,t))
 
-    | (Comp.CtxFun (loc, psi, e) , t ) ->  Comp.CtxFun (loc, psi, cnormExp (e, t))
+    | (Comp.CtxFun (loc, psi, e) , t ) ->  
+        Comp.CtxFun (loc, psi, cnormExp (e, mvar_dot1 t))
 
     | (Comp.MLam (loc, u, e), t) -> Comp.MLam (loc, u, cnormExp (e, mvar_dot1  t))
 
@@ -2133,11 +2220,11 @@ let rec mctxPVarPos cD p =
         Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
 
     | (Comp.Box (loc, psihat, tM), t) -> 
-        Comp.Box (loc, cnorm_psihat psihat, 
+        Comp.Box (loc, (cnorm_psihat psihat t), 
                   norm (cnorm (tM, t), LF.id))
 
     | (Comp.SBox (loc, psihat, sigma), t) -> 
-        Comp.SBox (loc, cnorm_psihat psihat, 
+        Comp.SBox (loc, (cnorm_psihat psihat t), 
                   normSub (cnormSub (sigma, t)))
 
     | (Comp.Case (loc, prag, i, branches), t) -> 
@@ -2160,18 +2247,18 @@ let rec mctxPVarPos cD p =
     | (Comp.CtxApp (loc, i, cPsi), t) -> Comp.CtxApp (loc, cnormExp' (i, t), normDCtx (cnormDCtx (cPsi, t)))
 
     | (Comp.MApp (loc, i, (psihat, Comp.NormObj tM)), t) -> 
-        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat, Comp.NormObj (norm (cnorm (tM, t), LF.id))))
+        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.NormObj (norm (cnorm (tM, t), LF.id))))
 
     | (Comp.MApp (loc, i, (psihat, Comp.NeutObj h)), t) -> 
        begin match normFt (Head (cnormHead (h,t))) with 
-          | Head h' ->  Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat, Comp.NeutObj h'))
+          | Head h' ->  Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.NeutObj h'))
           | _       -> raise (Violation ("Object does not remain head under msub"))
        end 
 
 
     | (Comp.MApp (loc, i, (psihat, Comp.SubstObj s)), t) -> 
         let s' = normSub (cnormSub (s,t)) in 
-        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat, Comp.SubstObj s'))
+        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.SubstObj s'))
 
     | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), cnormCTyp (tau, mcomp t' t))
 
@@ -2181,6 +2268,29 @@ let rec mctxPVarPos cD p =
          (Comp.Equal (loc, i1', i2'))
 
     | (Comp.Boolean b, t) -> Comp.Boolean(b)
+
+  and cnormPattern (pat, t) = match pat with 
+    | Comp.PatEmpty (loc, cPsi) -> 
+        Comp.PatEmpty (loc, cnormDCtx (cPsi, t))
+    | Comp.PatMetaObj (loc, mO) -> 
+        Comp.PatMetaObj (loc, cnormMetaObj (mO, t))
+    | Comp.PatConst (loc, c, patSpine) -> 
+        Comp.PatConst (loc, c, cnormPatSpine (patSpine, t))
+    | Comp.PatVar _ -> pat
+    | Comp.PatPair (loc, pat1, pat2) -> 
+        Comp.PatPair (loc, cnormPattern (pat1, t), 
+                      cnormPattern (pat2, t))
+    | Comp.PatTrue loc -> pat
+    | Comp.PatFalse loc -> pat
+    | Comp.PatAnn (loc, pat, tau) -> 
+        Comp.PatAnn (loc, cnormPattern (pat, t), 
+                     cnormCTyp (tau, t))
+
+  and cnormPatSpine (patSpine, t) = match patSpine with 
+    | Comp.PatNil -> Comp.PatNil
+    | Comp.PatApp (loc, pat, patSpine) -> 
+        Comp.PatApp (loc, cnormPattern (pat, t), 
+                     cnormPatSpine (patSpine, t))
 
 
   (* cnormBranch (BranchBox (cO, cD, (psihat, tM, (tA, cPsi)), e), theta, cs) = 
@@ -2221,9 +2331,9 @@ let rec mctxPVarPos cD p =
      *)
         Comp.Branch (loc, cO, cD, Comp.PatMetaObj (loc', normMetaObj mO), (cnormMSub t, cs), 
                      cnormExp (e, m_id))
-    | (Comp.Branch (loc, cO, cD, pat, (t,cs), e) , theta) -> 
-        (* there may be issues since we do not normalize pat *)
-        Comp.Branch (loc, cO, cD, pat, (cnormMSub t, cs), cnormExp (e, m_id))
+ | (Comp.Branch (loc, cO, cD, pat, (t,cs), e), theta) -> 
+     Comp.Branch (loc, cO, cD, cnormPattern (pat, theta), 
+                  (cnormMSub t, cs), cnormExp (e, m_id))
 
     | (Comp.BranchBox (cO, cD', (cPsi, Comp.NormalPattern(tM, e), t, cs)),  theta) ->
     (* cD' |- t <= cD    and   FMV(e) = cD' while 
@@ -2332,7 +2442,7 @@ let rec mctxPVarPos cD p =
     | ((Comp.TypCtxPi ((_psi, cid_schema, _ ), tT1), t) , (Comp.TypCtxPi ((_psi', cid_schema', _ ), tT1'), t'))
       -> cid_schema = cid_schema'
         && 
-          convCTyp (tT1, t) (tT1', t')
+          convCTyp (tT1, mvar_dot1 t) (tT1', mvar_dot1 t')
 
     | ((Comp.TypPiBox ((MDecl(_, tA, cPsi), dep), tT), t), (Comp.TypPiBox ((MDecl(_, tA', cPsi'), dep'), tT'), t'))
       -> dep = dep' 

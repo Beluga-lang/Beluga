@@ -165,22 +165,40 @@ module FVar : sig
   val fvar_list : unit -> (Id.name * LF.typ_free_var) list 
 end
 
-
+(*
 module FMVar : sig
    (* NOTE: FMVars are stored in an an ordered data structure *)  
+  
   val add   : name -> (LF.typ * LF.dctx) -> unit
   val get   : name -> (LF.typ * LF.dctx)
   val clear : unit -> unit
 end
 
+  *)
 
+module FPatVar : sig
+  val add   : name -> Syntax.Int.Comp.typ -> unit
+  val get   : name -> Syntax.Int.Comp.typ
+  val clear : unit -> unit
+  val fvar_ctx : unit -> Syntax.Int.Comp.gctx
+end
+
+module FCVar : sig
+
+   (* NOTE: FCVars are stored in an an ordered data structure *)  
+  val add   : name -> LF.ctyp_decl  -> unit
+  val get   : name -> LF.ctyp_decl
+  val clear : unit -> unit
+end
+
+(*
 module FPVar : sig
  (* NOTE: FPVars are stored in an an ordered data structure *)  
   val add   : name -> (LF.typ * LF.dctx) -> unit
   val get   : name -> (LF.typ * LF.dctx)
   val clear : unit -> unit
 end
-
+*)
 
 module Var : sig
 
@@ -193,6 +211,7 @@ module Var : sig
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry
+  val append        : t -> t -> t
   val index_of_name : t -> name -> offset
 
 end
@@ -200,16 +219,21 @@ end
 
 module CVar : sig
 
-  type entry = private {
-    name : name
+  type cvar = MV of Id.name | PV of Id.name | CV of Id.name | SV of Id.name
+
+  type entry = {
+    name : cvar
   }
 
-  val mk_entry      : name -> entry
+  val mk_entry      : cvar -> entry
+
   type t  (* NOTE: t is an ordered data structure *)  
+
+  val nearest_cvar  : t -> offset 
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry
-  val index_of_name : t -> name -> offset
+  val index_of_name : t -> cvar -> offset
   val append        : t -> t -> t
   val length        : t -> int
 

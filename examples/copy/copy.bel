@@ -17,13 +17,14 @@ schema tctx = some [t:tp] term t;
 
 rec copy : {g:(tctx)*} (term (T ..))[g] -> (term (T ..))[g] =
 FN g => fn e => case e of  
-| [g] #p ..    => [g] (#p ..)
 
 | [g]  z      => [g] z 
 
 | [g] s (E ..) => 
   let [g] (F ..) = copy [g] ([g] (E .. )) in 
      [g] s (F ..) 
+%{
+% | [g] #p ..    => [g] (#p ..)
 
 | [g] lam  (\x. (U .. x)) => 
   let [g,x : term _ ] (V .. x) = copy [g, x:term _ ] ([g,x] (U .. x))  in
@@ -33,9 +34,10 @@ FN g => fn e => case e of
   let [g] (F1 .. ) = copy [g] ([g] (E1 ..)) in 
   let [g] (F2 .. ) = copy [g] ([g] (E2 ..)) in 
     [g] app (F1 ..) (F2 ..)
+}%
 ;
 
-
+%{
 % let t = copy [ ] ([ ] z) ;
 % let t = copy [x:term nat ] ([x] x);
  let t = copy [x:term _ ] ([x] s x);
@@ -45,4 +47,5 @@ FN g => fn e => case e of
      = copy [ ] ([ ] lam \x. (lam \y. app x y));
  let t = copy [y:term (arrow (arrow (arrow bool nat) (arrow bool nat)) nat)] ([y] app y (lam \x. (lam \y. app x y)));
  let t = copy [y:term nat,x:term bool] ([x,y] s x);
+}%
 }%

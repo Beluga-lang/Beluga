@@ -179,7 +179,7 @@ and eval_chk e theta_eta =
           begin match eval_syn i theta_eta with
           | Comp.BoxValue (phat, tM) ->
               dprint (fun () -> "[eval_syn] EVALUATED SCRUTINEE: " ^
-                                P.expChkToString LF.Empty LF.Empty (Comp.Box (None, phat, tM))
+                                P.expChkToString LF.Empty LF.Empty (Comp.Box (Syntax.Loc.ghost, phat, tM))
                              );
               eval_branches (phat,tM) (branches, theta_eta)
           | _ -> raise (Error.Violation "Expected BoxValue for case")
@@ -245,9 +245,9 @@ let rec eval e  =
   dprint (fun () -> "Opsem.eval");
   Debug.indent 2;
   let result = match eval_chk e (LF.MShift 0, Comp.Empty) with
-    | Comp.ConstValue cid -> Comp.Syn (None, Comp.Const cid)
-    | Comp.BoxValue (phat, tM) -> Comp.Box (None, phat, tM)
-    | Comp.BoolValue b -> Comp.Syn (None, Comp.Boolean b)
+    | Comp.ConstValue cid -> Comp.Syn (Syntax.Loc.ghost, Comp.Const cid)
+    | Comp.BoxValue (phat, tM) -> Comp.Box (Syntax.Loc.ghost, phat, tM)
+    | Comp.BoolValue b -> Comp.Syn (Syntax.Loc.ghost, Comp.Boolean b)
     | v -> Comp.Value v
   in
     Debug.outdent 2;

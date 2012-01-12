@@ -49,13 +49,12 @@ open Format
 *)
 
 
-let locToString loc =
-  Parser.Grammar.Loc.print Format.str_formatter loc;
-  flush_str_formatter()
-
-let locOptToString = function
-  | None -> "???"
-  | Some loc -> locToString loc
+let string_of_loc loc =
+  if Syntax.Loc.is_ghost loc then "???"
+  else begin
+    Parser.Grammar.Loc.print Format.str_formatter loc;
+    flush_str_formatter()
+  end
 
 type lvl    = int
 
@@ -1986,12 +1985,12 @@ module Error = struct
       | CompAppMismatch (cD, (Comp.MetaTyp (tP, cPsi), tau)) -> 
           fprintf ppf
             "Expected contextual object ( Psi . M ) of type   %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp (Comp.TypBox(None, tP, cPsi), tau))
+            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp (Comp.TypBox(Syntax.Loc.ghost, tP, cPsi), tau))
 
       | CompMAppMismatch (cD, (Comp.MetaTyp (tA, cPsi), tau)) -> 
           fprintf ppf
             "Expected contextual object ( Psi . M ) of type   %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp (Comp.TypBox(None, tA, cPsi), tau))
+            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp (Comp.TypBox(Syntax.Loc.ghost, tA, cPsi), tau))
 
       | CompMAppMismatch (cD, (Comp.MetaSchema cid_schema, tau)) -> 
           fprintf ppf

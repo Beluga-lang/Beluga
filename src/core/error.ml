@@ -2,13 +2,14 @@
 
 open Syntax.Int
 
+
 type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 
 type error =
-  | CtxReconstruct 
+  | CtxReconstruct
   | UnboundName      of Id.name
   | UnboundCtxName   of Id.name
-  | UnboundCtxSchemaName   of Id.name
+  | UnboundCtxSchemaName of Id.name
   | UnboundCompName  of Id.name
   | UnknownCidTyp    of Id.cid_typ
 
@@ -95,7 +96,7 @@ type error =
   | SubIllTyped
   | LeftoverFVar
 
-exception Error of Syntax.Loc.t option * error
+exception Error of Syntax.Loc.t * error
 exception Violation of string
 exception NotImplemented
 

@@ -142,9 +142,10 @@ let main () =
             printer decl;
             print_sgn printer decls
       in
-      let printOptionalLocation locOpt = match locOpt with
-        | None     -> Format.fprintf Format.std_formatter "<unknown location>"
-        | Some loc -> Parser.Grammar.Loc.print Format.std_formatter loc
+      let printLocation loc =
+        if Syntax.Loc.is_ghost loc
+        then Format.fprintf Format.std_formatter "<unknown location>"
+        else Parser.Grammar.Loc.print Format.std_formatter loc
       in
       let abort_session () = raise SessionFatal
       in
@@ -191,8 +192,8 @@ let main () =
               print_newline ();
               abort_session ()
 
-          | Error.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
+          | Error.Error (loc, err) ->
+              printLocation loc;
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf
                 Format.std_formatter

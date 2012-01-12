@@ -81,7 +81,7 @@ let mixloc = function
 (* unmix : mixtyp -> whichmix *  *)
 let rec unmix = function
   | MTCompKind l -> CompKindMix (Comp.Ctype l)
-  | MTBase (l, a, ms) -> CompMix(Comp.TypBase (Some l, a, ms))
+  | MTBase (l, a, ms) -> CompMix(Comp.TypBase (l, a, ms))
   | MTArr(l, mt1, mt2) -> begin match (unmix mt1, unmix mt2) with
                                   | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
                                   | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))

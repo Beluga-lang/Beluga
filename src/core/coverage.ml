@@ -45,7 +45,7 @@ let new_name string =
 (* ****************************************************************************** *)
 (* Coverage problem *)
 
-type problem = {loc : Parser.Grammar.Loc.t option;    
+type problem = {loc : Parser.Grammar.Loc.t;    
                 prag : Pragma.case_pragma;           (* indicates if %not appeared after ``case...of'' *)
                 cO : LF.mctx;
                 cD : LF.mctx;
@@ -152,10 +152,10 @@ and etaExpandMVstr' cO cPsi sA  = match sA with
          cPsi |- s_proj : cPhi 
          cPsi |- comp  ss' s_proj   : cPhi' *)
       let ss_proj = S.LF.comp ss' s_proj in 
-        LF.Root (None, LF.MVar (u, ss_proj), LF.Nil)   
+        LF.Root (Syntax.Loc.ghost, LF.MVar (u, ss_proj), LF.Nil)   
 
   | (LF.PiTyp ((LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      LF.Lam (None, x, etaExpandMVstr cO (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s) )
+      LF.Lam (Syntax.Loc.ghost, x, etaExpandMVstr cO (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s) )
 
     
 
@@ -181,7 +181,7 @@ and etaExpandMVstr' cO cPsi sA  = match sA with
           cPsi' |- comp s ss1 <= cPsi0
       *)
       let u = Whnf.newMVar (cPsi', LF.TClo(tP,s0)) in
-        LF.Root (None, LF.MVar (u, ss'), LF.Nil)  
+        LF.Root (Syntax.Loc.ghost, LF.MVar (u, ss'), LF.Nil)  
 
   | (LF.PiTyp ((LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
       LF.Lam (None, x, etaExpandMVstr cO (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s) )
@@ -555,7 +555,7 @@ let rec genObj ((cO, cD), cPsi, tP) (tH, tA) =
     let cPsi' = Whnf.cnormDCtx (cPsi, ms) in 
     let tA'   = Whnf.cnormTyp (Whnf.normTyp (tA, S.LF.id), ms) in 
     let tH'   = Whnf.cnormHead (tH, ms) in 
-    let tM = LF.Root (None, tH' , genSpine (cO, cD) cPsi' (tA', S.LF.id) tP') in
+    let tM = LF.Root (Syntax.Loc.ghost, tH' , genSpine (cO, cD) cPsi' (tA', S.LF.id) tP') in
     let (cD', cPsi', tR, tP', ms') =   
       begin try
 	Abstract.abstrCovGoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
@@ -706,7 +706,7 @@ let rec genBCovGoals ((cOD, cPsi, tA) as cov_problem) =  match tA  with
       let cg_list = genBCovGoals (cOD, LF.DDec (cPsi, tdecl), tA) in 
 	List.map (fun (cOD',cg, ms) -> 
 		    let CovGoal (LF.DDec(cPsi', tdecl'), tM, sA) = cg in 
-		    let cg' = CovGoal (cPsi', LF.Lam (None, x, tM), 
+		    let cg' = CovGoal (cPsi', LF.Lam (Syntax.Loc.ghost, x, tM), 
 				       (LF.PiTyp ((tdecl' , dep), LF.TClo(sA)), S.LF.id)) in 
 		      (cOD', cg', ms))
 	  cg_list
@@ -722,7 +722,7 @@ let rec genCovGoals ((cOD, cPsi, tA) as cov_problem) =  match tA  with
       let LF.TypDecl (x, _ ) = tdecl in 
 	List.map (function (cOD', cg, ms) -> 
 		    let CovGoal (LF.DDec (cPsi', tdecl'), tM, sA) = cg in 
-		      (cOD', CovGoal (cPsi', LF.Lam (None, x, tM), 
+		      (cOD', CovGoal (cPsi', LF.Lam (Syntax.Loc.ghost, x, tM), 
 				     (LF.PiTyp ((tdecl',dep) , LF.TClo(sA)),
 				      S.LF.id)),
 		       ms))
@@ -1059,7 +1059,7 @@ let rec genCtxGoals (cO, cO_tail) cD (LF.CDecl (x, sW, dep)) =
 	let _ = dprint (fun () -> "[genCtx] generated mvar of type " ^ P.dctxToString cD'' cPsi'  ^ " |- " ^ 
 			  P.typToString cD'' cPsi' (tP, ssi)) in 
 	let mdec = LF.MDecl (x, LF.TClo(tP, ssi), cPsi') in 
-	let mv   = LF.Root(None, LF.MVar(LF.Offset 1, ss'), LF.Nil) in 
+	let mv   = LF.Root(Syntax.Loc.ghost, LF.MVar(LF.Offset 1, ss'), LF.Nil) in 
 	  (LF.Dec (cD'', mdec) , LF.Dot(LF.Obj mv, s'))
   in 
 
@@ -1404,7 +1404,7 @@ let rec initialize_coverage problem =
   let cO'        = problem.cO in 
   let cD'        = LF.Dec (problem.cD, LF.MDecl(Id.mk_name (Id.NoName), tA, cPsi)) in   
   let mv         = LF.MVar (LF.Offset 1, idSub) in 
-  let tM         = LF.Root(None, mv, LF.Nil) in 
+  let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in 
   let cPsi'      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
   let sA'        = (Whnf.cnormTyp (tA, LF.MShift 1), S.LF.id) in 
   let covGoal    = CovGoal (cPsi', tM, sA') in 
@@ -1419,7 +1419,7 @@ let rec initialize_coverage problem =
 	else 
 	  raise (NoCover (fun () -> let (cO, cD) = cOD in 
 			    Printf.sprintf "\n##   Empty Pattern ##\n   %s\n\n##   Case expression of type : \n##   %s\n##   is not empty.\n\n" 
-			      (Pretty.locOptToString problem.loc)
+			      (Pretty.string_of_loc problem.loc)
 			      (P.typToString cD cPsi sA)))
 (*	  raise (Error "COVERAGE CANNOT PROVE A TYPE TRIVIALLY EMPTY")*)
     | ((cO, cD) as cOD, (NeutPatt(cPhi, _tN, sB') as pat)) :: plist -> 
@@ -1481,17 +1481,17 @@ let check_coverage_success problem  =
 	 (* Check if the open coverage goals can be proven to be impossible *)
          Failure (fun () ->
                    Printf.sprintf "\n##   Case expression doesn't cover: ##\n##   %s\n##   %s\n\n"
-                     (Pretty.locOptToString problem.loc)
+                     (Pretty.string_of_loc problem.loc)
                      ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) ))
 
    | Pragma.PragmaNotCase ->
        if !open_cov_goals = [] then 
 	 Failure (fun () ->
                     Printf.sprintf "\n##   Case expression covers : ##\n##   %s\n##\n\n"
-                      (Pretty.locOptToString problem.loc))
+                      (Pretty.string_of_loc problem.loc))
        else 
 	 ( (Printf.printf "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %s\n##   %s\n\n"
-            (Pretty.locOptToString problem.loc)
+            (Pretty.string_of_loc problem.loc)
             ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) )) ; 
 	  Success )
  end 
@@ -1527,7 +1527,7 @@ else
     dprint (fun () -> "Coverage checking a case with "
               ^ string_of_int (List.length problem.branches)  
 	      ^ " branch(es) at:\n"
-              ^ Pretty.locOptToString problem.loc);
+              ^ Pretty.string_of_loc problem.loc);
 
     dprint (fun () -> "Initial coverage problem \n" ^ covproblemsToString cov_problems ) ; 
     
@@ -1540,7 +1540,7 @@ else
     if r  > r' then 
       (print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
        print_endline ("CASES TRIVIALLY COVERED in line " ^
-			 Pretty.locOptToString  problem.loc
+			 Pretty.string_of_loc  problem.loc
 		      ^ " : " ^ string_of_int (List.length (trivial_og)))
 (* opengoalsToString trivial_og *)
 )

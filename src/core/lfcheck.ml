@@ -5,7 +5,6 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [5])
 
 open Context
 open Store.Cid
-open Substitution
 open Syntax.Int.LF
 open Error
 
@@ -305,7 +304,7 @@ let rec ctxShift cPsi = begin match cPsi with
             TClo (tA, s)
 
     | FVar _ ->
-        raise (Error (None, LeftoverFVar))
+        raise (Error (Syntax.Loc.ghost, LeftoverFVar))
 
 
   and canAppear cD cPsi sA =
@@ -362,14 +361,14 @@ let rec ctxShift cPsi = begin match cPsi with
         if psi = psi' then
           ()
         else
-          raise (Error (None, SubIllTyped))
+          raise (Error (Syntax.Loc.ghost, SubIllTyped))
 
 
     | (Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi)) ->
         if psi = psi' then
           ()
         else
-          raise (Error (None, SubIllTyped))
+          raise (Error (Syntax.Loc.ghost, SubIllTyped))
 
     (* SVar case to be added - bp *)
 
@@ -377,7 +376,7 @@ let rec ctxShift cPsi = begin match cPsi with
         if k > 0 then
           checkSub loc cD cPsi (Shift (psi, k - 1)) Null
         else
-          raise (Error (None, SubIllTyped))
+          raise (Error (Syntax.Loc.ghost, SubIllTyped))
 
     | (DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi) ->
         if k > 0 then
@@ -421,8 +420,6 @@ This case should now be covered by the one below it
               (P.typToString cD cPsi' (tA1, Substitution.LF.id))
               (P.typToString cD cPsi' (tA2, s')) in
               raise (Error (loc, SubIllTyped))
-                (* let sM = Root (None, h, Nil) in
-                   raise (TypMismatch (cPsi', sM, (tA2, s'), (tA1, Substitution.LF.id)))  *)
 
     | (cPsi',  Dot (Obj tM, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
         (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
@@ -688,7 +685,7 @@ f   *)
 (*            if not (List.for_all (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements ) then *)
             if List.exists (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements then ()
             else
-              raise (Error (None, CtxVarMismatch (cD, phi, schema)))
+              raise (Error (Syntax.Loc.ghost, CtxVarMismatch (cD, phi, schema)))
 
       | DDec (cPsi', decl) ->
           begin
@@ -768,10 +765,10 @@ and checkMSub cD  ms cD' = match (ms, cD') with
                 let TypDecl (_, tB) = ctxDec cPsi' k in 
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
             | PVar _ -> 
-                let tB = inferHead None cD cPsi' h in 
+                let tB = inferHead Syntax.Loc.ghost cD cPsi' h in 
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
             | Proj _ -> 
-                let tB = inferHead None cD cPsi' h in 
+                let tB = inferHead Syntax.Loc.ghost cD cPsi' h in 
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
            end ;
            checkMSub cD ms cD1')

@@ -386,8 +386,8 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
                                 ^ "\n context given " ^ P.dctxToString cD cPsi) in
               if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then ()
               else 
-                raise (E.Error (Some loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
-          | _ -> raise (E.Error (Some loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
+                raise (E.Error (loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
+          | _ -> raise (E.Error (loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
         )
 
     | PatMetaObj (loc, mO) -> 
@@ -405,13 +405,13 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
   and synPattern cD cG pat = match pat with 
     | PatConst (loc, c, pat_spine) -> 
         let tau = (CompConst.get c).CompConst.typ in 
-          (Some loc, synPatSpine cD cG pat_spine (tau , C.m_id))
-    | PatVar (loc, k) -> (Some loc, (lookup cG k, C.m_id))
-    | PatTrue loc -> (Some loc, (TypBool, C.m_id))
-    | PatFalse loc -> (Some loc, (TypBool, C.m_id))
+          (loc, synPatSpine cD cG pat_spine (tau , C.m_id))
+    | PatVar (loc, k) -> (loc, (lookup cG k, C.m_id))
+    | PatTrue loc -> (loc, (TypBool, C.m_id))
+    | PatFalse loc -> (loc, (TypBool, C.m_id))
     | PatAnn (loc, pat, tau) ->  
         checkPattern cD cG pat (tau, C.m_id);
-        (Some loc, (tau, C.m_id))
+        (loc, (tau, C.m_id))
 
   and synPatSpine cD cG pat_spine (tau, theta) = match pat_spine with
     | PatNil  -> (tau, theta)

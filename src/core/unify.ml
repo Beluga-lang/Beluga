@@ -1673,7 +1673,7 @@ module Make (T : TRAIL) : UNIFY = struct
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
                          [|w[s']/u|](u[t2]) = [t2](w[s'])
                       *)
-                      instantiateMVar (r1, Root(None, MVar(w, s'),Nil), !cnstrs1)
+                      instantiateMVar (r1, Root(Syntax.Loc.ghost, MVar(w, s'),Nil), !cnstrs1)
                         
               | (true, false) ->
                     addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
@@ -1956,7 +1956,7 @@ module Make (T : TRAIL) : UNIFY = struct
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
                          [|w[s']/u|](u[t2]) = [t2](w[s'])
                       *)
-                    let _ = instantiateMMVar (r1, Root(None, MMVar(w, (mt', s')), Nil), !cnstrs1) in 
+                    let _ = instantiateMMVar (r1, Root(Syntax.Loc.ghost, MMVar(w, (mt', s')), Nil), !cnstrs1) in 
 
                      dprint (fun () -> "Instantiated with new meta^2-variable " ^ 
                                         P.normalToString cD0 cPsi sM1)
@@ -2632,10 +2632,10 @@ module Make (T : TRAIL) : UNIFY = struct
         -> unifyTerm mflag cD0 cPsi (tM, id) (tN, id)
 
       | (Head head, Obj tN)
-        -> unifyTerm mflag cD0 cPsi (Root (None, head, Nil), id) (tN, id)
+        -> unifyTerm mflag cD0 cPsi (Root (Syntax.Loc.ghost, head, Nil), id) (tN, id)
 
       | (Obj tN, Head head)
-        -> unifyTerm mflag cD0 cPsi (tN, id) (Root (None, head, Nil), id)
+        -> unifyTerm mflag cD0 cPsi (tN, id) (Root (Syntax.Loc.ghost, head, Nil), id)
 
       | (Undef, Undef)
         -> ()

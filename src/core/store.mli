@@ -32,7 +32,7 @@ module Cid : sig
     val gen_mvar_name     : LF.typ -> (unit -> string) option 
     val get               : cid_typ -> entry
     val index_of_name     : name -> cid_typ
-    val addConstructor : Syntax.Loc.t option -> cid_typ -> cid_term -> LF.typ -> unit
+    val addConstructor    : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear             : unit -> unit
 
     (* see subord.ml for an explanation of term-level subordination
@@ -52,7 +52,7 @@ module Cid : sig
 
     val mk_entry      : name -> LF.typ -> int -> entry
     type t
-    val add           : Syntax.Loc.t option -> cid_typ -> entry -> cid_term
+    val add           : Syntax.Loc.t -> cid_typ -> entry -> cid_term
     val get           : cid_term -> entry
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term

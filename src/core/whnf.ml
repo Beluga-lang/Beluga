@@ -158,14 +158,14 @@ let newMMVar (cD, cPsi, tA) =
 let rec lowerMVar' cPsi sA' = match sA' with
   | (PiTyp ((decl,_ ), tA'), s') ->
       let (u', tM) = lowerMVar' (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1 s') in
-        (u', Lam (None, Id.mk_name Id.NoName, tM))
+        (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
 
   | (TClo (tA, s), s') ->
       lowerMVar' cPsi (tA, LF.comp s s')
 
   | (Atom (loc, a, tS), s') ->
       let u' = newMVar (cPsi, Atom (loc, a, SClo (tS, s'))) in
-        (u', Root (None, MVar (u', LF.id), Nil)) (* cvar * normal *)
+        (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil)) (* cvar * normal *)
 
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
@@ -205,7 +205,7 @@ and lowerMVar = function
 
   | _ ->
       (* It is not clear if it can happen that cnstr =/= nil *)
-      raise (Error (None, ConstraintsLeft))
+      raise (Error (Syntax.Loc.ghost, ConstraintsLeft))
 
 
 (*************************************)
@@ -1655,10 +1655,10 @@ and conv' sM sN = match (sM, sN) with
       convTuple (tuple1, s1) (tuple2, s2)
 
   | ((Root (_,AnnH (head, _tA), spine1), s1), sN) -> 
-       conv' (Root (None, head, spine1), s1) sN
+       conv' (Root (Syntax.Loc.ghost, head, spine1), s1) sN
 
   | (sM, (Root(_ , AnnH (head, _tA), spine2), s2)) ->
-      conv' sM (Root (None, head, spine2), s2)
+      conv' sM (Root (Syntax.Loc.ghost, head, spine2), s2)
 
   | ((Root (_, head1, spine1), s1), (Root (_, head2, spine2), s2)) ->
       (dprint (fun () -> "[conv ] check heads ") ; 
@@ -2602,7 +2602,7 @@ let rec mkPatSub s = match s with
       s
 
   | Shift (NegCtxShift _,  _k) ->
-      raise (Error (None, NotPatSub))
+      raise (Error (Syntax.Loc.ghost, NotPatSub))
 
   | Dot (Head (BVar n), s) ->
       let s' = mkPatSub s in
@@ -2619,11 +2619,11 @@ let rec mkPatSub s = match s with
   | Dot (Obj tM, s) ->
       begin match whnf (tM, LF.id) with
         | (Root (_, BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
-        | _                            -> raise (Error (None, NotPatSub))
+        | _                            -> raise (Error (Syntax.Loc.ghost, NotPatSub))
       end
 
   | _ ->
-      raise (Error (None, NotPatSub))
+      raise (Error (Syntax.Loc.ghost, NotPatSub))
 
 
 let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
@@ -2644,10 +2644,10 @@ and etaExpandMV' cPsi sA  s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
       
       let u = newMVar (cPsi, TClo(tP,s)) in
-        Root (None, MVar (u, s'), Nil)
+        Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (None, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
+      Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
 
 
 

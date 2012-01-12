@@ -78,12 +78,26 @@ type error =
 
   | NoCover of string
 
+  | LeftoverCV
+  | LeftoverMV
+  | LeftoverMMV
+  | LeftoverConstraintsAbstract
+  | CyclicDependencyFV
+  | CyclicDependencyFCV
+  | CyclicDependencyMMV
+  | CyclicDependencyMV
+  | CyclicDependencyFMV
+  | CyclicDependencyPV
+  | CyclicDependencyFPV
+  | UnknownIdentifier
+
   | LeftoverUndef
   | SubIllTyped
   | LeftoverFVar
 
 exception Error of Syntax.Loc.t option * error
 exception Violation of string
+exception NotImplemented
 
 let information = ref []
 

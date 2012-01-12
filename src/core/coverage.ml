@@ -559,10 +559,11 @@ let rec genObj ((cO, cD), cPsi, tP) (tH, tA) =
     let (cD', cPsi', tR, tP', ms') =   
       begin try
 	Abstract.abstrCovGoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
-      with Abstract.Error msg -> (print_string ("WARNING: Encountered left-over constraints in higher-order unification\n Message: " ^ msg ^ "\n") ; 
-				  print_string ("Coverage goal : " ^ P.normalToString LF.Empty  cPsi' (tM, S.LF.id) ^ " : " ^ 
-						  P.typToString LF.Empty cPsi' (tP', S.LF.id) ^ "\n");
-				  raise (Abstract.Error msg))
+      with Error.Error (_, Error.LeftoverConstraintsAbstract) as e ->
+	(print_string ("WARNING: Encountered left-over constraints in higher-order unification\n");
+	 print_string ("Coverage goal : " ^ P.normalToString LF.Empty  cPsi' (tM, S.LF.id) ^ " : " ^ 
+			  P.typToString LF.Empty cPsi' (tP', S.LF.id) ^ "\n");
+	 raise e)
       end
       in 
     let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in 
@@ -733,7 +734,7 @@ let rec trivially_empty cov_problem =
       | [] -> true
       | _  -> false
     end
-  with Abstract.Error _ -> (print_string "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints. \n" ; false)
+  with Error.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
   end
 
 let rec solve' (cO, cD) (matchCand, ms, cs) cOD_p mCands sCands = match matchCand with 
@@ -1185,8 +1186,10 @@ match (mv_list, cD) with
 						then SomeTermCands (dep, cov_goals) else SomeTermCands (dep0, cov_goals0 )
 					       )	
 		  )
-	with Abstract.Error msg -> (print_string ("WARNING: Encountered left-over constraints in higher-order unification\n Message " ^ msg ^ "\n Try another candidate.") ; 
-				    best_cand (cO,cv_list) (cD', mvlist') (k+1) (md::cD_tail))
+	  with Error.Error (_, Error.LeftoverConstraintsAbstract) ->
+	    (print_endline ("WARNING: Encountered left-over constraints in higher-order unification.\n\
+                             Try another candidate.");
+	     best_cand (cO,cv_list) (cD', mvlist') (k+1) (md::cD_tail))
 	end
       else 
 	best_cand (cO, cv_list) (cD', mv_list) (k+1) (md::cD_tail)
@@ -1439,9 +1442,10 @@ let rec check_emptiness cO cD = match cD with
 	   | [] -> true
 	   | _  -> check_emptiness cO cD'
 	) 
-      with Abstract.Error msg -> (print_string ("Unable to prove : " ^ P.typToString cD' cPsi (tA, S.LF.id) ^ " to be empty \n") ;
-				  print_string "Try next meta-variable ...\n"; 
-				  check_emptiness cO cD')
+      with Error.Error (_, msg) ->
+	print_string ("Unable to prove : " ^ P.typToString cD' cPsi (tA, S.LF.id) ^ " to be empty \n") ;
+	print_string "Try next meta-variable ...\n"; 
+	check_emptiness cO cD'
       end 
   | LF.Dec(cD', LF.PDecl (_u, LF.Sigma _ , _cPsi)) -> 
       check_emptiness cO cD'
@@ -1451,7 +1455,8 @@ let rec check_emptiness cO cD = match cD with
 	   | [] -> true
 	   | _  -> check_emptiness cO cD'
 	) 
-      with Abstract.Error msg -> (print_string "Unable to prove given type is empty\n" ; check_emptiness cO cD')
+      with Error.Error (_, msg) ->
+	print_string "Unable to prove given type is empty\n" ; check_emptiness cO cD'
       end 
 
 let rec revisit_opengoals ogoals = begin match ogoals with

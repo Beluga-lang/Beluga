@@ -21,15 +21,6 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [3])
 
 exception NotImplemented
 
-exception Error of string
-
-let leftoverMeta2 =
-    "Encountered meta^2-variable which we cannot abstract over because they depend on meta-variables;\n"
-  ^ "the user needs to supply more information, since the type of a given expression is not uniquely determined.\n\n" ^ 
-    "Meta^2-variables are introduced during type reconstruction; if you explicitely quantify over some meta-variables, then\n" ^ 
-    "these meta-variables will impose constraints on meta^2-variables and we may not be able to abstract over the meta^2-variables.\n\n" ^
-    "The solution is either not to specify any meta-variables explicitely or specify all of them.\n"
-
 (* ******************************************************************* *)
 (* Abstraction:
 
@@ -502,7 +493,7 @@ and cnstr_typ_rec (t_rec, s) = match t_rec with
 
 let rec index_of_pat_var cG x = match cG with 
   | I.Empty -> 
-      raise (Error "index_of for a free variable does not exist -- should be impossible")
+      raise (Error.Violation "index_of for a free variable does not exist -- should be impossible")
   | I.Dec (cG, Comp.CTypDecl (y, _ )) -> 
       if x = y then 1 
       else (index_of_pat_var cG x) + 1 
@@ -513,8 +504,7 @@ let rec index_of_pat_var cG x = match cG with
 let rec index_of cQ n = 
   match (cQ, n) with
   | (I.Empty, _) ->
-      raise (Error "index_of for a free variable (FV, FMV, FPV, MV) does not exist -- should be impossible")
-            (* impossible due to invariant on collect *)
+      raise (Error.Violation "index_of for a free variable (FV, FMV, FPV, MV) does not exist.")
 
   | (I.Dec (cQ', MMV(Impure, _ )), _ ) -> 
       index_of cQ' n
@@ -538,28 +528,28 @@ let rec index_of cQ n =
       begin match eqMMVar u1 (MMV (Pure, u2)) with
         | Yes -> 1 
         | No  -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error "Cyclic dependency among meta^2-variables and free variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyMMV))
       end
 
   | (I.Dec (cQ', MV (Pure, u1)), MV (Pure, u2)) ->
       begin match eqMVar u1 (MV (Pure, u2)) with
         | Yes -> 1 
         | No ->  (index_of cQ' n) + 1 
-        | Cycle -> raise (Error "Cyclic dependency among meta-variables and free variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyMV))
       end
 
   | (I.Dec (cQ', PV (Pure, p1)), PV (Pure, p2)) ->
       begin match eqPVar p1 (PV (Pure, p2)) with
         | Yes -> 1 
         | No -> (index_of cQ' n) + 1 
-        | Cycle -> raise (Error "Cyclic dependency among parameter-variables and free variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyPV))
       end
 
   | (I.Dec (cQ', FV (Pure, f1, _)), FV (Pure, f2, tA)) ->
       begin match eqFVar f1 (FV (Pure, f2, tA)) with
         | Yes -> 1 
         | No  -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error "Cyclic dependency among free variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyFV))
       end
 
   | (I.Dec (cQ', CV(I.CtxVar psi1)), CV (psi2)) -> 
@@ -573,28 +563,28 @@ let rec index_of cQ n =
                  P.dctxToString I.Empty  (I.CtxVar psi1) ^ 
                  " psi2 = " ^ P.dctxToString I.Empty  psi2);
             (index_of cQ' n) + 1
-        | Cycle -> raise (Error "Cyclic dependency among free contextual-variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyFCV))
       end
       )
   | (I.Dec (cQ', FCV(psi1 , _ )), FCV (psi2, s_cid)) -> 
       begin match eqFCVar psi1 (FCV (psi2, s_cid)) with 
         | Yes -> 1
         | No -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error "Cyclic dependency among free contextual-variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyFCV))
       end
 
   | (I.Dec (cQ', FMV (Pure, u1, _)), FMV (Pure, u2, tA_cPsi)) ->
       begin match eqFMVar u1 (FMV (Pure, u2, tA_cPsi)) with
         | Yes -> 1 
         | No -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error "Cyclic dependency among free meta-variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyFMV))
       end
 
   | (I.Dec (cQ', FPV (Pure, p1, _)), FPV (Pure, p2, tA_cPsi)) ->
       begin match eqFPVar p1 (FPV (Pure, p2, tA_cPsi)) with
         | Yes -> 1 
         | No  -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error "Cyclic dependency among free parameter-variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyFPV))
       end
 
   | (I.Dec (cQ', _), _) ->
@@ -622,7 +612,7 @@ let rec ctxToDctx cQ = match cQ with
         | (None, tA') -> 
             let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in 
             I.DDec (ctxToDctx cQ', I.TypDecl (x, tA'))
-        | (Some _, _ ) -> raise (Error "ctxToDctx generates LF-dctx with context variable: should be impossible!")
+        | (Some _, _ ) -> raise (Error.Violation "ctxToDctx generates LF-dctx with context variable.")
       end 
   | I.Dec (cQ', FV (Pure, x, Some tA)) ->
       (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in  *)
@@ -638,7 +628,7 @@ let rec ctxToCtx cQ = match cQ with
         | (None, tA') -> 
             let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in 
             I.Dec (ctxToCtx cQ', I.TypDecl (x, tA'))
-        | (Some _, _ ) -> raise (Error "ctxToCtx generates LF-ctx with context variable: should be impossible!")
+        | (Some _, _ ) -> raise (Error.Violation "ctxToDctx generates LF-dctx with context variable.")
       end 
   | I.Dec (cQ', FV (Pure, x, Some tA)) ->
       (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in  *)
@@ -665,7 +655,7 @@ let rec ctxToMCtx cQ  = match cQ with
       I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi))
 
   | I.Dec (_cQ', MMV (Pure, I.MMVar (I.MInst (_, _cD, _cPsi, _tA, _), _s))) ->
-      raise (Error leftoverMeta2)
+      raise (Error.Error (None, Error.LeftoverMMV))
 
   | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_, cPsi, tA, _), _s))) -> 
       let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in 
@@ -695,7 +685,7 @@ let rec ctxToMCtx cQ  = match cQ with
 
   (* this case should not happen -bp *)
    | I.Dec (cQ', FV (_, _, Some tA)) ->
-      raise (Error "[Bug] Free variables in computation-level reconstruction")
+      raise (Error.Violation "Free variables in computation-level reconstruction.")
 
    | I.Dec (cQ', FPV(Impure, _, _ )) -> 
        ctxToMCtx cQ'
@@ -849,7 +839,7 @@ and collectHead (k:int) cQ phat ((head, _subst) as sH) =
                  is necessary for handling computation-level expressions,
                  and LF objects which occur in computations. *)
               (I.Dec (cQ', FV (Pure, name, Some tA')) , I.FVar name)
-        | Cycle -> raise (Error "Cyclic dependency among free variables")
+        | Cycle -> raise (Error.Error (None, Error.CyclicDependencyFV))
       end 
 
 
@@ -877,7 +867,7 @@ and collectHead (k:int) cQ phat ((head, _subst) as sH) =
                    is necessary for handling computation-level expressions,
                    and LF objects which occur in comp utations. *)
                 (I.Dec (cQ'', FMV (Pure, u, Some (tA', cPhi'))), I.FMVar (u, sigma))
-          | Cycle -> raise (Error "Cyclic dependency among free meta-variables")
+          | Cycle -> raise (Error.Error (None, Error.CyclicDependencyFMV))
       end 
 
   | (I.MVar (I.Inst (q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
@@ -901,10 +891,10 @@ and collectHead (k:int) cQ phat ((head, _subst) as sH) =
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in 
                 let v = I.MVar (I.Inst (q, cPsi', tA',  c), sigma) in 
                   (I.Dec (cQ'', MV (Pure, v)) , v)
-            | Cycle -> raise (Error "Cyclic dependency among meta-variables")
+            | Cycle -> raise (Error.Error (None, Error.CyclicDependencyMV))
           end 
       else 
-        raise (Error "Leftover constraints during abstraction")
+        raise (Error.Error (None, Error.LeftoverConstraintsAbstract))
 
   | (I.MMVar (I.MInst ({contents = None} as q, I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
       if constraints_solved cnstr then
@@ -925,13 +915,13 @@ and collectHead (k:int) cQ phat ((head, _subst) as sH) =
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in 
                 let v = I.MMVar (I.MInst (q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in 
                   (I.Dec (cQ'', MMV (Pure, v)) , v)
-            | Cycle -> raise (Error "Cyclic dependency among meta^2-variables")
+            | Cycle -> raise (Error.Error (None, Error.CyclicDependencyMMV))
           end 
       else 
-        raise (Error "Leftover constraints during abstraction")
+        raise (Error.Error (None, Error.LeftoverConstraintsAbstract))
 
   | (I.MMVar (I.MInst (_r, _cD, _cPsi, _tA,  _), _),  _s) ->
-      raise (Error leftoverMeta2)
+      raise (Error.Error (None, Error.LeftoverConstraintsAbstract))
 
   | (I.MVar (I.Offset j, s'), s) ->
       let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s)  in 
@@ -962,7 +952,7 @@ and collectHead (k:int) cQ phat ((head, _subst) as sH) =
               let (cQ1, cPhi')  = collectDctx k cQ' phihat cPhi in 
               let (cQ'', tA')   = collectTyp k cQ1  phihat (tA, LF.id) in 
                 (I.Dec (cQ'', FPV (Pure, u, Some (tA', cPhi'))), I.FPVar (u, sigma))
-          | Cycle -> raise (Error "Cyclic dependency among free parameter-variables")
+          | Cycle -> raise (Error.Error (None, Error.CyclicDependencyFPV))
         end 
           
       
@@ -985,10 +975,10 @@ and collectHead (k:int) cQ phat ((head, _subst) as sH) =
 
                 let p' = I.PVar (I.PInst (r, cPsi', tA', c), sigma) in 
                   (I.Dec (cQ'', PV (Pure, p')) , p')
-            | Cycle -> raise (Error "Cyclic dependency among parameter-variables")
+            | Cycle -> raise (Error.Error (None, Error.CyclicDependencyPV))
           end                
       else 
-        raise (Error "Leftover constraints during abstraction")
+        raise (Error.Error (None, Error.LeftoverConstraintsAbstract))
 
   | (I.PVar (I.Offset k', s'), _s) ->
       let (cQ', sigma) =  collectSub k cQ phat s' (* (LF.comp s' s) *) in 
@@ -1353,7 +1343,7 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MMVar (I.MInst(_r, _cD, _cPsi, _tP , _cnstr), (_ms, _s)) -> 
-      raise (Error leftoverMeta2)
+      raise (Error.Error (None, Error.LeftoverMMV))
 
   | I.MVar (I.Inst(_r, cPsi, _tP , _cnstr), s) -> 
        let _ = dprint (fun () -> "[abstractMVarTerm] MVar (ref)" ^
@@ -1530,7 +1520,7 @@ and abstractMVarCtx cQ l =  match cQ with
         I.Dec (cQ', MMV (Pure, u'))
 
   | I.Dec (_cQ, MMV (Pure, I.MMVar (I.MInst (_r, _cD, _cPsi, _tA, _cnstr), _s))) ->
-      raise (Error leftoverMeta2)
+      raise (Error.Error (None, Error.LeftoverMMV))
 
   | I.Dec (cQ, MV (Pure, I.MVar (I.Inst (r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
@@ -1604,7 +1594,7 @@ and abstractMVarCtx cQ l =  match cQ with
          * is it ever hit on correct code?  -jd 2009-02-12 
          * No. This case should not occur in correct code - bp 
          *)
-      raise (Error "[Abstraction] unknown identifier in program?")
+      raise (Error.Error (None, Error.UnknownIdentifier))
 
 
 (* Cases for: FMV, FPV *)
@@ -1688,7 +1678,7 @@ and abstrTyp tA =
           let cPsi       = ctxToDctx cQ' in
             begin match raiseType cPsi tA2 with 
               | (None, tA3) -> (tA3, length cPsi)
-              | _            -> raise (Error "Abstraction not valid LF-type because of left-over context variable")
+              | _            -> raise (Error.Error (None, Error.LeftoverCV))
             end
     end 
 
@@ -2340,10 +2330,9 @@ let rec abstrExp e =
   let (cQ, e')    = collectExp I.Empty e in 
     begin match cQ with 
         I.Empty -> e'
-      | _       -> ((* Printf.printf "Impossible? Leftover free MVars-ref that
-  are not already constrained?\n";*)
+      | _       ->
             let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
-              raise (Error "[Abstract] Left-over meta-variables in computation-level expression; provide a type annotation"))
+              raise (Error.Error (None, Error.LeftoverMV))
     end
 
 

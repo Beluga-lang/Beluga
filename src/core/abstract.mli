@@ -7,8 +7,6 @@
 
 open Syntax.Int 
 
-exception Error of string
-
 val cnstr_ctyp : Comp.typ  -> bool
 
 val abstrKind     : LF.kind -> LF.kind * Id.offset

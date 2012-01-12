@@ -2031,6 +2031,42 @@ module Error = struct
       | UnboundIdSub ->
           fprintf ppf "Identity substitution used without context variable"
 
+      | LeftoverCV ->
+        fprintf ppf "Abstraction not valid LF-type because of leftover context variable"
+      | LeftoverMV -> 
+        fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
+      | LeftoverMMV -> 
+        fprintf ppf
+          ("Encountered meta^2-variable,@ which we cannot abstract over@ \
+            because they depend on meta-variables;@ \
+            the user needs to supply more information,@ \
+            since the type of a given expression@ \
+            is not uniquely determined.@ \
+            Meta^2-variables are introduced during type reconstruction;@ \
+            if you explicitely quantify over some meta-variables,@ \
+            these meta-variables will impose constraints on meta^2-variables@ \
+            and we may not be able to abstract over the meta^2-variables.@ \
+            The solution is either to not specify any meta-variables explicitly,@ \
+            or specify all of them.")
+      | LeftoverConstraintsAbstract ->
+        fprintf ppf "Leftover constraints during abstraction"
+      | CyclicDependencyFV ->
+        fprintf ppf "Cyclic dependency among free variables"
+      | CyclicDependencyFCV ->
+        fprintf ppf "Cyclic dependency among free contextual-variables"
+      | CyclicDependencyMMV ->
+        fprintf ppf "Cyclic dependency among meta^2-variables and free variables"
+      | CyclicDependencyMV ->
+        fprintf ppf "Cyclic dependency among meta-variables and free variables"
+      | CyclicDependencyFMV ->
+        fprintf ppf "Cyclic dependency among free meta-variables"
+      | CyclicDependencyPV ->
+        fprintf ppf "Cyclic dependency among parameter-variables and free variables"
+      | CyclicDependencyFPV ->
+        fprintf ppf "Cyclic dependency among free parameter-variables"
+      | UnknownIdentifier ->
+        fprintf ppf "Unknown identifier in program."
+
     (* Regular Pretty Printers *)
     let ppr = fmt_ppr std_formatter
 

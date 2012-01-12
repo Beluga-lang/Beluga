@@ -1538,10 +1538,10 @@ else
     let r'           = List.length (revisited_og) in 
 
     if r  > r' then 
-      (print_string "\n(Some) coverage goals were trivially proven to be impossible.\n" ;
-      print_string ("CASES TRIVIALLY COVERED in line " ^ 
-		      Pretty.locOptToString  problem.loc  
-		      ^ " : " ^ string_of_int (List.length (trivial_og)) ^ " \n" )
+      (print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
+       print_endline ("CASES TRIVIALLY COVERED in line " ^
+			 Pretty.locOptToString  problem.loc
+		      ^ " : " ^ string_of_int (List.length (trivial_og)))
 (* opengoalsToString trivial_og *)
 )
     else () ; 

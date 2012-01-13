@@ -771,7 +771,7 @@ module Frontend = struct
     let solutions = ref 0 in
 
     (* Type checking function. *)
-    let check cPsi tM s = Lfcheck.check LF.Empty LF.Empty 
+    let check cPsi tM s = Check.LF.check LF.Empty LF.Empty 
       cPsi (tM, S.id) (sgnQuery.skinnyTyp, s) in
     
  

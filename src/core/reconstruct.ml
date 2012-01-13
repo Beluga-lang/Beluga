@@ -1855,7 +1855,7 @@ let rec elDCtxAgainstSchema recT  cO cD psi ((Int.LF.Schema elements) as schema)
       let c_var = elCtxVar c_var in 
       let cPsi' = Int.LF.CtxVar (c_var) in 
         begin try 
-          Lfcheck.checkSchema cO cD cPsi' schema ; 
+          Check.LF.checkSchema cO cD cPsi' schema ; 
           cPsi'
         with _ -> raise (Error.Error (None, Error.CtxVarMismatch (cO, c_var, schema)))
         end

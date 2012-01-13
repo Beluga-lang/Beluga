@@ -9,6 +9,13 @@ open Syntax.Int.LF
 open Syntax.Int
 open Error 
 
+
+type error
+
+let error_location e = assert false
+
+let report_error fmt e = assert false
+
 exception NoTypAvailable
 
 

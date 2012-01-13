@@ -3,6 +3,13 @@
 open Syntax.Int
 
 
+module type SIG = sig
+  type error
+
+  val error_location : error -> Syntax.Loc.t
+  val report_error : Format.formatter -> error -> unit
+end
+
 type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
 
 type error =

@@ -5,6 +5,8 @@
    modified: Joshua Dunfield
 *)
 
+include Error.SIG
+
 open Syntax.Int.LF
 open Syntax.Int
 open Context 

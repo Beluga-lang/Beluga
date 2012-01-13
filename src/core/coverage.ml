@@ -22,6 +22,12 @@ let idCSub = LF.CShift 0
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [29])
 
+type error
+
+let error_location e = assert false
+
+let report_error fmt e = assert false
+
 let printOptionalLocation locOpt = match locOpt with
         | None     -> Format.fprintf Format.std_formatter "<unknown location>"
         | Some loc -> Parser.Grammar.Loc.print Format.std_formatter loc

@@ -1,5 +1,7 @@
 (* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
+include Error.SIG
+
 open Syntax.Int
 
 val enableCoverage : bool ref

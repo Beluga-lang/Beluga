@@ -21,6 +21,12 @@ open Substitution
 open Error
 
 
+type error
+
+let error_location e = assert false
+
+let report_error fmt e = assert false
+
 exception Fmvar_not_found
 exception FreeMVar of head
 exception NonInvertible 

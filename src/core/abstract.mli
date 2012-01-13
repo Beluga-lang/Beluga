@@ -5,6 +5,8 @@
    modified: Joshua Dunfield
 *)
 
+include Error.SIG
+
 open Syntax.Int 
 
 val cnstr_ctyp : Comp.typ  -> bool

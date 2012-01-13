@@ -3,9 +3,10 @@
     @author Brigitte Pientka
 *)
 
+include Error.SIG
+
 open Syntax.Int.LF
 open Syntax.Int
-open Error
 
 exception NoTypAvailable
 

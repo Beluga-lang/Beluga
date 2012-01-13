@@ -12,6 +12,12 @@ module Print = Pretty.Int.DefaultPrinter
 
 module Unify = Unify.EmptyTrail
 
+type error
+
+let error_location e = assert false
+
+let report_error fmt e = assert false
+
 exception SpineMismatch
 
 

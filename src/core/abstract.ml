@@ -19,6 +19,12 @@ module R = Pretty.Int.DefaultCidRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [3])
 
+type error
+
+let error_location e = assert false
+
+let report_error fmt e = assert false
+
 exception NotImplemented
 
 (* ******************************************************************* *)

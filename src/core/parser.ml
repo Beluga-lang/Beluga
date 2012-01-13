@@ -22,7 +22,6 @@ let rec last l = begin match List.rev l with
   | h::t -> Some (h, t)
 end 
 
-
 type kind_or_typ =
   | Kind of LF.kind
   | Typ  of LF.typ

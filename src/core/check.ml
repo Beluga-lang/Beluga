@@ -18,6 +18,12 @@ module Comp = struct
 
   module E = Error
 
+  type error
+
+  let error_location e = assert false
+
+  let report_error fmt e = assert false
+
   module Unify = Unify.EmptyTrail
     (* NOTES on handling context variables: -bp
      *
@@ -487,6 +493,12 @@ end
 
 
 module Sgn = struct
+
+  type error
+
+  let error_location e = assert false
+
+  let report_error fmt e = assert false
 
   let rec check_sgn_decls = function
     | [] ->

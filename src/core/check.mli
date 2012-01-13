@@ -4,6 +4,7 @@
 *)
 
 module LF : sig 
+  include Error.SIG
 
   open Syntax.Int.LF
 
@@ -27,6 +28,7 @@ end
 
 
 module Comp : sig 
+  include Error.SIG
 
   open Syntax.Int
   open Syntax.Int.Comp
@@ -39,6 +41,7 @@ end
 
 
 module Sgn : sig
+  include Error.SIG
 
   open Syntax.Int.Sgn
 

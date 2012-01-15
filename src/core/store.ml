@@ -2,6 +2,13 @@
 
 open Syntax
 
+type error =
+  | FrozenType of Id.cid_typ
+
+exception Error of Syntax.Loc.t * error
+
+let error_location (Error (loc, _)) = loc
+
 module Cid = struct
 
   module Typ = struct
@@ -196,7 +203,7 @@ module Cid = struct
     let addConstructor loc typ c tA =
       let entry = get typ in
         if entry.frozen then
-          raise (Error.Error (loc, Error.FrozenType typ))
+          raise (Error (loc, FrozenType typ))
         else
           let _ = entry.constructors <- c :: entry.constructors in
           let _ = inspect [] tA in

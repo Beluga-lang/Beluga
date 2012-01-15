@@ -5,9 +5,25 @@
    modified: Joshua Dunfield
 *)
 
-include Error.SIG
-
 open Syntax.Int 
+
+type error =
+    LeftoverCV
+  | LeftoverMV
+  | LeftoverMMV
+  | LeftoverConstraints
+  | CyclicDependencyFV
+  | CyclicDependencyFCV
+  | CyclicDependencyMMV
+  | CyclicDependencyMV
+  | CyclicDependencyFMV
+  | CyclicDependencyPV
+  | CyclicDependencyFPV
+  | UnknownIdentifier
+
+exception Error of Syntax.Loc.t * error
+
+val report_error : Format.formatter -> error -> unit
 
 val cnstr_ctyp : Comp.typ  -> bool
 

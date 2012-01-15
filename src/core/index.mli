@@ -1,5 +1,21 @@
 type fcvars
 
+type error =
+  | UnboundName          of Id.name
+  | UnboundCtxName       of Id.name
+  | UnboundCtxSchemaName of Id.name
+  | UnboundCompName      of Id.name
+  | PatCtxRequired
+  | CompEmptyPattBranch
+  | UnboundIdSub
+  | PatVarNotUnique
+
+exception Error of Syntax.Loc.t * error
+
+val report_error : Format.formatter -> error -> unit
+
+type free_cvars
+
 val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * fcvars 
 
 val typ      : Syntax.Ext.LF.typ -> Syntax.Apx.LF.typ * fcvars 

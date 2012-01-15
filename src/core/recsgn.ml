@@ -357,7 +357,7 @@ let recSgnDecl d =
                   (Some (Gensym.VarData.name_gensym x)) in
                   (* Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp)) *) ()
           end
-        with _ -> raise (Error.Error (loc, Error.UnboundName typ_name)) 
+        with _ -> raise (Index.Error (loc, Index.UnboundName typ_name)) 
         end 
 
 

@@ -22,9 +22,15 @@ let idCSub = LF.CShift 0
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [29])
 
-type error
+type error =
+    NoCover of (unit -> string)
+  | MatchError of string
+  | NothingToRefine
+  | NoCoverageGoalsGenerated
 
-let error_location e = assert false
+exception Error of Syntax.Loc.t * error
+
+let error_location (Error (loc, _)) = loc
 
 let report_error fmt e = assert false
 
@@ -71,9 +77,6 @@ let make loc prag cO cD branches cA =
 type coverage_result =
   | Success
   | Failure of (unit -> string)
-
-exception NoCover of (unit -> string)
-exception Cover 
 
 (* ****************************************************************************** *)
 (* Rigid matching  algorithm : pre-matching algorithm which will generate 
@@ -293,17 +296,6 @@ let rec opengoalsToString ogoals = goalsToString ogoals 1
 
 (* ****************************************************************************** *)
 
-exception Error of string
-exception NewCandidate of eqn list * split 
-
-(* Assumes that tA[Psi] is an instance of tA'[cPsi'], i.e.
-   pre-matching for contextual types suceeded.
-*)
-
-exception MatchError of string
-exception NothingToRefine
-
-
 type result = Yes of LF.tclo * LF.tclo | Inst | SplitCand | No
 			
 let rec pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with 
@@ -392,7 +384,7 @@ let rec pre_match cOD cOD_p covGoal patt matchCands splitCands =
 		               (cPsi , tS , sA)  
 		               (cPhi , tS', sA')
 		               matchCands splitCands
-	  | No            -> raise (MatchError "Head mismatch")
+	  | No            -> raise (Error (Syntax.Loc.ghost, MatchError "Head mismatch"))
 	  | Inst          -> 
 	      (Eqn (covGoal, patt) :: matchCands , splitCands)
 	  | SplitCand     -> (matchCands , Split (covGoal, patt)::splitCands)
@@ -435,7 +427,7 @@ let rec pre_match_typ cOD cOD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
 	if a = b then 
 	  pre_match_typ_spine cOD cOD_p (cPsi, tS1', (tK1, S.LF.id)) (cPhi, tS2', (tK2, S.LF.id))
                               matchCands splitCands
-	else raise (MatchError "Type Head mismatch")
+	else raise (Error (Syntax.Loc.ghost, MatchError "Type Head mismatch"))
   | (LF.PiTyp ((LF.TypDecl(x, tA1), _ ), tA2), s1) ,  (LF.PiTyp ((LF.TypDecl(y, tB1), _ ), tB2), s2) -> 
       let (matchCands' , splitCands') = pre_match_typ cOD cOD_p (cPsi, (tA1, s1)) (cPhi, (tB1, s2)) 
 	                                              matchCands splitCands
@@ -495,7 +487,7 @@ let rec pre_match_dctx cOD cOD_p cPsi cPhi_patt matchCands splitCands =
     | (LF.DDec (cPsi', LF.TypDecl(_, tA)) , LF.DDec (cPhi', LF.TypDecl (_, tB))) -> 
 	 let (mC , sC) = pre_match_dctx cOD cOD_p cPsi' cPhi' matchCands splitCands in  
 	   pre_match_typ cOD cOD_p (cPsi', (tA, S.LF.id)) (cPhi', (tB, S.LF.id)) mC sC 
-    | (_ , _ ) -> raise (MatchError "Ctx mismatch")
+    | (_ , _ ) -> raise (Error (Syntax.Loc.ghost, MatchError "Ctx mismatch"))
   end
 
 
@@ -565,7 +557,7 @@ let rec genObj ((cO, cD), cPsi, tP) (tH, tA) =
     let (cD', cPsi', tR, tP', ms') =   
       begin try
 	Abstract.abstrCovGoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
-      with Error.Error (_, Error.LeftoverConstraintsAbstract) as e ->
+      with Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
 	(print_string ("WARNING: Encountered left-over constraints in higher-order unification\n");
 	 print_string ("Coverage goal : " ^ P.normalToString LF.Empty  cPsi' (tM, S.LF.id) ^ " : " ^ 
 			  P.typToString LF.Empty cPsi' (tP', S.LF.id) ^ "\n");
@@ -706,7 +698,7 @@ let rec genBCovGoals ((cOD, cPsi, tA) as cov_problem) =  match tA  with
       genPVar cov_problem @
       genBVar cov_problem 
   | LF.Sigma trec -> 
-      raise (Error "Coverage for parameter variables of sigma type not implemented")
+      raise Error.NotImplemented
   | LF.PiTyp ((tdecl, dep ) , tA) -> 
       let x = match tdecl with LF.TypDecl (x, _ ) -> x | LF.TypDeclOpt x -> x in 
       let cg_list = genBCovGoals (cOD, LF.DDec (cPsi, tdecl), tA) in 
@@ -740,7 +732,7 @@ let rec trivially_empty cov_problem =
       | [] -> true
       | _  -> false
     end
-  with Error.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
+  with Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
   end
 
 let rec solve' (cO, cD) (matchCand, ms, cs) cOD_p mCands sCands = match matchCand with 
@@ -889,7 +881,7 @@ let rec refine_candidates (cOD, cs_opt, ms) ((cO,cD), candidates) = match candid
 	let _ = dprint (fun () -> "REFINED CANDIDATE \n" ^ candToString cOD cand')  in
 	  cand' :: refine_candidates (cOD, cs_opt, ms) ((cO,cD), cands)
       with 
-	  MatchError _ -> refine_candidates (cOD, cs_opt, ms) ((cO,cD) , cands)
+	  Error (_, MatchError _) -> refine_candidates (cOD, cs_opt, ms) ((cO,cD) , cands)
       end
 
 
@@ -1137,7 +1129,7 @@ let genCGoals ((cO, cD') as cOD) mdec = match mdec with
 	 and hence we would only loop if we were to split #p (and initiate another context split)
       *)
 	(* (genBCovGoals (cOD, cPsi, tA), dep0) *)
-	raise (Error "PVAR CASE NOT IMPLEMENTED") 
+	raise Error.NotImplemented
 
 
 let rec best_ctx_cand (cO, cv_list) cD k cO_tail = match (cv_list , cO) with 
@@ -1192,7 +1184,7 @@ match (mv_list, cD) with
 						then SomeTermCands (dep, cov_goals) else SomeTermCands (dep0, cov_goals0 )
 					       )	
 		  )
-	  with Error.Error (_, Error.LeftoverConstraintsAbstract) ->
+	  with Abstract.Error (_, Abstract.LeftoverConstraints) ->
 	    (print_endline ("WARNING: Encountered left-over constraints in higher-order unification.\n\
                              Try another candidate.");
 	     best_cand (cO,cv_list) (cD', mvlist') (k+1) (md::cD_tail))
@@ -1270,7 +1262,7 @@ let rec refine ( ((cO,cD), candidates, (cPhi,tM)) as cov_problem )  =
     | LF.Empty  -> 
 	((* print_string (candidatesToString cov_problem ) ; *)
 	 open_cov_goals := ((cO,cD), cPhi, tM)::!open_cov_goals ; 
-	 raise NothingToRefine
+	 raise (Error (Syntax.Loc.ghost, NothingToRefine))
 	 (* [] *))
 	(* raise (Error "Nothing to refine"))*)
     | _  -> 
@@ -1290,15 +1282,16 @@ let rec refine ( ((cO,cD), candidates, (cPhi,tM)) as cov_problem )  =
   		  refine_covproblem cgoals cov_problem	
 	    | (NoCandidate,   [] ) -> []
 	    | (NoCandidate, _    ) -> 
-		raise (Error "No coverage goals generated")
+		raise (Error (Syntax.Loc.ghost, NoCoverageGoalsGenerated))
 	  end 
   end 
 	
 let rec check_all f l = (match l with
   | [] -> ()
   | h::t -> 
-      ((try f h with MatchError _  -> dprint (fun () ->  "MATCH ERROR"  )
-                   | NothingToRefine  -> dprint (fun () ->  "Nothing to refine ERROR" )); (* ??? *)
+      ((try f h with
+	  Error (_, MatchError _)  -> dprint (fun () ->  "MATCH ERROR"  )
+        | Error (_, NothingToRefine)  -> dprint (fun () ->  "Nothing to refine ERROR" )); (* ??? *)
        check_all f t )
 			)
 (* At least one of the candidates in cand_list must be solvable,
@@ -1423,11 +1416,11 @@ let rec initialize_coverage problem =
 	if trivially_empty (cOD, cPsi, Whnf.normTyp sA) then 
 	  gen_candidates covGoal plist 
 	else 
-	  raise (NoCover (fun () -> let (cO, cD) = cOD in 
-			    Printf.sprintf "\n##   Empty Pattern ##\n   %s\n\n##   Case expression of type : \n##   %s\n##   is not empty.\n\n" 
-			      (Pretty.string_of_loc problem.loc)
-			      (P.typToString cD cPsi sA)))
-(*	  raise (Error "COVERAGE CANNOT PROVE A TYPE TRIVIALLY EMPTY")*)
+	  raise (Error (Syntax.Loc.ghost,
+			NoCover (fun () -> let (cO, cD) = cOD in 
+					   Printf.sprintf "\n##   Empty Pattern ##\n   %s\n\n##   Case expression of type : \n##   %s\n##   is not empty.\n\n" 
+					     (Pretty.string_of_loc problem.loc)
+					     (P.typToString cD cPsi sA))))
     | ((cO, cD) as cOD, (NeutPatt(cPhi, _tN, sB') as pat)) :: plist -> 
 	let _ = dprint (fun () -> "PATTERN : \n     " ^ P.mctxToString cD ^ " |- " ^  pattToString cD pat)  in 
 
@@ -1448,7 +1441,7 @@ let rec check_emptiness cO cD = match cD with
 	   | [] -> true
 	   | _  -> check_emptiness cO cD'
 	) 
-      with Error.Error (_, msg) ->
+      with Error (_, msg) ->
 	print_string ("Unable to prove : " ^ P.typToString cD' cPsi (tA, S.LF.id) ^ " to be empty \n") ;
 	print_string "Try next meta-variable ...\n"; 
 	check_emptiness cO cD'
@@ -1461,7 +1454,7 @@ let rec check_emptiness cO cD = match cD with
 	   | [] -> true
 	   | _  -> check_emptiness cO cD'
 	) 
-      with Error.Error (_, msg) ->
+      with Error (_, msg) ->
 	print_string "Unable to prove given type is empty\n" ; check_emptiness cO cD'
       end 
 
@@ -1564,7 +1557,7 @@ let process problem =
       if !warningOnly then
         Error.addInformation ("WARNING: Cases didn't cover: "  ^ messageFn()) 
       else
-        raise (NoCover messageFn)
+        raise (Error (Syntax.Loc.ghost, NoCover messageFn))
 
 
 

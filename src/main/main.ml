@@ -142,11 +142,6 @@ let main () =
             printer decl;
             print_sgn printer decls
       in
-      let printLocation loc =
-        if Syntax.Loc.is_ghost loc
-        then Format.fprintf Format.std_formatter "<unknown location>"
-        else Parser.Grammar.Loc.print Format.std_formatter loc
-      in
       let abort_session () = raise SessionFatal
       in
         try
@@ -170,7 +165,7 @@ let main () =
                       if !Coverage.warningOnly then
                         Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn()) 
                       else
-                        raise (Coverage.NoCover messageFn)
+                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover messageFn))
                 ) in 
               begin
                 if !Coverage.enableCoverage then 
@@ -184,24 +179,6 @@ let main () =
               end
 
         with
-          | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-              Parser.Grammar.Loc.print Format.std_formatter loc;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
-              Format.fprintf Format.std_formatter "@?";
-              print_newline ();
-              abort_session ()
-
-          | Error.Error (loc, err) ->
-              printLocation loc;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError: %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
           | Error.Violation str ->
               Format.fprintf
                 Format.std_formatter
@@ -210,13 +187,12 @@ let main () =
               print_newline ();
               abort_session ()
 
-          | Coverage.NoCover strFn ->
-              (* printf "Error (Coverage): %s" (strFn());  *)
-              printf "%s" (strFn()); 
-              abort_session ()
-
-          | exn ->
-              printf "%s\n" (Printexc.to_string exn);
+          | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
+              Parser.Grammar.Loc.print Format.std_formatter loc;
+              Format.fprintf Format.std_formatter ":\n";
+              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
+              Format.fprintf Format.std_formatter "@?";
+              print_newline ();
               abort_session ()
 
     in

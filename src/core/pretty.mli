@@ -6,7 +6,6 @@
 *)
 
 open Format
-open Error
 
 type lvl
 
@@ -145,33 +144,6 @@ module Int : sig
   module NamedRenderer : CID_RENDERER
 
   (* Default Internal Syntax Pretty Printer Functor Instantiation *)
-  module DefaultPrinter : PRINTER
-
-end
-
-
-module Error : sig
-
-  (* Error Printer Signature *)
-  module type PRINTER = sig
-
-    (* Format Based Pretty Printers *)
-    val fmt_ppr : formatter -> error -> unit
-
-    (* Regular Pretty Printers *)
-    val ppr     : error -> unit    
-
-  end
-
-  (* Default CID_RENDERER for Errors *)
-  module DefaultCidRenderer : CID_RENDERER
-
-  (* Error Pretty Printer Functor  *)
-  module Make : functor (R : CID_RENDERER) -> PRINTER
-    (* Might need a constraint here saying that IPF will be
-       instantiated with R.  -dwm *)
-
-  (* Default Error Pretty Printer Functor Instantiation *)
   module DefaultPrinter : PRINTER
 
 end

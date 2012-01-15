@@ -16,14 +16,6 @@ module LF = Lfcheck
 
 module Comp = struct
 
-  module E = Error
-
-  type error
-
-  let error_location e = assert false
-
-  let report_error fmt e = assert false
-
   module Unify = Unify.EmptyTrail
     (* NOTES on handling context variables: -bp
      *
@@ -63,6 +55,36 @@ module Comp = struct
   module C = Whnf
 
   module P = Pretty.Int.DefaultPrinter
+
+  type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
+
+  type error =
+      IllTyped        of I.mctx * gctx * exp_chk * tclo * tclo
+    | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
+    | Mismatch        of I.mctx * gctx * exp_syn * typeVariant * tclo
+    | CtxFunMismatch  of I.mctx * gctx  * tclo 
+    | FunMismatch     of I.mctx * gctx  * tclo 
+    | MLamMismatch    of I.mctx * gctx  * tclo 
+    | PairMismatch    of I.mctx * gctx  * tclo 
+    | BoxMismatch     of I.mctx * gctx  * tclo 
+    | SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
+    | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
+    | SubPattMismatch of (I.mctx * I.dctx * I.sub * I.dctx) * 
+                         (I.mctx * I.dctx * I.dctx)  
+    | BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
+    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) * 
+                         (I.mctx * I.dctx * I.tclo)  
+    | IfMismatch      of I.mctx * gctx  * tclo 
+    | EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
+    | EqTyp           of I.mctx * tclo 
+    | MAppMismatch    of I.mctx * (meta_typ * I.msub)
+    | AppMismatch     of I.mctx * (meta_typ * I.msub)
+
+  exception Error of Syntax.Loc.t * error
+
+  let error_location (Error (loc, _)) = loc
+
+  let report_error fmt e = assert false
 
   type caseType =
     | IndexObj of I.psi_hat * I.normal
@@ -134,7 +156,7 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
     | I.CDecl (_, schema_cid, _ ) -> 
         begin try 
           let _ = Schema.get_schema schema_cid in ()
-        with _ -> raise (E.Violation "Schema undefined")
+        with _ -> raise (Error.Violation "Schema undefined")
         end
     | I.MDecl (_, tA, cPsi) -> 
         LF.checkDCtx cD cPsi;
@@ -255,14 +277,14 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
 *)
             LF.check cD  cPsi (tM, S.LF.id) (tA, S.LF.id)
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
-          raise (E.Violation ("Free meta-variable " ^ (R.render_name u)))
+          raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
     | (SBox (loc , _phat, sigma), (TypSub (_, cPhi, cPsi), t)) ->
         begin try
             LF.checkSub loc cD  cPsi sigma cPhi
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
-          raise (E.Violation ("Free meta-variable " ^ (R.render_name u)))
+          raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
     | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')),
@@ -292,14 +314,14 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
         if C.convCTyp (tau,t)  ttau' then 
           ()
         else
-          raise (E.Error (loc, E.CompIllTyped (cD, cG, e, (tau,t), ttau')))
+          raise (Error (loc, IllTyped (cD, cG, e, (tau,t), ttau')))
 
     | (If (loc, i, e1, e2), (tau,t)) -> 
         begin match C.cwhnfCTyp (syn cD cG i) with
           | (TypBool , _ ) -> 
               (check cD cG e1 (tau,t) ; 
                check cD cG e1 (tau,t) )
-          | tau_theta' -> raise (E.Error (loc, E.CompIfMismatch (cD, cG, tau_theta')))
+          | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end 
 
   and check cD cG e (tau, t) =
@@ -325,7 +347,7 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
               check cD cG e2 (tau2, t);
               (tau, t)
           | (tau, t) -> 
-              raise (E.Error (loc, E.CompMismatch (cD, cG, e1, E.Arrow, (tau,t))))
+              raise (Error (loc, Mismatch (cD, cG, e1, VariantArrow, (tau,t))))
         end
 
     | CtxApp (loc, e, cPsi) ->
@@ -340,7 +362,7 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
                           P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ; 
                  (tau, theta') 
           | (tau, t) -> 
-              raise (E.Error (loc, E.CompMismatch (cD, cG, e, E.CtxPi, (tau,t))))
+              raise (Error (loc, Mismatch (cD, cG, e, VariantCtxPi, (tau,t))))
         end
     | MApp (loc, e, (phat, cObj)) ->
         begin match (cObj, C.cwhnfCTyp (syn cD cG e)) with
@@ -355,10 +377,10 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
                 if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
                   (tau, I.MDot(I.PObj (phat, h), t))
                 else 
-                  raise (E.Error (loc, E.CompMismatch (cD, cG, e, E.PiBox, (tau,t))))
+                  raise (Error (loc, Mismatch (cD, cG, e, VariantPiBox, (tau,t))))
 
           | (_ , (tau, t)) -> 
-              raise (E.Error (loc, E.CompMismatch (cD, cG, e, E.PiBox, (tau,t))))
+              raise (Error (loc, Mismatch (cD, cG, e, VariantPiBox, (tau,t))))
         end
 
     | Ann (e, tau) ->
@@ -372,11 +394,11 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
              begin match (Whnf.cwhnfCTyp ttau1) with 
                | (TypBox _ , _ ) ->  (TypBool, C.m_id)
                | (TypBool, _ )   ->  (TypBool, C.m_id)
-               | _               ->  raise (E.Error (loc, E.CompEqTyp (cD, ttau1))) 
+               | _               ->  raise (Error (loc, EqTyp (cD, ttau1))) 
              end
 
            else 
-             raise (E.Error(loc, E.CompEqMismatch (cD, ttau1, ttau2 )))
+             raise (Error(loc, EqMismatch (cD, ttau1, ttau2 )))
 
     | Boolean _  -> (TypBool, C.m_id)
 
@@ -392,21 +414,21 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
                                 ^ "\n context given " ^ P.dctxToString cD cPsi) in
               if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then ()
               else 
-                raise (E.Error (loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
-          | _ -> raise (E.Error (loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
+                raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+          | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
 
     | PatMetaObj (loc, mO) -> 
         (match ttau with 
           | (TypBox (_, tA, cPsi) , theta) -> 
               checkMetaObj cD mO (MetaTyp (tA, cPsi), theta)
-          | _ -> raise (E.Error (loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
+          | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | pat -> 
         let (loc, ttau') = synPattern cD cG pat in 
           if C.convCTyp ttau ttau' then ()
           else 
-            raise (E.Error (loc, E.PatIllTyped (cD, cG, pat, ttau, ttau')))
+            raise (Error (loc, PatIllTyped (cD, cG, pat, ttau, ttau')))
 
   and synPattern cD cG pat = match pat with 
     | PatConst (loc, c, pat_spine) -> 

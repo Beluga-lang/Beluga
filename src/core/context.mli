@@ -3,13 +3,11 @@
     @author Brigitte Pientka
 *)
 
-include Error.SIG
-
 open Syntax.Int.LF
 open Syntax.Int
 
-exception NoTypAvailable
 
+exception NoTypAvailable
 
 val dctxToHat   : dctx -> psi_hat
 val addToHat   : psi_hat -> psi_hat   (* Lengthen by one declaration *)

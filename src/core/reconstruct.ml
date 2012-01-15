@@ -23,6 +23,19 @@ module RR = Pretty.Int.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
+type error =
+  | PruningFailed
+  | EtaExpandFMV        of Id.name * Int.LF.mctx * Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
+  | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
+  | CompScrutineeTyp    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.tclo * Int.LF.dctx 
+  | CompScrutineeSubTyp of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.dctx * Int.LF.dctx 
+
+exception Error of Syntax.Loc.t * error
+
+let error_location (Error (loc, _)) = loc
+
+let report_error fmt e = assert false
+
 exception NotImplemented
 
 
@@ -248,7 +261,7 @@ let rec elDCtxAgainstSchema recT cD psi s_cid = match psi with
         begin try 
           Check.LF.checkSchema cD cPsi' schema ; 
           cPsi'
-        with _ -> raise (Error.Error (Syntax.Loc.ghost, Error.CtxVarMismatch (cD, c_var, schema)))
+        with _ -> raise (Check.LF.Error (Syntax.Loc.ghost, Check.LF.CtxVarMismatch (cD, c_var, schema)))
         end
   | Apx.LF.CtxVar (Apx.LF.CtxName psi ) -> 
       (* This case should only be executed when c_var occurs in a pattern *)
@@ -258,7 +271,7 @@ let rec elDCtxAgainstSchema recT cD psi s_cid = match psi with
           else
             (let schema = Schema.get_schema s_cid in 
              let c_var' = Int.LF.CtxName psi in 
-               raise (Error.Error (Syntax.Loc.ghost, Error.CtxVarMismatch (cD, c_var', schema))))
+               raise (Check.LF.Error (Syntax.Loc.ghost, Check.LF.CtxVarMismatch (cD, c_var', schema))))
       with Not_found -> 
         (FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No));
          Int.LF.CtxVar (Int.LF.CtxName psi))
@@ -505,7 +518,7 @@ let rec elCompTyp cD tau = match tau with
         let cS' = elMetaSpineI cD cS i (tK, C.m_id) in 
           Int.Comp.TypBase (loc, a ,cS')
       with
-          exn  ->  raise (Error.Error (loc, Error.SpineIllTyped )) 
+          exn  ->  raise (Check.LF.Error (loc, Check.LF.SpineIllTyped )) 
       end 
 
   | Apx.Comp.TypBox (loc, a, psi) ->
@@ -701,7 +714,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
               let e'  =  elExp cD cG2 e (tau, theta) in
                 Int.Comp.LetPair (loc, i', (x, y, e'))
 
-          | _ -> raise (Error.Error (loc, Error.CompMismatch (cD, cG, i', Error.Cross, tau_theta'))) 
+          | _ -> raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantCross, tau_theta'))) 
               (* TODO postpone to reconstruction *)
         end
 
@@ -741,7 +754,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                dprint (fun () -> "[elExp] cPsi = " ^ P.dctxToString cD cPsi  ^ 
                      "\n psihat  = " ^ R.render_name psi ^ " , " ^ string_of_int k ^ "\n")
          end; 
-         raise (Error.Error (loc, Error.CompBoxMismatch (cD, cG, tau_theta))) )
+         raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, tau_theta))) )
 
 
   | (Apx.Comp.SBox (loc, psihat, sigma), ((Int.Comp.TypSub (_loc, cPhi, cPsi), theta))) ->
@@ -752,10 +765,10 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
         let _        = Unify.resetGlobalCnstrs () in 
           Int.Comp.SBox (loc, psihat, sigma')
       else 
-        (* raise (Error.Error (loc, Error.CompBoxCtxMismatch (cD, cPsi, (psihat, tM')))) *)
+        (* raise (Error (loc, Check.Comp.BoxCtxMismatch (cD, cPsi, (psihat, tM')))) *)
         (let (_ , k) = psihat in 
            dprint (fun () -> "cPsi = " ^ P.dctxToString cD (C.cnormDCtx (cPsi, theta))  ^ "\n psihat  = " ^ string_of_int k ^ "\n") ; 
-           raise (Error.Error (loc, Error.CompSBoxMismatch (cD, cG, (C.cnormDCtx (cPhi, theta)), (C.cnormDCtx (cPsi, theta)))) ))
+           raise (Check.Comp.Error (loc, Check.Comp.SBoxMismatch (cD, cG, (C.cnormDCtx (cPhi, theta)), (C.cnormDCtx (cPsi, theta)))) ))
  
 
   | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
@@ -781,7 +794,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                  let branches' = List.map recBranch branches in
                    Int.Comp.Case (loc, prag, i', branches')
               else 
-                raise (Error.Error (loc, Error.ValueRestriction (cD, cG, i', (tau_s,t))))
+                raise (Error (loc, ValueRestriction (cD, cG, i', (tau_s,t))))
               )
 
           | (i, (Int.Comp.TypBox (_, tP, cPsi) as tau_s, _mid)) -> 
@@ -804,8 +817,8 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                  let branches' = List.map recBranch branches in
                    Int.Comp.Case (loc, prag, i, branches') 
                 
-               else 
-                raise (Error.Error (loc, Error.CompScrutineeTyp (cD, cG, i', (tP, LF.id), cPsi)))
+              else 
+                raise (Error (loc, CompScrutineeTyp (cD, cG, i', (tP, LF.id), cPsi)))
               )
 
           | (i, (tau_s, _mid)) ->
@@ -835,7 +848,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                   Int.Comp.Case (loc, prag, i, branches') 
                 
               else 
-                raise (Error.Error (loc, Error.CompScrutineeSubTyp (cD, cG, i', cPsi, cPhi)))
+                raise (Error (loc, CompScrutineeSubTyp (cD, cG, i', cPsi, cPhi)))
               )
 *)
 
@@ -850,23 +863,21 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
               let e1' = elExp cD cG e1 tau_theta in 
               let e2' = elExp cD cG e2 tau_theta in 
                 Int.Comp.If (loc, i', e1', e2')
-          | _  -> raise (Error.Error (loc, Error.CompIfMismatch (cD, cG, tau_theta')))
+          | _  -> raise (Check.Comp.Error (loc, Check.Comp.IfMismatch (cD, cG, tau_theta')))
         end
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
-  | (Apx.Comp.Fun (loc, _x, _e),  tau_theta ) -> 
-      raise (Error.Error (loc, Error.CompFunMismatch (cD, cG, tau_theta)))
-  | (Apx.Comp.CtxFun (loc, _psi_name, _e), tau_theta) -> 
-      raise (Error.Error (loc, Error.CompCtxFunMismatch (cD, cG, tau_theta)))
-  | (Apx.Comp.MLam (loc, _u, _e), tau_theta) -> 
-      raise (Error.Error (loc, Error.CompMLamMismatch (cD, cG, tau_theta)))
-  | (Apx.Comp.Pair(loc, _ , _ ), tau_theta) ->  
-      raise (Error.Error (loc, Error.CompPairMismatch (cD, cG, tau_theta)))
-  | (Apx.Comp.Box (loc, _, _ ) , tau_theta) ->  
-      raise (Error.Error (loc, Error.CompBoxMismatch (cD, cG, tau_theta)))
-
-
+  | (Apx.Comp.Fun (loc, _x, _e),  tau_theta ) ->
+      raise (Check.Comp.Error (loc, Check.Comp.FunMismatch (cD, cG, tau_theta)))
+  | (Apx.Comp.CtxFun (loc, _psi_name, _e), tau_theta) ->
+      raise (Check.Comp.Error (loc, Check.Comp.CtxFunMismatch (cD, cG, tau_theta)))
+  | (Apx.Comp.MLam (loc, _u, _e), tau_theta) ->
+      raise (Check.Comp.Error (loc, Check.Comp.MLamMismatch (cD, cG, tau_theta)))
+  | (Apx.Comp.Pair(loc, _ , _ ), tau_theta) ->
+      raise (Check.Comp.Error (loc, Check.Comp.PairMismatch (cD, cG, tau_theta)))
+  | (Apx.Comp.Box (loc, _, _ ) , tau_theta) ->
+      raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, tau_theta)))
 
 and elExp' cD cG i = match i with
   | Apx.Comp.Var offset ->
@@ -897,7 +908,7 @@ and elExp' cD cG i = match i with
                 (Int.Comp.Apply (loc, i', e'), (tau, theta))
 
           | _ -> 
-              raise (Error.Error (loc, Error.CompMismatch (cD, cG, i', Error.Arrow, tau_theta'))) 
+              raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantArrow, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
         end
 
@@ -915,7 +926,7 @@ and elExp' cD cG i = match i with
                 (Int.Comp.CtxApp (loc, i', cPsi'), (tau, theta'))
 
           | _ -> 
-              raise (Error.Error (loc, Error.CompMismatch (cD, cG, i', Error.CtxPi, tau_theta'))) 
+              raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantCtxPi, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
         end
 
@@ -948,10 +959,10 @@ and elExp' cD cG i = match i with
                                      P.compTypToString cD (Whnf.cnormCTyp (tau, theta'))) ; 
                            (Int.Comp.MApp (loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta')))
                       with Error.Violation msg -> 
-                        dprint (fun () -> "[elTerm] Violation: " ^ msg);
-                        raise (Error.Error (loc, Error.CompTypAnn ))
+                        dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+                        raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
                       end 
-                  | _ -> raise (Error.Error (loc, Error.CompMAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta))))
+                  | _ -> raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta))))
                 end
             | (Int.Comp.TypPiBox ((Int.LF.PDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
               (* m = PVar or BVar of Proj *) 
@@ -970,15 +981,15 @@ and elExp' cD cG i = match i with
                           (Int.Comp.MApp (loc, i', (psihat, Int.Comp.NeutObj h')), (tau, theta')))
                          with Unify.Unify msg ->
                            (Printf.printf "%s\n" msg;
-                            raise (Error.Error (loc, Error.TypMismatchElab (cD, cPsi', sA', sB))))
+                            raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
                          end 
                   | _ -> 
-                       (dprint (fun () -> "[elTerm] Violation: Not a head");
-                      raise (Error.Error (loc, Error.CompMAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
+                       (dprint (fun () -> "[elTerm] Error.Violation: Not a head");
+                      raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
                  end  
                with Error.Violation msg -> 
-                 dprint (fun () -> "[elTerm] Violation: " ^ msg);
-                 raise (Error.Error (loc, Error.CompTypAnn))
+                 dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+                 raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
                end 
 
          (* Allow uniform applications for all meta-objects *)        
@@ -994,7 +1005,7 @@ and elExp' cD cG i = match i with
                                       P.compTypToString cD (Whnf.cnormCTyp (tau,theta)) ) in 
                       
                       (Int.Comp.CtxApp (loc, i', cPsi'), (tau, theta))
-                | _ ->  raise (Error.Error (loc, Error.CompMAppMismatch (cD, (Int.Comp.MetaSchema sW, theta))))
+                | _ ->  raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaSchema sW, theta))))
               end 
 
           | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) -> 
@@ -1014,14 +1025,14 @@ and elExp' cD cG i = match i with
                         dprint (fun () -> "[elExp] MApp Reconstructed: " ^
                                          P.expSynToString cD cG i); (i , (tau, theta))
                       with Error.Violation msg -> 
-                        dprint (fun () -> "[elTerm] Violation: " ^ msg);
-                        raise (Error.Error (loc, Error.CompAppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
+                        dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+                        raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
                       end 
-                  | _ -> raise (Error.Error (loc, Error.CompAppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
+                  | _ -> raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
                 end
 
           | _ -> 
-              raise (Error.Error (loc, Error.CompMismatch (cD, cG, i', Error.PiBox, tau_theta'))) 
+              raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantPiBox, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
 
         end
@@ -1049,8 +1060,8 @@ and elExp' cD cG i = match i with
               let theta' = Int.LF.MDot (Int.LF.MObj (psihat', tM'), theta) in
                 (Int.Comp.MApp (loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta'))
              with Error.Violation msg -> 
-               dprint (fun () -> "[elTerm] Violation: " ^ msg);
-               raise (Error.Error (loc, Error.CompTypAnn ))
+               dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+               raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn ))
              end 
           | (Int.Comp.TypPiBox ((Int.LF.PDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
               let cPsi    = C.cnormDCtx (cPsi, theta) in
@@ -1070,15 +1081,15 @@ and elExp' cD cG i = match i with
                           (Int.Comp.MApp (loc, i', (psihat', Int.Comp.NeutObj h')), (tau, theta')))
                        with Unify.Unify msg ->
                          (Printf.printf "%s\n" msg;
-                          raise (Error.Error (loc, Error.TypMismatchElab (cD, cPsi', sA', sB))))
+                          raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
                        end 
                   | _ -> 
                        (dprint (fun () -> "[elTerm] Violation: Not a head");
-                      raise (Error.Error (loc, Error.CompMAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
+                      raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
                end  
                 with Error.Violation msg -> 
                   dprint (fun () -> "[elTerm] Violation: " ^ msg);
-                  raise (Error.Error (loc, Error.CompTypAnn ))
+                  raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
               end 
           | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) -> 
               let _ = dprint (fun () -> "Encountered Boxed arg") in
@@ -1108,11 +1119,11 @@ and elExp' cD cG i = match i with
                               P.expSynToString cD cG i ^ "\n"); (i , (tau, theta))
 
                 with Error.Violation msg -> 
-                  dprint (fun () -> "[elTerm] Violation: " ^ msg);
-                  raise (Error.Error (loc, Error.CompAppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
+                  dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+                  raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
                 end 
           | _ ->
-              raise (Error.Error (loc, Error.CompMismatch (cD, cG, i', Error.PiBox, tau_theta'))) 
+              raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantPiBox, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
 
 
@@ -1143,7 +1154,7 @@ and elExp' cD cG i = match i with
        if Whnf.convCTyp ttau1 ttau2 then  
          (Int.Comp.Equal (loc, i1', i2'), (Int.Comp.TypBool , C.m_id))
        else 
-         raise (Error.Error(loc, Error.CompEqMismatch (cD, ttau1, ttau2 )))
+         raise (Check.Comp.Error (loc, Check.Comp.EqMismatch (cD, ttau1, ttau2 )))
 
 
   | Apx.Comp.Boolean (_ , b)  -> (Int.Comp.Boolean b, (Int.Comp.TypBool, C.m_id))
@@ -1305,7 +1316,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
           (cG', pat')
         with Unify.Unify msg -> 
           dprint (fun () -> "Unify Error: " ^ msg) ; 
-           raise (Error.Error (loc, Error.CompSynMismatch (cD, ttau, ttau')))
+           raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
         end
 
   | (Apx.Comp.PatPair (loc, pat1, pat2) , (Int.Comp.TypCross (tau1, tau2),
@@ -1320,9 +1331,9 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
         (cG, Int.Comp.PatMetaObj (loc, cM'))
   (* Error handling cases *)
   | (Apx.Comp.PatPair(loc, _ , _ ), tau_theta) ->  
-      raise (Error.Error (loc, Error.CompPairMismatch (cD, Int.LF.Empty, tau_theta)))
+      raise (Check.Comp.Error (loc, Check.Comp.PairMismatch (cD, Int.LF.Empty, tau_theta)))
   | (Apx.Comp.PatMetaObj (loc, _) , tau_theta) ->  
-      raise (Error.Error (loc, Error.CompBoxMismatch (cD, Int.LF.Empty, tau_theta)))
+      raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, Int.LF.Empty, tau_theta)))
   | (Apx.Comp.PatAnn (loc, _, _ ) , ttau) -> 
       let (cG', pat', ttau') = elPatSyn cD cG pat in 
       let _ = dprint (fun () -> "[elPatChk] expected tau : = " ^ 
@@ -1334,7 +1345,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
           (cG', pat')
         with Unify.Unify msg -> 
           dprint (fun () -> "Unify Error: " ^ msg) ; 
-          raise (Error.Error (loc, Error.CompSynMismatch (cD, ttau, ttau')))
+          raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
         end
 
 
@@ -1565,7 +1576,6 @@ and recPatObj cD pat (cD_s, tau_s) =
        cD1' ; |[t]|(|[r]|cPsi) |- |[t]|(|[r]|cP)  =   |[t]|(|[r1]|tP1) 
 *)
 and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
-  begin try 
     let cD'    = Context.append cD cD1 in  (*         cD'  = cD, cD1     *)
     let _      = dprint (fun () -> "[synRefine] cD' = " ^ P.mctxToString cD') in 
     let t      = Ctxsub.mctxToMSub cD'  in  (*         .  |- t   <= cD'   *) 
@@ -1617,8 +1627,8 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
                    ^ P.dctxToString Int.LF.Empty cPsi' ^ "    |-    "
                    ^ P.typToString Int.LF.Empty cPsi' (tP', LF.id))
              ; 
-            raise (Error.Error (loc, Error.CompPattMismatch ((cD1, cPsi1, pattern1, (tP1, LF.id)), 
-                                              (cD, cPsi, (tP, LF.id)))))
+            raise (Check.Comp.Error (loc, Check.Comp.PattMismatch ((cD1, cPsi1, pattern1, (tP1, LF.id)), 
+                                                                   (cD, cPsi, (tP, LF.id)))))
            )
         end
     in 
@@ -1640,9 +1650,6 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
     let _ = dprint (fun () -> "synRefine [Substitution] t': " ^ P.mctxToString cD1' ^ 
                         "\n|-\n" ^ P.msubToString cD1' t' ^ "\n <= " ^ P.mctxToString cD' ^ "\n") in 
       (t0, t', cD1', cPsi1_new, outputPattern)
-  with exn -> raise exn (* raise (Error.Error (loc, Error.ConstraintsLeft))*)
-  end
-
 
 and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) = 
  begin try 
@@ -1688,9 +1695,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
                           ^ P.compTypToString Int.LF.Empty tau_p' 
                           ^ "\n   Expected pattern type: "
                           ^ P.compTypToString Int.LF.Empty tau_s');
-                raise (Error.Error (loc, 
-                                    Error.CompSynMismatch (cD, (tau_s', Whnf.m_id),
-                                                          (tau_p', Whnf.m_id)))))
+                raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau_s', Whnf.m_id), (tau_p', Whnf.m_id)))))
              end in 
 
     let _ = dprnt "AbstractMSub..." in 

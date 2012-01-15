@@ -1723,6 +1723,7 @@ module Int = struct
 end (* Int *)
 
 
+(*
 module Error = struct
 
   open Syntax.Int
@@ -2082,3 +2083,4 @@ module Error = struct
   module DefaultPrinter = Make (DefaultCidRenderer)
 
 end (* Error *)
+*)

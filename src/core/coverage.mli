@@ -1,8 +1,17 @@
 (* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
-include Error.SIG
-
 open Syntax.Int
+
+type error =
+    NoCover of (unit -> string)
+  | MatchError of string
+  | NothingToRefine
+  | NoCoverageGoalsGenerated
+
+exception Error of Syntax.Loc.t * error
+
+val report_error : Format.formatter -> error -> unit
+
 
 val enableCoverage : bool ref
 val warningOnly : bool ref
@@ -21,9 +30,6 @@ val make : Parser.Grammar.Loc.t
 type coverage_result =
   | Success
   | Failure of (unit -> string)
-
-exception NoCover of (unit -> string)
-
 
 val clear  : unit -> unit
 val stage  : problem -> unit

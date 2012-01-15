@@ -12,9 +12,20 @@ module Print = Pretty.Int.DefaultPrinter
 
 module Unify = Unify.EmptyTrail
 
-type error
+type error =
+  | CtxVarMismatch   of mctx * ctx_var * schema
+  | CtxVarDiffer     of mctx * ctx_var * ctx_var
+  | IllTyped         of mctx * dctx * nclo * tclo
+  | SigmaIllTyped    of mctx * dctx * trec_clo * trec_clo
+  | KindMismatch     of mctx * dctx * sclo * (kind * sub)
+  | TypMismatch      of mctx * dctx * nclo * tclo * tclo
+  | SpineIllTyped
+  | SubIllTyped
+  | LeftoverFVar
 
-let error_location e = assert false
+exception Error of Syntax.Loc.t * error
+
+let error_location (Error (loc, _)) = loc
 
 let report_error fmt e = assert false
 

@@ -1652,31 +1652,6 @@ module Error = struct
       | PiBox -> "dependent function type"
       | Box   -> "contextual type"
     
-    (* Format-based printing of error messages *)
-    let fmt_ppr ppf = function
-      | CtxReconstruct -> fprintf ppf "Type reconstruction in the presence of multiple contexts and pattern matching on contexts is not implemented"
-
-      | UnknownCidTyp n ->
-          fprintf ppf "unbound type constructor: %s" (R.render_cid_typ n)
-
-      | FrozenType n ->
-          fprintf ppf "type %s was frozen by a previous case analysis; can't declare a new constructor here" (R.render_cid_typ n)
-
-      | PruningFailed -> 
-          fprintf ppf "Pruning a type failed; this can happen when you have some free meta-variables whose type cannot be inferred." 
-
-      | TypMismatchElab (cO, cD, cPsi, sA1, sA2) ->
-          fprintf ppf
-            "ill-typed expression\n  expected: %a\n  inferred: %a\n "
-            (IP.fmt_ppr_lf_typ cD cPsi    std_lvl) (Whnf.normTyp sA1)
-            (IP.fmt_ppr_lf_typ cD cPsi    std_lvl) (Whnf.normTyp sA2)
-            (* (IP.fmt_ppr_lf_dctx cO cD std_lvl)        (Whnf.normDCtx cPsi) *)
-
-      | IllTypedElab (cO, cD, cPsi, sA) ->
-          fprintf ppf
-            "ill-typed expression\n  inferred type: %a \n "
-            (IP.fmt_ppr_lf_typ cD cPsi std_lvl) (Whnf.normTyp sA)
-
       | EtaExpandBV (offset, cD, cPsi, sA) -> 
           fprintf ppf
             "bound variable %s to has type %a \n and should be eta-expanded\n"
@@ -1684,39 +1659,11 @@ module Error = struct
             (IP.fmt_ppr_lf_typ cD cPsi std_lvl) (Whnf.normTyp sA)
 
 
-      | EtaExpandFMV (offset, cD, cPsi, sA) -> 
-          fprintf ppf
-            "meta-variable %s to has type %a \n and should be eta-expanded\n"
-            (R.render_name offset)
-            (IP.fmt_ppr_lf_typ cD cPsi std_lvl) (Whnf.normTyp sA)
-
       | EtaExpandFV (offset, cD, cPsi, sA) -> 
           fprintf ppf
             "variable %s to has type %a \n and should be eta-expanded\n"
             (R.render_name offset)
             (IP.fmt_ppr_lf_typ cD cPsi std_lvl) (Whnf.normTyp sA)
-
-      | LeftoverConstraints x ->
-          fprintf ppf
-            "cannot reconstruct a type for free variable %s (leftover constraints)"
-            (R.render_name x)
-
-      | IllTypedIdSub ->
-          fprintf ppf "ill-typed substitution" (* TODO *)
-
-      | ValueRestriction (cD, cG, i, theta_tau) ->
-          fprintf ppf
-            "value restriction [pattern matching]\n  expected: boxed type\n  inferred: %a\n  for expression: %a\n  in context:\n    %s"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
-            (IP.fmt_ppr_cmp_exp_syn cD cG std_lvl) i
-            "[no comp-level context printing yet]" (* TODO print context? *)
-
-      | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
-          fprintf ppf
-            "ill-typed pattern\n  expected: %a\n  for pattern: %a\n  inferred:%a  "
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau) 
-            (IP.fmt_ppr_pat_obj cD cG std_lvl) pat
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau') 
 
       | CompIllTyped (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
           fprintf ppf
@@ -1768,19 +1715,6 @@ module Error = struct
       | CompFreeMVar u -> 
           fprintf ppf "Encountered free meta-variables %s\n"
             (R.render_name u)
-
-      | CompScrutineeTyp (cD, cG, i, sP, cPsi) -> 
-          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some variable dependencies cannot happen. This error may indicate that some implicit arguments that are reconstructed should be restricted.\n"
-            (IP.fmt_ppr_lf_typ  cD cPsi std_lvl) (Whnf.normTyp sP)
-            (IP.fmt_ppr_lf_dctx cD std_lvl) cPsi
-            (IP.fmt_ppr_cmp_exp_syn cD cG std_lvl) i
-
-      | CompScrutineeSubTyp (cD, cG, i, cPsi, cPhi) -> 
-          fprintf ppf "Type %a[%a] \n of scrutinee %a \n is not closed or requires that some meta-variables introduced in the pattern\n are further restricted, i.e. some variable dependencies cannot happen. This error may indicate that some implicit arguments that are reconstructed should be restricted.\n"
-            (IP.fmt_ppr_lf_dctx cD std_lvl) cPhi
-            (IP.fmt_ppr_lf_dctx cD std_lvl) cPsi
-            (IP.fmt_ppr_cmp_exp_syn cD cG std_lvl) i
-
 
       | CompCtxFunMismatch (cD, _cG, theta_tau) -> 
           fprintf ppf "Found Ctx abstraction, but expected type %a\n"
@@ -1847,18 +1781,8 @@ module Error = struct
             "Expected context of schema  %s\n"
             (R.render_cid_schema cid_schema)
 
-      | CompTypAnn -> 
-          fprintf ppf "Type synthesis of term failed (use typing annotation)" 
-
-      | ConstraintsLeft ->
-          fprintf ppf "Constraints of functional type were not simplified" (* TODO *)
-
       | NotPatSub ->
           fprintf ppf "Not a pattern substitution" (* TODO *)
-
-      | NotPatternSpine ->
-          fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *)
-
 
       | NoCover message ->
           fprintf ppf "Coverage checking failed: %s" message

@@ -49,13 +49,6 @@ open Format
 *)
 
 
-let string_of_loc loc =
-  if Syntax.Loc.is_ghost loc then "???"
-  else begin
-    Parser.Grammar.Loc.print Format.str_formatter loc;
-    flush_str_formatter()
-  end
-
 type lvl    = int
 
 let std_lvl = 0

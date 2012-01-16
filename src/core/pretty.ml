@@ -124,18 +124,22 @@ module Int = struct
     val fmt_ppr_lf_head       : LF.mctx -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
     val fmt_ppr_lf_spine      : LF.mctx -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
     val fmt_ppr_lf_sub        : LF.mctx -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
+    val fmt_ppr_lf_dctx       : LF.mctx -> LF.mctx -> lvl -> formatter -> LF.dctx -> unit
 
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
-    val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx     -> unit
+    val fmt_ppr_lf_mctx       : LF.mctx -> lvl -> formatter -> LF.mctx  -> unit
+    val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
     val fmt_ppr_cmp_kind      : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
     val fmt_ppr_cmp_branches  : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
+    val fmt_ppr_patternOpt    : LF.mctx -> LF.mctx -> LF.dctx -> formatter -> LF.normal option -> unit
+
 
     (* Regular Pretty Printers *)
     val ppr_sgn_decl      : Sgn.decl         -> unit
@@ -190,7 +194,7 @@ module Int = struct
   end (* Int.PRINTER *)
 
   (* Internal Syntax Pretty Printer Functor *)
-  module Make = functor (R : CID_RENDERER) -> struct
+  module Make : functor (R : CID_RENDERER) -> PRINTER = functor (R : CID_RENDERER) -> struct
 
     module InstHashedType = struct
       type t    = LF.normal option ref

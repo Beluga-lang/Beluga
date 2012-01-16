@@ -728,7 +728,7 @@ let rec trivially_empty cov_problem =
       | [] -> true
       | _  -> false
     end
-  with Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
+  with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
   end
 
 let rec solve' (cO, cD) (matchCand, ms, cs) cOD_p mCands sCands = match matchCand with 
@@ -1437,9 +1437,9 @@ let rec check_emptiness cO cD = match cD with
 	   | [] -> true
 	   | _  -> check_emptiness cO cD'
 	) 
-      with Error (_, msg) ->
-	print_string ("Unable to prove : " ^ P.typToString cD' cPsi (tA, S.LF.id) ^ " to be empty \n") ;
-	print_string "Try next meta-variable ...\n"; 
+      with Abstract.Error (_, msg) ->
+	print_endline ("Unable to prove : " ^ P.typToString cD' cPsi (tA, S.LF.id) ^ " to be empty") ;
+	print_endline "Try next meta-variable ...";
 	check_emptiness cO cD'
       end 
   | LF.Dec(cD', LF.PDecl (_u, LF.Sigma _ , _cPsi)) -> 
@@ -1450,7 +1450,7 @@ let rec check_emptiness cO cD = match cD with
 	   | [] -> true
 	   | _  -> check_emptiness cO cD'
 	) 
-      with Error (_, msg) ->
+      with Abstract.Error (_, msg) ->
 	print_string "Unable to prove given type is empty\n" ; check_emptiness cO cD'
       end 
 

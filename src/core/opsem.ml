@@ -10,8 +10,8 @@ open Syntax.Int
 module Unify = Unify.StdTrail
 
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.DefaultCidRenderer
-module RR = Pretty.Int.NamedRenderer
+module R = Store.Cid.DefaultRenderer
+module RR = Store.Cid.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
 

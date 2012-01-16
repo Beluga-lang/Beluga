@@ -1,7 +1,6 @@
 (* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 open Id
-
 open Syntax.Int
 
 module Cid : sig
@@ -135,6 +134,34 @@ module Cid : sig
     val index_of_name   : name -> cid_schema
     val clear           : unit -> unit
   end
+
+  module type RENDERER = sig
+
+    open Id
+    open Syntax.Int
+
+    val render_name         : name         -> string
+    val render_cid_comp_typ : cid_typ      -> string
+    val render_cid_comp_const : cid_comp_const -> string
+    val render_cid_typ      : cid_typ      -> string
+    val render_cid_term     : cid_term     -> string
+    val render_cid_schema   : cid_schema   -> string
+    val render_cid_prog     : cid_prog     -> string
+    val render_offset       : offset       -> string
+
+    val render_ctx_var      : LF.mctx    -> offset   -> string
+    val render_cvar         : LF.mctx    -> offset   -> string
+    val render_bvar         : LF.dctx    -> offset   -> string
+    val render_var          : Comp.gctx  -> var      -> string
+
+  end
+
+  (* Default RENDERER for Internal Syntax *)
+  module DefaultRenderer : RENDERER
+
+  (* Named Renderer for Internal Syntax *)
+  module NamedRenderer : RENDERER
+
 end
 
 val clear : unit -> unit

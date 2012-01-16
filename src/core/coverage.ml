@@ -14,7 +14,7 @@ module Const = Store.Cid.Term
 module S = Substitution
 module U = Unify.EmptyTrail
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.NamedRenderer
+module R = Store.Cid.NamedRenderer
 
 let idSub  = S.LF.id (* LF.Shift (LF.NoCtxShift, 0) *)
 let idMSub = Whnf.m_id

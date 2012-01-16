@@ -75,29 +75,6 @@ module Control = struct
 end (* Control *)
 
 
-
-module type CID_RENDERER = sig
-
-  open Id
-  open Syntax.Int
-
-  val render_name         : name         -> string
-  val render_cid_comp_typ : cid_comp_typ      -> string
-  val render_cid_comp_const : cid_comp_const -> string
-  val render_cid_typ      : cid_typ      -> string
-  val render_cid_term     : cid_term     -> string
-  val render_cid_schema   : cid_schema   -> string
-  val render_cid_prog     : cid_prog     -> string
-  val render_offset       : offset       -> string
-
-  val render_ctx_var      : LF.mctx    -> offset   -> string
-  val render_cvar         : LF.mctx    -> offset   -> string
-  val render_bvar         : LF.dctx    -> offset   -> string
-  val render_var          : Comp.gctx  -> var      -> string
-
-end
-
-
 module Int = struct
 
   open Id
@@ -191,7 +168,7 @@ module Int = struct
   end (* Int.PRINTER *)
 
   (* Internal Syntax Pretty Printer Functor *)
-  module Make : functor (R : CID_RENDERER) -> PRINTER = functor (R : CID_RENDERER) -> struct
+  module Make : functor (R : Store.Cid.RENDERER) -> PRINTER = functor (R : Store.Cid.RENDERER) -> struct
 
     module InstHashedType = struct
       type t    = LF.normal option ref
@@ -1643,75 +1620,8 @@ module Int = struct
 
   end (* Int.Make *)
 
-  (* Default CID_RENDERER for Internal Syntax using de Bruijn indices *)
-  module DefaultCidRenderer = struct
-
-    open Store.Cid
-
-    let render_name       n    = n.string_of_name
-    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
-    let render_cid_comp_const c  = render_name (CompConst.get c).CompConst.name
-    let render_cid_typ    a    = render_name (Typ.get a).Typ.name
-    let render_cid_term   c    = render_name (Term.get c).Term.name
-    let render_cid_schema w    = render_name (Schema.get w).Schema.name
-    let render_cid_prog   f    = render_name (Comp.get f).Comp.name
-    let render_ctx_var _cD g   =  string_of_int g
-    let render_cvar    _cD u   = "mvar " ^ string_of_int u
-    let render_bvar  _cPsi i   = string_of_int i
-    let render_offset      i   = string_of_int i
-    let render_var   _cG   x   = string_of_int x
-
-  end (* Int.DefaultCidRenderer *)
-
- 
- (* RENDERER for Internal Syntax using names *)
-  module NamedRenderer = struct
-
-    open Store.Cid
-    open Store
-
-    let render_name        n   = n.string_of_name
-    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
-    let render_cid_comp_const c  = render_name (CompConst.get c).CompConst.name
-    let render_cid_typ     a   = render_name (Typ.get a).Typ.name
-    let render_cid_term    c   = render_name (Term.get c).Term.name
-    let render_cid_schema  w   = render_name (Schema.get w).Schema.name
-    let render_cid_prog    f   = render_name (Comp.get f).Comp.name
-    let render_ctx_var cD g    =      
-      begin try
-        render_name (Context.getNameMCtx cD g)
-      with
-          _ -> "FREE CtxVar " ^ string_of_int g
-      end 
-
-    let render_cvar    cD u    = 
-      begin try
-        render_name (Context.getNameMCtx cD u)
-      with 
-          _ -> "FREE MVar " ^ (string_of_int u)
-      end 
-    let render_bvar  cPsi i    = 
-      begin try 
-        render_name (Context.getNameDCtx cPsi i)
-      with
-          _ -> "FREE BVar " ^ (string_of_int i)
-      end 
-
-    let render_offset     i   = string_of_int i
-
-    let render_var   cG   x   = 
-      begin try
-        render_name (Context.getNameCtx cG x)
-      with 
-          _ -> "FREE Var " ^ (string_of_int x)
-      end
-
-  end (* Int.NamedRenderer *)
-
-
-  (* Default Internal Syntax Pretty Printer Functor Instantiation *)
-   (* module DefaultPrinter = Make (DefaultCidRenderer)   *)
-    module DefaultPrinter = Make (NamedRenderer)   
+  (* Default Error Pretty Printer Functor Instantiation *)
+  module DefaultPrinter = Make (Store.Cid.DefaultRenderer)
 
 end (* Int *)
 
@@ -1731,7 +1641,7 @@ module Error = struct
   end
 
   (* Error Pretty Printer Functor *)
-  module Make = functor (R : CID_RENDERER) -> struct
+  module Make = functor (R : Store.Cid.RENDERER) -> struct
 
     module IP = Int.Make (R)
 
@@ -1998,14 +1908,14 @@ module Error = struct
   end
 
 
-  (* Default CID_RENDERER for Errors *)
-   (* module DefaultCidRenderer = Int.DefaultCidRenderer  *)
-      module DefaultCidRenderer = Int.NamedRenderer 
+  (* Default Store.Cid.RENDERER for Errors *)
+   (* module DefaultCidRenderer = Store.Cid.DefaultCidRenderer  *)
+      module DefaultCidRenderer = Store.Cid.NamedRenderer 
 
 
 
   (* Default Error Pretty Printer Functor Instantiation *)
-  module DefaultPrinter = Make (DefaultCidRenderer)
+  module DefaultPrinter = Make (Store.Cid.DefaultRenderer)
 
 end (* Error *)
 *)

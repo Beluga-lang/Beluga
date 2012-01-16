@@ -17,8 +17,8 @@ module Unify = Unify.StdTrail
 module C     = Whnf
 
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.DefaultCidRenderer
-module RR = Pretty.Int.NamedRenderer
+module R = Store.Cid.DefaultRenderer
+module RR = Store.Cid.NamedRenderer
 
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
@@ -1264,7 +1264,7 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
           scrutinee. \n"
                       ^ "Scrutinee's context " ^ P.dctxToString cD cPsi              
                       ^ "\nPattern's context " ^ P.dctxToString cD' cPsi' ^ "\n"             
-                      ^ Pretty.string_of_loc loc)
+                      ^ Error.string_of_loc loc)
             )
 
 (* ********************************************************************************)

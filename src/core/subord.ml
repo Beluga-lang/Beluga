@@ -16,7 +16,7 @@ module Types = Store.Cid.Typ
 module Schema = Store.Cid.Schema
 
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.NamedRenderer
+module R = Store.Cid.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [28])
 

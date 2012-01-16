@@ -30,9 +30,16 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-let error_location (Error (loc, _)) = loc
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+	| NoCover s -> Format.pp_print_string ppf s
+	| MatchError s -> Format.pp_print_string ppf s
+	| NothingToRefine -> Format.pp_print_string ppf "Nothing to refine"
+	| NoCoverageGoalsGenerated -> Format.pp_print_string ppf "No coverage goals generated"))
 
-let report_error fmt e = assert false
+exception Error of Syntax.Loc.t * error
 
 (* Generating meta-variable and parameter variable names,
  *  e.g. for Obj-no-split (MVars)

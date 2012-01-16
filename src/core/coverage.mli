@@ -10,9 +10,6 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-val report_error : Format.formatter -> error -> unit
-
-
 val enableCoverage : bool ref
 val warningOnly : bool ref
 val no_covers : int ref

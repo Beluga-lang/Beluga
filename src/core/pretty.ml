@@ -1745,17 +1745,6 @@ module Error = struct
     (* Format-based printing of error messages *)
     let fmt_ppr ppf = function
       | CtxReconstruct -> fprintf ppf "Type reconstruction in the presence of multiple contexts and pattern matching on contexts is not implemented"
-      | UnboundName n ->
-          fprintf ppf "unbound data-level variable (ordinary or meta-variable) or constructor: %s" (R.render_name n)
-
-      | UnboundCtxName n ->
-          fprintf ppf "unbound context variable: %s" (R.render_name n)
-
-      | UnboundCtxSchemaName n ->
-          fprintf ppf "unbound context schema: %s" (R.render_name n)
-
-      | UnboundCompName n ->
-          fprintf ppf "unbound computation-level variable: %s" (R.render_name n)
 
       | UnknownCidTyp n ->
           fprintf ppf "unbound type constructor: %s" (R.render_cid_typ n)
@@ -1766,52 +1755,14 @@ module Error = struct
       | PruningFailed -> 
           fprintf ppf "Pruning a type failed; this can happen when you have some free meta-variables whose type cannot be inferred." 
 
-      | CtxVarMismatch (cD, var, expected) ->
-          fprintf ppf "Context variable %a doesn't check against schema %a"
-            (IP.fmt_ppr_lf_ctx_var cD) var
-            (IP.fmt_ppr_lf_schema 0) expected
-
-
-      | CtxVarDiffer (cD, var, var1) ->
-          fprintf ppf "Context variable %a not equal to %a"
-            (IP.fmt_ppr_lf_ctx_var cD) var
-            (IP.fmt_ppr_lf_ctx_var cD) var1
-
-
-      | SigmaIllTyped ( _cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
-          fprintf ppf "Sigma Type mismatch" (* TODO *)
-
-      | KindMismatch (cD, cPsi, sS, sK) ->
-          fprintf ppf "ill-kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
-            (IP.kindToString cPsi sK)
-            (IP.fmt_ppr_lf_spine cD cPsi std_lvl) (Whnf.normSpine sS)
-            (IP.fmt_ppr_lf_dctx  cD std_lvl) cPsi
-
-      | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
-          fprintf ppf
-            "ill-typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n "
-            (IP.fmt_ppr_lf_typ cD cPsi    std_lvl) (Whnf.normTyp sA1)
-            (IP.fmt_ppr_lf_typ cD cPsi    std_lvl) (Whnf.normTyp sA2)
-            (IP.fmt_ppr_lf_normal cD cPsi std_lvl) (Whnf.norm sM)
-            (* (IP.fmt_ppr_lf_dctx cO cD std_lvl)        (Whnf.normDCtx cPsi) *)
-
-
-      | TypMismatchElab (cD, cPsi, sA1, sA2) ->
+      | TypMismatchElab (cO, cD, cPsi, sA1, sA2) ->
           fprintf ppf
             "ill-typed expression\n  expected: %a\n  inferred: %a\n "
             (IP.fmt_ppr_lf_typ cD cPsi    std_lvl) (Whnf.normTyp sA1)
             (IP.fmt_ppr_lf_typ cD cPsi    std_lvl) (Whnf.normTyp sA2)
             (* (IP.fmt_ppr_lf_dctx cO cD std_lvl)        (Whnf.normDCtx cPsi) *)
 
-
-      | IllTyped (cD, cPsi, sM, sA) ->
-          fprintf ppf
-            "ill-typed expression\n  expected type: %a\n  for expression:\n    %a\n "
-            (IP.fmt_ppr_lf_typ cD cPsi std_lvl) (Whnf.normTyp sA)
-            (IP.fmt_ppr_lf_normal cD cPsi std_lvl) (Whnf.norm sM)
-            (* (IP.fmt_ppr_lf_dctx cD std_lvl) cPsi  *)
-
-      | IllTypedElab (cD, cPsi, sA) ->
+      | IllTypedElab (cO, cD, cPsi, sA) ->
           fprintf ppf
             "ill-typed expression\n  inferred type: %a \n "
             (IP.fmt_ppr_lf_typ cD cPsi std_lvl) (Whnf.normTyp sA)
@@ -1834,11 +1785,6 @@ module Error = struct
             "variable %s to has type %a \n and should be eta-expanded\n"
             (R.render_name offset)
             (IP.fmt_ppr_lf_typ cD cPsi std_lvl) (Whnf.normTyp sA)
-
-
-      | SpineIllTyped -> 
-          fprintf ppf
-            "ill-typed spine---not enough arguments supplied"
 
       | LeftoverConstraints x ->
           fprintf ppf
@@ -2007,22 +1953,8 @@ module Error = struct
       | NoCover message ->
           fprintf ppf "Coverage checking failed: %s" message
 
-
       | LeftoverUndef ->
           fprintf ppf "Undef left after unification" (* FIXME this is a beluga error *)
-
-      | SubIllTyped ->
-          fprintf ppf "Substitution not well-typed"  (* TODO *)
-
-
-      | PatVarNotUnique -> 
-          fprintf ppf "Pattern variable not linear."
-      | PatCtxRequired -> 
-          fprintf ppf "The context in a pattern must be a proper context where variable declaration must carry its type.\n" 
-      | CompEmptyPattBranch -> 
-          fprintf ppf "If the pattern in a branch is empty, there should be no branch body\n" 
-      | UnboundIdSub ->
-          fprintf ppf "Identity substitution used without context variable"
 
       | LeftoverCV ->
         fprintf ppf "Abstraction not valid LF-type because of leftover context variable"

@@ -6,6 +6,7 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [5])
 open Context
 open Store.Cid
 open Syntax.Int.LF
+open Syntax.Int
 open Error
 
 module Print = Pretty.Int.DefaultPrinter
@@ -21,13 +22,54 @@ type error =
   | TypMismatch      of mctx * dctx * nclo * tclo * tclo
   | SpineIllTyped
   | SubIllTyped
-  | LeftoverFVar
+  | LeftoverFV
 
 exception Error of Syntax.Loc.t * error
 
-let error_location (Error (loc, _)) = loc
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+      | CtxVarMismatch (cO, var, expected) ->
+          Format.fprintf ppf "Context variable %a doesn't check against schema %a"
+            (P.fmt_ppr_lf_ctx_var cO) var
+            (P.fmt_ppr_lf_schema Pretty.std_lvl) expected
 
-let report_error fmt e = assert false
+      | CtxVarDiffer (cO, var, var1) ->
+          Format.fprintf ppf "Context variable %a not equal to %a"
+            (P.fmt_ppr_lf_ctx_var cO) var
+            (P.fmt_ppr_lf_ctx_var cO) var1
+
+      | IllTyped (cD, cPsi, sM, sA) ->
+          Format.fprintf ppf
+            "ill-typed expression\n  expected type: %a\n  for expression:\n    %a\n "
+            (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+            (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+
+      | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
+          Format.fprintf ppf "Sigma Type mismatch" (* TODO *)
+
+      | KindMismatch (cD, cPsi, sS, sK) ->
+          Format.fprintf ppf "ill-kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
+            (P.kindToString cPsi sK)
+            (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS)
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
+
+      | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
+          Format.fprintf ppf
+            "ill-typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n "
+            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA1)
+            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA2)
+            (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+
+      | SpineIllTyped -> 
+          Format.fprintf ppf "ill-typed spine---not enough arguments supplied"
+
+      | SubIllTyped ->
+          Format.fprintf ppf "Substitution not well-typed"  (* TODO *)
+
+      | LeftoverFV ->
+	  Format.fprintf ppf "Leftover free variable"))
 
 exception SpineMismatch
 
@@ -66,7 +108,7 @@ exception SpineMismatch
 
 *)
 let rec ctxShift cPsi = begin match cPsi with
-  | Null              -> Shift (NoCtxShift , 0 )
+  | Null              -> Shift (NoCtxShift, 0)
   | CtxVar psi        -> Shift (CtxShift psi, 0)
   | DDec   (cPsi, _x) -> 
       match  ctxShift cPsi with
@@ -102,10 +144,10 @@ let rec ctxShift cPsi = begin match cPsi with
 
         (* let u     = Whnf.etaExpandMV Null (tA, s) Substitution.LF.id in *)
           (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-        (* let u     = Whnf.etaExpandMV cPhi (tA, Substitution.LF.comp s (ctxShift cPhi)) Substitution.LF.id in *)
-	let u     = Whnf.etaExpandMV cPhi (tA, s) Substitution.LF.id in 
-        let front = (Obj ((* Root(MVar(u, S.Substitution.LF.id), Nil) *) u) : front) in
-          (* Dot (front, Substitution.LF.comp s Substitution.LF.shift)  *)
+        (* let u     = Whnf.etaExpandMV cPhi (tA, LF.comp s (ctxShift cPhi)) LF.id in *)
+	let u     = Whnf.etaExpandMV cPhi (tA, s) Substitution.LF.id in
+        let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
+          (* Dot (front, Substitution.LF.comp s LF.shift)  *)
            Dot (front, s) 
 
 
@@ -321,7 +363,7 @@ let rec ctxShift cPsi = begin match cPsi with
             TClo (tA, s)
 
     | FVar _ ->
-        raise (Error (Syntax.Loc.ghost, LeftoverFVar))
+        raise (Error (Syntax.Loc.ghost, LeftoverFV))
 
 
   and canAppear cD cPsi sA =

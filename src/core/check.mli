@@ -16,7 +16,7 @@ module LF : sig
     | TypMismatch      of mctx * dctx * nclo * tclo * tclo
     | SpineIllTyped
     | SubIllTyped
-    | LeftoverFVar
+    | LeftoverFV
 
   exception Error of Syntax.Loc.t * error
 
@@ -77,10 +77,7 @@ end
 
 
 module Sgn : sig
-  include Error.SIG
-
   open Syntax.Int.Sgn
 
   val check_sgn_decls :  decl list -> unit
-
 end

@@ -40,9 +40,27 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-let error_location (Error (loc, _)) = loc
-
-let report_error fmt e = assert false
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+      | UnboundName n ->
+          Format.fprintf ppf
+	    "unbound data-level variable (ordinary or meta-variable) or constructor: %s"
+	    (R.render_name n)
+      | UnboundCtxName n ->
+          Format.fprintf ppf "unbound context variable: %s" (R.render_name n)
+      | UnboundCtxSchemaName n ->
+          Format.fprintf ppf "unbound context schema: %s" (R.render_name n)
+      | UnboundCompName n ->
+          Format.fprintf ppf "unbound computation-level variable: %s" (R.render_name n)
+      | PatCtxRequired ->
+          Format.fprintf ppf
+	    "The context in a pattern must be a proper context where variable declaration must carry its type."
+      | CompEmptyPattBranch ->
+          Format.fprintf ppf "If the pattern in a branch is empty, there should be no branch body"
+      | UnboundIdSub ->
+          Format.fprintf ppf "Identity substitution used without context variable"))
 
 type free_cvars = 
     FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name 

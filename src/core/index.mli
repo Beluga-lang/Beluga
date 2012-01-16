@@ -12,8 +12,6 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-val report_error : Format.formatter -> error -> unit
-
 type free_cvars
 
 val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * fcvars 

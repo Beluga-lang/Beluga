@@ -23,8 +23,6 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-val report_error : Format.formatter -> error -> unit
-
 val cnstr_ctyp : Comp.typ  -> bool
 
 val abstrKind     : LF.kind -> LF.kind * Id.offset

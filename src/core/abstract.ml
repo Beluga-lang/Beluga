@@ -35,7 +35,43 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-let report_error fmt e = assert false
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+        | LeftoverCV ->
+          Format.fprintf ppf "Abstraction not valid LF-type because of leftover context variable"
+        | LeftoverMV -> 
+          Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
+        | LeftoverMMV -> 
+          Format.fprintf ppf
+            ("Encountered meta^2-variable,@ which we cannot abstract over@ \
+            because they depend on meta-variables;@ \
+            the user needs to supply more information,@ \
+            since the type of a given expression@ \
+            is not uniquely determined.@ \
+            Meta^2-variables are introduced during type reconstruction;@ \
+            if you explicitely quantify over some meta-variables,@ \
+            these meta-variables will impose constraints on meta^2-variables@ \
+            and we may not be able to abstract over the meta^2-variables.@ \
+            The solution is either to not specify any meta-variables explicitly,@ \
+            or specify all of them.")
+        | LeftoverConstraints ->
+          Format.fprintf ppf "Leftover constraints during abstraction"
+        | CyclicDependencyFV ->
+          Format.fprintf ppf "Cyclic dependency among free variables"
+        | CyclicDependencyMMV ->
+          Format.fprintf ppf "Cyclic dependency among meta^2-variables and free variables"
+        | CyclicDependencyMV ->
+          Format.fprintf ppf "Cyclic dependency among meta-variables and free variables"
+        | CyclicDependencyFMV ->
+          Format.fprintf ppf "Cyclic dependency among free meta-variables"
+        | CyclicDependencyPV ->
+          Format.fprintf ppf "Cyclic dependency among parameter-variables and free variables"
+        | CyclicDependencyFPV ->
+          Format.fprintf ppf "Cyclic dependency among free parameter-variables"
+        | UnknownIdentifier ->
+          Format.fprintf ppf "Unknown identifier in program."))
 
 (* ******************************************************************* *)
 (* Abstraction:

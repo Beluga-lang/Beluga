@@ -2,12 +2,11 @@
 
 open Syntax
 
+
 type error =
   | FrozenType of Id.cid_typ
 
 exception Error of Syntax.Loc.t * error
-
-let error_location (Error (loc, _)) = loc
 
 module Cid = struct
 
@@ -727,3 +726,13 @@ let clear () =
   Cid.CompTyp.clear ();
   Cid.CompConst.clear ();
   Cid.Comp.clear ()
+
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+        | FrozenType n ->
+            Format.fprintf ppf
+              "type %s was frozen by a previous case analysis;@ \
+               can't declare a new constructor here"
+              (Cid.DefaultRenderer.render_cid_typ n)))

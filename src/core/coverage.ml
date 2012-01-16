@@ -23,7 +23,7 @@ let idCSub = LF.CShift 0
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [29])
 
 type error =
-    NoCover of (unit -> string)
+    NoCover of string
   | MatchError of string
   | NothingToRefine
   | NoCoverageGoalsGenerated
@@ -72,7 +72,7 @@ let make loc prag cO cD branches cA =
 (* Final Coverage Result *)
 type coverage_result =
   | Success
-  | Failure of (unit -> string)
+  | Failure of string
 
 (* ****************************************************************************** *)
 (* Rigid matching  algorithm : pre-matching algorithm which will generate 
@@ -1412,11 +1412,11 @@ let rec initialize_coverage problem =
 	if trivially_empty (cOD, cPsi, Whnf.normTyp sA) then 
 	  gen_candidates covGoal plist 
 	else 
-	  raise (Error (Syntax.Loc.ghost, NoCover (fun () ->
-	    let (cO, cD) = cOD in 
-	    Printf.sprintf "\n##   Empty Pattern ##\n   %s\n\n##   Case expression of type : \n##   %s\n##   is not empty.\n\n" 
-	      (Pretty.string_of_loc problem.loc)
-	      (P.typToString cD cPsi sA))))
+	  raise (Error (Syntax.Loc.ghost, NoCover
+	    (let (cO, cD) = cOD in 
+	     Printf.sprintf "\n##   Empty Pattern ##\n   %s\n\n##   Case expression of type : \n##   %s\n##   is not empty.\n\n" 
+	       (Error.string_of_loc problem.loc)
+	       (P.typToString cD cPsi sA))))
     | ((cO, cD) as cOD, (NeutPatt(cPhi, _tN, sB') as pat)) :: plist -> 
 	let _ = dprint (fun () -> "PATTERN : \n     " ^ P.mctxToString cD ^ " |- " ^  pattToString cD pat)  in 
 
@@ -1466,33 +1466,28 @@ let rec revisit_opengoals ogoals = begin match ogoals with
 end 
 
 let check_coverage_success problem  =  
-(Debug.popIndentationLevel() ;        
- begin match problem.prag with
-   | Pragma.RegularCase -> 
-       if !open_cov_goals = [] then 
-	 (dprint (fun () -> "## COVERS ##");
-	  Success)
-       else 
+  Debug.popIndentationLevel ();
+  match problem.prag with
+    | Pragma.RegularCase -> 
+      if !open_cov_goals = [] then 
+	(dprint (fun () -> "## COVERS ##");
+	 Success)
+      else 
 	 (* Check if the open coverage goals can be proven to be impossible *)
-         Failure (fun () ->
-                   Printf.sprintf "\n##   Case expression doesn't cover: ##\n##   %s\n##   %s\n\n"
-                     (Error.string_of_loc problem.loc)
-                     ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) ))
+        Failure (Printf.sprintf "\n##   Case expression doesn't cover: ##\n##   %s\n##   %s\n\n"
+                   (Error.string_of_loc problem.loc)
+                   ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals)))
 
-   | Pragma.PragmaNotCase ->
-       if !open_cov_goals = [] then 
-	 Failure (fun () ->
-                    Printf.sprintf "\n##   Case expression covers : ##\n##   %s\n##\n\n"
-                      (Error.string_of_loc problem.loc))
-       else 
-	 ( (Printf.printf "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %s\n##   %s\n\n"
-            (Error.string_of_loc problem.loc)
-            ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) )) ; 
-	  Success )
- end 
-)
-
-
+    | Pragma.PragmaNotCase ->
+      if !open_cov_goals = [] then 
+	Failure (Printf.sprintf "\n##   Case expression covers : ##\n##   %s\n##\n\n"
+                   (Error.string_of_loc problem.loc))
+      else begin
+	Printf.printf "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %s\n##   %s\n\n"
+          (Error.string_of_loc problem.loc)
+          ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) );
+	Success
+      end
 
 (* covers problem = ()
 
@@ -1549,11 +1544,11 @@ let process problem =
   reset_cov_problem () ; 
   match covers problem with
   | Success -> ()
-  | Failure messageFn ->
+  | Failure message ->
       if !warningOnly then
-        Error.addInformation ("WARNING: Cases didn't cover: "  ^ messageFn()) 
+        Error.addInformation ("WARNING: Cases didn't cover: "  ^ message)
       else
-        raise (Error (Syntax.Loc.ghost, NoCover messageFn))
+        raise (Error (Syntax.Loc.ghost, NoCover message))
 
 
 

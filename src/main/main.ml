@@ -161,11 +161,11 @@ let main () =
                 (function
                   | Coverage.Success -> 
                      ()
-                  | Coverage.Failure messageFn ->
+                  | Coverage.Failure message ->
                       if !Coverage.warningOnly then
-                        Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn()) 
+                        Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
                       else
-                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover messageFn))
+                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
                 ) in 
               begin
                 if !Coverage.enableCoverage then 

@@ -3,7 +3,7 @@
 open Syntax.Int
 
 type error =
-    NoCover of (unit -> string)
+    NoCover of string
   | MatchError of string
   | NothingToRefine
   | NoCoverageGoalsGenerated
@@ -29,7 +29,7 @@ val make : Parser.Grammar.Loc.t
 
 type coverage_result =
   | Success
-  | Failure of (unit -> string)
+  | Failure of string
 
 val clear  : unit -> unit
 val stage  : problem -> unit

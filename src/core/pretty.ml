@@ -1710,12 +1710,6 @@ module Error = struct
             (IP.fmt_ppr_lf_dctx   cD std_lvl) (Whnf.normDCtx cPsi)
             (IP.fmt_ppr_lf_psi_hat cD std_lvl) (Context.hatToDCtx phat)
 
-
-
-      | CompFreeMVar u -> 
-          fprintf ppf "Encountered free meta-variables %s\n"
-            (R.render_name u)
-
       | CompCtxFunMismatch (cD, _cG, theta_tau) -> 
           fprintf ppf "Found Ctx abstraction, but expected type %a\n"
             (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
@@ -1780,9 +1774,6 @@ module Error = struct
           fprintf ppf
             "Expected context of schema  %s\n"
             (R.render_cid_schema cid_schema)
-
-      | NotPatSub ->
-          fprintf ppf "Not a pattern substitution" (* TODO *)
 
       | NoCover message ->
           fprintf ppf "Coverage checking failed: %s" message

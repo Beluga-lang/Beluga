@@ -26,9 +26,17 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-let error_location (Error (loc, _)) = loc
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+      | CompFreeMVar u ->
+          Format.fprintf ppf "Encountered free meta-variables %s\n"
+            (Store.Cid.DefaultRenderer.render_name u)
 
-let report_error fmt e = assert false
+      | NotPatSub ->
+          Format.fprintf ppf "Not a pattern substitution" (* TODO *) ))
+
 
 exception Fmvar_not_found
 exception FreeMVar of head

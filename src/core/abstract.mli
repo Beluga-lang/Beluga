@@ -37,7 +37,7 @@ val abstrExpMSub  : Comp.exp_chk  -> LF.msub -> LF.mctx * LF.msub * Comp.exp_chk
 val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ 
 
-val abstrPatObj  : LF.mctx -> Comp.pattern -> Comp.typ -> 
+val abstrPatObj  : LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ -> 
                     LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
 
 val abstrSubPattern  : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx -> 

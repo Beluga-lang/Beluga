@@ -1829,6 +1829,7 @@ let rec collectExp cQ e = match e with
 
 and collectExp' cQ i = match i with
   | Comp.Var _x -> (cQ , i)
+  | Comp.DataConst _c ->  (cQ , i)
   | Comp.Const _c ->  (cQ , i)
   | Comp.Apply (loc, i, e) -> 
       let (cQ', i') = collectExp' cQ i  in 
@@ -1930,10 +1931,10 @@ and collectSubPattern cQ cD cPsi sigma cPhi =
 
 
 and collectBranch cQ branch = match branch with
-  | Comp.Branch (loc, cO, cD, pat, (msub, csub), e) -> 
-      (* pat and cD cannot contain any free meta-variables *)
+  | Comp.Branch (loc, cD, cG, pat, msub, e) -> 
+      (* cG, cD, and pat cannot contain any free meta-variables *)
       let (cQ', e') = collectExp cQ e in 
-        (cQ', Comp.Branch (loc, cO, cD, pat, (msub, csub), e'))
+        (cQ', Comp.Branch (loc, cD, cG, pat, msub, e'))
   | Comp.EmptyBranch _  -> 
         (cQ, branch)
   | Comp.BranchBox (cO, cD, (dctx, Comp.NormalPattern(pat, e), msub, csub)) -> 
@@ -2047,9 +2048,9 @@ let rec abstractMVarPatObj cQ cG offset pat = match pat with
   | Comp.PatTrue loc -> pat
   | Comp.PatFalse loc -> pat
   | Comp.PatVar (_loc,_x) -> pat
-  | Comp.PatFVar (loc,x) -> 
+(*  | Comp.PatFVar (loc,x) -> 
       let k = index_of_pat_var cG x in 
-        Comp.PatVar (loc, k)
+        Comp.PatVar (loc, k)*)
   | Comp.PatPair (loc, pat1, pat2) -> 
       let pat1' = abstractMVarPatObj cQ cG offset pat1 in 
       let pat2' = abstractMVarPatObj cQ cG offset pat2 in 
@@ -2058,6 +2059,20 @@ let rec abstractMVarPatObj cQ cG offset pat = match pat with
       let  pat' = abstractMVarPatObj cQ cG offset pat in 
       let tau' = abstractMVarCompTyp cQ offset tau in 
         Comp.PatAnn (loc, pat', tau')
+  | Comp.PatConst (loc, c, pat_spine) -> 
+      let pat_spine' = abstractMVarPatSpine cQ cG offset pat_spine in 
+        Comp.PatConst (loc, c, pat_spine')
+
+  | Comp.PatMetaObj (loc, mO) -> 
+      let mO' = abstractMVarMetaObj cQ offset mO in 
+        Comp.PatMetaObj (loc, mO')
+
+and abstractMVarPatSpine cQ cG offset pat_spine = match pat_spine with
+  | Comp.PatNil -> Comp.PatNil
+  | Comp.PatApp (loc, pat, pat_spine) -> 
+      let pat' = abstractMVarPatObj cQ cG offset pat in 
+      let pat_spine' = abstractMVarPatSpine cQ cG offset pat_spine in 
+        Comp.PatApp (loc, pat', pat_spine')
 
 
 (* REDUNDANT Tue Apr 21 09:50:08 2009 -bp 
@@ -2212,17 +2227,27 @@ let rec abstrCompTyp tau =
 
 
 
-let rec abstrPatObj cD pat tau = 
+let rec abstrPatObj cD cG pat tau = 
   let (cQ1, cD1') = collectMctx I.Empty cD in
-  let (cQ2, cG)   = collectGctx cQ1 (FPatVar.fvar_ctx ()) in 
+  let _ = dprint (fun () -> "[collectMctx] done") in 
+  let _ = dprint (fun () -> "[collectGctx] cG= " ^ P.gctxToString cD cG) in 
+  let (cQ2, cG)   = collectGctx cQ1 cG   in 
+  let _ = dprint (fun () -> "[collectGctx] done") in 
   let (cQ3, pat') = collectPatObj cQ2 pat in 
+  let _ = dprint (fun () -> "[collectPatObj] done") in 
   let (cQ, tau') = collectCompTyp cQ3 tau in 
+  let _ = dprint (fun () -> "[collectCompTyp] done") in 
   let cQ'     = abstractMVarCtx cQ 0 in 
+  let _ = dprint (fun () -> "[abstractMVarCtx] done") in 
   let offset  = Context.length cD1' in 
   let cG'     = abstractMVarGctx cQ' (0,offset) cG in 
+  let _ = dprint (fun () -> "[abstractMVarGCtx] done") in 
   let pat'    = abstractMVarPatObj cQ' cG' (0,offset) pat' in 
+  let _ = dprint (fun () -> "[abstractMVarPatObj] done") in 
   let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in 
+  let _ = dprint (fun () -> "[abstractMVarCompTyp] done") in 
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in 
+  let _ = dprint (fun () -> "[abstractMVarMctx 2] done") in 
   let cD'     = ctxToMCtx cQ' in 
   let cD      = Context.append cD' cD2 in 
     (cD, cG', pat', tau')

@@ -288,22 +288,27 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
                              "\n supposed to have type " ^ P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ "\n"))
 
 *)
-    | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')), branches), (tau, t)) ->
+    | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')),
+      branches), (tau, t)) ->
+        let tau_s = TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
-        let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
+        let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in 
         let problem = Coverage.make loc prag Syntax.Int.LF.Empty cD branches cA in
           (* Coverage.stage problem; *)
-          checkBranches (IndexObj (phat, tR)) cD cG branches cA (tau, t);
+          checkBranches (IndexObj (phat, tR)) cD cG branches tau_s (tau, t);
           Coverage.process problem
 
     | (Case (loc, prag, i, branches), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cD cG i) with
-          | (TypBox (_, tA, cPsi),  t') ->
+          | (TypBox (loc, tA, cPsi),  t') ->
               let problem = Coverage.make loc prag Syntax.Int.LF.Empty cD branches (tA, cPsi) in
 (*                Coverage.stage problem; *)
-                checkBranches DataObj cD cG branches (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) (tau,t);
+              let tau_s = TypBox (loc, C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in 
+                checkBranches DataObj cD cG branches tau_s (tau,t);
                 Coverage.process problem
-          | (tau',t') -> raise (Error (loc, E.CompMismatch(cD, cG, i, E.Box, (tau', t'))))
+          | (tau',t') -> 
+              checkBranches DataObj cD cG branches (C.cnormCTyp (tau', t')) (tau,t)
+              (* raise (Error (loc, E.CompMismatch(cD, cG, i, E.Box, (tau', t')))) *)
         end
 
     | (Syn (loc, i), (tau, t)) ->
@@ -326,7 +331,8 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
 
   and syn cD cG e = match e with
     | Var x   -> (lookup cG x, C.m_id)
-        (* !!!! MAY BE WRONG since only . |- ^0 : .   and not cD |- ^0 : cD !!! *)
+    | DataConst c ->
+        ((CompConst.get c).CompConst.typ, C.m_id)
 
     | Const prog ->
         ((Comp.get prog).Comp.typ, C.m_id)
@@ -397,167 +403,99 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
     | Boolean _  -> (TypBool, C.m_id)
 
 
+  and checkPattern cD cG pat ttau = match pat with 
+    | PatEmpty (loc, cPsi) -> 
+        (match ttau with 
+          | (TypBox (_, tA, cPhi) , theta) ->               
+              if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then ()
+              else 
+                raise (Error (Some loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
+          | _ -> raise (Error (Some loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
+        )
 
+    | PatMetaObj (loc, mO) -> 
+        (match ttau with 
+          | (TypBox (_, tA, cPsi) , theta) -> 
+              checkMetaObj cD mO (MetaTyp (tA, cPsi), theta)
+          | _ -> raise (Error (loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
+        )
+    | pat -> 
+        let (loc, ttau') = synPattern cD cG pat in 
+          if C.convCTyp ttau ttau' then ()
+          else 
+            raise (Error (loc, E.PatIllTyped (cD, cG, pat, ttau, ttau')))
 
+  and synPattern cD cG pat = match pat with 
+    | PatConst (loc, c, pat_spine) -> 
+        let tau = (CompConst.get c).CompConst.typ in 
+          (Some loc, synPatSpine cD cG pat_spine (tau , C.m_id))
+    | PatVar (loc, k) -> (Some loc, (lookup cG k, C.m_id))
+    | PatTrue loc -> (Some loc, (TypBool, C.m_id))
+    | PatFalse loc -> (Some loc, (TypBool, C.m_id))
+    | PatAnn (loc, pat, tau) ->  
+        checkPattern cD cG pat (tau, C.m_id);
+        (Some loc, (tau, C.m_id))
 
+  and synPatSpine cD cG pat_spine (tau, theta) = match pat_spine with
+    | PatNil  -> (tau, theta)
+    | PatApp (_loc, pat, pat_spine)  -> 
+        (match (tau, theta) with 
+           | (TypArr (tau1, tau2), theta) -> 
+               checkPattern cD cG pat (tau1, theta); 
+               synPatSpine cD cG pat_spine (tau2, theta)
+           | (TypPiBox ((cdecl, _), tau), theta) -> 
+               let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in 
+                 synPatSpine cD cG pat_spine (tau, theta')
+           | (TypCtxPi ((x, w, dep), tau), theta) ->            
+             let theta' =  checkPatAgainstCDecl cD pat (I.CDecl(x,w, I.No), theta) in 
+               synPatSpine cD cG pat_spine (tau, theta')
+        )
+          
+  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
+    | I.MDecl (_, tA, cPsi) -> 
+        let _ = checkMetaObj cD mO (MetaTyp (tA, cPsi), theta) in 
+          (match mO with
+            | MetaObj (_, phat, tM) ->  I.MDot(I.MObj(phat, tM), theta)
+            | MetaObjAnn (_, cPsi, tM) -> I.MDot (I.MObj(Context.dctxToHat cPsi, tM), theta)
+          )
+    | I.CDecl (_, w, _ ) -> 
+        let _ = checkMetaObj cD mO (MetaSchema w, theta) in 
+          (match mO with 
+            | MetaCtx (_, cPsi) -> I.MDot (I.CObj (cPsi) , theta)
+          )
   and checkBranches caseTyp cD cG branches tAbox ttau =
     List.iter (fun branch -> checkBranch caseTyp cD cG branch tAbox ttau) branches
 
-(*  and checkBranch _caseTyp cD cG branch (tP, cPsi) (tau, t) =
+  and checkBranch _caseTyp cD cG branch tau_s (tau, t) =
     match branch with
-      | BranchBox (cD1,  (cPsi1, (I.Root(loc, _, _ ) as tR1), (t1', cD1')),  e1) ->
-          (* By invariant: cD1' |- t1' <= cD, cD1 *)
-          let _         = LF.checkMSub cD1' t1' (Context.append cD cD1) in  
-          let (tP1,s1)  = LF.syn cD1 cPsi1 (tR1, S.LF.id)  in 
-
-          (* Apply to the type tP1[Psi1] the refinement substitution t1' *)
-          (* cD1 ; cPsi1 |- tM1 <= tA1 
-           * cD1'  |- t1' <= cD, cD1  and 
-           * cD, cD1 |- MShift (n+n1) . u_n . ... . u_1  <= cD1
-           *       t1 = MShift (n+n1) . u_n . ... . u_1  
-           *)
-          let n1  = length cD1 in 
-          let n   = length cD  in 
-          let t1  =  Whnf.mvar_dot (I.MShift n) cD1 in   
-          (* cD1' |- t1_b <= cD1  where t1_b is the refinement substitution we apply to the pattern 
-                                  and its context and type
-           *)
-          let t1_b      = Whnf.mcomp t1 t1' in 
-          (* cD1'          |- cPsi1' ctx   where cPsi1' is the context of the pattern *)
-          (* cD1' ; cPsi1' |- sP1' <- type  where sP1'  is the type of the pattern    *)
-          let sP1'      = (Whnf.cnormTyp (tP1, t1_b), Whnf.cnormSub (s1, t1_b)) in 
-          let cPsi1'    = Whnf.cnormDCtx (cPsi1, t1_b) in  
-
-          (* Apply to the type of the scrutinee tP[Psi] the refinement substitution t1' *)
-          (* cD |- cPsi ctx  and cD, cD1 |- MShift n1 <= cD
-           *                 and cD1'    |- t1'       <= cD, CD1
-           *               then  cD1' |- t1'' <= cD
-           *)
-          let t1''  = Whnf.mcomp (I.MShift n1) t1' in 
-          let cPsi' = Whnf.cnormDCtx (cPsi, t1'') in  
-          let tP'   = Whnf.cnormTyp (tP, t1'') in 
-
-          (* Verify that the refinement substitution t1' 
-           * makes the type of the pattern equal to the type of the scrutinee 
-           * 
-           * and cD1' |- |[t1'']|cPsi = |[t1]|cPs1
-           * and cD1' ; |[t1]|cPsi1 |-  |[t1]|tP1 <= type
-           * and cD1' ; |[t1]|cPsi1 |- |[t1]|tP1 = |[t1'']|tP
-           *)
-
-          let  _    = (if Whnf.convDCtx cPsi1' cPsi'
-                         && Whnf.convTyp sP1' (tP', S.LF.id)
-                       then  ()
-                       else raise (Error (loc, E.CompPattMismatch ((cD1, cPsi1, tR1, (tP1,s1)), 
-                                                                   (cD, cPsi, (tP, S.LF.id)))))) in 
-
-          (* let t' = Whnf.mvar_dot t cD1 in  
-             let t''  = Whnf.mcomp t' t1'' in *)
-          (* if cD |- t <= cD0 then
-             cD, cD1 |- t' <= cD0, cD1  *)
-
-
-          let cG' = Whnf.cnormCtx (cG, t1'') in 
-          let t'' = Whnf.mcomp t t1'' in
-
-          let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.mctxToString cD1 ^ " . " ^ 
-                        P.normalToString cD1 cPsi1 (tR1, S.LF.id) ^ "\n   =>  " ^ 
-                            P.expChkToString cD1' cG' e1 ^ 
-                            "\n has type "  ^ P.compTypToString cD1' (Whnf.cnormCTyp (tau, t'')) ^ "\n" 
-                       ) in
-                 
-          in
-            check cD1' cG' e1 (tau, t'');
-*)
-  and checkBranch _caseTyp cD cG branch (tP, cPsi) (tau, t) =
-    match branch with
-      | EmptyBranch (loc, _cO1', cD1', PatEmpty (loc', _cPsi), (t1, cs)) -> 
-          (* By invariant: cD1' |- t1 <= cD *)
-(*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  *)
-          let _     = LF.checkMSub cD1' (cs, t1) cD in  
-          let t'' = Whnf.mcomp t t1 in
-
-          let tau  = Whnf.cnormCTyp (tau, t'') in
-          let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
-          let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.mctxToString cD1' ^ " ;\n " ^ 
-                        "{} (EmptyPattern)" ^
-                            "\n has type "  ^ P.compTypToString cD1' tau')
-          in
-            ()
-
-      | Branch (loc, _cO1', cD1', PatMetaObj (loc', mO), (t1, cs), e1) -> 
+      | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) -> 
           let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
+          let TypBox (_, (I.Atom(_, a, _) as tP) , cPsi) = tau_s in 
           (* By invariant: cD1' |- t1 <= cD *)
-          let tP1   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tP, t1), cs) in 
-          let cPsi1 = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi, t1), cs) in 
-          let cG' = Ctxsub.ctxnorm_gctx (Whnf.cnormCtx (cG, t1), cs) in 
-          let t'' = Whnf.mcomp t t1 in
-
-          let tau  = Whnf.cnormCTyp (tau, t'') in
-          let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
-          let _ = dprint (fun () -> "\nCheckBranch with pattern\n")
-                       (* 
-                        P.mctxToString1' cD1' ^ " ;\n [" ^ 
-                        P.dctxToString1' cD1' cPsi1' ^ "] \n" ^
-                        P.normalToString1' cD1' cPsi1' (tR1, S.LF.id) ^ 
-                            "\n " ^ P.msubToString1' cD1' t1 ^  
-                            "\n  =>  " ^ 
-                            P.expChkToString1' cD1' cG' e1 ^ 
-                            "\n has type "  ^ P.compTypToString1' cD1' tau' ^ "\n" *)
-                        in
+          let tP1   = Whnf.cnormTyp (tP, t1) in 
+          let cPsi1 = Whnf.cnormDCtx (cPsi, t1) in 
+          let cG'   = Whnf.cnormCtx (cG, t1) in 
+          let t''   = Whnf.mcomp t t1 in
+          let tau'  = Whnf.cnormCTyp (tau, t'') in
+          let _ = dprint (fun () -> "\nCheckBranch with pattern\n") in
           let _ = dprint (fun () -> "\nChecking refinement substitution\n") in          
-(*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in   *)
-          let _     = LF.checkMSub  cD1' (cs, t1) cD in   
+          let _     = LF.checkMSub  cD1' t1 cD in   
           let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in            
-          let _  = checkMetaObj cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in   
-
+          let _ = checkMetaObj cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in   
             check cD1' cG' e1 (tau', Whnf.m_id)
 
-      | BranchBox  (_cO1',  cD1',  (cPsi1', NormalPattern(I.Root(loc, _, _ ) as tR1, e1),  
-                                   t1,  cs)) ->
-          let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
-          (* By invariant: cD1' |- t1 <= cD *)
-          let tP1   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tP, t1), cs) in 
-(*          let cPsi1 = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx (cPsi, t1), cs) in *)
-          let cG' = Ctxsub.ctxnorm_gctx (Whnf.cnormCtx (cG, t1), cs) in 
-          let t'' = Whnf.mcomp t t1 in
-
-          let tau  = Whnf.cnormCTyp (tau, t'') in
-          let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
-          let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.mctxToString cD1' ^ " ;\n [" ^ 
-                        P.dctxToString cD1' cPsi1' ^ "] \n" ^
-                        P.normalToString cD1' cPsi1' (tR1, S.LF.id) ^ 
-                            "\n " ^ P.msubToString cD1' t1 ^  
-                            "\n  =>  " ^ 
-                            P.expChkToString cD1' cG' e1 ^ 
-                            "\n has type "  ^ P.compTypToString cD1' tau' ^ "\n" 
-                       ) in
-          let _ = dprint (fun () -> "\nChecking refinement substitution\n") in         
-(*          let _ = dprint (fun () -> "Domain [cs]cD : " ^ P.mctxToString (Ctxsub.ctxnorm_mctx (cD,cs)) ^ "\n") in 
-          let _     = LF.checkMSub cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in   *)
-          let _     = LF.checkMSub cD1' (cs, t1) cD in   
+      | Branch (loc, cD1', cG1, pat, t1, e1) -> 
+          let tau_p = Whnf.cnormCTyp (tau_s, t1) in 
+          let cG'   = Whnf.cnormCtx (cG, t1) in 
+          let t''   = Whnf.mcomp t t1 in
+          let tau'  = Whnf.cnormCTyp (tau, t'') in
+          let _ = dprint (fun () -> "\nCheckBranch with pattern\n") in
+          let _ = dprint (fun () -> "\nChecking refinement substitution\n") in          
+          let _     = LF.checkMSub  cD1' t1 cD in   
           let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in            
-          let _  = LF.check cD1' cPsi1' (tR1, S.LF.id)  (tP1, S.LF.id) in   
-
-            check cD1' cG' e1 (tau', Whnf.m_id)
-
-      | BranchBox (_cO1', cD1',  (_cPsi1, EmptyPattern, t1, cs)) ->
-          (* By invariant: cD1' |- t1 <= cD *)
-(*          let _     = LF.checkMSub cO1' cD1' t1 (Ctxsub.ctxnorm_mctx (cD,cs)) in  *)
-          let _     = LF.checkMSub cD1' (cs, t1) cD in  
-          let t'' = Whnf.mcomp t t1 in
-
-          let tau  = Whnf.cnormCTyp (tau, t'') in
-          let tau' = Ctxsub.ctxnorm_ctyp (tau, cs) in
-          let _ = dprint (fun () -> "\nCheckBranch with pattern\n Pi " ^
-                        P.mctxToString cD1' ^ " ;\n " ^ 
-                        "{} (EmptyPattern)" ^
-                            "\n has type "  ^ P.compTypToString cD1' tau')
-          in
-            ()
+          let _ = checkPattern cD1' cG1 pat (tau_p, Whnf.m_id) in 
+            check cD1' (Context.append cG' cG1) e1 (tau', Whnf.m_id)
+            
 
 end
   

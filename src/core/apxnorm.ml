@@ -390,6 +390,7 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 
 and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var _x -> i
+  | Apx.Comp.DataConst _c -> i
   | Apx.Comp.Const _c -> i
   | Apx.Comp.Apply (loc, i, e) -> 
       let i' = cnormApxExp' cD delta i cDt in 
@@ -486,6 +487,14 @@ and cnormApxBranch cD delta b (cD'', t) =
                                                            mvar_dot_apx t delta') in
 	  let _ = dprint (fun () -> "[cnormApxExp] Branch PatMetaObj done " ) in 
             Apx.Comp.Branch (loc, omega, delta', Apx.Comp.PatMetaObj (loc', mO), e')
+
+      | Apx.Comp.Branch (loc, omega, delta', pat, e) -> 
+	  let _ = dprint (fun () -> "[cnormApxExp] Branch Pattern cD = " 
+			    ^ P.mctxToString cD) in 
+          let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
+                                                           mvar_dot_apx t delta') in
+	  let _ = dprint (fun () -> "[cnormApxExp] Branch Pattern done " ) in 
+            Apx.Comp.Branch (loc, omega, delta', pat, e')
 
 
       | Apx.Comp.EmptyBranch (loc, omega, delta', Apx.Comp.PatEmpty _ ) -> b         
@@ -626,6 +635,78 @@ and collectApxMetaObj fMVs mO = match mO with
   | Apx.Comp.MetaObjAnn (_loc, cPsi, tR) -> 
       let fMVd = collectApxDCtx fMVs cPsi in
         collectApxTerm fMVd tR 
+
+and collectApxMetaSpine fMVs mS = match mS with 
+  | Apx.Comp.MetaNil -> fMVs
+  | Apx.Comp.MetaApp (mO, mS) -> 
+      let fMVs1 = collectApxMetaObj fMVs mO in 
+	collectApxMetaSpine fMVs1 mS 
+
+let rec collectApxTyp fMVd tA = match tA with 
+  | Apx.LF.Atom (loc, c, tS) -> 
+      collectApxSpine fMVd tS 
+  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, tA),_ ), tB) -> 
+      let fMVd1 = collectApxTyp fMVd tA in 
+	collectApxTyp fMVd1 tB 
+  | Apx.LF.Sigma trec -> 
+       collectApxTypRec fMVd trec 
+
+and collectApxTypRec fMVd trec = match trec with 
+  | Apx.LF.SigmaLast tA -> collectApxTyp fMVd tA
+  | Apx.LF.SigmaElem (_, tA, trec) -> 
+      let fMVd1 = collectApxTyp fMVd tA in 
+	collectApxTypRec fMVd1 trec
+
+let rec collectApxCDecl fMVd cdecl = match cdecl with 
+  | Apx.LF.MDecl (_, tA, cPsi) -> 
+      let fMVd1 = collectApxDCtx fMVd cPsi in 
+	collectApxTyp fMVd1 tA 
+  | Apx.LF.PDecl (_, tA, cPsi) -> 
+      let fMVd1 = collectApxDCtx fMVd cPsi in 
+	collectApxTyp fMVd1 tA 
+  | Apx.LF.CDecl (_, w) -> fMVd
+
+let rec collectApxCompTyp fMVd tau = match tau with 
+  | Apx.Comp.TypArr (tau1, tau2) -> 
+      let fMVd1 = collectApxCompTyp fMVd tau1 in 
+	collectApxCompTyp fMVd1 tau2
+  | Apx.Comp.TypCross (tau1, tau2) -> 
+      let fMVd1 = collectApxCompTyp fMVd tau1 in 
+	collectApxCompTyp fMVd1 tau2
+  | Apx.Comp.TypCtxPi (_, tau) -> 
+      collectApxCompTyp fMVd tau
+  | Apx.Comp.TypPiBox (cdecl, tau) -> 
+      let fMVd1 = collectApxCDecl fMVd cdecl in 
+	collectApxCompTyp fMVd1 tau
+  | Apx.Comp.TypBox (loc, tA, cPsi) -> 
+      (let fMVd1 = collectApxTyp fMVd tA in 
+	 collectApxDCtx fMVd1 cPsi )
+  | Apx.Comp.TypBool -> fMVd
+  | Apx.Comp.TypBase (_loc, _c, mS) -> 
+      collectApxMetaSpine fMVd mS 
+
+let rec collectApxPattern fMVd pat = match pat with 
+  | Apx.Comp.PatEmpty (_ , cPsi) -> 
+      collectApxDCtx fMVd cPsi 
+  | Apx.Comp.PatMetaObj (loc, mO) -> 
+      collectApxMetaObj fMVd mO
+  | Apx.Comp.PatConst (loc, c, pat_spine) -> 
+      collectApxPatSpine fMVd pat_spine 
+  | Apx.Comp.PatVar (loc, n, offset) -> fMVd
+  | Apx.Comp.PatPair (loc, pat1, pat2) -> 
+      let fMVs1 = collectApxPattern fMVd pat1 in 
+	collectApxPattern fMVs1 pat2
+  | Apx.Comp.PatAnn (loc, pat, tau) ->  
+      let fMVd1 = collectApxCompTyp fMVd tau in 
+	collectApxPattern fMVd1 pat 
+  | Apx.Comp.PatTrue loc -> fMVd
+  | Apx.Comp.PatFalse loc -> fMVd
+
+and collectApxPatSpine fMVd pat_spine = match pat_spine with 
+  | Apx.Comp.PatNil -> fMVd
+  | Apx.Comp.PatApp (loc, pat, pat_spine) -> 
+      let fMVs1 = collectApxPattern fMVd pat in 
+	collectApxPatSpine fMVs1 pat_spine 
 
 (* Replace FMVars with appropriate de Bruijn index  
  * If a FMVar (of FPVar) occurs in fMVs do not replace it
@@ -885,12 +966,14 @@ let rec fmvApxHat fMVs cD (l_cd1, l_delta, k) phat =
     | _ -> phat
   end
 
-
 let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
   | Apx.Comp.Syn (loc, i)       -> Apx.Comp.Syn (loc, fmvApxExp' fMVs cD d_param  i)
-  | Apx.Comp.Fun (loc, f, e)    -> Apx.Comp.Fun (loc, f, fmvApxExp fMVs cD d_param  e)
-  | Apx.Comp.CtxFun (loc, g, e) -> Apx.Comp.CtxFun (loc, g, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1)) e)
-  | Apx.Comp.MLam (loc, u, e)   -> Apx.Comp.MLam (loc, u, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1))  e)
+  | Apx.Comp.Fun (loc, f, e)    -> 
+      Apx.Comp.Fun (loc, f, fmvApxExp fMVs cD d_param  e)
+  | Apx.Comp.CtxFun (loc, g, e) -> 
+      Apx.Comp.CtxFun (loc, g, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1)) e)
+  | Apx.Comp.MLam (loc, u, e)   -> 
+      Apx.Comp.MLam (loc, u, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1))  e)
   | Apx.Comp.Pair (loc, e1, e2) -> 
       let e1' = fmvApxExp fMVs cD d_param  e1 in 
       let e2' = fmvApxExp fMVs cD d_param  e2 in 
@@ -922,6 +1005,7 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
 
 and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
   | Apx.Comp.Var _x -> i
+  | Apx.Comp.DataConst _c -> i
   | Apx.Comp.Const _c -> i
   | Apx.Comp.Apply (loc, i, e) -> 
       let i' = fmvApxExp' fMVs cD d_param  i in 
@@ -929,7 +1013,7 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
         Apx.Comp.Apply (loc, i', e')
   | Apx.Comp.CtxApp (loc, i, psi) -> 
       let i' = fmvApxExp' fMVs cD d_param  i in 
-      let psi' = fmvApxDCtx fMVs cD d_param  psi  in 
+      let psi' = fmvApxDCtx fMVs cD  d_param  psi  in 
         Apx.Comp.CtxApp (loc, i', psi')
 
   | Apx.Comp.MApp (loc, i, Apx.Comp.MetaObj (loc', phat, m)) -> 
@@ -962,6 +1046,8 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
         Apx.Comp.Equal (loc, i1', i2')
 
 
+
+
 and fmvApxBranches fMVs cD ((l_cd1, l_delta, k) as d_param)  branches = match branches with
   | [] -> []
   | b::bs -> (fmvApxBranch fMVs cD d_param  b)::(fmvApxBranches fMVs cD d_param  bs)
@@ -974,6 +1060,13 @@ and fmvApxBranch fMVs cD (l_cd1, l_delta, k)  b =
           let fMVb = collectApxMetaObj fMVd mO in 
           let l    = lengthApxMCtx delta in 
           let pat =  Apx.Comp.PatMetaObj (loc', mO) in 
+          let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l))  e in
+            Apx.Comp.Branch (loc, omega, delta, pat, e')
+
+     | Apx.Comp.Branch (loc, omega, delta, pat, e) -> 
+          let fMVd  = collectApxMCtx [] delta in 
+          let fMVb  = collectApxPattern fMVd pat in 
+          let l    = lengthApxMCtx delta in 
           let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l))  e in
             Apx.Comp.Branch (loc, omega, delta, pat, e')
 

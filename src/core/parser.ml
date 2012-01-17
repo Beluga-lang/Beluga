@@ -1088,7 +1088,7 @@ cmp_exp_syn:
                                     | Pair e2 ->   Comp.Pair (_loc, e, e2)
                                     | Atom    ->   e
                             end)
-   | x = UPSYMBOL ->  Comp.Const (_loc, Id.mk_name (Id.SomeString x))
+   | x = UPSYMBOL ->  Comp.DataConst (_loc, Id.mk_name (Id.SomeString x))
    | x = SYMBOL ->  Comp.Var (_loc, Id.mk_name (Id.SomeString x))
    | "ttrue"    ->   Comp.Boolean (_loc, true)
    | "ffalse"   ->   Comp.Boolean (_loc, false)

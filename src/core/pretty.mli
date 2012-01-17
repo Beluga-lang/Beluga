@@ -31,6 +31,7 @@ module type CID_RENDERER = sig
 
   val render_name         : name       -> string
   val render_cid_comp_typ : cid_comp_typ  -> string
+  val render_cid_comp_const : cid_comp_const  -> string
   val render_cid_typ      : cid_typ    -> string
   val render_cid_term     : cid_term   -> string
   val render_cid_schema   : cid_schema -> string

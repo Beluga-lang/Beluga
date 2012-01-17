@@ -255,7 +255,7 @@ let rec ctxShift cPsi = begin match cPsi with
 	let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in 
 	let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in 
 	let _ = dprint (fun () -> " cD' = " ^ P.mctxToString cD') in 
-	let _ = checkMSub cD (CShift 0, t') cD'  in 
+	let _ = checkMSub cD t' cD'  in 
 	let _ = dprint (fun () -> "[inferHead] MMVar - msub done \n") in 
 	  checkSub loc cD cPsi r (Whnf.cnormDCtx (cPsi', t')) ;
           TClo(Whnf.cnormTyp (tA, t'), r)
@@ -720,7 +720,7 @@ and checkSchemaWf (Schema elements ) =
      if cD |- ms <= cD' then checkMSub succeeds.
  
   *)
-and checkMSub cD (cs, ms) cD' = match (ms, cD') with
+and checkMSub cD  ms cD' = match (ms, cD') with
     | (MShift k, Empty) ->  
         if (Context.length cD) = k then () 
         else 
@@ -728,40 +728,40 @@ and checkMSub cD (cs, ms) cD' = match (ms, cD') with
 
     | (MShift k, cD') -> 
 	if k >= 0 then 
-	  checkMSub cD (cs, MDot (MV (k+1), MShift (k+1))) cD'
+	  checkMSub cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Violation ("Contextual substitution ill-formed"))
 
     | (MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi))) -> 
-        let cPsi' = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx  (cPsi, ms), cs) in 
-        let tA'   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tA, ms), cs) in
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+        let tA'   = Whnf.cnormTyp (tA, ms) in
         (check cD cPsi' (tM, LF.id) (tA', LF.id) ; 
-         checkMSub cD (cs, ms) cD1')
+         checkMSub cD ms cD1')
 
     | (MDot (CObj(cPsi), ms), Dec(cD1', CDecl (_psi, w, _))) -> 
         (checkSchema cD cPsi (Schema.get_schema w) ; 
-         checkMSub cD (cs, ms) cD1')
+         checkMSub cD ms cD1')
 
     | (MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi))) -> 
-        let cPsi' = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx  (cPsi, ms), cs) in 
-        let tA'   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tA, ms), cs) in
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+        let tA'   = Whnf.cnormTyp (tA, ms) in
         let (_, tA1, cPsi1) = Whnf.mctxMDec cD u in 
           if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', LF.id) (tA1, LF.id) then 
-                     checkMSub cD (cs, ms) cD1'
+                     checkMSub cD ms cD1'
           else 
             raise (Violation ("Contextual substitution ill-typed - 2 "))
 
     | (MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi))) -> 
-        let cPsi' = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx  (cPsi, ms), cs) in 
-        let tA'   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tA, ms), cs) in
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+        let tA'   = Whnf.cnormTyp (tA, ms) in
         let (_, tA1, cPsi1) = Whnf.mctxPDec cD p in 
           if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', LF.id) (tA1, LF.id) then 
-            checkMSub cD (cs, ms) cD1'
+            checkMSub cD ms cD1'
           else 
             raise (Violation ("Contextual substitution ill-typed - 3 "))
 
     | (MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi))) -> 
-        let cPsi' = Ctxsub.ctxnorm_dctx (Whnf.cnormDCtx  (cPsi, ms), cs) in 
-        let tA'   = Ctxsub.ctxnorm_typ (Whnf.cnormTyp (tA, ms), cs) in
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+        let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with
             | BVar k -> 
                 let TypDecl (_, tB) = ctxDec cPsi' k in 
@@ -773,7 +773,7 @@ and checkMSub cD (cs, ms) cD' = match (ms, cD') with
                 let tB = inferHead None cD cPsi' h in 
                   if Whnf.convTyp (tB, LF.id) (tA', LF.id) then ()
            end ;
-           checkMSub cD (cs, ms) cD1')
+           checkMSub cD ms cD1')
 
     | (_, _ ) -> 
         raise (Violation ("Contextual substitution ill-typed\n " ^ 

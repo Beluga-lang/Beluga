@@ -627,10 +627,13 @@ and index_exp' cvars vars fcvars = function
         Apx.Comp.Var (Var.index_of_name vars x)
       with Not_found -> try
         Apx.Comp.Const (Comp.index_of_name x)
+      with Not_found -> try
+        Apx.Comp.DataConst (CompConst.index_of_name x)
       with Not_found ->
         raise (Error.Error (Some loc, Error.UnboundCompName x))
       end
-
+  | Ext.Comp.DataConst (_loc, c) -> 
+        Apx.Comp.DataConst (CompConst.index_of_name c)
   | Ext.Comp.Apply (loc, i, e) ->
       let i' = index_exp' cvars vars fcvars i in
       let e' = index_exp  cvars vars fcvars e in
@@ -719,12 +722,13 @@ and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
 	  raise (Error.Error (Some loc, Error.PatVarNotUnique))
       with Not_found -> 
 	let fvars' = Var.extend fvars (Var.mk_entry x) in
-	  (Apx.Comp.PatFVar (loc, x), fcvars, fvars')
+	  (Apx.Comp.PatFVar (loc, x), fcvars, fvars') 
+	    (* (Apx.Comp.PatVar (loc, name, offset), fcvars, fvars') *) 
       end
   | Ext.Comp.PatPair (loc, pat1, pat2) -> 
       let (pat1, fcvars1, fvars1) = index_pattern cvars fcvars fvars pat1 in 
       let (pat2, fcvars2, fvars2) = index_pattern cvars fcvars1 fvars1 pat2 in 
-	(Apx.Comp.PatPair (loc, pat1, pat2), fcvars2, fvars)
+	(Apx.Comp.PatPair (loc, pat1, pat2), fcvars2, fvars2)
   | Ext.Comp.PatConst (loc, c, pat_spine) -> 
       let cid = begin try CompConst.index_of_name c 
                 with 
@@ -750,7 +754,40 @@ and index_pat_spine cvars fcvars fvars pat_spine = match pat_spine with
   | Ext.Comp.PatApp (loc, pat, pat_spine) -> 
       let (pat', fcvars1, fvars1) = index_pattern cvars fcvars fvars pat in 
       let (pat_spine', fcvars2, fvars2) = index_pat_spine cvars fcvars1 fvars1 pat_spine in
-	(Apx.Comp.PatApp (loc, pat', pat_spine'), fcvars, fvars)
+	(Apx.Comp.PatApp (loc, pat', pat_spine'), fcvars2, fvars2)
+
+
+(* reindex pattern *)
+and reindex_pattern fvars pat = match pat with 
+  | Apx.Comp.PatTrue loc -> Apx.Comp.PatTrue loc
+  | Apx.Comp.PatFalse loc -> Apx.Comp.PatFalse loc
+  | Apx.Comp.PatFVar (loc, x) -> 
+      (* all free variable names must be in fvars *)
+      let offset = Var.index_of_name fvars x in 
+	Apx.Comp.PatVar (loc, x, offset) 
+
+  | Apx.Comp.PatPair (loc, pat1, pat2) -> 
+      let pat1 = reindex_pattern fvars pat1 in 
+      let pat2 = reindex_pattern fvars pat2 in 
+	Apx.Comp.PatPair (loc, pat1, pat2)
+  | Apx.Comp.PatConst (loc, c, pat_spine) -> 
+      let pat_spine'  = reindex_pat_spine  fvars pat_spine in 	  
+	Apx.Comp.PatConst (loc, c, pat_spine')
+
+  | Apx.Comp.PatMetaObj (loc, mO) -> pat
+
+  | Apx.Comp.PatEmpty (loc, cpsi) -> pat
+	
+  | Apx.Comp.PatAnn (loc, pat, tau) ->
+      let pat' = reindex_pattern fvars pat in 
+	Apx.Comp.PatAnn (loc, pat', tau) 
+
+and reindex_pat_spine fvars pat_spine = match pat_spine with
+  | Apx.Comp.PatNil -> Apx.Comp.PatNil
+  | Apx.Comp.PatApp (loc, pat, pat_spine) -> 
+      let pat' = reindex_pattern fvars pat in 
+      let pat_spine' = reindex_pat_spine fvars pat_spine in
+	Apx.Comp.PatApp (loc, pat', pat_spine')
 
 and index_branch cvars vars (fcvars, _ ) branch = match branch with
   | Ext.Comp.Branch (loc, _cD, Ext.Comp.PatEmpty _ , _e) -> 
@@ -781,10 +818,11 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
       let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 (Var.create ()) pat in 
     let cvars_all  = CVar.append cvars1 cvars in
     let vars_all  = Var.append fvars2 vars in
+    let pat'' = reindex_pattern fvars2 pat' in 
     let (fcv2, _ ) = fcvars2 in 
     let fcv3      = List.append fcv2 fcvars in 
     let e'        = index_exp cvars_all vars_all (fcv3, term_closed) e in
-	Apx.Comp.Branch (loc, omega, cD', pat', e')
+	Apx.Comp.Branch (loc, omega, cD', pat'', e')
 	
 (*
   | Ext.Comp.BranchBox (loc, cD, pat) -> 

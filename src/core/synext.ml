@@ -143,6 +143,7 @@ module Comp = struct
 
   and exp_syn =
      | Var    of Loc.t * name                   (*  i ::= x                 *)
+     | DataConst  of Loc.t * name               (*    | c                   *)
      | Const  of Loc.t * name                   (*    | c                   *)
      | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
      | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)

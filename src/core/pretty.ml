@@ -90,7 +90,8 @@ module type CID_RENDERER = sig
   open Syntax.Int
 
   val render_name         : name         -> string
-  val render_cid_comp_typ : cid_typ      -> string
+  val render_cid_comp_typ : cid_comp_typ      -> string
+  val render_cid_comp_const : cid_comp_const -> string
   val render_cid_typ      : cid_typ      -> string
   val render_cid_term     : cid_term     -> string
   val render_cid_schema   : cid_schema   -> string
@@ -927,10 +928,10 @@ module Int = struct
           let cond = lvl > 1 in
             fprintf ppf "%s[%a. %a]%s"
               (l_paren_if cond)
-               (fmt_ppr_lf_psi_hat cD 0) cPsi
+               (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)
-
+         
     let rec fmt_ppr_cmp_typ cD lvl ppf = function
       | Comp.TypBase (_, c, mS)-> 
           let cond = lvl > 1 in
@@ -998,6 +999,51 @@ module Int = struct
 
     let apart_left ppf e = if not (together e) then fprintf ppf "@[<2>"
     let apart_right ppf e = if not (together e) then fprintf ppf "@]"
+
+    let rec fmt_ppr_pat_spine cD cG lvl ppf = (function 
+      | Comp.PatNil -> fprintf ppf ""
+      | Comp.PatApp (_, pat, pat_spine) -> 
+          fprintf ppf "%a %a"
+            (fmt_ppr_pat_obj cD cG (lvl+1)) pat
+            (fmt_ppr_pat_spine cD cG lvl) pat_spine
+
+                                          )
+    and fmt_ppr_pat_obj cD cG lvl ppf = function 
+      | Comp.PatEmpty (_, cPsi) -> 
+          let cond = lvl > 1 in 
+            fprintf ppf "%s[%a. ()]%s"
+              (l_paren_if cond)
+              (fmt_ppr_lf_dctx cD 0) cPsi
+              (r_paren_if cond)
+      | Comp.PatMetaObj (_, mO) -> 
+          let cond = lvl > 1 in 
+            fprintf ppf "%s[%a]%s"
+              (l_paren_if cond)
+              (fmt_ppr_meta_obj cD 0) mO
+              (r_paren_if cond)
+      | Comp.PatConst (_, c, pat_spine) -> 
+          let cond = lvl > 1 in 
+            fprintf ppf "%s%s %a%s"
+              (l_paren_if cond)
+              (R.render_cid_comp_const c)
+              (fmt_ppr_pat_spine cD cG 2) pat_spine
+              (r_paren_if cond)
+
+      | Comp.PatPair (_, pat1, pat2) -> 
+          fprintf ppf "(%a , %a)"
+            (fmt_ppr_pat_obj cD cG 0) pat1
+            (fmt_ppr_pat_obj cD cG 0) pat2            
+      | Comp.PatTrue _ -> fprintf ppf "tt"
+      | Comp.PatFalse _ -> fprintf ppf "ff"
+      | Comp.PatAnn (_, pat, tau) -> 
+          fprintf ppf "(%a : %a)"
+            (fmt_ppr_pat_obj cD cG 0) pat
+            (fmt_ppr_cmp_typ cD 0) tau
+
+      | Comp.PatVar (_, offset ) ->               
+          fprintf ppf "%s"
+            (R.render_var cG offset)
+          
 
     let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function 
       | Comp.Syn (_, i) ->
@@ -1114,6 +1160,8 @@ module Int = struct
     and strip_mapp_args' cD cG i = match i with 
       | Comp.Const prog -> 
           (i,  implicitCompArg  (Store.Cid.Comp.get prog).Store.Cid.Comp.typ)
+      | Comp.DataConst c -> 
+          (i,  implicitCompArg  (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ)
       | Comp.Var x -> 
           begin match Context.lookup cG x with
               None -> (i, 0) 
@@ -1153,6 +1201,10 @@ module Int = struct
       | Comp.Const prog ->
           fprintf ppf "%s"
             (R.render_cid_prog prog)
+
+      | Comp.DataConst c ->
+          fprintf ppf "%s"
+            (R.render_cid_comp_const c)
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
@@ -1266,7 +1318,7 @@ module Int = struct
       | Comp.EmptyPattern -> ()
     
     and fmt_ppr_cmp_branch cD cG _lvl ppf = function
-      | Comp.Branch (_, _cO', cD1', Comp.PatMetaObj (_, mO), (t,_cs), e) -> 
+      | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) -> 
           fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a  : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
@@ -1277,6 +1329,22 @@ module Int = struct
              * -bp
              *) 
             (fmt_ppr_cmp_exp_chk cD1' (Whnf.cnormCtx (cG, t)) 1) e
+
+      | Comp.Branch (_, cD1', cG', pat, t, e) -> 
+          let cG_t = Whnf.cnormCtx (cG, t) in 
+          let cG_ext = Context.append cG_t cG' in 
+
+          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+             (fmt_ppr_cmp_branch_prefix  0) cD1'
+            (fmt_ppr_cmp_gctx cD1' 0) cG' 
+             (fmt_ppr_pat_obj cD1' cG' 0) pat
+            (* this point is where the " : " is in the string above *)
+            (fmt_ppr_refinement cD1' cD 2) t
+            (* NOTE: Technically: cD |- cG ctx and 
+             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+             * -bp
+             *) 
+            (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
 
       | Comp.BranchBox (_, cD1', (cPsi, pattern, t, _cs)) ->
           let rec ppr_ctyp_decls' ppf = function
@@ -1372,7 +1440,7 @@ module Int = struct
             (R.render_name p)
 
 
-    let rec fmt_ppr_cmp_gctx cD lvl ppf = function
+    and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->
           fprintf ppf "."
 
@@ -1556,6 +1624,7 @@ module Int = struct
 
     let render_name       n    = n.string_of_name
     let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_const c  = render_name (CompConst.get c).CompConst.name
     let render_cid_typ    a    = render_name (Typ.get a).Typ.name
     let render_cid_term   c    = render_name (Term.get c).Term.name
     let render_cid_schema w    = render_name (Schema.get w).Schema.name
@@ -1577,6 +1646,7 @@ module Int = struct
 
     let render_name        n   = n.string_of_name
     let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_const c  = render_name (CompConst.get c).CompConst.name
     let render_cid_typ     a   = render_name (Typ.get a).Typ.name
     let render_cid_term    c   = render_name (Term.get c).Term.name
     let render_cid_schema  w   = render_name (Schema.get w).Schema.name
@@ -1757,6 +1827,13 @@ module Error = struct
             (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
             (IP.fmt_ppr_cmp_exp_syn cD cG std_lvl) i
             "[no comp-level context printing yet]" (* TODO print context? *)
+
+      | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+          fprintf ppf
+            "ill-typed pattern\n  expected: %a\n  for pattern: %a\n  inferred:%a  "
+            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau) 
+            (IP.fmt_ppr_pat_obj cD cG std_lvl) pat
+            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau') 
 
       | CompIllTyped (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
           fprintf ppf

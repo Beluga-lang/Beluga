@@ -151,6 +151,8 @@ module Comp = struct
 
   and exp_syn =
      | Var    of offset                                     (* x              *)
+     | FVar   of name                                       (* x              *)
+     | DataConst of cid_comp_const                          (* c              *)
      | Const  of cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
      | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
@@ -166,7 +168,7 @@ module Comp = struct
    | PatMetaObj of Loc.t * meta_obj
    | PatConst of Loc.t * cid_comp_const * pattern_spine
    | PatFVar   of Loc.t * name
-   | PatVar   of Loc.t * offset
+   | PatVar   of Loc.t * name * offset
    | PatPair  of Loc.t * pattern * pattern
    | PatTrue  of Loc.t 
    | PatFalse of Loc.t 

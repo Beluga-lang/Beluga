@@ -42,6 +42,7 @@ module type UNIFY = sig
 
   val instantiateMVar : normal option ref * normal * cnstr list -> unit
   val instantiatePVar : head   option ref * head   * cnstr list -> unit
+  val instantiateCtxVar : dctx option ref * dctx -> unit
 
   val resetDelayedCnstrs : unit -> unit
   val resetGlobalCnstrs : unit -> unit
@@ -2724,16 +2725,50 @@ let disallowUndefineds f =
       | (DDec (cPsi1, TypDecl(_ , tA1)) , DDec (cPsi2, TypDecl(_ , tA2))) -> 
             unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
             unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id)
+      | (DDec (cPsi1, TypDeclOpt _) ,   DDec (cPsi2, TypDeclOpt _ )) -> 
+          unifyDCtx1 mflag cD0 cPsi1 cPsi2
       | _ -> 
           (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ P.dctxToString cD0 cPsi1 ^ " cPsi2 = " ^ P.dctxToString cD0 cPsi2 ) ; 
 raise_ (Unify "Context clash"))
 
-
    (* **************************************************************** *)
+  let rec unifyMetaObj cD (mO, t) (mO', t') = match ((mO, t) , (mO', t')) with
+    | (Comp.MetaCtx (_, cPsi), t) , (Comp.MetaCtx (_, cPsi'), t') -> 
+        unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
+        
+    | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') -> 
+        let cPsi  = Context.hatToDCtx phat in 
+        let cPsi' = Context.hatToDCtx phat' in 
+          unifyDCtx1 Unification cD cPsi cPsi';
+          unifyTerm Unification cD cPsi
+            (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id)
+
+
+    | (Comp.MetaObjAnn (_, cPsi, tR) , t) , (Comp.MetaObjAnn (_, cPsi', tR') ,
+      t') -> 
+        let cPsi1 = Whnf.cnormDCtx (cPsi, t) in 
+        let cPsi2 = Whnf.cnormDCtx (cPsi', t') in 
+          unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
+          unifyTerm Unification cD cPsi1 
+            (Whnf.cnorm (tR, t), id) (Whnf.cnorm (tR', t'), id)
+    | _ -> raise_ (Unify "MetaObj mismatch")
+
+  let rec unifyMetaSpine cD (mS, t) (mS', t') = match ((mS, t) , (mS', t')) with
+    | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
+    | (Comp.MetaApp (mO, mS), t) , (Comp.MetaApp (mO', mS'), t') -> 
+        unifyMetaObj cD (mO, t) (mO', t');
+        unifyMetaSpine cD (mS, t) (mS', t')
+    | _ -> raise_ (Unify "Meta-Spine mismatch")
+
     let rec unifyCompTyp cD tau_t tau_t' = 
       unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t')
 
     and unifyCompTypW cD tau_t tau_t' = match (tau_t,  tau_t') with
+      | ((Comp.TypBase (_, c, mS), t), (Comp.TypBase (_, c', mS'), t')) -> 
+          if c = c' then 
+            unifyMetaSpine cD (mS, t) (mS', t')
+          else 
+            raise_ (Unify "Type Constant Clash")
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) -> 
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in 
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
@@ -2767,6 +2802,7 @@ raise_ (Unify "Context clash"))
             )
 
       | ((Comp.TypBool, _ ), (Comp.TypBool, _ )) -> ()
+      | _ -> raise_ (Unify "Computation-level Type Clash")
 
 
    (* **************************************************************** *)

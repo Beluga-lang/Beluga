@@ -213,6 +213,7 @@ module Var : sig
   val get           : t -> var  -> entry
   val append        : t -> t -> t
   val index_of_name : t -> name -> offset
+  val size          : t -> int
 
 end
 

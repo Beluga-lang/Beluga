@@ -2239,7 +2239,7 @@ let rec mctxPVarPos cD p =
  
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i 
-
+    | (Comp.DataConst _, _ ) -> i 
     | (Comp.Const _, _ ) -> i 
 
     | (Comp.Apply (loc, i, e), t) -> Comp.Apply (loc, cnormExp' (i, t), cnormExp (e,t))
@@ -2321,19 +2321,21 @@ let rec mctxPVarPos cD p =
 
   *)
   and cnormBranch = function
-    | (Comp.Branch (loc, cO, cD, Comp.PatMetaObj (loc', mO), (t,cs), e), theta) -> 
+    | (Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', mO), t, e), theta) -> 
     (* cD' |- t <= cD    and   FMV(e) = cD' while 
        cD' |- theta' <= cD0
        cD0' |- theta <= cD0 
      * Hence, no substitution into e at this point -- technically, we
      * need to unify theta' and theta and then create a new cD'' under which the
-     * branch makes sense
+     * branch makes sense -bp
      *)
-        Comp.Branch (loc, cO, cD, Comp.PatMetaObj (loc', normMetaObj mO), (cnormMSub t, cs), 
+        Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', normMetaObj mO), cnormMSub t, 
                      cnormExp (e, m_id))
- | (Comp.Branch (loc, cO, cD, pat, (t,cs), e), theta) -> 
-     Comp.Branch (loc, cO, cD, cnormPattern (pat, theta), 
-                  (cnormMSub t, cs), cnormExp (e, m_id))
+
+ | (Comp.Branch (loc, cD, cG, pat, t, e), theta) -> 
+     (* THIS IS WRONG. -bp *)
+     Comp.Branch (loc, cD, cG, pat, 
+                  cnormMSub t, cnormExp (e, m_id))
 
     | (Comp.BranchBox (cO, cD', (cPsi, Comp.NormalPattern(tM, e), t, cs)),  theta) ->
     (* cD' |- t <= cD    and   FMV(e) = cD' while 

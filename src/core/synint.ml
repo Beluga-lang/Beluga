@@ -29,7 +29,6 @@ module LF = struct
     | MDeclOpt of name 
     | PDeclOpt of name 
     | CDeclOpt of name 
-
                                               (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)
@@ -253,6 +252,13 @@ module Comp = struct
    | TypClo   of typ *  LF.msub
    | TypBool  
 
+
+ type ctyp_decl = 
+   | CTypDecl of name * typ
+   | CTypDeclOpt of name
+  
+  type gctx = ctyp_decl LF.ctx
+
  type contextual_obj = NormObj of LF.normal | NeutObj of LF.head | SubstObj of LF.sub 
 
  type env = 
@@ -285,6 +291,7 @@ module Comp = struct
 
  and exp_syn =
    | Var    of offset
+   | DataConst of cid_comp_const
    | Const  of cid_prog
    | Apply  of Loc.t option * exp_syn * exp_chk
    | CtxApp of Loc.t option * exp_syn * LF.dctx
@@ -292,8 +299,6 @@ module Comp = struct
    | Ann    of exp_chk * typ
    | Equal  of Loc.t option * exp_syn * exp_syn
    | Boolean of bool
-
-
        
   and branch_pattern =
      | NormalPattern of LF.normal * exp_chk
@@ -317,8 +322,8 @@ module Comp = struct
   and branch =
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx *  LF.ctyp_decl LF.ctx  
         * pattern * (LF.msub * LF.csub)
-    | Branch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx  
-        * pattern * (LF.msub * LF.csub) * exp_chk 
+    | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx 
+        * pattern * LF.msub * exp_chk 
 
     | BranchBox of LF.mctx * LF.mctx
         * (LF.dctx * branch_pattern * LF.msub * LF.csub)
@@ -327,11 +332,6 @@ module Comp = struct
         * (LF.dctx * LF.sub * LF.msub * LF.csub)
         * exp_chk
 
- type ctyp_decl = 
-   | CTypDecl of name * typ
-   | CTypDeclOpt of name
-  
-  type gctx = ctyp_decl LF.ctx
   type tclo = typ * LF.msub
 end
 

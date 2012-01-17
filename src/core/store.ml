@@ -580,6 +580,7 @@ module Var = struct
   let extend ctx e = e :: ctx
   let append vars vars' = vars @ vars'
   let get          = List.nth
+  let size  = List.length 
 
 end
 

@@ -34,6 +34,7 @@ type error =
   | LeftoverConstraints of Id.name
   | IllTypedIdSub
 
+  | PatIllTyped     of LF.mctx * Comp.gctx * Comp.pattern * Comp.tclo * Comp.tclo
   | ValueRestriction of LF.mctx * Comp.gctx * Comp.exp_syn * Comp.tclo
   | CompIllTyped     of LF.mctx * Comp.gctx * Comp.exp_chk * Comp.tclo * Comp.tclo
   | CompMismatch     of LF.mctx * Comp.gctx * Comp.exp_syn * typeVariant * Comp.tclo

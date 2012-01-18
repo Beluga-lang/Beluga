@@ -36,42 +36,42 @@ let _ = Error.register_printer
   (fun (Error (loc, e)) ->
     Error.print_with_location loc (fun ppf ->
       match e with
-      | CtxReconstruct ->
+        | CtxReconstruct ->
           Format.fprintf ppf
             "Type reconstruction@ in the presence of multiple contexts@ \
              and pattern matching on contexts is not implemented"
 
-      | PruningFailed -> 
+        | PruningFailed -> 
           Format.fprintf ppf "Pruning a type failed;@ this can happen when you have some@ \
-                       free meta-variables whose type cannot be inferred." 
+                              free meta-variables whose type cannot be inferred." 
 
-      | TypMismatchElab (cO, cD, cPsi, sA1, sA2) ->
+        | TypMismatchElab (cO, cD, cPsi, sA1, sA2) ->
           Format.fprintf ppf
             "ill-typed expression\n  expected: %a\n  inferred: %a\n "
             (P.fmt_ppr_lf_typ cO cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA1)
             (P.fmt_ppr_lf_typ cO cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA2)
-            (* (P.fmt_ppr_lf_dctx cO cD Pretty.std_lvl)        (Whnf.normDCtx cPsi) *)
+      (* (P.fmt_ppr_lf_dctx cO cD Pretty.std_lvl)        (Whnf.normDCtx cPsi) *)
 
-      | IllTypedElab (cO, cD, cPsi, sA) ->
+        | IllTypedElab (cO, cD, cPsi, sA) ->
           Format.fprintf ppf
             "ill-typed expression\n  inferred type: %a \n "
             (P.fmt_ppr_lf_typ cO cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 
-      | EtaExpandFMV (offset, cO, cD, cPsi, sA) -> 
+        | EtaExpandFMV (offset, cO, cD, cPsi, sA) -> 
           Format.fprintf ppf
             "meta-variable %s to has type %a \n and should be eta-expanded\n"
             (R.render_name offset)
             (P.fmt_ppr_lf_typ cO cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 
-      | LeftoverConstraints x ->
+        | LeftoverConstraints x ->
           Format.fprintf ppf
             "cannot reconstruct a type for free variable %s (leftover constraints)"
             (R.render_name x)
 
-      | IllTypedIdSub ->
+        | IllTypedIdSub ->
           Format.fprintf ppf "ill-typed substitution" (* TODO *)
 
-      | ValueRestriction (cO, cD, cG, i, theta_tau) ->
+        | ValueRestriction (cO, cD, cG, i, theta_tau) ->
           Format.fprintf ppf
             "value restriction [pattern matching]@.\
              @ @ expected: boxed type@.\
@@ -82,7 +82,7 @@ let _ = Error.register_printer
             (P.fmt_ppr_cmp_exp_syn cO cD cG Pretty.std_lvl) i
             "[no comp-level context printing yet]" (* TODO print context? *)
 
-      | CompScrutineeTyp (cO, cD, cG, i, sP, cPsi) -> 
+        | CompScrutineeTyp (cO, cD, cG, i, sP, cPsi) -> 
           Format.fprintf ppf
             "Type %a[%a]@.\
              of scrutinee %a@.\
@@ -94,7 +94,7 @@ let _ = Error.register_printer
             (P.fmt_ppr_lf_dctx cO cD Pretty.std_lvl) cPsi
             (P.fmt_ppr_cmp_exp_syn cO cD cG Pretty.std_lvl) i
 
-      | CompScrutineeSubTyp (cO, cD, cG, i, cPsi, cPhi) -> 
+        | CompScrutineeSubTyp (cO, cD, cG, i, cPsi, cPhi) -> 
           Format.fprintf ppf
             "Type %a[%a]@.\
              of scrutinee %a@.\
@@ -106,13 +106,13 @@ let _ = Error.register_printer
             (P.fmt_ppr_lf_dctx cO cD Pretty.std_lvl) cPsi
             (P.fmt_ppr_cmp_exp_syn cO cD cG Pretty.std_lvl) i
 
-      | CompTypAnn -> 
+        | CompTypAnn -> 
           Format.fprintf ppf "Type synthesis of term failed (use typing annotation)" 
 
-      | ConstraintsLeft ->
+        | ConstraintsLeft ->
           Format.fprintf ppf "Constraints of functional type were not simplified" (* TODO *)
 
-      | NotPatternSpine ->
+        | NotPatternSpine ->
           Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *) ))
 
 exception NotImplemented

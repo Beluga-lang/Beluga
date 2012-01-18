@@ -1457,7 +1457,6 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.CtxVar (I.CInst ({contents = None}, _, _, _)) -> 
       let _ = dprint (fun () -> "[abstractMVarDctx] abstracting over ctx_ref :"
                         ^ "cPsi = " ^ P.dctxToString I.Empty cPsi) in 
-          let _ = printCollection cQ in 
       let x = index_of cQ (CV cPsi) in 
         I.CtxVar (I.CtxOffset x)
 
@@ -2165,7 +2164,7 @@ let raiseCompKind cD cK =
   let rec roll cK = match cK with
     | Comp.PiKind (loc, (cdecl, dep), cK') -> 
         Comp.PiKind (loc, (cdecl, dep), roll cK')
-    | _ -> (print_string "[roll]\n" ; raisePiBox cD cK)
+    | _ ->  raisePiBox cD cK
 
   and raisePiBox cD cK = match cD with
     | I.Empty -> cK

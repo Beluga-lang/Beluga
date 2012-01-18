@@ -161,9 +161,6 @@ let rec raiseType cPsi tA = match cPsi with
 
 
 (* -------------------------------------------------------------*)
-
-
-(* -------------------------------------------------------------*)
 let rec apxget_ctxvar psi  = match psi with
   | Apx.LF.Null -> None
   | Apx.LF.CtxVar (psi_name) -> Some psi_name
@@ -183,6 +180,7 @@ let rec lookup cG k = match (cG, k) with
   | (Int.LF.Dec(_cG', Int.Comp.CTypDecl (_, tau)), 1) ->   tau
   | (Int.LF.Dec( cG', Int.Comp.CTypDecl (_, _tau)), k) ->
       lookup cG' (k-1)
+
 
 let rec getctxvarFromHat phat = match phat with 
   | (None, _ ) -> None

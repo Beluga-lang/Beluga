@@ -15,7 +15,6 @@ module RR = Store.Cid.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
 
-exception NotImplemented
 exception BranchMismatch
 
 
@@ -239,7 +238,7 @@ and eval_branch (phat, tM) branch (theta, eta) =
 
         with Unify.Unify msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
-    | _ -> raise NotImplemented
+    | _ -> raise Error.NotImplemented
 
 let rec eval e  =
   dprint (fun () -> "Opsem.eval");

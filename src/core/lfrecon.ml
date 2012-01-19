@@ -21,11 +21,40 @@ type error =
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | LeftoverConstraints of Id.name
   | PruningFailed
-  | NotPatternSpine
-  | CompTypAnn       
   | IllTypedIdSub
+  | CompTypAnn       
+  | NotPatternSpine
 
 exception Error of Syntax.Loc.t * error
+
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+        | TypMismatchElab (cD, cPsi, sA1, sA2) ->
+          Format.fprintf ppf
+            "ill-typed expression\n  expected: %a\n  inferred: %a\n "
+            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA1)
+            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA2)
+
+        | IllTypedElab (cD, cPsi, sA) ->
+          Format.fprintf ppf
+            "ill-typed expression\n  inferred type: %a \n "
+            (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+
+        | LeftoverConstraints x ->
+          Format.fprintf ppf
+            "cannot reconstruct a type for free variable %s (leftover constraints)"
+            (R.render_name x)
+
+        | IllTypedIdSub ->
+          Format.fprintf ppf "ill-typed substitution" (* TODO *) 
+
+        | CompTypAnn -> 
+          Format.fprintf ppf "Type synthesis of term failed (use typing annotation)" 
+
+        | NotPatternSpine ->
+          Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *) ))
 
 let rec conv_listToString clist = match clist with 
   | [] -> " "
@@ -1135,7 +1164,7 @@ and elTerm' recT cD cPsi r sP = match r with
             
       with _   -> 
         raise (Error (loc, CompTypAnn ))
-        (* raise (Error.Error (loc, Error.TypMismatch (cO, cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
+        (* raise (Error.Error (loc, Error.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
       end
 
   | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.MInst _ , _), _ ), _) ->

@@ -1306,7 +1306,7 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
           scrutinee. \n"
                       ^ "Scrutinee's context " ^ P.dctxToString cD cPsi              
                       ^ "\nPattern's context " ^ P.dctxToString cD' cPsi' ^ "\n"             
-                      ^ Error.string_of_loc loc)
+                      ^ Syntax.Loc.to_string loc)
             )
 
 (* ********************************************************************************)

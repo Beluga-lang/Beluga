@@ -15,8 +15,6 @@ val print : (Format.formatter -> unit) -> print_result
 (** Use supplied formatter for printing errors decorated with location information. *)
 val print_with_location : Syntax.Loc.t -> (Format.formatter -> unit) -> print_result
 
-val string_of_loc : Syntax.Loc.t -> string
-
 val getInformation : unit -> string
 
 val addInformation : string -> unit

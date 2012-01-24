@@ -25,15 +25,8 @@ let print f =
   Buffer.reset error_format_buffer;
   str
 
-let string_of_loc loc =
-  if Syntax.Loc.is_ghost loc then "<unknown location>"
-  else begin
-    Parser.Grammar.Loc.print Format.str_formatter loc;
-    Format.flush_str_formatter ()
-  end
-
 let print_with_location loc f =
-  Format.fprintf error_format "%s:@." (string_of_loc loc);
+  Format.fprintf error_format "%s:@." (Syntax.Loc.to_string loc);
   print f
 
 let _ = register_printer

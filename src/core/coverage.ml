@@ -1422,7 +1422,7 @@ let rec initialize_coverage problem =
 	  raise (Error (Syntax.Loc.ghost, NoCover
 	    (let (cO, cD) = cOD in 
 	     Printf.sprintf "\n##   Empty Pattern ##\n   %s\n\n##   Case expression of type : \n##   %s\n##   is not empty.\n\n" 
-	       (Error.string_of_loc problem.loc)
+	       (Syntax.Loc.to_string problem.loc)
 	       (P.typToString cD cPsi sA))))
     | ((cO, cD) as cOD, (NeutPatt(cPhi, _tN, sB') as pat)) :: plist -> 
 	let _ = dprint (fun () -> "PATTERN : \n     " ^ P.mctxToString cD ^ " |- " ^  pattToString cD pat)  in 
@@ -1482,16 +1482,16 @@ let check_coverage_success problem  =
       else 
 	 (* Check if the open coverage goals can be proven to be impossible *)
         Failure (Printf.sprintf "\n##   Case expression doesn't cover: ##\n##   %s\n##   %s\n\n"
-                   (Error.string_of_loc problem.loc)
+                   (Syntax.Loc.to_string problem.loc)
                    ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals)))
 
     | Pragma.PragmaNotCase ->
       if !open_cov_goals = [] then 
 	Failure (Printf.sprintf "\n##   Case expression covers : ##\n##   %s\n##\n\n"
-                   (Error.string_of_loc problem.loc))
+                   (Syntax.Loc.to_string problem.loc))
       else begin
 	Printf.printf "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %s\n##   %s\n\n"
-          (Error.string_of_loc problem.loc)
+          (Syntax.Loc.to_string problem.loc)
           ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) );
 	Success
       end
@@ -1524,7 +1524,7 @@ else
     dprint (fun () -> "Coverage checking a case with "
               ^ string_of_int (List.length problem.branches)  
 	      ^ " branch(es) at:\n"
-              ^ Error.string_of_loc problem.loc);
+              ^ Syntax.Loc.to_string problem.loc);
 
     dprint (fun () -> "Initial coverage problem \n" ^ covproblemsToString cov_problems ) ; 
     
@@ -1537,7 +1537,7 @@ else
     if r  > r' then 
       (print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
        print_endline ("CASES TRIVIALLY COVERED in line " ^
-			 Error.string_of_loc  problem.loc
+			 Syntax.Loc.to_string  problem.loc
 		      ^ " : " ^ string_of_int (List.length (trivial_og)))
 (* opengoalsToString trivial_og *)
 )

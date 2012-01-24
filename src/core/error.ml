@@ -45,11 +45,7 @@ let _ = Printexc.register_printer
 let _ = register_printer
   (fun (Violation msg) ->
     print (fun ppf ->
-      Format.pp_print_string ppf msg;
-      Format.pp_print_newline ppf ();
-      Format.pp_print_newline ppf ();
-      Format.fprintf ppf "Beluga encountered an internal violation.@ \
-                          Please report this as a bug."))
+      Format.fprintf ppf "Internal error (please report as a bug): %s" msg))
 
 let _ = register_printer
   (fun NotImplemented ->

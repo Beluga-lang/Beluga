@@ -44,6 +44,11 @@ let _ = register_printer
       Format.fprintf ppf "Beluga encountered an internal violation.@ \
                           Please report this as a bug."))
 
+let _ = register_printer
+  (fun NotImplemented ->
+    print (fun ppf ->
+      Format.fprintf ppf "Not implemented."))
+
 let information = ref []
 
 let getInformation () =

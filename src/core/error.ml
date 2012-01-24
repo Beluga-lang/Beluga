@@ -35,6 +35,15 @@ let print_with_location loc f =
   Format.fprintf error_format "%s:@." (string_of_loc loc);
   print f
 
+let _ = register_printer
+  (fun (Violation msg) ->
+    print (fun ppf ->
+      Format.pp_print_string ppf msg;
+      Format.pp_print_newline ppf ();
+      Format.pp_print_newline ppf ();
+      Format.fprintf ppf "Beluga encountered an internal violation.@ \
+                          Please report this as a bug."))
+
 let information = ref []
 
 let getInformation () =

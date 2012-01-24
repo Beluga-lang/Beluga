@@ -16,7 +16,7 @@ val no_covers : int ref
 
 type problem
 
-val make : Parser.Grammar.Loc.t
+val make : Syntax.Loc.t
         -> Pragma.case_pragma
         -> LF.mctx            (* cO *)
         -> LF.mctx            (* cD *)

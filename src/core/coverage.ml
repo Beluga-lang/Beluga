@@ -60,7 +60,7 @@ let new_name string =
 (* ****************************************************************************** *)
 (* Coverage problem *)
 
-type problem = {loc : Parser.Grammar.Loc.t;    
+type problem = {loc : Syntax.Loc.t;
                 prag : Pragma.case_pragma;           (* indicates if %not appeared after ``case...of'' *)
                 cO : LF.mctx;
                 cD : LF.mctx;

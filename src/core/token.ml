@@ -3,8 +3,7 @@
 (** Locations, used to locate a token within a file.  Since locations
     are slightly complicated, we just reuse the existing Camlp4
     definition. *)
-(* module Loc = Core.Syntax.Loc (*Camlp4.PreCast.Loc*) *)
- module Loc = Syntax.Loc (*Camlp4.PreCast.Loc*) 
+module Loc = Syntax.Loc
 
 
 

@@ -177,15 +177,6 @@ open Token
 EXTEND Grammar
 GLOBAL: sgn_eoi;
 
-(*  sgn_eoi:
-    [
-      [
-(*          decls = LIST0 sgn_decl; `EOI -> *)
-           decls = sgn_decls; `EOI  -> decls
-      ]
-    ]
-  ;
-*)
   symbol:
     [
       [

@@ -19,6 +19,7 @@ let print f =
      to error_format. Such an exception would be thrown when in the
      middle of printing an exception! *)
   Printexc.print f error_format;
+  Format.pp_print_newline error_format ();
   Format.pp_print_flush error_format ();
   let str = Buffer.contents error_format_buffer in
   Buffer.reset error_format_buffer;

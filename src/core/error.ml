@@ -29,6 +29,19 @@ let print_with_location loc f =
   Format.fprintf error_format "%s:@." (Syntax.Loc.to_string loc);
   print f
 
+(* Since this printer is registered first, it will be executed only if
+   all other printers fail. *)
+let _ = Printexc.register_printer
+  (fun e ->
+    (* We unfortunately do not have direct access to the default
+       printer that Printexc uses for exceptions, so we print the
+       message we want as a side-effect and return None, which should
+       in turn convince Printexc to resort to the default printer to
+       actually print the exception. *)
+    Format.fprintf Format.err_formatter
+      "Uncaught exception.@ Please report this as a bug.@.";
+    None)
+
 let _ = register_printer
   (fun (Violation msg) ->
     print (fun ppf ->

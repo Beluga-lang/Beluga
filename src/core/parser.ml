@@ -13,9 +13,15 @@ open Core.Syntax.Ext
 *)
 open Common
 open Syntax.Ext
-open Token
+
 
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
+
+let _ = Error.register_printer
+  (fun (Grammar.Loc.Exc_located (loc, Stream.Error exn)) ->
+    Error.print_with_location loc (fun ppf ->
+      Format.fprintf ppf "Parse Error: %s" exn;
+      Format.pp_print_newline ppf ()))
 
 let rec last l = begin match List.rev l with
   | [] -> None
@@ -160,6 +166,13 @@ let sgn_eoi = Grammar.Entry.mk "sig_eoi"
 (*****************************************)
 (* Dynamically Extensible Beluga Grammar *)
 (*****************************************)
+
+(* We are forced to do this because of a bug in camlp4 that prevents
+   qualified names in productions. Also we can't open earlier because
+   camlp4 mandates the presence of an error module in Token, so when
+   opening that module the module defined by error.ml gets
+   overshadowed. *)
+open Token
 
 EXTEND Grammar
 GLOBAL: sgn_eoi;

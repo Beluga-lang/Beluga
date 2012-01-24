@@ -738,7 +738,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                         P.compTypToString cD (Whnf.cnormCTyp (tau,t)) ^ "\n") ;
           Int.Comp.Syn (loc, i')
         with _ -> 
-          raise (Error.Error (loc, Error.CompSynMismatch (cD, (tau,t), tau_t')))
+          raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau,t), tau_t')))
         end 
 
 

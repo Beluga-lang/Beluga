@@ -178,23 +178,9 @@ let main () =
                 Logic.runLogic ()
               end
 
-        with
-          | Error.Violation str ->
-              Format.fprintf
-                Format.std_formatter
-                "Internal error (please report as a bug): %s\n@?"
-                str;
-              print_newline ();
-              abort_session ()
-
-          | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-              Parser.Grammar.Loc.print Format.std_formatter loc;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
-              Format.fprintf Format.std_formatter "@?";
-              print_newline ();
-              abort_session ()
-
+        with e ->
+          output_string stderr (Printexc.to_string e);
+          abort_session ()
     in
     let args   = List.tl (Array.to_list Sys.argv) in
     let files = process_options args in

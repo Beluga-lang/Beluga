@@ -1645,13 +1645,6 @@ module Error = struct
 
     module IP = Int.Make (R)
 
-    let print_typeVariant = function
-      | Cross -> "product type"
-      | Arrow -> "function type"
-      | CtxPi -> "context abstraction"
-      | PiBox -> "dependent function type"
-      | Box   -> "contextual type"
-    
       | EtaExpandBV (offset, cD, cPsi, sA) -> 
           fprintf ppf
             "bound variable %s to has type %a \n and should be eta-expanded\n"
@@ -1664,116 +1657,6 @@ module Error = struct
             "variable %s to has type %a \n and should be eta-expanded\n"
             (R.render_name offset)
             (IP.fmt_ppr_lf_typ cD cPsi std_lvl) (Whnf.normTyp sA)
-
-      | CompIllTyped (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
-          fprintf ppf
-            "ill-typed expression\n  expected: %a\n  for expression: %a\n  inferred:%a    \n Note: Computation-level applications are not automatically left-associative but require parentheses."
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau) 
-            (IP.fmt_ppr_cmp_exp_chk cD cG std_lvl) e
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau') 
-
-      | CompMismatch (cD, cG, i, variant, theta_tau) ->
-          fprintf ppf
-            (* "ill-typed expression\n  expected: %s\n  inferred: %a\n  for expression: %a\n  in context:\n    %s" *)
-            "ill-typed expression\n  inferred: %a\n  for expression: %a\n 
-             Beluga believes it should be a %s 
-\n Note: Computation-level applications are not automatically left-associative but require parentheses."
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau) 
-            (IP.fmt_ppr_cmp_exp_syn cD cG std_lvl) i
-            (print_typeVariant variant)
-
-
-      | CompPattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
-          fprintf ppf
-            "ill-typed pattern\n  expected: %a[%a] \n  inferred: %a[%a]\n  for expression: [%a] %a\n"  
-            (IP.fmt_ppr_lf_typ  cD' cPsi' std_lvl) (Whnf.normTyp sA')
-            (IP.fmt_ppr_lf_dctx cD' std_lvl) (Whnf.normDCtx cPsi')
-            (IP.fmt_ppr_lf_typ  cD cPsi std_lvl) (Whnf.normTyp sA)
-            (IP.fmt_ppr_lf_dctx cD' std_lvl) (Whnf.normDCtx cPsi)
-            (IP.fmt_ppr_lf_dctx cD' std_lvl) (Whnf.normDCtx cPsi)
-            (IP.fmt_ppr_patternOpt cD' cPsi) pattern
-
-
-      | CompSubPattMismatch ((cD, cPsi, sigma, cPhi) , (cD', cPsi', cPhi')) ->
-          fprintf ppf
-            "ill-typed pattern\n  expected: %a[%a] \n  inferred: %a[%a]\n  for subst-pattern: %a\n"  
-            (IP.fmt_ppr_lf_dctx cD' std_lvl) (Whnf.normDCtx cPsi')
-            (IP.fmt_ppr_lf_dctx cD' std_lvl) (Whnf.normDCtx cPhi')
-            (IP.fmt_ppr_lf_dctx cD' std_lvl) (Whnf.normDCtx cPsi)
-            (IP.fmt_ppr_lf_dctx cD' std_lvl) (Whnf.normDCtx cPhi)
-            (IP.fmt_ppr_lf_sub  cD cPsi std_lvl) sigma
-
-      | CompBoxCtxMismatch (cD, cPsi, (phat, tM)) ->
-          fprintf ppf
-            "Expected: %a\n  in context %a\n  Used in context %a\n"
-            (IP.fmt_ppr_lf_normal cD cPsi std_lvl) tM 
-            (IP.fmt_ppr_lf_dctx   cD std_lvl) (Whnf.normDCtx cPsi)
-            (IP.fmt_ppr_lf_psi_hat cD std_lvl) (Context.hatToDCtx phat)
-
-      | CompCtxFunMismatch (cD, _cG, theta_tau) -> 
-          fprintf ppf "Found Ctx abstraction, but expected type %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
-
-      | CompFunMismatch (cD, _cG, theta_tau) -> 
-          fprintf ppf "Found function abstraction, but expected type %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
-
-      | CompMLamMismatch (cD, _cG, theta_tau) -> 
-          fprintf ppf "Found MLam abstraction, but expected type %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
-
-      | CompBoxMismatch (cD, _cG, theta_tau) -> 
-          fprintf ppf "Found box-expression that does not have type %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
-
-
-      | CompSBoxMismatch (cD, _cG, cPsi, cPhi) ->
-          fprintf ppf
-            "Found substitution that does not have type %a[%a]\n" 
-            (IP.fmt_ppr_lf_dctx cD std_lvl) (Whnf.normDCtx cPsi)
-            (IP.fmt_ppr_lf_dctx cD std_lvl) (Whnf.normDCtx cPhi)
-
-      | CompIfMismatch (cD, _cG, theta_tau) -> 
-          fprintf ppf "Guard of if-expression does not have type bool; it has type %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
-
-      | CompPairMismatch (cD, _cG, theta_tau) -> 
-          fprintf ppf "Found tuple, but expected type %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
-
-      | CompSynMismatch (cD, theta_tau, theta_tau') ->
-          fprintf ppf
-            "Expected type  %a\n Inferred type  %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau)
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp theta_tau')
-
-
-      | CompEqMismatch (cD, ttau1, ttau2) -> 
-          fprintf ppf
-            "Type mismatch on equality:\nComparing objects of type  %a\n with objects of type  %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp ttau1)
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp ttau2)
-
-
-      | CompEqTyp (cD, ttau) -> 
-          fprintf ppf
-            "Equality comparison only possible at base types;\nfound objects of type  %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp ttau)
-
-      | CompAppMismatch (cD, (Comp.MetaTyp (tP, cPsi), tau)) -> 
-          fprintf ppf
-            "Expected contextual object ( Psi . M ) of type   %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp (Comp.TypBox(Syntax.Loc.ghost, tP, cPsi), tau))
-
-      | CompMAppMismatch (cD, (Comp.MetaTyp (tA, cPsi), tau)) -> 
-          fprintf ppf
-            "Expected contextual object ( Psi . M ) of type   %a\n"
-            (IP.fmt_ppr_cmp_typ cD std_lvl) (Whnf.cnormCTyp (Comp.TypBox(Syntax.Loc.ghost, tA, cPsi), tau))
-
-      | CompMAppMismatch (cD, (Comp.MetaSchema cid_schema, tau)) -> 
-          fprintf ppf
-            "Expected context of schema  %s\n"
-            (R.render_cid_schema cid_schema)
 
       | NoCover message ->
           fprintf ppf "Coverage checking failed: %s" message

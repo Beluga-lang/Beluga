@@ -233,10 +233,11 @@ let rec elSchElem (Apx.LF.SchElem (ctx, typRec)) =
 let rec elSchema (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map elSchElem el_list)
 
-let rec elDCtxAgainstSchema recT cD psi ((Int.LF.Schema elements) as schema) = match psi with
+let rec elDCtxAgainstSchema recT cD psi s_cid = match psi with
   | Apx.LF.Null -> Int.LF.Null
 
-  | Apx.LF.CtxVar (c_var) -> 
+  | Apx.LF.CtxVar ((Apx.LF.CtxOffset _ ) as c_var) -> 
+      let schema = Schema.get_schema s_cid in 
       let c_var = Lfrecon.elCtxVar c_var in 
       let cPsi' = Int.LF.CtxVar (c_var) in 
         begin try 
@@ -244,9 +245,21 @@ let rec elDCtxAgainstSchema recT cD psi ((Int.LF.Schema elements) as schema) = m
           cPsi'
         with _ -> raise (Error.Error (None, Error.CtxVarMismatch (cD, c_var, schema)))
         end
-
+  | Apx.LF.CtxVar (Apx.LF.CtxName psi ) -> 
+      (* This case should only be executed when c_var occurs in a pattern *)
+      begin try
+        let Int.LF.CDecl (_, s_cid', _ ) = FCVar.get psi in 
+          if s_cid = s_cid' then Int.LF.CtxVar (Int.LF.CtxName psi)
+          else
+            (let schema = Schema.get_schema s_cid in 
+             let c_var' = Int.LF.CtxName psi in 
+               raise (Error.Error (None, Error.CtxVarMismatch (cD, c_var', schema))))
+      with Not_found -> 
+        (FCVar.add psi (Int.LF.CDecl (psi, s_cid, Int.LF.No));
+         Int.LF.CtxVar (Int.LF.CtxName psi))
+      end
   | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
-      let cPsi = elDCtxAgainstSchema recT cD psi' schema in
+      let cPsi = elDCtxAgainstSchema recT cD psi' s_cid in
       let tA   = Lfrecon.elTyp recT cD cPsi a in
       (* let _ = Check.LF.checkTypeAgainstSchema cO cD cPsi' tA elements in          *)
       let _ = dprint (fun () -> "[elDCtxAgainstSchema] " ^ R.render_name x ^ ":" ^
@@ -377,7 +390,7 @@ let rec elCompKind cD k = match k with
         
 let rec elMetaObj cD cM cTt = match  (cM, cTt) with 
   | (Apx.Comp.MetaCtx (loc, psi), (Int.Comp.MetaSchema  w, _)) -> 
-      let cPsi' = elDCtxAgainstSchema Lfrecon.Pibox cD psi   (Schema.get_schema w) in 
+      let cPsi' = elDCtxAgainstSchema Lfrecon.Pibox cD psi w in 
         Int.Comp.MetaCtx (loc, cPsi')   
   | (Apx.Comp.MetaObj (loc, phat, tM), (Int.Comp.MetaTyp (tA, cPsi), theta)) ->  
       let cPsi' = C.cnormDCtx (cPsi, theta) in 
@@ -563,8 +576,12 @@ let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
   | (Apx.Comp.Syn (loc, i), (tau,t)) ->
       let _ = dprint (fun () -> "[elExp] Syn") in 
+      let _ = dprint (fun () -> "[elExp] cG = " ^ 
+                        P.mctxToString cD ^ " |- " ^ P.gctxToString cD cG) in 
       let (i1,tau1) = elExp' cD cG i in 
+      let _ = dprint (fun () -> "[elExp] Syn i = " ^ P.expSynToString cD cG i1) in
       let _ = dprint (fun () -> "[elExp] Syn done: " ^ 
+                        P.mctxToString cD ^ " |- " ^
                         P.compTypToString cD (Whnf.cnormCTyp tau1))  in 
       let (i', tau_t') = genMApp loc cD (i1, tau1) in 
       let _ = dprint (fun () -> "[elExp] Unify computation-level types: \n" ^
@@ -821,6 +838,9 @@ and elExp' cD cG i = match i with
       (Int.Comp.Var offset, (lookup cG offset, C.m_id))
 
   | Apx.Comp.DataConst c ->
+      let _ = dprint (fun () -> "[elExp'] DataConst " ^ R.render_cid_comp_const  c ^
+                        "\n has type " ^ P.mctxToString cD ^ " |- " ^ 
+                        P.compTypToString cD ((CompConst.get c).CompConst.typ)) in
      (Int.Comp.DataConst c, ((CompConst.get c).CompConst.typ, C.m_id))
 
   | Apx.Comp.Const prog ->
@@ -987,6 +1007,9 @@ and elExp' cD cG i = match i with
              end 
           | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) -> 
               let _ = dprint (fun () -> "Encountered Boxed arg") in
+              let _ = dprint (fun () -> "[elExp] MAnnApp - TypArr : " ^
+                                P.mctxToString cD ^ " |- " ^ 
+                                P.compTypToString cD (Whnf.cnormCTyp tau_theta')) in
               let cPsi'' = C.cnormDCtx (cPsi, theta) in
               let _ = dprint (fun () -> "cnormDctx done") in
               let _ = dprint (fun () -> "Projected type of argument : " ^
@@ -1000,12 +1023,13 @@ and elExp' cD cG i = match i with
                   let _     = Unify.unifyDCtx cD cPsi'' cPsi' in 
                   let _ = dprint (fun () -> "Infer omitted context argument using unification") in
                   let psihat' = Context.dctxToHat cPsi'  in
-                  let _ = dprint (fun () -> "dctxToHat done") in
-                  let tM'    = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m (C.cnormTyp (tP,   theta), LF.id) in
-                  let _ = dprint (fun () -> "[elTerm] for m done") in
+                  let tM' = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m (C.cnormTyp (tP, theta), LF.id) in
+                  let _   = dprint (fun () -> "[elTerm] for m against type : " ^      
+                                   P.dctxToString cD cPsi' ^ " |- " ^ 
+                                   P.typToString cD cPsi' (C.cnormTyp (tP, theta), LF.id)) in
                   let i = Int.Comp.Apply (Some loc, i', 
-                                     Int.Comp.Box(Some loc, psihat', tM')) in 
-                    dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^
+                                     Int.Comp.Box(Some loc, psihat', tM')) in  
+                    dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^ 
                               P.expSynToString cD cG i ^ "\n"); (i , (tau, theta))
 
                 with Violation msg -> 
@@ -1074,6 +1098,8 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
   | Apx.Comp.MetaObjAnn (loc, psi, m) -> 
   let cPsi'   = Lfrecon.elDCtx  Lfrecon.Pibox cD' psi in
   let _       = dprint (fun () -> "[recMObj] inferCtxSchema ... ") in 
+  let _       = dprint (fun () ->  P.mctxToString cD ^ " |- " ^ 
+                          P.dctxToString cD cPsi) in 
   let _       = inferCtxSchema (cD, cPsi) (cD', cPsi') in 
   let _       = dprint (fun () -> "[recMObj] inferCtxSchema done") in 
   let tP'     = begin match tAnn with 
@@ -1118,10 +1144,17 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
 and inferCtxSchema (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with 
       | (Int.LF.Null , Int.LF.Null) -> ()
       | (Int.LF.CtxVar (Int.LF.CtxOffset psi1_var), cPsi') -> 
+          let _ = dprint (fun () -> "[inferSchema] outside context cD = " ^ P.mctxToString cD )
+          in 
+          let _ = dprint (fun () -> "[inferSchema] local context in branch : cD' " ^ P.mctxToString cD' ) in 
+          let _ = dprint (fun () -> "[inferSchema] looking up psi = " ^
+                            P.dctxToString cD cPsi) in 
           let (_ , s_cid) = Whnf.mctxCDec cD psi1_var in 
             (match get_ctxvar cPsi' with 
                | None -> ()
                | Some (Int.LF.CtxOffset psi) -> 
+                   let _ = dprint (fun () -> "[inferSchema] looking up psi' = " ^
+                            P.dctxToString cD' cPsi') in 
                    let (_ , s_cid') = Whnf.mctxCDec cD' psi in                    
                      if s_cid = s_cid' then 
                        ()
@@ -1198,6 +1231,19 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
       raise (Error.Error (Some loc, Error.CompPairMismatch (cD, Int.LF.Empty, tau_theta)))
   | (Apx.Comp.PatMetaObj (loc, _) , tau_theta) ->  
       raise (Error.Error (Some loc, Error.CompBoxMismatch (cD, Int.LF.Empty, tau_theta)))
+  | (Apx.Comp.PatAnn (loc, _, _ ) , ttau) -> 
+      let (cG', pat', ttau') = elPatSyn cD cG pat in 
+      let _ = dprint (fun () -> "[elPatChk] expected tau : = " ^ 
+                        P.compTypToString cD (Whnf.cnormCTyp ttau)) in 
+      let _ = dprint (fun () -> "[elPatChk] inferred tau' : = " ^ 
+                        P.compTypToString cD (Whnf.cnormCTyp ttau')) in 
+        begin try
+          Unify.unifyCompTyp cD ttau ttau' ; 
+          (cG', pat')
+        with Unify.Unify msg -> 
+          dprint (fun () -> "Unify Error: " ^ msg) ; 
+          raise (Error.Error (Some loc, Error.CompSynMismatch (cD, ttau, ttau')))
+        end
 
 
  and elPatSyn (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat = match pat with 
@@ -1568,14 +1614,22 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
     let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj cD' pat tau_s
      in 
     let _ = dprint (fun () -> "[rePatObj] done") in 
+    let _ = dprint (fun () -> "   " ^ P.mctxToString cD1' ^ " ; " ^ 
+                      P.gctxToString cD1' cG1 ^ "\n    |- " ^ 
+                      P.compTypToString cD1' tau1) in 
     let tau_s' = Whnf.cnormCTyp (tau_s, Int.LF.MShift l_cd1') in 
     (* cD |- tau_s and cD, cD1 |- tau_s' *)
     (* cD1 |- tau1 *)
     let (t', t1, cD1'', pat1') = synPatRefine (Some loc) (cD, cD1') pat1 (tau_s', tau1) in
+    (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
+    let _ = dprint (fun () -> " cD1'' = " ^ P.mctxToString cD1'' ) in 
     let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
     let cD'      = Context.append cD cD1' in
+    let _ = dprint (fun () -> " cD, cD1' |- cG1 = " ^ P.gctxToString cD' cG1 ) in 
+    let _ = dprint (fun () -> " cD1'' |- cG1 = " ^ P.gctxToString cD1''  (Whnf.cnormCtx (cG1, t1))) in 
     let cG'     = Whnf.cnormCtx (cG, t') in 
-    let cG_ext  = Context.append cG' cG1 in 
+    let cG1'    = Whnf.cnormCtx (cG1, t1) in 
+    let cG_ext  = Context.append cG' cG1' in 
   
     let e1       = Apxnorm.fmvApxExp [] cD'  (l_cd1, l_delta, 0) e in
         
@@ -1608,7 +1662,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
       let eE'      = elExp cD1'' cG_ext  e' (tau', Whnf.m_id) in  
       let _        = dprint (fun () -> "[elBranch] Body done \n") in 
       let _       = FCVar.clear() in
-        Int.Comp.Branch (loc, cD1'', cG1, pat1', t', eE')
+        Int.Comp.Branch (loc, cD1'', cG1', pat1', t', eE')
 
 
 

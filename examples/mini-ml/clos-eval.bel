@@ -26,9 +26,9 @@ datatype List : ctype =
 ;
 
 datatype Clos : ctype = 
-Cl : (g:tctx) [g,x:tm . tm] -> ([g . tm] -> Clos) -> Clos 
+Cl : (g:tctx)  [g,x:tm . tm] -> ([g . tm] -> Clos) -> Clos 
 ;
-%{
+
 datatype CtxRel : {g:tctx} {h:tctx} ctype = 
 | Rnil : CtxRel [ ] [ ] 
 | Rsnoc : (g:tctx) (h:tctx) CtxRel [g] [h] -> CtxRel [g, x:tm] [h, x:tm]
@@ -53,7 +53,7 @@ rec ev_bool : (g:tctx) [g . tm] -> Bool =
 fn e => case e of 
 | [g . z ] => ttrue
 ;
-}%
+
 
 rec eval : (g:tctx) [g . tm] -> ([g.tm] -> Clos) -> Clos = 
 fn e => fn env => case e of

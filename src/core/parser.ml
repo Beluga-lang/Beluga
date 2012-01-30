@@ -1183,7 +1183,11 @@ clf_pattern :
 
      | "ttrue" -> Comp.PatTrue (_loc) 
      | "ffalse" -> Comp.PatFalse (_loc) 
-     | x = SYMBOL ->  Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
+     | x = SYMBOL; tauOpt = OPT [":" ; tau = cmp_typ -> tau] ->  
+         (match tauOpt with
+           | None -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
+           | Some tau -> Comp.PatAnn (_loc, Comp.PatVar (_loc, Id.mk_name (Id.SomeString x)), tau)
+         )
      | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) -> 
          let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s Comp.PatNil in 
            Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)

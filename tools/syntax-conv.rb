@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby-1.9.3-p0
+#!/usr/bin/env ruby
 
 class String
   def gsub_ignore_comments!(pat, *replacement, &block)

@@ -6,7 +6,7 @@
 
 # (Optional) Path to the Ruby executable; necessary if Ruby is not
 # in PATH.
-RUBY=
+RUBY=/Users/bpientka/.rvm/bin/ruby
 
 # Path to the syntax conversion script.
 CONVERT="$(cd $(dirname $0); pwd)/syntax-conv.rb"

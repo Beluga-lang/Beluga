@@ -747,7 +747,7 @@ and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
   | Ext.Comp.PatAnn (loc, pat, tau) ->
       let (pat', fcvars', fvars') = index_pattern cvars fcvars fvars pat in 
       let (tau', fcvars'') = index_comptyp cvars fcvars tau in 
-	(Apx.Comp.PatAnn (loc, pat', tau') , fcvars'', fvars)
+	(Apx.Comp.PatAnn (loc, pat', tau') , fcvars'', fvars')
 
 and index_pat_spine cvars fcvars fvars pat_spine = match pat_spine with
   | Ext.Comp.PatNil -> (Apx.Comp.PatNil, fcvars, fvars)
@@ -812,13 +812,15 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
 
   | Ext.Comp.Branch (loc, cD, pat, e) ->
       let empty_fcvars = [] in  
-      let _ = dprint (fun () -> "index_branch") in 
+      let _ = dprint (fun () -> "index_branch - pat") in 
       let (omega, cD', cvars1, fcvars1)  = 
 	index_mctx (CVar.create()) (empty_fcvars, not term_closed) cD in
-      let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 (Var.create ()) pat in 
+      let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 (Var.create ())  pat in 
+      let _ = dprint (fun () -> "index_pattern done") in 
     let cvars_all  = CVar.append cvars1 cvars in
     let vars_all  = Var.append fvars2 vars in
     let pat'' = reindex_pattern fvars2 pat' in 
+      let _ = dprint (fun () -> "reindex_pattern done") in 
     let (fcv2, _ ) = fcvars2 in 
     let fcv3      = List.append fcv2 fcvars in 
     let e'        = index_exp cvars_all vars_all (fcv3, term_closed) e in

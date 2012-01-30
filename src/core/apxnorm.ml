@@ -939,10 +939,14 @@ let rec fmvApxDCtx fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi with
       if List.mem x fMVs then 
 	psi
       else 
-	let (offset, _w) = Whnf.mctxCVarPos cD x  in          
-      let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ R.render_name x ^ 
-			" with CtxOffset " ^ R.render_offset offset) in 
-	  Apx.LF.CtxVar (Apx.LF.CtxOffset offset)
+	begin try
+	  let (offset, _w) = Whnf.mctxCVarPos cD x  in          
+	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ R.render_name x ^ 
+			    " with CtxOffset " ^ R.render_offset offset) in 
+	    Apx.LF.CtxVar (Apx.LF.CtxOffset offset)
+	with Whnf.Fmvar_not_found -> 
+	  raise (Error.Error (None, Error.UnboundName x))
+	end 
 
   | Apx.LF.DDec (psi, t_decl) -> 
       let psi' = fmvApxDCtx fMVs cD d_param  psi in 
@@ -959,10 +963,15 @@ let rec fmvApxHat fMVs cD (l_cd1, l_delta, k) phat =
 	if List.mem psi fMVs then 
 	  phat 
 	else 
-          let (offset, _) = Whnf.mctxCVarPos cD psi in
-	  let _ = dprint (fun () -> "[fmvApxHat] CtxName " ^ R.render_name psi ^
-			    " with " ^ R.render_offset offset ) in 
-            (Some (Int.LF.CtxOffset (offset)), d)
+	  begin try
+            let (offset, _) = Whnf.mctxCVarPos cD psi in
+	    let _ = dprint (fun () -> "[fmvApxHat] CtxName " ^ R.render_name psi ^
+			      " with " ^ R.render_offset offset ) in 
+              (Some (Int.LF.CtxOffset (offset)), d)
+	  with Whnf.Fmvar_not_found -> 
+	    raise (Error.Error (None, Error.UnboundName psi))
+	  end 
+
     | _ -> phat
   end
 

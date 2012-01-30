@@ -1,0 +1,106 @@
+% Untyped closure conversion from POPL12 paper 
+
+datatype tm:type  = 
+| lam: (tm -> tm) -> tm
+| app: tm -> tm -> tm
+; 
+
+datatype nat:type = 
+| z : nat
+| s : nat -> nat
+;
+
+schema ctx = tm;
+
+envr: type. 
+ctm: type.
+
+nil: envr.
+snoc : envr -> ctm -> envr.
+
+clam : (envr -> ctm) -> ctm.
+capp : ctm -> ctm -> ctm .
+proj: envr -> nat -> ctm.
+close : ctm -> envr -> ctm.
+open : ctm -> (envr -> ctm -> ctm) -> ctm.
+create: envr -> ctm.
+%{ 
+% mutual definition of datatypes is not working.
+ datatype envr: type = 
+| nil: envr
+| snoc : envr -> ctm -> envr 
+
+and datatype ctm: type = 
+| clam : (envr -> ctm) -> ctm
+| proj: envr -> nat -> ctm
+| close : ctm -> envr -> ctm
+| open : ctm -> (envr -> ctm -> ctm) -> ctm
+;
+
+}%
+schema cctx = ctm; 
+
+% Since we do not currently support direct pattern matching on contexts
+% we pattern match on M.
+
+
+rec addProjs : (g:cctx) [.nat] -> [g, e:envr . ctm] ->  [e:envr . ctm] = 
+fn n => fn m => case m of 
+| [ e:envr . M e ] => [e:envr . M e]
+| [ g,x:ctm, e:envr . M .. x e] => 
+  let [.N] = n in addProjs [.s N] [g, e:envr . M .. (proj e N) e]
+;
+
+datatype Ctx_rel : {g:ctx}{h:cctx} ctype = 
+| Rnil : Ctx_rel [] [] 
+| Rsnoc : (g:ctx){h:cctx} Ctx_rel [g] [h] -> Ctx_rel [g, x:tm] [h,x:ctm]
+;
+
+datatype CtxObj : {h:cctx} ctype = 
+| Ctx : {h:cctx} CtxObj [h] ; 
+
+
+% rec ctxToEnv : (g:cctx) [g. envr] = 
+
+rec ctxToEnv : (h:cctx) CtxObj [h] -> [h . envr] = 
+fn ctx => case ctx of 
+| Ctx [] => [ . nil] 
+| Ctx [h,x:ctm] => 
+  let [h' . Env .. ] = ctxToEnv (Ctx [h]) in 
+    [h', x:ctm . snoc (Env ..) x]
+;
+
+rec conv : (g:ctx) (h:cctx) Ctx_rel [g] [h] -> [g . tm] -> [h . ctm] = 
+fn cr => fn m => case m of 
+| [g', x:tm . x ] => 
+  (case cr of 
+   | Rsnoc [h] cr' => [h, x:ctm . x]
+  )
+
+| [g', x:tm . #p ..] => 
+  (case cr of 
+   | Rsnoc [h'] cr' =>
+     let [h'. M .. ] = conv cr' [g'. #p ..] in 
+       [h', x:ctm . M .. ]
+  )
+
+| [g .  lam \x. M .. x ] => 
+  (case cr of 
+  | cr : Ctx_rel [g] [h]  =>   % Note: use of type annotation to retrieve the
+                	      % type of cr
+    let [h,x:ctm . M' .. x] = conv (Rsnoc [h] cr) [g,x:tm . M .. x] in 
+    let [e:envr . N e] = addProjs [.z] [h,x:ctm, e:envr . M' .. x] in 
+    (case ctxToEnv (Ctx [h]) of
+     |  [h . Env .. ] => 
+      [h . close (clam \e. N e) (Env .. )]
+    )
+)
+
+
+| [ g . app (M ..) (N ..) ] => 
+  let [h . M' .. ] = conv cr [g . M .. ] in 
+  let [h . N' ..] = conv cr [g . N .. ] in 
+    [h . open (M' ..) (\env. \f. capp f (create (snoc env (N' ..) )))]
+
+;
+

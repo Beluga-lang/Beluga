@@ -74,12 +74,17 @@ class CompBlock < Block
     content.gsub_ignore_comments! /(?<leadin>=\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*in)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     # case scrutinee
     content.gsub_ignore_comments! /(?<leadin>case\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*of)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
-    content.gsub_ignore_comments! /(?<leadin>\|\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(:|=>))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
-    content.gsub_ignore_comments! /(?<leadin>(=>|in\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
-    # content.gsub_ignore_comments! /\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|=>|=|:|\|))/m, '[\k<ctx>. \k<obj>]\k<leadout>'
+    # case branch lhs
+    content.gsub_ignore_comments! /(?<leadin>\|\s*(\s*\{[^\{\}]*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(:|=>))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    # case branch rhs, let expression body and if branches
+    content.gsub_ignore_comments! /(?<leadin>(=>|⇒|in\s|then\s|else\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*(\)|;|else|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    #content.gsub_ignore_comments! /(?<leadin>(=>|in\s|then\s|else\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|else|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     content.gsub_ignore_comments! /<(?<ctx>[^<>]*?)\.(?<obj>[^<>]*?)>/m, '[\k<ctx>.\k<obj>]'
     content.gsub_ignore_comments! /FN/, 'mlam'
     content.gsub_ignore_comments! /::/, ':'
+    # if predicate
+    content.gsub_ignore_comments! /(?<leadin>if\s+\(?)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*==)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /(?<leadin>==\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*\)?\s*then)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     self
   end
 end

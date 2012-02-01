@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
 
 class String
   def gsub_ignore_comments!(pat, *replacement, &block)
@@ -40,13 +41,13 @@ class CompBlock < Block
       end
     end
     content.gsub_ignore_comments! /rec\s.*?=/m do |s|
-      s.gsub_ignore_comments! /(?<leadin>(::|->|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
+      s.gsub_ignore_comments! /(?<leadin>(::|->|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       s.gsub_ignore_comments! /\{(?<leadin>\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)(?<ctxtyp>[^\*\{\}:]*?)(?<leadout>\s*)\}/m, '(\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>)'
       s.gsub_ignore_comments! /(?<leadin>\{\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)\((?<ctxtyp>[^\*\{\}:]*?)\)\*(?<leadout>\s*\})/m, '\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>'
     end
     content.gsub_ignore_comments! /(=.*?;)/m do |s|
       s.gsub_ignore_comments! /\{.*?\}/m do |s|
-        s.gsub_ignore_comments! /(?<leadin>(::|->|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
+        s.gsub_ignore_comments! /(?<leadin>(::|->|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       end
     end
     content.gsub_ignore_comments! /\|.*?=>/ do |s|

@@ -30,7 +30,7 @@ class CompBlock < Block
   def mogrify!()
     content.gsub_ignore_comments! /schema\s.*?;/m do |s|
       s.gsub_ignore_comments! /\./, ','
-      s.gsub! /((?:block\s|,)\s*)([^,;\[\]]+)/m do |s|
+      s.gsub /((?:block\s|,)\s*)([^,;\[\]]+)/m do |s|
         s.gsub /^((?:block\s|,)\s*)([^:]+)$/m, '\1_t:\2'
       end
     end

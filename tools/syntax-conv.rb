@@ -38,6 +38,7 @@ class CompBlock < Block
         s.gsub /^((?:block\s|,)\s*)([^:]+)$/m, '\1_t:\2'
       end
     end
+
     # block expressions
     content.gsub_ignore_comments! /block\s[^;]*?\]/m do |s|
       s.gsub_ignore_comments! /\./, ','
@@ -45,18 +46,21 @@ class CompBlock < Block
         s.gsub /^((?:block\s|,)\s*)([^:]+)$/m, '\1_t:\2'
       end
     end
+
     # rec signature
     content.gsub_ignore_comments! /^(rec|let)\s.*?=/m do |s|
       s.gsub_ignore_comments! /(?<leadin>(::|->|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       s.gsub_ignore_comments! /\{(?<leadin>\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)(?<ctxtyp>[^\*\{\}:]*?)(?<leadout>\s*)\}/m, '(\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>)'
       s.gsub_ignore_comments! /(?<leadin>\{\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)\((?<ctxtyp>[^\*\{\}:]*?)\)\*(?<leadout>\s*\})/m, '\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>'
     end
+
     # rec and top-level let body
     content.gsub_ignore_comments! /(=.*?;)/m do |s|
       s.gsub_ignore_comments! /\{.*?\}/m do |s|
         s.gsub_ignore_comments! /(?<leadin>(::|->|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       end
     end
+
     # types in case patterns
     content.gsub_ignore_comments! /\|.*?(=>|⇒)/ do |s|
       s.gsub_ignore_comments! /(?<leadin>:\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\](?<leadout>\s*(=>|⇒))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
@@ -65,6 +69,7 @@ class CompBlock < Block
                                  '[\k<ctx>. \k<obj>]'
     # let expression pattern
     content.gsub_ignore_comments! /(?<leadin>let\s+(\{.*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*=)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+
     # type annotated let expression pattern
     content.gsub_ignore_comments! /(?<leadin>let\s+(\{[^\{\}]*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]=]*?)(?<typannot>\s*:\s*[^=]*?)(?<leadout>\s*=)/m, '\k<leadin>[\k<ctx>. \k<obj>]__ANNOT__\k<typannot>__ANNOT__\k<leadout>'
     # type annotation of let expression pattern
@@ -74,21 +79,26 @@ class CompBlock < Block
       s.gsub_ignore_comments! /(?<leadin>\{\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)\((?<ctxtyp>[^\*\{\}:]*?)\)\*(?<leadout>\s*\})/m, '\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>'
       s.gsub! /__ANNOT__/, ''
     end
+
     # let expression def
     content.gsub_ignore_comments! /(?<leadin>=\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*in)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+
     # case scrutinee
     content.gsub_ignore_comments! /(?<leadin>case\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*of)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+
     # case branch lhs
     content.gsub_ignore_comments! /(?<leadin>\|\s*(\s*\{[^\{\}]*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(:|=>|⇒))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+
     # case branch rhs, let expression body and if branches
     content.gsub_ignore_comments! /(?<leadin>(=>|⇒|in\s|then\s|else\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*(\)|;|else|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
-    #content.gsub_ignore_comments! /(?<leadin>(=>|in\s|then\s|else\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|else|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
-    content.gsub_ignore_comments! /<(?<ctx>[^<>]*?)\.(?<obj>[^<>]*?)>/m, '[\k<ctx>.\k<obj>]'
-    content.gsub_ignore_comments! /FN/, 'mlam'
-    content.gsub_ignore_comments! /::/, ':'
+
     # if predicate
     content.gsub_ignore_comments! /(?<leadin>if\s+\(?)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*==)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     content.gsub_ignore_comments! /(?<leadin>==\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*\)?\s*then)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+
+    content.gsub_ignore_comments! /<(?<ctx>[^<>]*?)\.(?<obj>[^<>]*?)>/m, '[\k<ctx>.\k<obj>]'
+    content.gsub_ignore_comments! /FN/, 'mlam'
+    content.gsub_ignore_comments! /::/, ':'
 
     # Undo obfuscation by unicode.
     content.gsub! /…/, '..'

@@ -30,6 +30,12 @@ class CompBlock < Block
   def mogrify!()
     # Temporarily translate '..' into its unicode version, to more easily distinguish it from '.'.
     content.gsub! /\.\./, '…'
+    content.gsub! /->/, '→'
+    content.gsub! /<-/, '←'
+    content.gsub! /\=>/, '⇒'
+    content.gsub! /\\([[:word:]]+)\./ do |s|
+      "\\" + $1 + "__LAMDOT__"
+    end
 
     # schema declarations
     content.gsub_ignore_comments! /schema\s.*?;/m do |s|
@@ -49,7 +55,7 @@ class CompBlock < Block
 
     # rec signature
     content.gsub_ignore_comments! /^(rec|let)\s.*?[^[[:word:]]]=/m do |s|
-      s.gsub_ignore_comments! /(?<leadin>(::|->|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
+      s.gsub_ignore_comments! /(?<leadin>(::|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       s.gsub_ignore_comments! /\{(?<leadin>\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)(?<ctxtyp>[^\*\{\}:]*?)(?<leadout>\s*)\}/m, '(\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>)'
       s.gsub_ignore_comments! /(?<leadin>\{\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)\((?<ctxtyp>[^\*\{\}:]*?)\)\*(?<leadout>\s*\})/m, '\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>'
     end
@@ -57,13 +63,13 @@ class CompBlock < Block
     # rec and top-level let body
     content.gsub_ignore_comments! /([^[[:word:]]]=.*?;)/m do |s|
       s.gsub_ignore_comments! /\{.*?\}/m do |s|
-        s.gsub_ignore_comments! /(?<leadin>(::|->|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
+        s.gsub_ignore_comments! /(?<leadin>(::|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       end
     end
 
     # types in case patterns
-    content.gsub_ignore_comments! /\|.*?(=>|⇒)/ do |s|
-      s.gsub_ignore_comments! /(?<leadin>:\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\](?<leadout>\s*(=>|⇒))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /\|.*?⇒/ do |s|
+      s.gsub_ignore_comments! /(?<leadin>:\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\](?<leadout>\s*⇒)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     end
 
     content.gsub_ignore_comments! /\(\s*\[\s*(?<ctx>[^\[\]]*?)\s*\]\s*(?<obj>((?<pobj>\(([^()]+|\g<pobj>)*\))|[^()])+)\s*\)/m,
@@ -75,7 +81,7 @@ class CompBlock < Block
     content.gsub_ignore_comments! /(?<leadin>let\s+(\{[^\{\}]*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]=]*?)(?<typannot>\s*:\s*[^=]*?)(?<leadout>\s*=)/m, '\k<leadin>[\k<ctx>. \k<obj>]__ANNOT__\k<typannot>__ANNOT__\k<leadout>'
     # type annotation of let expression pattern
     content.gsub! /__ANNOT__.*?__ANNOT__/ do |s|
-      s.gsub_ignore_comments! /(?<leadin>(::|->|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
+      s.gsub_ignore_comments! /(?<leadin>(::|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       s.gsub_ignore_comments! /\{(?<leadin>\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)(?<ctxtyp>[^\*\{\}:]*?)(?<leadout>\s*)\}/m, '(\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>)'
       s.gsub_ignore_comments! /(?<leadin>\{\s*)(?<ctx>\s*[^\*\{\}:]*?:\s*)\((?<ctxtyp>[^\*\{\}:]*?)\)\*(?<leadout>\s*\})/m, '\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>'
       s.gsub! /__ANNOT__/, ''
@@ -88,7 +94,7 @@ class CompBlock < Block
     content.gsub_ignore_comments! /(?<leadin>case\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*of)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
 
     # case branch lhs
-    content.gsub_ignore_comments! /(?<leadin>\|\s*(\s*\{[^\{\}]*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(:|=>|⇒))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /(?<leadin>\|\s*(\s*\{[^\{\}]*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(:|⇒))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
 
     # case branch rhs, let expression body and if branches
     content.gsub_ignore_comments! /(?<leadin>(=>|⇒|in\s|then\s|else\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*(\)|;|else|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
@@ -103,6 +109,10 @@ class CompBlock < Block
 
     # Undo obfuscation by unicode.
     content.gsub! /…/, '..'
+    content.gsub! /→/, '->'
+    content.gsub! /←/, '<-'
+    content.gsub! /⇒/, '=>'
+    content.gsub! /__LAMDOT__/, '.'
 
     self
   end

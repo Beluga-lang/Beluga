@@ -65,7 +65,8 @@ class CompBlock < Block
     content.gsub_ignore_comments! /\|.*?(=>|⇒)/ do |s|
       s.gsub_ignore_comments! /(?<leadin>:\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\](?<leadout>\s*(=>|⇒))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     end
-    content.gsub_ignore_comments! /\(\s*\[\s*(?<ctx>[^\.]*?)\s*\]\s*(?<obj>((?<pobj>\(([^()]+|\g<pobj>)*\))|[^()])+)\s*\)/m,
+
+    content.gsub_ignore_comments! /\(\s*\[\s*(?<ctx>[^\[\]]*?)\s*\]\s*(?<obj>((?<pobj>\(([^()]+|\g<pobj>)*\))|[^()])+)\s*\)/m,
                                  '[\k<ctx>. \k<obj>]'
     # let expression pattern
     content.gsub_ignore_comments! /(?<leadin>let\s+(\{.*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*=)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'

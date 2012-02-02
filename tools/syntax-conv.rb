@@ -28,6 +28,9 @@ end
 class CompBlock < Block
 
   def mogrify!()
+    # Temporarily translate '..' into its unicode version, to more easily distinguish it from '.'.
+    content.gsub! /\.\./, '…'
+
     # schema declarations
     content.gsub_ignore_comments! /schema\s.*?;/m do |s|
       s.gsub_ignore_comments! /\./, ','
@@ -86,6 +89,10 @@ class CompBlock < Block
     # if predicate
     content.gsub_ignore_comments! /(?<leadin>if\s+\(?)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*==)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     content.gsub_ignore_comments! /(?<leadin>==\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*\)?\s*then)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+
+    # Undo obfuscation by unicode.
+    content.gsub! /…/, '..'
+
     self
   end
 end

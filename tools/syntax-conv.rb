@@ -3,7 +3,7 @@
 
 class String
   def gsub_ignore_comments!(pat, *replacement, &block)
-    src = pat.source.gsub /\\s/, '(?:\s|%.*?$)'
+    src = pat.source.gsub /\\s/, '(?-m:\s|%.*$)'
     pat = Regexp.new("(?:(?<comment>(?m:%\{.*?\}%)|%.*?$)|#{src})", pat.options)
     current, post = "", self
     while pat =~ post do

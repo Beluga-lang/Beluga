@@ -54,8 +54,9 @@ class CompBlock < Block
         s.gsub_ignore_comments! /(?<leadin>(::|->|→|:|\})\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       end
     end
-    content.gsub_ignore_comments! /\|.*?=>/ do |s|
-      s.gsub_ignore_comments! /(?<leadin>:\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\](?<leadout>\s*=>)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    # types in case patterns
+    content.gsub_ignore_comments! /\|.*?(=>|⇒)/ do |s|
+      s.gsub_ignore_comments! /(?<leadin>:\s*)\(?(?<obj>[^\{\}]*?)\)?\s*\[\s*(?<ctx>.*?)\s*\](?<leadout>\s*(=>|⇒))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     end
     content.gsub_ignore_comments! /\(\s*\[\s*(?<ctx>[^\.]*?)\s*\]\s*(?<obj>((?<pobj>\(([^()]+|\g<pobj>)*\))|[^()])+)\s*\)/m,
                                  '[\k<ctx>. \k<obj>]'
@@ -75,7 +76,7 @@ class CompBlock < Block
     # case scrutinee
     content.gsub_ignore_comments! /(?<leadin>case\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*of)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     # case branch lhs
-    content.gsub_ignore_comments! /(?<leadin>\|\s*(\s*\{[^\{\}]*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(:|=>))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
+    content.gsub_ignore_comments! /(?<leadin>\|\s*(\s*\{[^\{\}]*?\}\s*)*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(:|=>|⇒))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     # case branch rhs, let expression body and if branches
     content.gsub_ignore_comments! /(?<leadin>(=>|⇒|in\s|then\s|else\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>((?<pobj>\(([^()]+?|\g<pobj>)*\))|[^()])+?)(?<leadout>\s*(\)|;|else|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     #content.gsub_ignore_comments! /(?<leadin>(=>|in\s|then\s|else\s)\s*)\[\s*(?<ctx>[^\.\[\]%]*)\s*\]\s*(?<obj>[^\[\]]*?)(?<leadout>\s*(;|else|\|))/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'

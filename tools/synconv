@@ -1,0 +1,213 @@
+#!/bin/bash
+
+##
+## Configuration
+##
+
+# Path to the syntax conversion script.
+CONVERT="$(cd $(dirname $0); pwd)/syntax-conv.rb"
+
+# Array of files to ignore when converting a whole directory.
+IGNORE=("eq-proof-full-crec.bel" "evaluation.bel" "evaluation-seq.bel" \
+  "evaluation-2.bel")
+
+# Increased verbosity, set when VERBOSE=0.
+VERBOSE=1
+
+
+##
+## Help
+##
+
+usage () {
+  echo "Usage:"
+  echo
+  echo "  $ $(basename $0) -o <file-out> <file-in>"
+  echo
+  echo "  Convert the Beluga source file <file-in> to the new 1.0 syntax."
+  echo "  If <file-out> is specified with the '-o' switch then the output"
+  echo "  is recorded in <file-out>, otherwise it is dumped to STDIN."
+  echo
+  echo "  $ $(basename $0) -s <src-dir> -t <dst-dir>"
+  echo
+  echo "  Copy the contents of <src-dir> to a new directory, <dst-dir>,"
+  echo "  and the convert every Beluga source file in <dst-dir> to the"
+  echo "  1.0 syntax."
+  echo
+  echo "  If a suitable ruby interpreter cannot be found automatically,"
+  echo "  you can point to one explicitly using the RUBY environment"
+  echo "  variable, as in the following example:"
+  echo
+  echo "  $ RUBY=/path/to/ruby $(basename $0) -o <file-out> <file-in>"
+  echo
+  echo "Options:"
+  echo -e "  -v\t\t Increased verbosity."
+  echo -e "  -h\t\t Show this message."
+  exit 1
+}
+
+
+##
+## Utilities
+##
+
+# Check if a program is in PATH.
+exists () {
+  type $1 &>/dev/null
+}
+
+# Abandon ship.
+abort () {
+  [[ -n "$1" ]] && echo "$1"
+  exit -1
+}
+
+# Get the absolute path of a file or directory.
+abspath () {
+  echo "$(cd $(dirname $1); pwd)/$(basename $1)"
+}
+
+
+##
+## Preliminary checks
+##
+
+if [[ ! -z "$RUBY" ]]; then
+  [[ -x "$RUBY" ]] ||
+  abort "Error: Unable to find Ruby executable."
+elif exists "ruby"; then
+  RUBY="ruby"
+else
+  abort "Error: Unable to locate Ruby executable."
+fi
+
+AWKSRC='{if ($1 >= 1 && $2 >= 9) {print 0}}'
+if [[ -z $($RUBY -e 'puts RUBY_VERSION' | tr . ' ' | awk "$AWKSRC") ]]; then
+  abort "Error: $(basename $0) requires Ruby version >= '1.9'."
+fi
+
+[[ -x "$CONVERT" ]] || abort "Error: Conversion script is not executable."
+
+
+##
+## Command-line options
+##
+
+if [[ "$#" = 0 ]]; then
+  usage
+fi
+
+while (( "$#" )); do
+  case "$1" in
+    -s)
+      (( "$#" > 1 )) || abort "Error: Missing argument for '-s'."
+      shift
+      SOURCE_DIRECTORY="$1"
+      ;;
+    -t)
+      (( "$#" > 1 )) || abort "Error: Missing argument for '-t'."
+      shift
+      TARGET_DIRECTORY="$1"
+      ;;
+    -o)
+      (( "$#" > 1 )) || abort "Error: Missing argument for '-o'."
+      shift
+      OUTPUT_FILE="$1"
+      ;;
+    -v)
+      VERBOSE=0
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      INPUT_FILE="$1"
+      ;;
+  esac
+  shift
+done
+
+if [[ -z "$SOURCE_DIRECTORY" && -z "$INPUT_FILE" ]]; then
+  usage
+fi
+
+if [[ ! -z "$SOURCE_DIRECTORY" ]]; then
+  [[ -d $SOURCE_DIRECTORY && -r $SOURCE_DIRECTORY ]] ||
+  abort "Error: Directory is not accessible, $SOURCE_DIRECTORY."
+  if [[ -z "$TARGET_DIRECTORY" ]]; then
+    abort "Error: Target directory must be specified."
+  fi
+fi
+
+if [[ ! -z "$TARGET_DIRECTORY" ]]; then
+  if [[ -z "$SOURCE_DIRECTORY" ]]; then
+    abort "Error: Source directory must be specified."
+  fi
+  if [[ ! -d $TARGET_DIRECTORY ]]; then
+    mkdir -p $TARGET_DIRECTORY ||
+    abort "Error: Cannot create $TARGET_DIRECTORY."
+  elif [[ ! -w $TARGET_DIRECTORY ]]; then
+    abort "Error: Cannot access $TARGET_DIRECTORY."
+  fi
+fi
+
+if [[ ! -z "$INPUT_FILE" ]]; then
+  if [[ ! -z "$SOURCE_DIRECTORY" ]]; then
+    abort "Error: Cannot mix directory and file modes."
+  fi
+  [[ -f "$INPUT_FILE" && -r "$INPUT_FILE" ]] ||
+  abort "Error: File is not readable, $INPUT_FILE."
+fi
+
+if [[ ! -z "$OUTPUT_FILE" ]]; then
+  if [[ ! -z "$SOURCE_DIRECTORY" ]]; then
+    abort "Error: Cannot mix directory and file modes."
+  fi
+  if [[ -d "$OUTPUT_FILE" ]]; then
+    abort "Error: Output file exists and is a directory."
+  elif [[ -f "$OUTPUT_FILE" ]]; then
+    [[ -w "$OUTPUT_FILE" ]] ||
+    abort "Error: Output file exists but it is not writable."
+  else
+    OUTPUT_DIR=$(dirname $OUTPUT_FILE)
+    [[ -d $OUTPUT_DIR && -w $OUTPUT_DIR ]] ||
+    abort "Error: Destination directory of output file is not writable."
+  fi
+fi
+
+
+##
+## Translation
+##
+
+if [[ ! -z "$INPUT_FILE" ]]; then
+  if [[ ! -z "$OUTPUT_FILE" ]]; then
+    $CONVERT "$INPUT_FILE" > "$OUTPUT_FILE"
+  else
+    $CONVERT "$INPUT_FILE"
+  fi
+else
+  SRCDIR=$(abspath $SOURCE_DIRECTORY)
+  cp -ru $SOURCE_DIRECTORY/* $TARGET_DIRECTORY/
+  pushd $TARGET_DIRECTORY &>/dev/null
+  for f in $(find . -name "*.bel"); do
+    skip=1
+    for i in ${IGNORE[@]}; do
+      if [[ "$(basename $f)" = "$i" ]]; then
+        skip=0
+        break
+      elif [[ "$(abspath $f)" = "$i" ]]; then
+        skip=0
+        break
+      fi
+    done
+    if [[ $skip = 1 ]]; then
+      [[ $VERBOSE = 0 ]] && echo -n "Converting: $f"
+      $CONVERT "$f" > "$f.tmp" && rm -f "$f" && mv "$f.tmp" "$f"
+      [[ $VERBOSE = 0 ]] && echo " => DONE."
+    else
+      [[ $VERBOSE = 0 ]] && echo "Skipping: $f"
+    fi
+  done
+  popd &>/dev/null
+fi

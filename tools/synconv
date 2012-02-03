@@ -22,13 +22,13 @@ VERBOSE=1
 usage () {
   echo "Usage:"
   echo
-  echo "  # $(basename $0) -o <file-out> <file-in>"
+  echo "  $ $(basename $0) -o <file-out> <file-in>"
   echo
   echo "  Convert the Beluga source file <file-in> to the new 1.0 syntax."
   echo "  If <file-out> is specified with the '-o' switch then the output"
   echo "  is recorded in <file-out>, otherwise it is dumped to STDIN."
   echo
-  echo "  # $(basename $0) -s <src-dir> -t <dst-dir>"
+  echo "  $ $(basename $0) -s <src-dir> -t <dst-dir>"
   echo
   echo "  Copy the contents of <src-dir> to a new directory, <dst-dir>,"
   echo "  and the convert every Beluga source file in <dst-dir> to the"

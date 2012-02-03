@@ -4,10 +4,6 @@
 ## Configuration
 ##
 
-# (Optional) Path to the Ruby executable; necessary if Ruby is not
-# in PATH.
-RUBY=/Users/bpientka/.rvm/bin/ruby
-
 # Path to the syntax conversion script.
 CONVERT="$(cd $(dirname $0); pwd)/syntax-conv.rb"
 
@@ -37,6 +33,12 @@ usage () {
   echo "  Copy the contents of <src-dir> to a new directory, <dst-dir>,"
   echo "  and the convert every Beluga source file in <dst-dir> to the"
   echo "  1.0 syntax."
+  echo
+  echo "  If a suitable ruby interpreter cannot be found automatically,"
+  echo "  you can point to one explicitly using the RUBY environment"
+  echo "  variable, as in the following example:"
+  echo
+  echo "  $ RUBY=/path/to/ruby $(basename $0) -o <file-out> <file-in>"
   echo
   echo "Options:"
   echo -e "  -v\t\t Increased verbosity."

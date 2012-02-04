@@ -1,0 +1,47 @@
+nat : type.
+z : nat.
+s : nat -> nat.
+
+schema w = some [] nat;
+
+rec id-test : {g:w} [g. nat] -> [g. nat] =
+    mlam g => fn x => x ;
+
+
+
+rec identity1 : {g:w} [g. nat] -> [g. nat] =
+  mlam g =>
+    fn x =>
+      case x of %not
+          [g. z]   : [g. nat] => [g. z]
+        | {U: [g. nat]} [g. s (U .. )] : [g. nat] => [g. s (U .. )];
+
+
+
+rec identity2 : {g:w} [g. nat] -> [g. nat] =
+  mlam g =>
+    fn x =>
+      case x of %not
+          [g. z]   : [g. nat] => x
+        | {U:[g. nat]} [g. s (U .. )] : [g. nat] => [g. s (U .. )];
+
+
+rec identity2 : {g:w} [g. nat] -> [g. nat] =
+  mlam g =>
+    fn x =>
+      case x of %not
+          [g. z]   : [g. nat] => x
+        | {U:[g. nat]} [g. s (U .. )] : [g. nat] => x;
+
+
+
+
+
+% SHOULD NOT TYPE CHECK
+% rec identity : {g:(w)*} nat [g] -> nat [g] =
+%   FN g =>
+%    fn x =>
+%      case x of
+%          [g] z)   : nat [g] => [g] z)
+%        | [g] s n) : nat [g] => [g] s n);
+

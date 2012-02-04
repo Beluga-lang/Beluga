@@ -1,0 +1,75 @@
+tp: type.
+nat: tp.
+cross: tp -> tp -> tp.
+
+term: tp -> type.
+z: term nat.
+% s: term nat -> term nat.
+% pair: term T -> term S -> term (cross T S).
+
+
+schema tctx = term S; 
+
+
+rec cmatch_correct1 : (g:tctx) [g. term T] -> [g. term T] =
+fn n  => case n of 
+ | [g. z] => [g. z]
+ | [g. #p ..] => [g. #p ..]
+;
+
+
+rec cmatch_correct2 : (g:tctx) [g. term (T ..)] -> [g. term (T ..)] =
+fn n  => case n of 
+ | [g. z] => [g. z]
+ | [h,x:term (S ..). x] => [h,x:term (S ..). x]
+ | % {#p::(term T)[g]}
+   [g,x:term (S ..). #p ..] => [g,x:term (S ..). #p ..]
+;
+
+
+rec cmatch_correct3 : (g:tctx) [g. term T] -> [g. term T] =
+fn n  => case n of 
+ | [g. z] => [g. z]
+ | [h,x:term S. x] => [h,x:term S. x]
+ |  {#p:[g. term T]}
+   [g,x:term S. #p ..] => [g,x:term S. #p ..]
+;
+
+
+rec cmatch_incorrect2 : (g:tctx) [g. term T] -> [g. term T] =
+fn n  => case n of  %not
+% | [g] z => [g] z
+ | [h,x:term S. x] => [h,x:term S. x]
+ |  {#p:[g. term T]}
+   [g,x:term S. #p ..] => [g,x:term S. #p ..]
+
+
+;
+
+
+%{
+% PVAR CASE NOT IMPLEMENTED ??? 
+rec cmatch_incorrect3 : (g:tctx) [g. term T] -> [g. term T] =
+fn n  => case n of  %not
+ | [g] z => [g] z
+ | [h,x:term S] x => [h,x:term S] x
+%{ |  {#p::(term T)[g]}
+   [g,x:term S] #p .. => [g,x:term S] #p ..
+}%
+
+;
+
+
+
+rec cmatch_incorrect1 : (g:tctx) [g. term T] -> [g. term T] =
+fn n  => case n of  %not
+ | [g. z] => [g. z]
+% | [h,x:term S] x => [h,x:term S] x
+ |  {#p:[g. term T]}
+   [g,x:term S. #p ..] => [g,x:term S. #p ..]
+
+
+;
+
+}%
+

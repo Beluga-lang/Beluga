@@ -1,0 +1,702 @@
+%{ 
+  CH 3:  Untyped arithmetic expressions
+  Author: Brigitte Pientka
+
+  EVALUATION RULES AND META-THEORY
+
+  Extended with leq
+
+}%
+
+% ---------------------------------------------------------- %
+% INTRODUCE GOOD VALUES AND STUCK VALUES
+
+% Good Values
+value     : term -> type.
+nat_value : term -> type.
+
+v_true : value true.
+v_false: value false.
+v_num  : nat_value N -> value N.
+
+
+v_z    : nat_value z.
+v_s    : nat_value N -> nat_value (succ N).
+
+
+isbool: term -> type.
+is_true: isbool true.
+is_false: isbool false.
+
+% Stuck (normal forms, i.e. terms which
+% do not evaluate further, but are not
+% meaningful values.
+
+stuck: term -> type.
+
+stuck_succ_true : stuck (succ true).
+stuck_succ_false: stuck (succ false).
+stuck_pred_true : stuck (pred true).
+stuck_pred_false: stuck (pred false).
+stuck_succ      : stuck V -> stuck (succ V).
+stuck_pred      : stuck V -> stuck (pred V).
+
+stuck_iszero_true : stuck (iszero true).
+stuck_iszero_false: stuck (iszero false).
+stuck_iszero      : stuck V -> stuck (iszero V).
+
+stuck_switch_zero : stuck (switch z _ _).
+stuck_switch_succ : stuck (switch (succ _ ) _ _ ).
+stuck_switch      : stuck V -> stuck (switch V _ _ ).
+
+
+stuck_leq_1_true  : stuck (leq true N).
+stuck_leq_1_false : stuck (leq false N).
+
+stuck_leq_2_true : stuck (leq M true).
+stuck_leq_2_false : stuck (leq M false).
+
+stuck_leq_1       : stuck M -> stuck (leq M N).
+stuck_leq_2       : stuck N -> stuck (leq M N).
+
+% ---------------------------------------------------------- %
+% Small-step operational semantics
+
+step: term -> term -> type.
+
+e_switch_true:  
+   step (switch true T2 T3)    T2.
+
+e_switch_false:
+   step (switch false T2 T3)   T3.
+
+e_switch:
+   step T1 T1' 
+-> step (switch T1 T2 T3)      (switch T1' T2 T3).
+
+e_succ:
+    step T T' 
+-> step (succ T) (succ T').
+
+e_pred_zero:
+   step (pred z) z.
+
+e_pred_succ:
+  nat_value N 
+-> step (pred (succ N)) N.
+
+e_pred:
+    step T T'
+-> step (pred T) (pred T').
+
+e_iszero_zero:
+   step (iszero z) true.
+
+e_iszero_succ:
+   nat_value N
+->  step (iszero (succ N)) false.
+
+e_iszero:
+   step M N
+-> step (iszero M) (iszero N).
+
+
+e_leq_1 : 
+   step N N' 
+-> step (leq N M) (leq N' M).
+
+e_leq_2 : 
+   nat_value M -> step N N'  
+-> step (leq M N) (leq M N').
+
+
+e_leq_zero : nat_value N -> step (leq z N) true.
+e_leq_succ_zero : nat_value N -> step (leq (succ N) z) false.
+
+e_leq_succ_succ : 
+   nat_value V1 -> nat_value V2
+-> step (leq (succ V1) (succ V2)) (leq V1 V2).
+
+
+%{
+  In the definition of leq below,
+  we take evaluating values as a real
+  cost; an alternative would be 
+
+e_leq_succ : 
+  nat_value V1 -> nat_value V2 -> step (leq V1 V2) V
+-> step (leq (succ V1) (succ V2)) V.
+
+}%
+
+
+% ---------------------------------------------------------- %
+%{
+  Equality between terms 
+}%
+equal: term -> term -> type.
+ref: equal T T.
+
+% -------------------------------------------------------- %
+%{
+Determinacy of evaluation:
+
+Theorem: if step T T1 and step T T2 then equal T1 T2.
+
+}%
+
+steps_to_terms: term -> term -> term -> type.
+andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
+
+impossible : type.
+
+rec values_dont_step : (step M M')[ ] -> (value M )[ ] -> impossible [ ]= 
+fn s => fn v => case v of 
+| [ ] v_true    => (case s of [ ] {} )
+| [ ] v_false   => (case s of [ ] {} )
+| [ ] v_num v_z => (case s of [ ] {} )
+| [ ] v_num (v_s V) => 
+    (case s of [ ] e_succ D => 
+		values_dont_step ([ ] D) ([ ] v_num V))
+;
+
+
+rec det : (steps_to_terms T T1 T2)[ ] -> (equal T1 T2)[ ] =
+fn s => case s of 
+| [ ] andalso (e_switch_true)     (e_switch_true)    =>  [ ] ref
+| [ ] andalso (e_switch_false)    (e_switch_false)   =>  [ ] ref
+| [ ] andalso (e_switch D)        (e_switch E)       =>
+  let [ ] ref = det ([ ] andalso D E) in [ ] ref
+
+| [ ] andalso (e_succ D)          (e_succ F)          => 
+  let [ ] ref = det ([ ] andalso D F) in [ ] ref
+
+| [ ] andalso (e_pred_zero)       (e_pred_zero)       => [ ] ref
+| [ ] andalso (e_pred_succ _ )    (e_pred_succ _ )    => [ ] ref
+| [ ] andalso (e_pred D)          (e_pred F)          =>
+    let [ ] ref = det ([ ] andalso D F) in  [ ] ref
+
+| [ ] andalso (e_leq_1 D)          (e_leq_1 F)        =>
+  let [ ] ref = det ([ ] andalso D F) in [ ] ref
+
+| [ ] andalso (e_leq_2 _ D)        (e_leq_2 _ F)      =>
+  let [ ] ref = det ([ ] andalso D F) in [ ] ref
+| [ ] andalso (e_leq_zero _)         (e_leq_zero _)=> [ ] ref
+| [ ] andalso (e_leq_succ_zero _)    (e_leq_succ_zero _)=> [ ] ref
+| [ ] andalso (e_leq_succ_succ _ _)  (e_leq_succ_succ _ _) => [ ] ref
+  
+% Impossible cases for leq
+| [ ] andalso (e_leq_1 D)          (e_leq_2 NV F)      =>
+  (case values_dont_step ([ ] D) ([ ] v_num NV) of [ ] {})
+  % This case below may not be necessary 
+| [ ] andalso (e_leq_1 D)          (e_leq_zero NV)      =>
+  (case values_dont_step ([ ] D) ([ ] v_num v_z) of [ ] {})
+| [ ] andalso (e_leq_1 D)          (e_leq_succ_zero NV)      =>
+  (case values_dont_step ([ ] D) ([ ] v_num (v_s NV)) of [ ] {})
+| [ ] andalso (e_leq_1 D)          (e_leq_succ_succ NV1 _ )  =>
+  (case values_dont_step ([ ] D) ([ ] v_num (v_s NV1)) of [ ] {})
+
+| [ ] andalso (e_leq_zero NV)      (e_leq_1 D)      =>
+  (case values_dont_step ([ ] D) ([ ] v_num v_z) of [ ] {})
+| [ ] andalso (e_leq_succ_zero NV) (e_leq_1 D)      =>
+  (case values_dont_step ([ ] D) ([ ] v_num (v_s NV)) of [ ] {})
+| [ ] andalso (e_leq_succ_succ NV1 _ ) (e_leq_1 D)  =>
+  (case values_dont_step ([ ] D) ([ ] v_num (v_s NV1)) of [ ] {})
+
+
+| [ ] andalso (e_leq_2 NV F)       (e_leq_1 D)         =>
+  (case values_dont_step ([ ] D) ([ ] v_num NV) of [ ] {})
+
+| [ ] andalso (e_leq_2 _ D)        (e_leq_zero NV)      =>
+  (case values_dont_step ([ ] D) ([ ] v_num NV) of [ ] {})
+
+| [ ] andalso (e_leq_2 _ D)        (e_leq_succ_zero NV)     =>
+  (case values_dont_step ([ ] D) ([ ] v_num v_z) of [ ] {})
+| [ ] andalso (e_leq_2 _ D)        (e_leq_succ_succ _ NV2)  =>
+  (case values_dont_step ([ ] D) ([ ] v_num (v_s NV2)) of [ ] {})
+
+
+| [ ] andalso (e_leq_1 D)          (e_leq_2 NV F)        =>
+  (case values_dont_step ([ ] D) ([ ] v_num NV) of [ ] {})
+| [ ] andalso (e_leq_zero NV)      (e_leq_2 _ D)         =>
+  (case values_dont_step ([ ] D) ([ ] v_num NV) of [ ] {})
+| [ ] andalso (e_leq_succ_zero NV) (e_leq_2 _ D)         =>
+  (case values_dont_step ([ ] D) ([ ] v_num v_z) of [ ] {})
+| [ ] andalso (e_leq_succ_succ _ NV2) (e_leq_2 _ D)      =>
+  (case values_dont_step ([ ] D) ([ ] v_num (v_s NV2)) of [ ] {})
+
+% Impossible cases for pred
+| [ ] andalso (e_pred D)          (e_pred_succ V )    =>
+   (case values_dont_step ([ ] D) ([ ] v_num (v_s V)) of [ ] {})
+| [ ] andalso (e_pred_succ V )       (e_pred D)       =>
+   (case values_dont_step ([ ] D) ([ ] v_num (v_s V)) of [ ] {})
+  
+| [ ] andalso (e_iszero_zero)     (e_iszero_zero)     => [ ] ref
+| [ ] andalso (e_iszero_succ _ )  (e_iszero_succ _)   => [ ] ref
+| [ ] andalso (e_iszero D)        (e_iszero F)        =>
+   let [ ] ref = det ([ ] andalso D F) in  [ ] ref
+
+% Impossible cases for iszero
+| [ ] andalso (e_iszero_succ V )  (e_iszero F)        => 
+   (case values_dont_step ([ ] F) ([ ] v_num (v_s V)) of [ ] {})
+
+| [ ] andalso (e_iszero D)        (e_iszero_succ V )  => 
+   (case values_dont_step ([ ] D) ([ ] v_num (v_s V)) of [ ] {})
+
+;
+
+
+% -------------------------------------------------------- %
+% Normal form = values
+%{ 
+ Multi-step evaluation rules 
+}%
+mstep: term -> term -> type.
+
+m_step : step M N' -> mstep N' N
+     -> mstep M N.   
+
+m_ref  : mstep M M.   % Reflexive
+
+
+% -------------------------------------------------------- %
+%{ Values evaluate to themselves
+
+ Lemma: if value N and mstep N M then  equal N M.
+
+}%
+rec lemma_val : (value N)[ ] -> (mstep N M)[ ] -> (equal M N)[ ] =
+fn v => fn s => case v of 
+| [ ] v_true => 
+    let [ ] m_ref  = s in 
+      [ ] ref
+
+| [ ] v_false => 
+    let  [ ] m_ref = s in
+      [ ] ref
+
+| [ ] v_num v_z     => 
+  let [ ] m_ref = s in 
+    [ ] ref
+
+| [ ] v_num (v_s V)   =>
+  (case s of 
+   | [ ] m_ref => [ ] ref 
+   | [ ] m_step S MS => 
+     case values_dont_step ([ ] S) v of [ ] {}
+  )
+
+;
+
+% -------------------------------------------------------- %
+%{
+Theorem: Uniqueness of evaluation
+
+If mstep M N  and mstep M N'  then equal N N'.
+}%
+
+msteps_to_terms: term -> term -> term -> type.
+andalso': mstep M M1 -> mstep M M2 -> msteps_to_terms M M1 M2.
+
+rec unique : (msteps_to_terms M N1 N2)[ ] 
+             -> (value N1)[ ] -> (value N2)[ ] 			      
+	     -> (equal N1 N2)[ ] =
+fn ms => fn vn1 => fn vn2 => case ms of 
+| [ ] andalso' (m_step S1 MS1) (m_ref) => 
+  let [ ] V2 = vn2 in 
+    lemma_val ([ ] V2) ([ ] m_step S1 MS1)
+
+| [ ] andalso' (m_step S1 MS1) (m_step S2 MS2) => 
+  let [ ] ref = det ([ ] andalso S1 S2) in
+    unique ([ ] andalso' MS1 MS2) vn1 vn2
+
+| [ ] andalso' (m_ref )       (m_ref )   => 
+   [ ] ref
+
+| [ ] andalso' (m_ref )       (m_step S MS)   => 
+  (case values_dont_step ([ ] S)  vn1 of [ ] {})
+
+;
+
+
+% -------------------------------------------------------- %
+%{
+ Correctness of algorithmic small-step semantics 
+}%
+
+multi_step: term -> term -> type.
+
+ms_tr: multi_step M N' -> multi_step N' N
+      -> multi_step M N.
+
+ms_ref: multi_step M M.
+
+ms_step: step M N
+	 -> multi_step M N.
+
+
+%{
+Admissibility of transitivity for mstep:
+}%
+
+rec m_trans : (mstep M N')[ ] -> (mstep N' N)[ ] -> (mstep M N)[ ] = 
+fn ms1 => fn ms2 => case ms1 of 
+| [ ] m_ref  => ms2 
+| [ ] m_step  S1 MS1 => 
+  let [ ] MS1' = m_trans ([ ] MS1) ms2 in 
+    [ ] m_step S1 MS1'
+;
+
+
+rec sound : (mstep M N)[ ] -> (multi_step M N)[ ] = 
+fn ms => case ms of 
+| [ ] m_ref => [ ] ms_ref
+| [ ] m_step S MS => 
+  let [ ] MS' = sound ([ ] MS) in 
+    [ ] ms_tr (ms_step S) MS'
+;
+
+
+rec complete : (multi_step M N)[ ] -> (mstep M N)[ ] =
+fn ms =>  case ms of 
+| [ ] ms_ref => 
+    [ ] m_ref 
+| [ ] ms_tr MS1 MS2 => 
+  let [ ] MS2' = complete ([ ] MS2) in 
+  let [ ] MS1' = complete ([ ] MS1) in 
+   m_trans ([ ] MS1') ([ ] MS2')
+
+| [ ] ms_step S => 
+  [ ] m_step S m_ref
+;
+
+
+% -------------------------------------------------------- %
+%{ 
+Termination of Evaluation
+
+We want to prove the following theorem:
+
+THEOREM: For every term, there exists an evaluation sequence 
+ which leads to a value or to a stuck state.
+
+}%
+
+%{
+
+Definition: 
+   A result is either a good_result or a stuck_result.
+
+Definition:
+   An answer (to the fact that a given term terminates) 
+   consists of the evaluation sequence together with
+   the result.
+
+}%
+
+steps_to_result: term -> type.
+result: term -> type.
+good_result : value T' -> result T'.
+stuck_result: stuck T' -> result T'.
+
+answer: multi_step T T' -> result T' 
+   -> steps_to_result T.
+
+% ---------------------------------------------------------- %
+% LEMMAS
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (switch T T2 T3) (switch T' T2 T3).
+
+}%
+rec mstep_switch : 
+  {T2::term[ ]}{T3::term[ ]}
+  (multi_step T T')[ ] ->
+  (multi_step (switch T T2 T3) (switch T' T2 T3))[ ] = 
+mlam T2 => mlam T3 => 
+fn ms => case ms of 
+| [ ] ms_ref => [ ] ms_ref
+| [ ] ms_step S => 
+  [ ] ms_step (e_switch S)
+
+| [ ] ms_tr MS1 MS2 =>
+  let [ ] MS1' = mstep_switch < . T2 > < . T3 > ([ ] MS1) in 
+  let [ ] MS2' = mstep_switch < . T2 > < . T3 > ([ ] MS2) in 
+    [ ] ms_tr MS1' MS2'
+;
+
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (succ T) (succ T').
+
+}%
+
+rec mstep_succ :
+ (multi_step M M')[ ] -> (multi_step (succ M) (succ M') )[ ] =
+fn ms => case ms of 
+| [ ] ms_ref => [ ] ms_ref
+| [ ] ms_step S => 
+    [ ] ms_step (e_succ S)
+| [ ] ms_tr MS1 MS2 => 
+  let [ ] MS1' = mstep_succ ([ ] MS1) in 
+  let [ ] MS2' = mstep_succ ([ ] MS2) in 
+    [ ] ms_tr MS1' MS2'
+;
+
+
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (pred T) (pred T').
+
+}%
+
+rec mstep_pred :
+  (multi_step M M')[ ] -> (multi_step (pred M) (pred M'))[ ] =
+fn ms => case ms of 
+| [ ] ms_ref => [ ] ms_ref
+| [ ] ms_step S => 
+    [ ] ms_step (e_pred S)
+| [ ] ms_tr MS1 MS2 => 
+  let [ ] MS1' = mstep_pred ([ ] MS1) in 
+  let [ ] MS2' = mstep_pred ([ ] MS2) in 
+    [ ] ms_tr MS1' MS2'
+;
+
+%{
+
+Lemma: IF multi-step T T'  
+  THEN multi-step (iszero T) (iszero T').
+
+}%
+
+rec mstep_iszero :
+ (multi_step M M')[ ] -> (multi_step (iszero M) (iszero M') )[ ] =
+fn ms => case ms of 
+| [ ] ms_ref => [ ] ms_ref
+| [ ] ms_step S => 
+    [ ] ms_step (e_iszero S)
+| [ ] ms_tr MS1 MS2 => 
+  let [ ] MS1' = mstep_iszero ([ ] MS1) in 
+  let [ ] MS2' = mstep_iszero ([ ] MS2) in 
+    [ ] ms_tr MS1' MS2'
+;
+
+
+%{
+
+Lemma: IF multi-step M M'   and multi-step N N'
+  THEN multi-step (leq M N) (leq M' N').
+
+}%
+
+rec mstep_leq_1 : {N :: term[ ]}
+ (multi_step M M')[ ] 
+-> (multi_step (leq M N) (leq M' N) )[ ] =
+mlam N => fn ms => case ms of 
+| [ ] ms_ref => [ ] ms_ref
+| [ ] ms_step S => 
+    [ ] ms_step (e_leq_1 S)
+| [ ] ms_tr MS1 MS2 => 
+  let [ ] MS1' = mstep_leq_1 < . N > ([ ] MS1) in 
+  let [ ] MS2' = mstep_leq_1 < . N > ([ ] MS2) in 
+    [ ] ms_tr MS1' MS2'
+;
+
+rec mstep_leq_2 :
+ (nat_value M)[ ]  -> (multi_step N N')[ ] 
+-> (multi_step (leq M N) (leq M N') )[ ] =
+fn mv => fn ms => case ms of 
+| [ ] ms_ref => [ ] ms_ref
+| [ ] ms_step S => let [ ] MV = mv in 
+    [ ] ms_step (e_leq_2 MV S)
+| [ ] ms_tr MS1 MS2 => 
+  let [ ] MS1' = mstep_leq_2 mv ([ ] MS1) in 
+  let [ ] MS2' = mstep_leq_2 mv ([ ] MS2) in 
+    [ ] ms_tr MS1' MS2'
+;
+
+leq_msteps_to_true_or_false : term -> term -> type.
+leq_msteps_to_true: multi_step (leq M N) true -> leq_msteps_to_true_or_false M N.
+leq_msteps_to_false: multi_step (leq M N) false  -> leq_msteps_to_true_or_false M N.
+
+rec mstep_leq_v : (nat_value M)[ ] -> (nat_value N)[ ] 
+		  -> (leq_msteps_to_true_or_false M N)[ ] = 
+fn mv => fn nv => case mv of 
+| [ ] v_z => let [ ] NV = nv in [ ] leq_msteps_to_true (ms_step (e_leq_zero NV))
+| [ ] v_s MV' => 
+  (case nv of [ ] v_z => [ ] leq_msteps_to_false (ms_step (e_leq_succ_zero MV'))
+            | [ ] v_s NV' => (case mstep_leq_v ([ ] MV') ([ ] NV') of
+		              | [ ] leq_msteps_to_true MStrue => 
+                                [ ] leq_msteps_to_true (ms_tr (ms_step (e_leq_succ_succ MV' NV')) MStrue)		   
+		              | [ ] leq_msteps_to_false MSfalse => 
+                                [ ] leq_msteps_to_false (ms_tr (ms_step (e_leq_succ_succ MV' NV')) MSfalse)		   
+			     )
+  )
+
+;
+
+
+% ---------------------------------------------------------- %
+%{
+
+ MAIN THEOREM: Evaluation terminates with either with
+  a good_result or a stuck_result
+
+ For every term, there exists an evaluation sequence 
+ which leads to a value or to a stuck state.
+
+}%
+
+rec terminate : {M::term[ ]} (steps_to_result M)[ ] =
+mlam M => case [ ] M of 
+| [ ] true => 
+   [ ] answer ms_ref (good_result v_true)
+
+| [ ] false => 
+    [ ] answer ms_ref (good_result v_false)
+
+| [ ] switch T T1 T2 => 
+  (case terminate < . T > of 
+   | [ ] answer MS (good_result v_true) => 
+       let [ ] answer MS1 V1 = terminate < . T1 > in 
+       let [ ] MS'           = mstep_switch < . T1 > < . T2 > ([ ] MS) in 
+       [ ] answer (ms_tr MS' (ms_tr (ms_step e_switch_true) MS1)) V1
+
+   | [ ] answer MS (good_result v_false) => 
+       let [ ] answer MS2 V2 = terminate < . T2 > in 
+       let [ ] MS'           = mstep_switch < . T1 > < . T2 > ([ ] MS) in 
+       [ ] answer (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2    
+
+   | [ ] answer MS (good_result (v_num v_z )) => 
+       let [ ] MS'           = mstep_switch < . T1 > < . T2 > ([ ] MS) in 
+       [ ] answer MS' (stuck_result  (stuck_switch_zero))
+
+   | [ ] answer MS (good_result (v_num (v_s V))) => 
+       let [ ] MS'           = mstep_switch < . T1 > < . T2 > ([ ] MS) in 
+       [ ] answer MS' (stuck_result  (stuck_switch_succ))
+
+
+   | [ ] answer MS (stuck_result R) => 
+       let [ ] MS'           = mstep_switch < . T1 > < . T2 > ([ ] MS) in 
+       [ ] answer MS' (stuck_result (stuck_switch R))     
+  )
+
+| [ ] z => 
+    [ ] answer ms_ref (good_result (v_num v_z))
+
+| [ ] succ N => 
+    (case terminate < . N > of 
+     | [ ] answer MS (good_result (v_num V)) => 
+	 let [ ] MS'         = mstep_succ ([ ] MS) in 
+	 [ ] answer MS' (good_result (v_num (v_s V)))
+
+     | [ ] answer MS (good_result v_true) => 
+       	 let [ ] MS'         = mstep_succ ([ ] MS) in 
+         [ ] answer MS' (stuck_result stuck_succ_true)
+
+     | [ ] answer MS (good_result v_false) => 
+       	 let [ ] MS'         = mstep_succ ([ ] MS) in 
+         [ ] answer MS' (stuck_result stuck_succ_false)
+
+     | [ ] answer MS (stuck_result R) => 
+	 let [ ] MS'         = mstep_succ ([ ] MS) in 
+	 [ ] answer MS' (stuck_result (stuck_succ R))
+   )
+| [ ] pred M       => 
+  (case terminate < . M > of 
+   | [ ] answer MS (good_result (v_num v_z)) => 
+     let [ ] MS'         = mstep_pred ([ ] MS) in 
+       [ ] answer (ms_tr MS' (ms_step (e_pred_zero))) (good_result (v_num v_z))
+   | [ ] answer MS (good_result (v_num (v_s V))) => 
+     let [ ] MS'         = mstep_pred ([ ] MS) in 
+       [ ] answer (ms_tr MS' (ms_step (e_pred_succ V))) (good_result (v_num V))
+
+   | [ ] answer MS (good_result (v_true)) => 
+     let [ ] MS'         = mstep_pred ([ ] MS) in 
+     [ ] answer MS' (stuck_result (stuck_pred_true))
+
+   | [ ] answer MS (good_result (v_false)) => 
+     let [ ] MS'         = mstep_pred ([ ] MS) in 
+     [ ] answer MS' (stuck_result (stuck_pred_false))
+
+   | [ ]  answer MS (stuck_result R) => 
+     let [ ] MS'         = mstep_pred ([ ] MS) in 
+       [ ] answer MS' (stuck_result (stuck_pred R))
+  )
+      
+
+| [ ] iszero N    => 
+  (case terminate < . N > of 
+   | [ ] answer MS (good_result (v_num v_z)) => 		       
+     let [ ] MS' = mstep_iszero ([ ] MS) in 
+     [ ] answer (ms_tr MS' (ms_step e_iszero_zero))(good_result (v_true))
+
+   |  [ ] answer MS (good_result (v_num (v_s V))) => 		       
+     let [ ] MS' = mstep_iszero ([ ] MS) in 
+     [ ] answer (ms_tr MS' (ms_step (e_iszero_succ V))) (good_result (v_false))
+
+   | [ ] answer MS (good_result (v_true)) => 		       
+     let [ ] MS' = mstep_iszero ([ ] MS) in 
+     [ ] answer MS' (stuck_result (stuck_iszero_true))
+
+   | [ ] answer MS (good_result (v_false)) => 		       
+     let [ ] MS' = mstep_iszero ([ ] MS) in 
+     [ ] answer MS' (stuck_result (stuck_iszero_false))
+
+   | [ ] answer MS (stuck_result R) => 		       
+     let [ ] MS' = mstep_iszero ([ ] MS) in 
+     [ ] answer MS' (stuck_result (stuck_iszero R))
+
+  )
+
+ | [ ] leq M N => 
+  (case terminate < . M > of 
+   | [ ] answer MS (good_result (v_num MV)) => 		       
+     (case terminate < . N > of 
+      | [ ] answer NS (good_result (v_num NV)) => 
+        let [ ] MS' = mstep_leq_1 < . N > ([ ] MS) in 
+        let [ ] NS' = mstep_leq_2 ([ ] MV) ([ ] NS) in 
+        (case mstep_leq_v ([ ] MV) ([ ] NV) of 
+         | [ ] leq_msteps_to_true MStrue =>    
+	     [ ] answer (ms_tr MS' (ms_tr NS' MStrue))
+		 (good_result v_true)
+         | [ ] leq_msteps_to_false MSfalse => 
+	     [ ] answer (ms_tr MS' (ms_tr NS' MSfalse)) (good_result v_false)
+	)
+      | [ ] answer NS (good_result v_true) => 
+        let [ ] MS' = mstep_leq_1 < . N > ([ ] MS) in 
+        let [ ] NS' = mstep_leq_2 ([ ] MV) ([ ] NS) in 
+	[ ] answer (ms_tr MS' NS') (stuck_result (stuck_leq_2_true))
+
+      | [ ] answer NS (good_result v_false) => 
+        let [ ] MS' = mstep_leq_1 < . N > ([ ] MS) in 
+        let [ ] NS' = mstep_leq_2 ([ ] MV) ([ ] NS) in 
+	[ ] answer (ms_tr MS' NS') (stuck_result (stuck_leq_2_false))
+
+      | [ ] answer NS (stuck_result R) => 
+        let [ ] MS' = mstep_leq_1 < . N > ([ ] MS) in 
+        let [ ] NS' = mstep_leq_2 ([ ] MV) ([ ] NS) in 
+	[ ] answer (ms_tr MS' NS') (stuck_result (stuck_leq_2 R))
+    )
+   | [ ] answer MS (stuck_result R) =>
+     let [ ] MS' = mstep_leq_1 < . N > ([ ] MS) in 
+       [ ] answer MS'  (stuck_result (stuck_leq_1 R))
+
+   | [ ] answer MS (good_result v_true) => 
+        let [ ] MS' = mstep_leq_1 < . N > ([ ] MS) in 
+	[ ] answer MS' (stuck_result (stuck_leq_1_true))
+   | [ ] answer MS (good_result v_false) => 
+        let [ ] MS' = mstep_leq_1 < . N > ([ ] MS) in 
+	[ ] answer MS' (stuck_result (stuck_leq_1_false))
+
+
+  )
+    
+
+;
+
+
+

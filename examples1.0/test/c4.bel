@@ -1,0 +1,12 @@
+term :  type.
+z    : term.
+plus  : term -> term -> term.
+
+schema termCtx = some [] term;
+
+rec fff : [. term] -> [. term] = fn e =>
+  case e of
+  | [. z]         => [. z]
+  | [. plus U V]  => [. z]
+;
+

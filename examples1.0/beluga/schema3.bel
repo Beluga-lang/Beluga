@@ -1,0 +1,16 @@
+nat: type.
+z   : nat.
+suc : nat -> nat.
+
+boolean : type.
+true : boolean.
+false : boolean.
+
+schema nat3 = block x:nat, y:nat, _t:nat;
+schema nat3' = block y:nat, x:nat, _t:nat;
+schema bool = block _t:boolean;
+schema bool' = block _t:boolean;
+
+rec loop1 : {g:nat3} {bb:bool} [g. nat] -> [g. nat] = mlam g => mlam bb => fn e => loop1[g][bb] e;
+
+rec loop2 : {g:nat3'} {bb:bool'} [g. nat] -> [g. nat] = mlam g => mlam bb => fn e => loop1[g][bb] e;

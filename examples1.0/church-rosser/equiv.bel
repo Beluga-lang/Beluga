@@ -1,0 +1,173 @@
+%%% Equivalence of ordinary and parallel reduction.
+%%% Author: Frank Pfenning
+
+% If M => N then M -->* N.
+schema ctx = block x:term, _t:pred x x; 
+
+rec best_step: {g:ctx}(-->[g. * (app (lam \x. M1' .. x) (M2' ..)) (M1' .. (M2' ..))] = 
+mlam g => [g. step1 beta1 id1]
+;
+
+rec eq1: {g:ctx} [g. pred (M ..) (N ..)] -> (-->[g. * (M ..) (N ..)] = 
+mlam g => fn r => case r of 
+| [g. #p.2 ..] => [g. id1]
+| % {R1::(pred (M1 .. x) (M1' .. x))[g, x:term, u:pred x x] }
+  % {R2::(pred (M2 ..) (M2' ..))[g]}
+  [g. beta (\x.\u. R1 .. x u) (R2 ..)] => 
+  %  : pred (app (lam M1) M2) (M1' M2')
+  let {M1':[g,x:term. term]}{S1*:(-->[g,x:term. * (M1 .. x) (M1' .. x)]}
+      [g,b:block x:term,_t:pred x x. ] S1* .. b.1 = 
+         eq1 [g,b:block x:term , _t:pred x x] [g,b. R1 .. b.1 b.2] in 
+  % S1*: -->* (M1 x) (M1' x)
+  let {M2:[g. term]}{S2*:(-->[g. * (M2 ..) (M2' ..)]}
+      [g. ] S2* ..   = eq1   [g] [g. R2 ..] in 
+  % S2* : -->* M2 M2'
+  let [g] S1*' ..  = lm1*  [g] [g,x. S1* .. x] in 
+  % S1*': -->* (lam \x. M1 x) (lam \x. M1' x)
+  let [g] S1*'' .. = apl1* [g] [ g. M2 ..  ] [g. S1*' ..] in 
+  % S1*'' : -->* (app (lam M1) M2) (app (lam M1') M2)
+  let [g] S2*' ..  = apr1* [g] [ g. lam \x. M1' .. x ] [g. S2*  ..] in 
+  % S2*'  : -->* (app (lam M1') M2) (app (lam M1') M2')
+  let [g] S*' ..  = appd [g] [g. S1*'' ..] [g. S2*' ..] in 
+    appd [g] [g. S*' ..] [g. step1 beta1 id1 ]
+
+| {R1: [g. pred (M1 ..) (N1 ..)]}{R2: [g. pred (M2 ..) (N2 ..)]}
+  [g. ap (R1 ..) (R2 ..)] => 
+  let % {S1*::(-->* (M1 ..) (N1 ..))[g]}
+      [g. S1* ..]  = eq1   [g] [g. R1 ..] in 
+  let % {S*'::(-->* (app (M1 ..) (M2 ..)) (app (N1 ..) (M2 ..)))[g]}
+      [g. S*' ..]  = apl1* [g] [g. M2 .. ]  [g. S1* ..] in 
+  
+  let % {S2*:: (-->* (M2 ..) (N2 ..))[g]}
+      [g. S2* ..]  = eq1   [g] [g. R2 ..] in 
+
+  let  % {S*'::(-->* (app (N1 ..) (M2 ..)) (app (N1 ..) (N2 ..)))[g]}
+       [g. S*'' ..] = apr1* [g]  [g. N1 .. ] [g. S2* ..] in 
+   appd [g] [g. S*' ..] [g. S*'' .. ]
+
+ | [g. lm (\x.\u. R1 .. x u)] => 
+  let {S1* : (-->[g,x:term. * (M .. x) (N .. x)]}
+       [g,b:block x:term , _t:pred x x. ] S1* .. b.1 = 
+   eq1 [g,b:block x:term , _t:pred x x] [g,b. R1 .. b.1 b.2] in 
+  lm1* [g] [g,x. S1* .. x]
+;
+
+
+rec eq2 : {g:ctx}(--> [g. M ..) (N ..)] -> [g. pred (M ..) (N ..)] = 
+mlam g => fn r => case r of 
+| [g. beta1] : [g. (--> (app (lam \x. M1 .. x) (M2 ..)) (M1 .. (M2 ..)))]  => 
+  let [g,b:block x:term,_t:pred x x. I1 .. b] = 
+    identity [g,b:block x:term, _t:pred x x]  [g,b . M1 .. b.1 ] in 
+  let [g. I2 ..] = identity [g] [g . M2 .. ] in 
+    [g. beta (\x.\u. I1 .. <x,u>) (I2 ..)]
+
+| [g. lm1 \x. R1 .. x] => 
+  let [g,b:block x:term , _t:pred x x. S1 .. b] = 
+    eq2 [g,b:block x:term,_t:pred x x] [g,b. R1 .. b.1] in 
+    [g. lm \x.\u. S1 .. <x,u>]
+
+| [g. apl1 (R1 .. )] : [g. (--> (app (M1 ..) (M2 ..)) (app (M1' ..) (M2 ..)))]  => 
+  let [g. S1 ..] = eq2 [g] [g. R1 .. ] in 
+  let [g. I2 ..] = identity [g] [g . M2 .. ]  in 
+    [g. ap (S1 ..) (I2 ..)]
+
+
+| [g. apr1 (R2 .. )] : [g. (--> (app (M1 ..) (M2 ..)) (app (M1 ..) (M2' ..)))]  => 
+  let [g. S2 ..] = eq2 [g] [g. R2 .. ] in 
+  let [g. I1 ..] = identity [g] [g . M1 .. ]  in 
+    [g. ap (I1 ..) (S2 ..)]
+
+;
+
+% If M -->* N then M =>* N.
+
+rec eq3:{g:ctx}(-->[g. * (M ..) (N ..)] -> [g. pred* (M ..) (N ..)] = 
+mlam g =>  fn r => case r of 
+| [g. id1] => [g. id*]
+| [g. step1 (R1 ..) (R2* ..)] => 
+  let [g. S1 ..]  = eq2 [g] [g. R1 ..]  in 
+  let [g. S2* ..] = eq3 [g] [g. R2* ..] in 
+    [g. next (S1 ..) (S2* ..)]
+;
+
+
+% If M =>* N then M -->* N.
+
+rec eq4 : {g:ctx} [g. pred* (M ..) (N ..)] -> (-->[g. * (M ..) (N ..)] = 
+mlam g => fn r => case r of 
+| [g. id*] => [g. id1]
+| [g. next (R1 ..) (R2* ..)] => 
+  let [g. S1* ..] = eq1 [g] [g. R1 ..] in 
+  let [g. S2* ..] = eq4 [g] [g. R2* ..] in
+   appd [g] [g. S1* ..] [g. S2* ..] 
+
+; 
+
+
+%{
+While we proved the previous lemmas in a non-empty context,
+we now proceed to prove properties for the empty context.
+}%
+
+% If M <=> N then M <-> N.
+rec eq5 : [. pred= M N] -> (<-> [. M N] = 
+fn r => case r of
+| [. reduce R*] => 
+  (let [. S*] = eq4 [ ] [. R*] in 
+    [. red S*])
+| [. expand R*] =>
+  let [. S*] = eq4 [] [. R*] in 
+    [. sym (red S*)]
+
+ | [. next= R' R''] => 
+   let [. C1'] = eq5 [. R'] in 
+   let [. C2'] = eq5 [. R''] in 
+     [. trans C2' C1']
+
+;
+
+% If M <=> N then N <=> M.
+
+rec sym_pconv: [. pred= M N]  ->  [. pred= N M] = 
+fn r => case r of 
+| [. reduce R*] => [. expand R*]
+| [. expand R*] => [. reduce R*]
+| [. next= C1 C2]  => 
+  let [. C1'] = sym_pconv [. C1] in 
+  let [. C2'] = sym_pconv [. C2] in 
+  [. next= C2' C1']
+;
+
+
+
+% The following was a bug in Twelf which was not detected by term reconstruction
+% spc_wrong : sym_pconv (C1 ;; C2) (C1' ;; C2')
+%         <- sym_pconv C1 C1'
+%         <- sym_pconv C2 C2'.
+% Similar bugs happen commonly in Twelf by accident, and are only detected
+% by coverage.
+%
+% In Beluga we detect such bugs earlier, because we do not use unification
+% on the overall program clause and result type. The downside is that sometimes
+% we need to provide more information. 
+
+% If M <-> N then M <=> N.
+
+rec eq6 : (<-> [. M N]  -> [. pred= M N] = 
+fn c => case c of 
+| [. refl]   => [. reduce id*]
+| [. sym C1] => 
+  let [. C1'] = eq6 [. C1] in 
+    sym_pconv [. C1']
+| [. trans C2 C1] => 
+  let [. C1'] = eq6 [. C1] in 
+  let [. C2'] = eq6 [. C2] in 
+    [. next= C1' C2']
+
+| [. red R*] => 
+  let [. S*] = eq3 [ ] [. R*] in 
+    [. reduce S*]
+;
+
+
+

@@ -4,10 +4,6 @@
 ## Configuration
 ##
 
-# (Optional) Path to the Ruby executable; necessary if Ruby is not
-# in PATH.
-RUBY=/Users/bpientka/.rvm/bin/ruby
-
 # Path to the syntax conversion script.
 CONVERT="$(cd $(dirname $0); pwd)/syntax-conv.rb"
 
@@ -16,7 +12,7 @@ IGNORE=("eq-proof-full-crec.bel" "evaluation.bel" "evaluation-seq.bel" \
   "evaluation-2.bel")
 
 # Increased verbosity, set when VERBOSE=0.
-VERBOSE=1
+VERBOSE=0
 
 
 ##
@@ -26,20 +22,26 @@ VERBOSE=1
 usage () {
   echo "Usage:"
   echo
-  echo "  # $(basename $0) -o <file-out> <file-in>"
+  echo "  $ $(basename $0) -o <file-out> <file-in>"
   echo
   echo "  Convert the Beluga source file <file-in> to the new 1.0 syntax."
   echo "  If <file-out> is specified with the '-o' switch then the output"
   echo "  is recorded in <file-out>, otherwise it is dumped to STDIN."
   echo
-  echo "  # $(basename $0) -s <src-dir> -t <dst-dir>"
+  echo "  $ $(basename $0) -s <src-dir> -t <dst-dir>"
   echo
   echo "  Copy the contents of <src-dir> to a new directory, <dst-dir>,"
   echo "  and the convert every Beluga source file in <dst-dir> to the"
   echo "  1.0 syntax."
   echo
+  echo "  If a suitable Ruby interpreter cannot be found automatically,"
+  echo "  you can point to one explicitly using the RUBY environment"
+  echo "  variable, as in the following example:"
+  echo
+  echo "  $ RUBY=/path/to/ruby $(basename $0) -o <file-out> <file-in>"
+  echo
   echo "Options:"
-  echo -e "  -v\t\t Increased verbosity."
+  echo -e "  -q\t\t No output."
   echo -e "  -h\t\t Show this message."
   exit 1
 }
@@ -71,8 +73,10 @@ abspath () {
 ##
 
 if [[ ! -z "$RUBY" ]]; then
-  [[ -x "$RUBY" ]] ||
+  $(exists "$RUBY") ||
   abort "Error: Unable to find Ruby executable."
+elif exists "ruby1.9"; then
+  RUBY="ruby1.9"
 elif exists "ruby"; then
   RUBY="ruby"
 else
@@ -112,8 +116,8 @@ while (( "$#" )); do
       shift
       OUTPUT_FILE="$1"
       ;;
-    -v)
-      VERBOSE=0
+    -q)
+      VERBOSE=1
       ;;
     -h|--help)
       usage
@@ -201,8 +205,9 @@ else
     done
     if [[ $skip = 1 ]]; then
       [[ $VERBOSE = 0 ]] && echo -n "Converting: $f"
-      $CONVERT "$f" > "$f.tmp" && rm -f "$f" && mv "$f.tmp" "$f"
-      [[ $VERBOSE = 0 ]] && echo " => DONE."
+      t=$(mktemp -q "$f-XXXX.tmp") &&
+      $CONVERT "$f" > "$t" && rm -f "$f" && mv "$t" "$f" &&
+      [[ $VERBOSE = 0 ]] && echo " => DONE." || echo " => FAILED."
     else
       [[ $VERBOSE = 0 ]] && echo "Skipping: $f"
     fi

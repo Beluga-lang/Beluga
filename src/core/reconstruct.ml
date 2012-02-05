@@ -241,7 +241,7 @@ let rec elDCtxAgainstSchema recT cD psi s_cid = match psi with
       let c_var = Lfrecon.elCtxVar c_var in 
       let cPsi' = Int.LF.CtxVar (c_var) in 
         begin try 
-          Lfcheck.checkSchema cD cPsi' schema ; 
+          Check.LF.checkSchema cD cPsi' schema ; 
           cPsi'
         with _ -> raise (Error.Error (None, Error.CtxVarMismatch (cD, c_var, schema)))
         end

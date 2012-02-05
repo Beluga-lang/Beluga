@@ -1,0 +1,109 @@
+%%% Canonical forms for natural deductions.
+%%% Author: Frank Pfenning
+
+can : {A:o} pf A -> type.  % Canonical deductions
+atm : pf A -> type.        % Atomic deductions
+%name can CN.
+%name atm AT.
+%%mode (can +A +P) (atm +P).
+
+can_andi : can (& A B) (andi E D)
+	    <- can A D
+	    <- can B E.
+
+
+% not necessary in horn fragment
+%{
+can_impi : can (imp A B) (impi (\u. D u))
+	    <- {u:pf A} atm u -> can B (D u).
+
+}%
+can_truei : can (true) (truei).
+
+
+
+% not necessary in horn fragment
+%{
+can_foralli : can (forall (\x. A x)) (foralli (\x. D x))
+	       <- {a:i} can (A a) (D a).
+
+}%
+can_atm : can (atom P) D
+	    <- atm D.
+
+atm_andel : atm (andel D) <- atm D.
+
+atm_ander : atm (ander D) <- atm D.
+
+atm_impe : atm (impe D E)
+	    <- atm D
+	    <- can B E.
+
+atm_foralle : atm (foralle D T)
+	       <- atm D.
+
+
+%%% Conversion to canonical form
+%%% Author: Frank Pfenning
+
+% Weak head reduction
+
+whr : pf A -> pf A -> type.  % Weak head reduction
+%name whr WHR.
+
+% Reductions
+whr_andl : whr (andel (andi E D)) D.
+whr_andr : whr (ander (andi E D)) E.
+whr_imp  : whr (impe (impi (\u. D u)) E) (D E).
+whr_forall : whr (foralle (foralli (\x. D x)) T) (D T).
+
+% Congruences on elimination rules
+whr_andel : whr (andel D) (andel D')
+	     <- whr D D'.
+whr_ander : whr (ander D) (ander D')
+	     <- whr D D'.
+whr_impe  : whr (impe D E) (impe D' E)
+	     <- whr D D'.
+whr_foralle : whr (foralle D T) (foralle D' T)
+	       <- whr D D'.
+
+% Conversion to canonical and atomic form.
+
+tocan : {A:o} pf A -> pf A -> type.  % Conversion to canonical form
+toatm : pf A -> pf A -> type.        % Conversion to atomic form
+%name tocan TC.
+%name toatm TA.
+
+tc_and : tocan (& A B) D (andi D2' D1')
+	  <- tocan A (andel D) D1'
+	  <- tocan B (ander D) D2'.
+%{
+tc_imp : tocan (imp A B) D  (impi (\u. D' u))
+	  <- {u:pf A} toatm u u -> tocan B (impe D u) (D' u).
+}%
+tc_true : tocan (true) D (truei).
+
+%{
+tc_forall : tocan (forall (\x. A x)) D (foralli (\x. D' x))
+	      <- {a:i} tocan (A a) (foralle D a) (D' a).
+}%
+tc_whr : tocan (atom P) D D'
+	  <- whr D D''
+	  <- tocan (atom P) D'' D'.
+
+tc_atm : tocan (atom P) D D'
+	  <- toatm D D'.
+
+ta_impe : toatm (impe D E) (impe D' E')
+	   <- toatm D D'
+	   <- tocan A E E'.
+
+ta_andel : toatm (andel D) (andel D')
+	    <- toatm D D'.
+
+ta_ander : toatm (ander D) (ander D')
+	    <- toatm D D'.
+
+ta_foralle : toatm (foralle D T) (foralle D' T)
+	      <- toatm D D'.
+

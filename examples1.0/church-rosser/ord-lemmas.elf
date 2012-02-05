@@ -1,0 +1,80 @@
+%%% Lemmas concerning ordinary multi-step reduction
+%%% Author: Frank Pfenning
+
+% Terms can contain free variables without explicitl
+% assumptions about them (for multi-step reduction)
+
+%block ltm : block {x:term}.
+
+% Transitivity of multi-step reduction
+
+appd :  -->* M M'  ->  -->*  M' M''  ->  -->* M M''  ->  type.
+%mode appd +R* +S* -S*'.
+
+appd_id   : appd id1 S* S*.
+appd_step : appd (step1 R1 R2*) S* (step1 R1 S2*')
+	 <- appd R2* S* S2*'.
+
+%worlds (ltm) (appd R* S* S*').
+%covers appd +R* +S* -S*'.
+%terminates R* (appd R* S* _).
+%total R* (appd R* S* _).
+
+% Multi-step reduction is a congruence
+
+lm1* : ({x:term}  -->* (M x) (M' x))
+     ->       -->* (lam M) (lam M')
+     -> type.
+%{
+%mode +{M} +{M'} +{R*:{x:term} M x -->* M' x}
+      -{S*:lam M -->* lam M'} lm1* R* S*.
+}%
+lm1*_id   : lm1* (\x. id1) id1.
+lm1*_step : lm1* (\x. step1 (R1 x) (R2* x)) (step1 (lm1 R1) S2*)
+	      <- lm1* R2* S2*.
+
+%{
+%worlds (ltm) (lm1* R* S*).
+%covers lm1* +R* -S*.
+%terminates R* (lm1* R* _).
+%total R* (lm1* R* _).
+}%
+apl1* :            -->* M1 M1'
+      ->  -->*  (app M1 M2) (app M1' M2)
+      -> type.
+% poor error message below. -fp
+% %mode +{M1} +{M1'} +{M2} +{R*} -{S*} apl1* R* S.
+%{
+%mode +{M1} +{M1'} +{M2} +{R*:M1 -->* M1'}
+      -{S*:app M1 M2 -->* app M1' M2} apl1* R* S*.
+}%
+apl1*_id   : apl1* id1 id1.
+apl1*_step : apl1* (step1 R1 R2*) (step1 (apl1 R1) S2*)
+	       <- apl1* R2* S2*.
+
+%{
+%worlds (ltm) (apl1* R* S*).
+%covers +{M1} +{M1'} +{M2} +{R*:M1 -->* M1'}
+        -{S*:app M1 M2 -->* app M1' M2} apl1* R* S*.
+%terminates R* (apl1* R* _).
+%total R* (apl1* R* _).
+}%
+
+apr1* :          -->*   M2 M2'
+      ->   -->* (app M1 M2) (app M1 M2')
+      -> type.
+%{
+%mode +{M2} +{M2'} +{M1} +{R*:M2 -->* M2'}
+      -{S*:app M1 M2 -->* app M1 M2'} apr1* R* S*.
+}%
+apr1*_id : apr1* id1 id1.
+apr1*_step : apr1* (step1 R1 R2*) (step1 (apr1 R1) S2*)
+	   <- apr1* R2* S2*.
+
+%{
+%worlds (ltm) (apr1* R* S*).
+%covers +{M2} +{M2'} +{M1} +{R*:M2 -->* M2'}
+        -{S*:app M1 M2 -->* app M1 M2'} apr1* R* S*.
+%terminates R* (apr1* R* _).
+%total R* (apr1* R* _).
+}%

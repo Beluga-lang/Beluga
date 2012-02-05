@@ -1,0 +1,89 @@
+%%% Mapping evaluations to evaluations in environments.
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+%%% Converted to Beluga: Brigitte Pientka
+
+%%% Lemmas about values.
+rec vtrans_val :  [. vtrans W E] -> [. value E] = 
+fn u => case u of 
+   [. vtr_z]   =>  [. val_z]
+
+ | [. vtr_s U1] => 
+   let [. P1] = vtrans_val [. U1] in  [. val_s P1]
+
+ | [. vtr_pair U2 U1] => 
+    let [. P1]  = vtrans_val [. U1]  in 
+    let [. P2]  = vtrans_val [. U2]  in 
+      [. val_pair P2 P1]
+
+  | [. vtr_lam U1]     => [. val_lam]
+
+;
+
+%%% Values evaluate only to themselves.
+
+rec val_eval: [. value E] -> [. eval E E] =
+fn p => case p of 
+  [. val_z]         =>   [. ev_z]
+
+| [. val_s P1]      =>   
+  let [. D1] = val_eval [. P1] in 
+    [. ev_s D1] 
+
+| [. val_pair P2 P1] => 
+  let [. D1]  = val_eval [. P1] in 
+  let [. D2]  = val_eval [. P2] in 
+    [. ev_pair D2 D1]
+
+| [. val_lam]        => [. ev_lam]
+
+;
+
+
+%%% Mapping evaluations to evaluations in environments.
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+% To return a pair: feval K F W * vtrans W V we define the
+% following constructor. This avoids not only computation-level pairs
+% but also avoids existential types on the computation-level.
+
+fev_vtr: env -> exp' -> exp  -> type.
+
+ev_vtrans: fev_vtr K F V
+            <- vtrans W V
+	    <- feval K F W.
+
+% rec map_eval: (eval E V)[ ] -> (trans K F E)[ ]
+%  	      -> (fev_vtr K F V)[ ] = 
+%
+% fn d => fn u =>  case u of 
+%
+%   [ ] tr_1 U1    => 
+%     let [ ] P  = vtrans_val ([ ] U1) : value E   in 
+%     let [ ] D' = val_eval   ([ ] P ) : eval E E  in 
+%       if [ ] D' : eval E E = [ ] D : eval E V  then    % E = V
+%          [ ] ev_vtrans   fev_1  U1 
+%
+% PROBLEMATIC CASE : How to propagate information about equality?
+%
+% d :tr_1  U1 : trans (vcons K W) one E   
+%     and  U1 : vtrans W E 
+%             
+% e : eval E V 
+%
+% P  : value E   by lemma vtrans_val
+% D' : eval E E  by lemma val_eval
+%
+%      E = V     
+% 
+% To show: 
+% fev_1   : feval (vcons K W) one W.
+%
+% and       vtrans W V 
+%
+%
+% 
+
+
+%;
+		 
+     

@@ -1,0 +1,36 @@
+%%% Lemmas about values.
+%%% Author: Frank Pfenning
+
+  %%% Values correspond to value expressions.
+  vtrans_val : vtrans W E -> value E -> type.
+
+  vtrv_z     : vtrans_val (vtr_z) (val_z).
+  vtrv_s     : vtrans_val (vtr_s U1) (val_s P1)
+		<- vtrans_val U1 P1.
+
+  vtrv_pair  : vtrans_val (vtr_pair U2 U1) (val_pair P2 P1)
+	          <- vtrans_val U1 P1
+		  <- vtrans_val U2 P2.
+
+  vtrv_lam   : vtrans_val (vtr_lam U1) (val_lam).
+
+%mode vtrans_val +U -P.
+%worlds () (vtrans_val U P).
+%covers vtrans_val +U -P.
+
+  %%% Values evaluate only to themselves.
+  val_eval  : value E -> eval E E -> type.
+
+  vev_z     : val_eval (val_z) (ev_z).
+  vev_s	    : val_eval (val_s P1) (ev_s D1)
+	       <- val_eval P1 D1.
+
+  vev_pair  : val_eval (val_pair P2 P1) (ev_pair D2 D1)
+	         <- val_eval P1 D1
+		 <- val_eval P2 D2.
+
+  vev_lam   : val_eval (val_lam) (ev_lam).
+
+%mode val_eval +P -D.
+%worlds () (val_eval P D).
+%covers val_eval +P -D.

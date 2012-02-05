@@ -1,0 +1,325 @@
+%%% The Mini-ML Language
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+exp  : type. 
+
+z     : exp.
+s     : exp -> exp.
+match : exp -> exp -> (exp -> exp) -> exp.  % case
+pair  : exp -> exp -> exp.
+fst   : exp -> exp.
+snd   : exp -> exp.
+lam   : (exp -> exp) -> exp.
+app   : exp -> exp -> exp.
+letv  : exp -> (exp -> exp) -> exp.
+letn  : exp -> (exp -> exp) -> exp.
+fix   : (exp -> exp) -> exp.
+
+
+%%% Definition of Values
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+value : exp -> type.  %name value P.
+
+val_z     : value z.
+val_s     : value (s E) <- value E.
+val_pair  : value (pair E1 E2) 
+	     <- value E1 
+	     <- value E2.
+val_lam   : value (lam (\x. E x)).
+
+
+%%% Expression representation using de Bruijn indices
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+exp'   : type.  
+
+one    : exp'.
+shift  : exp' -> exp'.  % ^
+z'     : exp'.
+s'     : exp' -> exp'.
+match'  : exp' -> exp' -> exp' -> exp'.
+pair'  : exp' -> exp' -> exp'.
+fst'   : exp' -> exp'.
+snd'   : exp' -> exp'.
+lam'   : exp' -> exp'.
+app'   : exp' -> exp' -> exp'.
+letv'  : exp' -> exp' -> exp'.
+letn'  : exp' -> exp' -> exp'.
+fix'   : exp' -> exp'.
+
+% Environments and values
+
+env    : type.  
+val    : type.  
+
+empty  : env.
+vcons  : env -> val -> env.   % ; 
+cons   : env -> exp' -> env.  % +
+
+z_val     : val.
+s_val     : val -> val.
+
+pair_val  : val -> val -> val.
+
+clo    : env -> exp' -> val.
+
+%%% Mini-ML Natural Semantics
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+eval : exp -> exp -> type.
+
+ev_z : eval z z.
+ev_s : eval E V -> eval (s E) (s V).
+
+ev_lam: eval (lam (\x . E x)) (lam (\x . E x)).
+
+ev_app:  eval (E1' V2) V  -> 
+         eval E2 V2 -> 
+         eval E1 (lam (\x . E1' x))  
+      -> eval (app E1 E2) V.
+
+ev_pair: eval E2 V2 -> eval E1 V1 
+	 -> eval (pair E1 E2) (pair V1 V2).
+
+ev_fst : eval E (pair V1 V2) 
+       -> eval (fst E) V1.
+
+ev_snd : eval E (pair V1 V2) 
+       -> eval (snd E) V2.
+
+ev_match_z : eval E2 V  -> eval E1 z
+           -> eval (match E1 E2 (\x . E3 x)) V.
+
+ev_match_s :  eval (E3 V1') V ->  eval E1 (s V1')
+	  -> eval (match E1 E2 (\x . E3 x)) V.
+
+ev_letv	  : eval (E2 V1) V -> 
+	    eval E1 V1  	   
+         -> eval (letv E1 (\x . E2 x)) V.
+
+ev_letn :  eval (E2 E1) V
+	   -> eval (letn E1 (\x . E2 x)) V.
+
+
+ev_fix :    eval (E (fix (\x . E x))) V
+	  -> eval (fix (\x . E x)) V.
+
+
+%%% Translation to representation using de Bruijn indices
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+trans  : env -> exp' -> exp -> type.  
+vtrans : val -> exp -> type.          
+
+% Natural numbers
+tr_z     : trans K z' z.
+tr_s     :  trans K (s' F) (s E)
+          <- trans K F E.
+
+tr_match : trans K (match' F1 F2 F3) (match E1 E2 (\x. E3 x))
+	   <- trans K F1 E1
+	   <- trans K F2 E2
+	   <- ({w:val} {x:exp}
+		 vtrans w x -> trans (vcons K  w) F3 (E3 x)).
+
+% Pairs
+tr_pair : trans K (pair' F1 F2) (pair E1 E2)
+	     <- trans K F1 E1
+	     <- trans K F2 E2.
+tr_fst  : trans K (fst' F1) (fst E1)
+	     <- trans K F1 E1.
+tr_snd  : trans K (snd' F1) (snd E1)
+	     <- trans K F1 E1.
+
+% Functions
+tr_lam : trans K (lam' F) (lam (\x. E x))
+	    <- ({w:val} {x:exp}
+		  vtrans w x -> trans (vcons K w) F (E x)).
+
+tr_app : trans K (app' F1 F2) (app E1 E2)
+	    <- trans K F1 E1
+	    <- trans K F2 E2.
+
+% Definitions
+tr_letv: trans K (letv' F1  F2) (letv E1 (\x. E2 x))
+	    <- trans K F1 E1
+	    <- ({w:val} {x:exp}
+		  vtrans w x -> trans (vcons K w) F2 (E2 x)).
+
+tr_letn: trans K (letn' F1 F2) (letn E1 (\x. E2 x))
+	    <- trans K F1 E1
+	    <- ({f:exp'} {x:exp}
+		  trans K f x -> trans (cons K f) F2 (E2 x)).
+
+% Recursion
+tr_fix : trans K (fix' F) (fix (\x. E x))
+	    <- ({f:exp'} {x:exp}
+		  trans K f x -> trans (cons K f) F (E x)).
+
+% Variables
+tr_1    : trans (vcons K W) one E <- vtrans W E.
+tr_^    : trans (vcons K W) (shift F) E <- trans K F E.
+
+tr_1+   : trans (cons K  F) one E <- trans K F E.
+tr_^+   : trans (cons K  F') (shift F) E <- trans K F E.
+
+% Natural number values
+vtr_z : vtrans z_val z.
+vtr_s : vtrans (s_val W) (s V)
+	 <- vtrans W V.
+
+% Pair values
+vtr_pair : vtrans (pair_val W1 W2) (pair V1 V2)
+	    <- vtrans W1 V1
+	    <- vtrans W2 V2.
+
+% Function values
+vtr_lam : vtrans (clo K (lam' F)) (lam (\x. E x))
+	   <- trans K (lam' F) (lam (\x. E x)).
+
+
+%%% Mini-ML Natural Semantics
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+feval : env -> exp' -> val -> type.  % name feval D.
+
+% Variables
+fev_1 : feval (vcons K W) one W.
+
+fev_^ : feval (vcons K W') (shift F) W
+	   <- feval K F W.
+
+fev_1+ : feval (cons K F) one W
+	    <- feval K F W.
+
+fev_^+ : feval (cons K F') (shift F) W
+	    <- feval K F W.
+
+% Natural Numbers
+fev_z : feval K z' z_val.
+fev_s : feval K (s' F) (s_val W)
+	 <- feval K F W.
+
+fev_match_z : feval K (match' F1 F2 F3) W
+	      <- feval K F1 z_val
+	      <- feval K F2 W.
+
+fev_match_s : feval K (match' F1 F2 F3) W
+	      <- feval K F1 (s_val W1)
+	      <- feval (vcons K W1) F3 W.
+
+% Pairs
+fev_pair : feval K (pair' F1 F2) (pair_val W1 W2)
+	     <- feval K F1 W1
+	     <- feval K F2 W2.
+fev_fst  : feval K (fst' F) W1
+	     <- feval K F (pair_val W1 W2).
+fev_snd  : feval K (snd' F) W2
+	     <- feval K F (pair_val W1 W2).
+
+% Functions
+fev_lam : feval K (lam' F) (clo K (lam' F)).
+fev_app : feval K (app' F1 F2) W
+	   <- feval K F1 (clo K' (lam' F1'))
+	   <- feval K F2 W2
+	   <- feval (vcons K' W2) F1' W.
+
+% Definitions
+fev_letv : feval K (letv' F1 F2) W
+	    <- feval K F1 W1
+	    <- feval (vcons K  W1) F2 W.
+
+fev_letn : feval K (letn' F1 F2) W
+	    <- feval (cons K F1) F2 W.
+
+% Recursion
+fev_fix  : feval K (fix' F) W
+	     <- feval (cons K (fix' F)) F W.
+
+
+%%% Mapping evaluations to evaluations in environments.
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+%%% Converted to Beluga: Brigitte Pientka
+
+%%% Lemmas about values.
+rec vtrans_val :  [. vtrans W E] -> [. value E] = 
+fn u => case u of 
+   [. vtr_z]   =>  [. val_z]
+
+ | [. vtr_s U1] => 
+   let [. P1] = vtrans_val [. U1] in  [. val_s P1]
+
+ | [. vtr_pair U2 U1] => 
+    let [. P1]  = vtrans_val [. U1]  in 
+    let [. P2]  = vtrans_val [. U2]  in 
+      [. val_pair P2 P1]
+
+  | [. vtr_lam U1]     => [. val_lam]
+
+;
+
+%%% Values evaluate only to themselves.
+
+rec val_eval: [. value E] -> [. eval E E] =
+fn p => case p of 
+  [. val_z]         =>   [. ev_z]
+
+| [. val_s P1]      =>   
+  let [. D1] = val_eval [. P1] in 
+    [. ev_s D1] 
+
+| [. val_pair P2 P1] => 
+  let [. D1]  = val_eval [. P1] in 
+  let [. D2]  = val_eval [. P2] in 
+    [. ev_pair D2 D1]
+
+| [. val_lam]        => [. ev_lam]
+
+;
+
+
+%%% Mapping evaluations to evaluations in environments.
+%%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
+
+% rec map_eval: (eval E V)[ ] -> (trans K F E)[ ]
+%  	      -> Sigma W. (feval K F W)[ ] *  (vtrans W V)[ ] = 
+%
+% fn d => fn u =>  case u of 
+%
+%   [ ] tr_1 U1    => 
+%     let [ ] P  = vtrans_val ([ ] U1) : value E   in 
+%     let [ ] D' = val_eval   ([ ] P ) : eval E E  in
+%       if [ ] D' : eval E E = [ ] D : eval E V  then    % E = V
+%          <   . W ,  
+%             ([ ] fev_1  ,  [ ] U1 ) 
+%          >
+%       else 
+%          ...
+%
+% PROBLEMATIC CASE : How to propagate information about equality?
+%
+% d :tr_1  U1 : trans (vcons K W) one E   
+%     and  U1 : vtrans W E 
+%             
+% e : eval E V 
+%
+% P  : value E   by lemma vtrans_val
+% D' : eval E E  by lemma val_eval
+%
+%      E = V     
+% 
+% To show: 
+% fev_1   : feval (vcons K W) one W.
+%
+% and       vtrans W V 
+%
+% rec vtrans_val :  (vtrans W E)[ ] -> (value E)[ ] = 
+% 
+
+
+%;
+		 
+     
+
+

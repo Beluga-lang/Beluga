@@ -1,0 +1,92 @@
+tp   : type.  %name tp T.
+nat  : tp.
+bool : tp.
+arr  : tp -> tp -> tp.
+
+term : type.  %name term M.
+z    : term.
+tt   : term.
+ff   : term.
+suc  : term -> term.
+letv : term -> (term -> term) -> term.
+lam  : tp -> (term -> term) -> term.
+app  : term -> term -> term.
+
+oft  : term -> tp -> type.  %name oft D.
+o_tt : oft tt bool.
+o_ff : oft ff bool.
+o_z  : oft z nat.
+o_s  : oft E nat -> oft (suc E) nat.
+o_lam: ({x:term} oft x T1 -> oft (E x) T2)
+       -> oft (lam T1 (\x. E x)) (arr T1 T2).
+
+o_app:    oft E1 (arr T2 T) -> oft E2 T2
+       -> oft (app E1 E2) T.
+
+o_let: oft E1 T1 -> ({x:term} oft x T1 -> oft (E2 x) T2)
+    -> oft (letv E1 (\x. E2 x)) T2.
+
+cert: term -> type.
+
+certify : {T:tp}oft E T -> cert E.
+
+ill_tp: type.
+bot: ill_tp.
+cert_illtyped: ill_tp -> cert E.
+
+schema tpCtx = some [t:tp] block x:term, _t:oft x t;
+
+rec equal : [. tp] -> [. tp] -> Bool = 
+fn t => fn s => s == t ; 
+
+rec infer' : {g:tpCtx} {U:[g. term]} [g. cert (U ..)] =
+mlam g => mlam U =>
+   case [g. U ..] of
+ | [g. z]     => [g. certify nat o_z] 
+
+ | [g. tt]    => [g. certify bool o_tt] 
+ | [g. ff]    => [g. certify bool o_ff]
+
+ | [g. suc (E ..)] => 
+   (case infer' [g] [ g. E .. ]  of 
+    | [g. certify nat (D ..)] => [g. certify nat (o_s (D ..))]
+    | [g. _]                 => [g. cert_illtyped bot]
+  )
+
+ | [g. #p.1 ..]  => [g. certify _   (#p.2 ..)]  
+
+ | [g. lam T \x. E .. x] => 
+   (case    infer' [g, b: block x:term, _t:oft x T] [ g,b . E .. b.1]    of
+    | [g, b:block x:term, _t:oft x T1. cert_illtyped bot]  => [g. cert_illtyped bot]
+
+    | [g, b: block x:term, _t:oft x T1. certify T2 (D .. b)]  =>  
+   	[g. certify (arr T1 T2) (o_lam \x.\u. D .. <x, u>)]  
+    )
+
+ | [g. app (E1 ..) (E2 ..)] =>
+   (case infer'  [g] [ g . E1 .. ] of 
+    | [g. certify (arr T2 T) (D1 ..)] => 
+      (case infer'  [g] [ g . E2 .. ]   of
+       | {D2: [g, t:tp. oft (E2 ..) t]}
+	 [g. certify T2' (D2 .. T2')] =>  	   
+	 if equal [. T2] [. T2']  
+	  then [g. certify T (o_app (D1 ..) (D2 .. T2))]
+	 else [g. cert_illtyped bot]
+       | [g. _] => [g. cert_illtyped bot]
+       )
+    | [g. _] => [g. cert_illtyped bot]
+    )
+   
+ | [g. letv (E1 ..) (\x. (E2 .. x))] => 
+   (case infer'  [g] [g. E1 ..] of
+    |[g. certify T1 (D1 ..)]  => 
+      (case infer' [g, b: block x:term, _t:oft x T1] [ g,b . E2 .. b.1] of 
+       | [g, b: block x:term, _t:oft x (S1 ..). certify T2 (D2 .. b)]  =>
+           [g. certify T2 (o_let (D1 ..) (\x.\u. D2 .. <x, u>))]
+       | [g, b: block x:term, _t:oft x (S1 ..). cert_illtyped bot] => 
+	   [g. cert_illtyped bot]
+      )
+    | [g. cert_illtyped bot] => 	   [g. cert_illtyped bot]
+   )
+
+;

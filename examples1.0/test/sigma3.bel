@@ -1,0 +1,78 @@
+nat: type.
+z : nat.
+s : nat -> nat.
+
+tp : type.
+un : tp.
+ 
+schema w = block x:nat, _t:nat;
+schema tps = tp;
+
+rec f : {g:w} [g. nat] -> [g. nat] =
+  mlam g => fn e =>
+    case e of  %not
+%     {#p::(block x:nat. nat)[g]}
+% | [g] #p.1 .. => [g] z
+| [g. #p.2 ..] => [g. z]
+| [g. z] => e
+| [g. s (N .. )] => e
+;
+
+
+rec f : {g:w} [g. nat] -> [g. nat] =
+  mlam g => fn e =>
+    case e of  %not
+     {#p:[g. block x:nat, _t:nat]}
+      [g. #p.1 ..] => [g. #p.2 ..]
+;
+
+rec qqqq : [x:block y:nat,_t:nat. nat] -> [x:block y:nat,_t:nat. nat] =   
+fn eNat => case eNat of %not
+  [x:block y:nat,_t:nat. x.1] => [x. x.2]
+;
+
+%not
+rec ffff1 : {h:tps} [h, extras:tp. nat] -> [h. nat] =
+   mlam h => fn eNat =>
+     case eNat of
+       [h, extras:tp. #pp ..] => [h. #pp ..]
+       % #pp must be a nat, but nat does not appear in contexts of the form [h, extras:tp]
+;
+
+
+%not
+rec ffff2 : {g:w} {h:tps} [g. nat] -> [h. tp] -> [g. nat] =
+  mlam g => mlam h => fn eNat => fn eTp =>
+    case eNat of
+      [g. #pp.1 ..] => [g. #pp ..]      % type error: #pp is `block _:nat.nat', not `nat'
+;
+
+rec ffff2-a : {h:tps} [h. tp] -> [h. tp] =
+  mlam h => fn eTp =>
+    case eTp of %not
+      [h. #q ..] => [h. #q ..]
+;
+
+% not
+rec ffff2-a-misspell : {h:tps} [h. tp] -> [h. tp] =
+  mlam h => fn eTp =>
+    case eTp of %not
+      [g. #q ..] => [g. #q ..]        % Unknown context variable in context: g
+;
+
+
+%not
+rec ffff3 : {g:w} {h:tps} [g. nat] -> [h. tp] -> [g. nat] =
+  mlam g => mlam h => fn eNat => fn eTp =>
+    case eTp of
+     [h. #pp.1 ..] => [g. z]             % Fails: tps doesn't include any Sigmas
+;
+
+
+rec ffff4 : {h:tps}{g:w}  [g. nat] -> [h. tp] -> [g. nat] =
+  mlam h => mlam g => fn eNat => fn eTp =>
+    case eNat of %not
+      [g. #pp'.1 ..] => [g. #pp'.2 ..]
+;
+
+

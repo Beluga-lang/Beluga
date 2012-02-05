@@ -533,18 +533,12 @@ This case should now be covered by the one below it
   and checkDec cD cPsi (decl, s) = match decl with
     | TypDecl (_, tA) -> checkTyp cD cPsi (tA, s)
 
-
-  and synCtxSchema cD (CtxOffset k) =  
-    (dprint (fun () -> "[synCtxSchema] lookup k = " ^ R.render_offset k 
-	      ^ " in \n cD = " ^ P.mctxToString cD ^ "\n");
-     Context.lookupSchema cD k )
-
   (* checkDCtx cD cPsi
    *
    * Invariant:
    *
    * succeeds iff ; cD |- cPsi ctx
-   *)
+f   *)
   and checkDCtx cD cPsi = match cPsi with
     | Null ->  ()
     | DDec (cPsi, tX)     ->
@@ -557,9 +551,10 @@ This case should now be covered by the one below it
         else
           raise (Violation "Context variable out of scope")
 *)
-    | CtxVar psi -> 
-        let _ = synCtxSchema cD psi in 
-          ()
+    | CtxVar (CtxOffset k) -> 
+	(dprint (fun () -> "[chkDCtx] lookup CtxVar where k = " ^ R.render_offset k 
+	       ^ " in \n cD = " ^ P.mctxToString cD ^ "\n");
+	 let _ = Context.lookupSchema cD k in ())
 
 (* other cases should be impossible -bp *)
 

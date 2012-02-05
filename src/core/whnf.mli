@@ -106,6 +106,8 @@ val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 
 val cnormPattern  : Comp.pattern * msub -> Comp.pattern 
 
+val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
+
 val cnormMSub  : msub -> msub
 val cnormCSub  : (csub * msub) -> csub
 

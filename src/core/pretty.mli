@@ -120,9 +120,12 @@ module Int : sig
     val dctxToString      : LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> string
 
+    val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
+
     val schemaToString    : LF.schema     -> string 
     val schElemToString   : LF.sch_elem   -> string 
     val gctxToString      : LF.mctx -> Comp.gctx  -> string
+    val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
     val expChkToString    : LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
     val expSynToString    : LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
     val branchToString    : LF.mctx -> Comp.gctx  -> Comp.branch   -> string

@@ -166,7 +166,7 @@ module Comp = struct
    | PatAnn   of Loc.t * pattern * typ
 
  and pattern_spine = 
-   | PatNil
+   | PatNil of Loc.t
    | PatApp of Loc.t * pattern * pattern_spine 
 
   and branch = 

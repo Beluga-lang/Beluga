@@ -750,7 +750,7 @@ and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
 	(Apx.Comp.PatAnn (loc, pat', tau') , fcvars'', fvars')
 
 and index_pat_spine cvars fcvars fvars pat_spine = match pat_spine with
-  | Ext.Comp.PatNil -> (Apx.Comp.PatNil, fcvars, fvars)
+  | Ext.Comp.PatNil loc -> (Apx.Comp.PatNil loc, fcvars, fvars)
   | Ext.Comp.PatApp (loc, pat, pat_spine) -> 
       let (pat', fcvars1, fvars1) = index_pattern cvars fcvars fvars pat in 
       let (pat_spine', fcvars2, fvars2) = index_pat_spine cvars fcvars1 fvars1 pat_spine in
@@ -783,7 +783,7 @@ and reindex_pattern fvars pat = match pat with
 	Apx.Comp.PatAnn (loc, pat', tau) 
 
 and reindex_pat_spine fvars pat_spine = match pat_spine with
-  | Apx.Comp.PatNil -> Apx.Comp.PatNil
+  | Apx.Comp.PatNil loc -> Apx.Comp.PatNil loc
   | Apx.Comp.PatApp (loc, pat, pat_spine) -> 
       let pat' = reindex_pattern fvars pat in 
       let pat_spine' = reindex_pat_spine fvars pat_spine in

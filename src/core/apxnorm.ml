@@ -703,7 +703,7 @@ let rec collectApxPattern fMVd pat = match pat with
   | Apx.Comp.PatFalse loc -> fMVd
 
 and collectApxPatSpine fMVd pat_spine = match pat_spine with 
-  | Apx.Comp.PatNil -> fMVd
+  | Apx.Comp.PatNil _ -> fMVd
   | Apx.Comp.PatApp (loc, pat, pat_spine) -> 
       let fMVs1 = collectApxPattern fMVd pat in 
 	collectApxPatSpine fMVs1 pat_spine 

@@ -43,7 +43,6 @@ schema cctx = ctm;
 % Since we do not currently support direct pattern matching on contexts
 % we pattern match on M.
 
-
 rec addProjs : (g:cctx) [.nat] -> [g, e:envr . ctm] ->  [e:envr . ctm] = 
 fn n => fn m => case m of 
 | [ e:envr . M e ] => [e:envr . M e]

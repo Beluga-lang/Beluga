@@ -177,8 +177,6 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
           checkMetaSpine cD mS (cK , C.m_id)
 
     | TypBox (_ , tA, cPsi) ->
-        let _ = dprint (fun () -> "[checkTyp] TypBox " ^ 
-                          P.compTypToString cD  tau ) in 
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
 

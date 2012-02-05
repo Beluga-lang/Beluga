@@ -2087,7 +2087,7 @@ let rec mctxPVarPos cD p =
     | Comp.MetaCtx (loc, cPsi) -> 
         Comp.MetaCtx (loc, cnormDCtx (cPsi,t))
     | Comp.MetaObj (loc, phat, tM) -> 
-        Comp.MetaObj (loc, phat, cnorm (tM, t))
+        Comp.MetaObj (loc, cnorm_psihat phat t, cnorm (tM, t))
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS

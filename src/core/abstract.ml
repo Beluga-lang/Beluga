@@ -1382,7 +1382,7 @@ and abstractMVarSpine cQ offset sS = match sS with
 and abstractMVarCtxV cQ (l,offset) ctx_var = 
 (match ctx_var with
    | I.CtxOffset psi -> 
-       if psi < offset then ctx_var
+       if psi <= offset then ctx_var
        else 
          I.CtxOffset (psi + l)
    | I.CtxName psi   ->    
@@ -1441,7 +1441,9 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.Null ->
       I.Null
   | I.CtxVar (I.CtxOffset psi) -> 
-      if psi < offset then cPsi
+
+      if psi <= offset then 
+        cPsi
       else 
         (dprint (fun () -> "[abstractMVarDctx] Old CtxOffset = " ^
                    R.render_offset psi ^ "  New CtxOffset " ^ 
@@ -1614,6 +1616,7 @@ and abstractMSub  t =
   let t''  = abstrMSub cQ' t' in
   let _ = dprint (fun () -> "AbstrMSub done\n") in 
   let cD'  = ctxToMCtx cQ' in  
+  let _ = dprint (fun () -> "ctxToMCtx done\n") in 
     (t'' , cD')  
 
 (*

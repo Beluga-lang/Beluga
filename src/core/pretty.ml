@@ -180,10 +180,13 @@ module Int = struct
     val dctxToString      : LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> string
 
+    val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
+
     val schemaToString    : LF.schema     -> string
     val schElemToString   : LF.sch_elem   -> string
 
     val gctxToString      : LF.mctx -> Comp.gctx  -> string
+    val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
     val expChkToString    : LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
     val expSynToString    : LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
     val branchToString    : LF.mctx -> Comp.gctx  -> Comp.branch   -> string
@@ -1023,7 +1026,7 @@ module Int = struct
               (r_paren_if cond)
       | Comp.PatMetaObj (_, mO) -> 
           let cond = lvl > 1 in 
-            fprintf ppf "%s[%a]%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
               (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
@@ -1340,7 +1343,7 @@ module Int = struct
           let cG_t = Whnf.cnormCtx (cG, t) in 
           let cG_ext = Context.append cG_t cG' in 
 
-          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ . %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
              (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_cmp_gctx cD1' 0) cG' 
              (fmt_ppr_pat_obj cD1' cG' 0) pat
@@ -1514,6 +1517,7 @@ module Int = struct
     let ppr_cmp_typ cD         = fmt_ppr_cmp_typ cD         std_lvl std_formatter
     let ppr_cmp_exp_chk cD cG  = fmt_ppr_cmp_exp_chk cD cG  std_lvl std_formatter
     let ppr_cmp_exp_syn cD cG  = fmt_ppr_cmp_exp_syn cD cG  std_lvl std_formatter
+    let ppr_pat_obj cD cG      = fmt_ppr_pat_obj cD cG  std_lvl std_formatter
     let ppr_cmp_branches cD cG = fmt_ppr_cmp_branches cD cG std_lvl std_formatter
     let ppr_cmp_branch cD cG   = fmt_ppr_cmp_branch cD cG   std_lvl std_formatter
 
@@ -1588,10 +1592,20 @@ module Int = struct
       fmt_ppr_lf_sch_elem std_lvl str_formatter sch_elem
       ; flush_str_formatter ()
 
+
+    let metaObjToString  cD mO = 
+        fmt_ppr_meta_obj cD std_lvl str_formatter mO
+        ; flush_str_formatter ()
+
     let gctxToString cD cG = 
       let cG' = Whnf.normCtx cG in 
         fmt_ppr_cmp_gctx cD std_lvl str_formatter cG'
         ; flush_str_formatter ()
+
+    let patternToString cD cG pat    = 
+      let pat' = Whnf.cnormPattern (pat , Whnf.m_id) in 
+       fmt_ppr_pat_obj cD cG std_lvl str_formatter pat'
+      ; flush_str_formatter ()
 
     let expChkToString cD cG e    = 
       let e' = Whnf.cnormExp (e , Whnf.m_id) in 

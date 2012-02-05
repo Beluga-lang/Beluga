@@ -2711,27 +2711,42 @@ let disallowUndefineds f =
  and unifyDCtx1 mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 
-      | (CtxVar (CInst (cvar_ref , _schema, _cO, _cD)) , cPsi) -> 
+      | (CtxVar (CInst ({contents = None} as cvar_ref1 , _schema1, _cO1, _cD1)) , 
+         CtxVar (CInst ({contents = None} as cvar_ref2 , _schema2, _cO2, _cD2))) -> 
+          if cvar_ref1 == cvar_ref2 then ()  
+          else 
+           instantiateCtxVar (cvar_ref1, cPsi2)
+
+      | (CtxVar (CInst ({contents = None} as cvar_ref , _schema, _cO, _cD)) , cPsi) -> 
            instantiateCtxVar (cvar_ref, cPsi)
 
-      | (cPsi , CtxVar (CInst (cvar_ref , _schema, _cO, _cD) )) -> 
+      | (cPsi , CtxVar (CInst ({contents = None} as cvar_ref , _schema, _cO, _cD) )) -> 
            instantiateCtxVar (cvar_ref, cPsi)
 
-      | (CtxVar  psi1_var , CtxVar psi2_var) -> 
-          if psi1_var = psi2_var then () 
-          else raise_ (Unify "CtxVar clash")
+      | (CtxVar cvar, CtxVar cvar') -> 
+          if cvar = cvar' then () 
+          else 
+             raise_ (Unify "Bound (named) context variable clash")
 
+(*      | (CtxVar (CInst ({contents = Some cPhi}  , _schema, _cO, _cD)) , cPsi) -> 
+          unifyDCtx1 mflag cD0 cPhi cPsi
+
+      | (cPsi , CtxVar (CInst ({contents = Some cPhi} , _schema, _cO, _cD) )) -> 
+          unifyDCtx1 mflag cD0 cPsi cPhi
+*)
 
       | (DDec (cPsi1, TypDecl(_ , tA1)) , DDec (cPsi2, TypDecl(_ , tA2))) -> 
             unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
             unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id)
-      | (DDec (cPsi1, TypDeclOpt _) ,   DDec (cPsi2, TypDeclOpt _ )) -> 
-          unifyDCtx1 mflag cD0 cPsi1 cPsi2
+
+      | (DDec (cPsi1, _) , DDec (cPsi2, _ )) -> 
+            unifyDCtx1 mflag cD0 cPsi1 cPsi2  
       | _ -> 
           (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ P.dctxToString cD0 cPsi1 ^ " cPsi2 = " ^ P.dctxToString cD0 cPsi2 ) ; 
 raise_ (Unify "Context clash"))
 
    (* **************************************************************** *)
+
   let rec unifyMetaObj cD (mO, t) (mO', t') = match ((mO, t) , (mO', t')) with
     | (Comp.MetaCtx (_, cPsi), t) , (Comp.MetaCtx (_, cPsi'), t') -> 
         unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
@@ -2739,7 +2754,7 @@ raise_ (Unify "Context clash"))
     | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') -> 
         let cPsi  = Context.hatToDCtx phat in 
         let cPsi' = Context.hatToDCtx phat' in 
-          unifyDCtx1 Unification cD cPsi cPsi';
+          unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'));
           unifyTerm Unification cD cPsi
             (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id)
 
@@ -2756,8 +2771,17 @@ raise_ (Unify "Context clash"))
   let rec unifyMetaSpine cD (mS, t) (mS', t') = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
     | (Comp.MetaApp (mO, mS), t) , (Comp.MetaApp (mO', mS'), t') -> 
-        unifyMetaObj cD (mO, t) (mO', t');
-        unifyMetaSpine cD (mS, t) (mS', t')
+        let mOt = Whnf.cnormMetaObj (mO, t) in 
+        let mOt' = Whnf.cnormMetaObj (mO', t') in 
+          (dprint (fun () -> "[unifyMetaObj] BEFORE " ^ P.metaObjToString cD mOt' ^ " == " ^ 
+                    P.metaObjToString cD mOt);
+          unifyMetaObj cD (mO, t) (mO', t');
+          dprint (fun () -> "[unifyMetaObj] AFTER " ^ P.metaObjToString cD mOt ^ " == " ^ 
+                    P.metaObjToString cD mO');
+          unifyMetaSpine cD (mS, t) (mS', t');
+          dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES" ^ P.metaObjToString cD mOt ^ " == " ^ 
+                    P.metaObjToString cD mO'))
+
     | _ -> raise_ (Unify "Meta-Spine mismatch")
 
     let rec unifyCompTyp cD tau_t tau_t' = 
@@ -2766,7 +2790,11 @@ raise_ (Unify "Context clash"))
     and unifyCompTypW cD tau_t tau_t' = match (tau_t,  tau_t') with
       | ((Comp.TypBase (_, c, mS), t), (Comp.TypBase (_, c', mS'), t')) -> 
           if c = c' then 
-            unifyMetaSpine cD (mS, t) (mS', t')
+            (unifyMetaSpine cD (mS, t) (mS', t'); 
+             dprint (fun () -> "[unifyCompTyp] " ^ 
+                       P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ " == "  ^
+                       P.compTypToString cD (Whnf.cnormCTyp tau_t') ))
+                       
           else 
             raise_ (Unify "Type Constant Clash")
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) -> 

@@ -1189,7 +1189,7 @@ clf_pattern :
            | Some tau -> Comp.PatAnn (_loc, Comp.PatVar (_loc, Id.mk_name (Id.SomeString x)), tau)
          )
      | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) -> 
-         let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s Comp.PatNil in 
+         let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in 
            Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
      | "("; p = SELF; ")"   ->  p 
       ]

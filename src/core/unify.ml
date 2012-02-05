@@ -2971,7 +2971,8 @@ raise_ (Unify "Context clash"))
           unifyCSub cs (CShift (k-1))
 
       | (CDot (cPsi, cs), CDot (cPhi, ct)) -> 
-          (unifyDCtx1 Unification Empty cPsi cPhi ; 
+          (unifyDCtx1 Unification Empty (Whnf.cnormDCtx (cPsi, Whnf.m_id)) 
+                                        (Whnf.cnormDCtx (cPhi, Whnf.m_id)) ; 
            unifyCSub cs ct )
  
 
@@ -2986,7 +2987,8 @@ raise_ (Unify "Context clash"))
 
 
     let unifyDCtx cD0 cPsi1 cPsi2 =
-      unifyDCtx1 Unification cD0 cPsi1 cPsi2 
+      unifyDCtx1 Unification cD0 (Whnf.cnormDCtx (cPsi1, Whnf.m_id)) 
+                                 (Whnf.cnormDCtx (cPsi2, Whnf.m_id))
 
     let matchTerm cD0 cPsi sM sN = 
       unify' Matching cD0 cPsi sM sN

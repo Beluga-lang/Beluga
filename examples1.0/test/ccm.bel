@@ -22,7 +22,7 @@ fn v => case v of
 ;
 
 %{
-rec gratlengthWrong : (g:nat-ctx) [g. nat]  -> [. nat] =
+rec gratlengthWrong : {g:nat-ctx} nat[g]  -> nat[ ] =
 fn v => case v of
  | [h,x:nat] U .. x => let [] N = gratlength ([h] U .. z) in [] s N
  | [hhh] V  %{ shouldn't need the .. here, but coverage rejects it otherwise }%  => [. z]
@@ -112,7 +112,7 @@ fn v => case v of
 
 
 %{
-rec db2vhoas : (g:ctx) [g. exp' T] -> [g. value T] = 
+rec db2vhoas : {g:ctx} (exp' T)[g] -> (value T)[g] = 
 fn e => case e of 
 | [h,x:value T] one : (exp' T)[h,x:value T] => 
     [h,x:value T] x

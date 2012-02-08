@@ -112,7 +112,7 @@ coercionTerm equal2eq : equal T T -> eq (equal2eq T) (equal2eq T) =
 
 
 %{
-rec co2eq : {g:equalCtx} [g. exp] -> [equal2eq(g). block x:exp. equal x x] = 
+rec co2eq : {g:(equalCtx)*} (exp)[g] -> (block x:exp. equal x x)[equal2eq(g)] = 
  FN g => fn e => case e of 
  
   [g] p .. => [equal2eq(g)] < p .. , e_r (p ..) >
@@ -146,8 +146,8 @@ morphism co2eq : g:equalCtx . exp[g]  -> exp'[equal2eq(g)] =
     [g] app' (F1 ..) (F2 ..)
 
 
-rec ceq: {g:equalCtx} [g. equal (T ..) (S ..)] 
-        -> [g. eq ((co2eq] ([g] T ..))..) ((co2eq [g] ([g] S ..)) ..) [equal2eq(g)]  =
+rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] 
+        -> (eq ((co2eq [g] ([g] T ..))..) ((co2eq [g] ([g] S ..)) ..) [equal2eq(g)]  =
 
 
 OR: Substitutions should be thought of structure preserving mappings aka morphisms.?
@@ -164,7 +164,7 @@ rec ceq: {g:equalCtx} [g. equal (T ..) (S ..)] -> [equal2eq(g). eq (T ..) (S ..)
 
 
 %{
-rec ceq: {g:equalCtx} [g. equal (T ..) (S ..)] -> [equal2eq(g). eq equal2eq(T ..) equal2eq(S ..)]  =
+rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq equal2eq(T ..) equal2eq(S ..))[equal2eq(g)]  =
  FN g =>  fn E =>
   case E of 
 

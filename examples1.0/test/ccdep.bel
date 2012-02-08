@@ -19,12 +19,12 @@ schema bool-ctx = bool;
 
 %{
 % these examples require context variable splitting, not yet implemented
-rec depsplit : (g:bool-ctx) [g. bool]  ->  [. bool] =
+rec depsplit : {g:bool-ctx} bool[g]  ->  bool[ ] =
 fn d => case d of 
  | [h, x:bool] U .. => [] tt
 ;
 
-rec depsplit : (g:dep-ctx) [g. dep (B ..)]  ->  [. bool] =
+rec depsplit : {g:dep-ctx} (dep (B ..))[g]  ->  bool[ ] =
 fn d => case d of 
  | [h, x:dep (S ..)] U .. => [] tt
  | [h, x:dep tt] U .. => [] tt
@@ -32,18 +32,18 @@ fn d => case d of
  | [h, x:dep tt, y:dep tt] U .. => [] ff
 ;
 
-rec depdepsplit : (g:depdep-ctx) [g. dep (BQ ..)]  ->  [. bool] =
+rec depdepsplit : {g:depdep-ctx} (dep (BQ ..))[g]  ->  bool[ ] =
 fn d => case d of 
  | [h, x : depdep tt deptt] U .. => [] tt
 ;
 
-rec depsplit : (g:dep-ctx) [g. dep (B ..)]  ->  [. bool] =
+rec depsplit : {g:dep-ctx} (dep (B ..))[g]  ->  bool[ ] =
 fn d => case d of
  | [h, x:dep tt] U .. => [] tt
  | [h, x:dep ff] U .. => [] ff
 ;
 
-rec depsplitWrong : (g:dep-ctx) [g. dep (B ..)]  ->  [. bool] =
+rec depsplitWrong : {g:dep-ctx} (dep (B ..))[g]  ->  bool[ ] =
 fn d => case d of  %not
  | [h, x:dep tt] U .. => [] tt
 ;

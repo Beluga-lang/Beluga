@@ -16,7 +16,7 @@ rec identity : [. nat] -> [. nat] =
 ;
 
 
- rec plus : [. nat] -> [. nat] -> [. nat] = 
+rec plus : [. nat] -> [. nat] -> [. nat] = 
  fn x => fn y => 
   case x of %not
      [. z]  => y
@@ -28,7 +28,7 @@ rec identity : [. nat] -> [. nat] =
 ;
 
 
- rec plus' : [. nat] -> [. nat] -> [. nat] = 
+rec plus' : [. nat] -> [. nat] -> [. nat] = 
    fn x => fn y => 
      case x of %not
        [. z]  => y

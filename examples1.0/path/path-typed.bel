@@ -78,7 +78,7 @@ mlam g => mlam M => mlam N => fn f => case [g. M ..] of
 
 | [g. lam T (\x. M' .. x)] => 
   let  [g. p_lam (\x.\p.\u. \i. p_done)]__ANNOT__  : 
-       [g. is_path (bind T' (\p.done)) (lam _ (\x. N' .. x))]__ANNOT__ 
+       (is_path (bind T' (\p.done)) (lam _ (\x. N' .. x)))[g]__ANNOT__ 
     = 
        f [g. bind T (\p.done) ] [g. p_lam (\x.\p.\u. \i. p_done)] in 
 
@@ -87,7 +87,7 @@ mlam g => mlam M => mlam N => fn f => case [g. M ..] of
 	      [g,b. M' .. b.1 ] [g,b. N' .. b.1 ] 
 (mlam Q => fn ip =>
          let {Qs: [g,p:path. path]}
-             [g, b:block x:exp, q:path, u:type_of x T', _t:is_path q x. ] Qs .. b.2 = 
+             [g, b:block x:exp, q:path, u:type_of x T', _t:is_path q x. Qs .. b.2] = 
 	        [g, b:block x:exp, q:path,u:type_of x T', _t:is_path q x. Q .. b] in  % strengthening
          let [g, b:block x:exp, q:path, u:type_of x T', _t:is_path q x. D .. b] = ip in 
          let [g. p_lam (\x.\q.\u.\iq. D' .. x q u iq)] : [g. is_path (bind T' (\q. Q' .. q)) (lam _ (\x. N' .. x))] =  

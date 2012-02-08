@@ -22,13 +22,13 @@ e_switch:
 
 % Example:
 
-let t : (step (switch (switch true false false)
+let t : [. step (switch (switch true false false)
                       true 
                       true)
-              (switch false true true)) [ ]
-= [ ] e_switch e_switch_true ;
+              (switch false true true)]
+= [. e_switch e_switch_true] ;
 
-let d : (step (switch (switch (switch true false false)
+let d : [. step (switch (switch (switch true false false)
                                true 
                                true)
                        false 
@@ -36,8 +36,8 @@ let d : (step (switch (switch (switch true false false)
         
               (switch (switch false true true)
 	              false
-                      false)) [ ]
-= [ ] e_switch (e_switch e_switch_true) ;
+                      false)]
+= [. e_switch (e_switch e_switch_true)] ;
 
 
 % Values
@@ -58,24 +58,23 @@ Theorem: if step T T1 and step T T2 then equal T1 T2.
 
 }%
 
-rec det : (step T T1)[ ] -> (step T T2)[ ] -> (equal T1 T2)[ ] =
+rec det : [. step T T1] -> [. step T T2] -> [. equal T1 T2] =
 fn s1 => fn s2 => case s1 of 
-| [ ] e_switch_true  => 
-    (case s2 of [ ] e_switch_true  =>  [ ] ref
+| [. e_switch_true]  => 
+    (case s2 of [. e_switch_true]  =>  [. ref]
 %	     | [ ] e_switch D     =>  impossible ([ ] D) in [ ]
     )
  
-| [ ] e_switch_false  =>
-  (case  s2 of [ ] e_switch_false =>  [ ] ref
+| [. e_switch_false]  =>
+  (case  s2 of [. e_switch_false] =>  [. ref]
 %	     | [ ] e_switch D     => impossible ([ ] D) in []
   )
 
-| [ ] e_switch D => 
+| [. e_switch D] => 
   (case s2 of 
-   | [ ] e_switch E  =>
-       let [ ] ref        = det ([ ] D) ([] E) in  [ ] ref
-   | [ ] e_switch_false => impossible ([ ] D) in []
-  | [ ] e_switch_true  => impossible ([ ] D) in [])
+   | [. e_switch E]  =>
+       let [. ref]        = det [. D] [. E] in  [. ref]
+   | [. e_switch_false] => impossible [. D] in []| [. e_switch_true]  => impossible [. D] in [])
 ;
 
 
@@ -98,35 +97,33 @@ m_ref  : mstep M M.   % Reflexive
  Lemma: if value N and mstep N M then  equal N M.
 
 }%
-rec lemma_val_2 : (value N)[ ] -> (mstep N M)[ ] -> (equal M N)[ ] =
+rec lemma_val_2 : [. value N] -> [. mstep N M] -> [. equal M N] =
 fn v => fn s => case v of 
-| [ ] v_true => 
-    let [ ] m_ref  = s in 
-      [ ] ref
+| [. v_true] => 
+    let [. m_ref]  = s in 
+      [. ref]
 
-| [ ] v_false => 
-    let  [ ] m_ref = s in
-      [ ] ref
+| [. v_false] => 
+    let  [. m_ref] = s in
+      [. ref]
 ;
 
-rec lemma_val_1 : (value N)[ ] -> (mstep N M)[ ] -> (equal N M)[ ] =
+rec lemma_val_1 : [. value N] -> [. mstep N M] -> [. equal N M] =
 fn v => fn s => case v of 
-| [ ] v_true => 
-    let [ ] m_ref  = s in 
-      [ ] ref
+| [. v_true] => 
+    let [. m_ref]  = s in 
+      [. ref]
 
-| [ ] v_false => 
-    let  [ ] m_ref = s in
-      [ ] ref
+| [. v_false] => 
+    let  [. m_ref] = s in
+      [. ref]
 ;
 
 absurd : type.
 
-rec values_dont_step : (value N)[ ] -> (step N M)[ ] -> absurd [ ] = 
+rec values_dont_step : [. value N] -> [. step N M] -> [. absurd] = 
 fn v => fn s => case v of 
-| [ ] v_true => impossible s in [ ] 
-| [ ] v_false => impossible s in [ ]
-;
+| [. v_true] => impossible s in []| [. v_false] => impossible s in [];
 
 
 % -------------------------------------------------------- %
@@ -139,28 +136,24 @@ If mstep M N  and mstep M N'  then equal N N'.
 msteps_to_terms: term -> term -> term -> type.
 andalso': mstep M M1 -> mstep M M2 -> msteps_to_terms M M1 M2.
 
-rec unique : (mstep M N1)[ ] -> (mstep M N2)[ ] 
-             -> (value N1)[ ] -> (value N2)[ ] 			      
-	     -> (equal N1 N2)[ ] =
+rec unique : [. mstep M N1] -> [. mstep M N2] 
+             -> [. value N1] -> [. value N2] 			      
+	     -> [. equal N1 N2] =
 fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of 
-| [ ] m_step S1 MS1 => 
+| [. m_step S1 MS1] => 
   (case ms2 of 
-   | [ ] m_ref => (case vn2 of 
-		    | [ ] v_true  => impossible [ ] S1 in [ ] 
-		    | [ ] v_false => impossible [ ] S1 in [ ] 
-		 )
-   | [ ] m_step S2 MS2 =>
-     let [ ] ref = det ([ ] S1) ([ ] S2) in
-       unique ([ ] MS1) ([] MS2) vn1 vn2
+   | [. m_ref] => (case vn2 of 
+		    | [. v_true]  => impossible [ ] S1 in []| [. v_false] => impossible [ ] S1 in [])
+   | [. m_step S2 MS2] =>
+     let [. ref] = det [. S1] [. S2] in
+       unique [. MS1] [. MS2] vn1 vn2
    )
-| [ ] m_ref    => 
+| [. m_ref]    => 
   (case ms2 of 
-     | [] m_ref  =>  [ ] ref
-     | [] m_step S2 MS2 =>  
+     | [. m_ref]  =>  [. ref]
+     | [. m_step S2 MS2] =>  
 	 (case vn1 of 
-	    | [ ] v_true  => impossible [ ] S2 in [ ] 
-	    | [ ] v_false => impossible [ ] S2 in [ ] 
-	 )
+	    | [. v_true]  => impossible [ ] S2 in []| [. v_false] => impossible [ ] S2 in [])
   ) 
 
 %{  let [ ] V1 = vn1 in 
@@ -188,35 +181,35 @@ ms_step: step M N
 Admissibility of transitivity for mstep:
 }%
 
-rec m_trans : (mstep M N')[ ] -> (mstep N' N)[ ] -> (mstep M N)[ ] = 
+rec m_trans : [. mstep M N'] -> [. mstep N' N] -> [. mstep M N] = 
 fn ms1 => fn ms2 => case ms1 of 
-| [ ] m_ref  => ms2 
-| [ ] m_step  S1 MS1 => 
-  let [ ] MS1' = m_trans ([ ] MS1) ms2 in 
-    [ ] m_step S1 MS1'
+| [. m_ref]  => ms2 
+| [. m_step  S1 MS1] => 
+  let [. MS1'] = m_trans [. MS1] ms2 in 
+    [. m_step S1 MS1']
 ;
 
 
-rec sound : (mstep M N)[ ] -> (multi_step M N)[ ] = 
+rec sound : [. mstep M N] -> [. multi_step M N] = 
 fn ms => case ms of 
-| [ ] m_ref => [ ] ms_ref
-| [ ] m_step S MS => 
-  let [ ] MS' = sound ([ ] MS) in 
-    [ ] ms_tr (ms_step S) MS'
+| [. m_ref] => [. ms_ref]
+| [. m_step S MS] => 
+  let [. MS'] = sound [. MS] in 
+    [. ms_tr (ms_step S) MS']
 ;
 
 
-rec complete : (multi_step M N)[ ] -> (mstep M N)[ ] =
+rec complete : [. multi_step M N] -> [. mstep M N] =
 fn ms =>  case ms of 
-| [ ] ms_ref => 
-    [ ] m_ref 
-| [ ] ms_tr MS1 MS2 => 
-  let [ ] MS2' = complete ([ ] MS2) in 
-  let [ ] MS1' = complete ([ ] MS1) in 
-   m_trans ([ ] MS1') ([ ] MS2')
+| [. ms_ref] => 
+    [. m_ref] 
+| [. ms_tr MS1 MS2] => 
+  let [. MS2'] = complete [. MS2] in 
+  let [. MS1'] = complete [. MS1] in 
+   m_trans [. MS1'] [. MS2']
 
-| [ ] ms_step S => 
-  [ ] m_step S m_ref
+| [. ms_step S] => 
+  [. m_step S m_ref]
 ;
 
 
@@ -230,19 +223,19 @@ result: multi_step T T' -> value T'
    -> steps_to_val T.
 
 rec mstep_switch : 
-  {T2::term[ ]}{T3::term[ ]}
-  (multi_step T T')[ ] ->
-  (multi_step (switch T T2 T3) (switch T' T2 T3))[ ] = 
+  {T2:[. term]}{T3:[. term]}
+  [. multi_step T T'] ->
+  [. multi_step (switch T T2 T3) (switch T' T2 T3)] = 
 mlam T2 => mlam T3 => 
 fn ms => case ms of 
-| [ ] ms_ref => [ ] ms_ref
-| [ ] ms_step S => 
-  [ ] ms_step (e_switch S)
+| [. ms_ref] => [. ms_ref]
+| [. ms_step S] => 
+  [. ms_step (e_switch S)]
 
-| [ ] ms_tr MS1 MS2 =>
-  let [ ] MS1' = mstep_switch < . T2 > < . T3 > ([ ] MS1) in 
-  let [ ] MS2' = mstep_switch < . T2 > < . T3 > ([ ] MS2) in 
-    [ ] ms_tr MS1' MS2'
+| [. ms_tr MS1 MS2] =>
+  let [. MS1'] = mstep_switch [ . T2 ] [ . T3 ] [. MS1] in 
+  let [. MS2'] = mstep_switch [ . T2 ] [ . T3 ] [. MS2] in 
+    [. ms_tr MS1' MS2']
 ;
 
 
@@ -253,25 +246,25 @@ fn ms => case ms of
  i.e. no term will get stuck.
 }%
 
-rec terminate : {M::term[ ]} (steps_to_val M)[ ] =
-mlam M => case [ ] M of 
-| [ ] true => 
-   [ ] result ms_ref v_true
+rec terminate : {M:[. term]} [. steps_to_val M] =
+mlam M => case [. M] of 
+| [. true] => 
+   [. result ms_ref v_true]
 
-| [ ] false => 
-    [ ] result ms_ref v_false
+| [. false] => 
+    [. result ms_ref v_false]
 
-| [ ] switch T T1 T2 => 
-  (case terminate < . T > of 
-   | [ ] result MS v_true => 
-       let [ ] result MS1 V1 = terminate < . T1 > in 
-       let [ ] MS'           = mstep_switch < . T1 > < . T2 > ([ ] MS) in 
-       [ ] result (ms_tr MS' (ms_tr (ms_step e_switch_true) MS1)) V1
+| [. switch T T1 T2] => 
+  (case terminate [ . T ] of 
+   | [. result MS v_true] => 
+       let [. result MS1 V1] = terminate [ . T1 ] in 
+       let [. MS']           = mstep_switch [ . T1 ] [ . T2 ] [. MS] in 
+       [. result (ms_tr MS' (ms_tr (ms_step e_switch_true) MS1)) V1]
 
-   | [ ] result MS v_false => 
-       let [ ] result MS2 V2 = terminate < . T2 > in 
-       let [ ] MS'           = mstep_switch < . T1 > < . T2 > ([ ] MS) in 
-       [ ] result (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2
+   | [. result MS v_false] => 
+       let [. result MS2 V2] = terminate [ . T2 ] in 
+       let [. MS']           = mstep_switch [ . T1 ] [ . T2 ] [. MS] in 
+       [. result (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2]
 
 
        

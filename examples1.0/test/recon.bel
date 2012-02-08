@@ -24,7 +24,7 @@ app: exp (arr T1 T2) -> exp T1 -> exp T2.
 % ;
 
 %{
-rec test0 : [. exp T] -> [. exp T] = 
+rec test0 : (exp T)[ ] -> (exp T)[ ] = 
  fn e => case e of 
   [ ] lam (\x. (E x)) => 
      case test0 ([ ] lam (\x. (E x))) of 
@@ -39,21 +39,21 @@ exS : tExp
     <- exp S.
 
 %{
-rec test1 : [. exp T] -> [. tExp] = 
+rec test1 : (exp T)[ ] -> tExp[ ] = 
 fn e => case e of 
  [ ] lam (\x. (E x)) => 
    test1 ([ ] lam (\x. (E x)))
 ;
 
 
- rec test2 : [. exp T] -> [. tExp] = 
+ rec test2 : (exp T)[ ] -> tExp[ ] = 
   fn e => case e of 
    [ ] lam (\x. (E x)) => 
      let [ ] exS F = test2 ([ ] lam (\x. (E x))) in 
 	[ ] exS F 
 ;
 
-rec test3 :  [. exp T] -> [. tExp] = 
+rec test3 :  (exp T)[ ] -> tExp[ ] = 
   fn e => case e of 
    [ ] lam (\x. (E x)) => 
 	let [ ] exS (lam (\x. x)) = test3 ([ ] lam (\x. (E x))) in  

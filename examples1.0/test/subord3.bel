@@ -15,7 +15,7 @@ schema blockCtx = block i1 : irrel, b : bool, i3:irrel, i4:irrel, _t:term;
 schema termCtx = block t1 : term, t2 : term, t3 : term, _t:term;
 
 %{
-rec fff0 : {g:termCtx} term[g, xx : block t1 : term, t2 : term, t3 : term. term] -> [. term] =
+rec fff0 : {g:(termCtx)*} term[g, xx : block t1 : term, t2 : term, t3 : term. term] -> term[] =
 FN g => fn e =>
   case e of
    | [g, xx : block t1 : term, t2 : term, t3 : term. term] U .. xx => [] z
@@ -44,7 +44,7 @@ mlam g => fn e =>
 % let nonexh = fff0'fail [] ([xx : block t1 : term, t2 : term, t3 : term. term] xx.2);
 
 %{
-rec fff : {g:blockCtx} bool[g, xx : block b : bool. term] -> [. term] =
+rec fff : {g:(blockCtx)*} bool[g, xx : block b : bool. term] -> term[] =
 FN g => fn e =>
   case e of
   | [g, xx : block b : bool. term]  eq U V     => [] z
@@ -53,7 +53,7 @@ FN g => fn e =>
 ;
 
 
-rec fff2 : {g:blockCtx} bool[g, xx : block i1 : irrel, b : bool, i3:irrel, i4:irrel. term] -> [. term] =
+rec fff2 : {g:(blockCtx)*} bool[g, xx : block i1 : irrel, b : bool, i3:irrel, i4:irrel. term] -> term[] =
 FN g => fn e =>
   case e of
 %  | [g, xx : block i1 : irrel, b : bool, i3:irrel, i4:irrel. term]  U .. xx     => [] z

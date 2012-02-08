@@ -88,13 +88,13 @@ e_iszero:
 % ---------------------------------------------------------- %
 % Example:
 %{
-let t : [. step (switch (switch true false false)
+let t : (step (switch (switch true false false)
                       true 
                       true)
-              (switch false true true)]
+              (switch false true true)) [ ]
 = [ ] e_switch e_switch_true ;
 
-let d : [. step (switch (switch (switch true false false)
+let d : (step (switch (switch (switch true false false)
                                true 
                                true)
                        false 
@@ -102,15 +102,15 @@ let d : [. step (switch (switch (switch true false false)
         
               (switch (switch false true true)
 	              false
-                      false)]
+                      false)) [ ]
 = [ ] e_switch (e_switch e_switch_true) ;
 
 
-let e1 : [. step (pred (succ (pred z))) (pred (succ z))] 
+let e1 : (step (pred (succ (pred z))) (pred (succ z))) [ ] 
 = [ ] e_pred (e_succ e_pred_zero) ;
 
 
-let e2 : [. step (pred (succ (pred z))) (pred z)] 
+let e2 : (step (pred (succ (pred z))) (pred z)) [ ] 
 = [ ] e_pred_succ ;
 }%
 % ---------------------------------------------------------- %

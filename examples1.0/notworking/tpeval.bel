@@ -21,10 +21,10 @@ letv : {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 schema ctx = some [t:tp] exp t;
 
- rec eval : (g:ctx) [g. exp bool] -> [. g] -> [. exp bool] =
+rec eval : (g:ctx) [g. exp bool] -> [. g] -> [. exp bool] =
 fn e => fn env => [. tt] ;
 
- rec eval : (g:ctx) [g. exp bool] -> [. g] -> [. exp bool] =
+rec eval : (g:ctx) [g. exp bool] -> [. g] -> [. exp bool] =
 fn e => fn env => 
  let [g. E ..] = e in 
  let [ ] #S[..] = env in [. E #S[..]]

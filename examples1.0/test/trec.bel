@@ -11,7 +11,7 @@ tlam: ({a:tp}exp (T a)) -> exp (all (\a. T a)).
 tapp: exp (all (\a. T a)) -> {S:tp} exp (T S).
 
 
- rec ev': [. exp T] -> [. exp S] = 
+rec ev': [. exp T] -> [. exp S] = 
  fn e => case e of 
 
  [. z]  => [. z]

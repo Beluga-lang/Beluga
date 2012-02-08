@@ -72,7 +72,7 @@ fn e => fn env => case e of
 ;
 
 %{
-rec eval : (g:ctx) [g . tm] -> [g. Env] -> Clos = 
+rec eval : (g:ctx) [g . tm] -> Env [g] -> Clos = 
 fn e => fn env => case e of
 | [g . #p .. ] => env [g . #p ..]
 | [g . lam \x. E .. x] => Cl [g, x:exp . E .. x] env 

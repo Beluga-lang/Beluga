@@ -19,7 +19,7 @@ rec testPairs : [. exp] -> [. exp] * tp [ ] =
 fn e => [. z , [ ] nat ]
 ;
 
- rec testPairs2 : [. exp] -> [. exp] * tp [ ] = 
+rec testPairs2 : [. exp] -> [. exp] * tp [ ] = 
  fn e => case e of 
    [. z] => ( e , [ ] nat )
 

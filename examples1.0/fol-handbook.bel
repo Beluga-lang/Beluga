@@ -90,7 +90,7 @@ rec ndhil : {g:ndhilCtx} [g. nd (A ..)] -> [g. hil (A ..)] =
 | {B1:[g. o]}{B2:[g. o]}{D:[g, u: nd (B1 ..). nd (B2 ..)]}
   [g. impi \u. D .. u] => 
   let {H:[g, u:hil (A1 ..). hil (A2 ..)]}
-      [g,b: block u: hil (A1 ..) , _t:nd (A1 ..). ] H .. b.1 = 
+      [g,b: block u: hil (A1 ..) , _t:nd (A1 ..) . H .. b.1] = 
     ndhil [g, b:block u:hil (B1 ..) , _t:nd (B1 ..) ] [g,b. D .. b.2]
   in
     ded [g] [g,u. H .. u]
@@ -117,7 +117,7 @@ rec ndhil : {g:ndhilCtx} [g. nd (A ..)] -> [g. hil (A ..)] =
 |  {B1:[g. o]}{D: [g, u:nd (B1 ..), p:o. nd p]}
   [g. noti (\p.(\u.(D .. u p)))] => 
   let {H:[g, u: hil (A ..), p:o. hil p]}
-      [g,w:block u:hil (A ..), _t:nd (A ..),p:o. ]  H .. w.1 p = 
+      [g,w:block u:hil (A ..), _t:nd (A ..),p:o. H .. w.1 p] = 
       ndhil [g, w : block u:hil (B1 ..) , _t:nd (B1 ..), p:o]   [g,w,p. D .. w.2 p] in 
   let [g. H1' ..]  = ded [g] [g,u. H .. u (not (A ..))] in 
   let [g. H1'' ..] = ded [g] [g,u. H .. u (A ..)] in

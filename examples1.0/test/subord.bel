@@ -13,7 +13,7 @@ schema boolCtx = bool;
 %   only bools, which cannot appear in terms of type `term'.
 
 %{
-rec fff : {g:boolCtx} [g, xx : bool. bool] -> [. term] =
+rec fff : {g:(boolCtx)*} bool[g, xx : bool] -> term[] =
 FN g => fn e =>
   case e of
 %{

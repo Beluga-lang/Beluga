@@ -117,7 +117,7 @@ fn d => fn ev => case ev of
  )
 | [. ~>_#2] => 
   let {D':[a:tp. has (E a) (T a)] }
-     [. ] is_# (is_lAM (\a. D' a))  : [. has (ann _ T2) (T T2)] = d in [. D' T2] 
+     [. is_# (is_lAM (\a. D' a))]  : [. has (ann _ T2) (T T2)] = d in [. D' T2] 
 ; 
 
 % Progress

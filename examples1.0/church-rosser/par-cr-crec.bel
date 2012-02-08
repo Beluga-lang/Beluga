@@ -99,8 +99,8 @@ fn d => fn e => case d of
 ;
 
 %{   
-rec dia : (g:ctx) [g. pred (M ..) (M1 ..)] -> [g. pred (M ..) (M2 ..)]
-          -> [g. dia_prop (M1 ..) (M2 ..)] = 
+rec dia : {g:ctx} (pred (M ..) (M1 ..))[g] -> (pred (M ..) (M2 ..))[g]
+          -> (dia_prop (M1 ..) (M2 ..))[g] = 
 fn d => fn e => case d of 
 | [g] ap (lm \y.\v. R1a .. y v) (R2 ..) => 
   let [g] beta (\y.\v. R1' .. y v) (R2' ..)  = e in 

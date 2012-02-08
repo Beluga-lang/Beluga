@@ -47,7 +47,7 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 
 schema w =  i + some [ a:o ] hil a;
 
- rec ded: {g:w} 
+rec ded: {g:w} 
     [g, u:hil (A ..). hil (B ..)] -> [g. hil (imp (A ..) (B ..))] = 
  mlam g => fn h =>  
  case h of 
@@ -93,7 +93,7 @@ coercion nd2hil : ndCtx -> hilCtx =
     | some [a:o] nd a => hil a ;
 
 %{
- rec ndhil : {g:ndCtx} [g. nd (A ..)] -> [nd2hil(g). hil (A .. )] =
+ rec ndhil : {g:(ndCtx)*} (nd (A ..))[g] -> (hil (A .. ))[nd2hil(g)] =
  FN g => fn d => 
  case d of 
    [g] (#p ..) => [g] (nd2hil (#p ..))

@@ -25,7 +25,7 @@ fn t => case t of
 
 %{
 % Error message testing 
-rec foo : [. term] -> [. term] = 
+rec foo : term [ ] -> term [ ] = 
 fn t => case t of
  | [ ] lam E => t 
 ;
@@ -39,7 +39,7 @@ FN g => fn t => case t of
 ;
 }%
 %{
-rec foo : {g:termCtx} [g, x:term. term] -> [g, x:term. term] = 
+rec foo : {g:(termCtx)*} term [g, x:term] -> term [g, x:term] = 
 FN g => fn t => case t of
  | [g, x:term] lam \x. (E .. x V) => t 
 ;

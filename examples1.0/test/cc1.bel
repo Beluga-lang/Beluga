@@ -90,7 +90,7 @@ mlam g => fn e =>
 
 
 %{
-    rec fff : {g:termCtx} [g, x:term, y:term. term] -> [g. term] =
+    rec fff : {g:(termCtx)*} term[g, x:term, y:term] -> term[g] =
     FN g => fn e =>
       case e of
       | [g, x:term, y:term]  z     => [g] z

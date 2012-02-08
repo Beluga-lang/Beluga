@@ -10,7 +10,7 @@ rec copy : [. term] -> [. term] = fn e =>
   | [. suc U] => let [. V] = copy [. U] in [. suc V];
 
 %{
-rec copy : {g:termCtx} [g. term] -> [g. term] =
+rec copy : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>
  (case e of
   | [g]  z     => [g] z

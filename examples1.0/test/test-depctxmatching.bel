@@ -49,7 +49,7 @@ fn n  => case n of  %not
 
 %{
 % PVAR CASE NOT IMPLEMENTED ??? 
-rec cmatch_incorrect3 : (g:tctx) [g. term T] -> [g. term T] =
+rec cmatch_incorrect3 : {g:tctx} (term T)[g] -> (term T)[g] =
 fn n  => case n of  %not
  | [g] z => [g] z
  | [h,x:term S] x => [h,x:term S] x

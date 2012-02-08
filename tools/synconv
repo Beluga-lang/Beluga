@@ -190,7 +190,7 @@ if [[ ! -z "$INPUT_FILE" ]]; then
   fi
 else
   SRCDIR=$(abspath $SOURCE_DIRECTORY)
-  cp -ru $SOURCE_DIRECTORY/* $TARGET_DIRECTORY/
+  cp -r $SOURCE_DIRECTORY/* $TARGET_DIRECTORY/
   pushd $TARGET_DIRECTORY &>/dev/null
   for f in $(find . -name "*.bel"); do
     skip=1

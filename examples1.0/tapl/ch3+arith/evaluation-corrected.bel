@@ -135,7 +135,10 @@ not_possible : type.
 
 rec values_dont_step : [. step M M'] -> [. value M ] -> [. not_possible]= 
 fn s => fn v => case v of 
-| [. v_true]    => impossible s in []| [. v_false]   => impossible s in []| [. v_num v_z] => impossible s in []| [. v_num (v_s V)] => 
+| [. v_true]    => impossible s in []
+| [. v_false]   => impossible s in []
+| [. v_num v_z] => impossible s in []
+| [. v_num (v_s V)] => 
     (case s of [. e_succ D] => 
 		values_dont_step [. D] [. v_num V])
 ;
@@ -158,15 +161,18 @@ fn s => case s of
 
 % Not_Possible cases for pred
 | [. andalso (e_pred D)          (e_pred_succ V )]    =>
-   impossible values_dont_step [. D] [. v_num (v_s V)] in []| [. andalso (e_pred_succ V )       (e_pred D)]       =>
-   impossible values_dont_step [. D] [. v_num (v_s V)] in []| [. andalso (e_iszero_zero)     (e_iszero_zero)]     => [. ref]
+   impossible values_dont_step [. D] [. v_num (v_s V)] in []
+| [. andalso (e_pred_succ V )       (e_pred D)]       =>
+   impossible values_dont_step [. D] [. v_num (v_s V)] in []
+| [. andalso (e_iszero_zero)     (e_iszero_zero)]     => [. ref]
 | [. andalso (e_iszero_succ _ )  (e_iszero_succ _)]   => [. ref]
 | [. andalso (e_iszero D)        (e_iszero F)]        =>
    let [. ref] = det [. andalso D F] in  [. ref]
 
 % Not_Possible cases for iszero
 | [. andalso (e_iszero_succ V )  (e_iszero F)]        => 
-   impossible values_dont_step [. F] [. v_num (v_s V)] in []| [. andalso (e_iszero D)        (e_iszero_succ V )]  => 
+   impossible values_dont_step [. F] [. v_num (v_s V)] in []
+| [. andalso (e_iszero D)        (e_iszero_succ V )]  => 
    impossible values_dont_step [. D] [. v_num (v_s V)] in [];
 
 

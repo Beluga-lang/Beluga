@@ -29,11 +29,11 @@ schema eqCtx = block x:exp, u: eq x x
 schema equalCtx = block x: exp, u:eq x x, v: equal x x 
 ;
 
-rec ref : (g:eqCtx) {U:[g . exp]} [g . eq (U ..) (U ..)] =
+rec ref : {g:eqCtx} {U:[g . exp]} [g . eq (U ..) (U ..)] =
 mlam g => mlam U => case [g . U ..] of
  | [g .  #p.1 .. ] => [g . #p.2 .. ]
  | [g . lam \x. L .. x ] =>
-  let [g,e:block (y:exp, u:eq y y) , _t:V .. e. ]= ref [g, e:block q:exp,u:eq q q]  [g,e .  L .. e.1]  in
+  let [g,e:block (y:exp, u:eq y y) . V .. e] = ref [g, e:block q:exp,u:eq q q]  [g,e .  L .. e.1]  in
    [g . eq_lam \x. \w. V .. <x, w> ]
 
 | [g . app (A1 ..) (A2 ..)] =>
@@ -65,9 +65,9 @@ fn e1 => fn e2 => case e1 of
 | [g . eq_lam \x.\u. D1 .. x u] =>
   (case e2 of 
   | [g . eq_lam \x.\u. D2 .. x u] => 
-     (case   trans [g, b:block (x:exp, u:eq x x) , _t:D1 .. b,_t:1 b,_t:2]
+     (case   trans [g, b:block (x:exp, u:eq x x) . D1 .. b.1 b.2]
 		   [g, b . D2 .. b.1 b.2]  of
-	| [h, b:block (x:exp, u:eq x x) , _t:E .. b,_t:1 b,_t:2. ]=> 
+	| [h, b:block (x:exp, u:eq x x) . E .. b.1 b.2] => 
 	  [h . eq_lam \x. \u. E .. x u]
      )
   )
@@ -95,8 +95,8 @@ fn e => case e of
 
  | [g . e_l \x.\u. D .. x u] => 
   let  
-     [g,b:block (x:exp,u:eq x x,v:equal x x) , _t:F .. b,_t:1 b,_t:2. ]= 
-        ceq  [g, b:block (x:exp, u:eq x x, v:equal x x) , _t:D .. b,_t:1 b,_t:3]
+     [g,b:block (x:exp,u:eq x x,v:equal x x) . F .. b.1 b.2] = 
+        ceq  [g, b:block (x:exp, u:eq x x, v:equal x x) . D .. b.1 b.3]
   in
      [g . eq_lam \x.\v. F .. x v]
 

@@ -306,6 +306,10 @@ let main () =
               printf "%s" (strFn()); 
               abort_session ()
 
+          | exn ->
+              printf "%s" (Printexc.to_string exn);
+              abort_session ()
+
 
     in
     let per_session (errors, unsound, incomplete) (Session file_names) =

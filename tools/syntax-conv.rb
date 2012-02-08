@@ -54,7 +54,7 @@ class CompBlock < Block
     end
 
     # rec signature
-    content.gsub_ignore_comments! /^\s*(rec|let|and)\s.*?[^[[:word:]]]=/m do |s|
+    content.gsub_ignore_comments! /^(rec|let|and)\s.*?[^[[:word:]]]=/m do |s|
       s.gsub_ignore_comments! /(?<leadin>(::|→|:|\})\s*)\(?(?<obj>[^→\{\}]*?)\)?\s*\[\s*(?<ctx>[^\.]*?)\s*\]/m, '\k<leadin>[\k<ctx>. \k<obj>]'
       s.gsub_ignore_comments! /\{(?<leadin>\s*)(?<ctx>\s*[^\*\.\{\}:]*?:\s*)(?<ctxtyp>[^\*\.\{\}:]*?)(?<leadout>\s*)\}/m, '(\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>)'
       s.gsub_ignore_comments! /(?<leadin>\{\s*)(?<ctx>\s*[^\*\.\{\}:]*?:\s*)\((?<ctxtyp>[^\*\.\{\}:]*?)\)\*(?<leadout>\s*\})/m, '\k<leadin>\k<ctx>\k<ctxtyp>\k<leadout>'
@@ -72,6 +72,7 @@ class CompBlock < Block
       s.gsub_ignore_comments! /(?<leadin>:\s*)(?<obj>[^\{\}\[\]]*?)\s*\[\s*(?<ctx>[^\.]*?)\s*\](?<leadout>\s*⇒)/m, '\k<leadin>[\k<ctx>. \k<obj>]\k<leadout>'
     end
 
+    # parenthesized terms
     content.gsub_ignore_comments! /\(\s*\[\s*(?<ctx>[^\.\[\]%]*?)\s*\]\s*(?<obj>((?<pobj>\(([^()]+|\g<pobj>)*\))|[^()])+)\s*\)/m,
                                  '[\k<ctx>. \k<obj>]'
     # let expression pattern

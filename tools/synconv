@@ -9,7 +9,7 @@ CONVERT="$(cd $(dirname $0); pwd)/syntax-conv.rb"
 
 # Filters to exclude certain files and directories from translation.
 # The filters are find(1) expressions.
-IGNORE=(-not -path ./equal/eq-proof-full-crec.bel
+IGNORE=(-not -path ./equal/eq-proof-crec.bel
         -not -path './popl12/*')
 
 # Increased verbosity, set when VERBOSE=0.

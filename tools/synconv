@@ -7,9 +7,10 @@
 # Path to the syntax conversion script.
 CONVERT="$(cd $(dirname $0); pwd)/syntax-conv.rb"
 
-# Array of files to ignore when converting a whole directory.
-IGNORE=("eq-proof-full-crec.bel" "evaluation.bel" "evaluation-seq.bel" \
-  "evaluation-2.bel")
+# Filters to exclude certain files and directories from translation.
+# The filters are find(1) expressions.
+IGNORE=(-not -path ./equal/eq-proof-full-crec.bel
+        -not -path './popl12/*')
 
 # Increased verbosity, set when VERBOSE=0.
 VERBOSE=0
@@ -193,25 +194,12 @@ else
   rm -rf $TARGET_DIRECTORY
   cp -r $SOURCE_DIRECTORY/ $TARGET_DIRECTORY/
   pushd $TARGET_DIRECTORY &>/dev/null
-  for f in $(find . -name "*.bel"); do
-    skip=1
-    for i in ${IGNORE[@]}; do
-      if [[ "$(basename $f)" = "$i" ]]; then
-        skip=0
-        break
-      elif [[ "$(abspath $f)" = "$i" ]]; then
-        skip=0
-        break
-      fi
-    done
-    if [[ $skip = 1 ]]; then
+  echo find . -name "*.bel" -not "${IGNORE[@]}"
+  for f in $(find . -name "*.bel" "${IGNORE[@]}"); do
       [[ $VERBOSE = 0 ]] && echo -n "Converting: $f"
       t=$(mktemp -q "$f-XXXX.tmp") &&
       $CONVERT "$f" > "$t" && rm -f "$f" && mv "$t" "$f" &&
       [[ $VERBOSE = 0 ]] && echo " => DONE." || echo " => FAILED."
-    else
-      [[ $VERBOSE = 0 ]] && echo "Skipping: $f"
-    fi
   done
   popd &>/dev/null
 fi

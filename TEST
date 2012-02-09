@@ -38,7 +38,7 @@ test_cases() {
 	then
 	    echo $dir/test.cfg
 	else
-	    find $dir/ -name '*.bel' -type f
+	    find $dir/ -maxdepth 1 -name '*.bel' -type f
 	fi
     done
 }

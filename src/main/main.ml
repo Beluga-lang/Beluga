@@ -105,7 +105,7 @@ let is_cfg file_name =
 
 let rec accum_lines input =
   try
-    let res = input_line input in printf "%s\n" res; res :: accum_lines input
+    let res = input_line input in res :: accum_lines input
   with
     | End_of_file -> []
 
@@ -284,7 +284,6 @@ let main () =
               abort_session ()
 
     in
-    (* Iterate the process for each file given on the command line *)
     let args   = List.tl (Array.to_list Sys.argv) in
     let files = process_options args in
     let status_code =

@@ -43,6 +43,14 @@ test_cases() {
     done
 }
 
+sort_cases() {
+    cases=$(</dev/stdin)
+    cfg=$(find $cases | grep '.cfg$')
+    bel=$(find $cases | grep '.bel$')
+    echo $bel | xargs wc -c | head -n-1 | sort -n | awk '{print $2}'
+    find $cases
+}
+
 n=0
 success=0
 fail=0
@@ -50,7 +58,7 @@ timeout=0
 
 ulimit -t 2
 
-for i in $(test_cases)
+for i in $(test_cases | sort_cases)
 do
     n=$((n+1))
     echo -n "** TEST $n: $i ... "

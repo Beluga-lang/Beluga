@@ -568,8 +568,10 @@ let rec inferPatTyp cD' tau = match tau with
       mgCompTyp cD' (loc, c)
   | Int.Comp.TypArr _  -> 
       raise (Error.Violation "Patterns cannot have function type")
-(*  | (Int.Comp.TypBox _ -> should never happen *)
-       
+  | _ -> raise NotImplemented
+(*  | Int.Comp.TypBox (_, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
+      let tP' = mgTyp cD' cPsi' a (Typ.get a).Typ.kind   
+*)      
 
 
 (* *******************************************************************************)
@@ -1335,13 +1337,30 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                  (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
       )
 
+and recPatObj' cD pat (cD_s, tau_s) = match pat with 
+  | Apx.Comp.PatAnn (_ , Apx.Comp.PatMetaObj _ , _ ) -> 
+      let (cG', pat', ttau') = elPatSyn cD Int.LF.Empty pat in 
+        (match (Whnf.cnormCTyp ttau', tau_s) with 
+        | (Int.Comp.TypBox (_ , _tP, cPsi),  Int.Comp.TypBox (_ , _tQ, cPsi_s)) -> 
+            let _       = inferCtxSchema (cD_s, cPsi_s) (cD, cPsi) in 
+            (* as a side effect we will update FCVAR with the schema for the
+               context variable occurring in cPsi' *)
+              (cG', pat', ttau')
+        )        
+  | Apx.Comp.PatAnn (_ , pat, _) -> 
+       elPatSyn cD Int.LF.Empty pat 
+  | _ -> 
+      let tau_p = inferPatTyp cD tau_s in 
+      let _ = dprint (fun () -> "[inferPatTyp] : tau_p = " ^ P.compTypToString cD  tau_p) in 
+      let ttau' = (tau_p, Whnf.m_id) in 
+      let (cG', pat')  = elPatChk cD Int.LF.Empty pat ttau' in  
+        (cG', pat', ttau')
 
-and recPatObj cD pat tau = 
-  let tau_p = inferPatTyp cD tau in 
-  let _ = dprint (fun () -> "[inferPatTyp] : tau_p = " ^ P.compTypToString cD  tau_p) in 
-  let ttau' = (tau_p, Whnf.m_id) in 
-  let (cG', pat')  = elPatChk cD Int.LF.Empty pat ttau' in  
-  (* cD' ; cG' |- pat' => tau' (may contain free contextual variables) *)
+
+and recPatObj cD pat (cD_s, tau_s) = 
+  let _ = dprint (fun () -> "[recPatObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in 
+  let (cG', pat', ttau') = recPatObj' cD pat (cD_s, tau_s) in 
+  (* cD' ; cG' |- pat' => tau' (may contain free contextual variables) *) 
   (* where cD' = cD1, cD and cD1 are the free contextual variables in pat' 
            cG' contains the free computation-level variables in pat'
      cG' and cD' are handled destructively via FVar and FCVar store
@@ -1648,7 +1667,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
      let _ = dprint (fun () -> "[elBranch] Reconstruction of general pattern of type "
                        ^ P.compTypToString cD tau_s) in
     let cD'    = elMCtx  Lfrecon.Pibox delta in
-    let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj cD' pat tau_s
+    let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj cD' pat (cD, tau_s)
      in 
     let _ = dprint (fun () -> "[rePatObj] done") in 
     let _ = dprint (fun () -> "   " ^ P.mctxToString cD1' ^ " ; " ^ 

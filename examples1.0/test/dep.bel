@@ -15,4 +15,4 @@ rec indep : (dep N)[] -> nat[] =
 }%
 
 rec indep : {N:[. nat]}[. dep N] -> [. nat] = 
-mlam n => fn d => [. z];
+mlam N => fn d => [. z];

@@ -44,11 +44,12 @@ test_cases() {
 }
 
 sort_cases() {
-    cases=$(</dev/stdin)
-    cfg=$(find $cases -name '*.cfg')
-    bel=$(find $cases -name '*.bel')
-    echo $bel | xargs wc -c | head -n-1 | sort -n | awk '{print $2}'
-    find $cfg
+    cases=($(</dev/stdin))
+    cases_cfg=($(find ${cases[@]} -name '*.cfg'))
+    cases_bel=($(find ${cases[@]} -name '*.bel'))
+    # Need to count lines explicitly for compatibily with BSD head.
+    echo ${cases_bel[@]} | xargs wc -c | head -n ${#cases_bel[@]} | sort -n | awk '{print $2}'
+    find ${cases_cfg[@]}
 }
 
 n=0

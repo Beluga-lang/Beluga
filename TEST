@@ -48,7 +48,7 @@ sort_cases() {
     cfg=$(find $cases | grep '.cfg$')
     bel=$(find $cases | grep '.bel$')
     echo $bel | xargs wc -c | head -n-1 | sort -n | awk '{print $2}'
-    find $cases
+    find $cfg
 }
 
 n=0

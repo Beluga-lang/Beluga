@@ -45,8 +45,8 @@ test_cases() {
 
 sort_cases() {
     cases=$(</dev/stdin)
-    cfg=$(find $cases | grep '.cfg$')
-    bel=$(find $cases | grep '.bel$')
+    cfg=$(find $cases -name '*.cfg')
+    bel=$(find $cases -name '*.bel')
     echo $bel | xargs wc -c | head -n-1 | sort -n | awk '{print $2}'
     find $cfg
 }

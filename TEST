@@ -1,170 +1,50 @@
-#!/bin/sh
+#!/bin/bash
 
-# TEST: tests Beluga (bin/interpreter) by calling it on various examples.
-#
-# Usage: TEST [options]
-#
-# [options], if given, are passed to Beluga.
-# Example: TEST +d
+usage() {
+    echo "Usage: $0 [test-options] -- [beluga-options]"
+    echo
+    echo "Synopsis: test harness for Beluga."
+    echo
+    echo "Notes:"
+    echo "    - Pure LF signatures are in files sources.cfg."
+    echo "    - Proofs written in Beluga are in test.cfg."
+    echo "    - Files ending in .bel contain Beluga programs."
+    echo "    - If a test.cfg file is found in a subdirectory, only it will be tested."
+    echo "    - If no test.cfg file is found, all .bel files in the subdirectory"
+    echo "      will be tested."
+    echo "    - To inhibit testing .bel files, put an empty test.cfg in that directory."
+}
 
+echo "Parameters for this run (override as necessary using environment variables):"
+echo
 
-# set $BELUGA to an absolute path to the toplevel .../beluga directory
-#
-pwd=`pwd`
-BELUGA=`dirname $pwd/$0`
-cd $BELUGA
-BELUGA=`pwd`
-# echo BELUGA: $BELUGA
+# Path to the Beluga source distribution.
+echo -e "\t" BELUGADIR=${BELUGADIR:=$(dirname $0)}
 
-# set $INTERPRETER to the executable
-INTERPRETER=$BELUGA/bin/interpreter 
+# Set $EXE to the executable to test.
+echo -e "\t" EXE=${EXE:=$BELUGADIR/bin/interpreter}
 
-# set $X to the `beluga' examples directory
-X=$BELUGA/examples
-cd $X
+# Test scripts.
+echo -e "\t" TESTDIR=${TESTDIR:=$BELUGADIR/examples}
 
+echo
 
-# We use the following conventions:
-#
-# - Pure LF signatures (and original converted Twelf example)
-#   are in files sources.cfg
-# - Proofs written in Beluga are in test.cfg
-# - Files ending in .bel contain Beluga programs
-# - Coverage checking: compile/cpm/test.cfg takes very long.
-#   be patient.
+# Find test cases.
+test_cases() {
+    for dir in $(find $TESTDIR -type d)
+    do
+	[[ -f $dir/sources.cfg ]] && echo $dir/sources.cfg
+	if [[ -f $dir/test.cfg ]]
+	then
+	    echo $dir/test.cfg
+	else
+	    find $dir/ -name '*.bel' -type f
+	fi
+    done
+}
 
-# The file below has already partially new syntax and doesn't work 
-# with the old syntax anymore. -bp
-#   tapl/ch3+arith/sources-corrected.cfg \
-
-$INTERPRETER +t \
-    $* \
-    arith/arith.bel \
-    church-rosser/test.cfg \
-    church-rosser/test-crec.cfg \
-    compile/cls/sources.cfg \
-    compile/cls/test.cfg \
-    compile/cpm/test.cfg \
-    compile/debruijn/sources.cfg \
-    compile/debruijn/test.cfg \
-    compile/debruijn1/sources.cfg \
-    compile/debruijn1/test.cfg \
-    compile/cps/sources.cfg \
-    compile/cxm/sources.cfg \
-    count-var/cntvar.bel \
-    count-var/cntvar-crec.bel \
-    count-var/cntvar-explicit.bel \
-    count-var/cntvar-simple.bel \
-    count-var/cntvar-simple-crec.bel \
-    count-var/cntvar-2.bel \
-    copy/copy.bel \
-    copy/copy-crec.bel \
-    copy/copy-explicit.bel \
-    copy/copy-simple.bel \
-    copy/copy-simple-crec.bel \
-    copy/copy-simple-explicit.bel \
-    cut-elim.bel \
-    cut-elim-crec.bel \
-    debruijn1/sources.cfg \
-    equal/eq-proof-tuple.bel \
-    equal/eq-proof.bel \
-    equal/eq-proof-full-crec.bel \
-    fol/sources.cfg \
-    fol/test.cfg \
-    free-vars/fvnat.bel \
-    free-vars/fvnat-crec.bel \
-    free-vars/fvnat-explicit.bel \
-    freshML/term.bel \
-    freshML/term-crec.bel \
-    freshML/cps.bel \
-    freshML/cps-crec.bel \
-    freshML/cps-popl-tutorial1.bel \
-    freshML/cps-popl-tutorial1-crec.bel \
-    freshML/cps-popl-tutorial2.bel \
-    freshML/cps-popl-tutorial2-crec.bel \
-    freshML/cconv-cheney.bel \
-    freshML/debruijn-1.bel \
-    freshML/conv-untyped.bel \
-    lp-horn/sources.cfg \
-    lp-horn/test-crec.cfg \
-    mini-ml/eval-sub-1.bel \
-    mini-ml/eval-sub-1-explicit.bel \
-    mini-ml/eval-sub.bel \
-    mini-ml/eval-sub-explicit.bel \
-    mini-ml/tps.bel \
-    mini-ml/vsound.bel \
-    mini-ml/vsound-explicit.bel \
-    path/path.bel \
-    path/path-typed.bel \
-    small-step/lam.bel \
-    small-step/system-f.bel \
-    small-step/system-f-iso.bel \
-    subject-red.bel \
-    subject-red-crec.bel \
-    tapl/ch3/sources.cfg \
-    test/backarrow.bel \
-    test/case1.bel \
-    test/case1-explicit.bel \
-    test/case2.bel \
-    test/case2-explicit.bel \
-    test/cross.bel \
-    test/dependency.bel \
-    test/id.bel \
-    test/id-simple.bel \
-    test/id-explicit.bel \
-    test/test-letexp.bel \
-    test/test.bel \
-    test/test-simple.bel \
-    test/test-simple-explicit.bel \
-    test/schema.bel \
-    tpcert.bel \
-    typed-eval/tpeval.bel \
-    typed-eval/tpeval-explicit.bel \
-    typed-eval/tpeval2.bel \
-    unique/unique.bel \
-    unique/unique-crec.bel \
-    unique/unique-eval.bel \
-    LF/arith.lf \
-    LF/arith-rec1.lf \
-    LF/lambda.lf \
-    LF/lambda-rec.lf \
-    LF/simple-typing.lf \
-    LF/lam-tp-rec.lf \
-    LF/cut-elim.lf \
-    LF/kindtest.lf \
-    LF/mini-ml.lf \
-    LF/mini-ml-rec.lf \
-    LF/vsound.lf \
-    LF/vsound-rec.lf \
-    LF/tpeval.lf \
-    LF/tpeval-rec.lf \
-    LF/tpcert.lf \
-    LF/tps.lf \
-    ../examples-twelf/arith/sources.cfg \
-    ../examples-twelf/alloc-sem/sources.cfg \
-    ../examples-twelf/ccc/sources.cfg \
-    ../examples-twelf/church-rosser/sources.cfg \
-    ../examples-twelf/church-rosser/test.cfg \
-    ../examples-twelf/cpsocc/sources.cfg \
-    ../examples-twelf/compile/cls/sources.cfg \
-    ../examples-twelf/compile/cls/test.cfg \
-    ../examples-twelf/compile/cpm/sources.cfg \
-    ../examples-twelf/compile/cpm/test.cfg \
-    ../examples-twelf/compile/debruijn/sources.cfg \
-    ../examples-twelf/compile/debruijn1/sources.cfg \
-    ../examples-twelf/compile/cps/sources.cfg \
-    ../examples-twelf/cut-elim/sources.cfg \
-    ../examples-twelf/fol/sources.cfg \
-    ../examples-twelf/handbook/sources.cfg \
-    ../examples-twelf/kolm/sources.cfg \
-    ../examples-twelf/lp/sources.cfg \
-    ../examples-twelf/lp-horn/sources.cfg \
-    ../examples-twelf/mini-ml/sources.cfg \
-    ../examples-twelf/mini-ml/test.cfg \
-    ../examples-twelf/prop-calc/sources.cfg \
-    test/alpha.bel \
-    test/sigma1.bel \
-    test/sigma2.bel \
-    test/sigma3.bel \
-    test/sigma4.bel \
-    test/implicit-obj.bel
+for i in $(test_cases)
+do
+    echo "TEST CASE: $i"
+    $EXE -noprint $* $i
+done

@@ -86,3 +86,6 @@ echo Successes: $success
 echo Failures: $fail
 echo Timeouts: $timeout
 echo Total: $n
+
+echo
+times

@@ -43,8 +43,37 @@ test_cases() {
     done
 }
 
+n=0
+success=0
+fail=0
+timeout=0
+
+ulimit -t 2
+
 for i in $(test_cases)
 do
-    echo "TEST CASE: $i"
-    $EXE -noprint $* $i
+    n=$((n+1))
+    echo -n "** TEST $n: $i ... "
+
+    result=$($EXE -noprint $* $i 2>&1)
+    exit_code=$?
+    if [[ $exit_code -eq 0 ]]
+    then
+	echo "done"
+	success=$((success+1))
+    elif [[ $exit_code -eq 137 ]]
+    then
+	echo "TIMEOUT!"
+	timeout=$((timeout+1))
+    else
+	echo "FAIL!"
+	echo "$result"
+	fail=$((fail+1))
+    fi
 done
+
+echo
+echo Successes: $success
+echo Failures: $fail
+echo Timeouts: $timeout
+echo Total: $n

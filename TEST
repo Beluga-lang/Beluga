@@ -89,3 +89,6 @@ echo Total: $n
 
 echo
 times
+
+# If not all tests succeeded then exit with non-zero status.
+[[ $success -eq $n ]] || exit 1

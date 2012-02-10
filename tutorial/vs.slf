@@ -1,6 +1,6 @@
-/* Tutorial example by Marie B.Langlois */
+/* Tutorial example by Marie-Andree B.Langlois */
 
-terminals z suc lambda value app
+terminals z suc lambda app
 syntax 
 
 /* The example illustrates the usual expressions one would want to declare using thiskind of system.*/
@@ -15,7 +15,7 @@ denotes that the variable x is bound in the expression e.*/
 
 /* The next alternative is simply the application of an expression, a fucntion (lambda expression) to another expression. Then there is the declaration of a let statement, the keywords/symbol let, = and in are mandatory. Then when have an expression that will equal the variable x in an expression bound in x. Note that the traslation to beluga will dislay the word letv instead of let, because let is reserved in Beluga. */
 | app exp exp 
-| let exp = x in exp[x]
+| let exp = x in exp[x] ;
 
 /* The following judgment simply specifies what is considered a value. */
 judgment value : exp value ;
@@ -48,12 +48,12 @@ e2 eval e2';
 e[e2'] eval e1';
 ----------------------------------------- ev-app
 (app e1 e2) eval e1';
-
+/*
 (e2[e1]) eval v1;
 e1 eval v1;
 ------------------------------------------- ev-let
 (let e1 = x in e2[x]) eval v1;
-
+*/
 
 /* This is the proof of value soundness that indicates that every expression evaluates to a value that is an expression. *//*
 theorem val-sound : forall d: e eval e' exists e' value .

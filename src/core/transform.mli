@@ -5,11 +5,11 @@
 open Syntax
 open Id
 open Error
-
-(*val makeTerminals : terminal list -> string list
+(*
+val makeTerminals : Ast.terminal list -> string list
 val checkString : string -> string list -> bool
-val alts : Loc.t -> string -> string list -> 'a -> alternative -> Ext.LF.typ
-val sgnAlts : Loc.t -> string -> string list -> string list -> alternative list -> Ext.Sgn.decl list
+val alts : Parser.Grammar.Loc.t -> string -> string list -> string list -> string list -> string list -> Ast.alternative -> Syntax.Ext.LF.typ
+val sgnAlts : Parser.Grammar.Loc.t -> string -> string list -> string list -> string list -> string list -> Ast.alternative list -> Syntax.Ext.Sgn.decl list
 val sgnTypes : string list -> string list -> production list -> Ext.Sgn.decl list
 val typ_or_sym : Loc.t -> string -> judge list -> string list -> Ext.LF.kind 
 val typ_or_sym_list : judge list -> string list -> string list

@@ -14,8 +14,9 @@ open Syntax
 (* the different section we have in a .slf file *)
 type section =
   | Terminals_decl of Loc.t * terminal list
-  | Grammar of Loc.t * production
+  | Grammar of Loc.t * production list
   | Judgement of Loc.t * jName * jsyntax * assptn option * rules list
+  | ContextDecl of Loc.t * cName * vAlternative list
   | Theorems of Loc.t * tName * statement * proof list
 
 and file = section list 
@@ -101,16 +102,19 @@ and vAlternative =
   | VAltFn of Loc.t * vName * typ_or_valt * vAlternative option
   | VAltBin of Loc.t * vAlternative
   | VAltLet of Loc.t * vAlternative                               
-  | VAltOft of Loc.t * vAlternative * vName                   (* x : tau *)
+  | VAltOft of Loc.t * ( string * string ) list * vAlternative 
+  | VAltOftBlock of Loc.t * ( string * string ) list * vAlternative option
   | VAltCtx of Loc.t * cName * vAlternative list              (* for contexts Gamma, x : tau, AltOft list to be more specific *)  
   | VAltPar of Loc.t * vAlternative * vAlternative option
+  | VAltEmpty of Loc.t
 
 and typ_or_valt =
   | VTy of typ
   | VLa of vAlternative list
 
 and pContext =
-  | PContext of vAlternative list
+  | LCD of (string * string) list
+  | Con of string
 
 and tpremise =
   | TPremisse of Loc.t * pName option * pContext option *  vAlternative 
@@ -122,6 +126,7 @@ and statement =
 and proof = 
   | Proof of Loc.t * tpremise * vName * argument list      (* a proof in SASyLF is an induction statement and a list of arguments; dt: e value by induction on ds ... arguments *)
   | PRule of Loc.t * tpremise * proof * vName list
+  | Induction of Loc.t * name
   | InductionHyp of Loc.t
   | CaseAn of Loc.t * tpremise * vName list * argument list
   | PTheorem of Loc.t * tName 

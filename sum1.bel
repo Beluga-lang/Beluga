@@ -3,45 +3,28 @@ z : nat.
 s : nat -> nat.
 
 add : nat -> nat -> nat -> type. 
-a_z : add z R R.
+a_z : {R:nat} add z R R.
 a_s : add N1 N2 N3 -> add (s N1) N2 (s N3).
 
 
 less : nat -> nat -> type. 
-l_one : less N (s N). 
+l_one : {N:nat} less N (s N). 
 l_trans : less N M -> less M O -> less N O.
 
-
-rec plus1 : nat [] -> nat [] =
-fn x => case x of
- | [] z => [] (s(z))
-%{ | [] (s U) => 
-   let [] V = plus1 ([] U ) in [] s V }%
-;
-%{
-rec plus11 : {N::nat []} (add N (s z) N) [] =
-mlam N => case ([] N) of
- | [] z => [] (a_z (s z))
-;
-}%
 rec sumzr1 : {N::nat []} (add N z N) [] =
 mlam N => case ([] N) of
- | [] z => [] (a_z z)
+ | [] z => [] (a_z N)
  | [] (s N) => 
    let [] F = sumzr1 < . N> in
      [] a_s F
 ;
-
-let v1 = plus1 ([] z);
-
-rec plus3 : nat [] -> nat [] =
-fn x => case x of
- | [] z => [] (s(s(s(z))))
- | [] (s U) => 
-   let [] V = plus3 ([] U ) in [] s V
+%{ try to get this to work
+rec plus3 : {N::nat []} (add (s (s (s z))) N (s (s (s N)))) [] =
+mlam N => let [] E = [] (a_z N) in let [] F = [] (a_s E) in let [] G = [] (a_s F) in [] (a_s G)
 ;
+}%
 
-rec zless :  (less z (s z)) []  = [] l_one
+rec zless :  (less z (s z)) []  = [] l_one z
 ;
 
 rec ssless : {N::nat []} (less N (s(s N))) [] =
@@ -50,19 +33,7 @@ mlam N =>
  let [] F = [] l_one (s N) in
  [] l_trans E F
 ;
-
-rec oneplusone : nat [] -> nat [] =
-fn y =>
-   plus1 ([] s z)
-;
-
-
-rec snplusone : nat [] -> nat [] = 
-fn x => case x of 
- | [] z => oneplusone ([] z)
- | [] (s A) => let [] B = [] s (s A) in plus1 ([] B);
-
-
+  
 rec sumzr : {N::nat []} (add N z N) [] =
 mlam N => case ([] N) of
  | [] z => [] (a_z z)

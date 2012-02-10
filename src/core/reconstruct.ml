@@ -4416,6 +4416,7 @@ let recSgnDecl d =
         let _        = dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^a.string_of_name ^
                                           " successful!") in
         let _a'       = Typ.add (Typ.mk_entry a tK' i) in
+        let _         = Printf.printf "%s : %s .\n" (a.string_of_name) (P.kindToString Int.LF.Null (tK', LF.id)) in                 (*  ******** *)
           (* Int.Sgn.Typ (a', tK') *) ()
 
 

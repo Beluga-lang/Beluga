@@ -5,13 +5,10 @@ terminals z suc lambda lit plus iff single double
 syntax 
 
 nat ::= z
-| suc nat
+| suc nat;
 
-syntax
+bool ::= true | false;
 
-bool ::= true | false
-
-syntax
 /* Now we will create expressions that refer to different types. */
 exp ::= lit nat
 /* In the rules we are goint to be able to specify that the exp in plus must be lit nat.*/
@@ -22,4 +19,4 @@ exp ::= lit nat
 | y 
 /* Two lambda terms one with 1 variable and the second with 2. */
 | single \ x . exp[x] 
-| double \ x y . exp[x] exp[x,y]
+| double \ x y . exp[x] exp[x,y];

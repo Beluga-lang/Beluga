@@ -1,8 +1,9 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(** Locations, used to locate a token within a file.  Since locations
-    are slightly complicated, we just reuse the existing Camlp4
-    definition. *)
+
+
+(** a lot of this is done in token instead see slexer 172 *)
+
 (* module Loc = Core.Syntax.Loc (*Camlp4.PreCast.Loc*) *)
  module Loc = Syntax.Loc (*Camlp4.PreCast.Loc*) 
 
@@ -21,6 +22,7 @@ type t =
   | INTLIT  of string
   | DECLA
   | LINES
+  | EMPTY
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"

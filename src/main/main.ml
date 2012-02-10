@@ -183,7 +183,7 @@ let main () =
           let sgn = Sparser.parse_file ~name:file_name Sparser.section_eoi in
             (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
             print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
-            printf "\n## SASyLF parsing: %s ##\n" file_name;
+            printf "\n## Sasybel Type Reconstruction: %s ##\n" file_name;
         
             let tSgn = Transform.sectionDecls sgn in
             let _int_decls = Reconstruct.recSgnDecls tSgn in

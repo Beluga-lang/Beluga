@@ -142,7 +142,8 @@ let mk_tok tok loc lexbuf =
 let mk_tok_of_lexeme tok_cons loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 (*  ; print_string ("mk_tok_of_lexeme ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
-  ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
+  ; 
+let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
 (*  let _ = print_string ("TOKEN>> " ^ Token.to_string tok ^ "\n") in *)
       tok
 

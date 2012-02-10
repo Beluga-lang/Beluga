@@ -66,7 +66,8 @@ let rec unmix = function
   |  MTBool l -> CompMix(Comp.TypBool)
   |  MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
   |  MTSub(l, dctx1, dctx) -> CompMix(Comp.TypSub(l, dctx1, dctx))
-  |  MTPiBox(l, cdecl, mt0) -> CompMix(Comp.TypPiBox(l, cdecl, toComp mt0))
+  |  MTPiBox(l, cdecl, mt0) -> CompMix(Comp.TypPiBox
+(l, cdecl, toComp mt0))
 (*  |  MTPiTyp(l, tdecl, mt0) -> LFMix(LF.PiTyp(l, tdecl, toLF mt0)) *)
   |  MTAtom(l, name, spine) -> LFMix(LF.Atom(l, name, spine))
 
@@ -132,7 +133,7 @@ GLOBAL: sgn_eoi;
              | Typ  a -> output_string out_channel "sgn_decl: SYMBOL :  type "; output_string out_channel a_or_c; output_char out_channel '\n'; Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)
            end
       |
-        "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" -> output_string out_channel "sgn_decl: schema "; output_char out_channel '\n'; 
+        "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" -> output_string out_channel "sgn_decl: schema symbol list1 sep "; output_char out_channel '\n'; 
           Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
 
       |
@@ -142,11 +143,11 @@ GLOBAL: sgn_eoi;
 
       |
 
-        "rec"; f = LIST1 cmp_rec SEP "and";  ";" -> output_string out_channel "sgn_decl: rec "; output_char out_channel '\n'; 
+        "rec"; f = LIST1 cmp_rec SEP "and";  ";" -> output_string out_channel "sgn_decl: rec list1 cmp-rec and ; "; output_char out_channel '\n'; 
           Sgn.Rec (_loc, f)
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->  output_string out_channel w; output_string out_channel mv; 
-                                                               output_string out_channel " : sgn_decl: %name \n"; Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
+                                                               output_string out_channel " : sgn_decl: %name symbol upsymbol opt \n"; Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))
 
 
       | "%not" -> output_string out_channel "sgn_decl: %not"; output_char out_channel '\n'; 
@@ -164,15 +165,15 @@ GLOBAL: sgn_eoi;
         [
            "{"; x = symbol; ":"; a2 = lf_typ; "}"; k_or_a = SELF ->
              begin match k_or_a with
-               | Kind k -> output_string out_channel "lf_kind_or_typ : {lf_typ } self kind k "; output_char out_channel '\n'; Kind (LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), k))
-               | Typ  a -> output_string out_channel "lf_kind_or_typ : {lf_typ } self typ a "; output_char out_channel '\n'; Typ  (LF.PiTyp  (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a))
+               | Kind k -> output_string out_channel "lf_kind_or_typ : { x : lf_typ } self kind k "; output_char out_channel '\n'; Kind (LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), k))
+               | Typ  a -> output_string out_channel "lf_kind_or_typ : { x : lf_typ } self typ a "; output_char out_channel '\n'; Typ  (LF.PiTyp  (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a))
              end
 
         |
            a2 = lf_typ LEVEL "atomic"; rarr; k_or_a = SELF ->
              begin match k_or_a with
                | Kind k -> output_string out_channel "lf_kind_or_typ rarr self kind"; output_char out_channel '\n'; Kind (LF.ArrKind (_loc, a2, k))
-               | Typ  a -> output_string out_channel "lf_kind_or_typ rarr self type \n";  Typ  (LF.ArrTyp  (_loc, a2, a))
+               | Typ  a -> output_string out_channel "lf_kind_or_typ rarr self type \n ";  Typ  (LF.ArrTyp  (_loc, a2, a))
              end
 
         | 
@@ -276,7 +277,7 @@ GLOBAL: sgn_eoi;
   lf_schema_elem:
     [
       [
-        some_arg = lf_schema_some; arec = lf_typ_rec -> output_string out_channel "lf_schema_elem "; output_char out_channel '\n'; 
+        some_arg = lf_schema_some; arec = lf_typ_rec -> output_string out_channel "lf_schema_elem : lf_schema_some lf_typ_rec "; output_char out_channel '\n'; 
           LF.SchElem (_loc,
                       List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg,
                       arec)
@@ -287,7 +288,7 @@ GLOBAL: sgn_eoi;
   lf_schema_some:
     [
       [
-       "some"; "["; ahat_decls = LIST0 lf_ahat_decl SEP ","; "]" -> output_string out_channel "lf_schema_some : some [ list0 lf_ahat_decl , ] \n"; ahat_decls
+       "some"; "["; ahat_decls = LIST0 lf_ahat_decl SEP ","; "]" -> output_string out_channel "lf_schema_some : some [ list0 lf_ahat_decl , ] "; output_char out_channel '\n'; ahat_decls
        | 
           -> []  (* no print statement *)
       ] 
@@ -308,9 +309,11 @@ GLOBAL: sgn_eoi;
   lf_typ_rec:
     [
       [
-        b = lf_typ_rec_block -> output_string out_channel "lf_type_rec : lf_type_rec_block"; output_char out_channel '\n'; b
+        b = lf_typ_rec_block
+        -> output_string out_channel "lf_type_rec : lf_type_rec_block"; output_char out_channel '\n'; b
       | 
-        a = lf_typ -> output_string out_channel "lf_type_rec : lf_type"; output_char out_channel '\n'; LF.SigmaLast a
+        a = lf_typ
+        -> output_string out_channel "lf_type_rec : lf_type"; output_char out_channel '\n'; LF.SigmaLast a
       ]
     ]
   ;
@@ -737,16 +740,13 @@ cmp_exp_chkX:
           Comp.LetPair (_loc, i, (Id.mk_name (Id.SomeString x), Id.mk_name (Id.SomeString y), e))
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
-
+       (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
        "["; pHat = clf_dctx ;"]"; tM = clf_term_app;
        tau = OPT [ ":"; tA = clf_typ LEVEL "atomic"; "["; cPsi = clf_dctx; "]" -> (tA, cPsi) ];
        "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk
        -> output_string out_channel "case_exp_chkX : LEFTA let ..... "; output_char out_channel '\n';
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-
           Comp.Case (_loc, Syntax.RegularCase, i, [Comp.BranchBox (_loc,  ctyp_decls', (pHat, Comp.NormalPattern (tM, e'), tau))]) 
-
-
       | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> output_string out_channel "case_exp_chkX : LEFTA ( cmp_exp_chk cmp_pair_atom"; output_char out_channel '\n';
           begin match p_or_a with 
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
@@ -812,23 +812,24 @@ isuffix:
 
 cmp_exp_syn:
  [ LEFTA [
-    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   -> output_string out_channel "cmp_exp_syn : LEFTA [ clf_hat_dctx ] clf_term_app \n";  
-      (Comp.BoxVal (_loc, cPsi, tR))
-   | h = SELF; s = isuffix  -> output_string out_channel "cmp_exp_syn : LEFTA SELF isuffixe \n";  s(h)
+    "["; cPsi = clf_dctx; "]"; tR = clf_term_app   -> output_string out_channel "cmp_exp_syn : LEFTA [ clf_hat_dctx ] clf_term_app"; output_char out_channel '\n'; 
+      ((*print_string ("BOXVAL: " ^ Comp.synToString(Comp.BoxVal (_loc, cPsi, tR)) ^ "\n"); *)  
+        Comp.BoxVal (_loc, cPsi, tR))
+   | h = SELF; s = isuffix  -> output_string out_channel "cmp_exp_syn : LEFTA SELF isuffixe"; output_char out_channel '\n'; s(h)
    | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
        Comp.Apply (_loc, h, begin match p_or_a with 
-                                    | Pair e2 -> output_string out_channel "cmp_exp_syn : LEFTA SELF ( cmp_exp_chk cmp_pair_atom Pair \n"; 
+                                    | Pair e2 -> output_string out_channel "cmp_exp_syn : LEFTA SELF ( cmp_exp_chk cmp_pair_atom Pair"; output_char out_channel '\n';
                                           Comp.Pair (_loc, e, e2)
-                                    | Atom    -> output_string out_channel "cmp_exp_syn : LEFTA SELF ( cmp_exp_chk cmp_pair_atom Atom \n";  
+                                    | Atom    -> output_string out_channel "cmp_exp_syn : LEFTA SELF ( cmp_exp_chk cmp_pair_atom Atom"; output_char out_channel '\n'; 
                                                   e
                             end)
-   | x = SYMBOL -> output_string out_channel x; output_string out_channel " : cmp_exp_syn : LEFTA SYMBOL \n";
+   | x = SYMBOL -> output_string out_channel "cmp_exp_syn : LEFTA SYMBOL"; output_char out_channel '\n'; 
                 Comp.Var (_loc, Id.mk_name (Id.SomeString x))
-   | "ttrue"    ->  output_string out_channel "cmp_exp_syn : LEFTA ttrue \n";
+   | "ttrue"    ->  output_string out_channel "cmp_exp_syn : LEFTA ttrue"; output_char out_channel '\n';
                  Comp.Boolean (_loc, true)
-   | "ffalse"   -> output_string out_channel "cmp_exp_syn : LEFTA ffalse \n";
+   | "ffalse"   -> output_string out_channel "cmp_exp_syn : LEFTA ffalse"; output_char out_channel '\n';  
                 Comp.Boolean (_loc, false)
-   | "("; i = SELF; ")"   -> output_string out_channel "cmp_exp_syn : LEFTA (SELF) \n";  i
+   | "("; i = SELF; ")"   -> output_string out_channel "cmp_exp_syn : LEFTA (SELF)"; output_char out_channel '\n';  i
  ]];
 
   cmp_branch_pattern:

@@ -106,13 +106,13 @@ let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                        ]
 
 let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
-                          'a'-'z'  '\''
+                          "%,.:;Γ()[]{}\\" '"'    (* exclude reserved characters *)
+                          'a'-'z'  '\'' 
                           '0'-'9'
                        ]
 
 let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
+                          "%,.:;Γ()[]{}\\" '"'    (* exclude reserved characters *)
                           'a'-'z' 
                           '#' '\''
                           '0'-'9'
@@ -168,6 +168,10 @@ let rec lex_token loc = lexer
   | "%not"
   | ["--"]+ -> output_string out_channel "made a token of lines \n"; mk_tok Token.LINES  loc lexbuf
   | "::=" -> output_string out_channel "made a token of declaration sign \n"; mk_tok Token.DECLA  loc lexbuf
+  | "()" -> output_string out_channel "made a token of empty token \n"; mk_tok Token.EMPTY  loc lexbuf
+  | 0x0370 -> output_string out_channel "made a token of turnstyle \n"; mk_tok Token.TSTYLE  loc lexbuf
+  | "|-" -> output_string out_channel "made a token of turnstyle \n"; mk_tok Token.TSTYLE  loc lexbuf
+  | 0x2200
   | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
          mk_tok_of_lexeme mk_keyword loc lexbuf
 (********)

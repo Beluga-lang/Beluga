@@ -19,8 +19,10 @@ type t =
   | SYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | INTLIT  of string
-   | DECLA
+  | DECLA
+  | EMPTY
   | LINES
+  | TSTYLE
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"

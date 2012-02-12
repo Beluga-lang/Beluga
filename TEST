@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 
 usage() {
     echo "Usage: $0 [test-options] -- [beluga-options]"
@@ -64,20 +64,20 @@ do_testing() {
     for i in $(test_cases | sort_cases)
     do
 	n=$((n+1))
-	echo -ne "${C[start]}**$CEND TEST $n: $i ... "
+	echo -ne "$C[start]**$CEND TEST $n: $i ... "
 
 	result=$($EXE -noprint $* $i 2>&1)
 	exit_code=$?
 	if [[ $exit_code -eq 0 ]]
 	then
-	    echo -e "${C[done]}DONE$CEND"
+	    echo -e "$C[done]DONE$CEND"
 	    success=$((success+1))
-	elif [[ $exit_code -eq 137 ]]
+	elif [[ $exit_code -eq 152 ]]
 	then
-	    echo -e "${C[timeout]}TIMEOUT$CEND"
+	    echo -e "$C[timeout]TIMEOUT$CEND"
 	    timeout=$((timeout+1))
 	else
-	    echo -e "${C[fail]}FAIL$CEND"
+	    echo -e "$C[fail]FAIL$CEND"
 	    echo "$result"
 	    fail=$((fail+1))
 	fi
@@ -97,12 +97,17 @@ do_testing() {
     exit 0
 }
 
-GETOPT=$(getopt -o hc --long help,colour,color -n $0 -- "$@")
+typeset -A C
 
-# Bail out if argument parsing failed.
-[[ $? != 0 ]] && exit 2
+set_colors() {
+    autoload colors
+    colors
+    C=(start ${fg[blue]} done ${fg_bold[green]} timeout ${fg_bold[magenta]} fail ${fg_bold[red]})
+    CEND=$reset_color
+}
 
-eval set -- "$GETOPT"
+# By default, use colors only when connected to a terminal.
+[[ -t 1 ]] && set_colors
 
 while true
 do
@@ -112,18 +117,17 @@ do
 	    exit 0
 	    ;;
 	-c|--colour|--color)
-	    CEND="\e[0m"
-	    typeset -A C
-	    C=( [start]="\e[0;34m"
-		[done]="\e[1;32m"
-	        [timeout]="\e[1;35m"
-		[fail]="\e[1;31m" )
+	    set_colors
 	    shift
 	    ;;
 	--)
 	    shift
 	    break
 	    ;;
+	*)
+            echo "Unrecognized option $1."
+	    echo "Make sure to write -- before any argument that should be passed to Beluga."
+	    exit 2
     esac
 done
 

@@ -744,8 +744,36 @@ and reindex_pat_spine fvars pat_spine = match pat_spine with
 	Apx.Comp.PatApp (loc, pat', pat_spine')
 
 and index_branch cvars vars (fcvars, _ ) branch = match branch with
+  | Ext.Comp.EmptyBranch (loc, cD, Ext.Comp.PatEmpty (loc', cpsi)) -> 
+    let empty_fcvars = [] in 
+    let fcvars' = begin match get_ctxvar cpsi with 
+                     | None -> empty_fcvars 
+                     | Some psi_name -> 
+                          FCV psi_name :: empty_fcvars  
+                    end in
+    let (omega, cD', cvars1, fcvars1)  = 
+      index_mctx (CVar.create()) (fcvars', not term_closed) cD in
+    let (cPsi', _bvars, fcvars2) = index_dctx cvars1 (BVar.create ()) fcvars1 cpsi in 
+      Apx.Comp.EmptyBranch (loc, cD', Apx.Comp.PatEmpty (loc', cPsi'))
+
+  | Ext.Comp.EmptyBranch (loc, cD, 
+			  Ext.Comp.PatAnn (loc1, Ext.Comp.PatEmpty (loc2, cpsi), tau)) ->  
+    let empty_fcvars = [] in 
+    let fcvars' = begin match get_ctxvar cpsi with 
+                     | None -> empty_fcvars 
+                     | Some psi_name -> 
+                          FCV psi_name :: empty_fcvars  
+                    end in
+    let (omega, cD', cvars1, fcvars1)  = 
+      index_mctx (CVar.create()) (fcvars', not term_closed) cD in
+    let (cPsi', _bvars, fcvars2) = index_dctx cvars1 (BVar.create ()) fcvars1 cpsi in 
+    let (tau', fcvars1) = index_comptyp cvars1 fcvars2 tau in 
+      Apx.Comp.EmptyBranch(loc, cD', 
+			   Apx.Comp.PatAnn (loc1, Apx.Comp.PatEmpty (loc2, cPsi'), tau'))
+
   | Ext.Comp.Branch (loc, _cD, Ext.Comp.PatEmpty _ , _e) -> 
-      raise (Error.Error (Some loc, Error.CompEmptyPattBranch))
+      (dprint (fun () -> "[index_branch] PatEmpty " ) ;
+      raise (Error.Error (Some loc, Error.CompEmptyPattBranch)))
   | Ext.Comp.Branch (loc, cD, Ext.Comp.PatMetaObj (loc', mO), e) -> 
     let empty_fcvars = [] in 
     let _ = dprint (fun () -> "index_branch") in 

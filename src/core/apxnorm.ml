@@ -114,6 +114,8 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                   | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in 
 
                 let t' = drop t l_delta in
+		let _ = dprint (fun () -> "[cnormApxHead] l_delta " ^
+				  string_of_int l_delta) in 
 		let _  = dprint (fun () -> "[cnormApxHead] MVar has type ") in 
 		let _  = dprint (fun () -> "              " ^
 				   P.typToString cD cPhi (tP, Substitution.LF.id) ^ " [ " ^ 
@@ -425,7 +427,7 @@ and cnormApxExp' cD delta i cDt = match i with
 
   | Apx.Comp.BoxVal (loc, psi, m) -> 
       begin try
-	let _    = dprint (fun () -> "[cnormApxExp] BoxVal") in 
+	let _    = dprint (fun () -> "[cnormApxExp'] BoxVal ") in 
         let psi' = cnormApxDCtx cD delta psi cDt in 
         let m'   = cnormApxTerm cD delta m cDt in 
           Apx.Comp.BoxVal (loc, psi', m')
@@ -497,7 +499,7 @@ and cnormApxBranch cD delta b (cD'', t) =
             Apx.Comp.Branch (loc, omega, delta', pat, e')
 
 
-      | Apx.Comp.EmptyBranch (loc, omega, delta', Apx.Comp.PatEmpty _ ) -> b         
+      | Apx.Comp.EmptyBranch (loc, delta', Apx.Comp.PatEmpty _ ) -> b         
  
       | Apx.Comp.BranchBox (loc, omega, delta', (psi1, Apx.Comp.NormalPattern (m, e), Some (a, psi))) ->
           (* |omega| = k  --> shift cs by k ERROR bp *)
@@ -1063,7 +1065,7 @@ and fmvApxBranches fMVs cD ((l_cd1, l_delta, k) as d_param)  branches = match br
 
 and fmvApxBranch fMVs cD (l_cd1, l_delta, k)  b = 
    match b with
-     | Apx.Comp.EmptyBranch (loc, omega, delta, Apx.Comp.PatEmpty _ ) -> b
+     | Apx.Comp.EmptyBranch (loc, delta, Apx.Comp.PatEmpty _ ) -> b
      | Apx.Comp.Branch (loc, omega, delta, Apx.Comp.PatMetaObj (loc', mO), e) -> 
           let fMVd  = collectApxMCtx [] delta in 
           let fMVb = collectApxMetaObj fMVd mO in 

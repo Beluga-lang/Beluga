@@ -77,8 +77,8 @@ mlam g => mlam M => mlam N => fn f => case [g. M ..] of
 
 
 | [g. lam T (\x. M' .. x)] => 
-  let  [g. p_lam (\x.\p.\u. \i. p_done)]__ANNOT__  : 
-       (is_path (bind T' (\p.done)) (lam _ (\x. N' .. x)))[g]__ANNOT__ 
+  let  [g. p_lam (\x.\p.\u. \i. p_done)] : 
+       [g . (is_path (bind T' (\p.done)) (lam _ (\x. N' .. x)))]
     = 
        f [g. bind T (\p.done) ] [g. p_lam (\x.\p.\u. \i. p_done)] in 
 

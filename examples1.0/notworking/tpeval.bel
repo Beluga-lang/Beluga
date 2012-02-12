@@ -24,13 +24,15 @@ schema ctx = some [t:tp] exp t;
 rec eval : (g:ctx) [g. exp bool] -> [. g] -> [. exp bool] =
 fn e => fn env => [. tt] ;
 
+%{ SUBSTITUTION VARIABLES
+
 rec eval : (g:ctx) [g. exp bool] -> [. g] -> [. exp bool] =
 fn e => fn env => 
  let [g. E ..] = e in 
  let [ ] #S[..] = env in [. E #S[..]]
 ;
     
-
+}%
 % FN g => fn e => fn r => let sbox S[.] = r in
 %     case e of 
 %         box(g. z) : (exp nat)[g] => box( . z)

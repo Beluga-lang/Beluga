@@ -22,15 +22,16 @@ rec f : {g:w} [g. nat] -> [g. nat] =
 rec f : {g:w} [g. nat] -> [g. nat] =
   mlam g => fn e =>
     case e of  %not
-     {#p:[g. block x:nat, _t:nat]}
+     {#p:[g. block (x:nat, _t:nat)]}
       [g. #p.1 ..] => [g. #p.2 ..]
 ;
 
-rec qqqq : [x:block y:nat,_t:nat. nat] -> [x:block y:nat,_t:nat. nat] =   
+rec qqqq : [x:block (y:nat,_t:nat). nat] -> [x:block (y:nat,_t:nat). nat] =   
 fn eNat => case eNat of %not
-  [x:block y:nat,_t:nat. x.1] => [x. x.2]
+  [x:block (y:nat,_t:nat). x.1] => [x. x.2]
 ;
 
+%{
 %not
 rec ffff1 : {h:tps} [h, extras:tp. nat] -> [h. nat] =
    mlam h => fn eNat =>
@@ -76,3 +77,4 @@ rec ffff4 : {h:tps}{g:w}  [g. nat] -> [h. tp] -> [g. nat] =
 ;
 
 
+}%

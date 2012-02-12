@@ -63,7 +63,7 @@ not_possible : type.
 
 rec values_dont_step : [. step M M'] -> [. num_value M ] -> [. not_possible]= 
 fn s => fn v => case v of 
-| [. v_z]   => (case s of [ ] {} )
+| [. v_z]   => (case s of [ .{}] )
 | [. v_s V] => 
     (case s of [. e_succ D] => 
 		values_dont_step [. D] [. V])
@@ -85,9 +85,9 @@ fn s => case s of
 
 % Not_Possible cases for pred
 | [. andalso (e_pred D)          (e_pred_succ V )]    =>
-   (case values_dont_step [. D] [. v_s V] of [ ] {})
+   (case values_dont_step [. D] [. v_s V] of [ . {}])
 | [. andalso (e_pred_succ V )       (e_pred D)]       =>
-   (case values_dont_step [. D] [. v_s V] of [ ] {})
+   (case values_dont_step [. D] [. v_s V] of [ . {}])
 
 ;
 

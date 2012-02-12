@@ -47,7 +47,7 @@ rec listg3 : {g:ly} {L:[g. list z]} [. nat] =
 ;
 
 
-schema lists-notblock _t:= some [n:nat] list n;
+schema lists-notblock = some [n:nat] list n;
 rec listg3 : {g:lists-notblock} {L:[g. list z]} [. nat] =
    mlam g => mlam L => case [g. L ..] of
       [g. #p ..]  => [. z]

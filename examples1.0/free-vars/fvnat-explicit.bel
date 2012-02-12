@@ -36,7 +36,7 @@ mlam g => mlam T => fn e =>
        (case free_var [g] [ . bool ] [g. (U ..)] of
           [g. nothing]                  : [g. opt] => free_var [g] [ . bool ] [g. (V ..)]
 
-       | {T':[]} {U:(exp T')[g]}
-          [g. something T' (U ..)] : opt[g. :tp] => [g. something T' (U ..)]
+       | {T':[. tp]} {U:[g. (exp T')]}
+          [g. something T' (U ..)] : [g. opt] => [g. something T' (U ..)]
        )
 );

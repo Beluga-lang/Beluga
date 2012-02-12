@@ -148,13 +148,13 @@ Theorem: if step T T1 and step T T2 then equal T1 T2.
 steps_to_terms: term -> term -> term -> type.
 andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
-impossible : type.
+impos : type.
 
-rec values_dont_step : [. step M M'] -> [. value M ] -> [. impossible]= 
+rec values_dont_step : [. step M M'] -> [. value M ] -> [. impos]= 
 fn s => fn v => case v of 
-| [. v_true]    => (case s of [ ] {} )
-| [. v_false]   => (case s of [ ] {} )
-| [. v_num v_z] => (case s of [ ] {} )
+| [. v_true]    => (case s of [ . {}] )
+| [. v_false]   => (case s of [ . {}] )
+| [. v_num v_z] => (case s of [ . {}] )
 | [. v_num (v_s V)] => 
     (case s of [. e_succ D] => 
 		values_dont_step [. D] [. v_num V])
@@ -185,51 +185,51 @@ fn s => case s of
 | [. andalso (e_leq_succ_zero _)    (e_leq_succ_zero _)]=> [. ref]
 | [. andalso (e_leq_succ_succ _ _)  (e_leq_succ_succ _ _)] => [. ref]
   
-% Impossible cases for leq
+% Impos cases for leq
 | [. andalso (e_leq_1 D)          (e_leq_2 NV F)]      =>
-  (case values_dont_step [. D] [. v_num NV] of [ ] {})
+  (case values_dont_step [. D] [. v_num NV] of [ . {}])
   % This case below may not be necessary 
 | [. andalso (e_leq_1 D)          (e_leq_zero NV)]      =>
-  (case values_dont_step [. D] [. v_num v_z] of [ ] {})
+  (case values_dont_step [. D] [. v_num v_z] of [ . {}])
 | [. andalso (e_leq_1 D)          (e_leq_succ_zero NV)]      =>
-  (case values_dont_step [. D] [. v_num (v_s NV)] of [ ] {})
+  (case values_dont_step [. D] [. v_num (v_s NV)] of [ .{}])
 | [. andalso (e_leq_1 D)          (e_leq_succ_succ NV1 _ )]  =>
-  (case values_dont_step [. D] [. v_num (v_s NV1)] of [ ] {})
+  (case values_dont_step [. D] [. v_num (v_s NV1)] of [ . {}])
 
 | [. andalso (e_leq_zero NV)      (e_leq_1 D)]      =>
-  (case values_dont_step [. D] [. v_num v_z] of [ ] {})
+  (case values_dont_step [. D] [. v_num v_z] of [ .{}])
 | [. andalso (e_leq_succ_zero NV) (e_leq_1 D)]      =>
-  (case values_dont_step [. D] [. v_num (v_s NV)] of [ ] {})
+  (case values_dont_step [. D] [. v_num (v_s NV)] of [ .{}])
 | [. andalso (e_leq_succ_succ NV1 _ ) (e_leq_1 D)]  =>
-  (case values_dont_step [. D] [. v_num (v_s NV1)] of [ ] {})
+  (case values_dont_step [. D] [. v_num (v_s NV1)] of [ .{}])
 
 
 | [. andalso (e_leq_2 NV F)       (e_leq_1 D)]         =>
-  (case values_dont_step [. D] [. v_num NV] of [ ] {})
+  (case values_dont_step [. D] [. v_num NV] of [ .{}])
 
 | [. andalso (e_leq_2 _ D)        (e_leq_zero NV)]      =>
-  (case values_dont_step [. D] [. v_num NV] of [ ] {})
+  (case values_dont_step [. D] [. v_num NV] of [ .{}])
 
 | [. andalso (e_leq_2 _ D)        (e_leq_succ_zero NV)]     =>
-  (case values_dont_step [. D] [. v_num v_z] of [ ] {})
+  (case values_dont_step [. D] [. v_num v_z] of [ .{}])
 | [. andalso (e_leq_2 _ D)        (e_leq_succ_succ _ NV2)]  =>
-  (case values_dont_step [. D] [. v_num (v_s NV2)] of [ ] {})
+  (case values_dont_step [. D] [. v_num (v_s NV2)] of [ .{}])
 
 
 | [. andalso (e_leq_1 D)          (e_leq_2 NV F)]        =>
-  (case values_dont_step [. D] [. v_num NV] of [ ] {})
+  (case values_dont_step [. D] [. v_num NV] of [. {}])
 | [. andalso (e_leq_zero NV)      (e_leq_2 _ D)]         =>
-  (case values_dont_step [. D] [. v_num NV] of [ ] {})
+  (case values_dont_step [. D] [. v_num NV] of [. {}])
 | [. andalso (e_leq_succ_zero NV) (e_leq_2 _ D)]         =>
-  (case values_dont_step [. D] [. v_num v_z] of [ ] {})
+  (case values_dont_step [. D] [. v_num v_z] of [. {}])
 | [. andalso (e_leq_succ_succ _ NV2) (e_leq_2 _ D)]      =>
-  (case values_dont_step [. D] [. v_num (v_s NV2)] of [ ] {})
+  (case values_dont_step [. D] [. v_num (v_s NV2)] of [. {}])
 
 % Impossible cases for pred
 | [. andalso (e_pred D)          (e_pred_succ V )]    =>
-   (case values_dont_step [. D] [. v_num (v_s V)] of [ ] {})
+   (case values_dont_step [. D] [. v_num (v_s V)] of [. {}])
 | [. andalso (e_pred_succ V )       (e_pred D)]       =>
-   (case values_dont_step [. D] [. v_num (v_s V)] of [ ] {})
+   (case values_dont_step [. D] [. v_num (v_s V)] of [. {}])
   
 | [. andalso (e_iszero_zero)     (e_iszero_zero)]     => [. ref]
 | [. andalso (e_iszero_succ _ )  (e_iszero_succ _)]   => [. ref]
@@ -238,10 +238,10 @@ fn s => case s of
 
 % Impossible cases for iszero
 | [. andalso (e_iszero_succ V )  (e_iszero F)]        => 
-   (case values_dont_step [. F] [. v_num (v_s V)] of [ ] {})
+   (case values_dont_step [. F] [. v_num (v_s V)] of [. {}])
 
 | [. andalso (e_iszero D)        (e_iszero_succ V )]  => 
-   (case values_dont_step [. D] [. v_num (v_s V)] of [. {})
+   (case values_dont_step [. D] [. v_num (v_s V)] of [. {}])
 
 ;
 
@@ -251,7 +251,7 @@ fn s => case s of
 %{ 
  Multi-step evaluation rules 
 }%
-mstep]: term -> term -> type.
+mstep: term -> term -> type.
 
 m_step : step M N' -> mstep N' N
      -> mstep M N.   
@@ -283,7 +283,7 @@ fn v => fn s => case v of
   (case s of 
    | [. m_ref] => [. ref] 
    | [. m_step S MS] => 
-     case values_dont_step [. S] v of [. {}
+     case values_dont_step [. S] v of [. {}]
   )
 
 ;
@@ -314,7 +314,7 @@ fn ms => fn vn1 => fn vn2 => case ms of
    [. ref]
 
 | [. andalso' (m_ref )       (m_step S MS)]   => 
-  (case values_dont_step [. S]  vn1 of [. {})
+  (case values_dont_step [. S]  vn1 of [. {}])
 
 ;
 
@@ -324,7 +324,7 @@ fn ms => fn vn1 => fn vn2 => case ms of
  Correctness of algorithmic small-step semantics 
 }%
 
-multi_step]: term -> term -> type.
+multi_step: term -> term -> type.
 
 ms_tr: multi_step M N' -> multi_step N' N
       -> multi_step M N.

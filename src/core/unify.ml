@@ -1213,7 +1213,16 @@ let disallowUndefineds f =
                     raise_ (Unify "Variable occurrence")
                   else
                     if isPatSub t then
-                      let (idsub, cPsi2) = pruneCtx phat (t, cPsi1) ss in
+                      let _ = dprint (fun () -> "[prune] MVar " ^
+                                        P.normalToString cD0 cPsi' sM) in 
+
+                      let (idsub, cPsi2) = pruneCtx phat (t, cPsi1) ss in                        
+                      let _ = dprint (fun () -> "[prune] cPsi1 = " ^
+                                        P.dctxToString cD0 cPsi1) in 
+                      let _ = dprint (fun () -> "[prune] t = " ^ 
+                                        P.subToString cD0 cPsi' t) in 
+                      let _ = dprint (fun () -> "[prune] cPsi2 = " ^
+                                        P.dctxToString cD0 cPsi2) in 
                         (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= cPsi1
                            cD ; cPsi |-  t o s <= cPsi1 and
                            cD ; cPsi1 |- idsub <= cPsi2 and
@@ -1583,6 +1592,17 @@ let disallowUndefineds f =
     | (Shift (_psi ,_k), Null) ->
         (id, Null)
 
+    | (Shift (NoCtxShift, 0), CtxVar psi) -> 
+        let ( _ , ssubst) = ss in 
+          begin match ssubst with 
+            | Shift (NegCtxShift phi, 0) -> 
+                if psi = phi then 
+                  (Shift (CtxShift phi,0), Null)
+                else (raise NotInvertible)
+            | _ -> (id, CtxVar psi)
+          end 
+
+
     | (Shift (_, _k), CtxVar psi) ->
         (id, CtxVar psi)
 
@@ -1664,20 +1684,20 @@ let disallowUndefineds f =
     (* MVar-MVar case *)
     | (((Root (_, MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), _tS1) as _tM1), s1) as sM1,
        (((Root (_, MVar (Inst (r2, cPsi2,  tP2, cnstrs2), t2), _tS2) as _tM2), s2) as sM2)) ->
-        (* dprnt "(000) MVar-MVar";*)
+        (* dprnt "(000) MVar-MVar"; *)
         (* by invariant of whnf:
            meta-variables are lowered during whnf, s1 = s2 = id or co-id
            r1 and r2 are uninstantiated  (None)
         *)
         let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
-(*        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar:"  
+        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar:"  
                                  ^ P.normalToString cD0 cPsi sM1 ^ "\n with type: "
                                  ^ P.dctxToString cD0 cPsi1 ^ " |- " ^ P.typToString cD0 cPsi1 (tP1 , id)
                                  ^ "\n and "
                                  ^ P.normalToString cD0 cPsi sM2 ^  "\n with type: "
                                  ^ P.dctxToString cD0 cPsi2 ^ " |- " ^ P.typToString cD0 cPsi2 (tP2 , id)) in
-*)
+
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isProjPatSub t1' , isProjPatSub t2') with                 
 (*            match (isPatSub t1' , isPatSub t2') with                 *)
@@ -1724,7 +1744,9 @@ let disallowUndefineds f =
                   begin try
                     let ss1  = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub t1')) (* cD ; cPsi1 |- ss1 <= cPsi *) in
                     let phat = Context.dctxToHat cPsi in 
-
+                    let _ = dprint (fun () -> "MVar-MVar : inverted ss1 : " ^
+                                      P.subToString cD0 cPsi1 ss1) in 
+                    let _ = dprint (fun () -> "MVar-MVar case initiate pruning " ) in 
                     let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss1) (MVarRef r1)) in 
                     (* let _ = dprint (fun () -> 
                                       "UNIFY: MVar =/= MVAR: Result of pruning : " ^ 

@@ -13,7 +13,7 @@ schema eqctx = block x:exp, _t:eq x x;
 
 rec eq_refl : {g:eqctx}{M:[g. exp]} [g. eq (M ..) (M ..)] =
 mlam g => mlam M => 
-case [g. M ..] of [g] { }
+case [g. M ..] of 
  | [g. app (M1 ..) (M2 ..)] => 
    let [g. D1 ..] = eq_refl [g] [ g . M1 .. ] in
    let [g. D2 ..] = eq_refl [g] [ g . M2 .. ] in

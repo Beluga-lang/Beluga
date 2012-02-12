@@ -118,20 +118,20 @@ mlam g => mlam A => fn d => fn e => case e of
      [g. existsl (\a. \h1. E1' .. a h1) (H ..)]
 
  %%%%
- | [g, h: hyp (and (A1 ..) (A2 ..)) . andl1 (\h1. E1 .. h h1)  h] => 
+ | [g, h: hyp (& (A1 ..) (A2 ..)) . andl1 (\h1. E1 .. h h1)  h] => 
    let [g. andr (D1 ..) (D2 ..)] = d in    
    let [g,h1: hyp _ . E1' .. h1] = ca [g, h1: hyp (A1 ..) ] 
-                                      [g, h1. and (A1 ..) (A2 ..)] 
+                                      [g, h1. & (A1 ..) (A2 ..)] 
                                       [g, h1. andr (D1 ..) (D2 ..)]
                                       [g, h1, h. E1 .. h h1] 
    in 
      ca [g] [g. A1 ..] [g. D1 ..] [g,h1. E1' .. h1]
 
 
- | [g, h: hyp (and (A1 ..) (A2 ..)) . andl2 (\h2. E2 .. h h2)  h] => 
+ | [g, h: hyp (& (A1 ..) (A2 ..)) . andl2 (\h2. E2 .. h h2)  h] => 
    let [g. andr (D1 ..) (D2 ..)] = d in    
    let [g,h2: hyp _ . E2' .. h2] = ca [g, h2: hyp (A2 ..) ] 
-                                      [g, h2. and (A1 ..) (A2 ..)] 
+                                      [g, h2. & (A1 ..) (A2 ..)] 
                                       [g, h2. andr (D1 ..) (D2 ..)]
                                       [g, h2, h. E2 .. h h2] 
    in 

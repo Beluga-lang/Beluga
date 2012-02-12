@@ -15,27 +15,27 @@ cross : tp -> tp -> tp.                 % Pairs
 arrow : tp -> tp -> tp.                 % Functions
 
 
-rec testPairs : [. exp] -> [. exp] * tp [ ] = 
-fn e => [. z , [ ] nat ]
+rec testPairs : [. exp] -> [. exp] * [ .tp ] = 
+fn e => ([. z] , [ . nat])
 ;
 
-rec testPairs2 : [. exp] -> [. exp] * tp [ ] = 
+rec testPairs2 : [. exp] -> [. exp] * [ . tp] = 
  fn e => case e of 
-   [. z] => ( e , [ ] nat )
+   [. z] => ( e , [ . nat] )
 
  | [. s U] => 
    let ( x, y ) = testPairs2 [. U] in 
    let [. nat] = y in 
    let [. V]   = x in 
-     [. s V , [ ] nat ]
+     ([. s V] , [ . nat ])
 
  ;
 
 
-rec testPairs3: [. exp] * exp [ ]  -> [. tp] * tp [ ] = 
+rec testPairs3: [. exp] * [ .exp]  -> [. tp] * [ .tp] = 
 fn p =>  let ( e1, e2 ) = p in 
-   case e1  of  [. z]   => [. nat , [ ] nat ]
+   case e1  of  [. z]   => ([. nat] , [ . nat ])
               | [. s U] => 
-                  testPairs3  [. U , e2 ]
+                  testPairs3  ([. U] , e2 )
  ;
                

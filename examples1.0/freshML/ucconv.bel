@@ -76,7 +76,7 @@ fn l => case l of
 ;
 
 %Extend the mapping with id function, used for the local variable in lam and let.
-rec e_map:(g:ctx){h:tctx} [g. term] -> [h. target])  ->  [g,x:term. term] -> [h,x:target. target]) =
+rec e_map : (g:ctx){h:tctx} ([g. term] -> [h. target])  ->  [g,x:term. term] -> [h,x:target. target] =
 mlam h => fn map => 
    fn e' => case e' of
    | [g,x:term. x] => [h,x:target. x]
@@ -88,8 +88,8 @@ mlam h => fn map =>
  %Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
  %Resulting should be a term closed under the environement tuple xenv and the local variable x.
 
-rec b_map:(g:ctx)[g,x:term. term] -> [xenv:target. target]) -> [g. fvlist] -> [. nat] -> 
-	  [g,x:term. term] -> [xenv:target. target]) =
+rec b_map:(g:ctx)([g,x:term. term] -> [xenv:target. target]) -> [g. fvlist] -> [. nat] -> 
+	  [g,x:term. term] -> [xenv:target. target] =
 fn map => fn l => fn n => case l of
 | [g. nil] => (fn e => case e of
 	       |[g,x:term. x] => [xenv:target. (tsnd xenv)]
@@ -108,7 +108,7 @@ fn map => fn l => fn n => case l of
 
 
 %Build the environement tuble xenv that will be packed next to a lam. Map should contain the idmapping from x:term to x:target at this stage.
-rec b_env:(g:ctx){h:tctx} [g. term] -> [h. target]) -> [g. fvlist] -> [h. target] =
+rec b_env:(g:ctx){h:tctx}( [g. term] -> [h. target]) -> [g. fvlist] -> [h. target] =
 mlam h => fn map => fn fvar => case fvar of
 | [g. nil] => [h. tunit]
 | [g. cons (E..) (Ta..)] => 
@@ -142,7 +142,7 @@ fn e => case e of
 %
 %outer conversion
 %
-rec convert:(g:ctx){h:tctx} [g. term] -> [h. target]) -> [g. term] -> [h. target] = 
+rec convert:(g:ctx){h:tctx} ([g. term] -> [h. target]) -> [g. term] -> [h. target] = 
 mlam h => fn map => fn e => case e of
 | [g. #p..] => map [g. #p..]
 | [g. eapp (U..) (V..)] => 

@@ -470,6 +470,11 @@ module Int = struct
               (R.render_ctx_var cD psi)
               (R.render_offset n)
 
+        | LF.Shift (LF.CtxShift (LF.CtxName psi), n) -> 
+            fprintf ppf "^(ctxShift (NAME %s ) + %s)"
+              (R.render_name psi)
+              (R.render_offset n)
+
         | LF.Shift (LF.CtxShift (_psi), n) -> 
             fprintf ppf "^(ctxShift ( _ ) + %s)"
               (R.render_offset n)
@@ -1020,7 +1025,7 @@ module Int = struct
     and fmt_ppr_pat_obj cD cG lvl ppf = function 
       | Comp.PatEmpty (_, cPsi) -> 
           let cond = lvl > 1 in 
-            fprintf ppf "%s[%a. ()]%s"
+            fprintf ppf "%s[%a. {}]%s"
               (l_paren_if cond)
               (fmt_ppr_lf_dctx cD 0) cPsi
               (r_paren_if cond)
@@ -1327,6 +1332,13 @@ module Int = struct
       | Comp.EmptyPattern -> ()
     
     and fmt_ppr_cmp_branch cD cG _lvl ppf = function
+      | Comp.EmptyBranch (_, cD1, pat, t) -> 
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a : %a ] @]  @]@  "
+            (fmt_ppr_cmp_branch_prefix  0) cD1
+            (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
+            (fmt_ppr_refinement cD1 cD 2) t
+
+
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) -> 
           fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a  : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'

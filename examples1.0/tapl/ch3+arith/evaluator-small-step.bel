@@ -104,9 +104,10 @@ fn m => case is_value? m of
   ) 
 ;
 
-
+%{
 let r' = mstep [. (switch (switch (switch true false false)
                                true 
                                true)
                        false 
                        false) ] ;
+}%

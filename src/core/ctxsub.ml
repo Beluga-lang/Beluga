@@ -13,6 +13,7 @@ open Syntax.Int
 open Substitution
 open Store.Cid
 open Error
+open Id
 
 let rec subToString = function
   | Shift(CtxShift _, n) -> "Shift(CtxShift _, " ^ string_of_int n ^ ")"
@@ -985,10 +986,16 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
 let rec mctxToMSub cD = match cD with
   | Empty -> Whnf.m_id
-  | Dec (cD', MDecl(_, tA, cPsi)) ->
+  | Dec (cD', MDecl(n, tA, cPsi)) ->
+      let _     = dprint (fun () -> "[mctxToString] MDecl " ^ n.string_of_name) in 
       let t     = mctxToMSub cD' in
+      let _     = dprint (fun () -> "[mctxToString] MDecl continue " ^ n.string_of_name) in 
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
+      let _     = dprint (fun () -> "[mctxToString] MDecl " ^ n.string_of_name ^
+                         " cPsi computed") in 
       let tA'   = Whnf.cnormTyp (tA, t) in
+      let _     = dprint (fun () -> "[mctxToString] MDecl " ^ n.string_of_name ^
+                         " new type computed") in 
       let u     = Whnf.newMVar (cPsi', tA') in
       let phat  = Context.dctxToHat cPsi' in
         MDot (MObj (phat, Root (None, MVar (u, Substitution.LF.id), Nil)) , t)
@@ -1000,8 +1007,10 @@ let rec mctxToMSub cD = match cD with
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
 
-  | Dec (cD', CDecl(_, sW, _)) -> 
+  | Dec (cD', CDecl(n, sW, _)) -> 
+      let _     = dprint (fun () -> "[mctxToString] CDecl " ^ n.string_of_name) in 
       let t = mctxToMSub cD' in 
+      let _     = dprint (fun () -> "[mctxToString] CDecl continued " ^ n.string_of_name) in 
       let cvar = Whnf.newCVar sW in 
         MDot (CObj (CtxVar cvar), t)
 

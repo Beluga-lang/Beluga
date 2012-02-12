@@ -466,6 +466,11 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
 
   and checkBranch _caseTyp cD cG branch tau_s (tau, t) =
     match branch with
+      | EmptyBranch (loc, cD1', pat, t1) -> 
+          let tau_p = Whnf.cnormCTyp (tau_s, t1) in 
+          let _     = LF.checkMSub  cD1' t1 cD in   
+            checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id)
+
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) -> 
           let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
           let TypBox (_, (I.Atom(_, a, _) as tP) , cPsi) = tau_s in 

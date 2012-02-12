@@ -179,7 +179,7 @@ module Comp = struct
    | PatApp of Loc.t * pattern * pattern_spine 
 
   and branch =
-    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern 
+    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern 
     | Branch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern * exp_chk 
     (* The following two are from the old implementation and will be removed eventually; 
        and replaced by the more general notion of patterns and branches above;

@@ -5,7 +5,7 @@ bool: tp.
 exp : tp -> type.
 z   : exp nat.
 suc : exp nat -> exp nat.
-and : exp bool -> exp bool -> exp bool.
+land : exp bool -> exp bool -> exp bool.
 tt  : exp bool.
 ff  : exp bool.
 

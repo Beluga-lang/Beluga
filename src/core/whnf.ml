@@ -287,7 +287,9 @@ and mshiftTypRec typRec n = match typRec with
         SigmaElem (x, tA, rest)
 
 and mshiftSub s n = match s with
-  | Shift (_,_k) -> s
+  | Shift (CtxShift (CtxOffset k), d) -> 
+      Shift(CtxShift (CtxOffset (k+n)), d)
+  | Shift (_,_k) -> s 
   | SVar(Offset k, s) -> SVar(Offset (k+n), mshiftSub s n)
   | Dot(ft, s) -> Dot (mshiftFt ft n, mshiftSub s n)
 
@@ -303,7 +305,10 @@ and mshiftDCtx cPsi k = match cPsi with
   | DDec(cPsi', TypDecl(x, tA)) -> 
       DDec(mshiftDCtx cPsi' k, TypDecl(x, mshiftTyp tA k))
 
-
+and mshiftHat phat k = match phat with 
+  | (None, d) -> phat
+  | (Some (CtxOffset n), d) -> (Some (CtxOffset (n+k)), d)
+  | _ -> phat
 
 (* mvar_dot1 psihat t = t'
    Invariant:
@@ -649,6 +654,30 @@ and reduce sM spine = match (sM, spine) with
 
 
 and normSub s = match s with
+  | Shift (CtxShift (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)), k) -> 
+      begin match Context.dctxToHat cPhi with
+        | (Some ctx_v, d) -> 
+            normSub (Shift (CtxShift ctx_v, k + d))
+        | (None, d) ->
+            Shift (NoCtxShift, k + d)
+      end
+
+    | Shift (NegCtxShift (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)), k) -> 
+        let rec undef_sub d s = 
+          if d = 0 then s 
+          else undef_sub (d-1) (Dot(Undef, s)) 
+        in 
+          begin match Context.dctxToHat cPhi with
+          | (Some ctx_v, d) -> 
+          (* Phi |- s : psi  and psi not in Psi and |Psi| = k 
+           * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi 
+           *)                      
+              normSub (undef_sub d (Shift (NegCtxShift ctx_v, k)))
+
+          | (None, d) -> undef_sub d (Shift (NoCtxShift, k))
+
+          end
+
   | Shift _      -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
   | SVar (Offset offset, s') -> SVar (Offset offset, normSub s')
@@ -708,6 +737,19 @@ and normDecl (decl, sigma) = match decl with
   | _ -> decl
 
 
+
+and norm_psihat (phat: psi_hat) = match phat with
+  | (None , _ ) -> phat
+  | (Some (CInst ({contents = Some cPsi}, _schema, _cO, _cD)),  k) -> 
+      begin match Context.dctxToHat cPsi with
+        | (None, i) -> (None, k+i)
+        | (Some cvar', i) -> (Some cvar', i+k)
+      end
+  |  _ -> phat
+
+
+
+
 (* ********************************************************************* *)
 (* Normalization = applying simultaneous modal substitution   
 
@@ -741,6 +783,27 @@ and what_head = function
   | FVar _ -> "FVar"
   | FMVar _ -> "FMVar"
   | FPVar _ -> "FPVar"
+
+
+
+and cnorm_psihat (phat: psi_hat) t = match phat with
+  | (None , _ ) -> phat
+  | (Some (CInst ({contents = Some cPsi}, _schema, _cO, _cD)),  k) -> 
+      begin match Context.dctxToHat cPsi with
+        | (None, i) -> (None, k+i)
+        | (Some cvar', i) -> (Some cvar', i+k)
+      end
+  | (Some (CtxOffset offset), k) -> 
+      begin match LF.applyMSub offset t with 
+        | CObj(cPsi) -> 
+            begin match Context.dctxToHat (cPsi) with
+              | (None, i) -> (None, k+i)
+              | (Some cvar', i) -> (Some cvar', i+k)
+            end
+        | MV offset' -> (Some (CtxOffset offset'), k)
+      end 
+  |  _ -> phat
+
 
 
 
@@ -987,6 +1050,7 @@ and cnorm (tM, t) = match tM with
                 cnormHead (Proj( PVar (q, (LF.comp s r)), k), t)
 
             | Offset k  -> 
+                let _ = dprint (fun () -> "[cnormHead] Pvar offset") in 
                 begin match LF.applyMSub k t with
                   | MV  k'            -> PVar (Offset k', cnormSub (r, t))
                   | PObj (_phat, BVar i) -> 
@@ -1044,9 +1108,9 @@ and cnorm (tM, t) = match tM with
     | Shift (CtxShift (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)), k) -> 
         begin match Context.dctxToHat cPhi with
           | (Some ctx_v, d) -> 
-              Shift (CtxShift ctx_v, k + d)
+              cnormSub (Shift (CtxShift ctx_v, k + d), t)
           | (None, d) ->
-              Shift (NoCtxShift, k + d)
+              cnormSub (Shift (NoCtxShift, k + d), t)
         end
 
     | Shift (NegCtxShift (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)), k) -> 
@@ -1059,14 +1123,54 @@ and cnorm (tM, t) = match tM with
           (* Phi |- s : psi  and psi not in Psi and |Psi| = k 
            * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi 
            *)                      
-              undef_sub d (Shift (NegCtxShift ctx_v, k))
+              cnormSub (undef_sub d (Shift (NegCtxShift ctx_v, k)) , t )
 
-          | (None, d) -> undef_sub d (Shift (NoCtxShift, k))
+          | (None, d) -> cnormSub (undef_sub d (Shift (NoCtxShift, k)), t)
 
           end
-              
 
-    | Shift _         -> s
+    | Shift (NegCtxShift (CtxOffset psi), k) -> 
+        let rec undef_sub d s = 
+          if d = 0 then s 
+          else undef_sub (d-1) (Dot(Undef, s)) 
+        in           
+        begin match LF.applyMSub psi t with             
+          | MV psi' -> Shift (NegCtxShift (CtxOffset psi'), k) 
+          | CObj (CtxVar psi) -> Shift (NegCtxShift (psi), k)
+          | CObj (Null) -> Shift (NoCtxShift, k)
+          | CObj (DDec _ as cPsi) -> 
+              begin match Context.dctxToHat cPsi with
+                | (Some ctx_v, d) -> 
+                    undef_sub d (Shift (NegCtxShift ctx_v, k))
+                | (None, d) -> undef_sub d (Shift (NoCtxShift, k))
+              end
+        end
+
+    | Shift (NoCtxShift, _k) -> s
+    | Shift (CtxShift (CtxOffset psi), k) ->  
+        let _ = dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int psi ) in 
+        begin match LF.applyMSub psi t with             
+          | MV psi' -> Shift (CtxShift (CtxOffset psi'), k) 
+          | CObj (CtxVar psi) -> Shift (CtxShift (psi), k)
+          | CObj (Null) -> Shift (NoCtxShift, k)
+          | CObj (DDec _ as cPsi) -> 
+            begin match Context.dctxToHat cPsi with
+              | (Some ctx_v, d) -> 
+                  Shift (CtxShift ctx_v, k + d)
+                    
+              | (None, d) ->
+                  Shift (NoCtxShift, k + d)
+            end
+          | MObj _ -> (dprint (fun () -> "[applyMSub] ill-typed MObj for CObj")
+                  ; raise (Violation "illtyped msub"))
+
+                       
+        end
+    (* this case does happen during type reconstruction when we are inferring
+       the type of a pattern which is a meta-object
+    *)
+    | Shift (CtxShift (CtxName psi), k) -> s 
+    | Shift (_ , k ) -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
     | SVar (Offset offset, s') -> SVar(Offset offset, cnormSub (s',t))
      (* substitution variables ignored for how -bp *)
@@ -1201,7 +1305,8 @@ and cnorm (tM, t) = match tM with
 and cnormMSub t = match t with
   | MShift _n -> t
   | MDot (MObj(phat, tM), t) -> 
-      MDot (MObj (phat, norm (tM, LF.id)), cnormMSub t) 
+      MDot (MObj (cnorm_psihat phat m_id, 
+                  norm(tM, LF.id)), cnormMSub t) 
 
   | MDot (CObj (cPsi), t) -> 
         let t' = cnormMSub t in 
@@ -1209,25 +1314,25 @@ and cnormMSub t = match t with
           MDot (CObj cPsi' , t')
 
   | MDot (PObj(phat, PVar(Offset k, s)), t) -> 
-      MDot (PObj(phat, PVar(Offset k, s)), cnormMSub t)
+      MDot (PObj(cnorm_psihat phat m_id, PVar(Offset k, s)), cnormMSub t)
 
   | MDot (PObj(phat, BVar k), t) -> 
-      MDot (PObj(phat, BVar k), cnormMSub t)
+      MDot (PObj(cnorm_psihat phat m_id, BVar k), cnormMSub t)
 
   | MDot (PObj(phat, PVar(PInst ({contents = None}, _cPsi, _tA, _ ) as p,  s)), t) -> 
-      MDot (PObj(phat, PVar(p, s)), cnormMSub t)
+      MDot (PObj(cnorm_psihat phat m_id, PVar(p, s)), cnormMSub t)
 
   | MDot(PObj(phat, PVar (PInst ({contents = Some (BVar x)}, _cPsi, _tA, _ ) , r)), t) -> 
         let t' = cnormMSub t in 
         begin match LF.bvarSub x r with
           | Head h  ->  
-             MDot (PObj(phat, h), t')
+             MDot (PObj(cnorm_psihat phat m_id, h), t')
           | Obj tM  -> 
-              MDot (MObj(phat,  norm (tM, LF.id)), t')
+              MDot (MObj(cnorm_psihat phat m_id,  norm (tM, LF.id)), t')
         end
 
   | MDot(PObj(phat, PVar (PInst ({contents = Some (PVar (q,s))}, _cPsi, _tA, _ ) , r)), t) -> 
-      cnormMSub (MDot (PObj (phat, PVar(q, LF.comp s r)), t))
+      cnormMSub (MDot (PObj (cnorm_psihat phat m_id, PVar(q, LF.comp s r)), t))
 
   | MDot (MV u, t) -> MDot (MV u, cnormMSub t)
 
@@ -1876,24 +1981,6 @@ let convHatCtx ((cvar, l), cPsi) =
   
 (* ************************************************* *)
 
-let rec cnorm_psihat (phat: psi_hat) t = match phat with
-  | (None , _ ) -> phat
-  | (Some (CInst ({contents = Some cPsi}, _schema, _cO, _cD)),  k) -> 
-      begin match Context.dctxToHat cPsi with
-        | (None, i) -> (None, k+i)
-        | (Some cvar', i) -> (Some cvar', i+k)
-      end
-  | (Some (CtxOffset offset), k) -> 
-      begin match LF.applyMSub offset t with 
-        | CObj(cPsi) -> 
-            begin match Context.dctxToHat (cPsi) with
-              | (None, i) -> (None, k+i)
-              | (Some cvar', i) -> (Some cvar', i+k)
-            end
-        | MV offset' -> (Some (CtxOffset offset'), k)
-      end 
-  |  _ -> phat
-
 
 
 let rec cnormCSub (cs, t) = begin match cs with
@@ -2321,6 +2408,10 @@ let rec mctxPVarPos cD p =
 
   *)
   and cnormBranch = function
+    | (Comp.EmptyBranch (loc, cD, pat, t), theta) -> 
+         (* THIS IS WRONG. -bp *)
+         Comp.EmptyBranch (loc, cD, pat, cnormMSub t)
+
     | (Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', mO), t, e), theta) -> 
     (* cD' |- t <= cD    and   FMV(e) = cD' while 
        cD' |- theta' <= cD0
@@ -2365,7 +2456,9 @@ let rec mctxPVarPos cD p =
   let rec cnormCtx (cG, t) = match cG with
     | Empty -> Empty
     | Dec(cG, Comp.CTypDecl(x, tau)) -> 
-        Dec (cnormCtx (cG, t), Comp.CTypDecl (x, cnormCTyp (tau, t)))
+        let _ = dprint (fun () -> "[cnormCtx] decl = " ^ x.Id.string_of_name) in
+        let tdcl = Comp.CTypDecl (x, cnormCTyp (tau, t)) in 
+        Dec (cnormCtx (cG, t), tdcl)
     | Dec(cG, Comp.CTypDeclOpt x) -> 
         Dec (cnormCtx (cG, t), Comp.CTypDeclOpt x)
 

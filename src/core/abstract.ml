@@ -1031,6 +1031,8 @@ and collectHat cQ phat = match phat with
       begin match checkOccurrence (eqFCVar psi) cQ with
           | Yes -> (cQ, phat)
           | No -> 
+              let _ = dprint (fun () -> "[collect_phat] looking up " ^
+                                R.render_name psi ^ " in fcvar ") in 
               let I.CDecl (_, s_cid, _)  = FCVar.get psi in
                 (I.Dec (cQ, FCV (psi, Some (s_cid))), 
                  phat)
@@ -1688,6 +1690,7 @@ let rec collect_meta_obj cQ cM = match cM with
       let (cQ', cPsi') = collectDctx cQ phat cPsi in 
         (cQ', Comp.MetaCtx (loc, cPsi'))
   | Comp.MetaObj (loc, phat, tM) -> 
+      let _ = dprint (fun () -> "[collect_meta_obj] MetaObj ") in 
       let (cQ', phat') = collectHat cQ phat in 
       let (cQ', tM') = collectTerm cQ' phat' (tM, LF.id) in 
         (cQ', Comp.MetaObj (loc, phat', tM'))
@@ -1883,7 +1886,9 @@ and collectPatObj cQ pat = match pat with
       let (cQ2, pat2') = collectPatObj cQ1 pat2 in 
         (cQ2, Comp.PatPair (loc, pat1', pat2'))
   | Comp.PatAnn (loc, pat, tau) -> 
+      let _ = dprint (fun () -> "[collectPatObj] PatAnn - pat  ") in 
       let (cQ1, pat') = collectPatObj cQ pat in 
+      let _ = dprint (fun () -> "[collectPatObj] PatAnn - pat done ") in 
       let (cQ2, tau') = collectCompTyp cQ1 tau in 
         (cQ2, Comp.PatAnn (loc, pat', tau'))
   | Comp.PatConst (loc, c, pat_spine) -> 
@@ -2205,7 +2210,7 @@ let rec abstrCompKind cK =
 
 let rec abstrCompTyp tau = 
   let rec roll tau cQ = match tau with
-    | Comp.TypCtxPi ((_psi, _w, Comp.Implicit) as ctx_decl, tau) -> 
+    | Comp.TypCtxPi ((_psi, _w, _ ) as ctx_decl, tau) -> 
         roll tau (I.Dec(cQ, CtxV (ctx_decl)))
     | tau -> (cQ, tau)
   in 

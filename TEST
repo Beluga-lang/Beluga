@@ -10,13 +10,13 @@ usage() {
     echo "  -c,--color       Force colorized output even when piped."
     echo
     echo "Notes:"
-    echo "    - Pure LF signatures are in files sources.cfg."
-    echo "    - Proofs written in Beluga are in test.cfg."
-    echo "    - Files ending in .bel contain Beluga programs."
-    echo "    - If a test.cfg file is found in a subdirectory, only it will be tested."
-    echo "    - If no test.cfg file is found, all .bel files in the subdirectory"
-    echo "      will be tested."
-    echo "    - To inhibit testing .bel files, put an empty test.cfg in that directory."
+    echo "  - Pure LF signatures are in files sources.cfg."
+    echo "  - Proofs written in Beluga are in test.cfg."
+    echo "  - Files ending in .bel contain Beluga programs."
+    echo "  - If a test.cfg file is found in a subdirectory, only it will be tested."
+    echo "  - If no test.cfg file is found, all .bel files in the subdirectory"
+    echo "    will be tested."
+    echo "  - To inhibit testing .bel files, put an empty test.cfg in that directory."
 }
 
 echo "Parameters for this run (override as necessary using environment variables):"

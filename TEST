@@ -5,6 +5,10 @@ usage() {
     echo
     echo "Synopsis: test harness for Beluga."
     echo
+    echo "Options:"
+    echo "  -h,--help        Display this usage information."
+    echo "  -c,--color       Force colorized output even when piped."
+    echo
     echo "Notes:"
     echo "    - Pure LF signatures are in files sources.cfg."
     echo "    - Proofs written in Beluga are in test.cfg."

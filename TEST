@@ -19,13 +19,16 @@ echo "Parameters for this run (override as necessary using environment variables
 echo
 
 # Path to the Beluga source distribution.
-echo -e "\t" BELUGADIR=${BELUGADIR:=$(dirname $0)}
+echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
 
 # Set $EXE to the executable to test.
-echo -e "\t" EXE=${EXE:=$BELUGADIR/bin/interpreter}
+echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/interpreter}
 
 # Test scripts.
-echo -e "\t" TESTDIR=${TESTDIR:=$BELUGADIR/examples}
+echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/examples}
+
+# Time limit.
+echo -e "\t" TIMEOUT: ${TIMEOUT:=2} seconds
 
 echo
 
@@ -55,7 +58,8 @@ sort_cases() {
 do_testing() {
     local n=0 success=0 fail=0 timeout=0
 
-ulimit -t 2
+    # Limit runtime of each test case, in seconds.
+    ulimit -t $TIMEOUT
 
     for i in $(test_cases | sort_cases)
     do

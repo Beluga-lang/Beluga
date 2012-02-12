@@ -52,43 +52,75 @@ sort_cases() {
     find ${cases_cfg[@]}
 }
 
-n=0
-success=0
-fail=0
-timeout=0
+do_testing() {
+    local n=0 success=0 fail=0 timeout=0
 
 ulimit -t 2
 
-for i in $(test_cases | sort_cases)
-do
-    n=$((n+1))
-    echo -n "** TEST $n: $i ... "
+    for i in $(test_cases | sort_cases)
+    do
+	n=$((n+1))
+	echo -ne "${C[start]}**$CEND TEST $n: $i ... "
 
-    result=$($EXE -noprint $* $i 2>&1)
-    exit_code=$?
-    if [[ $exit_code -eq 0 ]]
-    then
-	echo "done"
-	success=$((success+1))
-    elif [[ $exit_code -eq 137 ]]
-    then
-	echo "TIMEOUT!"
-	timeout=$((timeout+1))
-    else
-	echo "FAIL!"
-	echo "$result"
-	fail=$((fail+1))
-    fi
+	result=$($EXE -noprint $* $i 2>&1)
+	exit_code=$?
+	if [[ $exit_code -eq 0 ]]
+	then
+	    echo -e "${C[done]}DONE$CEND"
+	    success=$((success+1))
+	elif [[ $exit_code -eq 137 ]]
+	then
+	    echo -e "${C[timeout]}TIMEOUT$CEND"
+	    timeout=$((timeout+1))
+	else
+	    echo -e "${C[fail]}FAIL$CEND"
+	    echo "$result"
+	    fail=$((fail+1))
+	fi
+    done
+
+    echo
+    echo Successes: $success
+    echo Failures: $fail
+    echo Timeouts: $timeout
+    echo Total: $n
+
+    echo
+    times
+
+    # If not all tests succeeded then exit with non-zero status.
+    [[ $success -eq $n ]] || exit 1
+    exit 0
+}
+
+GETOPT=$(getopt -o hc --long help,colour,color -n $0 -- "$@")
+
+# Bail out if argument parsing failed.
+[[ $? != 0 ]] && exit 2
+
+eval set -- "$GETOPT"
+
+while true
+do
+    case "$1" in
+	-h|--help)
+	    usage
+	    exit 0
+	    ;;
+	-c|--colour|--color)
+	    CEND="\e[0m"
+	    typeset -A C
+	    C=( [start]="\e[0;34m"
+		[done]="\e[1;32m"
+	        [timeout]="\e[1;35m"
+		[fail]="\e[1;31m" )
+	    shift
+	    ;;
+	--)
+	    shift
+	    break
+	    ;;
+    esac
 done
 
-echo
-echo Successes: $success
-echo Failures: $fail
-echo Timeouts: $timeout
-echo Total: $n
-
-echo
-times
-
-# If not all tests succeeded then exit with non-zero status.
-[[ $success -eq $n ]] || exit 1
+do_testing $*

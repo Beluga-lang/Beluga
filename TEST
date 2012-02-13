@@ -33,26 +33,27 @@ echo -e "\t" TIMEOUT: ${TIMEOUT:=2} seconds
 
 echo
 
+# Allow file globs to match nothing.
+setopt null_glob
+
 # Find test cases.
 test_cases() {
-    for dir in $(find $TESTDIR -type d)
+    for dir in $TESTDIR/**/
     do
-	if [[ -n $(find $dir/ -maxdepth 1 -name '*.cfg' -print -quit) ]]
+	cfgs=(${dir}*.cfg)
+	if (( ${#cfgs[@]} > 0 ))
 	then
-	    find $dir/ -maxdepth 1 -name '*.cfg' -type f
+	    print -C1 ${dir}*.cfg
 	else
-	    find $dir/ -maxdepth 1 -name '*.bel' -type f
+	    print -C1 ${dir}*.bel
 	fi
     done
 }
 
 sort_cases() {
     cases=($(</dev/stdin))
-    cases_cfg=($(find ${cases[@]} -name '*.cfg'))
-    cases_bel=($(find ${cases[@]} -name '*.bel'))
-    # Need to count lines explicitly for compatibily with BSD head.
-    echo ${cases_bel[@]} | xargs wc -c 2>/dev/null | head -n ${#cases_bel[@]} | sort -n | awk '{print $2}'
-    find ${cases_cfg[@]}
+    for i in ${(M)cases#*.bel}; do wc -c $i; done | sort -n | awk '{print $2}'
+    print -C1 ${(M)cases#*.cfg}
 }
 
 do_testing() {

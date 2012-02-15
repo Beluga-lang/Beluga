@@ -42,8 +42,8 @@ case e of
   cmp [g. E .. ] [g,x. K .. (s+ x)]
 
 | [g. lam \x. E .. x] => 
-  let [g,b:block x:exp,x':cval , _t:(cval -> cexp). E' .. b.2 b.3] = 
-      cmp [g,b:block x:exp,x':cval , _t:(cval -> cexp). E .. b.1] [g,b,x1. b.3 x1] in 
+  let [g,b:block (x:exp,x':cval , _t:(cval -> cexp)). E' .. b.2 b.3] = 
+      cmp [g,b:block (x:exp,x':cval , _t:(cval -> cexp)). E .. b.1] [g,b,x1. b.3 x1] in 
    [g. K .. (lam+ (\v.\k. E' .. v k))]				    
 
 | [g. app (E1 ..) (E2 .. )] => 

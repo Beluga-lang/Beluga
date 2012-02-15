@@ -113,7 +113,8 @@ let ctxSigmaDec cPsi k =
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
-
+    | (CtxVar (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)) , k) -> 
+        ctxDec' (cPhi, k)
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in
     ctxDec' (cPsi, k)

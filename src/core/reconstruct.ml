@@ -648,21 +648,24 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
   | (e, (Int.Comp.TypCtxPi((psi_name, schema_cid, Int.Comp.Implicit), tau), theta))  ->
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in 
       let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.Maybe)) in 
-      let e' = elExp cD' cG'  e (tau, C.mvar_dot1 theta) in
+      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in 
+      let e' = elExp cD' cG'  e' (tau, C.mvar_dot1 theta) in
         Int.Comp.CtxFun (None, psi_name, e')
 
   | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
       (* let u' = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA)) in *)
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in 
       let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in  
-      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
+      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in 
+      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (None,u , e')
 
   | (e, (Int.Comp.TypPiBox((Int.LF.PDecl(_u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
       let u' = Id.mk_name (Id.PVarName None) in 
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in 
       let cD' = Int.LF.Dec (cD, Int.LF.PDecl (u', C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in 
-      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
+      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in 
+      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (None,u' , e')
 
   | (Apx.Comp.Pair(loc, e1, e2), (Int.Comp.TypCross (tau1, tau2), theta)) ->

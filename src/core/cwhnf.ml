@@ -635,6 +635,18 @@ let rec cnormDCtx (cPsi, t) = match cPsi with
     | LF.DDec(cPsi, decl) ->  
         LF.DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
 
+let rec cnormHat (phat, t) = match phat with
+  | (None, offset) -> phat
+  | (Some (CtxOffset psi, k) -> 
+      begin match applyMSub psi t with
+        | 
+      end
+  | (Some (CInst ({contents = Some cPsi}, _schema, _cO, _cD)), offset) -> 
+      begin match Context.dctxToHat cPsi with
+        | (None, i) -> (None, k+i)
+        | (Some cvar', i) -> (Some cvar', i+k)
+      end
+
 
 
 (* ************************************************* *)
@@ -946,6 +958,12 @@ let rec mctxPVarPos cD p =
     | (Comp.TypPiBox (_, _) , _)       -> thetaT
 
     | (Comp.TypClo (tT, t'), t)        -> cwhnfCTyp (tT, mcomp t' t)
+
+
+
+  let rec cwhnfExp (e, t) = match (e,t) with 
+    | (Comp.Box (psihat, tM), t) -> Comp.Box (psihat, Whnf.norm (cnorm (tM, t), S.id))
+    | _ -> (e,t)
 
 
   (* WHNF and Normalization for computation-level terms to be added -bp *)
@@ -1417,3 +1435,5 @@ and convSchElem (LF.SchElem (cPsi, trec)) (LF.SchElem (cPsi', trec')) =
     Whnf.convCtx cPsi cPsi'
   &&
     Whnf.convTypRec (trec, S.id) (trec', S.id)
+
+

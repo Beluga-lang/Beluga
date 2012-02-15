@@ -124,6 +124,11 @@ type free_var =
 
   | CtxV of (Id.name * cid_schema * Comp.depend)
 
+
+let rec prefixCompTyp tau = match tau with
+  | Comp.TypPiBox (_, tau) -> 1 + prefixCompTyp tau
+  | _ -> 0
+
 let rec raiseType cPsi tA = match cPsi with
   | I.Null -> (None, tA)
   | I.CtxVar psi -> (Some psi, tA)
@@ -1393,9 +1398,14 @@ and abstractMVarCtxV cQ (l,offset) ctx_var =
    | I.CInst ({contents = None}, _, _ ,_ ) -> 
        let x = index_of cQ (CV (I.CtxVar ctx_var)) in 
          I.CtxOffset x
+(*   | I.CInst ({contents = Some cPsi}, _, _, _ ) -> 
+       abstractMVarDctx cQ (l,offset) cPsi *)
       )
 
-and abstractMVarSub cQ offset s = match s with
+and abstractMVarSub cQ offset s = abstractMVarSub' 
+  cQ offset (Whnf.cnormSub (s, Whnf.m_id)) 
+
+and abstractMVarSub' cQ offset s = match s with
   | I.Shift (I.CtxShift ctx_var, d)   ->     
       let ctx_var' = abstractMVarCtxV cQ offset ctx_var in 
         I.Shift (I.CtxShift ctx_var', d)
@@ -1405,27 +1415,27 @@ and abstractMVarSub cQ offset s = match s with
   | I.Shift (I.NoCtxShift, _) -> s
 
   | I.Dot (I.Head tH, s) ->
-      I.Dot (I.Head (abstractMVarHead cQ offset tH), abstractMVarSub cQ offset s)
+      I.Dot (I.Head (abstractMVarHead cQ offset tH), abstractMVarSub' cQ offset s)
 
   | I.Dot (I.Obj tM, s) ->
-      I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub cQ offset s)
+      I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
   | I.SVar (I.Offset s, sigma) -> 
-      I.SVar (I.Offset s, abstractMVarSub cQ offset sigma)
+      I.SVar (I.Offset s, abstractMVarSub' cQ offset sigma)
 
   | I.Dot (I.Undef, s) -> 
-      I.Dot (I.Undef, abstractMVarSub cQ offset s)
+      I.Dot (I.Undef, abstractMVarSub' cQ offset s)
 (*  | I.FSVar (s, sigma) -> 
       let x = index_of cQ (FSV (Pure, s, None)) + offset in 
         I.SVar (I.Offset x, abstractMVarSub cQ offset sigma)
 *)
 
 
-and abstractMVarCSub cQ d cs = match cs with
+(*and abstractMVarCSub cQ ((l, offset) as d) cs = match cs with
   | I.CShift n -> I.CShift n
   | I.CDot (cPsi, cs') -> 
       I.CDot (abstractMVarDctx cQ d cPsi , abstractMVarCSub cQ d cs')
-
+*)
 and abstractMVarHat cQ (l,offset) phat = match phat with
   | (None, _ ) -> phat
   | (Some (I.CtxOffset x), k ) -> (Some (I.CtxOffset (x+l)), k)
@@ -1443,14 +1453,13 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.Null ->
       I.Null
   | I.CtxVar (I.CtxOffset psi) -> 
-
       if psi <= offset then 
         cPsi
       else 
-        (dprint (fun () -> "[abstractMVarDctx] Old CtxOffset = " ^
+        (dprint (fun () -> "[abstractMVarDctx] l = " ^ string_of_int l ^ "  Old CtxOffset = " ^
                    R.render_offset psi ^ "  New CtxOffset " ^ 
-                   R.render_offset (psi + l));
-        I.CtxVar (I.CtxOffset (psi + l)))
+                   R.render_offset (psi + l) );
+           I.CtxVar (I.CtxOffset (psi + l)))
   | I.CtxVar (I.CtxName psi) -> 
       let _ = dprint (fun () -> "[abstractMVarDctx] abstracting over ctx " ^
                         R.render_name psi) in 
@@ -2216,12 +2225,14 @@ let rec abstrCompTyp tau =
   in 
   let (cQ, tau')  = roll tau I.Empty in 
   let l'           = lengthCollection cQ in 
+  let p = prefixCompTyp tau' in (* p = number of explicitely mvars *) 
   let (cQ, tau1)  = collectCompTyp cQ tau' in 
   let k           = lengthCollection cQ in 
   let l           = (k - l') in 
   let _ = dprint (fun () -> "\n[collectCompTyp] done : l' = " ^ string_of_int l' ^
    " l = " ^ string_of_int l ) in 
-  let cQ'  = abstractMVarCtx cQ (l-1) in 
+  let cQ'  = abstractMVarCtx cQ (l-1-p) in  
+  (* let cQ'  = abstractMVarCtx cQ (l-1) in  *)
   let _ = dprint (fun () -> "\n[abstractMVarCtx] done ") in 
   let tau' = abstractMVarCompTyp cQ' (l,0) tau1 in 
   let _ = dprint (fun () -> "\n[abstractMVarCompTyp] done ") in 

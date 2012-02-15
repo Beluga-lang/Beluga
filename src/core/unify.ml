@@ -474,11 +474,30 @@ let disallowUndefineds f =
     | (MShift _k, Empty) ->
         (Whnf.m_id, Empty)
 
+   | (MShift k, Dec (_, CDecl (_x, _w, _dep))) ->
+       pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
+
    | (MShift k, Dec (_, MDecl (_x, _tA, _cPsi))) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
    | (MShift k, Dec (_, PDecl (_x, _tA, _cPsi))) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
+
+
+   | (MDot (MV k, mt), Dec (cD1, CDecl (g, w, dep))) ->
+       let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
+         (* cD1 |- mt' <= cD2 *)
+         begin match applyMSub k ms with
+           | MUndef          ->
+               (* Psi1, x:tA |- s' <= Psi2 *)
+               (Whnf.mcomp mt' (MShift 1), cD2)
+
+           | MV _n ->
+               (* cD1, u:A[Psi] |- mt' <= cD2, u:([mt']^-1 (A[cPsi])) since
+                  A = [mt']([mt']^-1 A)  and cPsi = [mt']([mt']^-1 cPsi *)
+               (Whnf.mvar_dot1 mt',  Dec(cD2, CDecl(g, w, dep)))
+         end
+
 
 
    | (MDot (MV k, mt), Dec (cD1, MDecl (u, tA, cPsi))) ->

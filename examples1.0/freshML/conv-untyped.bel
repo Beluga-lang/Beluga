@@ -30,7 +30,7 @@ and convv: (g:ctx)[g. value T] -> [g. term] =
 fn v => case v of 
 | [g. #p.2 ..] => [g. #p.1 ..] 
 | [g. lam A (\v. E .. v)] => 
-    let [g,b:block x:term, _t:value A. T .. b.1] = conv [g,b:block x:term , _t:value A. E .. b.2] in
+    let [g,b:block x:term, _t:value A. T .. b.1] = conv [g,b:block (x:term , _t:value A). E .. b.2] in
       [g. lam' \x. T .. x]
 
 ;					  

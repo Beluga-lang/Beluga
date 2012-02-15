@@ -615,7 +615,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
   | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in 
-      let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No)) in 
+      let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No))  in 
       let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in 
         Int.Comp.CtxFun (Some loc, psi_name, e')
 
@@ -736,7 +736,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
            raise (Error.Error (Some loc, Error.CompSBoxMismatch (cD, cG, (C.cnormDCtx (cPhi, theta)), (C.cnormDCtx (cPsi, theta)))) ))
  
 
-  | (Apx.Comp.Case (loc, prag, i, branches), tau_theta) ->
+  | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
       let _ = dprint (fun () -> "[elExp] case on " ^ P.expSynToString cD cG i')
       in 
@@ -820,7 +820,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
             i', Error.Box, tau_theta'))) *)
         end
 
-  | (Apx.Comp.If (loc, i, e1, e2), tau_theta) -> 
+  | (Apx.Comp.If (loc, i, e1, e2), ((tau, theta) as tau_theta)) -> 
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
         begin match C.cwhnfCTyp tau_theta' with 
           | (Int.Comp.TypBool , _ ) -> 
@@ -1060,7 +1060,7 @@ and elExp' cD cG i = match i with
       let _ = dprint (fun () -> "[elExp'] BoxVal dctx ") in 
       let cPsi     = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
       let _ = dprint (fun () -> "[elExp'] BoxVal dctx done: " ^ P.dctxToString cD cPsi ) in 
-      let (tR, sP) = Lfrecon.elClosedTerm' Lfrecon.Pibox cD cPsi r in
+      let (tR, sP) = Lfrecon.elClosedTerm' Lfrecon.Pibox cD cPsi r  in
       let _ = dprint (fun () -> "[elExp'] BoxVal tR done ") in 
       (* let sP    = synTerm Lfrecon.Pibox cD cPsi (tR, LF.id) in *)
       let phat     = Context.dctxToHat cPsi in

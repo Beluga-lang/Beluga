@@ -149,7 +149,7 @@ let recSgnDecl d =
     | Ext.Sgn.Val (loc, x, None, i) -> 
           let apx_i              = Index.exp' (Var.create ()) i in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in 
-          let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Rec.exp' cG apx_i ) in
+          let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Rec.exp' cG apx_i) in
           let _                  = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
           let _                  = Unify.resetGlobalCnstrs () in 
           let tau'               = Whnf.cnormCTyp (tau, theta) in 

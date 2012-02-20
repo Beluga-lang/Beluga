@@ -310,11 +310,6 @@ let rec flattenProjPat s conv_list = match s with
 
 
 (* ******************************************************************* *)
-let mctxToMSub = Ctxsub.mctxToMSub
-let ctxShift = Ctxsub.ctxShift
-let ctxToSub' = Ctxsub.ctxToSub'
-
-
 let rec projectCtxIntoDctx = function
   | Int.LF.Empty            -> Int.LF.Null
   | Int.LF.Dec (rest, last) -> Int.LF.DDec (projectCtxIntoDctx rest, last)
@@ -1136,7 +1131,7 @@ and elTerm' recT cD cPsi r sP = match r with
       | (nonsigma, s')          ->  (Int.LF.SigmaLast nonsigma, s') in *)
     let _ = dprint (fun () -> ("tA =" ^ P.typToString cD cPsi (tA, s) ^ " \n")) in 
     let dctx        = projectCtxIntoDctx some_part in  
-    let dctxSub     = ctxToSub' cD cPsi dctx in
+    let dctxSub     = Ctxsub.ctxToSub' cD cPsi dctx in
 
     (* let phat        = dctxToHat cPsi in *)
 

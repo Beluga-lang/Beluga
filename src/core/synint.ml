@@ -266,10 +266,10 @@ module Comp = struct
    | Cons of value * env
 
  and value = 
-   | FunValue   of (Loc.t option * name * exp_chk) * LF.csub * LF.msub * env 
-   | RecValue   of (cid_prog * exp_chk) * LF.csub  * LF.msub * env 
-   | MLamValue  of (Loc.t option * name * exp_chk) * LF.csub * LF.msub * env
-   | CtxValue   of (Loc.t option * name * exp_chk) * LF.csub * LF.msub * env
+   | FunValue   of (Loc.t option * name * exp_chk) * LF.msub * env 
+   | RecValue   of (cid_prog * exp_chk) * LF.msub * env 
+   | MLamValue  of (Loc.t option * name * exp_chk) * LF.msub * env
+   | CtxValue   of (Loc.t option * name * exp_chk) * LF.msub * env
    | BoxValue   of LF.psi_hat * LF.normal 
    | ConstValue of cid_prog   
    | BoolValue  of bool

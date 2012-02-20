@@ -77,7 +77,7 @@ let rec eval_syn i theta_eta =
                 dprint (fun () -> "  e' = " ^
                           P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
                 eval_chk e' ((Whnf.cnormMSub theta'), eta'')
-                (* eval_chk e' (theta', Cons(w, eta')) *)
+                (* eval_chk e' (theta', Cons (w, eta')) *)
           | v -> v
         end
 
@@ -95,19 +95,19 @@ let rec eval_syn i theta_eta =
               dprint (fun () -> "[eval_syn] Extended environment: |env1| =  "
                               ^ string_of_int (length_env eta1) ^ "\n"
                               ^ "[eval_syn] Extended environment: |env1'| =  "
-                              ^ string_of_int (length_env (Comp.Cons(w2,eta1))) ^ "\n"
+                              ^ string_of_int (length_env (Comp.Cons (w2,eta1))) ^ "\n"
                               ^ "[eval_syn] with  theta1 = "
                               ^ P.msubToString LF.Empty (Whnf.cnormMSub theta1) ^ "\n"
                      );
 
-              eval_chk e' (theta1, Comp.Cons(w2,eta1))
+              eval_chk e' (theta1, Comp.Cons (w2,eta1))
           | _ -> raise (Violation "Expected FunValue")
         end
 
   | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
       begin match eval_syn i' theta_eta with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
-            eval_chk e' (LF.MDot(LF.MObj(phat, Whnf.cnorm (tM, theta)), theta1), eta1)
+            eval_chk e' (LF.MDot (LF.MObj (phat, Whnf.cnorm (tM, theta)), theta1), eta1)
         | _ -> raise (Violation "Expected MLamValue")
       end
 
@@ -115,7 +115,7 @@ let rec eval_syn i theta_eta =
   | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
       begin match eval_syn i' theta_eta with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
-            eval_chk e' (LF.MDot(LF.PObj(phat, Whnf.cnormHead (h, theta)), theta1), eta1)
+            eval_chk e' (LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
         | _ -> raise (Violation "Expected MLamValue")
       end
 
@@ -134,7 +134,7 @@ let rec eval_syn i theta_eta =
       eval_chk e theta_eta
 
 
-  | Comp.Equal(_, i1, i2) ->
+  | Comp.Equal (_, i1, i2) ->
       let v1 = eval_syn i1 theta_eta in
       let v2 = eval_syn i2 theta_eta in
       (* begin match (eval_syn i1 theta_eta , eval_syn i2 theta_eta )  with *)
@@ -155,13 +155,13 @@ and eval_chk e theta_eta =
   let (theta,eta) = theta_eta in
 
     match e with
-      | Comp.Syn(_, i) -> eval_syn i theta_eta
-      | Comp.MLam(loc, n, e') ->
+      | Comp.Syn (_, i) -> eval_syn i theta_eta
+      | Comp.MLam (loc, n, e') ->
           dprint (fun () -> "[MLamValue] created: theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.MLamValue ((loc, n ,e'), Whnf.cnormMSub theta, eta)
       | Comp.CtxFun (loc, n, e') ->
           Comp.CtxValue ((loc,n,e'), theta, eta)
-      | Comp.Fun(loc, n, e') ->
+      | Comp.Fun (loc, n, e') ->
           dprint (fun () -> "[FunValue] created: theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.FunValue ((loc, n, e'), Whnf.cnormMSub theta, eta)
 
@@ -171,7 +171,7 @@ and eval_chk e theta_eta =
 
       | Comp.Box (loc, phat, tM) ->
           let tM'   = Whnf.cnorm (tM, theta) in
-          dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box(loc, phat, tM')));
+          dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box (loc, phat, tM')));
           Comp.BoxValue (phat , tM')
       | Comp.Case (_, _prag, i, branches) ->
           begin match eval_syn i theta_eta with
@@ -236,9 +236,9 @@ let rec eval e  =
   dprint (fun () -> "Opsem.eval");
   Debug.indent 2;
   let result = match eval_chk e (LF.MShift 0, Comp.Empty) with
-    | Comp.ConstValue cid -> Comp.Syn(None, Comp.Const cid)
-    | Comp.BoxValue (phat, tM) -> Comp.Box(None, phat, tM)
-    | Comp.BoolValue b -> Comp.Syn(None, Comp.Boolean b)
+    | Comp.ConstValue cid -> Comp.Syn (None, Comp.Const cid)
+    | Comp.BoxValue (phat, tM) -> Comp.Box (None, phat, tM)
+    | Comp.BoolValue b -> Comp.Syn (None, Comp.Boolean b)
     | v -> Comp.Value v
   in
     Debug.outdent 2;

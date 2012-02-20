@@ -41,60 +41,7 @@ let rec lookupValue x env = begin match (x, env) with
   (* otherwise undefined *)
 end 
 
-
-
-(* ******************************************************************************* *)
-(* Substitution for computation-level bound variables
-
-   If D ; G |- e <= tau   and   . |- theta <= D   and   . |- eta <= [|theta|]G 
-   then     [eta][|theta|]e
-
-  Code below is broken... 
-
-let rec subst_chk offset e eta = match e with 
-  | Syn (loc, i)         -> Syn(loc, subst_syn offset i eta)
-  | Fun (loc, f, e)      -> Fun (loc, f, subst_chk (offset+1) e eta)
-  | CtxFun (loc, psi, e) -> CtxFun (loc, psi, subst_chk offset e eta)
-  | Pair (loc, e1, e2)   -> 
-     Pair(loc, subst_chk offset e1 eta, subst_chk offset e2 eta)
-  | LetPair (loc, i, (x,y, e)) -> 
-      LetPair(loc, subst_syn offset i eta, 
-              (x,y, subst_chk (offset+2) e eta))
-  | Box(_loc, _phat, _tM) -> e 
-  | SBox _ -> e 
-  | Case (loc, i, branches) -> 
-      Case (loc, subst_syn offset i eta, subst_branches offest branches eta)
-
-and subst_syn offset i eta = match i with 
-  | Var x -> 
-  | Const c -> Const c
-  | Apply (loc, i, e) -> 
-      Apply (loc, subst_syn offset i eta, subst_chk offset e eta)
-  | MApp (loc, i, (phat,tM)) -> 
-      MApp (loc, subst_syn offset i eta, (phat, tM))
-  | CtxApp (loc, i, cPsi) -> 
-      CtxApp (loc, subst_syn offset i eta, cPsi)
-  | Ann (e, tau) -> Ann (subst_chk offset e eta, tau)
-
-
-and subst_branch offset branch eta = match branch with
-  | BranchBox (cD, pattern, e) -> 
-      BranchBox (cD, pattern, subst_chk offset e eta)
-
-and subst_branches offset branches eta = 
-  List.map (fun b -> subst_branch offset b eta) branches
-
-*)
-
 (* ********************************************************************* *)
-let rec cctxToCSub cO cD cPsi = match cO with
-  | Int.LF.Empty -> I.LF.CShift 0
-  | Int.LF.Dec (cO, Int.LF.CDecl (_psi, schema, _)) -> 
-      let ctxVar = Int.LF.CtxVar (Int.LF.CInst (ref None, schema, cO, cD)) in
-      let cs = cctxToCSub cO cD cPsi in 
-        I.LF.CDot (ctxVar, cs)
-
-let mctxToMSub = Ctxsub.mctxToMSub
 
 let rec add_mrecs n_list cs theta eta = match n_list with 
   | [] ->  eta
@@ -105,8 +52,6 @@ let rec add_mrecs n_list cs theta eta = match n_list with
         (dprint (fun () -> "[eval_syn] found -- extend environment with rec \""  ^ R.render_cid_prog cid' ^ "\"\n"
                 );
          Cons (RecValue ((cid', e'), cs, theta, eta),  eta'))
-
-
 
 (* eval e (theta, eta) = v 
 
@@ -221,12 +166,6 @@ and eval_chk e theta_eta =
 
     match e with
       | Syn(_, i) -> eval_syn i theta_eta
-(*      | Rec (loc, n, e') -> 
-          let w = RecValue ((loc, n, e'), theta, eta) in  
-          let _ = dprint (fun () -> "[eval_chk] rec-case -1- |env| = " ^ string_of_int (length_env eta)) in 
-          let eta' = Cons(w, eta) in 
-          let _ = dprint (fun () -> "[eval_chk] rec-case -2- |env| = " ^ string_of_int (length_env eta')) in 
-            eval_chk e' (theta, Cons(w, eta))*) 
       | MLam(loc, n, e') -> 
           dprint (fun () -> "[MLamValue] created: theta = " ^ P.msubToString I.LF.Empty (Whnf.cnormMSub theta));
           MLamValue ((loc, n ,e'), cs, (Whnf.cnormMSub (Ctxsub.ctxnorm_msub (theta, cs))), eta) 
@@ -250,7 +189,6 @@ and eval_chk e theta_eta =
           | BoxValue (phat, tM) ->        
               dprint (fun () -> "[eval_syn] EVALUATED SCRUTINEE: " ^ 
                                 P.expChkToString I.LF.Empty I.LF.Empty (Box(None, phat, tM))
-                             (*   P.normalToString I.LF.Empty (Context.hatToDCtx phat) (tM, LF.id)*)
                              );
               eval_branches (phat,tM) (branches, theta_eta) 
           | _ -> raise (Violation "Expected BoxValue for case")
@@ -277,45 +215,30 @@ and eval_branches (phat,tM) (branches, theta_eta) = match branches with
            dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString I.LF.Empty (Whnf.cnormMSub theta)) ; 
           eval_branches (phat,tM) (branches, theta_eta))
 
-and eval_branch (phat, tM) (BranchBox (cO, cD, (cPsi', pattern', theta', cs'))) (cs, theta, eta) =
-  match pattern' with
-  | EmptyPattern -> raise (Violation "Case {}-pattern -- coverage checking is off or broken")
-  | NormalPattern (tM', e) ->
-    try
-      let ct      = cctxToCSub cO cD cPsi' in 
-      let ct'     = Ctxsub.ccomp cs' ct in 
+and eval_branch (phat, tM) branch (cs, theta, eta) =
+  match branch with
+    | EmptyBranch (loc, cD, pat, t) ->
+      raise (Violation "Case {}-pattern -- coverage checking is off or broken")
+    | Branch (loc, cD, cG, PatMetaObj (_, (MetaObj (_, phat, tM))), theta', e) ->
+      raise NotImplemented
+    | Branch (loc, cD, cG, PatMetaObj (_, (MetaObjAnn (_, cPsi, tM'))), theta', e) ->
+      begin
+        try
+          let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
+          let theta_k = Whnf.mcomp (Whnf.cnormMSub theta') mt in
 
-      let _       = Unify.unifyCSub cs ct'  in 
-      let ct1     = Ctxsub.ctxnorm_csub ct in 
+          let _ = Unify.unifyMSub theta theta_k in
 
-      let mt      = mctxToMSub (Ctxsub.ctxnorm_mctx (cD,ct1)) in 
-      let theta_k = Whnf.mcomp (Ctxsub.ctxnorm_msub (theta', ct1)) mt in 
+          let tM' = C.cnorm (tM', mt) in
+          let mt  = Whnf.cnormMSub mt in
 
-      let _ = dprint (fun () -> "Unify msub: theta =  "
-                              ^ P.msubToString I.LF.Empty (Whnf.cnormMSub theta) ^ "\n"
-                              ^ "Unify Refinement  theta_k = "
-                              ^ P.msubToString I.LF.Empty (Whnf.cnormMSub theta_k)) in
+          let _ = Unify.unify I.LF.Empty cPsi (tM, LF.id) (tM', LF.id) in
 
-      let _        = Unify.unifyMSub theta theta_k  in 
+          eval_chk e (cs, mt, eta)
 
-      let _ =  (dprint (fun () -> "After unification: theta =  " ) ; 
-                dprint (fun () ->  P.msubToString I.LF.Empty (Whnf.cnormMSub theta) ) ; 
-                dprint (fun () -> "     theta_k = " ^ P.msubToString I.LF.Empty (Whnf.cnormMSub theta_k)) ) in
-
-      let tM1' = C.cnorm (Ctxsub.ctxnorm (tM', ct1), mt) in 
-      let mt1'  = Whnf.cnormMSub mt  in 
-      let cPsi' = Ctxsub.ctxnorm_dctx (cPsi', ct1) in 
-
-      let _     = Unify.unify I.LF.Empty cPsi' (tM, LF.id) (tM1', LF.id)  in 
-      let _     = dprint (fun () -> "[eval_chk] body with mt = "
-                                  ^ P.msubToString I.LF.Empty (Whnf.cnormMSub mt1') ^ "\n"
-                                  ^ "PATTERN MATCH  " ^ P.expChkToString I.LF.Empty I.LF.Empty (Box(None, phat, tM)) ^ " SUCCESSFUL") in
-
-           eval_chk e (ct1, mt1', eta) 
-    with 
-        Unify.Unify _ -> raise BranchMismatch
-
-
+        with Unify.Unify _ -> raise BranchMismatch
+      end
+    | _ -> raise NotImplemented
 
 let rec eval e  =  
   dprint (fun () -> "Opsem.eval");

@@ -217,9 +217,12 @@ and eval_branch (phat, tM) branch (theta, eta) =
   match branch with
     | EmptyBranch (loc, cD, pat, t) ->
       raise (Violation "Case {}-pattern -- coverage checking is off or broken")
-    | Branch (loc, cD, cG, PatMetaObj (_, (MetaObj (_, phat, tM))), theta', e) ->
-      raise NotImplemented
-    | Branch (loc, cD, cG, PatMetaObj (_, (MetaObjAnn (_, cPsi, tM'))), theta', e) ->
+    | Branch (loc, cD, cG, PatMetaObj (loc', (MetaObj (loc'', phat, tM))), theta', e) ->
+      eval_branch
+        (phat, tM)
+        (Branch (loc, cD, cG, PatMetaObj (loc', (MetaObjAnn (loc'', Context.hatToDCtx phat, tM))), theta', e))
+        (theta, eta)
+    | Branch (_, cD, _cG, PatMetaObj (_, (MetaObjAnn (_, cPsi, tM'))), theta', e) ->
       begin
         try
           let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in

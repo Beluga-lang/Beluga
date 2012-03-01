@@ -34,7 +34,7 @@ fn v =>  case v of
 | [g. #p.1 ..] =>  [g. #p.2 ..] 
 
 | [g. lam A2 \x. E .. x] => 
-  let  [g, b:block x:value A , _t:cvalue A, k:ccont B. E' .. b.2 k] =
+  let  [g, b:block (x:value A , _t:cvalue A), k:ccont B. E' .. b.2 k] =
     cpse [g, b:block x:value A2 , _t:cvalue A2. E .. b.1]
    in
      [g. clam \v.\c. E' .. v c]
@@ -57,8 +57,8 @@ let id_fun = [. lam o \x. ret x] ;
 
 let r0 = cps [b:block x:value o , _t:cvalue o. b.1] ;
 
-rec test : Bool -> [b:block x:value o , _t:cvalue o, k:ccont o. contra] = 
-fn x => let [b:block x:value o , _t:cvalue o. V' b] = cps [b:block x:value o , _t:cvalue o. b.1] in 
+rec test : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o. contra] = 
+fn x => let [b:block (x:value o , _t:cvalue o). V' b] = cps [b:block (x:value o , _t:cvalue o). b.1] in 
 	[b,k. cthrow k (V' b)] ; 
 
 let r1' = test ttrue ; 

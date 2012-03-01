@@ -263,10 +263,10 @@ module Int = struct
               (r_paren_if cond)
 
       | LF.Sigma typRec ->
-          fprintf ppf "%sblock %a%s"
-            (l_paren_if (lvl > 0))
+          fprintf ppf "block (%a)"
+(*            (l_paren_if (lvl > 0)) *)
             (fmt_ppr_lf_typ_rec cD cPsi lvl) typRec
-            (r_paren_if (lvl > 0))
+(*            (r_paren_if (lvl > 0)) *)
 
       | LF.TClo (typ, s) ->
           fprintf ppf "TClo(%a,@ %a)"
@@ -733,7 +733,7 @@ module Int = struct
 
     and frugal_block cD cPsi lvl ppf = function
       | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-      | other -> fprintf ppf "block %a" (fmt_ppr_lf_typ_rec cD cPsi lvl) other
+      | other -> fprintf ppf "block (%a)" (fmt_ppr_lf_typ_rec cD cPsi lvl) other
 
     and fmt_ppr_lf_sch_elem lvl ppf = function
       | LF.SchElem (LF.Empty, sgmDecl) ->

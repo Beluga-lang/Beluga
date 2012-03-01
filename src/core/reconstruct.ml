@@ -1113,9 +1113,11 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
   | Apx.Comp.MetaObjAnn (loc, psi, m) -> 
   let cPsi'   = Lfrecon.elDCtx  Lfrecon.Pibox cD' psi in
   let _       = dprint (fun () -> "[recMObj] inferCtxSchema ... ") in 
-  let _       = dprint (fun () ->  P.mctxToString cD ^ " |- " ^ 
+  let _       = dprint (fun () ->  "Scrutinee's context " ^ P.mctxToString cD ^ " |- " ^ 
                           P.dctxToString cD cPsi) in 
-  let _       = inferCtxSchema (cD, cPsi) (cD', cPsi') in 
+  let _       = dprint (fun () ->  "Pattern's context  " ^ P.mctxToString cD' ^ " |- " ^ 
+                          P.dctxToString cD' cPsi') in 
+  let _       = inferCtxSchema loc (cD, cPsi) (cD', cPsi') in 
   let _       = dprint (fun () -> "[recMObj] inferCtxSchema done") in 
   let tP'     = begin match tAnn with 
                 | FullTyp  a    -> 
@@ -1146,7 +1148,7 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
   let l_delta   = Context.length cD'  in  
     ((l_cd1', l_delta), cD1', cPsi1', Some tR1', tP1')
 
-(* inferCtxSchema (cD, cPsi) (cD', cPsi') = ()
+(* inferCtxSchema loc (cD, cPsi) (cD', cPsi') = ()
 
    if cD |- cPsi  ctx  and  cPsi is the context of the scrutinee
       cD'|- cPsi' ctx  and  cPsi' is the context of the pattern
@@ -1156,7 +1158,7 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
    otherwise 
       raise exception 
 *)
-and inferCtxSchema (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with 
+and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with 
       | (Int.LF.Null , Int.LF.Null) -> ()
       | (Int.LF.CtxVar (Int.LF.CtxOffset psi1_var), cPsi') -> 
           let _ = dprint (fun () -> "[inferSchema] outside context cD = " ^ P.mctxToString cD )
@@ -1184,9 +1186,15 @@ and inferCtxSchema (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
             )
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , _tA1)) , Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , _tA2))) ->  
-          inferCtxSchema (cD, cPsi1) (cD',cPsi2)
-      | _ -> raise (Error.Violation "Context clash: We do not allow the context
-          in the pattern to be more general than the context in the scrutinee. ")
+          inferCtxSchema loc (cD, cPsi1) (cD',cPsi2)
+      | _ ->
+          raise (Error.Violation ("Context clash: We do not allow the context
+          in the pattern to be more general than the context in the
+          scrutinee. \n"
+                      ^ "Scrutinee's context " ^ P.dctxToString cD cPsi              
+                      ^ "\nPattern's context " ^ P.dctxToString cD' cPsi' ^ "\n"             
+                      ^ Pretty.locOptToString loc)
+            )
 
 (* ********************************************************************************)
 (* Elaborate computation-level patterns *) 
@@ -1353,11 +1361,11 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
       )
 
 and recPatObj' cD pat (cD_s, tau_s) = match pat with 
-  | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (_, _) as pat') , Apx.Comp.TypBox (loc', a, psi) ) -> 
+  | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (loc, _) as pat') , Apx.Comp.TypBox (loc', a, psi) ) -> 
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
       let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
       let Int.Comp.TypBox (_ , _tQ, cPsi_s) = tau_s  in
-      let _       = inferCtxSchema (cD_s, cPsi_s) (cD, cPsi) in 
+      let _       = inferCtxSchema (Some loc) (cD_s, cPsi_s) (cD, cPsi) in 
             (* as a side effect we will update FCVAR with the schema for the
                context variable occurring in cPsi' *)
       let ttau' = (Int.Comp.TypBox(Some loc',tP, cPsi), Whnf.m_id) in 
@@ -1367,7 +1375,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
   | Apx.Comp.PatEmpty (loc, cpsi) -> 
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cpsi in
       let Int.Comp.TypBox (_ , (Int.LF.Atom(_, a, _) as _tQ), cPsi_s) = tau_s  in
-      let _       = inferCtxSchema (cD_s, cPsi_s) (cD, cPsi) in 
+      let _       = inferCtxSchema (Some loc) (cD_s, cPsi_s) (cD, cPsi) in 
       let tP     =  mgTyp cD cPsi a (Typ.get a).Typ.kind in
       let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of empty type  " ^ 
                         P.typToString cD cPsi (tP, LF.id)) in
@@ -1405,10 +1413,10 @@ and recPatObj cD pat (cD_s, tau_s) =
 
 (* ********************************************************************************)
 (* recPattern will become obsolete when we switch to the new syntax *)
-and recPattern (cD, cPsi) delta psi m tPopt = 
+ and recPattern (cD, cPsi) delta psi m tPopt = 
   let cD'     = elMCtx  Lfrecon.Pibox delta in
   let cPsi'   = Lfrecon.elDCtx  Lfrecon.Pibox cD' psi in
-  let _       = inferCtxSchema (cD, cPsi) (cD', cPsi') in 
+  let _       = inferCtxSchema None (cD, cPsi) (cD', cPsi') in 
 
   let _ = dprint (fun () -> "[recPattern] (specified pattern) cPsi' = " ^ 
                     P.dctxToString cD'  cPsi' ) in
@@ -1571,7 +1579,7 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
   end
 
 
-and synPatRefine loc (cD, cD_p) pat (tau_s, tau_p) = 
+and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) = 
  begin try 
    let cD'  = Context.append cD cD_p in   (* cD'  = cD, cD_p   *)
     let _   = dprint (fun () -> "[synPatRefine] cD' = " 
@@ -1586,7 +1594,22 @@ and synPatRefine loc (cD, cD_p) pat (tau_s, tau_p) =
       (* cD, cD_p |- t1 <= cD_p *)
     let mt1 = Whnf.mcomp t1 t in         (* .  |- mt1 <= cD1   *)
     let tau_s' = Whnf.cnormCTyp (tau_s, t) in       
-    let tau_p' = Whnf.cnormCTyp (tau_p, mt1) in       
+    let tau_p' = Whnf.cnormCTyp (tau_p, mt1) in  
+    let _  = begin match (caseT, pat) with
+               | (DataObj, _) -> ()
+               | (IndexObj (phat, tR'), Int.Comp.PatMetaObj(_, Int.Comp.MetaObj (_, _, tR1))) -> 
+                   begin try 
+                     (dprint (fun () -> "Pattern matching on index object...");
+                      Unify.unify Int.LF.Empty (Context.hatToDCtx phat) (C.cnorm (tR',  t),  LF.id) 
+                                                     (C.cnorm (tR1, mt1), LF.id))
+                   with Unify.Unify msg -> 
+                     (dprint (fun () -> "Unify ERROR: " ^ msg);
+                      raise (Error.Violation "Pattern matching on index argument failed"))
+                   end
+               | _ -> raise (Error.Violation "Pattern matching on index objects which are not meta-terms not allowed")
+             end
+    in
+     
     let _ = dprint (fun () -> "Unify : Inferred pattern type " 
                           ^  "  tau_p' =  " 
                           ^ P.compTypToString Int.LF.Empty tau_p'  
@@ -1632,7 +1655,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
         (* cD |- tau_s and cD, cD1 |- tau_s' *)
         (* cD1 |- tau1 *)
       let _ = dprint (fun () -> "[Reconstructed pattern] " ^ P.patternToString cD1' _cG1 pat1 ) in 
-      let (t', t1, cD1'', pat1') = synPatRefine (Some loc) (cD, cD1') pat1 (tau_s', tau1) in
+      let (t', t1, cD1'', pat1') = synPatRefine (Some loc) DataObj (cD, cD1') pat1 (tau_s', tau1) in
             (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
         Int.Comp.EmptyBranch (loc, cD1'', pat1, t')
         
@@ -1722,10 +1745,16 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
                       P.gctxToString cD1' cG1 ^ "\n    |- " ^ 
                       P.compTypToString cD1' tau1) in 
     let tau_s' = Whnf.cnormCTyp (tau_s, Int.LF.MShift l_cd1') in 
+    (* ***************                            *************** *)
+    let caseT'  = begin match caseTyp with
+                  | IndexObj (phat, tR') -> 
+                      IndexObj (phat, Whnf.cnorm (tR', Int.LF.MShift l_cd1'))
+                  | DataObj -> DataObj
+                  end in      
     (* cD |- tau_s and cD, cD1 |- tau_s' *)
     (* cD1 |- tau1 *)
     let _ = dprint (fun () -> "[Reconstructed pattern] " ^ P.patternToString cD1' cG1 pat1 ) in 
-    let (t', t1, cD1'', pat1') = synPatRefine (Some loc) (cD, cD1') pat1 (tau_s', tau1) in
+    let (t', t1, cD1'', pat1') = synPatRefine (Some loc) caseT' (cD, cD1') pat1 (tau_s', tau1) in
     (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
     let _ = dprint (fun () -> " cD1'' = " ^ P.mctxToString cD1'' ) in 
     let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)

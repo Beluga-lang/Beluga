@@ -27,7 +27,8 @@ eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
 
 schema eqCtx = block x:exp, _t:eq x x;
 
-
+% Pattern matching on implicit argument not propagated properly in the
+% reconstruction code
 rec ref : {g:eqCtx} {U:[g. exp]} [g. eq (U ..) (U ..)] =
  mlam g => mlam U =>
    case [g. U ..] of
@@ -39,13 +40,13 @@ rec ref : {g:eqCtx} {U:[g. exp]} [g. eq (U ..) (U ..)] =
       in
         [g. eq_lam \x. \w. (V .. <x, w>)]  % : eq (L .. x) (L .. x)
 
-   | [g. app (A1 ..) (A2 ..)] : [g. exp]=>
+   | [g. app (A1 ..) (A2 ..)] : [g. exp] =>
        let [g. EQ1 ..] = ref [g] [g . A1 .. ] in
        let [g. EQ2 ..] = ref [g] [g . A2 .. ] in
           [g. eq_app (EQ1 ..) (EQ2 ..)]
 ;
 
-  
+
 
 % General transitivity is admissible
 rec trans: {g:eqCtx} 
@@ -90,3 +91,4 @@ e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
 e_r: eq T T.
 e_t: eq T' S -> eq T T' -> eq T S.
 }%
+

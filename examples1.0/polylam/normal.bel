@@ -32,10 +32,10 @@ neut: neutral T -> normal T.
 
 schema ctx = some [t:tp] block x:exp t, _t:neutral t; % Q: why small T?
 
-%>>
+%
 
 
-%<< normal2exp: convert a normal form to a regular expression 
+% normal2exp: convert a normal form to a regular expression 
 %             also in the normal form
 
 
@@ -57,10 +57,10 @@ fn e => case e of
 |[g. #p.2..] => [g. #p.1..]
 
 ;
-%>>
+%
 
 
-%<< Normalization
+% Normalization
 
 rec norm : (g: ctx) [g. exp T] -> [g. normal T] =
 fn e => case e of

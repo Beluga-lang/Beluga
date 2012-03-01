@@ -289,6 +289,8 @@ and mshiftTypRec typRec n = match typRec with
 and mshiftSub s n = match s with
   | Shift (CtxShift (CtxOffset k), d) -> 
       Shift(CtxShift (CtxOffset (k+n)), d)
+  | Shift (NegCtxShift (CtxOffset k), d) -> 
+      Shift(NegCtxShift (CtxOffset (k+n)), d)
   | Shift (_,_k) -> s 
   | SVar(Offset k, s) -> SVar(Offset (k+n), mshiftSub s n)
   | Dot(ft, s) -> Dot (mshiftFt ft n, mshiftSub s n)

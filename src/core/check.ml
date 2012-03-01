@@ -227,7 +227,8 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
 
     | (CtxFun (_, psi, e), (TypCtxPi ((_psi, schema, dep ), tau), t)) ->
         let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in 
-        check (I.Dec(cD, I.CDecl(psi, schema, dep')))  cG e (tau, C.mvar_dot1 t)
+        check (I.Dec(cD, I.CDecl(psi, schema, dep')))  
+          (C.cnormCtx (cG, I.MShift 1)) e (tau, C.mvar_dot1 t)
 
     | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
         check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))

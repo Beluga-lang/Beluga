@@ -927,7 +927,7 @@ and fmvApxTypRec fMVs cD ((l_cd1, l_delta, k) as d_param)  t_rec = match t_rec w
       let t_rec' = fmvApxTypRec fMVs cD d_param  t_rec in 
         Apx.LF.SigmaElem (x, a', t_rec')
 
-let rec fmvApxDCtx fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi with
+let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi with
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) -> 
       let _ = dprint (fun () -> "[fmvApxDCtx] CtxOffset " ^ R.render_offset offset) in 
@@ -947,15 +947,15 @@ let rec fmvApxDCtx fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi with
 			    " with CtxOffset " ^ R.render_offset offset) in 
 	    Apx.LF.CtxVar (Apx.LF.CtxOffset offset)
 	with Whnf.Fmvar_not_found -> 
-	  raise (Error.Error (None, Error.UnboundName x))
+	  raise (Error.Error (loc, Error.UnboundCtxName x))
 	end 
 
   | Apx.LF.DDec (psi, t_decl) -> 
-      let psi' = fmvApxDCtx fMVs cD d_param  psi in 
+      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in 
       let t_decl' = fmvApxTypDecl fMVs cD d_param  t_decl in 
         Apx.LF.DDec (psi', t_decl')
 
-let rec fmvApxHat fMVs cD (l_cd1, l_delta, k) phat = 
+let rec fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat = 
   begin match phat with
     | (Some (Int.LF.CtxOffset offset), d) -> 
         if offset > (l_delta + k) then
@@ -971,7 +971,8 @@ let rec fmvApxHat fMVs cD (l_cd1, l_delta, k) phat =
 			      " with " ^ R.render_offset offset ) in 
               (Some (Int.LF.CtxOffset (offset)), d)
 	  with Whnf.Fmvar_not_found -> 
-	    raise (Error.Error (None, Error.UnboundName psi))
+	    (Printf.printf "Unbound context variable %s"  (R.render_name psi);
+	    raise (Error.Error (loc, Error.UnboundCtxName psi)))
 	  end 
 
     | _ -> phat
@@ -999,10 +1000,10 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
         Apx.Comp.Let (loc, i', (x, e')) 
 
   | Apx.Comp.Box(loc, phat, m) -> 
-      Apx.Comp.Box (loc, fmvApxHat fMVs cD d_param phat, fmvApxTerm fMVs cD d_param  m)
+      Apx.Comp.Box (loc, fmvApxHat (Some loc) fMVs cD d_param phat, fmvApxTerm fMVs cD d_param  m)
 
   | Apx.Comp.SBox(loc, phat, s) -> 
-      Apx.Comp.SBox (loc, fmvApxHat fMVs cD d_param  phat, fmvApxSub fMVs cD d_param  s)
+      Apx.Comp.SBox (loc, fmvApxHat (Some loc) fMVs cD d_param  phat, fmvApxSub fMVs cD d_param  s)
 
   | Apx.Comp.Case (loc, prag, i, branch) -> 
       Apx.Comp.Case (loc, prag, fmvApxExp' fMVs cD d_param  i, 
@@ -1024,22 +1025,22 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
         Apx.Comp.Apply (loc, i', e')
   | Apx.Comp.CtxApp (loc, i, psi) -> 
       let i' = fmvApxExp' fMVs cD d_param  i in 
-      let psi' = fmvApxDCtx fMVs cD  d_param  psi  in 
+      let psi' = fmvApxDCtx (Some loc) fMVs cD  d_param  psi  in 
         Apx.Comp.CtxApp (loc, i', psi')
 
   | Apx.Comp.MApp (loc, i, Apx.Comp.MetaObj (loc', phat, m)) -> 
       let i' = fmvApxExp' fMVs cD d_param  i in 
       let m' = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.MApp (loc, i', Apx.Comp.MetaObj (loc', (fmvApxHat fMVs cD d_param phat), m'))
+        Apx.Comp.MApp (loc, i', Apx.Comp.MetaObj (loc', (fmvApxHat loc' fMVs cD d_param phat), m'))
 
   | Apx.Comp.MAnnApp (loc, i, (psi, m)) -> 
       let i' = fmvApxExp' fMVs cD d_param  i in 
-      let psi' = fmvApxDCtx fMVs cD d_param  psi in 
+      let psi' = fmvApxDCtx (Some loc) fMVs cD d_param  psi in 
       let m' = fmvApxTerm fMVs cD d_param  m in
         Apx.Comp.MAnnApp (loc, i', (psi', m'))
 
   | Apx.Comp.BoxVal (loc, psi, m) -> 
-      let psi' = fmvApxDCtx fMVs cD d_param  psi in 
+      let psi' = fmvApxDCtx (Some loc) fMVs cD d_param  psi in 
       let m'   = fmvApxTerm fMVs cD d_param  m in 
         Apx.Comp.BoxVal (loc, psi', m')
 

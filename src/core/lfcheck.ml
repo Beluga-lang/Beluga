@@ -121,10 +121,16 @@ let rec ctxShift cPsi = begin match cPsi with
     | ((Root (loc, _h, _tS), _s (* id *)),   (Atom _, _s')) ->
         (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
           begin try
-            let _ = dprint (fun () -> "[check] " ^ P.normalToString cD cPsi sM ^ 
+            let _ = dprint (fun () -> "[check] " ^ 
+			      P.mctxToString cD ^ " ; " ^ 
+			      P.dctxToString cD cPsi ^ " |- " ^ 
+			      P.normalToString cD cPsi sM ^ 
                               " <= " ^ P.typToString cD cPsi sA ) in
             let sP = syn' cD cPsi sM in 
-            let _ = dprint (fun () -> "[check] synthesized " ^ P.normalToString cD cPsi sM ^ 
+            let _ = dprint (fun () -> "[check] synthesized " ^ 
+			      P.mctxToString cD ^ " ; " ^ 
+			      P.dctxToString cD cPsi ^ " |- " ^ 
+			      P.normalToString cD cPsi sM ^ 
                               " => " ^ P.typToString cD cPsi sP ) in
             let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in 
               if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then 
@@ -240,6 +246,7 @@ let rec ctxShift cPsi = begin match cPsi with
         let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in 
         let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^ 
                           P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
+
           checkSub loc cD cPsi s cPsi' ;
           TClo (tA, s)
 

@@ -808,6 +808,8 @@ and collectMSub cQ theta =  match theta with
       let _ = dprint (fun () -> "[collectMSub] tM = " 
                         ^ P.normalToString I.Empty I.Null (tM, LF.id)) in 
       let (cQ2, tM') = collectTerm cQ1 phat' (tM, LF.id) in 
+      let _ = dprint (fun () -> "[collectMSub] tM' = " 
+                        ^ P.normalToString I.Empty I.Null (tM', LF.id)) in 
       let _ = dprint (fun () -> "[collectMSub] Collection of MVars\n" ^ collectionToString cQ2 )in
         (cQ2 , I.MDot (I.MObj (phat', tM'), t'))
 
@@ -868,7 +870,10 @@ and collectHead cQ phat ((head, _subst) as sH) =
 
   | (I.MVar (I.Inst (q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
       if constraints_solved cnstr then
-         let _ = dprint (fun () -> "MVar type " ^ P.typToString I.Empty cPsi (tA, LF.id) ) in  
+         let _ = dprint (fun () -> "MVar type " ) in 
+(*         let tA' = Whnf.cnormTyp (tA, Whnf.m_id) in 
+         let cPsi' = Whnf.cnormDCtx (cPsi, Whnf.m_id) in  *)
+         let _ = dprint (fun () -> P.typToString I.Empty cPsi (tA, LF.id) ) in  
 (*         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString I.Empty I.Empty cPsi )in  *)
 (*         let _ = dprint (fun () -> "collectSub for MVar\n") in  *)
           begin match checkOccurrence (eqMVar u) cQ with
@@ -1411,7 +1416,7 @@ and abstractMVarSub' cQ offset s = match s with
         I.Shift (I.CtxShift ctx_var', d)
   | I.Shift (I.NegCtxShift ctx_var, d)   ->     
       let ctx_var' = abstractMVarCtxV cQ offset ctx_var in 
-        I.Shift (I.CtxShift ctx_var', d)
+        I.Shift (I.NegCtxShift ctx_var', d)
   | I.Shift (I.NoCtxShift, _) -> s
 
   | I.Dot (I.Head tH, s) ->

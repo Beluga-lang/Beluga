@@ -1669,7 +1669,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
       (*     and e must make sense in cD, cD1, cD'                         *)
       let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
       let cD'      = Context.append cD cD1' in
-
+      let _ =   dprint (fun () -> "Call fmvApxExp") in 
       let e1       = Apxnorm.fmvApxExp [] cD' (l_cd1, l_delta, 0) e in
         
       let _        = dprint (fun () -> "Refinement (from cD): " ^  P.mctxToString cD1'' ^ 

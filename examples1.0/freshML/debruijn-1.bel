@@ -51,7 +51,7 @@ and hoas2db : (g:ctx) [g. exp T] ->  [. exp' T] =
      vhoas2db [g. V ..]
 ;
 
-
+%{
 rec db2vhoas : (g:ctx) [g. exp' T] -> [g. value T] = 
   fn e => case e of 
   | [h,x:value T. one] : [h,x:value T. (exp' T)] => 
@@ -77,3 +77,4 @@ and db2hoas : (g:ctx) [g. exp' T] -> [g. exp T] =
 
 rec tohoas : [. exp' T] -> [. exp T] = 
 fn e => db2hoas e ;
+}%

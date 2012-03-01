@@ -323,6 +323,7 @@ body is more general than the context supplied.");
 	    (dprint (fun () -> "[cnormApxDCtx DDec] - The context used in the
 body is more general than the context supplied."); 
 	     raise NotImplemented)
+	| Int.LF.MV offset -> Apx.LF.CtxVar (Apx.LF.CtxOffset  offset)
       end
 
   | Apx.LF.CtxVar (Apx.LF.CtxName x) -> psi

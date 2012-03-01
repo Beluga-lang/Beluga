@@ -50,13 +50,14 @@ Proof by induction on E.
 
 schema tctx =  some [t:tp] block x:exp, _t:type_of x t;
 
+%{
 rec unique : {g:tctx}{E:[g. exp]} [g. type_of (E ..) T] -> [g. type_of (E ..) T'] 
              ->  [. eq T T'] = 
 mlam g => mlam E => fn d => fn f =>
   unique [g] [g.E ..] d f
 ;
 
-
+}%
 % Equality predicate
 equal: tp -> tp -> type.
 e_ref: equal T T.

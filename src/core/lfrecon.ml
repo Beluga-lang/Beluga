@@ -61,8 +61,13 @@ let rec unify_phat psihat ctx_var =
   match ctx_var with
     | (Some (Int.LF.CInst ({contents = None} as cref, _, _, _ )), d) -> 
         begin match psihat with 
+          | (Some (Int.LF.CInst ({contents = None} as cref', _, _, _) as c_var) , d') -> 
+	      if cref == cref' then 
+		(if d = d' then true  else false)
+	      else 
+		(cref := Some (Int.LF.CtxVar (c_var))  ; true)
           | ((Some (c_var)) , d') -> 
-              if d = d' then
+              if d = d' then 
                 (cref := Some (Int.LF.CtxVar (c_var))  ; true)
               else                 
                 (dprint (fun () -> "[unify_phat - 1] unify ctx_var with a full context");

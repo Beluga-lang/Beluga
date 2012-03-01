@@ -1703,17 +1703,20 @@ let disallowUndefineds f =
     (* MVar-MVar case *)
     | (((Root (_, MVar (Inst (r1,  cPsi1,  tP1, cnstrs1), t1), _tS1) as _tM1), s1) as sM1,
        (((Root (_, MVar (Inst (r2, cPsi2,  tP2, cnstrs2), t2), _tS2) as _tM2), s2) as sM2)) ->
-        (* dprnt "(000) MVar-MVar"; *)
+         dprnt "(000) MVar-MVar"; 
         (* by invariant of whnf:
            meta-variables are lowered during whnf, s1 = s2 = id or co-id
            r1 and r2 are uninstantiated  (None)
         *)
-        let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
-        and t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
-        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar:"  
-                                 ^ P.normalToString cD0 cPsi sM1 ^ "\n with type: "
-                                 ^ P.dctxToString cD0 cPsi1 ^ " |- " ^ P.typToString cD0 cPsi1 (tP1 , id)
-                                 ^ "\n and "
+        let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *) in
+        let t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
+        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar:"  ) in
+        let _ = dprint (fun () -> "                "^ P.normalToString cD0 cPsi  sM1 ) in 
+        let _ = dprint (fun () ->  "with type: "  ) in 
+        let _ = dprint (fun () ->  P.dctxToString cD0 cPsi1 ) in 
+        let _ = dprint (fun () -> " |- " ^
+                          P.typToString cD0 cPsi1 (tP1 , id)) in
+        let _ = dprint (fun () -> "\n and "
                                  ^ P.normalToString cD0 cPsi sM2 ^  "\n with type: "
                                  ^ P.dctxToString cD0 cPsi2 ^ " |- " ^ P.typToString cD0 cPsi2 (tP2 , id)) in
 
@@ -1761,7 +1764,8 @@ let disallowUndefineds f =
               | (true, _) ->
                   (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
                   begin try
-                    let ss1  = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub t1')) (* cD ; cPsi1 |- ss1 <= cPsi *) in
+                    let _ = dprint (fun () -> "MVar - MVar (different ) ... inverting substitution " ) in 
+                    let ss1  = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub t1')) (* cD ; cPsi1 |- ss1 <= cPsi *) in 
                     let phat = Context.dctxToHat cPsi in 
                     let _ = dprint (fun () -> "MVar-MVar : inverted ss1 : " ^
                                       P.subToString cD0 cPsi1 ss1) in 
@@ -2413,7 +2417,7 @@ let disallowUndefineds f =
                 let _ = dprint (fun () -> "q2 .  tA2  : " ^ P.typToString cD0 cPsi2 (tA2, id)) in 
 
                  (* no occurs check necessary, because s1' and s2' are pattern subs. *)
-                 let _ = (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
+                 let _ = (unifyDCtx1 mflag cD0  (Whnf.normDCtx cPsi1) (Whnf.normDCtx cPsi2) ;  (* check that cnstr1 = cnstr2 *)
                           unifyTyp mflag cD0 cPsi1 (tA1, id) (tA2, id)) in 
                  let _ = dprint (fun () -> "Unification of the types and contexts done ... \n") in 
                  (* at this point: s1' = s2'    ! *)
@@ -2439,7 +2443,8 @@ let disallowUndefineds f =
                     (* instantiatePVar (q1, PVar(p, comp ss (comp s2' s')), !cnstr1)*))
 
              | (true, false) ->
-                 let _ = (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
+                 let _ = (unifyDCtx1 mflag cD0 (Whnf.normDCtx cPsi1)
+                                               (Whnf.normDCtx cPsi2) ;  (* check that cnstr1 = cnstr2 *)
                           unifyTyp mflag cD0 cPsi1 (tA1, id) (tA2, id)) in 
 
                   (* only s1' is a pattern sub
@@ -2451,7 +2456,8 @@ let disallowUndefineds f =
                    instantiatePVar (q1, PVar(q2',s'), !cnstr1)
 
              | (false, true) ->
-                 let _ = (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;  (* check that cnstr1 = cnstr2 *)
+                 let _ = (unifyDCtx1 mflag cD0 (Whnf.normDCtx cPsi1)
+                                               (Whnf.normDCtx cPsi2) ;  (* check that cnstr1 = cnstr2 *)
                           unifyTyp mflag cD0 cPsi1 (tA1, id) (tA2, id)) in 
 
                  (* only s2' is a pattern sub *)
@@ -2601,6 +2607,8 @@ let disallowUndefineds f =
           unifySpine mflag cD0 cPsi sS (tS2, comp s2' s2)
 
       | ((App (tM1, tS1), s1), (App (tM2, tS2), s2)) ->
+          dprint (fun () -> "[unifySpine] " ^ P.normalToString cD0 cPsi (tM1,s1) ^ 
+                    " == " ^ P.normalToString cD0 cPsi (tM2, s2));
           unifyTerm mflag cD0 cPsi (tM1, s1) (tM2, s2);
           unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
       (* Nil/App or App/Nil cannot occur by typing invariants *)
@@ -2709,7 +2717,9 @@ let disallowUndefineds f =
     and unifyTypW mflag cD0 cPsi sA sB = match (sA, sB) with
       | ((Atom (_, a, tS1), s1),   (Atom (_, b, tS2), s2))  ->
           if a = b then
-            unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
+            (dprint (fun () -> "Unify Atomic types" ^ P.typToString cD0 cPsi sA
+                       ^ " == " ^ P.typToString cD0 cPsi sB);
+            unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2))
           else
             (dprint (fun () -> "UnifyTyp " ^ P.typToString cD0 cPsi sA ^ " ==== " ^ P.typToString cD0 cPsi sB);
             raise_ (Unify "Type constant clash"))
@@ -2726,18 +2736,20 @@ let disallowUndefineds f =
 
     and unifyTypRecW mflag cD0 cPsi srec1 srec2 = match (srec1, srec2) with
       | ((SigmaLast tA1, s1) ,   (SigmaLast tA2, s2)) ->
-          dprint (fun () -> "unifyTypRecW ["
-                          ^ P.typRecToString cD0 cPsi srec1
-                          ^ "]  ["
-                          ^ P.typRecToString cD0 cPsi srec2 ^ "]");
+          dprint (fun () -> "[unifyTypRecW] Last "
+                          ^ P.typToString cD0 cPsi (tA1, s1)  ^ " == "
+                          ^ P.typToString cD0 cPsi (tA2, s2) ^ "\n");
           unifyTyp mflag cD0 cPsi (tA1,s1) (tA2,s2)
         ; dprint (fun () ->  "succeeded   ["
                           ^ P.typRecToString cD0 cPsi srec1
                           ^ "]  ["
                           ^ P.typRecToString cD0 cPsi srec2 ^ "]");
       
-      | ((SigmaElem (x1, tA1, trec1),  s1) ,   (SigmaElem (_x2, tA2, trec2),  s2))  ->
-          (unifyTyp mflag cD0 cPsi (tA1,s1) (tA2,s2)
+      | ((SigmaElem (x1, tA1, trec1),  s1) ,   (SigmaElem (_x2, tA2, trec2), s2))  ->
+          (dprint (fun () -> "[unifyTypRecW] Elements " ^ 
+                     P.typToString cD0 cPsi (tA1, s1) ^ " == " 
+                     ^ P.typToString cD0 cPsi (tA2, s2));
+          unifyTyp mflag cD0 cPsi (tA1,s1) (tA2,s2)
          ; 
           let s1' = dot1 s1 in 
           let s2' = dot1 s2 in
@@ -2748,7 +2760,9 @@ let disallowUndefineds f =
           raise_ (Unify "TypRec length clash")
    
 
-   (* Unify pattern fragment, and force constraints after pattern unification succeeded *)
+   (* Unify pattern fragment, and force constraints after pattern unification
+   succeeded *)
+    (* Pre-condition: cPsi1, cPsi2 are in normal form *)
  and unifyDCtx1 mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 

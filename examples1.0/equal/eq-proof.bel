@@ -27,8 +27,7 @@ eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
 
 schema eqCtx = block x:exp, _t:eq x x;
 
-% Pattern matching on implicit argument not propagated properly in the
-% reconstruction code
+
 rec ref : {g:eqCtx} {U:[g. exp]} [g. eq (U ..) (U ..)] =
  mlam g => mlam U =>
    case [g. U ..] of

@@ -109,11 +109,17 @@ type caseType  = IndexObj of Int.LF.psi_hat * Int.LF.normal | DataObj
 
 type typAnn    = FullTyp of Apx.LF.typ | PartialTyp of cid_typ
 
-
-let rec unifyDCtx cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
+let rec unifyDCtx cD cPsi1 cPsi2 = unifyDCtx' cD (Whnf.normDCtx cPsi1)  (Whnf.normDCtx cPsi2)
+and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Int.LF.Null , Int.LF.Null) -> ()
 
-      | (Int.LF.CtxVar (Int.LF.CInst (cvar_ref , s_cid, _cO, _cD)) , cPsi) -> 
+      | (Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref1 , _schema1, _cO1, _cD1)) , 
+         Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref2 , _schema2, _cO2, _cD2))) ->  
+          if cvar_ref1 == cvar_ref2 then ()  
+          else 
+            Unify.instantiateCtxVar (cvar_ref1, cPsi2)
+
+      | (Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref , s_cid, _cO1, _cD1)) , cPsi) -> 
           let _ = Unify.instantiateCtxVar (cvar_ref, cPsi) in 
             (match Context.ctxVar cPsi with 
                | None -> ()
@@ -121,7 +127,7 @@ let rec unifyDCtx cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
                    FCVar.add psi (Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
                | _ -> ()
             )
-      | (cPsi , Int.LF.CtxVar (Int.LF.CInst (cvar_ref , s_cid, _cO, _cD) )) -> 
+      | (cPsi , Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref, s_cid, _cO, _cD) )) -> 
           let _ = Unify.instantiateCtxVar (cvar_ref, cPsi) in 
             (match Context.ctxVar cPsi with 
                | None -> ()
@@ -137,11 +143,11 @@ let rec unifyDCtx cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , tA1)) , 
          Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , tA2))) -> 
-            unifyDCtx cD cPsi1 cPsi2 ; 
+            unifyDCtx' cD cPsi1 cPsi2 ; 
             Unify.unifyTyp cD cPsi1 (tA1, LF.id)   (tA2, LF.id)
       | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _) ,   
          Int.LF.DDec (cPsi2, Int.LF.TypDeclOpt _ )) -> 
-          unifyDCtx cD cPsi1 cPsi2
+          unifyDCtx' cD cPsi1 cPsi2
       | _ -> 
           (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ 
                      P.dctxToString cD cPsi1 ^ 

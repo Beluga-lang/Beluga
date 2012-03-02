@@ -11,7 +11,7 @@ exp: tp -> type.
 lam: (exp T1 -> exp T2) -> exp (arr T1 T2).
 app: exp (arr T2 T) -> exp T2 -> exp T.
 
-%<< Normal form representation
+% Normal form representation
 
 normal: tp -> type.  % normal forms
 neutral: tp -> type. % terms with no abstractions
@@ -57,24 +57,26 @@ fn e => case e of
 |[g. #p.2..] => [g. #p.1..]
 
 ;
-%
+
 
 
 % Normalization
-
 rec norm : (g: ctx) [g. exp T] -> [g. normal T] =
 fn e => case e of
 | [g. app (M..) (N..)] =>
   (case norm [g. M..] of
-  | {S : [g, x:neutral T2. normal T1]}
-    [g. lam' \x.S..x] =>
-    let [g,b: block x: exp T, _t:neutral T. M'..b.1] =
-      normal2exp [g, b: block x:exp T2, _t:neutral T2. S..b.2]
+  |  {S : [h, x:neutral T2. normal T1]}
+    [h. lam' \x.S..x] =>
+    let [h,b: block x: exp T, _t:neutral T. M'..b.1] =
+      normal2exp [h, b: block x:exp T2, _t:neutral T2. S..b.2]
+%     normal2exp [g, b: block (x:exp _, _t:neutral _). S..b.2]
     in
-      norm [g. M'..(N..)]
-  | [g. neut(R..)] =>
-    (let [g. S..] = norm [g. N..] in [g. neut (app' (R..) (S..))]))
-
+      norm [h. M'..(N..)]
+)
+%{  | [g. neut(R..)] =>
+   (let [g. S..] = norm [g. N..] in [g. neut (app' (R..) (S..))]))
+}%
+%{
 | [g. #p.1 ..] => [g. neut(#p.2 ..)] % #p means variable p from the context
 
 | {M : [g, x:exp T2. exp T1]}
@@ -83,8 +85,9 @@ fn e => case e of
     = norm [g,b: block x:exp T2, _t:neutral T2. M..b.1]
   in
     [g. lam' \x.S..x]
-
+}%
 ;
 
-%>>
+
+
 

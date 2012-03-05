@@ -4,7 +4,7 @@
 
 }%
 
-rec small_step_cont : [. term] -> [. term] -> [. optInterim]) -> [. optInterim] = 
+rec small_step_cont : [. term] -> ([. term] -> [. optInterim]) -> [. optInterim] = 
 fn t => fn cont => case t of 
 | [. succ M] => 
    small_step_cont [. M ] (fn m' => let [. M'] = m' in cont [. succ M'])

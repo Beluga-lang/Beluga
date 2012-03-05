@@ -47,7 +47,7 @@ rec eq1: (g:ctx) [g. pred (M ..) (N ..)] -> [g. -->* (M ..) (N ..)] =
 ;
 
 
-rec eq2 : (g:ctx)[g. --> (M ..) (N ..)] -> [g. pred (M ..) (N ..)] = 
+rec eq2 : (g:ctx) [g. --> (M ..) (N ..)] -> [g. pred (M ..) (N ..)] = 
 fn r => case r of 
  | [g. beta1] : [g. (--> (app (lam \x. M1 .. x) (M2 ..)) (M1 .. (M2 ..)))]  => 
   let [g,b:block x:term,_t:pred x x. I1 .. b] = 
@@ -76,7 +76,8 @@ fn r => case r of
 
 % If M -->* N then M =>* N.
 
-rec eq3:(g:ctx)[g. -->* (M ..) (N ..)] -> [g. pred* (M ..) (N ..)] = 
+
+rec eq3:(g:ctx) [g. -->* (M ..) (N ..)] -> [g. pred* (M ..) (N ..)] = 
 fn r => case r of 
 | [g. id1] => [g. id*]
 | [g. step1 (R1 ..) (R2* ..)] => 
@@ -104,7 +105,8 @@ we now proceed to prove properties for the empty context.
 }%
 
 % If M <=> N then M <-> N.
-rec eq5 : [. pred= M N] ->  [. <-> M N] = 
+
+rec eq5 : [. pred= M N] -> [. <-> M N] = 
 fn r => case r of
 | [. reduce R*] => 
   let [. S*] = eq4 [. R*] in 
@@ -148,7 +150,9 @@ fn r => case r of
 
 % If M <-> N then M <=> N.
 
-rec eq6 :  [. <-> M N]  -> [. pred= M N] = 
+
+rec eq6 : [. <-> M N]  -> [. pred= M N] = 
+
 fn c => case c of 
 | [. refl]   => [. reduce id*]
 | [. sym C1] => 

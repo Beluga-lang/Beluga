@@ -311,7 +311,7 @@ and cnormApxTypRec cD delta t_rec (cD'', t) = match t_rec with
       let t_rec' = cnormApxTypRec cD delta t_rec (cD'', t) in 
         Apx.LF.SigmaElem (x, a', t_rec')
 
-% NOTE THERE IS A BUG IN OCAML: we are allowed to name _ cD !
+(* NOTE THERE IS A BUG IN OCAML: we are allowed to name _ cD !*)
 let rec cnormApxDCtx cD delta psi ((_ , t) as cDt) = match psi with
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) -> 

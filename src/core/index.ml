@@ -533,8 +533,12 @@ let rec index_exp cvars vars fcvars = function
         let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.CV psi_name)) in 
         Apx.Comp.CtxFun (loc, psi_name, index_exp cvars' vars fcvars e) 
 
-  | Ext.Comp.MLam (loc, u, e) ->
+  | Ext.Comp.MLam (loc, (u, Ext.Comp.MObj), e) ->
       let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.MV u)) in
+        Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
+
+  | Ext.Comp.MLam (loc, (u, Ext.Comp.PObj), e) ->
+      let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.PV u)) in
         Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 
   | Ext.Comp.Pair (loc, e1, e2) ->

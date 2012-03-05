@@ -766,13 +766,13 @@ cmp_exp_chkX:
 
 (*      | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk -> *)
       | "mlam"; f = symbol; rArr; e = cmp_exp_chk -> 
-          Comp.MLam (_loc, Id.mk_name (Id.SomeString f), e)
+          Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.MObj), e)
 
-      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
+(*      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, Id.mk_name (Id.SomeString s), e)
-
+*)
       | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, Id.mk_name (Id.SomeString p), e)
+          Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e) 
 
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)

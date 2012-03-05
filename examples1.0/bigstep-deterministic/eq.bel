@@ -10,7 +10,7 @@ eq_lam : ({x:exp} eq x x -> eq (M x) (N x)) -> eq (lam M) (lam N).
 eq_app : eq M M' -> eq N N' -> eq (app M N) (app M' N').
 
 schema eqctx = block x:exp, _t:eq x x;
-%{
+
 rec eq_refl : {g:eqctx}{M:[g. exp]} [g. eq (M ..) (M ..)] =
 mlam g => mlam M => 
 case [g. M ..] of 
@@ -40,7 +40,7 @@ case d of
 
  | [g. #p.2 ..] => [g. #p.2 ..]
 ;
-}%
+
 rec subst_respects_eq : {g:eqctx}{M:[g,x:exp. exp]}
 [g. eq (N ..) (N' ..)] -> [g. eq (M .. (N ..)) (M .. (N' ..))] =
 mlam g => mlam M => fn d => 
@@ -50,7 +50,7 @@ case [g,x:exp. M .. x] of
    let [g. D2 ..] = subst_respects_eq [g] [ g,x . T2 .. x ] d in
    [g. eq_app (D1 ..) (D2 ..)]
 
-%{ | [g,x:exp. lam (\y. M1 .. y x)] =>
+ | [g,x:exp. lam (\y. M1 .. y x)] =>
    let [g. D3 ..] = d in
    let [g,b:block z:exp, _t:eq z z. D1 .. b.1 b.2]
      = subst_respects_eq [g,b:block z:exp, _t:eq z z] [ g,b,x . M1 .. b.1 x ] [g,b. D3 ..] in
@@ -58,5 +58,5 @@ case [g,x:exp. M .. x] of
  
  | [g,x:exp. x] => d
  | [g,x:exp. #p.1 ..] => [g. #p.2 ..]
-}%
+
 ;

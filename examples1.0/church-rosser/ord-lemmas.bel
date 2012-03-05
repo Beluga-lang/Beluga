@@ -39,8 +39,8 @@ mlam g => mlam M2 => fn r => case r of
     [g. step1 (apl1 (R1 .. )) (S2* ..)]
 ;
 
-rec apr1* :{g:tctx} {M1:[g. term]} ([g. -->* (M2 ..) (M2' ..)] 
-                 ->  ([g. -->*  (app (M1 ..) (M2 ..)) (app (M1 ..) (M2' ..))] = 
+rec apr1* :{g:tctx} {M1:[g. term]} [g. -->* (M2 ..) (M2' ..)] 
+                 ->  [g. -->*  (app (M1 ..) (M2 ..)) (app (M1 ..) (M2' ..))] = 
 mlam g => mlam M1 => fn r => case r of 
 | [g. id1] => [g. id1] 
 | [g. step1 (R1 ..) (R2* ..)] => 

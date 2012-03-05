@@ -9,8 +9,8 @@
 schema tctx = term;
 
 % Transitivity of multi-step reduction
-rec appd: (g:tctx) ([g. -->* (M ..) (M'..)]  ->  ([g. -->*  (M' ..) (M'' ..)]
-        ->  ([g. -->* (M ..) (M'' ..)] = 
+rec appd: (g:tctx) [g. -->* (M ..) (M'..)]  ->  [g. -->*  (M' ..) (M'' ..)]
+        ->  [g. -->* (M ..) (M'' ..)] = 
 fn r => fn s => case r of 
 | [g. id1] => s
 | [g. step1 (R1 ..) (R2* ..)] => 
@@ -20,8 +20,8 @@ fn r => fn s => case r of
 ;
 
 % Multi-step reduction is a congruence
-rec lm1* : (g:tctx)( [g,x:term. -->* (M .. x) (M' .. x)]
-      ->  ([g. -->* (lam (\x. M .. x)) (lam (\x. M' .. x))] = 
+rec lm1* : (g:tctx) [g,x:term. -->* (M .. x) (M' .. x)]
+      ->  [g. -->* (lam (\x. M .. x)) (lam (\x. M' .. x))] = 
 fn r => case r of 
 | [g,x:term. id1] => [g. id1]
 | [g,x:term. step1 (R1 .. x) (R2* .. x)] => 
@@ -30,8 +30,8 @@ fn r => case r of
 ;
 
 
-rec apl1* :(g:tctx) {M2:[g. term]} ([g. -->* (M1 ..) (M1' ..)] 
-                 ->  ([g. -->*  (app (M1 ..) (M2 ..)) (app (M1' ..) (M2 ..))] = 
+rec apl1* :(g:tctx) {M2:[g. term]} [g. -->* (M1 ..) (M1' ..)] 
+                 ->  [g. -->*  (app (M1 ..) (M2 ..)) (app (M1' ..) (M2 ..))] = 
 mlam M2 => fn r => case r of 
 | [g. id1] => [g. id1] 
 | [g. step1 (R1 ..) (R2* ..)] => 
@@ -39,8 +39,8 @@ mlam M2 => fn r => case r of
     [g. step1 (apl1 (R1 .. )) (S2* ..)]
 ;
 
-rec apr1* :(g:tctx){M1:[g. term]} ([g. -->* (M2 ..) (M2' ..)] 
-                 ->  ([g. -->*  (app (M1 ..) (M2 ..)) (app (M1 ..) (M2' ..))] = 
+rec apr1* :(g:tctx){M1:[g. term]} [g. -->* (M2 ..) (M2' ..)] 
+                 ->  [g. -->*  (app (M1 ..) (M2 ..)) (app (M1 ..) (M2' ..))] = 
 mlam M1 => fn r => case r of 
 | [g. id1] => [g. id1] 
 | [g. step1 (R1 ..) (R2* ..)] => 

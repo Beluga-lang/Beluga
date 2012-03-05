@@ -908,7 +908,7 @@ and elExp' cD cG i = match i with
   | Apx.Comp.MApp (loc, i, mC) ->
       let _ = dprint (fun () -> "Elaborating MApp.\n") in 
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
-      let _ = dprint (fun () -> "\nGenerated implicit args.\n") in 
+      let _ = dprint (fun () -> "\n MApp - Generated implicit args.\n") in 
         begin match tau_theta' with
           | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
               let cPsi' = C.cnormDCtx (cPsi, theta) in 
@@ -1026,6 +1026,35 @@ and elExp' cD cG i = match i with
                dprint (fun () -> "[elTerm] Violation: " ^ msg);
                raise (Error.Error (Some loc, Error.CompTypAnn ))
              end 
+          | (Int.Comp.TypPiBox ((Int.LF.PDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
+              let cPsi    = C.cnormDCtx (cPsi, theta) in
+              begin try 
+                let foo = 3 in
+               let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
+               let _     = Unify.unifyDCtx cD cPsi cPsi' in 
+               let psihat' = Context.dctxToHat cPsi'  in
+               begin match m with 
+                 | Apx.LF.Root (_, h, Apx.LF.Nil) -> 
+                     let _ = dprint (fun () -> "[elExp'] Mapp case :  PDecl ") in
+                     let (h', sB) = Lfrecon.elHead loc Lfrecon.Pibox cD cPsi' h  in
+                     let theta' = Int.LF.MDot (Int.LF.PObj (psihat', h'), theta)  in
+                     let sA' = (C.cnormTyp (tA, theta), LF.id) in 
+                       begin try 
+                         (Unify.unifyTyp cD cPsi' sB  sA' ;
+                          dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
+                          (Int.Comp.MApp (Some loc, i', (psihat', Int.Comp.NeutObj h')), (tau, theta')))
+                       with Unify.Unify msg ->
+                         (Printf.printf "%s\n" msg;
+                          raise (Error.Error (Some loc, Error.TypMismatchElab (cD, cPsi', sA', sB))))
+                       end 
+                  | _ -> 
+                       (dprint (fun () -> "[elTerm] Violation: Not a head");
+                      raise (Error.Error (Some loc, Error.CompMAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
+               end  
+                with Violation msg -> 
+                  dprint (fun () -> "[elTerm] Violation: " ^ msg);
+                  raise (Error.Error (Some loc, Error.CompTypAnn ))
+              end 
           | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) -> 
               let _ = dprint (fun () -> "Encountered Boxed arg") in
               let _ = dprint (fun () -> "[elExp] MAnnApp - TypArr : " ^

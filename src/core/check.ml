@@ -351,7 +351,9 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
               (tau, I.MDot(I.MObj (phat, tM), t))
 
           | (NeutObj h, (TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
-              let tB = LF.inferHead loc cD cPsi h in 
+              let _ =  dprint (fun () -> "[check: inferHead] cPsi = " ^
+                                 P.dctxToString cD (C.cnormDCtx (cPsi,t) )) in
+              let tB = LF.inferHead loc cD (C.cnormDCtx (cPsi,t)) h in 
                 if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
                   (tau, I.MDot(I.PObj (phat, h), t))
                 else 

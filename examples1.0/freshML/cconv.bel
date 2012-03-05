@@ -82,7 +82,7 @@ fn env => fn t => case t of
 ;
 
 
-rec cc : [. term] ->  [. target] = 
+%{ rec cc : [. term] ->  [. target] = 
 fn e => 
  let [. E] = e in 
  let [arg':target, xve:target. T] = 
@@ -94,7 +94,7 @@ fn e =>
 
 let t1 = cc [. lam (\x. (lam (\y. app x y)))] ;
 let t2 = cc [. lam (\x. (lam (\y. app y x)))] ;
- 
+ }%
 
 
 %{

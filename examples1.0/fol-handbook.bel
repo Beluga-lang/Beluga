@@ -37,6 +37,7 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 
 schema hilCtx =  i + some [ a:o ] hil a ;
 
+
 rec trivial_imp : {g:hilCtx}{A:[g. o]}[g. hil (imp (A ..) (imp (A ..) (A ..)))] = 
  mlam g => mlam A => [g. k] ; 
 
@@ -117,11 +118,12 @@ rec ndhil : {g:ndhilCtx} [g. nd (A ..)] -> [g. hil (A ..)] =
 |  {B1:[g. o]}{D: [g, u:nd (B1 ..), p:o. nd p]}
   [g. noti (\p.(\u.(D .. u p)))] => 
   let {H:[g, u: hil (A ..), p:o. hil p]}
-      [g,w:block u:hil (A ..), _t:nd (A ..),p:o. H .. w.1 p] = 
-      ndhil [g, w : block u:hil (B1 ..) , _t:nd (B1 ..), p:o]   [g,w,p. D .. w.2 p] in 
+      [g,w:block (u:hil (A ..), _t:nd (A ..)),p:o. H .. w.1 p] = 
+      ndhil [g, w : block (u:hil (B1 ..) , _t:nd (B1 ..)), p:o]   [g,w,p. D .. w.2 p] in 
   let [g. H1' ..]  = ded [g] [g,u. H .. u (not (A ..))] in 
   let [g. H1'' ..] = ded [g] [g,u. H .. u (A ..)] in
     [g. mp (mp n1 (H1' ..)) (H1'' ..)]
+
 ;
 
 

@@ -300,9 +300,8 @@ let rec ctxShift cPsi = begin match cPsi with
           if not (canAppear cD cPsi (tA, s)) then
             raise (Violation ("Parameter variable of type " ^ P.typToString cD cPsi (tA, s)
                             ^ "\ncannot possibly appear in context " ^ P.dctxToString cD cPsi)) ;
-          
-          (* Return p's type from cD *)
-          TClo (tA, s)
+            (* Return p's type from cD *)
+            TClo (tA, s)
 
     | FVar _ ->
         raise (Error (None, LeftoverFVar))

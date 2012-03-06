@@ -60,3 +60,4 @@ case [g,x:exp. M .. x] of
  | [g,x:exp. #p.1 ..] => [g. #p.2 ..]
 
 ;
+

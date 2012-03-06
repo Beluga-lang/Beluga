@@ -81,6 +81,7 @@ case d of
       impossible [g. NL ..] in [g])
 
 | [g. #p.3 ..] => let [g. #q.3 ..] = f in eq_refl [g] [ g . _ ] 
+
 ;
 
 

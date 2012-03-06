@@ -1686,17 +1686,17 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
 and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
   | Apx.Comp.EmptyBranch(loc, delta, (Apx.Comp.PatEmpty (loc', cpsi) as pat)) -> 
       let cD'    = elMCtx  Lfrecon.Pibox delta in
-      let ((l_cd1', l_delta) , cD1', _cG1,  pat1, tau1)  =  recPatObj cD' pat (cD, tau_s)  in 
-      let _ = dprint (fun () -> "[rePatObj] done") in 
-      let _ = dprint (fun () -> "   " ^ P.mctxToString cD1' ^ " ; . |- " ^ 
-                        P.compTypToString cD1' tau1) in 
+      let ((l_cd1', l_delta) , cD1', _cG1,  pat1, tau1)  =  recPatObj cD' pat  (cD, tau_s)  in 
+      let _ = dprint (fun () -> "[elBranch] - EmptyBranch " ^ 
+                        "cD1' = " ^ P.mctxToString cD1' ^ 
+                        "pat = " ^ P.patternToString cD1' _cG1 pat1) in
       let tau_s' = Whnf.cnormCTyp (tau_s, Int.LF.MShift l_cd1') in 
         (* cD |- tau_s and cD, cD1 |- tau_s' *)
         (* cD1 |- tau1 *)
       let _ = dprint (fun () -> "[Reconstructed pattern] " ^ P.patternToString cD1' _cG1 pat1 ) in 
       let (t', t1, cD1'', pat1') = synPatRefine (Some loc) DataObj (cD, cD1') pat1 (tau_s', tau1) in
             (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
-        Int.Comp.EmptyBranch (loc, cD1'', pat1, t')
+        Int.Comp.EmptyBranch (loc, cD1'', pat1', t')
         
 
 (*  | Apx.Comp.EmptyBranch(loc, _omega, delta, 

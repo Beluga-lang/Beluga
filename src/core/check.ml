@@ -387,6 +387,11 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
     | PatEmpty (loc, cPsi) -> 
         (match ttau with 
           | (TypBox (_, tA, cPhi) , theta) ->               
+              let _ = dprint (fun () -> "[checkPattern] PatEmpty : \n cD = " ^ 
+                                P.mctxToString cD ^ 
+                                "context of expected  type " ^ 
+                                P.dctxToString cD (Whnf.cnormDCtx (cPhi, theta))
+                                ^ "\n context given " ^ P.dctxToString cD cPsi) in
               if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then ()
               else 
                 raise (Error (Some loc, Error.CompBoxMismatch (cD, I.Empty, ttau)))
@@ -449,6 +454,9 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
   and checkBranch _caseTyp cD cG branch tau_s (tau, t) =
     match branch with
       | EmptyBranch (loc, cD1', pat, t1) -> 
+          let _ = dprint (fun () -> "\nCheckBranch - Empty Pattern\n") in 
+          let _ = dprint (fun () -> "cD1 = " ^ P.mctxToString cD1') in 
+          let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in 
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in 
           let _     = LF.checkMSub  cD1' t1 cD in   
             checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id)

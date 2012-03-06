@@ -1029,7 +1029,6 @@ and elExp' cD cG i = match i with
           | (Int.Comp.TypPiBox ((Int.LF.PDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
               let cPsi    = C.cnormDCtx (cPsi, theta) in
               begin try 
-                let foo = 3 in
                let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
                let _     = Unify.unifyDCtx cD cPsi cPsi' in 
                let psihat' = Context.dctxToHat cPsi'  in
@@ -1397,6 +1396,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
 
 and recPatObj' cD pat (cD_s, tau_s) = match pat with 
   | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (loc, _) as pat') , Apx.Comp.TypBox (loc', a, psi) ) -> 
+      let _ = dprint (fun () -> "[recPatObj' - PatMetaObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in 
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
       let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
       let Int.Comp.TypBox (_ , _tQ, cPsi_s) = tau_s  in
@@ -1417,8 +1417,12 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
       let ttau' = (Int.Comp.TypBox (Some loc, tP, cPsi), Whnf.m_id) in 
         (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi), ttau')
 
-  | Apx.Comp.PatAnn (_ , pat, _) -> 
-       elPatSyn cD Int.LF.Empty pat 
+  | Apx.Comp.PatAnn (_ , pat, tau) -> 
+      let _ = dprint (fun () -> "[recPatObj' PatAnn] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in 
+      let tau' = elCompTyp cD tau in 
+      let ttau' = (tau', Whnf.m_id) in 
+      let (cG', pat') = elPatChk cD Int.LF.Empty pat ttau' in 
+        (cG', pat', ttau')
 
   | _ -> 
       let tau_p = inferPatTyp cD tau_s in 

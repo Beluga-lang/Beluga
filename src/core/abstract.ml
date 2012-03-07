@@ -973,7 +973,7 @@ and collectHead (k:int) cQ phat ((head, _subst) as sH) =
         raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
 
   | (I.MMVar (I.MInst (_r, _cD, _cPsi, _tA,  _), _),  _s) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
+      raise (Error (Syntax.Loc.ghost, LeftoverMMV))
 
   | (I.MVar (I.Offset j, s'), s) ->
       let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s)  in 

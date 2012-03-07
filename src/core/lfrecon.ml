@@ -47,6 +47,9 @@ let _ = Error.register_printer
             "cannot reconstruct a type for free variable %s (leftover constraints)"
             (R.render_name x)
 
+	| PruningFailed -> 
+          Format.fprintf ppf "Pruning a type failed; this can happen when you have some free meta-variables whose type cannot be inferred." 
+
         | IllTypedIdSub ->
           Format.fprintf ppf "ill-typed substitution" (* TODO *) 
 

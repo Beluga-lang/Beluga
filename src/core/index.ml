@@ -60,7 +60,9 @@ let _ = Error.register_printer
       | CompEmptyPattBranch ->
           Format.fprintf ppf "If the pattern in a branch is empty, there should be no branch body"
       | UnboundIdSub ->
-          Format.fprintf ppf "Identity substitution used without context variable"))
+          Format.fprintf ppf "Identity substitution used without context variable"
+      | PatVarNotUnique -> 
+          Format.fprintf ppf "Pattern variable not linear."))
 
 type free_cvars = 
     FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name 

@@ -99,6 +99,13 @@ module Comp = struct
               (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau')
 
+          | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+            Format.fprintf ppf
+              "ill-typed pattern\n  expected: %a\n  for pattern: %a\n  inferred:%a  "
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau) 
+              (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau') 
+
           | Mismatch (cD, cG, i, variant, theta_tau) ->
             Format.fprintf ppf
               "ill-typed expression\n  inferred: %a\n  for expression: %a\n\

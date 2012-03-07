@@ -699,7 +699,7 @@ let rec ctxToMCtx cQ  = match cQ with
        ctxToMCtx cQ'
 
 
-(* collectTerm cQ phat (tM,s) = cQ'
+(* collectTerm p cQ phat (tM,s) = cQ'
 
    Invariant:
 
@@ -718,33 +718,33 @@ let rec ctxToMCtx cQ  = match cQ with
    Improvement: if tM is in normal form, we don't
                 need to call whnf.
 *)
-let rec collectTerm cQ phat sM = collectTermW cQ phat (Whnf.whnf sM)
+let rec collectTerm p cQ phat sM = collectTermW p cQ phat (Whnf.whnf sM)
 
-and collectTermW cQ ((cvar, offset) as phat) sM = match sM with
+and collectTermW p cQ ((cvar, offset) as phat) sM = match sM with
   | (I.Lam (loc, x, tM), s) ->
-      let (cQ', tM') =  collectTerm cQ (cvar, offset + 1) (tM, LF.dot1 s) in 
+      let (cQ', tM') =  collectTerm p cQ (cvar, offset + 1) (tM, LF.dot1 s) in 
         (cQ', I.Lam (loc, x, tM'))
 
   | (I.Tuple (loc, tuple), s) ->
-      let (cQ', tuple') = collectTuple cQ phat (tuple, s) in 
+      let (cQ', tuple') = collectTuple p cQ phat (tuple, s) in 
         (cQ', I.Tuple (loc, tuple'))
 
   | (I.Root (loc, h, tS), s) ->
-      let (cQ', h') = collectHead cQ phat (h, s) in
-      let (cQ'', tS') =  collectSpine cQ' phat (tS, s) in 
+      let (cQ', h') = collectHead p cQ phat (h, s) in
+      let (cQ'', tS') =  collectSpine p cQ' phat (tS, s) in 
         (cQ'', I.Root(loc, h', tS'))
 
-and collectTuple cQ phat = function
+and collectTuple p cQ phat = function
   | (I.Last tM, s) -> 
-      let (cQ', tM') = collectTerm cQ phat (tM, s) in 
+      let (cQ', tM') = collectTerm p cQ phat (tM, s) in 
         (cQ', I.Last tM')
   | (I.Cons (tM, tuple), s) ->
-      let (cQ', tM') = collectTerm cQ phat (tM, s) in
-      let (cQ2, tuple') = collectTuple cQ' phat (tuple, s) in 
+      let (cQ', tM') = collectTerm p cQ phat (tM, s) in
+      let (cQ2, tuple') = collectTuple p cQ' phat (tuple, s) in 
         (cQ2, I.Cons(tM', tuple'))
 
 
-(* collectSpine cQ phat (S, s) = cQ'
+(* collectSpine p cQ phat (S, s) = cQ'
 
    Invariant:
    If    cPsi |- s : cPsi1     cPsi1 |- S : A > P
@@ -752,19 +752,19 @@ and collectTuple cQ phat = function
        where cQ'' contains all MVars and FVars in (S, s)
 
 *)
-and collectSpine cQ phat sS = match sS with
+and collectSpine p cQ phat sS = match sS with
   | (I.Nil, _) -> (cQ, I.Nil)
 
   | (I.SClo (tS, s'), s) ->
-      collectSpine cQ phat (tS, LF.comp s' s)
+      collectSpine p cQ phat (tS, LF.comp s' s)
 
   | (I.App (tM, tS), s) ->
-    let (cQ', tM') = collectTerm cQ phat (tM, s) in
-    let (cQ'', tS') = collectSpine cQ' phat (tS, s) in 
+    let (cQ', tM') = collectTerm p cQ phat (tM, s) in
+    let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in 
       (cQ'', I.App (tM', tS'))
 
 
-(* collectSub cQ phat s = cQ'
+(* collectSub p cQ phat s = cQ'
 
    Invariant:
    If    cPsi |- s : cPsi1    and phat = |cPsi|
@@ -772,19 +772,19 @@ and collectSpine cQ phat sS = match sS with
    where cQ'' contains all MVars and FVars in s
 
 *)
-and collectSub cQ phat s = match s with
+and collectSub p cQ phat s = match s with
   | I.Shift _ -> (cQ, s) (* we do not collect the context variable in the
                             argument to shift; if the substitution is
                             well-typed, then it has been already collected *)
   | I.Dot (I.Head h, s) ->
-      let (cQ1, s') =  collectSub cQ phat s in 
+      let (cQ1, s') =  collectSub p cQ phat s in 
       (* let _   = dprint (fun () -> "collectSub (Head) "  ) in *)
-      let (cQ2, h') = collectHead cQ1 phat (h, LF.id) in
+      let (cQ2, h') = collectHead p cQ1 phat (h, LF.id) in
         (cQ2, I.Dot(I.Head h', s'))
 
   | I.Dot (I.Obj tM, s) ->
-      let (cQ1,s') =  collectSub cQ phat s in 
-      let (cQ2, tM') = collectTerm cQ1 phat (tM, LF.id) in
+      let (cQ1,s') =  collectSub p cQ phat s in 
+      let (cQ2, tM') = collectTerm p cQ1 phat (tM, LF.id) in
         (cQ2, I.Dot (I.Obj tM', s'))
 
   | I.Dot (I.Undef, s') ->
@@ -792,40 +792,40 @@ and collectSub cQ phat s = match s with
        (* -bp Aug 24, 2009 BUG: If the substitution includes an undef
           one would need to prune the type of the MVAR with which this
           substitution is associated. *)    
-     let (cQ1, s) = collectSub cQ phat  s' in 
+     let (cQ1, s) = collectSub p cQ phat  s' in 
        (cQ1, I.Dot (I.Undef, s)))
 
   | I.SVar (I.Offset _offset, s) -> 
-       collectSub cQ phat s
+       collectSub p cQ phat s
 
 
-(* collectMSub cQ theta = cQ' *) 
-and collectMSub cQ theta =  match theta with 
+(* collectMSub p cQ theta = cQ' *) 
+and collectMSub p cQ theta =  match theta with 
   | I.MShift _n ->  (cQ , theta)
   | I.MDot(I.MObj(phat, tM), t) -> 
-      let (cQ1, t') =  collectMSub cQ t in 
-      let (cQ1, phat') = collectHat cQ1 phat in 
+      let (cQ1, t') =  collectMSub p cQ t in 
+      let (cQ1, phat') = collectHat p cQ1 phat in 
       let _ = dprint (fun () -> "[collectMSub] tM = " 
                         ^ P.normalToString I.Empty I.Null (tM, LF.id)) in 
-      let (cQ2, tM') = collectTerm cQ1 phat' (tM, LF.id) in 
+      let (cQ2, tM') = collectTerm p cQ1 phat' (tM, LF.id) in 
       let _ = dprint (fun () -> "[collectMSub] tM' = " 
                         ^ P.normalToString I.Empty I.Null (tM', LF.id)) in 
       let _ = dprint (fun () -> "[collectMSub] Collection of MVars\n" ^ collectionToString cQ2 )in
         (cQ2 , I.MDot (I.MObj (phat', tM'), t'))
 
   | I.MDot(I.PObj(phat, h), t) -> 
-      let (cQ1, t') =  collectMSub cQ t in 
-      let (cQ1, phat') = collectHat cQ1 phat in 
-      let (cQ2, h') = collectHead cQ1 phat' (h, LF.id) in 
+      let (cQ1, t') =  collectMSub p cQ t in 
+      let (cQ1, phat') = collectHat p cQ1 phat in 
+      let (cQ2, h') = collectHead p cQ1 phat' (h, LF.id) in 
         (cQ2, I.MDot (I.PObj (phat', h'), t'))
 
   | I.MDot (I.CObj (cPsi), t) -> 
-      let (cQ1, t') =  collectMSub cQ t in 
+      let (cQ1, t') =  collectMSub p cQ t in 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ2, cPsi') = collectDctx cQ1 phat cPsi in 
+      let (cQ2, cPsi') = collectDctx p cQ1 phat cPsi in 
         (cQ2, I.MDot (I.CObj (cPsi'), t'))
 
-and collectHead cQ phat ((head, _subst) as sH) =
+and collectHead (k:int) cQ phat ((head, _subst) as sH) =
     match sH with
 
   | (I.BVar _x, _s)  -> (cQ, head)
@@ -837,7 +837,7 @@ and collectHead cQ phat ((head, _subst) as sH) =
         | Yes -> (cQ, I.FVar name)
         | No -> 
             let Int.LF.Type tA  = FVar.get name in            
-            let (cQ', tA') = collectTyp (I.Dec(cQ, FV(Impure, name, None))) (None, 0) (tA, LF.id) in 
+            let (cQ', tA') = collectTyp k (I.Dec(cQ, FV(Impure, name, None))) (None, 0) (tA, LF.id) in 
               (* tA must be closed *)
               (* Since we only use abstraction on pure LF objects,
                  there are no context variables; different abstraction
@@ -851,14 +851,21 @@ and collectHead cQ phat ((head, _subst) as sH) =
   | (I.FMVar (u, s'), s) ->
         begin match checkOccurrence (eqFMVar u) cQ with
           | Yes ->    
-              let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in (cQ', I.FMVar (u, sigma))
+              let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s) in (cQ', I.FMVar (u, sigma))
           | No -> 
-              let (cQ0, sigma) = collectSub cQ phat (LF.comp s' s) in
-              let I.MDecl (_, tA, cPhi)  = FCVar.get u in
+              let (cQ0, sigma) = collectSub k cQ phat (LF.comp s' s) in
+              let (cD_d, I.MDecl (_, tA, cPhi))  = FCVar.get u in
+	      let d = k - Context.length cD_d in 
+              let _ = dprint (fun () -> "[collectHead] FMV " ^ R.render_name u ^
+                                " where k = " ^ string_of_int k ^ 
+                                "   |cD_d| = " ^ string_of_int (Context.length  cD_d)) in 
+
+	      let (tA,cPhi) = (if d <= 0    then (tA,cPhi) else 
+                      (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in 
               let phihat = Context.dctxToHat cPhi in 
               let cQ' = I.Dec(cQ0, FMV(Impure, u, None)) in                 
-              let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
-              let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
+              let (cQ1, cPhi')  = collectDctx k cQ' phihat cPhi in 
+              let (cQ'', tA')   = collectTyp k cQ1  phihat (tA, LF.id) in 
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,
                    there are no context variables; different abstraction
@@ -878,15 +885,15 @@ and collectHead cQ phat ((head, _subst) as sH) =
 (*         let _ = dprint (fun () -> "collectSub for MVar\n") in  *)
           begin match checkOccurrence (eqMVar u) cQ with
             | Yes -> 
-                let (cQ', sigma) = collectSub cQ phat s' in
+                let (cQ', sigma) = collectSub k cQ phat s' in
                   (cQ', I.MVar(r, sigma))
             | No -> 
                 (*  checkEmpty !cnstrs? -bp *)
-                let (cQ0, sigma) = collectSub cQ phat s' in
+                let (cQ0, sigma) = collectSub k cQ phat s' in
                 let cQ' = I.Dec(cQ0, MV(Impure, u)) in
                 let phihat = Context.dctxToHat cPsi in 
-                let (cQ1, cPsi')  = collectDctx cQ' phihat cPsi in 
-                let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
+                let (cQ1, cPsi')  = collectDctx k cQ' phihat cPsi in 
+                let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in 
                 let v = I.MVar (I.Inst (q, cPsi', tA',  c), sigma) in 
                   (I.Dec (cQ'', MV (Pure, v)) , v)
             | Cycle -> raise (Error "Cyclic dependency among meta-variables")
@@ -898,19 +905,19 @@ and collectHead cQ phat ((head, _subst) as sH) =
       if constraints_solved cnstr then
           begin match checkOccurrence (eqMMVar u) cQ with
             | Yes -> 
-                let (cQ0, ms1) = collectMSub cQ ms' in 
+                let (cQ0, ms1) = collectMSub k cQ ms' in 
                 let _ = dprint (fun () ->  "Collect sub (1) \n") in
-                let (cQ', sigma) = collectSub cQ0 phat s' in
+                let (cQ', sigma) = collectSub k cQ0 phat s' in
                   (cQ', I.MMVar(r, (ms1, sigma)))
             | No  ->  (*  checkEmpty !cnstrs ? -bp *)
-                let (cQ0, ms1) = collectMSub cQ ms' in 
+                let (cQ0, ms1) = collectMSub k cQ ms' in 
                 let _ = dprint (fun () ->  "Collect sub (2) \n") in
-                let (cQ2, sigma) = collectSub cQ0 phat s' in
+                let (cQ2, sigma) = collectSub k cQ0 phat s' in
 
                 let cQ' = I.Dec(cQ2, MMV(Impure, u)) in 
                 let phihat = Context.dctxToHat cPsi in 
-                let (cQ1, cPsi')  = collectDctx cQ' phihat cPsi in 
-                let (cQ'', tA') = collectTyp cQ1  phihat (tA, LF.id) in 
+                let (cQ1, cPsi')  = collectDctx k cQ' phihat cPsi in 
+                let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in 
                 let v = I.MMVar (I.MInst (q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in 
                   (I.Dec (cQ'', MMV (Pure, v)) , v)
             | Cycle -> raise (Error "Cyclic dependency among meta^2-variables")
@@ -921,18 +928,24 @@ and collectHead cQ phat ((head, _subst) as sH) =
   | (I.MMVar (I.MInst (_r, _cD, _cPsi, _tA,  _), _),  _s) ->
       raise (Error leftoverMeta2)
 
-  | (I.MVar (I.Offset k, s'), s) ->
-      let (cQ', sigma) = collectSub cQ phat (LF.comp s' s)  in 
-        (cQ', I.MVar (I.Offset k, sigma))
+  | (I.MVar (I.Offset j, s'), s) ->
+      let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s)  in 
+        (cQ', I.MVar (I.Offset j, sigma))
 
   | (I.FPVar (u, s'), _s) ->
       begin match checkOccurrence (eqFPVar u) cQ with
           | Yes -> 
-              let (cQ', sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in 
+              let (cQ', sigma) = collectSub k cQ phat s' (* (LF.comp s' s) *) in 
                 (cQ', I.FPVar (u, sigma))
           | No  -> 
-              let (cQ2, sigma) = collectSub cQ phat s' (* (LF.comp s' s) *) in                
-              let I.PDecl (_, tA, cPhi)  = FCVar.get u in
+              let (cQ2, sigma) = collectSub k cQ phat s' (* (LF.comp s' s) *) in                
+              let (cD_d, I.PDecl (_, tA, cPhi))  = FCVar.get u in
+               let d = k - Context.length cD_d in  
+              let _ = dprint (fun () -> "[collectHead] k = " ^ string_of_int k ^ 
+                                "   |cD_d| = " ^ string_of_int (Context.length  cD_d)) in 
+
+	      let (tA, cPhi) = (if d <= 0 then (tA,cPhi) else 
+                      (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in 
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,
                    there are no context variables; different abstraction
@@ -941,8 +954,8 @@ and collectHead cQ phat ((head, _subst) as sH) =
                 
               let phihat = Context.dctxToHat cPhi in 
               let cQ' = I.Dec(cQ2, FPV(Impure, u, None)) in 
-              let (cQ1, cPhi')  = collectDctx cQ' phihat cPhi in 
-              let (cQ'', tA')   = collectTyp cQ1  phihat (tA, LF.id) in 
+              let (cQ1, cPhi')  = collectDctx k cQ' phihat cPhi in 
+              let (cQ'', tA')   = collectTyp k cQ1  phihat (tA, LF.id) in 
                 (I.Dec (cQ'', FPV (Pure, u, Some (tA', cPhi'))), I.FPVar (u, sigma))
           | Cycle -> raise (Error "Cyclic dependency among free parameter-variables")
         end 
@@ -954,16 +967,16 @@ and collectHead cQ phat ((head, _subst) as sH) =
       if constraints_solved cnstr then
         begin match checkOccurrence (eqPVar p) cQ with
           | Yes -> 
-              let (cQ', sigma) = collectSub cQ phat (LF.comp s' s) in 
+              let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s) in 
                 (cQ', I.PVar (I.PInst (r, cPsi, tA, c), sigma))
             | No -> 
                 (*  checkEmpty !cnstrs ? -bp *)
-                let (cQ2, sigma) = collectSub cQ phat (LF.comp s' s) in               
+                let (cQ2, sigma) = collectSub k cQ phat (LF.comp s' s) in               
                 let cQ' = (I.Dec(cQ2, PV(Impure, p))) in 
                 let psihat = Context.dctxToHat cPsi in 
                   
-                let (cQ1, cPsi')  = collectDctx cQ' psihat cPsi in 
-                let (cQ'', tA') = collectTyp cQ1  psihat (tA, LF.id) in
+                let (cQ1, cPsi')  = collectDctx k cQ' psihat cPsi in 
+                let (cQ'', tA') = collectTyp k cQ1  psihat (tA, LF.id) in
 
                 let p' = I.PVar (I.PInst (r, cPsi', tA', c), sigma) in 
                   (I.Dec (cQ'', PV (Pure, p')) , p')
@@ -972,57 +985,57 @@ and collectHead cQ phat ((head, _subst) as sH) =
       else 
         raise (Error "Leftover constraints during abstraction")
 
-  | (I.PVar (I.Offset k, s'), _s) ->
-      let (cQ', sigma) =  collectSub cQ phat s' (* (LF.comp s' s) *) in 
-        (cQ', I.PVar (I.Offset k, sigma))
+  | (I.PVar (I.Offset k', s'), _s) ->
+      let (cQ', sigma) =  collectSub k cQ phat s' (* (LF.comp s' s) *) in 
+        (cQ', I.PVar (I.Offset k', sigma))
       
 
-  | (I.Proj (head, k),  s) ->
+  | (I.Proj (head, j),  s) ->
       (* let _ = dprint (fun () -> "collectHead Proj\n") in  *)
-      let (cQ', h') = collectHead cQ phat (head, s)  in
-        (cQ' , I.Proj (h', k))
+      let (cQ', h') = collectHead k cQ phat (head, s)  in
+        (cQ' , I.Proj (h', j))
 
 
-and collectTyp cQ ((cvar, offset) as phat) sA = match sA with
+and collectTyp p cQ ((cvar, offset) as phat) sA = match sA with
   | (I.Atom (loc, a, tS), s) ->
-      let (cQ', tS') = collectSpine cQ phat (tS, s) in 
+      let (cQ', tS') = collectSpine p cQ phat (tS, s) in 
         (cQ', I.Atom (loc, a, tS'))
 
   | (I.PiTyp ((I.TypDecl (x, tA), dep ), tB),  s) ->
-      let (cQ', tA')  = collectTyp cQ phat (tA, s) in
-      let (cQ'', tB') = collectTyp cQ' (cvar, offset + 1) (tB, LF.dot1 s) in
+      let (cQ', tA')  = collectTyp p cQ phat (tA, s) in
+      let (cQ'', tB') = collectTyp p cQ' (cvar, offset + 1) (tB, LF.dot1 s) in
         (cQ'', I.PiTyp ((I.TypDecl (x, tA'), dep ), tB'))
 
   | (I.TClo (tA, s'),  s) ->
-      collectTyp cQ phat (tA, LF.comp s' s)
+      collectTyp p cQ phat (tA, LF.comp s' s)
 
   | (I.Sigma typRec,  s) ->
       let _ = dprint (fun () -> "Collect free vars in Sigma type") in 
-      let (cQ', typRec') = collectTypRec cQ phat (typRec, s) in 
+      let (cQ', typRec') = collectTypRec p cQ phat (typRec, s) in 
         (cQ', I.Sigma typRec')
 
 
-and collectTypRec cQ ((cvar, offset) as phat) = function
+and collectTypRec p cQ ((cvar, offset) as phat) = function
   | (I.SigmaLast tA, s) -> 
-      let (cQ', tA') = collectTyp cQ phat (tA, s) in 
+      let (cQ', tA') = collectTyp p cQ phat (tA, s) in 
         (cQ', I.SigmaLast tA')
 
   | (I.SigmaElem(loc, tA, typRec), s) ->
-       let (cQ',tA') = collectTyp cQ phat (tA, s) in
-       let (cQ'', typRec') = collectTypRec cQ' (cvar, offset + 1) (typRec, LF.dot1 s) in 
+       let (cQ',tA') = collectTyp p cQ phat (tA, s) in
+       let (cQ'', typRec') = collectTypRec p cQ' (cvar, offset + 1) (typRec, LF.dot1 s) in 
          (cQ'', I.SigmaElem (loc, tA', typRec'))
 
-and collectKind cQ ((cvar, offset) as phat) sK = match sK with
+and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
   | (I.Typ, _s) ->
       (cQ, I.Typ)
 
   | (I.PiKind ((I.TypDecl (x, tA), dep), tK), s) ->
-      let (cQ', tA') = collectTyp cQ phat (tA, s) in
-      let (cQ'', tK')= collectKind cQ' (cvar, offset + 1) (tK, LF.dot1 s) in 
+      let (cQ', tA') = collectTyp p cQ phat (tA, s) in
+      let (cQ'', tK')= collectKind p cQ' (cvar, offset + 1) (tK, LF.dot1 s) in 
         (cQ'', I.PiKind ((I.TypDecl (x, tA'), dep), tK'))
 
 
-and collectHat cQ phat = match phat with
+and collectHat p cQ phat = match phat with
   | (None, _offset ) -> (cQ, phat)
   | (Some (I.CtxOffset _) , _ ) -> (cQ, phat)
   | (Some (I.CInst ({contents=Some cPsi}, _, _, _ )), k ) -> 
@@ -1031,7 +1044,7 @@ and collectHat cQ phat = match phat with
                   | (Some cvar', i) -> (Some cvar', i+k)
                   end
        in
-         collectHat cQ phat'
+         collectHat p cQ phat'
   | (Some (I.CInst ({contents=None}, _, _, _ ) as psi), _ ) -> 
         begin match checkOccurrence (eqCVar psi) cQ with
           | Yes -> (cQ, phat)
@@ -1043,26 +1056,26 @@ and collectHat cQ phat = match phat with
           | No -> 
               let _ = dprint (fun () -> "[collect_phat] looking up " ^
                                 R.render_name psi ^ " in fcvar ") in 
-              let I.CDecl (_, s_cid, _)  = FCVar.get psi in
+              let (_,I.CDecl (_, s_cid, _))  = FCVar.get psi in
                 (I.Dec (cQ, FCV (psi, Some (s_cid))), 
                  phat)
         end
 
-and collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with 
+and collectDctx p cQ ((cvar, offset) as _phat) cPsi = match cPsi with 
   | I.Null ->  (cQ, I.Null)
 
   | I.CtxVar (I.CtxName psi) -> 
         begin match checkOccurrence (eqFCVar psi) cQ with
           | Yes ->   (cQ , cPsi)
           | No -> 
-              let I.CDecl (_, s_cid, _)  = FCVar.get psi in
+              let (_,I.CDecl (_, s_cid, _))  = FCVar.get psi in
                 (I.Dec (cQ, FCV (psi, Some (s_cid))), 
                  I.CtxVar (I.CtxName psi))
         end
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
 
   | I.CtxVar (I.CInst ({contents = Some cPsi} , _, _cO, _cD)) -> 
-      collectDctx cQ (cvar, offset) cPsi
+      collectDctx p cQ (cvar, offset) cPsi
 
   | I.CtxVar (I.CInst ({contents = None} , _, _cO, _cD) as psi) -> 
         begin match checkOccurrence (eqCVar psi) cQ with
@@ -1070,26 +1083,26 @@ and collectDctx cQ ((cvar, offset) as _phat) cPsi = match cPsi with
           | No ->  (I.Dec (cQ, CV (cPsi)) , cPsi)
         end
   | I.DDec(cPsi, I.TypDecl(x, tA)) ->
-      let (cQ', cPsi') =  collectDctx cQ (cvar, offset - 1) cPsi in 
-      let (cQ'', tA')  =  collectTyp cQ' (cvar, offset - 1) (tA, LF.id) in 
+      let (cQ', cPsi') =  collectDctx p cQ (cvar, offset - 1) cPsi in 
+      let (cQ'', tA')  =  collectTyp p cQ' (cvar, offset - 1) (tA, LF.id) in 
         (cQ'', I.DDec (cPsi', I.TypDecl(x, tA')))
 
 
-let rec collectMctx cQ cD = match cD with
+let rec collectMctx  cQ cD = match cD with
   | I.Empty -> (cQ, I.Empty)
 
   | I.Dec(cD, I.MDecl(u, tA, cPsi)) -> 
       let (cQ', cD')  = collectMctx cQ cD in 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ'', cPsi') = collectDctx cQ' phat cPsi in 
-      let (cQ2, tA')    =  collectTyp cQ'' phat  (tA, LF.id) in 
+      let (cQ'', cPsi') = collectDctx 0 cQ' phat cPsi in 
+      let (cQ2, tA')    =  collectTyp 0 cQ'' phat  (tA, LF.id) in 
         (cQ2, I.Dec(cD', I.MDecl(u, tA', cPsi')))
 
   | I.Dec(cD, I.PDecl(p, tA, cPsi)) -> 
       let (cQ', cD')  = collectMctx cQ cD in 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ'', cPsi') = collectDctx cQ' phat cPsi in 
-      let (cQ2, tA')    = collectTyp cQ'' phat (tA, LF.id) in 
+      let (cQ'', cPsi') = collectDctx 0 cQ' phat cPsi in 
+      let (cQ2, tA')    = collectTyp 0 cQ'' phat (tA, LF.id) in 
         (cQ2,  I.Dec(cD', I.PDecl(p, tA', cPsi')))
 
 
@@ -1622,7 +1635,7 @@ let rec abstrMSub cQ t =
 
 and abstractMSub  t =  
   let _ = dprint (fun () -> "Collecting MSub\n") in 
-  let (cQ, t')  = collectMSub I.Empty t in
+  let (cQ, t')  = collectMSub 0 I.Empty t in
   let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
   let _ = dprint (fun () -> "Collect MSub done\n") in 
   let cQ' = abstractMVarCtx cQ 0 in 
@@ -1648,7 +1661,7 @@ and abstractMSub  t =
 let abstrKind tK =
   (* what is the purpose of phat? *)
   let empty_phat = (None, 0) in
-  let (cQ, tK')      = collectKind I.Empty empty_phat (tK, LF.id) in
+  let (cQ, tK')      = collectKind 0 I.Empty empty_phat (tK, LF.id) in
     begin match cQ with
         Int.LF.Empty -> (tK', 0)
       | _       -> 
@@ -1661,7 +1674,7 @@ let abstrKind tK =
 and abstrTyp tA =
   let empty_phat = (None, 0) in
 
-  let (cQ, tA')       = collectTyp I.Empty empty_phat (tA, LF.id) in
+  let (cQ, tA')       = collectTyp 0 I.Empty empty_phat (tA, LF.id) in
    begin match cQ with 
         Int.LF.Empty -> (tA', 0)
       | _       -> 
@@ -1680,13 +1693,13 @@ and abstrTyp tA =
 let rec collectCDecl cQ cdecl = match cdecl with 
   | I.MDecl (u, tA, cPsi) -> 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
-      let (cQ2, tA')    = collectTyp cQ1 phat (tA, LF.id) in 
+      let (cQ1, cPsi') = collectDctx 0 cQ phat cPsi in 
+      let (cQ2, tA')    = collectTyp 0 cQ1 phat (tA, LF.id) in 
         (cQ2, I.MDecl (u, tA', cPsi') )
   | I.PDecl (u, tA, cPsi) -> 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
-      let (cQ2, tA')    = collectTyp cQ1 phat (tA, LF.id) in 
+      let (cQ1, cPsi') = collectDctx 0 cQ phat cPsi in 
+      let (cQ2, tA')    = collectTyp 0 cQ1 phat (tA, LF.id) in 
         (cQ2, I.PDecl (u, tA', cPsi')) 
   | I.CDecl _ -> (cQ, cdecl)
   
@@ -1698,15 +1711,15 @@ let rec collectCompKind cQ cK = match cK with
       let (cQ'', cK2)    = collectCompKind cQ' cK1 in 
         (cQ'', Comp.PiKind (loc, (cdecl', dep), cK2) )
 
-let rec collect_meta_obj cQ cM = match cM with 
+let rec collect_meta_obj p cQ cM = match cM with 
   | Comp.MetaCtx (loc, cPsi) -> 
       let phat = Context.dctxToHat cPsi in  
-      let (cQ', cPsi') = collectDctx cQ phat cPsi in 
+      let (cQ', cPsi') = collectDctx p cQ phat cPsi in 
         (cQ', Comp.MetaCtx (loc, cPsi'))
   | Comp.MetaObj (loc, phat, tM) -> 
       let _ = dprint (fun () -> "[collect_meta_obj] MetaObj ") in 
-      let (cQ', phat') = collectHat cQ phat in 
-      let (cQ', tM') = collectTerm cQ' phat' (tM, LF.id) in 
+      let (cQ', phat') = collectHat p cQ phat in 
+      let (cQ', tM') = collectTerm p cQ' phat' (tM, LF.id) in 
         (cQ', Comp.MetaObj (loc, phat', tM'))
 (*  | Comp.MetaObjAnn (loc, cPsi, tM) -> 
       let phat = Context.dctxToHat cPsi in 
@@ -1714,66 +1727,66 @@ let rec collect_meta_obj cQ cM = match cM with
       let (cQ'', tM') = collectTerm cQ' phat (tM, LF.id) in 
         (cQ'', Comp.MetaObjAnn (loc, cPsi', tM'))
 *)
-and collect_meta_spine cQ cS = match cS with 
+and collect_meta_spine p cQ cS = match cS with 
   | Comp.MetaNil -> (cQ, Comp.MetaNil)
   | Comp.MetaApp (cM, cS) -> 
-      let (cQ', cM') = collect_meta_obj cQ cM in 
-      let (cQ'', cS') = collect_meta_spine cQ' cS in 
+      let (cQ', cM') = collect_meta_obj p cQ cM in 
+      let (cQ'', cS') = collect_meta_spine p cQ' cS in 
         (cQ'', Comp.MetaApp (cM', cS'))
 
-let rec collectCompTyp cQ tau = match tau with
+let rec collectCompTyp p cQ tau = match tau with
   | Comp.TypBase (loc, a, ms) -> 
-      let (cQ', ms') = collect_meta_spine cQ ms in 
+      let (cQ', ms') = collect_meta_spine p cQ ms in 
         (cQ', Comp.TypBase (loc, a, ms'))
 
   | Comp.TypBox (loc, tA, cPsi) -> 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ', cPsi') = collectDctx cQ phat cPsi in 
-      let (cQ'', tA')  = collectTyp cQ' phat (tA, LF.id) in 
+      let (cQ', cPsi') = collectDctx p cQ phat cPsi in 
+      let (cQ'', tA')  = collectTyp p cQ' phat (tA, LF.id) in 
         (cQ'', Comp.TypBox (loc, tA', cPsi'))
 
   | Comp.TypSub (loc, cPhi, cPsi) -> 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ', cPsi') = collectDctx cQ phat cPsi in 
-      let (cQ'', cPhi') = collectDctx cQ phat cPhi in 
+      let (cQ', cPsi') = collectDctx p cQ phat cPsi in 
+      let (cQ'', cPhi') = collectDctx p cQ phat cPhi in 
         (cQ'', Comp.TypSub (loc, cPhi', cPsi'))
 
   | Comp.TypArr (tau1, tau2) -> 
-      let (cQ1, tau1') = collectCompTyp cQ tau1 in 
-      let (cQ2, tau2') = collectCompTyp cQ1 tau2 in 
+      let (cQ1, tau1') = collectCompTyp p cQ tau1 in 
+      let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in 
         (cQ2, Comp.TypArr (tau1', tau2')) 
 
   | Comp.TypCross (tau1, tau2) -> 
-      let (cQ1, tau1') = collectCompTyp cQ tau1 in 
-      let (cQ2, tau2') = collectCompTyp cQ1 tau2 in 
+      let (cQ1, tau1') = collectCompTyp p cQ tau1 in 
+      let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in 
         (cQ2, Comp.TypCross (tau1', tau2'))
 
   | Comp.TypCtxPi (ctx_dec, tau) -> 
-      let (cQ1, tau') = collectCompTyp cQ tau  in 
+      let (cQ1, tau') = collectCompTyp p cQ tau  in 
         (cQ1, Comp.TypCtxPi (ctx_dec, tau'))
 
   | Comp.TypPiBox ((I.MDecl(u, tA, cPsi), dep ), tau) -> 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
-      let (cQ2, tA')    = collectTyp cQ1 phat (tA, LF.id) in 
-      let (cQ3, tau')  = collectCompTyp cQ2 tau in 
+      let (cQ1, cPsi') = collectDctx p cQ phat cPsi in 
+      let (cQ2, tA')    = collectTyp p cQ1 phat (tA, LF.id) in 
+      let (cQ3, tau')  = collectCompTyp p cQ2 tau in 
         (cQ3 , Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep ), tau'))
 
 
   | Comp.TypPiBox ((I.PDecl(u, tA, cPsi), dep ), tau) -> 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
-      let (cQ2, tA')    = collectTyp cQ1 phat (tA, LF.id) in 
-      let (cQ3, tau')  = collectCompTyp cQ2 tau in 
+      let (cQ1, cPsi') = collectDctx p cQ phat cPsi in 
+      let (cQ2, tA')    = collectTyp p cQ1 phat (tA, LF.id) in 
+      let (cQ3, tau')  = collectCompTyp p cQ2 tau in 
         (cQ3 , Comp.TypPiBox ((I.PDecl(u, tA', cPsi'), dep ), tau'))
 
 
   | Comp.TypPiBox ((I.SDecl(u, cPhi, cPsi), dep ), tau) -> 
       let phat = Context.dctxToHat cPsi in 
       let phat' = Context.dctxToHat cPhi in 
-      let (cQ1, cPsi') = collectDctx cQ phat cPsi in 
-      let (cQ2, cPhi')    = collectDctx cQ1 phat' cPhi in 
-      let (cQ3, tau')  = collectCompTyp cQ2 tau in 
+      let (cQ1, cPsi') = collectDctx p cQ phat cPsi in 
+      let (cQ2, cPhi')    = collectDctx p cQ1 phat' cPhi in 
+      let (cQ3, tau')  = collectCompTyp p cQ2 tau in 
         (cQ3 , Comp.TypPiBox ((I.SDecl(u, cPhi', cPsi'), dep ), tau'))
 
   | Comp.TypBool  -> (cQ, tau)
@@ -1785,7 +1798,7 @@ let rec collectGctx cQ cG = match cG with
   | I.Empty -> (cQ, I.Empty)
   | I.Dec (cG, Comp.CTypDecl (x, tau)) -> 
       let (cQ1, cG') = collectGctx cQ cG in 
-      let (cQ2, tau') = collectCompTyp cQ1 tau in 
+      let (cQ2, tau') = collectCompTyp 0 cQ1 tau in 
         (cQ2, I.Dec (cG', Comp.CTypDecl (x, tau')))
 
 let rec collectExp cQ e = match e with 
@@ -1825,14 +1838,14 @@ let rec collectExp cQ e = match e with
         (cQ', Comp.CtxFun (loc, psi, e'))
 
   | Comp.Box (loc, phat, tM) -> 
-      let (cQ', phat') = collectHat cQ phat in 
-      let (cQ'', tM') = collectTerm  cQ'  phat' (tM, LF.id)  in 
+      let (cQ', phat') = collectHat 0 cQ phat in 
+      let (cQ'', tM') = collectTerm 0 cQ'  phat' (tM, LF.id)  in 
         (cQ'', Comp.Box (loc, phat', tM') )
 
 
   | Comp.SBox (loc, phat, sigma) -> 
-      let (cQ', phat') = collectHat cQ phat in 
-      let (cQ'', sigma') = collectSub  cQ'  phat' sigma  in 
+      let (cQ', phat') = collectHat 0 cQ phat in 
+      let (cQ'', sigma') = collectSub 0 cQ'  phat' sigma  in 
         (cQ'', Comp.SBox (loc, phat', sigma') )
 
   | Comp.Case (loc, prag, i, branches) -> 
@@ -1858,25 +1871,25 @@ and collectExp' cQ i = match i with
   | Comp.CtxApp (loc, i, cPsi) -> 
       let (cQ', i') = collectExp' cQ i  in 
       let phat = Context.dctxToHat cPsi in 
-      let (cQ'', cPsi') = collectDctx cQ' phat cPsi in 
+      let (cQ'', cPsi') = collectDctx 0 cQ' phat cPsi in 
         (cQ'', Comp.CtxApp (loc, i', cPsi'))
 
   | Comp.MApp (loc, i, (phat, cObj)) -> 
       let (cQ', i') = collectExp' cQ i  in 
-      let (cQ', phat') = collectHat cQ' phat in 
+      let (cQ', phat') = collectHat 0 cQ' phat in 
       let (cQ'', cObj') = begin match cObj with 
                               | Comp.NormObj tM -> 
-                                  let (cQ'', tM') = collectTerm cQ' phat' (tM, LF.id)  in (cQ'', Comp.NormObj tM') 
+                                  let (cQ'', tM') = collectTerm 0 cQ' phat' (tM, LF.id)  in (cQ'', Comp.NormObj tM') 
                               | Comp.NeutObj h  -> 
-                                  let (cQ'', h')  = collectHead cQ' phat' (h, LF.id)   in (cQ'', Comp.NeutObj h')
+                                  let (cQ'', h')  = collectHead 0 cQ' phat' (h, LF.id)   in (cQ'', Comp.NeutObj h')
                               | Comp.SubstObj s -> 
-                                  let (cQ'', s')  = collectSub cQ' phat' s             in (cQ'', Comp.SubstObj s')
+                                  let (cQ'', s')  = collectSub 0 cQ' phat' s             in (cQ'', Comp.SubstObj s')
                          end in 
         (cQ'', Comp.MApp (loc, i', (phat', cObj')))
 
   | Comp.Ann  (e, tau) -> 
       let (cQ', e') = collectExp cQ e in 
-      let (cQ'', tau') = collectCompTyp cQ' tau in 
+      let (cQ'', tau') = collectCompTyp 0 cQ' tau in 
         (cQ'', Comp.Ann  (e', tau'))
 
   | Comp.Equal (loc, i1, i2) -> 
@@ -1889,7 +1902,7 @@ and collectExp' cQ i = match i with
 
 and collectPatObj cQ pat = match pat with
   | Comp.PatEmpty (loc, cPsi) -> 
-      let (cQ1, cPsi') = collectDctx cQ (Context.dctxToHat cPsi) cPsi in 
+      let (cQ1, cPsi') = collectDctx 0 cQ (Context.dctxToHat cPsi) cPsi in 
         (cQ1, Comp.PatEmpty (loc, cPsi'))
   | Comp.PatFVar (loc, x) -> (cQ, pat)      
   | Comp.PatVar  (loc, x) -> (cQ, pat)      
@@ -1903,13 +1916,13 @@ and collectPatObj cQ pat = match pat with
       let _ = dprint (fun () -> "[collectPatObj] PatAnn - pat  ") in 
       let (cQ1, pat') = collectPatObj cQ pat in 
       let _ = dprint (fun () -> "[collectPatObj] PatAnn - pat done ") in 
-      let (cQ2, tau') = collectCompTyp cQ1 tau in 
+      let (cQ2, tau') = collectCompTyp 0 cQ1 tau in 
         (cQ2, Comp.PatAnn (loc, pat', tau'))
   | Comp.PatConst (loc, c, pat_spine) -> 
       let (cQ1, pat_spine') = collectPatSpine cQ pat_spine in 
         (cQ1, Comp.PatConst (loc, c, pat_spine'))
   | Comp.PatMetaObj (loc, cM) -> 
-      let (cQ, cM') = collect_meta_obj cQ cM in 
+      let (cQ, cM') = collect_meta_obj 0 cQ cM in 
         (cQ, Comp.PatMetaObj (loc, cM'))
 
 and collectPatSpine cQ pat_spine = match pat_spine with
@@ -1925,14 +1938,14 @@ and collectPattern cQ cD cPsi (phat, tM) tA =
 (*   let _    = Printf.printf "Start Collection of cPsi -- cQ1 =\n" *)
 (*  (   P.dctxToString cPsi) *)
 (*  let _   = printCollection cQ1 in   *)
-  let (cQ2, cPsi') = collectDctx cQ1 phat cPsi in 
+  let (cQ2, cPsi') = collectDctx 0 cQ1 phat cPsi in 
 (*  let _ = Printf.printf "\ncQ2 (collection of cPsi)\n" in 
   let _   = printCollection cQ2 in  *)
-  let (cQ2', phat') = collectHat cQ2 phat in 
-  let (cQ3, tM') = collectTerm cQ2' phat' (tM, LF.id) in 
+  let (cQ2', phat') = collectHat 0 cQ2 phat in 
+  let (cQ3, tM') = collectTerm 0 cQ2' phat' (tM, LF.id) in 
 (*  let _ = Printf.printf "\ncQ3 (collection of cPsi)\n" in
    let _   = printCollection cQ3 in   *)
-  let (cQ4, tA') = collectTyp cQ3 phat' (tA, LF.id) in 
+  let (cQ4, tA') = collectTyp 0 cQ3 phat' (tA, LF.id) in 
 (*   let _ = Printf.printf "cQ4 (collection of cPsi)\n" in 
   let _   = printCollection cQ4 in   *)
     (cQ4, cD', cPsi', (phat', tM'), tA')
@@ -1942,9 +1955,9 @@ and collectPattern cQ cD cPsi (phat, tM) tA =
 and collectSubPattern cQ cD cPsi sigma cPhi = 
   let (cQ1, cD')    = collectMctx cQ cD in 
   let phat = Context.dctxToHat cPsi in 
-  let (cQ2, cPsi')  = collectDctx cQ1 phat cPsi in 
-  let (cQ3, cPhi')  = collectDctx cQ2 phat cPhi in 
-  let (cQ4, sigma') = collectSub  cQ3 phat sigma in 
+  let (cQ2, cPsi')  = collectDctx 0 cQ1 phat cPsi in 
+  let (cQ3, cPhi')  = collectDctx 0 cQ2 phat cPhi in 
+  let (cQ4, sigma') = collectSub  0 cQ3 phat sigma in 
 
     (cQ4, cD', cPsi', sigma', cPhi')
 
@@ -2230,8 +2243,8 @@ let rec abstrCompTyp tau =
   in 
   let (cQ, tau')  = roll tau I.Empty in 
   let l'           = lengthCollection cQ in 
-  let p = prefixCompTyp tau' in (* p = number of explicitely mvars *) 
-  let (cQ, tau1)  = collectCompTyp cQ tau' in 
+  let p = prefixCompTyp tau' in (* p = number of explicitely declared mvars *) 
+  let (cQ, tau1)  = collectCompTyp (l'+p) cQ tau' in 
   let k           = lengthCollection cQ in 
   let l           = (k - l') in 
   let _ = dprint (fun () -> "\n[collectCompTyp] done : l' = " ^ string_of_int l' ^
@@ -2258,7 +2271,7 @@ let rec abstrPatObj cD cG pat tau =
   let _ = dprint (fun () -> "[collectGctx] done") in 
   let (cQ3, pat') = collectPatObj cQ2 pat in 
   let _ = dprint (fun () -> "[collectPatObj] done") in 
-  let (cQ, tau') = collectCompTyp cQ3 tau in 
+  let (cQ, tau') = collectCompTyp 0 cQ3 tau in 
   let _ = dprint (fun () -> "[collectCompTyp] done") in 
   let cQ'     = abstractMVarCtx cQ 0 in 
   let _ = dprint (fun () -> "[abstractMVarCtx] done") in 
@@ -2338,9 +2351,9 @@ let rec abstrSchema (I.Schema elements) =
     | [] -> []
     | Int.LF.SchElem (cPsi, trec) ::els ->         
         let cPsi0 = Context.projectCtxIntoDctx cPsi in 
-        let (cQ, cPsi0') = collectDctx I.Empty (Context.dctxToHat I.Null) cPsi0 in 
+        let (cQ, cPsi0') = collectDctx 0 I.Empty (Context.dctxToHat I.Null) cPsi0 in 
         let (_, l) as phat = Context.dctxToHat cPsi0 in 
-        let (cQ, trec') = collectTypRec cQ phat (trec, LF.id) in 
+        let (cQ, trec') = collectTypRec 0 cQ phat (trec, LF.id) in 
         let cQ' = abstractCtx cQ in 
 
         let cPsi' = abstractDctx cQ' cPsi0'  l in 
@@ -2385,17 +2398,17 @@ let rec abstrBranch (cPsi1, (phat, tM), tA) e r =
 
 
 let rec printFreeMVars phat tM = 
-  let (cQ, _ ) = collectTerm I.Empty  phat (tM, LF.id) in 
+  let (cQ, _ ) = collectTerm 0 I.Empty  phat (tM, LF.id) in 
     printCollection cQ
 
 
-let collectTerm' (phat, tM ) = collectTerm I.Empty  phat (tM, LF.id) 
+let collectTerm' (phat, tM ) = collectTerm 0 I.Empty  phat (tM, LF.id) 
 
 let rec fvarInCollection cQ = begin match cQ with
   | I.Empty -> false
   | I.Dec(_cQ, FV (_, _, None)) ->  true
   | I.Dec(cQ, FV (_, _, Some (tA))) -> 
-       let (cQ',_ ) = collectTyp I.Empty (None, 0) (tA, LF.id) in 
+       let (cQ',_ ) = collectTyp 0 I.Empty (None, 0) (tA, LF.id) in 
          begin match cQ' with 
              Int.LF.Empty -> (print_string "empty" ; fvarInCollection cQ)
            | _ -> true
@@ -2408,18 +2421,18 @@ end
 
 
 let closedTyp (cPsi, tA) = 
-  let (cQ1, _ ) = collectDctx I.Empty (None, 0) cPsi in 
-  let (cQ2, _ ) = collectTyp cQ1 (Context.dctxToHat cPsi) (tA, LF.id) in 
+  let (cQ1, _ ) = collectDctx 0 I.Empty (None, 0) cPsi in 
+  let (cQ2, _ ) = collectTyp 0 cQ1 (Context.dctxToHat cPsi) (tA, LF.id) in 
     not (fvarInCollection cQ2)
 
 
 (* We abstract over the MVars in cPsi, tM, and tA *)
 let abstrCovGoal cPsi tM tA ms = 
   let phat = Context.dctxToHat cPsi in 
-  let (cQ0 , ms') = collectMSub I.Empty ms in 
-  let (cQ1, cPsi') = collectDctx cQ0 phat cPsi in 
-  let (cQ2, tA') = collectTyp cQ1 phat (tA, LF.id) in 
-  let (cQ3, tM')   = collectTerm cQ2 phat (tM, LF.id) in 
+  let (cQ0 , ms') = collectMSub 0 I.Empty ms in 
+  let (cQ1, cPsi') = collectDctx 0 cQ0 phat cPsi in 
+  let (cQ2, tA') = collectTyp 0 cQ1 phat (tA, LF.id) in 
+  let (cQ3, tM')   = collectTerm 0 cQ2 phat (tM, LF.id) in 
 
 
   let cQ'     = abstractMVarCtx cQ3 0 in 

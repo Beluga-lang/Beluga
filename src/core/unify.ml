@@ -780,12 +780,18 @@ let disallowUndefineds f =
           end 
 
     | (Root (loc, FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
-        let MDecl(_, _tA, cPsi1) = Store.FCVar.get u in 
+        let (cD_d, MDecl(_, _tA, cPsi1)) = Store.FCVar.get u in 
+	let d = Context.length cD0 - Context.length cD_d in 
+	let cPsi1 = if d = 0 then cPsi1 else 
+	   Whnf.cnormDCtx (cPsi1, MShift d) in 
         let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
           Root (loc, FMVar (u, s'), Nil)
 
     | (Root (loc, FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
-        let PDecl (_, _tA, cPsi1) = Store.FCVar.get p in 
+        let (cD_d, PDecl (_, _tA, cPsi1)) = Store.FCVar.get p in 
+	let d = Context.length cD0 - Context.length cD_d in 
+	let cPsi1 = if d = 0 then cPsi1 else 
+	  Whnf.cnormDCtx (cPsi1, MShift d) in 
         let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
           Root (loc, FPVar (p, s'), Nil)
 
@@ -1307,12 +1313,18 @@ let disallowUndefineds f =
                 end 
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
-                let MDecl (_, _tA, cPsi1) = Store.FCVar.get u in 
+                let (cD_d, MDecl (_, _tA, cPsi1)) = Store.FCVar.get u in 
+                let d = Context.length cD0 - Context.length cD_d in 
+	        let cPsi1 = if d = 0 then cPsi1 else 
+	          Whnf.cnormDCtx (cPsi1, MShift d) in 
                 let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                   returnNeutral (FMVar (u, s'))
                     
             | FPVar (p, t)   (* tS = Nil,   s = id *) ->
-                let PDecl (_, _tA, cPsi1) = Store.FCVar.get p in 
+                let (cD_d, PDecl (_, _tA, cPsi1)) = Store.FCVar.get p in 
+                let d = Context.length cD0 - Context.length cD_d in 
+	        let cPsi1 = if d = 0 then cPsi1 else 
+	          Whnf.cnormDCtx (cPsi1, MShift d) in 
                 let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                   returnNeutral (FPVar (p, s'))
                     
@@ -1370,7 +1382,10 @@ let disallowUndefineds f =
                         
             | Proj (FPVar(p,t), i)   (* tS = Nil,   s = id *) ->
                 begin try
-                  let PDecl (_, _tA, cPsi1) = Store.FCVar.get p in 
+                  let (cD_d, PDecl (_, _tA, cPsi1)) = Store.FCVar.get p in 
+                  let d = Context.length cD0 - Context.length cD_d in 
+	          let cPsi1 = if d = 0 then cPsi1 else 
+	                        Whnf.cnormDCtx (cPsi1, MShift d) in 
                   let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                     returnNeutral (Proj (FPVar(p,s'), i))
                 with

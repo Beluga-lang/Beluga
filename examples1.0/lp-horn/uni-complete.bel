@@ -13,7 +13,7 @@ mlam g => fn cn => case cn of
 
 |[g. can_truei] => [g. s_true]
 
-| % {D::(pf (atom (P ..)))[g]} 
+| {D:[g. pf (atom (P ..))]} 
   % {AT1::(atm (D ..))[g]}
   [g. can_atm (AT1 ..)] => 
   let [g,q:p,u:focus (A ..) q. I1 .. q u] = cmpai [g] [g . D .. ] [g. AT1 .. ] in
@@ -30,8 +30,8 @@ mlam g => fn cn => case cn of
      [g] s_imp (\v. S1 .. v )
 }%
 
-and cmpai: {g:c_ctx}{D:[g. pf (A ..)]}[g. atm (D ..)] -> 
-	       [g, q:p, u:focus (A ..) q. solve (atom q)] = 
+and cmpai: {g:c_ctx}{E:[g. pf (B ..)]}[g. atm (E ..)] -> 
+	       [g, q:p, u:focus (B ..) q . solve (atom q)] = 
 mlam g => mlam D => fn at => case [g. D .. ] of 
   | [g. #p.2 ..] => [g,q,u. s_atom u (#p.1 ..)] 
   | [g. andel (D1 .. )] =>

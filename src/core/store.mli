@@ -186,8 +186,8 @@ end
 module FCVar : sig
 
    (* NOTE: FCVars are stored in an an ordered data structure *)  
-  val add   : name -> LF.ctyp_decl  -> unit
-  val get   : name -> LF.ctyp_decl
+  val add   : name -> (LF.mctx * LF.ctyp_decl)  -> unit
+  val get   : name -> (LF.mctx * LF.ctyp_decl)
   val clear : unit -> unit
 end
 

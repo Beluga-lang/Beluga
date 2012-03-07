@@ -124,7 +124,7 @@ and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
             (match Context.ctxVar cPsi with 
                | None -> ()
                | Some (Int.LF.CtxName psi) -> 
-                   FCVar.add psi (Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
+                   FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
                | _ -> ()
             )
       | (cPsi , Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref, s_cid, _cO, _cD) )) -> 
@@ -132,7 +132,7 @@ and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
             (match Context.ctxVar cPsi with 
                | None -> ()
                | Some (Int.LF.CtxName psi) -> 
-                   FCVar.add psi (Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
+                   FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
                | _ -> ()
             )
 
@@ -254,14 +254,14 @@ let rec elDCtxAgainstSchema recT cD psi s_cid = match psi with
   | Apx.LF.CtxVar (Apx.LF.CtxName psi ) -> 
       (* This case should only be executed when c_var occurs in a pattern *)
       begin try
-        let Int.LF.CDecl (_, s_cid', _ ) = FCVar.get psi in 
+        let (_ , Int.LF.CDecl (_, s_cid', _ )) = FCVar.get psi in 
           if s_cid = s_cid' then Int.LF.CtxVar (Int.LF.CtxName psi)
           else
             (let schema = Schema.get_schema s_cid in 
              let c_var' = Int.LF.CtxName psi in 
                raise (Error.Error (None, Error.CtxVarMismatch (cD, c_var', schema))))
       with Not_found -> 
-        (FCVar.add psi (Int.LF.CDecl (psi, s_cid, Int.LF.No));
+        (FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No));
          Int.LF.CtxVar (Int.LF.CtxName psi))
       end
   | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
@@ -502,9 +502,13 @@ let rec elCompTyp cD tau = match tau with
       end 
 
   | Apx.Comp.TypBox (loc, a, psi) ->
+      let _ = dprint (fun () -> "[elCompTyp] TypBox" ) in 
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
+      let _ = dprint (fun () -> "[elCompTyp] TypBox - cPsi = " ^ P.dctxToString cD cPsi) in 
       let tA   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
-        Int.Comp.TypBox (Some loc, tA, cPsi)
+      let tT = Int.Comp.TypBox (Some loc, tA, cPsi) in 
+        (dprint (fun () -> "[elCompTyp] " ^ P.compTypToString cD tT);
+         tT)
 
   | Apx.Comp.TypSub (loc, psi, phi) -> 
       let cPsi = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
@@ -1216,7 +1220,7 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
                               ^ R.render_name psi ^ " with schema " ^ 
                               R.render_cid_schema s_cid ^ 
                               " to FCVar");
-                   FCVar.add psi (Int.LF.CDecl (psi, s_cid, Int.LF.No)))
+                   FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No)))
             )
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , _tA1)) , Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , _tA2))) ->  

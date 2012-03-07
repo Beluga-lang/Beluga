@@ -1029,7 +1029,6 @@ and elExp' cD cG i = match i with
           | (Int.Comp.TypPiBox ((Int.LF.PDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
               let cPsi    = C.cnormDCtx (cPsi, theta) in
               begin try 
-                let foo = 3 in
                let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
                let _     = Unify.unifyDCtx cD cPsi cPsi' in 
                let psihat' = Context.dctxToHat cPsi'  in

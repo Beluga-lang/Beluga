@@ -4,6 +4,11 @@
 % If M => N then M -->* N.
 schema ctx = block x:term, _t:pred x x; 
 
+rec best_step: {g:ctx}[g. -->* (app (lam \x. M1' .. x) (M2' ..)) (M1' .. (M2' ..))] = 
+mlam g => [g . step1 beta1 id1]
+;
+
+
 rec eq1: {g:ctx} [g. pred (M ..) (N ..)] -> [g. -->* (M ..) (N ..)] = 
 mlam g => fn r => case r of 
 | [g. #p.2 ..] => [g. id1]

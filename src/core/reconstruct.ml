@@ -592,33 +592,6 @@ let rec inferPatTyp cD' tau = match tau with
 let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
-  | (Apx.Comp.Syn (loc, i), (tau,t)) ->
-      let _ = dprint (fun () -> "[elExp] Syn") in 
-      let _ = dprint (fun () -> "[elExp] cG = " ^ 
-                        P.mctxToString cD ^ " |- " ^ P.gctxToString cD cG) in 
-      let (i1,tau1) = elExp' cD cG i in 
-      let _ = dprint (fun () -> "[elExp] Syn i = " ^ P.expSynToString cD cG i1) in
-      let _ = dprint (fun () -> "[elExp] Syn done: " ^ 
-                        P.mctxToString cD ^ " |- " ^
-                        P.compTypToString cD (Whnf.cnormCTyp tau1))  in 
-      let (i', tau_t') = genMApp loc cD (i1, tau1) in 
-      let _ = dprint (fun () -> "[elExp] Unify computation-level types: \n" ^
-                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ " == "
-                        ^ 
-                        P.compTypToString cD (Whnf.cnormCTyp (tau,t) )) in 
-        begin try
-          dprint (fun () -> "Unifying computation-level types\n") ; 
-          Unify.unifyCompTyp cD (tau, t) (tau_t');
-          dprint (fun () -> "Unified computation-level types\n") ; 
-          dprint (fun () -> "     " ^
-                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ " == "
-                        ^ 
-                        P.compTypToString cD (Whnf.cnormCTyp (tau,t)) ^ "\n") ;
-          Int.Comp.Syn (Some loc, i')
-        with _ -> 
-          raise (Error.Error (Some loc, Error.CompSynMismatch (cD, (tau,t), tau_t')))
-        end 
-
   | (Apx.Comp.Fun (loc, x, e), (Int.Comp.TypArr (tau1, tau2), theta)) ->
       let e' = elExp cD (Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Int.Comp.TypClo (tau1, theta)))) e (tau2, theta) in
         Int.Comp.Fun (Some loc, x, e')
@@ -677,6 +650,35 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in 
       let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (None,u' , e')
+
+
+  | (Apx.Comp.Syn (loc, i), (tau,t)) ->
+      let _ = dprint (fun () -> "[elExp] Syn") in 
+      let _ = dprint (fun () -> "[elExp] cG = " ^ 
+                        P.mctxToString cD ^ " |- " ^ P.gctxToString cD cG) in 
+      let (i1,tau1) = elExp' cD cG i in 
+      let _ = dprint (fun () -> "[elExp] Syn i = " ^ P.expSynToString cD cG i1) in
+      let _ = dprint (fun () -> "[elExp] Syn done: " ^ 
+                        P.mctxToString cD ^ " |- " ^
+                        P.compTypToString cD (Whnf.cnormCTyp tau1))  in 
+      let (i', tau_t') = genMApp loc cD (i1, tau1) in 
+      let _ = dprint (fun () -> "[elExp] Unify computation-level types: \n" ^
+                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ " == "
+                        ^ 
+                        P.compTypToString cD (Whnf.cnormCTyp (tau,t) )) in 
+        begin try
+          dprint (fun () -> "Unifying computation-level types\n") ; 
+          Unify.unifyCompTyp cD (tau, t) (tau_t');
+          dprint (fun () -> "Unified computation-level types\n") ; 
+          dprint (fun () -> "     " ^
+                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ " == "
+                        ^ 
+                        P.compTypToString cD (Whnf.cnormCTyp (tau,t)) ^ "\n") ;
+          Int.Comp.Syn (Some loc, i')
+        with _ -> 
+          raise (Error.Error (Some loc, Error.CompSynMismatch (cD, (tau,t), tau_t')))
+        end 
+
 
   | (Apx.Comp.Pair(loc, e1, e2), (Int.Comp.TypCross (tau1, tau2), theta)) ->
       let e1' = elExp cD cG e1 (tau1, theta) in

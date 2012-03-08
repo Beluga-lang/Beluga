@@ -992,11 +992,13 @@ module Int = struct
               (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, dep'))) 0) tau
               (r_paren_if cond)
 
-      | Comp.TypPiBox ((ctyp_decl, _ ), tau) ->
+      | Comp.TypPiBox ((ctyp_decl, dep ), tau) ->
+          let d = match dep with Comp.Explicit -> "^e" | Comp.Implicit -> "^i" in 
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ %a%s"
+            fprintf ppf "%s%a%s@ %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
+              d
               (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
               (r_paren_if cond)
 

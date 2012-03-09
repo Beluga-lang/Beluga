@@ -2,13 +2,13 @@
 %%% Author: Frank Pfenning
 %%% Adapted: Brigitte Pientka
 
-schema i_ctx = some [a:o] block u:pf a , ta:toatm u u , _t:atm u + i;
+schema i_ctx = some [a:o] block u:pf a , ta:toatm a u u , _t:atm u + i;
 
-rec iscan : {g:i_ctx} [g. tocan (A ..) (D ..) (D' ..)] -> [g. can (A ..) (D' ..)] = 
-mlam g => fn tc => case tc of 
+rec iscan : (g:i_ctx) [g. tocan (A ..) (D ..) (D' ..)] -> [g. can (A ..) (D' ..)] = 
+fn tc => case tc of 
 |[g. tc_and (TC2 ..) (TC1 ..)] => 
- let [g. CN1 ..] = iscan [g] [g. TC1 ..] in 
- let [g. CN2 ..] = iscan [g] [g. TC2 ..] in 
+ let [g. CN1 ..] = iscan [g. TC1 ..] in 
+ let [g. CN2 ..] = iscan [g. TC2 ..] in 
    [g. can_andi (CN2 ..) (CN1 ..)]
 
 |[g. tc_true] => [g. can_truei]
@@ -28,32 +28,32 @@ mlam g => fn tc => case tc of
 }%
 
 |[g. tc_whr (TC1 ..) (WHR ..)] => 
-   iscan [g] [g. TC1 .. ]
+   iscan [g. TC1 .. ]
 
 |[g. tc_atm (TA1 .. )] => 
- let [g. AT1 ..] = isatm [g] [g. TA1 .. ] in 
+ let [g. AT1 ..] = isatm [g. TA1 .. ] in 
    [g. can_atm (AT1 .. )]
 
-and isatm : {g:i_ctx} [g. toatm (D ..) (D' ..)]   -> [g. atm (D' ..)] = 
-mlam g => fn ta => case ta of 
+and isatm : (g:i_ctx) [g. toatm (A ..) (D ..) (D' ..)]   -> [g. atm (D' ..)] = 
+fn ta => case ta of 
 | [g. #p.2 ..] => [g. #p.3 ..] 
-|[g. ta_andel (TA1 ..)] => 
- let [g. AT1 ..] = isatm [g] [g. TA1 ..] in 
+| [g. ta_andel (TA1 ..)] => 
+ let [g. AT1 ..] = isatm [g. TA1 ..] in 
    [g. atm_andel (AT1..)]
 
 |[g. ta_ander (TA1 ..)] =>
- let [g. AT1 ..] = isatm [g] [g. TA1 ..] in 
+ let [g. AT1 ..] = isatm [g. TA1 ..] in 
   [g. atm_ander (AT1 ..)]
 
 |[g. ta_impe (TC2 .. ) (TA1 ..)] => 
- let [g. AT1 ..] = isatm [g] [g. TA1 ..] in 
- let [g. CN2 ..] = iscan [g] [g. TC2 ..] in 
+ let [g. AT1 ..] = isatm [g. TA1 ..] in 
+ let [g. CN2 ..] = iscan [g. TC2 ..] in 
   [g. atm_impe (CN2 ..) (AT1 ..)] 
 
 |[g. ta_foralle (TA1 .. )] => 
- let [g. AT1 ..] = isatm [g] [g. TA1 ..] in 
+ let [g. AT1 ..] = isatm [g. TA1 ..] in 
  [g. atm_foralle (AT1 ..)]
 ;
 		   
 rec iscan_thm : [. tocan A D D'] -> [. can A D'] = 
-fn tc => iscan [ ] tc ;
+fn tc => iscan tc ;

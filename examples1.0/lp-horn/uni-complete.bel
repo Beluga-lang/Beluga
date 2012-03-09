@@ -13,11 +13,8 @@ mlam g => fn cn => case cn of
 
 |[g. can_truei] => [g. s_true]
 
-| {D:[g. pf (atom (P ..))]} 
-  % {AT1::(atm (D ..))[g]}
-  [g. can_atm (AT1 ..)] => 
-  let [g,q:p,u:focus (A ..) q. I1 .. q u] = cmpai [g] [g . D .. ] [g. AT1 .. ] in
-%    [g] I1 .. (P ..) (i_atom)
+| [g. can_atm (AT1 ..)] => 
+  let [g,q:p,u:focus (A ..) q. I1 .. q u] = cmpai [g] [g . _ ] [g. AT1 .. ] in
     [g. I1 .. _ (i_atom)]
 
 %{ % This case is only not necessary for the Horn fragment 

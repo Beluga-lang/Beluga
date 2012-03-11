@@ -21,7 +21,7 @@ fn d => fn e => case d of
 | [g, x:term, u:pred x x. lm \y.\v. R1 .. y v x u] => 
   let [g. S ..] = e in 
   let [g,b:block y:term, _t:pred y y. R1' .. b] = 
-    subst [g, b:block y:term, _t:pred y y, x:term, u:pred x x. R1 .. b.1 b.2 x u] 
+    subst [g, b:block (y:term, _t:pred y y), x:term, u:pred x x. R1 .. b.1 b.2 x u] 
           [g, b. S .. ] 
   in 
    [g. lm \y.\v. R1' .. <y,v>]
@@ -30,7 +30,7 @@ fn d => fn e => case d of
   let [g. R2' ..] = subst [g, x, u. R2 .. x u] e in 
   let [g. S ..] = e in 
   let [g, b:block y:term,_t:pred y y. R1' .. b] = 
-      subst [g, b:block y:term,_t:pred y y, x:term, u:pred x x. R1 .. b.1 b.2 x u] [g, b. S ..] in 
+      subst [g, b:block (y:term,_t:pred y y), x:term, u:pred x x. R1 .. b.1 b.2 x u] [g, b. S ..] in 
   [g. beta (\y.\v. R1' .. <y,v>) (R2' ..)]
 
 ;

@@ -111,9 +111,9 @@ module Comp = struct
 
 and checkMetaSpine cD mS cKt  = match (mS, cKt) with 
   | (MetaNil , (Ctype _ , _ )) -> ()
-  | (MetaApp (mO, mS), (PiKind (_, (cdecl, Explicit), cK) , t)) -> 
+  | (MetaApp (mO, mS), (PiKind (_, (cdecl, _ ), cK) , t)) -> 
       begin match cdecl with 
-        | I.CDecl (_psi, schema_cid, I.No) -> 
+        | I.CDecl (_psi, schema_cid, _ ) -> 
             let MetaCtx (_, cPsi) = mO in 
             let theta' = Ctxsub.csub_msub cPsi 1 t in
             let cK'   = Ctxsub.csub_ckind cD cPsi 1 cK in               
@@ -175,9 +175,15 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
         let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in 
         checkTyp (I.Dec (cD, I.CDecl (psi_name, schema_cid, dep'))) tau
           
-    | TypPiBox ((cdecl, _), tau) ->
+    | TypPiBox ((cdecl, _), tau') ->
+        dprint (fun () -> "[checkCompTyp] " ^ 
+                  P.mctxToString cD ^ " |- " ^ 
+                  P.compTypToString cD tau);
         checkCDecl cD cdecl;
-        checkTyp (I.Dec (cD, cdecl)) tau 
+        dprint (fun () -> "[checkCompTyp] " ^ 
+                  P.mctxToString (I.Dec (cD, cdecl)) ^ " |- " ^ 
+                  P.compTypToString (I.Dec (cD, cdecl)) tau');
+        checkTyp (I.Dec (cD, cdecl)) tau' 
 
     | TypBool -> ()
 

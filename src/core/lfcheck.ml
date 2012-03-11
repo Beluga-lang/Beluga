@@ -132,6 +132,8 @@ let rec ctxShift cPsi = begin match cPsi with
 			      P.dctxToString cD cPsi ^ " |- " ^ 
 			      P.normalToString cD cPsi sM ^ 
                               " => " ^ P.typToString cD cPsi sP ) in
+	    let _ = dprint (fun () -> "       against " ^ 
+			      P.typToString cD cPsi sA) in
             let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in 
               if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then 
                 (dprint (fun () -> "here!") ; 

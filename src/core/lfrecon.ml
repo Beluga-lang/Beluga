@@ -57,13 +57,13 @@ let rec pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
     with _ -> raise (Error.Error (locOpt, Error.PruningFailed) )
     end 
 
-let rec unify_phat psihat ctx_var = 
-  match ctx_var with
+let rec unify_phat psihat phihat = 
+  match phihat with
     | (Some (Int.LF.CInst ({contents = None} as cref, _, _, _ )), d) -> 
         begin match psihat with 
           | (Some (Int.LF.CInst ({contents = None} as cref', _, _, _) as c_var) , d') -> 
 	      if cref == cref' then 
-		(if d = d' then true  else false)
+		d = d'
 	      else 
 		(cref := Some (Int.LF.CtxVar (c_var))  ; true)
           | ((Some (c_var)) , d') -> 
@@ -80,7 +80,7 @@ let rec unify_phat psihat ctx_var =
                  raise NotImplemented)
         end 
 
-    | _ ->  (psihat = ctx_var)
+    | _ ->  (psihat = phihat)
 
 (* ******************************************************************* *)
 

@@ -374,6 +374,7 @@ let rec mcomp t1 t2 = match (t1, t2) with
 *)
 and mfrontMSub ft t = match ft with
   | MObj (phat, tM)     -> 
+        (* apply cnorm_psihat (phat, t) -bp ! *)
         MObj (phat, cnorm(tM, t))
 
   | PObj (_phat, PVar (Offset k, s))  -> 
@@ -1291,7 +1292,7 @@ and cnorm (tM, t) = match tM with
 
     | CtxVar (CtxOffset psi) -> 
         begin match LF.applyMSub psi t with
-          | CObj (cPsi') -> cPsi'
+          | CObj (cPsi') -> normDCtx cPsi'
           | MV k -> CtxVar (CtxOffset k)
         end
 

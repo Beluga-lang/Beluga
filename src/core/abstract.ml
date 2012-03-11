@@ -129,6 +129,11 @@ let rec prefixCompTyp tau = match tau with
   | Comp.TypPiBox (_, tau) -> 1 + prefixCompTyp tau
   | _ -> 0
 
+let rec prefixCompKind cK = match cK with
+  | Comp.PiKind (_, _, cK) -> 1 + prefixCompKind cK
+  | _ -> 0
+
+
 let rec raiseType cPsi tA = match cPsi with
   | I.Null -> (None, tA)
   | I.CtxVar psi -> (Some psi, tA)
@@ -2196,17 +2201,18 @@ let rec raiseCompTyp cD tau =  match cD with
       raiseCompTyp cD (Comp.TypPiBox ((mdecl, Comp.Implicit), tau))
             
 let raiseCompKind cD cK = 
-  let rec roll cK = match cK with
+  let
+(*    rec roll cK = match cK with
     | Comp.PiKind (loc, (cdecl, dep), cK') -> 
         Comp.PiKind (loc, (cdecl, dep), roll cK')
     | _ ->  raisePiBox cD cK
-
-  and raisePiBox cD cK = match cD with
+*)
+  rec raisePiBox cD cK = match cD with
     | I.Empty -> cK
     | I.Dec(cD', mdecl) -> 
         raisePiBox cD' (Comp.PiKind (None, (mdecl, Comp.Implicit), cK))
   in 
-    roll cK
+    raisePiBox cD cK
 
 
 let raiseExp cD e = 
@@ -2224,10 +2230,20 @@ let raiseExp cD e =
 
 
 let rec abstrCompKind cK = 
+  let rec roll cK cQ = match cK with
+    | Comp.PiKind (_, (I.CDecl(psi, w, _), dep ), cK) -> 
+        roll cK (I.Dec(cQ, CtxV (psi,w,dep)))
+    | cK -> (cQ, cK)
+  in 
+  let (cQ, cK')  = roll cK I.Empty in 
+  let l'           = lengthCollection cQ in 
+  let p = prefixCompKind cK' in (* p = number of explicitely declared mvars *) 
   let (cQ, cK1)  = collectCompKind I.Empty cK in 
+  let k           = lengthCollection cQ in 
+  let l           = (k - l') in 
   let _ = dprint (fun () -> "\n[collectCompKind] done ") in 
-  let cQ'  = abstractMVarCtx cQ 0 in 
-  let cK' = abstractMVarCompKind cQ' (0,0) cK1 in 
+  let cQ'  = abstractMVarCtx cQ (l-1-p)  in 
+  let cK' = abstractMVarCompKind cQ' (l,0) cK1 in 
   let _ = dprint (fun () -> "\n[abstractMVarCompKind] done ") in 
   let cD'  = ctxToMCtx cQ' in 
   let _ = dprint (fun () ->  "\n[ctxToMCtx] done ") in 
@@ -2247,18 +2263,11 @@ let rec abstrCompTyp tau =
   let (cQ, tau1)  = collectCompTyp (l'+p) cQ tau' in 
   let k           = lengthCollection cQ in 
   let l           = (k - l') in 
-  let _ = dprint (fun () -> "\n[collectCompTyp] done : l' = " ^ string_of_int l' ^
-   " l = " ^ string_of_int l ) in 
   let cQ'  = abstractMVarCtx cQ (l-1-p) in  
   (* let cQ'  = abstractMVarCtx cQ (l-1) in  *)
-  let _ = dprint (fun () -> "\n[abstractMVarCtx] done ") in 
   let tau' = abstractMVarCompTyp cQ' (l,0) tau1 in 
-  let _ = dprint (fun () -> "\n[abstractMVarCompTyp] done ") in 
   let cD'  = ctxToMCtx cQ' in 
-  let _ = dprint (fun () -> "\n[ctxToMCtx] done ") in 
-  let _ = dprint (fun () -> P.mctxToString cD' ^ " |- " ^ P.compTypToString cD' tau' ) in 
   let tau'' = raiseCompTyp cD' tau' in 
-  let _  = dprint (fun () -> "[abstrCompTyp] AFTER RAISING: " ^ P.compTypToString I.Empty tau'' ) in 
     (tau'', Context.length cD')
 
 

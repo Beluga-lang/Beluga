@@ -480,7 +480,9 @@ and elMetaSpineI cD s i cKt =
           let tA'   = C.cnormTyp (tA, theta) in 
 
           let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) LF.id in 
-            elMetaSpineI cD s (i-1) (cK, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta))
+          let mS    = elMetaSpineI cD s (i-1) (cK, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)) in 
+           Int.Comp.MetaApp (Int.Comp.MetaObj (loc, psihat, tM'), mS)
+
 
 (*      | (I.Comp.PiKind (_, (I.LF.PDecl (_ , tA, cPsi), I.Comp.Implicit), tK), theta ) ->  *)       
 

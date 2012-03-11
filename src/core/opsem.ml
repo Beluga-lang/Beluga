@@ -125,8 +125,10 @@ let rec eval_syn i theta_eta =
             let _ = dprint (fun () -> "EVALUATE CtxApp ") in
             (* let _ = dprint (fun () -> "CtxApp AFTER substitution cPsi") in  *)
             let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
+            let theta1'= LF.MDot(LF.CObj(cPsi'), theta1) in
               dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
-              eval_chk e' (theta1, eta1)
+              dprint (fun () -> "[CtxApp] theta1' = " ^ P.msubToString LF.Empty  theta1');
+              eval_chk e' (theta1', eta1)
         | _ -> raise (Violation "Expected CtxValue")
       end
 
@@ -157,12 +159,14 @@ and eval_chk e theta_eta =
     match e with
       | Comp.Syn (_, i) -> eval_syn i theta_eta
       | Comp.MLam (loc, n, e') ->
-          dprint (fun () -> "[MLamValue] created: theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
+          dprint (fun () -> "[MLamValue] created: theta = " ^ 
+                    P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.MLamValue ((loc, n ,e'), Whnf.cnormMSub theta, eta)
       | Comp.CtxFun (loc, n, e') ->
-          Comp.CtxValue ((loc,n,e'), theta, eta)
+          Comp.CtxValue ((loc,n,e'), Whnf.cnormMSub theta, eta)
       | Comp.Fun (loc, n, e') ->
-          dprint (fun () -> "[FunValue] created: theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
+          dprint (fun () -> "[FunValue] created: theta = " ^ 
+                    P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.FunValue ((loc, n, e'), Whnf.cnormMSub theta, eta)
 
       | Comp.Let (loc, i, (x, e)) ->
@@ -171,8 +175,9 @@ and eval_chk e theta_eta =
 
       | Comp.Box (loc, phat, tM) ->
           let tM'   = Whnf.cnorm (tM, theta) in
+          let phat' = Whnf.cnorm_psihat phat theta in
           dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box (loc, phat, tM')));
-          Comp.BoxValue (phat , tM')
+          Comp.BoxValue (phat', tM')
       | Comp.Case (_, _prag, i, branches) ->
           begin match eval_syn i theta_eta with
           | Comp.BoxValue (phat, tM) ->
@@ -222,13 +227,21 @@ and eval_branch (phat, tM) branch (theta, eta) =
           let _ = Unify.unifyMSub theta theta_k in
 
           let tM' = Whnf.cnorm (tM', mt) in
+          let cPsi = Whnf.cnormDCtx (cPsi, mt) in 
           let mt  = Whnf.cnormMSub mt in
-
+          let _ = dprint (fun () -> "[elBranch] unify_phat " ^ 
+                            P.dctxToString LF.Empty (Context.hatToDCtx phat)
+                        ^ " == " ^ P.dctxToString LF.Empty cPsi) in 
+          let _ = dprint (fun () -> "[elBranch] unify meta-obj: " ^ 
+                            P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
+                            ^ " == " ^ 
+                            P.normalToString LF.Empty cPsi (tM', Substitution.LF.id)) in
+          let _ = Unify.unify_phat phat (Context.dctxToHat cPsi) in 
           let _ = Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id) in
 
           eval_chk e (mt, eta)
 
-        with Unify.Unify _ -> raise BranchMismatch
+        with Unify.Unify msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
     | _ -> raise NotImplemented
 

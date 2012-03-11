@@ -36,10 +36,11 @@ mlam g => fn e =>
 );
 
 
- let t = copy [ ] [. z] ;
- let t = copy [x:term] [x. x];
- let t = copy [x:term] [x. suc x];
+let t = copy [ ] [. z] ;
+let t = copy [x:term] [x:term. x];
+ let t = copy [x:term] [x:term. suc x];
  let t = copy [ ] [. lam \x. x];
  let t = copy [ ] [. lam \x. (lam \y. app x y)];
- let t = copy [y:term] [y. app y (lam \x. (lam \y. app x y))];
- let t = copy [y:term,x:term] [x,y. suc x];
+ let t = copy [y:term] [y:term. app y (lam \x. (lam \y. app x y))];
+ let t = copy [y:term,x:term] [x:term,y:term. suc x];
+

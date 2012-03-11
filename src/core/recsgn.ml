@@ -64,10 +64,10 @@ let recSgnDecl d =
         let (tau', i) = Monitor.timer ("Data-type Constant: Type Abstraction",
         fun () -> Abstract.abstrCompTyp tau') in
 	let _         = dprint (fun () -> "Abstracting over comp. type: done") in 
+	let _         = dprint (fun () ->  c.string_of_name ^ " : " ^  
+				   (P.compTypToString cD tau')) in 
 	let _         = (Monitor.timer ("Data-type Constant: Type Check", 
-					fun () -> Check.Comp.checkTyp cD tau');
-			 dprint (fun () ->  c.string_of_name ^ " : " ^  
-				   (P.compTypToString cD tau'))) in 
+					fun () -> Check.Comp.checkTyp cD tau')) in 
         let _c        = CompConst.add (CompConst.mk_entry c tau' i) in () 
 
     | Ext.Sgn.Typ (_, a, extK)   ->

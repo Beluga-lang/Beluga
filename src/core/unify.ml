@@ -68,6 +68,7 @@ module type UNIFY = sig
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
   val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
   val unifyDCtx    : mctx -> dctx -> dctx -> unit
+  val unify_phat   : psi_hat -> psi_hat -> unit
   
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
@@ -2806,14 +2807,16 @@ let disallowUndefineds f =
 *)
 
       | (DDec (cPsi1, TypDecl(_ , tA1)) , DDec (cPsi2, TypDecl(_ , tA2))) -> 
-            unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
-            unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id)
+            (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
+            unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id))
 
       | (DDec (cPsi1, _) , DDec (cPsi2, _ )) -> 
             unifyDCtx1 mflag cD0 cPsi1 cPsi2  
       | _ -> 
-          (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ P.dctxToString cD0 cPsi1 ^ " cPsi2 = " ^ P.dctxToString cD0 cPsi2 ) ; 
-raise_ (Unify "Context clash"))
+          (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ 
+                     P.dctxToString cD0 cPsi1 
+                     ^ " cPsi2 = " ^ P.dctxToString cD0 cPsi2 ) ; 
+           raise_ (Unify "Context clash"))
 
    (* **************************************************************** *)
 
@@ -3021,13 +3024,19 @@ raise_ (Unify "Context clash"))
           unifyMSub' ms (MShift (k-1))
       | (MShift k, MDot ( _ , ms)) -> 
           unifyMSub' ms (MShift (k-1))
-      | (MDot (MObj (phat, tM), ms'), MDot (MObj(phat', tM'), mt')) -> 
+      | (MDot (MObj (phat, tM), ms'), MDot (MObj(_phat', tM'), mt')) -> 
           (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ; 
            unifyMSub' ms' mt')
       | (MDot (PObj (phat, h), ms'), MDot (PObj(_phat', h'), mt')) -> 
-          (dprint (fun () -> "[unifyMSub] Pob "); 
+          (dprint (fun () -> "[unifyMSub] PObj "); 
           (unifyHead Unification Empty (Context.hatToDCtx phat) h h'; 
            unifyMSub' ms' mt'))
+      | (MDot (CObj (cPsi), ms), MDot (CObj(cPhi), mt)) -> 
+          (dprint (fun () -> "[unifyMSub] CObj "); 
+           unifyDCtx1 Unification Empty  cPsi cPhi;
+           dprint (fun () -> "[unifyMSub] cPsi = " ^ P.dctxToString Empty cPsi);
+           dprint (fun () -> "[unifyMSub] cPhi = " ^ P.dctxToString Empty cPhi);
+           unifyMSub' ms mt)
 
     let rec unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
 
@@ -3046,6 +3055,40 @@ raise_ (Unify "Context clash"))
            unifyCSub cs ct )
  
 
+
+
+let rec unify_phat psihat phihat = 
+  match phihat with
+    | (Some (CInst ({contents = None} as cref, _, _, _ )), d) -> 
+        begin match psihat with 
+          | (Some (CInst ({contents = None} as cref', _, _, _) as c_var) , d') -> 
+	      if cref == cref' then 
+		(if d = d' then () else raise (Unify "Hat context mismatch - 1"))  
+	      else 
+		cref := Some (CtxVar (c_var))
+          | ((Some (c_var)) , d') -> 
+              if d = d' then 
+                cref := Some (CtxVar (c_var)) 
+              else                 
+                (* (Some (cref), d) == (Some cpsi, d')   d' = d0+d  *)
+                (if d'< d then raise (Unify "Hat Context's do not unify")
+                 else 
+                   let cPsi = Context.hatToDCtx (Some (c_var), d'-d) in 
+                     cref := Some (cPsi))
+
+          | (None , d') -> 
+              if d = d' then 
+                cref := Some (Null)
+              else 
+                (* (Some (cref), d) == (None, d')   d' = d0+d  *)
+                (if d'< d then raise (Unify "Hat Context's do not unify")
+                 else 
+                   let cPsi = Context.hatToDCtx (None, d'-d) in 
+                     cref := Some (cPsi))
+                
+        end 
+
+    | _ ->  (if psihat = phihat then () else raise (Unify "Hat context mismatch - 2"))
 
    (* **************************************************************** *)
 

@@ -1419,7 +1419,7 @@ and abstractMVarCtxV cQ (l,offset) ctx_var =
        let x = index_of cQ (FCV (psi, None)) + offset in 
          I.CtxOffset x
    | I.CInst ({contents = None}, _, _ ,_ ) -> 
-       let x = index_of cQ (CV (I.CtxVar ctx_var)) in 
+       let x = index_of cQ (CV (I.CtxVar ctx_var)) + offset in 
          I.CtxOffset x
 (*   | I.CInst ({contents = Some cPsi}, _, _, _ ) -> 
        abstractMVarDctx cQ (l,offset) cPsi *)
@@ -1493,7 +1493,7 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.CtxVar (I.CInst ({contents = None}, _, _, _)) -> 
       let _ = dprint (fun () -> "[abstractMVarDctx] abstracting over ctx_ref :"
                         ^ "cPsi = " ^ P.dctxToString I.Empty cPsi) in 
-      let x = index_of cQ (CV cPsi) in 
+      let x = index_of cQ (CV cPsi) + offset in 
         I.CtxVar (I.CtxOffset x)
 
   | I.DDec (cPsi, I.TypDecl (x, tA)) ->

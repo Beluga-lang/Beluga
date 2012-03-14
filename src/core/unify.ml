@@ -2733,7 +2733,7 @@ let disallowUndefineds f =
     and unifyTypW mflag cD0 cPsi sA sB = match (sA, sB) with
       | ((Atom (_, a, tS1), s1),   (Atom (_, b, tS2), s2))  ->
           if a = b then
-            (dprint (fun () -> "Unify Atomic types" ^ P.typToString cD0 cPsi sA
+            (dprint (fun () -> "Unify Atomic types " ^ P.typToString cD0 cPsi sA
                        ^ " == " ^ P.typToString cD0 cPsi sB);
             unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2))
           else

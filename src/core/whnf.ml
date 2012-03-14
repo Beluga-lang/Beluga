@@ -374,35 +374,37 @@ let rec mcomp t1 t2 = match (t1, t2) with
 *)
 and mfrontMSub ft t = match ft with
   | MObj (phat, tM)     -> 
-        (* apply cnorm_psihat (phat, t) -bp ! *)
+        (* apply cnorm_psihat (phat, t) -bp ? *)
         MObj (phat, cnorm(tM, t))
 
-  | PObj (_phat, PVar (Offset k, s))  -> 
+  | PObj (phat, PVar (Offset k, s))  -> 
       begin match LF.applyMSub k t with
-        | PObj(phat, BVar k') ->  
+        | PObj(phat', BVar k') ->  
             begin match LF.bvarSub k' s with 
-              | Head(BVar j) -> PObj(phat, BVar j)
-              | Head(PVar (q, s')) -> PObj(phat, PVar(q, s'))
+              | Head(BVar j) -> PObj(phat', BVar j)
+              | Head(PVar (q, s')) -> PObj(phat', PVar(q, s'))
               (* no case for LF.Head(MVar(u, s')) since u not guaranteed
                  to be of atomic type. *)
-              | Obj tM      -> MObj(phat, tM)
+              | Obj tM      -> MObj(phat', tM)
             end 
-        | PObj(phat, PVar (q, s')) -> PObj(phat, PVar(q, LF.comp s' s))
+        | PObj(phat', PVar (q, s')) -> PObj(phat', PVar(q, LF.comp s' s))
 
-        | MV k'  -> PObj (_phat, PVar (Offset k', s))
+        | MV k'  -> PObj (phat, PVar (Offset k', s))
           (* other cases impossible *)
       end
   | PObj (_phat, BVar _k)  -> ft
 
-  | PObj (phat, PVar (PInst ({contents = Some (BVar x)}, _cPsi, _tA, _ ) , r))  -> 
+  | PObj (phat, PVar (PInst ({contents = Some (BVar x)}, _cPsi, _tA, _ ) , r)) -> 
+(*      let phat = cnorm_psihat phat t in  *)
       begin match LF.bvarSub x (cnormSub (r,t)) with
         | Head (BVar k)  ->  PObj (phat, BVar k)
         | Head (PVar (q,s))  ->  PObj (phat, PVar (q,s))
         | Obj tM  -> MObj (phat, tM)
       end 
 
-  | PObj (phat, PVar (PInst ({contents = None}, _cPsi, _tA, _ ), r)) -> 
-      ft
+  | PObj (phat, (PVar (PInst ({contents = None}, _cPsi, _tA, _ ), r) as p)) -> 
+(*      let phat' = cnorm_psihat phat t in *)
+        PObj (phat, p)
 
 
   | CObj (cPsi) -> CObj (cnormDCtx (cPsi, t))
@@ -1151,9 +1153,9 @@ and cnorm (tM, t) = match tM with
 
     | Shift (NoCtxShift, _k) -> s
     | Shift (CtxShift (CtxOffset psi), k) ->  
-        let _ = dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int psi ) in 
+        (* let _ = dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi ) in  *)
         begin match LF.applyMSub psi t with             
-          | MV psi' -> Shift (CtxShift (CtxOffset psi'), k) 
+          | MV psi' -> Shift (CtxShift (CtxOffset psi'), k)  
           | CObj (CtxVar psi) -> Shift (CtxShift (psi), k)
           | CObj (Null) -> Shift (NoCtxShift, k)
           | CObj (DDec _ as cPsi) -> 
@@ -1164,7 +1166,8 @@ and cnorm (tM, t) = match tM with
               | (None, d) ->
                   Shift (NoCtxShift, k + d)
             end
-          | MObj _ -> (dprint (fun () -> "[applyMSub] ill-typed MObj for CObj")
+          | MObj _ -> (dprint (fun () -> "[applyMSub] ill-typed MObj for CObj");
+                         dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi)
                   ; raise (Violation "illtyped msub"))
 
                        

@@ -364,6 +364,8 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
         let _   = dprint (fun () -> "          of type : " ^ 
                           P.dctxToString cD cPsi' ^ " |- " ^ 
                           P.typToString cD cPsi' (tA',LF.id)) in 
+        let _ = dprint (fun () -> "[genMApp] tau = " ^ 
+                          P.compTypToString cD (Whnf.cnormCTyp (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)))) in 
         genMApp loc cD ((Int.Comp.MApp (Some loc, i, (psihat, Int.Comp.NormObj tM'))), 
                         (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)))
 
@@ -378,7 +380,11 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
         genMApp loc cD  ((Int.Comp.CtxApp (Some loc, i, cPsi)), 
                          (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)))
 
-  | _ -> (i, tau_t)
+  | _ -> 
+      let _ = dprint (fun () -> "[genMAppp]  done " ^
+                                P.mctxToString cD ^ " \n   |- " ^ 
+                                P.compTypToString cD (Whnf.cnormCTyp tau_t)) in
+        (i, tau_t)
 
 
 (* elCompKind  cPsi k = K *)
@@ -673,7 +679,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
           Unify.unifyCompTyp cD (tau, t) (tau_t');
           dprint (fun () -> "Unified computation-level types\n") ; 
           dprint (fun () -> "     " ^
-                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ " == "
+                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ "\n         == \n"
                         ^ 
                         P.compTypToString cD (Whnf.cnormCTyp (tau,t)) ^ "\n") ;
           Int.Comp.Syn (Some loc, i')
@@ -754,6 +760,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
  
 
   | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
+      let _ = dprint (fun () -> "[elExp] case ") in
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
       let _ = dprint (fun () -> "[elExp] case on " ^ P.expSynToString cD cG i')
       in 
@@ -915,7 +922,11 @@ and elExp' cD cG i = match i with
 
   | Apx.Comp.MApp (loc, i, mC) ->
       let _ = dprint (fun () -> "Elaborating MApp.\n") in 
-      let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
+      let (i0, tau_t) = (elExp' cD cG i) in 
+      let _ = dprint (fun () -> "[elExp'] MApp : " ^ 
+                        P.expSynToString cD cG i0 ^ " : " ^ 
+                        P.compTypToString cD (Whnf.cnormCTyp tau_t) ) in
+      let (i', tau_theta') = genMApp loc cD (i0, tau_t) in
       let _ = dprint (fun () -> "\n MApp - Generated implicit args.\n") in 
         begin match tau_theta' with
           | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
@@ -1018,8 +1029,16 @@ and elExp' cD cG i = match i with
 
   | Apx.Comp.MAnnApp (loc, i, (psi, m)) ->
       let _ = dprint (fun () -> "Reconstructing MAnnApp\n") in 
-      let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
-      let _ = dprint (fun () -> "Generated implicit args.\n") in 
+      let (i0, tau_t) = (elExp' cD cG i) in 
+      let _ = dprint (fun () -> "[elExp'] MApp : " ^ 
+                        P.expSynToString cD cG i0 ^ " : " ^ 
+                        P.compTypToString cD (Whnf.cnormCTyp tau_t) ) in
+
+      let (i', tau_theta') = genMApp loc cD  (i0, tau_t) in
+      let _ = dprint (fun () -> "[elExp'] MAnnApp - generated implicit args.\n") in 
+      let _ = dprint (fun () -> "[elExp] MAnnApp  : " ^
+                                P.mctxToString cD ^ "\n |- " ^ 
+                                P.compTypToString cD (Whnf.cnormCTyp tau_theta')) in
         begin match tau_theta' with
           | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
               let cPsi    = C.cnormDCtx (cPsi, theta) in
@@ -1686,7 +1705,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
     let t0   = drop t' n in  (* cD1' |- t0 <= cD *) 
 
     let pat' = Whnf.cnormPattern (pat,  Whnf.mcomp t1 t') in 
-    let _ = dprint (fun () -> "cnormPat done ... ") in 
+    let _    = dprint (fun () -> "cnormPat done ... ") in 
       (t0, t', cD1', pat')
   with exn -> raise exn (* raise (Error.Error (loc, Error.ConstraintsLeft))*)
  end
@@ -1788,8 +1807,9 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
     let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj cD' pat (cD, tau_s)
      in 
     let _ = dprint (fun () -> "[rePatObj] done") in 
-    let _ = dprint (fun () -> "   " ^ P.mctxToString cD1' ^ " ; " ^ 
+    let _ = dprint (fun () -> "           " ^ P.mctxToString cD1' ^ " ; " ^ 
                       P.gctxToString cD1' cG1 ^ "\n    |- " ^ 
+                      P.patternToString cD1' cG1 pat1 ^ " : " ^
                       P.compTypToString cD1' tau1) in 
     let tau_s' = Whnf.cnormCTyp (tau_s, Int.LF.MShift l_cd1') in 
     (* ***************                            *************** *)
@@ -1800,18 +1820,23 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
                   end in      
     (* cD |- tau_s and cD, cD1 |- tau_s' *)
     (* cD1 |- tau1 *)
-    let _ = dprint (fun () -> "[Reconstructed pattern] " ^ P.patternToString cD1' cG1 pat1 ) in 
+
     let (t', t1, cD1'', pat1') = synPatRefine (Some loc) caseT' (cD, cD1') pat1 (tau_s', tau1) in
     (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
     let _ = dprint (fun () -> " cD1'' = " ^ P.mctxToString cD1'' ) in 
     let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
+    (*   cD1' |- cG1     cD1'' |- t1 : cD, cD1'    cD, cD1' |- ?   cD1' *)
     let cD'      = Context.append cD cD1' in
-    let _ = dprint (fun () -> " cD, cD1' |- cG1 = " ^ P.gctxToString cD' cG1 ) in 
-    let _ = dprint (fun () -> " cD1'' |- cG1 = " ^ P.gctxToString cD1''  (Whnf.cnormCtx (cG1, t1))) in 
-    let cG'     = Whnf.cnormCtx (cG, t') in 
+    let _ = dprint (fun () -> "cD' = " ^ P.mctxToString cD') in 
+    let _ = dprint (fun () -> "    ' |- cG1 = " ^ P.gctxToString cD' cG1 ) in 
+    let _ = dprint (fun () -> " t1 : cD' = " ^ P.msubToString cD1'' t1) in 
     let cG1'    = Whnf.cnormCtx (cG1, t1) in 
+
+    let _ = dprint (fun () -> " cD1'' |- cG1 = " ^ P.gctxToString cD1''  cG1') in 
+
+    let cG'     = Whnf.cnormCtx (cG, t') in 
     let cG_ext  = Context.append cG' cG1' in 
-  
+
     let e1       = Apxnorm.fmvApxExp [] cD'  (l_cd1, l_delta, 0) e in
         
     let _        = dprint (fun () -> "Refinement: " ^  P.mctxToString cD1'' ^ 

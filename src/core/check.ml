@@ -173,7 +173,7 @@ module Comp = struct
 
           | SynMismatch (cD, theta_tau, theta_tau') ->
             Format.fprintf ppf
-              "Expected type  %a\n Inferred type  %a"
+              "Expected type  %a\nInferred type  %a"
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau')
 

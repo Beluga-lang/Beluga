@@ -17,39 +17,39 @@ const : nat -> term.
 
 schema ctx = term ;
 
-rec add: nat [ ] -> nat [ ] -> nat [ ] = 
+rec add: [. nat] -> [. nat] -> [. nat] = 
 fn m => fn n => case m of 
-| [ ] z => n 
-| [ ] suc M => 
-  let [ ] K = (add ([ ] M)) n  in 
-   [ ] suc K
+| [. z] => n 
+| [. suc M] => 
+  let [. K] = (add [. M]) n  in 
+   [. suc K]
 ;
 
-rec size : {g:ctx} term[g] -> nat[ ] = 
+rec size : (g:ctx) [g. term] -> [. nat] = 
 fn t => case t of 
-| [g] #p .. => [ ] suc z
-| [g] lam \x. T .. x => 
-  let [ ] K = size ([g,x:term] T .. x ) in 
-   [ ] suc K
+| [g. #p ..] => [. suc z]
+| [g. lam \x. T .. x] => 
+  let [. K] = size [g,x:term. T .. x ] in 
+   [. suc K]
 
-| [g] app (T ..) (U ..) => 
-  let [ ] N = add (size ([g] T ..)) (size ([g] U ..)) in 
-   [ ] suc N
+| [g. app (T ..) (U ..)] => 
+  let [. N] = add (size [g. T ..]) (size [g. U ..]) in 
+   [. suc N]
       
 
-| [g] letv (T ..) (\x. U .. x) => 
-  let [ ] N =   add (size ([g] T ..)) (size ([g,x:term] U .. x)) in 
-   [ ] suc N
+| [g. letv (T ..) (\x. U .. x)] => 
+  let [. N] =   add (size [g. T ..]) (size [g,x:term. U .. x]) in 
+   [. suc N]
 
-| [g] const I => [ ] suc z
+| [g. const I] => [. suc z]
 ;
 
 
-let r   = add ([ ] suc z) ([ ] suc z) ;
-let s2  = size ([ ] lam \x. (const z)) ;
-let s2' = size ([ ] lam \x. x) ;
-let s4  = size ([ ] lam \x. app x (const z)) ;
-let s3  = size ([ ] app (const z) (const (suc z)));
+let r   = add [. suc z] [. suc z] ;
+let s2  = size [. lam \x. (const z)] ;
+let s2' = size [. lam \x. x] ;
+let s4  = size [. lam \x. app x (const z)] ;
+let s3  = size [. app (const z) (const (suc z))];
 
 %{
 % Output of the interpreter: 
@@ -81,12 +81,12 @@ nil: list.
 cons: term -> list -> list.
 
 
-rec append: {g:ctx} list [g] -> list [g] -> list [g] = 
+rec append: (g:ctx) [g. list] -> [g. list] -> [g. list] = 
 fn l1 => fn l2 => case l1 of 
-| [g] nil => l2 
-| [g] cons (X ..) (L ..) => 
-  let [g] L' .. = append ([g] L ..) l2 in 
-    [g] cons (X ..) (L' ..)
+| [g. nil] => l2 
+| [g. cons (X ..) (L ..)] => 
+  let [g. L' ..] = append [g. L ..] l2 in 
+    [g. cons (X ..) (L' ..)]
 ;
 
 
@@ -97,15 +97,15 @@ fn l1 => fn l2 => case l1 of
 % This is however also not really necessary to remove an element from a list.
 % see rm' function.
 
-rec rm : {g:ctx} list[g,x:term] -> list[g] =
+rec rm : (g:ctx) [g,x:term. list] -> [g. list] =
 fn l => case l of 
-| [g,x:term] nil => [g] nil
-| [g,x:term] cons x (L .. x)  => 
-    rm ([g,x] L .. x) 
+| [g,x:term. nil] => [g. nil]
+| [g,x:term. cons x (L .. x)]  => 
+    rm [g,x. L .. x] 
 
- | [g,x:term] cons (#p .. ) (L .. x) => 
-  let [g] L' .. = rm ([g,x] L .. x) in    
-   [g] cons (#p ..) (L' ..)
+ | [g,x:term. cons (#p .. ) (L .. x)] => 
+  let [g. L' ..] = rm [g,x. L .. x] in    
+   [g. cons (#p ..) (L' ..)]
 
 
 ;
@@ -113,36 +113,36 @@ fn l => case l of
 
 % OR more generally ... 
 
-rec rm' : {g:ctx} list[g,x:term] -> list[g] =
+rec rm' : (g:ctx) [g,x:term. list] -> [g. list] =
 fn l => case l of 
-| [g,x:term] nil => [g] nil
+| [g,x:term. nil] => [g. nil]
 
 % the next case succeeds if x does not occur in U 
-| [g,x:term] cons (U .. ) (L .. x) => 
-  let [g] L' .. = rm' ([g,x] L .. x) in    
-   [g] cons (U ..) (L' ..)
+| [g,x:term. cons (U .. ) (L .. x)] => 
+  let [g. L' ..] = rm' [g,x. L .. x] in    
+   [g. cons (U ..) (L' ..)]
 
 % this case hence succeeds if x does occur in U 
-| [g,x:term] cons (U .. x) (L .. x)  => 
-    rm' ([g,x] L .. x) 
+| [g,x:term. cons (U .. x) (L .. x)]  => 
+    rm' [g,x. L .. x] 
 ;
 
 
-rec fv : {g:ctx} term[g] -> list [g] = 
+rec fv : (g:ctx) [g. term] -> [g. list] = 
 fn t => case t of 
-| [g] const I => [g] nil 
-| [g] #p ..    => [g] cons (#p ..) nil
-| [g] app (T1 ..) (T2 ..) => 
-  append  (fv ([g] T1 ..)) (fv ([g] T2 ..))
+| [g. const I] => [g. nil] 
+| [g. #p ..]    => [g. cons (#p ..) nil]
+| [g. app (T1 ..) (T2 ..)] => 
+  append  (fv [g. T1 ..]) (fv [g. T2 ..])
 
-| [g] lam \x. T .. x => 
-  let [g,x:term] L .. x = fv ([g,x:term] T .. x) in 
-    rm' ([g,x] L .. x) 
+| [g. lam \x. T .. x] => 
+  let [g,x:term. L .. x] = fv [g,x:term. T .. x] in 
+    rm' [g,x. L .. x] 
 
-| [g] letv (T1 ..) (\x. T2 .. x) => 
-  let [g] L1 .. = fv ([g] T1 .. ) in 
-  let [g,x:term] L2 .. x = fv ([g,x:term] T2 .. x) in 
-  append ([g] L1 .. ) (rm' ([g,x] L2 .. x))
+| [g. letv (T1 ..) (\x. T2 .. x)] => 
+  let [g. L1 ..] = fv [g. T1 .. ] in 
+  let [g,x:term. L2 .. x] = fv [g,x:term. T2 .. x] in 
+  append [g. L1 .. ] (rm' [g,x. L2 .. x])
 ;
 
 
@@ -168,40 +168,40 @@ just: tp -> opt.
 
 schema tms = tm ; 
 
-rec memb: {g:tms} tm[g] -> env[g] -> opt [] = 
+rec memb: (g:tms) [g. tm] -> [g. env] -> [. opt] = 
 fn e => fn l => case l of 
-| [g] empty => [ ] nothing
-| [g] push (E' .. ) T (L .. ) => 
-  if e == ([g] E' .. ) then 
-    [ ] just T 
+| [g. empty] => [. nothing]
+| [g. push (E' .. ) T (L .. )] => 
+  if e == [g. E' .. ] then 
+    [. just T] 
   else 
-    memb e ([g] L .. )  
+    memb e [g. L .. ]  
 ;
 
 
-rec typing: {g:tms} tm[g] -> env[g] -> opt [ ] = 
+rec typing: (g:tms) [g. tm] -> [g. env] -> [. opt] = 
 fn e => fn l => case e of 
-| [g] #p ..  =>  memb ([g] #p .. ) l
+| [g. #p ..]  =>  memb [g. #p .. ] l
 
-| [g] lamt T (\x. M .. x) => 
-  let [g] L .. = l in  
-    typing ([g,x:tm] M .. x) ([g,x] push x T (L .. ))
+| [g. lamt T (\x. M .. x)] => 
+  let [g. L ..] = l in  
+    typing [g,x:tm. M .. x] [g,x. push x T (L .. )]
 
-| [g] apply (M1 .. ) (M2 .. ) => 
-  (case typing ([g] M1 .. ) l of 
-     | [ ] just (arr T2 T) => 
-       (case typing ([g] M2 .. ) l of 
-         | [ ] just T2' => 
-           if ([ ] T2) == ([ ] T2') then 
-             [ ] just T 
+| [g. apply (M1 .. ) (M2 .. )] => 
+  (case typing [g. M1 .. ] l of 
+     | [. just (arr T2 T)] => 
+       (case typing [g. M2 .. ] l of 
+         | [. just T2'] => 
+           if [. T2] == [. T2'] then 
+             [. just T] 
            else
-             [ ] nothing
+             [. nothing]
            
 
-         | [ ] nothing => [ ] nothing
+         | [. nothing] => [. nothing]
 
        )
-     | [ ] U => [ ] nothing
+     | [. U] => [. nothing]
   )
 
 ;

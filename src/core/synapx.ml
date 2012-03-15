@@ -24,9 +24,9 @@ module LF = struct
     | MDecl of  name * typ  * dctx
     | PDecl of  name * typ  * dctx
     | MDeclOpt of name
+    | CDeclOpt of name
     | SDecl of name * dctx * dctx
     | CDecl of name * cid_schema
-
 
   and typ =
     | Atom  of Loc.t * cid_typ * spine
@@ -90,6 +90,8 @@ module LF = struct
     | Empty
     | Dec of 'a ctx * 'a
 
+  and mctx = ctyp_decl ctx 
+
   and sch_elem =
     | SchElem of typ_decl ctx * typ_rec
 
@@ -149,6 +151,8 @@ module Comp = struct
 
   and exp_syn =
      | Var    of offset                                     (* x              *)
+     | FVar   of name                                       (* x              *)
+     | DataConst of cid_comp_const                          (* c              *)
      | Const  of cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
      | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
@@ -162,19 +166,20 @@ module Comp = struct
  and pattern = 
    | PatEmpty of Loc.t * LF.dctx 
    | PatMetaObj of Loc.t * meta_obj
-   | PatConst of Loc.t * name * pattern_spine
-   | PatVar   of Loc.t * name
+   | PatConst of Loc.t * cid_comp_const * pattern_spine
+   | PatFVar   of Loc.t * name
+   | PatVar   of Loc.t * name * offset
    | PatPair  of Loc.t * pattern * pattern
    | PatTrue  of Loc.t 
    | PatFalse of Loc.t 
    | PatAnn   of Loc.t * pattern * typ
 
  and pattern_spine = 
-   | PatNil
+   | PatNil of Loc.t
    | PatApp of Loc.t * pattern * pattern_spine 
 
   and branch =
-    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern 
+    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern 
     | Branch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern * exp_chk 
     (* The following two are from the old implementation and will be removed eventually; 
        and replaced by the more general notion of patterns and branches above;

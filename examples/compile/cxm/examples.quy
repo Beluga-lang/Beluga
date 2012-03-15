@@ -1,8 +1,0 @@
-%query 1 *
-xeval (app (lam [x] (vl x)) z) V.
-
-%query 1 *
-xeval (app (fix [double] lam [x]
-	      case (vl x) z
-	      [x'] s (s (app double (vl x')))) (s (s (s z))))
-V.

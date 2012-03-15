@@ -11,23 +11,21 @@ module LF : sig
   exception Error of Syntax.Loc.t option * Error.error
 
 
-  val check       : mctx -> mctx -> dctx -> nclo -> tclo -> unit
-  val syn         : mctx -> mctx -> dctx -> nclo -> tclo
-  val checkTyp    : mctx -> mctx -> dctx -> tclo         -> unit
-  val checkKind   : mctx -> mctx -> dctx -> kind         -> unit
-  val checkDCtx   : mctx -> mctx -> dctx                 -> unit
+  val check       : mctx -> dctx -> nclo -> tclo -> unit
+  val syn         : mctx -> dctx -> nclo -> tclo
+  val checkTyp    : mctx -> dctx -> tclo         -> unit
+  val checkKind   : mctx -> dctx -> kind         -> unit
+  val checkDCtx   : mctx -> dctx                 -> unit
 
   val checkSchemaWf : schema -> unit
-  val checkSchema : mctx -> mctx -> dctx -> schema -> unit
+  val checkSchema : mctx -> dctx -> schema -> unit
   val subsumes    : mctx -> ctx_var -> ctx_var -> bool
 
-  val synCtxSchema  : mctx -> ctx_var -> Id.cid_schema
+  val checkTypeAgainstSchema: mctx -> dctx -> typ -> sch_elem list -> (typ_rec * sub)
+  val instanceOfSchElem     : mctx -> dctx -> tclo -> sch_elem ->  (typ_rec * sub)
+  val instanceOfSchElemProj : mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
 
-  val checkTypeAgainstSchema: mctx -> mctx -> dctx -> typ -> sch_elem list -> (typ_rec * sub)
-  val instanceOfSchElem     : mctx -> mctx -> dctx -> tclo -> sch_elem ->  (typ_rec * sub)
-  val instanceOfSchElemProj : mctx -> mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
-
-  val checkMSub   : mctx -> mctx -> csub * msub -> mctx -> unit
+  val checkMSub   : mctx -> msub -> mctx -> unit
 
 end
 
@@ -40,9 +38,9 @@ module Comp : sig
   exception Violation of string
   exception Error of Syntax.Loc.t option * Error.error
 
-  val check       : LF.mctx -> LF.mctx -> gctx -> exp_chk -> tclo -> unit
-  val syn         : LF.mctx -> LF.mctx -> gctx -> exp_syn -> tclo
-  val checkTyp    : LF.mctx -> LF.mctx -> typ                  -> unit
+  val check       : LF.mctx -> gctx -> exp_chk -> tclo -> unit
+  val syn         : LF.mctx -> gctx -> exp_syn -> tclo
+  val checkTyp    : LF.mctx -> typ                  -> unit
 
 end
 

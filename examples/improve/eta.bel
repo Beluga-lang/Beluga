@@ -4,10 +4,10 @@ lam: (exp -> exp) -> exp.
 
 schema ctx = exp ;
 
-rec test : {g:ctx} exp[g] -> exp[g] = 
+rec test : (g:ctx) [g. exp] -> [g. exp] = 
 fn e => case e of 
 % we must write meta-variables in eta-expanded form.
-| [g] lam \x. M .. x => e
+| [g. lam \x. M .. x] => e
 
 ;
 

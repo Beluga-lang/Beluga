@@ -40,7 +40,9 @@ mlam g => mlam U => case [g . U ..] of
   let [g . EQ1 ..] = ref  [g] [g . A1 .. ] in
   let [g . EQ2 ..] = ref  [g] [g . A2 .. ] in
     [g . eq_app (EQ1 ..) (EQ2 ..)]
+
 ;
+
 
 % General transitivity is admissible
 rec trans: (g:eqCtx)
@@ -50,7 +52,7 @@ rec trans: (g:eqCtx)
 =
 fn e1 => fn e2 => case e1 of
 
-| [g . #p.2 .. ] => e2
+ | [g . #p.2 .. ] => e2
        
 | [g . eq_app (D1 ..) (D2 ..)] =>
    (case e2 of
@@ -61,13 +63,22 @@ fn e1 => fn e2 => case e1 of
 )
 
 | [g . eq_lam \x.\u. D1 .. x u] =>
-   let [g . eq_lam \x.\u. D2 .. x u] =  e2  in	
+  (case e2 of 
+  | [g . eq_lam \x.\u. D2 .. x u] => 
+     (case   trans [g, b:block (x:exp, u:eq x x) . D1 .. b.1 b.2]
+		   [g, b . D2 .. b.1 b.2]  of
+	| [h, b:block (x:exp, u:eq x x) . E .. b.1 b.2] => 
+	  [h . eq_lam \x. \u. E .. x u]
+     )
+  )
+  
+%{ let [g . eq_lam \x.\u. D2 .. x u] =  e2  in	
    let [g, b:block (x:exp, u:eq x x) . E .. b] = 
      trans [g, b:block (x:exp, u:eq x x) . D1 .. b.1 b.2]
            [g, b . D2 .. b.1 b.2]
     in
       [g . eq_lam \x. \u. E .. <x, u>]
-
+}%
 ;
 
 
@@ -99,5 +110,6 @@ fn e => case e of
 
 rec ceq_main: [ . equal T S] -> [ . eq T S] =  fn e =>  ceq e
 ;
+
 
 

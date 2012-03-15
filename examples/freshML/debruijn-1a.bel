@@ -37,43 +37,43 @@ tlam'   : ({a:tp}exp' (A a)) -> exp' (all A).
 schema ctx = value T + tp;
 schema tctx = tp;
 
-rec vhoas2db : {g:(ctx)*}(value (S ..))[g] ->  (exp' (S ..))[g] =  
-FN g => fn v =>  case v of 
- | [h,x:value (T ..) ] x => [h, x:value (T ..)] one (T ..)
+rec vhoas2db : {g:ctx}[g. value (S ..)] ->  [g. exp' (S ..)] =  
+mlam g => fn v =>  case v of 
+ | [h,x:value (T ..) . x] => [h, x:value (T ..). one (T ..)]
 
- |  {#p::(value (S' ..))[h]}
-   [h,x:value (T ..) ] #p .. => 
-   let [g] Db .. = vhoas2db [h] ([h] #p ..) in 
-     [g,x:value (T ..) ] shift (S' ..)  (Db ..)
+ |  {#p:[h. value (S' ..)]}
+   [h,x:value (T ..) . #p ..] => 
+   let [g. Db ..] = vhoas2db [h] [h. #p ..] in 
+     [g,x:value (T ..) . shift (S' ..)  (Db ..)]
 
-| [h,a:tp] #p .. => 
-   let [g] Db .. = vhoas2db [h] ([h] #p ..) in 
-     [g,a:tp] Db ..
+| [h,a:tp. #p ..] => 
+   let [g. Db ..] = vhoas2db [h] [h. #p ..] in 
+     [g,a:tp. Db ..]
 
- | [g] lam (T ..) (\x. E .. x) => 
-   let [g,x:value (T ..)] F .. =  hoas2db [g,x:value (T ..) ] ([g,x] E .. x ) in 
-     [g] lam' (T ..) (F ..)
+ | [g. lam (T ..) (\x. E .. x)] => 
+   let [g,x:value (T ..). F ..] =  hoas2db [g,x:value (T ..) ] [g,x. E .. x ] in 
+     [g. lam' (T ..) (F ..)]
 
- | [g] tlam \a. E .. a => 
-   let [g,a:tp] F .. a = hoas2db [g,a:tp] ([g,a] E .. a) in 
-     [g] tlam' \a. F .. a
+ | [g. tlam \a. E .. a] => 
+   let [g,a:tp. F .. a] = hoas2db [g,a:tp] [g,a. E .. a] in 
+     [g. tlam' \a. F .. a]
 
 
-and hoas2db : {g:(ctx)*} (exp (T ..))[g] ->  (exp' (T ..) )[g] = 
-FN g => fn e =>  case e of 
- | [g] app (E1 .. ) (E2 .. ) =>
-   let [g] F1 .. = hoas2db [g] ([g] E1 ..)  in 
-   let [g] F2 .. = hoas2db [g] ([g] E2 ..)  in 
-     [g] app' (F1 ..) (F2 ..) 
- | [g] ret (V ..) => 
-   vhoas2db [g] ([g] V .. )   
- | [g] tapp (E .. ) (T ..) => 
-     let [g] F .. = hoas2db [g] ([g] E .. ) in 
-     [g] tapp' (F .. ) (T .. )
+and hoas2db : {g:ctx} [g. exp (T ..)] ->  [g. exp' (T ..) ] = 
+mlam g => fn e =>  case e of 
+ | [g. app (E1 .. ) (E2 .. )] =>
+   let [g. F1 ..] = hoas2db [g] [g. E1 ..]  in 
+   let [g. F2 ..] = hoas2db [g] [g. E2 ..]  in 
+     [g. app' (F1 ..) (F2 ..)] 
+ | [g. ret (V ..)] => 
+   vhoas2db [g] [g. V .. ]   
+ | [g. tapp (E .. ) (T ..)] => 
+     let [g. F ..] = hoas2db [g] [g. E .. ] in 
+     [g. tapp' (F .. ) (T .. )]
 ;
 
-rec todbruijn : {g':(tctx)*}(exp (S .. ))[g'] -> (exp' (S ..))[g'] = 
-FN g' => fn e =>  hoas2db [g'] e ;
+rec todbruijn : {g':tctx}[g'. exp (S .. )] -> [g'. exp' (S ..)] = 
+mlam g' => fn e =>  hoas2db [g'] e ;
 
 
 % It is not easily possible to enforce that voas2db produces terms which only contain bound tp variables. 

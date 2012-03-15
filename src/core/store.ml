@@ -363,7 +363,6 @@ module Cid = struct
 
     type t = Id.name DynArray.t
 
-
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
@@ -467,14 +466,6 @@ end
 (* Free Bound Variables *)
 module FVar = struct
 
-(*
-  let store    = Hashtbl.create 25
-  let add      = Hashtbl.add store
-  let get      = Hashtbl.find store
-  let clear () = Hashtbl.clear store
-
-*)
-
   let store    = ref []
 
   let add x tA = 
@@ -491,8 +482,7 @@ module FVar = struct
             (y, tA'):: update str'
       | [] -> [(x, tA)]
     in 
-      store := update (!store)
-    
+      store := update (!store) 
 
   let get x    = 
     let rec lookup str = match str with
@@ -507,11 +497,33 @@ module FVar = struct
 
   let fvar_list () = !store
 
+end
+
+
+module FPatVar = struct
+
+  let store    = ref Syntax.Int.LF.Empty
+
+  let add x tau = 
+      store := Syntax.Int.LF.Dec (!store, Syntax.Int.Comp.CTypDecl (x,tau))
+
+  let get x    = 
+    let rec lookup str = match str with
+      | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau))) -> 
+          if x = y then tau else lookup str'
+      | _ -> raise Not_found
+    in 
+      lookup (!store)
+
+
+  let clear () = (store := Syntax.Int.LF.Empty)
+
+  let fvar_ctx () = !store
 
 end
 
 
-
+(*
 (* Free meta-variables *)
 module FMVar = struct
 
@@ -521,9 +533,19 @@ module FMVar = struct
   let clear () = Hashtbl.clear store
 
 end
+*)
 
+(* Free contextual variables *)
+module FCVar = struct
 
+  let store    = Hashtbl.create 0
+  let add      = Hashtbl.add store
+  let get      = Hashtbl.find store
+  let clear () = Hashtbl.clear store
 
+end
+
+(*
 (* Free parameter variables *)
 module FPVar = struct
 
@@ -533,9 +555,7 @@ module FPVar = struct
   let clear () = Hashtbl.clear store
 
 end
-
-
-
+*)
 (* Computation-level variables *)
 module Var = struct
 
@@ -558,7 +578,9 @@ module Var = struct
 
   let create ()    = []
   let extend ctx e = e :: ctx
+  let append vars vars' = vars @ vars'
   let get          = List.nth
+  let size  = List.length 
 
 end
 
@@ -567,7 +589,9 @@ end
 (* Contextual variables *)
 module CVar = struct
 
-  type entry = { name : Id.name }
+  type cvar = MV of Id.name | PV of Id.name | CV of Id.name | SV of Id.name
+
+  type entry = { name : cvar }
 
   let mk_entry n = { name = n }
 
@@ -583,6 +607,17 @@ module CVar = struct
             loop (i + 1) es
     in
       loop 1 store
+
+
+  let nearest_cvar store =
+    let rec ncvar store k = match store with 
+      | [] -> raise Not_found
+      | e::store' -> 
+          match e.name with CV _  ->  k
+            | _ -> ncvar store' (k+1)
+    in 
+      ncvar store 1
+
 
   let create ()     = []
   let extend cvars e = e :: cvars

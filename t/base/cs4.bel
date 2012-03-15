@@ -1,0 +1,70 @@
+irrel : type.
+irrel_ctor : irrel.
+
+tp : type.
+nat : tp.
+
+term : tp -> type.
+z    : term nat.
+suc  : term nat -> term nat.
+
+
+schema termCtx = some [t:tp] block firstpart:term t, wasted:irrel, _t:term t;
+
+
+rec fff : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat. term nat] -> [. term nat] =
+mlam g => fn e =>
+  case e of
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. z]     => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. suc (U .. b)]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.1 ..]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.3 ..]    => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. b.1]    => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. b.3]    => [. z]
+;
+
+
+
+rec fff2 : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat. term nat] -> [. term nat] =
+mlam g => fn e =>
+  case e of %not
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. z]     => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. suc (U .. b)]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.1 ..]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.3 ..]    => [. z]
+%  | [g, b:block yyy:term nat, www:irrel. term nat]  b.1    => [] z
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. b.3]    => [. z]
+;
+
+
+rec fff3 : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat. term nat] -> [. term nat] =
+mlam g => fn e =>
+  case e of %not
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. z]     => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. suc (U .. b)]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.1 ..]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.3 ..]    => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. b.1]    => [. z]
+%  | [g, b:block yyy:term nat, www:irrel. term nat]  b.3    => [] z
+;
+
+rec fff4 : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat. term nat] -> [. term nat] =
+mlam g => fn e =>
+  case e of
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. z]     => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. suc (U .. b)]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.1 .. b]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.3 ..]    => [. z]
+%  | [g, b:block yyy:term nat, www:irrel. term nat]  b.1    => [] z
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. b.3]    => [. z]
+;
+
+
+rec fff5 : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat. term nat] -> [. term nat] =
+mlam g => fn e =>
+  case e of
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. z]     => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. suc (U .. b)]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.1 .. b]   => [. z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat. #p.3 .. b]   => [. z]
+;

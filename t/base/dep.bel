@@ -1,0 +1,18 @@
+nat : type.
+z: nat.
+dep : nat -> type.
+
+%{ rec indep : (dep N)[] -> nat[] =
+ fn d => case d of [] D => [] N;
+}%
+
+%{
+rec indep : (dep N)[] -> nat[] =
+ fn d => [] N ;
+
+ rec indep : (dep N)[] -> nat[] =
+ fn d => case d of [] D => [] N;
+}%
+
+rec indep : {N:[. nat]}[. dep N] -> [. nat] = 
+mlam N => fn d => [. z];

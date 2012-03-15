@@ -47,6 +47,7 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 val newMMVar    : mctx * dctx * typ -> mm_var
 val newMVar     : dctx * typ -> cvar
 val newPVar     : dctx * typ -> cvar
+val newCVar     : Id.cid_schema -> ctx_var
 
 val raiseType   : dctx -> typ -> typ 
 
@@ -85,8 +86,10 @@ val invTerm    : normal    * msub -> int -> normal
 val mctxMDec   : mctx -> int -> Id.name * typ * dctx
 val mctxPDec   : mctx -> int -> Id.name * typ * dctx
 val mctxSDec   : mctx -> int -> Id.name * dctx * dctx
+val mctxCDec   : mctx -> int -> Id.name * Id.cid_schema
 
 
+val mctxCVarPos : mctx -> Id.name -> (Id.offset * Id.cid_schema)
 val mctxMVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
 val mctxPVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
 
@@ -98,8 +101,12 @@ val cnormSub   : sub * msub -> sub
 val cnormTyp   : typ  * msub -> typ
 val cnormTypRec: typ_rec * msub -> typ_rec
 val cnormDCtx  : dctx * msub -> dctx
-
+val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
+
+val cnormPattern  : Comp.pattern * msub -> Comp.pattern 
+
+val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
 
 val cnormMSub  : msub -> msub
 val cnormCSub  : (csub * msub) -> csub

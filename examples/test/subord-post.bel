@@ -12,20 +12,20 @@ eq : term -> term -> bool.
 schema termCtx = term;
 schema boolCtx = bool;
 
-rec fff : {g:(boolCtx)*} bool[g, xx : bool] -> term[] =
-FN g => fn e =>
+rec fff : {g:boolCtx} [g, xx : bool. bool] -> [. term] =
+mlam g => fn e =>
   case e of %not        % Shouldn't cover, due to "after" term constructor declared later
-  | [g, xx : bool]  eq U V     => [] z
+  | [g, xx : bool. eq U V]     => [. z]
 %  | [g, xx : bool]  eq (U ..) V     => [] z
 %  | [g, xx : bool]  eq (U ..) (V .. xx)     => [] z
-  | [g, xx : bool]  #p .. xx   => [] z
+  | [g, xx : bool. #p .. xx]   => [. z]
 ;
 
 after : term -> bool -> bool.
 
-rec fff2 : {g:(boolCtx)*} bool[g, xx : bool] -> term[] =
-FN g => fn e =>
+rec fff2 : {g:boolCtx} [g, xx : bool. bool] -> [. term] =
+mlam g => fn e =>
   case e of
-  | [g, xx : bool]  eq (U .. xx) (V .. xx)     => [] z
-  | [g, xx : bool]  #p .. xx   => [] z
+  | [g, xx : bool. eq (U .. xx) (V .. xx)]     => [. z]
+  | [g, xx : bool. #p .. xx]   => [. z]
 ;

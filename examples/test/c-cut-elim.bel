@@ -22,10 +22,10 @@ impl    : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C).
 
 schema ctx = some [a: o] hyp a + i + o;
 
-rec ca : {g:(ctx)*}{A::o[g]} (conc (A ..))[g] -> (conc (C ..))[g, u: hyp (A ..)] 
+rec ca : {g:ctx}{A:[g. o]} [g. conc (A ..)] -> [g, u: hyp (A ..). conc (C ..)] 
 %       -> (conc (C ..))[g] =
-       -> (conc true)[g] =
-FN g => mlam A' => fn d => fn e => case e of 
+       -> [g .(conc true)] =
+mlam g => mlam A' => fn d => fn e => case e of 
 %  | [g, h:hyp (B ..)] axiom (H1 ..) =>  [g] axiom (H1 ..)
 %
 %  | [g, h:hyp (A ..)] axiom h  => d
@@ -75,7 +75,7 @@ FN g => mlam A' => fn d => fn e => case e of
 %    in 
 %      [g] foralll (T ..) (\h1. E1' .. h1) (H ..)
 
- | [g, h:hyp (imp (A1 ..) (A2 ..))]  impl (GGGGG ..) (\h2. HHHHH) h => % impl (E1  .. %{ h }% ) (\h2. WWWW) %{ (\h2. E2 .. h h2) }% h  => 
+ | [g, h:hyp (imp (A1 ..) (A2 ..)). impl (GGGGG ..) (\h2. HHHHH) h] => % impl (E1  .. %{ h }% ) (\h2. WWWW) %{ (\h2. E2 .. h h2) }% h  => 
 %
 %    let [g] impr \h1. D2 .. h1  = d in 
 %    let [g] E1' .. = (ca [g] <g. A' .. > d) ([g,h ] E1 .. h) in 
@@ -85,7 +85,7 @@ FN g => mlam A' => fn d => fn e => case e of
 %    let [g] D2' .. = ca [g] <g . A1 .. > ([g] E1' .. ) ([g,h1] D2 .. h1) in 
 %      ca [g] <g . A2 .. > ([g] D2' .. ) ([g,h2] E2' .. h2)  
 %  
-     [g] truer
+     [g. truer]
 
 %  | [g, h:hyp (not (A1 ..))] notl (E1 .. h) h =>   
 %    let [g] notr \p.\h2. (D1 .. p h2)  = d in 

@@ -10,19 +10,19 @@ schema tctx = some [] term;
 %  fn t =>  case t of [ ] lam (\x . x) : term[ ] => t
 % ;
 
-rec copy : {g:(tctx)*} term[g] -> term[g] =
-FN g => fn e =>
+rec copy : {g:tctx} [g. term] -> [g. term] =
+mlam g => fn e =>
  (case e of
-    {#p::term [g]}
-     [g] (#p ..) : term [g] => [g] (#p ..)
+    {#p:[g. term]}
+     [g. (#p ..)] : [g. term] => [g. (#p ..)]
 
-  | {U::term [g, x : term]}
-    [g] lam (\x. (U .. x)) : term [g] => 
+  | {U:[g, x : term. term]}
+    [g. lam (\x. (U .. x))] : [g. term] => 
 
-       (case (copy [g, x:term]  ([g,x] (U .. x))) of
+       (case (copy [g, x:term]  [g,x. (U .. x)]) of
 
-          {V:: term[g, x : term ]}
+          {V: [g, x : term. term]}
 
-           [g,x:term ] (V .. x) : term [g,x:term] =>
-             [g] lam (\x. (V .. x)))
+           [g,x:term . (V .. x)] : [g,x:term. term] =>
+             [g. lam (\x. (V .. x))])
 );

@@ -8,39 +8,42 @@ s  : exp nat -> exp nat.
 lam : % {T1:tp}
       (exp T1 -> exp T2) -> exp (arr T1 T2).
 
-rec identity : (exp nat) [ ] -> (exp nat) [ ] =
+%{
+rec identity : [. exp nat] -> [. exp nat] =
     fn x =>
       case x of
-          [ ] z    =>  [ ] z
-        | [ ] s U  =>  [ ] s U;
+          [. z]    =>  [. z]
+        | [. s U]  =>  [. s U];
 
-
+}%
 schema w = some [t:tp] exp t;
 
 
-rec identity' : {g:(w)*} (exp T)[g] -> (exp T) [g] =
-FN g => 
+rec identity' : {g:w}
+ [g. exp T] -> [g. exp T] =  
+ mlam g => 
     fn x =>
       case x of
-          [g] z          => [g] z
-        | [g] s (U .. )  => [g] s (U .. )
-	| [g] (#p ..) 	 => [g] (#p ..)
+         [g. z]          => [g. z]
+       | [g. s (U .. )]  => [g. s (U .. )]
+	| [g. (#p ..)] 	 => [g. (#p ..)]
 ;
 
-
-rec copy : {g:(w)*} (exp (T ..))[g] -> (exp (T ..)) [g] =
-FN g =>  
+%{
+rec copy : {g:w} [g. exp (T ..)] -> [g. exp (T ..)] =
+mlam g =>  
  fn x =>
    case x of
-     [g] z   => [g] z
+     [g. z]   => [g. z]
 
-   | [g] s (U .. )  => 
+   | [g. s (U .. )]  => 
 
-      let [g] (V ..) =  copy [g] ([g] (U ..)) in
-        [g] s (V ..)
+      let [g. (V ..)] =  copy [g] [g. (U ..)] in
+        [g. s (V ..)]
 
-   | [g] lam (\x. (E ..  x))  => [g] lam  (\x. (E .. x)) 					  
-   | [g] lam (\ x. (E .. x))  => x
+   | [g. lam (\x. (E ..  x))]  => [g. lam  (\x. (E .. x))] 					  
+   | [g. lam (\ x. (E .. x))]  => x
 
-   | [g] (#p ..)              => [g] (#p ..)
+   | [g. (#p ..)]              => [g. (#p ..)]
 ;
+}%

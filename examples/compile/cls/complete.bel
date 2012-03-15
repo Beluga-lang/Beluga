@@ -7,16 +7,16 @@
 %  C'' :: st Ks P S =>* st Ks'' P'' S''.
 
 % Proof: By induction on the structure of C.
-rec append : (mstep (st Ks P S)  (st Ks' P' S'))[ ] 
-           -> (mstep (st Ks' P' S') (st Ks'' P'' S''))[ ]
-	   -> (mstep (st Ks P S) (st Ks'' P'' S''))[ ] = 
+rec append : [. mstep (st Ks P S)  (st Ks' P' S')] 
+           -> [. mstep (st Ks' P' S') (st Ks'' P'' S'')]
+	   -> [. mstep (st Ks P S) (st Ks'' P'' S'')] = 
 fn c =>  fn c' => case c of 
-| [ ] id_step =>  c'
+| [. id_step] =>  c'
 % Rewrote definition of to s.t. it is clear what a state is,
 % namely, it looks like (st K P S). The issue was that 
 % Otherwise, elaboration will only know the type state for C, but cannot
 % refine it later.
-| [ ] to R C  =>  let [ ] C'' = append ([ ] C) c' in ([ ] to R C'')
+| [. to R C]  =>  let [. C''] = append [. C] c' in [. to R C'']
 ;
 
 
@@ -34,90 +34,90 @@ fn c =>  fn c' => case c of
 % in the mode declaration, in the functional representation, we make these
 % inputs explicit in the type of the function subcomp, and also in the recursive calls.
 
-rec subcomp : {Ks::envstack [ ]}{P::program [ ]}{S:: env[ ]}
-              (feval K F W)[ ] -> 
-              (mstep (st (push Ks K) (prog (ev F) P) S) (st Ks P (vcons S  W)))[ ] = 
+rec subcomp : {Ks:[. envstack]}{P:[. program]}{S: [. env]}
+              [. feval K F W] -> 
+              [. mstep (st (push Ks K) (prog (ev F) P) S) (st Ks P (vcons S  W))] = 
 mlam Ks => mlam P => mlam S => 
 fn d => case d of 
-  [ ] fev_1  =>  [ ] to c_1 id_step
+  [. fev_1]  =>  [. to c_1 id_step]
 
- |  [ ] fev_^ D1 => 
-     (let [ ] C1  = subcomp < . Ks > < . P > < . S > ([ ] D1) in 
- 	([ ] to c_^ C1))
-
-
-| [ ] fev_1+ D1  =>   
-    let [ ] C1 = subcomp < . Ks > < . P > < . S > ([ ] D1) in 
- 	[ ]  (to c_1+ C1)
-
- | [ ] fev_^+ D1 => 
-     let [ ] C1 = subcomp < . Ks > < . P > < . S > ([ ] D1) in 
- 	[ ] (to c_^+ C1)
+ |  [. fev_^ D1] => 
+     (let [. C1]  = subcomp [ . Ks ] [ . P ] [ . S ] [. D1] in 
+ 	[. to c_^ C1])
 
 
- | [ ] fev_z => [ ] (to c_z id_step)
+| [. fev_1+ D1]  =>   
+    let [. C1] = subcomp [ . Ks ] [ . P ] [ . S ] [. D1] in 
+ 	[. (to c_1+ C1)]
+
+ | [. fev_^+ D1] => 
+     let [. C1] = subcomp [ . Ks ] [ . P ] [ . S ] [. D1] in 
+ 	[. (to c_^+ C1)]
 
 
- | [ ] fev_s D1 =>  
-     let [ ] C1 = subcomp  < . Ks > < . (prog add1 P ) > < . S > ([ ] D1) in    
-       append ([ ] to c_s C1) ([ ] to c_add1 id_step) 
+ | [. fev_z] => [. (to c_z id_step)]
 
 
-  | [ ] (fev_match_z D2 D1): (feval K (match' F1 F2 F3) W)[ ]  => 
-      let [ ] C1 = subcomp < . (push Ks K) >  
-                           < . (prog branch  (prog (ev F2)  (prog (ev F3)  P))) > 
-                           < . S > 
-                            ([ ] D1) in 
-      let [ ] C2 = subcomp < . Ks > < . P > < .  S  > ([ ] D2) in 
-        append ([ ] to c_match C1) ([ ] to c_branch_z  C2)
+ | [. fev_s D1] =>  
+     let [. C1] = subcomp  [ . Ks ] [ . (prog add1 P ) ] [ . S ] [. D1] in    
+       append [. to c_s C1] [. to c_add1 id_step] 
 
 
-  | [ ] (fev_match_s D3 D1): (feval K (match' F1 F2 F3) W)[ ]  => 
-      let [ ] C1 = subcomp < . (push Ks K) > 
-                           < . (prog branch  (prog (ev F2)  (prog (ev F3)  P))) > 
-                           < . S > 
-                            ([ ] D1) in 
-      let [ ] C2 = subcomp < . Ks > < . P > < .  S  > ([ ] D3) in 
-        append ([ ] to c_match C1) ([ ] to c_branch_s  C2)
+  | [. (fev_match_z D2 D1)]: [. (feval K (match' F1 F2 F3) W)]  => 
+      let [. C1] = subcomp [ . (push Ks K) ]  
+                           [ . (prog branch  (prog (ev F2)  (prog (ev F3)  P))) ] 
+                           [ . S ] 
+                            [. D1] in 
+      let [. C2] = subcomp [ . Ks ] [ . P ] [ .  S  ] [. D2] in 
+        append [. to c_match C1] [. to c_branch_z  C2]
 
- | [ ] (fev_pair D2 D1) : feval K (pair' F1 F2) (pair_val W1 W2)[ ] => 
-   let [ ] C1 = subcomp < . (push Ks K) > < . (prog (ev F2) (prog mkpair  P)) > < . S > ([ ] D1) in 
-   let [ ] C2 = subcomp < . Ks >   < .(prog mkpair  P)  > < . vcons S W1 > ([ ] D2) in 
-   let [ ] C' = append ([ ] to c_pair C1) ([ ] C2) in
-     append  ([ ] C')  ([ ] to c_mkpair id_step )
 
- | [ ] fev_fst D1 : (feval K (fst' F1) W1)[ ] =>  
-   let [ ] C1 = subcomp < . Ks > < . prog getfst P >  < . S > ([ ] D1) in 
-     append ([ ] to c_fst C1) ([ ] to c_getfst id_step)
+  | [. (fev_match_s D3 D1)]: [. (feval K (match' F1 F2 F3) W)]  => 
+      let [. C1] = subcomp [ . (push Ks K) ] 
+                           [ . (prog branch  (prog (ev F2)  (prog (ev F3)  P))) ] 
+                           [ . S ] 
+                            [. D1] in 
+      let [. C2] = subcomp [ . Ks ] [ . P ] [ .  S  ] [. D3] in 
+        append [. to c_match C1] [. to c_branch_s  C2]
 
- | [ ] fev_snd D2 : (feval K (snd' F2) W2)[ ] => 
-   let [ ] C2 = subcomp < . Ks > < . prog getsnd P >  < . S > ([ ] D2) in 
-     append ([ ] to c_snd C2) ([ ] to c_getsnd id_step)
+ | [. (fev_pair D2 D1)] : [. feval K (pair' F1 F2) (pair_val W1 W2)] => 
+   let [. C1] = subcomp [ . (push Ks K) ] [ . (prog (ev F2) (prog mkpair  P)) ] [ . S ] [. D1] in 
+   let [. C2] = subcomp [ . Ks ]   [ .(prog mkpair  P)  ] [ . vcons S W1 ] [. D2] in 
+   let [. C'] = append [. to c_pair C1] [. C2] in
+     append  [. C']  [. to c_mkpair id_step ]
 
- | [ ] fev_lam => [ ] to c_lam id_step
+ | [. fev_fst D1] : [. (feval K (fst' F1) W1)] =>  
+   let [. C1] = subcomp [ . Ks ] [ . prog getfst P ]  [ . S ] [. D1] in 
+     append [. to c_fst C1] [. to c_getfst id_step]
 
- |  {D1:: (feval K F1 (clo K' (lam' F1')))[ ]}
-    {D2:: (feval K F2 W2)[ ]}
-    {D3:: (feval (vcons K' W2) F1' W)[ ]}
-   [ ] fev_app D3 D2 D1: (feval K (app' F1 F2) W)[ ] =>
-   let [ ] C1 = subcomp < . push Ks K > < . (prog (ev F2) (prog apply P)) > < . S >  ([ ] D1) in 
-   let [ ] C2 = subcomp < . Ks > < . prog apply P > < . vcons S (clo K' (lam' F1')) > ([ ] D2) in 
-   let [ ] C3 = subcomp < . Ks > < . P > < . S > ([ ] D3) in
-   let [ ] C' = append ([ ] to c_app C1) ([ ] C2) in 
-     append ([ ] C') ([ ] to c_apply C3)
+ | [. fev_snd D2] : [. (feval K (snd' F2) W2)] => 
+   let [. C2] = subcomp [ . Ks ] [ . prog getsnd P ]  [ . S ] [. D2] in 
+     append [. to c_snd C2] [. to c_getsnd id_step]
 
- | [ ] fev_letv D2 D1 : (feval K (letv' F1 F2) W)[ ] => 
-   let [ ] C1 = subcomp < . push Ks K >  < . prog bind (prog (ev F2) P) > < . S > ([ ] D1) in 
-   let [ ] C2 = subcomp < . Ks > < . P > < . S > ([ ] D2) in 
-     append ([ ] to c_letv C1) ([ ] to c_bind C2)
+ | [. fev_lam] => [. to c_lam id_step]
 
- | [ ] fev_letn D2 : (feval K (letn' F1 F2) W)[ ] => 
-   let [ ] C2 = subcomp < . Ks > < . P > < . S > ([ ] D2) in 
-     [ ] to c_letn C2
+ |  {D1: [. feval K F1 (clo K' (lam' F1'))]}
+    {D2: [. feval K F2 W2]}
+    {D3: [. feval (vcons K' W2) F1' W]}
+   [. fev_app D3 D2 D1]: [. (feval K (app' F1 F2) W)] =>
+   let [. C1] = subcomp [ . push Ks K ] [ . (prog (ev F2) (prog apply P)) ] [ . S ]  [. D1] in 
+   let [. C2] = subcomp [ . Ks ] [ . prog apply P ] [ . vcons S (clo K' (lam' F1')) ] [. D2] in 
+   let [. C3] = subcomp [ . Ks ] [ . P ] [ . S ] [. D3] in
+   let [. C'] = append [. to c_app C1] [. C2] in 
+     append [. C'] [. to c_apply C3]
 
- | [ ] fev_fix D1 : (feval K (fix' F) W)[ ] => 
-   let [ ] C1 = subcomp < . Ks > < . P > < . S > ([ ] D1) in 
-     [ ] to c_fix C1
+ | [. fev_letv D2 D1] : [. (feval K (letv' F1 F2) W)] => 
+   let [. C1] = subcomp [ . push Ks K ]  [ . prog bind (prog (ev F2) P) ] [ . S ] [. D1] in 
+   let [. C2] = subcomp [ . Ks ] [ . P ] [ . S ] [. D2] in 
+     append [. to c_letv C1] [. to c_bind C2]
+
+ | [. fev_letn D2] : [. (feval K (letn' F1 F2) W)] => 
+   let [. C2] = subcomp [ . Ks ] [ . P ] [ . S ] [. D2] in 
+     [. to c_letn C2]
+
+ | [. fev_fix D1] : [. (feval K (fix' F) W)] => 
+   let [. C1] = subcomp [ . Ks ] [ . P ] [ . S ] [. D1] in 
+     [. to c_fix C1]
 
 ;
 
@@ -132,8 +132,8 @@ fn d => case d of
 % }%
 
 
-rec cev_complete : (feval K F W)[ ] -> (ceval K F W)[ ] = 
+rec cev_complete : [. feval K F W] -> [. ceval K F W] = 
  fn d => 
-  let [ ] C = subcomp < . emptys > < . done > < . empty > d in 
-    [ ] run C
+  let [. C] = subcomp [ . emptys ] [ . done ] [ . empty ] d in 
+    [. run C]
 ;

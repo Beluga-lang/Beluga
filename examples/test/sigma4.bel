@@ -39,17 +39,17 @@ rec listg3 : {g:(ly)*} {M::nat[g]} {L::(list (M ..))[g]} expl[g] =
 ;
 }%
 
-schema ly = some [n:nat] block l:list n. nat;
-rec listg3 : {g:(ly)*} {L::(list z)[g]} nat[] =
-  FN g => mlam L => case [g] L .. of
-      [g] #p.1 ..  => [] z
-    | [g] nil  => [] z
+schema ly = some [n:nat] block l:list n, _t:nat;
+rec listg3 : {g:ly} {L:[g. list z]} [. nat] =
+  mlam g => mlam L => case [g. L ..] of
+      [g. #p.1 ..]  => [. z]
+    | [g. nil]  => [. z]
 ;
 
 
 schema lists-notblock = some [n:nat] list n;
-rec listg3 : {g:(lists-notblock)*} {L::(list z)[g]} nat[] =
-   FN g => mlam L => case [g] L .. of
-      [g] #p ..  => [] z
-    | [g] nil  => [] z
+rec listg3 : {g:lists-notblock} {L:[g. list z]} [. nat] =
+   mlam g => mlam L => case [g. L ..] of
+      [g. #p ..]  => [. z]
+    | [g. nil]  => [. z]
 ;

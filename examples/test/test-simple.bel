@@ -11,33 +11,33 @@ zoo: (nat -> nat) -> nat.
 
 schema natCtx = some [] nat;
 
-rec identity : {g:(natCtx)*} nat [g] -> nat [g] =
-FN g => 
+rec identity : {g:natCtx} [g. nat] -> [g. nat] =
+mlam g => 
  fn x =>
   (case x of
-      [g] z                  =>  [g] z
-    | [g] (#p ..)            =>  [g] z
-    | [g] (U ..)             =>  [g] (U ..)
-    | [g] zoo (\x. (U .. x)) =>  [g] (U ..  (s z))
+      [g. z]                  =>  [g. z]
+    | [g. (#p ..)]            =>  [g. z]
+    | [g. (U ..)]             =>  [g. (U ..)]
+    | [g. zoo (\x. (U .. x))] =>  [g. (U ..  (s z))]
  
 );
 
-rec identity :  nat [ ] -> nat [ ] =
+rec identity :  [. nat] -> [. nat] =
  fn x =>
   (case x of
-     [ ] z          =>  [ ] z
-   | [ ] U          =>  [ ] U
+     [. z]          =>  [. z]
+   | [. U]          =>  [. U]
 )
 ;
 
 
-rec copy :  nat [ ] -> nat [ ] =
+rec copy :  [. nat] -> [. nat] =
  fn x =>
   (case x of
-     [ ] z          =>  [ ] z
-   | [ ] U          =>  
-    let [ ] V = copy ([ ] U) in 
-       [ ] s V
+     [. z]          =>  [. z]
+   | [. U]          =>  
+    let [. V] = copy [. U] in 
+       [. s V]
 )
 ;
 

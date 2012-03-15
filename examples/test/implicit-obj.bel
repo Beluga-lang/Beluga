@@ -26,16 +26,16 @@ lam  : (exp T1 -> exp T2) -> exp (arr T1 T2).
 
 
 
-rec typeCase : {T::tp[ ]} (exp T)[ ] -> (exp T)[ ] = 
-mlam T => fn e => case [ ] T of  
-   [ ] nat => (case e of [ ] z   => [ ] z 
-                       | [ ] suc U => e
-                       | [ ] suc U => let [ ] V = typeCase <. nat> ([ ] U) in [ ] suc V
+rec typeCase : {T:[. tp]} [. exp T] -> [. exp T] = 
+mlam T => fn e => case [. T] of  
+   [. nat] => (case e of [. z]   => [. z] 
+                       | [. suc U] => e
+                       | [. suc U] => let [. V] = typeCase [. nat] [. U] in [. suc V]
               ) 
- | [ ] bool => (case e of [ ] tt => [ ] tt
-                        | [ ] ff => [ ] ff
+ | [. bool] => (case e of [. tt] => [. tt]
+                        | [. ff] => [. ff]
                ) 
 
- | [ ] arr S' S => 
-   let [ ] lam (\x. E x) = e  in [ ] lam (\x. E x)
+ | [. arr S' S] => 
+   let [. lam (\x. E x)] = e  in [. lam (\x. E x)]
 ;

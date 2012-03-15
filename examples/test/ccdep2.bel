@@ -29,66 +29,66 @@ schema letter-ctx = some [b1:bool, b2:bool, m:letter] trip b1 b2 m;
 schema bool-ctx = bool;
 
 
-rec depsplitWrong1 : {g:(dep-ctx)*} (bool)[g, x : dep T1 T2]  ->  bool[ ] =
-FN g => fn d => case d of %not
- | [g, xx:dep ff ff] UU .. xx => [] ff
+rec depsplitWrong1 : {g:dep-ctx} [g, x : dep T1 T2. bool]  ->  [. bool] =
+mlam g => fn d => case d of %not
+ | [g, xx:dep ff ff. UU .. xx] => [. ff]
 ;
 
-rec depsplitWrong2 : {g:(dep-ctx)*} (bool)[g, x : dep T1 T2]  ->  bool[ ] =
-FN g => fn d => case d of %not
- | [g, xx:dep ff ff] UU1 .. xx => [] ff
- | [g, xx:dep ff tt] UU2 .. xx => [] ff
+rec depsplitWrong2 : {g:dep-ctx} [g, x : dep T1 T2. bool]  ->  [. bool] =
+mlam g => fn d => case d of %not
+ | [g, xx:dep ff ff. UU1 .. xx] => [. ff]
+ | [g, xx:dep ff tt. UU2 .. xx] => [. ff]
 ;
 
 
-rec depsplitOK3 : {g:(dep-ctx)*} (bool)[g, x : dep T1 T2]  ->  bool[ ] =
-FN g => fn d => case d of
- | [g, xx:dep tt ff] UU1 .. xx => [] ff
- | [g, xx:dep ff tt] UU2 .. xx => [] ff
- | [g, xx:dep tt tt] UU3 .. xx => [] ff
- | [g, xx:dep ff ff] UU4 .. xx => [] ff
+rec depsplitOK3 : {g:dep-ctx} [g, x : dep T1 T2. bool]  ->  [. bool] =
+mlam g => fn d => case d of
+ | [g, xx:dep tt ff. UU1 .. xx] => [. ff]
+ | [g, xx:dep ff tt. UU2 .. xx] => [. ff]
+ | [g, xx:dep tt tt. UU3 .. xx] => [. ff]
+ | [g, xx:dep ff ff. UU4 .. xx] => [. ff]
 ;
 
-rec depsplitWrong3 : {g:(dep-ctx)*} (bool)[g, x : dep T1 T2]  ->  bool[ ] =
-FN g => fn d => case d of %not
- | [g, xx:dep tt ff] UU1 .. xx => [] ff
- | [g, xx:dep ff tt] UU2 .. xx => [] ff
+rec depsplitWrong3 : {g:dep-ctx} [g, x : dep T1 T2. bool]  ->  [. bool] =
+mlam g => fn d => case d of %not
+ | [g, xx:dep tt ff. UU1 .. xx] => [. ff]
+ | [g, xx:dep ff tt. UU2 .. xx] => [. ff]
 % | [g, xx:dep tt tt] UU3 .. xx => [] ff
- | [g, xx:dep ff ff] UU4 .. xx => [] ff
+ | [g, xx:dep ff ff. UU4 .. xx] => [. ff]
 ;
 
 
 
-rec depsplitOKConstrained : {g:(dep-ctx)*} (bool)[g, x : dep tt ff]  ->  bool[ ] =
-FN g => fn d => case d of
- | [g, xx:dep tt ff] UU1 .. xx => [] ff
+rec depsplitOKConstrained : {g:dep-ctx} [g, x : dep tt ff. bool]  ->  [. bool] =
+mlam g => fn d => case d of
+ | [g, xx:dep tt ff. UU1 .. xx] => [. ff]
 ;
 
-rec depsplitWrongConstrained2 : {g:(dep-ctx)*} (bool)[g, x : dep tt T2]  ->  bool[ ] =
-FN g => fn d => case d of %not
- | [g, xx:dep tt ff] UU1 .. xx => [] ff
-;
-
-
-
-rec letterFn : {g:(letter-ctx)*} (bool)[g, x : trip tt BBB aa]  ->  bool[ ] =
-FN g => fn d => case d of
- | [g, xx:trip tt ff aa] UU1 .. xx => [] ff
- | [g, xx:trip tt tt aa] UU1 .. xx => [] ff
+rec depsplitWrongConstrained2 : {g:dep-ctx} [g, x : dep tt T2. bool]  ->  [. bool] =
+mlam g => fn d => case d of %not
+ | [g, xx:dep tt ff. UU1 .. xx] => [. ff]
 ;
 
 
 
-rec depsplitOKConstrained2 : {g:(dep-ctx)*} (bool)[g, x : dep tt T2]  ->  bool[ ] =
-FN g => fn d => case d of
- | [g, xx:dep tt ff] UU1 .. xx => [] ff
- | [g, xx:dep tt tt] VV1 .. xx => [] ff
+rec letterFn : {g:letter-ctx} [g, x : trip tt BBB aa. bool]  ->  [. bool] =
+mlam g => fn d => case d of
+ | [g, xx:trip tt ff aa. UU1 .. xx] => [. ff]
+ | [g, xx:trip tt tt aa. UU1 .. xx] => [. ff]
 ;
 
 
-rec depsplitOK2 : {g:(dep-ctx)*} (bool)[g, x : dep T1 T2]  ->  bool[ ] =
-FN g => fn d => case d of
- | [g, xx:dep W1 W2] U .. xx => [] tt
+
+rec depsplitOKConstrained2 : {g:dep-ctx} [g, x : dep tt T2. bool]  ->  [. bool] =
+mlam g => fn d => case d of
+ | [g, xx:dep tt ff. UU1 .. xx] => [. ff]
+ | [g, xx:dep tt tt. VV1 .. xx] => [. ff]
+;
+
+
+rec depsplitOK2 : {g:dep-ctx} [g, x : dep T1 T2. bool]  ->  [. bool] =
+mlam g => fn d => case d of
+ | [g, xx:dep W1 W2. U .. xx] => [. tt]
 ;
 
 

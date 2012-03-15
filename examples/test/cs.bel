@@ -8,63 +8,63 @@ suc  : term nat -> term nat.
 blivit : type.
 blivit_con: blivit.
 
-schema termCtx = some [t:tp] block x:term t. term t;
+schema termCtx = some [t:tp] block x:term t, _t:term t;
 
-rec fff : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
-FN g => fn e =>
+rec fff : {g:termCtx} [g. term nat] -> [g. term nat] =
+mlam g => fn e =>
   case e of
-  | [g]  z     => [g] z
-  | [g]  suc (U ..)   => [g] z
-  | [g]  #p.1 ..   => [g] z
-  | [g]  #p.2 ..   => [g] z
+  | [g. z]     => [g. z]
+  | [g. suc (U ..)]   => [g. z]
+  | [g. #p.1 ..]   => [g. z]
+  | [g. #p.2 ..]   => [g. z]
 ;
 
 
 
-rec fffRedundantWrongProjCases : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
-FN g => fn e =>
+rec fffRedundantWrongProjCases : {g:termCtx} [g. term nat] -> [g. term nat] =
+mlam g => fn e =>
   case e of %not
-  | [g]  z     => [g] z
-  | [g]  suc (U ..)   => [g] z
-  | [g]  #p.2 ..   => [g] z
-  | [g]  #p.2 ..   => [g] z
+  | [g. z]     => [g. z]
+  | [g. suc (U ..)]   => [g. z]
+  | [g. #p.2 ..]   => [g. z]
+  | [g. #p.2 ..]   => [g. z]
 ;
 
 
 
-rec fffRedundantWrongProjCases' : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
-FN g => fn e =>
+rec fffRedundantWrongProjCases' : {g:termCtx} [g. term nat] -> [g. term nat] =
+mlam g => fn e =>
   case e of %not
-  | [g]  z     => [g] z
-  | [g]  #p.1 ..   => [g] z
-  | [g]  suc (U ..)   => [g] z
-  | [g]  #p.1 ..   => [g] z
+  | [g. z]     => [g. z]
+  | [g. #p.1 ..]   => [g. z]
+  | [g. suc (U ..)]   => [g. z]
+  | [g. #p.1 ..]   => [g. z]
 ;
 
 
 
 
-rec fffForgotBothProjCases : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
-FN g => fn e =>
+rec fffForgotBothProjCases : {g:termCtx} [g. term nat] -> [g. term nat] =
+mlam g => fn e =>
   case e of %not
-  | [g]  z     => [g] z
-  | [g]  suc (U ..)   => [g] z
+  | [g. z]     => [g. z]
+  | [g. suc (U ..)]   => [g. z]
 ;
 
 
-rec fffForgot1stProjCase : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
-FN g => fn e =>
+rec fffForgot1stProjCase : {g:termCtx} [g. term nat] -> [g. term nat] =
+mlam g => fn e =>
   case e of %not
-  | [g]  z     => [g] z
-  | [g]  suc (U ..)   => [g] z
-  | [g]  #p.2 ..   => [g] z
+  | [g. z]     => [g. z]
+  | [g. suc (U ..)]   => [g. z]
+  | [g. #p.2 ..]   => [g. z]
 ;
 
 
-rec fffForgot2ndProjCase : {g:(termCtx)*} (term nat)[g] -> (term nat)[g] =
-FN g => fn e =>
+rec fffForgot2ndProjCase : {g:termCtx} [g. term nat] -> [g. term nat] =
+mlam g => fn e =>
   case e of %not
-  | [g]  z     => [g] z
-  | [g]  suc (U ..)   => [g] z
-  | [g]  #p.1 ..   => [g] z
+  | [g. z]     => [g. z]
+  | [g. suc (U ..)]   => [g. z]
+  | [g. #p.1 ..]   => [g. z]
 ;

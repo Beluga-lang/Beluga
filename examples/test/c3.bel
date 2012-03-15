@@ -4,10 +4,10 @@ suc  : term -> term.
 
 schema termCtx = some [] term;
 
-rec copy : term[] -> term[] = fn e =>
+rec copy : [. term] -> [. term] = fn e =>
   case e of
-  | []  z     => [] z
-  | [] suc U => let [] V = copy ([] U) in [] suc V;
+  | [. z]     => [. z]
+  | [. suc U] => let [. V] = copy [. U] in [. suc V];
 
 %{
 rec copy : {g:(termCtx)*} term[g] -> term[g] =

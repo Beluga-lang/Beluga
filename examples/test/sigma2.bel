@@ -5,18 +5,18 @@ arr : tp -> tp -> tp.
 exp : tp -> type.
 unitexp : exp unit.
 
-schema assn = block t:tp. exp t;
+schema assn = block t:tp, _t:exp t;
 
 %not
-rec fff : {g:(assn)*} tp[] -> tp[]
-= FN g => fn e => fff[g, zz:block u:tp. exp unit] e;
+rec fff : {g:assn} [. tp] -> [. tp]
+= mlam g => fn e => fff[g, zz:block u:tp, _t:exp unit] e;
 
-rec ggg : {g:(assn)*} tp[] -> tp[]
-= FN g => fn e => ggg[g, zz:block u:tp. exp u] e;
+rec ggg : {g:assn} [. tp] -> [. tp]
+= mlam g => fn e => ggg[g, zz:block u:tp, _t:exp u] e;
 
-rec hhh : {g:(assn)*} tp[] -> tp[]
-= FN g => fn e => hhh[g, zz:block (u:tp. exp u), zz1:block u':tp. exp u'] e;
+rec hhh : {g:assn} [. tp] -> [. tp]
+= mlam g => fn e => hhh[g, zz:block (u:tp, _t:exp u), zz1:block u':tp, _t:exp u'] e;
 
 %not
-rec iii : {g:(assn)*} tp[] -> tp[]
- = FN g => fn e => iii[g, zz:block (u:tp. exp u), zz1:block u':tp, u':tp. exp u'] e;
+rec iii : {g:assn} [. tp] -> [. tp]
+ = mlam g => fn e => iii[g, zz:block (u:tp, _t:exp u), zz1:block u':tp, u':tp, _t:exp u'] e;

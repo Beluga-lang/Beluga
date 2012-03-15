@@ -8,24 +8,24 @@ flat : term nat -> term nat -> term nat -> term nat.
 schema termCtx = term nat;
 
 
-rec fff : {g:(termCtx)*} (term nat)[] -> (term nat)[] =
-FN g => fn e =>
+rec fff : {g:termCtx} [. term nat] -> [. term nat] =
+mlam g => fn e =>
   case e of
-  | []  z     => [] z
+  | [. z]     => [. z]
 
 
-  | []  flat z z z => [] z
-  | []  flat z z (flat W1 W2 W3) => [] z
+  | [. flat z z z] => [. z]
+  | [. flat z z (flat W1 W2 W3)] => [. z]
 
-  | []  flat z (flat W1 W2 W3) z => [] z
-  | []  flat z (flat W1 W2 W3) (flat X1 X2 X3) => [] z
+  | [. flat z (flat W1 W2 W3) z] => [. z]
+  | [. flat z (flat W1 W2 W3) (flat X1 X2 X3)] => [. z]
 
 
-  | []  flat (flat U1 U2 U3) z z => [] z
-  | []  flat (flat U1 U2 U3) z (flat Y1 Y2 Y3) => [] z
+  | [. flat (flat U1 U2 U3) z z] => [. z]
+  | [. flat (flat U1 U2 U3) z (flat Y1 Y2 Y3)] => [. z]
 
-  | []  flat (flat U1 U2 U3) (flat V1 V2 V3) z => [] z
-  | []  flat (flat U1 U2 U3) (flat V1 V2 V3) (flat W1 W2 W3)   => [] z
+  | [. flat (flat U1 U2 U3) (flat V1 V2 V3) z] => [. z]
+  | [. flat (flat U1 U2 U3) (flat V1 V2 V3) (flat W1 W2 W3)]   => [. z]
 
 ;
 
@@ -33,21 +33,21 @@ FN g => fn e =>
 
 
 
-rec fffX2 : {g:(termCtx)*} (term nat)[] -> (term nat)[] =
-FN g => fn e =>
+rec fffX2 : {g:termCtx} [. term nat] -> [. term nat] =
+mlam g => fn e =>
   case e of
-  | []  z     => [] z
+  | [. z]     => [. z]
 
-  | []  flat z z z => [] z
-  | []  flat z z (flat W1 W2 W3) => [] z
+  | [. flat z z z] => [. z]
+  | [. flat z z (flat W1 W2 W3)] => [. z]
 
-  | []  flat z (flat W1 W2 W3) z => [] z
-  | []  flat z (flat W1 W2 W3) (flat X1 X2 X3) => [] z
+  | [. flat z (flat W1 W2 W3) z] => [. z]
+  | [. flat z (flat W1 W2 W3) (flat X1 X2 X3)] => [. z]
 
 
-  | []  flat (flat U1 U2 U3) z z => [] z
-  | []  flat (flat U1 U2 U3) z (flat Y1 Y2 Y3) => [] z
+  | [. flat (flat U1 U2 U3) z z] => [. z]
+  | [. flat (flat U1 U2 U3) z (flat Y1 Y2 Y3)] => [. z]
 
-  | []  flat (flat U1 U2 U3) (flat V1 V2 V3) (flat W1 W2 W3)   => [] z
+  | [. flat (flat U1 U2 U3) (flat V1 V2 V3) (flat W1 W2 W3)]   => [. z]
 
 ;

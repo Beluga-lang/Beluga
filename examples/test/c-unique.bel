@@ -28,13 +28,13 @@ e_nat: eq nat nat.
 
 % Reflexivity is admissible:
 % Theorem: For all types T:tp, eq T T.
-rec refl : {T::tp[ ]}(eq T T)[ ] = 
-mlam T => case [ ] T of 
- | [ ] nat => [ ] e_nat 
- | [ ] arr T1 T2 => 
-   let [ ] D1 = refl < . T1 > in 
-   let [ ] D2 = refl < . T2 > in 
-     [ ] e_arr D1 D2
+rec refl : {T:[. tp]}[. eq T T] = 
+mlam T => case [. T] of 
+ | [. nat] => [. e_nat] 
+ | [. arr T1 T2] => 
+   let [. D1] = refl [ . T1 ] in 
+   let [. D2] = refl [ . T2 ] in 
+     [. e_arr D1 D2]
 ;                        
 
 
@@ -48,22 +48,23 @@ Proof by induction on E.
 %block l = some [t:tp] block x:exp. type_of x t;
 %world tctx = l
 
-schema tctx =  some [t:tp] block x:exp. type_of x t;
+schema tctx =  some [t:tp] block x:exp, _t:type_of x t;
 
-rec unique : {g:(tctx)*}{E::exp[g]} (type_of (E ..) T)[g] -> (type_of (E ..) T')[g] 
-             ->  (eq T T')[ ] = 
-FN g => mlam E => fn d => fn f =>
-  unique [g] <g.E ..> d f
+%{
+rec unique : {g:tctx}{E:[g. exp]} [g. type_of (E ..) T] -> [g. type_of (E ..) T'] 
+             ->  [. eq T T'] = 
+mlam g => mlam E => fn d => fn f =>
+  unique [g] [g.E ..] d f
 ;
 
-
+}%
 % Equality predicate
 equal: tp -> tp -> type.
 e_ref: equal T T.
 
-rec unique2 : {g:(tctx)*}{E::exp[g]} (type_of (E ..) T)[g] -> (type_of (E ..) T')[g] 
-             ->  (equal T T')[ ] = 
-FN g => mlam E => fn d => fn f => case ([g] E .. ) of 
+rec unique2 : {g:tctx}{E:[g. exp]} [g. type_of (E ..) T] -> [g. type_of (E ..) T'] 
+             ->  [. equal T T'] = 
+mlam g => mlam E => fn d => fn f => case [g. E .. ] of 
 %{
 | [g] app (E1 .. ) (E2 .. ) => 
   let [g] t_app (D1 ..) (D2 ..) = d in 
@@ -79,10 +80,10 @@ FN g => mlam E => fn d => fn f => case ([g] E .. ) of
    [ ] e_ref  
 }%
 
-| [g] #p.1 .. => 
-  let [g] #q.2 .. = d  in  % d : type_of #p.1 T
-  let [g] #r.2 .. = f  in  % f : type_of #p.1 T'
-    [ ] e_ref                     
+| [g. #p.1 ..] => 
+  let [g. #q.2 ..] = d  in  % d : type_of #p.1 T
+  let [g. #r.2 ..] = f  in  % f : type_of #p.1 T'
+    [. e_ref]                     
 ;
 
 %{

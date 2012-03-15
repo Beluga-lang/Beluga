@@ -3,25 +3,25 @@ z : nat.
 s : nat -> nat.
 
 
-rec identity : nat[ ] -> nat [ ] =
+rec identity : [. nat] -> [. nat] =
     fn x =>
       case x of
-          [ ] z   : nat [ ] => [ ] z
-        | {U::nat[ ]}[ ] s U : nat [ ] => [ ] s U ;
+          [. z]   : [. nat] => [. z]
+        | {U:[. nat]}[. s U] : [. nat] => [. s U] ;
 
 
-rec plus : nat [ ] -> nat [ ] -> nat [ ] = 
+rec plus : [. nat] -> [. nat] -> [. nat] = 
   fn x => fn y => 
-    case x of [ ] z : nat [ ]  => y
-            | {U:: nat [ ]}[ ] s U : nat [ ] => 
-	      (case (plus ([ ] U) y) of 
- 	        {V:: nat [ ]} [ ] V : nat [ ] => [ ] s V);
+    case x of [. z] : [. nat]  => y
+            | {U: [. nat]}[. s U] : [. nat] => 
+	      (case (plus [. U] y) of 
+ 	        {V: [. nat]} [. V] : [. nat] => [. s V]);
 
 
-rec plus' : nat [ ] -> nat [ ] -> nat [ ] = 
+rec plus' : [. nat] -> [. nat] -> [. nat] = 
   fn x => fn y => 
-    case x of [ ] z : nat [ ]  => y
-            | {U:: nat [ ]}[ ] s U : nat [ ] => 
-	      (case (plus' ([ ] U) y) of 
- 	        {V:: nat [ ]} [ ] V : nat [ ] => [ ] s V);
+    case x of [. z] : [. nat]  => y
+            | {U: [. nat]}[. s U] : [. nat] => 
+	      (case (plus' [. U] y) of 
+ 	        {V: [. nat]} [. V] : [. nat] => [. s V]);
 

@@ -4,14 +4,14 @@ suc : nat -> nat.
 
 schema w = nat;
 
-rec copynat1 : {g:(w)*} nat[g] -> nat[g] = 
-  FN g => fn e => copynat1 [g] e;
+rec copynat1 : {g:w} [g. nat] -> [g. nat] = 
+  mlam g => fn e => copynat1 [g] e;
 
 
-rec copynat : {g:(w)*} nat[g] -> nat[g] =
-FN g =>
+rec copynat : {g:w} [g. nat] -> [g. nat] =
+mlam g =>
  fn e =>
   case e of %not
-    [g] z : nat[g] => [g] z
-  | {U :: nat [g]} [g] suc (U ..)   : nat[g] => copynat [g] ([g] (U ..))
+    [g. z] : [g. nat] => [g. z]
+  | {U : [g. nat]} [g. suc (U ..)]   : [g. nat] => copynat [g] [g. (U ..)]
 ;

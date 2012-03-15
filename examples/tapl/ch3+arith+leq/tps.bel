@@ -36,54 +36,54 @@ t_leq    : oft N nat -> oft M nat
 
 }%
 
-rec tps : (step M N)[ ] -> (oft M T)[ ] -> (oft N T)[ ] =
+rec tps : [. step M N] -> [. oft M T] -> [. oft N T] =
 fn s => fn d => case s of
-| [ ] e_switch_true => 
-  let [ ] t_switch D D1 D2 = d in [ ] D1
-| [ ] e_switch_false => 
-  let [ ] t_switch D D1 D2 = d in [ ] D2
-| [ ] e_switch S => 
-  let [ ] t_switch D D1 D2 = d in 
-  let [ ] D' = tps ([ ] S) ([ ] D) in 
-    [ ] t_switch D' D1 D2
+| [. e_switch_true] => 
+  let [. t_switch D D1 D2] = d in [. D1]
+| [. e_switch_false] => 
+  let [. t_switch D D1 D2] = d in [. D2]
+| [. e_switch S] => 
+  let [. t_switch D D1 D2] = d in 
+  let [. D'] = tps [. S] [. D] in 
+    [. t_switch D' D1 D2]
 
-| [ ] e_succ S => 
-  let [ ] t_succ D = d in 
-  let [ ] D'  = tps ([ ] S) ([ ] D) in 
-    [ ] t_succ D'
+| [. e_succ S] => 
+  let [. t_succ D] = d in 
+  let [. D']  = tps [. S] [. D] in 
+    [. t_succ D']
 
-| [ ] e_pred S => 
-  let [ ] t_pred D = d in 
-  let [ ] D'  = tps ([ ] S) ([ ] D) in 
-    [ ] t_pred D'
-| [ ] e_pred_zero => 
-  let [ ] t_pred D = d in [ ] t_zero
-| [ ] e_pred_succ _ => 
-  let [ ] t_pred (t_succ D) = d in [ ] D
+| [. e_pred S] => 
+  let [. t_pred D] = d in 
+  let [. D']  = tps [. S] [. D] in 
+    [. t_pred D']
+| [. e_pred_zero] => 
+  let [. t_pred D] = d in [. t_zero]
+| [. e_pred_succ _] => 
+  let [. t_pred (t_succ D)] = d in [. D]
 
-| [ ] e_iszero S => 
-  let [ ] t_iszero D = d in 
-  let [ ] D'  = tps ([ ] S) ([ ] D) in 
-    [ ] t_iszero D'
-| [ ] e_iszero_zero => 
-  let [ ] t_iszero D = d in [ ] t_true
-| [ ] e_iszero_succ _  => 
-  let [ ] t_iszero _ = d in [ ] t_false
+| [. e_iszero S] => 
+  let [. t_iszero D] = d in 
+  let [. D']  = tps [. S] [. D] in 
+    [. t_iszero D']
+| [. e_iszero_zero] => 
+  let [. t_iszero D] = d in [. t_true]
+| [. e_iszero_succ _]  => 
+  let [. t_iszero _] = d in [. t_false]
 
-| [ ] e_leq_1 S => 
-  let [ ] t_leq D1 D2 = d in 
-  let [ ] D1' = tps ([ ] S) ([ ] D1) in 
-    [ ] t_leq D1' D2
-| [ ] e_leq_2 _ S => 
-  let [ ] t_leq D1 D2 = d in 
-  let [ ] D2' = tps ([ ] S) ([ ] D2) in 
-    [ ] t_leq D1 D2'
-| [ ] e_leq_zero _ => 
-  let [ ] t_leq D1 D2 = d in [ ] t_true
-| [ ] e_leq_succ_zero _ => 
-  let [ ] t_leq D1 D2 = d in [ ] t_false
-| [ ] e_leq_succ_succ _ _ => 
-  let [ ] t_leq (t_succ D1) (t_succ D2) = d in [ ] t_leq D1 D2
+| [. e_leq_1 S] => 
+  let [. t_leq D1 D2] = d in 
+  let [. D1'] = tps [. S] [. D1] in 
+    [. t_leq D1' D2]
+| [. e_leq_2 _ S] => 
+  let [. t_leq D1 D2] = d in 
+  let [. D2'] = tps [. S] [. D2] in 
+    [. t_leq D1 D2']
+| [. e_leq_zero _] => 
+  let [. t_leq D1 D2] = d in [. t_true]
+| [. e_leq_succ_zero _] => 
+  let [. t_leq D1 D2] = d in [. t_false]
+| [. e_leq_succ_succ _ _] => 
+  let [. t_leq (t_succ D1) (t_succ D2)] = d in [. t_leq D1 D2]
 
 
 ;

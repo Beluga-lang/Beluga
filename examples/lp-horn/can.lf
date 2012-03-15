@@ -70,7 +70,7 @@ whr_foralle : whr (foralle D T) (foralle D' T)
 % Conversion to canonical and atomic form.
 
 tocan : {A:o} pf A -> pf A -> type.  % Conversion to canonical form
-toatm : pf A -> pf A -> type.        % Conversion to atomic form
+toatm : {A:o}pf A -> pf A -> type.        % Conversion to atomic form
 %name tocan TC.
 %name toatm TA.
 
@@ -79,7 +79,7 @@ tc_and : tocan (& A B) D (andi D2' D1')
 	  <- tocan B (ander D) D2'.
 %{
 tc_imp : tocan (imp A B) D  (impi (\u. D' u))
-	  <- {u:pf A} toatm u u -> tocan B (impe D u) (D' u).
+	  <- {u:pf A} toatm A u u -> tocan B (impe D u) (D' u).
 }%
 tc_true : tocan (true) D (truei).
 
@@ -92,18 +92,18 @@ tc_whr : tocan (atom P) D D'
 	  <- tocan (atom P) D'' D'.
 
 tc_atm : tocan (atom P) D D'
-	  <- toatm D D'.
+	  <- toatm (atom P) D D'.
 
-ta_impe : toatm (impe D E) (impe D' E')
-	   <- toatm D D'
+ta_impe : toatm B (impe D E) (impe D' E')
+	   <- toatm (imp A B) D D'
 	   <- tocan A E E'.
 
-ta_andel : toatm (andel D) (andel D')
-	    <- toatm D D'.
+ta_andel : toatm A (andel D) (andel D')
+	    <- toatm (& A B) D D'.
 
-ta_ander : toatm (ander D) (ander D')
-	    <- toatm D D'.
+ta_ander : toatm B (ander D) (ander D')
+	    <- toatm (& A B) D D'.
 
-ta_foralle : toatm (foralle D T) (foralle D' T)
-	      <- toatm D D'.
+ta_foralle : toatm (A T) (foralle D T) (foralle D' T)
+	      <- toatm (forall A) D D'.
 

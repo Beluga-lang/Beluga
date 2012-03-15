@@ -290,15 +290,14 @@ let main () =
       match files with
         | [file] ->
           begin
-            let Session file_names = process_file_argument file in
-            try List.iter per_file file_names; 0
+            try
+              let Session file_names = process_file_argument file in
+              List.iter per_file file_names; 0
             with SessionFatal -> 1
           end
         | _ ->
-          begin
-            printf "Wrong number of command line arguments.";
-            2
-          end
+          printf "Wrong number of command line arguments.\n";
+          2
     in
     printf "%s" (Error.getInformation());
     exit status_code

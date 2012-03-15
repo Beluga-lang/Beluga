@@ -302,5 +302,5 @@ let main () =
     printf "%s" (Error.getInformation());
     exit status_code
 
-let _ = Format.set_margin 86
+let _ = Format.set_margin 80
 let _ = main ()

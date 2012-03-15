@@ -1621,6 +1621,6 @@ module Int = struct
   end (* Int.Make *)
 
   (* Default Error Pretty Printer Functor Instantiation *)
-  module DefaultPrinter = Make (Store.Cid.DefaultRenderer)
+  module DefaultPrinter = Make (Store.Cid.NamedRenderer)
 
 end (* Int *)

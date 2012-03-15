@@ -146,7 +146,7 @@ do
 	    RESET=true
 	    shift
 	    ;;
-	--)
+	--|"")
 	    shift
 	    break
 	    ;;

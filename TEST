@@ -8,6 +8,7 @@ usage() {
     echo "Options:"
     echo "  -h,--help        Display this usage information."
     echo "  -c,--color       Force colorized output even when piped."
+    echo "  --noexamples     Do not also test $EXAMPLEDIR."
     echo
     echo "Notes:"
     echo "  - If any .cfg files are found in a subdirectory, only them will be tested."
@@ -25,8 +26,11 @@ echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
 # Set $EXE to the executable to test.
 echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/interpreter}
 
-# Test scripts.
-echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/examples}
+# Test cases.
+echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t}
+
+# Test cases.
+echo -e "\t" EXAMPLEDIR: ${EXAMPLEDIR:=$BELUGADIR/examples}
 
 # Time limit.
 echo -e "\t" TIMEOUT: ${TIMEOUT:=2} seconds
@@ -38,7 +42,7 @@ setopt null_glob
 
 # Find test cases.
 test_cases() {
-    for dir in $TESTDIR/**/
+    for dir in $TESTDIR/**/ $EXAMPLEDIR/**/
     do
 	cfgs=(${dir}*.cfg)
 	if (( ${#cfgs[@]} > 0 ))
@@ -119,6 +123,10 @@ do
 	    ;;
 	-c|--colour|--color)
 	    set_colors
+	    shift
+	    ;;
+	--noexamples)
+	    EXAMPLEDIR=/dev/null
 	    shift
 	    ;;
 	--)

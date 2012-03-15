@@ -26,7 +26,7 @@ echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
 echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/interpreter}
 
 # Test scripts.
-echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/examples1.0}
+echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/examples}
 
 # Time limit.
 echo -e "\t" TIMEOUT: ${TIMEOUT:=2} seconds

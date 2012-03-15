@@ -1,4 +1,3 @@
 File "./t/base/trec.bel", line 17, characters 10-15:
-
-Error (Reconstruction): Expected type  (exp T2)[]
- Inferred type  (exp nat)[]
+Expected type  (exp T2)[]
+Inferred type  (exp nat)[]

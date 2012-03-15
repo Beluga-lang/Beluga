@@ -1,4 +1,5 @@
-Error ("Violation") (Reconstruction): Context clash: We do not allow the context
+Internal error (please report as a bug):
+Context clash: We do not allow the context
           in the pattern to be more general than the context in the
           scrutinee. 
 Scrutinee's context 

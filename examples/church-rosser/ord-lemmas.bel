@@ -9,42 +9,42 @@
 schema tctx = term;
 
 % Transitivity of multi-step reduction
-rec appd: {g:(tctx)*} (-->* (M ..) (M'..))[g]  ->  (-->*  (M' ..) (M'' ..))[g]
-        ->  (-->* (M ..) (M'' ..))[g] = 
-FN g => fn r => fn s => case r of 
-| [g] id1 => s
-| [g] step1 (R1 ..) (R2* ..) => 
-  let [g] S2*' .. = appd [g] ([g] R2* .. ) s in 
-    [g] step1 (R1 ..) (S2*' ..)
+rec appd: {g:tctx} [g. -->* (M ..) (M'..)]  ->  [g. -->*  (M' ..) (M'' ..)]
+        ->  [g. -->* (M ..) (M'' ..)] = 
+mlam g => fn r => fn s => case r of 
+| [g. id1] => s
+| [g. step1 (R1 ..) (R2* ..)] => 
+  let [g. S2*' ..] = appd [g] [g. R2* .. ] s in 
+    [g. step1 (R1 ..) (S2*' ..)]
 
 ;
 
 % Multi-step reduction is a congruence
-rec lm1* : {g:(tctx)*}( -->* (M .. x) (M' .. x))[g,x:term]
-      ->  (-->* (lam (\x. M .. x)) (lam (\x. M' .. x)))[g] = 
-FN g => fn r => case r of 
-| [g,x:term] id1 => [g] id1
-| [g,x:term] step1 (R1 .. x) (R2* .. x) => 
-  let [g] S2* .. = lm1* [g] ([g,x] R2* .. x) in 
-    [g] step1 (lm1 \x. R1 .. x) (S2* ..)
+rec lm1* : {g:tctx} [g,x:term. -->* (M .. x) (M' .. x)]
+      ->  [g. -->* (lam (\x. M .. x)) (lam (\x. M' .. x))] = 
+mlam g => fn r => case r of 
+| [g,x:term. id1] => [g. id1]
+| [g,x:term. step1 (R1 .. x) (R2* .. x)] => 
+  let [g. S2* ..] = lm1* [g] [g,x. R2* .. x] in 
+    [g. step1 (lm1 \x. R1 .. x) (S2* ..)]
 ;
 
 
-rec apl1* :{g:(tctx)*} {M2::term[g]} (-->* (M1 ..) (M1' ..))[g] 
-                 ->  (-->*  (app (M1 ..) (M2 ..)) (app (M1' ..) (M2 ..)))[g] = 
-FN g => mlam M2 => fn r => case r of 
-| [g] id1 => [g] id1 
-| [g] step1 (R1 ..) (R2* ..) => 
-  let [g] S2* .. = apl1* [g] <g. M2 .. > ([g] R2* ..) in 
-    [g] step1 (apl1 (R1 .. )) (S2* ..)
+rec apl1* :{g:tctx} {M2:[g. term]} [g. -->* (M1 ..) (M1' ..)] 
+                 ->  [g. -->*  (app (M1 ..) (M2 ..)) (app (M1' ..) (M2 ..))] = 
+mlam g => mlam M2 => fn r => case r of 
+| [g. id1] => [g. id1] 
+| [g. step1 (R1 ..) (R2* ..)] => 
+  let [g. S2* ..] = apl1* [g] [g. M2 .. ] [g. R2* ..] in 
+    [g. step1 (apl1 (R1 .. )) (S2* ..)]
 ;
 
-rec apr1* :{g:(tctx)*} {M1::term[g]} (-->* (M2 ..) (M2' ..))[g] 
-                 ->  (-->*  (app (M1 ..) (M2 ..)) (app (M1 ..) (M2' ..)))[g] = 
-FN g => mlam M1 => fn r => case r of 
-| [g] id1 => [g] id1 
-| [g] step1 (R1 ..) (R2* ..) => 
-  let [g] S2* .. = apr1* [g] <g. M1 .. > ([g] R2* ..) in 
-    [g] step1 (apr1 (R1 .. )) (S2* ..)
+rec apr1* :{g:tctx} {M1:[g. term]} [g. -->* (M2 ..) (M2' ..)] 
+                 ->  [g. -->*  (app (M1 ..) (M2 ..)) (app (M1 ..) (M2' ..))] = 
+mlam g => mlam M1 => fn r => case r of 
+| [g. id1] => [g. id1] 
+| [g. step1 (R1 ..) (R2* ..)] => 
+  let [g. S2* ..] = apr1* [g] [g. M1 .. ] [g. R2* ..] in 
+    [g. step1 (apr1 (R1 .. )) (S2* ..)]
 ;
 

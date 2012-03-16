@@ -1,0 +1,18 @@
+datatype nat: type =
+| z: nat
+| s: nat -> nat
+;
+
+datatype plus: nat -> nat -> nat -> type =
+| pz: plus z Y Y
+| ps: plus X Y Z -> plus (s X) Y (s Z)
+;
+
+datatype list: nat -> type =
+| nil: list z
+| cons: nat -> list I -> list (s I)
+;
+
+datatype IsList : [.list N] -> ctype = 
+IL: {L:[.list N]} IsList [.L] 
+;

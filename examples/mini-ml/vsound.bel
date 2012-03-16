@@ -37,22 +37,22 @@ ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V
 
 
 
-rec vs :  (eval E V)[ ] -> (value V)[ ] = 
+rec vs :  [. eval E V] -> [. value V] = 
 
 fn e =>
  case e of 
-   [ ] ev_z =>  [ ] v_z
+   [. ev_z] =>  [. v_z]
  
- | [ ] ev_s  D  => 
-   let [ ] F =  vs ([ ] D) in 
-        [ ] v_s F
+ | [. ev_s  D]  => 
+   let [. F] =  vs [. D] in 
+        [. v_s F]
 
-| [ ] ev_l D2 D1 
-     =>  vs ([ ] D2)
+| [. ev_l D2 D1] 
+     =>  vs [. D2]
 
-| [ ] ev_lam          => [ ] v_lam
+| [. ev_lam]          => [. v_lam]
 
-| [ ] ev_app D1 D2 D3 =>  vs ([ ] D3)
+| [. ev_app D1 D2 D3] =>  vs [. D3]
 
 
 ; }%

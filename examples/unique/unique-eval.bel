@@ -25,17 +25,17 @@ eq_ref: eq E E.
 }%
 
 
-rec unique_eval : (eval E V)[ ] -> (eval E V')[ ] ->  (eq V V')[ ] = 
+rec unique_eval : [. eval E V] -> [. eval E V'] ->  [. eq V V'] = 
 fn d => fn f => case d of 
-| [ ] ev_app D1 D2 D3 => 
-  let [ ] ev_app F1 F2 F3 = f in 
-  let [ ] eq_ref = unique_eval ([ ] D1) ([ ] F1) in    
-  let [ ] eq_ref = unique_eval ([ ] D2) ([ ] F2) in 
-    unique_eval ([ ] D3) ([ ] F3)
+| [. ev_app D1 D2 D3] => 
+  let [. ev_app F1 F2 F3] = f in 
+  let [. eq_ref] = unique_eval [. D1] [. F1] in    
+  let [. eq_ref] = unique_eval [. D2] [. F2] in 
+    unique_eval [. D3] [. F3]
 
-| [ ] ev_lam => 
-  let [ ] ev_lam = f in 
-    [ ] eq_ref
+| [. ev_lam] => 
+  let [. ev_lam] = f in 
+    [. eq_ref]
 
 
 ;

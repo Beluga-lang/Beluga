@@ -7,7 +7,21 @@
 
 open Syntax.Int 
 
-exception Error of string
+type error =
+    LeftoverCV
+  | LeftoverMV
+  | LeftoverMMV
+  | LeftoverConstraints
+  | CyclicDependencyFV
+  | CyclicDependencyFCV
+  | CyclicDependencyMMV
+  | CyclicDependencyMV
+  | CyclicDependencyFMV
+  | CyclicDependencyPV
+  | CyclicDependencyFPV
+  | UnknownIdentifier
+
+exception Error of Syntax.Loc.t * error
 
 val cnstr_ctyp : Comp.typ  -> bool
 

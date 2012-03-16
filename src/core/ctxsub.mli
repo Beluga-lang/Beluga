@@ -9,9 +9,6 @@ open Context
 
 open Error
 
-exception Error of Syntax.Loc.t option * error
-exception Violation of string
-
 val csub_ckind : mctx -> dctx -> int -> Comp.kind -> Comp.kind
 val csub_ctyp  : mctx -> dctx -> int -> Comp.typ -> Comp.typ
 val csub_msub  : dctx -> int -> msub -> msub

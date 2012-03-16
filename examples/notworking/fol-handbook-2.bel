@@ -47,36 +47,36 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 
 schema w =  i + some [ a:o ] hil a;
 
-rec ded: {g:(w)*} 
-    (hil (B ..))[g, u:hil (A ..)] -> (hil (imp (A ..) (B ..)))[g] = 
- FN g => fn h =>  
+rec ded: {g:w} 
+    [g, u:hil (A ..). hil (B ..)] -> [g. hil (imp (A ..) (B ..))] = 
+ mlam g => fn h =>  
  case h of 
-   [g, u: hil _ ] #p .. =>  [g] mp k #p ..  % SPECIAL!
+   [g, u: hil _ . #p ..] =>  [g. mp k #p ..]  % SPECIAL!
 
 % Can only be done by giving type annotation to k or s in
 % the output; this is also done in the Twelf implementation
 % 
 % ded_id : ded ([u:hil A] u) (mp (mp s k) (k : hil (A imp (A imp A)))).
 % | [g, u: hil _ ] u     => [g] (mp (mp s k) k)
- | [g, u: hil _ ] k  => [g] mp k k
- | [g, u: hil _ ] n1 => [g] mp k n1
- | [g, u: hil _ ] n2 => [g] mp k n2
- | [g, u: hil _ ] f1 (T ..) => [g]  mp k (f1 (T ..))
- | [g, u: hil _ ] f2 => [g] mp k f2
+ | [g, u: hil _ . k]  => [g. mp k k]
+ | [g, u: hil _ . n1] => [g. mp k n1]
+ | [g, u: hil _ . n2] => [g. mp k n2]
+ | [g, u: hil _ . f1 (T ..)] => [g. mp k (f1 (T ..))]
+ | [g, u: hil _ . f2] => [g. mp k f2]
 
- | [g, u: hil (A ..)] ug (\x. (H .. x u)) => 
+ | [g, u: hil (A ..). ug (\x. (H .. x u))] => 
   let      
-    [g,x:i] (H' .. x) = 
-      ded [g, x:i]  ([g, x, u]  (H .. x u))
+    [g,x:i. (H' .. x)] = 
+      ded [g, x:i]  [g, x, u. (H .. x u)]
   in
-     [g] mp f2 (ug  \x. (H' .. x))
+     [g. mp f2 (ug  \x. (H' .. x))]
 
-| {H1 :: (hil (imp (B1 ..) (B2 ..)))[g, u : hil (A ..)]}
-  {H2 :: (hil (B1 ..))[g, u : hil (A ..)]}
-  [g, u: hil (A ..) ] (mp (H1 .. u) (H2 .. u)) => 
-  let [g] H2' .. = ded [g] ([g,u] H2 .. u) in
-  let [g] H1' .. = ded [g] ([g,u] H1 .. u) in
-       [g] mp (mp s (H1' ..)) (H2' ..)
+| {H1 : [g, u : hil (A ..). hil (imp (B1 ..) (B2 ..))]}
+  {H2 : [g, u : hil (A ..). hil (B1 ..)]}
+  [g, u: hil (A ..) . (mp (H1 .. u) (H2 .. u))] => 
+  let [g. H2' ..] = ded [g] [g,u. H2 .. u] in
+  let [g. H1' ..] = ded [g] [g,u. H1 .. u] in
+       [g. mp (mp s (H1' ..)) (H2' ..)]
 
 ;
 
@@ -87,12 +87,13 @@ rec ded: {g:(w)*}
 schema ndCtx  = i + o + some [a:o] nd a ; 
 schema hilCtx = i + o + some [a:o] hil a ;
 
+%{
 coercion nd2hil : ndCtx -> hilCtx = 
               i => i 
     |         o => o
     | some [a:o] nd a => hil a ;
 
-%{
+
  rec ndhil : {g:(ndCtx)*} (nd (A ..))[g] -> (hil (A .. ))[nd2hil(g)] =
  FN g => fn d => 
  case d of 

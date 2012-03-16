@@ -8,6 +8,8 @@ usage() {
     echo "Options:"
     echo "  -h,--help        Display this usage information."
     echo "  -c,--color       Force colorized output even when piped."
+    echo "  --noexamples     Do not also test $EXAMPLEDIR."
+    echo "  --reset          Replace all .out files with new output (use with caution!)."
     echo
     echo "Notes:"
     echo "  - If any .cfg files are found in a subdirectory, only them will be tested."
@@ -25,8 +27,11 @@ echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
 # Set $EXE to the executable to test.
 echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/interpreter}
 
-# Test scripts.
-echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/examples1.0}
+# Test cases.
+echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t}
+
+# Test cases.
+echo -e "\t" EXAMPLEDIR: ${EXAMPLEDIR:=$BELUGADIR/examples}
 
 # Time limit.
 echo -e "\t" TIMEOUT: ${TIMEOUT:=2} seconds
@@ -38,7 +43,7 @@ setopt null_glob
 
 # Find test cases.
 test_cases() {
-    for dir in $TESTDIR/**/
+    for dir in $TESTDIR/**/ $EXAMPLEDIR/**/
     do
 	cfgs=(${dir}*.cfg)
 	if (( ${#cfgs[@]} > 0 ))
@@ -69,19 +74,25 @@ do_testing() {
 
 	result=$($EXE -noprint $* $i 2>&1)
 	exit_code=$?
-	if [[ $exit_code -eq 0 ]]
-	then
-	    echo -e "$C[done]DONE$CEND"
-	    success=$((success+1))
-	elif [[ $exit_code -eq 152 ]]
+	diff_result=$(echo "$result" | diff -u $i.out - 2>/dev/null)
+	# diff responds 0 if same, 1 if different, 2 if couldn't compare.
+	diff_code=$?
+
+	if [[ $exit_code -eq 152 ]]
 	then
 	    echo -e "$C[timeout]TIMEOUT$CEND"
 	    timeout=$((timeout+1))
+	elif [[ $diff_code -eq 0 || (exit_code -eq 0 && $diff_code -eq 2) ]]
+	then
+	    echo -e "$C[done]DONE$CEND"
+	    success=$((success+1))
 	else
 	    echo -e "$C[fail]FAIL$CEND"
-	    echo "$result"
+	    [[ -z "$diff_result" ]] && echo "$result" || (echo "$diff_result" | colorize_diff)
 	    fail=$((fail+1))
 	fi
+
+	[[ -n $RESET && -f $i.out ]] && echo "$result" > $i.out
     done
 
     echo
@@ -99,6 +110,12 @@ do_testing() {
 }
 
 typeset -A C
+
+colorize_diff() {
+    sed "s/^+/${fg[green]}+/
+         s/^-/${fg[red]}-/
+         s/\$/$reset_color/"
+}
 
 set_colors() {
     autoload colors
@@ -121,7 +138,15 @@ do
 	    set_colors
 	    shift
 	    ;;
-	--)
+	--noexamples)
+	    EXAMPLEDIR=/dev/null
+	    shift
+	    ;;
+	--reset)
+	    RESET=true
+	    shift
+	    ;;
+	--|"")
 	    shift
 	    break
 	    ;;

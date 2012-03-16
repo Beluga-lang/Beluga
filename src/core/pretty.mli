@@ -6,14 +6,10 @@
 *)
 
 open Format
-open Error
 
 type lvl
 
 val std_lvl : lvl
-
-val locToString : Parser.Grammar.Loc.t -> string
-val locOptToString : Parser.Grammar.Loc.t option -> string
 
 module Control : sig
   type substitution_style = Natural | DeBruijn
@@ -22,27 +18,6 @@ module Control : sig
   val printImplicit : bool ref
  
   val db : unit -> bool  (* true if !substitutionStyle = DeBruijn *)
-end
-
-module type CID_RENDERER = sig
-
-  open Id
-  open Syntax.Int
-
-  val render_name         : name       -> string
-  val render_cid_comp_typ : cid_comp_typ  -> string
-  val render_cid_comp_const : cid_comp_const  -> string
-  val render_cid_typ      : cid_typ    -> string
-  val render_cid_term     : cid_term   -> string
-  val render_cid_schema   : cid_schema -> string
-  val render_cid_prog     : cid_prog   -> string
-  val render_offset       : offset     -> string
-
-  val render_ctx_var    : LF.mctx    -> offset   -> string
-  val render_cvar       : LF.mctx    -> offset   -> string
-  val render_bvar       : LF.dctx    -> offset   -> string
-  val render_var        : Comp.gctx  -> var      -> string
-
 end
 
 module Int : sig
@@ -135,44 +110,10 @@ module Int : sig
 
   end
 
-
   (* Internal Syntax Pretty Printer Functor *)
-  module Make : functor (R : CID_RENDERER) -> PRINTER
-
-  (* Default CID_RENDERER for Internal Syntax *)
-  module DefaultCidRenderer : CID_RENDERER
-
-  (* Named Renderer for Internal Syntax *)
-  module NamedRenderer : CID_RENDERER
+  module Make : functor (R : Store.Cid.RENDERER) -> PRINTER
 
   (* Default Internal Syntax Pretty Printer Functor Instantiation *)
-  module DefaultPrinter : PRINTER
-
-end
-
-
-module Error : sig
-
-  (* Error Printer Signature *)
-  module type PRINTER = sig
-
-    (* Format Based Pretty Printers *)
-    val fmt_ppr : formatter -> error -> unit
-
-    (* Regular Pretty Printers *)
-    val ppr     : error -> unit    
-
-  end
-
-  (* Default CID_RENDERER for Errors *)
-  module DefaultCidRenderer : CID_RENDERER
-
-  (* Error Pretty Printer Functor  *)
-  module Make : functor (R : CID_RENDERER) -> PRINTER
-    (* Might need a constraint here saying that IPF will be
-       instantiated with R.  -dwm *)
-
-  (* Default Error Pretty Printer Functor Instantiation *)
   module DefaultPrinter : PRINTER
 
 end

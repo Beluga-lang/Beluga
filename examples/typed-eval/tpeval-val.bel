@@ -29,65 +29,65 @@ v_z   : val nat.
 v_suc : val nat -> val nat.
 
 
-rec equal : (val nat)[ ] -> (val nat)[ ] -> (val bool)[ ] =
+rec equal : [. val nat] -> [. val nat] -> [. val bool] =
 fn x => fn y => 
   case x of
-    [ ] v_z  => 
+    [. v_z]  => 
       (case y of
-          [ ] v_z     => [ ] v_tt
-        | [ ] v_suc E => [ ] v_ff)
+          [. v_z]     => [. v_tt]
+        | [. v_suc E] => [. v_ff])
 
-  | [ ] v_suc E => 
+  | [. v_suc E] => 
       (case y of
-         [ ]  v_z      => [ ] v_ff
-      |  [ ]  v_suc V  => equal ([ ] E) ([ ] V))
+         [. v_z]      => [. v_ff]
+      |  [. v_suc V]  => equal [. E] [. V])
 ;
 
 
 
 
-rec eval : (exp T)[ ] -> (val T)[ ] = 
+rec eval : [. exp T] -> [. val T] = 
  fn e => case e of 
-  | [ ] tt => [ ] v_tt
+  | [. tt] => [. v_tt]
 
-  | [ ] ff => [ ] v_ff
+  | [. ff] => [. v_ff]
 
-  | [ ] z  => [ ] v_z
+  | [. z]  => [. v_z]
 
-  | [ ] suc E => 
-    let [ ] V  = eval ([ ] E) in [ ] v_suc V   
+  | [. suc E] => 
+    let [. V]  = eval [. E] in [. v_suc V]   
 
-  | [ ]  eq E1 E2 =>
-    equal (eval ([ ] E1))  (eval  ([ ] E2))
+  | [. eq E1 E2] =>
+    equal (eval [. E1])  (eval  [. E2])
 
-  | [ ] iff  E E1 E2  =>
-    (case eval ([ ] E) of
-       [ ] v_tt => eval ([ ] E1)
-     | [ ] v_ff => eval ([ ] E2)
+  | [. iff  E E1 E2]  =>
+    (case eval [. E] of
+       [. v_tt] => eval [. E1]
+     | [. v_ff] => eval [. E2]
      )
 
-   | [ ] letv  E (\x . (E1 x))  =>
-   let [ ] V = eval ([ ] E) in eval ([ ] (E1 V))
+   | [. letv  E (\x . (E1 x))]  =>
+   let [. V] = eval [. E] in eval [. (E1 V)]
 
-   | [] value V => [] V
+   | [. value V] => [. V]
 ;
 
-let y1 = eval ([ ] suc z) ;
+let y1 = eval [. suc z] ;
 
-let x1 = eval ([ ] z) ;
+let x1 = eval [. z] ;
 
 
 
-let y2 = eval ([ ] tt);
+let y2 = eval [. tt];
 
-let y3 = eval ([ ] iff tt (suc z) z) ;
+let y3 = eval [. iff tt (suc z) z] ;
 
-let a1 = equal ([ ] v_suc v_z) ([ ] v_suc v_z) ;
-let a2 = equal (eval ([ ] suc z)) (eval ([ ] suc z)) ;
+let a1 = equal [. v_suc v_z] [. v_suc v_z] ;
+let a2 = equal (eval [. suc z]) (eval [. suc z]) ;
 
 let a2 = (equal y1) y1;
 
-let y4 = eval ([ ] eq (suc z) (suc z)) ;
+let y4 = eval [. eq (suc z) (suc z)] ;
 
-let y5 = eval ([ ] letv (iff tt (suc z) z) (\y. iff (eq (value y) (suc z)) (suc (value y)) (value y))) ;
+let y5 = eval [. letv (iff tt (suc z) z) (\y. iff (eq (value y) (suc z)) (suc (value y)) (value y))] ;
 

@@ -16,7 +16,7 @@ open Syntax.Int
 open Trail
 
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.DefaultCidRenderer
+module R = Store.Cid.DefaultRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [15])
 
@@ -68,6 +68,7 @@ module type UNIFY = sig
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
   val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
   val unifyDCtx    : mctx -> dctx -> dctx -> unit
+  val unify_phat   : psi_hat -> psi_hat -> unit
   
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
@@ -101,90 +102,6 @@ module Make (T : TRAIL) : UNIFY = struct
   exception NotInvertible
   
   exception Error of string
-(*
-  type undefined_flag =
-    | UndefsOK
-    | NoUndefs
-  let r_undefined = ref UndefsOK
-  
-let disallowUndefineds f =
-    let old_flag = !r_undefined in
-      try
-        r_undefined := NoUndefs;
-        let result = f() in
-          r_undefined := old_flag;
-          result
-      with
-        exn -> (r_undefined := old_flag;
-                raise exn)
-*)
-  let raise_undefined () = raise (Unify "Undefined")
-
-(*
-  let rec screenUndefs = function
-    | Lam(_, _, tM) -> screenUndefs tM
-    | Root(_, head, spine) -> (screenUndefsHead head;
-                               screenUndefsSpine spine)
-    | Clo(tM, s) -> (screenUndefs tM;
-                     screenUndefsSub s)
-    | Tuple(_, tuple) -> screenUndefsTuple tuple
-
-  and screenUndefsHead = function
-    | BVar _ -> ()
-    | Const _ -> ()
-    | MMVar(_, (_msub, s)) -> (dprint (fun () -> "check for undefs in MMVar ... ") ;  screenUndefsSub s)
-    | MVar(_, s) -> (dprint (fun () ->" check for undefs in MVar ..." ) ; screenUndefsSub s) 
-    | PVar(_, s) -> screenUndefsSub s 
-    | FMVar(_, s) -> screenUndefsSub s
-    | FPVar(_, s) -> screenUndefsSub s
-    | AnnH(h, _) -> screenUndefsHead h
-    | Proj(h, _k) -> screenUndefsHead h
-    | FVar _ -> ()
-
-  and screenUndefsSpine = function
-    | Nil -> ()
-    | App(tM, spine) -> (screenUndefs tM; screenUndefsSpine spine)
-    | SClo(spine, s) -> (screenUndefsSpine spine; screenUndefsSub s)
-
-  and screenUndefsSub = function
-    | Shift(NegCtxShift _, _) -> raise_undefined()
-    | Shift(_, _) -> ()
-    | SVar(_, s) -> screenUndefsSub s
-    | FSVar(_, s) -> screenUndefsSub s
-    | Dot(front, s) -> (screenUndefsFront front; screenUndefsSub s)
-
-  and screenUndefsFront = function
-    | Head h -> screenUndefsHead h
-    | Obj tM -> screenUndefs tM
-    | Undef -> raise_undefined()
-
-  and screenUndefsTuple = function
-    | Last tM -> screenUndefs tM
-    | Cons(tM, tuple) -> (screenUndefs tM; screenUndefsTuple tuple)
-
-  (* screen : ('a -> unit) -> 'a -> unit
-   * screen f x : if r_undefined says undefs are OK, do nothing;
-   *              otherwise call f x.
-   * f should be one of the screenUndefs* functions.
-   *)
-  let screen f x =
-    match !r_undefined with
-      | UndefsOK -> ()
-      | NoUndefs -> f x
-
-
-*)
-
-  let raise_ exn =
-(*    begin match exn with
-      | Unify s -> dprint (fun () -> "raise Unify " ^ s)
-      | NotInvertible -> dprint (fun () -> "raise NotInvertible")
-      | Error s -> dprint (fun () -> "raise Error " ^ s)
-      | Not_found -> dprint (fun () -> "raise Not_found")
-      | _ -> ()
-    end
-  ;*)
- raise exn
 
   type matchFlag = Matching | Unification
 
@@ -358,7 +275,7 @@ let disallowUndefineds f =
        backtrack and propagate the exception  *)
   let rec trail f =
     let _ = mark  () in
-      try f () with e -> (unwind (); raise_ e)
+      try f () with e -> (unwind (); raise e)
         
   (* ---------------------------------------------------------------------- *)
 
@@ -629,7 +546,7 @@ let disallowUndefineds f =
     (* all other cases impossible for pattern substitutions *)
 
     | (_s1, _s2, _cPsi )  -> 
-           raise_ (Error "Intersection not defined")
+           raise (Error "Intersection not defined")
   end 
 
   (* m_intersection (mt1, mt2) cD' = (mt', cD'')
@@ -724,7 +641,7 @@ let disallowUndefineds f =
            hence tS = Nil and s = id *)
         let ( _ , ssubst) = ss in 
         if eq_cvarRef (MVarRef r) rOccur then
-          raise_ NotInvertible
+          raise NotInvertible
         else
           let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s) (* t' = t, since s = Id *)) in
             (* D ; Psi |- s <= Psi'   D ; Psi' |- t <= Psi1
@@ -737,7 +654,7 @@ let disallowUndefineds f =
                 if isId s' then
                   Root(loc, MVar(u, comp t' ssubst), Nil)
                 else
-                  raise_ NotInvertible
+                  raise NotInvertible
             else (* t' not patsub *)
               Root(loc, MVar(u, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
 
@@ -808,7 +725,7 @@ let disallowUndefineds f =
         (* by invariant tM is in whnf and meta-variables are lowered and s = id *)
         let ( _ , ssubst) = ss in 
         if eq_cvarRef (PVarRef r) rOccur then
-          raise_ NotInvertible
+          raise NotInvertible
         else
           let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub(comp t s) (* t' = t, since s = Id *)) in
             (* D ; Psi |- s <= Psi'   D ; Psi' |- t <= Psi1
@@ -823,7 +740,7 @@ let disallowUndefineds f =
                   Root (loc, PVar (q, comp t' ssubst), 
                         invSpine cD0 (phat, (tS, s), ss, rOccur))
                 else
-                  raise_ NotInvertible
+                  raise NotInvertible
             else (* t' not patsub *)
               Root (loc, PVar (q, invSub cD0 phat (t', cPsi1) ss rOccur),
                     invSpine cD0 (phat, (tS,s), ss, rOccur))
@@ -831,7 +748,7 @@ let disallowUndefineds f =
     | (Root (loc, Proj (PVar (PInst (r, cPsi1, _tA, _cnstrs) as q, t), i), tS), s) ->
         let ( _ , ssubst) = ss in 
         if eq_cvarRef (PVarRef r) rOccur then
-          raise_ NotInvertible
+          raise NotInvertible
         else
           let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s)   (* t' = t, since s = Id *)) in
             if isPatSub t' then
@@ -845,7 +762,7 @@ let disallowUndefineds f =
                   Root (loc, Proj (PVar(q, comp t' ssubst), i),
                         invSpine cD0 (phat, (tS,s), ss, rOccur))
                 else
-                  raise_ NotInvertible
+                  raise NotInvertible
             else (* t' not patsub *)
               Root (loc, Proj (PVar (q, invSub cD0 phat (t', cPsi1) ss rOccur), i),
                     invSpine cD0 (phat, (tS,s), ss, rOccur))
@@ -879,7 +796,7 @@ let disallowUndefineds f =
   and invHead cD0 (phat, head, ((ms, ssubst) as ss), rOccur) = match head with
     | BVar k            ->
         begin match bvarSub k ssubst with
-          | Undef          -> raise_ NotInvertible
+          | Undef          -> raise NotInvertible
           | Head (BVar k') -> BVar k'
         end
 
@@ -890,7 +807,7 @@ let disallowUndefineds f =
         let (_ , ssubst) = ss in 
         begin match bvarSub k ssubst with
           | Head (BVar _k' as head) -> head
-          | Undef                   -> raise_ NotInvertible
+          | Undef                   -> raise NotInvertible
         end
 
     | FVar _x           -> head
@@ -1235,7 +1152,7 @@ let disallowUndefineds f =
                 let t  = Whnf.normSub (comp t s) in 
                   (* by invariant: MVars are lowered since tM is in whnf *)
                   if eq_cvarRef (MVarRef r) rOccur then
-                    raise_ (Unify "Variable occurrence")
+                    raise (Unify "Variable occurrence")
                   else
                     if isPatSub t then
                       let _ = dprint (fun () -> "[prune] MVar " ^
@@ -1300,7 +1217,7 @@ let disallowUndefineds f =
 *)
                           returnNeutral (MVar (Offset v, s'))
                       with 
-                        | Whnf.Violation msg -> 
+                        | Error.Violation msg -> 
                             raise (Unify ("ERROR: prune: " ^ msg ^ 
                                           "\n Looking for " ^ R.render_cvar cD0 u ^ 
                                           "\n in context " ^ P.mctxToString cD0))
@@ -1308,8 +1225,8 @@ let disallowUndefineds f =
                                               R.render_cvar cD0 u ^ "\n in context " ^ 
                                               P.mctxToString cD0))
                       end
-                  | MUndef -> raise_ (Unify "[Prune] Bound MVar dependency")
-                  | _      -> raise_ (Unify "[Prune] MObj / PObj dependency")
+                  | MUndef -> raise (Unify "[Prune] Bound MVar dependency")
+                  | _      -> raise (Unify "[Prune] MObj / PObj dependency")
                 end 
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
@@ -1366,7 +1283,7 @@ let disallowUndefineds f =
             | Proj (PVar (PInst (r, cPsi1, tA, cnstrs) as q, t), i)  (* s = id *) ->
                 let t = Whnf.normSub t in 
                 if eq_cvarRef (PVarRef r) rOccur then
-                  raise_ (Unify "[Prune] Parameter variable occurrence")
+                  raise (Unify "[Prune] Parameter variable occurrence")
                 else
                   if isPatSub t then
                     let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
@@ -1391,12 +1308,12 @@ let disallowUndefineds f =
                 with
                   | Not_found -> 
                       if isId ssubst && isMId ms  then returnNeutral head 
-                      else raise_ (Unify ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
+                      else raise (Unify ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
                 end
                     
             | BVar k  (* s = id *) ->
                 begin match bvarSub k ssubst with
-                  | Undef                -> raise_ (Unify ("[Prune] Bound variable dependency : " ^ 
+                  | Undef                -> raise (Unify ("[Prune] Bound variable dependency : " ^ 
                                                       "head = " ^ P.headToString cD0 cPsi' head))
                   | Head (BVar _k as h') ->
                       returnNeutral h'
@@ -1409,7 +1326,7 @@ let disallowUndefineds f =
             | Proj (BVar k, i)  (* s = id *) ->
                 begin match bvarSub k ssubst with
                   | Head (BVar _k' as h') -> returnNeutral (Proj (h', i))
-                  | _                     -> raise_ (Unify "[Prune] Bound variable dependency (Proj) ")
+                  | _                     -> raise (Unify "[Prune] Bound variable dependency (Proj) ")
                 end
 
   and pruneTuple cD0 cPsi phat sTuple ss rOccur = match sTuple with
@@ -1756,7 +1673,7 @@ let disallowUndefineds f =
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
                          [|w[s']/u|](u[t2]) = [t2](w[s'])
                       *)
-                      instantiateMVar (r1, Root(None, MVar(w, s'),Nil), !cnstrs1)
+                      instantiateMVar (r1, Root(Syntax.Loc.ghost, MVar(w, s'),Nil), !cnstrs1)
                         
               | (true, false) ->
                     addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
@@ -1950,12 +1867,12 @@ let disallowUndefineds f =
 
                 instantiateMVar (r, tM1', !cnstrs)  
             with
-              | NotComposable _ -> raise_ (Unify "NotComposable")
+              | NotComposable _ -> raise (Unify "NotComposable")
               | NotInvertible ->
                   ((* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
                    (* Printf.printf "Added constraints: NotInvertible: \n" ;*)
                      addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
-                   (* raise_ (Unify "NotInvertible") *)
+                   (* raise (Unify "NotInvertible") *)
                   )
           else            
             if isProjPatSub t' then 
@@ -1979,7 +1896,7 @@ let disallowUndefineds f =
                   ( Printf.printf "Added constraints: NotInvertible: \n" ;
                     addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) 
                     (* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
-                    (* raise_ (Unify "NotInvertible") *)
+                    (* raise (Unify "NotInvertible") *)
                   )
               end
             else 
@@ -2039,7 +1956,7 @@ let disallowUndefineds f =
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
                          [|w[s']/u|](u[t2]) = [t2](w[s'])
                       *)
-                    let _ = instantiateMMVar (r1, Root(None, MMVar(w, (mt', s')), Nil), !cnstrs1) in 
+                    let _ = instantiateMMVar (r1, Root(Syntax.Loc.ghost, MMVar(w, (mt', s')), Nil), !cnstrs1) in 
 
                      dprint (fun () -> "Instantiated with new meta^2-variable " ^ 
                                         P.normalToString cD0 cPsi sM1)
@@ -2094,7 +2011,7 @@ let disallowUndefineds f =
                         ((* Printf.printf "Added constraints: NotInvertible: \n ";*)
                           addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) 
                     (* Printf.printf "Pruning failed -  NotInvertible: \n" ; *)
-                    (* raise_ (Unify "NotInvertible") *)
+                    (* raise (Unify "NotInvertible") *)
                         )
                   end
               | (_ , _, true, true) ->
@@ -2124,7 +2041,7 @@ let disallowUndefineds f =
                         (  (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
                           addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))
                     (* Printf.printf "Pruning failed -- NotInvertible:\n" ;*)
-                    (* raise_ (Unify "NotInvertible") *)
+                    (* raise (Unify "NotInvertible") *)
                              )
                   end
 (*              | ( _ , false , _ , _ ) -> 
@@ -2165,7 +2082,7 @@ let disallowUndefineds f =
                               ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
                                addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
                                 (* Printf.printf "Pruning failed -  NotInvertible: \n" ; *)
-                                (* raise_ (Unify "NotInvertible") *)
+                                (* raise (Unify "NotInvertible") *)
                               ) 
                         end
 
@@ -2185,7 +2102,7 @@ let disallowUndefineds f =
                               ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
                                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
                                 (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
-                                (* raise_ (Unify "NotInvertible")*)
+                                (* raise (Unify "NotInvertible")*)
                               )
                         end
 
@@ -2222,7 +2139,7 @@ let disallowUndefineds f =
                   ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
                         addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
                     (*(* Printf.printf "Pruning failed -- NotInvertible:\n" ;*)
-                    raise_ (Unify "NotInvertible")) *)
+                    raise (Unify "NotInvertible")) *)
             end 
           else 
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)           
@@ -2240,7 +2157,7 @@ let disallowUndefineds f =
                 ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
                     addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
                   (* Printf.printf "Pruning failed -- NotInvertible:\n" ; *)
-                  (* raise_ (Unify "NotInvertible")) *)
+                  (* raise (Unify "NotInvertible")) *)
               end
           else            
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
@@ -2268,7 +2185,7 @@ let disallowUndefineds f =
                   ( Printf.printf "Added constraints: NotInvertible: \n" ; 
                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
                     (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
-                    (* raise_ (Unify "NotInvertible")*)
+                    (* raise (Unify "NotInvertible")*)
           else 
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)           
             if isProjPatSub t' && isPatMSub mt then
@@ -2285,7 +2202,7 @@ let disallowUndefineds f =
               ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
                 (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
-                (* raise_ (Unify "NotInvertible") *)
+                (* raise (Unify "NotInvertible") *)
               )
             else        
               addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
@@ -2304,7 +2221,7 @@ let disallowUndefineds f =
         unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
 
     | (_sM1, _sM2) ->
-        raise_ (Unify "Expression clash")
+        raise (Unify "Expression clash")
 
   and unifyHead mflag cD0 cPsi head1 head2 = 
     match (head1, head2) with
@@ -2312,37 +2229,37 @@ let disallowUndefineds f =
         if k1 = k2 then
           ()
         else
-          raise_ (Unify "Bound variable clash")
+          raise (Unify "Bound variable clash")
 
     | (Const c1, Const c2) ->
         if c1 = c2 then
           ()
         else
-          raise_ (Unify "Constant clash")
+          raise (Unify "Constant clash")
 
     | (FVar x1, FVar x2) ->
         if x1 = x2 then
           ()
         else
-          raise_ (Unify "Free Variable clash")
+          raise (Unify "Free Variable clash")
 
     | (MVar (Offset k, s) , MVar(Offset k', s')) -> 
         if k = k' then unifySub mflag cD0 cPsi s s' 
-        else raise_ (Unify "Bound MVar clash")
+        else raise (Unify "Bound MVar clash")
 
     | (FMVar (u, s) , FMVar(u', s')) ->         
         if u = u' then unifySub mflag cD0 cPsi s s' 
-        else raise_ (Unify "Bound MVar clash")
+        else raise (Unify "Bound MVar clash")
 
     | (FPVar (q, s), FPVar (p, s'))
         ->   (if p = q then 
                 unifySub mflag cD0 cPsi s s' 
-              else raise_ (Error "Front FPVar mismatch"))
+              else raise (Error "Front FPVar mismatch"))
 
     | (PVar (Offset k, s) , PVar(Offset k', s')) -> 
         if k = k' then 
            unifySub mflag cD0 cPsi s s' 
-        else raise_ (Unify "Parameter variable clash")
+        else raise (Unify "Parameter variable clash")
 
     | (PVar (PInst (q, _cPsi1, tA1, cnstr), s1) as h1, BVar k2) ->
         let s1' = Whnf.normSub s1 in 
@@ -2355,7 +2272,7 @@ let disallowUndefineds f =
             dprint (fun () -> "\n unifyHead bvar - pvar \n") ;
             begin match bvarSub k2 (invert s1') with
                   | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
-                  | _               -> raise_ (Unify "Parameter violation")
+                  | _               -> raise (Unify "Parameter violation")
             end)
           else
             (* example: q[q[x,y],y] = x  should succeed
@@ -2377,7 +2294,7 @@ let disallowUndefineds f =
               match bvarSub k1 (invert s2') with
                 | Head (BVar k1') -> 
                     instantiatePVar (q, BVar k1', !cnstr)
-                | _ -> raise_ (Unify "Parameter violation")
+                | _ -> raise (Unify "Parameter violation")
              end
           else
             addConstraint (cnstr, ref (Eqh (cD0, cPsi, BVar k1, h1)))
@@ -2492,7 +2409,7 @@ let disallowUndefineds f =
              begin match bvarSub k ss' with
                | Head (BVar k') ->
                    instantiatePVar (q1, Proj(BVar k', i), !cnstr1)
-               | _ -> raise_ (Unify "parameter variable =/= projection of bound variable ")
+               | _ -> raise (Unify "parameter variable =/= projection of bound variable ")
              end 
          else 
            addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))) 
@@ -2504,7 +2421,7 @@ let disallowUndefineds f =
              begin match bvarSub k ss' with
                | Head (BVar k') ->
                    instantiatePVar (q1, Proj(BVar k', i), !cnstr1)
-               | _ -> raise_ (Unify "parameter variable =/= projection of bound variable ")
+               | _ -> raise (Unify "parameter variable =/= projection of bound variable ")
              end
          else 
            addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))) 
@@ -2516,25 +2433,25 @@ let disallowUndefineds f =
           (dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi h1 ^ " === " ^ P.headToString cD0 cPsi h2 ) ;
           unifyHead mflag cD0 cPsi h1 h2 )
         else
-          raise_ (Unify ("(Proj) Index clash: " ^ string_of_int i1 ^ " /= " ^ string_of_int i2))
+          raise (Unify ("(Proj) Index clash: " ^ string_of_int i1 ^ " /= " ^ string_of_int i2))
 
     | (Proj (PVar (PInst (q, _, _, cnstr), s1), projIndex) as h1, BVar k2) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
           (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-           raise_ (Unify "Projection of parameter variable =/= bound variable"))
+           raise (Unify "Projection of parameter variable =/= bound variable"))
 
     | (BVar k2, Proj (PVar (PInst (q, cPsi2, tA2, cnstr), s1), projIndex) as h1) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
            (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-            raise_ (Unify "Projection of parameter variable =/= bound variable"))
+            raise (Unify "Projection of parameter variable =/= bound variable"))
 
     | (FVar _, Proj (PVar _, _)) ->
         (print_string "[UnifyHead] Unify free variable with projection of parameter variable\n";
-         raise_ (Unify "Projection of parameter variable =/= free variable"))
+         raise (Unify "Projection of parameter variable =/= free variable"))
 
     | (PVar _ , Proj (PVar _, _)) ->
         (print_string "[UnifyHead] Projection of a parameter variable\n";
-         raise_ (Unify "PVar =/= Proj PVar"))
+         raise (Unify "PVar =/= Proj PVar"))
 
     | ((PVar (Offset k, s1)) as _sM1,   ((PVar (PInst (r, cPsi1, tP1, cnstrs), t')) as _sM2)) ->
 (*
@@ -2559,7 +2476,7 @@ let disallowUndefineds f =
                   ( (* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
                     (* Printf.printf "Added constraints: NotInvertible:\n" ;
                      addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
-                    raise_ (Unify "PVar - BVar dependency") 
+                    raise (Unify "PVar - BVar dependency") 
                   )
           else            
             if isProjPatSub t' then 
@@ -2577,22 +2494,22 @@ let disallowUndefineds f =
                   ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                        addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
                     (* Printf.printf "Pruning failed -- NotInvertible\n";*)
-                     raise_ (Unify "PVar - BVar dependency") 
+                     raise (Unify "PVar - BVar dependency") 
                   )
               end
             else 
-             raise_ (Unify "PVar - Nonpattern substitution")
+             raise (Unify "PVar - Nonpattern substitution")
 (*        (print_string "[UnifyHead] PVar(Offset,_) - PVar (PInst,_)\n";
-         raise_ (Unify "PVar Offset - PVar PInst"))
+         raise (Unify "PVar Offset - PVar PInst"))
 *)
 
     | (PVar (PInst _, _s1),  PVar (Offset k, _s2)) ->
         (print_string "[UnifyHead] PVar(PInst,_) - PVar (Offset,_)\n";
-         raise_ (Unify "PVar Inst - PVar Offset"))
+         raise (Unify "PVar Inst - PVar Offset"))
 
 
     | (_h1 , _h2 ) ->
-        raise_ (Unify "Head clash")
+        raise (Unify "Head clash")
 
 
     (* unifySpine mflag cD0 (cPsi, (tS1, s1), (tS2, s2)) = ()
@@ -2649,12 +2566,12 @@ let disallowUndefineds f =
             if n = k && compatible (psi, phi) then
               () 
             else
-              raise_ (Error "Substitutions not well-typed")
+              raise (Error "Substitutions not well-typed")
 
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2)) 
         -> if s1 = s2 then 
           unifySub mflag cD0 cPsi sigma1 sigma2
-        else raise_ (Error "SVar mismatch")
+        else raise (Error "SVar mismatch")
 
       | (Dot (f, s), Dot (f', s'))
         -> (unifyFront mflag cD0 cPsi f f' ;
@@ -2669,7 +2586,7 @@ let disallowUndefineds f =
             unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (psi, n+1)))
 
       |  _
-        -> raise_ (Unify (
+        -> raise (Unify (
                             "Substitution mismatch :\n " ^ P.dctxToString cD0 cPsi 
                          ^ "|-" ^ P.subToString cD0 cPsi s1 ^ " =/= " ^ P.subToString cD0 cPsi s2 ^ "\n"))
 
@@ -2677,54 +2594,54 @@ let disallowUndefineds f =
     and unifyFront mflag cD0 cPsi front1 front2 = match (front1, front2) with
       | (Head (BVar i), Head (BVar k))
         -> if i = k then () else 
-              raise_ (Error "Front BVar mismatch")
+              raise (Error "Front BVar mismatch")
 
       | (Head (Const i), Head (Const k))
-        -> if i = k then () else raise_ (Error "Front Constant mismatch")
+        -> if i = k then () else raise (Error "Front Constant mismatch")
 
       | (Head (PVar (q, s)), Head (PVar (p, s')))
         -> (if p = q then
             unifySub mflag cD0 cPsi s s'
-            else raise_ (Error "Front PVar mismatch"))
+            else raise (Error "Front PVar mismatch"))
 
 
       | (Head (FPVar (q, s)), Head (FPVar (p, s')))
         ->   (if p = q then 
                 unifySub mflag cD0 cPsi s s' 
-              else raise_ (Error "Front FPVar mismatch"))
+              else raise (Error "Front FPVar mismatch"))
 
       | (Head (MVar (u, s)), Head (MVar (v, s')))
         ->  (if u = v then
                unifySub mflag cD0 cPsi s s'
-             else raise_ (Error "Front MVar mismatch"))
+             else raise (Error "Front MVar mismatch"))
 
       | (Head (FMVar (u, s)), Head (FMVar (v, s')))
         ->    (if u = v then
                  unifySub mflag cD0 cPsi s s'
-               else raise_ (Error "Front FMVar mismatch"))
+               else raise (Error "Front FMVar mismatch"))
 
       | (Head (Proj (head, k)), Head (Proj (head', k')))
         ->    (if k = k' then
                  unifyFront mflag cD0 cPsi (Head head) (Head head')
-               else raise_ (Error "Front Proj mismatch"))
+               else raise (Error "Front Proj mismatch"))
 
       | (Head (FVar x), Head (FVar y)) 
-        -> if x = y then () else raise_ (Error "Front FVar mismatch")
+        -> if x = y then () else raise (Error "Front FVar mismatch")
 
       | (Obj tM, Obj tN)
         -> unifyTerm mflag cD0 cPsi (tM, id) (tN, id)
 
       | (Head head, Obj tN)
-        -> unifyTerm mflag cD0 cPsi (Root (None, head, Nil), id) (tN, id)
+        -> unifyTerm mflag cD0 cPsi (Root (Syntax.Loc.ghost, head, Nil), id) (tN, id)
 
       | (Obj tN, Head head)
-        -> unifyTerm mflag cD0 cPsi (tN, id) (Root (None, head, Nil), id)
+        -> unifyTerm mflag cD0 cPsi (tN, id) (Root (Syntax.Loc.ghost, head, Nil), id)
 
       | (Undef, Undef)
         -> ()
 
       | (_, _)
-        -> raise_ (Error "Front mismatch")
+        -> raise (Error "Front mismatch")
 
 
    and unifyTyp mflag cD0 cPsi sA sB = unifyTypW mflag cD0 cPsi (Whnf.whnfTyp sA) (Whnf.whnfTyp sB)
@@ -2732,12 +2649,12 @@ let disallowUndefineds f =
     and unifyTypW mflag cD0 cPsi sA sB = match (sA, sB) with
       | ((Atom (_, a, tS1), s1),   (Atom (_, b, tS2), s2))  ->
           if a = b then
-            (dprint (fun () -> "Unify Atomic types" ^ P.typToString cD0 cPsi sA
+            (dprint (fun () -> "Unify Atomic types " ^ P.typToString cD0 cPsi sA
                        ^ " == " ^ P.typToString cD0 cPsi sB);
             unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2))
           else
             (dprint (fun () -> "UnifyTyp " ^ P.typToString cD0 cPsi sA ^ " ==== " ^ P.typToString cD0 cPsi sB);
-            raise_ (Unify "Type constant clash"))
+            raise (Unify "Type constant clash"))
 
       | ((PiTyp ((TypDecl(x, tA1), dep), tA2), s1), (PiTyp ((TypDecl(_x, tB1), _dep), tB2), s2)) -> 
           unifyTyp mflag cD0 cPsi (tA1, s1) (tB1, s2) ;
@@ -2746,7 +2663,7 @@ let disallowUndefineds f =
       | ((Sigma typ_rec1, s1), (Sigma typ_rec2, s2)) -> 
           unifyTypRecW mflag cD0 cPsi (typ_rec1, s1) (typ_rec2, s2)
 
-      | _ ->  raise_ (Unify "Type mismatch")
+      | _ ->  raise (Unify "Type mismatch")
 
 
     and unifyTypRecW mflag cD0 cPsi srec1 srec2 = match (srec1, srec2) with
@@ -2772,7 +2689,7 @@ let disallowUndefineds f =
           )
       
       | ((_, _s1) ,   (_, _s2)) ->
-          raise_ (Unify "TypRec length clash")
+          raise (Unify "TypRec length clash")
    
 
    (* Unify pattern fragment, and force constraints after pattern unification
@@ -2796,24 +2713,19 @@ let disallowUndefineds f =
       | (CtxVar cvar, CtxVar cvar') -> 
           if cvar = cvar' then () 
           else 
-             raise_ (Unify "Bound (named) context variable clash")
-
-(*      | (CtxVar (CInst ({contents = Some cPhi}  , _schema, _cO, _cD)) , cPsi) -> 
-          unifyDCtx1 mflag cD0 cPhi cPsi
-
-      | (cPsi , CtxVar (CInst ({contents = Some cPhi} , _schema, _cO, _cD) )) -> 
-          unifyDCtx1 mflag cD0 cPsi cPhi
-*)
+             raise (Unify "Bound (named) context variable clash")
 
       | (DDec (cPsi1, TypDecl(_ , tA1)) , DDec (cPsi2, TypDecl(_ , tA2))) -> 
-            unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
-            unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id)
+            (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
+            unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id))
 
       | (DDec (cPsi1, _) , DDec (cPsi2, _ )) -> 
             unifyDCtx1 mflag cD0 cPsi1 cPsi2  
       | _ -> 
-          (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ P.dctxToString cD0 cPsi1 ^ " cPsi2 = " ^ P.dctxToString cD0 cPsi2 ) ; 
-raise_ (Unify "Context clash"))
+          (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ 
+                     P.dctxToString cD0 cPsi1 
+                     ^ " cPsi2 = " ^ P.dctxToString cD0 cPsi2 ) ; 
+           raise (Unify "Context clash"))
 
    (* **************************************************************** *)
 
@@ -2836,7 +2748,7 @@ raise_ (Unify "Context clash"))
           unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
           unifyTerm Unification cD cPsi1 
             (Whnf.cnorm (tR, t), id) (Whnf.cnorm (tR', t'), id)
-    | _ -> raise_ (Unify "MetaObj mismatch")
+    | _ -> raise (Unify "MetaObj mismatch")
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
@@ -2852,7 +2764,7 @@ raise_ (Unify "Context clash"))
           dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES" ^ P.metaObjToString cD mOt ^ " == " ^ 
                     P.metaObjToString cD mO'))
 
-    | _ -> raise_ (Unify "Meta-Spine mismatch")
+    | _ -> raise (Unify "Meta-Spine mismatch")
 
     let rec unifyCompTyp cD tau_t tau_t' = 
       unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t')
@@ -2866,7 +2778,7 @@ raise_ (Unify "Context clash"))
                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ))
                        
           else 
-            raise_ (Unify "Type Constant Clash")
+            raise (Unify "Type Constant Clash")
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) -> 
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in 
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
@@ -2900,7 +2812,7 @@ raise_ (Unify "Context clash"))
             )
 
       | ((Comp.TypBool, _ ), (Comp.TypBool, _ )) -> ()
-      | _ -> raise_ (Unify "Computation-level Type Clash")
+      | _ -> raise (Unify "Computation-level Type Clash")
 
 
    (* **************************************************************** *)
@@ -3021,13 +2933,19 @@ raise_ (Unify "Context clash"))
           unifyMSub' ms (MShift (k-1))
       | (MShift k, MDot ( _ , ms)) -> 
           unifyMSub' ms (MShift (k-1))
-      | (MDot (MObj (phat, tM), ms'), MDot (MObj(phat', tM'), mt')) -> 
+      | (MDot (MObj (phat, tM), ms'), MDot (MObj(_phat', tM'), mt')) -> 
           (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ; 
            unifyMSub' ms' mt')
       | (MDot (PObj (phat, h), ms'), MDot (PObj(_phat', h'), mt')) -> 
-          (dprint (fun () -> "[unifyMSub] Pob "); 
+          (dprint (fun () -> "[unifyMSub] PObj "); 
           (unifyHead Unification Empty (Context.hatToDCtx phat) h h'; 
            unifyMSub' ms' mt'))
+      | (MDot (CObj (cPsi), ms), MDot (CObj(cPhi), mt)) -> 
+          (dprint (fun () -> "[unifyMSub] CObj "); 
+           unifyDCtx1 Unification Empty  cPsi cPhi;
+           dprint (fun () -> "[unifyMSub] cPsi = " ^ P.dctxToString Empty cPsi);
+           dprint (fun () -> "[unifyMSub] cPhi = " ^ P.dctxToString Empty cPhi);
+           unifyMSub' ms mt)
 
     let rec unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
 
@@ -3046,6 +2964,40 @@ raise_ (Unify "Context clash"))
            unifyCSub cs ct )
  
 
+
+
+let rec unify_phat psihat phihat = 
+  match phihat with
+    | (Some (CInst ({contents = None} as cref, _, _, _ )), d) -> 
+        begin match psihat with 
+          | (Some (CInst ({contents = None} as cref', _, _, _) as c_var) , d') -> 
+	      if cref == cref' then 
+		(if d = d' then () else raise (Unify "Hat context mismatch - 1"))  
+	      else 
+		cref := Some (CtxVar (c_var))
+          | ((Some (c_var)) , d') -> 
+              if d = d' then 
+                cref := Some (CtxVar (c_var)) 
+              else                 
+                (* (Some (cref), d) == (Some cpsi, d')   d' = d0+d  *)
+                (if d'< d then raise (Unify "Hat Context's do not unify")
+                 else 
+                   let cPsi = Context.hatToDCtx (Some (c_var), d'-d) in 
+                     cref := Some (cPsi))
+
+          | (None , d') -> 
+              if d = d' then 
+                cref := Some (Null)
+              else 
+                (* (Some (cref), d) == (None, d')   d' = d0+d  *)
+                (if d'< d then raise (Unify "Hat Context's do not unify")
+                 else 
+                   let cPsi = Context.hatToDCtx (None, d'-d) in 
+                     cref := Some (cPsi))
+                
+        end 
+
+    | _ ->  (if psihat = phihat then () else raise (Unify "Hat context mismatch - 2"))
 
    (* **************************************************************** *)
 

@@ -11,7 +11,6 @@ module LF = struct
   type depend =
     | No       
     | Maybe        
-    
 
   type kind =
     | Typ
@@ -32,17 +31,17 @@ module LF = struct
                                               (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)
-    | Atom  of Loc.t option * cid_typ * spine (* A ::= a M1 ... Mn              *)
+    | Atom  of Loc.t * cid_typ * spine (* A ::= a M1 ... Mn              *)
     | PiTyp of (typ_decl * depend) * typ      (*   | Pi x:A.B                   *)
     | Sigma of typ_rec
     | TClo  of (typ * sub)                    (*   | TClo(A,s)                  *)
 
 
   and normal =                                (* normal terms                   *)
-    | Lam  of Loc.t option * name * normal    (* M ::= \x.M                     *)
-    | Root of Loc.t option * head * spine     (*   | h . S                      *)
+    | Lam  of Loc.t * name * normal    (* M ::= \x.M                     *)
+    | Root of Loc.t * head * spine     (*   | h . S                      *)
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
-    | Tuple of Loc.t option * tuple
+    | Tuple of Loc.t * tuple
 
   and head =
     | BVar  of offset                         (* H ::= x                        *)
@@ -225,16 +224,16 @@ module Comp = struct
 
  type  kind = 
    | Ctype of Loc.t
-   | PiKind  of Loc.t option * (LF.ctyp_decl * depend) * kind
+   | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
 
  type meta_typ = 
    | MetaTyp of LF.typ * LF.dctx
    | MetaSchema of cid_schema 
 
  type meta_obj = 
-   | MetaCtx of Loc.t option * LF.dctx 
-   | MetaObj of Loc.t option * LF.psi_hat * LF.normal
-   | MetaObjAnn of Loc.t option * LF.dctx * LF.normal
+   | MetaCtx of Loc.t * LF.dctx 
+   | MetaObj of Loc.t * LF.psi_hat * LF.normal
+   | MetaObjAnn of Loc.t * LF.dctx * LF.normal
 
  type meta_spine = 
    | MetaNil 
@@ -242,9 +241,9 @@ module Comp = struct
    (* MetaSClo of meta_spine * msub *)
 
  type typ =
-   | TypBase of Loc.t option * cid_comp_typ * meta_spine
-   | TypBox   of Loc.t option * LF.typ  * LF.dctx
-   | TypSub   of Loc.t option * LF.dctx * LF.dctx
+   | TypBase of Loc.t * cid_comp_typ * meta_spine
+   | TypBox   of Loc.t * LF.typ  * LF.dctx
+   | TypSub   of Loc.t * LF.dctx * LF.dctx
    | TypArr   of typ * typ
    | TypCross of typ * typ
    | TypCtxPi of (name * cid_schema * depend) * typ
@@ -266,38 +265,38 @@ module Comp = struct
    | Cons of value * env
 
  and value = 
-   | FunValue   of (Loc.t option * name * exp_chk) * LF.msub * env 
+   | FunValue   of (Loc.t * name * exp_chk) * LF.msub * env 
    | RecValue   of (cid_prog * exp_chk) * LF.msub * env 
-   | MLamValue  of (Loc.t option * name * exp_chk) * LF.msub * env
-   | CtxValue   of (Loc.t option * name * exp_chk) * LF.msub * env
+   | MLamValue  of (Loc.t * name * exp_chk) * LF.msub * env
+   | CtxValue   of (Loc.t * name * exp_chk) * LF.msub * env
    | BoxValue   of LF.psi_hat * LF.normal 
    | ConstValue of cid_prog   
    | BoolValue  of bool
 
  and exp_chk =
-   | Syn    of Loc.t option * exp_syn
-   | Rec    of Loc.t option * name * exp_chk
-   | Fun    of Loc.t option * name * exp_chk
-   | CtxFun of Loc.t option * name * exp_chk
-   | MLam   of Loc.t option * name * exp_chk
-   | Pair   of Loc.t option * exp_chk * exp_chk     
-   | LetPair of Loc.t option * exp_syn * (name * name * exp_chk) 
-   | Let    of Loc.t option * exp_syn * (name * exp_chk)
-   | Box    of Loc.t option * LF.psi_hat * LF.normal
-   | SBox   of Loc.t option * LF.psi_hat * LF.sub
-   | Case   of Loc.t option * case_pragma * exp_syn * branch list
-   | If     of Loc.t option * exp_syn * exp_chk * exp_chk
+   | Syn    of Loc.t * exp_syn
+   | Rec    of Loc.t * name * exp_chk
+   | Fun    of Loc.t * name * exp_chk
+   | CtxFun of Loc.t * name * exp_chk
+   | MLam   of Loc.t * name * exp_chk
+   | Pair   of Loc.t * exp_chk * exp_chk     
+   | LetPair of Loc.t * exp_syn * (name * name * exp_chk) 
+   | Let    of Loc.t * exp_syn * (name * exp_chk)
+   | Box    of Loc.t * LF.psi_hat * LF.normal
+   | SBox   of Loc.t * LF.psi_hat * LF.sub
+   | Case   of Loc.t * case_pragma * exp_syn * branch list
+   | If     of Loc.t * exp_syn * exp_chk * exp_chk
    | Value  of value 
 
  and exp_syn =
    | Var    of offset
    | DataConst of cid_comp_const
    | Const  of cid_prog
-   | Apply  of Loc.t option * exp_syn * exp_chk
-   | CtxApp of Loc.t option * exp_syn * LF.dctx
-   | MApp   of Loc.t option * exp_syn * (LF.psi_hat * contextual_obj)
+   | Apply  of Loc.t * exp_syn * exp_chk
+   | CtxApp of Loc.t * exp_syn * LF.dctx
+   | MApp   of Loc.t * exp_syn * (LF.psi_hat * contextual_obj)
    | Ann    of exp_chk * typ
-   | Equal  of Loc.t option * exp_syn * exp_syn
+   | Equal  of Loc.t * exp_syn * exp_syn
    | Boolean of bool
        
   and branch_pattern =
@@ -306,7 +305,7 @@ module Comp = struct
 
  and pattern = 
    | PatEmpty  of Loc.t * LF.dctx 
-   | PatMetaObj of Loc.t option * meta_obj
+   | PatMetaObj of Loc.t * meta_obj
    | PatConst of Loc.t * cid_comp_const * pattern_spine
    | PatFVar   of Loc.t * name
    | PatVar   of Loc.t * offset

@@ -56,34 +56,34 @@ t_trywith: oft E1 T -> oft E2 T
 t_error : oft error T.
 
 % ---------------------------------------------------------- %
-rec tps: (oft M T)[] -> (step M N)[] -> (oft N T)[] = 
+rec tps: [. oft M T] -> [. step M N] -> [. oft N T] = 
 fn d => fn s => case s of 
-| [] step_app_1 S1 => 
-  let [] t_app D1 D2 = d in 
-  let [] F1 = tps  ([] D1) ([] S1) in 
-    [] t_app F1 D2 
+| [. step_app_1 S1] => 
+  let [. t_app D1 D2] = d in 
+  let [. F1] = tps  [. D1] [. S1] in 
+    [. t_app F1 D2] 
 
-| [] step_app_2 S2 _ => 
-  let [] t_app D1 D2 = d in 
-  let [] F2 = tps  ([] D2) ([] S2) in 
-    [] t_app D1 F2 
+| [. step_app_2 S2 _] => 
+  let [. t_app D1 D2] = d in 
+  let [. F2] = tps  [. D2] [. S2] in 
+    [. t_app D1 F2] 
 
-| [] step_app_beta V => 
-  let [] t_app (t_lam D) D2 = d in 
-    [] D _ D2
+| [. step_app_beta V] => 
+  let [. t_app (t_lam D) D2] = d in 
+    [. D _ D2]
 
-| [] step_app_err1   => [] t_error
-| [] step_app_err2 _ => [] t_error
+| [. step_app_err1]   => [. t_error]
+| [. step_app_err2 _] => [. t_error]
 
-| [] step_try S1 => 
-  let [] t_trywith D1 D2 = d in 
-  let [] F1 = tps ([] D1) ([] S1) in 
-    [] t_trywith F1 D2
+| [. step_try S1] => 
+  let [. t_trywith D1 D2] = d in 
+  let [. F1] = tps [. D1] [. S1] in 
+    [. t_trywith F1 D2]
 
-| [] step_try_v V => 
-  let [] t_trywith D1 D2 = d in [] D1
+| [. step_try_v V] => 
+  let [. t_trywith D1 D2] = d in [. D1]
 
-| [] step_try_error  => 
-  let [] t_trywith D1 D2 = d in [] D2
+| [. step_try_error]  => 
+  let [. t_trywith D1 D2] = d in [. D2]
 
 ;

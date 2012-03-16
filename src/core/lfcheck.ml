@@ -1,19 +1,76 @@
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.DefaultCidRenderer
+module R = Store.Cid.DefaultRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [5])
 
 open Context
 open Store.Cid
 open Syntax.Int.LF
+open Syntax.Int
 open Error
 
 module Print = Pretty.Int.DefaultPrinter
 
 module Unify = Unify.EmptyTrail
 
-exception Violation of string
-exception Error of Syntax.Loc.t option * error
+type error =
+  | CtxVarMismatch   of mctx * ctx_var * schema
+  | CtxVarDiffer     of mctx * ctx_var * ctx_var
+  | IllTyped         of mctx * dctx * nclo * tclo
+  | SigmaIllTyped    of mctx * dctx * trec_clo * trec_clo
+  | KindMismatch     of mctx * dctx * sclo * (kind * sub)
+  | TypMismatch      of mctx * dctx * nclo * tclo * tclo
+  | SpineIllTyped
+  | SubIllTyped
+  | LeftoverFV
+
+exception Error of Syntax.Loc.t * error
+
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+      | CtxVarMismatch (cO, var, expected) ->
+          Format.fprintf ppf "Context variable %a doesn't check against schema %a"
+            (P.fmt_ppr_lf_ctx_var cO) var
+            (P.fmt_ppr_lf_schema Pretty.std_lvl) expected
+
+      | CtxVarDiffer (cO, var, var1) ->
+          Format.fprintf ppf "Context variable %a not equal to %a"
+            (P.fmt_ppr_lf_ctx_var cO) var
+            (P.fmt_ppr_lf_ctx_var cO) var1
+
+      | IllTyped (cD, cPsi, sM, sA) ->
+          Format.fprintf ppf
+            "ill-typed expression\n  expected type: %a\n  for expression:\n    %a\n "
+            (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+            (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+
+      | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
+          Format.fprintf ppf "Sigma Type mismatch" (* TODO *)
+
+      | KindMismatch (cD, cPsi, sS, sK) ->
+          Format.fprintf ppf "ill-kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
+            (P.kindToString cPsi sK)
+            (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS)
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
+
+      | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
+          Format.fprintf ppf
+            "ill-typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n "
+            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA1)
+            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA2)
+            (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+
+      | SpineIllTyped -> 
+          Format.fprintf ppf "ill-typed spine---not enough arguments supplied"
+
+      | SubIllTyped ->
+          Format.fprintf ppf "Substitution not well-typed"  (* TODO *)
+
+      | LeftoverFV ->
+	  Format.fprintf ppf "Leftover free variable"))
+
 exception SpineMismatch
 
 
@@ -51,7 +108,7 @@ exception SpineMismatch
 
 *)
 let rec ctxShift cPsi = begin match cPsi with
-  | Null              -> Shift (NoCtxShift , 0 )
+  | Null              -> Shift (NoCtxShift, 0)
   | CtxVar psi        -> Shift (CtxShift psi, 0)
   | DDec   (cPsi, _x) -> 
       match  ctxShift cPsi with
@@ -87,10 +144,10 @@ let rec ctxShift cPsi = begin match cPsi with
 
         (* let u     = Whnf.etaExpandMV Null (tA, s) Substitution.LF.id in *)
           (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-        (* let u     = Whnf.etaExpandMV cPhi (tA, Substitution.LF.comp s (ctxShift cPhi)) Substitution.LF.id in *)
-	let u     = Whnf.etaExpandMV cPhi (tA, s) Substitution.LF.id in 
-        let front = (Obj ((* Root(MVar(u, S.Substitution.LF.id), Nil) *) u) : front) in
-          (* Dot (front, Substitution.LF.comp s Substitution.LF.shift)  *)
+        (* let u     = Whnf.etaExpandMV cPhi (tA, LF.comp s (ctxShift cPhi)) LF.id in *)
+	let u     = Whnf.etaExpandMV cPhi (tA, s) Substitution.LF.id in
+        let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
+          (* Dot (front, Substitution.LF.comp s LF.shift)  *)
            Dot (front, s) 
 
 
@@ -132,6 +189,8 @@ let rec ctxShift cPsi = begin match cPsi with
 			      P.dctxToString cD cPsi ^ " |- " ^ 
 			      P.normalToString cD cPsi sM ^ 
                               " => " ^ P.typToString cD cPsi sP ) in
+	    let _ = dprint (fun () -> "       against " ^ 
+			      P.typToString cD cPsi sA) in
             let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in 
               if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then 
                 (dprint (fun () -> "here!") ; 
@@ -304,7 +363,7 @@ let rec ctxShift cPsi = begin match cPsi with
             TClo (tA, s)
 
     | FVar _ ->
-        raise (Error (None, LeftoverFVar))
+        raise (Error (Syntax.Loc.ghost, LeftoverFV))
 
 
   and canAppear cD cPsi sA =
@@ -361,14 +420,14 @@ let rec ctxShift cPsi = begin match cPsi with
         if psi = psi' then
           ()
         else
-          raise (Error (None, SubIllTyped))
+          raise (Error (Syntax.Loc.ghost, SubIllTyped))
 
 
     | (Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi)) ->
         if psi = psi' then
           ()
         else
-          raise (Error (None, SubIllTyped))
+          raise (Error (Syntax.Loc.ghost, SubIllTyped))
 
     (* SVar case to be added - bp *)
 
@@ -376,7 +435,7 @@ let rec ctxShift cPsi = begin match cPsi with
         if k > 0 then
           checkSub loc cD cPsi (Shift (psi, k - 1)) Null
         else
-          raise (Error (None, SubIllTyped))
+          raise (Error (Syntax.Loc.ghost, SubIllTyped))
 
     | (DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi) ->
         if k > 0 then
@@ -420,8 +479,6 @@ This case should now be covered by the one below it
               (P.typToString cD cPsi' (tA1, Substitution.LF.id))
               (P.typToString cD cPsi' (tA2, s')) in
               raise (Error (loc, SubIllTyped))
-                (* let sM = Root (None, h, Nil) in
-                   raise (TypMismatch (cPsi', sM, (tA2, s'), (tA1, Substitution.LF.id)))  *)
 
     | (cPsi',  Dot (Obj tM, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
         (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
@@ -687,7 +744,7 @@ f   *)
 (*            if not (List.for_all (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements ) then *)
             if List.exists (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements then ()
             else
-              raise (Error (None, CtxVarMismatch (cD, phi, schema)))
+              raise (Error (Syntax.Loc.ghost, CtxVarMismatch (cD, phi, schema)))
 
       | DDec (cPsi', decl) ->
           begin
@@ -767,10 +824,10 @@ and checkMSub cD  ms cD' = match (ms, cD') with
                 let TypDecl (_, tB) = ctxDec cPsi' k in 
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
             | PVar _ -> 
-                let tB = inferHead None cD cPsi' h in 
+                let tB = inferHead Syntax.Loc.ghost cD cPsi' h in 
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
             | Proj _ -> 
-                let tB = inferHead None cD cPsi' h in 
+                let tB = inferHead Syntax.Loc.ghost cD cPsi' h in 
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
            end ;
            checkMSub cD ms cD1')

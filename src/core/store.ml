@@ -2,6 +2,12 @@
 
 open Syntax
 
+
+type error =
+  | FrozenType of Id.cid_typ
+
+exception Error of Syntax.Loc.t * error
+
 module Cid = struct
 
   module Typ = struct
@@ -196,7 +202,7 @@ module Cid = struct
     let addConstructor loc typ c tA =
       let entry = get typ in
         if entry.frozen then
-          raise (Error.Error (loc, Error.FrozenType typ))
+          raise (Error (loc, FrozenType typ))
         else
           let _ = entry.constructors <- c :: entry.constructors in
           let _ = inspect [] tA in
@@ -430,6 +436,92 @@ module Cid = struct
       Hashtbl.clear directory
 
   end
+
+  module type RENDERER = sig
+
+    open Id
+    open Syntax.Int
+
+    val render_name         : name         -> string
+    val render_cid_comp_typ : cid_typ      -> string
+    val render_cid_comp_const : cid_comp_const -> string
+    val render_cid_typ      : cid_typ      -> string
+    val render_cid_term     : cid_term     -> string
+    val render_cid_schema   : cid_schema   -> string
+    val render_cid_prog     : cid_prog     -> string
+    val render_offset       : offset       -> string
+
+    val render_ctx_var      : LF.mctx    -> offset   -> string
+    val render_cvar         : LF.mctx    -> offset   -> string
+    val render_bvar         : LF.dctx    -> offset   -> string
+    val render_var          : Comp.gctx  -> var      -> string
+
+  end
+
+  (* Default RENDERER for Internal Syntax using de Bruijn indices *)
+  module DefaultRenderer : RENDERER = struct
+
+    open Id
+
+    let render_name       n    = n.string_of_name
+    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
+    let render_cid_typ    a    = render_name (Typ.get a).Typ.name
+    let render_cid_term   c    = render_name (Term.get c).Term.name
+    let render_cid_schema w    = render_name (Schema.get w).Schema.name
+    let render_cid_prog   f    = render_name (Comp.get f).Comp.name
+    let render_ctx_var _cO g   =  string_of_int g
+    let render_cvar    _cD u   = "mvar " ^ string_of_int u
+    let render_bvar  _cPsi i   = string_of_int i
+    let render_offset      i   = string_of_int i
+    let render_var   _cG   x   = string_of_int x
+
+  end (* Int.DefaultRenderer *)
+
+ 
+  (* RENDERER for Internal Syntax using names *)
+  module NamedRenderer : RENDERER = struct
+
+    open Id
+
+    let render_name        n   = n.string_of_name
+    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
+    let render_cid_typ     a   = render_name (Typ.get a).Typ.name
+    let render_cid_term    c   = render_name (Term.get c).Term.name
+    let render_cid_schema  w   = render_name (Schema.get w).Schema.name
+    let render_cid_prog    f   = render_name (Comp.get f).Comp.name
+    let render_ctx_var cO g    =      
+      begin try
+        render_name (Context.getNameMCtx cO g)
+      with
+          _ -> "FREE CtxVar " ^ string_of_int g
+      end 
+
+    let render_cvar    cD u    = 
+      begin try
+        render_name (Context.getNameMCtx cD u)
+      with 
+          _ -> "FREE MVar " ^ (string_of_int u)
+      end 
+    let render_bvar  cPsi i    = 
+      begin try 
+        render_name (Context.getNameDCtx cPsi i)
+      with
+          _ -> "FREE BVar " ^ (string_of_int i)
+      end 
+
+    let render_offset     i   = string_of_int i
+
+    let render_var   cG   x   =
+      begin try
+        render_name (Context.getNameCtx cG x)
+      with 
+          _ -> "FREE Var " ^ (string_of_int x)
+      end
+
+  end (* Int.NamedRenderer *)
+
 end
 
 
@@ -634,3 +726,13 @@ let clear () =
   Cid.CompTyp.clear ();
   Cid.CompConst.clear ();
   Cid.Comp.clear ()
+
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+        | FrozenType n ->
+            Format.fprintf ppf
+              "type %s was frozen by a previous case analysis;@ \
+               can't declare a new constructor here"
+              (Cid.DefaultRenderer.render_cid_typ n)))

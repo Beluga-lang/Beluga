@@ -7,12 +7,9 @@
 
 open Syntax.Int.LF
 open Syntax.Int
-open Error 
 
-exception Error of error
+
 exception NoTypAvailable
-exception Violation of string
-
 
 let addToHat (ctxvarOpt, length) =
   (ctxvarOpt, length + 1)
@@ -238,7 +235,7 @@ let rec lookupSchema cD psi_offset = match (cD, psi_offset) with
 
 and lookupCtxVar cD cvar = 
   let rec lookup cD offset = match cD with
-      | Empty -> raise (Violation "Context variable not found")
+      | Empty -> raise (Error.Violation "Context variable not found")
       | Dec (cD, CDecl (psi, schemaName, _)) ->      
           begin match cvar with 
             | CtxName phi when psi = phi ->  (psi, schemaName)

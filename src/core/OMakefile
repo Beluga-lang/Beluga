@@ -27,7 +27,6 @@ FILES[] =
 	logic
         opsem
         parser
-        parserRelease
         pragma
         pretty
         reconstruct

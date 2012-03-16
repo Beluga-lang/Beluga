@@ -32,7 +32,7 @@ let print_with_location loc f =
 (* Since this printer is registered first, it will be executed only if
    all other printers fail. *)
 let _ = Printexc.register_printer
-  (fun e ->
+  (fun exc ->
     (* We unfortunately do not have direct access to the default
        printer that Printexc uses for exceptions, so we print the
        message we want as a side-effect and return None, which should

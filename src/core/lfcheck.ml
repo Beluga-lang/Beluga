@@ -27,9 +27,9 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
       | CtxVarMismatch (cO, var, expected) ->
           Format.fprintf ppf "Context variable %a doesn't check against schema %a"
             (P.fmt_ppr_lf_ctx_var cO) var

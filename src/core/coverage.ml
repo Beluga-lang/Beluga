@@ -31,9 +31,9 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
 	| NoCover s -> Format.fprintf ppf "Coverage checking failed: %s" s
 	| MatchError s -> Format.pp_print_string ppf s
 	| NothingToRefine -> Format.pp_print_string ppf "Nothing to refine"

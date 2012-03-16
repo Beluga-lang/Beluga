@@ -33,9 +33,9 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
         | PruningFailed -> 
           Format.fprintf ppf "Pruning a type failed;@ this can happen when you have some@ \
                               free meta-variables whose type cannot be inferred." 

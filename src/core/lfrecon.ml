@@ -28,9 +28,9 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
           Format.fprintf ppf
             "ill-typed expression\n  expected: %a\n  inferred: %a\n "

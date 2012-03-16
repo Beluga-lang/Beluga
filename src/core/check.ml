@@ -88,9 +88,9 @@ module Comp = struct
     | VariantBox   -> "contextual type"
 
   let _ = Error.register_printer
-    (fun (Error (loc, e)) ->
+    (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
-        match e with
+        match err with
           | IllTyped (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
             Format.fprintf ppf
               "ill-typed expression\n  expected: %a\n  for expression: %a\n  inferred: %a\n\

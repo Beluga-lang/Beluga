@@ -41,9 +41,9 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
       | UnboundName n ->
           Format.fprintf ppf
 	    "unbound data-level variable (ordinary or meta-variable) or constructor: %s"

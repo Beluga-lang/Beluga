@@ -1,0 +1,37 @@
+% Type-preserving substitution-based interpreter
+%
+% Author: Brigitte Pientka
+%
+% TODO extend with functions and function application
+
+tp   : type.
+arr  : tp -> tp -> tp.
+bool : tp.
+
+exp  : tp -> type.  
+
+lam  : (exp T1 -> exp T2) -> exp (arr T1 T2).
+app  : exp (arr T1 T2) -> exp T1 -> exp T2.
+
+
+eval: exp T -> exp T -> type.
+ev_lam: eval (lam (\x. E x)) (lam (\x. E x)).
+ev_app: eval (app E1 E2) V
+        <- eval E1 (lam (\x. E x))
+        <- eval E2 V2
+        <- eval (E V2) V.
+
+
+val: exp T -> type.
+
+v_lam: val (lam (\x. E x)).
+
+
+rec vs : [. eval E V] -> [. val V] = 
+fn d => case d of 
+
+  [. ev_lam] => [. v_lam]
+
+| [. ev_app D3 D2 D1] =>  vs [. D3]
+
+;

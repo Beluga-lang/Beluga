@@ -96,12 +96,13 @@ and pJudge =
 
 and vAlternative =
   | VAltAtomic of Loc.t * string * vAlternative option      (* z, suc nat *)
+  | VAltId of Loc.t * string * vAlternative option 
   | VAltLam of Loc.t * aName * vAlternative (* * vName * vAlternative list*)
   | VAltFn of Loc.t * vName * typ_or_valt * vAlternative option
   | VAltBin of Loc.t * vAlternative
   | VAltLet of Loc.t * vAlternative                              
-  | VAltOft of Loc.t * ( string * string ) list * vAlternative   
-  | VAltOftBlock of Loc.t * ( string * string ) list * vAlternative option
+  | VAltOft of Loc.t * ( string * vAlternative ) list * vAlternative   
+  | VAltOftBlock of Loc.t * ( string * vAlternative ) list * vAlternative option
   | VAltCtx of Loc.t * cName * vAlternative list              (* for contexts Gamma, x : tau, AltOft list to be more specific *)  
   | VAltPar of Loc.t * vAlternative * vAlternative option
   | VAltEmpty of Loc.t
@@ -111,7 +112,7 @@ and typ_or_valt =
   | VLa of vAlternative list
 
 and pContext =
-  | LCD of (string * string) list
+  | LCD of (string * vAlternative) list
   | Con of string
 
 and tpremise =

@@ -47,7 +47,7 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 
 schema w =  i + some [ a:o ] hil a;
 
- rec ded: {g:(w)*} 
+rec ded: {g:(w)*} 
     (hil (B ..))[g, u:hil (A ..)] -> (hil (imp (A ..) (B ..)))[g] = 
  FN g => fn h =>  
  case h of 

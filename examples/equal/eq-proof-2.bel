@@ -83,7 +83,7 @@ rec ceq: {g:(equalCtx)*} (equal (T ..) (S ..))[g] -> (eq (T ..) (S ..))[g]  =
  FN g =>  fn e => case e of 
 | [g] #p.3 .. => [g] #p.2 ..
 
-| [g] e_r (T .. )=> ref [g] <g. _ >   
+| [g] e_r (T .. )=> ref [g] <g. T.. >   
 
 | [g] e_t (D2 ..) (D1 ..) => 
   let [g] F2 .. = ceq [g] ([g] D2 ..) in 

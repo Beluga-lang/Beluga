@@ -1,0 +1,59 @@
+%%% Mini-ML Natural Semantics
+%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
+
+feval : env -> exp' -> val -> type.  % name feval D.
+
+% Variables
+fev_1 : feval (vcons K W) one W.
+
+fev_^ : feval (vcons K W') (shift F) W
+	   <- feval K F W.
+
+fev_1+ : feval (cons K F) one W
+	    <- feval K F W.
+
+fev_^+ : feval (cons K F') (shift F) W
+	    <- feval K F W.
+
+% Natural Numbers
+fev_z : feval K z' z_val.
+
+fev_s : feval K (s' F) (s_val W)
+	 <- feval K F W.
+
+fev_match_z : feval K (match' F1 F2 F3) W
+	      <- feval K F1 z_val
+	      <- feval K F2 W.
+
+fev_match_s : feval K (match' F1 F2 F3) W
+	      <- feval K F1 (s_val W1)
+	      <- feval (vcons K W1) F3 W.
+
+% Pairs
+fev_pair : feval K (pair' F1 F2) (pair_val W1 W2)
+	     <- feval K F1 W1
+	     <- feval K F2 W2.
+fev_fst  : feval K (fst' F) W1
+	     <- feval K F (pair_val W1 W2).
+fev_snd  : feval K (snd' F) W2
+	     <- feval K F (pair_val W1 W2).
+
+% Functions
+fev_lam : feval K (lam' F) (clo K (lam' F)).
+fev_app : feval K (app' F1 F2) W
+	   <- feval K F1 (clo K' (lam' F1'))
+	   <- feval K F2 W2
+	   <- feval (vcons K' W2) F1' W.
+
+% Definitions
+fev_letv : feval K (letv' F1 F2) W
+	    <- feval K F1 W1
+	    <- feval (vcons K  W1) F2 W.
+
+fev_letn : feval K (letn' F1 F2) W
+	    <- feval (cons K F1) F2 W.
+
+% Recursion
+fev_fix  : feval K (fix' F) W
+	     <- feval (cons K (fix' F)) F W.
+

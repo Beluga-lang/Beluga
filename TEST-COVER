@@ -23,18 +23,19 @@ BELUGA=`pwd`
 INTERPRETER=$BELUGA/bin/interpreter 
 
 # set $X to the `beluga' examples directory
-X=$BELUGA/examples
+
+  X=$BELUGA/examples
 cd $X
 
 # The following contain nonexhaustive cases with empty contexts
-
+# Changed    tapl/ch3+arith/sources.cfg \
+# to new syntax; should be re-added
 echo 'nonexhaustive cases:  (empty contexts)'
 $INTERPRETER -noprint +t +warncover $* \
     compile/debruijn/test.cfg \
     mini-ml/eval-sub.bel \
     mini-ml/eval-sub-explicit.bel \
     tapl/ch6/evaluator.bel \
-    tapl/ch3+arith/sources.cfg \
     typed-eval/tpeval.bel \
     typed-eval/tpeval-explicit.bel \
     typed-eval/tpeval2.bel 
@@ -79,14 +80,15 @@ sleep 1
 # The following contain cases with empty contexts and 
 # we prove that the resulting open coverage goals are 
 # trivially proven to be impossible
+# All of these examples are currently only working in the new syntax
+#    tapl/ch3+arith/sources-corrected.cfg \
+#    tapl/ch3+arith/big-small.cfg \
+#    tapl/ch3+arith/det.cfg \
 
 echo 'covering cases with trivially proven open coverage goals (empty contexts): '
 $INTERPRETER -noprint +t +coverage $* \
     compile/cpm/test.cfg \
     tapl/ch3/sources.cfg \
-    tapl/ch3+arith/sources-corrected.cfg \
-    tapl/ch3+arith/big-small.cfg \
-    tapl/ch3+arith/det.cfg \
     tapl/ch6/tps.bel 
 
 sleep 1

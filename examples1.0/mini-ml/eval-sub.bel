@@ -1,0 +1,51 @@
+% Substitution based evaluator
+%   call-by-value strategy
+%
+%   Author: Brigitte Pientka
+%
+
+exp: type. %name exp E.
+
+z   : exp.
+suc : exp -> exp.
+app : exp -> exp -> exp.
+lam : (exp -> exp) -> exp.
+letn: exp -> (exp -> exp) -> exp.
+letv: exp -> (exp -> exp) -> exp.
+fix : (exp -> exp) -> exp. 
+
+
+% Call-By-Name evaluation 
+rec eval : [. exp] -> [. exp] = 
+fn e =>  case e of
+| [. z] => [. z]
+| [. suc E]  =>
+  let [. E'] = eval [. E] in 
+    [. suc E']
+
+| [. app E1 E2] =>   
+  let [. lam (\x. E x)]  =  eval [. E1] in 
+    eval [. (E E2)]  
+        
+| [. lam (\x. (E x))] =>  e
+
+| [. letv E1 (\x. E2 x )] => 
+  let [. V1] = eval [. E1] in 
+    eval [. E2 V1] 
+
+| [. letn E1 (\x. E2 x)]  => 
+   eval [. (E2 E1)]
+
+| [. fix (\x. E x)]  =>  
+   eval [. E (fix (\ x. E x))]
+;
+
+
+let x = eval [. z] ;
+
+
+let y = eval [. suc z] ;
+
+let x = eval [. app (lam \x. suc x) (suc z)] ;
+
+let x = eval [. letv (app (lam \x. suc x) (suc z)) (\y. suc y)] ;

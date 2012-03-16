@@ -1,0 +1,109 @@
+%%% Completeness of Evaluation under Continuations
+%%% Author: Frank Pfenning
+%
+% %{ The natural informal proof relies on the lemma
+%    If   D :: eval E V
+%    then for any K
+%         C :: K # (ev E) =>* K # (return V).
+%
+% Proof: by induction on the structure of D.
+%
+% The formalization of this proof requires appending partial computation
+% sequences, which is possible, although somewhat tedious.
+%
+% Below we give a simpler implementation in which the partial computations
+% are accumulated incrementally.
+% }%
+%
+% %{ Main Lemma
+%    If   D :: eval E V
+%    and  C' :: K # (return V) =>* (answer W)
+%    then C :: K # (ev E) =>* (answer W).
+%
+% Proof: by induction on the structure of D.  C' is the "accumulator"
+% argument for the resulting computation.
+%
+% The implementation below has the remarkable property that it is almost
+% exactly the same as csd, the implementation of the soundness proof.
+% There are only two changes: the order of arguments is switched
+% (following the convention that induction arguments come first), the
+% second is that the order of the subgoals is reversed.
+% }%
+
+ccp : eval E V
+       -> mstep (st K (return V)) (answer W)
+       -> mstep (st K (ev E)) (answer W)
+       -> type.
+
+%mode ccp +D +E -F.
+%name ccp CP.
+%%lex {D} ccp D _ _.
+
+% Natural Numbers
+
+ccp_z : ccp (ev_z) C' (<< C' st_z).
+
+ccp_s : ccp (ev_s D1) C' (<< C1 st_s)
+	 <- ccp D1 (<< C' (st_return _ _)) C1.
+
+
+ccp_match_z : % {C1 : mstep (st (c K15 (\v. match1 v E27 (\x. E26 x))) (ev E28)) (answer V47)}
+                 ccp (ev_match_z D2 D1) C' (<< C1 st_match)
+	      <- ccp D2 C' C2
+	      <- ccp D1 (<< (<< C2 st_match1_z) (st_return _ _)) C1.
+
+
+ ccp_match_s : ccp (ev_match_s D3 D1) C' (<< C1 st_match)
+	      <- ccp D3 C' C3
+	      <- ccp D1 (<< (<< C3 st_match1_s) (st_return _ _)) C1.
+
+
+% Pairs
+ccp_pair : ccp (ev_pair D2 D1) C' (<< C1 st_pair)
+	    <- ccp D2 (<< C' (st_return _ _)) C2
+	    <- ccp D1 (<< (<< C2 st_pair1) (st_return _ _)) C1.
+
+ccp_fst : ccp (ev_fst D1) C' (<< C1 st_fst)
+	   <- ccp D1 (<< (<< C' st_fst1) (st_return _ _)) C1.
+
+ccp_snd : ccp (ev_snd D1) C' (<< C1  st_snd)
+	   <- ccp D1 (<< (<< C' st_snd1) (st_return _ _)) C1.
+
+% Functions
+ccp_lam : ccp (ev_lam) C' (<< C' st_lam).
+
+ccp_app : ccp (ev_app D3 D2 D1) C' (<< C1  st_app)
+	   <- ccp D3 C' C3
+	   <- ccp D2 (<< (<< C3 st_app2) (st_return _ _)) C2
+	   <- ccp D1 (<< (<< C2  st_app1) (st_return _ _)) C1.
+
+% Definitions
+ccp_letv : ccp (ev_letv D2 D1) C' (<< C1  st_letv)
+	    <- ccp D2 C' C2
+	    <- ccp D1 (<< C2 (st_return _ _)) C1.
+
+ccp_letn : ccp (ev_letn D1) C' (<< C1  st_letn)
+	    <- ccp D1 C' C1.
+
+% Recursion
+ccp_fix : ccp (ev_fix D1) C' (<< C1  st_fix)
+	   <- ccp D1 C' C1.
+
+% Values
+ccp_vl : ccp (ev_vl) C' (<< C'  st_vl).
+
+
+%worlds () (ccp _ _ _).
+
+
+% %{ Completeness Theorem:
+%    If   D :: eval E V
+%    then CE :: ceval E V.
+%
+% Proof: By Main Lemma.
+% }%
+
+ceval_complete : eval E V -> ceval E V -> type.
+
+cevcp : ceval_complete D (cev C)
+	 <- ccp D (<< stop st_init) C.

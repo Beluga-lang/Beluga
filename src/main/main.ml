@@ -14,6 +14,7 @@ let usage () =
   let options =
           "    -d            turn all debugging printing off (default)\n"
         ^ "    +d            turn all debugging printing on\n"
+        ^ "    +p=new        switch to new parser \n"
         ^ "    -s=natural    print substitutions in a \"natural\" style (default)\n"
         ^ "    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n"
         ^ "    +implicit     print implicit arguments (default -- for now)\n"
@@ -27,21 +28,24 @@ let usage () =
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
         ^ "    +printSubord  print subordination relations (experimental)\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
+        ^ "    -logic        turn on logic programming engine\n"
   in
-    fprintf stderr
-      "Usage: %s [options] spec1 ... spec-n\nspec ::= file | @file (file that should fail)\noptions:\n%s"
-      Sys.argv.(0)   options
-  ; exit 2
+  fprintf stderr
+    "Usage: %s [options] file.(bel|cfg)\noptions:\n%s"
+    Sys.argv.(0) options;
+  exit 2
 
 let usasy = ref false
 
 module PC = Pretty.Control
 
+let new_parser = ref false 
+
 let process_option' arg rest = begin let f = function
   (* these strings must be lowercase *)
-  | "+sasy" -> (usasy := true; rest)
   | "+d" -> (Debug.showAll (); rest)
   | "-d" -> (Debug.showNone (); rest)
+  | "+p=new" -> (new_parser := true ; rest)
   | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
   | "-s=debruijn" -> (PC.substitutionStyle := PC.DeBruijn; rest)
   | "+implicit" -> (PC.printImplicit := true; rest)
@@ -61,6 +65,7 @@ let process_option' arg rest = begin let f = function
                                                  rest
                                                with Failure "int_of_string" ->
                                                       print_string "-width needs a numeric argument\n"; exit 2))
+  | "-logic" -> (Logic.Options.enableLogic := true ; rest)
   | _ -> usage ()
 in (* print_string (">>>> " ^ arg ^ "\n"); *)
   f arg
@@ -84,34 +89,20 @@ let rec process_options = function
         else  (* reached end of options: return this and remaining arguments *)
           arg :: rest
 
-(* File specification. *)
-type spec =
-  | Positive   (* "filename": should be processed with no errors *)
-  | Negative   (* "@filename": should yield errors *)
-  (* "Negative" is too broad; should distinguish type errors from internal failures, at least! *)
-
 type session =
   | Session of string list
 
-exception SessionFatal of spec
-
-let process_name name =
-  let rest = String.sub name 1 (String.length name - 1) in
-    if String.get name 0 = '@' then
-      (print_string ("\nNOTE: %not is usually preferred over \"@\"\n\n")
-      ; (Negative, rest))
-(* else if String.get name 0 = ...... then
-      (......, rest)
-*)
-    else
-      (Positive, name)
+exception SessionFatal
 
 let is_cfg file_name =
   Filename.check_suffix file_name ".cfg"
 
+let is_sasy file_name =
+  (if Filename.check_suffix file_name ".sbel" then usasy := true else () )
+
 let rec accum_lines input =
   try
-    let res = input_line input in printf "%s\n" res; res :: accum_lines input
+    let res = input_line input in res :: accum_lines input
   with
     | End_of_file -> []
 
@@ -136,6 +127,11 @@ let process_cfg_file file_name =
   ; let dir = Filename.dirname file_name ^ "/" in
     Session (List.map (fun x -> dir ^ x) (filter_lines lines))
 
+let rec process_file_argument f =
+  if is_cfg f
+  then process_cfg_file f
+  else Session [f]
+(*
 let rec process_files = function
   | []                    -> []
   | f :: fs when is_cfg f ->
@@ -143,23 +139,17 @@ let rec process_files = function
     :: (process_files fs)
   | f :: fs               -> (Session [f]) :: process_files fs
 
+*)
 
 let main () =
-  let args   = List.tl (Array.to_list Sys.argv) in
-  let files  = process_options args in
-  let sessions = process_files files in
-  let session_count = List.length sessions in
+  (*let args   = List.tl (Array.to_list Sys.argv) in*)
+  (*let files  = process_options args in*)
+  (*let sessions = process_file_argument files in*)
+  (*let session_count = List.length sessions in*)
   if Array.length Sys.argv < 2 then
     usage ()
   else
-    let per_file (errors, unsound, incomplete) file_name =
-      let (spec, file_name) = process_name file_name in
-      let return actual = match (spec, actual) with
-        | (Positive, Positive) -> (errors, unsound, incomplete)
-        | (Positive, Negative) -> (errors + 1, unsound, incomplete + 1)
-        | (Negative, Positive) -> (errors, unsound + 1, incomplete)
-        | (Negative, Negative) -> (errors + 1, unsound, incomplete)
-      in
+    let per_file file_name =
       let rec print_sgn printer = function
         | []            -> ()
         | decl :: decls ->
@@ -168,9 +158,13 @@ let main () =
       in
       let printOptionalLocation locOpt = match locOpt with
         | None     -> Format.fprintf Format.std_formatter "<unknown location>"
-        | Some loc -> Parser.Grammar.Loc.print Format.std_formatter loc
+        | Some loc -> 
+            if !new_parser then 
+              Parser.Grammar.Loc.print Format.std_formatter loc
+            else 
+              ParserRelease.Grammar.Loc.print Format.std_formatter loc
       in
-      let abort_session () = raise (SessionFatal spec)
+      let abort_session () = raise SessionFatal
       in
         try
           (* Subord.clearMemoTable();   (* obsolete *) *)
@@ -179,14 +173,16 @@ let main () =
           let args   = List.tl (Array.to_list Sys.argv) in
           let files  = process_options args in*)
          (* let asasy   = List.tl (Array.to_list Sys.argv) in
-          process_sasy asasy;*) if !usasy then
-          let sgn = Sparser.parse_file ~name:file_name Sparser.section_eoi in
+          process_sasy asasy;*) 
+            is_sasy file_name;
+            if !usasy then
+            let sgn = Sparser.parse_file ~name:file_name Sparser.section_eoi in
             (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
             print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
             printf "\n## Sasybel Type Reconstruction: %s ##\n" file_name;
         
             let tSgn = Transform.sectionDecls sgn in
-            let _int_decls = Reconstruct.recSgnDecls tSgn in
+            let _int_decls = Recsgn.recSgnDecls tSgn in
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
               let _ = Coverage.force
                 (function
@@ -198,20 +194,32 @@ let main () =
                       else
                         raise (Coverage.NoCover messageFn)
                 ) in
-                if !Coverage.enableCoverage then 
+               (* if !Coverage.enableCoverage then 
                   (printf "\n## Coverage checking done: %s  ##\n" file_name )
                 else ();
                 if !Subord.dump then (Subord.dump_subord() (* ;
                                       Subord.dump_typesubord() *) );
             
-                return Positive
+                return Positive*)
+              begin
+                if !Coverage.enableCoverage then 
+                  (if !Debug.chatter = 0 then () else
+                      printf "\n## Coverage checking done: %s  ##\n" file_name )
+                else ();
+                if !Subord.dump then (Subord.dump_subord() (* ;
+                                      Subord.dump_typesubord() *) );
+                print_newline () ;
+                Logic.runLogic ()
+              end
+
+
            else 
            let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
             if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction: %s ##\n" file_name;  
 
-(*            let int_decls = List.map Reconstruct.recSgnDecl sgn in *)
-            let _int_decls = Reconstruct.recSgnDecls sgn in
+(*            let int_decls = List.map Recsgn.recSgnDecl sgn in *)
+            let _int_decls = Recsgn.recSgnDecls sgn in
 
               if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
@@ -224,18 +232,30 @@ let main () =
                         Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn()) 
                       else
                         raise (Coverage.NoCover messageFn)
-                ) in
+                ) in 
+              begin
                 if !Coverage.enableCoverage then 
                   (if !Debug.chatter = 0 then () else
-                  printf "\n## Coverage checking done: %s  ##\n" file_name )
+                      printf "\n## Coverage checking done: %s  ##\n" file_name )
                 else ();
                 if !Subord.dump then (Subord.dump_subord() (* ;
                                       Subord.dump_typesubord() *) );
-                return Positive
+
+                print_newline () ;
+                Logic.runLogic ()
+              end
 
         with
           | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
               Parser.Grammar.Loc.print Format.std_formatter loc;
+              Format.fprintf Format.std_formatter ":\n";
+              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
+              Format.fprintf Format.std_formatter "@?";
+              print_newline ();
+              abort_session ()
+
+          | ParserRelease.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
+              ParserRelease.Grammar.Loc.print Format.std_formatter loc;
               Format.fprintf Format.std_formatter ":\n";
               Format.fprintf Format.std_formatter "Parse Error: %s" exn;
               Format.fprintf Format.std_formatter "@?";
@@ -310,60 +330,30 @@ let main () =
               printf "Error (Coverage): %s" (strFn());
               abort_session ()
 
+          | exn ->
+              printf "%s\n" (Printexc.to_string exn);
+              abort_session ()
 
     in
-    let per_session (errors, unsound, incomplete) (Session file_names) =
-      let return spec actual = match (spec, actual) with
-        | (Positive, Positive) -> (errors, unsound, incomplete)
-        | (Positive, Negative) -> (errors + 1, unsound, incomplete + 1)
-        | (Negative, Positive) -> (errors, unsound + 1, incomplete)
-        | (Negative, Negative) -> (errors + 1, unsound, incomplete)
-      in
-        Store.clear ()
-      ; Coverage.clear ()
-      ; Gensym.reset ()
-      ; try List.fold_left per_file (errors, unsound, incomplete) file_names
-        with SessionFatal spec -> return spec Negative
 
+    let args   = List.tl (Array.to_list Sys.argv) in
+    let files = process_options args in
+    let status_code =
+      match files with
+        | [file] ->
+          begin
+            let Session file_names = process_file_argument file in
+            try List.iter per_file file_names; 0
+            with SessionFatal -> 1
+          end
+        | _ ->
+          begin
+            printf "Wrong number of command line arguments.";
+            2
+          end
     in
-      (* Iterate the process for each file given on the command line *)
-    (*let args   = List.tl (Array.to_list Sys.argv) in
-    let files  = process_options args in
-    let sessions = process_files files in
-    let session_count = List.length sessions in*)
-    let (error_count, unsound_count, incomplete_count) = List.fold_left per_session
-      (0, 0, 0) (* initial number of: errors, unsounds, incompletes *)
-                         sessions in
-    let plural count what suffix =
-      string_of_int count ^ " "
-      ^ (if count = 1 then
-           what
-         else
-           what ^ suffix) in
-      
-    let status_code = if unsound_count + incomplete_count = 0 then 0 else 1
-    and message     = 
-      let full =
-        let sound = unsound_count = 0
-        and complete = incomplete_count = 0 in
-          (if sound && complete
-           then ( let _ = if (!Monitor.on || !Monitor.onf) then
-                    Monitor.print_timer ();
-                  in "#      OK!"
-                )            
-
-           else (if sound then "" else "####    " ^ plural unsound_count "erroneously accepted (unsound)" "" ^ (if complete then "" else ", "))
-          ^(if complete then "" else "####    " ^ plural incomplete_count "erroneously rejected (incomplete)" ""))
-          ^ "\n"
-
-      in match (session_count, error_count, unsound_count + incomplete_count) with
-         | (1, 0, 0) -> ""
-         | (1, 1, 1) -> "\n#### 1 error\n"
-         | (_, _, _) -> "\n#### " ^ plural session_count "session" "s" ^ ":\n" ^ full
-    in
-      print_string message;
-      printf "%s" (Error.getInformation());
-      exit status_code
+    printf "%s" (Error.getInformation());
+    exit status_code
 
 let _ = Format.set_margin 86
 let _ = main ()

@@ -32,7 +32,7 @@ fn v => case v of
 | {E::(exp B)[g, x:value A]} % Explicit type annotation for E is necessary                             
   [g] lam \x. E .. x =>        % because we need the type A in the recursive call
 
-  let [g, b:block x:value A . cvalue A, c:cvalue B -> contra] E' .. b.2 c =   
+  let [g, b:block (x:value A . cvalue A), c:cvalue B -> contra] E' .. b.2 c =   
       cpse ([g,b:block x:value A . cvalue A] E .. b.1 ) in 
     [g] clam \v.\c. E' .. v c
 

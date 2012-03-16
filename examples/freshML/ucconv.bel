@@ -10,7 +10,6 @@
 %
 
 
-
 %term is the source language
 term: type.
 elam:(term -> term) -> term. 

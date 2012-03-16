@@ -1,0 +1,30 @@
+
+This directory contains examples which suggest various
+improvements of Beluga.
+
+Anyone intersted in tackling these issues, please contact
+Brigitte Pientka <bpientka@cs.mcgill.ca>
+
+
+cpm 
+  The soundness proof takes a long time to coverage check.
+  This may be due to the "naive" search we currently employ.
+
+  Suggestion: Explore a better coverage strategy by for example
+    using a better and more refined term depth calculation.
+
+    At the moment, given a case expression
+   with one pattern [a:tp] arr nat (arr (arr S U) a), Beluga will
+   potentiall split the first argument up to depth 3, although only the
+   second argument needs to be split up to depth 3.
+   
+eta.bel
+   This little example illustrates that we currently do not support
+   automatic eta-expansion when we pattern match on contextual objects.
+   Eta-expansion is only supported on the LF level. 
+
+recon.bel
+   This little example illustrate that we currently do not support
+   type reconstruction for type labels; hence, we require the user to
+   write a type annotation 
+  

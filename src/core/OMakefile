@@ -9,7 +9,9 @@ PACK    = Core
 FILES[] =
         abstract
         ast
+        apxnorm
         lfcheck
+        lfrecon
         check
         common
         context
@@ -21,15 +23,22 @@ FILES[] =
         error
         gensym
         id
+        index
+	logic
         opsem
         parser
+        parserRelease
+        pragma
         pretty
         reconstruct
-        slexer
         sparser
+        recsgn
         store
         substitution
         syntax
+        synext
+        synapx
+        synint
         trail
         transform
         token

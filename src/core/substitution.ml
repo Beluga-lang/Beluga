@@ -468,9 +468,6 @@ let rec applyMSub n t = match (n, t) with
     | (n, MDot (_ft, t)) -> applyMSub (n - 1) t
     | (n, MShift k)       -> MV (k + n)
 
-
-
-
   (* identity : dctx -> sub
    *
    * identity cPsi = id(cPsi),

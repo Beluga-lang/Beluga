@@ -1,0 +1,32 @@
+% Various examples 
+% Exploring programming within the simply-typed fragment of Beluga
+% 
+% Author: Brigitte Pientka
+
+
+tp: type.
+nat: tp.
+arr: tp -> tp -> tp.
+
+term: tp -> type.
+lam   : (term T1 -> term T2) -> term (arr T1 T2).
+app   : term (arr T1 T2) -> term T1 -> term T2.
+letv  : term T1 -> (term T1 -> term T2) -> term T2.
+
+schema ctx = term T;
+
+
+rec eval : [. term T] -> [. term T] = 
+fn e => case e of 
+| [. app E1 E2] =>  
+  let [. (lam \x. E' x)] = eval [. E1] in 
+  % Note: typing guarantees this is the only possible case 
+  let [. V2]             = eval [. E2] in 
+   eval [. E' V2]
+
+| [. lam \x. E x] => e
+| [. letv E (\x. E' x)] => 
+  let [. V] = eval [. E] in 
+    eval [. E' V]
+
+;

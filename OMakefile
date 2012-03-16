@@ -40,23 +40,18 @@ OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
 # Map the src dir onto the build dir
 vmount(-l, src, .build)
-if $(not $(file-exists .build/core))
-  mkdir .build/core
-if $(not $(file-exists .build/main))
-  mkdir .build/main
+mkdir -p .build/core
+mkdir -p .build/main
 
 # Include the fake .build subdirectory
 .SUBDIRS: .build
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
-        $(if $(not $(file-exists bin)),               \
-          $(mkdir bin))                               \
-        $(if $(not $(file-exists bin/interpreter)),   \
-          $(symlink .build/main/interpreter, bin/interpreter)) \
-        $(if $(not $(file-exists bin/interpreter.run)),   \
-          $(symlink .build/main/interpreter.run, bin/interpreter.run))
+        mkdir -p bin
+        ln-or-cp .build/main/interpreter bin/interpreter
+        ln-or-cp .build/main/interpreter.run bin/interpreter.run
 
 clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))
         rm $(filter %.omc,         $(ls R, .))
-        $(if $(file-exists bin), $(rmdir -r bin))
+        rm -rf bin

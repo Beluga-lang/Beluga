@@ -15,8 +15,8 @@ rec ggg : {g:(assn)*} tp[] -> tp[]
 = FN g => fn e => ggg[g, zz:block u:tp. exp u] e;
 
 rec hhh : {g:(assn)*} tp[] -> tp[]
-= FN g => fn e => hhh[g, zz:block u:tp. exp u, zz1:block u':tp. exp u'] e;
+= FN g => fn e => hhh[g, zz:block (u:tp. exp u), zz1:block u':tp. exp u'] e;
 
 %not
 rec iii : {g:(assn)*} tp[] -> tp[]
- = FN g => fn e => iii[g, zz:block u:tp. exp u, zz1:block u':tp, u':tp. exp u'] e;
+ = FN g => fn e => iii[g, zz:block (u:tp. exp u), zz1:block u':tp, u':tp. exp u'] e;

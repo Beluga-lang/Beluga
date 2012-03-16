@@ -1,0 +1,15 @@
+exp : type. 
+
+z    : exp.
+s    : exp -> exp.
+lam  : (exp -> exp) -> exp.
+app  : exp -> exp -> exp.
+
+
+eval : exp -> exp -> type.
+ev_z : eval z z.
+ev_s : {E:exp} {V:exp} eval E V -> eval (s E) (s V).
+ev_lam : {E:exp -> exp} eval (lam (\ x . E x)) (lam (\ x . E x)).
+ev_app :
+   {E1:exp} {E2:exp} {E1':exp -> exp} {V2:exp} {V:exp}
+      eval E1 (lam (\ x . E1' x)) -> eval E2 V2 -> eval (E1' V2) V -> eval (app E1 E2) V.

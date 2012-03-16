@@ -1,0 +1,97 @@
+% Given an expression e, return the proof that e is always equal to itself.
+% Author: Brigitte Pientka
+
+
+exp: type.    %name exp M x.
+
+app: exp -> exp -> exp.
+lam: (exp -> exp) -> exp.
+
+% ------------------------------------------------------------------------------
+
+eq: exp -> exp -> type.   %name eq Q u.
+eq_app : eq M1 N1 -> eq M2 N2 -> eq (app M1 M2) (app N1 N2).
+
+eq_lam :  ({x : exp} eq x x -> eq (M x) (N x)) 
+          -> eq (lam (\x. M x)) (lam (\x. N x)).
+
+% ------------------------------------------------------------------------------
+ 
+schema eCtx = block x:exp, _t:eq x x;
+
+rec ref : {g:eCtx} {M:[g. exp]} [g. eq (M ..) (M ..)] =
+ mlam g => mlam M => case [g. (M ..)] of
+| [g. #p.1 ..] => [g. #p.2 ..]
+
+| [g. lam \x. M1 .. x] =>
+  let [g,e:block y:exp, _t:eq y y. EQ .. e] = 
+      ref [g, e:block q:exp, _t:eq q q] [g, e. M1 .. e.1] in
+    [g. eq_lam \x. \w. (EQ .. <x, w>)] 
+| [g. app (M1 ..) (M2 ..)] =>
+  let [g. EQ1 ..] = ref [g] [g . M1 ..] in
+  let [g. EQ2 ..] = ref [g] [g . M2 ..] in
+    [g. eq_app (EQ1 ..) (EQ2 ..)]
+;
+
+
+% ------------------------------------------------------------------------------
+% General transitivity is admissible
+rec trans: (g:eCtx) [g. eq (M ..) (M0 ..)]  -> [g. eq (M0 ..) (N ..)]  
+           -> [g. eq (M ..) (N ..)]  =
+fn e1 => fn e2 => case e1 of
+| [g. #p.2 ..] => e2
+
+| [g. eq_lam \x.\u. D1 .. x u] =>
+  let [g. eq_lam \x.\u. D2 .. x u] =  e2  in	
+  let [g, b:block x:exp, _t:eq x x. E .. b] = 
+    trans [g, b:block x':exp, _t:eq x' x'. D1 .. b.1 b.2]
+          [g, b. D2 .. b.1 b.2]
+  in
+    [g. eq_lam \x. \u. E .. <x, u>]
+       
+| [g. eq_app (D1 ..) (D2 ..)] =>
+  let [g. eq_app (F1 ..) (F2 ..)] = e2 in 
+  let [g. E1 ..] = trans [g. D1 ..]  [g. F1 ..] in
+  let [g. E2 ..] = trans [g. D2 ..]  [g. F2 ..] in
+    [g. eq_app (E1 ..) (E2 ..)]
+;
+
+% ------------------------------------------------------------------------------
+
+equal: exp -> exp -> type.
+e_l: ({x:exp} equal x x -> equal (T x) (T' x)) -> equal (lam (\x. T x)) (lam (\x. T' x)).
+e_a: equal T2 S2  -> equal T1 S1 -> equal (app T1 T2) (app S1 S2).
+e_r: equal T T.
+e_t: equal T' S -> equal T T' -> equal T S.
+
+% ------------------------------------------------------------------------------
+
+schema eqCtx = block x: exp, u:eq x x , _t:equal x x ;
+
+rec ceq: (g:eqCtx) [g. equal (T ..) (S ..)] -> [g. eq (T ..) (S ..)]  =
+fn e => case e of 
+| [g. #p.3 ..] => [g. #p.2 ..]
+
+| [g. e_r] => ref [g] [g. _ ]               % context subsumption is used here
+
+| [g. e_t (D2 ..) (D1 ..)] => 
+  let [g. F2 ..] = ceq [g. D2 ..] in 
+  let [g. F1 ..] = ceq [g. D1 ..] in 
+    trans [g. F1 ..]  [g. F2 ..]          % context subsumption is used here    
+
+| [g. e_l (\x.(\u. (D .. x u)))] => 
+  let [g,b:block x:exp,u:eq x x , _t:equal x x. F .. b.1 b.2] = 
+        ceq [g, b:block x:exp, u:eq x x , _t:equal x x. D .. b.1 b.3]
+  in
+     [g. eq_lam (\x.\v. F .. x v)]
+
+| [g. e_a (D2 ..) (D1 ..)] => 
+    let [g. F1 ..] = ceq [g. D1 ..] in 
+    let [g. F2 ..] = ceq [g. D2 ..] in 
+      [g. eq_app (F1 ..) (F2 ..)]
+
+;
+
+
+rec ceq_main: [. equal T S] -> [. eq T S] =  fn e =>  ceq e
+;

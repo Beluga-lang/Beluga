@@ -1,3 +1,5 @@
+(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
+
 (* sasy parser trying to fix turnstyle problems *)
 #load "pa_extend.cmo";;
 
@@ -6,7 +8,7 @@ open Syntax
 open Token
 open Ast
 let out_channel = open_out "astsasy.out";
-module Grammar = Camlp4.Struct.Grammar.Static.Make (Slexer)
+module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
 exception Error of string
 
@@ -54,9 +56,9 @@ GLOBAL: section_eoi;
  	 "judgment"; a = SYMBOL; ":"; b = j_syntax; ";"; lj = LIST1 rules -> output_string out_channel "section_decl judgement \n";
                                                                          Judgement(_loc, JName(a), b, None, lj)
 
-      |
+(*      |
          "judgment"; a = SYMBOL; ":"; b = cj_syntax; ";"; "assumes"; c = SYMBOL; lj = LIST1 rules -> output_string out_channel "section_decl judgement assumes \n"; 
-                                                                                                 Judgement(_loc, JName(a), b, Some(Assptn(CName(c))), lj)
+                                                                                                 Judgement(_loc, JName(a), b, Some(Assptn(CName(c))), lj)*)
 
           
       | 
@@ -64,7 +66,7 @@ GLOBAL: section_eoi;
                                                                                         Theorems(_loc, TName(a), b, lp)    
 
       | 
-         "Context"; a = SYMBOL; `DECLA; lva = LIST1 var_alternative SEP "|"; ";" -> output_string out_channel "context_decl \n"; ContextDecl(_loc, CName(a), lva); 
+         "context"; a = SYMBOL; `DECLA; lva = LIST1 var_alternative SEP "|"; ";" -> output_string out_channel "context_decl \n"; ContextDecl(_loc, CName(a), lva); 
 
       ]
     ]
@@ -149,15 +151,16 @@ typ:
     ]
   ;
 
- cj_syntax:
+(* cj_syntax:
     [
       [
-         c = SYMBOL; la = LIST1 alternative SEP ","; "|-"; lb = LIST1 judge -> output_string out_channel "cj_styntax mult \n";
+         c = SYMBOL; la = LIST1 alternative SEP ","; turnstyle; lb = LIST1 judge -> output_string out_channel "cj_styntax mult \n";
                                                                                         JSyntax(_loc, Some(Context(CName(c),la)), lb)
 
       ]
     ]
   ;
+*) 
 
  judge:
     [
@@ -191,13 +194,13 @@ typ:
     [
       [
 
-         a = UPSYMBOL; ":"; la = OPT [con_dcl]; b = var_alternative; ";" -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+         a = UPSYMBOL; ":"; la = OPT [con_dcl]; turnstyle; b = var_alternative; ";" -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
                                                                                                                  Premisse(_loc, Some(PName(a)), la, b)
       |
-         a = SYMBOL; ":"; la = OPT [con_dcl]; b = var_alternative; ";" -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+         a = SYMBOL; ":"; la = OPT [con_dcl]; turnstyle; b = var_alternative; ";" -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
                                                                                                                  Premisse(_loc, Some(PName(a)), la, b)
       |
-         la = OPT [con_dcl]; b = var_alternative; ";"  -> output_string out_channel "tpremise gamma list var_alt ... \n"; 
+         la = OPT [con_dcl]; turnstyle; b = var_alternative; ";"  -> output_string out_channel "tpremise gamma list var_alt ... \n"; 
                                                                                                 Premisse(_loc, None, la, b)
 
       |
@@ -216,6 +219,9 @@ typ:
     ]
   ;
 
+  dots: [[ "."; "." -> ()
+         | "…" -> output_string out_channel "dots "; output_char out_channel '\n' ]];  (* Unicode ellipsis (HTML &hellip;) *)
+
 
   var_alternative:
     [
@@ -223,7 +229,13 @@ typ:
 	 v = SYMBOL; a = OPT [ var_alternative ] -> output_string out_channel v; output_string out_channel " : var_alt 1 \n"; VAltAtomic(_loc, v, a) 
  
       |
-         v = UPSYMBOL; a = OPT [ var_alternative ] -> output_string out_channel v; output_string out_channel " : var_alt 1 \n"; VAltAtomic(_loc, v, a) 
+         v = UPSYMBOL; a = OPT [ var_alternative ] -> output_string out_channel v; output_string out_channel " : var_alt 1 \n"; VAltAtomic(_loc, v, a)
+       
+      |
+         v = SYMBOL; dots; a = OPT [ var_alternative ] -> output_string out_channel v; output_string out_channel " : var_alt 1 \n"; VAltId(_loc, v, a) 
+ 
+      |
+         v = UPSYMBOL; dots; a = OPT [ var_alternative ] -> output_string out_channel v; output_string out_channel " : var_alt 1 \n"; VAltId(_loc, v, a) 
 
       |
          "="; a = OPT [ var_alternative ] -> output_string out_channel " : var_alt 1 = \n"; VAltAtomic(_loc, "=", a) 
@@ -264,8 +276,8 @@ typ:
          "{"; la = LIST1 typ_dcl SEP ","; "}"; c = var_alternative -> output_string out_channel "var_alt 6 \n"; VAltOft(_loc, la, c)
  
       |
-         "("; a = SYMBOL; ":"; b = SYMBOL; la = LIST0 typ_dcl SEP ","; ")"; c = OPT [ var_alternative ] -> output_string out_channel "var_alt 9 \n"; 
-                                                 VAltOftBlock(_loc, [(a,b)], c) 
+         "("; a = SYMBOL; ":"; b = var_alternative; OPT [","]; la = LIST0 typ_dcl SEP ","; ")"; c = OPT [ var_alternative ] -> output_string out_channel "var_alt 9 \n"; 
+                                                 VAltOftBlock(_loc, (a,b)::la, c) 
     
      (* |
          "Gamma,"; la = LIST1 var_alternative SEP "," -> output_string out_channel "var_alt 7 \n";
@@ -279,20 +291,30 @@ typ:
  typ_dcl:
     [
       [
-          a = SYMBOL; ":"; b = SYMBOL -> (a,b)
+          a = SYMBOL; ":"; b = var_alternative -> output_string out_channel "typ_decl \n"; (a,b)
 
       ]
     ]
   ;
 
+ turnstyle:
+    [
+      [
+         "|-" -> ()
+
+      ]
+    ]
+  ;
+
+
  con_dcl:
     [
       [
-         "["; lt = LIST1 typ_dcl SEP ","; "]"; `TSTYLE -> LCD(lt)
+         "["; lt = LIST1 typ_dcl SEP ","; "]" -> output_string out_channel "con_dcl lcd \n"; LCD(lt)
 
       |
 
-         "["; a = SYMBOL; "]"; `TSTYLE -> Con(a)
+         "["; a = SYMBOL; "]" -> output_string out_channel "con_dcl con \n"; Con(a)
 
       ]
     ]
@@ -301,13 +323,13 @@ typ:
  t_premise:
     [
       [
-         a = UPSYMBOL; ":"; la = OPT [con_dcl]; b = var_alternative -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+         a = UPSYMBOL; ":"; la = OPT [con_dcl]; turnstyle; b = var_alternative -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
                                                                                                                  TPremisse(_loc, Some(PName(a)), la, b)
       |
-         a = SYMBOL; ":"; la = OPT [con_dcl]; b = var_alternative-> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+         a = SYMBOL; ":"; la = OPT [con_dcl]; turnstyle; b = var_alternative-> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
                                                                                                                  TPremisse(_loc, Some(PName(a)), la, b)
       |
-         la = OPT [con_dcl]; b = var_alternative -> output_string out_channel "tpremise gamma list var_alt ... \n"; TPremisse(_loc, None, la, b)
+         la = OPT [con_dcl]; turnstyle; b = var_alternative -> output_string out_channel "tpremise gamma list var_alt ... \n"; TPremisse(_loc, None, la, b)
 
       |
           a = SYMBOL; ":"; b = var_alternative -> output_string out_channel "tpremise symbol var_alt symbol \n"; 
@@ -346,7 +368,8 @@ typ:
         np = t_premise; "by";j = SELF; "on"; lb = LIST1 var_name SEP "," -> output_string out_channel "proof by rule \n"; PRule(_loc, np, j, lb)
 
       |
-        np = t_premise; "by"; "case"; "analysis"; "on"; lb = LIST1 var_name SEP ","; ":"; la = LIST1 args; "end"; "case"; "analysis" -> output_string out_channel "proof casean \n"; CaseAn(_loc, np, lb, la)
+        np = t_premise; "by"; "case"; "analysis"; "on"; lb = LIST1 var_name SEP ","; ":"; la = LIST1 args; "end"; "case"; "analysis" -> output_string out_channel "proof casean \n"; 
+                                                                                                                                        CaseAn(_loc, np, lb, la)
 
       |
         np = t_premise; "by";"rule"; rn = SYMBOL; b = OPT [ "on"; b = LIST1 var_name SEP "," -> b ] -> output_string out_channel "proof rule \n"; URule(_loc, np, RName(rn), b)

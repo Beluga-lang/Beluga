@@ -43,6 +43,11 @@ let _ = Printexc.register_printer
     None)
 
 let _ = register_printer
+  (fun (Sys_error msg) ->
+    print (fun ppf ->
+      Format.fprintf ppf "System error: %s" msg))
+
+let _ = register_printer
   (fun (Violation msg) ->
     print (fun ppf ->
       Format.fprintf ppf "Internal error (please report as a bug):@;%s" msg))

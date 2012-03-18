@@ -953,7 +953,7 @@ module Int = struct
       | Comp.TypCtxPi ((psi, w, dep), tau) ->
           let dep' = match dep with Comp.Explicit -> LF.No | Comp.Implicit -> LF.Maybe in 
           let cond = lvl > 1 in
-            fprintf ppf "%s{%s:(%s)}@ %a%s"
+            fprintf ppf "%s{%s : %s}@ %a%s"
               (l_paren_if cond)
               (R.render_name psi)
               (R.render_cid_schema w)
@@ -1046,7 +1046,7 @@ module Int = struct
 
       | Comp.CtxFun (_, x, e) ->
           let cond = lvl > 0 in
-            fprintf ppf "@[<2>%sFN %s =>@ %a%s@]"
+            fprintf ppf "@[<2>%smlam %s =>@ %a%s@]"
               (l_paren_if cond)
               (R.render_name x)
               (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.CDeclOpt x)) cG 0) e

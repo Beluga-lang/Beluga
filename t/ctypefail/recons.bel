@@ -1,0 +1,24 @@
+datatype nat: type =
+| zero   : nat
+| succ : nat → nat
+;
+
+datatype tm : type =
+| z    : tm
+| suc  : (tm) → tm
+| app  : tm → tm → tm
+| lam  : (tm → tm) → tm
+;
+
+schema tctx = tm ;
+
+datatype Nlist: {g:tctx} [.nat] -> ctype = 
+| Nnil : Nlist [g] [.zero]
+| Ncons: [g.tm] -> Nlist [g] [.N] -> Nlist [g] [.(succ N)]
+;
+
+
+rec tail: Nlist [g] [. succ M] -> Nlist [g] [. M]  =
+ mlam g => fn l => case l of
+    | Ncons t l' => l'
+;

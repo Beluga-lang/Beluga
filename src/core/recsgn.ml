@@ -7,13 +7,12 @@ open Syntax
 module C     = Whnf
 module S = Substitution
 module Rec = Reconstruct
-
 (* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail 
 
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.DefaultCidRenderer
-module RR = Pretty.Int.NamedRenderer
+module R = Store.Cid.DefaultRenderer
+module RR = Store.Cid.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
@@ -122,7 +121,7 @@ let recSgnDecl d =
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check", 
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in 
-	let _c = Term.add (Some loc) constructedType (Term.mk_entry c tA' i) in ()
+	let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in ()
 
 
     | Ext.Sgn.Schema (_, g, schema) ->
@@ -159,7 +158,7 @@ let recSgnDecl d =
 					     "\n  =  " ^ 
                                 P.expSynToString cD cG i' ^ "\n") in
           let i''                = Monitor.timer ("Function Abstraction", fun () -> 
-						    Abstract.abstrExp (Int.Comp.Syn (Some loc, i'))) in
+						    Abstract.abstrExp (Int.Comp.Syn (loc, i'))) in
           let _                  = Monitor.timer ("Function Check", fun () -> 
 						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
@@ -358,7 +357,7 @@ let recSgnDecl d =
                   (Some (Gensym.VarData.name_gensym x)) in
                   (* Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp)) *) ()
           end
-        with _ -> raise (Error.Error (Some loc, Error.UnboundName typ_name)) 
+        with _ -> raise (Index.Error (loc, Index.UnboundName typ_name)) 
         end 
 
 

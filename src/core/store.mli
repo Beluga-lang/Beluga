@@ -1,7 +1,6 @@
 (* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 open Id
-
 open Syntax.Int
 
 module Cid : sig
@@ -32,7 +31,7 @@ module Cid : sig
     val gen_mvar_name     : LF.typ -> (unit -> string) option 
     val get               : cid_typ -> entry
     val index_of_name     : name -> cid_typ
-    val addConstructor : Syntax.Loc.t option -> cid_typ -> cid_term -> LF.typ -> unit
+    val addConstructor    : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear             : unit -> unit
 
     (* see subord.ml for an explanation of term-level subordination
@@ -52,7 +51,7 @@ module Cid : sig
 
     val mk_entry      : name -> LF.typ -> int -> entry
     type t
-    val add           : Syntax.Loc.t option -> cid_typ -> entry -> cid_term
+    val add           : Syntax.Loc.t -> cid_typ -> entry -> cid_term
     val get           : cid_term -> entry
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
@@ -135,6 +134,34 @@ module Cid : sig
     val index_of_name   : name -> cid_schema
     val clear           : unit -> unit
   end
+
+  module type RENDERER = sig
+
+    open Id
+    open Syntax.Int
+
+    val render_name         : name         -> string
+    val render_cid_comp_typ : cid_typ      -> string
+    val render_cid_comp_const : cid_comp_const -> string
+    val render_cid_typ      : cid_typ      -> string
+    val render_cid_term     : cid_term     -> string
+    val render_cid_schema   : cid_schema   -> string
+    val render_cid_prog     : cid_prog     -> string
+    val render_offset       : offset       -> string
+
+    val render_ctx_var      : LF.mctx    -> offset   -> string
+    val render_cvar         : LF.mctx    -> offset   -> string
+    val render_bvar         : LF.dctx    -> offset   -> string
+    val render_var          : Comp.gctx  -> var      -> string
+
+  end
+
+  (* Default RENDERER for Internal Syntax *)
+  module DefaultRenderer : RENDERER
+
+  (* Named Renderer for Internal Syntax *)
+  module NamedRenderer : RENDERER
+
 end
 
 val clear : unit -> unit

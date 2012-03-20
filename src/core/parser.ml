@@ -13,15 +13,20 @@ open Core.Syntax.Ext
 *)
 open Common
 open Syntax.Ext
-open Token
+
 
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
+
+let _ = Error.register_printer
+  (fun (Grammar.Loc.Exc_located (loc, Stream.Error exn)) ->
+    Error.print_with_location loc (fun ppf ->
+      Format.fprintf ppf "Parse Error: %s" exn;
+      Format.pp_print_newline ppf ()))
 
 let rec last l = begin match List.rev l with
   | [] -> None
   | h::t -> Some (h, t)
 end 
-
 
 type kind_or_typ =
   | Kind of LF.kind
@@ -81,7 +86,7 @@ let mixloc = function
 (* unmix : mixtyp -> whichmix *  *)
 let rec unmix = function
   | MTCompKind l -> CompKindMix (Comp.Ctype l)
-  | MTBase (l, a, ms) -> CompMix(Comp.TypBase (Some l, a, ms))
+  | MTBase (l, a, ms) -> CompMix(Comp.TypBase (l, a, ms))
   | MTArr(l, mt1, mt2) -> begin match (unmix mt1, unmix mt2) with
                                   | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
                                   | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
@@ -162,18 +167,16 @@ let sgn_eoi = Grammar.Entry.mk "sig_eoi"
 (* Dynamically Extensible Beluga Grammar *)
 (*****************************************)
 
+(* We are forced to do this because of a bug in camlp4 that prevents
+   qualified names in productions. Also we can't open earlier because
+   camlp4 mandates the presence of an error module in Token, so when
+   opening that module the module defined by error.ml gets
+   overshadowed. *)
+open Token
+
 EXTEND Grammar
 GLOBAL: sgn_eoi;
 
-(*  sgn_eoi:
-    [
-      [
-(*          decls = LIST0 sgn_decl; `EOI -> *)
-           decls = sgn_decls; `EOI  -> decls
-      ]
-    ]
-  ;
-*)
   symbol:
     [
       [

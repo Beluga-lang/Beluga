@@ -28,9 +28,6 @@ and frontToString = function
   | Obj tM -> "Obj _"
   | Undef -> "Undef"
 
-exception Error of Syntax.Loc.t option * error
-exception Violation of string
-
 module Comp = Syntax.Int.Comp
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [12])
@@ -906,7 +903,7 @@ let rec ctxToSub_mclosed cD psi cPsi =
         dprint (fun () -> "s = " ^ subToString s);
         (* For the moment, assume tA atomic. *)
 
-      let u     = Root(None, MVar(Offset 1,  Substitution.LF.id), Nil) in 
+      let u     = Root(Syntax.Loc.ghost, MVar(Offset 1,  Substitution.LF.id), Nil) in 
 
         (* cD' ; psi |- s : cPsi' *)
         (* cD' ; psi |- u[id] : [s]tA *)
@@ -972,7 +969,7 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
       dprint (fun () -> "composition = " ^ subToString composition);
       let u     = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in 
 *)
-      let u     = Whnf.etaExpandMMV None cD cPhi (tA, s) Substitution.LF.id in 
+      let u     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi (tA, s) Substitution.LF.id in 
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
       (* cD ; cPhi |- s : cPsi' *)
       (* cD ; cPhi |- u[id] : [s]tA *)
@@ -998,7 +995,7 @@ let rec mctxToMSub cD = match cD with
                          " new type computed") in 
       let u     = Whnf.newMVar (cPsi', tA') in
       let phat  = Context.dctxToHat cPsi' in
-        MDot (MObj (phat, Root (None, MVar (u, Substitution.LF.id), Nil)) , t)
+        MDot (MObj (phat, Root (Syntax.Loc.ghost, MVar (u, Substitution.LF.id), Nil)) , t)
 
   | Dec(cD', PDecl(_, tA, cPsi)) ->
       let t    = mctxToMSub cD' in
@@ -1025,7 +1022,7 @@ let rec mctxToMMSub cD0 cD = match cD with
       let tA'   = Whnf.cnormTyp (tA, t) in
       let u     = Whnf.newMMVar (cD0, cPsi', tA') in
       let phat  = Context.dctxToHat cPsi' in
-        MDot (MObj (phat, Root (None, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil)) , t)
+        MDot (MObj (phat, Root (Syntax.Loc.ghost, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil)) , t)
 
   | Dec(cD', PDecl(_, tA, cPsi)) ->
      (* This is somewhat a hack...  *)

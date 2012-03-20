@@ -1,0 +1,7 @@
+Internal error (please report as a bug):
+Context clash: We do not allow the context
+          in the pattern to be more general than the context in the
+          scrutinee. 
+Scrutinee's context 
+Pattern's context h
+File "./t/base/weakening.bel", line 10, characters 12-18

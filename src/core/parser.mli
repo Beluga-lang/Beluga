@@ -10,7 +10,6 @@ module Grammar : Camlp4.Sig.Grammar.Static
   with module Loc   = Lexer.Loc
   and  module Token = Lexer.Token
 
-
 (** Grammar entry for an entire LF Signature *)
 val sgn_eoi : Ext.Sgn.sgn Grammar.Entry.t
 

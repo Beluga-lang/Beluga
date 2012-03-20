@@ -1,8 +1,7 @@
 
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-(* module Loc   = Core.Syntax.Loc (*Camlp4.PreCast.Loc*) *)
-module Loc   = Syntax.Loc (*Camlp4.PreCast.Loc*) 
+module Loc   = Syntax.Loc
 module Token = Token
 module Error = Camlp4.Struct.EmptyError
 

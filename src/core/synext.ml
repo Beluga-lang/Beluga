@@ -115,7 +115,7 @@ module Comp = struct
  type mabstr = CObj | MObj | PObj
 
  type typ =                                     (* Computation-level types *)
-   | TypBase of Loc.t option * name * meta_spine
+   | TypBase of Loc.t * name * meta_spine
    | TypBox   of Loc.t * LF.typ  * LF.dctx      (* tau ::= A[Psi]          *)
    | TypPBox  of Loc.t * LF.typ  * LF.dctx      (* tau ::= #A[Psi]         *)
    | TypCtx   of Loc.t * name                   (*    | W    (ctx schema)  *)

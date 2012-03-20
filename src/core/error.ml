@@ -1,89 +1,56 @@
 (* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
-open Syntax.Int
-
-type typeVariant = Cross | Arrow | CtxPi | PiBox | Box
-
-type error =
-  | CtxReconstruct 
-  | UnboundName      of Id.name
-  | UnboundCtxName   of Id.name
-  | UnboundCtxSchemaName   of Id.name
-  | UnboundCompName  of Id.name
-  | UnknownCidTyp    of Id.cid_typ
-
-  | PruningFailed
-
-  | FrozenType of Id.cid_typ
-
-  | CtxVarMismatch   of LF.mctx * LF.ctx_var * LF.schema
-  | CtxVarDiffer     of LF.mctx * LF.ctx_var * LF.ctx_var
-
-  | SigmaIllTyped    of LF.mctx * LF.dctx * LF.trec_clo * LF.trec_clo
-  | KindMismatch     of LF.mctx * LF.dctx * LF.sclo * (LF.kind * LF.sub)
-  | TypMismatch      of LF.mctx * LF.dctx * LF.nclo * LF.tclo * LF.tclo
-  | TypMismatchElab  of LF.mctx * LF.dctx * LF.tclo * LF.tclo
-  | IllTyped         of LF.mctx * LF.dctx * LF.nclo * LF.tclo
-  | IllTypedElab     of LF.mctx * LF.dctx * LF.tclo
-
-  | SpineIllTyped    
-  | EtaExpandBV      of Id.offset * LF.mctx * LF.dctx * LF.tclo
-  | EtaExpandFMV     of Id.name * LF.mctx * LF.dctx * LF.tclo
-  | EtaExpandFV      of Id.name * LF.mctx * LF.dctx * LF.tclo
-
-  | LeftoverConstraints of Id.name
-  | IllTypedIdSub
-
-  | PatIllTyped     of LF.mctx * Comp.gctx * Comp.pattern * Comp.tclo * Comp.tclo
-  | ValueRestriction of LF.mctx * Comp.gctx * Comp.exp_syn * Comp.tclo
-  | CompIllTyped     of LF.mctx * Comp.gctx * Comp.exp_chk * Comp.tclo * Comp.tclo
-  | CompMismatch     of LF.mctx * Comp.gctx * Comp.exp_syn * typeVariant * Comp.tclo
-  | CompPattMismatch of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) * 
-                        (LF.mctx * LF.dctx * LF.tclo)  
-
-  | CompSubPattMismatch of (LF.mctx * LF.dctx * LF.sub * LF.dctx) * 
-                        (LF.mctx * LF.dctx * LF.dctx)  
-
-  | CompBoxCtxMismatch  of LF.mctx * LF.dctx * (LF.psi_hat * LF.normal)
-
-  | CompFreeMVar     of  Id.name
-  | CompScrutineeTyp    of LF.mctx * Comp.gctx * Comp.exp_syn * LF.tclo * LF.dctx 
-  | CompScrutineeSubTyp of LF.mctx * Comp.gctx * Comp.exp_syn * LF.dctx * LF.dctx 
-
-
-  | CompCtxFunMismatch of  LF.mctx * Comp.gctx  * Comp.tclo 
-  | CompFunMismatch    of  LF.mctx * Comp.gctx  * Comp.tclo 
-  | CompMLamMismatch   of  LF.mctx * Comp.gctx  * Comp.tclo 
-  | CompPairMismatch   of  LF.mctx * Comp.gctx  * Comp.tclo 
-  | CompBoxMismatch    of  LF.mctx * Comp.gctx  * Comp.tclo 
-  | CompSBoxMismatch   of  LF.mctx * Comp.gctx  * LF.dctx  * LF.dctx
-  | CompIfMismatch     of  LF.mctx * Comp.gctx  * Comp.tclo 
-  | CompSynMismatch    of  LF.mctx * Comp.tclo (* expected *) * Comp.tclo (* inferred *)
-  | CompEqMismatch     of  LF.mctx * Comp.tclo (* arg1 *) * Comp.tclo (* arg2 *)
-  | CompEqTyp          of  LF.mctx * Comp.tclo 
-  | CompMAppMismatch   of  LF.mctx * (Comp.meta_typ * LF.msub)
-  | CompAppMismatch    of  LF.mctx * (Comp.meta_typ * LF.msub)
-
-  | CompTypAnn       
-
-  | PatVarNotUnique
-  | PatCtxRequired
-  | CompEmptyPattBranch
-
-  | UnboundIdSub
-
-  | ConstraintsLeft
-  | NotPatSub
-  | NotPatternSpine
-
-  | NoCover of string
-
-  | LeftoverUndef
-  | SubIllTyped
-  | LeftoverFVar
-
-exception Error of Syntax.Loc.t option * error
 exception Violation of string
+
+exception NotImplemented
+
+type print_result = string
+
+let error_format_buffer = Buffer.create 200
+
+let error_format = Format.formatter_of_buffer error_format_buffer
+
+let register_printer f =
+  Printexc.register_printer
+    (fun e -> try Some (f e) with Match_failure _ -> None)
+
+let print f =
+  (* Print to stderr any uncaught exception resulting from applying f
+     to error_format. Such an exception would be thrown when in the
+     middle of printing an exception! *)
+  Printexc.print f error_format;
+  Format.pp_print_newline error_format ();
+  Format.pp_print_flush error_format ();
+  let str = Buffer.contents error_format_buffer in
+  Buffer.reset error_format_buffer;
+  str
+
+let print_with_location loc f =
+  Format.fprintf error_format "%s:@." (Syntax.Loc.to_string loc);
+  print f
+
+(* Since this printer is registered first, it will be executed only if
+   all other printers fail. *)
+let _ = Printexc.register_printer
+  (fun e ->
+    (* We unfortunately do not have direct access to the default
+       printer that Printexc uses for exceptions, so we print the
+       message we want as a side-effect and return None, which should
+       in turn convince Printexc to resort to the default printer to
+       actually print the exception. *)
+    Format.fprintf Format.err_formatter
+      "Uncaught exception.@ Please report this as a bug.@.";
+    None)
+
+let _ = register_printer
+  (fun (Violation msg) ->
+    print (fun ppf ->
+      Format.fprintf ppf "Internal error (please report as a bug):@;%s" msg))
+
+let _ = register_printer
+  (fun NotImplemented ->
+    print (fun ppf ->
+      Format.fprintf ppf "Not implemented."))
 
 let information = ref []
 
@@ -91,7 +58,7 @@ let getInformation () =
   match List.rev !information with
     | [] -> ""
     | information ->
-        (List.fold_left (fun acc s -> acc ^ "\n" ^ s) "" information) ^ "\n"
+      (List.fold_left (fun acc s -> acc ^ "\n" ^ s) "" information) ^ "\n"
 
 let addInformation message =
   information := message :: !information

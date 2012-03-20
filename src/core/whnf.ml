@@ -18,16 +18,31 @@ open Context
 open Syntax.Int.LF
 open Syntax.Int
 open Substitution
-open Error
 
-exception Error of Syntax.Loc.t option * error
+
+type error =
+    CompFreeMVar of Id.name
+  | NotPatSub
+
+exception Error of Syntax.Loc.t * error
+
+module R = Store.Cid.DefaultRenderer
+
+let _ = Error.register_printer
+  (fun (Error (loc, e)) ->
+    Error.print_with_location loc (fun ppf ->
+      match e with
+      | CompFreeMVar u ->
+          Format.fprintf ppf "Encountered free meta-variables %s\n"
+            (Store.Cid.DefaultRenderer.render_name u)
+
+      | NotPatSub ->
+          Format.fprintf ppf "Not a pattern substitution" (* TODO *) ))
+
 
 exception Fmvar_not_found
 exception FreeMVar of head
 exception NonInvertible 
-
-exception Violation of string
-
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [18])
 
@@ -84,7 +99,7 @@ let rec etaContract tM = begin match tM with
         | (k', App(Root(_ , BVar x, Nil), tS')) -> 
             if k' = x then etaSpine (k'-1)  tS'
             else false
-        | _ -> (dprint (fun () -> "[etaSpine] _ ") ; raise (Violation ("etaSpine undefined\n")))
+        | _ -> (dprint (fun () -> "[etaSpine] _ ") ; raise (Error.Violation ("etaSpine undefined\n")))
       end in 
         begin match etaUnroll 0 tMn with 
           | (k, Root( _ , BVar x, tS)) -> 
@@ -162,14 +177,14 @@ let newMMVar (cD, cPsi, tA) =
 let rec lowerMVar' cPsi sA' = match sA' with
   | (PiTyp ((decl,_ ), tA'), s') ->
       let (u', tM) = lowerMVar' (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1 s') in
-        (u', Lam (None, Id.mk_name Id.NoName, tM))
+        (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
 
   | (TClo (tA, s), s') ->
       lowerMVar' cPsi (tA, LF.comp s s')
 
   | (Atom (loc, a, tS), s') ->
       let u' = newMVar (cPsi, Atom (loc, a, SClo (tS, s'))) in
-        (u', Root (None, MVar (u', LF.id), Nil)) (* cvar * normal *)
+        (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil)) (* cvar * normal *)
 
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
@@ -209,7 +224,8 @@ and lowerMVar = function
 
   | _ ->
       (* It is not clear if it can happen that cnstr =/= nil *)
-      raise (Error (None, ConstraintsLeft))
+      (* 2011/01/14: Changed this to a violation for now, to avoid a cyclic dependency on Reconstruct. -mb *)
+      raise (Error.Violation "Constraints left")
 
 
 (*************************************)
@@ -375,9 +391,11 @@ let rec mcomp t1 t2 = match (t1, t2) with
 and mfrontMSub ft t = match ft with
   | MObj (phat, tM)     -> 
         (* apply cnorm_psihat (phat, t) -bp ? *)
+      let phat = cnorm_psihat phat t in 
         MObj (phat, cnorm(tM, t))
 
   | PObj (phat, PVar (Offset k, s))  -> 
+      let phat = cnorm_psihat phat t in 
       begin match LF.applyMSub k t with
         | PObj(phat', BVar k') ->  
             begin match LF.bvarSub k' s with 
@@ -392,18 +410,20 @@ and mfrontMSub ft t = match ft with
         | MV k'  -> PObj (phat, PVar (Offset k', s))
           (* other cases impossible *)
       end
-  | PObj (_phat, BVar _k)  -> ft
+  | PObj (phat, BVar _k)  -> 
+      let phat = cnorm_psihat phat t in 
+        PObj (phat, BVar _k) 
 
   | PObj (phat, PVar (PInst ({contents = Some (BVar x)}, _cPsi, _tA, _ ) , r)) -> 
-(*      let phat = cnorm_psihat phat t in  *)
-      begin match LF.bvarSub x (cnormSub (r,t)) with
-        | Head (BVar k)  ->  PObj (phat, BVar k)
-        | Head (PVar (q,s))  ->  PObj (phat, PVar (q,s))
-        | Obj tM  -> MObj (phat, tM)
-      end 
+      let phat = cnorm_psihat phat t in  
+        begin match LF.bvarSub x (cnormSub (r,t)) with
+          | Head (BVar k)  ->  PObj (phat, BVar k)
+          | Head (PVar (q,s))  ->  PObj (phat, PVar (q,s))
+          | Obj tM  -> MObj (phat, tM)
+        end 
 
   | PObj (phat, (PVar (PInst ({contents = None}, _cPsi, _tA, _ ), r) as p)) -> 
-(*      let phat' = cnorm_psihat phat t in *)
+      let phat = cnorm_psihat phat t in 
         PObj (phat, p)
 
 
@@ -516,7 +536,7 @@ and norm (tM, sigma) = match tM with
         | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma)) 
         | Head (BVar k) ->  Root (loc, BVar k, normSpine (tS, sigma))
         | Head head     ->  norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
-        | Undef         -> raise (Violation ("Looking up " ^ string_of_int i ^ "\n"))
+        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
             (* Undef should not happen ! *)
       end
 
@@ -799,6 +819,8 @@ and cnorm_psihat (phat: psi_hat) t = match phat with
         | (Some cvar', i) -> (Some cvar', i+k)
       end
   | (Some (CtxOffset offset), k) -> 
+      let _ = dprint (fun () -> "cnorm_psihat : offset = " ^ 
+                        R.render_offset offset) in 
       begin match LF.applyMSub offset t with 
         | CObj(cPsi) -> 
             begin match Context.dctxToHat (cPsi) with
@@ -842,7 +864,7 @@ and cnorm (tM, t) = match tM with
                 let t'' = cnormMSub (mcomp t' t) in 
                 Root (loc, MMVar(u, (t'', r')), cnormSpine (tS, t)) 
               (* else 
-                raise (Violation "uninstantiated meta-variables with unresolved constraints") *)
+                raise (Error.Violation "uninstantiated meta-variables with unresolved constraints") *)
 
 
           (* Meta-variables *)
@@ -863,7 +885,7 @@ and cnorm (tM, t) = match tM with
                             | Obj tM        -> reduce (tM, LF.id) tS'
                             | Head (BVar k) ->  Root (loc, BVar k, tS')
                             | Head head     ->  Root (loc, head, tS')
-                            | Undef         -> raise (Violation ("Looking up " ^ string_of_int i ^ "\n")))
+                            | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n")))
                         | PVar (p, r') -> Root (loc, PVar (p, r') , tS')
                       end
               (* other cases impossible *)
@@ -888,7 +910,7 @@ and cnorm (tM, t) = match tM with
                 (* raise (Error "Encountered Uninstantiated MVar with reference ?\n") *)
                 Root (loc, MVar(u, cnormSub (r, t)), cnormSpine (tS, t)) 
 (*              else 
-                raise (Violation "uninstantiated meta-variables with unresolved constraints")*)
+                raise (Error.Violation "uninstantiated meta-variables with unresolved constraints")*)
                   
                   
           | PVar (PInst ({contents = None}, _cPsi, _tA, _ ) as p, r) -> 
@@ -961,10 +983,8 @@ and cnorm (tM, t) = match tM with
             -> Root (loc, Const c, cnormSpine (tS, t))
               
           (* Free Variables *)
-          | FVar x
-            -> raise (Error (loc, UnboundName x))
-               (* (dprint( fun () ->  "Encountered a free variable!?\n") ; 
-                Root (loc, FVar x, cnormSpine (tS, t))) *)
+          | FVar x ->
+              raise (Error.Violation "Encountered a free variable during normalization.")
 
           (* Projections *)
           | Proj (PVar (PInst ({contents = None}, _cPsi, _tA, _ ) as p, r), k) -> 
@@ -1080,19 +1100,19 @@ and cnorm (tM, t) = match tM with
                 end
           end
         else 
-          raise (Violation "Cannot guarantee that parameter variable remains head")
+          raise (Error.Violation "Cannot guarantee that parameter variable remains head")
 
     (* Projections *)
     | Proj(BVar i, k) -> Proj (BVar i, k)
     | Proj(PVar (p,r), k) -> 
         begin match cnormHead (PVar (p,r), t)  with
-          | Proj _ -> raise (Violation "Nested projections -- this is ill-typed")
+          | Proj _ -> raise (Error.Violation "Nested projections -- this is ill-typed")
           | h      -> Proj (h, k)
         end
 
     | Const k -> Const k
-    | MVar _ -> raise (Violation "cnormHead MVar")
-    | _      -> raise (Violation "cnormHead ???")
+    | MVar _ -> raise (Error.Violation "cnormHead MVar")
+    | _      -> raise (Error.Violation "cnormHead ???")
   end 
         
 
@@ -1168,7 +1188,7 @@ and cnorm (tM, t) = match tM with
             end
           | MObj _ -> (dprint (fun () -> "[applyMSub] ill-typed MObj for CObj");
                          dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi)
-                  ; raise (Violation "illtyped msub"))
+                  ; raise (Error.Violation "illtyped msub"))
 
                        
         end
@@ -1233,10 +1253,10 @@ and cnorm (tM, t) = match tM with
         let r' = cnormSub (r,t) in 
           Head (Proj (PVar (p, r'), k))
 
-    | Head (Proj (MVar _ , _)) -> raise (Violation "Head MVar")
-    | Head (Proj (Const _ , _)) -> raise (Violation "Head Const")
-    | Head (Proj (Proj _ , _)) -> raise (Violation "Head Proj Proj")
-    | Head (Proj (MMVar _ , _)) -> raise (Violation "Head MMVar ")
+    | Head (Proj (MVar _ , _)) -> raise (Error.Violation "Head MVar")
+    | Head (Proj (Const _ , _)) -> raise (Error.Violation "Head Const")
+    | Head (Proj (Proj _ , _)) -> raise (Error.Violation "Head Proj Proj")
+    | Head (Proj (MMVar _ , _)) -> raise (Error.Violation "Head MMVar ")
 
     | Obj (tM) -> Obj(cnorm (tM, t))
 
@@ -1462,7 +1482,7 @@ and whnf sM = match sM with
              * Should be possible to extend it to m^2-variables; D remains unchanged
              * because we never arbitrarily mix pi and pibox.
              *)
-            raise (Violation "Meta^2-variable needs to be of atomic type")
+            raise (Error.Violation "Meta^2-variable needs to be of atomic type")
 
       end
 
@@ -1659,10 +1679,10 @@ and conv' sM sN = match (sM, sN) with
       convTuple (tuple1, s1) (tuple2, s2)
 
   | ((Root (_,AnnH (head, _tA), spine1), s1), sN) -> 
-       conv' (Root (None, head, spine1), s1) sN
+       conv' (Root (Syntax.Loc.ghost, head, spine1), s1) sN
 
   | (sM, (Root(_ , AnnH (head, _tA), spine2), s2)) ->
-      conv' sM (Root (None, head, spine2), s2)
+      conv' sM (Root (Syntax.Loc.ghost, head, spine2), s2)
 
   | ((Root (_, head1, spine1), s1), (Root (_, head2, spine2), s2)) ->
       (dprint (fun () -> "[conv ] check heads ") ; 
@@ -2008,12 +2028,12 @@ let rec mctxMDec cD' k =
       -> (u, mshiftTyp tA k, mshiftDCtx cPsi k)
         
     | (Dec (_cD, PDecl _), 1)
-      -> raise (Violation "Expected meta-variable; Found parameter variable")
+      -> raise (Error.Violation "Expected meta-variable; Found parameter variable")
       
     | (Dec (cD, _), k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Violation ("Meta-variable out of bounds -- looking for " ^ string_of_int k ^ "in context"))
+    | (_ , _ ) -> raise (Error.Violation ("Meta-variable out of bounds -- looking for " ^ string_of_int k ^ "in context"))
   in 
     lookup cD' k
 
@@ -2029,16 +2049,16 @@ let rec mctxPDec cD k =
       -> (p, mshiftTyp tA k, mshiftDCtx cPsi k)
 *)        
     | (Dec (_cD, MDecl  _),  1)
-      -> raise (Violation ("Expected parameter variable, but found meta-variable"))
+      -> raise (Error.Violation ("Expected parameter variable, but found meta-variable"))
     | (Dec (_cD, CDecl  _),  1)
-      -> raise (Violation ("Expected parameter variable, but found context variable"))
+      -> raise (Error.Violation ("Expected parameter variable, but found context variable"))
     | (Dec (_cD, SDecl  _),  1)
-      -> raise (Violation ("Expected parameter variable, but found substitution variable"))
+      -> raise (Error.Violation ("Expected parameter variable, but found substitution variable"))
 
     | (Dec (cD, _),  k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Violation "Parameter variable out of bounds")
+    | (_ , _ ) -> raise (Error.Violation "Parameter variable out of bounds")
   in 
     lookup cD k
 
@@ -2049,16 +2069,16 @@ let rec mctxSDec cD' k =
       -> (u,mshiftDCtx cPhi k, mshiftDCtx cPsi k)
         
     | (Dec (_cD, PDecl _), 1)
-      -> raise (Violation "Expected substitution variable; found parameter variable")
+      -> raise (Error.Violation "Expected substitution variable; found parameter variable")
     | (Dec (_cD, MDecl _), 1)
-      -> raise (Violation "Expected substitution variable; found meta-variable")
+      -> raise (Error.Violation "Expected substitution variable; found meta-variable")
     | (Dec (_cD, CDecl _), 1)
-      -> raise (Violation "Expected substitution variable; found context-variable")
+      -> raise (Error.Violation "Expected substitution variable; found context-variable")
 
     | (Dec (cD, _), k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Violation ("Substitution variable out of bounds -- looking for " ^ string_of_int k ^ "in context "))
+    | (_ , _ ) -> raise (Error.Violation ("Substitution variable out of bounds -- looking for " ^ string_of_int k ^ "in context "))
   in 
     lookup cD' k
 
@@ -2071,15 +2091,15 @@ let rec mctxCDec cD k =
       -> (psi, sW)
 
     | (Dec (_cD, MDecl  _),  1)
-      -> raise (Violation ("Expected context variable, but found meta-variable"))
+      -> raise (Error.Violation ("Expected context variable, but found meta-variable"))
     | (Dec (_cD, PDecl  _),  1)
-      -> raise (Violation ("Expected context variable, but found parameter-variable"))
+      -> raise (Error.Violation ("Expected context variable, but found parameter-variable"))
     | (Dec (_cD, SDecl  _),  1)
-      -> raise (Violation ("Expected context variable, but found substitution-variable"))
+      -> raise (Error.Violation ("Expected context variable, but found substitution-variable"))
     | (Dec (cD, _),  k')
       -> lookup cD (k' - 1)
 
-    | (_ , _ ) -> raise (Violation "Context variable out of bounds")
+    | (_ , _ ) -> raise (Error.Violation "Context variable out of bounds")
   in 
     lookup cD k
 
@@ -2345,7 +2365,7 @@ let rec mctxPVarPos cD p =
     | (Comp.MApp (loc, i, (psihat, Comp.NeutObj h)), t) -> 
        begin match normFt (Head (cnormHead (h,t))) with 
           | Head h' ->  Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.NeutObj h'))
-          | _       -> raise (Violation ("Object does not remain head under msub"))
+          | _       -> raise (Error.Violation ("Object does not remain head under msub"))
        end 
 
 
@@ -2466,6 +2486,7 @@ let rec mctxPVarPos cD p =
         let tdcl = Comp.CTypDecl (x, cnormCTyp (tau, t)) in 
         Dec (cnormCtx (cG, t), tdcl)
     | Dec(cG, Comp.CTypDeclOpt x) -> 
+        let _ = dprint (fun () -> "[cnormCtx] decl-opt = " ^ x.Id.string_of_name) in
         Dec (cnormCtx (cG, t), Comp.CTypDeclOpt x)
 
   let rec normCtx cG = match cG with
@@ -2606,7 +2627,7 @@ let rec mkPatSub s = match s with
       s
 
   | Shift (NegCtxShift _,  _k) ->
-      raise (Error (None, NotPatSub))
+      raise (Error (Syntax.Loc.ghost, NotPatSub))
 
   | Dot (Head (BVar n), s) ->
       let s' = mkPatSub s in
@@ -2623,11 +2644,11 @@ let rec mkPatSub s = match s with
   | Dot (Obj tM, s) ->
       begin match whnf (tM, LF.id) with
         | (Root (_, BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
-        | _                            -> raise (Error (None, NotPatSub))
+        | _                            -> raise (Error (Syntax.Loc.ghost, NotPatSub))
       end
 
   | _ ->
-      raise (Error (None, NotPatSub))
+      raise (Error (Syntax.Loc.ghost, NotPatSub))
 
 
 let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
@@ -2648,10 +2669,10 @@ and etaExpandMV' cPsi sA  s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
       
       let u = newMVar (cPsi, TClo(tP,s)) in
-        Root (None, MVar (u, s'), Nil)
+        Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (None, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
+      Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
 
 
 
@@ -2740,7 +2761,8 @@ let rec closedMetaSpine mS = match mS with
 
 and closedMetaObj mO = match mO with
   | Comp.MetaCtx (_, cPsi) -> closedDCtx cPsi 
-  | Comp.MetaObj (_, _phat, tM) -> closed (tM, LF.id)
+  | Comp.MetaObj (_, phat, tM) -> 
+      closedDCtx (Context.hatToDCtx phat) && closed (tM, LF.id)
 
 let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true

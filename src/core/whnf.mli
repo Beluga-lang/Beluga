@@ -9,11 +9,6 @@ open Syntax.Int.LF
 open Syntax.Int
 open Context 
 
-open Error
-
-exception Error of Syntax.Loc.t option * error
-exception Violation of string
-
 
 val whnf       : nclo -> nclo
 val whnfTyp    : tclo -> tclo
@@ -57,7 +52,7 @@ val raiseType   : dctx -> typ -> typ
 (*************************************)
 
 val etaExpandMV     : dctx -> tclo -> sub -> normal
-val etaExpandMMV    : Syntax.Loc.t option -> mctx -> dctx -> tclo -> sub -> normal
+val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> sub -> normal
 
 exception Fmvar_not_found
 exception FreeMVar of head

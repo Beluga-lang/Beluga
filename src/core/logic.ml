@@ -230,9 +230,9 @@ module Convert = struct
     in match tA with
       | LF.Atom (_) as tA ->
         let u = Whnf.newMVar (cPsi, LF.TClo (tA, s)) in
-        LF.Root (None, LF.MVar (u, S.id), LF.Nil)
+        LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
-        LF.Lam (None, x, etaExpand
+        LF.Lam (Syntax.Loc.ghost, x, etaExpand
           (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s))
 
   (* dctxToSub Psi (eV, s) fS = sub * (spine -> spine)
@@ -597,10 +597,10 @@ module Solver = struct
     | Impl ((r, (LF.TypDecl (x, _) as tD)), g') ->
       let dPool' = DynCl (dPool, (C.resToClause (r, s), k)) in
       gSolve dPool' (LF.DDec (cPsi, S.decSub tD s), k + 1)
-        (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (None, x, tM)))
+        (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
     | All (LF.TypDecl (x, _) as tD, g') ->
       gSolve dPool (LF.DDec (cPsi, S.decSub tD s), k + 1)
-        (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (None, x, tM)))
+        (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
 
   (* matchAtom dPool (Psi, k) (A, s) sc = ()
      Invariants:
@@ -630,7 +630,7 @@ module Solver = struct
           (try trail (fun () -> unify cPsi (tA, s) (dCl.tHead, s')
             (fun () -> solveSubGoals dPool (cPsi, k) (dCl.subGoals, s')
               (fun (u, tS) -> 
-                sc (u, LF.Root (None, LF.BVar (k - k'), fS tS)))))
+                sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS tS)))))
            with U.Unify _ -> ()) ; matchDProg dPool'
         else matchDProg dPool'
       | Empty ->
@@ -654,7 +654,7 @@ module Solver = struct
       (* Trail to undo MVar instantiations. *)
       try trail (fun () -> unify cPsi (tA, s) (sCl.tHead, s')
         (fun () -> solveSubGoals dPool (cPsi, k) (sCl.subGoals, s')
-          (fun (u, tS) -> sc (u, LF.Root (None, LF.Const (cidTerm), fS tS)))))
+          (fun (u, tS) -> sc (u, LF.Root (Syntax.Loc.ghost, LF.Const (cidTerm), fS tS)))))
       with U.Unify _ -> ()
 
     in matchDProg dPool

@@ -2,13 +2,21 @@
 
 open Syntax.Int
 
+type error =
+    NoCover of string
+  | MatchError of string
+  | NothingToRefine
+  | NoCoverageGoalsGenerated
+
+exception Error of Syntax.Loc.t * error
+
 val enableCoverage : bool ref
 val warningOnly : bool ref
 val no_covers : int ref
 
 type problem
 
-val make : Parser.Grammar.Loc.t option
+val make : Syntax.Loc.t
         -> Pragma.case_pragma
         -> LF.mctx            (* cO *)
         -> LF.mctx            (* cD *)
@@ -18,10 +26,7 @@ val make : Parser.Grammar.Loc.t option
 
 type coverage_result =
   | Success
-  | Failure of (unit -> string)
-
-exception NoCover of (unit -> string)
-
+  | Failure of string
 
 val clear  : unit -> unit
 val stage  : problem -> unit

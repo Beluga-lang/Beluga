@@ -13,7 +13,6 @@ let usage () =
   let options =
           "    -d            turn all debugging printing off (default)\n"
         ^ "    +d            turn all debugging printing on\n"
-        ^ "    +p=new        switch to new parser \n"
         ^ "    -s=natural    print substitutions in a \"natural\" style (default)\n"
         ^ "    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n"
         ^ "    +implicit     print implicit arguments (default -- for now)\n"
@@ -37,13 +36,10 @@ let usage () =
 
 module PC = Pretty.Control
 
-let new_parser = ref false 
-
 let process_option' arg rest = begin let f = function
   (* these strings must be lowercase *)
   | "+d" -> (Debug.showAll (); rest)
   | "-d" -> (Debug.showNone (); rest)
-  | "+p=new" -> (new_parser := true ; rest)
   | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
   | "-s=debruijn" -> (PC.substitutionStyle := PC.DeBruijn; rest)
   | "+implicit" -> (PC.printImplicit := true; rest)
@@ -146,23 +142,12 @@ let main () =
             printer decl;
             print_sgn printer decls
       in
-      let printOptionalLocation locOpt = match locOpt with
-        | None     -> Format.fprintf Format.std_formatter "<unknown location>"
-        | Some loc -> 
-            if !new_parser then 
-              Parser.Grammar.Loc.print Format.std_formatter loc
-            else 
-              ParserRelease.Grammar.Loc.print Format.std_formatter loc
-      in
       let abort_session () = raise SessionFatal
       in
         try
           (* Subord.clearMemoTable();   (* obsolete *) *)
           let sgn = 
-            if !new_parser then 
               Parser.parse_file ~name:file_name Parser.sgn_eoi 
-            else 
-              ParserRelease.parse_file ~name:file_name ParserRelease.sgn_eoi 
           in
             if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction: %s ##\n" file_name;  
@@ -176,11 +161,11 @@ let main () =
                 (function
                   | Coverage.Success -> 
                      ()
-                  | Coverage.Failure messageFn ->
+                  | Coverage.Failure message ->
                       if !Coverage.warningOnly then
-                        Error.addInformation ("WARNING: Cases didn't cover: " ^ messageFn()) 
+                        Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
                       else
-                        raise (Coverage.NoCover messageFn)
+                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
                 ) in 
               begin
                 if !Coverage.enableCoverage then 
@@ -193,96 +178,9 @@ let main () =
                 Logic.runLogic ()
               end
 
-        with
-          | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-              Parser.Grammar.Loc.print Format.std_formatter loc;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
-              Format.fprintf Format.std_formatter "@?";
-              print_newline ();
-              abort_session ()
-
-          | ParserRelease.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-              ParserRelease.Grammar.Loc.print Format.std_formatter loc;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
-              Format.fprintf Format.std_formatter "@?";
-              print_newline ();
-              abort_session ()
-
-          | Error.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Reconstruction): %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Error.Violation str ->
-              Format.fprintf
-                Format.std_formatter
-                "Error (\"Violation\") (Reconstruction): %s\n@?"
-                str;
-              print_newline ();
-              abort_session ()
-
-
-          | Check.LF.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Type-checking): %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Check.Comp.Error (locOpt, err) ->
-             (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
-              printOptionalLocation locOpt;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Checking): %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Check.LF.Violation str ->
-              printf "Error (\"Violation\") (Checking): %s\n" str;
-              abort_session ()
-
-          | Context.Error err ->
-              Format.fprintf
-                Format.std_formatter
-                "Error (Context): %a\n@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Whnf.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Whnf): %a\n@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              abort_session ()
-
-          | Abstract.Error str ->
-              printf "Error (Abstraction): %s\n" str;
-              abort_session ()
-
-          | Coverage.NoCover strFn ->
-              (* printf "Error (Coverage): %s" (strFn());  *)
-              printf "%s" (strFn()); 
-              abort_session ()
-
-          | exn ->
-              printf "%s\n" (Printexc.to_string exn);
-              abort_session ()
-
+        with e ->
+          output_string stderr (Printexc.to_string e);
+          abort_session ()
     in
     let args   = List.tl (Array.to_list Sys.argv) in
     let files = process_options args in
@@ -290,18 +188,17 @@ let main () =
       match files with
         | [file] ->
           begin
-            let Session file_names = process_file_argument file in
-            try List.iter per_file file_names; 0
+            try
+              let Session file_names = process_file_argument file in
+              List.iter per_file file_names; 0
             with SessionFatal -> 1
           end
         | _ ->
-          begin
-            printf "Wrong number of command line arguments.";
-            2
-          end
+          printf "Wrong number of command line arguments.\n";
+          2
     in
     printf "%s" (Error.getInformation());
     exit status_code
 
-let _ = Format.set_margin 86
+let _ = Format.set_margin 80
 let _ = main ()

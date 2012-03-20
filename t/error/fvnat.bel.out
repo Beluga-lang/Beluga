@@ -1,3 +1,3 @@
-File "./t/error/fvnat.bel", line 55, characters 0-45:
-Expected type  opt[x8]
-Inferred type  opt[x8, x : exp (X1 )]
+File "./t/error/fvnat.bel", line 55, characters 0-46 (end at line 57, character 0):
+Expected type  [x8. opt]
+Inferred type  [x8, x : exp (X1 ). opt]

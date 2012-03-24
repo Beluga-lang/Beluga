@@ -91,7 +91,7 @@ and rules =
 
 (* the name option is to name the premises in the proofs, none is when defining the rules VName *)
 and premise =
-  | Premisse of Loc.t * pName option * pContext option *  vAlternative (* list *)
+  | Premisse of Loc.t * pName option * pContext list option *  vAlternative (* list *)
 
 and pJudge =
   | PJudge of Loc.t * vAlternative
@@ -114,11 +114,11 @@ and typ_or_valt =
   | VLa of vAlternative list
 
 and pContext =
-  | LCD of (string * vAlternative) list
+  | NewCon of (string * vAlternative)
   | Con of string
 
 and tpremise =
-  | TPremisse of Loc.t * pName option * pContext option *  vAlternative 
+  | TPremisse of Loc.t * pName option * pContext list option *  vAlternative 
 
 and statement = 
   | ForAllExist of Loc.t * tpremise list * premise      
@@ -126,12 +126,12 @@ and statement =
 
 and proof = 
   | Proof of Loc.t * tpremise * vName * argument list      (* a proof in SASyLF is an induction statement and a list of arguments; dt: e value by induction on ds ... arguments *)
-  | PRule of Loc.t * tpremise * proof * vName list
+  | PRule of Loc.t * tpremise * proof * tpremise list
   | Induction of Loc.t * name
   | InductionHyp of Loc.t
   | CaseAn of Loc.t * tpremise * vName list * argument list
   | PTheorem of Loc.t * tName 
-  | URule of Loc.t * tpremise * rName * vName list option
+  | URule of Loc.t * tpremise * rName * tpremise list option
 
 and argument = 
   | Argument of Loc.t * rules * proof list 

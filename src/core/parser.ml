@@ -928,13 +928,6 @@ cmp_exp_chkX:
                 output_string out_channel "case_exp_chkX : LEFTA case cmp_exp_syn of case_pragma OPT | list1 cmp_branch SEP |"; output_char out_channel '\n';
           Comp.Case (_loc, prag, i, bs)
 
-(*      | "impossible"; i = cmp_exp_syn; "in"; 
-         ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]"  -> 
-           output_string out_channel "case_exp_chkX : LEFTA impossible in cmp_exp_syn"; output_char out_channel '\n';
-           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-             Comp.Case (_loc, Pragma.RegularCase, i, [Comp.BranchBox (_loc, ctyp_decls', (pHat, Comp.EmptyPattern, None))])
-*)
-
      | "impossible"; i = cmp_exp_syn; "in"; 
          ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]"  -> 
            let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
@@ -1000,19 +993,6 @@ cmp_exp_chkX:
                      Comp.Box (_loc, phat, tM) 
       end
 
-(*        "["; phat_or_psi = clf_hat_or_dctx ; " . " ; tM = clf_term_app; "]" ->  output_string out_channel "case_exp_chkX : atomic clf_term_app"; output_char out_channel '\n';            
-          begin match phat_or_psi with
-            | Dctx cPsi ->  Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tM)) 
-            | Hat phat  ->                 Comp.Box (_loc, phat, tM) 
-      end
-*)
-(*      | 
-          "["; phat_or_psi = clf_hat_or_dctx ; "]" ; sigma = clf_sub_new ->  output_string out_channel "case_exp_chkX : atomic clf_sub_new"; output_char out_channel '\n';            
-          begin match phat_or_psi with
-            | Hat phat  ->                 Comp.SBox (_loc, phat, sigma) 
-          end
-*)
-
        | 
 
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom -> 
@@ -1042,19 +1022,6 @@ isuffix:
          | ( _ , _   )      ->  raise (MixErr _loc)
      end 
 
-(* | "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))   *)
-(*   "["; phat_or_psi = clf_hat_or_dctx; "]" ->   
-     begin match phat_or_psi with 
-       | Dctx cPsi -> (fun i -> Comp.CtxApp(_loc, i, cPsi))
-       | Hat phat -> raise (MixErr _loc)
-     end 
-
- | "["; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; "]"   ->  
-     begin match phat_or_psi with
-       | Dctx cPsi  -> (fun i -> Comp.MAnnApp (_loc, i, (cPsi,  tM)))
-       | Hat phat   -> (fun i -> Comp.MApp (_loc, i, (phat, tM)))
-     end 
-*)
  | "<"; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; ">"   ->  
      begin match phat_or_psi with
        | Dctx cPsi -> output_string out_channel "isuffix : LEFTA < clf_hat_dctx . clf_term_app > Dctx"; output_char out_channel '\n';
@@ -1063,13 +1030,6 @@ isuffix:
                  (fun i -> Comp.MApp (_loc, i, (phat, tM)))
      end
 
-(* | "["; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; "]"   ->  
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MAnnApp (_loc, i, (cPsi, tM)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, (phat, tM)))
-     end
-
-*)
 
    | "=="; i2 = cmp_exp_syn   -> output_string out_channel "isuffix : LEFTA == cmp_exp_syn"; output_char out_channel '\n';
                 (fun i -> Comp.Equal(_loc, i, i2))
@@ -1109,56 +1069,6 @@ cmp_exp_syn:
    | "("; i = SELF; ")"   ->  output_string out_channel "cmp_exp_syn : LEFTA (SELF) \n"; i
  ]];
 
-(******
-                      cmp_exp_syn:
-                        [ LEFTA
-                          [
-                            i = SELF; e = cmp_exp_chk ->
-                           (print_string("APPLY: " ^ Comp.synToString (Comp.Apply(_loc, i, e)) ^ "\n");
-                              Comp.Apply (_loc, i, e))
-                          |
-                            i = SELF; "["; cPsi = clf_dctx; "]" ->
-                              (print_string("CTXAPP: " ^ Comp.synToString (Comp.CtxApp(_loc, i, cPsi)) ^ "\n");
-                              Comp.CtxApp (_loc, i, cPsi))
-                    (*      |
-                              "("; i = SELF; "["; cPsi = clf_dctx; "]"; ")" ->
-                              (print_string("(CTXAPP): " ^ Comp.synToString (Comp.CtxApp(_loc, i, cPsi)) ^ "\n");
-                              Comp.CtxApp (_loc, i, cPsi))
-                    *)
-
-                          |
-                            i = SELF; "<"; vars = LIST0 [ x = lf_hat_elem -> x ] SEP ","; "."; tM = clf_term_app; ">" ->
-                              (* let pHat = List.map (fun x' -> Id.mk_name (Id.SomeString x')) vars in *)
-                                Comp.MApp (_loc, i, (vars, tM))
-
-                          | i1 = SELF; "=="; i2 = SELF -> 
-                               Comp.Equal(_loc, i1, i2)
-
-                          ]
-
-                        | "atomic"
-                          [
-                            x = SYMBOL ->
-                              Comp.Var (_loc, Id.mk_name (Id.SomeString x))
-
-                          | "ttrue" -> Comp.Boolean (_loc, true)
-                          | "ffalse" -> Comp.Boolean (_loc, false)
-                          | 
-
-                          "["; cPsi = clf_dctx; "]"; tR = clf_term_app ->
-                                Comp.BoxVal (_loc, cPsi, tR)
-                          |
-                    (*                    e = cmp_exp_chk; ":"; tau = cmp_typ ->
-                                              Comp.Ann (_loc, e, tau)
-                                          |
-                    *)
-                            "("; i = SELF; ")" ->
-                              i
-                          ]
-                        ]
-                      ;
-*****)
-
 
 (* pattern spine: something that can follow a constructor; returns a function
   that takes the constructor it follows,
@@ -1167,9 +1077,9 @@ cmp_exp_syn:
 clf_pattern : 
     [
       [
-        tM = clf_term_app -> output_string out_channel "cmp_branch_pattern : clf_term_app"; output_char out_channel '\n'; PatCLFTerm (_loc, tM)
+        tM = clf_term_app -> output_string out_channel "clf_pattern : clf_term_app"; output_char out_channel '\n'; PatCLFTerm (_loc, tM)
      |
-        "{"; "}" -> output_string out_channel "cmp_branch_pattern : { }"; output_char out_channel '\n'; PatEmpty _loc
+        "{"; "}" -> output_string out_channel "clf_pattern : { }"; output_char out_channel '\n'; PatEmpty _loc
       ]
     ]
   ;
@@ -1182,27 +1092,27 @@ clf_pattern :
          tau = OPT [ ":"; "["; cPsi = clf_dctx; "."; tA = clf_typ LEVEL "atomic"; "]" -> Comp.TypBox(_loc,tA, cPsi)] 
           ->   
               begin match  mobj with 
-            | Some (PatEmpty _loc')   -> 
+            | Some (PatEmpty _loc')   -> output_string out_channel "cmp_branch_pattern : some pat empty"; output_char out_channel '\n';
                 (match tau with None -> Comp.PatEmpty (_loc', cPsi)
                    | Some tau -> Comp.PatAnn (_loc', Comp.PatEmpty (_loc', cPsi), tau)
                 )
-            | Some (PatCLFTerm (_loc', tM))   -> 
+            | Some (PatCLFTerm (_loc', tM))   -> output_string out_channel "cmp_branch_pattern : some patclfterm"; output_char out_channel '\n';
                 (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (_loc',  cPsi,  tM))
-                  | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaObjAnn (_loc, cPsi,    tM)), tau))
+                              | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaObjAnn (_loc, cPsi,    tM)), tau))
 
-            | None -> 
+            | None -> output_string out_channel "cmp_branch_pattern : none"; output_char out_channel '\n';
                 (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaCtx (_loc,  cPsi))
                   | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaCtx (_loc, cPsi)), tau))
               end 
 
-     | "ttrue" -> Comp.PatTrue (_loc) 
-     | "ffalse" -> Comp.PatFalse (_loc) 
+     | "ttrue" -> output_string out_channel "cmp_branch_pattern :true"; output_char out_channel '\n'; Comp.PatTrue (_loc) 
+     | "ffalse" -> output_string out_channel "cmp_branch_pattern :false"; output_char out_channel '\n'; Comp.PatFalse (_loc) 
      | x = SYMBOL; tauOpt = OPT [":" ; tau = cmp_typ -> tau] ->  
          (match tauOpt with
-           | None -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
-           | Some tau -> Comp.PatAnn (_loc, Comp.PatVar (_loc, Id.mk_name (Id.SomeString x)), tau)
+           | None -> output_string out_channel "cmp_branch_pattern : symbol none"; output_char out_channel '\n'; Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
+           | Some tau -> output_string out_channel "cmp_branch_pattern : symbol some"; output_char out_channel '\n'; Comp.PatAnn (_loc, Comp.PatVar (_loc, Id.mk_name (Id.SomeString x)), tau)
          )
-     | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) -> 
+     | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) -> output_string out_channel "cmp_branch_pattern : upsymbol "; output_char out_channel '\n';
          let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in 
            Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
      | "("; p = SELF; ")"   ->  p 
@@ -1222,70 +1132,10 @@ clf_pattern :
               | Some e  -> Comp.Branch (_loc, ctyp_decls', pattern, e)
               | None    ->  Comp.EmptyBranch (_loc, ctyp_decls', pattern)
            )
-(*      |
-          ctyp_decls = LIST0 clf_ctyp_decl; 
-      (* "sbox"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")"; *)
-        "["; cPsi = clf_dctx ;"]"; sigma = clf_sub_new;  
-         cPhi = OPT [ ":"; cPhi = clf_dctx -> cPhi ] ; 
-         rArr; e = cmp_exp_chk ->  
-           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-            Comp.BranchSBox (_loc, ctyp_decls', (cPsi, sigma, cPhi), e)
-*)
+
       ]
     ]
   ;
-
-(*  cmp_branch:
-    [
-      [
-        ctyp_decls = LIST0 clf_ctyp_decl; 
-      (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")"; *)
-        "["; pHat = clf_dctx ;"."; pattern = cmp_branch_pattern;  "]";
-         tau = OPT [ ":"; "["; cPsi = clf_dctx; "."; tA = clf_typ LEVEL "atomic"; "]" -> (tA, cPsi)]; 
-         rest = OPT [rArr; e = cmp_exp_chk -> e] ->
-          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-           (match (pattern, rest) with
-
-              | (Some tM, Some e)  -> output_string out_channel "cmp_branch : ctyp_decls...atmomic... Some Some"; output_char out_channel '\n';
-                        Comp.BranchBox (_loc, ctyp_decls', (pHat, Comp.NormalPattern (tM, e), tau))
-
-              | (None, None) -> output_string out_channel "cmp_branch : ctyp_decls...atomic... None Nome"; output_char out_channel '\n'; 
-                        Comp.BranchBox (_loc, ctyp_decls', (pHat, Comp.EmptyPattern, tau))
-
-              | (Some _tM, None) -> output_string out_channel "cmp_branch : ctyp_decls...atmomic... Some None"; output_char out_channel '\n';
-                        (print_string ("Syntax error: missing body of case branch\n"); raise (MixErr _loc))
-
-              | (None, Some _e) -> output_string out_channel "cmp_branch : ctyp_decls...atmomic... None Some"; output_char out_channel '\n';
-                        (print_string ("Syntax error: can't have a body with an empty pattern \"{}\"\n"); raise (MixErr _loc)))
-      |
-          ctyp_decls = LIST0 clf_ctyp_decl; 
-        "["; cPsi = clf_dctx ;"]"; sigma = clf_sub_new;  
-         cPhi = OPT [ ":"; cPhi = clf_dctx -> cPhi ] ; 
-         rArr; e = cmp_exp_chk -> output_string out_channel "cmp_branch : ctyp_decls... "; output_char out_channel '\n'; 
-           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-            Comp.BranchSBox (_loc, ctyp_decls', (cPsi, sigma, cPhi), e)
-      ]
-    ]
-  ;
-
-*)
-(*   boxtyp :
-   [
-     [
-
-         a = SYMBOL;  "["; cPsi = clf_dctx; "]" -> output_string out_channel "boxtyp : symbol"; output_char out_channel '\n';
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi )
-
-     | 
-          "("; a = SYMBOL;  ms = LIST0 clf_normal; ")"; "["; cPsi = clf_dctx; "]" -> output_string out_channel "boxtyp : (symbol)"; output_char out_channel '\n';
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
-
-
-     ]
-   ]
-  ;
-*)
 
   meta_obj:
     [
@@ -1359,7 +1209,7 @@ clf_pattern :
               MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ), 
                     mixtau2) 
 
-      |   "(" ; "#"; "[";  cPsi = clf_dctx; "."; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" -> 
+      |   "(" ; "#"; "[";  cPsi = clf_dctx; "."; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" -> output_string out_channel "mixtyp : atomic ( # SYMBOL [ clf_dctx ] rarr mixtyp )"; output_char out_channel '\n';
               MTArr(_loc, MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ), 
                     mixtau2) 
 
@@ -1367,7 +1217,7 @@ clf_pattern :
               MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi )
       *)
       | 
-          "#";"["; cPsi = clf_dctx; "."; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
+          "#";"["; cPsi = clf_dctx; "."; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->  output_string out_channel a ; output_string out_channel " : mixtyp : atomic #( SYMBOL list0 clf_normal ) \n";
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) 
 
@@ -1379,7 +1229,7 @@ clf_pattern :
 
 
       | 
-          "["; cPsi = clf_dctx; "."; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
+          "["; cPsi = clf_dctx; "."; a = SYMBOL;  ms = LIST0 clf_normal; "]"  -> output_string out_channel a ; output_string out_channel " : mixtyp : atomic SYMBOL list0 clf_normal \n";
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) 
 

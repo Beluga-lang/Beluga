@@ -91,8 +91,9 @@ let recSgnDecl d =
 				       fun () -> Check.LF.checkKind Int.LF.Empty Int.LF.Null tK');
 			dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^a.string_of_name ^
 				  " successful!")) in 
-        let _a = Typ.add (Typ.mk_entry a tK' i) in ()
-
+        let _a = Typ.add (Typ.mk_entry a tK' i) in ();
+        let _         = Printf.printf "%s : %s .\n" (a.string_of_name) (P.kindToString Int.LF.Null (tK', S.LF.id)) in                 (*  ******** *)
+          (* Int.Sgn.Typ (a', tK') *) ()
 
     | Ext.Sgn.Const (loc, c, extT) ->
         let (apxT, _ ) = Index.typ extT in
@@ -121,7 +122,10 @@ let recSgnDecl d =
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check", 
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in 
-	let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in ()
+	let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in ();
+         let _        = Printf.printf "%s : %s .\n" (c.string_of_name) (P.typToString cD  Int.LF.Null (tA', S.LF.id)) in                 (*  ******** *)
+          (* Int.Sgn.Const (c', tA') *)
+          () 
 
 
     | Ext.Sgn.Schema (_, g, schema) ->

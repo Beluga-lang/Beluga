@@ -66,7 +66,7 @@ GLOBAL: section_eoi;
                                                                                         Theorems(_loc, TName(a), b, lp)    
 
       | 
-         "context"; a = SYMBOL; `DECLA; lva = LIST1 var_alternative SEP "|"; ";" -> output_string out_channel "context_decl \n"; ContextDecl(_loc, CName(a), lva); 
+         "context"; a = SYMBOL; `DECLA; lva = LIST1 var_alternative SEP "|"; ";" -> output_string out_channel "section context_decl \n"; ContextDecl(_loc, CName(a), lva); 
 
       ]
     ]
@@ -194,13 +194,13 @@ typ:
     [
       [
 
-         a = UPSYMBOL; ":"; la = OPT [con_dcl]; turnstyle; b = var_alternative; ";" -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+         a = UPSYMBOL; ":"; la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative; ";" -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
                                                                                                                  Premisse(_loc, Some(PName(a)), la, b)
       |
-         a = SYMBOL; ":"; la = OPT [con_dcl]; turnstyle; b = var_alternative; ";" -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+         a = SYMBOL; ":"; la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative; ";" -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
                                                                                                                  Premisse(_loc, Some(PName(a)), la, b)
       |
-         la = OPT [con_dcl]; turnstyle; b = var_alternative; ";"  -> output_string out_channel "tpremise gamma list var_alt ... \n"; 
+         la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la ]; b = var_alternative; ";"  -> output_string out_channel "tpremise gamma list var_alt ... \n"; 
                                                                                                 Premisse(_loc, None, la, b)
 
       |
@@ -239,7 +239,13 @@ typ:
 
       |
          "="; a = OPT [ var_alternative ] -> output_string out_channel " : var_alt 1 = \n"; VAltAtomic(_loc, "=", a) 
-     
+
+      |
+         "("; a = SYMBOL; ":"; b = var_alternative; OPT [","]; la = LIST0 typ_dcl SEP ","; ")"; c = OPT [ var_alternative ] -> output_string out_channel "var_alt 9 \n"; 
+                                                 VAltOftBlock(_loc, (a,b)::la, c)   
+      |
+         "("; a = UPSYMBOL; ":"; b = var_alternative; OPT [","]; la = LIST0 typ_dcl SEP ","; ")"; c = OPT [ var_alternative ] -> output_string out_channel "var_alt 9 \n"; 
+                                                 VAltOftBlock(_loc, (a,b)::la, c)    
       |
          "("; a = SELF; ")"; b = OPT [ var_alternative ] -> output_string out_channel "var_alt : (self) "; output_char out_channel '\n'; VAltPar(_loc, a, b)    
 
@@ -275,9 +281,6 @@ typ:
       |
          "{"; la = LIST1 typ_dcl SEP ","; "}"; c = var_alternative -> output_string out_channel "var_alt 6 \n"; VAltOft(_loc, la, c)
  
-      |
-         "("; a = SYMBOL; ":"; b = var_alternative; OPT [","]; la = LIST0 typ_dcl SEP ","; ")"; c = OPT [ var_alternative ] -> output_string out_channel "var_alt 9 \n"; 
-                                                 VAltOftBlock(_loc, (a,b)::la, c) 
     
      (* |
          "Gamma,"; la = LIST1 var_alternative SEP "," -> output_string out_channel "var_alt 7 \n";
@@ -310,11 +313,11 @@ typ:
  con_dcl:
     [
       [
-         "["; lt = LIST1 typ_dcl SEP ","; "]" -> output_string out_channel "con_dcl lcd \n"; LCD(lt)
+          a = SYMBOL; ":"; b = var_alternative -> output_string out_channel "newcon \n"; NewCon(a,b)
 
       |
 
-         "["; a = SYMBOL; "]" -> output_string out_channel "con_dcl con \n"; Con(a)
+         a = SYMBOL -> output_string out_channel "con_dcl con \n"; Con(a)
 
       ]
     ]
@@ -323,13 +326,13 @@ typ:
  t_premise:
     [
       [
-         a = UPSYMBOL; ":"; la = OPT [con_dcl]; turnstyle; b = var_alternative -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+         a = UPSYMBOL; ":"; la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative -> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
                                                                                                                  TPremisse(_loc, Some(PName(a)), la, b)
       |
-         a = SYMBOL; ":"; la = OPT [con_dcl]; turnstyle; b = var_alternative-> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
+         a = SYMBOL; ":"; la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative-> output_string out_channel "tpremise symbol : gamma var_alt symbol \n"; 
                                                                                                                  TPremisse(_loc, Some(PName(a)), la, b)
       |
-         la = OPT [con_dcl]; turnstyle; b = var_alternative -> output_string out_channel "tpremise gamma list var_alt ... \n"; TPremisse(_loc, None, la, b)
+         la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative -> output_string out_channel "tpremise gamma list var_alt ... \n"; TPremisse(_loc, None, la, b)
 
       |
           a = SYMBOL; ":"; b = var_alternative -> output_string out_channel "tpremise symbol var_alt symbol \n"; 
@@ -365,14 +368,14 @@ typ:
         np = t_premise; "by"; "induction"; "on"; a = var_name; ":"; lb = LIST1 args; "end"; "induction" -> output_string out_channel "proof proof \n"; Proof(_loc, np, a, lb)
 
       |
-        np = t_premise; "by";j = SELF; "on"; lb = LIST1 var_name SEP "," -> output_string out_channel "proof by rule \n"; PRule(_loc, np, j, lb)
+        np = t_premise; "by";j = SELF; "on"; lp = LIST1 t_premise SEP "," ; ";"-> output_string out_channel "proof by rule \n"; PRule(_loc, np, j, lp)
 
       |
         np = t_premise; "by"; "case"; "analysis"; "on"; lb = LIST1 var_name SEP ","; ":"; la = LIST1 args; "end"; "case"; "analysis" -> output_string out_channel "proof casean \n"; 
                                                                                                                                         CaseAn(_loc, np, lb, la)
 
       |
-        np = t_premise; "by";"rule"; rn = SYMBOL; b = OPT [ "on"; b = LIST1 var_name SEP "," -> b ] -> output_string out_channel "proof rule \n"; URule(_loc, np, RName(rn), b)
+        np = t_premise; "by";"rule"; rn = SYMBOL; ltp = OPT [ "on"; ltp = LIST1 t_premise SEP ","; ";" -> ltp] -> output_string out_channel "proof rule \n"; URule(_loc, np, RName(rn), ltp)
 
       |
          "induction"; "hypothesis" -> output_string out_channel "proof induction hypothesis \n"; InductionHyp(_loc)
@@ -402,7 +405,7 @@ var_name:
  args:
     [
       [
-         "case"; "rule"; r1 = rules; "is"; lp = LIST1 proof; "end"; "case" -> output_string out_channel "args \n"; Argument(_loc, r1, lp)
+         "case"; "rule"; r1 = rules; "is"; lp = LIST1 proof; "end"; "case" -> output_string out_channel "argumentss \n"; Argument(_loc, r1, lp)
 
       |
          "case"; n1 = var_alternative; "is"; lp = LIST1 proof; "end"; "case" -> output_string out_channel "args \n"; Arg(_loc, n1, lp)

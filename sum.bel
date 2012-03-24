@@ -6,7 +6,6 @@ add : nat -> nat -> nat -> type.
 a_z : add z R R.
 a_s : add N1 N2 N3 -> add (s N1) N2 (s N3).
 
-%{
 less : nat -> nat -> type. 
 l_one : {N:nat} less N (s N). 
 l_trans : less N M -> less M O -> less N O.
@@ -23,7 +22,7 @@ mlam N => case ([] N) of
      [] a_s F
 
 ;
-}%
+
 rec sumsr : {D1::(add Nat1 Nat2 Nat3)[]} (add Nat1 (s Nat2) (s Nat3))[] = 
 mlam D1 => case ([] D1) of
 

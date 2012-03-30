@@ -9,7 +9,6 @@ open Pretty
 *)
 
 module Loc = Syntax.Loc
-let out_channel = open_out "reconstruct.out";
 
 exception Error of string
 
@@ -30,13 +29,13 @@ type jdef = Jdef of string * string list
 let rec findJu s lju = List.fold_left (fun x y -> let (Jdef(s1, lsym)) = y in 
                                        if (checkString s lsym) then (Jdef(s1, lsym)) else x) (Jdef("",[])) lju
 
-let rec printL l = List.fold_left (fun x y -> output_string out_channel y; output_string out_channel " print list \n") () l
+(*let rec printL l = List.fold_left (fun x y -> output_string out_channel y; output_string out_channel " print list \n") () l
 
 let rec printOM l = List.fold_left (fun x y -> match y with n -> output_string out_channel n; output_string out_channel " print omlam \n") () l
 
 let rec printLju l = List.fold_left (fun x y -> let Jdef(h1,h2) = y in 
                                      output_string out_channel h1; output_string out_channel " : print list of symbols: \n"; printL h2) () l
-
+*)
 type bind = Paire of alternative * (string * string) list
 
 let rec findJ va lju = (** should check if you have all the symbols of the judgement *)
@@ -47,8 +46,8 @@ let rec findJ va lju = (** should check if you have all the symbols of the judge
                                 if s1 = "" then (s,[]) else (s1, lsym)
     | VAltBin(l, va) -> findJ va lju
     | VAltLam(l, _, va) -> findJ va lju
-    | VAltId(l, _, Some(va)) -> findJ va lju
-    | VAltId(l, _, None) -> ("",[])
+    | VAltId(l, _, _, Some(va)) -> findJ va lju
+    | VAltId(l, _, _, None) -> ("",[])
     | VAltFn(l, _, _, Some(va)) -> findJ va lju
     | VAltFn(l, _, _, None) -> ("",[])
     | VAltPar(l,a,Some(va)) -> let (s1,l1) = findJ a lju in 
@@ -62,25 +61,27 @@ let rec findJ va lju = (** should check if you have all the symbols of the judge
 
 (* Declaration section *)
 
+let rec find_lams lp = List.fold_left (fun x y -> let Production (l, t, la) = y in [(List.fold_left ((fun x y -> begin match y with | AltLam(l1, AName(n),va) -> n | _ -> x end))"" la )]::x ) [] lp
+
 let rec checkString2 s lt = List.fold_left (fun x y -> let (h1,h2) = y in 
                                             if h1 = s then (true,h2) else x) (false, "") lt
 
-let rec printL2 l = List.fold_left (fun x y -> let (h1,h2) = y in 
+(*let rec printL2 l = List.fold_left (fun x y -> let (h1,h2) = y in 
                                     output_string out_channel h1; output_string out_channel ", "; 
                                     output_string out_channel h2; output_string out_channel " print list of vars\n") () l
-
+*)
 let rec findBind l a ty lv ac =
   match a with
     | AltAtomic(l1,t1,a1) -> begin match a1 with
                                | None -> let s = locToString(l) in 
                                          let s1 = s ^ " This alternative needs a variable binding." in raise (Error (s1))
-                               | Some(a2) -> output_string out_channel "print list of vars: \n"; printL2 lv; 
+                               | Some(a2) -> 
                                              let (b, ty1) = checkString2 t1 lv  in 
                                              if b then findBind l a2 ty lv ((t1,ty1)::ac) 
                                              else let s = locToString(l1) in 
                                              let s1 = s ^ " Did you forget to declare " ^ t1 ^ " as a variable?" in raise (Error (s1)) 
                               end
-    | AltBin(l1, a) -> output_string out_channel "found bin \n"; Paire(AltBin(l1, a), ac) 
+    | AltBin(l1, a) -> Paire(AltBin(l1, a), ac) 
     | _ -> let s = locToString(l) in 
            let s1 = s ^ " Syntax error in alternative." in raise (Error (s1))
 
@@ -102,7 +103,7 @@ and alts l ty lty lt lv llam a =
                                   (* this is a type is theres is an alternative after it just skip to next*)
                                begin match a1 with
                                  | None -> Ext.LF.Atom(l1, Id.mk_name (Id.SomeString ty),Ext.LF.Nil)
-                                 | Some(a2) -> output_string out_channel "AltAtomic typ \n"; 
+                                 | Some(a2) -> 
                                                (*alts l1 ty lty lt lv llam a2 *) (* try to remember why it was implemented this way in the first place*)
                                                Ext.LF.ArrTyp(l,Ext.LF.Atom(l1, Id.mk_name (Id.SomeString t1),Ext.LF.Nil), alts l1 ty lty lt lv llam a2)
                                end
@@ -113,7 +114,7 @@ and alts l ty lty lt lv llam a =
                                end 
                                (* else raise (Error ("Alternatives must be only types or terminals"))*)
 
-    | AltLam(l1, AName(t1), a1) -> output_string out_channel "alts AltLam \n";
+    | AltLam(l1, AName(t1), a1) -> 
                                    if checkString t1 lt 
                                    then
                                    begin match a1 with
@@ -130,25 +131,25 @@ and alts l ty lty lt lv llam a =
     | AltFn(l1, Typ(l2, t1), t_or_l, a1) -> 
             begin match t_or_l with
               | Ty(Typ(l3, t2)) -> begin match a1 with 
-                                     | None -> output_string out_channel "altfn Ty(typ)) None\n"; 
+                                     | None ->  
                                                Ext.LF.Atom(l1, Id.mk_name(Id.SomeString t2),Ext.LF.Nil)
-                                     | Some(a2) -> output_string out_channel "altfn Ty(typ)) Some \n"; 
+                                     | Some(a2) ->  
                                                    Ext.LF.ArrTyp(l, Ext.LF.Atom(l1, Id.mk_name(Id.SomeString t2),Ext.LF.Nil), 
                                                    alts l1 ty lty lt lv llam a2)
                                     end
               | La(la2) -> begin match a1 with 
-                             | None -> output_string out_channel "altfn La(la)) None\n";
+                             | None -> 
                                        Ext.LF.ArrTyp(l,Ext.LF.ArrTyp(l,Ext.LF.Atom(l1,Id.mk_name(Id.SomeString t1),Ext.LF.Nil)
                                        , altList l1 ty lty lt lv llam la2), Ext.LF.Atom(l1, Id.mk_name (Id.SomeString ty),
                                        Ext.LF.Nil))
-                             | Some(a2) -> output_string out_channel "altfn La(la)) Some\n";(** what about ar2*)
+                             | Some(a2) -> (** what about ar2*)
                                            let Ext.LF.ArrTyp(l4,ar1,ar2) = alts l1 ty lty lt lv llam (AltFn(l1,Typ(l2, t1), t_or_l, None)) in
                                            Ext.LF.ArrTyp(l,ar1, alts l1 ty lty lt lv llam a2)
                            end
             end
 
 
-    | AltBin(l1, a) -> output_string out_channel "AltBin\n"; alts l1 ty lty lt lv llam a
+    | AltBin(l1, a) ->  alts l1 ty lty lt lv llam a
 
     | AltOft(l1, a1, a2) -> alts l1 ty lty lt lv llam a2  
     | _ -> raise (Error ("Unvalid alternative/Not implemented yet"))
@@ -166,7 +167,7 @@ let rec sgnAlts l ty lty lt lv llam la =
                   | None -> let s = locToString(l1) in 
                             let s1 = s ^ " Illegal alternative" in 
                             raise (Error (s1))
-                  | Some(a2) -> output_string out_channel "sgn AltAtomic typ\n"; 
+                  | Some(a2) -> 
                                 Ext.Sgn.Const(l1, Id.mk_name (Id.SomeString t1),  alts l1 ty lty lt lv llam a2)::sgnAlts l ty lty lt lv llam t 
                 end 
                 else if (checkString t1 lt) 
@@ -174,7 +175,7 @@ let rec sgnAlts l ty lty lt lv llam la =
                 begin match a1 with
                   | None -> Ext.Sgn.Const(l1, Id.mk_name (Id.SomeString t1), Ext.LF.Atom(l, Id.mk_name (Id.SomeString ty),Ext.LF.Nil))
                             ::sgnAlts l ty lty lt lv llam t
-                  | Some(a2) -> output_string out_channel "sgn altAtomic terminal \n"; 
+                  | Some(a2) ->  
                                 Ext.Sgn.Const(l1, Id.mk_name (Id.SomeString t1), Ext.LF.ArrTyp(l,
                                 Ext.LF.Atom(l1, Id.mk_name (Id.SomeString ty),Ext.LF.Nil), alts l1 ty lty lt lv llam a2))
                                 ::sgnAlts l ty lty lt lv llam t 
@@ -189,7 +190,7 @@ let rec sgnAlts l ty lty lt lv llam la =
 
 
     | AltLam(l1, AName(t1), a1)::t -> 
-             output_string out_channel "sgn AltLam\n"; if checkString t1 lt 
+             if checkString t1 lt 
              then 
              begin match a1 with
                | None -> raise (Error ("Must indicate variable binding in this alternative"))
@@ -210,7 +211,7 @@ let rec sgnAlts l ty lty lt lv llam la =
                                       
 
     | AltFn(l1, Typ(l2, t1), Ty(Typ(l3, t2)), a1)::t -> 
-            output_string out_channel "sgn AltFn \n"; (** might cause prob. with AltLet*)
+            (** might cause prob. with AltLet*)
             begin match a1 with 
               | None -> Ext.Sgn.Const(l, Id.mk_name (Id.SomeString "arr"), 
                         Ext.LF.ArrTyp(l,Ext.LF.Atom(l1, Id.mk_name (Id.SomeString t1),Ext.LF.Nil), 
@@ -222,7 +223,7 @@ let rec sgnAlts l ty lty lt lv llam la =
             end
 
     | AltLet(l1, a1, a2, a3)::t -> 
-             output_string out_channel "sgn AltLet \n"; 
+              
              begin match a3 with (** should not ignore whats in AltFn *)
                | AltFn(_) -> Ext.Sgn.Const(l1, Id.mk_name (Id.SomeString "letv"), Ext.LF.ArrTyp(l, 
                              Ext.LF.Atom(l1, Id.mk_name (Id.SomeString ty),Ext.LF.Nil),  alts l1 ty lty lt lv llam a3))
@@ -253,35 +254,35 @@ let rec find_var_prep lp = (List.fold_left (fun x y -> let Production(l1, Typ(l2
                                                        ((la,t1)::x) )) [] lp
 
 (* string list -> string list -> production list -> Ext.Sgn.decl list, first list types second terminals *)
-let rec sgnTypes lt lty lvar lp =
+let rec sgnTypes lt lty lvar llam lp =
   match lp with
     | [] -> []
     | Production(l1, Typ(l2, t1), la)::t -> 
-                 let sgn1 = sgnAlts l2 t1 lty lt lvar [] la in 
-                 [Ext.Sgn.Typ(l1, Id.mk_name (Id.SomeString t1), Ext.LF.Typ(l1))]@ sgn1 @ sgnTypes lt lty lvar t
+                 let sgn1 = sgnAlts l2 t1 lty lt lvar llam la in 
+                 [Ext.Sgn.Typ(l1, Id.mk_name (Id.SomeString t1), Ext.LF.Typ(l1))]@ sgn1 @ sgnTypes lt lty lvar llam t
 
 (* Judgment Section *)
 
 (* Loc.t -> string -> judge list -> string list -> Ext.Sgn.decl list *)
 let rec typ_or_sym l js ltyp =
   match js with
-    | [] -> output_string out_channel "typ or sym [] \n"; Ext.LF.Typ(l) 
+    | [] ->  Ext.LF.Typ(l) 
     | h::t -> let Judge(l1,s1) = h in 
               if (checkString s1 ltyp ) 
-              then (output_string out_channel " typ or sym then \n"; 
+              then (
               Ext.LF.ArrKind(l, Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s1),Ext.LF.Nil), typ_or_sym l1 t ltyp) )
-              else (output_string out_channel " typ or sym else \n"; typ_or_sym l1 t ltyp)
+              else ( typ_or_sym l1 t ltyp)
 
 (* checks the judgement if its not a type its a symbol indicating the syntax of the judgement *)
 (* judge list -> string list -> string list *)
 let rec typ_or_sym_list lj ltyp = 
   match lj with
-    | [] -> output_string out_channel "typ or sym list [] \n"; []
+    | [] ->  []
     | h::t -> let Judge(l1,s1) = h in 
               if (checkString s1 ltyp ) 
-              then (output_string out_channel s1; output_string out_channel " check string then \n"; 
+              then ( 
               typ_or_sym_list t ltyp) 
-              else (output_string out_channel s1; output_string out_channel " check string else \n"; s1 :: typ_or_sym_list t ltyp  )
+              else ( s1 :: typ_or_sym_list t ltyp  )
 
 (* Loc.t -> jName -> jSyntax -> string list -> (string list , Ext.Sgn.decl list) *)
 let sgnJudge l jn js ltyp = let JName(j) = jn in 
@@ -301,30 +302,30 @@ let rec valtsPar l lsym a =
   match a with 
     | VAltAtomic(l, s, vao) -> 
                  begin match vao with 
-                   | None -> output_string out_channel "valtsPar none in altpar \n";
+                   | None -> 
                              Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), Ext.LF.Nil)
 
                    | Some(VAltBin(l2, va)) -> if checkString s lsym 
-                                              then (output_string out_channel s; output_string out_channel "valtspar some valtbin then \n"; 
+                                              then (
                                               raise (Error ("Error in Lamdba term."))) 
-                                              else (output_string out_channel s; output_string out_channel " valtspar some valtbin else \n";
+                                              else (
                                               Ext.LF.Lam(l2, Id.mk_name(Id.SomeString s), valtsPar l lsym va) )
 
-                   | Some(va) -> output_string out_channel "valtspar some then in altpar \n";  (** might want to check if its a symbol *)
+                   | Some(va) -> (** might want to check if its a symbol *)
                                  Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), valts l lsym va) 
 
                  end
 
 
-    | VAltLam(l, AName(n), va) -> output_string out_channel "valts par valtlam\n";
+    | VAltLam(l, AName(n), va) -> 
                                   Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString n)), valts l lsym va)
 
-    | VAltFn(l1, VName(n1), v, vao) -> output_string out_channel n1; output_string out_channel " valtspar valtfn\n"; 
+    | VAltFn(l1, VName(n1), v, vao) ->  
              begin match v with 
                | VLa(lva) ->  let Some(va1) = valtslist lva in
                      begin match vao with
                        | None -> Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1)
-                       | Some(VAltBin(l2, va)) -> output_string out_channel " valtspar valtfn valtbin else \n";
+                       | Some(VAltBin(l2, va)) -> 
                                                   Ext.LF.Lam(l2, Id.mk_name(Id.SomeString n1), Ext.LF.Root(l, 
                                                   Ext.LF.Name(l, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1))
                                                   (*, valts l1 lsym va)*)
@@ -336,7 +337,7 @@ let rec valtsPar l lsym a =
                      begin match vao with
                        | None -> Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString "arr")), Ext.LF.App(l2,Ext.LF.Root(l2, 
                                  Ext.LF.Name(l, Id.mk_name(Id.SomeString n1)),Ext.LF.Nil),va1)) 
-                       | Some(VAltBin(l2, va)) -> output_string out_channel " valtspar valtfn valtbin else \n"; (** you dont use va*)
+                       | Some(VAltBin(l2, va)) -> (** you dont use va*)
                                                   Ext.LF.Lam(l2, Id.mk_name(Id.SomeString n1), Ext.LF.Root(l, 
                                                   Ext.LF.Name(l, Id.mk_name(Id.SomeString n1)), va1))
                                                   (*, valts l1 lsym va)*)
@@ -344,9 +345,18 @@ let rec valtsPar l lsym a =
                      end 
             end
 
-    | VAltLet(l, va) -> output_string out_channel " valts valtfn\n"; let lsym1 = "="::lsym in
+    | VAltLet(l, va) -> let lsym1 = "="::lsym in
                         Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString "letv")), valts l lsym1 va)
 
+ (*   | VAltPar(l, a, vao) -> (begin match vao with 
+                                 | None -> valtsPar l lsym a 
+
+                                 | Some(vb) -> let Ext.LF.Root(l1,nor,sp) = valtsPar l lsym a in
+                                               let v2 = valts l lsym vb in  output_string out_channel "valts altpar some \n";
+                                               Ext.LF.Root(l1,nor,v2)    
+
+                              end)
+*)
     | VAltOft _ -> raise (Error ("Valtoft")) 
 
     | _ -> let s = locToString(l) in 
@@ -356,24 +366,37 @@ let rec valtsPar l lsym a =
 (* Loc.t -> string list -> var_alternative -> Ext.LF.spine *)
 and valts l lsym va =
   match va with 
-    | VAltId(l, s, vao) -> 
-             begin match vao with 
-               | None -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil), 
-                         Ext.LF.Nil )        
-               | Some(va) -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil), 
-                             valts l lsym va)
+    | VAltId(l, s, lpr, vao) -> 
+             begin match lpr with 
+               | [] -> begin match vao with 
+                         | None -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil), 
+                                   Ext.LF.Nil )        
+                         | Some(va) -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil), 
+                                       valts l lsym va)
+                       end       
+               | h::t -> let s = locToString(l) in 
+                         let s1 = s ^ " List of projections1." in 
+                         raise (Error (s1)) 
              end
+
+    | VAltAtomic(l, "_", vao) -> 
+                 begin match vao with 
+                   | None -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.Hole(l), Ext.LF.Nil), Ext.LF.Nil)
+
+                   | Some(va) -> let va1 = valts l lsym va in 
+                                 Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.Hole(l), Ext.LF.Nil), va1)
+                 end     
 
     | VAltAtomic(l, s, vao) -> 
                  begin match vao with 
                    | None -> if checkString s lsym 
-                             then (output_string out_channel s; output_string out_channel " valts none then \n"; Ext.LF.Nil ) 
-                             else (output_string out_channel s; output_string out_channel " valts none else \n";
+                             then (Ext.LF.Nil ) 
+                             else (
                              Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), Ext.LF.Nil), Ext.LF.Nil) )
 
                    | Some(VAltBin(l2, va)) -> if checkString s lsym 
                                               then (raise (Error ("Error in Lamdba term."))) 
-                                              else (output_string out_channel s; output_string out_channel " valts some valtbin else \n"; 
+                                              else (
                                               begin match va with (** mght want to make a function instead*)
                                                 | VAltFn(l3,v2,vl2,Some(VAltBin(l4,vaoo))) -> Ext.LF.App(l, Ext.LF.Lam(l2, 
                                                                                               Id.mk_name(Id.SomeString s), 
@@ -385,43 +408,43 @@ and valts l lsym va =
                                               end) 
 
                    | Some(va) -> if checkString s lsym 
-                                 then (output_string out_channel s; output_string out_channel "valts some then \n"; valts l lsym va) 
-                                 else (output_string out_channel s; output_string out_channel " valts some else \n";
+                                 then (valts l lsym va) 
+                                 else (
                                  Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), Ext.LF.Nil), valts l lsym va) )
                  end
 
     | VAltPar(l, a, vao) -> (begin match vao with 
-                                 | None -> let v1 = valtsPar l lsym a in output_string out_channel "valts altpar none \n";
+                                 | None -> let v1 = valtsPar l lsym a in 
                                                    Ext.LF.App(l, v1, Ext.LF.Nil) 
 
 
-                                 | Some(vb) -> let v1 = valtsPar l lsym a in output_string out_channel "valts altpar some \n";
+                                 | Some(vb) -> let v1 = valtsPar l lsym a in 
                                                    Ext.LF.App(l, v1, valts l lsym vb) 
 
                               end)
 
 
-    | VAltLam(l, AName(n), va) -> output_string out_channel "valts valtlam\n";
+    | VAltLam(l, AName(n), va) -> 
                                   Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString n)), valts l lsym va), Ext.LF.Nil)
     
-    | VAltFn(l1, VName(n1), VLa([va1]), vao) -> output_string out_channel n1; output_string out_channel " valts valtfn\n"; (**assuming only 1 element in list *)
+    | VAltFn(l1, VName(n1), VLa([va1]), vao) -> (**assuming only 1 element in list *)
              begin match vao with
                | None -> Ext.LF.App(l, Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1), 
                          Ext.LF.Nil)
-               | Some(VAltBin(l2, va)) -> output_string out_channel " valts valtfn valtbin else \n";
+               | Some(VAltBin(l2, va)) -> 
                                           Ext.LF.App(l, Ext.LF.Lam(l2, Id.mk_name(Id.SomeString n1), valtsPar l1 lsym va1), 
                                           valts l1 lsym va)
                | Some(a2) -> Ext.LF.App(l, Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1), 
                              valts l1 lsym a2)
               end
 
-    | VAltFn(l1, VName(n1), VTy(Typ(l2,t2)), vao) -> output_string out_channel n1; output_string out_channel " valtspar valtfn\n"; 
+    | VAltFn(l1, VName(n1), VTy(Typ(l2,t2)), vao) ->  
              let va2 = VAltAtomic(l2,t2,None) in 
              let va1 = valts l2 lsym va2 in
              begin match vao with
                | None -> Ext.LF.App(l,Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString "arr")), Ext.LF.App(l2,Ext.LF.Root(l2, 
                          Ext.LF.Name(l, Id.mk_name(Id.SomeString n1)),Ext.LF.Nil),va1)), Ext.LF.Nil) 
-             (*| Some(VAltBin(l2, va)) -> output_string out_channel " valtspar valtfn valtbin else \n"; 
+             (*| Some(VAltBin(l2, va)) -> 
                                           Ext.LF.App(l,Ext.LF.Lam(l2, Id.mk_name(Id.SomeString n1), Ext.LF.Root(l, 
                                           Ext.LF.Name(l, Id.mk_name(Id.SomeString n1)), va1)), valts l1 lsym va)
                                           (*, valts l1 lsym va)*)*)
@@ -442,6 +465,26 @@ and valts l lsym va =
 let rec judges' jn lsym lp l2 va lju =
    match lp with
      | [] -> Ext.LF.Atom(l2, Id.mk_name(Id.SomeString jn), valts l2 lsym va)
+     | h::[] -> let Premisse(l3, b1, c1, va1) = h in 
+               begin match va1 with
+                 | VAltOft(l, [(n, va3)], VAltPar(l5,va5,Some(VAltPar(l6,va6,None)))) ->
+                             let VAltAtomic(l4, s, vao) = va3 in
+                             begin match vao with
+                                | None -> let v5 = valts l5 lsym va5 in
+                                          let v6 = valts l6 lsym va6 in 
+                                          Ext.LF.ArrTyp(l2, Ext.LF.PiTyp(l, Ext.LF.TypDecl( Id.mk_name(Id.SomeString n), 
+                                          Ext.LF.Atom(l2, Id.mk_name(Id.SomeString s), Ext.LF.Nil)), Ext.LF.ArrTyp(l5, 
+                                          Ext.LF.Atom(l2, Id.mk_name(Id.SomeString jn), v5), 
+                                          Ext.LF.Atom(l6, Id.mk_name(Id.SomeString jn), v6))), 
+                                          judges' jn lsym [] l2 va lju)
+
+
+                                | Some(_) -> let s = locToString(l) in 
+                                             let s1 = s ^ " Non atomic type declaration for a variable." in 
+                                             raise (Error (s1))
+                             end
+                | _ -> Ext.LF.ArrTyp(l2, Ext.LF.Atom(l2, Id.mk_name(Id.SomeString jn), valts l3 lsym va1), judges' jn lsym ([]) l2 va lju)
+              end
      | h::t -> let Premisse(l3, b1, c1, va1) = h in 
                begin match va1 with
                  | VAltOft(l, [(n, va3)], va2) -> 
@@ -462,16 +505,17 @@ let rec judges' jn lsym lp l2 va lju =
               end
 
 (* string list -> rule list -> Ext.Sgn.decl list *)
-let rec judges jn lsym lr lju = output_string out_channel "judges \n";
+let rec judges jn lsym lr lju = 
    match lr with
     | [] -> []
     | h::t -> let Rule(l1, a, RName(s), Premisse(l2, b, c, va)) = h in 
               let JName(s1) = jn in
               begin match a with
-                | [] -> output_string out_channel  s; output_string out_channel " judges [] s s1 \n";
+                | [] -> 
                         let lv = [Ext.Sgn.Const(l1, Id.mk_name(Id.SomeString s), Ext.LF.Atom(l2, Id.mk_name(Id.SomeString s1), valts l2 lsym va))] in 
                         lv @ judges jn lsym t lju
-                | la -> let lv = [Ext.Sgn.Const(l1, Id.mk_name(Id.SomeString s), judges' s1 lsym la l2 va lju)] in 
+                | la -> let ju = judges' s1 lsym la l2 va lju in
+                        let lv = [Ext.Sgn.Const(l1, Id.mk_name(Id.SomeString s), ju)] in 
                         lv @ judges jn lsym t lju
               end
 
@@ -479,25 +523,27 @@ let rec judges jn lsym lr lju = output_string out_channel "judges \n";
 
 let rec context_sch l lv lsym lju va = 
    match va with
-  (*  | VAltOftBlock (l1,[(x1,x2)],Some(va)) -> let (s1, ls) = findJ va lju in let va2 = valts l1 lsym va in let VAltAtomic(l4, s, vao) = x2 in
-                                              (begin match vao with
-                                                 | None -> Ext.LF.SigmaElem(Id.mk_name(Id.SomeString x1),Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s), Ext.LF.Nil),
-                                                           Ext.LF.SigmaLast( Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s1), va2)))
-                                                 | Some(_) -> let (s2, ls2) = findJ x2 lju in let va3 = valts l1 lsym x2 in
-                                                              Ext.LF.SigmaElem(Id.mk_name(Id.SomeString x1),Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s2), va3),
-                                                              Ext.LF.SigmaLast( Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s1), va2)))
-                                               end)*)
-    | VAltOftBlock (l1,ltd,Some(va)) -> let (s1, ls) = findJ va lju in let va2 = valts l1 lsym va in let ltd' = List.rev ltd in
+    | VAltOftBlock (l1,ltd,Some(va1)) -> let (s1, ls) = findJ va1 lju in
+                                        let va2 = valts l1 lsym va1 in 
+                                        let ltd' = List.rev ltd in
                                         let sl = Ext.LF.SigmaLast( Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s1), va2)) in
                                         List.fold_left (fun y (x1,x2) -> let VAltAtomic(l4, s, vao) = x2 in
                                                   (begin match vao with
-                                                     | None -> Ext.LF.SigmaElem(Id.mk_name(Id.SomeString x1),Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s), Ext.LF.Nil), y)
-                                                     | Some(_) -> let (s2, ls2) = findJ x2 lju in let va3 = valts l1 lsym x2 in
-                                                                  Ext.LF.SigmaElem(Id.mk_name(Id.SomeString x1),Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s2), va3), y)
+                                                     | None -> 
+                                                               Ext.LF.SigmaElem(Id.mk_name(Id.SomeString x1),
+                                                               Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s), Ext.LF.Nil), y)
+                                                     | Some(_) -> let (s2, ls2) = findJ x2 lju in 
+                                                                  let va3 = valts l1 lsym x2 in
+                                                                  Ext.LF.SigmaElem(Id.mk_name(Id.SomeString x1),
+                                                                  Ext.LF.Atom(l1, Id.mk_name(Id.SomeString s2), va3), y)
                                                    end)) sl ltd'
 
-    | VAltOftBlock (l1,_,None) -> let s = locToString(l1) in let s1 = s ^ " There should be a premisse after this context block." in raise (Error (s1))
-    | _ -> let ( s1, ls) = findJ va lju in let va2 = valts l lsym va in Ext.LF.SigmaLast( Ext.LF.Atom(l, Id.mk_name(Id.SomeString s1), va2))
+    | VAltOftBlock (l1,_,None) -> let s = locToString(l1) in 
+                                  let s1 = s ^ " There should be a premisse after this context block." in 
+                                  raise (Error (s1))
+    | _ -> let ( s1, ls) = findJ va lju in 
+           let va2 = valts l lsym va in 
+           Ext.LF.SigmaLast( Ext.LF.Atom(l, Id.mk_name(Id.SomeString s1), va2))
 
 
 let rec context lv lsym lju lva = 
@@ -530,37 +576,50 @@ let rec valtpPar l lt lsym a =
   match a with 
     | VAltAtomic(l, s, vao) -> 
                  begin match vao with (** probably want to check if is a symbol *)
-                   | None -> output_string out_channel "valtpPar none in valtatom \n";
+                   | None -> 
                              if checkString s lt 
-                             then Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), Ext.LF.Nil)
+                             then (Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), Ext.LF.Nil))
                              else Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.EmptySub(l)), Ext.LF.Nil)
 
                (*  | Some(VAltBin(l2, va)) -> if checkString s lsym 
-                                              then (output_string out_channel s; output_string out_channel "valtspar some valtbin then \n"; 
+                                              then ( 
                                               raise (Error ("Error in Lamdba term."))) 
-                                              else (output_string out_channel s; output_string out_channel " valtspar some valtbin else \n";
+                                              else (
                                               Ext.LF.Lam(l2, Id.mk_name(Id.SomeString s), valtpPar l lsym va) )*)
 
                    | Some(va) -> if checkString s lt 
-                                 then (output_string out_channel s; output_string out_channel " valtppar some else terminal then \n";
+                                 then (
                                  Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), valtp l lt lsym va))
                                  else 
-                                 (output_string out_channel "valtppar some then in altpar \n";
+                                 (
                                  Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.EmptySub(l)), valtp l lt lsym va))
                  end
 
-    | VAltId(l, s, vao) -> 
-             begin match vao with (** probably want to check if is a symbol *)
-               | None -> output_string out_channel "valtpPar none in valtid \n";
-                         if checkString s lt 
-                         then Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), Ext.LF.Nil)
-                         else Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil)
-               | Some(va) -> if checkString s lt 
-                             then (output_string out_channel s; output_string out_channel " valtppar some else terminal then \n";
-                             Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), valtp l lt lsym va))
-                             else 
-                             (output_string out_channel "valtppar some then in altpar \n";
-                             Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), valtp l lt lsym va))
+    | VAltId(l, s, lpr, vao) -> 
+             begin match lpr with 
+               | [] -> begin match vao with 
+                         | None -> 
+                                   if checkString s lt 
+                                   then (
+                                         Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), Ext.LF.Nil))
+                                   else Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil)      
+                         | Some(va) -> if checkString s lt 
+                                       then 
+                                       Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), valtp l lt lsym va)
+                                       else 
+                                      (
+                                       Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), valtp l lt lsym va))
+                       end       
+               | lp -> begin match vao with 
+                         | None -> 
+                                   let rlp = List.rev lp in
+                                   let ds = List.fold_left (fun x (Proj(l1, s1, i1)) -> Ext.LF.Dot(l1, x, 
+                                            Ext.LF.Head(Ext.LF.ProjName(l1, i1, Id.mk_name(Id.SomeString s1))) ) ) (Ext.LF.Id(l)) rlp in
+                                   Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),ds), Ext.LF.Nil)      
+                         | Some(va) -> let s = locToString(l) in 
+                                       let s1 = s ^ " There should be parentheses around the alternative with the list of projections." in 
+                                       raise (Error (s1)) 
+                       end 
              end
 
 
@@ -575,7 +634,7 @@ let rec valtpPar l lt lsym a =
                      begin match vao with
                        | None -> Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString "arr")), Ext.LF.App(l2,Ext.LF.Root(l2, 
                                  Ext.LF.Name(l, Id.mk_name(Id.SomeString n1)),Ext.LF.Nil),va1)) 
-                       | Some(VAltBin(l2, va)) -> output_string out_channel " valtspar valtfn valtbin else \n"; (** you dont use va*)
+                       | Some(VAltBin(l2, va)) -> (** you dont use va*)
                                                   Ext.LF.Lam(l2, Id.mk_name(Id.SomeString n1), Ext.LF.Root(l, 
                                                   Ext.LF.Name(l, Id.mk_name(Id.SomeString n1)), va1))
                                                   (*, valts l1 lsym va)*)
@@ -611,9 +670,9 @@ let rec valtpPar l lt lsym a =
                       raise (Error (s1))
 
     | VAltPar(l, a, vao) -> begin match vao with 
-                              | None -> output_string out_channel "valtp valtpar none \n"; valtpPar l lt lsym a
+                              | None ->  valtpPar l lt lsym a
                               | Some(vb) -> let vp2 = valtpPar l lt lsym a in 
-                                            output_string out_channel "valtp valtpar some \n";
+                                            
                                             let vp3 = valtp l lt lsym vb in 
                                             find_nil vp2 vp3 
                             end
@@ -623,19 +682,24 @@ let rec valtpPar l lt lsym a =
 
 and valtp l lt lsym va =
   match va with 
-    | VAltId(l, s, vao) -> 
-             begin match vao with 
-               | None -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil), 
-                         Ext.LF.Nil )        
-               | Some(va) -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil), 
-                             valtp l lt lsym va)
+    | VAltId(l, s, lpr, vao) -> 
+             begin match lpr with 
+               | [] -> begin match vao with 
+                         | None -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil), 
+                                   Ext.LF.Nil )      
+                         | Some(va) -> Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.Id(l)), Ext.LF.Nil), 
+                                       valtp l lt lsym va)
+                       end       
+               | h::t -> let s = locToString(l) in 
+                         let s1 = s ^ " List of projections." in 
+                         raise (Error (s1)) 
              end
 
     | VAltAtomic(l, s, vao) -> 
                  begin match vao with 
                    | None -> if checkString s lsym 
-                             then (output_string out_channel s; output_string out_channel " valtp none then \n"; Ext.LF.Nil ) 
-                             else (output_string out_channel s; output_string out_channel " valtp none else \n";
+                             then (Ext.LF.Nil ) 
+                             else (
                                    if checkString s lt
                                    then  Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.Name(l, 
                                          Id.mk_name(Id.SomeString s)), Ext.LF.Nil), Ext.LF.Nil)
@@ -645,9 +709,9 @@ and valtp l lt lsym va =
 
 
                 (* | Some(VAltBin(l2, va)) -> if checkString s lsym 
-                                              then (output_string out_channel s; output_string out_channel " valts some valtbin then \n"; 
+                                              then ( 
                                               raise (Error ("Error in Lamdba term."))) 
-                                              else (output_string out_channel s; output_string out_channel " valts some valtbin else \n"; 
+                                              else (
                                               (begin match va with (** mght want to make a function instead*)
                                                  | VAltFn(l3,v2,vl2,Some(VAltBin(l4,vaoo))) -> 
                                                           Ext.LF.App(l, Ext.LF.Lam(l2, Id.mk_name(Id.SomeString s), 
@@ -658,51 +722,43 @@ and valtp l lt lsym va =
  
 
                    | Some(va) -> if checkString s lsym 
-                                 then (output_string out_channel s; output_string out_channel "valtp some then \n"; valtp l lt lsym va) 
+                                 then ( valtp l lt lsym va) 
                                  else (if checkString s lt 
-                                       then (output_string out_channel s; output_string out_channel " valtp some else terminal then \n";
+                                       then (
                                        Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s)), Ext.LF.Nil), valtp l lt lsym va)) 
-                                       else (output_string out_channel s; output_string out_channel " valtp some terminal else \n";
+                                       else (
                                        Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),Ext.LF.EmptySub(l)), Ext.LF.Nil), 
                                       valtp l lt lsym va)))
                  end
 
   | VAltPar(l, a, vao) -> begin match vao with 
                             | None -> let vp1 = valtpPar l lt lsym a in  
-                                      output_string out_channel "valtp altpar none \n";
+                                      
                                       Ext.LF.App(l, vp1, Ext.LF.Nil) 
                             | Some(vb) -> let vp2 = valtpPar l lt lsym a in 
-                                          output_string out_channel "valtp altpar some \n";
+                                          
                                           Ext.LF.App(l, vp2, valtp l lt lsym vb ) 
 
                               end
 
 
-(*  | VAltLam(l, AName(n), va) -> output_string out_channel "valts valtlam\n";
+(*  | VAltLam(l, AName(n), va) -> 
                                   Ext.LF.App(l, Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString n)), valtp l lsym va), Ext.LF.Nil)*)
 
 (* not adapted to lf id *)
-    | VAltFn(l1, VName(n1), VLa([va1]), vao) -> output_string out_channel n1; output_string out_channel " valts valtfn\n"; (**assuming only 1 element in list *)
+    | VAltFn(l1, VName(n1), VLa([va1]), vao) -> (**assuming only 1 element in list *)
              begin match vao with
                | None -> Ext.LF.App(l, Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1), 
                          Ext.LF.Nil)
-               | Some(VAltBin(l2, va)) -> output_string out_channel " valts valtfn valtbin else \n";
+               | Some(VAltBin(l2, va)) -> 
                                           Ext.LF.App(l, Ext.LF.Lam(l2, Id.mk_name(Id.SomeString n1), valtsPar l1 lsym va1), 
                                           valts l1 lsym va)
                | Some(a2) -> Ext.LF.App(l, Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1), 
                              valts l1 lsym a2)
               end
 
-    | VAltFn(l1, VName(n1), VTy(Typ(l2, t1)), vao) -> output_string out_channel n1; output_string out_channel " valts valtfn\n"; (**assuming only 1 element in list *)raise (Error ("ValtFn vty not implemented.")) 
-             (*begin match vao with
-               | None -> Ext.LF.App(l, Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1), 
-                         Ext.LF.Nil)
-               | Some(VAltBin(l2, va)) -> output_string out_channel " valts valtfn valtbin else \n";
-                                          Ext.LF.App(l, Ext.LF.Lam(l2, Id.mk_name(Id.SomeString n1), valtsPar l1 lsym va1), 
-                                          valts l1 lsym va)
-               | Some(a2) -> Ext.LF.App(l, Ext.LF.Root(l1, Ext.LF.Name(l1, Id.mk_name(Id.SomeString n1)), valts l1 lsym va1), 
-                             valts l1 lsym a2)
-              end*)
+    | VAltFn(l1, VName(n1), VTy(Typ(l2, t1)), vao) ->  (**assuming only 1 element in list *)raise (Error ("ValtFn vty not implemented.")) 
+
 
     |  VAltOftBlock(l1, [h], vao) -> raise (Error ("oue oue"))
 (*
@@ -720,9 +776,9 @@ let rec conTypArr l lt lju lsym ltp =
                 let (jn,lsym1)= findJ va1 lju in 
                 let v1 = valtp l lt lsym1 va1 in
                 begin match co with 
-                  | None -> output_string out_channel "ctx va null \n";
+                  | None -> 
                             Ext.Comp.TypBox(l2, Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null)
-                  | Some([Con(s)]) -> output_string out_channel "ctx va not null \n";
+                  | Some([Con(s)]) -> 
                                     let c = Ext.LF.CtxVar(l2, Id.mk_name(Id.SomeString s)) in
                                     Ext.Comp.TypBox(l2, Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1), c)
                   | _ -> let s = locToString(l2) in 
@@ -732,10 +788,10 @@ let rec conTypArr l lt lju lsym ltp =
     | TPremisse(l2,nao1,co,va1)::t ->  
                 let (jn,lsym1)= findJ va1 lju in let v1 = valtp l lt lsym1 va1 in
                 begin match co with 
-                  | None -> output_string out_channel "ctx va null \n";
+                  | None -> 
                             Ext.Comp.TypArr(l2, Ext.Comp.TypBox(l2, Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1),
                             Ext.LF.Null), conTypArr l2 lt lju lsym t)
-                  | Some([Con(s)]) -> output_string out_channel "ctx va not null \n";
+                  | Some([Con(s)]) -> 
                                     let c = Ext.LF.CtxVar(l2, Id.mk_name(Id.SomeString s)) in 
                                     Ext.Comp.TypArr(l2, Ext.Comp.TypBox(l2, 
                                     Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1), c), conTypArr l2 lt lju lsym t)
@@ -751,23 +807,22 @@ let stmt_to_prove l lt st lju lsym =
                   (match (tp,p) with (** dummy string n might want to write a findtyp fun *) 
                    | ([TPremisse(l2,nao1,None,va1)],Premisse(l3,nao2,None,va2)) ->                                    
                                  begin match va1 with (** you ignore nao1*)(** dummy "n"*)
-                                   |VAltAtomic(l4,s1,None) ->  output_string out_channel " stmttoprove forall n n\n";
+                                   |VAltAtomic(l4,s1,None) ->  
                                                                let (jn,lsym1)= findJ va2 lju in 
-                                                               let v1 = valtp l3 lt lsym1 va2 in 
-                                                               output_string out_channel jn; output_string out_channel " : jn stmtp\n"; 
+                                                               let v1 = valtp l3 lt lsym1 va2 in  
                                                                (Ext.Comp.TypPiBox(l1,Ext.LF.MDecl(l2,Id.mk_name(Id.SomeString s1),
                                                                Ext.LF.Atom(l2,Id.mk_name(Id.SomeString "n"),Ext.LF.Nil)(*valts l2 lsym va1*),
                                                                Ext.LF.Null), 
                                                                Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null)),
                                                                Some([s1]))
 
-                                   | _ -> output_string out_channel " stmttoprove forall _\n";
+                                   | _ -> 
                                           begin match nao1 with
                                             | Some(PName(n1)) ->  
                                                    let (jn,lsym1)= findJ va2 lju in
                                                    let  aa1  = valtp l2 lt lsym1 va1  in 
                                                    let v1 = valtp l3 lt lsym1 va2 in 
-                                                   output_string out_channel jn; output_string out_channel " : jn stmtp\n"; 
+                                                    
                                                    (Ext.Comp.TypPiBox(l1,Ext.LF.MDecl(l2,Id.mk_name(Id.SomeString n1),
                                                    Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),aa1), Ext.LF.Null), 
                                                    Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null)),
@@ -778,7 +833,7 @@ let stmt_to_prove l lt st lju lsym =
                                           end 
                                  end
 
-                   | (TPremisse(l2,nao1,Some(c1),va1)::t ,Premisse(l3,nao2,co,va2)) -> output_string out_channel "stmtto prove with context\n";
+                   | (TPremisse(l2,nao1,Some(c1),va1)::t ,Premisse(l3,nao2,co,va2)) -> 
                       begin match c1 with 
                         | [NewCon(s1,x2)] -> let lp1 = [TPremisse(l2,nao1,Some([Con(s1)]),va1)] @ t @ [TPremisse(l3,nao2,co,va2)] in 
                                              let (s2, ls2) = findJ x2 lju in
@@ -789,10 +844,11 @@ let stmt_to_prove l lt st lju lsym =
                                                               let va3 = Ext.LF.Atom(l1, Id.mk_name(Id.SomeString jn), va4) in 
                                                               let tbox = Ext.Comp.TypBox(l5, va3,Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s2)))in
                                                               let cta = Ext.Comp.TypPiBox(l4, Ext.LF.MDecl(l4,Id.mk_name(Id.SomeString s3),
-                                                                        Ext.LF.Atom(l2,Id.mk_name(Id.SomeString s5), Ext.LF.Nil), Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s2))), tbox) in
+                                                                        Ext.LF.Atom(l2,Id.mk_name(Id.SomeString s5), Ext.LF.Nil), 
+                                                                        Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s2))), tbox) in
                                                               let ls = List.fold_left (fun x y -> 
                                                                        match y with |TPremisse(_,Some(PName(s)),_,_) -> s::x 
-                                                                                    |TPremisse(_,None,_,_) -> x) [] t in output_string out_channel "stmtto prove with context over\n";
+                                                                                    |TPremisse(_,None,_,_) -> x) [] t in 
                                                               (Ext.Comp.TypCtxPi(l1, (Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2), 
                                                                Ext.Comp.Explicit), cta), Some(ls))
 
@@ -805,7 +861,6 @@ let stmt_to_prove l lt st lju lsym =
                                                                                 match y with |TPremisse(_,Some(PName(s)),_,_) -> s::x 
                                                                                              |TPremisse(_,None,_,_) -> x) [] t in
                                                                                   (*let va3 = valts l1 lsym x2 in*)
-                                                                  output_string out_channel "stmtto prove with context _\n";
                                                                   (Ext.Comp.TypCtxPi(l1, (Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2), 
                                                                   Ext.Comp.Implicit), cta), Some(n1::ls))
                                                         | None -> let s = locToString(l2) in 
@@ -818,130 +873,230 @@ let stmt_to_prove l lt st lju lsym =
                                     raise (Error (s1))
                       end 
                    | _ -> let s = locToString(l) in 
-                          let s1 = "Sorry, try again later. " ^ s in 
+                          let s1 = "Context problem. " ^ s in 
                           raise (Error (s1)) 
                    )
     | Exist (l1, p) -> 
              begin match p with
-               | Premisse( l2, None, None, va) -> output_string out_channel " stmttoprove n n\n";  
+               | Premisse( l2, None, None, va) ->  
                                                   let (jn, lsym) = findJ va lju in
                                                   let va1 = valts l2 lsym va in
                                                   (Ext.Comp.TypBox(l1, Ext.LF.Atom(l1, Id.mk_name(Id.SomeString jn), va1), Ext.LF.Null),None)
-               | Premisse _ -> raise (Error ("Sorry, i am not implemented yet."))
+               | Premisse _ -> raise (Error ("Not implemented."))
              end 
 
 let rec list_of_nil l =
-  match l with | [] -> true | []::t -> list_of_nil t | h::t -> printL h; list_of_nil t
+  match l with | [] -> true | []::t -> list_of_nil t | h::t -> list_of_nil t
 
 let rec comp_box l lt lsym co va =
   match co with 
     | Some([Con(s)]) -> let va1 = valtpPar l lt lsym va in
                       Ext.Comp.Box(l, [Id.mk_name(Id.SomeString s)],va1)
-    | _ -> raise (Error ("Sorry, i am not implemented yet in comp_box "))
+    | _ -> raise (Error ("Should use a context that has already been specified \n"))
 
+let rec contain_lam llam va =
+  match va with
+    | VAltAtomic(l, s, Some(vao)) -> if (checkString s llam) then true else contain_lam llam vao 
+    | VAltAtomic(l, s, None) -> if (checkString s llam) then true else false
+    | VAltBin(l, va) -> contain_lam llam va
+    | VAltLam(l, _, va) -> contain_lam llam va
+    | VAltId(l, _, _, Some(va)) -> contain_lam llam va
+    | VAltId(l, _, _, None) -> false
+    | VAltFn(l, _, _, Some(va)) -> contain_lam llam va
+    | VAltFn(l, _, _, None) -> false
+    | VAltPar(l,a,Some(va)) -> if (contain_lam llam a) then true else contain_lam llam va
+    | VAltPar(l,a,None) -> contain_lam llam a
+    | VAltOftBlock (l,_,Some(va)) -> contain_lam llam va
+    | VAltOftBlock (l,_,None) -> false
 
-let rec comp_branch l lt n omlam lsym al cb cano = 
+let get_comp_var var =
+  match var with
+    | "x" -> "u"
+    | "y" -> "v"
+    | "z" -> "w"
+    | "u" -> "q"
+    | "v" -> "r"
+
+let rec get_var va1 = 
+  match va1 with 
+    | VAltOftBlock(l1 , [(t, d)], _) -> t
+    | VAltAtomic(l1, v, vao) -> begin match vao with
+                                | Some(va) -> get_var va
+                                | None ->  let s1 = " Couldn't find the correponding variable. " in 
+                                           raise (Error (s1))
+                                end
+
+    | VAltOft(l1, [(t, d)], _) -> t
+
+    | _ -> let s1 = " This should have the proper syntax for context declaration, couldn't find the corresponding variable. " in 
+           raise (Error (s1)) 
+
+let count = ref 0
+
+let rec count_valt lju va1 va2 = 
+  match va1 with 
+    | VAltOftBlock(l1 , ltd, Some(va)) -> begin match va2 with
+                                            | VAltOftBlock(l1 , ltd, vao) -> (count := !count + 1; !count)
+                                            | _ -> (count := !count + 1; count_valt lju va va2)
+                                          end
+    | VAltAtomic(l1, v, a) -> let (s1, ls1) = findJ (VAltAtomic(l1, v, a)) lju in
+                              let (s2, ls2) = findJ va2 lju in
+                              if s1 = s2 
+                              then (count := !count + 1; !count)
+                              else let s = locToString(l1) in 
+                                   let s1 = " This should have the proper syntax for context declaration. " ^ s in 
+                                   raise (Error (s1))
+(*    | VAltPar(l1, a, b) ->*)
+    | _ -> let s1 = " This should have the proper syntax for context declaration. " in 
+           raise (Error (s1)) 
+
+let rec comp_branch l lt n omlam lsym llam lju al cb cano = 
   match al with 
     | [] -> []
-    | Arg(l1, va, pl)::t -> if cb
+    | Arg(l1, TPremisse(l2, None, None, va), pl)::t -> if cb
                             then
                             let s = locToString(l) in 
                             let s1 = s ^ " Not implemented in context comp_branch arg with context." in 
                             raise (Error (s1))
-                            else
-                            output_string out_channel "comp_branch arg \n"; 
+                            else 
                             let v1 = valtpPar l1 lt lsym va in 
-                            output_string out_channel "calling proofs 3 \n";
-                            let p1 = proofs l1 lt n omlam pl lsym cb cano in 
+                            let p1 = proofs l1 lt n omlam pl lsym llam lju cb cano in 
                             let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, Ext.Comp.MetaObjAnn(l1, Ext.LF.Null, v1)),  p1) in
-                            cb1 :: comp_branch l lt n omlam lsym t cb cano
+                            cb1 :: comp_branch l lt n omlam lsym llam lju t cb cano
+
+    | Arg(l1, TPremisse(l2, None, Some(c), va), pl)::t -> 
+                       begin match c with 
+                         |[NewCon(n, va1)] -> count := 0;
+                                              let k = count_valt lju va1 va in 
+                                              let v = get_var va1 in
+                                              let s1 = get_comp_var v in 
+                                              let pvar = Ext.LF.Root(l2, Ext.LF.ProjPVar(l2, k, (Id.mk_name(Id.SomeString s1), Ext.LF.Id(l2))), Ext.LF.Nil) in
+                                              let p1 = proofs l1 lt n omlam pl lsym llam lju cb cano in
+                                              let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, 
+                                                        Ext.Comp.MetaObjAnn(l1, Ext.LF.CtxVar(l2,Id.mk_name(Id.SomeString n)), pvar)),  p1) in
+                                              cb1 :: comp_branch l lt n omlam lsym llam lju t cb cano
+
+                         | _ -> let s = locToString(l) in 
+                                let s1 = "Need to specify what has been added to the context. " ^ s in 
+                                raise (Error (s1)) 
+                       end
 
 
     | Argument(l1, Rule(l2,lp1,RName(rn),p),lp)::t ->  (** change to filter instead of map*)
                let lp2 = List.map (fun (Premisse(l3, no,c, va)) -> match no with | Some(PName(n1))-> [n1] 
                                                                                  | _ -> []) (lp1@[p]) in 
                if lp2 = []
-               then (output_string out_channel "comp_branch argument then \n"; 
+               then ( 
                let Premisse(l4, _, co, va) = p in
                begin match co with
                       | None -> let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), Ext.LF.Nil) in  
-                                output_string out_channel "calling proofs 2 \n";
-                                let p1 = proofs l1 lt n omlam lp lsym cb cano in
+                                
+                                let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in
                                 let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, Ext.Comp.MetaObjAnn(l1, Ext.LF.Null, v1)), p1) in
-                                cb1 :: comp_branch l lt n omlam lsym t cb  cano
+                                cb1 :: comp_branch l lt n omlam lsym llam lju t cb  cano
                       | Some([Con(c)]) -> let v1 = Ext.LF.Root(l2, Ext.LF.Name(l2, Id.mk_name(Id.SomeString rn)), Ext.LF.Nil)in  
-                                        output_string out_channel "calling proofs 4 \n";
-                                        let p1 = proofs l1 lt n omlam lp lsym cb cano in
+                                        
+                                        let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in
                                         let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, Ext.Comp.MetaObjAnn(l1, 
                                                   Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString c)), v1)), p1)in 
-                                        cb1 :: comp_branch l lt n omlam lsym t cb cano
+                                        cb1 :: comp_branch l lt n omlam lsym llam lju t cb cano
                      |  _ -> let s = locToString(l) in 
                              let s1 = s ^ " Not implemented in context comp_branch" in 
                              raise (Error (s1))
                end
                )
-               else (output_string out_channel "comp_branch argument else \n"; let Premisse(l4, _, co, va) = p in
+               else (let Premisse(l4, _, co, va) = p in
+                   if contain_lam llam va 
+                   then
+                   begin match co with
+                      | None -> let s = locToString(l) in 
+                                let s1 = s ^ " This lambda term expects a context." in 
+                                raise (Error (s1))
+
+                      | Some([Con(c)]) -> let Premisse(l5,_,_,va5)::t1 = lp1 in
+                                          let var = get_var va5 in 
+                                          let cvar = get_comp_var var in 
+                                          let va2 = (List.fold_left (fun x y -> match y with |[] -> x | n1::[] -> 
+                                                     let dots = Ext.LF.Dot(l2, Ext.LF.Id(l2), Ext.LF.Head(Ext.LF.Name(l2, Id.mk_name(Id.SomeString var)))) in 
+                                                     let dots1 = Ext.LF.Dot(l2, dots, Ext.LF.Head(Ext.LF.Name( l2, Id.mk_name(Id.SomeString cvar)))) in
+                                                     let norm = Ext.LF.Root(l2, Ext.LF.MVar(l2, Id.mk_name(Id.SomeString n1), dots1),Ext.LF.Nil) in 
+                                                     let lam = Ext.LF.Lam(l2, Id.mk_name(Id.SomeString cvar), norm) in
+                                                     let lam1 = Ext.LF.Lam(l2, Id.mk_name(Id.SomeString var), lam ) in
+                                                     Ext.LF.App(l2, lam1, x))) Ext.LF.Nil lp2 in
+
+                                         let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), va2) in 
+
+
+                                        let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in
+                                        let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, 
+                                        Ext.Comp.MetaObjAnn(l1, Ext.LF.CtxVar(l4, Id.mk_name(Id.SomeString c)), v1)), p1) in 
+                                        cb1 :: comp_branch l lt n omlam lsym llam lju t cb cano
+                      |  _ -> let s = locToString(l) in 
+                              let s1 = s ^ " Not implemented in context comp_branch" in 
+                              raise (Error (s1))
+                   end
+                   else 
                    begin match co with
                       | None ->  let va1 = (List.fold_left (fun x y -> match y with 
                                             |[] -> x | n1::t -> Ext.LF.App(l1, Ext.LF.Root(l2, Ext.LF.MVar(l2, 
                                                                 Id.mk_name(Id.SomeString n1),Ext.LF.EmptySub(l1)),Ext.LF.Nil),x))) Ext.LF.Nil lp2 in
                                                                 let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), va1) in 
-                                                                output_string out_channel "calling proofs 5 \n";
-                                                                let p1 = proofs l1 lt n omlam lp lsym cb cano in 
+                                                                let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in 
                                                                 let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, 
                                                                 Ext.Comp.PatMetaObj(l1, Ext.Comp.MetaObjAnn(l1, Ext.LF.Null, v1)), p1) in 
-                                                                cb1 :: comp_branch l lt n omlam lsym t cb cano
+                                                                cb1 :: comp_branch l lt n omlam lsym llam lju t cb cano
 
                       | Some([Con(c)]) -> let va1 = (List.fold_left (fun x y -> match y with |[] -> x | n1::[] -> Ext.LF.App(l1, Ext.LF.Root(l2, Ext.LF.MVar(l2, 
                                                                    Id.mk_name(Id.SomeString n1),Ext.LF.Id(l1)),Ext.LF.Nil),x))) Ext.LF.Nil lp2 in
                                         let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), va1) in 
-                                        output_string out_channel "calling proofs 6 \n";
-                                        let p1 = proofs l1 lt n omlam lp lsym cb cano in
+                                        let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in
                                         let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, 
                                         Ext.Comp.MetaObjAnn(l1, Ext.LF.CtxVar(l4, Id.mk_name(Id.SomeString c)), v1)), p1) in 
-                                        cb1 :: comp_branch l lt n omlam lsym t cb cano
+                                        cb1 :: comp_branch l lt n omlam lsym llam lju t cb cano
                       |  _ -> let s = locToString(l) in 
                               let s1 = s ^ " Not implemented in context comp_branch" in 
                               raise (Error (s1))
                     end
                     )
 
-and proofs l lt n omlam pl lsym cb cano = 
+and proofs l lt n omlam pl lsym llam lju cb cano = 
   match pl with 
     | [] -> raise (Error ("Sorry, I am not implemented yet.[]"))
     | h::t ->  (** in some cases nothing happens with t *)
        begin match h with
-         | URule (l1, tp, RName(n1), lvno) -> output_string out_channel n1; output_string out_channel " : urule \n";(** why do we ignore the tp *) 
+         | URule (l1, tp, RName(n1), lvno) -> (** why do we ignore the tp *) 
                   begin match (lvno,omlam) with (** (None,None) has been added it might cause problems with (None,_)*)
-                    | (None,None) -> output_string out_channel " : urule none none\n";
-                                     Ext.Comp.Box(l, [], Ext.LF.Root(l1, Ext.LF.Name( l1, Id.mk_name(Id.SomeString n1)),Ext.LF.Nil)) 
-
-                    | (None,_) -> output_string out_channel " : urule none\n"; 
+                    | (None,_) -> 
                                   Ext.Comp.Syn(l1, Ext.Comp.BoxVal(l, Ext.LF.Null, Ext.LF.Root(l1, Ext.LF.Name( l1, Id.mk_name(Id.SomeString n1)), Ext.LF.Nil)))
 
-                    | (Some(vn),Some([s1])) -> printOM [s1] ;let va = VAltAtomic(l1,s1,None) in 
+                    | (Some(vn),Some([s1])) -> let va = VAltAtomic(l1,s1,None) in 
                                                let v1 = valtp l1 lt lsym va in
                                                Ext.Comp.Box(l, [], Ext.LF.Root(l1, Ext.LF.Name( l1, Id.mk_name(Id.SomeString n1)),v1))                       
                     |  (_, Some(l)) -> let s1 = "more than one element in mlam  1  "  in 
                                        raise (Error (s1)) (* see case below if you raise this error *)
                   end
-         | Proof (l1, tp, VName(s), al) -> output_string out_channel "proof \n";
+         | Proof (l1, tp, VName(s), al) -> 
                   begin match omlam with (** you changed a boxval to a var might be a source of problems *) (** why do we ignore the tp *) 
-                    | Some(h1::t1) -> output_string out_channel "proof some  \n";
+                    | Some(h1::t1) -> 
                                       (*let va = VAltAtomic(l1,h1,None) in let v1 = valtpPar l1 lt lsym va in *) 
                                       if cb 
-                                      then (output_string out_channel "cb true \n"; 
-                                      let cc = Ext.Comp.Case(l1,Pragma.RegularCase, Ext.Comp.Var(l1,Id.mk_name(Id.SomeString h1)), 
-                                               comp_branch l1 lt n omlam lsym al cb  cano) in 
+
+                                      then (
+                                      let cbranch = comp_branch l1 lt n omlam lsym llam lju al cb  cano in 
+                                      let cc = Ext.Comp.Case(l1,Pragma.RegularCase, Ext.Comp.Var(l1,Id.mk_name(Id.SomeString s)), 
+                                               cbranch) in 
                                       let ls = h1::t1 in 
                                       let lcf = List.fold_left (fun x y -> Ext.Comp.Fun(l1,Id.mk_name(Id.SomeString y),x) ) cc ls in
                                       lcf)
+
                                       else
+                                      let cbranch = comp_branch l1 lt n omlam lsym llam lju al cb  cano in
                                       let cc = Ext.Comp.Case(l1,Pragma.RegularCase, Ext.Comp.BoxVal(l1, Ext.LF.Null, 
-                                      Ext.LF.Root(l1 ,Ext.LF.MVar(l1 ,Id.mk_name(Id.SomeString h1),Ext.LF.EmptySub(l1)), 
-                                      Ext.LF.Nil)), comp_branch l1 lt n omlam lsym al cb cano) in 
+                                      Ext.LF.Root(l1 ,Ext.LF.MVar(l1 ,Id.mk_name(Id.SomeString s),Ext.LF.EmptySub(l1)), 
+                                      Ext.LF.Nil)), cbranch) in 
                                       let ls = h1::t1 in 
                                       List.fold_left (fun x y -> Ext.Comp.MLam(l1,(Id.mk_name(Id.SomeString y),Ext.Comp.MObj),x) ) cc ls
+
                     | Some([]) -> let s1 = "Weird empty string list. "  in 
                                   raise (Error (s1)) 
                     | None -> let s = locToString(l1) in 
@@ -949,18 +1104,18 @@ and proofs l lt n omlam pl lsym cb cano =
                               raise (Error (s1)) 
                   end
 
-         | PRule (l1, tp, pf, lva) -> output_string out_channel "Prule \n";
+         | PRule (l1, tp, pf, lva) -> 
                   begin match lva with 
                     | [] -> raise (Error ("Sorry, I am not implemented yet (PR1)."))
                     | [TPremisse(l2,None,_,VAltAtomic(l3,s,None))] -> 
                        begin match pf with 
                          | InductionHyp(l2) -> let v1 = VAltAtomic(l1,s,None) in 
-                                               output_string out_channel "name  1.......... \n";
+                                               
                                                let TPremisse(_,Some(PName(s1)),_,_) = tp in
                                                let v2 = VAltAtomic(l1,s1,None) in 
-                                               let ag = Arg(l1,v2,t) in
+                                               let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
                                                let v3 = valtpPar l1 lt lsym v1 in
-                                               let cbranch = comp_branch l lt n (Some([s1])) lsym [ag] cb  cano in
+                                               let cbranch = comp_branch l lt n (Some([s1])) lsym llam lju [ag] cb  cano in
                                                Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)),
                                                ([], v3)), cbranch)
                          | _ -> raise (Error ("Sorry not implemented yet in prule."))
@@ -973,34 +1128,59 @@ and proofs l lt n omlam pl lsym cb cano =
                                   begin match tp with 
                                     | TPremisse(_,Some(PName(s1)),_,_) -> 
                                                 let v2 = VAltAtomic(l1,s1,None) in 
-                                                let ag = Arg(l1,v2,t) in
+                                                let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
                                                 let cv = Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)) in
 
-
-                                                (** you might need to reverse the list *) 
                                                 let lca = List.fold_left (fun x (TPremisse(l3,None,c,va1)) -> 
                                                           let cbox = comp_box l3 lt lsym c va1 in
                                                           Ext.Comp.Apply(l1, x, cbox )  ) cv lvn1 in
-                                                let cbranch = comp_branch l lt n (Some([s1])) lsym [ag] cb cano in
+                                                let cbranch = comp_branch l lt n (Some([s1])) lsym llam lju [ag] cb cano in
 
 
                                                 Ext.Comp.Case(l1,Pragma.RegularCase, lca, cbranch)
 
                                     | TPremisse(l4,None,_,v2) -> (** you are gonna want to match the co to use it in valtpar once fixed*)
+                                                                 
 
-                                                let cv = Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)) in
+                                                let cv = (*Ext.Comp.CtxApp(l1,*)Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n))
+                                                         (*, Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString "g")))*) in
 
                                                 let lca = List.fold_left (fun x (TPremisse(l3,None,c,va1)) -> 
-                                                          let cbox = comp_box l3 lt lsym c va1 in
-                                                          Ext.Comp.Apply(l1, x, cbox )  ) cv lvn1 in
-                                                let v1 = valtpPar l4 lt lsym v2 in 
-                                                let Some(c1) = cano in
-                        
-                                                let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, Ext.Comp.MetaObjAnn(l1, Ext.LF.Null, v1)), c1) in 
+                                                          begin match c with 
+                                                            | Some([Con(s)]) -> let va3 = valtpPar l lt lsym va1 in 
+                                                                                Ext.Comp.MAnnApp(l1, x, (Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)), va3))
 
-                                                Ext.Comp.Case(l1,Pragma.RegularCase, lca, [cb1]) 
+                                                            | Some(Con(s)::[NewCon(s1, va4)]) -> let va3 = valtpPar l lt lsym va1 in
+                                                                                                 let ctxv = Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)) in
+                                                                        (** dummy list of variables *)
+                                                                        let va5 = context_sch l4 (["x"]) lsym lju va4 in
+                                                                        let td = Ext.LF.TypDecl(Id.mk_name(Id.SomeString s1), Ext.LF.Sigma(l4, va5)) in
+                                                                        let dd = Ext.LF.DDec(ctxv, td) in
+                                                                        Ext.Comp.MAnnApp(l1, x, (dd, va3))
+
+                                                            | Some(Con(s)::[Con(s1)]) -> let va3 = valtpPar l lt lsym va1 in 
+                                                                        let dd = (Id.mk_name(Id.SomeString s))::[Id.mk_name(Id.SomeString s1)] in
+                                                                        Ext.Comp.MApp(l1, x, (dd, va3))
+
+                                                            | _ -> let s = locToString(l4) in 
+                                                                           let s1 = "Problem with the context of your premisse." ^ s in 
+                                                                           raise (Error (s1))
+
+
+                                                          end
+                                                           ) cv (List.rev lvn1) in
+
+                                                begin match v2 with 
+                                                  | VAltAtomic(l5, s5, None) -> let v1 = Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s5)), 
+                                                                                         Ext.LF.Nil) in 
+                                                                                let Some(c1) = cano in                        
+                                                                                let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, 
+                                                                                Ext.Comp.MetaObjAnn(l1, Ext.LF.Null, v1)), c1) in 
+                                                                                Ext.Comp.Case(l1,Pragma.RegularCase, lca, [cb1]) 
+                                                  | _ -> raise (Error ("Sorry not implemented yet in prule."))
+                                                end
                                   end
-                                | _ -> raise (Error ("Sorry not implemented yet in prule."))
+                                | _ -> raise (Error ("Sorry not implemented yet in prule valt."))
                               end
 
                   end
@@ -1008,51 +1188,62 @@ and proofs l lt n omlam pl lsym cb cano =
          | InductionHyp (l1) -> raise (Error ("Sorry, I am not implemented yet (IH)."))
                                               
          | CaseAn (l1, tp, [VName(vn)], al) -> if t = [] 
-                                               then raise (Error ("Need to explain what is provent by the case analysis.")) 
+                                               then 
+                                               let cbranch = comp_branch l lt n (Some([vn])) lsym llam lju al cb None in
+                                               Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString vn)), cbranch)
                                                else
-                                               let pt = proofs l lt n None t lsym cb  cano in
-                                               let cbranch = comp_branch l lt n (Some([vn])) lsym al cb (Some(pt)) in
+                                               let pt = proofs l lt n None t lsym llam lju cb cano in
+                                               let cbranch = comp_branch l lt n (Some([vn])) lsym llam lju al cb (Some(pt)) in
                                                Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString vn)), cbranch) (** should something happen with tp?*)
 
          | PTheorem (l1, tn) -> raise (Error ("Sorry, I am not implemented yet (PTheorem)."))
 
+         | Unique(l1, np) -> begin match np with 
+                               | TPremisse(l2, None, None, VAltAtomic(l3, s1, None)) -> Ext.Comp.Syn(l1, Ext.Comp.BoxVal(l1, Ext.LF.Null,  
+                                                                                        Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s1)), Ext.LF.Nil)))
+                               | _ -> let s = locToString(l) in 
+                                      let s1 = s ^ " This shouldn't have a context" in 
+                                      raise (Error (s1))
+                              end
+
          | _ -> raise (Error ("Error in theorem."))
        end
 
-let theorem l lt n st pl lju lsym cb = output_string out_channel " theorem translation \n"; (* omlam = [d,f] *)
+let theorem l lt n st pl lju lsym llam cb = (* omlam = [d,f] *)
                                        let (ctb,omlam) =  stmt_to_prove l lt st lju lsym in 
-                                       let prf = proofs l lt n omlam pl lsym cb None in 
+                                       let prf = proofs l lt n omlam pl lsym llam lju cb None in 
                                        [Ext.Sgn.Rec(l, [Ext.Comp.RecFun( Id.mk_name(Id.SomeString n), ctb, prf)])]
 
 
 (* string list -> string list -> Ext.Sgn.decl list, first list terminals secong types *)
-let rec recSectionDecl lt ltyp lv ls lju lsym cb = 
+let rec recSectionDecl lt ltyp lv ls lju lsym llam cb = 
   match ls with 
     | [] -> []
     | h::t -> begin match h with
                 | Grammar (_, lp) -> let las = find_var_prep lp in 
                                      let lvar = find_var lt ltyp las in 
-                                     output_string out_channel "print list of var after find var \n"; printL2 lvar; 
-                                     let ls = sgnTypes lt ltyp lvar lp in 
-                                     output_string out_channel "Grammar decl \n"; (ls @ recSectionDecl lt ltyp lvar t lju lsym cb)
-                | Judgement(l, jn, js, a, lr) -> output_string out_channel "Judgement \n"; output_string out_channel "print list in judgement \n";printL ltyp; 
+                                     
+                                     let ls = sgnTypes lt ltyp lvar llam lp in 
+                                     let llam1 = List.flatten(find_lams lp) in 
+                                     (ls @ recSectionDecl lt ltyp lvar t lju lsym llam1 cb)
+                | Judgement(l, jn, js, a, lr) ->  
                                                  let (lsym1, sgnj) = sgnJudge l jn js ltyp in 
                                                  let lj = judges jn lsym1 lr lju in 
                                                  let JName(s1)=jn in 
-                                                 [sgnj] @ lj @ recSectionDecl lt ltyp lv t (Jdef(s1,lsym1)::lju) (lsym1@lsym) cb
+                                                 [sgnj] @ lj @ recSectionDecl lt ltyp lv t (Jdef(s1,lsym1)::lju) (lsym1@lsym) llam cb
                 | ContextDecl (l, CName(cn), lva) -> let c =  context lv lsym lju lva in 
                                                      [Ext.Sgn.Schema(l, Id.mk_name(Id.SomeString cn), Ext.LF.Schema(c))] 
-                                                     @ recSectionDecl lt ltyp lv t lju lsym true
-                | Theorems (l, TName(n), st, pl) -> output_string out_channel "Theorems \n"; printLju lju;
-                                                    let t1 = theorem l lt n st pl lju lsym cb in 
-                                                    t1 @ recSectionDecl lt ltyp lv t lju lsym cb
+                                                     @ recSectionDecl lt ltyp lv t lju lsym llam true
+                | Theorems (l, TName(n), st, pl) -> 
+                                                    let t1 = theorem l lt n st pl lju lsym llam cb in 
+                                                    t1 @ recSectionDecl lt ltyp lv t lju lsym llam cb
               end
 
 (* section list -> string list *)
 let rec recSectionDeclGram l ls =
   match ls with
     | [] -> []
-    | Grammar (_, Production(l1, Typ(l2, t1), la)::t2):: t -> output_string out_channel t1; output_string out_channel " gram decl \n"; 
+    | Grammar (_, Production(l1, Typ(l2, t1), la)::t2):: t ->  
                                                               let rec ltails lp acc = match lp with 
                                                                                         | [] -> acc 
                                                                                         | Production(l3, Typ(l4, t3), la)::t4 -> ltails t4 (t3::acc)  in
@@ -1069,6 +1260,6 @@ let rec recSectionDeclGram l ls =
 let sectionDecls ls = 
   match ls with
     | Terminals_decl(l,lt):: t -> let lt1 = List.map (fun x -> let Terminal(_, t1) = x in t1) lt in 
-                                  let ltyp = recSectionDeclGram l t in output_string out_channel "Section Decls \n"; 
-                                  printL ltyp; recSectionDecl lt1 ltyp [] t [] [] false
+                                  let ltyp = recSectionDeclGram l t in 
+                                  recSectionDecl lt1 ltyp [] t [] [] [] false
     | _ -> raise (Error ("No terminal declaration or grammar at the beginnig of file"))

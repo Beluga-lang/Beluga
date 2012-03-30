@@ -96,9 +96,12 @@ and premise =
 and pJudge =
   | PJudge of Loc.t * vAlternative
 
+and projection = 
+  | Proj of Loc.t * string * int
+
 and vAlternative =
   | VAltAtomic of Loc.t * string * vAlternative option      (* z, suc nat *)
-  | VAltId of Loc.t * string * vAlternative option 
+  | VAltId of Loc.t * string * projection list * vAlternative option 
   | VAltLam of Loc.t * aName * vAlternative (* * vName * vAlternative list*)
   | VAltFn of Loc.t * vName * typ_or_valt * vAlternative option
   | VAltBin of Loc.t * vAlternative
@@ -132,10 +135,11 @@ and proof =
   | CaseAn of Loc.t * tpremise * vName list * argument list
   | PTheorem of Loc.t * tName 
   | URule of Loc.t * tpremise * rName * tpremise list option
+  | Unique of Loc.t * tpremise
 
 and argument = 
   | Argument of Loc.t * rules * proof list 
-  | Arg of Loc.t * vAlternative * proof list
+  | Arg of Loc.t * tpremise * proof list
 
 type kind_or_typ =
   | Kind of Ext.LF.kind

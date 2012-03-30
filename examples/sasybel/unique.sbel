@@ -32,28 +32,44 @@ theorem unique : forall d: [g: gamma] |- E .. oft T ; f: [g] |- E .. oft T' exis
 
 T = T' by induction on d :
 
-
-case rule
-
-D1: [g] |- E1 oft (T2 -> T);  
-D2: [g] |- E2 oft T2;
------------------------------- t_app
-[g] |- (app E1 E2) oft T;
+case [g: (x:exp) x oft T] |- x oft T
 
 is
 
-(T2 -> T) = (T2 -> T') by case analysis on f:
+T = T' by case analysis on f:
 
-                 case rule
-
-                 F1: [g] |- E1 oft (T2 -> T');  
-                 F2: [g] |- E2 oft T2;
-                 ------------------------------ t_app
-                 [g] |- (app E1 E2) oft T';
+                 case [g: (y:exp) y oft T'] |- y oft T'
 
                  is 
 
-                 eq_ref by induction hypothesis on [g] |- D1 .. , [g] |- F1 .. ;
+                 eq_ref  by uniqueness of variables
+
+                 end case
+                 end case analysis
+
+end case
+
+%{
+case rule
+
+D: [g] |- {x:exp} (x oft T1) (E[x] oft T2);
+-------------------------------------------- t_lam
+[g] |- (lam T1 E) oft (T1 -> T2);
+
+is
+
+eq_ref by case analysis on f:
+
+                 case rule
+
+
+                 F: [g] |- {x:exp} (x oft T1) (E[x] oft T2);
+                 -------------------------------------------- t_lam
+                 [g] |- (lam T1 E) oft (T1 -> T2);
+
+                 is 
+
+                 eq_ref  by induction hypothesis on [g, b:(x:exp) x oft _] |- D .. b.1 b.2 , [g,b] |- F .. b.1 b.2 ;
 
                  end case
                  end case analysis
@@ -61,39 +77,6 @@ is
 T = T' by rule eq_ref
 
 end case
-
-
-end induction
-end theorem
-%{
-case rule
-
-D1 : [g] |- {x:exp} x oft T1;  
-D2 : [g] |- E[x] oft T2;
----------------------------------- t_lam
-[g] |- (lam T1 E) oft (T1 -> T2);
-
-is
-
-(T2 -> T) = (T2 -> T') by case analysis on f:
-
-                 case rule
-
-                 F1: [g] |- {x:exp} x oft T1;  
-                 F2: [g] |- E[x] oft T2;
-                 ---------------------------------- t_lam 
-                 [g] |- (lam T1 E) oft (T1 -> T2);
-
-                 is 
-
-                 eq_ref  by induction hypothesis on [g, b:(x:exp) x oft _] |- D1 .. , [g,b] |- F1 .. ;
-
-                 end case
-                 end case analysis
-
-T = T' by rule eq_ref
-
-end case 
 
 case rule
 
@@ -124,3 +107,7 @@ T = T' by rule eq_ref
 
 end case
 }%
+
+end induction
+end theorem
+

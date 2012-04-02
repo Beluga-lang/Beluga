@@ -1,44 +1,52 @@
 % Types
-tp: type.   %name tp T.
-%base type
-int: tp.
-arr  : tp -> tp -> tp.
-code : tp -> tp -> tp.
-cross: tp -> tp -> tp.
-unit :tp.
+
+datatype tp: type =   
+| int: tp
+| arr  : tp -> tp -> tp
+| code : tp -> tp -> tp
+| cross: tp -> tp -> tp
+| unit :tp
+;
+%name tp T.
 
 
 % Target language 
-target: tp -> type.      %name target Q.
-bottom: target T.
-tunit : target unit.
-tfst  : target (cross T S) -> target T.
-tsnd  : target (cross T S) -> target S.
-tpair : target T -> target S -> target (cross T S).
-tapp  : target (code T S) -> target T -> target S. 
-tlam  : (target T -> target S) -> target (code T S).
-tlet  : target T -> (target T -> target S) -> target S.
+datatype target: tp -> type =     
+| bottom: target T
+| tunit : target unit
+| tfst  : target (cross T S) -> target T
+| tsnd  : target (cross T S) -> target S
+| tpair : target T -> target S -> target (cross T S)
+| tapp  : target (code T S) -> target T -> target S
+| tlam  : (target T -> target S) -> target (code T S)
+| tlet  : target T -> (target T -> target S) -> target S
 % We write E for the type of the environment
-tpack : {E:tp} target (cross (code (cross T E) S) E)
-       -> target (arr T S). 
-topen : target (arr T S)
+| tpack : {E:tp} target (cross (code (cross T E) S) E)
+       -> target (arr T S)
+| topen : target (arr T S)
        -> ({e:tp} target (cross (code (cross T e) S) e) -> target S')
-       -> target S'.
-tz: target int.
-tsuc: target int -> target int.
+       -> target S'
+| tz: target int
+| tsuc: target int -> target int
+;
+%name target Q.
 
-% Natural Numbers                            
-nat: type.  %name nat N.
-z:nat.
-suc: nat -> nat.
+% Natural Numbers     
+datatype nat: type =  
+| z:nat
+| suc: nat -> nat
+;
+%name nat N.                       
 
-
-
-
-member_tp: nat -> tp -> tp -> type.
-m_last: member_tp z P (cross P R').
-m_cons: member_tp N P R'
-	-> member_tp (suc N) P (cross R R').
+%{
+%  member N R P is true iff
+%   P is the (N-1)th member of R, counting from the head.
+}% 
+datatype member_tp: nat -> tp -> tp -> type =
+| m_last: member_tp z P (cross P R')
+| m_cons: member_tp N P R'
+	-> member_tp (suc N) P (cross R R')
+;
 
 
 

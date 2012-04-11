@@ -819,13 +819,14 @@ let stmt_to_prove l lt st lju lsym =
                                    | _ -> 
                                           begin match nao1 with
                                             | Some(PName(n1)) ->  
-                                                   let (jn,lsym1)= findJ va2 lju in
-                                                   let  aa1  = valtp l2 lt lsym1 va1  in 
-                                                   let v1 = valtp l3 lt lsym1 va2 in 
+                                                   let (jn,lsym1)= findJ va1 lju in
+                                                   let  aa1  = valtp l2 lt lsym va1  in 
+                                                   let (jn2,lsym2)= findJ va2 lju in
+                                                   let v1 = valtp l3 lt lsym va2 in 
                                                     
                                                    (Ext.Comp.TypPiBox(l1,Ext.LF.MDecl(l2,Id.mk_name(Id.SomeString n1),
                                                    Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),aa1), Ext.LF.Null), 
-                                                   Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null)),
+                                                   Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn2),v1),Ext.LF.Null)),
                                                    Some([n1]))
                                             | None -> let s = locToString(l2) in 
                                                       let s1 = "This premise needs a name.  " ^ s in 
@@ -908,6 +909,7 @@ let rec contain_lam llam va =
     | VAltPar(l,a,None) -> contain_lam llam a
     | VAltOftBlock (l,_,Some(va)) -> contain_lam llam va
     | VAltOftBlock (l,_,None) -> false
+    | VAltLet (l,va) -> contain_lam llam va
 
 let get_comp_var var =
   match var with
@@ -1039,7 +1041,7 @@ let rec comp_branch l lt n omlam lsym llam lju al cb cano =
                    begin match co with
                       | None ->  let va1 = (List.fold_left (fun x y -> match y with 
                                             |[] -> x | n1::t -> Ext.LF.App(l1, Ext.LF.Root(l2, Ext.LF.MVar(l2, 
-                                                                Id.mk_name(Id.SomeString n1),Ext.LF.EmptySub(l1)),Ext.LF.Nil),x))) Ext.LF.Nil lp2 in
+                                                                Id.mk_name(Id.SomeString n1),Ext.LF.EmptySub(l1)),Ext.LF.Nil),x))) Ext.LF.Nil (List.rev lp2) in
                                                                 let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), va1) in 
                                                                 let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in 
                                                                 let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, 
@@ -1110,14 +1112,17 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                     | [TPremisse(l2,None,_,VAltAtomic(l3,s,None))] -> 
                        begin match pf with 
                          | InductionHyp(l2) -> let v1 = VAltAtomic(l1,s,None) in 
-                                               
-                                               let TPremisse(_,Some(PName(s1)),_,_) = tp in
-                                               let v2 = VAltAtomic(l1,s1,None) in 
-                                               let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
-                                               let v3 = valtpPar l1 lt lsym v1 in
-                                               let cbranch = comp_branch l lt n (Some([s1])) lsym llam lju [ag] cb  cano in
-                                               Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)),
-                                               ([], v3)), cbranch)
+                                               begin match tp with
+                                                 | TPremisse(_,Some(PName(s1)),_,_) -> 
+                                                             let v2 = VAltAtomic(l1,s1,None) in 
+                                                             let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
+                                                             let v3 = valtpPar l1 lt lsym v1 in
+                                                             let cbranch = comp_branch l lt n (Some([s1])) lsym llam lju [ag] cb  cano in
+                                                             Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)),
+                                                             ([], v3)), cbranch)
+                                                 | _ ->      let v3 = valtpPar l1 lt lsym v1 in
+                                                             Ext.Comp.Syn(l1,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)), ([], v3)))
+                                               end
                          | _ -> raise (Error ("Sorry not implemented yet in prule."))
                        end
                     | [TPremisse(l2,Some(PName(s2)),_,VAltAtomic(l3,s,None))] -> let s = locToString(l1) in 

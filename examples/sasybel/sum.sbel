@@ -1,4 +1,4 @@
-%{ lju = [(value,["value"]),(sum,["+","="]),(less,["<"])] lsym = ["value","+","=","<"] }%
+%{ Example with natural numbers }%
 
 terminals z s lam true false
 syntax
@@ -9,12 +9,12 @@ n ::= z
 bool ::= true
   | false;
 
-judgment value: n value;
+notation value: n value;
 
 -------------- val-z
 z value;
 
-judgment sum: n + n = n;
+notation sum: n + n = n;
 
 -------------------- sum-z
 z + (N ) = (N) ;
@@ -23,7 +23,7 @@ N1 + N2 = N3 ;
 ------------------------ sum-s
 (s N1) + N2 = (s N3) ;
 
-judgment less : n < n ;
+notation less : n < n ;
 
 ------------ less-one
 n < (s n) ;

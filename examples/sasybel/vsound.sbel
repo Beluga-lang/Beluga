@@ -1,0 +1,117 @@
+%{ Tutorial example by Marie-Andree B.Langlois }%
+
+terminals z suc lambda app
+syntax 
+
+exp ::= z
+| suc exp
+| x
+| lambda \x .exp[x] 
+| app exp exp 
+| let exp = x in exp[x] ;
+
+notation value : exp value ;
+
+--------------- val-z
+z value ;
+
+e1 value ;
+--------------- val-s
+(suc e1) value ;
+
+------------------------------ val-lam
+(lambda \x . e1[x]) value ;
+
+notation eval : exp eval exp;
+
+--------------- ev-z
+z eval z;
+
+e1 eval e2;
+------------------------- ev-s
+(suc e1) eval (suc e2);
+
+--------------------------------------------- ev-lam
+(lambda \x .e1[x]) eval (lambda \x .e1[x]);
+
+e1 eval (lambda \x .e[x]);
+e2 eval e2';
+e[e2'] eval e1';
+----------------------------------------- ev-app
+(app e1 e2) eval e1';
+
+(e2[e1]) eval v;
+e1 eval v1;
+------------------------------------------- ev-let
+(let e1 = x in e2[x]) eval v;
+
+
+
+theorem val-sound : forall D: E eval E' exists E' value ;
+
+E' value by induction on D:
+
+case rule
+
+	--------------- ev-z
+	z eval z;
+
+	is
+
+	E' value by rule val-z
+
+end case
+
+case rule 
+
+	I: e1 eval e2;
+	---------------------------- ev-s
+	(suc e1) eval (suc e2);
+
+	is
+
+	H: e2 value by induction hypothesis on I;
+	e' value by rule val-s on H;
+
+end case
+
+case rule 
+
+	-------------------------------------------------------- ev-lam
+	(lambda \x . e1[x]) eval (lambda \x . e1[x]);
+
+	is
+
+	e' value by rule val-lam
+
+end case
+
+case rule 
+
+	D1: e1 eval lambda \x . e3[x];
+	D2: e2 eval e2';
+	D3: e3[e2'] eval e1';
+	------------------------------------- ev-app
+	(e1 e2) eval e1';
+
+	is
+
+	e' value by induction hypothesis on D3;
+
+end case
+
+case rule 
+
+	I: e2[e1] eval e1';
+	H: e1 eval e1';
+	----------------------------------------------- ev-let
+	(let x=e1 in e2[x]) eval e1';
+
+	is
+
+	e' value by induction hypothesis on I;
+
+end case
+
+end induction 
+end theorem

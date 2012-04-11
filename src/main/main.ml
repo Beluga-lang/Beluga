@@ -35,6 +35,7 @@ let usage () =
   exit 2
 
 let usasy = ref false
+let externall = ref false
 
 module PC = Pretty.Control
 
@@ -42,6 +43,7 @@ let process_option' arg rest = begin let f = function
   (* these strings must be lowercase *)
   | "+d" -> (Debug.showAll (); rest)
   | "-d" -> (Debug.showNone (); rest)
+  | "+ext" -> (externall := true; rest)
   | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
   | "-s=debruijn" -> (PC.substitutionStyle := PC.DeBruijn; rest)
   | "+implicit" -> (PC.printImplicit := true; rest)
@@ -136,6 +138,10 @@ let rec process_files = function
   | f :: fs               -> (Session [f]) :: process_files fs
 
 *)
+let rec printL lsgn =
+  match lsgn with
+    | [] -> ()
+    | h::t -> Ext_print.Ext.DefaultPrinter.ppr_sgn_decl h; printL t
 
 let main () =
   (*let args   = List.tl (Array.to_list Sys.argv) in*)
@@ -171,6 +177,7 @@ let main () =
             printf "\n## Sasybel Type Reconstruction: %s ##\n" file_name;
         
             let tSgn = Transform.sectionDecls sgn in
+            printL tSgn;
             let _int_decls = Recsgn.recSgnDecls tSgn in
               printf "\n## Type Reconstruction done: %s  ##\n" file_name;
               let _ = Coverage.force
@@ -204,6 +211,8 @@ let main () =
 
            else 
            let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
+
+            if !externall then (printf "\n## Pretty-printing of the external syntax : ##\n"; printL sgn;) else ();
 
             if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction: %s ##\n" file_name;  

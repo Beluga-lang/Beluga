@@ -7,29 +7,22 @@ z    : exp.
 suc  : exp -> exp.
 letv : exp -> (exp -> exp) -> exp.
 lam  : (exp -> exp) -> exp. 
-
-%{
 app  : exp -> exp -> exp.
-compo: (exp -> exp) -> (exp -> exp) -> exp.
 
-value : exp -> type. 
+value : exp -> type.
 
 v_z   : value z.
 v_s   : value E -> value (suc E).
 v_lam   : value (lam (\x. E x)).
 
-v_l   : value (letv E1 (\x. E2 x)).
-v_c   : value (compo (\x. E1 x) (\x. E2 x) ).
-}%
+eval : exp -> exp -> type.
 
-eval : exp -> exp -> type. 
-%{  
 ev_z : eval z z.
 
 ev_s : eval E V -> eval (suc E) (suc V).
-}%
+
 ev_l : eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
-%{
+
 ev_lam: eval (lam (\x. E x)) (lam (\x. E x)).
 
 ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V 
@@ -55,4 +48,4 @@ fn e =>
 | [. ev_app D1 D2 D3] =>  vs [. D3]
 
 
-; }%
+; 

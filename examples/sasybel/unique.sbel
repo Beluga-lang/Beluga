@@ -7,26 +7,24 @@ tp ::= tp -> tp | nat | x ;
 
 exp ::= lam \x .exp[x] | app exp exp; 
 
-judgment of_typ : exp oft tp;
+notation of_typ : exp oft tp;
 
 E1 oft (T2 -> T);  
 E2 oft T2;
 ------------------------- t_app
 (app E1 E2) oft T;
 
-{x:exp} x oft T1;  
-E[x] oft T2;
-------------------------- t_lam
+
+{x:exp} (x oft T1) (E[x] oft T2);
+------------------------------------ t_lam
 (lam T1 E) oft (T1 -> T2);
 
-judgment equal : tp = tp;
+notation equal : tp = tp;
 
 ------------------------- eq_ref
 T = T;
 
-%{ schema tctx =  some [t:tp] block x:exp. type_of x t; }%
-
-context gamma ::= {t:tp} (y:exp) y oft t;
+context gamma ::= {t:tp} (x:exp) x oft t;
 
 theorem unique : forall d: [g: gamma] |- E .. oft T ; f: [g] |- E .. oft T' exists T = T';
 
@@ -49,7 +47,7 @@ T = T' by case analysis on f:
 
 end case
 
-%{
+
 case rule
 
 D: [g] |- {x:exp} (x oft T1) (E[x] oft T2);
@@ -106,7 +104,7 @@ is
 T = T' by rule eq_ref
 
 end case
-}%
+
 
 end induction
 end theorem

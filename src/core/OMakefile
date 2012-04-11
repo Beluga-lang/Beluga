@@ -21,6 +21,7 @@ FILES[] =
         ctxsub
         debug
         error
+        ext_print
         gensym
         id
         index

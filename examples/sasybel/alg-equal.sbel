@@ -6,27 +6,25 @@ syntax
 
 term ::= term -> term | x | lam \x .term[x] ;
 
-judgment aeq : term a= term;
+notation aeq : term a= term;
 
 E1 a= F1;  
 E2 a= F2;
 --------------------------- ae_a
 (E1 -> E2) a= (F1 -> F2);
 
-{x:term} x a= x;  
-E[x] a= E[x];
+{x:term} (x a= x) (E[x] a= E[x]);
 ----------------------------------- ae_l
 (lam \x . E[x]) a= (lam \x . F[x]);
 
-judgment deq : term d= term;
+notation deq : term d= term;
 
 T1 d= S1;  
 T2 d= S2;
 --------------------------- de_a
 (T1 -> T2) d= (S1 -> S2);
 
-{x:term} x d= x;  
-T[x] d= T'[x];
+{x:term} (x d= x) (T[x] d= T'[x]);
 ------------------------------------ de_l
 (lam \x . T[x]) d= (lam \x . T'[x]);
 

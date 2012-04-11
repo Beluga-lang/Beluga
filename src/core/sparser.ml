@@ -52,13 +52,8 @@ GLOBAL: section_eoi;
 	 "syntax"; lp = LIST1 prod -> Grammar(_loc, lp)
 
       |
- 	 "judgment"; a = SYMBOL; ":"; b = j_syntax; ";"; lj = LIST1 rules ->
+ 	 "notation"; a = SYMBOL; ":"; b = j_syntax; ";"; lj = LIST1 rules ->
                                                                          Judgement(_loc, JName(a), b, None, lj)
-
-(*      |
-         "judgment"; a = SYMBOL; ":"; b = cj_syntax; ";"; "assumes"; c = SYMBOL; lj = LIST1 rules -> 
-                                                                                                 Judgement(_loc, JName(a), b, Some(Assptn(CName(c))), lj)*)
-
           
       | 
          "theorem"; a = SYMBOL; ":"; b = stmnt;  lp = LIST1 proof; "end"; "theorem" -> 

@@ -1,5 +1,3 @@
-%{ type uniqueness, Marie }%
-
 terminals lam app nat fun
 syntax 
 
@@ -14,21 +12,49 @@ E2 oft T2;
 ------------------------- t_app
 (app E1 E2) oft T;
 
-
 {x:exp} (x oft T1) (E[x] oft T2);
 ------------------------------------ t_lam
 (lam T1 E) oft (T1 -> T2);
+
+context gamma ::= {t:tp} (x:exp) x oft t;
 
 notation equal : tp = tp;
 
 ------------------------- eq_ref
 T = T;
 
-context gamma ::= {t:tp} (x:exp) x oft t;
-
 theorem unique : forall d: [g: gamma] |- E .. oft T ; f: [g] |- E .. oft T' exists T = T';
 
 T = T' by induction on d :
+
+case rule
+
+D1: [g] |- E1 oft (T2 -> T);  
+D2: [g] |- E2 oft T2;
+------------------------------ t_app
+[g] |- (app E1 E2) oft T;
+
+is
+
+eq_ref by case analysis on f:
+
+                 case rule
+
+                 F1: [g] |- E1 oft (T2 -> T');  
+                 F2: [g] |- E2 oft T2;
+                 ------------------------------ t_app
+                 [g] |- (app E1 E2) oft T';
+
+                 is 
+
+                 eq_ref by induction hypothesis on [g] |- D1 .. , [g] |- F1 .. ;
+
+                 end case
+                 end case analysis
+
+T = T' by rule eq_ref
+
+end case
 
 case [g: (x:exp) x oft T] |- x oft T
 
@@ -46,7 +72,6 @@ T = T' by case analysis on f:
                  end case analysis
 
 end case
-
 
 case rule
 
@@ -76,36 +101,7 @@ T = T' by rule eq_ref
 
 end case
 
-case rule
-
-D1: [g] |- E1 oft (T2 -> T);  
-D2: [g] |- E2 oft T2;
------------------------------- t_app
-[g] |- (app E1 E2) oft T;
-
-is
-
-(T2 -> T) = (T2 -> T') by case analysis on f:
-
-                 case rule
-
-                 F1: [g] |- E1 oft (T2 -> T');  
-                 F2: [g] |- E2 oft T2;
-                 ------------------------------ t_app
-                 [g] |- (app E1 E2) oft T';
-
-                 is 
-
-                 eq_ref by induction hypothesis on [g] |- D1 .. , [g] |- F1 .. ;
-
-                 end case
-                 end case analysis
-
-T = T' by rule eq_ref
-
-end case
-
-
 end induction
 end theorem
+
 

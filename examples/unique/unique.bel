@@ -28,6 +28,10 @@ e_ref: equal T T.
 rec unique3 : (g:tctx)[g. type_of (E ..) T] -> [g. type_of (E ..) T'] 
              ->  [. equal T T'] = 
 fn d => fn f => case d of 
+| [g. t_app (D1 ..) (D2 ..)] =>
+  let [g. t_app (F1 ..) (F2 ..)] = f in 
+  let [. e_ref]  = unique3 [g. D1 ..] [g. F1 ..] in    
+    [. e_ref]  
 
 | [g. t_lam (\x.\u. D .. x u)] =>
   let [g. t_lam (\x.\u. F .. x u)] = f in 

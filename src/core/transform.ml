@@ -9,7 +9,6 @@ open Pretty
 *)
 
 module Loc = Syntax.Loc
-
 exception Error of string
 
 let printLocation loc = Parser.Grammar.Loc.print Format.std_formatter loc
@@ -614,7 +613,7 @@ let rec valtpPar l lt lsym a =
                          | None -> 
                                    let rlp = List.rev lp in
                                    let ds = List.fold_left (fun x (Proj(l1, s1, i1)) -> Ext.LF.Dot(l1, x, 
-                                            Ext.LF.Head(Ext.LF.ProjName(l1, i1, Id.mk_name(Id.SomeString s1))) ) ) (Ext.LF.Id(l)) rlp in
+                                            Ext.LF.Head(Ext.LF.ProjName(l1, i1, Id.mk_name(Id.SomeString s1))) ) ) (Ext.LF.Id(l)) (List.rev rlp) in
                                    Ext.LF.Root(l, Ext.LF.MVar(l, Id.mk_name(Id.SomeString s),ds), Ext.LF.Nil)      
                          | Some(va) -> let s = locToString(l) in 
                                        let s1 = s ^ " There should be parentheses around the alternative with the list of projections." in 
@@ -968,14 +967,14 @@ let rec comp_branch l lt n omlam lsym llam lju al cb cano =
 
     | Arg(l1, TPremisse(l2, None, Some(c), va), pl)::t -> 
                        begin match c with 
-                         |[NewCon(n, va1)] -> count := 0;
+                         |[NewCon(n1, va1)] -> count := 0;
                                               let k = count_valt lju va1 va in 
                                               let v = get_var va1 in
                                               let s1 = get_comp_var v in 
-                                              let pvar = Ext.LF.Root(l2, Ext.LF.ProjPVar(l2, k, (Id.mk_name(Id.SomeString s1), Ext.LF.Id(l2))), Ext.LF.Nil) in
+                                              let pvar = Ext.LF.Root(l2, Ext.LF.ProjPVar(l2, k, (Id.mk_name(Id.SomeString s1), Ext.LF.Id(l2))), Ext.LF.Nil) in    
                                               let p1 = proofs l1 lt n omlam pl lsym llam lju cb cano in
                                               let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, 
-                                                        Ext.Comp.MetaObjAnn(l1, Ext.LF.CtxVar(l2,Id.mk_name(Id.SomeString n)), pvar)),  p1) in
+                                                        Ext.Comp.MetaObjAnn(l1, Ext.LF.CtxVar(l2,Id.mk_name(Id.SomeString n1)), pvar)),  p1) in
                                               cb1 :: comp_branch l lt n omlam lsym llam lju t cb cano
 
                          | _ -> let s = locToString(l) in 
@@ -992,12 +991,12 @@ let rec comp_branch l lt n omlam lsym llam lju al cb cano =
                let Premisse(l4, _, co, va) = p in
                begin match co with
                       | None -> let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), Ext.LF.Nil) in  
-                                
+                          
                                 let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in
                                 let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, Ext.Comp.MetaObjAnn(l1, Ext.LF.Null, v1)), p1) in
                                 cb1 :: comp_branch l lt n omlam lsym llam lju t cb  cano
                       | Some([Con(c)]) -> let v1 = Ext.LF.Root(l2, Ext.LF.Name(l2, Id.mk_name(Id.SomeString rn)), Ext.LF.Nil)in  
-                                        
+                                      
                                         let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in
                                         let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, Ext.Comp.MetaObjAnn(l1, 
                                                   Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString c)), v1)), p1)in 
@@ -1042,15 +1041,15 @@ let rec comp_branch l lt n omlam lsym llam lju al cb cano =
                       | None ->  let va1 = (List.fold_left (fun x y -> match y with 
                                             |[] -> x | n1::t -> Ext.LF.App(l1, Ext.LF.Root(l2, Ext.LF.MVar(l2, 
                                                                 Id.mk_name(Id.SomeString n1),Ext.LF.EmptySub(l1)),Ext.LF.Nil),x))) Ext.LF.Nil (List.rev lp2) in
-                                                                let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), va1) in 
+                                                                let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), va1) in    
                                                                 let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in 
                                                                 let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, 
                                                                 Ext.Comp.PatMetaObj(l1, Ext.Comp.MetaObjAnn(l1, Ext.LF.Null, v1)), p1) in 
                                                                 cb1 :: comp_branch l lt n omlam lsym llam lju t cb cano
 
                       | Some([Con(c)]) -> let va1 = (List.fold_left (fun x y -> match y with |[] -> x | n1::[] -> Ext.LF.App(l1, Ext.LF.Root(l2, Ext.LF.MVar(l2, 
-                                                                   Id.mk_name(Id.SomeString n1),Ext.LF.Id(l1)),Ext.LF.Nil),x))) Ext.LF.Nil lp2 in
-                                        let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), va1) in 
+                                                                   Id.mk_name(Id.SomeString n1),Ext.LF.Id(l1)),Ext.LF.Nil),x))) Ext.LF.Nil (List.rev lp2) in
+                                        let v1 = Ext.LF.Root(l2, Ext.LF.Name( l2, Id.mk_name(Id.SomeString rn)), va1) in    
                                         let p1 = proofs l1 lt n omlam lp lsym llam lju cb cano in
                                         let cb1 = Ext.Comp.Branch(l, Ext.LF.Empty, Ext.Comp.PatMetaObj(l1, 
                                         Ext.Comp.MetaObjAnn(l1, Ext.LF.CtxVar(l4, Id.mk_name(Id.SomeString c)), v1)), p1) in 
@@ -1135,7 +1134,7 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                                                 let v2 = VAltAtomic(l1,s1,None) in 
                                                 let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
                                                 let cv = Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)) in
-
+                                                
                                                 let lca = List.fold_left (fun x (TPremisse(l3,None,c,va1)) -> 
                                                           let cbox = comp_box l3 lt lsym c va1 in
                                                           Ext.Comp.Apply(l1, x, cbox )  ) cv lvn1 in
@@ -1144,11 +1143,9 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
 
                                                 Ext.Comp.Case(l1,Pragma.RegularCase, lca, cbranch)
 
-                                    | TPremisse(l4,None,_,v2) -> (** you are gonna want to match the co to use it in valtpar once fixed*)
-                                                                 
+                                    | TPremisse(l4,None,_,v2) -> (** you are gonna want to match the co to use it in valtpar once fixed*)            
 
-                                                let cv = (*Ext.Comp.CtxApp(l1,*)Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n))
-                                                         (*, Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString "g")))*) in
+                                                let cv = Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)) in
 
                                                 let lca = List.fold_left (fun x (TPremisse(l3,None,c,va1)) -> 
                                                           begin match c with 
@@ -1173,7 +1170,7 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
 
 
                                                           end
-                                                           ) cv (List.rev lvn1) in
+                                                           ) cv (lvn1) in
 
                                                 begin match v2 with 
                                                   | VAltAtomic(l5, s5, None) -> let v1 = Ext.LF.Root(l, Ext.LF.Name(l, Id.mk_name(Id.SomeString s5)), 
@@ -1196,7 +1193,7 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                                                then 
                                                let cbranch = comp_branch l lt n (Some([vn])) lsym llam lju al cb None in
                                                Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString vn)), cbranch)
-                                               else
+                                               else  
                                                let pt = proofs l lt n None t lsym llam lju cb cano in
                                                let cbranch = comp_branch l lt n (Some([vn])) lsym llam lju al cb (Some(pt)) in
                                                Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString vn)), cbranch) (** should something happen with tp?*)
@@ -1215,7 +1212,7 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
        end
 
 let theorem l lt n st pl lju lsym llam cb = (* omlam = [d,f] *)
-                                       let (ctb,omlam) =  stmt_to_prove l lt st lju lsym in 
+                                       let (ctb,omlam) =  stmt_to_prove l lt st lju lsym in   
                                        let prf = proofs l lt n omlam pl lsym llam lju cb None in 
                                        [Ext.Sgn.Rec(l, [Ext.Comp.RecFun( Id.mk_name(Id.SomeString n), ctb, prf)])]
 

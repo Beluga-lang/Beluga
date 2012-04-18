@@ -28,11 +28,6 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-(*raise (Violation ("Type " ^ P.typToString cD cPsi (tA, Substitution.LF.id) ^ " doesn't check against schema " ^ P.schemaToString (Schema elements)))
-
-*)
-
-
 let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
@@ -41,8 +36,6 @@ let _ = Error.register_printer
             Format.fprintf ppf "Type %a doesn't check against schema %a\n"
                (P.fmt_ppr_lf_typ c0 cPsi Pretty.std_lvl) (Whnf.normTyp sA)
                (P.fmt_ppr_lf_schema Pretty.std_lvl) sEl 
-               (*(P.typToString c0 cV (sT, sS))
-               (P.schemaToString sEl)*)
 
       | CtxVarMismatch (cO, var, expected) ->
           Format.fprintf ppf "Context variable %a doesn't check against schema %a"

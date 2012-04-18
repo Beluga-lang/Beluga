@@ -26,7 +26,7 @@ val getNameDCtx : dctx -> int -> Id.name
 val getNameMCtx : mctx -> int -> Id.name
 val getNameCtx  : Comp.gctx -> int -> Id.name
 
-val projectCtxIntoDctx : typ_decl ctx -> dctx 
+val projectCtxIntoDctx : typ_decl ctx -> dctx
 val splitContextVariable : dctx -> typ_decl -> dctx
 val emptyContextVariable : dctx -> dctx
 

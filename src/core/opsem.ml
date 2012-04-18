@@ -155,13 +155,13 @@ and eval_chk e theta_eta =
     match e with
       | Comp.Syn (_, i) -> eval_syn i theta_eta
       | Comp.MLam (loc, n, e') ->
-          dprint (fun () -> "[MLamValue] created: theta = " ^ 
+          dprint (fun () -> "[MLamValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.MLamValue ((loc, n ,e'), Whnf.cnormMSub theta, eta)
       | Comp.CtxFun (loc, n, e') ->
           Comp.CtxValue ((loc,n,e'), Whnf.cnormMSub theta, eta)
       | Comp.Fun (loc, n, e') ->
-          dprint (fun () -> "[FunValue] created: theta = " ^ 
+          dprint (fun () -> "[FunValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.FunValue ((loc, n, e'), Whnf.cnormMSub theta, eta)
 
@@ -222,16 +222,16 @@ and eval_branch (phat, tM) branch (theta, eta) =
           let _ = Unify.unifyMSub theta theta_k in
 
           let tM' = Whnf.cnorm (tM', mt) in
-          let cPsi = Whnf.cnormDCtx (cPsi, mt) in 
+          let cPsi = Whnf.cnormDCtx (cPsi, mt) in
           let mt  = Whnf.cnormMSub mt in
-          let _ = dprint (fun () -> "[elBranch] unify_phat " ^ 
+          let _ = dprint (fun () -> "[elBranch] unify_phat " ^
                             P.dctxToString LF.Empty (Context.hatToDCtx phat)
-                        ^ " == " ^ P.dctxToString LF.Empty cPsi) in 
-          let _ = dprint (fun () -> "[elBranch] unify meta-obj: " ^ 
+                        ^ " == " ^ P.dctxToString LF.Empty cPsi) in
+          let _ = dprint (fun () -> "[elBranch] unify meta-obj: " ^
                             P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
-                            ^ " == " ^ 
+                            ^ " == " ^
                             P.normalToString LF.Empty cPsi (tM', Substitution.LF.id)) in
-          let _ = Unify.unify_phat phat (Context.dctxToHat cPsi) in 
+          let _ = Unify.unify_phat phat (Context.dctxToHat cPsi) in
           let _ = Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id) in
 
           eval_chk e (mt, eta)

@@ -16,7 +16,7 @@ let create_symbols (alphabet : string array) : string Stream.t =
            generate a unique symbol. *)
 (*      then Some (symbol          ^ "%")
       else Some (symbol ^ suffix ^ "%") *)
-      Some (symbol ^ suffix ) 
+      Some (symbol ^ suffix )
   in
     Stream.from next
 
@@ -36,15 +36,15 @@ module VarData : GENSYM = struct
 
   let create () = create_symbols [|
 (*   "a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"; "i"; "j"; "k"; "l"; "m";
-      "n"; "o"; "p"; "q"; "r"; "s"; "t"; "u"; "v"; "w";*) 
+      "n"; "o"; "p"; "q"; "r"; "s"; "t"; "u"; "v"; "w";*)
      "y"; "x"; "z"  |]
 
   let symbols = ref (create ())
 
   let gensym () = Stream.next !symbols
 
-  let name_gensym s = 
-    let symbols = create_symbols [| s |] in 
+  let name_gensym s =
+    let symbols = create_symbols [| s |] in
       (fun () -> Stream.next symbols)
 
   let reset () = (symbols := create ())
@@ -59,11 +59,11 @@ module MVarData : GENSYM = struct
          "Y"; "X"; "Z"        |]
 
   let symbols = ref (create ())
-  
+
   let gensym () = Stream.next !symbols
-  
-  let name_gensym s = 
-    let symbols = create_symbols [| s |] in 
+
+  let name_gensym s =
+    let symbols = create_symbols [| s |] in
       (fun () -> Stream.next symbols)
 
   let reset () = (symbols := create ())

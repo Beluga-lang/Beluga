@@ -20,27 +20,27 @@ let rec dctxToHat = function
   | CtxVar psi      -> (Some psi, 0)
   | DDec (cPsi', _) -> addToHat (dctxToHat cPsi')
 
-let rec hatToDCtx phat = match phat with 
+let rec hatToDCtx phat = match phat with
   | (None,      0) -> LF.Null
   | (Some psi , 0) -> LF.CtxVar psi
-  | (ctx_v    , k) -> 
-      LF.DDec (hatToDCtx (ctx_v, k-1), LF.TypDeclOpt (Id.mk_name Id.NoName)) 
-        
+  | (ctx_v    , k) ->
+      LF.DDec (hatToDCtx (ctx_v, k-1), LF.TypDeclOpt (Id.mk_name Id.NoName))
+
 
 (* Declaration Contexts *)
 (*
 let rec sigmaShift typrec k = match typrec with
-  | SigmaLast tA -> 
+  | SigmaLast tA ->
       SigmaLast (TClo (tA, Shift  (NoCtxShift, k)))
 
-  | SigmaElem (x, tA, typrec) -> 
+  | SigmaElem (x, tA, typrec) ->
       SigmaElem (x, TClo (tA, Shift (NoCtxShift, k)), sigmaShift typrec (k (*+ 1*) ))
 *)
 let rec sigmaShift typrec s = match typrec with
-  | SigmaLast tA -> 
+  | SigmaLast tA ->
       SigmaLast (TClo (tA, s))
 
-  | SigmaElem (x, tA, typrec) -> 
+  | SigmaElem (x, tA, typrec) ->
       SigmaElem (x, TClo (tA, s), sigmaShift typrec (Substitution.LF.dot1 s))
 
 
@@ -77,7 +77,7 @@ let ctxDec cPsi k =
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
 
-    | (DDec (cPsi', TypDeclOpt _ ), 1) -> 
+    | (DDec (cPsi', TypDeclOpt _ ), 1) ->
         raise NoTypAvailable
 
     | (DDec (cPsi', _), k') ->
@@ -110,7 +110,7 @@ let ctxSigmaDec cPsi k =
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
-    | (CtxVar (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)) , k) -> 
+    | (CtxVar (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)) , k) ->
         ctxDec' (cPhi, k)
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in
@@ -138,7 +138,7 @@ let hasCtxVar cPsi = match ctxVar cPsi with
 
 (* append cD1 cD2 = (cD1, cD2) *)
 let rec append cD1 cD2 = match cD2 with
-  | Empty -> 
+  | Empty ->
       cD1
 
   | Dec (cD2', dec) ->
@@ -158,9 +158,9 @@ let rec dctxLength = function
 
 
 (* Lookup name in context
- * 
- * getNameDCtx cPsi k = x 
- *  
+ *
+ * getNameDCtx cPsi k = x
+ *
  * If |cPsi| <= k then x is the name of the k-th declaration in cPsi
  *
  * Invariants for lookup in cD and cG similar.
@@ -171,18 +171,18 @@ let rec getNameDCtx cPsi k = match (cPsi, k) with
   | (DDec (_cPsi, TypDeclOpt x) , 1)   -> x
   | (DDec (cPsi, _ ) , k) -> getNameDCtx cPsi (k-1)
 
-let rec getNameMCtx cD k = match (cD, k) with 
-  | (Dec (_cD, MDecl(u, _, _ )), 1) -> u 
-  | (Dec (_cD, PDecl(u, _, _ )), 1) -> u 
-  | (Dec (_cD, CDecl(u, _, _)), 1) -> u 
-  | (Dec (_cD, MDeclOpt u), 1) -> u 
-  | (Dec (_cD, PDeclOpt u), 1) -> u 
-  | (Dec (_cD, CDeclOpt u), 1) -> u 
-  | (Dec (cD, _ ) , k) -> 
+let rec getNameMCtx cD k = match (cD, k) with
+  | (Dec (_cD, MDecl(u, _, _ )), 1) -> u
+  | (Dec (_cD, PDecl(u, _, _ )), 1) -> u
+  | (Dec (_cD, CDecl(u, _, _)), 1) -> u
+  | (Dec (_cD, MDeclOpt u), 1) -> u
+  | (Dec (_cD, PDeclOpt u), 1) -> u
+  | (Dec (_cD, CDeclOpt u), 1) -> u
+  | (Dec (cD, _ ) , k) ->
       getNameMCtx cD (k-1)
 
-let rec getNameCtx cG k = match (cG, k) with 
-  | (Dec(_cG, Comp.CTypDecl (x, _ )), 1 ) -> x 
+let rec getNameCtx cG k = match (cG, k) with
+  | (Dec(_cG, Comp.CTypDecl (x, _ )), 1 ) -> x
   | (Dec(_cG, Comp.CTypDeclOpt x), 1) -> x
   | (Dec(cG, _ ) , k) -> getNameCtx cG (k-1)
 
@@ -208,7 +208,7 @@ let rec typdeclCtxToMctx cPsi = function
 let splitContextVariable cPsi new_typ_decl =
   let rec inner = function
     | CtxVar ctx_var -> DDec(CtxVar ctx_var, new_typ_decl)
-    | DDec (cPsi, concrete) -> DDec(inner cPsi, concrete) 
+    | DDec (cPsi, concrete) -> DDec(inner cPsi, concrete)
   in
     inner cPsi
 
@@ -220,7 +220,7 @@ let emptyContextVariable cPsi = (* wrong *)
     inner cPsi
 
 
-let rec lookup cG k = match (cG, k) with 
+let rec lookup cG k = match (cG, k) with
   | (Dec (_cG', Comp.CTypDecl (_,  tau)), 1) ->  Some tau
   | (Dec (_cG', _ ), 1) ->  None
   | (Dec ( cG', _ ), k) ->
@@ -229,25 +229,25 @@ let rec lookup cG k = match (cG, k) with
 
 let rec lookupSchema cD psi_offset = match (cD, psi_offset) with
   | (Dec (_cD, CDecl (_, cid_schema, _)), 1) -> cid_schema
-  | (Dec (cD, _) , i) -> 
+  | (Dec (cD, _) , i) ->
       lookupSchema cD (i-1)
 
 
-and lookupCtxVar cD cvar = 
+and lookupCtxVar cD cvar =
   let rec lookup cD offset = match cD with
       | Empty -> raise (Error.Violation "Context variable not found")
-      | Dec (cD, CDecl (psi, schemaName, _)) ->      
-          begin match cvar with 
+      | Dec (cD, CDecl (psi, schemaName, _)) ->
+          begin match cvar with
             | CtxName phi when psi = phi ->  (psi, schemaName)
             | (CtxName _phi)             -> lookup cD (offset+1)
-            | CtxOffset n                -> 
-                if (n - offset) = 1 then 
+            | CtxOffset n                ->
+                if (n - offset) = 1 then
                   (psi, schemaName)
-                else 
+                else
                   lookup cD (offset+1)
-          end 
+          end
       | Dec (cD, _ ) -> lookup cD (offset+1)
-  in 
+  in
     lookup cD 0
 
 

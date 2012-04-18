@@ -18,7 +18,7 @@ let rec toFlags = function
   | x::xs ->
        if x > 30 then
          raise (Invalid_argument "toFlags argument out of bounds")
-       else 
+       else
          (toFlags xs) lor (1 lsl x)
 
 let flagsToString flags =
@@ -64,10 +64,10 @@ let rec print_noticing_newlines s x len =
       else
         print_char ch);
       print_noticing_newlines s (x + 1) len
-        
+
 
 let print flags f =
-    if flags land !r_flags == 0 then 
+    if flags land !r_flags == 0 then
         ()
     else
         (print_level_spaces();

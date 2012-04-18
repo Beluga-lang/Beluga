@@ -78,11 +78,11 @@ module Filter = struct
     match tok with
     | KEYWORD s              -> KEYWORD s
     | SYMBOL s when is_kwd s -> KEYWORD s
-    | SYMBOL s               -> 
-        let firstChar = String.get s 0 in 
-          if firstChar >= 'A' && firstChar <= 'Z' then 
+    | SYMBOL s               ->
+        let firstChar = String.get s 0 in
+          if firstChar >= 'A' && firstChar <= 'Z' then
             UPSYMBOL  s
-          else 
+          else
             SYMBOL s
     | tok -> tok  (* EOI, INTLIT *)
 

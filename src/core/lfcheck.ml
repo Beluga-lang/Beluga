@@ -35,7 +35,7 @@ let _ = Error.register_printer
       | CtxVarMisCheck (c0, cPsi, sA, sEl ) ->
             Format.fprintf ppf "Type %a doesn't check against schema %a\n"
                (P.fmt_ppr_lf_typ c0 cPsi Pretty.std_lvl) (Whnf.normTyp sA)
-               (P.fmt_ppr_lf_schema Pretty.std_lvl) sEl 
+               (P.fmt_ppr_lf_schema Pretty.std_lvl) sEl
 
       | CtxVarMismatch (cO, var, expected) ->
           Format.fprintf ppf "Context variable %a doesn't check against schema %a"
@@ -69,7 +69,7 @@ let _ = Error.register_printer
             (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA2)
             (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
 
-      | SpineIllTyped -> 
+      | SpineIllTyped ->
           Format.fprintf ppf "ill-typed spine---not enough arguments supplied"
 
       | SubIllTyped ->
@@ -83,7 +83,7 @@ exception SpineMismatch
 
 
 
-(* Seems broken Sat Sep  4 12:24:43 2010 -bp 
+(* Seems broken Sat Sep  4 12:24:43 2010 -bp
   (* ctxToSub cPsi:
    *
    * generates, based on cPsi, a substitution suitable for unification
@@ -117,12 +117,12 @@ exception SpineMismatch
 let rec ctxShift cPsi = begin match cPsi with
   | Null              -> Shift (NoCtxShift, 0)
   | CtxVar psi        -> Shift (CtxShift psi, 0)
-  | DDec   (cPsi, _x) -> 
+  | DDec   (cPsi, _x) ->
       match  ctxShift cPsi with
           Shift (cshift, n)  -> Shift (cshift, n+1)
   end
 
-  (* ctxToSub' cPhi cPsi = s 
+  (* ctxToSub' cPhi cPsi = s
 
      if x1:A1, ... xn:An = cPsi
      then D = u1:A1[cPhi], ... un:An[cPhi]
@@ -155,7 +155,7 @@ let rec ctxShift cPsi = begin match cPsi with
 	let u     = Whnf.etaExpandMV cPhi (tA, s) Substitution.LF.id in
         let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
           (* Dot (front, Substitution.LF.comp s LF.shift)  *)
-           Dot (front, s) 
+           Dot (front, s)
 
 
   (* check cD cPsi (tM, s1) (tA, s2) = ()
@@ -172,35 +172,35 @@ let rec ctxShift cPsi = begin match cPsi with
    * otherwise exception Error is raised
    *)
   let rec checkW cD cPsi sM sA = match (sM, sA) with
-    | ((Lam (_, _, tM), s1),   (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2)) -> 
+    | ((Lam (_, _, tM), s1),   (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2)) ->
         check cD
           (DDec (cPsi, Substitution.LF.decSub tX s2))
           (tM, Substitution.LF.dot1 s1)
           (tB, Substitution.LF.dot1 s2)
 
 
-    | ((Tuple (_, tuple), s1),   (Sigma typRec, s2)) -> 
+    | ((Tuple (_, tuple), s1),   (Sigma typRec, s2)) ->
         checkTuple cD cPsi (tuple, s1) (typRec, s2)
 
     | ((Root (loc, _h, _tS), _s (* id *)),   (Atom _, _s')) ->
         (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
           begin try
-            let _ = dprint (fun () -> "[check] " ^ 
-			      P.mctxToString cD ^ " ; " ^ 
-			      P.dctxToString cD cPsi ^ " |- " ^ 
-			      P.normalToString cD cPsi sM ^ 
+            let _ = dprint (fun () -> "[check] " ^
+			      P.mctxToString cD ^ " ; " ^
+			      P.dctxToString cD cPsi ^ " |- " ^
+			      P.normalToString cD cPsi sM ^
                               " <= " ^ P.typToString cD cPsi sA ) in
-            let sP = syn' cD cPsi sM in 
-            let _ = dprint (fun () -> "[check] synthesized " ^ 
-			      P.mctxToString cD ^ " ; " ^ 
-			      P.dctxToString cD cPsi ^ " |- " ^ 
-			      P.normalToString cD cPsi sM ^ 
+            let sP = syn' cD cPsi sM in
+            let _ = dprint (fun () -> "[check] synthesized " ^
+			      P.mctxToString cD ^ " ; " ^
+			      P.dctxToString cD cPsi ^ " |- " ^
+			      P.normalToString cD cPsi sM ^
                               " => " ^ P.typToString cD cPsi sP ) in
-	    let _ = dprint (fun () -> "       against " ^ 
+	    let _ = dprint (fun () -> "       against " ^
 			      P.typToString cD cPsi sA) in
-            let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in 
-              if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then 
-                (dprint (fun () -> "here!") ; 
+            let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
+              if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
+                (dprint (fun () -> "here!") ;
                  raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP))))
           with SpineMismatch ->
             raise (Error (loc, (IllTyped (cD, cPsi, sM, sA))))
@@ -228,20 +228,20 @@ let rec ctxShift cPsi = begin match cPsi with
         raise (Violation ("checkTuple arity mismatch"))
 
 
-  and syn' cD cPsi (Root (loc, h, tS), s (* id *)) = 
+  and syn' cD cPsi (Root (loc, h, tS), s (* id *)) =
     let sA' = Whnf.whnfTyp (inferHead loc cD cPsi h, Substitution.LF.id) in
       synSpine cD cPsi (tS, s) sA'
-        
 
-  and syn cD cPsi ((Root (loc, _h, _tS), _s (* id *)) as sR) = 
+
+  and syn cD cPsi ((Root (loc, _h, _tS), _s (* id *)) as sR) =
     begin try
       syn' cD cPsi sR
-    with SpineMismatch -> 
+    with SpineMismatch ->
       raise (Error (loc, SpineIllTyped))
     end
 
   (* synSpine cD cPsi sS sA = sP
-   * 
+   *
    * Invariant:
    *
    * ; cD ; cPsi sS : sA => sP
@@ -249,10 +249,10 @@ let rec ctxShift cPsi = begin match cPsi with
   and synSpine cD cPsi sS sA = match (sS, sA) with
     | ((Nil, _),   sP) ->
         sP
-    
+
     | ((SClo (tS, s'), s),   sA) ->
         synSpine cD cPsi (tS, Substitution.LF.comp s' s) sA
-    
+
     | ((App (tM, tS), s1),   (PiTyp ((TypDecl (_, tA1), _), tB2), s2)) ->
         check cD cPsi (tM, s1) (tA1, s2);
         (*     cD ; cPsi1        |- tM  <= tA1'
@@ -262,7 +262,7 @@ let rec ctxShift cPsi = begin match cPsi with
          *)
         let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
           synSpine cD cPsi (tS, s1) tB2
-    
+
     | ((App _, _),   (Atom _, _)) ->
         raise SpineMismatch
 
@@ -282,14 +282,14 @@ let rec ctxShift cPsi = begin match cPsi with
         let (_, _l) = dctxToHat cPsi in
         let TypDecl (_, tA) = ctxDec cPsi k' in
           tA
-    
+
     | Proj (tuple_head, target) ->
         let srecA = match tuple_head with
           | BVar k' ->
               let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
               let _ = dprint (fun () -> "[InferHead] " ^ P.dctxToString cD cPsi) in
-              let _ = dprint (fun () -> "|-  " ^  P.headToString cD cPsi head ^ "\n" ^ 
-                                " where " ^ P.headToString cD cPsi tuple_head ^ 
+              let _ = dprint (fun () -> "|-  " ^  P.headToString cD cPsi head ^ "\n" ^
+                                " where " ^ P.headToString cD cPsi tuple_head ^
 				" has type " ^ P.typRecToString cD cPsi (recA, Substitution.LF.id)) in
                 (recA, Substitution.LF.id)
           | PVar (Offset p, s) ->
@@ -297,43 +297,43 @@ let rec ctxShift cPsi = begin match cPsi with
                 checkSub loc cD cPsi s cPsi';
                 (recA, s)
         in
-        let (_tA, s) as sA = getType tuple_head srecA target 1 in 
+        let (_tA, s) as sA = getType tuple_head srecA target 1 in
           dprint (fun () -> "getType (" ^ P.headToString cD cPsi head ^ ") = " ^ P.typToString cD cPsi sA);
           dprint (fun () -> "s = " ^ P.subToString cD cPsi s);
           TClo sA
 
-    
+
     | Const c ->
         (Term.get c).Term.typ
-    
+
     | MVar (Offset u, s) ->
         (* cD ; cPsi' |- tA <= type *)
         let (_, tA, cPsi') = Whnf.mctxMDec cD u in
-        let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in 
-        let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^ 
+        let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
+        let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
                           P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
 
           checkSub loc cD cPsi s cPsi' ;
           TClo (tA, s)
 
-    | MVar (Inst ({contents = None}, cPsi', tA, _cnstr), s) -> 
-        let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in 
-        let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^ 
+    | MVar (Inst ({contents = None}, cPsi', tA, _cnstr), s) ->
+        let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
+        let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
                           P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
           checkSub loc cD cPsi s cPsi' ;
           TClo (tA, s)
 
-    | MMVar (MInst ({contents = None}, cD' , cPsi', tA, _cnstr) , (t', r)) -> 
-	let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in 
-	let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in 
-	let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in 
-	let _ = dprint (fun () -> " cD' = " ^ P.mctxToString cD') in 
-	let _ = checkMSub loc cD t' cD' in 
-	let _ = dprint (fun () -> "[inferHead] MMVar - msub done \n") in 
+    | MMVar (MInst ({contents = None}, cD' , cPsi', tA, _cnstr) , (t', r)) ->
+	let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
+	let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
+	let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
+	let _ = dprint (fun () -> " cD' = " ^ P.mctxToString cD') in
+	let _ = checkMSub loc cD t' cD' in
+	let _ = dprint (fun () -> "[inferHead] MMVar - msub done \n") in
 	  checkSub loc cD cPsi r (Whnf.cnormDCtx (cPsi', t')) ;
           TClo(Whnf.cnormTyp (tA, t'), r)
 
-  
+
     | PVar (Offset p, s) ->
         (* cD ; cPsi' |- tA <= type *)
         let (_, tA, cPsi') = Whnf.mctxPDec cD p in
@@ -348,7 +348,7 @@ let rec ctxShift cPsi = begin match cPsi with
           if not (canAppear cD cPsi (tA, s) loc) then
             raise (Violation ("Parameter variable of type " ^ P.typToString cD cPsi (tA, s)
                             ^ "\ncannot possibly appear in context " ^ P.dctxToString cD cPsi)) ;
-          
+
           (* Return p's type from cD *)
           TClo (tA, s)
 
@@ -390,7 +390,7 @@ let rec ctxShift cPsi = begin match cPsi with
           canAppear cD rest sA loc
         ||
           false (* should check if sA = tB; unimplemented.
-                   This should only matter when using a parameter variable 
+                   This should only matter when using a parameter variable
                      somewhat gratuitously, as p .. x y when the context variable schema
                      doesn't include elements of type sA, but x or y do have type sA *)
 
@@ -406,14 +406,14 @@ let rec ctxShift cPsi = begin match cPsi with
 
     | (cPhi, SVar (Offset offset, s'), CtxVar psi')  ->
         begin try
-        let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in 
-          if cPhi1 = CtxVar psi' then 
+        let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in
+          if cPhi1 = CtxVar psi' then
             checkSub loc cD cPsi s' cPsi1
-          else 
+          else
             raise (Error (loc, SubIllTyped ))
-        with 
+        with
           | _ -> raise (Error (loc, SubIllTyped ))
-        end 
+        end
 
     | (CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi')  ->
         (* if psi = psi' then *)
@@ -539,7 +539,7 @@ This case should now be covered by the one below it
    *
    * succeeds iff cD ; cPsi |- [s]tA <= type
    *)
-  and checkTyp' cD cPsi (tA, s) = 
+  and checkTyp' cD cPsi (tA, s) =
 
     match tA with
     | Atom (loc, a, tS) ->
@@ -621,8 +621,8 @@ f   *)
         else
           raise (Violation "Context variable out of scope")
 *)
-    | CtxVar (CtxOffset k) -> 
-	(dprint (fun () -> "[chkDCtx] lookup CtxVar where k = " ^ R.render_offset k 
+    | CtxVar (CtxOffset k) ->
+	(dprint (fun () -> "[chkDCtx] lookup CtxVar where k = " ^ R.render_offset k
 	       ^ " in \n cD = " ^ P.mctxToString cD ^ "\n");
 	 let _ = Context.lookupSchema cD k in ())
 
@@ -643,51 +643,51 @@ f   *)
                       "checkTypeAgainstSchema "
                     ^ P.typToString cD cPsi (tA, Substitution.LF.id)
                     ^ "  against  "
-                    ^ P.schemaToString (Schema elements)) 
+                    ^ P.schemaToString (Schema elements))
     in
       match elements with
-        | [] -> 
+        | [] ->
             raise (Error (loc, CtxVarMisCheck (cD, cPsi, (tA, Substitution.LF.id), Schema elements)))
 
         | element :: elements ->
             try
               instanceOfSchElem cD cPsi (tA, Substitution.LF.id) element
-            with 
+            with
               | (Match_failure _) as exn -> raise exn
               | _ -> checkTypeAgainstSchema loc cD cPsi tA elements
 
-  and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) = 
-    let _ = dprint (fun () -> "instanceOfSchElem...") in 
+  and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) =
+    let _ = dprint (fun () -> "instanceOfSchElem...") in
     let sArec = match Whnf.whnfTyp (tA, s) with
-      | (Sigma tArec,s') -> 
-          (tArec, s') 
-      | (nonsigma, s') -> 
+      | (Sigma tArec,s') ->
+          (tArec, s')
+      | (nonsigma, s') ->
           (SigmaLast nonsigma, s') in
-    let _ = dprint (fun () -> "tA =" ^ P.typToString cD cPsi (tA, s)) in 
+    let _ = dprint (fun () -> "tA =" ^ P.typToString cD cPsi (tA, s)) in
     let dctx        = projectCtxIntoDctx some_part in
-    let _ =  dprint (fun () -> "***Check if it is an instance of a schema element ...") in 
+    let _ =  dprint (fun () -> "***Check if it is an instance of a schema element ...") in
     let _ =  dprint (fun () -> "*** "
                         ^ "\n   cPsi = " ^ P.dctxToString cD cPsi
-                        ^ "\n   dctx = " ^ P.dctxToString cD dctx ) in  
+                        ^ "\n   dctx = " ^ P.dctxToString cD dctx ) in
 
-    let _ =  dprint (fun () -> "***Check if it is an instance of a schema element ...") in 
+    let _ =  dprint (fun () -> "***Check if it is an instance of a schema element ...") in
     let dctxSub     = ctxToSub' cPsi dctx in
-    let _ = dprint (fun () -> "dctxSub = " ) in 
+    let _ = dprint (fun () -> "dctxSub = " ) in
     let _ = dprint (fun () ->  P.subToString cD cPsi dctxSub) in
     (* let phat        = dctxToHat cPsi in *)
-    let _ =  dprint (fun () -> "***Unify.unifyTypRec (" 
+    let _ =  dprint (fun () -> "***Unify.unifyTypRec ("
                         ^ "\n   cPsi = " ^ P.dctxToString cD cPsi
-                        ^ "\n   dctx = " ^ P.dctxToString cD dctx  
+                        ^ "\n   dctx = " ^ P.dctxToString cD dctx
                         ^ "\n   " ^  P.typToString cD cPsi (tA, s) ) in
 
       (* P.typRecToString cD cPsi sArec  *)
-(*    let _ = dprint (fun () -> 
+(*    let _ = dprint (fun () ->
                          "\n== " ^ P.typRecToString cD cPsi (block_part, dctxSub) ) in  *)
-    let _ = dprint (fun () ->  "== " ) in 
+    let _ = dprint (fun () ->  "== " ) in
     let _ = dprint (fun () -> P.typRecToString cD cPsi (block_part, dctxSub) ) in
       begin
         try
-          Unify.unifyTypRec cD cPsi sArec (block_part, dctxSub) 
+          Unify.unifyTypRec cD cPsi sArec (block_part, dctxSub)
         ; dprint (fun () -> "instanceOfSchElem\n"
                             ^ "  block_part = " ^ P.typRecToString cD cPsi (block_part, dctxSub) ^ "\n"
                             ^ "  succeeded.")
@@ -698,15 +698,15 @@ f   *)
                     ^ P.typRecToString cD cPsi (block_part, dctxSub));
           raise exn
       end
-  
-  and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) = 
+
+  and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) =
     let tA_k (* : tclo *) = getType var (trec, Substitution.LF.id) k 1 in
     let _ = dprint (fun () -> "instanceOfSchElemProj...") in
     let (_tA'_k, subst) =
       instanceOfSchElem cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (TClo tA_k)))
       (* tA'_k = [subst] (tA_k) = [s]tA *)
     in
-      (trec, subst) 
+      (trec, subst)
 
 
   (* The rule for checking a context against a schema is
@@ -720,7 +720,7 @@ f   *)
   and checkElementAgainstElement __cD elem1 elem2 =
       let result =
 (*         Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in *)
-         Whnf.prefixSchElem elem2 elem1 (* (cSome1 = cSome2) && (block1 = block2)  *) in 
+         Whnf.prefixSchElem elem2 elem1 (* (cSome1 = cSome2) && (block1 = block2)  *) in
         dprint (fun () -> "checkElementAgainstElement "
                          ^ P.schemaToString (Schema[elem1])
                          ^ " <== "
@@ -733,20 +733,20 @@ f   *)
   and checkElementAgainstSchema cD sch_elem elements =
     List.exists (checkElementAgainstElement cD sch_elem) elements
 
-(*  and subset f list = 
+(*  and subset f list =
     begin match list with [] -> true
-      | elem::elems -> f elem 
-*)    
+      | elem::elems -> f elem
+*)
 
   and checkSchema loc cD cPsi (Schema elements as schema) =
-    dprint (fun () -> "checkSchema "  
+    dprint (fun () -> "checkSchema "
               ^ P.dctxToString cD cPsi ^ " against " ^ P.schemaToString schema);
     match cPsi with
       | Null -> ()
-      | CtxVar (CInst ({contents = Some cPhi}, _, _, _ )) -> 
-          checkSchema loc cD cPhi schema 
+      | CtxVar (CInst ({contents = Some cPhi}, _, _, _ )) ->
+          checkSchema loc cD cPhi schema
       | CtxVar ((CtxOffset _ ) as phi) ->
-          let Schema phiSchemaElements = 
+          let Schema phiSchemaElements =
 	    Schema.get_schema (lookupCtxVarSchema cD phi) in
 (*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cD phiElem elements) phiSchemaElements) then *)
 (*            if not (List.for_all (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements ) then *)
@@ -765,83 +765,83 @@ f   *)
 
  (* If subsumes psi phi succeeds then there exists  wk_sub  such that  psi |- wk_sub : phi  *)
 and subsumes cD psi phi = match (psi, phi) with
-  | (CtxOffset psi_var , CtxOffset phi_var) -> 
-      let Schema psi_selem = Schema.get_schema (lookupCtxVarSchema cD psi) in 
-      let Schema phi_selem = Schema.get_schema (lookupCtxVarSchema cD phi) in 
-        List.for_all (fun elem -> checkElementAgainstSchema Empty elem phi_selem) psi_selem  
+  | (CtxOffset psi_var , CtxOffset phi_var) ->
+      let Schema psi_selem = Schema.get_schema (lookupCtxVarSchema cD psi) in
+      let Schema phi_selem = Schema.get_schema (lookupCtxVarSchema cD phi) in
+        List.for_all (fun elem -> checkElementAgainstSchema Empty elem phi_selem) psi_selem
   | _ -> false
 
 
-and checkSchemaWf (Schema elements ) = 
+and checkSchemaWf (Schema elements ) =
     let rec checkElems elements = match elements with
       | [] -> ()
       | SchElem (cPsi, trec) :: els ->
-          checkTypRec Empty (projectCtxIntoDctx cPsi) (trec, Substitution.LF.id) 
+          checkTypRec Empty (projectCtxIntoDctx cPsi) (trec, Substitution.LF.id)
           ; checkElems els
     in
       checkElems elements
 
-  (* checkMSub loc cD ms cD'  = () 
-  
+  (* checkMSub loc cD ms cD'  = ()
+
      if cD |- ms <= cD' then checkMSub succeeds.
- 
+
   *)
 and checkMSub loc cD  ms cD'  = match (ms, cD') with
-    | (MShift k, Empty) ->  
-        if (Context.length cD) = k then () 
-        else 
+    | (MShift k, Empty) ->
+        if (Context.length cD) = k then ()
+        else
           raise (Violation ("Contextual substitution ill-typed - 1"))
 
-    | (MShift k, cD') -> 
-	if k >= 0 then 
+    | (MShift k, cD') ->
+	if k >= 0 then
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Violation ("Contextual substitution ill-formed"))
 
-    | (MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi))) -> 
-        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+    | (MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi))) ->
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
-        (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ; 
+        (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ;
          checkMSub loc cD ms cD1')
-    | (MDot (CObj(cPsi), ms), Dec(cD1', CDecl (_psi, w, _))) -> 
-        (checkSchema loc cD cPsi (Schema.get_schema w); 
+    | (MDot (CObj(cPsi), ms), Dec(cD1', CDecl (_psi, w, _))) ->
+        (checkSchema loc cD cPsi (Schema.get_schema w);
          checkMSub loc cD ms cD1')
 
-    | (MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi))) -> 
-        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+    | (MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi))) ->
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
-        let (_, tA1, cPsi1) = Whnf.mctxMDec cD u in 
-          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', Substitution.LF.id) (tA1, Substitution.LF.id) then 
+        let (_, tA1, cPsi1) = Whnf.mctxMDec cD u in
+          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', Substitution.LF.id) (tA1, Substitution.LF.id) then
                      checkMSub loc cD ms cD1'
-          else 
+          else
             raise (Violation ("Contextual substitution ill-typed - 2 "))
 
-    | (MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi))) -> 
-        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+    | (MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi))) ->
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
-        let (_, tA1, cPsi1) = Whnf.mctxPDec cD p in 
-          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', Substitution.LF.id) (tA1, Substitution.LF.id) then 
-            checkMSub loc cD ms cD1' 
-          else 
+        let (_, tA1, cPsi1) = Whnf.mctxPDec cD p in
+          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', Substitution.LF.id) (tA1, Substitution.LF.id) then
+            checkMSub loc cD ms cD1'
+          else
             raise (Violation ("Contextual substitution ill-typed - 3 "))
 
-    | (MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi))) -> 
-        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in 
+    | (MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi))) ->
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with
-            | BVar k -> 
-                let TypDecl (_, tB) = ctxDec cPsi' k in 
+            | BVar k ->
+                let TypDecl (_, tB) = ctxDec cPsi' k in
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-            | PVar _ -> 
-                let tB = inferHead loc cD cPsi' h in 
+            | PVar _ ->
+                let tB = inferHead loc cD cPsi' h in
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-            | Proj _ -> 
-                let tB = inferHead loc cD cPsi' h in 
+            | Proj _ ->
+                let tB = inferHead loc cD cPsi' h in
                   if Whnf.convTyp (tB, Substitution.LF.id) (tA', Substitution.LF.id) then ()
            end ;
            checkMSub loc cD ms cD1' )
 
-    | (_, _ ) -> 
-        raise (Violation ("Contextual substitution ill-typed\n " ^ 
-                            P.mctxToString cD ^ " |- " ^ 
-                            P.msubToString cD ms ^ " <= "  
+    | (_, _ ) ->
+        raise (Violation ("Contextual substitution ill-typed\n " ^
+                            P.mctxToString cD ^ " |- " ^
+                            P.msubToString cD ms ^ " <= "
                          ^ " = " ^ P.mctxToString cD'))

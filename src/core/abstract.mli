@@ -5,7 +5,7 @@
    modified: Joshua Dunfield
 *)
 
-open Syntax.Int 
+open Syntax.Int
 
 type error =
     LeftoverCV
@@ -29,7 +29,7 @@ val abstrKind     : LF.kind -> LF.kind * Id.offset
 
 val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
 
-val abstrCovGoal  : LF.dctx -> LF.normal -> LF.typ -> LF.msub -> 
+val abstrCovGoal  : LF.dctx -> LF.normal -> LF.typ -> LF.msub ->
                       LF.mctx * LF.dctx * LF.normal * LF.typ * LF.msub
 
 val abstrSchema   : LF.schema  -> LF.schema
@@ -41,23 +41,23 @@ val abstrCompKind  : Comp.kind  -> Comp.kind * Id.offset
 val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset
 
 val abstrExp      : Comp.exp_chk  -> Comp.exp_chk
-(* val abstrBranch   : (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) -> Comp.exp_chk  -> LF.msub 
+(* val abstrBranch   : (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) -> Comp.exp_chk  -> LF.msub
                   -> LF.mctx * (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) * Comp.exp_chk * LF.msub
 
 val abstrExpMSub  : Comp.exp_chk  -> LF.msub -> LF.mctx * LF.msub * Comp.exp_chk
 *)
 
 
-val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
-                    LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ 
+val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ ->
+                    LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ
 
-val abstrPatObj  : LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ -> 
+val abstrPatObj  : LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ ->
                     LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
 
-val abstrSubPattern  : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx -> 
+val abstrSubPattern  : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx ->
                     LF.mctx * LF.dctx * LF.sub * LF.dctx
 
 val closedTyp      : (LF.dctx * LF.typ) -> bool
 
 
-val printFreeMVars : LF.psi_hat -> LF.normal -> unit   
+val printFreeMVars : LF.psi_hat -> LF.normal -> unit

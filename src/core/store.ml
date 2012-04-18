@@ -23,7 +23,7 @@ module Cid = struct
       mutable subordinates : BitSet.t;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
       mutable typesubordinated : BitSet.t (* unused at the moment *)
     }
-    
+
     let entry_list  = ref []
 
     let mk_entry name kind implicit_arguments =
@@ -38,46 +38,46 @@ module Cid = struct
         subordinates       = BitSet.empty ();
         typesubordinated   = BitSet.empty ()
       }
-    
+
     type t = Id.name DynArray.t
 
     (*  store : {!entry DynArray.t} *)
     (*  store is used for storing the information associated with a cid *)
     let store = DynArray.create ()
-    
+
     (*  directory : {!(Id.name, Id.cid_type) Hashtbl.t} *)
     (*  directory keeps track of which cid a name is associated with
         and provides a way to quickly look up this information. *)
     let directory = Hashtbl.create 0
-    
+
     let index_of_name n = Hashtbl.find directory n
-    
+
     let get = DynArray.get store
 
     let freeze a =
           (get a).frozen <- true
-    
+
     let addNameConvention cid_name var_name_generator mvar_name_generator =
-      let cid_tp = index_of_name cid_name in 
+      let cid_tp = index_of_name cid_name in
       let entry = get cid_tp in
       let new_entry = {name   = entry.name ;
-                       implicit_arguments = entry.implicit_arguments ; 
+                       implicit_arguments = entry.implicit_arguments ;
                        kind  = entry.kind ;
-                       var_generator    = var_name_generator; 
+                       var_generator    = var_name_generator;
                        mvar_generator   = mvar_name_generator;
                        frozen           = entry.frozen;
                        constructors     = entry.constructors;
                        subordinates     = entry.subordinates;
                        typesubordinated = entry.typesubordinated
-                      } in 
-        (DynArray.set store cid_tp new_entry; 
+                      } in
+        (DynArray.set store cid_tp new_entry;
          cid_tp)
 
 
-    let var_gen cid_tp =  (get cid_tp).var_generator 
-    let mvar_gen cid_tp =  (get cid_tp).mvar_generator 
+    let var_gen cid_tp =  (get cid_tp).var_generator
+    let mvar_gen cid_tp =  (get cid_tp).mvar_generator
 
-    let rec gen_var_name tA = match tA with 
+    let rec gen_var_name tA = match tA with
       | Int.LF.Atom (_, a, _ ) -> var_gen a
       | Int.LF.PiTyp(_, tA) -> gen_var_name tA
       | Int.LF.Sigma typRec -> gen_var_name_typRec typRec
@@ -86,7 +86,7 @@ module Cid = struct
       | Int.LF.SigmaLast tA -> gen_var_name tA
       | Int.LF.SigmaElem(_, _, rest) -> gen_var_name_typRec rest
 
-    let rec gen_mvar_name tA = match tA with 
+    let rec gen_mvar_name tA = match tA with
       | Int.LF.Atom (_, a, _ ) -> mvar_gen a
       | Int.LF.PiTyp(_, tA)    -> gen_mvar_name tA
       | Int.LF.TClo(tA, _)     -> gen_mvar_name tA
@@ -95,32 +95,32 @@ module Cid = struct
     and gen_mvar_name_typRec = function
       | Int.LF.SigmaLast tA -> gen_mvar_name tA
       | Int.LF.SigmaElem(_, _, rest) -> gen_mvar_name_typRec rest
-   
+
 
     (* Subordination array:
 
        Subordination information is stored in a bit array.
-       if cid is a subordinate of this entry, then the cid-th bit is set 
+       if cid is a subordinate of this entry, then the cid-th bit is set
 
        We store subordination information as a adjacency matrix, i.e.
        the row corresponding to one type familly contains *all* cids
-       it can depend on.          
+       it can depend on.
 
     *)
-    (* subord_iter f arr = ()    
+    (* subord_iter f arr = ()
 
-       if f: int -> ()    and  
+       if f: int -> ()    and
           arr is a  bit array describing a subordination relation
-       then 
+       then
           f is applied to each cid which is in the subordination relation
     *)
     let subord_iter f arr =
       Enum.iter f (BitSet.enum arr)
- 
+
     (* add the subordination:  b-terms can contain a-terms *)
     (* addSubord a b = ()
-        
-       Let a,b be cid for type constructors. 
+
+       Let a,b be cid for type constructors.
        Terms of type family b can contain terms of type family a.
      *)
     let rec addSubord a b =
@@ -152,7 +152,7 @@ module Cid = struct
           (BitSet.set a_e.typesubordinated b;
            (* If b-types can contain a-terms, then b-types can contain everything a-terms can contain. *)
            subord_iter (fun bb -> addTypesubord bb a) b_e.subordinates)
-    
+
     let updateTypesubord cid entry =
       let rec doTypDecl = function
             Int.LF.TypDecl(_name, typ) -> doTyp typ
@@ -162,7 +162,7 @@ module Cid = struct
         | Int.LF.PiTyp ((typdecl, _depend), typ) ->
             doTypDecl typdecl;
             doTyp typ
-          
+
       and update = function
         | Int.LF.Typ -> ()
         | Int.LF.PiKind ((typdecl, _depend), kind) ->
@@ -173,30 +173,30 @@ module Cid = struct
       in
         update entry.kind
 *)
-   
+
     let rec inspect acc = function
       | Int.LF.Atom(_, b, spine) ->
           List.iter (fun a -> addSubord a b) acc ; [b]
 
-      | Int.LF.PiTyp((Int.LF.TypDecl(_name, tA1), _depend), tA2) ->       
-          inspect (acc @ (inspect [] tA1)) tA2 
+      | Int.LF.PiTyp((Int.LF.TypDecl(_name, tA1), _depend), tA2) ->
+          inspect (acc @ (inspect [] tA1)) tA2
     (*  | Sigma _ -> *)
 
 
     let rec inspectKind cid_tp acc = function
-      | Int.LF.Typ -> 
+      | Int.LF.Typ ->
           List.iter (fun a -> addSubord a cid_tp) acc
-      | Int.LF.PiKind((Int.LF.TypDecl(_name, tA1), _depend), tK2) ->       
-          inspectKind cid_tp (acc @ (inspect [] tA1)) tK2 
-    
-    let add entry = 
+      | Int.LF.PiKind((Int.LF.TypDecl(_name, tA1), _depend), tK2) ->
+          inspectKind cid_tp (acc @ (inspect [] tA1)) tK2
+
+    let add entry =
       let cid_tp = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tp;
         entry_list := cid_tp :: !entry_list;
-        inspectKind cid_tp [] entry.kind; 
+        inspectKind cid_tp [] entry.kind;
         cid_tp
-    
+
 
 
     let addConstructor loc typ c tA =
@@ -206,13 +206,13 @@ module Cid = struct
         else
           let _ = entry.constructors <- c :: entry.constructors in
           let _ = inspect [] tA in
-          (* type families occuring tA are added to the subordination relation 
+          (* type families occuring tA are added to the subordination relation
              BP: This insepction should be done once for each type family - not
                  when adding a constructor; some type families do not have
-                 constructors, and it is redundant to compute it multiple times.             
+                 constructors, and it is redundant to compute it multiple times.
           *)
             ()
-    
+
     let clear () =
       entry_list := [];
       DynArray.clear store;
@@ -311,12 +311,12 @@ module Cid = struct
 
   end
 
-  module CompTyp = struct 
+  module CompTyp = struct
     type entry = {
       name                : Id.name;
       implicit_arguments  : int;
       kind                : Int.Comp.kind;
-      mutable constructors: Id.cid_comp_const list 
+      mutable constructors: Id.cid_comp_const list
     }
 
     let entry_list  = ref []
@@ -350,10 +350,10 @@ module Cid = struct
     let clear () =
       DynArray.clear store;
       Hashtbl.clear directory
-  end 
+  end
 
 
-  module CompConst = struct 
+  module CompConst = struct
     type entry = {
       name                : Id.name;
       implicit_arguments  : int;
@@ -391,7 +391,7 @@ module Cid = struct
     let clear () =
       DynArray.clear store;
       Hashtbl.clear directory
-  end 
+  end
 
 
   module Comp = struct
@@ -478,7 +478,7 @@ module Cid = struct
 
   end (* Int.DefaultRenderer *)
 
- 
+
   (* RENDERER for Internal Syntax using names *)
   module NamedRenderer : RENDERER = struct
 
@@ -491,32 +491,32 @@ module Cid = struct
     let render_cid_term    c   = render_name (Term.get c).Term.name
     let render_cid_schema  w   = render_name (Schema.get w).Schema.name
     let render_cid_prog    f   = render_name (Comp.get f).Comp.name
-    let render_ctx_var cO g    =      
+    let render_ctx_var cO g    =
       begin try
         render_name (Context.getNameMCtx cO g)
       with
           _ -> "FREE CtxVar " ^ string_of_int g
-      end 
+      end
 
-    let render_cvar    cD u    = 
+    let render_cvar    cD u    =
       begin try
         render_name (Context.getNameMCtx cD u)
-      with 
+      with
           _ -> "FREE MVar " ^ (string_of_int u)
-      end 
-    let render_bvar  cPsi i    = 
-      begin try 
+      end
+    let render_bvar  cPsi i    =
+      begin try
         render_name (Context.getNameDCtx cPsi i)
       with
           _ -> "FREE BVar " ^ (string_of_int i)
-      end 
+      end
 
     let render_offset     i   = string_of_int i
 
     let render_var   cG   x   =
       begin try
         render_name (Context.getNameCtx cG x)
-      with 
+      with
           _ -> "FREE Var " ^ (string_of_int x)
       end
 
@@ -545,7 +545,7 @@ module BVar = struct
             loop (i + 1) es
     in
       loop 1 store
-  
+
   let create ()    = []
   let extend ctx e = e :: ctx
   let length       = List.length
@@ -560,28 +560,28 @@ module FVar = struct
 
   let store    = ref []
 
-  let add x tA = 
+  let add x tA =
     let rec update str = match str with
-      | ((y, tA')::str') -> 
-          if x = y then 
-            begin match (tA, tA') with 
-              | (Int.LF.Type tB, 
-                 Int.LF.TypVar (Int.LF.TInst ({contents = None} as r, _, _, {contents = []}))) -> 
-                  (r := Some tB ; 
+      | ((y, tA')::str') ->
+          if x = y then
+            begin match (tA, tA') with
+              | (Int.LF.Type tB,
+                 Int.LF.TypVar (Int.LF.TInst ({contents = None} as r, _, _, {contents = []}))) ->
+                  (r := Some tB ;
                   (x, Int.LF.Type tB)::str')
-            end 
-          else 
+            end
+          else
             (y, tA'):: update str'
       | [] -> [(x, tA)]
-    in 
-      store := update (!store) 
+    in
+      store := update (!store)
 
-  let get x    = 
+  let get x    =
     let rec lookup str = match str with
-      | ((y, tA)::str') -> 
+      | ((y, tA)::str') ->
           if x = y then tA else lookup str'
       | _ -> raise Not_found
-    in 
+    in
       lookup (!store)
 
 
@@ -596,15 +596,15 @@ module FPatVar = struct
 
   let store    = ref Syntax.Int.LF.Empty
 
-  let add x tau = 
+  let add x tau =
       store := Syntax.Int.LF.Dec (!store, Syntax.Int.Comp.CTypDecl (x,tau))
 
-  let get x    = 
+  let get x    =
     let rec lookup str = match str with
-      | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau))) -> 
+      | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau))) ->
           if x = y then tau else lookup str'
       | _ -> raise Not_found
-    in 
+    in
       lookup (!store)
 
 
@@ -672,7 +672,7 @@ module Var = struct
   let extend ctx e = e :: ctx
   let append vars vars' = vars @ vars'
   let get          = List.nth
-  let size  = List.length 
+  let size  = List.length
 
 end
 
@@ -702,12 +702,12 @@ module CVar = struct
 
 
   let nearest_cvar store =
-    let rec ncvar store k = match store with 
+    let rec ncvar store k = match store with
       | [] -> raise Not_found
-      | e::store' -> 
+      | e::store' ->
           match e.name with CV _  ->  k
             | _ -> ncvar store' (k+1)
-    in 
+    in
       ncvar store 1
 
 
@@ -715,7 +715,7 @@ module CVar = struct
   let extend cvars e = e :: cvars
   let get           = List.nth
   let append cvars cvars' = cvars @ cvars'
-  let length cvars = List.length cvars 
+  let length cvars = List.length cvars
 
 end
 

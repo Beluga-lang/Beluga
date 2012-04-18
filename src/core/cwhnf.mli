@@ -7,7 +7,7 @@ open Syntax.Int
 
 exception Fmvar_not_found
 exception FreeMVar of LF.head
-exception NonInvertible 
+exception NonInvertible
 
 
 val m_id   : LF.msub
@@ -22,7 +22,7 @@ val mcomp      : LF.msub -> LF.msub -> LF.msub
 
 val invert     : LF.msub -> LF.msub
 
-val invExp     : Comp.exp_chk * LF.msub -> int -> Comp.exp_chk 
+val invExp     : Comp.exp_chk * LF.msub -> int -> Comp.exp_chk
 val invTerm    : LF.normal    * LF.msub -> int -> LF.normal
 
 val mctxMDec   : LF.mctx -> int -> LF.typ * LF.dctx

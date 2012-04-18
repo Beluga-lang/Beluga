@@ -7,7 +7,7 @@
 
 open Syntax.Int.LF
 open Syntax.Int
-open Context 
+open Context
 
 
 val whnf       : nclo -> nclo
@@ -44,7 +44,7 @@ val newMVar     : dctx * typ -> cvar
 val newPVar     : dctx * typ -> cvar
 val newCVar     : Id.cid_schema -> ctx_var
 
-val raiseType   : dctx -> typ -> typ 
+val raiseType   : dctx -> typ -> typ
 
 
 (*************************************)
@@ -56,7 +56,7 @@ val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> sub -> normal
 
 exception Fmvar_not_found
 exception FreeMVar of head
-exception NonInvertible 
+exception NonInvertible
 
 
 val m_id   : msub
@@ -75,7 +75,7 @@ val mcomp      : msub -> msub -> msub
 
 val m_invert     : msub -> msub
 
-(* val invExp     : Comp.exp_chk * msub -> int -> Comp.exp_chk 
+(* val invExp     : Comp.exp_chk * msub -> int -> Comp.exp_chk
 val invTerm    : normal    * msub -> int -> normal
 *)
 val mctxMDec   : mctx -> int -> Id.name * typ * dctx
@@ -99,7 +99,7 @@ val cnormDCtx  : dctx * msub -> dctx
 val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 
-val cnormPattern  : Comp.pattern * msub -> Comp.pattern 
+val cnormPattern  : Comp.pattern * msub -> Comp.pattern
 
 val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
 

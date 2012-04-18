@@ -58,8 +58,8 @@ module LF = struct
    * then s' patsub
    *)
   let rec comp s1 s2 = match (s1, s2) with
-      
-    | (Shift (NoCtxShift , 0), s2) -> 
+
+    | (Shift (NoCtxShift , 0), s2) ->
         (*  Psi |- s1 : Psi   and Psi2 |- s2 : Psi
          *  therefore   Psi2 |- s2 : Psi  and s2 = s1 o s2
          *)
@@ -91,7 +91,7 @@ module LF = struct
     | (Shift (CtxShift psi , m), s2) ->
        (* psi, cPsi |-  s1 : .     and     cPsi' |- s2 : psi, cPsi  *)
         let rec ctx_shift n s2 = match s2 with
-          | Dot(_ft, s) -> ctx_shift (n - 1) s 
+          | Dot(_ft, s) -> ctx_shift (n - 1) s
               (*  psi, Psi |- s1 : .   and Psi2 |- s2. ft : psi, Psi  *)
 
           | Shift (NoCtxShift, k) -> Shift (CtxShift psi, k + n)
@@ -105,7 +105,7 @@ module LF = struct
                *)
 
           | Shift (CtxShift _ , _ ) ->  raise (NotComposable "Composition       undefined - 2")
- 
+
 (*          | _ ->  raise (NotComposable "Composition undefined - 2") *)
         in
           ctx_shift m s2
@@ -142,28 +142,28 @@ module LF = struct
          * where s :: Psi[Phi]  and |Psi| = k'
          * k = k' + k0
          *)
-        let h = frontSub ft s' in 
+        let h = frontSub ft s' in
           Dot (h, comp s s')
 
-(*    | (Shift (CtxShift _, _ ), _s2) -> 
+(*    | (Shift (CtxShift _, _ ), _s2) ->
        raise (Error "Composition not defined?  Shift CtxShift")
 *)
 
-    | (Shift (NoCtxShift, k1), Shift (NegCtxShift psi2, k2)) -> 
+    | (Shift (NoCtxShift, k1), Shift (NegCtxShift psi2, k2)) ->
     (*
      * s2 = Shift(NegCtxShift psi2, k2)               s1 = Shift(NoCtxShift, k1)
      *    k1, k2 |- s2 : psi, k1              psi, k1 |-  s1 : psi
      *
      *    k1, k2 |- s1 o s2 : psi
-     * 
+     *
      *  s1 o s2 = Shift(NegCtxShift psi2, k1 + k2)
      *)
 (*        Shift (NegCtxShift psi2, k1 + k2)     (* ADDED -jd 2010-06-25 *) *)
-        raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ 
-                                " o NegCtxShift " ^ string_of_int k2 ^ "\n")) 
+        raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^
+                                " o NegCtxShift " ^ string_of_int k2 ^ "\n"))
 
     (*  Psi, Psi' |- Shift n : Psi    |Psi'| = n    *)
-    | (Shift (NoCtxShift, k1 ), Shift (CtxShift psi2, k2 )) -> 
+    | (Shift (NoCtxShift, k1 ), Shift (CtxShift psi2, k2 )) ->
     (*
      * s2 = Shift(CtxShift psi2, k2)               s1 = Shift(NoCtxShift, k1)
      *      psi, k1, k2     |- s2 : k1           k1  |- s1 : .
@@ -176,7 +176,7 @@ module LF = struct
         raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o CtxShift " ^ string_of_int k2 ^ "?"))
 
 
-    | (_s1, _s2) -> 
+    | (_s1, _s2) ->
         raise (NotComposable "Composition not defined?")
 
 
@@ -206,7 +206,7 @@ module LF = struct
   and frontSub ft s = match ft with
     | Head (BVar n)       ->  bvarSub n s
     | Head (FVar _)       -> ft
-    | Head (MVar (u, s')) -> Head (MVar (u, comp s' s)) 
+    | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))
     | Head (PVar (u, s')) -> Head (PVar (u, comp s' s))
 
     | Head (Proj (BVar n, k))  ->
@@ -252,7 +252,7 @@ module LF = struct
     | Head (FPVar (_n, _ )) -> ft
     | Head (MMVar (_n, _ )) -> raise (Error "[frontSub] mmvar undefined ")
 
-        
+
   (* dot1 (s) = s'
    *
    * Invariant:
@@ -270,7 +270,7 @@ module LF = struct
   and dot1 s = match s with
     | Shift (CtxShift _ , 0) -> Dot (Head (BVar 1), comp s shift)
     | Shift (NegCtxShift _ , 0) -> Dot (Head (BVar 1), comp s shift)
-    | Shift (_ , 0) -> s 
+    | Shift (_ , 0) -> s
     | s             -> Dot (Head (BVar 1), comp s shift)
 
 
@@ -327,7 +327,7 @@ module LF = struct
           if k = p then
             Some (Head (BVar n))
           else
-            lookup (n + 1) s' p 
+            lookup (n + 1) s' p
     in
 
     let rec invert'' p si = match p with
@@ -408,7 +408,7 @@ module LF = struct
       | Dot (Head (BVar n), s') -> n = (k' + 1) && isId' s' (k' + 1)
       | _                       -> false
     in
-      isId' s 0 
+      isId' s 0
 
 
 (* cloInv (U, w) = U[w^-1]
@@ -456,8 +456,8 @@ module LF = struct
 
 
 (* applyMSub n t = MFt'
-     
-   Invariant: 
+
+   Invariant:
 
      If    D |- t <= D'    n-th element in D' = A[Psi]
      then  Ft' = Ft_n      if  t = Ft_1 .. Ft_n .. ^0

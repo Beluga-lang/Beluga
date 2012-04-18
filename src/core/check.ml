@@ -238,12 +238,12 @@ module Comp = struct
       (* other cases should be impossible *)
     in ext t2;;
 
-  let rec checkMetaObj cD cM cTt = match  (cM, cTt) with 
+  let rec checkMetaObj loc cD cM cTt = match  (cM, cTt) with 
   | (MetaCtx (loc, cPsi), (MetaSchema  w, _)) -> 
-      LF.checkSchema cD cPsi (Schema.get_schema w)
+      LF.checkSchema loc cD cPsi (Schema.get_schema w)
 
   | (MetaObj (loc, phat, tM), (MetaTyp (tA, cPsi), t)) ->  
-      LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+      LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) 
   | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->  
       LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)  
 ;
@@ -251,7 +251,7 @@ module Comp = struct
     (* The case for parameter types should be handled separately, for better error messages -bp *)
 
 
-and checkMetaSpine cD mS cKt  = match (mS, cKt) with 
+and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with 
   | (MetaNil , (Ctype _ , _ )) -> ()
   | (MetaApp (mO, mS), (PiKind (_, (cdecl, _ ), cK) , t)) -> 
       begin match cdecl with 
@@ -259,13 +259,13 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
             let MetaCtx (_, cPsi) = mO in 
             let theta' = Ctxsub.csub_msub cPsi 1 t in
             let cK'   = Ctxsub.csub_ckind cD cPsi 1 cK in               
-              checkMetaObj cD mO (MetaSchema schema_cid , t); 
-              checkMetaSpine cD mS (cK', theta')
+              checkMetaObj loc cD mO (MetaSchema schema_cid , t); 
+              checkMetaSpine loc cD mS (cK', theta')
 
         | I.MDecl (_u, tA, cPsi) -> 
             let MetaObj (loc, psihat, tM) = mO in 
-              checkMetaObj cD mO (MetaTyp (tA, cPsi), t) ;
-              checkMetaSpine cD mS (cK, I.MDot (I.MObj(psihat, tM), t)) 
+              checkMetaObj loc cD mO (MetaTyp (tA, cPsi), t) ;
+              checkMetaSpine loc cD mS (cK, I.MDot (I.MObj(psihat, tM), t)) 
     end
 
 
@@ -295,7 +295,7 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
   let rec checkTyp cD tau =  match tau with
     | TypBase (loc, c, mS) -> 
         let cK = (CompTyp.get c).CompTyp.kind in
-          checkMetaSpine cD mS (cK , C.m_id)
+          checkMetaSpine loc cD mS (cK , C.m_id)
 
     | TypBox (_ , tA, cPsi) ->
         LF.checkDCtx cD cPsi;
@@ -471,7 +471,7 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
         begin match C.cwhnfCTyp (syn cD cG e) with
           | ((TypCtxPi ((_psi, w, _ ) , tau), t) as tt) ->
               let theta' = I.MDot (I.CObj (cPsi), t) in
-              LF.checkSchema cD cPsi (Schema.get_schema w);
+              LF.checkSchema loc cD cPsi (Schema.get_schema w);
               (dprint (fun () -> "[check: syn] CtxApp : tau = " ^ 
                          P.compTypToString cD (Whnf.cnormCTyp tt) ); 
                dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
@@ -538,7 +538,7 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
     | PatMetaObj (loc, mO) -> 
         (match ttau with 
           | (TypBox (_, tA, cPsi) , theta) -> 
-              checkMetaObj cD mO (MetaTyp (tA, cPsi), theta)
+              checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | pat -> 
@@ -575,13 +575,13 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
           
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
     | I.MDecl (_, tA, cPsi) -> 
-        let _ = checkMetaObj cD mO (MetaTyp (tA, cPsi), theta) in 
+        let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in 
           (match mO with
             | MetaObj (_, phat, tM) ->  I.MDot(I.MObj(phat, tM), theta)
             | MetaObjAnn (_, cPsi, tM) -> I.MDot (I.MObj(Context.dctxToHat cPsi, tM), theta)
           )
     | I.CDecl (_, w, _ ) -> 
-        let _ = checkMetaObj cD mO (MetaSchema w, theta) in 
+        let _ = checkMetaObj loc cD mO (MetaSchema w, theta) in 
           (match mO with 
             | MetaCtx (_, cPsi) -> I.MDot (I.CObj (cPsi) , theta)
           )
@@ -595,7 +595,7 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
           let _ = dprint (fun () -> "cD1 = " ^ P.mctxToString cD1') in 
           let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in 
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in 
-          let _     = LF.checkMSub  cD1' t1 cD in   
+          let _     = LF.checkMSub  loc cD1' t1 cD in   
             checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id)
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) -> 
@@ -609,9 +609,9 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
           let tau'  = Whnf.cnormCTyp (tau, t'') in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n") in
           let _ = dprint (fun () -> "\nChecking refinement substitution\n") in          
-          let _     = LF.checkMSub  cD1' t1 cD in   
+          let _     = LF.checkMSub loc cD1' t1 cD in   
           let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in            
-          let _ = checkMetaObj cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in   
+          let _ = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in   
             check cD1' cG' e1 (tau', Whnf.m_id)
 
       | Branch (loc, cD1', cG1, pat, t1, e1) -> 
@@ -621,7 +621,7 @@ and checkMetaSpine cD mS cKt  = match (mS, cKt) with
           let tau'  = Whnf.cnormCTyp (tau, t'') in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n") in
           let _ = dprint (fun () -> "\nChecking refinement substitution\n") in          
-          let _     = LF.checkMSub  cD1' t1 cD in   
+          let _     = LF.checkMSub loc  cD1' t1 cD in   
           let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in            
           let _ = checkPattern cD1' cG1 pat (tau_p, Whnf.m_id) in 
             check cD1' (Context.append cG' cG1) e1 (tau', Whnf.m_id)
@@ -658,7 +658,7 @@ module Sgn = struct
     | Syntax.Int.Sgn.Schema (_w, schema) :: decls ->
         let cD   = Syntax.Int.LF.Empty in
         let cPsi = Syntax.Int.LF.Null in
-          LF.checkSchema cD cPsi schema;
+          LF.checkSchema (Syntax.Loc.ghost) cD cPsi schema;
           check_sgn_decls decls
 
     | Syntax.Int.Sgn.Rec (f, tau, e) :: decls ->

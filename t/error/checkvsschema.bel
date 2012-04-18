@@ -1,0 +1,32 @@
+tp: type.
+nat: tp.
+bool: tp.
+arr : tp -> tp -> tp.
+
+
+exp : tp -> type.
+z   : exp nat.
+suc : exp nat -> exp nat.
+andi : exp bool -> exp bool -> exp bool.
+tt  : exp bool.
+ff  : exp bool.
+
+app:  exp (arr T T') -> exp T -> exp T'.
+
+lam : (exp T -> exp T') -> exp (arr T T').
+
+
+opt: type.
+nothing: opt.
+something: exp T -> opt.
+
+schema ctx = exp T;
+schema tctx = tp;
+
+rec justfoolingaround : {g:ctx} [g. exp T] -> [g. exp T] =
+mlam g  => 
+ fn e => 
+   let [g. U..] = e in
+   let [g,x:tp. U..] = [g. U..] in
+      e
+;

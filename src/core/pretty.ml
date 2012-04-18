@@ -403,9 +403,9 @@ module Int = struct
         | LF.Shift (LF.NegCtxShift _, _) when not hasCtxVar  ->    ()    (* ??? *)
 
         | LF.SVar (c, s) ->
-            fprintf ppf "#%a[%a]"
-              (fmt_ppr_lf_cvar cD lvl) c
-              (self lvl) s
+            fprintf ppf "[%a. #%a]"
+               (self lvl) s
+               (fmt_ppr_lf_cvar cD lvl) c
               
         | LF.Dot (f, s) when hasCtxVar ->
             fprintf ppf "%a %a"
@@ -460,9 +460,9 @@ module Int = struct
               (R.render_offset n)
 
         | LF.SVar (c, s) ->
-            fprintf ppf "%a[%a]"
-              (fmt_ppr_lf_cvar cD lvl) c
+            fprintf ppf "[%a.%a]"
               (self lvl) s
+              (fmt_ppr_lf_cvar cD lvl) c
 
         | LF.Dot (f, s) ->
             fprintf ppf "%a . %a"
@@ -836,30 +836,30 @@ module Int = struct
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
       | LF.MDecl (u, tA, cPsi) ->
-          fprintf ppf "{%s :: %a[%a]}"
+          fprintf ppf "{%s :: [%a. %a]}"
             (R.render_name u)
-            (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 2) tA
 
       | LF.PDecl (p, tA, cPsi) ->
-          fprintf ppf "{#%s :: %a[%a]}"
+          fprintf ppf "{#%s :: [%a.%a]}"
             (R.render_name p)
-            (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 2) tA
 
       | LF.SDecl (u, cPhi, cPsi) ->
-          fprintf ppf "{%s :: %a[%a]}"
+          fprintf ppf "{%s :: [%a. %a]}"
             (R.render_name u)
-            (fmt_ppr_lf_dctx cD 0) cPhi
             (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_dctx cD 0) cPhi
 
       | LF.CDecl (name, schemaName, LF.No) ->
-          fprintf ppf "{%s :: (%a)*}"
+          fprintf ppf "{%s :: (%a)}"
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
       | LF.CDecl (name, schemaName, LF.Maybe) ->
-          fprintf ppf "{%s :: (%a)}"
+          fprintf ppf "{%s :: {%a}}"
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
@@ -925,15 +925,14 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.TypBox (_, tA, cPsi) ->
-          fprintf ppf "%a[%a]"
-            (fmt_ppr_lf_typ cD cPsi 2) tA
-            (fmt_ppr_lf_dctx cD 0) cPsi
-
+          fprintf ppf "[%a. %a]"
+                (fmt_ppr_lf_dctx cD 0) cPsi
+                (fmt_ppr_lf_typ cD cPsi 2) tA
 
       | Comp.TypSub (_, cPhi, cPsi) ->
-          fprintf ppf "%a[%a]"
-            (fmt_ppr_lf_dctx cD 0) cPhi
+          fprintf ppf "[%a. %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_dctx cD 0) cPhi
 
       | Comp.TypArr (tau1, tau2) ->
           let cond = lvl > 1 in
@@ -954,7 +953,7 @@ module Int = struct
       | Comp.TypCtxPi ((psi, w, dep), tau) ->
           let dep' = match dep with Comp.Explicit -> LF.No | Comp.Implicit -> LF.Maybe in 
           let cond = lvl > 1 in
-            fprintf ppf "%s{%s:(%s)*}@ %a%s"
+            fprintf ppf "%s{%s : %s}@ %a%s"
               (l_paren_if cond)
               (R.render_name psi)
               (R.render_cid_schema w)
@@ -1047,7 +1046,7 @@ module Int = struct
 
       | Comp.CtxFun (_, x, e) ->
           let cond = lvl > 0 in
-            fprintf ppf "@[<2>%sFN %s =>@ %a%s@]"
+            fprintf ppf "@[<2>%smlam %s =>@ %a%s@]"
               (l_paren_if cond)
               (R.render_name x)
               (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.CDeclOpt x)) cG 0) e
@@ -1092,7 +1091,7 @@ module Int = struct
       | Comp.Box (_ , pHat, tM) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a] %a%s"
+            fprintf ppf "%s[%a. %a]%s"
               (l_paren_if cond)
               (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
@@ -1102,7 +1101,7 @@ module Int = struct
       | Comp.SBox (_ , pHat, sigma) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a] %a%s"
+            fprintf ppf "%s[%a. %a]%s"
               (l_paren_if cond)
               (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) sigma
@@ -1132,7 +1131,7 @@ module Int = struct
       | Comp.Value (Comp.FunValue _ ) -> fprintf ppf " fn "
       | Comp.Value (Comp.RecValue _ ) -> fprintf ppf " rec "
       | Comp.Value (Comp.MLamValue _ ) -> fprintf ppf " mlam "
-      | Comp.Value (Comp.CtxValue _ ) -> fprintf ppf " FN "
+      | Comp.Value (Comp.CtxValue _ ) -> fprintf ppf " mlam "
       | Comp.Value (Comp.BoxValue _ ) -> fprintf ppf " box "
       | Comp.Value (Comp.ConstValue _ ) -> fprintf ppf " const "
 
@@ -1201,10 +1200,10 @@ module Int = struct
 
       | Comp.CtxApp (_, i, cPsi) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ [%a]%s"
+            fprintf ppf "%s[%a@ . %a]%s"
               (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD cG 1) i
               (fmt_ppr_lf_dctx cD 0) cPsi
+              (fmt_ppr_cmp_exp_syn cD cG 1) i
               (r_paren_if cond)
 
       | Comp.MApp (_, i, (pHat, Comp.NormObj tM )) ->
@@ -1353,7 +1352,7 @@ module Int = struct
           in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
 (*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a] %a)@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a. %a])@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
               (ppr_ctyp_decls ) cD1'
               (* (fmt_ppr_lf_psi_hat cO' 0) cPsi *)
               (fmt_ppr_lf_dctx cD1' 0) cPsi 

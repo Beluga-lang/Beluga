@@ -17,7 +17,7 @@ module LF : sig
     | SpineIllTyped
     | SubIllTyped
     | LeftoverFV
-
+    | CtxVarMisCheck	of mctx * dctx * tclo * schema
   exception Error of Syntax.Loc.t * error
 
   val check       : mctx -> dctx -> nclo -> tclo -> unit
@@ -27,14 +27,14 @@ module LF : sig
   val checkDCtx   : mctx -> dctx                 -> unit
 
   val checkSchemaWf : schema -> unit
-  val checkSchema : mctx -> dctx -> schema -> unit
+  val checkSchema : Syntax.Loc.t -> mctx -> dctx -> schema -> unit
   val subsumes    : mctx -> ctx_var -> ctx_var -> bool
 
-  val checkTypeAgainstSchema: mctx -> dctx -> typ -> sch_elem list -> (typ_rec * sub)
+  val checkTypeAgainstSchema: Syntax.Loc.t ->  mctx -> dctx -> typ -> sch_elem list -> (typ_rec * sub)
   val instanceOfSchElem     : mctx -> dctx -> tclo -> sch_elem ->  (typ_rec * sub)
   val instanceOfSchElemProj : mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
 
-  val checkMSub   : mctx -> msub -> mctx -> unit
+  val checkMSub   : Syntax.Loc.t -> mctx -> msub -> mctx -> unit
 
 end
 

@@ -1819,9 +1819,6 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
             (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
         Int.Comp.EmptyBranch (loc, cD1'', pat1', t')
         
-
-(*  | Apx.Comp.EmptyBranch(loc, _omega, delta, 
-                         Apx.Comp.PatAnn(loc0, Apx.Comp.PatEmpty (loc', cpsi), tau_p)) -> *)
   | Apx.Comp.Branch (loc, _omega, delta, Apx.Comp.PatMetaObj(loc',mO), e) -> 
       let Int.Comp.TypBox (_, (Int.LF.Atom(_, a, _) as tP) , cPsi) = tau_s in 
       let _ = dprint (fun () -> "[elBranch] Reconstruction of pattern ... ") in
@@ -1970,9 +1967,6 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
       let _        = dprint (fun () -> "[elBranch] Body done (general pattern) \n") in 
       let _       = FCVar.clear() in
         Int.Comp.Branch (loc, cD1'', cG1', pat1', t', eE')
-
-
-
 
 (* ******************************************************************************* *)
 (* TOP LEVEL                                                                       *)

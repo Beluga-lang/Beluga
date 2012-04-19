@@ -472,11 +472,11 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
   | (Apx.Comp.MetaCtx (loc, psi), (Int.Comp.MetaSchema  w, _)) -> 
       let cPsi' = elDCtxAgainstSchema Lfrecon.Pibox cD psi w in 
         Int.Comp.MetaCtx (loc, cPsi')   
+
   | (Apx.Comp.MetaObj (loc, phat, tM), (Int.Comp.MetaTyp (tA, cPsi), theta)) ->  
       let cPsi' = C.cnormDCtx (cPsi, theta) in 
       if Lfrecon.unify_phat phat (Context.dctxToHat cPsi') then
         let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (C.cnormTyp (tA, theta), LF.id) in
-         
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in  
         let _        = Unify.resetGlobalCnstrs () in 
         let _        = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi (tA, LF.id) ) in 
@@ -485,7 +485,6 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       else 
         raise (Error.Violation ("MetaObj not of the appropriate meta-type" 
                                 ^ P.typToString cD cPsi (tA, LF.id)))
-
 
   | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.Comp.MetaTyp (tA, cPsi), theta)) ->       
       let cPsi' = C.cnormDCtx (cPsi, theta) in 

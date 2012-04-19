@@ -177,12 +177,13 @@ and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
 
       | (Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref , s_cid, _cO1, _cD1)) , cPsi) -> 
           let _ = Unify.instantiateCtxVar (cvar_ref, cPsi) in 
-            (match Context.ctxVar cPsi with 
+          begin match Context.ctxVar cPsi with
                | None -> ()
                | Some (Int.LF.CtxName psi) -> 
                    FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
                | _ -> ()
-            )
+          end
+
       | (cPsi , Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref, s_cid, _cO, _cD) )) -> 
           let _ = Unify.instantiateCtxVar (cvar_ref, cPsi) in 
             (match Context.ctxVar cPsi with 
@@ -201,7 +202,8 @@ and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
          Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , tA2))) -> 
             unifyDCtx' cD cPsi1 cPsi2 ; 
             Unify.unifyTyp cD cPsi1 (tA1, LF.id)   (tA2, LF.id)
-      | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _) ,   
+
+      | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _),
          Int.LF.DDec (cPsi2, Int.LF.TypDeclOpt _ )) -> 
           unifyDCtx' cD cPsi1 cPsi2
       | _ -> 

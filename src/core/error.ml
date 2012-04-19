@@ -57,6 +57,7 @@ let _ = register_printer
     print (fun ppf ->
       Format.fprintf ppf "Not implemented."))
 
+(* The following is for coverage. Probably needs to be phased out. *)
 let information = ref []
 
 let getInformation () =

@@ -193,10 +193,7 @@ and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
                | _ -> ()
             )
 
-      | (Int.LF.CtxVar  psi1_var , Int.LF.CtxVar psi2_var) -> 
-          if psi1_var = psi2_var then () 
-          else raise (Error.Violation "[unifyDctx] CtxVar clash")
-
+      | (Int.LF.CtxVar  psi1_var , Int.LF.CtxVar psi2_var) when psi1_var = psi2_var -> ()
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , tA1)) , 
          Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , tA2))) -> 
@@ -206,17 +203,8 @@ and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _),
          Int.LF.DDec (cPsi2, Int.LF.TypDeclOpt _ )) -> 
           unifyDCtx' cD cPsi1 cPsi2
-      | _ -> 
-          (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ 
-                     P.dctxToString cD cPsi1 ^ 
-                     " cPsi2 = " ^ P.dctxToString cD cPsi2 ) ; 
-           raise (Error.Violation "[unifyDCtx] Context clash"))
 
-(* let rec remove_name n n_list - match n_list with 
-  | [ ] -> [ ] 
-  | n'::n_list' -> if n = n' then n_list else n'::(remove_name n n_list')
-*)
-
+      | _ -> raise (Unify.Unify "context clash")
 
 let rec raiseType cPsi tA = match cPsi with
   | Int.LF.Null -> tA

@@ -31,6 +31,7 @@ type error =
   | CompScrutineeSubTyp of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.dctx * Int.LF.dctx
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
+  | ContextSchemaClash  of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
 
 exception Error of Syntax.Loc.t * error
 
@@ -96,7 +97,13 @@ let _ = Error.register_printer
             "Scrutinee's context" (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) cPsi';
           Format.fprintf ppf
             "Note that we do not allow the context in the pattern@ \
-             to be more general than the context in the scrutinee."))
+             to be more general than the context in the scrutinee."
+
+        | ContextSchemaClash (cD, cPsi, cD', cPsi') ->
+          Error.report_mismatch ppf
+            "Context schema clash."
+            "Expected context"    (P.fmt_ppr_lf_dctx cD Pretty.std_lvl)  cPsi
+            "Encountered context" (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) cPsi'))
 
 let rec projectCtxIntoDctx = function
   | Int.LF.Empty            -> Int.LF.Null
@@ -1319,23 +1326,20 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
           let _ = dprint (fun () -> "[inferSchema] looking up psi = " ^
                             P.dctxToString cD cPsi) in 
           let (_ , s_cid) = Whnf.mctxCDec cD psi1_var in 
-            (match get_ctxvar cPsi' with 
+          begin match get_ctxvar cPsi' with
                | None -> ()
                | Some (Int.LF.CtxOffset psi) -> 
                    let _ = dprint (fun () -> "[inferSchema] looking up psi' = " ^
                             P.dctxToString cD' cPsi') in 
                    let (_ , s_cid') = Whnf.mctxCDec cD' psi in                    
-                     if s_cid = s_cid' then 
-                       ()
-                     else
-                       raise (Error.Violation "Context schemas clash")
+              if s_cid != s_cid' then raise (Error (loc, ContextSchemaClash (cD, cPsi, cD', cPsi')))
                | Some (Int.LF.CtxName psi) -> 
                    (dprint (fun () -> "[inferCtxSchema] Added free context variable " 
                               ^ R.render_name psi ^ " with schema " ^ 
                               R.render_cid_schema s_cid ^ 
                               " to FCVar");
                    FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No)))
-            )
+          end
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , _tA1)) , Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , _tA2))) ->  
           inferCtxSchema loc (cD, cPsi1) (cD',cPsi2)

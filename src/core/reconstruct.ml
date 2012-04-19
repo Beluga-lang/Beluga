@@ -28,9 +28,9 @@ type error =
   | EtaExpandFMV        of Id.name * Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | CompScrutineeTyp    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.tclo * Int.LF.dctx 
-  | CompScrutineeSubTyp of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn *
-      Int.LF.dctx * Int.LF.dctx 
-
+  | CompScrutineeSubTyp of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.dctx * Int.LF.dctx
+  | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
+  | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
 
 exception Error of Syntax.Loc.t * error
 
@@ -81,7 +81,22 @@ let _ = Error.register_printer
              should be restricted.@."
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPhi
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
-            (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i))
+            (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
+
+        | MetaObjContextClash (cD, cPsi, cPhi) ->
+          Error.report_mismatch ppf
+            "Context of meta-object does not match expected context."
+            "Expected context"    (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
+            "Encountered context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPhi;
+
+        | PatternContextClash (cD, cPsi, cD', cPsi') ->
+          Error.report_mismatch ppf
+            "Context clash in pattern."
+            "Pattern's context"   (P.fmt_ppr_lf_dctx cD Pretty.std_lvl)  cPsi
+            "Scrutinee's context" (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) cPsi';
+          Format.fprintf ppf
+            "Note that we do not allow the context in the pattern@ \
+             to be more general than the context in the scrutinee."))
 
 let rec projectCtxIntoDctx = function
   | Int.LF.Empty            -> Int.LF.Null
@@ -471,15 +486,11 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in  
       let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in  
       (* let _    = inferCtxSchema (cD, cPsi') (cD, cPhi) in  *)
-      let _     = (try 
-                     unifyDCtx cD cPsi' cPhi (* unifying two contexts AND
-                                                inferring schema for psi in
+      let _ =
+        (* unifying two contexts AND inferring schema for psi in
                                                 cPhi, if psi is not in cD *)
-                   with _ ->   
-                     raise (Error.Violation ("Context of MetaObj does not match expected context"^
-                                               "\n expected context : " ^ P.dctxToString cD cPsi' ^ 
-                                               " Encountered context: " ^ P.dctxToString cD cPhi ))
-                  )in 
+        try unifyDCtx cD cPsi' cPhi
+        with Unify.Unify _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
       let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in 
       let tA' = C.cnormTyp (tA, theta) in 
@@ -1328,14 +1339,7 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , _tA1)) , Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , _tA2))) ->  
           inferCtxSchema loc (cD, cPsi1) (cD',cPsi2)
-      | _ ->
-          raise (Error.Violation ("Context clash: We do not allow the context
-          in the pattern to be more general than the context in the
-          scrutinee. \n"
-                      ^ "Scrutinee's context " ^ P.dctxToString cD cPsi              
-                      ^ "\nPattern's context " ^ P.dctxToString cD' cPsi' ^ "\n"             
-                      ^ Syntax.Loc.to_string loc)
-            )
+      | _ -> raise (Error (loc, PatternContextClash (cD, cPsi, cD', cPsi')))
 
 (* ********************************************************************************)
 (* Elaborate computation-level patterns *) 

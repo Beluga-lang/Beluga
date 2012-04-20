@@ -1256,10 +1256,10 @@ module Int = struct
               (fmt_ppr_cmp_exp_syn cD cG 1) i2 
 
       | Comp.Boolean true -> 
-          fprintf ppf "true"
+          fprintf ppf "ttrue"
 
       | Comp.Boolean false -> 
-          fprintf ppf "false"
+          fprintf ppf "ffalse"
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function 
       | LF.Empty -> ()

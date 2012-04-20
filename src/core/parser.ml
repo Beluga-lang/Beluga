@@ -14,10 +14,13 @@ open Syntax.Ext
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
 let _ = Error.register_printer
-  (fun (Grammar.Loc.Exc_located (loc, Stream.Error exn)) ->
+  (fun (Grammar.Loc.Exc_located (loc, exn)) ->
     Error.print_with_location loc (fun ppf ->
-      Format.fprintf ppf "Parse Error: %s" exn;
-      Format.pp_print_newline ppf ()))
+      Format.fprintf ppf "Parse Error: %s" (Printexc.to_string exn)))
+
+let _ = Error.register_printer
+  (fun (Stream.Error str) ->
+    Error.print (fun ppf -> Format.fprintf ppf "%s" str))
 
 let rec last l = begin match List.rev l with
   | [] -> None

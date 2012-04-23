@@ -232,117 +232,22 @@ and lowerMVar = function
 
 let m_id = MShift 0
 
-(* mshift t n = t' 
-
-   Invariant: 
-
-   If cD |- t <= cD' 
-   then  cD, ... |- t' <= cD', ...   where ... has length n
-                                     and t' = t^n
-
-
-   Can be replaced cnorm (t, MShift n) ? Mon Apr 20 20:57:36 2009 -bp 
-*)
-let rec mshift t n = match t with
-  | MShift k   ->  MShift (k+n)
-
-  | MDot(ft, t') -> MDot(mshiftMFt ft n, mshift t' n)
-
-
-and mshiftMFt ft n = match ft with 
-  | CObj(cPsi) -> 
-      CObj(mshiftDCtx cPsi n)
-   
-  | MObj(phat, tM) -> 
-      MObj(phat, mshiftTerm tM n)   
-
-  | PObj(phat, PVar(Offset k, s)) -> 
-     PObj(phat, PVar(Offset (k+n), s))
-
-  | PObj(_phat, BVar _k) -> ft
-
-  | MV (u_offset) -> MV (u_offset + n)
-
-
-and mshiftTerm tM n = match tM with
-  | Lam(loc, x, tN)  -> Lam(loc, x, mshiftTerm tN n)
-  | Tuple(loc, tuple)  -> Tuple(loc, mshiftTuple tuple n)
-  | Root(loc, h, tS) -> Root(loc, mshiftHead h n, mshiftSpine tS n)
-  | Clo(tM, s)  -> Clo(mshiftTerm tM n, mshiftSub s n)
-
-and mshiftTuple tuple n = match tuple with
-  | Last tM -> Last (mshiftTerm tM n)
-  | Cons (tM, rest) ->
-      let tMshifted = mshiftTerm tM n in
-      let restShifted = mshiftTuple rest n in
-        Cons (tMshifted, restShifted)
-
-and mshiftHead h n = match h with
-  | MVar(Offset k, s) -> MVar(Offset (k+n), mshiftSub s n)
-  | PVar(Offset k, s) -> PVar(Offset (k+n), mshiftSub s n)
-  | Proj(PVar(Offset k, s), j) -> Proj(PVar(Offset (k+n), mshiftSub s n), j)
-  | AnnH(h, tA) -> AnnH(mshiftHead h n, mshiftTyp tA n)
-  | _ -> h
-
-and mshiftSpine tS n = match tS with 
-  | Nil -> Nil
-  | App(tM, tS) -> App(mshiftTerm tM n, mshiftSpine tS n)
-  | SClo(tS, s) -> SClo(mshiftSpine tS n, mshiftSub s n)
-
-and mshiftTyp tA n = match tA with
-  | Atom (loc, a, tS) -> Atom (loc, a, mshiftSpine tS n)
-  | PiTyp((TypDecl(x, tA), dep), tB) -> PiTyp((TypDecl(x, mshiftTyp tA n), dep), mshiftTyp tB n)
-  | TClo(tA, s) -> TClo(mshiftTyp tA n, mshiftSub s n)
-  | Sigma typRec -> Sigma (mshiftTypRec typRec n)
-
-and mshiftTypRec typRec n = match typRec with
-  | SigmaLast tA -> SigmaLast (mshiftTyp tA n)
-  | SigmaElem (x, tA, rest) ->
-      let tA = mshiftTyp tA n in
-      let rest = mshiftTypRec rest n in
-        SigmaElem (x, tA, rest)
-
-and mshiftSub s n = match s with
-  | Shift (CtxShift (CtxOffset k), d) -> 
-      Shift(CtxShift (CtxOffset (k+n)), d)
-  | Shift (NegCtxShift (CtxOffset k), d) -> 
-      Shift(NegCtxShift (CtxOffset (k+n)), d)
-  | Shift (_,_k) -> s 
-  | SVar(Offset k, s) -> SVar(Offset (k+n), mshiftSub s n)
-  | Dot(ft, s) -> Dot (mshiftFt ft n, mshiftSub s n)
-
-and mshiftFt ft n = match ft with
-  | Head h -> Head (mshiftHead h n)
-  | Obj tM -> Obj (mshiftTerm tM n)
-  | Undef  -> Undef
-  
-and mshiftDCtx cPsi k = match cPsi with
-  | Null -> Null
-  | CtxVar (CtxOffset offset) -> CtxVar (CtxOffset (offset + k))
-  | CtxVar _ -> cPsi
-  | DDec(cPsi', TypDecl(x, tA)) -> 
-      DDec(mshiftDCtx cPsi' k, TypDecl(x, mshiftTyp tA k))
-
-and mshiftHat phat k = match phat with 
-  | (None, d) -> phat
-  | (Some (CtxOffset n), d) -> (Some (CtxOffset (n+k)), d)
-  | _ -> phat
-
 (* mvar_dot1 psihat t = t'
    Invariant:
 
-   If  cO ;  cD |- t : D'
+   If  cO ;  cD |- t : D'       
 
    then t' = u. (mshift t 1)  
        and  for all A s.t.  D' ; Psi |- A : type
 
               D, u::[|t|](A[Psi]) |- t' : D', A[Psi]
  *)
-  and mvar_dot1 t = 
-    MDot (MV 1, mshift t 1)
+let rec mvar_dot1 t = 
+(*    MDot (MV 1, mshift t 1) *)
+  MDot (MV 1, mcomp t (MShift 1))
 
   and pvar_dot1 t = 
-    MDot (MV 1, mshift t 1)
+    MDot (MV 1, mcomp t (MShift 1))
 
 
   (* mvar_dot t cD = t' 
@@ -370,7 +275,7 @@ and mshiftHat phat k = match phat with
 
 *)
 
-let rec mcomp t1 t2 = match (t1, t2) with
+and mcomp t1 t2 = match (t1, t2) with
   | (MShift 0, t)         -> t
   | (t, MShift 0)         -> t
   | (MShift n, MShift k) -> (MShift (n+k))
@@ -819,8 +724,6 @@ and cnorm_psihat (phat: psi_hat) t = match phat with
         | (Some cvar', i) -> (Some cvar', i+k)
       end
   | (Some (CtxOffset offset), k) -> 
-      let _ = dprint (fun () -> "cnorm_psihat : offset = " ^ 
-                        R.render_offset offset) in 
       begin match LF.applyMSub offset t with 
         | CObj(cPsi) -> 
             begin match Context.dctxToHat (cPsi) with
@@ -875,9 +778,9 @@ and cnorm (tM, t) = match tM with
                     Root (loc, MVar (Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
                       
                 | MObj (_phat,tM)   -> 
-                    reduce (tM, cnormSub (r, t)) (cnormSpine (tS, t))  
-                    (* Clo(whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS,
-                    t), LF.id)))  *)
+                    (dprint (fun () -> "cnorm MVar Offset substitute!"); 
+                    reduce (tM, cnormSub (r, t)) (cnormSpine (tS, t)) ) 
+                    (* Clo(whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), LF.id)))  *) 
                 | PObj (_phat, h) -> 
                     let tS' = cnormSpine (tS, t) in 
                       begin match h with 
@@ -1292,7 +1195,8 @@ and cnorm (tM, t) = match tM with
 
   and cnormDecl (decl, t) = match decl with
     | TypDecl (x, tA) -> 
-          TypDecl (x, cnormTyp (tA, t))
+        (dprint (fun () -> "[cnormDecl] ... " );
+          TypDecl (x, cnormTyp (tA, t)))
     | TypDeclOpt x -> TypDeclOpt x    (* jd 2010-05-22: +d fails otherwise *)
 
 
@@ -2025,7 +1929,8 @@ end
 let rec mctxMDec cD' k = 
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, MDecl(u, tA, cPsi)), 1)
-      -> (u, mshiftTyp tA k, mshiftDCtx cPsi k)
+      -> (u, cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k)) 
+(*        (u, mshiftTyp tA k, mshiftDCtx cPsi k)*)
         
     | (Dec (_cD, PDecl _), 1)
       -> raise (Error.Violation "Expected meta-variable; Found parameter variable")
@@ -2043,7 +1948,8 @@ let rec mctxMDec cD' k =
 let rec mctxPDec cD k = 
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, PDecl (p, tA, cPsi)),  1)
-      -> (p, mshiftTyp tA k, mshiftDCtx cPsi k)
+      -> (p, cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k)) 
+        (* (p, mshiftTyp tA k, mshiftDCtx cPsi k)*)
 
 (*    | (Dec (_cD, MDecl (p, tA, cPsi)),  1)
       -> (p, mshiftTyp tA k, mshiftDCtx cPsi k)
@@ -2066,7 +1972,8 @@ let rec mctxPDec cD k =
 let rec mctxSDec cD' k = 
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, SDecl(u, cPhi, cPsi)), 1)
-      -> (u,mshiftDCtx cPhi k, mshiftDCtx cPsi k)
+      -> (* (u,mshiftDCtx cPhi k, mshiftDCtx cPsi k) *)
+        (u, cnormDCtx (cPhi, MShift k), cnormDCtx (cPsi, MShift k))
         
     | (Dec (_cD, PDecl _), 1)
       -> raise (Error.Violation "Expected substitution variable; found parameter variable")
@@ -2122,7 +2029,8 @@ let rec mctxMVarPos cD u =
   let rec lookup cD k = match cD  with
     | Dec (cD, MDecl(v, tA, cPsi))    -> 
         if v = u then 
-          (k, (mshiftTyp tA k, mshiftDCtx cPsi k))
+         (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
+         (k, (cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k)) )
         else 
           lookup cD (k+1)
               
@@ -2136,7 +2044,8 @@ let rec mctxPVarPos cD p =
   let rec lookup cD k = match cD  with
     | Dec (cD, PDecl(q, tA, cPsi))    -> 
         if p = q then 
-          (k, (mshiftTyp tA k, mshiftDCtx cPsi k))
+          (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
+         (k, (cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k)) )
         else 
           lookup cD (k+1)
               
@@ -2201,6 +2110,8 @@ let rec mctxPVarPos cD p =
         Comp.MetaCtx (loc, cnormDCtx (cPsi,t))
     | Comp.MetaObj (loc, phat, tM) -> 
         Comp.MetaObj (loc, cnorm_psihat phat t, cnorm (tM, t))
+    | Comp.MetaObjAnn (loc, cPsi, tM) -> 
+        Comp.MetaObjAnn (loc, cnormDCtx (cPsi, t), cnorm (tM, t))
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS
@@ -2482,11 +2393,9 @@ let rec mctxPVarPos cD p =
   let rec cnormCtx (cG, t) = match cG with
     | Empty -> Empty
     | Dec(cG, Comp.CTypDecl(x, tau)) -> 
-        let _ = dprint (fun () -> "[cnormCtx] decl = " ^ x.Id.string_of_name) in
         let tdcl = Comp.CTypDecl (x, cnormCTyp (tau, t)) in 
         Dec (cnormCtx (cG, t), tdcl)
     | Dec(cG, Comp.CTypDeclOpt x) -> 
-        let _ = dprint (fun () -> "[cnormCtx] decl-opt = " ^ x.Id.string_of_name) in
         Dec (cnormCtx (cG, t), Comp.CTypDeclOpt x)
 
   let rec normCtx cG = match cG with

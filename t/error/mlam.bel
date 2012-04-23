@@ -1,0 +1,35 @@
+tp: type.
+nat: tp.
+bool: tp.
+arr : tp -> tp -> tp.
+
+
+exp : tp -> type.
+z   : exp nat.
+suc : exp nat -> exp nat.
+andi : exp bool -> exp bool -> exp bool.
+tt  : exp bool.
+ff  : exp bool.
+
+app:  exp (arr T T') -> exp T -> exp T'.
+
+lam : (exp T -> exp T') -> exp (arr T T').
+
+
+opt: type.
+nothing: opt.
+something: exp T -> opt.
+
+schema expCtx = some [t:tp] block _t:exp t;
+
+% no need for mlam here
+rec noneedformlam: (g:expCtx) [g.exp T] -> [g.exp T] =
+ fn e => e
+;
+
+% uh oh, we need a mlam for the explicit context variable g
+rec forgetmlam: {g:expCtx} [g.exp T] -> [g.exp T] =
+ fn e => e
+;
+
+

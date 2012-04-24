@@ -1200,16 +1200,16 @@ module Int = struct
 
       | Comp.CtxApp (_, i, cPsi) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a@ . %a]%s"
+            fprintf ppf "%s%a [%a]%s"
               (l_paren_if cond)
-              (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_cmp_exp_syn cD cG 1) i
+              (fmt_ppr_lf_dctx cD 0) cPsi
               (r_paren_if cond)
 
       | Comp.MApp (_, i, (pHat, Comp.NormObj tM )) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s%a@ <%s%a. %a%s>%s"
+            fprintf ppf "%s%a@ [%s%a. %a%s]%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               ("")
@@ -1319,10 +1319,10 @@ module Int = struct
              *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
              * -bp
              *) 
-            (fmt_ppr_cmp_exp_chk cD1' (Whnf.cnormCtx (cG, t)) 1) e
+            (fmt_ppr_cmp_exp_chk cD1' cG 1) e
 
       | Comp.Branch (_, cD1', cG', pat, t, e) -> 
-          let cG_t = Whnf.cnormCtx (cG, t) in 
+          let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in  
           let cG_ext = Context.append cG_t cG' in 
 
           fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ . %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
@@ -1591,6 +1591,7 @@ module Int = struct
 
     let expChkToString cD cG e    = 
       let e' = Whnf.cnormExp (e , Whnf.m_id) in 
+      let _ = Printf.printf "[expChkToString] cnormExp done\n" in  
        fmt_ppr_cmp_exp_chk cD cG std_lvl str_formatter e'
       ; flush_str_formatter ()
 

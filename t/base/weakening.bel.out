@@ -4,4 +4,4 @@ Context clash: We do not allow the context
           scrutinee. 
 Scrutinee's context 
 Pattern's context h
-File "./t/base/weakening.bel", line 10, characters 12-18
+File "./t/base/weakening.bel", line 10, characters 12-19

@@ -723,7 +723,7 @@ let rec ctxToMCtx cQ  = match cQ with
       I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi))  
 
   | I.Dec (cQ', FCV (psi, Some (s_cid))) ->
-      I.Dec (ctxToMCtx cQ', I.CDecl (psi, s_cid, I.No))
+      I.Dec (ctxToMCtx cQ', I.CDecl (psi, s_cid, I.Maybe))
 
   | I.Dec (cQ', FMV (Pure, u, Some (tA, cPsi))) ->
       I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi)) 
@@ -733,6 +733,9 @@ let rec ctxToMCtx cQ  = match cQ with
 
   | I.Dec (cQ', CtxV (x,w, dep)) -> 
       let dep' = match dep with Comp.Explicit -> I.No | Comp.Implicit -> I.Maybe in
+      let _ = dprint (fun () -> 
+                        let s = (match dep' with I.No -> "No" | I.Maybe -> "MAYBE") in 
+                        "[ctxToMCtx] psi = " ^ R.render_name x ^ " -- " ^ s)  in 
       I.Dec (ctxToMCtx cQ', I.CDecl (x, w, dep'))
 
   (* this case should not happen -bp *)

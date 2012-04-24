@@ -60,13 +60,13 @@ exception NonInvertible
 
 
 val m_id   : msub
-val mshift: msub -> int -> msub
+(* val mshift: msub -> int -> msub
 val mshiftTerm: normal -> int -> normal
 val mshiftHead: head -> int -> head
 val mshiftSpine: spine -> int -> spine
 val mshiftTyp : typ  -> int -> typ
 val mshiftDCtx : dctx  -> int -> dctx
-
+*)
 val mvar_dot1  : msub -> msub
 val pvar_dot1  : msub -> msub
 val mvar_dot   : msub -> mctx -> msub

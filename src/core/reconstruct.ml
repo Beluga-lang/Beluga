@@ -1188,8 +1188,7 @@ and elExp' cD cG i = match i with
                     dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^ 
                               P.expSynToString cD cG i ^ "\n"); (i , (tau, theta))
 
-                with Error.Violation msg -> 
-                  dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+                with Unify.Unify msg -> 
                   raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
                 end 
           | _ ->

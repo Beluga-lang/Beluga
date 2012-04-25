@@ -57,9 +57,9 @@ module Comp = struct
   type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
   type error =
-      IllTyped        of I.mctx * gctx * exp_chk * tclo * tclo
+      MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
+    | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
-    | Mismatch        of I.mctx * gctx * exp_syn * typeVariant * tclo
     | CtxFunMismatch  of I.mctx * gctx  * tclo 
     | FunMismatch     of I.mctx * gctx  * tclo 
     | MLamMismatch    of I.mctx * gctx  * tclo 
@@ -91,29 +91,36 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
-          | IllTyped (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+          | MismatchChk (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+            Error.report_mismatch ppf
+              "Ill-typed expression."
+              "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
             Format.fprintf ppf
-              "ill-typed expression\n  expected: %a\n  for expression: %a\n  inferred: %a\n\
-               Note: Computation-level applications are not automatically left-associative but require parentheses."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
-              (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau')
+              "In expression: %a.@"
+              (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e;
+            Format.fprintf ppf
+              "Note: Computation-level applications are not automatically left-associative but require parentheses."
+
+          | MismatchSyn (cD, cG, i, variant, theta_tau) ->
+            Error.report_mismatch ppf
+              "Ill-typed expression."
+              "Expected" Format.pp_print_string (string_of_typeVariant variant)
+              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau);
+            Format.fprintf ppf
+              "In expression: %a.@"
+              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i;
+            Format.fprintf ppf
+              "Note: Computation-level applications are not automatically left-associative but require parentheses."
 
           | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+            Error.report_mismatch ppf
+              "Ill-typed pattern."
+              "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
             Format.fprintf ppf
-              "ill-typed pattern\n  expected: %a\n  for pattern: %a\n  inferred:%a  "
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau) 
+              "In pattern: %a.@"
               (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau') 
-
-          | Mismatch (cD, cG, i, variant, theta_tau) ->
-            Format.fprintf ppf
-              "ill-typed expression\n  inferred: %a\n  for expression: %a\n\
-               Beluga believes it should be a %s\n\
-               Note: Computation-level applications are not automatically left-associative but require parentheses."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
-              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
-              (string_of_typeVariant variant)
 
           | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
             Format.fprintf ppf
@@ -431,7 +438,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         if C.convCTyp (tau,t)  ttau' then 
           ()
         else
-          raise (Error (loc, IllTyped (cD, cG, e, (tau,t), ttau')))
+          raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), ttau')))
 
     | (If (loc, i, e1, e2), (tau,t)) -> 
         begin match C.cwhnfCTyp (syn cD cG i) with
@@ -464,7 +471,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
               check cD cG e2 (tau2, t);
               (tau, t)
           | (tau, t) -> 
-              raise (Error (loc, Mismatch (cD, cG, e1, VariantArrow, (tau,t))))
+              raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
         end
 
     | CtxApp (loc, e, cPsi) ->
@@ -479,7 +486,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
                           P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ; 
                  (tau, theta') 
           | (tau, t) -> 
-              raise (Error (loc, Mismatch (cD, cG, e, VariantCtxPi, (tau,t))))
+              raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
         end
     | MApp (loc, e, (phat, cObj)) ->
         begin match (cObj, C.cwhnfCTyp (syn cD cG e)) with
@@ -494,10 +501,10 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
                 if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
                   (tau, I.MDot(I.PObj (phat, h), t))
                 else 
-                  raise (Error (loc, Mismatch (cD, cG, e, VariantPiBox, (tau,t))))
+                  raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
 
           | (_ , (tau, t)) -> 
-              raise (Error (loc, Mismatch (cD, cG, e, VariantPiBox, (tau,t))))
+              raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end
 
     | Ann (e, tau) ->

@@ -46,9 +46,9 @@ module Comp : sig
   type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
   type error =
-      IllTyped        of LF.mctx * gctx * exp_chk * tclo * tclo
+      MismatchChk     of LF.mctx * gctx * exp_chk * tclo * tclo
+    | MismatchSyn     of LF.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of LF.mctx * gctx * pattern * tclo * tclo
-    | Mismatch        of LF.mctx * gctx * exp_syn * typeVariant * tclo
     | CtxFunMismatch  of LF.mctx * gctx  * tclo 
     | FunMismatch     of LF.mctx * gctx  * tclo 
     | MLamMismatch    of LF.mctx * gctx  * tclo 

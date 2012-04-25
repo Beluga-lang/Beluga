@@ -792,7 +792,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
               let e'  =  elExp cD cG2 e (tau, theta) in
                 Int.Comp.LetPair (loc, i', (x, y, e'))
 
-          | _ -> raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantCross, tau_theta'))) 
+          | _ -> raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantCross, tau_theta'))) 
               (* TODO postpone to reconstruction *)
         end
 
@@ -978,7 +978,7 @@ and elExp' cD cG i = match i with
                 (i'', (tau, theta))
 
           | _ -> 
-              raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantArrow, tau_theta'))) 
+              raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantArrow, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
         end
 
@@ -996,7 +996,7 @@ and elExp' cD cG i = match i with
                 (Int.Comp.CtxApp (loc, i', cPsi'), (tau, theta'))
 
           | _ -> 
-              raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantCtxPi, tau_theta'))) 
+              raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantCtxPi, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
         end
 
@@ -1102,7 +1102,7 @@ and elExp' cD cG i = match i with
                 end
 
           | _ -> 
-              raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantPiBox, tau_theta'))) 
+              raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantPiBox, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
 
         end
@@ -1193,7 +1193,7 @@ and elExp' cD cG i = match i with
                   raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
                 end 
           | _ ->
-              raise (Check.Comp.Error (loc, Check.Comp.Mismatch (cD, cG, i', Check.Comp.VariantPiBox, tau_theta'))) 
+              raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantPiBox, tau_theta'))) 
                 (* TODO postpone to reconstruction *)
 
 

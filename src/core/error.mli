@@ -25,7 +25,7 @@ val print_with_location : Syntax.Loc.t -> (Format.formatter -> unit) -> print_re
 val report_mismatch :
   Format.formatter -> string ->
   string -> (Format.formatter -> 'a -> unit) -> 'a ->
-  string -> (Format.formatter -> 'a -> unit) -> 'a ->
+  string -> (Format.formatter -> 'b -> unit) -> 'b ->
   unit
 
 val getInformation : unit -> string

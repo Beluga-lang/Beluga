@@ -197,12 +197,12 @@ module Comp = struct
 
           | AppMismatch (cD, (MetaTyp (tP, cPsi), tau)) ->
             Format.fprintf ppf
-              "Expected contextual object ( Psi . M ) of type   %a"
+              "Expected contextual object of type %a"
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tP, cPsi), tau))
 
           | MAppMismatch (cD, (MetaTyp (tA, cPsi), tau)) ->
             Format.fprintf ppf
-              "Expected contextual object ( Psi . M ) of type   %a"
+              "Expected contextual object of type %a"
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), tau))
 
           | MAppMismatch (cD, (MetaSchema cid_schema, tau)) ->

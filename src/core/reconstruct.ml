@@ -27,6 +27,7 @@ type error =
   | PruningFailed
   | EtaExpandFMV        of Id.name * Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
+  | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | CompScrutineeTyp    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.tclo * Int.LF.dctx 
   | CompScrutineeSubTyp of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.dctx * Int.LF.dctx
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
@@ -59,6 +60,15 @@ let _ = Error.register_printer
             (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
             (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
             "[no comp-level context printing yet]" (* TODO print context? *)
+
+        | IllegalCase (cD, cG, i, theta_tau) ->
+          Format.fprintf ppf
+            "Cannot pattern-match on values of this type.@.";
+          Format.fprintf ppf
+            "  @[<v>Scrutinee: %a@;\
+                    Type: %a@]"
+            (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
+            (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
         | CompScrutineeTyp (cD, cG, i, sP, cPsi) -> 
           Format.fprintf ppf
@@ -844,100 +854,75 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
   | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
       let _ = dprint (fun () -> "[elExp] case ") in
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
-      let _ = dprint (fun () -> "[elExp] case on " ^ P.expSynToString cD cG i')
-      in 
-        begin match (i', C.cwhnfCTyp tau_theta') with
-          | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ), 
-             (Int.Comp.TypBox (_, tP, cPsi) as tau_s, t (* m_id *))) ->
-              let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
-              let _ = Unify.resetGlobalCnstrs () in 
+      let _ = dprint (fun () -> "[elExp] case on " ^ P.expSynToString cD cG i') in
+      begin match (i', C.cwhnfCTyp tau_theta') with
+        | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ) as i,
+           (Int.Comp.TypBox (_, tP, cPsi) as tau_s, t (* m_id *))) ->
+          let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
+          let _ = Unify.resetGlobalCnstrs () in 
+          if Whnf.closed (tR, LF.id) then 
+            let rec recBranch b =       
+              let _ = dprint (fun () -> "[elBranch - IndexObj] in context cPsi = " 
+                ^ P.dctxToString cD cPsi ^ "\n") in
+              let b = elBranch (IndexObj(phat, tR)) cD cG b tau_s tau_theta in 
+              let _ = Gensym.MVarData.reset () in
+              b in
+            let branches' = List.map recBranch branches in
+            Int.Comp.Case (loc, prag, i, branches')
+          else 
+            raise (Error (loc, ValueRestriction (cD, cG, i, (tau_s,t))))
 
-              (if Whnf.closed (tR, LF.id)  then 
-                 (* && Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi &&
-              Whnf.closedGCtx cG ? *)
-                 let rec recBranch b =       
-                   let _ = dprint (fun () -> "[elBranch - IndexObj] in context cPsi = " 
-                                     ^ P.dctxToString cD cPsi ^ "\n") in
-                   let b = elBranch (IndexObj(phat, tR)) cD cG b tau_s tau_theta in 
-                     Gensym.MVarData.reset () ; b in 
-                 let branches' = List.map recBranch branches in
-                   Int.Comp.Case (loc, prag, i', branches')
-              else 
-                raise (Error (loc, ValueRestriction (cD, cG, i', (tau_s,t))))
-              )
+        | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ) as i, (tau_s, t)) ->
+          raise (Error (loc, (IllegalCase (cD, cG, i, (tau_s, t)))))
 
-          | (i, (Int.Comp.TypBox (_, tP, cPsi) as tau_s, _mid)) -> 
-                 let _      = dprint (fun () -> "[elExp]" 
-                                        ^ "Contexts cD  = " ^ P.mctxToString cD ^ "\n"
-                                        ^ "cG = " ^ P.gctxToString cD cG ^ "\n"
-                                        ^ "Expected Pattern has type :" ^
-                                        P.typToString cD cPsi (tP, LF.id)           
-                                        ^  "\n Context of expected pattern type : "
-                                        ^  P.dctxToString cD cPsi 
-                                        ^ "\n Checking closedness ... ") in
+        | (i, (Int.Comp.TypBox (_, tP, cPsi) as tau_s, _mid)) -> 
+          let _      = dprint (fun () -> "[elExp]" 
+            ^ "Contexts cD  = " ^ P.mctxToString cD ^ "\n"
+            ^ "cG = " ^ P.gctxToString cD cG ^ "\n"
+            ^ "Expected Pattern has type :" ^
+            P.typToString cD cPsi (tP, LF.id)           
+            ^  "\n Context of expected pattern type : "
+            ^  P.dctxToString cD cPsi 
+            ^ "\n Checking closedness ... ") in
+          if Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi && Whnf.closedGCtx cG then 
+            let rec recBranch b = 
+              let _ = dprint (fun () -> "[elBranch - DataObj] " ^ 
+                P.expSynToString cD cG i ^ 
+                " of type " 
+                ^ P.compTypToString cD tau_s 
+                ^ "\n") in
+              let b = elBranch DataObj cD cG b tau_s tau_theta in  
+              let _ = Gensym.MVarData.reset () in
+              b in
+            let branches' = List.map recBranch branches in
+            let b = Int.Comp.Case (loc, prag, i, branches') in
+            let _ = (dprint (fun () -> "[elBranch - DataObj] ");
+                     dprint (fun () -> "             of type " 
+                       ^ P.compTypToString cD tau_s 
+                       ^ " done");
+                     dprint (fun () -> "cG = " ^ P.gctxToString cD cG);
+                     dprint(fun () ->  "    Reconstructed branch: " ^ 
+                       P.expChkToString cD cG b)) in
+            b
+          else raise (Error (loc, CompScrutineeTyp (cD, cG, i', (tP, LF.id), cPsi)))
 
-              (if Whnf.closedTyp (tP, LF.id) && Whnf.closedDCtx cPsi && Whnf.closedGCtx cG then 
-                 let rec recBranch b = 
-                   let _ = dprint (fun () -> "[elBranch - DataObj] " ^ 
-                                     P.expSynToString cD cG i ^ 
-                                     " of type " 
-                                     ^ P.compTypToString cD tau_s 
-                                     ^ "\n") in
-                   let b = elBranch DataObj cD cG b tau_s tau_theta in  
-                     Gensym.MVarData.reset () ; b in 
-                   
-                 let branches' = List.map recBranch branches in
-                 let b = Int.Comp.Case (loc, prag, i, branches') in
-                 let _ = (dprint (fun () -> "[elBranch - DataObj] ");
-                         dprint (fun () -> "             of type " 
-                                   ^ P.compTypToString cD tau_s 
-                                   ^ " done");
-                         dprint (fun () -> "cG = " ^ P.gctxToString cD cG);
-                          dprint(fun () ->  "    Reconstructed branch: " ^ 
-                                P.expChkToString cD cG b)) in
-                   b 
-                
-              else 
-                raise (Error (loc, CompScrutineeTyp (cD, cG, i', (tP, LF.id), cPsi)))
-              )
+        | (i, ((Int.Comp.TypBool | Int.Comp.TypCross (_, _) | Int.Comp.TypBase (_, _, _)) as tau_s, _mid)) ->
+          let rec recBranch b = 
+            let _ = dprint (fun () -> "[elBranch - PatObj] of type " 
+              ^ P.compTypToString cD tau_s 
+              ^ "\n") in
+            let b = elBranch DataObj cD cG b tau_s tau_theta in  
+            Gensym.MVarData.reset () ; b in 
 
-          | (i, (tau_s, _mid)) ->
-              let rec recBranch b = 
-                let _ = dprint (fun () -> "[elBranch - PatObj] of type " 
-                                  ^ P.compTypToString cD tau_s 
-                                  ^ "\n") in
-                let b = elBranch DataObj cD cG b tau_s tau_theta in  
-                  Gensym.MVarData.reset () ; b in 
+          let branches' = List.map recBranch branches in
+          let _ = dprint (fun () -> "[elBranch - PatObj] of type " ) in
+          let _ = dprint (fun () ->  P.compTypToString cD tau_s 
+            ^ " done \n") in
+          Int.Comp.Case (loc, prag, i, branches')
 
-              let branches' = List.map recBranch branches in
-              let _ = dprint (fun () -> "[elBranch - PatObj] of type " ) in
-              let _ = dprint (fun () ->  P.compTypToString cD tau_s 
-                                  ^ " done \n") in
-                Int.Comp.Case (loc, prag, i, branches')
-
-(*          | (i, (Int.Comp.TypSub (_, cPsi, cPhi), _mid)) -> 
-              let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
-              let _        = Unify.resetGlobalCnstrs () in 
-                
-                (if Whnf.closedDCtx cPhi && Whnf.closedDCtx cPsi && Whnf.closedGCtx cG then 
-                   let _      = dprint (fun () -> "[elExp] " 
-                                          ^ "Contexts cD  = " ^ P.mctxToString cD ^ "\n"
-                                          ^  "Context of expected pattern type :" 
-                                          ^  P.dctxToString cD cPsi  ^ "[" 
-                                          ^  P.dctxToString cD cPhi ^ "]" 
-                                          ^ "\n") in
-
-                let branches' = List.map (function b ->  elSBranch cD cG b (cPsi, cPhi) tau_theta )  branches in
-                  Int.Comp.Case (loc, prag, i, branches') 
-                
-              else 
-                raise (Error (loc, CompScrutineeSubTyp (cD, cG, i', cPsi, cPhi)))
-              )
-*)
-
-(*          | _ ->  raise (Error.Error (loc, Error.CompMismatch (cD, cG,
-            i', Error.Box, tau_theta'))) *)
-        end
+        | (i, (tau_s, t)) ->
+          raise (Error (loc, (IllegalCase (cD, cG, i, (tau_s, t)))))
+      end
 
   | (Apx.Comp.If (loc, i, e1, e2), ((tau, theta) as tau_theta)) -> 
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in

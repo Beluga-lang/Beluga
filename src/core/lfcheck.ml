@@ -7,7 +7,6 @@ open Context
 open Store.Cid
 open Syntax.Int.LF
 open Syntax.Int
-open Error
 
 module Print = Pretty.Int.DefaultPrinter
 
@@ -225,7 +224,7 @@ let rec ctxShift cPsi = begin match cPsi with
           (restOfTypRec, Dot (Obj tM, s2))
 
     | (_, _) ->
-        raise (Violation ("checkTuple arity mismatch"))
+        raise (Error.Violation ("checkTuple arity mismatch"))
 
 
   and syn' cD cPsi (Root (loc, h, tS), s (* id *)) =
@@ -346,7 +345,7 @@ let rec ctxShift cPsi = begin match cPsi with
           checkSub loc cD cPsi s cPsi';
           (* Check that something of type tA could possibly appear in cPsi *)
           if not (canAppear cD cPsi (tA, s) loc) then
-            raise (Violation ("Parameter variable of type " ^ P.typToString cD cPsi (tA, s)
+            raise (Error.Violation ("Parameter variable of type " ^ P.typToString cD cPsi (tA, s)
                             ^ "\ncannot possibly appear in context " ^ P.dctxToString cD cPsi)) ;
 
           (* Return p's type from cD *)
@@ -364,7 +363,7 @@ let rec ctxShift cPsi = begin match cPsi with
           checkSub loc cD cPsi s cPsi';
           (* Check that something of type tA could possibly appear in cPsi *)
           if not (canAppear cD cPsi (tA, s) loc) then
-            raise (Violation ("Parameter variable of type " ^ P.typToString cD cPsi (tA, s)
+            raise (Error.Violation ("Parameter variable of type " ^ P.typToString cD cPsi (tA, s)
                             ^ "\ncannot possibly appear in context " ^ P.dctxToString cD cPsi)) ;
             (* Return p's type from cD *)
             TClo (tA, s)
@@ -448,7 +447,7 @@ let rec ctxShift cPsi = begin match cPsi with
         if k > 0 then
           checkSub loc cD cPsi (Shift (phi, k - 1)) (CtxVar psi)
         else
-          raise (Violation ("Substitution ill-typed: Shift(_, " ^ string_of_int k ^ ")"))
+          raise (Error.Violation ("Substitution ill-typed: Shift(_, " ^ string_of_int k ^ ")"))
           (* (SubIllTyped) *)
 
 
@@ -456,7 +455,7 @@ let rec ctxShift cPsi = begin match cPsi with
         if k >= 0 then
           checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
         else
-          raise (Violation ("Substitution ill-formed: Shift(_, " ^ string_of_int k ^ ")"))
+          raise (Error.Violation ("Substitution ill-formed: Shift(_, " ^ string_of_int k ^ ")"))
 
 
 (****
@@ -790,12 +789,12 @@ and checkMSub loc cD  ms cD'  = match (ms, cD') with
     | (MShift k, Empty) ->
         if (Context.length cD) = k then ()
         else
-          raise (Violation ("Contextual substitution ill-typed - 1"))
+          raise (Error.Violation ("Contextual substitution ill-typed - 1"))
 
     | (MShift k, cD') ->
 	if k >= 0 then
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
-	else raise (Violation ("Contextual substitution ill-formed"))
+	else raise (Error.Violation ("Contextual substitution ill-formed"))
 
     | (MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
@@ -813,7 +812,7 @@ and checkMSub loc cD  ms cD'  = match (ms, cD') with
           if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', Substitution.LF.id) (tA1, Substitution.LF.id) then
                      checkMSub loc cD ms cD1'
           else
-            raise (Violation ("Contextual substitution ill-typed - 2 "))
+            raise (Error.Violation ("Contextual substitution ill-typed - 2 "))
 
     | (MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
@@ -822,7 +821,7 @@ and checkMSub loc cD  ms cD'  = match (ms, cD') with
           if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', Substitution.LF.id) (tA1, Substitution.LF.id) then
             checkMSub loc cD ms cD1'
           else
-            raise (Violation ("Contextual substitution ill-typed - 3 "))
+            raise (Error.Violation ("Contextual substitution ill-typed - 3 "))
 
     | (MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
@@ -841,7 +840,7 @@ and checkMSub loc cD  ms cD'  = match (ms, cD') with
            checkMSub loc cD ms cD1' )
 
     | (_, _ ) ->
-        raise (Violation ("Contextual substitution ill-typed\n " ^
+        raise (Error.Violation ("Contextual substitution ill-typed\n " ^
                             P.mctxToString cD ^ " |- " ^
                             P.msubToString cD ms ^ " <= "
                          ^ " = " ^ P.mctxToString cD'))

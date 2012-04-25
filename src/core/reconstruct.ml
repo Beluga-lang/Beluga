@@ -1682,26 +1682,24 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
     let tP1'   = Whnf.cnormTyp (tP1, mt1) in                (*  . ; cPsi1' |- tP1' <= type *)
         
     let _  = begin try 
-          Unify.unifyDCtx (Int.LF.Empty) cPsi' cPsi1' ;
-          Unify.unifyTyp   (Int.LF.Empty) cPsi' (tP', LF.id) (tP1', LF.id); 
+          Unify.unifyDCtx (Int.LF.Empty) cPsi' cPsi1';
+          Unify.unifyTyp   (Int.LF.Empty) cPsi' (tP', LF.id) (tP1', LF.id);
           dprint (fun () -> "Unify successful: \n" ^  "  Inferred pattern type: "
                     ^  P.dctxToString Int.LF.Empty cPsi1' ^ "    |-    "
                     ^ P.typToString Int.LF.Empty cPsi1' (tP1', LF.id)
                     ^ "\n  Expected pattern type: "
                     ^ P.dctxToString Int.LF.Empty  cPsi1' ^ "    |-    "
-                    ^ P.typToString Int.LF.Empty cPsi1' (tP', LF.id))           
+                    ^ P.typToString Int.LF.Empty cPsi1' (tP', LF.id))
         with Unify.Unify msg ->
-           (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n" ^  "  Inferred pattern type: "
+          dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n" ^  "  Inferred pattern type: "
                    ^  P.dctxToString Int.LF.Empty cPsi1' ^ "    |-    "
                    ^ P.typToString Int.LF.Empty cPsi1' (tP1', LF.id)
                    ^ "\n  Expected pattern type: "
                    ^ P.dctxToString Int.LF.Empty cPsi' ^ "    |-    "
-                   ^ P.typToString Int.LF.Empty cPsi' (tP', LF.id))
-             ; 
-            dprint (fun () -> "cD' = " ^ P.mctxToString cD');
-            raise (Check.Comp.Error (loc, Check.Comp.PattMismatch ((cD1, cPsi1, pattern1, (tP1, LF.id)), 
-                                                                   (cD', cPsi, (tP, LF.id)))))
-           )
+                   ^ P.typToString Int.LF.Empty cPsi' (tP', LF.id));
+          dprint (fun () -> "cD' = " ^ P.mctxToString cD');
+          raise (Check.Comp.Error (loc, Check.Comp.PattMismatch ((cD1, cPsi1, pattern1, (tP1, LF.id)),
+                                                                 (cD', cPsi, (tP, LF.id)))))
         end
     in 
     let _ = dprnt "AbstractMSub..." in 

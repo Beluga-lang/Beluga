@@ -317,7 +317,7 @@ let rec elSchElem (Apx.LF.SchElem (ctx, typRec)) =
 let rec elSchema (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map elSchElem el_list)
 
-let rec elDCtxAgainstSchema recT cD psi s_cid = match psi with
+let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
   | Apx.LF.Null -> Int.LF.Null
 
   | Apx.LF.CtxVar ((Apx.LF.CtxOffset _ ) as c_var) -> 
@@ -325,9 +325,9 @@ let rec elDCtxAgainstSchema recT cD psi s_cid = match psi with
       let c_var = Lfrecon.elCtxVar c_var in 
       let cPsi' = Int.LF.CtxVar (c_var) in 
         begin try 
-          Check.LF.checkSchema Syntax.Loc.ghost cD cPsi' schema ; 
+          Check.LF.checkSchema loc cD cPsi' schema ; 
           cPsi'
-        with _ -> raise (Check.LF.Error (Syntax.Loc.ghost, Check.LF.CtxVarMismatch (cD, c_var, schema)))
+        with _ -> raise (Check.LF.Error (loc, Check.LF.CtxVarMismatch (cD, c_var, schema)))
         end
   | Apx.LF.CtxVar (Apx.LF.CtxName psi ) -> 
       (* This case should only be executed when c_var occurs in a pattern *)
@@ -343,7 +343,7 @@ let rec elDCtxAgainstSchema recT cD psi s_cid = match psi with
          Int.LF.CtxVar (Int.LF.CtxName psi))
       end
   | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
-      let cPsi = elDCtxAgainstSchema recT cD psi' s_cid in
+      let cPsi = elDCtxAgainstSchema loc recT cD psi' s_cid in
       let tA   = Lfrecon.elTyp recT cD cPsi a in
       (* let _ = Check.LF.checkTypeAgainstSchema cO cD cPsi' tA elements in          *)
       let _ = dprint (fun () -> "[elDCtxAgainstSchema] " ^ R.render_name x ^ ":" ^
@@ -480,7 +480,7 @@ let rec elCompKind cD k = match k with
         
 let rec elMetaObj cD cM cTt = match  (cM, cTt) with 
   | (Apx.Comp.MetaCtx (loc, psi), (Int.Comp.MetaSchema  w, _)) -> 
-      let cPsi' = elDCtxAgainstSchema Lfrecon.Pibox cD psi w in 
+      let cPsi' = elDCtxAgainstSchema loc Lfrecon.Pibox cD psi w in 
         Int.Comp.MetaCtx (loc, cPsi')   
 
   | (Apx.Comp.MetaObj (loc, phat, tM), (Int.Comp.MetaTyp (tA, cPsi), theta)) ->  

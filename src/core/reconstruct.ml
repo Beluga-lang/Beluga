@@ -424,8 +424,6 @@ let mgTyp cD cPsi a kK =
   in
     Int.LF.Atom (Syntax.Loc.ghost, a, genSpine (kK, LF.id))
 
-
-
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
 
 and genMAppW loc cD (i, tau_t) = match tau_t with
@@ -1834,7 +1832,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
       (*     and e must make sense in cD, cD1, cD'                         *)
       let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
       let cD'      = Context.append cD cD1' in
-       let e1       = Apxnorm.fmvApxExp [] cD' (l_cd1, l_delta, 0) e in
+      let e1       = Apxnorm.fmvApxExp [] cD' (l_cd1, l_delta, 0) e in
         
       let _        = dprint (fun () -> "Refinement (from cD): " ^  P.mctxToString cD1'' ^ 
                                "\n |- \n " ^ P.msubToString cD1'' t' ^ 
@@ -1925,7 +1923,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
     let _        = dprint (fun () -> "Refinement: " ^  P.mctxToString cD1'' ^ 
                                "\n |- \n " ^ P.msubToString cD1'' t' ^ 
                                " \n <= " ^ P.mctxToString cD ^ "\n") in
-      let _        = dprint (fun () -> "Refinement: " ^  P.mctxToString cD1'' ^ 
+    let _        = dprint (fun () -> "Refinement: " ^  P.mctxToString cD1'' ^ 
                                "\n |- \n " ^ P.msubToString cD1'' t1 ^ 
                                " \n<= " ^ P.mctxToString cD' ^ "\n") in
       (*  if cD,cD0     |- e apx_exp   and  cD1' = cD1, cD0 
@@ -1934,24 +1932,24 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) = match branch with
       (* if   cD1'' |- t' <= cD, cD1'   and cD,cD1' |- e1 apx_exp
                  then cD1'' |- e' apx_exp
       *)
-      let e'      =  Apxnorm.cnormApxExp cD' Apx.LF.Empty e1  (cD1'', t1) in  
-        (* Note: e' is in the scope of cD1''  *)
-      let _       = dprint (fun () -> "[Apx.cnormApxExp ] done ") in 
-         
-      let _ = (dprint (fun () -> "tau' = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) ;         
-               dprint (fun () -> "t'   = " ^ P.msubToString cD1'' t' )) in
-        
-      let tau'    = Whnf.cnormCTyp (tau, Whnf.mcomp theta t') in
-        
-      let _       = dprint (fun () -> "[elBranch] Elaborate branch \n" ^
+    let e'      =  Apxnorm.cnormApxExp cD' Apx.LF.Empty e1  (cD1'', t1) in  
+      (* Note: e' is in the scope of cD1''  *)
+    let _       = dprint (fun () -> "[Apx.cnormApxExp ] done ") in 
+
+    let _ = (dprint (fun () -> "tau' = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) ;         
+             dprint (fun () -> "t'   = " ^ P.msubToString cD1'' t' )) in
+
+    let tau'    = Whnf.cnormCTyp (tau, Whnf.mcomp theta t') in
+
+    let _       = dprint (fun () -> "[elBranch] Elaborate branch \n" ^
                               P.mctxToString cD1'' ^ "  ;  " ^
                               P.gctxToString cD1'' cG_ext ^ "\n      |-\n" ^
                               "against type " ^ P.compTypToString cD1'' tau' ^
                               "\n") in
-      let eE'      = elExp cD1'' cG_ext  e' (tau', Whnf.m_id) in  
-      let _        = dprint (fun () -> "[elBranch] Body done (general pattern) \n") in 
-      let _       = FCVar.clear() in
-        Int.Comp.Branch (loc, cD1'', cG1', pat1', t', eE')
+    let eE'      = elExp cD1'' cG_ext  e' (tau', Whnf.m_id) in  
+    let _        = dprint (fun () -> "[elBranch] Body done (general pattern) \n") in 
+    let _       = FCVar.clear() in
+    Int.Comp.Branch (loc, cD1'', cG1', pat1', t', eE')
 
 (* ******************************************************************************* *)
 (* TOP LEVEL                                                                       *)

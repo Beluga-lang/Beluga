@@ -1017,8 +1017,8 @@ module Int = struct
           fprintf ppf "(%a , %a)"
             (fmt_ppr_pat_obj cD cG 0) pat1
             (fmt_ppr_pat_obj cD cG 0) pat2            
-      | Comp.PatTrue _ -> fprintf ppf "tt"
-      | Comp.PatFalse _ -> fprintf ppf "ff"
+      | Comp.PatTrue _ -> fprintf ppf "ttrue"
+      | Comp.PatFalse _ -> fprintf ppf "ffalse"
       | Comp.PatAnn (_, pat, tau) -> 
           fprintf ppf "(%a : %a)"
             (fmt_ppr_pat_obj cD cG 0) pat

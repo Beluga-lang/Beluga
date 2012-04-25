@@ -550,7 +550,7 @@ and elMetaSpineI cD s i cKt =
   else 
     begin match cKt with 
       | (Int.Comp.PiKind (_ , (Int.LF.CDecl (_ , w, _), Int.Comp.Implicit), cK), theta ) -> 
-          raise (Error.Violation "Contexts cannot be supplied implicitely; they must be passed explicit)\n")
+          raise (Error.Violation "Contexts cannot be supplied implicitly; they must be passed explicitly)\n")
       | (Int.Comp.PiKind (loc, (Int.LF.MDecl (_ , tA, cPsi), Int.Comp.Implicit), cK), theta ) -> 
           let psihat  = Context.dctxToHat cPsi in
           let cPsi' = C.cnormDCtx (cPsi, theta) in 

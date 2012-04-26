@@ -16,8 +16,8 @@ type error =
   | CtxVarMismatch   of mctx * ctx_var * schema
   | CtxVarDiffer     of mctx * ctx_var * ctx_var
   | CheckError       of mctx * dctx * nclo * tclo
-  | SigmaIllTyped    of mctx * dctx * trec_clo * trec_clo
   | TupleArity       of mctx * dctx * nclo * trec_clo
+  | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo
   | KindMismatch     of mctx * dctx * sclo * (kind * sub)
   | TypMismatch      of mctx * dctx * nclo * tclo * tclo
   | SpineIllTyped
@@ -52,8 +52,11 @@ let _ = Error.register_printer
 	    (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
 	    (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 
-      | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
-          Format.fprintf ppf "Sigma Type mismatch" (* TODO *)
+      | SigmaMismatch (cD, cPsi, sArec, sBrec) ->
+        Error.report_mismatch ppf
+	  "Sigma type mismatch."
+	  "Expected type" (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sArec)
+	  "Actual type"   (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sBrec)
 
       | TupleArity (cD, cPsi, sM, sA) ->
 	Error.report_mismatch ppf
@@ -463,18 +466,6 @@ let rec ctxShift cPsi = begin match cPsi with
           raise (Error.Violation ("Substitution ill-formed: Shift(_, " ^ string_of_int k ^ ")"))
 
 
-(****
-This case should now be covered by the one below it
-
-    | (cPsi',  Dot (Head (BVar w), t),  DDec (cPsi, TypDecl(_, Sigma arec))) ->
-        (* other heads of type Sigma disallowed -bp *)
-        let _ = checkSub cD cPsi' t cPsi
-          (* ensures that t is well-typed before comparing types BRec = [t]ARec *)
-        and TypDecl (_, Sigma brec) = ctxSigmaDec cPsi' w in
-          if not (Whnf.convTypRec (brec, Substitution.LF.id) (arec, t)) then
-            raise (Violation "Sigma-type ill-typed")
-            (* (SigmaIllTyped (cD, cPsi', (brec, Substitution.LF.id), (arec, t))) *)
-****)
     (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
 
     | (cPsi',  Dot (Head h, s'),  DDec (cPsi, TypDecl (_, tA2))) ->

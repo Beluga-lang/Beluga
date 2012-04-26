@@ -12,6 +12,7 @@ module LF : sig
     | CtxVarDiffer     of mctx * ctx_var * ctx_var
     | IllTyped         of mctx * dctx * nclo * tclo
     | SigmaIllTyped    of mctx * dctx * trec_clo * trec_clo
+    | TupleArity       of mctx * dctx * nclo * trec_clo
     | KindMismatch     of mctx * dctx * sclo * (kind * sub)
     | TypMismatch      of mctx * dctx * nclo * tclo * tclo
     | SpineIllTyped

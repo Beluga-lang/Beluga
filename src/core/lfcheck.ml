@@ -17,13 +17,13 @@ type error =
   | CtxVarDiffer     of mctx * ctx_var * ctx_var
   | IllTyped         of mctx * dctx * nclo * tclo
   | SigmaIllTyped    of mctx * dctx * trec_clo * trec_clo
+  | TupleArity       of mctx * dctx * nclo * trec_clo
   | KindMismatch     of mctx * dctx * sclo * (kind * sub)
   | TypMismatch      of mctx * dctx * nclo * tclo * tclo
   | SpineIllTyped
   | SubIllTyped
   | LeftoverFV
   | CtxVarMisCheck   of mctx * dctx * tclo * schema
-
 
 exception Error of Syntax.Loc.t * error
 
@@ -54,6 +54,12 @@ let _ = Error.register_printer
 
       | SigmaIllTyped (_cD, _cPsi, (_tArec, _s1), (_tBrec, _s2)) ->
           Format.fprintf ppf "Sigma Type mismatch" (* TODO *)
+
+      | TupleArity (cD, cPsi, sM, sA) ->
+	Error.report_mismatch ppf
+	  "Arity of tuple doesn't match type."
+	  "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+	  "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sA)
 
       | KindMismatch (cD, cPsi, sS, sK) ->
           Format.fprintf ppf "ill-kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
@@ -178,8 +184,8 @@ let rec ctxShift cPsi = begin match cPsi with
           (tB, Substitution.LF.dot1 s2)
 
 
-    | ((Tuple (_, tuple), s1),   (Sigma typRec, s2)) ->
-        checkTuple cD cPsi (tuple, s1) (typRec, s2)
+    | ((Tuple (loc, tuple), s1),   (Sigma typRec, s2)) ->
+        checkTuple loc cD cPsi (tuple, s1) (typRec, s2)
 
     | ((Root (loc, _h, _tS), _s (* id *)),   (Atom _, _s')) ->
         (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
@@ -213,18 +219,14 @@ let rec ctxShift cPsi = begin match cPsi with
 
   and check cD cPsi sM sA = checkW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
-  and checkTuple cD cPsi (tuple, s1) (typRec, s2) = match (tuple, typRec) with
-    | (Last tM,   SigmaLast tA) ->
-        checkW cD cPsi (tM, s1) (tA, s2)
-
-    | (Cons (tM, restOfTuple),   SigmaElem (_x, tA, restOfTypRec)) ->
-        checkW cD cPsi (tM, s1) (tA, s2)
-      ; checkTuple cD cPsi
-          (restOfTuple, s1)
-          (restOfTypRec, Dot (Obj tM, s2))
-
-    | (_, _) ->
-        raise (Error.Violation ("checkTuple arity mismatch"))
+  and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =
+    let loop (tuple, s1) (typRec, s2) = match (tuple, typRec) with
+      | (Last tM,   SigmaLast tA) -> checkW cD cPsi (tM, s1) (tA, s2)
+      | (Cons (tM, tuple),   SigmaElem (_x, tA, typRec)) ->
+	checkW cD cPsi (tM, s1) (tA, s2);
+	checkTuple loc cD cPsi (tuple, s1) (typRec, Dot (Obj tM, s2))
+      | (_, _) -> raise (Error (loc, TupleArity (cD, cPsi, (Tuple (loc, tuple), s1), (trec, s2)))) in
+    loop (tuple, s1) (trec, s2)
 
 
   and syn' cD cPsi (Root (loc, h, tS), s (* id *)) =

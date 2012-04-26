@@ -15,8 +15,8 @@ module LF : sig
     | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo
     | KindMismatch     of mctx * dctx * sclo * (kind * sub)
     | TypMismatch      of mctx * dctx * nclo * tclo * tclo
+    | SubIllTyped      of mctx * dctx * sub * dctx
     | SpineIllTyped
-    | SubIllTyped
     | LeftoverFV
     | CtxVarMisCheck	of mctx * dctx * tclo * schema
   exception Error of Syntax.Loc.t * error

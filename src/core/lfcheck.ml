@@ -20,8 +20,8 @@ type error =
   | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo
   | KindMismatch     of mctx * dctx * sclo * (kind * sub)
   | TypMismatch      of mctx * dctx * nclo * tclo * tclo
+  | SubIllTyped      of mctx * dctx * sub * dctx
   | SpineIllTyped
-  | SubIllTyped
   | LeftoverFV
   | CtxVarMisCheck   of mctx * dctx * tclo * schema
 
@@ -77,11 +77,17 @@ let _ = Error.register_printer
             (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA2)
             (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
 
+      | SubIllTyped (cD, cPsi, s, cPsi') ->
+          Format.fprintf ppf "Substitution not well-typed.@.";
+          Format.fprintf ppf "           Substitution: %a.@."
+            (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) s;
+          Format.fprintf ppf "  does not take context: %a.@."
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi';
+          Format.fprintf ppf "             to context: %a.@."
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
+
       | SpineIllTyped ->
           Format.fprintf ppf "ill-typed spine---not enough arguments supplied"
-
-      | SubIllTyped ->
-          Format.fprintf ppf "Substitution not well-typed"  (* TODO *)
 
       | LeftoverFV ->
 	  Format.fprintf ppf "Leftover free variable"))
@@ -406,95 +412,68 @@ and canAppear cD cPsi sA loc=
  *
  * succeeds iff cD ; cPsi |- s : cPsi'
  *)
-and checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
-  | Null, Shift (NoCtxShift, 0), Null ->
-    ()
+and checkSub loc cD cPsi1 s1 cPsi1' =
+  let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
+    | Null, Shift (NoCtxShift, 0), Null -> ()
 
-  | (cPhi, SVar (Offset offset, s'), CtxVar psi')  ->
-    begin try
-            let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in
-            if cPhi1 = CtxVar psi' then
-	      checkSub loc cD cPsi s' cPsi1
-            else
-	      raise (Error (loc, SubIllTyped ))
-      with
-        | _ -> raise (Error (loc, SubIllTyped ))
-    end
+    | cPhi, SVar (Offset offset, s'), CtxVar psi' ->
+      let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in
+      if cPhi1 = CtxVar psi' then
+	checkSub loc cD cPsi s' cPsi1
+      else
+	raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
 
-  | (CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi')  ->
-    (* if psi = psi' then *)
-    if subsumes cD psi' psi then
-      ()
-    else
-      raise (Error (loc, CtxVarDiffer (cD, psi, psi')))
-  (* (CtxVarMisMatch (psi, psi')) *)
+    | CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi' ->
+      (* if psi = psi' then *)
+      if not (subsumes cD psi' psi) then
+	raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
 
-  | CtxVar (CtxOffset _ as psi), Shift (CtxShift (psi'), 0), Null ->
-    if psi = psi' then
-      ()
-    else
-      raise (Error (loc, SubIllTyped))
+    | CtxVar (CtxOffset _ as psi), Shift (CtxShift (psi'), 0), Null ->
+      if not (psi = psi') then
+	raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
 
+    | Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi) ->
+      if not (psi = psi') then
+	raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
 
-  | Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi) ->
-    if psi = psi' then
-      ()
-    else
-      raise (Error (loc, SubIllTyped))
+    (* SVar case to be added - bp *)
 
-  (* SVar case to be added - bp *)
+    | DDec (cPsi, _tX),  Shift (psi, k),  Null ->
+      if k > 0 then
+	checkSub loc cD cPsi (Shift (psi, k - 1)) Null
+      else
+	raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
 
-  | DDec (cPsi, _tX),  Shift (psi, k),  Null ->
-    if k > 0 then
-      checkSub loc cD cPsi (Shift (psi, k - 1)) Null
-    else
-      raise (Error (loc, SubIllTyped))
+    | DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi ->
+      if k > 0 then
+	checkSub loc cD cPsi (Shift (phi, k - 1)) (CtxVar psi)
+      else
+	raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
 
-  | DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi ->
-    if k > 0 then
-      checkSub loc cD cPsi (Shift (phi, k - 1)) (CtxVar psi)
-    else
-      raise (Error.Violation ("Substitution ill-typed: Shift(_, " ^ string_of_int k ^ ")"))
-  (* (SubIllTyped) *)
+    | cPsi',  Shift (psi, k),  cPsi ->
+      if k >= 0 then
+	checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
+      else
+	raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
 
+    (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
 
-  | cPsi',  Shift (psi, k),  cPsi ->
-    if k >= 0 then
-      checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
-    else
-      raise (Error.Violation ("Substitution ill-formed: Shift(_, " ^ string_of_int k ^ ")"))
+    | cPsi', Dot (Head h, s'), DDec (cPsi, TypDecl (_, tA2)) ->
+      let _ = checkSub loc cD cPsi' s' cPsi
+      (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
+      and tA1 = inferHead loc cD cPsi' h in
+      if not (Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s')) then
+	raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
 
+    | cPsi', Dot (Obj tM, s'), DDec (cPsi, TypDecl (_, tA2)) ->
+      (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
+      let _ = checkSub loc cD cPsi' s' cPsi in
+      (* ensures that s' is well-typed and [s']tA2 is well-defined *)
+      check cD cPsi' (tM, Substitution.LF.id) (tA2, s')
 
-  (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
-
-  | cPsi',  Dot (Head h, s'),  DDec (cPsi, TypDecl (_, tA2)) ->
-    let _   = checkSub loc cD cPsi' s' cPsi
-    (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
-    and tA1 = inferHead loc cD cPsi' h in
-    if Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s') then
-      ()
-    else
-      let _ = Printf.printf "[checkSub] cPsi' = %s\n           Head h = %s\n           Inferred type: %s\n           Expected type: %s\n\n"
-        (P.dctxToString cD cPsi')
-        (P.headToString cD cPsi' h)
-        (P.typToString cD cPsi' (tA1, Substitution.LF.id))
-        (P.typToString cD cPsi' (tA2, s')) in
-      raise (Error (loc, SubIllTyped))
-
-  | cPsi',  Dot (Obj tM, s'),  DDec (cPsi, TypDecl (_, tA2)) ->
-    (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
-    let _ = checkSub loc cD cPsi' s' cPsi in
-    (* ensures that s' is well-typed and [s']tA2 is well-defined *)
-    check cD cPsi' (tM, Substitution.LF.id) (tA2, s')
-
-
-  | cPsi1,  s,  cPsi2 ->
-    Printf.printf "\n Check substitution: %s  |-  %s  <=  %s\n\n"
-      (P.dctxToString cD cPsi1)
-      (P.subToString cD cPsi1 s)
-      (P.dctxToString cD cPsi2);
-    raise (Error (loc, SubIllTyped))
-
+    | cPsi1, s, cPsi2 ->
+      raise (Error (loc, SubIllTyped (cD, cPsi1, s1, cPsi1')))
+  in checkSub loc cD cPsi1 s1 cPsi1'
 
 (*****************)
 (* Kind Checking *)

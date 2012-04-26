@@ -21,6 +21,7 @@ type error =
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | LeftoverConstraints of Id.name
   | PruningFailed
+  | SubIllTyped
   | IllTypedIdSub
   | CompTypAnn       
   | NotPatternSpine
@@ -49,6 +50,9 @@ let _ = Error.register_printer
 
 	| PruningFailed -> 
           Format.fprintf ppf "Pruning a type failed; this can happen when you have some free meta-variables whose type cannot be inferred." 
+
+        | SubIllTyped ->
+          Format.fprintf ppf "Ill-typed substitution during elaboration."
 
         | IllTypedIdSub ->
           Format.fprintf ppf "ill-typed substitution" (* TODO *) 
@@ -1354,29 +1358,21 @@ and elClosedTerm' recT cD cPsi r = match r with
 
 
 
-(* elSub recT cD cPsi s cPhi = s'
- *
- *)
+(* elSub recT cD cPsi s cPhi = s' *)
 and elSub loc recT cD cPsi s cPhi =
   match (s, cPhi) with
   | (Apx.LF.EmptySub, Int.LF.Null) ->
-      begin match Context.dctxToHat cPsi with
-        | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d)
-        | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
-      end
+    begin match Context.dctxToHat cPsi with
+      | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d)
+      | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
+    end
 
-  | (Apx.LF.SVar (Apx.LF.Offset offset, s), Int.LF.CtxVar phi) -> 
-      begin try
-        match Whnf.mctxSDec cD offset with
-          | (_ , Int.LF.CtxVar phi', cPhi2)  ->  
-              if phi = phi' then 
-                let s' = elSub loc recT cD cPsi s (Int.LF.CtxVar phi) in
-                  Int.LF.SVar (Int.LF.Offset offset, s')
-              else raise (Check.LF.Error (loc, Check.LF.SubIllTyped))
-      with 
-          _ -> raise (Check.LF.Error (loc, Check.LF.SubIllTyped))
-      end 
-
+  | (Apx.LF.SVar (Apx.LF.Offset offset, s), (Int.LF.CtxVar phi as cPhi)) ->
+    let (_, Int.LF.CtxVar phi', cPhi2) = Whnf.mctxSDec cD offset in
+    if phi = phi' then
+      let s' = elSub loc recT cD cPsi s cPhi in
+      Int.LF.SVar (Int.LF.Offset offset, s')
+    else raise (Error (loc, SubIllTyped))
 
   | (Apx.LF.Id _ , Int.LF.CtxVar phi) ->
       begin match Context.dctxToHat (C.cnormDCtx (cPsi, C.m_id)) with

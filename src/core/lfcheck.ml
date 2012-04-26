@@ -226,12 +226,12 @@ let rec ctxShift cPsi = begin match cPsi with
   and check cD cPsi sM sA = checkW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
   and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =
-    let loop (tuple, s1) (typRec, s2) = match (tuple, typRec) with
-      | (Last tM,   SigmaLast tA) -> checkW cD cPsi (tM, s1) (tA, s2)
-      | (Cons (tM, tuple),   SigmaElem (_x, tA, typRec)) ->
+    let loop (tuple, s1) (typRec, s2) = match tuple, typRec with
+      | Last tM,   SigmaLast tA -> checkW cD cPsi (tM, s1) (tA, s2)
+      | Cons (tM, tuple),   SigmaElem (_x, tA, typRec) ->
 	checkW cD cPsi (tM, s1) (tA, s2);
 	checkTuple loc cD cPsi (tuple, s1) (typRec, Dot (Obj tM, s2))
-      | (_, _) -> raise (Error (loc, TupleArity (cD, cPsi, (Tuple (loc, tuple), s1), (trec, s2)))) in
+      | _, _ -> raise (Error (loc, TupleArity (cD, cPsi, (Tuple (loc, tuple), s1), (trec, s2)))) in
     loop (tuple, s1) (trec, s2)
 
 
@@ -253,14 +253,14 @@ let rec ctxShift cPsi = begin match cPsi with
    *
    * ; cD ; cPsi sS : sA => sP
    *)
-  and synSpine cD cPsi sS sA = match (sS, sA) with
-    | ((Nil, _),   sP) ->
+  and synSpine cD cPsi sS sA = match sS, sA with
+    | (Nil, _),   sP ->
         sP
 
-    | ((SClo (tS, s'), s),   sA) ->
+    | (SClo (tS, s'), s),   sA ->
         synSpine cD cPsi (tS, Substitution.LF.comp s' s) sA
 
-    | ((App (tM, tS), s1),   (PiTyp ((TypDecl (_, tA1), _), tB2), s2)) ->
+    | (App (tM, tS), s1),   (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
         check cD cPsi (tM, s1) (tA1, s2);
         (*     cD ; cPsi1        |- tM  <= tA1'
          * and cD ; cPsi         |- s1  <= cPsi1
@@ -270,7 +270,7 @@ let rec ctxShift cPsi = begin match cPsi with
         let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
           synSpine cD cPsi (tS, s1) tB2
 
-    | ((App _, _),   (Atom _, _)) ->
+    | (App _, _),   (Atom _, _) ->
         raise SpineMismatch
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
@@ -407,8 +407,8 @@ let rec ctxShift cPsi = begin match cPsi with
    *
    * succeeds iff cD ; cPsi |- s : cPsi'
    *)
-  and checkSub loc cD cPsi s cPsi' = match (cPsi, s, cPsi') with
-    | (Null, Shift (NoCtxShift, 0), Null) ->
+  and checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
+    | Null, Shift (NoCtxShift, 0), Null ->
         ()
 
     | (cPhi, SVar (Offset offset, s'), CtxVar psi')  ->
@@ -430,14 +430,14 @@ let rec ctxShift cPsi = begin match cPsi with
           raise (Error (loc, CtxVarDiffer (cD, psi, psi')))
             (* (CtxVarMisMatch (psi, psi')) *)
 
-    | (CtxVar (CtxOffset _ as psi), Shift (CtxShift (psi'), 0), Null) ->
+    | CtxVar (CtxOffset _ as psi), Shift (CtxShift (psi'), 0), Null ->
         if psi = psi' then
           ()
         else
           raise (Error (loc, SubIllTyped))
 
 
-    | (Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi)) ->
+    | Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi) ->
         if psi = psi' then
           ()
         else
@@ -445,13 +445,13 @@ let rec ctxShift cPsi = begin match cPsi with
 
     (* SVar case to be added - bp *)
 
-    | (DDec (cPsi, _tX),  Shift (psi, k),  Null) ->
+    | DDec (cPsi, _tX),  Shift (psi, k),  Null ->
         if k > 0 then
           checkSub loc cD cPsi (Shift (psi, k - 1)) Null
         else
           raise (Error (loc, SubIllTyped))
 
-    | (DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi) ->
+    | DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi ->
         if k > 0 then
           checkSub loc cD cPsi (Shift (phi, k - 1)) (CtxVar psi)
         else
@@ -459,7 +459,7 @@ let rec ctxShift cPsi = begin match cPsi with
           (* (SubIllTyped) *)
 
 
-    | (cPsi',  Shift (psi, k),  cPsi) ->
+    | cPsi',  Shift (psi, k),  cPsi ->
         if k >= 0 then
           checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
         else
@@ -468,7 +468,7 @@ let rec ctxShift cPsi = begin match cPsi with
 
     (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
 
-    | (cPsi',  Dot (Head h, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
+    | cPsi',  Dot (Head h, s'),  DDec (cPsi, TypDecl (_, tA2)) ->
         let _   = checkSub loc cD cPsi' s' cPsi
           (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
         and tA1 = inferHead loc cD cPsi' h in
@@ -482,14 +482,14 @@ let rec ctxShift cPsi = begin match cPsi with
               (P.typToString cD cPsi' (tA2, s')) in
               raise (Error (loc, SubIllTyped))
 
-    | (cPsi',  Dot (Obj tM, s'),  DDec (cPsi, TypDecl (_, tA2))) ->
+    | cPsi',  Dot (Obj tM, s'),  DDec (cPsi, TypDecl (_, tA2)) ->
         (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
         let _ = checkSub loc cD cPsi' s' cPsi in
           (* ensures that s' is well-typed and [s']tA2 is well-defined *)
           check cD cPsi' (tM, Substitution.LF.id) (tA2, s')
 
 
-    | (cPsi1,  s,  cPsi2) ->
+    | cPsi1,  s,  cPsi2 ->
         Printf.printf "\n Check substitution: %s  |-  %s  <=  %s\n\n"
           (P.dctxToString cD cPsi1)
           (P.subToString cD cPsi1 s)
@@ -514,18 +514,18 @@ let rec ctxShift cPsi = begin match cPsi with
    *
    * succeeds iff cD ; cPsi |- [s1]tS <= [s2]K
    *)
-  and synKSpine cD cPsi sS1 sK = match (sS1, sK) with
-    | ((Nil, _), sK) ->
+  and synKSpine cD cPsi sS1 sK = match sS1, sK with
+    | (Nil, _), sK ->
         sK
 
-    | ((SClo (tS, s'), s), sK) ->
+    | (SClo (tS, s'), s), sK ->
         synKSpine cD cPsi (tS, Substitution.LF.comp s' s) sK
 
-    | ((App (tM, tS), s1), (PiKind ((TypDecl (_, tA1), _), kK), s2)) ->
+    | (App (tM, tS), s1), (PiKind ((TypDecl (_, tA1), _), kK), s2) ->
         check cD cPsi (tM, s1) (tA1, s2);
         synKSpine cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
-    | ((App _, _), (Typ, _)) ->
+    | (App _, _), (Typ, _) ->
         raise SpineMismatch
 
   (* checkTyp (cD, cPsi, (tA,s))
@@ -759,12 +759,12 @@ f   *)
 
 
  (* If subsumes psi phi succeeds then there exists  wk_sub  such that  psi |- wk_sub : phi  *)
-and subsumes cD psi phi = match (psi, phi) with
-  | (CtxOffset psi_var , CtxOffset phi_var) ->
+and subsumes cD psi phi = match psi, phi with
+  | CtxOffset psi_var , CtxOffset phi_var ->
       let Schema psi_selem = Schema.get_schema (lookupCtxVarSchema cD psi) in
       let Schema phi_selem = Schema.get_schema (lookupCtxVarSchema cD phi) in
         List.for_all (fun elem -> checkElementAgainstSchema Empty elem phi_selem) psi_selem
-  | _ -> false
+  | _, _ -> false
 
 
 and checkSchemaWf (Schema elements ) =
@@ -781,27 +781,27 @@ and checkSchemaWf (Schema elements ) =
      if cD |- ms <= cD' then checkMSub succeeds.
 
   *)
-and checkMSub loc cD  ms cD'  = match (ms, cD') with
-    | (MShift k, Empty) ->
+and checkMSub loc cD  ms cD'  = match ms, cD' with
+    | MShift k, Empty ->
         if (Context.length cD) = k then ()
         else
           raise (Error.Violation ("Contextual substitution ill-typed - 1"))
 
-    | (MShift k, cD') ->
+    | MShift k, cD' ->
 	if k >= 0 then
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Error.Violation ("Contextual substitution ill-formed"))
 
-    | (MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi))) ->
+    | MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ;
          checkMSub loc cD ms cD1')
-    | (MDot (CObj(cPsi), ms), Dec(cD1', CDecl (_psi, w, _))) ->
+    | MDot (CObj(cPsi), ms), Dec(cD1', CDecl (_psi, w, _)) ->
         (checkSchema loc cD cPsi (Schema.get_schema w);
          checkMSub loc cD ms cD1')
 
-    | (MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi))) ->
+    | MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         let (_, tA1, cPsi1) = Whnf.mctxMDec cD u in
@@ -810,7 +810,7 @@ and checkMSub loc cD  ms cD'  = match (ms, cD') with
           else
             raise (Error.Violation ("Contextual substitution ill-typed - 2 "))
 
-    | (MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi))) ->
+    | MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         let (_, tA1, cPsi1) = Whnf.mctxPDec cD p in
@@ -819,7 +819,7 @@ and checkMSub loc cD  ms cD'  = match (ms, cD') with
           else
             raise (Error.Violation ("Contextual substitution ill-typed - 3 "))
 
-    | (MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi))) ->
+    | MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with
@@ -835,7 +835,7 @@ and checkMSub loc cD  ms cD'  = match (ms, cD') with
            end ;
            checkMSub loc cD ms cD1' )
 
-    | (_, _ ) ->
+    | _, _ ->
         raise (Error.Violation ("Contextual substitution ill-typed\n " ^
                             P.mctxToString cD ^ " |- " ^
                             P.msubToString cD ms ^ " <= "

@@ -35,6 +35,7 @@ module Int : sig
 
 
     val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
+    val fmt_ppr_lf_tuple      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.tuple  -> unit
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
     val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit

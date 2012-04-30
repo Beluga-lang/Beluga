@@ -1162,30 +1162,30 @@ and elExp' cD cG i = match i with
                   raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
               end 
           | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) -> 
+              let cPsi = C.cnormDCtx (cPsi, theta) in
               let _ = dprint (fun () -> "Encountered Boxed arg") in
               let _ = dprint (fun () -> "[elExp] MAnnApp - TypArr : " ^
-                                P.mctxToString cD ^ " |- " ^ 
+                                P.mctxToString cD ^ " |- " ^
                                 P.compTypToString cD (Whnf.cnormCTyp tau_theta')) in
-              let cPsi'' = C.cnormDCtx (cPsi, theta) in
               let _ = dprint (fun () -> "cnormDctx done") in
               let _ = dprint (fun () -> "Projected type of argument : " ^
-                                (P.dctxToString cD cPsi'') ^ " |- " ^
-                                P.typToString cD cPsi'' (C.cnormTyp (tP, theta), LF.id)) in 
-                begin try 
+                                (P.dctxToString cD cPsi) ^ " |- " ^
+                                P.typToString cD cPsi (C.cnormTyp (tP, theta), LF.id)) in
+                begin try
                   let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
                   let _ = dprint (fun () -> "reconstruction of explicit psi done") in
-                  let _ = dprint (fun () -> "BEFORE unifyDCtx cPsi' = " ^ P.dctxToString cD  cPsi') in 
-                  let _ = dprint (fun () -> "                 cPsi'' = " ^ P.dctxToString cD  cPsi'') in 
-                  let _     = Unify.unifyDCtx cD cPsi'' cPsi' in 
+                  let _ = dprint (fun () -> "BEFORE unifyDCtx cPsi' = " ^ P.dctxToString cD  cPsi') in
+                  let _ = dprint (fun () -> "                 cPsi = " ^ P.dctxToString cD  cPsi) in
+                  let _     = Unify.unifyDCtx cD cPsi cPsi' in
                   let _ = dprint (fun () -> "Infer omitted context argument using unification") in
                   let psihat' = Context.dctxToHat cPsi'  in
                   let tM' = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m (C.cnormTyp (tP, theta), LF.id) in
-                  let _   = dprint (fun () -> "[elTerm] for m against type : " ^      
-                                   P.dctxToString cD cPsi' ^ " |- " ^ 
+                  let _   = dprint (fun () -> "[elTerm] for m against type : " ^
+                                   P.dctxToString cD cPsi' ^ " |- " ^
                                    P.typToString cD cPsi' (C.cnormTyp (tP, theta), LF.id)) in
-                  let i = Int.Comp.Apply (loc, i', 
-                                     Int.Comp.Box(loc, psihat', tM')) in  
-                    dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^ 
+                  let i = Int.Comp.Apply (loc, i',
+                                     Int.Comp.Box(loc, psihat', tM')) in
+                    dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^
                               P.expSynToString cD cG i ^ "\n"); (i , (tau, theta))
 
                 with Unify.Unify msg -> 

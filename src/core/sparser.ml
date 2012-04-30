@@ -182,13 +182,13 @@ typ:
     [
       [
 
-         a = UPSYMBOL; ":"; la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative; ";" -> 
+         a = UPSYMBOL; ":"; la = OPT ["|";  la= LIST1 con_dcl SEP ","; turnstyle -> la]; b = var_alternative; ";" -> 
                                                                     Premisse(_loc, Some(PName(a)), la, b)
       |
-         a = SYMBOL; ":"; la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative; ";" -> 
+         a = SYMBOL; ":"; la = OPT ["|";  la= LIST1 con_dcl SEP ","; turnstyle -> la]; b = var_alternative; ";" -> 
                                                                     Premisse(_loc, Some(PName(a)), la, b)
       |
-         la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la ]; b = var_alternative; ";"  -> 
+         la = OPT ["|";  la= LIST1 con_dcl SEP ","; turnstyle -> la ]; b = var_alternative; ";"  -> 
                                                                        Premisse(_loc, None, la, b)
 
       |
@@ -264,6 +264,10 @@ typ:
                                                                                         VAltFn(_loc, VName(t1), VLa(la), b)
 
       |
+         t1 = UPSYMBOL; dots; "["; la = LIST1 SELF SEP ","; "]"; b = OPT [ var_alternative ] ->  
+                                                                                        VAltFn(_loc, VName(t1), VLa(la), b)
+
+      |
          t1 = SYMBOL; "["; la = LIST1 SELF SEP ","; "]"; b = OPT [ var_alternative ] ->  
                                                                                         VAltFn(_loc, VName(t1), VLa(la), b)
  
@@ -277,7 +281,7 @@ typ:
          "let"; a = var_alternative; (*"="; b = SELF;*) "in"; c = SELF -> let d = VAltBin(_loc, c) in let b = append a d in VAltLet(_loc,b) 
 
       |
-         "{"; la = LIST1 typ_dcl SEP ","; "}"; c = var_alternative -> VAltOft(_loc, la, c)
+         "{"; a = typ_dcl ; b = OPT [ ","; b = var_alternative -> b ]; "}"; c = var_alternative -> VAltOft(_loc, a, b, c)
 
       |
          `EMPTY ->  VAltEmpty(_loc)       
@@ -311,7 +315,7 @@ typ:
 
       |
 
-         a = SYMBOL ->  Con(a)
+         a = SYMBOL  ->  Con(a)
 
       ]
     ]
@@ -320,13 +324,13 @@ typ:
  t_premise:
     [
       [
-         a = UPSYMBOL; ":"; la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative -> 
+         a = UPSYMBOL; ":"; la = OPT ["|"; la= LIST1 con_dcl SEP ","; turnstyle -> la]; b = var_alternative -> 
                                                                                                                  TPremisse(_loc, Some(PName(a)), la, b)
       |
-         a = SYMBOL; ":"; la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative-> 
+         a = SYMBOL; ":"; la = OPT ["|"; la= LIST1 con_dcl SEP ","; turnstyle -> la]; b = var_alternative-> 
                                                                                                                  TPremisse(_loc, Some(PName(a)), la, b)
       |
-         la = OPT ["["; la= LIST1 con_dcl SEP ","; "]"; turnstyle -> la]; b = var_alternative -> TPremisse(_loc, None, la, b)
+         la = OPT ["|";  la= LIST1 con_dcl SEP ","; turnstyle -> la]; b = var_alternative -> TPremisse(_loc, None, la, b)
 
       |
           a = SYMBOL; ":"; b = var_alternative -> TPremisse(_loc, Some(PName(a)), None, b)
@@ -356,11 +360,11 @@ typ:
  proof:
     [
       [
-        np = t_premise; "by"; "induction"; "on"; a = var_name; ":"; lb = LIST1 args; "end"; "induction" -> Proof(_loc, np, a, lb)
+        np = t_premise; "by"; "induction"; "on"; a = t_premise; ";"; lb = LIST1 args; "end"; "induction" -> Proof(_loc, np, a, lb)
 
       |
 
-        np = t_premise; "by"; "uniqueness"; "of"; "variables" ->  Unique(_loc, np)
+        np = t_premise; "by"; "uniqueness"; "of"; "variables"; ";" ->  Unique(_loc, np)
 
       |
         np = t_premise; "by";j = SELF; "on"; lp = LIST1 t_premise SEP "," ; ";"->  PRule(_loc, np, j, lp)
@@ -369,7 +373,7 @@ typ:
         np = t_premise; "by"; "case"; "analysis"; "on"; lb = LIST1 var_name SEP ","; ":"; la = LIST1 args; "end"; "case"; "analysis" ->  CaseAn(_loc, np, lb, la)
 
       |
-        np = t_premise; "by";"rule"; rn = SYMBOL; ltp = OPT [ "on"; ltp = LIST1 t_premise SEP ","; ";" -> ltp] -> URule(_loc, np, RName(rn), ltp)
+        np = t_premise; "by";"rule"; rn = SYMBOL; ltp = OPT [ "on"; ltp = LIST1 t_premise SEP "," -> ltp]; ";" -> URule(_loc, np, RName(rn), ltp)
 
       |
          "induction"; "hypothesis" -> InductionHyp(_loc)

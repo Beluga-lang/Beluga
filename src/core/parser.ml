@@ -944,7 +944,6 @@ cmp_exp_chkX:
           Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
-       (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
        "["; pHat = clf_dctx ;"."; mobj = clf_pattern; "]";
        tau = OPT [ ":"; "["; cPsi = clf_dctx; "."; tA = clf_typ LEVEL "atomic";  "]" -> Comp.TypBox(_loc,tA, cPsi) ];
        "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk

@@ -49,7 +49,7 @@ e1 eval v1;
 
 theorem val-sound : forall D: E eval E' exists E' value ;
 
-E' value by induction on D:
+E' value by induction on D;
 
 case rule
 
@@ -58,7 +58,7 @@ case rule
 
 	is
 
-	E' value by rule val-z
+	E' value by rule val-z;
 
 end case
 
@@ -82,7 +82,7 @@ case rule
 
 	is
 
-	e' value by rule val-lam
+	e' value by rule val-lam;
 
 end case
 

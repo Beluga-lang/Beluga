@@ -106,7 +106,7 @@ and vAlternative =
   | VAltFn of Loc.t * vName * typ_or_valt * vAlternative option
   | VAltBin of Loc.t * vAlternative
   | VAltLet of Loc.t * vAlternative                               
-  | VAltOft of Loc.t * ( string * vAlternative ) list * vAlternative 
+  | VAltOft of Loc.t * ( string * vAlternative ) * vAlternative option * vAlternative 
   | VAltOftBlock of Loc.t * ( string * vAlternative ) list * vAlternative option
   | VAltCtx of Loc.t * cName * vAlternative list              (* for contexts Gamma, x : tau, AltOft list to be more specific *)  
   | VAltPar of Loc.t * vAlternative * vAlternative option
@@ -128,7 +128,7 @@ and statement =
   | Exist of Loc.t  * premise
 
 and proof = 
-  | Proof of Loc.t * tpremise * vName * argument list      (* a proof in SASyLF is an induction statement and a list of arguments; dt: e value by induction on ds ... arguments *)
+  | Proof of Loc.t * tpremise * tpremise * argument list      (* a proof in SASyLF is an induction statement and a list of arguments; dt: e value by induction on ds ... arguments *)
   | PRule of Loc.t * tpremise * proof * tpremise list
   | Induction of Loc.t * name
   | InductionHyp of Loc.t

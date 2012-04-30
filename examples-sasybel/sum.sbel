@@ -35,16 +35,16 @@ n1 < n2 ;
 
 theorem z_less_s_z: exists z < (s z) ;
 
-dsolve : z < (s z) by rule less-one
+dsolve : z < (s z) by rule less-one;
 
 end theorem
 
 theorem plus1 : forall N exists N + (s z) = (s N);
 
-x : N + (s z) = (s N) by induction on N : 
+x : N + (s z) = (s N) by induction on N ; 
 
 case z is
-	   d2: (z) + (s z) = (s z) 	by rule sum-z
+	   d2: (z) + (s z) = (s z) 	by rule sum-z;
 end case
 
 case (s N) is
@@ -57,7 +57,7 @@ end theorem
 
 theorem sum-s-rh : forall D1 : N1 + N2 = N3 exists N1 + (s N2) = (s N3);
 
-d2 : N1 + (s N2) = (s N3) by induction on D1 :
+d2 : N1 + (s N2) = (s N3) by induction on D1 ;
 
 case rule
 
@@ -66,7 +66,7 @@ z + N = N;
 
 is
 
-dz1 : z + (s N) = (s N) by rule sum-z
+dz1 : z + (s N) = (s N) by rule sum-z;
 
 end case
 

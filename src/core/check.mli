@@ -10,12 +10,13 @@ module LF : sig
   type error =
     | CtxVarMismatch   of mctx * ctx_var * schema
     | CtxVarDiffer     of mctx * ctx_var * ctx_var
-    | IllTyped         of mctx * dctx * nclo * tclo
-    | SigmaIllTyped    of mctx * dctx * trec_clo * trec_clo
+    | CheckError       of mctx * dctx * nclo * tclo
+    | TupleArity       of mctx * dctx * nclo * trec_clo
+    | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo
     | KindMismatch     of mctx * dctx * sclo * (kind * sub)
     | TypMismatch      of mctx * dctx * nclo * tclo * tclo
+    | SubIllTyped      of mctx * dctx * sub * dctx
     | SpineIllTyped
-    | SubIllTyped
     | LeftoverFV
     | CtxVarMisCheck	of mctx * dctx * tclo * schema
   exception Error of Syntax.Loc.t * error
@@ -46,9 +47,9 @@ module Comp : sig
   type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
   type error =
-      IllTyped        of LF.mctx * gctx * exp_chk * tclo * tclo
+      MismatchChk     of LF.mctx * gctx * exp_chk * tclo * tclo
+    | MismatchSyn     of LF.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of LF.mctx * gctx * pattern * tclo * tclo
-    | Mismatch        of LF.mctx * gctx * exp_syn * typeVariant * tclo
     | CtxFunMismatch  of LF.mctx * gctx  * tclo 
     | FunMismatch     of LF.mctx * gctx  * tclo 
     | MLamMismatch    of LF.mctx * gctx  * tclo 

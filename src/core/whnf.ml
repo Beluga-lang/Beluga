@@ -29,9 +29,9 @@ exception Error of Syntax.Loc.t * error
 module R = Store.Cid.DefaultRenderer
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
       | CompFreeMVar u ->
           Format.fprintf ppf "Encountered free meta-variables %s\n"
             (Store.Cid.DefaultRenderer.render_name u)

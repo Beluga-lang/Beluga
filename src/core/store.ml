@@ -728,9 +728,9 @@ let clear () =
   Cid.Comp.clear ()
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
         | FrozenType n ->
             Format.fprintf ppf
               "type %s was frozen by a previous case analysis;@ \

@@ -1,0 +1,7 @@
+nat : type.
+z : nat.
+
+rec f : ([. nat] -> [. nat]) -> [.nat] =
+    fn g => case g of
+      | [. z] => [. z]
+;

@@ -90,6 +90,7 @@ module Int = struct
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
 
     val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
+    val fmt_ppr_lf_tuple      : LF.mctx -> LF.dctx -> lvl  -> formatter -> LF.tuple  -> unit
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
     val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
@@ -243,14 +244,14 @@ module Int = struct
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
 
-    and fmt_ppr_tuple cD cPsi lvl ppf = function
+    and fmt_ppr_lf_tuple cD cPsi lvl ppf = function
       | LF.Last tM ->
            fmt_ppr_lf_normal cD cPsi lvl ppf tM
 
       | LF.Cons(tM, rest) ->
            fprintf ppf "%a, %a"
              (fmt_ppr_lf_normal cD cPsi lvl) tM
-             (fmt_ppr_tuple cD cPsi lvl) rest
+             (fmt_ppr_lf_tuple cD cPsi lvl) rest
 
     and fmt_ppr_lf_normal cD cPsi lvl ppf =
       let rec dropSpineLeft ms n = match (ms, n) with
@@ -287,7 +288,7 @@ module Int = struct
 
         | LF.Tuple (_, tuple) ->
            fprintf ppf "<%a>"
-             (fmt_ppr_tuple cD cPsi lvl) tuple
+             (fmt_ppr_lf_tuple cD cPsi lvl) tuple
 
         | LF.Root (_, h, LF.Nil) ->
             fprintf ppf "%a"
@@ -1017,8 +1018,8 @@ module Int = struct
           fprintf ppf "(%a , %a)"
             (fmt_ppr_pat_obj cD cG 0) pat1
             (fmt_ppr_pat_obj cD cG 0) pat2            
-      | Comp.PatTrue _ -> fprintf ppf "tt"
-      | Comp.PatFalse _ -> fprintf ppf "ff"
+      | Comp.PatTrue _ -> fprintf ppf "ttrue"
+      | Comp.PatFalse _ -> fprintf ppf "ffalse"
       | Comp.PatAnn (_, pat, tau) -> 
           fprintf ppf "(%a : %a)"
             (fmt_ppr_pat_obj cD cG 0) pat
@@ -1256,10 +1257,10 @@ module Int = struct
               (fmt_ppr_cmp_exp_syn cD cG 1) i2 
 
       | Comp.Boolean true -> 
-          fprintf ppf "true"
+          fprintf ppf "ttrue"
 
       | Comp.Boolean false -> 
-          fprintf ppf "false"
+          fprintf ppf "ffalse"
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function 
       | LF.Empty -> ()
@@ -1477,7 +1478,7 @@ module Int = struct
     let ppr_lf_kind cPsi       = fmt_ppr_lf_kind cPsi          std_lvl std_formatter
     let ppr_lf_typ  cD cPsi    = fmt_ppr_lf_typ cD cPsi     std_lvl std_formatter
     let ppr_lf_normal cD cPsi  = fmt_ppr_lf_normal cD cPsi  std_lvl std_formatter
-    let ppr_tuple cD cPsi      = fmt_ppr_tuple cD cPsi      std_lvl std_formatter
+    let ppr_lf_tuple cD cPsi   = fmt_ppr_lf_tuple cD cPsi      std_lvl std_formatter
     let ppr_lf_head cD cPsi    = fmt_ppr_lf_head cD cPsi    std_lvl std_formatter
     let ppr_lf_spine cD cPsi   = fmt_ppr_lf_spine cD cPsi   std_lvl std_formatter
     let ppr_lf_sub cD cPsi     = fmt_ppr_lf_sub cD cPsi     std_lvl std_formatter
@@ -1529,7 +1530,7 @@ module Int = struct
       ; flush_str_formatter ()
 
     let tupleToString cD cPsi tuple = 
-      fmt_ppr_tuple cD cPsi std_lvl str_formatter tuple
+      fmt_ppr_lf_tuple cD cPsi std_lvl str_formatter tuple
       ; flush_str_formatter ()
 
     let headToString cD cPsi h = 

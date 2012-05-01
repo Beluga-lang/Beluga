@@ -38,8 +38,8 @@ module PC = Pretty.Control
 
 let process_option' arg rest = begin let f = function
   (* these strings must be lowercase *)
-  | "+d" -> (Debug.showAll (); rest)
-  | "-d" -> (Debug.showNone (); rest)
+  | "+d" -> (Debug.showAll (); Printexc.record_backtrace true; rest)
+  | "-d" -> (Debug.showNone (); Printexc.record_backtrace false; rest)
   | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
   | "-s=debruijn" -> (PC.substitutionStyle := PC.DeBruijn; rest)
   | "+implicit" -> (PC.printImplicit := true; rest)
@@ -179,6 +179,7 @@ let main () =
               end
 
         with e ->
+          Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
           output_string stderr (Printexc.to_string e);
           abort_session ()
     in

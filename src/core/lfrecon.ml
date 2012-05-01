@@ -21,6 +21,7 @@ type error =
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | LeftoverConstraints of Id.name
   | PruningFailed
+  | SubIllTyped
   | IllTypedIdSub
   | CompTypAnn       
   | NotPatternSpine
@@ -28,9 +29,9 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
           Format.fprintf ppf
             "ill-typed expression\n  expected: %a\n  inferred: %a\n "
@@ -49,6 +50,9 @@ let _ = Error.register_printer
 
 	| PruningFailed -> 
           Format.fprintf ppf "Pruning a type failed; this can happen when you have some free meta-variables whose type cannot be inferred." 
+
+        | SubIllTyped ->
+          Format.fprintf ppf "Ill-typed substitution during elaboration."
 
         | IllTypedIdSub ->
           Format.fprintf ppf "ill-typed substitution" (* TODO *) 
@@ -671,37 +675,34 @@ and elTerm' recT cD cPsi r sP = match r with
       let s = Substitution.LF.id in 
       let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in
       let tR = Int.LF.Root (loc, Int.LF.Const c, tS)  in 
-        begin try
-          (Unify.unifyTyp cD cPsi sQ sP ;
-           tR)
-        with 
+      begin
+	try
+          Unify.unifyTyp cD cPsi sQ sP;
+	  tR
+        with
          | Unify.Unify msg ->
-             ((* Printf.printf "\nUnification Error: %s\n\n" msg; *)
-              raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
+           raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
          | Unify.Error msg -> 
-             (Printf.printf ("\nHidden %s\n  This may indicate the following problem:\n a contextual variable was inferred with the most general type,\n  but subsequently it must have a more restrictive type,\n  i.e., where certain bound variable dependencies cannot occur.\n\n") msg;
-              raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
+           raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
          | Unify.NotInvertible -> 
-            ((* Printf.printf "\nUnification Error: NotInvertible\n\n"; *)
-             raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
-        end
+           raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+      end
 
   | Apx.LF.Root (loc, Apx.LF.BVar x, spine) ->
-      begin try 
+    begin
+      try
         let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, Substitution.LF.id) in
-          begin try
-            (Unify.unifyTyp cD  cPsi sQ sP ;
-             Int.LF.Root (loc, Int.LF.BVar x, tS)) 
-          with Unify.Unify msg ->
-            (Printf.printf "%s\n" msg;
-             raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
-             | _ -> (Printf.printf "Non-Unification Error(2)\n" ;
-                    raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))) 
-          end
+        begin
+	  try
+	    (Unify.unifyTyp cD  cPsi sQ sP;
+	     Int.LF.Root (loc, Int.LF.BVar x, tS))
+          with
+	    | Unify.Unify msg ->
+	      raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+            | _ -> raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+        end
       with _ -> raise (Error (loc, CompTypAnn))
-        (* (Printf.printf "BVar lookup error \n" ; raise (Error.Violation "Not Found")) *)
-
       end
 
   | Apx.LF.Root (loc, Apx.LF.FVar x, spine) as m ->
@@ -717,37 +718,38 @@ and elTerm' recT cD cPsi r sP = match r with
                  *)
               let s = mkShift recT cPsi in
               let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s) in
-                begin try
-                  (Unify.unifyTyp cD cPsi sQ sP ;
-                   Int.LF.Root (loc, Int.LF.FVar x, tS)) 
-                with Unify.Unify msg ->
-                       (Printf.printf "%s\n" msg;
-                        raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
-                   | _ ->
-                       (Printf.printf "Non-Unification Error (3)\n" ;
-                        raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
-                end
+              begin
+		try
+                  Unify.unifyTyp cD cPsi sQ sP;
+                  Int.LF.Root (loc, Int.LF.FVar x, tS)
+                with
+		  | Unify.Unify msg ->
+                    raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+                  | _ ->
+                    raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+              end
 
 
             with Not_found ->
-              begin try
-                let (_l, p_spine) = patSpine spine in
-                let s = mkShift recT cPsi in              
-                let (tS, tA) =  elSpineSynth recT  cD cPsi p_spine s sP in 
+              begin
+		try
+                  let (_l, p_spine) = patSpine spine in
+                  let s = mkShift recT cPsi in              
+                  let (tS, tA) =  elSpineSynth recT  cD cPsi p_spine s sP in 
                   (* For type reconstruction to succeed, we must have
                    *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
                    *  This will be enforced during abstraction.
                    *)
                   FVar.add x (Int.LF.Type tA);
                   Int.LF.Root (loc, Int.LF.FVar x, tS)
-              with NotPatSpine -> 
-                (let _ = dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...") in  
-                  let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
-                 let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in  
-                    add_fvarCnstr (tAvar, m, v);
+		with NotPatSpine -> 
+                  (let _ = dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...") in  
+                   let v = Whnf.newMVar (cPsi, Int.LF.TClo sP) in
+                   let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in  
+                   add_fvarCnstr (tAvar, m, v);
                    Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil))
-                | _  ->                 
-                raise (Error (loc, IllTypedElab (cD, cPsi, sP)))
+                  | _  ->                 
+                    raise (Error (loc, IllTypedElab (cD, cPsi, sP)))
               end
             end
         | Pibox -> raise (Index.Error (loc, Index.UnboundName x))
@@ -778,8 +780,7 @@ and elTerm' recT cD cPsi r sP = match r with
               let u =  Whnf.newMMVar (cD, cPsi, tA) in
                 Int.LF.Root (loc, Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.id)), tS)
         end)
-      with NotPatSpine ->          
-           raise (Error (loc, NotPatternSpine))
+      with NotPatSpine -> raise (Error (loc, NotPatternSpine))
       end
   (* We only allow free meta-variables of atomic type *)
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) as m ->
@@ -798,15 +799,12 @@ and elTerm' recT cD cPsi r sP = match r with
           (* We do not check here that tP approx. [s']tP' --
            * this check is delayed to reconstruction *)
         let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil) in 
-          begin try
-            Unify.unifyTyp cD  cPsi (tQ', s'') sP ; 
-            tR
-          with Unify.Unify msg -> 
-            (Printf.printf "%s\n" msg;
-             raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP))))
-            |_ -> (Printf.printf "Unification Error (4)\n";
-             raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP))))
-
+        begin try
+		Unify.unifyTyp cD  cPsi (tQ', s'') sP ; 
+		tR
+	  with Unify.Unify msg -> 
+            raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP)))
+            |_ -> raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP)))
           end
       with 
         | Not_found ->
@@ -891,12 +889,11 @@ and elTerm' recT cD cPsi r sP = match r with
           begin try
             Unify.unifyTyp cD cPsi sQ sP;
             tR
-          with Unify.Unify msg -> 
-                 (Printf.printf "%s\n" msg;
-                 raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP))))
-             | _ ->
-                (Printf.printf "Unification Error (5) \n";
-                 raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP))))
+            with
+	      | Unify.Unify msg -> 
+		raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
+              | _ ->
+		raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
           end
       
       with 
@@ -923,10 +920,8 @@ and elTerm' recT cD cPsi r sP = match r with
                 let q = Whnf.newPVar (cPsi, Int.LF.TClo sP) in
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (loc, Int.LF.PVar (q, Substitution.LF.id), Int.LF.Nil)
-            
-            | (_, _) ->  raise (Error (loc, NotPatternSpine))
 
-                   (* (Printf.printf "elTerm': FPVar with spine\n" ; raise NotImplemented)*)
+            | (_, _) ->  raise (Error (loc, NotPatternSpine))
           end
         | Error.Violation msg  -> 
             dprint (fun () -> "[elClosedTerm] Violation: " ^ msg) ;
@@ -954,11 +949,11 @@ and elTerm' recT cD cPsi r sP = match r with
             begin try
               (Unify.unifyTyp cD cPsi (Int.LF.TClo sQ, s'') sP ;
                Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k), tS))
-            with Unify.Unify msg ->
-              (Printf.printf "%s\n" msg;
-               raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
-              | _ ->               (Printf.printf "Unification Error (6)\n" ;
-               raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
+              with
+		| Unify.Unify msg ->
+		  raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+		| _ ->
+		  raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
             end
         with Not_found ->
 	  (dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
@@ -1016,48 +1011,48 @@ and elTerm' recT cD cPsi r sP = match r with
 
           let _   = dprint (fun () -> "[elTerm] Apx-mvar: Expected type: " ^ P.typToString cD cPsi sP ^ "\n") in 
           let _   = dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s'') ^ "\n") in  
-            begin try
-          (* This case only applies to Beluga; MInst are introduced during cnormApxTerm. *)
-          ( Unify.unifyTyp cD  cPsi (tQ, s'') sP ; 
-            dprint (fun () -> "[elTerm] reconstruction of mvar done ");
-            dprint (fun () -> "  sQ = " ^ P.typToString cD cPsi (tQ,s'') ^ " == " ^ P.typToString cD cPsi sP) ; 
-            dprint (fun () -> "  tN = " ^ P.normalToString cD cPsi (tN, s''));
-           Int.LF.Clo(tN, s''))
-      with  Error.Violation msg  -> 
-        (dprint (fun () -> "[elTerm] Violation: " ^ msg) ;
-         dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
-         raise (Error (loc, CompTypAnn )))
-        |  Unify.Unify msg  -> 
-             dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
-             dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
-             dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
-             dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
-             dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD);
-             raise (Error (loc, CompTypAnn ))
-        | _ ->               (Printf.printf "Unification Error (7)\n" ;
-             dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
-             dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s'') ^ " does not match expected type");
-(*             dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP ^ "\n");*) 
-(*             dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD ^ "\n"); *)
-                              raise (Error (loc, CompTypAnn))
-                   )
-      end
-        
+          begin
+	    try
+	      (* This case only applies to Beluga; MInst are introduced during cnormApxTerm. *)
+	      Unify.unifyTyp cD  cPsi (tQ, s'') sP ;
+	      dprint (fun () -> "[elTerm] reconstruction of mvar done ");
+	      dprint (fun () -> "  sQ = " ^ P.typToString cD cPsi (tQ,s'') ^ " == " ^ P.typToString cD cPsi sP) ; 
+	      dprint (fun () -> "  tN = " ^ P.normalToString cD cPsi (tN, s''));
+	      Int.LF.Clo(tN, s'')
+	    with Error.Violation msg  -> 
+              (dprint (fun () -> "[elTerm] Violation: " ^ msg);
+               dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+               raise (Error (loc, CompTypAnn)))
+              |  Unify.Unify msg  -> 
+		dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
+		dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+		dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
+		dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
+		dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD);
+		raise (Error (loc, CompTypAnn))
+              | _ ->
+		begin
+		  dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+		  dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s'') ^ " does not match expected type");
+		  raise (Error (loc, CompTypAnn))
+		end
+	  end
+
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset u, s'), spine) ->
       begin try
         let (_, tA, cPhi) = Whnf.mctxMDec cD u in
         let s'' = elSub loc recT cD cPsi s' cPhi in
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
         let tR = Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS) in 
-          begin try
-            (Unify.unifyTyp cD cPsi sQ sP ; 
-            tR) 
-            with Unify.Unify msg ->
-                   (Printf.printf "%s\n" msg;
-                    raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP))))
-              | _ ->
-                  (Printf.printf "Unification Error (7)\n" ;
-                   raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP))))
+        begin
+	  try
+            Unify.unifyTyp cD cPsi sQ sP; 
+            tR
+          with
+	    | Unify.Unify msg ->
+              raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
+            | _ ->
+              raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
           end
       with Error.Violation msg ->
         dprint (fun () -> "[elTerm] Violation: " ^ msg);
@@ -1086,56 +1081,56 @@ and elTerm' recT cD cPsi r sP = match r with
 
 
   | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.Offset p,s'), spine) ->
-      begin try 
+    begin
+      try 
         let (_, tA, cPhi) = Whnf.mctxPDec cD p in
         let s'' = elSub loc recT cD cPsi s' cPhi in
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'')  in
         let tR = Int.LF.Root (loc, Int.LF.PVar (Int.LF.Offset p, s''), tS) in 
-          begin try
+        begin
+	  try
             Unify.unifyTyp cD cPsi sQ sP ; 
             tR
-          with Unify.Unify msg -> 
-            (Printf.printf "%s\n" msg;
-             raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP))))
-          end
+          with
+	    | Unify.Unify msg -> 
+              raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
+        end
       with Error.Violation msg  -> 
         dprint (fun () -> "[elTerm] Violation: " ^ msg);
         raise (Error (loc, CompTypAnn ))
-      end
-
-
+    end
 
   (* Reconstruction for projections *)
   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
       let sA       = Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1 in 
       let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
-        begin try
-          (Unify.unifyTyp cD cPsi sQ sP ;
-           Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS)
-          )
-        with Unify.Unify msg ->
-          (Printf.printf "%s\n" msg;
-           raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
-        end
+      begin
+	try
+          Unify.unifyTyp cD cPsi sQ sP;
+          Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS)
+        with
+	  | Unify.Unify msg ->
+           raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+      end
 
   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), k),  spine) ->
-      begin match Whnf.mctxPDec cD p with
+    begin
+      match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') -> 
-            let t' = elSub loc recT cD  cPsi t cPsi' in 
-            let  sA = Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') k 1 in 
-            let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
-              begin try
-                (Unify.unifyTyp cD cPsi sQ sP ;
-                 Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,t'), k), tS)
-                )
-              with Unify.Unify msg ->
-                (Printf.printf "%s\n" msg;
-                 raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ))))
-              end
+          let t' = elSub loc recT cD  cPsi t cPsi' in 
+          let  sA = Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') k 1 in 
+          let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
+          begin
+	    try
+              Unify.unifyTyp cD cPsi sQ sP;
+              Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,t'), k), tS)
+	    with
+	      | Unify.Unify msg ->
+                raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+          end
         | _  -> raise (Error (loc, IllTypedElab (cD, cPsi, sP)))
-
-      end
+    end
 
 
   | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), k), spine) ->
@@ -1363,29 +1358,21 @@ and elClosedTerm' recT cD cPsi r = match r with
 
 
 
-(* elSub recT cD cPsi s cPhi = s'
- *
- *)
+(* elSub recT cD cPsi s cPhi = s' *)
 and elSub loc recT cD cPsi s cPhi =
   match (s, cPhi) with
   | (Apx.LF.EmptySub, Int.LF.Null) ->
-      begin match Context.dctxToHat cPsi with
-        | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d)
-        | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
-      end
+    begin match Context.dctxToHat cPsi with
+      | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d)
+      | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
+    end
 
-  | (Apx.LF.SVar (Apx.LF.Offset offset, s), Int.LF.CtxVar phi) -> 
-      begin try
-        match Whnf.mctxSDec cD offset with
-          | (_ , Int.LF.CtxVar phi', cPhi2)  ->  
-              if phi = phi' then 
-                let s' = elSub loc recT cD cPsi s (Int.LF.CtxVar phi) in
-                  Int.LF.SVar (Int.LF.Offset offset, s')
-              else raise (Check.LF.Error (loc, Check.LF.SubIllTyped))
-      with 
-          _ -> raise (Check.LF.Error (loc, Check.LF.SubIllTyped))
-      end 
-
+  | (Apx.LF.SVar (Apx.LF.Offset offset, s), (Int.LF.CtxVar phi as cPhi)) ->
+    let (_, Int.LF.CtxVar phi', cPhi2) = Whnf.mctxSDec cD offset in
+    if phi = phi' then
+      let s' = elSub loc recT cD cPsi s cPhi in
+      Int.LF.SVar (Int.LF.Offset offset, s')
+    else raise (Error (loc, SubIllTyped))
 
   | (Apx.LF.Id _ , Int.LF.CtxVar phi) ->
       begin match Context.dctxToHat (C.cnormDCtx (cPsi, C.m_id)) with
@@ -1651,8 +1638,7 @@ and elKSpine recT cD cPsi spine sK = match (spine, sK) with
         Int.LF.App (tM, tS)
 
   | ( _, _) ->
-      ((*Printf.printf "elKSpine: spine ill-kinded\n"; *)
-      raise Error.NotImplemented) (* TODO postpone error to reconstruction phase *)
+      raise Error.NotImplemented (* TODO postpone error to reconstruction phase *)
 
 (* elSpineSynth cD cPsi p_spine s' = (S, A')
  *
@@ -1750,15 +1736,15 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
               (* let tS = elSpine cPsi spine (tA, Substitution.LF.id) (tP,s) in *)
               let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, sshift) in
-		begin try
-                  (Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id) ;
-                   r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS));
-                   solve_fvarCnstr recT cD cnstrs
-                  ) 
-		with Unify.Unify msg ->
-		  (Printf.printf "%s\n" msg;
-		   raise (Error (loc, TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ))))
-		end
+	      begin
+		try
+                  Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id);
+                  r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS));
+                  solve_fvarCnstr recT cD cnstrs
+		with
+		  | Unify.Unify msg ->
+		    raise (Error (loc, TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ)))
+	      end
           | Int.LF.TypVar _ -> 
               raise (Error (loc, LeftoverConstraints x))
 	end
@@ -1779,23 +1765,21 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
             (* let tS = elSpine cPsi spine (tA, Substitution.LF.id) (tP,s) in *)
             let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, sshift) in
-         (* let psihat = Context.dctxToHat cPsi in             *)
-              begin try 
-                (Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id) ;
-                 Unify.unify cD cPsi 
-		   (Int.LF.Root (loc, Int.LF.FVar x, tS), Substitution.LF.id) 
-		   (tR, Substitution.LF.id);
-              (* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
-              solve_fvarCnstr recT cD cnstrs
-                ) 
-            with Unify.Unify msg ->
-              (Printf.printf "%s\n" msg;
-              raise (Error (loc, TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ))))
-              end
-
-
+            (* let psihat = Context.dctxToHat cPsi in *)
+            begin
+	      try 
+                Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id) ;
+                Unify.unify cD cPsi 
+		  (Int.LF.Root (loc, Int.LF.FVar x, tS), Substitution.LF.id) 
+		  (tR, Substitution.LF.id);
+		(* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
+		solve_fvarCnstr recT cD cnstrs
+	      with
+		| Unify.Unify msg ->
+		  raise (Error (loc, TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ)))
+            end
         | Int.LF.TypVar _ -> 
-            raise (Error (loc, LeftoverConstraints x))
+          raise (Error (loc, LeftoverConstraints x))
       end
 
     with _ -> raise (Index.Error (loc, Index.UnboundName x)) 

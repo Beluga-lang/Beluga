@@ -256,7 +256,7 @@ module Comp = struct
    | CTypDecl of name * typ
    | CTypDeclOpt of name
   
-  type gctx = ctyp_decl LF.ctx
+ type gctx = ctyp_decl LF.ctx
 
  type contextual_obj = NormObj of LF.normal | NeutObj of LF.head | SubstObj of LF.sub 
 

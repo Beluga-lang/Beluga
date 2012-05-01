@@ -223,7 +223,7 @@ let rec thin (cO, cD) (tP, cPsi) =
 
 
 
-let rec thin' cO a cPsi = 
+let rec thin' cD a cPsi = 
   (*inner basis cPsi = (s, cPsi')
 
      if basis is a list of type families
@@ -238,7 +238,7 @@ let rec thin' cO a cPsi =
   let rec inner (basis : Id.cid_typ list) cPsi = match cPsi with
     | Null -> (Shift(NoCtxShift, 0),  Null) (* . |- shift(noCtx, 0) : . *)
     | CtxVar psi -> 
-        if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) basis then
+        if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cD psi)) basis then
           ( (*print_string "Keeping context variable\n"; *)
             (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
         else

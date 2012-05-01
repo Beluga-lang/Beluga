@@ -724,6 +724,7 @@ and cnorm_psihat (phat: psi_hat) t = match phat with
         | (Some cvar', i) -> (Some cvar', i+k)
       end
   | (Some (CtxOffset offset), k) -> 
+      (dprint (fun () -> "[cnorm_psihat] CtxOffset = " ^ string_of_int offset ^ "\n");
       begin match LF.applyMSub offset t with 
         | CObj(cPsi) -> 
             begin match Context.dctxToHat (cPsi) with
@@ -731,7 +732,7 @@ and cnorm_psihat (phat: psi_hat) t = match phat with
               | (Some cvar', i) -> (Some cvar', i+k)
             end
         | MV offset' -> (Some (CtxOffset offset'), k)
-      end 
+      end )
   |  _ -> phat
 
 
@@ -820,12 +821,13 @@ and cnorm (tM, t) = match tM with
               Root (loc, PVar(p, cnormSub (r, t)), cnormSpine (tS, t)) 
 
           | PVar (PInst ({contents = Some (BVar x)}, _cPsi, _tA, _ ) , r) ->
+              (dprint (fun () -> "[cnorm] PVar Some BVar ");
               begin match LF.bvarSub x (cnormSub (r,t)) with
                 | Head h  ->
                     Root (loc, h, cnormSpine (tS, t))
                 | Obj tM  -> Clo (whnfRedex ((tM, LF.id), (cnormSpine (tS, t), LF.id)))
               end
-
+              )
 
           | PVar (PInst ({contents = Some (PVar (q,s))}, _cPsi, _tA, _ ) , r) ->
               Root (loc, PVar (q, (LF.comp s (cnormSub (r,t)))), cnormSpine (tS, t))           

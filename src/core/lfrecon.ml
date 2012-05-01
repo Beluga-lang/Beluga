@@ -20,8 +20,8 @@ type error =
   | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | LeftoverConstraints of Id.name
+  | SubIllTyped 
   | PruningFailed
-  | SubIllTyped
   | IllTypedIdSub
   | CompTypAnn       
   | NotPatternSpine

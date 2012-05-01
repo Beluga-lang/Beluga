@@ -30,9 +30,9 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
-  (fun (Error (loc, err)) ->
+  (fun (Error (loc, e)) ->
     Error.print_with_location loc (fun ppf ->
-      match err with
+      match e with
 	| NoCover s -> Format.fprintf ppf "Coverage checking failed: %s" s
 	| MatchError s -> Format.pp_print_string ppf s
 	| NothingToRefine -> Format.pp_print_string ppf "Nothing to refine"
@@ -1388,11 +1388,17 @@ let rec dprintCTs cO cD cPsi = function
               dprintCTs cO cD cPsi rest)
 
 
-let rec extract_patterns tA branch_patt = match branch_patt with 
+let rec extract_patterns (cPhi, tA) branch_patt = match branch_patt with 
   | Branch (loc, cD, _cG, PatMetaObj (loc', pat), ms, _e) -> 
-      let MetaObjAnn (loc', cPsi, tR) = pat in  
+      let (cPsi, tR) = (match pat with 
+			  | MetaObjAnn (loc', cPsi, tR) ->
+			      (cPsi, tR) (* [ms]cPhi = cPsi *)
+			  | MetaObj (loc, phat, tR) -> 
+			      (Whnf.cnormDCtx (cPhi, ms), tR)) 
+      in
 	(cD, NeutPatt (cPsi, tR, (Whnf.cnormTyp (tA, ms), S.LF.id)))
-
+  | EmptyBranch (loc, cD, PatEmpty (loc', cPsi), ms)  -> 
+	(cD, EmptyPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
 (*    | Branch (loc, cD, cG, pat, ms, _e) -> 
  | EmptyBranch (loc, cD, patt, ms)  *)
 
@@ -1415,7 +1421,7 @@ let rec initialize_coverage problem =
   let sA'        = (Whnf.cnormTyp (tA, LF.MShift 1), S.LF.id) in 
   let covGoal    = CovGoal (cPsi', tM, sA') in 
 
-  let pat_list  = List.map (function b -> extract_patterns tA b) problem.branches in 
+  let pat_list  = List.map (function b -> extract_patterns (cPsi,tA) b) problem.branches in 
 
   let rec gen_candidates covGoal patList = match patList with 
     | [] -> [] 

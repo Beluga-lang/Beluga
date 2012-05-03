@@ -7,8 +7,8 @@ open Ast
 
 
 module Grammar : Camlp4.Sig.Grammar.Static
-  with module Loc   = Lexer.Loc
-  and  module Token = Lexer.Token
+  with module Loc   = Slexer.Loc
+  and  module Token = Slexer.Token
 
 
 (** Grammar entry for an entire LF Signature *)

@@ -5,9 +5,9 @@
 
 open Common
 open Syntax
-open Token
+open Stoken
 open Ast
-module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
+module Grammar = Camlp4.Struct.Grammar.Static.Make (Slexer)
 
 exception Error of string
 

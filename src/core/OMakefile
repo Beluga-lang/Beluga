@@ -31,6 +31,8 @@ FILES[] =
         pragma
         pretty
         reconstruct
+        stoken
+        slexer
         sparser
         recsgn
         store

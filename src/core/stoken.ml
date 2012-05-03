@@ -1,11 +1,9 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
-
-
-(** a lot of this is done in token instead see slexer 172 *)
-
-(* module Loc = Core.Syntax.Loc (*Camlp4.PreCast.Loc*) *)
- module Loc = Syntax.Loc (*Camlp4.PreCast.Loc*) 
+(** Locations, used to locate a token within a file.  Since locations
+    are slightly complicated, we just reuse the existing Camlp4
+    definition. *)
+module Loc = Syntax.Loc
 
 
 
@@ -21,8 +19,9 @@ type t =
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | INTLIT  of string
   | DECLA
-  | LINES
   | EMPTY
+  | LINES
+  | TSTYLE
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"
@@ -53,8 +52,6 @@ let extract_string = function
   | SYMBOL  s -> s
   | UPSYMBOL  s -> s
   | INTLIT  s -> s
- (* | LINES ->  invalid_arg ("Cannot extract string from token: " ^
-                     to_string EOI)*)
 
 
 

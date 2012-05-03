@@ -2,7 +2,7 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
 module Loc   = Syntax.Loc
-module Token = Token
+module Token = Stoken
 module Error = Camlp4.Struct.EmptyError
 
 (*

@@ -26,7 +26,9 @@ module RR = Store.Cid.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
+
 let term_closed = true
+
 
 type error =
   | UnboundName          of Id.name
@@ -41,9 +43,9 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
-  (fun (Error (loc, e)) ->
+  (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
-      match e with
+      match err with
       | UnboundName n ->
           Format.fprintf ppf
 	    "unbound data-level variable (ordinary or meta-variable) or constructor: %s"
@@ -66,6 +68,7 @@ let _ = Error.register_printer
 
 type free_cvars = 
     FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name 
+
 
 type fcvars = free_cvars list * bool 
 
@@ -358,6 +361,7 @@ let index_psihat cvars fcvars extphat =
     begin match extphat with
       | [] -> ((None, 0), bv)
       |  x :: psihat ->
+
 	   let (fvs, _ ) = fcvars in 
 	     if lookup_fv fvs (FCV x) then 
                let (d, bvars) = index_hat bv psihat in
@@ -406,6 +410,7 @@ let index_cdecl cvars fvars = function
 
   | Ext.LF.CDecl (loc , ctx_name, schema_name) -> 
     begin try 
+
       let cvars'        = CVar.extend cvars (CVar.mk_entry (CVar.CV ctx_name)) in
       let schema_cid    = Schema.index_of_name schema_name in
         (Apx.LF.CDecl (ctx_name, schema_cid), cvars', fvars)
@@ -494,6 +499,7 @@ let rec index_compkind cvars fcvars = function
       let dep' = match dep with Ext.Comp.Explicit -> Apx.Comp.Explicit | Ext.Comp.Implicit -> Apx.Comp.Implicit in 
       let cK' = index_compkind cvars' fcvars' cK in 
         Apx.Comp.PiKind (loc, (cdecl', dep'), cK')
+
 
 let rec index_comptyp cvars  ((fcvs, closed) as fcvars) = 
   function
@@ -611,6 +617,7 @@ let rec index_exp cvars vars fcvars = function
              create_sub (Apx.LF.Dot (Apx.LF.Obj m', s)) spine' 
       in 
       let (sigma', _ ) =  index_sub cvars (bvars) fcvars sigma in 
+
         begin try
           let offset = CVar.index_of_name cvars (CVar.SV s) in
             Apx.Comp.SBox (loc1, psihat', 
@@ -962,3 +969,4 @@ let exp      = fun vars -> fun e ->
 (dprint (fun () -> "Indexing expression ... " );
  index_exp (CVar.create ()) vars ([], term_closed) e)
 let exp'     = fun vars -> fun i -> index_exp' (CVar.create ()) vars ([], term_closed) i
+

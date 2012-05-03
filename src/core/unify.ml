@@ -2797,10 +2797,17 @@ module Make (T : TRAIL) : UNIFY = struct
            unifyCompTyp cD (tau2, t) (tau2', t')
           )
 
-      | ((Comp.TypCtxPi ( _, tau), t) , (Comp.TypCtxPi ( _, tau'), t')) -> 
-          unifyCompTyp cD (tau, t) (tau', t')
-
-      | ((Comp.TypPiBox ((MDecl(u, tA, cPsi), _ ), tau), t), 
+      | ((Comp.TypCtxPi ( (psi, schema, dep), tau), t) , 
+         (Comp.TypCtxPi ( (_, schema', dep'), tau'), t')) -> 
+          if schema = schema' && dep = dep' then
+            let cdep = (match dep with Comp.Implicit -> Maybe |  Comp.Explicit -> No) in 
+            unifyCompTyp 
+              (Dec(cD, CDecl (psi, schema, cdep))) 
+              (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
+          else
+            raise (Unify "CtxPi schema clash")
+                 
+      | ((Comp.TypPiBox ((MDecl(u, tA, cPsi), _ ), tau), t),  
          (Comp.TypPiBox ((MDecl(_, tA', cPsi'), _ ), tau'), t')) -> 
           let tAn    = Whnf.cnormTyp (tA, t) in
           let tAn'   = Whnf.cnormTyp (tA', t') in
@@ -2808,7 +2815,8 @@ module Make (T : TRAIL) : UNIFY = struct
           let cPsin' = Whnf.cnormDCtx (cPsi', t') in
             (unifyDCtx1 Unification cD cPsin cPsin';
              unifyTyp Unification cD cPsin (tAn, id)  (tAn', id);
-             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
+             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin))) 
+               (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
             )
 
       | ((Comp.TypBool, _ ), (Comp.TypBool, _ )) -> ()

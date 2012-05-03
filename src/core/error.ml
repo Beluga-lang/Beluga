@@ -32,7 +32,7 @@ let print_with_location loc f =
 (* Since this printer is registered first, it will be executed only if
    all other printers fail. *)
 let _ = Printexc.register_printer
-  (fun e ->
+  (fun exc ->
     (* We unfortunately do not have direct access to the default
        printer that Printexc uses for exceptions, so we print the
        message we want as a side-effect and return None, which should
@@ -41,6 +41,11 @@ let _ = Printexc.register_printer
     Format.fprintf Format.err_formatter
       "Uncaught exception.@ Please report this as a bug.@.";
     None)
+
+let _ = register_printer
+  (fun (Sys_error msg) ->
+    print (fun ppf ->
+      Format.fprintf ppf "System error: %s" msg))
 
 let _ = register_printer
   (fun (Violation msg) ->
@@ -52,6 +57,15 @@ let _ = register_printer
     print (fun ppf ->
       Format.fprintf ppf "Not implemented."))
 
+let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
+  Format.fprintf ppf "%s@." title;
+  Format.fprintf ppf
+    "    @[<v>%s: %a@;\
+              %s: %a@]@." 
+    title_obj1 pp_obj1 obj1
+    title_obj2 pp_obj2 obj2
+
+(* The following is for coverage. Probably needs to be phased out. *)
 let information = ref []
 
 let getInformation () =

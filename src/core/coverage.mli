@@ -18,7 +18,6 @@ type problem
 
 val make : Syntax.Loc.t
         -> Pragma.case_pragma
-        -> LF.mctx            (* cO *)
         -> LF.mctx            (* cD *)
         -> Comp.branch list   (* branches *)
         -> (LF.typ * LF.dctx) (* type of object being case-analyzed *)

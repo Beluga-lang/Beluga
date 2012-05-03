@@ -43,8 +43,11 @@ vmount(-l, src, .build)
 mkdir -p .build/core
 mkdir -p .build/main
 
+vmount(-l, sasybel/src, .build/sasybel)
+mkdir -p .build/sasybel
+
 # Include the fake .build subdirectory
-.SUBDIRS: .build
+.SUBDIRS: .build .build/sasybel
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin

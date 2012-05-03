@@ -1,0 +1,111 @@
+# -*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+# Declare the directories we need to include other libraries from
+OCAMLINCLUDES += +camlp4 ../core
+
+# Declare the names of the libraries we depend on
+OCAML_LIBS[] +=
+        ../core/beluga-core
+
+# Declare an OCaml library
+LIBRARY = sasybel
+# Declare an OCaml package
+PACK    = Sasybel
+
+# Declare the files the package will contain
+FILES[] =
+        ast
+        stoken
+        slexer
+        sparser
+        transform
+
+# Declare one pseudo target for the package and one for the files it
+# contains
+.PHONY: src files pack
+
+.DEFAULT: src
+
+clean:
+        rm $(filter-proper-targets $(ls R, .))
+        rm $(filter %.omc,         $(ls R, .))
+
+src: files pack $(OCamlLibrary $(LIBRARY), $(PACK))
+
+public.QuietOCamlPackage(name, files) =
+               # XXX: JYH: these variables should be marked private in 0.9.9
+               protected.OFILES   = $(addsuffix $(EXT_OBJ), $(files))
+               protected.CMOFILES = $(addsuffix .cmo, $(files))
+               protected.CMXFILES = $(addsuffix .cmx, $(files))
+
+               protected.OBJ       = $(file $(name)$(EXT_OBJ))
+               protected.CMO       = $(file $(name).cmo)
+               protected.CMX       = $(file $(name).cmx)
+               protected.CMI       = $(file $(name).cmi)
+               protected.MLI       = $(file $(name).mli)
+
+               protected.BYTE_TARGETS   = $(CMO)
+               protected.TARGETS = $(CMI)
+
+               if $(BYTE_ENABLED)
+                   TARGETS += $(BYTE_TARGETS)
+                   export
+
+               #
+               # Link commands
+               #
+               protected.BYTE_DEPS = $(CMOFILES)
+               $(BYTE_TARGETS): $(CMOFILES)
+                  section rule
+                     if $(target-exists $(MLI))
+                         BYTE_DEPS += $(CMI)
+                         export
+                     else
+                         BYTE_TARGETS += $(CMI)
+                         export
+                     $(BYTE_TARGETS): $(BYTE_DEPS)
+                        $(OCAMLFIND) $(OCAMLC) $(LAZY_OCAMLFINDFLAGS) $(PREFIXED_OCAMLPACKS) $(OCAMLFLAGS) \
+                            $(OCAMLCFLAGS) $(OCAML_LIB_FLAGS) -pack -o $(CMO) $(OCamlLinkSort $(CMOFILES))
+
+               $(CMI):
+                  section rule
+                         if $(target-exists $(MLI))
+                            $(CMI): $(MLI) :scanner: scan-ocaml-$(name).mli
+                                $(OCamlC) -c $<
+                         else
+                            $(BYTE_TARGETS) $(CMI): $(BYTE_DEPS)
+                               $(OCAMLFIND) $(OCAMLC) $(LAZY_OCAMLFINDFLAGS) $(PREFIXED_OCAMLPACKS) $(OCAMLFLAGS) \
+                                   $(OCAMLCFLAGS) $(OCAML_LIB_FLAGS) -pack -o $(CMO) $(OCamlLinkSort $(CMOFILES))
+
+#                $(CMI):
+#                   section rule
+#                          if $(target-exists $(MLI))
+#                             $(CMI): $(MLI) :scanner: scan-ocaml-$(name).mli
+#                                 $(OCamlC) -c $<
+#                          elseif $(NATIVE_ENABLED)
+#                             $(NATIVE_TARGETS) $(CMI): $(NATIVE_DEPS)
+#                                $(OCAMLFIND) $(OCAMLOPTLINK) $(LAZY_OCAMLFINDFLAGS) $(PREFIXED_OCAMLPACKS) $(OCAMLFLAGS) \
+#                                    $(OCAMLOPTFLAGS) $(OCAML_LIB_FLAGS) -pack -o $(CMX) $(OCamlLinkSort $(CMXFILES))
+#                          else
+#                             $(BYTE_TARGETS) $(CMI): $(BYTE_DEPS)
+#                                $(OCAMLFIND) $(OCAMLC) $(LAZY_OCAMLFINDFLAGS) $(PREFIXED_OCAMLPACKS) $(OCAMLFLAGS) \
+#                                    $(OCAMLCFLAGS) $(OCAML_LIB_FLAGS) -pack -o $(CMO) $(OCamlLinkSort $(CMOFILES))
+               return $(TARGETS)
+
+
+
+pack: $(QuietOCamlPackage $(PACK), $(FILES))
+
+# **NOTE** Because of the way scoping for OCAMLFLAGS works, the pack
+# target must come _BEFORE_ the files target, otherwise pack will be
+# passed the -for-pack flag as well, which is not what we want
+
+# Use the -for-pack flag for compiling the individual modules
+OCAMLFLAGS += -for-pack $(PACK)
+files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
+
+# Turn off unused variable warning only for the lexer; needed for
+# dummy variables created by ulex / camlp4
+section
+    OCAMLFLAGS += -w z
+    $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), slexer):

@@ -8,7 +8,6 @@ PACK    = Core
 # Declare the files the package will contain
 FILES[] =
         abstract
-        ast
         apxnorm
         lfcheck
         lfrecon
@@ -31,9 +30,6 @@ FILES[] =
         pragma
         pretty
         reconstruct
-        stoken
-        slexer
-        sparser
         recsgn
         store
         substitution
@@ -42,7 +38,6 @@ FILES[] =
         synapx
         synint
         trail
-        transform
         token
         unify
         whnf

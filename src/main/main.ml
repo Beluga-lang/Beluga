@@ -156,7 +156,8 @@ let main () =
         try
           (* Subord.clearMemoTable();   (* obsolete *) *)
            let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
-            if !externall then (printf "\n## Pretty-printing of the external syntax : ##\n"; printL sgn;) else ();
+            if !externall then
+              printf "\n## Pretty-printing of the external syntax : ##\n"; List.iter Ext_print.Ext.DefaultPrinter.ppr_sgn_decl sgn;
             if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction: %s ##\n" file_name;  
 

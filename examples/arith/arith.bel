@@ -2,20 +2,7 @@ nat :  type.     %name nat N x.
 z : nat.
 s : nat -> nat.
 
-add : nat -> nat -> nat -> type. 
-a_z : add z R R.
-a_s : add N1 N2 N3 -> add (s N1) N2 (s N3).
 
-rec plus1 : {N:[. nat]} [. add N (s z) (s N)] =
-mlam N => case [. N] of
- | [. z] => [. a_z]
-
- %{| [. s N] => 
-   let [. F] = plus1 [ . N] in
-    [. a_s F]
-}%
-;
-%{
 rec plus : [. nat] -> [. nat] -> [. nat] = 
 fn x => fn y =>  case x of 
 | [. z]  => y 
@@ -63,4 +50,4 @@ fn x => case x of
 let x = plus [. z] [. s z] ;
 let y = fact [. s (s z)];
 let w = fact [. s (s (s z))];
-}%
+

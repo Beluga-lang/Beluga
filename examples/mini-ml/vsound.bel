@@ -2,21 +2,19 @@
 % Author: Brigitte Pientka
 %
 
-exp  : type. 
+exp  : type.   %name exp E.
 z    : exp.
 suc  : exp -> exp.
 letv : exp -> (exp -> exp) -> exp.
-lam  : (exp -> exp) -> exp. 
+lam  : (exp -> exp) -> exp.
 app  : exp -> exp -> exp.
 
-value : exp -> type.
-
+value : exp -> type. %name value F.
 v_z   : value z.
 v_s   : value E -> value (suc E).
 v_lam   : value (lam (\x. E x)).
 
-eval : exp -> exp -> type.
-
+eval : exp -> exp -> type.   %name eval D.
 ev_z : eval z z.
 
 ev_s : eval E V -> eval (suc E) (suc V).
@@ -48,4 +46,4 @@ fn e =>
 | [. ev_app D1 D2 D3] =>  vs [. D3]
 
 
-; 
+;

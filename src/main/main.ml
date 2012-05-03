@@ -27,6 +27,7 @@ let usage () =
         ^ "    +covdepth nn  \"extra\" depth for coverage checker\n"
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
         ^ "    +printSubord  print subordination relations (experimental)\n"
+        ^ "    -noprint      turn printing off\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
         ^ "    -logic        turn on logic programming engine\n"
   in
@@ -57,7 +58,15 @@ let process_option' arg rest = begin let f = function
   | "+coverage" -> (Coverage.enableCoverage := true; rest)
   | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true; rest)
   | "-coverage" -> (Coverage.enableCoverage := false; rest)
+(*  | "+covdepth" -> (match rest with [] -> (print_string "-covDepth needs an argument\n"; exit 2)
+                               | arg::rest -> (try let extraDepth = int_of_string arg in
+                                                 Coverage.extraDepth := extraDepth;
+                                                 rest
+                                               with Failure "int_of_string" ->
+                                                      print_string "-covDepth needs a numeric argument\n"; exit 2))
+*)
   | "+printsubord" -> (Subord.dump := true; rest)
+  | "-noprint"     -> (Debug.chatter := 0; rest)
   | "-width" -> (match rest with [] -> (print_string "-width needs an argument\n"; exit 2)
                                | arg::rest -> (try let width = int_of_string arg in
                                                  Format.set_margin (max 40 width);
@@ -130,25 +139,8 @@ let rec process_file_argument f =
   if is_cfg f
   then process_cfg_file f
   else Session [f]
-(*
-let rec process_files = function
-  | []                    -> []
-  | f :: fs when is_cfg f ->
-    process_cfg_file f
-    :: (process_files fs)
-  | f :: fs               -> (Session [f]) :: process_files fs
-
-*)
-let rec printL lsgn =
-  match lsgn with
-    | [] -> ()
-    | h::t -> Ext_print.Ext.DefaultPrinter.ppr_sgn_decl h; printL t
 
 let main () =
-  (*let args   = List.tl (Array.to_list Sys.argv) in*)
-  (*let files  = process_options args in*)
-  (*let sessions = process_file_argument files in*)
-  (*let session_count = List.length sessions in*)
   if Array.length Sys.argv < 2 then
     usage ()
   else
@@ -163,58 +155,8 @@ let main () =
       in
         try
           (* Subord.clearMemoTable();   (* obsolete *) *)
-
-         (* let args   = List.tl (Array.to_list Sys.argv) in
-          let files  = process_options args in 
-          let args   = List.tl (Array.to_list Sys.argv) in
-          let files  = process_options args in*)
-         (* let asasy   = List.tl (Array.to_list Sys.argv) in
-          process_sasy asasy;*) 
-            is_sasy file_name;
-            if !usasy then
-            let sgn = Sparser.parse_file ~name:file_name Sparser.section_eoi in
-            (* printf "## Pretty Printing External Syntax: %s ##\n" file_name;
-            print_sgn Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn;  *)
-            printf "\n## Sasybel Type Reconstruction: %s ##\n" file_name;
-        
-            let tSgn = Transform.sectionDecls sgn in
-            printL tSgn;
-            let _int_decls = Recsgn.recSgnDecls tSgn in
-              printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-              let _ = Coverage.force
-                (function
-                  | Coverage.Success -> 
-                     ()
-                  | Coverage.Failure message ->
-                      if !Coverage.warningOnly then
-                        Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
-                      else
-                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
-                )  in
-               (* if !Coverage.enableCoverage then 
-                  (printf "\n## Coverage checking done: %s  ##\n" file_name )
-                else ();
-                if !Subord.dump then (Subord.dump_subord() (* ;
-                                      Subord.dump_typesubord() *) );
-            
-                return Positive*)
-              begin
-                if !Coverage.enableCoverage then 
-                  (if !Debug.chatter = 0 then () else
-                      printf "\n## Coverage checking done: %s  ##\n" file_name )
-                else ();
-                if !Subord.dump then (Subord.dump_subord() (* ;
-                                      Subord.dump_typesubord() *) );
-                print_newline () ;
-                Logic.runLogic ()
-              end
-
-
-           else 
            let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
-
             if !externall then (printf "\n## Pretty-printing of the external syntax : ##\n"; printL sgn;) else ();
-
             if !Debug.chatter = 0 then () else
               printf "\n## Type Reconstruction: %s ##\n" file_name;  
 
@@ -240,108 +182,15 @@ let main () =
                 else ();
                 if !Subord.dump then (Subord.dump_subord() (* ;
                                       Subord.dump_typesubord() *) );
-
                 print_newline () ;
                 Logic.runLogic ()
               end
 
-(*
-        with
-          | Parser.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-              Parser.Grammar.Loc.print Format.std_formatter loc;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
-              Format.fprintf Format.std_formatter "@?";
-              print_newline ();
-              abort_session ()
-
-          | ParserRelease.Grammar.Loc.Exc_located (loc, Stream.Error exn) ->
-              ParserRelease.Grammar.Loc.print Format.std_formatter loc;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf Format.std_formatter "Parse Error: %s" exn;
-              Format.fprintf Format.std_formatter "@?";
-              print_newline ();
-              abort_session ()
-
-          | Error.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Reconstruction): %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Error.Violation str ->
-              Format.fprintf
-                Format.std_formatter
-                "Error (\"Violation\") (Reconstruction): %s\n@?"
-                str;
-              print_newline ();
-              abort_session ()
-
-
-          | Check.LF.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Type-checking): %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Check.Comp.Error (locOpt, err) ->
-             (* Parser.Grammar.Loc.print Format.std_formatter loc; *)
-              printOptionalLocation locOpt;
-              Format.fprintf Format.std_formatter ":\n";
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Checking): %a@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Check.LF.Violation str ->
-              printf "Error (\"Violation\") (Checking): %s\n" str;
-              abort_session ()
-
-          | Context.Error err ->
-              Format.fprintf
-                Format.std_formatter
-                "Error (Context): %a\n@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              print_newline ();
-              abort_session ()
-
-          | Whnf.Error (locOpt, err) ->
-              printOptionalLocation locOpt;
-              Format.fprintf
-                Format.std_formatter
-                "\nError (Whnf): %a\n@?"
-                Pretty.Error.DefaultPrinter.fmt_ppr err;
-              abort_session ()
-
-          | Abstract.Error str ->
-              printf "Error (Abstraction): %s\n" str;
-              abort_session ()
-
-          | Coverage.NoCover strFn ->
-              printf "Error (Coverage): %s" (strFn());
-              abort_session ()
-
-          | exn ->
-              printf "%s\n" (Printexc.to_string exn);
-              abort_session ()
-
-*)
         with e ->
           Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
           output_string stderr (Printexc.to_string e);
           abort_session ()
     in
-
     let args   = List.tl (Array.to_list Sys.argv) in
     let files = process_options args in
     let status_code =

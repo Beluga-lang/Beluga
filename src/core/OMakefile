@@ -19,7 +19,6 @@ FILES[] =
         ctxsub
         debug
         error
-        ext_print
         gensym
         id
         index
@@ -28,6 +27,7 @@ FILES[] =
         parser
         pragma
         pretty
+        prettyext
         reconstruct
         recsgn
         store

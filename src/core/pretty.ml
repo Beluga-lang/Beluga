@@ -1625,3 +1625,5 @@ module Int = struct
   module DefaultPrinter = Make (Store.Cid.NamedRenderer)
 
 end (* Int *)
+
+module Ext = Prettyext.Ext

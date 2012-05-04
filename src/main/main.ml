@@ -166,7 +166,7 @@ let main () =
         if !externall then begin
           if !Debug.chatter != 0 then
             printf "\n## Pretty-printing of the external syntax : ##\n";
-          List.iter Ext_print.Ext.DefaultPrinter.ppr_sgn_decl sgn
+          List.iter Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
         end;
         if !Debug.chatter != 0 then
           printf "\n## Type Reconstruction: %s ##\n" file_name;

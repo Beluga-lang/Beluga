@@ -1,13 +1,13 @@
+(**
+
+   @author Marie-Andree B.Langlois
+*)
+
 open Core
 open Syntax
 open Substitution
 open Id
 open Ast
-open Pretty
-(**
-
-   @author Marie-Andree B.Langlois
-*)
 
 (* variable naming convention: the variable names are usually the first(s) character(s) of what they stand for*)
 

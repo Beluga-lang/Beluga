@@ -1,9 +1,4 @@
-(* open Core.Common
-open Core.Syntax *)
-
-open Common
 open Ast
-
 
 
 module Grammar : Camlp4.Sig.Grammar.Static

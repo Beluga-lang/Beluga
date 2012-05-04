@@ -3,7 +3,6 @@
 (* sasy parser trying to fix turnstyle problems *)
 #load "pa_extend.cmo";;
 
-open Common
 open Syntax
 open Stoken
 open Ast

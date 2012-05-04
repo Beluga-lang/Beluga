@@ -6,9 +6,8 @@
 *)
 
 open Core
-(* open Frontend *)
 open Printf
-open Marshal
+
 
 let usage () =
   let options =
@@ -106,7 +105,7 @@ let is_cfg file_name =
   Filename.check_suffix file_name ".cfg"
 
 let is_sasy file_name =
-  (if Filename.check_suffix file_name ".sbel" then usasy := true else () )
+  Filename.check_suffix file_name ".sbel"
 
 let rec accum_lines input =
   try
@@ -153,9 +152,19 @@ let main () =
       in
       let abort_session () = raise SessionFatal in
       try
-        let sgn = Parser.parse_file ~name:file_name Parser.sgn_eoi in
+        let sgn =
+          if is_sasy file_name
+          then begin
+            let sasy_sgn = Sasybel.Sparser.parse_file ~name:file_name Sasybel.Sparser.section_eoi in
+            if !Debug.chatter != 0 then
+              printf "\n## Sasybel translation: %s ##\n" file_name;
+            Sasybel.Transform.sectionDecls sasy_sgn
+          end else begin
+            Parser.parse_file ~name:file_name Parser.sgn_eoi
+          end in
         if !externall then begin
-          printf "\n## Pretty-printing of the external syntax : ##\n";
+          if !Debug.chatter != 0 then
+            printf "\n## Pretty-printing of the external syntax : ##\n";
           List.iter Ext_print.Ext.DefaultPrinter.ppr_sgn_decl sgn
         end;
         if !Debug.chatter != 0 then

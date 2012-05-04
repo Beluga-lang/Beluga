@@ -2,6 +2,7 @@
    @author Marie-Andree B.Langlois
 *)
 
+open Core
 open Syntax
 open Id
 open Error

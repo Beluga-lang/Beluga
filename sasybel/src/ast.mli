@@ -6,6 +6,7 @@
 
 (** Syntax for the LF *)
 
+open Core
 open Id
 open Syntax
 

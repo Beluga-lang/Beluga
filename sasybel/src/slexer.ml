@@ -1,6 +1,7 @@
 
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
+open Core
 module Loc   = Syntax.Loc
 module Token = Stoken
 module Error = Camlp4.Struct.EmptyError

@@ -1,7 +1,7 @@
 # -*- coding: utf-8; indent-tabs-mode: nil; -*-
 
 # Declare the directories we need to include other libraries from
-OCAMLINCLUDES += +camlp4 ../core
+OCAMLINCLUDES += +camlp4 ../core ../sasybel
 
 # Declare the names of the libraries we depend on
 OCAML_LIBS[] +=

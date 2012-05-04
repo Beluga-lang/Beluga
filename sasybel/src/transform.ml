@@ -1,3 +1,4 @@
+open Core
 open Syntax
 open Substitution
 open Id

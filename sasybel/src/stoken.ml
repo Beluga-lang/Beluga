@@ -1,5 +1,7 @@
 (* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
 
+open Core
+
 (** Locations, used to locate a token within a file.  Since locations
     are slightly complicated, we just reuse the existing Camlp4
     definition. *)

@@ -101,7 +101,7 @@ pack: $(QuietOCamlPackage $(PACK), $(FILES))
 # passed the -for-pack flag as well, which is not what we want
 
 # Use the -for-pack flag for compiling the individual modules
-OCAMLFLAGS += -for-pack $(PACK)
+OCAMLFLAGS += -for-pack $(PACK) -w z
 files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
 
 # Turn off unused variable warning only for the lexer; needed for

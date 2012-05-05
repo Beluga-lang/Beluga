@@ -5,10 +5,12 @@ type error =
   | UnboundCtxName       of Id.name
   | UnboundCtxSchemaName of Id.name
   | UnboundCompName      of Id.name
+  | UnboundCompConstName of Id.name
   | PatCtxRequired
   | CompEmptyPattBranch
   | UnboundIdSub
   | PatVarNotUnique
+  | IllFormedCompTyp
 
 exception Error of Syntax.Loc.t * error
 

@@ -97,7 +97,7 @@ module Comp = struct
               "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
               "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
             Format.fprintf ppf
-              "In expression: %a.@"
+              "In expression: %a.@ "
               (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e;
             Format.fprintf ppf
               "Note: Computation-level applications are not automatically left-associative but require parentheses."
@@ -108,7 +108,7 @@ module Comp = struct
               "Expected" Format.pp_print_string (string_of_typeVariant variant)
               "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau);
             Format.fprintf ppf
-              "In expression: %a.@"
+              "In expression: %a.@ "
               (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i;
             Format.fprintf ppf
               "Note: Computation-level applications are not automatically left-associative but require parentheses."
@@ -119,7 +119,7 @@ module Comp = struct
               "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
               "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
             Format.fprintf ppf
-              "In pattern: %a.@"
+              "In pattern: %a.@ "
               (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat
 
           | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->

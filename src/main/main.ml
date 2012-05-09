@@ -196,9 +196,7 @@ let main () =
               List.iter per_file file_names; 0
             with SessionFatal -> 1
           end
-        | _ ->
-          printf "Wrong number of command line arguments.\n";
-          2
+        | _ -> bailout "Wrong number of command line arguments."
     in
     printf "%s" (Error.getInformation());
     exit status_code

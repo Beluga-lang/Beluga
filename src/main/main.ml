@@ -10,6 +10,10 @@ open Sasybel
 open Printf
 
 
+let bailout msg =
+  fprintf stderr "%s\n" msg;
+  exit 2
+
 let usage () =
   let options =
           "    -d            turn all debugging printing off (default)\n"
@@ -42,53 +46,37 @@ let externall = ref false
 
 module PC = Pretty.Control
 
-let process_option' arg rest = begin let f = function
+let process_option arg rest = match arg with
   (* these strings must be lowercase *)
-  | "+d" -> (Debug.showAll (); Printexc.record_backtrace true; rest)
-  | "-d" -> (Debug.showNone (); Printexc.record_backtrace false; rest)
-  | "+ext" -> (externall := true; rest)
-  | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
-  | "-s=debruijn" -> (PC.substitutionStyle := PC.DeBruijn; rest)
-  | "+implicit" -> (PC.printImplicit := true; rest)
-  | "-implicit" -> (PC.printImplicit := false; rest)
-  | "+t" -> (Monitor.on := true; rest)
-  | "+tfile" -> (Monitor.onf := true; rest)
-  | "-t" -> (Monitor.on := false;
-             Monitor.onf := false;
-             rest)
-  | "+coverage" -> (Coverage.enableCoverage := true; rest)
-  | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true; rest)
-  | "-coverage" -> (Coverage.enableCoverage := false; rest)
-(*  | "+covdepth" -> (match rest with [] -> (print_string "-covDepth needs an argument\n"; exit 2)
-                               | arg::rest -> (try let extraDepth = int_of_string arg in
-                                                 Coverage.extraDepth := extraDepth;
-                                                 rest
-                                               with Failure "int_of_string" ->
-                                                      print_string "-covDepth needs a numeric argument\n"; exit 2))
-*)
-  | "+printsubord" -> (Subord.dump := true; rest)
+  | "+d" ->Debug.showAll (); Printexc.record_backtrace true; rest
+  | "-d" -> Debug.showNone (); Printexc.record_backtrace false; rest
+  | "+ext" -> externall := true; rest
+  | "-s=natural" -> PC.substitutionStyle := PC.Natural; rest
+  | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn; rest
+  | "+implicit" -> PC.printImplicit := true; rest
+  | "-implicit" -> PC.printImplicit := false; rest
+  | "+t" -> Monitor.on := true; rest
+  | "+tfile" -> Monitor.onf := true; rest
+  | "-t" -> Monitor.on := false; Monitor.onf := false; rest
+  | "+coverage" -> Coverage.enableCoverage := true; rest
+  | "+warncover" -> Coverage.enableCoverage := true; Coverage.warningOnly := true; rest
+  | "-coverage" -> Coverage.enableCoverage := false; rest
+  | "+printsubord" -> Subord.dump := true; rest
   | "+print" -> rest
   | "-print" -> Debug.chatter := 0; rest
-  | "-width" -> (match rest with [] -> (print_string "-width needs an argument\n"; exit 2)
-                               | arg::rest -> (try let width = int_of_string arg in
-                                                 Format.set_margin (max 40 width);
-                                                 rest
-                                               with Failure "int_of_string" ->
-                                                      print_string "-width needs a numeric argument\n"; exit 2))
-  | "+logic" -> (Logic.Options.enableLogic := true ; rest)
+  | "-width" ->
+    begin match rest with
+      | [] -> bailout "-width needs an argument"
+      | arg::rest ->
+        try
+          let width = int_of_string arg in
+          Format.set_margin (max 40 width);
+          rest
+        with Failure "int_of_string" ->
+          bailout "-width needs a numeric argument"
+    end
+  | "+logic" -> Logic.Options.enableLogic := true ; rest
   | _ -> usage ()
-in
-  f arg
-end
-
-let process_option string rest =
-  if String.length string < 4 then
-    process_option' string rest
-  else
-    (* preserve case of first 2 characters; lowercase following *)
-    let first_part = String.sub string 0 2
-    and second_part = String.lowercase (String.sub string 2 (String.length string - 2)) in
-      process_option' (first_part ^ second_part) rest
 
 let rec process_options = function
   | [] -> []

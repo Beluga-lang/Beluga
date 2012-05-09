@@ -27,9 +27,10 @@ let usage () =
         ^ "    +covdepth nn  \"extra\" depth for coverage checker\n"
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
         ^ "    +printSubord  print subordination relations (experimental)\n"
-        ^ "    -noprint      turn printing off\n"
+        ^ "    +print        turn printing on (default)\n"
+        ^ "    -print        turn printing off\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
-        ^ "    -logic        turn on logic programming engine\n"
+        ^ "    +logic        turn on logic programming engine\n"
   in
   fprintf stderr
     "Usage: %s [options] file.(bel|cfg)\noptions:\n%s"
@@ -66,16 +67,17 @@ let process_option' arg rest = begin let f = function
                                                       print_string "-covDepth needs a numeric argument\n"; exit 2))
 *)
   | "+printsubord" -> (Subord.dump := true; rest)
-  | "-noprint"     -> (Debug.chatter := 0; rest)
+  | "+print" -> rest
+  | "-print" -> Debug.chatter := 0; rest
   | "-width" -> (match rest with [] -> (print_string "-width needs an argument\n"; exit 2)
                                | arg::rest -> (try let width = int_of_string arg in
                                                  Format.set_margin (max 40 width);
                                                  rest
                                                with Failure "int_of_string" ->
                                                       print_string "-width needs a numeric argument\n"; exit 2))
-  | "-logic" -> (Logic.Options.enableLogic := true ; rest)
+  | "+logic" -> (Logic.Options.enableLogic := true ; rest)
   | _ -> usage ()
-in (* print_string (">>>> " ^ arg ^ "\n"); *)
+in
   f arg
 end
 

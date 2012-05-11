@@ -41,7 +41,6 @@ let usage () =
     Sys.argv.(0) options;
   exit 2
 
-let usasy = ref false
 let externall = ref false
 
 module PC = Pretty.Control

@@ -38,8 +38,6 @@ let _ = Error.register_printer
 	| NothingToRefine -> Format.pp_print_string ppf "Nothing to refine"
 	| NoCoverageGoalsGenerated -> Format.pp_print_string ppf "No coverage goals generated"))
 
-(* exception Error of Syntax.Loc.t * error *)
-
 (* Generating meta-variable and parameter variable names,
  *  e.g. for Obj-no-split (MVars)
  *)

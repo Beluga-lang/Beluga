@@ -12,7 +12,6 @@ FILES[] =
         lfcheck
         lfrecon
         check
-        common
         context
         convSigma
         subord
@@ -28,6 +27,7 @@ FILES[] =
         parser
         pragma
         pretty
+        prettyext
         reconstruct
         recsgn
         store
@@ -41,7 +41,6 @@ FILES[] =
         unify
         whnf
         monitor
-
 
 # Declare one pseudo target for the package and one for the files it
 # contains

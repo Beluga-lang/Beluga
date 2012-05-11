@@ -1,8 +1,37 @@
-# The default OCamlPackage in omake/build/OCaml.om gives noisy warnings when
-#   NATIVE_ENABLED is false.
-# This version specializes that code for NATIVE_ENABLED being false, and that somehow
-#  eliminates the warnings.
-# --jd 2009-02-16
+# -*- coding: utf-8; indent-tabs-mode: nil; -*-
+
+# Declare the directories we need to include other libraries from
+OCAMLINCLUDES += +camlp4 ../core
+
+# Declare the names of the libraries we depend on
+OCAML_LIBS[] +=
+        ../core/beluga-core
+
+# Declare an OCaml library
+LIBRARY = sasybel
+# Declare an OCaml package
+PACK    = Sasybel
+
+# Declare the files the package will contain
+FILES[] =
+        ast
+        stoken
+        slexer
+        sparser
+        transform
+
+# Declare one pseudo target for the package and one for the files it
+# contains
+.PHONY: src files pack
+
+.DEFAULT: src
+
+clean:
+        rm $(filter-proper-targets $(ls R, .))
+        rm $(filter %.omc,         $(ls R, .))
+
+src: files pack $(OCamlLibrary $(LIBRARY), $(PACK))
+
 public.QuietOCamlPackage(name, files) =
                # XXX: JYH: these variables should be marked private in 0.9.9
                protected.OFILES   = $(addsuffix $(EXT_OBJ), $(files))
@@ -63,15 +92,20 @@ public.QuietOCamlPackage(name, files) =
 #                                    $(OCAMLCFLAGS) $(OCAML_LIB_FLAGS) -pack -o $(CMO) $(OCamlLinkSort $(CMOFILES))
                return $(TARGETS)
 
-read-sources(root, file) =
-    accum[] =
-    println($"accum: $(accum)")
-    lex($(root)/$(file))
-    default
-        # empty
-    case $"[[:graph:]]+" g
-        accum[] += $(root)/$0
-        export
-    return $(accum)
 
-.SUBDIRS: core main
+
+pack: $(QuietOCamlPackage $(PACK), $(FILES))
+
+# **NOTE** Because of the way scoping for OCAMLFLAGS works, the pack
+# target must come _BEFORE_ the files target, otherwise pack will be
+# passed the -for-pack flag as well, which is not what we want
+
+# Use the -for-pack flag for compiling the individual modules
+OCAMLFLAGS += -for-pack $(PACK) -w z
+files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
+
+# Turn off unused variable warning only for the lexer; needed for
+# dummy variables created by ulex / camlp4
+section
+    OCAMLFLAGS += -w z
+    $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), slexer):

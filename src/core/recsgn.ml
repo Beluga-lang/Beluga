@@ -14,10 +14,21 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
+
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
+type error =
+  | UnexpectedSucess
 
-(* ------------------------------------------------------------------- *)
+exception Error of Syntax.Loc.t * error
+
+let _ = Error.register_printer
+  (fun (Error (loc, err)) ->
+    Error.print_with_location loc (fun ppf ->
+      match err with
+	| UnexpectedSucess ->
+	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."))
+
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->  
       if f = f' then tau else         
@@ -345,7 +356,6 @@ let recSgnDecl d =
       let _c'       = Logic.storeQuery name (tA', i) expected tries in
       ()
 
-
     | Ext.Sgn.Pragma(loc, Ext.LF.NamePrag (typ_name, m_name, v_name)) ->
         begin try 
           begin match v_name with
@@ -362,28 +372,25 @@ let recSgnDecl d =
 
 
 let rec recSgnDecls = function
-
   | [] -> ()
 
-  | Ext.Sgn.Pragma(_, Ext.LF.NotPrag) :: not'd_decl :: rest ->
-      (*   let internal_syntax_pragma = Int.Sgn.Pragma(Int.LF.NotPrag) in *)
-      let not'd_decl_succeeds = 
-        begin try
-          (let _ = recSgnDecl not'd_decl in
-             true)
-        with
-            _ -> ((if (!Debug.chatter) == 0 then () 
-                  else print_string ("Reconstruction fails for %not'd declaration\n"));
-                  false)
-        end
-      in
-        if not'd_decl_succeeds then
-          raise (Error.Violation ("UNSOUND: reconstruction succeeded for %not'd declaration"))
-        else recSgnDecls rest
+  | Ext.Sgn.Pragma(loc, Ext.LF.NotPrag) :: not'd_decl :: rest ->
+    let not'd_decl_succeeds =
+      begin
+	try
+	  recSgnDecl not'd_decl; true
+	with _ ->
+	  if !Debug.chatter != 0 then
+	    print_string ("Reconstruction fails for %not'd declaration\n");
+          false
+      end in
+    if not'd_decl_succeeds
+    then raise (Error (loc, UnexpectedSucess))
+    else recSgnDecls rest
 
-  | [Ext.Sgn.Pragma(_, Ext.LF.NotPrag)] ->  (* %not declaration with nothing following *)
-      ()
+  (* %not declaration with nothing following *)
+  | [Ext.Sgn.Pragma(_, Ext.LF.NotPrag)] -> ()
 
   | decl :: rest ->
-      recSgnDecl decl;
-      recSgnDecls rest
+    recSgnDecl decl;
+    recSgnDecls rest

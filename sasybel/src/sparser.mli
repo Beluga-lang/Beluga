@@ -1,12 +1,14 @@
-open Syntax
+open Core
+open Ast
 
 
 module Grammar : Camlp4.Sig.Grammar.Static
-  with module Loc   = Lexer.Loc
-  and  module Token = Lexer.Token
+  with module Loc   = Slexer.Loc
+  and  module Token = Slexer.Token
+
 
 (** Grammar entry for an entire LF Signature *)
-val sgn_eoi : Ext.Sgn.sgn Grammar.Entry.t
+val section_eoi : Ast.section list Grammar.Entry.t
 
 (** Parse a stream and return a signature *)
 val parse_stream :
@@ -34,3 +36,6 @@ val parse_file   :
      name:string
   -> 'a Grammar.Entry.t
   -> 'a
+
+
+

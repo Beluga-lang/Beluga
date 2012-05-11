@@ -6,13 +6,15 @@
 *)
 
 open Core
-(* open Frontend *)
+open Sasybel
 open Printf
+
 
 let usage () =
   let options =
           "    -d            turn all debugging printing off (default)\n"
         ^ "    +d            turn all debugging printing on\n"
+        ^ "    +ext          print external syntax before reconstruction\n"
         ^ "    -s=natural    print substitutions in a \"natural\" style (default)\n"
         ^ "    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n"
         ^ "    +implicit     print implicit arguments (default -- for now)\n"
@@ -34,12 +36,16 @@ let usage () =
     Sys.argv.(0) options;
   exit 2
 
+let usasy = ref false
+let externall = ref false
+
 module PC = Pretty.Control
 
 let process_option' arg rest = begin let f = function
   (* these strings must be lowercase *)
   | "+d" -> (Debug.showAll (); Printexc.record_backtrace true; rest)
   | "-d" -> (Debug.showNone (); Printexc.record_backtrace false; rest)
+  | "+ext" -> (externall := true; rest)
   | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
   | "-s=debruijn" -> (PC.substitutionStyle := PC.DeBruijn; rest)
   | "+implicit" -> (PC.printImplicit := true; rest)
@@ -99,6 +105,9 @@ exception SessionFatal
 let is_cfg file_name =
   Filename.check_suffix file_name ".cfg"
 
+let is_sasy file_name =
+  Filename.check_suffix file_name ".sbel"
+
 let rec accum_lines input =
   try
     let res = input_line input in res :: accum_lines input
@@ -142,46 +151,49 @@ let main () =
             printer decl;
             print_sgn printer decls
       in
-      let abort_session () = raise SessionFatal
-      in
-        try
-          (* Subord.clearMemoTable();   (* obsolete *) *)
-          let sgn = 
-              Parser.parse_file ~name:file_name Parser.sgn_eoi 
-          in
-            if !Debug.chatter = 0 then () else
-              printf "\n## Type Reconstruction: %s ##\n" file_name;  
-
-(*            let int_decls = List.map Recsgn.recSgnDecl sgn in *)
-            let _int_decls = Recsgn.recSgnDecls sgn in
-
-              if !Debug.chatter = 0 then () else
-              printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-              let _ = Coverage.force
-                (function
-                  | Coverage.Success -> 
-                     ()
-                  | Coverage.Failure message ->
+      let abort_session () = raise SessionFatal in
+      try
+        let sgn =
+          if is_sasy file_name
+          then begin
+            let sasy_sgn = Sasybel.Sparser.parse_file ~name:file_name Sasybel.Sparser.section_eoi in
+            if !Debug.chatter != 0 then
+              printf "\n## Sasybel translation: %s ##\n" file_name;
+            Sasybel.Transform.sectionDecls sasy_sgn
+          end else begin
+            Parser.parse_file ~name:file_name Parser.sgn_eoi
+          end in
+        if !externall then begin
+          if !Debug.chatter != 0 then
+            printf "\n## Pretty-printing of the external syntax : ##\n";
+          List.iter Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
+        end;
+        if !Debug.chatter != 0 then
+          printf "\n## Type Reconstruction: %s ##\n" file_name;
+        Recsgn.recSgnDecls sgn;
+        if !Debug.chatter != 0 then
+          printf "\n## Type Reconstruction done: %s  ##\n" file_name;
+        ignore (Coverage.force
+                  (function
+                    | Coverage.Success -> ()
+                    | Coverage.Failure message ->
                       if !Coverage.warningOnly then
                         Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
                       else
-                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
-                ) in 
-              begin
-                if !Coverage.enableCoverage then 
-                  (if !Debug.chatter = 0 then () else
-                      printf "\n## Coverage checking done: %s  ##\n" file_name )
-                else ();
-                if !Subord.dump then (Subord.dump_subord() (* ;
-                                      Subord.dump_typesubord() *) );
-                print_newline () ;
-                Logic.runLogic ()
-              end
-
-        with e ->
-          Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
-          output_string stderr (Printexc.to_string e);
-          abort_session ()
+                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))));
+          if !Coverage.enableCoverage then 
+            (if !Debug.chatter != 0 then
+                printf "\n## Coverage checking done: %s  ##\n" file_name);
+          if !Subord.dump then begin
+            Subord.dump_subord();
+            (* Subord.dump_typesubord() *)
+          end;
+          print_newline ();
+          Logic.runLogic ()
+      with e ->
+        Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
+        output_string stderr (Printexc.to_string e);
+        abort_session ()
     in
     let args   = List.tl (Array.to_list Sys.argv) in
     let files = process_options args in

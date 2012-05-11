@@ -1,0 +1,404 @@
+\documentclass[12pt]{article}
+\usepackage{array}
+\usepackage{multicol}
+\usepackage{amssymb} %math symbols
+\usepackage{amsmath} %math stuff
+\usepackage{mathrsfs}
+\usepackage{fullpage}
+\usepackage{epstopdf}
+\usepackage{setspace} %Spacing
+\usepackage{graphicx}
+\usepackage{enumerate}
+\usepackage{gensymb}
+\usepackage{beamerarticle} %uncomment when making beamernotes
+\usepackage{textcomp}
+\usepackage{amsfonts}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes,snakes,positioning}
+
+\begin{document}
+\title{\textmd{Sasybel}: the Tutorial}
+\author{
+        Marie-Andree B.Langlois \\
+                Faculty of science\\
+        McGill University, Montreal, Canada, \\
+        \texttt{marie-andree.blanglois@mail.mcgill.ca}
+}
+\date{\today}
+\maketitle
+
+\begin{abstract}
+This tutorial gives a good introduction to \textmd{Sasybel}, the user-friendly version of \textmd{Beluga}. It consist of many commented examples.
+\end{abstract}
+
+\section{Introduction}
+\textmd{Beluga} is a strong tool to reason about systems and the proofs related to them, but as it is now, it might be difficult for someone new to type systems to learn the \textmd{Beluga} 
+syntax. The implementation of a beginner mode could make \textmd{Beluga} more accessible. \textmd{Beluga} could be useful in many undergraduate and graduate classes which introduce logic, types 
+and programming languages, as it permits the implementation of the theory learned in class and allows immediate feedback about theorems. This way the student can learn about their mistakes 
+while doing the work, instead of waiting to get their work corrected and not remembering why they wrote such answers upon getting their work back, improving their 
+learning process. 
+This tutorial explains how to use \textmd{Sasybel} which is the \textmd{SASyLF}, a proof checker for formal systems, syntax used for \textmd{Beluga} interpretation. 
+\textmd{SASyLF} has a really easy syntax, as close as possible to what one would write on paper, so users of \textmd{Sasybel} who are trying to learn types systems wont have to go through the 
+struggle of learning a new language to implement these.\\
+\subsection{Running Sasybel}
+The \textmd{Sasybel} can be compiled at the command line like regular \textmd{Beluga} code:
+\begin{verbatim}
+  bin/interpreter file_name.sbel
+\end{verbatim}
+By putting {\tt .sbel} in the file name the compiler will assume that this is \textmd{Sasybel} code.
+\subsection{Sasybel Basics}
+
+The \textmd{Sasybel} syntax will be introduced by commented examples:
+\subsubsection{Terminals Declaration}
+The {\tt terminals} declaration at the top of the file declares identifiers, which helps \textmd{Sasybel} detect mistakes; in \textmd{Sasybel} these 
+will be used to detect variables and symbols, it consist of the keyword {\tt terminals} and a list of terms. 
+The terminal declaration is necessary, it can always be empty though.
+\begin{verbatim}
+  terminals z suc
+\end{verbatim}
+\subsubsection{Simple Expressions Declarations}
+Before declaring any type the keyword syntax is needed. Types are declared with the following syntax: {\tt <type> ::= <alternative> $\vert$ <alternative> ...} . There is no upper bound 
+on the number of alternatives, and order does not matter. Alternatives in \textmd{Sasybel} can be anything, but more examples will be shown later.
+\begin{verbatim}
+  syntax
+
+ /* This is an example of a comment */
+
+  nat ::= z
+  | suc nat
+
+\end{verbatim}
+\textmd{Sasybel} uses the same syntax for comments as beluga, beginning by {\tt \%\{ } and ending by {\tt \}\% } for multi-line comments, and {\tt \%} to comment the rests of a line.
+\subsubsection{Judgments}
+The syntax for a judgment is: {\tt notation <judgment\_name>:<premise>;} . The judgment name can be any string starting by a character. The premise is made of two types of words types and symbols. \textmd{Sasybel} 
+knows that the result must be a ``type'' like in \textmd{Beluga}, so the remaining tokens are analyzed and if they are a type declared in the syntax section 
+they are added to the translated result; otherwise they are considered a symbol and will be used later on. Terminals should not appear in the premises of a judgment. The {\tt ;} at the end is necessary since this how Sasybels 
+knows that the premise is finished. A judgment is follow by one or more rules.
+\begin{verbatim}
+
+  notation sum: nat + nat = nat;
+
+\end{verbatim}
+Rules are declared almost as on paper, they can consist of only a conclusion, in this case the inference line consist of a finite sequence of {\tt -} and the name of the rule is located at the end of it. Here again the premise 
+must end by a {\tt ;} , but in this case the premise can be composed of alternatives and symbols that were previously declare in the judgments.
+(*** put this in example with context *) Judgments can be given a context to assume, by typing {\tt assume context\_name} right after the judgment definition.
+\begin{verbatim}
+ 
+  ------------- sum-z
+  z + n1 = n1'
+
+\end{verbatim}
+Rules can also have many premises, these also must end with a {\tt ;} they can be separated by any whitespace.
+\begin{verbatim}
+
+  n1 + n2 = n3;
+  -------------------------- sum-s
+  (suc n1) + n2 = (suc n3);
+
+  notation less : nat < nat ;
+
+  ---------------- less-one
+  n1 < (suc n1);
+
+  n1 < n3; n3 < n2;
+  -------------------- less-transitive
+  n1 < n2;
+
+\end{verbatim}
+\subsubsection{Theorems}
+A theorem declaration starts with the keyword {\tt theorem} followed by the name of the theorem, then the statement that must be proven, 
+which can be of the type {\tt exist <premise>} or {\tt forall <premise> exist <premise>} , these statements must also end with a {\tt;} .
+\begin{verbatim}
+
+ theorem plus1 : forall n exists n + (suc z) = (suc n);
+
+\end{verbatim}
+In the case of an induction proof what has to be proven is repeated and the premise is given a name this time.
+\begin{verbatim}
+
+  x : n + (suc z) = (suc n) by induction on n :
+
+\end{verbatim}
+The different cases of the induction are listed, with the syntax: {\tt case <alternative> is} , then this is followed by a list of premises which possibly have names and are followed by a justification. 
+A case is terminated with {\tt end case}.
+\begin{verbatim}
+
+  case z is
+               d2: (z) + (suc z) = (suc z)  by rule sum-z;
+  end case
+
+\end{verbatim}
+The syntax for justifications' which in this case are applying the induction hypothesis or justifying by a rule is straight forward: {\tt by <justification>} or {\tt by <justification> on <list of names>} . These can be invoked on a {\tt name} or not.
+\begin{verbatim}
+
+  case suc n' is
+                 d3 : n' + (suc z) = (suc n') by induction hypothesis on n';
+                 d4 : (suc n') + (suc z) = (suc suc n')  by rule sum-s on d3;
+\end{verbatim}
+In the two statements above only {\tt d3} needs a name, we could have omitted to write {\tt d4}.
+\begin{verbatim}
+  end case
+\end{verbatim}
+Specify that you are ending your induction and the theorem.
+\begin{verbatim}
+  end induction
+  end theorem
+\end{verbatim}
+$\linebreak$
+The next one is a very simple theorem, theres is no {\tt forall} part therefore this can only be proved by calling a rule. Note that a proof can also be justified by referring to a theorem 
+that has been proven earlier.
+\begin{verbatim}
+
+  theorem z_less_suc_z: exists z < suc z; 
+
+   z < suc z by rule less-one;
+
+  end theorem
+\end{verbatim}
+This is another induction proof but here, the cases are not alternatives but judgments.
+\begin{verbatim}
+
+  theorem sum-s-rh : forall d1 : n1 + n2 = n3 exists n1 + (suc n2) = (suc n3);
+
+\end{verbatim}
+Note that the brackets in this case are important because they delimit the alternative.
+\begin{verbatim}
+  d2 : n1 + (suc n2) = (suc n3) by induction on d1 :
+
+  case rule
+
+  -------------- sum-z
+  z + n = n;
+
+  is
+
+  z + (suc n) = (suc n) by rule sum-z;
+
+  end case
+
+
+  case rule
+
+  d3 : n1' + n2 = n3';
+  ---------------------------- sum-s
+  d4 : (suc n1') + n2 = (suc n3');
+
+  is
+
+  d5 : n1' + (suc n2) = (suc n3')  by induction hypothesis on d3;
+  d6 : (suc n1') + (suc n2) = (suc suc n3') by rule sum-s on d5;
+
+  end case
+  end induction
+  end theorem
+\end{verbatim}
+\subsubsection{More Expressions}
+This is a more complete example on types, and the proof has more cases and uses different justifications.
+\begin{verbatim}
+
+terminals z s lambda value app
+syntax 
+
+\end{verbatim}
+The example illustrates the usual expressions one would want to declare using this kind of system.
+ This type is called {\tt exp}, the two first alternatives are simply the naturals. Note that the \textmd{Sasybel} translation will assume that every terminal in alternative is of the type of the given production.
+\begin{verbatim}
+
+exp ::= z
+| suc exp
+
+\end{verbatim}
+{\tt x}, must be declared as an alternative, this way the reconstruction will know that every {\tt x} is a variable. All variable must be declared separately, the translation recognizes 
+them for being alternatives of length one, that are not terminals. The following alternative declares a lambda term, the {\tt \textbackslash} \ is mandatory for the parser to understand that it's a lambda term. The \textbf{.} 
+indicates that there is a binding coming. One of the \textmd{Sasybel} conventions is that {\tt exp[x]}
+denotes that the variable {\tt x} is bound in the expression {\tt exp}.
+\begin{verbatim}
+
+| x
+| lambda \x .exp[x] 
+
+\end{verbatim}
+The next alternative is simply the application of an expression, which is a function (lambda expression) to another expression. Then there is the declaration of a let statement, the keywords/symbol {\tt let},
+ {\tt =} and {\tt in} are mandatory. Then when have an expression that will equal the variable {\tt x} in an expression bound in {\tt x}. Note that the translation to beluga will display the word {\tt letv}
+ instead of {\tt let}, because {\tt let} is reserved in \textmd{Beluga}.
+\begin{verbatim}
+
+| app exp exp 
+| let exp = x in exp[x]
+
+\end{verbatim}
+$\linebreak$
+Now we will show judgment examples using the above expressions.The following judgment simply specifies what is considered a value.
+\begin{verbatim}
+notation value: exp value;
+
+--------- v_z
+z value;
+
+e1 value;
+-------------- v_s
+(suc e1) value;
+
+------------------------ v_lam
+lambda \x . e1[x] value;
+
+\end{verbatim}
+Inference rules about evaluation:
+\begin{verbatim}
+notation eval: eval exp exp
+
+------------- ev_z
+eval z z;
+
+eval e1 e2;
+----------------------- ev_s
+eval (suc e1) (suc e2);
+
+\end{verbatim}
+$\linebreak$
+\textmd{SASyLF} would use ``e -$>$ e'' instead of ``eval e e'' but -$>$ is a reserved symbol in OCaml, so this feature of \textmd{SASyLF} couldn't be kept in \textmd{Sasybel}.\\
+\begin{verbatim}
+eval e2[e2'] e1';
+eval e1 e2';
+--------------------------------- ev_l
+eval (let x=e1 in e2[x]) e1';
+
+------------------------------------ ev_lam
+eval (lambda \x. e1[x]) (lambda \x. e1[x]);
+
+eval e1 (lambda \x . e[x]);
+eval e2 e2';
+eval e[e2'] e1';
+-------------------- ev-app
+eval (app e1 e2) e1';
+
+\end{verbatim}
+$\linebreak$
+This is the proof of value soundness that indicates that every expression evaluates to a value that is an expression.
+\begin{verbatim}
+theorem val-sound : forall D: E eval E' exists E' value ;
+
+E' value by induction on D:
+
+case rule
+
+	--------------- ev-z
+	z eval z;
+
+	is
+
+	E' value by rule val-z;
+
+end case
+
+\end{verbatim}
+$\linebreak$
+This is the base case of the proof.
+\begin{verbatim}
+case rule 
+
+	I: e1 eval e2;
+	---------------------------- ev-s
+	(suc e1) eval (suc e2);
+
+	is
+
+	H: e2 value by induction hypothesis on I;
+	e' value by rule val-s on H;
+
+end case
+\end{verbatim}
+The other cases correspond to the evaluation rules.
+\begin{verbatim}
+case rule 
+
+	-------------------------------------------------------- ev-lam
+	(lambda \x . e1[x]) eval (lambda \x . e1[x]);
+
+	is
+
+	e' value by rule val-lam;
+
+end case
+
+case rule 
+
+	D1: e1 eval lambda \x . e3[x];
+	D2: e2 eval e2';
+	D3: e3[e2'] eval e1';
+	------------------------------------- ev-app
+	(e1 e2) eval e1';
+
+	is
+
+	e' value by induction hypothesis on D3;
+
+end case
+
+case rule 
+
+	I: e2[e1] eval e1';
+	H: e1 eval e1';
+	----------------------------------------------- ev-let
+	(let x=e1 in e2[x]) eval e1';
+
+	is
+
+	e' value by induction hypothesis on I;
+
+end case
+
+end induction 
+end theorem
+
+\end{verbatim}
+$\linebreak$
+Both theorems are proven. This is how \textmd{Sasybel} is translated into \textmd{Beluga} on paper. The two following sections will show how the computer will do it.
+\subsection{Multiple Types}
+The following example will show how different types can interact in \textmd{Sasybel}. The two first types to be introduced are the naturals and booleans.
+\begin{verbatim}
+
+
+terminals z susc lambda lit plus iff single double 
+
+syntax 
+
+nat ::= z
+| suc nat
+
+syntax
+
+bool ::= true | false
+
+syntax
+
+\end{verbatim}
+Now we will create expressions that refer to different types.
+\begin{verbatim}
+
+exp ::= lit nat
+
+\end{verbatim}
+In the rules we are going to be able to specify that the {\tt exp} in {\tt plus} must be a {\tt lit nat} .
+\begin{verbatim}
+ 
+| plus exp exp
+
+\end{verbatim}
+This alternative models a regular {\tt if  then  else statement}, since {\tt if} is a reserved word it has been replaced with {\tt iff}, which has nothing to do with if and only if in this case.
+\begin{verbatim}
+ 
+| iff bool exp exp
+| x
+| y 
+
+\end{verbatim}
+Two lambda terms one with one variable and the second with two.
+\begin{verbatim}
+ 
+| single \ x . exp[x] 
+| double \ x y . exp[x] exp[x,y]
+
+\end{verbatim}
+\end{document}

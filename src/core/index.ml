@@ -35,10 +35,12 @@ type error =
   | UnboundCtxName       of Id.name
   | UnboundCtxSchemaName of Id.name
   | UnboundCompName      of Id.name
+  | UnboundCompConstName of Id.name
   | PatCtxRequired
   | CompEmptyPattBranch
   | UnboundIdSub
   | PatVarNotUnique
+  | IllFormedCompTyp
 
 exception Error of Syntax.Loc.t * error
 
@@ -48,23 +50,27 @@ let _ = Error.register_printer
       match err with
       | UnboundName n ->
           Format.fprintf ppf
-	    "unbound data-level variable (ordinary or meta-variable) or constructor: %s"
+	    "Unbound data-level variable (ordinary or meta-variable) or constructor: %s."
 	    (R.render_name n)
       | UnboundCtxName n ->
-          Format.fprintf ppf "unbound context variable: %s" (R.render_name n)
+          Format.fprintf ppf "Unbound context variable: %s." (R.render_name n)
       | UnboundCtxSchemaName n ->
-          Format.fprintf ppf "unbound context schema: %s" (R.render_name n)
+          Format.fprintf ppf "Unbound context schema: %s." (R.render_name n)
       | UnboundCompName n ->
-          Format.fprintf ppf "unbound computation-level variable: %s" (R.render_name n)
+          Format.fprintf ppf "Unbound computation-level variable: %s." (R.render_name n)
+      | UnboundCompConstName n ->
+          Format.fprintf ppf "Unbound computation-level constructor: %s." (R.render_name n)
       | PatCtxRequired ->
           Format.fprintf ppf
 	    "The context in a pattern must be a proper context where variable declaration must carry its type."
       | CompEmptyPattBranch ->
-          Format.fprintf ppf "If the pattern in a branch is empty, there should be no branch body"
+          Format.fprintf ppf "If the pattern in a branch is empty, there should be no branch body."
       | UnboundIdSub ->
-          Format.fprintf ppf "Identity substitution used without context variable"
+          Format.fprintf ppf "Identity substitution used without context variable."
       | PatVarNotUnique -> 
-          Format.fprintf ppf "Pattern variable not linear."))
+          Format.fprintf ppf "Pattern variable not linear."
+      | IllFormedCompTyp ->
+	Format.fprintf ppf "Ill-formed computation-level type."))
 
 type free_cvars = 
     FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name 
@@ -148,14 +154,14 @@ let rec index_kind cvars bvars fvars = function
 
 and index_typ cvars bvars fvars = function
   | Ext.LF.Atom (loc, a, s) ->
-      begin try 
-        let a' = Typ.index_of_name a
-        and (s', fvars') = index_spine cvars bvars fvars s in
-          (Apx.LF.Atom (loc, a', s') , fvars')
+    begin
+      try
+        let a' = Typ.index_of_name a in
+	let (s', fvars') = index_spine cvars bvars fvars s in
+        (Apx.LF.Atom (loc, a', s') , fvars')
       with Not_found ->
-       raise (Error (loc, UnboundName a))
-      end
-    
+	raise (Error (loc, UnboundName a))
+    end
 
   | Ext.LF.ArrTyp (_loc, a, b) ->
       let x            = Id.mk_name Id.NoName
@@ -548,20 +554,25 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
       let (tau', fcvars2) = index_comptyp cvars' fcvars1 tau in 
         (Apx.Comp.TypPiBox (cdecl', tau'), fcvars2)
 
-  | Ext.Comp.TypCtxPi (loc, (ctx_name, schema_name, dep), tau)    ->
-    begin try 
-      let cvars'        = CVar.extend cvars (CVar.mk_entry (CVar.CV ctx_name)) in
-      let schema_cid    = Schema.index_of_name schema_name in
-        (* if exception Not_found is raised, it means schema_name does not exist *)
-      let apxdep = match dep with Ext.Comp.Explicit -> Apx.Comp.Explicit |
-    Ext.Comp.Implicit -> Apx.Comp.Implicit in 
-      let (tau', fcvars1) = index_comptyp cvars' fcvars tau in 
+  | Ext.Comp.TypCtxPi (loc, (ctx_name, schema_name, dep), tau) ->
+    begin
+      try
+	let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.CV ctx_name)) in
+	let schema_cid = Schema.index_of_name schema_name in
+	(* if exception Not_found is raised, it means schema_name does not exist *)
+	let apxdep = match dep with
+	    Ext.Comp.Explicit -> Apx.Comp.Explicit
+	  | Ext.Comp.Implicit -> Apx.Comp.Implicit in 
+	let (tau', fcvars1) = index_comptyp cvars' fcvars tau in 
         (Apx.Comp.TypCtxPi ((ctx_name, schema_cid, apxdep), tau'), fcvars1)
-    with 
-        Not_found -> raise (Error (loc, UnboundCtxSchemaName schema_name))
+      with
+          Not_found -> raise (Error (loc, UnboundCtxSchemaName schema_name))
     end
 
   | Ext.Comp.TypBool -> (Apx.Comp.TypBool, fcvars)
+
+  | Ext.Comp.TypPBox (loc, _, _) -> raise (Error (loc, IllFormedCompTyp))
+  | Ext.Comp.TypCtx (loc, _) -> raise (Error (loc, IllFormedCompTyp))
 
 let rec index_exp cvars vars fcvars = function
   | Ext.Comp.Syn (loc , i)   ->
@@ -662,8 +673,12 @@ and index_exp' cvars vars fcvars = function
       with Not_found ->
         raise (Error (loc, UnboundCompName x))
       end
-  | Ext.Comp.DataConst (_loc, c) -> 
-        Apx.Comp.DataConst (CompConst.index_of_name c)
+  | Ext.Comp.DataConst (loc, c) ->
+    begin
+      try
+	Apx.Comp.DataConst (CompConst.index_of_name c)
+      with Not_found -> raise (Error (loc, UnboundCompConstName  c))
+    end
   | Ext.Comp.Apply (loc, i, e) ->
       let i' = index_exp' cvars vars fcvars i in
       let e' = index_exp  cvars vars fcvars e in

@@ -196,7 +196,12 @@ let rec thin (cO, cD) (tP, cPsi) =
   let rec inner (basis : Id.cid_typ list) cPsi = match cPsi with
     | Null -> (Shift(NoCtxShift, 0),  Null) (* . |- shift(noCtx, 0) : . *)
     | CtxVar psi -> 
-        if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) basis then
+        let schema = begin match psi with
+          | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
+          | CInst ( _ , cid_schema, _, _ ) -> cid_schema
+        end
+        in 
+        if relevantSchema (Schema.get_schema schema) basis then
           ( (*print_string "Keeping context variable\n"; *)
             (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
         else
@@ -237,8 +242,14 @@ let rec thin' cD a cPsi =
   *)
   let rec inner (basis : Id.cid_typ list) cPsi = match cPsi with
     | Null -> (Shift(NoCtxShift, 0),  Null) (* . |- shift(noCtx, 0) : . *)
-    | CtxVar psi -> 
-        if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cD psi)) basis then
+
+    | CtxVar (psi) -> 
+        let schema = begin match psi with
+          | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
+          | CInst ( _ , cid_schema, _, _ ) -> cid_schema
+        end
+        in 
+        if relevantSchema (Schema.get_schema schema) basis then
           ( (*print_string "Keeping context variable\n"; *)
             (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
         else

@@ -52,7 +52,7 @@ $INTERPRETER +t +coverage  compile/cls/test.cfg
 $INTERPRETER +t +coverage  compile/debruijn1/test.cfg 
 $INTERPRETER +t +coverage  debruijn1/sources.cfg 
 $INTERPRETER +t +coverage  fol/test.cfg 
-$INTERPRETER +t +coverage  ../t/base/id-simple.bel 
+$INTERPRETER +t +coverage  ../t/success/base/id-simple.bel 
 $INTERPRETER +t +coverage  typed-eval/tpeval-val.bel 
 $INTERPRETER +t +coverage  mini-ml/eval-sub-1.bel 
 $INTERPRETER +t +coverage  mini-ml/eval-sub-1-explicit.bel  
@@ -141,23 +141,23 @@ $INTERPRETER +t +coverage      equal/eq-proof-full-crec.bel
 $INTERPRETER +t +coverage      lp-horn/test-crec.cfg 
 $INTERPRETER +t +coverage      path/path.bel 
 $INTERPRETER +t +coverage      path/path-typed.bel 
-$INTERPRETER +t +coverage      ../t/base/case1.bel 
-$INTERPRETER +t +coverage      ../t/base/case1-explicit.bel 
-$INTERPRETER +t +coverage      ../t/base/case2.bel 
-$INTERPRETER +t +coverage      ../t/base/case2-explicit.bel 
-$INTERPRETER +t +coverage      ../t/base/simple-explicit.bel 
-$INTERPRETER +t +coverage      ../t/base/simple.bel 
-$INTERPRETER +t +coverage      ../t/base/sigma4.bel 
-$INTERPRETER +t +coverage      ../t/base/sigma3.bel 
-$INTERPRETER +t +coverage      ../t/base/alpha.bel 
+$INTERPRETER +t +coverage      ../t/success/base/case1.bel 
+$INTERPRETER +t +coverage      ../t/success/base/case1-explicit.bel 
+$INTERPRETER +t +coverage      ../t/success/base/case2.bel 
+$INTERPRETER +t +coverage      ../t/success/base/case2-explicit.bel 
+$INTERPRETER +t +coverage      ../t/success/base/simple-explicit.bel 
+$INTERPRETER +t +coverage      ../t/success/base/simple.bel 
+$INTERPRETER +t +coverage      ../t/success/base/sigma4.bel 
+$INTERPRETER +t +coverage      ../t/success/base/sigma3.bel 
+$INTERPRETER +t +coverage      ../t/success/base/alpha.bel 
 $INTERPRETER +t +coverage      tpcert.bel 
 
 # sleep 1
 # echo 'covering cases requiring context splits: '
 # # $INTERPRETER -noprint +t +coverage $* \
-$INTERPRETER  +t +coverage  ../t/base/ctxmatching.bel 
-$INTERPRETER  +t +coverage  ../t/base/depctxmatching.bel \
-$INTERPRETER  +t +coverage  freshML/debruijn-uniform.bel \
+$INTERPRETER  +t +coverage  ../t/success/base/ctxmatching.bel 
+$INTERPRETER  +t +coverage  ../t/success/base/depctxmatching.bel 
+$INTERPRETER  +t +coverage  freshML/debruijn-uniform.bel 
 $INTERPRETER  +t +coverage  freshML/debruijn-1a.bel
 
 

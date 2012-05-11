@@ -94,7 +94,10 @@ public.QuietOCamlPackage(name, files) =
 
 
 
-pack: $(QuietOCamlPackage $(PACK), $(FILES))
+if $(NATIVE_ENABLED)
+    pack: $(OCamlPackage $(PACK), $(FILES))
+else
+    pack: $(QuietOCamlPackage $(PACK), $(FILES))
 
 # **NOTE** Because of the way scoping for OCAMLFLAGS works, the pack
 # target must come _BEFORE_ the files target, otherwise pack will be

@@ -778,9 +778,8 @@ and cnorm (tM, t) = match tM with
                 | MV  k'            -> 
                     Root (loc, MVar (Offset k', cnormSub (r, t)), cnormSpine (tS, t)) 
                       
-                | MObj (_phat,tM)   -> 
-                    (dprint (fun () -> "cnorm MVar Offset substitute!"); 
-                    reduce (tM, cnormSub (r, t)) (cnormSpine (tS, t)) ) 
+                | MObj (_phat,tM)   ->                     
+                    reduce (tM, cnormSub (r, t)) (cnormSpine (tS, t)) 
                     (* Clo(whnfRedex ((tM, cnormSub (r, t)), (cnormSpine (tS, t), LF.id)))  *) 
                 | PObj (_phat, h) -> 
                     let tS' = cnormSpine (tS, t) in 
@@ -1092,7 +1091,7 @@ and cnorm (tM, t) = match tM with
                   Shift (NoCtxShift, k + d)
             end
           | MObj _ -> (dprint (fun () -> "[applyMSub] ill-typed MObj for CObj");
-                         dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi)
+                       dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi)
                   ; raise (Error.Violation "illtyped msub"))
 
                        
@@ -1197,9 +1196,8 @@ and cnorm (tM, t) = match tM with
 
   and cnormDecl (decl, t) = match decl with
     | TypDecl (x, tA) -> 
-        (dprint (fun () -> "[cnormDecl] ... " );
-          TypDecl (x, cnormTyp (tA, t)))
-    | TypDeclOpt x -> TypDeclOpt x    (* jd 2010-05-22: +d fails otherwise *)
+        TypDecl (x, cnormTyp (tA, t))
+    | TypDeclOpt x -> TypDeclOpt x  
 
 
 

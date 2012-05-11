@@ -1592,7 +1592,6 @@ module Int = struct
 
     let expChkToString cD cG e    = 
       let e' = Whnf.cnormExp (e , Whnf.m_id) in 
-      let _ = Printf.printf "[expChkToString] cnormExp done\n" in  
        fmt_ppr_cmp_exp_chk cD cG std_lvl str_formatter e'
       ; flush_str_formatter ()
 

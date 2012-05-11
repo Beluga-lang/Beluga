@@ -178,7 +178,9 @@ let main () =
             (* Subord.dump_typesubord() *)
           end;
           print_newline ();
-          Logic.runLogic ()
+          Logic.runLogic ();
+          if !Monitor.on || !Monitor.onf then
+            Monitor.print_timer ()
       with e ->
         Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
         output_string stderr (Printexc.to_string e);

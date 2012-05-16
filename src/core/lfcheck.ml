@@ -61,14 +61,14 @@ let _ = Error.register_printer
       | TupleArity (cD, cPsi, sM, sA) ->
 	Error.report_mismatch ppf
 	  "Arity of tuple doesn't match type."
-	  "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+	  "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl)  (Whnf.norm sM)
 	  "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sA)
 
       | KindMismatch (cD, cPsi, sS, sK) ->
-          Format.fprintf ppf "ill-kinded type\n  expected kind %s \n  for spine: %a \n  in context:\n    %a"
-            (P.kindToString cPsi sK)
-            (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS)
-            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
+	Error.report_mismatch ppf
+          "Ill-kinded type."
+	  "Expected kind:" Format.pp_print_string                      (P.kindToString cPsi sK)
+	  "for spine:"     (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS)
 
       | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
           Format.fprintf ppf

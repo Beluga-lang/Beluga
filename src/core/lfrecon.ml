@@ -1590,9 +1590,6 @@ and elSpineIW loc recT cD cPsi spine i sA  =
  *   O' = extension of O containing new meta-variables of S
  *)
 and elSpine loc recT cD cPsi spine sA =
-  elSpineW loc recT cD cPsi spine (Whnf.whnfTyp sA)
-
-and elSpineW loc recT cD cPsi spine sA =
   let rec spineLength = function
     | Apx.LF.Nil -> 0
     | Apx.LF.App (_, tS) -> 1 + spineLength tS in
@@ -1604,14 +1601,15 @@ and elSpineW loc recT cD cPsi spine sA =
   (* Check first that we didn't supply too many arguments. *)
   if typLength (fst sA) < spineLength spine then
     raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (typLength (fst sA), spineLength spine)));
-  match spine, sA with
-  | Apx.LF.Nil, sP ->
+  let rec elSpine loc rectT cD cPsi spine sA = match spine, sA with
+    | Apx.LF.Nil, sP ->
       (Int.LF.Nil, sP) (* errors are postponed to reconstruction phase *)
 
-  | Apx.LF.App (m, spine), (Int.LF.PiTyp ((Int.LF.TypDecl (_, tA), _ ), tB), s) ->
+    | Apx.LF.App (m, spine), (Int.LF.PiTyp ((Int.LF.TypDecl (_, tA), _ ), tB), s) ->
       let tM = elTerm recT cD cPsi m (tA, s) in
       let (tS, sP) = elSpine loc recT cD cPsi spine (tB, Int.LF.Dot (Int.LF.Obj tM, s)) in
-        (Int.LF.App (tM, tS), sP)
+      (Int.LF.App (tM, tS), sP)
+  in elSpine loc recT cD cPsi spine (Whnf.whnfTyp sA)
 
 (* see invariant for elSpineI *)
 and elKSpineI loc recT cD cPsi spine i sK =
@@ -1646,14 +1644,15 @@ and elKSpine loc recT cD cPsi spine sK =
   (* Check first that we didn't supply too many arguments. *)
   if kindLength (fst sK) < spineLength spine then
     raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (kindLength (fst sK), spineLength spine)));
-  match spine, sK with
-  | Apx.LF.Nil, (Int.LF.Typ, _s) ->
+  let rec elKSpine loc recT cD cPsi spine sK = match spine, sK with
+    | Apx.LF.Nil, (Int.LF.Typ, _s) ->
       Int.LF.Nil (* errors are postponed to reconstruction phase *)
 
-  | Apx.LF.App (m, spine), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s) ->
+    | Apx.LF.App (m, spine), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s) ->
       let tM = elTerm recT cD cPsi m (tA, s) in
       let tS = elKSpine loc recT cD cPsi spine (tK, Int.LF.Dot (Int.LF.Obj tM, s)) in
-        Int.LF.App (tM, tS)
+      Int.LF.App (tM, tS)
+  in elKSpine loc recT cD cPsi spine sK
 
 (* elSpineSynth cD cPsi p_spine s' = (S, A')
  *

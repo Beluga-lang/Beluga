@@ -212,22 +212,22 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
     | Atom _ -> 0
     | PiTyp (_, tB2) -> 1 + typLength tB2 in
 
-  let rec synSpine tS sA = match tS, sA with
+  let rec syn tS sA = match tS, sA with
     | (Nil, _), sP -> sP
 
     | (SClo (tS, s'), s), sA ->
-      synSpine (tS, Substitution.LF.comp s' s) sA
+      syn (tS, Substitution.LF.comp s' s) sA
 
     | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
       check cD cPsi (tM, s1) (tA1, s2);
       let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
-      synSpine (tS, s1) tB2 in
+      syn (tS, s1) tB2 in
 
   let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h, Substitution.LF.id) in
   (* Check first that we didn't supply too many arguments. *)
   if typLength sA' < spineLength tS then
     raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));
-  synSpine (tS, s) (sA', s')
+  syn (tS, s) (sA', s')
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
 

@@ -1108,96 +1108,97 @@ and elExp' cD cG i = match i with
         end
 
   | Apx.Comp.MAnnApp (loc, i, (psi, m)) ->
-      let _ = dprint (fun () -> "Reconstructing MAnnApp\n") in 
-      let (i0, tau_t) = (elExp' cD cG i) in 
-      let _ = dprint (fun () -> "[elExp'] MApp : " ^ 
-                        P.expSynToString cD cG i0 ^ " : " ^ 
+      let _ = dprint (fun () -> "Reconstructing MAnnApp\n") in
+      let (i0, tau_t) = (elExp' cD cG i) in
+      let _ = dprint (fun () -> "[elExp'] MApp : " ^
+                        P.expSynToString cD cG i0 ^ " : " ^
                         P.compTypToString cD (Whnf.cnormCTyp tau_t) ) in
 
       let (i', tau_theta') = genMApp loc cD  (i0, tau_t) in
-      let _ = dprint (fun () -> "[elExp'] MAnnApp - generated implicit args.\n") in 
+      let _ = dprint (fun () -> "[elExp'] MAnnApp - generated implicit args.\n") in
       let _ = dprint (fun () -> "[elExp] MAnnApp  : " ^
-                                P.mctxToString cD ^ "\n |- " ^ 
+                                P.mctxToString cD ^ "\n |- " ^
                                 P.compTypToString cD (Whnf.cnormCTyp tau_theta')) in
-        begin match tau_theta' with
-          | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
-              let cPsi    = C.cnormDCtx (cPsi, theta) in
-                begin try 
-               let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
-               let _     = Unify.unifyDCtx cD cPsi cPsi' in 
-               let psihat' = Context.dctxToHat cPsi'  in
+      begin match tau_theta' with
+        | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
+          let cPsi    = C.cnormDCtx (cPsi, theta) in
+          begin
+            try
+              let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
+              let _     = Unify.unifyDCtx cD cPsi cPsi' in
+              let psihat' = Context.dctxToHat cPsi'  in
               let tM'    = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m (C.cnormTyp (tA, theta), LF.id) in
               let theta' = Int.LF.MDot (Int.LF.MObj (psihat', tM'), theta) in
-                (Int.Comp.MApp (loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta'))
-             with Error.Violation msg -> 
-               dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
-               raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn ))
-             end 
-          | (Int.Comp.TypPiBox ((Int.LF.PDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
-              let cPsi    = C.cnormDCtx (cPsi, theta) in
-              begin try 
-               let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
-               let _     = Unify.unifyDCtx cD cPsi cPsi' in 
-               let psihat' = Context.dctxToHat cPsi'  in
-               begin match m with 
-                 | Apx.LF.Root (_, h, Apx.LF.Nil) -> 
-                     let _ = dprint (fun () -> "[elExp'] Mapp case :  PDecl ") in
-                     let (h', sB) = Lfrecon.elHead loc Lfrecon.Pibox cD cPsi' h  in
-                     let theta' = Int.LF.MDot (Int.LF.PObj (psihat', h'), theta)  in
-                     let sA' = (C.cnormTyp (tA, theta), LF.id) in 
-                       begin try 
-                         (Unify.unifyTyp cD cPsi' sB  sA' ;
-                          dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
-                          (Int.Comp.MApp (loc, i', (psihat', Int.Comp.NeutObj h')), (tau, theta')))
-                       with Unify.Unify msg ->
-                         (Printf.printf "%s\n" msg;
-                          raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
-                       end 
-                  | _ -> 
-                       (dprint (fun () -> "[elTerm] Violation: Not a head");
-                      raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
-               end  
-                with Error.Violation msg -> 
-                  dprint (fun () -> "[elTerm] Violation: " ^ msg);
-                  raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
-              end 
-          | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) -> 
-              let cPsi = C.cnormDCtx (cPsi, theta) in
-              let _ = dprint (fun () -> "Encountered Boxed arg") in
-              let _ = dprint (fun () -> "[elExp] MAnnApp - TypArr : " ^
-                                P.mctxToString cD ^ " |- " ^
-                                P.compTypToString cD (Whnf.cnormCTyp tau_theta')) in
-              let _ = dprint (fun () -> "cnormDctx done") in
-              let _ = dprint (fun () -> "Projected type of argument : " ^
-                                (P.dctxToString cD cPsi) ^ " |- " ^
-                                P.typToString cD cPsi (C.cnormTyp (tP, theta), LF.id)) in
-                begin try
-                  let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
-                  let _ = dprint (fun () -> "reconstruction of explicit psi done") in
-                  let _ = dprint (fun () -> "BEFORE unifyDCtx cPsi' = " ^ P.dctxToString cD  cPsi') in
-                  let _ = dprint (fun () -> "                 cPsi = " ^ P.dctxToString cD  cPsi) in
-                  let _     = Unify.unifyDCtx cD cPsi cPsi' in
-                  let _ = dprint (fun () -> "Infer omitted context argument using unification") in
-                  let psihat' = Context.dctxToHat cPsi'  in
-                  let tM' = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m (C.cnormTyp (tP, theta), LF.id) in
-                  let _   = dprint (fun () -> "[elTerm] for m against type : " ^
-                                   P.dctxToString cD cPsi' ^ " |- " ^
-                                   P.typToString cD cPsi' (C.cnormTyp (tP, theta), LF.id)) in
-                  let i = Int.Comp.Apply (loc, i',
-                                     Int.Comp.Box(loc, psihat', tM')) in
-                    dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^
-                              P.expSynToString cD cG i ^ "\n"); (i , (tau, theta))
+              (Int.Comp.MApp (loc, i', (psihat', Int.Comp.NormObj tM')), (tau, theta'))
+            with Error.Violation msg ->
+              dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+              raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn ))
+          end
+        | (Int.Comp.TypPiBox ((Int.LF.PDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
+          let cPsi    = C.cnormDCtx (cPsi, theta) in
+          begin
+            try
+              let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
+              let _     = Unify.unifyDCtx cD cPsi cPsi' in
+              let psihat' = Context.dctxToHat cPsi'  in
+              begin match m with
+                | Apx.LF.Root (_, h, Apx.LF.Nil) ->
+                  let _ = dprint (fun () -> "[elExp'] Mapp case :  PDecl ") in
+                  let (h', sB) = Lfrecon.elHead loc Lfrecon.Pibox cD cPsi' h  in
+                  let theta' = Int.LF.MDot (Int.LF.PObj (psihat', h'), theta)  in
+                  let sA' = (C.cnormTyp (tA, theta), LF.id) in
+                  begin
+                    try
+                      (Unify.unifyTyp cD cPsi' sB  sA' ;
+                       dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
+                       (Int.Comp.MApp (loc, i', (psihat', Int.Comp.NeutObj h')), (tau, theta')))
+                    with Unify.Unify msg ->
+                      (Printf.printf "%s\n" msg;
+                       raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
+                  end
+                | _ ->
+                  (dprint (fun () -> "[elTerm] Violation: Not a head");
+                   raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))
+              end
+            with Error.Violation msg ->
+              dprint (fun () -> "[elTerm] Violation: " ^ msg);
+              raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
+          end
+        | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) ->
+          let cPsi = C.cnormDCtx (cPsi, theta) in
+          let _ = dprint (fun () -> "Encountered Boxed arg") in
+          let _ = dprint (fun () -> "[elExp] MAnnApp - TypArr : " ^
+            P.mctxToString cD ^ " |- " ^
+            P.compTypToString cD (Whnf.cnormCTyp tau_theta')) in
+          let _ = dprint (fun () -> "cnormDctx done") in
+          let _ = dprint (fun () -> "Projected type of argument : " ^
+            (P.dctxToString cD cPsi) ^ " |- " ^
+            P.typToString cD cPsi (C.cnormTyp (tP, theta), LF.id)) in
+          begin
+            try
+              let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
+              let _ = dprint (fun () -> "reconstruction of explicit psi done") in
+              let _ = dprint (fun () -> "BEFORE unifyDCtx cPsi' = " ^ P.dctxToString cD  cPsi') in
+              let _ = dprint (fun () -> "                 cPsi = " ^ P.dctxToString cD  cPsi) in
+              let _     = Unify.unifyDCtx cD cPsi cPsi' in
+              let _ = dprint (fun () -> "Infer omitted context argument using unification") in
+              let psihat' = Context.dctxToHat cPsi'  in
+              let tM' = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m (C.cnormTyp (tP, theta), LF.id) in
+              let _   = dprint (fun () -> "[elTerm] for m against type : " ^
+                P.dctxToString cD cPsi' ^ " |- " ^
+                P.typToString cD cPsi' (C.cnormTyp (tP, theta), LF.id)) in
+              let i = Int.Comp.Apply (loc, i',
+                                      Int.Comp.Box(loc, psihat', tM')) in
+              dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^
+                P.expSynToString cD cG i ^ "\n"); (i , (tau, theta))
 
-                with Unify.Unify msg -> 
-                  raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
-                end 
-          | _ ->
-              raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantPiBox, tau_theta'))) 
-                (* TODO postpone to reconstruction *)
-
-
+            with Unify.Unify msg ->
+              raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
+          end
+        | _ ->
+          raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantPiBox, tau_theta')))
+          (* TODO postpone to reconstruction *)
         end
-          
 
   | Apx.Comp.BoxVal (loc, psi, r) ->
       let _ = dprint (fun () -> "[elExp'] BoxVal dctx ") in 

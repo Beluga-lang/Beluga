@@ -149,7 +149,7 @@ module Comp = struct
               (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) (Context.hatToDCtx phat)
 
           | CtxFunMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found Ctx abstraction, but expected type %a"
+            Format.fprintf ppf "Found context abstraction, but expected type %a"
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | FunMismatch (cD, _cG, theta_tau) ->

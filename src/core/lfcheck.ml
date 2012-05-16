@@ -32,17 +32,17 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match err with
       | CtxVarMisCheck (c0, cPsi, sA, sEl ) ->
-            Format.fprintf ppf "Type %a doesn't check against schema %a\n"
+            Format.fprintf ppf "Type %a doesn't check against schema %a."
                (P.fmt_ppr_lf_typ c0 cPsi Pretty.std_lvl) (Whnf.normTyp sA)
                (P.fmt_ppr_lf_schema Pretty.std_lvl) sEl
 
       | CtxVarMismatch (cO, var, expected) ->
-          Format.fprintf ppf "Context variable %a doesn't check against schema %a"
+          Format.fprintf ppf "Context variable %a doesn't check against schema %a."
             (P.fmt_ppr_lf_ctx_var cO) var
             (P.fmt_ppr_lf_schema Pretty.std_lvl) expected
 
       | CtxVarDiffer (cO, var, var1) ->
-          Format.fprintf ppf "Context variable %a not equal to %a"
+          Format.fprintf ppf "Context variable %a not equal to %a."
             (P.fmt_ppr_lf_ctx_var cO) var
             (P.fmt_ppr_lf_ctx_var cO) var1
 
@@ -87,10 +87,10 @@ let _ = Error.register_printer
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
 
       | SpineIllTyped ->
-          Format.fprintf ppf "ill-typed spine---not enough arguments supplied"
+          Format.fprintf ppf "Ill-typed spine - not enough arguments supplied."
 
       | LeftoverFV ->
-	  Format.fprintf ppf "Leftover free variable"))
+	  Format.fprintf ppf "Leftover free variable."))
 
 exception SpineMismatch
 

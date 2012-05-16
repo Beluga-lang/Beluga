@@ -96,40 +96,6 @@ let _ = Error.register_printer
 
 exception SpineMismatch
 
-
-
-
-(* Seems broken Sat Sep  4 12:24:43 2010 -bp
-  (* ctxToSub cPsi:
-   *
-   * generates, based on cPsi, a substitution suitable for unification
-   *
-   * Currently broken: assumes all types in cPsi are atomic
-   *)
-  let rec ctxToSub cPsi = match cPsi with
-    | Null -> Substitution.LF.id
-    | DDec (cPsi', TypDecl (_, tA)) ->
-        let s = ((ctxToSub cPsi') : sub) in
-          (* For the moment, assume tA atomic. *)
-          (* lower tA? *)
-          (* A = A_1 -> ... -> A_n -> P
-
-             create cPhi = A_1, ..., A_n
-             \x_1. ... \x_n. u[id]
-             u::P[cPhi]
-
-             already done in reconstruct.ml
-             let (_, d) = Context.dctxToHat cPsi in
-             let tN     = etaExpandMV Int.Substitution.LF.Null (tA, s) (Int.Substitution.LF.Shift d) in
-             in elSpineIW
-          *)
-        let (_, phat') = Context.dctxToHat cPsi' in
-        let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in
-          (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-        let front = (Obj ((* Root(MVar(u, S.Substitution.LF.id), Nil) *) u) : front) in
-          Dot (front, Substitution.LF.comp s Substitution.LF.shift)
-
-*)
 let rec ctxShift cPsi = begin match cPsi with
   | Null              -> Shift (NoCtxShift, 0)
   | CtxVar psi        -> Shift (CtxShift psi, 0)
@@ -221,8 +187,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
 	  P.typToString cD cPsi sA) in
         let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
         if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
-          (dprint (fun () -> "here!") ;
-           raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP))))
+          raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
       with SpineMismatch ->
         raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
     end

@@ -857,24 +857,12 @@ and ctxnorm_branch (branch,cs') = match branch with
        Feb 17 2010 - bp *) 
         Comp.BranchBox (cO, cD, (cPhi, pattern, ms, cs))
 
-
-
-
-
-
-(*
- * Following functions moved from reconstruct.ml; may need to be reorganized further
- *  -jd 2010-05-16
- *)
-
 let rec ctxShift cPsi = match cPsi with
   | Null              -> Shift (NoCtxShift , 0 )
   | CtxVar psi        -> Shift (CtxShift psi, 0)
   | DDec   (cPsi, _x) -> 
       let Shift(cshift, n) = ctxShift cPsi in
         Shift (cshift, n+1)
-
-
 
 (* ctxToSub_mclosed cD psi cPsi = (cD', s)
 

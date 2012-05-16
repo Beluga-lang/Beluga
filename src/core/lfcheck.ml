@@ -96,14 +96,6 @@ let _ = Error.register_printer
 
 exception SpineMismatch
 
-let rec ctxShift cPsi = begin match cPsi with
-  | Null              -> Shift (NoCtxShift, 0)
-  | CtxVar psi        -> Shift (CtxShift psi, 0)
-  | DDec   (cPsi, _x) ->
-      match  ctxShift cPsi with
-          Shift (cshift, n)  -> Shift (cshift, n+1)
-  end
-
 (* ctxToSub' cPhi cPsi = s
 
    if x1:A1, ... xn:An = cPsi
@@ -112,7 +104,7 @@ let rec ctxShift cPsi = begin match cPsi with
    s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
 *)
 let rec ctxToSub' cPhi cPsi = match cPsi with
-  | Null -> ctxShift cPhi (* Substitution.LF.id *)
+  | Null -> Ctxsub.ctxShift cPhi (* Substitution.LF.id *)
   | DDec (cPsi', TypDecl (_, tA)) ->
     let s = ((ctxToSub' cPhi cPsi') : sub) in
     (* For the moment, assume tA atomic. *)

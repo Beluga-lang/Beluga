@@ -171,8 +171,10 @@ module Comp = struct
               (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPhi)
 
           | IfMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Guard of if-expression does not have type bool; it has type %a"
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+            Error.report_mismatch ppf
+              "Type error in guard of if expression."
+	      "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) TypBool
+	      "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | PairMismatch (cD, _cG, theta_tau) ->
             Format.fprintf ppf "Found tuple, but expected type %a"

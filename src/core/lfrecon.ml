@@ -557,7 +557,7 @@ and elTyp recT cD cPsi a = match a with
     let i  = (Typ.get a).Typ.implicit_arguments in
     let s'  = mkShift recT cPsi in
     (* let s' = Substitution.LF.id in *)
-    let tS = elKSpineI recT cD cPsi s i (tK, s') in
+    let tS = elKSpineI loc recT cD cPsi s i (tK, s') in
     Int.LF.Atom (loc, a, tS)
 
   | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a), dep), b) ->
@@ -1614,37 +1614,46 @@ and elSpineW loc recT cD cPsi spine sA =
         (Int.LF.App (tM, tS), sP)
 
 (* see invariant for elSpineI *)
-and elKSpineI recT cD cPsi spine i sK =
+and elKSpineI loc recT cD cPsi spine i sK =
   if i = 0 then
-    elKSpine recT  cD cPsi spine sK
+    elKSpine loc recT cD cPsi spine sK
   else
     match (sK, recT) with
       | ((Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s), Pi) ->
           (* let sshift = mkShift recT cPsi in *)
           (* let tN     = Whnf.etaExpandMV Int.LF.Null (tA,s) sshift in *)
           let tN     = Whnf.etaExpandMV cPsi (tA, s) Substitution.LF.id in
-          let spine' = elKSpineI recT  cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
+          let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
       | ((Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s), Pibox) ->
           (* let sshift = mkShift recT cPsi in *)
           let tN     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) Substitution.LF.id in 
           (* let tN = etaExpandMMVstr None cO cD cPsi (tA, s) in  *)
-          let spine' = elKSpineI recT  cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
+          let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
 
 
 (* see invariant for elSpine *)
-and elKSpine recT cD cPsi spine sK = match (spine, sK) with
-  | (Apx.LF.Nil, (Int.LF.Typ, _s)) ->
+and elKSpine loc recT cD cPsi spine sK =
+  let rec spineLength = function
+    | Apx.LF.Nil -> 0
+    | Apx.LF.App (_, tS) -> 1 + spineLength tS in
+
+  let rec kindLength = function
+    | Int.LF.Typ -> 0
+    | Int.LF.PiKind (_, tK) -> 1 + kindLength tK in
+
+  (* Check first that we didn't supply too many arguments. *)
+  if kindLength (fst sK) < spineLength spine then
+    raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (kindLength (fst sK), spineLength spine)));
+  match spine, sK with
+  | Apx.LF.Nil, (Int.LF.Typ, _s) ->
       Int.LF.Nil (* errors are postponed to reconstruction phase *)
 
-  | (Apx.LF.App (m, spine), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s)) ->
+  | Apx.LF.App (m, spine), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s) ->
       let tM = elTerm recT cD cPsi m (tA, s) in
-      let tS = elKSpine recT cD cPsi spine (tK, Int.LF.Dot (Int.LF.Obj tM, s)) in
+      let tS = elKSpine loc recT cD cPsi spine (tK, Int.LF.Dot (Int.LF.Obj tM, s)) in
         Int.LF.App (tM, tS)
-
-  | ( _, _) ->
-      raise Error.NotImplemented (* TODO postpone error to reconstruction phase *)
 
 (* elSpineSynth cD cPsi p_spine s' = (S, A')
  *

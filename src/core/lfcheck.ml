@@ -71,11 +71,13 @@ let _ = Error.register_printer
 	  "for spine:"     (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS)
 
       | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
-          Format.fprintf ppf
-            "ill-typed expression\n  expected: %a\n  inferred: %a\n  for expression: %a\n "
-            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA1)
-            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA2)
-            (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+        Error.report_mismatch ppf
+          "Ill-typed expression."
+	  "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
+	  "Inferred type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2);
+        Format.fprintf ppf
+          "In expression: %a@."
+          (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
 
       | SubIllTyped (cD, cPsi, s, cPsi') ->
           Format.fprintf ppf "Substitution not well-typed.@.";

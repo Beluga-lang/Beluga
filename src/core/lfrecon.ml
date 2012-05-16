@@ -553,15 +553,12 @@ let rec elKind cD cPsi k = match k with
  *)
 and elTyp recT cD cPsi a = match a with
   | Apx.LF.Atom (loc, a, s) ->
-      begin try
-        let tK = (Typ.get a).Typ.kind in
-        let i  = (Typ.get a).Typ.implicit_arguments in
-        let s'  = mkShift recT cPsi in 
-          (* let s' = Substitution.LF.id in *)
-        let tS = elKSpineI recT cD cPsi s i (tK, s') in
-          Int.LF.Atom (loc, a, tS)            
-      with exn -> raise (Check.LF.Error (loc, Check.LF.SpineIllTyped))
-      end
+    let tK = (Typ.get a).Typ.kind in
+    let i  = (Typ.get a).Typ.implicit_arguments in
+    let s'  = mkShift recT cPsi in
+    (* let s' = Substitution.LF.id in *)
+    let tS = elKSpineI recT cD cPsi s i (tK, s') in
+    Int.LF.Atom (loc, a, tS)
 
   | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a), dep), b) ->
       let dep'  = match dep with Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
@@ -1595,17 +1592,26 @@ and elSpineIW loc recT cD cPsi spine i sA  =
 and elSpine loc recT cD cPsi spine sA =
   elSpineW loc recT cD cPsi spine (Whnf.whnfTyp sA)
 
-and elSpineW loc recT cD cPsi spine sA = match (spine, sA) with
-  | (Apx.LF.Nil, sP) ->
+and elSpineW loc recT cD cPsi spine sA =
+  let rec spineLength = function
+    | Apx.LF.Nil -> 0
+    | Apx.LF.App (_, tS) -> 1 + spineLength tS in
+
+  let rec typLength = function
+    | Int.LF.Atom _ -> 0
+    | Int.LF.PiTyp (_, tB2) -> 1 + typLength tB2 in
+
+  (* Check first that we didn't supply too many arguments. *)
+  if typLength (fst sA) < spineLength spine then
+    raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (typLength (fst sA), spineLength spine)));
+  match spine, sA with
+  | Apx.LF.Nil, sP ->
       (Int.LF.Nil, sP) (* errors are postponed to reconstruction phase *)
 
-  | (Apx.LF.App (m, spine), (Int.LF.PiTyp ((Int.LF.TypDecl (_, tA), _ ), tB), s)) ->
+  | Apx.LF.App (m, spine), (Int.LF.PiTyp ((Int.LF.TypDecl (_, tA), _ ), tB), s) ->
       let tM = elTerm recT cD cPsi m (tA, s) in
       let (tS, sP) = elSpine loc recT cD cPsi spine (tB, Int.LF.Dot (Int.LF.Obj tM, s)) in
         (Int.LF.App (tM, tS), sP)
-
-  | (Apx.LF.App _, _) ->
-      raise (Check.LF.Error (loc, Check.LF.SpineIllTyped))
 
 (* see invariant for elSpineI *)
 and elKSpineI recT cD cPsi spine i sK =

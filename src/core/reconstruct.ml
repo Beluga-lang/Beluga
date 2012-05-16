@@ -568,17 +568,13 @@ and elMetaSpineI cD s i cKt =
 
 let rec elCompTyp cD tau = match tau with
   | Apx.Comp.TypBase (loc, a, cS) -> 
-      begin try
-        let _ = dprint (fun () -> "[elCompTyp] Base : " ^ R.render_cid_comp_typ a) in 
-        let tK = (CompTyp.get a).CompTyp.kind in
-        let _ = dprint (fun () -> "[elCompTyp] of kind : " ^ P.compKindToString cD tK) in
-        let i  = (CompTyp.get a).CompTyp.implicit_arguments in
-        let _ = dprint (fun () -> "[elCompTyp] with #impArg = " ^ string_of_int i) in 
-        let cS' = elMetaSpineI cD cS i (tK, C.m_id) in 
-          Int.Comp.TypBase (loc, a ,cS')
-      with
-          exn  ->  raise (Check.LF.Error (loc, Check.LF.SpineIllTyped )) 
-      end 
+      let _ = dprint (fun () -> "[elCompTyp] Base : " ^ R.render_cid_comp_typ a) in
+      let tK = (CompTyp.get a).CompTyp.kind in
+      let _ = dprint (fun () -> "[elCompTyp] of kind : " ^ P.compKindToString cD tK) in
+      let i  = (CompTyp.get a).CompTyp.implicit_arguments in
+      let _ = dprint (fun () -> "[elCompTyp] with #impArg = " ^ string_of_int i) in
+      let cS' = elMetaSpineI cD cS i (tK, C.m_id) in
+        Int.Comp.TypBase (loc, a ,cS')
 
   | Apx.Comp.TypBox (loc, a, psi) ->
       let _ = dprint (fun () -> "[elCompTyp] TypBox" ) in 

@@ -22,7 +22,7 @@ type error =
   | KindMismatch     of mctx * dctx * sclo * (kind * sub)
   | TypMismatch      of mctx * dctx * nclo * tclo * tclo
   | SubIllTyped      of mctx * dctx * sub * dctx
-  | SpineIllTyped
+  | SpineIllTyped    of int * int
   | LeftoverFV
 
 exception Error of Syntax.Loc.t * error
@@ -88,8 +88,11 @@ let _ = Error.register_printer
           Format.fprintf ppf "             to context: %a.@."
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
 
-      | SpineIllTyped ->
-          Format.fprintf ppf "Ill-typed spine - not enough arguments supplied."
+      | SpineIllTyped (n_expected, n_actual) ->
+	Error.report_mismatch ppf
+	  "Ill-typed spine."
+	  "Expected number of arguments" Format.pp_print_int n_expected
+	  "Actual number of arguments"   Format.pp_print_int n_actual
 
       | LeftoverFV ->
 	  Format.fprintf ppf "Leftover free variable."))
@@ -169,7 +172,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
 	  P.dctxToString cD cPsi ^ " |- " ^
 	  P.normalToString cD cPsi sM ^
           " <= " ^ P.typToString cD cPsi sA ) in
-        let sP = syn' cD cPsi sM in
+        let sP = syn cD cPsi sM in
         let _ = dprint (fun () -> "[check] synthesized " ^
 	  P.mctxToString cD ^ " ; " ^
 	  P.dctxToString cD cPsi ^ " |- " ^
@@ -199,43 +202,32 @@ and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =
   loop (tuple, s1) (trec, s2)
 
 
-and syn' cD cPsi (Root (loc, h, tS), s (* id *)) =
-  let sA' = Whnf.whnfTyp (inferHead loc cD cPsi h, Substitution.LF.id) in
-  synSpine cD cPsi (tS, s) sA'
+and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
+  let rec spineLength = function
+    | Nil -> 0
+    | SClo (tS, _) -> spineLength tS
+    | App (_, tS) -> 1 + spineLength tS in
 
+  let rec typLength = function
+    | Atom _ -> 0
+    | PiTyp (_, tB2) -> 1 + typLength tB2 in
 
-and syn cD cPsi ((Root (loc, _h, _tS), _s (* id *)) as sR) =
-  begin try
-	  syn' cD cPsi sR
-    with SpineMismatch ->
-      raise (Error (loc, SpineIllTyped))
-  end
+  let rec synSpine tS sA = match tS, sA with
+    | (Nil, _), sP -> sP
 
-  (* synSpine cD cPsi sS sA = sP
-   *
-   * Invariant:
-   *
-   * ; cD ; cPsi sS : sA => sP
-   *)
-and synSpine cD cPsi sS sA = match sS, sA with
-  | (Nil, _),   sP ->
-    sP
+    | (SClo (tS, s'), s), sA ->
+      synSpine (tS, Substitution.LF.comp s' s) sA
 
-  | (SClo (tS, s'), s),   sA ->
-    synSpine cD cPsi (tS, Substitution.LF.comp s' s) sA
+    | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
+      check cD cPsi (tM, s1) (tA1, s2);
+      let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
+      synSpine (tS, s1) tB2 in
 
-  | (App (tM, tS), s1),   (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
-    check cD cPsi (tM, s1) (tA1, s2);
-        (*     cD ; cPsi1        |- tM  <= tA1'
-         * and cD ; cPsi         |- s1  <= cPsi1
-         * and cD ; cPsi2, x:tA1 |- tB2 <= type
-         * and [s1]tA1' = [s2]tA1
-         *)
-    let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
-    synSpine cD cPsi (tS, s1) tB2
-
-  | (App _, _),   (Atom _, _) ->
-    raise SpineMismatch
+  let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h, Substitution.LF.id) in
+  (* Check first that we didn't supply too many arguments. *)
+  if typLength sA' < spineLength tS then
+    raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));
+  synSpine (tS, s) (sA', s')
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
 

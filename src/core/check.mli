@@ -17,7 +17,7 @@ module LF : sig
     | KindMismatch     of mctx * dctx * sclo * (kind * sub)
     | TypMismatch      of mctx * dctx * nclo * tclo * tclo
     | SubIllTyped      of mctx * dctx * sub * dctx
-    | SpineIllTyped
+    | SpineIllTyped    of int * int
     | LeftoverFV
   exception Error of Syntax.Loc.t * error
 

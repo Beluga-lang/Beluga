@@ -13,6 +13,7 @@ module Print = Pretty.Int.DefaultPrinter
 module Unify = Unify.EmptyTrail
 
 type error =
+  | CtxVarMisCheck   of mctx * dctx * tclo * schema
   | CtxVarMismatch   of mctx * ctx_var * schema
   | CtxVarDiffer     of mctx * ctx_var * ctx_var
   | CheckError       of mctx * dctx * nclo * tclo
@@ -23,7 +24,6 @@ type error =
   | SubIllTyped      of mctx * dctx * sub * dctx
   | SpineIllTyped
   | LeftoverFV
-  | CtxVarMisCheck   of mctx * dctx * tclo * schema
 
 exception Error of Syntax.Loc.t * error
 

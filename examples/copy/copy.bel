@@ -1,4 +1,4 @@
-tp: type.   %name tp T.
+1;2790;0ctp: type.   %name tp T.
 bool: tp.
 nat: tp.
 arrow: tp -> tp -> tp.

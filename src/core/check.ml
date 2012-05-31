@@ -123,14 +123,14 @@ module Comp = struct
               (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat
 
           | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
-            Format.fprintf ppf
-              "ill-typed pattern\n  expected: %a[%a] \n  inferred: %a[%a]\n  for expression: [%a] %a"
-              (P.fmt_ppr_lf_typ cD' cPsi' Pretty.std_lvl) (Whnf.normTyp sA')
-              (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) (Whnf.normDCtx cPsi')
-              (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
-              (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) (Whnf.normDCtx cPsi)
-              (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) (Whnf.normDCtx cPsi)
-              (P.fmt_ppr_patternOpt cD' cPsi) pattern
+            Error.report_mismatch ppf
+              "Ill-typed pattern."
+              "Expected type"
+              (P.fmt_ppr_cmp_typ cD' Pretty.std_lvl)
+              (TypBox (Syntax.Loc.ghost, Whnf.normTyp sA', Whnf.normDCtx cPsi'))
+              "Inferred type"
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+              (TypBox (Syntax.Loc.ghost, Whnf.normTyp sA, Whnf.normDCtx cPsi))
 
           | SubPattMismatch ((cD, cPsi, sigma, cPhi) , (cD', cPsi', cPhi')) ->
             Format.fprintf ppf

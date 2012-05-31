@@ -181,21 +181,22 @@ module Comp = struct
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | SynMismatch (cD, theta_tau, theta_tau') ->
-            Format.fprintf ppf
-              "Expected type  %a\nInferred type  %a"
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau')
+            Error.report_mismatch ppf
+              "Ill-typed expression."
+              "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau')
 
           | EqMismatch (cD, ttau1, ttau2) ->
-            Format.fprintf ppf
-              "Type mismatch on equality:\nComparing objects of type  %a\n with objects of type  %a"
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau1)
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau2)
+            Error.report_mismatch ppf
+              "Type mismatch on equality."
+              "Type of LHS" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau1)
+              "Type of RHS" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau2)
 
           | EqTyp (cD, ttau) ->
-            Format.fprintf ppf
-              "Equality comparison only possible at base types;\nfound objects of type  %a"
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau)
+            Error.report_mismatch ppf
+              "Equality comparison only possible at base types."
+              "Expected type" Format.pp_print_string                "base type"
+              "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau)
 
           | AppMismatch (cD, (MetaTyp (tP, cPsi), tau)) ->
             Format.fprintf ppf

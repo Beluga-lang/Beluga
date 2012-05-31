@@ -72,7 +72,7 @@ let _ = Error.register_printer
 
       | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
         Error.report_mismatch ppf
-          "Ill-typed expression."
+          "Ill-typed term."
 	  "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
 	  "Inferred type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2);
         Format.fprintf ppf

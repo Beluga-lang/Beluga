@@ -149,24 +149,24 @@ module Comp = struct
               (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) (Context.hatToDCtx phat)
 
           | CtxFunMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found context abstraction, but expected type %a"
+            Format.fprintf ppf "Found context abstraction, but expected type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | FunMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found function abstraction, but expected type %a"
+            Format.fprintf ppf "Found function abstraction, but expected type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | MLamMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found MLam abstraction, but expected type %a"
+            Format.fprintf ppf "Found MLam abstraction, but expected type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | BoxMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found box-expression that does not have type %a"
+            Format.fprintf ppf "Found box-expression that does not have type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | SBoxMismatch (cD, _cG, cPsi, cPhi) ->
             Format.fprintf ppf
-              "Found substitution that does not have type %a[%a]"
+              "Found substitution that does not have type %a[%a]."
               (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
               (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPhi)
 
@@ -199,17 +199,17 @@ module Comp = struct
 
           | AppMismatch (cD, (MetaTyp (tP, cPsi), tau)) ->
             Format.fprintf ppf
-              "Expected contextual object of type %a"
+              "Expected contextual object of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tP, cPsi), tau))
 
           | MAppMismatch (cD, (MetaTyp (tA, cPsi), tau)) ->
             Format.fprintf ppf
-              "Expected contextual object of type %a"
+              "Expected contextual object of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), tau))
 
           | MAppMismatch (cD, (MetaSchema cid_schema, tau)) ->
             Format.fprintf ppf
-              "Expected context of schema  %s"
+              "Expected context of schema %s."
               (R.render_cid_schema cid_schema)))
 
   type caseType =

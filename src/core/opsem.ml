@@ -13,10 +13,22 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
+
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
 
-exception BranchMismatch
+type error =
+  | MissingBranch
 
+exception Error of Syntax.Loc.t * error
+
+let _ = Error.register_printer
+  (fun (Error (loc, err)) ->
+    Error.print_with_location loc (fun ppf ->
+      match err with
+        | MissingBranch ->
+          Format.fprintf ppf "Missing branch -- non-exhaustive pattern match."))
+
+exception BranchMismatch
 
 let rec length_env env = begin match env with
   | Comp.Empty -> 0
@@ -174,13 +186,13 @@ and eval_chk e theta_eta =
           let phat' = Whnf.cnorm_psihat phat theta in
           dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box (loc, phat, tM')));
           Comp.BoxValue (phat', tM')
-      | Comp.Case (_, _prag, i, branches) ->
+      | Comp.Case (loc, _prag, i, branches) ->
           begin match eval_syn i theta_eta with
           | Comp.BoxValue (phat, tM) ->
               dprint (fun () -> "[eval_syn] EVALUATED SCRUTINEE: " ^
                                 P.expChkToString LF.Empty LF.Empty (Comp.Box (Syntax.Loc.ghost, phat, tM))
                              );
-              eval_branches (phat,tM) (branches, theta_eta)
+              eval_branches loc (phat,tM) (branches, theta_eta)
           | _ -> raise (Error.Violation "Expected BoxValue for case")
           end
 
@@ -191,8 +203,8 @@ and eval_chk e theta_eta =
             | Comp.BoolValue false -> eval_chk e2 theta_eta
           end
 
-and eval_branches (phat,tM) (branches, theta_eta) = match branches with
-  | [] -> raise (Error.Violation "Missing branch -- Non-exhaustive pattern match")
+and eval_branches loc (phat,tM) (branches, theta_eta) = match branches with
+  | [] -> raise (Error (loc, MissingBranch))
   | b::branches ->
       let (theta, _ ) = theta_eta in
         try

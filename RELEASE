@@ -7,10 +7,10 @@ git status 2> /dev/null \
     && suppress=SUPPRESS
 
 if [ $suppress = SUPPRESS ]; then
-   echo
-   echo '`git status'"'"' reports changed files.'
-   echo 'This script will continue, but will not build a final .tar.gz file.'
-   echo
+    echo
+    echo '`git status'"'"' reports changed files.'
+    echo 'This script will continue, but will not build a final .tar.gz file.'
+    echo
 fi
 
 echo 'Version number is:'
@@ -26,44 +26,44 @@ echo '    '$release
 echo
 
 if [ -e $release ]; then
-  echo Release directory "$release" already exists.
-  exit 1
+    echo Release directory "$release" already exists.
+    exit 1
 fi
 
 mkdir $release
 
 echo 'Copying files in root'
 cp -a \
- INSTALL \
- OMakefile \
- OMakeroot \
- README \
- STYLE \
- $release
+    INSTALL \
+    OMakefile \
+    OMakeroot \
+    README \
+    STYLE \
+    $release
 
 mkdir $release/bin
 
 echo 'Copying src'
 cp -a \
- src \
- $release
+    src \
+    $release
 
 echo 'Copying tools'
 cp -a \
- tools \
- $release
+    tools \
+    $release
 
 echo 'Copying examples examples-twelf'
 cp -a \
- examples \
- examples-twelf \
- $release
+    examples \
+    examples-twelf \
+    $release
 
 cd $release
 echo Deleting useless files:
-useless="`find . -print | egrep '~|.DS_Store'`"
+useless=$(find . -print | egrep '~|.DS_Store' || true)
 echo rm $useless
-rm $useless
+rm -rf $useless
 
 # Remove examples not yet ready for public consumption
 rm -rf examples/notworking
@@ -73,8 +73,8 @@ rm -rf examples/beluga
 echo "Copying $release to $release-sandbox"
 cd ..
 if [ -e $release-sandbox ]; then
-  echo Release sandbox directory "$release-sandbox" already exists.
-  exit 1
+    echo Release sandbox directory "$release-sandbox" already exists.
+    exit 1
 fi
 cp -a $release $release-sandbox
 
@@ -107,8 +107,8 @@ cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further'
 
 if [ $suppress = SUPPRESS ]; then
-  echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'
-  exit 3
+    echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'
+    exit 3
 fi
 
 sleep 1

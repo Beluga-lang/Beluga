@@ -35,6 +35,7 @@ let usage () =
         ^ "    -print        turn printing off\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
         ^ "    +logic        turn on logic programming engine\n"
+        ^ "    +test         Make output suitable for test harness\n"
   in
   fprintf stderr
     "Usage: %s [options] file.(bel|cfg)\noptions:\n%s"
@@ -75,6 +76,7 @@ let process_option arg rest = match arg with
           bailout "-width needs a numeric argument"
     end
   | "+logic" -> Logic.Options.enableLogic := true ; rest
+  | "+test" -> Error.Options.print_loc := false ; rest
   | _ -> usage ()
 
 let rec process_options = function

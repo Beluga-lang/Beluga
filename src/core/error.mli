@@ -1,3 +1,12 @@
+module Options :
+sig
+  (** Whether to include locations in the output of errors or not.
+      Omitting locations is useful when comparing outputs of two
+      script runs, because locations and their formatting are
+      dependent on the version of Camlp4, not Beluga. *)
+  val print_loc : bool ref
+end
+
 exception Violation of string
 
 exception NotImplemented

@@ -1,5 +1,10 @@
 (* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
+module Options =
+struct
+  let print_loc = ref true
+end
+
 exception Violation of string
 
 exception NotImplemented
@@ -26,7 +31,8 @@ let print f =
   str
 
 let print_with_location loc f =
-  Format.fprintf error_format "%s:@." (Syntax.Loc.to_string loc);
+  if !Options.print_loc then
+    Format.fprintf error_format "%s:@." (Syntax.Loc.to_string loc);
   print f
 
 (* Since this printer is registered first, it will be executed only if

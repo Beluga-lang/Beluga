@@ -679,8 +679,6 @@ and elTerm' recT cD cPsi r sP = match r with
         with
          | Unify.Unify msg ->
            raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
-         | Unify.Error msg -> 
-           raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
          | Unify.NotInvertible -> 
            raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
       end

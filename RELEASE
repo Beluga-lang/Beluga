@@ -1,8 +1,10 @@
 #!/bin/sh
 
 suppress=NO
-git status 2> /dev/null | egrep 'Changed but not updated|Changes to be committed' > /dev/null \
-  && suppress=SUPPRESS
+
+git status 2> /dev/null \
+    |  egrep 'Changes not staged for commit|Changes to be committed' > /dev/null \
+    && suppress=SUPPRESS
 
 if [ $suppress = SUPPRESS ]; then
    echo

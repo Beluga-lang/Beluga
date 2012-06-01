@@ -212,9 +212,9 @@ and eval_branches loc (phat,tM) (branches, theta_eta) = match branches with
                      P.msubToString LF.Empty (Whnf.cnormMSub theta)) ;
           eval_branch (phat,tM) b  theta_eta
         with BranchMismatch ->
-          (dprint (fun () -> "[eval_branches] Try next branch...");
-           dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) ;
-          eval_branches (phat,tM) (branches, theta_eta))
+          dprint (fun () -> "[eval_branches] Try next branch...");
+          dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
+          eval_branches loc (phat,tM) (branches, theta_eta)
 
 and eval_branch (phat, tM) branch (theta, eta) =
   match branch with

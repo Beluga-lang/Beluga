@@ -13,18 +13,18 @@ if [ $suppress = SUPPRESS ]; then
    echo
 fi
 
-# release=./release
 echo 'Version number is:'
 echo
 cat VERSION || ( echo "VERSION file doesn't exist; aborting release" ; exit 1 )
 echo
-sleep 2
+
 release=./beluga-"`cat VERSION`"-"`date +%Y%m%d`"
+
 echo 'Release directory name is:'
 echo
 echo '    '$release
 echo
-sleep 1
+
 if [ -e $release ]; then
   echo Release directory "$release" already exists.
   exit 1

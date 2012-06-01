@@ -112,7 +112,6 @@ module Int = struct
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
 
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
-    val fmt_ppr_patternOpt    : LF.mctx -> LF.dctx -> formatter -> LF.normal option -> unit
 
     (* Regular Pretty Printers *)
     val ppr_sgn_decl      : Sgn.decl         -> unit
@@ -1293,10 +1292,6 @@ module Int = struct
     and fmt_ppr_pattern cD1' cPsi ppf = function
       | Comp.NormalPattern (tM, _) -> fmt_ppr_lf_normal cD1' cPsi 0 ppf tM
       | Comp.EmptyPattern ->fprintf ppf "@[{}@]"
-
-    and fmt_ppr_patternOpt cD1' cPsi ppf = function
-      | Some tM -> fmt_ppr_lf_normal cD1' cPsi 0 ppf tM
-      | None ->fprintf ppf "@[{}@]"
 
     and fmt_ppr_branch_body cD1' cG t ppf = function
       | Comp.NormalPattern (_, e) -> fmt_ppr_cmp_exp_chk cD1' (Whnf.cnormCtx (cG, t)) 1 ppf e

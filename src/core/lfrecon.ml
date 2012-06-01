@@ -1597,9 +1597,9 @@ and elSpine loc recT cD cPsi spine sA =
     | Int.LF.PiTyp (_, tB2) -> 1 + typLength tB2 in
 
   (* Check first that we didn't supply too many arguments. *)
-  if typLength (fst sA) < spineLength spine then
-    raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (typLength (fst sA), spineLength spine)));
-  let rec elSpine loc rectT cD cPsi spine sA = match spine, sA with
+  if typLength (fst (Whnf.whnfTyp sA)) < spineLength spine then
+    raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (typLength (fst (Whnf.whnfTyp sA)), spineLength spine)));
+  let rec elSpine loc rectT cD cPsi spine sA = match spine, Whnf.whnfTyp sA with
     | Apx.LF.Nil, sP ->
       (Int.LF.Nil, sP) (* errors are postponed to reconstruction phase *)
 
@@ -1607,7 +1607,7 @@ and elSpine loc recT cD cPsi spine sA =
       let tM = elTerm recT cD cPsi m (tA, s) in
       let (tS, sP) = elSpine loc recT cD cPsi spine (tB, Int.LF.Dot (Int.LF.Obj tM, s)) in
       (Int.LF.App (tM, tS), sP)
-  in elSpine loc recT cD cPsi spine (Whnf.whnfTyp sA)
+  in elSpine loc recT cD cPsi spine sA
 
 (* see invariant for elSpineI *)
 and elKSpineI loc recT cD cPsi spine i sK =

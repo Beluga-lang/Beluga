@@ -72,31 +72,39 @@ rm -rf examples/beluga
 
 echo "Copying $release to $release-sandbox"
 cd ..
+if [ -e $release-sandbox ]; then
+  echo Release sandbox directory "$release-sandbox" already exists.
+  exit 1
+fi
 cp -a $release $release-sandbox
 
-cd $release-sandbox
-echo 'Running omake'
+echo 'Building (bytecode) in-tree first, for testing'
+omake clean
 omake || ( echo 'omake failed; aborting release' ; exit 1 )
 
-echo 'Running TEST'
+echo 'Running TEST (bytecode)'
 ./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
 
+echo 'Building (native) in-tree first, for testing'
 omake clean
 omake NATIVE_ENABLED=true clean
-
-echo
-echo 'Running omake NATIVE_ENABLED=true'
-sleep 1
 omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
 
-echo 'Running TEST (native code)'
-./TEST || ( echo 'TEST (native code) failed; aborting release' ; exit 1 )
+echo 'Running TEST (native)'
+./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
 
-echo ; echo 'TEST exit value 0; check output for signs of trouble'
-sleep 2
+cd $release-sandbox
+
+echo 'Building (bytecode) in release directory'
+omake || ( echo 'omake failed; aborting release' ; exit 1 )
+
+echo 'Building (native) in release directory'
+omake clean
+omake NATIVE_ENABLED=true clean
+omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
+
 cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further'
-sleep 1
 
 if [ $suppress = SUPPRESS ]; then
   echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'

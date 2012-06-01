@@ -39,8 +39,6 @@ cp -a \
  OMakeroot \
  README \
  STYLE \
- TEST \
- TEST-LF \
  $release
 
 mkdir $release/bin

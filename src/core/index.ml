@@ -705,6 +705,10 @@ and index_exp' cvars vars fcvars = function
       let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars  psi in
       let (m', _ ) = index_term cvars bvars fcvars m in 
         Apx.Comp.BoxVal (loc, psi', m') 
+  | Ext.Comp.PairVal (loc, i1, i2) -> 
+      let i1' = index_exp' cvars vars fcvars i1 in
+      let i2' = index_exp' cvars vars fcvars i2 in
+	Apx.Comp.PairVal (loc, i1', i2')
 
   | Ext.Comp.Ann (_loc, e, tau) ->
       let (tau', _ ) =  index_comptyp cvars fcvars tau in 

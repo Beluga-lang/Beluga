@@ -44,6 +44,15 @@ type pair_or_atom =
   | Pair of Comp.exp_chk
   | Atom
 
+
+type pair_or_atom_syn =
+  | Pair_syn of Comp.exp_syn
+  | Atom_syn
+
+type pair_or_atom_pat =
+  | Pair_pat of Comp.pattern
+  | Atom_pat
+
 type clf_pattern =
   | PatEmpty of Loc.t
   | PatCLFTerm of Loc.t * LF.normal
@@ -903,6 +912,29 @@ cmp_kind:
   ;
 
 
+  cmp_pair_atom_syn :
+    [
+      [
+        ","; e2 = cmp_exp_syn ; ")" -> Pair_syn e2
+
+      | ")"                 -> Atom_syn
+
+      ]
+    ]
+  ;
+
+  cmp_pair_atom_pat :
+    [
+      [
+        ","; e2 = cmp_branch_pattern ; ")" -> Pair_pat e2
+
+      | ")"                 -> Atom_pat
+
+      ]
+    ]
+  ;
+
+
  cmp_rec:
    [[
      f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk -> Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)
@@ -1124,7 +1156,11 @@ cmp_exp_syn:
    | x = SYMBOL ->  Comp.Var (_loc, Id.mk_name (Id.SomeString x))
    | "ttrue"    ->   Comp.Boolean (_loc, true)
    | "ffalse"   ->   Comp.Boolean (_loc, false)
-   | "("; i = SELF; ")"   ->   i
+   | "("; i = SELF; p_or_a = cmp_pair_atom_syn -> begin match p_or_a with 
+                                         | Pair_syn i2 -> Comp.PairVal (_loc, i, i2)
+                                         | Atom_syn -> i
+                                             end
+(*   | "("; i = SELF; ")"   ->   i *)
  ]];
 
 (******
@@ -1223,7 +1259,10 @@ clf_pattern :
      | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) ->
          let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in
            Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
-     | "("; p = SELF; ")"   ->  p
+     | "("; p = SELF; p_or_a = cmp_pair_atom_pat   ->  
+         (match p_or_a with
+            | Pair_pat p2 -> Comp.PatPair (_loc, p, p2)
+            | Atom_pat -> p)
       ]
     ]
   ;

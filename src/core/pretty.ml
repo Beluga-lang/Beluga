@@ -1027,7 +1027,10 @@ module Int = struct
       | Comp.PatVar (_, offset ) ->               
           fprintf ppf "%s"
             (R.render_var cG offset)
-          
+
+      | Comp.PatFVar (_, name ) -> 
+          fprintf ppf "%s"
+            (R.render_name name)
 
     let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function 
       | Comp.Syn (_, i) ->
@@ -1239,6 +1242,10 @@ module Int = struct
               (fmt_ppr_lf_sub cD cPsi 0) s
               (r_paren_if cond)
 
+      | Comp.PairVal (loc, i1, i2) -> 
+            fprintf ppf "(%a , %a)"
+              (fmt_ppr_cmp_exp_syn cD cG 1) i1
+              (fmt_ppr_cmp_exp_syn cD cG 1) i2
 
       | Comp.Ann (e, tau) ->
           let cond = lvl > 1 in
@@ -1599,7 +1606,7 @@ module Int = struct
       ; flush_str_formatter ()
 
     let compTypToString cD tau  = 
-      let tau' = Whnf.normCTyp tau in 
+      let tau' = Whnf.normCTyp (Whnf.cnormCTyp (tau, Whnf.m_id)) in 
         fmt_ppr_cmp_typ cD std_lvl str_formatter tau'
         ; flush_str_formatter ()
 

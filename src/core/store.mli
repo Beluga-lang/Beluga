@@ -73,6 +73,7 @@ module Cid : sig
 
     val add           : entry -> cid_comp_typ
     val get           : cid_comp_typ -> entry
+    val addConstructor: cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : name -> cid_comp_typ
     val clear         : unit -> unit
   end
@@ -88,7 +89,7 @@ module Cid : sig
 
     val mk_entry      : name -> Comp.typ -> int -> entry
     type t
-    val add           : entry -> cid_comp_const
+    val add           : cid_comp_typ -> entry -> cid_comp_const
     val get           : cid_comp_const -> entry
     val get_implicit_arguments : cid_comp_const -> int
     val index_of_name : name -> cid_comp_const

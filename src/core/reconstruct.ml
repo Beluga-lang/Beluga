@@ -646,21 +646,22 @@ let rec mgCompTyp cD (loc, c) =
     Int.Comp.TypBase (loc, c, genMetaSpine (cK, Whnf.m_id))
     
 
-let rec inferPatTyp cD' tau = match tau with
+let rec inferPatTyp' cD' tau = match tau with
   | Int.Comp.TypBool -> Int.Comp.TypBool
   | Int.Comp.TypCross (tau1, tau2) -> 
-      let tau1' = inferPatTyp cD' tau1 in
-      let tau2' = inferPatTyp cD' tau2 in
+      let tau1' = inferPatTyp' cD' tau1 in
+      let tau2' = inferPatTyp' cD' tau2 in
         Int.Comp.TypCross (tau1', tau2')
   | Int.Comp.TypBase (loc, c, _ )  -> 
       mgCompTyp cD' (loc, c)
   | Int.Comp.TypArr _  -> 
-      raise (Error.Violation "Patterns cannot have function type")
+      raise (Error.Violation "Patterns cannot have function type")        
   | _ -> raise Error.NotImplemented
 (*  | Int.Comp.TypBox (_, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
       let tP' = mgTyp cD' cPsi' a (Typ.get a).Typ.kind   
 *)      
 
+let rec inferPatTyp cD' tau = inferPatTyp' cD' (Whnf.cnormCTyp (tau, Whnf.m_id))
 
 (* *******************************************************************************)
 
@@ -902,9 +903,8 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
         | (i, ((Int.Comp.TypBool | Int.Comp.TypCross (_, _) | Int.Comp.TypBase (_, _, _)) as tau_s, _mid)) ->
           let rec recBranch b = 
-            let _ = dprint (fun () -> "[elBranch - PatObj] of type " 
-              ^ P.compTypToString cD tau_s 
-              ^ "\n") in
+            let _ = dprint (fun () -> "[elBranch - PatObj] has type " ) in 
+            let _ = dprint (fun () -> "         " ^ P.compTypToString cD tau_s ^ "\n") in
             let b = elBranch DataObj cD cG b tau_s tau_theta in  
             Gensym.MVarData.reset () ; b in 
 
@@ -1206,6 +1206,13 @@ and elExp' cD cG i = match i with
       let phat     = Context.dctxToHat cPsi in
       let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.TClo sP, cPsi) in
         (Int.Comp.Ann (Int.Comp.Box (loc, phat, tR), tau), (tau, C.m_id))
+
+  | Apx.Comp.PairVal (loc, i1, i2) -> 
+      let (i1', (tau1,t1)) = genMApp loc cD (elExp' cD cG i1) in 
+      let (i2', (tau2,t2)) = genMApp loc cD (elExp' cD cG i2) in 
+        (Int.Comp.PairVal (loc, i1', i2'),
+         (Int.Comp.TypCross (Int.Comp.TypClo (tau1,t1), Int.Comp.TypClo (tau2,t2)), C.m_id))
+
 
   | Apx.Comp.Ann (e, tau) ->
       let tau' = elCompTyp cD tau in

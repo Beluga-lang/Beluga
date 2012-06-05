@@ -159,6 +159,7 @@ module Comp = struct
      | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)
      | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
      | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (Psi. tR)  *)
+     | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                              (* e : tau        *)
      | Equal  of Loc.t  * exp_syn * exp_syn
      | Boolean of Loc.t * bool

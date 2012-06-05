@@ -2135,8 +2135,7 @@ let rec mctxPVarPos cD p =
           Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
 
       | (Comp.TypCross (tT1, tT2), t)   -> 
-          Comp.TypCross (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
-            
+          Comp.TypCross (cnormCTyp (tT1, t), cnormCTyp (tT2, t))          
             
       | (Comp.TypCtxPi (ctx_dec , tau), t)      -> 
           Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, mvar_dot1 t))
@@ -2268,6 +2267,9 @@ let rec mctxPVarPos cD p =
 
     | (Comp.Apply (loc, i, e), t) -> Comp.Apply (loc, cnormExp' (i, t), cnormExp (e,t))
         
+        
+    | (Comp.PairVal (loc, i1, i2), t) -> 
+        Comp.PairVal (loc, cnormExp' (i1,t), cnormExp' (i2, t))
     | (Comp.CtxApp (loc, i, cPsi), t) -> Comp.CtxApp (loc, cnormExp' (i, t), normDCtx (cnormDCtx (cPsi, t)))
 
     | (Comp.MApp (loc, i, (psihat, Comp.NormObj tM)), t) -> 
@@ -2300,6 +2302,7 @@ let rec mctxPVarPos cD p =
         Comp.PatMetaObj (loc, cnormMetaObj (mO, t))
     | Comp.PatConst (loc, c, patSpine) -> 
         Comp.PatConst (loc, c, cnormPatSpine (patSpine, t))
+    | Comp.PatFVar _ -> pat
     | Comp.PatVar _ -> pat
     | Comp.PatPair (loc, pat1, pat2) -> 
         Comp.PatPair (loc, cnormPattern (pat1, t), 

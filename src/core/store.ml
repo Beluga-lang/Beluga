@@ -347,6 +347,10 @@ module Cid = struct
 
     let get = DynArray.get store
 
+    let addConstructor c typ = 
+      let entry = get typ in 
+        entry.constructors <- c :: entry.constructors 
+
     let clear () =
       DynArray.clear store;
       Hashtbl.clear directory
@@ -378,10 +382,12 @@ module Cid = struct
 
     let index_of_name n = Hashtbl.find directory n
 
-    let add entry =
+
+    let add cid_ctyp entry =
       let cid_comp_const = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_comp_const;
+        CompTyp.addConstructor cid_comp_const cid_ctyp;
         cid_comp_const
 
     let get = DynArray.get store

@@ -418,8 +418,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
       branches), (tau, t)) ->
         let tau_s = TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in 
-        let cA = (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in 
-        let problem = Coverage.make loc prag cD branches cA in
+        let problem = Coverage.make loc prag cD branches tau_s in
           (* Coverage.stage problem; *)
           checkBranches (IndexObj (phat, tR)) cD cG branches tau_s (tau, t);
           Coverage.process problem
@@ -427,13 +426,15 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | (Case (loc, prag, i, branches), (tau, t)) -> 
         begin match C.cwhnfCTyp (syn cD cG i) with
           | (TypBox (loc, tA, cPsi),  t') ->
-              let problem = Coverage.make loc prag  cD branches (tA, cPsi) in
-              (* Coverage.stage problem; *)
               let tau_s = TypBox (loc, C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in 
+              let problem = Coverage.make loc prag cD branches tau_s in
+              (* Coverage.stage problem; *)
                 checkBranches DataObj cD cG branches tau_s (tau,t);
                 Coverage.process problem
           | (tau',t') -> 
-              checkBranches DataObj cD cG branches (C.cnormCTyp (tau', t')) (tau,t)
+              let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
+              checkBranches DataObj cD cG branches (C.cnormCTyp (tau', t')) (tau,t);
+                Coverage.process problem
         end
 
     | (Syn (loc, i), (tau, t)) ->
@@ -510,6 +511,12 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end
 
+    | PairVal (loc, i1, i2) -> 
+        let (tau1,t1) =  C.cwhnfCTyp (syn cD cG i1) in 
+        let (tau2,t2) =  C.cwhnfCTyp (syn cD cG i2) in 
+          (TypCross (TypClo (tau1, t1), TypClo (tau2,t2)), C.m_id)
+           
+
     | Ann (e, tau) ->
         check cD cG e (tau, C.m_id);
         (tau, C.m_id)
@@ -564,6 +571,12 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | PatVar (loc, k) -> (loc, (lookup cG k, C.m_id))
     | PatTrue loc -> (loc, (TypBool, C.m_id))
     | PatFalse loc -> (loc, (TypBool, C.m_id))
+    | PatPair (loc, pat1, pat2) -> 
+        let (loc1, ttau1) = (synPattern cD cG pat1) in 
+        let tau1 = Whnf.cnormCTyp ttau1 in 
+        let (_loc2, ttau2) = synPattern cD cG pat2 in 
+        let tau2 = Whnf.cnormCTyp ttau2 in
+          (loc1, (TypCross (tau1, tau2), C.m_id))
     | PatAnn (loc, pat, tau) ->  
         checkPattern cD cG pat (tau, C.m_id);
         (loc, (tau, C.m_id))

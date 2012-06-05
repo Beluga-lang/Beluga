@@ -1947,6 +1947,11 @@ and collectExp' cQ i = match i with
      let (cQ'', i2') = collectExp' cQ' i2  in 
        (cQ'', Comp.Equal(loc, i1', i2'))
 
+  | Comp.PairVal (loc, i1, i2) -> 
+     let (cQ', i1') = collectExp' cQ i1  in 
+     let (cQ'', i2') = collectExp' cQ' i2  in 
+       (cQ'', Comp.PairVal(loc, i1', i2'))
+
   | Comp.Boolean b -> (cQ, Comp.Boolean b)
 
 
@@ -2132,9 +2137,8 @@ let rec abstractMVarPatObj cQ cG offset pat = match pat with
   | Comp.PatTrue loc -> pat
   | Comp.PatFalse loc -> pat
   | Comp.PatVar (_loc,_x) -> pat
-(*  | Comp.PatFVar (loc,x) -> 
-      let k = index_of_pat_var cG x in 
-        Comp.PatVar (loc, k)*)
+  | Comp.PatFVar (loc,x) -> pat
+
   | Comp.PatPair (loc, pat1, pat2) -> 
       let pat1' = abstractMVarPatObj cQ cG offset pat1 in 
       let pat2' = abstractMVarPatObj cQ cG offset pat2 in 
@@ -2499,4 +2503,18 @@ let abstrCovGoal cPsi tM tA ms =
 
     (cD0, cPsi0, tM0, tA0, ms0)
 
-
+let abstrCovPatt cG pat tau ms = 
+  let (cQ1 , ms') = collectMSub 0 I.Empty ms in 
+  let (cQ2, cG') = collectGctx cQ1 cG in 
+  let (cQ3, pat') = collectPatObj cQ2 pat in 
+  let (cQ, tau') = collectCompTyp 0 cQ3 tau in 
+(*  let _ = dprint (fun () -> "[collectCovPat] done") in  *)
+  let cQ'     = abstractMVarCtx cQ 0 in 
+(*  let _ = dprint (fun () -> "[abstractMVarCtx] done") in  *)
+  let ms0     = abstrMSub cQ' ms' in 
+  let cG'     = abstractMVarGctx cQ' (0,0) cG in 
+(*  let _ = dprint (fun () -> "[abstractMVarGCtx] done") in  *)
+  let pat'    = abstractMVarPatObj cQ' cG' (0,0) pat' in 
+  let tau'    = abstractMVarCompTyp cQ' (0,0) tau' in 
+  let cD'     = ctxToMCtx cQ' in 
+    (cD', cG', pat', tau', ms0)

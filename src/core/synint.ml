@@ -297,6 +297,7 @@ module Comp = struct
    | MApp   of Loc.t * exp_syn * (LF.psi_hat * contextual_obj)
    | Ann    of exp_chk * typ
    | Equal  of Loc.t * exp_syn * exp_syn
+   | PairVal of Loc.t * exp_syn * exp_syn
    | Boolean of bool
        
   and branch_pattern =

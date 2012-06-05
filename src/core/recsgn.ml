@@ -34,6 +34,12 @@ let rec lookupFun cG f = match cG with
       if f = f' then tau else         
       lookupFun cG' f
 
+let rec get_target_cid_comptyp tau = match tau with
+  | Int.Comp.TypBase (_, a, _ ) -> a 
+  | Int.Comp.TypArr (_ , tau) -> get_target_cid_comptyp tau
+  | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_comptyp tau
+  | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
+
 let recSgnDecl d = 
     Rec.reset_fvarCnstr ();  FCVar.clear ();
     match d with
@@ -77,8 +83,10 @@ let recSgnDecl d =
 	let _         = dprint (fun () ->  c.string_of_name ^ " : " ^  
 				   (P.compTypToString cD tau')) in 
 	let _         = (Monitor.timer ("Data-type Constant: Type Check", 
-					fun () -> Check.Comp.checkTyp cD tau')) in 
-        let _c        = CompConst.add (CompConst.mk_entry c tau' i) in () 
+					fun () -> Check.Comp.checkTyp cD tau'))
+        in 
+	let cid_ctypfamily = get_target_cid_comptyp tau' in 
+        let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in () 
 
     | Ext.Sgn.Typ (_, a, extK)   ->
         let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in

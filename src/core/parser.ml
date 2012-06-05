@@ -1028,13 +1028,12 @@ cmp_exp_chkX:
            end in
 
          Comp.Case (_loc, Pragma.RegularCase, i, [branch])
-(*      | "let"; ctyp_decls = LIST0 clf_ctyp_decl; pat = cmp_branch_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
+      | "let"; ctyp_decls = LIST0 clf_ctyp_decl; pat = cmp_branch_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
                            LF.Empty ctyp_decls in
 
           let branch = Comp.Branch(_loc, ctyp_decls', pat, e)  in
           Comp.Case (_loc, Pragma.RegularCase, i, [branch]) 
-*)
       | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
           begin match p_or_a with
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)

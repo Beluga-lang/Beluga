@@ -98,9 +98,7 @@ module Comp = struct
               "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
             Format.fprintf ppf
               "In expression: %a@."
-              (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e;
-            Format.fprintf ppf
-              "Note: Computation-level applications are not automatically left-associative but require parentheses."
+              (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e
 
           | MismatchSyn (cD, cG, i, variant, theta_tau) ->
             Error.report_mismatch ppf
@@ -109,9 +107,7 @@ module Comp = struct
               "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau);
             Format.fprintf ppf
               "In expression: %a@."
-              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i;
-            Format.fprintf ppf
-              "Note: Computation-level applications are not automatically left-associative but require parentheses."
+              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
 
           | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
             Error.report_mismatch ppf

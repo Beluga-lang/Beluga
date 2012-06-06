@@ -192,47 +192,6 @@ type caseType  = IndexObj of Int.LF.psi_hat * Int.LF.normal | DataObj
 
 type typAnn    = FullTyp of Apx.LF.typ | PartialTyp of cid_typ
 
-let rec unifyDCtx cD cPsi1 cPsi2 = unifyDCtx' cD (Whnf.normDCtx cPsi1)  (Whnf.normDCtx cPsi2)
-and unifyDCtx' cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
-      | (Int.LF.Null , Int.LF.Null) -> ()
-
-      | (Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref1 , _schema1, _cO1, _cD1)) , 
-         Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref2 , _schema2, _cO2, _cD2))) ->  
-          if cvar_ref1 == cvar_ref2 then ()  
-          else 
-            Unify.instantiateCtxVar (cvar_ref1, cPsi2)
-
-      | (Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref , s_cid, _cO1, _cD1)) , cPsi) -> 
-          let _ = Unify.instantiateCtxVar (cvar_ref, cPsi) in 
-          begin match Context.ctxVar cPsi with
-               | None -> ()
-               | Some (Int.LF.CtxName psi) -> 
-                   FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
-               | _ -> ()
-          end
-
-      | (cPsi , Int.LF.CtxVar (Int.LF.CInst ({contents = None} as cvar_ref, s_cid, _cO, _cD) )) -> 
-          let _ = Unify.instantiateCtxVar (cvar_ref, cPsi) in 
-            (match Context.ctxVar cPsi with 
-               | None -> ()
-               | Some (Int.LF.CtxName psi) -> 
-                   FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
-               | _ -> ()
-            )
-
-      | (Int.LF.CtxVar  psi1_var , Int.LF.CtxVar psi2_var) when psi1_var = psi2_var -> ()
-
-      | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , tA1)) , 
-         Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , tA2))) -> 
-            unifyDCtx' cD cPsi1 cPsi2 ; 
-            Unify.unifyTyp cD cPsi1 (tA1, LF.id)   (tA2, LF.id)
-
-      | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _),
-         Int.LF.DDec (cPsi2, Int.LF.TypDeclOpt _ )) -> 
-          unifyDCtx' cD cPsi1 cPsi2
-
-      | _ -> raise (Unify.Unify "context clash")
-
 let rec raiseType cPsi tA = match cPsi with
   | Int.LF.Null -> tA
   | Int.LF.DDec (cPsi', decl) ->
@@ -494,7 +453,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       let _ =
         (* unifying two contexts AND inferring schema for psi in
                                                 cPhi, if psi is not in cD *)
-        try unifyDCtx cD cPsi' cPhi
+        try Unify.unifyDCtx cD cPsi' cPhi
         with Unify.Unify _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
       let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in 

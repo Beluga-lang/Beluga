@@ -75,7 +75,6 @@ let _ = Error.register_printer
 type free_cvars = 
     FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name 
 
-
 type fcvars = free_cvars list * bool 
 
 let rec nearestFCVar fvars = begin match fvars with 
@@ -84,6 +83,12 @@ let rec nearestFCVar fvars = begin match fvars with
   | _ :: fvs -> nearestFCVar fvs
 end
 
+let rec fcvarsToString fcvars = match fcvars with
+  | [] -> ""
+  | FMV m :: fcvars -> ", FMV " ^ R.render_name m ^ fcvarsToString fcvars
+  | FPV m :: fcvars -> ", FPV " ^ R.render_name m ^ fcvarsToString fcvars  
+  | FCV m :: fcvars -> ", FCV " ^ R.render_name m ^ fcvarsToString fcvars
+  | FSV m :: fcvars -> ", FSV " ^ R.render_name m ^ fcvarsToString fcvars
 
 let rec lookup_fv fvars m = begin  match (fvars, m) with 
      ([], _ ) -> false
@@ -342,7 +347,10 @@ let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
           let offset = CVar.index_of_name cvars (CVar.CV psi_name) in
             (Apx.LF.CtxVar (Apx.LF.CtxOffset offset) , bvars, fvars)
 	with Not_found ->  
-	 (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, ((FCV psi_name :: fvs),  closed))
+	if closed then 
+	     raise (Error (loc, UnboundName psi_name))
+	else 
+	  (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, ((FCV psi_name :: fvs),  closed))
 	end
   | Ext.LF.DDec (psi, decl) ->
       let (psi', bvars', fvars')    = index_dctx cvars bvars fvars psi in
@@ -854,7 +862,9 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
       index_mctx (CVar.create()) (fcvars', not term_closed) cD in
     let (mO', (fcvars2, _)) = index_mobj cvars1 fcvars1 mO in 
     let cvars_all  = CVar.append cvars1 cvars in
+    let _ = dprint (fun () -> "FVars in pattern " ^ fcvarsToString fcvars2 ) in 
     let fcvars3    = List.append fcvars2 fcvars in 
+    let _ = dprint (fun () -> "FVars all up to here: " ^ fcvarsToString fcvars3 ) in 
     let e'         = index_exp cvars_all vars (fcvars3, term_closed) e in
       Apx.Comp.Branch (loc, omega, cD', Apx.Comp.PatMetaObj (loc', mO'), e')
 

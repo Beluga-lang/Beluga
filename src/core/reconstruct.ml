@@ -115,11 +115,6 @@ let _ = Error.register_printer
             "Expected context"    (P.fmt_ppr_lf_dctx cD Pretty.std_lvl)  cPsi
             "Encountered context" (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) cPsi'))
 
-let rec projectCtxIntoDctx = function
-  | Int.LF.Empty            -> Int.LF.Null
-  | Int.LF.Dec (rest, last) -> Int.LF.DDec (projectCtxIntoDctx rest, last)
-
-
 let rec get_ctxvar cPsi  = match cPsi with
   | Int.LF.Null -> None
   | Int.LF.CtxVar (psi_name) -> Some psi_name
@@ -295,7 +290,7 @@ let rec elTypDeclCtx cD  = function
 
   | Apx.LF.Dec (ctx, Apx.LF.TypDecl (name, typ)) ->
       let ctx'     = elTypDeclCtx cD ctx in
-      let tA       = Lfrecon.elTyp Lfrecon.Pi cD (projectCtxIntoDctx ctx') typ in 
+      let tA       = Lfrecon.elTyp Lfrecon.Pi cD (Context.projectCtxIntoDctx ctx') typ in 
       let typDecl' = Int.LF.TypDecl (name, tA) in
         Int.LF.Dec (ctx', typDecl')
 
@@ -303,7 +298,7 @@ let rec elSchElem (Apx.LF.SchElem (ctx, typRec)) =
    let cD = Int.LF.Empty in
    let _ = dprint (fun () -> "elTypDeclCtx \n") in 
    let el_ctx = elTypDeclCtx cD ctx in
-   let dctx = projectCtxIntoDctx el_ctx in
+   let dctx = Context.projectCtxIntoDctx el_ctx in
    let _ = dprint (fun () -> "[elSchElem] some context = " 
                      ^ P.dctxToString Int.LF.Empty dctx ^ "\n") in 
    let _ = dprint (fun () ->  ("\n[elSchElem] apx nblock has length " 

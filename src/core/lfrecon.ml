@@ -361,12 +361,6 @@ let rec flattenProjPat s conv_list = match s with
 
 
 (* ******************************************************************* *)
-let rec projectCtxIntoDctx = function
-  | Int.LF.Empty            -> Int.LF.Null
-  | Int.LF.Dec (rest, last) -> Int.LF.DDec (projectCtxIntoDctx rest, last)
-
-
-(* ******************************************************************* *)
 (* PHASE 1 : Elaboration and Reconstruction (one pass)                 *)
 (*  elTerm recT cD cPsi m sA = M
  *
@@ -1179,7 +1173,7 @@ and elTerm' recT cD cPsi r sP = match r with
       | (Int.LF.Sigma tArec,s') ->  (tArec, s') 
       | (nonsigma, s')          ->  (Int.LF.SigmaLast nonsigma, s') in *)
     let _ = dprint (fun () -> ("tA =" ^ P.typToString cD cPsi (tA, s) ^ " \n")) in 
-    let dctx        = projectCtxIntoDctx some_part in  
+    let dctx        = Context.projectCtxIntoDctx some_part in  
     let dctxSub     = Ctxsub.ctxToSub' cD cPsi dctx in
 
     (* let phat        = dctxToHat cPsi in *)
@@ -1213,7 +1207,7 @@ and elTerm' recT cD cPsi r sP = match r with
   
   and instanceOfSchElemProj loc cD cPsi (tA, s) (var, k) (Int.LF.SchElem (cPhi, trec)) = 
     let _ = dprint (fun () -> "[instanceOfSchElemProj] getType of " ^ string_of_int k ^ ". argument\n") in 
-    let cPhi'  = projectCtxIntoDctx cPhi in  
+    let cPhi'  = Context.projectCtxIntoDctx cPhi in  
     let _ = dprint (fun () -> " of " ^ P.typRecToString cD cPhi' (trec, Substitution.LF.id)) in
     let _ = dprint (fun () -> " var = " ^ P.headToString cD cPsi var) in
     let sA_k (* : tclo *) = Int.LF.getType var (trec, Substitution.LF.id) k 1 in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence,eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)

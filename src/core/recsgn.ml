@@ -4,10 +4,8 @@ open Store
 open Store.Cid
 open Syntax
 
-module C     = Whnf
+module C = Whnf
 module S = Substitution
-module Rec = Reconstruct
-(* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail 
 
 module P = Pretty.Int.DefaultPrinter
@@ -41,7 +39,7 @@ let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
 
 let recSgnDecl d = 
-    Rec.reset_fvarCnstr ();  FCVar.clear ();
+    Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
     | Ext.Sgn.CompTypAbbrev (_, a, _cK, _cT) -> print_string "Not implemented yet\n"
     | Ext.Sgn.CompTyp (_ , a, extK) -> 
@@ -50,14 +48,14 @@ let recSgnDecl d =
         let _ = FVar.clear () in 
         let _ = dprint (fun () -> "\nElaborating data-type declaration " ^ a.string_of_name) in 
         let cK = Monitor.timer ("CType Elaboration" , 
-                               (fun () -> let cK = Rec.compkind apxK in 
-                                  Rec.solve_fvarCnstr Lfrecon.Pibox; cK 
+                               (fun () -> let cK = Reconstruct.compkind apxK in 
+                                  Reconstruct.solve_fvarCnstr Lfrecon.Pibox; cK 
                                )) in 
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
         let (cK', i) = Monitor.timer ("Type Abstraction",  
                                       fun () -> Abstract.abstrCompKind cK) in
 
-        let _        = (Rec.reset_fvarCnstr ();
+        let _        = (Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ();
 			dprint (fun () ->  a.string_of_name ^ 
 				  " : " ^  (P.compKindToString Int.LF.Empty cK'))) in
@@ -73,12 +71,13 @@ let recSgnDecl d =
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
         let _         = dprint (fun () -> "\nElaborating data-type constructor " ^ c.string_of_name) in 
-        let tau'      = Monitor.timer ("Data-type Constant: Type Elaboration", fun () -> Rec.comptyp apx_tau)  in
+        let tau'      = Monitor.timer ("Data-type Constant: Type Elaboration",
+				       fun () -> Reconstruct.comptyp apx_tau)  in
         let _         = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
         let _         = Unify.resetGlobalCnstrs () in 
 	let _         = dprint (fun () -> "Abstracting over comp. type") in 
         let (tau', i) = Monitor.timer ("Data-type Constant: Type Abstraction",
-        fun () -> Abstract.abstrCompTyp tau') in
+				       fun () -> Abstract.abstrCompTyp tau') in
 	let _         = dprint (fun () -> "Abstracting over comp. type: done") in 
 	let _         = dprint (fun () ->  c.string_of_name ^ " : " ^  
 				   (P.compTypToString cD tau')) in 
@@ -96,14 +95,14 @@ let recSgnDecl d =
         let _        = dprint (fun () -> "\nElaborating type constant " ^ a.string_of_name) in
 
         let tK       = Monitor.timer ("Type Elaboration", 
-                                      fun () -> (let tK = Rec.kind apxK in
-                                                   Rec.solve_fvarCnstr Lfrecon.Pi; tK )) in
+                                      fun () -> (let tK = Reconstruct.kind apxK in
+                                                   Reconstruct.solve_fvarCnstr Lfrecon.Pi; tK )) in
 
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
 
         let (tK', i) = Monitor.timer ("Type Abstraction",  
                                       fun () -> Abstract.abstrKind tK) in
-        let _        = (Rec.reset_fvarCnstr ();
+        let _        = (Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ();
 			dprint (fun () ->  a.string_of_name ^ " : " ^  (P.kindToString Int.LF.Null (tK', S.LF.id)));
 			Monitor.timer ("Type Check", 
@@ -123,8 +122,8 @@ let recSgnDecl d =
 
         let _        = FVar.clear () in
         let tA       = Monitor.timer ("Constant Elaboration",
-                                      fun () -> (let tA = Rec.typ Lfrecon.Pi  apxT in
-                                                   Rec.solve_fvarCnstr Lfrecon.Pi; tA)) in
+                                      fun () -> (let tA = Reconstruct.typ Lfrecon.Pi  apxT in
+                                                   Reconstruct.solve_fvarCnstr Lfrecon.Pi; tA)) in
         let cD       = Int.LF.Empty in
 
         let _        = dprint (fun () -> "\nElaboration of constant " ^ c.string_of_name ^ " : " ^
@@ -133,7 +132,7 @@ let recSgnDecl d =
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
         let (tA', i) = Monitor.timer ("Constant Abstraction", 
                                       fun () -> Abstract.abstrTyp tA) in
-	let _        = ( Rec.reset_fvarCnstr ();
+	let _        = ( Reconstruct.reset_fvarCnstr ();
 			 Unify.resetGlobalCnstrs ();
 			 dprint (fun () -> "\nReconstruction (with abstraction) of constant: " ^
 				   c.string_of_name ^ " : " ^
@@ -147,11 +146,11 @@ let recSgnDecl d =
         let apx_schema = Index.schema schema in
         let _        = dprint (fun () -> "\nReconstructing schema " ^ g.string_of_name ^ "\n") in
         let _        = FVar.clear () in
-        let sW       = Rec.schema apx_schema in
+        let sW       = Reconstruct.schema apx_schema in
         let _        = (dprint (fun () -> "\nElaborating schema " ^ g.string_of_name );
-			Rec.solve_fvarCnstr Lfrecon.Pi;
+			Reconstruct.solve_fvarCnstr Lfrecon.Pi;
 			Unify.forceGlobalCnstr (!Unify.globalCnstrs);
-			Rec.reset_fvarCnstr ();
+			Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ()) in 
 
         let sW'      = Abstract.abstrSchema sW in 
@@ -167,7 +166,7 @@ let recSgnDecl d =
     | Ext.Sgn.Val (loc, x, None, i) -> 
           let apx_i              = Index.exp' (Var.create ()) i in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in 
-          let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Rec.exp' cG apx_i) in
+          let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp' cG apx_i) in
           let _                  = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
           let _                  = Unify.resetGlobalCnstrs () in 
           let tau'               = Whnf.cnormCTyp (tau, theta) in 
@@ -193,7 +192,7 @@ let recSgnDecl d =
     | Ext.Sgn.Val (loc, x, Some tau, i) -> 
           let apx_tau = Index.comptyp tau in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in 
-          let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Rec.comptyp apx_tau)  in
+          let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
           let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
           let _        = Unify.resetGlobalCnstrs () in 
           let (tau', _imp) = Monitor.timer ("Function Type Abstraction", fun ()
@@ -203,7 +202,7 @@ let recSgnDecl d =
 
           let apx_i   = Index.exp' (Var.create ()) i in
 
-          let i'      = Monitor.timer ("Function Elaboration", fun () -> Rec.exp cG (Apx.Comp.Syn(loc, apx_i)) (tau', C.m_id)) in
+          let i'      = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp cG (Apx.Comp.Syn(loc, apx_i)) (tau', C.m_id)) in
           let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
           let _       = Unify.resetGlobalCnstrs () in 
 
@@ -235,7 +234,7 @@ let recSgnDecl d =
           | Ext.Comp.RecFun (f, tau, _e) :: lf -> 
           let apx_tau = Index.comptyp  tau in
           let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
-          let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Rec.comptyp apx_tau)  in
+          let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
           let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in 
           let _        = Unify.resetGlobalCnstrs () in 
           (* Are some FMVars delayed since we can't infer their type? - Not associated with pattsub *)
@@ -260,7 +259,7 @@ let recSgnDecl d =
           let apx_e   = Index.exp vars' e in
           let _       = dprint (fun () -> "\n  Indexing  expression done \n") in
           let tau'    = lookupFun cG f in 
-          let e'      = Monitor.timer ("Function Elaboration", fun () -> Rec.exp cG apx_e (tau', C.m_id)) in
+          let e'      = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp cG apx_e (tau', C.m_id)) in
 
           let _       = dprint (fun () ->  "\n Elaboration of function " ^ f.string_of_name ^
                                   "\n   type: " ^ P.compTypToString cD tau' ^ 
@@ -340,8 +339,8 @@ let recSgnDecl d =
 
       let _        = FVar.clear () in
       let tA       = Monitor.timer ("Constant Elaboration",
-                                    fun () -> (let tA = Rec.typ Lfrecon.Pi apxT in
-                                               Rec.solve_fvarCnstr Lfrecon.Pi;
+                                    fun () -> (let tA = Reconstruct.typ Lfrecon.Pi apxT in
+                                               Reconstruct.solve_fvarCnstr Lfrecon.Pi;
                                                tA)) in
       let cD       = Int.LF.Empty in
 
@@ -354,7 +353,7 @@ let recSgnDecl d =
       let (tA', i) = Monitor.timer ("Constant Abstraction",
                                     fun () -> Abstract.abstrTyp tA) in
 
-      let _        = Rec.reset_fvarCnstr () in
+      let _        = Reconstruct.reset_fvarCnstr () in
       let _        = Unify.resetGlobalCnstrs () in
       let _        = dprint (fun () -> "\nReconstruction (with abstraction) of query: " ^
         (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n") in

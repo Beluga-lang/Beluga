@@ -240,6 +240,7 @@ let rec raiseType cPsi tA = match cPsi with
 
 
 (* -------------------------------------------------------------*)
+
 let rec apxget_ctxvar psi  = match psi with
   | Apx.LF.Null -> None
   | Apx.LF.CtxVar (psi_name) -> Some psi_name
@@ -251,16 +252,6 @@ let rec apx_length_typ_rec t_rec = match t_rec with
       (print_string (R.render_name x ^ "  ");
       1 + apx_length_typ_rec rest )
 
-
-(* -------------------------------------------------------------*)
-
-
-let rec lookup cG k = match (cG, k) with
-  | (Int.LF.Dec(_cG', Int.Comp.CTypDecl (_, tau)), 1) ->   tau
-  | (Int.LF.Dec( cG', Int.Comp.CTypDecl (_, _tau)), k) ->
-      lookup cG' (k-1)
-
-
 let rec getctxvarFromHat phat = match phat with 
   | (None, _ ) -> None
   | (Some (Int.LF.CtxName n), _ ) -> Some(Apx.LF.CtxName n)
@@ -271,6 +262,12 @@ let rec apxget_ctxvar_mobj mO = match mO with
   | Apx.Comp.MetaObjAnn (_, cPsi, _tM) -> apxget_ctxvar cPsi 
   | Apx.Comp.MetaObj (_, phat, _tM) -> 
       getctxvarFromHat phat
+
+let rec lookup cG k = match (cG, k) with
+  | (Int.LF.Dec(_cG', Int.Comp.CTypDecl (_, tau)), 1) ->   tau
+  | (Int.LF.Dec( cG', Int.Comp.CTypDecl (_, _tau)), k) ->
+      lookup cG' (k-1)
+
 (* -------------------------------------------------------------*)
 
 (* Solve free variable constraints *)

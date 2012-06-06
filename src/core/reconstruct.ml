@@ -263,10 +263,9 @@ let rec apxget_ctxvar_mobj mO = match mO with
   | Apx.Comp.MetaObj (_, phat, _tM) -> 
       getctxvarFromHat phat
 
-let rec lookup cG k = match (cG, k) with
-  | (Int.LF.Dec(_cG', Int.Comp.CTypDecl (_, tau)), 1) ->   tau
-  | (Int.LF.Dec( cG', Int.Comp.CTypDecl (_, _tau)), k) ->
-      lookup cG' (k-1)
+let rec lookup cG k = match cG, k with
+  | Int.LF.Dec (_cG', Int.Comp.CTypDecl (_, tau)), 1 -> tau
+  | Int.LF.Dec ( cG', Int.Comp.CTypDecl (_, _tau)), k -> lookup cG' (k-1)
 
 (* -------------------------------------------------------------*)
 

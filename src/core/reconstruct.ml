@@ -1910,15 +1910,20 @@ let solve_fvarCnstr = Lfrecon.solve_fvarCnstr
 let reset_fvarCnstr = Lfrecon.reset_fvarCnstr
 
 type reconType = Lfrecon.reconType 
+
 let kind = Lfrecon.elKind Int.LF.Empty Int.LF.Null
+
 let typ rectyp apxT = Lfrecon.elTyp rectyp Int.LF.Empty Int.LF.Null apxT 
-let schema   = elSchema 
+
+let schema = elSchema
+
 let compkind = elCompKind Int.LF.Empty
-let comptyp tau = 
-  let tau' = elCompTyp  Int.LF.Empty tau in
-  let _ = dprint (fun () -> "[elCompTyp] " ^ 
-                    P.compTypToString Int.LF.Empty tau'
-                    ^ " done \n") in 
-    tau'
-let exp      = elExp  Int.LF.Empty 
-let exp'     = elExp' Int.LF.Empty 
+
+let comptyp tau =
+  let tau' = elCompTyp Int.LF.Empty tau in
+  let _ = dprint (fun () -> "[elCompTyp] " ^ P.compTypToString Int.LF.Empty tau' ^ " done \n") in
+  tau'
+
+let exp  = elExp  Int.LF.Empty
+
+let exp' = elExp' Int.LF.Empty

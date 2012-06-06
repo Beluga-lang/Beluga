@@ -8,11 +8,14 @@
 #load "pa_extend.cmo";;
 
 open Syntax.Ext
+open Id
 
 
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
 exception MixError of (Format.formatter -> unit)
+exception IllFormedDataDecl
+exception WrongConsType of Id.name * Id.name * Id.name
 
 let _ = Error.register_printer
   (fun (Grammar.Loc.Exc_located (loc, exn)) ->
@@ -26,6 +29,19 @@ let _ = Error.register_printer
 let _ = Error.register_printer
   (fun (MixError f) ->
     Error.print (fun ppf -> f ppf))
+
+let _ = Error.register_printer
+  (fun IllFormedDataDecl ->
+    Error.print (fun ppf ->
+      Format.fprintf ppf "Ill-formed datatype declaration."))
+
+let _ = Error.register_printer
+  (fun (WrongConsType (c, a, a')) ->
+    Error.print (fun ppf ->
+      Error.report_mismatch ppf
+        ("Wrong datatype for constructor " ^ c.string_of_name ^ ".")
+        "Expected datatype" Format.pp_print_string a.string_of_name
+        "Actual datatype"   Format.pp_print_string a'.string_of_name))
 
 let rec last l = begin match List.rev l with
   | [] -> None
@@ -156,6 +172,20 @@ and toCompKind k = match unmix k with
       "Syntax error: @[<v>Found LF-type@;\
        Expected: computation-level kind"))
 
+(* Check that datatype declarations are well formed. We can't do this
+   later because after parsing there is no structural grouping between
+   constructors of a same datatype. *)
+let check_datatype_decl a cs =
+  let rec retname = function
+    | Comp.TypBase (_, c', _) -> c'
+    | Comp.TypArr (_, _, tau) -> retname tau
+    | Comp.TypCtxPi (_, _, tau) -> retname tau
+    | Comp.TypPiBox (_, _, tau) -> retname tau
+    | _ -> raise IllFormedDataDecl in
+  List.iter (fun (Sgn.CompConst (_, c, tau)) ->
+    let a' = retname tau in
+    if not (a = a') then raise (WrongConsType (c, a, a'))) cs
+
 (*******************************)
 (* Global Grammar Entry Points *)
 (*******************************)
@@ -239,9 +269,9 @@ GLOBAL: sgn_eoi;
           Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
 
 
-      | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ;  c_decls = LIST0 sgn_comp_typ SEP "|"; ";"
-           ->
-            Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+      | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
+          check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+          Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
 
       | "type"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
           [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]

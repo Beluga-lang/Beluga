@@ -26,9 +26,7 @@ module RR = Store.Cid.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
-
 let term_closed = true
-
 
 type error =
   | UnboundName          of Id.name
@@ -62,7 +60,7 @@ let _ = Error.register_printer
           Format.fprintf ppf "Unbound computation-level constructor: %s." (R.render_name n)
       | PatCtxRequired ->
           Format.fprintf ppf
-	    "The context in a pattern must be a proper context where variable declaration must carry its type."
+	    "The context in a pattern must be a proper context, where a variable declaration must carry its type."
       | CompEmptyPattBranch ->
           Format.fprintf ppf "If the pattern in a branch is empty, there should be no branch body."
       | UnboundIdSub ->

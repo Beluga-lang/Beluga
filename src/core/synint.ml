@@ -272,6 +272,7 @@ module Comp = struct
    | BoxValue   of LF.psi_hat * LF.normal 
    | ConstValue of cid_prog   
    | BoolValue  of bool
+   | PairValue  of value * value
 
  and exp_chk =
    | Syn    of Loc.t * exp_syn

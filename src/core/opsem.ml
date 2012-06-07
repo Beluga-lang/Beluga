@@ -157,6 +157,11 @@ let rec eval_syn i theta_eta =
         | ( _ , _ ) -> raise (Error.Violation "Expected atomic object")
       end
 
+    | Comp.PairVal (_, i1, i2) ->
+      let v1 = eval_syn i1 theta_eta in
+      let v2 = eval_syn i2 theta_eta in
+      Comp.PairValue (v1, v2)
+
     | Comp.Boolean b -> Comp.BoolValue b
 
 and eval_chk e theta_eta =
@@ -174,6 +179,11 @@ and eval_chk e theta_eta =
           dprint (fun () -> "[FunValue] created: theta = " ^ 
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.FunValue ((loc, n, e'), Whnf.cnormMSub theta, eta)
+
+      | Comp.Pair (_, e1, e2) ->
+        let v1 = eval_chk e1 theta_eta in
+        let v2 = eval_chk e2 theta_eta in
+        Comp.PairValue (v1, v2)
 
       | Comp.Let (loc, i, (x, e)) ->
           let w = eval_syn i theta_eta in

@@ -1,0 +1,10 @@
+tp : type.
+base : tp.
+term : tp -> type.
+
+schema ctx = term T;
+
+
+datatype HoistReturn : {g:ctx} [g. tp] -> ctype =
+| Ret: {h:ctx} HoistReturn [h. base]
+;

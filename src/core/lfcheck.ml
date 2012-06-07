@@ -110,29 +110,8 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
   | Null -> Ctxsub.ctxShift cPhi (* Substitution.LF.id *)
   | DDec (cPsi', TypDecl (_, tA)) ->
     let s = ((ctxToSub' cPhi cPsi') : sub) in
-    (* For the moment, assume tA atomic. *)
-    (* lower tA? *)
-    (* A = A_1 -> ... -> A_n -> P
-
-       create cPhi = A_1, ..., A_n
-       \x_1. ... \x_n. u[id]
-       u::P[cPhi]
-
-       already done in reconstruct.ml
-       let (_, d) = Context.dctxToHat cPsi in
-       let tN     = etaExpandMV Int.Substitution.LF.Null (tA, s) (Int.Substitution.LF.Shift d) in
-       in elSpineIW
-    *)
-    (* let (_, phat') = Context.dctxToHat cPsi' in*)
-    (* let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in *)
-
-    (* let u     = Whnf.etaExpandMV Null (tA, s) Substitution.LF.id in *)
-    (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-    (* let u     = Whnf.etaExpandMV cPhi (tA, LF.comp s (ctxShift cPhi)) LF.id in *)
     let u     = Whnf.etaExpandMV cPhi (tA, s) Substitution.LF.id in
-    let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
-    (* Dot (front, Substitution.LF.comp s LF.shift)  *)
-    Dot (front, s)
+    Dot (Obj u, s)
 
 (* check cD cPsi (tM, s1) (tA, s2) = ()
  *

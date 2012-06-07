@@ -241,7 +241,7 @@ module Comp = struct
    (* MetaSClo of meta_spine * msub *)
 
  type typ =
-   | TypBase of Loc.t * cid_comp_typ * meta_spine
+   | TypBase  of Loc.t * cid_comp_typ * meta_spine
    | TypBox   of Loc.t * LF.typ  * LF.dctx
    | TypSub   of Loc.t * LF.dctx * LF.dctx
    | TypArr   of typ * typ
@@ -253,7 +253,7 @@ module Comp = struct
 
 
  type ctyp_decl = 
-   | CTypDecl of name * typ
+   | CTypDecl    of name * typ
    | CTypDeclOpt of name
   
  type gctx = ctyp_decl LF.ctx
@@ -299,10 +299,10 @@ module Comp = struct
    | Equal  of Loc.t * exp_syn * exp_syn
    | PairVal of Loc.t * exp_syn * exp_syn
    | Boolean of bool
-       
-  and branch_pattern =
-     | NormalPattern of LF.normal * exp_chk
-     | EmptyPattern
+
+ and branch_pattern =
+   | NormalPattern of LF.normal * exp_chk
+   | EmptyPattern
 
  and pattern = 
    | PatEmpty  of Loc.t * LF.dctx 
@@ -340,17 +340,15 @@ end
 module Sgn = struct
 
   type decl =
-    | Typ    of cid_typ    * LF.kind
-    | Const  of cid_term   * LF.typ
-    | CompTyp  of Loc.t * name * Comp.kind
-    | CompConst of Loc.t * name * Comp.typ
+    | Typ           of cid_typ  * LF.kind
+    | Const         of cid_term * LF.typ
+    | CompTyp       of Loc.t * name * Comp.kind
+    | CompConst     of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
-    | Schema of cid_schema * LF.schema
-    | Rec    of cid_prog   * Comp.typ * Comp.exp_chk
-    | Pragma of LF.prag
+    | Schema        of cid_schema * LF.schema
+    | Rec           of cid_prog   * Comp.typ * Comp.exp_chk
+    | Pragma        of LF.prag
 
   type sgn = decl list
 
 end
-
-

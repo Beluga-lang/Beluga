@@ -305,7 +305,7 @@ module Comp = struct
    | EmptyPattern
 
  and pattern = 
-   | PatEmpty  of Loc.t * LF.dctx 
+   | PatEmpty   of Loc.t * LF.dctx
    | PatMetaObj of Loc.t * meta_obj
    | PatConst of Loc.t * cid_comp_const * pattern_spine
    | PatFVar   of Loc.t * name
@@ -319,18 +319,14 @@ module Comp = struct
    | PatNil
    | PatApp of Loc.t * pattern * pattern_spine 
   
-  and branch =
-    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx  
-        * pattern * LF.msub 
-    | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx 
-        * pattern * LF.msub * exp_chk 
+ and branch =
+   | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
+   | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
-    | BranchBox of LF.mctx * LF.mctx
-        * (LF.dctx * branch_pattern * LF.msub * LF.csub)
+   | BranchBox of LF.mctx * LF.mctx * (LF.dctx * branch_pattern * LF.msub * LF.csub)
 
-    | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
-        * (LF.dctx * LF.sub * LF.msub * LF.csub)
-        * exp_chk
+   | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx *
+       (LF.dctx * LF.sub * LF.msub * LF.csub) * exp_chk
 
   type tclo = typ * LF.msub
 end

@@ -579,19 +579,19 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
   and synPatSpine cD cG pat_spine (tau, theta) = match pat_spine with
     | PatNil  -> (tau, theta)
-    | PatApp (_loc, pat, pat_spine)  -> 
-        (match (tau, theta) with 
-           | (TypArr (tau1, tau2), theta) -> 
-               checkPattern cD cG pat (tau1, theta); 
-               synPatSpine cD cG pat_spine (tau2, theta)
-           | (TypPiBox ((cdecl, _), tau), theta) -> 
-               let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in 
-                 synPatSpine cD cG pat_spine (tau, theta')
-           | (TypCtxPi ((x, w, dep), tau), theta) ->            
-             let theta' =  checkPatAgainstCDecl cD pat (I.CDecl(x,w, I.No), theta) in 
-               synPatSpine cD cG pat_spine (tau, theta')
-        )
-          
+    | PatApp (_loc, pat, pat_spine)  ->
+      begin match (tau, theta) with
+        | (TypArr (tau1, tau2), theta) ->
+          checkPattern cD cG pat (tau1, theta);
+          synPatSpine cD cG pat_spine (tau2, theta)
+        | (TypPiBox ((cdecl, _), tau), theta) ->
+          let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
+          synPatSpine cD cG pat_spine (tau, theta')
+        | (TypCtxPi ((x, w, dep), tau), theta) ->
+          let theta' =  checkPatAgainstCDecl cD pat (I.CDecl(x,w, I.No), theta) in
+          synPatSpine cD cG pat_spine (tau, theta')
+      end
+
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
     | I.MDecl (_, tA, cPsi) -> 
         let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in 

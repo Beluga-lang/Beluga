@@ -990,9 +990,8 @@ module Int = struct
       | Comp.PatApp (_, pat, pat_spine) -> 
           fprintf ppf "%a %a"
             (fmt_ppr_pat_obj cD cG (lvl+1)) pat
-            (fmt_ppr_pat_spine cD cG lvl) pat_spine
+            (fmt_ppr_pat_spine cD cG lvl) pat_spine)
 
-                                          )
     and fmt_ppr_pat_obj cD cG lvl ppf = function 
       | Comp.PatEmpty (_, cPsi) -> 
           let cond = lvl > 1 in 

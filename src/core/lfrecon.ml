@@ -33,10 +33,10 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match err with
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
-          Format.fprintf ppf
-            "ill-typed expression\n  expected: %a\n  inferred: %a\n "
-            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA1)
-            (P.fmt_ppr_lf_typ cD cPsi    Pretty.std_lvl) (Whnf.normTyp sA2)
+          Error.report_mismatch ppf
+            "Ill-typed expression."
+	    "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
+	    "Actual type"   (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2)
 
         | IllTypedElab (cD, cPsi, sA) ->
           Format.fprintf ppf

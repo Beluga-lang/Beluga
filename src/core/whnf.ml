@@ -27,6 +27,7 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 module R = Store.Cid.DefaultRenderer
+module T = Store.Cid.Typ
 
 let _ = Error.register_printer
   (fun (Error (loc, err)) ->
@@ -122,7 +123,10 @@ let rec etaContract tM = begin match tM with
 (* newCVar n sW = psi
  *
  *)
-let newCVar _n (sW) = CInst (Id.mk_name Id.NoName, ref None, sW, Empty, Empty)
+let newCVar n (sW) = match n with
+  | None -> CInst (Id.mk_name Id.NoName, ref None, sW, Empty, Empty)
+  | Some name -> CInst (name, ref None, sW, Empty, Empty)
+
 
 (* newPVar n (cPsi, tA) = p
  *
@@ -132,7 +136,9 @@ let newCVar _n (sW) = CInst (Id.mk_name Id.NoName, ref None, sW, Empty, Empty)
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
-let newPVar _n (cPsi, tA) = PInst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref [])
+let newPVar n (cPsi, tA) = match n with
+  | None -> PInst (Id.mk_name (Id.BVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [])
+  | Some name -> PInst (name, ref None, cPsi, tA, ref [])
 
 
 (* newMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
@@ -145,8 +151,9 @@ let newPVar _n (cPsi, tA) = PInst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref
  *)
 
 
-let newMVar _n (cPsi, tA) = Inst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref [])
-
+let newMVar n (cPsi, tA) = match n with
+  | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [])
+  | Some name -> Inst (name, ref None, cPsi, tA, ref [])
 
 
 (* newMMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
@@ -157,7 +164,7 @@ let newMVar _n (cPsi, tA) = Inst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref 
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
-let newMMVar _n (cD, cPsi, tA) = 
+let newMMVar n (cD, cPsi, tA) = match n with
   (* flatten blocks in cPsi, and create appropriate indices in tA 
      together with an appropriate substitution which moves us between 
      the flattened cPsi_f and cPsi. 
@@ -165,7 +172,8 @@ let newMMVar _n (cD, cPsi, tA) =
      this will allow to later prune MMVars. 
      Tue Dec  1 09:49:06 2009 -bp 
    *)
-  MInst (Id.mk_name Id.NoName, ref None, cD, cPsi, tA, ref [])
+  | None -> MInst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [])
+  | Some name -> MInst (name, ref None, cD, cPsi, tA, ref [])
 
 
 
@@ -2599,7 +2607,7 @@ let rec etaExpandMMV loc cD cPsi sA n s' = etaExpandMMV' loc cD cPsi (whnfTyp sA
 
 and etaExpandMMV' loc cD cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMMVar (Some n) (cD , cPsi, TClo(tP,s)) in
+      let u = newMMVar None (cD , cPsi, TClo(tP,s)) in
         Root (loc, MMVar (u, (m_id, s')), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->

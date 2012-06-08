@@ -17,40 +17,40 @@ const : nat -> term.
 
 schema ctx = term ;
 
-rec add: nat [ ] -> nat [ ] -> nat [ ] = 
+rec add: [. nat] -> [. nat] -> [. nat] = 
 fn m => fn n => case m of 
-| [ ] z => n 
-| [ ] suc M => 
-  let [ ] K = (add ([ ] M)) n  in 
-   [ ] suc K
+| [. z] => n 
+| [. suc M] => 
+  let [. K] = (add [. M]) n  in 
+   [. suc K]
 ;
 
-rec size : {g:(ctx)*} term[g] -> nat[ ] = 
-FN g => fn t => case t of 
-| [g] #p .. => [ ] suc z
-| [g] lam \x. T .. x => 
-  let [ ] K = size [g,x:term] ([g,x] T .. x ) in 
-   [ ] suc K
+rec size : {g:ctx} [g. term] -> [. nat] = 
+mlam g => fn t => case t of 
+| [g. #p ..] => [. suc z]
+| [g. lam \x. T .. x] => 
+  let [. K] = size [g,x:term] [g,x. T .. x ] in 
+   [. suc K]
 
-| [g] app (T ..) (U ..) => 
-  let [ ] N = add (size [g] ([g] T ..)) 
-                  (size [g] ([g] U ..)) in 
-   [ ] suc N
+| [g. app (T ..) (U ..)] => 
+  let [. N] = add (size [g] [g. T ..]) 
+                  (size [g] [g. U ..]) in 
+   [. suc N]
       
 
-| [g] letv (T ..) (\x. U .. x) => 
-  let [ ] N =   add (size [g] ([g] T ..))
-		    (size [g,x:term] ([g,x] U .. x)) in 
-   [ ] suc N
+| [g. letv (T ..) (\x. U .. x)] => 
+  let [. N] =   add (size [g] [g. T ..])
+		    (size [g,x:term] [g,x. U .. x]) in 
+   [. suc N]
 
-| [g] const I => [ ] suc z
+| [g. const I] => [. suc z]
 ;
 
 
 % let r   = add ([ ] suc z) ([ ] suc z) ;
 % let s2  = size [ ] ([ ] lam \x. (const z)) ;
 % let s2' = size [ ] ([ ] lam \x. x) ;
- let s4  = size [ ] ([ ] lam \x. app x (const z)) ;
+% let s4  = size [ ] ([ ] lam \x. app x (const z)) ;
 % let s3  = size [ ] ([ ] app (const z) (const (suc z)));
 
 %{

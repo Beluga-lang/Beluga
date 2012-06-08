@@ -198,6 +198,7 @@ Regexp match data 0 points to the chars."
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.bel\\'" . beluga-mode))
+(add-to-list 'auto-mode-alist '("\\.sbel\\'" . beluga-mode))
 
 ;;;###autoload
 (define-derived-mode beluga-mode nil "Beluga"

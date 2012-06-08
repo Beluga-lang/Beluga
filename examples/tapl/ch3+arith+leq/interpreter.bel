@@ -1,0 +1,226 @@
+%{
+
+  Implementation of interpreter and 
+  type inference
+
+}%
+
+yes_or_no : type.
+yes : yes_or_no.
+no  : yes_or_no.
+
+rec isvalue : [. term] -> [. yes_or_no] =
+fn m => case m of 
+| [. true] => [. yes]
+| [. false] => [. yes]
+| [. z]     => [. yes]
+| [. succ V] => isvalue [. V]
+| [. _]      => [. no]
+;
+
+optInterim: type.
+no_interim : optInterim.
+interim    : term -> optInterim.
+
+
+
+rec small_step : [. term] -> [. optInterim] = 
+fn m => case m of 
+| [. succ M]    => 
+  (case small_step [. M] of [. no_interim] => [. no_interim]
+			    | [. interim M']  => [. interim (succ M')]
+  )
+
+| [. pred M] => 
+  (case isvalue [. M] of 
+    | [. yes] => (case [. M] of 
+		   | [. z] => [. interim z]
+		   | [. succ V] => [. interim V]
+		 )
+    | [. no] => (case small_step [. M] of 
+		   | [. no_interim] => [. no_interim]
+		   | [. interim M']  => [. interim (pred M')]
+		)
+  )
+
+| [. iszero M] => 
+  (case isvalue [. M] of 
+     | [. yes] => (case [. M] of 
+		     | [. z] => [. interim true]
+		     | [. succ V] => [. interim false]
+		     | [. _]      => [. no_interim]
+		  )
+     | [. no]  => (case small_step [. M] of 
+		     | [. no_interim] => [. no_interim]
+		     | [. interim M']  => [. interim (iszero M')]
+		  )
+  )
+   
+
+| [. switch M M1 M2]      => 
+  (case isvalue [. M] of 
+     | [. yes] => (case [. M ] of  
+		     | [. true] => [. interim M1]
+		     | [. false] => [. interim M2]
+		     | [. V]     => [. no_interim])
+     | [. no] =>  (case small_step [. M] of 
+		     | [. no_interim] => [. no_interim]
+		     | [. interim M'] => [. interim (switch M' M1 M2)])
+  )
+
+| [. leq M N] => 
+  (case isvalue [. M] of 
+     | [. yes] => 
+	 (case isvalue [. N] of 
+	    | [. yes] =>  (case [. M] of 
+			     | [. z] => [. interim true]
+			     | [. (succ V)] => (case [. N] of [. z] => [. interim false]
+							     | [. succ W] => [. interim (leq V W)]
+							     | [. _]      => [. no_interim])
+
+                             | [. _]        => [. no_interim]
+			  )
+	    | [. no] => (case small_step [. N] of [. interim N'] => [. interim (leq M N')]
+						  | [. no_interim] => [. no_interim])
+	 )
+     | [. no] => (case small_step [. M] of [. interim M'] => [. interim (leq M' N)]
+					   | [. no_interim] => [. no_interim])
+  )
+;
+
+optVal: type.
+no_val : optVal.
+val    : term -> optVal.
+
+rec mstep : [. term] -> [. optVal] = 
+fn m => case isvalue m of 
+| [. yes] => let [. M] = m in [. val M]
+| [. no]  => (case small_step m of 
+		| [. no_interim] => [. no_val]
+		| [. interim M'] => mstep [. M']
+	     )
+;
+
+% let v1 = [ ] switch false z (succ z) ;
+% let v2 = [ ] iszero (pred (succ z))  ;
+% let v3 = [ ] switch (succ z) (succ z) false  ;  
+
+let v4   =  [. switch (iszero (pred (succ z))) (switch false z (succ z)) (switch true z (succ z))];
+
+let r1 = mstep v1 ; % Result will be : [ ] succ z
+let r2 = mstep v2 ; % Result will be : [ ] true
+let r3 = mstep v3 ; % Result will be : [ ] no_val
+
+
+
+% Interpreter based on big-step rules
+
+rec eval : [. term] -> [. optVal] = 
+fn m => case m of 
+| [. succ M] => 
+  (case eval [. M ] of 
+     | [. val V] => [. val (succ V)]
+     | [. no_val] => [. no_val]
+  )
+| [. switch M M1 M2] => 
+  (case eval [. M] of 
+     | [. val true]  => eval [. M1]
+     | [. val false] => eval [. M2]
+     | [. _]         => [. no_val]
+  )
+
+| [. iszero M] => 
+  (case eval [. M] of 
+     | [. val z]         => [. val true]
+     | [. val (succ _ )] => [. val false]
+     | [. _]             => [. no_val]
+  )
+
+| [. pred M] => 
+  (case eval [. M] of 
+     | [. val z]        => [. val z]
+     | [. val (succ V)] => [. val V]
+     | [. _]            => [. no_val]
+  )
+
+| [. leq M N] => 
+  (case eval [. M] of 
+     | [. val z] => 
+       (case eval [. N] of [. val _] =>  [. val true]
+			     | [. no_val] => [. no_val]
+       ) 
+     | [. val (succ V)] => 
+       (case eval [. N] of 
+	  | [. val z]        => [. val false]
+	  | [. val (succ W)] => eval [. leq V W] 
+	  | [. _]            => [. no_val]
+       )
+  )
+| [. true]   => [. val true]
+| [. false]  => [. val false]
+| [. z]      => [. val z]
+;
+
+
+let r1 = eval v1 ; % Result will be : [ ] succ z
+let r2 = eval v2 ; % Result will be : [ ] true
+let r3 = eval v3 ; % Result will be : [ ] no_val
+
+
+% ---------------------------------------------------------------
+%{
+% Type inference
+}%
+
+optTyp: type.
+no_typ: optTyp.
+typ   : tp -> optTyp.
+
+rec equal : [. tp] -> [. tp] -> [. yes_or_no] = 
+fn t1 => fn t2 => case t1 of 
+| [. nat]  => (case t2 of [. nat] => [. yes] | [. _] => [. no])
+| [. bool] => (case t2 of [. bool] => [. yes] | [. _] => [. no])
+;
+
+rec infer : [. term] -> [. optTyp] = 
+fn m => case m of 
+| [. z] => [. typ nat]
+| [. true] => [. typ bool]
+| [. false] => [. typ bool]
+| [. succ N] => infer [. N]
+| [. pred N] => infer [. N]
+| [. switch M N1 N2] => 
+  (case infer [. M] of 
+     | [. typ bool] => 
+	 (case infer [. N1] of 
+	    | [. no_typ] => [. no_typ]
+	    | [. typ T1] =>  (case infer [. N2 ] of 
+			    | [. no_typ] => [. no_typ] 
+			    | [. typ T2] =>  (case equal [. T1] [. T2] of 
+						| [. yes] => [. typ T1] 
+						| [. no]  => [. no_typ]))
+	 )
+     | [. _]  => [. no_typ]
+  )
+
+| [. iszero M] => 
+  (case infer [. M] of 
+     | [. typ nat] => [. typ bool]
+     | [. _]       => [. no_typ]
+  )
+
+| [. leq M N] => 
+  (case infer [. M] of 
+     | [. typ nat] => (case infer [. N] of 
+			 | [. typ nat] => [. typ bool]
+			 | [. _]       => [. no_typ]
+		      )
+     | [. no_typ] => [. no_typ]
+  )
+;
+
+
+ let t1 = infer v1 ;
+ let t2 = infer v2 ;
+ let t3 = infer v3 ;
+ 

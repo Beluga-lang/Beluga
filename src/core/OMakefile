@@ -8,9 +8,10 @@ PACK    = Core
 # Declare the files the package will contain
 FILES[] =
         abstract
+        apxnorm
         lfcheck
+        lfrecon
         check
-        common
         context
         convSigma
         subord
@@ -20,19 +21,26 @@ FILES[] =
         error
         gensym
         id
+        index
+	logic
         opsem
         parser
+        pragma
         pretty
+        prettyext
         reconstruct
+        recsgn
         store
         substitution
         syntax
+        synext
+        synapx
+        synint
         trail
         token
         unify
         whnf
         monitor
-
 
 # Declare one pseudo target for the package and one for the files it
 # contains

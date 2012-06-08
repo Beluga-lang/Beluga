@@ -7,22 +7,21 @@
 
 open Syntax.Int 
 
-exception Error of string
+type error =
+    LeftoverCV
+  | LeftoverMV
+  | LeftoverMMV
+  | LeftoverConstraints
+  | CyclicDependencyFV
+  | CyclicDependencyFCV
+  | CyclicDependencyMMV
+  | CyclicDependencyMV
+  | CyclicDependencyFMV
+  | CyclicDependencyPV
+  | CyclicDependencyFPV
+  | UnknownIdentifier
 
-type marker = Pure | Impure 
-
-type free_var =
-  (* Free variables (references): unnamed *)
-  | MMV of marker * LF.head       
-  | MV  of marker * LF.head       
-  | PV  of marker * LF.head       
-
-  (* Free named variables *)
-  | FV  of marker * Id.name * LF.typ option 
-  | FMV of marker * Id.name * (LF.typ * LF.dctx) option 
-  | FPV of marker * Id.name * (LF.typ * LF.dctx) option 
-
-
+exception Error of Syntax.Loc.t * error
 
 val cnstr_ctyp : Comp.typ  -> bool
 
@@ -30,9 +29,17 @@ val abstrKind     : LF.kind -> LF.kind * Id.offset
 
 val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
 
+val abstrCovGoal  : LF.dctx -> LF.normal -> LF.typ -> LF.msub -> 
+                      LF.mctx * LF.dctx * LF.normal * LF.typ * LF.msub
+
+val abstrCovPatt  : Comp.gctx -> Comp.pattern -> Comp.typ -> LF.msub -> 
+                     LF.mctx * Comp.gctx * Comp.pattern * Comp.typ * LF.msub
+
 val abstrSchema   : LF.schema  -> LF.schema
 
 val abstractMSub  : LF.msub -> LF.msub * LF.mctx
+
+val abstrCompKind  : Comp.kind  -> Comp.kind * Id.offset
 
 val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset
 
@@ -42,15 +49,18 @@ val abstrExp      : Comp.exp_chk  -> Comp.exp_chk
 
 val abstrExpMSub  : Comp.exp_chk  -> LF.msub -> LF.mctx * LF.msub * Comp.exp_chk
 *)
-val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> (LF.csub * LF.csub) -> 
-                    LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ * LF.csub * LF.csub
 
+
+val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
+                    LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ 
+
+val abstrPatObj  : LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ -> 
+                    LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
 
 val abstrSubPattern  : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx -> 
                     LF.mctx * LF.dctx * LF.sub * LF.dctx
 
-val collectTerm'   : (LF.psi_hat * LF.normal) -> (free_var LF.ctx * LF.normal)
 val closedTyp      : (LF.dctx * LF.typ) -> bool
-val printCollection : free_var LF.ctx -> unit
+
 
 val printFreeMVars : LF.psi_hat -> LF.normal -> unit   

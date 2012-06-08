@@ -1,0 +1,13 @@
+datatype Car : ctype =
+| Beatle : Car
+;
+
+datatype Colour : ctype =
+| Blue : Car
+;
+
+rec f : Car -> Car =
+    fn c => case c of
+     | Beatle => Beatle
+     | Blue => Blue
+;

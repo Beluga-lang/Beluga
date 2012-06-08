@@ -21,16 +21,18 @@ letv : {T1:tp} {T2:tp} exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 schema ctx = some [t:tp] exp t;
 
- rec eval : {g:ctx} (exp bool)[g] -> g[ ] -> (exp bool)[ ] =
-fn e => fn env => [ ] tt ;
+rec eval : (g:ctx) [g. exp bool] -> [. g] -> [. exp bool] =
+fn e => fn env => [. tt] ;
 
- rec eval : {g:ctx} (exp bool)[g] -> g[ ] -> (exp bool)[ ] =
+%{ SUBSTITUTION VARIABLES
+
+rec eval : (g:ctx) [g. exp bool] -> [. g] -> [. exp bool] =
 fn e => fn env => 
- let [g] E .. = e in 
- let [ ] #S[..] = env in [ ] E #S[..]
+ let [g. E ..] = e in 
+ let [ ] #S[..] = env in [. E #S[..]]
 ;
     
-
+}%
 % FN g => fn e => fn r => let sbox S[.] = r in
 %     case e of 
 %         box(g. z) : (exp nat)[g] => box( . z)

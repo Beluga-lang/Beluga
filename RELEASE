@@ -1,69 +1,71 @@
 #!/bin/sh
 
+set -e
+
 suppress=NO
-git status 2> /dev/null | egrep 'Changed but not updated|Changes to be committed' > /dev/null \
-  && suppress=SUPPRESS
+
+git status 2> /dev/null \
+    |  egrep 'Changes not staged for commit|Changes to be committed' > /dev/null \
+    && suppress=SUPPRESS
 
 if [ $suppress = SUPPRESS ]; then
-   echo
-   echo '`git status'"'"' reports changed files.'
-   echo 'This script will continue, but will not build a final .tar.gz file.'
-   echo
+    echo
+    echo '`git status'"'"' reports changed files.'
+    echo 'This script will continue, but will not build a final .tar.gz file.'
+    echo
 fi
 
-# release=./release
 echo 'Version number is:'
 echo
 cat VERSION || ( echo "VERSION file doesn't exist; aborting release" ; exit 1 )
 echo
-sleep 2
+
 release=./beluga-"`cat VERSION`"-"`date +%Y%m%d`"
+
 echo 'Release directory name is:'
 echo
 echo '    '$release
 echo
-sleep 1
+
 if [ -e $release ]; then
-  echo Release directory "$release" already exists.
-  exit 1
+    echo Release directory "$release" already exists.
+    exit 1
 fi
 
 mkdir $release
 
 echo 'Copying files in root'
 cp -a \
- INSTALL \
- OMakefile \
- OMakeroot \
- README \
- STYLE \
- TEST \
- TEST-LF \
- $release
+    INSTALL \
+    OMakefile \
+    OMakeroot \
+    README \
+    STYLE \
+    $release
 
 mkdir $release/bin
 
 echo 'Copying src'
 cp -a \
- src \
- $release
+    src \
+    $release
 
 echo 'Copying tools'
 cp -a \
- tools \
- $release
+    tools \
+    $release
 
 echo 'Copying examples examples-twelf'
 cp -a \
- examples \
- examples-twelf \
- $release
+    examples \
+    examples-twelf \
+    $release
 
 cd $release
 echo Deleting useless files:
-useless="`find . -print | egrep '~|.DS_Store'`"
+useless=$(find . -print | egrep '~|.DS_Store' || true)
 echo rm $useless
-rm $useless
+rm -rf $useless
 
 # Remove examples not yet ready for public consumption
 rm -rf examples/notworking
@@ -72,35 +74,43 @@ rm -rf examples/beluga
 
 echo "Copying $release to $release-sandbox"
 cd ..
+if [ -e $release-sandbox ]; then
+    echo Release sandbox directory "$release-sandbox" already exists.
+    exit 1
+fi
 cp -a $release $release-sandbox
 
-cd $release-sandbox
-echo 'Running omake'
+echo 'Building (bytecode) in-tree first, for testing'
+omake clean
 omake || ( echo 'omake failed; aborting release' ; exit 1 )
 
-echo 'Running TEST'
+echo 'Running TEST (bytecode)'
 ./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
 
+echo 'Building (native) in-tree first, for testing'
 omake clean
 omake NATIVE_ENABLED=true clean
-
-echo
-echo 'Running omake NATIVE_ENABLED=true'
-sleep 1
 omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
 
-echo 'Running TEST (native code)'
-./TEST || ( echo 'TEST (native code) failed; aborting release' ; exit 1 )
+echo 'Running TEST (native)'
+./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
 
-echo ; echo 'TEST exit value 0; check output for signs of trouble'
-sleep 2
+cd $release-sandbox
+
+echo 'Building (bytecode) in release directory'
+omake || ( echo 'omake failed; aborting release' ; exit 1 )
+
+echo 'Building (native) in release directory'
+omake clean
+omake NATIVE_ENABLED=true clean
+omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
+
 cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further'
-sleep 1
 
 if [ $suppress = SUPPRESS ]; then
-  echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'
-  exit 3
+    echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'
+    exit 3
 fi
 
 sleep 1

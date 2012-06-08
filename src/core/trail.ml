@@ -5,24 +5,21 @@
     @author Joshua Dunfield
     @author Brigitte Pientka
     @author Roberto Virga
+    Modified: Costin Badescu
 *)
 
 
-
 module type TRAIL = sig
+
   type 'a t
 
   val trail   : unit -> 'a t
-
-  val suspend : 'a t -> ('a -> 'b) -> 'b t
-  val resume  : 'b t -> 'a t -> ('b -> 'a) -> unit
-
   val reset   : 'a t -> unit
   val mark    : 'a t -> unit
   val unwind  : 'a t -> ('a -> unit) -> unit
   val log     : 'a t -> 'a -> unit
-end
 
+end
 
 
 module EmptyTrail : TRAIL = struct
@@ -30,10 +27,6 @@ module EmptyTrail : TRAIL = struct
   type 'a t = unit
 
   let trail   ()           = ()
-
-  let suspend () _copy     = ()
-
-  let resume  () () _reset = ()
 
   let reset   ()           = ()
 
@@ -46,53 +39,25 @@ module EmptyTrail : TRAIL = struct
 end
 
 
-
 module StdTrail : TRAIL = struct
 
-    type 'a desc =
-      | Cons of 'a * 'a desc
-      | Mark of 'a desc
-      | Nil
+  type 'a event = Mark | Event of 'a
 
-    type 'a t = 'a desc ref
+  type 'a t = 'a event Stack.t
 
-    let trail () = ref Nil
+  let trail () = Stack.create ()
 
-    let reset trail = trail := Nil
+  let log trail action = Stack.push (Event action) trail
 
-    let suspend trail copy =
-      let rec suspend' trail = match trail with
-        | Nil                  -> Nil
-        | Mark trail           -> suspend' trail
-        | Cons (action, trail) ->
-            Cons (copy action, suspend' trail) in
-      let ftrail = suspend' !trail
-      in
-        ref ftrail
+  let reset trail = Stack.clear trail
 
-    let resume ftrail trail reset =
-      let rec resume' trail = match trail with
-        | Nil                    -> Nil
-        | Mark ftrail            -> resume' ftrail
-        | Cons (faction, ftrail) ->
-            Cons (reset faction, resume' ftrail) in
-      let trail' = resume' !ftrail
-      in
-        trail := trail'
+  let mark trail = Stack.push (Mark) trail
 
-
-    let mark trail = trail := Mark !trail
-
-    let unwind trail undo =
-      let rec unwind' trail = match trail with
-        | Nil                  -> Nil
-        | Mark trail           -> trail
-        | Cons (action, trail) ->
-              undo action
-            ; unwind' trail
-      in
-        trail := unwind' !trail
-
-    let log trail action = trail := Cons (action, !trail)
+  let rec unwind trail undo =
+    if Stack.is_empty trail then
+      ()
+    else match Stack.pop trail with
+      | Mark -> ()
+      | Event action -> undo action ; unwind trail undo
 
 end

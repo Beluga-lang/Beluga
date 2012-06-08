@@ -1,7 +1,6 @@
 (* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
 
 open Id
-
 open Syntax.Int
 
 module Cid : sig
@@ -32,7 +31,7 @@ module Cid : sig
     val gen_mvar_name     : LF.typ -> (unit -> string) option 
     val get               : cid_typ -> entry
     val index_of_name     : name -> cid_typ
-    val addConstructor : Syntax.Loc.t option -> cid_typ -> cid_term -> LF.typ -> unit
+    val addConstructor    : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear             : unit -> unit
 
     (* see subord.ml for an explanation of term-level subordination
@@ -52,12 +51,51 @@ module Cid : sig
 
     val mk_entry      : name -> LF.typ -> int -> entry
     type t
-    val add           : Syntax.Loc.t option -> cid_typ -> entry -> cid_term
+    val add           : Syntax.Loc.t -> cid_typ -> entry -> cid_term
     val get           : cid_term -> entry
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
     val clear         : unit -> unit
   end
+
+  module CompTyp : sig
+
+    type entry = private {
+      name               : name;
+      implicit_arguments : int;
+      kind               : Comp.kind;
+      mutable constructors : cid_comp_const list
+    }
+
+    val mk_entry  : name -> Comp.kind -> int -> entry 
+
+    type t
+
+    val add           : entry -> cid_comp_typ
+    val get           : cid_comp_typ -> entry
+    val addConstructor: cid_comp_const -> cid_comp_typ -> unit
+    val index_of_name : name -> cid_comp_typ
+    val clear         : unit -> unit
+  end
+
+
+  module CompConst : sig
+
+    type entry = private {
+      name               : name;
+      implicit_arguments : int;
+      typ                : Comp.typ
+    }
+
+    val mk_entry      : name -> Comp.typ -> int -> entry
+    type t
+    val add           : cid_comp_typ -> entry -> cid_comp_const
+    val get           : cid_comp_const -> entry
+    val get_implicit_arguments : cid_comp_const -> int
+    val index_of_name : name -> cid_comp_const
+    val clear         : unit -> unit
+  end
+
 
 
   module Comp : sig
@@ -97,6 +135,34 @@ module Cid : sig
     val index_of_name   : name -> cid_schema
     val clear           : unit -> unit
   end
+
+  module type RENDERER = sig
+
+    open Id
+    open Syntax.Int
+
+    val render_name         : name         -> string
+    val render_cid_comp_typ : cid_typ      -> string
+    val render_cid_comp_const : cid_comp_const -> string
+    val render_cid_typ      : cid_typ      -> string
+    val render_cid_term     : cid_term     -> string
+    val render_cid_schema   : cid_schema   -> string
+    val render_cid_prog     : cid_prog     -> string
+    val render_offset       : offset       -> string
+
+    val render_ctx_var      : LF.mctx    -> offset   -> string
+    val render_cvar         : LF.mctx    -> offset   -> string
+    val render_bvar         : LF.dctx    -> offset   -> string
+    val render_var          : Comp.gctx  -> var      -> string
+
+  end
+
+  (* Default RENDERER for Internal Syntax *)
+  module DefaultRenderer : RENDERER
+
+  (* Named Renderer for Internal Syntax *)
+  module NamedRenderer : RENDERER
+
 end
 
 val clear : unit -> unit
@@ -127,22 +193,40 @@ module FVar : sig
   val fvar_list : unit -> (Id.name * LF.typ_free_var) list 
 end
 
-
+(*
 module FMVar : sig
    (* NOTE: FMVars are stored in an an ordered data structure *)  
+  
   val add   : name -> (LF.typ * LF.dctx) -> unit
   val get   : name -> (LF.typ * LF.dctx)
   val clear : unit -> unit
 end
 
+  *)
 
+module FPatVar : sig
+  val add   : name -> Syntax.Int.Comp.typ -> unit
+  val get   : name -> Syntax.Int.Comp.typ
+  val clear : unit -> unit
+  val fvar_ctx : unit -> Syntax.Int.Comp.gctx
+end
+
+module FCVar : sig
+
+   (* NOTE: FCVars are stored in an an ordered data structure *)  
+  val add   : name -> (LF.mctx * LF.ctyp_decl)  -> unit
+  val get   : name -> (LF.mctx * LF.ctyp_decl)
+  val clear : unit -> unit
+end
+
+(*
 module FPVar : sig
  (* NOTE: FPVars are stored in an an ordered data structure *)  
   val add   : name -> (LF.typ * LF.dctx) -> unit
   val get   : name -> (LF.typ * LF.dctx)
   val clear : unit -> unit
 end
-
+*)
 
 module Var : sig
 
@@ -155,23 +239,30 @@ module Var : sig
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry
+  val append        : t -> t -> t
   val index_of_name : t -> name -> offset
+  val size          : t -> int
 
 end
 
 
 module CVar : sig
 
-  type entry = private {
-    name : name
+  type cvar = MV of Id.name | PV of Id.name | CV of Id.name | SV of Id.name
+
+  type entry = {
+    name : cvar
   }
 
-  val mk_entry      : name -> entry
+  val mk_entry      : cvar -> entry
+
   type t  (* NOTE: t is an ordered data structure *)  
+
+  val nearest_cvar  : t -> offset 
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry
-  val index_of_name : t -> name -> offset
+  val index_of_name : t -> cvar -> offset
   val append        : t -> t -> t
   val length        : t -> int
 

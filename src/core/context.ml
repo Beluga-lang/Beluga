@@ -7,26 +7,18 @@
 
 open Syntax.Int.LF
 open Syntax.Int
-open Error 
 
-exception Error of error
+
 exception NoTypAvailable
-exception Violation of string
-
 
 let addToHat (ctxvarOpt, length) =
   (ctxvarOpt, length + 1)
 
 (* More appropriate: Psi into psihat  Oct  4 2008 -bp *)
 let rec dctxToHat = function
-  | Null ->
-      (None, 0)
-
-  | CtxVar psi ->
-      (Some psi, 0)
-
-  | DDec (cPsi', _) ->
-      addToHat (dctxToHat cPsi')
+  | Null            -> (None, 0)
+  | CtxVar psi      -> (Some psi, 0)
+  | DDec (cPsi', _) -> addToHat (dctxToHat cPsi')
 
 let rec hatToDCtx phat = match phat with 
   | (None,      0) -> LF.Null
@@ -85,8 +77,11 @@ let ctxDec cPsi k =
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
 
-    | (DDec (cPsi', TypDeclOpt _ ) , 1 ) -> 
+    | (DDec (cPsi', TypDeclOpt _ ), 1) -> 
         raise NoTypAvailable
+
+    | (DDec (cPsi', _), k') ->
+        ctxDec' (cPsi', k'-1)
 
     (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in
@@ -115,7 +110,8 @@ let ctxSigmaDec cPsi k =
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
-
+    | (CtxVar (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)) , k) -> 
+        ctxDec' (cPhi, k)
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in
     ctxDec' (cPsi, k)
@@ -133,8 +129,6 @@ let rec ctxVar = function
   | Null              -> None
   | CtxVar psi        -> Some psi
   | DDec   (cPsi, _x) -> ctxVar cPsi
-
-
 
 let hasCtxVar cPsi = match ctxVar cPsi with
   | Some _ -> true
@@ -178,7 +172,7 @@ let rec getNameDCtx cPsi k = match (cPsi, k) with
 let rec getNameMCtx cD k = match (cD, k) with 
   | (Dec (_cD, MDecl(u, _, _ )), 1) -> u 
   | (Dec (_cD, PDecl(u, _, _ )), 1) -> u 
-  | (Dec (_cD, CDecl(u, _)), 1) -> u 
+  | (Dec (_cD, CDecl(u, _, _)), 1) -> u 
   | (Dec (_cD, MDeclOpt u), 1) -> u 
   | (Dec (_cD, PDeclOpt u), 1) -> u 
   | (Dec (_cD, CDeclOpt u), 1) -> u 
@@ -223,29 +217,32 @@ let emptyContextVariable cPsi = (* wrong *)
   in
     inner cPsi
 
-
 let rec lookup cG k = match (cG, k) with 
   | (Dec (_cG', Comp.CTypDecl (_,  tau)), 1) ->  Some tau
   | (Dec (_cG', _ ), 1) ->  None
   | (Dec ( cG', _ ), k) ->
       lookup cG' (k - 1)
 
+let rec lookupSchema cD psi_offset = match (cD, psi_offset) with
+  | (Dec (_cD, CDecl (_, cid_schema, _)), 1) -> cid_schema
+  | (Dec (cD, _) , i) -> 
+      lookupSchema cD (i-1)
 
-let rec lookupSchema cO psi_offset = match (cO, psi_offset) with
-  | (Dec (_cO, CDecl (_, cid_schema)), 1) -> cid_schema
-  | (Dec (cO, _) , i) -> 
-      lookupSchema cO (i-1)
-
-
-and lookupCtxVar cO cvar = 
-    match cO with
-      | Empty -> raise (Violation "Context variable not found")
-      | Dec (cO, CDecl (psi, schemaName)) ->      
+and lookupCtxVar cD cvar = 
+  let rec lookup cD offset = match cD with
+      | Empty -> raise (Error.Violation "Context variable not found")
+      | Dec (cD, CDecl (psi, schemaName, _)) ->      
           begin match cvar with 
             | CtxName phi when psi = phi ->  (psi, schemaName)
-            | (CtxName _phi) as ctx_var  -> lookupCtxVar cO ctx_var
-            | CtxOffset 1                -> (psi, schemaName)
-            | CtxOffset n                -> lookupCtxVar cO (CtxOffset (n - 1))
+            | (CtxName _phi)             -> lookup cD (offset+1)
+            | CtxOffset n                -> 
+                if (n - offset) = 1 then 
+                  (psi, schemaName)
+                else 
+                  lookup cD (offset+1)
           end 
+      | Dec (cD, _ ) -> lookup cD (offset+1)
+  in 
+    lookup cD 0
 
 and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)

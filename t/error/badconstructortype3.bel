@@ -1,0 +1,6 @@
+nat : type.
+
+datatype Colour : ctype =
+| Blue : Colour
+| Red  : [.nat]
+;

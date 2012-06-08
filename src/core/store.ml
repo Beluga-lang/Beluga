@@ -3,6 +3,11 @@
 open Syntax
 
 
+type error =
+  | FrozenType of Id.cid_typ
+
+exception Error of Syntax.Loc.t * error
+
 module Cid = struct
 
   module Typ = struct
@@ -134,9 +139,10 @@ module Cid = struct
            subord_iter (fun aa -> addSubord aa b) a_e.subordinates;
           )
 
-(* At the moment not relevant: may or may not be correct / unused code 
+(*
+(* At the moment not relevant: may or may not be correct / unused code *)
     (* add the type-level subordination:  b-types can contain a-terms *)
-    and addTypesubord a b =
+     and addTypesubord a b =
       let a_e = get a in
       let b_e = get b in
 (*      let _ = print_string ("addTypesubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in *)
@@ -166,35 +172,45 @@ module Cid = struct
 *)
       in
         update entry.kind
-
 *)
-
-    let add entry = 
-      let cid_tp = DynArray.length store in
-        DynArray.add store entry;
-        Hashtbl.replace directory entry.name cid_tp;
-        entry_list := cid_tp :: !entry_list;
-(*        updateTypesubord cid_tp entry; *)
-        cid_tp
-    
-    
+   
     let rec inspect acc = function
       | Int.LF.Atom(_, b, spine) ->
-          List.iter (fun acc1 -> addSubord acc1 b) acc; 
-          [b]
+          List.iter (fun a -> addSubord a b) acc ; [b]
 
       | Int.LF.PiTyp((Int.LF.TypDecl(_name, tA1), _depend), tA2) ->       
           inspect (acc @ (inspect [] tA1)) tA2 
     (*  | Sigma _ -> *)
 
+
+    let rec inspectKind cid_tp acc = function
+      | Int.LF.Typ -> 
+          List.iter (fun a -> addSubord a cid_tp) acc
+      | Int.LF.PiKind((Int.LF.TypDecl(_name, tA1), _depend), tK2) ->       
+          inspectKind cid_tp (acc @ (inspect [] tA1)) tK2 
+    
+    let add entry = 
+      let cid_tp = DynArray.length store in
+        DynArray.add store entry;
+        Hashtbl.replace directory entry.name cid_tp;
+        entry_list := cid_tp :: !entry_list;
+        inspectKind cid_tp [] entry.kind; 
+        cid_tp
+    
+
+
     let addConstructor loc typ c tA =
       let entry = get typ in
         if entry.frozen then
-          raise (Error.Error (loc, Error.FrozenType typ))
+          raise (Error (loc, FrozenType typ))
         else
           let _ = entry.constructors <- c :: entry.constructors in
           let _ = inspect [] tA in
-          (* type families occuring tA are added to the subordination relation *)
+          (* type families occuring tA are added to the subordination relation 
+             BP: This insepction should be done once for each type family - not
+                 when adding a constructor; some type families do not have
+                 constructors, and it is redundant to compute it multiple times.             
+          *)
             ()
     
     let clear () =
@@ -226,7 +242,6 @@ module Cid = struct
       implicit_arguments = i;
       typ                = t
     }
-
 
     type t = Id.name DynArray.t
 
@@ -296,6 +311,93 @@ module Cid = struct
 
   end
 
+  module CompTyp = struct 
+    type entry = {
+      name                : Id.name;
+      implicit_arguments  : int;
+      kind                : Int.Comp.kind;
+      mutable constructors: Id.cid_comp_const list 
+    }
+
+    let entry_list  = ref []
+
+    let mk_entry name kind implicit_arguments  =  {
+      name               = name;
+      implicit_arguments = implicit_arguments;
+      kind               = kind;
+      constructors       = []
+    }
+
+    type t = Id.name DynArray.t
+
+    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name n = Hashtbl.find directory n
+
+    let add e =
+      let cid_comp_typ = DynArray.length store in
+        DynArray.add store e;
+        Hashtbl.replace directory e.name cid_comp_typ;
+        cid_comp_typ
+
+    let get = DynArray.get store
+
+    let addConstructor c typ = 
+      let entry = get typ in 
+        entry.constructors <- c :: entry.constructors 
+
+    let clear () =
+      DynArray.clear store;
+      Hashtbl.clear directory
+  end 
+
+
+  module CompConst = struct 
+    type entry = {
+      name                : Id.name;
+      implicit_arguments  : int;
+      typ                : Int.Comp.typ
+    }
+
+
+    let mk_entry name tau implicit_arguments  =  {
+      name               = name;
+      implicit_arguments = implicit_arguments;
+      typ               = tau
+    }
+
+    type t = Id.name DynArray.t
+
+    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name n = Hashtbl.find directory n
+
+
+    let add cid_ctyp entry =
+      let cid_comp_const = DynArray.length store in
+        DynArray.add store entry;
+        Hashtbl.replace directory entry.name cid_comp_const;
+        CompTyp.addConstructor cid_comp_const cid_ctyp;
+        cid_comp_const
+
+    let get = DynArray.get store
+
+    let get_implicit_arguments c = (get c).implicit_arguments
+
+    let clear () =
+      DynArray.clear store;
+      Hashtbl.clear directory
+  end 
 
 
   module Comp = struct
@@ -340,6 +442,92 @@ module Cid = struct
       Hashtbl.clear directory
 
   end
+
+  module type RENDERER = sig
+
+    open Id
+    open Syntax.Int
+
+    val render_name         : name         -> string
+    val render_cid_comp_typ : cid_typ      -> string
+    val render_cid_comp_const : cid_comp_const -> string
+    val render_cid_typ      : cid_typ      -> string
+    val render_cid_term     : cid_term     -> string
+    val render_cid_schema   : cid_schema   -> string
+    val render_cid_prog     : cid_prog     -> string
+    val render_offset       : offset       -> string
+
+    val render_ctx_var      : LF.mctx    -> offset   -> string
+    val render_cvar         : LF.mctx    -> offset   -> string
+    val render_bvar         : LF.dctx    -> offset   -> string
+    val render_var          : Comp.gctx  -> var      -> string
+
+  end
+
+  (* Default RENDERER for Internal Syntax using de Bruijn indices *)
+  module DefaultRenderer : RENDERER = struct
+
+    open Id
+
+    let render_name       n    = n.string_of_name
+    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
+    let render_cid_typ    a    = render_name (Typ.get a).Typ.name
+    let render_cid_term   c    = render_name (Term.get c).Term.name
+    let render_cid_schema w    = render_name (Schema.get w).Schema.name
+    let render_cid_prog   f    = render_name (Comp.get f).Comp.name
+    let render_ctx_var _cO g   =  string_of_int g
+    let render_cvar    _cD u   = "mvar " ^ string_of_int u
+    let render_bvar  _cPsi i   = string_of_int i
+    let render_offset      i   = string_of_int i
+    let render_var   _cG   x   = string_of_int x
+
+  end (* Int.DefaultRenderer *)
+
+ 
+  (* RENDERER for Internal Syntax using names *)
+  module NamedRenderer : RENDERER = struct
+
+    open Id
+
+    let render_name        n   = n.string_of_name
+    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
+    let render_cid_typ     a   = render_name (Typ.get a).Typ.name
+    let render_cid_term    c   = render_name (Term.get c).Term.name
+    let render_cid_schema  w   = render_name (Schema.get w).Schema.name
+    let render_cid_prog    f   = render_name (Comp.get f).Comp.name
+    let render_ctx_var cO g    =      
+      begin try
+        render_name (Context.getNameMCtx cO g)
+      with
+          _ -> "FREE CtxVar " ^ string_of_int g
+      end 
+
+    let render_cvar    cD u    = 
+      begin try
+        render_name (Context.getNameMCtx cD u)
+      with 
+          _ -> "FREE MVar " ^ (string_of_int u)
+      end 
+    let render_bvar  cPsi i    = 
+      begin try 
+        render_name (Context.getNameDCtx cPsi i)
+      with
+          _ -> "FREE BVar " ^ (string_of_int i)
+      end 
+
+    let render_offset     i   = string_of_int i
+
+    let render_var   cG   x   =
+      begin try
+        render_name (Context.getNameCtx cG x)
+      with 
+          _ -> "FREE Var " ^ (string_of_int x)
+      end
+
+  end (* Int.NamedRenderer *)
+
 end
 
 
@@ -376,14 +564,6 @@ end
 (* Free Bound Variables *)
 module FVar = struct
 
-(*
-  let store    = Hashtbl.create 25
-  let add      = Hashtbl.add store
-  let get      = Hashtbl.find store
-  let clear () = Hashtbl.clear store
-
-*)
-
   let store    = ref []
 
   let add x tA = 
@@ -400,8 +580,7 @@ module FVar = struct
             (y, tA'):: update str'
       | [] -> [(x, tA)]
     in 
-      store := update (!store)
-    
+      store := update (!store) 
 
   let get x    = 
     let rec lookup str = match str with
@@ -416,11 +595,33 @@ module FVar = struct
 
   let fvar_list () = !store
 
+end
+
+
+module FPatVar = struct
+
+  let store    = ref Syntax.Int.LF.Empty
+
+  let add x tau = 
+      store := Syntax.Int.LF.Dec (!store, Syntax.Int.Comp.CTypDecl (x,tau))
+
+  let get x    = 
+    let rec lookup str = match str with
+      | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau))) -> 
+          if x = y then tau else lookup str'
+      | _ -> raise Not_found
+    in 
+      lookup (!store)
+
+
+  let clear () = (store := Syntax.Int.LF.Empty)
+
+  let fvar_ctx () = !store
 
 end
 
 
-
+(*
 (* Free meta-variables *)
 module FMVar = struct
 
@@ -430,9 +631,19 @@ module FMVar = struct
   let clear () = Hashtbl.clear store
 
 end
+*)
 
+(* Free contextual variables *)
+module FCVar = struct
 
+  let store    = Hashtbl.create 0
+  let add      = Hashtbl.add store
+  let get      = Hashtbl.find store
+  let clear () = Hashtbl.clear store
 
+end
+
+(*
 (* Free parameter variables *)
 module FPVar = struct
 
@@ -442,9 +653,7 @@ module FPVar = struct
   let clear () = Hashtbl.clear store
 
 end
-
-
-
+*)
 (* Computation-level variables *)
 module Var = struct
 
@@ -467,7 +676,9 @@ module Var = struct
 
   let create ()    = []
   let extend ctx e = e :: ctx
+  let append vars vars' = vars @ vars'
   let get          = List.nth
+  let size  = List.length 
 
 end
 
@@ -476,7 +687,9 @@ end
 (* Contextual variables *)
 module CVar = struct
 
-  type entry = { name : Id.name }
+  type cvar = MV of Id.name | PV of Id.name | CV of Id.name | SV of Id.name
+
+  type entry = { name : cvar }
 
   let mk_entry n = { name = n }
 
@@ -493,6 +706,17 @@ module CVar = struct
     in
       loop 1 store
 
+
+  let nearest_cvar store =
+    let rec ncvar store k = match store with 
+      | [] -> raise Not_found
+      | e::store' -> 
+          match e.name with CV _  ->  k
+            | _ -> ncvar store' (k+1)
+    in 
+      ncvar store 1
+
+
   let create ()     = []
   let extend cvars e = e :: cvars
   let get           = List.nth
@@ -505,4 +729,16 @@ let clear () =
   Cid.Typ.clear ();
   Cid.Term.clear ();
   Cid.Schema.clear ();
+  Cid.CompTyp.clear ();
+  Cid.CompConst.clear ();
   Cid.Comp.clear ()
+
+let _ = Error.register_printer
+  (fun (Error (loc, err)) ->
+    Error.print_with_location loc (fun ppf ->
+      match err with
+        | FrozenType n ->
+            Format.fprintf ppf
+              "type %s was frozen by a previous case analysis;@ \
+               can't declare a new constructor here"
+              (Cid.DefaultRenderer.render_cid_typ n)))

@@ -12,6 +12,10 @@ type cid_schema = int
 
 type cid_coercion = int
 
+type cid_comp_typ = int
+
+type cid_comp_const = int
+
 type cid_prog   = int
 
 type offset     = int

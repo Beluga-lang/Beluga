@@ -13,6 +13,9 @@ open Syntax.Int
 open Substitution
 open Store.Cid
 open Error
+open Id
+
+module P = Pretty.Int.DefaultPrinter
 
 let rec subToString = function
   | Shift(CtxShift _, n) -> "Shift(CtxShift _, " ^ string_of_int n ^ ")"
@@ -26,9 +29,6 @@ and frontToString = function
   | Head h -> "Head _"
   | Obj tM -> "Obj _"
   | Undef -> "Undef"
-
-exception Error of Syntax.Loc.t option * error
-exception Violation of string
 
 module Comp = Syntax.Int.Comp
 
@@ -117,6 +117,8 @@ and ctxnorm_tuple (tuple, t) = match tuple with
 
 
 and ctxnorm_head (h,cs) = match h with
+  | FMVar (u, s) -> FMVar (u, ctxnorm_sub (s, cs))
+  | FPVar (u, s) -> FPVar (u, ctxnorm_sub (s, cs))
   | MVar (u, s) -> MVar (u, ctxnorm_sub (s, cs))
   | PVar (p, s) -> PVar (p, ctxnorm_sub (s, cs))
   | MMVar (MInst({contents = None} as u, cD, cPsi, tA, cnstr), (t,s)) -> 
@@ -127,6 +129,8 @@ and ctxnorm_head (h,cs) = match h with
 (*  | MMVar (u, (t,s)) -> MMVar (u, (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs))) *)
   | Proj(PVar (p,s), k) -> 
       Proj(PVar (p, ctxnorm_sub (s, cs)), k)
+  | Proj(FPVar (p,s), k) -> 
+      Proj(FPVar (p, ctxnorm_sub (s, cs)), k)
   | _ -> h 
 
 and ctxnorm_spine (tS, cs) = match tS with
@@ -255,6 +259,11 @@ and ctxnorm_psihat (phat, cs) = match phat with
         | (Some cvar', i) -> (Some cvar', i+k)
       end
 
+(* The function below only works, if cs is a renaming substitution;
+   if cs contains itself proper context with dependently typed declarations
+   which make sense in cD itself, then we need to appropriately shift them 
+- bp
+*)
 
 and ctxnorm_mctx (cD, cs) = match cD with
   | Empty -> Empty
@@ -268,6 +277,9 @@ and ctxnorm_cdec (cdec, cs) = match cdec with
       PDecl(u, ctxnorm_typ (tA, cs), ctxnorm_dctx (cPsi, cs))
   | MDeclOpt _ -> cdec
   | PDeclOpt _ -> cdec
+
+
+
 
 
 (* would still require that cD is ordered in
@@ -319,7 +331,7 @@ let rec ctxnorm_csub cs = match cs with
 
 
 let rec lookupSchemaOpt cO psi_offset = match (cO, psi_offset) with
-  | (Dec (_cO, CDecl (_, cid_schema)), 1) -> Some (cid_schema)
+  | (Dec (_cO, CDecl (_, cid_schema, _)), 1) -> Some (cid_schema)
   | (Dec (cO, _) , i) -> 
       lookupSchemaOpt cO (i-1)
   | _ -> None
@@ -392,7 +404,8 @@ and csub_sub cPsi phi (* k *) s = match s with
         (if psi < phi then 
            Shift (CtxShift (CtxOffset psi), k)
          else 
-           Shift (CtxShift (CtxOffset (psi-1)), k))
+            Shift (CtxShift (CtxOffset (psi-1)), k)) 
+
 
   | Shift (NegCtxShift (CtxOffset psi), k) -> 
       if psi = phi then 
@@ -415,7 +428,8 @@ and csub_sub cPsi phi (* k *) s = match s with
         (if psi < phi then Shift(NegCtxShift (CtxOffset psi), k)
          else Shift(NegCtxShift (CtxOffset (psi-1)), k)
         )
-
+  | Shift (CtxShift _ , k) -> s
+  | Shift (NegCtxShift _ , k) -> s
   | Dot (ft, s) -> 
       Dot (csub_front cPsi phi ft, csub_sub cPsi phi s)
 
@@ -434,8 +448,48 @@ and csub_front cPsi k ft = match ft with
 
 *)
 
- 
-let rec csub_ctyp cD cPsi k tau = match tau with
+
+
+let rec csub_meta_obj cD cPsi k mO = match mO with 
+  | Syntax.Int.Comp.MetaCtx (loc, cPhi) -> 
+      let cPhi' = csub_dctx cD cPsi k cPhi in 
+        Syntax.Int.Comp.MetaCtx (loc, cPhi')
+  | Syntax.Int.Comp.MetaObj (loc, phat, tM) -> 
+      let phat' = csub_psihat cPsi k phat in 
+      let tM'   = csub_norm cPsi k tM in 
+        Syntax.Int.Comp.MetaObj (loc, phat', tM') 
+
+
+and csub_meta_spine cD cPsi k mS = match mS with 
+  | Syntax.Int.Comp.MetaNil -> Syntax.Int.Comp.MetaNil
+  | Syntax.Int.Comp.MetaApp (mO, mS) -> 
+      let mO' = csub_meta_obj cD cPsi k mO in 
+      let mS' = csub_meta_spine cD cPsi k mS in 
+        Syntax.Int.Comp.MetaApp (mO', mS')
+
+and csub_ckind cD cPsi k cK = begin match cK with 
+  | Syntax.Int.Comp.Ctype _ -> cK
+  | Syntax.Int.Comp.PiKind (loc, (cdecl, dep), cK') -> 
+      begin match cdecl with 
+        | Syntax.Int.LF.CDecl _ -> 
+            let cK' = csub_ckind cD (ctxnorm_dctx (cPsi, CShift 1)) (k+1) cK' in 
+              Syntax.Int.Comp.PiKind (loc, (cdecl, dep), cK')
+        | Syntax.Int.LF.MDecl (u, tA, cPhi) -> 
+            let mdecl = MDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi) in 
+            let cK'    = csub_ckind (Dec(cD, mdecl)) (Whnf.cnormDCtx (cPsi, MShift 1)) k cK' in 
+              Syntax.Int.Comp.PiKind (loc, (mdecl, dep), cK')
+        | Syntax.Int.LF.PDecl (u, tA, cPhi) -> 
+            let pdecl = PDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi) in 
+            let cK'    = csub_ckind (Dec(cD, pdecl)) (Whnf.cnormDCtx (cPsi, MShift 1)) k cK' in 
+              Syntax.Int.Comp.PiKind (loc, (pdecl, dep), cK')
+      end
+end 
+
+and csub_ctyp cD cPsi k tau = match tau with
+  | Syntax.Int.Comp.TypBase (loc, c, mS) -> 
+      let mS' = csub_meta_spine cD cPsi k mS in 
+        Syntax.Int.Comp.TypBase (loc, c, mS')
+
   | Syntax.Int.Comp.TypBool ->
       Syntax.Int.Comp.TypBool 
 
@@ -485,8 +539,11 @@ and csub_dctx cD cPsi k cPhi =
     | CtxVar (CtxOffset offset') ->         
         if offset' = k then 
           (cPsi, true) else 
-            (if offset' < k then (CtxVar (CtxOffset offset'), false)
-             else (CtxVar (CtxOffset (offset' - 1)), false))
+            (if offset' < k then 
+               (dprint (fun () -> "[csub_dctx] 0" ); 
+               (CtxVar (CtxOffset offset'), false))
+             else 
+               (dprint (fun () -> "[csub_dctx] 1") ; (CtxVar (CtxOffset (offset' - 1)), false)))
 
     | CtxVar (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx)) ->         
         csub_dctx' cPhi
@@ -501,7 +558,10 @@ and csub_dctx cD cPsi k cPhi =
           let tA' = csub_typ cPsi k tA in 
           (DDec (cPhi', TypDecl(x, tA')), b)
         else 
-          (DDec(cPhi', TypDecl (x, tA)), b)
+          let _ = dprint (fun () -> "[csub_dctx] 2") in 
+          let tA' = csub_typ cPsi k tA in 
+            (DDec(cPhi', TypDecl (x, tA')), b)
+(*            (DDec(cPhi', TypDecl (x, tA)), b) *)
 
     | DDec (cPhi, TypDeclOpt x) ->   
         let (cPhi', b) = csub_dctx' cPhi in 
@@ -566,6 +626,11 @@ let rec csub_exp_chk cPsi k e' =
       let i1 = csub_exp_syn cPsi k i in 
       let e1 = csub_exp_chk cPsi k e in 
         Comp.LetPair (loc, i1, (x,y,e1))
+
+  | Comp.Let (loc, i, (x,e)) -> 
+      let i1 = csub_exp_syn cPsi k i in 
+      let e1 = csub_exp_chk cPsi k e in 
+        Comp.Let (loc, i1, (x,e1))
 
   | Comp.Box (loc, phat, tM) -> 
       let phat' = csub_psihat cPsi k phat in 
@@ -654,7 +719,7 @@ and csub_branch cPsi k branch = match branch with
 let id_csub cO = 
   let rec gen_id cO k = match cO with
   | Empty -> CShift k 
-  | Dec (cO', CDecl(_psi, _sW)) -> 
+  | Dec (cO', CDecl(_psi, _sW, _)) -> 
       CDot(CtxVar (CtxOffset (k+1)), gen_id cO' (k+1) )
   | Dec (cO', CDeclOpt _ ) -> 
       CDot(CtxVar (CtxOffset (k+1)), gen_id cO' (k+1) )
@@ -671,7 +736,7 @@ let rec inst_csub cPsi2 offset' csub cO =
   let rec update_octx cO1 offset sW = 
     begin match (cO1, offset) with
       | (Dec (cO', CDeclOpt psi_name ), 1) ->      
-           Dec(cO', CDecl (psi_name, sW ))
+           Dec(cO', CDecl (psi_name, sW, Maybe ))
       | (Dec (cO', cdec), k) -> 
           Dec(update_octx cO' (k-1) sW, cdec)  
     end
@@ -792,24 +857,12 @@ and ctxnorm_branch (branch,cs') = match branch with
        Feb 17 2010 - bp *) 
         Comp.BranchBox (cO, cD, (cPhi, pattern, ms, cs))
 
-
-
-
-
-
-(*
- * Following functions moved from reconstruct.ml; may need to be reorganized further
- *  -jd 2010-05-16
- *)
-
 let rec ctxShift cPsi = match cPsi with
   | Null              -> Shift (NoCtxShift , 0 )
   | CtxVar psi        -> Shift (CtxShift psi, 0)
   | DDec   (cPsi, _x) -> 
       let Shift(cshift, n) = ctxShift cPsi in
         Shift (cshift, n+1)
-
-
 
 (* ctxToSub_mclosed cD psi cPsi = (cD', s)
 
@@ -840,17 +893,19 @@ let rec ctxToSub_mclosed cD psi cPsi =
         dprint (fun () -> "s = " ^ subToString s);
         (* For the moment, assume tA atomic. *)
 
-      let u     = Root(None, MVar(Offset 1,  Substitution.LF.id), Nil) in 
+      let u     = Root(Syntax.Loc.ghost, MVar(Offset 1,  Substitution.LF.id), Nil) in 
+
         (* cD' ; psi |- s : cPsi' *)
         (* cD' ; psi |- u[id] : [s]tA *)
+
       let tA'   = TClo(tA, s) in 
-      (* cD ; cPhi |- Dot(s, Obj u) : cPsi', x:tA *)
-      let shifted = Substitution.LF.comp s Substitution.LF.shift in
-      (* dprint (fun () -> "shifted = " ^ subToString shifted);*)
-      let result = Dot(Obj u, shifted) in
+      (* cD', u: _   ; psi |- s : cPsi', x:tA *)
+      let s' = Whnf.cnormSub (s, MShift 1) in 
+      let result = Dot(Obj u, s') in
+
       let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in 
-        dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result);
-        (Dec (cD', MDecl(u_name , tA', psi)), result, k+1)
+        (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
+        (Dec (cD', MDecl(u_name , tA', Whnf.cnormDCtx (psi, MShift k))), result, k+1)
   in
     toSub cPsi
 
@@ -904,7 +959,7 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
       dprint (fun () -> "composition = " ^ subToString composition);
       let u     = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in 
 *)
-      let u     = Whnf.etaExpandMMV None cD cPhi (tA, s) Substitution.LF.id in 
+      let u     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi (tA, s) Substitution.LF.id in 
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
       (* cD ; cPhi |- s : cPsi' *)
       (* cD ; cPhi |- u[id] : [s]tA *)
@@ -918,13 +973,15 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
 let rec mctxToMSub cD = match cD with
   | Empty -> Whnf.m_id
-  | Dec (cD', MDecl(_, tA, cPsi)) ->
+  | Dec (cD', MDecl(n, tA, cPsi)) ->
       let t     = mctxToMSub cD' in
+      let _ = dprint (fun () -> "[mctxToMSub] cD' = " ^ P.mctxToString cD') in
+      let _     = dprint (fun () -> "[mctxToMSub] t = " ^ P.msubToString Empty t) in 
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let tA'   = Whnf.cnormTyp (tA, t) in
       let u     = Whnf.newMVar (cPsi', tA') in
       let phat  = Context.dctxToHat cPsi' in
-        MDot (MObj (phat, Root (None, MVar (u, Substitution.LF.id), Nil)) , t)
+        MDot (MObj (phat, Root (Syntax.Loc.ghost, MVar (u, Substitution.LF.id), Nil)) , t)
 
   | Dec(cD', PDecl(_, tA, cPsi)) ->
       let t    = mctxToMSub cD' in
@@ -932,6 +989,51 @@ let rec mctxToMSub cD = match cD with
       let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
+
+  | Dec (cD', CDecl(n, sW, _)) -> 
+      let t = mctxToMSub cD' in 
+      let cvar = Whnf.newCVar sW in 
+        MDot (CObj (CtxVar cvar), t)
+
+
+
+
+let rec mctxToMMSub cD0 cD = match cD with
+  | Empty -> MShift (Context.length cD0)   
+  | Dec (cD', MDecl(_, tA, cPsi)) ->
+      let t     = mctxToMMSub cD0 cD' in
+      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
+      let tA'   = Whnf.cnormTyp (tA, t) in
+      let u     = Whnf.newMMVar (cD0, cPsi', tA') in
+      let phat  = Context.dctxToHat cPsi' in
+        MDot (MObj (phat, Root (Syntax.Loc.ghost, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil)) , t)
+
+  | Dec(cD', PDecl(_, tA, cPsi)) ->
+     (* This is somewhat a hack...  *)
+      let t    = mctxToMSub cD' in
+      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
+      let p    = Whnf.newPVar (cPsi', Whnf.cnormTyp (tA, t)) in
+      let phat = dctxToHat cPsi' in
+        MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
+
+  | Dec (cD', CDecl (n, sW, _ )) -> 
+     (* This is somewhat a hack...  *)
+      let _     = dprint (fun () -> "[mctxToString] CDecl " ^ n.string_of_name) in 
+      let t = mctxToMMSub cD0 cD' in 
+      let _     = dprint (fun () -> "[mctxToString] CDecl continued " ^ n.string_of_name) in 
+      let cvar = Whnf.newCVar sW in 
+        MDot (CObj (CtxVar cvar), t)
+
+
+
+
+let rec cctxToCSub cO cD = match cO with
+  | Empty -> CShift 0
+  | Dec (cO, CDecl (_psi, schema, _)) -> 
+      let ctxVar = CtxVar (CInst (ref None, schema, cO, cD)) in
+      let cs = cctxToCSub cO cD  in 
+        CDot (ctxVar, cs)
+
 
 
 (* The following functions are from an attempt to improve printing of meta-variables;

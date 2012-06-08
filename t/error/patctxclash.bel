@@ -1,0 +1,14 @@
+% Test for context clash in pattern.
+
+tp : type.
+i : tp.
+
+exp : tp -> type.
+expi : exp i.
+
+schema ctx = some [t:tp] exp t;
+
+rec f : {g:ctx} [.exp i] -> [g. exp i] =
+    mlam g => fn x => case x of
+      | [g. #p..] => [g. expi]
+;

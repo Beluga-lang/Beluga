@@ -89,8 +89,9 @@ module LF = struct
         raise (Error "Composition undefined (1) : encountered different context variables! ")*)
 
     | (Shift (CtxShift psi , m), s2) ->
+       (* psi, cPsi |-  s1 : .     and     cPsi' |- s2 : psi, cPsi  *)
         let rec ctx_shift n s2 = match s2 with
-          | Dot(_ft, s) -> ctx_shift (n - 1) s
+          | Dot(_ft, s) -> ctx_shift (n - 1) s 
               (*  psi, Psi |- s1 : .   and Psi2 |- s2. ft : psi, Psi  *)
 
           | Shift (NoCtxShift, k) -> Shift (CtxShift psi, k + n)
@@ -103,10 +104,9 @@ module LF = struct
                * Psi, Psi' |- s1 o s2 : .
                *)
 
-
-          | _ -> (* (Printf.printf "Composing: s1 = %s \n and s2 = %s\n\n"
-                    (P.subToString s1) (P.subToString s2) ; *)
-              raise (NotComposable "Composition undefined - 2")
+          | Shift (CtxShift _ , _ ) ->  raise (NotComposable "Composition       undefined - 2")
+ 
+(*          | _ ->  raise (NotComposable "Composition undefined - 2") *)
         in
           ctx_shift m s2
 
@@ -467,9 +467,6 @@ let rec applyMSub n t = match (n, t) with
     | (1, MDot (ft, _t)) -> ft
     | (n, MDot (_ft, t)) -> applyMSub (n - 1) t
     | (n, MShift k)       -> MV (k + n)
-
-
-
 
   (* identity : dctx -> sub
    *

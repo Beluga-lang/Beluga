@@ -16,7 +16,7 @@ module Types = Store.Cid.Typ
 module Schema = Store.Cid.Schema
 
 module P = Pretty.Int.DefaultPrinter
-module R = Pretty.Int.NamedRenderer
+module R = Store.Cid.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [28])
 
@@ -43,7 +43,7 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [28])
  *
  *     list : nat -> type.
  *
- * Therefore "list-types can contain nat-terms", or equivalently,
+ * Therefore "list-terms can contain nat-terms", or equivalently,
  *
  *   "list is type-subordinate to nat"
  *   "nat type-subordinates list"
@@ -54,13 +54,23 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [28])
  * a transitive relation.
  *
  *     list : nat -> type.
- *     t : list (suc (suc zero)) -> type.
+ *     t : list (suc (suc z)) -> type.
  *
  * t is type-subordinate to list, and list is type-subordinate to nat, but t is *not*
- * type-subordinate to nat, because the dependent type arguments to t don't
+ * type-subordinate to nat, because the dependent type arguments to t does not 
  * include nat-terms.
  *
  * -jd 2010-06
+ * [BP : NOTE 5 Apr, 2011 ]
+ *     list : nat -> type.
+ *     t : list (suc (suc N)) -> type.
+ *
+ * t is type-subordinate to list, and list is type-subordinate to nat; t *must*
+ * be type-subordinate to nat, because the dependent type arguments to t does 
+ * include nat-terms.
+
+
+
  *)
 
 let dump_subord () =
@@ -137,6 +147,8 @@ let rec relevant tA basis = (match tA with
         (
           dprint (fun () -> "Denying that " ^ R.render_cid_typ a ^ 
                     " can appear in any of the following: " ^ basisToString basis);
+(*          dump_subord () ; 
+          dump_typesubord () ; *)
           [])
   | PiTyp((TypDecl(_x, tA1), _), tA2) ->
       (relevant tA1 basis) @ (relevant tA2 basis)
@@ -184,7 +196,12 @@ let rec thin (cO, cD) (tP, cPsi) =
   let rec inner (basis : Id.cid_typ list) cPsi = match cPsi with
     | Null -> (Shift(NoCtxShift, 0),  Null) (* . |- shift(noCtx, 0) : . *)
     | CtxVar psi -> 
-        if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) basis then
+        let schema = begin match psi with
+          | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
+          | CInst ( _ , cid_schema, _, _ ) -> cid_schema
+        end
+        in 
+        if relevantSchema (Schema.get_schema schema) basis then
           ( (*print_string "Keeping context variable\n"; *)
             (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
         else
@@ -206,3 +223,51 @@ let rec thin (cO, cD) (tP, cPsi) =
         end
   in
     inner (match tP with Atom(_, a, _spine) -> [a]) cPsi
+
+
+
+
+
+let rec thin' cD a cPsi = 
+  (*inner basis cPsi = (s, cPsi')
+
+     if basis is a list of type families
+        cO ; cD |- cPsi ctx  
+     then
+        cPsi' only contains those declarations whose types is
+        relevant to constructing elements of type families 
+        in basis.
+
+     Initially, basis is `b' where tP = Atom(_, b, _). 
+  *)
+  let rec inner (basis : Id.cid_typ list) cPsi = match cPsi with
+    | Null -> (Shift(NoCtxShift, 0),  Null) (* . |- shift(noCtx, 0) : . *)
+
+    | CtxVar (psi) -> 
+        let schema = begin match psi with
+          | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
+          | CInst ( _ , cid_schema, _, _ ) -> cid_schema
+        end
+        in 
+        if relevantSchema (Schema.get_schema schema) basis then
+          ( (*print_string "Keeping context variable\n"; *)
+            (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
+        else
+          ( (* print_string ("Denying that the context variable is relevant to anything in " ^ basisToString basis ^ "\n"); *)
+            (Shift(CtxShift psi, 0),  Null) )  (* psi |- shift(noCtx, 0) : . *)            
+    | DDec(cPsi, TypDecl(name, tA)) ->
+        begin match relevant (Whnf.normTyp (tA, Substitution.LF.id)) basis with
+          | [] -> 
+            let (thin_s, cPsi') = inner  basis cPsi in 
+              (* cPsi |- thin_s : cPsi' *)
+              (Substitution.LF.comp thin_s (Shift (NoCtxShift, 1)),  cPsi') 
+              (* cPsi, x:tA |- thin_s ^ 1 : cPsi' *)
+          | nonempty_list -> 
+            let (thin_s, cPsi') = inner (nonempty_list @ basis) cPsi in 
+              (* cPsi |- thin_s <= cPsi' *) 
+              (* cPsi,x:tA |- dot1 thin_s <= cPsi', x:tA'  where tA = [thin_s]([thin_s_inv]tA) *) 
+            let thin_s_inv      = Substitution.LF.invert thin_s in 
+              (Substitution.LF.dot1 thin_s,  DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
+        end
+  in
+    inner [a] cPsi

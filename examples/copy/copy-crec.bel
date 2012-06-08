@@ -15,44 +15,43 @@ app  : term (arrow T T') -> term T -> term T'.
 schema tctx = some [t:tp] term t;
 % schema W = term nat;
 
-rec copy : {g:tctx} (term (T ..))[g] -> (term (T ..))[g] =
+rec copy : (g:tctx) [g. term (T ..)] -> [g. term (T ..)] =
 fn e => case e of  
-| [g] #p ..    => [g] (#p ..)
+| [g. #p ..]    => [g. (#p ..)]
 
-| [g]  z      => [g] z 
+| [g. z]      => [g. z] 
 
-| [g] s (E ..) => 
-  let [g] (F ..) = copy ([g] E .. ) in 
-     [g] s (F ..) 
+| [g. s (E ..)] => 
+  let [g. (F ..)] = copy [g. E .. ] in 
+     [g. s (F ..)] 
 
-| [g] lam  (\x. (U .. x)) => 
-  let [g,x : term _ ] (V .. x) = copy  ([g,x: term _ ] (U .. x))  in % [g, x:term _ ]
-    [g] lam  (\x. (V .. x))
+| [g. lam  (\x. (U .. x))] => 
+  let [g,x : term _ . (V .. x)] = copy  [g,x: term _. (U .. x)]  in % [g, x:term _ ]
+    [g. lam  (\x. (V .. x))]
 
 
-| [g] app (E1 ..) (E2 ..) => 
-  let [g] (F1 .. ) = copy ([g] (E1 ..)) in 
-  let [g] (F2 .. ) = copy ([g] (E2 ..)) in 
-    [g] app (F1 ..) (F2 ..)
+| [g. app (E1 ..) (E2 ..)] => 
+  let [g. (F1 .. )] = copy [g. (E1 ..)] in 
+  let [g. (F2 .. )] = copy [g. (E2 ..)] in 
+    [g. app (F1 ..) (F2 ..)]
 
 ;
 
 
-let t = copy ([ ] z) ;
+let t = copy [. z] ;
 
-let t = copy ([x:term nat] x);
+let t = copy [x:term nat. x];
 
-let t = copy ([x:term _ ] s x);
+let t = copy [x:term _. s x];
 
-let t : (term (arrow nat nat))[ ] = 
-     copy  ([ ] lam \x. x);
+let t : [. term (arrow nat nat)] = 
+     copy  [. lam \x. x];
 
-let t : (term (arrow (arrow bool nat) (arrow bool nat)))[ ] 
-     = copy ([ ] lam \x. (lam \y. app x y));
+let t : [. term (arrow (arrow bool nat) (arrow bool nat))] 
+     = copy [. lam \x. (lam \y. app x y)];
 
-let t = copy ([y:term (arrow (arrow (arrow bool nat) (arrow bool nat)) nat)]
-		   app y (lam \x. (lam \y. app x y)));
+let t = copy [y:term (arrow (arrow (arrow bool nat) (arrow bool nat)) nat). app y (lam \x. (lam \y. app x y))];
 
-let t = copy ([y:term nat,x:term bool] s y);
+let t = copy [y:term nat,x:term bool. s y];
 
 

@@ -5,11 +5,9 @@
 
 open Syntax.Int.LF
 open Syntax.Int
-open Error
 
-exception Error of error
+
 exception NoTypAvailable
-
 
 val dctxToHat   : dctx -> psi_hat
 val addToHat   : psi_hat -> psi_hat   (* Lengthen by one declaration *)

@@ -1,0 +1,87 @@
+%{ Example with natural numbers }%
+
+terminals z s lam true false
+syntax
+
+n ::= z
+  | s n;
+
+bool ::= true
+  | false;
+
+notation value: n value;
+
+-------------- val-z
+z value;
+
+notation sum: n + n = n;
+
+-------------------- sum-z
+z + (N ) = (N) ;
+
+N1 + N2 = N3 ;
+------------------------ sum-s
+(s N1) + N2 = (s N3) ;
+
+notation less : n < n ;
+
+------------ less-one
+n < (s n) ;
+
+n1 < n3 ;
+n3 < n2 ;
+------------ less-transitive
+n1 < n2 ;
+
+theorem z_less_s_z: exists z < (s z) ;
+
+dsolve : z < (s z) by rule less-one;
+
+end theorem
+
+theorem plus1 : forall N exists N + (s z) = (s N);
+
+x : N + (s z) = (s N) by induction on N ; 
+
+case z is
+	   d2: (z) + (s z) = (s z) 	by rule sum-z;
+end case
+
+case (s N) is
+	               F : N + (s z) = (s N) by induction hypothesis on N;
+                       (s N) + (s N) = (s (s N))  by rule sum-s on F;
+end case
+
+end induction
+end theorem 
+
+theorem sum-s-rh : forall D1 : N1 + N2 = N3 exists N1 + (s N2) = (s N3);
+
+d2 : N1 + (s N2) = (s N3) by induction on D1 ;
+
+case rule
+
+--------------------- sum-z
+z + N = N;
+
+is
+
+dz1 : z + (s N) = (s N) by rule sum-z;
+
+end case
+
+
+case rule
+
+I : N1' + N2 = N3';
+---------------------------- sum-s
+(s N1') + N2 = (s N3');
+
+is
+
+H : N1' + (s N2) = (s N3')  by induction hypothesis on I;
+(s N1') + (s N2) = (s s N3') by rule sum-s on H;
+
+end case 
+end induction
+end theorem 

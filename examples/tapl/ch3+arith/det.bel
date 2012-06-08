@@ -17,8 +17,7 @@ v_true : value true.
 v_false: value false.
 
 v_num  : num_value N -> value N.
-v_z    : num_value z.
-v_s    : num_value N -> num_value (succ N).
+v_z    : num_value z.v_s    : num_value N -> num_value (succ N).
 
 
 % ---------------------------------------------------------- %
@@ -62,33 +61,33 @@ andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
 not_possible : type.
 
-rec values_dont_step : (step M M')[ ] -> (num_value M )[ ] -> not_possible [ ]= 
+rec values_dont_step : [. step M M'] -> [. num_value M ] -> [. not_possible]= 
 fn s => fn v => case v of 
-| [ ] v_z   => (case s of [ ] {} )
-| [ ] v_s V => 
-    (case s of [ ] e_succ D => 
-		values_dont_step ([ ] D) ([ ] V))
+| [. v_z]   => (case s of [ .{}] )
+| [. v_s V] => 
+    (case s of [. e_succ D] => 
+		values_dont_step [. D] [. V])
 ;
 
 
-rec det : (steps_to_terms T T1 T2)[ ] -> (equal T1 T2)[ ] =
+rec det : [. steps_to_terms T T1 T2] -> [. equal T1 T2] =
 fn s => case s of 
 
-| [ ] andalso (e_succ D)        (e_succ F)   => 
-  let [ ] ref = det ([ ] andalso D F) in [ ] ref
+| [. andalso (e_succ D)        (e_succ F)]   => 
+  let [. ref] = det [. andalso D F] in [. ref]
 
-| [ ] andalso (e_pred_zero)     (e_pred_zero)    => [ ] ref
+| [. andalso (e_pred_zero)     (e_pred_zero)]    => [. ref]
 
-| [ ] andalso (e_pred_succ _ )  (e_pred_succ _ ) => [ ] ref
+| [. andalso (e_pred_succ _ )  (e_pred_succ _ )] => [. ref]
 
-| [ ] andalso (e_pred D)         (e_pred F)   =>
-    let [ ] ref = det ([ ] andalso D F) in [ ] ref
+| [. andalso (e_pred D)         (e_pred F)]   =>
+    let [. ref] = det [. andalso D F] in [. ref]
 
 % Not_Possible cases for pred
-| [ ] andalso (e_pred D)          (e_pred_succ V )    =>
-   (case values_dont_step ([ ] D) ([ ] v_s V) of [ ] {})
-| [ ] andalso (e_pred_succ V )       (e_pred D)       =>
-   (case values_dont_step ([ ] D) ([ ] v_s V) of [ ] {})
+| [. andalso (e_pred D)          (e_pred_succ V )]    =>
+   (case values_dont_step [. D] [. v_s V] of [ . {}])
+| [. andalso (e_pred_succ V )       (e_pred D)]       =>
+   (case values_dont_step [. D] [. v_s V] of [ . {}])
 
 ;
 

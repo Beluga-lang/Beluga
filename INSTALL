@@ -31,10 +31,11 @@ Generic
  giving up in despair, see the following section about the OCaml GODI
  distribution.*
 
-ocaml 3.10 or greater:  http://caml.inria.fr/download.en.html
-extlib:                 http://code.google.com/p/ocaml-extlib/downloads/list
-ulex:                   http://www.cduce.org/download.html#side
-omake:                  http://omake.metaprl.org/index.html
+ocaml 3.11.2 or greater: http://caml.inria.fr/download.en.html
+extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
+ulex:                    http://www.cduce.org/download.html#side
+omake:                   http://omake.metaprl.org/index.html
+ounit:                   http://ounit.forge.ocamlcore.org/
 
 GODI
 ----
@@ -130,3 +131,30 @@ ever need to run `omake clean', you should pass the same option:
 
 Running `omake clean' without setting NATIVE_ENABLED may not properly
 remove the native code.
+
+
+Running Ruby script to convert to new syntax
+=============================================
+
+You will need Ruby 1.9 for running the script.
+
+For MAC OS:
+The default version of ruby installed on Mac OS is usually not Ruby 1.9, but
+Ruby 1.8. To install the newest version of Ruby, we recommend installing first
+RVM, the “Ruby Version Manager. This will make installing Ruby 1.9 easy. In your
+home directory, you can say:
+
+ bash < <(curl -s https://rvm.beginrescueend.com/install/rvm)
+
+rvm is then installed in .rvm/bin. 
+
+Then you can say: 
+
+.rvm/bin/rvm install 1.9.3
+
+Note, you will want to add .rvm/bin to your .bashrc directory, so you will be able to
+find rvm without giving the full path.
+
+
+
+

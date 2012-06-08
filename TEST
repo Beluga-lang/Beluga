@@ -1,166 +1,160 @@
-#!/bin/sh
+#!/usr/bin/env zsh
 
-# TEST: tests Beluga (bin/interpreter) by calling it on various examples.
-#
-# Usage: TEST [options]
-#
-# [options], if given, are passed to Beluga.
-# Example: TEST +d
+usage() {
+    echo "Usage: $0 [test-options] -- [beluga-options]"
+    echo
+    echo "Synopsis: test harness for Beluga."
+    echo
+    echo "Options:"
+    echo "  -h,--help        Display this usage information."
+    echo "  -c,--color       Force colorized output even when piped."
+    echo "  --noexamples     Do not also test $EXAMPLEDIR."
+    echo "  --reset          Replace all .out files with new output (use with caution!)."
+    echo
+    echo "Notes:"
+    echo "  - If any .cfg files are found in a subdirectory, only them will be tested."
+    echo "  - If no .cfg file is found, all .bel files in the subdirectory"
+    echo "    will be tested."
+    echo "  - To inhibit testing .bel files, put an empty test.cfg in that directory."
+}
 
+echo "Parameters for this run (override as necessary using environment variables):"
+echo
 
-# set $BELUGA to an absolute path to the toplevel .../beluga directory
-#
-pwd=`pwd`
-BELUGA=`dirname $pwd/$0`
-cd $BELUGA
-BELUGA=`pwd`
-# echo BELUGA: $BELUGA
+# Path to the Beluga source distribution.
+echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
 
-# set $INTERPRETER to the executable
-INTERPRETER=$BELUGA/bin/interpreter 
+# Set $EXE to the executable to test.
+echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/interpreter}
 
-# set $X to the `beluga' examples directory
-X=$BELUGA/examples
-cd $X
+# Test cases.
+echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t}
 
+# Test cases.
+echo -e "\t" EXAMPLEDIR: ${EXAMPLEDIR:=$BELUGADIR/examples}
 
-# We use the following conventions:
-#
-# - Pure LF signatures (and original converted Twelf example)
-#   are in files sources.cfg
-# - Proofs written in Beluga are in test.cfg
-# - Files ending in .bel contain Beluga programs
-# - Coverage checking: compile/cpm/test.cfg takes very long.
-#   be patient.
+# Time limit.
+echo -e "\t" TIMEOUT: ${TIMEOUT:=2} seconds
 
-$INTERPRETER +t \
-    $* \
-    arith/arith.bel \
-    church-rosser/test.cfg \
-    church-rosser/test-crec.cfg \
-    compile/cls/sources.cfg \
-    compile/cls/test.cfg \
-    compile/cpm/test.cfg \
-    compile/debruijn/sources.cfg \
-    compile/debruijn/test.cfg \
-    compile/debruijn1/sources.cfg \
-    compile/debruijn1/test.cfg \
-    compile/cps/sources.cfg \
-    compile/cxm/sources.cfg \
-    count-var/cntvar.bel \
-    count-var/cntvar-crec.bel \
-    count-var/cntvar-explicit.bel \
-    count-var/cntvar-simple.bel \
-    count-var/cntvar-simple-crec.bel \
-    count-var/cntvar-2.bel \
-    copy/copy.bel \
-    copy/copy-crec.bel \
-    copy/copy-explicit.bel \
-    copy/copy-simple.bel \
-    copy/copy-simple-crec.bel \
-    copy/copy-simple-explicit.bel \
-    cut-elim.bel \
-    cut-elim-crec.bel \
-    debruijn1/sources.cfg \
-    equal/eq-proof-tuple.bel \
-    equal/eq-proof.bel \
-    equal/eq-proof-full-crec.bel \
-    fol/sources.cfg \
-    fol/test.cfg \
-    free-vars/fvnat.bel \
-    free-vars/fvnat-crec.bel \
-    free-vars/fvnat-explicit.bel \
-    freshML/term.bel \
-    freshML/term-crec.bel \
-    freshML/cps.bel \
-    freshML/cps-crec.bel \
-    freshML/cps-popl-tutorial1.bel \
-    freshML/cps-popl-tutorial1-crec.bel \
-    freshML/cps-popl-tutorial2.bel \
-    freshML/cps-popl-tutorial2-crec.bel \
-    freshML/cconv-cheney.bel \
-    freshML/debruijn-1.bel \
-    freshML/conv-untyped.bel \
-    lp-horn/sources.cfg \
-    lp-horn/test-crec.cfg \
-    mini-ml/eval-sub-1.bel \
-    mini-ml/eval-sub-1-explicit.bel \
-    mini-ml/eval-sub.bel \
-    mini-ml/eval-sub-explicit.bel \
-    mini-ml/tps.bel \
-    mini-ml/vsound.bel \
-    mini-ml/vsound-explicit.bel \
-    path/path.bel \
-    path/path-typed.bel \
-    small-step/lam.bel \
-    small-step/system-f.bel \
-    small-step/system-f-iso.bel \
-    subject-red.bel \
-    subject-red-crec.bel \
-    tapl/ch3/sources.cfg \
-    tapl/ch3+arith/sources-corrected.cfg \
-    test/backarrow.bel \
-    test/case1.bel \
-    test/case1-explicit.bel \
-    test/case2.bel \
-    test/case2-explicit.bel \
-    test/cross.bel \
-    test/dependency.bel \
-    test/id.bel \
-    test/id-simple.bel \
-    test/id-explicit.bel \
-    test/test.bel \
-    test/test-simple.bel \
-    test/test-simple-explicit.bel \
-    test/schema.bel \
-    tpcert.bel \
-    typed-eval/tpeval.bel \
-    typed-eval/tpeval-explicit.bel \
-    typed-eval/tpeval2.bel \
-    unique/unique.bel \
-    unique/unique-crec.bel \
-    unique/unique-eval.bel \
-    LF/arith.lf \
-    LF/arith-rec1.lf \
-    LF/lambda.lf \
-    LF/lambda-rec.lf \
-    LF/simple-typing.lf \
-    LF/lam-tp-rec.lf \
-    LF/cut-elim.lf \
-    LF/kindtest.lf \
-    LF/mini-ml.lf \
-    LF/mini-ml-rec.lf \
-    LF/vsound.lf \
-    LF/vsound-rec.lf \
-    LF/tpeval.lf \
-    LF/tpeval-rec.lf \
-    LF/tpcert.lf \
-    LF/tps.lf \
-    ../examples-twelf/arith/sources.cfg \
-    ../examples-twelf/alloc-sem/sources.cfg \
-    ../examples-twelf/ccc/sources.cfg \
-    ../examples-twelf/church-rosser/sources.cfg \
-    ../examples-twelf/church-rosser/test.cfg \
-    ../examples-twelf/cpsocc/sources.cfg \
-    ../examples-twelf/compile/cls/sources.cfg \
-    ../examples-twelf/compile/cls/test.cfg \
-    ../examples-twelf/compile/cpm/sources.cfg \
-    ../examples-twelf/compile/cpm/test.cfg \
-    ../examples-twelf/compile/debruijn/sources.cfg \
-    ../examples-twelf/compile/debruijn1/sources.cfg \
-    ../examples-twelf/compile/cps/sources.cfg \
-    ../examples-twelf/cut-elim/sources.cfg \
-    ../examples-twelf/fol/sources.cfg \
-    ../examples-twelf/handbook/sources.cfg \
-    ../examples-twelf/kolm/sources.cfg \
-    ../examples-twelf/lp/sources.cfg \
-    ../examples-twelf/lp-horn/sources.cfg \
-    ../examples-twelf/mini-ml/sources.cfg \
-    ../examples-twelf/mini-ml/test.cfg \
-    ../examples-twelf/prop-calc/sources.cfg \
-    test/alpha.bel \
-    test/sigma1.bel \
-    test/sigma2.bel \
-    test/sigma3.bel \
-    test/sigma4.bel \
-    test/implicit-obj.bel
+echo
+
+# Allow file globs to match nothing.
+setopt null_glob
+
+# Find test cases.
+test_cases() {
+    for dir in $TESTDIR/**/ $EXAMPLEDIR/**/
+    do
+	cfgs=(${dir}*.cfg)
+	if (( ${#cfgs[@]} > 0 ))
+	then
+	    print -C1 ${dir}*.cfg
+	else
+	    print -C1 ${dir}*.bel
+	fi
+    done
+}
+
+sort_cases() {
+    cases=($(</dev/stdin))
+    for i in ${(M)cases#*.bel}; do wc -c $i; done | sort -n | awk '{print $2}'
+    print -C1 ${(M)cases#*.cfg}
+}
+
+do_testing() {
+    local n=0 success=0 fail=0 timeout=0
+
+    # Limit runtime of each test case, in seconds.
+    ulimit -t $TIMEOUT
+
+    for i in $(test_cases | sort_cases)
+    do
+	n=$((n+1))
+	echo -ne "$C[start]**$CEND TEST $n: $i ... "
+
+	result=$($EXE +test $* $i 2>&1)
+	exit_code=$?
+	diff_result=$(echo "$result" | diff -u $i.out - 2>/dev/null)
+	# diff responds 0 if same, 1 if different, 2 if couldn't compare.
+	diff_code=$?
+
+	if [[ $exit_code -eq 152 ]]
+	then
+	    echo -e "$C[timeout]TIMEOUT$CEND"
+	    timeout=$((timeout+1))
+	elif [[ $diff_code -eq 0 || (exit_code -eq 0 && $diff_code -eq 2) ]]
+	then
+	    echo -e "$C[done]DONE$CEND"
+	    success=$((success+1))
+	else
+	    echo -e "$C[fail]FAIL$CEND"
+	    [[ -z "$diff_result" ]] && echo "$result" || (echo "$diff_result" | colorize_diff)
+	    fail=$((fail+1))
+	fi
+
+	[[ -n $RESET && -f $i.out ]] && echo "$result" > $i.out
+    done
+
+    echo
+    echo Successes: $success
+    echo Failures: $fail
+    echo Timeouts: $timeout
+    echo Total: $n
+
+    echo
+    times
+
+    # If not all tests succeeded then exit with non-zero status.
+    [[ $success -eq $n ]] || exit 1
+    exit 0
+}
+
+typeset -A C
+
+colorize_diff() {
+    sed "s/^+/${fg[green]}+/
+         s/^-/${fg[red]}-/
+         s/\$/$reset_color/"
+}
+
+set_colors() {
+    autoload colors
+    colors
+    C=(start ${fg[blue]} done ${fg_bold[green]} timeout ${fg_bold[magenta]} fail ${fg_bold[red]})
+    CEND=$reset_color
+}
+
+# By default, use colors only when connected to a terminal.
+[[ -t 1 ]] && set_colors
+
+while true
+do
+    case "$1" in
+	-h|--help)
+	    usage
+	    exit 0
+	    ;;
+	-c|--colour|--color)
+	    set_colors
+	    shift
+	    ;;
+	--noexamples)
+	    EXAMPLEDIR=/dev/null
+	    shift
+	    ;;
+	--reset)
+	    RESET=true
+	    shift
+	    ;;
+	--|"")
+	    shift
+	    break
+	    ;;
+	*)
+            echo "Unrecognized option $1."
+	    echo "Make sure to write -- before any argument that should be passed to Beluga."
+	    exit 2
+    esac
+done
+
+do_testing $*

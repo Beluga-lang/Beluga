@@ -108,7 +108,7 @@ exception SpineMismatch
 *)
 let rec ctxToSub' cPhi cPsi = match cPsi with
   | Null -> Ctxsub.ctxShift cPhi (* Substitution.LF.id *)
-  | DDec (cPsi', TypDecl (_, tA)) ->
+  | DDec (cPsi', TypDecl (n, tA)) ->
     let s = ((ctxToSub' cPhi cPsi') : sub) in
     (* For the moment, assume tA atomic. *)
     (* lower tA? *)
@@ -129,7 +129,7 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
     (* let u     = Whnf.etaExpandMV Null (tA, s) Substitution.LF.id in *)
     (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
     (* let u     = Whnf.etaExpandMV cPhi (tA, LF.comp s (ctxShift cPhi)) LF.id in *)
-    let u     = Whnf.etaExpandMV cPhi (tA, s) Substitution.LF.id in
+    let u     = Whnf.etaExpandMV cPhi (tA, s) n Substitution.LF.id in
     let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
     (* Dot (front, Substitution.LF.comp s LF.shift)  *)
     Dot (front, s)

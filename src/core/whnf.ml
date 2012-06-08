@@ -119,12 +119,12 @@ let rec etaContract tM = begin match tM with
 (*************************************)
 (* Creating new contextual variables *)
 (*************************************)
-(* newCVar sW = psi
+(* newCVar n sW = psi
  *
  *)
-let newCVar (sW) = CInst (Id.mk_name Id.NoName, ref None, sW, Empty, Empty)
+let newCVar _n (sW) = CInst (Id.mk_name Id.NoName, ref None, sW, Empty, Empty)
 
-(* newPVar (cPsi, tA) = p
+(* newPVar n (cPsi, tA) = p
  *
  * Invariant:
  *
@@ -132,10 +132,10 @@ let newCVar (sW) = CInst (Id.mk_name Id.NoName, ref None, sW, Empty, Empty)
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
-let newPVar (cPsi, tA) = PInst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref [])
+let newPVar _n (cPsi, tA) = PInst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref [])
 
 
-(* newMVar (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
+(* newMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
  *
  * Invariant:
  *
@@ -145,11 +145,11 @@ let newPVar (cPsi, tA) = PInst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref []
  *)
 
 
-let newMVar (cPsi, tA) = Inst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref [])
+let newMVar _n (cPsi, tA) = Inst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref [])
 
 
 
-(* newMMVar (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
+(* newMMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
  *
  * Invariant:
  *
@@ -157,7 +157,7 @@ let newMVar (cPsi, tA) = Inst (Id.mk_name Id.NoName, ref None, cPsi, tA, ref [])
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
-let newMMVar (cD, cPsi, tA) = 
+let newMMVar _n (cD, cPsi, tA) = 
   (* flatten blocks in cPsi, and create appropriate indices in tA 
      together with an appropriate substitution which moves us between 
      the flattened cPsi_f and cPsi. 
@@ -183,7 +183,7 @@ let rec lowerMVar' cPsi sA' = match sA' with
       lowerMVar' cPsi (tA, LF.comp s s')
 
   | (Atom (loc, a, tS), s') ->
-      let u' = newMVar (cPsi, Atom (loc, a, SClo (tS, s'))) in
+      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s'))) in
         (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil)) (* cvar * normal *)
 
 
@@ -2575,16 +2575,16 @@ let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
  *
  *  cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMV cPsi sA s' = etaExpandMV' cPsi (whnfTyp sA)  s'
+let rec etaExpandMV cPsi sA n s' = etaExpandMV' cPsi (whnfTyp sA) n s'
 
-and etaExpandMV' cPsi sA  s' = match sA with
+and etaExpandMV' cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
       
-      let u = newMVar (cPsi, TClo(tP,s)) in
+      let u = newMVar (Some n) (cPsi, TClo(tP,s)) in
         Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
+      Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s'))
 
 
 
@@ -2595,15 +2595,15 @@ and etaExpandMV' cPsi sA  s' = match sA with
  *
  *  cD ; cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMMV loc cD cPsi sA s' = etaExpandMMV' loc cD cPsi (whnfTyp sA)  s'
+let rec etaExpandMMV loc cD cPsi sA n s' = etaExpandMMV' loc cD cPsi (whnfTyp sA) n s'
 
-and etaExpandMMV' loc cD cPsi sA  s' = match sA with
+and etaExpandMMV' loc cD cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMMVar (cD , cPsi, TClo(tP,s)) in
+      let u = newMMVar (Some n) (cD , cPsi, TClo(tP,s)) in
         Root (loc, MMVar (u, (m_id, s')), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) (LF.dot1 s'))
+      Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s'))
  
 
 let rec closed sM = closedW (whnf sM) 

@@ -1088,7 +1088,7 @@ module Make (T : TRAIL) : UNIFY = struct
                       let i_sub  = Whnf.cnormSub (i_id_sub, i_msub) in 
                       let tP'    = Whnf.cnormTyp (tP, i_id_msub) in 
 
-                      let v = Whnf.newMMVar(cD2, cPsi2', TClo(tP', i_sub)) in
+                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', i_sub)) in
                         (instantiateMMVar (r, Root (loc, MMVar (v, (id_msub, id_sub)), Nil), !cnstrs);
                          Clo(tM, comp s ssubst))                        
                         
@@ -1138,7 +1138,7 @@ module Make (T : TRAIL) : UNIFY = struct
                          cD2 ; cPsi2' |-  [id_sub_i]  [|id_msub^-1|] tP 
                       *)
                       let tP' = Whnf.cnormTyp (tP, id_msub_i) in 
-                      let v = Whnf.newMMVar(cD2, cPsi2', TClo(tP', invert idsub_i)) in                       
+                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', invert idsub_i)) in                       
                         (instantiateMMVar (r, Root (loc, MMVar (v, (id_msub, idsub)), Nil), !cnstrs) ;
                          Clo(tM, comp s ssubst) )
                       else 
@@ -1170,7 +1170,7 @@ module Make (T : TRAIL) : UNIFY = struct
                            cD ; cPsi1 |- idsub <= cPsi2 and
                            cD ; cPsi |- t o s o idsub <= cPsi2 *)
                       let idsub_i = invert idsub in
-                      let v = Whnf.newMVar(cPsi2, TClo(tP, idsub_i)) in
+                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) in
 
                       let _  = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in 
                          Clo(tM, comp s ssubst)   
@@ -1194,7 +1194,7 @@ module Make (T : TRAIL) : UNIFY = struct
                         (* could maybe just prune tP and cPsi1 ? 
                            29 Jan, 2011  -bp  *)
                       let idsub_i = invert idsub in 
-                      let v = Whnf.newMVar(cPsi2, TClo(tP, idsub_i)) in 
+                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) in 
                       (* let _ = print_string ("prune non-pattern sub s  where u[s] \n") in *)
                       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in 
                         Clo(tM, comp s ssubst)
@@ -1271,7 +1271,7 @@ module Make (T : TRAIL) : UNIFY = struct
                     if isPatSub t then
                       let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
                         (* cD ; cPsi1 |- idsub <= cPsi2 *)
-                      let p = Whnf.newPVar (cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1]tA)[cPsi2] *) in
+                      let p = Whnf.newPVar None (cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1]tA)[cPsi2] *) in
                       let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) in
                         (* [|p[idsub] / q|] *)
                         (* h = p[[ssubst] ([t] idsub)] *)
@@ -1288,7 +1288,7 @@ module Make (T : TRAIL) : UNIFY = struct
                   if isPatSub t then
                     let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
                       (* cD ; cPsi1 |- idsub <= cPsi2 *)
-                    let p = Whnf.newPVar(cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1] tA)[cPsi2] *) in
+                    let p = Whnf.newPVar None (cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1] tA)[cPsi2] *) in
                     let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) (* [|p[idsub] / q|] *) in
                     let s_comp = comp (comp t idsub) ssubst in  
                       returnNeutral (Proj (PVar(p, s_comp), i))  
@@ -1667,7 +1667,7 @@ module Make (T : TRAIL) : UNIFY = struct
                     let ss' = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')) in
                       (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
                       
-                    let w = Whnf.newMVar (cPsi', TClo(tP1, ss')) in
+                    let w = Whnf.newMVar None (cPsi', TClo(tP1, ss')) in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -1950,7 +1950,7 @@ module Make (T : TRAIL) : UNIFY = struct
                     let tP1_n  = Whnf.cnormTyp (TClo(tP1,ss'), mtt') in 
                       
                       
-                    let w = Whnf.newMMVar (cD', cPsi_n, tP1_n) in
+                    let w = Whnf.newMMVar None (cD', cPsi_n, tP1_n) in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -2327,7 +2327,7 @@ module Make (T : TRAIL) : UNIFY = struct
                      parameter variables exists *)
                 let ss' = invert (Whnf.normSub s') in
                   (* cD ; cPsi' |- [s']^-1(tA1) <= type *)
-                let w = Whnf.newPVar (cPsi', TClo(tA1, ss')) in
+                let w = Whnf.newPVar None (cPsi', TClo(tA1, ss')) in
                   (* w::[s'^-1](tA1)[cPsi'] in cD'            *)
                   (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tA1)
                      [|w[s']/u|](u[t]) = [t](w[s'])
@@ -2363,7 +2363,7 @@ module Make (T : TRAIL) : UNIFY = struct
                    (* cPsi' =/= Null ! otherwise no instantiation for
                       parameter variables exists *)
                  *)
-                 let p = Whnf.newPVar (cPsi', TClo(tA2, invert (Whnf.normSub s'))) in
+                 let p = Whnf.newPVar None (cPsi', TClo(tA2, invert (Whnf.normSub s'))) in
                    (* p::([s'^-1]tA2)[cPsi'] and
                       [|cPsi2.p[s'] / q2 |](q2[s2']) = p[[s2'] s']
 

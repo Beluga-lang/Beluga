@@ -701,21 +701,25 @@ let rec ctxToMCtx cQ  = match cQ with
 
   (* The case where cD is not empty and a meta^2-variable is uninstantiated
      should never happen. -bp *)
-  | I.Dec (cQ', MMV (Pure, I.MMVar (I.MInst (n, _, I.Empty, cPsi, tA, _), _s))) ->
-      I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi))
+  | I.Dec (cQ', MMV (Pure, I.MMVar (I.MInst (_n, _, I.Empty, cPsi, tA, _), _s))) ->
+      let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in
+      I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi))
 
-  | I.Dec (_cQ', MMV (Pure, I.MMVar (I.MInst (_n, _, _cD, _cPsi, _tA, _), _s))) ->
+  | I.Dec (_cQ', MMV (Pure, I.MMVar (I.MInst (_, _, _cD, _cPsi, _tA, _), _s))) ->
       raise (Error (Syntax.Loc.ghost, LeftoverMMV))
 
-  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (n, _, cPsi, tA, _), _s))) -> 
-      I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi)) 
+  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_n, _, cPsi, tA, _), _s))) -> 
+      let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in
+      I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi)) 
 
-  | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _)))) -> 
-      I.Dec (ctxToMCtx cQ', I.CDecl (n, s_cid, I.No)) 
+  | I.Dec (cQ', CV (I.CtxVar (I.CInst (_n, {contents = None}, s_cid, _, _)))) -> 
+      let psi = Id.mk_name (NoName) in
+      I.Dec (ctxToMCtx cQ', I.CDecl (psi, s_cid, I.No)) 
 
   (* Can this case ever happen?  I don't think so. -bp *)
-  | I.Dec (cQ', PV (Pure, I.PVar (I.PInst (n, _, cPsi, tA, _), _s))) -> 
-      I.Dec (ctxToMCtx cQ', I.PDecl (n, tA, cPsi))  
+  | I.Dec (cQ', PV (Pure, I.PVar (I.PInst (_n, _, cPsi, tA, _), _s))) -> 
+      let p = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in
+      I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi))  
 
   | I.Dec (cQ', FCV (psi, Some (s_cid))) ->
       I.Dec (ctxToMCtx cQ', I.CDecl (psi, s_cid, I.Maybe))

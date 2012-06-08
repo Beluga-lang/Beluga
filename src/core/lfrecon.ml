@@ -105,9 +105,9 @@ let rec pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
 
 let rec unify_phat psihat phihat = 
   match phihat with
-    | (Some (Int.LF.CInst ({contents = None} as cref, _, _, _ )), d) -> 
+    | (Some (Int.LF.CInst (_, ({contents = None} as cref), _, _, _ )), d) -> 
         begin match psihat with 
-          | (Some (Int.LF.CInst ({contents = None} as cref', _, _, _) as c_var) , d') -> 
+          | (Some (Int.LF.CInst (_, ({contents = None} as cref'), _, _, _) as c_var) , d') -> 
 	      if cref == cref' then 
 		d = d'
 	      else 
@@ -1730,7 +1730,7 @@ let rec elDCtx recT cD psi = match psi with
 let rec solve_fvarCnstr recT cD cnstr = match cnstr with
   | [] -> ()
   | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine), 
-      Int.LF.Inst ({contents = None} as r, cPsi, tP, _)) :: cnstrs) -> 
+      Int.LF.Inst (_, ({contents = None} as r), cPsi, tP, _)) :: cnstrs) -> 
       begin try
 	begin match FVar.get x with
           | Int.LF.Type tA -> 
@@ -1759,7 +1759,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
 
   | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine), 
-      Int.LF.Inst ({contents = Some tR}, cPsi, tP, _ )) :: cnstrs) ->
+      Int.LF.Inst (_, {contents = Some tR}, cPsi, tP, _ )) :: cnstrs) ->
       begin try 
         begin match FVar.get x with
         | Int.LF.Type tA -> 
@@ -1793,7 +1793,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
 let rec solve_fcvarCnstr cD cnstr = match cnstr with
   | [] -> ()
-  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (r, cPsi, _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (_, r, cPsi, _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.MDecl (_, _tP, cPhi)) = FCVar.get u in
 	let d = Context.length cD - Context.length cD_d in 
@@ -1806,7 +1806,7 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
         raise (Error (loc, LeftoverConstraints u))
       end
 
-  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (r, cPsi, _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, cPsi, _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.PDecl (_, tA, cPhi)) = FCVar.get x in
 	let d = Context.length cD - Context.length cD_d in 

@@ -581,7 +581,7 @@ module Int = struct
           fprintf ppf "_ "
 
     and fmt_ppr_lf_mmvar lvl ppf = function
-      | LF.MInst ({ contents = None } as u, _, _, tA, _) ->
+      | LF.MInst (_, ({ contents = None } as u), _, _, tA, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -600,7 +600,7 @@ module Int = struct
                     ; fprintf ppf "?%s" sym
           end
        
-      | LF.MInst ({ contents = Some m}, cD, cPsi, _, _) ->
+      | LF.MInst (_, {contents = Some m}, cD, cPsi, _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_normal cD cPsi lvl) m
@@ -610,7 +610,7 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_cvar cD n)
 
-      | LF.Inst ({ contents = None } as u, _, tA, _) ->
+      | LF.Inst (_, ({ contents = None } as u), _, tA, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -625,7 +625,7 @@ module Int = struct
                     ; fprintf ppf "?%s" sym
           end
 
-      | LF.PInst ({ contents = None } as p, _, _, _) ->
+      | LF.PInst (_, ({ contents = None } as p), _, _, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -642,10 +642,11 @@ module Int = struct
       | LF.Inst _ ->               fprintf ppf "?INST _ "
 
     and fmt_ppr_lf_ctx_var cD ppf = function     
-      | LF.CInst ({contents = None}, _schema, _cO, _cD) -> 
-          fprintf ppf "g?"
+      | LF.CInst (n, {contents = None}, _schema, _cO, _cD) -> 
+          fprintf ppf "%s"
+            (R.render_name n)
 
-      | LF.CInst ({contents = Some cPsi}, _schema, _cO', cD') -> 
+      | LF.CInst (_n, {contents = Some cPsi}, _schema, _cO', cD') -> 
           fprintf ppf "%a"
           (fmt_ppr_lf_dctx cD' 0) cPsi
 

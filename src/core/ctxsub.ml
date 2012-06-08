@@ -95,9 +95,9 @@ and apply_csub cvar cs = match (cvar, cs) with
       in 
         apply offset cs
 
-  | (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx), cs) -> 
+  | (CInst (_, {contents =  Some cPhi }, _schema, _octx, _mctx), cs) -> 
       ctxnorm_dctx (cPhi, cs)
-  | (CInst ({contents = None}, _ , _, _ ) , cs) -> CtxVar (cvar )
+  | (CInst (_, {contents = None}, _ , _, _ ) , cs) -> CtxVar (cvar )
 
 
 
@@ -121,9 +121,9 @@ and ctxnorm_head (h,cs) = match h with
   | FPVar (u, s) -> FPVar (u, ctxnorm_sub (s, cs))
   | MVar (u, s) -> MVar (u, ctxnorm_sub (s, cs))
   | PVar (p, s) -> PVar (p, ctxnorm_sub (s, cs))
-  | MMVar (MInst({contents = None} as u, cD, cPsi, tA, cnstr), (t,s)) -> 
+  | MMVar (MInst(n, ({contents = None} as u), cD, cPsi, tA, cnstr), (t,s)) -> 
       (* cnstr must be empty *)
-      MMVar (MInst (u,ctxnorm_mctx (cD, cs), ctxnorm_dctx (cPsi, cs), ctxnorm_typ (tA, cs), cnstr)
+      MMVar (MInst (n, u,ctxnorm_mctx (cD, cs), ctxnorm_dctx (cPsi, cs), ctxnorm_typ (tA, cs), cnstr)
                , (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs)))
 
 (*  | MMVar (u, (t,s)) -> MMVar (u, (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs))) *)
@@ -140,7 +140,7 @@ and ctxnorm_spine (tS, cs) = match tS with
 
 and ctxnorm_sub (s, cs) = match s with
   | Shift (NoCtxShift, _k) -> s
-  | Shift (CtxShift (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
+  | Shift (CtxShift (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
       begin match Context.dctxToHat cPhi with
         | (None, l) -> Shift (NoCtxShift, k+l)
         | (Some psi, l) -> Shift (CtxShift psi, k+l)
@@ -160,7 +160,7 @@ and ctxnorm_sub (s, cs) = match s with
             end
       end
 
-  | Shift (NegCtxShift (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
+  | Shift (NegCtxShift (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
       let rec undef_sub d s = 
         if d = 0 then s 
         else undef_sub (d-1) (Dot(Undef, s)) 
@@ -232,7 +232,7 @@ and ctxnorm_dctx (cPsi, cs) = match cPsi with
   | Null -> Null
   | DDec (cPsi', TypDecl (x, tA)) -> 
       DDec (ctxnorm_dctx (cPsi', cs), TypDecl (x, ctxnorm_typ (tA, cs)))
-  | CtxVar (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx)) -> 
+  | CtxVar (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)) -> 
       ctxnorm_dctx (cPhi, cs)
   | CtxVar ctxvar -> begin match apply_csub ctxvar cs with
       | CtxVar cvar -> CtxVar cvar
@@ -243,7 +243,7 @@ and ctxnorm_dctx (cPsi, cs) = match cPsi with
 
 and ctxnorm_psihat (phat, cs) = match phat with
   | (None , _ ) -> phat
-  | (Some (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
+  | (Some (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
       (match Context.dctxToHat cPhi with 
         | (None, l) -> (None, l+k)
         | (Some cvar, l) -> 
@@ -545,10 +545,10 @@ and csub_dctx cD cPsi k cPhi =
              else 
                (dprint (fun () -> "[csub_dctx] 1") ; (CtxVar (CtxOffset (offset' - 1)), false)))
 
-    | CtxVar (CInst ({contents =  Some cPhi }, _schema, _octx, _mctx)) ->         
+    | CtxVar (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)) ->         
         csub_dctx' cPhi
 
-    | CtxVar (CInst ({contents =  None }, _schema, _octx, _mctx)) ->         
+    | CtxVar (CInst (_n, {contents =  None }, _schema, _octx, _mctx)) ->         
         (cPhi , false)
 
     | DDec (cPhi, TypDecl (x, tA)) ->   
@@ -1029,8 +1029,8 @@ let rec mctxToMMSub cD0 cD = match cD with
 
 let rec cctxToCSub cO cD = match cO with
   | Empty -> CShift 0
-  | Dec (cO, CDecl (_psi, schema, _)) -> 
-      let ctxVar = CtxVar (CInst (ref None, schema, cO, cD)) in
+  | Dec (cO, CDecl (psi, schema, _)) -> 
+      let ctxVar = CtxVar (CInst (psi, ref None, schema, cO, cD)) in
       let cs = cctxToCSub cO cD  in 
         CDot (ctxVar, cs)
 

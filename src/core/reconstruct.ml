@@ -397,7 +397,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
 
   | (Int.Comp.TypCtxPi ((psi_name, schema_cid, Int.Comp.Implicit), tau), theta)
     -> 
-      let cPsi = Int.LF.CtxVar (Int.LF.CInst (ref None, schema_cid, Int.LF.Empty, cD)) in
+      let cPsi = Int.LF.CtxVar (Int.LF.CInst (psi_name, ref None, schema_cid, Int.LF.Empty, cD)) in
       let _   = dprint (fun () -> "[genMApp] Generated ctx-variable " ^ 
                           P.dctxToString cD cPsi) in 
       let _ = dprint (fun () -> "[genMApp] Show tau : " ^ 
@@ -578,8 +578,8 @@ let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
         (Int.Comp.MetaObj (loc', psihat, tM') , 
          Int.LF.MObj (psihat, tM'))
 
-  | Int.LF.CDecl (_, schema_cid, _ ) -> 
-      let cPsi = Int.LF.CtxVar (Int.LF.CInst (ref None, schema_cid,
+  | Int.LF.CDecl (n, schema_cid, _ ) -> 
+      let cPsi = Int.LF.CtxVar (Int.LF.CInst (n, ref None, schema_cid,
                                               Int.LF.Empty, cD)) in
         (Int.Comp.MetaCtx (loc', cPsi),
          Int.LF.CObj cPsi)
@@ -1401,8 +1401,8 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 
                (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
       
-          | (Int.Comp.TypCtxPi ((_, w, Int.Comp.Implicit), tau), theta) ->            
-               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (ref None, w, Int.LF.Empty, cD)) in
+          | (Int.Comp.TypCtxPi ((n, w, Int.Comp.Implicit), tau), theta) ->            
+               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (n, ref None, w, Int.LF.Empty, cD)) in
                let ttau' = (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)) in 
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaCtx (loc, cPsi)) in 
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 
@@ -1446,10 +1446,10 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 
                (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
       
-          | (Int.Comp.TypCtxPi ((_, w, Int.Comp.Implicit), tau), theta) ->            
+          | (Int.Comp.TypCtxPi ((n, w, Int.Comp.Implicit), tau), theta) ->            
              let _ = dprint (fun () -> "[elPatSpine] TypCtxPi implicit ttau = " ^
                                P.compTypToString cD (Whnf.cnormCTyp ttau)) in  
-               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (ref None, w, Int.LF.Empty, cD)) in
+               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (n, ref None, w, Int.LF.Empty, cD)) in
                let ttau' = (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)) in 
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaCtx (loc, cPsi)) in 
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 

@@ -172,7 +172,7 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *) 
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMVar (cPhi', LF.TClo(tQ,ssi')) in
+      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) in
       (* cPhi |- ss'    : cPhi' 
          cPsi |- s_proj : cPhi 
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -1396,7 +1396,7 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
 	((pv1, Whnf.cnormCTyp (tau1,t))::cG , 
 	 Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau)
   | (Comp.TypCtxPi ((x, sW, _ ), tau), t) -> 
-      let cPsi' = LF.CtxVar (LF.CInst (ref None, sW, LF.Empty, LF.Empty)) in 
+      let cPsi' = LF.CtxVar (LF.CInst (x, ref None, sW, LF.Empty, LF.Empty)) in 
       let pat1 = Comp.PatMetaObj (Syntax.Loc.ghost, 
 				  Comp.MetaCtx (Syntax.Loc.ghost, cPsi')) in 
       let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.CObj(cPsi'), t)) in 

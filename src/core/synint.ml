@@ -98,15 +98,15 @@ module LF = struct
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of normal option ref * dctx * typ * cnstr list ref
+    | Inst   of name * normal option ref * dctx * typ * cnstr list ref
         (* D ; Psi |- M <= A
            provided constraint *)
-    | PInst  of head   option ref * dctx * typ * cnstr list ref
+    | PInst  of name * head   option ref * dctx * typ * cnstr list ref
         (* D ; Psi |- H => A
            provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of normal option ref * mctx * dctx * typ * cnstr list ref
+    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
         (* D ; Psi |- M <= A
            provided constraint *)
 
@@ -132,7 +132,7 @@ module LF = struct
   and ctx_var = 
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of dctx option ref * cid_schema * mctx * mctx (* delete both mctx
+    | CInst  of name * dctx option ref * cid_schema * mctx * mctx (* delete both mctx
 							      contexts *)
         (* D |- Psi : schema   *)
 

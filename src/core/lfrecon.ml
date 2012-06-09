@@ -45,20 +45,22 @@ let _ = Error.register_printer
 
         | LeftoverConstraints x ->
           Format.fprintf ppf
-            "cannot reconstruct a type for free variable %s (leftover constraints)"
+            "Cannot reconstruct a type for free variable %s (leftover constraints)."
             (R.render_name x)
 
 	| PruningFailed -> 
-          Format.fprintf ppf "Pruning a type failed; this can happen when you have some free meta-variables whose type cannot be inferred." 
+          Format.fprintf ppf
+	    "Pruning a type failed.@ This can happen when you have some free@ \
+             meta-variables whose type cannot be inferred."
 
         | SubIllTyped ->
           Format.fprintf ppf "Ill-typed substitution during elaboration."
 
         | IllTypedIdSub ->
-          Format.fprintf ppf "ill-typed substitution" (* TODO *) 
+          Format.fprintf ppf "Ill-typed substitution." (* TODO *)
 
         | CompTypAnn -> 
-          Format.fprintf ppf "Type synthesis of term failed (use typing annotation)" 
+          Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
 
         | NotPatternSpine ->
           Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *) ))

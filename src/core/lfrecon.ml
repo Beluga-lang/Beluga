@@ -616,7 +616,7 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
         Int.LF.Lam (loc, x, tM)
   
   | (Apx.LF.Root (_loc, _h, _spine),  (Int.LF.Atom _, _s)) ->
-      elTerm' recT cD cPsi m  sA  
+      elTerm' recT cD cPsi m  sA
   
   | (Apx.LF.Tuple (loc, tuple),  (Int.LF.Sigma typRec, s)) -> 
       let tuple' = elTuple recT cD cPsi tuple (typRec, s) in
@@ -719,7 +719,6 @@ and elTerm' recT cD cPsi r sP = match r with
                   | _ ->
                     raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
               end
-
 
             with Not_found ->
               begin

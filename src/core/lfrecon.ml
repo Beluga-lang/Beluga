@@ -16,9 +16,11 @@ module RR = Store.Cid.NamedRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
+type typeVariant = VariantAtom | VariantPi | VariantSigma
+
 type error =
-  | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
+  | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
   | LeftoverConstraints of Id.name
   | SubIllTyped 
   | PruningFailed
@@ -27,6 +29,11 @@ type error =
   | NotPatternSpine
 
 exception Error of Syntax.Loc.t * error
+
+let string_of_typeVariant = function
+  | VariantAtom -> "atomic type"
+  | VariantPi -> "Pi type"
+  | VariantSigma -> "Sigma type"
 
 let _ = Error.register_printer
   (fun (Error (loc, err)) ->
@@ -38,10 +45,11 @@ let _ = Error.register_printer
 	    "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
 	    "Actual type"   (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2)
 
-        | IllTypedElab (cD, cPsi, sA) ->
-          Format.fprintf ppf
-            "ill-typed expression\n  inferred type: %a \n "
-            (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+        | IllTypedElab (cD, cPsi, sA, variant) ->
+          Error.report_mismatch ppf
+            "Ill-typed expression."
+	    "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+	    "Actual type"   (Format.pp_print_string)                  (string_of_typeVariant variant)
 
         | LeftoverConstraints x ->
           Format.fprintf ppf
@@ -615,6 +623,12 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
       let tM    = elTerm recT cD cPsi' m (tB, Substitution.LF.dot1 s) in
         Int.LF.Lam (loc, x, tM)
   
+  | (Apx.LF.Lam (loc, _, _ ), (Int.LF.Atom _, _s)) ->
+      raise (Error (loc, IllTypedElab (cD, cPsi, sA, VariantAtom)))
+
+  | (Apx.LF.Lam (loc, _, _ ), (Int.LF.Sigma _, _s)) ->
+      raise (Error (loc, IllTypedElab (cD, cPsi, sA, VariantSigma)))
+
   | (Apx.LF.Root (_loc, _h, _spine),  (Int.LF.Atom _, _s)) ->
       elTerm' recT cD cPsi m  sA
   
@@ -622,25 +636,24 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
       let tuple' = elTuple recT cD cPsi tuple (typRec, s) in
         Int.LF.Tuple (loc, tuple')
 
+  | (Apx.LF.Tuple (loc, _), (Int.LF.PiTyp _, _s)) ->
+      raise (Error (loc, IllTypedElab (cD, cPsi, sA, VariantPi)))
+
+  | (Apx.LF.Tuple (loc, _), (Int.LF.Atom _, _s)) ->
+      raise (Error (loc, IllTypedElab (cD, cPsi, sA, VariantAtom)))
+
   | (Apx.LF.Root (loc, Apx.LF.FMVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
       let n = etaExpandFMV loc (Apx.LF.FMVar (x,s)) tA in 
         elTerm recT cD cPsi n sA
-(*      raise (Error.Error (loc, Error.EtaExpandFMV (x, cD, cPsi, sA))) *)
 
   | (Apx.LF.Root (loc, Apx.LF.MVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
       let n = etaExpandMV loc (Apx.LF.MVar (x,s)) tA in 
         elTerm recT cD cPsi n sA
 
-  | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) -> 
+  | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) ->
       let n = etaExpandApxTerm loc h spine tA in 
         elTerm recT cD cPsi n sA
   
-  | (Apx.LF.Lam (loc, _, _ ), _ ) ->  
-      raise (Error (loc, IllTypedElab (cD, cPsi, sA))) 
-
-  | (Apx.LF.Tuple (loc, _ ),  _) ->
-      raise (Error (loc, IllTypedElab (cD, cPsi, sA))) 
-
 and elTuple recT cD cPsi tuple (typRec, s) =
   match (tuple, typRec) with
   | (Apx.LF.Last m,
@@ -738,8 +751,6 @@ and elTerm' recT cD cPsi r sP = match r with
                    let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in  
                    add_fvarCnstr (tAvar, m, v);
                    Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil))
-                  | _  ->                 
-                    raise (Error (loc, IllTypedElab (cD, cPsi, sP)))
               end
             end
         | Pibox -> raise (Index.Error (loc, Index.UnboundName x))
@@ -1119,7 +1130,8 @@ and elTerm' recT cD cPsi r sP = match r with
 	      | Unify.Unify msg ->
                 raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
           end
-        | _  -> raise (Error (loc, IllTypedElab (cD, cPsi, sP)))
+        | (_, Int.LF.PiTyp _, _) -> raise (Error (loc, IllTypedElab (cD, cPsi, sP, VariantPi)))
+        | (_, Int.LF.Atom _, _) -> raise (Error (loc, IllTypedElab (cD, cPsi, sP, VariantAtom)))
     end
 
 

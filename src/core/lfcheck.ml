@@ -108,31 +108,10 @@ exception SpineMismatch
 *)
 let rec ctxToSub' cPhi cPsi = match cPsi with
   | Null -> Ctxsub.ctxShift cPhi (* Substitution.LF.id *)
-  | DDec (cPsi', TypDecl (_, tA)) ->
+  | DDec (cPsi', TypDecl (n, tA)) ->
     let s = ((ctxToSub' cPhi cPsi') : sub) in
-    (* For the moment, assume tA atomic. *)
-    (* lower tA? *)
-    (* A = A_1 -> ... -> A_n -> P
-
-       create cPhi = A_1, ..., A_n
-       \x_1. ... \x_n. u[id]
-       u::P[cPhi]
-
-       already done in reconstruct.ml
-       let (_, d) = Context.dctxToHat cPsi in
-       let tN     = etaExpandMV Int.Substitution.LF.Null (tA, s) (Int.Substitution.LF.Shift d) in
-       in elSpineIW
-    *)
-    (* let (_, phat') = Context.dctxToHat cPsi' in*)
-    (* let u     = Whnf.etaExpandMV Null (tA, s) (Shift (NoCtxShift, phat')) in *)
-
-    (* let u     = Whnf.etaExpandMV Null (tA, s) Substitution.LF.id in *)
-    (* let u = Whnf.newMVar (Null ,  TClo( tA, s)) in *)
-    (* let u     = Whnf.etaExpandMV cPhi (tA, LF.comp s (ctxShift cPhi)) LF.id in *)
-    let u     = Whnf.etaExpandMV cPhi (tA, s) Substitution.LF.id in
-    let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
-    (* Dot (front, Substitution.LF.comp s LF.shift)  *)
-    Dot (front, s)
+    let u     = Whnf.etaExpandMV cPhi (tA, s) n Substitution.LF.id in
+    Dot (Obj u, s)
 
 (* check cD cPsi (tM, s1) (tA, s2) = ()
  *
@@ -279,14 +258,14 @@ and inferHead loc cD cPsi head = match head with
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MVar (Inst ({contents = None}, cPsi', tA, _cnstr), s) ->
+  | MVar (Inst (_n, {contents = None}, cPsi', tA, _cnstr), s) ->
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MMVar (MInst ({contents = None}, cD' , cPsi', tA, _cnstr) , (t', r)) ->
+  | MMVar (MInst (_n, {contents = None}, cD' , cPsi', tA, _cnstr) , (t', r)) ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
@@ -316,7 +295,7 @@ and inferHead loc cD cPsi head = match head with
     TClo (tA, s)
 
 
-  | PVar (PInst ({contents = None}, cPsi', tA, _ ) , s) ->
+  | PVar (PInst (_, {contents = None}, cPsi', tA, _ ) , s) ->
     (* cD ; cPsi' |- tA <= type *)
     dprnt "[inferHead] PVar case";
     dprint (fun () -> "[inferHead] PVar case:    s = " ^ P.subToString cD cPsi s);
@@ -667,7 +646,7 @@ and checkSchema loc cD cPsi (Schema elements as schema) =
     ^ P.dctxToString cD cPsi ^ " against " ^ P.schemaToString schema);
   match cPsi with
     | Null -> ()
-    | CtxVar (CInst ({contents = Some cPhi}, _, _, _ )) ->
+    | CtxVar (CInst (_, {contents = Some cPhi}, _, _, _ )) ->
       checkSchema loc cD cPhi schema
     | CtxVar ((CtxOffset _ ) as phi) ->
       let Schema phiSchemaElements =

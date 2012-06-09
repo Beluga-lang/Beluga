@@ -81,6 +81,7 @@ module Cid = struct
       | Int.LF.Atom (_, a, _ ) -> var_gen a
       | Int.LF.PiTyp(_, tA) -> gen_var_name tA
       | Int.LF.Sigma typRec -> gen_var_name_typRec typRec
+      | Int.LF.TClo (tA, s) -> gen_var_name tA
 
     and gen_var_name_typRec = function
       | Int.LF.SigmaLast tA -> gen_var_name tA

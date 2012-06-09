@@ -98,9 +98,7 @@ module Comp = struct
               "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
             Format.fprintf ppf
               "In expression: %a@."
-              (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e;
-            Format.fprintf ppf
-              "Note: Computation-level applications are not automatically left-associative but require parentheses."
+              (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e
 
           | MismatchSyn (cD, cG, i, variant, theta_tau) ->
             Error.report_mismatch ppf
@@ -109,9 +107,7 @@ module Comp = struct
               "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau);
             Format.fprintf ppf
               "In expression: %a@."
-              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i;
-            Format.fprintf ppf
-              "Note: Computation-level applications are not automatically left-associative but require parentheses."
+              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
 
           | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
             Error.report_mismatch ppf
@@ -583,19 +579,19 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
   and synPatSpine cD cG pat_spine (tau, theta) = match pat_spine with
     | PatNil  -> (tau, theta)
-    | PatApp (_loc, pat, pat_spine)  -> 
-        (match (tau, theta) with 
-           | (TypArr (tau1, tau2), theta) -> 
-               checkPattern cD cG pat (tau1, theta); 
-               synPatSpine cD cG pat_spine (tau2, theta)
-           | (TypPiBox ((cdecl, _), tau), theta) -> 
-               let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in 
-                 synPatSpine cD cG pat_spine (tau, theta')
-           | (TypCtxPi ((x, w, dep), tau), theta) ->            
-             let theta' =  checkPatAgainstCDecl cD pat (I.CDecl(x,w, I.No), theta) in 
-               synPatSpine cD cG pat_spine (tau, theta')
-        )
-          
+    | PatApp (_loc, pat, pat_spine)  ->
+      begin match (tau, theta) with
+        | (TypArr (tau1, tau2), theta) ->
+          checkPattern cD cG pat (tau1, theta);
+          synPatSpine cD cG pat_spine (tau2, theta)
+        | (TypPiBox ((cdecl, _), tau), theta) ->
+          let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
+          synPatSpine cD cG pat_spine (tau, theta')
+        | (TypCtxPi ((x, w, dep), tau), theta) ->
+          let theta' =  checkPatAgainstCDecl cD pat (I.CDecl(x,w, I.No), theta) in
+          synPatSpine cD cG pat_spine (tau, theta')
+      end
+
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
     | I.MDecl (_, tA, cPsi) -> 
         let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in 

@@ -98,15 +98,15 @@ module LF = struct
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of normal option ref * dctx * typ * cnstr list ref
+    | Inst   of name * normal option ref * dctx * typ * cnstr list ref
         (* D ; Psi |- M <= A
            provided constraint *)
-    | PInst  of head   option ref * dctx * typ * cnstr list ref
+    | PInst  of name * head   option ref * dctx * typ * cnstr list ref
         (* D ; Psi |- H => A
            provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of normal option ref * mctx * dctx * typ * cnstr list ref
+    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
         (* D ; Psi |- M <= A
            provided constraint *)
 
@@ -132,7 +132,7 @@ module LF = struct
   and ctx_var = 
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of dctx option ref * cid_schema * mctx * mctx (* delete both mctx
+    | CInst  of name * dctx option ref * cid_schema * mctx * mctx (* delete both mctx
 							      contexts *)
         (* D |- Psi : schema   *)
 
@@ -241,7 +241,7 @@ module Comp = struct
    (* MetaSClo of meta_spine * msub *)
 
  type typ =
-   | TypBase of Loc.t * cid_comp_typ * meta_spine
+   | TypBase  of Loc.t * cid_comp_typ * meta_spine
    | TypBox   of Loc.t * LF.typ  * LF.dctx
    | TypSub   of Loc.t * LF.dctx * LF.dctx
    | TypArr   of typ * typ
@@ -253,7 +253,7 @@ module Comp = struct
 
 
  type ctyp_decl = 
-   | CTypDecl of name * typ
+   | CTypDecl    of name * typ
    | CTypDeclOpt of name
   
  type gctx = ctyp_decl LF.ctx
@@ -299,13 +299,13 @@ module Comp = struct
    | Equal  of Loc.t * exp_syn * exp_syn
    | PairVal of Loc.t * exp_syn * exp_syn
    | Boolean of bool
-       
-  and branch_pattern =
-     | NormalPattern of LF.normal * exp_chk
-     | EmptyPattern
+
+ and branch_pattern =
+   | NormalPattern of LF.normal * exp_chk
+   | EmptyPattern
 
  and pattern = 
-   | PatEmpty  of Loc.t * LF.dctx 
+   | PatEmpty   of Loc.t * LF.dctx
    | PatMetaObj of Loc.t * meta_obj
    | PatConst of Loc.t * cid_comp_const * pattern_spine
    | PatFVar   of Loc.t * name
@@ -319,18 +319,14 @@ module Comp = struct
    | PatNil
    | PatApp of Loc.t * pattern * pattern_spine 
   
-  and branch =
-    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx  
-        * pattern * LF.msub 
-    | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx 
-        * pattern * LF.msub * exp_chk 
+ and branch =
+   | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
+   | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
-    | BranchBox of LF.mctx * LF.mctx
-        * (LF.dctx * branch_pattern * LF.msub * LF.csub)
+   | BranchBox of LF.mctx * LF.mctx * (LF.dctx * branch_pattern * LF.msub * LF.csub)
 
-    | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx 
-        * (LF.dctx * LF.sub * LF.msub * LF.csub)
-        * exp_chk
+   | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx *
+       (LF.dctx * LF.sub * LF.msub * LF.csub) * exp_chk
 
   type tclo = typ * LF.msub
 end
@@ -340,17 +336,15 @@ end
 module Sgn = struct
 
   type decl =
-    | Typ    of cid_typ    * LF.kind
-    | Const  of cid_term   * LF.typ
-    | CompTyp  of Loc.t * name * Comp.kind
-    | CompConst of Loc.t * name * Comp.typ
+    | Typ           of cid_typ  * LF.kind
+    | Const         of cid_term * LF.typ
+    | CompTyp       of Loc.t * name * Comp.kind
+    | CompConst     of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
-    | Schema of cid_schema * LF.schema
-    | Rec    of cid_prog   * Comp.typ * Comp.exp_chk
-    | Pragma of LF.prag
+    | Schema        of cid_schema * LF.schema
+    | Rec           of cid_prog   * Comp.typ * Comp.exp_chk
+    | Pragma        of LF.prag
 
   type sgn = decl list
 
 end
-
-

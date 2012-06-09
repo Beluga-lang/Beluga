@@ -1,6 +1,6 @@
 
 (* -------------------------------------------------------------*)
-(*  Indexing
+(*  indexing
  *
  * index_term names ext_m = (m, fvars)
  *
@@ -272,16 +272,15 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
           let (s', fvs')     = index_sub cvars bvars fvs s in
             (Apx.LF.MVar (Apx.LF.Offset offset, s') , fvs')
         with Not_found ->
-	if closed_flag then 
-	  (if lookup_fv fvars (FMV u) then 
-          let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
-            (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
-	   else
-	     raise (Error (loc, UnboundName u))
-	  )
-	else 
-          let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
-            (Apx.LF.FMVar (u, s') , (FMV u :: fvars' , closed_flag))
+	  if closed_flag then 
+	    (* if lookup_fv fvars (FMV u) then 
+               let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
+		 (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
+	     else *)
+	       raise (Error (loc, UnboundName u))	    
+	  else 
+            let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
+              (Apx.LF.FMVar (u, s') , (FMV u :: fvars' , closed_flag))
         end
 
   | Ext.LF.SVar (loc, n, _sigma) -> 
@@ -861,10 +860,9 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
     let (omega, cD', cvars1, fcvars1)  = 
       index_mctx (CVar.create()) (fcvars', not term_closed) cD in
     let (mO', (fcvars2, _)) = index_mobj cvars1 fcvars1 mO in 
+    let _ = dprint (fun () -> "fcvars in pattern = " ^ fcvarsToString fcvars2) in 
     let cvars_all  = CVar.append cvars1 cvars in
-    let _ = dprint (fun () -> "FVars in pattern " ^ fcvarsToString fcvars2 ) in 
     let fcvars3    = List.append fcvars2 fcvars in 
-    let _ = dprint (fun () -> "FVars all up to here: " ^ fcvarsToString fcvars3 ) in 
     let e'         = index_exp cvars_all vars (fcvars3, term_closed) e in
       Apx.Comp.Branch (loc, omega, cD', Apx.Comp.PatMetaObj (loc', mO'), e')
 
@@ -875,13 +873,14 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
 	index_mctx (CVar.create()) (empty_fcvars, not term_closed) cD in
       let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 (Var.create ())  pat in 
       let _ = dprint (fun () -> "index_pattern done") in 
-    let cvars_all  = CVar.append cvars1 cvars in
-    let vars_all  = Var.append fvars2 vars in
-    let pat'' = reindex_pattern fvars2 pat' in 
+      let cvars_all  = CVar.append cvars1 cvars in
+      let vars_all  = Var.append fvars2 vars in
+      let pat'' = reindex_pattern fvars2 pat' in 
       let _ = dprint (fun () -> "reindex_pattern done") in 
-    let (fcv2, _ ) = fcvars2 in 
-    let fcv3      = List.append fcv2 fcvars in 
-    let e'        = index_exp cvars_all vars_all (fcv3, term_closed) e in
+      let (fcv2, _ ) = fcvars2 in 
+      let _ = dprint (fun () -> "fcvars in pattern = " ^ fcvarsToString fcv2) in 
+      let fcv3      = List.append fcv2 fcvars in 
+      let e'        = index_exp cvars_all vars_all (fcv3, term_closed) e in
 	Apx.Comp.Branch (loc, omega, cD', pat'', e')
 	
 (*

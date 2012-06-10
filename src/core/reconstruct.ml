@@ -873,6 +873,10 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
           | _  -> raise (Check.Comp.Error (loc, Check.Comp.IfMismatch (cD, cG, tau_theta')))
         end
 
+  | (Apx.Comp.Hole (loc), (tau, theta)) ->
+    let () = Holes.collect (loc, cD, cG, (tau, theta)) in
+    Int.Comp.Hole (loc)
+
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
   | (Apx.Comp.Fun (loc, _x, _e),  tau_theta ) ->

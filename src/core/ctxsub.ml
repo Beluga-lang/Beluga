@@ -648,6 +648,8 @@ let rec csub_exp_chk cPsi k e' =
       let branches' = List.map (fun b -> csub_branch cPsi k b) branches in 
         Comp.Case (loc, prag, i1, branches')
 
+  | Comp.Hole (loc) -> Comp.Hole (loc)
+
 and csub_exp_syn cPsi k i' = match i' with
   | Comp.Const _c -> i'
   | Comp.Var _    -> i'

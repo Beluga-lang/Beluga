@@ -1002,6 +1002,9 @@ GLOBAL: sgn_eoi;
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
             | Atom    ->   e1
           end
+
+      | "?" -> Comp.Hole (_loc)
+
       ]
 
     | "atomic"

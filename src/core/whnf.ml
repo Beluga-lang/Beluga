@@ -2267,6 +2267,8 @@ let rec mctxPVarPos cD p =
     | (Comp.If (loc, i, e1, e2), t) -> 
         Comp.If (loc, cnormExp' (i,t),  
                  cnormExp (e1, t), cnormExp (e2, t))
+
+    | (Comp.Hole (loc), _) -> Comp.Hole (loc)
  
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i 

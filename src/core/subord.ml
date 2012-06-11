@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    Printing the subordination relation.
    Computing the relation is done in store.ml, as constructors are added.

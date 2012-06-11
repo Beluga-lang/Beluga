@@ -1,6 +1,4 @@
 
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 module Loc   = Syntax.Loc
 module Token = Token
 module Error = Camlp4.Struct.EmptyError

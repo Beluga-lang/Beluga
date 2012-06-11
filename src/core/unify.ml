@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
    code walk with Joshua Dunfield, Dec 3 2008

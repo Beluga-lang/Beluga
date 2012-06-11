@@ -188,6 +188,7 @@ let rec lex_token loc = lexer
   | "%name"
   | "%not"
   | "%query"
+  | "?"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 
   | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)

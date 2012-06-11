@@ -148,6 +148,7 @@ module Comp = struct
      | SBox   of Loc.t * LF.psi_hat * LF.sub    (* box (Psi hat. M)    *)
      | Case   of Loc.t * case_pragma * exp_syn * branch list
      | If      of Loc.t * exp_syn * exp_chk * exp_chk
+     | Hole   of Loc.t
 
   and exp_syn =
      | Var    of offset                                     (* x              *)

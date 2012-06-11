@@ -24,7 +24,6 @@ module RR = Store.Cid.NamedRenderer
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
-  | PruningFailed
   | EtaExpandFMV        of Id.name * Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
@@ -40,10 +39,6 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-        | PruningFailed -> 
-          Format.fprintf ppf "Pruning a type failed;@ this can happen when you have some@ \
-                              free meta-variables whose type cannot be inferred." 
-
         | EtaExpandFMV (offset, cD, cPsi, sA) -> 
           Format.fprintf ppf
             "meta-variable %s to has type %a \n and should be eta-expanded\n"
@@ -877,6 +872,10 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                 Int.Comp.If (loc, i', e1', e2')
           | _  -> raise (Check.Comp.Error (loc, Check.Comp.IfMismatch (cD, cG, tau_theta')))
         end
+
+  | (Apx.Comp.Hole (loc), (tau, theta)) ->
+    let () = Holes.collect (loc, cD, cG, (tau, theta)) in
+    Int.Comp.Hole (loc)
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)

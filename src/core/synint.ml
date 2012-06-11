@@ -287,6 +287,7 @@ module Comp = struct
    | Case   of Loc.t * case_pragma * exp_syn * branch list
    | If     of Loc.t * exp_syn * exp_chk * exp_chk
    | Value  of value 
+   | Hole   of Loc.t
 
  and exp_syn =
    | Var    of offset

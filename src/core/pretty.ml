@@ -1131,6 +1131,8 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 0) e2
               (r_paren_if cond)
 
+      | Comp.Hole (_) -> fprintf ppf " ? "
+
       | Comp.Value (Comp.FunValue _ ) -> fprintf ppf " fn "
       | Comp.Value (Comp.RecValue _ ) -> fprintf ppf " rec "
       | Comp.Value (Comp.MLamValue _ ) -> fprintf ppf " mlam "

@@ -667,6 +667,8 @@ let rec index_exp cvars vars fcvars = function
       let e2' = index_exp cvars vars fcvars e2 in
         Apx.Comp.If(loc, i', e1', e2')
 
+  | Ext.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
+
 and index_exp' cvars vars fcvars = function
   | Ext.Comp.Var (loc, x) ->
       begin try

@@ -201,6 +201,9 @@ and eval_chk e theta_eta =
             | Comp.BoolValue false -> eval_chk e2 theta_eta
           end
 
+      | Comp.Hole (_) ->
+        raise (Error.Violation "Source contains holes")
+
 and eval_branches loc (phat,tM) (branches, theta_eta) = match branches with
   | [] -> raise (Error (loc, MissingBranch))
   | b::branches ->

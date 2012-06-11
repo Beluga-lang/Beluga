@@ -1908,6 +1908,8 @@ let rec collectExp cQ e = match e with
       let (cQ2, e2') = collectExp cQ1 e2 in
         (cQ2, Comp.If (loc, i', e1', e2'))
 
+  | Comp.Hole (loc) -> (cQ, Comp.Hole (loc))
+
 and collectExp' cQ i = match i with
   | Comp.Var _x -> (cQ , i)
   | Comp.DataConst _c ->  (cQ , i)

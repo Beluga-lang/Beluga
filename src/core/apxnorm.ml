@@ -400,6 +400,8 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
       let e2' = cnormApxExp cD delta e2 (cD'', t) in 
         Apx.Comp.If(loc, i', e1', e2')
 
+  | Apx.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
+
 
 and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var _x -> i
@@ -1028,6 +1030,8 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
       let e1' = fmvApxExp  fMVs cD d_param  e1 in 
       let e2' = fmvApxExp  fMVs cD d_param  e2 in 
         Apx.Comp.If (loc, i', e1', e2')
+
+  | Apx.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
 
 
 and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with

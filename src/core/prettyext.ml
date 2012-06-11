@@ -808,6 +808,8 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e2
               (r_paren_if cond)
 
+      | Comp.Hole (_) -> fprintf ppf " ? "
+
     and strip_mapp_args cD i = 
       if !Control.printImplicit then 
         i 

@@ -450,11 +450,6 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in  
       let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in  
       (* let _    = inferCtxSchema (cD, cPsi') (cD, cPhi) in  *)
-      let _ = (match Context.ctxVar cPsi with 
-               | None -> ()
-               | Some (Int.LF.CtxName psi) -> 
-                   FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No))                   
-               | _ -> ())
       let _ =
         (* unifying two contexts AND inferring schema for psi in
                                                 cPhi, if psi is not in cD *)

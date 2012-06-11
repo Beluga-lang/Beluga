@@ -218,45 +218,40 @@ and eval_branches loc vscrut branches (theta, eta) = match branches with
       dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
       eval_branches loc vscrut branches (theta, eta)
 
+and match_pattern mt vscrut pat =
+  match vscrut, pat with
+    | _, Comp.PatMetaObj (loc', (Comp.MetaObj (loc'', phat, tM))) ->
+      match_pattern mt vscrut
+        (Comp.PatMetaObj (loc', Comp.MetaObjAnn (loc'', Context.hatToDCtx phat, tM)))
+
+    | Comp.BoxValue (phat, tM), Comp.PatMetaObj (_, (Comp.MetaObjAnn (_, cPsi, tM'))) ->
+      let tM' = Whnf.cnorm (tM', mt) in
+      let cPsi = Whnf.cnormDCtx (cPsi, mt) in
+      dprint (fun () -> "[evBranch] unify_phat "
+        ^ P.dctxToString LF.Empty (Context.hatToDCtx phat)
+        ^ " == " ^ P.dctxToString LF.Empty cPsi);
+      dprint (fun () -> "[evBranch] unify meta-obj: "
+        ^ P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
+        ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id));
+      Unify.unify_phat phat (Context.dctxToHat cPsi);
+      Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
+
+    | _ -> raise Error.NotImplemented
+
 and eval_branch vscrut branch (theta, eta) =
   match branch with
     | Comp.EmptyBranch (loc, cD, pat, t) ->
       raise (Error.Violation "Case {}-pattern -- coverage checking is off or broken")
     | Comp.Branch (loc, cD, cG, pat, theta', e) ->
-      match vscrut, pat with
-        | _, Comp.PatMetaObj (loc', (Comp.MetaObj (loc'', phat, tM))) ->
-          eval_branch
-            vscrut
-            (Comp.Branch (loc, cD, cG,
-                          Comp.PatMetaObj (loc',
-                                           Comp.MetaObjAnn (loc'', Context.hatToDCtx phat, tM)), theta', e))
-            (theta, eta)
-
-        | Comp.BoxValue (phat, tM), Comp.PatMetaObj (_, (Comp.MetaObjAnn (_, cPsi, tM'))) ->
-          begin
-            try
-              let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
-              let theta_k = Whnf.mcomp (Whnf.cnormMSub theta') mt in
-
-              let _ = Unify.unifyMSub theta theta_k in
-
-              let tM' = Whnf.cnorm (tM', mt) in
-              let cPsi = Whnf.cnormDCtx (cPsi, mt) in
-              let mt  = Whnf.cnormMSub mt in
-              let _ = dprint (fun () -> "[evBranch] unify_phat " ^ P.dctxToString LF.Empty (Context.hatToDCtx phat)
-                ^ " == " ^ P.dctxToString LF.Empty cPsi) in
-              let _ = dprint (fun () -> "[evBranch] unify meta-obj: "
-                ^ P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
-                ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id)) in
-              let _ = Unify.unify_phat phat (Context.dctxToHat cPsi) in
-              let _ = Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id) in
-
-              eval_chk e (mt, eta)
-
-            with Unify.Unify msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
-          end
-
-        | _ -> raise Error.NotImplemented
+      begin
+        try
+          let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
+          let theta_k = Whnf.mcomp (Whnf.cnormMSub theta') mt in
+          let _ = Unify.unifyMSub theta theta_k in
+          match_pattern mt vscrut pat;
+          eval_chk e (Whnf.cnormMSub mt, eta)
+        with Unify.Unify msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
+      end
 
 let rec eval e =
   dprint (fun () -> "Opsem.eval");

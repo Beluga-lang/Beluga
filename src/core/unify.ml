@@ -2705,22 +2705,10 @@ module Make (T : TRAIL) : UNIFY = struct
            instantiateCtxVar (cvar_ref1, cPsi2)
 
       | (CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cO, _cD)) , cPsi) -> 
-           instantiateCtxVar (cvar_ref, cPsi);
-           begin match Context.ctxVar cPsi with 
-             | None -> ()
-             | Some (CtxName psi) -> 
-               Store.FCVar.add psi (cD0, CDecl (psi, s_cid, No))                   
-             | _ -> ()
-           end
+           instantiateCtxVar (cvar_ref, cPsi)
 
       | (cPsi , CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cO, _cD) )) -> 
-           instantiateCtxVar (cvar_ref, cPsi);
-           begin match Context.ctxVar cPsi with 
-             | None -> ()
-             | Some (CtxName psi) -> 
-               Store.FCVar.add psi (cD0, CDecl (psi, s_cid, No))                   
-             | _ -> ()
-           end
+           instantiateCtxVar (cvar_ref, cPsi)
 
       | (CtxVar cvar, CtxVar cvar') -> 
           if cvar = cvar' then () 

@@ -146,7 +146,6 @@ let rec eval_syn i theta_eta =
     | Comp.Equal (_, i1, i2) ->
       let v1 = eval_syn i1 theta_eta in
       let v2 = eval_syn i2 theta_eta in
-        (* begin match (eval_syn i1 theta_eta , eval_syn i2 theta_eta )  with *)
       begin match (v1, v2)  with
         | (Comp.BoxValue (psihat, tM), Comp.BoxValue ( _ , tN)) ->
           if Whnf.conv (tM, Substitution.LF.id) (tN, Substitution.LF.id) then
@@ -186,14 +185,15 @@ and eval_chk e theta_eta =
         Comp.PairValue (v1, v2)
 
       | Comp.Let (loc, i, (x, e)) ->
-          let w = eval_syn i theta_eta in
-            eval_chk e (theta, Comp.Cons (w, eta))
+        let w = eval_syn i theta_eta in
+        eval_chk e (theta, Comp.Cons (w, eta))
 
       | Comp.Box (loc, phat, tM) ->
-          let tM'   = Whnf.cnorm (tM, theta) in
-          let phat' = Whnf.cnorm_psihat phat theta in
-          dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box (loc, phat, tM')));
-          Comp.BoxValue (phat', tM')
+        let tM'   = Whnf.cnorm (tM, theta) in
+        let phat' = Whnf.cnorm_psihat phat theta in
+        dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box (loc, phat, tM')));
+        Comp.BoxValue (phat', tM')
+
       | Comp.Case (loc, _prag, i, branches) ->
           begin match eval_syn i theta_eta with
           | Comp.BoxValue (phat, tM) ->
@@ -206,10 +206,10 @@ and eval_chk e theta_eta =
 
       | Comp.Value v -> v
       | Comp.If (_, i, e1, e2) ->
-          begin match eval_syn i theta_eta with
-            | Comp.BoolValue true -> eval_chk e1 theta_eta
-            | Comp.BoolValue false -> eval_chk e2 theta_eta
-          end
+        begin match eval_syn i theta_eta with
+          | Comp.BoolValue true -> eval_chk e1 theta_eta
+          | Comp.BoolValue false -> eval_chk e2 theta_eta
+        end
 
 and eval_branches loc (phat,tM) (branches, theta_eta) = match branches with
   | [] -> raise (Error (loc, MissingBranch))
@@ -244,13 +244,11 @@ and eval_branch (phat, tM) branch (theta, eta) =
           let tM' = Whnf.cnorm (tM', mt) in
           let cPsi = Whnf.cnormDCtx (cPsi, mt) in 
           let mt  = Whnf.cnormMSub mt in
-          let _ = dprint (fun () -> "[elBranch] unify_phat " ^ 
-                            P.dctxToString LF.Empty (Context.hatToDCtx phat)
-                        ^ " == " ^ P.dctxToString LF.Empty cPsi) in 
-          let _ = dprint (fun () -> "[elBranch] unify meta-obj: " ^ 
-                            P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
-                            ^ " == " ^ 
-                            P.normalToString LF.Empty cPsi (tM', Substitution.LF.id)) in
+          let _ = dprint (fun () -> "[evBranch] unify_phat " ^ P.dctxToString LF.Empty (Context.hatToDCtx phat)
+                                                    ^ " == " ^ P.dctxToString LF.Empty cPsi) in
+          let _ = dprint (fun () -> "[evBranch] unify meta-obj: "
+                                  ^ P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
+                         ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id)) in
           let _ = Unify.unify_phat phat (Context.dctxToHat cPsi) in 
           let _ = Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id) in
 
@@ -260,7 +258,7 @@ and eval_branch (phat, tM) branch (theta, eta) =
       end
     | _ -> raise Error.NotImplemented
 
-let rec eval e  =
+let rec eval e =
   dprint (fun () -> "Opsem.eval");
   Debug.indent 2;
   let result = match eval_chk e (LF.MShift 0, Comp.Empty) with

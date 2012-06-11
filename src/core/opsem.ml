@@ -195,45 +195,42 @@ and eval_chk e theta_eta =
         Comp.BoxValue (phat', tM')
 
       | Comp.Case (loc, _prag, i, branches) ->
-          begin match eval_syn i theta_eta with
-          | Comp.BoxValue (phat, tM) ->
-              dprint (fun () -> "[eval_syn] EVALUATED SCRUTINEE: " ^
-                                P.expChkToString LF.Empty LF.Empty (Comp.Box (Syntax.Loc.ghost, phat, tM))
-                             );
-              eval_branches loc (phat,tM) (branches, theta_eta)
-          | _ -> raise (Error.Violation "Expected BoxValue for case")
-          end
+        let vscrut = eval_syn i theta_eta in
+        eval_branches loc vscrut branches theta_eta
 
-      | Comp.Value v -> v
       | Comp.If (_, i, e1, e2) ->
         begin match eval_syn i theta_eta with
           | Comp.BoolValue true -> eval_chk e1 theta_eta
           | Comp.BoolValue false -> eval_chk e2 theta_eta
         end
 
-and eval_branches loc (phat,tM) (branches, theta_eta) = match branches with
+      | Comp.Value v -> v
+
+and eval_branches loc vscrut branches (theta, eta) = match branches with
   | [] -> raise (Error (loc, MissingBranch))
   | b::branches ->
-      let (theta, _ ) = theta_eta in
-        try
-           dprint (fun () -> "[eval_branches] try branch with  theta = " ^
-                     P.msubToString LF.Empty (Whnf.cnormMSub theta)) ;
-          eval_branch (phat,tM) b  theta_eta
-        with BranchMismatch ->
-          dprint (fun () -> "[eval_branches] Try next branch...");
-          dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
-          eval_branches loc (phat,tM) (branches, theta_eta)
+    try
+      dprint (fun () -> "[eval_branches] try branch with theta = " ^
+        P.msubToString LF.Empty (Whnf.cnormMSub theta)) ;
+      eval_branch vscrut b (theta, eta)
+    with BranchMismatch ->
+      dprint (fun () -> "[eval_branches] Try next branch...");
+      dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
+      eval_branches loc vscrut branches (theta, eta)
 
-and eval_branch (phat, tM) branch (theta, eta) =
-  match branch with
-    | Comp.EmptyBranch (loc, cD, pat, t) ->
+and eval_branch vscrut branch (theta, eta) =
+  match vscrut, branch with
+    | _, Comp.EmptyBranch (loc, cD, pat, t) ->
       raise (Error.Violation "Case {}-pattern -- coverage checking is off or broken")
-    | Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', (Comp.MetaObj (loc'', phat, tM))), theta', e) ->
+    | _, Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', (Comp.MetaObj (loc'', phat, tM))), theta', e) ->
       eval_branch
-        (phat, tM)
-        (Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', (Comp.MetaObjAnn (loc'', Context.hatToDCtx phat, tM))), theta', e))
+        vscrut
+        (Comp.Branch (loc, cD, cG,
+                      Comp.PatMetaObj (loc',
+                                       Comp.MetaObjAnn (loc'', Context.hatToDCtx phat, tM)), theta', e))
         (theta, eta)
-    | Comp.Branch (_, cD, _cG, Comp.PatMetaObj (_, (Comp.MetaObjAnn (_, cPsi, tM'))), theta', e) ->
+    | Comp.BoxValue (phat, tM),
+      Comp.Branch (_, cD, cG, Comp.PatMetaObj (_, (Comp.MetaObjAnn (_, cPsi, tM'))), theta', e) ->
       begin
         try
           let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in

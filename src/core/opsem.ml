@@ -235,6 +235,11 @@ and match_pattern mt vscrut pat =
       Unify.unify_phat phat (Context.dctxToHat cPsi);
       Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
 
+    | Comp.PairValue (v1, v2), Comp.PatPair (_, pat1, pat2) ->
+      dprint (fun () -> "[evBranch] matching a pair.");
+      match_pattern mt v1 pat1;
+      match_pattern mt v2 pat2
+
     | _ -> raise Error.NotImplemented
 
 and eval_branch vscrut branch (theta, eta) =

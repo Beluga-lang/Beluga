@@ -1,8 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-(**
-   @author Brigitte Pientka
-*)
-
 (* Contextual Weak Head Normalization,
    Contextual Normalization, and alpha-conversion 
    for contextual substitutions *)

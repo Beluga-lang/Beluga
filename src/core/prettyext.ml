@@ -1,5 +1,3 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 (** Pretty printing for external syntax.
 
     @see http://caml.inria.fr/resources/doc/guides/format.html

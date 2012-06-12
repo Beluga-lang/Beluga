@@ -1,5 +1,3 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 (* NOTE: Be careful with tuareg-mode M-q in this file -- it doesn't
    understand the grammar formatting below very well and will easily
    trash the layout. *)

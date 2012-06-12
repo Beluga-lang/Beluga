@@ -223,6 +223,9 @@ and match_pattern mt vscrut pat =
       match_pattern mt vscrut
         (Comp.PatMetaObj (loc', Comp.MetaObjAnn (loc'', Context.hatToDCtx phat, tM)))
 
+    | _, PatAnn (_, pat', _) ->
+      match_pattern mt vscrut pat'
+
     | Comp.BoxValue (phat, tM), Comp.PatMetaObj (_, (Comp.MetaObjAnn (_, cPsi, tM'))) ->
       let tM' = Whnf.cnorm (tM', mt) in
       let cPsi = Whnf.cnormDCtx (cPsi, mt) in

@@ -216,38 +216,49 @@ and eval_branches loc vscrut branches (theta, eta) = match branches with
       dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
       eval_branches loc vscrut branches (theta, eta)
 
-and match_pattern mt vscrut pat =
-  match vscrut, pat with
-    | _, Comp.PatMetaObj (loc', (Comp.MetaObj (loc'', phat, tM))) ->
-      match_pattern mt vscrut
-        (Comp.PatMetaObj (loc', Comp.MetaObjAnn (loc'', Context.hatToDCtx phat, tM)))
+and match_pattern mt eta v pat =
+  let eta = ref eta in
+  let rec loop v pat =
+    match v, pat with
+      | _, Comp.PatMetaObj (loc', (Comp.MetaObj (loc'', phat, tM))) ->
+        loop v
+          (Comp.PatMetaObj (loc', Comp.MetaObjAnn (loc'', Context.hatToDCtx phat, tM)))
 
-    | _, Comp.PatAnn (_, pat', _) ->
-      match_pattern mt vscrut pat'
+      | _, Comp.PatAnn (_, pat', _) ->
+        loop v pat'
 
-    | Comp.BoxValue (phat, tM), Comp.PatMetaObj (_, (Comp.MetaObjAnn (_, cPsi, tM'))) ->
-      let tM' = Whnf.cnorm (tM', mt) in
-      let cPsi = Whnf.cnormDCtx (cPsi, mt) in
-      dprint (fun () -> "[evBranch] unify_phat "
-        ^ P.dctxToString LF.Empty (Context.hatToDCtx phat)
-        ^ " == " ^ P.dctxToString LF.Empty cPsi);
-      dprint (fun () -> "[evBranch] unify meta-obj: "
-        ^ P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
-        ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id));
-      Unify.unify_phat phat (Context.dctxToHat cPsi);
-      Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
+      | Comp.BoxValue (phat, tM), Comp.PatMetaObj (_, (Comp.MetaObjAnn (_, cPsi, tM'))) ->
+        let tM' = Whnf.cnorm (tM', mt) in
+        let cPsi = Whnf.cnormDCtx (cPsi, mt) in
+        dprint (fun () -> "[evBranch] unify_phat "
+          ^ P.dctxToString LF.Empty (Context.hatToDCtx phat)
+          ^ " == " ^ P.dctxToString LF.Empty cPsi);
+        dprint (fun () -> "[evBranch] unify meta-obj: "
+          ^ P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
+          ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id));
+        Unify.unify_phat phat (Context.dctxToHat cPsi);
+        Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
 
-    | Comp.PairValue (v1, v2), Comp.PatPair (_, pat1, pat2) ->
-      dprint (fun () -> "[evBranch] matching a pair.");
-      match_pattern mt v1 pat1;
-      match_pattern mt v2 pat2
+    (* | PatConst (_, cid, pat_spine) -> *)
 
-    | Comp.BoolValue true, Comp.PatTrue _ -> ()
-    | Comp.BoolValue false, Comp.PatFalse _ -> ()
-    | Comp.BoolValue _, (Comp.PatTrue _ | Comp.PatFalse _) -> raise BranchMismatch
-    | _,           (Comp.PatTrue _ | Comp.PatFalse _) -> raise (Error.Violation "Expected Bool value.")
+      | Comp.PairValue (v1, v2), Comp.PatPair (_, pat1, pat2) ->
+        dprint (fun () -> "[evBranch] matching a pair.");
+        loop v1 pat1;
+        loop v2 pat2
 
-    | _ -> raise Error.NotImplemented
+      | _, Comp.PatFVar (_, _) ->
+        raise (Error.Violation "Found PatFVar in opsem.")
+
+      | v, Comp.PatVar (_, _) ->
+        eta := Comp.Cons (v, !eta)
+
+      | Comp.BoolValue true, Comp.PatTrue _ -> ()
+      | Comp.BoolValue false, Comp.PatFalse _ -> ()
+      | Comp.BoolValue _, (Comp.PatTrue _ | Comp.PatFalse _) -> raise BranchMismatch
+      | _,           (Comp.PatTrue _ | Comp.PatFalse _) -> raise (Error.Violation "Expected Bool value.")
+
+      | _ -> raise Error.NotImplemented
+  in loop v pat; !eta
 
 and eval_branch vscrut branch (theta, eta) =
   match branch with
@@ -259,8 +270,8 @@ and eval_branch vscrut branch (theta, eta) =
           let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
           let theta_k = Whnf.mcomp (Whnf.cnormMSub theta') mt in
           let _ = Unify.unifyMSub theta theta_k in
-          match_pattern mt vscrut pat;
-          eval_chk e (Whnf.cnormMSub mt, eta)
+          let eta' = match_pattern mt eta vscrut pat in
+          eval_chk e (Whnf.cnormMSub mt, eta')
         with Unify.Unify msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
 

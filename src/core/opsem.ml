@@ -35,11 +35,10 @@ let rec length_env env = begin match env with
   | Comp.Cons (_ , env') -> length_env env' + 1
 end
 
-let rec lookupValue x env = begin match (x, env) with
-  | (1, Comp.Cons (v, env'))  -> v
-  | (n, Comp.Cons (_ , env')) -> lookupValue (n-1) env'
-  (* otherwise undefined *)
-end
+let rec lookupValue x env = match x, env with
+  | 1, Comp.Cons (v, env')  -> v
+  | n, Comp.Cons (_, env') -> lookupValue (n-1) env'
+  | _, _ -> raise (Error.Violation "lookupValue: bad offset.")
 
 (* ********************************************************************* *)
 

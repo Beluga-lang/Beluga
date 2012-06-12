@@ -271,6 +271,7 @@ module Comp = struct
    | CtxValue   of (Loc.t * name * exp_chk) * LF.msub * env
    | BoxValue   of LF.psi_hat * LF.normal 
    | ConstValue of cid_prog   
+   | DataValue  of cid_comp_const * data_spine
    | BoolValue  of bool
    | PairValue  of value * value
 
@@ -319,7 +320,11 @@ module Comp = struct
  and pattern_spine = 
    | PatNil
    | PatApp of Loc.t * pattern * pattern_spine 
-  
+
+ and data_spine =
+   | DataNil
+   | DataApp of value * data_spine
+
  and branch =
    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
    | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk

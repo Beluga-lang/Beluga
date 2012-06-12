@@ -210,8 +210,7 @@ and eval_branches loc vscrut branches (theta, eta) = match branches with
   | [] -> raise (Error (loc, MissingBranch))
   | b::branches ->
     try
-      dprint (fun () -> "[eval_branches] try branch with theta = " ^
-        P.msubToString LF.Empty (Whnf.cnormMSub theta)) ;
+      dprint (fun () -> "[eval_branches] try branch with theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
       eval_branch vscrut b (theta, eta)
     with BranchMismatch ->
       dprint (fun () -> "[eval_branches] Try next branch...");

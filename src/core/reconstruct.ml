@@ -601,10 +601,11 @@ let rec inferPatTyp' cD' tau = match tau with
       mgCompTyp cD' (loc, c)
   | Int.Comp.TypArr _  -> 
       raise (Error.Violation "Patterns cannot have function type")        
-  | _ -> raise Error.NotImplemented
-(*  | Int.Comp.TypBox (_, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
-      let tP' = mgTyp cD' cPsi' a (Typ.get a).Typ.kind   
-*)      
+(*  | _ -> raise Error.NotImplemented*)
+  | Int.Comp.TypBox (loc, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
+      let tP' = mgTyp cD' cPsi a (Typ.get a).Typ.kind  in 
+        Int.Comp.TypBox (loc, tP', cPsi)
+      
 
 let rec inferPatTyp cD' tau = inferPatTyp' cD' (Whnf.cnormCTyp (tau, Whnf.m_id))
 

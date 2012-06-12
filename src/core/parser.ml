@@ -954,10 +954,6 @@ GLOBAL: sgn_eoi;
       | "if"; i = cmp_exp_syn; "then"; e1 = cmp_exp_chk ; "else"; e2 = cmp_exp_chk ->
           Comp.If (_loc, i, e1, e2)
 
-      | "let"; "("; x = SYMBOL; ","; y = SYMBOL; ")"; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
-          Comp.LetPair (_loc, i, (Id.mk_name (Id.SomeString x), Id.mk_name
-          (Id.SomeString y), e))
-
       | "let";  x = SYMBOL; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
           Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
 
@@ -969,8 +965,6 @@ GLOBAL: sgn_eoi;
        ->
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
                                           LF.Empty ctyp_decls in
-
-
          let branch =
            begin match mobj with
             | PatEmpty _loc'   ->

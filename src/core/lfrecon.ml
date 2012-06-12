@@ -19,8 +19,8 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
-  | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
+  | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | LeftoverConstraints of Id.name
   | SubIllTyped 
   | PruningFailed

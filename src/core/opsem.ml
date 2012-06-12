@@ -243,6 +243,11 @@ and match_pattern mt vscrut pat =
       match_pattern mt v1 pat1;
       match_pattern mt v2 pat2
 
+    | BoolValue true, PatTrue _ -> ()
+    | BoolValue false, PatFalse _ -> ()
+    | BoolValue _, (PatTrue _ | PatFalse _) -> raise BranchMismatch
+    | _,           (PatTrue _ | PatFalse _) -> raise (Error.Violation "Expected Bool value.")
+
     | _ -> raise Error.NotImplemented
 
 and eval_branch vscrut branch (theta, eta) =

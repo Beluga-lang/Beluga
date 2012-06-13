@@ -16,7 +16,6 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
 
 type error =
   | MissingBranch
-  | FoundHole
 
 exception Error of Syntax.Loc.t * error
 
@@ -25,9 +24,7 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match err with
         | MissingBranch ->
-          Format.fprintf ppf "Missing branch -- non-exhaustive pattern match."
-        | FoundHole ->
-          Format.fprintf ppf "Cannot evaluate holes. The hole must be filled in for evaluation to proceed."))
+          Format.fprintf ppf "Missing branch -- non-exhaustive pattern match."))
 
 exception BranchMismatch
 
@@ -202,8 +199,8 @@ and eval_chk e theta_eta =
             | Comp.BoolValue false -> eval_chk e2 theta_eta
           end
 
-      | Comp.Hole loc ->
-        raise (Error (loc, FoundHole))
+      | Comp.Hole (_) ->
+        raise (Error.Violation "Source contains holes")
 
 and eval_branches loc (phat,tM) (branches, theta_eta) = match branches with
   | [] -> raise (Error (loc, MissingBranch))

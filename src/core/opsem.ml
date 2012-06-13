@@ -71,7 +71,7 @@ let rec eval_syn i theta_eta =
       eval_chk e (theta, (add_mrecs n_list theta eta))
 
     | Comp.DataConst cid ->
-      Comp.DataValue (cid, LF.MShift 0, Comp.Empty)
+      Comp.DataValue (cid, Comp.DataNil)
 
     | Comp.Var x     ->
       let _ = dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment") in
@@ -111,8 +111,8 @@ let rec eval_syn i theta_eta =
 
           eval_chk e' (theta1, Comp.Cons (w2,eta1))
 
-        | Comp.DataValue (cid, theta1, eta1) ->
-          Comp.DataValue (cid, theta1, Comp.Cons (w2, eta1))
+        | Comp.DataValue (cid, spine) ->
+          Comp.DataValue (cid, Comp.DataApp (w2, spine))
 
         | _ -> raise (Error.Violation "Expected FunValue")
       end
@@ -121,8 +121,8 @@ let rec eval_syn i theta_eta =
       begin match eval_syn i' theta_eta with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.MObj (phat, Whnf.cnorm (tM, theta)), theta1), eta1)
-        | Comp.DataValue (cid, theta1, eta1) ->
-          Comp.DataValue (cid, LF.MDot (LF.MObj (phat, Whnf.cnorm (tM, theta)), theta1), eta1)
+        | Comp.DataValue (cid, spine) ->
+          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (phat, tM), spine))
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
@@ -131,8 +131,6 @@ let rec eval_syn i theta_eta =
       begin match eval_syn i' theta_eta with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
-        | Comp.DataValue (cid, theta1, eta1) ->
-          Comp.DataValue (cid, LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
@@ -146,10 +144,6 @@ let rec eval_syn i theta_eta =
           dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
           dprint (fun () -> "[CtxApp] theta1' = " ^ P.msubToString LF.Empty  theta1');
           eval_chk e' (theta1', eta1)
-        | Comp.DataValue (cid, theta1, eta1) ->
-          let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
-          let theta1'= LF.MDot (LF.CObj cPsi', theta1) in          
-          Comp.DataValue (cid, theta1', eta1)
         | _ -> raise (Error.Violation "Expected CtxValue")
       end
 
@@ -256,7 +250,7 @@ and match_pattern mt eta v pat =
       | _, Comp.PatMetaObj _ ->
         raise (Error.Violation "Expected box value.")
 
-      | Comp.DataValue (cid, theta1, eta1), Comp.PatConst (_, pat_cid, pat_spine) ->
+      | Comp.DataValue (cid, spine), Comp.PatConst (_, pat_cid, pat_spine) ->
         if cid <> pat_cid then
           raise BranchMismatch;
         assert false

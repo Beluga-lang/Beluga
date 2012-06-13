@@ -5,8 +5,6 @@
 
 open Format
 
-
-
 (* Explanation of formatting markup:
 
    "@[" opens a box (open_box 0).  You may specify more information
@@ -46,11 +44,9 @@ open Format
      - Function whose names start with "frugal" try to produce output similar to human input.
 *)
 
-
 type lvl    = int
 
 let std_lvl = 0
-
 
 let l_paren_if cond =
   if cond
@@ -62,7 +58,6 @@ let r_paren_if cond =
   then ")"
   else ""
 
-
 module Control = struct
   type substitution_style = Natural | DeBruijn
 
@@ -71,7 +66,6 @@ module Control = struct
 
   let db() = !substitutionStyle = DeBruijn
 end (* Control *)
-
 
 module Int = struct
 

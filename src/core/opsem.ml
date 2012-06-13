@@ -58,8 +58,7 @@ where  cD ; cG |- e <= wf_exp
        .  ; .  |- eta   <= [|theta|]cG
 *)
 
-let rec eval_syn i theta_eta =
-  let (theta, eta) = theta_eta in
+let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
     | Comp.Const cid ->
@@ -84,7 +83,7 @@ let rec eval_syn i theta_eta =
       end
 
     | Comp.Apply (_ , i', e') ->
-      let w2 = eval_chk e' theta_eta in
+      let w2 = eval_chk e' (theta, eta) in
       let _ = dprint (fun () -> "[eval_syn] Apply argument evaluated\n"
         ^ "[eval_syn] Extended environment: |env| =  "
         ^ string_of_int (length_env eta) ^ "\n"
@@ -92,7 +91,7 @@ let rec eval_syn i theta_eta =
         ^ P.msubToString LF.Empty (Whnf.cnormMSub theta) ^ "\n"
       ) in
 
-      begin match eval_syn i' theta_eta with
+      begin match eval_syn i' (theta, eta) with
         | Comp.FunValue ((_loc, _x , e'), theta1, eta1) ->
           dprint (fun () -> "[eval_syn] Extended environment: |env1| =  "
             ^ string_of_int (length_env eta1) ^ "\n"
@@ -107,7 +106,7 @@ let rec eval_syn i theta_eta =
       end
 
     | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
-      begin match eval_syn i' theta_eta with
+      begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.MObj (phat, Whnf.cnorm (tM, theta)), theta1), eta1)
         | _ -> raise (Error.Violation "Expected MLamValue")
@@ -115,14 +114,14 @@ let rec eval_syn i theta_eta =
 
 
     | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
-      begin match eval_syn i' theta_eta with
+      begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
     | Comp.CtxApp (_, i', cPsi) ->
-      begin match eval_syn i' theta_eta with
+      begin match eval_syn i' (theta, eta) with
         | Comp.CtxValue ((_loc, _psi, e'), theta1, eta1) ->
           let _ = dprint (fun () -> "EVALUATE CtxApp ") in
             (* let _ = dprint (fun () -> "CtxApp AFTER substitution cPsi") in  *)
@@ -135,13 +134,12 @@ let rec eval_syn i theta_eta =
       end
 
     | Comp.Ann (e, _tau) ->
-      eval_chk e theta_eta
+      eval_chk e (theta, eta)
 
 
     | Comp.Equal (_, i1, i2) ->
-      let v1 = eval_syn i1 theta_eta in
-      let v2 = eval_syn i2 theta_eta in
-        (* begin match (eval_syn i1 theta_eta , eval_syn i2 theta_eta )  with *)
+      let v1 = eval_syn i1 (theta, eta) in
+      let v2 = eval_syn i2 (theta, eta) in
       begin match (v1, v2)  with
         | (Comp.BoxValue (psihat, tM), Comp.BoxValue ( _ , tN)) ->
           if Whnf.conv (tM, Substitution.LF.id) (tN, Substitution.LF.id) then
@@ -154,11 +152,9 @@ let rec eval_syn i theta_eta =
 
     | Comp.Boolean b -> Comp.BoolValue b
 
-and eval_chk e theta_eta =
-  let (theta,eta) = theta_eta in
-
+and eval_chk e (theta, eta) =
     match e with
-      | Comp.Syn (_, i) -> eval_syn i theta_eta
+      | Comp.Syn (_, i) -> eval_syn i (theta, eta)
       | Comp.MLam (loc, n, e') ->
           dprint (fun () -> "[MLamValue] created: theta = " ^ 
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
@@ -171,7 +167,7 @@ and eval_chk e theta_eta =
           Comp.FunValue ((loc, n, e'), Whnf.cnormMSub theta, eta)
 
       | Comp.Let (loc, i, (x, e)) ->
-          let w = eval_syn i theta_eta in
+          let w = eval_syn i (theta, eta) in
             eval_chk e (theta, Comp.Cons (w, eta))
 
       | Comp.Box (loc, phat, tM) ->
@@ -180,37 +176,36 @@ and eval_chk e theta_eta =
           dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box (loc, phat, tM')));
           Comp.BoxValue (phat', tM')
       | Comp.Case (loc, _prag, i, branches) ->
-          begin match eval_syn i theta_eta with
+          begin match eval_syn i (theta, eta) with
           | Comp.BoxValue (phat, tM) ->
               dprint (fun () -> "[eval_syn] EVALUATED SCRUTINEE: " ^
                                 P.expChkToString LF.Empty LF.Empty (Comp.Box (Syntax.Loc.ghost, phat, tM))
                              );
-              eval_branches loc (phat,tM) (branches, theta_eta)
+              eval_branches loc (phat,tM) (branches, (theta, eta))
           | _ -> raise (Error.Violation "Expected BoxValue for case")
           end
 
       | Comp.Value v -> v
       | Comp.If (_, i, e1, e2) ->
-          begin match eval_syn i theta_eta with
-            | Comp.BoolValue true -> eval_chk e1 theta_eta
-            | Comp.BoolValue false -> eval_chk e2 theta_eta
+          begin match eval_syn i (theta, eta) with
+            | Comp.BoolValue true -> eval_chk e1 (theta, eta)
+            | Comp.BoolValue false -> eval_chk e2 (theta, eta)
           end
 
       | Comp.Hole (_) ->
         raise (Error.Violation "Source contains holes")
 
-and eval_branches loc (phat,tM) (branches, theta_eta) = match branches with
+and eval_branches loc (phat,tM) (branches, (theta, eta)) = match branches with
   | [] -> raise (Error (loc, MissingBranch))
   | b::branches ->
-      let (theta, _ ) = theta_eta in
         try
            dprint (fun () -> "[eval_branches] try branch with  theta = " ^
                      P.msubToString LF.Empty (Whnf.cnormMSub theta)) ;
-          eval_branch (phat,tM) b  theta_eta
+          eval_branch (phat,tM) b  (theta, eta)
         with BranchMismatch ->
           dprint (fun () -> "[eval_branches] Try next branch...");
           dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
-          eval_branches loc (phat,tM) (branches, theta_eta)
+          eval_branches loc (phat,tM) (branches, (theta, eta))
 
 and eval_branch (phat, tM) branch (theta, eta) =
   match branch with

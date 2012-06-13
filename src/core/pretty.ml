@@ -1262,6 +1262,13 @@ module Int = struct
       | Comp.CtxValue _ -> fprintf ppf " mlam "
       | Comp.BoxValue _ -> fprintf ppf " box "
       | Comp.ConstValue _ -> fprintf ppf " const "
+      | Comp.DataValue (c, spine) ->
+        let rec print_spine ppf = function
+          | Comp.DataNil -> ()
+          | Comp.DataApp (v, spine) ->
+            fprintf ppf " %a" (fmt_ppr_cmp_value lvl) v;
+            print_spine ppf spine
+        in fprintf ppf "%s%a" (R.render_cid_comp_const c) print_spine spine
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function 
       | LF.Empty -> ()

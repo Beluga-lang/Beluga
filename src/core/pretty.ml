@@ -1268,6 +1268,8 @@ module Int = struct
       | Comp.CtxValue _ -> fprintf ppf " mlam "
       | Comp.BoxValue _ -> fprintf ppf " box "
       | Comp.ConstValue _ -> fprintf ppf " const "
+      | Comp.BoolValue true -> fprintf ppf "ttrue"
+      | Comp.BoolValue false -> fprintf ppf "ffalse"
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function 
       | LF.Empty -> ()

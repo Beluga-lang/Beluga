@@ -105,6 +105,7 @@ module Int = struct
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
+    val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
@@ -1131,12 +1132,8 @@ module Int = struct
 
       | Comp.Hole (_) -> fprintf ppf " ? "
 
-      | Comp.Value (Comp.FunValue _ ) -> fprintf ppf " fn "
-      | Comp.Value (Comp.RecValue _ ) -> fprintf ppf " rec "
-      | Comp.Value (Comp.MLamValue _ ) -> fprintf ppf " mlam "
-      | Comp.Value (Comp.CtxValue _ ) -> fprintf ppf " mlam "
-      | Comp.Value (Comp.BoxValue _ ) -> fprintf ppf " box "
-      | Comp.Value (Comp.ConstValue _ ) -> fprintf ppf " const "
+      | Comp.Value v ->
+        fmt_ppr_cmp_value lvl ppf v
 
     and strip_mapp_args cD cG i = 
       if !Control.printImplicit then 
@@ -1267,6 +1264,14 @@ module Int = struct
 
       | Comp.Boolean false -> 
           fprintf ppf "ffalse"
+
+    and fmt_ppr_cmp_value lvl ppf = function
+      | Comp.FunValue _ -> fprintf ppf " fn "
+      | Comp.RecValue _ -> fprintf ppf " rec "
+      | Comp.MLamValue _ -> fprintf ppf " mlam "
+      | Comp.CtxValue _ -> fprintf ppf " mlam "
+      | Comp.BoxValue _ -> fprintf ppf " box "
+      | Comp.ConstValue _ -> fprintf ppf " const "
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function 
       | LF.Empty -> ()

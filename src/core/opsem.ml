@@ -40,6 +40,25 @@ let rec lookupValue x env = match x, env with
   | n, Comp.Cons (_, env') -> lookupValue (n-1) env'
   | _, _ -> raise (Error.Violation "lookupValue: bad offset.")
 
+(** The Data spine must necessarily be in reverse order, to allow
+    constant time applications. The pattern spine, however, is in the
+    natural order. This function zips the reverse of the one spine
+    with the other spine and discards the result, ie it computes the
+    convolution of the two spines and discards the result. *)
+let convolve_spines f spine pat_spine =
+  (* To avoid doing two traversals of the first spine (once for
+     reversing and once for zipping), we use the "There And Back
+     Again" trick by Danvy and Goldberg (2202). *)
+  let rec loop spine =
+    match spine with
+      | Comp.DataNil -> pat_spine
+      | Comp.DataApp (v, spine') ->
+        match loop spine' with
+          | Comp.PatApp (_, pat', pat_spine') ->
+            f v pat'; pat_spine'
+          | _ -> raise (Error.Violation "convolve_spines: spines not the same length.")
+  in ignore (loop spine)
+
 (* ********************************************************************* *)
 
 let rec add_mrecs n_list theta eta = match n_list with
@@ -253,7 +272,7 @@ and match_pattern mt eta v pat =
       | Comp.DataValue (cid, spine), Comp.PatConst (_, pat_cid, pat_spine) ->
         if cid <> pat_cid then
           raise BranchMismatch;
-        assert false
+        convolve_spines loop spine pat_spine
       | _, Comp.PatConst _ ->
         raise (Error.Violation "Expected data value.")
 

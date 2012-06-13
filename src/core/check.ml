@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
    modified: Joshua Dunfield
@@ -447,6 +445,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
                check cD cG e1 (tau,t) )
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end 
+
+    | (Hole (_loc), (_tau, _t)) -> ()
 
   and check cD cG e (tau, t) =
     checkW cD cG e (C.cwhnfCTyp (tau, t));

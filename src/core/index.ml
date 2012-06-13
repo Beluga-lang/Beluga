@@ -1,6 +1,6 @@
 
 (* -------------------------------------------------------------*)
-(*  Indexing
+(*  indexing
  *
  * index_term names ext_m = (m, fvars)
  *
@@ -73,7 +73,6 @@ let _ = Error.register_printer
 type free_cvars = 
     FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name 
 
-
 type fcvars = free_cvars list * bool 
 
 let rec nearestFCVar fvars = begin match fvars with 
@@ -82,6 +81,12 @@ let rec nearestFCVar fvars = begin match fvars with
   | _ :: fvs -> nearestFCVar fvs
 end
 
+let rec fcvarsToString fcvars = match fcvars with
+  | [] -> ""
+  | FMV m :: fcvars -> ", FMV " ^ R.render_name m ^ fcvarsToString fcvars
+  | FPV m :: fcvars -> ", FPV " ^ R.render_name m ^ fcvarsToString fcvars  
+  | FCV m :: fcvars -> ", FCV " ^ R.render_name m ^ fcvarsToString fcvars
+  | FSV m :: fcvars -> ", FSV " ^ R.render_name m ^ fcvarsToString fcvars
 
 let rec lookup_fv fvars m = begin  match (fvars, m) with 
      ([], _ ) -> false
@@ -265,16 +270,15 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
           let (s', fvs')     = index_sub cvars bvars fvs s in
             (Apx.LF.MVar (Apx.LF.Offset offset, s') , fvs')
         with Not_found ->
-	if closed_flag then 
-	  (if lookup_fv fvars (FMV u) then 
-          let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
-            (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
-	   else
-	     raise (Error (loc, UnboundName u))
-	  )
-	else 
-          let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
-            (Apx.LF.FMVar (u, s') , (FMV u :: fvars' , closed_flag))
+	  if closed_flag then 
+	    (* if lookup_fv fvars (FMV u) then 
+               let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
+		 (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
+	     else *)
+	       raise (Error (loc, UnboundName u))	    
+	  else 
+            let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
+              (Apx.LF.FMVar (u, s') , (FMV u :: fvars' , closed_flag))
         end
 
   | Ext.LF.SVar (loc, n, _sigma) -> 
@@ -340,7 +344,10 @@ let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
           let offset = CVar.index_of_name cvars (CVar.CV psi_name) in
             (Apx.LF.CtxVar (Apx.LF.CtxOffset offset) , bvars, fvars)
 	with Not_found ->  
-	 (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, ((FCV psi_name :: fvs),  closed))
+	if closed then 
+	     raise (Error (loc, UnboundName psi_name))
+	else 
+	  (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, ((FCV psi_name :: fvs),  closed))
 	end
   | Ext.LF.DDec (psi, decl) ->
       let (psi', bvars', fvars')    = index_dctx cvars bvars fvars psi in
@@ -660,6 +667,8 @@ let rec index_exp cvars vars fcvars = function
       let e2' = index_exp cvars vars fcvars e2 in
         Apx.Comp.If(loc, i', e1', e2')
 
+  | Ext.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
+
 and index_exp' cvars vars fcvars = function
   | Ext.Comp.Var (loc, x) ->
       begin try
@@ -851,6 +860,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
     let (omega, cD', cvars1, fcvars1)  = 
       index_mctx (CVar.create()) (fcvars', not term_closed) cD in
     let (mO', (fcvars2, _)) = index_mobj cvars1 fcvars1 mO in 
+    let _ = dprint (fun () -> "fcvars in pattern = " ^ fcvarsToString fcvars2) in 
     let cvars_all  = CVar.append cvars1 cvars in
     let fcvars3    = List.append fcvars2 fcvars in 
     let e'         = index_exp cvars_all vars (fcvars3, term_closed) e in
@@ -863,13 +873,14 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
 	index_mctx (CVar.create()) (empty_fcvars, not term_closed) cD in
       let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 (Var.create ())  pat in 
       let _ = dprint (fun () -> "index_pattern done") in 
-    let cvars_all  = CVar.append cvars1 cvars in
-    let vars_all  = Var.append fvars2 vars in
-    let pat'' = reindex_pattern fvars2 pat' in 
+      let cvars_all  = CVar.append cvars1 cvars in
+      let vars_all  = Var.append fvars2 vars in
+      let pat'' = reindex_pattern fvars2 pat' in 
       let _ = dprint (fun () -> "reindex_pattern done") in 
-    let (fcv2, _ ) = fcvars2 in 
-    let fcv3      = List.append fcv2 fcvars in 
-    let e'        = index_exp cvars_all vars_all (fcv3, term_closed) e in
+      let (fcv2, _ ) = fcvars2 in 
+      let _ = dprint (fun () -> "fcvars in pattern = " ^ fcvarsToString fcv2) in 
+      let fcv3      = List.append fcv2 fcvars in 
+      let e'        = index_exp cvars_all vars_all (fcv3, term_closed) e in
 	Apx.Comp.Branch (loc, omega, cD', pat'', e')
 	
 (*

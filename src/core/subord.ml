@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    Printing the subordination relation.
    Computing the relation is done in store.ml, as constructors are added.
@@ -198,7 +196,7 @@ let rec thin (cO, cD) (tP, cPsi) =
     | CtxVar psi -> 
         let schema = begin match psi with
           | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
-          | CInst ( _ , cid_schema, _, _ ) -> cid_schema
+          | CInst ( _, _ , cid_schema, _, _ ) -> cid_schema
         end
         in 
         if relevantSchema (Schema.get_schema schema) basis then
@@ -246,7 +244,7 @@ let rec thin' cD a cPsi =
     | CtxVar (psi) -> 
         let schema = begin match psi with
           | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
-          | CInst ( _ , cid_schema, _, _ ) -> cid_schema
+          | CInst ( _, _ , cid_schema, _, _ ) -> cid_schema
         end
         in 
         if relevantSchema (Schema.get_schema schema) basis then

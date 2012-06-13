@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
 *)
@@ -232,6 +230,9 @@ and eval_chk e theta_eta =
         end
 
       | Comp.Value v -> v
+
+      | Comp.Hole (_) ->
+        raise (Error.Violation "Source contains holes")
 
 and eval_branches loc vscrut branches (theta, eta) = match branches with
   | [] -> raise (Error (loc, MissingBranch))

@@ -180,14 +180,17 @@ let recSgnDecl d =
           let _                  = Monitor.timer ("Function Check", fun () -> 
 						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-          let v                  =   Opsem.eval i''  in 
-          let _x                 = Comp.add (Comp.mk_entry x tau' 0 v []) in 
-            if (!Debug.chatter) == 0 then () 
-            else (Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
-                    (R.render_name x)
-                    (P.compTypToString cD tau') 
-                    (P.expChkToString cD cG i'') 
-                    (P.expChkToString cD cG v))
+	  if Holes.none () then
+	    begin
+              let v                  =   Opsem.eval i''  in 
+              let _x                 = Comp.add (Comp.mk_entry x tau' 0 v []) in 
+              if (!Debug.chatter) == 0 then () 
+              else (Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
+                      (R.render_name x)
+                      (P.compTypToString cD tau') 
+                      (P.expChkToString cD cG i'') 
+                      (P.expChkToString cD cG v))
+	    end
 
     | Ext.Sgn.Val (loc, x, Some tau, i) -> 
           let apx_tau = Index.comptyp tau in
@@ -214,16 +217,18 @@ let recSgnDecl d =
           let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.abstrExp i') in
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-          let v  =   Opsem.eval i''  in
-          let _       = if (!Debug.chatter) == 0 then () 
-          else (Printf.printf  "\nlet %s : %s = %s\n===>  %s\n"
-                                       (R.render_name x)
-                                       (P.compTypToString cD tau') 
-                                       (P.expChkToString cD cG i'') 
-                                       (P.expChkToString cD cG v)) in 
-          let _x = Comp.add (Comp.mk_entry x tau' 0 v []) in 
-            ()
-
+	  if Holes.none () then
+	    begin
+              let v  =   Opsem.eval i''  in
+              let _       = if (!Debug.chatter) == 0 then () 
+		else (Printf.printf  "\nlet %s : %s = %s\n===>  %s\n"
+			(R.render_name x)
+			(P.compTypToString cD tau') 
+			(P.expChkToString cD cG i'') 
+			(P.expChkToString cD cG v)) in 
+              let _x = Comp.add (Comp.mk_entry x tau' 0 v []) in 
+              ()
+	    end
 
     | Ext.Sgn.Rec (_, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)

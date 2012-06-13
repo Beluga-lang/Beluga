@@ -1,19 +1,10 @@
-
 nat:type.
 z: nat.
 s: nat -> nat.
 
-
-
-
 datatype NatPair: ctype =
 | Pair: [. nat] -> [. nat] -> NatPair
 ;
-
-
-
-
-
 
 rec copy : NatPair -> NatPair =
 fn n => case n of 
@@ -30,7 +21,7 @@ fn n => case n of
 rec copy2 : NatPair -> NatPair =
 fn n => case n of 
 | Pair [. z] [. z] => n
-| Pair [. z] [. s M] => case  copy2 (Pair [.z] [. M]) of 
+| Pair [. z] [. s M] => case  copy2 Pair [.z] [. M] of 
                            | Pair [. N'] [. M']  =>
 			    Pair [. z] [. s M']
 | Pair [. s N] [. s M] => case  copy2 (Pair [. N] [. M]) of
@@ -40,4 +31,5 @@ fn n => case n of
                           | Pair [. N'] [. M'] =>
                          Pair [. s N'] [.z]
 ;
+
 }%

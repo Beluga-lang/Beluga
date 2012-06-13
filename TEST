@@ -146,10 +146,13 @@ do
 	    RESET=true
 	    shift
 	    ;;
-	--|"")
+	--)
 	    shift
 	    break
 	    ;;
+        "")
+            break
+            ;;
 	*)
             echo "Unrecognized option $1."
 	    echo "Make sure to write -- before any argument that should be passed to Beluga."

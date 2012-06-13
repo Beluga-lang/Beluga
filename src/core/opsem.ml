@@ -69,7 +69,7 @@ let rec eval_syn i (theta, eta) =
       eval_chk e (theta, add_mrecs n_list (LF.MShift 0, Comp.Empty))
 
     | Comp.Var x ->
-      let _ = dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment") in
+      dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
       begin match lookupValue x eta with
         | Comp.RecValue ((cid,e'), theta', eta') ->
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
@@ -78,19 +78,17 @@ let rec eval_syn i (theta, eta) =
           dprint (fun () -> "[eval_syn] with  theta' = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta'));
           dprint (fun () -> "  call eval_chk on the body of " ^ R.render_cid_prog cid);
           dprint (fun () -> "  e' = " ^ P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
-          eval_chk e' ((Whnf.cnormMSub theta'), eta'')
+          eval_chk e' (Whnf.cnormMSub theta', eta'')
         | v -> v
       end
 
     | Comp.Apply (_ , i', e') ->
       let w2 = eval_chk e' (theta, eta) in
-      let _ = dprint (fun () -> "[eval_syn] Apply argument evaluated\n"
+      dprint (fun () -> "[eval_syn] Apply argument evaluated\n"
         ^ "[eval_syn] Extended environment: |env| =  "
         ^ string_of_int (length_env eta) ^ "\n"
         ^ "[eval_syn] with  theta = "
-        ^ P.msubToString LF.Empty (Whnf.cnormMSub theta) ^ "\n"
-      ) in
-
+        ^ P.msubToString LF.Empty (Whnf.cnormMSub theta) ^ "\n");
       begin match eval_syn i' (theta, eta) with
         | Comp.FunValue ((_loc, _x , e'), theta1, eta1) ->
           dprint (fun () -> "[eval_syn] Extended environment: |env1| =  "
@@ -98,8 +96,7 @@ let rec eval_syn i (theta, eta) =
             ^ "[eval_syn] Extended environment: |env1'| =  "
             ^ string_of_int (length_env (Comp.Cons (w2,eta1))) ^ "\n"
             ^ "[eval_syn] with  theta1 = "
-            ^ P.msubToString LF.Empty (Whnf.cnormMSub theta1) ^ "\n"
-          );
+            ^ P.msubToString LF.Empty (Whnf.cnormMSub theta1) ^ "\n");
 
           eval_chk e' (theta1, Comp.Cons (w2,eta1))
         | _ -> raise (Error.Violation "Expected FunValue")
@@ -124,7 +121,6 @@ let rec eval_syn i (theta, eta) =
       begin match eval_syn i' (theta, eta) with
         | Comp.CtxValue ((_loc, _psi, e'), theta1, eta1) ->
           let _ = dprint (fun () -> "EVALUATE CtxApp ") in
-            (* let _ = dprint (fun () -> "CtxApp AFTER substitution cPsi") in  *)
           let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
           let theta1'= LF.MDot(LF.CObj(cPsi'), theta1) in
           dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
@@ -227,15 +223,15 @@ and eval_branch (phat, tM) branch (theta, eta) =
           let tM' = Whnf.cnorm (tM', mt) in
           let cPsi = Whnf.cnormDCtx (cPsi, mt) in 
           let mt  = Whnf.cnormMSub mt in
-          let _ = dprint (fun () -> "[elBranch] unify_phat " ^ 
-                            P.dctxToString LF.Empty (Context.hatToDCtx phat)
-                        ^ " == " ^ P.dctxToString LF.Empty cPsi) in 
-          let _ = dprint (fun () -> "[elBranch] unify meta-obj: " ^ 
-                            P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
-                            ^ " == " ^ 
-                            P.normalToString LF.Empty cPsi (tM', Substitution.LF.id)) in
-          let _ = Unify.unify_phat phat (Context.dctxToHat cPsi) in 
-          let _ = Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id) in
+          dprint (fun () -> "[elBranch] unify_phat " ^ 
+                    P.dctxToString LF.Empty (Context.hatToDCtx phat)
+                ^ " == " ^ P.dctxToString LF.Empty cPsi);
+          dprint (fun () -> "[elBranch] unify meta-obj: " ^
+                    P.normalToString LF.Empty (Context.hatToDCtx phat) (tM, Substitution.LF.id)
+                    ^ " == " ^
+                    P.normalToString LF.Empty cPsi (tM', Substitution.LF.id));
+          Unify.unify_phat phat (Context.dctxToHat cPsi);
+          Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id);
 
           eval_chk e (mt, eta)
 

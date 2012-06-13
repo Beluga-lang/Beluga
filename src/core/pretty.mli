@@ -97,14 +97,15 @@ module Int : sig
 
     val schemaToString    : LF.schema     -> string 
     val schElemToString   : LF.sch_elem   -> string 
-    val gctxToString      : LF.mctx -> Comp.gctx  -> string
+    val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
-    val expChkToString    : LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
-    val expSynToString    : LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
-    val branchToString    : LF.mctx -> Comp.gctx  -> Comp.branch   -> string
-    val compKindToString  : LF.mctx -> Comp.kind  -> string
-    val compTypToString   : LF.mctx -> Comp.typ   -> string
-    val msubToString      : LF.mctx -> LF.msub    -> string
+    val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
+    val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
+    val valueToString     :                         Comp.value   -> string
+    val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
+    val compKindToString  : LF.mctx              -> Comp.kind -> string
+    val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end
 

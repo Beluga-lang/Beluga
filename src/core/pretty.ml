@@ -153,16 +153,15 @@ module Int = struct
     val schemaToString    : LF.schema     -> string
     val schElemToString   : LF.sch_elem   -> string
 
-    val gctxToString      : LF.mctx -> Comp.gctx  -> string
+    val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
-    val expChkToString    : LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
-    val expSynToString    : LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
-    val branchToString    : LF.mctx -> Comp.gctx  -> Comp.branch   -> string
-    val compKindToString  : LF.mctx -> Comp.kind  -> string
-    val compTypToString   : LF.mctx -> Comp.typ   -> string
-    val msubToString      : LF.mctx -> LF.msub    -> string
-
-
+    val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
+    val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
+    val valueToString     :                         Comp.value   -> string
+    val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
+    val compKindToString  : LF.mctx              -> Comp.kind -> string
+    val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end (* Int.PRINTER *)
 
@@ -1132,9 +1131,6 @@ module Int = struct
 
       | Comp.Hole (_) -> fprintf ppf " ? "
 
-      | Comp.Value v ->
-        fmt_ppr_cmp_value lvl ppf v
-
     and strip_mapp_args cD cG i = 
       if !Control.printImplicit then 
         i 
@@ -1604,6 +1600,10 @@ module Int = struct
 
     let expSynToString cD cG i   = 
       fmt_ppr_cmp_exp_syn cD cG std_lvl str_formatter i
+      ; flush_str_formatter ()
+
+    let valueToString v = 
+      fmt_ppr_cmp_value std_lvl str_formatter v
       ; flush_str_formatter ()
 
     let branchToString cD cG  b    = 

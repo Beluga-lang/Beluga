@@ -405,15 +405,15 @@ module Cid = struct
       name               : Id.name;
       implicit_arguments : int;
       typ                : Int.Comp.typ;
-      prog               : Int.Comp.exp_chk;
+      prog               : Int.Comp.value;
       mut_rec            : Id.name list
     }
 
-    let mk_entry name typ implicit_arguments exp name_list =  {
+    let mk_entry name typ implicit_arguments v name_list = {
       name               = name;
       implicit_arguments = implicit_arguments;
       typ                = typ;
-      prog               = exp;
+      prog               = v;
       mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
     }
 
@@ -422,17 +422,17 @@ module Cid = struct
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
-
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
 
-    let add e =
+    let add f =
       let cid_prog = DynArray.length store in
-        DynArray.add store e;
-        Hashtbl.replace directory e.name cid_prog;
-        cid_prog
+      let e = f cid_prog in
+      DynArray.add store e;
+      Hashtbl.replace directory e.name cid_prog;
+      cid_prog
 
     let get = DynArray.get store
 

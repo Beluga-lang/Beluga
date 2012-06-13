@@ -253,16 +253,22 @@ and match_pattern mt eta v pat =
           ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id));
         Unify.unify_phat phat (Context.dctxToHat cPsi);
         Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
+      | _, Comp.PatMetaObj _ ->
+        raise (Error.Violation "Expected box value.")
 
       | Comp.DataValue (cid, theta1, eta1), Comp.PatConst (_, pat_cid, pat_spine) ->
         if cid <> pat_cid then
           raise BranchMismatch;
         assert false
+      | _, Comp.PatConst _ ->
+        raise (Error.Violation "Expected data value.")
 
       | Comp.PairValue (v1, v2), Comp.PatPair (_, pat1, pat2) ->
         dprint (fun () -> "[evBranch] matching a pair.");
         loop v1 pat1;
         loop v2 pat2
+      | _, Comp.PatPair _ ->
+        raise (Error.Violation "Expected pair value.")
 
       | _, Comp.PatFVar (_, _) ->
         raise (Error.Violation "Found PatFVar in opsem.")
@@ -273,7 +279,7 @@ and match_pattern mt eta v pat =
       | Comp.BoolValue true, Comp.PatTrue _ -> ()
       | Comp.BoolValue false, Comp.PatFalse _ -> ()
       | Comp.BoolValue _, (Comp.PatTrue _ | Comp.PatFalse _) -> raise BranchMismatch
-      | _,           (Comp.PatTrue _ | Comp.PatFalse _) -> raise (Error.Violation "Expected Bool value.")
+      | _, (Comp.PatTrue _ | Comp.PatFalse _) -> raise (Error.Violation "Expected Bool value.")
 
       | _ -> raise Error.NotImplemented
   in loop v pat; !eta

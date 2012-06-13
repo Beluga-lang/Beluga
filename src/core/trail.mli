@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (** Trailing Abstract Operations
 
     @author Joshua Dunfield

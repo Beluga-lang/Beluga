@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
 
    @author Brigitte Pientka
@@ -24,7 +22,6 @@ module RR = Store.Cid.NamedRenderer
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
-  | PruningFailed
   | EtaExpandFMV        of Id.name * Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
@@ -40,10 +37,6 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-        | PruningFailed -> 
-          Format.fprintf ppf "Pruning a type failed;@ this can happen when you have some@ \
-                              free meta-variables whose type cannot be inferred." 
-
         | EtaExpandFMV (offset, cD, cPsi, sA) -> 
           Format.fprintf ppf
             "meta-variable %s to has type %a \n and should be eta-expanded\n"
@@ -143,7 +136,7 @@ and etaExpandMVstr' loc cO cPsi sA  = match sA with
       let ssi' = LF.invert ss' in
       (* cPhi' |- ssi : cPhi *) 
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMVar (cPhi', Int.LF.TClo(tQ,ssi')) in
+      let u = Whnf.newMVar None (cPhi', Int.LF.TClo(tQ,ssi')) in
       (* cPhi |- ss'    : cPhi' 
          cPsi |- s_proj : cPhi 
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -177,7 +170,7 @@ and etaExpandMMVstr' loc cO cD cPsi sA  = match sA with
       let ssi' = LF.invert ss' in
       (* cPhi' |- ssi : cPhi *) 
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar (cD, cPhi', Int.LF.TClo(tQ,ssi')) in
+      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in
       (* cPhi |- ss'    : cPhi' 
          cPsi |- s_proj : cPhi 
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -192,10 +185,57 @@ type caseType  = IndexObj of Int.LF.psi_hat * Int.LF.normal | DataObj
 
 type typAnn    = FullTyp of Apx.LF.typ | PartialTyp of cid_typ
 
+(** This function does the same thing as unifyDCtx in unify.ml, but in
+    addition records new names for variables left free by the user
+    when they are instantiated. *)
+let rec unifyDCtxWithFCVar cD cPsi1 cPsi2 =
+  let rec loop cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
+    | (Int.LF.Null , Int.LF.Null) -> ()
+
+    | (Int.LF.CtxVar (Int.LF.CInst (_n1, ({contents = None} as cvar_ref1), _schema1, _cO1, _cD1)),
+       Int.LF.CtxVar (Int.LF.CInst (_n2, ({contents = None} as cvar_ref2), _schema2, _cO2, _cD2))) ->
+      if cvar_ref1 != cvar_ref2 then
+        Unify.instantiateCtxVar (cvar_ref1, cPsi2)
+
+    | (Int.LF.CtxVar (Int.LF.CInst (_n, ({contents = None} as cvar_ref), s_cid, _cO, _cD)) , cPsi) ->
+      begin
+        Unify.instantiateCtxVar (cvar_ref, cPsi);
+        match Context.ctxVar cPsi with
+          | None -> ()
+          | Some (Int.LF.CtxName psi) ->
+            FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No))
+          | _ -> ()
+      end
+
+    | (cPsi, Int.LF.CtxVar (Int.LF.CInst (_n, ({contents = None} as cvar_ref), s_cid, _cO, _cD))) ->
+      begin
+        Unify.instantiateCtxVar (cvar_ref, cPsi);
+        match Context.ctxVar cPsi with
+          | None -> ()
+          | Some (Int.LF.CtxName psi) ->
+            FCVar.add psi (cD, Int.LF.CDecl (psi, s_cid, Int.LF.No))
+          | _ -> ()
+      end
+
+    | (Int.LF.CtxVar  psi1_var , Int.LF.CtxVar psi2_var) when psi1_var = psi2_var -> ()
+
+    | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , tA1)) ,
+       Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , tA2))) ->
+      loop cD cPsi1 cPsi2;
+      Unify.unifyTyp cD cPsi1 (tA1, LF.id) (tA2, LF.id)
+
+    | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _),
+       Int.LF.DDec (cPsi2, Int.LF.TypDeclOpt _ )) ->
+      loop cD cPsi1 cPsi2
+
+    | _ -> raise (Unify.Unify "context clash")
+
+  in loop cD (Whnf.normDCtx cPsi1)  (Whnf.normDCtx cPsi2)
+
 let rec raiseType cPsi tA = match cPsi with
   | Int.LF.Null -> tA
   | Int.LF.DDec (cPsi', decl) ->
-      raiseType cPsi' (Int.LF.PiTyp ((decl, Int.LF.Maybe), tA))
+    raiseType cPsi' (Int.LF.PiTyp ((decl, Int.LF.Maybe), tA))
 
 
 (* -------------------------------------------------------------*)
@@ -352,9 +392,9 @@ let mgTyp cD cPsi a kK =
           Int.LF.App (tR, tS)
 *)
 
-    | (Int.LF.PiKind ((Int.LF.TypDecl (_, tA1), _ ), kK), s) ->
+    | (Int.LF.PiKind ((Int.LF.TypDecl (n, tA1), _ ), kK), s) ->
         let tA1' = strans_typ (tA1, s) conv_list in
-        let u  = Whnf.newMMVar (cD, flat_cPsi , tA1') in
+        let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1') in
         let h  = Int.LF.MMVar (u, (Whnf.m_id, s_proj)) in 
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be
           eta-expanded *)
@@ -377,12 +417,12 @@ let mgTyp cD cPsi a kK =
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
 
 and genMAppW loc cD (i, tau_t) = match tau_t with
-  | (Int.Comp.TypPiBox ((Int.LF.MDecl(_, tA, cPsi), Int.Comp.Implicit), tau), theta) ->
+  | (Int.Comp.TypPiBox ((Int.LF.MDecl(n, tA, cPsi), Int.Comp.Implicit), tau), theta) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in 
       let psihat  = Context.dctxToHat cPsi' in
       let tA'   = C.cnormTyp (tA, theta) in 
 
-      let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) LF.id in 
+      let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in 
       (* let tM'   = etaExpandMMVstr loc cD  cPsi' (tA', LF.id) in *)
         let _   = dprint (fun () -> "[genMApp] Generated meta^2-variable " ^ 
                             P.dctxToString cD cPsi' ^ " . " ^ 
@@ -397,7 +437,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
 
   | (Int.Comp.TypCtxPi ((psi_name, schema_cid, Int.Comp.Implicit), tau), theta)
     -> 
-      let cPsi = Int.LF.CtxVar (Int.LF.CInst (ref None, schema_cid, Int.LF.Empty, cD)) in
+      let cPsi = Int.LF.CtxVar (Int.LF.CInst (psi_name, ref None, schema_cid, Int.LF.Empty, cD)) in
       let _   = dprint (fun () -> "[genMApp] Generated ctx-variable " ^ 
                           P.dctxToString cD cPsi) in 
       let _ = dprint (fun () -> "[genMApp] Show tau : " ^ 
@@ -453,7 +493,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       let _ =
         (* unifying two contexts AND inferring schema for psi in
                                                 cPhi, if psi is not in cD *)
-        try Unify.unifyDCtx cD cPsi' cPhi
+        try unifyDCtxWithFCVar cD cPsi' cPhi
         with Unify.Unify _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
       let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in 
@@ -501,12 +541,12 @@ and elMetaSpineI cD s i cKt =
     begin match cKt with 
       | (Int.Comp.PiKind (_ , (Int.LF.CDecl (_ , w, _), Int.Comp.Implicit), cK), theta ) -> 
           raise (Error.Violation "Contexts cannot be supplied implicitly; they must be passed explicitly)\n")
-      | (Int.Comp.PiKind (loc, (Int.LF.MDecl (_ , tA, cPsi), Int.Comp.Implicit), cK), theta ) -> 
+      | (Int.Comp.PiKind (loc, (Int.LF.MDecl (n , tA, cPsi), Int.Comp.Implicit), cK), theta ) -> 
           let psihat  = Context.dctxToHat cPsi in
           let cPsi' = C.cnormDCtx (cPsi, theta) in 
           let tA'   = C.cnormTyp (tA, theta) in 
 
-          let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) LF.id in 
+          let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in 
           let mS    = elMetaSpineI cD s (i-1) (cK, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)) in 
            Int.Comp.MetaApp (Int.Comp.MetaObj (loc, psihat, tM'), mS)
 
@@ -570,16 +610,16 @@ let rec elCompTyp cD tau = match tau with
 (* *******************************************************************************)
 
 let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with 
-  | Int.LF.MDecl (_, tA, cPsi) -> 
+  | Int.LF.MDecl (n, tA, cPsi) -> 
       let cPsi' = C.cnormDCtx (cPsi, t) in 
       let psihat  = Context.dctxToHat cPsi' in
       let tA'   = C.cnormTyp (tA, t) in 
-      let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) LF.id in 
+      let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in 
         (Int.Comp.MetaObj (loc', psihat, tM') , 
          Int.LF.MObj (psihat, tM'))
 
-  | Int.LF.CDecl (_, schema_cid, _ ) -> 
-      let cPsi = Int.LF.CtxVar (Int.LF.CInst (ref None, schema_cid,
+  | Int.LF.CDecl (n, schema_cid, _ ) -> 
+      let cPsi = Int.LF.CtxVar (Int.LF.CInst (n, ref None, schema_cid,
                                               Int.LF.Empty, cD)) in
         (Int.Comp.MetaCtx (loc', cPsi),
          Int.LF.CObj cPsi)
@@ -606,10 +646,11 @@ let rec inferPatTyp' cD' tau = match tau with
       mgCompTyp cD' (loc, c)
   | Int.Comp.TypArr _  -> 
       raise (Error.Violation "Patterns cannot have function type")        
-  | _ -> raise Error.NotImplemented
-(*  | Int.Comp.TypBox (_, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
-      let tP' = mgTyp cD' cPsi' a (Typ.get a).Typ.kind   
-*)      
+(*  | _ -> raise Error.NotImplemented*)
+  | Int.Comp.TypBox (loc, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
+      let tP' = mgTyp cD' cPsi a (Typ.get a).Typ.kind  in 
+        Int.Comp.TypBox (loc, tP', cPsi)
+      
 
 let rec inferPatTyp cD' tau = inferPatTyp' cD' (Whnf.cnormCTyp (tau, Whnf.m_id))
 
@@ -877,6 +918,10 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                 Int.Comp.If (loc, i', e1', e2')
           | _  -> raise (Check.Comp.Error (loc, Check.Comp.IfMismatch (cD, cG, tau_theta')))
         end
+
+  | (Apx.Comp.Hole (loc), (tau, theta)) ->
+    let () = Holes.collect (loc, cD, cG, (tau, theta)) in
+    Int.Comp.Hole (loc)
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
@@ -1390,19 +1435,19 @@ and elPatSpine (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat_spine ttau =
 and elPatSpineW cD cG pat_spine ttau = match pat_spine with
   | Apx.Comp.PatNil loc -> 
       (match ttau with
-         | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Implicit), tau), theta) -> 
+         | (Int.Comp.TypPiBox ((Int.LF.MDecl (n, tA, cPsi), Int.Comp.Implicit), tau), theta) -> 
              let cPsi' = C.cnormDCtx (cPsi, theta) in 
              let tA'   = C.cnormTyp (tA, theta) in 
              let psihat  = Context.dctxToHat cPsi' in
               
-             let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) LF.id in 
+             let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in 
              let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaObj (loc, psihat, tM')) in 
              let ttau' = (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)) in 
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 
                (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
       
-          | (Int.Comp.TypCtxPi ((_, w, Int.Comp.Implicit), tau), theta) ->            
-               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (ref None, w, Int.LF.Empty, cD)) in
+          | (Int.Comp.TypCtxPi ((n, w, Int.Comp.Implicit), tau), theta) ->            
+               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (n, ref None, w, Int.LF.Empty, cD)) in
                let ttau' = (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)) in 
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaCtx (loc, cPsi)) in 
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 
@@ -1432,7 +1477,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let (pat, theta') = elPatMetaObj cD pat' (Int.LF.CDecl(x,w, Int.LF.No), theta) in 
              let (cG1, pat_spine, ttau2) = elPatSpine cD cG pat_spine' (tau, theta') in 
                (cG1, Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
-         | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Implicit),
+         | (Int.Comp.TypPiBox ((Int.LF.MDecl (n, tA, cPsi), Int.Comp.Implicit),
       tau), theta) -> 
              let _ = dprint (fun () -> "[elPatSpine] TypPiBox implicit ttau = " ^
                                P.compTypToString cD (Whnf.cnormCTyp ttau)) in  
@@ -1440,16 +1485,16 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let tA'   = C.cnormTyp (tA, theta) in 
              let psihat  = Context.dctxToHat cPsi' in
                
-             let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) LF.id in 
+             let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in 
              let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaObj (loc, psihat, tM')) in 
              let ttau' = (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)) in 
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 
                (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
       
-          | (Int.Comp.TypCtxPi ((_, w, Int.Comp.Implicit), tau), theta) ->            
+          | (Int.Comp.TypCtxPi ((n, w, Int.Comp.Implicit), tau), theta) ->            
              let _ = dprint (fun () -> "[elPatSpine] TypCtxPi implicit ttau = " ^
                                P.compTypToString cD (Whnf.cnormCTyp ttau)) in  
-               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (ref None, w, Int.LF.Empty, cD)) in
+               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (n, ref None, w, Int.LF.Empty, cD)) in
                let ttau' = (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)) in 
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaCtx (loc, cPsi)) in 
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 

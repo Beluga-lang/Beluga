@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
 *)
@@ -200,6 +198,9 @@ and eval_chk e theta_eta =
             | Comp.BoolValue true -> eval_chk e1 theta_eta
             | Comp.BoolValue false -> eval_chk e2 theta_eta
           end
+
+      | Comp.Hole (_) ->
+        raise (Error.Violation "Source contains holes")
 
 and eval_branches loc (phat,tM) (branches, theta_eta) = match branches with
   | [] -> raise (Error (loc, MissingBranch))

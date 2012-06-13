@@ -17,8 +17,6 @@ fn n => case n of
 | [g. N ..] =>  let w = copy n in w 
 ;
 
-
-
 rec copy_final' : (g:ctx) [g. nat] -> [g. nat] = 
 fn n => let f = copy in 
 case n of 

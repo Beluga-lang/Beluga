@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (** Contexts
 
     @author Brigitte Pientka
@@ -110,7 +108,7 @@ let ctxSigmaDec cPsi k =
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
-    | (CtxVar (CInst ({contents = Some cPhi }, _schema, _octx, _mctx)) , k) -> 
+    | (CtxVar (CInst (_n, {contents = Some cPhi }, _schema, _octx, _mctx)) , k) -> 
         ctxDec' (cPhi, k)
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in

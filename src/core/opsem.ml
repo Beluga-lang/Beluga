@@ -41,12 +41,12 @@ end
 
 (* ********************************************************************* *)
 
-let rec add_mrecs n_list theta eta = match n_list with
+let rec add_mrecs n_list (theta, eta) = match n_list with
   | [] ->  eta
   | n'::n_list' ->
       let cid' = Store.Cid.Comp.index_of_name n' in
       let e' = (Store.Cid.Comp.get cid').Store.Cid.Comp.prog in
-      let eta' = add_mrecs n_list' theta eta in
+      let eta' = add_mrecs n_list' (theta, eta) in
         (dprint (fun () -> "[eval_syn] found -- extend environment with rec \""  ^ R.render_cid_prog cid' ^ "\"\n"
                 );
          Comp.Cons (Comp.RecValue ((cid', e'), theta, eta),  eta'))
@@ -67,14 +67,14 @@ let rec eval_syn i theta_eta =
       let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
       let e = (Store.Cid.Comp.get cid).Store.Cid.Comp.prog in
       dprint (fun () -> "EVALUATE");
-      eval_chk e (theta, (add_mrecs n_list theta eta))
+      eval_chk e (theta, add_mrecs n_list (theta, eta))
 
     | Comp.Var x     ->
       let _ = dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment") in
       begin match lookupValue x eta with
         | Comp.RecValue ((cid,e'), theta', eta') ->
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
-          let eta'' = add_mrecs n_list theta' eta' in
+          let eta'' = add_mrecs n_list (theta', eta') in
           dprint (fun () -> "[eval_syn] Lookup found RecValue " ^ R.render_cid_prog cid);
           dprint (fun () -> "[eval_syn] with  theta' = " ^
             P.msubToString LF.Empty (Whnf.cnormMSub theta'));

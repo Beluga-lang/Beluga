@@ -67,7 +67,7 @@ let rec eval_syn i theta_eta =
       let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
       let e = (Store.Cid.Comp.get cid).Store.Cid.Comp.prog in
       dprint (fun () -> "EVALUATE");
-      eval_chk e (theta, add_mrecs n_list (theta, eta))
+      eval_chk e (theta, add_mrecs n_list (LF.MShift 0, Comp.Empty))
 
     | Comp.Var x ->
       let _ = dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment") in

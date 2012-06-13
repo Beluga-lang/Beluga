@@ -59,15 +59,14 @@ let convolve_spines f spine pat_spine =
 
 (* ********************************************************************* *)
 
-let rec add_mrecs n_list theta eta = match n_list with
+let rec add_mrecs n_list (theta, eta) = match n_list with
   | [] ->  eta
   | n'::n_list' ->
       let cid' = Store.Cid.Comp.index_of_name n' in
-      let e' = (Store.Cid.Comp.get cid').Store.Cid.Comp.prog in
-      let eta' = add_mrecs n_list' theta eta in
-        (dprint (fun () -> "[eval_syn] found -- extend environment with rec \""  ^ R.render_cid_prog cid' ^ "\"\n"
-                );
-         Comp.Cons (Comp.RecValue ((cid', e'), theta, eta),  eta'))
+      let v = (Store.Cid.Comp.get cid').Store.Cid.Comp.prog in
+      let eta' = add_mrecs n_list' (theta, eta) in
+      dprint (fun () -> "[eval_syn] found -- extend environment with rec \""  ^ R.render_cid_prog cid' ^ "\"\n");
+      Comp.Cons (v,  eta')
 
 (* eval e (theta, eta) = v
 
@@ -76,55 +75,55 @@ where  cD ; cG |- e <= wf_exp
        .  ; .  |- eta   <= [|theta|]cG
 *)
 
-let rec eval_syn i theta_eta =
-  let (theta, eta) = theta_eta in
+let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
     | Comp.Const cid ->
-      let _ = dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid) in
-      let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
-      let e = (Store.Cid.Comp.get cid).Store.Cid.Comp.prog in
-      dprint (fun () -> "EVALUATE");
-      eval_chk e (theta, (add_mrecs n_list theta eta))
+      dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
+      begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
+        | Comp.RecValue ((cid,e'), theta', eta') ->
+          let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
+          let eta'' = add_mrecs n_list (theta', eta') in
+          dprint (fun () -> "[eval_syn] Const is RecValue " ^ R.render_cid_prog cid);
+          dprint (fun () -> "[eval_syn] with theta' = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta'));
+          dprint (fun () -> "  call eval_chk on the body of " ^ R.render_cid_prog cid);
+          dprint (fun () -> "  e' = " ^ P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
+          eval_chk e' (Whnf.cnormMSub theta', eta'')
+        | v -> v
+      end
 
     | Comp.DataConst cid ->
       Comp.DataValue (cid, Comp.DataNil)
 
-    | Comp.Var x     ->
-      let _ = dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment") in
+    | Comp.Var x ->
+      dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
       begin match lookupValue x eta with
         | Comp.RecValue ((cid,e'), theta', eta') ->
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
-          let eta'' = add_mrecs n_list theta' eta' in
+          let eta'' = add_mrecs n_list (theta', eta') in
           dprint (fun () -> "[eval_syn] Lookup found RecValue " ^ R.render_cid_prog cid);
-          dprint (fun () -> "[eval_syn] with  theta' = " ^
-            P.msubToString LF.Empty (Whnf.cnormMSub theta'));
+          dprint (fun () -> "[eval_syn] with theta' = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta'));
           dprint (fun () -> "  call eval_chk on the body of " ^ R.render_cid_prog cid);
-          dprint (fun () -> "  e' = " ^
-            P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
-          eval_chk e' ((Whnf.cnormMSub theta'), eta'')
-          (* eval_chk e' (theta', Cons (w, eta')) *)
+          dprint (fun () -> "  e' = " ^ P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
+          eval_chk e' (Whnf.cnormMSub theta', eta'')
         | v -> v
       end
 
     | Comp.Apply (_ , i', e') ->
-      let w2 = eval_chk e' theta_eta in
-      let _ = dprint (fun () -> "[eval_syn] Apply argument evaluated\n"
+      let w2 = eval_chk e' (theta, eta) in
+      dprint (fun () -> "[eval_syn] Apply argument evaluated\n"
         ^ "[eval_syn] Extended environment: |env| =  "
         ^ string_of_int (length_env eta) ^ "\n"
         ^ "[eval_syn] with  theta = "
-        ^ P.msubToString LF.Empty (Whnf.cnormMSub theta) ^ "\n"
-      ) in
-
-      begin match eval_syn i' theta_eta with
+        ^ P.msubToString LF.Empty (Whnf.cnormMSub theta) ^ "\n");
+      begin match eval_syn i' (theta, eta) with
         | Comp.FunValue ((_loc, _x , e'), theta1, eta1) ->
           dprint (fun () -> "[eval_syn] Extended environment: |env1| =  "
             ^ string_of_int (length_env eta1) ^ "\n"
             ^ "[eval_syn] Extended environment: |env1'| =  "
             ^ string_of_int (length_env (Comp.Cons (w2,eta1))) ^ "\n"
             ^ "[eval_syn] with  theta1 = "
-            ^ P.msubToString LF.Empty (Whnf.cnormMSub theta1) ^ "\n"
-          );
+            ^ P.msubToString LF.Empty (Whnf.cnormMSub theta1) ^ "\n");
 
           eval_chk e' (theta1, Comp.Cons (w2,eta1))
 
@@ -135,7 +134,7 @@ let rec eval_syn i theta_eta =
       end
 
     | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
-      begin match eval_syn i' theta_eta with
+      begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.MObj (phat, Whnf.cnorm (tM, theta)), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
@@ -145,17 +144,16 @@ let rec eval_syn i theta_eta =
 
 
     | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
-      begin match eval_syn i' theta_eta with
+      begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
     | Comp.CtxApp (_, i', cPsi) ->
-      begin match eval_syn i' theta_eta with
+      begin match eval_syn i' (theta, eta) with
         | Comp.CtxValue ((_loc, _psi, e'), theta1, eta1) ->
           let _ = dprint (fun () -> "EVALUATE CtxApp ") in
-            (* let _ = dprint (fun () -> "CtxApp AFTER substitution cPsi") in  *)
           let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
           let theta1'= LF.MDot(LF.CObj(cPsi'), theta1) in
           dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
@@ -165,12 +163,12 @@ let rec eval_syn i theta_eta =
       end
 
     | Comp.Ann (e, _tau) ->
-      eval_chk e theta_eta
+      eval_chk e (theta, eta)
 
 
     | Comp.Equal (_, i1, i2) ->
-      let v1 = eval_syn i1 theta_eta in
-      let v2 = eval_syn i2 theta_eta in
+      let v1 = eval_syn i1 (theta, eta) in
+      let v2 = eval_syn i2 (theta, eta) in
       begin match (v1, v2)  with
         | (Comp.BoxValue (psihat, tM), Comp.BoxValue ( _ , tN)) ->
           if Whnf.conv (tM, Substitution.LF.id) (tN, Substitution.LF.id) then
@@ -182,17 +180,15 @@ let rec eval_syn i theta_eta =
       end
 
     | Comp.PairVal (_, i1, i2) ->
-      let v1 = eval_syn i1 theta_eta in
-      let v2 = eval_syn i2 theta_eta in
+      let v1 = eval_syn i1 (theta, eta) in
+      let v2 = eval_syn i2 (theta, eta) in
       Comp.PairValue (v1, v2)
 
     | Comp.Boolean b -> Comp.BoolValue b
 
-and eval_chk e theta_eta =
-  let (theta,eta) = theta_eta in
-
+and eval_chk e (theta, eta) =
     match e with
-      | Comp.Syn (_, i) -> eval_syn i theta_eta
+      | Comp.Syn (_, i) -> eval_syn i (theta, eta)
       | Comp.MLam (loc, n, e') ->
           dprint (fun () -> "[MLamValue] created: theta = " ^ 
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
@@ -205,13 +201,13 @@ and eval_chk e theta_eta =
           Comp.FunValue ((loc, n, e'), Whnf.cnormMSub theta, eta)
 
       | Comp.Pair (_, e1, e2) ->
-        let v1 = eval_chk e1 theta_eta in
-        let v2 = eval_chk e2 theta_eta in
+        let v1 = eval_chk e1 (theta, eta) in
+        let v2 = eval_chk e2 (theta, eta) in
         Comp.PairValue (v1, v2)
 
       | Comp.Let (loc, i, (x, e)) ->
-        let w = eval_syn i theta_eta in
-        eval_chk e (theta, Comp.Cons (w, eta))
+          let w = eval_syn i (theta, eta) in
+            eval_chk e (theta, Comp.Cons (w, eta))
 
       | Comp.Box (loc, phat, tM) ->
         let tM'   = Whnf.cnorm (tM, theta) in
@@ -220,16 +216,14 @@ and eval_chk e theta_eta =
         Comp.BoxValue (phat', tM')
 
       | Comp.Case (loc, _prag, i, branches) ->
-        let vscrut = eval_syn i theta_eta in
-        eval_branches loc vscrut branches theta_eta
+        let vscrut = eval_syn i (theta, eta) in
+        eval_branches loc vscrut branches (theta, eta)
 
       | Comp.If (_, i, e1, e2) ->
-        begin match eval_syn i theta_eta with
-          | Comp.BoolValue true -> eval_chk e1 theta_eta
-          | Comp.BoolValue false -> eval_chk e2 theta_eta
+        begin match eval_syn i (theta, eta) with
+          | Comp.BoolValue true -> eval_chk e1 (theta, eta)
+          | Comp.BoolValue false -> eval_chk e2 (theta, eta)
         end
-
-      | Comp.Value v -> v
 
       | Comp.Hole (_) ->
         raise (Error.Violation "Source contains holes")
@@ -316,11 +310,6 @@ and eval_branch vscrut branch (theta, eta) =
 let rec eval e =
   dprint (fun () -> "Opsem.eval");
   Debug.indent 2;
-  let result = match eval_chk e (LF.MShift 0, Comp.Empty) with
-    | Comp.ConstValue cid -> Comp.Syn (Syntax.Loc.ghost, Comp.Const cid)
-    | Comp.BoxValue (phat, tM) -> Comp.Box (Syntax.Loc.ghost, phat, tM)
-    | Comp.BoolValue b -> Comp.Syn (Syntax.Loc.ghost, Comp.Boolean b)
-    | v -> Comp.Value v
-  in
-    Debug.outdent 2;
-    result
+  let result = eval_chk e (LF.MShift 0, Comp.Empty) in
+  Debug.outdent 2;
+  result

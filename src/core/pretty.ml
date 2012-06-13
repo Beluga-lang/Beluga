@@ -1265,6 +1265,10 @@ module Int = struct
       | Comp.ConstValue _ -> fprintf ppf " const "
       | Comp.BoolValue true -> fprintf ppf "ttrue"
       | Comp.BoolValue false -> fprintf ppf "ffalse"
+      | Comp.PairValue (v1, v2) ->
+        fprintf ppf "(%a , %a)"
+          (fmt_ppr_cmp_value 0) v1
+          (fmt_ppr_cmp_value 0) v2
       | Comp.DataValue (c, spine) ->
         let rec print_spine ppf = function
           | Comp.DataNil -> ()

@@ -69,20 +69,17 @@ let rec eval_syn i theta_eta =
       dprint (fun () -> "EVALUATE");
       eval_chk e (theta, add_mrecs n_list (theta, eta))
 
-    | Comp.Var x     ->
+    | Comp.Var x ->
       let _ = dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment") in
       begin match lookupValue x eta with
         | Comp.RecValue ((cid,e'), theta', eta') ->
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
           let eta'' = add_mrecs n_list (theta', eta') in
           dprint (fun () -> "[eval_syn] Lookup found RecValue " ^ R.render_cid_prog cid);
-          dprint (fun () -> "[eval_syn] with  theta' = " ^
-            P.msubToString LF.Empty (Whnf.cnormMSub theta'));
+          dprint (fun () -> "[eval_syn] with  theta' = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta'));
           dprint (fun () -> "  call eval_chk on the body of " ^ R.render_cid_prog cid);
-          dprint (fun () -> "  e' = " ^
-            P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
+          dprint (fun () -> "  e' = " ^ P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
           eval_chk e' ((Whnf.cnormMSub theta'), eta'')
-          (* eval_chk e' (theta', Cons (w, eta')) *)
         | v -> v
       end
 

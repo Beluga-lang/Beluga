@@ -1,0 +1,22 @@
+datatype nat : type =
+| z : nat
+| suc : nat -> nat
+;
+
+datatype Vector : [.nat] -> ctype =
+| Nil : Vector [. z]
+| Cons : Bool -> Vector [.N] -> Vector [. suc N]
+;
+
+rec hd : Vector [.suc N] -> Bool =
+    fn xs => case xs of
+      | Cons x xs => x
+;
+
+rec tl : Vector [.suc N] -> Vector [. N] =
+    fn xs => case xs of
+      | Cons x xs => xs
+;
+
+let t1 = hd (Cons ttrue (Nil));
+let t2 = tl (Cons ttrue (Nil));

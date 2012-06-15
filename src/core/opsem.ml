@@ -261,7 +261,7 @@ and match_pattern mt eta v pat =
           ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id));
         Unify.unify_phat phat (Context.dctxToHat cPsi);
         Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
-      | _, Comp.PatMetaObj _ ->
+      | _, Comp.PatMetaObj (_, (Comp.MetaObjAnn _)) ->
         raise (Error.Violation "Expected box value.")
 
       | Comp.DataValue (cid, spine), Comp.PatConst (_, pat_cid, pat_spine) ->

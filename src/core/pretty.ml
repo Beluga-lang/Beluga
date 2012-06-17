@@ -1274,8 +1274,8 @@ module Int = struct
         let rec print_spine ppf = function
           | Comp.DataNil -> ()
           | Comp.DataApp (v, spine) ->
-            fprintf ppf " %a" (fmt_ppr_cmp_value lvl) v;
-            print_spine ppf spine
+            print_spine ppf spine;
+            fprintf ppf " %a" (fmt_ppr_cmp_value lvl) v
         in fprintf ppf "%s%a" (R.render_cid_comp_const c) print_spine spine
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function 

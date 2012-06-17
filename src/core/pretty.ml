@@ -1260,6 +1260,7 @@ module Int = struct
       | Comp.RecValue _ -> fprintf ppf " rec "
       | Comp.MLamValue _ -> fprintf ppf " mlam "
       | Comp.CtxValue _ -> fprintf ppf " mlam "
+      | Comp.PsiValue psi -> fprintf ppf "[%a]" (fmt_ppr_lf_dctx LF.Empty lvl) psi
       | Comp.BoxValue (phat, tM) ->
         fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl ppf (Comp.Box (Syntax.Loc.ghost, phat, tM))
       | Comp.ConstValue _ -> fprintf ppf " const "

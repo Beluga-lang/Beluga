@@ -150,16 +150,20 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
-    | Comp.CtxApp (_, i', cPsi) ->
+    | Comp.CtxApp (loc, i', cPsi) ->
+      let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
+      dprint (fun () -> "EVALUATE CtxApp ");
+      dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
       begin match eval_syn i' (theta, eta) with
         | Comp.CtxValue ((_loc, _psi, e'), theta1, eta1) ->
-          let _ = dprint (fun () -> "EVALUATE CtxApp ") in
-          let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
-          let theta1'= LF.MDot(LF.CObj(cPsi'), theta1) in
-          dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
+          let theta1' =  LF.MDot(LF.CObj(cPsi'), theta1) in
           dprint (fun () -> "[CtxApp] theta1' = " ^ P.msubToString LF.Empty  theta1');
           eval_chk e' (theta1', eta1)
-        | _ -> raise (Error.Violation "Expected CtxValue")
+        | Comp.DataValue (cid, spine) ->
+          Comp.DataValue (cid, Comp.DataApp (Comp.PsiValue cPsi', spine))
+        | _ ->
+          print_endline (Syntax.Loc.to_string loc);
+          raise (Error.Violation "Expected CtxValue")
       end
 
     | Comp.Ann (e, _tau) ->
@@ -263,6 +267,11 @@ and match_pattern mt eta v pat =
         Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
       | _, Comp.PatMetaObj (_, (Comp.MetaObjAnn _)) ->
         raise (Error.Violation "Expected box value.")
+
+      | Comp.PsiValue cPsi, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
+        Unify.unifyDCtx LF.Empty cPsi cPsi'
+      | _, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
+        raise (Error.Violation "Expected context.")
 
       | Comp.DataValue (cid, spine), Comp.PatConst (_, pat_cid, pat_spine) ->
         if cid <> pat_cid then

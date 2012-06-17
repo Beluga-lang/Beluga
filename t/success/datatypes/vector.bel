@@ -18,5 +18,6 @@ rec tl : Vector [.suc N] -> Vector [. N] =
       | Cons x xs => xs
 ;
 
-let t1 = hd (Cons ttrue (Nil));
-let t2 = tl (Cons ttrue (Nil));
+let t0 = (Cons ttrue (Nil));
+let t1 = hd t0;
+let t2 = tl t0;

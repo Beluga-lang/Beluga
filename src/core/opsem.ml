@@ -142,7 +142,6 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
-
     | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
@@ -168,7 +167,6 @@ let rec eval_syn i (theta, eta) =
 
     | Comp.Ann (e, _tau) ->
       eval_chk e (theta, eta)
-
 
     | Comp.Equal (_, i1, i2) ->
       let v1 = eval_syn i1 (theta, eta) in
@@ -254,7 +252,7 @@ and match_pattern mt eta v pat =
       | _, Comp.PatAnn (_, pat', _) ->
         loop v pat'
 
-      | Comp.BoxValue (phat, tM), Comp.PatMetaObj (_, (Comp.MetaObjAnn (_, cPsi, tM'))) ->
+      | Comp.BoxValue (phat, tM), Comp.PatMetaObj (_, Comp.MetaObjAnn (_, cPsi, tM')) ->
         let tM' = Whnf.cnorm (tM', mt) in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
         dprint (fun () -> "[evBranch] unify_phat "
@@ -265,7 +263,7 @@ and match_pattern mt eta v pat =
           ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id));
         Unify.unify_phat phat (Context.dctxToHat cPsi);
         Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
-      | _, Comp.PatMetaObj (_, (Comp.MetaObjAnn _)) ->
+      | _, Comp.PatMetaObj (_, Comp.MetaObjAnn _) ->
         raise (Error.Violation "Expected box value.")
 
       | Comp.PsiValue cPsi, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->

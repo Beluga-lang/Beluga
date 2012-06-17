@@ -322,6 +322,8 @@ module Comp = struct
    | PatNil
    | PatApp of Loc.t * pattern * pattern_spine 
 
+ (* Arguments in data spines are accumulated in reverse order, to
+    allow applications of data values in constant time. *)
  and data_spine =
    | DataNil
    | DataApp of value * data_spine

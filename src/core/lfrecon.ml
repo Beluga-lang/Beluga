@@ -686,7 +686,7 @@ and elTerm' recT cD cPsi r sP = match r with
           Unify.unifyTyp cD cPsi sQ sP;
 	  tR
         with
-         | Unify.Unify msg ->
+         | Unify.Failure msg ->
            raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
          | Unify.NotInvertible -> 
            raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
@@ -702,7 +702,7 @@ and elTerm' recT cD cPsi r sP = match r with
 	    (Unify.unifyTyp cD  cPsi sQ sP;
 	     Int.LF.Root (loc, Int.LF.BVar x, tS))
           with
-	    | Unify.Unify msg ->
+	    | Unify.Failure msg ->
 	      raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
             | _ -> raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
         end
@@ -727,7 +727,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   Unify.unifyTyp cD cPsi sQ sP;
                   Int.LF.Root (loc, Int.LF.FVar x, tS)
                 with
-		  | Unify.Unify msg ->
+		  | Unify.Failure msg ->
                     raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
                   | _ ->
                     raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
@@ -803,7 +803,7 @@ and elTerm' recT cD cPsi r sP = match r with
         begin try
 		Unify.unifyTyp cD  cPsi (tQ', s'') sP ; 
 		tR
-	  with Unify.Unify msg -> 
+	  with Unify.Failure msg -> 
             raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP)))
             |_ -> raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP)))
           end
@@ -891,7 +891,7 @@ and elTerm' recT cD cPsi r sP = match r with
             Unify.unifyTyp cD cPsi sQ sP;
             tR
             with
-	      | Unify.Unify msg -> 
+	      | Unify.Failure msg -> 
 		raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
               | _ ->
 		raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
@@ -951,7 +951,7 @@ and elTerm' recT cD cPsi r sP = match r with
               (Unify.unifyTyp cD cPsi (Int.LF.TClo sQ, s'') sP ;
                Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k), tS))
               with
-		| Unify.Unify msg ->
+		| Unify.Failure msg ->
 		  raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
 		| _ ->
 		  raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
@@ -1024,7 +1024,7 @@ and elTerm' recT cD cPsi r sP = match r with
               (dprint (fun () -> "[elTerm] Violation: " ^ msg);
                dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
                raise (Error (loc, CompTypAnn)))
-              |  Unify.Unify msg  -> 
+              |  Unify.Failure msg  -> 
 		dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
 		dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
 		dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
@@ -1050,7 +1050,7 @@ and elTerm' recT cD cPsi r sP = match r with
             Unify.unifyTyp cD cPsi sQ sP; 
             tR
           with
-	    | Unify.Unify msg ->
+	    | Unify.Failure msg ->
               raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
             | _ ->
               raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
@@ -1093,7 +1093,7 @@ and elTerm' recT cD cPsi r sP = match r with
             Unify.unifyTyp cD cPsi sQ sP ; 
             tR
           with
-	    | Unify.Unify msg -> 
+	    | Unify.Failure msg -> 
               raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))
         end
       with Error.Violation msg  -> 
@@ -1111,7 +1111,7 @@ and elTerm' recT cD cPsi r sP = match r with
           Unify.unifyTyp cD cPsi sQ sP;
           Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS)
         with
-	  | Unify.Unify msg ->
+	  | Unify.Failure msg ->
            raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
       end
 
@@ -1127,7 +1127,7 @@ and elTerm' recT cD cPsi r sP = match r with
               Unify.unifyTyp cD cPsi sQ sP;
               Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,t'), k), tS)
 	    with
-	      | Unify.Unify msg ->
+	      | Unify.Failure msg ->
                 raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
           end
         | (_, Int.LF.PiTyp _, _) -> raise (Error (loc, IllTypedElab (cD, cPsi, sP, VariantPi)))
@@ -1209,7 +1209,7 @@ and elTerm' recT cD cPsi r sP = match r with
                             ^ "  block_part = " ^ P.typToString cD cPsi (Int.LF.TClo sB, dctxSub) ^ "\n"
                             ^ "  succeeded.")
         ; (Int.LF.TClo sB, dctxSub)
-        with (Unify.Unify _)  ->
+        with (Unify.Failure _)  ->
           (dprint (fun () -> "Type " ^ P.typToString cD cPsi (tA,s) ^ " doesn't unify with schema element\n");
 (*          dprint (fun () ->  P.typRecToString cD cPsi (block_part, dctxSub)) *)
            
@@ -1249,7 +1249,7 @@ and synSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema ele
             dprint (fun () -> "synSchemaElem RESULT = "
                             ^ P.typRecToString cD cPsi (typRec, subst))
           ; Some (typRec, subst) (* sP *)
-          with Unify.Unify _  -> self (Int.LF.Schema rest)
+          with Unify.Failure _  -> self (Int.LF.Schema rest)
             | Not_found -> self (Int.LF.Schema rest) 
 
 
@@ -1761,7 +1761,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
                   r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS));
                   solve_fvarCnstr recT cD cnstrs
 		with
-		  | Unify.Unify msg ->
+		  | Unify.Failure msg ->
 		    raise (Error (loc, TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ)))
 	      end
           | Int.LF.TypVar _ -> 
@@ -1794,7 +1794,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 		(* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
 		solve_fvarCnstr recT cD cnstrs
 	      with
-		| Unify.Unify msg ->
+		| Unify.Failure msg ->
 		  raise (Error (loc, TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ)))
             end
         | Int.LF.TypVar _ -> 

@@ -631,7 +631,7 @@ module Solver = struct
             (fun () -> solveSubGoals dPool (cPsi, k) (dCl.subGoals, s')
               (fun (u, tS) -> 
                 sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS tS)))))
-           with U.Unify _ -> ()) ; matchDProg dPool'
+           with U.Failure _ -> ()) ; matchDProg dPool'
         else matchDProg dPool'
       | Empty ->
         matchSig (cidFromAtom tA)
@@ -655,7 +655,7 @@ module Solver = struct
       try trail (fun () -> unify cPsi (tA, s) (sCl.tHead, s')
         (fun () -> solveSubGoals dPool (cPsi, k) (sCl.subGoals, s')
           (fun (u, tS) -> sc (u, LF.Root (Syntax.Loc.ghost, LF.Const (cidTerm), fS tS)))))
-      with U.Unify _ -> ()
+      with U.Failure _ -> ()
 
     in matchDProg dPool
 

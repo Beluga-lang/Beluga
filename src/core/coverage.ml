@@ -719,7 +719,7 @@ let rec genAllObj cg tHtA_list  = match tHtA_list with
       begin try 
 	let cg' = genObj cg tH_tA in 
 	   cg' :: genAllObj cg tHAlist 
-      with U.Unify _ -> genAllObj cg tHAlist 
+      with U.Failure _ -> genAllObj cg tHAlist 
 	| _ ->genAllObj cg tHAlist 
       end 
 
@@ -934,13 +934,13 @@ let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
 	      solve' cD (mCands, ms) cD_p (mc::mCands) sCands 
 	    with
 	      (* should this case betaken care of  during pre_match phase ? *)
-	      |U.Unify "Context clash" -> 
+	      |U.Failure "Context clash" -> 
 		 let _ = print_string "Unification of pre-solved equation failed due to context mis-match - initiate context matching" in 
 	      	let sc = SplitCtx (cPsi , cPsi_p) in 
 		let _ = dprint (fun () -> "Initiate context splitting: " ^ P.dctxToString cD cPsi ^ " == " ^ 
 		  P.dctxToString cD cPsi_p' ^ " \n") in 
 		  solve' cD (mCands, ms) cD_p mCands (sc::sCands) 
-	      | U.Unify msg -> 
+	      | U.Failure msg -> 
 	      if U.unresolvedGlobalCnstrs () then 
 		let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ "\n MOVED BACK TO SPLIT CAND") in
 		let sc = Split (CovGoal (cPsi, tR, sA) , MetaPatt (cPsi_p, tR_p, sA_p)) in 
@@ -955,7 +955,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
 	      begin try
 		U.unifyDCtx cD cPsi cPsi_p' ;
 		solve' cD (mCands, ms) cD_p (mc::mCands) sCands 
-	      with U.Unify msg -> 
+	      with U.Failure msg -> 
 		  let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ) in
 		    NotSolvable
 	      end
@@ -1427,7 +1427,7 @@ let rec genPatt (cD_p,tau_v) (c, tau_c) =
       let (cD', cG', pat', tau', ms') = Abstract.abstrCovPatt (gctxToCompgctx cG) pat (Whnf.cnormCTyp (tau_v, ms)) ms in
       let ccG' = compgctxTogctx cG' in 
 	Some (cD', CovPatt (ccG', pat', (tau', Whnf.m_id)), ms')
-    with U.Unify _ -> (* expected type and generated type for spine do not
+    with U.Failure _ -> (* expected type and generated type for spine do not
 			 unify; therefore c pS is not inhabit tau_v *)
                        None
       | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->

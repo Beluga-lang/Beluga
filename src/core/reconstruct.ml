@@ -228,7 +228,7 @@ let rec unifyDCtxWithFCVar cD cPsi1 cPsi2 =
        Int.LF.DDec (cPsi2, Int.LF.TypDeclOpt _ )) ->
       loop cD cPsi1 cPsi2
 
-    | _ -> raise (Unify.Unify "context clash")
+    | _ -> raise (Unify.Failure "context clash")
 
   in loop cD (Whnf.normDCtx cPsi1)  (Whnf.normDCtx cPsi2)
 
@@ -494,7 +494,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
         (* unifying two contexts AND inferring schema for psi in
                                                 cPhi, if psi is not in cD *)
         try unifyDCtxWithFCVar cD cPsi' cPhi
-        with Unify.Unify _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
+        with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
       let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in 
       let tA' = C.cnormTyp (tA, theta) in 
@@ -1040,7 +1040,7 @@ and elExp' cD cG i = match i with
                            (Unify.unifyTyp cD cPsi' sB  sA' ;
                             dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
                           (Int.Comp.MApp (loc, i', (psihat, Int.Comp.NeutObj h')), (tau, theta')))
-                         with Unify.Unify msg ->
+                         with Unify.Failure msg ->
                            (Printf.printf "%s\n" msg;
                             raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
                          end 
@@ -1143,7 +1143,7 @@ and elExp' cD cG i = match i with
                       (Unify.unifyTyp cD cPsi' sB  sA' ;
                        dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
                        (Int.Comp.MApp (loc, i', (psihat', Int.Comp.NeutObj h')), (tau, theta')))
-                    with Unify.Unify msg ->
+                    with Unify.Failure msg ->
                       (Printf.printf "%s\n" msg;
                        raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
                   end
@@ -1183,7 +1183,7 @@ and elExp' cD cG i = match i with
               dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^
                 P.expSynToString cD cG i ^ "\n"); (i , (tau, theta))
 
-            with Unify.Unify msg ->
+            with Unify.Failure msg ->
               raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
           end
         | _ ->
@@ -1351,7 +1351,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
         begin try
           Unify.unifyDCtx (Int.LF.Empty) cPsi' cPsi_s;
           (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi'))
-        with Unify.Unify _msg -> 
+        with Unify.Failure _msg -> 
           raise (Error.Violation "Context mismatch in pattern")
         end
   | (Apx.Comp.PatVar (loc, name, x) , (tau, theta)) -> 
@@ -1375,7 +1375,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
         begin try
           Unify.unifyCompTyp cD ttau ttau' ; 
           (cG', pat')
-        with Unify.Unify msg -> 
+        with Unify.Failure msg -> 
           dprint (fun () -> "Unify Error: " ^ msg) ; 
            raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
         end
@@ -1404,7 +1404,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
         begin try
           Unify.unifyCompTyp cD ttau ttau' ; 
           (cG', pat')
-        with Unify.Unify msg -> 
+        with Unify.Failure msg -> 
           dprint (fun () -> "Unify Error: " ^ msg) ; 
           raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
         end
@@ -1667,7 +1667,7 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
                      (dprint (fun () -> "Pattern matching on index object...");
                       Unify.unify Int.LF.Empty cPsi' (C.cnorm (tR',  t),  LF.id) 
                                                      (C.cnorm (tR1, mt1), LF.id))
-                   with Unify.Unify msg -> 
+                   with Unify.Failure msg -> 
                      (dprint (fun () -> "Unify ERROR: " ^ msg);
                       raise (Error.Violation "Pattern matching on index argument failed"))
                    end
@@ -1689,7 +1689,7 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
                     ^ "\n  Expected pattern type: "
                     ^ P.dctxToString Int.LF.Empty  cPsi1' ^ "    |-    "
                     ^ P.typToString Int.LF.Empty cPsi1' (tP', LF.id))
-        with Unify.Unify msg ->
+        with Unify.Failure msg ->
           dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n" ^  "  Inferred pattern type: "
                    ^  P.dctxToString Int.LF.Empty cPsi1' ^ "    |-    "
                    ^ P.typToString Int.LF.Empty cPsi1' (tP1', LF.id)
@@ -1743,7 +1743,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
                      (dprint (fun () -> "Pattern matching on index object...");
                       Unify.unify Int.LF.Empty (Context.hatToDCtx phat) (C.cnorm (tR',  t),  LF.id) 
                                                      (C.cnorm (tR1, mt1), LF.id))
-                   with Unify.Unify msg -> 
+                   with Unify.Failure msg -> 
                      (dprint (fun () -> "Unify ERROR: " ^ msg);
                       raise (Error.Violation "Pattern matching on index argument failed"))
                    end
@@ -1758,7 +1758,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
                           ^ P.compTypToString Int.LF.Empty tau_s') in 
     let _  = begin try 
               Unify.unifyCompTyp (Int.LF.Empty) (tau_s', Whnf.m_id) (tau_p', Whnf.m_id)
-             with Unify.Unify msg ->
+             with Unify.Failure msg ->
                (dprint (fun () -> "Unify ERROR: " ^   msg  ^ "\n" 
                           ^  "  Inferred pattern type: " 
                           ^ P.compTypToString Int.LF.Empty tau_p' 

@@ -235,7 +235,7 @@ and eval_branch (phat, tM) branch (theta, eta) =
 
           eval_chk e (mt, eta)
 
-        with Unify.Unify msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
+        with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
     | _ -> raise Error.NotImplemented
 

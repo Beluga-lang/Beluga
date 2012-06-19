@@ -2617,7 +2617,7 @@ module Make (T : TRAIL) : UNIFY = struct
             unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2))
           else
             ((* dprint (fun () -> "UnifyTyp " ^ P.typToString cD0 cPsi sA ^ " ==== " ^ P.typToString cD0 cPsi sB);*)
-            raise (Unify "Type constant clash"))
+            raise (Failure "Type constant clash"))
 
       | ((PiTyp ((TypDecl(x, tA1), dep), tA2), s1), (PiTyp ((TypDecl(_x, tB1), _dep), tB2), s2)) -> 
           unifyTyp mflag cD0 cPsi (tA1, s1) (tB1, s2) ;

@@ -58,10 +58,10 @@ module type UNIFY = sig
 
   val intersection : psi_hat -> sub -> sub -> dctx -> (sub * dctx)
 
-  exception Unify of string
+  exception Failure of string
   exception NotInvertible
   
-  (* All unify* functions return () on success and raise Unify on failure *)
+  (* All unify* functions return () on success and raise Failure on failure *)
   val unify        : mctx -> dctx  -> nclo  -> nclo -> unit
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
   val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
@@ -95,7 +95,7 @@ module Make (T : TRAIL) : UNIFY = struct
   open Substitution.LF
   module P = Pretty.Int.DefaultPrinter
 
-  exception Unify of string
+  exception Failure of string
 
   exception NotInvertible
   
@@ -1015,7 +1015,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
      can fail:
 
-       - raises Unify if rOccur occurs in tM (occurs check)
+       - raises Failure if rOccur occurs in tM (occurs check)
          or [ss]([|rho|][s]tM) does not exist,
 
        - raises NotInvertible if there exist meta-variables u[t] where t is not a
@@ -1053,7 +1053,7 @@ module Make (T : TRAIL) : UNIFY = struct
                 let t  = Whnf.normSub t in 
                   (* by invariant: MVars are lowered since tM is in whnf *)
                   if eq_cvarRef (MMVarRef r) rOccur then
-                    raise (Unify "Variable occurrence")
+                    raise (Failure "Variable occurrence")
                   else
                     if isPatSub t && isPatMSub mt then
                       let (id_sub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
@@ -1150,7 +1150,7 @@ module Make (T : TRAIL) : UNIFY = struct
                 let t  = Whnf.normSub (comp t s) in 
                   (* by invariant: MVars are lowered since tM is in whnf *)
                   if eq_cvarRef (MVarRef r) rOccur then
-                    raise (Unify "Variable occurrence")
+                    raise (Failure "Variable occurrence")
                   else
                     if isPatSub t then
                       (* let _ = dprint (fun () -> "[prune] MVar " ^
@@ -1216,15 +1216,15 @@ module Make (T : TRAIL) : UNIFY = struct
                           returnNeutral (MVar (Offset v, s'))
                       with 
                         | Error.Violation msg -> 
-                            raise (Unify ("ERROR: prune: " ^ msg ^ 
+                            raise (Failure ("ERROR: prune: " ^ msg ^ 
                                           "\n Looking for " ^ R.render_cvar cD0 u ^ 
                                           "\n in context " ^ P.mctxToString cD0))
-                        | Error msg -> raise (Unify ("ERROR: prune (2) " ^ msg ^ "\n Looking for " ^ 
+                        | Error msg -> raise (Failure ("ERROR: prune (2) " ^ msg ^ "\n Looking for " ^ 
                                               R.render_cvar cD0 u ^ "\n in context " ^ 
                                               P.mctxToString cD0))
                       end
-                  | MUndef -> raise (Unify "[Prune] Bound MVar dependency")
-                  | _      -> raise (Unify "[Prune] MObj / PObj dependency")
+                  | MUndef -> raise (Failure "[Prune] Bound MVar dependency")
+                  | _      -> raise (Failure "[Prune] MObj / PObj dependency")
                 end 
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
@@ -1249,7 +1249,7 @@ module Make (T : TRAIL) : UNIFY = struct
                       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in 
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                         returnNeutral (PVar (Offset q, s'))
-                  | MUndef -> raise (Unify "[Prune] Bound PVar dependency")
+                  | MUndef -> raise (Failure "[Prune] Bound PVar dependency")
                 end
 
             | Proj (PVar (Offset p, t), i)   (* tS = Nil,   s = id *) ->
@@ -1258,13 +1258,13 @@ module Make (T : TRAIL) : UNIFY = struct
                       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in 
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                         returnNeutral (Proj (PVar (Offset q, s'), i))
-                  | MUndef -> raise (Unify "[Prune] Bound PVar dependency in projection")
+                  | MUndef -> raise (Failure "[Prune] Bound PVar dependency in projection")
                 end 
 
             | PVar (PInst (_n, r, cPsi1, tA, cnstrs) as q, t) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in 
                   if eq_cvarRef (PVarRef r) rOccur then
-                    raise (Unify "[Prune] Parameter variable occurrence")
+                    raise (Failure "[Prune] Parameter variable occurrence")
                   else
                     if isPatSub t then
                       let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
@@ -1281,7 +1281,7 @@ module Make (T : TRAIL) : UNIFY = struct
             | Proj (PVar (PInst (_n, r, cPsi1, tA, cnstrs) as q, t), i)  (* s = id *) ->
                 let t = Whnf.normSub t in 
                 if eq_cvarRef (PVarRef r) rOccur then
-                  raise (Unify "[Prune] Parameter variable occurrence")
+                  raise (Failure "[Prune] Parameter variable occurrence")
                 else
                   if isPatSub t then
                     let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
@@ -1306,12 +1306,12 @@ module Make (T : TRAIL) : UNIFY = struct
                 with
                   | Not_found -> 
                       if isId ssubst && isMId ms  then returnNeutral head 
-                      else raise (Unify ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
+                      else raise (Failure ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
                 end
                     
             | BVar k  (* s = id *) ->
                 begin match bvarSub k ssubst with
-                  | Undef                -> raise (Unify ("[Prune] Bound variable dependency : " ^ 
+                  | Undef                -> raise (Failure ("[Prune] Bound variable dependency : " ^ 
                                                       "head = " ^ P.headToString cD0 cPsi' head))
                   | Head (BVar _k as h') ->
                       returnNeutral h'
@@ -1324,7 +1324,7 @@ module Make (T : TRAIL) : UNIFY = struct
             | Proj (BVar k, i)  (* s = id *) ->
                 begin match bvarSub k ssubst with
                   | Head (BVar _k' as h') -> returnNeutral (Proj (h', i))
-                  | _                     -> raise (Unify "[Prune] Bound variable dependency (Proj) ")
+                  | _                     -> raise (Failure "[Prune] Bound variable dependency (Proj) ")
                 end
 
   and pruneTuple cD0 cPsi phat sTuple ss rOccur = match sTuple with
@@ -1616,7 +1616,7 @@ module Make (T : TRAIL) : UNIFY = struct
         [|theta|]([s1]tN) = [|theta|]([s2]tM) where cD' |- theta <= cD.
 
        Also, applies instantiation theta as an effect, and returns ().
-       Otherwise, raises exception Unify.
+       Otherwise, raises exception Failure.
 
        Postcondition: cD' includes new and possibly updated contextual variables;
 
@@ -1865,13 +1865,9 @@ module Make (T : TRAIL) : UNIFY = struct
 
                 instantiateMVar (r, tM1', !cnstrs)  
             with
-              | NotComposable _ -> raise (Unify "NotComposable")
+              | NotComposable _ -> raise (Failure "NotComposable")
               | NotInvertible ->
-                  ((* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
-                   (* Printf.printf "Added constraints: NotInvertible: \n" ;*)
-                     addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
-                   (* raise (Unify "NotInvertible") *)
-                  )
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
           else            
             if isProjPatSub t' then 
               begin try 
@@ -1891,11 +1887,8 @@ module Make (T : TRAIL) : UNIFY = struct
                   instantiateMVar (r, sM1', !cnstrs) 
               with
               | NotInvertible ->
-                  ( Printf.printf "Added constraints: NotInvertible: \n" ;
-                    addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) 
-                    (* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
-                    (* raise (Unify "NotInvertible") *)
-                  )
+                Printf.printf "Added constraints: NotInvertible: \n";
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
               end
             else 
             (dprint (fun () -> "Add constraint: Normal-MVar case");
@@ -2006,11 +1999,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
                   with
                     | NotInvertible ->
-                        ((* Printf.printf "Added constraints: NotInvertible: \n ";*)
-                          addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) 
-                    (* Printf.printf "Pruning failed -  NotInvertible: \n" ; *)
-                    (* raise (Unify "NotInvertible") *)
-                        )
+                      addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
                   end
               | (_ , _, true, true) ->
                   begin try
@@ -2036,11 +2025,7 @@ module Make (T : TRAIL) : UNIFY = struct
                                         P.normalToString cD0 cPsi sM2) )*)
                   with
                     | NotInvertible ->
-                        (  (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
-                          addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))
-                    (* Printf.printf "Pruning failed -- NotInvertible:\n" ;*)
-                    (* raise (Unify "NotInvertible") *)
-                             )
+                      addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))
                   end
 (*              | ( _ , false , _ , _ ) -> 
                   (* neither t1' is not pattern substitutions -- add projPat case *)
@@ -2077,11 +2062,7 @@ module Make (T : TRAIL) : UNIFY = struct
                             instantiateMMVar (r2, sM1', !cnstrs2) 
                         with
                           | NotInvertible ->
-                              ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
-                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
-                                (* Printf.printf "Pruning failed -  NotInvertible: \n" ; *)
-                                (* raise (Unify "NotInvertible") *)
-                              ) 
+                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
                         end
 
 
@@ -2097,11 +2078,7 @@ module Make (T : TRAIL) : UNIFY = struct
                             instantiateMMVar (r1, sM2', !cnstrs1) 
                         with
                           | NotInvertible ->
-                              ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
-                                 addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
-                                (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
-                                (* raise (Unify "NotInvertible")*)
-                              )
+                            addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
                         end
 
 
@@ -2134,11 +2111,8 @@ module Make (T : TRAIL) : UNIFY = struct
                                         P.normalToString cD0 cPsi sM1))*)
             with
               | NotInvertible ->
-                  ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
-                        addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-                    (*(* Printf.printf "Pruning failed -- NotInvertible:\n" ;*)
-                    raise (Unify "NotInvertible")) *)
-            end 
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+            end
           else 
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)           
             if isProjPatSub t' && isPatMSub mt then
@@ -2151,11 +2125,8 @@ module Make (T : TRAIL) : UNIFY = struct
                 let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in                   
                 let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (mtt, ss) (MMVarRef r)) in
                   instantiateMMVar (r, sM2', !cnstrs)                          
-              with | NotInvertible -> 
-                ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
-                    addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-                  (* Printf.printf "Pruning failed -- NotInvertible:\n" ; *)
-                  (* raise (Unify "NotInvertible")) *)
+                with NotInvertible -> 
+                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
               end
           else            
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
@@ -2180,10 +2151,7 @@ module Make (T : TRAIL) : UNIFY = struct
                 instantiateMMVar (r, sM1', !cnstrs)               
             with
               | NotInvertible ->
-                  ( Printf.printf "Added constraints: NotInvertible: \n" ; 
-                      addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-                    (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
-                    (* raise (Unify "NotInvertible")*)
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
           else 
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)           
             if isProjPatSub t' && isPatMSub mt then
@@ -2196,12 +2164,9 @@ module Make (T : TRAIL) : UNIFY = struct
               let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in 
               let sM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (mtt, ss) (MMVarRef r)) in
                 instantiateMMVar (r, sM1', !cnstrs)                          
-            with | NotInvertible -> 
-              ( (* Printf.printf "Added constraints: NotInvertible: \n" ; *)
-               addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
-                (* Printf.printf "Pruning failed -  NotInvertible: \n" ;*)
-                (* raise (Unify "NotInvertible") *)
-              )
+            with
+              | NotInvertible -> 
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
             else        
               addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
 
@@ -2219,7 +2184,7 @@ module Make (T : TRAIL) : UNIFY = struct
         unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
 
     | (_sM1, _sM2) ->
-        raise (Unify "Expression clash")
+        raise (Failure "Expression clash")
 
   and unifyHead mflag cD0 cPsi head1 head2 = 
     match (head1, head2) with
@@ -2227,27 +2192,27 @@ module Make (T : TRAIL) : UNIFY = struct
         if k1 = k2 then
           ()
         else
-          raise (Unify "Bound variable clash")
+          raise (Failure "Bound variable clash")
 
     | (Const c1, Const c2) ->
         if c1 = c2 then
           ()
         else
-          raise (Unify "Constant clash")
+          raise (Failure "Constant clash")
 
     | (FVar x1, FVar x2) ->
         if x1 = x2 then
           ()
         else
-          raise (Unify "Free Variable clash")
+          raise (Failure "Free Variable clash")
 
     | (MVar (Offset k, s) , MVar(Offset k', s')) -> 
         if k = k' then unifySub mflag cD0 cPsi s s' 
-        else raise (Unify "Bound MVar clash")
+        else raise (Failure "Bound MVar clash")
 
     | (FMVar (u, s) , FMVar(u', s')) ->         
         if u = u' then unifySub mflag cD0 cPsi s s' 
-        else raise (Unify "Bound MVar clash")
+        else raise (Failure "Bound MVar clash")
 
     | (FPVar (q, s), FPVar (p, s'))
         ->   (if p = q then 
@@ -2257,7 +2222,7 @@ module Make (T : TRAIL) : UNIFY = struct
     | (PVar (Offset k, s) , PVar(Offset k', s')) -> 
         if k = k' then 
            unifySub mflag cD0 cPsi s s' 
-        else raise (Unify "Parameter variable clash")
+        else raise (Failure "Parameter variable clash")
 
     | (PVar (PInst (_n, q, _cPsi1, tA1, cnstr), s1) as h1, BVar k2) ->
         let s1' = Whnf.normSub s1 in 
@@ -2270,7 +2235,7 @@ module Make (T : TRAIL) : UNIFY = struct
 (*            dprint (fun () -> "\n unifyHead bvar - pvar \n") ;*)
             begin match bvarSub k2 (invert s1') with
                   | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
-                  | _               -> raise (Unify "Parameter violation")
+                  | _               -> raise (Failure "Parameter violation")
             end)
           else
             (* example: q[q[x,y],y] = x  should succeed
@@ -2292,7 +2257,7 @@ module Make (T : TRAIL) : UNIFY = struct
               match bvarSub k1 (invert s2') with
                 | Head (BVar k1') -> 
                     instantiatePVar (q, BVar k1', !cnstr)
-                | _ -> raise (Unify "Parameter violation")
+                | _ -> raise (Failure "Parameter violation")
              end
           else
             addConstraint (cnstr, ref (Eqh (cD0, cPsi, BVar k1, h1)))
@@ -2407,7 +2372,7 @@ module Make (T : TRAIL) : UNIFY = struct
              begin match bvarSub k ss' with
                | Head (BVar k') ->
                    instantiatePVar (q1, Proj(BVar k', i), !cnstr1)
-               | _ -> raise (Unify "parameter variable =/= projection of bound variable ")
+               | _ -> raise (Failure "parameter variable =/= projection of bound variable ")
              end 
          else 
            addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))) 
@@ -2419,7 +2384,7 @@ module Make (T : TRAIL) : UNIFY = struct
              begin match bvarSub k ss' with
                | Head (BVar k') ->
                    instantiatePVar (q1, Proj(BVar k', i), !cnstr1)
-               | _ -> raise (Unify "parameter variable =/= projection of bound variable ")
+               | _ -> raise (Failure "parameter variable =/= projection of bound variable ")
              end
          else 
            addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))) 
@@ -2431,25 +2396,25 @@ module Make (T : TRAIL) : UNIFY = struct
           ((* dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi h1 ^ " === " ^ P.headToString cD0 cPsi h2 ) ;*)
           unifyHead mflag cD0 cPsi h1 h2 )
         else
-          raise (Unify ("(Proj) Index clash: " ^ string_of_int i1 ^ " /= " ^ string_of_int i2))
+          raise (Failure ("(Proj) Index clash: " ^ string_of_int i1 ^ " /= " ^ string_of_int i2))
 
     | (Proj (PVar (PInst (_n, q, _, _, cnstr), s1), projIndex) as h1, BVar k2) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
           (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-           raise (Unify "Projection of parameter variable =/= bound variable"))
+           raise (Failure "Projection of parameter variable =/= bound variable"))
 
     | (BVar k2, Proj (PVar (PInst (_n, q, cPsi2, tA2, cnstr), s1), projIndex) as h1) ->
         let _ = (q, cnstr, s1, projIndex, h1, k2) in
            (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-            raise (Unify "Projection of parameter variable =/= bound variable"))
+            raise (Failure "Projection of parameter variable =/= bound variable"))
 
     | (FVar _, Proj (PVar _, _)) ->
         (print_string "[UnifyHead] Unify free variable with projection of parameter variable\n";
-         raise (Unify "Projection of parameter variable =/= free variable"))
+         raise (Failure "Projection of parameter variable =/= free variable"))
 
     | (PVar _ , Proj (PVar _, _)) ->
         (print_string "[UnifyHead] Projection of a parameter variable\n";
-         raise (Unify "PVar =/= Proj PVar"))
+         raise (Failure "PVar =/= Proj PVar"))
 
     | ((PVar (Offset k, s1)) as _sM1,   ((PVar (PInst (_n, r, cPsi1, tP1, cnstrs), t')) as _sM2)) ->
 (*
@@ -2474,7 +2439,7 @@ module Make (T : TRAIL) : UNIFY = struct
                   ( (* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
                     (* Printf.printf "Added constraints: NotInvertible:\n" ;
                      addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
-                    raise (Unify "PVar - BVar dependency") 
+                    raise (Failure "PVar - BVar dependency") 
                   )
           else            
             if isProjPatSub t' then 
@@ -2492,22 +2457,22 @@ module Make (T : TRAIL) : UNIFY = struct
                   ((* Printf.printf "Added constraints: NotInvertible: \n" ;
                        addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
                     (* Printf.printf "Pruning failed -- NotInvertible\n";*)
-                     raise (Unify "PVar - BVar dependency") 
+                     raise (Failure "PVar - BVar dependency") 
                   )
               end
             else 
-             raise (Unify "PVar - Nonpattern substitution")
+             raise (Failure "PVar - Nonpattern substitution")
 (*        (print_string "[UnifyHead] PVar(Offset,_) - PVar (PInst,_)\n";
-         raise (Unify "PVar Offset - PVar PInst"))
+         raise (Failure "PVar Offset - PVar PInst"))
 *)
 
     | (PVar (PInst _, _s1),  PVar (Offset k, _s2)) ->
         (print_string "[UnifyHead] PVar(PInst,_) - PVar (Offset,_)\n";
-         raise (Unify "PVar Inst - PVar Offset"))
+         raise (Failure "PVar Inst - PVar Offset"))
 
 
     | (_h1 , _h2 ) ->
-        raise (Unify "Head clash")
+        raise (Failure "Head clash")
 
 
     (* unifySpine mflag cD0 (cPsi, (tS1, s1), (tS2, s2)) = ()
@@ -2521,7 +2486,7 @@ module Make (T : TRAIL) : UNIFY = struct
        then if there is an instantiation t :
                  s.t. cPsi |- [|theta|] (tS1 [s1]) == [|theta|](tS2 [s2])
             then instantiation is applied as effect, () returned
-            else exception Unify is raised
+            else exception Failure is raised
 
        Other effects: MVars may be lowered during whnf,
                       constraints may be added for non-patterns
@@ -2584,7 +2549,7 @@ module Make (T : TRAIL) : UNIFY = struct
             unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (psi, n+1)))
 
       |  _
-        -> raise (Unify (
+        -> raise (Failure (
                             "Substitution mismatch :\n " ^ P.dctxToString cD0 cPsi 
                          ^ "|-" ^ P.subToString cD0 cPsi s1 ^ " =/= " ^ P.subToString cD0 cPsi s2 ^ "\n"))
 
@@ -2661,7 +2626,7 @@ module Make (T : TRAIL) : UNIFY = struct
       | ((Sigma typ_rec1, s1), (Sigma typ_rec2, s2)) -> 
           unifyTypRecW mflag cD0 cPsi (typ_rec1, s1) (typ_rec2, s2)
 
-      | _ ->  raise (Unify "Type mismatch")
+      | _ ->  raise (Failure "Type mismatch")
 
 
     and unifyTypRecW mflag cD0 cPsi srec1 srec2 = match (srec1, srec2) with
@@ -2687,7 +2652,7 @@ module Make (T : TRAIL) : UNIFY = struct
           )
       
       | ((_, _s1) ,   (_, _s2)) ->
-          raise (Unify "TypRec length clash")
+          raise (Failure "TypRec length clash")
    
 
    (* Unify pattern fragment, and force constraints after pattern unification
@@ -2711,7 +2676,7 @@ module Make (T : TRAIL) : UNIFY = struct
       | (CtxVar cvar, CtxVar cvar') -> 
           if cvar = cvar' then () 
           else 
-             raise (Unify "Bound (named) context variable clash")
+             raise (Failure "Bound (named) context variable clash")
 
       | (DDec (cPsi1, TypDecl(_ , tA1)) , DDec (cPsi2, TypDecl(_ , tA2))) -> 
             (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ; 
@@ -2723,7 +2688,7 @@ module Make (T : TRAIL) : UNIFY = struct
           (dprint (fun () -> "Unify Context clash: cPsi1 = " ^ 
                      P.dctxToString cD0 cPsi1 
                      ^ " cPsi2 = " ^ P.dctxToString cD0 cPsi2 ) ; 
-           raise (Unify "Context clash"))
+           raise (Failure "Context clash"))
 
    (* **************************************************************** *)
 
@@ -2746,7 +2711,7 @@ module Make (T : TRAIL) : UNIFY = struct
           unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
           unifyTerm Unification cD cPsi1 
             (Whnf.cnorm (tR, t), id) (Whnf.cnorm (tR', t'), id)
-    | _ -> raise (Unify "MetaObj mismatch")
+    | _ -> raise (Failure "MetaObj mismatch")
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
@@ -2762,7 +2727,7 @@ module Make (T : TRAIL) : UNIFY = struct
           dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES" ^ P.metaObjToString cD mOt ^ " == " ^ 
                     P.metaObjToString cD mO'))
 
-    | _ -> raise (Unify "Meta-Spine mismatch")
+    | _ -> raise (Failure "Meta-Spine mismatch")
 
     let rec unifyCompTyp cD tau_t tau_t' = 
       unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t')
@@ -2776,7 +2741,7 @@ module Make (T : TRAIL) : UNIFY = struct
                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ))
                        
           else 
-            raise (Unify "Type Constant Clash")
+            raise (Failure "Type Constant Clash")
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) -> 
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in 
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
@@ -2803,7 +2768,7 @@ module Make (T : TRAIL) : UNIFY = struct
               (Dec(cD, CDecl (psi, schema, cdep))) 
               (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
           else
-            raise (Unify "CtxPi schema clash")
+            raise (Failure "CtxPi schema clash")
                  
       | ((Comp.TypPiBox ((MDecl(u, tA, cPsi), _ ), tau), t),  
          (Comp.TypPiBox ((MDecl(_, tA', cPsi'), _ ), tau'), t')) -> 
@@ -2818,7 +2783,7 @@ module Make (T : TRAIL) : UNIFY = struct
             )
 
       | ((Comp.TypBool, _ ), (Comp.TypBool, _ )) -> ()
-      | _ -> raise (Unify "Computation-level Type Clash")
+      | _ -> raise (Failure "Computation-level Type Clash")
 
 
    (* **************************************************************** *)
@@ -2888,7 +2853,7 @@ module Make (T : TRAIL) : UNIFY = struct
         forceGlobalCnstr (!globalCnstrs); 
         resetGlobalCnstrs () ;
         false
-      with Unify _ -> resetGlobalCnstrs () ; true
+      with Failure _ -> resetGlobalCnstrs () ; true
       end
 
     let unify' mflag cD0 cPsi sM1 sM2 =
@@ -2934,7 +2899,7 @@ module Make (T : TRAIL) : UNIFY = struct
          they are needed to allow for weakening, i.e. using a function
          that makes sense in a stronger environment *)
       | (MShift k, MShift k') ->  () (* if k = k' then () 
-        else raise (Unify "Contextual substitutions not of the same length")   *)
+        else raise (Failure "Contextual substitutions not of the same length")   *)
       | (MDot ( _ , ms), MShift k) -> 
           unifyMSub' ms (MShift (k-1))
       | (MShift k, MDot ( _ , ms)) -> 
@@ -2978,7 +2943,7 @@ let rec unify_phat psihat phihat =
         begin match psihat with 
           | (Some (CInst (_, ({contents = None} as cref'), _, _, _) as c_var) , d') -> 
 	      if cref == cref' then 
-		(if d = d' then () else raise (Unify "Hat context mismatch - 1"))  
+		(if d = d' then () else raise (Failure "Hat context mismatch - 1"))  
 	      else 
 		cref := Some (CtxVar (c_var))
           | ((Some (c_var)) , d') -> 
@@ -2986,7 +2951,7 @@ let rec unify_phat psihat phihat =
                 cref := Some (CtxVar (c_var)) 
               else                 
                 (* (Some (cref), d) == (Some cpsi, d')   d' = d0+d  *)
-                (if d'< d then raise (Unify "Hat Context's do not unify")
+                (if d'< d then raise (Failure "Hat Context's do not unify")
                  else 
                    let cPsi = Context.hatToDCtx (Some (c_var), d'-d) in 
                      cref := Some (cPsi))
@@ -2996,14 +2961,14 @@ let rec unify_phat psihat phihat =
                 cref := Some (Null)
               else 
                 (* (Some (cref), d) == (None, d')   d' = d0+d  *)
-                (if d'< d then raise (Unify "Hat Context's do not unify")
+                (if d'< d then raise (Failure "Hat Context's do not unify")
                  else 
                    let cPsi = Context.hatToDCtx (None, d'-d) in 
                      cref := Some (cPsi))
                 
         end 
 
-    | _ ->  (if psihat = phihat then () else raise (Unify "Hat context mismatch - 2"))
+    | _ ->  (if psihat = phihat then () else raise (Failure "Hat context mismatch - 2"))
 
    (* **************************************************************** *)
 

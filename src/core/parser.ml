@@ -265,7 +265,8 @@ GLOBAL: sgn_eoi;
         "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
         const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
           Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
-
+      | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" -> 
+           [Sgn.MRecTyp(_loc, f)]
 
       | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
           check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
@@ -894,6 +895,15 @@ GLOBAL: sgn_eoi;
 
       ]
     ]
+  ;
+
+  
+
+  cmp_dat: 
+    [[
+     a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" -> 
+                                                   Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+    ]]
   ;
 
   cmp_rec:

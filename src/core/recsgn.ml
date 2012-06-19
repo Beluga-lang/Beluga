@@ -229,7 +229,7 @@ let recSgnDecl d =
               let _x = Comp.add (Comp.mk_entry x tau' 0 v []) in 
               ()
 	    end
-
+    | Ext.Sgn.MRecTyp (_, recDats) -> ()
     | Ext.Sgn.Rec (_, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
         let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in

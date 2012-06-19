@@ -230,6 +230,7 @@ let recSgnDecl d =
               ()
 	    end
     | Ext.Sgn.MRecTyp (_, recDats) -> ()
+    | Ext.Sgn.MRecCompTyp (_, recCDats) -> ()
     | Ext.Sgn.Rec (_, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
         let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in

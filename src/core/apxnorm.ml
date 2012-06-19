@@ -1067,6 +1067,11 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
       let m'   = fmvApxTerm fMVs cD d_param  m in 
         Apx.Comp.BoxVal (loc, psi', m')
 
+  | Apx.Comp.PairVal (loc, i1, i2) -> 
+      let i1' = fmvApxExp' fMVs cD d_param  i1 in 
+      let i2' = fmvApxExp' fMVs cD d_param  i2 in 
+        Apx.Comp.PairVal (loc, i1', i2')
+
 (*  | Apx.Comp.Ann (e, tau) -> 
       let e' = fmvApxExp e t in 
       let tau' = fmvApxCTyp tau t in 

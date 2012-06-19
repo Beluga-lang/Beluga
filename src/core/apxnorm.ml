@@ -410,6 +410,10 @@ and cnormApxExp' cD delta i cDt = match i with
       i)
   | Apx.Comp.Const _c -> (dprint (fun () -> "[cnormApxExp'] Const " ^
 				    R.render_cid_prog _c ); i)
+  | Apx.Comp.PairVal (loc, i1, i2) -> 
+      let i1' = cnormApxExp' cD delta i1 cDt in 
+      let i2' = cnormApxExp' cD delta i2 cDt in 
+        Apx.Comp.PairVal (loc, i1', i2')
   | Apx.Comp.Apply (loc, i, e) -> 
       let _ = dprint (fun () -> "[cnormApxExp'] Apply left arg ") in 
       let i' = cnormApxExp' cD delta i cDt in 

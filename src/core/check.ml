@@ -554,6 +554,13 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
               checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
+    | PatPair (loc, pat1, pat2) -> 
+        (match ttau with 
+           | (TypCross (tau1, tau2), theta) -> 
+               checkPattern cD cG pat1 (tau1, theta);
+               checkPattern cD cG pat2 (tau2, theta)
+           | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau))))
+
     | pat -> 
         let (loc, ttau') = synPattern cD cG pat in 
           if C.convCTyp ttau ttau' then ()
@@ -567,12 +574,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | PatVar (loc, k) -> (loc, (lookup cG k, C.m_id))
     | PatTrue loc -> (loc, (TypBool, C.m_id))
     | PatFalse loc -> (loc, (TypBool, C.m_id))
-    | PatPair (loc, pat1, pat2) -> 
-        let (loc1, ttau1) = (synPattern cD cG pat1) in 
-        let tau1 = Whnf.cnormCTyp ttau1 in 
-        let (_loc2, ttau2) = synPattern cD cG pat2 in 
-        let tau2 = Whnf.cnormCTyp ttau2 in
-          (loc1, (TypCross (tau1, tau2), C.m_id))
     | PatAnn (loc, pat, tau) ->  
         checkPattern cD cG pat (tau, C.m_id);
         (loc, (tau, C.m_id))

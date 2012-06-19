@@ -261,7 +261,8 @@ let rec covGoalToString cD cg = match cg with
 let rec covGoalsToString cov_goals = match cov_goals with 
   | [] -> "\n"
   | (cD, cg, _ ) :: cgoals -> 
-      "-- " ^  covGoalToString cD cg ^ "\n-- " ^  covGoalsToString  cgoals 
+      "-- " ^  P.mctxToString cD ^ "\n     |- " ^ covGoalToString cD cg ^ 
+	"\n " ^  covGoalsToString  cgoals 
 
 let rec splitsToString' (cD, cG) (cD_p, cG_p) splits = match splits with 
   | [] -> "\n"
@@ -274,7 +275,7 @@ let rec splitsToString' (cD, cG) (cD_p, cG_p) splits = match splits with
   | (SplitPat ((patt, ttau) , (patt', ttau')) :: splits ) -> 
       P.patternToString cD cG patt ^ " : " ^ P.compTypToString cD (Whnf.cnormCTyp ttau) ^ " == " ^ 
 	P.patternToString cD_p cG_p patt' ^ " : " ^ 
-	P.compTypToString cD_p (Whnf.cnormCTyp ttau') ^ 
+	P.compTypToString cD_p (Whnf.cnormCTyp ttau') ^ " , \n" ^ 
 	splitsToString' (cD, cG) (cD_p, cG_p) splits
 
 let splitsToString (cD, cG) (cD_p, cG_p) splits = 
@@ -309,6 +310,7 @@ let rec candidatesToString' (cD, cG) candidates k = match candidates with
 let candidatesToString (cD,cG, candidates, patt ) = 
   let cG' = gctxToCompgctx cG in 
 "COVERAGE GOAL : " ^ 
+P.gctxToString cD cG' ^ " |- " ^ 
 P.patternToString cD cG' patt 
 ^ "\nCOVERED BY\n" ^ 
 candidatesToString' (cD, cG') candidates 1
@@ -573,7 +575,7 @@ match (pat, ttau) , (pat_p, ttau_p) with
   | (Comp.PatPair (_, pat1, pat2) , (Comp.TypCross (tau1, tau2), t)),
     (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (tau1', tau2'),t')) -> 
       let (mC1, sC1) = match_pattern (cD,cG) (cD_p, cG_p)
-	                 (pat1, (tau1,t)) (pat1', (tau1',t)) mC sC in
+	                 (pat1, (tau1,t)) (pat1', (tau1',t')) mC sC in
 	match_pattern (cD,cG) (cD_p, cG_p) 
 	  (pat2, (tau2,t))  (pat2', (tau2',t')) mC1 sC1
   | (Comp.PatTrue _ , _ ), 
@@ -1005,7 +1007,7 @@ let rec refineSplits (cD:LF.mctx) (cD_p:LF.mctx) matchL splitL ms = match splitL
 (* cnormCtx (cG, ms) = cG' *)
 let rec cnormCtx (cG, ms) = match cG with
   | [] -> []
-  | (x,tau) :: cG -> (x, Whnf.cnormCTyp (tau, ms)) :: cG
+  | (x,tau) :: cG' -> (x, Whnf.cnormCTyp (tau, ms)) :: (cnormCtx (cG', ms))
 
 (* cnormEqn matchL ms = [ms]matchL
 
@@ -1038,25 +1040,29 @@ then
 
 *)
 
-let rec refine_cand (cD', ms) (cD, Cand (cD_p, cG_p, matchL, splitL)) = 
+let rec refine_cand (cD',cG', ms) (cD, cG, Cand (cD_p, cG_p, matchL, splitL)) = 
   let matchL' = cnormEqn matchL  ms in 
-  let _ = dprint (fun () -> "[refine_cand] matchL' = " ^ eqnsToString cD' cD_p matchL' ) in 
+  let _ = dprint (fun () -> "[refine_cand]  old  matchL = " ^ eqnsToString cD cD_p  matchL ) in 
+  let _ = dprint (fun () -> "[refine_cand] ms = " ^ P.msubToString cD' ms) in 
+  let _ = dprint (fun () -> "[refine_cand] new matchL' = " ^ eqnsToString cD' cD_p matchL' ) in 
   let (matchL0,splitL0) = refineSplits cD' cD_p matchL' splitL ms in
+  let _ = dprint (fun () -> "[refine_cand] splitL = " ^ splitsToString (cD, cG) (cD_p, cG_p) splitL) in 
+  let _ = dprint (fun () -> "[refine_cand] splitL' = " ^ splitsToString (cD', cG') (cD_p, cG_p) splitL0) in 
     Cand (cD_p, cG_p, matchL0, splitL0)
 
-let rec refine_candidates (cD', ms) (cD, candidates) = match candidates with
+let rec refine_candidates (cD', cG', ms) (cD, cG, candidates) = match candidates with
   | [] -> []
   | cand :: cands -> 
       begin try 
-	let cand' = refine_cand (cD', ms) (cD, cand)  in
+	let cand' = refine_cand (cD', cG', ms) (cD, cG, cand)  in
 	let _ = dprint (fun () -> "REFINED CANDIDATE \n" ^ candToString (cD', LF.Empty) cand')  in
-	  cand' :: refine_candidates (cD', ms) (cD, cands)
+	  cand' :: refine_candidates (cD', cG', ms) (cD, cG, cands)
       with 
-	  Error (_, MatchError _) -> refine_candidates (cD, ms) (cD , cands)
+	  Error (_, MatchError _) -> refine_candidates (cD', cG', ms) (cD, cG, cands)
       end
 
 
-let rec refine_lf_covproblem cov_goals ( (cD, cG, candidates, (cPhi, tM) ) as cov_problem ) = 
+let rec refine_pattern cov_goals ( (cD, cG, candidates, patt ) as cov_problem ) = 
   match cov_goals with 
   | [] -> []
   | (TermCandidate ((cD_cg, _, ms) as cg)) :: cgs  -> 
@@ -1066,27 +1072,24 @@ let rec refine_lf_covproblem cov_goals ( (cD, cG, candidates, (cPhi, tM) ) as co
 		dprint (fun () -> "cD = " ^ P.mctxToString cD);
 		dprint (fun () -> "ms = " ^ P.msubToString cD_cg ms ))   in 
 
-       let candidates' = refine_candidates (cD_cg, ms) (cD, candidates) in 
+       let cG'         = cnormCtx (cG, ms) in 
+       let candidates' = refine_candidates (cD_cg, cG', ms) (cD, cG, candidates) in 
 
        let _ =  dprint (fun () -> "[refine_candidates] DONE : There are
 			    remaining #refined candidates = " ^ string_of_int  (List.length candidates')) in 
-       let tM'     = Whnf.cnorm (tM, ms) in 
-       let cPhi'   = Whnf.cnormDCtx (cPhi, ms) in 
-       let cG'     = cnormCtx (cG, ms) in 
-       let pat'    = Comp.PatMetaObj (Syntax.Loc.ghost, 
-				      Comp.MetaObjAnn (Syntax.Loc.ghost, cPhi', tM')) in 
+       let pat' = Whnf.cnormPattern (patt, ms) in 
+
 	 (match candidates' with
 	   | [] -> (dprint (fun () -> "[OPEN COVERAGE GOAL] " ^ covGoalsToString [cg] ) ; 
 	            open_cov_goals := (cD_cg, cG', pat')::!open_cov_goals ; 
-		    refine_lf_covproblem cgs cov_problem )
+		    refine_pattern cgs cov_problem )
 	   | _  -> 
 	      (dprint (fun () -> "  There are " ^ string_of_int (List.length candidates'));  
-	       dprint (fun () -> " refined candidates for " ^ P.normalToString cD_cg cPhi' (tM', S.LF.id) ^ "\n"); 
 	       dprint (fun () -> candidatesToString 
 			 (cD_cg, cG',
 			  candidates',
 		          pat')) ; 
-	       ((cD_cg, cG', candidates', pat') :: refine_lf_covproblem cgs cov_problem) ) 
+	       ((cD_cg, cG', candidates', pat') :: refine_pattern cgs cov_problem) ) 
 	 )
 
   | CtxCandidate (cD_cg, cPhi_r, ms) :: cgs  -> 
@@ -1097,29 +1100,27 @@ let rec refine_lf_covproblem cov_goals ( (cD, cG, candidates, (cPhi, tM) ) as co
 		dprint (fun () -> "cD = " ^ P.mctxToString cD);
 		dprint (fun () -> "ms = " ^ P.msubToString cD_cg ms ))   in  
 
-       let candidates' = refine_candidates (cD_cg, ms) (cD, candidates) in 
+	 let cG'     = cnormCtx (cG, ms) in 
+       let candidates' = refine_candidates (cD_cg, cG', ms) (cD, cG, candidates) in 
 
        let _ =  dprint (fun () -> "[refine_candidates] DONE : There are
 			    remaining #refined candidates = " ^ 
 			  string_of_int (List.length candidates')) in  
-         let tM'     = Whnf.cnorm (tM, ms)  in 
-         let cPhi'   = Whnf.cnormDCtx (cPhi,ms) in 
+       let pat' = Whnf.cnormPattern (patt, ms) in 
 	 let _ = dprint (fun () -> "cG = " ^ P.gctxToString cD (gctxToCompgctx cG)) in
 	 (* cD |- cPhi     and     cD0, cD |- ms : cD ? *)
-	 let cG'     = cnormCtx (cG, ms) in 
-	 let ghost_loc = Syntax.Loc.ghost in 
-	 let pat'    = Comp.PatMetaObj (ghost_loc, Comp.MetaObjAnn (ghost_loc, cPhi', tM')) in 
+
 	 begin match candidates' with 
 	   | [] -> (dprint (fun () -> "[OPEN CONTEXT GOAL] " ^ P.dctxToString cD_cg cPhi_r) ; 
-		    dprint (fun () -> "[OPEN COVERAGE GOAL] " ^ P.dctxToString cD_cg cPhi' ^ " . " ^  
-			      P.normalToString cD_cg cPhi' (tM', S.LF.id) );
+		    dprint (fun () -> "[OPEN COVERAGE GOAL] " ^
+			    P.patternToString cD_cg (gctxToCompgctx cG') pat'  );
 	            open_cov_goals := (cD_cg, cG', pat')::!open_cov_goals ;  
-		    refine_lf_covproblem cgs cov_problem )  
+		    refine_pattern cgs cov_problem )  
 	   | _  -> 
 	      (dprint (fun () -> "  There are " ^ string_of_int (List.length candidates') ^ 
-			 " refined candidates for " ^ P.normalToString cD_cg cPhi' (tM', S.LF.id) ^ "\n");  
+			 " refined candidates for " ^ P.patternToString cD (gctxToCompgctx cG) patt ^ "\n");  
 	       dprint (fun () -> candidatesToString (cD_cg, cG', candidates', pat')) ; 
-	       (cD_cg, cG', candidates', pat') :: refine_lf_covproblem cgs cov_problem)  
+	       (cD_cg, cG', candidates', pat') :: refine_pattern cgs cov_problem)  
 	 end
 
 let rec check_empty_pattern k candidates = match candidates with
@@ -1461,7 +1462,29 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
       let cg = CovPatt (cG', pat, (tau, Whnf.m_id)) in 
 	[ (cD, cg, Whnf.m_id) ] 
 	
-  | Comp.TypBox (_, tA, cPsi) -> let (cgoals, _ ) = genCGoals cD (LF.MDecl(Id.mk_name(Id.NoName), tA, cPsi)) in cgoals
+  | Comp.TypBox (loc, tA, cPsi) -> 
+      let (cgoals, _ ) = genCGoals cD (LF.MDecl(Id.mk_name(Id.NoName), tA, cPsi)) in
+
+	List.map (fun (cD', cg, ms) -> 
+		    let CovGoal (cPsi', tR, sA') = cg in 
+		    let _ = dprint (fun () -> "[genPatCGoals] " ^ 
+				      P.mctxToString cD' ^ " \n |- " ^ 
+				      P.msubToString cD' ms ^ " \n : " ^
+				      P.mctxToString cD) in
+		    let ghost_loc = Syntax.Loc.ghost in 
+		    let pat_r = Comp.PatMetaObj (ghost_loc , Comp.MetaObjAnn (ghost_loc, cPsi', tR)) in  
+	            let tau_r = (Comp.TypBox (loc, LF.TClo sA', cPsi'), Whnf.m_id) in 
+		    let cG' = cnormCtx (cG1, ms)@cnormCtx(cG2,ms) in 
+		    let _ = dprint (fun () -> "[genPatCGoals] " ^ 
+				      "old cG = " ^ P.gctxToString cD (gctxToCompgctx (cG1@cG2))) in 
+		    let _ = dprint (fun () -> "[genPatCGoals] " ^ 
+				      "new cG' = " ^ P.gctxToString cD' (gctxToCompgctx cG')) in 
+		      (cD', CovPatt (cG', pat_r, tau_r), ms)
+		 )
+
+	cgoals
+										       
+
   | Comp.TypBase (_, c, mS) -> 
       let _ = dprint (fun () -> "[genPatCGoals] for " ^ P.compTypToString cD tau) in 
       let constructors = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors in
@@ -1477,7 +1500,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
       in
 	List.map (fun (cD, cg, ms) -> 
 		    let CovPatt (cG0, pat, ttau) = cg in 
-		    let cG0' = cG1@cG0@cG2 in 
+		    let cG0' = cnormCtx (cG1, ms)@cG0@ cnormCtx(cG2, ms) in 
 		      (cD, CovPatt (cG0', pat, ttau), ms))
 	  (genAllPatt (cD,tau) ctau_list)
 
@@ -1580,9 +1603,7 @@ let rec refine_mv ( (cD, cG, candidates, patt) as cov_problem )  =
 	    | (SomeCtxCands ctx_goals,  _ )  -> 
 		(* bp : TODO refine_ctx_covproblem ctx_goals cov_problem *)
 		(*	raise (Error "Context refinment not implemented yet") *)
-		let Comp.PatMetaObj (_, Comp.MetaObjAnn (_, cPhi, tM)) = patt in 
-		let lf_covproblem = (cD, cG, candidates, (cPhi, tM)) in 
-  		  refine_lf_covproblem ctx_goals lf_covproblem	
+  		  refine_pattern ctx_goals cov_problem	
 	    | (SomeTermCands (_, []), [])  -> [] 
 	    | (SomeTermCands (_, []), _ )  -> 
 		[(cD, [], check_empty_pattern 1 candidates, patt)]
@@ -1590,10 +1611,17 @@ let rec refine_mv ( (cD, cG, candidates, patt) as cov_problem )  =
 		let _ = dprint (fun () -> 
 				  let cgs = List.map (fun (TermCandidate cg) -> cg) cgoals in 
 				    "[Generated coverage goals] \n     " ^
-  covGoalsToString cgs ) in 
-		let Comp.PatMetaObj (_, Comp.MetaObjAnn (_, cPhi, tM)) = patt in 
+				      covGoalsToString cgs ) in 
+		let _ = dprint (fun () -> "for pattern " ^ P.patternToString cD (gctxToCompgctx cG) patt) in 
+		  refine_pattern cgoals cov_problem
+(*		let Comp.PatMetaObj (_, mO) = patt in 
+		let (cPhi, tM) = match mO with 
+		  | Comp.MetaObjAnn (_, cPhi, tM) -> (cPhi, tM)
+		  | Comp.MetaObj (loc, phat, tM) -> (Context.hatToDCtx phat, tM)
+		in 
+
 		let lf_covproblem = (cD, cG, candidates, (cPhi, tM)) in 
-  		  refine_lf_covproblem cgoals lf_covproblem	
+  		  refine_lf_covproblem cgoals lf_covproblem	*)
 	    | (NoCandidate,   [] ) -> []
 	    | (NoCandidate, _    ) -> (open_cov_goals := (cD, cG, patt) :: !open_cov_goals;[])
 (*		let _ = dprint (fun () -> "No Candidates found: Remaining Candidates : \n" ^ 
@@ -1691,13 +1719,26 @@ let rec refine_patt_cands ( (cD, cG, candidates, patt) as cov_problem ) (pvsplit
   | [] -> []
   | (cD', cg, ms) :: pvsplits -> 
       let CovPatt (cG', pat_r , ttau) = cg in 
+      let _ = dprint (fun () -> "[refine_patt_cands] " 
+			^ "cD = " ^ P.mctxToString cD ^ "\n"
+                        ^ "cG = " ^ P.gctxToString cD (gctxToCompgctx cG) 
+			^ "\nold pat = " ^
+			P.patternToString cD (gctxToCompgctx cG) patt) in 
+
+      let _ = dprint (fun () -> "[refine_patt_cands] \n"  
+			^ "cD' = " ^ P.mctxToString cD' 
+			^ "\n cG' = " ^ P.gctxToString cD' (gctxToCompgctx cG') 
+                      ^ "\n[ms]pat = " ^
+			P.patternToString cD' (gctxToCompgctx cG') (Whnf.cnormPattern (patt, ms))) in 
       let patt' = subst_pattern (pat_r,pv) (Whnf.cnormPattern (patt, ms)) in
+      let _ = dprint (fun () -> "[refine_patt_cands] new patt = " ^
+			P.patternToString cD' (gctxToCompgctx cG') patt') in 
       let _ = dprint (fun () -> "ms = " ^ P.msubToString cD' ms ) in 
-      let candidates' = refine_candidates (cD', ms) (cD, candidates) in 
+      let candidates' = refine_candidates (cD', cG', ms) (cD, cG, candidates) in 
       let candidates'' = subst_candidates (cD, cG) (pat_r,pv) candidates' in 
       let r_cands =  refine_patt_cands cov_problem (pvsplits, pv) in 
 	(match candidates'' with
-	   |  [] ->(open_cov_goals := (cD, cG, patt') :: !open_cov_goals;
+	   |  [] ->(open_cov_goals := (cD', cG', patt') :: !open_cov_goals;
 		    r_cands)
 	   | _ -> (cD', cG', candidates'', patt') :: r_cands
 	)
@@ -1708,11 +1749,20 @@ let rec refine ( (cD, cG, candidates, patt) as cov_problem ) =
 	dprint (fun () -> "[refine] no pattern variables to refine");
 	refine_mv cov_problem  (* there are no pattern variables *)
     | pvlist ->  (* there are pattern variables to be split *)
-	let _ = dprint (fun () -> "[refine] coverage problem ") in 			  
+	let _ = dprint (fun () -> "[refine] coverage problem ") in
+  
+	let _ = dprint (fun () -> "[refine] Pattern = " ^ P.patternToString cD (gctxToCompgctx cG) patt) in 
 	let _ = dprint (fun () -> "[refine] found " ^ string_of_int (List.length pvlist) ^ " candidates") in
 	let (pv_splits, pv) = best_pv_cand (cD, cG) pvlist in 
-	  refine_patt_cands cov_problem (pv_splits, pv)
-
+	let r_cands =  refine_patt_cands cov_problem (pv_splits, pv) in 
+	let _ = dprint (fun () -> "[refine] refined cov_problem = " ) in 
+	let _ = List.map (fun (cD', cG', cands, patt) -> 
+			    (dprint (fun () -> " Pattern : " ^ P.patternToString cD' (gctxToCompgctx cG') patt);
+			    dprint (fun () -> " Candidates : " ^
+				      candidatesToString (cD', cG', cands, patt))))
+	  r_cands
+	in 
+	  r_cands
   end 
 
 let rec check_all f l = (match l with
@@ -1929,7 +1979,7 @@ let rec check_emptiness cD = match cD with
 
 let rec revisit_opengoals ogoals = begin match ogoals with
   | [] -> ([], [])
-  | ((cD, _cPsi, _tM) as og) :: ogoals -> 
+  | ((cD, _cG, _patt) as og) :: ogoals -> 
       if check_emptiness cD then 
         let (oglist , trivial_list) = revisit_opengoals ogoals in 
 	  (oglist, og::trivial_list)

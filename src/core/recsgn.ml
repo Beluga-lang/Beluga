@@ -180,17 +180,16 @@ let recSgnDecl d =
           let _                  = Monitor.timer ("Function Check", fun () -> 
 						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-	  if Holes.none () then
-	    begin
-              let v                  =   Opsem.eval i''  in 
-              let _x                 = Comp.add (Comp.mk_entry x tau' 0 v []) in 
-              if (!Debug.chatter) == 0 then () 
-              else (Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
-                      (R.render_name x)
-                      (P.compTypToString cD tau') 
-                      (P.expChkToString cD cG i'') 
-                      (P.expChkToString cD cG v))
-	    end
+	  if Holes.none () then begin
+            let v = Opsem.eval i'' in
+            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
+            if (!Debug.chatter) <> 0 then
+              Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
+                (R.render_name x)
+                (P.compTypToString cD tau') 
+                (P.expChkToString cD cG i'') 
+                (P.valueToString v)
+	  end
 
     | Ext.Sgn.Val (loc, x, Some tau, i) -> 
           let apx_tau = Index.comptyp tau in
@@ -217,18 +216,16 @@ let recSgnDecl d =
           let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.abstrExp i') in
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-	  if Holes.none () then
-	    begin
-              let v  =   Opsem.eval i''  in
-              let _       = if (!Debug.chatter) == 0 then () 
-		else (Printf.printf  "\nlet %s : %s = %s\n===>  %s\n"
-			(R.render_name x)
-			(P.compTypToString cD tau') 
-			(P.expChkToString cD cG i'') 
-			(P.expChkToString cD cG v)) in 
-              let _x = Comp.add (Comp.mk_entry x tau' 0 v []) in 
-              ()
-	    end
+	  if Holes.none () then begin
+            let v = Opsem.eval i'' in
+            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
+            if (!Debug.chatter) <> 0 then
+	      Printf.printf "\nlet %s : %s = %s\n===>  %s\n"
+		(R.render_name x)
+		(P.compTypToString cD tau') 
+		(P.expChkToString cD cG i'') 
+		(P.valueToString v)
+	  end
 
     | Ext.Sgn.Rec (_, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
@@ -294,48 +291,45 @@ let recSgnDecl d =
         let rec reconRecFun recFuns = match recFuns with
           | [] -> ()
           | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
-              (let (e_r' , tau') = reconFun f e in 
-                 (if (!Debug.chatter) == 0 then () 
-                  else (Printf.printf  "and %s : %s =\n %s\n"
-                          (R.render_name f)
-                          (P.compTypToString cD tau') 
-                          (P.expChkToString cD cG e_r')))
-                    (* (P.expChkToString cD cG (Whnf.cnormExp (e_r', C.m_id)) ) *); 
-                  
-                 (if !Coverage.enableCoverage then 
-                    Printf.printf "\n## Coverage checking done: %s  ##\n"  
-                      (R.render_name f)
-                  else ()) ; 
-                 dprint (fun () ->  "DOUBLE CHECK of function " ^    
-                           f.string_of_name ^  " successful!\n\n" ) ; 
-                 
-                 let _ = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list) in 
-                   reconRecFun lf 
-              )
-        in 
-          begin match recFuns with
-            | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
-                let (e_r' , tau') = reconFun f e in 
-                (if (!Debug.chatter) == 0 then () 
-                else Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
-                     (R.render_name f)
-                     (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.normCTyp tau')
-                     (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) 
-                     (Whnf.cnormExp (e_r', Whnf.m_id)); 
-                  if !Coverage.enableCoverage then 
-                    (if !Debug.chatter = 0 then () else
-                      Printf.printf "\n## Coverage checking done: %s  ##\n"  
-                        (R.render_name f))
-                  else () ;                   
-                  dprint (fun () ->  "DOUBLE CHECK of function " ^    
-                            f.string_of_name ^  " successful!\n" )  ;
+            let (e_r' , tau') = reconFun f e in 
+            if !Debug.chatter <> 0 then
+              Printf.printf  "and %s : %s =\n %s\n"
+                (R.render_name f)
+                (P.compTypToString cD tau') 
+                (P.expChkToString cD cG e_r');
+            if !Coverage.enableCoverage then 
+              Printf.printf "\n## Coverage checking done: %s  ##\n"  
+                (R.render_name f);
+            dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
+            let _x = Comp.add
+              (fun cid ->
+                Comp.mk_entry f tau' 0
+                  (Int.Comp.RecValue ((cid, e_r'), Int.LF.MShift 0, Int.Comp.Empty))
+                  n_list) in
+            reconRecFun lf in
+        begin match recFuns with
+          | Ext.Comp.RecFun (f, _tau, e) :: lf -> 
+            let (e_r' , tau') = reconFun f e in 
+            if !Debug.chatter <> 0 then
+              Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
+                (R.render_name f)
+                (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.normCTyp tau')
+                (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) 
+                (Whnf.cnormExp (e_r', Whnf.m_id)); 
+            if !Coverage.enableCoverage then 
+              Printf.printf "\n## Coverage checking done: %s  ##\n"  
+                (R.render_name f);
+            dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
 
-                  let _ = Comp.add (Comp.mk_entry f tau' 0  e_r' n_list) in
+            let _x = Comp.add
+              (fun cid ->
+                Comp.mk_entry f tau' 0
+                  (Int.Comp.RecValue ((cid, e_r'), Int.LF.MShift 0, Int.Comp.Empty))
+                  n_list) in
+            reconRecFun lf
 
-                reconRecFun lf 
-                )
-            | _ -> raise (Error.Violation "No recursive function defined")
-          end
+          | _ -> raise (Error.Violation "No recursive function defined")
+        end
 
 
     | Ext.Sgn.Query (loc, name, extT, expected, tries) ->

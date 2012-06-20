@@ -97,13 +97,19 @@ module Cid : sig
       name               : name;
       implicit_arguments : int;
       typ                : Comp.typ;
-      prog               : Comp.exp_chk;
+      prog               : Comp.value;
       mut_rec            : name list
     }
 
-    val mk_entry  : name -> Comp.typ -> int -> Comp.exp_chk -> name list -> entry 
+    val mk_entry  : name -> Comp.typ -> int -> Comp.value -> name list -> entry
 
-    val add           : entry -> cid_prog
+    (** If the value we store in the entry is a recursive value, it
+        itself needs the cid_prog that we are creating to store this
+        entry. Therefore, unlike 'add' functions in other modules,
+        this 'add' function expects a function to which it will
+        provide the cid_prog it generated to store the entry, thus
+        tying the recursive knot. *)
+    val add           : (cid_prog -> entry) -> cid_prog
     val get           : cid_prog -> entry
     val index_of_name : name -> cid_prog
 

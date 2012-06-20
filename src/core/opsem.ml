@@ -45,11 +45,10 @@ let rec add_mrecs n_list (theta, eta) = match n_list with
   | [] ->  eta
   | n'::n_list' ->
       let cid' = Store.Cid.Comp.index_of_name n' in
-      let e' = (Store.Cid.Comp.get cid').Store.Cid.Comp.prog in
+      let v = (Store.Cid.Comp.get cid').Store.Cid.Comp.prog in
       let eta' = add_mrecs n_list' (theta, eta) in
-        (dprint (fun () -> "[eval_syn] found -- extend environment with rec \""  ^ R.render_cid_prog cid' ^ "\"\n"
-                );
-         Comp.Cons (Comp.RecValue ((cid', e'), theta, eta),  eta'))
+      dprint (fun () -> "[eval_syn] found -- extend environment with rec \""  ^ R.render_cid_prog cid' ^ "\"\n");
+      Comp.Cons (v,  eta')
 
 (* eval e (theta, eta) = v
 
@@ -62,11 +61,18 @@ let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
     | Comp.Const cid ->
-      let _ = dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid) in
-      let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
-      let e = (Store.Cid.Comp.get cid).Store.Cid.Comp.prog in
-      dprint (fun () -> "EVALUATE");
-      eval_chk e (theta, add_mrecs n_list (LF.MShift 0, Comp.Empty))
+      dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
+      begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
+        | Comp.RecValue ((cid,e'), theta', eta') ->
+          let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
+          let eta'' = add_mrecs n_list (theta', eta') in
+          dprint (fun () -> "[eval_syn] Const is RecValue " ^ R.render_cid_prog cid);
+          dprint (fun () -> "[eval_syn] with theta' = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta'));
+          dprint (fun () -> "  call eval_chk on the body of " ^ R.render_cid_prog cid);
+          dprint (fun () -> "  e' = " ^ P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
+          eval_chk e' (Whnf.cnormMSub theta', eta'')
+        | v -> v
+      end
 
     | Comp.Var x ->
       dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
@@ -75,7 +81,7 @@ let rec eval_syn i (theta, eta) =
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
           let eta'' = add_mrecs n_list (theta', eta') in
           dprint (fun () -> "[eval_syn] Lookup found RecValue " ^ R.render_cid_prog cid);
-          dprint (fun () -> "[eval_syn] with  theta' = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta'));
+          dprint (fun () -> "[eval_syn] with theta' = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta'));
           dprint (fun () -> "  call eval_chk on the body of " ^ R.render_cid_prog cid);
           dprint (fun () -> "  e' = " ^ P.expChkToString LF.Empty LF.Empty (Whnf.cnormExp (e', theta')));
           eval_chk e' (Whnf.cnormMSub theta', eta'')
@@ -181,7 +187,6 @@ and eval_chk e (theta, eta) =
           | _ -> raise (Error.Violation "Expected BoxValue for case")
           end
 
-      | Comp.Value v -> v
       | Comp.If (_, i, e1, e2) ->
           begin match eval_syn i (theta, eta) with
             | Comp.BoolValue true -> eval_chk e1 (theta, eta)
@@ -242,11 +247,6 @@ and eval_branch (phat, tM) branch (theta, eta) =
 let rec eval e  =
   dprint (fun () -> "Opsem.eval");
   Debug.indent 2;
-  let result = match eval_chk e (LF.MShift 0, Comp.Empty) with
-    | Comp.ConstValue cid -> Comp.Syn (Syntax.Loc.ghost, Comp.Const cid)
-    | Comp.BoxValue (phat, tM) -> Comp.Box (Syntax.Loc.ghost, phat, tM)
-    | Comp.BoolValue b -> Comp.Syn (Syntax.Loc.ghost, Comp.Boolean b)
-    | v -> Comp.Value v
-  in
-    Debug.outdent 2;
-    result
+  let result = eval_chk e (LF.MShift 0, Comp.Empty) in
+  Debug.outdent 2;
+  result

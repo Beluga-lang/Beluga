@@ -46,7 +46,7 @@ let rec lookupValue x env = match x, env with
 let convolve_spines f spine pat_spine =
   (* To avoid doing two traversals of the first spine (once for
      reversing and once for zipping), we use the "There And Back
-     Again" trick by Danvy and Goldberg (2202). *)
+     Again" trick by Danvy and Goldberg (2002). *)
   let rec loop spine =
     match spine with
       | Comp.DataNil -> pat_spine

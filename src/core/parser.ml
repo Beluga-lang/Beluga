@@ -261,18 +261,18 @@ GLOBAL: sgn_eoi;
              | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
            end
 
-      |
+(*      |
         "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
         const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
           Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
-
+*)
       | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" -> 
            [Sgn.MRecTyp(_loc, f)]
-
+(*
       | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
           check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
           Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
-
+*)
       | "datatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->
            [Sgn.MRecCompTyp(_loc, f)]
 

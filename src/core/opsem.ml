@@ -134,11 +134,12 @@ let rec eval_syn i (theta, eta) =
       end
 
     | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
+      let tM' = Whnf.cnorm (tM, theta) in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
-          eval_chk e' (LF.MDot (LF.MObj (phat, Whnf.cnorm (tM, theta)), theta1), eta1)
+          eval_chk e' (LF.MDot (LF.MObj (phat, tM'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
-          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (phat, tM), spine))
+          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (phat, tM'), spine))
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 

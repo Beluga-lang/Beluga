@@ -22,7 +22,6 @@ module Cid : sig
     val entry_list : Id.cid_typ list ref
     
     val mk_entry          : name -> LF.kind -> int -> entry
-    type t
     val add               : entry -> cid_typ
     val addNameConvention : name -> (unit -> string) option  -> (unit -> string) option -> cid_typ
     val gen_var_name      : LF.typ -> (unit -> string) option 
@@ -48,7 +47,6 @@ module Cid : sig
     }
 
     val mk_entry      : name -> LF.typ -> int -> entry
-    type t
     val add           : Syntax.Loc.t -> cid_typ -> entry -> cid_term
     val get           : cid_term -> entry
     val get_implicit_arguments : cid_term -> int
@@ -67,8 +65,6 @@ module Cid : sig
 
     val mk_entry  : name -> Comp.kind -> int -> entry 
 
-    type t
-
     val add           : entry -> cid_comp_typ
     val get           : cid_comp_typ -> entry
     val addConstructor: cid_comp_const -> cid_comp_typ -> unit
@@ -86,7 +82,6 @@ module Cid : sig
     }
 
     val mk_entry      : name -> Comp.typ -> int -> entry
-    type t
     val add           : cid_comp_typ -> entry -> cid_comp_const
     val get           : cid_comp_const -> entry
     val get_implicit_arguments : cid_comp_const -> int
@@ -107,8 +102,6 @@ module Cid : sig
     }
 
     val mk_entry  : name -> Comp.typ -> int -> Comp.value -> name list -> entry
-
-    type t
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this
@@ -132,7 +125,6 @@ module Cid : sig
     }
 
     val mk_entry        : name -> LF.schema -> entry
-    type t
     val add             : entry -> cid_schema
     val get             : cid_schema -> entry
     val get_schema      : cid_schema -> LF.schema

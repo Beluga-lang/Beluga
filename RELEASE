@@ -64,13 +64,12 @@ cp -a \
 cd $release
 echo Deleting useless files:
 useless=$(find . -print | egrep '~|.DS_Store' || true)
-echo rm $useless
+echo rm -rf $useless
 rm -rf $useless
 
 # Remove examples not yet ready for public consumption
-rm -rf examples/notworking
-rm -rf examples/cfg
-rm -rf examples/beluga
+echo rm -rf examples/{notworking,cfg,beluga}
+rm -rf examples/{notworking,cfg,beluga}
 
 echo "Copying $release to $release-sandbox"
 cd ..
@@ -114,7 +113,7 @@ if [ $suppress = SUPPRESS ]; then
 fi
 
 sleep 1
-echo 'Building archive' $release.tar
+echo 'Building archive' $release.tar.gz
 tar zcf $release.tar.gz $release || ( echo 'tar failed' ; exit 1 )
 echo
 ls -l $release.tar.gz

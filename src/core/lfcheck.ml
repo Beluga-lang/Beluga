@@ -595,7 +595,7 @@ and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) =
         ^ "  block_part = " ^ P.typRecToString cD cPsi (block_part, dctxSub) ^ "\n"
         ^ "  succeeded.");
       (block_part, dctxSub)
-    with (Unify.Unify _) as exn ->
+    with (Unify.Failure _) as exn ->
       dprint (fun () -> "Type  "
         ^ P.typRecToString cD cPsi sArec ^ "  doesn't unify with  "
         ^ P.typRecToString cD cPsi (block_part, dctxSub));

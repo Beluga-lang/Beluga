@@ -117,7 +117,7 @@ let rec eval_syn i (theta, eta) =
         ^ "[eval_syn] with  theta = "
         ^ P.msubToString LF.Empty (Whnf.cnormMSub theta) ^ "\n");
       begin match eval_syn i' (theta, eta) with
-        | Comp.FunValue ((_loc, _x , e'), theta1, eta1) ->
+        | Comp.FunValue ((_x , e'), theta1, eta1) ->
           dprint (fun () -> "[eval_syn] Extended environment: |env1| =  "
             ^ string_of_int (length_env eta1) ^ "\n"
             ^ "[eval_syn] Extended environment: |env1'| =  "
@@ -136,7 +136,7 @@ let rec eval_syn i (theta, eta) =
     | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
       let tM' = Whnf.cnorm (tM, theta) in
       begin match eval_syn i' (theta, eta) with
-        | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
+        | Comp.MLamValue ((_u, e'), theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.MObj (phat, tM'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (phat, tM'), spine))
@@ -145,7 +145,7 @@ let rec eval_syn i (theta, eta) =
 
     | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
       begin match eval_syn i' (theta, eta) with
-        | Comp.MLamValue ((_loc, _u, e'), theta1, eta1) ->
+        | Comp.MLamValue ((_u, e'), theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
@@ -155,7 +155,7 @@ let rec eval_syn i (theta, eta) =
       dprint (fun () -> "EVALUATE CtxApp ");
       dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
       begin match eval_syn i' (theta, eta) with
-        | Comp.CtxValue ((_loc, _psi, e'), theta1, eta1) ->
+        | Comp.CtxValue ((_psi, e'), theta1, eta1) ->
           let theta1' =  LF.MDot(LF.CObj(cPsi'), theta1) in
           dprint (fun () -> "[CtxApp] theta1' = " ^ P.msubToString LF.Empty  theta1');
           eval_chk e' (theta1', eta1)
@@ -195,13 +195,13 @@ and eval_chk e (theta, eta) =
       | Comp.MLam (loc, n, e') ->
           dprint (fun () -> "[MLamValue] created: theta = " ^ 
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
-          Comp.MLamValue ((loc, n ,e'), Whnf.cnormMSub theta, eta)
+          Comp.MLamValue ((n ,e'), Whnf.cnormMSub theta, eta)
       | Comp.CtxFun (loc, n, e') ->
-          Comp.CtxValue ((loc,n,e'), Whnf.cnormMSub theta, eta)
+          Comp.CtxValue ((n,e'), Whnf.cnormMSub theta, eta)
       | Comp.Fun (loc, n, e') ->
           dprint (fun () -> "[FunValue] created: theta = " ^ 
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
-          Comp.FunValue ((loc, n, e'), Whnf.cnormMSub theta, eta)
+          Comp.FunValue ((n, e'), Whnf.cnormMSub theta, eta)
 
       | Comp.Pair (_, e1, e2) ->
         let v1 = eval_chk e1 (theta, eta) in
@@ -312,7 +312,7 @@ and eval_branch vscrut branch (theta, eta) =
           let _ = Unify.unifyMSub theta theta_k in
           let eta' = match_pattern mt eta vscrut pat in
           eval_chk e (Whnf.cnormMSub mt, eta')
-        with Unify.Unify msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
+        with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
 
 let rec eval e =

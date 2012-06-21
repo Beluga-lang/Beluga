@@ -304,7 +304,7 @@ let recSgnDecl d =
             let _x = Comp.add
               (fun cid ->
                 Comp.mk_entry f tau' 0
-                  (Int.Comp.RecValue ((cid, e_r'), Int.LF.MShift 0, Int.Comp.Empty))
+                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
                   n_list) in
             reconRecFun lf in
         begin match recFuns with
@@ -324,7 +324,7 @@ let recSgnDecl d =
             let _x = Comp.add
               (fun cid ->
                 Comp.mk_entry f tau' 0
-                  (Int.Comp.RecValue ((cid, e_r'), Int.LF.MShift 0, Int.Comp.Empty))
+                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
                   n_list) in
             reconRecFun lf
 

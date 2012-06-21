@@ -265,10 +265,10 @@ module Comp = struct
     | Cons of value * env
 
   and value =
-    | FunValue   of (name * exp_chk) * LF.msub * env
-    | RecValue   of (cid_prog * exp_chk) * LF.msub * env
-    | MLamValue  of (name * exp_chk) * LF.msub * env
-    | CtxValue   of (name * exp_chk) * LF.msub * env
+    | FunValue   of name * exp_chk * LF.msub * env
+    | RecValue   of cid_prog * exp_chk * LF.msub * env
+    | MLamValue  of name * exp_chk * LF.msub * env
+    | CtxValue   of name * exp_chk * LF.msub * env
     | BoxValue   of LF.psi_hat * LF.normal
     | PsiValue   of LF.dctx
     | ConstValue of cid_prog

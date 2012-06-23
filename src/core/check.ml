@@ -638,19 +638,10 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 end
   
-
-
 module Sgn = struct
 
-  type error
-
-  let error_location e = assert false
-
-  let report_error fmt e = assert false
-
   let rec check_sgn_decls = function
-    | [] ->
-        ()
+    | [] -> ()
 
     | Syntax.Int.Sgn.Typ (_a, tK) :: decls ->
         let cD   = Syntax.Int.LF.Empty in

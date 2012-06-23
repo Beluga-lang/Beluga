@@ -18,21 +18,8 @@ open Syntax.Int
 open Substitution
 
 
-type error =
-  | NotPatSub
-
-exception Error of Syntax.Loc.t * error
-
 module R = Store.Cid.DefaultRenderer
 module T = Store.Cid.Typ
-
-let _ = Error.register_printer
-  (fun (Error (loc, err)) ->
-    Error.print_with_location loc (fun ppf ->
-      match err with
-      | NotPatSub ->
-          Format.fprintf ppf "Not a pattern substitution" (* TODO *) ))
-
 
 exception Fmvar_not_found
 exception FreeMVar of head

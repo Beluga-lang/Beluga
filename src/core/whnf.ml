@@ -2519,52 +2519,6 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
     convTypRec (trec, LF.id) (trec', LF.id)
 
 
-(* ----------------------------------------------------------- *)
-(* makePatSub s = Some(s') if s is convertible to a patSub
- *                None otherwise
- *
- * Invariant:
- * If    cPsi |- s : cPsi'
- * and   s = n1 .. nm ^k
- * then  tB iff  n1, .., nm pairwise distinct
- *         and  ni <= k or ni = _ for all 1 <= i <= m
- *)
-let rec mkPatSub s = match s with
-  | Shift (NoCtxShift, _k) ->
-      s
-
-  | Shift (CtxShift (_psi), _k) ->
-      s
-
-  | Shift (NegCtxShift _,  _k) ->
-      raise (Error (Syntax.Loc.ghost, NotPatSub))
-
-  | Dot (Head (BVar n), s) ->
-    let rec checkBVar s = match s with
-      | Shift (_ , k)            -> n <= k
-      | Dot (Head (BVar n'), s') -> n <> n' && checkBVar s'
-      | Dot (Undef, s')          ->            checkBVar s' in
-    let s' = mkPatSub s in
-    if checkBVar s' then
-      Dot (Head (BVar n), s')
-    else
-      raise (Error (Syntax.Loc.ghost, NotPatSub))
-
-  | Dot (Undef, s) ->
-      Dot (Undef, mkPatSub s)
-
-  | Dot (Obj tM, s) ->
-      begin match whnf (tM, LF.id) with
-        | (Root (_, BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
-        | _                            -> raise (Error (Syntax.Loc.ghost, NotPatSub))
-      end
-
-  | _ ->
-      raise (Error (Syntax.Loc.ghost, NotPatSub))
-
-
-let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
-
 (* ------------------------------------------------------------ *)
 
 

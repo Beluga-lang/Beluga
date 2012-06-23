@@ -19,7 +19,6 @@ open Substitution
 
 
 type error =
-    CompFreeMVar of Id.name
   | NotPatSub
 
 exception Error of Syntax.Loc.t * error
@@ -31,10 +30,6 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-      | CompFreeMVar u ->
-          Format.fprintf ppf "Encountered free meta-variables %s\n"
-            (Store.Cid.DefaultRenderer.render_name u)
-
       | NotPatSub ->
           Format.fprintf ppf "Not a pattern substitution" (* TODO *) ))
 
@@ -801,8 +796,6 @@ and cnorm (tM, t) = match tM with
               end 
 
           | FMVar (u, r) -> Root (loc, FMVar (u, cnormSub (r,t)),  cnormSpine (tS, t))
-              (* raise (Error (loc, CompFreeMVar u)) *)
-
 
           | MVar (Inst (_n, {contents = Some _tM}, _cPsi, _tA, _cnstr), _r) ->  
               (* We could normalize [r]tM *)
@@ -880,7 +873,6 @@ and cnorm (tM, t) = match tM with
             end
 
           | FPVar (p, r) -> Root(loc, FPVar (p, cnormSub (r,t)), cnormSpine (tS, t)) 
-              (* raise (Error (loc, CompFreeMVar p)) *)
 
           | Proj (FPVar (_p, _r), _tupleIndex) as head -> 
               Root (loc, head, cnormSpine(tS, t)) 

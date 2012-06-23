@@ -2548,13 +2548,15 @@ let rec mkPatSub s = match s with
       raise (Error (Syntax.Loc.ghost, NotPatSub))
 
   | Dot (Head (BVar n), s) ->
-      let s' = mkPatSub s in
-      let rec checkBVar s = match s with
-        | Shift (_ , k)            -> n <= k
-        | Dot (Head (BVar n'), s') -> n <> n' && checkBVar s'
-        | Dot (Undef, s')          ->            checkBVar s' in
-      let _ = checkBVar s' in
-        Dot (Head (BVar n), s')
+    let rec checkBVar s = match s with
+      | Shift (_ , k)            -> n <= k
+      | Dot (Head (BVar n'), s') -> n <> n' && checkBVar s'
+      | Dot (Undef, s')          ->            checkBVar s' in
+    let s' = mkPatSub s in
+    if checkBVar s' then
+      Dot (Head (BVar n), s')
+    else
+      raise (Error (Syntax.Loc.ghost, NotPatSub))
 
   | Dot (Undef, s) ->
       Dot (Undef, mkPatSub s)

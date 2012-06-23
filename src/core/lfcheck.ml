@@ -80,13 +80,13 @@ let _ = Error.register_printer
           (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
 
       | IllTypedSub (cD, cPsi, s, cPsi') ->
-          Format.fprintf ppf "Substitution not well-typed.@.";
-          Format.fprintf ppf "           Substitution: %a.@."
-            (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) s;
-          Format.fprintf ppf "  does not take context: %a.@."
-            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi';
-          Format.fprintf ppf "             to context: %a.@."
-            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
+        Format.fprintf ppf "Ill-typed substitution.@.";
+        Format.fprintf ppf "@<n> Substitution: %a.@."
+          (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) s;
+        Format.fprintf ppf "@<n> does not take context: %a.@."
+          (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi';
+        Format.fprintf ppf "@<n> to context: %a.@."
+          (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
 
       | SpineIllTyped (n_expected, n_actual) ->
 	Error.report_mismatch ppf

@@ -6,6 +6,8 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
+(* Register error printer at the end of this module. *)
+
 module Cid = struct
 
   module Typ = struct
@@ -195,8 +197,6 @@ module Cid = struct
         entry_list := cid_tp :: !entry_list;
         inspectKind cid_tp [] entry.kind; 
         cid_tp
-    
-
 
     let addConstructor loc typ c tA =
       let entry = get typ in
@@ -224,9 +224,7 @@ module Cid = struct
     let is_typesubordinate_to a b =
       let b_e = get b in
         (*subord_read*)BitSet.is_set b_e.typesubordinated a
-
   end
-
 
   module Term = struct
 
@@ -738,6 +736,5 @@ let _ = Error.register_printer
       match err with
         | FrozenType n ->
             Format.fprintf ppf
-              "type %s was frozen by a previous case analysis;@ \
-               can't declare a new constructor here"
+              "Type %s is frozen. A new constructor cannot be defined."
               (Cid.DefaultRenderer.render_cid_typ n)))

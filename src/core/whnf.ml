@@ -37,33 +37,27 @@ let rec emptySpine tS = match tS with
   | SClo(tS, _s) -> emptySpine tS
 
 
-  (* isPatSub s = B
+(* isPatSub s = B
 
-     Invariant:
+   Invariant:
 
-     If    Psi |- s : Psi' 
-     and   s = n1 .. nm ^k
-     then  B iff  n1, .., nm pairwise distinct
-     and  ni <= k or ni = _ for all 1 <= i <= m
-  *)
-  let rec isPatSub s = 
-    (* let s = (Whnf.normSub s) in  *)
-    begin match s with
-    | Shift (_,_k)              -> true
-    | Dot (Head(BVar n), s) ->
-        let rec checkBVar s' = match s' with
-          | Shift (_ , k)           -> n <= k
-          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
-          | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s 
-          | Dot (Undef, s)          -> checkBVar s
-          | _                       -> false
-        in
-          checkBVar s && isPatSub s
-
-    | Dot (Undef, s)        -> isPatSub s
-
-    | _                     -> false
-    end 
+   If    Psi |- s : Psi'
+   and   s = n1 .. nm ^k
+   then  B iff  n1, .., nm pairwise distinct
+   and  ni <= k or ni = _ for all 1 <= i <= m
+*)
+let rec isPatSub = function
+  | Shift (_,_k)              -> true
+  | Dot (Head(BVar n), s) ->
+    let rec checkBVar s' = match s' with
+      | Shift (_ , k)           -> n <= k
+      | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+      | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s
+      | Dot (Undef, s)          -> checkBVar s
+      | _                       -> false in
+    checkBVar s && isPatSub s
+  | Dot (Undef, s)        -> isPatSub s
+  | _                     -> false
 
 (* Eta-contract elements in substitutions *)
 let rec etaContract tM = begin match tM with 
@@ -93,9 +87,6 @@ let rec etaContract tM = begin match tM with
         end 
   | _  -> Obj tM
  end
-
-
-
 
 (*************************************)
 (* Creating new contextual variables *)

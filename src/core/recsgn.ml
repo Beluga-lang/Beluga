@@ -38,7 +38,30 @@ let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
 
-let recSgnDecl d = 
+let rec recSgnDecls = function
+  | [] -> ()
+
+  | Ext.Sgn.Pragma(loc, Ext.LF.NotPrag) :: not'd_decl :: rest ->
+    let not'd_decl_succeeds =
+      begin
+	try
+	  recSgnDecl not'd_decl; true
+	with _ ->
+	  if !Debug.chatter != 0 then
+	    print_string ("Reconstruction fails for %not'd declaration\n");
+          false
+      end in
+    if not'd_decl_succeeds
+    then raise (Error (loc, UnexpectedSucess))
+    else recSgnDecls rest
+
+  (* %not declaration with nothing following *)
+  | [Ext.Sgn.Pragma(_, Ext.LF.NotPrag)] -> ()
+
+  | decl :: rest ->
+    recSgnDecl decl;
+    recSgnDecls rest
+and recSgnDecl d = 
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
     | Ext.Sgn.CompTypAbbrev (_, a, _cK, _cT) -> print_string "Not implemented yet\n"
@@ -134,7 +157,7 @@ let recSgnDecl d =
                                       fun () -> Abstract.abstrTyp tA) in
 	let _        = ( Reconstruct.reset_fvarCnstr ();
 			 Unify.resetGlobalCnstrs ();
-			 dprint (fun () -> "\nReconstruction (with abstraction) of constant: " ^
+        		 dprint (fun () -> "\nReconstruction (with abstraction) of constant: " ^
 				   c.string_of_name ^ " : " ^
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check", 
@@ -215,7 +238,6 @@ let recSgnDecl d =
 
           let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.abstrExp i') in
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
-
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
             let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
@@ -225,7 +247,21 @@ let recSgnDecl d =
 		(P.compTypToString cD tau') 
 		(P.expChkToString cD cG i'') 
 		(P.valueToString v)
-	  end
+  	  end
+
+    | Ext.Sgn.MRecTyp (_, recDats) -> 
+          let recTyps = List.map List.hd recDats in
+          let   _   =  recSgnDecls recTyps in
+          let recConts = List.map List.tl recDats in 
+          let recConts' = List.flatten recConts in
+          recSgnDecls recConts'
+
+    | Ext.Sgn.MRecCompTyp (_, recCDats) -> 
+          let recTyps = List.map List.hd recCDats in
+          let   _   =  recSgnDecls recTyps in
+          let recConts = List.map List.tl recCDats in 
+          let recConts' = List.flatten recConts in
+          recSgnDecls recConts'
 
     | Ext.Sgn.Rec (_, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
@@ -375,28 +411,3 @@ let recSgnDecl d =
           end
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name)) 
         end 
-
-
-let rec recSgnDecls = function
-  | [] -> ()
-
-  | Ext.Sgn.Pragma(loc, Ext.LF.NotPrag) :: not'd_decl :: rest ->
-    let not'd_decl_succeeds =
-      begin
-	try
-	  recSgnDecl not'd_decl; true
-	with _ ->
-	  if !Debug.chatter != 0 then
-	    print_string ("Reconstruction fails for %not'd declaration\n");
-          false
-      end in
-    if not'd_decl_succeeds
-    then raise (Error (loc, UnexpectedSucess))
-    else recSgnDecls rest
-
-  (* %not declaration with nothing following *)
-  | [Ext.Sgn.Pragma(_, Ext.LF.NotPrag)] -> ()
-
-  | decl :: rest ->
-    recSgnDecl decl;
-    recSgnDecls rest

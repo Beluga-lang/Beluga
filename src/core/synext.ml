@@ -239,6 +239,8 @@ module Sgn = struct
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema   of Loc.t * name * LF.schema
     | Pragma   of Loc.t * LF.prag
+    | MRecTyp  of Loc.t * decl list list
+    | MRecCompTyp of Loc.t * decl list list
     | Rec      of Loc.t * Comp.rec_fun list   
     | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn 
     | Query    of Loc.t * name option * LF.typ * int option * int option

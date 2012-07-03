@@ -27,6 +27,7 @@ type error =
   | IllTypedIdSub
   | CompTypAnn       
   | NotPatternSpine
+  | MissingSchemaForCtxVar of Id.name 
 
 exception Error of Syntax.Loc.t * error
 

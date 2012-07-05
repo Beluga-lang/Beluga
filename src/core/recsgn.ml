@@ -12,7 +12,6 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
-
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
@@ -37,6 +36,15 @@ let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypArr (_ , tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
+
+let rec freeze_from_name tau = match tau with
+  |Ext.Sgn.Typ ( _, n, _) ->  let a = Typ.index_of_name n in
+                               Typ.freeze a;
+                               ()
+  |Ext.Sgn.CompTyp (_, n, _) -> let a =   CompTyp.index_of_name n in
+                               CompTyp.freeze a;
+                               ()
+                                   
 
 let rec recSgnDecls = function
   | [] -> ()
@@ -254,15 +262,9 @@ and recSgnDecl d =
           let   _   =  recSgnDecls recTyps in
           let recConts = List.map List.tl recDats in 
           let recConts' = List.flatten recConts in
-          recSgnDecls recConts'
-
-    | Ext.Sgn.MRecCompTyp (_, recCDats) -> 
-          let recTyps = List.map List.hd recCDats in
-          let   _   =  recSgnDecls recTyps in
-          let recConts = List.map List.tl recCDats in 
-          let recConts' = List.flatten recConts in
-          recSgnDecls recConts'
-
+          let   _   = recSgnDecls recConts' in
+          let  _  = List.map freeze_from_name recTyps in
+               ()
     | Ext.Sgn.Rec (_, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
         let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in

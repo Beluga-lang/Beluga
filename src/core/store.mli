@@ -60,6 +60,7 @@ module Cid : sig
       name               : name;
       implicit_arguments : int;
       kind               : Comp.kind;
+      mutable frozen             : bool;
       mutable constructors : cid_comp_const list
     }
 
@@ -67,6 +68,7 @@ module Cid : sig
 
     val add           : entry -> cid_comp_typ
     val get           : cid_comp_typ -> entry
+    val freeze : cid_comp_typ -> unit
     val addConstructor: cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : name -> cid_comp_typ
     val clear         : unit -> unit

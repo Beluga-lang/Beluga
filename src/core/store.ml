@@ -313,6 +313,7 @@ module Cid = struct
       name                : Id.name;
       implicit_arguments  : int;
       kind                : Int.Comp.kind;
+      mutable frozen       : bool;
       mutable constructors: Id.cid_comp_const list 
     }
 
@@ -322,6 +323,7 @@ module Cid = struct
       name               = name;
       implicit_arguments = implicit_arguments;
       kind               = kind;
+      frozen             = false;
       constructors       = []
     }
 
@@ -343,7 +345,10 @@ module Cid = struct
         cid_comp_typ
 
     let get = DynArray.get store
-
+    
+    let freeze a =
+          (get a).frozen <- true
+    
     let addConstructor c typ = 
       let entry = get typ in 
         entry.constructors <- c :: entry.constructors 

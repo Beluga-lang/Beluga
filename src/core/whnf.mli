@@ -50,6 +50,7 @@ val raiseType   : dctx -> typ -> typ
 (*************************************)
 
 val etaExpandMV     : dctx -> tclo -> Id.name -> sub -> normal
+
 val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> Id.name -> sub -> normal
 
 exception Fmvar_not_found

@@ -2507,8 +2507,7 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
  *
  *  cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMV cPsi sA n s' = etaExpandMV' cPsi (whnfTyp sA) n s'
-
+let rec etaExpandMV cPsi sA n s' =  etaExpandMV' cPsi (whnfTyp sA) n s'
 and etaExpandMV' cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
       
@@ -2518,7 +2517,7 @@ and etaExpandMV' cPsi sA n s' = match sA with
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s'))
 
-
+(* Coverage.etaExpandMVstr s' cPsi sA *)
 
 (* etaExpandMMV cD cPsi sA s' = tN
  *

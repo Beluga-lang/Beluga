@@ -274,7 +274,7 @@ GLOBAL: sgn_eoi;
           Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
 *)
       | "datatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->
-           [Sgn.MRecCompTyp(_loc, f)]
+           [Sgn.MRecTyp(_loc, f)]
 
       | "type"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
           [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]

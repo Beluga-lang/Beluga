@@ -1,0 +1,525 @@
+nat : type.
+z : nat.
+succ: nat -> nat.
+
+kind : type.
+cnstc : type.
+polytype : type.
+term : type.
+sig : type.
+ctx : type.
+
+%{
+cnstc_sig : sig.
+term_sig : sig.
+cnsct_ctx : ctx.
+term_ctx : ctx.
+}%
+
+oftype : cnstc -> kind -> type.  %  a:T
+
+oftype_list : nat -> type.
+nil_o : oftype_list z.
+cons_o : oftype t1 t2 -> oftype_list N -> oftype_list (succ N).
+
+ofkind : cnstc -> kind -> type. % a::K
+
+%judgements
+jgmt : type.
+wfkind : kind -> jgmt. %  K kind
+check : cnstc -> kind -> jgmt.   %  A <= K
+synth : cnstc -> kind -> jgmt.  %  N => K
+inwld : term -> cnstc -> cnstc -> jgmt.  % m : A@w
+ok : ofkind a K -> jgmt. % a::K
+mobile : cnstc -> jgmt.  % A mobile
+
+jgmt_list : type.
+nil_j : jgmt_list.
+cons_j : jgmt -> jgmt_list -> jgmt_list.
+
+at : cnstc -> cnstc -> type.
+
+%kinds  K
+tp : kind.
+wld : kind.
+prop : kind.
+prin : kind.
+prf : cnstc -> kind.
+affirm : cnstc -> cnstc -> kind.
+db : kind.
+pi : kind  -> (cnstc -> kind) -> kind.
+
+kind_list : nat -> type.
+nil_k : kind_list z.
+cons_k : kind -> kind_list N -> kind_list (succ N).
+
+
+%constructors neutral forms  N
+alpha : cnstc.
+a : cnstc.
+arr : cnstc -> cnstc -> cnstc.
+cross : cnstc -> cnstc -> cnstc.
+plus : cnstc -> cnstc -> cnstc.
+unit : cnstc.
+exists : kind -> (cnstc -> cnstc) -> cnstc.
+_Iam : cnstc -> cnstc.
+
+at : cnstc -> cnstc -> cnstc.
+
+%????????????????
+option : cnstc.
+unit : cnstc.
+_NONE : cnstc.
+_SOME : cnstc.
+
+cnstc_list : nat -> type.
+nil_c : cnstc_list z.
+cons_c : cnstc -> cnstc_list N -> cnstc_list (succ N).
+
+%constructors Normal forms   A, w, k
+_N : cnstc.
+lamk : kind -> (cnstc -> cnstc) -> cnstc.
+
+%polytype tao
+polytype : type.
+universal : oftype_list N -> cnstc.
+
+%terms  m
+x : term.
+lamt : cnstc -> (term -> term) -> term.
+tuple : term -> term -> term.
+pair : term -> term -> term.
+fst : term -> term.
+scd : term -> term.
+inl : term -> term.
+inr : term -> term.
+casee : term -> (term -> term) -> (term  -> term) -> term.
+empty : term.
+lett : term -> (term -> term) -> term.
+
+get : cnstc -> term -> term.
+acquire : cnstc -> term.
+authenticate : term.
+c : cnstc_list N -> term -> term.
+set : cnstc -> cnstc -> term -> cnstc -> term.
+open : cnstc -> term -> term -> term -> term.
+iam : cnstc -> term.
+
+leta : term -> (term -> term) -> term.
+hold : term -> term.
+held : term -> term.
+
+tuplec : cnstc -> cnstc -> cnstc.
+
+active_prin : type.
+empty_ap : active_prin.
+add_ap : active_prin -> active_prin -> active_prin.
+
+%{
+constructor signature  sigma_c
+empty_cs : cntsc_sig.
+add_cs : oftype a K -> cnstc_sig -> cnstc_sig.
+
+term signature  sigma_t
+empty_ts : term_sig.
+add_ts : inwld c tao w -> term_sig -> term_sig.
+
+constructor context   delta
+empty_cc : cntsc_ctx.
+add_cc : synth alpha K -> cnstc_ctx -> cnstc_ctx.
+
+term context  gamma
+empty_tc : term_ctx.
+add_tc : inwld x A w-> term_ctx -> term_ctx.
+}%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Inference Rules
+
+%Well-formed signatures and kinds, and constructor kinding.
+
+is_ok : cnstc_list N  -> type.
+is_wfkind : kind -> type.
+is_checkd : cnstc -> kind -> type.
+is_synthd : cnstc -> kind -> type.
+
+is_mobile : cnstc -> type.
+
+
+%K kind
+iswfk_tp : is_wfkind tp.
+iwfk_prin : is_wfkind prin.
+iwfk_wld : is_wfkind wld.
+iwfk_db : is_wfkind db.
+iwfk_prop : is_wfkind prop.
+iwfk_prf : (is_checkd P prop) -> is_wfkind (prf P).
+iwfk_affirm : is_checkd P prop -> is_checkd k prin -> is_wfkind (affirm k P).
+iwfk_pi : is_wfkind K1  -> ( { alpha : cnstc } (is_checkd alpha K1)  -> is_wfkind K2 ) -> is_wfkind (pi K2 (\alpha. K1)).
+
+%A <= K
+ischk1 : ( {N : cnstc}  is_synthd N K ) -> is_checkd N K.
+ischk2 : ({alpha : cnstc} is_synthd alpha K -> is_checkd A K') -> is_checkd (lamk K (\alpha. A)) (pi K (\alpha. K')).
+
+% N => K
+issynthd_arr : is_checkd A1 tp -> is_checkd A2 tp -> is_synthd (arr A1 A2) tp.
+issynthd_cross : is_checkd A1 tp -> is_checkd A2 tp -> is_synthd (cross A1 A2) tp.
+issynthd_plus : is_checkd A1 tp -> is_checkd A2 tp -> is_synthd (plus A1 A2) tp.
+issynthd_unit : is_synthd unit tp.
+issynthd_at : is_checkd A tp -> is_checkd w wld -> is_synthd (at A w) tp.
+issynthd_app : is_synthd N (pi K1 K2) -> is_checkd A K1  -> is_synthd (tuplec N A) (K2 A).
+issynthd_exists : ( is_synthd alpha K -> is_checkd A tp) -> is_synthd (exists K (\alpha. A)) tp.
+issynthd_iam : is_checkd A prin -> is_synthd (_Iam A) tp.
+
+
+%Typing rules for terms and values.
+is_inwld : term -> cnstc -> cnstc -> type.
+
+%check association of let
+
+%%%%%%%M2 is term and (term-> term)
+%isinwld_lett : is_inwld M1 A1 W -> ({x : term}is_inwld x A2 W -> is_inwld M2 A2 W) -> is_inwld (lett M2 M1) A2 W.
+
+isinwld_tuple : is_inwld m1 (arr A1 A2) w -> is_inwld m2 A2 w -> is_inwld (tuple m1 m2) A1 w.
+isinwld_fst : is_inwld M (cross A1 A2) W -> is_inwld (fst M) A1 W.
+isinwld_scd : is_inwld M (cross A1 A2) W -> is_inwld (scd M) A2 W.
+
+%%%%%%%%M1 is (term -> term) and term.
+%isinwld_leta : is_inwld M1 (at A1 W') W -> ( is_inwld x A1 W' -> is_inwld M2 A2 W) -> is_inwld (leta M1 M2) A2 W.
+
+isinwld_get : is_checkd w' wld -> is_inwld m A w' -> is_mobile A -> is_inwld (get w' m) A w.
+isinwld_acquire : is_checkd A prop -> is_inwld (acquire A) (exists (prf A)( \alpha. (option))) w.
+% isinwld_c : 
+
+%%%%%%%%M1 and M2 both (cnstc -> cnstc) AND cnstc 
+%isinwld_casee : is_inwld M (plus A1 A2) W -> (is_inwld x A1 W -> is_inwld M1 A W) -> (is_inwld x A2 W -> is_inwld M2 A W) -> is_inwld (casee M M1 M2) A W).
+
+%%%%%%%% A is (cnstc -> cnstc) AND cnstc....
+%isinwld_open : is_inwld m1 (exists K A) w -> ({alpha : term} is_checkd alpha K -> is_inwld x A w) -> is_inwld m2 A2 w) -> is_checkd A1 tp -> is_inwld (open alpha x m1 m2) A2 w 
+
+
+%%%%%%%option.....
+%isinwld_authenticate : is_checkd W wld -> is_inwld authenticate ((exists (\alpha. prin alpha) (_Iam alpha)) option ) W.
+isinwld_trans : ({x : term}  is_inwld x A w -> is_inwld x A w).
+isinwld_lamt : ( {x:term}  is_inwld x A1 w -> is_inwld m A2 w) -> is_inwld (lamt A2 (\x. m) ) (arr A1 A2) w.
+isinwld_empty : is_checkd w wld -> is_inwld empty unit w.
+isinwld_pair : is_inwld m1 A1 w -> is_inwld m2 A2 w -> is_inwld (pair m1 m2) (cross A1 A2) w.
+isinwld_hold : is_inwld m A w -> is_inwld (hold m) (at A w) w.
+isinwld_held : is_inwld m A w -> is_checkd w' wld -> is_inwld (held m) (at A w) w.
+isinwld_inl : is_inwld m A1 w -> is_inwld (inl m) (plus A1 A2) w.
+isinwld_inr : is_inwld m A2 w -> is_inwld (inr m) (plus A1 A2) w.
+%ininwld_set : is_checkd A K -> is_inwld M (A' A) W -> is_inwld (set alpha A M A') (exists K A') W.
+isinwld_iam : is_checkd k prin -> is_checkd w wld -> is_inwld (iam k) (_Iam k) w.
+
+%{
+%Mobile types
+ismobile_cross : is_mobile A1 -> is_mobile A2 -> is_mobile (cross A1 A2).
+ismobile_plus : is_mobile A1 -> is_mobile A2 -> is_mobile (plus A1 A2).
+ismobile_unit : is_mobile unit.
+ismobile_at : is_mobile (at A w).
+ismobile_Iam : is_mobile (_Iam A).
+ismobile_exists : ( oftype alpha K -> is_mobile A) -> is_mobile (exists K (\alpha. A)).
+}%
+
+%Dynamic semantics
+is_val : cnstc -> term -> active_prin -> type.
+is_ap : active_prin -> type.
+
+isval_arrV : is_val W (lamt A (\x. M x)) AA.
+isval_xV : is_val W M1 AA -> is_val W M2 AA -> is_val W (pair M1 M2) AA.
+isval_unitV : is_val W  empty AA.
+isval_plV1 : is_val W  M AA -> is_val W (inl M) AA.
+isval_plV2 : is_val W M AA -> is_val W (inr M) AA.
+isval_atV : is_val W (held M) AA.
+isval_IamV : { AA : active_prin} is_val W (iam A) AA.
+isval_existsV : is_val W M AA -> is_val W (set alpha A M A') AA.
+
+%is worldshift
+is_ws : term -> active_prin -> cnstc -> term -> active_prin -> type.
+
+isws_lett : is_ws m1 AA W m1' AA' -> is_ws (lett m1 m2) AA W (lett m1' m2) AA'.
+isws_lett2 : is_val W m1 AA -> is_ws (lett m1 m2) AA W (m2 m1) AA.
+isws_tuple : is_ws m1 AA W m1' AA' -> is_ws (tuple m1 m2) AA W (tuple m1' m2) AA'.
+isws_lamt : is_ws m2 AA W m2' AA' -> is_ws (tuple (lamt A (\x. m1)) m2) AA W (tuple (lamt A (\x. m1)) m2') AA'.
+isws_lamtapp : is_val W M2 AA -> is_ws (tuple (lamt A M1) M2) AA W (M1 M2) AA.
+isws_pair : is_ws m1 AA W m1' AA' -> is_ws (pair m1 m2) AA W (pair m1' m2) AA'.
+isws_pair' : is_val W  m1 AA -> is_ws m2 AA W m2' A' -> is_ws (pair m1 m2) AA W (pair m1 m2') AA'.
+isws_fst : is_ws m AA W m' AA' -> is_ws (fst m) AA W (fst m') AA'.
+isws_pairfst : is_val W (pair m1 m2) AA -> is_ws (fst (pair m1 m2)) AA W m1 AA.
+isws_scd :  is_ws m AA W m' AA' -> is_ws (scd m) AA W (scd m' ) AA'.
+isws_pairscd : is_val W (pair m1 m2) AA -> is_ws (scd (pair m1 m2)) AA W m2 AA.
+isws_hold : is_ws m AA W m' AA' -> is_ws (hold m) AA W (hold m') AA'.
+isws_held : is_val W M AA -> is_ws (hold M) AA W (held M) AA.
+isws_leta : is_ws M1 AA W M1' AA' -> is_ws (leta M1 M2) AA W (leta M1' M2) AA'.
+iws_leta2 : is_val W M1 AA -> is_ws (leta (held M1) M2) AA W (M2 M1) AA.
+isws_get : is_ws m AA W' m' AA' -> is_ws (get W' m) AA W (get W' m') AA'.
+isws_get2 : is_val W m AA -> is_ws (get w' m) AA W m AA.
+%isws_auth : ofkind a prin -> is_ws authenticate AA w SOME (set alpha a (iam a) (iam alpha ) AA a.
+isws_auth2 : is_ws authenticate AA W NONE AA.
+isws_acq : is_ws (acquire A) AA W NONE AA.
+%isws_acq2 : is_checkd AA' (prf A). -> is_ws (acquire A) AA w (SOME alpha A' empty unit) AA.
+%isws_c : is_ws m AA w m' AA'' -> is_ws (c (Alist N) m) AA w (c (Alist N) m') AA'.
+%isws_c2 :  
+isws_inl : is_ws m AA W m' AA' -> is_ws (inl m) AA W (inl m') AA'.
+isws_inr : is_ws m AA W m' AA' -> is_ws (inr m) AA W (inr m') AA'.
+isws_casee : is_ws m AA w m' AA' -> is_ws (casee m m1 m2) AA w (casee m' m1 m2) AA.
+isws_caseinl : is_val W (inl M) AA -> is_ws (casee (inl M) M1 M2) AA W (M1 M) AA.
+isws_caseinr : is_val W (inl M) AA -> is_ws (casee (inr M) M1 M2) AA W (M2 M) AA'.
+
+isws_set : is_ws m AA W m' AA' -> is_ws (set alpha A m A') AA W (set alpha A m' A') AA'.
+%isws_open : is_ws m1 AA w m1' AA' -> is_ws (open m1 alpha x m2) AA w (open m1' alpha x m2) AA'.
+%isw_open2 : is_val (set alpha A m A') AA -> is_ws (open alpha x (set alpha A m A') m') AA -> w (app m' m A) AA.
+
+
+%{
+%stuck states
+is_stuck : term -> active_prin -> type.
+
+%isstuck_iam : [don't need] 
+%isstuck_c : 
+isstuck_lett  : is_stuck m1 AA -> is_stuck (lett x m1 m2) AA.
+isstuck_tuple : is_stuck m1 AA -> is_stuck (tuple m1 m2) AA.
+isstuck_lamt : is_stuck m2 AA -> is_stuck (tuple (lamt A (\x. m1)) m2) AA.
+isstuck_pair : is_stuck m1 AA -> is_stuck (pair m1 m2) AA.
+isstuck_pair2 : is_val m1 AA -> is_stuck m2 AA -> is_stuck (pair m1 m2) AA.
+isstuck_fst : is_stuck m AA -> is_stuck (fst m) AA.
+isstuck_scd : is_stuck m AA -> is_stuck (scd m) AA.
+isstuck_hold : is_stuck m AA -> is_stuck (hold m) AA.
+isstuck_leta : is_stuck m1 AA -> is_stuck (leta x m1 m2) AA.
+isstuck_get : is_stuck m AA -> is_stuck (get w m) AA.
+isstuck_inl : is_stuck m AA -> is_stuck (inl m) AA.
+isstuck_inr : is_stuck m AA -> is_stuck (inr m) AA.
+%istuck_casee : is_stuck m AA -> is_stuck (casee m (\x. m1 m2)) AA.
+isstuck_set : is_stuck m AA -> is_stuck (set alpha A m A') AA.
+isstuck_open : is_stuck m AA -> is_stuck (open alpha x m m') AA.
+}%
+
+
+%Theorem C.4(Progress)
+result : term -> type.
+r_val : is_val W M AA -> result M.
+r_ws : is_ws M AA W M' AA' -> result M.
+
+schema apctx = active_prin ;
+
+rec thmc4 : [. is_inwld M A W] -> [. result M] = 
+fn d => case d of
+
+%{| [. isinwld_lett D1 D2] =>
+   let [. R] = thmc4 [. D1] in
+   (case [. R] of 
+     |[. r_val V] =>  [. r_ws (isws_lett2 V)]
+    |[. r_ws T ] => [. r_ws (isws_lett T)]
+   )
+}%
+
+
+| [. isinwld_tuple D1 D2] =>
+ let [. R1] = thmc4 [. D1] in
+ let [. R2] = thmc4 [. D2] in
+  (case [. R1] of
+ %  | [. r_val V] => 
+  %  (case [. R2] of  
+   %   | [. r_val VV] => 
+      %%%% is_ws m1 m2 AA w (M2 m) AA
+
+ %let [. VV1] = [. isws_lett2 VV] in [. r_ws V]
+       % | [. r_ws TT] => [. r_ws (isws_lamt TT)]
+                              % let [. TT1] = [. isws_lamt TT] in [. r_ws TT1]
+ 
+    % )
+
+   |[. r_ws T] => [. r_ws (isws_tuple T)]
+  )
+
+| [. isinwld_pair D1 D2] =>
+  let [. R1] = thmc4 [. D1] in
+  let [. R2] = thmc4 [. D2] in
+  (case [. R1] of 
+   | [. r_ws T] =>  [. r_ws (isws_pair T)]
+    %| [. r_val V] => 
+    %  (case [. R2] of
+    %   | [. r_ws T] => [. r_ws (isws_pair' V T)] %%%Need to make sure 2 active principles are the same in V and Q.
+
+          % | [. r_val Q] => 
+	     % [. r_val (isval_xV V Q)] %%%Nedd to make sure the 2 active principles are the same in V and Q.
+    %  )
+  )
+
+%%%%Arguments and meta-variables
+%| [. isinwld_lamt D] => [. r_val (isval_arrV)]
+   %let [. V1] = [. isval_arrV]  in [. r_val V1]
+
+
+| [. isinwld_fst D] =>
+   let [. R] = thmc4 [. D] in
+     (case [. R] of 
+        | [. r_ws T] => let [. T1] = [. isws_fst T] in [. r_ws T1]
+    %    | [. r_val V] => [. r_ws (isws_pairfst V)]   %%%Need to make sure te 2 world are the same???
+    )
+
+| [. isinwld_scd D] => 
+   let [. R] = thmc4 [. D] in
+     (case [. R] of 
+      | [. r_ws T] => let [. T1] = [. isws_scd T] in [. r_ws T1]
+     % | [. r_val V] => [. r_ws (isws_pairscd V)]  %%Need to make sure 2 worlds are the same???
+% let [. V1] = [. isws_pairscd V] in [. r_ws V1]
+     )
+
+| [. isinwld_get D1 D2 D3] =>  
+  let [. R] = thmc4 [. D2] in  
+   (case [. R] of
+    | [. r_val V] => [. r_ws (isws_get2 V)]
+  % | [. r_ws T] => [. r_ws (isws_get T)]
+                   %let [. T1] = [. isws_get T] in [. r_ws T1] 
+  )
+
+
+%{| [AA. isinwld_acq D] =>
+   let [. is_checkd A P] = [. D] in  
+   let [. T1] = [. is_ws (acquire A) AA w NONE AA] in 
+      [. r_ws T1]
+}%
+
+%| [. isinwld_c] =>
+
+|[. isinwld_inl D] => 
+   let [. R] = thmc4 [. D] in 
+    (case [. R] of
+      | [. r_val V] => let [. V1] = [. isval_plV1 V] in [. r_val V1]
+      | [. r_ws T] => let [. T1] = [. isws_inl T] in [. r_ws T1] 
+    )
+
+| [. isinwld_inr D] =>
+  let [. R] = thmc4 [. D] in 
+   (case [. R] of 
+     | [. r_val V] => let [. V1] = [. isval_plV2 V] in [. r_val V1]
+     | [. r_ws T] => let [. T1] = [. isws_inr T] in [. r_ws T1]
+   )
+
+%|[. isinwld_casee D1 D2 D3] =>
+%|[. isinwld_set D1 D2] =>
+%|[. isinwld_open D1 D2 D3] =>
+%{|[AA. isiwld_auth D] => 
+   let [. is_checkd w wld] = [. D] in
+   let [. T1] = [. is_ws authenticate AA w NONE AA] in [. r_ws T1]
+}%
+%|[. isinwld_empty D] => [. r_val (isval_unitV)]
+% let [. R] = [. isval_unitV] in [. r_val R]
+%|[. isinwld_iam D1 D2] => let [. R] = [. isval_IamV] in [. r_val R] 
+
+|[. isinwld_hold D] => 
+  let [. R] = thmc4 [. D] in 
+   (case [. R] of 
+   |[. r_val V] => [. r_ws (isws_held V)]
+    |[. r_ws T] => [. r_ws (isws_hold T)]
+  )
+
+%|[. isinwld_held D1 D2] => [. r_val (isval_atV)]
+               % let [. R] = [. isval_atV] in [. r_val (is_val R)]
+
+ %{|[. isinwld_leta D1 D2] =>
+ let [. R1] = thmc4 [. D1] in
+    (case [. R1] of
+     % | [. r_val V] => let [. V1] = [. isws_leta2 V] in [. r_ws V1]
+
+     | [. r_ws T] => let [. T1] = [. isws_leta T] in [. r_ws T1]
+)
+ }%
+;
+
+
+%Theorem c.1 (preservation)
+
+
+rec thmc11 : [. is_ws M AA W M' AA'] -> [. is_inwld M A W] -> [. is_inwld M' A W] =
+fn d => fn f => case d of
+
+%{| [. isws_lett D] =>
+  let [. isinwld_lett F2 F1] = f in
+  let [. R] =  thmc11 [. D] [. F2] in
+    [. isinwld_lett R F1]
+}%
+%|[. isws_lett2 D] =>
+%  let [. isinwld_lett F2 F1 ] = f in
+ 
+| [. isws_tuple D] =>
+   let [. isinwld_tuple F2 F1] = f in
+   let [. R] = thmc11 [. D] [. F2] in
+      [. isinwld_tuple R F1]
+
+%{
+| [. isws_lamt D] =>
+%Should this be tuple? it's app? no isinwld for app though
+   let [. isinwld_tuple F1 F2] = f in
+   let [. R] =  thmc11 [. D] [. F2] in
+     [. isinwld_lamt R]
+}%
+
+%| [. isws_lamt2 D] => 
+%   let [. isinwld_lett F1 F2] = f in
+   
+| [. isws_pair D] =>  
+  let [. isinwld_pair F1 F2] = f in
+  let [. R] = thmc11 [. D ] [. F1] in 
+    [. isinwld_pair R F2]
+
+
+| [. isws_pair' D1 D2] => 
+  let [. isinwld_pair F1 F2] = f in
+  let [. R] =  thmc11 [. D2] [. F2] in
+      [. isinwld_pair F1 R]
+
+| [. isws_fst D] =>
+  let [. isinwld_fst F] = f in
+  let [. R] =  thmc11 [. D] [. F] in
+     [. isinwld_fst R]
+
+| [. isws_pairfst D] =>
+  let [. isinwld_fst F] = f in
+  let [. isinwld_pair F1 F2] =  [. F] in
+     [. F1]
+
+| [. isws_scd D] => 
+  let [. isinwld_scd F] = f in
+  let [. R] =  thmc11 [. D] [. F] in
+   [. isinwld_scd R]
+
+
+| [. isws_pairscd D] =>
+  let [. isinwld_scd F] = f in
+  let [. isinwld_pair F1 F2] = [. F] in
+    [. F2]
+
+| [. isws_get D] => 
+  let [. isinwld_get F1 F2 F3] = f in
+  let [. R] =  thmc11 [. D] [. F2] in
+    [. isinwld_get F1 R F3]
+
+%| [. isws_auth D] => 
+ %| [. isws_auth2 D] => 
+%| [. isws_acq D]
+%| [. iwsws_acq2 D] =>
+%| [. isws_c D] =>
+%|[. isws_c2 D] =>
+
+| [. isws_inl D] =>
+  let [. isinwld_inl F] = f in
+  let [. R] =  thmc11 [. D] [. F] in
+    [. isinwld_inl R]
+
+| [. isws_inr D] =>
+  let [. isinwld_inr F] = f in
+  let [. R] =  thmc11 [. D] [. F] in
+    [. isinwld_inr R]
+
+
+%{%left or right?
+|[. isws_casee D ] =>
+  let [. isinwld_inl F1] = f in
+  let [. isinwld_inr F2] = f in
+  let [. R1] = thmc11 [. D] [. F1] in
+  let [. R2] = thmc11 [. D] [. F2] in
+    [. isinwld_casee R1 F1 F2]
+  }% 
+ ;
+

@@ -47,6 +47,7 @@ module LF = struct
     | BVar  of offset                         (* H ::= x                        *)
     | Const of cid_term                       (*   | c                          *)
     | MMVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
+    | MPVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
     | MVar  of cvar * sub                     (*   | u[s]                       *)
     | PVar  of cvar * sub                     (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
@@ -109,6 +110,7 @@ module LF = struct
     | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
         (* D ; Psi |- M <= A
            provided constraint *)
+    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
 
 
   and tvar =
@@ -234,6 +236,7 @@ module Comp = struct
    | MetaCtx of Loc.t * LF.dctx 
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
+   | MetaParam of Loc.t * LF.psi_hat * LF.head
 
  type meta_spine = 
    | MetaNil 

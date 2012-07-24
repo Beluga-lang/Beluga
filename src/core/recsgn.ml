@@ -281,7 +281,8 @@ let recSgnDecl d =
                                 "\n   result:  " ^ 
                                 P.expChkToString cD cG e' ^ "\n") in
 
-          let e_r'    = Monitor.timer ("Function Abstraction", fun () -> Abstract.abstrExp e' ) in
+          let e'' = Whnf.cnormExp (e', Whnf.m_id) in
+          let e_r'    = Monitor.timer ("Function Abstraction", fun () -> Abstract.abstrExp e'' ) in
 
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in  
 

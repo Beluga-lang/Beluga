@@ -119,6 +119,7 @@ module Comp = struct
    | MetaCtx of Loc.t * LF.dctx 
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
+   | MetaParam of Loc.t * LF.psi_hat * LF.head
 
  type meta_spine = 
    | MetaNil 

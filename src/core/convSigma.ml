@@ -135,11 +135,12 @@ let rec flattenSigmaTyp cPsi strec conv_list = match strec with
                 L   =    [3,1,2]    (note reverse order since contexts are built in reverse order)
 *)
 
-let rec flattenDCtx cPsi = match cPsi with 
+let rec flattenDCtx cPsi = flattenDCtx' (Whnf.cnormDCtx (cPsi, Whnf.m_id))
+and flattenDCtx' cPsi = match cPsi with 
   | Int.LF.Null -> (Int.LF.Null , [])
   | Int.LF.CtxVar psi -> (Int.LF.CtxVar psi , [] )
   | Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA)) -> 
-      let (cPhi, conv_list) = flattenDCtx cPsi' in 
+      let (cPhi, conv_list) = flattenDCtx' cPsi' in 
         begin
           match Whnf.whnfTyp (tA, LF.id) with 
             | (Int.LF.Sigma trec, s) -> let (cPhi', k) = flattenSigmaTyp cPhi (trec,s) conv_list in (cPhi', k::conv_list)
@@ -147,7 +148,7 @@ let rec flattenDCtx cPsi = match cPsi with
         end
 
   | Int.LF.DDec (cPsi', Int.LF.TypDeclOpt x) -> 
-      let (cPhi, conv_list) = flattenDCtx cPsi' in
+      let (cPhi, conv_list) = flattenDCtx' cPsi' in
         (Int.LF.DDec(cPhi, Int.LF.TypDeclOpt x), 1::conv_list)
 
 

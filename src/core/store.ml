@@ -313,7 +313,8 @@ module Cid = struct
   module CompTyp = struct 
     type entry = {
       name                : Id.name;
-      implicit_arguments  : int;
+      implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
+                                    are factored into implicit arguments *)
       kind                : Int.Comp.kind;
       mutable constructors: Id.cid_comp_const list 
     }

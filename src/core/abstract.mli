@@ -9,10 +9,12 @@ type error =
     LeftoverCV
   | LeftoverMV
   | LeftoverMMV
+  | LeftoverMPV
   | LeftoverConstraints
   | CyclicDependencyFV
   | CyclicDependencyFCV
   | CyclicDependencyMMV
+  | CyclicDependencyMPV
   | CyclicDependencyMV
   | CyclicDependencyFMV
   | CyclicDependencyPV

@@ -38,6 +38,7 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 (*************************************)
 
 val newMMVar    : Id.name option -> mctx * dctx * typ -> mm_var
+val newMPVar    : Id.name option -> mctx * dctx * typ -> mm_var
 val newMVar     : Id.name option -> dctx * typ -> cvar
 val newPVar     : Id.name option -> dctx * typ -> cvar
 val newCVar     : Id.name option -> Id.cid_schema -> ctx_var
@@ -100,6 +101,7 @@ val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 val cnormPattern  : Comp.pattern * msub -> Comp.pattern 
 
 val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
+val cnormMetaTyp : Comp.meta_typ * msub -> Comp.meta_typ
 
 val cnormMSub  : msub -> msub
 val cnormCSub  : (csub * msub) -> csub

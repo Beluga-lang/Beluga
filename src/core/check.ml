@@ -248,8 +248,14 @@ module Comp = struct
 
   | (MetaObj (loc, phat, tM), (MetaTyp (tA, cPsi), t)) ->  
       LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) 
+
   | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->  
       LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)  
+
+  | (MetaParam (loc, _phat, h), (MetaTyp (tA, cPsi), t)) ->  
+      let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in 
+      let tA  = C.cnormTyp (tA, t) in 
+        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
 ;
          
     (* The case for parameter types should be handled separately, for better error messages -bp *)
@@ -261,10 +267,9 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
       begin match cdecl with 
         | I.CDecl (_psi, schema_cid, _ ) -> 
             let MetaCtx (_, cPsi) = mO in 
-            let theta' = Ctxsub.csub_msub cPsi 1 t in
-            let cK'   = Ctxsub.csub_ckind cD cPsi 1 cK in               
+            let theta' = I.MDot (I.CObj (cPsi), t) in
               checkMetaObj loc cD mO (MetaSchema schema_cid , t); 
-              checkMetaSpine loc cD mS (cK', theta')
+              checkMetaSpine loc cD mS (cK, theta') 
 
         | I.MDecl (_u, tA, cPsi) -> 
             let MetaObj (loc, psihat, tM) = mO in 
@@ -599,6 +604,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           (match mO with
             | MetaObj (_, phat, tM) ->  I.MDot(I.MObj(phat, tM), theta)
             | MetaObjAnn (_, cPsi, tM) -> I.MDot (I.MObj(Context.dctxToHat cPsi, tM), theta)
+          )
+    | I.PDecl (_, tA, cPsi) -> 
+        let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in 
+          (match mO with
+            | MetaParam (_, phat, h) ->  I.MDot(I.PObj(phat, h), theta)
           )
     | I.CDecl (_, w, _ ) -> 
         let _ = checkMetaObj loc cD mO (MetaSchema w, theta) in 

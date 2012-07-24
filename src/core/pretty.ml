@@ -110,6 +110,9 @@ module Int = struct
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
 
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
+    val fmt_ppr_meta_typ      : LF.mctx -> lvl -> formatter -> Comp.meta_typ -> unit
+    val fmt_ppr_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
+    val fmt_ppr_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
 
     (* Regular Pretty Printers *)
     val ppr_sgn_decl      : Sgn.decl         -> unit
@@ -319,6 +322,15 @@ module Int = struct
             proj
 
       | LF.MMVar (c, (ms, s)) ->
+          fprintf ppf "%s%a%s[%a]%a%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_mmvar lvl) c
+            proj
+            (fmt_ppr_lf_msub cD lvl) ms
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.MPVar (c, (ms, s)) ->
           fprintf ppf "%s%a%s[%a]%a%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_mmvar lvl) c
@@ -579,6 +591,25 @@ module Int = struct
           fprintf ppf "_ "
 
     and fmt_ppr_lf_mmvar lvl ppf = function
+      | LF.MPInst (_, ({ contents = None } as u), _, _, tA, _) ->
+          begin
+            try
+              fprintf ppf "?#%s"
+                (PInstHashtbl.find pinst_hashtbl u)
+            with
+              | Not_found ->
+                  let sym = match Store.Cid.Typ.gen_mvar_name tA with 
+                              | Some vGen -> vGen ()
+                              | None -> Gensym.MVarData.gensym ()
+                  in 
+                      PInstHashtbl.replace pinst_hashtbl u sym
+                    ; fprintf ppf "?#%s" sym
+          end
+      | LF.MPInst (_, {contents = Some h}, cD, cPsi, _, _) ->
+          (* fprintf ppf "MMV SOME %a" *)
+          fprintf ppf " %a"
+            (fmt_ppr_lf_head cD cPsi lvl) h
+
       | LF.MInst (_, ({ contents = None } as u), _, _, tA, _) ->
           begin
             try
@@ -886,6 +917,15 @@ module Int = struct
               (fmt_ppr_cmp_kind (LF.Dec(cD, ctyp_decl)) 1) cK
               (r_paren_if cond)
 
+
+    let rec fmt_ppr_meta_typ cD lvl ppf = function 
+      | Comp.MetaTyp (tA, cPsi) -> 
+          fprintf ppf "[%a.%a]"
+            (fmt_ppr_lf_dctx cD lvl) cPsi
+            (fmt_ppr_lf_typ cD cPsi lvl) tA
+      | Comp.MetaSchema (s_cid) -> 
+          fprintf ppf "%s" (R.render_cid_schema s_cid)
+
     let rec fmt_ppr_meta_spine cD lvl ppf = function 
       | Comp.MetaNil ->           
           fprintf ppf ""
@@ -912,6 +952,14 @@ module Int = struct
               (l_paren_if cond)
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
+              (r_paren_if cond)
+      | Comp.MetaParam (_, phat, h) ->
+          let cond = lvl > 1 in
+          let cPsi = phatToDCtx phat in
+            fprintf ppf "%s[%a. %a]%s"
+              (l_paren_if cond)
+               (fmt_ppr_lf_psi_hat cD 0) cPsi
+              (fmt_ppr_lf_head cD cPsi 0) h
               (r_paren_if cond)
          
     let rec fmt_ppr_cmp_typ cD lvl ppf = function
@@ -1579,7 +1627,8 @@ module Int = struct
 
 
     let metaObjToString  cD mO = 
-        fmt_ppr_meta_obj cD std_lvl str_formatter mO
+      let mO' = Whnf.cnormMetaObj (mO, Whnf.m_id) in 
+        fmt_ppr_meta_obj cD std_lvl str_formatter mO'
         ; flush_str_formatter ()
 
     let gctxToString cD cG = 

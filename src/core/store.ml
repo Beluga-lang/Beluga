@@ -6,6 +6,8 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
+(* Register error printer at the end of this module. *)
+
 module Cid = struct
 
   module Typ = struct
@@ -195,8 +197,6 @@ module Cid = struct
         entry_list := cid_tp :: !entry_list;
         inspectKind cid_tp [] entry.kind; 
         cid_tp
-    
-
 
     let addConstructor loc typ c tA =
       let entry = get typ in
@@ -224,9 +224,7 @@ module Cid = struct
     let is_typesubordinate_to a b =
       let b_e = get b in
         (*subord_read*)BitSet.is_set b_e.typesubordinated a
-
   end
-
 
   module Term = struct
 
@@ -316,6 +314,7 @@ module Cid = struct
       implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
                                     are factored into implicit arguments *)
       kind                : Int.Comp.kind;
+      mutable frozen       : bool;
       mutable constructors: Id.cid_comp_const list 
     }
 
@@ -325,6 +324,7 @@ module Cid = struct
       name               = name;
       implicit_arguments = implicit_arguments;
       kind               = kind;
+      frozen             = false;
       constructors       = []
     }
 
@@ -346,7 +346,10 @@ module Cid = struct
         cid_comp_typ
 
     let get = DynArray.get store
-
+    
+    let freeze a =
+          (get a).frozen <- true
+    
     let addConstructor c typ = 
       let entry = get typ in 
         entry.constructors <- c :: entry.constructors 
@@ -406,15 +409,15 @@ module Cid = struct
       name               : Id.name;
       implicit_arguments : int;
       typ                : Int.Comp.typ;
-      prog               : Int.Comp.exp_chk;
+      prog               : Int.Comp.value;
       mut_rec            : Id.name list
     }
 
-    let mk_entry name typ implicit_arguments exp name_list =  {
+    let mk_entry name typ implicit_arguments v name_list = {
       name               = name;
       implicit_arguments = implicit_arguments;
       typ                = typ;
-      prog               = exp;
+      prog               = v;
       mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
     }
 
@@ -423,17 +426,17 @@ module Cid = struct
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
-
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
 
-    let add e =
+    let add f =
       let cid_prog = DynArray.length store in
-        DynArray.add store e;
-        Hashtbl.replace directory e.name cid_prog;
-        cid_prog
+      let e = f cid_prog in
+      DynArray.add store e;
+      Hashtbl.replace directory e.name cid_prog;
+      cid_prog
 
     let get = DynArray.get store
 
@@ -739,6 +742,5 @@ let _ = Error.register_printer
       match err with
         | FrozenType n ->
             Format.fprintf ppf
-              "type %s was frozen by a previous case analysis;@ \
-               can't declare a new constructor here"
+              "Type %s is frozen. A new constructor cannot be defined."
               (Cid.DefaultRenderer.render_cid_typ n)))

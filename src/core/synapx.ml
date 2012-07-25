@@ -200,8 +200,5 @@ module Comp = struct
   and branch_pattern =
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
-  
 
 end
-
-

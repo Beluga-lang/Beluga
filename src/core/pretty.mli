@@ -49,6 +49,7 @@ module Int : sig
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
+    val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
@@ -98,14 +99,15 @@ module Int : sig
 
     val schemaToString    : LF.schema     -> string 
     val schElemToString   : LF.sch_elem   -> string 
-    val gctxToString      : LF.mctx -> Comp.gctx  -> string
+    val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
-    val expChkToString    : LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
-    val expSynToString    : LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
-    val branchToString    : LF.mctx -> Comp.gctx  -> Comp.branch   -> string
-    val compKindToString  : LF.mctx -> Comp.kind  -> string
-    val compTypToString   : LF.mctx -> Comp.typ   -> string
-    val msubToString      : LF.mctx -> LF.msub    -> string
+    val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
+    val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
+    val valueToString     :                         Comp.value   -> string
+    val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
+    val compKindToString  : LF.mctx              -> Comp.kind -> string
+    val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end
 

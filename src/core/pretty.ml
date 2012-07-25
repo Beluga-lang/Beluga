@@ -5,8 +5,6 @@
 
 open Format
 
-
-
 (* Explanation of formatting markup:
 
    "@[" opens a box (open_box 0).  You may specify more information
@@ -46,11 +44,9 @@ open Format
      - Function whose names start with "frugal" try to produce output similar to human input.
 *)
 
-
 type lvl    = int
 
 let std_lvl = 0
-
 
 let l_paren_if cond =
   if cond
@@ -62,7 +58,6 @@ let r_paren_if cond =
   then ")"
   else ""
 
-
 module Control = struct
   type substitution_style = Natural | DeBruijn
 
@@ -71,7 +66,6 @@ module Control = struct
 
   let db() = !substitutionStyle = DeBruijn
 end (* Control *)
-
 
 module Int = struct
 
@@ -105,6 +99,7 @@ module Int = struct
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
+    val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
@@ -155,16 +150,15 @@ module Int = struct
     val schemaToString    : LF.schema     -> string
     val schElemToString   : LF.sch_elem   -> string
 
-    val gctxToString      : LF.mctx -> Comp.gctx  -> string
+    val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
-    val expChkToString    : LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
-    val expSynToString    : LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
-    val branchToString    : LF.mctx -> Comp.gctx  -> Comp.branch   -> string
-    val compKindToString  : LF.mctx -> Comp.kind  -> string
-    val compTypToString   : LF.mctx -> Comp.typ   -> string
-    val msubToString      : LF.mctx -> LF.msub    -> string
-
-
+    val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
+    val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
+    val valueToString     :                         Comp.value   -> string
+    val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
+    val compKindToString  : LF.mctx              -> Comp.kind -> string
+    val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end (* Int.PRINTER *)
 
@@ -1179,13 +1173,6 @@ module Int = struct
 
       | Comp.Hole (_) -> fprintf ppf " ? "
 
-      | Comp.Value (Comp.FunValue _ ) -> fprintf ppf " fn "
-      | Comp.Value (Comp.RecValue _ ) -> fprintf ppf " rec "
-      | Comp.Value (Comp.MLamValue _ ) -> fprintf ppf " mlam "
-      | Comp.Value (Comp.CtxValue _ ) -> fprintf ppf " mlam "
-      | Comp.Value (Comp.BoxValue _ ) -> fprintf ppf " box "
-      | Comp.Value (Comp.ConstValue _ ) -> fprintf ppf " const "
-
     and strip_mapp_args cD cG i = 
       if !Control.printImplicit then 
         i 
@@ -1315,6 +1302,29 @@ module Int = struct
 
       | Comp.Boolean false -> 
           fprintf ppf "ffalse"
+
+    and fmt_ppr_cmp_value lvl ppf = function
+      | Comp.FunValue _ -> fprintf ppf " fn "
+      | Comp.RecValue _ -> fprintf ppf " rec "
+      | Comp.MLamValue _ -> fprintf ppf " mlam "
+      | Comp.CtxValue _ -> fprintf ppf " mlam "
+      | Comp.PsiValue psi -> fprintf ppf "[%a]" (fmt_ppr_lf_dctx LF.Empty lvl) psi
+      | Comp.BoxValue (phat, tM) ->
+        fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl ppf (Comp.Box (Syntax.Loc.ghost, phat, tM))
+      | Comp.ConstValue _ -> fprintf ppf " const "
+      | Comp.BoolValue true -> fprintf ppf "ttrue"
+      | Comp.BoolValue false -> fprintf ppf "ffalse"
+      | Comp.PairValue (v1, v2) ->
+        fprintf ppf "(%a , %a)"
+          (fmt_ppr_cmp_value 0) v1
+          (fmt_ppr_cmp_value 0) v2
+      | Comp.DataValue (c, spine) ->
+        let rec print_spine ppf = function
+          | Comp.DataNil -> ()
+          | Comp.DataApp (v, spine) ->
+            print_spine ppf spine;
+            fprintf ppf " %a" (fmt_ppr_cmp_value lvl) v
+        in fprintf ppf "%s%a" (R.render_cid_comp_const c) print_spine spine
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function 
       | LF.Empty -> ()
@@ -1648,6 +1658,10 @@ module Int = struct
 
     let expSynToString cD cG i   = 
       fmt_ppr_cmp_exp_syn cD cG std_lvl str_formatter i
+      ; flush_str_formatter ()
+
+    let valueToString v = 
+      fmt_ppr_cmp_value std_lvl str_formatter v
       ; flush_str_formatter ()
 
     let branchToString cD cG  b    = 

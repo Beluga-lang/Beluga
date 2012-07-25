@@ -26,7 +26,6 @@ type error =
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | CompScrutineeTyp    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.tclo * Int.LF.dctx 
-  | CompScrutineeSubTyp of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.dctx * Int.LF.dctx
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
   | ContextSchemaClash  of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
@@ -75,18 +74,6 @@ let _ = Error.register_printer
              This error may indicate@ that some implicit arguments that are reconstructed@ \
              should be restricted.@."
             (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sP)
-            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
-            (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
-
-        | CompScrutineeSubTyp (cD, cG, i, cPsi, cPhi) -> 
-          Format.fprintf ppf
-            "Type %a[%a]@.\
-             of scrutinee %a@.\
-             is not closed@ or requires that some meta-variables@ introduced in the pattern@ \
-             are further restricted,@ i.e. some variable dependencies cannot happen.@ \
-             This error may indicate@ that some implicit arguments that are reconstructed@ \
-             should be restricted.@."
-            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPhi
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
             (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
 

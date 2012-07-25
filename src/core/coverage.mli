@@ -31,3 +31,4 @@ val force  : (coverage_result -> 'a) -> 'a list
 
 (* val covers : problem -> coverage_result *)
 val process : problem -> unit   (* check coverage immediately *)
+(* val etaExpandMVstr     : sub -> dctx -> tclo -> normal *)

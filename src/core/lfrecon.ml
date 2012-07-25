@@ -22,7 +22,7 @@ type error =
   | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | LeftoverConstraints of Id.name
-  | SubIllTyped 
+  | IllTypedSub
   | PruningFailed
   | IllTypedIdSub
   | CompTypAnn       
@@ -62,7 +62,7 @@ let _ = Error.register_printer
 	    "Pruning a type failed.@ This can happen when you have some free@ \
              meta-variables whose type cannot be inferred."
 
-        | SubIllTyped ->
+        | IllTypedSub ->
           Format.fprintf ppf "Ill-typed substitution during elaboration."
 
         | IllTypedIdSub ->
@@ -1388,7 +1388,7 @@ and elSub' loc recT cD cPsi s cPhi =
     if phi = phi' then
       let s' = elSub' loc recT cD cPsi s cPhi in
       Int.LF.SVar (Int.LF.Offset offset, s')
-    else raise (Error (loc, SubIllTyped))
+    else raise (Error (loc, IllTypedSub))
 
   | (Apx.LF.Id _ , Int.LF.DDec (_cPhi', _decl)) -> 
     elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi

@@ -65,8 +65,6 @@ module Comp = struct
     | BoxMismatch     of I.mctx * gctx  * tclo 
     | SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
     | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
-    | SubPattMismatch of (I.mctx * I.dctx * I.sub * I.dctx) * 
-                         (I.mctx * I.dctx * I.dctx)  
     | BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
     | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) * 
                          (I.mctx * I.dctx * I.tclo)  
@@ -125,15 +123,6 @@ module Comp = struct
               "Inferred type"
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
               (TypBox (Syntax.Loc.ghost, Whnf.normTyp sA, Whnf.normDCtx cPsi))
-
-          | SubPattMismatch ((cD, cPsi, sigma, cPhi) , (cD', cPsi', cPhi')) ->
-            Format.fprintf ppf
-              "ill-typed pattern\n  expected: %a[%a] \n  inferred: %a[%a]\n  for subst-pattern: %a"
-              (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) (Whnf.normDCtx cPsi')
-              (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) (Whnf.normDCtx cPhi')
-              (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) (Whnf.normDCtx cPsi)
-              (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) (Whnf.normDCtx cPhi)
-              (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) sigma
 
           | BoxCtxMismatch (cD, cPsi, (phat, tM)) ->
             Format.fprintf ppf
@@ -659,19 +648,10 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 end
   
-
-
 module Sgn = struct
 
-  type error
-
-  let error_location e = assert false
-
-  let report_error fmt e = assert false
-
   let rec check_sgn_decls = function
-    | [] ->
-        ()
+    | [] -> ()
 
     | Syntax.Int.Sgn.Typ (_a, tK) :: decls ->
         let cD   = Syntax.Int.LF.Empty in

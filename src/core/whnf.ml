@@ -18,26 +18,8 @@ open Syntax.Int
 open Substitution
 
 
-type error =
-    CompFreeMVar of Id.name
-  | NotPatSub
-
-exception Error of Syntax.Loc.t * error
-
 module R = Store.Cid.DefaultRenderer
 module T = Store.Cid.Typ
-
-let _ = Error.register_printer
-  (fun (Error (loc, err)) ->
-    Error.print_with_location loc (fun ppf ->
-      match err with
-      | CompFreeMVar u ->
-          Format.fprintf ppf "Encountered free meta-variables %s\n"
-            (Store.Cid.DefaultRenderer.render_name u)
-
-      | NotPatSub ->
-          Format.fprintf ppf "Not a pattern substitution" (* TODO *) ))
-
 
 exception Fmvar_not_found
 exception FreeMVar of head
@@ -55,33 +37,27 @@ let rec emptySpine tS = match tS with
   | SClo(tS, _s) -> emptySpine tS
 
 
-  (* isPatSub s = B
+(* isPatSub s = B
 
-     Invariant:
+   Invariant:
 
-     If    Psi |- s : Psi' 
-     and   s = n1 .. nm ^k
-     then  B iff  n1, .., nm pairwise distinct
-     and  ni <= k or ni = _ for all 1 <= i <= m
-  *)
-  let rec isPatSub s = 
-    (* let s = (Whnf.normSub s) in  *)
-    begin match s with
-    | Shift (_,_k)              -> true
-    | Dot (Head(BVar n), s) ->
-        let rec checkBVar s' = match s' with
-          | Shift (_ , k)           -> n <= k
-          | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
-          | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s 
-          | Dot (Undef, s)          -> checkBVar s
-          | _                       -> false
-        in
-          checkBVar s && isPatSub s
-
-    | Dot (Undef, s)        -> isPatSub s
-
-    | _                     -> false
-    end 
+   If    Psi |- s : Psi'
+   and   s = n1 .. nm ^k
+   then  B iff  n1, .., nm pairwise distinct
+   and  ni <= k or ni = _ for all 1 <= i <= m
+*)
+let rec isPatSub = function
+  | Shift (_,_k)              -> true
+  | Dot (Head(BVar n), s) ->
+    let rec checkBVar s' = match s' with
+      | Shift (_ , k)           -> n <= k
+      | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+      | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s
+      | Dot (Undef, s)          -> checkBVar s
+      | _                       -> false in
+    checkBVar s && isPatSub s
+  | Dot (Undef, s)        -> isPatSub s
+  | _                     -> false
 
   (* isPatMSub t = B
 
@@ -147,9 +123,6 @@ let rec etaContract tM = begin match tM with
         end 
   | _  -> Obj tM
  end
-
-
-
 
 (*************************************)
 (* Creating new contextual variables *)
@@ -902,8 +875,6 @@ and cnorm (tM, t) = match tM with
               end 
 
           | FMVar (u, r) -> Root (loc, FMVar (u, cnormSub (r,t)),  cnormSpine (tS, t))
-              (* raise (Error (loc, CompFreeMVar u)) *)
-
 
           | MVar (Inst (_n, {contents = Some tM}, _cPsi, _tA, _cnstr), r) ->  
               (* We could normalize [r]tM *)
@@ -989,7 +960,6 @@ and cnorm (tM, t) = match tM with
             end
 
           | FPVar (p, r) -> Root(loc, FPVar (p, cnormSub (r,t)), cnormSpine (tS, t)) 
-              (* raise (Error (loc, CompFreeMVar p)) *)
 
           | Proj (FPVar (_p, _r), _tupleIndex) as head -> 
               Root (loc, head, cnormSpine(tS, t)) 
@@ -2438,8 +2408,6 @@ let rec mctxPVarPos cD p =
         Comp.Case (loc, prag, cnormExp' (i,t), 
                    List.map (function b -> cnormBranch (b, t)) branches)
 
-    | (Comp.Value v, _ ) -> Comp.Value v
-
     | (Comp.If (loc, i, e1, e2), t) -> 
         Comp.If (loc, cnormExp' (i,t),  
                  cnormExp (e1, t), cnormExp (e2, t))
@@ -2707,50 +2675,6 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
     convTypRec (trec, LF.id) (trec', LF.id)
 
 
-(* ----------------------------------------------------------- *)
-(* makePatSub s = Some(s') if s is convertible to a patSub
- *                None otherwise
- *
- * Invariant:
- * If    cPsi |- s : cPsi'
- * and   s = n1 .. nm ^k
- * then  tB iff  n1, .., nm pairwise distinct
- *         and  ni <= k or ni = _ for all 1 <= i <= m
- *)
-let rec mkPatSub s = match s with
-  | Shift (NoCtxShift, _k) ->
-      s
-
-  | Shift (CtxShift (_psi), _k) ->
-      s
-
-  | Shift (NegCtxShift _,  _k) ->
-      raise (Error (Syntax.Loc.ghost, NotPatSub))
-
-  | Dot (Head (BVar n), s) ->
-      let s' = mkPatSub s in
-      let rec checkBVar s = match s with
-        | Shift (_ , k)            -> n <= k
-        | Dot (Head (BVar n'), s') -> n <> n' && checkBVar s'
-        | Dot (Undef, s')          ->            checkBVar s' in
-      let _ = checkBVar s' in
-        Dot (Head (BVar n), s')
-
-  | Dot (Undef, s) ->
-      Dot (Undef, mkPatSub s)
-
-  | Dot (Obj tM, s) ->
-      begin match whnf (tM, LF.id) with
-        | (Root (_, BVar k, Nil), _id) -> Dot (Head (BVar k), mkPatSub s)
-        | _                            -> raise (Error (Syntax.Loc.ghost, NotPatSub))
-      end
-
-  | _ ->
-      raise (Error (Syntax.Loc.ghost, NotPatSub))
-
-
-let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
-
 (* ------------------------------------------------------------ *)
 
 
@@ -2761,8 +2685,7 @@ let rec makePatSub s = try Some (mkPatSub s) with Error _ -> None
  *
  *  cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMV cPsi sA n s' = etaExpandMV' cPsi (whnfTyp sA) n s'
-
+let rec etaExpandMV cPsi sA n s' =  etaExpandMV' cPsi (whnfTyp sA) n s'
 and etaExpandMV' cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
       
@@ -2772,7 +2695,7 @@ and etaExpandMV' cPsi sA n s' = match sA with
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s'))
 
-
+(* Coverage.etaExpandMVstr s' cPsi sA *)
 
 (* etaExpandMMV cD cPsi sA s' = tN
  *

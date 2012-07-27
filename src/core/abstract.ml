@@ -1033,9 +1033,15 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
       else 
         raise (Error (loc, LeftoverConstraints))
 
-  | (I.MPVar (I.MPInst (_n, ({contents = Some _h} as _q), _cD, _cPsi, _tA,  ({contents = _cnstr} as _c)) as _r, (_ms', _s')), _s) ->
-      (Printf.printf "[collectHead] non-normal MPVar "; raise (Error (loc, LeftoverConstraints)))
+  | (I.MPVar (I.MPInst (_n, ({contents = Some h} as _q), cD, cPsi, _tA,
+    ({contents = _cnstr} as _c)) as _r, (ms', s')), s) ->
+      let h' = Whnf.cnormHead (h,ms') in 
+      collectHead k cQ phat loc (h', LF.comp s' s)
 
+(*      (Printf.printf "[collectHead] non-normal MPVar : ";
+       dprint (fun () -> "             " ^ P.headToString cD cPsi h);
+       raise (Error (loc, LeftoverConstraints)))
+*)
   | (I.MPVar (I.MPInst (_n, _r, _cD, _cPsi, _tA,  _), _),  _s) ->
       raise (Error (loc, LeftoverMPV))
 

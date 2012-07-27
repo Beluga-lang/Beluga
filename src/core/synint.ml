@@ -230,6 +230,7 @@ module Comp = struct
 
   type meta_typ =
     | MetaTyp of LF.typ * LF.dctx
+    | MetaParamTyp of LF.typ * LF.dctx
     | MetaSchema of cid_schema
 
   type meta_obj =

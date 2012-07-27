@@ -527,25 +527,72 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in 
       let tA' = C.cnormTyp (tA, theta) in 
       let _        = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi' (tA',LF.id) ) in 
-      let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in 
-         
+      let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in          
       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in  
       let _        = Unify.resetGlobalCnstrs () in 
-        
+        (* RETURN POSSIBLY A PARAMETER OBJECT *)
       let _        = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi' (tM', LF.id) ) in
         Int.Comp.MetaObj (loc, phat, tM')
 
-  | (Apx.Comp.MetaParam (loc, phat, h), (Int.Comp.MetaTyp (tA, cPsi), theta)) ->  
+  | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.Comp.MetaParamTyp (tA, cPsi), theta)) ->       
       let cPsi' = C.cnormDCtx (cPsi, theta) in 
+      let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
+      let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in  
+      let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in  
+      let _ =
+        (* unifying two contexts AND inferring schema for psi in
+           cPhi, if psi is not in cD *)
+        try unifyDCtxWithFCVar cD cPsi' cPhi
+        with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
+      let phat = Context.dctxToHat cPhi  in
+      let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in 
+      let tA' = C.cnormTyp (tA, theta) in 
+      let _   = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi' (tA',LF.id) ) in 
+      let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in          
+      let h   = begin match tM' with 
+                  | Int.LF.Root(_, ((Int.LF.FPVar (p,s)) as h), Int.LF.Nil) -> h
+                  | Int.LF.Root(_, ((Int.LF.PVar (p,s)) as h), Int.LF.Nil) -> h
+                  | Int.LF.Root (_, ((Int.LF.BVar k) as h), Int.LF.Nil) -> h 
+                  | Int.LF.Root (_, (Int.LF.Proj (_, _ ) as h), Int.LF.Nil) -> h
+                end in 
+      let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in  
+      let _   = Unify.resetGlobalCnstrs () in 
+      let _   = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in
+        Int.Comp.MetaParam (loc, phat, h)
+
+
+  | (Apx.Comp.MetaObj (loc, phat, tM), (Int.Comp.MetaParamTyp (tA, cPsi), theta)) ->       
+      let cPsi' = C.cnormDCtx (cPsi, theta) in 
+      let tA'   = C.cnormTyp (tA, theta) in 
       if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
-        let (h', sA') = Lfrecon.elHead loc (Lfrecon.Pibox) cD cPsi' h in
-        let _         = Unify.unifyTyp cD cPsi sA' (tA, LF.id) in 
-        let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in  
-        let _        = Unify.resetGlobalCnstrs () in 
-        let _        = dprint (fun () -> "[elMetaObj] expected tA = " ^ P.typToString cD cPsi (tA, LF.id) ) in 
-        let _        = dprint (fun () -> "[elMetaObj] inferred sA' = " ^ P.typToString cD cPsi sA') in 
-        let _        = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi h') in 
-          Int.Comp.MetaParam (loc, phat, h')
+        let _ = dprint (fun () -> "[elMetaObj/Param] cPsi = " ^ P.dctxToString cD  cPsi') in  
+        let _   = dprint (fun () -> "[elMetaObj]/Param tA = " ^ P.typToString cD cPsi' (tA',LF.id) ) in 
+        let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in          
+        let h   = begin match tM' with 
+          | Int.LF.Root(_, ((Int.LF.FPVar (p,s)) as h), Int.LF.Nil) -> h
+          | Int.LF.Root(_, ((Int.LF.PVar (p,s)) as h), Int.LF.Nil) -> h
+          | Int.LF.Root (_, ((Int.LF.BVar k) as h), Int.LF.Nil) -> h 
+          | Int.LF.Root (_, (Int.LF.Proj (_, _ ) as h), Int.LF.Nil) -> h
+        end in 
+        let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in  
+        let _   = Unify.resetGlobalCnstrs () in 
+        let _   = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in
+          Int.Comp.MetaParam (loc, phat, h)
+      else 
+        raise (Error.Violation ("ParamObj not of the appropriate meta-type" 
+                                ^ P.typToString cD cPsi (tA, LF.id)))
+
+  | (Apx.Comp.MetaParam (loc, phat, h), (Int.Comp.MetaParamTyp (tA, cPsi), theta)) ->  
+      let cPsi' = C.cnormDCtx (cPsi, theta) in 
+      let tA'   = C.cnormTyp (tA, theta) in 
+      if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
+        let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in 
+        let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in          
+        let _  = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in  
+        let _  = Unify.resetGlobalCnstrs () in 
+        let _  = dprint (fun () -> "[elMetaObj] expected tA = " ^ P.typToString cD cPsi' (tA', LF.id) ) in 
+        let _  = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in 
+          Int.Comp.MetaParam (loc, phat, h)
       else 
         raise (Error.Violation ("MetaParameter not of the appropriate meta-type" 
                                 ^ P.typToString cD cPsi (tA, LF.id)))
@@ -606,7 +653,7 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
 
 
         | Int.LF.PDecl (_u, tA, cPsi) -> 
-            let (Int.Comp.MetaParam (_, psihat, h) as cM) = elMetaObj cD m (Int.Comp.MetaTyp (tA, cPsi), theta)  in 
+            let (Int.Comp.MetaParam (_, psihat, h) as cM) = elMetaObj cD m (Int.Comp.MetaParamTyp (tA, cPsi), theta)  in 
             let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.PObj(psihat, h), theta)) in 
               Int.Comp.MetaApp (cM, cS)
 
@@ -1418,17 +1465,7 @@ and elPatMetaObj cD pat (cdecl, theta) = match pat with
                    Int.LF.MDot (Int.LF.MObj (phat, tM), theta))
            )
        | Int.LF.PDecl (_, tA, cPsi) -> 
-           (match  elMetaObj cD cM (Int.Comp.MetaTyp (tA, cPsi), theta)  with
-              | (Int.Comp.MetaObj (loc, phat, tM)) ->
-                  let h = begin match tM with
-                          | Int.LF.Root(_, ((Int.LF.FPVar (p,s)) as h), Int.LF.Nil) -> h
-                          | Int.LF.Root(_, ((Int.LF.PVar (p,s)) as h), Int.LF.Nil) -> h
-                          | Int.LF.Root (_, ((Int.LF.BVar k) as h), Int.LF.Nil) -> h 
-                          | Int.LF.Root (_, (Int.LF.Proj (_, _ ) as h), Int.LF.Nil) -> h
-                          end 
-                  in 
-                    (Int.Comp.PatMetaObj (loc, Int.Comp.MetaParam (loc, phat, h)), 
-                     Int.LF.MDot (Int.LF.PObj (phat, h), theta))
+           (match elMetaObj cD cM (Int.Comp.MetaParamTyp (tA, cPsi), theta)  with
               | (Int.Comp.MetaParam (loc, phat, h) as cM') ->
                   (Int.Comp.PatMetaObj (loc, cM'), 
                    Int.LF.MDot (Int.LF.PObj (phat, h), theta))
@@ -1579,6 +1616,9 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let _ = dprint (fun () -> "[elPatSpine] TypPiBox explicit ttau = " ^
                                P.compTypToString cD (Whnf.cnormCTyp ttau)) in  
              let (pat, theta') = elPatMetaObj cD pat' (cdecl, theta) in 
+             let _ = dprint (fun () -> "[elPatSpine] pat = " ^ P.patternToString cD cG pat ) in 
+             let _ = dprint (fun () -> "[elPatSpine] remaining pattern spine must have type : " ) in 
+             let _ = dprint (fun () -> "              " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta'))) in 
              let (cG1, pat_spine, ttau2) = elPatSpine cD cG pat_spine' (tau, theta') in 
                (cG1, Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
          | (Int.Comp.TypCtxPi ((x, w, Int.Comp.Explicit), tau), theta) ->     
@@ -1608,6 +1648,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let psihat  = Context.dctxToHat cPsi' in 
                
              let p   =  Int.LF.MPVar(Whnf.newMPVar (Some n) (cD, cPsi', tA'), (Whnf.m_id, LF.id)) in 
+             let _   = dprint (fun () -> "[elPatSpine] new MPVar #p = " ^ P.headToString cD cPsi' p ^ "\n") in
               let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaParam (loc, psihat, p)) in 
              let ttau' = (tau, Int.LF.MDot (Int.LF.PObj (psihat, p), theta)) in 
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 
@@ -1622,6 +1663,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaCtx (loc, cPsi)) in 
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in 
                  (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
+          | _ ->  raise (Error (loc, TooManyMetaObj))
       )
 
 and recPatObj' cD pat (cD_s, tau_s) = match pat with 

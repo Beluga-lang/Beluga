@@ -1333,6 +1333,54 @@ module Make (T : TRAIL) : UNIFY = struct
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in 
                         returnNeutral (MPVar (q, (mt', s')))
+
+
+            | Proj(MPVar (MPInst (_n, r, cD1, cPsi1, tA, cnstrs) as q, (mt, t)), index) (* tS *)   (* s = id *) ->
+                let t = Whnf.normSub t in 
+                  if eq_cvarRef (PVarRef r) rOccur then
+                    raise (Failure "[Prune] Parameter variable occurrence")
+                  else
+                    if isPatSub t & isPatMSub mt then
+                      let (id_sub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
+                        (* cD ; cPsi1 |- idsub <= cPsi2 *)
+                      let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
+                        (* cD  |- mt <= cD1  
+                         * cD1 |- id_msub <=  cD2
+                         * cD  |- [|mt|]id_msub <= cD2
+                         * 
+                         * Note: cD |- cPsi2 ctx  and cD1 ; cPsi1 |- tP <= type
+                         *       cD ; [|mt|]cPsi1 |- [|mt|]tP <= type
+                         *)
+
+                      let i_id_sub  = invert id_sub in 
+                        (* cD; cPsi2 |- i_id_sub : cPsi1 *)
+                      let i_msub = Whnf.m_invert (Whnf.mcomp id_msub mt) in 
+                        (* cD2 |- i_msub <= cD 
+                         * cD ; cPsi2 |- i_id_sub <= cPsi1
+                         * cD2 ; [|i_msub|]cPsi2 |- [|i_msub|]i_id_sub <= [|i_msub|]cPsi1
+                         * 
+                         * and more importantly: cD2 |- [|i_msub|]cPsi2 ctx
+                         *)
+                      let i_id_msub = Whnf.m_invert id_msub in 
+                        (* cD2 |- i_id_msub <= cD1 
+                         * cD2 ; [|i_id_msub|]cPsi1 |- [|i_id_msub|]tA <= type
+                         * cD2 ; [|i_msub|]cPsi2 |- [i_sub][|i_id_msub|]tA <= type
+                        *)
+                      let cPsi2' = Whnf.cnormDCtx (cPsi2, i_msub) in 
+                      let i_sub  = Whnf.cnormSub (i_id_sub, i_msub) in 
+                      let tA'    = Whnf.cnormTyp (tA, i_id_msub) in 
+
+                      let v = Whnf.newMPVar None (cD2, cPsi2', TClo(tA', i_sub)) in
+
+                      let _ = instantiateMPVar (r, MPVar (v, (id_msub, id_sub)), !cnstrs) in
+                        (* [|p[id_msub, id_sub] / q|] *)
+                        (* h = p[[ssubst] ([t] idsub)] *)
+                        returnNeutral (Proj(MPVar(v, ( Whnf.mcomp (Whnf.mcomp mt id_msub) ms, comp (comp t id_sub) ssubst)), index))
+                    else (* t and mt not patsub *)
+                      let (ms, ssubst) = ss in 
+                      let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                      let mt' = invMSub cD0 (mt, cD1) ms rOccur in 
+                        returnNeutral (Proj(MPVar (q, (mt', s')), index))
                         
             | Proj (PVar (PInst (_n, r, cPsi1, tA, cnstrs) as q, t), i)  (* s = id *) ->
                 let t = Whnf.normSub t in 
@@ -2153,7 +2201,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     (* MMVar-normal case *)
-    | ((Root (_, MMVar (MInst (_n, r, _cD,  cPsi1, _tP, cnstrs), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
+    | ((Root (_, MMVar (MInst (_n, r, cD,  cPsi1, _tP, cnstrs), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         dprnt "(011) MMVar-_";
         let t' = Whnf.normSub (comp t s1) in
         let _ = dprint (fun () -> "t' = " ^ P.subToString cD0 cPsi t') in 
@@ -2169,6 +2217,10 @@ module Make (T : TRAIL) : UNIFY = struct
                                   P.normalToString cD0 cPsi sM2 ^ "\n") in  
               let phat = Context.dctxToHat cPsi in 
               let sM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (mtt, ss) (MMVarRef r)) in
+              let _ = dprint (fun () -> 
+                                "UNIFY(2): MMVar-Normal Pruned sM2'\n" ^ 
+                                  P.mctxToString cD ^ "\n" ^ 
+                                  P.normalToString cD cPsi1 (sM2', id) ^ "\n" ) in  
                 instantiateMMVar (r, sM2', !cnstrs) ;
                  dprint (fun () -> "Instantiated meta^2-variable to : " ^ 
                                         P.normalToString cD0 cPsi sM1)
@@ -2431,8 +2483,8 @@ module Make (T : TRAIL) : UNIFY = struct
 
                    (instantiateMPVar (q2, MPVar(v, (id_msub , id_sub)), !cnstr2);
 
-                    instantiateMPVar (q1, MPVar(v, (Whnf.mcomp mtt1 (Whnf.mcomp mt2' id_msub), 
-                                                    comp ss (comp s2' id_sub))), 
+                    instantiateMPVar (q1, MPVar(v, (Whnf.mcomp (Whnf.mcomp id_msub mt2') mtt1 , 
+                                                    comp (comp id_sub s2') ss)), 
                                           !cnstr1))
 
    
@@ -2522,7 +2574,7 @@ module Make (T : TRAIL) : UNIFY = struct
            check q1 = q2 *)        
         let s1' = Whnf.normSub s1' in 
         let s2' = Whnf.normSub s2' in 
-(*        let _ = dprint (fun () -> "[unifyHead] PVar (PInst) = PVar(PInst) " ) in*)
+        let _ = dprint (fun () -> "[unifyHead] PVar (PInst) = PVar(PInst) " ) in
         if q1 == q2 then (* cPsi1 = _cPsi2 *)
 (*          (let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 = q2 " ) in*)
           (match (isPatSub s1' ,  isPatSub s2') with
@@ -2554,24 +2606,26 @@ module Make (T : TRAIL) : UNIFY = struct
             | (false, _) ->
                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *))
         else
-          ((*let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in*)
+          (let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in
             match (isPatSub s1' , isPatSub s2') with
              | (true, true) ->
-(*                let _ = dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi head1 ^ 
+                let _ = dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi head1 ^ 
                                   " === " ^ P.headToString cD0 cPsi head2 ) in
                 let _ = dprint (fun () -> "q1 .  cPsi1: " ^ P.dctxToString cD0 cPsi1) in
                 let _ = dprint (fun () -> "q2 .  cPsi2: " ^ P.dctxToString cD0 cPsi2) in
                 let _ = dprint (fun () -> "q1 .  tA1  : " ^ P.typToString cD0 cPsi1 (tA1, id)) in 
                 let _ = dprint (fun () -> "q2 .  tA2  : " ^ P.typToString cD0 cPsi2 (tA2, id)) in 
-*)
+
                  (* no occurs check necessary, because s1' and s2' are pattern subs. *)
                  let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in 
- (*                let _ = dprint (fun () -> "Unification of the types  done ... \n") in *)
+                let _ = dprint (fun () -> "Unification of the types  done ... \n") in 
                  (* at this point: s1' = s2'    ! *)
                  let ss = invert s1' in
                   let _ = dprint (fun () -> "Inverted s1' " ^ P.subToString cD0 cPsi ss ) in 
                  let phat = Context.dctxToHat cPsi in  
-                 let (s', cPsi') = pruneCtx phat (s2', cPsi2) (MShift 0, ss) in
+                 let (s', cPsi') = pruneCtx phat (s2', Whnf.normDCtx cPsi2) (MShift 0, ss) in
+                 let _ = dprint (fun () -> "Pruned cPsi2 : " ^ P.dctxToString cD0 cPsi') in 
+                 let _ = dprint (fun () -> "Pruning subst s' : " ^ P.subToString cD0 cPsi2 s') in 
                    (*
                    (* if   cPsi  |- s2' <= cPsi2  and cPsi1 |- ss <= cPsi
                       then cPsi2 |- s' <= cPsi' and [ss](s2' (s')) exists *)
@@ -2587,7 +2641,11 @@ module Make (T : TRAIL) : UNIFY = struct
                       and [s2'][s'][s'^-1] tA2  = [s2']tA2 *)
                    (instantiatePVar (q2, PVar(p, s'), !cnstr2);
                     (* instantiatePVar (q1, PVar(p, s'), !cnstr1);*)
-                    instantiatePVar (q1, PVar(p, comp ss (comp s2' s')), !cnstr1))
+                    (*  cPsi1 |-  ss [s2']  s'  : cPsi' 
+                        cPsi  |-   comp s' s2'   : cPsi'
+                        cPsi1 |-  (comp s1 s2') ss : cPsi'
+                     *)
+                    instantiatePVar (q1, PVar(p, comp (comp s' s2') ss), !cnstr1))
 
              | (true, false) ->
                  let _ =  unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in 
@@ -2945,10 +3003,10 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') -> 
         let cPsi  = Context.hatToDCtx phat in 
         let cPsi' = Context.hatToDCtx phat' in 
+        let _ = dprint (fun () -> "[unifyMetaObj] MetaObj case ... ") in 
           unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'));
           unifyTerm Unification cD cPsi
             (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id)
-
 
     | (Comp.MetaObjAnn (_, cPsi, tR) , t) , (Comp.MetaObjAnn (_, cPsi', tR') ,
       t') -> 

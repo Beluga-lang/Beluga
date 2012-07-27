@@ -639,6 +639,9 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
 
   | (Apx.LF.Root (_loc, _h, _spine),  (Int.LF.Atom _, _s)) ->
       elTerm' recT cD cPsi m  sA
+
+  | (Apx.LF.Root (_loc, _h, _spine),  (Int.LF.Sigma _, _s)) ->
+      elTerm' recT cD cPsi m  sA
   
   | (Apx.LF.Tuple (loc, tuple),  (Int.LF.Sigma typRec, s)) -> 
       let tuple' = elTuple recT cD cPsi tuple (typRec, s) in

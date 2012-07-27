@@ -363,7 +363,7 @@ module Int = struct
             (r_paren_if (paren s))
 
       | LF.FPVar (p, s) ->
-          fprintf ppf "%s#%s%s%a%s"
+          fprintf ppf "%sFPV #%s%s%a%s"
             (l_paren_if (paren s))
             (R.render_name p)
             proj

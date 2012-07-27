@@ -1005,7 +1005,8 @@ GLOBAL: sgn_eoi;
            end in
 
          Comp.Case (_loc, Pragma.RegularCase, i, [branch])
-      | "let"; ctyp_decls = LIST0 clf_ctyp_decl; pat = cmp_branch_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
+      | "let"; ctyp_decls = LIST0 clf_ctyp_decl; 
+           pat = cmp_branch_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
                            LF.Empty ctyp_decls in
 
@@ -1107,7 +1108,7 @@ isuffix:
    | x = SYMBOL   ->
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name (Id.SomeString x)))))
    | x = UPSYMBOL   ->
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Const (_loc, Id.mk_name (Id.SomeString x)))))
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.DataConst (_loc, Id.mk_name (Id.SomeString x)))))
    | "ttrue"      ->
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, true))))
    | "ffalse"     ->

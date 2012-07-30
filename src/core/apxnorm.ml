@@ -12,6 +12,20 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 exception NotImplemented
 
+type error = 
+  | CtxOverGeneral 
+
+exception Error of Syntax.Loc.t * error
+
+let _ = Error.register_printer
+  (fun (Error (loc, err)) ->
+    Error.print_with_location loc (fun ppf ->
+      match err with
+        | CtxOverGeneral -> 
+          Format.fprintf ppf
+            "context  in the body appears to be more general than the context supplied\n"
+                                  ))
+
 (* ********************************************************************************)
 let rec lengthApxMCtx cD = match cD with
   | Apx.LF.Empty -> 0
@@ -313,27 +327,24 @@ and cnormApxTypRec cD delta t_rec (cD'', t) = match t_rec with
         Apx.LF.SigmaElem (x, a', t_rec')
 
 (* NOTE THERE IS A BUG IN OCAML: we are allowed to name _ cD !*)
-let rec cnormApxDCtx cD delta psi ((_ , t) as cDt) = match psi with
+let rec cnormApxDCtx loc cD delta psi ((_ , t) as cDt) = match psi with
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) -> 
       begin match Substitution.LF.applyMSub offset t with
         | Int.LF.CObj (Int.LF.CtxVar (Int.LF.CtxOffset psi0)) -> 
             Apx.LF.CtxVar (Apx.LF.CtxOffset psi0)
         | Int.LF.CObj(Int.LF.Null) ->  
-            (dprint (fun () -> "[cnormApxDCtx] Null = The context used in the
-body is more general than the context supplied."); 
-	     raise NotImplemented)
-        | Int.LF.CObj(Int.LF.DDec _) -> 
-	    (dprint (fun () -> "[cnormApxDCtx DDec] - The context used in the
-body is more general than the context supplied."); 
-	     raise NotImplemented)
+            Apx.LF.Null
+        | Int.LF.CObj(Int.LF.DDec _ ) ->
+            raise (Error (loc, CtxOverGeneral))
+            (* Apx.LF.CtxVar (Apx.LF.CInst cPsi) *)
 	| Int.LF.MV offset -> Apx.LF.CtxVar (Apx.LF.CtxOffset  offset)
       end
 
   | Apx.LF.CtxVar (Apx.LF.CtxName x) -> psi
 
   | Apx.LF.DDec (psi, t_decl) -> 
-      let psi' = cnormApxDCtx cD delta psi cDt in  
+      let psi' = cnormApxDCtx loc cD delta psi cDt in  
       let t_decl' = cnormApxTypDecl cD delta t_decl cDt in  
         Apx.LF.DDec (psi', t_decl')
 
@@ -422,7 +433,7 @@ and cnormApxExp' cD delta i cDt = match i with
         Apx.Comp.Apply (loc, i', e')
   | Apx.Comp.CtxApp (loc, i, psi) -> 
         let i' = cnormApxExp' cD delta i cDt in 
-        let psi' = cnormApxDCtx cD delta psi cDt in 
+        let psi' = cnormApxDCtx loc cD delta psi cDt in 
           Apx.Comp.CtxApp (loc, i', psi')
 
   | Apx.Comp.MApp (loc, i, Apx.Comp.MetaObj (loc', phat, m)) -> 
@@ -442,13 +453,13 @@ and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.MAnnApp (loc, i, (psi, m)) -> 
       let _ = dprint (fun () -> "[cnormApxExp'] MAnnApp ") in 
       let i' = cnormApxExp' cD delta i cDt in 
-      let psi' = cnormApxDCtx cD delta psi cDt in 
+      let psi' = cnormApxDCtx loc cD delta psi cDt in 
       let m' = cnormApxTerm cD delta m cDt in
         Apx.Comp.MAnnApp (loc, i', (psi', m'))
 
   | Apx.Comp.BoxVal (loc, psi, m) -> 
       let _    = dprint (fun () -> "[cnormApxExp'] BoxVal ") in
-      let psi' = cnormApxDCtx cD delta psi cDt in 
+      let psi' = cnormApxDCtx loc cD delta psi cDt in 
       let m'   = cnormApxTerm cD delta m cDt in 
         Apx.Comp.BoxVal (loc, psi', m')
 

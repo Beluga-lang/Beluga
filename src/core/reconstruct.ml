@@ -509,7 +509,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
         let _        = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi (tM', LF.id) ) in 
           Int.Comp.MetaObj (loc, phat, tM')
       else 
-        raise (Error.Violation ("MetaObj not of the appropriate meta-type" 
+         raise (Error.Violation ("Contexts do not match - MetaObj not of the appropriate meta-type" 
                                 ^ P.typToString cD cPsi (tA, LF.id)))
 
   | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.Comp.MetaTyp (tA, cPsi), theta)) ->       
@@ -1823,28 +1823,13 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
     let t1     = Whnf.mvar_dot (Int.LF.MShift m) cD1 in
       (* cD, cD1 |- t1 <= cD1 *)
     let mt1    = Whnf.mcomp t1 t in        (*         .  |- mt1 <= cD1   *)
-    let cPsi'  = Whnf.cnormDCtx (cPsi, t) in   (*     .  |- cPsi' ctx    *)
-    
-    let _  = begin match (caseT, pattern1) with
-               | (_, None) -> ()
-               | (IndexObj (_phat, tR'), Some tR1) -> 
-                   begin try 
-                     (dprint (fun () -> "Pattern matching on index object...");
-                      Unify.unify Int.LF.Empty cPsi' (C.cnorm (tR',  t),  LF.id) 
-                                                     (C.cnorm (tR1, mt1), LF.id))
-                   with Unify.Failure msg -> 
-                     (dprint (fun () -> "Unify ERROR: " ^ msg);
-                      raise (Error.Violation "Pattern matching on index argument failed"))
-                   end
-               | (DataObj, _) -> ()
-             end
-    in
-    
+
     let cPsi'  = Whnf.cnormDCtx (cPsi, t) (* t *) in        (*      .  |- cPsi' ctx    *)
     let cPsi1' = Whnf.cnormDCtx (cPsi1, mt1) in             (*      .  |- cPsi1 ctx    *)
+
     let tP'    = Whnf.cnormTyp (tP, t) (* t *) in           (*  . ; cPsi'  |- tP'  <= type *) 
     let tP1'   = Whnf.cnormTyp (tP1, mt1) in                (*  . ; cPsi1' |- tP1' <= type *)
-        
+
     let _  = begin try 
           Unify.unifyDCtx (Int.LF.Empty) cPsi' cPsi1';
           Unify.unifyTyp   (Int.LF.Empty) cPsi' (tP', LF.id) (tP1', LF.id);
@@ -1864,7 +1849,21 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
           dprint (fun () -> "cD' = " ^ P.mctxToString cD');
           raise (Check.Comp.Error (loc, Check.Comp.PattMismatch ((cD1, cPsi1, pattern1, (tP1, LF.id)),
                                                                  (cD', cPsi, (tP, LF.id)))))
-        end
+        end    
+    in
+    let _  = begin match (caseT, pattern1) with
+               | (_, None) -> ()
+               | (IndexObj (_phat, tR'), Some tR1) -> 
+                   begin try 
+                     (dprint (fun () -> "Pattern matching on index object...unify scrutinee with pattern");
+                        Unify.unify Int.LF.Empty (Whnf.normDCtx cPsi') (C.cnorm (tR',  t),  LF.id) 
+                                                       (C.cnorm (tR1, mt1), LF.id))
+                   with Unify.Failure msg -> 
+                     (dprint (fun () -> "Unify ERROR: " ^ msg);
+                      raise (Error.Violation "Pattern matching on index argument failed"))
+                   end
+               | (DataObj, _) -> ()
+             end     
     in 
     let _ = dprnt "AbstractMSub..." in 
       (* cD1' |- t' <= cD' *)

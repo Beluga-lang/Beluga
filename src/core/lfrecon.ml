@@ -28,6 +28,7 @@ type error =
   | CompTypAnn       
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name 
+  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
 
 exception Error of Syntax.Loc.t * error
 
@@ -40,6 +41,11 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | ProjNotValid (cD, cPsi, k, sA) -> 
+            Format.fprintf ppf 
+              "Cannot get the %s. projection from type %a."  
+              (string_of_int k)  
+              (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
           Error.report_mismatch ppf
             "Ill-typed expression."
@@ -510,12 +516,15 @@ let rec synDom cD loc cPsi s = begin match s with
 
             let Int.LF.Sigma typRec = 
               pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi) (tB, Substitution.LF.id) (Int.LF.MShift 0, ss)  in
+              begin try 
+                let sQ = Int.LF.getType  (Int.LF.BVar k) (typRec, Substitution.LF.id) k 1 in 
 
-            let sQ = Int.LF.getType  (Int.LF.BVar k) (typRec, Substitution.LF.id) k 1 in 
-
-              (Int.LF.DDec (cPhi,
-                            Int.LF.TypDecl (x, Int.LF.TClo sQ)),
-               Int.LF.Dot (Int.LF.Head(Int.LF.Proj(Int.LF.BVar k, j)), s'))
+                  (Int.LF.DDec (cPhi,
+                                Int.LF.TypDecl (x, Int.LF.TClo sQ)),
+                   Int.LF.Dot (Int.LF.Head(Int.LF.Proj(Int.LF.BVar k, j)), s'))
+              with _ -> 
+                  raise (Error (loc, ProjNotValid (cD, cPsi, k, (Int.LF.Sigma typRec, Substitution.LF.id))))
+              end 
          | _ -> raise (Error.Violation "Undefined bound variable") 
       end
 
@@ -958,17 +967,21 @@ and elTerm' recT cD cPsi r sP = match r with
           let _ = dprint (fun () -> "      with type " ^ 
 			    P.typToString cD cPhi (tA, Substitution.LF.id) ^ "[" ^ P.dctxToString cD cPhi ^ "]") in 
           let s'' = elSub loc recT cD cPsi s cPhi in
-(*          let Int.LF.Sigma typRec = tA *)
-          let sA = Int.LF.getType  (Int.LF.FPVar (p, s'')) (typRec, s'') k 1 in  
-          let (tS, sQ ) = elSpine loc recT cD cPsi spine (Int.LF.TClo sA, s'')  in
-            begin try
-              (Unify.unifyTyp cD cPsi (Int.LF.TClo sQ, s'') sP ;
-               Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k), tS))
-              with
-		| Unify.Failure msg ->
-		  raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
-		| _ ->
-		  raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+          let sA =  begin try 
+                         Int.LF.getType  (Int.LF.FPVar (p, s'')) (typRec, s'') k 1 
+                    with _ -> raise (Error (loc, ProjNotValid (cD, cPhi, k,
+                                                         (tA, Substitution.LF.id))))
+                    end 
+              in  
+              let (tS, sQ ) = elSpine loc recT cD cPsi spine (Int.LF.TClo sA, s'')  in
+                begin try
+                  (Unify.unifyTyp cD cPsi (Int.LF.TClo sQ, s'') sP ;
+                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k), tS))
+                with
+		  | Unify.Failure msg ->
+		      raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
+		  | _ ->
+		      raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
             end
         with Not_found ->
 	  (dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
@@ -1118,7 +1131,11 @@ and elTerm' recT cD cPsi r sP = match r with
   (* Reconstruction for projections *)
   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
-      let sA       = Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1 in 
+      let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1 
+                     with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
+                    end 
+       in 
       let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
       begin
 	try
@@ -1134,7 +1151,12 @@ and elTerm' recT cD cPsi r sP = match r with
       match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') -> 
           let t' = elSub loc recT cD  cPsi t cPsi' in 
-          let  sA = Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') k 1 in 
+          let sA = begin try
+                      Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA,  t') k 1 
+                   with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, t'))))
+                    end  
+           in 
           let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
           begin
 	    try
@@ -1161,7 +1183,12 @@ and elTerm' recT cD cPsi r sP = match r with
                   raise (Error.Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
         in 
         let s''       = elSub loc recT cD cPsi s' cPhi in
-        let sA        = Int.LF.getType h (recA, s'') k 1 in 
+        let sA        = begin try 
+                           Int.LF.getType h (recA, s'') k 1 
+                        with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, s''))))
+                        end  
+        in 
         let (tS, sQ ) = elSpine loc recT cD cPsi spine sA  in
         let _ = Unify.unifyTyp cD cPsi sQ sP  in
           begin match h with 
@@ -1328,7 +1355,11 @@ and elClosedTerm' recT cD cPsi r = match r with
 
   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
-      let sA       = Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1 in 
+      let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
+                     with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
+                     end  
+       in 
       let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
         (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS) , sQ)
 
@@ -1336,7 +1367,11 @@ and elClosedTerm' recT cD cPsi r = match r with
       begin match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') -> 
             let t' = elSub loc recT cD  cPsi t cPsi' in 
-            let  sA = Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') k 1 in 
+            let  sA = begin try Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') k 1 
+                      with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, t'))))
+                      end  
+            in 
             let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
               (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,t'), k), tS) , sQ)
         | _  -> 
@@ -1350,9 +1385,14 @@ and elClosedTerm' recT cD cPsi r = match r with
 	| (Int.LF.PVar (Int.LF.Offset p, s') , Int.LF.Sigma recA) -> 
 	    let t' = elSub loc recT cD  cPsi s cPsi' in 
 	    let s = Substitution.LF.comp s' t' in 
-	    let  sA = Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, s)) (recA, t') k 1 in 
-	    let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
-	      (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,s), k), tS) , sQ)
+              begin try 
+	        let  sA = Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, s)) (recA, t') k 1 in 
+	        let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in 
+	          (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,s), k), tS) , sQ)
+              with
+                  _ -> 
+                    raise (Error (loc, ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t'))))
+              end 
 		
         | _  -> 
 	    dprint (fun () -> "[elClosedTerm'] Looking for p " ^ P.headToString cD cPsi' h);

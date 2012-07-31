@@ -1199,25 +1199,23 @@ and elExp' cD cG i = match i with
           | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) -> 
               begin match mC with 
                 | Apx.Comp.MetaObj (loc, psihat, m) -> 
-                    begin try 
-                      let cPsi' = C.cnormDCtx (cPsi, theta) in 
-                        let _      = dprint (fun () -> "[elExp']  MApp -  MetaObj") in 
-                        let _      = dprint (fun () -> "[elExp'] elaborate"^
-                                               " MetaObj against type " ^ 
-                                               P.typToString cD cPsi' (C.cnormTyp (tP, theta),
-                                                                       LF.id)) in 
-                      let tM'    = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m  (C.cnormTyp (tP, theta), LF.id) in
-                        
-                      let i =   Int.Comp.Apply (loc, i', 
-                                         Int.Comp.Box(loc, psihat, tM')) in  
-                        dprint (fun () -> "[elExp] MApp Reconstructed: " ^
-                                         P.expSynToString cD cG i); (i , (tau, theta))
-                      with Error.Violation msg -> 
-                        dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
-                        raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
-                      end 
-                  | _ -> raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
-                end
+                  begin
+                    try
+                      let cPsi' = C.cnormDCtx (cPsi, theta) in
+                      let _     = dprint (fun () -> "[elExp']  MApp -  MetaObj") in
+                      let _     = dprint (fun () -> "[elExp'] elaborate" ^
+                        " MetaObj against type " ^
+                        P.typToString cD cPsi' (C.cnormTyp (tP, theta), LF.id)) in
+                      let tM'   = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m  (C.cnormTyp (tP, theta), LF.id) in
+                      let i     = Int.Comp.Apply (loc, i', Int.Comp.Box(loc, psihat, tM')) in
+                      dprint (fun () -> "[elExp] MApp Reconstructed: " ^
+                        P.expSynToString cD cG i); (i , (tau, theta))
+                    with Error.Violation msg ->
+                      dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+                      raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
+                  end
+                | _ -> raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
+              end
 
           | _ -> 
               raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantPiBox, tau_theta'))) 

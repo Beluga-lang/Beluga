@@ -1,5 +1,5 @@
 sigma[CR : {y:dtriv}{y':ctriv}{cy:cpsT y y'}
-           cpsR (dexp->droot 
+           cpsR (dexp->droot
                  (dapp
                   (dapp
                    (dtriv->dexp
@@ -48,7 +48,7 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {y:dtriv}{y':ctriv}{cy:cpsT y y'}
-           cpsR (dexp->droot 
+           cpsR (dexp->droot
                  (dapp
                   (dapp
                    (dtriv->dexp
@@ -105,7 +105,7 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {y:dtriv}{y':ctriv}{cy:cpsT y y'}
-           cpsR (dexp->droot 
+           cpsR (dexp->droot
                  (dapp
                   (dapp
                    (dtriv->dexp
@@ -132,7 +132,7 @@ sigma[CVR : {y':ctriv}{cvy:cvalT y'}
 sigma[DR : {y':ctriv}{dy':{xi:stack}dstackT xi y' y' xi}
            dstackR (R' y') (D y')]
 {y:dtriv}{y':ctriv}{vvy:{xi:stack}vvalT xi y' xi}{cy:cpsT y y'}{cvy:cvalT y'}
-{dy':{xi:stack}dstackT xi y' y' xi}{dsy':{xi:stack}dstack_substT y' xi y' xi} 
+{dy':{xi:stack}dstackT xi y' y' xi}{dsy':{xi:stack}dstack_substT y' xi y' xi}
 th18-1 (VVR y' vvy) (CVR y' cvy) (DR y' dy') (BR y').
                                                                               Solving...
 
@@ -158,7 +158,7 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {y:dtriv}{y':ctriv}{cy:cpsT y y'}
-           cpsR (dexp->droot 
+           cpsR (dexp->droot
                  (dapp
                   (dapp
                    (dtriv->dexp
@@ -185,7 +185,7 @@ sigma[CVR : {y':ctriv}{cvy:cvalT y'}
 sigma[BR : {y':ctriv}
            bareR (R' y') (B y')]
 {y:dtriv}{y':ctriv}{vvy:{xi:stack}vvalT xi y' xi}{cy:cpsT y y'}{cvy:cvalT y'}
-{dy':{xi:stack}dstackT xi y' y' xi}{dsy':{xi:stack}dstack_substT y' xi y' xi} 
+{dy':{xi:stack}dstackT xi y' y' xi}{dsy':{xi:stack}dstack_substT y' xi y' xi}
 th18-1 (VVR y' vvy) (CVR y' cvy) (DR y' dy') (BR y').
                                                                               Solving...
 

@@ -26,7 +26,7 @@ subst_ap  : subst ([x][idx] ap (R1 x idx) (R2 x idx))
 subst_lm  : subst ([x][idx] lm (R1 x idx))
                   S (lm R1')
           <- ({y:term} {idy: pred y  y}
-		   subst ([x][idx] idy) S' idy 
+		   subst ([x][idx] idy) S' idy
                 -> subst ([x][idx] R1 x idx y idy)
                          S (R1' y idy)).
 

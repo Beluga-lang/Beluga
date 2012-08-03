@@ -2,7 +2,7 @@
 %%%%%%%%%%%%%%%%%%%%%%
 % not provable
 
-%querytabled * * 
+%querytabled * *
    D : check inc (nat => nat).
 
 %querytabled * 5 check test2 nat.
@@ -10,6 +10,6 @@
 %querytabled * *
   check sub' (nat => nat => nat).
 
-%querytabled * 16 
+%querytabled * 16
 check mult (nat => pos => nat).
 

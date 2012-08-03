@@ -33,7 +33,7 @@ bffe : prog (
 ).
 
 bfft : prog (
-^ bff N 
+^ bff N
   <<= ^ n (t _ L R) (t N L' R')
   <<= (^ n L L' >=> ^ n R R' >=> ^ bff (s N))
 ).

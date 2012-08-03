@@ -4,7 +4,7 @@ s : nat -> nat.
 
 tp : type.
 un : tp.
- 
+
 schema w = nat;
 schema wblock = block x:nat, _t:nat;
 schema tps = tp;

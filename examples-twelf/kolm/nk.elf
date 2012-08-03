@@ -1,7 +1,7 @@
 % File: nk.elf
 
 % Classical, Natural Deduction
-nk : o -> type. 
+nk : o -> type.
 
 nk_andi    : nk A -> nk B -> nk (& A B).
 nk_andel   : nk (& A B) -> nk A.

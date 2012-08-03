@@ -37,93 +37,93 @@ p_done: is_path done M.
 eq: exp -> exp -> type.  %name eq E.
 e_ref: eq T T.
 %{e_lam: ({x:exp}eq x x -> eq (E x) (E' x))
-        -> eq (lam T E) (lam T E'). 
+        -> eq (lam T E) (lam T E').
 }%
-schema ctx = some [t:tp] block x:exp, p:path, u:type_of x t , _t:is_path p x ; 
+schema ctx = some [t:tp] block x:exp, p:path, u:type_of x t , _t:is_path p x ;
 
 %{
 For all M, N.
 
 If for all paths P, is_path P M  implies is_path P N
-then  eq M N. 
+then  eq M N.
 
 }%
 rec eqPath : {g:ctx}{M:[g. exp]}{N:[g. exp]}
              ({P:[g. path]} [g. is_path (P ..) (M ..)] -> [g. is_path (P ..) (N ..)])
-	     -> [g. eq (M ..) (N ..)] = 
-mlam g => mlam M => mlam N => fn f => case [g. M ..] of 
- | [g. app (M1 ..) (M2 ..)]  => 
-    let [g. p_left p_done] : [g. is_path (left done) (app (N1 ..) (N2 ..))] 
-       = f [g. (left done)] [g. p_left p_done] in 
+	     -> [g. eq (M ..) (N ..)] =
+mlam g => mlam M => mlam N => fn f => case [g. M ..] of
+ | [g. app (M1 ..) (M2 ..)]  =>
+    let [g. p_left p_done] : [g. is_path (left done) (app (N1 ..) (N2 ..))]
+       = f [g. (left done)] [g. p_left p_done] in
 
-    let [g. e_ref] = eqPath [g] [g. M2 .. ] [g. (N2 ..)  ] 
-  		     (mlam Q => fn iq => let [g. D ..] = iq in 
-                      let [g. p_right (D' ..)] : [g. is_path (right (Q' .. )) (app (N1 ..) (N2 ..))] 
+    let [g. e_ref] = eqPath [g] [g. M2 .. ] [g. (N2 ..)  ]
+  		     (mlam Q => fn iq => let [g. D ..] = iq in
+                      let [g. p_right (D' ..)] : [g. is_path (right (Q' .. )) (app (N1 ..) (N2 ..))]
 			  = f [ g. (right (Q ..)) ] [g. p_right (D .. )]  in
 						 [g. D' ..]   )  in
 
     let [g. e_ref]  = eqPath [g] [g. M1 .. ] [g. (N1 ..)  ]
-                       (mlam Q => fn iq => 
-                        let [g. D ..] = iq in 
-			let [g. p_left (D' ..)] : [g. is_path (left (Q' .. )) (app (N1 ..) (N2 ..))] 
-			    = f [ g. (left (Q ..)) ] [g. p_left (D .. )] in 
-				     [g. D' ..]   ) in 
-			 
+                       (mlam Q => fn iq =>
+                        let [g. D ..] = iq in
+			let [g. p_left (D' ..)] : [g. is_path (left (Q' .. )) (app (N1 ..) (N2 ..))]
+			    = f [ g. (left (Q ..)) ] [g. p_left (D .. )] in
+				     [g. D' ..]   ) in
+
     [g. e_ref]
 
-| [g. #p.1 ..] => 
-  let [g. #q.4 ..] = f [g. #p.2 .. ] [g. #p.4 .. ] in 
+| [g. #p.1 ..] =>
+  let [g. #q.4 ..] = f [g. #p.2 .. ] [g. #p.4 .. ] in
     [g. e_ref]
 
 
-| [g. lam T (\x. M' .. x)] => 
-  let  [g. p_lam (\x.\p.\u. \i. p_done)] : 
+| [g. lam T (\x. M' .. x)] =>
+  let  [g. p_lam (\x.\p.\u. \i. p_done)] :
        [g . (is_path (bind T' (\p.done)) (lam _ (\x. N' .. x)))]
-    = 
-       f [g. bind T (\p.done) ] [g. p_lam (\x.\p.\u. \i. p_done)] in 
+    =
+       f [g. bind T (\p.done) ] [g. p_lam (\x.\p.\u. \i. p_done)] in
 
-  let [g,b:block x:exp, q:path,u:type_of x T'' , _t:is_path q x. e_ref] = 
-       eqPath [g, b:block x:exp, q:path, u:type_of x T' , _t:is_path q x] 
-	      [g,b. M' .. b.1 ] [g,b. N' .. b.1 ] 
+  let [g,b:block x:exp, q:path,u:type_of x T'' , _t:is_path q x. e_ref] =
+       eqPath [g, b:block x:exp, q:path, u:type_of x T' , _t:is_path q x]
+	      [g,b. M' .. b.1 ] [g,b. N' .. b.1 ]
 (mlam Q => fn ip =>
          let {Qs: [g,p:path. path]}
-             [g, b:block x:exp, q:path, u:type_of x T', _t:is_path q x. Qs .. b.2] = 
+             [g, b:block x:exp, q:path, u:type_of x T', _t:is_path q x. Qs .. b.2] =
 	        [g, b:block x:exp, q:path,u:type_of x T', _t:is_path q x. Q .. b] in  % strengthening
-         let [g, b:block x:exp, q:path, u:type_of x T', _t:is_path q x. D .. b] = ip in 
-         let [g. p_lam (\x.\q.\u.\iq. D' .. x q u iq)] : [g. is_path (bind T' (\q. Q' .. q)) (lam _ (\x. N' .. x))] =  
+         let [g, b:block x:exp, q:path, u:type_of x T', _t:is_path q x. D .. b] = ip in
+         let [g. p_lam (\x.\q.\u.\iq. D' .. x q u iq)] : [g. is_path (bind T' (\q. Q' .. q)) (lam _ (\x. N' .. x))] =
            f [ g. bind _ (\q. Qs .. q) ]  [g. p_lam (\x.\q.\u.\iq. D .. <x,q,u,iq> )  ] in
              [g,b. D' .. b.1 b.2 b.3 b.4]
        )
-  in 
+  in
       [g. e_ref]
 
 ;
 
 %{
 
-Case : M = #p.1 
+Case : M = #p.1
 
  Assume N:exp,  f:{P::path[g]} (is_path (P ..) #p.1)[g] -> (is_path (P ..) (N ..))[g])
-  
+
 let  {#q::blck x:exp, p:path. is_path p x}
      [g] #q.3 : (is_path #q.2 #q.1)[g]  = f <g. #p.2 > ([g] #p.3)
      where #q = #p
 
 
-Case : M = lam x. M' 
+Case : M = lam x. M'
 
-  
+
  Assume N:exp,  f:{P::path[g]} (is_path (P ..) (lam x. M'))[g] -> (is_path (P ..) (N ..))[g])
 
   let  {N'::exp[g, x:exp]
-       [g] bind \p.done  : (is_path (p_bind \p.done) (lam (\x. N' .. x)))[g] = 
-       f <g. bind (\p.done) > ([g] p_lam (\x.\p.\u. p_done)) in 
+       [g] bind \p.done  : (is_path (p_bind \p.done) (lam (\x. N' .. x)))[g] =
+       f <g. bind (\p.done) > ([g] p_lam (\x.\p.\u. p_done)) in
 
 
-  let [g,b:block x:exp, q:path . is_path x q] e_ref = 
-       eqPath [g, b:block x:exp, q:path . is_path x q] <g,b. M' .. b.1 > <g,b. N' .. b.1 > 
+  let [g,b:block x:exp, q:path . is_path x q] e_ref =
+       eqPath [g, b:block x:exp, q:path . is_path x q] <g,b. M' .. b.1 > <g,b. N' .. b.1 >
 
-  in 
+  in
       [g] e_ref
 
 }%

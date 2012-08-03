@@ -15,7 +15,7 @@ has : tm -> tp -> type. %infix left 5 is.
 
 is_@   : has E1 (arr T1 T2) ->
          has E2  T1 ->
-       % -------------------   
+       % -------------------
          has (app E1 E2) T2.
 
 is_lam : ({x:tm} has x  T1 -> has (E x) T2) ->
@@ -23,7 +23,7 @@ is_lam : ({x:tm} has x  T1 -> has (E x) T2) ->
          (has (lam T1 (\x. E x)) (arr T1 T2)).
 
 % Values
-value : tm -> type. 
+value : tm -> type.
 
 value_lam : value (lam T (\x. E x)).
 
@@ -51,7 +51,7 @@ pres : (has E T) -> (~> E E') -> (has E' T) -> type.
 pres_@1 : pres D1 EV1 D1' ->
         % ----------------------------------------
           pres (is_@ D1 D2) (~>_@1 EV1) (is_@ D1' D2).
-         
+
 pres_@2 : pres D2 EV2 D2' ->
         % --------------------------------------------
           pres (is_@ D1 D2) (~>_@2 V EV2) (is_@ D1 D2').
@@ -65,15 +65,15 @@ pres_@3 :
 
 % Progress (much trickier)
 
-% Introduce a new type family to distinguish between the case where a term can 
-% take a step and it is a value. 
+% Introduce a new type family to distinguish between the case where a term can
+% take a step and it is a value.
 step_or_val : tm -> type.
 
 step : (~> E E') -> step_or_val E.
 val : (value E) -> step_or_val E.
 
 %{
-% The usual declarative proof of progress will not work because it 
+% The usual declarative proof of progress will not work because it
 % requires Twelf to perform output splitting when it attempts to coverage
 % check the application case.
 
@@ -82,19 +82,19 @@ prog : (E is T) -> step_or_val E -> type.
 
 prog_@1  : prog D1 (step EV) ->
          % -----------------------------------
-           prog (is_@ D1 D2) (step (~>_@1 EV)). 
+           prog (is_@ D1 D2) (step (~>_@1 EV)).
 
 prog_@2  : prog D1 (val VL) ->
            prog D2 (step EV) ->
          % -----------------------------------
-           prog (is_@ D1 D2) (step (~>_@2 VL EV)). 
+           prog (is_@ D1 D2) (step (~>_@2 VL EV)).
 
 prog_@3  : prog D1 (val VL1) ->
            prog D2 (val VL2) ->
          % -----------------------------------
-           prog (is_@ D1 D2) (step (~>_@3 VL2)). 
+           prog (is_@ D1 D2) (step (~>_@3 VL2)).
 
-prog_lam : 
+prog_lam :
          % --------------------------------------------------------
            prog (is_lam (\x.\d. D1 x d)) (val value_lam).
 
@@ -114,7 +114,7 @@ prog_@_lemma_vs : prog_@_lemma (val VL1) (val VL2) (step (~>_@3 VL2)).
 %worlds () (prog_@_lemma SV1 SV2 SV3).
 %total {SV1 SV2} (prog_@_lemma SV1 SV2 _).
 
-% Now we can prove progress by simply using the lemma 
+% Now we can prove progress by simply using the lemma
 
 prog : (has E T) -> step_or_val E -> type.
 %mode prog +D -SV.
@@ -123,9 +123,9 @@ prog_@   : prog_@_lemma SV1 SV2 SV3 ->
            prog D1 SV1 ->
            prog D2 SV2 ->
          % ------------------------------
-           prog (is_@ D1 D2) SV3. 
+           prog (is_@ D1 D2) SV3.
 
-prog_lam : 
+prog_lam :
          % --------------------------------------------------------
            prog (is_lam (\x.\d. D1 x d)) (val value_lam).
 

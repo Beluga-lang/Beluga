@@ -1,4 +1,4 @@
-%{ 
+%{
   CH 6:  Lambda-terms
   Author: Brigitte Pientka
 
@@ -35,8 +35,8 @@ refl: equal E E .
 
 not_possible : type.
 
-rec values_dont_step : [. step M M' ] -> [.value M  ] -> [.not_possible]= 
-fn s => fn v => case v of 
+rec values_dont_step : [. step M M' ] -> [.value M  ] -> [.not_possible]=
+fn s => fn v => case v of
 | [ .v_lam] => impossible s in []
 ;
 
@@ -44,35 +44,35 @@ steps_to_terms: term -> term -> term -> type.
 andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
 rec det : [. steps_to_terms T T1 T2 ] -> [.equal T1 T2 ] =
-fn s => case s of 
-| [ . andalso (step_app_1 DstepE1') (step_app_1 DstepE1'')] => 
-  let [ .refl] = det [ . andalso DstepE1' DstepE1''] in 
+fn s => case s of
+| [ . andalso (step_app_1 DstepE1') (step_app_1 DstepE1'')] =>
+  let [ .refl] = det [ . andalso DstepE1' DstepE1''] in
     [ .refl]
 
-| [ .andalso (step_app_2 DstepE2' _ ) (step_app_2 DstepE2'' _)] => 
-  let [ .refl] = det [ . andalso DstepE2' DstepE2'' ] in 
+| [ .andalso (step_app_2 DstepE2' _ ) (step_app_2 DstepE2'' _)] =>
+  let [ .refl] = det [ . andalso DstepE2' DstepE2'' ] in
   [ . refl]
 
 | [ . andalso (step_app_beta _ ) (step_app_beta _ )] =>  [ .refl]
 
-% Not_Possible cases: specifying all possible cases to avoid splitting 
+% Not_Possible cases: specifying all possible cases to avoid splitting
 % on non-pattern
 % These cases are redundant, if we increase splitting depth by 2.
 
-| [ . andalso (step_app_1 DstepE1') (step_app_2 DstepE2' V)] => 
+| [ . andalso (step_app_1 DstepE1') (step_app_2 DstepE2' V)] =>
   impossible values_dont_step [ . DstepE1'] [ . V] in [ ]
 
-| [ . andalso (step_app_2 DstepE2' V) (step_app_1 DstepE1')]  => 
+| [ . andalso (step_app_2 DstepE2' V) (step_app_1 DstepE1')]  =>
   impossible values_dont_step [ . DstepE1'] [ . V] in [ ]
 
 | [ . andalso (step_app_1 DstepE1') (step_app_beta _ )] =>
-  impossible values_dont_step [ . DstepE1'] [ . v_lam ] in [ ] 
+  impossible values_dont_step [ . DstepE1'] [ . v_lam ] in [ ]
 
 | [ . andalso (step_app_beta _ ) (step_app_1 DstepE1')] =>
-  impossible values_dont_step [ . DstepE1'] [ . v_lam ] in [ ] 
+  impossible values_dont_step [ . DstepE1'] [ . v_lam ] in [ ]
 
 | [ . andalso (step_app_2 DstepE2' V) (step_app_beta V2 )] =>
-  impossible values_dont_step [ . DstepE2'] [ . V2] in [ ] 
+  impossible values_dont_step [ . DstepE2'] [ . V2] in [ ]
 
 | [ . andalso (step_app_beta V2 ) (step_app_2 DstepE2' _)] =>
   impossible values_dont_step [ . DstepE2'] [ . V2] in [ ]

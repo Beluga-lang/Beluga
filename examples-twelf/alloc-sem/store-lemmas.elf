@@ -19,7 +19,7 @@ st_wf_tail     : st_wf (cons_st L V S') -> st_wf S' -> type.
 %%% Store Alloc Lemmas
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-st_alloc_preserves_wf    
+st_alloc_preserves_wf
                : st_wf S1 -> st_alloc S1 V S2 L -> st_wf S2 -> type.
 %mode st_alloc_preserves_wf +DSWf1 +DStAlloc -DSWf2.
 -nil           : st_alloc_preserves_wf (st_wf_nil)

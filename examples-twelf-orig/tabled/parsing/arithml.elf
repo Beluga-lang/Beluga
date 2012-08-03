@@ -1,10 +1,10 @@
 % Context-free grammar for arithmetic expressions
 % Author: Brigitte Pientka
 
-% each operator is left-associative 
-% * and / binds tighter than + and - 
+% each operator is left-associative
+% * and / binds tighter than + and -
 %
-%  
+%
 % expr --> expr, [+], term.
 % expr --> expr, [-], term.
 % expr --> term.
@@ -35,7 +35,7 @@ n : exp.
 9: exp.
 
 % brackets
-< : exp -> exp.   
+< : exp -> exp.
 > : exp -> exp.    %postfix 30 >.
 
 % Tokens
@@ -79,15 +79,15 @@ nil: tokens.
 ; : tok -> tokens -> tokens.  %infix right 10 ;.
 
 
-% explicit context for bvars 
-% to only retrieve the first instance 
+% explicit context for bvars
+% to only retrieve the first instance
 ctx: type.
 hyp: type.
 bvar: tok -> exp -> hyp.
 # : hyp -> ctx -> ctx. %infix right 10 #.
 e : ctx.
 
-%  
+%
 neq: tok -> tok -> type.
 % tabled neq.
 
@@ -163,19 +163,19 @@ plam: fun C ('lam' ; I ; L) R (lam E)
 
 ca : fun C L R E <- fapp C L R E.
 
-% app left associative 
+% app left associative
 papp: fapp C L R (app E1 E2)
        <- fapp C L ('@' ; L2) E1
        <- expr C L2 R E2.
 
 clam : fapp C L R E <- expr C L R E.
 
-% + left associative 
+% + left associative
 plus: expr C L R (E1 + E2)
        <- expr C L ('+' ; L2) E1
        <- term C L2 R E2.
 
-% + left associative 
+% + left associative
 minus: expr C L R (E1 - E2)
        <- expr C L ('-' ; L2) E1
        <- term C L2 R E2.
@@ -183,12 +183,12 @@ minus: expr C L R (E1 - E2)
 conv_et : expr C L R E
 	   <- term C L R E.
 
-% + left associative 
+% + left associative
 times: term C L R (E1 * E2)
 	<- term C L ('*' ; L2) E1
 	<- prim C L2 R E2.
 
-% + left associative 
+% + left associative
 div: term C L R (E1 / E2)
 	<- term C L ('/' ; L2) E1
 	<- prim C L2 R E2.
@@ -206,7 +206,7 @@ brackets : prim C ('openB' ; L) R E
       <-  fun C L ('closeB' ; R) E.
 
 number : prim C (num ; R) R n.
-num    : prim C (N ; R) R N' 
+num    : prim C (N ; R) R N'
 	  <- numConv N N'.
 
 var : prim C (BV ; R) R V
@@ -235,15 +235,15 @@ minus: expression L R
 
 conv_et : expression L R <- termE L R.
 
-times: termE L R 
+times: termE L R
 	<- termE L ('*' ; L2)
 	<- primA L2 R.
 
-div: termE L R 
+div: termE L R
 	<- termE L ('/' ; L2)
 	<- primA L2 R.
 
-conv_tp : termE L R 
+conv_tp : termE L R
        <- primA L R.
 
 brackets : primA ('openB' ; L) R

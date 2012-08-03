@@ -1,65 +1,65 @@
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'q' ; 'x' ; nil) P.
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'q' ; 'x' ;  'and' ; 'p' ; 'x' ; nil) P.
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'q' ; 'x' ; 'imp' ; 'z' ; 'and' ; 'p' ; 'x' ; nil) P.
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'forall' ; 'y' ; 'not' ; 'p' ; 'y' ; 'and' ; 'openB' ; 'forall' ; 'x' ; 'q' ; 'x' ; 'or' ; 'z' ; 'closeB' ; 'and' ; 'p' ; 'x' ; nil) P.
 
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'forall' ; 'x' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'or' ; 'openB' ; 'exist' ; 'y' ; 's' ; 'y' ; 'closeB' ; 'closeB' ; nil) P.
 
 
-%querytabled * * 
+%querytabled * *
 parse ('openB' ; 'x' ; 'imp' ; 'y' ; 'closeB' ; 'and' ; 'true' ; nil) P.
 
 
-%querytabled * * 
+%querytabled * *
 parse ('openB' ; 'not' ; 'x' ; 'closeB' ; 'and' ; 'openB' ; 'y' ; 'or' ; 'z' ; 'closeB' ; nil) P.
 
-%querytabled * * 
+%querytabled * *
 parse ('not' ; 'openB' ; 'x' ; 'and' ; 'openB' ; 'y' ; 'or' ; 'z' ; 'closeB' ;  'closeB' ; nil) P.
 
-%querytabled * * 
+%querytabled * *
 parse ('not' ; 'x' ; 'and' ; 'openB' ; 'y' ; 'or' ; 'z' ; 'closeB' ; nil) P.
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'forall' ; 'y' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'closeB' ; nil) P.
 
 
-%querytabled * * 
+%querytabled * *
 parse ('x' ; 'or' ; 'openB' ; 'exist' ; 'y' ; 's' ; 'y' ; 'closeB' ; nil) P.
 
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'forall' ; 'y' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'closeB' ; 'or' ; 'openB' ; 'exist' ; 'y' ; 's' ; 'y' ; 'closeB' ; nil) P.
 
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'forall' ; 'x' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'closeB' ; 'or' ; 'openB' ; 'exist' ; 'y' ; 's' ; 'y' ; 'closeB' ; nil) P.
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'forall' ; 'x' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'or' ; 'exist' ; 'y' ; 's' ; 'y' ; 'closeB' ; nil) P.
 
 
-%querytabled * * 
+%querytabled * *
 parse ('forall' ; 'x' ; 'forall' ; 'x' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'or' ; 'openB' ; 'exist' ; 'y' ; 's' ; 'y' ; 'closeB' ; 'closeB' ; nil) P.
 
 %{
-% should not be parseable 
-%querytabled * * 
+% should not be parseable
+%querytabled * *
 parse ('forall' ; 'x' ; 'forall' ; 'x' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'or' ; 'exist' ; 'y' ; 's' ; 'y' ; 'closeB' ; nil) P.
 
 }%
 
-%querytabled * * 
+%querytabled * *
 parse ('openB' ; 'forall' ; 'x' ; 'forall' ; 'y' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'closeB' ; 'closeB' ; 'imp' ; 'true' ; nil) P.
 
-%querytabled * * 
+%querytabled * *
 parse ('openB' ; 'forall' ; 'x' ; 'forall' ; 'x' ; 'not' ; 'p' ; 'x' ; 'and' ; 'openB' ; 'forall' ; 'y' ; 'q' ; 'y' ; 'or' ; 'z' ; 'or' ; 'openB' ; 'exist' ; 'y' ; 's' ; 'y' ; 'closeB' ; 'closeB' ; 'closeB' ; 'imp' ; 'true' ; nil) P.
 

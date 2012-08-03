@@ -1,8 +1,8 @@
 %
 % mini-ml
-% 
-exp  : sort.  
-val  : sort.  
+%
+exp  : sort.
+val  : sort.
 
 z     : trm exp.
 s     : trm exp -> trm exp.
@@ -45,85 +45,85 @@ appm2 : trm val -> trm val -> atm.
 %
 % queries should be: sqnt cpmG rnil rnil rnil rnil (^(return V) =>> ^(ev E)).
 %	where E is some expression to evaluate.
-% 
+%
 % Thus the ordered context is the stack of continuations left to execute.
 %
-% Note the use of left implications (>=>) in rules where a continuation expecting 
+% Note the use of left implications (>=>) in rules where a continuation expecting
 %  a new value s put onto the stack.
 %
 
 %% Natural Numbers
 ev2 : prog(
-^ ev z  
+^ ev z
      <<= ^ return z*
 ).
 
 ev3 : prog(
-^ ev (s E)  
-     <<= ((forall val [V]  ^ return V  <=< ^ return (s* V) ) 
+^ ev (s E)
+     <<= ((forall val [V]  ^ return V  <=< ^ return (s* V) )
 	   =>>  ^ ev E )
-). 
+).
 
 ev4 : prog(
-^ ev (case E1 E2 E3)  
-     <<= ((forall val [V] ^ return V  <=< ^ case1 V E2 E3 ) 
+^ ev (case E1 E2 E3)
+     <<= ((forall val [V] ^ return V  <=< ^ case1 V E2 E3 )
 	  =>>  ^ ev E1 )
-). 
+).
 
 ev5 : prog(
-^ case1 z* E2 E3  
-     <<= ^ ev E2 
-). 
+^ case1 z* E2 E3
+     <<= ^ ev E2
+).
 
 ev6 : prog(
-^ case1 (s* V) E2 E3  
-     <<= ^ ev (E3 V) 
+^ case1 (s* V) E2 E3
+     <<= ^ ev (E3 V)
 ).
 
 %% Functions
 ev7 : prog(
-^ ev (lamm E)  
-     <<= ^ return (lamm* E) 
+^ ev (lamm E)
+     <<= ^ return (lamm* E)
 ).
 
 ev8 : prog(
-^ ev (appm E1 E2)  
+^ ev (appm E1 E2)
      <<= ((forall val [V1] ^ return V1  <=< ^ appm1 V1 E2)
 	  =>> ^ ev E1 )
-). 
+).
 
 ev9 : prog(
-^ appm1 V1 E2 
-     <<= ((forall val [V2] ^ return V2 <=< ^ appm2 V1 V2) 
+^ appm1 V1 E2
+     <<= ((forall val [V2] ^ return V2 <=< ^ appm2 V1 V2)
 	  =>> ^ ev E2 )
 ).
 
 ev10 : prog(
-^ appm2 (lamm* E1') V2  
-      <<= ^ ev (E1' V2) 
-). 
-
-%% Definitions 
-ev11: prog(
-^ ev (letv E1 E2)  
-     <<= ((forall val [V1] ^ ev (E2 V1) >=> ^ return V1 ) 
-	  =>> ^ ev E1 )
-). 
-
-ev12: prog(
-^ ev (letn E1 E2)  
-     <<= ^ ev (E2 E1)  
+^ appm2 (lamm* E1') V2
+      <<= ^ ev (E1' V2)
 ).
 
-%%  Recursion 
+%% Definitions
+ev11: prog(
+^ ev (letv E1 E2)
+     <<= ((forall val [V1] ^ ev (E2 V1) >=> ^ return V1 )
+	  =>> ^ ev E1 )
+).
+
+ev12: prog(
+^ ev (letn E1 E2)
+     <<= ^ ev (E2 E1)
+).
+
+%%  Recursion
 ev13: prog(
-^ ev (fix E) 
-     <<= ^ ev (E (fix E)) 
-). 
+^ ev (fix E)
+     <<= ^ ev (E (fix E))
+).
 
 %% Values
 ev14 : prog(
-^ ev (vl V)  
-     <<= ^ return V 
+^ ev (vl V)
+     <<= ^ return V
 ).
 

@@ -31,7 +31,7 @@ cd $X
 #
 # - Pure LF signatures (and original converted Twelf example) are in files sources.cfg
 # - Proofs written in Beluga (or an original Twelf example) are in test.cfg
-# 
+#
 
 $INTERPRETER +t \
     $* \

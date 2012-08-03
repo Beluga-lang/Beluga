@@ -2,7 +2,7 @@
 
 % Kolmogorov's double negation interpretation of classical logic
 % in intuitionistic logic.
-% 
+%
 % Here I'm taking A to A* (it's Kolmogorov translation)
 % By inversion we have A* is of the form (not not A+).
 

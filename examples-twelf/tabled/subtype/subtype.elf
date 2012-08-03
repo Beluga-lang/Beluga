@@ -20,8 +20,8 @@ sub : tp -> tp -> type.  %name sub C.
 %mode sub *T *T'.
 %tabled sub.
 
-sub_pn : sub pos nat. 
-sub_zn : sub zero nat. 
+sub_pn : sub pos nat.
+sub_zn : sub zero nat.
 
 sub_=> : sub (T1 => T2) (S1 => S2)
 	  <- sub S1 T1
@@ -36,7 +36,7 @@ sub_trans :  sub S R
 % sub_trans : sub S T -> sub T R -> sub S R.
 
 %{
-sub_* : sub T1 S1 
+sub_* : sub T1 S1
 	 -> sub T2 S2
 	 -> sub (T1 * T2) (S1 * S2).
 }%

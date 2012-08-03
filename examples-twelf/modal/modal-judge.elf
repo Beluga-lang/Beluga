@@ -30,7 +30,7 @@ poss : o -> type.
 ⇒E : true (P1 ⇒ P2) W -> true P1 W ->
    % --------------------------------
      true P2 W.
-     
+
 □I : ({W':w} true P W') ->
    % -------------------
      true (□ P) W.
@@ -57,7 +57,7 @@ poss : o -> type.
 }%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      
+
 % Sequent calculus version
 
 hyp : o -> w -> type.
@@ -73,16 +73,16 @@ poss : o -> type.
 axiom : hyp P W ->
       % -----------
         conc P W.
-     
+
 ⇒R : (hyp P1 W -> conc P2 W) ->
    % ---------------------------
      conc (P1 ⇒ P2) W.
-     
+
 ⇒L : (hyp P2 W -> conc P3 W') ->
      conc P1 W ->
    % --------------------------------
      (hyp (P1 ⇒ P2) W -> conc P3 W').
-     
+
 □R : ({W':w} conc P W') ->
    % ---------------------
      conc (□ P) W.
@@ -91,7 +91,7 @@ axiom : hyp P W ->
    % ------------------------------
      (hyp (□ P1) W -> conc P2 W'').
 
-cnv: conc P W -> 
+cnv: conc P W ->
    % -----------
      poss P.
 
@@ -116,7 +116,7 @@ cnv: conc P W ->
 
 %theorem t_axiom1 : exists {D:{W:w}{A:o} conc ((□ A) ⇒ A) W} true.
 %establish 50 {} (t_axiom1 D).
-  
+
 %theorem t_axiom2 : exists {D:{W:w}{A:o} conc (A ⇒ (<> A)) W} true.
 %establish 50 {} (t_axiom2 D).
 
@@ -126,7 +126,7 @@ cnv: conc P W ->
 %theorem 4_axiom2 : exists {D:{W:w}{A:o} conc ((<>(<> A)) ⇒ (<> A)) W} true.
 %establish 50 {} (4_axiom2 D).
 
-%{ 
+%{
 %theorem modaleq1 : exists {D:{W:w}{A:o} conc ((□ A) ⇒ (¬ (<> (¬ A)))) W} true.
 %prove 50 {} (modaleq1 D).
 

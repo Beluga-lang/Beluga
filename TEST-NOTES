@@ -1,16 +1,16 @@
     arith/arith.bel				Beluga Example - empty contexts
 
-    church-rosser/test.cfg \                    Beluga Example: with contexts and reconstruction for 
+    church-rosser/test.cfg \                    Beluga Example: with contexts and reconstruction for
     church-rosser/test-crec.cfg \		meta-variables associated with projection-pattern
 
     compile/cls/sources.cfg \                	Twelf Example
     compile/cls/test.cfg \  			Beluga Example: completeness proof; advanced unification
     			 			illustrates that we cannot infer as many implicit argument
-						statically because patterns must be "closed" and we cannot 
+						statically because patterns must be "closed" and we cannot
 						propagate information we learn later backwards.
 
     compile/cpm/sources.cfg \			Twelf Example
-    compile/cpm/test.cfg \  			Beluga Example: 
+    compile/cpm/test.cfg \  			Beluga Example:
     			 			 completeness and soundness proof
 
     compile/debruijn/sources.cfg \              Twelf Example
@@ -18,8 +18,8 @@
                                                 MISSING: other direction
 
     compile/debruijn1/sources.cfg \		Twelf example
-    compile/debruijn1/test.cfg \  		Beluga example: Both directions (mapping evaluations to 
-    			       			evaluations in environments and vice versa) 
+    compile/debruijn1/test.cfg \  		Beluga example: Both directions (mapping evaluations to
+    			       			evaluations in environments and vice versa)
 						(the previous example in directory debruijn is contained here.
 
     compile/cps/sources.cfg \                   Twelf example (no proofs)
@@ -29,7 +29,7 @@
     count-var/cntvar-explicit.bel \
     count-var/cntvar-2.bel \
 
-    copy/copy.bel \				Belgua examples: simple use of contexts                      
+    copy/copy.bel \				Belgua examples: simple use of contexts
     copy/copy-crec.bel \
     copy/copy-explicit.bel \
     copy/copy-simple.bel \
@@ -37,8 +37,8 @@
     copy/copy-simple-explicit.bel \
 
 
-    cut-elim.bel \				Beluga examples: fairly straightfoward    
-    cut-elim-crec.bel \				use of contexts  
+    cut-elim.bel \				Beluga examples: fairly straightfoward
+    cut-elim-crec.bel \				use of contexts
 
     debruijn1/sources.cfg \			Beluga example: empty contexts
     			  			Proof that evaluations map to evaluations in env.
@@ -46,11 +46,11 @@
 						compile dir)
 
     equal/eq-proof-tuple.bel \                  Beluga examples: use of context subsumption,
-    equal/eq-proof.bel \                        use of sophisticated pattern variable reconstruction in 
+    equal/eq-proof.bel \                        use of sophisticated pattern variable reconstruction in
     equal/eq-proof-full-crec \                  the presence of projections, use of context reconstruction
 
     fol/sources.cfg \                           Twelf example
-    fol/test.cfg \  				Beluga examples: no recursion; mostly definitions.      
+    fol/test.cfg \  				Beluga examples: no recursion; mostly definitions.
 
     free-vars/fvnat.bel \                       Beluga examples: simple contexts, context reconstruction
     free-vars/fvnat-crec.bel \
@@ -102,7 +102,7 @@
     test/test-simple-explicit.bel \
     test/schema.bel \
 
-    tpcert.bel \				Beluga example: recursion over implicit arg. 
+    tpcert.bel \				Beluga example: recursion over implicit arg.
     	       					hence no context reconstruction
 
     typed-eval/tpeval.bel \			Beluga example: empty contexts

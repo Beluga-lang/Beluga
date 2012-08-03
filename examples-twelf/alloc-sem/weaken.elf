@@ -8,7 +8,7 @@
 
 %%% sttp_lookup
 sttp_weak_sttp_lookup
-               : sttp_lookup ST1 L T -> 
+               : sttp_lookup ST1 L T ->
                  sttp_extend ST1 ST2
                   -> sttp_lookup ST2 L T -> type.
 %mode sttp_weak_sttp_lookup +DSttpLookup1 +DSttpExtend -DSttpLookup2.
@@ -52,7 +52,7 @@ sttp_weak_loc_judg : loc_judg ST1 L T -> sttp_extend ST1 ST2
 
 %mode sttp_weak_loc_judg +DLocTc +DSttpExtend -DLocTc'.
 
-sttp_weak_loc_judg_ 
+sttp_weak_loc_judg_
                : sttp_weak_loc_judg (loc_judg_ DSttpLookup) DSttpExtend (loc_judg_ DSttpLookup')
 		  <- sttp_weak_sttp_lookup DSttpLookup DSttpExtend DSttpLookup'.
 
@@ -127,8 +127,8 @@ sttp_weak_val_judg
                                  DSttpExtend
                                  (val_judg_lam (\x. \d. DExpTcF' x d))
 		  <- ({x:exp}{dVarTcX : var_judg x Tx}
-			sttp_weak_exp_judg (DExpTcF x dVarTcX) 
-			                DSttpExtend 
+			sttp_weak_exp_judg (DExpTcF x dVarTcX)
+			                DSttpExtend
                                         (DExpTcF' x dVarTcX)).
 -unit          : sttp_weak_val_judg (val_judg_unit)
                                  DSttpExtend

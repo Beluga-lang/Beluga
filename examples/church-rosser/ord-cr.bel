@@ -3,15 +3,15 @@
 %%% Adapted: Brigitte Pientka
 
 cr+ord_prop : term -> term -> type.
-cr+ord_result: -->* M N  ->  -->* M' N 
+cr+ord_result: -->* M N  ->  -->* M' N
 	       -> cr+ord_prop M M'.
 
-rec cr_ord :  [. <-> M M']  ->  [. cr+ord_prop M M'] = 
-fn c => 
- let [. C'] = eq6 c in 
- let [. cr_result R* R*'] = cr [ ] [. C'] in 
- let [. S*]  = eq4 [ ] [. R*] in 
- let [. S*'] = eq4 [ ] [. R*'] in 
+rec cr_ord :  [. <-> M M']  ->  [. cr+ord_prop M M'] =
+fn c =>
+ let [. C'] = eq6 c in
+ let [. cr_result R* R*'] = cr [ ] [. C'] in
+ let [. S*]  = eq4 [ ] [. R*] in
+ let [. S*'] = eq4 [ ] [. R*'] in
   [. cr+ord_result S* S*']
 ;
 

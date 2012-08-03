@@ -4,10 +4,10 @@ tp : type.  %name tp T.
 tm : type.  %name tm M.
 
 % Types
-arr : tp -> tp -> tp.  
+arr : tp -> tp -> tp.
 
 % Terms
-app : tm -> tm -> tm.  
+app : tm -> tm -> tm.
 lam : tp -> (tm -> tm) -> tm.
 
 % Typing
@@ -15,7 +15,7 @@ has_type : tm -> tp -> type.  %name has_type D.
 
 is_app : has_type E1 (arr T1 T2) ->
          has_type E2 T1 ->
-       % -------------------   
+       % -------------------
          has_type (app E1 E2) T2.
 
 is_lam : ({x:tm} has_type x T1 -> has_type (E x) T2) ->
@@ -46,53 +46,53 @@ s_app3 : value E2 ->
 
 
 % Preservation
-rec pres : [. has_type E T] -> [. step E E'] -> [. has_type E' T] = 
-fn d => fn s =>  
-case s of 
-  [. s_app1 S1] => 
-    let [. is_app D1 D2] = d in 
-    let [. D1']          = pres [. D1] [. S1] in 
+rec pres : [. has_type E T] -> [. step E E'] -> [. has_type E' T] =
+fn d => fn s =>
+case s of
+  [. s_app1 S1] =>
+    let [. is_app D1 D2] = d in
+    let [. D1']          = pres [. D1] [. S1] in
       [. is_app D1' D2]
 
- | [. s_app2 V S2] => 
-    let [. is_app D1 D2] = d in 
-    let [. D2']            = pres [. D2] [. S2] in 
+ | [. s_app2 V S2] =>
+    let [. is_app D1 D2] = d in
+    let [. D2']            = pres [. D2] [. S2] in
       [. is_app D1 D2']
- 
- | [. s_app3 V] => 
-   let [. is_app (is_lam (\x. (\d. (D1 x d)))) D2] = d in 
+
+ | [. s_app3 V] =>
+   let [. is_app (is_lam (\x. (\d. (D1 x d)))) D2] = d in
      [. (D1 _ D2)]
-	
+
 ;
 
 
-% Progress 
+% Progress
 
-% Introduce a new type family to distinguish between the case where a term can 
-% take a step and it is a value. 
+% Introduce a new type family to distinguish between the case where a term can
+% take a step and it is a value.
 
 step_or_val : tm -> type.
 
-step_to : step E E' -> step_or_val E. 
+step_to : step E E' -> step_or_val E.
 val     :  value E   -> step_or_val E.
 
 
-% The usual declarative proof of progress will not work because it 
+% The usual declarative proof of progress will not work because it
 % requires Twelf to perform output splitting when it attempts to coverage
 % check the application case. This is the Beluga implementation.
 
 
-rec prog : [. has_type E T] -> [. step_or_val E] = 
-fn d => 
- case d of 
-  [. is_app D1 D2]  => 
+rec prog : [. has_type E T] -> [. step_or_val E] =
+fn d =>
+ case d of
+  [. is_app D1 D2]  =>
     (case   (prog [. D1])    of
         [. step_to EV]    =>  [. step_to (s_app1 EV)]
       | [. val VL1]       =>
          (case   (prog [. D2])   of
             [. step_to EV]   =>  [. step_to (s_app2 VL1 EV)]
-          | [. val VL2]      =>  
-            let [. value_lam]	= [. VL1] in 			     
+          | [. val VL2]      =>
+            let [. value_lam]	= [. VL1] in
 	    [. step_to (s_app3 VL2)]
 	 )
        )
@@ -100,16 +100,16 @@ fn d =>
 ;
 
 
-rec prog' : [. has_type E T] -> [. step_or_val E] = 
-fn d =>  case d of 
-| [. is_app D1 D2]  => 
+rec prog' : [. has_type E T] -> [. step_or_val E] =
+fn d =>  case d of
+| [. is_app D1 D2]  =>
     (case   (prog' [. D1])    of
         [. step_to EV]     =>  [. step_to (s_app1 EV)]
-      | [. val value_lam]  =>   
+      | [. val value_lam]  =>
          (case   (prog' [. D2])   of
             [. step_to EV]   =>  [. step_to (s_app2 value_lam EV)]
 
-           | [. val VL2]     =>  [. step_to (s_app3 VL2)] 
+           | [. val VL2]     =>  [. step_to (s_app3 VL2)]
 	    )
 %      | [ ] {}  % Prove explicitely that the other cases are impossible
        )

@@ -31,7 +31,7 @@ case x of
 
 
 rec cntV : {g:expCtx} [g, x:exp (T ..). exp (S ..)] -> [. exp nat] =
-mlam g => 
+mlam g =>
  fn e =>
   case e of
 
@@ -49,20 +49,20 @@ mlam g =>
 %%
 %%  NOT WORKING IF WE OMIT T1 ..  since from the pattern we simply infer
 %%  T1:tp[g, x:exp _]    and only later in the branch we learn that T1:tp[g].
-%%  
+%%
 %%   | [g,x : exp _ ] letv  (U1 .. x) (\y . (U2 ..  x y)) =>
-%%             plus (cntV [g]  ([g,x] (U1 .. x))) 
+%%             plus (cntV [g]  ([g,x] (U1 .. x)))
 %%                  (cntV [g, y:exp _ ]  ([g,y,x] (U2 .. x y)))
 %%
-%% CURRENTLY, THIS PROBLEM ARISES IN THE FORM OF FAILURE TO INVERT THE 
+%% CURRENTLY, THIS PROBLEM ARISES IN THE FORM OF FAILURE TO INVERT THE
 %% RECONSTRUCTED BRANCH: MVAR 3[_ . ^0] occurs in the branch, but this is
-%% bad, since progress would be violated. The pattern may succeed in instantiating 3 to x 
+%% bad, since progress would be violated. The pattern may succeed in instantiating 3 to x
 %% in the context ., x:A . But then [_, .](x)  does actually not exist.
-%% The solution is that the original meta-variable 3 needs to be in fact of a different type, 
-%% namely exp [. ] and not exp[. , x:A].  
+%% The solution is that the original meta-variable 3 needs to be in fact of a different type,
+%% namely exp [. ] and not exp[. , x:A].
 %%
    | [g,x : exp _ . letv (T1 ..) (U1 .. x) (\y . (U2 .. x y))] =>
-      plus  (cntV [g]          [g,x. (U1 .. x)]) 
+      plus  (cntV [g]          [g,x. (U1 .. x)])
             (cntV [g, y:exp _]  [g,y,x. (U2 .. x y)])
 
 

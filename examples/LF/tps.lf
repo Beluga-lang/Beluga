@@ -1,4 +1,4 @@
-exp  : type.  
+exp  : type.
 z    : exp.
 suc  : exp -> exp.
 
@@ -30,29 +30,29 @@ ev_s : eval E V -> eval (suc E) (suc V).
 
 ev_lam: eval (lam (\ x . E x)) (lam (\ x . E x)).
 
-ev_app:  eval (E1' V2) V  -> 
-         eval E2 V2 -> 
-         eval E1 (lam (\ x . E1' x))  
+ev_app:  eval (E1' V2) V  ->
+         eval E2 V2 ->
+         eval E1 (lam (\ x . E1' x))
       -> eval (app E1 E2) V.
 
-ev_pair: eval E2 V2 -> eval E1 V1 
+ev_pair: eval E2 V2 -> eval E1 V1
 	 -> eval (pair E1 E2) (pair V1 V2).
 
-ev_fst : eval E (pair V1 V2) 
+ev_fst : eval E (pair V1 V2)
        -> eval (fst E) V1.
 
-ev_snd : eval E (pair V1 V2) 
+ev_snd : eval E (pair V1 V2)
        -> eval (snd E) V2.
 
-ev_case'_z : eval E2 V  -> 
+ev_case'_z : eval E2 V  ->
  	    eval E1 z
          -> eval (case' E1 E2 (\ x . E3 x)) V.
 
 ev_case'_s :  eval (E3 V1') V ->  eval E1 (suc V1')
 	  -> eval (case' E1 E2 (\ x . E3 x)) V.
 
-ev_letv	  : eval (E2 V1) V -> 
-	    eval E1 V1  	   
+ev_letv	  : eval (E2 V1) V ->
+	    eval E1 V1
          -> eval (letv E1 (\ x . E2 x)) V.
 
 ev_letn :  eval (E2 E1) V
@@ -63,19 +63,19 @@ ev_fix :    eval (E (fix (\ x . E x))) V
 	  -> eval (fix (\ x . E x)) V.
 
 
-oft : exp -> tp -> type. 
+oft : exp -> tp -> type.
 
 tp_z     : oft z nat.
-tp_s     : oft E nat -> 
+tp_s     : oft E nat ->
 	   oft (suc E) nat.
 
-tp_case'  : ({x:exp} oft x nat -> oft (E3 x) T) -> 
-	    oft E2 T -> 
-	    oft E1 nat -> 
+tp_case'  : ({x:exp} oft x nat -> oft (E3 x) T) ->
+	    oft E2 T ->
+	    oft E1 nat ->
             oft (case' E1 E2 (\ x . E3 x)) T.
 
 tp_pair :  oft E2 T2 ->
-	   oft E1 T1 -> 
+	   oft E1 T1 ->
            oft (pair E1 E2) (cross T1 T2).
 
 tp_fst  : oft E (cross T1 T2)
@@ -85,23 +85,23 @@ tp_snd  : oft E (cross T1 T2)
 	-> oft (snd E) T2.
 
 
-tp_lam :   ({x:exp} oft x T1 -> oft (E x) T2) 
+tp_lam :   ({x:exp} oft x T1 -> oft (E x) T2)
         -> oft (lam (\ x . E x)) (arrow T1 T2).
 
-tp_app : oft E2 T2 -> 
+tp_app : oft E2 T2 ->
          oft E1 (arrow T2 T1)
 	 -> oft (app E1 E2) T1.
 
 
-tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) -> 
-	   oft E1 T1  
+tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
+	   oft E1 T1
         -> oft (letv E1 (\ x . E2 x)) T2.
 
-tp_letn :   oft (E2 E1) T2 -> 
-	    oft E1 T1 
+tp_letn :   oft (E2 E1) T2 ->
+	    oft E1 T1
 	    -> oft (letn E1 (\ x . E2 x)) T2.
 
-tp_fix : ({x:exp} oft x T -> oft (E x) T) 
+tp_fix : ({x:exp} oft x T -> oft (E x) T)
        -> oft (fix (\ x . E x)) T.
 
 
@@ -117,26 +117,26 @@ tps_case'_z:  tps D2 P2 Q2
 	   -> tps (ev_case'_z D2 D1) (tp_case' (\ x . \ u . P3 x u) P2 P1) Q2.
 
 
-tps_case'_s: 
-	    tps D1 P1 (tp_s Q1') -> 
-	    tps D3 (P3 _ Q1') Q3 
+tps_case'_s:
+	    tps D1 P1 (tp_s Q1') ->
+	    tps D3 (P3 _ Q1') Q3
 	  -> tps (ev_case'_s D3 D1) (tp_case' (\ x . \ u . P3 x u) P2 P1) Q3.
 
 
-tps_pair : tps D2 P2 Q2 -> 
-	   tps D1 P1 Q1 
+tps_pair : tps D2 P2 Q2 ->
+	   tps D1 P1 Q1
          -> tps (ev_pair D2 D1) (tp_pair P2 P1) (tp_pair Q2 Q1).
 
 tps_fst  : tps D1 P1 (tp_pair Q2 Q1)
 	 -> tps (ev_fst D1) (tp_fst P1) Q1.
 
-tps_snd  : tps D1 P1 (tp_pair Q2 Q1) 
+tps_snd  : tps D1 P1 (tp_pair Q2 Q1)
 	 -> tps (ev_snd D1) (tp_snd P1) Q2.
 
 
 
-tps_app  :  tps D3 (Q1' _ Q2) Q3 -> 
-	    tps D2 P2 Q2 -> 
+tps_app  :  tps D3 (Q1' _ Q2) Q3 ->
+	    tps D2 P2 Q2 ->
 	    tps D1 P1 (tp_lam (\ x . \ u . Q1' x u))
           -> tps (ev_app D3 D2 D1) (tp_app P2 P1) Q3.
 
@@ -146,7 +146,7 @@ tps_lam  : tps (ev_lam) (tp_lam (\ x . \ u . P x u)) (tp_lam (\ x . \ u . P x u)
 
 
 
-tps_letv :  tps D2 (P2 _ Q1) Q2 -> 
+tps_letv :  tps D2 (P2 _ Q1) Q2 ->
 	    tps D1 P1 Q1
           -> tps (ev_letv D2 D1) (tp_letv (\ x . \ u . P2 x u) P1) Q2.
 

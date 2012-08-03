@@ -129,7 +129,7 @@ hnd_ug : hilnd (ug H1) (foralli D1)
 %covers hilnd +H -D.
 %total H (hilnd H _).
 
-%{solve id' : 
+%{solve id' :
 hilnd (mp (mp s k) k) (D:nd (imp A A)).
 
 _ : nd (imp A A)

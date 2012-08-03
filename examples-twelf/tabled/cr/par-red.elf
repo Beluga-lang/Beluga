@@ -24,7 +24,7 @@ lm   : ({x:term} x => x -> M x => M' x)
 
 id   :          M  =>* M.
 
-;    :          M  =>* M''  
+;    :          M  =>* M''
      <-         M  => M'
      <-         M' =>* M''.   %infix right 10 ;.
 

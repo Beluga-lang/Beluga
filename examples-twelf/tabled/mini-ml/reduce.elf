@@ -27,7 +27,7 @@ red*_s : s E ==>* s E'
 red*_case : case E1 E2 E3 ==>* case E1' E2 E3
 	     <- E1 ==>* E1'.
 
-% non-deterministic choice 
+% non-deterministic choice
 red*_pair1 : pair E1 E2 ==>* pair E1' E2
 	     <- E1 ==>* E1'.
 red*_pair2 : pair E1 E2 ==>* pair E1 E2'
@@ -37,7 +37,7 @@ red*_fst : fst E ==>* fst E'
 red*_snd : snd E ==>* snd E'
 	    <- E ==>* E'.
 % no red*_lam
-% non-deterministic choice 
+% non-deterministic choice
 red*_app1 : app E1 E2 ==>* app E1' E2
 	     <- E1 ==>* E1'.
 red*_app2 : app E1 E2 ==>* app E1 E2'
@@ -65,7 +65,7 @@ ev: eval E V
      <- value V.
 
 
-% otherwise unpractical to execute. 
+% otherwise unpractical to execute.
 
 
 %tabled ==>*.

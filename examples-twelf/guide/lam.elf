@@ -12,7 +12,7 @@ exp : type.				%name exp E.
 lam : (exp -> exp) -> exp.		% lam x. E
 app : exp -> exp -> exp.		% (E1 E2)
 
-%{ Type inference 
+%{ Type inference
     |- E : T  (expression E has type T)
 }%
 
@@ -29,7 +29,7 @@ tp_app : oft (app E1 E2) T1		% |- E1 E2 : T1
 	  <- oft E1 (arrow T2 T1)	% if  |- E1 : T2 => T1
 	  <- oft E2 T2.			% and |- E2 : T2.
 
-% Evaluation (call-by-value) 
+% Evaluation (call-by-value)
 % E ==> V  (expression E evaluates to value V)
 
 eval : exp -> exp -> type.		%name eval D.
@@ -90,7 +90,7 @@ tpsa : forall* {E:exp} {V:exp} {T:tp}
 e0 = (app (lam [x] x) (lam [y] y)).
 %solve p0 : oft e0 T.
 %solve d0 : eval e0 V.
-%solve tps0 : tps d0 p0 Q.      
+%solve tps0 : tps d0 p0 Q.
 }%
 
 % Example of regular worlds

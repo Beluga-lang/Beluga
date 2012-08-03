@@ -28,13 +28,13 @@ An alternative would be to prove strengthening lemmas about fields and mtype.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%{ 
-We also have to reason about when things are equal, even though equality is not 
+%{
+We also have to reason about when things are equal, even though equality is not
 built into twelf. Therefore, we need a judgment about equality for each different
 type.
 }%
 
-%% other equality relations --- not part of specification of FJ 
+%% other equality relations --- not part of specification of FJ
 
 classDef_eq : classDef C -> classDef C -> type.
 %mode classDef_eq +CD1 +CD2.
@@ -69,7 +69,7 @@ cnlist_eq_refl : cnlist_eq X X.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 classDef_eq_extract:
-classDef_eq (class C D1 CS1 MT1) (class C D2 CS2 MT2) -> 
+classDef_eq (class C D1 CS1 MT1) (class C D2 CS2 MT2) ->
 className_eq D1 D2 -> cnlist_eq CS1 CS2 -> methodTable_eq MT1 MT2 -> type.
 %mode classDef_eq_extract +E -E2 -CNLEQ -MTE.
 -: classDef_eq_extract classDef_refl className_refl cnlist_eq_refl methodTable_refl.
@@ -79,7 +79,7 @@ className_eq D1 D2 -> cnlist_eq CS1 CS2 -> methodTable_eq MT1 MT2 -> type.
 %% These next few lemmas are really annoying because we would like to say
 %% something like Leibniz equality:
 %%     if M = N then P(M) => P (N).
-%% But we can't prove things in that generality. We must prove it for each 
+%% But we can't prove things in that generality. We must prove it for each
 %% particular case.
 
 refineMTEQ : methodTable_eq MT1 MT2 -> lookupMethod MT1 M MD -> lookupMethod MT2 M MD -> type.
@@ -94,7 +94,7 @@ refineCEQ : className_eq C1 C2 -> mtype CT M C1 C O1 -> mtype CT M C2 C O1 -> ty
 %worlds (var ) (refineCEQ M N O).
 %total M (refineCEQ M N O).
 
-refineMDEQ : methodDef_eq (method D0 M (BE0 : bexp DS)) (method C0 M (BE1 : bexp CS)) ->     
+refineMDEQ : methodDef_eq (method D0 M (BE0 : bexp DS)) (method C0 M (BE1 : bexp CS)) ->
    lookupMethod MR1 M (method D0 M (BE2: bexp DS)) ->
    lookupMethod MR1 M (method C0 M (BE3: bexp CS)) -> type.
 %mode +{M:methodName} +{N1:nat} +{DS:cnlist N1} +{D0:className} +{BE0:bexp DS}
@@ -116,7 +116,7 @@ sub_trans : subtyping CT C D -> subtyping CT D E -> subtyping CT C E -> type.
 %mode sub_trans +SB1 +SB2 -SB3.
 -: sub_trans s_refl SB SB.
 -: sub_trans SB SB2 SB3 ->
-    sub_trans (s_super SB LC NEQ) SB2 (s_super SB3 LC NEQ). 
+    sub_trans (s_super SB LC NEQ) SB2 (s_super SB3 LC NEQ).
 %worlds (var) (sub_trans SB1 SB2 SB3).
 %total SB1 (sub_trans SB1 SB2 SB3).
 
@@ -129,7 +129,7 @@ lookupClass_strengthen : ({x:exp} lookupClass CT C (class C D FS (MT x)))
 -: lookupClass_strengthen ([x] lookupClass_crcons1)  lookupClass_crcons1.
 
 -: lookupClass_strengthen LC1 LC2 ->
-   lookupClass_strengthen ([x] lookupClass_crcons2 NEQ (LC1 x)) 
+   lookupClass_strengthen ([x] lookupClass_crcons2 NEQ (LC1 x))
                            (lookupClass_crcons2 NEQ LC2).
 %worlds (var) (lookupClass_strengthen LC1 LC2).
 %total LC1 (lookupClass_strengthen LC1 LC2).
@@ -150,14 +150,14 @@ sub_strengthen : (exp -> subtyping CT C D) -> subtyping CT C D -> type.
 %% several lemmas about cnappend. These really should be in a list library.
 %% at least we didn't need them for expression lists too!
 
-%% Ok, this is really annoying. I just used the metalogic to 
-%% show that append was total, but if I want to use it in the 
+%% Ok, this is really annoying. I just used the metalogic to
+%% show that append was total, but if I want to use it in the
 %% logic, I have to show totality in the logic too!
 append_total : {CS:cnlist N1} {DS: cnlist N2} {ES:cnlist N3}
                     {PL:plus N1 N2 N3} cnappend CS DS ES PL -> type.
-%mode append_total +CS +DS -ES -PL -APP. 
+%mode append_total +CS +DS -ES -PL -APP.
 -: append_total cnnil CS CS plus_z cnappend_cnnil.
--: append_total CS1 CS2 CS3 PL D -> 
+-: append_total CS1 CS2 CS3 PL D ->
    append_total (cncons CN CS1) CS2 (cncons CN CS3) (plus_s PL) (cnappend_cncons D).
 %worlds () (append_total CS DS ES PL APP).
 %total CS (append_total CS DS ES PL APP).
@@ -173,24 +173,24 @@ cnappend_cnnil_lemma_cnnil : cnappend_cnnil_lemma (cnnil) (cnappend_cnnil).
 
 cnappend_cnnil_lemma_cncons : cnappend_cnnil_lemma CS CAP ->
                             % -------------------------------------------------------------
-                              cnappend_cnnil_lemma (cncons C CS) (cnappend_cncons CAP). 
+                              cnappend_cnnil_lemma (cncons C CS) (cnappend_cncons CAP).
 
 %worlds () (cnappend_cnnil_lemma CS CAP).
 %total CS (cnappend_cnnil_lemma CS CAP).
 
 %%%%%
 %% Append is an associative operation
-%% (xs ++ ys) ++ zs = xs ++ (ys ++ zs) 
+%% (xs ++ ys) ++ zs = xs ++ (ys ++ zs)
 %%     us                       ts
 append_assoc : cnappend XS YS US P3 -> cnappend US ZS RESULT P4 ->
-                    cnappend YS ZS TS P2 -> cnappend XS TS RESULT P1 
+                    cnappend YS ZS TS P2 -> cnappend XS TS RESULT P1
                     -> type.
 %mode append_assoc +A1 +A2 +A3 -A4.
 
 -: append_assoc cnappend_cnnil UZ YZ cnappend_cnnil.
 %% xs = x :: xs1
 
-%% don't know why this case isn't subsumed by the first. But it makes the 
+%% don't know why this case isn't subsumed by the first. But it makes the
 %% coverage checker happy.
 -: append_assoc cnappend_cnnil (cnappend_cncons R1) (cnappend_cncons R2) cnappend_cnnil.
 
@@ -198,14 +198,14 @@ append_assoc : cnappend XS YS US P3 -> cnappend US ZS RESULT P4 ->
     append_assoc (cnappend_cncons R1) (cnappend_cncons R2) YZ (cnappend_cncons R3).
 
 %worlds () (append_assoc A1 A2 A3 A4).
-%total A1 (append_assoc A1 A2 A3 A4). 
+%total A1 (append_assoc A1 A2 A3 A4).
 
 %% weird, works with CVS version, but not with old version.....
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Lemma about accessing the fields of a subtype
-%% The fields of a subtype are an extension. 
+%% The fields of a subtype are an extension.
 sub_fields : subtyping CT C D -> fields CT D N DG -> cnappend DG EF CS PL -> fields CT C M CS -> type.
 %mode sub_fields +SB +F1 -APP -F2.
 
@@ -222,9 +222,9 @@ sub_fields : subtyping CT C D -> fields CT D N DG -> cnappend DG EF CS PL -> fie
     append_total FSD FSC FSCD PLCD APCD ->
      append_total FD FSC FC PLC APC ->
      sub_fields SB QFE APD QFD  ->
-    sub_fields ((s_super SB LC1 NEQ):subtyping CT C E) 
+    sub_fields ((s_super SB LC1 NEQ):subtyping CT C E)
                     (QFE : fields CT E NE FE)
-                    (XXX : cnappend FE FSCD FC _) 
+                    (XXX : cnappend FE FSCD FC _)
                (f_class APC QFD LC1 NEQ).
 %worlds (var) (sub_fields SB F1 APP F2).
 %total SB  (sub_fields SB F1 APP F2).
@@ -235,7 +235,7 @@ sub_fields : subtyping CT C D -> fields CT D N DG -> cnappend DG EF CS PL -> fie
 append_nth : {C} cnnth_opt N DG C -> cnappend DG EF CS PL -> cnnth_opt N CS C -> type.
 %mode append_nth +C +NO1 +APP -NO2.
 -: append_nth C cnnth_sz APP cnnth_sz.
--: append_nth C D APP E -> 
+-: append_nth C D APP E ->
     append_nth C (cnnth_sn D) (cnappend_cncons APP) (cnnth_sn E).
 %worlds () (append_nth C N1 APP N2).
 %total N1 (append_nth C N1 APP N2).
@@ -244,7 +244,7 @@ append_nth : {C} cnnth_opt N DG C -> cnappend DG EF CS PL -> cnnth_opt N CS C ->
 % Lemma that states that if we have a list of well formed expressions, we can project
 % out the nth expression and nth class name and there exists a derivation that the
 % expression is well typed with a subtype.
- 
+
 typing_list_proj_lemma : typing_list CT ES CS -> enth_opt N ES E -> cnnth_opt N CS C ->
              subtyping CT C0 C -> typing CT E C0 -> type.
 %mode typing_list_proj_lemma +PL +ENTH +CNTH -QT -QS.
@@ -288,7 +288,7 @@ meq_lcm    : methodName_eq M N -> lookupMethod MT M MD    -> lookupMethod MT N N
 -: meq_lcm methodName_refl LCM LCM.
 %worlds () (meq_lcm MEQ L1 L2).
 %total  MEQ (meq_lcm MEQ L1 L2).
- 
+
 %% ... over methods being undefined
 meq_notInMT : methodName_eq M N -> notInMT MT M -> notInMT MT N -> type.
 %mode meq_notInMT +EQ +N -N.
@@ -326,7 +326,7 @@ mneq_excluded_middle : {M}{N} mneq_em M N -> type.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% lm_total: Method lookup is decidable
-%% we can either lookup a method name in the method table or 
+%% we can either lookup a method name in the method table or
 %% get a derivation that the method name is undefined.
 %% again, split into several helper functions.
 
@@ -334,8 +334,8 @@ lookup_or_notInMT : methodTable -> methodName -> type.
 lom1 : lookupMethod MT M MD -> lookup_or_notInMT MT M.
 lom2 : notInMT MT M -> lookup_or_notInMT MT M.
 
-lm_helper2 : methodName_neq M N 
-                  -> lookup_or_notInMT MT M 
+lm_helper2 : methodName_neq M N
+                  -> lookup_or_notInMT MT M
                   -> lookup_or_notInMT (mrcons (method C N BE) MT MR) M -> type.
 %mode +{M:methodName} +{N:methodName} +{MT:methodTable} +{N1:nat} +{CS1:cnlist N1}
    +{C:className} +{BE:bexp CS1} +{MR:notInMT MT N} +{NEQ:methodName_neq M N}
@@ -350,7 +350,7 @@ lm_helper2 : methodName_neq M N
 %total L1 (lm_helper2 N2 L1 O1).
 
 
-lm_helper1 : {MT:methodTable}{MR:notInMT MT N} mneq_em M N 
+lm_helper1 : {MT:methodTable}{MR:notInMT MT N} mneq_em M N
                   -> lookup_or_notInMT (mrcons (method C N BE) MT MR) M -> type.
 %mode +{M:methodName} +{N:methodName} +{N1:nat} +{CS1:cnlist N1} +{C:className}
    +{BE:bexp CS1} +{MT:methodTable} +{MR:notInMT MT N} +{EQ:mneq_em M N}
@@ -362,7 +362,7 @@ lm_total : {MT:methodTable}{M:methodName} lookup_or_notInMT MT M -> type.
 
 -: lm_helper1 MT MR (mneq_eq EQ) (lom1 lookupMethod_mrcons1).
 
--: lm_helper2 NEQ LOM1 LOM2 
+-: lm_helper2 NEQ LOM1 LOM2
    -> lm_total MT M LOM1
    -> lm_helper1 MT MR (mneq_neq NEQ) LOM2.
 
@@ -375,7 +375,7 @@ lm_total : {MT:methodTable}{M:methodName} lookup_or_notInMT MT M -> type.
 %worlds (var) (lm_total MT M LM) (lm_helper1 MT2 MR L O).
 %total (MT1 MT2) (lm_total MT1 M LM) (lm_helper1 MT2 MR L2 O2).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% exclusitivity of various operations
 
@@ -416,7 +416,7 @@ lookupMethod_exclusive : lookupMethod MT M MD -> notInMT MT M -> false -> type.
 
 
 -: lookupMethod_exclusive LM0 NI0 FALSE ->
-   lookupMethod_exclusive (lookupMethod_mrcons2 NEQ1 LM0) 
+   lookupMethod_exclusive (lookupMethod_mrcons2 NEQ1 LM0)
                            (notInMT_mrcons NI0 NEQ2) FALSE.
 %worlds (var) (lookupMethod_exclusive LM NI F).
 %total (LM) (lookupMethod_exclusive LM NI F).
@@ -428,7 +428,7 @@ mtype2neq : mtype CT M C CS C0 -> className_neq C object -> type.
 %worlds (var) (mtype2neq N O).
 %total N (mtype2neq N O).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% false implies equality
 
@@ -465,24 +465,24 @@ false_imp_TBE : false -> typing_bexp CT (BE: bexp CS1) C0 object -> subtyping CT
 lookupMethod_unique: lookupMethod MT M MD1 -> lookupMethod MT M MD2 -> methodDef_eq MD1 MD2 -> type.
 %mode lookupMethod_unique +LCM1 +LCM2 -MDEQ.
 
--: lookupMethod_unique 
+-: lookupMethod_unique
      (lookupMethod_mrcons1:lookupMethod _ M _) lookupMethod_mrcons1 methodDef_refl.
 
 -: false_imp_eq FALSE MDEQ ->
     methodName_eq_exclusive methodName_refl NEQ FALSE ->
-   lookupMethod_unique 
-     (lookupMethod_mrcons1 : lookupMethod _ M _) 
+   lookupMethod_unique
+     (lookupMethod_mrcons1 : lookupMethod _ M _)
      (lookupMethod_mrcons2 NEQ LM0) MDEQ.
 
 -: false_imp_eq FALSE MDEQ ->
     methodName_eq_exclusive methodName_refl NEQ FALSE ->
-   lookupMethod_unique 
-     (lookupMethod_mrcons2 NEQ LM1:lookupMethod _ M _) 
+   lookupMethod_unique
+     (lookupMethod_mrcons2 NEQ LM1:lookupMethod _ M _)
      (lookupMethod_mrcons1 : lookupMethod _ M _) MDEQ.
 
 -: lookupMethod_unique LM1 LM2 MDEQ ->
-   lookupMethod_unique 
-     (lookupMethod_mrcons2 NEQ1 LM1:lookupMethod _ M _) 
+   lookupMethod_unique
+     (lookupMethod_mrcons2 NEQ1 LM1:lookupMethod _ M _)
      (lookupMethod_mrcons2 NEQ2 LM2) MDEQ.
 
 %worlds (var)  (lookupMethod_unique LCM1 LCM2 CDEQ).
@@ -494,24 +494,24 @@ lookupMethod_unique: lookupMethod MT M MD1 -> lookupMethod MT M MD2 -> methodDef
 lookupClass_unique : lookupClass CT C CD1 -> lookupClass CT C CD2 -> classDef_eq CD1 CD2 -> type.
 %mode lookupClass_unique +LC1 +LC2 -CDEQ.
 
--: lookupClass_unique 
+-: lookupClass_unique
      (lookupClass_crcons1) lookupClass_crcons1 classDef_refl.
 
 -: false_imp_eq_class FALSE MDEQ ->
     className_eq_exclusive className_refl NEQ FALSE ->
-   lookupClass_unique 
-     (lookupClass_crcons1) 
+   lookupClass_unique
+     (lookupClass_crcons1)
      (lookupClass_crcons2 NEQ LC0) MDEQ.
 
 -: false_imp_eq_class FALSE MDEQ ->
     className_eq_exclusive className_refl NEQ FALSE ->
-   lookupClass_unique 
-     (lookupClass_crcons2 NEQ LC1) 
+   lookupClass_unique
+     (lookupClass_crcons2 NEQ LC1)
      (lookupClass_crcons1 : lookupClass _ M _) MDEQ.
 
 -: lookupClass_unique LC1 LC2 MDEQ ->
-   lookupClass_unique 
-     (lookupClass_crcons2 NEQ1 LC1) 
+   lookupClass_unique
+     (lookupClass_crcons2 NEQ1 LC1)
      (lookupClass_crcons2 NEQ2 LC2) MDEQ.
 
 %worlds (var) (lookupClass_unique LC1 LC2 CDEQ).
@@ -535,7 +535,7 @@ mtype_exclusive :  mtype CT M C CS C0 ->  method_undefined CT M C -> false -> ty
    {CLEQ:cnlist_eq _ _}
    {MTY1:mtype CT1 M D CS1 C0}
    {MU:method_undefined CT1 M D0}
-   mtype_exclusive MTY2 MU FALSE -> 
+   mtype_exclusive MTY2 MU FALSE ->
     refineCEQ CEQ MTY1 MTY2 ->
    classDef_eq_extract  CDEQ CEQ CLEQ MTEQ ->
     lookupClass_unique LC1 LC2 CDEQ ->
@@ -550,7 +550,7 @@ false_imp_lookupMethod : false ->
    lookupMethod MR1 M (method C0 M (BE3: bexp CS)) -> type.
 %mode +{MR1:methodTable} +{M:methodName} +{N1:nat} +{DS:cnlist N1} +{D0:className}
    +{BE2:bexp DS} +{N2:nat} +{CS:cnlist N2} +{C0:className} -{BE3:bexp CS}
-   +{F:false} 
+   +{F:false}
    +{LM1:lookupMethod MR1 M (method D0 M BE2)}
    -{LM2:lookupMethod MR1 M (method C0 M BE3)}
    (false_imp_lookupMethod F LM1 LM2).
@@ -569,21 +569,21 @@ mtype_unique : mtype CT M C DS D0 -> mtype CT M C CS C0 ->
    -{E4:lookupMethod MR1 M (method C0 M BE3)} (mtype_unique M1 M2 E3 E4).
 
 -: false_imp_lookupMethod FALSE LM1 LM2
-   -> lookupMethod_exclusive LCM3 NI2 FALSE 
+   -> lookupMethod_exclusive LCM3 NI2 FALSE
    -> refineMTEQ MTEQ LCM1 LCM3
-   -> classDef_eq_extract CDEQ _ _ MTEQ 
-   -> lookupClass_unique LC1 LC2 CDEQ 
+   -> classDef_eq_extract CDEQ _ _ MTEQ
+   -> lookupClass_unique LC1 LC2 CDEQ
    -> mtype_unique (mt_class LCM1 LC1 _) (mt_super GMD2 NI2 LC2 _) LM1 LM2.
 
 -: false_imp_lookupMethod FALSE LM1 LM2
-   -> lookupMethod_exclusive LCM3 NI1 FALSE 
+   -> lookupMethod_exclusive LCM3 NI1 FALSE
    -> refineMTEQ MTEQ LCM2 LCM3
    -> classDef_eq_extract CDEQ _ _ MTEQ
    -> lookupClass_unique LC2 LC1 CDEQ
    -> mtype_unique (mt_super GMD1 NI1 LC1 _) (mt_class LCM2 LC2 _) LM1 LM2.
 
 -: mtype_unique GMD1 GMD3 LM1 LM2 ->
-    refineCEQ CEQ GMD2 GMD3 ->        
+    refineCEQ CEQ GMD2 GMD3 ->
    classDef_eq_extract CDEQ CEQ _ _ ->
    lookupClass_unique LC2 LC1 CDEQ ->
    mtype_unique (mt_super GMD1 NI1 LC1 _) (mt_super GMD2 NI2 LC2 _) LM1 LM2.
@@ -599,14 +599,14 @@ mtype_unique : mtype CT M C DS D0 -> mtype CT M C CS C0 ->
 %total {M N} (mtype_unique M N O P).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% If the class table is well formed, then a class defined in the class
 %% table is well formed.
 
-ctth_ct : class_table_typing_help CT0 CT 
+ctth_ct : class_table_typing_help CT0 CT
   -> lookupClass CT C CD
-  -> className_neq C object 
-  -> class_typing CT0 C CD 
+  -> className_neq C object
+  -> class_typing CT0 C CD
   -> type.
 %mode ctth_ct +WCT +LCM -NEQ -CT.
 -: ctth_ct (ctt_cons _ CT NEQ) lookupClass_crcons1 NEQ CT.
@@ -635,7 +635,7 @@ ct_mtt : class_typing CT C (class C D FS MT) -> method_table_typing CT MT C -> t
 
 
 %% If a method table is well formed, then a method is well typed.
-mtt_mt : 
+mtt_mt :
      method_table_typing CT MT C
   -> lookupMethod MT M MD
   -> method_typing CT M MD C -> type.
@@ -647,13 +647,13 @@ mtt_mt :
 %total  LCM (mtt_mt MTT LCM MT).
 %unique mtt_mt +MTT +LCM -1MT.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% This part deals with mtype---see sub_mtype lemma below.
 
 
 %% the class table says that if M is defined in D then it has type
 %% DS -> D0.
-%% but mtype thinks the type should be CS -> C0                                                                
+%% but mtype thinks the type should be CS -> C0
 
 override_check :
     override CT M D DS D0 ->
@@ -663,18 +663,18 @@ override_check :
 %mode override_check +OV +MT +EQ1 -EQ2.
 
 -:  {MT1:mtype CT1 M1 C DS D0}
-    {MT2:mtype CT1 M1 C CS C0} 
+    {MT2:mtype CT1 M1 C CS C0}
     {LM1:lookupMethod MR1 M1 (method D0 M1 BE1)}
     {LM2:lookupMethod MR1 M1 (method C0 M1 BE2)}
-    mtype_unique MT1 MT2 LM1 LM2 -> 
+    mtype_unique MT1 MT2 LM1 LM2 ->
     override_check (ov1 MT1) MT2 LM1 LM2 .
 
 -:  false_imp_lookupMethod FALSE LM1 LM2 ->
-     mtype_exclusive MT2 UN FALSE -> 
+     mtype_exclusive MT2 UN FALSE ->
      override_check (ov2 UN) MT2 LM1 LM2.
 
 %worlds (var) (override_check OV MT E1 E2).
-%total OV (override_check OV MT E1 E2). 
+%total OV (override_check OV MT E1 E2).
 
 
 refine_override : className_eq D1 D2 -> override CT M D1 CS C0 -> override CT M D2 CS C0 -> type.
@@ -682,19 +682,19 @@ refine_override : className_eq D1 D2 -> override CT M D1 CS C0 -> override CT M 
 -: refine_override className_refl OV OV.
 %worlds (var) (refine_override EQ OV1 OV2).
 %total EQ (refine_override EQ OV1 OV2).
-    
+
 
 %%% Lemma about subtyping and mtype. (A.13 in TAPL)
 %% split to help the coverage checker.
 
 %% if mtype(M,D) = C0 -> CS
-%% and C extends D 
+%% and C extends D
 %% then mtype(M,C) = C0 -> CS
 
 sub_mtype_helper :  class_table_typing CT
                           -> mtype CT M D CS C0                     % if M has type CS -> C0 in D
                           -> lookup_or_notInMT MT M                 % and may or may not be in C's
-                          -> lookupClass CT C (class C D FS MT)     %   method table 
+                          -> lookupClass CT C (class C D FS MT)     %   method table
                           -> mtype CT M C CS C0                     % then M has type CS -> C0 in C
                           -> type.
 %mode sub_mtype_helper  +CT +QMT1 +LOM +LC -QMT2.
@@ -705,7 +705,7 @@ sub_mtype_helper :  class_table_typing CT
 %% is defined in the method table for the super class, but lookup
 %% method in the current class may not have returned the same type for it
 %% as mtype. However, because of overriding, we know that those types
-%% must be the same.  
+%% must be the same.
 
 -: {CLEQ:cnlist_eq _ _}
    {SB : subtyping CT _ object}
@@ -718,11 +718,11 @@ sub_mtype_helper :  class_table_typing CT
    classDef_eq_extract CDEQ EQ1 CLEQ MTEQ ->
    lookupClass_unique LC2 LC1 CDEQ ->
     mtt_mt MTT LM1 (t_method Y X OV1 LC2)  ->
-   ctt_ct (ctt X1) LC1 NEQ (t_class Z MTT SB) 
+   ctt_ct (ctt X1) LC1 NEQ (t_class Z MTT SB)
      -> sub_mtype_helper (ctt X1) MTY1 (lom1 LM1) LC1 (mt_class LM2 LC1 NEQ).
 
 %% in this case we know that the method does not appear in the method table.
--:  ctt_ct WCT1 LC NEQ (t_class _ MTT _) 
+-:  ctt_ct WCT1 LC NEQ (t_class _ MTT _)
      -> sub_mtype_helper WCT1 MTY1 (lom2 MNDEF) LC (mt_super MTY1 MNDEF LC NEQ).
 
 %worlds (b_typing | var) (sub_mtype_helper WCT MT LOM LC QM).
@@ -743,7 +743,7 @@ sub_mtype: class_table_typing CT -> mtype CT M C CS C0 -> subtyping CT D C -> mt
      {QMT3 : mtype CT M D CS C0}
      sub_mtype_helper WCT QMT2 LOM LC QMT3
     -> lm_total MT M LOM
-     -> sub_mtype WCT QMT1 SB QMT2 
+     -> sub_mtype WCT QMT1 SB QMT2
     -> sub_mtype WCT QMT1 (s_super SB LC NEQ) QMT3.
 
 %worlds (b_typing | var) (sub_mtype WCT Q1 S Q2).
@@ -760,35 +760,35 @@ sub_mtype: class_table_typing CT -> mtype CT M C CS C0 -> subtyping CT D C -> mt
 
 %% This theorem is not nearly so tricky as the one for the POPLmark solution.
 
-narrowing_bexp :  class_table_typing CT -> 
+narrowing_bexp :  class_table_typing CT ->
                   {E: exp -> bexp CS}
-                        ({X:exp} typing CT X C0 -> typing_bexp CT (E X) C D0) 
-                        -> subtyping CT C1 C0 
+                        ({X:exp} typing CT X C0 -> typing_bexp CT (E X) C D0)
+                        -> subtyping CT C1 C0
                         -> ({X:exp} typing CT X C1 -> typing_bexp CT (E X) C D1)
                         -> subtyping CT D1 D0
                         -> type.
 %mode narrowing_bexp +WCT +E +P1 +SB1 -P2 -SB2.
-                                                          
-narrowing_exp  :  class_table_typing CT 
-                  -> ({X:exp} typing CT X C0 -> typing CT (E X) D0) 
-                        -> subtyping CT C1 C0 
+
+narrowing_exp  :  class_table_typing CT
+                  -> ({X:exp} typing CT X C0 -> typing CT (E X) D0)
+                        -> subtyping CT C1 C0
                         -> ({X:exp} typing CT X C1 -> typing CT (E X) D1)
                         -> subtyping CT D1 D0
-                        -> type.                                                                                             
+                        -> type.
 %mode narrowing_exp +WCT +P1 +SB1 -P2 -SB2.
 
-narrowing_explist :  class_table_typing CT -> 
-                   ({X:exp} typing CT X C0 -> typing_list CT (ES X) DS) 
-                        -> subtyping CT C1 C0 
+narrowing_explist :  class_table_typing CT ->
+                   ({X:exp} typing CT X C0 -> typing_list CT (ES X) DS)
+                        -> subtyping CT C1 C0
                         -> ({X:exp} typing CT X C1 -> typing_list CT (ES X) DS)
                         -> type.
 %mode narrowing_explist +WCT +P1 +SB1 -P2.
 
 %% a specialization of narrowing for the "this" variable.
 
-narrowing_this : class_table_typing CT 
-                        -> typing_bexp CT E D C0 
-                        -> subtyping CT C D 
+narrowing_this : class_table_typing CT
+                        -> typing_bexp CT E D C0
+                        -> subtyping CT C D
                         -> typing_bexp CT E C C1
                         -> subtyping CT C1 C0
                         -> type.
@@ -796,40 +796,40 @@ narrowing_this : class_table_typing CT
 
 %block b_bind :  some {CT: classTable}
                            {C0 : className}
-                        block 
+                        block
                      {x: exp}
                      {q: typing CT x C0}
                      {N: ({WCT : class_table_typing CT}
                           {C1 : className}
                                   {C2 : className}
-                          {SB0: subtyping CT C1 C2} 
+                          {SB0: subtyping CT C1 C2}
                           narrowing_exp WCT ([y][qy] q) SB0 ([y][qy] q) s_refl)}.
 
 -: sub_strengthen SB2 SB3
    -> ({this:exp}
     {qthis: typing CT this C0}
-     {N: {WCT}{C1}{C2}{SB0:subtyping CT C1 C2} narrowing_exp WCT 
-              ([x][q:typing CT x C2] qthis) SB0 
-              ([x][q:typing CT x C1] qthis) s_refl}              
+     {N: {WCT}{C1}{C2}{SB0:subtyping CT C1 C2} narrowing_exp WCT
+              ([x][q:typing CT x C2] qthis) SB0
+              ([x][q:typing CT x C1] qthis) s_refl}
           narrowing_exp WCT
-              ([x][q] Q x q this qthis)  SB1 
+              ([x][q] Q x q this qthis)  SB1
               ([x][q] Q2 x q this qthis) (SB2 this))
      -> narrowing_bexp WCT
          ([x:exp](base (E x)))
-         ([x:exp][q] t_base (Q x q)) SB1 
+         ([x:exp][q] t_base (Q x q)) SB1
        ([x][q] t_base (Q2 x q))    SB3.
 
 -: sub_strengthen SB2 SB3
-    -> ({y:exp}{qy:typing CT y C0} 
-        {N: {WCT}{C1}{C2}{SB0:subtyping CT C1 C2} narrowing_exp WCT ([x][q:typing CT x C2] qy) SB0 
-                                                         ([x][q:typing CT x C1] qy) s_refl}              
-        narrowing_bexp WCT 
+    -> ({y:exp}{qy:typing CT y C0}
+        {N: {WCT}{C1}{C2}{SB0:subtyping CT C1 C2} narrowing_exp WCT ([x][q:typing CT x C2] qy) SB0
+                                                         ([x][q:typing CT x C1] qy) s_refl}
+        narrowing_bexp WCT
         ([x] E x y)
-        ([x][q] Q1 x q y qy)    SB1 
+        ([x][q] Q1 x q y qy)    SB1
         ([x][q] Q2 x q y qy)    (SB2 y))
-     -> narrowing_bexp WCT 
-         ([x] bind C0 (E x)) 
-         ([x:exp][q] t_bind (Q1 x q)) SB1 
+     -> narrowing_bexp WCT
+         ([x] bind C0 (E x))
+         ([x:exp][q] t_bind (Q1 x q)) SB1
          ([x][q] (t_bind (Q2 x q)))   SB3.
 
 %% narrowing the very variable that occurs here.
@@ -838,25 +838,25 @@ narrowing_this : class_table_typing CT
 -:  append_nth FI CNTH1 APP CNTH2 ->
      ({x:exp} sub_fields SB2 (FE1 x) APP (FE2 x)) ->
     narrowing_exp WCT TY1 SB1 TY2 SB2 ->
-     narrowing_exp WCT 
-     ([x][q] t_field CNTH1 (FE1 x) (TY1 x q)) SB1 
+     narrowing_exp WCT
+     ([x][q] t_field CNTH1 (FE1 x) (TY1 x q)) SB1
      ([x][q] t_field CNTH2 (FE2 x) (TY2 x q)) s_refl.
 
--:  {MTY1:{e:exp} mtype CT1 M1 _ _ _} 
+-:  {MTY1:{e:exp} mtype CT1 M1 _ _ _}
     ({x:exp} sub_mtype WCT (MTY1 x) SB2 (MTY2 x)) ->
     narrowing_explist WCT TL1 SB1 TL2 ->
      narrowing_exp WCT T1 SB1 T2 SB2 ->
-     narrowing_exp WCT 
+     narrowing_exp WCT
      ([x][q] t_invk (TL1 x q) (MTY1 x) (T1 x q)) SB1
      ([x][q] t_invk (TL2 x q) (MTY2 x) (T2 x q)) s_refl.
 
 -:  narrowing_explist WCT TL1 SB1 TL2 ->
-    narrowing_exp WCT 
+    narrowing_exp WCT
      ([x][q] t_new (TL1 x q) (FE x)) SB1
      ([x][q] t_new (TL2 x q) (FE x)) s_refl.
-     
+
 -:  narrowing_exp WCT TY1 SB1 TY2 SB2 ->
-    narrowing_exp WCT 
+    narrowing_exp WCT
      ([x][q] t_cast (TY1 x q)) SB1
      ([x][q] t_cast (TY2 x q)) s_refl.
 
@@ -865,7 +865,7 @@ narrowing_this : class_table_typing CT
 
 -:  narrowing_explist WCT TL1 SB TL2 ->
     sub_trans SB2 SB3 SB4 ->
-    sub_strengthen SB1 SB3 -> 
+    sub_strengthen SB1 SB3 ->
      narrowing_exp WCT T1 SB T2 SB2 ->
      narrowing_explist WCT
      ([x][q] tl_cons (SB1 x) (TL1 x q) (T1 x q)) SB
@@ -886,12 +886,12 @@ narrowing_this : class_table_typing CT
      narrowing_this WCT (t_base Q) SB1 (t_base Q2) SB2.
 
 -:  sub_strengthen SB2 SB3
-    ->({y:exp}{qy:typing CT y C0} 
-         {N: {WCT}{C1}{C2}{SB0:subtyping CT C1 C2} 
-                narrowing_exp WCT ([x][q:typing CT x C2] qy) SB0 
+    ->({y:exp}{qy:typing CT y C0}
+         {N: {WCT}{C1}{C2}{SB0:subtyping CT C1 C2}
+                narrowing_exp WCT ([x][q:typing CT x C2] qy) SB0
                 ([x][q:typing CT x C1] qy) s_refl}
-            narrowing_this WCT 
-            (Q1 y qy) SB1 
+            narrowing_this WCT
+            (Q1 y qy) SB1
             (Q2 y qy) (SB2 y))
      -> narrowing_this WCT (t_bind Q1) SB1 (t_bind Q2) SB3.
 
@@ -901,8 +901,8 @@ narrowing_this : class_table_typing CT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-eq_lemma1 : classDef_eq (class C D1 F1 MT1) (class C D2 F2 MT2) 
-    -> lookupMethod MT2 M MD1 
+eq_lemma1 : classDef_eq (class C D1 F1 MT1) (class C D2 F2 MT2)
+    -> lookupMethod MT2 M MD1
    -> lookupMethod MT1 M MD1
    -> type.
 %mode eq_lemma1 +CDEQ +LCM1 -LCM2.
@@ -910,8 +910,8 @@ eq_lemma1 : classDef_eq (class C D1 F1 MT1) (class C D2 F2 MT2)
 %worlds () (eq_lemma1 MDEQ TBE1 TBE2).
 %total MDEQ (eq_lemma1 MDEQ TBE1 TBE2).
 
-eq_lemma2 : methodDef_eq (method R1 M (BE1: bexp CS1)) (method R2 M (BE2: bexp CS2)) 
-            -> typing_bexp CT BE1 C C1 
+eq_lemma2 : methodDef_eq (method R1 M (BE1: bexp CS1)) (method R2 M (BE2: bexp CS2))
+            -> typing_bexp CT BE1 C C1
            -> typing_bexp CT BE2 C C1
            -> cnlist_eq CS2 CS1
             -> type.
@@ -924,13 +924,13 @@ eq_lemma2 : methodDef_eq (method R1 M (BE1: bexp CS1)) (method R2 M (BE2: bexp C
 %% Lemma about mtype/mbody connection
 
 %% tricky part here---I don't think we have the lemma stated correctly.
-%% we also need some proofs that CS = DS and BE2 = BE1 for the 
+%% we also need some proofs that CS = DS and BE2 = BE1 for the
 %% preservation proof.
-mtype_mbody : class_table_typing CT 
-                    -> mtype CT M C DS C0 
+mtype_mbody : class_table_typing CT
+                    -> mtype CT M C DS C0
                     -> mbody CT M C (BE : bexp CS)
-                    -> typing_bexp CT (BE : bexp CS) C C1 
-                    -> subtyping CT C1 C0 
+                    -> typing_bexp CT (BE : bexp CS) C C1
+                    -> subtyping CT C1 C0
                -> cnlist_eq CS DS
                -> type.
 %mode mtype_mbody +CT +P +Q -R -S -EQ.
@@ -952,7 +952,7 @@ mtype_mbody : class_table_typing CT
      lookupMethod_unique LCM1 LCM3 MDEQ ->
      eq_lemma1 CDEQ LCM2 LCM3 ->
      lookupClass_unique LC1 LC2 CDEQ ->
-    mtype_mbody WCT (mt_class LCM1 LC1 NEQ1) 
+    mtype_mbody WCT (mt_class LCM1 LC1 NEQ1)
                     (mb_class LCM2 LC2 NEQ2) TBE2 SB EQ.
 
 -:  {CLEQ:cnlist_eq _ _}
@@ -969,21 +969,21 @@ mtype_mbody : class_table_typing CT
     {MTY2 : mtype CT M D2 CS1 R1}
     {TBE  : typing_bexp CT BE1 D2 C1}
     {SB   : subtyping CT C1 R1 }
-%    
+%
     sub_trans SB2 SB SB3 ->
     narrowing_this WCT TBE (s_super s_refl LC2 NEQ2) TBE2 SB2 ->
     mtype_mbody WCT MTY2 MB2 TBE SB EQ ->
     refineCEQ CEQ MTY1 MTY2 ->
     classDef_eq_extract CDEQ CEQ CLEQ MTEQ ->
     lookupClass_unique LC1 LC2 CDEQ ->
-    mtype_mbody WCT (mt_super MTY1 NI1 LC1 NEQ1) 
+    mtype_mbody WCT (mt_super MTY1 NI1 LC1 NEQ1)
                     (mb_super NI2 MB2 LC2 NEQ2) TBE2 SB3 EQ.
 
 
 -:  false_imp_TBE  FALSE TBE SB EQ ->
     lookupMethod_exclusive LM3 NI2 FALSE ->
      eq_lemma1 CDEQ LM1 LM3 ->
-     lookupClass_unique LC2 LC1 CDEQ ->                        
+     lookupClass_unique LC2 LC1 CDEQ ->
     mtype_mbody WCT (mt_class LM1 LC1 NEQ1)
                      (mb_super NI2 GMD2 LC2 NEQ2) TBE SB EQ.
 
@@ -991,15 +991,15 @@ mtype_mbody : class_table_typing CT
     {NI1  : notInMT MT1 M}
      {LC1  : lookupClass CT C (class C D1 FS1 MT1)}
     {NEQ1 : className_neq C object}
-%    
+%
      {LCM2 : lookupMethod MT2 M (method R2 M CS2)}
     {LC2  : lookupClass CT C (class C D2 FS2 MT2)}
     {NEQ2:  className_neq C object}
     false_imp_TBE  FALSE TBE SB EQ ->
     lookupMethod_exclusive LCM3 NI1 FALSE ->
      eq_lemma1 CDEQ LCM2 LCM3 ->
-     lookupClass_unique LC1 LC2 CDEQ ->                        
-    mtype_mbody WCT  (mt_super MTY1 NI1 LC1 NEQ1) 
+     lookupClass_unique LC1 LC2 CDEQ ->
+    mtype_mbody WCT  (mt_super MTY1 NI1 LC1 NEQ1)
                      (mb_class LCM2 LC2 NEQ2) TBE SB EQ.
 
 
@@ -1007,7 +1007,7 @@ mtype_mbody : class_table_typing CT
 %total  (P) (mtype_mbody C M P Q S E).
 
 
-%{ 
+%{
 
 Coverage checker fails. Doesn't know that NI and LCM are exclusive. How to express
 this to twelf?
@@ -1021,7 +1021,7 @@ this to twelf?
 %% Lemma about invoc
 
 invoc_lemma :
-  %{ IF }% class_table_typing CT -> typing_list CT ES CS1 -> typing_bexp CT BE C0 C1 
+  %{ IF }% class_table_typing CT -> typing_list CT ES CS1 -> typing_bexp CT BE C0 C1
                     -> invoc (BE:bexp CS1) ES (new C0 E1) E -> typing CT (new C0 E1) C0
   %{ THEN }%   -> typing CT E C2 -> subtyping CT C2 C1 -> type.
 %mode invoc_lemma +WCT +TL +P +R +I -Q -SB.
@@ -1031,9 +1031,9 @@ invoc_lemma :
 -:  {WCT : class_table_typing CT}
     {Q: ({XI:exp}{D:typing CT XI CI} typing_bexp CT (BE XI) C E0)}
     sub_trans SB SB2 SB3 ->
-     invoc_lemma WCT TL1 (Q2 E T1) I R P SB -> 
-    narrowing_bexp WCT BE Q SB1 Q2 SB2 ->  
-     invoc_lemma WCT 
+     invoc_lemma WCT TL1 (Q2 E T1) I R P SB ->
+    narrowing_bexp WCT BE Q SB1 Q2 SB2 ->
+     invoc_lemma WCT
               (tl_cons SB1 TL1 (T1:typing CT E C0))
                (t_bind Q)
                (invoc_bind I)
@@ -1064,7 +1064,7 @@ inv_new2 : typing CT (new C ES) D -> className_eq D C -> type.
 %% need to show that looking up the fields of a type is a function.
 
 
-refine_really: cnlist_eq CS1 CS2 -> cnnth_opt FI CS1 CI 
+refine_really: cnlist_eq CS1 CS2 -> cnnth_opt FI CS1 CI
                                             -> cnnth_opt FI CS2 CI -> type.
 %mode refine_really +E +CS1 -CS2.
 -: refine_really cnlist_eq_refl CN1 CN1.
@@ -1096,8 +1096,8 @@ append_unique : cnappend CS1 CS2 ES1 Pl1 -> cnappend CS1 CS2 ES2 PL2 -> cnlist_e
 %mode append_unique +A1 +A2 -E3.
 -: append_unique cnappend_cnnil cnappend_cnnil cnlist_eq_refl.
 
--: cncons_eq EQ EQ2 
-     -> append_unique R1 R2 EQ 
+-: cncons_eq EQ EQ2
+     -> append_unique R1 R2 EQ
      -> append_unique (cnappend_cncons R1) (cnappend_cncons R2) EQ2.
 %worlds () (append_unique E F G).
 %total {E F} (append_unique E F G).
@@ -1109,23 +1109,23 @@ fields_append_refine : cnlist_eq DG1 DG2 ->
            cnappend DG1 FE1 CS PL1 ->
            cnappend DG2 FE2 CS PL2 -> type.
 %mode fields_append_refine +E +F +G -I.
--: fields_append_refine cnlist_eq_refl classDef_refl X X. 
+-: fields_append_refine cnlist_eq_refl classDef_refl X X.
 %worlds () (fields_append_refine E F G H).
 %total (E) (fields_append_refine E F G H).
 
-fields_refine : 
+fields_refine :
            classDef_eq (class C D1 FE1 BE1)
                               (class C D2 FE2 BE2) ->
            fields CT D2 N2 CS2 ->
            fields CT D1 N2 CS2 -> type.
 %mode fields_refine +E +F -I.
--: fields_refine classDef_refl X X. 
+-: fields_refine classDef_refl X X.
 %worlds () (fields_refine E G H).
 %total (E) (fields_refine E G H).
 
 
-fields_unique : fields CT C N CS 
-                      -> fields CT C N2 CS2 
+fields_unique : fields CT C N CS
+                      -> fields CT C N2 CS2
                  -> cnlist_eq CS CS2 -> type.
 
 %mode fields_unique +F1 +F2 -EQ.
@@ -1141,11 +1141,11 @@ fields_unique : fields CT C N CS
    {APP2: cnappend DG2 FS2 CS2 PL2}
    {APP3: cnappend DG2 FS2 CS1 PL3}
    append_unique APP3 APP2 CEQ ->
-   fields_append_refine EQ CDEQ APP1 APP3  ->   
+   fields_append_refine EQ CDEQ APP1 APP3  ->
    fields_unique F1 F3 EQ ->
    fields_refine CDEQ F2 F3 ->
    lookupClass_unique LC1 LC2 CDEQ ->
-   fields_unique (f_class APP1 F1 LC1 NEQ1) 
+   fields_unique (f_class APP1 F1 LC1 NEQ1)
                  (f_class APP2 F2 LC2 NEQ2) CEQ.
 
 -: false_imp_really FALSE EQ ->

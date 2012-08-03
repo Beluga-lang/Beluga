@@ -1,5 +1,5 @@
 
-Prove lemmas: 
+Prove lemmas:
 
 
 needs subsumption strategy
@@ -7,11 +7,11 @@ needs subsumption strategy
 Problem:
 
  - what is the right formulation of
-   the lemma ? 
+   the lemma ?
 
-   need universal quantification ? 
+   need universal quantification ?
 
    {f}{g}{h} ....
-  
+
  - needs term-depth abstraction
  	otherwise it will loop

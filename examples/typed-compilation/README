@@ -2,10 +2,10 @@
 - Translation between DeBruijn and HOAS
    (type preserving)
 
-  debruijn.bel 
+  debruijn.bel
 
   Nice features: use context matching
-    use context as the environment to look up the 
+    use context as the environment to look up the
     position of a bound variable
 
     much easier to write the converse:
@@ -23,8 +23,8 @@
     no error handling is necessary
 
 - CPS translation (2 different kinds)
-   cps-popl-tutorial1-crec.bel   
-   cps-popl-tutorial2-crec.bel   
+   cps-popl-tutorial1-crec.bel
+   cps-popl-tutorial2-crec.bel
 
    we show two different type-preserving CPS translations
    one of them avoids administrative redeces
@@ -33,16 +33,16 @@
   Distinguishes between the context of variables occurring in the
   source language and in the target language; this would even be
   possible if we would use the same language for source and target.
- 
+
   Typed closure conversion see Francois Pottier's slides.
 
 
 ---------------------------------------------------------------
 TODO:
 
-- Evaluator for CPS terms 
+- Evaluator for CPS terms
 
-- Typed closure conversion 
+- Typed closure conversion
 
 - Extensions to handle system F
 
@@ -52,7 +52,7 @@ Current status:
 - we have typed cps translation
 - we have untyped cclosure conversion
 - we have a sketch of typed closure conversion
- 
+
 
 ---------------------------------------------------------------
 
@@ -62,7 +62,7 @@ Possible extensions / Related systems :
    Eijiro Sumii
 
 - From System F to typed assembly language
-    
+
 
 
 

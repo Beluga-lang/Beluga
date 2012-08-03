@@ -13,11 +13,11 @@ nd_allI: nd (all (\x. A x))
 	 <- ({a:i} nd (A a)).
 
 nd_neg : nd (neg A)
-	  <- nd A. 
+	  <- nd A.
 
 proof: nd A -> type.
 
-pr_all: proof (nd_allI (\a. D a)) 
+pr_all: proof (nd_allI (\a. D a))
 	<- ({a:i} proof (D a)).
 
 

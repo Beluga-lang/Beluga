@@ -33,28 +33,28 @@ lemma9-1b : ({v:ctriv}app (& (cons Xi'  v)  Xi'') (Xi v))
              -> ({v:ctriv}{vvv:{xi:stack}vvalT (cons xi  v) v xi}
                  vvalE (Xi v) (E v))
              -> ({xi:stack}vvalT xi T1 xi)
-             -> app (& Xi' Xi'') Xi1 
+             -> app (& Xi' Xi'') Xi1
              -> vvalE Xi1 (E T1)
-             -> type.  
+             -> type.
 %mode lemma9-1b +APP +VVE +VVT1 +APP1 -VVE1.
 
 lemma9-1e : ({v:ctriv}app (& (cons Xi'  v) Xi'') (Xi v))
              -> ({v:ctriv}{vvv:{xi:stack}vvalT (cons xi  v) v xi}
                  vvalC (Xi v) (C v))
              -> ({xi:stack}vvalT xi T1 xi)
-             -> app (& Xi' Xi'') Xi1 
+             -> app (& Xi' Xi'') Xi1
              -> vvalC Xi1 (C T1)
-             -> type.  
+             -> type.
 %mode lemma9-1e +APP +VVC +VVT1 +APP1 -VVC1.
 
-lemma9-3a : ({k:ccont}{vvk:vvalC dot k}vvalE Xi (E k)) 
-             -> cvalE E -> vvalC Xi' C 
+lemma9-3a : ({k:ccont}{vvk:vvalC dot k}vvalE Xi (E k))
+             -> cvalE E -> vvalC Xi' C
              -> app (& Xi' Xi) Xi0 -> vvalE Xi0 (E C) -> type.
 %mode lemma9-3a +VVE +CVE +VVC +APP0 -VVE0.
 
-lemma9-3b : ({k:ccont}{vvk:vvalC dot k}vvalC Xi (C k)) 
-             -> cvalC C -> vvalC Xi' C' 
-             -> app (& Xi' Xi) Xi0 -> vvalC Xi0 (C C') -> type. 
+lemma9-3b : ({k:ccont}{vvk:vvalC dot k}vvalC Xi (C k))
+             -> cvalC C -> vvalC Xi' C'
+             -> app (& Xi' Xi) Xi0 -> vvalC Xi0 (C C') -> type.
 %mode lemma9-3b +VVC +CC +VVC' +APP0 -VVC0.
 
 lemma9-1b_cret_t : lemma9-1b (\v.app_init)
@@ -64,7 +64,7 @@ lemma9-1b_cret_t : lemma9-1b (\v.app_init)
                                app_init
                                (vval_cret VVC (VVT Xi')).
 
-lemma9-1b_cret_c : lemma9-1b APP 
+lemma9-1b_cret_c : lemma9-1b APP
                                (\v.\vvv.vval_cret (VVC v vvv) VVT)
                                VVT1
                                APP1
@@ -72,12 +72,12 @@ lemma9-1b_cret_c : lemma9-1b APP
                     <- lemma9-1e APP
                                   VVC
                                   VVT1
-                                  APP1 
+                                  APP1
                                   VVC'.
 
 lemma9-1b_capp_t1 : lemma9-1b (\v.app_init)
                                 (\v.\vvv.
-                                  vval_capp VVC  
+                                  vval_capp VVC
                                             VVT0
                                             (vvv Xi'))
                                 VVT
@@ -93,7 +93,7 @@ lemma9-1b_capp_t0 : {vvt1:{xi:stack}vvalT xi T xi}
                                           (vvv Xi')
                                           (vvt1 (Xi' , v)))
                                VVT
-                               app_init 
+                               app_init
                                (vval_capp VVC (VVT Xi') (vvt1 Xi')).
 }%
 
@@ -105,7 +105,7 @@ lemma9-1b_capp_t0 : lemma9-1b
 			(vval_xlam VVR % : vvalT (Xi' , v) _ (Xi' , v)
 					  ))
 		     VVT
-		     app_init 
+		     app_init
 		     (vval_capp VVC (VVT Xi')
 			(vval_xlam VVR % : vvalT Xi' _ Xi'
 					  )).
@@ -116,12 +116,12 @@ lemma9-1b_capp_c : lemma9-1b APP
                                            VVT0
                                            VVT1)
                                VVT
-                               APP1 
+                               APP1
                                (vval_capp VVC' VVT0 VVT1)
                      <- lemma9-1e APP
                                    VVC
                                    VVT
-                                   APP1 
+                                   APP1
                                    VVC'.
 
 
@@ -151,13 +151,13 @@ lemma9-1e_vlam : ({v1:ctriv} {vvv1:{xi:stack} vvalT (cons xi  v1) v1 xi}
 %                             (vval_vlam (\v.\vvt. VVE' v vvt))
 %                  <- {v1:ctriv}{vvv1:{xi:stack} vvalT (cons xi  v1) v1 xi}
 %		     ({xi:stack} {xi0:stack} {xi1:stack}
-%			{aPP:app (& xi0  xi) xi1} 
+%			{aPP:app (& xi0  xi) xi1}
 %			appT (vvv1 xi) (app_stack aPP) aPP (vvv1 xi1))
 %		     ->
-%                     lemma9-1b (\v. app_stack (APP v)) 
-%                                (\v.\vv. VVE v1 vvv1 v vv) 
+%                     lemma9-1b (\v. app_stack (APP v))
+%                                (\v.\vv. VVE v1 vvv1 v vv)
 %                                (\xi. VVT  xi)
-%                                (app_stack APP1) 
+%                                (app_stack APP1)
 %                                (VVE' v1 vvv1).
 %
 
@@ -178,7 +178,7 @@ lemma9-3a_capp_c : lemma9-3a (\k.\vvk.
                     <- appT VVT1 APP APP1 VVT1'
                     <- appT VVT0 APP1 APP2 VVT0'
                     <- lemma9-3b VVC CVC VVC1 APP2 VVC'.
-                    
+
 
 lemma9-3b_vlam : lemma9-3b (\k.\vvk.
                                vval_vlam (\v.
@@ -201,7 +201,7 @@ lemma9-3b_vlam : lemma9-3b (\k.\vvk.
                                (VVE' v vvv).
 
 
-lemma9-3b_k : lemma9-3b (\k. \vvk. vvk) cval_k  VVC APP VVC.  
+lemma9-3b_k : lemma9-3b (\k. \vvk. vvk) cval_k  VVC APP VVC.
 
 %terminates APP  (appT _ APP _ _).
 

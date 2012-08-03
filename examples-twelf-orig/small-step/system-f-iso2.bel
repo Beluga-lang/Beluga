@@ -22,7 +22,7 @@ ann   : tm -> tp -> tm.  %infix left 5 #.
 % Typing
 has : tm -> tp -> type. %infix left 5 is.
 
-is_z   : 
+is_z   :
        % ----------
          has z  nat.
 
@@ -40,8 +40,8 @@ is_unroll : has E  (mu (\a. T a)) ->
 
 is_@   : has E1  (arr T1 T2) ->
          has E2 T1 ->
-       % -------------------   
-         has (app E1 E2)  T2.         
+       % -------------------
+         has (app E1 E2)  T2.
 
 is_lam : ({x:tm} has x T1 -> has (E x) T2) ->
        % -----------------------------------
@@ -51,12 +51,12 @@ is_tlam : ({a:tp}has (E a) (T a)) ->
        % -----------------------------------
          (has (tlam (\a. E a))  (forall (\a. T a))).
 
-is_#   : has E  (forall (\a. T1 a)) -> 
+is_#   : has E  (forall (\a. T1 a)) ->
        % ----------------------------
          (has (ann E T2) (T1 T2)).
 
 % Values
-value : tm -> type. 
+value : tm -> type.
 
 value_z : value z.
 
@@ -64,7 +64,7 @@ value_s : value V ->
         % -----------
           value (s V).
 
-value_roll : value E -> 
+value_roll : value E ->
            % --------------------
              value (roll E T).
 
@@ -98,11 +98,11 @@ value_tlam : value (tlam (\a. E a)).
       % --------------------------
         (~> (ann E T) (ann E' T)).
 
-~>_#2 : 
+~>_#2 :
       % ------------------------------
         ~> (ann (tlam (\a. E a)) T) (E T).
 
-~>_unroll1 : ~> E E' -> 
+~>_unroll1 : ~> E E' ->
            % -----------------------------
             ~> (unroll E T)  (unroll E' T).
 
@@ -118,64 +118,64 @@ value_tlam : value (tlam (\a. E a)).
 
 % Preservation
 
-rec pres : (has E T)[ ] -> (~> E E')[ ] -> (has E' T)[ ] =  
-fn d => fn ev => case ev of 
-| [ ] ~>_s EV => 
-  let [ ] is_s D = d in 
-  let [ ] D'      = pres ([ ] D) ([ ] EV) in 
-    [ ] is_s D'  
+rec pres : (has E T)[ ] -> (~> E E')[ ] -> (has E' T)[ ] =
+fn d => fn ev => case ev of
+| [ ] ~>_s EV =>
+  let [ ] is_s D = d in
+  let [ ] D'      = pres ([ ] D) ([ ] EV) in
+    [ ] is_s D'
 
-| [ ] ~>_@1 EV1 => 
-  let [ ] is_@ D1 D2 = d in 
-  let [ ] D1'       = pres ([ ] D1) ([ ] EV1) in 
+| [ ] ~>_@1 EV1 =>
+  let [ ] is_@ D1 D2 = d in
+  let [ ] D1'       = pres ([ ] D1) ([ ] EV1) in
     [ ] is_@ D1' D2
 
-| [ ] ~>_@2 V EV2  => 
-  let [ ] is_@ D1 D2 = d in 
-  let [ ] D2'       = pres ([ ] D2) ([ ] EV2) in 
+| [ ] ~>_@2 V EV2  =>
+  let [ ] is_@ D1 D2 = d in
+  let [ ] D2'       = pres ([ ] D2) ([ ] EV2) in
     [ ] is_@ D1 D2'
- 
-| [ ] ~>_@3 V => 
-  let [ ] is_@ (is_lam (\x.\d. D1' x d)) D2 = d in 
+
+| [ ] ~>_@3 V =>
+  let [ ] is_@ (is_lam (\x.\d. D1' x d)) D2 = d in
     [ ] D1' _ D2
-   
+
 
 % Note: typing annotation required here,
-% because otherwise left-over constraints. -bp 
+% because otherwise left-over constraints. -bp
 
-| [ ] ~>_#2 => 
+| [ ] ~>_#2 =>
  let {D::(has (E a) (T a)) [a:tp] }{T2::tp[ ]}
-     [ ] is_# (is_tlam (\a. D a)) : 
-      (has (ann (tlam (\a. E a)) T2) (T T2))[ ] = d 
- in  
-   [ ] D T2 
+     [ ] is_# (is_tlam (\a. D a)) :
+      (has (ann (tlam (\a. E a)) T2) (T T2))[ ] = d
+ in
+   [ ] D T2
 
- | [ ] (~>_#1 EV) => 
-  let [ ] is_# D = d in 
-  let [ ] D'         = pres ([ ] D) ([ ] EV) in 
-    [ ] is_# D'  
+ | [ ] (~>_#1 EV) =>
+  let [ ] is_# D = d in
+  let [ ] D'         = pres ([ ] D) ([ ] EV) in
+    [ ] is_# D'
 
-% without type annotation causes stack overflow! 
+% without type annotation causes stack overflow!
 % - bp
 | [ ] ~>_unroll2 VL =>
-  let  [ ] is_unroll (is_roll D) : 
-       (has (unroll _ (mu (\a. T a)))  (T (mu (\a. T a))))[ ] 
+  let  [ ] is_unroll (is_roll D) :
+       (has (unroll _ (mu (\a. T a)))  (T (mu (\a. T a))))[ ]
        % Full type annotation:
-       %  (has (unroll (roll E (mu (\a. T a))) (mu (\a. T a)))  (T (mu (\a. T a))))[ ] 
-       = d 
-  in  
-    [ ] D			   
+       %  (has (unroll (roll E (mu (\a. T a))) (mu (\a. T a)))  (T (mu (\a. T a))))[ ]
+       = d
+  in
+    [ ] D
 
 | [ ] ~>_unroll1 EV =>
-  let  [ ] is_unroll D = d in 
-  let [ ] D'            = pres ([ ] D) ([ ] EV) in 
+  let  [ ] is_unroll D = d in
+  let [ ] D'            = pres ([ ] D) ([ ] EV) in
     [ ] is_unroll D'
 
 | [ ] ~>_roll EV =>
-  let [ ] is_roll D = d in 
-  let [ ] D'         = pres ([ ] D) ([ ] EV) in 
+  let [ ] is_roll D = d in
+  let [ ] D'         = pres ([ ] D) ([ ] EV) in
     [ ] is_roll D'
-; 
+;
 
 
 %{
@@ -190,7 +190,7 @@ pres_s : pres D EV D' ->
 pres_@1 : pres D1 EV1 D1' ->
         % ----------------------------------------
           pres (is_@ D1 D2) (~>_@1 EV1) (is_@ D1' D2).
-         
+
 pres_@2 : pres D2 EV2 D2' ->
         % --------------------------------------------
           pres (is_@ D1 D2) (~>_@2 V EV2) (is_@ D1 D2').
@@ -203,7 +203,7 @@ pres_#1 : pres D EV D' ->
         % -----------------------------------
           pres (is_# D) (~>_#1 EV) (is_# D').
 
-pres_#2 : 
+pres_#2 :
         % ----------------------------------------------------------------
           {D:{x:tp} has (X1 x) (X2 x)}
           pres (is_# (is_tlam (\a. D a))) (~>_#2) (D T).
@@ -212,7 +212,7 @@ pres_unroll1 : pres D EV D' ->
              % ----------------------------------------------------
                pres (is_unroll D) (~>_unroll1 EV) (is_unroll D').
 
-pres_unroll2 : 
+pres_unroll2 :
              % -----------------------------------------------
                pres (is_unroll (is_roll D)) (~>_unroll2 VL) D.
 
@@ -228,8 +228,8 @@ pres_roll : pres D EV D' ->
 
 % Progress (much trickier)
 
-% Introduce a new type family to distinguish between the case where a term can 
-% take a step and it is a value. 
+% Introduce a new type family to distinguish between the case where a term can
+% take a step and it is a value.
 step_or_val : tm -> type.
 
 step : (~> E E') -> step_or_val E.
@@ -238,48 +238,48 @@ val : (value E) -> step_or_val E.
 
 
 
-rec progress : (has E T)[ ] -> (step_or_val E)[ ] = 
-fn d => case d of 
+rec progress : (has E T)[ ] -> (step_or_val E)[ ] =
+fn d => case d of
  | [ ] is_z => [ ] val value_z
- | [ ] is_s D => 
+ | [ ] is_s D =>
    (case    progress ([ ] D)   of
     | [ ] step EV => [ ] step (~>_s EV)
     | [ ] val VL  => [ ] val (value_s VL)
    )
- | [ ] is_@ D1 D2 => 
-   (case   progress ([ ] D1)   of 
+ | [ ] is_@ D1 D2 =>
+   (case   progress ([ ] D1)   of
     | [ ] step EV => [ ] step (~>_@1 EV)
-    | [ ] val value_lam  => 
+    | [ ] val value_lam  =>
       (case  progress ([ ] D2)   of
         | [ ] step EV => [ ] step (~>_@2 value_lam EV)
         | [ ] val VL2 => [ ] step (~>_@3 VL2)
        )
    )
-| [ ] is_lam (\x.\d. D1 x d) => [ ] val value_lam 
+| [ ] is_lam (\x.\d. D1 x d) => [ ] val value_lam
 
 | [ ] is_tlam (\a. D a)       => [ ] val value_tlam
 
-| [ ] is_# D => 
-  (case   progress ([ ] D)   of 
+| [ ] is_# D =>
+  (case   progress ([ ] D)   of
     | [ ] step EV => [ ] step (~>_#1 EV)
     | [ ] val value_tlam  => [ ] step (~>_#2)
      )
-| [ ] is_roll D => 
-  (case    progress ([ ] D)  of  
+| [ ] is_roll D =>
+  (case    progress ([ ] D)  of
    | [ ] step EV => [ ] step (~>_roll EV)
    | [ ] val VL  => [ ] val (value_roll VL)
   )
 
-| [ ] is_unroll D => 
+| [ ] is_unroll D =>
   (case    progress ([ ] D)  of
-   | [ ] step EV => [ ] step (~>_unroll1 EV) 
+   | [ ] step EV => [ ] step (~>_unroll1 EV)
    | [ ] val (value_roll VL) => [ ] step (~>_unroll2 VL)
   )
 ;
 
 %{
 
-prog_@_lemma :  (has E1 (arr T1 T2)) -> step_or_val E1 -> step_or_val E2 -> 
+prog_@_lemma :  (has E1 (arr T1 T2)) -> step_or_val E1 -> step_or_val E2 ->
                 step_or_val (app E1 E2) -> type.
 %mode prog_@_lemma +D +SV1 +SV2 -SV3.
 
@@ -291,7 +291,7 @@ prog_@_lemma_vs : prog_@_lemma _ (val VL1) (val VL2) (step (~>_@3 VL2)).
 %total {SV1 SV2} (prog_@_lemma _ SV1 SV2 _).
 
 
-prog_roll_lemma :  {T:tp} step_or_val E -> 
+prog_roll_lemma :  {T:tp} step_or_val E ->
                    step_or_val (roll E T) -> type.
 %mode prog_roll_lemma +T +SV1 -SV2.
 
@@ -302,7 +302,7 @@ prog_roll_lemma_v : prog_roll_lemma _ (val VL) (val (value_roll VL)).
 %total {SV1} (prog_roll_lemma _ SV1 _).
 
 prog_unroll_lemma :  has E  (mu (\a. T a)) ->
-                     step_or_val E -> 
+                     step_or_val E ->
                      step_or_val (unroll E (mu (\a. T a))) -> type.
 %mode prog_unroll_lemma +D +SV1 -SV2.
 
@@ -313,7 +313,7 @@ prog_unroll_lemma_v : prog_unroll_lemma _ (val (value_roll VL)) (step (~>_unroll
 %total {SV1} (prog_unroll_lemma _ SV1 _).
 
 
-prog_#_lemma :  {T2:tp} (has E (forall (\a. T1 a))) -> step_or_val E -> 
+prog_#_lemma :  {T2:tp} (has E (forall (\a. T1 a))) -> step_or_val E ->
                 step_or_val (ann E T2) -> type.
 %mode prog_#_lemma +T2 +D +SV1 -SV2.
 
@@ -332,7 +332,7 @@ prog_s_lemma_v  : prog_s_lemma (val VL) (val (value_s VL)).
 %worlds () (prog_s_lemma SV1 SV2).
 %total (SV1) (prog_s_lemma SV1 _).
 
-% Now we can prove progress by simply using the lemma 
+% Now we can prove progress by simply using the lemma
 
 prog : (has E T) -> step_or_val E -> type.
 %mode prog +D -SV.
@@ -340,37 +340,37 @@ prog : (has E T) -> step_or_val E -> type.
 prog_z   : prog (is_z) (val value_z).
 
 prog_s   : prog_s_lemma SV SV' ->
-           prog D SV -> 
+           prog D SV ->
          % ---------------------------
-           prog (is_s D) SV'. 
+           prog (is_s D) SV'.
 
 prog_@   : prog_@_lemma D1 SV1 SV2 SV3 ->
            prog D1 SV1 ->
            prog D2 SV2 ->
          % ------------------------------
-           prog (is_@ D1 D2) SV3. 
+           prog (is_@ D1 D2) SV3.
 
 prog_#   : prog_#_lemma _ D SV SV' ->
            prog D SV ->
          % ------------------------------
-           prog (is_# D) SV'. 
+           prog (is_# D) SV'.
 
-prog_roll : prog_roll_lemma (mu (\a. T a)) SV SV' -> 
-            prog D SV -> 
+prog_roll : prog_roll_lemma (mu (\a. T a)) SV SV' ->
+            prog D SV ->
           % -----------------------
             prog (is_roll D) SV'.
 %            prog ((is_roll D) : (roll E (mu ([a:tp] T a)) is (mu ([a:tp] T a)))) SV'.
 
-prog_unroll : prog_unroll_lemma D SV SV' -> 
-              prog D SV -> 
+prog_unroll : prog_unroll_lemma D SV SV' ->
+              prog D SV ->
             % -----------------------
               prog (is_unroll D) SV'.
 
-prog_lam : 
+prog_lam :
          % --------------------------------------------------------
            prog (is_lam (\x.\d. D1 x d)) (val value_lam).
 
-prog_tlam : 
+prog_tlam :
          % -------------------------------------------
            prog (is_tlam (\a. D a)) (val value_tlam).
 

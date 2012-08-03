@@ -8,7 +8,7 @@ arith           Associativity and commutativity of unary addition (done)
 ccc             Cartesian-closed categories [incomplete]
                 (Renaud, Brigitte, Part 1 done)
 
-church-rosser   The Church-Rosser theorem for untyped lambda-calculus 
+church-rosser   The Church-Rosser theorem for untyped lambda-calculus
 		(Brigitte, part 1 done)
                 (Giulia)
 
@@ -16,7 +16,7 @@ compile         Various compilers starting from Mini-ML
                 cls (Brigite, Part 1: done
                               Part 2: completeness  done, soundness: to do)
                 cpm (Brigitte, Part 1: done (sources.cfg)
-                               Part 2: soundness done, 
+                               Part 2: soundness done,
                                        completeness done,
                                        equivalence of soundness and completeness proof omitted
                                        (test.cfg)
@@ -24,7 +24,7 @@ compile         Various compilers starting from Mini-ML
                 cps (Brigitte, Part 1 done)
                 cxm
                 debruijn  (Brigitte, Part 1 done ; Part 2: attempt can be found in examples)
-                debruijn1 (Brigitte, Part 1 done ; 
+                debruijn1 (Brigitte, Part 1 done ;
                                      Part 2: Bisimulation proof both directions done)
 
 cpsocc          CPS conversion and stack-based machines [in progress]
@@ -53,7 +53,7 @@ kolm            Kolmogorov translation from classical to intuitionistic logic
 fj              The soundness of Featherweight Java
 
 lp              Logic programming, uniform derivations
-		(NOTE: Needs typing annotation for isc_all in uni_sound.elf 
+		(NOTE: Needs typing annotation for isc_all in uni_sound.elf
                        we need to add this to our implementation.
 		 )
 		(Brigitte part 1 done)
@@ -71,18 +71,18 @@ polylam         Polymorphic lambda-calculus
 		(Brigitte part 1 done)
 
 prop-calc       Natural deduction and Hilbert propositional calculus
-                (Brigitte part 1 done; 
+                (Brigitte part 1 done;
                  Giulia)
 
 small-step      Brief tutorial on proving progress and preservation in Twelf
-                 - lam.elf      
-                 - system-f.elf 
+                 - lam.elf
+                 - system-f.elf
                  - system-f-iso.elf
 		 (Brigitte part 1 done , part 2 done)
 
 
 tapl-ch13       A formalization of Chapter 13 from "Types and Programming Languages"
-                (Joshua) 
+                (Joshua)
 
 
 ------------------------------------------------

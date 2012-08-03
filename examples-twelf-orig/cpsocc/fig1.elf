@@ -10,7 +10,7 @@ cpsT : dtriv -> ctriv -> type.                     %name cpsT CT.
 %mode cpsE +E +K -E'.
 %mode cpsT +T -T'.
 
-cps_droot : cpsR (dexp->droot E) (klam ([x] E' x)) 
+cps_droot : cpsR (dexp->droot E) (klam ([x] E' x))
             <- {k:ccont} cpsE E ([v] cret k v) (E' k).
 
 cps_dtriv : cpsE (dtriv->dexp T) ([x] K  x) (K T')

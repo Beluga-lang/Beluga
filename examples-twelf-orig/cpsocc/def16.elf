@@ -9,9 +9,9 @@ dstack_substE : cexp -> stack -> cexp -> type.
 dstack_substC : ccont -> stack -> ccont -> type.
 
 dstack_subst_xlam : dstack_substT (xlam R)
-                                  Xi 
-                                  (xlam R) 
-                                  Xi. 
+                                  Xi
+                                  (xlam R)
+                                  Xi.
 
 dstack_subst_cret : dstack_substE (cret C T) Xi (cret C' T')
                     <- dstack_substT T Xi T' Xi'
@@ -25,4 +25,4 @@ dstack_subst_capp : dstack_substE (capp T0 T1 C) Xi (capp T0' T1' C')
 dstack_subst_vlam : dstack_substC (vlam E) Xi (vlam E')
                     <- {v:ctriv}
                        {dsv:{xi:stack}{t:ctriv}dstack_substT v (cons xi t) t xi}
-                       dstack_substE (E v) (cons Xi  v) (E' v). 
+                       dstack_substE (E v) (cons Xi  v) (E' v).

@@ -2,7 +2,7 @@
 % Translating system F into deBruijn representation
 % We keep higher-order abstract syntax for the types
 % since types are thrown away during runtime.
-% 
+%
 
 nat: type.
 z: nat.
@@ -11,7 +11,7 @@ s: nat -> nat.
 % Types
 tp  : type.                %name tp T.
 o   : tp.
-arr : tp -> tp -> tp.          
+arr : tp -> tp -> tp.
 all : (tp -> tp) -> tp.
 % Intrinsically well-typed expressions
 exp   : tp -> type.        %name exp E.
@@ -22,9 +22,9 @@ ret   : value A -> exp A.
 tapp   : exp (all A)  -> {T:tp}exp (A T).
 tlam   : ({a:tp}exp (A a)) -> value (all A).
 
-% Translating to untyped deBruijn terms 
+% Translating to untyped deBruijn terms
 
-exp'   : tp -> type.  
+exp'   : tp -> type.
 
 one    : {A:tp}exp' A.
 shift  : {A:tp}exp' A -> exp' A.  % ^
@@ -37,89 +37,89 @@ tlam'   : ({a:tp}exp' (A a)) -> exp' (all A).
 schema ctx = value T + tp;
 schema tctx = tp;
 
-rec vhoas2db : {g:ctx}[g. value (S ..)] ->  [g. exp' (S ..)] =  
-mlam g => fn v =>  case v of 
+rec vhoas2db : {g:ctx}[g. value (S ..)] ->  [g. exp' (S ..)] =
+mlam g => fn v =>  case v of
  | [h,x:value (T ..) . x] => [h, x:value (T ..). one (T ..)]
 
  |  {#p:[h. value (S' ..)]}
-   [h,x:value (T ..) . #p ..] => 
-   let [g. Db ..] = vhoas2db [h] [h. #p ..] in 
+   [h,x:value (T ..) . #p ..] =>
+   let [g. Db ..] = vhoas2db [h] [h. #p ..] in
      [g,x:value (T ..) . shift (S' ..)  (Db ..)]
 
-| [h,a:tp. #p ..] => 
-   let [g. Db ..] = vhoas2db [h] [h. #p ..] in 
+| [h,a:tp. #p ..] =>
+   let [g. Db ..] = vhoas2db [h] [h. #p ..] in
      [g,a:tp. Db ..]
 
- | [g. lam (T ..) (\x. E .. x)] => 
-   let [g,x:value (T ..). F ..] =  hoas2db [g,x:value (T ..) ] [g,x. E .. x ] in 
+ | [g. lam (T ..) (\x. E .. x)] =>
+   let [g,x:value (T ..). F ..] =  hoas2db [g,x:value (T ..) ] [g,x. E .. x ] in
      [g. lam' (T ..) (F ..)]
 
- | [g. tlam \a. E .. a] => 
-   let [g,a:tp. F .. a] = hoas2db [g,a:tp] [g,a. E .. a] in 
+ | [g. tlam \a. E .. a] =>
+   let [g,a:tp. F .. a] = hoas2db [g,a:tp] [g,a. E .. a] in
      [g. tlam' \a. F .. a]
 
 
-and hoas2db : {g:ctx} [g. exp (T ..)] ->  [g. exp' (T ..) ] = 
-mlam g => fn e =>  case e of 
+and hoas2db : {g:ctx} [g. exp (T ..)] ->  [g. exp' (T ..) ] =
+mlam g => fn e =>  case e of
  | [g. app (E1 .. ) (E2 .. )] =>
-   let [g. F1 ..] = hoas2db [g] [g. E1 ..]  in 
-   let [g. F2 ..] = hoas2db [g] [g. E2 ..]  in 
-     [g. app' (F1 ..) (F2 ..)] 
- | [g. ret (V ..)] => 
-   vhoas2db [g] [g. V .. ]   
- | [g. tapp (E .. ) (T ..)] => 
-     let [g. F ..] = hoas2db [g] [g. E .. ] in 
+   let [g. F1 ..] = hoas2db [g] [g. E1 ..]  in
+   let [g. F2 ..] = hoas2db [g] [g. E2 ..]  in
+     [g. app' (F1 ..) (F2 ..)]
+ | [g. ret (V ..)] =>
+   vhoas2db [g] [g. V .. ]
+ | [g. tapp (E .. ) (T ..)] =>
+     let [g. F ..] = hoas2db [g] [g. E .. ] in
      [g. tapp' (F .. ) (T .. )]
 ;
 
-rec todbruijn : {g':tctx}[g'. exp (S .. )] -> [g'. exp' (S ..)] = 
+rec todbruijn : {g':tctx}[g'. exp (S .. )] -> [g'. exp' (S ..)] =
 mlam g' => fn e =>  hoas2db [g'] e ;
 
 
-% It is not easily possible to enforce that voas2db produces terms which only contain bound tp variables. 
+% It is not easily possible to enforce that voas2db produces terms which only contain bound tp variables.
 % but we can show that in the end, if we start with something only containing tp variables
-% it only contains tp variables. Unless there is some built in notion existential types of 
-% contextual data-types. 
-% 
+% it only contains tp variables. Unless there is some built in notion existential types of
+% contextual data-types.
+%
 % One option would be to carry a substitution s : g'[g]   i.e. from a tp context to a (tp + exp) context.
 %
 % The below probably works theoretically since we have context subsumption
 % but without subordination reasoning it is a pain to program with...
 %{
 rec vhoas2db : {g:(ctx)*}{g':(tctx)*}{S::tp[g']}
-                 (value (S ..))[g] ->  (exp' (S ..))[g'] =  
-FN g => FN g' => mlam S => fn v =>  case v of 
+                 (value (S ..))[g] ->  (exp' (S ..))[g'] =
+FN g => FN g' => mlam S => fn v =>  case v of
  | {g':(tctx)*}{h:(ctx)*}{T::tp[g']}
    [h,x:value (T ..) ] x => [g'] one (T ..)
 
 %{ |  {#p::(value (S' ..))[h]}
-   [h,x:value (T ..) ] #p .. => 
-   let [g] Db = vhoas2db [h] <g' . S .. >  ([h] #p ..) in 
+   [h,x:value (T ..) ] #p .. =>
+   let [g] Db = vhoas2db [h] <g' . S .. >  ([h] #p ..) in
      [g,x:value (T ..) ] shift (S' ..)  Db
 
- | [g] lam (T ..) (\x. E .. x) => 
-   let [g,x:value (T ..)] F =  hoas2db [g,x:value (T ..) ] ([g,x] E .. x ) in 
+ | [g] lam (T ..) (\x. E .. x) =>
+   let [g,x:value (T ..)] F =  hoas2db [g,x:value (T ..) ] ([g,x] E .. x ) in
      [g] lam' (T ..) F
 
- | [g] tlam \a. E .. a => 
-   let [g,a:tp] F .. a = hoas2db [g,a:tp] ([g,a] E .. a) in 
+ | [g] tlam \a. E .. a =>
+   let [g,a:tp] F .. a = hoas2db [g,a:tp] ([g,a] E .. a) in
      [g] tlam' \a. F .. a
 
 
 and hoas2db : {g:(ctx)*}{g':(tctx)*}{T::tp[g']}
-			(exp (T ..))[g] ->  (exp' (T ..) )[g'] = 
-FN g => FN g' => mlam T => fn e =>  case e of 
+			(exp (T ..))[g] ->  (exp' (T ..) )[g'] =
+FN g => FN g' => mlam T => fn e =>  case e of
  | {g:(ctx)*}{g':(tctx)*}
-   {T1::tp[g']}{T2::tp[g']}{E1:: (exp (arr (T1 ..) (T2 ..)))[g]} 
+   {T1::tp[g']}{T2::tp[g']}{E1:: (exp (arr (T1 ..) (T2 ..)))[g]}
     [g] app (E1 .. ) (E2 .. ) =>
-   let [g'] F1 = hoas2db [g] [g'] <g' . arr (T1 ..) (T2 ..) > ([g] E1 ..)  in 
-   let [g'] F2 = hoas2db [g] [g'] <g' . T1 .. > ([g] E2 ..)  in 
+   let [g'] F1 = hoas2db [g] [g'] <g' . arr (T1 ..) (T2 ..) > ([g] E1 ..)  in
+   let [g'] F2 = hoas2db [g] [g'] <g' . T1 .. > ([g] E2 ..)  in
      [g'] app' F1 F2
- | [g] ret (V ..) => 
-   vhoas2db [g] [g'] <g' . T .. > ([g] V .. )   
+ | [g] ret (V ..) =>
+   vhoas2db [g] [g'] <g' . T .. > ([g] V .. )
 }%
-%{ | [g] tapp (E .. ) (T ..) => 
-     let [g] F .. = hoas2db [g] ([g] E .. ) in 
+%{ | [g] tapp (E .. ) (T ..) =>
+     let [g] F .. = hoas2db [g] ([g] E .. ) in
      [g] tapp' (F .. ) (T .. )
 }%
 ;

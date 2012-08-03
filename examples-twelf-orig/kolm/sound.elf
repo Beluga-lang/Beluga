@@ -3,8 +3,8 @@ sound : nk A -> kolm A A* -> nj A* -> type.
 %mode sound +NK +K -NJ.
 
 % andi -- easy, andi and double negate
-sound_andi     : sound (nk_andi NKA NKB) (kolm_and KB KA) 
-                       (nj_noti ([p] [u] (nj_note u p 
+sound_andi     : sound (nk_andi NKA NKB) (kolm_and KB KA)
+                       (nj_noti ([p] [u] (nj_note u p
 			  (nj_andi NJA NJB))))
     <- sound NKA KA NJA
     <- sound NKB KB NJB.
@@ -23,7 +23,7 @@ sound_andi     : sound (nk_andi NKA NKB) (kolm_and KB KA)
 %                    --------- -I^q^u
 %                     - - A+
 
-sound_andel : sound (nk_andel NK1) KA 
+sound_andel : sound (nk_andel NK1) KA
                     (nj_noti ([q][u]
                       (nj_note NJ1 q
                         (nj_noti ([p][v]
@@ -42,7 +42,7 @@ sound_ander : sound (nk_ander NK1) KB
     <- sound NK1 (kolm_and KB KA) NJ1.  % NJ1::- - (A* and - - B+)
 
 % impi -- easy.  apply impi and double negate
-sound_impi : sound (nk_impi NKB) (kolm_imp KB KA) 
+sound_impi : sound (nk_impi NKB) (kolm_imp KB KA)
                    (nj_noti ([p] [u] (nj_note u p (nj_impi NJB))))
     <- ({u:nk A} {v:nj A*} sound u KA v ->
           sound (NKB u) KB (NJB v)).
@@ -51,7 +51,7 @@ sound_impi : sound (nk_impi NKB) (kolm_imp KB KA)
 % as in other cases.
 sound_impe : sound (nk_impe NKI NKA) KB
                    (nj_noti ([q] [v]
-                     (nj_note NJI q 
+                     (nj_note NJI q
                        (nj_noti ([p][u]
                          (nj_note (nj_impe u NJA) p v))))))
     <- existskolm A A* KA
@@ -73,20 +73,20 @@ sound_orir : sound (nk_orir NK) (kolm_or KB KA)
 %  ---------------- u . . .      . . .
 %     A* or B*        - - C+    - - C+
 %  ------------------------------------ ore
-%                     
+%
 %    ---- v           - - C+
 %    - C+
 %    --------------------------- note
 %                            p
 %    [hyp]                ------------------- noti^p^u
-%  - -(A* or B*)          -(A* or B*) 
+%  - -(A* or B*)          -(A* or B*)
 %  ------------------------------------------ note
 %                        q
 %  ------------------------------------------ noti^q^v
 %                  - - C+
-sound_ore  : sound (nk_ore NK NKA NKB) KC 
+sound_ore  : sound (nk_ore NK NKA NKB) KC
                    (nj_noti ([q][v]
-                     (nj_note NJ q 
+                     (nj_note NJ q
                        (nj_noti ([p][u]
                          (nj_note (nj_ore u NJA NJB) p v))))))
     <- existskolm A A* KA
@@ -101,21 +101,21 @@ sound_ore  : sound (nk_ore NK NKA NKB) KC
 
 % noti -- use Lemma 2 (nj_dneg_falser)  - - false |- q
 sound_noti : sound (nk_noti NK1) (kolm_not K)
-                   (nj_noti ([p] [u] (nj_note u p 
+                   (nj_noti ([p] [u] (nj_note u p
                      (nj_noti ([q][v]
-                       (nj_note (NJ1 false v) q 
+                       (nj_note (NJ1 false v) q
 			  (nj_noti ([p][u] (nj_falsee u)))
 			  ) )))))
-    <- ({p:o} {u:nk A} {v:nj A*} {kp:kolm p (not (not p))} 
+    <- ({p:o} {u:nk A} {v:nj A*} {kp:kolm p (not (not p))}
         existskolm p (not (not p)) kp ->
         sound u K v ->
          sound (NK1 p u) kp (NJ1 p v)). % (NJ1 p v):nj (n p)
 
 % note -- use Lemma 1 to derive - - - A from - - - - - A
 % and apply note
-sound_note : sound (nk_note NK2 C NK1) KC 
-                   (nj_note 
-		      (nj_noti 
+sound_note : sound (nk_note NK2 C NK1) KC
+                   (nj_note
+		      (nj_noti
 			 ([q][v] nj_note NJ2 q (nj_noti ([p] [u] (nj_note u p v)))))
                             (not (not C*)) NJ1)
       <- existskolm A A* KA
@@ -150,12 +150,12 @@ sound_foralle : sound (nk_foralle NK T) (KA T)
     <- sound NK (kolm_forall KA) NJ.
 
 % existsi -- easy, existsi and double negate
-sound_existi : sound (nk_existsi T NK) (kolm_exists KA) 
+sound_existi : sound (nk_existsi T NK) (kolm_exists KA)
                      (nj_noti ([p] [u] (nj_note u p (nj_existsi T NJ))))
     <- sound NK (KA T) NJ.
 
 % existse -- hard -- play around with negations (compare to ore)
-sound_existse : sound (nk_existse NKEA NKC) KC 
+sound_existse : sound (nk_existse NKEA NKC) KC
                       (nj_noti ([q][v]
                         (nj_note NJnnEA q
                           (nj_noti ([p][u]
@@ -178,14 +178,14 @@ sound_existse : sound (nk_existse NKEA NKC) KC
 % and that's what we want!
 
 sound_dnotr    : sound (nk_dnotr NK1) KA
-                       (nj_noti ([q][v] 
-                          (nj_note (nj_noti ([q2][v2] 
+                       (nj_noti ([q][v]
+                          (nj_note (nj_noti ([q2][v2]
 				    (nj_note (nj_noti ([q][v]
                                                 (nj_note NJ1 q (nj_noti ([p] [u] (nj_note u p v)))
                                                  )))
-                                                 q2 
+                                                 q2
 				       (nj_noti ([p] [u] (nj_note u p v2))))))
-			     q (nj_noti ([p] [u] (nj_note u p v)))			     
+			     q (nj_noti ([p] [u] (nj_note u p v)))
 			     )))
     <- sound NK1 (kolm_not (kolm_not KA)) NJ1.
 

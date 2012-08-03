@@ -1,7 +1,7 @@
 term :  type.
 z    : term.
 suc  : term -> term.
-app  : term -> term -> term.    
+app  : term -> term -> term.
 
 schema termCtx = some [] term;
 
@@ -11,9 +11,9 @@ mlam g => fn e =>
   | [g. z]     => [g. z]
   | [g. suc (U ..)] => let [g. V ..] = copy [g] [g. U ..] in [g. suc (V .. )]
   | [g. #p ..] => [g. #p ..]
-  | [g. app (U ..) (V ..)]  => 
-    let [g. U' ..]  = copy [g] [g. U ..] in 
-    let [g. V' ..]  = copy [g] [g. V ..] in 
+  | [g. app (U ..) (V ..)]  =>
+    let [g. U' ..]  = copy [g] [g. U ..] in
+    let [g. V' ..]  = copy [g] [g. V ..] in
        [g. app (U' ..) (V' ..)]
 );
 

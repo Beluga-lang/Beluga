@@ -7,7 +7,7 @@ datatype NatPair: ctype =
 ;
 
 rec copy : NatPair -> NatPair =
-fn n => case n of 
+fn n => case n of
 | Pair [. z] [. z] => n
 | Pair [. z] [. s M] => let Pair [. N'] [. M'] = copy (Pair [.z] [. M]) in
                          Pair [. z] [. s M']
@@ -19,15 +19,15 @@ fn n => case n of
 
 %{
 rec copy2 : NatPair -> NatPair =
-fn n => case n of 
+fn n => case n of
 | Pair [. z] [. z] => n
-| Pair [. z] [. s M] => case  copy2 Pair [.z] [. M] of 
+| Pair [. z] [. s M] => case  copy2 Pair [.z] [. M] of
                            | Pair [. N'] [. M']  =>
 			    Pair [. z] [. s M']
 | Pair [. s N] [. s M] => case  copy2 (Pair [. N] [. M]) of
                           | Pair [. N'] [. M'] =>
 			 Pair [. s N'] [. s M']
-| Pair [. s N] [. z] => case copy2 (Pair [. N] [. z]) of 
+| Pair [. s N] [. z] => case copy2 (Pair [. N] [. z]) of
                           | Pair [. N'] [. M'] =>
                          Pair [. s N'] [.z]
 ;

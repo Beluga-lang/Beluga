@@ -47,7 +47,7 @@ truer : conc (true).
 falsel : (hyp (false) -> conc C).
 
 forallr : ({a:i} conc (A a))
-	   -> conc (forall A). 
+	   -> conc (forall A).
 
 foralll : {T:i} (hyp (A T) -> conc C)
 	   -> (hyp (forall A) -> conc C).

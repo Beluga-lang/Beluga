@@ -2,13 +2,13 @@
 Author: Marie-Andree B.Langlois
 }%
 terminals lam app
-syntax 
+syntax
 
 term ::= app term term | x | lam \x .term[x] ;
 
 notation aeq : term a= term;
 
-E1 a= F1;  
+E1 a= F1;
 E2 a= F2;
 --------------------------- ae_a
 (app E1 E2) a= (app F1 F2);

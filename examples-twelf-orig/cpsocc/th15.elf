@@ -4,25 +4,25 @@
 
 th15-1 : cvalR R -> cstackR R A -> bareR R A -> type.
 
-th15-2 : cvalCS Phi 
-         -> cvalE E 
+th15-2 : cvalCS Phi
+         -> cvalE E
          -> cstackE Phi E A
-         -> cstack_substE E Phi E' 
+         -> cstack_substE E Phi E'
          -> ({k:ccont}
              {b:{t:ctriv}bareE (cret k t) t}
-             bareE (E' k) A) 
+             bareE (E' k) A)
          -> type.
 
 
-th15-1_proof : th15-1 (cval_klam CVE) 
-                      (cstack_klam CE) 
+th15-1_proof : th15-1 (cval_klam CVE)
+                      (cstack_klam CE)
                       (bare_klam ([k][b] BE k b))
                <- lemma14-1c CVE CSE'
                <- th15-2 cvalCS_init CVE CE CSE' BE.
 
 
-th15-2_capp_k_k_init : th15-2 cvalCS_init 
-                              (cval_capp cval_k 
+th15-2_capp_k_k_init : th15-2 cvalCS_init
+                              (cval_capp cval_k
                                          (cval_xlam ([t]
                                                       [cvt]
                                                        cval_klam (CVE t cvt)))
@@ -36,18 +36,18 @@ th15-2_capp_k_k_init : th15-2 cvalCS_init
                                  CE
                                  CSE'
                                  BE.
-                        
+
 th15-2_capp_k_vlam : th15-2 CVS
                             (cval_capp cval_k
                                        (cval_xlam ([t]
                                                     [cvt]
-                                                     cval_klam (CVE t cvt))) 
+                                                     cval_klam (CVE t cvt)))
                                        CVT)
                               (cstack_capp CE cstack_phi_k)
                               (csubst_capp (csubst_k_vlam CSE1))
                               ([k][b]bare_capp (BE k b))
                        <- lemma14-1a CVS
-                                     (CVE T CVT) 
+                                     (CVE T CVT)
                                      CSE1
                                      CSE'
                        <- th15-2 CVS
@@ -57,11 +57,11 @@ th15-2_capp_k_vlam : th15-2 CVS
                                  BE.
 
 th15-2_capp_vlam_phi : th15-2 CVS
-                              (cval_capp 
+                              (cval_capp
                                    (cval_vlam CVE1)
                                    (cval_xlam ([t]
                                                 [cvt]
-                                                 cval_klam (CVE t cvt))) 
+                                                 cval_klam (CVE t cvt)))
                                    CVT)
                               (cstack_capp CE cstack_vlam)
                               (csubst_capp (csubst_vlam CSE1))

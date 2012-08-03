@@ -28,7 +28,7 @@ schema termCtx = some [A:obj] block (term A) | some [A:obj][E:term A][E':term A]
 
 % for all M. conv E E' -> conv (M E) (M E')
 
-% 
+%
 
 rec cong : {g:termCtx}{M::(term B)[g, x:term A]} ((conv E E')[g] -> (conv (M E) (M E'))[g]) =
 mlam M => case M of

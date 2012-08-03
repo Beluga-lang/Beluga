@@ -1,8 +1,8 @@
 %%% Translation to representation using de Bruijn indices
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
-trans  : env -> exp' -> exp -> type.  
-vtrans : val -> exp -> type.          
+trans  : env -> exp' -> exp -> type.
+vtrans : val -> exp -> type.
 
 % Natural numbers
 tr_z     : trans K z' z.

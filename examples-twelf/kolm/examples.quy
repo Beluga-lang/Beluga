@@ -1,9 +1,9 @@
 % Examples
 
 % First a few examples that do not use double negation.
-%query 1 * D:sound % (not false) (not not not false) 
+%query 1 * D:sound % (not false) (not not not false)
    (nk_noti [p:o] [u:nk false] (nk_falsee u)) (kolm_not kolm_false) NJ.
-%query 1 * D:complete (kolm_not kolm_false) 
+%query 1 * D:complete (kolm_not kolm_false)
    (nj_noti
       ([p:o] [u:nj (not not not not false)]
           nj_note u p
@@ -24,9 +24,9 @@
              (nj_impi
                  ([X1:nj (not not false)]
                      nj_note X1 (not not false)
-                        (nj_noti ([p1:o] [u1:nj false] nj_falsee u1)))))) 
+                        (nj_noti ([p1:o] [u1:nj false] nj_falsee u1))))))
    NK.
-        
+
 
 %query 1 * D:sound % (false imp true)
      (nk_impi [u:nk false] nk_truei) (kolm_imp kolm_true kolm_false) NJ.
@@ -39,7 +39,7 @@
                      nj_noti ([p1:o] [u1:nj (not true)] nj_note u1 p1 nj_truei)))))
    NK.
 
-%query 1 * D:sound % (false imp true) 
+%query 1 * D:sound % (false imp true)
     (nk_impi [u:nk false] (nk_falsee u)) (kolm_imp kolm_true kolm_false) NJ.
 %query 1 * D:complete (kolm_imp kolm_true kolm_false)
    (nj_noti
@@ -54,7 +54,7 @@
 % A good first test case using dnot, noti, note, and truei.
 %     true                      true
 %   - - - - -        ====>      ....
-%    - - true                   ....   
+%    - - true                   ....
 %   ---------dnot            -----------
 %     true                     - - true
 %query 1 * D:sound % true
@@ -99,10 +99,10 @@
 
 % A big monster example using every propositional inference
 % rule.  Don't even try to read the corresponding NJ proof!
-%query 1 * D:sound 
+%query 1 * D:sound
 %  ((true or false) and (not false))
-  (nk_andi 
-    (nk_ore 
+  (nk_andi
+    (nk_ore
       (nk_impe (nk_impi [v2:nk true] (nk_orir (nk_andi nk_truei v2)))
                (nk_dnotr (nk_noti [p] [u2:nk (not true)]
                            (nk_note u2 p nk_truei))))
@@ -195,7 +195,7 @@ nj_noti
                              ([q3:o] [u7:nj (not not not true)]
                                  nj_note
                                     (nj_noti
-                                        
+
 ([q4:o] [u8:nj (not not not not not true)]
     nj_note
        (nj_noti
@@ -285,20 +285,20 @@ nj_ore u13
 %query 1 * D:({a:o} {ka:kolm a (not not a)} existskolm a (not not a) ka ->
                 sound % (a or (not a)) (not not ((not not a) or (not not not not not a)))
                       (nk_dnotr
-                        (nk_noti 
+                        (nk_noti
                           ([p] [u:nk (not (a or (not a)))]
                             nk_note u p
-                              (nk_orir 
-                                (nk_noti 
+                              (nk_orir
+                                (nk_noti
                                   ([q] [v:nk a]
                                     nk_note u q (nk_oril v)))))))
                       (kolm_or (kolm_not ka) ka)
                       (NJ a)).
 
 % check of completeness for the NJ proof returned by soundness
-%query 1 * D:({a:o} {ka:kolm a (not not a)} 
+%query 1 * D:({a:o} {ka:kolm a (not not a)}
    equiv ka ([u:nk a] (nk_dnotx u)) ([u:nk (not not a)] (nk_dnotr u)) ->
-   complete (kolm_or (kolm_not ka) ka) 
+   complete (kolm_or (kolm_not ka) ka)
       (nj_triple_neg_red
          (nj_triple_neg_red
              (nj_triple_neg_red
@@ -311,7 +311,7 @@ nj_ore u13
                              nj_dneg_falser
                                 (nj_note (nj_triple_neg_red v) (not not false)
                                     (nj_dnotx
-                                        
+
 (nj_orir
     (nj_dnotx
         (nj_noti
@@ -323,12 +323,12 @@ nj_ore u13
        (NK a)).
 
 % Check of completeness for a more reasonable NJ proof.
-%query 1 * D:({a:o} {ka:kolm a (not not a)} 
+%query 1 * D:({a:o} {ka:kolm a (not not a)}
    equiv ka ([u:nk a] (nk_dnotx u)) ([u:nk (not not a)] (nk_dnotr u)) ->
    complete (kolm_or (kolm_not ka) ka)
             (nj_noti [p] [u:nj (not ((not not a) or (not not not not not a)))]
               (nj_note u p
-                (nj_orir 
+                (nj_orir
                   (nj_dnotx
                     (nj_noti [q] [v:nj (not not a)]
                       (nj_note u q (nj_oril v)))))))
@@ -344,10 +344,10 @@ nj_ore u13
           (nk_dnotr
            (nk_noti ([p] [v:nk (not ((not a) or (not b)))]
             nk_note v p
-             (nk_orir 
+             (nk_orir
               (nk_noti ([q] [w:nk b]
                nk_note v q
-                (nk_oril 
+                (nk_oril
                  (nk_noti [r] [z:nk a]
                   (nk_note u r
                    (nk_andi z w)))))))))))
@@ -376,7 +376,7 @@ nj_ore u13
                                                   (not not not
                                                       (n (not n a)
                                                           or n (not n b))))]
-                                        
+
 nj_dneg_falser
    (nj_note (nj_triple_neg_red v) (n false)
        (nj_dnotx
@@ -388,7 +388,7 @@ nj_dneg_falser
                               (nj_note (nj_triple_neg_red v) (n false)
                                   (nj_dnotx
                                       (nj_oril
-                                          
+
 (nj_dnotx
     (nj_noti
         ([q2:o] [v2:nj (n a)]
@@ -402,7 +402,7 @@ nj_dneg_falser
 % Now to test the quantifier rules.
 
 % First a simple example
-%query 1 * D:({R:i -> i -> o} {kr:{x} {y} kolm (R x y) (not not (R x y))} 
+%query 1 * D:({R:i -> i -> o} {kr:{x} {y} kolm (R x y) (not not (R x y))}
     ({x} {y} existskolm (R x y) (not not (R x y)) (kr x y)) ->
   sound
 %   ((forall [x] (R x x)) imp (forall [x] (exists [y] (R x y))))
@@ -416,8 +416,8 @@ nj_dneg_falser
              (kolm_forall [x] (kr x x)))
    (NJ R)).
 
-%query 1 * D:({R:i -> i -> o} {kr:{x} {y} kolm (R x y) (not not (R x y))} 
-   ({x} {y} equiv (kr x y) ([u:nk (R x y)] (nk_dnotx u)) 
+%query 1 * D:({R:i -> i -> o} {kr:{x} {y} kolm (R x y) (not not (R x y))}
+   ({x} {y} equiv (kr x y) ([u:nk (R x y)] (nk_dnotx u))
                            ([u:nk (not not (R x y))] (nk_dnotr u))) ->
    complete (kolm_imp (kolm_forall [x] (kolm_exists [y] (kr x y)))
              (kolm_forall [x] (kr x x)))
@@ -445,7 +445,7 @@ nj_dneg_falser
                                nj_note u1 p1
                                   (nj_foralli
                                       ([a:i]
-                                          
+
 nj_noti
    ([p2:o] [u2:nj (not exists ([T2:i] not not R a T2))]
        nj_note u2 p2
@@ -469,7 +469,7 @@ nj_noti
              (nk_foralli ([a:i]
                nk_dnotr % used twice!
                (nk_noti ([q] [w:nk (not (A a))]
-                 nk_note v q 
+                 nk_note v q
                  (nk_existsi a w)))))))))
          (kolm_imp (kolm_exists [x] (kolm_not (kA x)))
                    (kolm_not (kolm_forall kA)))
@@ -496,7 +496,7 @@ nj_noti
                                                       exists
                                                          ([T2:i]
                                                              n (not n (A T2)))))]
-                                        
+
 nj_dneg_falser
    (nj_note (nj_triple_neg_red X2) (n false)
        (nj_dnotx

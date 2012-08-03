@@ -20,8 +20,8 @@ schema w = some [t:tp] exp t;
 
 
 rec identity' : {g:w}
- [g. exp T] -> [g. exp T] =  
- mlam g => 
+ [g. exp T] -> [g. exp T] =
+ mlam g =>
     fn x =>
       case x of
          [g. z]          => [g. z]
@@ -31,17 +31,17 @@ rec identity' : {g:w}
 
 %{
 rec copy : {g:w} [g. exp (T ..)] -> [g. exp (T ..)] =
-mlam g =>  
+mlam g =>
  fn x =>
    case x of
      [g. z]   => [g. z]
 
-   | [g. s (U .. )]  => 
+   | [g. s (U .. )]  =>
 
       let [g. (V ..)] =  copy [g] [g. (U ..)] in
         [g. s (V ..)]
 
-   | [g. lam (\x. (E ..  x))]  => [g. lam  (\x. (E .. x))] 					  
+   | [g. lam (\x. (E ..  x))]  => [g. lam  (\x. (E .. x))]
    | [g. lam (\ x. (E .. x))]  => x
 
    | [g. (#p ..)]              => [g. (#p ..)]

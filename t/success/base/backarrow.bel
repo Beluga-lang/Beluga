@@ -1,4 +1,4 @@
-exp : type.  
+exp : type.
 
 z    : exp.
 s    : exp -> exp.
@@ -15,15 +15,15 @@ cross : tp -> tp -> tp.			% Pairs
 arrow : tp -> tp -> tp.			% Functions
 
 
-eval : exp -> exp -> type.  
+eval : exp -> exp -> type.
 
 % Natural Numbers
 ev_z      : eval z z.
-ev_s      : eval (s E) (s V)  
+ev_s      : eval (s E) (s V)
 	  <- eval E V .
 
-ev_pair   : eval (pair E1 E2) (pair V1 V2) 
-	  <- eval E1 V1 
+ev_pair   : eval (pair E1 E2) (pair V1 V2)
+	  <- eval E1 V1
 	  <- eval E2 V2.
 
 

@@ -10,14 +10,14 @@ lemma14-1a : cvalCS ([k](ccons (Phi k)  (vlam ([v]E1 v k))))
                               ([k] E (vlam ([v]E1' v k)))
              -> type.
 
-lemma14-1c : cvalE E 
-             -> cstack_substE E ([k]cdot) E 
+lemma14-1c : cvalE E
+             -> cstack_substE E ([k]cdot) E
              -> type.
 
 lemma14-2a : cvalCS ([k](ccons (Phi k) (vlam ([v]E1 v k))) )
              -> cvalC C
              -> ({v:ctriv}cstack_substE ([k] E1 v k) Phi ([k] E1' v k))
-             -> cstack_substC C 
+             -> cstack_substC C
                               ([k] (ccons (Phi k)  (vlam ([v] E1 v k)) ))
                               ([k] C (vlam ([v]E1' v k)))
              -> type.
@@ -26,8 +26,8 @@ lemma14-2b : cvalC C
              -> cstack_substC C ([k]cdot) C
              -> type.
 
-lemma14-1a_cret : lemma14-1a CVS 
-                             (cval_cret CVC CVT) 
+lemma14-1a_cret : lemma14-1a CVS
+                             (cval_cret CVC CVT)
                              SE1
                              (csubst_cret SC)
                   <- lemma14-2a CVS
@@ -35,8 +35,8 @@ lemma14-1a_cret : lemma14-1a CVS
                                 SE1
                                 SC.
 
-lemma14-1a_capp : lemma14-1a CVS 
-                             (cval_capp CVC CVT0 CVT1) 
+lemma14-1a_capp : lemma14-1a CVS
+                             (cval_capp CVC CVT0 CVT1)
                              SE1
                              (csubst_capp SC)
                   <- lemma14-2a CVS
@@ -44,37 +44,37 @@ lemma14-1a_capp : lemma14-1a CVS
                                 SE1
                                 SC.
 
-lemma14-1c_cret : lemma14-1c (cval_cret CVC CVT) 
+lemma14-1c_cret : lemma14-1c (cval_cret CVC CVT)
                              (csubst_cret SC)
-                  <- lemma14-2b CVC 
+                  <- lemma14-2b CVC
                                 SC.
 
-lemma14-1c_capp : lemma14-1c (cval_capp CVC CVT0 CVT1) 
+lemma14-1c_capp : lemma14-1c (cval_capp CVC CVT0 CVT1)
                              (csubst_capp SC)
-                  <- lemma14-2b CVC 
+                  <- lemma14-2b CVC
                                 SC.
 
 
-lemma14-2a_k : lemma14-2a CVS 
-                          cval_k 
+lemma14-2a_k : lemma14-2a CVS
+                          cval_k
                           SE1
                           (csubst_k_vlam SE1).
 
 
-lemma14-2a_vlam : lemma14-2a CVS 
-                             (cval_vlam CVE) 
+lemma14-2a_vlam : lemma14-2a CVS
+                             (cval_vlam CVE)
                              SE1
                              (csubst_vlam SE2)
                   <- {v:ctriv}{cvv:cvalT v}
-                     lemma14-1a  CVS 
-                                (CVE v cvv) 
+                     lemma14-1a  CVS
+                                (CVE v cvv)
                                 SE1
                                 (SE2 v).
 
 lemma14-2b_k : lemma14-2b cval_k csubst_k_init.
 
-lemma14-2b_vlam : lemma14-2b (cval_vlam CVE) 
+lemma14-2b_vlam : lemma14-2b (cval_vlam CVE)
                              (csubst_vlam SE)
                   <- {v:ctriv}{cvv:cvalT v}
-                     lemma14-1c (CVE v cvv) 
+                     lemma14-1c (CVE v cvv)
                                 (SE v).

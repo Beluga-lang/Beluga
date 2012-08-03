@@ -1,5 +1,5 @@
 % Classical, Natural Deduction
-nk : o -> type. 
+nk : o -> type.
 
 nk_impi    : (nk A -> nk B) -> nk (imp A B).
 nk_impe    : nk (imp A B) -> nk A -> nk B.

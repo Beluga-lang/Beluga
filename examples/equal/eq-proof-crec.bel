@@ -1,23 +1,23 @@
 % Given an expression e, return the proof that e is always equal to itself.
-% 
+%
 % Author: Brigitte Pientka
 
-datatype exp: type =   
+datatype exp: type =
 | app: exp -> exp -> exp
 | lam: (exp -> exp) -> exp
 ;
 
 %name exp E x.
 
-datatype eq: exp -> exp -> type =    
+datatype eq: exp -> exp -> type =
 | eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2)
-| eq_lam :  ({x : exp} eq x x -> eq (E x) (F x)) 
+| eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
             -> eq (lam E) (lam F)
 ;
 %name eq D u.
 
 
-datatype equal: exp -> exp -> type = 
+datatype equal: exp -> exp -> type =
 | e_l: ({x:exp} equal x x -> equal (T x) (T' x)) -> equal (lam T) (lam  T')
 | e_a: equal T2 S2  -> equal T1 S1 -> equal (app T1 T2) (app S1 S2)
 | e_r: {T:exp}equal T T
@@ -26,7 +26,7 @@ datatype equal: exp -> exp -> type =
 
 schema eqCtx = block x:exp, u: eq x x
 ;
-schema equalCtx = block x: exp, u:eq x x, v: equal x x 
+schema equalCtx = block x: exp, u:eq x x, v: equal x x
 ;
 
 rec ref : {g:eqCtx} {U:[g . exp]} [g . eq (U ..) (U ..)] =
@@ -53,7 +53,7 @@ rec trans: (g:eqCtx)
 fn e1 => fn e2 => case e1 of
 
  | [g . #p.2 .. ] => e2
-       
+
 | [g . eq_app (D1 ..) (D2 ..)] =>
    (case e2 of
    | [g . eq_app (F1 ..) (F2 ..)] =>
@@ -63,17 +63,17 @@ fn e1 => fn e2 => case e1 of
 )
 
 | [g . eq_lam \x.\u. D1 .. x u] =>
-  (case e2 of 
-  | [g . eq_lam \x.\u. D2 .. x u] => 
+  (case e2 of
+  | [g . eq_lam \x.\u. D2 .. x u] =>
      (case   trans [g, b:block (x:exp, u:eq x x) . D1 .. b.1 b.2]
 		   [g, b . D2 .. b.1 b.2]  of
-	| [h, b:block (x:exp, u:eq x x) . E .. b.1 b.2] => 
+	| [h, b:block (x:exp, u:eq x x) . E .. b.1 b.2] =>
 	  [h . eq_lam \x. \u. E .. x u]
      )
   )
-  
-%{ let [g . eq_lam \x.\u. D2 .. x u] =  e2  in	
-   let [g, b:block (x:exp, u:eq x x) . E .. b] = 
+
+%{ let [g . eq_lam \x.\u. D2 .. x u] =  e2  in
+   let [g, b:block (x:exp, u:eq x x) . E .. b] =
      trans [g, b:block (x:exp, u:eq x x) . D1 .. b.1 b.2]
            [g, b . D2 .. b.1 b.2]
     in
@@ -83,26 +83,26 @@ fn e1 => fn e2 => case e1 of
 
 
 rec ceq: (g:equalCtx) [g . equal (T ..) (S ..)] -> [g . eq (T ..) (S ..)]  =
-fn e => case e of 
+fn e => case e of
  | [g . #p.3 .. ] => [g . #p.2 .. ]
 
- | [g . e_r (T .. )] => ref [g] [ g. T .. ]   
+ | [g . e_r (T .. )] => ref [g] [ g. T .. ]
 
- | [g . e_t (D2 ..) (D1 ..)] => 
-  let [g . F2 ..] = ceq [g . D2 ..] in 
-  let [g . F1 ..] = ceq [g . D1 ..] in 
-    trans [g . F1 ..]  [g . F2 ..]           
+ | [g . e_t (D2 ..) (D1 ..)] =>
+  let [g . F2 ..] = ceq [g . D2 ..] in
+  let [g . F1 ..] = ceq [g . D1 ..] in
+    trans [g . F1 ..]  [g . F2 ..]
 
- | [g . e_l \x.\u. D .. x u] => 
-  let  
-     [g,b:block (x:exp,u:eq x x,v:equal x x) . F .. b.1 b.2] = 
+ | [g . e_l \x.\u. D .. x u] =>
+  let
+     [g,b:block (x:exp,u:eq x x,v:equal x x) . F .. b.1 b.2] =
         ceq  [g, b:block (x:exp, u:eq x x, v:equal x x) . D .. b.1 b.3]
   in
      [g . eq_lam \x.\v. F .. x v]
 
-| [g . e_a (D2 ..) (D1 ..)] => 
-    let [g . F1 ..] = ceq [g . D1 ..] in 
-    let [g . F2 .. ]= ceq [g . D2 ..] in 
+| [g . e_a (D2 ..) (D1 ..)] =>
+    let [g . F1 ..] = ceq [g . D1 ..] in
+    let [g . F2 .. ]= ceq [g . D2 ..] in
       [g . eq_app (F1 ..) (F2 ..)]
 
 ;

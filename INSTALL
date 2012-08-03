@@ -42,7 +42,7 @@ GODI
 
 The above list of required packages may seem excessive and you may
 feel that you shouldn't have to manually download and install five or
-more separate packages to compile this software. 
+more separate packages to compile this software.
 
 That's why, rather than downloading the extremely barebones OCaml
 compiler, you can instead download the OCaml GODI] distribution
@@ -122,7 +122,7 @@ Native code compilation
 
 If Beluga seems too slow, try using the OCaml native code compiler:
 
-  omake NATIVE_ENABLED=true 
+  omake NATIVE_ENABLED=true
 
 This typically results in about a 6x speedup.  Note, however, that if you
 ever need to run `omake clean', you should pass the same option:
@@ -146,9 +146,9 @@ home directory, you can say:
 
  bash < <(curl -s https://rvm.beginrescueend.com/install/rvm)
 
-rvm is then installed in .rvm/bin. 
+rvm is then installed in .rvm/bin.
 
-Then you can say: 
+Then you can say:
 
 .rvm/bin/rvm install 1.9.3
 

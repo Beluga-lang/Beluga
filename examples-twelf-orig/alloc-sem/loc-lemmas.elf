@@ -8,8 +8,8 @@
 
 loc_lt_trans   : loc_lt L1 L2 -> loc_lt L2 L3 -> loc_lt L1 L3 -> type.
 %mode loc_lt_trans +DLocLt12 +DLocLt23 -DLocLt13.
--              : loc_lt_trans (loc_lt_ DNatLt12) 
-                              (loc_lt_ DNatLt23) 
+-              : loc_lt_trans (loc_lt_ DNatLt12)
+                              (loc_lt_ DNatLt23)
                               (loc_lt_ DNatLt13)
 		  <- nat_lt_trans DNatLt12 DNatLt23 DNatLt13.
 %worlds () (loc_lt_trans _ _ _).

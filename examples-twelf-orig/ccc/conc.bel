@@ -2,26 +2,26 @@
 
 % conc  : mor A B -> (term A -> term B) -> type.
 % % mode conc +D -E.
-% 
+%
 % cid   : conc idc (\x . x).
-% 
+%
 % ccomp : conc (@ F G) (\x . (M (N x)))
 %          <- conc G (\x . N x)
 %          <- conc F (\x . M x).
-% 
+%
 % cunit : conc drop (\x . lunit).
-% 
+%
 % cpair : conc (pair F G) (\x . (lpair (M x) (N x)))
 %          <- conc G (\x . N x)
 %          <- conc F (\x . M x).
-% 
+%
 % cfst  : conc fst (\x . (lfst x)).
-% 
+%
 % csnd  : conc snd (\x . (lsnd x)).
-% 
+%
 % ccur  : conc (cur F) (\a . llam (\b . M (lpair a b)))
 %          <- conc F (\x . M x).
-% 
+%
 % capp  : conc app (\a . lapp (lfst a) (lsnd a)).
 
 % worlds () (conc _ _).
@@ -34,7 +34,7 @@ rec conc : (mor A B)[] -> (term B)[u:term A] =
 % FIXME reconstruct:elBranch expect an atomic type for the argument of the match
 % here we are matching on argument of type (term A -> term B) ('let' gets transformed into a match)
 % same problem for pair and cur below
-% 
+%
 %       | [] (@ F G) =>
 %            let [x:term A] (M x)  = conc ([] F) in
 %            let [x:term A] (N x)  = conc ([] G) in
@@ -44,15 +44,15 @@ rec conc : (mor A B)[] -> (term B)[u:term A] =
            [x] lunit
 
        | [] (pair F G) : (mor A (cross B C))[ ]  =>
-            let [y:term A] (M y) : (term B)[y:term A] = conc ([] F) in 
-            let [x:term A] (N x) : (term C)[x:term A] = conc ([] G) in 
-                [x] lpair (M x) (N x)  % term (cross B C)[x:term A] 
+            let [y:term A] (M y) : (term B)[y:term A] = conc ([] F) in
+            let [x:term A] (N x) : (term C)[x:term A] = conc ([] G) in
+                [x] lpair (M x) (N x)  % term (cross B C)[x:term A]
 
 % FIXME problem in unification I do not really understand, same problem for snd and app below
-% 
+%
 %       | [] fst =>
 %           [] (\x . (lfst x))
-% 
+%
 %       | [] snd =>
 %            [] (\x . (lsnd x))
 

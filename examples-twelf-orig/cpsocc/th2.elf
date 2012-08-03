@@ -2,11 +2,11 @@
 %%%%% Theorem 2 : A result of cps transformation is cont-valid
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-cps_cvR : cpsR R R' -> cvalR R' -> type.                    
+cps_cvR : cpsR R R' -> cvalR R' -> type.
 cps_cvE : cvalK ([x] [y] Kappa x y)
-          -> ({k:ccont}cpsE E ([y] Kappa k y) (E' k)) 
-          -> cvalE ([k] E' k) -> type.   
-cps_cvT : cpsT T T' -> cvalT T' -> type.                    
+          -> ({k:ccont}cpsE E ([y] Kappa k y) (E' k))
+          -> cvalE ([k] E' k) -> type.
+cps_cvT : cpsT T T' -> cvalT T' -> type.
 %mode cps_cvR +CR -CVR.
 %mode cps_cvE +CVK +CE -CVE.
 %mode cps_cvT +CT -CVT.
@@ -18,15 +18,15 @@ cps_cvT : cpsT T T' -> cvalT T' -> type.
 cval_droot : cps_cvR (cps_droot ([k] CE k)) (cval_klam CVE)
              <- cps_cvE (cval_kappa ([v] [cvv] cval_cret cval_k cvv)) ([k] CE k)  CVE.
 
-cval_dtriv : cps_cvE (cval_kappa ([t] [cvt] CVE t cvt)) ([k] cps_dtriv CT) (CVE T CVT) 
-             <- cps_cvT CT CVT. 
+cval_dtriv : cps_cvE (cval_kappa ([t] [cvt] CVE t cvt)) ([k] cps_dtriv CT) (CVE T CVT)
+             <- cps_cvT CT CVT.
 
 cval_dapp : cps_cvE (cval_kappa ([t] [cvt] CVE t cvt)) ([k] cps_dapp (CE0 k) ([x] CE1 k x)) CE
             <- ({t0:ctriv}{cVt0:cvalT t0}
-                cps_cvE (cval_kappa ([t1][cvt1] (cval_capp (cval_vlam ([v] [cvt] CVE v cvt)) cVt0 cvt1))) 
-                        ([k]CE1 k t0) 
+                cps_cvE (cval_kappa ([t1][cvt1] (cval_capp (cval_vlam ([v] [cvt] CVE v cvt)) cVt0 cvt1)))
+                        ([k]CE1 k t0)
                         (CVE' t0 cVt0))
-            <- cps_cvE (cval_kappa ([t] [cvt] CVE' t cvt)) ([k] CE0 k) CE. 
+            <- cps_cvE (cval_kappa ([t] [cvt] CVE' t cvt)) ([k] CE0 k) CE.
 
 cval_dlam : cps_cvT (cps_dlam ([x] [x'] [ct] CR x x' ct)) (cval_xlam ([x] [cvt] CVR x cvt))
             <- ({x:dtriv}{x':ctriv}{cX:cpsT x x'}{cVX:cvalT x'}

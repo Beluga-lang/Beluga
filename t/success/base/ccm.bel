@@ -16,7 +16,7 @@ schema nat-ctx = nat;
 
 
 rec gratlength : (g:nat-ctx) [g. nat]  -> [. nat] =
-fn v => case v of 
+fn v => case v of
  | [h,x:nat. U .. x] => let [. N] = gratlength [h. U .. z] in [. s N]
  | [hhh. V ..] => [. z]
 ;
@@ -31,7 +31,7 @@ fn v => case v of
 }%
 
 rec length' : {g:nat-ctx} [g. nat]  -> [. nat] =
-mlam g => fn v => case v of 
+mlam g => fn v => case v of
  | [h,x:nat. U .. x] => let [. N] = length' [h] [h. z] in [. s N]
  | [hhh. V ..] => [. z]
 ;
@@ -48,7 +48,7 @@ mlam g => fn v => case v of %not
 
 
 
-rec fff1 : (g:tp-ctx) [g. tp]  -> [. nat] = 
+rec fff1 : (g:tp-ctx) [g. tp]  -> [. nat] =
 fn v => case v of
  | [hh,x:tp. x] => [. z]
  | [h,y:tp,x:tp. y]  =>  [. z]
@@ -58,7 +58,7 @@ fn v => case v of
 ;
 
 
-rec aaa1Wrong : (g:natORtp-ctx) [g. tp]  -> [. nat] = 
+rec aaa1Wrong : (g:natORtp-ctx) [g. tp]  -> [. nat] =
 fn v => case v of %not
  | [h,x:tp. x] => [. z]
  | [h1,y:tp,x:tp. y]  =>  [. z]
@@ -68,29 +68,29 @@ fn v => case v of %not
 ;
 
 
-rec aaa1Wrong2 : (g:natORtp-ctx) [g. tp]  -> [. nat] = 
+rec aaa1Wrong2 : (g:natORtp-ctx) [g. tp]  -> [. nat] =
 fn v => case v of  %not
  | [h,x:tp. x] => [. z]
  | [h,x:tp. #p ..]  =>  [. z]
  | [h,n:nat. #p ..]  =>  [. z]
  | [h,n:nat. card (N .. n)]  =>  [. z]
- | [h,x:tp. card (N ..)]  =>  [. z] 
+ | [h,x:tp. card (N ..)]  =>  [. z]
  | [g. arr (T1 ..) (T2 ..)]  =>  [. z]
 ;
 
-rec aaa1 : (g:natORtp-ctx) [g. tp]  -> [. nat] = 
-fn v => case v of 
+rec aaa1 : (g:natORtp-ctx) [g. tp]  -> [. nat] =
+fn v => case v of
  | [h,x:tp. x] => [. z]
  | [h,x:tp. #p ..]  =>  [. z]
  | [h,n:nat. #p ..]  =>  [. z]
  | [h,n:nat. card (N .. n)]  =>  [. z]
- | [h,x:tp. card (N ..)]  =>  [. z] 
+ | [h,x:tp. card (N ..)]  =>  [. z]
  | [g. arr (T1 ..) (T2 ..)]  =>  [. z]
  | [g. card (N ..)]  =>  [. z]
 ;
 
 
-rec fff2Wrong : (g:tp-ctx) [g. tp]  -> [. nat] = 
+rec fff2Wrong : (g:tp-ctx) [g. tp]  -> [. nat] =
 fn v => case v of %not
  | [h,x:tp. x] => [. z]
  | [h,y:tp,x:tp. y]  =>  [. z]
@@ -100,7 +100,7 @@ fn v => case v of %not
 ;
 
 
-rec fff2 : (g:tp-ctx) [g. tp]  -> [. nat] = 
+rec fff2 : (g:tp-ctx) [g. tp]  -> [. nat] =
 fn v => case v of
  | [h,x:tp. x] => [. z]
  | [h,y:tp,x:tp. y]  =>  [. z]
@@ -112,18 +112,18 @@ fn v => case v of
 
 
 %{
-rec db2vhoas : {g:ctx} (exp' T)[g] -> (value T)[g] = 
-fn e => case e of 
-| [h,x:value T] one : (exp' T)[h,x:value T] => 
+rec db2vhoas : {g:ctx} (exp' T)[g] -> (value T)[g] =
+fn e => case e of
+| [h,x:value T] one : (exp' T)[h,x:value T] =>
     [h,x:value T] x
 
 | {E::(exp' S)[ ]}
-   [h,x:value T] shift E => 
-  let [h] F .. = db2vhoas ([h] E)  in 
+   [h,x:value T] shift E =>
+  let [h] F .. = db2vhoas ([h] E)  in
     [h,x:value T] F ..
 
-| [h] lam' T E => 
-    let [g,x:value T] F .. x = db2hoas  ([h, x:value T] E) in 
+| [h] lam' T E =>
+    let [g,x:value T] F .. x = db2hoas  ([h, x:value T] E) in
       [g] lam T (\x. F .. x)
 ;
 }%

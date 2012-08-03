@@ -1,15 +1,15 @@
 % Completeness
 
 %theorem compcs : forall* {A:o} {D:pf A}
-	          forall {CN : can A D} 
+	          forall {CN : can A D}
 	  	  exists {S : solve A} true.
-%theorem compai : forall* {A:o} 
+%theorem compai : forall* {A:o}
 		  forall {D : pf A} {AT : atm D}
 		  exists {CN : {P:p} A >> P -> solve (atom P)} true.
 %prove 4 (CN AT)
-  (compcs CN _) 
+  (compcs CN _)
   (compai _ AT _).
 
 %terminates (CN AT)
-  (compcs CN _) 
+  (compcs CN _)
   (compai _ AT _).

@@ -12,14 +12,14 @@ zoo: (nat -> nat) -> nat.
 schema natCtx = some [] nat;
 
 rec identity : {g:natCtx} [g. nat] -> [g. nat] =
-mlam g => 
+mlam g =>
  fn x =>
   (case x of
       [g. z]                  =>  [g. z]
     | [g. (#p ..)]            =>  [g. z]
     | [g. (U ..)]             =>  [g. (U ..)]
     | [g. zoo (\x. (U .. x))] =>  [g. (U ..  (s z))]
- 
+
 );
 
 rec identity :  [. nat] -> [. nat] =
@@ -35,19 +35,19 @@ rec copy :  [. nat] -> [. nat] =
  fn x =>
   (case x of
      [. z]          =>  [. z]
-   | [. U]          =>  
-    let [. V] = copy [. U] in 
+   | [. U]          =>
+    let [. V] = copy [. U] in
        [. s V]
 )
 ;
 
 
 % rec plus :  nat [ ] -> nat [ ] -> nat [ ] =
-% fn x => fn y => 
+% fn x => fn y =>
 %  (case x of
 %     box ( . z)            =>  y
-%   | box ( . U)          =>  
-%    let box( . V) = plus box ( .  U)  y in 
+%   | box ( . U)          =>
+%    let box( . V) = plus box ( .  U)  y in
 %       box( . s V)
 %)
 %;
@@ -60,6 +60,6 @@ rec copy :  [. nat] -> [. nat] =
 %  (case x of
 %     box (y : nat. z)            =>  box (y . z)
 %   | box (y : nat. y)            =>  box (y . z)
-%   | box (y : nat . U y) =>  box(y .z) 
+%   | box (y : nat . U y) =>  box(y .z)
 %)
 %;

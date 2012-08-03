@@ -1,13 +1,13 @@
 terminals lam app nat fun
-syntax 
+syntax
 
 tp ::= tp -> tp | nat | x ;
 
-exp ::= lam \x .exp[x] | app exp exp; 
+exp ::= lam \x .exp[x] | app exp exp;
 
 notation of_typ : exp oft tp;
 
-E1 oft (T2 -> T);  
+E1 oft (T2 -> T);
 E2 oft T2;
 ------------------------- t_app
 (app E1 E2) oft T;
@@ -29,7 +29,7 @@ T = T' by induction on d ;
 
 case rule
 
-D1: | g |- E1 .. oft (T2 -> T);  
+D1: | g |- E1 .. oft (T2 -> T);
 D2: | g |- E2 .. oft T2;
 ------------------------------ t_app
 | g |- (app (E1 ..) (E2 ..)) oft T;
@@ -40,12 +40,12 @@ eq_ref by case analysis on f:
 
                  case rule
 
-                 F1: | g |- E1 .. oft (T2 -> T');  
+                 F1: | g |- E1 .. oft (T2 -> T');
                  F2: | g |- E2 .. oft T2;
                  ------------------------------ t_app
                  | g |- (app (E1 ..) (E2 ..)) oft T';
 
-                 is 
+                 is
 
                  eq_ref by induction hypothesis on | g |- D1 .. , | g |- F1 .. ;
 
@@ -64,7 +64,7 @@ T = T' by case analysis on f:
 
                  case | g: (y:exp) y oft T' |- y oft T'
 
-                 is 
+                 is
 
                  eq_ref  by uniqueness of variables;
 
@@ -90,7 +90,7 @@ eq_ref by case analysis on f:
                  ---------------------------------------------- t_lam
                  | g |- (lam T1 E ..) oft (T1 -> T2);
 
-                 is 
+                 is
 
                  eq_ref  by induction hypothesis on | g, b:(x:exp) x oft _ |- D .. b.1 b.2 , | g,b |- F .. b.1 b.2 ;
 

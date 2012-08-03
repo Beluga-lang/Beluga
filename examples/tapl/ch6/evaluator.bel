@@ -1,4 +1,4 @@
-%{ 
+%{
   CH 6:  Lambda-terms
   Author: Brigitte Pientka
 
@@ -15,11 +15,11 @@ no_result : result.
 value     : term -> result.
 
 
-rec eval : [.term] -> [.result] = 
-fn t => case t of 
-| [ . app M N] =>  
-  (case eval [ .M] of 
-     | [ . value (lam \x. M' x)] => (case eval [ .N] of 
+rec eval : [.term] -> [.result] =
+fn t => case t of
+| [ . app M N] =>
+  (case eval [ .M] of
+     | [ . value (lam \x. M' x)] => (case eval [ .N] of
 				     | [ . value V]   => eval [ . M' V]
 				     | [ . no_result] => [ .no_result]
 				  )

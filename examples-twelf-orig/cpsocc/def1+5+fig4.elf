@@ -2,10 +2,10 @@
 %%%%% Definition 1 + 5 + Figure 4 : Cont-validity of cps terms
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-cvalR : croot -> type.           
-cvalE : (ccont -> cexp) -> type.   
-cvalT : ctriv -> type.           
-cvalC : (ccont -> ccont) -> type.  
+cvalR : croot -> type.
+cvalE : (ccont -> cexp) -> type.
+cvalT : ctriv -> type.
+cvalC : (ccont -> ccont) -> type.
 %mode cvalR +R.
 %mode cvalE +E.
 %mode cvalT +T.

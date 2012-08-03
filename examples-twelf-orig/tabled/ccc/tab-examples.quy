@@ -11,5 +11,5 @@ D : {f}{g}{h}pair f g @ h == pair (f @ h) (g @ h).
 
 %{
 %querytabled * 10 10
-D : pair F G @ H == pair (F @ H) (G @ H). 
+D : pair F G @ H == pair (F @ H) (G @ H).
 }%

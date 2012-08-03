@@ -1,56 +1,56 @@
-%%% 
+%%%
 %%% Author : Frank Pfenning, Brigitte Pientka
-%%% queries: sample programs for binary arithmentic and 
-%%% refinement types. 
+%%% queries: sample programs for binary arithmentic and
+%%% refinement types.
 
 % Examples from paper + own examples
-% to do: 
+% to do:
 % seperate out unprovable queries / provable queries
-% 
+%
 
-%querytabled * 5 
+%querytabled * 5
   check (lam [x] x 0) (bit => bit & pos => pos).
 
-%querytabled * 15 
+%querytabled * 15
   check std (bit => nat).
 
 %querytabled * *
   check std (zero => zero & nat => nat & pos => pos & nat => bit).
 
-%querytabled * 4 
+%querytabled * 4
    check test1 pos.
 
-%querytabled * * 
+%querytabled * *
    check shiftl (zero => zero).
 
-%querytabled * * 
+%querytabled * *
    check shiftl (zero => nat).
 
 %querytabled * 3
     check shiftl (nat => nat).
 
-%querytabled * 7 
+%querytabled * 7
     check shiftl (bit => bit).
 
-%querytabled * 7 
+%querytabled * 7
   check shiftl (pos => nat).
 
 %querytabled * 7
   check shiftl (nat => nat).
 
-%querytabled * 7 
+%querytabled * 7
   check shiftl ((nat => nat) & (pos => pos) & (pos => nat) & (bit => bit)).
 
-%querytabled * * 
+%querytabled * *
      check inc (pos => pos & nat => nat & nat => pos).
 
-%querytabled * * 
+%querytabled * *
       check inc (zero => pos & nat => nat & nat => pos).
 
-%querytabled * 5  
+%querytabled * 5
    check inc (nat => pos).
 
-%querytabled * * 
+%querytabled * *
       check inc (zero => pos).
 
 % working
@@ -118,7 +118,7 @@ synth ((fix [inc] lam [n]
 %querytabled * 14
   check (fix [plus] lam [n] lam [m]
 	 (case n
-	    m 
+	    m
 	    ([x] case m (x 0) ([y] y 1) ([y] y 1))
 	    ([x] x 1)))
 (nat => nat => nat &
@@ -129,7 +129,7 @@ synth ((fix [inc] lam [n]
 %querytabled * 16
   check (fix [plus] lam [n] lam [m]
 	 (case n
-	    m 
+	    m
 	    ([x] case m
 	       (x 0)
 	       ([y] y 1)
@@ -183,14 +183,14 @@ synth ((fix [inc] lam [n]
     check sub (nat => zero => nat & zero => nat => zero & bit => bit => bit).
 
 %querytabled * *
-    check sub (nat => zero => nat & 
-	     zero => nat => zero & 
+    check sub (nat => zero => nat &
+	     zero => nat => zero &
 	     nat => nat => nat).
 
 %querytabled * *
     check sub' (nat => zero => nat & zero => nat => zero & bit => bit => bit).
 
- 
+
 %querytabled * *
     check sub (pos => pos => nat).
 
@@ -200,7 +200,7 @@ synth ((fix [inc] lam [n]
 %querytabled * *
    check mult (nat => zero => zero).
 
-% all are provable 
+% all are provable
 
 %querytabled * *
   check mult (nat => nat => nat).
@@ -216,7 +216,7 @@ synth ((fix [inc] lam [n]
 
 %querytabled * *
   check mult' (bit => bit => bit).
-                      
+
 %querytabled * 16
    check mult' (bit => bit => bit).
 
@@ -230,6 +230,6 @@ synth ((fix [inc] lam [n]
   check square (pos => pos).
 
 
- 
+
 
 

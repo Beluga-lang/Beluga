@@ -112,7 +112,7 @@ sc_fix : subcomp (fev_fix D1) (to c_fix C1)
 
 
 % %{
-% Completeness Theorem: For every evaluation 
+% Completeness Theorem: For every evaluation
 %  D :: feval K F W
 % there exists a complete computation
 %  E :: ceval K F W

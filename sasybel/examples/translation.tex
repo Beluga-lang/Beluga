@@ -46,7 +46,7 @@ was translated and produced the following output was produced after the reconstr
 
 ## SASyLF parsing: nat.slf ##
 
-rec zless : (less z (s z))[] = 
+rec zless : (less z (s z))[] =
 [] l_one z
 
 ## Type Reconstruction done: nat.slf  ##
@@ -57,7 +57,7 @@ This is the same theorem written directly in \textmd{Beluga}.
 
 ## Type Reconstruction: sum1.bel ##
 
-rec zless : (less z (s z))[] = 
+rec zless : (less z (s z))[] =
 [] l_one z
 
 ## Type Reconstruction done: sum1.bel  ##
@@ -68,14 +68,14 @@ The following \textmd{Sasybel} code:
 \begin{verbatim}
 theorem plus1 : forall N exists N + (s z) = (s N);
 
-x : N + (s z) = (s N) by induction on N : 
+x : N + (s z) = (s N) by induction on N :
 
 case z is
 	   d2: (z) + (s z) = (s z) 	by rule sum-z
 end case
 
 end induction
-end theorem 
+end theorem
 
 \end{verbatim}
 was translated and produced the following output was produced after the reconstruction:
@@ -83,11 +83,11 @@ was translated and produced the following output was produced after the reconstr
 
 ## SASyLF parsing: sum2.slf ##
 
-rec plus1 : {N :: n[]} (sum N (s z) (s N))[] = 
-mlam N =>  case [] N : n[] of 
-           | ([] z) :  . z = N ;   => 
+rec plus1 : {N :: n[]} (sum N (s z) (s N))[] =
+mlam N =>  case [] N : n[] of
+           | ([] z) :  . z = N ;   =>
               [] sum-z (s z)
-           
+
 
 ## Type Reconstruction done: sum2.slf  ##
 
@@ -97,11 +97,11 @@ This is the same theorem written directly in \textmd{Beluga}.
 
 ## Type Reconstruction: sum.bel ##
 
-rec plus1 : {N :: nat[]} (add N (s z) (s N))[] = 
-mlam N =>  case [] N : nat[] of 
-           | ([] z) :  . z = N ;   => 
+rec plus1 : {N :: nat[]} (add N (s z) (s N))[] =
+mlam N =>  case [] N : nat[] of
+           | ([] z) :  . z = N ;   =>
               [] a_z (s z)
-           
+
 
 ## Type Reconstruction done: sum.bel  ##
 
@@ -113,7 +113,7 @@ The following \textmd{Sasybel} code:
 
 theorem plus1 : forall N exists N + (s z) = (s N);
 
-x : N + (s z) = (s N) by induction on N : 
+x : N + (s z) = (s N) by induction on N :
 
 case z is
 	   d2: (z) + (s z) = (s z) 	by rule sum-z
@@ -125,7 +125,7 @@ case (s N) is
 end case
 
 end induction
-end theorem 
+end theorem
 
 \end{verbatim}
 was translated and produced the following output was produced after the reconstruction:
@@ -133,20 +133,20 @@ was translated and produced the following output was produced after the reconstr
 
 ## SASyLF parsing: sum2.slf ##
 
-rec plus1 : {N :: n[]} (sum N (s z) (s N))[] = 
-mlam N => 
-  case [] N : n[] of 
-  | ([] z) :  . z = N ;   => 
+rec plus1 : {N :: n[]} (sum N (s z) (s N))[] =
+mlam N =>
+  case [] N : n[] of
+  | ([] z) :  . z = N ;   =>
      [] sum-z (s z)
-  
+
   | {Y :: n[]}
-    ([] s Y) :  . s Y = N ;   => 
-      (case plus1 <. Y> of 
+    ([] s Y) :  . s Y = N ;   =>
+      (case plus1 <. Y> of
        | {Z1 :: n[]}  {X1 :: (sum Z1 (s z) (s Z1))[]}
-         ([] X1) :  . Z1 = Y ;   => 
+         ([] X1) :  . Z1 = Y ;   =>
           [] sum-s Z1 (s z) (s Z1) X1
        )
-  
+
 
 ## Type Reconstruction done: sum2.slf  ##
 
@@ -156,20 +156,20 @@ This is the same theorem written directly in \textmd{Beluga}.
 
 ## Type Reconstruction: sum.bel ##
 
-rec plus1 : {N :: nat[]} (add N (s z) (s N))[] = 
-mlam N => 
-  case [] N : nat[] of 
-  | ([] z) :  . z = N ;   => 
+rec plus1 : {N :: nat[]} (add N (s z) (s N))[] =
+mlam N =>
+  case [] N : nat[] of
+  | ([] z) :  . z = N ;   =>
      [] a_z (s z)
-  
+
   | {Y :: nat[]}
-    ([] s Y) :  . s Y = N ;   => 
-      (case plus1 <. Y> of 
+    ([] s Y) :  . s Y = N ;   =>
+      (case plus1 <. Y> of
        | {Z1 :: nat[]}  {X1 :: (add Z1 (s z) (s Z1))[]}
-         ([] X1) :  . Z1 = Y ;   => 
+         ([] X1) :  . Z1 = Y ;   =>
           [] a_s Z1 (s z) (s Z1) X1
        )
-  
+
 
 ## Type Reconstruction done: sum.bel  ##
 \end{verbatim}
@@ -192,7 +192,7 @@ dz1 : (z) + (s N) = (s N) by rule sum-z
 
 end case
 end induction
-end theorem 
+end theorem
 
 \end{verbatim}
 was translated and produced the following output was produced after the reconstruction:
@@ -200,13 +200,13 @@ was translated and produced the following output was produced after the reconstr
 
 ## SASyLF parsing: sum2.slf ##
 rec sum-s-rh : {N1 :: n[]} {N2 :: n[]} {N3 :: n[]} {D1 :: (sum N1 N2 N3)[]}
-                 (sum N1 (s N2) (s N3))[] = 
-mlam N1 => mlam N2 => mlam N3 => mlam D1 => 
+                 (sum N1 (s N2) (s N3))[] =
+mlam N1 => mlam N2 => mlam N3 => mlam D1 =>
   case [] D1 : (sum N1 N2 N3)[] of 0
   | {X :: n[]}
-    ([] sum-z X) :  . sum-z X = D1 ,  . X = N3 ,  . X = N2 ,  . z = N1 ;   => 
+    ([] sum-z X) :  . sum-z X = D1 ,  . X = N3 ,  . X = N2 ,  . z = N1 ;   =>
      [] sum-z (s X)
-  
+
 
 ## Type Reconstruction done: sum2.slf  ##
 
@@ -222,13 +222,13 @@ a_z : {R : nat}  add z R R .
 a_s : {N1 : nat}  {N2 : nat}  {N3 : nat}  add N1 N2 N3 -> add (s N1) N2 (s N3) .
 
 rec sumsr : {Nat1 :: nat[]} {Nat2 :: nat[]} {Nat3 :: nat[]}
-              {D1 :: (add Nat1 Nat2 Nat3)[]} (add Nat1 (s Nat2) (s Nat3))[] = 
-mlam Nat1 => mlam Nat2 => mlam Nat3 => mlam D1 => 
-  case [] D1 : (add Nat1 Nat2 Nat3)[] of 
+              {D1 :: (add Nat1 Nat2 Nat3)[]} (add Nat1 (s Nat2) (s Nat3))[] =
+mlam Nat1 => mlam Nat2 => mlam Nat3 => mlam D1 =>
+  case [] D1 : (add Nat1 Nat2 Nat3)[] of
   | {X :: nat[]}
-    ([] a_z X) :  . a_z X = D1 ,  . X = Nat3 ,  . X = Nat2 ,  . z = Nat1 ;   => 
+    ([] a_z X) :  . a_z X = D1 ,  . X = Nat3 ,  . X = Nat2 ,  . z = Nat1 ;   =>
      [] a_z (s X)
-  
+
 
 ## Type Reconstruction done: sum.bel  ##
 
@@ -265,9 +265,9 @@ is
 H : N1' + (s N2) = (s N3')  by induction hypothesis on I
 (s N1') + (s N2) = (s s N3') by rule sum-s on H
 
-end case 
+end case
 end induction
-end theorem 
+end theorem
 
 \end{verbatim}
 was translated and produced the following output was produced after the reconstruction:
@@ -275,23 +275,23 @@ was translated and produced the following output was produced after the reconstr
 
 ## SASyLF parsing: sum2.slf ##
 rec sum-s-rh : {N1 :: n[]} {N2 :: n[]} {N3 :: n[]} {D1 :: (sum N1 N2 N3)[]}
-                 (sum N1 (s N2) (s N3))[] = 
-mlam N1 => mlam N2 => mlam N3 => mlam D1 => 
-  case [] D1 : (sum N1 N2 N3)[] of 
+                 (sum N1 (s N2) (s N3))[] =
+mlam N1 => mlam N2 => mlam N3 => mlam D1 =>
+  case [] D1 : (sum N1 N2 N3)[] of
   | {X :: n[]}
-    ([] sum-z X) :  . sum-z X = D1 ,  . X = N3 ,  . X = N2 ,  . z = N1 ;   => 
+    ([] sum-z X) :  . sum-z X = D1 ,  . X = N3 ,  . X = N2 ,  . z = N1 ;   =>
      [] sum-z (s X)
-  
+
   | {Y2 :: n[]}  {Z1 :: n[]}  {X1 :: n[]}  {Y1 :: (sum Y2 Z1 X1)[]}
     ([] sum-s Y2 Z1 X1 Y1) :  . sum-s Y2 Z1 X1 Y1 = D1 ,  . s X1 = N3 ,  . Z1 = N2 ,
-     . s Y2 = N1 ;   => 
-      (case sum-s-rh <. Y2> <. Z1> <. X1> <. Y1> of 
-       | {Z4 :: n[]}  {X4 :: n[]}  {Y4 :: n[]}  {Z3 :: (sum Z4 X4 Y4)[]} 
+     . s Y2 = N1 ;   =>
+      (case sum-s-rh <. Y2> <. Z1> <. X1> <. Y1> of
+       | {Z4 :: n[]}  {X4 :: n[]}  {Y4 :: n[]}  {Z3 :: (sum Z4 X4 Y4)[]}
          {X3 :: (sum Z4 (s X4) (s Y4))[]}
-         ([] X3) :  . Z3 = Y1 ,  . Y4 = X1 ,  . X4 = Z1 ,  . Z4 = Y2 ;   => 
+         ([] X3) :  . Z3 = Y1 ,  . Y4 = X1 ,  . X4 = Z1 ,  . Z4 = Y2 ;   =>
           [] sum-s Z4 (s X4) (s Y4) X3
        )
-  
+
 
 ## Type Reconstruction done: sum2.slf  ##
 
@@ -303,23 +303,23 @@ This is the same theorem written directly in \textmd{Beluga}.
 
 ## Type Reconstruction: sum.bel ##
 rec sumsr : {Nat1 :: nat[]} {Nat2 :: nat[]} {Nat3 :: nat[]}
-              {D1 :: (add Nat1 Nat2 Nat3)[]} (add Nat1 (s Nat2) (s Nat3))[] = 
-mlam Nat1 => mlam Nat2 => mlam Nat3 => mlam D1 => 
-  case [] D1 : (add Nat1 Nat2 Nat3)[] of 
+              {D1 :: (add Nat1 Nat2 Nat3)[]} (add Nat1 (s Nat2) (s Nat3))[] =
+mlam Nat1 => mlam Nat2 => mlam Nat3 => mlam D1 =>
+  case [] D1 : (add Nat1 Nat2 Nat3)[] of
   | {X :: nat[]}
-    ([] a_z X) :  . a_z X = D1 ,  . X = Nat3 ,  . X = Nat2 ,  . z = Nat1 ;   => 
+    ([] a_z X) :  . a_z X = D1 ,  . X = Nat3 ,  . X = Nat2 ,  . z = Nat1 ;   =>
      [] a_z (s X)
-  
+
   | {Y2 :: nat[]}  {Z1 :: nat[]}  {X1 :: nat[]}  {Y1 :: (add Y2 Z1 X1)[]}
     ([] a_s Y2 Z1 X1 Y1) :  . a_s Y2 Z1 X1 Y1 = D1 ,  . s X1 = Nat3 ,  . Z1 = Nat2 ,
-     . s Y2 = Nat1 ;   => 
-      (case sumsr <. Y2> <. Z1> <. X1> <. Y1> of 
-       | {Z4 :: nat[]}  {X4 :: nat[]}  {Y4 :: nat[]}  {Z3 :: (add Z4 X4 Y4)[]} 
+     . s Y2 = Nat1 ;   =>
+      (case sumsr <. Y2> <. Z1> <. X1> <. Y1> of
+       | {Z4 :: nat[]}  {X4 :: nat[]}  {Y4 :: nat[]}  {Z3 :: (add Z4 X4 Y4)[]}
          {X3 :: (add Z4 (s X4) (s Y4))[]}
-         ([] X3) :  . Z3 = Y1 ,  . Y4 = X1 ,  . X4 = Z1 ,  . Z4 = Y2 ;   => 
+         ([] X3) :  . Z3 = Y1 ,  . Y4 = X1 ,  . X4 = Z1 ,  . Z4 = Y2 ;   =>
           [] a_s Z4 (s X4) (s Y4) X3
        )
-  
+
 
 ## Type Reconstruction done: sum.bel  ##
 
@@ -376,7 +376,7 @@ T = T' by case analysis on f:
 
                  case [g: (y:exp) y oft T'] |- y oft T'
 
-                 is 
+                 is
 
                  eq_ref  by uniqueness of variables
 
@@ -399,20 +399,20 @@ equal : tp -> tp -> type .
 eq_ref : {T : tp}  equal T T .
 
 rec unique : {g:(gamma)*} {E :: exp[g]}^i {T :: tp[]}^i {T' :: tp[]}^i
-               (of_typ (E ..) (T ))[g] -> (of_typ (E ..) (T' ))[g] -> (equal T T')[] = 
-FN g => mlam E => mlam T => mlam T' => fn f => fn d => 
-  case d of 
-  | {y6 :: (some [t : tp] block (x:exp. of_typ x t))*}  {Z :: tp[]} 
+               (of_typ (E ..) (T ))[g] -> (of_typ (E ..) (T' ))[g] -> (equal T T')[] =
+FN g => mlam E => mlam T => mlam T' => fn f => fn d =>
+  case d of
+  | {y6 :: (some [t : tp] block (x:exp. of_typ x t))*}  {Z :: tp[]}
     {#z5 :: block (x:exp. of_typ x (Z ))[y6]}  {X :: tp[]}
-    [[y6. #z5.2 ..]  :  . Z = T' ,  . X = T , y6 . (#z5.1 ..) = E , y6 = g ]   => 
-      (case f of 
-       | {z6 :: (some [t : tp] block (x:exp. of_typ x t))*}  {X1 :: tp[]} 
+    [[y6. #z5.2 ..]  :  . Z = T' ,  . X = T , y6 . (#z5.1 ..) = E , y6 = g ]   =>
+      (case f of
+       | {z6 :: (some [t : tp] block (x:exp. of_typ x t))*}  {X1 :: tp[]}
          {#x6 :: block (x:exp. of_typ x (X1 ))[z6]}
          [[z6. #x6.2 ..]  :  . X1 = X , z6 . (#x6 ..) = #z5 ,  . X1 = Z ,
-         z6 = y6 ]   => 
+         z6 = y6 ]   =>
           [] eq_ref X1 : (equal X1 X1)[]
        )
-  
+
 
 ## Type Reconstruction done: typuni.sbel  ##
 
@@ -422,20 +422,20 @@ This is the same theorem written directly in \textmd{Beluga}.
 ## Type Reconstruction: unique.bel ##
 
 rec unique : {g:(tctx)*} {E :: exp[g]}^i {T :: tp[]}^i {T' :: tp[]}^i
-               (type_of (E ..) (T ))[g] -> (type_of (E ..) (T' ))[g] -> (equal T T')[] = 
-FN g => mlam E => mlam T => mlam T' => fn d => fn f => 
-  case d of 
-  | {x5 :: (some [t : tp] block (x:exp. type_of x t))*}  {Z :: tp[]} 
+               (type_of (E ..) (T ))[g] -> (type_of (E ..) (T' ))[g] -> (equal T T')[] =
+FN g => mlam E => mlam T => mlam T' => fn d => fn f =>
+  case d of
+  | {x5 :: (some [t : tp] block (x:exp. type_of x t))*}  {Z :: tp[]}
     {#H :: block (x:exp. type_of x (Z ))[x5]}  {X :: tp[]}
-    [[x5. #H.2 ..]  :  . X = T' ,  . Z = T , x5 . (#H.1 ..) = E , x5 = g ]   => 
-      (case f of 
-       | {z5 :: (some [t : tp] block (x:exp. type_of x t))*}  {X1 :: tp[]} 
+    [[x5. #H.2 ..]  :  . X = T' ,  . Z = T , x5 . (#H.1 ..) = E , x5 = g ]   =>
+      (case f of
+       | {z5 :: (some [t : tp] block (x:exp. type_of x t))*}  {X1 :: tp[]}
          {#H1 :: block (x:exp. type_of x (X1 ))[z5]}
          [[z5. #H1.2 ..]  :  . X1 = X , z5 . (#H1 ..) = #H ,  . X1 = Z ,
-         z5 = x5 ]   => 
+         z5 = x5 ]   =>
           [] e_ref X1 : (equal X1 X1)[]
        )
-  
+
 
 ## Type Reconstruction done: unique.bel  ##
 
@@ -446,13 +446,13 @@ The following \textmd{Sasybel} code:
 \footnotesize\begin{verbatim}
 
 terminals z suc lambda app
-syntax 
+syntax
 
 exp ::= z
 | suc exp
 | x
-| lambda \x .exp[x] 
-| app exp exp 
+| lambda \x .exp[x]
+| app exp exp
 | let exp = x in exp[x] ;
 
 notation value : exp value ;
@@ -507,7 +507,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	I: e1 eval e2;
 	---------------------------- ev-s
@@ -520,7 +520,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	-------------------------------------------------------- ev-lam
 	(lambda \x . e1[x]) eval (lambda \x . e1[x]);
@@ -531,7 +531,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	D1: e1 eval lambda \x . e3[x];
 	D2: e2 eval e2';
@@ -545,7 +545,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	I: e2[e1] eval e1';
 	H: e1 eval e1';
@@ -558,7 +558,7 @@ case rule
 
 end case
 
-end induction 
+end induction
 end theorem
 
 \end{verbatim}
@@ -580,54 +580,54 @@ eval : exp -> exp -> type .
 ev-z : eval z z .
 ev-s : {e1 : exp}  {e2 : exp}  eval e1 e2 -> eval (suc e1) (suc e2) .
 ev-lam : {e1 : {z4 : exp}  exp}  eval (lambda (\x. e1 x)) (lambda (\x. e1 x)) .
-ev-app : {e1 : exp} 
- {e : {y6 : exp}  exp} 
-  {e2 : exp} 
-   {e2' : exp} 
-    {e1' : exp} 
+ev-app : {e1 : exp}
+ {e : {y6 : exp}  exp}
+  {e2 : exp}
+   {e2' : exp}
+    {e1' : exp}
      eval e1 (lambda (\x. e x)) -> eval e2 e2' -> eval (e e2') e1' -> eval (app e1 e2) e1' .
-ev-let : {e2 : {y7 : exp}  exp} 
- {e1 : exp} 
-  {v : exp} 
+ev-let : {e2 : {y7 : exp}  exp}
+ {e1 : exp}
+  {v : exp}
    {v1 : exp}  eval (e2 e1) v -> eval e1 v1 -> eval (letv e1 (\x. e2 x)) v .
 
-              
+
 
 rec val-sound : {E :: exp[]}^i {E' :: exp[]}^i
-                                 {D :: (eval E E')[]}^e (value E')[] = 
-mlam E => mlam E' => mlam D => 
-  case [] D : (eval E E')[] of 
-  | [[. ev-z]  :  . ev-z = D ,  . z = E' ,  . z = E ]   => 
+                                 {D :: (eval E E')[]}^e (value E')[] =
+mlam E => mlam E' => mlam D =>
+  case [] D : (eval E E')[] of
+  | [[. ev-z]  :  . ev-z = D ,  . z = E' ,  . z = E ]   =>
      [] val-z : (value z)[]
-  
+
   | {X1 :: exp[]}  {Y1 :: exp[]}  {Z :: (eval X1 Y1)[]}
     [[. ev-s X1 Y1 Z]  :  . ev-s X1 Y1 Z = D ,  . suc Y1 = E' ,
-     . suc X1 = E ]   => 
-      (case val-sound <. X1> <. Y1> <. Z> of 
-       | {Y3 :: exp[]}  {Z2 :: exp[]}  {X2 :: (eval Y3 Z2)[]} 
+     . suc X1 = E ]   =>
+      (case val-sound <. X1> <. Y1> <. Z> of
+       | {Y3 :: exp[]}  {Z2 :: exp[]}  {X2 :: (eval Y3 Z2)[]}
          {Y2 :: (value Z2)[]}
-         [[. Y2]  :  . X2 = Z ,  . Z2 = Y1 ,  . Y3 = X1 ]   => 
+         [[. Y2]  :  . X2 = Z ,  . Z2 = Y1 ,  . Y3 = X1 ]   =>
           [] val-s Z2 Y2
        )
-  
+
   | {X :: exp[z4 : exp]}
     [[. ev-lam (\z4. X)]  :  . ev-lam (\z4. X) = D ,  . lambda (\x. X x) = E' ,
-     . lambda (\x. X x) = E ]   => 
+     . lambda (\x. X x) = E ]   =>
      [] val-lam (\x3. X x3) : (value (lambda (\x. X x)))[]
-  
-  | {Y4 :: exp[]}  {Z3 :: exp[]}  {X3 :: exp[]}  {Y3 :: exp[y6 : exp]} 
-    {Z2 :: exp[]}  {X2 :: (eval Y4 (lambda (\x. Y3 x)))[]} 
+
+  | {Y4 :: exp[]}  {Z3 :: exp[]}  {X3 :: exp[]}  {Y3 :: exp[y6 : exp]}
+    {Z2 :: exp[]}  {X2 :: (eval Y4 (lambda (\x. Y3 x)))[]}
     {Y2 :: (eval Z3 Z2)[]}  {Z1 :: (eval (Y3 Z2) X3)[]}
     [[. ev-app Y4 (\y6. Y3) Z3 Z2 X3 X2 Y2 Z1]  :  . ev-app Y4 (\y6. Y3) Z3 Z2 X3 X2 Y2 Z1 = D
-    ,  . X3 = E' ,  . app Y4 Z3 = E ]   => 
+    ,  . X3 = E' ,  . app Y4 Z3 = E ]   =>
      val-sound <. Y3 Z2> <. X3> <. Z1>
-  
-  | {Y3 :: exp[]}  {Z2 :: exp[y7 : exp]}  {X2 :: exp[]}  {Y2 :: exp[]} 
+
+  | {Y3 :: exp[]}  {Z2 :: exp[y7 : exp]}  {X2 :: exp[]}  {Y2 :: exp[]}
     {Z1 :: (eval (Z2 Y3) X2)[]}  {X1 :: (eval Y3 Y2)[]}
     [[. ev-let (\y7. Z2) Y3 X2 Y2 Z1 X1]  :  . ev-let (\y7. Z2) Y3 X2 Y2 Z1 X1 = D
-    ,  . X2 = E' ,  . letv Y3 (\x. Z2 x) = E ]   => 
+    ,  . X2 = E' ,  . letv Y3 (\x. Z2 x) = E ]   =>
      val-sound <. Z2 Y3> <. X2> <. Z1>
-  
+
 
 ## Type Reconstruction done: vs.sbel  ##
 
@@ -648,50 +648,50 @@ v_lam : {E : {x3 : exp}  exp}  value (lam (\x. E x)) .
 eval : exp -> exp -> type .
 ev_z : eval z z .
 ev_s : {E : exp}  {V : exp}  eval E V -> eval (suc E) (suc V) .
-ev_l : {E2 : {x5 : exp}  exp} 
- {V1 : exp} 
-  {V : exp} 
+ev_l : {E2 : {x5 : exp}  exp}
+ {V1 : exp}
+  {V : exp}
    {E1 : exp}  eval (E2 V1) V -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V .
 ev_lam : {E : {z5 : exp}  exp}  eval (lam (\x. E x)) (lam (\x. E x)) .
-ev_app : {E1 : exp} 
- {E : {y7 : exp}  exp} 
-  {E2 : exp} 
-   {V2 : exp} 
-    {V : exp} 
+ev_app : {E1 : exp}
+ {E : {y7 : exp}  exp}
+  {E2 : exp}
+   {V2 : exp}
+    {V : exp}
      eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V -> eval (app E1 E2) V .
 
-rec vs : {E :: exp[]}^i {V :: exp[]}^i (eval E V)[] -> (value V)[] = 
-mlam E => mlam V => fn e => 
-  case e of 
-  | [[. ev_z]  :  . z = V ,  . z = E ]   => 
+rec vs : {E :: exp[]}^i {V :: exp[]}^i (eval E V)[] -> (value V)[] =
+mlam E => mlam V => fn e =>
+  case e of
+  | [[. ev_z]  :  . z = V ,  . z = E ]   =>
      [] v_z : (value z)[]
-  
+
   | {X1 :: exp[]}  {Y1 :: exp[]}  {Z :: (eval X1 Y1)[]}
-    [[. ev_s X1 Y1 Z]  :  . suc Y1 = V ,  . suc X1 = E ]   => 
-      (case vs <. X1> <. Y1> ([] Z) of 
-       | {Y3 :: exp[]}  {Z2 :: exp[]}  {X2 :: (eval Y3 Z2)[]} 
+    [[. ev_s X1 Y1 Z]  :  . suc Y1 = V ,  . suc X1 = E ]   =>
+      (case vs <. X1> <. Y1> ([] Z) of
+       | {Y3 :: exp[]}  {Z2 :: exp[]}  {X2 :: (eval Y3 Z2)[]}
          {Y2 :: (value Z2)[]}
-         [[. Y2]  :  . X2 = Z ,  . Z2 = Y1 ,  . Y3 = X1 ]   => 
+         [[. Y2]  :  . X2 = Z ,  . Z2 = Y1 ,  . Y3 = X1 ]   =>
           [] v_s Z2 Y2 : (value (suc Z2))[]
        )
-  
-  | {Y3 :: exp[]}  {Z2 :: exp[x5 : exp]}  {X2 :: exp[]}  {Y2 :: exp[]} 
+
+  | {Y3 :: exp[]}  {Z2 :: exp[x5 : exp]}  {X2 :: exp[]}  {Y2 :: exp[]}
     {Z1 :: (eval (Z2 Y2) X2)[]}  {X1 :: (eval Y3 Y2)[]}
     [[. ev_l (\x5. Z2) Y2 X2 Y3 Z1 X1]  :  . X2 = V ,
-     . letv Y3 (\x. Z2 x) = E ]   => 
+     . letv Y3 (\x. Z2 x) = E ]   =>
      vs <. Z2 Y2> <. X2> ([] Z1)
-  
+
   | {X :: exp[z5 : exp]}
-    [[. ev_lam (\z5. X)]  :  . lam (\x. X x) = V ,  . lam (\x. X x) = E ]   => 
+    [[. ev_lam (\z5. X)]  :  . lam (\x. X x) = V ,  . lam (\x. X x) = E ]   =>
      [] v_lam (\x3. X x3) : (value (lam (\x. X x)))[]
-  
-  | {Y4 :: exp[]}  {Z3 :: exp[]}  {X3 :: exp[]}  {Y3 :: exp[y7 : exp]} 
-    {Z2 :: exp[]}  {X2 :: (eval Y4 (lam (\x. Y3 x)))[]} 
+
+  | {Y4 :: exp[]}  {Z3 :: exp[]}  {X3 :: exp[]}  {Y3 :: exp[y7 : exp]}
+    {Z2 :: exp[]}  {X2 :: (eval Y4 (lam (\x. Y3 x)))[]}
     {Y2 :: (eval Z3 Z2)[]}  {Z1 :: (eval (Y3 Z2) X3)[]}
     [[. ev_app Y4 (\y7. Y3) Z3 Z2 X3 X2 Y2 Z1]  :  . X3 = V ,
-     . app Y4 Z3 = E ]   => 
+     . app Y4 Z3 = E ]   =>
      vs <. Y3 Z2> <. X3> ([] Z1)
-  
+
 
 ## Type Reconstruction done: examples/mini-ml/vsound.bel  ##
 
@@ -703,7 +703,7 @@ The two following cases of the type uniqueness proof, from \textmd{Sasybel} code
 
 case rule
 
-D1: [g] |- E1 oft (T2 -> T);  
+D1: [g] |- E1 oft (T2 -> T);
 D2: [g] |- E2 oft T2;
 ------------------------------ t_app
 [g] |- (app E1 E2) oft T;
@@ -714,12 +714,12 @@ eq_ref by case analysis on f:
 
                  case rule
 
-                 F1: [g] |- E1 oft (T2 -> T');  
+                 F1: [g] |- E1 oft (T2 -> T');
                  F2: [g] |- E2 oft T2;
                  ------------------------------ t_app
                  [g] |- (app E1 E2) oft T';
 
-                 is 
+                 is
 
                  eq_ref by induction hypothesis on [g] |- D1 .. , [g] |- F1 .. ;
 
@@ -747,9 +747,9 @@ eq_ref by case analysis on f:
                  -------------------------------------------- t_lam
                  [g] |- (lam T1 E) oft (T1 -> T2);
 
-                 is 
+                 is
 
-                 eq_ref  by induction hypothesis on [g, b:(x:exp) x oft _] |- D .. b.1 b.2 , 
+                 eq_ref  by induction hypothesis on [g, b:(x:exp) x oft _] |- D .. b.1 b.2 ,
                                                     [g,b] |- F .. b.1 b.2 ;
 
                  end case
@@ -763,68 +763,68 @@ was translated and produced the following output was produced after the reconstr
 
 ## Sasybel Type Reconstruction: examples/sasybel/unique.sbel ##
 
-  case d of 
-  | {y6 :: (some [t : tp] block (x:exp. of_typ x t))*}  {X3 :: exp[y6]} 
-    {Y3 :: exp[y6]}  {Z2 :: tp[]}  {X2 :: tp[]}  {Y2 :: tp[y6]} 
-    {Z1 :: (of_typ (X3 ..) (arr (Y2 ..) (X2 )))[y6]} 
+  case d of
+  | {y6 :: (some [t : tp] block (x:exp. of_typ x t))*}  {X3 :: exp[y6]}
+    {Y3 :: exp[y6]}  {Z2 :: tp[]}  {X2 :: tp[]}  {Y2 :: tp[y6]}
+    {Z1 :: (of_typ (X3 ..) (arr (Y2 ..) (X2 )))[y6]}
     {X1 :: (of_typ (Y3 ..) (Y2 ..))[y6]}
     [[y6. t_app (X3 ..) (Y2 ..) (X2 ) (Y3 ..) (Z1 ..) (X1 ..)]  :  . X2 = T' ,
-     . Z2 = T , y6 . app (X3 ..) (Y3 ..) = E , y6 = g ]   => 
-      (case f of 
-       | {x6 :: (some [t : tp] block (x:exp. of_typ x t))*}  {Y8 :: exp[x6]} 
-         {Z7 :: exp[x6]}  {X7 :: tp[]}  {Y7 :: tp[]}  {Z6 :: tp[x6]} 
-         {X6 :: (of_typ (Y8 ..) (arr (Z6 ..) (Y7 )))[x6]} 
-         {Y6 :: (of_typ (Z7 ..) (Z6 ..))[x6]}  {Z5 :: tp[x6]} 
-         {X5 :: (of_typ (Y8 ..) (arr (Z5 ..) (X7 )))[x6]} 
+     . Z2 = T , y6 . app (X3 ..) (Y3 ..) = E , y6 = g ]   =>
+      (case f of
+       | {x6 :: (some [t : tp] block (x:exp. of_typ x t))*}  {Y8 :: exp[x6]}
+         {Z7 :: exp[x6]}  {X7 :: tp[]}  {Y7 :: tp[]}  {Z6 :: tp[x6]}
+         {X6 :: (of_typ (Y8 ..) (arr (Z6 ..) (Y7 )))[x6]}
+         {Y6 :: (of_typ (Z7 ..) (Z6 ..))[x6]}  {Z5 :: tp[x6]}
+         {X5 :: (of_typ (Y8 ..) (arr (Z5 ..) (X7 )))[x6]}
          {Y5 :: (of_typ (Z7 ..) (Z5 ..))[x6]}
          [[x6. t_app (Y8 ..) (Z5 ..) (X7 ) (Z7 ..) (X5 ..) (Y5 ..)]  : x6 . (Y6 ..) = X1
          , x6 . (X6 ..) = Z1 , x6 . (Z6 ..) = Y2 ,  . Y7 = X2 ,  . X7 = Z2 ,
-         x6 . (Z7 ..) = Y3 , x6 . (Y8 ..) = X3 , x6 = y6 ]   => 
+         x6 . (Z7 ..) = Y3 , x6 . (Y8 ..) = X3 , x6 = y6 ]   =>
            (case unique [x6] <x6. Y8 ..> <. arr Z6 Y7> <. arr Z5 X7>
-                   ([x6] X6 ..) ([x6] X5 ..) of 
-            | {z6 :: (some [t : tp] block (x:exp. of_typ x t))*} 
-              {Y11 :: exp[z6]}  {Z10 :: exp[z6]}  {X10 :: tp[]} 
-              {Y10 :: tp[z6]} 
-              {Z9 :: (of_typ (Y11 ..) (arr (Y10 ..) (X10 )))[z6]} 
-              {X9 :: (of_typ (Z10 ..) (Y10 ..))[z6]} 
-              {Y9 :: (of_typ (Y11 ..) (arr (Y10 ..) (X10 )))[z6]} 
+                   ([x6] X6 ..) ([x6] X5 ..) of
+            | {z6 :: (some [t : tp] block (x:exp. of_typ x t))*}
+              {Y11 :: exp[z6]}  {Z10 :: exp[z6]}  {X10 :: tp[]}
+              {Y10 :: tp[z6]}
+              {Z9 :: (of_typ (Y11 ..) (arr (Y10 ..) (X10 )))[z6]}
+              {X9 :: (of_typ (Z10 ..) (Y10 ..))[z6]}
+              {Y9 :: (of_typ (Y11 ..) (arr (Y10 ..) (X10 )))[z6]}
               {Z8 :: (of_typ (Z10 ..) (Y10 ..))[z6]}
               [[. eq_ref (arr Y10 X10)]  : z6 . (Z8 ..) = Y5 ,
               z6 . (Y9 ..) = X5 , z6 . (Y10 ..) = Z5 , z6 . (X9 ..) = Y6 ,
               z6 . (Z9 ..) = X6 , z6 . (Y10 ..) = Z6 ,  . X10 = Y7 ,
                . X10 = X7 , z6 . (Z10 ..) = Z7 , z6 . (Y11 ..) = Y8 ,
-              z6 = x6 ]   => 
+              z6 = x6 ]   =>
                [] eq_ref X10 : (equal X10 X10)[]
             )
        )
 
-  | {y9 :: (some [t : tp] block (x:exp. of_typ x t))*}  {X2 :: tp[]} 
-    {Y2 :: exp[y9, z4 : exp]}  {Z1 :: tp[]}  {X1 :: tp[]} 
+  | {y9 :: (some [t : tp] block (x:exp. of_typ x t))*}  {X2 :: tp[]}
+    {Y2 :: exp[y9, z4 : exp]}  {Z1 :: tp[]}  {X1 :: tp[]}
     {Y1 :: (of_typ (Y2 .. x) (X1 ))[y9, x : exp, x4 : of_typ x (X2 )]}
     [[y9. t_lam (X2 ) (\z4. Y2 ..) (X1 ) (\x. \u. Y1 .. x u)]  :  . arr X2 X1 = T'
-    ,  . Z1 = T , y9 . lam (X2 ) (\z1. Y2 .. z1) = E , y9 = g ]   => 
-      (case f of 
-       | {z9 :: (some [t : tp] block (x:exp. of_typ x t))*}  {X5 :: tp[]} 
-         {Y5 :: exp[z9, z4 : exp]}  {Z4 :: tp[]}  {X4 :: tp[]} 
-         {Y4 :: (of_typ (Y5 .. x) (X4 ))[z9, x : exp, x4 : of_typ x (X5 )]} 
+    ,  . Z1 = T , y9 . lam (X2 ) (\z1. Y2 .. z1) = E , y9 = g ]   =>
+      (case f of
+       | {z9 :: (some [t : tp] block (x:exp. of_typ x t))*}  {X5 :: tp[]}
+         {Y5 :: exp[z9, z4 : exp]}  {Z4 :: tp[]}  {X4 :: tp[]}
+         {Y4 :: (of_typ (Y5 .. x) (X4 ))[z9, x : exp, x4 : of_typ x (X5 )]}
          {Z3 :: (of_typ (Y5 .. x) (Z4 ))[z9, x : exp, x4 : of_typ x (X5 )]}
          [[z9. t_lam (X5 ) (\z4. Y5 ..) (Z4 ) (\x. \u. Z3 .. x u)]  : z9, y11, z10 . (Y4 ..) = Y1
          ,  . X4 = X1 ,  . arr X5 Z4 = Z1 , z9, x11 . (Y5 .. x11) = Y2 ,
-          . X5 = X2 , z9 = y9 ]   => 
+          . X5 = X2 , z9 = y9 ]   =>
            (case unique [z9, b : block (x:exp. of_typ x (X5 ))]
                    <z9, z11. Y5 .. z11.1> <. X4> <. Z4>
-                   ([z9, y12] Y4 .. y12.1 y12.2) ([z9, x12] Z3 .. x12.1 x12.2) of 
-            | {x10 :: (some [t : tp] block (x:exp. of_typ x t))*} 
-              {X7 :: tp[]}  {Y7 :: exp[x10, z4 : exp]}  {Z6 :: tp[]} 
-              {X6 :: (of_typ (Y7 .. x) (Z6 ))[x10, x : exp, x4 : of_typ x (X7 )]} 
+                   ([z9, y12] Y4 .. y12.1 y12.2) ([z9, x12] Z3 .. x12.1 x12.2) of
+            | {x10 :: (some [t : tp] block (x:exp. of_typ x t))*}
+              {X7 :: tp[]}  {Y7 :: exp[x10, z4 : exp]}  {Z6 :: tp[]}
+              {X6 :: (of_typ (Y7 .. x) (Z6 ))[x10, x : exp, x4 : of_typ x (X7 )]}
               {Y6 :: (of_typ (Y7 .. x) (Z6 ))[x10, x : exp, x4 : of_typ x (X7 )]}
               [[. eq_ref Z6]  : x10, y13, z12 . (Y6 ..) = Z3 ,
               x10, z13, x13 . (X6 ..) = Y4 ,  . Z6 = X4 ,  . Z6 = Z4 ,
-              x10, y14 . (Y7 ..) = Y5 ,  . X7 = X5 , x10 = z9 ]   => 
+              x10, y14 . (Y7 ..) = Y5 ,  . X7 = X5 , x10 = z9 ]   =>
                [] eq_ref (arr X7 Z6) : (equal (arr X7 Z6) (arr X7 Z6))[]
             )
        )
-  
+
 
 ## Type Reconstruction done: examples/sasybel/unique.sbel  ##
 
@@ -834,68 +834,68 @@ This is the same theorem written directly in \textmd{Beluga}.
 \footnotesize\begin{verbatim}
 ## Type Reconstruction: examples/unique/unique.bel ##
 
-  case d of 
-  | {x5 :: (some [t : tp] block (x:exp. type_of x t))*}  {E4 :: exp[x5]} 
-    {E3 :: exp[x5]}  {T4 :: tp[]}  {T3 :: tp[]}  {T2 :: tp[x5]} 
-    {H1 :: (type_of (E4 ..) (arr (T2 ..) (T4 )))[x5]} 
+  case d of
+  | {x5 :: (some [t : tp] block (x:exp. type_of x t))*}  {E4 :: exp[x5]}
+    {E3 :: exp[x5]}  {T4 :: tp[]}  {T3 :: tp[]}  {T2 :: tp[x5]}
+    {H1 :: (type_of (E4 ..) (arr (T2 ..) (T4 )))[x5]}
     {H :: (type_of (E3 ..) (T2 ..))[x5]}
     [[x5. t_app (E4 ..) (T2 ..) (T4 ) (E3 ..) (H1 ..) (H ..)]  :  . T3 = T' ,
-     . T4 = T , x5 . app (E4 ..) (E3 ..) = E , x5 = g ]   => 
-      (case f of 
-       | {z5 :: (some [t : tp] block (x:exp. type_of x t))*}  {E8 :: exp[z5]} 
-         {E7 :: exp[z5]}  {T10 :: tp[]}  {T9 :: tp[]}  {T8 :: tp[z5]} 
-         {H5 :: (type_of (E8 ..) (arr (T8 ..) (T10 )))[z5]} 
-         {H4 :: (type_of (E7 ..) (T8 ..))[z5]}  {T7 :: tp[z5]} 
-         {H3 :: (type_of (E8 ..) (arr (T7 ..) (T9 )))[z5]} 
+     . T4 = T , x5 . app (E4 ..) (E3 ..) = E , x5 = g ]   =>
+      (case f of
+       | {z5 :: (some [t : tp] block (x:exp. type_of x t))*}  {E8 :: exp[z5]}
+         {E7 :: exp[z5]}  {T10 :: tp[]}  {T9 :: tp[]}  {T8 :: tp[z5]}
+         {H5 :: (type_of (E8 ..) (arr (T8 ..) (T10 )))[z5]}
+         {H4 :: (type_of (E7 ..) (T8 ..))[z5]}  {T7 :: tp[z5]}
+         {H3 :: (type_of (E8 ..) (arr (T7 ..) (T9 )))[z5]}
          {H2 :: (type_of (E7 ..) (T7 ..))[z5]}
          [[z5. t_app (E8 ..) (T7 ..) (T9 ) (E7 ..) (H3 ..) (H2 ..)]  : z5 . (H4 ..) = H
          , z5 . (H5 ..) = H1 , z5 . (T8 ..) = T2 ,  . T9 = T3 ,  . T10 = T4 ,
-         z5 . (E7 ..) = E3 , z5 . (E8 ..) = E4 , z5 = x5 ]   => 
+         z5 . (E7 ..) = E3 , z5 . (E8 ..) = E4 , z5 = x5 ]   =>
            (case unique3 [z5] <z5. E8 ..> <. arr T8 T10> <. arr T7 T9>
-                   ([z5] H5 ..) ([z5] H3 ..) of 
-            | {y6 :: (some [t : tp] block (x:exp. type_of x t))*} 
-              {E10 :: exp[y6]}  {E9 :: exp[y6]}  {T13 :: tp[]} 
-              {T12 :: tp[y6]} 
-              {H9 :: (type_of (E10 ..) (arr (T12 ..) (T13 )))[y6]} 
-              {H8 :: (type_of (E9 ..) (T12 ..))[y6]} 
-              {H7 :: (type_of (E10 ..) (arr (T12 ..) (T13 )))[y6]} 
+                   ([z5] H5 ..) ([z5] H3 ..) of
+            | {y6 :: (some [t : tp] block (x:exp. type_of x t))*}
+              {E10 :: exp[y6]}  {E9 :: exp[y6]}  {T13 :: tp[]}
+              {T12 :: tp[y6]}
+              {H9 :: (type_of (E10 ..) (arr (T12 ..) (T13 )))[y6]}
+              {H8 :: (type_of (E9 ..) (T12 ..))[y6]}
+              {H7 :: (type_of (E10 ..) (arr (T12 ..) (T13 )))[y6]}
               {H6 :: (type_of (E9 ..) (T12 ..))[y6]}
               [[. e_ref (arr T12 T13)]  : y6 . (H6 ..) = H2 , y6 . (H7 ..) = H3
               , y6 . (T12 ..) = T7 , y6 . (H8 ..) = H4 , y6 . (H9 ..) = H5 ,
               y6 . (T12 ..) = T8 ,  . T13 = T9 ,  . T13 = T10 ,
-              y6 . (E9 ..) = E7 , y6 . (E10 ..) = E8 , y6 = z5 ]   => 
+              y6 . (E9 ..) = E7 , y6 . (E10 ..) = E8 , y6 = z5 ]   =>
                [] e_ref T13 : (equal T13 T13)[]
             )
        )
-  
-  | {y7 :: (some [t : tp] block (x:exp. type_of x t))*}  {T18 :: tp[]} 
-    {E12 :: exp[y7, E : exp]}  {T17 :: tp[]}  {T16 :: tp[]} 
+
+  | {y7 :: (some [t : tp] block (x:exp. type_of x t))*}  {T18 :: tp[]}
+    {E12 :: exp[y7, E : exp]}  {T17 :: tp[]}  {T16 :: tp[]}
     {H10 :: (type_of (E12 .. x) (T17 ))[y7, x : exp, x3 : type_of x (T18 )]}
     [[y7. t_lam (T18 ) (\E. E12 ..) (T17 ) (\x. \u. H10 .. x u)]  :  . T16 = T'
-    ,  . arr T18 T17 = T , y7 . lam (T18 ) (\x1. E12 .. x1) = E , y7 = g ]   => 
-      (case f of 
-       | {z7 :: (some [t : tp] block (x:exp. type_of x t))*}  {T23 :: tp[]} 
-         {E14 :: exp[z7, E : exp]}  {T22 :: tp[]}  {T21 :: tp[]} 
-         {H12 :: (type_of (E14 .. x) (T22 ))[z7, x : exp, x3 : type_of x (T23 )]} 
+    ,  . arr T18 T17 = T , y7 . lam (T18 ) (\x1. E12 .. x1) = E , y7 = g ]   =>
+      (case f of
+       | {z7 :: (some [t : tp] block (x:exp. type_of x t))*}  {T23 :: tp[]}
+         {E14 :: exp[z7, E : exp]}  {T22 :: tp[]}  {T21 :: tp[]}
+         {H12 :: (type_of (E14 .. x) (T22 ))[z7, x : exp, x3 : type_of x (T23 )]}
          {H11 :: (type_of (E14 .. x) (T21 ))[z7, x : exp, x3 : type_of x (T23 )]}
          [[z7. t_lam (T23 ) (\E. E14 ..) (T21 ) (\x. \u. H11 .. x u)]  : z7, y9, z8 . (H12 ..) = H10
          ,  . arr T23 T21 = T16 ,  . T22 = T17 , z7, x9 . (E14 .. x9) = E12 ,
-          . T23 = T18 , z7 = y7 ]   => 
+          . T23 = T18 , z7 = y7 ]   =>
            (case unique3 [z7, b : block (x:exp. type_of x (T23 ))]
                    <z7, z9. E14 .. z9.1> <. T22> <. T21>
                    ([z7, y10] H12 .. y10.1 y10.2)
-                   ([z7, x10] H11 .. x10.1 x10.2) of 
-            | {x8 :: (some [t : tp] block (x:exp. type_of x t))*} 
-              {T26 :: tp[]}  {E15 :: exp[x8, E : exp]}  {T25 :: tp[]} 
-              {H14 :: (type_of (E15 .. x) (T25 ))[x8, x : exp, x3 : type_of x (T26 )]} 
+                   ([z7, x10] H11 .. x10.1 x10.2) of
+            | {x8 :: (some [t : tp] block (x:exp. type_of x t))*}
+              {T26 :: tp[]}  {E15 :: exp[x8, E : exp]}  {T25 :: tp[]}
+              {H14 :: (type_of (E15 .. x) (T25 ))[x8, x : exp, x3 : type_of x (T26 )]}
               {H13 :: (type_of (E15 .. x) (T25 ))[x8, x : exp, x3 : type_of x (T26 )]}
               [[. e_ref T25]  : x8, y11, z10 . (H13 ..) = H11 ,
               x8, z11, x11 . (H14 ..) = H12 ,  . T25 = T21 ,  . T25 = T22 ,
-              x8, y12 . (E15 ..) = E14 ,  . T26 = T23 , x8 = z7 ]   => 
+              x8, y12 . (E15 ..) = E14 ,  . T26 = T23 , x8 = z7 ]   =>
                [] e_ref (arr T26 T25) : (equal (arr T26 T25) (arr T26 T25))[]
             )
        )
-  
+
 
 ## Type Reconstruction done: examples/unique/unique.bel  ##
 

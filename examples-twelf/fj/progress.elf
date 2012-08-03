@@ -12,8 +12,8 @@ failed_cast_list : classTable -> elist N -> type.
 fc_field : failed_cast CT E ->
          % --------------------------------
            failed_cast CT (fieldProj E N).
-           
-fc_invk_recv : failed_cast CT E -> 
+
+fc_invk_recv : failed_cast CT E ->
              % ----------------------------------
                failed_cast CT (methodInvk E MN ES).
 
@@ -24,7 +24,7 @@ fc_invk_arg : failed_cast_list CT ES ->
 fc_new : failed_cast_list CT ES ->
        % ---------------------------
          failed_cast CT (new CN ES).
-         
+
 fc_cast : notSubtype CT CN2 CN1 ->
           value_list ES ->
         % --------------------------------------
@@ -68,13 +68,13 @@ psl_failed : failed_cast_list CT ES -> progsum_list CT ES.
 
 % Proof of progress for expressions and expression lists.
 % Every case of the proof requires a helper lemma because of output coverage
-% constraints. 
+% constraints.
 
-progress : {CT:classTable} class_table_typing CT -> typing CT E C 
+progress : {CT:classTable} class_table_typing CT -> typing CT E C
 -> progsum CT E -> type.
 %mode progress +CT +CTT +TP -PS.
 
-progress_list : {CT:classTable} class_table_typing CT -> typing_list CT ES C 
+progress_list : {CT:classTable} class_table_typing CT -> typing_list CT ES C
 -> progsum_list CT ES -> type.
 %mode progress_list +CT +CTT +TPS -PSL.
 
@@ -89,7 +89,7 @@ progress_cast_helper2 : value (new C ES) -> xm_subtype CT C D -> progsum CT (cas
 %worlds () (progress_cast_helper2 VL XMSB PS).
 %total XMSB (progress_cast_helper2 VL XMSB PS).
 
-progress_cast_helper1 :  {CT:classTable} {D:className} class_table_typing CT -> 
+progress_cast_helper1 :  {CT:classTable} {D:className} class_table_typing CT ->
 progsum CT E -> progsum CT (cast D E) -> type.
 %mode progress_cast_helper1 +CT +D +CTT +PS1 -PS2.
 
@@ -97,7 +97,7 @@ progsum CT E -> progsum CT (cast D E) -> type.
     sb_total CT _ D CTT XMSB ->
   % ----------------------------------------------
    progress_cast_helper1 CT D CTT (ps_value VL) PS.
-   
+
 - : progress_cast_helper1 CT D CTT (ps_step RD) (ps_step (rc_cast RD)).
 - : progress_cast_helper1 CT D CTT (ps_failed FC) (ps_failed (fc_cast_arg FC)).
 
@@ -111,10 +111,10 @@ progsum CT E -> progsum CT (cast D E) -> type.
 
 %%%% Cases for well-typed field projections
 
-progress_field_helper : {CT:classTable} class_table_typing CT -> 
+progress_field_helper : {CT:classTable} class_table_typing CT ->
 cnnth_opt FI CS CI -> fields CT C1 N2 CS -> typing CT E C1
 -> progsum CT E -> progsum CT (fieldProj E FI) -> type.
-%mode progress_field_helper +CT +CTT +CNOPT +FS +TP +PS1 -PS2. 
+%mode progress_field_helper +CT +CTT +CNOPT +FS +TP +PS1 -PS2.
 
 - : proj_lemma TP FS CNOPT ENTH ->
   % ---------------------------------------------------------------------------
@@ -122,9 +122,9 @@ cnnth_opt FI CS CI -> fields CT C1 N2 CS -> typing CT E C1
 - : progress_field_helper CT CTT CNOPT FS TP (ps_step RD) (ps_step (rc_field RD)).
 - : progress_field_helper CT CTT CNOPT FS TP (ps_failed FC) (ps_failed (fc_field FC)).
 
-%worlds () (progress_field_helper CT CTT CNOPT FS TP PS1 PS2). 
-%total PS1 (progress_field_helper CT CTT CNOPT FS TP PS1 PS2). 
- 
+%worlds () (progress_field_helper CT CTT CNOPT FS TP PS1 PS2).
+%total PS1 (progress_field_helper CT CTT CNOPT FS TP PS1 PS2).
+
 - : progress_field_helper CT CTT CNOPT FS TP PS1 PS2 ->
     progress CT CTT TP PS1 ->
   % ----------------------------------------
@@ -132,28 +132,28 @@ cnnth_opt FI CS CI -> fields CT C1 N2 CS -> typing CT E C1
 
 %%%% Cases for well-typed method invocations
 
-progress_invk_helper : 
+progress_invk_helper :
 {ES:elist N} {CS:cnlist N}
-mtype CT M C1 CS C0 -> 
+mtype CT M C1 CS C0 ->
 typing CT E C1 ->
 typing_list CT ES CS ->
-progsum CT E -> progsum_list CT ES -> 
+progsum CT E -> progsum_list CT ES ->
 progsum CT (methodInvk E M ES) -> type.
 %mode progress_invk_helper +ES +CS +MTY +TP +TPS +PS1 +PSL -PS2.
 
 - : invoc_total ES TPS BE _ INV ->
-    mbody_inv TP MTY BE MBY -> 
+    mbody_inv TP MTY BE MBY ->
   % ---------------------------------------------------------------------------------
-    progress_invk_helper ES CS MTY TP TPS (ps_value VL) (psl_value VLS) 
+    progress_invk_helper ES CS MTY TP TPS (ps_value VL) (psl_value VLS)
        (ps_step (r_invk VLS MBY INV)).
-- : progress_invk_helper ES CS MTY TP TPS (ps_value VL) (psl_step RDS)  
+- : progress_invk_helper ES CS MTY TP TPS (ps_value VL) (psl_step RDS)
        (ps_step (rc_invk_arg VL RDS)).
-- : progress_invk_helper ES CS MTY TP TPS (ps_value VL) (psl_failed FC)  
+- : progress_invk_helper ES CS MTY TP TPS (ps_value VL) (psl_failed FC)
        (ps_failed (fc_invk_arg FC)).
-- : progress_invk_helper ES CS MTY TP TPS (ps_step RD) PSL 
-       (ps_step (rc_invk_recv RD)). 
-- : progress_invk_helper ES CS MTY TP TPS (ps_failed FC) PSL 
-       (ps_failed (fc_invk_recv FC)). 
+- : progress_invk_helper ES CS MTY TP TPS (ps_step RD) PSL
+       (ps_step (rc_invk_recv RD)).
+- : progress_invk_helper ES CS MTY TP TPS (ps_failed FC) PSL
+       (ps_failed (fc_invk_recv FC)).
 
 %worlds () (progress_invk_helper ES CS MTY TP TPS PS1 PSL PS2).
 %total {PS1 PSL} (progress_invk_helper ES CS MTY TP TPS PS1 PSL PS2).
@@ -183,7 +183,7 @@ progress_new_helper : {C:className} progsum_list CT ES -> progsum CT (new C ES) 
 
 %%%% Cases for well-typed expression lists
 
-progress_list_helper : progsum CT E -> progsum_list CT ES -> 
+progress_list_helper : progsum CT E -> progsum_list CT ES ->
 progsum_list CT (econs E ES) -> type.
 %mode progress_list_helper +PS +PSL1 -PSL2.
 
@@ -196,15 +196,15 @@ progsum_list CT (econs E ES) -> type.
 %worlds () (progress_list_helper PS PSL1 PSL2).
 %total PS (progress_list_helper PS PSL1 PSL2).
 
-- : 
+- :
   % ----------------------------------------------
-    progress_list CT CTT (tl_nil) (psl_value v_nil). 
+    progress_list CT CTT (tl_nil) (psl_value v_nil).
 
 - : progress_list_helper PS1 PSL1 PSL2 ->
     progress CT CTT TP PS1 ->
-    progress_list CT CTT TPS PSL1 -> 
+    progress_list CT CTT TPS PSL1 ->
   % --------------------------------------------
-    progress_list CT CTT (tl_cons SB TPS TP) PSL2. 
+    progress_list CT CTT (tl_cons SB TPS TP) PSL2.
 
 %worlds () (progress CT CTT TP PS) (progress_list CT CTT TPS PSL).
 %total (TP TPS) (progress CT1 CTT1 TP PS) (progress_list CT2 CTT2 TPS PSL).

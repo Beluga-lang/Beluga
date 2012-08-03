@@ -10,7 +10,7 @@ nil : ctx.
 
 search : o -> type.
 activeR : ctx -> o -> type.  % Conclusion (right)
-activeL : ctx -> o -> type.  
+activeL : ctx -> o -> type.
 focusR : o -> type.   % Conclusion (right)
 hyp : o -> type.      % Hypothesis (left)
 
@@ -50,20 +50,20 @@ a_nil : activeL nil R
 
 andL : activeL (G ; (A and B)) R
 	<- activeL ((G ; A ); B) R.
-	     
+
 orL  : activeL (G ; (A or B)) R
 	<- activeL (G ; A) R
 	<- activeL (G ; B) R.
 
 falseL : activeL (G ; false) R.
 
-a_imp : activeL (G ; (A imp B)) R 
+a_imp : activeL (G ; (A imp B)) R
        <- (hyp (A imp B) -> activeL G R).
 
-a_atom : activeL (G ; (atom A)) R 
+a_atom : activeL (G ; (atom A)) R
        <- (hyp (atom A) -> activeL G R).
 
-a_true : activeL (G ; true) R 
+a_true : activeL (G ; true) R
        <-  activeL G R.
 
 

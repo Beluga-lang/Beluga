@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 open Syntax
 
 
@@ -7,6 +5,8 @@ type error =
   | FrozenType of Id.cid_typ
 
 exception Error of Syntax.Loc.t * error
+
+(* Register error printer at the end of this module. *)
 
 module Cid = struct
 
@@ -81,6 +81,7 @@ module Cid = struct
       | Int.LF.Atom (_, a, _ ) -> var_gen a
       | Int.LF.PiTyp(_, tA) -> gen_var_name tA
       | Int.LF.Sigma typRec -> gen_var_name_typRec typRec
+      | Int.LF.TClo (tA, s) -> gen_var_name tA
 
     and gen_var_name_typRec = function
       | Int.LF.SigmaLast tA -> gen_var_name tA
@@ -197,8 +198,6 @@ module Cid = struct
         inspectKind cid_tp [] entry.kind;
         cid_tp
 
-
-
     let addConstructor loc typ c tA =
       let entry = get typ in
         if entry.frozen then
@@ -225,9 +224,7 @@ module Cid = struct
     let is_typesubordinate_to a b =
       let b_e = get b in
         (*subord_read*)BitSet.is_set b_e.typesubordinated a
-
   end
-
 
   module Term = struct
 
@@ -314,9 +311,11 @@ module Cid = struct
   module CompTyp = struct
     type entry = {
       name                : Id.name;
-      implicit_arguments  : int;
+      implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
+                                    are factored into implicit arguments *)
       kind                : Int.Comp.kind;
-      mutable constructors: Id.cid_comp_const list
+      mutable frozen       : bool;
+      mutable constructors: Id.cid_comp_const list 
     }
 
     let entry_list  = ref []
@@ -325,6 +324,7 @@ module Cid = struct
       name               = name;
       implicit_arguments = implicit_arguments;
       kind               = kind;
+      frozen             = false;
       constructors       = []
     }
 
@@ -346,6 +346,13 @@ module Cid = struct
         cid_comp_typ
 
     let get = DynArray.get store
+    
+    let freeze a =
+          (get a).frozen <- true
+    
+    let addConstructor c typ = 
+      let entry = get typ in 
+        entry.constructors <- c :: entry.constructors 
 
     let clear () =
       DynArray.clear store;
@@ -378,10 +385,12 @@ module Cid = struct
 
     let index_of_name n = Hashtbl.find directory n
 
-    let add entry =
+
+    let add cid_ctyp entry =
       let cid_comp_const = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_comp_const;
+        CompTyp.addConstructor cid_comp_const cid_ctyp;
         cid_comp_const
 
     let get = DynArray.get store
@@ -400,15 +409,15 @@ module Cid = struct
       name               : Id.name;
       implicit_arguments : int;
       typ                : Int.Comp.typ;
-      prog               : Int.Comp.exp_chk;
+      prog               : Int.Comp.value;
       mut_rec            : Id.name list
     }
 
-    let mk_entry name typ implicit_arguments exp name_list =  {
+    let mk_entry name typ implicit_arguments v name_list = {
       name               = name;
       implicit_arguments = implicit_arguments;
       typ                = typ;
-      prog               = exp;
+      prog               = v;
       mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
     }
 
@@ -417,17 +426,17 @@ module Cid = struct
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
-
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
 
-    let add e =
+    let add f =
       let cid_prog = DynArray.length store in
-        DynArray.add store e;
-        Hashtbl.replace directory e.name cid_prog;
-        cid_prog
+      let e = f cid_prog in
+      DynArray.add store e;
+      Hashtbl.replace directory e.name cid_prog;
+      cid_prog
 
     let get = DynArray.get store
 
@@ -733,6 +742,5 @@ let _ = Error.register_printer
       match err with
         | FrozenType n ->
             Format.fprintf ppf
-              "type %s was frozen by a previous case analysis;@ \
-               can't declare a new constructor here"
+              "Type %s is frozen. A new constructor cannot be defined."
               (Cid.DefaultRenderer.render_cid_typ n)))

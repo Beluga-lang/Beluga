@@ -1,0 +1,27 @@
+nat  : type.
+z    : nat.
+s    : nat -> nat.
+cmp  : type.
+lt   : cmp.
+eq   : cmp.
+gt   : cmp.
+
+rec cmp : [. nat] -> [. nat] -> [. cmp] =
+fn x => fn y => case x of
+| [. z] => case y of
+    | [. z] => [. eq]
+    | [. _] => [. lt]
+| [. s N] => case y of
+    | [. z] => [. gt]
+    | [. s M] => cmp [. N] [. M]
+;
+
+rec max : [. nat] -> [. nat] -> [. nat] =
+fn x => fn y => let c = cmp x y in
+    case c of
+    | [. lt] => y
+    | [. gt] => x
+    | [. _] => x
+;
+
+let y = max [. (s (s (s z)))] [. (s z)] ;

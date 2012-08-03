@@ -72,7 +72,7 @@ do_testing() {
 	n=$((n+1))
 	echo -ne "$C[start]**$CEND TEST $n: $i ... "
 
-	result=$($EXE -noprint $* $i 2>&1)
+	result=$($EXE +test $* $i 2>&1)
 	exit_code=$?
 	diff_result=$(echo "$result" | diff -u $i.out - 2>/dev/null)
 	# diff responds 0 if same, 1 if different, 2 if couldn't compare.
@@ -146,10 +146,13 @@ do
 	    RESET=true
 	    shift
 	    ;;
-	--|"")
+	--)
 	    shift
 	    break
 	    ;;
+        "")
+            break
+            ;;
 	*)
             echo "Unrecognized option $1."
 	    echo "Make sure to write -- before any argument that should be passed to Beluga."

@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (* File: Debug.sml
   Author: Joshua Dunfield
   Contents: Debug-print library with up to 31 separate categories of information.

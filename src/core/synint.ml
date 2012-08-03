@@ -47,6 +47,7 @@ module LF = struct
     | BVar  of offset                         (* H ::= x                        *)
     | Const of cid_term                       (*   | c                          *)
     | MMVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
+    | MPVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
     | MVar  of cvar * sub                     (*   | u[s]                       *)
     | PVar  of cvar * sub                     (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
@@ -98,17 +99,18 @@ module LF = struct
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of normal option ref * dctx * typ * cnstr list ref
+    | Inst   of name * normal option ref * dctx * typ * cnstr list ref
         (* D ; Psi |- M <= A
            provided constraint *)
-    | PInst  of head   option ref * dctx * typ * cnstr list ref
+    | PInst  of name * head   option ref * dctx * typ * cnstr list ref
         (* D ; Psi |- H => A
            provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of normal option ref * mctx * dctx * typ * cnstr list ref
+    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
         (* D ; Psi |- M <= A
            provided constraint *)
+    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
 
 
   and tvar =
@@ -132,7 +134,7 @@ module LF = struct
   and ctx_var =
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of dctx option ref * cid_schema * mctx * mctx (* delete both mctx
+    | CInst  of name * dctx option ref * cid_schema * mctx * mctx (* delete both mctx
 							      contexts *)
         (* D |- Psi : schema   *)
 
@@ -218,118 +220,126 @@ end
 (** Internal Computation Syntax *)
 module Comp = struct
 
- type depend =
-   | Implicit   (* Maybe *)
-   | Explicit   (* No *)
+  type depend =
+    | Implicit   (* Maybe *)
+    | Explicit   (* No *)
 
- type  kind =
-   | Ctype of Loc.t
-   | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
+  type  kind =
+    | Ctype of Loc.t
+    | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
 
- type meta_typ =
-   | MetaTyp of LF.typ * LF.dctx
-   | MetaSchema of cid_schema
+  type meta_typ =
+    | MetaTyp of LF.typ * LF.dctx
+    | MetaParamTyp of LF.typ * LF.dctx
+    | MetaSchema of cid_schema
 
- type meta_obj =
-   | MetaCtx of Loc.t * LF.dctx
-   | MetaObj of Loc.t * LF.psi_hat * LF.normal
-   | MetaObjAnn of Loc.t * LF.dctx * LF.normal
+  type meta_obj =
+    | MetaCtx of Loc.t * LF.dctx
+    | MetaObj of Loc.t * LF.psi_hat * LF.normal
+    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
+    | MetaParam of Loc.t * LF.psi_hat * LF.head
 
- type meta_spine =
-   | MetaNil
-   | MetaApp of meta_obj * meta_spine
-   (* MetaSClo of meta_spine * msub *)
+  type meta_spine =
+    | MetaNil
+    | MetaApp of meta_obj * meta_spine
+  (* MetaSClo of meta_spine * msub *)
 
- type typ =
-   | TypBase of Loc.t * cid_comp_typ * meta_spine
-   | TypBox   of Loc.t * LF.typ  * LF.dctx
-   | TypSub   of Loc.t * LF.dctx * LF.dctx
-   | TypArr   of typ * typ
-   | TypCross of typ * typ
-   | TypCtxPi of (name * cid_schema * depend) * typ
-   | TypPiBox of (LF.ctyp_decl * depend) * typ
-   | TypClo   of typ *  LF.msub
-   | TypBool
+  type typ =
+    | TypBase  of Loc.t * cid_comp_typ * meta_spine
+    | TypBox   of Loc.t * LF.typ  * LF.dctx
+    | TypSub   of Loc.t * LF.dctx * LF.dctx
+    | TypArr   of typ * typ
+    | TypCross of typ * typ
+    | TypCtxPi of (name * cid_schema * depend) * typ
+    | TypPiBox of (LF.ctyp_decl * depend) * typ
+    | TypClo   of typ *  LF.msub
+    | TypBool
 
 
- type ctyp_decl =
-   | CTypDecl of name * typ
-   | CTypDeclOpt of name
+  type ctyp_decl =
+    | CTypDecl    of name * typ
+    | CTypDeclOpt of name
 
   type gctx = ctyp_decl LF.ctx
 
- type contextual_obj = NormObj of LF.normal | NeutObj of LF.head | SubstObj of LF.sub
+  type contextual_obj = NormObj of LF.normal | NeutObj of LF.head | SubstObj of LF.sub
 
- type env =
-   | Empty
-   | Cons of value * env
+  type env =
+    | Empty
+    | Cons of value * env
 
- and value =
-   | FunValue   of (Loc.t * name * exp_chk) * LF.msub * env
-   | RecValue   of (cid_prog * exp_chk) * LF.msub * env
-   | MLamValue  of (Loc.t * name * exp_chk) * LF.msub * env
-   | CtxValue   of (Loc.t * name * exp_chk) * LF.msub * env
-   | BoxValue   of LF.psi_hat * LF.normal
-   | ConstValue of cid_prog
-   | BoolValue  of bool
+  and value =
+    | FunValue   of name * exp_chk * LF.msub * env
+    | RecValue   of cid_prog * exp_chk * LF.msub * env
+    | MLamValue  of name * exp_chk * LF.msub * env
+    | CtxValue   of name * exp_chk * LF.msub * env
+    | BoxValue   of LF.psi_hat * LF.normal
+    | PsiValue   of LF.dctx
+    | ConstValue of cid_prog
+    | DataValue  of cid_comp_const * data_spine
+    | BoolValue  of bool
+    | PairValue  of value * value
 
- and exp_chk =
-   | Syn    of Loc.t * exp_syn
-   | Rec    of Loc.t * name * exp_chk
-   | Fun    of Loc.t * name * exp_chk
-   | CtxFun of Loc.t * name * exp_chk
-   | MLam   of Loc.t * name * exp_chk
-   | Pair   of Loc.t * exp_chk * exp_chk
-   | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
-   | Let    of Loc.t * exp_syn * (name * exp_chk)
-   | Box    of Loc.t * LF.psi_hat * LF.normal
-   | SBox   of Loc.t * LF.psi_hat * LF.sub
-   | Case   of Loc.t * case_pragma * exp_syn * branch list
-   | If     of Loc.t * exp_syn * exp_chk * exp_chk
-   | Value  of value
+  and exp_chk =
+    | Syn    of Loc.t * exp_syn
+    | Rec    of Loc.t * name * exp_chk
+    | Fun    of Loc.t * name * exp_chk
+    | CtxFun of Loc.t * name * exp_chk
+    | MLam   of Loc.t * name * exp_chk
+    | Pair   of Loc.t * exp_chk * exp_chk
+    | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
+    | Let    of Loc.t * exp_syn * (name * exp_chk)
+    | Box    of Loc.t * LF.psi_hat * LF.normal
+    | SBox   of Loc.t * LF.psi_hat * LF.sub
+    | Case   of Loc.t * case_pragma * exp_syn * branch list
+    | If     of Loc.t * exp_syn * exp_chk * exp_chk
+    | Hole   of Loc.t
 
- and exp_syn =
-   | Var    of offset
-   | DataConst of cid_comp_const
-   | Const  of cid_prog
-   | Apply  of Loc.t * exp_syn * exp_chk
-   | CtxApp of Loc.t * exp_syn * LF.dctx
-   | MApp   of Loc.t * exp_syn * (LF.psi_hat * contextual_obj)
-   | Ann    of exp_chk * typ
-   | Equal  of Loc.t * exp_syn * exp_syn
-   | Boolean of bool
+  and exp_syn =
+    | Var    of offset
+    | DataConst of cid_comp_const
+    | Const  of cid_prog
+    | Apply  of Loc.t * exp_syn * exp_chk
+    | CtxApp of Loc.t * exp_syn * LF.dctx
+    | MApp   of Loc.t * exp_syn * (LF.psi_hat * contextual_obj)
+    | Ann    of exp_chk * typ
+    | Equal  of Loc.t * exp_syn * exp_syn
+    | PairVal of Loc.t * exp_syn * exp_syn
+    | Boolean of bool
 
   and branch_pattern =
-     | NormalPattern of LF.normal * exp_chk
-     | EmptyPattern
+    | NormalPattern of LF.normal * exp_chk
+    | EmptyPattern
 
- and pattern =
-   | PatEmpty  of Loc.t * LF.dctx
-   | PatMetaObj of Loc.t * meta_obj
-   | PatConst of Loc.t * cid_comp_const * pattern_spine
-   | PatFVar   of Loc.t * name
-   | PatVar   of Loc.t * offset
-   | PatPair  of Loc.t * pattern * pattern
-   | PatTrue  of Loc.t
-   | PatFalse of Loc.t
-   | PatAnn   of Loc.t * pattern * typ
+  and pattern =
+    | PatEmpty   of Loc.t * LF.dctx
+    | PatMetaObj of Loc.t * meta_obj
+    | PatConst of Loc.t * cid_comp_const * pattern_spine
+    | PatFVar   of Loc.t * name
+    | PatVar   of Loc.t * offset
+    | PatPair  of Loc.t * pattern * pattern
+    | PatTrue  of Loc.t
+    | PatFalse of Loc.t
+    | PatAnn   of Loc.t * pattern * typ
 
- and pattern_spine =
-   | PatNil
-   | PatApp of Loc.t * pattern * pattern_spine
+  and pattern_spine =
+    | PatNil
+    | PatApp of Loc.t * pattern * pattern_spine
+
+  (* Arguments in data spines are accumulated in reverse order, to
+     allow applications of data values in constant time. *)
+  and data_spine =
+    | DataNil
+    | DataApp of value * data_spine
 
   and branch =
-    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx
-        * pattern * LF.msub
-    | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx
-        * pattern * LF.msub * exp_chk
+    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
+    | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
-    | BranchBox of LF.mctx * LF.mctx
-        * (LF.dctx * branch_pattern * LF.msub * LF.csub)
+    | BranchBox of LF.mctx * LF.mctx * (LF.dctx * branch_pattern * LF.msub * LF.csub)
 
-    | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx
-        * (LF.dctx * LF.sub * LF.msub * LF.csub)
-        * exp_chk
+    | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx *
+        (LF.dctx * LF.sub * LF.msub * LF.csub) * exp_chk
 
   type tclo = typ * LF.msub
 end
@@ -339,17 +349,15 @@ end
 module Sgn = struct
 
   type decl =
-    | Typ    of cid_typ    * LF.kind
-    | Const  of cid_term   * LF.typ
-    | CompTyp  of Loc.t * name * Comp.kind
-    | CompConst of Loc.t * name * Comp.typ
+    | Typ           of cid_typ  * LF.kind
+    | Const         of cid_term * LF.typ
+    | CompTyp       of Loc.t * name * Comp.kind
+    | CompConst     of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
-    | Schema of cid_schema * LF.schema
-    | Rec    of cid_prog   * Comp.typ * Comp.exp_chk
-    | Pragma of LF.prag
+    | Schema        of cid_schema * LF.schema
+    | Rec           of cid_prog   * Comp.typ * Comp.exp_chk
+    | Pragma        of LF.prag
 
   type sgn = decl list
 
 end
-
-

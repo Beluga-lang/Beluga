@@ -1,6 +1,4 @@
 
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 module Loc   = Syntax.Loc
 module Token = Token
 module Error = Camlp4.Struct.EmptyError
@@ -188,6 +186,7 @@ let rec lex_token loc = lexer
   | "%name"
   | "%not"
   | "%query"
+  | "?"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 
   | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)

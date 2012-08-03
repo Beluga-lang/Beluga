@@ -1,2 +1,0 @@
-File "./t/error/error.bel", line 16, characters 13-19:
-cannot reconstruct a type for free variable E (leftover constraints)

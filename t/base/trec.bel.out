@@ -1,3 +1,0 @@
-File "./t/base/trec.bel", line 17, characters 10-15:
-Expected type  (exp T2)[]
-Inferred type  (exp nat)[]

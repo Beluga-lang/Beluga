@@ -101,6 +101,7 @@ module Comp = struct
    | MetaCtx of Loc.t * LF.dctx
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
+   | MetaParam of Loc.t * LF.psi_hat * LF.head
 
  type meta_spine =
    | MetaNil
@@ -141,7 +142,8 @@ module Comp = struct
      | CtxBox of Loc.t * LF.dctx                (*    | box (Psi)           *)
      | SBox   of Loc.t * LF.psi_hat * LF.sub
      | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
-     | If of Loc.t * exp_syn * exp_chk * exp_chk(*    | if i then e1 else e2 *)
+     | If of Loc.t * exp_syn * exp_chk * exp_chk(*    | if i then e1 else e2 *)   
+     | Hole of Loc.t				(*    | ?                   *)
 
   and exp_syn =
      | Var    of Loc.t * name                   (*  i ::= x                 *)
@@ -152,7 +154,8 @@ module Comp = struct
      | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
                                                 (*    | i [Psi hat. M]      *)
      | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
-     | BoxVal of Loc.t * LF.dctx * LF.normal
+     | BoxVal of Loc.t * LF.dctx * LF.normal 
+     | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
      | Equal  of Loc.t * exp_syn * exp_syn
      | Boolean of Loc.t * bool
@@ -221,6 +224,7 @@ module Comp = struct
      | Box     (_loc, _, _) -> "Box(...)"
      | Case    (_loc, _, syn, _) -> "Case(" ^ synToString syn ^ " of ...)"
      | If      (_loc, syn, chk1, chk2) -> "If(" ^ synToString syn ^ " Then " ^  chkToString chk1 ^ " Else " ^ chkToString chk2 ^ ")"
+     | Hole    (_loc) -> "Hole"
 
 end
 
@@ -236,8 +240,9 @@ module Sgn = struct
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema   of Loc.t * name * LF.schema
     | Pragma   of Loc.t * LF.prag
-    | Rec      of Loc.t * Comp.rec_fun list
-    | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn
+    | MRecTyp  of Loc.t * decl list list
+    | Rec      of Loc.t * Comp.rec_fun list   
+    | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn 
     | Query    of Loc.t * name option * LF.typ * int option * int option
 
   type sgn = decl list

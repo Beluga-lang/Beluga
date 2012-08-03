@@ -1,0 +1,3 @@
+Type error in guard of if expression.
+    Expected type: Bool
+    Actual type: [. nat]

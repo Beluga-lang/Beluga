@@ -10,7 +10,7 @@ exp  : type.   %name exp E x.
 z    : exp.
 suc  : exp -> exp.
 match: exp -> exp -> (exp -> exp) -> exp.
-letv : exp -> (exp -> exp) -> exp.
+letv : exp -> (exp -> exp) -> exp.  % let x = e1 in e2
 lam  : tp -> (exp -> exp) -> exp.
 app  : exp -> exp -> exp.
 
@@ -52,7 +52,7 @@ tp_match : oft (match E E1 (\x. E2 x)) T
 	 <- ({x:exp}oft x nat -> oft (E2 x) T).
 
 tp_lam :   ({x:exp} oft x T1 -> oft (E x) T2) 
-        -> oft (lam T1 (\ x . E x)) (arrow T1 T2).
+        -> oft (lam T1 (\x . E x)) (arrow T1 T2).
 
 tp_app : oft E2 T2 -> 
          oft E1 (arrow T2 T1)

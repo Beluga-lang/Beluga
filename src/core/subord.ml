@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    Printing the subordination relation.
    Computing the relation is done in store.ml, as constructors are added.
@@ -195,8 +193,13 @@ let rec thin (cO, cD) (tP, cPsi) =
   *)
   let rec inner (basis : Id.cid_typ list) cPsi = match cPsi with
     | Null -> (Shift(NoCtxShift, 0),  Null) (* . |- shift(noCtx, 0) : . *)
-    | CtxVar psi ->
-        if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) basis then
+    | CtxVar psi -> 
+        let schema = begin match psi with
+          | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
+          | CInst ( _, _ , cid_schema, _, _ ) -> cid_schema
+        end
+        in 
+        if relevantSchema (Schema.get_schema schema) basis then
           ( (*print_string "Keeping context variable\n"; *)
             (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
         else
@@ -223,7 +226,7 @@ let rec thin (cO, cD) (tP, cPsi) =
 
 
 
-let rec thin' cO a cPsi =
+let rec thin' cD a cPsi = 
   (*inner basis cPsi = (s, cPsi')
 
      if basis is a list of type families
@@ -237,8 +240,14 @@ let rec thin' cO a cPsi =
   *)
   let rec inner (basis : Id.cid_typ list) cPsi = match cPsi with
     | Null -> (Shift(NoCtxShift, 0),  Null) (* . |- shift(noCtx, 0) : . *)
-    | CtxVar psi ->
-        if relevantSchema (Schema.get_schema (Context.lookupCtxVarSchema cO psi)) basis then
+
+    | CtxVar (psi) -> 
+        let schema = begin match psi with
+          | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
+          | CInst ( _, _ , cid_schema, _, _ ) -> cid_schema
+        end
+        in 
+        if relevantSchema (Schema.get_schema schema) basis then
           ( (*print_string "Keeping context variable\n"; *)
             (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
         else

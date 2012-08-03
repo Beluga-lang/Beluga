@@ -1,4 +1,7 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
+module Options =
+struct
+  let print_loc = ref true
+end
 
 exception Violation of string
 
@@ -26,7 +29,8 @@ let print f =
   str
 
 let print_with_location loc f =
-  Format.fprintf error_format "%s:@." (Syntax.Loc.to_string loc);
+  if !Options.print_loc then
+    Format.fprintf error_format "%s:@." (Syntax.Loc.to_string loc);
   print f
 
 (* Since this printer is registered first, it will be executed only if
@@ -57,6 +61,15 @@ let _ = register_printer
     print (fun ppf ->
       Format.fprintf ppf "Not implemented."))
 
+let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
+  Format.fprintf ppf "%s@." title;
+  Format.fprintf ppf
+    "    @[<v>%s: %a@;\
+              %s: %a@]@." 
+    title_obj1 pp_obj1 obj1
+    title_obj2 pp_obj2 obj2
+
+(* The following is for coverage. Probably needs to be phased out. *)
 let information = ref []
 
 let getInformation () =

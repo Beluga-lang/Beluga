@@ -74,6 +74,4 @@ read-sources(root, file) =
         export
     return $(accum)
 
-
-# Include the lib, tests, and tools subdirectory
 .SUBDIRS: core main

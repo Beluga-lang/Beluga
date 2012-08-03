@@ -1,0 +1,40 @@
+% test case for mutually recursive datatypes.
+%adapted from untyped closure conversion from POPL12 paper 
+
+datatype tm:type  = 
+| lam: (tm -> tm) -> tm
+| app: tm -> tm -> tm
+; 
+
+datatype nat:type = 
+| z : nat
+| s : nat -> nat
+;
+
+schema ctx = tm;
+
+datatype envr: type = 
+| nil: envr
+| snoc : envr -> ctm -> envr 
+
+and ctm: type = 
+| clam : (envr -> ctm) -> ctm
+| capp : ctm -> ctm -> ctm
+| proj: envr -> nat -> ctm
+| close : ctm -> envr -> ctm
+| open : ctm -> (envr -> ctm -> ctm) -> ctm
+| create: envr -> ctm
+;
+
+schema cctx = ctm; 
+
+rec envrSize: [. envr] -> [. nat] =
+fn e => case e of
+|[. nil] => [. z]
+|[. snoc U V] =>
+     let [. N] = envrSize [. U] in
+     case [.V] of
+       |[. clam (\x.W x)] => [. N]
+       |[. _] => [. s N]
+;
+

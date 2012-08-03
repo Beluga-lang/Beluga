@@ -1,3 +1,2 @@
-File "./t/error/mlam.bel", line 32, characters 0-10 (end at line 33, character 0):
 Found function abstraction, but expected type {g : expCtx} {T :: [. tp]}^i
-[g. (exp (T ))] -> [g. (exp (T ))]
+[g. (exp (T ))] -> [g. (exp (T ))].

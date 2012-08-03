@@ -119,6 +119,7 @@ module Comp = struct
    | MetaCtx of Loc.t * LF.dctx
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
+   | MetaParam of Loc.t * LF.psi_hat * LF.head
 
  type meta_spine =
    | MetaNil
@@ -148,6 +149,7 @@ module Comp = struct
      | SBox   of Loc.t * LF.psi_hat * LF.sub    (* box (Psi hat. M)    *)
      | Case   of Loc.t * case_pragma * exp_syn * branch list
      | If      of Loc.t * exp_syn * exp_chk * exp_chk
+     | Hole   of Loc.t
 
   and exp_syn =
      | Var    of offset                                     (* x              *)
@@ -159,20 +161,21 @@ module Comp = struct
      | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)
      | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
      | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (Psi. tR)  *)
+     | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                              (* e : tau        *)
      | Equal  of Loc.t  * exp_syn * exp_syn
      | Boolean of Loc.t * bool
 
- and pattern =
-   | PatEmpty of Loc.t * LF.dctx
+ and pattern = 
+   | PatEmpty   of Loc.t * LF.dctx 
    | PatMetaObj of Loc.t * meta_obj
-   | PatConst of Loc.t * cid_comp_const * pattern_spine
-   | PatFVar   of Loc.t * name
-   | PatVar   of Loc.t * name * offset
-   | PatPair  of Loc.t * pattern * pattern
-   | PatTrue  of Loc.t
-   | PatFalse of Loc.t
-   | PatAnn   of Loc.t * pattern * typ
+   | PatConst   of Loc.t * cid_comp_const * pattern_spine
+   | PatFVar    of Loc.t * name
+   | PatVar     of Loc.t * name * offset
+   | PatPair    of Loc.t * pattern * pattern
+   | PatTrue    of Loc.t 
+   | PatFalse   of Loc.t 
+   | PatAnn     of Loc.t * pattern * typ
 
  and pattern_spine =
    | PatNil of Loc.t
@@ -198,7 +201,4 @@ module Comp = struct
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
 
-
 end
-
-

@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
    modified: Joshua Dunfield
@@ -39,10 +37,11 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 (* Creating new contextual variables *)
 (*************************************)
 
-val newMMVar    : mctx * dctx * typ -> mm_var
-val newMVar     : dctx * typ -> cvar
-val newPVar     : dctx * typ -> cvar
-val newCVar     : Id.cid_schema -> ctx_var
+val newMMVar    : Id.name option -> mctx * dctx * typ -> mm_var
+val newMPVar    : Id.name option -> mctx * dctx * typ -> mm_var
+val newMVar     : Id.name option -> dctx * typ -> cvar
+val newPVar     : Id.name option -> dctx * typ -> cvar
+val newCVar     : Id.name option -> Id.cid_schema -> ctx_var
 
 val raiseType   : dctx -> typ -> typ
 
@@ -51,8 +50,9 @@ val raiseType   : dctx -> typ -> typ
 (* Other operations *)
 (*************************************)
 
-val etaExpandMV     : dctx -> tclo -> sub -> normal
-val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> sub -> normal
+val etaExpandMV     : dctx -> tclo -> Id.name -> sub -> normal
+
+val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> Id.name -> sub -> normal
 
 exception Fmvar_not_found
 exception FreeMVar of head
@@ -60,13 +60,13 @@ exception NonInvertible
 
 
 val m_id   : msub
-val mshift: msub -> int -> msub
+(* val mshift: msub -> int -> msub
 val mshiftTerm: normal -> int -> normal
 val mshiftHead: head -> int -> head
 val mshiftSpine: spine -> int -> spine
 val mshiftTyp : typ  -> int -> typ
 val mshiftDCtx : dctx  -> int -> dctx
-
+*)
 val mvar_dot1  : msub -> msub
 val pvar_dot1  : msub -> msub
 val mvar_dot   : msub -> mctx -> msub
@@ -102,6 +102,7 @@ val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 val cnormPattern  : Comp.pattern * msub -> Comp.pattern
 
 val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
+val cnormMetaTyp : Comp.meta_typ * msub -> Comp.meta_typ
 
 val cnormMSub  : msub -> msub
 val cnormCSub  : (csub * msub) -> csub

@@ -1,0 +1,4 @@
+datatype Colour : ctype =
+| Blue : t
+| Red : t
+;

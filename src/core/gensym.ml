@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (* Given an alphabet of strings as an array, creates a symbol
    generator over the alphabet *)
 let create_symbols (alphabet : string array) : string Stream.t =

@@ -1,0 +1,47 @@
+%{ Sasybel Development
+Author: Marie-Andree B.Langlois
+}%
+terminals lam app
+syntax 
+
+term ::= app term term | x | lam \x .term[x] ;
+
+notation aeq : term a= term;
+
+E1 a= F1;  
+E2 a= F2;
+--------------------------- ae_a
+(app E1 E2) a= (app F1 F2);
+
+{x:term, x a= x} (E[x] a= E[x]);
+----------------------------------- ae_l
+(lam \x . E[x]) a= (lam \x . F[x]);
+
+context aCtex ::= (x:term) x a= x;
+%{
+theorem ref : forall | g: aCtex |- (M:term) exists | g |- M .. a= M ..;
+
+M .. a= M .. by induction on | g |- M .. ;
+
+case | g |- app (A1 ..) (A2 ..)
+
+is
+
+EQ1 .. by induction hypothesis on | g |- A1 .. ;
+EQ2 .. by induction hypothesis on | g |- A2 .. ;
+M .. a= M .. by rule ae_a on EQ1, EQ2;
+
+end case
+
+case | g: (x:term) x a= x |- x a= x
+
+is
+
+M .. a= M .. by uniqueness of variables;
+
+end case
+
+end induction
+end theorem
+}%
+

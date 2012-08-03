@@ -6,13 +6,19 @@
 *)
 
 open Core
-(* open Frontend *)
+open Sasybel
 open Printf
+
+
+let bailout msg =
+  fprintf stderr "%s\n" msg;
+  exit 2
 
 let usage () =
   let options =
           "    -d            turn all debugging printing off (default)\n"
         ^ "    +d            turn all debugging printing on\n"
+        ^ "    +ext          print external syntax before reconstruction\n"
         ^ "    -s=natural    print substitutions in a \"natural\" style (default)\n"
         ^ "    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n"
         ^ "    +implicit     print implicit arguments (default -- for now)\n"
@@ -25,62 +31,53 @@ let usage () =
         ^ "    +covdepth nn  \"extra\" depth for coverage checker\n"
         ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
         ^ "    +printSubord  print subordination relations (experimental)\n"
-        ^ "    -noprint      turn printing off\n"
+        ^ "    +print        turn printing on (default)\n"
+        ^ "    -print        turn printing off\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
-        ^ "    -logic        turn on logic programming engine\n"
+        ^ "    +logic        turn on logic programming engine\n"
+        ^ "    +test         Make output suitable for test harness. Implies -print\n"
   in
   fprintf stderr
     "Usage: %s [options] file.(bel|cfg)\noptions:\n%s"
     Sys.argv.(0) options;
   exit 2
 
+let externall = ref false
+
 module PC = Pretty.Control
 
-let process_option' arg rest = begin let f = function
+let process_option arg rest = match arg with
   (* these strings must be lowercase *)
-  | "+d" -> (Debug.showAll (); rest)
-  | "-d" -> (Debug.showNone (); rest)
-  | "-s=natural" -> (PC.substitutionStyle := PC.Natural; rest)
-  | "-s=debruijn" -> (PC.substitutionStyle := PC.DeBruijn; rest)
-  | "+implicit" -> (PC.printImplicit := true; rest)
-  | "-implicit" -> (PC.printImplicit := false; rest)
-  | "+t" -> (Monitor.on := true; rest)
-  | "+tfile" -> (Monitor.onf := true; rest)
-  | "-t" -> (Monitor.on := false;
-             Monitor.onf := false;
-             rest)
-  | "+coverage" -> (Coverage.enableCoverage := true; rest)
-  | "+warncover" -> (Coverage.enableCoverage := true; Coverage.warningOnly := true; rest)
-  | "-coverage" -> (Coverage.enableCoverage := false; rest)
-(*  | "+covdepth" -> (match rest with [] -> (print_string "-covDepth needs an argument\n"; exit 2)
-                               | arg::rest -> (try let extraDepth = int_of_string arg in
-                                                 Coverage.extraDepth := extraDepth;
-                                                 rest
-                                               with Failure "int_of_string" ->
-                                                      print_string "-covDepth needs a numeric argument\n"; exit 2))
-*)
-  | "+printsubord" -> (Subord.dump := true; rest)
-  | "-noprint"     -> (Debug.chatter := 0; rest)
-  | "-width" -> (match rest with [] -> (print_string "-width needs an argument\n"; exit 2)
-                               | arg::rest -> (try let width = int_of_string arg in
-                                                 Format.set_margin (max 40 width);
-                                                 rest
-                                               with Failure "int_of_string" ->
-                                                      print_string "-width needs a numeric argument\n"; exit 2))
-  | "-logic" -> (Logic.Options.enableLogic := true ; rest)
+  | "+d" ->Debug.showAll (); Printexc.record_backtrace true; rest
+  | "-d" -> Debug.showNone (); Printexc.record_backtrace false; rest
+  | "+ext" -> externall := true; rest
+  | "-s=natural" -> PC.substitutionStyle := PC.Natural; rest
+  | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn; rest
+  | "+implicit" -> PC.printImplicit := true; rest
+  | "-implicit" -> PC.printImplicit := false; rest
+  | "+t" -> Monitor.on := true; rest
+  | "+tfile" -> Monitor.onf := true; rest
+  | "-t" -> Monitor.on := false; Monitor.onf := false; rest
+  | "+coverage" -> Coverage.enableCoverage := true; rest
+  | "+warncover" -> Coverage.enableCoverage := true; Coverage.warningOnly := true; rest
+  | "-coverage" -> Coverage.enableCoverage := false; rest
+  | "+printsubord" -> Subord.dump := true; rest
+  | "+print" -> rest
+  | "-print" -> Debug.chatter := 0; rest
+  | "-width" ->
+    begin match rest with
+      | [] -> bailout "-width needs an argument"
+      | arg::rest ->
+        try
+          let width = int_of_string arg in
+          Format.set_margin (max 40 width);
+          rest
+        with Failure "int_of_string" ->
+          bailout "-width needs a numeric argument"
+    end
+  | "+logic" -> Logic.Options.enableLogic := true ; rest
+  | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
   | _ -> usage ()
-in (* print_string (">>>> " ^ arg ^ "\n"); *)
-  f arg
-end
-
-let process_option string rest =
-  if String.length string < 4 then
-    process_option' string rest
-  else
-    (* preserve case of first 2 characters; lowercase following *)
-    let first_part = String.sub string 0 2
-    and second_part = String.lowercase (String.sub string 2 (String.length string - 2)) in
-      process_option' (first_part ^ second_part) rest
 
 let rec process_options = function
   | [] -> []
@@ -98,6 +95,9 @@ exception SessionFatal
 
 let is_cfg file_name =
   Filename.check_suffix file_name ".cfg"
+
+let is_sasy file_name =
+  Filename.check_suffix file_name ".sbel"
 
 let rec accum_lines input =
   try
@@ -142,45 +142,55 @@ let main () =
             printer decl;
             print_sgn printer decls
       in
-      let abort_session () = raise SessionFatal
-      in
-        try
-          (* Subord.clearMemoTable();   (* obsolete *) *)
-          let sgn = 
-              Parser.parse_file ~name:file_name Parser.sgn_eoi 
-          in
-            if !Debug.chatter = 0 then () else
-              printf "\n## Type Reconstruction: %s ##\n" file_name;  
-
-(*            let int_decls = List.map Recsgn.recSgnDecl sgn in *)
-            let _int_decls = Recsgn.recSgnDecls sgn in
-
-              if !Debug.chatter = 0 then () else
-              printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-              let _ = Coverage.force
-                (function
-                  | Coverage.Success -> 
-                     ()
-                  | Coverage.Failure message ->
+      let abort_session () = raise SessionFatal in
+      try
+        let sgn =
+          if is_sasy file_name
+          then begin
+            let sasy_sgn = Sasybel.Sparser.parse_file ~name:file_name Sasybel.Sparser.section_eoi in
+            if !Debug.chatter != 0 then
+              printf "\n## Sasybel translation: %s ##\n" file_name;
+            Sasybel.Transform.sectionDecls sasy_sgn
+          end else begin
+            Parser.parse_file ~name:file_name Parser.sgn_eoi
+          end in
+        if !externall then begin
+          if !Debug.chatter != 0 then
+            printf "\n## Pretty-printing of the external syntax : ##\n";
+          List.iter Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
+        end;
+        if !Debug.chatter != 0 then
+          printf "\n## Type Reconstruction: %s ##\n" file_name;
+        Recsgn.recSgnDecls sgn;
+        if !Debug.chatter != 0 then
+          printf "\n## Type Reconstruction done: %s  ##\n" file_name;
+        ignore (Coverage.force
+                  (function
+                    | Coverage.Success -> ()
+                    | Coverage.Failure message ->
                       if !Coverage.warningOnly then
                         Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
                       else
-                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
-                ) in 
-              begin
-                if !Coverage.enableCoverage then 
-                  (if !Debug.chatter = 0 then () else
-                      printf "\n## Coverage checking done: %s  ##\n" file_name )
-                else ();
-                if !Subord.dump then (Subord.dump_subord() (* ;
-                                      Subord.dump_typesubord() *) );
-                print_newline () ;
-                Logic.runLogic ()
-              end
-
-        with e ->
-          output_string stderr (Printexc.to_string e);
-          abort_session ()
+                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))));
+          if !Coverage.enableCoverage then 
+            (if !Debug.chatter != 0 then
+                printf "\n## Coverage checking done: %s  ##\n" file_name);
+          if !Subord.dump then begin
+            Subord.dump_subord();
+            (* Subord.dump_typesubord() *)
+          end;
+          print_newline ();
+          Logic.runLogic ();
+          if not (Holes.none ()) && !Debug.chatter != 0 then begin
+            printf "\n## Holes: %s  ##\n" file_name;
+            Holes.printAll ()
+          end;
+          if !Monitor.on || !Monitor.onf then
+            Monitor.print_timer ()
+      with e ->
+        Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
+        output_string stderr (Printexc.to_string e);
+        abort_session ()
     in
     let args   = List.tl (Array.to_list Sys.argv) in
     let files = process_options args in
@@ -193,9 +203,7 @@ let main () =
               List.iter per_file file_names; 0
             with SessionFatal -> 1
           end
-        | _ ->
-          printf "Wrong number of command line arguments.\n";
-          2
+        | _ -> bailout "Wrong number of command line arguments."
     in
     printf "%s" (Error.getInformation());
     exit status_code

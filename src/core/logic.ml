@@ -229,7 +229,7 @@ module Convert = struct
     let (tA, s) = Whnf.whnfTyp sA
     in match tA with
       | LF.Atom (_) as tA ->
-        let u = Whnf.newMVar (cPsi, LF.TClo (tA, s)) in
+        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) in
         LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
         LF.Lam (Syntax.Loc.ghost, x, etaExpand
@@ -631,7 +631,7 @@ module Solver = struct
             (fun () -> solveSubGoals dPool (cPsi, k) (dCl.subGoals, s')
               (fun (u, tS) ->
                 sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS tS)))))
-           with U.Unify _ -> ()) ; matchDProg dPool'
+           with U.Failure _ -> ()) ; matchDProg dPool'
         else matchDProg dPool'
       | Empty ->
         matchSig (cidFromAtom tA)
@@ -655,7 +655,7 @@ module Solver = struct
       try trail (fun () -> unify cPsi (tA, s) (sCl.tHead, s')
         (fun () -> solveSubGoals dPool (cPsi, k) (sCl.subGoals, s')
           (fun (u, tS) -> sc (u, LF.Root (Syntax.Loc.ghost, LF.Const (cidTerm), fS tS)))))
-      with U.Unify _ -> ()
+      with U.Failure _ -> ()
 
     in matchDProg dPool
 

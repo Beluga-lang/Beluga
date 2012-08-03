@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 open Syntax.Int
 
 type error =
@@ -18,10 +16,9 @@ type problem
 
 val make : Syntax.Loc.t
         -> Pragma.case_pragma
-        -> LF.mctx            (* cO *)
         -> LF.mctx            (* cD *)
         -> Comp.branch list   (* branches *)
-        -> (LF.typ * LF.dctx) (* type of object being case-analyzed *)
+        -> Comp.typ (* type of object being case-analyzed *)
         -> problem
 
 type coverage_result =
@@ -32,6 +29,6 @@ val clear  : unit -> unit
 val stage  : problem -> unit
 val force  : (coverage_result -> 'a) -> 'a list
 
-
 (* val covers : problem -> coverage_result *)
 val process : problem -> unit   (* check coverage immediately *)
+(* val etaExpandMVstr     : sub -> dctx -> tclo -> normal *)

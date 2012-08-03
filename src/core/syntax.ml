@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
 *)
@@ -21,9 +19,3 @@ end
 module Int = Synint
 module Apx = Synapx
 module Ext = Synext
-
-
-
-
-
-

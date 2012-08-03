@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Brigitte Pientka
    modified: Joshua Dunfield
@@ -11,10 +9,12 @@ type error =
     LeftoverCV
   | LeftoverMV
   | LeftoverMMV
+  | LeftoverMPV
   | LeftoverConstraints
   | CyclicDependencyFV
   | CyclicDependencyFCV
   | CyclicDependencyMMV
+  | CyclicDependencyMPV
   | CyclicDependencyMV
   | CyclicDependencyFMV
   | CyclicDependencyPV
@@ -31,6 +31,9 @@ val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
 
 val abstrCovGoal  : LF.dctx -> LF.normal -> LF.typ -> LF.msub ->
                       LF.mctx * LF.dctx * LF.normal * LF.typ * LF.msub
+
+val abstrCovPatt  : Comp.gctx -> Comp.pattern -> Comp.typ -> LF.msub -> 
+                     LF.mctx * Comp.gctx * Comp.pattern * Comp.typ * LF.msub
 
 val abstrSchema   : LF.schema  -> LF.schema
 

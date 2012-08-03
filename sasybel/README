@@ -1,0 +1,101 @@
+-*- This file was stolen from the Beluga source files -*-
+
+This document describes the Sasybel source code, including a
+description of the source code structure and a description of the
+Sasybel project.
+
+*      [Structure]
+*      [Project Description]
+*      [Contextual Modal Type Theory]
+
+
+Structure
+=========
+
+
+src
+---
+  OMakefile
+  
+
+src/core:
+---------
+    abstract.ml         Abstraction
+    abstract.mli
+    ast.ml              Syntax of Sasybel
+    ast.mli
+    check.ml            Typechecking
+    check.mli           
+    common.ml
+    common.mli
+    context.ml          Contexts 
+    context.mli         
+    coverage.ml         Coverage checking
+    coverage.mli
+    ctxsub.ml           Context substitutions
+    ctxsub.mli          
+    cwhnf.ml            Contextual Weak head normalization
+    cwhnf.mli
+    debug.ml            Debugging flags
+    error.ml
+    error.mli           Error handling 
+    ext_print.ml        Printing of the expernal Beluga syntax
+    gensym.ml           Unique symbol generation
+    gensym.mli          
+    id.ml               Identifiers, used for variables, constants, etc.
+    id.mli               
+    lexer.ml            Lexer
+    lexer.mli  
+    monitor.ml          Timing 
+    monitor.mli
+    parser.ml           Parser
+    parser.mli
+    pretty.ml           Pretty printing
+    pretty.mli 
+    reconstruct.ml      Type reconstruction for LF and computations
+    reconstruct.mli
+    slexer.ml           Lexer for Sasybel
+    slexer.mli          
+    sparser.ml          The Sasybel parser
+    sparser.mli
+    stoken.ml           Tokens for parsing Sasybel
+    store.ml            Variable store, maps ids to variabin/interpreter name.slfble information, computing subordination
+    store.mli           
+    subord.ml           Using and displaying the subordination relation
+    subord.mli
+    substitution.ml     Explicit substitution operations (ordinary and contextual)
+    substitution.mli
+    syntax.ml           Syntax for the LF and computation layer of Beluga
+    syntax.mli
+    token.ml            Tokens for parsing
+    trail.ml            Trailing meta-variables for backtracking
+    trail.mli
+    transform.ml        The translation
+    transform.mli       
+    unify.ml            Higher-order unification
+    whnf.ml             Weak-head normalization
+    whnf.mli        
+
+
+src/main
+-----------
+
+   OMakefile
+   main.ml              Main top-level
+
+Code compilation
+================
+
+- In the directory where sasybel was installed, type to interpret Sasybel code:
+
+bin/interpreter name.sbel
+
+The ".sbel" will translate the code into the beluga external abstract syntax tree before the interpretation, the external abstact syntax is automatically prineted in Sasybel mode.
+
+- To interpret regular Beluga code the syntax is the following:
+
+bin/interpreter name.bel
+
+- The switch "+ext" can be used to get the external syntax of the beluga code printed:
+
+bin/interpreter +ext name.bel

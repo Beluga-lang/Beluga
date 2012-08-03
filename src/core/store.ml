@@ -315,7 +315,7 @@ module Cid = struct
                                     are factored into implicit arguments *)
       kind                : Int.Comp.kind;
       mutable frozen       : bool;
-      mutable constructors: Id.cid_comp_const list 
+      mutable constructors: Id.cid_comp_const list
     }
 
     let entry_list  = ref []
@@ -346,13 +346,13 @@ module Cid = struct
         cid_comp_typ
 
     let get = DynArray.get store
-    
+
     let freeze a =
           (get a).frozen <- true
-    
-    let addConstructor c typ = 
-      let entry = get typ in 
-        entry.constructors <- c :: entry.constructors 
+
+    let addConstructor c typ =
+      let entry = get typ in
+        entry.constructors <- c :: entry.constructors
 
     let clear () =
       DynArray.clear store;

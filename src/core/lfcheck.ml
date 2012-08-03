@@ -355,7 +355,7 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
 
     | CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi' ->
       (* if psi = psi' then *)
-      if not (psi = psi') then 
+      if not (psi = psi') then
 (*      if not (subsumes cD psi' psi) then *)
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 

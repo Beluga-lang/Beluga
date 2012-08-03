@@ -93,7 +93,7 @@ and apply_csub cvar cs = match (cvar, cs) with
       in
         apply offset cs
 
-  | (CInst (_, {contents =  Some cPhi }, _schema, _octx, _mctx), cs) -> 
+  | (CInst (_, {contents =  Some cPhi }, _schema, _octx, _mctx), cs) ->
       ctxnorm_dctx (cPhi, cs)
   | (CInst (_, {contents = None}, _ , _, _ ) , cs) -> CtxVar (cvar )
 
@@ -119,7 +119,7 @@ and ctxnorm_head (h,cs) = match h with
   | FPVar (u, s) -> FPVar (u, ctxnorm_sub (s, cs))
   | MVar (u, s) -> MVar (u, ctxnorm_sub (s, cs))
   | PVar (p, s) -> PVar (p, ctxnorm_sub (s, cs))
-  | MMVar (MInst(n, ({contents = None} as u), cD, cPsi, tA, cnstr), (t,s)) -> 
+  | MMVar (MInst(n, ({contents = None} as u), cD, cPsi, tA, cnstr), (t,s)) ->
       (* cnstr must be empty *)
       MMVar (MInst (n, u,ctxnorm_mctx (cD, cs), ctxnorm_dctx (cPsi, cs), ctxnorm_typ (tA, cs), cnstr)
                , (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs)))
@@ -138,7 +138,7 @@ and ctxnorm_spine (tS, cs) = match tS with
 
 and ctxnorm_sub (s, cs) = match s with
   | Shift (NoCtxShift, _k) -> s
-  | Shift (CtxShift (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
+  | Shift (CtxShift (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) ->
       begin match Context.dctxToHat cPhi with
         | (None, l) -> Shift (NoCtxShift, k+l)
         | (Some psi, l) -> Shift (CtxShift psi, k+l)
@@ -158,11 +158,11 @@ and ctxnorm_sub (s, cs) = match s with
             end
       end
 
-  | Shift (NegCtxShift (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
-      let rec undef_sub d s = 
-        if d = 0 then s 
-        else undef_sub (d-1) (Dot(Undef, s)) 
-      in 
+  | Shift (NegCtxShift (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) ->
+      let rec undef_sub d s =
+        if d = 0 then s
+        else undef_sub (d-1) (Dot(Undef, s))
+      in
 
       begin match Context.dctxToHat cPhi with
         | (None, d)     -> undef_sub d (Shift (NoCtxShift, k))
@@ -230,7 +230,7 @@ and ctxnorm_dctx (cPsi, cs) = match cPsi with
   | Null -> Null
   | DDec (cPsi', TypDecl (x, tA)) ->
       DDec (ctxnorm_dctx (cPsi', cs), TypDecl (x, ctxnorm_typ (tA, cs)))
-  | CtxVar (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)) -> 
+  | CtxVar (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)) ->
       ctxnorm_dctx (cPhi, cs)
   | CtxVar ctxvar -> begin match apply_csub ctxvar cs with
       | CtxVar cvar -> CtxVar cvar
@@ -241,8 +241,8 @@ and ctxnorm_dctx (cPsi, cs) = match cPsi with
 
 and ctxnorm_psihat (phat, cs) = match phat with
   | (None , _ ) -> phat
-  | (Some (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) -> 
-      (match Context.dctxToHat cPhi with 
+  | (Some (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)), k) ->
+      (match Context.dctxToHat cPhi with
         | (None, l) -> (None, l+k)
         | (Some cvar, l) ->
             begin match Context.dctxToHat (apply_csub cvar cs) with
@@ -543,10 +543,10 @@ and csub_dctx cD cPsi k cPhi =
              else
                (dprint (fun () -> "[csub_dctx] 1") ; (CtxVar (CtxOffset (offset' - 1)), false)))
 
-    | CtxVar (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)) ->         
+    | CtxVar (CInst (_n, {contents =  Some cPhi }, _schema, _octx, _mctx)) ->
         csub_dctx' cPhi
 
-    | CtxVar (CInst (_n, {contents =  None }, _schema, _octx, _mctx)) ->         
+    | CtxVar (CInst (_n, {contents =  None }, _schema, _octx, _mctx)) ->
         (cPhi , false)
 
     | DDec (cPhi, TypDecl (x, tA)) ->
@@ -903,7 +903,7 @@ let rec ctxToSub_mclosed cD psi cPsi =
       let s' = Whnf.cnormSub (s, MShift 1) in
       let result = Dot(Obj u, s') in
 
-      let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in 
+      let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
         (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
         (Dec (cD', MDecl(u_name , tA', Whnf.cnormDCtx (psi, MShift k))), result, k+1)
   in
@@ -959,7 +959,7 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
       dprint (fun () -> "composition = " ^ subToString composition);
       let u     = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in
 *)
-      let u     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi (tA, s) n Substitution.LF.id in 
+      let u     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi (tA, s) n Substitution.LF.id in
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
       (* cD ; cPhi |- s : cPsi' *)
       (* cD ; cPhi |- u[id] : [s]tA *)
@@ -990,16 +990,16 @@ let rec mctxToMSub cD = match cD with
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
 
-  | Dec (cD', CDecl(n, sW, _)) -> 
-      let t = mctxToMSub cD' in 
-      let cvar = Whnf.newCVar (Some n) sW in 
+  | Dec (cD', CDecl(n, sW, _)) ->
+      let t = mctxToMSub cD' in
+      let cvar = Whnf.newCVar (Some n) sW in
         MDot (CObj (CtxVar cvar), t)
 
 
 
 
 let rec mctxToMMSub cD0 cD = match cD with
-  | Empty -> MShift (Context.length cD0)   
+  | Empty -> MShift (Context.length cD0)
   | Dec (cD', MDecl(n, tA, cPsi)) ->
       let t     = mctxToMMSub cD0 cD' in
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
@@ -1016,12 +1016,12 @@ let rec mctxToMMSub cD0 cD = match cD with
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
 
-  | Dec (cD', CDecl (n, sW, _ )) -> 
+  | Dec (cD', CDecl (n, sW, _ )) ->
      (* This is somewhat a hack...  *)
-      let _     = dprint (fun () -> "[mctxToString] CDecl " ^ n.string_of_name) in 
-      let t = mctxToMMSub cD0 cD' in 
-      let _     = dprint (fun () -> "[mctxToString] CDecl continued " ^ n.string_of_name) in 
-      let cvar = Whnf.newCVar (Some n) sW in 
+      let _     = dprint (fun () -> "[mctxToString] CDecl " ^ n.string_of_name) in
+      let t = mctxToMMSub cD0 cD' in
+      let _     = dprint (fun () -> "[mctxToString] CDecl continued " ^ n.string_of_name) in
+      let cvar = Whnf.newCVar (Some n) sW in
         MDot (CObj (CtxVar cvar), t)
 
 
@@ -1029,9 +1029,9 @@ let rec mctxToMMSub cD0 cD = match cD with
 
 let rec cctxToCSub cO cD = match cO with
   | Empty -> CShift 0
-  | Dec (cO, CDecl (psi, schema, _)) -> 
+  | Dec (cO, CDecl (psi, schema, _)) ->
       let ctxVar = CtxVar (CInst (psi, ref None, schema, cO, cD)) in
-      let cs = cctxToCSub cO cD  in 
+      let cs = cctxToCSub cO cD  in
         CDot (ctxVar, cs)
 
 

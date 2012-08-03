@@ -166,15 +166,15 @@ module Comp = struct
      | Equal  of Loc.t  * exp_syn * exp_syn
      | Boolean of Loc.t * bool
 
- and pattern = 
-   | PatEmpty   of Loc.t * LF.dctx 
+ and pattern =
+   | PatEmpty   of Loc.t * LF.dctx
    | PatMetaObj of Loc.t * meta_obj
    | PatConst   of Loc.t * cid_comp_const * pattern_spine
    | PatFVar    of Loc.t * name
    | PatVar     of Loc.t * name * offset
    | PatPair    of Loc.t * pattern * pattern
-   | PatTrue    of Loc.t 
-   | PatFalse   of Loc.t 
+   | PatTrue    of Loc.t
+   | PatFalse   of Loc.t
    | PatAnn     of Loc.t * pattern * typ
 
  and pattern_spine =

@@ -136,18 +136,18 @@ let rec flattenSigmaTyp cPsi strec conv_list = match strec with
 *)
 
 let rec flattenDCtx cPsi = flattenDCtx' (Whnf.cnormDCtx (cPsi, Whnf.m_id))
-and flattenDCtx' cPsi = match cPsi with 
+and flattenDCtx' cPsi = match cPsi with
   | Int.LF.Null -> (Int.LF.Null , [])
   | Int.LF.CtxVar psi -> (Int.LF.CtxVar psi , [] )
-  | Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA)) -> 
-      let (cPhi, conv_list) = flattenDCtx' cPsi' in 
+  | Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA)) ->
+      let (cPhi, conv_list) = flattenDCtx' cPsi' in
         begin
           match Whnf.whnfTyp (tA, LF.id) with
             | (Int.LF.Sigma trec, s) -> let (cPhi', k) = flattenSigmaTyp cPhi (trec,s) conv_list in (cPhi', k::conv_list)
             | _          -> (Int.LF.DDec(cPhi, Int.LF.TypDecl(x, strans_typ (tA, LF.id) conv_list)), 1::conv_list)
         end
 
-  | Int.LF.DDec (cPsi', Int.LF.TypDeclOpt x) -> 
+  | Int.LF.DDec (cPsi', Int.LF.TypDeclOpt x) ->
       let (cPhi, conv_list) = flattenDCtx' cPsi' in
         (Int.LF.DDec(cPhi, Int.LF.TypDeclOpt x), 1::conv_list)
 

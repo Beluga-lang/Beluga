@@ -32,7 +32,7 @@ val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
 val abstrCovGoal  : LF.dctx -> LF.normal -> LF.typ -> LF.msub ->
                       LF.mctx * LF.dctx * LF.normal * LF.typ * LF.msub
 
-val abstrCovPatt  : Comp.gctx -> Comp.pattern -> Comp.typ -> LF.msub -> 
+val abstrCovPatt  : Comp.gctx -> Comp.pattern -> Comp.typ -> LF.msub ->
                      LF.mctx * Comp.gctx * Comp.pattern * Comp.typ * LF.msub
 
 val abstrSchema   : LF.schema  -> LF.schema

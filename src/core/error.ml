@@ -65,7 +65,7 @@ let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
   Format.fprintf ppf "%s@." title;
   Format.fprintf ppf
     "    @[<v>%s: %a@;\
-              %s: %a@]@." 
+              %s: %a@]@."
     title_obj1 pp_obj1 obj1
     title_obj2 pp_obj2 obj2
 

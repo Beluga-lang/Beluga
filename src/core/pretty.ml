@@ -592,10 +592,10 @@ module Int = struct
                 (PInstHashtbl.find pinst_hashtbl u)
             with
               | Not_found ->
-                  let sym = match Store.Cid.Typ.gen_mvar_name tA with 
+                  let sym = match Store.Cid.Typ.gen_mvar_name tA with
                               | Some vGen -> vGen ()
                               | None -> Gensym.MVarData.gensym ()
-                  in 
+                  in
                       PInstHashtbl.replace pinst_hashtbl u sym
                     ; fprintf ppf "?#%s" sym
           end
@@ -622,7 +622,7 @@ module Int = struct
                       InstHashtbl.replace inst_hashtbl u sym
                     ; fprintf ppf "?%s" sym
           end
-       
+
       | LF.MInst (_, {contents = Some m}, cD, cPsi, _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
@@ -664,12 +664,12 @@ module Int = struct
       | LF.PInst _ ->               fprintf ppf "?PINST _ "
       | LF.Inst _ ->               fprintf ppf "?INST _ "
 
-    and fmt_ppr_lf_ctx_var cD ppf = function     
-      | LF.CInst (n, {contents = None}, _schema, _cO, _cD) -> 
+    and fmt_ppr_lf_ctx_var cD ppf = function
+      | LF.CInst (n, {contents = None}, _schema, _cO, _cD) ->
           fprintf ppf "%s"
             (R.render_name n)
 
-      | LF.CInst (_n, {contents = Some cPsi}, _schema, _cO', cD') -> 
+      | LF.CInst (_n, {contents = Some cPsi}, _schema, _cO', cD') ->
           fprintf ppf "%a"
           (fmt_ppr_lf_dctx cD' 0) cPsi
 
@@ -912,16 +912,16 @@ module Int = struct
               (r_paren_if cond)
 
 
-    let rec fmt_ppr_meta_typ cD lvl ppf = function 
-      | Comp.MetaTyp (tA, cPsi) -> 
+    let rec fmt_ppr_meta_typ cD lvl ppf = function
+      | Comp.MetaTyp (tA, cPsi) ->
           fprintf ppf "[%a.%a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_typ cD cPsi lvl) tA
-      | Comp.MetaSchema (s_cid) -> 
+      | Comp.MetaSchema (s_cid) ->
           fprintf ppf "%s" (R.render_cid_schema s_cid)
 
-    let rec fmt_ppr_meta_spine cD lvl ppf = function 
-      | Comp.MetaNil ->           
+    let rec fmt_ppr_meta_spine cD lvl ppf = function
+      | Comp.MetaNil ->
           fprintf ppf ""
       | Comp.MetaApp (mO, mS) ->
           fprintf ppf " %a%a"
@@ -955,7 +955,7 @@ module Int = struct
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_head cD cPsi 0) h
               (r_paren_if cond)
-         
+
     let rec fmt_ppr_cmp_typ cD lvl ppf = function
       | Comp.TypBase (_, c, mS)->
           let cond = lvl > 1 in
@@ -1032,9 +1032,9 @@ module Int = struct
             (fmt_ppr_pat_obj cD cG (lvl+1)) pat
             (fmt_ppr_pat_spine cD cG lvl) pat_spine)
 
-    and fmt_ppr_pat_obj cD cG lvl ppf = function 
-      | Comp.PatEmpty (_, cPsi) -> 
-          let cond = lvl > 1 in 
+    and fmt_ppr_pat_obj cD cG lvl ppf = function
+      | Comp.PatEmpty (_, cPsi) ->
+          let cond = lvl > 1 in
             fprintf ppf "%s[%a. {}]%s"
               (l_paren_if cond)
               (fmt_ppr_lf_dctx cD 0) cPsi
@@ -1056,10 +1056,10 @@ module Int = struct
       | Comp.PatPair (_, pat1, pat2) ->
           fprintf ppf "(%a , %a)"
             (fmt_ppr_pat_obj cD cG 0) pat1
-            (fmt_ppr_pat_obj cD cG 0) pat2            
+            (fmt_ppr_pat_obj cD cG 0) pat2
       | Comp.PatTrue _ -> fprintf ppf "ttrue"
       | Comp.PatFalse _ -> fprintf ppf "ffalse"
-      | Comp.PatAnn (_, pat, tau) -> 
+      | Comp.PatAnn (_, pat, tau) ->
           fprintf ppf "(%a : %a)"
             (fmt_ppr_pat_obj cD cG 0) pat
             (fmt_ppr_cmp_typ cD 0) tau
@@ -1068,7 +1068,7 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_var cG offset)
 
-      | Comp.PatFVar (_, name ) -> 
+      | Comp.PatFVar (_, name ) ->
           fprintf ppf "%s"
             (R.render_name name)
 
@@ -1278,7 +1278,7 @@ module Int = struct
               (fmt_ppr_lf_sub cD cPsi 0) s
               (r_paren_if cond)
 
-      | Comp.PairVal (loc, i1, i2) -> 
+      | Comp.PairVal (loc, i1, i2) ->
             fprintf ppf "(%a , %a)"
               (fmt_ppr_cmp_exp_syn cD cG 1) i1
               (fmt_ppr_cmp_exp_syn cD cG 1) i2
@@ -1298,10 +1298,10 @@ module Int = struct
               (fmt_ppr_cmp_exp_syn cD cG 1) i1
               (fmt_ppr_cmp_exp_syn cD cG 1) i2
 
-      | Comp.Boolean true -> 
+      | Comp.Boolean true ->
           fprintf ppf "ttrue"
 
-      | Comp.Boolean false -> 
+      | Comp.Boolean false ->
           fprintf ppf "ffalse"
 
     and fmt_ppr_cmp_value lvl ppf = function
@@ -1380,12 +1380,12 @@ module Int = struct
             (* NOTE: Technically: cD |- cG ctx and
              *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
              * -bp
-             *) 
+             *)
             (fmt_ppr_cmp_exp_chk cD1' cG 1) e
 
-      | Comp.Branch (_, cD1', cG', pat, t, e) -> 
-          let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in  
-          let cG_ext = Context.append cG_t cG' in 
+      | Comp.Branch (_, cD1', cG', pat, t, e) ->
+          let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
+          let cG_ext = Context.append cG_t cG' in
 
           fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ . %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
              (fmt_ppr_cmp_branch_prefix  0) cD1'
@@ -1590,7 +1590,7 @@ module Int = struct
       fmt_ppr_lf_kind cPsi std_lvl str_formatter tK
       ; flush_str_formatter ()
 
-    let tupleToString cD cPsi tuple = 
+    let tupleToString cD cPsi tuple =
       fmt_ppr_lf_tuple cD cPsi std_lvl str_formatter tuple
       ; flush_str_formatter ()
 
@@ -1637,8 +1637,8 @@ module Int = struct
       ; flush_str_formatter ()
 
 
-    let metaObjToString  cD mO = 
-      let mO' = Whnf.cnormMetaObj (mO, Whnf.m_id) in 
+    let metaObjToString  cD mO =
+      let mO' = Whnf.cnormMetaObj (mO, Whnf.m_id) in
         fmt_ppr_meta_obj cD std_lvl str_formatter mO'
         ; flush_str_formatter ()
 
@@ -1661,16 +1661,16 @@ module Int = struct
       fmt_ppr_cmp_exp_syn cD cG std_lvl str_formatter i
       ; flush_str_formatter ()
 
-    let valueToString v = 
+    let valueToString v =
       fmt_ppr_cmp_value std_lvl str_formatter v
       ; flush_str_formatter ()
 
-    let branchToString cD cG  b    = 
+    let branchToString cD cG  b    =
       fmt_ppr_cmp_branch cD cG std_lvl str_formatter b
       ; flush_str_formatter ()
 
-    let compTypToString cD tau  = 
-      let tau' = Whnf.normCTyp (Whnf.cnormCTyp (tau, Whnf.m_id)) in 
+    let compTypToString cD tau  =
+      let tau' = Whnf.normCTyp (Whnf.cnormCTyp (tau, Whnf.m_id)) in
         fmt_ppr_cmp_typ cD std_lvl str_formatter tau'
         ; flush_str_formatter ()
 

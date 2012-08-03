@@ -15,7 +15,7 @@ let addToHat (ctxvarOpt, length) =
 (* More appropriate: Psi into psihat  Oct  4 2008 -bp *)
 let rec dctxToHat = function
   | Null            -> (None, 0)
-  | CtxVar (CInst (_, {contents = Some cPsi}, _G, _cD, _ ))   -> 
+  | CtxVar (CInst (_, {contents = Some cPsi}, _G, _cD, _ ))   ->
       dctxToHat cPsi
   | CtxVar psi      -> (Some psi, 0)
   | DDec (cPsi', _) -> addToHat (dctxToHat cPsi')
@@ -83,7 +83,7 @@ let ctxDec cPsi k =
     | (DDec (cPsi', _), k') ->
         ctxDec' (cPsi', k'-1)
 
-    | (CtxVar (CInst (_psiname, {contents = Some (cPsi)}, _, _, _ )), k) -> 
+    | (CtxVar (CInst (_psiname, {contents = Some (cPsi)}, _, _, _ )), k) ->
         ctxDec' (cPsi, k)
     (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in
@@ -112,7 +112,7 @@ let ctxSigmaDec cPsi k =
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
-    | (CtxVar (CInst (_n, {contents = Some cPhi }, _schema, _octx, _mctx)) , k) -> 
+    | (CtxVar (CInst (_n, {contents = Some cPhi }, _schema, _octx, _mctx)) , k) ->
         ctxDec' (cPhi, k)
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in
@@ -219,7 +219,7 @@ let emptyContextVariable cPsi = (* wrong *)
   in
     inner cPsi
 
-let rec lookup cG k = match (cG, k) with 
+let rec lookup cG k = match (cG, k) with
   | (Dec (_cG', Comp.CTypDecl (_,  tau)), 1) ->  Some tau
   | (Dec (_cG', _ ), 1) ->  None
   | (Dec ( cG', _ ), k) ->
@@ -230,7 +230,7 @@ let rec lookupSchema cD psi_offset = match (cD, psi_offset) with
   | (Dec (cD, _) , i) ->
       lookupSchema cD (i-1)
 
-and lookupCtxVar cD cvar = 
+and lookupCtxVar cD cvar =
   let rec lookup cD offset = match cD with
       | Empty -> raise (Error.Violation "Context variable not found")
       | Dec (cD, CDecl (psi, schemaName, _)) ->

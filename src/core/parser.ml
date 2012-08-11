@@ -15,10 +15,17 @@ exception MixError of (Format.formatter -> unit)
 exception IllFormedDataDecl
 exception WrongConsType of Id.name * Id.name * Id.name
 
+(** Remove any trailing newlines. Named after the Perl function that
+    does the same thing. *)
+let chomp = function
+  | "" -> ""
+  | s when s.[String.length s - 1] = '\n' -> String.sub s 0 (String.length s - 1)
+  | s -> s
+
 let _ = Error.register_printer
   (fun (Grammar.Loc.Exc_located (loc, exn)) ->
     Error.print_with_location loc (fun ppf ->
-      Format.fprintf ppf "Parse Error: %s" (Printexc.to_string exn)))
+      Format.fprintf ppf "Parse Error: %s" (chomp (Printexc.to_string exn))))
 
 let _ = Error.register_printer
   (fun (Stream.Error str) ->

@@ -1,0 +1,14 @@
+datatype Colour : ctype =
+| Blue : Colour
+| Red  : Colour
+;
+
+rec same : Colour -> Colour -> Bool =
+    fn x => fn y => case (x, y) of
+       | (Blue, Blue) => ttrue
+       | (Red, Red) => ttrue
+       | (x, y) => ffalse
+;
+
+let t1 = same (Blue) (Blue)
+;

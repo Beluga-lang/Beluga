@@ -1525,6 +1525,9 @@ and elHead loc recT cD cPsi = function
 
   | Apx.LF.PVar (Apx.LF.PInst (Int.LF.PVar (p,r), tA, cPhi), s) -> 
       begin try
+        let _ = dprint (fun () -> "[elHead] PInst : " ^ P.headToString cD cPhi (Int.LF.PVar (p,r))) in 
+        let _ = dprint (fun () -> "[elHead] PInst cPhi : " ^ P.dctxToString cD  cPhi ) in 
+        let _ = dprint (fun () -> "[elHead] PInst target cPsi : " ^ P.dctxToString cD cPsi ) in 
         let s' = elSub loc recT cD cPsi s cPhi in 
         let r' = Substitution.LF.comp r s' in 
          (Int.LF.PVar (p, r') , (tA, r')) 

@@ -235,22 +235,26 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
         (Apx.LF.Proj(bvar, k), fvs')
 
   | Ext.LF.PVar (loc, p, s) ->
-      begin try
-        let offset = CVar.index_of_name cvars (CVar.PV p) in
-        let (s' , fvs') = index_sub cvars bvars fvs s in
-          (Apx.LF.PVar (Apx.LF.Offset offset, s') , fvs')
-      with Not_found ->
-	if closed_flag then 
-	  (if lookup_fv fvars (FPV p) then 
-          let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
-            (Apx.LF.FPVar (p, s') , (fvars' , closed_flag))	
+      if lookup_fv fvars (FPV p) then 
+        let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
+          (Apx.LF.FPVar (p, s') , (fvars' , closed_flag))	
+      else 
+        begin try
+          let offset = CVar.index_of_name cvars (CVar.PV p) in
+          let (s' , fvs') = index_sub cvars bvars fvs s in
+            (Apx.LF.PVar (Apx.LF.Offset offset, s') , fvs')
+        with Not_found ->
+	  if closed_flag then 
+	    ((* if lookup_fv fvars (FPV p) then 
+                let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
+                (Apx.LF.FPVar (p, s') , (fvars' , closed_flag))	
+	        else *)
+	      raise (Error (loc, UnboundName p))
+	    )
 	  else 
-	    raise (Error (loc, UnboundName p))
-	  )
-	else 
-          let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
-            (Apx.LF.FPVar (p, s') , (FPV p :: fvars' , closed_flag))	
-      end
+            let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
+              (Apx.LF.FPVar (p, s') , (FPV p :: fvars' , closed_flag))	
+        end
 
   | Ext.LF.ProjPVar (loc, k, (p, s)) ->
       let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in

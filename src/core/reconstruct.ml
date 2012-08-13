@@ -1258,6 +1258,7 @@ and elExp' cD cG i = match i with
             try
               let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
               let _     = Unify.unifyDCtx cD cPsi cPsi' in
+              let cPsi' = Whnf.normDCtx cPsi' in 
               let psihat' = Context.dctxToHat cPsi'  in
               begin match m with
                 | Apx.LF.Root (_, h, Apx.LF.Nil) ->

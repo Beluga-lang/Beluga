@@ -370,7 +370,7 @@ and mfrontMSub ft t = match ft with
                             (* Undef should not happen ! *)
                       end 
           | PVar (p, s') -> mfrontMSub (PObj (phat, PVar (p, LF.comp s' s))) t
-          | MPVar (q, (t', r')) -> mfrontMSub (PObj (phat, MPVar (q, ((mcomp t' ms), s)))) t
+          | MPVar (q, (t', r')) -> mfrontMSub (PObj (phat, MPVar (q, ((mcomp t' ms), LF.comp r' s)))) t
           (* anything else not allowed *)
         end 
 
@@ -579,8 +579,9 @@ and norm (tM, sigma) = match tM with
                         | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
                             (* Undef should not happen ! *)
                       end 
-          | PVar (p, s) -> Root (loc, PVar (p, s), normSpine (tS, sigma))
-          | MPVar (q, (t', r')) -> norm (Root (loc, MPVar (q, (t', r')), normSpine (tS, sigma)), LF.id)
+          | PVar (p, s) -> Root (loc, PVar (p, LF.comp(LF.comp s r) sigma), normSpine (tS, sigma))
+          | MPVar (q, (t', r')) -> 
+              norm (Root (loc, MPVar (q, (t', LF.comp r' r)), tS), sigma)
           (* anything else not allowed *)
         end 
 
@@ -632,12 +633,12 @@ and norm (tM, sigma) = match tM with
           | BVar i -> begin match LF.bvarSub i (LF.comp r sigma) with
                         | Obj tM -> reduce (tM, LF.id) (normSpine (tS, sigma))
                         | Head (BVar k) -> Root (loc, Proj(BVar k , index), normSpine (tS, sigma))
-                        | Head h        -> norm (Root (loc, Proj(h, index), normSpine (tS, sigma)), LF.id)
+                        | Head h        -> norm (Root (loc, Proj(h, index), tS), sigma)
                         | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
                             (* Undef should not happen ! *)
                       end 
-          | PVar (p, s) -> Root (loc, Proj(PVar (p, s), index), normSpine (tS, sigma))
-          | MPVar (q, (t', r')) -> norm (Root (loc, Proj(MPVar (q, (t', r')), index), normSpine (tS, sigma)), LF.id)
+          | PVar (p, s) -> Root (loc, Proj(PVar (p, LF.comp (LF.comp s r) sigma), index), normSpine (tS, sigma))
+          | MPVar (q, (t', r')) -> norm (Root (loc, Proj(MPVar (q, (t', LF.comp r' r)), index), tS), sigma)
           (* anything else not allowed *)
         end 
 
@@ -720,7 +721,7 @@ and normFt ft = match ft with
         begin match h' with
           | BVar i -> LF.bvarSub i r
           | PVar (p, s) -> Head (PVar (p, LF.comp r s))              
-          | MPVar (q, (t',r')) -> Head (MPVar (q, (t', LF.comp r r')))
+          | MPVar (q, (t',r')) -> normFt (Head (MPVar (q, (t', LF.comp r' r))))
         end 
   | Head (MPVar (p, (t, s')))     -> Head (MPVar (p, (cnormMSub t, normSub s')))
   | Head (MMVar (MInst (_n, { contents = Some tN}, _, _, _, _), (t, s'))) -> 
@@ -738,7 +739,7 @@ and normFt ft = match ft with
         begin match h' with
           | BVar i -> let Head h = LF.bvarSub i r in Head (Proj(h,k))
           | PVar (p, s) -> Head (Proj(PVar (p, LF.comp r s), k))              
-          | MPVar (q, (t',r')) -> Head (Proj(MPVar (q, (t', LF.comp r r')), k))
+          | MPVar (q, (t',r')) -> Head (Proj(MPVar (q, (t', LF.comp r' r)), k))
         end 
   | Head (Proj (MPVar (p, (ms,s')), k)) -> Head (Proj (MPVar (p, (cnormMSub ms, normSub s')), k)) 
   | Head h                        -> Head h 
@@ -1264,23 +1265,27 @@ and cnorm (tM, t) = match tM with
             | Offset k  -> 
                 let _ = dprint (fun () -> "[cnormHead] Pvar offset") in 
                 begin match LF.applyMSub k t with
-                  | MV  k'            -> PVar (Offset k', cnormSub (r, t))
+                  | MV  k'            -> (dprint (fun () -> "[cnormHead] MV " ^ string_of_int k' );
+                                          PVar (Offset k', cnormSub (r, t)))
                   | PObj (_phat, BVar i) -> 
                       let Head h = LF.bvarSub i r in h
-              | PObj (_phat, PVar(Offset i, r')) -> 
-                  PVar(Offset i, LF.comp r' r)
+              | PObj (_phat, PVar(Offset i, r')) ->                   
+                  (dprint (fun () -> "[cnormHead] replace " ^ string_of_int k ^ " with pvar offset " ^ string_of_int i);
+                  PVar(Offset i, LF.comp r' r))
                     
               | PObj (_phat, PVar(PInst (_, {contents = None}, _, _, _ ) as p, r')) -> 
                   PVar(p, LF.comp r' r)                   
                     
               | PObj (_phat, PVar(PInst (_, {contents = Some (PVar (x, rx))}, _, _, _ ), r')) -> 
-                  PVar (x, LF.comp rx (LF.comp r' r))
+                  (dprint (fun () -> "[cnormHead] PInst -  Some PVar ");
+                  PVar (x, LF.comp rx (LF.comp r' r)))
                     
               | PObj (_phat, PVar(PInst (_, {contents = Some (BVar x)}, _, _, _ ), r')) -> 
                   begin match LF.bvarSub x r' with
                     | Head (BVar i)  ->  
                         let Head h = LF.bvarSub i r in h
-                    | Head (PVar(q, s)) -> PVar(q,  LF.comp s r)
+                    | Head (PVar(q, s)) -> (dprint (fun () -> "[cnormHead] PInst - Some BVar");
+                                            PVar(q,  LF.comp s r))
                         (* Other case MObj _ should not happen -- ill-typed *)
                   end
                     

@@ -181,7 +181,6 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                   | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in 
 
                 let t' = drop t l_delta in
-
                   Apx.LF.PVar (Apx.LF.PInst (h, Whnf.cnormTyp (tP,t'), Whnf.cnormDCtx (cPhi,t')), 
                                cnormApxSub cD delta s (cD'', t))
           end

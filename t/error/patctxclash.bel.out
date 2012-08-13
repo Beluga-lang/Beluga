@@ -1,5 +1,5 @@
 Context clash in pattern.
-    Pattern's context:
+    Pattern's context: 
     Scrutinee's context: g
 Note that we do not allow the context in the pattern
 to be more general than the context in the scrutinee.

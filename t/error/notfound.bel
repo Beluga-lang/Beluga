@@ -10,7 +10,7 @@ datatype nat: type =
 | zero   : nat
 | succ : nat → nat
 ;
-
+ 
 datatype nlist: nat → type =
 | nnil : nlist zero
 | ncons : tm  → nlist N → nlist (succ N)
@@ -18,8 +18,8 @@ datatype nlist: nat → type =
 
 schema tctx = tm ;
 
-%Not_found
-rec tail:[g. nlist (succ M)] -> [g.nlist M] =
+% Not_found (the context schema for g must be specified)
+rec tail: [g. nlist (succ M)] -> [g.nlist M] =
    fn l => case l of
        | [g. ncons T (L'..)] => [g.(L'..)]
 ;

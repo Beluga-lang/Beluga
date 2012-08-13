@@ -381,7 +381,8 @@ let rec elMCtx recT delta = match delta with
 (* Given a type-level constant a of type K , it will generate the most general
  * type a U1 ... Un
  *)
-let mgTyp cD cPsi a kK =
+
+let mgAtomicTyp cD cPsi a kK =
   let (flat_cPsi, conv_list) = flattenDCtx cPsi in
     let s_proj   = gen_conv_sub conv_list in
 
@@ -423,6 +424,34 @@ let mgTyp cD cPsi a kK =
 
   in
     Int.LF.Atom (Syntax.Loc.ghost, a, genSpine (kK, LF.id))
+
+
+let rec mgTyp cD cPsi tA = begin match tA with 
+  | Int.LF.Atom (_, a, _) -> 
+      mgAtomicTyp cD cPsi a (Typ.get a).Typ.kind
+
+  | Int.LF.Sigma trec -> 
+      Int.LF.Sigma (mgTypRec cD cPsi trec )
+
+  | Int.LF.PiTyp ((tdecl, dep), tA) -> 
+   let tdecl' = mgTypDecl cD cPsi tdecl in 
+     Int.LF.PiTyp ((tdecl', dep), 
+		   mgTyp cD (Int.LF.DDec (cPsi, tdecl')) tA)
+ end
+
+ and mgTypDecl cD cPsi tdecl = begin match tdecl with 
+   | Int.LF.TypDecl (x, tA) -> 
+       Int.LF.TypDecl (x, mgTyp cD cPsi tA)
+ end 
+
+ and mgTypRec cD cPsi trec = begin match trec with 
+   | Int.LF.SigmaLast tA -> Int.LF.SigmaLast (mgTyp cD cPsi tA)
+   | Int.LF.SigmaElem (x, tA, trec) -> 
+       let tA' = mgTyp cD cPsi tA in 
+       let trec' = mgTypRec cD (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA'))) trec in 
+	 Int.LF.SigmaElem (x, tA', trec')
+ end	 
+
 
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
 
@@ -762,24 +791,35 @@ let rec mgCompTyp cD (loc, c) =
   in
     Int.Comp.TypBase (loc, c, genMetaSpine (cK, Whnf.m_id))
 
+let rec mgCtx cD' (cD, cPsi) = begin match cPsi with 
+  | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) -> 
+      let (n , sW) = Whnf.mctxCDec cD psi_var in
+	Int.LF.CtxVar (Int.LF.CInst (n, ref None, sW,
+                                     Int.LF.Empty, cD))
+  | Int.LF.Null -> Int.LF.Null
+  | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) -> 
+      let cPsi' = mgCtx cD' (cD, cPsi) in 
+      let tA'   = mgTyp cD' cPsi' tA in 
+	Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA'))
+   end
 
-let rec inferPatTyp' cD' tau = match tau with
+let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
   | Int.Comp.TypBool -> Int.Comp.TypBool
   | Int.Comp.TypCross (tau1, tau2) ->
-      let tau1' = inferPatTyp' cD' tau1 in
-      let tau2' = inferPatTyp' cD' tau2 in
+      let tau1' = inferPatTyp' cD' (cD_s, tau1) in
+      let tau2' = inferPatTyp' cD' (cD_s, tau2) in
         Int.Comp.TypCross (tau1', tau2')
   | Int.Comp.TypBase (loc, c, _ )  ->
       mgCompTyp cD' (loc, c)
   | Int.Comp.TypArr _  ->
       raise (Error.Violation "Patterns cannot have function type")
-(*  | _ -> raise Error.NotImplemented*)
   | Int.Comp.TypBox (loc, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
-      let tP' = mgTyp cD' cPsi a (Typ.get a).Typ.kind  in
-        Int.Comp.TypBox (loc, tP', cPsi)
+      let cPsi' = mgCtx cD' (cD_s, cPsi) in 
+      let tP' = mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind  in
+        Int.Comp.TypBox (loc, tP', cPsi')
 
 
-let rec inferPatTyp cD' tau = inferPatTyp' cD' (Whnf.cnormCTyp (tau, Whnf.m_id))
+let rec inferPatTyp cD' (cD_s, tau_s) = inferPatTyp' cD' (cD_s, Whnf.cnormCTyp (tau_s, Whnf.m_id))
 
 (* *******************************************************************************)
 
@@ -1389,9 +1429,9 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
                     let tP' = Lfrecon.elTyp Lfrecon.Pibox cD' cPsi' a  in
                       (* recTyp Lfrecon.Pibox cD' cPsi' (tP', LF.id) ;*) tP'
                 | PartialTyp a  ->
-                    let _ = dprint (fun () -> "[mgTyp] Generate mg type in context " ^
+                    let _ = dprint (fun () -> "[mgAtomicTyp] Generate mg type in context " ^
                                       P.dctxToString cD' cPsi' ) in
-                      mgTyp cD' cPsi' a (Typ.get a).Typ.kind
+                      mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind
                 end in
   let _ = dprint (fun () -> "[recMObj] Reconstruction of pattern of type  " ^
                     P.typToString cD' cPsi' (tP', LF.id)) in
@@ -1682,7 +1722,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cpsi in
       let Int.Comp.TypBox (_ , (Int.LF.Atom(_, a, _) as _tQ), cPsi_s) = tau_s  in
       let _       = inferCtxSchema loc (cD_s, cPsi_s) (cD, cPsi) in
-      let tP     =  mgTyp cD cPsi a (Typ.get a).Typ.kind in
+      let tP     =  mgAtomicTyp cD cPsi a (Typ.get a).Typ.kind in
       let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of empty type  " ^
                         P.typToString cD cPsi (tP, LF.id)) in
       let ttau' = (Int.Comp.TypBox (loc, tP, cPsi), Whnf.m_id) in
@@ -1696,7 +1736,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
         (cG', pat', ttau')
 
   | _ ->
-      let tau_p = inferPatTyp cD tau_s in
+      let tau_p = inferPatTyp cD (cD_s, tau_s) in
       let _ = dprint (fun () -> "[inferPatTyp] : tau_p = " ^ P.compTypToString cD  tau_p) in
       let ttau' = (tau_p, Whnf.m_id) in
       let (cG', pat')  = elPatChk cD Int.LF.Empty pat ttau' in
@@ -1723,7 +1763,7 @@ and recPatObj cD pat (cD_s, tau_s) =
 
 (* ********************************************************************************)
 (* recPattern will become obsolete when we switch to the new syntax *)
- and recPattern (cD, cPsi) delta psi m tPopt =
+(*  and recPattern (cD, cPsi) delta psi m tPopt =
   let cD'     = elMCtx  Lfrecon.Pibox delta in
   let cPsi'   = Lfrecon.elDCtx  Lfrecon.Pibox cD' psi in
   let _       = inferCtxSchema Syntax.Loc.ghost (cD, cPsi) (cD', cPsi') in
@@ -1736,9 +1776,9 @@ and recPatObj cD pat (cD_s, tau_s) =
                       let tP' = Lfrecon.elTyp Lfrecon.Pibox cD' cPsi' a  in
                         (* recTyp Lfrecon.Pibox cD' cPsi' (tP', LF.id) ;*) tP'
                   | PartialTyp a  ->
-                      let _ = dprint (fun () -> "[mgTyp] Generate mg type in context " ^
+                      let _ = dprint (fun () -> "[mgAtomicTyp] Generate mg type in context " ^
                                         P.dctxToString cD' cPsi' ) in
-                      mgTyp cD' cPsi' a (Typ.get a).Typ.kind
+                      mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind
                 end in
 
   let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of type  " ^
@@ -1765,7 +1805,7 @@ and recPatObj cD pat (cD_s, tau_s) =
   let k       = Context.length cD'  in
     ((n,k), cD1', cPsi1', Some tR1', tP1')
 
-
+*)
 (* and recEmptyPattern (cD, cPsi) delta psi tPopt =
   let cD'     = elMCtx  Lfrecon.Pibox delta in
   let cPsi'   = Lfrecon.elDCtx  Lfrecon.Pibox cD' psi in
@@ -1778,9 +1818,9 @@ and recPatObj cD pat (cD_s, tau_s) =
                       let tP' = Lfrecon.elTyp Lfrecon.Pibox cD' cPsi' a  in
                         (* recTyp Lfrecon.Pibox cD' cPsi' (tP', LF.id) ;*) tP'
                   | PartialTyp a  ->
-                      let _ = dprint (fun () -> "[mgTyp] Generate mg type in context " ^
+                      let _ = dprint (fun () -> "[mgAtomicTyp] Generate mg type in context " ^
                                         P.dctxToString cD' cPsi' ) in
-                      mgTyp cD' cPsi' a (Typ.get a).Typ.kind
+                      mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind
                 end in
 
   let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of type  " ^

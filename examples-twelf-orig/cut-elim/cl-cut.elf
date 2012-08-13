@@ -48,7 +48,7 @@ truer^ : (pos (true) -> @).
 falsel^ : (neg (false) -> @).
 
 forallr^ : ({a:i} pos (A a) -> @)
-	    -> (pos (forall A) -> @). 
+	    -> (pos (forall A) -> @).
 
 foralll^ : {T:i} (neg (A T) -> @)
 	    -> (neg (forall A) -> @).

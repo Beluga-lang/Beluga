@@ -20,7 +20,7 @@ acker : nat -> nat -> nat -> type.
 %mode acker +X +Y -Z.
 
 a_1   : acker z Y (s Y).
-a_2   : acker (s X) z Z 
+a_2   : acker (s X) z Z
 	 <- acker X (s z) Z.
 a_3   : acker (s X) (s Y) Z
 	 <- acker (s X) Y Z'

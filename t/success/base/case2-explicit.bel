@@ -13,5 +13,5 @@ mlam g => fn e =>
     [g. z] : [g. nat] => [g. z]
   | {U:[g. nat]}
      [g. suc (U ..)] : [g. nat] => copynat [g] [g. (U ..)]
-    
+
 ;

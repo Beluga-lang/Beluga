@@ -23,7 +23,7 @@ acker : nat -> nat -> nat -> type.
 %mode acker +X +Y -Z.
 
 a_1   : acker z Y (s Y).
-a_2   : acker (s X) z Z 
+a_2   : acker (s X) z Z
 	 <- acker X (s z) Z.
 a_3   : acker (s X) (s Y) Z
 	 <- acker (s X) Y Z'
@@ -54,8 +54,8 @@ m'_z2 : min z Y z.
 m'_ss : min X Y Z
 	<- minus X Y Z.
 
-%terminates (X X') (minus X _ _) (min X' _ _).  
-%reduces (Z Z') <= (X X') (minus X Y Z) (min X' _ Z'). 
+%terminates (X X') (minus X _ _) (min X' _ _).
+%reduces (Z Z') <= (X X') (minus X Y Z) (min X' _ Z').
 
 
 rminus: nat -> nat -> nat -> type.        %name rminus M.
@@ -92,4 +92,4 @@ gcd_s1: gcd (s X) (s Y) Z
 	 <- gcd X' (s Y)  Z.
 
 %terminates [X Y] (gcd X Y _).
-%terminates {X Y}  (gcd X Y Z).  
+%terminates {X Y}  (gcd X Y Z).

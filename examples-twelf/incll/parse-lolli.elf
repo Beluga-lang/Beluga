@@ -66,21 +66,21 @@ stv : trm (list wd) -> trm (list wd) -> trm prs -> atm.
 snt_0 : prog (
 ^(snt P1 P2 (snt' N V))
     <=  ^(np P1 P0 N)
-    <<= ^(vp P0 P2 V) 
+    <<= ^(vp P0 P2 V)
 ).
 
 % vp P1 P2 (vp T N) :- tv P1 P0 T, np P0 P2 N.
 vp_0 : prog (
 ^(vp P1 P2 (vp' T N))
-    <<= ^(tv P1 P0 T) 
-    <<= ^(np P0 P2 N) 
+    <<= ^(tv P1 P0 T)
+    <<= ^(np P0 P2 N)
 ).
 
 % vp P1 P2 (vp Stv Sbar) :- stv P1 P0 Stv, sbar P0 P2 Sbar.
 vp_1 : prog (
 ^(vp P1 P2 (vp' T N))
-    <<= ^(stv P1 P0 T) 
-    <<= ^(sbar P0 P2 N) 
+    <<= ^(stv P1 P0 T)
+    <<= ^(sbar P0 P2 N)
 ).
 
 % sbar (that::P1) P2 (sbar that S) :- sent P1 P2 S.
@@ -90,18 +90,18 @@ sbar_0 : prog (
 ).
 
 % np P1 P2 (np D N) :- det P1 P0 D, n P0 P2 N.
-np_0 : prog ( 
+np_0 : prog (
 ^(np P1 P2 (npD' D N))
     <<= ^(det P1 P0 D)
-    <<= ^(n P0 P2 N) 
+    <<= ^(n P0 P2 N)
 ).
 
 % np P1 P2 (np D N R) :- det P1 P0 D, n P0 P3 N, rel P3 P2 R.
 np_1 : prog (
 ^(np P1 P2 (npR' D N R))
-    <<= ^(det P1 P0 D) 
-    <<= ^(n P0 P3 N) 
-    <<= ^(rel P3 P2 R) 
+    <<= ^(det P1 P0 D)
+    <<= ^(n P0 P3 N)
+    <<= ^(rel P3 P2 R)
 ).
 
 % np P1 P2 (np P) :- pn P1 P2 P.
@@ -110,67 +110,67 @@ np_2 : prog (
     <<= ^(pn P1 P2 P)
 ).
 
-% rel (whom::P1) P2 (rel whom S) :- 
+% rel (whom::P1) P2 (rel whom S) :-
 %	(forall Z\ np Z Z (np gap)) -o sent P1 P2 S.
 rel_0 : prog (
-^(rel (whom | P1) P2 (rel' whom' S)) 
+^(rel (whom | P1) P2 (rel' whom' S))
     <<= ((forall (list wd) [Z] ^(np Z Z (np' gap))) =0 ^(snt P1 P2 S))
 ).
 
 % % lexical items
 
 % det (the::L) L (det the).
-det_the : prog ( 
-	^(det (the | L) L (det' the')) 
+det_the : prog (
+	^(det (the | L) L (det' the'))
 ).
 
 % n (man::L) L (n man).
-n_man : prog ( 
-	^(n (man | L) L (n' man')) 
+n_man : prog (
+	^(n (man | L) L (n' man'))
 ).
 
 % n (woman::L) L (n woman).
-n_woman : prog ( 
-	^(n (woman | L) L (n' woman')) 
+n_woman : prog (
+	^(n (woman | L) L (n' woman'))
 ).
 
 % n (girl::L) L (n girl).
-n_girl : prog ( 
+n_girl : prog (
 	^(n (girl | L) L (n' girl'))
 ).
 
 % n (boy::L) L (n boy).
-n_boy : prog ( 
+n_boy : prog (
 	^(n (boy | L) L (n' boy'))
 ).
 
 % pn (mary::L) L (pn mary).
-pn_mary : prog ( 
-	^(pn (mary | L) L (pn' mary')) 
+pn_mary : prog (
+	^(pn (mary | L) L (pn' mary'))
 ).
 
 % pn (bob::L) L (pn bob).
-pn_bob : prog ( 
-	^(pn (bob | L) L (pn' bob')) 
+pn_bob : prog (
+	^(pn (bob | L) L (pn' bob'))
 ).
 
 % pn (jill::L) L (pn jill).
-pn_jill : prog ( 
-	^(pn (jill | L) L (pn' jill')) 
+pn_jill : prog (
+	^(pn (jill | L) L (pn' jill'))
 ).
 
 % tv (loves::L) L (tv loves).
-tv_loves : prog ( 
-	^(tv (loves | L) L (tv' loves')) 
+tv_loves : prog (
+	^(tv (loves | L) L (tv' loves'))
 ).
 
 % tv (married::L) L (tv married).
-tv_married : prog ( 
-	^(tv (married | L) L (tv' married')) 
+tv_married : prog (
+	^(tv (married | L) L (tv' married'))
 ).
 
 % stv (believes::L) L (stv believes).
-tv_believes : prog ( 
+tv_believes : prog (
 	^(stv (believes | L) L (stv' believes'))
 ).
 

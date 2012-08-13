@@ -46,7 +46,7 @@ cmpai_foralle : cmpai (foralle D1 T) (atm_foralle AT1)
 
 %worlds () (cmpcs _ _) (cmpai _ _ _).
 
-%%% Termination 
+%%% Termination
 % %terminates (D E) (cmpcs D _ _) (cmpai _ E _ ).
 %{
 %total (CN AT) (cmpcs CN _) (cmpai D AT _).

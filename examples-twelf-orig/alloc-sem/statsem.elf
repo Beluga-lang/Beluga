@@ -47,19 +47,19 @@ exp_judg_lam      : exp_judg ST (lam_e Tx ([x] F x)) (fn_t Tx T)
 		  <- ({x:exp} var_judg x Tx -> exp_judg ST (F x) T).
 
 exp_judg_app      : exp_judg ST (app_e E1 E2) T
-		  <- exp_judg ST E1 (fn_t Tx T) 
+		  <- exp_judg ST E1 (fn_t Tx T)
 		  <- exp_judg ST E2 Tx.
 exp_judg_unit     : exp_judg ST (unit_e) (unit_t).
 exp_judg_letunit  : exp_judg ST (letunit_e E1 E2) T
-		  <- exp_judg ST E1 (unit_t) 
+		  <- exp_judg ST E1 (unit_t)
 		  <- exp_judg ST E2 T.
 exp_judg_pair     : exp_judg ST (pair_e E1 E2) (pair_t T1 T2)
-		  <- exp_judg ST E1 T1 
+		  <- exp_judg ST E1 T1
 		  <- exp_judg ST E2 T2.
 exp_judg_letpair  : exp_judg ST (letpair_e E1 ([x] [y] F2 x y)) T
-		  <- exp_judg ST E1 (pair_t Tx Ty) 
-		  <- ({x:exp} var_judg x Tx -> 
-		      {y:exp} var_judg y Ty 
+		  <- exp_judg ST E1 (pair_t Tx Ty)
+		  <- ({x:exp} var_judg x Tx ->
+		      {y:exp} var_judg y Ty
 		       -> exp_judg ST (F2 x y) T).
 
 %terminates E (exp_judg _ E _).
@@ -78,7 +78,7 @@ val_judg_lam      : val_judg ST (lam_v Tx ([x] F x)) (fn_t Tx T)
 		  <- ({x:exp} var_judg x Tx -> exp_judg ST (F x) T).
 val_judg_unit     : val_judg ST unit_v unit_t.
 val_judg_pair     : val_judg ST (pair_v L1 L2) (pair_t T1 T2)
-		  <- loc_judg ST L1 T1 
+		  <- loc_judg ST L1 T1
 		  <- loc_judg ST L2 T2.
 
 %terminates V (val_judg _ V _).
@@ -116,7 +116,7 @@ stwf_judg         : st -> sttp -> type.
 %% %mode stwf_judg +S +ST. % Curry-style
 stwf_judg_        : stwf_judg S ST
 		  <- st_judg S ST
-		  <- st_wf S 
+		  <- st_wf S
 		  <- sttp_wf ST.
 %terminates S (stwf_judg S _).
 %worlds () (stwf_judg _ _).

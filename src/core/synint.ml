@@ -9,13 +9,13 @@ module Loc = Camlp4.PreCast.Loc
 module LF = struct
 
   type depend =
-    | No       
-    | Maybe        
+    | No
+    | Maybe
 
   type kind =
     | Typ
     | PiKind of (typ_decl * depend) * kind
-  
+
   and typ_decl =                              (* LF Declarations                *)
     | TypDecl of name * typ                   (* D := x:A                       *)
     | TypDeclOpt of name                      (*   |  x:_                       *)
@@ -25,9 +25,9 @@ module LF = struct
     | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
     | SDecl of name * dctx * dctx             (*   |   s::A[Psi]                *)
     | CDecl of name * cid_schema * depend
-    | MDeclOpt of name 
-    | PDeclOpt of name 
-    | CDeclOpt of name 
+    | MDeclOpt of name
+    | PDeclOpt of name
+    | CDeclOpt of name
                                               (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)
@@ -53,9 +53,9 @@ module LF = struct
     | AnnH  of head * typ                     (*   | (H:A)                      *)
     | Proj  of head * int                     (*   | x.k | #p.k s               *)
 
-    | FVar  of name                           (* free variable for type 
+    | FVar  of name                           (* free variable for type
                                                  reconstruction                 *)
-    | FMVar of name * sub                     (* free meta-variable for type 
+    | FMVar of name * sub                     (* free meta-variable for type
                                                  reconstruction                 *)
     | FPVar of name * sub                     (* free parameter variable for type
                                                 reconstruction                 *)
@@ -76,11 +76,11 @@ module LF = struct
     | Obj  of normal                          (*    | N                         *)
     | Undef                                   (*    | _                         *)
 
-                                             (* Contextual substitutions       *) 
+                                             (* Contextual substitutions       *)
  and mfront =                                (* Fronts:                        *)
    | MObj of psi_hat * normal                (* Mft::= Psihat.N                *)
    | PObj of psi_hat * head                  (*    | Psihat.p[s] | Psihat.x    *)
-   | CObj of dctx                            (*    | Psi                       *)         
+   | CObj of dctx                            (*    | Psi                       *)
    | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
    | MUndef
 
@@ -92,7 +92,7 @@ module LF = struct
    | CShift of int                           (* delta ::= ^n                   *)
    | CDot   of dctx * csub                   (*       | cPsi .delta            *)
 
- and ctx_offset = 
+ and ctx_offset =
     | CtxShift of ctx_var
     | NoCtxShift
     | NegCtxShift of ctx_var
@@ -131,7 +131,7 @@ module LF = struct
     | CtxVar   of ctx_var                    (* | psi                          *)
     | DDec     of dctx * typ_decl            (* | Psi, x:A   or x:block ...    *)
 
-  and ctx_var = 
+  and ctx_var =
     | CtxName   of name
     | CtxOffset of offset
     | CInst  of name * dctx option ref * cid_schema * mctx * mctx (* delete both mctx
@@ -147,16 +147,16 @@ module LF = struct
     | SchElem of typ_decl ctx * typ_rec    (* Pi    x1:A1 ... xn:An.
                                             Sigma y1:B1 ... yk:Bk. B       *)
                                          (* Sigma-types not allowed in Ai  *)
-  
+
   and schema =
     | Schema of sch_elem list
-  
+
   and psi_hat = ctx_var option * offset  (* Psihat ::=         *)
                                          (*        | psi       *)
                                          (*        | .         *)
                                          (*        | Psihat, x *)
-  
-  
+
+
   and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
     |  SigmaLast of typ                             (* ... . B *)
     |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
@@ -178,7 +178,7 @@ module LF = struct
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
 
   type prag =
-    | NamePrag of cid_typ 
+    | NamePrag of cid_typ
     | NotPrag
 
   (* val blockLength : typ_rec -> int *)
@@ -187,10 +187,10 @@ module LF = struct
     | SigmaElem(_x, _tA, recA) -> 1 + blockLength recA
 
   (* getType traverses the typ_rec from left to right;
-     target is relative to the remaining suffix of the type 
+     target is relative to the remaining suffix of the type
 
      getType head s_recA target j = (tA, s')
-     
+
      if  Psi(head) = Sigma recA'
          and [s]recA is a suffix of recA'
      then
@@ -204,14 +204,14 @@ module LF = struct
   let rec getType head s_recA target j = match (s_recA, target) with
     | ((SigmaLast lastA, s), 1) ->
         (lastA, s)
-    
-    | ((SigmaElem (_x, tA, _recA), s), 1) -> 
+
+    | ((SigmaElem (_x, tA, _recA), s), 1) ->
         (tA, s)
-    
+
     | ((SigmaElem (_x, _tA, recA), s), target) ->
         let tPj = Proj (head, j) in
           getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
-    
+
     | _ -> raise Not_found
 end
 

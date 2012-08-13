@@ -20,8 +20,8 @@ type offset     = int
 
 type var        = int
 
-type name_guide = 
-  | NoName 
+type name_guide =
+  | NoName
   | MVarName of (unit -> string) option
   | PVarName of (unit -> string) option
   | BVarName of (unit -> string) option
@@ -35,25 +35,25 @@ let mk_name = function
        looked up, we never have to compare a {!string option}.
        This prevents the case where two entries appear to refer to the same name
        because {!None} = {!None}. *)
-  | MVarName (Some vGen)  -> 
+  | MVarName (Some vGen)  ->
       { string_of_name = vGen() }
-       
-  | MVarName None  -> 
+
+  | MVarName None  ->
       { string_of_name = Gensym.MVarData.gensym() }
 
-  | PVarName (Some vGen)  -> 
+  | PVarName (Some vGen)  ->
       { string_of_name = "#" ^ vGen() }
-       
-  | PVarName None  -> 
+
+  | PVarName None  ->
       { string_of_name = "#" ^ Gensym.VarData.gensym() }
 
 
-  | BVarName (Some vGen)   -> 
+  | BVarName (Some vGen)   ->
         { string_of_name = vGen() }
-          
-  | SomeName x  -> x 
 
-  | SomeString x     -> 
-        { string_of_name = x }                          
+  | SomeName x  -> x
+
+  | SomeString x     ->
+        { string_of_name = x }
 
   | _     -> { string_of_name = (Gensym.VarData.gensym ()) }

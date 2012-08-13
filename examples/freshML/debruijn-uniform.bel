@@ -5,7 +5,7 @@
 
   Author: Brigitte Pientka
 
-  Feature: 
+  Feature:
     - Uniform source and target language
     - Use of dependent types and context matching
 
@@ -26,10 +26,10 @@ nat   : obj typ.
 arr   : obj typ -> obj typ -> obj typ.
 all   : (obj typ -> obj typ) -> obj typ.
 
-% Translating to untyped deBruijn terms 
+% Translating to untyped deBruijn terms
 
 
-obj'   : term_or_typ -> type.  
+obj'   : term_or_typ -> type.
 
 one    : obj' T.
 shift  : obj' T -> obj' T.  % ^
@@ -42,8 +42,8 @@ all'   : obj' typ -> obj' typ.
 
 schema ctx = some [a:term_or_typ] obj a ;
 
-rec hoas2db : (g:ctx) [g. obj S]  -> [. obj' S] = 
-fn v =>  case v of 
+rec hoas2db : (g:ctx) [g. obj S]  -> [. obj' S] =
+fn v =>  case v of
 | [h,x:obj S. x] => [. one]
 
 | {#p:[h. obj S]}
@@ -51,21 +51,21 @@ fn v =>  case v of
   let [. Db] = hoas2db [h. #p ..] in [. shift Db]
 
 | [g. lam (\x. E .. x)] =>
-  let [. F]  =  hoas2db [g,x:obj _. E .. x] in 
+  let [. F]  =  hoas2db [g,x:obj _. E .. x] in
     [. lam' F]
 
 | [g. app (E1 .. ) (E2 .. )] =>
-  let [. F1] = hoas2db [g. E1 ..]  in 
+  let [. F1] = hoas2db [g. E1 ..]  in
   let [. F2] = hoas2db [g. E2 ..]  in [. app' F1 F2]
 
 | [g. nat]               => [. nat']
 
-| [g. arr (T ..) (S ..)]   => 
-  let [. T'] = hoas2db [g. T ..] in 
+| [g. arr (T ..) (S ..)]   =>
+  let [. T'] = hoas2db [g. T ..] in
   let [. S'] = hoas2db [g. S ..] in [. arr' T' S']
 
-| [g. all \a. T .. a] => 
-  let [. T'] = hoas2db [g, a:obj typ. T .. a] in 
+| [g. all \a. T .. a] =>
+  let [. T'] = hoas2db [g, a:obj typ. T .. a] in
     [. all' T']
 
 ;

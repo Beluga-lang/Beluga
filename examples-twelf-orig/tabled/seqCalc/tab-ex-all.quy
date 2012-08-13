@@ -23,7 +23,7 @@
 
 
 % impDef
-% 
+%
 %querytabled * * D :  {A:o}{B:o}{C:o}(hyp ((A and B) or C) -> conc ((A or C) and (B or C))).
 %querytabled * * D :  {A:o}{B:o}{C:o}(hyp (A and (B or C)) -> conc ((A and B) or (A and C))).
 
@@ -39,10 +39,10 @@
 %querytabled * * D : {A:o}{B:o}{C:o}(hyp ((A or C) and (B imp C)) -> conc ((A imp B) imp C)).
 
 % 5
-%querytabled * * D : {A:o}{B:o}{C:o}(hyp ((A or B) imp C) -> conc ((A imp C) and (B imp C))). 
-%querytabled * * D : {A:o}{B:o}{C:o}(hyp ((A imp C) and (B imp C)) -> conc ((A or B) imp C)). 
+%querytabled * * D : {A:o}{B:o}{C:o}(hyp ((A or B) imp C) -> conc ((A imp C) and (B imp C))).
+%querytabled * * D : {A:o}{B:o}{C:o}(hyp ((A imp C) and (B imp C)) -> conc ((A or B) imp C)).
 
-% 6 
+% 6
 %querytabled * * D : {A:o}{B:o}{C:o}(hyp (A and (B or C)) -> conc ((A and B) or (A and C))).
 %querytabled * * D : {A:o}{B:o}{C:o}(hyp ((A and B) or (A and C)) -> conc (A and (B or C))).
 
@@ -51,31 +51,31 @@
 %querytabled * * D : {A:o}{B:o}{C:o}(hyp ((A or B) and (A or C)) -> conc (A or (B and C))).
 
 
-% Id : A => A 
+% Id : A => A
 %querytabled * * D : {A:o} conc (A imp A).
 
-% K : A => B => A 
+% K : A => B => A
 %querytabled * * D : {A:o}{B:o} conc (A imp B imp A).
 
-% S : (A => B => C) => (A => B) => (A => C) 
-%querytabled * * D : {A:o}{B:o}{C:o} conc ((A imp (B imp C)) imp 
+% S : (A => B => C) => (A => B) => (A => C)
+%querytabled * * D : {A:o}{B:o}{C:o} conc ((A imp (B imp C)) imp
 			     ((A imp B) imp (A imp C))).
 
-% (A & B => C) <=> (A => B => C) 
+% (A & B => C) <=> (A => B => C)
 %querytabled * * D : {A:o}{B:o}{C:o} conc (((A and B) imp C) imp
 			     (A imp (B imp C))).
 %querytabled * * D : {A:o}{B:o}{C:o} conc ((A imp (B imp C)) imp
 			     ((A and B) imp C)).
 
-% (A => B & C) <=> (A => B) & (A => C) 
+% (A => B & C) <=> (A => B) & (A => C)
 %querytabled * * D : {A:o}{B:o}{C:o} conc ((A imp (B and C)) imp (A imp B) and (A imp C)).
 %querytabled * * D : {A:o}{B:o}{C:o} conc (((A imp B) and (A imp C)) imp (A imp (B and C))).
 
-% (A => T) <=> T 
+% (A => T) <=> T
 %querytabled * * D : {A:o} conc ((A imp true) imp true).
 %querytabled * * D : {A:o} conc (true imp (A imp true)).
 
-% (A v B => C) <=> (A => C) & (B => C) 
+% (A v B => C) <=> (A => C) & (B => C)
 %querytabled * * D : {A:o}{B:o}{C:o} conc (((A or B) imp C) imp
 					     ((A imp C) and (B imp C))).
 
@@ -83,41 +83,41 @@
 %querytabled * * D : {A:o}{B:o}{C:o} conc (((A imp C) and (B imp C)) imp
 					     ((A or B) imp C)).
 
-% (F => C) <=> T 
+% (F => C) <=> T
 %querytabled * * D : {C:o} conc ((false imp C) imp true).
 %querytabled * * D : {C:o}conc (true imp (false imp C)).
 
 
-% (A => B v C) =>(A => B) v (A => C) 
+% (A => B v C) =>(A => B) v (A => C)
 %querytabled * * D : {A:o}{B:o}{C:o} conc (((A imp B) or (A imp C)) imp
 					     (A imp (B or C))).
 
- % F => C 
+ % F => C
  %querytabled * * D : {C:o}conc (false imp C).
 
-% A => ((A => F) => F) 
+% A => ((A => F) => F)
 %querytabled * * D : {A:o}conc (A imp ((A imp false) imp false)).
 
- % ((A => F) & A) => C 
+ % ((A => F) & A) => C
 %querytabled * * D : {A:o}{C:o} conc (((A imp false) and A) imp C).
 
- % A & ~B => ~(A => B) 
+ % A & ~B => ~(A => B)
 %querytabled * * D : {A:o}{B:o}conc ((A and (B imp false)) imp ((A imp B) imp false)).
 
 
 
-% A & (B v C) <=> (A & B) v (A & C) 
+% A & (B v C) <=> (A & B) v (A & C)
 %querytabled * * D : {A:o}{B:o}{C:o} conc ((A and (B or C)) imp
 			     ((A and B) or (A and C))).
 
 %querytabled * * D : {A:o}{B:o}{C:o} conc (((A and B) or (A and C)) imp
 			     (A and (B or C))).
 
-% A & F <=> F 
+% A & F <=> F
 %querytabled * * D : {A:o}conc ((A and false) imp false).
 %querytabled * * D : {A:o}conc (false imp (A and false)).
 
-% A v (B & C) <=> (A v B) & (A v C) 
+% A v (B & C) <=> (A v B) & (A v C)
 %querytabled * * D : {A:o}{B:o}{C:o} conc ((A or (B and C)) imp
 			     (A or B) and (A or C)).
 
@@ -130,19 +130,19 @@
 %querytabled * * D : {A:o}conc (A imp (A or A)).
 %querytabled * * D : {A:o}conc ((A or A) imp A).
 
-% ~A v ~B => ~(A & B)  
-%querytabled * * D : {A:o}{B:o}conc (((A imp false) or (B imp false)) 
+% ~A v ~B => ~(A & B)
+%querytabled * * D : {A:o}{B:o}conc (((A imp false) or (B imp false))
 				       imp ((A and B) imp false)).
 
-% A => A v B  
+% A => A v B
 %querytabled * * D : {A:o}{B:o}conc (A imp (A or B)).
-% B => A v B  
+% B => A v B
 %querytabled * * D : {A:o}{B:o}conc (B imp (A or B)).
-% A & B => A  
+% A & B => A
 %querytabled * * D : {A:o}{B:o}conc ((A and B) imp A).
-% A & B => B  
+% A & B => B
 %querytabled * * D : {A:o}{B:o}conc ((A and B) imp B).
- 
-% A v ~A => ((A => B) => A) => A 
-%querytabled * * D : {A:o}{B:o}conc ((A or (A imp false)) imp 
+
+% A v ~A => ((A => B) => A) => A
+%querytabled * * D : {A:o}{B:o}conc ((A or (A imp false)) imp
 			     (((A imp B) imp A) imp A)).

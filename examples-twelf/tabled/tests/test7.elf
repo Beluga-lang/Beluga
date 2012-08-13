@@ -8,7 +8,7 @@ c: node.
 p: node -> type.
 
 p1: p a.
-p2: p a 
+p2: p a
      <- (p c -> p b).
 p3: p b
      <- p c.
@@ -21,10 +21,10 @@ r: node -> type.
 s: node -> type.
 %tabled q.
 
-qr2: q a 
+qr2: q a
      <- (r a -> r b -> q a).
 
-qs2: q a 
+qs2: q a
      <- (s a -> s b -> q a).
 
 q2 : q a

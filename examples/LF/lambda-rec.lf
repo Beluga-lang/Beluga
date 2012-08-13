@@ -1,4 +1,4 @@
-exp : type. 
+exp : type.
 
 z    : exp.
 s    : exp -> exp.

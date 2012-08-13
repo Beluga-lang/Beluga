@@ -48,7 +48,7 @@ truer' : (pos (true) -> bot).
 falsel' : (neg (false) -> bot).
 
 forallr' : ({a:i} pos (A a) -> bot)
-	    -> (pos (forall A) -> bot). 
+	    -> (pos (forall A) -> bot).
 
 foralll' : {T:i} (neg (A T) -> bot)
 	    -> (neg (forall  A) -> bot).

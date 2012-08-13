@@ -3,7 +3,7 @@
 ;; Copyright (C) 2009, 2010  Stefan Monnier
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
-;; Keywords: 
+;; Keywords:
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -238,7 +238,7 @@ Regexp match data 0 points to the chars."
   (add-hook 'post-self-insert-hook
             #'belugasmie-blink-matching-open 'append 'local)
   (set (make-local-variable 'belugasmie-blink-matching-triggers) '(?>))
-  
+
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
          (font-lock-syntactic-keywords . nil))))
@@ -456,7 +456,7 @@ from the table, e.g. the table will not include things like (\"if\" . \"else\").
               (unless (member term nts)
                 (pushnew (cons (car rhs) term) alist :test #'equal)))))))
     (nreverse alist)))
-    
+
 
 (defun belugasmie-debug--prec2-cycle (csts)
   "Return a cycle in CSTS, assuming there's one.
@@ -474,7 +474,7 @@ CSTS is a list of pairs representing arcs in a graph."
               (push (cons (car path) (cons (cdr cst) (cdr path)))
                     paths))))))
     (cons (car cycle) (nreverse (cdr cycle)))))
-            
+
 (defun belugasmie-debug--describe-cycle (table cycle)
   (let ((names
          (mapcar (lambda (val)
@@ -1571,7 +1571,7 @@ to which that point should be aligned, if we were to reindent it.")
             ("mlam" atom "=>" exp)
             ("<" dotted-type ">")
             ("case" exp "of" cases))
-       
+
        (exps (exps ";" exps) (exp))
        ;; Separate cases/branch so that "|" is recognized as associative.
        (cases (branch) (cases "|" cases))

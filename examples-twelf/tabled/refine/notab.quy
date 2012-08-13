@@ -94,7 +94,7 @@ check (fix [plus] lam [n] lam [m]
 %query 1 *
 check (fix [plus] lam [n] lam [m]
 	 (case n
-	    m 
+	    m
 	    ([x] case m (x 0) ([y] y 1) ([y] y 1))
 	    ([x] x 1)))
 (nat => nat => nat &
@@ -105,7 +105,7 @@ check (fix [plus] lam [n] lam [m]
 %query 1 *
 check (fix [plus] lam [n] lam [m]
 	 (case n
-	    m 
+	    m
 	    ([x] case m
 	       (x 0)
 	       ([y] y 1)

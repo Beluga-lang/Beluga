@@ -1,19 +1,19 @@
 
 term: type.
 z: term.
-s: term -> term. 
-schema ctx = term ; 
+s: term -> term.
+schema ctx = term ;
 
 
-rec test : [x:term. term] -> [x:term. term] = 
-fn t => case t of 
+rec test : [x:term. term] -> [x:term. term] =
+fn t => case t of
 | [h,x:term. U .. x] => [x:term. x]
 
 ;
 
 
-rec test' : [. term] -> [. term] = 
-fn t => case t of 
+rec test' : [. term] -> [. term] =
+fn t => case t of
 | [h. U ..]  => [. z]
 
 ;

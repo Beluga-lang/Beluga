@@ -17,7 +17,7 @@ reach: node -> node -> type.
 
 r_refl: reach X X.
 
-r_cl  : reach X Y 
+r_cl  : reach X Y
 	 <- edge X Z
 	 <- reach Z Y.
 

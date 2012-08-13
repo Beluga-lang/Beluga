@@ -20,8 +20,8 @@ cn : nat -> className.
 % -bp : Eliminated the use of definitions.
 % object : className = cn z.
 
-% Class name lists. Indexed by length 
-cnlist : nat -> type. %name cnlist CS cs. 
+% Class name lists. Indexed by length
+cnlist : nat -> type. %name cnlist CS cs.
 
 cnnil  : cnlist z.                               % Empty class name list
 cncons : className -> cnlist N -> cnlist (s N).  % Class name list cons
@@ -31,7 +31,7 @@ cncons : className -> cnlist N -> cnlist (s N).  % Class name list cons
 exp   : type.  %name exp E e.
 elist : nat -> type. %name elist ES es.   % lists are indexed by length
 
-fieldProj   : exp -> nat -> exp.    
+fieldProj   : exp -> nat -> exp.
 methodInvk  : exp -> methodName -> elist N -> exp.
 new         : className -> elist N -> exp.
 cast        : className -> exp -> exp.
@@ -60,10 +60,10 @@ method : className -> {M :methodName} bexp CS -> methodDef M.
 % Assoc tables of methods
 methodTable : type.  %name methodTable MR mr.
 
-%% definition of methodTable is below. We are using a representation of method 
-%% tables that includes a proof that labels are not repeated. However, we have 
+%% definition of methodTable is below. We are using a representation of method
+%% tables that includes a proof that labels are not repeated. However, we have
 %% to define equality for method names first. We could drop this proof and still
-%% prove the soundness of FJ, but adding this to our representation makes the 
+%% prove the soundness of FJ, but adding this to our representation makes the
 %% adequacy proof easier.
 
 % Class definition
@@ -196,12 +196,12 @@ cnappend_cncons : cnappend CS1 CS2 CS3 PL ->
 %terminates CS1 (cnappend CS1 CS2 CS3 PL).
 %unique cnappend +CS1 +CS2 -1CS3 -1PL.
 %covers cnappend +CS1 +CS2 -CS3 -PL.
-%total CS1 (cnappend CS1 CS2 CS3 PL).  
+%total CS1 (cnappend CS1 CS2 CS3 PL).
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Helper functions for method and class tables as well as 
+% Helper functions for method and class tables as well as
 % class table and method table abstract syntax.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -213,7 +213,7 @@ notInMT    : methodTable -> methodName -> type.
 %mode notInMT +M +MT.
 %name notInMT NI ni.
 
-notInCT    : classTable -> className -> type. 
+notInCT    : classTable -> className -> type.
 %mode notInCT +C +CT.
 
 
@@ -258,7 +258,7 @@ lookupMethod : methodTable -> {M :methodName} methodDef M -> type.
 %name lookupMethod LM lm.
 %mode lookupMethod +MR +MN -MD.
 
-lookupMethod_mrcons1 : % methodName_eq MN1 MN2 -> 
+lookupMethod_mrcons1 : % methodName_eq MN1 MN2 ->
                 % -------------------------------------------------------
                   lookupMethod (mrcons (method C MN1 BE) MT MU) MN1 (method C MN1 BE).
 
@@ -273,25 +273,25 @@ lookupMethod_mrcons2 : methodName_neq MN1 MN2 ->
 %%%%%%%%%%%%%
 
 % Find the class definition for a given class.
-%% returns the rest of the class table, which is where the superclass of 
+%% returns the rest of the class table, which is where the superclass of
 
 lookupClass : {CT:classTable} {C:className} classDef C -> type.
 %name lookupClass LC lc.
 %mode lookupClass +CT +CN  -CD.
 
-lookupClass_crcons1 : 
+lookupClass_crcons1 :
           % ------------------------------------------------------------
             lookupClass (crcons (class CN2 CN3 CNL MR) CT CTU) CN2 (class CN2 CN3 CNL MR).
-            
+
 lookupClass_crcons2 : className_neq CN1 CN2 ->
              lookupClass CT CN1 CD ->
            % -------------------------------------------------------------------
              lookupClass (crcons (class CN2 CN3 CNL MR) CT CTU) CN1 CD.
 
 %worlds () (lookupClass CN CT CD).
-%terminates CN (lookupClass CN CT CD).   
+%terminates CN (lookupClass CN CT CD).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Static Semantics of FJ
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -299,14 +299,14 @@ lookupClass_crcons2 : className_neq CN1 CN2 ->
 
 % Subtyping
 
-%% Note, I couldn't specify the mode I wanted for subtyping because of the 
-%% transitivity rule---the middle types are not ground inputs. 
+%% Note, I couldn't specify the mode I wanted for subtyping because of the
+%% transitivity rule---the middle types are not ground inputs.
 %% therefore, I'm using an 'algorithmic' subtyping judgment instead.
 %% I should lookup later whether I can use the subtyping judgment that appears
 %% in TAPL instead.
 
 %% In the end, we don't need the mode declaration for subtyping. On the other
-%% hand, defining subtyping in this way means that our type system is syntax 
+%% hand, defining subtyping in this way means that our type system is syntax
 %% directed and proof search capabilities of twelf means that we have also
 %% implemented a type checker.
 
@@ -328,7 +328,7 @@ s_super : subtyping CT D E ->
 
 %worlds () (subtyping CT C1 C2).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Calculate the fields of a given class
 fields : classTable -> className -> {N:nat} cnlist N -> type.
@@ -345,13 +345,13 @@ f_class  : cnappend CS2 CS1 (CS3 ) _ ->
 
 %worlds () (fields CT C M CS).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Method type lookup
 %% method M in class C1 takes args CS and produces C2.
 
-mtype :  {CT:classTable} methodName -> className -> 
-        cnlist N -> className -> type.        
+mtype :  {CT:classTable} methodName -> className ->
+        cnlist N -> className -> type.
 %name mtype MTY mty.
 %mode mtype +CT +M +C1 -CS -C2.
 
@@ -359,20 +359,20 @@ mtype :  {CT:classTable} methodName -> className ->
 mt_class :   lookupMethod MT M (method C2 _ (BE)) % BE : bexp CS)
    ->
              lookupClass CT C1 (class _ _ _ MT) ->
-  			    className_neq C1 (cn z) -> 
+  			    className_neq C1 (cn z) ->
            % ---------------------------------------------------
              mtype CT M C1 CS C2.
 
-%% the method is not found in this class, but is found in some 
+%% the method is not found in this class, but is found in some
 %% superclass
 mt_super : mtype CT M C2 CS C0 ->
-           notInMT MT M ->        
+           notInMT MT M ->
            lookupClass CT C1 (class _ C2 _ MT) ->
-  	        className_neq C1 (cn z) -> 
+  	        className_neq C1 (cn z) ->
          % ------------------------------------------------------
            mtype CT M C1 CS C0.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Method body lookup
 
 
@@ -382,19 +382,19 @@ mbody :  classTable -> methodName -> className ->
 
 mb_class : lookupMethod MT M (method _ _ BE) ->
            lookupClass CT C1 (class _ _ _ MT) ->
-  		     className_neq C1 (cn z) -> 
+  		     className_neq C1 (cn z) ->
          % ---------------------------------------------------
            mbody CT M C1 BE.
 
-mb_super : notInMT MT M ->        
+mb_super : notInMT MT M ->
            mbody CT M C2 BE ->
            lookupClass CT C1 (class _ C2 _ MT) ->
-  		     className_neq C1 (cn z) -> 
+  		     className_neq C1 (cn z) ->
         % ------------------------------------------------------
            mbody CT M C1 BE.
 %worlds () (mbody C CT  M BE).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% method not defined in a class.
 
 method_undefined : classTable -> methodName -> className -> type.
@@ -405,13 +405,13 @@ mu_object : method_undefined CT M (cn z).
 
 mu_super :  method_undefined CT M D ->
 			   notInMT MT M ->
-            lookupClass CT C (class _ D _ MT) -> 
-			   className_neq C (cn z) -> 
+            lookupClass CT C (class _ D _ MT) ->
+			   className_neq C (cn z) ->
          % --------------------------------------------------
 				method_undefined CT M C.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Expression/expression list typing
 
@@ -446,7 +446,7 @@ t_cast :  typing CT E C1 ->
 
 tl_nil  : typing_list CT enil cnnil.
 
-tl_cons : subtyping CT C0 C ->			     
+tl_cons : subtyping CT C0 C ->
           typing_list CT ES CS ->
 			 typing CT E C0 ->
         % ---------------------------------------------
@@ -455,7 +455,7 @@ tl_cons : subtyping CT C0 C ->
 
 %% Notes about typing judgment:
 % casts include both safe and unsafe casts.
-% field projection uses the "partial" version of nth---if there is 
+% field projection uses the "partial" version of nth---if there is
 % a derivation of nth then the expression will be well-typed. That
 % seems reasonable to me.
 
@@ -476,12 +476,12 @@ t_bind : ({xI:exp}{d:typing CT xI CI} typing_bexp CT (E xI) C E0) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Check that all definitions of the method above class name have the 
-%% same type. 
+%% Check that all definitions of the method above class name have the
+%% same type.
 override : classTable -> methodName -> className -> cnlist N -> className -> type.
 %mode override +CT +M +C +CS +DS.
 
-%% mtype is defined for M 
+%% mtype is defined for M
 ov1 : mtype CT M D CS C -> override CT M D CS C.
 
 %% mtype is not defined for M
@@ -491,20 +491,20 @@ ov2 : method_undefined CT M D -> override CT M D CS C.
 method_typing : classTable -> {M : methodName} methodDef M -> className -> type.
 %% %mode method_typing +CT +M +MD +C.
 
-t_method :     subtyping CT E0 C0 
-				-> typing_bexp CT BE C E0 
-            -> override CT M D CS C0 	
-				-> lookupClass CT C (class C D FS MT) 
+t_method :     subtyping CT E0 C0
+				-> typing_bexp CT BE C E0
+            -> override CT M D CS C0
+				-> lookupClass CT C (class C D FS MT)
 	% ------------------------------------------------
-%				-> method_typing CT M (method C0 M (BE: bexp CS)) C.   
-				-> method_typing CT M (method C0 M BE) C.   
+%				-> method_typing CT M (method C0 M (BE: bexp CS)) C.
+				-> method_typing CT M (method C0 M BE) C.
 
 method_table_typing : classTable -> methodTable -> className -> type.
 %% %mode method_table_typing +CT +MT +C.
 
 mtt_nil  : method_table_typing CT mrnil C.
 
-mtt_cons : method_table_typing CT MT C 
+mtt_cons : method_table_typing CT MT C
 				-> method_typing CT M MD C
 %				-> method_table_typing CT (mrcons (MD : methodDef M) MT MNI) C.
 				-> method_table_typing CT (mrcons MD MT MNI) C.
@@ -512,7 +512,7 @@ mtt_cons : method_table_typing CT MT C
 class_typing : classTable -> {C:className} classDef C -> type.
 % %mode class_typing +CT +C +CD.
 
-t_class :    fields CT D N DS   %% side effect of checking that 
+t_class :    fields CT D N DS   %% side effect of checking that
 			                       %% D is either object or in CT.
           -> method_table_typing CT MT C
           -> subtyping CT D (cn z)
@@ -523,9 +523,9 @@ class_table_typing_help : classTable -> classTable -> type.
 
 ctt_nil : class_table_typing_help CT0  crnil.
 
-ctt_cons : class_table_typing_help CT0 CT 
-	   -> class_typing CT0 C CD 
-	   -> className_neq C (cn z) 
+ctt_cons : class_table_typing_help CT0 CT
+	   -> class_typing CT0 C CD
+	   -> className_neq C (cn z)
           % --------------------------------------
 %	   -> class_table_typing_help CT0 (crcons (CD : classDef C) CT CTI).
 	   -> class_table_typing_help CT0 (crcons CD CT CTI).
@@ -534,7 +534,7 @@ class_table_typing : classTable -> type.
 % %mode class_table_typing +CT.
 
 ctt : class_table_typing_help CT CT
-   -> class_table_typing CT.   
+   -> class_table_typing CT.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -586,16 +586,16 @@ v_newv : value_list EL ->
 
 % Operational semantics
 
-reduction_list : {CT:classTable} elist N -> elist N -> type. 
+reduction_list : {CT:classTable} elist N -> elist N -> type.
 
-reduction : {CT:classTable} exp -> exp -> type. 
+reduction : {CT:classTable} exp -> exp -> type.
 
 
 r_field : enth_opt N2 EL E ->
        % --------------------------------------------
 %          reduction CT (fieldProj (new C (EL : elist N1)) N2) E.
           reduction CT (fieldProj (new C EL) N2) E.
-          
+
 
 r_invk : value_list EL2 ->
          mbody CT M C BE ->
@@ -610,9 +610,9 @@ r_cast : subtyping CT C1 C2 ->
 
 rc_field : reduction CT E1 E2 ->
         % ---------------------------------------------
-          reduction CT (fieldProj E1 N) (fieldProj E2 N).           
+          reduction CT (fieldProj E1 N) (fieldProj E2 N).
 
-rc_invk_recv : reduction CT E1 E2 ->           
+rc_invk_recv : reduction CT E1 E2 ->
           % --------------------------------------------------
             reduction CT (methodInvk E1 M EL) (methodInvk E2 M EL).
 
@@ -630,12 +630,12 @@ rc_cast : reduction CT E1 E2 ->
           reduction CT (cast C E1) (cast C E2).
 
 
-rl_hd : reduction CT E1 E2 -> 
+rl_hd : reduction CT E1 E2 ->
      % ---------------------------------------------
         reduction_list CT (econs E1 EL) (econs E2 EL).
 
 rl_tl : value E ->
-        reduction_list CT EL1 EL2 -> 
+        reduction_list CT EL1 EL2 ->
     % ---------------------------------------------
         reduction_list CT (econs E EL1) (econs E EL2).
 

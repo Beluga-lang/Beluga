@@ -15,7 +15,7 @@ letv: exp -> (nat -> exp) -> exp.
 z  : nat.
 suc: nat -> nat.
 
-rec add : [. nat] -> [. nat] -> [. nat] = 
+rec add : [. nat] -> [. nat] -> [. nat] =
 fn a => fn b =>
    (case a of
         [. z]  => b
@@ -24,16 +24,16 @@ fn a => fn b =>
 )
 ;
 
-rec eval : [. exp] -> [. nat] = 
-fn e => 
+rec eval : [. exp] -> [. nat] =
+fn e =>
 (case e of
    [. num U] => [. U]
- | [. add U W]  => 
+ | [. add U W]  =>
        add (eval [. U]) (eval [. W])
 
- | [. letv U (\ x . (W x))]  => 
+ | [. letv U (\ x . (W x))]  =>
 
-    case (eval [. U]) of 
-        [. V]  =>  
+    case (eval [. U]) of
+        [. V]  =>
           eval [. (W V)]
 );

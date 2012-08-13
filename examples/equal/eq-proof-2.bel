@@ -1,9 +1,9 @@
 % Given an expression e, return the proof that e is always equal to itself.
-% 
+%
 % If e is an expression, then eq e e.
 
 % Author: Brigitte Pientka
-% Comments: 
+% Comments:
 % - use of Sigma-types in context
 %
 % - in Delphin, this example requires a special function `extend' of
@@ -22,9 +22,9 @@ lam: (exp -> exp) -> exp.
 eq: exp -> exp -> type.   %name eq Q u.
 eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 
-eq_lam :  ({x : exp} eq x x -> eq (E x) (F x)) 
+eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
           -> eq (lam (\x. E x)) (lam (\x. F x)).
- 
+
 schema eqCtx = block x:exp, _t:eq x x;
 
 rec ref : {g:eqCtx} {U:[g. exp]} [g. eq (U ..) (U ..)] =
@@ -32,7 +32,7 @@ rec ref : {g:eqCtx} {U:[g. exp]} [g. eq (U ..) (U ..)] =
 | [g. #p.1 ..] => [g. #p.2 ..]
 
 | [g. lam \x. L .. x] =>
-  let [g,e:block y:exp, _t:eq y y. V .. e] = 
+  let [g,e:block y:exp, _t:eq y y. V .. e] =
       ref [g, e:block q:exp, _t:eq q q] [g, e. L .. e.1] in
     [g. eq_lam \x. \w. (V .. <x, w>)]  % : eq (L .. x) (L .. x)
 | [g. app (A1 ..) (A2 ..)]  : [g. exp]=>
@@ -44,7 +44,7 @@ rec ref : {g:eqCtx} {U:[g. exp]} [g. eq (U ..) (U ..)] =
 
 
 % General transitivity is admissible
-rec trans: {g:eqCtx} 
+rec trans: {g:eqCtx}
    [g. eq (TT ..) (RR ..)]     % e1 : eq T R
 -> [g. eq (RR ..) (SS ..)]     % e2 : eq R S
 -> [g. eq (TT ..) (SS ..)]     % result : eq T S
@@ -54,16 +54,16 @@ mlam g => fn e1 => fn e2 => case e1 of
 | [g. #p.2 ..] => e2
 
 | [g. eq_lam \x.\u. D1 .. x u] =>
-  let [g. eq_lam \x.\u. D2 .. x u] =  e2  in	
-  let [g, b:block x:exp, _t:eq x x. E .. b] = 
-    trans [g, b:block x':exp, _t:eq x' x'] 
+  let [g. eq_lam \x.\u. D2 .. x u] =  e2  in
+  let [g, b:block x:exp, _t:eq x x. E .. b] =
+    trans [g, b:block x':exp, _t:eq x' x']
         [g, b. D1 .. b.1 b.2]
         [g, b. D2 .. b.1 b.2]
   in
     [g. eq_lam \x. \u. E .. <x, u>]
-       
+
 | [g. eq_app (D1 ..) (D2 ..)] =>
-  let [g. eq_app (F1 ..) (F2 ..)] = e2 in 
+  let [g. eq_app (F1 ..) (F2 ..)] = e2 in
   let [g. E1 ..] = trans [g]  [g. D1 ..]  [g. F1 ..] in
   let [g. E2 ..] = trans [g]  [g. D2 ..]  [g. F2 ..] in
     [g. eq_app  (E1 ..)  (E2 ..)]
@@ -80,26 +80,26 @@ e_t: equal T' S -> equal T T' -> equal T S.
 schema equalCtx = some [] block x: exp, u:eq x x , _t:equal x x ;
 
 rec ceq: {g:equalCtx} [g. equal (T ..) (S ..)] -> [g. eq (T ..) (S ..)]  =
- mlam g =>  fn e => case e of 
+ mlam g =>  fn e => case e of
 | [g. #p.3 ..] => [g. #p.2 ..]
 
-| [g. e_r (T .. )]=> ref [g] [g. T.. ]   
+| [g. e_r (T .. )]=> ref [g] [g. T.. ]
 
-| [g. e_t (D2 ..) (D1 ..)] => 
-  let [g. F2 ..] = ceq [g] [g. D2 ..] in 
-  let [g. F1 ..] = ceq [g] [g. D1 ..] in 
-    trans [g] [g. F1 ..]  [g. F2 ..]           
+| [g. e_t (D2 ..) (D1 ..)] =>
+  let [g. F2 ..] = ceq [g] [g. D2 ..] in
+  let [g. F1 ..] = ceq [g] [g. D1 ..] in
+    trans [g] [g. F1 ..]  [g. F2 ..]
 
-| [g. e_l (\x.(\u. (D .. x u)))] => 
+| [g. e_l (\x.(\u. (D .. x u)))] =>
   let {F: [g, x:exp, u: eq x x. eq (R .. x) (Q .. x)]}
-     [g,b:block x:exp,u:eq x x , _t:equal x x. F .. b.1 b.2] = 
+     [g,b:block x:exp,u:eq x x , _t:equal x x. F .. b.1 b.2] =
         ceq [g, b:block x:exp, u:eq x x , _t:equal x x]   [g, b. D .. b.1 b.3]
   in
      [g. eq_lam (\x.\v. F .. x v)]
 
-| [g. e_a (D2 ..) (D1 ..)] => 
-    let [g. F1 ..] = ceq [g] [g. D1 ..] in 
-    let [g. F2 ..] = ceq [g] [g. D2 ..] in 
+| [g. e_a (D2 ..) (D1 ..)] =>
+    let [g. F1 ..] = ceq [g] [g. D1 ..] in
+    let [g. F2 ..] = ceq [g] [g. D2 ..] in
       [g. eq_app (F1 ..) (F2 ..)]
 
 ;

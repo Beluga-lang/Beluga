@@ -7,7 +7,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %theorem
-st!wf_tail_thm : 
+st!wf_tail_thm :
           forall* {L:loc} {V:val} {S':st}
           forall {DSWf: st_wf (cons_st L V S')}
           exists {DSWf': st_wf S'}

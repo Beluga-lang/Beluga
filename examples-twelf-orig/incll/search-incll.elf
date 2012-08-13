@@ -1,5 +1,5 @@
 %
-% a breadth first search-- takes a graph and returns the list of 
+% a breadth first search-- takes a graph and returns the list of
 %     nodes with their bfs numbering
 %
 
@@ -18,8 +18,8 @@ next : trm (cross int pint) -> atm.
 
 finish : trm gtype -> trm rtype -> atm.
 
-bfs_main : trm gtype 
-	    -> trm int 
+bfs_main : trm gtype
+	    -> trm int
 	    -> trm rtype
 	    -> atm.
 
@@ -33,8 +33,8 @@ bfs' : trm int -> trm pint -> trm rtype -> atm.
 bfs'' : trm (list int) -> trm pint -> trm rtype -> atm.
 
 
-dfs_main : trm gtype 
-	    -> trm int 
+dfs_main : trm gtype
+	    -> trm int
 	    -> trm rtype
 	    -> atm.
 
@@ -60,18 +60,18 @@ finish1 : prog(
 finish2 : prog(
 %%
 %% add a node that was visited to R
-%%       
-^ finish ((pair V E) | G) ((pair D V) | R)  
-       0= ^ used (pair D V)  
+%%
+^ finish ((pair V E) | G) ((pair D V) | R)
+       0= ^ used (pair D V)
        0= ^ finish G R
 ).
 
 finish3 : prog(
 %%
 %% add a node that wasn't visited to R
-%%       
-^ finish ((pair V E) | G) ((pair omega V) | R) 
-       0= ^ node (pair V E) 
+%%
+^ finish ((pair V E) | G) ((pair omega V) | R)
+       0= ^ node (pair V E)
        0= ^ finish G R
 ).
 
@@ -80,14 +80,14 @@ finish3 : prog(
 
 bfs1 : prog(
 %%
-%% G is the graph. 
-%% S is the start node. 
+%% G is the graph.
+%% S is the start node.
 %% R is the resulting (int * Pint) list of distances for each node from S.
 %%
 %% make a copy of the given graph so we can gracefully exit
 %%   even if graph is not fully connnected.
 %%
-^ bfs_main G S R  
+^ bfs_main G S R
       <= (^ nodes G => ^ bfs G S R)
 ).
 
@@ -95,7 +95,7 @@ bfs2 : prog(
 %%
 %% place each node of graph into linear context
 %%
-^ bfs (N | G) S R 
+^ bfs (N | G) S R
       0=  (^ node N =0 ^ bfs G S R)
 ).
 
@@ -104,7 +104,7 @@ bfs3 : prog(
 %% start the breadth-first traversal from start node
 %%   S and distance z (zero)
 %%
-^ bfs nil S R 
+^ bfs nil S R
       0=  ^ bfs' S z R
 ).
 
@@ -113,9 +113,9 @@ bfs4 : prog(
 %% read the unvisited specified node (V) out of the linear context.
 %%   replace it in the linear context with correct distance.
 %%   put the edges of node V into ordered context.
-%% 
-^ bfs' V D R  
-      0=  ^ node (pair V E)  
+%%
+^ bfs' V D R
+      0=  ^ node (pair V E)
       <<= (^ used (pair D V) =0 ^ bfs'' E D R)
 ).
 
@@ -124,8 +124,8 @@ bfs5 : prog(
 %% read the already visited specified node (V) from linear context.
 %%   replace it. then add no edges to ordered context.
 %%
-^ bfs' V D R  
-      0=  ^ used (pair D' V) 
+^ bfs' V D R
+      0=  ^ used (pair D' V)
       <<= (^ used (pair D' V) =0 ^ bfs'' nil D R)
 ).
 
@@ -134,7 +134,7 @@ bfs6 : prog(
 %% put an edge into the left side of ordered context
 %%   also record distance to this edge
 %%
-^ bfs'' (E | Es) D R  
+^ bfs'' (E | Es) D R
       <<=  (^ next (pair E D) >=> ^ bfs'' Es D R)
 ).
 
@@ -144,8 +144,8 @@ bfs7 : prog(
 %%   read a new edge to explore from right side of ordered context.
 %%   continue breadth-first traversal with incremented distance.
 %%
-^ bfs'' nil D R  
-      <<= ^ next (pair V D')  
+^ bfs'' nil D R
+      <<= ^ next (pair V D')
       <<= ^ bfs' V (s D') R
 ).
 
@@ -155,8 +155,8 @@ bfs8 : prog(
 %%   no more edges left to explore.
 %%   package up the results (the linear context) into R
 %%
-^ bfs'' nil D R 
-      <= ^ nodes G  
+^ bfs'' nil D R
+      <= ^ nodes G
       0= ^ finish G R
 ).
 
@@ -164,14 +164,14 @@ bfs8 : prog(
 
 dfs1 : prog(
 %%
-%% G is the graph. 
-%% S is the start node. 
+%% G is the graph.
+%% S is the start node.
 %% R is the resulting (int * Pint) list of distances for each node from S.
 %%
 %% make a copy of the given graph so we can gracefully exit
 %%   even if graph is not fully connnected.
 %%
-^ dfs_main G S R  
+^ dfs_main G S R
       <= (^ nodes G => ^ dfs G S R)
 ).
 
@@ -179,7 +179,7 @@ dfs2 : prog(
 %%
 %% place each node of graph into linear context
 %%
-^ dfs (N | G) S R 
+^ dfs (N | G) S R
       0=  (^ node N =0 ^ dfs G S R)
 ).
 
@@ -188,7 +188,7 @@ dfs3 : prog(
 %% start the depth-first traversal from start node
 %%   S and distance z (zero)
 %%
-^ dfs nil S R 
+^ dfs nil S R
       0=  ^ dfs' S z R
 ).
 
@@ -197,9 +197,9 @@ dfs4 : prog(
 %% read the unvisited specified node (V) out of the linear context.
 %%   replace it in the linear context with correct distance.
 %%   put the edges of node V into ordered context.
-%% 
-^ dfs' V D R  
-      0=  ^ node (pair V E)  
+%%
+^ dfs' V D R
+      0=  ^ node (pair V E)
       <<= (^ used (pair D V) =0 ^ dfs'' E D R)
 ).
 
@@ -208,8 +208,8 @@ dfs5 : prog(
 %% read the already visited specified node (V) from linear context.
 %%   replace it. then add no edges to ordered context.
 %%
-^ dfs' V D R  
-      0=  ^ used (pair D' V) 
+^ dfs' V D R
+      0=  ^ used (pair D' V)
       <<= (^ used (pair D' V) =0 ^ dfs'' nil D R)
 ).
 
@@ -218,7 +218,7 @@ dfs6 : prog(
 %% put an edge into the right side of ordered context
 %%   also record distance to this edge
 %%
-^ dfs'' (E | Es) D R  
+^ dfs'' (E | Es) D R
       <<=  (^ next (pair E D) =>> ^ dfs'' Es D R)
 ).
 
@@ -228,8 +228,8 @@ dfs7 : prog(
 %%   read a new edge to explore from right side of ordered context.
 %%   continue depth-first traversal with incremented distance.
 %%
-^ dfs'' nil D R  
-      <<= ^ next (pair V D')  
+^ dfs'' nil D R
+      <<= ^ next (pair V D')
       <<= ^ dfs' V (s D') R
 ).
 
@@ -239,8 +239,8 @@ dfs8 : prog(
 %%   no more edges left to explore.
 %%   package up the results (the linear context) into R
 %%
-^ dfs'' nil D R 
-      <= ^ nodes G  
+^ dfs'' nil D R
+      <= ^ nodes G
       0= ^ finish G R
 ).
 

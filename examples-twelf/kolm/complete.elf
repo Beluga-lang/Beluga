@@ -75,7 +75,7 @@ nj_nk_existse : nj_nk (nj_existse NJ1 NJ2) (nk_existse NK1 NK2)
 % (i.e., A and A* are classically equivalent!)
 
 % Could not prove this automatically (I gave up)
-% %theorem equiv_auto : forall* {A:o} {A*:o} forall {K:kolm A A*} 
+% %theorem equiv_auto : forall* {A:o} {A*:o} forall {K:kolm A A*}
 %                      exists {NK*:nk A -> nk A*} {NK:nk A* -> nk A} true.
 % %prove 2 K (equiv_auto K NK* NK).
 
@@ -94,9 +94,9 @@ equiv_and : equiv (kolm_and KB KA)
 
 % This case clearly demonstrates why we need to prove
 % the existence of NK* and NK together.
-equiv_imp : equiv (kolm_imp KB KA) 
+equiv_imp : equiv (kolm_imp KB KA)
                   (\v.
-                     (nk_noti (\p. \u. (nk_note u p 
+                     (nk_noti (\p. \u. (nk_note u p
                        (nk_impi (\u.
                           (NKB* (nk_impe v (NKA u)))))))))
                   (\v.
@@ -107,7 +107,7 @@ equiv_imp : equiv (kolm_imp KB KA)
 
 equiv_or  : equiv (kolm_or KB KA)
                   (\v.
-                     (nk_noti (\p. \u. (nk_note u p 
+                     (nk_noti (\p. \u. (nk_note u p
                        (nk_ore v
                           (\u. (nk_oril (NKA* u)))
                           (\u. (nk_orir (NKB* u))))))))
@@ -118,7 +118,7 @@ equiv_or  : equiv (kolm_or KB KA)
     <- equiv KA NKA* NKA
     <- equiv KB NKB* NKB.
 
-equiv_not : equiv (kolm_not K) 
+equiv_not : equiv (kolm_not K)
                   (\v.
                      (nk_noti (\p.\u.
                         (nk_note
@@ -130,15 +130,15 @@ equiv_not : equiv (kolm_not K)
     <- equiv K NKA* NKA.
 
 % An alternative formulation is
-% equiv_true : equiv kolm_true ([v:nk true] (nk_dnotx nk_truei)) 
+% equiv_true : equiv kolm_true ([v:nk true] (nk_dnotx nk_truei))
 %                              ([v:nk (n true)] nk_truei).
 equiv_true : equiv kolm_true (\v. (nk_noti (\p. \u. (nk_note u p v))))
                              (\v. (nk_dnotr v)).
 
-equiv_false : equiv kolm_false (\v. (nk_noti (\p. \u. (nk_note u p v)))) 
+equiv_false : equiv kolm_false (\v. (nk_noti (\p. \u. (nk_note u p v))))
                                (\v. (nk_dnotr v)).
 
-equiv_forall : equiv (kolm_forall K) 
+equiv_forall : equiv (kolm_forall K)
                      (\v.
                        (nk_noti (\p. \u. (nk_note u p
                          (nk_foralli (\a.
@@ -148,10 +148,10 @@ equiv_forall : equiv (kolm_forall K)
                          (NK a (nk_foralle (nk_dnotr v) a)))))
    <- ({a:i} equiv (K a) (NK* a) (NK a)).
 
-equiv_exists : equiv (kolm_exists K) 
+equiv_exists : equiv (kolm_exists K)
                      (\v.
                         (nk_noti (\p. \u. (nk_note u p
-                          (nk_existse v 
+                          (nk_existse v
                              (\a.\u.
                                 (nk_existsi a (NK* a u))))))))
                      (\v.

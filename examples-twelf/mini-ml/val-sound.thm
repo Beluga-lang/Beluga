@@ -4,8 +4,8 @@
 %terminates D (vs D _).
 
 % Automatic proof generation
-%theorem vls : forall* {E : exp} {V : exp} 
-               forall {D : eval E V} 
+%theorem vls : forall* {E : exp} {V : exp}
+               forall {D : eval E V}
                exists {P : value V} true.
 %prove 3 D (vls D _).
 

@@ -1,7 +1,7 @@
 datatype atomic_tp: type =
 ;
 
-datatype nat: type = 
+datatype nat: type =
 | z: nat
 | s: nat -> nat
 ;
@@ -11,7 +11,7 @@ datatype Even: ctype =
 | Ze : Even
 | Ev : Odd -> Even
 and
-Odd: ctype = 
+Odd: ctype =
 | Od : Even -> Odd
 ;
 

@@ -266,7 +266,7 @@ GLOBAL: sgn_eoi;
         const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
           Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
 *)
-      | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" -> 
+      | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
 (*
       | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
@@ -873,7 +873,7 @@ GLOBAL: sgn_eoi;
     [
       [
         ","; e2 = cmp_exp_chk ; ")" -> Pair e2
-        
+
       | ")"                 -> Atom
       ]
     ]
@@ -901,18 +901,18 @@ GLOBAL: sgn_eoi;
     ]
   ;
 
-  
 
-  cmp_dat: 
+
+  cmp_dat:
     [[
-     a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" -> 
+     a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" ->
                                                    Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
     ]]
   ;
-  
+
   cmp_cdat:
     [[
-    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" -> 
+    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
                                        check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
                                         Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
     ]]
@@ -1005,13 +1005,13 @@ GLOBAL: sgn_eoi;
            end in
 
          Comp.Case (_loc, Pragma.RegularCase, i, [branch])
-      | "let"; ctyp_decls = LIST0 clf_ctyp_decl; 
+      | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
            pat = cmp_branch_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
                            LF.Empty ctyp_decls in
 
           let branch = Comp.Branch(_loc, ctyp_decls', pat, e)  in
-          Comp.Case (_loc, Pragma.RegularCase, i, [branch]) 
+          Comp.Case (_loc, Pragma.RegularCase, i, [branch])
       | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
           begin match p_or_a with
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
@@ -1073,7 +1073,7 @@ isuffix:
        | (Dctx cPsi, None)      -> (fun i -> Comp.CtxApp(_loc, i, cPsi))
        | (Hat [psi], None)      -> (fun i -> Comp.CtxApp(_loc, i, LF.CtxVar (_loc, psi)))
        | (Hat []  , None)       -> (fun i -> Comp.CtxApp(_loc, i, LF.Null))
-       | (_ , _)                -> 
+       | (_ , _)                ->
          raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
      end
 
@@ -1184,7 +1184,7 @@ clf_pattern :
      | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) ->
          let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in
            Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
-     | "("; p = SELF; p_or_a = cmp_pair_atom_pat   ->  
+     | "("; p = SELF; p_or_a = cmp_pair_atom_pat   ->
          (match p_or_a with
             | Pair_pat p2 -> Comp.PatPair (_loc, p, p2)
             | Atom_pat -> p)

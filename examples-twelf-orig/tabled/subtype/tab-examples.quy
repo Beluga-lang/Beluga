@@ -3,7 +3,7 @@
 %querytabled * 4 (of z T).
 %querytabled * 5 (of z nat).
 
-% use termDepth = 7 
+% use termDepth = 7
 % querytabled * 2 (of (lam [x] s x) (nat => pos)).
 
 % use termDepth = 10
@@ -15,7 +15,7 @@
 % querytabled * 2 (of (lam [x] case x z ([x'] x')) T).
 
 %{
-% these query will not terminate 
+% these query will not terminate
 
 %querytabled * 2 (sub (arrow S S) (arrow zero zero)).
 %querytabled * 2 (of (lam [x] x) (zero => zero)).

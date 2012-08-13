@@ -1,7 +1,7 @@
 % Closure based interpreter with computation-level data-types.
 % Author: Brigitte Pientka
 
-datatype tm : type = 
+datatype tm : type =
 | z    : tm
 | suc  : (tm) -> tm
 | app  : tm -> tm -> tm
@@ -10,58 +10,58 @@ datatype tm : type =
 
 schema tctx = tm ;
 
-datatype nat: type = 
+datatype nat: type =
 | zero   : nat
-| succ : nat -> nat 
+| succ : nat -> nat
 ;
 
-datatype NList : [ .  nat] -> ctype = 
+datatype NList : [ .  nat] -> ctype =
 | NNil : NList [ . zero]
 | NCons : {g:tctx} {N:[ . nat]} [g . tm] -> NList [ . N] -> NList [ . succ N]
 ;
 
-datatype List : ctype = 
+datatype List : ctype =
 | Nil : List
 | Cons : {g:tctx} [g . tm] -> List -> List
 ;
 
-datatype Clos : ctype = 
-Cl : (g:tctx)  [g,x:tm . tm] -> ([g . tm] -> Clos) -> Clos 
+datatype Clos : ctype =
+Cl : (g:tctx)  [g,x:tm . tm] -> ([g . tm] -> Clos) -> Clos
 ;
 
-datatype CtxRel : {g:tctx} {h:tctx} ctype = 
-| Rnil : CtxRel [ ] [ ] 
+datatype CtxRel : {g:tctx} {h:tctx} ctype =
+| Rnil : CtxRel [ ] [ ]
 | Rsnoc : (g:tctx) (h:tctx) CtxRel [g] [h] -> CtxRel [g, x:tm] [h, x:tm]
 ;
 
 % type Env : {g:tctx} ctype = [g . tm] -> Clos ;
 
 
-rec test : Clos -> Clos = 
+rec test : Clos -> Clos =
 fn x => case x of Cl y f  => x
 ;
 
-rec test_bool : Bool -> Bool = 
-fn e => case e of 
+rec test_bool : Bool -> Bool =
+fn e => case e of
 | ttrue => ffalse
 ;
 
 
-rec ev_bool : (g:tctx) [g . tm] -> Bool = 
-fn e => case e of 
+rec ev_bool : (g:tctx) [g . tm] -> Bool =
+fn e => case e of
 | [g . z ] => ttrue
 ;
 
 
-rec eval : (g:tctx) [g . tm] -> ([g.tm] -> Clos) -> Clos = 
+rec eval : (g:tctx) [g . tm] -> ([g.tm] -> Clos) -> Clos =
 fn e => fn env => case e of
 | [g . #p .. ] => env [g . #p ..]
-| [g . lam \x. E .. x] => Cl [g, x:tm . E .. x] env 
-| [g . app (E1 ..) (E2 ..)] => 
+| [g . lam \x. E .. x] => Cl [g, x:tm . E .. x] env
+| [g . app (E1 ..) (E2 ..)] =>
   case eval [g . E1 ..] env of
-  | Cl [h, x:tm . E .. x] env' => 
-    let v = eval [g . E2 ..] env in 
-    eval [h,x:tm . E .. x] 
+  | Cl [h, x:tm . E .. x] env' =>
+    let v = eval [g . E2 ..] env in
+    eval [h,x:tm . E .. x]
          (fn var => case var of
                | [h, x:tm . x] => v
                | [h, x:tm . #p .. ] => env' [h . #p ..]
@@ -71,18 +71,18 @@ fn e => fn env => case e of
 
 %{
 datatype env : (psi : tctx) ctype =
-Empty :  env [ ] 
+Empty :  env [ ]
 Extend: (psi : tctx) Clos -> env [psi] -> env [psi, x:tm]
 
-and Clos : ctype = 
-Cl : (g:tctx)  [g,x:tm . tm] -> env [g] -> Clos 
+and Clos : ctype =
+Cl : (g:tctx)  [g,x:tm . tm] -> env [g] -> Clos
 ;
 
-rec lookup : env [g] -> #[g . tm] -> Clos = 
-fn env => mlam p => case [g. #p ..] of 
-| [g, x:tm . x] => 
+rec lookup : env [g] -> #[g . tm] -> Clos =
+fn env => mlam p => case [g. #p ..] of
+| [g, x:tm . x] =>
   let Extend cl env' = env in cl
-| [g, x:tm . #p ..] => 
+| [g, x:tm . #p ..] =>
   let Extend _ env' = env in lookup env' [g. #p ..]
 
 }%

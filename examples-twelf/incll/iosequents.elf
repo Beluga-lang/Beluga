@@ -12,13 +12,13 @@ sqnt : rctx -> rctx -> rctx -> rctx -> frm -> type.
 %
 % ie_sqnt1 is: G ; D_I \ D_O ; ( L_I \ L_O ; R_I \ R_O ) --> A >> P
 %
-ie_sqnt1 : rctx -> rctx -> 
+ie_sqnt1 : rctx -> rctx ->
 	   rctx -> rctx -> rctx -> rctx -> frm -> atm -> type.
 
 %
 % ie_sqnt2 is: G ; D_I \ D_O ; O_I \ ( O_L | O_M | O_R ) --> A >> P
 %
-ie_sqnt2 : rctx -> rctx -> 
+ie_sqnt2 : rctx -> rctx ->
 	   rctx -> rctx -> rctx -> rctx -> frm -> atm -> type.
 
 =>_R : sqnt Di Do Oi Oo (A => B)
@@ -52,14 +52,14 @@ choice_D : sqnt Di Do Oi Oo (^ P)
 	<- choose Di DiL A DiR
 	<- appr DiL DiR Di'
 	<- ie_sqnt2 Di' Do' Oi Ol Om Or A P
-	<- insertAfter DiR (# A) Di' Di	
+	<- insertAfter DiR (# A) Di' Di
 	<- insertAfter DiR del Do' Do
 	<- appr Ol Om Oo'
 	<- appr Oo' Or Oo.
 
 choice_G : sqnt Di Do Oi Oo (^ P)
 %%%	<- choose G _ A _
-        <- prog A 
+        <- prog A
 	<- ie_sqnt2 Di Do Oi Ol Om Or A P
 	<- appr Ol Om Oo'
 	<- appr Oo' Or Oo.
@@ -70,11 +70,11 @@ forall_L1 : {t : trm Srt} ie_sqnt1 Di Do OiL OoL OiR OoR (forall Srt Frm) P
 forall_L2 : {t : trm Srt} ie_sqnt2 Di Do Oi Ol Om Or (forall Srt Frm) P
 	<- ie_sqnt2 Di Do Oi Ol Om Or (Frm t) P.
 
-forall2_L1 : {t : trm Srt1 -> trm Srt2} 
+forall2_L1 : {t : trm Srt1 -> trm Srt2}
 	ie_sqnt1 Di Do OiL OoL OiR OoR (forall2 Srt1 Srt2 Frm) P
 		<- ie_sqnt1 Di Do OiL OoL OiR OoR (Frm t) P.
 
-forall2_L2 : {t : trm Srt1 -> trm Srt2} 
+forall2_L2 : {t : trm Srt1 -> trm Srt2}
 	ie_sqnt2 Di Do Oi Ol Om Or (forall2 Srt1 Srt2 Frm) P
 		<- ie_sqnt2 Di Do Oi Ol Om Or (Frm t) P.
 

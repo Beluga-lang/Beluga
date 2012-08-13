@@ -23,9 +23,9 @@ prog_st_judg_inversion_aux
                                          DValTc
 		  <- sttp_wf_tail DSTWf DSTWf'
 		  <- st_wf_tail DSWf DSWf'
-		  <- prog_st_judg_inversion_aux DSTWf' DSWf' DStTc' 
-                                             DSttpLookup' 
-                                             DStLookup' 
+		  <- prog_st_judg_inversion_aux DSTWf' DSWf' DStTc'
+                                             DSttpLookup'
+                                             DStLookup'
                                              DValTc'
 		  <- sttp_wf_cons_implies_extend_cons DSTWf DSttpExtend'
 		  <- sttp_weak_val_judg DValTc' DSttpExtend' DValTc.
@@ -36,9 +36,9 @@ prog_st_judg_inversion_aux
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-prog_st_judg_inversion 
+prog_st_judg_inversion
                : stwf_judg S ST ->
-                 sttp_lookup ST L T 
+                 sttp_lookup ST L T
                   -> st_lookup S L V ->
                      val_judg ST V T -> type.
 %mode prog_st_judg_inversion +DStTcWf +SttpLookup -StLookup -DValTc.

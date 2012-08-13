@@ -16,9 +16,9 @@ exception Error of Syntax.Loc.t * error
 
 type free_cvars
 
-val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * fcvars 
+val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * fcvars
 
-val typ      : Syntax.Ext.LF.typ -> Syntax.Apx.LF.typ * fcvars 
+val typ      : Syntax.Ext.LF.typ -> Syntax.Apx.LF.typ * fcvars
 
 val schema   : Syntax.Ext.LF.schema -> Syntax.Apx.LF.schema
 

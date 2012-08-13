@@ -19,7 +19,7 @@ sttp_wf_tail   : sttp_wf (cons_sttp L T ST') -> sttp_wf ST' -> type.
 %%% Store Typing Alloc Lemmas
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-sttp_alloc_preserves_wf  
+sttp_alloc_preserves_wf
                : sttp_wf ST1 -> sttp_alloc ST1 T ST2 L -> sttp_wf ST2 -> type.
 %mode sttp_alloc_preserves_wf +DSTWf1 +DSttpAlloc -DSTWf2.
 -nil           : sttp_alloc_preserves_wf (sttp_wf_nil)
@@ -41,9 +41,9 @@ sttp_alloc_preserves_wf
 sttp_extend_refl
                : {ST:sttp} sttp_extend ST ST -> type.
 %mode sttp_extend_refl +ST -DSttpExtend.
--nil           : sttp_extend_refl nil_sttp 
+-nil           : sttp_extend_refl nil_sttp
                                   (sttp_extend_nil).
--cons          : sttp_extend_refl (cons_sttp L T ST') 
+-cons          : sttp_extend_refl (cons_sttp L T ST')
 		                  (sttp_extend_cons_hit DSttpExtend')
 		  <- sttp_extend_refl ST' DSttpExtend'.
 %terminates ST (sttp_extend_refl ST _).
@@ -53,7 +53,7 @@ sttp_extend_refl
 
 sttp_extend_trans
                : sttp_extend ST1 ST2 ->
-		 sttp_extend ST2 ST3 
+		 sttp_extend ST2 ST3
                   -> sttp_extend ST1 ST3 -> type.
 %mode sttp_extend_trans +DSttpExtend12 +DSttpExtend23 -DSttpExtend13.
 -nil__        : sttp_extend_trans (sttp_extend_nil)
@@ -74,7 +74,7 @@ sttp_extend_trans
                                    (sttp_extend_cons_miss DSttpExtend23' DLocLt)
                                    (sttp_extend_cons_miss DSttpExtend13' DLocLt)
 		  <- sttp_extend_trans (sttp_extend_cons_hit DSttpExtend1'2')
-                                       DSttpExtend23' 
+                                       DSttpExtend23'
                                        DSttpExtend13'.
 -cons_miss__cons_miss
                : sttp_extend_trans (sttp_extend_cons_miss DSttpExtend12' DLocLt)
@@ -97,7 +97,7 @@ sttp_alloc_implies_extend
 -nil           : sttp_alloc_implies_extend (sttp_alloc_nil)
                                            (sttp_extend_nil).
 -cons          : sttp_alloc_implies_extend (sttp_alloc_cons)
-                                           (sttp_extend_cons_miss DSttpExtend 
+                                           (sttp_extend_cons_miss DSttpExtend
 				                                  (loc_lt_ DNatLt))
 		  <- sttp_extend_refl _ DSttpExtend
 		  <- nat_N_lt_sN _ DNatLt.
@@ -107,14 +107,14 @@ sttp_alloc_implies_extend
 %total DStAlloc (sttp_alloc_implies_extend DStAlloc _).
 
 %%% A well-formed, non-empty store typing is an extension of its tail.
-sttp_wf_cons_implies_extend_cons 
+sttp_wf_cons_implies_extend_cons
                : sttp_wf (cons_sttp L T ST')
 		  -> sttp_extend ST' (cons_sttp L T ST') -> type.
 %mode sttp_wf_cons_implies_extend_cons +DSTWf -DSttpExtend.
 -nil           : sttp_wf_cons_implies_extend_cons (sttp_wf_cons_nil)
                                                   (sttp_extend_nil).
 -cons          : sttp_wf_cons_implies_extend_cons (sttp_wf_cons_cons _ DLocLt)
-                                                  (sttp_extend_cons_miss DSttpExtend 
+                                                  (sttp_extend_cons_miss DSttpExtend
                                                                          DLocLt)
 		  <- sttp_extend_refl _ DSttpExtend.
 %terminates {} (sttp_wf_cons_implies_extend_cons _ _).

@@ -41,7 +41,7 @@ end theorem
 
 theorem plus1 : forall N exists N + (s z) = (s N);
 
-x : N + (s z) = (s N) by induction on N ; 
+x : N + (s z) = (s N) by induction on N ;
 
 case z is
 	   d2: (z) + (s z) = (s z) 	by rule sum-z;
@@ -53,7 +53,7 @@ case (s N) is
 end case
 
 end induction
-end theorem 
+end theorem
 
 theorem sum-s-rh : forall D1 : N1 + N2 = N3 exists N1 + (s N2) = (s N3);
 
@@ -82,6 +82,6 @@ is
 H : N1' + (s N2) = (s N3')  by induction hypothesis on I;
 (s N1') + (s N2) = (s s N3') by rule sum-s on H;
 
-end case 
+end case
 end induction
-end theorem 
+end theorem

@@ -40,13 +40,13 @@ st_lookup_miss : st_lookup S' L V ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 st_alloc       : st -> val -> st -> loc -> type.
 %mode st_alloc +S1 +V -S2 -L.
-st_alloc_nil   : st_alloc nil_st 
-		          V'' 
-		          (cons_st (mkLoc z_nat) V'' nil_st) 
+st_alloc_nil   : st_alloc nil_st
+		          V''
+		          (cons_st (mkLoc z_nat) V'' nil_st)
 		          (mkLoc z_nat).
-st_alloc_cons  : st_alloc (cons_st (mkLoc N') V' S) 
-		          V'' 
-		          (cons_st (mkLoc (s_nat N')) V'' (cons_st (mkLoc N') V' S)) 
+st_alloc_cons  : st_alloc (cons_st (mkLoc N') V' S)
+		          V''
+		          (cons_st (mkLoc (s_nat N')) V'' (cons_st (mkLoc N') V' S))
 		          (mkLoc (s_nat N')).
 %terminates S (st_alloc S _ _ _).
 %worlds () (st_alloc _ _ _ _).

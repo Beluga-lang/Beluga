@@ -29,6 +29,6 @@ rec conslist3 : [. list (suc G')] -> [. nat] = fn e =>
 
 %not
 rec badlist : {G':[. nat]} [. list (suc G')] -> [. nat] = mlam G => fn e =>
-  case e of 
+  case e of
   | [. nil]          => [. z]
 ;

@@ -1,4 +1,4 @@
-%{ 
+%{
   CH 3:  Untyped arithmetic expressions
   Author: Brigitte Pientka
 
@@ -13,10 +13,10 @@ no_result: final_value.
 result: term -> final_value.
 
 rec eval : [. term] -> [. final_value] =
-fn m => case m of 
+fn m => case m of
 | [. true]  => [. result true]
 | [. false] => [. result false]
-| [. switch T1 T2 T3] => 
+| [. switch T1 T2 T3] =>
   (case eval [. T1] of
     | [. result true]  => eval [. T2]
     | [. result false] => eval [. T3]
@@ -27,7 +27,7 @@ fn m => case m of
 
 
 let r = eval [. (switch (switch (switch true false false)
-                               true 
+                               true
                                true)
-                       false 
+                       false
                        false) ] ;

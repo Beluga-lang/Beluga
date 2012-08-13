@@ -5,7 +5,7 @@ datatype tm : type =
 | lam  : (tm → tm) → tm
 ;
 
-datatype tp: type = 
+datatype tp: type =
 | nattp:tp
 | unittp:tp
 | arr: tp -> tp -> tp
@@ -42,7 +42,7 @@ datatype plus: nat -> nat -> nat -> type =
 schema tctx = tm ;
 
 %Whnf.Violation("illtyped msub")
-datatype Addup:{g:tctx} [g.nlist M] -> [g.nat] -> ctype = 
+datatype Addup:{g:tctx} [g.nlist M] -> [g.nat] -> ctype =
 | AddNil: Addup [g] [g.nnil] [g. zero]
 | AddSuc: Addup [g] [g.L..] [g.N..] -> Addup [g] [g.ncons (Y..) (L..)] [g. plus (N..) (Y..) (Q..)]
 ;

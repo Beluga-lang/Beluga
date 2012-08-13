@@ -78,7 +78,7 @@ ssc_atom : ss_can (ss_atom IS2 HS1) (can_atm (AT2 _ AT1))
 	    <- is_atm IS2 AT2.
 
 
-isc_andl : % {IS1:i_sound I1 (\d. D1 d)} 
+isc_andl : % {IS1:i_sound I1 (\d. D1 d)}
            is_atm (is_andl IS1)
 	    (\u. \at. AT1 (andel u) (atm_andel at))
 	    <- is_atm IS1 (\u. \at. AT1 u at).
@@ -99,7 +99,7 @@ isc_atom : is_atm (is_atom) (\u.\at. at).
 
 
 %{
-REQUIRES SOME TYPING ANNOTATION 
+REQUIRES SOME TYPING ANNOTATION
 In Twelf:       ([u:pf (forall A)] [at:atm u] AT1 (foralle u _) (atm_foralle at))
 isc_forall : is_atm (is_forall IS1)
 	      (\u.\at. AT1 (foralle u T1) (atm_foralle at))

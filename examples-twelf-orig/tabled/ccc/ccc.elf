@@ -22,7 +22,7 @@ mor : obj -> obj -> type.  %name mor F.
 
 % morphisms
 id : mor A A.
-@ : mor B C -> mor A B -> mor A C. 
+@ : mor B C -> mor A B -> mor A C.
 %infix none 10 @.
 
 drop : mor A 1.
@@ -46,8 +46,8 @@ h:mor A4 A1.
 % equations
 % reordered equations for tabling purposes
 % still needs at least abstraction to prevent
-% getting stuck 
-% 
+% getting stuck
+%
 ass  : H @ (G @ F) == (H @ G) @ F.
 
 prod_l : fst @ (pair F G) == F.
@@ -57,11 +57,11 @@ prod_u : H == pair (fst @ H) (snd @ H).
 
 % @(H @(G F))
 =@= : F @ G == F' @ G'
-       <- F == F' 
+       <- F == F'
        <- G == G'.
 
 =pair= : pair F G == pair F' G'
-	  <- F == F' 
+	  <- F == F'
 	  <- G == G'.
 
 
@@ -69,10 +69,10 @@ refl : F == F.
 
 then : F == F''
 	<- F == F'
-	<- F' == F''. %infix right 4 then. 
+	<- F' == F''. %infix right 4 then.
 
 
-% sym : F == F' -> F' == F. 
+% sym : F == F' -> F' == F.
 % id_l : id @ F == F.
 % id_r : F @ id == F.
 
@@ -85,9 +85,9 @@ then : F == F''
 
 % exp_e : app @ (pair ((cur F) @ fst) snd) == F.
 % term-depth : 4
-% (@  app pair(@((cur F) fst) snd))  
+% (@  app pair(@((cur F) fst) snd))
 
-% term-depth : 
+% term-depth :
 % exp_u : cur (app @ (pair (G @ fst) snd)) == G.
 % term-depth: 4
 % cur(@ app (pair (@ G fst) snd))

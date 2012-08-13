@@ -15,7 +15,7 @@ forall' : (i -> goal) -> goal.
 or'   : goal -> goal -> goal.  %infix right 11 or'.
 false'  : goal.
 exists' : (i -> goal) -> goal.
-eq    : p -> p -> goal.        
+eq    : p -> p -> goal.
 
 atom^ : p -> prog.
 and^  : prog -> prog -> prog.  %infix right 11 and^.

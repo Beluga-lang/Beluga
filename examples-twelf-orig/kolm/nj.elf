@@ -37,29 +37,29 @@ nj_dnotx = ([NJ] (nj_noti [p:o] [u:nj (not A)] (nj_note u p NJ))).
 
  nj_dnotx = ([NJ] (nj_noti (\p. \u. (nj_note u p NJ)))).
 }%
-% Lemma 1: 
-% In intuitionistic logic we have the 
+% Lemma 1:
+% In intuitionistic logic we have the
 % following derivation of (not not not A):- (not A)
 
 %         ------------------- u
 %                  A
 %         ------------------- dnotx
-%                - - A                   - - - A [hyp] 
-%          ------------------------------------------- note(q) 
-%                           q 
-%                 ------------------ noti^q^u 
-%                          - A 
+%                - - A                   - - - A [hyp]
+%          ------------------------------------------- note(q)
+%                           q
+%                 ------------------ noti^q^u
+%                          - A
 % represented in Elf by the definition nj_triple_neg_red given by
 % [w:nj (not (not (not A)))] (nj_noti ([q:o] [u:nj A] (nj_note w q (noti ([p:o] [v:nj (not A)] (note v p u))))))
 
 % %theorem nj_triple_neg_red_auto : forall* {A:o} forall {D:nj (not not not A)} exists {D':nj (not A)} true.
 % %prove 7 {} (nj_triple_neg_red_auto D D').
 %{
-nj_triple_neg_red = ([NJ] 
-                       (nj_noti [q:o] [u:nj A] 
+nj_triple_neg_red = ([NJ]
+                       (nj_noti [q:o] [u:nj A]
                           (nj_note NJ q (nj_dnotx u)))).
 
-nj_triple_neg_red = (\NJ. 
+nj_triple_neg_red = (\NJ.
                        (nj_noti (\q.\v.
                           (nj_note NJ q (nj_noti (\p. \u. (nj_note u p v)))))).
 
@@ -81,9 +81,9 @@ nj_triple_neg_red = (\NJ.
 %theorem nj_dneg_falser_auto : forall* {A:o} exists {D:nj (not not false) -> {C:o} nj C} true.
 %prove 10 {} (nk_dnotx_auto D).
 
-nj_dneg_falser = ([NJ1] [C] (nj_note 
+nj_dneg_falser = ([NJ1] [C] (nj_note
                                NJ1 C
-                               (nj_noti ([p] [u:nj false] 
+                               (nj_noti ([p] [u:nj false]
                                   (nj_falsee u))))).
 
 % (nj_note NJ1 C (nj_noti (\p.\u. (nj_falsee u)))).

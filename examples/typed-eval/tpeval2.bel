@@ -4,7 +4,7 @@
 %   Author: Brigitte Pientka
 %
 
-tp:type. 
+tp:type.
 exp: tp -> type.
 
 nat: tp.
@@ -22,40 +22,40 @@ letv: exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 
 
-rec add : [. exp nat] -> [. exp nat] -> [. exp nat] = 
+rec add : [. exp nat] -> [. exp nat] -> [. exp nat] =
 fn a => fn b =>
  case a of
    [. z]  => b
  | [. s U]  =>
-   let [. V] =  b in 
+   let [. V] =  b in
      add [. U] [. s V]
 ;
 
-rec logical_and : [. exp bool] -> [. exp bool] -> [. exp bool] = 
-fn a => fn b => 
- case a of 
-   [. tt] => b 
+rec logical_and : [. exp bool] -> [. exp bool] -> [. exp bool] =
+fn a => fn b =>
+ case a of
+   [. tt] => b
  | [. ff] => a
 ;
 
 
-rec eval : [. exp T] -> [. exp T] = 
-fn e => 
+rec eval : [. exp T] -> [. exp T] =
+fn e =>
 case e of
    [. z]  => e
  | [. tt] => [. tt]
  | [. ff] => [. ff]
 
- | [. s U]  =>  
+ | [. s U]  =>
    let [. V] = eval [. U] in [. s V]
 
- | [. andalso U1 W1]  => 
+ | [. andalso U1 W1]  =>
     logical_and (eval [. U1]) (eval [. W1])
 
- | [. plus U W]  => 
+ | [. plus U W]  =>
     add (eval  [. U]) (eval [. W])
 
- | [. letv  U (\x . (W  x))]  => 
-   let [. V] = eval  [. U] in 
+ | [. letv  U (\x . (W  x))]  =>
+   let [. V] = eval  [. U] in
       eval [. (W V)]
 ;

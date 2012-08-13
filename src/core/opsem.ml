@@ -193,13 +193,13 @@ and eval_chk e (theta, eta) =
     match e with
       | Comp.Syn (_, i) -> eval_syn i (theta, eta)
       | Comp.MLam (loc, n, e') ->
-          dprint (fun () -> "[MLamValue] created: theta = " ^ 
+          dprint (fun () -> "[MLamValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.MLamValue (n, e', Whnf.cnormMSub theta, eta)
       | Comp.CtxFun (loc, n, e') ->
           Comp.CtxValue (n, e', Whnf.cnormMSub theta, eta)
       | Comp.Fun (loc, n, e') ->
-          dprint (fun () -> "[FunValue] created: theta = " ^ 
+          dprint (fun () -> "[FunValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.FunValue (n, e', Whnf.cnormMSub theta, eta)
 

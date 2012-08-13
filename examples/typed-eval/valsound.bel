@@ -8,7 +8,7 @@ tp   : type.
 arr  : tp -> tp -> tp.
 bool : tp.
 
-exp  : tp -> type.  
+exp  : tp -> type.
 
 lam  : (exp T1 -> exp T2) -> exp (arr T1 T2).
 app  : exp (arr T1 T2) -> exp T1 -> exp T2.
@@ -27,8 +27,8 @@ val: exp T -> type.
 v_lam: val (lam (\x. E x)).
 
 
-rec vs : [. eval E V] -> [. val V] = 
-fn d => case d of 
+rec vs : [. eval E V] -> [. val V] =
+fn d => case d of
 
   [. ev_lam] => [. v_lam]
 

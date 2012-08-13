@@ -1,4 +1,4 @@
-%{ 
+%{
   CH 3:  Untyped arithmetic expressions
   Author: Brigitte Pientka
 
@@ -26,7 +26,7 @@ step: term -> term -> type.
 
 
 e_succ:
-   step T T' 
+   step T T'
 -> step (succ T) (succ T').
 
 e_pred_zero:
@@ -43,7 +43,7 @@ e_pred:
 
 % ---------------------------------------------------------- %
 %{
-  Equality between terms 
+  Equality between terms
 }%
 equal: term -> term -> type.
 ref: equal T T.
@@ -61,19 +61,19 @@ andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
 not_possible : type.
 
-rec values_dont_step : [. step M M'] -> [. num_value M ] -> [. not_possible]= 
-fn s => fn v => case v of 
+rec values_dont_step : [. step M M'] -> [. num_value M ] -> [. not_possible]=
+fn s => fn v => case v of
 | [. v_z]   => (case s of [ .{}] )
-| [. v_s V] => 
-    (case s of [. e_succ D] => 
+| [. v_s V] =>
+    (case s of [. e_succ D] =>
 		values_dont_step [. D] [. V])
 ;
 
 
 rec det : [. steps_to_terms T T1 T2] -> [. equal T1 T2] =
-fn s => case s of 
+fn s => case s of
 
-| [. andalso (e_succ D)        (e_succ F)]   => 
+| [. andalso (e_succ D)        (e_succ F)]   =>
   let [. ref] = det [. andalso D F] in [. ref]
 
 | [. andalso (e_pred_zero)     (e_pred_zero)]    => [. ref]

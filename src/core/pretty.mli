@@ -14,7 +14,7 @@ module Control : sig
 
   val substitutionStyle : substitution_style ref
   val printImplicit : bool ref
- 
+
   val db : unit -> bool  (* true if !substitutionStyle = DeBruijn *)
 end
 
@@ -41,7 +41,7 @@ module Int : sig
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
-    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
+    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
 
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     ->  unit
@@ -97,8 +97,8 @@ module Int : sig
 
     val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
 
-    val schemaToString    : LF.schema     -> string 
-    val schElemToString   : LF.sch_elem   -> string 
+    val schemaToString    : LF.schema     -> string
+    val schElemToString   : LF.sch_elem   -> string
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
@@ -140,7 +140,7 @@ module Ext : sig
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
-    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
+    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
 
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     -> unit
@@ -170,7 +170,7 @@ module Ext : sig
 
     (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.dctx  -> unit
-    val ppr_lf_mctx       : LF.mctx -> unit 
+    val ppr_lf_mctx       : LF.mctx -> unit
     val ppr_cmp_kind      : LF.mctx -> Comp.kind -> unit
     val ppr_cmp_typ       : LF.mctx -> Comp.typ -> unit
     val ppr_cmp_exp_chk   : LF.ctyp_decl LF.ctx -> Comp.exp_chk -> unit

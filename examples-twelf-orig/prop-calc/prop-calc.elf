@@ -25,7 +25,7 @@ LEFT : |- A & B => A.
 RIGHT : |- A & B => B.
 
 % Inference Rule.
-MP : |- A => B -> |- A -> |- B. 
+MP : |- A => B -> |- A -> |- B.
 
 % Natural Deduction.
 

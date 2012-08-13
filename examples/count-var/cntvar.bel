@@ -37,7 +37,7 @@ case x of
 % G, x:exp T |-  z  ==>  0
 % G, x:exp T |-  tt  ==>  0
 % G, x:exp T |-  x  ==>  1
-% G, x:exp T |-  y  ==>  0   y =/= x 
+% G, x:exp T |-  y  ==>  0   y =/= x
 % G, x:exp T |-  s (U .. x) ==> n   if G, x:exp T |- U  ==> n
 % G, x:exp T |-  s U  ==> n   if G, x:exp T |- U  ==> n
 % G, x:exp T |-  letv (U .. x) (\y. V .. x y) ===> n1 + n2
@@ -45,12 +45,12 @@ case x of
 % if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
 
 rec cntV : {g:expCtx}  [g, x:exp (T ..). exp (S .. x)] -> [. exp nat] =
-mlam g => 
+mlam g =>
  fn e =>
   case e of  % e : exp (S .. x) [g, x:exp (T ..)]
 
    | {T':[g. tp]}
-     [g,x : exp (T' ..) . tt]  
+     [g,x : exp (T' ..) . tt]
      => [. z]
 
   | [g,x : exp _ . (#p .. )]    => [. z]
@@ -67,14 +67,14 @@ mlam g =>
 %
 %  NOT WORKING IF WE OMIT T1 ..  since from the pattern we simply infer
 %  T1:tp[g, x:exp _]    and only later in the branch we learn that T1:tp[g].
-%  
+%
 %   | [g,x : exp _ ] letv  (U1 .. x) (\y . (U2 ..  x y)) =>
-%             plus (cntV [g]  ([g,x] (U1 .. x))) 
+%             plus (cntV [g]  ([g,x] (U1 .. x)))
 %                  (cntV [g, y:exp _ ]  ([g,y,x] (U2 .. x y)))
 
 
    | [g,x : exp _ . letv (T1 ..)  (U1 .. x) (\y . (U2 .. x y))] =>
-      plus  (cntV [g]          [g,x. (U1 .. x)]) 
+      plus  (cntV [g]          [g,x. (U1 .. x)])
             (cntV [g, y:exp _]  [g,y,x. (U2 .. x y)])
 
 

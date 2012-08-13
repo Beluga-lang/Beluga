@@ -7,15 +7,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Allocation Progresses
-prog_st_alloc  : {V:val} 
-		 stwf_judg S ST 
+prog_st_alloc  : {V:val}
+		 stwf_judg S ST
 		  -> st_alloc S V S' L' -> type.
 %mode prog_st_alloc +V +DStTcWf -DStAlloc.
--nil           : prog_st_alloc _ 
-                               (stwf_judg_ _ _ (st_judg_nil)) 
+-nil           : prog_st_alloc _
+                               (stwf_judg_ _ _ (st_judg_nil))
                                st_alloc_nil.
--cons          : prog_st_alloc _ 
-                               (stwf_judg_ _ _ (st_judg_cons _ _)) 
+-cons          : prog_st_alloc _
+                               (stwf_judg_ _ _ (st_judg_cons _ _))
                                (st_alloc_cons).
 %terminates {} (prog_st_alloc _ _ _).
 %worlds () (prog_st_alloc _ _ _).
@@ -59,21 +59,21 @@ prog_app_aux   : {E1:exp} {E2:exp}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% letunit ctxt
-prog_letunit_aux 
+prog_letunit_aux
                : {E1:exp} {E2: exp}
 		 stwf_judg S ST ->
-		 exp_judg ST E1 unit_t -> 
+		 exp_judg ST E1 unit_t ->
 		 mach_ok S E1
 		   -> mach_ok S (letunit_e E1 E2) -> type.
 %mode prog_letunit_aux +E1 +E2 +DStTcWf +DExpTc +DMachOk1 -DMachOk.
 -ctxt          : prog_letunit_aux _ _
-		                  _ 
-                                  _ 
+		                  _
+                                  _
                                   (mach_ok_step DStep)
                                   (mach_ok_step (letunit_ctxt_step DStep)).
 -beta          : prog_letunit_aux _ _
-		                  DStTcWf 
-                                  (exp_judg_loc (loc_judg_ DSttpLookup)) 
+		                  DStTcWf
+                                  (exp_judg_loc (loc_judg_ DSttpLookup))
                                   (mach_ok_irred _)
 		                  (mach_ok_step (letunit_beta_step DStLookup))
 		  <- prog_st_judg_inversion DStTcWf DSttpLookup DStLookup DValTc.
@@ -115,22 +115,22 @@ prog_pair_aux   : {E1:exp} {E2:exp}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% letpair ctxt
-prog_letpair_aux 
+prog_letpair_aux
                : {E1:exp} {F2: exp -> exp -> exp}
 		 stwf_judg S ST ->
-		 exp_judg ST E1 (pair_t Tx Ty) -> 
+		 exp_judg ST E1 (pair_t Tx Ty) ->
 		 mach_ok S E1
 		   -> mach_ok S (letpair_e E1 (\x.\y. F2 x y)) -> type.
 %mode prog_letpair_aux +E1 +E2 +DStTcWf +DExpTc +DMachOk1 -DMachOk.
 -ctxt          : prog_letpair_aux _ (\x.\y. F2 x y)
-		                  _ 
-                                  _ 
+		                  _
+                                  _
                                   (mach_ok_step DStep)
                                   (mach_ok_step (letpair_ctxt_step DStep)).
 
 -beta          : prog_letpair_aux _ (\x.\y. F2 x y)
-		                  DStTcWf 
-                                  (exp_judg_loc (loc_judg_ DSttpLookup)) 
+		                  DStTcWf
+                                  (exp_judg_loc (loc_judg_ DSttpLookup))
                                   (mach_ok_irred _)
 		                  (mach_ok_step (letpair_beta_step DStLookup))
 		  <- prog_st_judg_inversion DStTcWf DSttpLookup DStLookup DValTc.

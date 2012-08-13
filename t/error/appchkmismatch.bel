@@ -1,0 +1,46 @@
+datatype tp: type =
+| unit: tp
+| cross: tp -> tp -> tp
+;
+%name tp T.
+
+datatype term: tp -> type =
+;
+%name term M.
+
+% Target language
+datatype target: tp -> type =
+| tunit: target unit
+| tpair: target T -> target S -> target (cross T S)
+;
+%name target Q.
+
+% Natural Numbers
+datatype nat: type =
+| z: nat
+| suc: nat -> nat
+;
+%name nat N.
+
+
+% List of free variables occurring in a term
+datatype fvlist: tp -> type =
+| nil: fvlist unit
+| cons: term T -> fvlist S -> fvlist (cross T S)
+;
+%name fvlist F.
+
+% ----------------------------------------------------------------------
+
+% Define contexts for source and target language
+schema ctx = term T;
+schema tctx = target T;
+
+rec b_env:(g:ctx){h:tctx}
+          ({T:[. tp]} [g. term T] -> [h. target T])
+	  -> [g. fvlist R]
+	  -> [h. target R] =
+mlam h => fn map => fn fvar => case fvar of
+| {T:[. tp]}{E:[g. term T]}{Ta:[g. fvlist S]}
+  [g. cons (E..) (Ta..)] => b_env [h] map [g. Ta.. ]
+;

@@ -14,13 +14,13 @@ rec conc : (mor A B)[] -> (term B)[u:term A] =
            [x] lunit
 
 %       | [] (pair F G) : (mor A (cross B C))[ ]  =>
-%            let [x:term A] (M x) : (term B)[x:term A] = conc ([] F) in 
-%            let [x:term A] (N x) : (term C)[x:term A] = conc ([] G) in 
-%                [x] lpair (M x) (N x)  % term (cross B C)[x:term A] 
+%            let [x:term A] (M x) : (term B)[x:term A] = conc ([] F) in
+%            let [x:term A] (N x) : (term C)[x:term A] = conc ([] G) in
+%                [x] lpair (M x) (N x)  % term (cross B C)[x:term A]
 
       | [] (pair F G)  =>
-           let [x:term A] (M x) = conc ([] F) in 
-           let [x:term A] (N x) = conc ([] G) in 
+           let [x:term A] (M x) = conc ([] F) in
+           let [x:term A] (N x) = conc ([] G) in
                [x] lpair (M x) (N x)
 
       | [] fst =>

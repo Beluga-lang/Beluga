@@ -3,11 +3,11 @@
 schema ctx = some [a:obj] term a;
 
 rec cong : {g:(ctx)*} {M::(term B)[g, x:term A]} (conv (E ..) (E' ..))[g] -> (conv (M .. (E ..)) (M .. (E' ..)))[g] =
-   FN g => mlam M => fn c => 
+   FN g => mlam M => fn c =>
     case ([g,x:term _] M .. x) of
-    | [g, x:term A]  x   =>      c      
+    | [g, x:term A]  x   =>      c
     | [g, x:term _ ] #p .. =>  [g] c_refl
-      
+
     | [g, x:term A] lunit => [g] c_refl
 
     | [g, x:term A] (lpair (M1 .. x) (M2 .. x))  =>
@@ -16,17 +16,17 @@ rec cong : {g:(ctx)*} {M::(term B)[g, x:term A]} (conv (E ..) (E' ..))[g] -> (co
         [g] (c_pair (LC1 ..) (LC2 ..))
 
     | {N::(term (cross B1 B2))[g,x:term A']}
-      [g, x:term A'] (lfst (N .. x)) => 
+      [g, x:term A'] (lfst (N .. x)) =>
       let [g] LP .. = cong [g] <g, x . N .. x> c in
         [g] c_fst (LP ..)
 
     | {N::(term (cross B1 B2))[g,x:term A']}
-      [g, x:term A'] (lsnd (N .. x)) => 
+      [g, x:term A'] (lsnd (N .. x)) =>
       let [g] (LC ..) = cong [g] <g, x . N .. x> c in
           [g] (c_snd (LC ..))
 
     | [g, x:term A'] llam (\y. N .. y x) =>
-      let [g] D ..  = c in  
+      let [g] D ..  = c in
       let [g, y:term B1'] (CP .. y) = cong [g, y:term _] <g, y, x . N .. y x > ([g,y] D .. ) in
           [g] (c_lam  (\y . CP .. y ))
 

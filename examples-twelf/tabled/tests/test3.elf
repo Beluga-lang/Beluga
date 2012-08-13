@@ -6,7 +6,7 @@ p: node -> type.
 %tabled p.
 
 p1: p a.
-p2: p a 
+p2: p a
      <- p b.
 p3: p b
      <- p a.
@@ -18,7 +18,7 @@ p3: p b
 q: node -> type.
 %tabled q.
 
-q2: q a 
+q2: q a
      <- q b.
 q3: q b
      <- q a.

@@ -1,130 +1,130 @@
 %%% The Church-Rosser theorem for parallel reduction
-%%% Author: Frank Pfenning 
+%%% Author: Frank Pfenning
 %%% Adapted for Beluga: Brigitte Pientka
 
 % Substitution lemma for parallel reduction
 
 rec subst : {g:(ctx)*}
              (pred (M .. x) (M' .. x))[g, x:term, u:pred x x]
-          -> (pred (N ..) (N' ..))[g] 
-          -> (pred (M .. (N ..)) (M' .. (N' ..)))[g] = 
-FN g => fn d => fn e => case d of 
+          -> (pred (N ..) (N' ..))[g]
+          -> (pred (M .. (N ..)) (M' .. (N' ..)))[g] =
+FN g => fn d => fn e => case d of
 | [g, x:term, u:pred x x] u => e
 
 | % {#p::(block x:term. pred x x)[g]}
    [g, x:term, u:pred x x] #p.2 .. => [g] #p.2 ..
 
-| [g, x:term, u:pred x x] ap (R1 .. x u) (R2 .. x u) => 
-    let [g] R1' .. = subst [g] ([g,x,u] R1 .. x u) e in 
-    let [g] R2' .. = subst [g] ([g,x,u] R2 .. x u) e in 
+| [g, x:term, u:pred x x] ap (R1 .. x u) (R2 .. x u) =>
+    let [g] R1' .. = subst [g] ([g,x,u] R1 .. x u) e in
+    let [g] R2' .. = subst [g] ([g,x,u] R2 .. x u) e in
     [g] ap (R1' ..) (R2' ..)
 
-| [g, x:term, u:pred x x] lm \y.\v. R1 .. y v x u => 
-  let [g] S .. = e in 
-  let [g,b:block y:term. pred y y] R1' .. b = 
-    subst [g, b:block y:term. pred y y] 
-          ([g,b, x, u] R1 .. b.1 b.2 x u) ([g, b] S .. ) in 
+| [g, x:term, u:pred x x] lm \y.\v. R1 .. y v x u =>
+  let [g] S .. = e in
+  let [g,b:block y:term. pred y y] R1' .. b =
+    subst [g, b:block y:term. pred y y]
+          ([g,b, x, u] R1 .. b.1 b.2 x u) ([g, b] S .. ) in
   [g] lm \y.\v. R1' .. <y,v>
 
 | [g, x:term, u:pred x x] beta (\y.\v. (R1 .. y v x u)) (R2 .. x u) =>
-  let [g] R2' .. = subst [g] ([g, x, u] R2 .. x u) e in 
-  let [g] S .. = e in 
-  let [g, b:block y:term.pred y y] R1' .. b = 
-      subst [g, b:block y:term.pred y y] ([g, b, x, u] R1 .. b.1 b.2 x u) ([g, b] S ..) in 
+  let [g] R2' .. = subst [g] ([g, x, u] R2 .. x u) e in
+  let [g] S .. = e in
+  let [g, b:block y:term.pred y y] R1' .. b =
+      subst [g, b:block y:term.pred y y] ([g, b, x, u] R1 .. b.1 b.2 x u) ([g, b] S ..) in
   [g] beta (\y.\v. R1' .. <y,v>) (R2' ..)
 
 ;
 
 dia_prop: term -> term  -> type.
 dia_result: {N:term}pred M' N -> pred M'' N -> dia_prop M' M''.
-		     
-rec dia : {g:(ctx)*} (pred (M ..) (M1 ..))[g] -> (pred (M ..) (M2 ..))[g]
-          -> (dia_prop (M1 ..) (M2 ..))[g] = 
-FN g => fn d => fn e => case d of 
-| [g] ap (R1 ..) (R2 ..) => 
-  (case e of 
-   | [g] beta (\y.\v. R1' .. y v) (R2' ..)  => 
-     let [g] lm \y.\v. R1a .. y v = [g] R1 .. in 
-     let [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in 
 
-     let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
-       dia [g, b:block y:term. pred y y] ([g, b] R1a .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in 
-     let [g] S'' .. = subst [g] ([g, y, v] S1' .. <y, v>) ([g] S2' ..) in 
+rec dia : {g:(ctx)*} (pred (M ..) (M1 ..))[g] -> (pred (M ..) (M2 ..))[g]
+          -> (dia_prop (M1 ..) (M2 ..))[g] =
+FN g => fn d => fn e => case d of
+| [g] ap (R1 ..) (R2 ..) =>
+  (case e of
+   | [g] beta (\y.\v. R1' .. y v) (R2' ..)  =>
+     let [g] lm \y.\v. R1a .. y v = [g] R1 .. in
+     let [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in
+
+     let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) =
+       dia [g, b:block y:term. pred y y] ([g, b] R1a .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in
+     let [g] S'' .. = subst [g] ([g, y, v] S1' .. <y, v>) ([g] S2' ..) in
        [g] (dia_result (H1 .. (H2 ..)) (beta (\y.\v. S1 .. <y, v>) (S2 ..)) (S'' ..))
-   | [g] ap (R1' ..) (R2' ..) => 
-    let [g] dia_result (N1 .. ) (S1 ..) (S1' ..) = dia [g] ([g] R1 ..) ([g] R1' ..) in 
-    let [g] dia_result (N2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in 
+   | [g] ap (R1' ..) (R2' ..) =>
+    let [g] dia_result (N1 .. ) (S1 ..) (S1' ..) = dia [g] ([g] R1 ..) ([g] R1' ..) in
+    let [g] dia_result (N2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in
       [g] dia_result (app (N1 ..) (N2 ..)) (ap (S1 ..) (S2 ..)) (ap (S1' ..) (S2' ..))
    )
 | [g] beta (\y.\v. R1 .. y v) (R2 ..) =>
-  (case e of 
-   | [g] beta (\y.\v. R1' .. y v) (R2' ..) => 
+  (case e of
+   | [g] beta (\y.\v. R1' .. y v) (R2' ..) =>
 
-     (let  [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in 
+     (let  [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in
 
      let %  {M0::term[g,y:term]}{M1::term[g,y:term]}{H1::term[g,y:term]}
          %  {S1 :: (pred (M0 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
          %  {S1':: (pred (M1 .. b.1) (H1 .. b.1))[g, b: block y:term . pred y y]}
-          [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
-      dia [g, b:block y:term. pred y y] ([g, b] R1 .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in 
+          [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) =
+      dia [g, b:block y:term. pred y y] ([g, b] R1 .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in
 
-     let [g] S .. = subst [g] ([g,y,v] S1 .. <y,v>) ([g] S2 ..) in 
-     let [g] S' .. = subst [g] ([g,y,v] S1' .. <y,v>) ([g] S2' ..) in 
+     let [g] S .. = subst [g] ([g,y,v] S1 .. <y,v>) ([g] S2 ..) in
+     let [g] S' .. = subst [g] ([g,y,v] S1' .. <y,v>) ([g] S2' ..) in
        [g] dia_result _  (S ..) (S' ..)
 	   )
-  | [g] ap (R1' ..) (R2' ..) => 
-    (case [g] R1' ..  of 
-     | [g] lm \y.\v. R1'' .. y v => 
-	 let [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in 
+  | [g] ap (R1' ..) (R2' ..) =>
+    (case [g] R1' ..  of
+     | [g] lm \y.\v. R1'' .. y v =>
+	 let [g] dia_result (H2 ..) (S2 ..) (S2' ..) = dia [g] ([g] R2 ..) ([g] R2' ..) in
 
-	 let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
-      dia [g, b:block y:term. pred y y] ([g, b] R1 .. b.1 b.2) ([g,b] R1'' .. b.1 b.2) in 
+	 let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) =
+      dia [g, b:block y:term. pred y y] ([g, b] R1 .. b.1 b.2) ([g,b] R1'' .. b.1 b.2) in
 
-	 let [g] S .. = subst [g] ([g,y,v] S1 .. <y,v>) ([g] S2 ..) in 
+	 let [g] S .. = subst [g] ([g,y,v] S1 .. <y,v>) ([g] S2 ..) in
 	 [g] dia_result _ (S ..) (beta (\y.\v. S1' .. <y,v>) (S2' ..))
 %     | [g] {}  % prove explicitely that other cases is impossible
     )
   )
-| [g] lm (\y.\v. R1 .. y v) => 
-  let [g] lm (\y.\v. R1' .. y v) = e in 
-  let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) = 
-     dia [g, b:block y:term. pred y y] ([g, b] R1 .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in 
+| [g] lm (\y.\v. R1 .. y v) =>
+  let [g] lm (\y.\v. R1' .. y v) = e in
+  let [g, b:block y:term. pred y y] dia_result (H1 .. b.1) (S1 .. b) (S1' .. b) =
+     dia [g, b:block y:term. pred y y] ([g, b] R1 .. b.1 b.2) ([g,b] R1' .. b.1 b.2) in
 
   [g] dia_result _ (lm (\y.\v. S1 .. <y,v>)) (lm (\y.\v. S1' .. <y,v>))
 
-| [g] #p.2 .. => 
-   let 
+| [g] #p.2 .. =>
+   let
        [g] #q.2 .. = e in [g] dia_result _ (#q.2 ..) (#q.2 ..)
 
 ;
 
 strip_prop: term -> term -> type.
-strip_result: pred* M' N -> pred M'' N 
+strip_result: pred* M' N -> pred M'' N
 	      -> strip_prop M' M''.
 
 rec strip_lemma: {g:(ctx)*}(pred (M ..) (M' ..))[g] -> (pred* (M ..) (M'' ..))[g]
-                -> (strip_prop (M' ..) (M'' ..))[g] = 
-FN g => fn r => fn s =>      let [g] R .. = r in case s of 
+                -> (strip_prop (M' ..) (M'' ..))[g] =
+FN g => fn r => fn s =>      let [g] R .. = r in case s of
  | [g] id* => [g] strip_result id* (R ..)
- 
- | [g] next (R1 ..) (R2* ..) => 
-   let [g] dia_result _ (S1 ..) (S1' ..) = dia [g] ([g] R ..) ([g] R1 ..) in 
-   let [g] strip_result (S2* ..) (S' ..) = strip_lemma [g] ([g] S1' ..) ([g] R2* ..) in 
+
+ | [g] next (R1 ..) (R2* ..) =>
+   let [g] dia_result _ (S1 ..) (S1' ..) = dia [g] ([g] R ..) ([g] R1 ..) in
+   let [g] strip_result (S2* ..) (S' ..) = strip_lemma [g] ([g] S1' ..) ([g] R2* ..) in
      [g] strip_result (next (S1 ..) (S2* ..)) (S' ..)
 ;
 
- 									  
+
 % Confluence for parallel multi-step reduction.
 conf_prop: term -> term -> type.
 conf_result: pred* M' N -> pred* M'' N
           -> conf_prop M' M''.
 
 rec conf : {g:(ctx)*} (pred* (M ..) (M' ..))[g] -> (pred* (M ..) (M'' ..))[g]
-         -> (conf_prop (M' ..) (M'' .. ))[g] = 
-FN g => fn r => fn s => case r of 
-| [g] id* => let [g] R* .. = s in [g] conf_result (R* ..) id* 
-| [g] next (R1 ..) (R2* ..) => 
-  let [g] strip_result (S1* ..) (S1 ..) = strip_lemma [g] ([g] R1 ..) s in 
+         -> (conf_prop (M' ..) (M'' .. ))[g] =
+FN g => fn r => fn s => case r of
+| [g] id* => let [g] R* .. = s in [g] conf_result (R* ..) id*
+| [g] next (R1 ..) (R2* ..) =>
+  let [g] strip_result (S1* ..) (S1 ..) = strip_lemma [g] ([g] R1 ..) s in
 
   let [g] conf_result (S* ..) (S2* ..)  = conf [g] ([g] R2* ..) ([g] S1* ..) in
     [g] conf_result (S* ..) (next (S1 ..) (S2* ..))
@@ -134,30 +134,30 @@ FN g => fn r => fn s => case r of
 
 % Church-Rosser Theorem for parallel reduction
 cr_prop: term -> term -> type.
-cr_result: pred* M N  ->  pred* M'  N 
+cr_result: pred* M N  ->  pred* M'  N
        -> cr_prop M M'.
 
 
-rec cr: {g:(ctx)*} (pred= (M ..)  (M' ..))[g]  ->  (cr_prop (M ..) (M' ..))[g] = 
-FN g => fn e => case e of 
+rec cr: {g:(ctx)*} (pred= (M ..)  (M' ..))[g]  ->  (cr_prop (M ..) (M' ..))[g] =
+FN g => fn e => case e of
 |[g] reduce (R* ..) => [g] cr_result (R* ..) id*
 |[g] expand (R* ..) => [g] cr_result id* (R* ..)
-|[g] next= (C1 ..) (C2 ..) => 
- % C1:pred= M M' 
+|[g] next= (C1 ..) (C2 ..) =>
+ % C1:pred= M M'
  % C2: pred M' M''   TO SHOW: pred* M N   and pred* M'' N
- let [g] cr_result (S1* ..) (R1* ..) = cr [g] ([g] C1 ..) in 
+ let [g] cr_result (S1* ..) (R1* ..) = cr [g] ([g] C1 ..) in
  % S1*: pred* M N1   and R1*: pred* M' N1
 
- let [g] cr_result (S2* ..) (R2* ..) = cr [g] ([g] C2 ..) in 
+ let [g] cr_result (S2* ..) (R2* ..) = cr [g] ([g] C2 ..) in
  % S2*: pred* M' N2   and R2*: pred* M'' N2
 
- let [g] conf_result (T1* ..) (T2* ..) = conf [g] ([g] R1* ..) ([g] S2* ..) in 
+ let [g] conf_result (T1* ..) (T2* ..) = conf [g] ([g] R1* ..) ([g] S2* ..) in
  % T1* : pred* N1 N and T2*: pred* N2 N
 
- let [g] S* .. = append [g] ([g] S1* ..) ([g] T1* ..) in 
+ let [g] S* .. = append [g] ([g] S1* ..) ([g] T1* ..) in
      % S*: pred M N
 
- let [g] S*' .. = append [g] ([g] R2* ..) ([g] T2* ..) in 
+ let [g] S*' .. = append [g] ([g] R2* ..) ([g] T2* ..) in
      % S*' M' N
    [g] cr_result (S* ..) (S*' ..)
 
@@ -165,8 +165,8 @@ FN g => fn e => case e of
 %{
 % This proof below which is in the Twelf repository is wrong. Type
 % checking does not catch the error, although presumably the coverage
-% checker would eventually. 
-%  Tue Nov 24 16:52:22 2009 -bp 
+% checker would eventually.
+%  Tue Nov 24 16:52:22 2009 -bp
 
 % Church-Rosser Theorem for parallel reduction
 

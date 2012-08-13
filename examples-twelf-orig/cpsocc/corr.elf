@@ -17,9 +17,9 @@ vvalMS_t : vvalMS (cons XXi  V) (cons Xi  T)
 
 vvalDS->vvalMS : vvalDS XXi Xi -> vvalMS XXi Xi -> type.
 
-ds_ms_init : vvalDS->vvalMS vvalDS_init 
+ds_ms_init : vvalDS->vvalMS vvalDS_init
                             vvalMS_init.
 
-ds_ms_stack : vvalDS->vvalMS (vvalDS_stack VVDS VVT)  
+ds_ms_stack : vvalDS->vvalMS (vvalDS_stack VVDS VVT)
                              (vvalMS_t VVMS VVT)
               <- vvalDS->vvalMS VVDS VVMS.

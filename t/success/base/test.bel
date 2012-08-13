@@ -13,8 +13,8 @@ coe : exp T -> exp T.
 schema w = some [t:tp] exp t;
 
 rec test : {g:w} [g. exp (T ..)] -> [g. exp (T ..)] =
- mlam g =>  
- fn x => 
+ mlam g =>
+ fn x =>
   case x of
 
     [g. z]          => [g. z]
@@ -25,8 +25,8 @@ rec test : {g:w} [g. exp (T ..)] -> [g. exp (T ..)] =
 
   | [g. (#p ..)]    => [g. (#p ..)]
 
-  | [g. lam (\x. (E .. x))]  =>  
-      [g. lam (\x. (E .. x))]   
+  | [g. lam (\x. (E .. x))]  =>
+      [g. lam (\x. (E .. x))]
 
 
 ;

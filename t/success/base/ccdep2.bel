@@ -94,5 +94,5 @@ mlam g => fn d => case d of
 
 
 % let ok_call = depsplitWrong [] ([x:dep tt] deptt);
-%  
+%
 % let bad_call = depsplitWrong [] ([x:dep ff] tt);

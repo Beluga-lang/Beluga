@@ -1,4 +1,4 @@
-% Translating positive formulas to goal and program formulas.  
+% Translating positive formulas to goal and program formulas.
 
 gl : o -> goal -> type.
 pg : o -> prog -> type.

@@ -3,7 +3,7 @@
 
 combdefn : |- A -> ! A -> type.
 %mode  combdefn +D -F.
- 
+
 cdK     : combdefn K (impliesI [p] impliesI [q] p).
 cdS     : combdefn S (impliesI [p] impliesI [q] impliesI [r]
                          (impliesE (impliesE p r) (impliesE q r))).

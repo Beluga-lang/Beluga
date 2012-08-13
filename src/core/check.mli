@@ -3,7 +3,7 @@
    modified: Joshua Dunfield
 *)
 
-module LF : sig 
+module LF : sig
 
   open Syntax.Int.LF
 
@@ -40,7 +40,7 @@ module LF : sig
 
 end
 
-module Comp : sig 
+module Comp : sig
   open Syntax.Int.Comp
   open Syntax.Int
 
@@ -50,19 +50,19 @@ module Comp : sig
       MismatchChk     of LF.mctx * gctx * exp_chk * tclo * tclo
     | MismatchSyn     of LF.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of LF.mctx * gctx * pattern * tclo * tclo
-    | CtxFunMismatch  of LF.mctx * gctx  * tclo 
-    | FunMismatch     of LF.mctx * gctx  * tclo 
-    | MLamMismatch    of LF.mctx * gctx  * tclo 
-    | PairMismatch    of LF.mctx * gctx  * tclo 
-    | BoxMismatch     of LF.mctx * gctx  * tclo 
+    | CtxFunMismatch  of LF.mctx * gctx  * tclo
+    | FunMismatch     of LF.mctx * gctx  * tclo
+    | MLamMismatch    of LF.mctx * gctx  * tclo
+    | PairMismatch    of LF.mctx * gctx  * tclo
+    | BoxMismatch     of LF.mctx * gctx  * tclo
     | SBoxMismatch    of LF.mctx * gctx  * LF.dctx  * LF.dctx
     | SynMismatch     of LF.mctx * tclo (* expected *) * tclo (* inferred *)
     | BoxCtxMismatch  of LF.mctx * LF.dctx * (LF.psi_hat * LF.normal)
-    | PattMismatch    of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) * 
-                         (LF.mctx * LF.dctx * LF.tclo)  
-    | IfMismatch      of LF.mctx * gctx  * tclo 
+    | PattMismatch    of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) *
+                         (LF.mctx * LF.dctx * LF.tclo)
+    | IfMismatch      of LF.mctx * gctx  * tclo
     | EqMismatch      of LF.mctx * tclo (* arg1 *) * tclo (* arg2 *)
-    | EqTyp           of LF.mctx * tclo 
+    | EqTyp           of LF.mctx * tclo
     | MAppMismatch    of LF.mctx * (meta_typ * LF.msub)
     | AppMismatch     of LF.mctx * (meta_typ * LF.msub)
 

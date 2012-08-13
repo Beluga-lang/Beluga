@@ -42,7 +42,7 @@ dynsem_step_preserves_wf : st_wf S1 -> step S1 E1 S2 E2 -> st_wf S2 -> type.
 		  <- dynsem_step_preserves_wf DSWf DStep DSWf'.
 
 -letpair_beta  : % {S:st_lookup S1 L1 (pair_v L3 L2)}
-%		  {S:st_lookup _ _ _}  
+%		  {S:st_lookup _ _ _}
 		  dynsem_step_preserves_wf DSWf (letpair_beta_step S) DSWf.
 
 

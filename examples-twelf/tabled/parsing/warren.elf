@@ -1,8 +1,8 @@
 %
 % Simple grammar example
-% taken from: David S. Warren: 
+% taken from: David S. Warren:
 % Programming in tabled Prolog, Ch 4 Grammars
-% 
+%
 % illustrates efficient recognition and parsing
 % using tabled logic programming
 %
@@ -14,7 +14,7 @@
 
 tok:type.
 
-% tokens 
+% tokens
 'c': tok.
 'a': tok.
 'd': tok.
@@ -26,7 +26,7 @@ nil: tokens.
 ; : tok -> tokens -> tokens.  %infix right 10 ;.
 
 %{
-DCG : for Prolog 
+DCG : for Prolog
 
 s --> b, [c].
 s --> g, [d].
@@ -43,13 +43,13 @@ recogG : tokens -> tokens -> type.
 %tabled recogB.
 %tabled recogG.
 
-sb: recogS L R 
+sb: recogS L R
    <- recogB L ('c' ; R).
 
-sg: recogS L R 
+sg: recogS L R
    <- recogG L ('d' ; R).
 
-b1 : recogB L R 
+b1 : recogB L R
       <- recogB L R1
       <- recogB R1 R.
 
@@ -61,15 +61,15 @@ g2 : recogG ('a' ; L) L.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 % parse simple grammar
-%{ 
+%{
 
 if we add an extra argument to the recognizer,
-then our parser will have exponential complexity. 
+then our parser will have exponential complexity.
 
-Note: there are exponentially many parses 
+Note: there are exponentially many parses
    and we want to produce all of them!
    it will take exponential time to produce them all,
-   however, it do not want to take exponential time 
+   however, it do not want to take exponential time
    to report failure.
 }%
 
@@ -88,8 +88,8 @@ parseB : pterm -> tokens -> tokens -> type.
 parseS : pterm -> tokens -> tokens -> type.
 parseG : pterm -> tokens -> tokens -> type.
 
-ps1: parseS (s P c) L R 
-      <- recogB L ('c' ; R) 
+ps1: parseS (s P c) L R
+      <- recogB L ('c' ; R)
       <- parseB P L ('c' ; R).
 
 ps2: parseS (s P d) L R
@@ -98,19 +98,19 @@ ps2: parseS (s P d) L R
 
 pb1: parseB (b P1 P2) L R
   <- recogB L L1
-  <- recogB L1 R 
-  <- parseB P1 L L1 
+  <- recogB L1 R
+  <- parseB P1 L L1
   <- parseB P2 L1 R.
 
 pb2: parseB a ('a' ; L) L.
 
 pg1: parseG (g P) L R
-   <- recogG L ('a' ; R) 
+   <- recogG L ('a' ; R)
    <- parseG P L ('a' ; R).
 
 pg2: parseG a ('a' ; L) L.
 
-% some simple queries 
+% some simple queries
 
 %querytabled * *
  recogG ('a' ; 'a' ; 'a' ; nil) L.

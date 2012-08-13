@@ -1,9 +1,9 @@
 % Given an expression e, return the proof that e is always equal to itself.
-% 
+%
 % If e is an expression, then eq e e.
 
 % Author: Brigitte Pientka
-% Comments: 
+% Comments:
 % - use of Sigma-types in context
 %
 % - in Delphin, this example requires a special function `extend' of
@@ -23,9 +23,9 @@ eq_app : % {E1:exp} {F1:exp} {E2:exp} {F2:exp}
          eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 
 eq_lam : % {E : exp -> exp} {F : exp -> exp}
-             ({x : exp} eq x x -> eq (E x) (F x)) 
+             ({x : exp} eq x x -> eq (E x) (F x))
           -> eq (lam (\x. E x)) (lam (\x. F x)).
- 
+
 
 schema w = block x:exp, _t:eq x x;
 
@@ -57,9 +57,9 @@ eq_app : {E1:exp} {F1:exp} {E2:exp} {F2:exp}
          eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
 
 eq_lam : % {E : exp -> exp} {F : exp -> exp}
-             ({x : exp} eq x x -> eq (E x) (F x)) 
+             ({x : exp} eq x x -> eq (E x) (F x))
           -> eq (lam (\x. E x)) (lam (\x. F x)).
- 
+
 % schema w = some [x:exp] eq x x;
 schema w = block x:exp, _t:eq x x;
 
@@ -70,7 +70,7 @@ rec trans: {g:w}       %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
 -> [g. eq (RR ..) (SS ..)]  % e2 : eq R S
 -> [g. eq (TT ..) (SS ..)]  % result : eq T S
 =
-  mlam g => 
+  mlam g =>
     fn e1 => fn e2 =>
       case e1 of
       | {#p : [g. block yy:exp, _t:eq yy yy]}
@@ -80,8 +80,8 @@ rec trans: {g:w}       %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
            (case e2 of
               [g. eq_lam \xx.\uu. D2 .. xx uu] =>
               let
-                  [g, b:block x:exp, _t:eq x x. E .. b] = 
-                     trans [g, b:block x':exp, _t:eq x' x'] 
+                  [g, b:block x:exp, _t:eq x x. E .. b] =
+                     trans [g, b:block x':exp, _t:eq x' x']
                        [g, b. D1 .. b.1 b.2]
                        [g, b. D2 .. b.1 b.2]
               in

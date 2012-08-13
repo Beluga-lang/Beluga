@@ -1,6 +1,6 @@
 %{
    Exceptions carrying values of type int
-  
+
 }%
 tp: type.
 nat: tp.
@@ -31,9 +31,9 @@ step_app_2    : step (app E1 E2) (app E1 E2')
 step_app_beta : step (app (lam T E ) E2) (E E2)
                  <- value E2.
 
-step_app_err1 : value V 
+step_app_err1 : value V
 		-> step (app (raise V) E2) (raise V).
-step_app_err2 : value V1 -> value V2 -> 
+step_app_err2 : value V1 -> value V2 ->
 		step (app V1 (raise V2)) (raise V2).
 
 step_try      : step E1 E1'
@@ -58,36 +58,36 @@ t_trywith: oft E1 T -> ({x:term} oft x nat -> oft (E2 x) T)
 t_error : oft E nat -> oft (raise E) T.
 
 % ---------------------------------------------------------- %
-rec tps: [. oft M T] -> [. step M N] -> [. oft N T] = 
-fn d => fn s => case s of 
-| [. step_app_1 S1] => 
-  let [. t_app D1 D2] = d in 
-  let [. F1] = tps  [. D1] [. S1] in 
-    [. t_app F1 D2] 
+rec tps: [. oft M T] -> [. step M N] -> [. oft N T] =
+fn d => fn s => case s of
+| [. step_app_1 S1] =>
+  let [. t_app D1 D2] = d in
+  let [. F1] = tps  [. D1] [. S1] in
+    [. t_app F1 D2]
 
-| [. step_app_2 S2 _] => 
-  let [. t_app D1 D2] = d in 
-  let [. F2] = tps  [. D2] [. S2] in 
-    [. t_app D1 F2] 
+| [. step_app_2 S2 _] =>
+  let [. t_app D1 D2] = d in
+  let [. F2] = tps  [. D2] [. S2] in
+    [. t_app D1 F2]
 
-| [. step_app_beta V] => 
-  let [. t_app (t_lam D) D2] = d in 
+| [. step_app_beta V] =>
+  let [. t_app (t_lam D) D2] = d in
     [. D _ D2]
 
-| [. step_app_err1 _]   => 
-  let [. t_app (t_error D) _]  = d in [. t_error D] 
-| [. step_app_err2 _  _] => 
+| [. step_app_err1 _]   =>
+  let [. t_app (t_error D) _]  = d in [. t_error D]
+| [. step_app_err2 _  _] =>
   let [. t_app _ (t_error D)] = d in [. t_error D]
 
-| [. step_try S1] => 
-  let [. t_trywith D1 D2] = d in 
-  let [. F1] = tps [. D1] [. S1] in 
+| [. step_try S1] =>
+  let [. t_trywith D1 D2] = d in
+  let [. F1] = tps [. D1] [. S1] in
     [. t_trywith F1 D2]
 
-| [. step_try_v V] => 
+| [. step_try_v V] =>
   let [. t_trywith D1 D2] = d in [. D1]
 
-| [. step_try_error _]  => 
+| [. step_try_error _]  =>
   let [. t_trywith (t_error D1) D2] = d in [. D2 _ D1]
 
 ;

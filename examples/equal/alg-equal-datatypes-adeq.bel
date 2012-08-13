@@ -1,7 +1,7 @@
 % Adequacy: Converting between HOAS representation of aeq in LF
 % and its representation on the computation-level using data-types.
 
-datatype term: type = 
+datatype term: type =
 | app : term -> term -> term
 | lam : (term -> term) -> term
 ;
@@ -11,60 +11,60 @@ schema tctx = term;
 
 % Algorithmic Equality
 aeq: term -> term -> type.   %name aeq Q u.
-ae_a : aeq E1 F1 -> aeq E2 F2 
+ae_a : aeq E1 F1 -> aeq E2 F2
     -> aeq (app E1 E2) (app F1 F2).
-ae_l :  ({x:term} aeq x x -> aeq (E x) (F x)) 
+ae_l :  ({x:term} aeq x x -> aeq (E x) (F x))
         -> aeq (lam (\x. E x)) (lam (\x. F x)).
 
 % Context declarations
 schema aCtx  = block x:term, _t:aeq x x;
 
 % Algorithmic Equality weakened contexts aCtx
-datatype Aeq' : (g:aCtx) [g.term] -> [g.term] -> ctype = 
+datatype Aeq' : (g:aCtx) [g.term] -> [g.term] -> ctype =
 | Ae_v' : % {#p:[g.block (x:term, u:aeq x x)]}
              Aeq' [g. #p.1 ..] [ g.#p.1 ..]
 | Ae_a' : Aeq' [g.E1 ..] [g.F1 .. ] -> Aeq' [g.E2 ..] [g.F2 ..]
     -> Aeq' [g. app (E1..) (E2..)] [g. app (F1 ..) (F2 ..)]
-| Ae_l' :  Aeq' [h,b:block (x:term, u:aeq x x). E .. b.1] 
-              [h,b:block (x:term, u:aeq x x). F .. b.1] 
+| Ae_l' :  Aeq' [h,b:block (x:term, u:aeq x x). E .. b.1]
+              [h,b:block (x:term, u:aeq x x). F .. b.1]
         -> Aeq' [h. lam (\x. E .. x)]  [h. lam (\x. F .. x)]
 ;
 
 % Algorithmic Equality in context tctx
-datatype Aeq : (g:tctx) [g.term] -> [g.term] -> ctype = 
+datatype Aeq : (g:tctx) [g.term] -> [g.term] -> ctype =
 | Ae_v : % {#p:[g.term]}
              Aeq [g. #p ..] [ g.#p..]
 | Ae_a : Aeq [g.E1 ..] [g.F1 .. ] -> Aeq [g.E2 ..] [g.F2 ..]
     -> Aeq [g. app (E1..) (E2..)] [g. app (F1 ..) (F2 ..)]
-| Ae_l :  Aeq [h,x:term. E .. x] [h,x:term. F .. x] 
+| Ae_l :  Aeq [h,x:term. E .. x] [h,x:term. F .. x]
         -> Aeq [h. lam (\x. E .. x)]  [h. lam (\x. F .. x)]
 ;
 
 % Declarative Equality
 %{
-datatype Deq: (g:tctx) [g.term] -> [g.term] -> ctype = 
+datatype Deq: (g:tctx) [g.term] -> [g.term] -> ctype =
 | De_v : Deq [g. #p ..] [ g.#p..]
-| De_l : Deq [g,x:term. T ..x] [g,x:term. T'..x] 
+| De_l : Deq [g,x:term. T ..x] [g,x:term. T'..x]
      -> Deq [g. lam (\x. T .. x)] [g. lam (\x. T' .. x)]
 | De_a : Deq [g.T1 ..] [g.S1 ..] -> Deq [g.T2 ..] [g.S2 ..]
      -> Deq [g. app (T1 ..) (T2 ..)] [g. app (S1 ..) (S2..)]
 | De_r : {T: [g.term]}Deq [g.T..] [g.T..]
-| De_t : Deq [g.T ..] [g.R ..] -> Deq [g.R..] [g.S..] 
+| De_t : Deq [g.T ..] [g.R ..] -> Deq [g.R..] [g.S..]
      -> Deq [g.T..] [g.S..]
 ;
 
 % Declarative Equality
 
 deq: term -> term -> type.
-de_l: ({x:term} deq x x -> deq (T x) (T' x)) 
+de_l: ({x:term} deq x x -> deq (T x) (T' x))
      -> deq (lam (\x. T x)) (lam (\x. T' x)).
-de_a: deq T1 S1 -> deq T2 S2  
+de_a: deq T1 S1 -> deq T2 S2
      -> deq (app T1 T2) (app S1 S2).
 de_r: deq T T.
-de_t: deq T R -> deq R S 
+de_t: deq T R -> deq R S
      -> deq T S.
 
-% schema adCtx =  block x: term, u:aeq x x , _t:deq x x ; 
+% schema adCtx =  block x: term, u:aeq x x , _t:deq x x ;
 }%
 
 
@@ -72,37 +72,37 @@ de_t: deq T R -> deq R S
 % To keep the translation simple, we first translate contextual objects
 % [g. aeq (M ..) (N ..) to Aeq' objects within the same context g.
 rec atrans_c :(g:aCtx) [g. aeq (M ..) (N ..)] -> Aeq' [g.M ..] [g.N ..] =
-fn ae => case ae of 
+fn ae => case ae of
 | [g. #p.2 ..] => Ae_v' % [g.#p ..]
-| [g.ae_a (D1 ..) (D2 ..)] => 
+| [g.ae_a (D1 ..) (D2 ..)] =>
   Ae_a' (atrans_c [g. D1..]) (atrans_c [g. D2 ..])
-| [g. ae_l \x.\u.D .. x u] => 
+| [g. ae_l \x.\u.D .. x u] =>
   Ae_l' (atrans_c [g, b:block (x:term, _u:aeq x x) . D .. b.1 b.2])
 ;
 
 rec atrans_s :(g:aCtx)  Aeq' [g.M ..] [g.N ..] -> [g. aeq (M ..) (N ..)] =
-fn ae => case ae of 
-| Ae_v' => 
-  let ae : Aeq' [g.#p.1 ..] [g.#p.1 ..] = ae in [g. #p.2 ..] 
-| Ae_a' d1 d2 => 
-  let [g. D1 ..] = atrans_s d1 in 
-  let [g. D2 ..] = atrans_s d2 in 
-     [g.ae_a (D1 ..) (D2 ..)]  
+fn ae => case ae of
+| Ae_v' =>
+  let ae : Aeq' [g.#p.1 ..] [g.#p.1 ..] = ae in [g. #p.2 ..]
+| Ae_a' d1 d2 =>
+  let [g. D1 ..] = atrans_s d1 in
+  let [g. D2 ..] = atrans_s d2 in
+     [g.ae_a (D1 ..) (D2 ..)]
 
-| Ae_l' d => 
-  let [g, b:block (x:term, _u:aeq x x) . D .. b.1 b.2] = atrans_s d in 
-  [g. ae_l \x.\u.D .. x u] 
+| Ae_l' d =>
+  let [g, b:block (x:term, _u:aeq x x) . D .. b.1 b.2] = atrans_s d in
+  [g. ae_l \x.\u.D .. x u]
 ;
 
 
-% To weaken/strengthen the Aeq' relation, we define how 
+% To weaken/strengthen the Aeq' relation, we define how
 % terms in the context tctx are related to terms in the context aCtx
-datatype TRel : (g:tctx) (h:aCtx) [g. term] -> [h.term] -> ctype = 
-| TRvar0 : {h: aCtx} TRel [g, x:term. x] 
- 		         [h, b:block (x:term, u:aeq x x).b.1] 
+datatype TRel : (g:tctx) (h:aCtx) [g. term] -> [h.term] -> ctype =
+| TRvar0 : {h: aCtx} TRel [g, x:term. x]
+ 		         [h, b:block (x:term, u:aeq x x).b.1]
 | TRvar  :   % {#p:[g.term]}{#q:[h. block x:term, u:aeq x x]}
                           TRel  [g . #p ..] [h . #q.1 ..]
-         -> TRel [g, x:term. #p ..] 
+         -> TRel [g, x:term. #p ..]
                 [h, b:block (x:term, u:aeq x x). #q.1 ..]
 
 | TRapp  : TRel [g. M ..] [h. M'..] -> TRel [g. N ..] [h.N' ..]
@@ -113,70 +113,70 @@ datatype TRel : (g:tctx) (h:aCtx) [g. term] -> [h.term] -> ctype =
 ;
 
 % strengthen Aeq' to Aeq.
-rec aeq_str: (h:aCtx)(g:tctx) Aeq' [h.M ..] [h.N ..] -> 
-            TRel [g.M' ..] [h.M ..] -> TRel  [g.N' ..] [h.N ..] -> 
-            Aeq [g.M' ..] [g.N' ..] = 
-fn ae' => fn tr1 => fn tr2 => case tr1  of 
-| TRvar0 [h] => 
-   let Ae_v'  = ae' in 
-   let TRvar0 [h] = tr2 in Ae_v 
+rec aeq_str: (h:aCtx)(g:tctx) Aeq' [h.M ..] [h.N ..] ->
+            TRel [g.M' ..] [h.M ..] -> TRel  [g.N' ..] [h.N ..] ->
+            Aeq [g.M' ..] [g.N' ..] =
+fn ae' => fn tr1 => fn tr2 => case tr1  of
+| TRvar0 [h] =>
+   let Ae_v'  = ae' in
+   let TRvar0 [h] = tr2 in Ae_v
 | TRvar r => % r : TRel [g. #q ..] [h.#p.1 ..]
   let Ae_v' = ae' in  % Aeq' [h,b . #p.1 ..] [h,b. #p.1 ..]
   let TRvar r' = tr2 in  % r : TRel [g.#q' ..] [h,b. #p.1 ..]
-  let Ae_v  = aeq_str Ae_v' r r' in  % Aeq [g. #q ..] [g. #q' ..] 
+  let Ae_v  = aeq_str Ae_v' r r' in  % Aeq [g. #q ..] [g. #q' ..]
       % by inversion, we know that #q = #q'
-    Ae_v  % % [g, x.term #q ..]  
+    Ae_v  % % [g, x.term #q ..]
 
-| TRapp r1 r2 => 
-  let Ae_a' d1 d2 = ae' in 
-  let TRapp r1' r2' = tr2 in 
+| TRapp r1 r2 =>
+  let Ae_a' d1 d2 = ae' in
+  let TRapp r1' r2' = tr2 in
     Ae_a (aeq_str d1 r1 r1') (aeq_str d2 r2 r2')
 
-| TRlam r1 => 
-  let Ae_l' d = ae' in 
-  let TRlam r2 = tr2 in 
+| TRlam r1 =>
+  let Ae_l' d = ae' in
+  let TRlam r2 = tr2 in
     Ae_l (aeq_str d r1 r2)
 ;
 
-% Completeness 
-rec caeq : (h:aCtx)(g:tctx) [h. aeq (M ..) (N ..)] -> 
-           TRel [g.M' ..] [h.M ..] -> TRel  [g.N' ..] [h.N ..] -> 
+% Completeness
+rec caeq : (h:aCtx)(g:tctx) [h. aeq (M ..) (N ..)] ->
+           TRel [g.M' ..] [h.M ..] -> TRel  [g.N' ..] [h.N ..] ->
            Aeq [g.M' ..] [g.N' ..] =
 fn ae => fn tr1 => fn tr2 => aeq_str (atrans_c ae ) tr1 tr2
 ;
 
 % weaken  Aeq to Aeq'.
-rec aeq_wk: (h:aCtx)(g:tctx)  Aeq [g.M' ..] [g.N' ..] -> 
-            TRel [g.M' ..] [h.M ..] -> TRel  [g.N' ..] [h.N ..] -> 
+rec aeq_wk: (h:aCtx)(g:tctx)  Aeq [g.M' ..] [g.N' ..] ->
+            TRel [g.M' ..] [h.M ..] -> TRel  [g.N' ..] [h.N ..] ->
             Aeq' [h.M ..] [h.N ..]
-            = 
-fn ae => fn tr1 => fn tr2 => case tr1  of 
- | TRvar0 [h] => 
-   let Ae_v = ae in 
-   let TRvar0 [h] = tr2 in 
-    Ae_v' 
+            =
+fn ae => fn tr1 => fn tr2 => case tr1  of
+ | TRvar0 [h] =>
+   let Ae_v = ae in
+   let TRvar0 [h] = tr2 in
+    Ae_v'
 
 | TRvar r =>             % r : TRel [g. #q ..] [h.#p.1 ..]
   let Ae_v = ae in       % Aeq [g,x:term . #q ..] [g,x:term. #q ..]
   let TRvar r' = tr2 in  % r : TRel [g.#q ..]  [h. #p'.1 ..]
-  let Ae_v'  = aeq_wk Ae_v  r r' in  % Aeq' [g. #p.1 ..] [g. #p.1 ..] 
+  let Ae_v'  = aeq_wk Ae_v  r r' in  % Aeq' [g. #p.1 ..] [g. #p.1 ..]
       % by inversion, we know that #p = #p'
     Ae_v'
 
-| TRapp r1 r2 => 
-  let Ae_a d1 d2 = ae in 
-  let TRapp r1' r2' = tr2 in 
+| TRapp r1 r2 =>
+  let Ae_a d1 d2 = ae in
+  let TRapp r1' r2' = tr2 in
     Ae_a' (aeq_wk d1 r1 r1') (aeq_wk d2 r2 r2')
 
-| TRlam r1 => 
-  let Ae_l d = ae in 
-  let TRlam r2 = tr2 in 
+| TRlam r1 =>
+  let Ae_l d = ae in
+  let TRlam r2 = tr2 in
     Ae_l' (aeq_wk d r1 r2)
 ;
 
 % Soundness
-rec saeq : (h:aCtx)(g:tctx) Aeq [g.M' ..] [g.N' ..] ->  
-           TRel [g.M' ..] [h.M ..] -> TRel  [g.N' ..] [h.N ..] -> 
+rec saeq : (h:aCtx)(g:tctx) Aeq [g.M' ..] [g.N' ..] ->
+           TRel [g.M' ..] [h.M ..] -> TRel  [g.N' ..] [h.N ..] ->
            [h. aeq (M ..) (N ..)] =
 fn ae => fn tr1 => fn tr2 => atrans_s (aeq_wk ae tr1 tr2)
 ;

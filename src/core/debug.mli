@@ -1,15 +1,15 @@
 (* File: Debug.sml
   Author: Joshua Dunfield
   Contents: Debug-print library with up to 31 separate categories of information.
- 
+
   Usage:
 
    - show, showAll, showNone determine which categories will be printed.
- 
+
    - In each client module, create debug-printer functions by calling `makeFunctions':
 
       let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [...])
- 
+
     where `...' is the category (conceivably, categories) specific to the module.
 
    - `print' takes a thunk; `prnt' (misspelled) takes a string.
@@ -21,16 +21,16 @@
      Both `print' and `prnt' add a newline.
 
   TODO: Add a third form that's like `printf', for those who enjoy such things.
-  
+
   OLD TODO: Functorize.  Have one debug-functor for each category; the numbers
-    then become debugging levels per category, allowing one to incrementally 
+    then become debugging levels per category, allowing one to incrementally
     crank up verbosity for the module of interest.  Have a single module whose `show'
     is propagated to all debug-functors.
 *)
 
 type flags
 
-val chatter : int ref 
+val chatter : int ref
 
 val makeFunctions : flags -> ((unit -> string) -> unit) * (string -> unit)
 

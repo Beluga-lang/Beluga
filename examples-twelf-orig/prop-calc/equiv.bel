@@ -21,7 +21,7 @@ aMP	  : abs (\x. mp (P x) (Q x)) (mp (mp s P') Q')
 
 schema |-ctx =  |- A.
 
-rec abs: {g:(|-ctx)*}(|- (B .. ))[g, u: |- A] -> (|- imp (A ..) (B ..))[g] = 
+rec abs: {g:(|-ctx)*}(|- (B .. ))[g, u: |- A] -> (|- imp (A ..) (B ..))[g] =
  FN g => fn d => case d of
   | [g,x: |- (A ..)] x       => [g] mp (mp s k) k
   | [g,x: |- (A ..)] #p ..   => [g] mp k (#p ..)
@@ -29,11 +29,11 @@ rec abs: {g:(|-ctx)*}(|- (B .. ))[g, u: |- A] -> (|- imp (A ..) (B ..))[g] =
   | [g,x: |- _     ] left    => [g] mp k left
   | [g,x: |- _     ] right   => [g] mp k right
   | [g,x: |- _     ] k       => [g] mp k k
-  | [g,x: |- _     ]  mp (P .. x) (Q .. x) => 
-    let [g] P' .. = abs [g] ([g,x] P .. x) in 
-    let [g] Q' .. = abs [g] ([g,x] Q .. x) in 
+  | [g,x: |- _     ]  mp (P .. x) (Q .. x) =>
+    let [g] P' .. = abs [g] ([g,x] P .. x) in
+    let [g] Q' .. = abs [g] ([g,x] Q .. x) in
      [g] mp (mp s (P' ..)) (Q' ..)
-  
+
 ;
 
 % comb does the translation from natural deduction to Hilbert deductions,
@@ -62,36 +62,36 @@ cimpliesE : comb (impliesE P Q) (mp P' Q')
 
 
 schema !ctx = some [a:o] ! a;
-coercion !to|- : !ctx -> |-ctx = 
+coercion !to|- : !ctx -> |-ctx =
             [a:o] ! a => |- a;
 
-rec comb: {g:!ctx} (! (A ..))[g] -> (|- (A ..))[!to|-(g)] = 
-FN g => fn d => case d of 
-  
+rec comb: {g:!ctx} (! (A ..))[g] -> (|- (A ..))[!to|-(g)] =
+FN g => fn d => case d of
+
   [g] #p .. => [!to|-(g)] !to|-(#p ..)
 
-| [g] trueI => [!to|-(g)] one 
+| [g] trueI => [!to|-(g)] one
 
-|[g] andI (P ..) (Q ..) => 
- let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in 
- let [!to|-(g)] Q' .. = comb [g] ([g] Q .. ) in 
+|[g] andI (P ..) (Q ..) =>
+ let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in
+ let [!to|-(g)] Q' .. = comb [g] ([g] Q .. ) in
    [!to|-(g)] mp (mp pair (P' ..)) (Q' ..)
 
-|[g] andEL (P ..)  => 
- let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in 
+|[g] andEL (P ..)  =>
+ let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in
   [!to|-(g)] mp left (P' ..)
-|[g] andER (P ..)  => 
- let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in 
+|[g] andER (P ..)  =>
+ let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in
   [!to|-(g)] mp right (P' ..)
 
 |[g] impliesI (PP ..) =>
- let [!to|-(g), y:|- _ ] PP' .. y = comb [g, x:! _ ] ([g, x] PP .. x) in 
+ let [!to|-(g), y:|- _ ] PP' .. y = comb [g, x:! _ ] ([g, x] PP .. x) in
     abs [!to|-(g)] ([!to|-(g), y] PP' .. y)
 
-|[g] impliesE (P ..) (Q ..) => 
-  let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in 
- let [!to|-(g)] Q' .. = comb [g] ([g] Q .. ) in 
-   [!to|-(g)] mp (P' ..) (Q' ..)  
+|[g] impliesE (P ..) (Q ..) =>
+  let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in
+ let [!to|-(g)] Q' .. = comb [g] ([g] Q .. ) in
+   [!to|-(g)] mp (P' ..) (Q' ..)
 
 ;
 
@@ -100,7 +100,7 @@ FN g => fn d => case d of
 % This simply gives the definition of the (proof) combinators as lambda-terms.
 
 
-coercion |-to! : |-ctx –-> !ctx = 
+coercion |-to! : |-ctx –-> !ctx =
             [a:o] |- a –-> ! a ;
 
 %{combdefn : |- A -> ! A -> type.
@@ -119,8 +119,8 @@ cdMP    : combdefn (mp P Q) (impliesE P' Q')
 
 }%
 
-rec combdefn : {g:(|-ctx)*} (|- (A ..))[g] -> (! (A .. ))[|-to!(g)] = 
-FN g => fn d => case d of 
+rec combdefn : {g:(|-ctx)*} (|- (A ..))[g] -> (! (A .. ))[|-to!(g)] =
+FN g => fn d => case d of
 
  | [g] #p .. => [|-to!(g)] |-to!(#p ..)
 
@@ -134,9 +134,9 @@ FN g => fn d => case d of
  | [g] left =>  [|-to!(g)] impliesI (\p. andEL p)
  | [g] right =>  [|-to!(g)] impliesI (\p. andER p)
 
- | [g] mp (P ..) (Q ..) => 
-   let [|-to!(g)] P' .. = combdefn [g] ([g] P .. ) in 
-   let [|-to!(g)] Q' .. = combdefn [g] ([g] Q .. ) in 
+ | [g] mp (P ..) (Q ..) =>
+   let [|-to!(g)] P' .. = combdefn [g] ([g] P .. ) in
+   let [|-to!(g)] Q' .. = combdefn [g] ([g] Q .. ) in
      [|-to!(g)] impliesE (P' ..) (Q' ..)
 
 ;

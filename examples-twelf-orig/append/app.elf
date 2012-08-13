@@ -22,7 +22,7 @@ appcons : app (@ X L) K (@ X M)
 
 %{
 rec  ex1 : (app (@ a (@ a (@ a nil))) (@ a (@ a nil))  (@ a (@ a (@ a (@ a (@ a nil))))))[ ] =
-  [ ] appcons (appcons (appcons appnil)) 
+  [ ] appcons (appcons (appcons appnil))
 ;
 
 
@@ -36,7 +36,7 @@ ex1: test (appcons (appcons (appcons appnil))).
 
 
 %{
-%query 1 * D : app (a @ a @ a @ nil) (b @ b @ nil) M. 
+%query 1 * D : app (a @ a @ a @ nil) (b @ b @ nil) M.
 %query 1 * D : app M (b @ b @ nil) (a @ a @ a @ b @ b @ nil).
 %query 1 * D : app (a @ a @ a @ nil)  M (a @ a @ a @ b @ b @ nil).
 
@@ -220,7 +220,7 @@ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
-a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ 
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
@@ -449,7 +449,7 @@ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
-a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ 
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
@@ -561,7 +561,7 @@ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
-a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ 
+a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @
 a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @ a @

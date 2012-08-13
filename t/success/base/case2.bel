@@ -10,6 +10,6 @@ schema w = some [ ] nat;
 rec copynat : {g:w} [g. nat] -> [g. nat] =
    mlam g => fn e =>
      case e of %not
-       [g. z] => [g. z] 
+       [g. z] => [g. z]
      | [g. suc (U ..)] => copynat [g] [g. (U ..)]
 ;

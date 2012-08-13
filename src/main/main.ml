@@ -105,7 +105,7 @@ let rec accum_lines input =
   with
     | End_of_file -> []
 
-let rec trim_comment str = 
+let rec trim_comment str =
   let len = String.length str in
   match str with
   | "" -> ""
@@ -115,11 +115,11 @@ let rec trim_comment str =
   | s when s.[len - 1] = ' ' -> trim_comment (String.sub s 0 (len - 1))
   | s -> s
 
-let filter_lines files = 
+let filter_lines files =
   let files' = List.map trim_comment files in
   List.filter (fun s -> String.length s != 0) files'
 
-let process_cfg_file file_name = 
+let process_cfg_file file_name =
   let cfg = open_in file_name in
   let lines = accum_lines cfg in
   close_in cfg
@@ -172,7 +172,7 @@ let main () =
                         Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
                       else
                         raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))));
-          if !Coverage.enableCoverage then 
+          if !Coverage.enableCoverage then
             (if !Debug.chatter != 0 then
                 printf "\n## Coverage checking done: %s  ##\n" file_name);
           if !Subord.dump then begin

@@ -20,6 +20,7 @@ type error =
   | CyclicDependencyPV
   | CyclicDependencyFPV
   | UnknownIdentifier
+  | UnknownSchemaCtx of Id.name
 
 exception Error of Syntax.Loc.t * error
 

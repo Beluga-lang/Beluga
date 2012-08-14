@@ -4,11 +4,6 @@
 ((nil
   (coding . us-ascii)
   (indent-tabs-mode)
-  (eval ignore-errors
-      "Write-contents-functions is a buffer-local alternative to before-save-hook"
-      (add-hook 'write-contents-functions
-                (lambda ()
-                  (delete-trailing-whitespace (point-min) (point-max))
-                  nil))))
+  (eval . (add-hook 'write-file-hooks 'delete-trailing-whitespace)))
  (tuareg-mode
   (compile-command . "omake -R")))

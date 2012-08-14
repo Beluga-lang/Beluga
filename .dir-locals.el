@@ -3,7 +3,7 @@
 
 ((nil
   (coding . us-ascii)
-  (indent-tabs-mode)
+  (indent-tabs-mode . nil)
   (eval . (add-hook 'write-file-hooks 'delete-trailing-whitespace)))
  (tuareg-mode
   (compile-command . "omake -R")))

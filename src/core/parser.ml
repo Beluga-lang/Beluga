@@ -72,7 +72,7 @@ type pair_or_atom_syn =
 
 type pair_or_atom_pat =
   | Pair_pat of Comp.pattern
-  | Atom_pat
+  | Atom_pat of Comp.typ option
 
 type clf_pattern =
   | PatEmpty of Loc.t
@@ -902,7 +902,7 @@ GLOBAL: sgn_eoi;
       [
         ","; e2 = cmp_branch_pattern ; ")" -> Pair_pat e2
 
-      | ")"                 -> Atom_pat
+      | ")"; tauOpt = OPT [":" ; tau = cmp_typ -> tau]  -> Atom_pat tauOpt
 
       ]
     ]
@@ -1194,7 +1194,8 @@ clf_pattern :
      | "("; p = SELF; p_or_a = cmp_pair_atom_pat   ->
          (match p_or_a with
             | Pair_pat p2 -> Comp.PatPair (_loc, p, p2)
-            | Atom_pat -> p)
+            | Atom_pat None -> p
+            | Atom_pat (Some tau) -> Comp.PatAnn (_loc, p, tau))
       ]
     ]
   ;

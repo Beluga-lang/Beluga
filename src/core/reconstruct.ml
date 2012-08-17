@@ -426,31 +426,31 @@ let mgAtomicTyp cD cPsi a kK =
     Int.LF.Atom (Syntax.Loc.ghost, a, genSpine (kK, LF.id))
 
 
-let rec mgTyp cD cPsi tA = begin match tA with 
-  | Int.LF.Atom (_, a, _) -> 
+let rec mgTyp cD cPsi tA = begin match tA with
+  | Int.LF.Atom (_, a, _) ->
       mgAtomicTyp cD cPsi a (Typ.get a).Typ.kind
 
-  | Int.LF.Sigma trec -> 
+  | Int.LF.Sigma trec ->
       Int.LF.Sigma (mgTypRec cD cPsi trec )
 
-  | Int.LF.PiTyp ((tdecl, dep), tA) -> 
-   let tdecl' = mgTypDecl cD cPsi tdecl in 
-     Int.LF.PiTyp ((tdecl', dep), 
+  | Int.LF.PiTyp ((tdecl, dep), tA) ->
+   let tdecl' = mgTypDecl cD cPsi tdecl in
+     Int.LF.PiTyp ((tdecl', dep),
 		   mgTyp cD (Int.LF.DDec (cPsi, tdecl')) tA)
  end
 
- and mgTypDecl cD cPsi tdecl = begin match tdecl with 
-   | Int.LF.TypDecl (x, tA) -> 
+ and mgTypDecl cD cPsi tdecl = begin match tdecl with
+   | Int.LF.TypDecl (x, tA) ->
        Int.LF.TypDecl (x, mgTyp cD cPsi tA)
- end 
+ end
 
- and mgTypRec cD cPsi trec = begin match trec with 
+ and mgTypRec cD cPsi trec = begin match trec with
    | Int.LF.SigmaLast tA -> Int.LF.SigmaLast (mgTyp cD cPsi tA)
-   | Int.LF.SigmaElem (x, tA, trec) -> 
-       let tA' = mgTyp cD cPsi tA in 
-       let trec' = mgTypRec cD (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA'))) trec in 
+   | Int.LF.SigmaElem (x, tA, trec) ->
+       let tA' = mgTyp cD cPsi tA in
+       let trec' = mgTypRec cD (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA'))) trec in
 	 Int.LF.SigmaElem (x, tA', trec')
- end	 
+ end
 
 
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
@@ -504,7 +504,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
                          (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)))
 
   | _ ->
-      let _ = dprint (fun () -> "[genMAppp]  done " ^
+      let _ = dprint (fun () -> "[genMApp]  done " ^
                                 P.mctxToString cD ^ " \n   |- " ^
                                 P.compTypToString cD (Whnf.cnormCTyp tau_t)) in
         (i, tau_t)
@@ -791,15 +791,15 @@ let rec mgCompTyp cD (loc, c) =
   in
     Int.Comp.TypBase (loc, c, genMetaSpine (cK, Whnf.m_id))
 
-let rec mgCtx cD' (cD, cPsi) = begin match cPsi with 
-  | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) -> 
+let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
+  | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
       let (n , sW) = Whnf.mctxCDec cD psi_var in
 	Int.LF.CtxVar (Int.LF.CInst (n, ref None, sW,
                                      Int.LF.Empty, cD))
   | Int.LF.Null -> Int.LF.Null
-  | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) -> 
-      let cPsi' = mgCtx cD' (cD, cPsi) in 
-      let tA'   = mgTyp cD' cPsi' tA in 
+  | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) ->
+      let cPsi' = mgCtx cD' (cD, cPsi) in
+      let tA'   = mgTyp cD' cPsi' tA in
 	Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA'))
    end
 
@@ -814,7 +814,7 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
   | Int.Comp.TypArr _  ->
       raise (Error.Violation "Patterns cannot have function type")
   | Int.Comp.TypBox (loc, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
-      let cPsi' = mgCtx cD' (cD_s, cPsi) in 
+      let cPsi' = mgCtx cD' (cD_s, cPsi) in
       let tP' = mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind  in
         Int.Comp.TypBox (loc, tP', cPsi')
 
@@ -1126,14 +1126,19 @@ and elExp' cD cG i = match i with
                                 P.expSynToString cD cG i' ^ "\n      " ^
                                 P.compTypToString cD (Whnf.cnormCTyp (Int.Comp.TypArr (tau2,tau), theta))
                                 ^ "\n") in
+              let tau' = Whnf.cnormCTyp (tau, theta) in
               let _ = dprint (fun () -> "[elExp'] Check argument has type " ^
                                 P.compTypToString cD (Whnf.cnormCTyp (tau2,theta))) in
+              let _ = dprint (fun () -> "[elExp'] Result has type " ^
+                                P.compTypToString cD (Whnf.cnormCTyp (tau,theta))) in
               let e' = elExp cD cG e (tau2, theta) in
               let i'' = Int.Comp.Apply (loc, i', e') in
               let _ = dprint (fun () -> "[elExp'] Apply done : " ) in
               let _ = dprint (fun () -> "         " ^
                                 P.expSynToString cD cG i'') in
-                (i'', (tau, theta))
+              let _ = dprint (fun () -> "         has type " ^
+                                P.compTypToString cD (Whnf.cnormCTyp (tau', Whnf.m_id))) in
+                 (i'', (tau, theta))
 
           | _ ->
               raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantArrow, tau_theta')))
@@ -1296,7 +1301,7 @@ and elExp' cD cG i = match i with
             try
               let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
               let _     = Unify.unifyDCtx cD cPsi cPsi' in
-              let cPsi' = Whnf.normDCtx cPsi' in 
+              let cPsi' = Whnf.normDCtx cPsi' in
               let psihat' = Context.dctxToHat cPsi'  in
               begin match m with
                 | Apx.LF.Root (_, h, Apx.LF.Nil) ->

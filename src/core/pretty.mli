@@ -73,7 +73,7 @@ module Int : sig
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
 
-    (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
+    (* val ppr_lf_psi_hat    : LF.mctx -> LF. -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.dctx  -> unit
     val ppr_lf_mctx       : LF.mctx -> unit
     val ppr_cmp_kind      : LF.mctx -> Comp.kind -> unit

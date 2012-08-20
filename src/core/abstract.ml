@@ -32,7 +32,7 @@ type error =
   | CyclicDependencyPV
   | CyclicDependencyFPV
   | UnknownIdentifier
-  | UnknownSchemaCtx of name 
+  | UnknownSchemaCtx of name
 
 exception Error of Syntax.Loc.t * error
 
@@ -40,8 +40,8 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-        | UnknownSchemaCtx psi -> 
-            Format.fprintf ppf "Unable to infer schema for context variable %s" 
+        | UnknownSchemaCtx psi ->
+            Format.fprintf ppf "Unable to infer schema for context variable %s"
               (R.render_name psi)
         | LeftoverCV ->
           Format.fprintf ppf "Abstraction not valid LF-type because of leftover context variable"
@@ -216,7 +216,7 @@ let ctxVarToString psi = match psi with
 
 let rec collectionToString cQ = match cQ with
   | I.Empty -> ""
-  | I.Dec(cQ, CV(I.CtxVar(I.CInst(_n, _r, s_cid, _, _ )) as cPsi)) ->
+  | I.Dec(cQ, CV(I.CtxVar(I.CInst(_n, _r, s_cid, _, _theta)) as cPsi)) ->
       collectionToString cQ ^ " " ^ P.dctxToString I.Empty cPsi ^ " : " ^ R.render_cid_schema s_cid ^ "\n"
 
   | I.Dec(cQ, FCV(psi, Some s_cid)) ->
@@ -470,7 +470,7 @@ let rec eqFCVar n1 fV2 = match (n1, fV2) with
    where B iff n and fV' represent same variable
 *)
 let rec eqCVar n1 fV2 = match (n1, fV2) with
-  | (I.CInst (_, r, _, _, _ ) ,  CV (I.CtxVar (I.CInst (_, r_psi, _, _, _ )))) ->
+  | (I.CInst (_, r, _, _, _theta ) ,  CV (I.CtxVar (I.CInst (_, r_psi, _, _, _theta' )))) ->
       if r == r_psi then
          Yes
       else
@@ -770,8 +770,9 @@ let rec ctxToMCtx cQ  = match cQ with
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
       I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi))
 
-  | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _)))) ->
+  | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _theta)))) ->
       (* let psi = Id.mk_name (NoName) in *)
+      (* this case should not happen? -bp *)
       I.Dec (ctxToMCtx cQ', I.CDecl (n, s_cid, I.No))
 
   (* Can this case ever happen?  I don't think so. -bp *)
@@ -1152,14 +1153,15 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
 and collectHat p cQ phat = match phat with
   | (None, _offset ) -> (cQ, phat)
   | (Some (I.CtxOffset _) , _ ) -> (cQ, phat)
-  | (Some (I.CInst (_, {contents=Some cPsi}, _, _, _ )), k ) ->
-       let phat' = begin match Context.dctxToHat cPsi with
+  | (Some (I.CInst (_, {contents=Some cPsi}, _, _, theta )), k ) ->
+       let phat' = begin match Context.dctxToHat (Whnf.cnormDCtx (cPsi, theta)) with
                   | (None, i) -> (None, k+i)
                   | (Some cvar', i) -> (Some cvar', i+k)
                   end
        in
          collectHat p cQ phat'
-  | (Some (I.CInst (_, {contents=None}, _, _, _ ) as psi), _ ) ->
+  | (Some (I.CInst (_, {contents=None}, _, _, _theta ) as psi), _ ) ->
+       (* this case should not happen -bp *)
         begin match checkOccurrence (eqCVar psi) cQ with
           | Yes -> (cQ, phat)
           | No ->  (I.Dec (cQ, CV (I.CtxVar psi)) , phat)
@@ -1180,20 +1182,21 @@ and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
         begin match checkOccurrence (eqFCVar psi) cQ with
           | Yes ->   (cQ , cPsi)
           | No ->
-	      begin try 
+	      begin try
 		let (_,I.CDecl (_, s_cid, _))  = FCVar.get psi in
                   (I.Dec (cQ, FCV (psi, Some (s_cid))),
                    I.CtxVar (I.CtxName psi))
-	      with 
+	      with
 		  Not_found -> raise (Error (loc, UnknownSchemaCtx psi))
 	      end
         end
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
 
-  | I.CtxVar (I.CInst (_, {contents = Some cPsi} , _, _cO, _cD)) ->
-      collectDctx loc p cQ (cvar, offset) cPsi
+  | I.CtxVar (I.CInst (_, {contents = Some cPsi} , _, _cD, theta)) ->
+      collectDctx loc p cQ (cvar, offset) (Whnf.cnormDCtx (cPsi, theta))
 
-  | I.CtxVar (I.CInst (_, {contents = None} , _, _cO, _cD) as psi) ->
+  | I.CtxVar (I.CInst (_, {contents = None} , _, _cD, _theta) as psi) ->
+        (* this case should not happen *)
         begin match checkOccurrence (eqCVar psi) cQ with
           | Yes -> (cQ, cPsi)
           | No ->  (I.Dec (cQ, CV (cPsi)) , cPsi)
@@ -1530,7 +1533,8 @@ and abstractMVarCtxV cQ (l,offset) ctx_var =
    | I.CtxName psi   ->
        let x = index_of cQ (FCV (psi, None)) + offset in
          I.CtxOffset x
-   | I.CInst (_, {contents = None}, _, _ ,_ ) ->
+   | I.CInst (_, {contents = None}, _, _ ,_theta ) ->
+       (* this case should not happen -bp *)
        let x = index_of cQ (CV (I.CtxVar ctx_var)) + offset in
          I.CtxOffset x
 (*   | I.CInst (_, {contents = Some cPsi}, _, _, _ ) ->
@@ -1579,7 +1583,8 @@ and abstractMVarHat cQ (l,offset) phat = match phat with
         (Some (I.CtxOffset x), k)
   (* case where contents = Some cPsi cannot happen,
      since collect normalized phat *)
-  | (Some (I.CInst (_, {contents = None}, _, _, _ ) as psi), k) ->
+  | (Some (I.CInst (_, {contents = None}, _, _, _theta ) as psi), k) ->
+      (* this case should not happen -bp *)
       let x = index_of cQ (CV (I.CtxVar psi)) in
         (Some (I.CtxOffset x), k)
 
@@ -1595,9 +1600,10 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.CtxVar (I.CtxName psi) ->
       let x = index_of cQ (FCV (psi, None)) + offset in
         I.CtxVar (I.CtxOffset x)
-  | I.CtxVar (I.CInst (_, {contents = Some cPsi}, _, _, _ )) ->
-      abstractMVarDctx cQ (l,offset) cPsi
-  | I.CtxVar (I.CInst (_, {contents = None}, _, _, _)) ->
+  | I.CtxVar (I.CInst (_, {contents = Some cPsi}, _, _, theta )) ->
+      abstractMVarDctx cQ (l,offset) (Whnf.cnormDCtx (cPsi, theta))
+  | I.CtxVar (I.CInst (_, {contents = None}, _, _, _theta)) ->
+      (* this case should not happen -bp *)
       let x = index_of cQ (CV cPsi) + offset in
         I.CtxVar (I.CtxOffset x)
 

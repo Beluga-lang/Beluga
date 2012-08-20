@@ -752,9 +752,17 @@ GLOBAL: sgn_eoi;
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
-        "#"; p = SYMBOL;  sigma = clf_sub_new ->
-          LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+        "#"; p = SYMBOL;  sigmaOpt = OPT [ sigma = clf_sub_new -> sigma] ->
+          begin match sigmaOpt with
+            | None -> LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
+            | Some sigma ->           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+          end
 
+
+
+(*      |  "#"; p = SYMBOL ->
+           LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc)
+*)
       |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
@@ -767,8 +775,9 @@ GLOBAL: sgn_eoi;
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
 
-      | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
+(*      | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
+*)
 
       ]
     ]

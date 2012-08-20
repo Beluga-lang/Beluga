@@ -131,8 +131,8 @@ let rec etaContract tM = begin match tM with
  *
  *)
 let newCVar n (sW) = match n with
-  | None -> CInst (Id.mk_name Id.NoName, ref None, sW, Empty, Empty)
-  | Some name -> CInst (name, ref None, sW, Empty, Empty)
+  | None -> CInst (Id.mk_name Id.NoName, ref None, sW, Empty, MShift 0)
+  | Some name -> CInst (name, ref None, sW, Empty, MShift 0)
 
 
 (* newPVar n (cPsi, tA) = p
@@ -686,20 +686,20 @@ and reduce sM spine = match (sM, spine) with
 
 
 and normSub s = match s with
-  | Shift (CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _octx, _mctx)), k) ->
-      begin match Context.dctxToHat cPhi with
+  | Shift (CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
+      begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
         | (Some ctx_v, d) ->
             normSub (Shift (CtxShift ctx_v, k + d))
         | (None, d) ->
             Shift (NoCtxShift, k + d)
       end
 
-    | Shift (NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _octx, _mctx)), k) ->
+    | Shift (NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
         let rec undef_sub d s =
           if d = 0 then s
           else undef_sub (d-1) (Dot(Undef, s))
         in
-          begin match Context.dctxToHat cPhi with
+          begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
           | (Some ctx_v, d) ->
           (* Phi |- s : psi  and psi not in Psi and |Psi| = k
            * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi
@@ -790,8 +790,8 @@ and normDecl (decl, sigma) = match decl with
 
 and norm_psihat (phat: psi_hat) = match phat with
   | (None , _ ) -> phat
-  | (Some (CInst (_n, {contents = Some cPsi}, _schema, _cO, _cD)),  k) ->
-      begin match Context.dctxToHat cPsi with
+  | (Some (CInst (_n, {contents = Some cPsi}, _schema, _cD, theta)),  k) ->
+      begin match Context.dctxToHat (cnormDCtx (cPsi, theta)) with
         | (None, i) -> (None, k+i)
         | (Some cvar', i) -> (Some cvar', i+k)
       end
@@ -839,8 +839,8 @@ and what_head = function
 
 and cnorm_psihat (phat: psi_hat) t = match phat with
   | (None , _ ) -> phat
-  | (Some (CInst (_n, {contents = Some cPsi}, _schema, _cO, _cD)),  k) ->
-      begin match Context.dctxToHat cPsi with
+  | (Some (CInst (_n, {contents = Some cPsi}, _schema, _cD, theta)),  k) ->
+      begin match Context.dctxToHat (cnormDCtx (cPsi,theta))  with
         | (None, i) -> (None, k+i)
         | (Some cvar', i) -> (Some cvar', i+k)
       end
@@ -1349,20 +1349,20 @@ and cnorm (tM, t) = match tM with
           Cons (tM', rest')
 
   and cnormSub (s, t) = match s with
-    | Shift (CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _octx, _mctx)), k) ->
-        begin match Context.dctxToHat cPhi with
+    | Shift (CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
+        begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
           | (Some ctx_v, d) ->
               cnormSub (Shift (CtxShift ctx_v, k + d), t)
           | (None, d) ->
               cnormSub (Shift (NoCtxShift, k + d), t)
         end
 
-    | Shift (NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _octx, _mctx)), k) ->
+    | Shift (NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
         let rec undef_sub d s =
           if d = 0 then s
           else undef_sub (d-1) (Dot(Undef, s))
         in
-          begin match Context.dctxToHat cPhi with
+          begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
           | (Some ctx_v, d) ->
           (* Phi |- s : psi  and psi not in Psi and |Psi| = k
            * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi
@@ -1533,10 +1533,10 @@ and cnorm (tM, t) = match tM with
   and cnormDCtx (cPsi, t) = match cPsi with
     | Null       ->  Null
 
-    | CtxVar (CInst (_n, {contents = None} , _schema, _octx, _mctx )) -> cPsi
-
-    | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _octx, _mctx)) ->
-        cnormDCtx (cPhi, t)
+    | CtxVar (CInst (_n, ({contents = None} as cvar_ref), _schema,  _mctx, theta )) ->
+        CtxVar (CInst (_n, cvar_ref , _schema,  _mctx, mcomp theta t))
+    | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _mctx, theta)) ->
+        cnormDCtx (cPhi, mcomp theta t)
 
     | CtxVar (CtxOffset psi) ->
         begin match LF.applyMSub psi t with
@@ -1602,10 +1602,10 @@ and normKind sK = match sK with
 and normDCtx cPsi = match cPsi with
   | Null -> Null
 
-  | CtxVar (CInst (_n, {contents = None} , _schema, _octx, _mctx )) -> cPsi
+  | CtxVar (CInst (_n, {contents = None} , _schema, _mctx, _theta )) -> cPsi
 
-  | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _octx, _mctx)) ->
-      normDCtx cPhi
+  | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _mctx, theta)) ->
+      normDCtx (cnormDCtx (cPhi,theta))
 
   | CtxVar psi -> CtxVar psi
 
@@ -3002,6 +3002,8 @@ and closedDecl (tdecl, s) = match tdecl with
 let rec closedDCtx cPsi = match cPsi with
   | Null     -> true
   | CtxVar (CInst (_, {contents = None}, _, _, _)) -> false
+  | CtxVar (CInst (_, {contents = Some cPsi}, _,_ , theta)) ->
+     closedDCtx (cnormDCtx (cPsi, theta))
   | CtxVar _ -> true
   | DDec (cPsi' , tdecl) -> closedDCtx cPsi' && closedDecl (tdecl, LF.id)
 

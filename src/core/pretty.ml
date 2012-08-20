@@ -97,6 +97,7 @@ module Int = struct
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
+    val fmt_ppr_cmp_gctx      : LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
     val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
@@ -665,13 +666,14 @@ module Int = struct
       | LF.Inst _ ->               fprintf ppf "?INST _ "
 
     and fmt_ppr_lf_ctx_var cD ppf = function
-      | LF.CInst (n, {contents = None}, _schema, _cO, _cD) ->
-          fprintf ppf "%s"
+      | LF.CInst (n, {contents = None}, _schema, _cD, theta) ->
+          fprintf ppf "?%s[%a]"
             (R.render_name n)
+            (fmt_ppr_lf_msub cD 0) theta
 
-      | LF.CInst (_n, {contents = Some cPsi}, _schema, _cO', cD') ->
+      | LF.CInst (_n, {contents = Some cPsi}, _schema, cD', theta) ->
           fprintf ppf "%a"
-          (fmt_ppr_lf_dctx cD' 0) cPsi
+          (fmt_ppr_lf_dctx cD' 0) (Whnf.cnormDCtx (cPsi, theta))
 
       | LF.CtxOffset psi ->
           fprintf ppf "%s"

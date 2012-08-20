@@ -48,8 +48,7 @@ mkdir -p .build/sasybel
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin
-        ln-or-cp .build/belchk/belchk bin/belchk
-        ln-or-cp .build/belchk/belchk.run bin/belchk.run
+        ln-or-cp .build/belchk/belchk.run bin/belchk
 
 clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))

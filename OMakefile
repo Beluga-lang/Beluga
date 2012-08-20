@@ -39,7 +39,7 @@ OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 # Map the src dir onto the build dir
 vmount(-l, src, .build)
 mkdir -p .build/core
-mkdir -p .build/main
+mkdir -p .build/belchk
 
 vmount(-l, sasybel/src, .build/sasybel)
 mkdir -p .build/sasybel
@@ -49,8 +49,8 @@ mkdir -p .build/sasybel
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin
-        ln-or-cp .build/main/interpreter bin/interpreter
-        ln-or-cp .build/main/interpreter.run bin/interpreter.run
+        ln-or-cp .build/belchk/interpreter bin/interpreter
+        ln-or-cp .build/belchk/interpreter.run bin/interpreter.run
 
 clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))

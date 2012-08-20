@@ -33,8 +33,7 @@ OCAMLOPTFLAGS  = -noassert -inline 100
 OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
 # Declare a phony clean target
-# .PHONY: core clean frontend interpreter test
-.PHONY: clean interpreter
+.PHONY: clean belchk
 
 # Map the src dir onto the build dir
 vmount(-l, src, .build)
@@ -49,8 +48,8 @@ mkdir -p .build/sasybel
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin
-        ln-or-cp .build/belchk/interpreter bin/interpreter
-        ln-or-cp .build/belchk/interpreter.run bin/interpreter.run
+        ln-or-cp .build/belchk/belchk bin/belchk
+        ln-or-cp .build/belchk/belchk.run bin/belchk.run
 
 clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))

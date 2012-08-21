@@ -36,7 +36,7 @@ let rec process_options = function
       arg :: rest
 
 let init_repl ppf =
-  fprintf ppf "        Beluga (interactive) version %s@.@." "(NONE)";
+  fprintf ppf "        Beluga (interactive) version %s@.@." Version.beluga_version;
   Sys.catch_break true
 
 let rec loop ppf =

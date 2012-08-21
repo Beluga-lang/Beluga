@@ -11,6 +11,7 @@ OCAMLPACKS[] =
         oUnit
         ulex
         dynlink
+        unix
 
 # Compile with debugging options?  This enables:
 #

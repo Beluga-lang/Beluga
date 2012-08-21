@@ -134,8 +134,7 @@ module LF = struct
   and ctx_var =
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of name * dctx option ref * cid_schema * mctx * mctx (* delete both mctx
-							      contexts *)
+    | CInst  of name * dctx option ref * cid_schema * mctx * msub
         (* D |- Psi : schema   *)
 
   and 'a ctx =                           (* Generic context declaration    *)

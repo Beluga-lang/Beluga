@@ -72,7 +72,7 @@ type pair_or_atom_syn =
 
 type pair_or_atom_pat =
   | Pair_pat of Comp.pattern
-  | Atom_pat
+  | Atom_pat of Comp.typ option
 
 type clf_pattern =
   | PatEmpty of Loc.t
@@ -752,9 +752,17 @@ GLOBAL: sgn_eoi;
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
-        "#"; p = SYMBOL;  sigma = clf_sub_new ->
-          LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+        "#"; p = SYMBOL;  sigmaOpt = OPT [ sigma = clf_sub_new -> sigma] ->
+          begin match sigmaOpt with
+            | None -> LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
+            | Some sigma ->           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+          end
 
+
+
+(*      |  "#"; p = SYMBOL ->
+           LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc)
+*)
       |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
@@ -767,8 +775,9 @@ GLOBAL: sgn_eoi;
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
 
-      | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
+(*      | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
+*)
 
       ]
     ]
@@ -902,7 +911,7 @@ GLOBAL: sgn_eoi;
       [
         ","; e2 = cmp_branch_pattern ; ")" -> Pair_pat e2
 
-      | ")"                 -> Atom_pat
+      | ")"; tauOpt = OPT [":" ; tau = cmp_typ -> tau]  -> Atom_pat tauOpt
 
       ]
     ]
@@ -1194,7 +1203,8 @@ clf_pattern :
      | "("; p = SELF; p_or_a = cmp_pair_atom_pat   ->
          (match p_or_a with
             | Pair_pat p2 -> Comp.PatPair (_loc, p, p2)
-            | Atom_pat -> p)
+            | Atom_pat None -> p
+            | Atom_pat (Some tau) -> Comp.PatAnn (_loc, p, tau))
       ]
     ]
   ;

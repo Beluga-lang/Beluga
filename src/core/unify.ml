@@ -2288,13 +2288,13 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     | (((Root(_, h1,tS1), s1) as _sM1), ((Root(_, h2, tS2), s2) as _sM2)) ->
-(*        dprnt "(020) Root-Root"; *)
-(*        let _ = dprint (fun () ->
+        dprnt "(020) Root-Root";
+        let _ = dprint (fun () ->
                           "UNIFY: normal - normal (non MVar cases) " ^
                             P.mctxToString cD0 ^ "      |-    " ^
-                            P.normalToString cD0 cPsi sM1 ^ "           ==       " ^
-                            P.normalToString cD0 cPsi sM2 ^ "\n") in
-*)
+                            P.normalToString cD0 cPsi _sM1 ^ "           ==       " ^
+                            P.normalToString cD0 cPsi _sM2 ^ "\n") in
+
         (* s1 = s2 = id by whnf *)
         unifyHead  mflag cD0 cPsi h1 h2;
         unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
@@ -2775,7 +2775,8 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     | (_h1 , _h2 ) ->
-        raise (Failure "Head clash")
+        (dprint (fun () -> "[unifyHead'] Head clash");
+        raise (Failure "Head clash"))
 
 
     (* unifySpine mflag cD0 (cPsi, (tS1, s1), (tS2, s2)) = ()
@@ -2813,15 +2814,24 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     and unifySub mflag cD0 cPsi s1 s2 = match (s1, s2) with
-
       | (Shift (psi, n), Shift (phi, k)) ->
           let rec compatible_cv = function
             | (CtxName n1,  CtxName n2) -> n1 = n2
             | (CtxOffset off1,  CtxOffset off2) -> off1 = off2
-            | (CInst (_, {contents=None}, _, _, _),  _) -> true
-            | (_,  CInst (_, {contents=None}, _, _, _)) -> true
-            | (CInst (_, {contents=Some (CtxVar ctx_var1)}, _, _, _),  ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
-            | (ctx_var1,  CInst (_, {contents=Some (CtxVar ctx_var2)}, _, _, _)) -> compatible_cv (ctx_var1, ctx_var2)
+            | (CInst (_, {contents=None}, _, _, _theta),  _) -> true
+            | (_,  CInst (_, {contents=None}, _, _, _theta)) -> true
+            | (CInst (_, {contents=Some (CtxVar ctx_var1)}, _, _, theta), ctx_var2)
+              -> begin match Whnf.cnormDCtx (CtxVar ctx_var1,theta) with
+                   | CtxVar ctx_var1' -> compatible_cv (ctx_var1', ctx_var2)
+                   | _ -> false
+                end
+
+            | (ctx_var1,  CInst (_, {contents=Some (CtxVar ctx_var2)}, _, _, theta)) ->
+                begin match Whnf.cnormDCtx (CtxVar ctx_var1,theta) with
+                   | CtxVar ctx_var1' -> compatible_cv (ctx_var1', ctx_var2)
+                   | _ -> false
+                end
+
             | (_, _) -> false
           and compatible = function
             | (NoCtxShift, NoCtxShift) -> true
@@ -2964,17 +2974,39 @@ module Make (T : TRAIL) : UNIFY = struct
  and unifyDCtx1 mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 
-      | (CtxVar (CInst (_n1, ({contents = None} as cvar_ref1), _schema1, _cO1, _cD1)) ,
-         CtxVar (CInst (_n2, ({contents = None} as cvar_ref2), _schema2, _cO2, _cD2))) ->
-          if cvar_ref1 == cvar_ref2 then ()
+      | (CtxVar (CInst (n1, ({contents = None} as cvar_ref1), schema1, cD1, theta1)) ,
+         CtxVar (CInst (_n2, ({contents = None} as cvar_ref2), _schema2,  _cD2, theta2))) ->
+          if cvar_ref1 == cvar_ref2 then
+             begin match ( isPatMSub theta1 , isPatMSub theta2) with
+                | (true , true ) ->  (if  Whnf.convMSub theta1 theta2 then () else
+                   let (mt', cD') = m_intersection (Whnf.cnormMSub theta1)  (Whnf.cnormMSub theta2) cD1 in
+                    let cPsi = CtxVar (CInst (n1, {contents = None}, schema1, cD', mt')) in
+                      instantiateCtxVar (cvar_ref1, cPsi)
+                                     )
+                | ( _ , _ ) ->
+                raise (Error.Violation "Case where we need to unify the same context variables which are associated with different meta-stitutions which are non-patterns is not handled")
+              end
+
           else
-           instantiateCtxVar (cvar_ref1, cPsi2)
+            begin match ( isPatMSub theta1 , isPatMSub theta2 ) with
+              | (true , true ) ->
+                let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta1) in
+                  instantiateCtxVar (cvar_ref1, Whnf.cnormDCtx(cPsi2, mtt1))
+              | _ -> raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
+            end
 
-      | (CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cO, _cD)) , cPsi) ->
-           instantiateCtxVar (cvar_ref, cPsi)
-
-      | (cPsi , CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cO, _cD) )) ->
-           instantiateCtxVar (cvar_ref, cPsi)
+      | (CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cD, theta)) , cPsi) ->
+          if isPatMSub theta then
+            let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
+              instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1))
+          else
+            raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
+      | (cPsi , CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cD, theta) )) ->
+          if isPatMSub theta then
+            let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
+              instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1))
+          else
+            raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
 
       | (CtxVar cvar, CtxVar cvar') ->
           if cvar = cvar' then ()
@@ -3003,10 +3035,17 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') ->
         let cPsi  = Context.hatToDCtx phat in
         let cPsi' = Context.hatToDCtx phat' in
-        let _ = dprint (fun () -> "[unifyMetaObj] MetaObj case ... ") in
+          dprint (fun () -> "[unifyMetaObj] MetaObj  ... with context "
+                       ^ P.dctxToString cD (Whnf.cnormDCtx (cPsi, t))
+                       ^ " == "  ^ P.dctxToString cD (Whnf.cnormDCtx (cPsi', t'))
+                        ^ "\n");
           unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'));
+          dprint (fun () -> "[unifyMetaObj'] MetaObj ... actual obj ..." ^
+                 P.normalToString cD cPsi (Whnf.cnorm (tR , t), id)
+                 ^ " == " ^ P.normalToString cD cPsi (Whnf.cnorm (tR', t'),  id));
           unifyTerm Unification cD cPsi
-            (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id)
+            (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id);
+          dprint (fun () -> "[unifyMetaObj'] SUCCESS")
 
     | (Comp.MetaObjAnn (_, cPsi, tR) , t) , (Comp.MetaObjAnn (_, cPsi', tR') ,
       t') ->
@@ -3022,7 +3061,9 @@ module Make (T : TRAIL) : UNIFY = struct
     | (Comp.MetaApp (mO, mS), t) , (Comp.MetaApp (mO', mS'), t') ->
         let mOt = Whnf.cnormMetaObj (mO, t) in
         let mOt' = Whnf.cnormMetaObj (mO', t') in
-          (dprint (fun () -> "[unifyMetaObj] BEFORE " ^ P.metaObjToString cD mOt' ^ " == " ^
+          (dprint (fun () -> "[unifyMetaObj] BEFORE " ^
+                     " cD = " ^ P.mctxToString cD ^ "\n     " ^
+                     P.metaObjToString cD mOt' ^ " == " ^
                     P.metaObjToString cD mOt);
           unifyMetaObj cD (mO, t) (mO', t');
           dprint (fun () -> "[unifyMetaObj] AFTER " ^ P.metaObjToString cD mOt ^ " == " ^
@@ -3079,6 +3120,19 @@ module Make (T : TRAIL) : UNIFY = struct
 
       | ((Comp.TypPiBox ((MDecl(u, tA, cPsi), _ ), tau), t),
          (Comp.TypPiBox ((MDecl(_, tA', cPsi'), _ ), tau'), t')) ->
+          let tAn    = Whnf.cnormTyp (tA, t) in
+          let tAn'   = Whnf.cnormTyp (tA', t') in
+          let cPsin  = Whnf.cnormDCtx (cPsi, t) in
+          let cPsin' = Whnf.cnormDCtx (cPsi', t') in
+            (unifyDCtx1 Unification cD cPsin cPsin';
+             unifyTyp Unification cD cPsin (tAn, id)  (tAn', id);
+             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin)))
+               (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
+            )
+
+
+      | ((Comp.TypPiBox ((PDecl(u, tA, cPsi), _ ), tau), t),
+         (Comp.TypPiBox ((PDecl(_, tA', cPsi'), _ ), tau'), t')) ->
           let tAn    = Whnf.cnormTyp (tA, t) in
           let tAn'   = Whnf.cnormTyp (tA', t') in
           let cPsin  = Whnf.cnormDCtx (cPsi, t) in
@@ -3246,13 +3300,26 @@ module Make (T : TRAIL) : UNIFY = struct
 
 let rec unify_phat psihat phihat =
   match phihat with
-    | (Some (CInst (_, ({contents = None} as cref), _, _, _ )), d) ->
+    | (Some (CInst (n1, ({contents = None} as cref), schema1, cD1, theta1 )), d) ->
         begin match psihat with
-          | (Some (CInst (_, ({contents = None} as cref'), _, _, _) as c_var) , d') ->
+          | (Some (CInst (n2, ({contents = None} as cref'), schema2, cD2, theta2)) , d') ->
 	      if cref == cref' then
-		(if d = d' then () else raise (Failure "Hat context mismatch - 1"))
+                (if  Whnf.convMSub theta1 theta2 then
+		   (if d = d' then () else raise (Failure "Hat context mismatch- 1"))
+                 else
+                   (if isPatMSub theta1 && isPatMSub theta2 then
+                      let (mt', cD') = m_intersection (Whnf.cnormMSub theta1)  (Whnf.cnormMSub theta2) cD1 in
+                      let cPsi = CtxVar (CInst (n1, {contents = None}, schema1, cD', mt')) in
+                        instantiateCtxVar (cref, cPsi)
+                    else
+                      raise (Error.Violation "Case where we need to unify the same context variables which are associated with different meta-stitutions which are non-patterns is not handled")
+                ))
 	      else
-		cref := Some (CtxVar (c_var))
+                (if isPatMSub theta1 && isPatMSub theta2 then
+                   let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta1) in
+		     cref := Some (CtxVar (CInst (n2, cref', schema2, cD2,  Whnf.mcomp theta2 mtt1 )))
+                 else
+                   raise (Error.Violation "Case where we need to unify the context variables which are associated with different meta-stitutions which are non-patterns is not handled"))
           | ((Some (c_var)) , d') ->
               if d = d' then
                 cref := Some (CtxVar (c_var))

@@ -317,7 +317,8 @@ and inferHead loc cD cPsi head = match head with
 
 and canAppear cD cPsi sA loc=
   match cPsi with
-    | Null -> false
+    | Null -> true (* we need to succeed because coverage should detect that
+                      it is not inhabited *)
 
     | CtxVar ctx_var ->
       begin let (Schema elems) = Schema.get_schema (lookupCtxVarSchema cD ctx_var) in

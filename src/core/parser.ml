@@ -317,6 +317,11 @@ GLOBAL: sgn_eoi;
 
       | "%not" ->
         [Sgn.Pragma (_loc, LF.NotPrag)]
+
+      (* A naked expression, in REPL. *)
+      | i = cmp_exp_syn ->
+        [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
+
       ]
     ]
   ;

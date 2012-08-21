@@ -21,6 +21,10 @@ with just the following command:
 
 The same might hold for other distributions.
 
+The interactive mode is greatly improved if you have rlwrap installed,
+so you might also want to consider:
+
+# apt-get install rlwrap
 
 Generic
 -------
@@ -34,6 +38,10 @@ extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
 ulex:                    http://www.cduce.org/download.html#side
 omake:                   http://omake.metaprl.org/index.html
 ounit:                   http://ounit.forge.ocamlcore.org/
+
+Optional dependencies (for improved interactive mode):
+
+rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/
 
 GODI
 ----

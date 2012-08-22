@@ -70,6 +70,7 @@ module Comp : sig
 
   val check       : LF.mctx -> gctx -> exp_chk -> tclo -> unit
   val syn         : LF.mctx -> gctx -> exp_syn -> tclo
+  val checkKind    : LF.mctx -> kind                -> unit
   val checkTyp    : LF.mctx -> typ                  -> unit
 
 end

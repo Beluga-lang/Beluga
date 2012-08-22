@@ -1,0 +1,369 @@
+% Beluga Development with explicit context relations
+% Author: Brigitte Pientka
+%{ Content:
+
+   - Definition for aeq
+   - Definition for deq
+   - Meta-theoretic properties: (Solved with generalized context)
+      o Admissibility of Reflexivity
+      o Admissibility of Transitivity
+      o Admissibility of Symmertry
+      o Soundness
+      o Completeness
+}%
+
+term: type.    %name term M x.
+app : term -> term -> term.
+lam : (term -> term) -> term.
+
+% Algorithmic Equality
+aeq: term -> term -> type.   %name aeq Q u.
+ae_a : aeq E1 F1 -> aeq E2 F2
+    -> aeq (app E1 E2) (app F1 F2).
+ae_l :  ({x:term} aeq x x -> aeq (E x) (F x))
+        -> aeq (lam (\x. E x)) (lam (\x. F x)).
+
+% Declarative Equality
+deq: term -> term -> type.
+de_l: ({x:term} deq x x -> deq (T x) (T' x))
+     -> deq (lam (\x. T x)) (lam (\x. T' x)).
+de_a: deq T1 S1 -> deq T2 S2
+     -> deq (app T1 T2) (app S1 S2).
+de_r: deq T T.
+de_t: deq T R -> deq R S
+     -> deq T S.
+
+% Context declarations
+schema tCtx = term;
+schema taCtx = block x:term, _t:aeq x x;
+schema tdCtx =  block x:term,  _t:deq x x ;
+
+datatype TaCxt : {g:tCtx} {h:taCtx} ctype =
+| Tanil : TaCxt [ ] []
+| Tacons: TaCxt [g] [h] -> TaCxt [g, x:term] [h, b: block (x:term, u:aeq x x)]
+;
+
+datatype TadCxt : {g:taCtx} {h:tdCtx} ctype =
+| ADnil : TadCxt [ ] []
+| ADcons: TadCxt [g] [h] -> TadCxt [g, b:block (x:term, u:aeq x x)]
+				   [h, b: block (x:term, u:deq x x)]
+;
+
+datatype TdCxt : {g:tCtx} {h:tdCtx} ctype =
+| Tdnil : TdCxt [ ] []
+| Tdcons: TdCxt [g] [h] -> TdCxt [g, x:term] [h, b: block (x:term, u:deq x x)]
+;
+
+datatype TRel : (g:tCtx) (h:taCtx) [g. term] -> [h.term] -> ctype =
+| TRvar0 : {h: taCtx} TaCxt [g] [h] ->
+            TRel [g, x:term. x]
+ 		 [h, b:block (x:term, u:aeq x x).b.1]
+| TRvar  : TRel  [g . #p ..] [h . #q.1 ..]
+         -> TRel [g, x:term. #p ..]
+                [h, b:block (x:term, u:aeq x x). #q.1 ..]
+
+| TRapp  : TRel [g. M ..] [h. M'..] -> TRel [g. N ..] [h.N' ..]
+        -> TRel [g. app (M ..) (N ..)] [h. app (M'..) (N'..)]
+
+| TRlam  : TRel [g, x:term. M .. x] [h, b:block (x:term, _u:aeq x x). N .. b.1]
+	   -> TRel [g. lam \x. M .. x] [h. lam \x. N .. x]
+;
+
+
+datatype TRel' : (g:tCtx) (h:tdCtx) [g. term] -> [h.term] -> ctype =
+| TRvar0' : {h: tdCtx} % should it include a proof that g and h are related
+            TdCxt [g] [h] ->
+            TRel' [g, x:term. x] [h, b:block (x:term, u:deq x x).b.1]
+| TRvar'  : TRel'  [g . #p ..] [h . #q.1 ..]
+         -> TRel' [g, x:term. #p ..]
+                [h, b:block (x:term, u:deq x x). #q.1 ..]
+
+| TRapp'  : TRel' [g. M ..] [h. M'..] -> TRel' [g. N ..] [h.N' ..]
+        -> TRel' [g. app (M ..) (N ..)] [h. app (M'..) (N'..)]
+
+| TRlam'  : TRel' [g, x:term. M .. x] [h, b:block (x:term, _u:deq x x). N .. b.1]
+	   -> TRel' [g. lam \x. M .. x] [h. lam \x. N .. x]
+;
+
+
+datatype ExistsTRel' : (h: tdCtx){l:tCtx}[h. term] -> ctype =
+| ExTRel' :  TRel' [l.M' ..] [h.M ..] -> ExistsTRel' [l] [h.M ..]
+;
+
+datatype ExistsTRelV' : (h: tdCtx){l:tCtx}[h. term] -> ctype =
+| ExTRelV' :  TRel' [l.#q ..] [h.#p.1 ..] -> ExistsTRelV' [l] [h.#p.1 ..]
+;
+
+
+% Various Lemmas needed in the transitivity case of the ceq proof
+% They establish properties about the weakening relation TRel' and TRel
+% as well as about context relations.
+
+rec trelImpliesTdCxt :TRel' [l. T ..] [h.T' ..] -> TdCxt [l] [h] =
+fn tr => case tr of
+| TRvar0' [h] cr => Tdcons cr
+| TRvar' tr => Tdcons (trelImpliesTdCxt tr)
+| TRapp' tr1 tr2 =>
+  trelImpliesTdCxt tr1
+| TRlam' tr =>
+  let Tdcons cr = trelImpliesTdCxt tr in cr
+;
+
+% Guarantee that for every variable in h there is a corresponding variable in l
+rec exTRelV' : {#p: [h.block x:term, _u:deq x x]} TdCxt [l] [h] -> ExistsTRelV' [l] [h.#p.1 ..] =
+mlam #p => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h. #p.1 ..] of
+| [h,b: block x:term, _u:deq x x. b.1 ] =>
+  let Tdcons cr' = cr in ExTRelV' (TRvar0' [h] cr')
+| [h',b: block x:term, _u:deq x x.#p.1 ..] =>
+  let Tdcons cr' = cr in
+  let ExTRelV' tr = exTRelV' [h'. #p ..] cr' in
+    ExTRelV' (TRvar' tr )
+;
+
+% Guarantee that for every term M in h there is a term M' in l
+rec exTRel' : {M : [h.term]} TdCxt [l] [h] -> ExistsTRel' [l] [ h.M ..] =
+mlam M => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h . M ..] of
+| [h . #p.1 ..] =>
+  let ExTRelV' tr = exTRelV' [h.#p ..] cr in ExTRel' tr
+
+| [h. lam \x. M .. x] =>
+  let ExTRel' tr' = exTRel' [h, b:block (x:term, _u: deq x x). M .. b.1] (Tdcons cr) in
+    ExTRel' (TRlam' tr')
+
+| [h . app (M ..) (N ..)] =>
+  let ExTRel' tr1 = exTRel' [h. M ..] cr in
+  let ExTRel' tr2 = exTRel' [h. N ..] cr in
+    ExTRel' (TRapp' tr1 tr2)
+;
+
+datatype ExistsTRel : (l: tCtx){h:taCtx}[l. term] -> ctype =
+| ExTRel : {M:[h.term]}
+           TRel [l.M' ..] [h.M ..] -> ExistsTRel [h] [l.M' ..]
+;
+
+datatype ExistsTRelV : (l: tCtx){h:taCtx}[l. term] -> ctype =
+| ExTRelV :  TRel [l.#q ..] [h.#p.1 ..] -> ExistsTRelV [h] [l.#q ..]
+;
+
+rec trelImpliesTaCxt :TRel [l. T ..] [h.T' ..] -> TaCxt [l] [h] =
+fn tr => case tr of
+| TRvar0 [h] cr => Tacons cr
+| TRvar tr => Tacons (trelImpliesTaCxt tr)
+| TRapp tr1 tr2 =>
+  trelImpliesTaCxt tr1
+| TRlam tr =>
+  let Tacons cr = trelImpliesTaCxt tr in cr
+;
+
+% Guarantee that for every variable in h there is a corresponding variable in l
+rec exTRelV : {#p: [l. term]} TaCxt [l] [h] -> ExistsTRelV [h] [l.#p ..] =
+mlam #p => fn cr => let (cr : TaCxt [l] [h]) = cr in case [l. #p ..] of
+| [l, x:term. x ] =>
+  let Tacons (cr' : TaCxt [l0] [h0]) = cr in ExTRelV (TRvar0 [h0] cr')
+| [l, x:term.#p ..] =>
+  let Tacons cr' = cr in
+  let ExTRelV tr = exTRelV [l. #p ..] cr' in
+    ExTRelV (TRvar tr )
+;
+
+% Guarantee that for every term M in l there is a term M' in h
+rec exTRel : {M : [l.term]} TaCxt [l] [h] -> ExistsTRel [h] [ l.M ..] =
+mlam M => fn cr => let (cr : TaCxt [l] [h]) = cr in case [l . M ..] of
+| [l . #p ..] =>
+  let ExTRelV tr = exTRelV [l.#p ..] cr in ExTRel [h. _ ] tr
+
+
+% this case is in principle right, but currently there is a subtle bug in Beluga
+  | [l. lam \x. M .. x] =>
+  let ExTRel [h,b:block (x:term, _u: aeq x x). M' .. b.1] tr' = exTRel [l, x:term. M .. x] (Tacons cr) in
+    ExTRel [h. lam \x. M' .. x] (TRlam tr')
+
+| [l . app (M ..) (N ..)] =>
+  let ExTRel [h.M' ..] tr1 = exTRel [l. M ..] cr in
+  let ExTRel [h.N' ..] tr2 = exTRel [l. N ..] cr in
+    ExTRel [h.app (M' ..) (N'..)] (TRapp tr1 tr2)
+
+;
+
+%{
+
+% Admissibility of Reflexivity
+% Comment: With substitution variables, the theorem below is more elegantly
+% stated as:
+%{rec ref' : (h:taCtx){g:tCtx}{M:[g. term]} TRel [g.M..] [h.N..] ->  % {sigma : g[h]}
+          [h. aeq (M sigma) (N sigma)] =
+}%
+% BP: Note one could simply recurse on TRel and not on M, but it is reassuring that
+% the program below actually works.
+
+rec ref' : (h:taCtx)(g:tCtx) TRel [g.M..] [h.N..] ->
+          [h. aeq (N ..) (N ..)] =
+fn r => let (r:TRel [g. M ..] [h.N ..]) = r in case [g. (M ..)] of
+| [g,x:term. x] =>
+  let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x) . b.2]
+
+| [g, x:term. #p .. ] =>
+  let TRvar r' = r in
+  let [h. E ..] = ref' r' in
+    [h, b:block(x:term, _u:aeq x x). E ..]
+
+| [g. lam \x. M .. x] =>
+  let TRlam  tr1 = r in
+  let [h,b:block (y:term , _t:aeq y y). AE .. b.1 b.2] =
+         ref'  tr1
+  in
+   [h. ae_l \x. \w. (AE .. x w)]
+
+| [g. app (M1 ..) (M2 ..)] =>
+  let TRapp tr1 tr2 = r in
+  let [h. AE1 ..] = ref'  tr1 in
+  let [h. AE2 ..] = ref' tr2 in
+    [h. ae_a (AE1 ..) (AE2 ..)]
+;
+
+rec trans: (h:taCtx)(g:tCtx)
+TRel [g.T..] [h.T'..] -> TRel [g.S..] [h.S'..] -> TRel [g.R..] [h.R'..] ->
+   [h. aeq (T' ..) (R' ..)] -> [h. aeq (R' ..) (S' ..)]
+ -> [h. aeq (T' ..) (S' ..)] =
+fn tr => fn sr => fn rr =>
+fn ae1 => fn ae2 => case ae1 of
+| [h. #p.2 ..] => ae2
+
+| [h. ae_l \x.\u. AE1 .. x u] =>
+  let [h. ae_l \x.\u. AE2 .. x u] =  ae2  in
+  let TRlam t = tr in
+  let TRlam s = sr in
+  let TRlam r = rr in
+  let [h, b:block x:term , _t:aeq x x. AE .. b.1 b.2] =
+         trans t s r
+               [h, b:block x':term , _t:aeq x' x'. AE1 .. b.1 b.2]
+               [h, b. AE2 .. b.1 b.2]
+  in
+    [h. ae_l \x. \u. AE .. x u]
+
+| [h. ae_a (AE1 ..) (AE2 ..)] =>
+  let [h. ae_a (AE3 ..) (AE4 ..)] = ae2 in
+  let TRapp t1 t2 = tr in
+  let TRapp s1 s2 = sr in
+  let TRapp r1 r2 = rr in
+  let [h. AE ..] = trans t1 s1 r1 [h. AE1 ..]  [h. AE3 ..] in
+  let [h. AE' ..] = trans t2 s2 r2 [h. AE2 ..]  [h. AE4 ..] in
+    [h. ae_a  (AE ..)  (AE' ..)]
+;
+
+datatype EqT : (l:tCtx) [l.term] -> [l.term] -> ctype =
+| EqTRef : EqT [l. M ..] [l.M ..]
+;
+
+datatype Equal : (h:taCtx) [h.term] -> [h.term] -> ctype =
+| EqRef : Equal [h. M ..] [h.M ..]
+;
+
+rec unique' : TRel' [l.T ..] [h.T1 ..] -> TRel' [l. S ..] [h.T1 ..]
+      -> EqT [l.T ..] [l.S..]  =
+fn tr => fn sr => case (tr , sr) of
+| (TRvar0' [h] cr,  TRvar0' [h] cr') => EqTRef
+| (TRvar' tr', TRvar' sr') => let EqTRef = unique' tr' sr' in EqTRef
+| (TRapp' tr1 tr2, TRapp' sr1 sr2) =>
+  let EqTRef = unique' tr1 sr1 in
+  let EqTRef = unique' tr2 sr2 in
+    EqTRef
+| (TRlam'  tr, TRlam' sr) =>
+  let EqTRef = unique' tr sr in EqTRef
+;
+
+rec unique : TRel [l.T ..] [h.T1 ..] -> TRel [l. T ..] [h.T2 ..]
+      -> Equal [h.T1 ..] [h.T2..]  =
+fn tr => fn sr => case (tr , sr) of
+| (TRvar0 [h] cr,  TRvar0 [h] cr') => EqRef
+| (TRvar tr', TRvar sr') => let EqRef = unique tr' sr' in EqRef
+| (TRapp tr1 tr2, TRapp sr1 sr2) =>
+  let EqRef = unique tr1 sr1 in
+  let EqRef = unique tr2 sr2 in
+    EqRef
+| (TRlam  tr, TRlam sr) =>
+  let EqRef = unique tr sr in EqRef
+;
+
+
+rec ceq: (g:taCtx)(h:tdCtx)(l:tCtx)
+         TRel' [l.T..] [h. T1'..]  -> TRel' [l.S..] [h. S1'..] ->
+         TRel [l.T..] [g. T2'..]  -> TRel [l.S..] [g. S2'..] ->
+         TadCxt [g] [h]
+         -> [h. deq (T1' ..) (S1' ..)] -> [g. aeq (T2' ..) (S2' ..)]  =
+fn tr => fn sr => fn tr' => fn sr' => fn cr =>
+fn de => case de of
+| [h. #p.2 ..] =>
+  let EqTRef = unique' tr sr in
+  let EqRef = unique tr' sr' in
+   ref' tr'
+
+| [h. de_r] => % de_r : deq T1' T1'
+  let EqTRef = unique' tr sr in
+  let EqRef = unique tr' sr' in
+   ref' tr'
+
+ | [h. de_a (DE1 ..) (DE2 ..)] =>
+   let TRapp' tr1' tr2' = tr in
+   let TRapp' sr1' sr2' = sr in
+   let TRapp tr1 tr2 = tr' in
+   let TRapp sr1 sr2 = sr' in
+  let [g. AE1 ..] = ceq tr1' sr1' tr1 sr1 cr [h. DE1 ..] in
+  let [g. AE2 ..] = ceq tr2' sr2' tr2 sr2 cr [h. DE2 ..] in
+    [g. ae_a (AE1 ..) (AE2 ..)]
+
+ | [h. de_l (\x.\u. DE .. x u)] =>
+  let TRlam' tr1' = tr in
+  let TRlam' sr1' = sr in
+  let TRlam tr1 = tr' in
+  let TRlam sr1 = sr' in
+  let [g,b:block x:term,u:aeq x x . AE .. b.1 b.2] =
+        ceq tr1' sr1' tr1 sr1 (ADcons cr)
+            [h, b:block x:term, _t:deq x x. DE .. b.1 b.2]
+  in
+     [g. ae_l (\x.\v. AE .. x v)]
+
+ | [h. de_t (DE1 ..) (DE2 ..)] =>
+   let [h. DE1 ..] : [h. deq (T1' ..) (R1' ..)] = [h.DE1 ..] in
+   let tdcxt = trelImpliesTdCxt tr in  % tdcxt:TdCxt [l] [h]
+   let ExTRel' (rr : TRel' [l.R ..] [h.R1' ..]) = exTRel' [h.R1' ..] tdcxt in
+   let tacxt = trelImpliesTaCxt tr' in
+   let ExTRel (rr' : TRel [l.R ..]  [g.R2' ..]) = exTRel [l.R ..] tacxt in
+   let [g.AE2 ..] = ceq  rr sr rr' sr' cr [h.DE2 ..] in
+   let [g. AE1 ..] = ceq tr rr tr' rr' cr [h. DE1 ..] in
+       trans tr' sr' rr' [g.AE1 ..] [g.AE2 ..]
+
+%{ Explanation of the previous case:
+  % Assumptions:
+  % {DE1 :: [h. (deq (T1' ..) (R1' ..))]}
+  % {DE2 :: [h. (deq (R1' ..) (S1' ..))]}
+  % tr : TRel' [l.T ..] [h.T1' ..]
+  % sr : TRel' [l.S ..] [h. S1' ..]
+  % tr': TRel [l] [g] ([l. T ..]) ([g. T2' ..])
+  % sr': TRel [l] [g] ([l. S ..]) ([g. S2' ..])
+  % cr: TadCxt [g] [h]
+  % If {R1' : [h.term]} then there exists {R : [l.term]} and rr : TRel' [l.R ..] [h.R1' ..]
+  % If {R : [l.term]} then there exists {R2': [g.term]}  and rr' : TRel [l.R ..] [g. R2' ..]
+}%
+%{ i.h. given DE2 :[h. (deq (R1' ..) (S1' ..))]
+              rr  : TRel' [l. R ..][h. R1'..]
+              sr  : TRel' [l.S ..] [h. S1' ..]
+              rr' : TRel [l. R ..][g. R2'..]
+              sr' : TRel [l] [g] ([l. S ..]) ([g. S2' ..])
+        we obtain [g. aeq (R2' ..) (S2'..))]
+
+   let [g. AE2 ..] = ceq rr sr rr' sr' cr [h. DE2 ..] in
+
+   i.h.  given DE1 : [h. deq (T1' ..) (R1' ..)]
+               tr  : TRel' [l. T ..][h. T1'..]
+               rr  : TRel' [l. R ..][h. R1'..]
+               tr' : TRel [l. T ..][g. T2'..]
+               rr' : TRel [l. R ..][g. R2'..]
+         we obtain[g. aeq (T2' ..) (R2' ..)]
+  let [g. AE1 ..] = ceq tr rr tr' rr' cr [g. DE1 ..] in
+    trans tr' sr' srr [g. AE1 ..]  [g. AE2 ..]
+}%
+;
+
+
+

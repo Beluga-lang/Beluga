@@ -403,6 +403,52 @@ module Cid = struct
   end
 
 
+  module CompTypDef = struct
+
+    type entry = {
+      name               : Id.name;
+      implicit_arguments : int;
+      kind               : Int.Comp.kind;
+      mctx               : Int.LF.mctx;
+      typ                : Int.Comp.typ
+    }
+
+    let mk_entry n i (cD,t) k = {
+      name               = n;
+      implicit_arguments = i;
+      kind               = k;
+      mctx               = cD;
+      typ                = t
+    }
+
+    type t = Id.name DynArray.t
+
+    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name name = Hashtbl.find directory name
+
+    let add entry =
+      let cid_typdef = DynArray.length store in
+        DynArray.add store entry;
+        Hashtbl.replace directory entry.name cid_typdef;
+        cid_typdef
+
+    let get = DynArray.get store
+
+    let get_implicit_arguments c = (get c).implicit_arguments
+
+    let clear () =
+      DynArray.clear store;
+      Hashtbl.clear directory
+
+  end
+
+
   module Comp = struct
 
     type entry = {

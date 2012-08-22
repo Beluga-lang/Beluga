@@ -283,7 +283,7 @@ GLOBAL: sgn_eoi;
       | "datatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
 
-      | "type"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
+      | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
           [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
       |
         "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->

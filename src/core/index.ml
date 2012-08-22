@@ -523,7 +523,13 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
         let (ms', fcvars') = index_meta_spine cvars fcvars ms in
 	  (Apx.Comp.TypBase (loc, a', ms'), fcvars')
       with Not_found ->
-        raise (Error (loc, UnboundName a))
+        begin try
+          let a' = CompTypDef.index_of_name a in
+          let (ms', fcvars') = index_meta_spine cvars fcvars ms in
+            (Apx.Comp.TypDef (loc, a', ms'), fcvars')
+        with Not_found ->
+          raise (Error (loc, UnboundName a))
+        end
       end
   | Ext.Comp.TypBox (loc, a, psi) ->
     begin match a with
@@ -987,6 +993,21 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
     in
 *)
 
+
+let rec comptypdef (cT, cK) =
+  let cK' = index_compkind (CVar.create ())  ([], term_closed) cK in
+  let rec unroll cK cvars = begin match cK with
+    | Apx.Comp.Ctype _ -> cvars
+    | Apx.Comp.PiKind (loc, (cdecl, dep), cK) ->
+        let cvars' = match cdecl with
+                       | Apx.LF.MDecl (u ,_a, _psi) -> CVar.extend cvars (CVar.mk_entry (CVar.MV u))
+                       | Apx.LF.PDecl (p ,_a, _psi) -> CVar.extend cvars (CVar.mk_entry (CVar.PV p))
+                       | Apx.LF.CDecl (psi,_sW) -> CVar.extend cvars (CVar.mk_entry (CVar.CV psi))
+                      in
+            unroll cK cvars'
+   end in
+   let (tau,_ ) = index_comptyp (unroll cK' (CVar.create ())) ([], term_closed) cT in
+        (tau, cK')
 
 let kind     = index_kind (CVar.create ()) (BVar.create ()) ([], term_closed)
 let typ      = index_typ  (CVar.create ()) (BVar.create ()) ([], term_closed)

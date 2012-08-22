@@ -33,6 +33,7 @@ type error =
   | MissingMetaObj
   | TooManyMetaObj
   | CompTypEmpty       of Int.LF.mctx * Int.Comp.tclo
+  | TypeAbbrev         of Id.name
 
 exception Error of Syntax.Loc.t * error
 
@@ -40,6 +41,10 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | TypeAbbrev a ->
+          Format.fprintf ppf
+            "Type definition %s cannot contain any free meta-variables in its type."
+            (R.render_name a)
         | CompTypEmpty (cD, (tau, theta)) ->
           Format.fprintf ppf
            "Coverage cannot determine whether a computation-level type %a is empty;@.\
@@ -145,9 +150,9 @@ let rec etaExpandMVstr loc cO cPsi sA  = etaExpandMVstr' loc cO cPsi (Whnf.whnfT
 
 and etaExpandMVstr' loc cO cPsi sA  = match sA with
   | (Int.LF.Atom (_, a, _tS) as tP, s) ->
-      let (cPhi, conv_list) = ConvSigma.flattenDCtx cPsi in
+      let (cPhi, conv_list) = ConvSigma.flattenDCtx Int.LF.Empty cPsi in
       let s_proj = ConvSigma.gen_conv_sub conv_list in
-      let tQ    = ConvSigma.strans_typ (tP, s) conv_list in
+      let tQ    = ConvSigma.strans_typ Int.LF.Empty (tP, s) conv_list in
       (*  cPsi |- s_proj : cPhi
           cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
 
@@ -179,9 +184,9 @@ let rec etaExpandMMVstr loc cO cD cPsi sA  = etaExpandMMVstr' loc cO cD cPsi (Wh
 
 and etaExpandMMVstr' loc cO cD cPsi sA  = match sA with
   | (Int.LF.Atom (_, a, _tS) as tP, s) ->
-      let (cPhi, conv_list) = ConvSigma.flattenDCtx cPsi in
+      let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
       let s_proj = ConvSigma.gen_conv_sub conv_list in
-      let tQ    = ConvSigma.strans_typ (tP, s) conv_list in
+      let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
       (*  cPsi |- s_proj : cPhi
           cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
 
@@ -395,7 +400,7 @@ let rec elMCtx recT delta = match delta with
  *)
 
 let mgAtomicTyp cD cPsi a kK =
-  let (flat_cPsi, conv_list) = flattenDCtx cPsi in
+  let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
     let s_proj   = gen_conv_sub conv_list in
 
   let rec genSpine sK = match sK with
@@ -416,7 +421,7 @@ let mgAtomicTyp cD cPsi a kK =
 *)
 
     | (Int.LF.PiKind ((Int.LF.TypDecl (n, tA1), _ ), kK), s) ->
-        let tA1' = strans_typ (tA1, s) conv_list in
+        let tA1' = strans_typ cD (tA1, s) conv_list in
         let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1') in
         let h  = Int.LF.MMVar (u, (Whnf.m_id, s_proj)) in
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be
@@ -734,6 +739,27 @@ let rec elCompTyp cD tau = match tau with
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
         Int.Comp.TypBase (loc, a ,cS')
 
+  | Apx.Comp.TypDef (loc, a, cS) ->
+      let tK = (CompTypDef.get a).CompTypDef.kind in
+      let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
+      let rec spineToMSub cS' ms = match cS' with
+        | Int.Comp.MetaNil -> ms
+        | Int.Comp.MetaApp (mO, mS) ->
+            let mf = begin match mO with
+              | Int.Comp.MetaObj (loc, phat, tM) -> Int.LF.MObj (phat, tM)
+              | Int.Comp.MetaObjAnn (loc, cPsi, tM) -> Int.LF.MObj (Context.dctxToHat cPsi, tM)
+              | Int.Comp.MetaParam (loc, phat, h) -> Int.LF.PObj (phat, h)
+              | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj (cPsi)
+            end in
+              spineToMSub mS (Int.LF.MDot(mf, ms))
+      in
+      let tau = (CompTypDef.get a).CompTypDef.typ in
+        (* eager expansion of type definitions - to make things simple for now
+           -bp *)
+      let ms = spineToMSub cS' (Int.LF.MShift 0) in
+        Whnf.cnormCTyp (tau, ms)
+        (* Int.Comp.TypDef (loc, a, cS') *)
+
   | Apx.Comp.TypBox (loc, a, psi) ->
       let _ = dprint (fun () -> "[elCompTyp] TypBox" ) in
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
@@ -972,8 +998,11 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                         ^
                         P.compTypToString cD (Whnf.cnormCTyp (tau,t)) ^ "\n") ;
           Int.Comp.Syn (loc, i')
-        with _ ->
-          raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau,t), tau_t')))
+        with
+          | ConvSigma.Error (_loc, msg) ->
+              raise (ConvSigma.Error (loc, msg))
+          | _ ->
+              raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau,t), tau_t')))
         end
 
 
@@ -2234,6 +2263,28 @@ let comptyp tau =
   let tau' = elCompTyp Int.LF.Empty tau in
   let _ = dprint (fun () -> "[elCompTyp] " ^ P.compTypToString Int.LF.Empty tau' ^ " done \n") in
   tau'
+
+let comptypdef loc a (tau, cK) =
+  let cK = elCompKind Int.LF.Empty cK in
+  let _  = (solve_fvarCnstr Lfrecon.Pibox;
+            Unify.forceGlobalCnstr (!Unify.globalCnstrs)) in
+  let (cK,i) = Abstract.abstrCompKind cK in
+  let _  = (reset_fvarCnstr ();
+	    Unify.resetGlobalCnstrs ()) in
+  let rec unroll cD cK = begin match cK with
+    | Int.Comp.Ctype _ -> cD
+    | Int.Comp.PiKind (_, (cdecl, dep), cK) -> unroll (Int.LF.Dec(cD, cdecl)) cK
+  end in
+  let cD  = unroll Int.LF.Empty cK in
+  let tau = elCompTyp cD tau in
+  let _   = (Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+             Unify.resetGlobalCnstrs ()) in
+  let (tau, k) =  Abstract.abstrCompTyp  tau in
+   let _   = if k = 0 then () else
+                raise (Error(loc, TypeAbbrev a)) in
+
+    ((cD, tau), i, cK)
+
 
 let exp  = elExp  Int.LF.Empty
 

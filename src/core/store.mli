@@ -92,6 +92,24 @@ module Cid : sig
   end
 
 
+  module CompTypDef : sig
+
+    type entry = private {
+      name               : name;
+      implicit_arguments : int;
+      kind               : Comp.kind;
+      mctx               : LF.mctx;
+      typ                : Comp.typ
+    }
+
+    val mk_entry      : name -> int -> (LF.mctx * Comp.typ) -> Comp.kind -> entry
+    val add           : entry -> cid_comp_typ
+    val get           : cid_comp_typ -> entry
+    val get_implicit_arguments : cid_comp_typ -> int
+    val index_of_name : name -> cid_comp_typ
+    val clear         : unit -> unit
+  end
+
 
   module Comp : sig
 

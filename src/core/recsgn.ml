@@ -69,10 +69,25 @@ let rec recSgnDecls = function
   | decl :: rest ->
     recSgnDecl decl;
     recSgnDecls rest
+
 and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
-    | Ext.Sgn.CompTypAbbrev (_, a, _cK, _cT) -> print_string "Not implemented yet\n"
+    | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
+        let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
+        (* index cT  in a context which contains arguments to cK *)
+        let (apx_tau, apxK) = Index.comptypdef  (cT, cK) in
+
+        let ((cD,tau), i, cK) = Reconstruct.comptypdef loc a (apx_tau, apxK) in
+	let _         = dprint (fun () ->  "typedef " ^ a.string_of_name ^ " : " ^
+                                  (P.compKindToString Int.LF.Empty cK) ^ " = " ^
+				   (P.compTypToString cD tau)) in
+	let _         = (Monitor.timer ("Type abbrev. : Kind Check",
+					fun () -> Check.Comp.checkKind Int.LF.Empty cK)) in
+	let _         = (Monitor.timer ("Type abbrev. : Type Check",
+					fun () -> Check.Comp.checkTyp cD tau)) in
+        let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
+
     | Ext.Sgn.CompTyp (_ , a, extK) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
@@ -90,10 +105,10 @@ and recSgnDecl d =
 			Unify.resetGlobalCnstrs ();
 			dprint (fun () ->  a.string_of_name ^
 				  " : " ^  (P.compKindToString Int.LF.Empty cK'))) in
-	 (* Monitor.timer ("Type Check",
-            fun () -> Check.LF.checkCompKind Int.LF.Empty Int.LF.Empty cK');
+	  Monitor.timer ("Type Check",
+            fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
 	    dprint (fun () ->  "\nDOUBLE CHECK for data type constant " ^a.string_of_name ^
-            " successful!"); *)
+            " successful!");
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i) in ()
 
 

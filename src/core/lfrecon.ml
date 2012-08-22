@@ -854,7 +854,7 @@ and elTerm' recT cD cPsi r sP = match r with
            if isProjPatSub s then
              let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name ) in
              let _ = dprint (fun () -> "isProjPatSub ... " ) in
-             let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in
+             let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
              let _ = dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cD flat_cPsi ^ "\n") in
              let _ = dprint (fun () -> "conv_list " ^ conv_listToString conv_list ) in
              let flat_s = flattenProjPat s conv_list in
@@ -863,7 +863,7 @@ and elTerm' recT cD cPsi r sP = match r with
              let (cPhi, s'') = synDom cD loc flat_cPsi flat_s in
              let ss =  Substitution.LF.invert s'' in
 
-             let tP' = ConvSigma.strans_typ sP conv_list in
+             let tP' = ConvSigma.strans_typ cD sP conv_list in
              let _ = dprint (fun () -> "[synDom] Prune type " ^ P.typToString cD cPsi sP ) in
              let _ = dprint (fun () -> "[synDom] Prune flattened type " ^ P.typToString cD cPhi (tP', Substitution.LF.id) ) in
              let _ = dprint (fun () -> "         with respect to ss = " ^ P.subToString cD cPhi ss ) in
@@ -1525,13 +1525,13 @@ and elHead loc recT cD cPsi = function
 
   | Apx.LF.PVar (Apx.LF.PInst (Int.LF.PVar (p,r), tA, cPhi), s) ->
       begin try
-        let _ = dprint (fun () -> "[elHead] PInst : " ^ P.headToString cD cPhi (Int.LF.PVar (p,r))) in 
-        let _ = dprint (fun () -> "[elHead] PInst cPhi : " ^ P.dctxToString cD  cPhi ) in 
-        let _ = dprint (fun () -> "[elHead] PInst target cPsi : " ^ P.dctxToString cD cPsi ) in 
-        let s' = elSub loc recT cD cPsi s cPhi in 
-        let r' = Substitution.LF.comp r s' in 
-         (Int.LF.PVar (p, r') , (tA, r')) 
-      with Error.Violation msg -> 
+        let _ = dprint (fun () -> "[elHead] PInst : " ^ P.headToString cD cPhi (Int.LF.PVar (p,r))) in
+        let _ = dprint (fun () -> "[elHead] PInst cPhi : " ^ P.dctxToString cD  cPhi ) in
+        let _ = dprint (fun () -> "[elHead] PInst target cPsi : " ^ P.dctxToString cD cPsi ) in
+        let s' = elSub loc recT cD cPsi s cPhi in
+        let r' = Substitution.LF.comp r s' in
+         (Int.LF.PVar (p, r') , (tA, r'))
+      with Error.Violation msg ->
         dprint (fun () -> "[elHead] Violation: " ^ msg);
         raise (Error (loc, CompTypAnn ))
       end

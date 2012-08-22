@@ -161,9 +161,9 @@ let rec etaExpandMVstr cD cPsi sA  = etaExpandMVstr' cD cPsi (Whnf.whnfTyp sA)
 
 and etaExpandMVstr' cD cPsi sA  = match sA with
   | (LF.Atom (_, a, _tS) as tP, s) ->
-      let (cPhi, conv_list) = ConvSigma.flattenDCtx cPsi in
+      let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
       let s_proj = ConvSigma.gen_conv_sub conv_list in
-      let tQ    = ConvSigma.strans_typ (tP, s) conv_list in
+      let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
       (*  cPsi |- s_proj : cPhi
           cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
 

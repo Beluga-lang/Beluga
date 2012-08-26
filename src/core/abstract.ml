@@ -1586,9 +1586,8 @@ and abstractMVarHat cQ (l,offset) phat = match phat with
   (* case where contents = Some cPsi cannot happen,
      since collect normalized phat *)
   | (Some (I.CInst (_, {contents = None}, _, _, _theta ) as psi), k) ->
-      (* this case should not happen -bp *)
-      let x = index_of cQ (CV (I.CtxVar psi)) in
-        (Some (I.CtxOffset x), k)
+      let x = index_of cQ (CV (I.CtxVar psi)) + offset in
+        (Some (I.CtxOffset x  ), k)
 
 
 and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
@@ -2386,6 +2385,7 @@ let rec abstrCompTyp tau =
 
 let rec abstrPatObj cD cG pat tau =
   let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
+  let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
   let (cQ1, cD1') = collectMctx I.Empty cD in
   let (cQ2, cG)   = collectGctx cQ1 cG   in
   let (cQ3, pat') = collectPatObj cQ2 pat in

@@ -2248,7 +2248,7 @@ module Make (T : TRAIL) : UNIFY = struct
                                   P.mctxToString cD ^ ";\n" ^
                                   P.dctxToString cD cPsi1 ^ "\n  |- " ^
                                   P.normalToString cD cPsi1 (sM2', id) ^ "\n" ) in
-                 dprint (fun () -> "Instantiated meta^2-variable  " ^
+                 dprint (fun () -> "Instantiate meta^2-variable  " ^
                                         P.normalToString cD0 cPsi sM1);
                 instantiateMMVar (r, sM2', !cnstrs) ;
                  dprint (fun () -> "   to : " ^
@@ -3031,6 +3031,7 @@ module Make (T : TRAIL) : UNIFY = struct
    (* Unify pattern fragment, and force constraints after pattern unification
    succeeded *)
     (* Pre-condition: cPsi1, cPsi2 are in normal form *)
+
  and unifyDCtx1 mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 
@@ -3338,15 +3339,21 @@ module Make (T : TRAIL) : UNIFY = struct
       | (MShift k, MDot ( _ , ms)) ->
           unifyMSub' ms (MShift (k-1))
       | (MDot (MObj (phat, tM), ms'), MDot (MObj(_phat', tM'), mt')) ->
-          (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ;
+          (dprint (fun () -> "[unifyMSub] MObj BEFORE");
+           unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ;
            unifyMSub' ms' mt')
       | (MDot (PObj (phat, h), ms'), MDot (PObj(_phat', h'), mt')) ->
           (dprint (fun () -> "[unifyMSub] PObj ");
           (unifyHead Unification Empty (Context.hatToDCtx phat) h h';
            unifyMSub' ms' mt'))
       | (MDot (CObj (cPsi), ms), MDot (CObj(cPhi), mt)) ->
-          (dprint (fun () -> "[unifyMSub] CObj ");
-           unifyDCtx1 Unification Empty  cPsi cPhi;
+          (dprint (fun () -> "[unifyMSub] CObj BEFORE");
+           dprint (fun () -> "[unifyMSub] cPsi = " ^ P.dctxToString Empty cPsi);
+           dprint (fun () -> "[unifyMSub] cPhi = " ^ P.dctxToString Empty cPhi);
+           let cPsi' = Whnf.cnormDCtx (cPsi, Whnf.m_id) in
+           let cPhi' = Whnf.cnormDCtx (cPhi, Whnf.m_id) in
+             unifyDCtx1 Unification Empty  cPsi' cPhi';
+           dprint (fun () -> "[unifyMSub] CObj AFTER");
            dprint (fun () -> "[unifyMSub] cPsi = " ^ P.dctxToString Empty cPsi);
            dprint (fun () -> "[unifyMSub] cPhi = " ^ P.dctxToString Empty cPhi);
            unifyMSub' ms mt)
@@ -3426,8 +3433,12 @@ let rec unify_phat psihat phihat =
 
 
     let unifyDCtx cD0 cPsi1 cPsi2 =
-      unifyDCtx1 Unification cD0 (Whnf.cnormDCtx (cPsi1, Whnf.m_id))
-                                 (Whnf.cnormDCtx (cPsi2, Whnf.m_id))
+      let cPsi1' = Whnf.cnormDCtx (cPsi1, Whnf.m_id) in
+      let cPsi2' = Whnf.cnormDCtx (cPsi2, Whnf.m_id) in
+        (dprint (fun () -> "           cPsi = " ^ P.dctxToString Empty cPsi1');
+        dprint (fun () -> "           cPsi' = " ^ P.dctxToString Empty cPsi2');
+        unifyDCtx1 Unification cD0 cPsi1' cPsi2')
+
 
     let matchTerm cD0 cPsi sM sN =
       unify' Matching cD0 cPsi sM sN

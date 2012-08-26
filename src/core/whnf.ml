@@ -841,9 +841,9 @@ and what_head = function
 and cnorm_psihat (phat: psi_hat) t = match phat with
   | (None , _ ) -> phat
   | (Some (CInst (_n, {contents = Some cPsi}, _schema, _cD, theta)),  k) ->
-      begin match Context.dctxToHat (cnormDCtx (cPsi,theta))  with
-        | (None, i) -> (None, k+i)
-        | (Some cvar', i) -> (Some cvar', i+k)
+      begin match Context.dctxToHat (cnormDCtx (cPsi, t))  with
+        | (None, i) -> cnorm_psihat (None, k+i) t
+        | (Some cvar', i) -> cnorm_psihat (Some cvar', i+k) t
       end
   | (Some (CtxOffset offset), k) ->
       (dprint (fun () -> "[cnorm_psihat] CtxOffset = " ^ string_of_int offset ^ "\n");
@@ -1539,6 +1539,7 @@ and cnorm (tM, t) = match tM with
 
     | CtxVar (CInst (_n, ({contents = None} as cvar_ref), _schema,  _mctx, theta )) ->
         CtxVar (CInst (_n, cvar_ref , _schema,  _mctx, mcomp theta t))
+
     | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _mctx, theta)) ->
         cnormDCtx (cPhi, mcomp theta t)
 
@@ -2297,7 +2298,6 @@ let rec mctxMDec cD' k =
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, MDecl(u, tA, cPsi)), 1)
       -> (u, cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k))
-(*        (u, mshiftTyp tA k, mshiftDCtx cPsi k)*)
 
     | (Dec (_cD, PDecl _), 1)
       -> raise (Error.Violation "Expected meta-variable; Found parameter variable")

@@ -242,7 +242,7 @@ and eval_branches loc vscrut branches (theta, eta) = match branches with
       dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
       eval_branches loc vscrut branches (theta, eta)
 
-and match_pattern mt eta v pat =
+and match_pattern  (v,eta) (pat, mt) =
   let eta = ref eta in
   let rec loop v pat =
     match v, pat with
@@ -268,7 +268,9 @@ and match_pattern mt eta v pat =
         raise (Error.Violation "Expected box value.")
 
       | Comp.PsiValue cPsi, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
-        Unify.unifyDCtx LF.Empty cPsi cPsi'
+        let cPsi = Whnf.cnormDCtx (cPsi', mt) in
+          dprint (fun () -> "[match_pattern] call unifyDCtx ");
+          Unify.unifyDCtx LF.Empty cPsi cPsi'
       | _, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
         raise (Error.Violation "Expected context.")
 
@@ -309,8 +311,10 @@ and eval_branch vscrut branch (theta, eta) =
         try
           let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
           let theta_k = Whnf.mcomp (Whnf.cnormMSub theta') mt in
+          let _ = dprint (fun () -> "[eval_branches] try branch with theta_k = "
+                            ^ P.msubToString LF.Empty (Whnf.cnormMSub theta_k)) in
           let _ = Unify.unifyMSub theta theta_k in
-          let eta' = match_pattern mt eta vscrut pat in
+          let eta' = match_pattern  (vscrut, eta) (pat, mt) in
           eval_chk e (Whnf.cnormMSub mt, eta')
         with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end

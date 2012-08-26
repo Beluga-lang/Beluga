@@ -511,7 +511,8 @@ and norm (tM, sigma) = match tM with
       Root (loc, MMVar (u, (t, normSub (LF.comp r sigma))), normSpine (tS, sigma))
 
   | Root (loc, MMVar (MInst (n, ({contents = None} as r), cD, cPsi, TClo (tA, s'), cnstr), (t, s)), tS) ->
-      norm (Root (loc, MMVar (MInst (n, r, cD, cPsi, normTyp (tA, s'), cnstr), (t, s)), tS), sigma)
+      Root (loc, MMVar (MInst (n, r, cD, cPsi, normTyp (tA, s'), cnstr),
+                        (t, normSub (LF.comp s sigma))), normSpine (tS, sigma))
 
   (* Meta-variables *)
 
@@ -1374,6 +1375,8 @@ and cnorm (tM, t) = match tM with
           end
 
     | Shift (NegCtxShift (CtxOffset psi), k) ->
+        (*  |cPsi| = k
+            cPsi |- s : psi *)
         let rec undef_sub d s =
           if d = 0 then s
           else undef_sub (d-1) (Dot(Undef, s))
@@ -1392,7 +1395,8 @@ and cnorm (tM, t) = match tM with
 
     | Shift (NoCtxShift, _k) -> s
     | Shift (CtxShift (CtxOffset psi), k) ->
-        (* let _ = dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi ) in  *)
+        let _ = dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi
+                         ^ " k = " ^ string_of_int k) in
         begin match LF.applyMSub psi t with
           | MV psi' -> Shift (CtxShift (CtxOffset psi'), k)
           | CObj (CtxVar psi) -> Shift (CtxShift (psi), k)
@@ -2570,9 +2574,8 @@ let rec mctxPVarPos cD p =
 
     | (Comp.TypBox (loc, tA, cPsi), t)
       ->
-        let tA' = normTyp (cnormTyp(tA, t), LF.id) in
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-
+        let tA' = normTyp (cnormTyp(tA, t), LF.id) in
           (Comp.TypBox(loc, tA', cPsi') , m_id)
 
 

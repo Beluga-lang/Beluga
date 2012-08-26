@@ -65,6 +65,8 @@ module Comp : sig
     | EqTyp           of LF.mctx * tclo
     | MAppMismatch    of LF.mctx * (meta_typ * LF.msub)
     | AppMismatch     of LF.mctx * (meta_typ * LF.msub)
+    | CtxHatMismatch  of LF.mctx * LF.dctx (* expected *) * LF.psi_hat (* found *) * meta_obj
+    | CtxMismatch     of LF.mctx * LF.dctx (* expected *) * LF.dctx (* found *) * meta_obj
 
   exception Error of Syntax.Loc.t * error
 

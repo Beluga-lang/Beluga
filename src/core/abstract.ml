@@ -1577,7 +1577,9 @@ and abstractMVarSub' cQ offset s = match s with
 *)
 and abstractMVarHat cQ (l,offset) phat = match phat with
   | (None, _ ) -> phat
-  | (Some (I.CtxOffset x), k ) -> (Some (I.CtxOffset (x+l)), k)
+  | (Some (I.CtxOffset x), k ) ->
+      if x <= offset then phat
+      else (Some (I.CtxOffset (x+l)), k)
   | (Some (I.CtxName psi), k) ->
       let x = index_of cQ (FCV (psi, None)) + offset in
         (Some (I.CtxOffset x), k)

@@ -254,7 +254,6 @@ and inferHead loc cD cPsi head = match head with
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
-
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 

@@ -63,6 +63,7 @@ module type UNIFY = sig
 
   (* All unify* functions return () on success and raise Failure on failure *)
   val unify        : mctx -> dctx  -> nclo  -> nclo -> unit
+  val unifyH       : mctx -> psi_hat -> head -> head -> unit
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
   val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
   val unifyDCtx    : mctx -> dctx -> dctx -> unit
@@ -3325,7 +3326,8 @@ module Make (T : TRAIL) : UNIFY = struct
       unify' Unification cD0 cPsi sM sN;
       dprint (fun () -> "Unify DONE: " ^ P.normalToString cD0 cPsi sM ^ "\n ==  \n" ^ P.normalToString Empty cPsi sN)
 
-
+    let unifyH cD phat h h' =
+      unifyHead Unification Empty (Context.hatToDCtx phat) h h'
    (* **************************************************************** *)
 
     let rec unifyMSub' ms mt = match (ms, mt) with

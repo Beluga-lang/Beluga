@@ -135,18 +135,23 @@ let rec eval_syn i (theta, eta) =
 
     | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
       let tM' = Whnf.cnorm (tM, theta) in
+        let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue (_u, e', theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.MObj (phat, tM'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (phat, tM'), spine))
-        | _ -> raise (Error.Violation "Expected MLamValue")
+        | _ -> raise (Error.Violation "Expected MLamValue ")
       end
 
     | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
+        let h' = Whnf.cnormHead (h, theta) in
+        let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue (_u, e', theta1, eta1) ->
-          eval_chk e' (LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
+          eval_chk e' (LF.MDot (LF.PObj (phat, h'), theta1), eta1)
+        | Comp.DataValue (cid, spine) ->
+          Comp.DataValue (cid, Comp.DataApp (Comp.ParamValue (phat, h'), spine))
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
@@ -266,6 +271,14 @@ and match_pattern  (v,eta) (pat, mt) =
         Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
       | _, Comp.PatMetaObj (_, Comp.MetaObjAnn _) ->
         raise (Error.Violation "Expected box value.")
+
+      | Comp.ParamValue (phat, h), Comp.PatMetaObj (_, Comp.MetaParam (_, phat', h')) ->
+          let phat' = Whnf.cnorm_psihat phat' mt in
+          let h'    = Whnf.cnormHead (h', mt) in
+            Unify.unify_phat phat phat';
+            Unify.unifyH LF.Empty phat h h'
+      | _, Comp.PatMetaObj (_, Comp.MetaParam _ ) ->
+        raise (Error.Violation "Expected param value.")
 
       | Comp.PsiValue cPsi, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
         let cPsi' = Whnf.cnormDCtx (cPsi', mt) in

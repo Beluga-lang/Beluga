@@ -268,7 +268,7 @@ and match_pattern  (v,eta) (pat, mt) =
         raise (Error.Violation "Expected box value.")
 
       | Comp.PsiValue cPsi, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
-        let cPsi = Whnf.cnormDCtx (cPsi', mt) in
+        let cPsi' = Whnf.cnormDCtx (cPsi', mt) in
           dprint (fun () -> "[match_pattern] call unifyDCtx ");
           Unify.unifyDCtx LF.Empty cPsi cPsi'
       | _, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
@@ -314,8 +314,13 @@ and eval_branch vscrut branch (theta, eta) =
           let _ = dprint (fun () -> "[eval_branches] try branch with theta_k = "
                             ^ P.msubToString LF.Empty (Whnf.cnormMSub theta_k)) in
           let _ = Unify.unifyMSub theta theta_k in
+          let _ = dprint (fun () -> "match scrutinee against pattern \n     " ^
+                            P.patternToString cD cG pat) in
+          let _ = dprint (fun () -> "     pattern with mvars \n     " ^
+                            P.patternToString LF.Empty (Whnf.cnormCtx (cG, mt))
+                            (Whnf.cnormPattern (pat, mt))) in
           let eta' = match_pattern  (vscrut, eta) (pat, mt) in
-          eval_chk e (Whnf.cnormMSub mt, eta')
+            eval_chk e (Whnf.cnormMSub mt, eta')
         with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
 

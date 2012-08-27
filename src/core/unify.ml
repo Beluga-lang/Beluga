@@ -3120,6 +3120,9 @@ module Make (T : TRAIL) : UNIFY = struct
           unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
           unifyTerm Unification cD cPsi1
             (Whnf.cnorm (tR, t), id) (Whnf.cnorm (tR', t'), id)
+
+    (* Add MetaParam Obj ... *)
+
     | _ -> raise (Failure "MetaObj mismatch")
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') (cK, mt) = match ((mS, t) , (mS', t')) with

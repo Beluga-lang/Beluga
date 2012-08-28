@@ -73,6 +73,8 @@ module Comp = struct
     | EqTyp           of I.mctx * tclo
     | MAppMismatch    of I.mctx * (meta_typ * I.msub)
     | AppMismatch     of I.mctx * (meta_typ * I.msub)
+    | CtxHatMismatch  of I.mctx * I.dctx (* expected *) * I.psi_hat (* found *) * meta_obj
+    | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
 
   exception Error of Syntax.Loc.t * error
 
@@ -87,6 +89,25 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
+          | CtxHatMismatch (cD, cPsi, phat, cM) ->
+          let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
+            Error.report_mismatch ppf
+              "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
+              "Expected context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx  cPsi)
+              "Given context" (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) cPhi;
+              Format.fprintf ppf
+                "In expression: %a@."
+                (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+
+          | CtxMismatch (cD, cPsi, cPhi, cM) ->
+            Error.report_mismatch ppf
+              "Type checking Ill-typed meta-object. This is a bug in type reconstruction."
+              "Expected context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx  cPsi)
+              "Given context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPhi);
+              Format.fprintf ppf
+                "In expression: %a@."
+                (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+
           | MismatchChk (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
             Error.report_mismatch ppf
               "Ill-typed expression."
@@ -236,7 +257,11 @@ module Comp = struct
       LF.checkSchema loc cD cPsi (Schema.get_schema w)
 
   | (MetaObj (loc, phat, tM), (MetaTyp (tA, cPsi), t)) ->
-      LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+      let cPsi' = C.cnormDCtx (cPsi, t) in
+      if phat = Context.dctxToHat cPsi' then
+        LF.check cD cPsi' (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+      else
+        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
 
   | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->
       LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
@@ -415,6 +440,10 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         begin match C.cwhnfCTyp (syn cD cG i) with
           | (TypBox (loc, tA, cPsi),  t') ->
               let tau_s = TypBox (loc, C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in
+              let _ = dprint (fun () -> "[check] Case - Scrutinee " ^
+                                P.expSynToString cD cG i ^
+                                "\n   has type " ^ P.compTypToString cD tau_s)
+              in
               let problem = Coverage.make loc prag cD branches tau_s in
               (* Coverage.stage problem; *)
                 checkBranches DataObj cD cG branches tau_s (tau,t);
@@ -619,6 +648,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
           let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
+          let _ = dprint (fun () -> "where scrutinee has type" ^
+                            P.compTypToString cD tau_s) in
           let TypBox (_, (I.Atom(_, a, _) as tP) , cPsi) = tau_s in
           (* By invariant: cD1' |- t1 <= cD *)
           let tP1   = Whnf.cnormTyp (tP, t1) in
@@ -629,7 +660,10 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n") in
           let _ = dprint (fun () -> "\nChecking refinement substitution\n") in
           let _     = LF.checkMSub loc cD1' t1 cD in
-          let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in
+          let _ = dprint (fun () -> "\nChecking refinement substitution :      DONE\n") in
+          let _ = dprint (fun () -> "[check] MetaObj " ^ P.metaObjToString cD1'  mO
+                            ^ "\n   has type " ^  P.typToString cD1'  cPsi1  (tP1, S.LF.id)
+                            ^ "\n   in " ^ P.dctxToString cD1' cPsi1 ) in
           let _ = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in
             check cD1' cG' e1 (tau', Whnf.m_id)
 

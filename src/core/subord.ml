@@ -179,11 +179,11 @@ and relevantSchema (Schema sch_elems) basis =
 
 *)
 
-let rec thin (cO, cD) (tP, cPsi) =
+let rec thin cD (tP, cPsi) =
   (*inner basis cPsi = (s, cPsi')
 
      if basis is a list of type families
-        cO ; cD |- cPsi ctx
+        cD |- cPsi ctx
      then
         cPsi' only contains those declarations whose types is
         relevant to constructing elements of type families
@@ -225,12 +225,11 @@ let rec thin (cO, cD) (tP, cPsi) =
 
 
 
-
-let rec thin' cD a cPsi =
+let rec thin0 cD a cPsi =
   (*inner basis cPsi = (s, cPsi')
 
      if basis is a list of type families
-        cO ; cD |- cPsi ctx
+         cD |- cPsi ctx
      then
         cPsi' only contains those declarations whose types is
         relevant to constructing elements of type families
@@ -245,6 +244,8 @@ let rec thin' cD a cPsi =
         let schema = begin match psi with
           | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
           | CInst ( _, _ , cid_schema, _, _ ) -> cid_schema
+          | CtxName psi ->
+              let (_,CDecl (_, s_cid, _))  = Store.FCVar.get psi in s_cid
         end
         in
         if relevantSchema (Schema.get_schema schema) basis then
@@ -269,3 +270,17 @@ let rec thin' cD a cPsi =
         end
   in
     inner [a] cPsi
+
+
+let rec thin' cD a cPsi =
+  begin match Context.ctxVar cPsi with
+  | Some (CtxName psi) ->
+      begin try
+        let (_,CDecl (_, _, _))  = Store.FCVar.get psi in
+          thin0 cD a cPsi
+      with
+          Not_found -> (Shift(NoCtxShift, 0), cPsi)
+      end
+  | _ -> thin0 cD a cPsi
+  end
+

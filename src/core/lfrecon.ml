@@ -29,6 +29,7 @@ type error =
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
   | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
+  | HolesFunction
 
 exception Error of Syntax.Loc.t * error
 
@@ -41,6 +42,9 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | HolesFunction ->
+            Format.fprintf ppf
+              "Underscores occurring inside LF objects must be of atomic type."
         | ProjNotValid (cD, cPsi, k, sA) ->
             Format.fprintf ppf
               "Cannot get the %s. projection from type %a."
@@ -109,6 +113,42 @@ let rec mkShift recT cPsi = match recT with
   | Pi ->
       let (None, d) = Context.dctxToHat cPsi in
         Int.LF.Shift (Int.LF.NoCtxShift, d)
+
+
+
+(* etaExpandMMV loc cD cPsi sA  = tN
+ *
+ *  cD ; cPsi   |- [s]A <= typ
+ *
+ *  cD ; cPsi   |- tN   <= [s]A
+ *)
+let rec etaExpandMMVstr loc cD cPsi sA  n =
+  etaExpandMMVstr' loc cD cPsi (Whnf.whnfTyp sA) n
+
+and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
+  | (Int.LF.Atom (_, a, _tS) as tP, s) ->
+      let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
+      let s_proj = ConvSigma.gen_conv_sub conv_list in
+      let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
+      (*  cPsi |- s_proj : cPhi
+          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+
+      let (ss', cPhi') = Subord.thin' cD a cPhi in
+      (* cPhi |- ss' : cPhi' *)
+      let ssi' = Substitution.LF.invert ss' in
+      (* cPhi' |- ssi : cPhi *)
+      (* cPhi' |- [ssi]tQ    *)
+      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in
+      (* cPhi |- ss'    : cPhi'
+         cPsi |- s_proj : cPhi
+         cPsi |- comp  ss' s_proj   : cPhi' *)
+      let ss_proj = Substitution.LF.comp ss' s_proj in
+        Int.LF.Root (loc, Int.LF.MMVar (u, (Whnf.m_id, ss_proj)), Int.LF.Nil)
+
+  | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
+      Int.LF.Lam (loc, x,
+                  etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, Substitution.LF.decSub decl s)) (tB, Substitution.LF.dot1 s) x )
+
 
 (* ******************************************************************* *)
 let rec pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
@@ -798,8 +838,20 @@ and elTerm' recT cD cPsi r sP = match r with
               let u =  Whnf.newMVar None (Int.LF.Null, tA) in
                 Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
           | Pibox ->
-              let u =  Whnf.newMMVar None (cD, cPsi, tA) in
-                Int.LF.Root (loc, Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.id)), tS)
+              begin match tA with
+                | Int.LF.Atom (_, a, _ ) ->
+                    let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
+                    let s_proj = ConvSigma.gen_conv_sub conv_list in
+                    let tA'    = ConvSigma.strans_typ cD (tA, Substitution.LF.id) conv_list  in
+                    let (ss', cPhi') = Subord.thin' cD a cPhi in
+                      (* cPhi |- ss' : cPhi' *)
+                    let ssi' = Substitution.LF.invert ss' in
+                      (* cPhi' |- ssi : cPhi *)
+                      (* cPhi' |- [ssi]tQ    *)
+                    let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) in
+                      Int.LF.Root (loc, Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.comp ss'  s_proj)), tS)
+                | _ -> raise (Error (loc, HolesFunction))
+              end
         end)
       with NotPatSpine -> raise (Error (loc, NotPatternSpine))
       end
@@ -1615,10 +1667,7 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            * s.t.  cPsi |- u[s'] => [s']A'  where cPsi |- s' : .
            *   and    [s]A = [s']A'. Therefore A' = [s']^-1([s]A)
            *)
-          (* let (_, d) = Context.dctxToHat cPsi in
-          let tN     = Whnf.etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift(Int.LF.NoCtxShift, d)) in   *)
-          let tN     = Whnf.etaExpandMV cPsi (tA, s) n Substitution.LF.id in
-
+           let tN     = Whnf.etaExpandMV cPsi (tA, s) n Substitution.LF.id      in
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
 
@@ -1630,8 +1679,8 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            *
            * s.t.  cPsi |- \x1...\xn. u[id] => [id]A  where cPsi |- id : cPsi
            *)
-           let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in
-          (* let tN     = etaExpandMMVstr loc cO cD cPsi (tA, s) in *)
+           (* let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in *)
+           let tN     = etaExpandMMVstr loc cD cPsi (tA, s) n in
 
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
@@ -1693,8 +1742,8 @@ and elKSpineI loc recT cD cPsi spine i sK =
             Int.LF.App (tN, spine')
       | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pibox) ->
           (* let sshift = mkShift recT cPsi in *)
-          let tN     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n Substitution.LF.id in
-          (* let tN = etaExpandMMVstr None cO cD cPsi (tA, s) in  *)
+          (* let tN     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n Substitution.LF.id in*)
+          let tN = etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) n in
           let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
 

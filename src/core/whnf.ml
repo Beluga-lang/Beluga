@@ -511,7 +511,8 @@ and norm (tM, sigma) = match tM with
       Root (loc, MMVar (u, (t, normSub (LF.comp r sigma))), normSpine (tS, sigma))
 
   | Root (loc, MMVar (MInst (n, ({contents = None} as r), cD, cPsi, TClo (tA, s'), cnstr), (t, s)), tS) ->
-      norm (Root (loc, MMVar (MInst (n, r, cD, cPsi, normTyp (tA, s'), cnstr), (t, s)), tS), sigma)
+      Root (loc, MMVar (MInst (n, r, cD, cPsi, normTyp (tA, s'), cnstr),
+                        (t, normSub (LF.comp s sigma))), normSpine (tS, sigma))
 
   (* Meta-variables *)
 
@@ -839,13 +840,14 @@ and what_head = function
 
 and cnorm_psihat (phat: psi_hat) t = match phat with
   | (None , _ ) -> phat
+  | (Some (CInst (_n, ({contents = None} as cvar_ref), _schema, _cD, theta)),  k) ->
+      (Some (CInst (_n, cvar_ref, _schema, _cD, mcomp theta t)), k)
   | (Some (CInst (_n, {contents = Some cPsi}, _schema, _cD, theta)),  k) ->
-      begin match Context.dctxToHat (cnormDCtx (cPsi,theta))  with
-        | (None, i) -> (None, k+i)
-        | (Some cvar', i) -> (Some cvar', i+k)
+      begin match Context.dctxToHat (cnormDCtx (cPsi, mcomp theta t))  with
+        | (None, i) -> (None, k+i) (* cnorm_psihat (None, k+i) t *)
+        | (Some cvar', i) -> (Some cvar', i+k) (* cnorm_psihat (Some cvar', i+k) t *)
       end
   | (Some (CtxOffset offset), k) ->
-      (dprint (fun () -> "[cnorm_psihat] CtxOffset = " ^ string_of_int offset ^ "\n");
       begin match LF.applyMSub offset t with
         | CObj(cPsi) ->
             begin match Context.dctxToHat (cPsi) with
@@ -853,10 +855,8 @@ and cnorm_psihat (phat: psi_hat) t = match phat with
               | (Some cvar', i) -> (Some cvar', i+k)
             end
         | MV offset' -> (Some (CtxOffset offset'), k)
-      end )
+      end
   |  _ -> phat
-
-
 
 
 and cnorm (tM, t) = match tM with
@@ -1374,6 +1374,8 @@ and cnorm (tM, t) = match tM with
           end
 
     | Shift (NegCtxShift (CtxOffset psi), k) ->
+        (*  |cPsi| = k
+            cPsi |- s : psi *)
         let rec undef_sub d s =
           if d = 0 then s
           else undef_sub (d-1) (Dot(Undef, s))
@@ -1392,7 +1394,8 @@ and cnorm (tM, t) = match tM with
 
     | Shift (NoCtxShift, _k) -> s
     | Shift (CtxShift (CtxOffset psi), k) ->
-        (* let _ = dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi ) in  *)
+        (* let _ = dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi
+                         ^ " k = " ^ string_of_int k) in *)
         begin match LF.applyMSub psi t with
           | MV psi' -> Shift (CtxShift (CtxOffset psi'), k)
           | CObj (CtxVar psi) -> Shift (CtxShift (psi), k)
@@ -1535,6 +1538,7 @@ and cnorm (tM, t) = match tM with
 
     | CtxVar (CInst (_n, ({contents = None} as cvar_ref), _schema,  _mctx, theta )) ->
         CtxVar (CInst (_n, cvar_ref , _schema,  _mctx, mcomp theta t))
+
     | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _mctx, theta)) ->
         cnormDCtx (cPhi, mcomp theta t)
 
@@ -2293,7 +2297,6 @@ let rec mctxMDec cD' k =
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, MDecl(u, tA, cPsi)), 1)
       -> (u, cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k))
-(*        (u, mshiftTyp tA k, mshiftDCtx cPsi k)*)
 
     | (Dec (_cD, PDecl _), 1)
       -> raise (Error.Violation "Expected meta-variable; Found parameter variable")
@@ -2427,13 +2430,14 @@ let rec mctxPVarPos cD p =
     | Comp.MetaCtx (loc, cPsi) ->
         Comp.MetaCtx (loc, normDCtx cPsi)
     | Comp.MetaObj (loc, phat, tM) ->
-        Comp.MetaObj (loc, phat, norm (tM, LF.id))
+        Comp.MetaObj (loc, cnorm_psihat phat m_id, norm (tM, LF.id))
     | Comp.MetaObjAnn (loc, cPsi, tM) ->
         Comp.MetaObjAnn (loc, normDCtx cPsi, norm (tM, LF.id))
     | Comp.MetaParam (loc, phat, PVar (PInst (_, {contents = Some h}, _, _, _ ), s)) ->
         begin match h with
-          | BVar k -> let Head h' = LF.bvarSub k s in Comp.MetaParam (loc, phat, h')
-          | PVar (q, s') -> normMetaObj (Comp.MetaParam (loc, phat, PVar (q, LF.comp s' s)))
+          | BVar k -> let Head h' = LF.bvarSub k s in
+              Comp.MetaParam (loc, cnorm_psihat phat m_id, h')
+          | PVar (q, s') -> normMetaObj (Comp.MetaParam (loc, cnorm_psihat phat m_id, PVar (q, LF.comp s' s)))
         end
 
     | Comp.MetaParam (loc, phat, _ ) ->    mO
@@ -2495,7 +2499,7 @@ let rec mctxPVarPos cD p =
           | PVar (q, s') -> cnormMetaObj (Comp.MetaParam (loc, phat, PVar (q, LF.comp s' s)), t)
         end
 *)
-    | Comp.MetaParam (loc, phat, h ) ->  Comp.MetaParam (loc, phat, cnormHead (h, t))
+    | Comp.MetaParam (loc, phat, h ) ->  Comp.MetaParam (loc, cnorm_psihat phat t, cnormHead (h, t))
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS
@@ -2570,9 +2574,8 @@ let rec mctxPVarPos cD p =
 
     | (Comp.TypBox (loc, tA, cPsi), t)
       ->
-        let tA' = normTyp (cnormTyp(tA, t), LF.id) in
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-
+        let tA' = normTyp (cnormTyp(tA, t), LF.id) in
           (Comp.TypBox(loc, tA', cPsi') , m_id)
 
 

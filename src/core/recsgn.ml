@@ -321,7 +321,11 @@ and recSgnDecl d =
                                   "\n   result:  " ^
                                   P.expChkToString cD cG e' ^ "\n") in
 
-          let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+          let _        = begin try
+                           Unify.forceGlobalCnstr (!Unify.globalCnstrs)
+                        with Unify.Failure _ -> raise (Check.Comp.Error  (Syntax.Loc.ghost, Check.Comp.UnsolvableConstraints f))
+                        end
+          in
           let _        = Unify.resetGlobalCnstrs () in
 
           (* let e_r     = Monitor.timer ("Function Reconstruction", fun () -> check  cO cD cG e' (tau', C.m_id)) in  *)

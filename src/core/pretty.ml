@@ -1605,27 +1605,11 @@ module Int = struct
         fmt_ppr_lf_normal cD cPsi std_lvl str_formatter tM
         ; flush_str_formatter ()
 
-    let attempt message f fallback =
-      try
-        f()
-      with
-        | Match_failure (file, line, column) ->
-            (print_string ("pretty.ml attempt: \"" ^ message ^ "\" crashed: "
-                           ^ file ^ " " ^ string_of_int line ^ " " ^ string_of_int column ^ "\n");
-             exit 230)
-        | _ -> (print_string ("pretty.ml attempt: \"" ^ message ^ "\" crashed.\n");
-                fallback (*exit 231*) )
-
     let dctxToString cD cPsi =
-      let (cPsi', notice) =  try (Whnf.cnormDCtx (cPsi, Whnf.m_id),  "")
-                            with _ -> (cPsi, "{dctxToString: Whnf.cnormDCtx    crashed}")
-      in
-      let cPsi' = attempt "dctxToString whnf" (fun () -> Whnf.normDCtx cPsi') cPsi' in
-       notice ^ (fmt_ppr_lf_dctx cD std_lvl str_formatter cPsi';
-                 flush_str_formatter ())
+      fmt_ppr_lf_dctx cD std_lvl str_formatter (Whnf.normDCtx cPsi);
+      flush_str_formatter ()
 
     let mctxToString cD =
-(*      let cD' = attempt "mctxToString normMCtx" (fun () -> Whnf.normMCtx cD) cD in  *)
       let cD' = Whnf.normMCtx cD in
       fmt_ppr_lf_mctx std_lvl str_formatter cD'
         ; flush_str_formatter ()

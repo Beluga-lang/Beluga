@@ -34,6 +34,8 @@ type error =
   | TooManyMetaObj
   | CompTypEmpty       of Int.LF.mctx * Int.Comp.tclo
   | TypeAbbrev         of Id.name
+  | CtxMismatch        of Int.LF.mctx * Int.Comp.typ * Int.LF.dctx
+  | PatternMobj
 
 exception Error of Syntax.Loc.t * error
 
@@ -41,6 +43,16 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | PatternMobj ->
+            Format.fprintf ppf
+              "Expected a meta-object; Found a computation-level pattern"
+        | CtxMismatch (cD, tau, cPsi) ->
+            Format.fprintf ppf
+              "Context mismatch@.\
+               @ @ expected: %a@.\
+               @ @ found object in context %a"
+            (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
         | TypeAbbrev a ->
           Format.fprintf ppf
             "Type definition %s cannot contain any free meta-variables in its type."
@@ -1390,7 +1402,15 @@ and elExp' cD cG i = match i with
               let _ = dprint (fun () -> "... PiBox MDecl case ...") in
               let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
               let _ = dprint (fun () -> "[elDCtx] done... ]") in
-              let _     = Unify.unifyDCtx cD cPsi cPsi' in
+              let _     = begin try
+                           Unify.unifyDCtx cD cPsi cPsi'
+                          with
+                            | Unify.Failure "Context clash" ->
+                                let expected_tau = Int.Comp.TypBox (Syntax.Loc.ghost,Whnf.cnormTyp (tA, theta),
+                                                                Whnf.cnormDCtx (cPsi, theta))   in
+                                  raise (Error (loc, CtxMismatch (cD, expected_tau, cPsi')))
+                          end
+              in
               let _ = dprint (fun () -> "[unifyDCtx] done... ]") in
               let cPsi' = Whnf.normDCtx cPsi' in
               let psihat' = Context.dctxToHat cPsi'  in
@@ -1623,8 +1643,8 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
 (* ********************************************************************************)
 (* Elaborate computation-level patterns *)
 
-and elPatMetaObj cD pat (cdecl, theta) = match pat with
-  | (Apx.Comp.PatMetaObj (loc, cM)) ->
+and elPatMetaObj cD pat (cdecl, theta) = begin match pat with
+  | Apx.Comp.PatMetaObj (loc, cM) ->
     (match cdecl with
        | Int.LF.MDecl (_, tA, cPsi) ->
            (match  elMetaObj cD cM (Int.Comp.MetaTyp (tA, cPsi), theta)  with
@@ -1644,7 +1664,35 @@ and elPatMetaObj cD pat (cdecl, theta) = match pat with
              (Int.Comp.PatMetaObj (loc, cM'),
               Int.LF.MDot (Int.LF.CObj (cPsi), theta))
     )
-  | pat -> raise (Error.Violation "Expected a meta-object; Found a computation-level pattern")
+
+  | Apx.Comp.PatEmpty (loc, _ ) -> raise (Error (loc, PatternMobj))
+  | Apx.Comp.PatConst (loc, _, _ ) -> raise (Error (loc, PatternMobj))
+  | Apx.Comp.PatFVar (loc, _ ) -> raise (Error (loc, PatternMobj))
+  | Apx.Comp.PatVar (loc, _ , _ ) -> raise (Error (loc, PatternMobj))
+  | Apx.Comp.PatPair (loc, _ , _ ) -> raise (Error (loc, PatternMobj))
+  | Apx.Comp.PatTrue loc -> raise (Error (loc, PatternMobj))
+  | Apx.Comp.PatFalse loc -> raise (Error (loc, PatternMobj))
+(*  | Apx.Comp.PatAnn (loc, (Apx.Comp.PatMetaObj (_, _ ) as pat), tau) ->
+      (let tau' = elCompTyp cD tau in
+      let (_cG', pat') = elPatChk cD (Int.LF.Empty) pat (tau', Whnf.m_id) in
+        begin match pat' , cdecl with
+          |  (Int.Comp.MetaObj (loc, phat, tM) as cM') , Int.LF.MDecl (_, tA, cPsi) ->
+               let ttau = (Int.Comp.TypBox (Syntax.Loc.ghost, tA, cPsi), theta) in
+               let ttau' = (tau', Whnf.m_id) in
+                 begin try
+                   Unify.unifyCompTyp cD ttau ttau' ;
+                   (Int.Comp.PatMetaObj (loc, cM'),
+                    Int.LF.MDot (Int.LF.MObj (phat, tM), theta))
+                 with Unify.Failure msg ->
+                   dprint (fun () -> "Unify Error: " ^ msg) ;
+                   raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
+                 end
+          (* Other type annotations on MetaCtx or MetaParam not supported *)
+        end)
+
+  | Apx.Comp.PatAnn (loc, _, _) -> raise (Error (loc, PatternMobj))
+*)
+end
 
 and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) with
   | (Apx.Comp.PatEmpty (loc, cpsi), (tau, theta)) ->
@@ -1686,8 +1734,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
            raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
         end
 
-  | (Apx.Comp.PatPair (loc, pat1, pat2) , (Int.Comp.TypCross (tau1, tau2),
-                                           theta)) ->
+  | (Apx.Comp.PatPair (loc, pat1, pat2) , (Int.Comp.TypCross (tau1, tau2), theta)) ->
       let (cG1, pat1') = elPatChk cD cG pat1 (tau1, theta) in
       let (cG2, pat2') = elPatChk cD cG1 pat2 (tau2, theta) in
         (cG2, Int.Comp.PatPair (loc, pat1', pat2'))

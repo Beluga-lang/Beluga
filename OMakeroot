@@ -6,7 +6,7 @@ open build/OCaml
 # Default values, which can be overridden by the command line:
 DEBUG = false
 BYTE_ENABLED   = true
-NATIVE_ENABLED = false
+NATIVE_ENABLED = true
 
 
 #

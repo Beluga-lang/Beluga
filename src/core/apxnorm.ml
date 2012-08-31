@@ -95,6 +95,9 @@ let rec cnormApxTerm cD delta m (cD'', t) = match m with
   | Apx.LF.Tuple (loc, tuple) ->
       Apx.LF.Tuple(loc, cnormApxTuple cD delta tuple (cD'', t))
 
+  | Apx.LF.Ann (loc, m', a) ->
+    Apx.LF.Ann (loc, cnormApxTerm cD delta m' (cD'', t), a)
+
 and cnormApxTuple cD delta tuple (cD'', t) = match tuple with
   | Apx.LF.Last m -> Apx.LF.Last (cnormApxTerm cD delta m (cD'' , t))
   | Apx.LF.Cons (m, tuple) ->
@@ -784,6 +787,9 @@ let rec fmvApxTerm fMVs cD ((l_cd1, l_delta, k) as d_param) m =   match m with
   | Apx.LF.Tuple (loc, tuple) ->
       Apx.LF.Tuple(loc, fmvApxTuple fMVs cD d_param  tuple)
 
+  | Apx.LF.Ann (loc, m', a) ->
+    Apx.LF.Ann (loc, fmvApxTerm fMVs cD d_param m', a)
+
 and fmvApxTuple fMVs cD ((l_cd1, l_delta, k) as d_param)   tuple = match tuple with
   | Apx.LF.Last m -> Apx.LF.Last (fmvApxTerm fMVs cD d_param   m)
   | Apx.LF.Cons (m, tuple) ->
@@ -1164,5 +1170,3 @@ and fmvApxBranch fMVs cD (l_cd1, l_delta, k)  b =
           let l    = lengthApxMCtx delta in
           let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l)) e in
             Apx.Comp.BranchBox (loc, omega, delta, (psi, Apx.Comp.NormalPattern (r, e'), None))
-
-

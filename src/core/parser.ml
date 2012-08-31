@@ -446,9 +446,11 @@ GLOBAL: sgn_eoi;
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
         |
-           "("; m = SELF; ")" ->
-             m
-
+            "("; m = SELF; ann = OPT [ ":"; a = lf_typ -> a ]; ")" ->
+            begin match ann with
+            | None -> m
+            | Some a -> LF.Ann (_loc, m, a)
+            end
 
         ]
     ]
@@ -670,8 +672,11 @@ GLOBAL: sgn_eoi;
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
         |
-           "("; m = clf_term_app; ")" ->
-             m
+           "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
+           begin match ann with
+           | None -> m
+           | Some a -> LF.Ann (_loc, m, a)
+           end
         |
            "<"; ms = LIST1 clf_term_app SEP ","; ">"  ->
              let rec fold = function [m] -> LF.Last m

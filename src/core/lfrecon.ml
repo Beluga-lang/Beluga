@@ -19,17 +19,16 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
-  | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
+  | HolesFunction
+  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
+  | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
+  | IllTypedSub     of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub * Int.LF.dctx
   | LeftoverConstraints of Id.name
-  | IllTypedSub
   | PruningFailed
-  | IllTypedIdSub
   | CompTypAnn
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
-  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
-  | HolesFunction
 
 exception Error of Syntax.Loc.t * error
 
@@ -45,11 +44,13 @@ let _ = Error.register_printer
         | HolesFunction ->
             Format.fprintf ppf
               "Underscores occurring inside LF objects must be of atomic type."
+
         | ProjNotValid (cD, cPsi, k, sA) ->
             Format.fprintf ppf
               "Cannot get the %s. projection from type %a."
               (string_of_int k)
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
           Error.report_mismatch ppf
             "Ill-typed expression."
@@ -62,6 +63,13 @@ let _ = Error.register_printer
 	    "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 	    "Actual type"   (Format.pp_print_string)                  (string_of_typeVariant variant)
 
+        | IllTypedSub (cD, cPsi, s, cPsi') ->
+          Format.fprintf ppf "Ill-typed substitution.@.";
+          Format.fprintf ppf "    Does not take context: %a@."
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi');
+          Format.fprintf ppf "    to context: %a@."
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
+
         | LeftoverConstraints x ->
           Format.fprintf ppf
             "Cannot reconstruct a type for free variable %s (leftover constraints)."
@@ -72,17 +80,16 @@ let _ = Error.register_printer
 	    "Pruning a type failed.@ This can happen when you have some free@ \
              meta-variables whose type cannot be inferred."
 
-        | IllTypedSub ->
-          Format.fprintf ppf "Ill-typed substitution during elaboration."
-
-        | IllTypedIdSub ->
-          Format.fprintf ppf "Ill-typed substitution." (* TODO *)
-
         | CompTypAnn ->
           Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
 
         | NotPatternSpine ->
-          Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *) ))
+          Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole." (* TODO *)
+
+        | MissingSchemaForCtxVar psi ->
+          Format.fprintf ppf
+            "Missing schema for context variable %s."
+            (R.render_name psi)))
 
 let rec conv_listToString clist = match clist with
   | [] -> " "
@@ -576,7 +583,10 @@ end
 (* ******************************************************************* *)
 (* ELABORATION OF KINDS                                                *)
 (* ******************************************************************* *)
-(* elKind  cPsi k = K *)
+
+exception SubTypingFailure
+
+(* elKind cPsi k = K *)
 let rec elKind cD cPsi k = match k with
   | Apx.LF.Typ ->
       Int.LF.Typ
@@ -593,9 +603,6 @@ let rec elKind cD cPsi k = match k with
       let tK    = elKind cD cPsi' k in
         Int.LF.PiKind ((Int.LF.TypDecl (x, tA), dep'), tK)
 
-(* ******************************************************************* *)
-(* ELABORATION OF KINDS                                                *)
-(* ******************************************************************* *)
 (* elTyp recT  cD cPsi a = A
  *
  * Pre-condition:
@@ -1473,11 +1480,10 @@ and elClosedTerm' recT cD cPsi r = match r with
   | _ -> (dprint (fun () -> "[elClosedTerm] Violation?");
                 raise (Error (Syntax.Loc.ghost, CompTypAnn)))
 
-
-
-(* elSub recT cD cPsi s cPhi = s' *)
 and elSub loc recT cD cPsi s cPhi =
-  elSub' loc recT cD (Whnf.cnormDCtx (cPsi, Whnf.m_id)) s (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+  try
+    elSub' loc recT cD (Whnf.cnormDCtx (cPsi, Whnf.m_id)) s (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+  with SubTypingFailure -> raise (Error (loc, IllTypedSub (cD, cPsi, s, cPhi)))
 
 and elSub' loc recT cD cPsi s cPhi =
   match (s, cPhi) with
@@ -1492,7 +1498,7 @@ and elSub' loc recT cD cPsi s cPhi =
     if phi = phi' then
       let s' = elSub' loc recT cD cPsi s cPhi in
       Int.LF.SVar (Int.LF.Offset offset, s')
-    else raise (Error (loc, IllTypedSub))
+    else raise SubTypingFailure
 
   | (Apx.LF.Id _ , Int.LF.DDec (_cPhi', _decl)) ->
     elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi
@@ -1542,15 +1548,13 @@ and elSub' loc recT cD cPsi s cPhi =
         Int.LF.Dot (Int.LF.Obj m', s')
 
   | (s, cPhi) ->
-      (dprint (fun () ->
-                 let s = begin match s with
-                   | Apx.LF.Dot _ -> "Dot _ "
-                   | Apx.LF.EmptySub -> " . "
-                   | Apx.LF.Id _ -> " .. "
-                 end in
-                   "Expected substitution : " ^ P.dctxToString cD cPsi  ^
-                     " |- " ^ s ^ " : " ^ P.dctxToString cD cPhi) ;
-       raise (Error (loc, IllTypedIdSub)))
+    dprint (fun () ->
+      let s = match s with
+        | Apx.LF.Dot _ -> "Dot _ "
+        | Apx.LF.EmptySub -> " . "
+        | Apx.LF.Id _ -> " .. " in
+      "Expected substitution : " ^ P.dctxToString cD cPsi  ^ " |- " ^ s ^ " : " ^ P.dctxToString cD cPhi);
+    raise SubTypingFailure
 
 
 and elHead loc recT cD cPsi = function

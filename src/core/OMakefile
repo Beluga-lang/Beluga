@@ -1,5 +1,3 @@
-# -*- coding: utf-8; indent-tabs-mode: nil; -*-
-
 # Declare an OCaml library
 LIBRARY = beluga-core
 # Declare an OCaml package

@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Marie-Andree B.Langlois
 *)
@@ -143,9 +141,3 @@ and argument =
 type kind_or_typ =
   | Kind of Ext.LF.kind
   | Typp  of Ext.LF.typ
-
-
-
-
-
-

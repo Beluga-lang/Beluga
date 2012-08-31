@@ -1,5 +1,3 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 (* sasy parser trying to fix turnstyle problems *)
 #load "pa_extend.cmo";;
 

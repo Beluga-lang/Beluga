@@ -19,17 +19,16 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
-  | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
+  | HolesFunction
+  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
+  | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
+  | IllTypedSub     of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub * Int.LF.dctx
   | LeftoverConstraints of Id.name
-  | IllTypedSub
   | PruningFailed
-  | IllTypedIdSub
   | CompTypAnn
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
-  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
-  | HolesFunction
 
 exception Error of Syntax.Loc.t * error
 
@@ -45,11 +44,13 @@ let _ = Error.register_printer
         | HolesFunction ->
             Format.fprintf ppf
               "Underscores occurring inside LF objects must be of atomic type."
+
         | ProjNotValid (cD, cPsi, k, sA) ->
             Format.fprintf ppf
               "Cannot get the %s. projection from type %a."
               (string_of_int k)
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
           Error.report_mismatch ppf
             "Ill-typed expression."

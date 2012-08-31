@@ -72,17 +72,16 @@ let _ = Error.register_printer
 	    "Pruning a type failed.@ This can happen when you have some free@ \
              meta-variables whose type cannot be inferred."
 
-        | IllTypedSub ->
-          Format.fprintf ppf "Ill-typed substitution during elaboration."
-
-        | IllTypedIdSub ->
-          Format.fprintf ppf "Ill-typed substitution." (* TODO *)
-
         | CompTypAnn ->
           Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
 
         | NotPatternSpine ->
-          Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *) ))
+          Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole." (* TODO *)
+
+        | MissingSchemaForCtxVar psi ->
+          Format.fprintf ppf
+            "Missing schema for context variable %s."
+            (R.render_name psi)))
 
 let rec conv_listToString clist = match clist with
   | [] -> " "

@@ -47,6 +47,7 @@ module Int : sig
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     ->  unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
+    val fmt_ppr_cmp_gctx      : LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
     val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
@@ -73,7 +74,7 @@ module Int : sig
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
 
-    (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
+    (* val ppr_lf_psi_hat    : LF.mctx -> LF. -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.dctx  -> unit
     val ppr_lf_mctx       : LF.mctx -> unit
     val ppr_cmp_kind      : LF.mctx -> Comp.kind -> unit

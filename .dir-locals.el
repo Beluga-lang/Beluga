@@ -4,6 +4,6 @@
 ((nil
   (coding . us-ascii)
   (indent-tabs-mode . nil)
-  (eval . (add-hook 'write-contents-functions 'delete-trailing-whitespace)))
+  (eval . (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
  (tuareg-mode
   (compile-command . "omake -R")))

@@ -134,8 +134,7 @@ module LF = struct
   and ctx_var =
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of name * dctx option ref * cid_schema * mctx * mctx (* delete both mctx
-							      contexts *)
+    | CInst  of name * dctx option ref * cid_schema * mctx * msub
         (* D |- Psi : schema   *)
 
   and 'a ctx =                           (* Generic context declaration    *)
@@ -246,6 +245,7 @@ module Comp = struct
 
   type typ =
     | TypBase  of Loc.t * cid_comp_typ * meta_spine
+    | TypDef  of Loc.t * cid_comp_typ * meta_spine
     | TypBox   of Loc.t * LF.typ  * LF.dctx
     | TypSub   of Loc.t * LF.dctx * LF.dctx
     | TypArr   of typ * typ
@@ -274,6 +274,7 @@ module Comp = struct
     | MLamValue  of name * exp_chk * LF.msub * env
     | CtxValue   of name * exp_chk * LF.msub * env
     | BoxValue   of LF.psi_hat * LF.normal
+    | ParamValue of LF.psi_hat * LF.head
     | PsiValue   of LF.dctx
     | ConstValue of cid_prog
     | DataValue  of cid_comp_const * data_spine

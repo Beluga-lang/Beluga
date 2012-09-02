@@ -17,39 +17,43 @@ module R = Store.Cid.DefaultRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [3])
 
+type varvariant =
+    VariantFV | VariantFCV | VariantMMV | VariantMPV
+  | VariantMV | VariantFMV | VariantPV | VariantFPV
+
 type error =
-    LeftoverCV
-  | LeftoverMV
-  | LeftoverMMV
-  | LeftoverMPV
+  | LeftoverVars of varvariant
   | LeftoverConstraints
-  | CyclicDependencyFV
-  | CyclicDependencyFCV
-  | CyclicDependencyMMV
-  | CyclicDependencyMPV
-  | CyclicDependencyMV
-  | CyclicDependencyFMV
-  | CyclicDependencyPV
-  | CyclicDependencyFPV
+  | CyclicDependency of varvariant
   | UnknownIdentifier
-  | UnknownSchemaCtx of name 
+  | UnknownSchemaCtx of name
 
 exception Error of Syntax.Loc.t * error
+
+let string_of_varvariant = function
+  | VariantFV  -> "free variables"
+  | VariantFCV -> "free context variables"
+  | VariantMMV -> "meta^2-variables and free variables"
+  | VariantMPV -> "meta^2-parameter variables and free variables"
+  | VariantMV  -> "meta-variables and free variables"
+  | VariantFMV -> "free meta-variables"
+  | VariantPV  -> "parameter-variables and free variables"
+  | VariantFPV -> "free parameter-variables"
 
 let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-        | UnknownSchemaCtx psi -> 
-            Format.fprintf ppf "Unable to infer schema for context variable %s" 
+        | UnknownSchemaCtx psi ->
+            Format.fprintf ppf "Unable to infer schema for context variable %s"
               (R.render_name psi)
-        | LeftoverCV ->
+        | LeftoverVars VariantFCV ->
           Format.fprintf ppf "Abstraction not valid LF-type because of leftover context variable"
-        | LeftoverMV ->
+        | LeftoverVars VariantMV ->
           Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
-        | LeftoverMMV ->
+        | LeftoverVars (VariantMMV | VariantMPV as varvariant) ->
           Format.fprintf ppf
-            ("Encountered meta^2-variable,@ which we cannot abstract over@ \
+            ("Encountered %s,@ which we cannot abstract over@ \
             because they depend on meta-variables;@ \
             the user needs to supply more information,@ \
             since the type of a given expression@ \
@@ -60,35 +64,11 @@ let _ = Error.register_printer
             and we may not be able to abstract over the meta^2-variables.@ \
             The solution is either to not specify any meta-variables explicitly,@ \
             or specify all of them.")
-        | LeftoverMPV ->
-          Format.fprintf ppf
-            ("Encountered meta^2-parameter variable,@ which we cannot abstract over@ \
-            because they depend on other meta-variables;@ \
-            the user needs to supply more information,@ \
-            since the type of a given expression@ \
-            is not uniquely determined.@ \
-            Meta^2-variables are introduced during type reconstruction;@ \
-            if you explicitely quantify over some meta-variables,@ \
-            these meta-variables will impose constraints on meta^2-variables@ \
-            and we may not be able to abstract over the meta^2-variables.@ \
-            The solution is either to not specify any meta-variables explicitly,@ \
-            or specify all of them.")
+            (string_of_varvariant varvariant)
         | LeftoverConstraints ->
-          Format.fprintf ppf "Leftover constraints during abstraction"
-        | CyclicDependencyFV ->
-          Format.fprintf ppf "Cyclic dependency among free variables"
-        | CyclicDependencyMMV ->
-          Format.fprintf ppf "Cyclic dependency among meta^2-variables and free variables"
-        | CyclicDependencyMPV ->
-          Format.fprintf ppf "Cyclic dependency among meta^2-parameter variables and free variables"
-        | CyclicDependencyMV ->
-          Format.fprintf ppf "Cyclic dependency among meta-variables and free variables"
-        | CyclicDependencyFMV ->
-          Format.fprintf ppf "Cyclic dependency among free meta-variables"
-        | CyclicDependencyPV ->
-          Format.fprintf ppf "Cyclic dependency among parameter-variables and free variables"
-        | CyclicDependencyFPV ->
-          Format.fprintf ppf "Cyclic dependency among free parameter-variables"
+          Format.fprintf ppf "Leftover constraints during abstraction."
+        | CyclicDependency variant ->
+          Format.fprintf ppf "Cyclic dependencies among %s" (string_of_varvariant variant)
         | UnknownIdentifier ->
           Format.fprintf ppf "Unknown identifier in program."))
 
@@ -216,7 +196,7 @@ let ctxVarToString psi = match psi with
 
 let rec collectionToString cQ = match cQ with
   | I.Empty -> ""
-  | I.Dec(cQ, CV(I.CtxVar(I.CInst(_n, _r, s_cid, _, _ )) as cPsi)) ->
+  | I.Dec(cQ, CV(I.CtxVar(I.CInst(_n, _r, s_cid, _, _theta)) as cPsi)) ->
       collectionToString cQ ^ " " ^ P.dctxToString I.Empty cPsi ^ " : " ^ R.render_cid_schema s_cid ^ "\n"
 
   | I.Dec(cQ, FCV(psi, Some s_cid)) ->
@@ -470,7 +450,7 @@ let rec eqFCVar n1 fV2 = match (n1, fV2) with
    where B iff n and fV' represent same variable
 *)
 let rec eqCVar n1 fV2 = match (n1, fV2) with
-  | (I.CInst (_, r, _, _, _ ) ,  CV (I.CtxVar (I.CInst (_, r_psi, _, _, _ )))) ->
+  | (I.CInst (_, r, _, _, _theta ) ,  CV (I.CtxVar (I.CInst (_, r_psi, _, _, _theta' )))) ->
       if r == r_psi then
          Yes
       else
@@ -629,35 +609,35 @@ let rec index_of cQ n =
       begin match eqMMVar u1 (MMV (Pure, u2)) with
         | Yes -> 1
         | No  -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyMMV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantMMV))
       end
 
   | (I.Dec (cQ', MPV (Pure, u1)), MPV (Pure, u2)) ->
       begin match eqMPVar u1 (MPV (Pure, u2)) with
         | Yes -> 1
         | No  -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyMPV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantMPV))
       end
 
   | (I.Dec (cQ', MV (Pure, u1)), MV (Pure, u2)) ->
       begin match eqMVar u1 (MV (Pure, u2)) with
         | Yes -> 1
         | No ->  (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyMV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantMV))
       end
 
   | (I.Dec (cQ', PV (Pure, p1)), PV (Pure, p2)) ->
       begin match eqPVar p1 (PV (Pure, p2)) with
         | Yes -> 1
         | No -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyPV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantPV))
       end
 
   | (I.Dec (cQ', FV (Pure, f1, _)), FV (Pure, f2, tA)) ->
       begin match eqFVar f1 (FV (Pure, f2, tA)) with
         | Yes -> 1
         | No  -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyFV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantFV))
       end
 
   | (I.Dec (cQ', CV(I.CtxVar psi1)), CV (psi2)) ->
@@ -665,28 +645,28 @@ let rec index_of cQ n =
         | Yes ->  1
         | No ->
             (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyFCV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantFCV))
       end
 
   | (I.Dec (cQ', FCV(psi1 , _ )), FCV (psi2, s_cid)) ->
       begin match eqFCVar psi1 (FCV (psi2, s_cid)) with
         | Yes -> 1
         | No -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyFCV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantFCV))
       end
 
   | (I.Dec (cQ', FMV (Pure, u1, _)), FMV (Pure, u2, tA_cPsi)) ->
       begin match eqFMVar u1 (FMV (Pure, u2, tA_cPsi)) with
         | Yes -> 1
         | No -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyFMV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantFMV))
       end
 
   | (I.Dec (cQ', FPV (Pure, p1, _)), FPV (Pure, p2, tA_cPsi)) ->
       begin match eqFPVar p1 (FPV (Pure, p2, tA_cPsi)) with
         | Yes -> 1
         | No  -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependencyFPV))
+        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantFPV))
       end
 
   | (I.Dec (cQ', _), _) ->
@@ -757,21 +737,22 @@ let rec ctxToMCtx cQ  = match cQ with
       I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi))
 
   | I.Dec (_cQ', MMV (Pure, I.MMVar (I.MInst (_, _, _cD, _cPsi, _tA, _), _s))) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverMMV))
+      raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
 
   | I.Dec (cQ', MPV (Pure, I.MPVar (I.MPInst (n, _, I.Empty, cPsi, tA, _), _s))) ->
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
       I.Dec (ctxToMCtx cQ', I.PDecl (n, tA, cPsi))
 
   | I.Dec (_cQ', MPV (Pure, I.MPVar (I.MPInst (_, _, _cD, _cPsi, _tA, _), _s))) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverMPV))
+      raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMPV))
 
   | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (n, _, cPsi, tA, _), _s))) ->
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
       I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi))
 
-  | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _)))) ->
+  | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _theta)))) ->
       (* let psi = Id.mk_name (NoName) in *)
+      (* this case should not happen? -bp *)
       I.Dec (ctxToMCtx cQ', I.CDecl (n, s_cid, I.No))
 
   (* Can this case ever happen?  I don't think so. -bp *)
@@ -942,7 +923,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                  is necessary for handling computation-level expressions,
                  and LF objects which occur in computations. *)
               (I.Dec (cQ', FV (Pure, name, Some tA')) , I.FVar name)
-        | Cycle -> raise (Error (loc, CyclicDependencyFV))
+        | Cycle -> raise (Error (loc, CyclicDependency VariantFV))
       end
 
 
@@ -966,7 +947,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                    is necessary for handling computation-level expressions,
                    and LF objects which occur in comp utations. *)
                 (I.Dec (cQ'', FMV (Pure, u, Some (tA', cPhi'))), I.FMVar (u, sigma))
-          | Cycle -> raise (Error (loc, CyclicDependencyFMV))
+          | Cycle -> raise (Error (loc, CyclicDependency VariantFMV))
       end
 
   | (I.MVar (I.Inst (n, q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
@@ -984,7 +965,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
                 let v = I.MVar (I.Inst (n, q, cPsi', tA',  c), sigma) in
                   (I.Dec (cQ'', MV (Pure, v)) , v)
-            | Cycle -> raise (Error (loc, CyclicDependencyMV))
+            | Cycle -> raise (Error (loc, CyclicDependency VariantMV))
           end
       else
         raise (Error (loc, LeftoverConstraints))
@@ -1006,13 +987,13 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
                 let v = I.MMVar (I.MInst (n, q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in
                   (I.Dec (cQ'', MMV (Pure, v)) , v)
-            | Cycle -> raise (Error (loc, CyclicDependencyMMV))
+            | Cycle -> raise (Error (loc, CyclicDependency VariantMMV))
           end
       else
         raise (Error (loc, LeftoverConstraints))
 
   | (I.MMVar (I.MInst (_n, _r, _cD, _cPsi, _tA,  _), _),  _s) ->
-      raise (Error (loc, LeftoverMMV))
+      raise (Error (loc, LeftoverVars VariantMMV))
 
   | (I.MPVar (I.MPInst (n, ({contents = None} as q), I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
       if constraints_solved cnstr then
@@ -1031,7 +1012,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
                 let v = I.MPVar (I.MPInst (n, q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in
                   (I.Dec (cQ'', MPV (Pure, v)) , v)
-            | Cycle -> raise (Error (loc, CyclicDependencyMPV))
+            | Cycle -> raise (Error (loc, CyclicDependency VariantMPV))
           end
       else
         raise (Error (loc, LeftoverConstraints))
@@ -1046,7 +1027,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
        raise (Error (loc, LeftoverConstraints)))
 *)
   | (I.MPVar (I.MPInst (_n, _r, _cD, _cPsi, _tA,  _), _),  _s) ->
-      raise (Error (loc, LeftoverMPV))
+      raise (Error (loc, LeftoverVars VariantMPV))
 
   | (I.MVar (I.Offset j, s'), s) ->
       let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s)  in
@@ -1075,7 +1056,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
               let (cQ1, cPhi')  = collectDctx loc k cQ' phihat cPhi in
               let (cQ'', tA')   = collectTyp k cQ1  phihat (tA, LF.id) in
                 (I.Dec (cQ'', FPV (Pure, u, Some (tA', cPhi'))), I.FPVar (u, sigma))
-          | Cycle -> raise (Error (loc, CyclicDependencyFPV))
+          | Cycle -> raise (Error (loc, CyclicDependency VariantFPV))
         end
 
 
@@ -1096,7 +1077,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
 
                 let p' = I.PVar (I.PInst (n, r, cPsi', tA', c), sigma) in
                   (I.Dec (cQ'', PV (Pure, p')) , p')
-            | Cycle -> raise (Error (loc, CyclicDependencyPV))
+            | Cycle -> raise (Error (loc, CyclicDependency VariantPV))
           end
       else
         raise (Error (loc, LeftoverConstraints))
@@ -1152,14 +1133,15 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
 and collectHat p cQ phat = match phat with
   | (None, _offset ) -> (cQ, phat)
   | (Some (I.CtxOffset _) , _ ) -> (cQ, phat)
-  | (Some (I.CInst (_, {contents=Some cPsi}, _, _, _ )), k ) ->
-       let phat' = begin match Context.dctxToHat cPsi with
+  | (Some (I.CInst (_, {contents=Some cPsi}, _, _, theta )), k ) ->
+       let phat' = begin match Context.dctxToHat (Whnf.cnormDCtx (cPsi, theta)) with
                   | (None, i) -> (None, k+i)
                   | (Some cvar', i) -> (Some cvar', i+k)
                   end
        in
          collectHat p cQ phat'
-  | (Some (I.CInst (_, {contents=None}, _, _, _ ) as psi), _ ) ->
+  | (Some (I.CInst (_, {contents=None}, _, _, _theta ) as psi), _ ) ->
+       (* this case should not happen -bp *)
         begin match checkOccurrence (eqCVar psi) cQ with
           | Yes -> (cQ, phat)
           | No ->  (I.Dec (cQ, CV (I.CtxVar psi)) , phat)
@@ -1180,20 +1162,21 @@ and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
         begin match checkOccurrence (eqFCVar psi) cQ with
           | Yes ->   (cQ , cPsi)
           | No ->
-	      begin try 
+	      begin try
 		let (_,I.CDecl (_, s_cid, _))  = FCVar.get psi in
                   (I.Dec (cQ, FCV (psi, Some (s_cid))),
                    I.CtxVar (I.CtxName psi))
-	      with 
+	      with
 		  Not_found -> raise (Error (loc, UnknownSchemaCtx psi))
 	      end
         end
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
 
-  | I.CtxVar (I.CInst (_, {contents = Some cPsi} , _, _cO, _cD)) ->
-      collectDctx loc p cQ (cvar, offset) cPsi
+  | I.CtxVar (I.CInst (_, {contents = Some cPsi} , _, _cD, theta)) ->
+      collectDctx loc p cQ (cvar, offset) (Whnf.cnormDCtx (cPsi, theta))
 
-  | I.CtxVar (I.CInst (_, {contents = None} , _, _cO, _cD) as psi) ->
+  | I.CtxVar (I.CInst (_, {contents = None} , _, _cD, _theta) as psi) ->
+        (* this case should not happen *)
         begin match checkOccurrence (eqCVar psi) cQ with
           | Yes -> (cQ, cPsi)
           | No ->  (I.Dec (cQ, CV (cPsi)) , cPsi)
@@ -1464,14 +1447,14 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MMVar (I.MInst(_n, _r, _cD, _cPsi, _tP , _cnstr), (_ms, _s)) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverMMV))
+      raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
 
   | I.MPVar (I.MPInst(_n, _r, I.Empty, _cPsi, _tP , _cnstr), (_ms, s)) ->
       let x = index_of cQ (MPV (Pure, tH)) + d in
         I.PVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MPVar (I.MPInst(_n, _r, _cD, _cPsi, _tP , _cnstr), (_ms, _s)) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverMPV))
+      raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMPV))
 
   | I.MVar (I.Inst(_n, _r, cPsi, _tP , _cnstr), s) ->
       let x = index_of cQ (MV (Pure, tH)) + d in
@@ -1530,7 +1513,8 @@ and abstractMVarCtxV cQ (l,offset) ctx_var =
    | I.CtxName psi   ->
        let x = index_of cQ (FCV (psi, None)) + offset in
          I.CtxOffset x
-   | I.CInst (_, {contents = None}, _, _ ,_ ) ->
+   | I.CInst (_, {contents = None}, _, _ ,_theta ) ->
+       (* this case should not happen -bp *)
        let x = index_of cQ (CV (I.CtxVar ctx_var)) + offset in
          I.CtxOffset x
 (*   | I.CInst (_, {contents = Some cPsi}, _, _, _ ) ->
@@ -1573,15 +1557,17 @@ and abstractMVarSub' cQ offset s = match s with
 *)
 and abstractMVarHat cQ (l,offset) phat = match phat with
   | (None, _ ) -> phat
-  | (Some (I.CtxOffset x), k ) -> (Some (I.CtxOffset (x+l)), k)
+  | (Some (I.CtxOffset x), k ) ->
+      if x <= offset then phat
+      else (Some (I.CtxOffset (x+l)), k)
   | (Some (I.CtxName psi), k) ->
       let x = index_of cQ (FCV (psi, None)) + offset in
         (Some (I.CtxOffset x), k)
   (* case where contents = Some cPsi cannot happen,
      since collect normalized phat *)
-  | (Some (I.CInst (_, {contents = None}, _, _, _ ) as psi), k) ->
-      let x = index_of cQ (CV (I.CtxVar psi)) in
-        (Some (I.CtxOffset x), k)
+  | (Some (I.CInst (_, {contents = None}, _, _, _theta ) as psi), k) ->
+      let x = index_of cQ (CV (I.CtxVar psi)) + offset in
+        (Some (I.CtxOffset x  ), k)
 
 
 and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
@@ -1595,9 +1581,10 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.CtxVar (I.CtxName psi) ->
       let x = index_of cQ (FCV (psi, None)) + offset in
         I.CtxVar (I.CtxOffset x)
-  | I.CtxVar (I.CInst (_, {contents = Some cPsi}, _, _, _ )) ->
-      abstractMVarDctx cQ (l,offset) cPsi
-  | I.CtxVar (I.CInst (_, {contents = None}, _, _, _)) ->
+  | I.CtxVar (I.CInst (_, {contents = Some cPsi}, _, _, theta )) ->
+      abstractMVarDctx cQ (l,offset) (Whnf.cnormDCtx (cPsi, theta))
+  | I.CtxVar (I.CInst (_, {contents = None}, _, _, _theta)) ->
+      (* this case should not happen -bp *)
       let x = index_of cQ (CV cPsi) + offset in
         I.CtxVar (I.CtxOffset x)
 
@@ -1634,7 +1621,7 @@ and abstractMVarCtx cQ l =  match cQ with
         I.Dec (cQ', MMV (Pure, u'))
 
   | I.Dec (_cQ, MMV (Pure, I.MMVar (I.MInst (_n, _r, _cD, _cPsi, _tA, _cnstr), _s))) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverMMV))
+      raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
 
   | I.Dec (cQ, MPV (Pure, I.MPVar (I.MPInst (n, r, I.Empty, cPsi, tA, cnstr), (ms, s)))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
@@ -1646,7 +1633,7 @@ and abstractMVarCtx cQ l =  match cQ with
         I.Dec (cQ', MPV (Pure, u'))
 
   | I.Dec (_cQ, MPV (Pure, I.MPVar (I.MPInst (_n, _r, _cD, _cPsi, _tA, _cnstr), _s))) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverMPV))
+      raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMPV))
 
   | I.Dec (cQ, MV (Pure, I.MVar (I.Inst (n, r, cPsi, tA, cnstr), s))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
@@ -1722,7 +1709,6 @@ and abstractMVarCtx cQ l =  match cQ with
 
 (* Cases for: FMV, FPV *)
 
-
 let rec abstrMSub cQ t =
   let l = lengthCollection cQ in
   let rec abstrMSub' t =
@@ -1747,22 +1733,13 @@ let rec abstrMSub cQ t =
   in
     abstrMSub' t
 
-and abstractMSub  t =
-  let (cQ, t')  = collectMSub 0 I.Empty t in
+and abstractMSub t =
+  let (cQ, t') = collectMSub 0 I.Empty t in
   let cQ' = abstractMVarCtx cQ 0 in
-  let t''  = abstrMSub cQ' t' in
-  let cD'  = ctxToMCtx cQ' in
-    (t'' , cD')
+  let t'' = abstrMSub cQ' t' in
+  let cD' = ctxToMCtx cQ' in
+  (t'', cD')
 
-(*
- and abstractMSub cQ t =
-  let cQ1  = collectMSub cQ t in
-  let d    = Context.length cQ in
-  let cQ' = abstractMVarCtx d cQ1 in
-  let t'  = abstrMSub cQ' t in
-  let cD'  = ctxToMCtx cQ' in
-    (t' , cD')
-*)
 (* wrapper function *)
 let abstrKind tK =
   (* what is the purpose of phat? *)
@@ -1789,7 +1766,7 @@ and abstrTyp tA =
           let cPsi       = ctxToDctx cQ' in
             begin match raiseType cPsi tA2 with
               | (None, tA3) -> (tA3, length cPsi)
-              | _            -> raise (Error (Syntax.Loc.ghost, LeftoverCV))
+              | _            -> raise (Error (Syntax.Loc.ghost, LeftoverVars VariantFCV))
             end
     end
 
@@ -2378,6 +2355,7 @@ let rec abstrCompTyp tau =
 
 let rec abstrPatObj cD cG pat tau =
   let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
+  let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
   let (cQ1, cD1') = collectMctx I.Empty cD in
   let (cQ2, cG)   = collectGctx cQ1 cG   in
   let (cQ3, pat') = collectPatObj cQ2 pat in
@@ -2437,10 +2415,8 @@ let rec abstrExp e =
         I.Empty -> e'
       | _       ->
             let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
-              raise (Error (Syntax.Loc.ghost, LeftoverMV))
+              raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMV))
     end
-
-
 
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)
 let rec appDCtx cPsi1 cPsi2 = match cPsi2 with
@@ -2469,41 +2445,9 @@ let rec abstrSchema (I.Schema elements) =
   in
     I.Schema (abstrElems elements)
 
-
-(* REDUNDANT Tue Apr 21 09:52:37 2009 -bp
-let rec abstrBranch (cPsi1, (phat, tM), tA) e r =
-  let cQ0     = collectPattern I.Empty I.Empty cPsi1 (phat,tM) tA in
-  let cQ1     = collectExp cQ0 e in
-  let cQ2     = collectMSub cQ1 r in
-  let cQ'     = abstractMVarCtx cQ2 in
-
-  let cPsi1'  = abstractMVarDctx cQ' 0 cPsi1 in
-  let tM'     = abstractMVarTerm cQ' 0 (tM, LF.id) in
-  let tA'     = abstractMVarTyp  cQ' 0 (tA, LF.id) in
-
-  let e'      = abstractMVarExp cQ' 0 e in
-
-  let r'      = abstrMSub cQ' r in
-  let cD      = ctxToMCtx cQ' in
-    (cD, (cPsi1', (phat, tM'), tA'), e', r')
-
-*)
-
-(* let rec abstrExpMSub e t =
-  let cQ1     = collectMSub I.Empty t in
-  let cQ      = collectExp cQ1 e in
-  let cQ'     = abstractMVarCtx cQ in
-  let e'      = abstractMVarExp cQ' 0 e in
-  let t'      = abstrMSub cQ' t in
-  let cD'     = ctxToMCtx cQ' in
-     (cD', t', e')
-*)
-
-
 let rec printFreeMVars phat tM =
   let (cQ, _ ) = collectTerm 0 I.Empty  phat (tM, LF.id) in
     printCollection cQ
-
 
 let collectTerm' (phat, tM ) = collectTerm 0 I.Empty  phat (tM, LF.id)
 
@@ -2520,8 +2464,6 @@ let rec fvarInCollection cQ = begin match cQ with
 
   | I.Dec(cQ, _ ) -> fvarInCollection cQ
 end
-
-
 
 let closedTyp (cPsi, tA) =
   let (cQ1, _ ) = collectDctx (Syntax.Loc.ghost) 0 I.Empty (None, 0) cPsi in
@@ -2561,3 +2503,17 @@ let abstrCovPatt cG pat tau ms =
   let tau'    = abstractMVarCompTyp cQ' (0,0) tau' in
   let cD'     = ctxToMCtx cQ' in
     (cD', cG', pat', tau', ms0)
+
+(* Shorter names for export outside of this module. *)
+let kind = abstrKind
+let typ = abstrTyp
+let covgoal = abstrCovGoal
+let covpatt = abstrCovPatt
+let schema = abstrSchema
+let msub = abstractMSub
+let compkind = abstrCompKind
+let comptyp = abstrCompTyp
+let exp = abstrExp
+let pattern = abstrPattern
+let patobj = abstrPatObj
+let subpattern = abstrSubPattern

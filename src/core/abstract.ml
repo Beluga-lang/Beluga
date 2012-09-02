@@ -2513,3 +2513,17 @@ let abstrCovPatt cG pat tau ms =
   let tau'    = abstractMVarCompTyp cQ' (0,0) tau' in
   let cD'     = ctxToMCtx cQ' in
     (cD', cG', pat', tau', ms0)
+
+(* Shorter names for export outside of this module. *)
+let kind = abstrKind
+let typ = abstrTyp
+let covgoal = abstrCovGoal
+let covpatt = abstrCovPatt
+let schema = abstrSchema
+let msub = abstractMSub
+let compkind = abstrCompKind
+let comptyp = abstrCompTyp
+let exp = abstrExp
+let pattern = abstrPattern
+let patobj = abstrPatObj
+let subpattern = abstrSubPattern

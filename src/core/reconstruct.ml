@@ -1592,7 +1592,7 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
 
   let phat = Context.dctxToHat cPsi' in
   let (cD1', cPsi1', (_phat, tR1'), tP1') =
-    Abstract.abstrPattern cD' cPsi' (phat, tR) tP' in
+    Abstract.pattern cD' cPsi' (phat, tR) tP' in
 
   let _   = dprint (fun () -> "recMObj: Reconstructed pattern (AFTER ABSTRACTION)...\n" ^
                       P.mctxToString cD1' ^ "  ;   " ^ P.dctxToString cD1' cPsi1' ^ "\n   |-\n    "  ^
@@ -1955,7 +1955,7 @@ and recPatObj cD pat (cD_s, tau_s) =
                     P.gctxToString cD cG' ^ " \n  |-  " ^
                     P.patternToString cD cG' pat' ) in
   let _ = dprint (fun () -> "[recPatObj] Abstract over pattern and its type") in
-  let (cD1, cG1, pat1, tau1) = Abstract.abstrPatObj cD (Whnf.cnormCtx (cG', Whnf.m_id)) pat' (Whnf.cnormCTyp ttau') in
+  let (cD1, cG1, pat1, tau1) = Abstract.patobj cD (Whnf.cnormCtx (cG', Whnf.m_id)) pat' (Whnf.cnormCTyp ttau') in
   (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
   let l_cd1                  = Context.length cD1 in
   let l_delta                = Context.length cD  in
@@ -1995,7 +1995,7 @@ and recPatObj cD pat (cD_s, tau_s) =
 
   let phat = Context.dctxToHat cPsi' in
 
-  let (cD1', cPsi1', (_phat, tR1'), tP1') =  Abstract.abstrPattern cD' cPsi' (phat, tR) tP' in
+  let (cD1', cPsi1', (_phat, tR1'), tP1') =  Abstract.pattern cD' cPsi' (phat, tR) tP' in
 
   let _       = dprint (fun () -> "recPattern: Reconstructed pattern (AFTER ABSTRACTION)...\n" ^
                           P.mctxToString cD1' ^ "  ;   " ^ P.dctxToString cD1' cPsi1' ^ "\n   |-\n    "  ^
@@ -2106,7 +2106,7 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
     in
     let _ = dprnt "AbstractMSub..." in
       (* cD1' |- t' <= cD' *)
-    let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub t) in
+    let (t', cD1') = Abstract.msub (Whnf.cnormMSub t) in
 
     let rec drop t l_delta1 = match (l_delta1, t) with
         | (0, t) -> t
@@ -2176,7 +2176,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
 
     let _ = dprnt "AbstractMSub..." in
       (* cD1' |- t' <= cD' where cD' = cD, cD_p *)
-    let (t', cD1') = Abstract.abstractMSub (Whnf.cnormMSub t) in
+    let (t', cD1') = Abstract.msub (Whnf.cnormMSub t) in
     let _ = dprnt "AbstractMSub... done " in
     let rec drop t l_delta1 = match (l_delta1, t) with
         | (0, t) -> t
@@ -2382,7 +2382,7 @@ let comptypdef loc a (tau, cK) =
   let cK = elCompKind Int.LF.Empty cK in
   let _  = (solve_fvarCnstr Lfrecon.Pibox;
             Unify.forceGlobalCnstr (!Unify.globalCnstrs)) in
-  let (cK,i) = Abstract.abstrCompKind cK in
+  let (cK,i) = Abstract.compkind cK in
   let _  = (reset_fvarCnstr ();
 	    Unify.resetGlobalCnstrs ()) in
   let rec unroll cD cK = begin match cK with
@@ -2393,7 +2393,7 @@ let comptypdef loc a (tau, cK) =
   let tau = elCompTyp cD tau in
   let _   = (Unify.forceGlobalCnstr (!Unify.globalCnstrs);
              Unify.resetGlobalCnstrs ()) in
-  let (tau, k) =  Abstract.abstrCompTyp  tau in
+  let (tau, k) =  Abstract.comptyp  tau in
    let _   = if k = 0 then () else
                 raise (Error(loc, TypeAbbrev a)) in
 

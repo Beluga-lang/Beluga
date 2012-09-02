@@ -703,7 +703,7 @@ let rec genObj (cD, cPsi, tP) (tH, tA) =
     let tM = LF.Root (Syntax.Loc.ghost, tH' , genSpine LF.Empty cPsi' (tA', S.LF.id) tP') in
     let (cD', cPsi', tR, tP', ms') =
       begin try
-	Abstract.abstrCovGoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
+	Abstract.covgoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
       with Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
 	(print_string ("WARNING: Encountered left-over constraints in higher-order unification\n");
 	 print_string ("Coverage goal : " ^ P.normalToString LF.Empty  cPsi' (tM, S.LF.id) ^ " : " ^
@@ -1424,7 +1424,7 @@ let rec genPatt (cD_p,tau_v) (c, tau_c) =
   let ms    = Ctxsub.mctxToMSub cD_p in
     begin try
       U.unifyCompTyp LF.Empty (tau,t) (tau_v, ms);
-      let (cD', cG', pat', tau', ms') = Abstract.abstrCovPatt (gctxToCompgctx cG) pat (Whnf.cnormCTyp (tau_v, ms)) ms in
+      let (cD', cG', pat', tau', ms') = Abstract.covpatt (gctxToCompgctx cG) pat (Whnf.cnormCTyp (tau_v, ms)) ms in
       let ccG' = compgctxTogctx cG' in
 	Some (cD', CovPatt (ccG', pat', (tau', Whnf.m_id)), ms')
     with U.Failure _ -> (* expected type and generated type for spine do not
@@ -2083,4 +2083,3 @@ let stage problem =
 
 let force f =
   List.map (fun problem -> f (covers problem)) (List.rev !problems)
-

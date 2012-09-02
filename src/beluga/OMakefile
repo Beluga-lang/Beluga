@@ -8,7 +8,7 @@ OCAML_LIBS[] +=
         ../sasybel/sasybel
 
 # Declare the name of the program
-PROGRAM = belchk
+PROGRAM = beluga
 
 # Declare the files the program is built from
 FILES[] = main
@@ -20,10 +20,10 @@ camlp4lib.a   :
 camlp4lib.cma :
 camlp4lib.cmxa:
 
-.DEFAULT: belchk
+.DEFAULT: beluga
 
 clean:
         rm $(filter-proper-targets $(ls R, .))
         rm $(filter %.omc,         $(ls R, .))
 
-belchk: $(OCamlProgram $(PROGRAM), $(FILES))
+beluga: $(OCamlProgram $(PROGRAM), $(FILES))

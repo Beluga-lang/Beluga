@@ -161,9 +161,9 @@ let rec etaExpandMVstr cD cPsi sA  = etaExpandMVstr' cD cPsi (Whnf.whnfTyp sA)
 
 and etaExpandMVstr' cD cPsi sA  = match sA with
   | (LF.Atom (_, a, _tS) as tP, s) ->
-      let (cPhi, conv_list) = ConvSigma.flattenDCtx cPsi in
+      let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
       let s_proj = ConvSigma.gen_conv_sub conv_list in
-      let tQ    = ConvSigma.strans_typ (tP, s) conv_list in
+      let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
       (*  cPsi |- s_proj : cPhi
           cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
 
@@ -703,7 +703,7 @@ let rec genObj (cD, cPsi, tP) (tH, tA) =
     let tM = LF.Root (Syntax.Loc.ghost, tH' , genSpine LF.Empty cPsi' (tA', S.LF.id) tP') in
     let (cD', cPsi', tR, tP', ms') =
       begin try
-	Abstract.abstrCovGoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
+	Abstract.covgoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
       with Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
 	(print_string ("WARNING: Encountered left-over constraints in higher-order unification\n");
 	 print_string ("Coverage goal : " ^ P.normalToString LF.Empty  cPsi' (tM, S.LF.id) ^ " : " ^
@@ -1396,7 +1396,7 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
 	((pv1, Whnf.cnormCTyp (tau1,t))::cG ,
 	 Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau)
   | (Comp.TypCtxPi ((x, sW, _ ), tau), t) ->
-      let cPsi' = LF.CtxVar (LF.CInst (x, ref None, sW, LF.Empty, LF.Empty)) in
+      let cPsi' = LF.CtxVar (LF.CInst (x, ref None, sW, LF.Empty, Whnf.m_id)) in
       let pat1 = Comp.PatMetaObj (Syntax.Loc.ghost,
 				  Comp.MetaCtx (Syntax.Loc.ghost, cPsi')) in
       let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.CObj(cPsi'), t)) in
@@ -1424,7 +1424,7 @@ let rec genPatt (cD_p,tau_v) (c, tau_c) =
   let ms    = Ctxsub.mctxToMSub cD_p in
     begin try
       U.unifyCompTyp LF.Empty (tau,t) (tau_v, ms);
-      let (cD', cG', pat', tau', ms') = Abstract.abstrCovPatt (gctxToCompgctx cG) pat (Whnf.cnormCTyp (tau_v, ms)) ms in
+      let (cD', cG', pat', tau', ms') = Abstract.covpatt (gctxToCompgctx cG) pat (Whnf.cnormCTyp (tau_v, ms)) ms in
       let ccG' = compgctxTogctx cG' in
 	Some (cD', CovPatt (ccG', pat', (tau', Whnf.m_id)), ms')
     with U.Failure _ -> (* expected type and generated type for spine do not
@@ -2083,4 +2083,3 @@ let stage problem =
 
 let force f =
   List.map (fun problem -> f (covers problem)) (List.rev !problems)
-

@@ -19,16 +19,16 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
-  | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
+  | HolesFunction
+  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
+  | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
+  | IllTypedSub     of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub * Int.LF.dctx
   | LeftoverConstraints of Id.name
-  | IllTypedSub
   | PruningFailed
-  | IllTypedIdSub
   | CompTypAnn
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
-  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
 
 exception Error of Syntax.Loc.t * error
 
@@ -41,11 +41,16 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | HolesFunction ->
+            Format.fprintf ppf
+              "Underscores occurring inside LF objects must be of atomic type."
+
         | ProjNotValid (cD, cPsi, k, sA) ->
             Format.fprintf ppf
               "Cannot get the %s. projection from type %a."
               (string_of_int k)
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
           Error.report_mismatch ppf
             "Ill-typed expression."
@@ -58,6 +63,13 @@ let _ = Error.register_printer
 	    "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 	    "Actual type"   (Format.pp_print_string)                  (string_of_typeVariant variant)
 
+        | IllTypedSub (cD, cPsi, s, cPsi') ->
+          Format.fprintf ppf "Ill-typed substitution.@.";
+          Format.fprintf ppf "    Does not take context: %a@."
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi');
+          Format.fprintf ppf "    to context: %a@."
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
+
         | LeftoverConstraints x ->
           Format.fprintf ppf
             "Cannot reconstruct a type for free variable %s (leftover constraints)."
@@ -68,17 +80,16 @@ let _ = Error.register_printer
 	    "Pruning a type failed.@ This can happen when you have some free@ \
              meta-variables whose type cannot be inferred."
 
-        | IllTypedSub ->
-          Format.fprintf ppf "Ill-typed substitution during elaboration."
-
-        | IllTypedIdSub ->
-          Format.fprintf ppf "Ill-typed substitution." (* TODO *)
-
         | CompTypAnn ->
           Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
 
         | NotPatternSpine ->
-          Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole" (* TODO *) ))
+          Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole." (* TODO *)
+
+        | MissingSchemaForCtxVar psi ->
+          Format.fprintf ppf
+            "Missing schema for context variable %s."
+            (R.render_name psi)))
 
 let rec conv_listToString clist = match clist with
   | [] -> " "
@@ -109,6 +120,42 @@ let rec mkShift recT cPsi = match recT with
   | Pi ->
       let (None, d) = Context.dctxToHat cPsi in
         Int.LF.Shift (Int.LF.NoCtxShift, d)
+
+
+
+(* etaExpandMMV loc cD cPsi sA  = tN
+ *
+ *  cD ; cPsi   |- [s]A <= typ
+ *
+ *  cD ; cPsi   |- tN   <= [s]A
+ *)
+let rec etaExpandMMVstr loc cD cPsi sA  n =
+  etaExpandMMVstr' loc cD cPsi (Whnf.whnfTyp sA) n
+
+and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
+  | (Int.LF.Atom (_, a, _tS) as tP, s) ->
+      let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
+      let s_proj = ConvSigma.gen_conv_sub conv_list in
+      let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
+      (*  cPsi |- s_proj : cPhi
+          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+
+      let (ss', cPhi') = Subord.thin' cD a cPhi in
+      (* cPhi |- ss' : cPhi' *)
+      let ssi' = Substitution.LF.invert ss' in
+      (* cPhi' |- ssi : cPhi *)
+      (* cPhi' |- [ssi]tQ    *)
+      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in
+      (* cPhi |- ss'    : cPhi'
+         cPsi |- s_proj : cPhi
+         cPsi |- comp  ss' s_proj   : cPhi' *)
+      let ss_proj = Substitution.LF.comp ss' s_proj in
+        Int.LF.Root (loc, Int.LF.MMVar (u, (Whnf.m_id, ss_proj)), Int.LF.Nil)
+
+  | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
+      Int.LF.Lam (loc, x,
+                  etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, Substitution.LF.decSub decl s)) (tB, Substitution.LF.dot1 s) x )
+
 
 (* ******************************************************************* *)
 let rec pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
@@ -536,7 +583,10 @@ end
 (* ******************************************************************* *)
 (* ELABORATION OF KINDS                                                *)
 (* ******************************************************************* *)
-(* elKind  cPsi k = K *)
+
+exception SubTypingFailure
+
+(* elKind cPsi k = K *)
 let rec elKind cD cPsi k = match k with
   | Apx.LF.Typ ->
       Int.LF.Typ
@@ -553,9 +603,6 @@ let rec elKind cD cPsi k = match k with
       let tK    = elKind cD cPsi' k in
         Int.LF.PiKind ((Int.LF.TypDecl (x, tA), dep'), tK)
 
-(* ******************************************************************* *)
-(* ELABORATION OF KINDS                                                *)
-(* ******************************************************************* *)
 (* elTyp recT  cD cPsi a = A
  *
  * Pre-condition:
@@ -798,8 +845,20 @@ and elTerm' recT cD cPsi r sP = match r with
               let u =  Whnf.newMVar None (Int.LF.Null, tA) in
                 Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
           | Pibox ->
-              let u =  Whnf.newMMVar None (cD, cPsi, tA) in
-                Int.LF.Root (loc, Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.id)), tS)
+              begin match tA with
+                | Int.LF.Atom (_, a, _ ) ->
+                    let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
+                    let s_proj = ConvSigma.gen_conv_sub conv_list in
+                    let tA'    = ConvSigma.strans_typ cD (tA, Substitution.LF.id) conv_list  in
+                    let (ss', cPhi') = Subord.thin' cD a cPhi in
+                      (* cPhi |- ss' : cPhi' *)
+                    let ssi' = Substitution.LF.invert ss' in
+                      (* cPhi' |- ssi : cPhi *)
+                      (* cPhi' |- [ssi]tQ    *)
+                    let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) in
+                      Int.LF.Root (loc, Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.comp ss'  s_proj)), tS)
+                | _ -> raise (Error (loc, HolesFunction))
+              end
         end)
       with NotPatSpine -> raise (Error (loc, NotPatternSpine))
       end
@@ -854,7 +913,7 @@ and elTerm' recT cD cPsi r sP = match r with
            if isProjPatSub s then
              let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name ) in
              let _ = dprint (fun () -> "isProjPatSub ... " ) in
-             let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cPsi in
+             let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
              let _ = dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cD flat_cPsi ^ "\n") in
              let _ = dprint (fun () -> "conv_list " ^ conv_listToString conv_list ) in
              let flat_s = flattenProjPat s conv_list in
@@ -863,7 +922,7 @@ and elTerm' recT cD cPsi r sP = match r with
              let (cPhi, s'') = synDom cD loc flat_cPsi flat_s in
              let ss =  Substitution.LF.invert s'' in
 
-             let tP' = ConvSigma.strans_typ sP conv_list in
+             let tP' = ConvSigma.strans_typ cD sP conv_list in
              let _ = dprint (fun () -> "[synDom] Prune type " ^ P.typToString cD cPsi sP ) in
              let _ = dprint (fun () -> "[synDom] Prune flattened type " ^ P.typToString cD cPhi (tP', Substitution.LF.id) ) in
              let _ = dprint (fun () -> "         with respect to ss = " ^ P.subToString cD cPhi ss ) in
@@ -1412,11 +1471,10 @@ and elClosedTerm' recT cD cPsi r = match r with
   | _ -> (dprint (fun () -> "[elClosedTerm] Violation?");
                 raise (Error (Syntax.Loc.ghost, CompTypAnn)))
 
-
-
-(* elSub recT cD cPsi s cPhi = s' *)
 and elSub loc recT cD cPsi s cPhi =
-  elSub' loc recT cD (Whnf.cnormDCtx (cPsi, Whnf.m_id)) s (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+  try
+    elSub' loc recT cD (Whnf.cnormDCtx (cPsi, Whnf.m_id)) s (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+  with SubTypingFailure -> raise (Error (loc, IllTypedSub (cD, cPsi, s, cPhi)))
 
 and elSub' loc recT cD cPsi s cPhi =
   match (s, cPhi) with
@@ -1431,7 +1489,7 @@ and elSub' loc recT cD cPsi s cPhi =
     if phi = phi' then
       let s' = elSub' loc recT cD cPsi s cPhi in
       Int.LF.SVar (Int.LF.Offset offset, s')
-    else raise (Error (loc, IllTypedSub))
+    else raise SubTypingFailure
 
   | (Apx.LF.Id _ , Int.LF.DDec (_cPhi', _decl)) ->
     elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi
@@ -1481,15 +1539,13 @@ and elSub' loc recT cD cPsi s cPhi =
         Int.LF.Dot (Int.LF.Obj m', s')
 
   | (s, cPhi) ->
-      (dprint (fun () ->
-                 let s = begin match s with
-                   | Apx.LF.Dot _ -> "Dot _ "
-                   | Apx.LF.EmptySub -> " . "
-                   | Apx.LF.Id _ -> " .. "
-                 end in
-                   "Expected substitution : " ^ P.dctxToString cD cPsi  ^
-                     " |- " ^ s ^ " : " ^ P.dctxToString cD cPhi) ;
-       raise (Error (loc, IllTypedIdSub)))
+    dprint (fun () ->
+      let s = match s with
+        | Apx.LF.Dot _ -> "Dot _ "
+        | Apx.LF.EmptySub -> " . "
+        | Apx.LF.Id _ -> " .. " in
+      "Expected substitution : " ^ P.dctxToString cD cPsi  ^ " |- " ^ s ^ " : " ^ P.dctxToString cD cPhi);
+    raise SubTypingFailure
 
 
 and elHead loc recT cD cPsi = function
@@ -1525,13 +1581,13 @@ and elHead loc recT cD cPsi = function
 
   | Apx.LF.PVar (Apx.LF.PInst (Int.LF.PVar (p,r), tA, cPhi), s) ->
       begin try
-        let _ = dprint (fun () -> "[elHead] PInst : " ^ P.headToString cD cPhi (Int.LF.PVar (p,r))) in 
-        let _ = dprint (fun () -> "[elHead] PInst cPhi : " ^ P.dctxToString cD  cPhi ) in 
-        let _ = dprint (fun () -> "[elHead] PInst target cPsi : " ^ P.dctxToString cD cPsi ) in 
-        let s' = elSub loc recT cD cPsi s cPhi in 
-        let r' = Substitution.LF.comp r s' in 
-         (Int.LF.PVar (p, r') , (tA, r')) 
-      with Error.Violation msg -> 
+        let _ = dprint (fun () -> "[elHead] PInst : " ^ P.headToString cD cPhi (Int.LF.PVar (p,r))) in
+        let _ = dprint (fun () -> "[elHead] PInst cPhi : " ^ P.dctxToString cD  cPhi ) in
+        let _ = dprint (fun () -> "[elHead] PInst target cPsi : " ^ P.dctxToString cD cPsi ) in
+        let s' = elSub loc recT cD cPsi s cPhi in
+        let r' = Substitution.LF.comp r s' in
+         (Int.LF.PVar (p, r') , (tA, r'))
+      with Error.Violation msg ->
         dprint (fun () -> "[elHead] Violation: " ^ msg);
         raise (Error (loc, CompTypAnn ))
       end
@@ -1615,10 +1671,7 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            * s.t.  cPsi |- u[s'] => [s']A'  where cPsi |- s' : .
            *   and    [s]A = [s']A'. Therefore A' = [s']^-1([s]A)
            *)
-          (* let (_, d) = Context.dctxToHat cPsi in
-          let tN     = Whnf.etaExpandMV Int.LF.Null (tA, s) (Int.LF.Shift(Int.LF.NoCtxShift, d)) in   *)
-          let tN     = Whnf.etaExpandMV cPsi (tA, s) n Substitution.LF.id in
-
+           let tN     = Whnf.etaExpandMV cPsi (tA, s) n Substitution.LF.id      in
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
 
@@ -1630,8 +1683,8 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            *
            * s.t.  cPsi |- \x1...\xn. u[id] => [id]A  where cPsi |- id : cPsi
            *)
-           let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in
-          (* let tN     = etaExpandMMVstr loc cO cD cPsi (tA, s) in *)
+           (* let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in *)
+           let tN     = etaExpandMMVstr loc cD cPsi (tA, s) n in
 
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
@@ -1693,8 +1746,8 @@ and elKSpineI loc recT cD cPsi spine i sK =
             Int.LF.App (tN, spine')
       | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pibox) ->
           (* let sshift = mkShift recT cPsi in *)
-          let tN     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n Substitution.LF.id in
-          (* let tN = etaExpandMMVstr None cO cD cPsi (tA, s) in  *)
+          (* let tN     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n Substitution.LF.id in*)
+          let tN = etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) n in
           let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
 

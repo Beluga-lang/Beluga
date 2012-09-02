@@ -65,11 +65,15 @@ module Comp : sig
     | EqTyp           of LF.mctx * tclo
     | MAppMismatch    of LF.mctx * (meta_typ * LF.msub)
     | AppMismatch     of LF.mctx * (meta_typ * LF.msub)
+    | CtxHatMismatch  of LF.mctx * LF.dctx (* expected *) * LF.psi_hat (* found *) * meta_obj
+    | CtxMismatch     of LF.mctx * LF.dctx (* expected *) * LF.dctx (* found *) * meta_obj
+    | UnsolvableConstraints of Id.name
 
   exception Error of Syntax.Loc.t * error
 
   val check       : LF.mctx -> gctx -> exp_chk -> tclo -> unit
   val syn         : LF.mctx -> gctx -> exp_syn -> tclo
+  val checkKind    : LF.mctx -> kind                -> unit
   val checkTyp    : LF.mctx -> typ                  -> unit
 
 end

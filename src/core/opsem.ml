@@ -135,18 +135,23 @@ let rec eval_syn i (theta, eta) =
 
     | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
       let tM' = Whnf.cnorm (tM, theta) in
+        let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue (_u, e', theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.MObj (phat, tM'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (phat, tM'), spine))
-        | _ -> raise (Error.Violation "Expected MLamValue")
+        | _ -> raise (Error.Violation "Expected MLamValue ")
       end
 
     | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
+        let h' = Whnf.cnormHead (h, theta) in
+        let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue (_u, e', theta1, eta1) ->
-          eval_chk e' (LF.MDot (LF.PObj (phat, Whnf.cnormHead (h, theta)), theta1), eta1)
+          eval_chk e' (LF.MDot (LF.PObj (phat, h'), theta1), eta1)
+        | Comp.DataValue (cid, spine) ->
+          Comp.DataValue (cid, Comp.DataApp (Comp.ParamValue (phat, h'), spine))
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
@@ -242,7 +247,7 @@ and eval_branches loc vscrut branches (theta, eta) = match branches with
       dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
       eval_branches loc vscrut branches (theta, eta)
 
-and match_pattern mt eta v pat =
+and match_pattern  (v,eta) (pat, mt) =
   let eta = ref eta in
   let rec loop v pat =
     match v, pat with
@@ -267,8 +272,18 @@ and match_pattern mt eta v pat =
       | _, Comp.PatMetaObj (_, Comp.MetaObjAnn _) ->
         raise (Error.Violation "Expected box value.")
 
+      | Comp.ParamValue (phat, h), Comp.PatMetaObj (_, Comp.MetaParam (_, phat', h')) ->
+          let phat' = Whnf.cnorm_psihat phat' mt in
+          let h'    = Whnf.cnormHead (h', mt) in
+            Unify.unify_phat phat phat';
+            Unify.unifyH LF.Empty phat h h'
+      | _, Comp.PatMetaObj (_, Comp.MetaParam _ ) ->
+        raise (Error.Violation "Expected param value.")
+
       | Comp.PsiValue cPsi, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
-        Unify.unifyDCtx LF.Empty cPsi cPsi'
+        let cPsi' = Whnf.cnormDCtx (cPsi', mt) in
+          dprint (fun () -> "[match_pattern] call unifyDCtx ");
+          Unify.unifyDCtx LF.Empty cPsi cPsi'
       | _, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
         raise (Error.Violation "Expected context.")
 
@@ -309,9 +324,16 @@ and eval_branch vscrut branch (theta, eta) =
         try
           let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
           let theta_k = Whnf.mcomp (Whnf.cnormMSub theta') mt in
+          let _ = dprint (fun () -> "[eval_branches] try branch with theta_k = "
+                            ^ P.msubToString LF.Empty (Whnf.cnormMSub theta_k)) in
           let _ = Unify.unifyMSub theta theta_k in
-          let eta' = match_pattern mt eta vscrut pat in
-          eval_chk e (Whnf.cnormMSub mt, eta')
+          let _ = dprint (fun () -> "match scrutinee against pattern \n     " ^
+                            P.patternToString cD cG pat) in
+          let _ = dprint (fun () -> "     pattern with mvars \n     " ^
+                            P.patternToString LF.Empty (Whnf.cnormCtx (cG, mt))
+                            (Whnf.cnormPattern (pat, mt))) in
+          let eta' = match_pattern  (vscrut, eta) (pat, mt) in
+            eval_chk e (Whnf.cnormMSub mt, eta')
         with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
 

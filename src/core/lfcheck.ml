@@ -81,11 +81,11 @@ let _ = Error.register_printer
 
       | IllTypedSub (cD, cPsi, s, cPsi') ->
         Format.fprintf ppf "Ill-typed substitution.@.";
-        Format.fprintf ppf "@<n> Substitution: %a.@."
+        Format.fprintf ppf "    Substitution: %a@."
           (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) s;
-        Format.fprintf ppf "@<n> does not take context: %a.@."
+        Format.fprintf ppf "    does not take context: %a@."
           (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi';
-        Format.fprintf ppf "@<n> to context: %a.@."
+        Format.fprintf ppf "    to context: %a@."
           (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
 
       | SpineIllTyped (n_expected, n_actual) ->
@@ -254,7 +254,6 @@ and inferHead loc cD cPsi head = match head with
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
-
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
@@ -317,7 +316,8 @@ and inferHead loc cD cPsi head = match head with
 
 and canAppear cD cPsi sA loc=
   match cPsi with
-    | Null -> false
+    | Null -> true (* we need to succeed because coverage should detect that
+                      it is not inhabited *)
 
     | CtxVar ctx_var ->
       begin let (Schema elems) = Schema.get_schema (lookupCtxVarSchema cD ctx_var) in

@@ -34,12 +34,12 @@ OCAMLOPTFLAGS  = -noassert -inline 100
 OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
 # Declare a phony clean target
-.PHONY: clean belchk beli
+.PHONY: clean beluga beli
 
 # Map the src dir onto the build dir
 vmount(-l, src, .build)
 mkdir -p .build/core
-mkdir -p .build/belchk
+mkdir -p .build/beluga
 mkdir -p .build/beli
 
 vmount(-l, sasybel/src, .build/sasybel)
@@ -50,7 +50,7 @@ mkdir -p .build/sasybel
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin
-        ln-or-cp .build/belchk/belchk.run bin/belchk
+        ln-or-cp .build/beluga/beluga.run bin/beluga
         ln-or-cp .build/beli/beli.run bin/beli
 
 clean: .PHONY/src/clean

@@ -20,7 +20,7 @@ BELUGA=`pwd`
 # echo BELUGA: $BELUGA
 
 # set $INTERPRETER to the executable
-INTERPRETER=$BELUGA/bin/belchk
+INTERPRETER=$BELUGA/bin/beluga
 
 # set $X to the `beluga' examples directory
 

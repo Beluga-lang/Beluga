@@ -5,20 +5,14 @@
 
 open Syntax.Int
 
+type varvariant =
+    VariantFV | VariantFCV | VariantMMV | VariantMPV
+  | VariantMV | VariantFMV | VariantPV | VariantFPV
+
 type error =
-    LeftoverCV
-  | LeftoverMV
-  | LeftoverMMV
-  | LeftoverMPV
+  | LeftoverVars of varvariant
   | LeftoverConstraints
-  | CyclicDependencyFV
-  | CyclicDependencyFCV
-  | CyclicDependencyMMV
-  | CyclicDependencyMPV
-  | CyclicDependencyMV
-  | CyclicDependencyFMV
-  | CyclicDependencyPV
-  | CyclicDependencyFPV
+  | CyclicDependency of varvariant
   | UnknownIdentifier
   | UnknownSchemaCtx of Id.name
 

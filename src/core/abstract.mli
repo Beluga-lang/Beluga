@@ -39,12 +39,6 @@ val abstrCompKind  : Comp.kind  -> Comp.kind * Id.offset
 val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset
 
 val abstrExp      : Comp.exp_chk  -> Comp.exp_chk
-(* val abstrBranch   : (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) -> Comp.exp_chk  -> LF.msub
-                  -> LF.mctx * (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) * Comp.exp_chk * LF.msub
-
-val abstrExpMSub  : Comp.exp_chk  -> LF.msub -> LF.mctx * LF.msub * Comp.exp_chk
-*)
-
 
 val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ ->
                     LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ

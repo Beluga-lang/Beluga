@@ -2428,8 +2428,6 @@ let rec abstrExp e =
               raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMV))
     end
 
-
-
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)
 let rec appDCtx cPsi1 cPsi2 = match cPsi2 with
   | I.Null -> cPsi1
@@ -2457,41 +2455,9 @@ let rec abstrSchema (I.Schema elements) =
   in
     I.Schema (abstrElems elements)
 
-
-(* REDUNDANT Tue Apr 21 09:52:37 2009 -bp
-let rec abstrBranch (cPsi1, (phat, tM), tA) e r =
-  let cQ0     = collectPattern I.Empty I.Empty cPsi1 (phat,tM) tA in
-  let cQ1     = collectExp cQ0 e in
-  let cQ2     = collectMSub cQ1 r in
-  let cQ'     = abstractMVarCtx cQ2 in
-
-  let cPsi1'  = abstractMVarDctx cQ' 0 cPsi1 in
-  let tM'     = abstractMVarTerm cQ' 0 (tM, LF.id) in
-  let tA'     = abstractMVarTyp  cQ' 0 (tA, LF.id) in
-
-  let e'      = abstractMVarExp cQ' 0 e in
-
-  let r'      = abstrMSub cQ' r in
-  let cD      = ctxToMCtx cQ' in
-    (cD, (cPsi1', (phat, tM'), tA'), e', r')
-
-*)
-
-(* let rec abstrExpMSub e t =
-  let cQ1     = collectMSub I.Empty t in
-  let cQ      = collectExp cQ1 e in
-  let cQ'     = abstractMVarCtx cQ in
-  let e'      = abstractMVarExp cQ' 0 e in
-  let t'      = abstrMSub cQ' t in
-  let cD'     = ctxToMCtx cQ' in
-     (cD', t', e')
-*)
-
-
 let rec printFreeMVars phat tM =
   let (cQ, _ ) = collectTerm 0 I.Empty  phat (tM, LF.id) in
     printCollection cQ
-
 
 let collectTerm' (phat, tM ) = collectTerm 0 I.Empty  phat (tM, LF.id)
 
@@ -2508,8 +2474,6 @@ let rec fvarInCollection cQ = begin match cQ with
 
   | I.Dec(cQ, _ ) -> fvarInCollection cQ
 end
-
-
 
 let closedTyp (cPsi, tA) =
   let (cQ1, _ ) = collectDctx (Syntax.Loc.ghost) 0 I.Empty (None, 0) cPsi in

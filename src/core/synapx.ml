@@ -45,6 +45,7 @@ module LF = struct
     | Lam  of Loc.t * name * normal
     | Root of Loc.t * head * spine
     | Tuple of Loc.t * tuple
+    | Ann of Loc.t * normal * typ
 
   and head =
     | BVar  of offset

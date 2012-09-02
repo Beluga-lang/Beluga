@@ -1709,7 +1709,6 @@ and abstractMVarCtx cQ l =  match cQ with
 
 (* Cases for: FMV, FPV *)
 
-
 let rec abstrMSub cQ t =
   let l = lengthCollection cQ in
   let rec abstrMSub' t =
@@ -1734,22 +1733,13 @@ let rec abstrMSub cQ t =
   in
     abstrMSub' t
 
-and abstractMSub  t =
-  let (cQ, t')  = collectMSub 0 I.Empty t in
+and abstractMSub t =
+  let (cQ, t') = collectMSub 0 I.Empty t in
   let cQ' = abstractMVarCtx cQ 0 in
-  let t''  = abstrMSub cQ' t' in
-  let cD'  = ctxToMCtx cQ' in
-    (t'' , cD')
+  let t'' = abstrMSub cQ' t' in
+  let cD' = ctxToMCtx cQ' in
+  (t'', cD')
 
-(*
- and abstractMSub cQ t =
-  let cQ1  = collectMSub cQ t in
-  let d    = Context.length cQ in
-  let cQ' = abstractMVarCtx d cQ1 in
-  let t'  = abstrMSub cQ' t in
-  let cD'  = ctxToMCtx cQ' in
-    (t' , cD')
-*)
 (* wrapper function *)
 let abstrKind tK =
   (* what is the purpose of phat? *)

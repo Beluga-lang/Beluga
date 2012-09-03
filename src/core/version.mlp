@@ -1,0 +1,4 @@
+(* This is an .ml file template. The corresponding .ml file is the
+   result of preprocessing this file. *)
+
+let beluga_version = "%VERSION%%"

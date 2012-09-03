@@ -1102,8 +1102,9 @@ module Make (T : TRAIL) : UNIFY = struct
                       let _ = dprint (fun () -> "[prune] new mvar created : " ^ P.normalToString cD0 cPsi1 (tN, Substitution.LF.id)) in
 
                       let tM' = (instantiateMMVar (r, Root (loc, MMVar (v, (id_msub, id_sub)), Nil), !cnstrs);
-                                 Clo(tM, comp s ssubst)
-                                ) in
+                                 Whnf.norm (tM, comp s ssubst))
+                                 (* Clo(tM, comp s ssubst) *)
+                                 in
                         (dprint (fun () -> "[prune] tM' = " ^ P.normalToString cD0 cPsi' (tM', Substitution.LF.id));
                         tM')
 

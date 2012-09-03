@@ -99,7 +99,7 @@ and recSgnDecl d =
                                )) in
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
         let (cK', i) = Monitor.timer ("Type Abstraction",
-                                      fun () -> Abstract.abstrCompKind cK) in
+                                      fun () -> Abstract.compkind cK) in
 
         let _        = (Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ();
@@ -123,7 +123,7 @@ and recSgnDecl d =
         let _         = Unify.resetGlobalCnstrs () in
 	let _         = dprint (fun () -> "Abstracting over comp. type") in
         let (tau', i) = Monitor.timer ("Data-type Constant: Type Abstraction",
-				       fun () -> Abstract.abstrCompTyp tau') in
+				       fun () -> Abstract.comptyp tau') in
 	let _         = dprint (fun () -> "Abstracting over comp. type: done") in
 	let _         = dprint (fun () ->  c.string_of_name ^ " : " ^
 				   (P.compTypToString cD tau')) in
@@ -147,7 +147,7 @@ and recSgnDecl d =
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
 
         let (tK', i) = Monitor.timer ("Type Abstraction",
-                                      fun () -> Abstract.abstrKind tK) in
+                                      fun () -> Abstract.kind tK) in
         let _        = (Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ();
 			dprint (fun () ->  a.string_of_name ^ " : " ^  (P.kindToString Int.LF.Null (tK', S.LF.id)));
@@ -177,7 +177,7 @@ and recSgnDecl d =
 
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
         let (tA', i) = Monitor.timer ("Constant Abstraction",
-                                      fun () -> Abstract.abstrTyp tA) in
+                                      fun () -> Abstract.typ tA) in
 	let _        = ( Reconstruct.reset_fvarCnstr ();
 			 Unify.resetGlobalCnstrs ();
         		 dprint (fun () -> "\nReconstruction (with abstraction) of constant: " ^
@@ -199,7 +199,7 @@ and recSgnDecl d =
 			Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ()) in
 
-        let sW'      = Abstract.abstrSchema sW in
+        let sW'      = Abstract.schema sW in
         (Check.LF.checkSchemaWf sW' ;
 	 dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" );
          let _s = Schema.add (Schema.mk_entry g sW') in ();
@@ -222,7 +222,7 @@ and recSgnDecl d =
 					     "\n  =  " ^
                                 P.expSynToString cD cG i' ^ "\n") in
           let i''                = Monitor.timer ("Function Abstraction", fun () ->
-						    Abstract.abstrExp (Int.Comp.Syn (loc, i'))) in
+						    Abstract.exp (Int.Comp.Syn (loc, i'))) in
           let _                  = Monitor.timer ("Function Check", fun () ->
 						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
@@ -244,7 +244,7 @@ and recSgnDecl d =
           let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           let _        = Unify.resetGlobalCnstrs () in
           let (tau', _imp) = Monitor.timer ("Function Type Abstraction", fun ()
-					      -> Abstract.abstrCompTyp tau') in
+					      -> Abstract.comptyp tau') in
 	  let _       = dprint (fun () -> "[checkTyp] ") in
           let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
 
@@ -259,7 +259,7 @@ and recSgnDecl d =
                                 "\n  =  " ^
                                 P.expChkToString cD cG i' ^ "\n") in
 
-          let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.abstrExp i') in
+          let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp i') in
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
@@ -297,7 +297,7 @@ and recSgnDecl d =
                                    " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
 
           (* let _       = Monitor.timer ("Function Type Reconstruction", fun () -> recCompTyp cO cD tau') in *)
-          let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.abstrCompTyp tau') in
+          let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.comptyp tau') in
           let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
           let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
           let _       = FCVar.clear () in
@@ -336,7 +336,7 @@ and recSgnDecl d =
                                 P.expChkToString cD cG e' ^ "\n") in
 
           let e'' = Whnf.cnormExp (e', Whnf.m_id) in
-          let e_r'    = Monitor.timer ("Function Abstraction", fun () -> Abstract.abstrExp e'' ) in
+          let e_r'    = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp e'' ) in
 
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
 
@@ -408,7 +408,7 @@ and recSgnDecl d =
       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
 
       let (tA', i) = Monitor.timer ("Constant Abstraction",
-                                    fun () -> Abstract.abstrTyp tA) in
+                                    fun () -> Abstract.typ tA) in
 
       let _        = Reconstruct.reset_fvarCnstr () in
       let _        = Unify.resetGlobalCnstrs () in

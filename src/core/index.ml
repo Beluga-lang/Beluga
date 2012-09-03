@@ -217,6 +217,11 @@ and index_term cvars bvars fvars = function
       let (s', fvars2) = index_spine cvars bvars fvars1 s in
         (Apx.LF.Root (loc, h', s') , fvars2)
 
+  | Ext.LF.Ann (loc, m, a) ->
+    let (a', fvars') = index_typ cvars bvars fvars a in
+    let (m', fvars'') = index_term cvars bvars fvars' m in
+    (Apx.LF.Ann (loc, m', a'), fvars'')
+
 and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.Name (_, n) ->
       (* let _        = dprint (fun () -> "Indexing name " ^ n.string_of_name)
@@ -1021,4 +1026,3 @@ let exp      = fun vars -> fun e ->
 (dprint (fun () -> "Indexing expression ... " );
  index_exp (CVar.create ()) vars ([], term_closed) e)
 let exp'     = fun vars -> fun i -> index_exp' (CVar.create ()) vars ([], term_closed) i
-

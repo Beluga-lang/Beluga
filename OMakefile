@@ -11,6 +11,7 @@ OCAMLPACKS[] =
         oUnit
         ulex
         dynlink
+        unix
 
 # Compile with debugging options?  This enables:
 #
@@ -33,13 +34,13 @@ OCAMLOPTFLAGS  = -noassert -inline 100
 OCAMLOPTFLAGS += $(if $(DEBUG), -p)
 
 # Declare a phony clean target
-# .PHONY: core clean frontend interpreter test
-.PHONY: clean interpreter
+.PHONY: clean beluga beli
 
 # Map the src dir onto the build dir
 vmount(-l, src, .build)
 mkdir -p .build/core
-mkdir -p .build/main
+mkdir -p .build/beluga
+mkdir -p .build/beli
 
 vmount(-l, sasybel/src, .build/sasybel)
 mkdir -p .build/sasybel
@@ -49,8 +50,8 @@ mkdir -p .build/sasybel
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin
-        ln-or-cp .build/main/interpreter bin/interpreter
-        ln-or-cp .build/main/interpreter.run bin/interpreter.run
+        ln-or-cp .build/beluga/beluga.run bin/beluga
+        ln-or-cp .build/beli/beli.run bin/beli
 
 clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))

@@ -4,7 +4,7 @@
 #
 # Usage: TEST [options]
 #
-# [options], if given, are passed to bin/interpreter.
+# [options], if given, are passed to bin/beluga.
 # Example: TEST +d
 #
 # Note that a leading '@' in a filename means that the test should NOT succeed,
@@ -20,7 +20,7 @@ BELUGA=`pwd`
 # echo BELUGA: $BELUGA
 
 # set $INTERPRETER to the executable
-INTERPRETER=$BELUGA/bin/interpreter
+INTERPRETER=$BELUGA/bin/beluga
 
 # set $X to the `beluga' examples directory
 X=$BELUGA/examples
@@ -53,6 +53,3 @@ $INTERPRETER +t \
     ../examples-twelf/lp-horn/sources.cfg \
     ../examples-twelf/mini-ml/sources.cfg \
     ../examples-twelf/prop-calc/sources.cfg
-
-
-

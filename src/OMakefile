@@ -74,4 +74,4 @@ read-sources(root, file) =
         export
     return $(accum)
 
-.SUBDIRS: core main
+.SUBDIRS: core beluga beli

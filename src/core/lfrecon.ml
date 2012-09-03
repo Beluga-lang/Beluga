@@ -723,6 +723,12 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
       let n = etaExpandApxTerm loc h spine tA in
         elTerm recT cD cPsi n sA
 
+  | (Apx.LF.Ann (loc, m, a), tA) ->
+    let tB = elTyp recT cD cPsi a in
+    let tM = elTerm recT cD cPsi m (tB, Substitution.LF.id) in
+    let () = Unify.unifyTyp cD cPsi (tB, Substitution.LF.id) sA in
+    tM
+
 and elTuple recT cD cPsi tuple (typRec, s) =
   match (tuple, typRec) with
   | (Apx.LF.Last m,
@@ -742,6 +748,9 @@ and elTuple recT cD cPsi tuple (typRec, s) =
 
 
 and elTerm' recT cD cPsi r sP = match r with
+
+  | Apx.LF.Ann (_loc, m, a) ->
+    elTerm' recT cD cPsi m sP
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in

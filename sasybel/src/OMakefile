@@ -13,8 +13,8 @@ PACK    = Sasybel
 # Declare the files the package will contain
 FILES[] =
         ast
-        stoken
         slexer
+        stoken
         sparser
         transform
 
@@ -104,9 +104,3 @@ else
 # Use the -for-pack flag for compiling the individual modules
 OCAMLFLAGS += -for-pack $(PACK) -w z
 files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), $(FILES))
-
-# Turn off unused variable warning only for the lexer; needed for
-# dummy variables created by ulex / camlp4
-section
-    OCAMLFLAGS += -w z
-    $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), slexer):

@@ -50,8 +50,8 @@ mkdir -p .build/sasybel
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin
-        ln-or-cp .build/beluga/beluga.run bin/beluga
-        ln-or-cp .build/beli/beli.run bin/beli
+        ln-or-cp .build/beluga/beluga.$(if $(NATIVE_ENABLED), opt, run) bin/beluga
+        ln-or-cp .build/beli/beli.$(if $(NATIVE_ENABLED), opt, run) bin/beli
 
 clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))

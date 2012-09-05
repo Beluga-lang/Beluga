@@ -77,5 +77,5 @@ version.ml: version.mlp
             stdout = $(fopen version.ml, w)
             fsubst($<)
             case $"%VERSION%%" g
-                value $(shell git describe)
+                value NONE
             close($(stdout))

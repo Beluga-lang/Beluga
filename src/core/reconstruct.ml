@@ -1914,13 +1914,17 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
       let _ = dprint (fun () -> "[recPatObj' - PatMetaObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
       let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
-      let Int.Comp.TypBox (_ , _tQ, cPsi_s) = tau_s  in
-      let _       = inferCtxSchema loc (cD_s, cPsi_s) (cD, cPsi) in
+        begin try
+          let Int.Comp.TypBox (_ , _tQ, cPsi_s) = tau_s  in
+          let _       = inferCtxSchema loc (cD_s, cPsi_s) (cD, cPsi) in
             (* as a side effect we will update FCVAR with the schema for the
                context variable occurring in cPsi' *)
-      let ttau' = (Int.Comp.TypBox(loc',tP, cPsi), Whnf.m_id) in
-      let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
-              (cG', pat', ttau')
+          let ttau' = (Int.Comp.TypBox(loc',tP, cPsi), Whnf.m_id) in
+          let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
+            (cG', pat', ttau')
+        with
+            _ -> raise (Error (loc, PatternMobj))
+        end
 
   | Apx.Comp.PatEmpty (loc, cpsi) ->
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cpsi in

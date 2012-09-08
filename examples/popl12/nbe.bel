@@ -38,10 +38,10 @@ datatype Sem : {g:ctx} [. tp] -> ctype =
            -> Sem [g] [ . arr A B]
 ;
 
-rec rsubst : (g:ctx)(h:ctx) Extends [g] [h] -> [g. neut A] -> [h. neut A] =
+rec weak_neut : (g:ctx)(h:ctx) Extends [g] [h] -> [g. neut A] -> [h. neut A] =
 fn e => fn r => case e of
 | Zero => r
-| Succ [h] e' => let [h. R ..] = rsubst e' r in [h,x:neut _. R ..]
+| Succ [h] e' => let [h. R ..] = weak_neut e' r in [h,x:neut _. R ..]
 ;
 
 rec extendsTrans : Extends [g] [h] -> Extends [h] [h'] -> Extends [g] [h'] =
@@ -52,7 +52,7 @@ fn e => fn f => case f of
 
 rec weaken : (g:ctx)(h:ctx) Extends [g] [h] -> Sem [g] [.A] -> Sem [h] [. A] =
 fn e => fn x => case x of
-| Syn r => Syn (rsubst e r)
+| Syn r => Syn (weak_neut e r)
 | Slam f => Slam (mlam h' => fn e' => fn x => f [h'] (extendsTrans e e') x)
 ;
 
@@ -95,7 +95,7 @@ and extendSem : [g.neut (arr A B)] ->
 =
 fn r => mlam h => fn s => fn e =>
 let [h. N .. ] = reify e in
-let [h. R' .. ] = rsubst s r in
+let [h. R' .. ] = weak_neut s r in
   reflect [h. rapp (R' ..) (N ..)]
 
 and reify : Sem [g] [.A] -> [g. norm A] =

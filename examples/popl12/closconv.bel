@@ -12,7 +12,7 @@ datatype nat:type =
 
 schema ctx = tm;
 
-envr: type.
+%{envr: type.
 ctm: type.
 
 nil: envr.
@@ -24,20 +24,22 @@ proj: envr -> nat -> ctm.
 close : ctm -> envr -> ctm.
 open : ctm -> (envr -> ctm -> ctm) -> ctm.
 create: envr -> ctm.
-%{
+}%
 % mutual definition of datatypes is not working.
- datatype envr: type =
+datatype envr: type =
 | nil: envr
 | snoc : envr -> ctm -> envr
 
-and datatype ctm: type =
+and ctm: type =
 | clam : (envr -> ctm) -> ctm
+| capp : ctm -> ctm -> ctm
 | proj: envr -> nat -> ctm
 | close : ctm -> envr -> ctm
 | open : ctm -> (envr -> ctm -> ctm) -> ctm
+| create: envr -> ctm
 ;
 
-}%
+
 schema cctx = ctm;
 
 % Since we do not currently support direct pattern matching on contexts

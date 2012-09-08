@@ -19,6 +19,8 @@ module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
 
+let strengthen : bool ref =  Lfrecon.strengthen
+
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
@@ -436,17 +438,19 @@ let mgAtomicTyp cD cPsi a kK =
 
     | (Int.LF.PiKind ((Int.LF.TypDecl (n, tA1), _ ), kK), s) ->
         let tA1' = strans_typ cD (tA1, s) conv_list in
-        let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
-          (* cPhi |- ss' : cPhi' *)
-        let ssi' = LF.invert ss' in
-          (* cPhi' |- ssi : cPhi *)
-          (* cPhi' |- [ssi]tQ    *)
-    (*    let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1') in
-          let h  = Int.LF.MMVar (u, (Whnf.m_id, s_proj)) in
-    *)
-        let u  = Whnf.newMMVar (Some n) (cD, cPhi' , Int.LF.TClo (tA1', ssi')) in
-        let ss_proj = LF.comp ss' s_proj in
-        let h  = Int.LF.MMVar (u, (Whnf.m_id, ss_proj)) in
+        let h    = if !strengthen then
+                    (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
+                       (* cPhi |- ss' : cPhi' *)
+                     let ssi' = LF.invert ss' in
+                       (* cPhi' |- ssi : cPhi *)
+                       (* cPhi' |- [ssi]tQ    *)
+                     let u  = Whnf.newMMVar (Some n) (cD, cPhi' , Int.LF.TClo (tA1', ssi')) in
+                     let ss_proj = LF.comp ss' s_proj in
+                       Int.LF.MMVar (u, (Whnf.m_id, ss_proj)))
+                   else
+                     let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1') in
+                     Int.LF.MMVar (u, (Whnf.m_id, s_proj))
+        in
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
 
         let _ = dprint (fun () -> "Generated meta^2-variable " ^
@@ -499,7 +503,8 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
       let tA'   = C.cnormTyp (tA, theta) in
 
       (* let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in *)
-      let tM'   = etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n in
+      let tM'   =  if !strengthen then  etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
+                   else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
       let _   = dprint (fun () -> "[genMApp] Generated meta^2-variable " ^
                             P.dctxToString cD cPsi' ^ " . " ^
                             P.normalToString cD cPsi' (tM', LF.id)) in
@@ -690,7 +695,8 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
       let tA'   = C.cnormTyp (tA, theta) in
 
       (* let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in *)
-      let tM'   = etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n in
+      let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
+                  else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
       let mS    = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)) in
         Int.Comp.MetaApp (Int.Comp.MetaObj (loc, psihat, tM'), mS)
 
@@ -829,8 +835,8 @@ let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
       let cPsi' = C.cnormDCtx (cPsi, t) in
       let psihat  = Context.dctxToHat cPsi' in
       let tA'   = C.cnormTyp (tA, t) in
-      (* let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in *)
-      let tM'   = etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n  in
+      let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
+                  else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
         (Int.Comp.MetaObj (loc', psihat, tM') ,
          Int.LF.MObj (psihat, tM'))
 
@@ -1799,8 +1805,8 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let tA'   = C.cnormTyp (tA, theta) in
              let psihat  = Context.dctxToHat cPsi' in
 
-             (* let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in *)
-             let tM'   = etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n in
+             let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
+                         else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
              let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaObj (loc, psihat, tM')) in
              let ttau' = (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)) in
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
@@ -1865,7 +1871,8 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let psihat  = Context.dctxToHat cPsi' in
              let _ = dprint (fun () -> "call etaExpandMMV ... ") in
              (* let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in *)
-             let tM'   = etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n  in
+             let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
+                         else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
              let _ = dprint (fun () -> "...generated MMVar " ^ P.normalToString cD cPsi' (tM', LF.id)) in
              let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaObj (loc, psihat, tM')) in
              let ttau' = (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta))
@@ -1907,13 +1914,17 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
       let _ = dprint (fun () -> "[recPatObj' - PatMetaObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
       let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
-      let Int.Comp.TypBox (_ , _tQ, cPsi_s) = tau_s  in
-      let _       = inferCtxSchema loc (cD_s, cPsi_s) (cD, cPsi) in
+        begin try
+          let Int.Comp.TypBox (_ , _tQ, cPsi_s) = tau_s  in
+          let _       = inferCtxSchema loc (cD_s, cPsi_s) (cD, cPsi) in
             (* as a side effect we will update FCVAR with the schema for the
                context variable occurring in cPsi' *)
-      let ttau' = (Int.Comp.TypBox(loc',tP, cPsi), Whnf.m_id) in
-      let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
-              (cG', pat', ttau')
+          let ttau' = (Int.Comp.TypBox(loc',tP, cPsi), Whnf.m_id) in
+          let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
+            (cG', pat', ttau')
+        with
+            _ -> raise (Error (loc, PatternMobj))
+        end
 
   | Apx.Comp.PatEmpty (loc, cpsi) ->
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cpsi in

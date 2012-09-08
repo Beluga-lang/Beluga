@@ -13,14 +13,14 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
+let strengthen : bool ref = ref false
+
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
-  | HolesFunction
-  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
   | IllTypedSub     of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub * Int.LF.dctx
@@ -29,6 +29,8 @@ type error =
   | CompTypAnn
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
+  | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
+  | HolesFunction
 
 exception Error of Syntax.Loc.t * error
 
@@ -859,13 +861,19 @@ and elTerm' recT cD cPsi r sP = match r with
                     let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
                     let s_proj = ConvSigma.gen_conv_sub conv_list in
                     let tA'    = ConvSigma.strans_typ cD (tA, Substitution.LF.id) conv_list  in
-                    let (ss', cPhi') = Subord.thin' cD a cPhi in
-                      (* cPhi |- ss' : cPhi' *)
-                    let ssi' = Substitution.LF.invert ss' in
-                      (* cPhi' |- ssi : cPhi *)
-                      (* cPhi' |- [ssi]tQ    *)
-                    let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) in
-                      Int.LF.Root (loc, Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.comp ss'  s_proj)), tS)
+                    let h      = if !strengthen then
+                                   let (ss', cPhi') = Subord.thin' cD a cPhi in
+                                     (* cPhi |- ss' : cPhi' *)
+                                   let ssi' = Substitution.LF.invert ss' in
+                                     (* cPhi' |- ssi : cPhi *)
+                                     (* cPhi' |- [ssi]tQ    *)
+                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) in
+                                     Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.comp ss'  s_proj))
+                                 else
+                                   let u = Whnf.newMMVar None (cD, cPhi, tA') in
+                                     Int.LF.MMVar (u, (Whnf.m_id, s_proj))
+                    in
+                      Int.LF.Root (loc, h, tS)
                 | _ -> raise (Error (loc, HolesFunction))
               end
         end)
@@ -1693,7 +1701,8 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            * s.t.  cPsi |- \x1...\xn. u[id] => [id]A  where cPsi |- id : cPsi
            *)
            (* let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in *)
-           let tN     = etaExpandMMVstr loc cD cPsi (tA, s) n in
+           let tN     = if !strengthen then etaExpandMMVstr loc cD cPsi (tA, s) n
+                        else Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in
 
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
@@ -1756,7 +1765,8 @@ and elKSpineI loc recT cD cPsi spine i sK =
       | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pibox) ->
           (* let sshift = mkShift recT cPsi in *)
           (* let tN     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n Substitution.LF.id in*)
-          let tN = etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) n in
+          let tN = if !strengthen then etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) n
+                   else Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n Substitution.LF.id     in
           let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')
 

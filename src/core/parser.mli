@@ -6,7 +6,7 @@ module Grammar : Camlp4.Sig.Grammar.Static
   and  module Token = Lexer.Token
 
 (** Grammar entry for an entire LF Signature *)
-val sgn_eoi : Ext.Sgn.sgn Grammar.Entry.t
+val sgn : Ext.Sgn.sgn Grammar.Entry.t
 
 (** Parse a stream and return a signature *)
 val parse_stream :

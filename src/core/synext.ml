@@ -230,6 +230,7 @@ end
 module Sgn = struct
 
   type pragma =
+    | OptsPrag of string list
     | NamePrag of name * string * string option
     | NotPrag
 

@@ -184,6 +184,7 @@ let rec lex_token loc = lexer
   | "ttrue"
   | "ffalse"
   | "%name"
+  | "%opts"
   | "%not"
   | "%query"
   | "?"

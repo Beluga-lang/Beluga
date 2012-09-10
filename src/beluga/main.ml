@@ -151,9 +151,12 @@ let main () =
             if !Debug.chatter != 0 then
               printf "\n## Sasybel translation: %s ##\n" file_name;
             Sasybel.Transform.sectionDecls sasy_sgn
-          end else begin
-            Parser.parse_file ~name:file_name Parser.sgn_eoi
-          end in
+          end else Parser.parse_file ~name:file_name Parser.sgn in
+        (* If the file starts with an %opts pragma then process it now. *)
+        let sgn = match sgn with
+          | Synext.Sgn.Pragma (_, Synext.Sgn.OptsPrag opts) :: sgn ->
+            ignore (process_options opts); sgn
+          | _ -> sgn in
         if !externall then begin
           if !Debug.chatter != 0 then
             printf "\n## Pretty-printing of the external syntax : ##\n";

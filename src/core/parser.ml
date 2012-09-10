@@ -195,7 +195,7 @@ let check_datatype_decl a cs =
 (* Global Grammar Entry Points *)
 (*******************************)
 
-let sgn_eoi = Grammar.Entry.mk "sig_eoi"
+let sgn = Grammar.Entry.mk "sgn"
 
 (*****************************************)
 (* Dynamically Extensible Beluga Grammar *)
@@ -209,7 +209,7 @@ let sgn_eoi = Grammar.Entry.mk "sig_eoi"
 open Token
 
 EXTEND Grammar
-GLOBAL: sgn_eoi;
+GLOBAL: sgn;
 
   symbol:
     [
@@ -233,21 +233,31 @@ GLOBAL: sgn_eoi;
   gLambda: [[ "FN" -> ()
          | "Λ" -> () ]];  (* Unicode capital Lambda (HTML &Lambda;) *)
 
- sgn_eoi:
+  sgn:
+    [
+      [ prag = sgn_pragma_opts; decls = sgn_eoi -> Sgn.Pragma (_loc, prag) :: decls
+      | decls = sgn_eoi -> decls
+      ]
+    ];
+
+  sgn_eoi:
    [
      [ decl = sgn_decl; decls = SELF -> decl @ decls
      | `EOI -> []
      ]
-   ]
-;
+   ];
+
+  sgn_pragma_opts:
+    [
+      [ "%opts"; opts = LIST1 [ opt = SYMBOL -> opt]; ";" -> Sgn.OptsPrag opts ]
+    ];
 
   sgn_lf_typ :
     [
       [ a = SYMBOL; ":"; tA = lf_typ ->
           Sgn.Const   (_loc, Id.mk_name (Id.SomeString a), tA)
       ]
-    ]
-;
+    ];
 
 
   sgn_comp_typ :

@@ -16,6 +16,7 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
   | UnexpectedSucess
+  | IllegalOptsPrag
 
 exception Error of Syntax.Loc.t * error
 
@@ -24,7 +25,9 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match err with
 	| UnexpectedSucess ->
-	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."))
+	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
+        | IllegalOptsPrag ->
+          Format.fprintf ppf "%%opts pragma can only appear before any declarations."))
 
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
@@ -65,6 +68,9 @@ let rec recSgnDecls = function
 
   (* %not declaration with nothing following *)
   | [Ext.Sgn.Pragma(_, Ext.Sgn.NotPrag)] -> ()
+
+  | Ext.Sgn.Pragma(loc, Ext.Sgn.OptsPrag _) :: rest ->
+    raise (Error (loc, IllegalOptsPrag))
 
   | decl :: rest ->
     recSgnDecl decl;

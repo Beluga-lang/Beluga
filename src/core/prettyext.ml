@@ -1088,7 +1088,7 @@ module Ext = struct
      | Sgn.Rec (_, lrec) ->
            (fmt_ppr_rec lvl ppf) lrec
 
-      | Sgn.Pragma (_, LF.NamePrag _) ->  ()
+      | Sgn.Pragma (_, Sgn.NamePrag _) ->  ()
 
       | Sgn.Val (_, x, _, i) ->
           fprintf ppf "let %s = %a"

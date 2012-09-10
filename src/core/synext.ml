@@ -84,10 +84,6 @@ module LF = struct
 
   and mctx = ctyp_decl ctx
 
-  and prag =
-    | NamePrag of name * string * string option
-    | NotPrag
-
 end
 
 
@@ -233,6 +229,10 @@ end
 (** External Signature Syntax *)
 module Sgn = struct
 
+  type pragma =
+    | NamePrag of name * string * string option
+    | NotPrag
+
   type decl =
     | Const    of Loc.t * name * LF.typ
     | Typ      of Loc.t * name * LF.kind
@@ -240,7 +240,7 @@ module Sgn = struct
     | CompConst of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema   of Loc.t * name * LF.schema
-    | Pragma   of Loc.t * LF.prag
+    | Pragma   of Loc.t * pragma
     | MRecTyp  of Loc.t * decl list list
     | Rec      of Loc.t * Comp.rec_fun list
     | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn

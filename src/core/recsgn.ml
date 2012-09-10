@@ -49,7 +49,7 @@ let rec freeze_from_name tau = match tau with
 let rec recSgnDecls = function
   | [] -> ()
 
-  | Ext.Sgn.Pragma(loc, Ext.LF.NotPrag) :: not'd_decl :: rest ->
+  | Ext.Sgn.Pragma(loc, Ext.Sgn.NotPrag) :: not'd_decl :: rest ->
     let not'd_decl_succeeds =
       begin
 	try
@@ -64,7 +64,7 @@ let rec recSgnDecls = function
     else recSgnDecls rest
 
   (* %not declaration with nothing following *)
-  | [Ext.Sgn.Pragma(_, Ext.LF.NotPrag)] -> ()
+  | [Ext.Sgn.Pragma(_, Ext.Sgn.NotPrag)] -> ()
 
   | decl :: rest ->
     recSgnDecl decl;
@@ -420,7 +420,7 @@ and recSgnDecl d =
       let _c'       = Logic.storeQuery name (tA', i) expected tries in
       ()
 
-    | Ext.Sgn.Pragma(loc, Ext.LF.NamePrag (typ_name, m_name, v_name)) ->
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
         begin try
           begin match v_name with
             | None ->

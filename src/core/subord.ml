@@ -16,7 +16,7 @@ module Schema = Store.Cid.Schema
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.NamedRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [28])
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28])
 
 (*
  * OVERVIEW
@@ -104,11 +104,6 @@ let dump_typesubord () =
 let null = function [] -> true
                    | _ -> false
 
-(* Apply the `normer' function with the identity substitution,
-   then call `f' on the result *)
-let normify f normer =
-  fun thing -> f (normer (thing, Substitution.LF.id))
-
 let rec separate sep f xs = match xs with
   | [] -> ""
   | [x] -> f x
@@ -179,7 +174,7 @@ and relevantSchema (Schema sch_elems) basis =
 
 *)
 
-let rec thin cD (tP, cPsi) =
+let thin cD (tP, cPsi) =
   (*inner basis cPsi = (s, cPsi')
 
      if basis is a list of type families
@@ -225,7 +220,7 @@ let rec thin cD (tP, cPsi) =
 
 
 
-let rec thin0 cD a cPsi =
+let thin0 cD a cPsi =
   (*inner basis cPsi = (s, cPsi')
 
      if basis is a list of type families
@@ -272,7 +267,7 @@ let rec thin0 cD a cPsi =
     inner [a] cPsi
 
 
-let rec thin' cD a cPsi =
+let thin' cD a cPsi =
   begin match Context.ctxVar cPsi with
   | Some (CtxName psi) ->
       begin try
@@ -283,4 +278,3 @@ let rec thin' cD a cPsi =
       end
   | _ -> thin0 cD a cPsi
   end
-

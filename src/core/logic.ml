@@ -283,10 +283,6 @@ module Index = struct
 
   open Store
 
-  type typConst = sgnClause DynArray.t  (* tC ::= sgnClause DynArray.t *)
-
-  and sgnClause = Id.cid_term * clause  (* sgnClause ::= (c, sCl)      *)
-
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
   type inst = (Id.name * LF.normal)     (* I ::= (x, MVar)             *)
@@ -330,10 +326,6 @@ module Index = struct
         expected = e ;
         tries = t ;
         instMVars = xs }
-
-  (* lookupTyp c = typConst *)
-  let lookupTyp cidTyp =
-    Hashtbl.find types cidTyp
 
   (* compileSgnClause c = (c, sCl)
      Retrieve LF.typ for term constant c, clausify it into sCl and
@@ -387,9 +379,6 @@ module Index = struct
   *)
   let iterSClauses f cidTyp =
     DynArray.iter f (Hashtbl.find types cidTyp)
-
-  let iterTypConst f =
-    Hashtbl.iter f types
 
   let iterAllSClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) types
@@ -480,14 +469,6 @@ module Printer = struct
       (typToString sCl.eVars (sCl.tHead, S.id))
       (subGoalsToString sCl.eVars (sCl.subGoals, S.id))
 
-  (* dClauseToString Psi (dCl, s) = string
-     String representation of dynamic clause.
-  *)
-  and dClauseToString cPsi (dCl, s) =
-    sprintf "%s\n%s"
-      (typToString cPsi (dCl.tHead, s))
-      (subGoalsToString cPsi (dCl.subGoals, s))
-
   let boundToString b = match b with
     | Some i -> string_of_int i
     | None -> "*"
@@ -517,8 +498,6 @@ module Printer = struct
 
   let printSignature () =
     iterAllSClauses (fun w -> printf "%s\n" (sgnClauseToString w))
-
-  let dash s = "---------- " ^ s ^ " ----------"
 
 end
 

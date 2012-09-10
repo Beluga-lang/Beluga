@@ -4,9 +4,6 @@
 
 (** Syntax for the LF and Computation languages *)
 
-open Id
-open Pragma
-
 module Loc : Camlp4.Sig.Loc with type t = Camlp4.PreCast.Loc.t = struct
   include Camlp4.PreCast.Loc
 

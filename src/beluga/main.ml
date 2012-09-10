@@ -6,7 +6,6 @@
 *)
 
 open Core
-open Sasybel
 open Printf
 
 
@@ -126,7 +125,7 @@ let process_cfg_file file_name =
   ; let dir = Filename.dirname file_name ^ "/" in
     Session (List.map (fun x -> dir ^ x) (filter_lines lines))
 
-let rec process_file_argument f =
+let process_file_argument f =
   if is_cfg f
   then process_cfg_file f
   else Session [f]
@@ -136,12 +135,6 @@ let main () =
     usage ()
   else
     let per_file file_name =
-      let rec print_sgn printer = function
-        | []            -> ()
-        | decl :: decls ->
-            printer decl;
-            print_sgn printer decls
-      in
       let abort_session () = raise SessionFatal in
       try
         let sgn =

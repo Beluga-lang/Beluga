@@ -8,7 +8,7 @@
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [5])
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5])
 
 module LF = Lfcheck
 
@@ -44,7 +44,6 @@ module Comp = struct
      *  If we keep them in Delta, we need to rewrite mctxToMSub for example;
      *)
 
-  open Context
   open Store.Cid
   open Syntax.Int.Comp
 
@@ -226,36 +225,10 @@ module Comp = struct
     | IndexObj of I.psi_hat * I.normal
     | DataObj
 
-  let rec length cD = match cD with
-    | I.Empty -> 0
-    | I.Dec(cD, _) -> 1 + length cD
-
   let rec lookup cG k = match (cG, k) with
     | (I.Dec (_cG', CTypDecl (_,  tau)), 1) -> tau
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
-
-  let rec split tc d = match (tc, d) with
-    | (tc, 0) -> tc
-    | (I.MDot (_ft, t), d) -> split t (d - 1)
-
-  (* extend t1 t2 = t
-   *
-   * Invariant:
-   * If    . |- t1 <= cD1
-   *   and . |- t2 <= cD2
-   *   and FMV(cD1) intersect FMV(cD2) = {}
-   *   (i.e. no modal variable occurring in type declarations in cD1
-   *    also occurs in a type declaration of cD2)
-   * then
-   *       . |- t1,t2 <= cD1, cD2   and t = t1,t2
-   *)
-  let extend t1 t2 =
-    let rec ext t2 = match t2 with
-      | I.MShift 0     -> t1
-      | I.MDot (ft, t) -> I.MDot (ft, ext t)
-      (* other cases should be impossible *)
-    in ext t2;;
 
   let rec checkMetaObj loc cD cM cTt = match  (cM, cTt) with
   | (MetaCtx (loc, cPsi), (MetaSchema  w, _)) ->
@@ -297,7 +270,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     end
 
 
-  let rec checkCDecl cD cdecl = match cdecl with
+  let checkCDecl cD cdecl = match cdecl with
     | I.CDecl (_, schema_cid, _ ) ->
         begin try
           let _ = Schema.get_schema schema_cid in ()

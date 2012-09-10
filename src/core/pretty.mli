@@ -67,6 +67,7 @@ module Int : sig
     val ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> LF.typ_rec -> unit
     val ppr_lf_typ        : LF.mctx -> LF.dctx -> LF.typ     -> unit
     val ppr_lf_normal     : LF.mctx -> LF.dctx -> LF.normal  -> unit
+    val ppr_lf_tuple      : LF.mctx -> LF.dctx -> LF.tuple   -> unit
     val ppr_lf_head       : LF.mctx -> LF.dctx -> LF.head    -> unit
     val ppr_lf_spine      : LF.mctx -> LF.dctx -> LF.spine   -> unit
     val ppr_lf_sub        : LF.mctx -> LF.dctx -> LF.sub     -> unit

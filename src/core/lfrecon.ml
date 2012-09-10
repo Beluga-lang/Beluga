@@ -115,7 +115,7 @@ type reconType = Pibox | Pi
 exception NotPatSpine
 
 (* ******************************************************************* *)
-let rec mkShift recT cPsi = match recT with
+let mkShift recT cPsi = match recT with
   | Pibox ->
       Int.LF.Shift (Int.LF.NoCtxShift, 0)
 
@@ -160,7 +160,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
 
 
 (* ******************************************************************* *)
-let rec pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
+let pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
   if Substitution.LF.isId ss then
     Whnf.normTyp sA
   else
@@ -169,7 +169,7 @@ let rec pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
     with _ -> raise (Error (locOpt, PruningFailed))
     end
 
-let rec unify_phat cD psihat phihat =
+let unify_phat cD psihat phihat =
   match phihat with
     | (Some (Int.LF.CInst (_, ({contents = None} as cref), s_cid, _, _ )), d) ->
         begin match psihat with
@@ -200,7 +200,7 @@ let rec unify_phat cD psihat phihat =
 
 (* ******************************************************************* *)
 
-let rec getSchema cD ctxvar  = match ctxvar with
+let getSchema cD ctxvar  = match ctxvar with
   | Some ((Int.LF.CtxOffset offset ) as phi) ->
       Schema.get_schema (Context.lookupCtxVarSchema cD  phi)
   | Some (Int.LF.CtxName n) ->
@@ -227,17 +227,17 @@ let rec getSchema cD ctxvar  = match ctxvar with
        (k'-1, Apx.LF.Dot(Apx.LF.Head(Apx.LF.BVar(k')),s'))
   end
 
-  let rec etaExpandFMV  loc (Apx.LF.FMVar (x, s)) tA =
+  let etaExpandFMV  loc (Apx.LF.FMVar (x, s)) tA =
     let ( _ , s') = etaExpSub 0 s tA  in
       addPrefix loc (Apx.LF.Root(loc, Apx.LF.FMVar(x, s'), Apx.LF.Nil)) tA
 
-  let rec etaExpandMV loc (Apx.LF.MVar (x,s)) tA =
+  let etaExpandMV loc (Apx.LF.MVar (x,s)) tA =
     let ( _ , s') = etaExpSub 0 s tA  in
       addPrefix loc (Apx.LF.Root(loc, Apx.LF.MVar(x, s'), Apx.LF.Nil)) tA
 
 
 (* Eta-expansion of bound variables which have function type *)
-let rec etaExpandHead loc h tA =
+let etaExpandHead loc h tA =
   let rec etaExpSpine k tS tA = begin match  tA with
     | Int.LF.Atom _  -> (k, tS)
 
@@ -262,7 +262,7 @@ let rec etaExpandHead loc h tA =
 
 
 
-let rec etaExpandApxHead loc h tA =
+let etaExpandApxHead loc h tA =
   let rec etaExpApxSpine k tS tA = begin match  tA with
     | Int.LF.Atom _  -> (k, tS)
 
@@ -285,7 +285,7 @@ let rec etaExpandApxHead loc h tA =
     etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS'), tA)
 
 
-let rec etaExpandApxTerm  loc h tS tA =
+let etaExpandApxTerm  loc h tS tA =
   let rec etaExpApxSpine k tS tA = begin match  tA with
     | Int.LF.Atom _  -> (k, tS)
 
@@ -1852,7 +1852,7 @@ and elSpineSynth recT cD cPsi spine s' sP = match (spine, sP) with
    (* other cases impossible *)
 
 
-let rec elCtxVar c_var = match c_var with
+let elCtxVar c_var = match c_var with
   | Apx.LF.CtxOffset offset  -> Int.LF.CtxOffset offset
   | Apx.LF.CtxName psi       -> Int.LF.CtxName psi
 

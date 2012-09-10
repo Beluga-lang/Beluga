@@ -48,10 +48,9 @@ let _ = Error.register_printer
         "Expected datatype" Format.pp_print_string a.string_of_name
         "Actual datatype"   Format.pp_print_string a'.string_of_name))
 
-let rec last l = begin match List.rev l with
+let last l = match List.rev l with
   | [] -> None
   | h::t -> Some (h, t)
-end
 
 type kind_or_typ =
   | Kind of LF.kind

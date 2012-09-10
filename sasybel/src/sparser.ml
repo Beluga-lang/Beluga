@@ -1,8 +1,6 @@
 (* sasy parser trying to fix turnstyle problems *)
 #load "pa_extend.cmo";;
 
-open Core
-open Syntax
 open Stoken
 open Ast
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Slexer)

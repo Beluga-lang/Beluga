@@ -12,7 +12,7 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
   | UnexpectedSucess
@@ -40,7 +40,7 @@ let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
 
-let rec freeze_from_name tau = match tau with
+let freeze_from_name tau = match tau with
   |Ext.Sgn.Typ ( _, n, _) ->  let a = Typ.index_of_name n in
                                Typ.freeze a;
                                ()

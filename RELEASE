@@ -39,8 +39,10 @@ cp -a \
     INSTALL \
     OMakefile \
     OMakeroot \
-    README \
-    STYLE \
+    AUTHORS \
+    COPYRIGHT \
+    LICENSE \
+    VERSION \
     $release
 
 mkdir $release/bin

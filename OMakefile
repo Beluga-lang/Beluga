@@ -45,8 +45,9 @@ mkdir -p .build/beluga
 mkdir -p .build/beli
 
 if $(not $(RELEASE))
-    vmount(-l, sasybel/src, .build/sasybel)
-    mkdir -p .build/sasybel
+  vmount(-l, sasybel/src, .build/sasybel)
+  mkdir -p .build/sasybel
+  export
 
 # Include the fake .build subdirectory
 .SUBDIRS: .build $(if $(not $(RELEASE)), .build/sasybel)

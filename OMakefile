@@ -44,11 +44,12 @@ mkdir -p .build/core
 mkdir -p .build/beluga
 mkdir -p .build/beli
 
-vmount(-l, sasybel/src, .build/sasybel)
-mkdir -p .build/sasybel
+if $(not $(RELEASE))
+    vmount(-l, sasybel/src, .build/sasybel)
+    mkdir -p .build/sasybel
 
 # Include the fake .build subdirectory
-.SUBDIRS: .build .build/sasybel
+.SUBDIRS: .build $(if $(not $(RELEASE)), .build/sasybel)
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin

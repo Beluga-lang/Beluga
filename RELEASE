@@ -86,7 +86,7 @@ omake clean
 omake || ( echo 'omake failed; aborting release' ; exit 1 )
 
 echo 'Running TEST (bytecode)'
-./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
+./TEST --examples || ( echo 'TEST failed; aborting release' ; exit 1 )
 
 echo 'Building (native) in-tree first, for testing'
 omake clean
@@ -94,7 +94,7 @@ omake NATIVE_ENABLED=true clean
 omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
 
 echo 'Running TEST (native)'
-./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
+./TEST --examples || ( echo 'TEST failed; aborting release' ; exit 1 )
 
 cd $release-sandbox
 

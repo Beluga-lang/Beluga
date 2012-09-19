@@ -20,7 +20,7 @@ echo
 cat VERSION || ( echo "VERSION file doesn't exist; aborting release" ; exit 1 )
 echo
 
-release=./beluga-"`cat VERSION`"-"`date +%Y%m%d`"
+release=./beluga-`cat VERSION`
 
 echo 'Release directory name is:'
 echo

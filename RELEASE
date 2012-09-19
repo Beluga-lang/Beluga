@@ -2,17 +2,17 @@
 
 set -e
 
-suppress=NO
+bailout=NO
 
-git status 2> /dev/null \
-    |  egrep 'Changes not staged for commit|Changes to be committed' > /dev/null \
-    && suppress=SUPPRESS
+git status --porcelain | grep "" && bailout=YES
 
-if [ $suppress = SUPPRESS ]; then
+if [ $bailout = YES ]; then
     echo
-    echo '`git status'"'"' reports changed files.'
-    echo 'This script will continue, but will not build a final .tar.gz file.'
+    echo 'git status reports a working tree that is not pristine.'
+    echo 'Please run this release script in a clean directory, such as after'
     echo
+    echo '$ git clone'
+    exit 1
 fi
 
 echo 'Version number is:'
@@ -108,11 +108,6 @@ omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; ex
 
 cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further'
-
-if [ $suppress = SUPPRESS ]; then
-    echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'
-    exit 3
-fi
 
 sleep 1
 echo 'Building archive' $release.tar.gz

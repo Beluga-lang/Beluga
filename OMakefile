@@ -20,8 +20,8 @@ OCAMLPACKS[] =
 
 # DEBUG = true
 
-OCAMLFLAGS = $(if $(DEBUG), -w Ae  -warn-error Ap \
-                          , -w Aep -warn-error A-37)
+OCAMLFLAGS += $(if $(DEBUG), -w Ae  -warn-error Ap-37 \
+                           , -w Aep -warn-error A-37)
 
 # 3. Debugging information in byte-compiled code (-g)  (It is never useful to turn this off. -jd)
 OCAMLFLAGS += -g

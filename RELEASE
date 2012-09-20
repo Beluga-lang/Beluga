@@ -34,7 +34,7 @@ fi
 
 mkdir $release
 
-echo 'Copying files in root'
+echo 'Copying files in root ...'
 cp -a \
     INSTALL \
     OMakefile \
@@ -47,17 +47,17 @@ cp -a \
 
 mkdir $release/bin
 
-echo 'Copying src'
+echo 'Copying src ...'
 cp -a \
     src \
     $release
 
-echo 'Copying tools'
+echo 'Copying tools ...'
 cp -a \
     tools \
     $release
 
-echo 'Copying examples'
+echo 'Copying examples ...'
 cp -a \
     examples \
     $release
@@ -72,7 +72,7 @@ rm -rf $useless
 echo rm -rf examples/{notworking,cfg,beluga}
 rm -rf examples/{notworking,cfg,beluga}
 
-echo "Copying $release to $release-sandbox"
+echo "Copying $release to $release-sandbox ..."
 cd ..
 if [ -e $release-sandbox ]; then
     echo Release sandbox directory "$release-sandbox" already exists.
@@ -80,37 +80,37 @@ if [ -e $release-sandbox ]; then
 fi
 cp -a $release $release-sandbox
 
-echo 'Building (bytecode) in-tree first, for testing'
+echo 'Building (bytecode) in-tree first, for testing ...'
 omake clean
-omake || ( echo 'omake failed; aborting release' ; exit 1 )
+omake || ( echo 'omake failed; aborting release.' ; exit 1 )
 
-echo 'Running TEST (bytecode)'
-./TEST --examples || ( echo 'TEST failed; aborting release' ; exit 1 )
+echo 'Running TEST (bytecode) ...'
+./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
 
-echo 'Building (native) in-tree first, for testing'
+echo 'Building (native) in-tree first, for testing ...'
 omake clean
 omake NATIVE_ENABLED=true clean
-omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
+omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release.' ; exit 1 )
 
-echo 'Running TEST (native)'
-./TEST --examples || ( echo 'TEST failed; aborting release' ; exit 1 )
+echo 'Running TEST (native) ...'
+./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
 
 cd $release-sandbox
 
-echo 'Building (bytecode) in release directory'
-omake RELEASE=true || ( echo 'omake failed; aborting release' ; exit 1 )
+echo 'Building (bytecode) in release directory ...'
+omake RELEASE=true || ( echo 'omake failed; aborting release.' ; exit 1 )
 
-echo 'Building (native) in release directory'
+echo 'Building (native) in release directory ...'
 omake RELEASE=true clean
 omake RELEASE=true NATIVE_ENABLED=true clean
-omake RELEASE=true NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
+omake RELEASE=true NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release.' ; exit 1 )
 
 cd ..
-echo 'Leaving '$release-sandbox' around if you want to test further'
+echo 'Leaving '$release-sandbox' around if you want to test further.'
 
 sleep 1
 echo 'Building archive' $release.tar.gz
-tar zcf $release.tar.gz $release || ( echo 'tar failed' ; exit 1 )
+tar zcf $release.tar.gz $release || ( echo 'tar failed.' ; exit 1 )
 echo
 ls -l $release.tar.gz
 echo

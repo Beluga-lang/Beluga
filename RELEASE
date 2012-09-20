@@ -57,10 +57,9 @@ cp -a \
     tools \
     $release
 
-echo 'Copying examples examples-twelf'
+echo 'Copying examples'
 cp -a \
     examples \
-    examples-twelf \
     $release
 
 cd $release

@@ -95,9 +95,6 @@ exception SessionFatal
 let is_cfg file_name =
   Filename.check_suffix file_name ".cfg"
 
-let is_sasy file_name =
-  Filename.check_suffix file_name ".sbel"
-
 let rec accum_lines input =
   try
     let res = input_line input in res :: accum_lines input
@@ -137,14 +134,7 @@ let main () =
     let per_file file_name =
       let abort_session () = raise SessionFatal in
       try
-        let sgn =
-          if is_sasy file_name
-          then begin
-            let sasy_sgn = Sasybel.Sparser.parse_file ~name:file_name Sasybel.Sparser.section_eoi in
-            if !Debug.chatter != 0 then
-              printf "\n## Sasybel translation: %s ##\n" file_name;
-            Sasybel.Transform.sectionDecls sasy_sgn
-          end else Parser.parse_file ~name:file_name Parser.sgn in
+        let sgn = Parser.parse_file ~name:file_name Parser.sgn in
         (* If the file starts with an %opts pragma then process it now. *)
         let sgn = match sgn with
           | Synext.Sgn.Pragma (_, Synext.Sgn.OptsPrag opts) :: sgn ->

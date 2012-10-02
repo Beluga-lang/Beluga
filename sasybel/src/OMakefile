@@ -5,13 +5,20 @@ OCAMLINCLUDES += +camlp4 ../core
 OCAML_LIBS[] +=
         camlp4lib
         ../core/beluga-core
-        ../sasybel/sasybel
 
 # Declare the name of the program
 PROGRAM = sasybel
 
 # Declare the files the program is built from
-FILES[] = main
+FILES[] =
+        main
+        ast
+        slexer
+        sparser
+        stoken
+        transform
+
+OCAMLFLAGS += -w z
 
 # Declare some phony empty targets so omake doesn't try to build
 # camlp4lib. May be a more elegant way to do this.

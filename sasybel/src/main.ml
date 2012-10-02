@@ -140,10 +140,10 @@ let main () =
         let sgn =
           if is_sasy file_name
           then begin
-            let sasy_sgn = Sasybel.Sparser.parse_file ~name:file_name Sasybel.Sparser.section_eoi in
+            let sasy_sgn = Sparser.parse_file ~name:file_name Sparser.section_eoi in
             if !Debug.chatter != 0 then
               printf "\n## Sasybel translation: %s ##\n" file_name;
-            Sasybel.Transform.sectionDecls sasy_sgn
+            Transform.sectionDecls sasy_sgn
           end else Parser.parse_file ~name:file_name Parser.sgn in
         (* If the file starts with an %opts pragma then process it now. *)
         let sgn = match sgn with

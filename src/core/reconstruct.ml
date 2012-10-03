@@ -1491,7 +1491,7 @@ and elExp' cD cG i = match i with
               dprint (fun () -> "[elExp] MAnnApp Reconstructed (partially): " ^
                 P.expSynToString cD cG i_norm ^ "\n");
               let cPsi' = Whnf.normDCtx cPsi' in
-              let psihat' = Context.dctxToHat cPsi'  in
+
               let _   = dprint (fun () -> "[elTerm] for m against type (BEFORE): " ^
                 P.dctxToString cD cPsi' ^ " \n  |- \n  " ^
                 P.typToString cD cPsi' (C.cnormTyp (tP, theta), LF.id)) in
@@ -1499,6 +1499,7 @@ and elExp' cD cG i = match i with
               let _   = dprint (fun () -> "[elTerm] for m against type (AFTER): " ^
                 P.dctxToString cD cPsi' ^ " \n  |- \n " ^
                 P.typToString cD cPsi' (C.cnormTyp (tP, theta), LF.id)) in
+              let psihat' = Context.dctxToHat (Whnf.normDCtx cPsi')  in
               let i = Int.Comp.Apply (loc, i_norm,
                                       Int.Comp.Box(loc, psihat', tM')) in
               dprint (fun () -> "[elExp] MAnnApp Reconstructed: " ^

@@ -8,8 +8,6 @@ open Syntax.Int.LF
 
 module LF = struct
 
-  let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [13])
-
   exception Error of string
   exception NotComposable of string
 

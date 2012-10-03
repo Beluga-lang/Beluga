@@ -15,7 +15,7 @@ module Comp = Int.Comp
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [3])
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [3])
 
 type varvariant =
     VariantFV | VariantFCV | VariantMMV | VariantMPV
@@ -129,8 +129,6 @@ let _ = Error.register_printer
 
 
 *)
-
-type occurrence = Yes | No | Cycle
 
 (* marker will indicate whether the type of the variable is already clean,
    i.e. the meta-variables and free variables occurring the type had been
@@ -287,16 +285,6 @@ let printCollection s =
   (print_string "Print Collection of contextual variables:\n";
    print_string (collectionToString s) )
 
-
-
-(* exists p cQ = B
-   where B iff cQ = cQ1, Y, cQ2  s.t. p(Y)  holds
-
-*)
-let rec exists p = function
-  | I.Empty        -> false
-  | I.Dec(cQ', y)  -> p y || exists p cQ'
-
 (* checkOccurrence p cQ = result
 
    If the first occurrence of Y in cQ s.t. p(Y) = Some Pure, then Yes
@@ -339,7 +327,7 @@ let rec lengthCollection cQ = match cQ with
 
 
 (* Eta-expansion of bound variables which have function type *)
-let rec etaExpandHead loc h tA =
+let etaExpandHead loc h tA =
   let rec etaExpSpine k tS tA = begin match  tA with
     | I.Atom _  -> (k, tS)
 
@@ -367,7 +355,7 @@ let rec etaExpandHead loc h tA =
 (* eqMMVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
-let rec eqMMVar mmV1 mmV2 = match (mmV1, mmV2) with
+let eqMMVar mmV1 mmV2 = match (mmV1, mmV2) with
   | (I.MMVar (I.MInst (_, r1, _, _, _, _), _s) , MMV (marker , I.MMVar (I.MInst (_, r2, _, _, _, _), _s'))) ->
       if r1 == r2 then
         match marker with Pure -> Yes  | Impure -> Cycle
@@ -378,7 +366,7 @@ let rec eqMMVar mmV1 mmV2 = match (mmV1, mmV2) with
 (* eqMPVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
-let rec eqMPVar mmV1 mmV2 = match (mmV1, mmV2) with
+let eqMPVar mmV1 mmV2 = match (mmV1, mmV2) with
   | (I.MPVar (I.MPInst (_, r1, _, _, _, _), _s) , MPV (marker , I.MPVar (I.MPInst (_, r2, _, _, _, _), _s'))) ->
       if r1 == r2 then
         match marker with Pure -> Yes  | Impure -> Cycle
@@ -390,7 +378,7 @@ let rec eqMPVar mmV1 mmV2 = match (mmV1, mmV2) with
 (* eqMVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
-let rec eqMVar mV1 mV2 = match (mV1, mV2) with
+let eqMVar mV1 mV2 = match (mV1, mV2) with
   | (I.MVar (I.Inst (_, r1, _, _, _), _s) , MV (marker , I.MVar (I.Inst (_, r2, _, _, _), _s'))) ->
        if r1 == r2 then
          match marker with Pure -> Yes | Impure -> Cycle
@@ -403,7 +391,7 @@ let rec eqMVar mV1 mV2 = match (mV1, mV2) with
 (* eqPVar mV mV' = B
    where B iff mV and mV' represent same variable
 *)
-let rec eqPVar mV1 mV2 = match (mV1, mV2) with
+let eqPVar mV1 mV2 = match (mV1, mV2) with
   | (I.PVar (I.PInst (_, r1, _, _, _), _s) , PV (marker , I.PVar (I.PInst (_, r2, _, _, _), _s'))) ->
        if r1 == r2 then
          match marker with Pure -> Yes | Impure -> Cycle
@@ -414,7 +402,7 @@ let rec eqPVar mV1 mV2 = match (mV1, mV2) with
 (* eqFVar n fV' = B
    where B iff n and fV' represent same variable
 *)
-let rec eqFVar n1 fV2 = match (n1, fV2) with
+let eqFVar n1 fV2 = match (n1, fV2) with
   | (n1 ,  FV (marker, n2, _)) ->
       if n1 = n2 then
         match marker with Pure -> Yes | Impure -> Cycle
@@ -425,7 +413,7 @@ let rec eqFVar n1 fV2 = match (n1, fV2) with
 (* eqFMVar n fV' = B
    where B iff n and fV' represent same variable
 *)
-let rec eqFMVar n1 fV2 = match (n1, fV2) with
+let eqFMVar n1 fV2 = match (n1, fV2) with
   | (n1 ,  FMV (marker, n2, _)) ->
       if n1 = n2 then
         match marker with Pure -> Yes | Impure -> Cycle
@@ -437,7 +425,7 @@ let rec eqFMVar n1 fV2 = match (n1, fV2) with
 (* eqFCVar n fV' = B
    where B iff n and fV' represent same variable
 *)
-let rec eqFCVar n1 fV2 = match (n1, fV2) with
+let eqFCVar n1 fV2 = match (n1, fV2) with
   | (n1 ,  FCV (n2, _)) ->
       if n1 = n2 then
          Yes
@@ -449,7 +437,7 @@ let rec eqFCVar n1 fV2 = match (n1, fV2) with
 (* eqCVar n fV' = B
    where B iff n and fV' represent same variable
 *)
-let rec eqCVar n1 fV2 = match (n1, fV2) with
+let eqCVar n1 fV2 = match (n1, fV2) with
   | (I.CInst (_, r, _, _, _theta ) ,  CV (I.CtxVar (I.CInst (_, r_psi, _, _, _theta' )))) ->
       if r == r_psi then
          Yes
@@ -460,7 +448,7 @@ let rec eqCVar n1 fV2 = match (n1, fV2) with
 (* eqFPVar n fV' = B
    where B iff n and fV' represent same variable
 *)
-let rec eqFPVar n1 fV2 = match (n1, fV2) with
+let eqFPVar n1 fV2 = match (n1, fV2) with
   | (n1 ,  FPV (marker, n2, _ )) ->
       if n1 = n2 then
         match marker with Pure -> Yes | Impure -> Cycle
@@ -468,12 +456,6 @@ let rec eqFPVar n1 fV2 = match (n1, fV2) with
         No
   | _ -> No
 
-
-let rec phatToDCtx phat = match phat with
-  | (None,      0) -> I.Null
-  | (Some psi , 0) -> I.CtxVar psi
-  | (ctx_v    , k) ->
-      I.DDec (phatToDCtx (ctx_v, k-1), I.TypDeclOpt (Id.mk_name Id.NoName))
 
 let rec constraints_solved cnstr = match cnstr with
   | [] -> true
@@ -568,13 +550,6 @@ and cnstr_typ_decl st_decl = match st_decl with
 and cnstr_typ_rec (t_rec, s) = match t_rec with
   | I.SigmaLast tA -> cnstr_typ (tA, s)
   | I.SigmaElem (_, tA, t_rec) -> cnstr_typ (tA, s) && cnstr_typ_rec (t_rec, s)
-
-let rec index_of_pat_var cG x = match cG with
-  | I.Empty ->
-      raise (Error.Violation "index_of for a free variable does not exist -- should be impossible")
-  | I.Dec (cG, Comp.CTypDecl (y, _ )) ->
-      if x = y then 1
-      else (index_of_pat_var cG x) + 1
 
 (* index_of cQ n = i
    where cQ = cQ1, Y, cQ2 s.t. n = Y and length cQ2 = i
@@ -1773,7 +1748,7 @@ and abstrTyp tA =
 (* *********************************************************************** *)
 (* Abstract over computations *)
 (* *********************************************************************** *)
-let rec collectCDecl p cQ cdecl = match cdecl with
+let collectCDecl p cQ cdecl = match cdecl with
   | I.MDecl (u, tA, cPsi) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
@@ -2069,7 +2044,7 @@ and collectBranches cQ branches = match branches with
         (cQ2, b'::branches')
 
 
-let rec abstractMVarCdecl cQ offset cdecl = match cdecl with
+let abstractMVarCdecl cQ offset cdecl = match cdecl with
   | I.MDecl (u, tA, cPsi) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
@@ -2297,22 +2272,7 @@ let raiseCompKind cD cK =
   in
     raisePiBox cD cK
 
-
-let raiseExp cD e =
-  let rec roll e = match e with
-    | Comp.CtxFun (loc, psi, e) ->
-        Comp.CtxFun (loc, psi, roll e)
-    | e -> raiseMLam cD e
-
-  and raiseMLam cD e = match cD with
-    | I.Empty -> e
-    | I.Dec(cD , (I.MDecl(u, _cPsi, _tA), _ )) ->
-        raiseMLam cD (Comp.MLam (Syntax.Loc.ghost, Id.mk_name (Id.SomeName u), e))
-  in
-    roll e
-
-
-let rec abstrCompKind cK =
+let abstrCompKind cK =
   let rec roll cK cQ = match cK with
     | Comp.PiKind (_, (I.CDecl(psi, w, _), Comp.Explicit ), cK) ->
         roll cK (I.Dec(cQ, CtxV (psi,w, Comp.Explicit)))
@@ -2332,7 +2292,7 @@ let rec abstrCompKind cK =
   let cK2 = raiseCompKind cD' cK' in
     (cK2, Context.length cD')
 
-let rec abstrCompTyp tau =
+let abstrCompTyp tau =
   let rec roll tau cQ = match tau with
     | Comp.TypCtxPi ((_psi, _w, _ ) as ctx_decl, tau) ->
         roll tau (I.Dec(cQ, CtxV (ctx_decl)))
@@ -2353,7 +2313,7 @@ let rec abstrCompTyp tau =
 
 
 
-let rec abstrPatObj cD cG pat tau =
+let abstrPatObj cD cG pat tau =
   let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
   let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
   let (cQ1, cD1') = collectMctx I.Empty cD in
@@ -2374,7 +2334,7 @@ let rec abstrPatObj cD cG pat tau =
    2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA
 
 *)
-let rec abstrPattern cD1 cPsi1  (phat, tM) tA =
+let abstrPattern cD1 cPsi1  (phat, tM) tA =
   let (cQ, cD1', cPsi1', (phat, tM'), tA')  = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in
   let cQ'     = abstractMVarCtx cQ 0 in
   let offset  = Context.length cD1' in
@@ -2395,7 +2355,7 @@ let rec abstrPattern cD1 cPsi1  (phat, tM) tA =
    2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA
 
 *)
-let rec abstrSubPattern cD1 cPsi1  sigma cPhi1 =
+let abstrSubPattern cD1 cPsi1  sigma cPhi1 =
   let (cQ, cD1', cPsi1', sigma', cPhi1')  = collectSubPattern I.Empty cD1 cPsi1 sigma cPhi1 in
   let cQ'      = abstractMVarCtx cQ 0 in
   let offset   = Context.length cD1' in
@@ -2409,7 +2369,7 @@ let rec abstrSubPattern cD1 cPsi1  sigma cPhi1 =
 
 
 
-let rec abstrExp e =
+let abstrExp e =
   let (cQ, e')    = collectExp I.Empty e in
     begin match cQ with
         I.Empty -> e'
@@ -2425,7 +2385,7 @@ let rec appDCtx cPsi1 cPsi2 = match cPsi2 with
       let cPsi1' = appDCtx cPsi1 cPsi2' in
         I.Dec (cPsi1', dec)
 
-let rec abstrSchema (I.Schema elements) =
+let abstrSchema (I.Schema elements) =
   let rec abstrElems elements = match elements with
     | [] -> []
     | Int.LF.SchElem (cPsi, trec) ::els ->
@@ -2445,11 +2405,9 @@ let rec abstrSchema (I.Schema elements) =
   in
     I.Schema (abstrElems elements)
 
-let rec printFreeMVars phat tM =
+let printFreeMVars phat tM =
   let (cQ, _ ) = collectTerm 0 I.Empty  phat (tM, LF.id) in
     printCollection cQ
-
-let collectTerm' (phat, tM ) = collectTerm 0 I.Empty  phat (tM, LF.id)
 
 let rec fvarInCollection cQ = begin match cQ with
   | I.Empty -> false

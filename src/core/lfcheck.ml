@@ -6,7 +6,6 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [5])
 open Context
 open Store.Cid
 open Syntax.Int.LF
-open Syntax.Int
 
 module Print = Pretty.Int.DefaultPrinter
 

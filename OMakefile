@@ -20,8 +20,10 @@ OCAMLPACKS[] =
 
 # DEBUG = true
 
-OCAMLFLAGS = $(if $(DEBUG), -w Ae  -warn-error Ap \
-                          , -w Aep -warn-error A)
+OCAMLFLAGS += $(if $(DEBUG), -w Ae  -warn-error Ap-37 \
+                           , -w Aep -warn-error A-37)
+
+OCAMLFLAGS += $(if $(RELEASE), -warn-error a)
 
 # 3. Debugging information in byte-compiled code (-g)  (It is never useful to turn this off. -jd)
 OCAMLFLAGS += -g
@@ -42,16 +44,21 @@ mkdir -p .build/core
 mkdir -p .build/beluga
 mkdir -p .build/beli
 
-vmount(-l, sasybel/src, .build/sasybel)
-mkdir -p .build/sasybel
+if $(not $(RELEASE))
+  vmount(-l, sasybel/src, .build/sasybel)
+  mkdir -p .build/sasybel
+  export
 
 # Include the fake .build subdirectory
-.SUBDIRS: .build .build/sasybel
+.SUBDIRS: .build $(if $(not $(RELEASE)), .build/sasybel)
 
 .DEFAULT: .PHONY/src/.DEFAULT :effects: build
         mkdir -p bin
         ln-or-cp .build/beluga/beluga.$(if $(NATIVE_ENABLED), opt, run) bin/beluga
         ln-or-cp .build/beli/beli.$(if $(NATIVE_ENABLED), opt, run) bin/beli
+        if $(not $(RELEASE))
+          ln-or-cp .build/sasybel/sasybel.$(if $(NATIVE_ENABLED), opt, run) bin/sasybel
+          export
 
 clean: .PHONY/src/clean
         rm $(filter-proper-targets $(ls R, .))

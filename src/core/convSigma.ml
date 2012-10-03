@@ -10,7 +10,8 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [7])
+
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [7])
 
 let rec conv_listToString clist = match clist with
   | [] -> " "
@@ -206,7 +207,7 @@ and flattenDCtx' cD cPsi = match cPsi with
             s   :        ^1, b.1 , b.2
 
 *)
-let rec gen_conv_sub conv_list  =
+let gen_conv_sub conv_list  =
   let l = List.length conv_list in
   let rec gen_sub conv_list pos = match conv_list with
     | [] -> Int.LF.Shift (Int.LF.NoCtxShift, l)
@@ -227,5 +228,3 @@ let rec gen_conv_sub conv_list  =
 
   in
     gen_sub conv_list 1
-
-

@@ -108,13 +108,6 @@ module Make (T : TRAIL) : UNIFY = struct
 
   (* Matching not fully implemented yet -bp *)
 
-  let rec phatToDCtx phat = match phat with
-    | (None,      0) -> Null
-    | (Some psi , 0) -> CtxVar psi
-    | (ctx_v    , k) ->
-        DDec (phatToDCtx (ctx_v, k-1), TypDeclOpt (Id.mk_name Id.NoName))
-
-
   type cvarRef =
     | MMVarRef of normal option ref
     | MPVarRef of normal option ref
@@ -126,15 +119,6 @@ module Make (T : TRAIL) : UNIFY = struct
     | (MVarRef r, MVarRef r') -> r == r'
     | (PVarRef r, PVarRef r') -> r == r'
     | (_, _)                  -> false
-
-  let rec raiseType cPsi tA = match cPsi with
-    | Null -> tA
-    | DDec (cPsi', decl) ->
-        raiseType cPsi' (PiTyp ((decl, Maybe), tA))
-
-  let rec emptySpine tS = match tS with
-    | Nil -> true
-    | SClo(tS, _s) -> emptySpine tS
 
   (* isPatSub s = B
 
@@ -255,27 +239,27 @@ module Make (T : TRAIL) : UNIFY = struct
 
   let globalTrail : action T.t = T.trail()
 
-  let rec undo action = (dprint (fun () -> "Call to UNDO\n") ; match action with
+  let undo action = (dprint (fun () -> "Call to UNDO\n") ; match action with
     | InstNormal refM         -> refM   := None
     | InstHead   refH         -> refH   := None
     | Add cnstrs              -> cnstrs := List.tl !cnstrs
     | Solve (cnstr, constrnt) -> cnstr  := constrnt)
 
-  let rec reset  () = T.reset globalTrail
+  let reset  () = T.reset globalTrail
 
-  let rec mark   () = T.mark globalTrail
+  let mark   () = T.mark globalTrail
 
-  let rec unwind () = T.unwind globalTrail undo
+  let unwind () = T.unwind globalTrail undo
 
 
-  let rec solveConstraint ({contents=constrnt} as cnstr) =
+  let solveConstraint ({contents=constrnt} as cnstr) =
     cnstr := Queued;
     T.log globalTrail (Solve (cnstr, constrnt))
 
   (* trail a function;
      if the function raises an exception,
        backtrack and propagate the exception  *)
-  let rec trail f =
+  let trail f =
     let _ = mark  () in
       try f () with e -> (unwind (); raise e)
 
@@ -287,7 +271,7 @@ module Make (T : TRAIL) : UNIFY = struct
   let resetDelayedCnstrs () = delayedCnstrs := []
   let resetGlobalCnstrs () = globalCnstrs := []
 
-  let rec addConstraint (cnstrs, cnstr) =
+  let addConstraint (cnstrs, cnstr) =
   (begin match cnstr with
     | {contents= (Eqn (cD0, cPsi, tM, tN))} ->
         dprint (fun () -> "Add constraint: " ^ P.normalToString cD0 cPsi (tM, id)  ^
@@ -297,19 +281,19 @@ module Make (T : TRAIL) : UNIFY = struct
    T.log globalTrail (Add cnstrs))
 
 
-  let rec nextCnstr () = match !delayedCnstrs with
+  let nextCnstr () = match !delayedCnstrs with
     | []              -> None
     | cnstr :: cnstrL ->
         delayedCnstrs := cnstrL;
         Some cnstr
 
 
-  let rec instantiateCtxVar (ctx_ref, cPsi) =
+  let instantiateCtxVar (ctx_ref, cPsi) =
     ctx_ref := Some cPsi;
     T.log globalTrail (InstCtx ctx_ref)
 
 
-  let rec instantiatePVar (q, head, cnstrL) =
+  let instantiatePVar (q, head, cnstrL) =
     q := Some head;
     (* screen screenUndefsHead head; *)
     T.log globalTrail (InstHead q);
@@ -317,7 +301,7 @@ module Make (T : TRAIL) : UNIFY = struct
     globalCnstrs := cnstrL @ !globalCnstrs
 
 
-  let rec instantiateMVar (u, tM, cnstrL) =
+  let instantiateMVar (u, tM, cnstrL) =
      u := Some (Whnf.norm (tM, id));
 (*    screen screenUndefs tM;
     u := Some tM; *)
@@ -325,13 +309,13 @@ module Make (T : TRAIL) : UNIFY = struct
     delayedCnstrs := cnstrL @ !delayedCnstrs;
     globalCnstrs := cnstrL @ !globalCnstrs
 
-  let rec instantiateMMVar (u, tM, cnstrL) =
+  let instantiateMMVar (u, tM, cnstrL) =
     u := Some tM;
     T.log globalTrail (InstNormal u);
     delayedCnstrs := cnstrL @ !delayedCnstrs;
     globalCnstrs := cnstrL @ !globalCnstrs
 
-  let rec instantiateMPVar (p, head, cnstrL) =
+  let instantiateMPVar (p, head, cnstrL) =
     p := Some head;
     T.log globalTrail (InstHead p);
     delayedCnstrs := cnstrL @ !delayedCnstrs;
@@ -1540,67 +1524,6 @@ module Make (T : TRAIL) : UNIFY = struct
        let (s1', cPsi1') = pruneSub' cD0 cPsi phat (t, cPsi1) ss rOccur in
          (comp s1' shift, cPsi1')
 
-
-  (* pruneMSub cD0 (t, cD1) mtt rOccur = (t', cD')
-
-     if cD0   |- t   <= cD1
-        cD''  |- mtt <= cD0
-     then cD1 |- t' <= cD1'
-          t' = [mtt]t   if it exists, and
-         cD'' |- [mtt]t <= cD1'
-   *)
-
-  and pruneMSub cD0 (t, cD1) mtt rOccur = match (t, cD1) with
-    | (MShift n, Dec(_cD', _dec)) ->
-        pruneMSub cD0 (MDot (MV (n + 1), MShift (n + 1)), cD1) mtt rOccur
-
-    | (MShift _n, Empty) -> (Whnf.m_id, Empty)
-
-    | (MDot (MV n, t'), Dec(cD', MDecl(x, tA, cPsi))) ->
-        begin match applyMSub n mtt with
-          | MUndef ->
-              let (t1', cD1') = pruneMSub cD0 (t', cD') mtt rOccur  in
-                (Whnf.mcomp t1' (MShift 1), cD1')
-
-           | MV _n ->
-              let (t1', cD1') = pruneMSub cD0 (t', cD') mtt rOccur in
-              let t1_i = Whnf.m_invert (Whnf.cnormMSub t1') in      (* cD1' |- t1_i <= cD' *)
-              (* cD' |- cPsi ctx  and cD' ; cPsi |- tA     *)
-              let cPsi' = Whnf.cnormDCtx (cPsi, t1_i) in
-              let tA'   = Whnf.cnormTyp (tA, t1_i) in
-               (Whnf.mvar_dot1 t1' ,  Dec(cD1', MDecl(x, tA', cPsi')))
-        end
-
-    | (MDot (MV n, t'), Dec(cD', PDecl(x, tA, cPsi))) ->
-        begin match applyMSub n mtt with
-          | MUndef ->
-              let (t1', cD1') = pruneMSub cD0 (t', cD') mtt rOccur  in
-                (Whnf.mcomp t1' (MShift 1), cD1')
-
-           | MV _n ->
-              let (t1', cD1') = pruneMSub cD0 (t', cD') mtt rOccur in
-              let t1_i = Whnf.m_invert (Whnf.cnormMSub t1') in      (* cD1' |- t1_i <= cD' *)
-              let cPsi' = Whnf.cnormDCtx (cPsi, t1_i) in
-              let tA'   = Whnf.cnormTyp (tA, t1_i) in
-               (Whnf.mvar_dot1 t1' ,  Dec(cD1', PDecl(x, tA', cPsi')))
-        end
-
-    | (MDot (MObj (phat, tM), t'), Dec(cD', MDecl(x, tA, cPsi)))        ->
-        (* below may raise NotInvertible *)
-        (* let _tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in    *)
-        let _tM' = prune cD0 cPsi phat (tM, id) (mtt, id) rOccur in
-
-        let (t1', cD1')  = pruneMSub cD0 (t', cD') mtt rOccur in
-        let t1_i = Whnf.m_invert (Whnf.cnormMSub t1') in      (* cD1' |- t1_i <= cD' *)
-        (* We need to prune the type here as well;  -bp *)
-        let tA' = pruneTyp cD0 cPsi phat (tA, id) (t1_i, id) rOccur in
-        let cPsi' = pruneDCtx cD0 cPsi  t1_i rOccur in
-          (Whnf.mvar_dot1 t1'  , Dec(cD1', MDecl(x, tA', cPsi')))
-
-   | (MDot (MUndef, t), Dec (cD1, _)) ->
-       let (t1', cD1') = pruneMSub cD0 (t, cD1) mtt rOccur in
-         (Whnf.mcomp t1' (MShift 1), cD1')
-
   and pruneTypW cD0 cPsi phat sA (mss, ss) rOccur = match sA with
     | (Atom(loc, a, tS) , s) -> Atom(loc, a, pruneSpine cD0  cPsi phat (tS, s) (mss, ss) rOccur)
     | (PiTyp((TypDecl(x, tA), dep), tB), s) ->
@@ -1626,17 +1549,6 @@ module Make (T : TRAIL) : UNIFY = struct
       let tA' = pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur in
       let typ_rec'' = pruneTypRec cD0 cPsi phat (typ_rec', dot1 s) (mss, dot1 ss) rOccur in
         SigmaElem (x, tA', typ_rec'')
-
-
-
-  and pruneDCtx cD0 cPsi mtt rOccur = match cPsi with
-    | Null -> Null
-    | DDec (cPsi', TypDecl(x, tA)) ->
-        let cPsi'' = pruneDCtx cD0 cPsi mtt rOccur in
-        let phat   = Context.dctxToHat cPsi' in
-        let tA''   = pruneTyp cD0 cPsi phat (tA, id) (mtt, id) rOccur in
-          DDec (cPsi'', TypDecl (x, tA''))
-
 
   (* pruneCtx cD (phat, (t, Psi1), ss) = (s', cPsi2)
 
@@ -3094,7 +3006,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
    (* **************************************************************** *)
 
-  let rec unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt) = match ((mO, t) , (mO', t')) with
+  let unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt) = match ((mO, t) , (mO', t')) with
     | (Comp.MetaCtx (_, cPsi), t) , (Comp.MetaCtx (_, cPsi'), t') ->
         unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
 
@@ -3286,7 +3198,7 @@ module Make (T : TRAIL) : UNIFY = struct
                         " = " ^ P.headToString cD cPsi h2 ^ "\n"))
 
 
-    let rec unresolvedGlobalCnstrs () =
+    let unresolvedGlobalCnstrs () =
       begin try
         forceGlobalCnstr (!globalCnstrs);
         resetGlobalCnstrs () ;
@@ -3364,7 +3276,7 @@ module Make (T : TRAIL) : UNIFY = struct
            dprint (fun () -> "[unifyMSub] cPhi = " ^ P.dctxToString Empty cPhi);
            unifyMSub' ms mt)
 
-    let rec unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
+    let unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
 
 
 
@@ -3383,7 +3295,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
 
-let rec unify_phat psihat phihat =
+let unify_phat psihat phihat =
   match phihat with
     | (Some (CInst (n1, ({contents = None} as cref), schema1, cD1, theta1 )), d) ->
         begin match psihat with

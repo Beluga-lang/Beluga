@@ -7,7 +7,7 @@ open build/OCaml
 DEBUG = false
 BYTE_ENABLED   = true
 NATIVE_ENABLED = false
-
+RELEASE = false
 
 #
 # Process the command-line variables are defined *after* the standard

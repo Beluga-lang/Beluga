@@ -704,7 +704,7 @@ and collectApxTypRec fMVd trec = match trec with
       let fMVd1 = collectApxTyp fMVd tA in
 	collectApxTypRec fMVd1 trec
 
-let rec collectApxCDecl fMVd cdecl = match cdecl with
+let collectApxCDecl fMVd cdecl = match cdecl with
   | Apx.LF.MDecl (_, tA, cPsi) ->
       let fMVd1 = collectApxDCtx fMVd cPsi in
 	collectApxTyp fMVd1 tA
@@ -1007,7 +1007,7 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi 
       let t_decl' = fmvApxTypDecl fMVs cD d_param  t_decl in
         Apx.LF.DDec (psi', t_decl')
 
-let rec fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
+let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
   begin match phat with
     | (Some (Int.LF.CtxOffset offset), d) ->
         if offset > (l_delta + k) then

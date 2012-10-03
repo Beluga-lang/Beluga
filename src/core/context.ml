@@ -43,21 +43,6 @@ let rec sigmaShift typrec s = match typrec with
   | SigmaElem (x, tA, typrec) ->
       SigmaElem (x, TClo (tA, s), sigmaShift typrec (Substitution.LF.dot1 s))
 
-
-
-let rec ctxShift cPsi k = match cPsi with
-  | Null ->
-      Null
-
-  | CtxVar psi ->
-      CtxVar psi
-
-  | DDec (cPsi, TypDecl (x, Sigma tArec)) ->
-      DDec (ctxShift cPsi k, TypDecl (x, Sigma (sigmaShift tArec (Shift (NoCtxShift, k)))))
-
-  | DDec (cPsi, TypDecl (x, tA)) ->
-      DDec (ctxShift cPsi k, TypDecl (x, TClo (tA, Shift (NoCtxShift, k))))
-
 (* ctxDec Psi k = x:A
  *
  * Invariant:

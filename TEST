@@ -9,6 +9,7 @@ usage() {
     echo "  -h,--help        Display this usage information."
     echo "  -c,--color       Force colorized output even when piped."
     echo "  --noexamples     Do not also test $EXAMPLEDIR."
+    echo "  --examples       Only test $EXAMPLEDIR."
     echo "  --reset          Replace all .out files with new output (use with caution!)."
     echo
     echo "Notes:"
@@ -140,6 +141,10 @@ do
 	    ;;
 	--noexamples)
 	    EXAMPLEDIR=/dev/null
+	    shift
+	    ;;
+	--examples)
+	    TESTDIR=/dev/null
 	    shift
 	    ;;
 	--reset)

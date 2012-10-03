@@ -155,7 +155,7 @@ let mk_integer  s = Token.INTLIT s
 (** @see http://www.cduce.org/ulex/ See [ulex] for details *)
 
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
-let rec lex_token loc = lexer
+let lex_token loc = lexer
   | "->"
   | "<-"
   | "::"

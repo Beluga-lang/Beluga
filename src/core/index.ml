@@ -24,7 +24,7 @@ module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 
 let term_closed = true
 
@@ -115,7 +115,7 @@ let rec get_ctxvar psi = match psi with
   | Ext.LF.DDec (psi, _ ) -> get_ctxvar psi
 
 
-let rec get_ctxvar_mobj mO = match mO with
+let get_ctxvar_mobj mO = match mO with
   | Ext.Comp.MetaCtx (_, cPsi) -> get_ctxvar cPsi
   | Ext.Comp.MetaObjAnn (_, cPsi, _tM) -> get_ctxvar cPsi
   | _ -> None
@@ -125,18 +125,6 @@ let rec length_typ_rec t_rec = match t_rec with
   | Ext.LF.SigmaElem (x, _ , rest ) ->
       (print_string (R.render_name x ^ "  ");
       1 + length_typ_rec rest )
-
-(* index_of cQ n = i
-   where cQ = cQ1, Y, cQ2 s.t. n = Y and length cQ2 = i
-*)
-
-let rec index_of cQ n = match cQ with
-  | [] ->
-      raise (Error.Violation "index_of for a free variable does not exist -- should be impossible")
-        (* impossible due to invariant on collect *)
-  | (x, _ )::cQ' -> if x = n then 1 else (index_of cQ' n) + 1
-
-
 
 let rec index_kind cvars bvars fvars = function
   | Ext.LF.Typ _ ->
@@ -999,7 +987,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
 *)
 
 
-let rec comptypdef (cT, cK) =
+let comptypdef (cT, cK) =
   let cK' = index_compkind (CVar.create ())  ([], term_closed) cK in
   let rec unroll cK cvars = begin match cK with
     | Apx.Comp.Ctype _ -> cvars

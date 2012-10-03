@@ -39,8 +39,6 @@ module Cid = struct
         typesubordinated   = BitSet.empty ()
       }
 
-    type t = Id.name DynArray.t
-
     (*  store : {!entry DynArray.t} *)
     (*  store is used for storing the information associated with a cid *)
     let store = DynArray.create ()
@@ -240,8 +238,6 @@ module Cid = struct
       typ                = t
     }
 
-    type t = Id.name DynArray.t
-
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
@@ -281,8 +277,6 @@ module Cid = struct
       schema = schema
     }
 
-    type t = Id.name DynArray.t
-
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
@@ -318,8 +312,6 @@ module Cid = struct
       mutable constructors: Id.cid_comp_const list
     }
 
-    let entry_list  = ref []
-
     let mk_entry name kind implicit_arguments  =  {
       name               = name;
       implicit_arguments = implicit_arguments;
@@ -327,8 +319,6 @@ module Cid = struct
       frozen             = false;
       constructors       = []
     }
-
-    type t = Id.name DynArray.t
 
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
@@ -373,8 +363,6 @@ module Cid = struct
       implicit_arguments = implicit_arguments;
       typ               = tau
     }
-
-    type t = Id.name DynArray.t
 
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
@@ -421,8 +409,6 @@ module Cid = struct
       typ                = t
     }
 
-    type t = Id.name DynArray.t
-
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
@@ -466,8 +452,6 @@ module Cid = struct
       prog               = v;
       mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
     }
-
-    type t = Id.name DynArray.t
 
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()

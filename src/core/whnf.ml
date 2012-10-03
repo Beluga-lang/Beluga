@@ -9,10 +9,6 @@
  * Normalization, and alpha-conversion
  *)
 
-
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [17])
-
-open Context
 open Syntax.Int.LF
 open Syntax.Int
 open Substitution
@@ -25,17 +21,12 @@ exception Fmvar_not_found
 exception FreeMVar of head
 exception NonInvertible
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [18])
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [18])
 
 let rec raiseType cPsi tA = match cPsi with
   | Null -> tA
   | DDec (cPsi', decl) ->
       raiseType cPsi' (PiTyp ((decl, Maybe), tA))
-
-let rec emptySpine tS = match tS with
-  | Nil -> true
-  | SClo(tS, _s) -> emptySpine tS
-
 
 (* isPatSub s = B
 
@@ -96,7 +87,7 @@ let rec isPatSub = function
     end
 
 (* Eta-contract elements in substitutions *)
-let rec etaContract tM = begin match tM with
+let etaContract tM = begin match tM with
   | Root (_, BVar k, Nil) -> Head (BVar k)
   | Lam  _ as tMn ->
       let rec etaUnroll k tM = begin match tM with
@@ -787,20 +778,6 @@ and normDecl (decl, sigma) = match decl with
 
   | _ -> decl
 
-
-
-and norm_psihat (phat: psi_hat) = match phat with
-  | (None , _ ) -> phat
-  | (Some (CInst (_n, {contents = Some cPsi}, _schema, _cD, theta)),  k) ->
-      begin match Context.dctxToHat (cnormDCtx (cPsi, theta)) with
-        | (None, i) -> (None, k+i)
-        | (Some cvar', i) -> (Some cvar', i+k)
-      end
-  |  _ -> phat
-
-
-
-
 (* ********************************************************************* *)
 (* Normalization = applying simultaneous modal substitution
 
@@ -1013,7 +990,7 @@ and cnorm (tM, t) = match tM with
            [|t|](p[r] . S)  = [r']h . [|t|]S
            where r' = [|t|] r                          *)
             ->
-              let rec pobj_base_cases h = begin match h with
+              let pobj_base_cases h = begin match h with
                 | PVar(Offset i, r') -> PVar(Offset i, LF.comp r' (cnormSub (r,t)))
                 | PVar(PInst (_, {contents = None}, _, _, _ ) as p, r') ->
                     PVar(p, LF.comp r' (cnormSub (r,t)))
@@ -1621,28 +1598,6 @@ and normDCtx cPsi = match cPsi with
   | DDec (cPsi1, decl) ->
       DDec (normDCtx cPsi1, normDecl (decl, LF.id))
 
-
-and normCDecl (decl, sigma) = match decl with
-  | MDecl (x, tA, cPsi) ->
-      MDecl (x, normTyp (tA, sigma) , normDCtx cPsi)
-
-  | PDecl (x, tA, cPsi) ->
-      PDecl (x, normTyp (tA, sigma) , normDCtx cPsi)
-
-  | CDecl (x, schema, dep) ->
-      CDecl (x, schema, dep)
-
-
-  | SDecl (s, cPhi, cPsi) ->
-      SDecl (s, normDCtx cPhi, normDCtx cPsi)
-
-
-and normMCtx cD = match cD with
-  | Empty -> Empty
-  | Dec(cD, cdecl) ->
-      Dec (normMCtx cD, normCDecl (cdecl, LF.id))
-
-
 (* ---------------------------------------------------------- *)
 (* Weak head normalization = applying simultaneous hereditary
  * substitution lazily
@@ -2200,9 +2155,6 @@ let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
 
   | _ -> false
 
-let rec convSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
-  convCtx cSome1 cSome2 && convTypRec (typRec1, LF.id) (typRec2, LF.id)
-
 let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (_ , Empty) ->
       true
@@ -2234,18 +2186,8 @@ and convPrefixTypRec sArec sBrec = match (sArec, sBrec) with
   | (_, _) -> (* lengths differ *)
       false
 
-let rec prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
+let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
   convPrefixCtx cSome1 cSome2 && convPrefixTypRec (typRec1, LF.id) (typRec2, LF.id)
-
-(* convHatCtx((psiOpt, l), cPsi) = true iff |cPsi| = |Psihat|
- *
- * where psiOpt is a context variable, l = |Psihat|
- *       cPsi is a object-level context.
- *)
-let convHatCtx ((cvar, l), cPsi) =
-  let (cvar', l') = dctxToHat cPsi in
-    l' = l && cvar = cvar'
-
 
 (* *********************************************************************** *)
 (* Contextual substitutions                                                *)
@@ -2293,7 +2235,7 @@ end
 
 (*
 *)
-let rec mctxMDec cD' k =
+let mctxMDec cD' k =
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, MDecl(u, tA, cPsi)), 1)
       -> (u, cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k))
@@ -2311,7 +2253,7 @@ let rec mctxMDec cD' k =
 
 (*
 *)
-let rec mctxPDec cD k =
+let mctxPDec cD k =
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, PDecl (p, tA, cPsi)),  1)
       -> (p, cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k))
@@ -2335,7 +2277,7 @@ let rec mctxPDec cD k =
     lookup cD k
 
 
-let rec mctxSDec cD' k =
+let mctxSDec cD' k =
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, SDecl(u, cPhi, cPsi)), 1)
       -> (* (u,mshiftDCtx cPhi k, mshiftDCtx cPsi k) *)
@@ -2358,7 +2300,7 @@ let rec mctxSDec cD' k =
 
 (*
 *)
-let rec mctxCDec cD k =
+let mctxCDec cD k =
   let rec lookup cD k' = match (cD, k') with
     | (Dec (_cD, CDecl (psi, sW, dep)),  1)
       -> (psi, sW)
@@ -2376,7 +2318,7 @@ let rec mctxCDec cD k =
   in
     lookup cD k
 
-let rec mctxCVarPos cD psi =
+let mctxCVarPos cD psi =
   let rec lookup cD k = match cD  with
     | Dec (cD, CDecl(phi, s_cid, _))    ->
         if psi = phi then
@@ -2391,7 +2333,7 @@ let rec mctxCVarPos cD psi =
     lookup cD 1
 
 
-let rec mctxMVarPos cD u =
+let mctxMVarPos cD u =
   let rec lookup cD k = match cD  with
     | Dec (cD, MDecl(v, tA, cPsi))    ->
         if v = u then
@@ -2406,7 +2348,7 @@ let rec mctxMVarPos cD u =
   in
     lookup cD 1
 
-let rec mctxPVarPos cD p =
+let mctxPVarPos cD p =
   let rec lookup cD k = match cD  with
     | Dec (cD, PDecl(q, tA, cPsi))    ->
         if p = q then
@@ -2479,7 +2421,7 @@ let rec mctxPVarPos cD p =
 
     | Comp.TypBool -> Comp.TypBool
 
-  let rec cnormMetaTyp (mC, t) = match mC with
+  let cnormMetaTyp (mC, t) = match mC with
     | Comp.MetaTyp (tA, cPsi) ->
         let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
@@ -2897,10 +2839,6 @@ let rec mctxPVarPos cD p =
     | ((Comp.TypBool, _t ), (Comp.TypBool, _t')) -> true
 
     | ( _ , _ ) -> false
-
-(* For now we omit PDecl, SDecl - bp *)
-
-and convSchema (Schema fs) (Schema fs') =  List.for_all2 convSchElem fs fs'
 
 and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
     convCtx cPsi cPsi'

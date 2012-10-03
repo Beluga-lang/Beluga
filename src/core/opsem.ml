@@ -12,7 +12,7 @@ module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [9])
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [9])
 
 type error =
   | MissingBranch
@@ -337,7 +337,7 @@ and eval_branch vscrut branch (theta, eta) =
         with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
 
-let rec eval e =
+let eval e =
   dprint (fun () -> "Opsem.eval");
   Debug.indent 2;
   let result = eval_chk e (LF.MShift 0, Comp.Empty) in

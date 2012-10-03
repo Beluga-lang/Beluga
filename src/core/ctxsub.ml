@@ -7,10 +7,7 @@
 
 open Context
 open Syntax.Int.LF
-open Syntax.Int
-open Substitution
 open Store.Cid
-open Error
 open Id
 
 module P = Pretty.Int.DefaultPrinter
@@ -30,7 +27,7 @@ and frontToString = function
 
 module Comp = Syntax.Int.Comp
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [12])
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [12])
 
 (* broken
   (* ctxToSub cPsi:
@@ -732,7 +729,7 @@ let id_csub cO =
            1/1  2/2   i.e. lower all indices >=2 by 1.
                  |cO| = 2  ---> |cO'| = 1 *)
 (* instantiate  2 with 1    1/1  1/2 *)
-let rec inst_csub cPsi2 offset' csub cO =
+let inst_csub cPsi2 offset' csub cO =
   let rec update_octx cO1 offset sW =
     begin match (cO1, offset) with
       | (Dec (cO', CDeclOpt psi_name ), 1) ->
@@ -880,7 +877,7 @@ if  ctxToSub_mclosed  cD psi cPsi = (cD',s) then
    cD' ; psi |- s : cPsi
 
 *)
-let rec ctxToSub_mclosed cD psi cPsi =
+let ctxToSub_mclosed cD psi cPsi =
   let rec toSub cPsi =  match cPsi with
     | Null ->
       (* Substitution.LF.id  --changed 2010-07-26*)

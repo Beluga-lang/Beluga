@@ -1,11 +1,10 @@
 # Declare the directories we need to include other libraries from
-OCAMLINCLUDES += +camlp4 ../core ../sasybel
+OCAMLINCLUDES += +camlp4 ../core
 
 # Declare the names of the libraries we depend on
 OCAML_LIBS[] +=
         camlp4lib
         ../core/beluga-core
-        ../sasybel/sasybel
 
 # Declare the name of the program
 PROGRAM = beluga

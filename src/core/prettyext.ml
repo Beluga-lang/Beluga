@@ -34,7 +34,6 @@ end (* Control *)
 
 module Ext = struct
 
-  open Id
   open Syntax.Ext
 
   (* External Syntax Printer Signature *)
@@ -133,8 +132,6 @@ module Ext = struct
 
     module InstHashtbl = Hashtbl.Make (InstHashedType)
 
-    let inst_hashtbl : string InstHashtbl.t = InstHashtbl.create 0
-
     module PInstHashedType = struct
       type t    = LF.head option ref
       let equal = (==)
@@ -142,8 +139,6 @@ module Ext = struct
     end
 
     module PInstHashtbl = Hashtbl.Make (PInstHashedType)
-
-    let pinst_hashtbl : string PInstHashtbl.t = PInstHashtbl.create 0
 
     let rec phatToDCtx phat = match phat with
       | [] -> LF.Null
@@ -211,21 +206,14 @@ module Ext = struct
              (fmt_ppr_tuple cD cPsi lvl) rest
 
     and fmt_ppr_lf_normal cD cPsi lvl ppf =
-      let rec dropSpineLeft ms n = match (ms, n) with
-          (_, 0) -> ms
-        | (LF.Nil, _) -> ms
-        | (LF.App (_, _m, rest), n) -> dropSpineLeft rest (n - 1)
-
-      in let deimplicitize_spine h ms = match h with
-
+      let deimplicitize_spine h ms = match h with
         | LF.MVar _
         | LF.PVar _
         | LF.Name _
         | LF.Hole _
         | LF.ProjName _
         | LF.ProjPVar _
-        | LF.SVar _ ->
-            ms
+        | LF.SVar _ -> ms
 
       in function
         | LF.Lam (_, x, m) ->
@@ -644,16 +632,6 @@ module Ext = struct
 
       | Comp.TypBool -> fprintf ppf "Bool"
 
-    let together = function
-      | Comp.Syn _ -> false
-      | Comp.Fun _ -> true
-      | Comp.CtxFun _ -> true
-      | Comp.MLam _ -> true
-      | _ -> false
-
-    let apart_left ppf e = if not (together e) then fprintf ppf "@[<2>"
-    let apart_right ppf e = if not (together e) then fprintf ppf "@]"
-
     let rec fmt_ppr_pat_spine cD lvl ppf = (function
       | Comp.PatNil _ -> fprintf ppf ""
       | Comp.PatApp (_, pat, pat_spine) ->
@@ -961,10 +939,6 @@ module Ext = struct
       | Some tM -> fmt_ppr_lf_normal cD1' cPsi 0 ppf tM
       | None ->fprintf ppf "@[{}@]"
 
-    and fmt_ppr_branch_body cD1' cG t ppf = function
-      | Comp.NormalPattern (_, e) -> fmt_ppr_cmp_exp_chk cD1' 1 ppf e
-      | Comp.EmptyPattern -> ()
-
     and fmt_ppr_cmp_branch cD _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat) ->
           fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a] @]  @]@  "
@@ -1040,7 +1014,7 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ cD LF.Null lvl) tau
 
-    let rec fmt_ppr_cmp_rec lvl ppf = function
+    let fmt_ppr_cmp_rec lvl ppf = function
       | Comp.RecFun (x, a, e) ->
           fprintf ppf "rec %s : %a => @ %a"
             (R.render_name x)
@@ -1053,7 +1027,7 @@ module Ext = struct
                    (fmt_ppr_cmp_rec lvl) h
                    (fmt_ppr_rec lvl) t
 
-    let rec fmt_ppr_sgn_decl lvl ppf = function
+    let fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (_, x, a) ->
           fprintf ppf "%s : %a.@.@?"
             (R.render_name x)
@@ -1106,26 +1080,21 @@ module Ext = struct
     let ppr_lf_kind cPsi       = fmt_ppr_lf_kind cPsi          std_lvl std_formatter
     let ppr_lf_typ  cD cPsi    = fmt_ppr_lf_typ cD cPsi     std_lvl std_formatter
     let ppr_lf_normal cD cPsi  = fmt_ppr_lf_normal cD cPsi  std_lvl std_formatter
-    let ppr_tuple cD cPsi      = fmt_ppr_tuple cD cPsi      std_lvl std_formatter
     let ppr_lf_head cD cPsi    = fmt_ppr_lf_head cD cPsi    std_lvl std_formatter
     let ppr_lf_spine cD cPsi   = fmt_ppr_lf_spine cD cPsi   std_lvl std_formatter
     let ppr_lf_sub cD cPsi     = fmt_ppr_lf_sub cD cPsi     std_lvl std_formatter
-    let ppr_lf_front cD cPsi   = fmt_ppr_lf_front cD cPsi   std_lvl std_formatter
 
     let ppr_lf_schema          = fmt_ppr_lf_schema             std_lvl std_formatter
     let ppr_lf_sch_elem        = fmt_ppr_lf_sch_elem           std_lvl std_formatter
 
     let ppr_lf_typ_rec cD cPsi = fmt_ppr_lf_typ_rec cD cPsi std_lvl std_formatter
 
-    let ppr_lf_psi_hat cD      = fmt_ppr_lf_psi_hat cD         std_lvl std_formatter
     let ppr_lf_dctx cD         = fmt_ppr_lf_dctx cD         std_lvl std_formatter
     let ppr_lf_mctx            = fmt_ppr_lf_mctx            std_lvl std_formatter
-    let ppr_cmp_gctx cD        = fmt_ppr_cmp_gctx cD        std_lvl std_formatter
     let ppr_cmp_kind cD        = fmt_ppr_cmp_kind cD        std_lvl std_formatter
     let ppr_cmp_typ cD         = fmt_ppr_cmp_typ cD         std_lvl std_formatter
     let ppr_cmp_exp_chk cD     = fmt_ppr_cmp_exp_chk cD     std_lvl std_formatter
     let ppr_cmp_exp_syn cD     = fmt_ppr_cmp_exp_syn cD     std_lvl std_formatter
-    let ppr_pat_obj cD         = fmt_ppr_pat_obj cD         std_lvl std_formatter
     let ppr_cmp_branches cD    = fmt_ppr_cmp_branches cD    std_lvl std_formatter
     let ppr_cmp_branch cD      = fmt_ppr_cmp_branch cD      std_lvl std_formatter
 
@@ -1160,17 +1129,6 @@ module Ext = struct
     let normalToString cD cPsi sM =
         fmt_ppr_lf_normal cD cPsi std_lvl str_formatter sM
         ; flush_str_formatter ()
-
-    let attempt message f fallback =
-      try
-        f()
-      with
-        | Match_failure (file, line, column) ->
-            (print_string ("pretty.ml attempt: \"" ^ message ^ "\" crashed: "
-                           ^ file ^ " " ^ string_of_int line ^ " " ^ string_of_int column ^ "\n");
-             exit 230)
-        | _ -> (print_string ("pretty.ml attempt: \"" ^ message ^ "\" crashed.\n");
-                fallback (*exit 231*) )
 
     let dctxToString cD cPsi =
        (fmt_ppr_lf_dctx cD std_lvl str_formatter cPsi;

@@ -5,16 +5,12 @@
 
 open Core
 open Syntax
-open Substitution
-open Id
 open Ast
 
 (* variable naming convention: the variable names are usually the first(s) character(s) of what they stand for*)
 
 module Loc = Syntax.Loc
 exception Error of string
-
-let printLocation loc = Parser.Grammar.Loc.print Format.std_formatter loc
 
 let locToString loc =
   Parser.Grammar.Loc.print Format.str_formatter loc;
@@ -23,12 +19,12 @@ let locToString loc =
 (* Terminal and Helper Functions Section *)
 
 (* checks if a sting is present in the given list, string -> string list -> bool *)
-let rec checkString s lt = List.fold_left (fun x y -> if y = s then true else x) false lt
+let checkString s lt = List.fold_left (fun x y -> if y = s then true else x) false lt
 
 type jdef = Jdef of string * string list
 
 (* given a var_alternative, find to which judgment it corresonds to*)
-let rec findJu s lju = List.fold_left (fun x y -> let (Jdef(s1, lsym)) = y in
+let findJu s lju = List.fold_left (fun x y -> let (Jdef(s1, lsym)) = y in
                                        if (checkString s lsym) then (Jdef(s1, lsym)) else x) (Jdef("",[])) lju
 
 type bind = Paire of alternative * (string * string) list
@@ -56,9 +52,9 @@ let rec findJ va lju =
 (* Declaration section *)
 
 (* finds the lambda terms in a production *)
-let rec find_lams lp = List.fold_left (fun x y -> let Production (l, t, la) = y in [(List.fold_left ((fun x y -> begin match y with | AltLam(l1, AName(n),va) -> n | _ -> x end))"" la )]::x ) [] lp
+let find_lams lp = List.fold_left (fun x y -> let Production (l, t, la) = y in [(List.fold_left ((fun x y -> begin match y with | AltLam(l1, AName(n),va) -> n | _ -> x end))"" la )]::x ) [] lp
 
-let rec checkString2 s lt = List.fold_left (fun x y -> let (h1,h2) = y in
+let checkString2 s lt = List.fold_left (fun x y -> let (h1,h2) = y in
                                             if h1 = s then (true,h2) else x) (false, "") lt
 
 (* finds in which variable the alternative in binded *)
@@ -77,7 +73,7 @@ let rec findBind l a ty lv ac =
     | _ -> let s = locToString(l) in
            let s1 = s ^ " Syntax error in alternative." in raise (Error (s1))
 
-let rec diff_type ty lvar = List.fold_left (fun x y -> let (s1, s2) = y in
+let diff_type ty lvar = List.fold_left (fun x y -> let (s1, s2) = y in
                                             if ty = s2 then [] else (s1, s2)::x ) [] lvar
 
 let rec altList l ty lty lt lv llam la =
@@ -238,7 +234,7 @@ let rec find_var lt ltyp las = List.fold_left (fun x y ->
                                             | (h::t,s1)-> x@(find_var lt ltyp [(t,s1)]) | _ -> [])
                                [] las
 
-let rec find_var_prep lp = (List.fold_left (fun x y -> let Production(l1, Typ(l2, t1), la) = y in
+let find_var_prep lp = (List.fold_left (fun x y -> let Production(l1, Typ(l2, t1), la) = y in
                                                        ((la,t1)::x) )) [] lp
 
 (* creates new types, string list -> string list -> production list -> Ext.Sgn.decl list, first list types second terminals *)
@@ -494,7 +490,7 @@ let rec judges jn lsym lr lju =
 
 (* Context Section *)
 
-let rec context_sch l lv lsym lju va =
+let context_sch l lv lsym lju va =
    match va with
     | VAltOftBlock (l1,ltd,Some(va1)) -> let (s1, ls) = findJ va1 lju in
                                         let va2 = valts l1 lsym va1 in
@@ -834,10 +830,7 @@ let stmt_to_prove l lt st lju lsym =
                | Premisse _ -> raise (Error ("Not implemented."))
              end
 
-let rec list_of_nil l =
-  match l with | [] -> true | []::t -> list_of_nil t | h::t -> list_of_nil t
-
-let rec comp_box l lt lsym co va =
+let comp_box l lt lsym co va =
   match co with
     | Some([Con(s)]) -> let va1 = valtpPar l lt lsym va in
                       Ext.Comp.Box(l, [Id.mk_name(Id.SomeString s)],va1)

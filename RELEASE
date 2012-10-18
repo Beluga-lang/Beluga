@@ -47,6 +47,9 @@ cp -a \
 
 mkdir $release/bin
 
+# Set the RELEASE to true by default.
+sed -i 's/RELEASE *= *false/RELEASE = true/' OMakeroot
+
 echo 'Copying src ...'
 cp -a \
     src \
@@ -98,12 +101,12 @@ echo 'Running TEST (native) ...'
 cd $release-sandbox
 
 echo 'Building (bytecode) in release directory ...'
-omake RELEASE=true || ( echo 'omake failed; aborting release.' ; exit 1 )
+omake || ( echo 'omake failed; aborting release.' ; exit 1 )
 
 echo 'Building (native) in release directory ...'
-omake RELEASE=true clean
-omake RELEASE=true NATIVE_ENABLED=true clean
-omake RELEASE=true NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release.' ; exit 1 )
+omake clean
+omake NATIVE_ENABLED=true clean
+omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release.' ; exit 1 )
 
 cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further.'

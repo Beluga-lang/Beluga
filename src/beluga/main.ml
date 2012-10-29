@@ -35,6 +35,7 @@ let usage () =
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
         ^ "    +logic        turn on logic programming engine\n"
         ^ "    +test         Make output suitable for test harness. Implies -print\n"
+        ^ "    +strengthen   Perform context strengthening automatically."
   in
   fprintf stderr
     "Usage: %s [options] file.(bel|cfg)\noptions:\n%s"
@@ -76,6 +77,7 @@ let process_option arg rest = match arg with
     end
   | "+logic" -> Logic.Options.enableLogic := true ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
+  | "+strengthen" -> Lfrecon.strengthen := true; rest
   | _ -> usage ()
 
 let rec process_options = function

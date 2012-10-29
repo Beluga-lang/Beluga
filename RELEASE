@@ -48,7 +48,7 @@ cp -a \
 mkdir $release/bin
 
 # Set the RELEASE to true by default.
-sed -i 's/RELEASE *= *false/RELEASE = true/' OMakeroot
+sed -i 's/RELEASE *= *false/RELEASE = true/' $release/OMakeroot
 
 echo 'Copying src ...'
 cp -a \

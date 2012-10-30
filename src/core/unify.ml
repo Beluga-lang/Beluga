@@ -2228,12 +2228,12 @@ module Make (T : TRAIL) : UNIFY = struct
         let t' = Whnf.normSub (comp t s2) in
           if isPatSub t' && isPatMSub mt then
             try
-(*               let _ = dprint (fun () ->
+               let _ = dprint (fun () ->
                                 "UNIFY(3): normal-MMVar" ^
                                   P.mctxToString cD0 ^ "\n" ^
                                   P.normalToString cD0 cPsi sM1 ^ "\n    " ^
                                   P.normalToString cD0 cPsi sM2 ^ "\n") in
-*)
+
               let ss = invert t' in
               let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in
               let phat = Context.dctxToHat cPsi in
@@ -2786,26 +2786,16 @@ module Make (T : TRAIL) : UNIFY = struct
           unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
       (* Nil/App or App/Nil cannot occur by typing invariants *)
 
-
-    and unifySub mflag cD0 cPsi s1 s2 = match (s1, s2) with
+    and unifySub mflag cD0 cPsi s1 s2 =
+    unifySub' mflag cD0 cPsi (Whnf.cnormSub (s1, Whnf.m_id))
+                             (Whnf.cnormSub (s2, Whnf.m_id))
+    and unifySub' mflag cD0 cPsi s1 s2 = match (s1, s2) with
       | (Shift (psi, n), Shift (phi, k)) ->
           let rec compatible_cv = function
             | (CtxName n1,  CtxName n2) -> n1 = n2
             | (CtxOffset off1,  CtxOffset off2) -> off1 = off2
             | (CInst (_, {contents=None}, _, _, _theta),  _) -> true
             | (_,  CInst (_, {contents=None}, _, _, _theta)) -> true
-            | (CInst (_, {contents=Some (CtxVar ctx_var1)}, _, _, theta), ctx_var2)
-              -> begin match Whnf.cnormDCtx (CtxVar ctx_var1,theta) with
-                   | CtxVar ctx_var1' -> compatible_cv (ctx_var1', ctx_var2)
-                   | _ -> false
-                end
-
-            | (ctx_var1,  CInst (_, {contents=Some (CtxVar ctx_var2)}, _, _, theta)) ->
-                begin match Whnf.cnormDCtx (CtxVar ctx_var1,theta) with
-                   | CtxVar ctx_var1' -> compatible_cv (ctx_var1', ctx_var2)
-                   | _ -> false
-                end
-
             | (_, _) -> false
           and compatible = function
             | (NoCtxShift, NoCtxShift) -> true
@@ -2903,7 +2893,7 @@ module Make (T : TRAIL) : UNIFY = struct
                        ^ " == " ^ P.typToString cD0 cPsi sB);*)
             unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2))
           else
-            ((* dprint (fun () -> "UnifyTyp " ^ P.typToString cD0 cPsi sA ^ " ==== " ^ P.typToString cD0 cPsi sB);*)
+            (dprint (fun () -> "UnifyTyp " ^ P.typToString cD0 cPsi sA ^ " ==== " ^ P.typToString cD0 cPsi sB);
             raise (Failure "Type constant clash"))
 
       | ((PiTyp ((TypDecl(x, tA1), dep), tA2), s1), (PiTyp ((TypDecl(_x, tB1), _dep), tB2), s2)) ->
@@ -3353,8 +3343,8 @@ let unify_phat psihat phihat =
     let unifyDCtx cD0 cPsi1 cPsi2 =
       let cPsi1' = Whnf.cnormDCtx (cPsi1, Whnf.m_id) in
       let cPsi2' = Whnf.cnormDCtx (cPsi2, Whnf.m_id) in
-        (dprint (fun () -> "           cPsi = " ^ P.dctxToString Empty cPsi1');
-        dprint (fun () -> "           cPsi' = " ^ P.dctxToString Empty cPsi2');
+        (dprint (fun () -> "[unifyDCtx] cPsi1 = " ^ P.dctxToString cD0 cPsi1');
+        dprint (fun () -> "             cPsi2 = " ^ P.dctxToString cD0 cPsi2');
         unifyDCtx1 Unification cD0 cPsi1' cPsi2')
 
 

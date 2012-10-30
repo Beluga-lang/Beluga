@@ -37,9 +37,8 @@ let _ = Error.register_printer
       match err with
         | BlockInDctx (cD, h, tA, cPsi) ->
             Format.fprintf ppf
-              "Encountered contextual object [%a.%a] of type [%a.%a] during type reconstruction.@.\
-               Unification cannot prune it because its context contains blocks.@.\
-               Solution: Make the meta-variable explicit restricting its dependencies."
+              "Encountered contextual object [%a.%a] of type [%a.%a].@.\
+               Unification cannot prune it because its context contains blocks.@."
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
             (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) h
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi

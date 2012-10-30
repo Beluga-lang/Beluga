@@ -13,7 +13,7 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
-let strengthen : bool ref = ref false
+let strengthen : bool ref = ref true
 
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])

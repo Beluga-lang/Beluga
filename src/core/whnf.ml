@@ -101,7 +101,7 @@ let etaContract tM = begin match tM with
         | (k', App(Root(_ , BVar x, Nil), tS')) ->
             if k' = x then etaSpine (k'-1)  tS'
             else false
-        | _ -> (dprint (fun () -> "[etaSpine] _ ") ; raise (Error.Violation ("etaSpine undefined\n")))
+        | _ -> false (* previously (dprint (fun () -> "[etaSpine] _ ") ; raise (Error.Violation ("etaSpine undefined\n"))) *)
       end in
         begin match etaUnroll 0 tMn with
           | (k, Root( _ , BVar x, tS)) ->

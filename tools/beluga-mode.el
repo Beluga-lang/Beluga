@@ -1,6 +1,6 @@
 ;;; beluga-mode.el --- Major mode for Beluga source code  -*- coding: utf-8 -*-
 
-;; Copyright (C) 2009, 2010  Stefan Monnier
+;; Copyright (C) 2009, 2010, 2012  Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Keywords:
@@ -30,6 +30,7 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
+(require 'smie nil t)                   ;Use smie when available.
 
 (defgroup beluga-mode ()
   "Editing support for the Beluga language."
@@ -161,19 +162,21 @@ Regexp match data 0 points to the chars."
 (defvar beluga-syntax-fundec-re "^[ \t]*\\(rec\\|and\\)\\>")
 
 (defvar beluga-font-lock-keywords
-  `(,(concat (regexp-opt
-              '("FN" "and" "block" "case" "fn" "else" "if" "in" "let" "mlam"
-                "impossible" "of" "rec" "schema" "some" "then" "type" "ttrue"
-                "ffalse" "%name" "%not") 'words)
-             "\\|\\\\")
+  `(,(concat "\\_<"
+             (regexp-opt
+              '("FN" "and" "block" "case" "datatype" "else" "ffalse" "fn" "if"
+                "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
+                "then" "type" "ttrue" "%name" "%not"))
+             "\\_>\\|\\\\")
     (,(concat "^\\(" beluga-syntax-id-re
-              "\\)[ \t\n]*:\\([^.]*\\<type\\>[ \t\n]*.\\)?")
+              "\\)[ \t\n]*:\\([^.]*\\_<type\\_>[ \t\n]*.\\)?")
      ;; This is a regexp that can span multiple lines, so it may not
      ;; always highlight properly.  `font-lock-multiline' tries to help.
      (0 (if (match-end 2) '(face nil font-lock-multiline t)))
      (1 (if (match-end 2)
             font-lock-type-face font-lock-variable-name-face)))
-    (,(concat "^schema[ \t\n]+\\(" beluga-syntax-id-re "\\)")
+    (,(concat "^\\(?:schema\\|datatype\\)[ \t\n]+\\("
+              beluga-syntax-id-re "\\)")
      (1 font-lock-type-face))
     (,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)")
      (2 font-lock-function-name-face))
@@ -185,7 +188,9 @@ Regexp match data 0 points to the chars."
     ("Constructors"
      ,(concat "^\\(" beluga-syntax-id-re "\\)[ \t\n]*:") 1)
     ("Type Constructors"
-     ,(concat "^\\(" beluga-syntax-id-re "\\)[ \t\n]*:[^.]*\\<type\\>[ \t\n]*.") 1)
+     ,(concat "^\\(?:datatype[ \t]+\\(" beluga-syntax-id-re
+              "\\)\\|\\(?1:" beluga-syntax-id-re
+              "\\)[ \t\n]*:[^.]*\\<type\\>[ \t\n]*.\\)") 1)
     ("Functions"
      ,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)") 1)))
 
@@ -205,7 +210,8 @@ Regexp match data 0 points to the chars."
   "Major mode to edit Beluga source code."
   (set (make-local-variable 'imenu-generic-expression)
        beluga-imenu-generic-expression)
-  (set (make-local-variable 'outline-regexp) beluga-syntax-fundec-re)
+  (set (make-local-variable 'outline-regexp)
+       (concat beluga-syntax-fundec-re "\\|^datatype\\_>"))
   (set (make-local-variable 'require-final-newline) t)
   (when buffer-file-name
     (set (make-local-variable 'compile-command)
@@ -222,28 +228,32 @@ Regexp match data 0 points to the chars."
                        '(?\n))))
   ;; SMIE setup.
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
-  (belugasmie-setup beluga-smie-op-levels beluga-smie-indent-rules)
-  (set (make-local-variable 'belugasmie-indent-basic) beluga-indent-basic)
-  (set (make-local-variable 'forward-sexp-function)
-       #'belugasmie-forward-sexp-command)
-  (set (make-local-variable 'belugasmie-forward-token-function)
-       #'beluga-smie-forward-token)
-  (set (make-local-variable 'belugasmie-backward-token-function)
-       #'beluga-smie-backward-token)
-  (set (make-local-variable 'belugasmie-closer-alist)
-       '(("<" . ">"))) ;; (t . ".")
-  ;; Only needed for interactive calls to blink-matching-open.
-  (set (make-local-variable 'blink-matching-check-function)
-       #'belugasmie-blink-matching-check)
-  (add-hook 'post-self-insert-hook
-            #'belugasmie-blink-matching-open 'append 'local)
-  (set (make-local-variable 'belugasmie-blink-matching-triggers) '(?>))
+  (if (fboundp 'smie-setup)
+      (smie-setup beluga-smie-grammar #'beluga-smie-indent-rules
+                  :forward-token #'beluga-smie-forward-token
+                  :backward-token #'beluga-smie-backward-token)
+    (belugasmie-setup beluga-smie-grammar beluga-smie-indent-rules)
+    (set (make-local-variable 'belugasmie-indent-basic) beluga-indent-basic)
+    (set (make-local-variable 'forward-sexp-function)
+         #'belugasmie-forward-sexp-command)
+    (set (make-local-variable 'belugasmie-forward-token-function)
+         #'beluga-smie-forward-token)
+    (set (make-local-variable 'belugasmie-backward-token-function)
+         #'beluga-smie-backward-token)
+    (set (make-local-variable 'belugasmie-closer-alist)
+         '(("<" . ">"))) ;; (t . ".")
+    ;; Only needed for interactive calls to blink-matching-open.
+    (set (make-local-variable 'blink-matching-check-function)
+         #'belugasmie-blink-matching-check)
+    (add-hook 'post-self-insert-hook
+              #'belugasmie-blink-matching-open 'append 'local)
+    (set (make-local-variable 'belugasmie-blink-matching-triggers) '(?>)))
 
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
          (font-lock-syntactic-keywords . nil))))
 
-;;; Own own copy of (a version of) SMIE.
+;;; Our own copy of (a version of) SMIE.
 
 (defun belugasmie-set-prec2tab (table x y val &optional override)
   (assert (and x y))
@@ -292,7 +302,7 @@ one of those elements share the same precedence level and associativity."
                  table))
       prec2)))
 
-(defun belugasmie-bnf-precedence-table (bnf &rest precs)
+(defun belugasmie-bnf->prec2 (bnf &rest precs)
   (let ((nts (mapcar 'car bnf))         ;Non-terminals
         (first-ops-table ())
         (last-ops-table ())
@@ -492,7 +502,7 @@ CSTS is a list of pairs representing arcs in a graph."
      (append names (list (car names)))
      " < ")))
 
-(defun belugasmie-prec2-levels (prec2)
+(defun belugasmie-prec2->grammar (prec2)
   ;; FIXME: Rather than only return an alist of precedence levels, we should
   ;; also extract other useful data from it:
   ;; - matching sets of block openers&closers (which can otherwise become
@@ -506,7 +516,7 @@ CSTS is a list of pairs representing arcs in a graph."
   ;; bnf->prec function.
   "Take a 2D precedence table and turn it into an alist of precedence levels.
 PREC2 is a table as returned by `belugasmie-precs-precedence-table' or
-`belugasmie-bnf-precedence-table'."
+`belugasmie-bnf->prec2'."
   ;; For each operator, we create two "variables" (corresponding to
   ;; the left and right precedence level), which are represented by
   ;; cons cells.  Those are the very cons cells that appear in the
@@ -640,7 +650,7 @@ it should move backward to the beginning of the previous token.")
 (defun belugasmie--associative-p (toklevels)
   ;; in "a + b + c" we want to stop at each +, but in
   ;; "if a then b elsif c then d else c" we don't want to stop at each keyword.
-  ;; To distinguish the two cases, we made belugasmie-prec2-levels choose
+  ;; To distinguish the two cases, we made belugasmie-prec2->grammar choose
   ;; different levels for each part of "if a then b else c", so that
   ;; by checking if the left-level is equal to the right level, we can
   ;; figure out that it's an associative operator.
@@ -1525,77 +1535,93 @@ to which that point should be aligned, if we were to reindent it.")
              ((not (zerop (skip-syntax-backward ".")))))
             (point)))))
 
-(defconst beluga-smie-op-levels
+(defun beluga-smie-grammar (bnf resolvers precs)
+  (if (fboundp 'smie-setup)
+      (smie-prec2->grammar
+       (smie-merge-prec2s
+        (apply #'smie-bnf->prec2 bnf resolvers)
+        (smie-precs->prec2 precs)))
+    (belugasmie-prec2->grammar
+       (belugasmie-merge-prec2s
+        (apply #'belugasmie-bnf->prec2 bnf resolvers)
+        (belugasmie-precs->prec2 precs)))))
+
+;; FIXME: Use smie functions if applicable.
+(defconst beluga-smie-grammar
   ;; The "." used for terminating LF declarations is syntactically completely
   ;; different from the "." used in the binding forms.  Conflating the two
   ;; leads here to a lot of precedence conflicts, so we try and guess the two
   ;; based on a heuristic in the tokenizing code.
-  (belugasmie-prec2-levels
-   (belugasmie-merge-prec2s
-    (belugasmie-bnf-precedence-table
-     ;; FIXME: without this dummy, "=>" is marked as "open paren" because it
-     ;; can only bind to `atom' on the left.
-     '((atom ("--dummy--"))
-       (def (exp "=" exp) (atom ":" exp))
-       (decl (atom ":" type)
-             ("schema" sdef)
-             ("let" def)
-             (recs))
-       (simpletype (simpletype "->" simpletype)
-                   (simpletype "<-" simpletype))
-       (recs ("rec" def) (recs "and" recs))
-       (decls (decl) (decls ";" decls) (decls ";." decls))
-       ;; FIXME: only allow simple types here, otherwise we get nasty
-       ;; precedence conflicts between "." and ",".  In practice, this seems to
-       ;; be sufficient.
-       (sdecl (atom ":" type))
-       (sdecls (sdecl) (sdecls "," sdecls))
-       (dotted-type (sdecls "." type))
-       (type (simpletype)
-             ("\\" atom "." type)       ;dotted-type
-             ("block" sdecls "." type)  ;dotted-type
-             ;; ("{" blabla "}" type)  ; FIXME!
-             ;; FIXME: the projection via "." creates precedence conflicts.
-             ;; (type "." atom)
+  (beluga-smie-grammar
+   ;; FIXME: without this dummy, "=>" is marked as "open paren" because it
+   ;; can only bind to `atom' on the left.
+   '((atom ("--dummy--"))
+     (def (exp "=" exp) (atom ":" exp))
+     (decl (atom ":" type)
+           ("datatype" datatype-def)
+           ("schema" sdef)
+           ("let" def)
+           (recs))
+     (simpletype (simpletype "->" simpletype)
+                 (simpletype "<-" simpletype))
+     (recs ("rec" def) (recs "and" recs))
+     (decls (decl) (decls ";" decls) (decls ";." decls))
+     ;; FIXME: only allow simple types here, otherwise we get nasty
+     ;; precedence conflicts between "." and ",".  In practice, this seems to
+     ;; be sufficient.
+     (sdecl (atom ":" type))
+     (sdecls (sdecl) (sdecls "," sdecls))
+     (dotted-type (sdecls "." type))
+     (type (simpletype)
+           ("\\" atom "." type)         ;dotted-type
+           ("block" sdecls "." type)    ;dotted-type
+           ;; ("{" blabla "}" type)  ; FIXME!
+           ;; FIXME: the projection via "." creates precedence conflicts.
+           ;; (type "." atom)
+           )
+     (sdef (atom "=" schema))
+     (schema (type)
+             ;; Not sure if it's correct, and create precedence conflicts.
+             ;; ("some" sdecls "block" sdecls "." schema)
              )
-       (sdef (atom "=" schema))
-       (schema (type)
-               ;; Not sure if it's correct, and create precedence conflicts.
-               ;; ("some" sdecls "block" sdecls "." schema)
-               )
-       (exp ("if" exp "then" exp "else" exp)
-            (type)
-            ("let" def "in" exp)
-            ("fn" atom "=>" exp)
-            ("FN" atom "=>" exp)
-            ("mlam" atom "=>" exp)
-            ("<" dotted-type ">")
-            ("case" exp "of" cases))
+     (datatype-name (atom ":" type))
+     (datatype-def (datatype-name "=" datatype-branches))
+     (datatype-branches (datatype-branches "|" datatype-branches)
+                        (atom ":" type))
+     (exp ("if" exp "then" exp "else" exp)
+          (type)
+          ("let" def "in" exp)
+          ("fn" atom "=>" exp)
+          ("FN" atom "=>" exp)
+          ("mlam" atom "=>" exp)
+          ("<" dotted-type ">")
+          ("case" exp "of" cases))
 
-       (exps (exps ";" exps) (exp))
-       ;; Separate cases/branch so that "|" is recognized as associative.
-       (cases (branch) (cases "|" cases))
-       (branch (atom "=>" exp)))
-     '((assoc ";" ";."))
-     '((assoc "->" "<-"))
-     '((assoc ","))
-     '((assoc "and"))
-     '((nonassoc "of") (assoc "|")) ; Trailing | ambiguity.
+     (exps (exps ";" exps) (exp))
+     ;; Separate cases/branch so that "|" is recognized as associative.
+     (cases (branch) (cases "|" cases))
+     (branch (atom "=>" exp)))
+   '(((assoc ";" ";."))
+     ((assoc "->" "<-"))
+     ((assoc ","))
+     ((assoc "and"))
+     ((nonassoc "of") (assoc "|"))      ; Trailing | ambiguity.
      ;; '((nonassoc "\\") (nonassoc ".")) ; Trailing . ambiguity.
      ;; '((nonassoc "block") (nonassoc ".")) ; Trailing . ambiguity.
      )
 
-    ;; The above BNF grammar should cover this already, so this ends up only
-    ;; useful to check that the BNF entails the expected precedences.
-    (belugasmie-precs-precedence-table
-     '((assoc ";")
-       (assoc ",")
-       (left ":")
-       (assoc "<-" "->")
-       (nonassoc " -dummy- "))) ;Bogus anchor at the end.
-     )))
+   ;; The above BNF grammar should cover this already, so this ends up only
+   ;; useful to check that the BNF entails the expected precedences.
+   '((assoc ";")
+     (assoc ",")
+     (left ":")
+     (assoc "<-" "->")
+     (nonassoc " -dummy- "))))          ;Bogus anchor at the end.
+
 
 (defconst beluga-smie-indent-rules
+  ;; FIXME: Obsolete; This variable is only used in Emacs<23.4.  Newer versions
+  ;; use the beluga-smie-indent-rules function instead, via smie-setup.
   '((list-intro "fn" "FN" "mlam")
     ("of" 2)
     ("in" (:hanging 0) nil)
@@ -1610,6 +1636,29 @@ to which that point should be aligned, if we were to reindent it.")
     ((t . "|") . -2)
     ("let") ("if")
     ))
+
+(defun beluga-smie-indent-rules (method token)
+  (cond
+   ((eq method :list-intro) (member token '("fn" "FN" "mlam")))
+   ((and (eq method :elem) (eq token 'arg)) beluga-indent-basic)
+   ((and (eq method :before) (equal token "|") (smie-rule-prev-p "=" "of"))
+    ;; Presumable a "datatype foo = | ...".
+    (smie-rule-parent))
+   ((equal token "|") (smie-rule-separator method))
+   ((eq method :after)
+    (cond
+     ((equal token "of") 2)
+     ((equal token "in") (if (smie-rule-hanging-p) 0))
+     ((equal token "=") 0)
+     ;; FIXME: Specify the indentation after => depending
+     ;; on whether it is a "=>" that goes with an "fn" or with a "|".
+     ((equal token "=>") 0)
+     ((member token '(":" "let" "if")) beluga-indent-basic)))
+   ((eq method :before)
+    (cond
+     ((and (equal token "=") (smie-rule-parent-p "datatype")) 2)
+     ((member token '("case" "fn" "mlam"))
+      (if (smie-rule-prev-p "=>") (smie-rule-parent)))))))
 
 (defcustom beluga-indent-basic 4
   "Basic amount of indentation."

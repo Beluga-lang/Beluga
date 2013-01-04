@@ -1546,6 +1546,7 @@ to which that point should be aligned, if we were to reindent it.")
         (apply #'belugasmie-bnf->prec2 bnf resolvers)
         (belugasmie-precs->prec2 precs)))))
 
+
 ;; FIXME: Use smie functions if applicable.
 (defconst beluga-smie-grammar
   ;; The "." used for terminating LF declarations is syntactically completely

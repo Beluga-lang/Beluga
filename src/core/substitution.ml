@@ -245,7 +245,7 @@ module LF = struct
     | Head (Const c)      -> Head (Const c)
     | Obj u               -> Obj (Clo (u, s))
     | Undef               -> Undef
-    | Head (FPVar (_n, _ )) -> ft
+    | Head (FPVar (_n, _s' )) -> ft
     | Head (MMVar (_n, _ )) -> raise (Error "[frontSub] mmvar undefined ")
 
 

@@ -120,6 +120,53 @@ module Make (T : TRAIL) : UNIFY = struct
     | (PVarRef r, PVarRef r') -> r == r'
     | (_, _)                  -> false
 
+
+
+let rec blockdeclInDctx cPsi = match cPsi with
+  | Null -> false
+  | CtxVar psi -> false
+  | DDec (cPsi',TypDecl(x, tA)) ->
+     begin match Whnf.whnfTyp (tA, id) with
+       | (Sigma _ , _ ) -> true
+       | _  ->    blockdeclInDctx cPsi'
+     end
+
+  let rec expandPatSub t cPsi = match (t, cPsi) with
+    | Shift ( _ , k) , Null -> t
+    | Shift ( _ , k) , CtxVar _ -> t
+    | Shift ( c , k) , DDec (cPsi,TypDecl(x, tA)) ->
+      Dot(Head (BVar (k+1)), expandPatSub (Shift (c, k+1)) cPsi)
+    | Dot (h, s) , DDec (cPsi, tdec) ->
+      Dot (h, expandPatSub s cPsi)
+
+  (* genMMVarstr cD cPsi (tP, s) = Y[ss_proj]
+
+     if  cD ; cPsi |- [s]tP    and  let X be a mmvar of this type
+     then Y[ss_proj] is a new mmvar of type
+          cD ; cPhi' |- tQ'  where
+
+          cPsi  |- ss_proj : cPhi'
+  *)
+  let genMMVarstr loc cD cPsi (Atom (_, a, _tS) as tP, s) =
+    let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
+    let s_proj = ConvSigma.gen_conv_sub conv_list in
+    let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
+      (*  cPsi |- s_proj : cPhi
+          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+
+    let (ss', cPhi') = Subord.thin' cD a cPhi in
+      (* cPhi |- ss' : cPhi' *)
+    let ssi' = Substitution.LF.invert ss' in
+      (* cPhi' |- ssi : cPhi *)
+      (* cPhi' |- [ssi]tQ    *)
+    let u = Whnf.newMMVar None (cD, cPhi', TClo(tQ,ssi')) in
+      (* cPhi |- ss'    : cPhi'
+         cPsi |- s_proj : cPhi
+         cPsi |- comp  ss' s_proj   : cPhi' *)
+    let ss_proj = Substitution.LF.comp ss' s_proj in
+      Root (loc, MMVar (u, (Whnf.m_id, ss_proj)), Nil)
+
+
   (* isPatSub s = B
 
      Invariant:
@@ -2141,8 +2188,14 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     (* MMVar-normal case *)
-    | ((Root (_, MMVar (MInst (_n, r, cD,  cPsi1, _tP, cnstrs), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
+    | ((Root (loc, MMVar (MInst (_n, r, cD,  cPsi1, tP, cnstrs), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         dprnt "(011) MMVar-_";
+        if blockdeclInDctx (Whnf.cnormDCtx (cPsi1, Whnf.m_id)) then
+          (dprnt "(011) - blockinDCtx";
+          let tN = genMMVarstr loc cD cPsi1 (tP, id) in
+            instantiateMMVar (r, tN,!cnstrs);
+            unifyTerm mflag cD0 cPsi sM1 sM2)
+        else
         let t' = Whnf.normSub (comp t s1) in
         let _ = dprint (fun () -> "t' = " ^ P.subToString cD0 cPsi t') in
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
@@ -2176,6 +2229,11 @@ module Make (T : TRAIL) : UNIFY = struct
             if isProjPatSub t' && isPatMSub mt then
               begin try
                 let _ = dprint (fun () -> "MMVar case - with projpat sub") in
+                let _ = dprint (fun () ->
+                                "UNIFY(2): MMVar-Normal\n" ^
+                                  P.mctxToString cD0 ^ "\n" ^
+                                  P.normalToString cD0 cPsi sM1 ^ "  ==  " ^
+                                  P.normalToString cD0 cPsi sM2 ^ "\n") in
                 let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
                 let phat = Context.dctxToHat flat_cPsi in
                 let t_flat = ConvSigma.strans_sub cD0 t' conv_list in
@@ -2223,8 +2281,14 @@ module Make (T : TRAIL) : UNIFY = struct
 
 
     (* normal-MMVar case *)
-    | ((_tM1, _s1) as sM1, ((Root (_, MMVar (MInst (_n, r, _cD, cPsi2, _tP, cnstrs), (mt, t)), _tS), s2) as sM2)) ->
+    | ((_tM1, _s1) as sM1, ((Root (loc, MMVar (MInst (_n, r, cD2, cPsi2, tP, cnstrs), (mt, t)), _tS), s2) as sM2)) ->
         dprnt "(012) _-MMVar";
+        if blockdeclInDctx (Whnf.cnormDCtx (cPsi2, Whnf.m_id)) then
+          (dprnt "(012) - blockinDCtx";
+          let tN = genMMVarstr loc cD2 cPsi2 (tP, id) in
+            instantiateMMVar (r, tN,!cnstrs);
+            unifyTerm mflag cD0 cPsi sM1 sM2)
+        else
         let t' = Whnf.normSub (comp t s2) in
           if isPatSub t' && isPatMSub mt then
             try
@@ -2246,6 +2310,11 @@ module Make (T : TRAIL) : UNIFY = struct
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)
             if isProjPatSub t' && isPatMSub mt then
             try
+               let _ = dprint (fun () ->
+                                "UNIFY(3): normal-MMVar" ^
+                                  P.mctxToString cD0 ^ "\n" ^
+                                  P.normalToString cD0 cPsi sM1 ^ "\n    " ^
+                                  P.normalToString cD0 cPsi sM2 ^ "\n") in
               let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
               let phat = Context.dctxToHat flat_cPsi in
               let t_flat = ConvSigma.strans_sub cD0 t' conv_list in
@@ -2307,7 +2376,7 @@ module Make (T : TRAIL) : UNIFY = struct
     | (FPVar (q, s), FPVar (p, s'))
         ->   (if p = q then
                 unifySub mflag cD0 cPsi s s'
-              else raise (Error "Front FPVar mismatch"))
+              else raise (Failure "Front FPVar mismatch"))
 
     | (PVar (Offset k, s) , PVar(Offset k', s')) ->
         if k = k' then
@@ -2811,7 +2880,7 @@ module Make (T : TRAIL) : UNIFY = struct
       | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2))
         -> if s1 = s2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
-        else raise (Error "SVar mismatch")
+        else raise (Failure "SVar mismatch")
 
       | (Dot (f, s), Dot (f', s'))
         -> (unifyFront mflag cD0 cPsi f f' ;
@@ -2834,39 +2903,39 @@ module Make (T : TRAIL) : UNIFY = struct
     and unifyFront mflag cD0 cPsi front1 front2 = match (front1, front2) with
       | (Head (BVar i), Head (BVar k))
         -> if i = k then () else
-              raise (Error "Front BVar mismatch")
+              raise (Failure "Front BVar mismatch")
 
       | (Head (Const i), Head (Const k))
-        -> if i = k then () else raise (Error "Front Constant mismatch")
+        -> if i = k then () else raise (Failure "Front Constant mismatch")
 
       | (Head (PVar (q, s)), Head (PVar (p, s')))
         -> (if p = q then
             unifySub mflag cD0 cPsi s s'
-            else raise (Error "Front PVar mismatch"))
+            else raise (Failure "Front PVar mismatch"))
 
 
       | (Head (FPVar (q, s)), Head (FPVar (p, s')))
         ->   (if p = q then
                 unifySub mflag cD0 cPsi s s'
-              else raise (Error "Front FPVar mismatch"))
+              else raise (Failure "Front FPVar mismatch"))
 
       | (Head (MVar (u, s)), Head (MVar (v, s')))
         ->  (if u = v then
                unifySub mflag cD0 cPsi s s'
-             else raise (Error "Front MVar mismatch"))
+             else raise (Failure "Front MVar mismatch"))
 
       | (Head (FMVar (u, s)), Head (FMVar (v, s')))
         ->    (if u = v then
                  unifySub mflag cD0 cPsi s s'
-               else raise (Error "Front FMVar mismatch"))
+               else raise (Failure "Front FMVar mismatch"))
 
       | (Head (Proj (head, k)), Head (Proj (head', k')))
         ->    (if k = k' then
                  unifyFront mflag cD0 cPsi (Head head) (Head head')
-               else raise (Error "Front Proj mismatch"))
+               else raise (Failure "Front Proj mismatch"))
 
       | (Head (FVar x), Head (FVar y))
-        -> if x = y then () else raise (Error "Front FVar mismatch")
+        -> if x = y then () else raise (Failure "Front FVar mismatch")
 
       | (Obj tM, Obj tN)
         -> unifyTerm mflag cD0 cPsi (tM, id) (tN, id)
@@ -2881,7 +2950,7 @@ module Make (T : TRAIL) : UNIFY = struct
         -> ()
 
       | (_, _)
-        -> raise (Error "Front mismatch")
+        -> raise (Failure "Front mismatch")
 
 
    and unifyTyp mflag cD0 cPsi sA sB = unifyTypW mflag cD0 cPsi (Whnf.whnfTyp sA) (Whnf.whnfTyp sB)

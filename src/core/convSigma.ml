@@ -61,10 +61,10 @@ and strans_normW cD (tM, s) conv_list = match tM with
 and strans_head loc cD h conv_list = match h with
   | Int.LF.BVar x -> Int.LF.BVar (new_index x conv_list)
   | Int.LF.MVar (Int.LF.Offset u, sigma) ->
-      let (_, tA, cPsi') =  Whnf.mctxMDec cD u in
+(*      let (_, tA, cPsi') =  Whnf.mctxMDec cD u in
         if blockdeclInDctx cPsi' then
           raise (Error (loc, BlockInDctx (cD, h, tA, cPsi')))
-        else
+        else *)
           Int.LF.MVar(Int.LF.Offset u, strans_sub cD sigma conv_list)
   | Int.LF.MVar (u, sigma) ->
           Int.LF.MVar(u, strans_sub cD sigma conv_list)
@@ -79,6 +79,11 @@ and strans_head loc cD h conv_list = match h with
   | Int.LF.Proj (Int.LF.FPVar (p, sigma), j) ->
       Int.LF.Proj (Int.LF.FPVar (p, strans_sub cD sigma conv_list), j)
 
+  | Int.LF.Proj (Int.LF.MPVar (p, (ms, sigma)), j) ->
+      let ms' = strans_msub cD ms conv_list in
+      let sigma' = strans_sub cD sigma conv_list in
+        Int.LF.Proj (Int.LF.MPVar (p, (ms', sigma')), j)
+
   | Int.LF.Const c -> Int.LF.Const c
   | Int.LF.FVar x -> Int.LF.FVar x
   | Int.LF.FMVar (u,s) -> Int.LF.FMVar (u, strans_sub cD s conv_list)
@@ -87,6 +92,10 @@ and strans_head loc cD h conv_list = match h with
       let ms' = strans_msub cD ms conv_list in
       let s'  = strans_sub cD s conv_list in
         Int.LF.MMVar (u, (ms', s'))
+  | Int.LF.MPVar  (u, (ms, s)) ->
+      let ms' = strans_msub cD ms conv_list in
+      let s'  = strans_sub cD s conv_list in
+        Int.LF.MPVar (u, (ms', s'))
 
 and strans_msub cD ms conv_list = match ms with
   | Int.LF.MShift k -> Int.LF.MShift k

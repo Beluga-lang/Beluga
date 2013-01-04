@@ -393,6 +393,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           let cPsi' = C.cnormDCtx (cPsi, t) in
           let tA'   = C.cnormTyp (tA, t) in
 *)
+        let _ = dprint (fun () -> "[comp check ] " ^
+	  P.mctxToString cD ^ " ; " ^
+	  P.dctxToString cD cPsi ^ " |- " ^
+	  P.normalToString cD cPsi (tM, S.LF.id) ^
+          " <= " ^ P.typToString cD cPsi (tA, S.LF.id) ) in
             LF.check cD  cPsi (tM, S.LF.id) (tA, S.LF.id)
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
@@ -450,6 +455,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | (Hole (_loc), (_tau, _t)) -> ()
 
   and check cD cG e (tau, t) =
+    let _ =  dprint (fun () -> "[check]  " ^
+                       P.expChkToString cD cG e ^
+                        " against \n    " ^
+                  P.mctxToString cD ^ " |- " ^
+                  P.compTypToString cD (Whnf.cnormCTyp (tau, t))) in
     checkW cD cG e (C.cwhnfCTyp (tau, t));
 
   and syn cD cG e = match e with

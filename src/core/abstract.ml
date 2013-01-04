@@ -819,7 +819,7 @@ and collectSpine p cQ phat sS = match sS with
       collectSpine p cQ phat (tS, LF.comp s' s)
 
   | (I.App (tM, tS), s) ->
-    let (cQ', tM') = collectTerm p cQ phat (tM, s) in
+    let (cQ', tM') = collectTerm p cQ phat (tM, LF.id)  in
     let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in
       (cQ'', I.App (tM', tS'))
 
@@ -910,11 +910,18 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
               let (cQ0, sigma) = collectSub k cQ phat (LF.comp s' s) in
               let (cD_d, I.MDecl (_, tA, cPhi))  = FCVar.get u in
 	      let d = k - Context.length cD_d in
-	      let (tA,cPhi) = (if d <= 0    then (tA,cPhi) else
-                      (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in
+	      let (tA,cPhi) = (if d <= 0  then (tA,cPhi)
+                               else
+                                 (Whnf.cnormTyp (tA, Int.LF.MShift d),
+                                  Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in
               let phihat = Context.dctxToHat cPhi in
               let cQ' = I.Dec(cQ0, FMV(Impure, u, None)) in
               let (cQ1, cPhi')  = collectDctx loc k cQ' phihat cPhi in
+              let _ = dprint (fun () -> "[collectTerm] FMVar "
+                                ^ R.render_name u ^ " has typ " ^
+                                P.typToString I.Empty cPhi (tA, LF.id))
+              in
+
               let (cQ'', tA')   = collectTyp k cQ1  phihat (tA, LF.id) in
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,

@@ -1667,7 +1667,10 @@ and whnf sM = match sM with
   | (Root (_, MMVar (MInst (_, {contents = Some tM}, _cD, _cPsi, _tA, _), (t,r)), tS), sigma) ->
       (* constraints associated with u must be in solved form *)
       let tM' = cnorm (tM, t) in
-      let sR =  whnfRedex ((tM', LF.comp r sigma), (tS, sigma)) in
+      let tM'' = norm (tM', r) in
+      let sR =  whnfRedex ((tM'', sigma), (tS, sigma)) in
+
+(*      let sR =  whnfRedex ((tM', LF.comp r sigma), (tS, sigma)) in *)
         sR
 
   | (Root (loc, MMVar (MInst (n, ({contents = None} as uref), cD, cPsi, tA, cnstr), (t, r)), tS), sigma) ->

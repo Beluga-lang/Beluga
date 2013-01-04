@@ -665,13 +665,46 @@ and checkSchema loc cD cPsi (Schema elements as schema) =
             let _ = checkTypeAgainstSchema loc cD cPsi' tA elements in ()
       end
 
- (* If subsumes psi phi succeeds then there exists  wk_sub  such that  psi |- wk_sub : phi  *)
-and subsumes cD psi phi = match psi, phi with
+ (* If subsumes psi phi succeeds then there exists  wk_sub
+    such that  psi |-  wk_sub : phi
+    and in addition (more importantly), there exists a str_sub
+    phi |- str_sub : psi
+    *)
+ and subsumes cD psi phi = match psi, phi with
   | CtxOffset psi_var , CtxOffset phi_var ->
       let Schema psi_selem = Schema.get_schema (lookupCtxVarSchema cD psi) in
       let Schema phi_selem = Schema.get_schema (lookupCtxVarSchema cD phi) in
-        List.for_all (fun elem -> checkElementAgainstSchema Empty elem phi_selem) psi_selem
+        List.for_all (fun elem -> checkElementAgainstSchema Empty elem  phi_selem) psi_selem
   | _, _ -> false
+
+(*
+ and checkElemIrrelevant (SchElem (cPsi1, tArec1)) (SchElem (cPsi2, tArec2)) =
+  begin match elemPostfix (tArec1, id) (tArec2, id) with
+    | None -> true
+    | Some (tArec, s) -> (* tArec1, tArec = tArec2 *)
+        checkTypRecIrr (tArec, s) (tArec1, id)
+  end
+*)
+(* tArec~> cPsi then for all tP in tArec1,   thin (tP, cPsi)
+
+tArec1 ~> list of type families forms "basis"
+for each tA in tArec, check that  Subord.relevant  tA basis = []
+
+
+ and checkTypRecIrr (SigmaLast tA, s)
+
+*)
+
+ and elemPostfix sArec sBrec = match (sArec, sBrec) with
+   | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
+       None
+
+   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast tB, s')) ->
+       Some (recA,s)
+
+   | ((SigmaElem (_xA, _tA, recA), s), (SigmaElem(_xB, _tB, recB), s')) ->
+       elemPostfix (recA, Substitution.LF.dot1 s) (recB, Substitution.LF.dot1 s')
+
 
 
 and checkSchemaWf (Schema elements ) =

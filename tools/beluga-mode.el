@@ -1,6 +1,6 @@
 ;;; beluga-mode.el --- Major mode for Beluga source code  -*- coding: utf-8 -*-
 
-;; Copyright (C) 2009, 2010, 2012  Free Software Foundation, Inc.
+;; Copyright (C) 2009, 2010, 2012, 2013  Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Keywords:
@@ -269,7 +269,7 @@ Regexp match data 0 points to the chars."
           (display-warning 'smie (format "Conflict: %s %s/%s %s" x old val y)))
       (puthash key val table))))
 
-(defun belugasmie-precs-precedence-table (precs)
+(defun belugasmie-precs->prec2 (precs)
   "Compute a 2D precedence table from a list of precedences.
 PRECS should be a list, sorted by precedence (e.g. \"+\" will
 come before \"*\"), of elements of the form \(left OP ...)
@@ -310,7 +310,7 @@ one of those elements share the same precedence level and associativity."
         (last-nts-table ())
         (prec2 (make-hash-table :test 'equal))
         (override (apply 'belugasmie-merge-prec2s
-                         (mapcar 'belugasmie-precs-precedence-table precs)))
+                         (mapcar 'belugasmie-precs->prec2 precs)))
         again)
     (dolist (rules bnf)
       (let ((nt (car rules))
@@ -515,7 +515,7 @@ CSTS is a list of pairs representing arcs in a graph."
   ;; Of course, maybe those things would be even better handled in the
   ;; bnf->prec function.
   "Take a 2D precedence table and turn it into an alist of precedence levels.
-PREC2 is a table as returned by `belugasmie-precs-precedence-table' or
+PREC2 is a table as returned by `belugasmie-precs->prec2' or
 `belugasmie-bnf->prec2'."
   ;; For each operator, we create two "variables" (corresponding to
   ;; the left and right precedence level), which are represented by

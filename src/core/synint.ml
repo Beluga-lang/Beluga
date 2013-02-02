@@ -244,15 +244,16 @@ module Comp = struct
   (* MetaSClo of meta_spine * msub *)
 
   type typ =
-    | TypBase  of Loc.t * cid_comp_typ * meta_spine
-    | TypDef  of Loc.t * cid_comp_typ * meta_spine
-    | TypBox   of Loc.t * LF.typ  * LF.dctx
-    | TypSub   of Loc.t * LF.dctx * LF.dctx
-    | TypArr   of typ * typ
-    | TypCross of typ * typ
-    | TypCtxPi of (name * cid_schema * depend) * typ
-    | TypPiBox of (LF.ctyp_decl * depend) * typ
-    | TypClo   of typ *  LF.msub
+    | TypBase   of Loc.t * cid_comp_typ * meta_spine
+    | TypDef    of Loc.t * cid_comp_typ * meta_spine
+    | TypBox    of Loc.t * LF.typ  * LF.dctx
+    | TypParam  of Loc.t * LF.typ  * LF.dctx
+    | TypSub    of Loc.t * LF.dctx * LF.dctx
+    | TypArr    of typ * typ
+    | TypCross  of typ * typ
+    | TypCtxPi  of (name * cid_schema * depend) * typ
+    | TypPiBox  of (LF.ctyp_decl * depend) * typ
+    | TypClo    of typ *  LF.msub
     | TypBool
 
 

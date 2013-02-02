@@ -411,10 +411,15 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         end
 
     | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')),
-      branches), (tau, t)) ->
+             branches), (tau, t)) ->
+        let tau_sc =  (match tR with
+                   | I.Root (_, I.PVar _ , _ ) ->
+                       TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')
+                   | _ ->
+                       TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in
         let tau_s = TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
-        let problem = Coverage.make loc prag cD branches tau_s in
+        let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
           checkBranches (IndexObj (phat, tR)) cD cG branches tau_s (tau, t);
           Coverage.process problem

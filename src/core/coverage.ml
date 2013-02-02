@@ -105,6 +105,7 @@ type pattern =
   | MetaPatt  of  LF.dctx * LF.normal * LF.tclo
   | MetaCtx   of LF.dctx
   | EmptyPatt of  LF.dctx * LF.tclo
+  | EmptyParamPatt of  LF.dctx * LF.tclo
   | GenPatt of Comp.gctx * Comp.pattern * Comp.tclo
 
 
@@ -240,6 +241,8 @@ let pattToString cD patt = match patt with
       P.dctxToString cD cPsi ^ " . " ^
       P.normalToString cD cPsi (tR, S.LF.id) ^ " : " ^ P.typToString cD cPsi sA
   | EmptyPatt (cPsi, sA) ->
+           P.dctxToString cD cPsi ^ " . " ^ "     ()    : " ^ P.typToString cD cPsi sA
+  | EmptyParamPatt (cPsi, sA) ->
            P.dctxToString cD cPsi ^ " . " ^ "     ()    : " ^ P.typToString cD cPsi sA
 
 
@@ -903,6 +906,17 @@ let trivially_empty cov_problem =
   with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
   end
 
+let trivially_empty_param cov_problem =
+  begin try
+    begin match genPVar cov_problem with
+      | [] -> true
+      | _  -> false
+    end
+  with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
+  end
+
+
+
 let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
   | [] -> (match sCands with []  -> Solved
 	     | _ -> PossSolvable (Cand (cD_p , LF.Empty, mCands, sCands)))
@@ -1123,6 +1137,12 @@ let rec check_empty_pattern k candidates = match candidates with
 				     (match tR with
 					|LF.Root (_, LF.MVar (LF.Offset k', _ ), LF.Nil ) -> not (k = k' )
 					| _ -> true)
+
+				 | EmptyParamPatt (_cPhi, _sB) ->
+				     (match tR with
+					|LF.Root (_, LF.PVar (LF.Offset k', _ ), LF.Nil ) -> not (k = k' )
+					| _ -> true)
+
 				 | _ -> true )
 	sl in
 	Cand (cD_p, cG_p, ml, sl') :: check_empty_pattern k cands
@@ -1832,7 +1852,9 @@ let extract_patterns tau branch_patt = match branch_patt with
   | Comp.Branch (loc, cD, _cG, Comp.PatMetaObj (loc', Comp.MetaCtx (_, cPsi)), ms, _e) ->
 	(cD, MetaCtx (cPsi))
   | Comp.Branch (loc, cD, _cG, Comp.PatMetaObj (loc', pat), ms, _e) ->
-      let Comp.TypBox (_, tA, cPhi) = tau in
+      let (tA, cPhi) = match tau with
+        | Comp.TypBox (_, tA, cPhi) -> (tA, cPhi)
+        | Comp.TypParam (_, tA, cPhi) -> (tA, cPhi) in
       let (cPsi, tR) = (match pat with
 			  | Comp.MetaObjAnn (loc', cPsi, tR) ->
 			      (cPsi, tR) (* [ms]cPhi = cPsi *)
@@ -1840,8 +1862,11 @@ let extract_patterns tau branch_patt = match branch_patt with
 				(Whnf.cnormDCtx (cPhi, ms), tR)) in
 	(cD, MetaPatt (cPsi, tR, (Whnf.cnormTyp (tA, ms), S.LF.id)))
   | Comp.EmptyBranch (loc, cD, Comp.PatEmpty (loc', cPsi), ms)  ->
-      let Comp.TypBox (_, tA, _cPsi) = tau in
-	(cD, EmptyPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
+      begin match tau with
+        | Comp.TypBox (_, tA, cPhi) ->	(cD, EmptyPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
+        | Comp.TypParam (_, tA, cPhi) -> (cD, EmptyParamPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
+      end
+
   | Comp.Branch (loc, cD, cG, pat, ms, _e) ->
       (cD, GenPatt (cG, pat, (tau, ms)))
 
@@ -1855,6 +1880,15 @@ let rec gen_candidates loc cD covGoal patList = match patList with
       else
 	raise (Error (Syntax.Loc.ghost, NoCover
 			(Printf.sprintf "\n##   Empty Pattern ##\n   %s\n\n##   Case expression of type : \n##   %s\n##   is not empty.\n\n"
+			   (Syntax.Loc.to_string loc)
+			   (P.typToString cD_p cPsi sA))))
+
+  | (cD_p, EmptyParamPatt (cPsi, sA) ) :: plist ->
+      if trivially_empty_param (cD_p, cPsi, Whnf.normTyp sA) then
+	gen_candidates loc cD covGoal plist
+      else
+	raise (Error (Syntax.Loc.ghost, NoCover
+			(Printf.sprintf "\n##   Empty Parameter Pattern ##\n    %s\n\n##   Case expression of parameter type : \n##   %s\n##   is not empty.\n\n"
 			   (Syntax.Loc.to_string loc)
 			   (P.typToString cD_p cPsi sA))))
   | (cD_p, (MetaPatt(cPhi, _tN, sB') as pat)) :: plist ->
@@ -1896,17 +1930,22 @@ let initialize_coverage problem = begin match problem.ctype with
       let loc = Syntax.Loc.ghost in
 	[ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , Comp.MetaObjAnn (loc, cPsi', tM) )) ]
 
-(*  | Comp.TypCross (tau1, tau2) ->
-      let cG' = LF.Dec(LF.Dec(problem.cG, Comp.CTypDecl (Id.mk_name (Id.NoName), tau1)),
-		       Comp.CTypDecl (Id.mk_name (Id.NoName), tau2)) in
 
-      let loc_ghost = Syntax.Loc.ghost in
-      let pat = Comp.PatPair (loc_ghost, Comp.PatVar (loc_ghost, 2), Comp.PatVar (loc_ghost, 1))  in
-      let pat_list = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
-      let covGoal = CovPatt (cG', pat, (problem.ctype, Whnf.m_id)) in
-      let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
-	[ (problem.cD, cG', cand_list, pat) ]
-*)
+  | Comp.TypParam(loc, tA, cPsi) ->
+      let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
+      let cD'        = LF.Dec (problem.cD, LF.PDecl(Id.mk_name (Id.NoName), tA, cPsi)) in
+      let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
+      let mv         = LF.PVar (LF.Offset 1, idSub) in
+      let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
+      let cPsi'      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
+      let tA'        = Whnf.cnormTyp (tA, LF.MShift 1) in
+      let covGoal    = CovGoal (cPsi', tM, (tA', S.LF.id)) in
+
+      let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
+
+      let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
+      let loc = Syntax.Loc.ghost in
+	[ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , Comp.MetaObjAnn (loc, cPsi', tM) )) ]
 
  | tau ->  (* tau := Bool | Cross (tau1, tau2) | U *)
       let loc_ghost = Syntax.Loc.ghost in

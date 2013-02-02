@@ -1532,11 +1532,7 @@ and abstractMVarSub' cQ offset s = match s with
 *)
 
 
-(*and abstractMVarCSub cQ ((l, offset) as d) cs = match cs with
-  | I.CShift n -> I.CShift n
-  | I.CDot (cPsi, cs') ->
-      I.CDot (abstractMVarDctx cQ d cPsi , abstractMVarCSub cQ d cs')
-*)
+
 and abstractMVarHat cQ (l,offset) phat = match phat with
   | (None, _ ) -> phat
   | (Some (I.CtxOffset x), k ) ->
@@ -1550,7 +1546,7 @@ and abstractMVarHat cQ (l,offset) phat = match phat with
   | (Some (I.CInst (_, {contents = None}, _, _, _theta ) as psi), k) ->
       let x = index_of cQ (CV (I.CtxVar psi)) + offset in
         (Some (I.CtxOffset x  ), k)
-
+  |  _ -> abstractMVarHat cQ (l,offset) (Whnf.cnorm_psihat phat Whnf.m_id)
 
 and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.Null ->
@@ -2077,6 +2073,10 @@ let rec abstractMVarMetaObj cQ offset cM = match cM with
       let phat' = abstractMVarHat cQ offset phat in
       let tM' = abstractMVarTerm  cQ  offset (tM, LF.id) in
         Comp.MetaObj (loc, phat', tM')
+  | Comp.MetaObjAnn (loc, cPsi, tM) ->
+      let cPsi' = abstractMVarDctx cQ offset cPsi in
+      let tM' = abstractMVarTerm  cQ  offset (tM, LF.id) in
+        Comp.MetaObjAnn (loc, cPsi', tM')
   | Comp.MetaParam (loc, phat, h) ->
       let phat' = abstractMVarHat cQ offset phat in
       let h' = abstractMVarHead cQ offset h in

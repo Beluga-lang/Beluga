@@ -283,6 +283,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
 
+    | _ -> ()
 
   let rec checkKind cD cK = match cK with
     | Ctype _ -> ()

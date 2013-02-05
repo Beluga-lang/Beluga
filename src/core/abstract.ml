@@ -966,7 +966,13 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
 
                 let cQ' = I.Dec(cQ2, MMV(Impure, u)) in
                 let phihat = Context.dctxToHat cPsi in
+                let (_ , offset) = phihat in
+                (* let cPsi = Whnf.normDCtx cPsi in *)
                 let (cQ1, cPsi')  = collectDctx loc k cQ' phihat cPsi in
+                let _ = dprint (fun () -> "[collect] (collect in cPsi and tA) for MMV : " ^ P.headToString I.Empty (Context.hatToDCtx phihat) head) in
+                let _ = dprint (fun () -> "[collect] offset = " ^ string_of_int offset) in
+                let _ = dprint (fun () -> "[collect] MMV before : cPsi = " ^ P.dctxToString I.Empty cPsi) in
+                let _ = dprint (fun () -> "[collect] MMV after: cPsi' = " ^ P.dctxToString I.Empty cPsi') in
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
                 let v = I.MMVar (I.MInst (n, q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in
                   (I.Dec (cQ'', MMV (Pure, v)) , v)
@@ -1138,7 +1144,10 @@ and collectHat p cQ phat = match phat with
                  phat)
         end
 
-and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
+and collectDctx loc p cQ (cvar, offset) cPsi =
+  collectDctx' loc p cQ (cvar, offset) (Whnf.normDCtx cPsi)
+
+and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
   | I.Null ->  (cQ, I.Null)
 
   | I.CtxVar (I.CtxName psi) ->
@@ -1156,7 +1165,7 @@ and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
 
   | I.CtxVar (I.CInst (_, {contents = Some cPsi} , _, _cD, theta)) ->
-      collectDctx loc p cQ (cvar, offset) (Whnf.cnormDCtx (cPsi, theta))
+      collectDctx' loc p cQ (cvar, offset) (Whnf.cnormDCtx (cPsi, theta))
 
   | I.CtxVar (I.CInst (_, {contents = None} , _, _cD, _theta) as psi) ->
         (* this case should not happen *)
@@ -1165,7 +1174,8 @@ and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
           | No ->  (I.Dec (cQ, CV (cPsi)) , cPsi)
         end
   | I.DDec(cPsi, I.TypDecl(x, tA)) ->
-      let (cQ', cPsi') =  collectDctx loc p cQ (cvar, offset - 1) cPsi in
+      let (cQ', cPsi') =  collectDctx' loc p cQ (cvar, offset - 1) cPsi in
+
       let (cQ'', tA')  =  collectTyp p cQ' (cvar, offset - 1) (tA, LF.id) in
         (cQ'', I.DDec (cPsi', I.TypDecl(x, tA')))
 

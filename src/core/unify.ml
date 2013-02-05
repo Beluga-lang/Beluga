@@ -1131,6 +1131,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
                       let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', i_sub)) in
                       let tN = Root (loc, MMVar (v, (id_msub, id_sub)), Nil) in
                       let _ = dprint (fun () -> "[prune] new mvar created : " ^ P.normalToString cD0 cPsi1 (tN, Substitution.LF.id)) in
+                      let _ = dprint (fun () -> "[prune] new mvar has type : [ " ^ P.dctxToString cD2 cPsi2'
+                                        ^ P.typToString cD2 cPsi2' (tP', i_sub)) in
 
                       let tM' = (instantiateMMVar (r, Root (loc, MMVar (v, (id_msub, id_sub)), Nil), !cnstrs);
                                  Whnf.norm (tM, comp s ssubst))

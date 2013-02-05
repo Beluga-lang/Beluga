@@ -4,7 +4,7 @@
 notLam : exp -> type.
 notLam : notLam (app M N).
 
-eval : exp -> exp -> type.
+eval : exp -> exp -> type. %name eval E.
 eval_lam : ({x:exp} eval x x -> notLam x -> eval (M x) (N x))
            -> eval (lam M) (lam N).
 eval_app1 : eval M (lam M') -> eval (M' N) R -> eval (app M N) R.
@@ -24,7 +24,10 @@ case f of
 
  | [g. eval_lam (\x.\u.\v. M' .. x u v)] =>
    let [g. eq_lam (\x.\u. F1 .. x u)] = d in
-   let [g,b:block x:exp, u:eq x x, v:eval x x, _t:notLam x. D1 .. b.1 b.3 b.4] =
+
+   let
+
+     [g,b:block x:exp, u:eq x x, v:eval x x, _t:notLam x. D1 .. b.1 b.3 b.4] =
      eval_respects_eq [g,b:block x:exp, u:eq x x, v:eval x x, _t:notLam x. F1 .. b.1 b.2]
        [g,b. M' .. b.1 b.3 b.4] in
    [g. eval_lam (\x.\u.\v. D1 .. x u v)]
@@ -40,6 +43,7 @@ case f of
 
  | [g. #p.3 ..] =>
    let [g. #q.2 ..] = d in f
+
 ;
 
 rec deterministic : (g:evctx) [g. eval (M ..) (R ..)] -> [g. eval (M ..) (R' ..)]

@@ -954,11 +954,22 @@ and elTerm' recT cD cPsi r sP = match r with
              let _ = dprint (fun () -> "flattenProjPat done " ) in
 
              let (cPhi, s'') = synDom cD loc flat_cPsi flat_s in
+               (*
+                  cD ; cPsi |- sP
+                  cD ; cPsi |- s : cPsi'   and   cD ; cPsi' |- P
+
+                  flat_cPsi |-  s'' : cPhi
+                  cPhi      |-  ss  : flat_cPsi
+
+               *)
              let ss =  Substitution.LF.invert s'' in
 
+             let _ = dprint (fun () -> "[synDom] (after flattening) cPhi = " ^ P.dctxToString cD cPhi ^ "\n") in
              let tP' = ConvSigma.strans_typ cD sP conv_list in
-             let _ = dprint (fun () -> "[synDom] Prune type " ^ P.typToString cD cPsi sP ) in
-             let _ = dprint (fun () -> "[synDom] Prune flattened type " ^ P.typToString cD cPhi (tP', Substitution.LF.id) ) in
+             let _ = dprint (fun () -> "[synDom] Prune type sP = " ^ P.typToString cD cPsi sP ) in
+      (*             let _ = dprint (fun () -> "[synDom] Prune flattened type " ^ P.typToString cD cPhi (tP', Substitution.LF.id) ) in *)
+             let _ = dprint (fun () -> "[synDom] Prune flattened type (1 with resp. flat_cPsi) " ^ P.typToString cD flat_cPsi (tP', Substitution.LF.id) ) in
+(*             let _ = dprint (fun () -> "[synDom] Prune flattened type (2 with resp. cPhi) (may not exist yet)" ^ P.typToString cD cPhi (tP', ss) ) in *)
              let _ = dprint (fun () -> "         with respect to ss = " ^ P.subToString cD cPhi ss ) in
 
              let tP = pruningTyp loc cD flat_cPsi (*?*)
@@ -970,7 +981,7 @@ and elTerm' recT cD cPsi r sP = match r with
              * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
              * This will be enforced during abstraction.
              *)
-             let _ = dprint (fun () -> "Type of mvar " ^ u.string_of_name ^ ":" ^
+             let _ = dprint (fun () -> "[synDom] Type of mvar " ^ u.string_of_name ^ ":" ^
                                P.typToString cD cPhi (tP, Substitution.LF.id) ^ " [ " ^
                                P.dctxToString cD cPhi ^ " ] ") in
 

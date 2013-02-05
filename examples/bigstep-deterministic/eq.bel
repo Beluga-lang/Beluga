@@ -1,11 +1,11 @@
 % Equality lemmas
 % Author: Andrew Cave
 
-exp : type.
+exp : type. %name exp M.
 app : exp -> exp -> exp.
 lam : (exp -> exp) -> exp.
 
-eq : exp -> exp -> type.
+eq : exp -> exp -> type. %name eq D.
 eq_lam : ({x:exp} eq x x -> eq (M x) (N x)) -> eq (lam M) (lam N).
 eq_app : eq M M' -> eq N N' -> eq (app M N) (app M' N').
 
@@ -60,4 +60,5 @@ case [g,x:exp. M .. x] of
  | [g,x:exp. #p.1 ..] => [g. #p.2 ..]
 
 ;
+
 

@@ -39,7 +39,7 @@ type error =
   | PatternMobj
   | PatAnn
   | PatIndexMatch  of Int.LF.mctx * Int.LF.dctx * Int.LF.normal
-  | MCtxIllformed
+  | MCtxIllformed of Int.LF.mctx
 
 exception Error of Syntax.Loc.t * error
 
@@ -47,8 +47,9 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-        | MCtxIllformed ->
-            Format.fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables."
+        | MCtxIllformed cD ->
+            Format.fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
+              (P.fmt_ppr_lf_mctx Pretty.std_lvl) cD
         | PatIndexMatch (cD, cPsi, tR) ->
             Format.fprintf ppf "Pattern matching on index argument %a fails. @@
   Note that unification is conservative and will fail if it cannot handle a case."
@@ -1551,7 +1552,7 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
       Check.Comp.wf_mctx cD1' ;
         ((l_cd1', l_delta), cD1', cPsi1', Some tR1', tP1')
     with
-        _ -> raise (Error (loc,MCtxIllformed))
+        _ -> raise (Error (loc,MCtxIllformed cD1'))
     end
 
 (* inferCtxSchema loc (cD, cPsi) (cD', cPsi') = ()
@@ -1971,7 +1972,7 @@ and recPatObj loc cD pat (cD_s, tau_s) =
       let l_delta                = Context.length cD  in
         ((l_cd1, l_delta), cD1, cG1,  pat1, tau1)
     with
-        _ -> raise (Error (loc,MCtxIllformed))
+        _ -> raise (Error (loc,MCtxIllformed cD1))
     end
 
 (* ********************************************************************************)

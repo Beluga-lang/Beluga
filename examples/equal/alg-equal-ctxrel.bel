@@ -12,50 +12,49 @@
       o Completeness
 }%
 
-term: type.    %name term M x.
+term : type.
 app : term -> term -> term.
 lam : (term -> term) -> term.
+%name term M x.
 
 % Algorithmic Equality
 aeq: term -> term -> type.   %name aeq Q u.
-ae_a : aeq E1 F1 -> aeq E2 F2
-    -> aeq (app E1 E2) (app F1 F2).
-ae_l :  ({x:term} aeq x x -> aeq (E x) (F x))
-        -> aeq (lam (\x. E x)) (lam (\x. F x)).
+ae_a : aeq M1 N1 -> aeq M2 N2
+    -> aeq (app M1 M2) (app N1 N2).
+ae_l :  ({x:term} aeq x x -> aeq (M x) (N x))
+        -> aeq (lam (\x. M x)) (lam (\x. N x)).
 
 % Declarative Equality
 deq: term -> term -> type.
-de_l: ({x:term} deq x x -> deq (T x) (T' x))
-     -> deq (lam (\x. T x)) (lam (\x. T' x)).
-de_a: deq T1 S1 -> deq T2 S2
-     -> deq (app T1 T2) (app S1 S2).
-de_r: deq T T.
-de_t: deq T R -> deq R S
-     -> deq T S.
+de_l: ({x:term} deq x x -> deq (M x) (M' x))
+     -> deq (lam (\x. M x)) (lam (\x. M' x)).
+de_a: deq M1 N1 -> deq M2 N2
+     -> deq (app M1 M2) (app N1 N2).
+de_r: deq M M.
+de_t: deq M L -> deq L N
+     -> deq M N.
 
 % Context declarations
 schema tCtx = term;
 schema taCtx = block x:term, _t:aeq x x;
 schema tdCtx =  block x:term,  _t:deq x x ;
 
-datatype TaCxt : {g:tCtx} {h:taCtx} ctype =
-| Tanil : TaCxt [ ] []
-| Tacons: TaCxt [g] [h] -> TaCxt [g, x:term] [h, b: block (x:term, u:aeq x x)]
+%----------------------------------------------------------
+% Context relations
+
+datatype Crel : {g:tCtx} {h:taCtx} ctype =
+| Crel_e : Crel [ ] []
+| Crel_xa: Crel [g] [h] -> Crel [g, x:term] [h, b: block (x:term, u:aeq x x)]
 ;
 
-datatype TadCxt : {g:taCtx} {h:tdCtx} ctype =
-| ADnil : TadCxt [ ] []
-| ADcons: TadCxt [g] [h] -> TadCxt [g, b:block (x:term, u:aeq x x)]
-				   [h, b: block (x:term, u:deq x x)]
-;
-
-datatype TdCxt : {g:tCtx} {h:tdCtx} ctype =
-| Tdnil : TdCxt [ ] []
-| Tdcons: TdCxt [g] [h] -> TdCxt [g, x:term] [h, b: block (x:term, u:deq x x)]
-;
+% Relation of terms in tCtx context to terms in taCtx context
+% TRel [g.M ..] [h.N ..]
+% This relation allows for a dual reading:
+% 1) When given [g.M ..] then we can always weaken it to obtain [h.N ..]
+% 2) When given [h.N ..] we can always strengthen it to obtain [g.M ..]
 
 datatype TRel : (g:tCtx) (h:taCtx) [g. term] -> [h.term] -> ctype =
-| TRvar0 : {h: taCtx} TaCxt [g] [h] ->
+| TRvar0 : {h: taCtx} Crel [g] [h] ->
             TRel [g, x:term. x]
  		 [h, b:block (x:term, u:aeq x x).b.1]
 | TRvar  : TRel  [g . #p ..] [h . #q.1 ..]
@@ -69,132 +68,9 @@ datatype TRel : (g:tCtx) (h:taCtx) [g. term] -> [h.term] -> ctype =
 	   -> TRel [g. lam \x. M .. x] [h. lam \x. N .. x]
 ;
 
-
-datatype TRel' : (g:tCtx) (h:tdCtx) [g. term] -> [h.term] -> ctype =
-| TRvar0' : {h: tdCtx} % should it include a proof that g and h are related
-            TdCxt [g] [h] ->
-            TRel' [g, x:term. x] [h, b:block (x:term, u:deq x x).b.1]
-| TRvar'  : TRel'  [g . #p ..] [h . #q.1 ..]
-         -> TRel' [g, x:term. #p ..]
-                [h, b:block (x:term, u:deq x x). #q.1 ..]
-
-| TRapp'  : TRel' [g. M ..] [h. M'..] -> TRel' [g. N ..] [h.N' ..]
-        -> TRel' [g. app (M ..) (N ..)] [h. app (M'..) (N'..)]
-
-| TRlam'  : TRel' [g, x:term. M .. x] [h, b:block (x:term, _u:deq x x). N .. b.1]
-	   -> TRel' [g. lam \x. M .. x] [h. lam \x. N .. x]
-;
-
-
-datatype ExistsTRel' : (h: tdCtx){l:tCtx}[h. term] -> ctype =
-| ExTRel' :  TRel' [l.M' ..] [h.M ..] -> ExistsTRel' [l] [h.M ..]
-;
-
-datatype ExistsTRelV' : (h: tdCtx){l:tCtx}[h. term] -> ctype =
-| ExTRelV' :  TRel' [l.#q ..] [h.#p.1 ..] -> ExistsTRelV' [l] [h.#p.1 ..]
-;
-
-
-% Various Lemmas needed in the transitivity case of the ceq proof
-% They establish properties about the weakening relation TRel' and TRel
-% as well as about context relations.
-
-rec trelImpliesTdCxt :TRel' [l. T ..] [h.T' ..] -> TdCxt [l] [h] =
-fn tr => case tr of
-| TRvar0' [h] cr => Tdcons cr
-| TRvar' tr => Tdcons (trelImpliesTdCxt tr)
-| TRapp' tr1 tr2 =>
-  trelImpliesTdCxt tr1
-| TRlam' tr =>
-  let Tdcons cr = trelImpliesTdCxt tr in cr
-;
-
-% Guarantee that for every variable in h there is a corresponding variable in l
-rec exTRelV' : {#p: [h.block x:term, _u:deq x x]} TdCxt [l] [h] -> ExistsTRelV' [l] [h.#p.1 ..] =
-mlam #p => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h. #p.1 ..] of
-| [h,b: block x:term, _u:deq x x. b.1 ] =>
-  let Tdcons cr' = cr in ExTRelV' (TRvar0' [h] cr')
-| [h',b: block x:term, _u:deq x x.#p.1 ..] =>
-  let Tdcons cr' = cr in
-  let ExTRelV' tr = exTRelV' [h'. #p ..] cr' in
-    ExTRelV' (TRvar' tr )
-;
-
-% Guarantee that for every term M in h there is a term M' in l
-rec exTRel' : {M : [h.term]} TdCxt [l] [h] -> ExistsTRel' [l] [ h.M ..] =
-mlam M => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h . M ..] of
-| [h . #p.1 ..] =>
-  let ExTRelV' tr = exTRelV' [h.#p ..] cr in ExTRel' tr
-
-| [h. lam \x. M .. x] =>
-  let ExTRel' tr' = exTRel' [h, b:block (x:term, _u: deq x x). M .. b.1] (Tdcons cr) in
-    ExTRel' (TRlam' tr')
-
-| [h . app (M ..) (N ..)] =>
-  let ExTRel' tr1 = exTRel' [h. M ..] cr in
-  let ExTRel' tr2 = exTRel' [h. N ..] cr in
-    ExTRel' (TRapp' tr1 tr2)
-;
-
-datatype ExistsTRel : (l: tCtx){h:taCtx}[l. term] -> ctype =
-| ExTRel : {M:[h.term]}
-           TRel [l.M' ..] [h.M ..] -> ExistsTRel [h] [l.M' ..]
-;
-
-datatype ExistsTRelV : (l: tCtx){h:taCtx}[l. term] -> ctype =
-| ExTRelV :  TRel [l.#q ..] [h.#p.1 ..] -> ExistsTRelV [h] [l.#q ..]
-;
-
-rec trelImpliesTaCxt :TRel [l. T ..] [h.T' ..] -> TaCxt [l] [h] =
-fn tr => case tr of
-| TRvar0 [h] cr => Tacons cr
-| TRvar tr => Tacons (trelImpliesTaCxt tr)
-| TRapp tr1 tr2 =>
-  trelImpliesTaCxt tr1
-| TRlam tr =>
-  let Tacons cr = trelImpliesTaCxt tr in cr
-;
-
-% Guarantee that for every variable in h there is a corresponding variable in l
-rec exTRelV : {#p: [l. term]} TaCxt [l] [h] -> ExistsTRelV [h] [l.#p ..] =
-mlam #p => fn cr => let (cr : TaCxt [l] [h]) = cr in case [l. #p ..] of
-| [l, x:term. x ] =>
-  let Tacons (cr' : TaCxt [l0] [h0]) = cr in ExTRelV (TRvar0 [h0] cr')
-| [l, x:term.#p ..] =>
-  let Tacons cr' = cr in
-  let ExTRelV tr = exTRelV [l. #p ..] cr' in
-    ExTRelV (TRvar tr )
-;
-
-% Guarantee that for every term M in l there is a term M' in h
-rec exTRel : {M : [l.term]} TaCxt [l] [h] -> ExistsTRel [h] [ l.M ..] =
-mlam M => fn cr => let (cr : TaCxt [l] [h]) = cr in case [l . M ..] of
-| [l . #p ..] =>
-  let ExTRelV tr = exTRelV [l.#p ..] cr in ExTRel [h. _ ] tr
-
-
-% this case is in principle right, but currently there is a subtle bug in Beluga
-  | [l. lam \x. M .. x] =>
-  let ExTRel [h,b:block (x:term, _u: aeq x x). M' .. b.1] tr' = exTRel [l, x:term. M .. x] (Tacons cr) in
-    ExTRel [h. lam \x. M' .. x] (TRlam tr')
-
-| [l . app (M ..) (N ..)] =>
-  let ExTRel [h.M' ..] tr1 = exTRel [l. M ..] cr in
-  let ExTRel [h.N' ..] tr2 = exTRel [l. N ..] cr in
-    ExTRel [h.app (M' ..) (N'..)] (TRapp tr1 tr2)
-
-;
-
-%{
-
-% Admissibility of Reflexivity
-% Comment: With substitution variables, the theorem below is more elegantly
-% stated as:
-%{rec ref' : (h:taCtx){g:tCtx}{M:[g. term]} TRel [g.M..] [h.N..] ->  % {sigma : g[h]}
-          [h. aeq (M sigma) (N sigma)] =
-}%
-% BP: Note one could simply recurse on TRel and not on M, but it is reassuring that
-% the program below actually works.
+% ----------------------------------------------------------------------
+%  Note one could simply pattern match and recurse on TRel and 
+%  pattern match on M and recurse on TRel.
 
 rec ref' : (h:taCtx)(g:tCtx) TRel [g.M..] [h.N..] ->
           [h. aeq (N ..) (N ..)] =
@@ -251,25 +127,106 @@ fn ae1 => fn ae2 => case ae1 of
     [h. ae_a  (AE ..)  (AE' ..)]
 ;
 
-datatype EqT : (l:tCtx) [l.term] -> [l.term] -> ctype =
-| EqTRef : EqT [l. M ..] [l.M ..]
+%----------------------------------------------------------
+%{
+ COMMENT on Admissibility of Reflexivity and transitivity
+  With substitution variables, the theorems could be stated below could
+ be elegantly by generalizing the Crel to include a substitution
+ between [g] and [h]
+}%
+
+%{rec ref' : (h:taCtx){g:tCtx}{M:[g. term]}{N:[h.term] Crel [g] sigma [h]  ->
+             [h. aeq (M sigma) (N sigma)] =
+
+  rec trans': Crel [g] sigma [h]  ->
+   [h. aeq (T sigma) (R sigma)] -> [h. aeq (R sigma) (S sigma)]
+ -> [h. aeq (T sigma) (S sigma)] =
+
+
+  rec ceq : Crel [g] tau [h]  -> Crel [g] sigma [l] ->
+         -> [h. deq (T tau) (S tau)] -> [l. aeq (T sigma) (S2 sigma)]  =
+
+}%
+
+%----------------------------------------------------------
+%{ 3 Properties about TRel needed in the completeness proof
+
+1) unique: Uniqueness
+
+2) exCRel: If terms are related via wk-str relation (aka TRel),
+   then the contexts are related
+
+3) exTRel : Given that the context g and h are related
+      and M makes sense in g, there exists a weakened term M' s.t.
+     it is well-formed in h.
+
+
+}%
+
+
+% Given [g.M ..] and a context h, we can weaken [g.M ..] to
+% obtain [h. N ..] where N is the weakening of M.
+datatype ExWk : (g: tCtx){h:taCtx}[g. term] -> ctype =
+| ExWk : {M: [h.term]}TRel [g.M' ..] [h.M ..] -> ExWk [h] [g.M' ..]
+;
+
+% Given a variable [g. #p ..] and a context h, we can weaken [g. #p ..] to
+% obtain [h. #q ..] where #q is the weakening of #p.
+% Here #q and #p denote the same variable but because variables essentially
+% stand for positions, their position may be different.
+datatype ExWkV : (g: tCtx){h:taCtx}[g. term] -> ctype =
+| ExWkV :  TRel [g.#q ..] [h.#p.1 ..] -> ExWkV [h] [g.#q ..]
+;
+
+% ---------------------------------------------------------------
+% We prove that
+% if wk-str relation between [g. M ..] and [h.N ..] holds then
+% [g] and [h] wk-str of each other, i.e. they are related.
+
+
+% If TRel [g. M ..] [h. N ..] then Crel [g] [h]
+rec exCRel :TRel [l. T ..] [h.T' ..] -> Crel [l] [h] =
+fn tr => case tr of
+| TRvar0 [h] cr => Crel_xa cr
+| TRvar tr      => Crel_xa (exCRel tr)
+| TRapp tr1 tr2 => exCRel tr1
+| TRlam tr      => let Crel_xa cr = exCRel tr in cr
+;
+
+% Other direction:
+% For all [g.M ..] if [g] and [h] wk-str of each other,
+% then there we can weaken M to [h. N ..]
+
+% Guarantee that for every variable in h there is a corresponding variable in l
+rec exTRelV : {#p: [l. term]} Crel [l] [h] -> ExWkV [h] [l.#p ..] =
+mlam #p => fn cr => let (cr : Crel [l] [h]) = cr in case [l. #p ..] of
+| [l, x:term. x ] =>
+  let Crel_xa (cr' : Crel [l0] [h0]) = cr in ExWkV (TRvar0 [h0] cr')
+| [l, x:term.#p ..] =>
+  let Crel_xa cr' = cr in
+  let ExWkV tr = exTRelV [l. #p ..] cr' in
+    ExWkV (TRvar tr )
+;
+
+% Guarantee that for every term M in l there is a term M' in h
+rec exTRel : {M : [l.term]} Crel [l] [h] -> ExWk [h] [ l.M ..] =
+mlam M => fn cr => let (cr : Crel [l] [h]) = cr in case [l . M ..] of
+| [l . #p ..] =>
+  let ExWkV tr = exTRelV [l.#p ..] cr in ExWk [h. _ ] tr
+
+| [l. lam \x. M .. x] =>
+  let ExWk [h,b:block (x:term, _u: aeq x x). M' .. b.1] tr' = exTRel [l, x:term. M .. x] (Crel_xa cr) in
+    ExWk [h. lam \x. M' .. x] (TRlam tr')
+
+| [l . app (M ..) (N ..)] =>
+  let ExWk [h.M' ..] tr1 = exTRel [l. M ..] cr in
+  let ExWk [h.N' ..] tr2 = exTRel [l. N ..] cr in
+    ExWk [h.app (M' ..) (N'..)] (TRapp tr1 tr2)
+
 ;
 
 datatype Equal : (h:taCtx) [h.term] -> [h.term] -> ctype =
 | EqRef : Equal [h. M ..] [h.M ..]
-;
-
-rec unique' : TRel' [l.T ..] [h.T1 ..] -> TRel' [l. S ..] [h.T1 ..]
-      -> EqT [l.T ..] [l.S..]  =
-fn tr => fn sr => case (tr , sr) of
-| (TRvar0' [h] cr,  TRvar0' [h] cr') => EqTRef
-| (TRvar' tr', TRvar' sr') => let EqTRef = unique' tr' sr' in EqTRef
-| (TRapp' tr1 tr2, TRapp' sr1 sr2) =>
-  let EqTRef = unique' tr1 sr1 in
-  let EqTRef = unique' tr2 sr2 in
-    EqTRef
-| (TRlam'  tr, TRlam' sr) =>
-  let EqTRef = unique' tr sr in EqTRef
 ;
 
 rec unique : TRel [l.T ..] [h.T1 ..] -> TRel [l. T ..] [h.T2 ..]
@@ -284,6 +241,120 @@ fn tr => fn sr => case (tr , sr) of
 | (TRlam  tr, TRlam sr) =>
   let EqRef = unique tr sr in EqRef
 ;
+
+
+
+%----------------------------------------------------------
+datatype TadCxt : {g:taCtx} {h:tdCtx} ctype =
+| ADnil : TadCxt [ ] []
+| ADcons: TadCxt [g] [h] -> TadCxt [g, b:block (x:term, u:aeq x x)]
+				   [h, b: block (x:term, u:deq x x)]
+;
+
+datatype TdCxt : {g:tCtx} {h:tdCtx} ctype =
+| Tdnil : TdCxt [ ] []
+| Tdcons: TdCxt [g] [h] -> TdCxt [g, x:term] [h, b: block (x:term, u:deq x x)]
+;
+
+datatype TRel' : (g:tCtx) (h:tdCtx) [g. term] -> [h.term] -> ctype =
+| TRvar0' : {h: tdCtx} % should it include a proof that g and h are related
+            TdCxt [g] [h] ->
+            TRel' [g, x:term. x] [h, b:block (x:term, u:deq x x).b.1]
+| TRvar'  : TRel'  [g . #p ..] [h . #q.1 ..]
+         -> TRel' [g, x:term. #p ..]
+                [h, b:block (x:term, u:deq x x). #q.1 ..]
+
+| TRapp'  : TRel' [g. M ..] [h. M'..] -> TRel' [g. N ..] [h.N' ..]
+        -> TRel' [g. app (M ..) (N ..)] [h. app (M'..) (N'..)]
+
+| TRlam'  : TRel' [g, x:term. M .. x] [h, b:block (x:term, _u:deq x x). N .. b.1]
+	   -> TRel' [g. lam \x. M .. x] [h. lam \x. N .. x]
+;
+
+
+datatype ExWk' : (h: tdCtx){l:tCtx}[h. term] -> ctype =
+| ExWk' :  TRel' [l.M' ..] [h.M ..] -> ExWk' [l] [h.M ..]
+;
+
+datatype ExWkV' : (h: tdCtx){l:tCtx}[h. term] -> ctype =
+| ExWkV' :  TRel' [l.#q ..] [h.#p.1 ..] -> ExWkV' [l] [h.#p.1 ..]
+;
+
+datatype Var : (h: tdCtx) [h. term] -> ctype = 
+| BV : {h:tdCtx} Var [h, b: block x:term, _u:deq x x. b.1 ]
+| PV : Var [h. #p.1 ..] -> Var [h, b: block x:term, _u:deq x x. #p.1 .. ];
+
+% Various Lemmas needed in the transitivity case of the ceq proof
+% They establish properties about the weakening relation TRel' and TRel
+% as well as about context relations.
+
+rec trelImpliesTdCxt :TRel' [l. T ..] [h.T' ..] -> TdCxt [l] [h] =
+fn tr => case tr of
+| TRvar0' [h] cr => Tdcons cr
+| TRvar' tr => Tdcons (trelImpliesTdCxt tr)
+| TRapp' tr1 tr2 =>
+  trelImpliesTdCxt tr1
+| TRlam' tr =>
+  let Tdcons cr = trelImpliesTdCxt tr in cr
+;
+
+% Guarantee that for every variable in h there is a corresponding variable in l
+rec exTRelV' :  {#p: [h.block x:term, _u:deq x x]} 
+		    TdCxt [l] [h] -> ExWkV' [l] [h.#p.1 ..] =
+mlam #p => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h.#p.1 ..] of
+| [h,b: block x:term, _u:deq x x. b.1 ] =>
+  let Tdcons cr' = cr in ExWkV' (TRvar0' [h] cr')
+| [h',b: block x:term, _u:deq x x.#q.1 ..] =>
+  let Tdcons cr' = cr in
+  let ExWkV' tr = exTRelV' [h'. #q ..] cr' in
+    ExWkV' (TRvar' tr )
+;
+
+% Guarantee that for every term M in h there is a term M' in l
+rec exTRel' : {M : [h.term]} TdCxt [l] [h] -> ExWk' [l] [ h.M ..] =
+mlam M => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h . M ..] of
+| [h . #p.1 ..] =>
+  let ExWkV' tr = exTRelV' [h.#p ..] cr in ExWk' tr
+
+| [h. lam \x. M .. x] =>
+  let ExWk' tr' = exTRel' [h, b:block (x:term, _u: deq x x). M .. b.1] (Tdcons cr) in
+    ExWk' (TRlam' tr')
+
+| [h . app (M ..) (N ..)] =>
+  let ExWk' tr1 = exTRel' [h. M ..] cr in
+  let ExWk' tr2 = exTRel' [h. N ..] cr in
+    ExWk' (TRapp' tr1 tr2)
+;
+
+
+
+datatype EqT : (l:tCtx) [l.term] -> [l.term] -> ctype =
+| EqTRef : EqT [l. M ..] [l.M ..]
+;
+
+
+rec unique' : TRel' [l.T ..] [h.T1 ..] -> TRel' [l. S ..] [h.T1 ..]
+      -> EqT [l.T ..] [l.S..]  =
+ fn tr => fn sr => case tr of
+| TRvar0' [h] cr => 
+  let TRvar0' [h] cr' = sr in EqTRef
+| TRvar' tr' => 
+    let TRvar' sr' = sr in 
+    let EqTRef = unique' tr' sr' in EqTRef
+
+| TRapp' tr1 tr2 => 
+    let TRapp' sr1 sr2 = sr in 
+    let EqTRef = unique' tr1 sr1 in
+    let EqTRef = unique' tr2 sr2 in
+    EqTRef
+
+| TRlam'  tr' => 
+    let TRlam' sr' = sr in 
+    let EqTRef = unique' tr' sr' in EqTRef
+;
+
+
+% ----------------------------------------------------------------------
 
 
 rec ceq: (g:taCtx)(h:tdCtx)(l:tCtx)
@@ -326,9 +397,9 @@ fn de => case de of
  | [h. de_t (DE1 ..) (DE2 ..)] =>
    let [h. DE1 ..] : [h. deq (T1' ..) (R1' ..)] = [h.DE1 ..] in
    let tdcxt = trelImpliesTdCxt tr in  % tdcxt:TdCxt [l] [h]
-   let ExTRel' (rr : TRel' [l.R ..] [h.R1' ..]) = exTRel' [h.R1' ..] tdcxt in
-   let tacxt = trelImpliesTaCxt tr' in
-   let ExTRel (rr' : TRel [l.R ..]  [g.R2' ..]) = exTRel [l.R ..] tacxt in
+   let ExWk' (rr : TRel' [l.R ..] [h.R1' ..]) = exTRel' [h.R1' ..] tdcxt in
+   let tacxt = exCRel tr' in
+   let ExWk  [g. R2' ..] (rr' : TRel [l.R ..]  [g.R2' ..]) = exTRel [l.R ..] tacxt in
    let [g.AE2 ..] = ceq  rr sr rr' sr' cr [h.DE2 ..] in
    let [g. AE1 ..] = ceq tr rr tr' rr' cr [h. DE1 ..] in
        trans tr' sr' rr' [g.AE1 ..] [g.AE2 ..]

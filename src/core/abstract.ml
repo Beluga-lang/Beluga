@@ -28,6 +28,7 @@ type error =
   | UnknownIdentifier
   | UnknownSchemaCtx of name
 
+
 exception Error of Syntax.Loc.t * error
 
 let string_of_varvariant = function
@@ -2320,7 +2321,7 @@ let abstrCompTyp tau =
 
 
 
-let abstrPatObj cD cG pat tau =
+let abstrPatObj loc cD cG pat tau =
   let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
   let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
   let (cQ1, cD1') = collectMctx I.Empty cD in
@@ -2335,7 +2336,8 @@ let abstrPatObj cD cG pat tau =
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD'     = ctxToMCtx cQ' in
   let cD      = Context.append cD' cD2 in
-    (cD, cG', pat', tau')
+      (cD, cG', pat', tau')
+
 (*
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
    2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA

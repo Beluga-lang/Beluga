@@ -911,6 +911,11 @@ module Int = struct
                 (fmt_ppr_lf_dctx cD 0) cPsi
                 (fmt_ppr_lf_typ cD cPsi 2) tA
 
+      | Comp.TypParam (_, tA, cPsi) ->
+          fprintf ppf "#[%a. %a]"
+                (fmt_ppr_lf_dctx cD 0) cPsi
+                (fmt_ppr_lf_typ cD cPsi 2) tA
+
       | Comp.TypSub (_, cPhi, cPsi) ->
           fprintf ppf "[%a. %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi

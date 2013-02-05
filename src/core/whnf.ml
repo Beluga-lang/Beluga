@@ -550,6 +550,13 @@ and norm (tM, sigma) = match tM with
         | Head head     ->  norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
       end
 
+
+  | Root (loc, PVar (PInst (_, { contents = Some (Proj (BVar i, k))}, _, _, _), r), tS) ->
+      begin match LF.bvarSub i r with
+        | Head h ->  Root (loc, Proj (h, k), normSpine (tS, sigma))
+      end
+
+
   | Root (loc, PVar (PInst (_, { contents = Some (PVar (q, r')) }, _, _, _) as _p, r), tS) ->
       norm (Root (loc, PVar (q, LF.comp r' r), tS), sigma)
       (* where p::tA[cPsi]
@@ -558,6 +565,10 @@ and norm (tM, sigma) = match tM with
        * and  cD; cPsi  |- q[r']     ->    tA
        * and  cD; cPsi' |- q[r' o r] -> [r]tA
        *)
+
+  | Root (loc, PVar (PInst (_, { contents = Some (Proj (PVar (q, r'), k)) }, _, _, _) as _p, r), tS) ->
+      norm (Root (loc, Proj(PVar (q, LF.comp r' r), k), tS), sigma)
+
   | Root (loc, PVar (PInst (_, { contents = None}, _, _, _) as p, r), tS) ->
       Root (loc, PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
@@ -1548,8 +1559,14 @@ and cnormMSub t = match t with
   | MDot (PObj(phat, PVar(Offset k, s)), t) ->
       MDot (PObj(cnorm_psihat phat m_id, PVar(Offset k, s)), cnormMSub t)
 
+  | MDot (PObj(phat, Proj(PVar(Offset k, s), i)), t) ->
+      MDot (PObj(cnorm_psihat phat m_id, Proj (PVar(Offset k, s),i)), cnormMSub t)
+
   | MDot (PObj(phat, BVar k), t) ->
       MDot (PObj(cnorm_psihat phat m_id, BVar k), cnormMSub t)
+
+  | MDot (PObj(phat, Proj(BVar k, i)), t) ->
+      MDot (PObj(cnorm_psihat phat m_id, Proj(BVar k,i)), cnormMSub t)
 
   | MDot (PObj(phat, PVar(PInst (_, {contents = None}, _cPsi, _tA, _ ) as p,  s)), t) ->
       MDot (PObj(cnorm_psihat phat m_id, PVar(p, s)), cnormMSub t)
@@ -1563,8 +1580,18 @@ and cnormMSub t = match t with
               MDot (MObj(cnorm_psihat phat m_id,  norm (tM, LF.id)), t')
         end
 
+  | MDot(PObj(phat, PVar (PInst (_, {contents = Some (Proj(BVar x, i))}, _cPsi, _tA, _ ) , r)), t) ->
+        let t' = cnormMSub t in
+        begin match LF.bvarSub x r with
+          | Head h ->
+             MDot (PObj(cnorm_psihat phat m_id, Proj(h, i)), t')
+        end
+
   | MDot(PObj(phat, PVar (PInst (_, {contents = Some (PVar (q,s))}, _cPsi, _tA, _ ) , r)), t) ->
       cnormMSub (MDot (PObj (cnorm_psihat phat m_id, PVar(q, LF.comp s r)), t))
+
+  | MDot(PObj(phat, PVar (PInst (_, {contents = Some (Proj (PVar (q,s), i))}, _cPsi, _tA, _ ) , r)), t) ->
+      cnormMSub (MDot (PObj (cnorm_psihat phat m_id, Proj (PVar(q, LF.comp s r), i)), t))
 
   | MDot (MV u, t) -> MDot (MV u, cnormMSub t)
 
@@ -2400,6 +2427,8 @@ let mctxPVarPos cD p =
         Comp.TypBase (loc, c, normMetaSpine mS)
     | Comp.TypBox (loc, tA, cPsi)
       -> Comp.TypBox(loc, normTyp(tA, LF.id), normDCtx cPsi)
+    | Comp.TypParam (loc, tA, cPsi)
+      -> Comp.TypParam(loc, normTyp(tA, LF.id), normDCtx cPsi)
 
     | Comp.TypSub (loc, cPsi, cPsi')
       -> Comp.TypSub (loc, normDCtx cPsi, normDCtx cPsi')
@@ -2463,6 +2492,11 @@ let mctxPVarPos cD p =
           let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
           let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
             Comp.TypBox(loc, tA', cPsi')
+
+      | (Comp.TypParam (loc, tA, cPsi), t) ->
+          let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
+          let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
+            Comp.TypParam(loc, tA', cPsi')
 
       | (Comp.TypSub (loc, cPsi, cPsi'), t) ->
           Comp.TypSub (loc, cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))

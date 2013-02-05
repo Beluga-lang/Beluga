@@ -31,6 +31,9 @@ type error =
   | MissingSchemaForCtxVar of Id.name
   | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
   | HolesFunction
+  | ParamFun
+  | CtxVarSchema of Id.name
+  | SigmaTypImpos of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
 
 exception Error of Syntax.Loc.t * error
 
@@ -43,6 +46,16 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | CtxVarSchema psi ->
+            Format.fprintf ppf
+              "Reconstruction cannot infer the schema for context %s."
+            (R.render_name psi)
+        | SigmaTypImpos (cD, cPsi, sA) ->
+            Format.fprintf ppf
+              "Ill-typed expression. @ @ The head of a spine has type %a. "
+              (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+        | ParamFun ->
+            Format.fprintf ppf "Projection on a parameter variable has a functional type which type reconstruction cannot infer - please specify the type of the parameter variable"
         | HolesFunction ->
             Format.fprintf ppf
               "Underscores occurring inside LF objects must be of atomic type."
@@ -200,12 +213,16 @@ let unify_phat cD psihat phihat =
 
 (* ******************************************************************* *)
 
-let getSchema cD ctxvar  = match ctxvar with
+let getSchema cD ctxvar loc = match ctxvar with
   | Some ((Int.LF.CtxOffset offset ) as phi) ->
       Schema.get_schema (Context.lookupCtxVarSchema cD  phi)
   | Some (Int.LF.CtxName n) ->
-      let (_ , Int.LF.CDecl (_, s_cid, _dep)) = FCVar.get n in
-	Schema.get_schema s_cid
+      begin try
+        let (_ , Int.LF.CDecl (_, s_cid, _dep)) = FCVar.get n in
+	  Schema.get_schema s_cid
+      with _ ->  raise (Error (loc,CtxVarSchema n))
+      end
+
 
   | None -> raise (Error.Violation "No context variable for which we could retrieve a schema")
 
@@ -1068,7 +1085,9 @@ and elTerm' recT cD cPsi r sP = match r with
                 let si          = Substitution.LF.invert s'' in
                 let tP = pruningTyp loc cD cPsi (*?*)
 		  (Context.dctxToHat  cPsi) sP (Int.LF.MShift 0, si)  in
-                let schema =  getSchema cD (Context.ctxVar (Whnf.cnormDCtx (cPsi, Whnf.m_id))) in
+                let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in
+                let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cD cPsi) in
+                let schema =  getSchema cD (Context.ctxVar (Whnf.cnormDCtx  (cPsi, Whnf.m_id))) loc in
 		let _ = dprint (fun () -> "[ctxVar] done") in
                 let h = Int.LF.FPVar (p, Substitution.LF.id) in
                 let (typRec, s_inst) =
@@ -1093,7 +1112,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil)
 
-            | ( _ , _ ) -> raise (Error.Violation ("Projection on a parameter variable has a functional type"))
+            | ( _ , _ ) -> raise (Error (loc, ParamFun))
           end
 	  )
         end
@@ -1232,7 +1251,11 @@ and elTerm' recT cD cPsi r sP = match r with
                    with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, t'))))
                     end
-           in
+          in
+          let _ = dprint (fun () -> "[elTerm'] PVar " ^ P.headToString cD cPsi
+                            (Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p, t'), k))) in
+
+          let _ = dprint (fun () -> "[elTerm'] against type " ^ P.typToString cD cPsi sA) in
           let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
           begin
 	    try
@@ -1735,11 +1758,14 @@ and elSpine loc recT cD cPsi spine sA =
 
   let rec typLength = function
     | Int.LF.Atom _ -> 0
-    | Int.LF.PiTyp (_, tB2) -> 1 + typLength tB2 in
+    | Int.LF.PiTyp (_, tB2) -> 1 + typLength tB2
+    | Int.LF.Sigma _ -> raise (Error (loc, SigmaTypImpos (cD, cPsi, sA))) in
 
   (* Check first that we didn't supply too many arguments. *)
   if typLength (fst (Whnf.whnfTyp sA)) < spineLength spine then
-    raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (typLength (fst (Whnf.whnfTyp sA)), spineLength spine)));
+    raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (typLength (fst
+  (Whnf.whnfTyp sA)), spineLength spine)));
+
   let rec elSpine loc rectT cD cPsi spine sA = match spine, Whnf.whnfTyp sA with
     | Apx.LF.Nil, sP ->
       (Int.LF.Nil, sP) (* errors are postponed to reconstruction phase *)

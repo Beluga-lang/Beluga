@@ -412,17 +412,19 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')),
              branches), (tau, t)) ->
-        let tau_sc =  (match tR with
+        let (tau_sc, projOpt) =  (match tR with
                    | I.Root (_, I.PVar _ , _ ) ->
-                       TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')
+                       (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), None)
+                   | I.Root (_, I.Proj (I.PVar _, k ), _ ) ->
+                       (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), Some k)
                    | _ ->
-                       TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in
+                       (TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), None)) in
         let tau_s = TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
         let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
           checkBranches (IndexObj (phat, tR)) cD cG branches tau_s (tau, t);
-          Coverage.process problem
+          Coverage.process problem projOpt
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
         begin match C.cwhnfCTyp (syn cD cG i) with
@@ -435,11 +437,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
               let problem = Coverage.make loc prag cD branches tau_s in
               (* Coverage.stage problem; *)
                 checkBranches DataObj cD cG branches tau_s (tau,t);
-                Coverage.process problem
+                Coverage.process problem None
           | (tau',t') ->
               let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
               checkBranches DataObj cD cG branches (C.cnormCTyp (tau', t')) (tau,t);
-                Coverage.process problem
+                Coverage.process problem None
         end
 
     | (Syn (loc, i), (tau, t)) ->
@@ -673,6 +675,13 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             check cD1' (Context.append cG' cG1) e1 (tau', Whnf.m_id)
 
 
+  let rec wf_mctx cD = match cD with
+    | I.Empty -> ()
+    | I.Dec (cD, cdecl) ->
+        (wf_mctx cD ; checkCDecl cD cdecl)
+
+
+
 end
 
 module Sgn = struct
@@ -707,5 +716,8 @@ module Sgn = struct
 
     | Syntax.Int.Sgn.Pragma (_a) :: decls ->
         check_sgn_decls decls
+
+
+
 
 end

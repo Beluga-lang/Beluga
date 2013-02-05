@@ -33,7 +33,7 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match e with
 	| NoCover s -> Format.fprintf ppf "Coverage checking failed: %s" s
-	| MatchError s -> Format.pp_print_string ppf s
+	| MatchError s -> Format.fprintf ppf "Coverage checking failed: Matching fails due to %s." s
 	| NothingToRefine -> Format.pp_print_string ppf "Nothing to refine"
 	| NoCoverageGoalsGenerated -> Format.pp_print_string ppf "No coverage goals generated"))
 
@@ -372,8 +372,9 @@ let pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with
   | (LF.MVar _ ,  _         ) -> SplitCand
 
   | (LF.PVar _ , LF.Const _) -> No
-  | (LF.PVar _ , LF.Proj (_ , _ ) )-> No
   | (LF.Proj ( _, _ ) , LF.Const _ ) -> No
+  | (LF.PVar _ , LF.Proj (LF.BVar _ , _ ) )-> No (* Inst *)
+  | (LF.PVar _ , LF.Proj (LF.PVar _ , _ ) )-> No (* Inst *)
   | (LF.Proj ( _, _ ) , LF.BVar _ ) -> No
   | (LF.Proj ( _, _ ) , LF.PVar _ ) -> No
   | ( _ , _ ) -> No
@@ -412,14 +413,15 @@ let rec pre_match cD cD_p covGoal patt matchCands splitCands =
 
 	  pre_match cD cD_p covGoal' patt' matchCands splitCands
 
-    | (LF.Root (_ , tH, tS), LF.Root (_, tH', tS')) ->
+    | (LF.Root (_ , tH, tS), LF.Root (loc, tH', tS')) ->
 	begin match pre_match_head (cPsi, tH) (cPhi, tH') with
 	  | Yes (sA, sA') ->
 	      pre_match_spine  cD cD_p
 		               (cPsi , tS , sA)
 		               (cPhi , tS', sA')
 		               matchCands splitCands
-	  | No            -> raise (Error (Syntax.Loc.ghost, MatchError "Head mismatch"))
+	  | No            -> raise (Error (loc,
+                                           MatchError ("Head mismatch " ^ P.headToString cD cPsi tH ^ " =/= " ^ P.headToString cD_p cPhi tH' ^ "\n")))
 	  | Inst          ->
 	      (Eqn (covGoal, patt) :: matchCands , splitCands)
 	  | SplitCand     -> (matchCands , Split (covGoal, patt)::splitCands)
@@ -1914,7 +1916,7 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 (* initialize_coverage problem =
 
 *)
-let initialize_coverage problem = begin match problem.ctype with
+let initialize_coverage problem projOpt = begin match problem.ctype with
   | Comp.TypBox(loc, tA, cPsi) ->
       let cD'        = LF.Dec (problem.cD, LF.MDecl(Id.mk_name (Id.NoName), tA, cPsi)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
@@ -1935,7 +1937,7 @@ let initialize_coverage problem = begin match problem.ctype with
       let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
       let cD'        = LF.Dec (problem.cD, LF.PDecl(Id.mk_name (Id.NoName), tA, cPsi)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
-      let mv         = LF.PVar (LF.Offset 1, idSub) in
+      let mv         = match projOpt with None -> LF.PVar (LF.Offset 1, idSub) | Some k -> LF.Proj(LF.PVar (LF.Offset 1, idSub), k) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
       let cPsi'      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
       let tA'        = Whnf.cnormTyp (tA, LF.MShift 1) in
@@ -2037,7 +2039,7 @@ let check_coverage_success problem  =
   Succeeds, if there is at least one pattern which covers elements of type tau
   Fails, otherwise
 *)
-let covers problem =
+let covers problem projObj =
 if not (!enableCoverage)
   then Success
 else
@@ -2046,7 +2048,7 @@ else
    let _ = (Debug.pushIndentationLevel(); Debug.indent 2) in
    let _ = U.resetGlobalCnstrs () in
 
-  let cov_problems : covproblems = initialize_coverage problem in
+  let cov_problems : covproblems = initialize_coverage problem projObj in
 
     dprint (fun () -> "Coverage checking a case with "
               ^ string_of_int (List.length problem.branches)
@@ -2075,9 +2077,9 @@ else
     check_coverage_success problem
   )
 
-let process problem =
+let process problem projObj =
   reset_cov_problem () ;
-  match covers problem with
+  match covers problem projObj with
   | Success -> reset_counter ()
   | Failure message ->
       (reset_counter () ;
@@ -2089,12 +2091,14 @@ let process problem =
 
 
 let problems = ref ([] : problem list)
-
+(*
 let clear () =
   problems := []
 
 let stage problem =
   problems := problem::!problems
-
+*)
 let force f =
-  List.map (fun problem -> f (covers problem)) (List.rev !problems)
+  (match !problems with [] -> []
+     | _ ->   List.map (fun problem -> f (covers problem None)) (List.rev !problems))
+

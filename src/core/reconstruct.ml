@@ -37,6 +37,9 @@ type error =
   | TypeAbbrev         of Id.name
   | CtxMismatch        of Int.LF.mctx * Int.Comp.typ * Int.LF.dctx
   | PatternMobj
+  | PatAnn
+  | PatIndexMatch  of Int.LF.mctx * Int.LF.dctx * Int.LF.normal
+  | MCtxIllformed
 
 exception Error of Syntax.Loc.t * error
 
@@ -44,6 +47,15 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | MCtxIllformed ->
+            Format.fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables."
+        | PatIndexMatch (cD, cPsi, tR) ->
+            Format.fprintf ppf "Pattern matching on index argument %a fails. @@
+  Note that unification is conservative and will fail if it cannot handle a case."
+              (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tR
+        | PatAnn     ->
+            Format.fprintf ppf
+              "Type annotations on context variables and parameter variables not supported at this point."
         | PatternMobj ->
             Format.fprintf ppf
               "Expected a meta-object; Found a computation-level pattern"
@@ -1529,14 +1541,18 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
   let phat = Context.dctxToHat cPsi' in
   let (cD1', cPsi1', (_phat, tR1'), tP1') =
     Abstract.pattern cD' cPsi' (phat, tR) tP' in
-
-  let _   = dprint (fun () -> "recMObj: Reconstructed pattern (AFTER ABSTRACTION)...\n" ^
-                      P.mctxToString cD1' ^ "  ;   " ^ P.dctxToString cD1' cPsi1' ^ "\n   |-\n    "  ^
+    begin try
+      let _   = dprint (fun () -> "recMObj: Reconstructed pattern (AFTER ABSTRACTION)...\n" ^
+                          P.mctxToString cD1' ^ "  ;   " ^ P.dctxToString cD1' cPsi1' ^ "\n   |-\n    "  ^
                           P.normalToString cD1' cPsi1' (tR1', LF.id) ^ "\n has type \n " ^
-                      P.typToString cD1' cPsi1'  (tP1', LF.id)) in
-  let l_cd1'    = Context.length cD1'  in
-  let l_delta   = Context.length cD'  in
-    ((l_cd1', l_delta), cD1', cPsi1', Some tR1', tP1')
+                          P.typToString cD1' cPsi1'  (tP1', LF.id)) in
+      let l_cd1'    = Context.length cD1'  in
+      let l_delta   = Context.length cD'  in
+      Check.Comp.wf_mctx cD1' ;
+        ((l_cd1', l_delta), cD1', cPsi1', Some tR1', tP1')
+    with
+        _ -> raise (Error (loc,MCtxIllformed))
+    end
 
 (* inferCtxSchema loc (cD, cPsi) (cD', cPsi') = ()
 
@@ -1623,11 +1639,62 @@ and elPatMetaObj cD pat (cdecl, theta) = begin match pat with
                    dprint (fun () -> "Unify Error: " ^ msg) ;
                    raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
                  end
+          | _ -> raise (Error (loc, PattAnn))
           (* Other type annotations on MetaCtx or MetaParam not supported *)
         end)
-
-  | Apx.Comp.PatAnn (loc, _, _) -> raise (Error (loc, PatternMobj))
 *)
+(*
+      (let tau'   =  elCompTyp cD tau in
+       let cdecl' = (match tau' with
+         | Int.Comp.TypBox (_, tA', cPsi') ->
+             Int.LF.MDecl (Id.mk_name (Id.MVar_name None) , tA', cPsi')
+         | Int.Comp.TypParam (_, tA', cPsi') ->
+             Int.LF.PDecl (Id.mk_name (Id.PVar_name None) , tA', cPsi')) in
+
+      let (pat', _) = elPatMetaObj cD pat (cdecl', Whnf.m_id) in
+        begin try
+          (match cdecl , cdecl' with
+             | Int.LF.MDecl (_, tA, cPsi) , Int.LF.MDecl (_, tA', cPsi') ->
+                 let cPsi0 = Whnf.cnormDCtx (cPsi, theta) in
+                 let tA0   = Whnf.cnormTyp (tA, theta) in
+                   (Unify.unifyDCtx cD cPsi0 cPsi';
+                    Unify.unifyTyp cD cPsi0 (tA0, LF.id) (tA', LF.id);
+                    (pat,
+             | Int.LF.PDecl (_, tA, cPsi) , Int.LF.PDecl (_, tA', cPsi') ->
+                 let cPsi0 = Whnf.cnormDCtx (cPsi, theta) in
+                 let tA0   = Whnf.cnormTyp (tA, theta) in
+                   (Unify.unifyDCtx cD cPsi0 cPsi';
+                    Unify.unifyTyp cD cPsi0 (tA0, LF.id) (tA', LF.id))
+          );
+          match pat'  with
+          |  (Int.Comp.MetaObj (loc, phat, tM) as cM') ,  ->
+               (Int.Comp.PatMetaObj (loc, cM'),
+                Int.LF.MDot (Int.LF.MObj (phat, tM), theta))
+          |  (Int.Comp.MetaParam (loc, phat, h) as cM') , Int.LF.PDecl (_, tA, cPsi) ->
+               let ttau = (Int.Comp.TypParam (Syntax.Loc.ghost, tA, cPsi), theta) in
+               let ttau' = (tau', Whnf.m_id) in
+                 begin try
+                   Unify.unifyCompTyp cD ttau ttau' ;
+                   (Int.Comp.PatMetaObj (loc, cM'),
+                    Int.LF.MDot (Int.LF.MObj (phat, tM), theta))
+                 with Unify.Failure msg ->
+                   dprint (fun () -> "Unify Error: " ^ msg) ;
+                   raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
+                 end
+        with Unify.Failure msg ->
+         let tau0 = (match cdecl of
+         |  Int.LF.MDecl (_, tA, cPsi)  ->Int.Comp.TypBox   (Syntax.Loc.ghost, tA, cPsi)
+         |  Int.LF.PDecl (_, tA, cPsi)  -> Int.Comp.TypParam (Syntax.Loc.ghost, tA, cPsi)
+                    ) in
+         dprint (fun () -> "Unify Error: " ^ msg) ;
+         raise (Check.Comp.Error (loc,
+                                  Check.Comp.SynMismatch (cD, (tau', Whnf.m_id), (tau0, Whnf.m_id))))
+         | _ -> raise (Error (loc, PatternMobj))
+          (* Other type annotations on MetaCtx not supported *)
+        end)
+*)
+  | Apx.Comp.PatAnn (loc, _, _) -> raise (Error (loc, PatAnn))
+
 end
 
 and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) with
@@ -1883,7 +1950,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
         (cG', pat', ttau')
 
 
-and recPatObj cD pat (cD_s, tau_s) =
+and recPatObj loc cD pat (cD_s, tau_s) =
   let _ = dprint (fun () -> "[recPatObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in
   let (cG', pat', ttau') = recPatObj' cD pat (cD_s, tau_s) in
   (* cD' ; cG' |- pat' => tau' (may contain free contextual variables) *)
@@ -1896,11 +1963,16 @@ and recPatObj cD pat (cD_s, tau_s) =
                     P.gctxToString cD cG' ^ " \n  |-  " ^
                     P.patternToString cD cG' pat' ) in
   let _ = dprint (fun () -> "[recPatObj] Abstract over pattern and its type") in
-  let (cD1, cG1, pat1, tau1) = Abstract.patobj cD (Whnf.cnormCtx (cG', Whnf.m_id)) pat' (Whnf.cnormCTyp ttau') in
-  (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
-  let l_cd1                  = Context.length cD1 in
-  let l_delta                = Context.length cD  in
-    ((l_cd1, l_delta), cD1, cG1,  pat1, tau1)
+  let (cD1, cG1, pat1, tau1) = Abstract.patobj loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) pat' (Whnf.cnormCTyp ttau') in
+    begin try
+      Check.Comp.wf_mctx cD1 ;
+      (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
+      let l_cd1                  = Context.length cD1 in
+      let l_delta                = Context.length cD  in
+        ((l_cd1, l_delta), cD1, cG1,  pat1, tau1)
+    with
+        _ -> raise (Error (loc,MCtxIllformed))
+    end
 
 (* ********************************************************************************)
 (* recPattern will become obsolete when we switch to the new syntax *)
@@ -2040,7 +2112,10 @@ and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
                                                        (C.cnorm (tR1, mt1), LF.id))
                    with Unify.Failure msg ->
                      (dprint (fun () -> "Unify ERROR: " ^ msg);
-                      raise (Error.Violation "Pattern matching on index argument failed"))
+                      raise (Error (loc, PatIndexMatch (cD, Whnf.normDCtx cPsi',
+                                                        C.cnorm (tR',  t)))))
+(*                      raise (Error.Violation "Pattern matching on index
+                        argument failed")*)
                    end
                | (DataObj, _) -> ()
              end
@@ -2134,7 +2209,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
 and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
   | Apx.Comp.EmptyBranch(loc, delta, (Apx.Comp.PatEmpty (loc', cpsi) as pat)) ->
       let cD'    = elMCtx  Lfrecon.Pibox delta in
-      let ((l_cd1', l_delta) , cD1', _cG1,  pat1, tau1)  =  recPatObj cD' pat  (cD, tau_s)  in
+      let ((l_cd1', l_delta) , cD1', _cG1,  pat1, tau1)  =  recPatObj loc cD' pat  (cD, tau_s)  in
       let _ = dprint (fun () -> "[elBranch] - EmptyBranch " ^
                         "cD1' = " ^ P.mctxToString cD1' ^
                         "pat = " ^ P.patternToString cD1' _cG1 pat1) in
@@ -2231,7 +2306,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
      let _ = dprint (fun () -> "[elBranch] Reconstruction of general pattern of type "
                        ^ P.compTypToString cD tau_s) in
     let cD'    = elMCtx  Lfrecon.Pibox delta in
-    let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj cD' pat (cD, tau_s)
+    let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat (cD, tau_s)
      in
     let _ = dprint (fun () -> "[rePatObj] done") in
     let _ = dprint (fun () -> "           " ^ P.mctxToString cD1' ^ " ; " ^

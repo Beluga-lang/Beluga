@@ -2610,6 +2610,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           end
 
     (* PVar - PVar *)
+
     | (PVar (PInst (_n1, q1, cPsi1, tA1, cnstr1) as q1', s1'),
        PVar (PInst (_n2, q2, cPsi2, tA2, cnstr2) as q2', s2')) ->
         (* check s1' and s2' are pattern substitutions; possibly generate constraints;
@@ -2623,14 +2624,6 @@ let rec blockdeclInDctx cPsi = match cPsi with
           (match (isPatSub s1' ,  isPatSub s2') with
             | (true, true) ->
                 let phat = Context.dctxToHat cPsi in
-(*                let _ = dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi head1 ^
-                                  " === " ^ P.headToString cD0 cPsi head2 ) in
-                let _ = dprint (fun () -> "compute intersection of") in
-                let _ = dprint (fun () -> "s1'" ^ P.subToString cD0 cPsi s1') in
-                let _ = dprint (fun () -> "s2'" ^ P.subToString cD0 cPsi s2') in
-                let _ = dprint (fun () -> "domain cPsi1: " ^ P.dctxToString cD0 cPsi1) in
-                let _ = dprint (fun () -> "domain cPsi1: " ^ P.dctxToString cD0 cPsi2) in
-                let _ = dprint (fun () -> "target cPsi: " ^ P.dctxToString cD0 cPsi) in*)
                 let (s', cPsi') = intersection phat s1' s2' cPsi1 in
                   (* if cD ; cPsi |- s1' <= cPsi1 and cD ; cPsi |- s2' <= cPsi1
                      then cD ; cPsi1 |- s' <= cPsi' *)
@@ -2714,6 +2707,98 @@ let rec blockdeclInDctx cPsi = match cPsi with
                  (* neither s1' nor s2' are patsub *)
                  addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))))
 
+(*
+    BP: One could allow unification to succeeds in this case.
+
+    | (PVar (PInst (_n1, q1, cPsi1, tA1, cnstr1) as q1', s1') ,
+       Proj (PVar (PInst (_n2, q2, cPsi2, tA2, cnstr2) as q2', s2'), k)) ->
+        let s1' = Whnf.normSub s1' in
+        let s2' = Whnf.normSub s2' in
+        let _ = dprint (fun () -> "[unifyHead] PVar (PInst) = PVar(PInst) " ) in
+        if q1 == q2 then (* cPsi1 = _cPsi2 *)
+        (print_string "[UnifyHead] Projection of a parameter variable\n";
+         raise (Failure "PVar i =/= Proj PVar"))
+        else
+          (
+            match (isPatSub s1' , isPatSub s2') with
+             | (true, true) ->
+                let _ = dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi head1 ^
+                                  " === " ^ P.headToString cD0 cPsi head2 ) in
+                let _ = dprint (fun () -> "q1 .  cPsi1: " ^ P.dctxToString cD0 cPsi1) in
+                let _ = dprint (fun () -> "q2 .  cPsi2: " ^ P.dctxToString cD0 cPsi2) in
+                let _ = dprint (fun () -> "q1 .  tA1  : " ^ P.typToString cD0 cPsi1 (tA1, id)) in
+                let _ = dprint (fun () -> "q2 .  tA2  : " ^ P.typToString cD0 cPsi2 (tA2, id)) in
+
+                 (* no occurs check necessary, because s1' and s2' are pattern subs. *)
+                (* bp : we need to unify tA1 with the k-th element in tA2
+
+                   let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
+                *)
+                let _ = dprint (fun () -> "Unification of the types  done ... \n") in
+                 (* at this point: s1' = s2'    ! *)
+                 let ss = invert s1' in
+                  let _ = dprint (fun () -> "Inverted s1' " ^ P.subToString cD0 cPsi ss ) in
+                 let phat = Context.dctxToHat cPsi in
+                 let (s', cPsi') = pruneCtx phat (s2', Whnf.normDCtx cPsi2) (MShift 0, ss) in
+                 let _ = dprint (fun () -> "Pruned cPsi2 : " ^ P.dctxToString cD0 cPsi') in
+                 let _ = dprint (fun () -> "Pruning subst s' : " ^ P.subToString cD0 cPsi2 s') in
+                   (*
+                   (* if   cPsi  |- s2' <= cPsi2  and cPsi1 |- ss <= cPsi
+                      then cPsi2 |- s' <= cPsi' and [ss](s2' (s')) exists *)
+                   (* cPsi' =/= Null ! otherwise no instantiation for
+                      parameter variables exists *)
+                 *)
+                 let p = Whnf.newPVar None (cPsi', TClo(tA2, invert (Whnf.normSub s'))) in
+                   (* p::([s'^-1]tA2)[cPsi'] and
+                      [|cPsi2.p[s'] / q2 |](q2[s2']) = p[[s2'] s']
+
+                      and   cPsi |- [s2'] s' : cPsi'
+                      and   cPsi |- p[[s2'] s'] : [s2'][s'][s'^-1] tA2
+                      and [s2'][s'][s'^-1] tA2  = [s2']tA2 *)
+                   (instantiatePVar (q2, PVar(p, s'), !cnstr2);
+                    (* instantiatePVar (q1, PVar(p, s'), !cnstr1);*)
+                    (*  cPsi1 |-  ss [s2']  s'  : cPsi'
+                        cPsi  |-   comp s' s2'   : cPsi'
+                        cPsi1 |-  (comp s1 s2') ss : cPsi'
+                     *)
+                    instantiatePVar (q1, PVar(p, comp (comp s' s2') ss), !cnstr1))
+
+             | (true, false) ->
+                 let _ =  unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
+
+                  (* only s1' is a pattern sub
+                     [(s1)^-1](q2[s2']) = q2[(s1)^-1 s2']
+                  *)
+                 let ss1 = invert s1' in
+                 let phat = Context.dctxToHat cPsi in
+                 let s' = invSub cD0 phat (s2', cPsi2) (MShift 0 , ss1)  (PVarRef q1) in
+                   instantiatePVar (q1, PVar(q2',s'), !cnstr1)
+
+             | (false, true) ->
+                 let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
+
+                 (* only s2' is a pattern sub *)
+                 let ss2 = invert s2' in
+                 let phat = Context.dctxToHat cPsi in
+                 let s' = invSub cD0 phat (s1', cPsi1) (MShift 0, ss2) (PVarRef q2) in
+                   instantiatePVar (q2, PVar(q1', s'), !cnstr2)
+
+             | (false, false) ->
+                 (* neither s1' nor s2' are patsub *)
+                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
+          )
+
+*)
+
+    | (PVar _  , Proj (PVar _, _)) ->
+        (print_string "[UnifyHead] Projection of a parameter variable\n";
+         raise (Failure "PVar i =/= Proj PVar"))
+
+    | (Proj (PVar _, _), PVar _ ) ->
+        (print_string "[UnifyHead] Projection of a parameter variable\n";
+         raise (Failure " Proj PVar =/= PVar i"))
+
+
     | (Proj(BVar k, i) , PVar (PInst (_n1, q1, _cPsi1, _tA1, cnstr1), s1)) ->
         let s1' = Whnf.normSub s1 in
          if isPatSub s1' then
@@ -2727,6 +2812,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
            addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
 
     | (PVar (PInst (_n1, q1, _cPsi1, _tA1, cnstr1), s1), Proj(BVar k, i)) ->
+        let _ = dprint (fun () -> "[unifyHead] PVar - Proj (BVar )") in
         let s1' = Whnf.normSub s1 in
          if isPatSub s1' then
            let ss' = invert (Whnf.normSub s1') in
@@ -2761,9 +2847,6 @@ let rec blockdeclInDctx cPsi = match cPsi with
         (print_string "[UnifyHead] Unify free variable with projection of parameter variable\n";
          raise (Failure "Projection of parameter variable =/= free variable"))
 
-    | (PVar _ , Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Projection of a parameter variable\n";
-         raise (Failure "PVar =/= Proj PVar"))
 
     | ((PVar (Offset k, s1)) as _sM1,   ((PVar (PInst (_n, r, cPsi1, tp1, cnstrs), t')) as _sM2)) ->
           if isPatSub t' then

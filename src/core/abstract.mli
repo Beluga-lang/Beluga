@@ -16,6 +16,7 @@ type error =
   | UnknownIdentifier
   | UnknownSchemaCtx of Id.name
 
+
 exception Error of Syntax.Loc.t * error
 
 val cnstr_ctyp : Comp.typ -> bool
@@ -37,7 +38,7 @@ val exp      : Comp.exp_chk -> Comp.exp_chk
 
 val pattern    : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ ->
                  LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ
-val patobj     : LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ ->
+val patobj     : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ ->
                  LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
 val subpattern : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx ->
                  LF.mctx * LF.dctx * LF.sub * LF.dctx

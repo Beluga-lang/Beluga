@@ -148,7 +148,7 @@ mlam Q => fn d1 => fn d2 => case d1 of
    | [g. sa_top] => [g. sa_top]
   )
 
-| [g. sa_all (D2 ..) (D1 ..)] : [g. sub (forall (S1 ..) (S2 ..)) (forall (Q1 ..) (Q2 ..))] =>
+| [g. sa_all (D2 ..) (D1 ..)]  : [g. sub (forall (S1 ..) (S2 ..)) (forall (Q1 ..) (Q2 ..))] =>
     case d2 of
     | [g. sa_all (E2 ..) (E1 ..)]  =>
 	let [g. F1 ..] = trans [g. Q1 ..] [g. E1 ..] [g.D1 ..] in
@@ -189,8 +189,7 @@ fn d => case d of
 
 | [g . sa_all (D2 ..) (D1 ..)] : [g. sub (forall (S1 ..) (S2 ..)) (forall (T1 ..) (T2 ..))] =>
   let [g. F1 ..] = sound [g. D1 ..] in
-  let {F2: [g, a:tp, w: subtype a (T1 ..). subtype (S2 .. a) (T2 .. a)]}
-      [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+  let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..)) . F2 .. b.1 b.5] =
       sound [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..)) . D2 .. b.1 b.2 b.3 b.4 ] in

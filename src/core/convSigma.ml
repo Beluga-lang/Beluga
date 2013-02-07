@@ -17,13 +17,14 @@ let rec conv_listToString clist = match clist with
   | [] -> " "
   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
 
-let rec blockdeclInDctx cPsi = match cPsi with
+(* blockdeclInDctx is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
+let rec _blockdeclInDctx cPsi = match cPsi with
   | Int.LF.Null -> false
   | Int.LF.CtxVar psi -> false
   |Int.LF.DDec (cPsi',Int.LF.TypDecl(x, tA)) ->
      begin match Whnf.whnfTyp (tA, LF.id) with
        | (Int.LF.Sigma _ , _ ) -> true
-       | _  ->    blockdeclInDctx cPsi'
+       | _  ->    _blockdeclInDctx cPsi'
      end
 
 type error =

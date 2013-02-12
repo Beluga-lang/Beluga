@@ -1,0 +1,9 @@
+datatype bool : type =
+| t : bool
+| f : bool
+;
+
+codatatype Stream : ctype = 
+ | Hd : Stream -> Stream
+ | Tl : Stream -> Stream
+;

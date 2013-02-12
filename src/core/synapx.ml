@@ -128,6 +128,7 @@ module Comp = struct
 
   type typ =
    | TypBase of Loc.t * cid_comp_typ * meta_spine
+   | TypCobase of Loc.t * cid_comp_typ * meta_spine
    | TypDef of Loc.t * cid_comp_typ * meta_spine
    | TypBox     of Loc.t * LF.typ  * LF.dctx
    | TypSub     of Loc.t * LF.dctx  * LF.dctx

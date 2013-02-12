@@ -695,6 +695,13 @@ let rec elCompTyp cD tau = match tau with
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
         Int.Comp.TypBase (loc, a ,cS')
 
+| Apx.Comp.TypCobase (loc, a, cS) ->
+      let _ = dprint (fun () -> "[elCompTyp] Cobase : " ^ R.render_cid_comp_typ a) in
+      let tK = (CompTyp.get a).CompTyp.kind in
+      let _ = dprint (fun () -> "[elCompTyp] of kind : " ^ P.compKindToString cD tK) in
+      let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
+        Int.Comp.TypCobase (loc, a ,cS')
+
   | Apx.Comp.TypDef (loc, a, cS) ->
       let tK = (CompTypDef.get a).CompTypDef.kind in
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
@@ -805,6 +812,9 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
         Int.Comp.TypCross (tau1', tau2')
   | Int.Comp.TypBase (loc, c, _ )  ->
       mgCompTyp cD' (loc, c)
+ | Int.Comp.TypCobase (loc, c, _ )  ->
+      mgCompTyp cD' (loc, c)
+
   | Int.Comp.TypArr (tau1, tau2)  ->
       let tau1' = inferPatTyp' cD' (cD_s, tau1) in
       let tau2' = inferPatTyp' cD' (cD_s, tau2) in

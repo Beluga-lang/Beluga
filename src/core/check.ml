@@ -298,6 +298,10 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         let cK = (CompTyp.get c).CompTyp.kind in
           checkMetaSpine loc cD mS (cK , C.m_id)
 
+    | TypCobase (loc, c, mS) ->
+        let cK = (CompTyp.get c).CompTyp.kind in
+          checkMetaSpine loc cD mS (cK , C.m_id)
+
     | TypBox (_ , tA, cPsi) ->
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)

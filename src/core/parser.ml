@@ -80,6 +80,7 @@ type clf_pattern =
 type mixtyp =
   | MTCompKind of Loc.t
   | MTBase of Loc.t * Id.name * Comp.meta_spine
+  | MTCobase of Loc.t * Id.name * Comp.meta_spine
   | MTArr of Loc.t * mixtyp * mixtyp
   | MTCross of Loc.t * mixtyp * mixtyp
   | MTCtxPi of  Loc.t * (Id.name * Id.name * Comp.depend) * mixtyp
@@ -109,6 +110,7 @@ let mixloc = function
 (*  |  MTPiTyp(l, _, _) -> l *)
   |  MTAtom(l, _, _) -> l
   |  MTBase(l, _, _) -> l
+  |  MTCobase(l, _, _) -> l
 
 let unmixfail loc = raise (Error.Violation ("Can't unmix. At " ^ Syntax.Loc.to_string loc))
 
@@ -116,6 +118,7 @@ let unmixfail loc = raise (Error.Violation ("Can't unmix. At " ^ Syntax.Loc.to_s
 let rec unmix = function
   | MTCompKind l -> CompKindMix (Comp.Ctype l)
   | MTBase (l, a, ms) -> CompMix(Comp.TypBase (l, a, ms))
+  | MTCobase (l, a, ms) -> CompMix(Comp.TypCobase (l, a, ms))
   | MTArr(l, mt1, mt2) -> begin match (unmix mt1, unmix mt2) with
                                   | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
                                   | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
@@ -182,6 +185,7 @@ and toCompKind k = match unmix k with
 let check_datatype_decl a cs =
   let rec retname = function
     | Comp.TypBase (_, c', _) -> c'
+    | Comp.TypCobase (_, c', _) -> c'
     | Comp.TypArr (_, _, tau) -> retname tau
     | Comp.TypCtxPi (_, _, tau) -> retname tau
     | Comp.TypPiBox (_, _, tau) -> retname tau
@@ -284,6 +288,10 @@ GLOBAL: sgn;
 *)
       | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
+
+     | "codatatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
+           [Sgn.MRecTyp(_loc, f)]
+
 (*
       | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
           check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
@@ -291,6 +299,10 @@ GLOBAL: sgn;
 *)
       | "datatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
+
+      | "codatatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->                                                                           [Sgn.MRecTyp(_loc, f)]
+ 
+
 
       | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
           [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]

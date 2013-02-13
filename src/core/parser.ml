@@ -194,6 +194,19 @@ let check_datatype_decl a cs =
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
+let check_codatatype_decl a cs =
+  let rec retname = function
+    | Comp.TypBase (_, c', _) -> c'
+    | Comp.TypCobase (_, c', _) -> c'
+    | Comp.TypArr (_, tau, _) -> retname tau
+    | Comp.TypCtxPi (_, _, tau) -> retname tau
+    | Comp.TypPiBox (_, _, tau) -> retname tau
+    | _ -> raise IllFormedDataDecl in
+  List.iter (fun (Sgn.CompConst (_, c, tau)) ->
+    let a' = retname tau in
+    if not (a = a') then raise (WrongConsType (c, a, a'))) cs
+
+
 (*******************************)
 (* Global Grammar Entry Points *)
 (*******************************)
@@ -289,7 +302,7 @@ GLOBAL: sgn;
       | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
 
-     | "codatatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
+      | "codatatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
 
 (*
@@ -300,7 +313,8 @@ GLOBAL: sgn;
       | "datatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
 
-      | "codatatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->                                                                           [Sgn.MRecTyp(_loc, f)]
+      | "codatatype"; f = LIST1 cocmp_cdat SEP "and"; ";" -> 
+           [Sgn.MRecTyp(_loc, f)]
  
 
 
@@ -958,6 +972,13 @@ GLOBAL: sgn;
     [[
     a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
                                        check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+                                        Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+    ]]
+;
+ cocmp_cdat:
+    [[
+    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
+                                       check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
                                         Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
     ]]
 ;

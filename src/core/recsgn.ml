@@ -36,6 +36,7 @@ let rec lookupFun cG f = match cG with
 
 let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypBase (_, a, _ ) -> a
+  | Int.Comp.TypCobase (_, a, _ ) -> a
   | Int.Comp.TypArr (_ , tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
@@ -135,8 +136,7 @@ and recSgnDecl d =
 				   (P.compTypToString cD tau')) in
 	let _         = (Monitor.timer ("Data-type Constant: Type Check",
 					fun () -> Check.Comp.checkTyp cD tau'))
-        in
-	let cid_ctypfamily = get_target_cid_comptyp tau' in
+        in	let cid_ctypfamily = get_target_cid_comptyp tau' in
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in ()
 
     | Ext.Sgn.Typ (_, a, extK)   ->

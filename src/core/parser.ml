@@ -185,7 +185,6 @@ and toCompKind k = match unmix k with
 let check_datatype_decl a cs =
   let rec retname = function
     | Comp.TypBase (_, c', _) -> c'
-    | Comp.TypCobase (_, c', _) -> c'
     | Comp.TypArr (_, _, tau) -> retname tau
     | Comp.TypCtxPi (_, _, tau) -> retname tau
     | Comp.TypPiBox (_, _, tau) -> retname tau
@@ -196,9 +195,8 @@ let check_datatype_decl a cs =
 
 let check_codatatype_decl a cs =
   let rec retname = function
-    | Comp.TypBase (_, c', _) -> c'
     | Comp.TypCobase (_, c', _) -> c'
-    | Comp.TypArr (_, tau, _) -> retname tau
+    | Comp.TypArr (_, Comp.TypCobase (_, c', _), _) -> c'
     | Comp.TypCtxPi (_, _, tau) -> retname tau
     | Comp.TypPiBox (_, _, tau) -> retname tau
     | _ -> raise IllFormedDataDecl in
@@ -301,10 +299,6 @@ GLOBAL: sgn;
 *)
       | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
-
-      | "codatatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
-           [Sgn.MRecTyp(_loc, f)]
-
 (*
       | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
           check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
@@ -313,9 +307,9 @@ GLOBAL: sgn;
       | "datatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
 
-      | "codatatype"; f = LIST1 cocmp_cdat SEP "and"; ";" -> 
+      | "codatatype"; f = LIST1 cocmp_cdat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
- 
+
 
 
       | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
@@ -964,22 +958,22 @@ GLOBAL: sgn;
   cmp_dat:
     [[
      a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" ->
-                                                   Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+       Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
     ]]
   ;
 
   cmp_cdat:
     [[
     a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
-                                       check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-                                        Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+      check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
     ]]
 ;
  cocmp_cdat:
     [[
     a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
-                                       check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-                                        Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+      check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
     ]]
 ;
 

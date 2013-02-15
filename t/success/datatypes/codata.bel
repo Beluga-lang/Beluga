@@ -1,9 +1,13 @@
-datatype Colour :ctype =
+datatype Colour : ctype =
 | Blue : Colour
 | Red  : Colour
 ;
 
-codatatype Stream : ctype = 
+codatatype Stream : ctype =
 | Hd : Stream -> Colour
 | Tl : Stream -> Stream
 ;
+
+%rec test : Colour -> Stream =
+%fn e => cofun Hd => e | Tl => test e
+%;

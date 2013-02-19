@@ -460,6 +460,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | Var x   -> (lookup cG x, C.m_id)
     | DataConst c ->
         ((CompConst.get c).CompConst.typ, C.m_id)
+    | CodataConst c ->
+        ((CompConst.get c).CompConst.typ, C.m_id)
 
     | Const prog ->
         ((Comp.get prog).Comp.typ, C.m_id)

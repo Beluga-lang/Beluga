@@ -286,6 +286,7 @@ module Comp = struct
     | Syn    of Loc.t * exp_syn
     | Rec    of Loc.t * name * exp_chk
     | Fun    of Loc.t * name * exp_chk
+    | Cofun  of Loc.t * (name * copattern_spine * exp_chk) list
     | CtxFun of Loc.t * name * exp_chk
     | MLam   of Loc.t * name * exp_chk
     | Pair   of Loc.t * exp_chk * exp_chk
@@ -300,6 +301,7 @@ module Comp = struct
   and exp_syn =
     | Var    of offset
     | DataConst of cid_comp_const
+    | CodataConst of cid_comp_const
     | Const  of cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | CtxApp of Loc.t * exp_syn * LF.dctx
@@ -342,6 +344,13 @@ module Comp = struct
 
     | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx *
         (LF.dctx * LF.sub * LF.msub * LF.csub) * exp_chk
+
+  and copattern =
+    | CopatDummy of Loc.t
+
+  and copattern_spine =
+    | CopatNil of Loc.t
+    | CopatApp of Loc.t * copattern * copattern_spine
 
   type tclo = typ * LF.msub
 end

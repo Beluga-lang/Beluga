@@ -604,6 +604,14 @@ let rec index_exp cvars vars fcvars = function
       let vars' = Var.extend vars (Var.mk_entry x) in
         Apx.Comp.Fun (loc, x, index_exp cvars vars' fcvars e)
 
+  | Ext.Comp.Cofun (loc, copatterns) ->
+      let copatterns' =
+        List.map (function (name, sp, e) ->
+                    (name, index_copat_spine cvars vars fcvars sp, index_exp cvars vars fcvars e))
+          copatterns
+      in
+        Apx.Comp.Cofun (loc, copatterns')
+
   | Ext.Comp.CtxFun (loc, psi_name, e) ->
         let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.CV psi_name)) in
         Apx.Comp.CtxFun (loc, psi_name, index_exp cvars' vars fcvars e)
@@ -756,6 +764,13 @@ and index_mobj cvars fcvars  mO = match mO with
     let (tM', fcvars2)           = index_term cvars bvars fcvars1 tM in
       (Apx.Comp.MetaObjAnn (loc, cPsi', tM') , fcvars2)
 
+and index_copattern cvars vars fcvars copat = match copat with
+  | Ext.Comp.CopatDummy loc -> Apx.Comp.CopatDummy loc
+
+and index_copat_spine cvars vars fcvars sp = match sp with
+  | Ext.Comp.CopatNil loc -> Apx.Comp.CopatNil loc
+  | Ext.Comp.CopatApp (loc, copat, sp') ->
+      Apx.Comp.CopatApp (loc, index_copattern cvars vars fcvars copat, index_copat_spine cvars vars fcvars sp')
 
 and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
   | Ext.Comp.PatTrue loc -> (Apx.Comp.PatTrue loc, fcvars, fvars)

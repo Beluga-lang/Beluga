@@ -995,6 +995,11 @@ GLOBAL: sgn;
     | -> Pragma.RegularCase
     ]];
 
+  cofun_lst:
+    [[
+       f = UPSYMBOL; rArr; e = cmp_exp_chk -> (Id.mk_name (Id.SomeString f), Comp.CopatNil _loc, e)
+    ]];
+
   (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
   cmp_exp_chkX:
     [ LEFTA
@@ -1018,6 +1023,9 @@ GLOBAL: sgn;
 
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)
+
+      | "cofun"; bs = LIST1 cofun_lst SEP "|" ->
+          Comp.Cofun (_loc, bs)
 
 (*      | "impossible"; i = cmp_exp_syn; "in";
          ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]"  ->

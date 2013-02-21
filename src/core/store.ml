@@ -349,6 +349,54 @@ module Cid = struct
       Hashtbl.clear directory
   end
 
+ module CompCotyp = struct
+    type entry = {
+      name                : Id.name;
+      implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
+                                    are factored into implicit arguments *)
+      kind                : Int.Comp.kind;
+      mutable frozen       : bool;
+      mutable destructors: Id.cid_comp_dest list
+    }
+
+    let mk_entry name kind implicit_arguments  =  {
+      name               = name;
+      implicit_arguments = implicit_arguments;
+      kind               = kind;
+      frozen             = false;
+      destructors        = []
+    }
+
+    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name n = Hashtbl.find directory n
+
+    let add e =
+      let cid_comp_typ = DynArray.length store in
+        DynArray.add store e;
+        Hashtbl.replace directory e.name cid_comp_typ;
+        cid_comp_typ
+
+    let get = DynArray.get store
+
+    let freeze a =
+          (get a).frozen <- true
+
+    let addDestructor c typ =
+      let entry = get typ in
+        entry.destructors <- c :: entry.destructors
+
+    let clear () =
+      DynArray.clear store;
+      Hashtbl.clear directory
+  end
+
+
 
   module CompConst = struct
     type entry = {
@@ -389,6 +437,45 @@ module Cid = struct
       DynArray.clear store;
       Hashtbl.clear directory
   end
+
+  module CompDest = struct
+    type entry = {
+      name                : Id.name;
+      implicit_arguments  : int;
+      typ                : Int.Comp.typ
+    }
+
+
+    let mk_entry name tau implicit_arguments  =  {
+      name               = name;
+      implicit_arguments = implicit_arguments;
+      typ               = tau
+    }
+   (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name n = Hashtbl.find directory n
+
+    let add cid_ctyp entry =
+      let cid_comp_dest = DynArray.length store in
+        DynArray.add store entry;
+        Hashtbl.replace directory entry.name cid_comp_dest;
+        CompCotyp.addDestructor cid_comp_dest cid_ctyp;
+        cid_comp_dest
+
+    let get = DynArray.get store
+
+    let get_implicit_arguments c = (get c).implicit_arguments
+
+    let clear () =
+      DynArray.clear store;
+      Hashtbl.clear directory
+  end
+
 
 
   module CompTypDef = struct

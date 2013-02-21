@@ -697,7 +697,7 @@ let rec elCompTyp cD tau = match tau with
 
 | Apx.Comp.TypCobase (loc, a, cS) ->
       let _ = dprint (fun () -> "[elCompTyp] Cobase : " ^ R.render_cid_comp_typ a) in
-      let tK = (CompTyp.get a).CompTyp.kind in
+      let tK = (CompCotyp.get a).CompCotyp.kind in
       let _ = dprint (fun () -> "[elCompTyp] of kind : " ^ P.compKindToString cD tK) in
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
         Int.Comp.TypCobase (loc, a ,cS')

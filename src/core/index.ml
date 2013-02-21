@@ -526,7 +526,7 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
       end
   | Ext.Comp.TypCobase (loc, a, ms) ->
       begin try
-        let a' = CompTyp.index_of_name a in
+        let a' = CompCotyp.index_of_name a in
         let (ms', fcvars') = index_meta_spine cvars fcvars ms in
           (Apx.Comp.TypCobase (loc, a', ms'), fcvars')
       with Not_found ->

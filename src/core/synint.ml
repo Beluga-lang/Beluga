@@ -363,7 +363,9 @@ module Sgn = struct
     | Typ           of cid_typ  * LF.kind
     | Const         of cid_term * LF.typ
     | CompTyp       of Loc.t * name * Comp.kind
+    | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
+    | CompDest      of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
     | Rec           of cid_prog   * Comp.typ * Comp.exp_chk

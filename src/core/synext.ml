@@ -247,7 +247,9 @@ module Sgn = struct
     | Const    of Loc.t * name * LF.typ
     | Typ      of Loc.t * name * LF.kind
     | CompTyp  of Loc.t * name * Comp.kind
+    | CompCotyp of Loc.t * name * Comp.kind
     | CompConst of Loc.t * name * Comp.typ
+    | CompDest of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema   of Loc.t * name * LF.schema
     | Pragma   of Loc.t * pragma

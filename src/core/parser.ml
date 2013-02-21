@@ -973,7 +973,7 @@ GLOBAL: sgn;
     [[
     a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
       check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+      Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
     ]]
 ;
 

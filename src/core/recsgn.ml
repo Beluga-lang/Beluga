@@ -48,6 +48,9 @@ let freeze_from_name tau = match tau with
   |Ext.Sgn.CompTyp (_, n, _) -> let a =   CompTyp.index_of_name n in
                                CompTyp.freeze a;
                                ()
+   |Ext.Sgn.CompCotyp (_, n, _) -> let a =   CompCotyp.index_of_name n in
+                               CompCotyp.freeze a;
+                                ()   
 
 
 let rec recSgnDecls = function
@@ -118,6 +121,29 @@ and recSgnDecl d =
             " successful!");
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i) in ()
 
+  | Ext.Sgn.CompCotyp (_ , a, extK) ->
+        let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ a.string_of_name) in
+        let apxK = Index.compkind extK in
+        let _ = FVar.clear () in
+        let _ = dprint (fun () -> "\nElaborating codata-type declaration " ^ a.string_of_name) in
+        let cK = Monitor.timer ("CType Elaboration" ,
+                               (fun () -> let cK = Reconstruct.compkind apxK in
+                                  Reconstruct.solve_fvarCnstr Lfrecon.Pibox; cK                                                             
+       )) in
+        let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+        let (cK', i) = Monitor.timer ("Type Abstraction",
+                                      fun () -> Abstract.compkind cK) in
+
+        let _        = (Reconstruct.reset_fvarCnstr ();                                                                                     
+                        Unify.resetGlobalCnstrs ();                                                                                         
+                        dprint (fun () ->  a.string_of_name ^
+                                  " : " ^  (P.compKindToString Int.LF.Empty cK'))) in
+          Monitor.timer ("Type Check",
+            fun () -> Check.Comp.checkKind  Int.LF.Empty cK');                                                                              
+            dprint (fun () ->  "\nDOUBLE CHECK for codata type constant " ^a.string_of_name ^
+            " successful!");                                                                                                                
+        let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in ()
+
 
     | Ext.Sgn.CompConst (_ , c, tau) ->
         let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
@@ -138,6 +164,27 @@ and recSgnDecl d =
 					fun () -> Check.Comp.checkTyp cD tau'))
         in	let cid_ctypfamily = get_target_cid_comptyp tau' in
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in ()
+
+   | Ext.Sgn.CompDest (_ , c, tau) ->
+        let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ c.string_of_name) in
+        let apx_tau   = Index.comptyp tau in
+        let cD        = Int.LF.Empty in
+        let _         = dprint (fun () -> "\nElaborating codata-type destructor " ^ c.string_of_name) in
+        let tau'      = Monitor.timer ("Codata-type Constant: Type Elaboration",
+                                       fun () -> Reconstruct.comptyp apx_tau)  in
+        let _         = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+        let _         = Unify.resetGlobalCnstrs () in
+        let _         = dprint (fun () -> "Abstracting over comp. type") in
+        let (tau', i) = Monitor.timer ("Codata-type Constant: Type Abstraction",
+                                       fun () -> Abstract.comptyp tau') in
+        let _         = dprint (fun () -> "Abstracting over comp. type: done") in
+        let _         = dprint (fun () ->  c.string_of_name ^ " : " ^
+                                   (P.compTypToString cD tau')) in
+        let _         = (Monitor.timer ("Codata-type Constant: Type Check",
+                                        fun () -> Check.Comp.checkTyp cD tau'))
+        in      let cid_ctypfamily = get_target_cid_comptyp tau' in
+        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in ()
+
 
     | Ext.Sgn.Typ (_, a, extK)   ->
         let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in

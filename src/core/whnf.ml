@@ -2395,6 +2395,8 @@ let mctxPVarPos cD p =
   let rec normCTyp tau = match tau with
     | Comp.TypBase (loc, c, mS) ->
         Comp.TypBase (loc, c, normMetaSpine mS)
+    | Comp.TypCobase (loc, c, mS) ->
+        Comp.TypCobase (loc, c, normMetaSpine mS)
     | Comp.TypBox (loc, tA, cPsi)
       -> Comp.TypBox(loc, normTyp(tA, LF.id), normDCtx cPsi)
 
@@ -2456,6 +2458,9 @@ let mctxPVarPos cD p =
       | (Comp.TypBase (loc, a, mS), t) ->
           let mS' = cnormMetaSpine (mS, t) in
             Comp.TypBase (loc, a, mS')
+      | (Comp.TypCobase (loc, a, mS), t) ->
+          let mS' = cnormMetaSpine (mS, t) in
+            Comp.TypCobase (loc, a, mS')
       | (Comp.TypBox (loc, tA, cPsi), t) ->
           let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
           let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
@@ -2516,6 +2521,9 @@ let mctxPVarPos cD p =
     | (Comp.TypBase (loc, c, mS) , t) ->
         let mS' = normMetaSpine (cnormMetaSpine (mS, t)) in
           (Comp.TypBase (loc, c, mS'), m_id)
+    | (Comp.TypCobase (loc, c, mS) , t) ->
+        let mS' = normMetaSpine (cnormMetaSpine (mS, t)) in
+          (Comp.TypCobase (loc, c, mS'), m_id)
 
     | (Comp.TypBox (loc, tA, cPsi), t)
       ->

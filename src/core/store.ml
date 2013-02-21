@@ -569,8 +569,10 @@ module Cid = struct
     open Syntax.Int
 
     val render_name         : name         -> string
-    val render_cid_comp_typ : cid_typ      -> string
+    val render_cid_comp_typ : cid_comp_typ -> string
+    val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string
+    val render_cid_comp_dest : cid_comp_dest -> string
     val render_cid_typ      : cid_typ      -> string
     val render_cid_term     : cid_term     -> string
     val render_cid_schema   : cid_schema   -> string
@@ -591,7 +593,9 @@ module Cid = struct
 
     let render_name       n    = n.string_of_name
     let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
+    let render_cid_comp_dest c = render_name (CompDest.get c).CompDest.name
     let render_cid_typ    a    = render_name (Typ.get a).Typ.name
     let render_cid_term   c    = render_name (Term.get c).Term.name
     let render_cid_schema w    = render_name (Schema.get w).Schema.name
@@ -612,7 +616,9 @@ module Cid = struct
 
     let render_name        n   = n.string_of_name
     let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
+    let render_cid_comp_dest c = render_name (CompDest.get c).CompDest.name
     let render_cid_typ     a   = render_name (Typ.get a).Typ.name
     let render_cid_term    c   = render_name (Term.get c).Term.name
     let render_cid_schema  w   = render_name (Schema.get w).Schema.name

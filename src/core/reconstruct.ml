@@ -696,9 +696,9 @@ let rec elCompTyp cD tau = match tau with
         Int.Comp.TypBase (loc, a ,cS')
 
 | Apx.Comp.TypCobase (loc, a, cS) ->
-      let _ = dprint (fun () -> "[elCompTyp] Cobase : " ^ R.render_cid_comp_typ a) in
+      let _ = dprint (fun () -> "[elCompCotyp] Cobase : " ^ R.render_cid_comp_cotyp a) in
       let tK = (CompCotyp.get a).CompCotyp.kind in
-      let _ = dprint (fun () -> "[elCompTyp] of kind : " ^ P.compKindToString cD tK) in
+      let _ = dprint (fun () -> "[elCompCotyp] of kind : " ^ P.compKindToString cD tK) in
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
         Int.Comp.TypCobase (loc, a ,cS')
 
@@ -1164,6 +1164,12 @@ and elExp' cD cG i = match i with
                         "\n has type " ^ P.mctxToString cD ^ " |- " ^
                         P.compTypToString cD ((CompConst.get c).CompConst.typ)) in
      (Int.Comp.DataConst c, ((CompConst.get c).CompConst.typ, C.m_id))
+
+  | Apx.Comp.DataDest c ->
+      let _ = dprint (fun () -> "[elExp'] DataDest " ^ R.render_cid_comp_dest  c ^
+                        "\n has type " ^ P.mctxToString cD ^ " |- " ^
+                        P.compTypToString cD ((CompDest.get c).CompDest.typ)) in
+     (Int.Comp.DataDest c, ((CompDest.get c).CompDest.typ, C.m_id))
 
   | Apx.Comp.Const prog ->
      (Int.Comp.Const prog, ((Comp.get prog).Comp.typ, C.m_id))

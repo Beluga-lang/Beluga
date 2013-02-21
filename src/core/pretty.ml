@@ -905,6 +905,13 @@ module Int = struct
               (R.render_cid_comp_typ c)
               (fmt_ppr_meta_spine cD 2) mS
               (r_paren_if cond)
+      | Comp.TypCobase (_, c, mS)->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%s%a%s"
+              (l_paren_if cond)
+              (R.render_cid_comp_cotyp c)
+              (fmt_ppr_meta_spine cD 2) mS
+              (r_paren_if cond)
 
       | Comp.TypBox (_, tA, cPsi) ->
           fprintf ppf "[%a. %a]"

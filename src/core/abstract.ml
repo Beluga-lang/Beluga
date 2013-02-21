@@ -1798,6 +1798,9 @@ let rec collectCompTyp p cQ tau = match tau with
   | Comp.TypBase (loc, a, ms) ->
       let (cQ', ms') = collect_meta_spine p cQ ms in
         (cQ', Comp.TypBase (loc, a, ms'))
+  | Comp.TypCobase (loc, a, ms) ->
+      let (cQ', ms') = collect_meta_spine p cQ ms in
+        (cQ', Comp.TypCobase (loc, a, ms'))
 
   | Comp.TypBox (loc, tA, cPsi) ->
       let phat = Context.dctxToHat cPsi in
@@ -2086,6 +2089,9 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypBase (loc, a, cS) ->
       let cS' = abstractMVarMetaSpine cQ offset cS in
         Comp.TypBase (loc, a , cS')
+  | Comp.TypCobase (loc, a, cS) ->
+      let cS' = abstractMVarMetaSpine cQ offset cS in
+        Comp.TypCobase (loc, a , cS')
   | Comp.TypBox (loc, tA, cPsi) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in

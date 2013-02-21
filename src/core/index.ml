@@ -515,20 +515,10 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
         let a' = CompTyp.index_of_name a in
         let (ms', fcvars') = index_meta_spine cvars fcvars ms in
 	  (Apx.Comp.TypBase (loc, a', ms'), fcvars')
-      with Not_found ->
-        begin try
-          let a' = CompTypDef.index_of_name a in
-          let (ms', fcvars') = index_meta_spine cvars fcvars ms in
-            (Apx.Comp.TypDef (loc, a', ms'), fcvars')
-        with Not_found ->
-          raise (Error (loc, UnboundName a))
-        end
-      end
-  | Ext.Comp.TypCobase (loc, a, ms) ->
-      begin try
+      with Not_found -> try
         let a' = CompCotyp.index_of_name a in
         let (ms', fcvars') = index_meta_spine cvars fcvars ms in
-          (Apx.Comp.TypCobase (loc, a', ms'), fcvars')
+	  (Apx.Comp.TypCobase (loc, a', ms'), fcvars')
       with Not_found ->
         begin try
           let a' = CompTypDef.index_of_name a in
@@ -538,7 +528,6 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
           raise (Error (loc, UnboundName a))
         end
       end
-
   | Ext.Comp.TypBox (loc, a, psi) ->
     begin match a with
       | Ext.LF.Atom (_ , name, Ext.LF.Nil)

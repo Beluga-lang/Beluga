@@ -80,7 +80,6 @@ type clf_pattern =
 type mixtyp =
   | MTCompKind of Loc.t
   | MTBase of Loc.t * Id.name * Comp.meta_spine
-  | MTCobase of Loc.t * Id.name * Comp.meta_spine
   | MTArr of Loc.t * mixtyp * mixtyp
   | MTCross of Loc.t * mixtyp * mixtyp
   | MTCtxPi of  Loc.t * (Id.name * Id.name * Comp.depend) * mixtyp
@@ -110,7 +109,6 @@ let mixloc = function
 (*  |  MTPiTyp(l, _, _) -> l *)
   |  MTAtom(l, _, _) -> l
   |  MTBase(l, _, _) -> l
-  |  MTCobase(l, _, _) -> l
 
 let unmixfail loc = raise (Error.Violation ("Can't unmix. At " ^ Syntax.Loc.to_string loc))
 
@@ -118,7 +116,6 @@ let unmixfail loc = raise (Error.Violation ("Can't unmix. At " ^ Syntax.Loc.to_s
 let rec unmix = function
   | MTCompKind l -> CompKindMix (Comp.Ctype l)
   | MTBase (l, a, ms) -> CompMix(Comp.TypBase (l, a, ms))
-  | MTCobase (l, a, ms) -> CompMix(Comp.TypCobase (l, a, ms))
   | MTArr(l, mt1, mt2) -> begin match (unmix mt1, unmix mt2) with
                                   | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
                                   | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
@@ -195,12 +192,12 @@ let check_datatype_decl a cs =
 
 let check_codatatype_decl a cs =
   let rec retname = function
-    | Comp.TypCobase (_, c', _) -> c'
-    | Comp.TypArr (_, Comp.TypCobase (_, c', _), _) -> c'
+    | Comp.TypBase (_, c', _) -> c'
+    | Comp.TypArr (_, Comp.TypBase (_, c', _), _) -> c'
     | Comp.TypCtxPi (_, _, tau) -> retname tau
     | Comp.TypPiBox (_, _, tau) -> retname tau
     | _ -> raise IllFormedDataDecl in
-  List.iter (fun (Sgn.CompConst (_, c, tau)) ->
+  List.iter (fun (Sgn.CompDest (_, c, tau)) ->
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
@@ -279,6 +276,14 @@ GLOBAL: sgn;
       [
         a = UPSYMBOL; ":"; tau = cmp_typ ->
           Sgn.CompConst (_loc, Id.mk_name (Id.SomeString a), tau)
+      ]
+    ];
+
+  sgn_comp_cotyp :
+    [
+      [
+        a = UPSYMBOL; ":"; tau = cmp_typ ->
+          Sgn.CompDest (_loc, Id.mk_name (Id.SomeString a), tau)
       ]
     ];
 
@@ -971,7 +976,7 @@ GLOBAL: sgn;
 ;
  cocmp_cdat:
     [[
-    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
+    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_cotyp SEP "|" ->
       check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
       Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
     ]]

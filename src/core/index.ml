@@ -691,6 +691,8 @@ and index_exp' cvars vars fcvars = function
         Apx.Comp.Const (Comp.index_of_name x)
       with Not_found -> try
         Apx.Comp.DataConst (CompConst.index_of_name x)
+      with Not_found -> try
+        Apx.Comp.DataDest (CompDest.index_of_name x)
       with Not_found ->
         raise (Error (loc, UnboundCompName x))
       end
@@ -698,6 +700,8 @@ and index_exp' cvars vars fcvars = function
     begin
       try
 	Apx.Comp.DataConst (CompConst.index_of_name c)
+      with Not_found -> try
+        Apx.Comp.DataDest (CompDest.index_of_name c)
       with Not_found -> raise (Error (loc, UnboundCompConstName  c))
     end
   | Ext.Comp.Apply (loc, i, e) ->

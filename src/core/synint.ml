@@ -301,7 +301,7 @@ module Comp = struct
   and exp_syn =
     | Var    of offset
     | DataConst of cid_comp_const
-    | CodataConst of cid_comp_const
+    | DataDest of cid_comp_dest
     | Const  of cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | CtxApp of Loc.t * exp_syn * LF.dctx

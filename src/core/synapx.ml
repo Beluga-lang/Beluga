@@ -159,6 +159,7 @@ module Comp = struct
      | Var    of offset                                     (* x              *)
      | FVar   of name                                       (* x              *)
      | DataConst of cid_comp_const                          (* c              *)
+     | DataDest of cid_comp_dest                            (* c              *)
      | Const  of cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
      | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)

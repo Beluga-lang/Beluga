@@ -36,10 +36,15 @@ let rec lookupFun cG f = match cG with
 
 let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypBase (_, a, _ ) -> a
-  | Int.Comp.TypCobase (_, a, _ ) -> a
   | Int.Comp.TypArr (_ , tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
+
+let rec get_target_cid_compcotyp tau = match tau with
+  | Int.Comp.TypCobase (_, a, _ ) -> a
+  | Int.Comp.TypArr (tau , _) -> get_target_cid_compcotyp tau
+  | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_compcotyp tau
+  | Int.Comp.TypPiBox (_, tau) -> get_target_cid_compcotyp tau
 
 let freeze_from_name tau = match tau with
   |Ext.Sgn.Typ ( _, n, _) ->  let a = Typ.index_of_name n in
@@ -182,7 +187,7 @@ and recSgnDecl d =
                                    (P.compTypToString cD tau')) in
         let _         = (Monitor.timer ("Codata-type Constant: Type Check",
                                         fun () -> Check.Comp.checkTyp cD tau'))
-        in      let cid_ctypfamily = get_target_cid_comptyp tau' in
+        in      let cid_ctypfamily = get_target_cid_compcotyp tau' in
         let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in ()
 
 

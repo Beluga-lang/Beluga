@@ -192,7 +192,6 @@ let check_datatype_decl a cs =
 
 let check_codatatype_decl a cs =
   let rec retname = function
-    | Comp.TypBase (_, c', _) -> c'
     | Comp.TypArr (_, Comp.TypBase (_, c', _), _) -> c'
     | Comp.TypCtxPi (_, _, tau) -> retname tau
     | Comp.TypPiBox (_, _, tau) -> retname tau

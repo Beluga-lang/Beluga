@@ -999,9 +999,22 @@ GLOBAL: sgn;
     | -> Pragma.RegularCase
     ]];
 
+  copat:
+    [[
+       f = UPSYMBOL; ms = LIST0 meta_obj ->
+         let rec embed_spine = function
+           | [] -> Comp.MetaNil
+           | (mo :: ms) -> Comp.MetaApp (mo, embed_spine ms)
+     in (Id.mk_name (Id.SomeString f), embed_spine ms)
+    ]];
+
   cofun_lst:
     [[
-       f = UPSYMBOL; rArr; e = cmp_exp_chk -> (Id.mk_name (Id.SomeString f), Comp.CopatNil _loc, e)
+      cps = LIST1 copat; rArr; e = cmp_exp_chk ->
+        let rec embed_spine = function
+          | [] -> Comp.CopatNil _loc
+          | (name, ms) :: cs -> Comp.CopatApp (_loc, name, ms, embed_spine cs)
+        in (embed_spine cps, e)
     ]];
 
   (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)

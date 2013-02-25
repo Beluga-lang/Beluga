@@ -55,7 +55,7 @@ let freeze_from_name tau = match tau with
                                ()
    |Ext.Sgn.CompCotyp (_, n, _) -> let a =   CompCotyp.index_of_name n in
                                CompCotyp.freeze a;
-                                ()   
+                                ()
 
 
 let rec recSgnDecls = function

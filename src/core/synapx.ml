@@ -206,8 +206,9 @@ module Comp = struct
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
 
- and copattern_spine =
+  and copattern_spine =
     | CopatNil of Loc.t
-    | CopatApp of Loc.t * name * meta_spine * copattern_spine
+    | CopatApp of Loc.t * name * copattern_spine
+    | CopatMeta of Loc.t * meta_obj * copattern_spine
 
 end

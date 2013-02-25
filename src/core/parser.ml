@@ -999,22 +999,16 @@ GLOBAL: sgn;
     | -> Pragma.RegularCase
     ]];
 
-  copat:
+  copat_lst:
     [[
-       f = UPSYMBOL; ms = LIST0 meta_obj ->
-         let rec embed_spine = function
-           | [] -> Comp.MetaNil
-           | (mo :: ms) -> Comp.MetaApp (mo, embed_spine ms)
-     in (Id.mk_name (Id.SomeString f), embed_spine ms)
+       f = UPSYMBOL -> Comp.CopatApp (_loc, Id.mk_name (Id.SomeString f), Comp.CopatNil _loc)
+     | g = meta_obj -> Comp.CopatMeta (_loc, g, Comp.CopatNil _loc)
     ]];
 
   cofun_lst:
     [[
-      cps = LIST1 copat; rArr; e = cmp_exp_chk ->
-        let rec embed_spine = function
-          | [] -> Comp.CopatNil _loc
-          | (name, ms) :: cs -> Comp.CopatApp (_loc, name, ms, embed_spine cs)
-        in (embed_spine cps, e)
+      f = UPSYMBOL; csp = LIST0 copat_lst; rArr; e = cmp_exp_chk ->
+        ((Comp.CopatApp (_loc, Id.mk_name (Id.SomeString f), Comp.CopatNil _loc)) :: csp, e)
     ]];
 
   (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
@@ -1041,8 +1035,12 @@ GLOBAL: sgn;
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)
 
-      | "cofun"; bs = LIST1 cofun_lst SEP "|" ->
-          Comp.Cofun (_loc, bs)
+      | "cofun"; csp = LIST1 cofun_lst SEP "|" ->
+          let f head left = match (head, left) with
+            | (Comp.CopatApp (loc, a, csp'), csp'') -> Comp.CopatApp (loc, a, csp'')
+            | (Comp.CopatMeta (loc, a, csp'), csp'') -> Comp.CopatMeta (loc, a, csp'') in
+          let g = fun (csp1, e) -> (List.fold_right f csp1 (Comp.CopatNil _loc), e) in
+          Comp.Cofun (_loc, List.map g csp)
 
 (*      | "impossible"; i = cmp_exp_syn; "in";
          ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]"  ->

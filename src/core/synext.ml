@@ -194,7 +194,8 @@ module Comp = struct
 
   and copattern_spine =
     | CopatNil of Loc.t
-    | CopatApp of Loc.t * name * meta_spine * copattern_spine
+    | CopatApp of Loc.t * name * copattern_spine
+    | CopatMeta of Loc.t * meta_obj * copattern_spine
 
  type rec_fun = RecFun of name * typ * exp_chk
 

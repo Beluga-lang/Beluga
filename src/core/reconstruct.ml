@@ -37,6 +37,7 @@ type error =
   | TypeAbbrev         of Id.name
   | CtxMismatch        of Int.LF.mctx * Int.Comp.typ * Int.LF.dctx
   | PatternMobj
+  | TypMismatch        of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
 
 exception Error of Syntax.Loc.t * error
 
@@ -136,6 +137,14 @@ let _ = Error.register_printer
        | TooManyMetaObj      ->
            Format.fprintf ppf
              "Too many meta-objects supplied to data-constructor"
+
+       | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
+           Error.report_mismatch ppf
+             "Type of destructor did not match the type it was expected to have."
+             "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+             (Whnf.cnormCTyp (tau1, theta1))
+             "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+             (Whnf.cnormCTyp (tau2, theta2))
 ))
 
 
@@ -854,6 +863,21 @@ let inferPatTyp cD' (cD_s, tau_s) = inferPatTyp' cD' (cD_s, Whnf.cnormCTyp (tau_
 
 (* *******************************************************************************)
 
+let rec elCofunExp cD csp theta_tau1 theta_tau2 =
+  match (csp, theta_tau1, theta_tau2) with
+    | (Apx.Comp.CopatNil loc, (Int.Comp.TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          (Int.Comp.CopatNil loc, (tau2, theta))
+        else raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+    | (Apx.Comp.CopatApp (loc, dest, csp'),
+       (Int.Comp.TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          let (csp'', theta_tau') = elCofunExp cD csp'
+            ((CompDest.get dest).CompDest.typ,Whnf.m_id) (tau2, theta) in
+            (Int.Comp.CopatApp (loc, dest, csp''), theta_tau')
+        else raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+          (*  | (Apx.Comp.CopatMeta (loc, mo, csp'), (Int.Comp.*)
+
 let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
@@ -869,6 +893,14 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let _ = dprint (fun () -> "[elExp] has type " ^
                         P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
         e''
+
+  | (Apx.Comp.Cofun (loc, bs), (Int.Comp.TypCobase (_, a, sp), theta)) ->
+      let copatMap = function (Apx.Comp.CopatApp (loc, dest, csp), e')  ->
+          let (csp', theta_tau') =
+            elCofunExp cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) theta_tau
+          in (Int.Comp.CopatApp (loc, dest, csp'), elExpW cD cG e' theta_tau')
+      in let bs' = List.map copatMap bs
+      in Int.Comp.Cofun (loc, bs')
 
 
   | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->

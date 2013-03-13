@@ -2569,6 +2569,9 @@ let mctxPVarPos cD p =
 
     | (Comp.Fun (loc, x, e), t) -> Comp.Fun (loc, x, cnormExp (e,t))
 
+    | (Comp.Cofun (loc, bs), t) ->
+        Comp.Cofun (loc, List.map (fun (cps, e) -> (cps, cnormExp (e, t))) bs)
+
     | (Comp.CtxFun (loc, psi, e) , t ) ->
         Comp.CtxFun (loc, psi, cnormExp (e, mvar_dot1 t))
 
@@ -2786,6 +2789,12 @@ let mctxPVarPos cD p =
 
   and convCTyp' thetaT1 thetaT2 = match (thetaT1, thetaT2) with
     | ((Comp.TypBase (_, c1, mS1), _t1), (Comp.TypBase (_, c2, mS2), _t2)) ->
+          if c1 = c2 then
+            (* t1 = t2 = id by invariant *)
+            convMetaSpine mS1 mS2
+          else false
+
+    | ((Comp.TypCobase (_, c1, mS1), _t1), (Comp.TypCobase (_, c2, mS2), _t2)) ->
           if c1 = c2 then
             (* t1 = t2 = id by invariant *)
             convMetaSpine mS1 mS2

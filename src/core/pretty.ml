@@ -1026,6 +1026,14 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
               (r_paren_if cond);
 
+      | Comp.Cofun (_, bs) ->
+          let cond = lvl > 0 in
+(*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
+            fprintf ppf "%sSome cofun%s"
+              (l_paren_if cond)
+              (r_paren_if cond)
+
+
       | Comp.CtxFun (_, x, e) ->
           let cond = lvl > 0 in
             fprintf ppf "@[<2>%smlam %s =>@ %a%s@]"

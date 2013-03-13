@@ -761,7 +761,7 @@ and index_copat_spine cvars vars fcvars sp = match sp with
   | Ext.Comp.CopatNil loc -> (Apx.Comp.CopatNil loc, fcvars)
   | Ext.Comp.CopatApp (loc, name, sp') ->
       let (sp'', fcvars') = index_copat_spine cvars vars fcvars sp' in
-        (Apx.Comp.CopatApp (loc, name, sp''), fcvars')
+        (Apx.Comp.CopatApp (loc, CompDest.index_of_name name, sp''), fcvars')
   | Ext.Comp.CopatMeta (loc, metaobj, sp') ->
       let (metaobj', fcvars') = index_meta_obj cvars fcvars metaobj in
       let (sp'', fcvars'') = index_copat_spine cvars vars fcvars' sp' in

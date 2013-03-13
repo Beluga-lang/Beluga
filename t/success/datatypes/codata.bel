@@ -8,6 +8,7 @@ codatatype Stream : ctype =
 | Tl : Stream -> Stream
 ;
 
-%rec test : Colour -> Stream =
-%fn e => cofun Hd => e | Tl => test e
-%;
+rec test : Colour -> Stream =
+fn e => cofun Hd => e
+           | Tl => test e
+;

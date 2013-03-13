@@ -347,7 +347,7 @@ module Comp = struct
 
   and copattern_spine =
     | CopatNil of Loc.t
-    | CopatApp of Loc.t * name * copattern_spine
+    | CopatApp of Loc.t * cid_comp_dest * copattern_spine
     | CopatMeta of Loc.t * meta_obj * copattern_spine
 
   type tclo = typ * LF.msub

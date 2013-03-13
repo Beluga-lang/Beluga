@@ -1931,6 +1931,7 @@ let rec collectExp cQ e = match e with
 and collectExp' cQ i = match i with
   | Comp.Var _x -> (cQ , i)
   | Comp.DataConst _c ->  (cQ , i)
+  | Comp.DataDest _c -> (cQ , i)
   | Comp.Const _c ->  (cQ , i)
   | Comp.Apply (loc, i, e) ->
       let (cQ', i') = collectExp' cQ i  in

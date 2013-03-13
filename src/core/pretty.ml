@@ -1175,6 +1175,10 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_cid_comp_const c)
 
+      | Comp.DataDest c ->
+          fprintf ppf "%s"
+            (R.render_cid_comp_dest c)
+
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
             fprintf ppf "%s@[<2>%a@ %a@]%s"

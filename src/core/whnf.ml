@@ -2606,6 +2606,7 @@ let mctxPVarPos cD p =
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i
     | (Comp.DataConst _, _ ) -> i
+    | (Comp.DataDest _, _ ) -> i
     | (Comp.Const _, _ ) -> i
 
     | (Comp.Apply (loc, i, e), t) -> Comp.Apply (loc, cnormExp' (i, t), cnormExp (e,t))

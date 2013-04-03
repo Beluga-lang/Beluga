@@ -1276,6 +1276,8 @@ module Int = struct
             print_spine ppf spine;
             fprintf ppf " %a" (fmt_ppr_cmp_value lvl) v
         in fprintf ppf "%s%a" (R.render_cid_comp_const c) print_spine spine
+      | Comp.CodataValue (cid, spine) -> fprintf ppf "%s" (R.render_cid_comp_dest cid)
+      | Comp.CofunValue _ -> fprintf ppf " cofun "
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function
       | LF.Empty -> ()

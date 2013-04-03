@@ -281,6 +281,8 @@ module Comp = struct
     | DataValue  of cid_comp_const * data_spine
     | BoolValue  of bool
     | PairValue  of value * value
+    | CofunValue of (copattern_spine * exp_chk) list * LF.msub * env
+    | CodataValue of cid_comp_dest * codata_spine
 
   and exp_chk =
     | Syn    of Loc.t * exp_syn
@@ -335,6 +337,10 @@ module Comp = struct
   and data_spine =
     | DataNil
     | DataApp of value * data_spine
+
+  and codata_spine =
+    | CodataNil
+    | CodataApp of value * codata_spine
 
   and branch =
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub

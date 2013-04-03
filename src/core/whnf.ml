@@ -2983,6 +2983,7 @@ and closedMetaObj mO = match mO with
 let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true
   | Comp.TypBase (_, _c, mS) -> closedMetaSpine mS
+  | Comp.TypCobase (_, _c, mS) -> closedMetaSpine mS
   | Comp.TypBox (_ , tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
   | Comp.TypSub (_ , cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi
   | Comp.TypArr (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2

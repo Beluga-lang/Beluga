@@ -863,6 +863,7 @@ let inferPatTyp cD' (cD_s, tau_s) = inferPatTyp' cD' (cD_s, Whnf.cnormCTyp (tau_
 
 (* *******************************************************************************)
 
+(* cD |- csp : theta_tau1 => theta_tau2 *)
 let rec elCofunExp cD csp theta_tau1 theta_tau2 =
   match (csp, theta_tau1, theta_tau2) with
     | (Apx.Comp.CopatNil loc, (Int.Comp.TypArr (tau1, tau2), theta), (tau', theta')) ->

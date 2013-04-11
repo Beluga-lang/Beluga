@@ -308,13 +308,22 @@ GLOBAL: sgn;
           check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
           Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
 *)
-      | "datatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->
-           [Sgn.MRecTyp(_loc, f)]
 
-      | "codatatype"; f = LIST1 cocmp_cdat SEP "and"; ";" ->
-           [Sgn.MRecTyp(_loc, f)]
+      | "datatype"; f = cmp_cdat;
+        g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
+                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+          begin match g with
+            | None -> [Sgn.MRecTyp(_loc, [f])]
+            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+          end
 
-
+      | "codatatype"; f = cocmp_cdat;
+        g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
+                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+          begin match g with
+            | None -> [Sgn.MRecTyp(_loc, [f])]
+            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+          end
 
       | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
           [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
@@ -979,6 +988,14 @@ GLOBAL: sgn;
       check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
       Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
     ]]
+;
+
+ mutual_cmp_cdat:
+    [[
+        "datatype"; f = cmp_cdat -> f
+
+      | "codatatype"; f = cocmp_cdat -> f
+   ]]
 ;
 
   cmp_rec:

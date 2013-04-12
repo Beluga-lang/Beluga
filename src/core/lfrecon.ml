@@ -34,6 +34,7 @@ type error =
   | ParamFun
   | CtxVarSchema of Id.name
   | SigmaTypImpos of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
+  | SpineLengthMisMatch
 
 exception Error of Syntax.Loc.t * error
 
@@ -46,6 +47,9 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | SpineLengthMisMatch ->
+            Format.fprintf ppf
+              "Too few or to many arguments supplied to a type family."
         | CtxVarSchema psi ->
             Format.fprintf ppf
               "Reconstruction cannot infer the schema for context %s."
@@ -778,7 +782,7 @@ and elTerm' recT cD cPsi r sP = match r with
       let tR = Int.LF.Root (loc, Int.LF.Const c, tS)  in
       begin
 	try
-          Unify.unifyTyp cD cPsi sQ sP;
+          Unify.unifyTyp cD cPsi sQ sP ;
 	  tR
         with
          | Unify.Failure msg ->
@@ -1821,15 +1825,19 @@ and elKSpine loc recT cD cPsi spine sK =
   (* Check first that we didn't supply too many arguments. *)
   if kindLength (fst sK) < spineLength spine then
     raise (Check.LF.Error (loc, Check.LF.SpineIllTyped (kindLength (fst sK), spineLength spine)));
+
   let rec elKSpine loc recT cD cPsi spine sK = match spine, sK with
     | Apx.LF.Nil, (Int.LF.Typ, _s) ->
       Int.LF.Nil (* errors are postponed to reconstruction phase *)
 
     | Apx.LF.App (m, spine), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s) ->
-      let tM = elTerm recT cD cPsi m (tA, s) in
-      let tS = elKSpine loc recT cD cPsi spine (tK, Int.LF.Dot (Int.LF.Obj tM, s)) in
-      Int.LF.App (tM, tS)
+        let tM = elTerm recT cD cPsi m (tA, s) in
+        let tS = elKSpine loc recT cD cPsi spine (tK, Int.LF.Dot (Int.LF.Obj tM, s)) in
+          Int.LF.App (tM, tS)
+    | _ -> raise (Error (loc, SpineLengthMisMatch))
   in elKSpine loc recT cD cPsi spine sK
+
+
 
 (* elSpineSynth cD cPsi p_spine s' = (S, A')
  *

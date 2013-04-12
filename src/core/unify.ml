@@ -131,7 +131,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
        | _  ->    blockdeclInDctx cPsi'
      end
 
-(* expandPatSub is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary*)
+(* expandPatSub is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
   let rec _expandPatSub t cPsi = match (t, cPsi) with
     | Shift ( _ , k) , Null -> t
     | Shift ( _ , k) , CtxVar _ -> t

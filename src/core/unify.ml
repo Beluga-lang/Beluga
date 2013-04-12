@@ -3221,6 +3221,17 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
           else
             raise (Failure "Type Constant Clash")
+
+      | ((Comp.TypCobase (_, c, mS), t), (Comp.TypCobase (_, c', mS'), t')) ->
+          if c = c' then
+            let tK = (Store.Cid.CompCotyp.get c).Store.Cid.CompCotyp.kind in
+            (unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);
+             dprint (fun () -> "[unifyCompTyp] " ^
+                       P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ " == "  ^
+                       P.compTypToString cD (Whnf.cnormCTyp tau_t') ))
+
+          else
+            raise (Failure "Type Constant Clash")
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) ->
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));

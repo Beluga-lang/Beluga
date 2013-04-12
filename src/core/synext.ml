@@ -128,6 +128,7 @@ module Comp = struct
   and exp_chk =                            (* Computation-level expressions *)
      | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
      | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
+     | Cofun  of Loc.t * (copattern_spine * exp_chk) list  (*    | (cofun hd => e | tl => e') *)
      | CtxFun of Loc.t * name * exp_chk         (*    | FN f => e           *)
      | MLam   of Loc.t * (name * mabstr) * exp_chk  (*| mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
@@ -191,6 +192,11 @@ module Comp = struct
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
 
+  and copattern_spine =
+    | CopatNil of Loc.t
+    | CopatApp of Loc.t * name * copattern_spine
+    | CopatMeta of Loc.t * meta_obj * copattern_spine
+
  type rec_fun = RecFun of name * typ * exp_chk
 
  type  kind =
@@ -238,7 +244,9 @@ module Sgn = struct
     | Const    of Loc.t * name * LF.typ
     | Typ      of Loc.t * name * LF.kind
     | CompTyp  of Loc.t * name * Comp.kind
+    | CompCotyp of Loc.t * name * Comp.kind
     | CompConst of Loc.t * name * Comp.typ
+    | CompDest of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema   of Loc.t * name * LF.schema
     | Pragma   of Loc.t * pragma

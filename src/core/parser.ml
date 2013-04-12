@@ -190,6 +190,17 @@ let check_datatype_decl a cs =
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
+let check_codatatype_decl a cs =
+  let rec retname = function
+    | Comp.TypArr (_, Comp.TypBase (_, c', _), _) -> c'
+    | Comp.TypCtxPi (_, _, tau) -> retname tau
+    | Comp.TypPiBox (_, _, tau) -> retname tau
+    | _ -> raise IllFormedDataDecl in
+  List.iter (fun (Sgn.CompDest (_, c, tau)) ->
+    let a' = retname tau in
+    if not (a = a') then raise (WrongConsType (c, a, a'))) cs
+
+
 (*******************************)
 (* Global Grammar Entry Points *)
 (*******************************)
@@ -267,6 +278,14 @@ GLOBAL: sgn;
       ]
     ];
 
+  sgn_comp_cotyp :
+    [
+      [
+        a = UPSYMBOL; ":"; tau = cmp_typ ->
+          Sgn.CompDest (_loc, Id.mk_name (Id.SomeString a), tau)
+      ]
+    ];
+
 
   sgn_decl:
     [
@@ -289,8 +308,22 @@ GLOBAL: sgn;
           check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
           Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
 *)
-      | "datatype"; f = LIST1 cmp_cdat SEP "and"; ";" ->
-           [Sgn.MRecTyp(_loc, f)]
+
+      | "datatype"; f = cmp_cdat;
+        g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
+                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+          begin match g with
+            | None -> [Sgn.MRecTyp(_loc, [f])]
+            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+          end
+
+      | "codatatype"; f = cocmp_cdat;
+        g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
+                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+          begin match g with
+            | None -> [Sgn.MRecTyp(_loc, [f])]
+            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+          end
 
       | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
           [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
@@ -938,16 +971,31 @@ GLOBAL: sgn;
   cmp_dat:
     [[
      a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" ->
-                                                   Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+       Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
     ]]
   ;
 
   cmp_cdat:
     [[
     a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
-                                       check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-                                        Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+      check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
     ]]
+;
+ cocmp_cdat:
+    [[
+    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_cotyp SEP "|" ->
+      check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+      Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+    ]]
+;
+
+ mutual_cmp_cdat:
+    [[
+        "datatype"; f = cmp_cdat -> f
+
+      | "codatatype"; f = cocmp_cdat -> f
+   ]]
 ;
 
   cmp_rec:
@@ -966,6 +1014,18 @@ GLOBAL: sgn;
     [[
       "%not" -> Pragma.PragmaNotCase
     | -> Pragma.RegularCase
+    ]];
+
+  copat_lst:
+    [[
+       f = UPSYMBOL -> Comp.CopatApp (_loc, Id.mk_name (Id.SomeString f), Comp.CopatNil _loc)
+     | g = meta_obj -> Comp.CopatMeta (_loc, g, Comp.CopatNil _loc)
+    ]];
+
+  cofun_lst:
+    [[
+      f = UPSYMBOL; csp = LIST0 copat_lst; rArr; e = cmp_exp_chk ->
+        ((Comp.CopatApp (_loc, Id.mk_name (Id.SomeString f), Comp.CopatNil _loc)) :: csp, e)
     ]];
 
   (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
@@ -991,6 +1051,13 @@ GLOBAL: sgn;
 
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)
+
+      | "cofun"; csp = LIST1 cofun_lst SEP "|" ->
+          let f head left = match (head, left) with
+            | (Comp.CopatApp (loc, a, csp'), csp'') -> Comp.CopatApp (loc, a, csp'')
+            | (Comp.CopatMeta (loc, a, csp'), csp'') -> Comp.CopatMeta (loc, a, csp'') in
+          let g = fun (csp1, e) -> (List.fold_right f csp1 (Comp.CopatNil _loc), e) in
+          Comp.Cofun (_loc, List.map g csp)
 
 (*      | "impossible"; i = cmp_exp_syn; "in";
          ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]"  ->

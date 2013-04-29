@@ -69,7 +69,7 @@ module Comp : sig
     | CtxHatMismatch  of LF.mctx * LF.dctx (* expected *) * LF.psi_hat (* found *) * meta_obj
     | CtxMismatch     of LF.mctx * LF.dctx (* expected *) * LF.dctx (* found *) * meta_obj
     | TypMismatch     of LF.mctx * tclo * tclo
-    | UnsolvableConstraints of Id.name
+    | UnsolvableConstraints of Id.name * string
 
   exception Error of Syntax.Loc.t * error
 

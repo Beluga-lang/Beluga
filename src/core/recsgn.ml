@@ -133,20 +133,20 @@ and recSgnDecl d =
         let _ = dprint (fun () -> "\nElaborating codata-type declaration " ^ a.string_of_name) in
         let cK = Monitor.timer ("CType Elaboration" ,
                                (fun () -> let cK = Reconstruct.compkind apxK in
-                                  Reconstruct.solve_fvarCnstr Lfrecon.Pibox; cK                                                             
+                                  Reconstruct.solve_fvarCnstr Lfrecon.Pibox; cK
        )) in
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
         let (cK', i) = Monitor.timer ("Type Abstraction",
                                       fun () -> Abstract.compkind cK) in
 
-        let _        = (Reconstruct.reset_fvarCnstr ();                                                                                     
-                        Unify.resetGlobalCnstrs ();                                                                                         
+        let _        = (Reconstruct.reset_fvarCnstr ();
+                        Unify.resetGlobalCnstrs ();
                         dprint (fun () ->  a.string_of_name ^
                                   " : " ^  (P.compKindToString Int.LF.Empty cK'))) in
           Monitor.timer ("Type Check",
-            fun () -> Check.Comp.checkKind  Int.LF.Empty cK');                                                                              
+            fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
             dprint (fun () ->  "\nDOUBLE CHECK for codata type constant " ^a.string_of_name ^
-            " successful!");                                                                                                                
+            " successful!");
         let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in ()
 
 
@@ -384,7 +384,8 @@ and recSgnDecl d =
 
           let _        = begin try
                            Unify.forceGlobalCnstr (!Unify.globalCnstrs)
-                        with Unify.Failure _ -> raise (Check.Comp.Error  (Syntax.Loc.ghost, Check.Comp.UnsolvableConstraints f))
+                        with Unify.GlobalCnstrFailure (loc,cnstr) ->
+                          raise (Check.Comp.Error  (loc, Check.Comp.UnsolvableConstraints (f, cnstr)))
                         end
           in
           let _        = Unify.resetGlobalCnstrs () in

@@ -75,7 +75,7 @@ module Comp = struct
     | CtxHatMismatch  of I.mctx * I.dctx (* expected *) * I.psi_hat (* found *) * meta_obj
     | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
     | TypMismatch     of I.mctx * tclo * tclo
-    | UnsolvableConstraints of Id.name
+    | UnsolvableConstraints of Id.name * string
 
 
   exception Error of Syntax.Loc.t * error
@@ -91,10 +91,11 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
-        | UnsolvableConstraints f ->
+        | UnsolvableConstraints (f,cnstrs) ->
             Format.fprintf ppf
-            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment. The constraints were not solvable. The program  %s is ill-typed. To help unification consider making explicit the variables which occur in the non-pattern."
-              (R.render_name f)
+            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables. \n
+The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
+              cnstrs (R.render_name f)
           | CtxHatMismatch (cD, cPsi, phat, cM) ->
           let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
             Error.report_mismatch ppf

@@ -18,8 +18,7 @@ datatype Unit : ctype =
 
 datatype IsLam : {g:ctx}{M:[g,x:tm A. tm B]}{N:[.tm (arr A B)]} ctype =
 | IsLam : % {M:[g,x:tm A. tm B]}
- %  ({U:[. tm A]} IsInstantiation [g,x:tm A] [g,x:tm A. M .. x] [. N1 U]) ->
-   ({U:[.tm A]} IsInst [g,x:tm A] [g,x:tm A. M .. x]) ->
+   ({U:[. tm A]} IsInstantiation [g,x:tm A] [g,x:tm A. M .. x] [. N1 U]) ->
   IsLam [g] [g,x:tm A. M .. x] [. lam (\x. N1 x)]
 ;
 

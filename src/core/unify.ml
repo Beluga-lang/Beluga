@@ -326,6 +326,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                    " = " ^ P.normalToString cD0 cPsi (tN, id))
     | _ -> () end ;
    cnstrs := cnstr :: !cnstrs;
+   globalCnstrs := cnstr :: !globalCnstrs;
    T.log globalTrail (Add cnstrs))
 
 

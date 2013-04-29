@@ -855,8 +855,9 @@ and collectSub p cQ phat s = match s with
      let (cQ1, s) = collectSub p cQ phat  s' in
        (cQ1, I.Dot (I.Undef, s)))
 
-  | I.SVar (I.Offset _offset, s) ->
-       collectSub p cQ phat s
+  | I.SVar (I.Offset offset, s) ->
+    let (cQ1,s') = collectSub p cQ phat s in
+       (cQ1, I.SVar(I.Offset offset, s'))
 
 
 (* collectMSub p cQ theta = cQ' *)

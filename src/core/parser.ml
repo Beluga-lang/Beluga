@@ -791,9 +791,9 @@ GLOBAL: sgn;
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
 
-(*      | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
-          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
-*)
+ (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
+          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
+
 
       ]
     ]
@@ -826,6 +826,10 @@ GLOBAL: sgn;
       |
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
+      
+      | 
+         "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
+          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
 
       ]
     ]
@@ -983,9 +987,9 @@ GLOBAL: sgn;
       | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.MObj), e)
 
-(*      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString s), Comp.PObj), e)
-*)
+      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
+          Comp.MLam (_loc, (Id.mk_name (Id.SomeString s), Comp.SObj), e)
+
       | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e)
 

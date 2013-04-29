@@ -1,0 +1,10 @@
+tm : type.
+i : tm.
+
+schema ctx = tm;
+
+rec f : {g:ctx}{h:ctx} {#S : g[h]} { M : [g. tm]} [h. tm] =
+mlam g => mlam h => mlam #S => mlam M => [h. M #S[..] ]
+;
+
+% let t = f [x:tm] [] [ . i ] [x:tm. x];

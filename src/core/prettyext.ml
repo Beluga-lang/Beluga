@@ -212,8 +212,7 @@ module Ext = struct
         | LF.Name _
         | LF.Hole _
         | LF.ProjName _
-        | LF.ProjPVar _
-        | LF.SVar _ -> ms
+        | LF.ProjPVar _ -> ms
 
       in function
         | LF.Lam (_, x, m) ->
@@ -251,12 +250,12 @@ module Ext = struct
             (fmt_ppr_lf_sub  cD cPsi lvl) s
             (r_paren_if (paren s))
 
-      | LF.SVar (_, x, s) ->
-          fprintf ppf "%s%s%a%s"
-            (l_paren_if (paren s))
-            (R.render_name x)
-            (fmt_ppr_lf_sub  cD cPsi lvl) s
-            (r_paren_if (paren s))
+      (* | LF.SVar (_, x, s) -> *)
+      (*     fprintf ppf "%s%s%a%s" *)
+      (*       (l_paren_if (paren s)) *)
+      (*       (R.render_name x) *)
+      (*       (fmt_ppr_lf_sub  cD cPsi lvl) s *)
+      (*       (r_paren_if (paren s)) *)
 
       | LF.PVar (_,  x, s) ->
           fprintf ppf "%s#%s%a%s"
@@ -327,6 +326,10 @@ module Ext = struct
 
         | LF.EmptySub _ when hasCtxVar ->
             fprintf ppf ""
+        | LF.SVar (_, s, f) ->
+            fprintf ppf "#%s[%a]"
+              (R.render_name s)
+              (self lvl) f
 
 
       in
@@ -711,6 +714,15 @@ module Ext = struct
       | Comp.MLam (_, (x, Comp.PObj), e) ->
           let cond = lvl > 0 in
             fprintf ppf "%smlam # %s => "
+              (l_paren_if cond)
+              (R.render_name x);
+            fprintf ppf "%a%s"
+              (fmt_ppr_cmp_exp_chk cD 0) e
+              (r_paren_if cond);
+
+     | Comp.MLam (_, (x, Comp.SObj), e) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%smlam #%s => "
               (l_paren_if cond)
               (R.render_name x);
             fprintf ppf "%a%s"

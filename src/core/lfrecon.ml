@@ -907,13 +907,29 @@ and elTerm' recT cD cPsi r sP = match r with
         let (cD_d, Int.LF.MDecl(_, tQ, cPhi)) = FCVar.get u in
 	let _ = dprint (fun () -> "Retrieving type of FMV " ^ R.render_name u ^
       " of type " ^ P.typToString cD_d cPhi (tQ, Substitution.LF.id) ^ "[" ^
-			  P.dctxToString cD_d cPhi ^ "]") in
+			  P.dctxToString cD_d cPhi ^ "]" ^
+"\n in cD_d = " ^ P.mctxToString cD_d) in
+
+        let _ = dprint (fun () -> "Current context cD = " ^ P.mctxToString cD) in
 	let d = Context.length cD - Context.length cD_d in
+
+        let _ = dprint (fun () -> "d = " ^ string_of_int d) in
 	let (tQ', cPhi') = if d = 0 then (tQ, cPhi) else
-	  (Whnf.cnormTyp (tQ, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in
+          (if d > 0 then
+	     (Whnf.cnormTyp (tQ, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d))
+           else
+             let rec createMSub d = if d = 0 then Int.LF.MShift 0 else
+                Int.LF.MDot (Int.LF.MUndef, createMSub (d+1)) in
+             let t = createMSub d in
+               (Whnf.cnormTyp (tQ, t) , Whnf.cnormDCtx (cPhi, t)))
+
+           in
           (* For type reconstruction to succeed, we must have
            *    . ; cPsi |- tA <= type , i.e. cPsi and tA cannot depend on
            * meta-variables in cD. This will be enforced during abstraction *)
+	let _ = dprint (fun () -> "Normalized retrieved type of FMV " ^ R.render_name u ^
+      " of type " ^ P.typToString cD cPhi' (tQ', Substitution.LF.id) ^ "[" ^
+			  P.dctxToString cD cPhi' ^ "]") in
         let s'' = elSub loc recT cD cPsi s cPhi' in
           (* We do not check here that tP approx. [s']tP' --
            * this check is delayed to reconstruction *)

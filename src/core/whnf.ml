@@ -1595,7 +1595,7 @@ and cnormMSub t = match t with
 
   | MDot (MV u, t) -> MDot (MV u, cnormMSub t)
 
-
+  | MDot (MUndef, t) -> MDot (MUndef, cnormMSub t)
 
 (* ************************************************************** *)
 

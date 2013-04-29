@@ -133,13 +133,13 @@ type solved = Solved | NotSolvable | PossSolvable of candidate
 type refinement_candidate =
   | TermCandidate of (LF.mctx * cov_goal * LF.msub)
   | CtxCandidate of (LF.mctx * LF.dctx * LF.msub)
-  | PatCandidate of (LF.mctx * gctx * cov_goal * LF.msub * Comp.pattern list)
+(*  | PatCandidate of (LF.mctx * gctx * cov_goal * LF.msub * Comp.pattern list) *)
 
 type refinement_cands =
     NoCandidate
   | SomeTermCands of depend * (refinement_candidate list)
   | SomeCtxCands of refinement_candidate list
-  | SomePatCands of refinement_candidate list
+(*  | SomePatCands of refinement_candidate list *)
 
 
 let rec lower cPsi sA = match sA with

@@ -16,7 +16,7 @@ module RR = Store.Cid.NamedRenderer
 let strengthen : bool ref = ref true
 
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
+let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
@@ -283,7 +283,7 @@ let etaExpandHead loc h tA =
 
 
 
-let etaExpandApxHead loc h tA =
+(* let etaExpandApxHead loc h tA =
   let rec etaExpApxSpine k tS tA = begin match  tA with
     | Int.LF.Atom _  -> (k, tS)
 
@@ -305,6 +305,7 @@ let etaExpandApxHead loc h tA =
                   end  in
     etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS'), tA)
 
+*)
 
 let etaExpandApxTerm  loc h tS tA =
   let rec etaExpApxSpine k tS tA = begin match  tA with

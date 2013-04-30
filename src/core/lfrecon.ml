@@ -1539,7 +1539,7 @@ and elSub' loc recT cD cPsi s cPhi =
     let (_, Int.LF.CtxVar phi', cPhi2) = Whnf.mctxSDec cD offset in
     if phi = phi' then
       let s' = elSub' loc recT cD cPsi s cPhi2 in
-      Int.LF.SVar (Int.LF.Offset offset, s')
+      Int.LF.SVar (Int.LF.Offset offset, 0, s')
     else  raise SubTypingFailure
 
   | (Apx.LF.Id _ , Int.LF.DDec (_cPhi', _decl)) ->

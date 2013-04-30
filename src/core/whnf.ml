@@ -153,6 +153,10 @@ let newMVar n (cPsi, tA) = match n with
   | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [])
   | Some name -> Inst (name, ref None, cPsi, tA, ref [])
 
+let newSVar n (cPsi, cPhi) = match n with
+  | None -> SInst (Id.mk_name Id.NoName, ref None, cPsi, cPhi, ref [])
+  | Some name -> SInst (name, ref None, cPsi, cPhi, ref [])
+
 
 (* newMMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
  *
@@ -718,7 +722,9 @@ and normSub s = match s with
 
   | Shift _      -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
-  | SVar (Offset offset, s') -> SVar (Offset offset, normSub s')
+  | SVar (Offset offset, n, s') -> SVar (Offset offset, n, normSub s')
+(*  | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, theta), n, s') ->
+    normSub *)
 
 and normFt ft = match ft with
   | Obj tM ->
@@ -1411,7 +1417,7 @@ and cnorm (tM, t) = match tM with
     | Shift (CtxShift (CtxName psi), k) -> s
     | Shift (_ , k ) -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
-    | SVar (Offset offset, s') -> SVar(Offset offset, cnormSub (s',t))
+    | SVar (Offset offset, n, s') -> SVar(Offset offset, n, cnormSub (s',t))
      (* substitution variables ignored for how -bp *)
 
 
@@ -1553,7 +1559,9 @@ and cnormMSub t = match t with
   | MDot (MObj(phat, tM), t) ->
       MDot (MObj (cnorm_psihat phat m_id,
                   norm(tM, LF.id)), cnormMSub t)
-
+  | MDot (SObj(phat, s), t) ->
+      MDot (SObj(cnorm_psihat phat m_id,
+                  normSub s), cnormMSub t)
   | MDot (CObj (cPsi), t) ->
         let t' = cnormMSub t in
         let cPsi' = normDCtx cPsi in
@@ -2022,8 +2030,8 @@ and convSub subst1 subst2 = match (subst1, subst2) with
   | (Shift (psi,n), Shift (psi', k)) ->
       n = k && psi = psi'
 
-  | (SVar (Offset s1, sigma1), SVar (Offset s2, sigma2)) ->
-      s1 = s2 && convSub sigma1 sigma2
+  | (SVar (Offset s1, n1, sigma1), SVar (Offset s2, n2, sigma2)) ->
+      s1 = s2 && n1 = n2 && convSub sigma1 sigma2
 
   | (Dot (f, s), Dot (f', s')) ->
       convFront f f' && convSub s s'

@@ -350,12 +350,18 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | Null, Shift (NoCtxShift, 0), Null -> ()
 
-    | cPhi, SVar (Offset offset, s'), CtxVar psi' ->
+    | cPhi, SVar (Offset offset, 0, s'), CtxVar psi' ->
       let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in
       if cPhi1 = CtxVar psi' then
 	checkSub loc cD cPsi s' cPsi1
       else
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+
+    | cPhi, SVar (Offset offset, k, s'), DDec(cPsi,_tX) ->
+      if k > 0 then
+        checkSub loc cD cPhi (SVar (Offset offset, k-1, s')) cPsi
+      else
+        raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi' ->
       (* if psi = psi' then *)

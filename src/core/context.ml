@@ -160,6 +160,7 @@ let rec getNameMCtx cD k = match (cD, k) with
   | (Dec (_cD, MDecl(u, _, _ )), 1) -> u
   | (Dec (_cD, PDecl(u, _, _ )), 1) -> u
   | (Dec (_cD, CDecl(u, _, _)), 1) -> u
+  | (Dec (_cD, SDecl(u, _, _)), 1) -> u
   | (Dec (_cD, MDeclOpt u), 1) -> u
   | (Dec (_cD, PDeclOpt u), 1) -> u
   | (Dec (_cD, CDeclOpt u), 1) -> u

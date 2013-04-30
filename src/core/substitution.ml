@@ -102,6 +102,8 @@ module LF = struct
 
           | Shift (CtxShift _ , _ ) ->  raise (NotComposable "Composition       undefined - 2")
 
+          | SVar (offset, k, s') -> SVar (offset, k + n, s')
+
 (*          | _ ->  raise (NotComposable "Composition undefined - 2") *)
         in
           ctx_shift m s2
@@ -127,8 +129,8 @@ module LF = struct
     | (Shift (psi,n), Dot (_ft, s)) ->
         comp (Shift (psi, n - 1)) s
 
-    | (SVar (s, tau), s2) ->
-        SVar (s, comp tau s2)
+    | (SVar (s, n, tau), s2) ->
+        SVar (s, n, comp tau s2)
 
     | (Dot (ft, s), s') ->
         (* comp(s[tau], Shift(k)) = s[tau]

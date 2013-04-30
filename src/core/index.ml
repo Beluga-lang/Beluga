@@ -99,14 +99,22 @@ let rec lookup_fv fvars m = begin  match (fvars, m) with
   | (FCV n :: fvars' , FCV m) ->
       if n = m then true
       else lookup_fv fvars' (FCV m)
+  | (FSV n :: fvars' , FSV m) ->
+      if n = m then true
+      else lookup_fv fvars' (FSV m)
 
   | (FPV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
   | (FCV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
+  | (FSV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
   | (FMV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
   | (FCV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
+  | (FSV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
   | (FMV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
   | (FPV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
-
+  | (FSV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
+  | (FMV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
+  | (FPV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
+  | (FCV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
 end
 
 let rec get_ctxvar psi = match psi with

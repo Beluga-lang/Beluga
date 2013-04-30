@@ -1093,18 +1093,26 @@ let rec blockdeclInDctx cPsi = match cPsi with
                  cD ; cPsi |- [t]([|mt|]tP)
               *)
                 let tM = Root(loc, head, tS) in
+                let (_ms, sigma) = ss in
+                let _ = dprint (fun () -> "[prune] MMVar " ^ P.normalToString cD0 (Context.hatToDCtx phat) sM ) in
+                let _ = dprint (fun () -> "[prune] with respect to ss = " ^ P.subToString cD0 cPsi' sigma) in
                 let t  = Whnf.normSub t in
                   (* by invariant: MVars are lowered since tM is in whnf *)
                   if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "Variable occurrence")
                   else
                     if isPatSub t && isPatMSub mt then
+                      let _ = dprint (fun () -> "[prune] patsub case " ) in
+                      let _ = dprint (fun () -> "[prune] Ctx : cPsi1 = " ^ P.dctxToString cD1 cPsi1) in
+                      let _ = dprint (fun () -> "[prune] t : " ^ P.subToString cD0 (Context.hatToDCtx phat) (comp t s)) in
                       let (id_sub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
+                      let _ = dprint (fun () -> "[prune] pruneCtx done " ) in
                         (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= [|mt|]cPsi1
                            cD ; cPsi |-  t o s <= [|mt|]cPsi1 and
                            cD ; [|mt|]cPsi1 |- id_sub <= cPsi2 and
                            cD ; cPsi |- t o s o idsub <= cPsi2 *)
                       let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
+                      let _ = dprint (fun () -> "[prune] pruneMCtx done " ) in
                         (* cD  |- mt <= cD1
                          * cD1 |- id_msub <=  cD2
                          * cD  |- [|mt|]id_msub <= cD2
@@ -1113,6 +1121,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                          *       cD ; [|mt|]cPsi1 |- [|mt|]tP <= type
                          *)
                       let i_id_sub  = invert id_sub in
+                      let _ = dprint (fun () -> "[prune] inverting id_sub done " ) in
                       let i_msub = Whnf.m_invert (Whnf.mcomp id_msub mt) in
                         (* cD2 |- i_msub <= cD
                          * cD ; cPsi2 |- i_id_sub <= cPsi1
@@ -1629,8 +1638,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
         let ( _ , ssubst) = ss in
         let rec check_negshift k ssubst = begin match (k, ssubst) with
           | (0 , Shift (NegCtxShift phi, 0)) ->
-               if phi = psi then (Shift (CtxShift phi, 0 ), Null)
-               else (raise NotInvertible)
+               if Whnf.convDCtx (Whnf.cnormDCtx (CtxVar phi, Whnf.m_id))
+                                (Whnf.cnormDCtx (CtxVar psi, Whnf.m_id))
+               then (Shift (CtxShift phi, 0 ), Null)
+               else (dprint (fun () -> "??? ") ; raise NotInvertible)
           | (k, Dot (Undef, ssubst')) -> check_negshift (k-1) ssubst'
           | (_ , _ ) -> (id, CtxVar psi)
         end
@@ -2067,6 +2078,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
                   begin try
                     let ss1  = invert t1' in
+                    let ss1  = Whnf.cnormSub (ss1, Whnf.m_id) in
                       (* cD ; cPsi1 |- ss1 <= cPsi *)
                     let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
                       (* cD1 |- mtt1 <= cD *)

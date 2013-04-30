@@ -460,6 +460,11 @@ module Int = struct
               (R.render_offset n)
 
 
+        | LF.Shift (LF.NegCtxShift (LF.CtxName psi), n) ->
+            fprintf ppf "^(NegShift (NAME %s ) + %s)"
+              (R.render_name psi)
+              (R.render_offset n)
+
         | LF.Shift (LF.NegCtxShift ( _psi), n) ->
             fprintf ppf "^(NegShift( _ ) + %s)"
               (R.render_offset n)

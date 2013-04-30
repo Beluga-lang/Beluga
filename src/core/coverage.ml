@@ -943,10 +943,14 @@ let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
 	      U.unifyDCtx cD cPsi cPsi_p' ;
 	      U.matchTyp cD cPsi sA (tA_p', S.LF.id);
 	      U.matchTerm cD cPsi (tR, S.LF.id) (tR_p', S.LF.id) ;
+              U.forceGlobalCnstr ();
 	      solve' cD (mCands, ms) cD_p (mc::mCands) sCands
 	    with
 	      (* should this case betaken care of  during pre_match phase ? *)
-	      |U.Failure "Context clash" ->
+              | U.GlobalCnstrFailure ( _loc, cnstr) ->
+		 let _ = print_string ("Unification of pre-solved equation failed due to the fact the constraint " ^ cnstr ^ " cannot be solved.") in
+                   NotSolvable
+	      | U.Failure "Context clash" ->
 		 let _ = print_string "Unification of pre-solved equation failed due to context mis-match - initiate context matching" in
 	      	let sc = SplitCtx (cPsi , cPsi_p) in
 		let _ = dprint (fun () -> "Initiate context splitting: " ^ P.dctxToString cD cPsi ^ " == " ^
@@ -1553,6 +1557,11 @@ and mvInSplit cD vlist slist = match slist with
 		 pattToString cD patt ) ;
       mvInSplit cD vlist sl
 
+(*  | Split (cg, patt) :: sl ->
+      (dprint (fun () -> "SPLIT CAND (other - an equation which was not solvable earlier due to global constraints) :\n       " ^ covGoalToString cD cg ^ " == " ^
+		 pattToString cD patt );
+      raise (Error (Syntax.Loc.ghost, NothingToRefine)))
+*)
   | SplitCtx (LF.CtxVar psi, cPhi) :: sl ->
       let (pvlist, cvlist , mvlist) = vlist in
 (*	mvInSplit cD (psi::cvlist, mvlist) sl  *)

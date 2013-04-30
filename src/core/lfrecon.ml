@@ -21,6 +21,7 @@ let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
+  | IdCtxsub
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
   | IllTypedSub     of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub * Int.LF.dctx
@@ -94,6 +95,9 @@ let _ = Error.register_printer
             "Cannot reconstruct a type for free variable %s (leftover constraints)."
             (R.render_name x)
 
+        | IdCtxsub ->
+            Format.fprintf ppf
+              "Identity substitution .. must be associated with a context variable. \n \n If your object is closed, you should omit the identitiy substitution, since it is empty."
 	| PruningFailed ->
           Format.fprintf ppf
 	    "Pruning a type failed.@ This can happen when you have some free@ \
@@ -1585,7 +1589,7 @@ and elSub' loc recT cD cPsi s cPhi =
                                         P.dctxToString cD cPsi ^ "'"))*)
 
         | _ ->
-            raise (Error.Violation "Id must be associated with ctxvar")
+            raise (Error (loc, IdCtxsub))
       end
 
 
@@ -2036,7 +2040,7 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
 let solve_constraints cD' =
   (solve_fcvarCnstr cD' !fcvar_cnstr ;
   reset_fcvarCnstr ();
-  Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+  Unify.forceGlobalCnstr ();
   Unify.resetGlobalCnstrs () )
 
 let solve_fvarCnstr rectyp =

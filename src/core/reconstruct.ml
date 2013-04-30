@@ -526,10 +526,11 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
         let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (C.cnormTyp (tA, theta), LF.id) in
-        let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let _        = Unify.resetGlobalCnstrs () in
-        let _        = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi (tA, LF.id) ) in
-        let _        = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi (tM', LF.id) ) in
+        let _   = begin try Unify.forceGlobalCnstr ()
+                        with _ -> raise (Error.Violation ("Unresolved constraints - MetaObj cannot be reconstructed"))
+                  end  in
+        let _   = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi (tA, LF.id) ) in
+        let _   = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi (tM', LF.id) ) in
           Int.Comp.MetaObj (loc, phat, tM')
       else
          raise (Error.Violation ("Contexts do not match - MetaObj not of the appropriate meta-type"
@@ -551,10 +552,9 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       let tA' = C.cnormTyp (tA, theta) in
       let _        = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi' (tA',LF.id) ) in
       let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
-      let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-      let _        = Unify.resetGlobalCnstrs () in
+      let _   = Unify.forceGlobalCnstr () in
         (* RETURN POSSIBLY A PARAMETER OBJECT *)
-      let _        = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi' (tM', LF.id) ) in
+      let _   = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi' (tM', LF.id) ) in
         Int.Comp.MetaObj (loc, phat, tM')
 
   | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.Comp.MetaParamTyp (tA, cPsi), theta)) ->
@@ -578,8 +578,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
                   | Int.LF.Root (_, ((Int.LF.BVar k) as h), Int.LF.Nil) -> h
                   | Int.LF.Root (_, (Int.LF.Proj (_, _ ) as h), Int.LF.Nil) -> h
                 end in
-      let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-      let _   = Unify.resetGlobalCnstrs () in
+      let _   = Unify.forceGlobalCnstr () in
       let _   = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in
         Int.Comp.MetaParam (loc, phat, h)
 
@@ -597,8 +596,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
           | Int.LF.Root (_, ((Int.LF.BVar k) as h), Int.LF.Nil) -> h
           | Int.LF.Root (_, (Int.LF.Proj (_, _ ) as h), Int.LF.Nil) -> h
         end in
-        let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let _   = Unify.resetGlobalCnstrs () in
+        let _   = Unify.forceGlobalCnstr () in
         let _   = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in
           Int.Comp.MetaParam (loc, phat, h)
       else
@@ -611,8 +609,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
         let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in
         let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
-        let _  = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let _  = Unify.resetGlobalCnstrs () in
+        let _  = Unify.forceGlobalCnstr () in
         let _  = dprint (fun () -> "[elMetaObj] expected tA = " ^ P.typToString cD cPsi' (tA', LF.id) ) in
         let _  = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in
           Int.Comp.MetaParam (loc, phat, h)
@@ -1052,8 +1049,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       if Lfrecon.unify_phat cD psihat (Context.dctxToHat cPsi') then
         let tM' = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (C.cnormTyp (tA, theta), LF.id) in
-        let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let _   = Unify.resetGlobalCnstrs () in
+        let _   = Unify.forceGlobalCnstr () in
         let e   = Int.Comp.Box (loc, psihat, tM') in
         let _   = (dprint (fun () -> "[elExp] Box : " ^ P.expChkToString cD cG e ) ;
                    dprint (fun () -> "[elExp] Box checked against "  ^
@@ -1083,8 +1079,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
    (* if psihat = Context.dctxToHat cPsi then *)
       if Lfrecon.unify_phat cD psihat (Context.dctxToHat cPsi) then
         let sigma' = Lfrecon.elSub loc Lfrecon.Pibox cD (C.cnormDCtx (cPsi, theta)) sigma (C.cnormDCtx (cPhi, theta)) in
-        let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let _        = Unify.resetGlobalCnstrs () in
+        let _        = Unify.forceGlobalCnstr () in
           Int.Comp.SBox (loc, psihat, sigma')
       else
         (* raise (Error (loc, Check.Comp.BoxCtxMismatch (cD, cPsi, (psihat, tM')))) *)
@@ -1100,8 +1095,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       begin match (i', C.cwhnfCTyp tau_theta') with
         | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ) as i,
            (Int.Comp.TypBox (_, tP, cPsi) as tau_s, t (* m_id *))) ->
-          let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-          let _ = Unify.resetGlobalCnstrs () in
+          let _ = Unify.forceGlobalCnstr () in
           if Whnf.closed (tR, LF.id) then
             let recBranch b =
               let _ = dprint (fun () -> "[elBranch - IndexObj] in context cPsi = "
@@ -2445,7 +2439,7 @@ let comptyp tau =
 let comptypdef loc a (tau, cK) =
   let cK = elCompKind Int.LF.Empty cK in
   let _  = (solve_fvarCnstr Lfrecon.Pibox;
-            Unify.forceGlobalCnstr (!Unify.globalCnstrs)) in
+            Unify.forceGlobalCnstr ()) in
   let (cK,i) = Abstract.compkind cK in
   let _  = (reset_fvarCnstr ();
 	    Unify.resetGlobalCnstrs ()) in
@@ -2455,8 +2449,7 @@ let comptypdef loc a (tau, cK) =
   end in
   let cD  = unroll Int.LF.Empty cK in
   let tau = elCompTyp cD tau in
-  let _   = (Unify.forceGlobalCnstr (!Unify.globalCnstrs);
-             Unify.resetGlobalCnstrs ()) in
+  let _   = Unify.forceGlobalCnstr () in
   let (tau, k) =  Abstract.comptyp  tau in
    let _   = if k = 0 then () else
                 raise (Error(loc, TypeAbbrev a)) in

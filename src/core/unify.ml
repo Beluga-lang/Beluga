@@ -50,7 +50,7 @@ module type UNIFY = sig
 
   val nextCnstr         : unit -> cnstr option
   val addConstraint     : cnstr list ref * cnstr -> unit
-  val forceGlobalCnstr : cnstr list -> unit
+  val forceGlobalCnstr  : unit -> unit
   val solveConstraint   : cnstr -> unit
 
   val isPatSub          : sub  -> bool
@@ -1878,7 +1878,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     (* MVar-normal case *)
     | ((Root (_, MVar (Inst (_n, r, cPsi1, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
-(*        dprnt "(001) MVar-_";*)
+        dprnt "(001) MVar-_";
         let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s1)) in
           if isPatSub t' then
             try
@@ -1929,7 +1929,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     (* normal-MVar case *)
     | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (_n, r, cPsi1, tP1, cnstrs), t), _tS), s2) as sM2)) ->
-(*        dprnt "(002) _-MVar"; *)
+        dprnt "(002) _-MVar";
         let t' = Monitor.timer ("Normalisation" , fun () -> Whnf.normSub (comp t s2)) in
 
           if isPatSub t' then
@@ -3298,7 +3298,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
    (* **************************************************************** *)
     let rec unify1 mflag cD0 cPsi sM1 sM2 =
       unifyTerm mflag cD0 cPsi sM1 sM2;
-(*      dprint (fun () -> "Forcing constraint...") ;  *)
+      dprint (fun () -> "Forcing constraint...") ;
       forceCnstr mflag (nextCnstr ())
 
     (* NOTE: We sometimes flip the position when we generate constraints;
@@ -3321,7 +3321,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                    if Whnf.conv (tM1, id) (tM2, id) then dprint (fun () ->  "Constraints are trivial...")
                    else
                      (dprint (fun () ->  "Use unification on them...");
-                      unify1 mflag cD cPsi (tM2, id) (tM1, id);
+                      unify1 mflag cD cPsi (tM1, id) (tM2, id);
                       dprint (fun () ->  "Solved constraint (DONE): " ^
                                 P.normalToString cD cPsi (tM1, id)  ^
                                 " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n"))
@@ -3335,19 +3335,30 @@ let rec blockdeclInDctx cPsi = match cPsi with
                         " = " ^ P.headToString cD cPsi h2 ^ "\n"))
           end )
 
-    and forceGlobalCnstr c_list = match c_list with
+    and forceGlobalCnstr ()      =
+      let cnstr = !globalCnstrs in
+        (resetGlobalCnstrs ();
+        forceGlobalCnstr' cnstr;
+        begin match !globalCnstrs with
+          | [] -> ()
+          | _ -> raise (Failure "Unresolved constraints")
+        end)
+
+    and forceGlobalCnstr' c_list = match c_list with
       | [ ] -> ()
       | c::cnstrs ->
           match !c with
-            | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs
+            | Queued (* in process elsewhere *) -> forceGlobalCnstr' cnstrs
             |  Eqn (cD, cPsi, tM1, tM2) ->
                  let _ = solveConstraint c in
                    (dprint (fun () ->  "Solve global constraint:\n") ;
                     dprint (fun () ->  P.normalToString cD cPsi (tM1, id)  ^
                         " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
-                    begin try unify1 Unification cD cPsi (tM2, id) (tM1, id);
-                   dprint (fun () ->  "Solved global constraint (DONE): " ^ P.normalToString cD cPsi (tM1, id)  ^
-                        " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n")
+                    begin try
+                      (unify1 Unification cD cPsi (tM1, id) (tM2, id);
+                       dprint (fun () ->  "Solved global constraint (DONE): " ^ P.normalToString cD cPsi (tM1, id)  ^
+                                 " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
+                      forceGlobalCnstr' cnstrs)
                     with Failure _ ->
                       let cnstr_string = (P.normalToString cD cPsi (tM1, id)  ^ " =/= " ^ P.normalToString cD cPsi (tM2, id)) in
                       let getLoc tM1 = begin match tM1 with
@@ -3363,7 +3374,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
                    begin try
                      unifyHead Unification cD cPsi h1 h2;
                      dprint (fun () -> "Solved global constraint (H): " ^ P.headToString cD cPsi h1  ^
-                            " = " ^ P.headToString cD cPsi h2 ^ "\n")
+                            " = " ^ P.headToString cD cPsi h2 ^ "\n");
+                      forceGlobalCnstr' cnstrs
                    with Failure _ ->
                      let cnstr_string = (P.headToString cD cPsi h1  ^ " =/= " ^ P.headToString cD cPsi h2) in
                      let loc = Syntax.Loc.ghost in
@@ -3373,7 +3385,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     let unresolvedGlobalCnstrs () =
       begin try
-        forceGlobalCnstr (!globalCnstrs);
+        forceGlobalCnstr ();
         resetGlobalCnstrs () ;
         false
       with Failure _ -> resetGlobalCnstrs () ; true

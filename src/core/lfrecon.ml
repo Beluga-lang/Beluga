@@ -21,6 +21,7 @@ let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
+  | BVarTypMissing  of Int.LF.mctx * Int.LF.dctx * Int.LF.head
   | IdCtxsub
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
@@ -48,6 +49,10 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | BVarTypMissing (cD, cPsi, _h) ->
+            Format.fprintf ppf
+              "Missing type information for bound variable. Provide a fully annotated context."
+(*              (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) h *)
         | SpineLengthMisMatch ->
             Format.fprintf ppf
               "Too few or to many arguments supplied to a type family."
@@ -1626,11 +1631,13 @@ and elSub' loc recT cD cPsi s cPhi =
 
 and elHead loc recT cD cPsi = function
   | Apx.LF.BVar x ->
+      begin try
       let _ = dprint (fun () -> "[elHead] cPsi = " ^ P.dctxToString cD cPsi ^ "|- BVar " ^ string_of_int x ) in
       let Int.LF.TypDecl (_, tA') = Context.ctxDec (Whnf.cnormDCtx (cPsi, Whnf.m_id)) x in
       let _ = dprint (fun () -> "[elHead] done") in
         (Int.LF.BVar x,  (tA' , Substitution.LF.id))
-
+      with _ -> raise (Error (loc, BVarTypMissing (cD, cPsi, Int.LF.BVar x)))
+      end
   | Apx.LF.Const c ->
       let tA = (Term.get c).Term.typ in
         (Int.LF.Const c , (tA, Substitution.LF.id))

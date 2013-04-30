@@ -21,6 +21,7 @@ let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
+  | ProjBVarImpossible of Int.LF.mctx * Int.LF.dctx * Int.LF.head
   | BVarTypMissing  of Int.LF.mctx * Int.LF.dctx * Int.LF.head
   | IdCtxsub
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
@@ -49,6 +50,11 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | ProjBVarImpossible (cD, cPsi, h) ->
+            Format.fprintf ppf
+              "%a is illegal; there is no block declaration in %a."
+              (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) h
+              (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
         | BVarTypMissing (cD, cPsi, _h) ->
             Format.fprintf ppf
               "Missing type information for bound variable. Provide a fully annotated context."
@@ -1266,11 +1272,14 @@ and elTerm' recT cD cPsi r sP = match r with
 
   (* Reconstruction for projections *)
   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , k),  spine) ->
-      let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
+      let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
+        begin try Context.ctxSigmaDec cPsi x with
+          _ -> raise (Error (loc, ProjBVarImpossible (cD, cPsi, Int.LF.Proj(Int.LF.BVar x, k))))
+        end in
       let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
                      with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
-                    end
+                     end
        in
       let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
       begin

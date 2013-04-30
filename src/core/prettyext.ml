@@ -884,6 +884,28 @@ module Ext = struct
               (fmt_ppr_lf_normal cD cPsi 0) normal
               ("")
               (r_paren_if cond)
+      | Comp.MSApp (_, i, (pHat, sub)) ->
+          let cond = lvl > 1 in
+          let cPsi = phatToDCtx pHat in
+            fprintf ppf "%s%a@ [%s%a$ %a%s]%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_syn cD 1) i
+              ("")
+              (fmt_ppr_lf_psi_hat cD 0) cPsi
+              (fmt_ppr_lf_sub cD cPsi 0) sub
+              ("")
+              (r_paren_if cond)
+
+      | Comp.MAnnSApp (_, i, (cPsi, sub)) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a@ [%s%a$ %a%s]%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_syn cD 1) i
+              ("")
+              (fmt_ppr_lf_dctx cD 0) cPsi
+              (fmt_ppr_lf_sub cD cPsi 0) sub
+              ("")
+              (r_paren_if cond)
 
       | Comp.BoxVal (_, cPsi, normal) ->
           let cond = lvl > 1 in

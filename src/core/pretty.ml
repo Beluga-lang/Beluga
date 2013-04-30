@@ -238,7 +238,6 @@ module Int = struct
             (fmt_ppr_lf_typ cD cPsi lvl) typ
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
-
     and fmt_ppr_lf_tuple cD cPsi lvl ppf = function
       | LF.Last tM ->
            fmt_ppr_lf_normal cD cPsi lvl ppf tM

@@ -743,6 +743,7 @@ GLOBAL: sgn;
           h = clf_head; ms = LIST0 clf_normal ->
             let spine = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Root (_loc, h, spine)
+          
         ]
 
     | RIGHTA
@@ -1111,6 +1112,12 @@ isuffix:
        | (Hat []  , None)       -> (fun i -> Comp.CtxApp(_loc, i, LF.Null))
        | (_ , _)                ->
          raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
+     end
+
+   | "["; phat_or_psi = clf_hat_or_dctx ; "$"; tM = clf_sub_new; "]"   ->
+     begin match phat_or_psi with
+       | Dctx cPsi ->  (fun i -> Comp.MAnnSApp (_loc, i, (cPsi, tM)))
+       | Hat phat  ->  (fun i -> Comp.MSApp (_loc, i, (phat, tM)))
      end
 
 (* | "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))   *)

@@ -735,6 +735,18 @@ and index_exp' cvars vars fcvars = function
       let (m', _ ) = index_term cvars bvars fcvars m in
         Apx.Comp.MAnnApp (loc, i', (psi', m'))
 
+  | Ext.Comp.MSApp (loc, i, (psihat, s)) ->
+      let i'      = index_exp' cvars vars fcvars i in
+      let (psihat', bvars) = index_psihat cvars fcvars psihat in
+      let (s', _ ) = index_sub cvars bvars fcvars s in
+        Apx.Comp.MApp (loc, i', Apx.Comp.MetaSub (loc, psihat', s'))
+
+  | Ext.Comp.MAnnSApp (loc, i, (psi, s)) ->
+      let i'      = index_exp' cvars vars fcvars i in
+      let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars psi in
+      let (s', _ ) = index_sub cvars bvars fcvars s in
+        Apx.Comp.MAnnSApp (loc, i', (psi', s'))
+
   | Ext.Comp.BoxVal (loc, psi, m) ->
       let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars  psi in
       let (m', _ ) = index_term cvars bvars fcvars m in

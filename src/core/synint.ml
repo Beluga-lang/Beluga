@@ -80,6 +80,7 @@ module LF = struct
  and mfront =                                (* Fronts:                        *)
    | MObj of psi_hat * normal                (* Mft::= Psihat.N                *)
    | PObj of psi_hat * head                  (*    | Psihat.p[s] | Psihat.x    *)
+   | SObj of psi_hat * sub
    | CObj of dctx                            (*    | Psi                       *)
    | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
    | MUndef
@@ -230,6 +231,7 @@ module Comp = struct
   type meta_typ =
     | MetaTyp of LF.typ * LF.dctx
     | MetaParamTyp of LF.typ * LF.dctx
+    | MetaSubTyp of LF.dctx * LF.dctx
     | MetaSchema of cid_schema
 
   type meta_obj =

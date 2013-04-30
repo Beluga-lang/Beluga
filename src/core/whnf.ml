@@ -309,6 +309,9 @@ and mfrontMSub ft t = match ft with
   | MObj (phat, tM)     ->
       let phat = cnorm_psihat phat t in
         MObj (phat, cnorm(tM, t))
+  | SObj (phat, tM)     ->
+      let phat = cnorm_psihat phat t in
+        SObj (phat, cnormSub(tM, t))
 
   | PObj (phat, PVar (Offset k, s))  ->
       let phat = cnorm_psihat phat t in

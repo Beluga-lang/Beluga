@@ -51,3 +51,12 @@ let printOne (loc, cD, cG, (tau, theta)) =
 
 let printAll () =
   DynArray.iter printOne holes
+
+let printOneHole i =
+  try
+    printOne (DynArray.get holes i)
+  with
+    | DynArray.Invalid_arg (_, _, _) -> if !Debug.chatter != 0 then
+        Printf.printf "\nThere is not %d-th hole.\n" i
+      else
+        ()

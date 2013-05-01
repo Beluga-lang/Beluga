@@ -17,16 +17,26 @@ let usage () =
     ^ "    (+|-)readline (enable|disable) readline support (requires rlwrap installed)\n"
     ^ "    -emacs        mode used to interact with emacs (not recommended in command line)"
   in
-  fprintf Format.err_formatter
-    "Usage: %s [options]\noptions:\n%s"
-    Sys.argv.(0) options;
-  exit 2
+    fprintf Format.err_formatter
+      "Usage: %s [options]\noptions:\n%s"
+      Sys.argv.(0) options;
+    exit 2
+
+let cmd_usage ppf =
+  let options =
+      "    load filename       Loads the file \"filename\" into the interpreter\n"
+    ^ "    loadchat filename   Loads the file \"filename\" with the chatter on (-emacs option deactivates the chatter)\n"
+    ^ "    printhole i         Prints the hole represented by the index i\n"
+  in
+    fprintf ppf
+      "Usage: %%: [command]\ncommand:\n%s"
+      options
 
 let process_option arg rest = match arg with
   | "-help" -> usage ()
   | "+readline" -> Options.readline := true; rest
   | "-readline" -> Options.readline := false; rest
-  | "-emacs" -> Options.emacs := true; rest
+  | "-emacs" -> Options.emacs := true; Debug.chatter := 0; rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -52,23 +62,36 @@ let is_command (str:string) =
     else
       `Input str
 
-let do_command str =
-  let (cmd, arg) = split str " " in
-    match cmd with
-      | "load" ->
-          let sgn = Parser.parse_file ~name:arg Parser.sgn in
-            Recsgn.recSgnDecls sgn
-      | _ -> ()
+let do_command ppf str =
+  begin
+  try
+    let (cmd, arg) = split str " " in
+      match cmd with
+        | "load" ->
+            let sgn = Parser.parse_file ~name:arg Parser.sgn in
+              Recsgn.recSgnDecls sgn
+        | "loadchat" -> (* Makes sure chatter is on before loading file. Restores previous behaviour afterwards. *)
+            let chat = !Debug.chatter in
+              Debug.chatter := 1;
+              let sgn = Parser.parse_file ~name:arg Parser.sgn in
+                Recsgn.recSgnDecls sgn;
+                Debug.chatter := chat
+        | "printhole" -> if not (Holes.none ()) then Holes.printOneHole (to_int arg) else ()
+        | _ -> ()
+  with
+    | ExtString.Invalid_string -> fprintf ppf "Invalid command.@.\n"; cmd_usage ppf
+  end
 
 let rec loop ppf =
   begin
     try
-      fprintf ppf "# ";
+      (if !Options.emacs then ()
+      else fprintf ppf "# ");
       pp_print_flush ppf ();
       let input = read_line () in
         match is_command input with
           | `Cmd cmd ->
-              do_command cmd
+              do_command ppf cmd
           | `Input input ->
               let sgn = Parser.parse_string ~name:"<interactive>" ~input:input Parser.sgn in
                 Recsgn.recSgnDecls sgn

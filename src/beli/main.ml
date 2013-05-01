@@ -1,8 +1,10 @@
 open Core
 open Format
+open ExtString.String
 
 module Options = struct
   let readline = ref true
+  let emacs = ref false
 end
 
 let bailout msg =
@@ -13,6 +15,7 @@ let usage () =
   let options =
       "    -help         this usage message\n"
     ^ "    (+|-)readline (enable|disable) readline support (requires rlwrap installed)\n"
+    ^ "    -emacs        mode used to interact with emacs (not recommended in command line)"
   in
   fprintf Format.err_formatter
     "Usage: %s [options]\noptions:\n%s"
@@ -23,6 +26,7 @@ let process_option arg rest = match arg with
   | "-help" -> usage ()
   | "+readline" -> Options.readline := true; rest
   | "-readline" -> Options.readline := false; rest
+  | "-emacs" -> Options.emacs := true; rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -39,14 +43,35 @@ let init_repl ppf =
   fprintf ppf "        Beluga (interactive) version %s@.@." Version.beluga_version;
   Sys.catch_break true
 
+let is_command (str:string) =
+  let str' = String.trim str in
+  let l = String.length str' in
+    if l > 1 && String.sub str' 0 2 = "%:" then
+      let (_, cmd) = ExtString.String.split str' ":" in
+        `Cmd (String.trim cmd)
+    else
+      `Input str
+
+let do_command str =
+  let (cmd, arg) = split str " " in
+    match cmd with
+      | "load" ->
+          let sgn = Parser.parse_file ~name:arg Parser.sgn in
+            Recsgn.recSgnDecls sgn
+      | _ -> ()
+
 let rec loop ppf =
   begin
     try
       fprintf ppf "# ";
       pp_print_flush ppf ();
       let input = read_line () in
-      let sgn = Parser.parse_string ~name:"<interactive>" ~input:input Parser.sgn in
-      Recsgn.recSgnDecls sgn
+        match is_command input with
+          | `Cmd cmd ->
+              do_command cmd
+          | `Input input ->
+              let sgn = Parser.parse_string ~name:"<interactive>" ~input:input Parser.sgn in
+                Recsgn.recSgnDecls sgn
     with
       | End_of_file -> exit 0
       | Sys.Break -> fprintf ppf "Interrupted.@."

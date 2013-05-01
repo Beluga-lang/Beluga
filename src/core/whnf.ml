@@ -723,8 +723,13 @@ and normSub s = match s with
   | Shift _      -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
   | SVar (Offset offset, n, s') -> SVar (Offset offset, n, normSub s')
-(*  | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, theta), n, s') ->
-    normSub *)
+  | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), n, s') ->
+    (* cPsi |- s : cPhi  and  cPhi |- Shift n : cPhi'
+       where cPhi = cPhi', x1:A1, ... xn:An
+       and   cPsi' |- s' : cPsi  *)
+    LF.comp (LF.comp (Shift (NoCtxShift, n)) (normSub s)) (normSub s')
+  | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, n, s') ->
+    SVar (sigma, n ,normSub s')
 
 and normFt ft = match ft with
   | Obj tM ->
@@ -1417,7 +1422,21 @@ and cnorm (tM, t) = match tM with
     | Shift (CtxShift (CtxName psi), k) -> s
     | Shift (_ , k ) -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
-    | SVar (Offset offset, n, s') -> SVar(Offset offset, n, cnormSub (s',t))
+    | SVar (Offset offset, n, s') ->
+      begin match LF.applyMSub offset t with
+        | MV offset' -> SVar (Offset offset', n, cnormSub (s', t))
+        | SObj (_phat, r) ->
+          LF.comp (LF.comp (Shift (NoCtxShift, n)) r) (cnormSub (s',t))
+      end
+
+    (* | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), n, s') ->
+    (* cPsi |- s : cPhi  and  cPhi |- Shift n : cPhi'
+       where cPhi = cPhi', x1:A1, ... xn:An
+       and   cPsi' |- s' : cPsi  *)
+      LF.comp (LF.comp (Shift (NoCtxShift, n)) (normSub s)) (normSub s')
+    *)
+    | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, n, s') ->
+      SVar (sigma, n , cnormSub (s',t))
      (* substitution variables ignored for how -bp *)
 
 

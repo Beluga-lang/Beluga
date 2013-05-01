@@ -24,6 +24,13 @@ datatype IsWeakeningOf : {g:ctx} [g. tm A] -> {h:ctx} [h. tm A] -> ctype =
 | Succ : {h:ctx} {M:[g.tm B]} IsWeakeningOf [g] [g. M ..] [h] [h. N ..] -> IsWeakeningOf [g] [g. M ..] [h,x:tm A] [h,x:tm A. N ..]
 ;
 
+%{ datatype IsWeakening : {g:ctx}  {h:ctx} {#S: g[h]}ctype =
+| Zero : IsWeakening [g] [g] [g $ .. ]
+| Succ : IsWeakening [g] [h] [h $ #S ..]
+         -> IsWeakening [g] [h,x:tm A] [h,x $ #S .. ]
+;
+}%
+
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
 % TODO: Hmm, couldn't we use a block x:tm A , neut x schema all the way through? lam even adds the assumption that neut x?
 datatype IsNormal : {g:ctx} {A:[.tp]} {M:[g.tm A]} ctype =
@@ -41,8 +48,14 @@ datatype Halts : {g:ctx} {A:[.tp]} {M:[g.tm A]} ctype =
 
 datatype Reduce : {g:ctx} {A:[.tp]} {M:[g.tm A]} ctype =
 | Base : Halts [g] [.i] [g. M ..] -> Reduce [g] [. i] [g. M ..]
-| Arr : ({h:ctx} {F:[h. tm (arr A B)]} {N:[h. tm A]} IsWeakeningOf [g] [g. M ..] [h] [h. F ..] -> Reduce [h] [.A] [h. N ..] -> Reduce [h] [.B] [h. app (F ..) (N ..)])
+ | Arr : ({h:ctx} {F:[h. tm (arr A B)]} {N:[h. tm A]} IsWeakeningOf [g] [g. M ..] [h] [h. F ..] -> Reduce [h] [.A] [h. N ..] -> Reduce [h] [.B] [h. app (F ..) (N ..)])
            -> Reduce [g] [. arr A B] [g. M ..]
+%{
+ | Arr : ({h:ctx} {#S:[h. g]} {N:[h. tm A]}
+          IsWeakening [g] [h] [h $ #S ..] ->
+          Reduce [h] [.A] [h. N ..] -> Reduce [h] [.B] [h. app (M #S[..]) (N ..)])
+           -> Reduce [g] [. arr A B] [g. M ..]
+}%
 ;
 
 datatype IsApp : {g:ctx}{M:[g.tm (arr A B)]}{N:[g.tm A]}{h:ctx}{R:[h. tm B]} ctype =
@@ -148,12 +161,14 @@ rec weak-normalization-closed : {M:[. tm A]} -> Halts [] [.A] [. M] =
 mlam M => reify (eval [. M] [.] Nil)
 }%
 
-rec eval : {g:ctx}{h:ctx}{M:[g.tm A]}{#S:g[h]} Reduce [h] [.A] [h. M #S[..] ] =
-mlam g => mlam h => mlam M => mlam #S => case [g. M ..] of
+rec eval : {g:ctx}{h:ctx}{A:[.tp]}{M:[g.tm A]}{#S:g[h]} Reduce [h] [.A] [h. M #S[..] ] =
+mlam g => mlam h => mlam A => mlam M => mlam #S => case [g. M ..] of
 %| [g,x:tm T. x] => let Cons rs' r = rs in r
 %| [g,x:tm T. #p ..] => let Cons rs' r = rs in eval [g. #p ..] rs'
-| [g. app (M1 ..) (M2 ..)] => let Arr f = eval [g] [h] [g. M1 ..] [h $ #S[..] ] in
-                              f [h] [h. M1 #S[..] ] [h. M2 #S[..]] Zero (eval [g] [h] [g. M2 ..] [h $ #S[..] ])
+| {T:[.tp]}{T2:[.tp]}{M1: [g.tm (arr T2 T)]}{M2:[g.tm T2]}
+  [g. app (M1 ..) (M2 ..)]  =>
+  let Arr f = eval [g] [h] [. (arr T2 T)] [g. M1 ..] [h $ #S[..] ] in
+                              f [h] [h. M1 #S[..] ] [h. M2 #S[..]] Zero (eval [g] [h] [.T2] [g. M2 ..] [h $ #S[..] ])
 %| [g. lam (\x. M1 .. x)] => % This case is definitely wrong, but roughly the idea...
 %   mlam h' => mlam F => mlam N => fn wkn-f-m => fn rn => eval [g,x:tm _. M1 .. x] (Cons (all-wkn wkn-f-m rs) rn)
 ;

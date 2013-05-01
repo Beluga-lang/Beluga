@@ -86,7 +86,7 @@ let rec fcvarsToString fcvars = match fcvars with
   | FMV m :: fcvars -> ", FMV " ^ R.render_name m ^ fcvarsToString fcvars
   | FPV m :: fcvars -> ", FPV " ^ R.render_name m ^ fcvarsToString fcvars
   | FCV m :: fcvars -> ", FCV " ^ R.render_name m ^ fcvarsToString fcvars
-(*  | FSV m :: fcvars -> ", FSV " ^ R.render_name m ^ fcvarsToString fcvars *)
+  | FSV m :: fcvars -> ", FSV " ^ R.render_name m ^ fcvarsToString fcvars
 
 let rec lookup_fv fvars m = begin  match (fvars, m) with
      ([], _ ) -> false

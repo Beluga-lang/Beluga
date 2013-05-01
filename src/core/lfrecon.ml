@@ -1574,12 +1574,12 @@ and elSub' loc recT cD cPsi s cPhi =
       | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
     end
 
-  | (Apx.LF.SVar (Apx.LF.Offset offset, s), (Int.LF.CtxVar phi as cPhi)) ->
+  | (Apx.LF.SVar (Apx.LF.Offset offset, s), (Int.LF.CtxVar phi as _cPhi)) ->
     let (_, Int.LF.CtxVar phi', cPhi2) = Whnf.mctxSDec cD offset in
     if phi = phi' then
-      let s' = elSub' loc recT cD cPsi s cPhi in
-      Int.LF.SVar (Int.LF.Offset offset, s')
-    else raise SubTypingFailure
+      let s' = elSub' loc recT cD cPsi s cPhi2 in
+      Int.LF.SVar (Int.LF.Offset offset, 0, s')
+    else  raise SubTypingFailure
 
   | (Apx.LF.Id _ , Int.LF.DDec (_cPhi', _decl)) ->
     elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi

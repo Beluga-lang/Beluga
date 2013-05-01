@@ -776,6 +776,7 @@ GLOBAL: sgn;
           h = clf_head; ms = LIST0 clf_normal ->
             let spine = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Root (_loc, h, spine)
+          
         ]
 
     | RIGHTA
@@ -824,9 +825,9 @@ GLOBAL: sgn;
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
 
-(*      | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
-          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
-*)
+ (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
+          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
+
 
       ]
     ]
@@ -859,6 +860,10 @@ GLOBAL: sgn;
       |
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
+      
+      | 
+         "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
+          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
 
       ]
     ]
@@ -1043,9 +1048,9 @@ GLOBAL: sgn;
       | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.MObj), e)
 
-(*      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString s), Comp.PObj), e)
-*)
+      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
+          Comp.MLam (_loc, (Id.mk_name (Id.SomeString s), Comp.SObj), e)
+
       | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e)
 
@@ -1174,6 +1179,12 @@ isuffix:
        | (Hat []  , None)       -> (fun i -> Comp.CtxApp(_loc, i, LF.Null))
        | (_ , _)                ->
          raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
+     end
+
+   | "["; phat_or_psi = clf_hat_or_dctx ; "$"; tM = clf_sub_new; "]"   ->
+     begin match phat_or_psi with
+       | Dctx cPsi ->  (fun i -> Comp.MAnnSApp (_loc, i, (cPsi, tM)))
+       | Hat phat  ->  (fun i -> Comp.MSApp (_loc, i, (phat, tM)))
      end
 
 (* | "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))   *)

@@ -99,14 +99,22 @@ let rec lookup_fv fvars m = begin  match (fvars, m) with
   | (FCV n :: fvars' , FCV m) ->
       if n = m then true
       else lookup_fv fvars' (FCV m)
+  | (FSV n :: fvars' , FSV m) ->
+      if n = m then true
+      else lookup_fv fvars' (FSV m)
 
   | (FPV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
   | (FCV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
+  | (FSV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
   | (FMV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
   | (FCV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
+  | (FSV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
   | (FMV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
   | (FPV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
-
+  | (FSV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
+  | (FMV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
+  | (FPV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
+  | (FCV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
 end
 
 let rec get_ctxvar psi = match psi with
@@ -278,9 +286,9 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
               (Apx.LF.FMVar (u, s') , (FMV u :: fvars' , closed_flag))
         end
 
-  | Ext.LF.SVar (loc, n, _sigma) ->
-      let _        = dprint (fun () -> "Indexing head : SVar " ^ n.string_of_name) in
-        raise (Error (loc, UnboundName n))
+  (* | Ext.LF.SVar (loc, n, _sigma) -> *)
+  (*     let _        = dprint (fun () -> "Indexing head : SVar " ^ n.string_of_name) in *)
+  (*       raise (Error (loc, UnboundName n)) *)
 
 and index_spine cvars bvars fvars = function
   | Ext.LF.Nil ->
@@ -291,7 +299,7 @@ and index_spine cvars bvars fvars = function
       let (s', fvars'') = index_spine cvars bvars fvars' s in
         (Apx.LF.App (m', s') , fvars'')
 
-and index_sub cvars bvars ((fvs, _ )  as fvars) = function
+and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
   | Ext.LF.Id loc ->
       let psi =
 	begin try Apx.LF.CtxOffset (CVar.nearest_cvar cvars)
@@ -323,6 +331,27 @@ and index_sub cvars bvars ((fvs, _ )  as fvars) = function
 
   | Ext.LF.EmptySub _ ->
       (Apx.LF.EmptySub, fvars)
+
+  | Ext.LF.SVar (loc, u, s) ->
+      if lookup_fv fvs (FSV u) then
+        let (s', fvs')     = index_sub cvars bvars fvars s in
+          (Apx.LF.FSVar (u, s') , fvs')
+      else
+        begin try
+          let offset = CVar.index_of_name cvars (CVar.SV u) in
+          let (s', fvs')     = index_sub cvars bvars fvars s in
+            (Apx.LF.SVar (Apx.LF.Offset offset, s') , fvs')
+        with Not_found ->
+	  if closed_flag then
+	    (* if lookup_fv fvars (FMV u) then
+               let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
+		 (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
+	     else *)
+	       raise (Error (loc, UnboundName u))
+	  else
+            let (s', (fvars', closed_flag))     = index_sub cvars bvars fvars s in
+              (Apx.LF.FSVar (u, s') , (FSV u :: fvars' , closed_flag))
+        end
 
 
 let index_decl cvars bvars fvars (Ext.LF.TypDecl(x, a)) =
@@ -613,6 +642,10 @@ let rec index_exp cvars vars fcvars = function
       let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.PV u)) in
         Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 
+  | Ext.Comp.MLam (loc, (u, Ext.Comp.SObj), e) ->
+      let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.SV u)) in
+        Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
+
   | Ext.Comp.Pair (loc, e1, e2) ->
       let e1 = index_exp cvars vars fcvars e1 in
       let e2 = index_exp cvars vars fcvars e2 in
@@ -632,7 +665,7 @@ let rec index_exp cvars vars fcvars = function
         Apx.Comp.Let (loc, i', (x,e'))
 
   (* SVars are parsed as terms but are actually substitutions *)
-  | Ext.Comp.Box (loc1, psihat, Ext.LF.Root(loc2, Ext.LF.SVar(loc3,s, sigma), spine)) ->
+(*  | Ext.Comp.Box (loc1, psihat, Ext.LF.Root(loc2, Ext.LF.SVar(loc3,s, sigma), spine)) ->
       let (psihat' , bvars) = index_psihat cvars fcvars psihat in
       let _ctxOpt = begin match psihat' with
                    | None , _  -> None
@@ -654,7 +687,7 @@ let rec index_exp cvars vars fcvars = function
                            create_sub (Apx.LF.SVar (Apx.LF.Offset offset, sigma')) spine )
         with Not_found ->
           raise (Error (loc3, UnboundName s))
-        end
+        end *)
 
 
   | Ext.Comp.Box (loc, psihat, m) ->
@@ -725,6 +758,18 @@ and index_exp' cvars vars fcvars = function
       let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars psi in
       let (m', _ ) = index_term cvars bvars fcvars m in
         Apx.Comp.MAnnApp (loc, i', (psi', m'))
+
+  | Ext.Comp.MSApp (loc, i, (psihat, s)) ->
+      let i'      = index_exp' cvars vars fcvars i in
+      let (psihat', bvars) = index_psihat cvars fcvars psihat in
+      let (s', _ ) = index_sub cvars bvars fcvars s in
+        Apx.Comp.MApp (loc, i', Apx.Comp.MetaSub (loc, psihat', s'))
+
+  | Ext.Comp.MAnnSApp (loc, i, (psi, s)) ->
+      let i'      = index_exp' cvars vars fcvars i in
+      let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars psi in
+      let (s', _ ) = index_sub cvars bvars fcvars s in
+        Apx.Comp.MAnnSApp (loc, i', (psi', s'))
 
   | Ext.Comp.BoxVal (loc, psi, m) ->
       let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars  psi in

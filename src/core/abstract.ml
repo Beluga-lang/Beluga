@@ -855,8 +855,9 @@ and collectSub p cQ phat s = match s with
      let (cQ1, s) = collectSub p cQ phat  s' in
        (cQ1, I.Dot (I.Undef, s)))
 
-  | I.SVar (I.Offset _offset, s) ->
-       collectSub p cQ phat s
+  | I.SVar (I.Offset offset, n, s) ->
+    let (cQ1,s') = collectSub p cQ phat s in
+       (cQ1, I.SVar(I.Offset offset, n, s'))
 
 
 (* collectMSub p cQ theta = cQ' *)
@@ -1532,8 +1533,8 @@ and abstractMVarSub' cQ offset s = match s with
   | I.Dot (I.Obj tM, s) ->
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.Offset s, sigma) ->
-      I.SVar (I.Offset s, abstractMVarSub' cQ offset sigma)
+  | I.SVar (I.Offset s, n, sigma) ->
+      I.SVar (I.Offset s, n, abstractMVarSub' cQ offset sigma)
 
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)

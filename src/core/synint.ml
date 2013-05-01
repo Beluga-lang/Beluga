@@ -67,7 +67,7 @@ module LF = struct
 
   and sub =                                   (* Substitutions                  *)
     | Shift of ctx_offset * offset            (* sigma ::= ^(psi,n)             *)
-    | SVar  of cvar * sub                     (*       | s[sigma]               *)
+    | SVar  of cvar * offset * sub            (*       | s[sigma]               *)
     | FSVar of name * sub                     (*       | s[sigma]               *)
     | Dot   of front * sub                    (*       | Ft . s                 *)
 
@@ -80,6 +80,7 @@ module LF = struct
  and mfront =                                (* Fronts:                        *)
    | MObj of psi_hat * normal                (* Mft::= Psihat.N                *)
    | PObj of psi_hat * head                  (*    | Psihat.p[s] | Psihat.x    *)
+   | SObj of psi_hat * sub
    | CObj of dctx                            (*    | Psi                       *)
    | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
    | MUndef
@@ -105,6 +106,7 @@ module LF = struct
     | PInst  of name * head   option ref * dctx * typ * cnstr list ref
         (* D ; Psi |- H => A
            provided constraint *)
+    | SInst  of name * sub    option ref * dctx * dctx * cnstr list ref
 
   and mm_var  =                               (* Meta^2 Variables                *)
     | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
@@ -230,6 +232,7 @@ module Comp = struct
   type meta_typ =
     | MetaTyp of LF.typ * LF.dctx
     | MetaParamTyp of LF.typ * LF.dctx
+    | MetaSubTyp of LF.dctx * LF.dctx
     | MetaSchema of cid_schema
 
   type meta_obj =

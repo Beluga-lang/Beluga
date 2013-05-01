@@ -993,6 +993,18 @@ let rec mctxToMSub cD = match cD with
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
 
+  | Dec (cD', SDecl(n, cPhi, cPsi)) ->
+      let t     = mctxToMSub cD' in
+      let _ = dprint (fun () -> "[mctxToMSub] cD' = " ^ P.mctxToString cD') in
+      let _     = dprint (fun () -> "[mctxToMSub] t = " ^ P.msubToString Empty t) in
+      let _ = dprint (fun () -> "cPsi =" ^ P.dctxToString cD' cPsi) in
+      let _ = dprint (fun () -> "tA =" ^ P.dctxToString cD' cPhi) in
+      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
+      let cPhi'   = Whnf.cnormDCtx (cPhi, t) in
+      let u     = Whnf.newSVar (Some n) (cPsi', cPhi') in
+      let phat  = Context.dctxToHat cPsi' in
+        MDot (SObj (phat, SVar (u, 0, Substitution.LF.id)) , t)
+
   | Dec (cD', CDecl(n, sW, _)) ->
       let t = mctxToMSub cD' in
       let cvar = Whnf.newCVar (Some n) sW in

@@ -949,7 +949,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
      then s' = [ss]s   if it exists, and
         D ; cPsi'' |- [ss]s <= cPsi'
    *)
-  and invSub cD0 phat (s, cPsi1) ((_ms , ssubst) as ss) rOccur = match (s, cPsi1) with
+  and invSub cD0 phat (s, cPsi1) ((ms , ssubst) as ss) rOccur = match (s, cPsi1) with
     | (Shift (psi, n), DDec(_cPsi', _dec)) ->
         invSub cD0 phat (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur
 
@@ -994,6 +994,13 @@ let rec blockdeclInDctx cPsi = match cPsi with
         let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in
           Dot (Obj tM', invSub cD0 phat (s', cPsi') ss rOccur)
 
+    | (SVar (Offset s, n, t), cPsi1) -> (* This is probably buggy. Need to deal with the n *)
+        let (_, _tA, cPsi1) = Whnf.mctxSDec cD0 s in
+          begin match applyMSub s ms with
+            | MV v ->
+                SVar(Offset v, n, invSub cD0 phat (t, cPsi1) ss rOccur)
+            | MUndef -> raise NotInvertible
+          end
     | _ -> (dprint (fun () -> "invSub -- undefined") ; raise (Error "invSub -- undefined"))
 
 
@@ -2992,8 +2999,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
             else
               raise (Error "Substitutions not well-typed")
 
-      | (SVar(Offset s1, sigma1), SVar(Offset s2, sigma2))
-        -> if s1 = s2 then
+      | (SVar(Offset s1, n1, sigma1), SVar(Offset s2, n2, sigma2))
+        -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "SVar mismatch")
 
@@ -3268,7 +3275,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
            dprint (fun () -> "               cPsi = " ^ P.dctxToString cD cPsi ^
                            "\n               cPsi' = " ^ P.dctxToString cD cPsi');
            dprint (fun () -> "[unifyCompTyp] tA = " ^ P.typToString cD cPsi (Whnf.cnormTyp (tA, t), id));
-           dprint (fun () -> "[unifyCompTyp] tA' = " ^ P.typToString cD cPsi' (Whnf.cnormTyp (tA', t'), id));                      unifyTyp Unification cD cPsi1 (Whnf.cnormTyp (tA, t), id)  (Whnf.cnormTyp (tA', t'), id)
+           dprint (fun () -> "[unifyCompTyp] tA' = " ^ P.typToString cD cPsi' (Whnf.cnormTyp (tA', t'), id));
+           unifyTyp Unification cD cPsi1 (Whnf.cnormTyp (tA, t), id)  (Whnf.cnormTyp (tA', t'), id)
           )
 
       | ((Comp.TypArr (tau1, tau2), t), (Comp.TypArr (tau1', tau2'), t')) ->

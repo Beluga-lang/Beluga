@@ -219,6 +219,11 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
               "Expected contextual object of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), tau))
 
+(*          | MAppMismatch (cD, (MetaSubTyp (cPhi, cPsi), tau)) ->
+            Format.fprintf ppf
+              "Expected contextual substitution object of type %a."
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), tau)) *)
+
           | MAppMismatch (cD, (MetaSchema cid_schema, tau)) ->
             Format.fprintf ppf
               "Expected context of schema %s."
@@ -544,7 +549,9 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
                   (tau, I.MDot(I.PObj (phat, h), t))
                 else
                   raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-
+          | (SubstObj s, (TypPiBox ((I.SDecl(_, tA, cPsi), _ ), tau), t)) ->
+              LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
+              (tau, I.MDot(I.SObj (phat, s), t))
           | (_ , (tau, t)) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end

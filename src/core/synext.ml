@@ -42,7 +42,6 @@ module LF = struct
     | PVar  of Loc.t * name * sub
     | ProjName  of Loc.t * int * name
     | ProjPVar  of Loc.t * int * (name * sub)
-    | SVar  of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
 
   and spine =
     | Nil
@@ -52,6 +51,7 @@ module LF = struct
     | EmptySub of Loc.t
     | Dot      of Loc.t * sub * front
     | Id       of Loc.t
+    | SVar     of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
 
   and front =
     | Head     of head
@@ -110,7 +110,7 @@ module Comp = struct
    | MetaTyp of Loc.t * LF.dctx * LF.typ
    | MetaParamTyp of Loc.t * LF.dctx * LF.typ
 
- type mabstr = CObj | MObj | PObj
+ type mabstr = CObj | MObj | PObj | SObj
 
  type typ =                                     (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine
@@ -152,6 +152,9 @@ module Comp = struct
      | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
                                                 (*    | i [Psi hat. M]      *)
      | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
+     | MSApp   of Loc.t * exp_syn * (LF.psi_hat * LF.sub)
+                                                (*    | i [Psi hat $ sigma]      *)
+     | MAnnSApp   of Loc.t * exp_syn * (LF.dctx * LF.sub) (* i [Psi $ sigma]     *)
      | BoxVal of Loc.t * LF.dctx * LF.normal
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)

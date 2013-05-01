@@ -121,6 +121,8 @@ module Comp = struct
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
    | MetaParam of Loc.t * LF.psi_hat * LF.head
+   | MetaSub of Loc.t * LF.psi_hat * LF.sub
+   | MetaSubAnn of Loc.t * LF.dctx * LF.sub
 
  type meta_spine =
    | MetaNil
@@ -165,6 +167,7 @@ module Comp = struct
      | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
      | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)
      | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
+     | MAnnSApp   of Loc.t * exp_syn * (LF.dctx * LF.sub) (* i [Psi. M]     *)
      | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (Psi. tR)  *)
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                              (* e : tau        *)

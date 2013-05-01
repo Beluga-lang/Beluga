@@ -57,7 +57,7 @@ $INTERPRETER +t +coverage  typed-eval/tpeval-val.bel
 $INTERPRETER +t +coverage  mini-ml/eval-sub-1.bel
 $INTERPRETER +t +coverage  mini-ml/eval-sub-1-explicit.bel
 $INTERPRETER +t +coverage  mini-ml/vsound.bel
-#### $INTERPRETER +t +coverage  mini-ml/vsound-explicit.bel
+$INTERPRETER +t +coverage  mini-ml/vsound-explicit.bel
 $INTERPRETER +t +coverage  mini-ml/tps.bel
 # $INTERPRETER +t +coverage  coverage/arith.bel   # gone ?
 # $INTERPRETER +t +coverage  coverage/list.bel    # gone ?

@@ -24,7 +24,7 @@ ev_l : eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 ev_lam: eval (lam (\x. E x)) (lam (\x. E x)).
 
 ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V
-     -> eval (app E1 E2) V.
+      -> eval (app E1 E2) V.
 
 
 

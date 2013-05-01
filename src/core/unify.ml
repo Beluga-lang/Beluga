@@ -1286,15 +1286,24 @@ let rec blockdeclInDctx cPsi = match cPsi with
                               returnNeutral (MVar (Offset v, s'))
                       with
                         | Error.Violation msg ->
+                            (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
+                              "\n Looking for " ^ R.render_cvar cD0 u ^
+                              "\n in context " ^ P.mctxToString cD0);
                             raise (Failure ("ERROR: prune: " ^ msg ^
                                           "\n Looking for " ^ R.render_cvar cD0 u ^
-                                          "\n in context " ^ P.mctxToString cD0))
-                        | Error msg -> raise (Failure ("ERROR: prune (2) " ^ msg ^ "\n Looking for " ^
+                                          "\n in context " ^ P.mctxToString cD0)))
+                        | Error msg ->
+                          (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
+                                          "\n Looking for " ^ R.render_cvar cD0 u ^
+                                          "\n in context " ^ P.mctxToString cD0) ;
+                           raise (Failure ("ERROR: prune (2) " ^ msg ^ "\n Looking for " ^
                                               R.render_cvar cD0 u ^ "\n in context " ^
-                                              P.mctxToString cD0))
+                                              P.mctxToString cD0)))
                       end
-                  | MUndef -> raise (Failure "[Prune] Bound MVar dependency")
-                  | _      -> raise (Failure "[Prune] MObj / PObj dependency")
+                  | MUndef -> (dprint (fun () -> "pruning bound metavariable - MUndef failure ");
+                               raise (Failure "[Prune] Bound MVar dependency"))
+                  | _      -> (dprint (fun () -> "pruning bound meta-variable - FAIL");
+                               raise (Failure "[Prune] MObj / PObj dependency"))
                 end
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
@@ -2291,7 +2300,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
                                   P.normalToString cD cPsi1 (sM2', id) ^ "\n" ) in
                   instantiateMMVar (r, sM2', !cnstrs)
                 with NotInvertible ->
-                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+                  (dprint (fun () -> "(010) Add constraints ");
+                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
               end
           else
              (dprint (fun () -> "(011) Add constraints ");
@@ -2323,7 +2333,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
                 instantiateMMVar (r, sM1', !cnstrs)
             with
               | NotInvertible ->
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+                (dprint (fun () -> "(012) Add constraints ");
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
           else
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)
             if isProjPatSub t' && isPatMSub mt then
@@ -2343,9 +2354,11 @@ let rec blockdeclInDctx cPsi = match cPsi with
                 instantiateMMVar (r, sM1', !cnstrs)
             with
               | NotInvertible ->
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+                (dprint (fun () -> "(013) Add constraints ");
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
             else
-              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+              (dprint (fun () -> "(014) Add constraints ");
+              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
 
 
     | (((Root(_, h1,tS1), s1) as _sM1), ((Root(_, h2, tS2), s2) as _sM2)) ->
@@ -2420,7 +2433,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
                         q[q[x,y],y] = y  should fail
                This will be dealt with when solving constraints.
             *)
-            addConstraint (cnstr, ref (Eqh (cD0, cPsi, h1, BVar k2)))
+            (dprint (fun () -> "(015) Add constraints ");
+            addConstraint (cnstr, ref (Eqh (cD0, cPsi, h1, BVar k2))))
 
     | (BVar k1, (PVar (PInst (_n, q, _cPsi2, tA2, cnstr), s2) as h1)) ->
         let s2' = Whnf.normSub s2 in

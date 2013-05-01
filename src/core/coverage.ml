@@ -701,6 +701,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
 		      P.typToString LF.Empty cPsi' (tA', S.LF.id) )      in
 
     let tM = LF.Root (Syntax.Loc.ghost, tH' , genSpine LF.Empty cPsi' (tA', S.LF.id) tP') in
+    let _  = U.forceGlobalCnstr () in
     let (cD', cPsi', tR, tP', ms') =
       begin try
 	Abstract.covgoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
@@ -923,7 +924,21 @@ let trivially_empty_param cov_problem =
 
 
 let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
-  | [] -> (match sCands with []  -> Solved
+  | [] -> (match sCands with
+             | []  ->  begin try ( dprint (fun () -> "[solve'] Check that all global constraints are true");
+                                  U.forceGlobalCnstr ();  Solved)
+                      with
+                        | U.Failure "Unresolved constraints" ->
+                          (dprint (fun () -> "Global constraints failed\n");
+                         (* PossSolvable (Cand (cD_p , LF.Empty, mCands, sCands)) *)
+                           NotSolvable
+                          )
+                        | U.GlobalCnstrFailure (_ , cnstr) ->
+ 	                 let _ = print_string ("Unification of global constraint "
+                                                 ^ cnstr ^ " failed.\n")
+                         in
+                         NotSolvable
+                      end
 	     | _ -> PossSolvable (Cand (cD_p , LF.Empty, mCands, sCands)))
   | mc :: mCands ->
       begin match mc with
@@ -931,19 +946,21 @@ let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
 	  let cPsi_p' = Whnf.cnormDCtx (cPsi_p, ms) in
 	  let tR_p'   = Whnf.cnorm (tR_p, ms) in
 	  let tA_p'   = Whnf.cnormTyp (Whnf.normTyp sA_p,  ms) in
-	  let _       = (dprint (fun () -> "[solve] " ^ P.dctxToString cD  cPsi ^
+	  let _       = (dprint (fun () -> "\n[solve'] " ^ P.dctxToString cD  cPsi ^
 				   "    ==    " ^ P.dctxToString cD cPsi_p' );
 			 dprint (fun () -> "        " ^ P.typToString cD cPsi sA ^
 				   "    ==    " ^ P.typToString cD cPsi (tA_p', S.LF.id)) ;
 			 dprint (fun () -> "        " ^
 				   P.normalToString cD cPsi (tR, S.LF.id) ^
-				   "    ==    " ^ P.normalToString cD cPsi (tR_p', S.LF.id))) in
+				   "    ==    " ^ P.normalToString cD cPsi (tR_p', S.LF.id) ^ "\n")) in
 
 	    begin try
 	      U.unifyDCtx cD cPsi cPsi_p' ;
+              dprint (fun () -> "[solve'] DCtx matching succeeded!");
 	      U.matchTyp cD cPsi sA (tA_p', S.LF.id);
+              dprint (fun () -> "[solve'] Typ matching succeeded!");
 	      U.matchTerm cD cPsi (tR, S.LF.id) (tR_p', S.LF.id) ;
-              U.forceGlobalCnstr ();
+              dprint (fun () -> "[solve'] Term matching succeeded!");
 	      solve' cD (mCands, ms) cD_p (mc::mCands) sCands
 	    with
 	      (* should this case betaken care of  during pre_match phase ? *)
@@ -979,7 +996,8 @@ let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
 
 
 let solve cD cD_p matchCand = match matchCand with
-  | [] -> Solved
+  | [] ->  Solved
+
   | mc :: mCands ->
   (*  mc =  Eqn (_  , MetaPatt (_, _, _)) ->  *)
       let ms = Ctxsub.mctxToMMSub cD cD_p in
@@ -2096,7 +2114,8 @@ let process problem projObj =
   | Failure message ->
       (reset_counter () ;
       if !warningOnly then
-        Error.addInformation ("WARNING: Cases didn't cover: "  ^ message)
+        (print_string "WARNING: CASES DID NOT COVER";
+        Error.addInformation ("WARNING: Cases didn't cover: " ^ message))
       else
         raise (Error (Syntax.Loc.ghost, NoCover message)))
 
@@ -2113,4 +2132,3 @@ let stage problem =
 let force f =
   (match !problems with [] -> []
      | _ ->   List.map (fun problem -> f (covers problem None)) (List.rev !problems))
-

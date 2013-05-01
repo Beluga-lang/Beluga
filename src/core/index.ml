@@ -71,7 +71,7 @@ let _ = Error.register_printer
 	Format.fprintf ppf "Ill-formed computation-level type."))
 
 type free_cvars =
-    FMV of Id.name | FPV of Id.name | FCV of Id.name
+    FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name
 
 type fcvars = free_cvars list * bool
 
@@ -86,7 +86,7 @@ let rec fcvarsToString fcvars = match fcvars with
   | FMV m :: fcvars -> ", FMV " ^ R.render_name m ^ fcvarsToString fcvars
   | FPV m :: fcvars -> ", FPV " ^ R.render_name m ^ fcvarsToString fcvars
   | FCV m :: fcvars -> ", FCV " ^ R.render_name m ^ fcvarsToString fcvars
-(*  | FSV m :: fcvars -> ", FSV " ^ R.render_name m ^ fcvarsToString fcvars *)
+  | FSV m :: fcvars -> ", FSV " ^ R.render_name m ^ fcvarsToString fcvars
 
 let rec lookup_fv fvars m = begin  match (fvars, m) with
      ([], _ ) -> false

@@ -508,6 +508,12 @@ module Int = struct
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_normal cD cPsi lvl) m
 
+      | LF.SObj (psihat, s) ->
+          let cPsi = phatToDCtx psihat in
+          fprintf ppf "S (%a . %a)"
+            (fmt_ppr_lf_psi_hat cD lvl) cPsi
+            (fmt_ppr_lf_sub cD cPsi lvl) s
+
       | LF.PObj (psihat, h) ->
           let cPsi = phatToDCtx psihat in
           fprintf ppf "P (%a . %a)"

@@ -69,6 +69,16 @@ module LF = struct
 
     (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
 
+    | (Shift (NoCtxShift, n), SVar(Offset offset, k, r)) ->
+        (* psi, Psi |- s1 : psi   where |Psi| = n
+           Phi |- SVar(s, k, r): psi, Psi
+           where  psi,Psi, Psi_k |- ^k : psi, Psi
+           where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
+          therefore  Phi |- SVar (s, k+n, r) : psi
+                and  psi, Psi, Psi_k |- ^(n+k) : psi
+         *)
+      SVar (Offset offset, k+n, r)
+
     | (Shift (NoCtxShift, n), Shift (NoCtxShift, m)) ->
         (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
          *  therefore  psi, Psi2 |- s : psi, Psi1  where s = s1 o s2
@@ -102,7 +112,8 @@ module LF = struct
 
           | Shift (CtxShift _ , _ ) ->  raise (NotComposable "Composition       undefined - 2")
 
-          | SVar (offset, k, s') -> SVar (offset, k + n, s')
+          | SVar (offset, k, s') ->
+            (* SVar (offset, k + n, s') *)
 
 (*          | _ ->  raise (NotComposable "Composition undefined - 2") *)
         in

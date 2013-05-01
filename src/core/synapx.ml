@@ -130,6 +130,7 @@ module Comp = struct
 
   type typ =
    | TypBase of Loc.t * cid_comp_typ * meta_spine
+   | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
    | TypDef of Loc.t * cid_comp_typ * meta_spine
    | TypBox     of Loc.t * LF.typ  * LF.dctx
    | TypSub     of Loc.t * LF.dctx  * LF.dctx
@@ -142,6 +143,7 @@ module Comp = struct
   and exp_chk =
      | Syn    of Loc.t * exp_syn
      | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
+     | Cofun  of Loc.t * (copattern_spine * exp_chk) list         (* Cofun hd => e | tl => e' *)
      | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *)
      | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (* (e1 , e2)           *)
@@ -159,6 +161,7 @@ module Comp = struct
      | Var    of offset                                     (* x              *)
      | FVar   of name                                       (* x              *)
      | DataConst of cid_comp_const                          (* c              *)
+     | DataDest of cid_comp_dest                            (* c              *)
      | Const  of cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
      | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
@@ -205,5 +208,10 @@ module Comp = struct
   and branch_pattern =
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
+
+  and copattern_spine =
+    | CopatNil of Loc.t
+    | CopatApp of Loc.t * cid_comp_dest * copattern_spine
+    | CopatMeta of Loc.t * meta_obj * copattern_spine
 
 end

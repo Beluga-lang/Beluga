@@ -1,0 +1,33 @@
+datatype nat : type =
+| z : nat
+| s : nat -> nat
+;
+
+codatatype Stream : ctype =
+| Hd : Stream -> [. nat]
+| Tl : Stream -> Stream
+;
+
+rec plus : [. nat] -> [. nat] -> [. nat] =
+fn e => fn f => case e of
+| [. z] => f
+| [. s N] => let [. M] = f in plus [. N] [. s M]
+;
+
+rec zipwith : Stream -> Stream -> Stream =
+fn e => fn f => cofun Hd => plus (Hd e) (Hd f)
+                  | Tl => zipwith (Tl e) (Tl f)
+;
+
+rec fib : Stream =
+cofun Hd => [. z]
+    | Tl Hd => [. s z]
+    | Tl Tl => zipwith fib (Tl fib)
+;
+
+let a = Hd fib;
+let b = Tl fib;
+let c = Tl b;
+let d = Hd b;
+let e = Tl c;
+let f = Hd e;

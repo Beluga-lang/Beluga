@@ -40,6 +40,8 @@ type error =
   | PatAnn
   | PatIndexMatch  of Int.LF.mctx * Int.LF.dctx * Int.LF.normal
   | MCtxIllformed of Int.LF.mctx
+  | TypMismatch        of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
+
 
 exception Error of Syntax.Loc.t * error
 
@@ -149,6 +151,14 @@ let _ = Error.register_printer
        | TooManyMetaObj      ->
            Format.fprintf ppf
              "Too many meta-objects supplied to data-constructor"
+
+       | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
+           Error.report_mismatch ppf
+             "Type of destructor did not match the type it was expected to have."
+             "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+             (Whnf.cnormCTyp (tau1, theta1))
+             "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+             (Whnf.cnormCTyp (tau2, theta2))
 ))
 
 
@@ -708,6 +718,13 @@ let rec elCompTyp cD tau = match tau with
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
         Int.Comp.TypBase (loc, a ,cS')
 
+| Apx.Comp.TypCobase (loc, a, cS) ->
+      let _ = dprint (fun () -> "[elCompCotyp] Cobase : " ^ R.render_cid_comp_cotyp a) in
+      let tK = (CompCotyp.get a).CompCotyp.kind in
+      let _ = dprint (fun () -> "[elCompCotyp] of kind : " ^ P.compKindToString cD tK) in
+      let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
+        Int.Comp.TypCobase (loc, a ,cS')
+
   | Apx.Comp.TypDef (loc, a, cS) ->
       let tK = (CompTypDef.get a).CompTypDef.kind in
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
@@ -818,6 +835,9 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
         Int.Comp.TypCross (tau1', tau2')
   | Int.Comp.TypBase (loc, c, _ )  ->
       mgCompTyp cD' (loc, c)
+ | Int.Comp.TypCobase (loc, c, _ )  ->
+      mgCompTyp cD' (loc, c)
+
   | Int.Comp.TypArr (tau1, tau2)  ->
       let tau1' = inferPatTyp' cD' (cD_s, tau1) in
       let tau2' = inferPatTyp' cD' (cD_s, tau2) in
@@ -857,6 +877,22 @@ let inferPatTyp cD' (cD_s, tau_s) = inferPatTyp' cD' (cD_s, Whnf.cnormCTyp (tau_
 
 (* *******************************************************************************)
 
+(* cD |- csp : theta_tau1 => theta_tau2 *)
+let rec elCofunExp cD csp theta_tau1 theta_tau2 =
+  match (csp, theta_tau1, theta_tau2) with
+    | (Apx.Comp.CopatNil loc, (Int.Comp.TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          (Int.Comp.CopatNil loc, (tau2, theta))
+        else raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+    | (Apx.Comp.CopatApp (loc, dest, csp'),
+       (Int.Comp.TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          let (csp'', theta_tau') = elCofunExp cD csp'
+            ((CompDest.get dest).CompDest.typ,Whnf.m_id) (tau2, theta) in
+            (Int.Comp.CopatApp (loc, dest, csp''), theta_tau')
+        else raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+          (*  | (Apx.Comp.CopatMeta (loc, mo, csp'), (Int.Comp.*)
+
 let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
@@ -872,6 +908,14 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let _ = dprint (fun () -> "[elExp] has type " ^
                         P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
         e''
+
+  | (Apx.Comp.Cofun (loc, bs), (Int.Comp.TypCobase (_, a, sp), theta)) ->
+      let copatMap = function (Apx.Comp.CopatApp (loc, dest, csp), e')  ->
+          let (csp', theta_tau') =
+            elCofunExp cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) theta_tau
+          in (Int.Comp.CopatApp (loc, dest, csp'), elExpW cD cG e' theta_tau')
+      in let bs' = List.map copatMap bs
+      in Int.Comp.Cofun (loc, bs')
 
 
   | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
@@ -1167,6 +1211,12 @@ and elExp' cD cG i = match i with
                         "\n has type " ^ P.mctxToString cD ^ " |- " ^
                         P.compTypToString cD ((CompConst.get c).CompConst.typ)) in
      (Int.Comp.DataConst c, ((CompConst.get c).CompConst.typ, C.m_id))
+
+  | Apx.Comp.DataDest c ->
+      let _ = dprint (fun () -> "[elExp'] DataDest " ^ R.render_cid_comp_dest  c ^
+                        "\n has type " ^ P.mctxToString cD ^ " |- " ^
+                        P.compTypToString cD ((CompDest.get c).CompDest.typ)) in
+     (Int.Comp.DataDest c, ((CompDest.get c).CompDest.typ, C.m_id))
 
   | Apx.Comp.Const prog ->
      (Int.Comp.Const prog, ((Comp.get prog).Comp.typ, C.m_id))
@@ -2032,26 +2082,26 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
 and recPatObj loc cD pat (cD_s, tau_s) =
   let _ = dprint (fun () -> "[recPatObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in
   let (cG', pat', ttau') = recPatObj' cD pat (cD_s, tau_s) in
-  (* cD' ; cG' |- pat' => tau' (may contain free contextual variables) *)
-  (* where cD' = cD1, cD and cD1 are the free contextual variables in pat'
-           cG' contains the free computation-level variables in pat'
-     cG' and cD' are handled destructively via FVar and FCVar store
-  *)
-  let _                      = Lfrecon.solve_constraints cD in
-  let _ = dprint (fun () -> "[recPatObj] pat (before abstraction) = " ^
-                    P.gctxToString cD cG' ^ " \n  |-  " ^
-                    P.patternToString cD cG' pat' ) in
-  let _ = dprint (fun () -> "[recPatObj] Abstract over pattern and its type") in
-  let (cD1, cG1, pat1, tau1) = Abstract.patobj loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) pat' (Whnf.cnormCTyp ttau') in
-    begin try
-      Check.Comp.wf_mctx cD1 ;
-      (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
-      let l_cd1                  = Context.length cD1 in
-      let l_delta                = Context.length cD  in
-        ((l_cd1, l_delta), cD1, cG1,  pat1, tau1)
-    with
-        _ -> raise (Error (loc,MCtxIllformed cD1))
-    end
+    (* cD' ; cG' |- pat' => tau' (may contain free contextual variables) *)
+    (* where cD' = cD1, cD and cD1 are the free contextual variables in pat'
+       cG' contains the free computation-level variables in pat'
+       cG' and cD' are handled destructively via FVar and FCVar store
+      *)
+    let _                      = Lfrecon.solve_constraints cD in
+    let _ = dprint (fun () -> "[recPatObj] pat (before abstraction) = " ^
+                      P.gctxToString cD cG' ^ " \n  |-  " ^
+                      P.patternToString cD cG' pat' ) in
+    let _ = dprint (fun () -> "[recPatObj] Abstract over pattern and its type") in
+    let (cD1, cG1, pat1, tau1) = Abstract.patobj loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) pat' (Whnf.cnormCTyp ttau') in
+      begin try
+        Check.Comp.wf_mctx cD1 ;
+        (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
+        let l_cd1                  = Context.length cD1 in
+        let l_delta                = Context.length cD  in
+          ((l_cd1, l_delta), cD1, cG1,  pat1, tau1)
+      with
+          _ -> raise (Error (loc,MCtxIllformed cD1))
+      end
 
 (* ********************************************************************************)
 (* recPattern will become obsolete when we switch to the new syntax *)
@@ -2382,12 +2432,11 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
         end
 
  | Apx.Comp.Branch (loc, _omega, delta, pat, e) ->
-     let _ = dprint (fun () -> "[elBranch] Reconstruction of general pattern of type "
+     let _  = dprint (fun () -> "[elBranch] Reconstruction of general pattern of type "
                        ^ P.compTypToString cD tau_s) in
-    let cD'    = elMCtx  Lfrecon.Pibox delta in
-    let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat (cD, tau_s)
-     in
-    let _ = dprint (fun () -> "[rePatObj] done") in
+    let cD' = elMCtx Lfrecon.Pibox delta in
+    let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat (cD, tau_s) in
+    let _ = dprint (fun () -> "[recPatObj] done") in
     let _ = dprint (fun () -> "           " ^ P.mctxToString cD1' ^ " ; " ^
                       P.gctxToString cD1' cG1 ^ "\n    |- " ^
                       P.patternToString cD1' cG1 pat1 ^ " : " ^
@@ -2404,7 +2453,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
 
     let (t', t1, cD1'', pat1') = synPatRefine loc caseT' (cD, cD1') pat1 (tau_s', tau1) in
     (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
-    let _ = dprint (fun () -> " cD1'' = " ^ P.mctxToString cD1'' ) in
+    let _ = dprint (fun () -> "[after synPatRefine] cD1'' = " ^ P.mctxToString cD1'' ) in
     let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
     (*   cD1' |- cG1     cD1'' |- t1 : cD, cD1'    cD, cD1' |- ?   cD1' *)
     let cD'      = Context.append cD cD1' in

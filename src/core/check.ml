@@ -74,7 +74,9 @@ module Comp = struct
     | AppMismatch     of I.mctx * (meta_typ * I.msub)
     | CtxHatMismatch  of I.mctx * I.dctx (* expected *) * I.psi_hat (* found *) * meta_obj
     | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
-    | UnsolvableConstraints of Id.name
+    | TypMismatch     of I.mctx * tclo * tclo
+    | UnsolvableConstraints of Id.name * string
+
 
   exception Error of Syntax.Loc.t * error
 
@@ -89,10 +91,11 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
-        | UnsolvableConstraints f ->
+        | UnsolvableConstraints (f,cnstrs) ->
             Format.fprintf ppf
-            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment. The constraints were not solvable. The program  %s is ill-typed. To help unification consider making explicit the variables which occur in the non-pattern."
-              (R.render_name f)
+            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables. \n
+The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
+              cnstrs (R.render_name f)
           | CtxHatMismatch (cD, cPsi, phat, cM) ->
           let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
             Error.report_mismatch ppf
@@ -224,7 +227,15 @@ module Comp = struct
           | MAppMismatch (cD, (MetaSchema cid_schema, tau)) ->
             Format.fprintf ppf
               "Expected context of schema %s."
-              (R.render_cid_schema cid_schema)))
+              (R.render_cid_schema cid_schema)
+
+          | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
+              Error.report_mismatch ppf
+                "Type of destructor did not match the type it was expected to have."
+                "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+                (Whnf.cnormCTyp (tau1, theta1))
+                "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+                (Whnf.cnormCTyp (tau2, theta2))))
 
   type caseType =
     | IndexObj of I.psi_hat * I.normal
@@ -304,6 +315,10 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         let cK = (CompTyp.get c).CompTyp.kind in
           checkMetaSpine loc cD mS (cK , C.m_id)
 
+    | TypCobase (loc, c, mS) ->
+        let cK = (CompCotyp.get c).CompCotyp.kind in
+          checkMetaSpine loc cD mS (cK , C.m_id)
+
     | TypBox (_ , tA, cPsi) ->
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
@@ -358,6 +373,12 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | (Fun (_, x, e), (TypArr (tau1, tau2), t)) ->
         check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t)))) e (tau2, t)
+
+    | (Cofun (_, bs), (TypCobase (_, cid, sp), t)) ->
+         let f = fun (CopatApp (loc, dest, csp), e') ->
+           let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
+           in check cD cG e' ttau'
+         in let _ = List.map f bs in ()
 
     | (CtxFun (_, psi, e), (TypCtxPi ((_psi, schema, dep ), tau), t)) ->
         let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
@@ -479,6 +500,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | Var x   -> (lookup cG x, C.m_id)
     | DataConst c ->
         ((CompConst.get c).CompConst.typ, C.m_id)
+    | DataDest c ->
+        ((CompDest.get c).CompDest.typ, C.m_id)
 
     | Const prog ->
         ((Comp.get prog).Comp.typ, C.m_id)
@@ -558,6 +581,17 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | Boolean _  -> (TypBool, C.m_id)
 
+  and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
+    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          (tau2, theta)
+        else
+          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
+        else
+          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
 
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->

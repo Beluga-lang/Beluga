@@ -74,6 +74,25 @@ module Cid : sig
     val clear         : unit -> unit
   end
 
+  module CompCotyp : sig
+
+    type entry = private {
+      name               : name;
+      implicit_arguments : int;
+      kind               : Comp.kind;
+      mutable frozen             : bool;
+      mutable destructors : cid_comp_dest list
+    }
+
+    val mk_entry  : name -> Comp.kind -> int -> entry
+
+    val add           : entry -> cid_comp_cotyp
+    val get           : cid_comp_cotyp -> entry
+    val freeze : cid_comp_cotyp -> unit
+    val addDestructor : cid_comp_dest -> cid_comp_cotyp -> unit
+    val index_of_name : name -> cid_comp_typ
+    val clear         : unit -> unit
+  end
 
   module CompConst : sig
 
@@ -91,6 +110,21 @@ module Cid : sig
     val clear         : unit -> unit
   end
 
+  module CompDest : sig
+
+    type entry = private {
+      name               : name;
+      implicit_arguments : int;
+      typ                : Comp.typ
+    }
+
+    val mk_entry      : name -> Comp.typ -> int -> entry
+    val add           : cid_comp_cotyp -> entry -> cid_comp_dest
+    val get           : cid_comp_dest -> entry
+    val get_implicit_arguments : cid_comp_dest -> int
+    val index_of_name : name -> cid_comp_dest
+    val clear         : unit -> unit
+  end
 
   module CompTypDef : sig
 
@@ -158,8 +192,10 @@ module Cid : sig
     open Syntax.Int
 
     val render_name         : name         -> string
-    val render_cid_comp_typ : cid_typ      -> string
+    val render_cid_comp_typ : cid_comp_typ -> string
+    val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string
+    val render_cid_comp_dest : cid_comp_dest -> string
     val render_cid_typ      : cid_typ      -> string
     val render_cid_term     : cid_term     -> string
     val render_cid_schema   : cid_schema   -> string

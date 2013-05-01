@@ -1,0 +1,24 @@
+tp : type.                %name tp T.
+i :  tp.
+arr: tp -> tp -> tp.
+
+tm : tp -> type.          %name tm E.
+app : tm (arr T S) -> tm T -> tm S.
+lam : (tm T -> tm S) -> tm (arr T S).
+
+schema ctx = tm T;
+
+datatype IsInstantiation : {g:ctx}{M:[g.tm A]}{N:[.tm A]} ctype =
+;
+datatype IsInst : {g:ctx}{M:[g.tm A]} ctype =
+;
+
+datatype Unit : ctype =
+| Unit : Unit;
+
+datatype IsLam : {g:ctx}{M:[g,x:tm A. tm B]}{N:[.tm (arr A B)]} ctype =
+| IsLam : % {M:[g,x:tm A. tm B]}
+   ({U:[. tm A]} IsInstantiation [g,x:tm A] [g,x:tm A. M .. x] [. N1 U]) ->
+  IsLam [g] [g,x:tm A. M .. x] [. lam (\x. N1 x)]
+;
+

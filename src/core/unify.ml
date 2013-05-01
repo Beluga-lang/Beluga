@@ -15,6 +15,7 @@ open Trail
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
+module Loc = Camlp4.PreCast.Loc
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [15])
 
@@ -59,6 +60,7 @@ module type UNIFY = sig
   val intersection : psi_hat -> sub -> sub -> dctx -> (sub * dctx)
 
   exception Failure of string
+  exception GlobalCnstrFailure of Loc.t * string
   exception NotInvertible
 
   (* All unify* functions return () on success and raise Failure on failure *)
@@ -99,7 +101,7 @@ module Make (T : TRAIL) : UNIFY = struct
   module P = Pretty.Int.DefaultPrinter
 
   exception Failure of string
-
+  exception GlobalCnstrFailure of Loc.t * string
   exception NotInvertible
 
   exception Error of string
@@ -131,7 +133,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
        | _  ->    blockdeclInDctx cPsi'
      end
 
-(* expandPatSub is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary*)
+(* expandPatSub is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
   let rec _expandPatSub t cPsi = match (t, cPsi) with
     | Shift ( _ , k) , Null -> t
     | Shift ( _ , k) , CtxVar _ -> t
@@ -326,6 +328,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                    " = " ^ P.normalToString cD0 cPsi (tN, id))
     | _ -> () end ;
    cnstrs := cnstr :: !cnstrs;
+   globalCnstrs := cnstr :: !globalCnstrs;
    T.log globalTrail (Add cnstrs))
 
 
@@ -3228,6 +3231,17 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
           else
             raise (Failure "Type Constant Clash")
+
+      | ((Comp.TypCobase (_, c, mS), t), (Comp.TypCobase (_, c', mS'), t')) ->
+          if c = c' then
+            let tK = (Store.Cid.CompCotyp.get c).Store.Cid.CompCotyp.kind in
+            (unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);
+             dprint (fun () -> "[unifyCompTyp] " ^
+                       P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ " == "  ^
+                       P.compTypToString cD (Whnf.cnormCTyp tau_t') ))
+
+          else
+            raise (Failure "Type Constant Clash")
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) ->
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
@@ -3339,16 +3353,30 @@ let rec blockdeclInDctx cPsi = match cPsi with
                    (dprint (fun () ->  "Solve global constraint:\n") ;
                     dprint (fun () ->  P.normalToString cD cPsi (tM1, id)  ^
                         " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
-                   unify1 Unification cD cPsi (tM2, id) (tM1, id);
+                    begin try unify1 Unification cD cPsi (tM2, id) (tM1, id);
                    dprint (fun () ->  "Solved global constraint (DONE): " ^ P.normalToString cD cPsi (tM1, id)  ^
-                        " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n"))
+                        " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n")
+                    with Failure _ ->
+                      let cnstr_string = (P.normalToString cD cPsi (tM1, id)  ^ " =/= " ^ P.normalToString cD cPsi (tM2, id)) in
+                      let getLoc tM1 = begin match tM1 with
+                        | Root(loc, _, _ ) -> loc
+                        | Lam (loc, _ , _ ) -> loc
+                        | Tuple (loc, _ ) -> loc  end in
+                        raise (GlobalCnstrFailure (getLoc (Whnf.norm (tM1, id)), cnstr_string))
+                    end)
             | Eqh (cD, cPsi, h1, h2)   ->
                 let _ = solveConstraint c in
                   (dprint (fun () -> "Solve global constraint (H): " ^ P.headToString cD cPsi h1  ^
                         " = " ^ P.headToString cD cPsi h2 ^ "\n");
-                  unifyHead Unification cD cPsi h1 h2 ;
-                  dprint (fun () -> "Solved global constraint (H): " ^ P.headToString cD cPsi h1  ^
-                        " = " ^ P.headToString cD cPsi h2 ^ "\n"))
+                   begin try
+                     unifyHead Unification cD cPsi h1 h2;
+                     dprint (fun () -> "Solved global constraint (H): " ^ P.headToString cD cPsi h1  ^
+                            " = " ^ P.headToString cD cPsi h2 ^ "\n")
+                   with Failure _ ->
+                     let cnstr_string = (P.headToString cD cPsi h1  ^ " =/= " ^ P.headToString cD cPsi h2) in
+                     let loc = Syntax.Loc.ghost in
+                       raise (GlobalCnstrFailure (loc, cnstr_string))
+                   end)
 
 
     let unresolvedGlobalCnstrs () =

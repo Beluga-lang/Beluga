@@ -41,7 +41,7 @@ datatype Aeq : (g:tctx) [g.term] -> [g.term] -> ctype =
 ;
 
 % Declarative Equality
-%{
+
 datatype Deq: (g:tctx) [g.term] -> [g.term] -> ctype =
 | De_v : Deq [g. #p ..] [ g.#p..]
 | De_l : Deq [g,x:term. T ..x] [g,x:term. T'..x]
@@ -65,10 +65,10 @@ de_t: deq T R -> deq R S
      -> deq T S.
 
 % schema adCtx =  block x: term, u:aeq x x , _t:deq x x ;
-}%
 
 
-% Translating aeq to aeq
+
+% Translating aeq to Aeq
 % To keep the translation simple, we first translate contextual objects
 % [g. aeq (M ..) (N ..) to Aeq' objects within the same context g.
 rec atrans_c :(g:aCtx) [g. aeq (M ..) (N ..)] -> Aeq' [g.M ..] [g.N ..] =

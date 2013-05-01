@@ -22,8 +22,14 @@ type cid_coercion = int
 (** A constant identifier for computation-level data-types *)
 type cid_comp_typ = int
 
+(** A constant identifier for computation-level codata-types *)
+type cid_comp_cotyp = int
+
 (** A constant identifier for computation-level constructors *)
 type cid_comp_const = int
+
+(** A constant identifier for computation-level destructors *)
+type cid_comp_dest = int
 
 (** A constant identifier for recursive computations/programs *)
 type cid_prog = int

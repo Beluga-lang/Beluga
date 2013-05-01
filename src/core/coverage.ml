@@ -133,13 +133,13 @@ type solved = Solved | NotSolvable | PossSolvable of candidate
 type refinement_candidate =
   | TermCandidate of (LF.mctx * cov_goal * LF.msub)
   | CtxCandidate of (LF.mctx * LF.dctx * LF.msub)
-  | PatCandidate of (LF.mctx * gctx * cov_goal * LF.msub * Comp.pattern list)
+(*  | PatCandidate of (LF.mctx * gctx * cov_goal * LF.msub * Comp.pattern list) *)
 
 type refinement_cands =
     NoCandidate
   | SomeTermCands of depend * (refinement_candidate list)
   | SomeCtxCands of refinement_candidate list
-  | SomePatCands of refinement_candidate list
+(*  | SomePatCands of refinement_candidate list *)
 
 
 let rec lower cPsi sA = match sA with
@@ -455,7 +455,7 @@ let rec pre_match_typ cD cD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
 		      "[pre_match_typ] sA = " ^ P.typToString cD cPsi sA ^ "\n" ^
 		      "                sB = " ^ P.typToString cD' cPhi sB) in
     match (Whnf.whnfTyp sA , Whnf.whnfTyp sB) with
-  | (LF.Atom (_, a, tS1) , s1) , (LF.Atom (_, b, tS2), s2) ->
+  | (LF.Atom (_, a, tS1) , s1) , (LF.Atom (loc, b, tS2), s2) ->
       let tK1 = (Types.get a).Types.kind in
       let tK2 = (Types.get b).Types.kind in
       let tS1' = Whnf.normSpine (tS1, s1) in
@@ -463,7 +463,7 @@ let rec pre_match_typ cD cD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
 	if a = b then
 	  pre_match_typ_spine cD cD_p (cPsi, tS1', (tK1, S.LF.id)) (cPhi, tS2', (tK2, S.LF.id))
                               matchCands splitCands
-	else raise (Error (Syntax.Loc.ghost, MatchError "Type Head mismatch"))
+	else raise (Error (loc, MatchError "Type Head mismatch"))
   | (LF.PiTyp ((LF.TypDecl(x, tA1), _ ), tA2), s1) ,  (LF.PiTyp ((LF.TypDecl(y, tB1), _ ), tB2), s2) ->
       let (matchCands' , splitCands') = pre_match_typ cD cD_p (cPsi, (tA1, s1)) (cPhi, (tB1, s2))
 	                                              matchCands splitCands
@@ -554,13 +554,13 @@ match (pat, ttau) , (pat_p, ttau_p) with
       let tau' = Comp.MetaTyp( Whnf.cnormTyp (tA',t'), Whnf.cnormDCtx (cPsi', t')) in
       match_metaobj cD cD_p (mO, tau) (mO', tau') mC sC
   | (Comp.PatConst (_, c, pS) , (Comp.TypBase _, t)) ,
-    (Comp.PatConst (_, c', pS'), (Comp.TypBase _,t')) ->
+    (Comp.PatConst (loc, c', pS'), (Comp.TypBase _,t')) ->
       if c = c' then
 	let ttau = ((Store.Cid.CompConst.get c).Store.Cid.CompConst.typ, Whnf.m_id) in
 	let ttau' = ((Store.Cid.CompConst.get c').Store.Cid.CompConst.typ, Whnf.m_id) in
 	match_spines (cD, cG) (cD_p, cG_p) (pS, ttau) (pS', ttau') mC sC
       else
-	raise (Error (Syntax.Loc.ghost, MatchError "Const mismatch"))
+	raise (Error (loc, MatchError "Const mismatch"))
   | (Comp.PatFVar (_, v) , ttau),
     (pat_p, ttau')  -> (* splitting candidate *)
       (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
@@ -624,6 +624,9 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
       let (mC1, sC1) = match_metaobj cD cD_p (mO, tau1) (mO', tau1') mC sC in
 	match_spines (cD,cG) (cD_p, cG_p)
 	  (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
+
+  |  _ , (Comp.PatApp (loc, _pat', _pS') , _ )
+        -> raise (Error (loc, MatchError "Spine Mismatch"))
 
   | _ -> raise (Error (Syntax.Loc.ghost, MatchError "Spine Mismatch"))
 

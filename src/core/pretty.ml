@@ -906,6 +906,13 @@ module Int = struct
               (R.render_cid_comp_typ c)
               (fmt_ppr_meta_spine cD 2) mS
               (r_paren_if cond)
+      | Comp.TypCobase (_, c, mS)->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%s%a%s"
+              (l_paren_if cond)
+              (R.render_cid_comp_cotyp c)
+              (fmt_ppr_meta_spine cD 2) mS
+              (r_paren_if cond)
 
       | Comp.TypBox (_, tA, cPsi) ->
           fprintf ppf "[%a. %a]"
@@ -1024,6 +1031,14 @@ module Int = struct
             fprintf ppf "%a%s"
               (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
               (r_paren_if cond);
+
+      | Comp.Cofun (_, bs) ->
+          let cond = lvl > 0 in
+(*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
+            fprintf ppf "%sSome cofun%s"
+              (l_paren_if cond)
+              (r_paren_if cond)
+
 
       | Comp.CtxFun (_, x, e) ->
           let cond = lvl > 0 in
@@ -1166,6 +1181,10 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_cid_comp_const c)
 
+      | Comp.DataDest c ->
+          fprintf ppf "%s"
+            (R.render_cid_comp_dest c)
+
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
             fprintf ppf "%s@[<2>%a@ %a@]%s"
@@ -1263,6 +1282,8 @@ module Int = struct
             print_spine ppf spine;
             fprintf ppf " %a" (fmt_ppr_cmp_value lvl) v
         in fprintf ppf "%s%a" (R.render_cid_comp_const c) print_spine spine
+      | Comp.CodataValue (cid, spine) -> fprintf ppf "%s" (R.render_cid_comp_dest cid)
+      | Comp.CofunValue _ -> fprintf ppf " cofun "
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function
       | LF.Empty -> ()

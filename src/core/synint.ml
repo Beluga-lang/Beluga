@@ -248,6 +248,7 @@ module Comp = struct
 
   type typ =
     | TypBase   of Loc.t * cid_comp_typ * meta_spine
+    | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
     | TypDef    of Loc.t * cid_comp_typ * meta_spine
     | TypBox    of Loc.t * LF.typ  * LF.dctx
     | TypParam  of Loc.t * LF.typ  * LF.dctx
@@ -284,11 +285,14 @@ module Comp = struct
     | DataValue  of cid_comp_const * data_spine
     | BoolValue  of bool
     | PairValue  of value * value
+    | CofunValue of (copattern_spine * exp_chk) list * LF.msub * env
+    | CodataValue of cid_comp_dest * codata_spine
 
   and exp_chk =
     | Syn    of Loc.t * exp_syn
     | Rec    of Loc.t * name * exp_chk
     | Fun    of Loc.t * name * exp_chk
+    | Cofun  of Loc.t * (copattern_spine * exp_chk) list
     | CtxFun of Loc.t * name * exp_chk
     | MLam   of Loc.t * name * exp_chk
     | Pair   of Loc.t * exp_chk * exp_chk
@@ -303,6 +307,7 @@ module Comp = struct
   and exp_syn =
     | Var    of offset
     | DataConst of cid_comp_const
+    | DataDest of cid_comp_dest
     | Const  of cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | CtxApp of Loc.t * exp_syn * LF.dctx
@@ -337,6 +342,10 @@ module Comp = struct
     | DataNil
     | DataApp of value * data_spine
 
+  and codata_spine =
+    | CodataNil
+    | CodataApp of value * codata_spine
+
   and branch =
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
@@ -345,6 +354,11 @@ module Comp = struct
 
     | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx *
         (LF.dctx * LF.sub * LF.msub * LF.csub) * exp_chk
+
+  and copattern_spine =
+    | CopatNil of Loc.t
+    | CopatApp of Loc.t * cid_comp_dest * copattern_spine
+    | CopatMeta of Loc.t * meta_obj * copattern_spine
 
   type tclo = typ * LF.msub
 end
@@ -357,7 +371,9 @@ module Sgn = struct
     | Typ           of cid_typ  * LF.kind
     | Const         of cid_term * LF.typ
     | CompTyp       of Loc.t * name * Comp.kind
+    | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
+    | CompDest      of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
     | Rec           of cid_prog   * Comp.typ * Comp.exp_chk

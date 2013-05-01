@@ -35,7 +35,7 @@ echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t}
 echo -e "\t" EXAMPLEDIR: ${EXAMPLEDIR:=$BELUGADIR/examples}
 
 # Time limit.
-echo -e "\t" TIMEOUT: ${TIMEOUT:=2} seconds
+echo -e "\t" TIMEOUT: ${TIMEOUT:=10} seconds
 
 echo
 

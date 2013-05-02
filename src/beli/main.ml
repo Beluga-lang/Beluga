@@ -1,6 +1,8 @@
 open Core
 open Format
 open ExtString.String
+open Store.Cid
+open Pretty.Int.DefaultPrinter
 
 module Options = struct
   let readline = ref true
@@ -30,7 +32,8 @@ let cmd_usage ppf =
     ^ "    printhole i         Print all the information of the i-th hole\n"
     ^ "    lochole i           Print the location of the i-th hole\n"
     ^ "    countholes          Print the total number of holes\n"
-    ^ "    printfun funname    Print the specified function\n"
+    ^ "    types               Print all declared types\n"
+    ^ "    constructors tpname Print all constructors of a given type\n"
   in
     fprintf ppf
       "Usage: %%: [command]\ncommand:\n%s"
@@ -70,26 +73,40 @@ let do_command ppf str =
   begin
     match str with
       | "countholes" -> Holes.printNumHoles ()
-      | "chatteron" -> Debug.chatter :=1; fprintf ppf "\nThe chatter is on now.\n"
-      | "chatteroff" -> Debug.chatter :=0; fprintf ppf "\nThe chatter is off now.\n"
+      | "chatteron" -> Debug.chatter :=1; fprintf ppf "The chatter is on now.\n"
+      | "chatteroff" -> Debug.chatter :=0; fprintf ppf "The chatter is off now.\n"
+      | "types" ->
+        let entrylist = List.rev_map Typ.get (!Typ.entry_list) in
+        let dctx = Synint.LF.Null in
+        List.iter (fun x -> fprintf ppf "%s:" x.Typ.name.Id.string_of_name; ppr_lf_kind dctx x.Typ.kind; fprintf ppf "\n") entrylist
       | _ ->
-        try
+         try
           let (cmd, arg) = split str " " in
           match cmd with
             | "load" ->
               let sgn = Parser.parse_file ~name:arg Parser.sgn in
               Recsgn.recSgnDecls sgn;
-              fprintf ppf "\nThe file has been successfully loaded.\n"
+              fprintf ppf "The file has been successfully loaded.\n"
             | "printhole" ->
 	      if not (Holes.none ()) then Holes.printOneHole (to_int arg)
-	      else fprintf ppf "\nThere is no hole at all!!\n"
-            | "lochole" -> 
-	      if not (Holes.none ()) then Holes.printHolePos (to_int arg) 
-	      else fprintf ppf "\nThere is no hole at all!!\n"
+	      else fprintf ppf "There is no hole at all!!\n"
+            | "lochole" ->
+	      if not (Holes.none ()) then Holes.printHolePos (to_int arg)
+	      else fprintf ppf "There is no hole at all!!\n"
+            | "constructors" ->
+              (try
+                let entrylist = List.rev_map Typ.get (!Typ.entry_list) in
+                let entry = List.find (fun x -> arg = x.Typ.name.Id.string_of_name) entrylist in
+                let mctx = Synint.LF.Empty in
+                let dctx = Synint.LF.Null in
+                let termlist = List.rev_map Term.get (entry.Typ.constructors) in
+                List.iter (fun x -> fprintf ppf "%s: [%d] " x.Term.name.Id.string_of_name x.Term.implicit_arguments; ppr_lf_typ mctx dctx x.Term.typ; fprintf ppf "\n") termlist
+               with
+                 | Not_found -> fprintf ppf "Such type does not exist!!\n")
             | _ -> fprintf ppf "Invalid command.@.\n"; cmd_usage ppf
-        with
-          | ExtString.Invalid_string -> fprintf ppf "Invalid command.@.\n"; cmd_usage ppf
-  end
+         with
+           | ExtString.Invalid_string -> fprintf ppf "Invalid command.@.\n"; cmd_usage ppf
+         end
 
 let rec loop ppf =
   begin

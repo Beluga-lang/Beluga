@@ -24,9 +24,13 @@ let usage () =
 
 let cmd_usage ppf =
   let options =
-      "    load filename       Loads the file \"filename\" into the interpreter\n"
-    ^ "    loadchat filename   Loads the file \"filename\" with the chatter on (-emacs option deactivates the chatter)\n"
-    ^ "    printhole i         Prints the hole represented by the index i\n"
+      "    chatteron           Turn on the chatter\n"
+    ^ "    chatteroff          Turn off the chatter\n"
+    ^ "    load filename       Load the file \"filename\" into the interpreter\n"
+    ^ "    printhole i         Print all the information of the i-th hole\n"
+    ^ "    lochole i           Print the location of the i-th hole\n"
+    ^ "    countholes          Print the total number of holes\n"
+    ^ "    printfun funname    Print the specified function\n"
   in
     fprintf ppf
       "Usage: %%: [command]\ncommand:\n%s"
@@ -54,39 +58,44 @@ let init_repl ppf =
   Sys.catch_break true
 
 let is_command (str:string) =
-  let str' = String.trim str in
+  let str' = strip str in
   let l = String.length str' in
     if l > 1 && String.sub str' 0 2 = "%:" then
       let (_, cmd) = ExtString.String.split str' ":" in
-        `Cmd (String.trim cmd)
+        `Cmd (strip cmd)
     else
       `Input str
 
 let do_command ppf str =
   begin
-  try
-    let (cmd, arg) = split str " " in
-      match cmd with
-        | "load" ->
-            let sgn = Parser.parse_file ~name:arg Parser.sgn in
-              Recsgn.recSgnDecls sgn
-        | "loadchat" -> (* Makes sure chatter is on before loading file. Restores previous behaviour afterwards. *)
-            let chat = !Debug.chatter in
-              Debug.chatter := 1;
+    match str with
+      | "countholes" -> Holes.printNumHoles ()
+      | "chatteron" -> Debug.chatter :=1; fprintf ppf "\nThe chatter is on now.\n"
+      | "chatteroff" -> Debug.chatter :=0; fprintf ppf "\nThe chatter is off now.\n"
+      | _ ->
+        try
+          let (cmd, arg) = split str " " in
+          match cmd with
+            | "load" ->
               let sgn = Parser.parse_file ~name:arg Parser.sgn in
-                Recsgn.recSgnDecls sgn;
-                Debug.chatter := chat
-        | "printhole" -> if not (Holes.none ()) then Holes.printOneHole (to_int arg) else ()
-        | _ -> ()
-  with
-    | ExtString.Invalid_string -> fprintf ppf "Invalid command.@.\n"; cmd_usage ppf
+              Recsgn.recSgnDecls sgn;
+              fprintf ppf "\nThe file has been successfully loaded.\n"
+            | "printhole" ->
+	      if not (Holes.none ()) then Holes.printOneHole (to_int arg)
+	      else fprintf ppf "\nThere is no hole at all!!\n"
+            | "lochole" -> 
+	      if not (Holes.none ()) then Holes.printHolePos (to_int arg) 
+	      else fprintf ppf "\nThere is no hole at all!!\n"
+            | _ -> fprintf ppf "Invalid command.@.\n"; cmd_usage ppf
+        with
+          | ExtString.Invalid_string -> fprintf ppf "Invalid command.@.\n"; cmd_usage ppf
   end
 
 let rec loop ppf =
   begin
     try
-      (if !Options.emacs then ()
-      else fprintf ppf "# ");
+      if !Options.emacs then ()
+      else fprintf ppf "# ";
       pp_print_flush ppf ();
       let input = read_line () in
         match is_command input with

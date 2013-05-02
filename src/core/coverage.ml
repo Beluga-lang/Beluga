@@ -1090,7 +1090,10 @@ let rec refine_candidates (cD', cG', ms) (cD, cG, candidates) = match candidates
 	let _ = dprint (fun () -> "REFINED CANDIDATE \n" ^ candToString (cD', LF.Empty) cand')  in
 	  cand' :: refine_candidates (cD', cG', ms) (cD, cG, cands)
       with
-	  Error (_, MatchError _) -> refine_candidates (cD', cG', ms) (cD, cG, cands)
+	  Error (_, MatchError _) ->
+            (dprint (fun () -> "[refine_candidate] not relevant candidate : " ^
+              candToString (cD, LF.Empty) cand  );
+            refine_candidates (cD', cG', ms) (cD, cG, cands))
       end
 
 
@@ -1101,6 +1104,7 @@ let rec refine_pattern cov_goals ( (cD, cG, candidates, patt ) as cov_problem ) 
        let _ = dprint (fun () -> "[Consider coverage goal] \n     " ^ covGoalsToString [cg] ) in
        let _ = (dprint (fun () -> "  There are " ^ string_of_int (List.length candidates) ^
 			  " candidates.\n");
+                dprint (fun () -> "Candidates : " ^ candidatesToString (cD,cG) candidates);
 		dprint (fun () -> "cD = " ^ P.mctxToString cD);
 		dprint (fun () -> "ms = " ^ P.msubToString cD_cg ms ))   in
 

@@ -71,7 +71,7 @@ let _ = Error.register_printer
 	Format.fprintf ppf "Ill-formed computation-level type."))
 
 type free_cvars =
-    FMV of Id.name | FPV of Id.name | FCV of Id.name
+    FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name
 
 type fcvars = free_cvars list * bool
 

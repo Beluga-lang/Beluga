@@ -1283,6 +1283,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                                           ^ " ) = " ^ P.dctxToString cD0 cPsi1) in
                         let _ = dprint (fun () -> "   cPsi' " ^ P.dctxToString cD0 cPsi') in
                         let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                        let _ = dprint (fun () -> "AFTER invSub") in
                               (*                        let (_, ssSubst) = ss in
                                                         dprint (fun () -> "##       s  = " ^ P.subToString cD0 cPsi' s);
                                                         dprint (fun () -> "##       t  = " ^ P.subToString cD0 cPsi' t);
@@ -1290,8 +1291,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
                                                         dprint (fun () -> "##       s' = " ^ P.subToString cD0 cPsi' s');
                                                         dprint (fun () -> "## comp t s = " ^ P.subToString cD0 cPsi' (comp t s));
 *)
+
                               returnNeutral (MVar (Offset v, s'))
-                      with
+                        with
+                        | NotInvertible -> raise (Failure ("ERROR: prune: " ^
+                                          "\n Looking for " ^ R.render_cvar cD0 u ^
+                                          "\n in context " ^ P.mctxToString cD0))
                         | Error.Violation msg ->
                             (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
                               "\n Looking for " ^ R.render_cvar cD0 u ^
@@ -2333,9 +2338,11 @@ let rec blockdeclInDctx cPsi = match cPsi with
                                   P.normalToString cD0 cPsi sM1 ^ "\n    " ^
                                   P.normalToString cD0 cPsi sM2 ^ "\n") in
 
-              let ss = invert t' in
-              let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in
+              let ss   = invert t' in
+              let mtt  = Whnf.m_invert (Whnf.cnormMSub mt) in
               let phat = Context.dctxToHat cPsi in
+              let _    = dprint (fun () -> "Initiating pruning with " ^
+                                           P.subToString cD2 cPsi2 ss) in
               let sM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (mtt, ss) (MMVarRef r)) in
                 instantiateMMVar (r, sM1', !cnstrs)
             with

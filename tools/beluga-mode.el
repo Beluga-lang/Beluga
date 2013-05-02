@@ -217,7 +217,7 @@ Regexp match data 0 points to the chars."
     (set (make-local-variable 'compile-command)
          ;; Quite dubious, but it's the intention that counts.
          (concat beluga-interpreter-name
-                 " " (shell-quote-argument buffer-file-name))))
+                 "/beluga " (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
   (set (make-local-variable 'comment-start-skip) "%[%{]*[ \t]*")
   (set (make-local-variable 'comment-end-skip) "[ \t]*\\(?:\n\\|}%\\)")
@@ -226,6 +226,30 @@ Regexp match data 0 points to the chars."
        (append '(?|) (if (boundp 'electric-indent-chars)
                          electric-indent-chars
                        '(?\n))))
+
+;;---------------------------- Interactive mode ----------------------------;;
+
+(defvar beli-process ())
+
+;;need to have beli-exec-path in .emacs
+(defun beli-start ()
+  (if (and (not (eq beli-process ()))
+          (eq (process-status (process-name beli-process)) 'run))
+      ()
+    (setq beli-process
+          (start-process "belip" "*beli*"
+                         (concat beluga-interpreter-name "/beli")
+                         "-emacs"))))
+
+(defun beli-stop () (quit-process beli-process))
+
+(defun beli-send (cmd)
+  (process-send-string (process-name beli-process) (concat "%:" cmd "\n")))
+
+
+
+;;---------------------------- SMIE ----------------------------;;
+
   ;; SMIE setup.
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
   (if (fboundp 'smie-setup)

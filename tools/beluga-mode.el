@@ -217,7 +217,7 @@ Regexp match data 0 points to the chars."
     (set (make-local-variable 'compile-command)
          ;; Quite dubious, but it's the intention that counts.
          (concat beluga-interpreter-name
-                 " " (shell-quote-argument buffer-file-name))))
+                 "/beluga " (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
   (set (make-local-variable 'comment-start-skip) "%[%{]*[ \t]*")
   (set (make-local-variable 'comment-end-skip) "[ \t]*\\(?:\n\\|}%\\)")
@@ -226,6 +226,53 @@ Regexp match data 0 points to the chars."
        (append '(?|) (if (boundp 'electric-indent-chars)
                          electric-indent-chars
                        '(?\n))))
+
+;;---------------------------- Interactive mode ----------------------------;;
+
+(defvar beli-process ())
+
+;;need to have beli-exec-path in .emacs
+(defun beli-start ()
+  (if (and (not (eq beli-process ()))
+          (eq (process-status (process-name beli-process)) 'run))
+      ()
+    (setq beli-process
+          (start-process "belip" "*beli*"
+                         (concat beluga-interpreter-name "/beli")
+                         "-emacs"))))
+
+(defun beli-stop () (quit-process beli-process))
+
+(defun beli-send (cmd)
+  (process-send-string (process-name beli-process) (concat "%:" cmd "\n")))
+
+(defvar beli-holes-overlays ())
+
+(defun beli-create-overlay (pos)
+  (let ((file-name (nth 0 pos))
+        (start-line (nth 1 pos))
+        (start-bol (nth 2 pos))
+        (start-off (nth 3 pos))
+        (stop-line (nth 4 pos))
+        (stop-bol (nth 5 pos))
+        (stop-off (nth 6 pos)))
+    (make-overlay (+ (line-beginning-position start-line) ;;line-beginning-position is not what we want.
+                     (- start-off start-bol))
+                  (+ (line-beginning-position stop-line)
+                     (- stop-off stop-bol)))))
+
+(defun beli-highlight-holes ()
+  (interactive)
+  (let ((numholes 1)) ;;need to obtain the value from beli
+    (dotimes (i numholes)
+      (let ((beli-hole (beli-create-overlay '("/lol.txt" 125 4213 4251 125 4213 4252))))
+        (setq beli-holes-overlays beli-hole)
+        (overlay-put beli-hole 'priority 10)
+        (overlay-put beli-hole 'face '(background-color . "red"))))))
+
+
+;;---------------------------- SMIE ----------------------------;;
+
   ;; SMIE setup.
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
   (if (fboundp 'smie-setup)

@@ -50,7 +50,7 @@ mlam g => fn e => case e of
 % | [g,x:exp. #p ..]    => [. z]
 | [g,x:exp. x]       => [. s z]
 % | [g,x:exp . z]      => [. z]
-| [g,x:exp. (U .. )]  => [. z]
+ | [g,x:exp. (U .. )]  => [. z]
 %   | [g,x:exp. s (W .. x)]  => cntV [g]  [g,x. (W .. x)]
 
   | [g,x:exp. letv (U1 .. x) (\y . (U2 .. x y))] =>

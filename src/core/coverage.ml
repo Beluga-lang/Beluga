@@ -923,8 +923,8 @@ let trivially_empty_param cov_problem =
 
 
 
-let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
-  | [] -> (match sCands with
+let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
+  | [] -> (match sCands' with
              | []  ->  begin try ( dprint (fun () -> "[solve'] Check that all global constraints are true");
                                   U.forceGlobalCnstr ();  Solved)
                       with
@@ -939,7 +939,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
                          in
                          NotSolvable
                       end
-	     | _ -> PossSolvable (Cand (cD_p , LF.Empty, mCands, sCands)))
+	     | _ -> PossSolvable (Cand (cD_p , LF.Empty, mCands', sCands')))
   | mc :: mCands ->
       begin match mc with
 	| Eqn (CovGoal (cPsi, tR, sA) , MetaPatt (cPsi_p, tR_p, sA_p)) ->
@@ -961,7 +961,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
               dprint (fun () -> "[solve'] Typ matching succeeded!");
 	      U.matchTerm cD cPsi (tR, S.LF.id) (tR_p', S.LF.id) ;
               dprint (fun () -> "[solve'] Term matching succeeded!");
-	      solve' cD (mCands, ms) cD_p (mc::mCands) sCands
+	      solve' cD (mCands, ms) cD_p (mc::mCands') sCands'
 	    with
 	      (* should this case betaken care of  during pre_match phase ? *)
               | U.GlobalCnstrFailure ( _loc, cnstr) ->
@@ -972,22 +972,27 @@ let rec solve' cD (matchCand, ms) cD_p mCands sCands = match matchCand with
 	      	let sc = SplitCtx (cPsi , cPsi_p) in
 		let _ = dprint (fun () -> "Initiate context splitting: " ^ P.dctxToString cD cPsi ^ " == " ^
 		  P.dctxToString cD cPsi_p' ^ " \n") in
-		  solve' cD (mCands, ms) cD_p mCands (sc::sCands)
+		  solve' cD (mCands, ms) cD_p mCands' (sc::sCands')
 	      | U.Failure msg ->
-	      if U.unresolvedGlobalCnstrs () then
+	      (if U.unresolvedGlobalCnstrs () then
 		let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ "\n MOVED BACK TO SPLIT CAND") in
 		let sc = Split (CovGoal (cPsi, tR, sA) , MetaPatt (cPsi_p, tR_p, sA_p)) in
-		  solve' cD (mCands, ms) cD_p mCands (sc::sCands)
+		  solve' cD (mCands, ms) cD_p mCands' (sc::sCands')
 	      else
-		let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ " \n CONSTRAINT NOT SOLVABLE\n") in
-		  NotSolvable
-	    end
+                begin match msg with
+                  | "UNIFY FAILURE ERROR: prune: " ->
+                      PossSolvable (Cand (cD_p , LF.Empty, mCands', sCands'))
+                  | _ ->
+		    let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ " \n NOT SOLVABLE\n") in
+		    NotSolvable
+	        end)
+            end
 
 	| EqnCtx (cPsi, cPsi_p) ->
 	    let cPsi_p' = Whnf.cnormDCtx (cPsi_p, ms) in
 	      begin try
 		U.unifyDCtx cD cPsi cPsi_p' ;
-		solve' cD (mCands, ms) cD_p (mc::mCands) sCands
+		solve' cD (mCands, ms) cD_p (mc::mCands') sCands'
 	      with U.Failure msg ->
 		  let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ) in
 		    NotSolvable
@@ -1104,7 +1109,7 @@ let rec refine_pattern cov_goals ( (cD, cG, candidates, patt ) as cov_problem ) 
        let _ = dprint (fun () -> "[Consider coverage goal] \n     " ^ covGoalsToString [cg] ) in
        let _ = (dprint (fun () -> "  There are " ^ string_of_int (List.length candidates) ^
 			  " candidates.\n");
-                dprint (fun () -> "Candidates : " ^ candidatesToString (cD,cG) candidates);
+                dprint (fun () -> "Candidates : " ^ candidatesToString (cD,cG, candidates, patt));
 		dprint (fun () -> "cD = " ^ P.mctxToString cD);
 		dprint (fun () -> "ms = " ^ P.msubToString cD_cg ms ))   in
 

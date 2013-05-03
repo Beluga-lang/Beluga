@@ -68,7 +68,7 @@ let printHolePos i =
   try
     let  (loc, _, _, (_, _)) = DynArray.get holes i in
     let  (file_name, start_line, start_bol, start_off, stop_line, stop_bol, stop_off, _ghost) = Loc.to_tuple loc in
-    Printf.printf "(\"%s\".(%d %d %d).(%d %d %d))\n" file_name start_line start_bol start_off stop_line stop_bol stop_off
+    Printf.printf "(\"%s\" %d %d %d %d %d %d)\n" file_name start_line start_bol start_off stop_line stop_bol stop_off
   with
     | DynArray.Invalid_arg (_, _, _) -> if !Debug.chatter != 0 then
         Printf.printf "\nThere is no %d-th hole.\n" i

@@ -75,7 +75,7 @@ let main () =
   (* If readline wrapper exists, replace current process with a call
      to it and ask it to run us, wrapped. Line editing is then
      available. Otherwise don't bother. *)
-  if !Options.readline then begin
+  if !Options.readline && (not !Options.emacs) then begin
     try
       Unix.execvp "rlwrap" [| "rlwrap"; Sys.executable_name; "-readline" |]
     with Unix.Unix_error _ -> ()

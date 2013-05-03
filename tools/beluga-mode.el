@@ -248,24 +248,33 @@ Regexp match data 0 points to the chars."
 
 (defvar beli-holes-overlays ())
 
+;; Returns the initial position of line n (hackish much?)
+(defun beli-line-pos (n)
+  (let ((currp (point))
+        (res (progn (goto-line n) (point))))
+    (progn
+      (goto-char currp)
+      res)))
+
+
 (defun beli-create-overlay (pos)
   (let ((file-name (nth 0 pos))
         (start-line (nth 1 pos))
         (start-bol (nth 2 pos))
-        (start-off (nth 3 pos))
+        (start-off (+ 1 (nth 3 pos))) ;; counting like dijstra vs von neumann issue
         (stop-line (nth 4 pos))
         (stop-bol (nth 5 pos))
-        (stop-off (nth 6 pos)))
-    (make-overlay (+ (line-beginning-position start-line) ;;line-beginning-position is not what we want.
+        (stop-off (+ 1 (nth 6 pos))))
+    (make-overlay (+ (beli-line-pos start-line)
                      (- start-off start-bol))
-                  (+ (line-beginning-position stop-line)
+                  (+ (beli-line-pos stop-line)
                      (- stop-off stop-bol)))))
 
 (defun beli-highlight-holes ()
   (interactive)
   (let ((numholes 1)) ;;need to obtain the value from beli
     (dotimes (i numholes)
-      (let ((beli-hole (beli-create-overlay '("/lol.txt" 125 4213 4251 125 4213 4252))))
+      (let ((beli-hole (beli-create-overlay '("tpcert.bel" 74 1891 1897 74 1891 1898))))
         (setq beli-holes-overlays beli-hole)
         (overlay-put beli-hole 'priority 10)
         (overlay-put beli-hole 'face '(background-color . "red"))))))

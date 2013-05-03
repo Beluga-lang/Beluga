@@ -113,7 +113,7 @@ module LF = struct
           | Shift (CtxShift _ , _ ) ->  raise (NotComposable "Composition       undefined - 2")
 
           | SVar (offset, k, s') ->
-            (* SVar (offset, k + n, s') *)
+            SVar (offset, k + n, s') (* This is wrong *) 
 
 (*          | _ ->  raise (NotComposable "Composition undefined - 2") *)
         in

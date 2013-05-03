@@ -1077,6 +1077,13 @@ and elTerm' recT cD cPsi r sP = match r with
                    * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                    * This will be enforced during abstraction.
                    *)
+                let _ = begin match cPhi with
+                  | Int.LF.Null -> dprint (fun () -> "Add Parameter variable in empty context !!! of type : " ^
+                    P.dctxToString cD cPhi ^ " |- " ^ P.typToString cD cPhi (tP, Substitution.LF.id))
+                    ;
+                    dprint (fun () -> "cPsi = " ^ P.dctxToString cD cPsi);
+                    dprint (fun () -> "s = " ^ P.subToString cD cPhi s'')
+                  | _ -> () end in
                   FCVar.add p (cD, Int.LF.PDecl(p, Whnf.normTyp (tP,Substitution.LF.id),  cPhi));
                   Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
 

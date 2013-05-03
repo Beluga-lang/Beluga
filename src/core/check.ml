@@ -253,7 +253,7 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
 
 let checkParamTypeValid cD cPsi tA =
   let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
-  | Syntax.Int.LF.Null -> raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA)))
+  | Syntax.Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA))) *)
   | Syntax.Int.LF.CtxVar psi ->
      (* tA is an instance of a schema block *)
       let Syntax.Int.LF.Schema s_elems =
@@ -268,10 +268,8 @@ let checkParamTypeValid cD cPsi tA =
     let tB' = Syntax.Int.LF.TClo(tB, Syntax.Int.LF.Shift (Syntax.Int.LF.NoCtxShift, n)) in
     let ms  = Ctxsub.mctxToMSub cD in
     let tB0 = Whnf.cnormTyp (tB', ms) in
-    begin try
-            Unify.unifyTyp cD cPsi (tA, Substitution.LF.id) (tB0, Substitution.LF.id) ;
-            checkParamTypeValid' (cPsi0', n+1)
-      with _ -> raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA)))
+    begin try Unify.unifyTyp cD cPsi (tA, Substitution.LF.id) (tB0, Substitution.LF.id) with
+      | _ ->  checkParamTypeValid' (cPsi0', n+1)
     end
   in
   checkParamTypeValid' (cPsi , 1)

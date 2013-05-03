@@ -1,0 +1,72 @@
+% Sketch of weak normalization for STLC that goes under binders
+% Author: Andrew Cave
+
+tp : type.                %name tp T.
+i :  tp.
+arr: tp -> tp -> tp.
+
+tm : tp -> type.          %name tm E.
+app : tm (arr T S) -> tm T -> tm S.
+lam : (tm T -> tm S) -> tm (arr T S).
+
+schema ctx = tm T;
+
+mstep : tm A -> tm A -> type.
+beta : mstep (app (lam M) N) (M N).
+eta : {M:tm (arr A B)} mstep M (lam (\x. app M x)).
+steplam : ({x:tm A} mstep (M x) (M' x)) -> mstep (lam M) (lam M').
+stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
+refl : mstep M M.
+trans : mstep M M' -> mstep M' M'' -> mstep M M''.
+
+datatype IsWeakeningOf : {g:ctx} [g. tm A] -> {h:ctx} [h. tm A] -> ctype =
+| Zero : IsWeakeningOf [g] [g. M ..] [g] [g. M ..]
+| Succ : {h:ctx} {M:[g.tm B]} IsWeakeningOf [g] [g. M ..] [h] [h. N ..] -> IsWeakeningOf [g] [g. M ..] [h,x:tm A] [h,x:tm A. N ..]
+;
+
+datatype IsWeakening : {g:ctx}  {h:ctx} {#S: g[h]}ctype =
+| Zero : IsWeakening [g] [g] <g $ .. >
+| Succ : {#S:g[h]} IsWeakening [g] [h] <h $ #S[..] >
+         -> IsWeakening [g] [h,x:tm (A ..)] <h,x:tm (A ..) $ #S [..] >
+;
+
+
+% This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
+% TODO: Hmm, couldn't we use a block x:tm A , neut x schema all the way through? lam even adds the assumption that neut x?
+datatype IsNormal : {g:ctx} {A:[.tp]} {M:[g.tm A]} ctype =
+| Neut : IsNeutral [g] [. i] [g. M ..] -> IsNormal [g] [.i] [g. M ..]
+| Lam : IsNormal [g,x:tm A] [.B] [g,x:tm A. M .. x] -> IsNormal [g] [.arr A B] [g. lam (\x. M .. x)]
+and IsNeutral : {g:ctx} {A:[.tp]} {M:[g.tm A]} ctype =
+| Var : {#p:[g.tm A]} IsNeutral [g] [.A] [g. #p ..]
+| App : IsNeutral [g] [.arr A B] [g. M ..] -> IsNormal [g] [.A] [g. N ..] -> IsNeutral [g] [.B] [g. app (M ..) (N ..)]
+;
+
+datatype Halts : {g:ctx} {A:[.tp]} {M:[g.tm A]} ctype =
+| Halts : [g. mstep (M ..) (V ..)] -> IsNormal [g] [.A] [g. V ..] ->
+          Halts [g] [.A] [g. M ..]
+;
+
+datatype Reduce : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
+| Base : Halts [g] [.i] [g. M ..] -> Reduce [g] [g . i] [g. M ..]
+| Arr : {A:[g.tp]}{B:[g.tp]}{M:[g.tm (arr (A ..) (B ..))]}{N:[g.tm (A ..)]}
+         ({h:ctx} {#S:g[h]} {N:[h. tm (A #S[..])]}
+          IsWeakening [g] [h] <h $ #S[..] > ->
+          Reduce [h] [h. A #S[..] ] [h. N ..] -> Reduce [h] [h. B #S[..] ] [h. app (M #S[..]) (N ..)])
+           -> Reduce [g] [g. arr (A ..) (B ..)] [g. M ..]
+
+;
+
+
+rec eval : {g:ctx}{h:ctx}{A:[g.tp]}{M:[g.tm (A ..)]}{#S:g[h]} Reduce [h] [h. A #S[..] ] [h. M #S[..] ] =
+mlam g => mlam h => mlam A => mlam M => mlam #S => case [g. M ..] of
+%| [g,x:tm T. x] => let Cons rs' r = rs in r
+%| [g,x:tm T. #p ..] => let Cons rs' r = rs in eval [g. #p ..] rs'
+| {T:[.tp]}{T2:[.tp]}{M1: [g.tm (arr T2 T)]}{M2:[g.tm T2]}
+  [g. app (M1 ..) (M2 ..)]  =>
+  let Arr f = eval [g] [h] [. (arr T2 T)] [g. M1 ..] [h $ #S[..] ] in
+                              f [h] [h. M1 #S[..] ] [h. M2 #S[..]] Zero (eval [g] [h] [.T2] [g. M2 ..] [h $ #S[..] ])
+%| [g. lam (\x. M1 .. x)] => % This case is definitely wrong, but roughly the idea...
+%   mlam h' => mlam F => mlam N => fn wkn-f-m => fn rn => eval [g,x:tm _. M1 .. x] (Cons (all-wkn wkn-f-m rs) rn)
+;
+
+

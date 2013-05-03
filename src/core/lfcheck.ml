@@ -573,10 +573,8 @@ and checkTypeAgainstSchema loc cD cPsi tA elements =
 and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) =
   let _ = dprint (fun () -> "instanceOfSchElem...") in
   let sArec = match Whnf.whnfTyp (tA, s) with
-    | (Sigma tArec,s') ->
-      (tArec, s')
-    | (nonsigma, s') ->
-      (SigmaLast nonsigma, s') in
+    | (Sigma tArec,s') -> (tArec, s')
+    | (nonsigma, s') ->   (SigmaLast nonsigma, s') in
   let _ = dprint (fun () -> "tA =" ^ P.typToString cD cPsi (tA, s)) in
   let dctx        = projectCtxIntoDctx some_part in
   let _ =  dprint (fun () -> "***Check if it is an instance of a schema element ...") in
@@ -826,5 +824,3 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
                             P.mctxToString cD ^ " |- " ^
                             P.msubToString cD ms ^ " <= "
                          ^ " = " ^ P.mctxToString cD'))
-
-

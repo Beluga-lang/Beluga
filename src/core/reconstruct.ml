@@ -163,7 +163,6 @@ let _ = Error.register_printer
 
 
 
-
 let rec get_ctxvar cPsi  = match cPsi with
   | Int.LF.Null -> None
   | Int.LF.CtxVar (psi_name) -> Some psi_name
@@ -343,6 +342,14 @@ let elCDecl recT cD cdecl = match cdecl with
   | Apx.LF.PDecl (u, a, psi) ->
       let cPsi = Lfrecon.elDCtx recT cD psi in
       let tA   = Lfrecon.elTyp recT cD cPsi a in
+      (* The type tA is valid, if it either is part of the context schema
+         or if it is an instance of a concrete declaration in cPsi.
+         This is postponed to checking, since we may not have the
+         schema of the context yet.
+
+         let elems =
+         let _ = Check.LF.checkTypeAgainstSchema (Syntax.ghost.loc) cD cPsi tA elems
+      *)
         Int.LF.PDecl (u, tA, cPsi)
 
   | Apx.LF.SDecl (u, phi, psi) ->
@@ -1673,8 +1680,9 @@ and recMObj cD' mO (cD, tAnn, cPsi) = match mO with
       let l_delta   = Context.length cD'  in
       Check.Comp.wf_mctx cD1' ;
         ((l_cd1', l_delta), cD1', cPsi1', Some tR1', tP1')
-    with
-        _ -> raise (Error (loc,MCtxIllformed cD1'))
+      with
+        | Check.Comp.Error (_ , msg) -> raise (Check.Comp.Error (loc, msg))
+        |  _ -> raise (Error (loc,MCtxIllformed cD1'))
     end
 
 (* inferCtxSchema loc (cD, cPsi) (cD', cPsi') = ()

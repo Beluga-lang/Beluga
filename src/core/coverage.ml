@@ -2071,7 +2071,7 @@ let check_coverage_success problem  =
 	 Success)
       else
 	 (* Check if the open coverage goals can be proven to be impossible *)
-        Failure (Printf.sprintf "###################################\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##   %s\n##   %s\n\n"
+        Failure (Printf.sprintf "\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##   %s\n##   %s\n\n"
                    (Syntax.Loc.to_string problem.loc)
                    ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals)))
 

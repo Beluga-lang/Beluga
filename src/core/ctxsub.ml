@@ -8,7 +8,6 @@
 open Context
 open Syntax.Int.LF
 open Store.Cid
-open Id
 
 module P = Pretty.Int.DefaultPrinter
 

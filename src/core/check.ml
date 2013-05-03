@@ -54,7 +54,8 @@ module Comp = struct
   type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
   type error =
-      MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
+    | IllegalParamTyp of I.mctx * I.dctx * I.typ
+    | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
     | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
     | CtxFunMismatch  of I.mctx * gctx  * tclo
@@ -91,7 +92,11 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
-        | UnsolvableConstraints (f,cnstrs) ->
+          | IllegalParamTyp (cD, cPsi, tA) ->
+            Format.fprintf ppf
+              "Parameter type %a is illegal."
+              (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp (tA, Substitution.LF.id))
+          | UnsolvableConstraints (f,cnstrs) ->
             Format.fprintf ppf
             "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables. \n
 The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
@@ -246,6 +251,33 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
 
+let checkParamTypeValid cD cPsi tA =
+  let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
+  | Syntax.Int.LF.Null -> raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA)))
+  | Syntax.Int.LF.CtxVar psi ->
+     (* tA is an instance of a schema block *)
+      let Syntax.Int.LF.Schema s_elems =
+	Schema.get_schema (Context.lookupCtxVarSchema cD psi) in
+      begin try
+        let _ = LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems in ()
+        with _ -> raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA)))
+      end
+
+  | Syntax.Int.LF.DDec (cPsi0', Syntax.Int.LF.TypDecl (x, tB)) ->
+     (* tA is instance of tB *)
+    let tB' = Syntax.Int.LF.TClo(tB, Syntax.Int.LF.Shift (Syntax.Int.LF.NoCtxShift, n)) in
+    let ms  = Ctxsub.mctxToMSub cD in
+    let tB0 = Whnf.cnormTyp (tB', ms) in
+    begin try
+            Unify.unifyTyp cD cPsi (tA, Substitution.LF.id) (tB0, Substitution.LF.id) ;
+            checkParamTypeValid' (cPsi0', n+1)
+      with _ -> raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA)))
+    end
+  in
+  checkParamTypeValid' (cPsi , 1)
+
+
+
   let rec checkMetaObj loc cD cM cTt = match  (cM, cTt) with
   | (MetaCtx (loc, cPsi), (MetaSchema  w, _)) ->
       LF.checkSchema loc cD cPsi (Schema.get_schema w)
@@ -297,7 +329,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         LF.checkTyp  cD cPsi (tA, S.LF.id)
     | I.PDecl (_, tA, cPsi) ->
         LF.checkDCtx cD cPsi;
-        LF.checkTyp  cD cPsi (tA, S.LF.id)
+        LF.checkTyp  cD cPsi (tA, S.LF.id);
+        checkParamTypeValid cD cPsi tA
 
     | _ -> ()
 
@@ -455,8 +488,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
         begin match C.cwhnfCTyp (syn cD cG i) with
-          | (TypBox (loc, tA, cPsi),  t') ->
-              let tau_s = TypBox (loc, C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in
+          | (TypBox (loc', tA, cPsi),  t') ->
+              let tau_s = TypBox (loc', C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in
               let _ = dprint (fun () -> "[check] Case - Scrutinee " ^
                                 P.expSynToString cD cG i ^
                                 "\n   has type " ^ P.compTypToString cD tau_s)

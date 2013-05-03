@@ -1,0 +1,9 @@
+target:type.
+z: target.
+tlam: (target → target) → target.
+
+schema tctx = target;
+
+rec f: (h:tctx) [h,y:target.target] → [h, y:target.target] =
+ fn e => case e of %not
+   | [h,y:target. U .. ] => e ;

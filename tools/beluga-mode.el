@@ -39,6 +39,8 @@
 (defvar beluga-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c\C-c" 'compile)
+    (define-key map "\C-c\C-l" 'beli-load)
+    (define-key map "\C-c\C-p" 'beli-highlight-holes)
     map))
 
 (defvar beluga-mode-syntax-table
@@ -201,6 +203,103 @@ Regexp match data 0 points to the chars."
   "Name of the interpreter executable."
   :type 'string)
 
+;;---------------------------- Interactive mode ----------------------------;;
+
+(defvar beli-buffer ()
+  "Will contain the buffer of the beli process.")
+
+(defun beli-start ()
+  "Starts a beli process with the -emacs option into a buffer called
+*belip*. If a previous beli process existed, it is killed together with
+its buffer."
+  (beli-stop)
+  (setq beli-buffer
+        (make-comint "belip"
+                     (concat beluga-interpreter-name "/beli")
+                     nil "-emacs")))
+
+(defun beli-stop ()
+  "Stops the beli process and its buffer, if it exists."
+  (condition-case nil
+      (with-current-buffer beli-buffer
+        (progn
+          (comint-kill-subjob)
+          (kill-buffer beli-buffer)))
+    (error nil)))
+
+(defun beli-send (cmd)
+  (with-current-buffer beli-buffer
+    (goto-char (point-max))
+    (insert (concat "%:" cmd))
+    (comint-send-input)
+    (progn
+      (while (progn
+               (goto-char comint-last-input-end)
+               (not (re-search-forward comint-prompt-regexp nil t)))
+        (accept-process-output)))))
+
+(defun beli-receive ()
+  (with-current-buffer beli-buffer
+    (buffer-substring-no-properties comint-last-input-end (point-max))))
+
+(defun beli-load ()
+  (interactive)
+  (beli-send (concat "load " (buffer-file-name))))
+
+(defvar beli-holes-overlays ())
+
+;; Returns the initial position of line n (hackish much?)
+(defun beli-line-pos (n)
+  (let ((currp (point))
+        (res (progn (goto-line n) (point))))
+    (progn
+      (goto-char currp)
+      res)))
+
+(defun beli-create-overlay (pos)
+  (let ((file-name (nth 0 pos))
+        (start-line (nth 1 pos))
+        (start-bol (nth 2 pos))
+        (start-off (+ 1 (nth 3 pos))) ;; counting like dijstra vs von neumann issue
+        (stop-line (nth 4 pos))
+        (stop-bol (nth 5 pos))
+        (stop-off (+ 1 (nth 6 pos))))
+    (make-overlay (+ (beli-line-pos start-line)
+                     (- start-off start-bol))
+                  (+ (beli-line-pos stop-line)
+                     (- stop-off stop-bol)))))
+
+(defun beli-hole-pos (num)
+  (beli-send (concat "lochole " (number-to-string num)))
+  (sit-for 0 500)
+  (read (beli-receive)))
+
+(defun beli-hole-num ()
+  (beli-send "countholes")
+  (sit-for 0 500)
+  (string-to-number (beli-receive)))
+
+(defun beli-highlight-holes ()
+  (interactive)
+  (let ((numholes (beli-hole-num)))
+    (dotimes (i numholes)
+      (let ((beli-hole (beli-create-overlay (beli-hole-pos i))))
+        (setq beli-holes-overlays beli-hole)
+        (overlay-put beli-hole 'priority 10)
+        (overlay-put beli-hole 'face '(background-color . "yellow"))
+;;        (overlay-put beli-hole 'face '(foreground-color . "white"))
+        ))))
+
+(defun beli-erase-holes ()
+  (interactive)
+  (overlay-put beli-holes-overlays 'priority 0)
+  (overlay-put beli-holes-overlays 'face '(background-color . "white")))
+
+(defun beli-filter input
+  input)
+
+;;---------------------------- Loading of the mode ----------------------------;;
+
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.bel\\'" . beluga-mode))
 (add-to-list 'auto-mode-alist '("\\.sbel\\'" . beluga-mode))
@@ -226,58 +325,9 @@ Regexp match data 0 points to the chars."
        (append '(?|) (if (boundp 'electric-indent-chars)
                          electric-indent-chars
                        '(?\n))))
-
-;;---------------------------- Interactive mode ----------------------------;;
-
-(defvar beli-process ())
-
-;;need to have beli-exec-path in .emacs
-(defun beli-start ()
-  (if (and (not (eq beli-process ()))
-          (eq (process-status (process-name beli-process)) 'run))
-      ()
-    (setq beli-process
-          (start-process "belip" "*beli*"
-                         (concat beluga-interpreter-name "/beli")
-                         "-emacs"))))
-
-(defun beli-stop () (quit-process beli-process))
-
-(defun beli-send (cmd)
-  (process-send-string (process-name beli-process) (concat "%:" cmd "\n")))
-
-(defvar beli-holes-overlays ())
-
-;; Returns the initial position of line n (hackish much?)
-(defun beli-line-pos (n)
-  (let ((currp (point))
-        (res (progn (goto-line n) (point))))
-    (progn
-      (goto-char currp)
-      res)))
-
-
-(defun beli-create-overlay (pos)
-  (let ((file-name (nth 0 pos))
-        (start-line (nth 1 pos))
-        (start-bol (nth 2 pos))
-        (start-off (+ 1 (nth 3 pos))) ;; counting like dijstra vs von neumann issue
-        (stop-line (nth 4 pos))
-        (stop-bol (nth 5 pos))
-        (stop-off (+ 1 (nth 6 pos))))
-    (make-overlay (+ (beli-line-pos start-line)
-                     (- start-off start-bol))
-                  (+ (beli-line-pos stop-line)
-                     (- stop-off stop-bol)))))
-
-(defun beli-highlight-holes ()
-  (interactive)
-  (let ((numholes 1)) ;;need to obtain the value from beli
-    (dotimes (i numholes)
-      (let ((beli-hole (beli-create-overlay '("tpcert.bel" 74 1891 1897 74 1891 1898))))
-        (setq beli-holes-overlays beli-hole)
-        (overlay-put beli-hole 'priority 10)
-        (overlay-put beli-hole 'face '(background-color . "red"))))))
+  (set (make-local-variable 'beli-buffer) ())
+  (set (make-local-variable 'beli-holes-overlays) ())
+  (beli-start)
 
 
 ;;---------------------------- SMIE ----------------------------;;

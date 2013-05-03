@@ -260,6 +260,16 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
   | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->
       LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
 
+  | (MetaSObj (loc, phat, tM), (MetaSubTyp (tA, cPsi), t)) ->
+      let cPsi' = C.cnormDCtx (cPsi, t) in
+      if phat = Context.dctxToHat cPsi' then
+        LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
+      else
+        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
+
+  | (MetaSObjAnn (loc, _cPhi, tM), (MetaSubTyp (tA, cPsi), t)) ->
+      LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) tM (C.cnormDCtx (tA, t))
+
   | (MetaParam (loc, _phat, h), (MetaTyp (tA, cPsi), t)) ->
       let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
       let tA  = C.cnormTyp (tA, t) in
@@ -283,6 +293,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             let MetaObj (loc, psihat, tM) = mO in
               checkMetaObj loc cD mO (MetaTyp (tA, cPsi), t) ;
               checkMetaSpine loc cD mS (cK, I.MDot (I.MObj(psihat, tM), t))
+
+        | I.SDecl (_u, cPhi, cPsi) ->
+            let MetaSObj (loc, psihat, tM) = mO in
+              checkMetaObj loc cD mO (MetaSubTyp (cPhi, cPsi), t) ;
+              checkMetaSpine loc cD mS (cK, I.MDot (I.SObj(psihat, tM), t))
     end
 
 

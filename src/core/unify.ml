@@ -440,7 +440,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
    | (MShift k, Dec (_, PDecl (_x, _tA, _cPsi))) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
-
+   | (MShift k, Dec (_, SDecl (_x, _tA, _cPsi))) ->
+       pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
    | (MDot (MV k, mt), Dec (cD1, CDecl (g, w, dep))) ->
        let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
@@ -492,6 +493,23 @@ let rec blockdeclInDctx cPsi = match cPsi with
                let tA'   = Whnf.cnormTyp  (tA , mtt') in
                (Whnf.pvar_dot1 mt',  Dec(cD2, PDecl(u, tA', cPsi')))
          end
+   | (MDot (MV k, mt), Dec (cD1, SDecl (u, tA, cPsi))) ->
+       let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
+         (* cD1 |- mt' <= cD2 *)
+         begin match applyMSub k ms with
+           | MUndef          ->
+               (* Psi1, x:tA |- s' <= Psi2 *)
+               (Whnf.mcomp mt' (MShift 1), cD2)
+
+           | MV _n ->
+               (* cD1, u:A[Psi] |- mt' <= cD2, u:([mt']^-1 (A[cPsi])) since
+                  A = [mt']([mt']^-1 A)  and cPsi = [mt']([mt']^-1 cPsi *)
+               let mtt'  = Whnf.m_invert (Whnf.cnormMSub mt') in
+               let cPsi' = Whnf.cnormDCtx (cPsi, mtt') in
+               let tA'   = Whnf.cnormDCtx  (tA , mtt') in
+               (Whnf.mvar_dot1 mt',  Dec(cD2, SDecl(u, tA', cPsi')))
+         end
+
    | (MDot (MUndef, mt), Dec (cD1, _)) ->
        let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
          (* cD1 |- mt' <= cD2 *)

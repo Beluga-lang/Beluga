@@ -1294,23 +1294,21 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
                               returnNeutral (MVar (Offset v, s'))
                         with
-                        | NotInvertible -> raise (Failure ("ERROR: prune: " ^
-                                          "\n Looking for " ^ R.render_cvar cD0 u ^
-                                          "\n in context " ^ P.mctxToString cD0))
+                        | NotInvertible ->
+                          (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^
+                              "\n Looking for " ^ R.render_cvar cD0 u ^
+                              "\n in context " ^ P.mctxToString cD0);
+                           raise (Failure ("Pruning")))
                         | Error.Violation msg ->
                             (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
                               "\n Looking for " ^ R.render_cvar cD0 u ^
                               "\n in context " ^ P.mctxToString cD0);
-                            raise (Failure ("ERROR: prune: " ^ msg ^
-                                          "\n Looking for " ^ R.render_cvar cD0 u ^
-                                          "\n in context " ^ P.mctxToString cD0)))
+                            raise (Failure ("Pruning")))
                         | Error msg ->
                           (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
                                           "\n Looking for " ^ R.render_cvar cD0 u ^
                                           "\n in context " ^ P.mctxToString cD0) ;
-                           raise (Failure ("ERROR: prune (2) " ^ msg ^ "\n Looking for " ^
-                                              R.render_cvar cD0 u ^ "\n in context " ^
-                                              P.mctxToString cD0)))
+                           raise (Failure ("Pruning")))
                       end
                   | MUndef -> (dprint (fun () -> "pruning bound metavariable - MUndef failure ");
                                raise (Failure "[Prune] Bound MVar dependency"))
@@ -3178,9 +3176,9 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
       | (DDec (cPsi1, TypDecl(_y , tA1)) , DDec (cPsi2, TypDecl(_x , tA2))) ->
             (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;
-             dprint (fun () -> "[unifyDCtx] unify type-decl \n");
-             dprint (fun () -> "            " ^ P.typToString cD0 cPsi1 (tA1, id)
-                       ^ "   ==   " ^ P.typToString cD0 cPsi2 (tA2, id));
+             (* dprint (fun () -> "[unifyDCtx] unify type-decl \n");
+                dprint (fun () -> "            " ^ P.typToString cD0 cPsi1 (tA1, id)
+                       ^ "   ==   " ^ P.typToString cD0 cPsi2 (tA2, id)); *)
             unifyTyp mflag cD0 cPsi1 (tA1, id)   (tA2, id)
             )
 
@@ -3208,12 +3206,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
                        ^ " == "  ^ P.dctxToString cD (Whnf.cnormDCtx (cPsi', t'))
                         ^ "\n");
           unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx  (cPsi', t')); *)
-          dprint (fun () -> "[unifyMetaObj'] MetaObj ... actual obj ..." ^
+          (* dprint (fun () -> "[unifyMetaObj'] MetaObj ... actual obj ..." ^
                  P.normalToString cD cPsi (Whnf.cnorm (tR , t), id)
-                 ^ " == " ^ P.normalToString cD cPsi (Whnf.cnorm (tR', t'),  id));
+                 ^ " == " ^ P.normalToString cD cPsi (Whnf.cnorm (tR', t'),  id)); *)
           unifyTerm Unification cD cPsi
             (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id);
-          dprint (fun () -> "[unifyMetaObj'] SUCCESS")
+          (* dprint (fun () -> "[unifyMetaObj'] SUCCESS") *)
 
     | (Comp.MetaObjAnn (_, cPsi, tR) , t) , (Comp.MetaObjAnn (_, cPsi', tR') , t') ->
         let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
@@ -3231,22 +3229,22 @@ let rec blockdeclInDctx cPsi = match cPsi with
     | (Comp.MetaApp (mO, mS), t) , (Comp.MetaApp (mO', mS'), t') ->
         let Comp.PiKind (_, (cdecl, _), cK') = cK in
         let mOt = Whnf.cnormMetaObj (mO, t) in
-        let mOt' = Whnf.cnormMetaObj (mO', t') in
-          (dprint (fun () -> "[unifyMetaObj] BEFORE " ^
+        let _mOt' = Whnf.cnormMetaObj (mO', t') in
+          ((* dprint (fun () -> "[unifyMetaObj] BEFORE " ^
                      " cD = " ^ P.mctxToString cD ^ "\n     " ^
                      P.metaObjToString cD mOt' ^ " == " ^
-                    P.metaObjToString cD mOt);
+                    P.metaObjToString cD mOt); *)
           unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt);
-          dprint (fun () -> "[unifyMetaObj] AFTER " ^ P.metaObjToString cD mOt ^ " == " ^
-                    P.metaObjToString cD mOt');
+          (* dprint (fun () -> "[unifyMetaObj] AFTER " ^ P.metaObjToString cD mOt ^ " == " ^
+                    P.metaObjToString cD mOt'); *)
           let mt' = begin match mOt with
                       | Comp.MetaCtx (loc, cPsi0) -> MDot (CObj(cPsi0), mt)
                       | Comp.MetaObj (loc, psihat, tM) -> MDot (MObj (psihat, tM), mt)
                       | Comp.MetaParam (loc, psihat, h) -> MDot (PObj (psihat, h), mt)
                     end in
           unifyMetaSpine cD (mS, t) (mS', t') (cK', mt');
-          dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES " ^ P.metaObjToString cD mOt ^ " == " ^
-                    P.metaObjToString cD mOt'))
+          (* dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES " ^ P.metaObjToString cD mOt ^ " == " ^
+                    P.metaObjToString cD mOt') *))
 
     | _ -> raise (Failure "Meta-Spine mismatch")
 
@@ -3258,9 +3256,9 @@ let rec blockdeclInDctx cPsi = match cPsi with
           if c = c' then
             let tK = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.kind in
             (unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);
-             dprint (fun () -> "[unifyCompTyp] " ^
+             (* dprint (fun () -> "[unifyCompTyp] " ^
                        P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ " == "  ^
-                       P.compTypToString cD (Whnf.cnormCTyp tau_t') ))
+                       P.compTypToString cD (Whnf.cnormCTyp tau_t') )*))
 
           else
             raise (Failure "Type Constant Clash")
@@ -3269,20 +3267,20 @@ let rec blockdeclInDctx cPsi = match cPsi with
           if c = c' then
             let tK = (Store.Cid.CompCotyp.get c).Store.Cid.CompCotyp.kind in
             (unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);
-             dprint (fun () -> "[unifyCompTyp] " ^
+             (* dprint (fun () -> "[unifyCompTyp] " ^
                        P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ " == "  ^
-                       P.compTypToString cD (Whnf.cnormCTyp tau_t') ))
+                       P.compTypToString cD (Whnf.cnormCTyp tau_t') )*) )
 
           else
             raise (Failure "Type Constant Clash")
       | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) ->
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
-           dprint (fun () -> "[unifyCompTyp] Unifying contexts done");
+           (* dprint (fun () -> "[unifyCompTyp] Unifying contexts done");
            dprint (fun () -> "               cPsi = " ^ P.dctxToString cD cPsi ^
                            "\n               cPsi' = " ^ P.dctxToString cD cPsi');
            dprint (fun () -> "[unifyCompTyp] tA = " ^ P.typToString cD cPsi (Whnf.cnormTyp (tA, t), id));
-           dprint (fun () -> "[unifyCompTyp] tA' = " ^ P.typToString cD cPsi' (Whnf.cnormTyp (tA', t'), id));
+           dprint (fun () -> "[unifyCompTyp] tA' = " ^ P.typToString cD cPsi' (Whnf.cnormTyp (tA', t'), id)); *)
            unifyTyp Unification cD cPsi1 (Whnf.cnormTyp (tA, t), id)  (Whnf.cnormTyp (tA', t'), id)
           )
 
@@ -3483,23 +3481,16 @@ let rec blockdeclInDctx cPsi = match cPsi with
       | (MShift k, MDot ( _ , ms)) ->
           unifyMSub' ms (MShift (k-1))
       | (MDot (MObj (phat, tM), ms'), MDot (MObj(_phat', tM'), mt')) ->
-          (dprint (fun () -> "[unifyMSub] MObj BEFORE");
-           unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ;
+          (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ;
            unifyMSub' ms' mt')
       | (MDot (PObj (phat, h), ms'), MDot (PObj(_phat', h'), mt')) ->
           (dprint (fun () -> "[unifyMSub] PObj ");
           (unifyHead Unification Empty (Context.hatToDCtx phat) h h';
            unifyMSub' ms' mt'))
       | (MDot (CObj (cPsi), ms), MDot (CObj(cPhi), mt)) ->
-          (dprint (fun () -> "[unifyMSub] CObj BEFORE");
-           dprint (fun () -> "[unifyMSub] cPsi = " ^ P.dctxToString Empty cPsi);
-           dprint (fun () -> "[unifyMSub] cPhi = " ^ P.dctxToString Empty cPhi);
-           let cPsi' = Whnf.cnormDCtx (cPsi, Whnf.m_id) in
+          (let cPsi' = Whnf.cnormDCtx (cPsi, Whnf.m_id) in
            let cPhi' = Whnf.cnormDCtx (cPhi, Whnf.m_id) in
              unifyDCtx1 Unification Empty  cPsi' cPhi';
-           dprint (fun () -> "[unifyMSub] CObj AFTER");
-           dprint (fun () -> "[unifyMSub] cPsi = " ^ P.dctxToString Empty cPsi);
-           dprint (fun () -> "[unifyMSub] cPhi = " ^ P.dctxToString Empty cPhi);
            unifyMSub' ms mt)
 
     let unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
@@ -3579,9 +3570,7 @@ let unify_phat psihat phihat =
     let unifyDCtx cD0 cPsi1 cPsi2 =
       let cPsi1' = Whnf.cnormDCtx (cPsi1, Whnf.m_id) in
       let cPsi2' = Whnf.cnormDCtx (cPsi2, Whnf.m_id) in
-        (dprint (fun () -> "[unifyDCtx] cPsi1 = " ^ P.dctxToString cD0 cPsi1');
-        dprint (fun () -> "             cPsi2 = " ^ P.dctxToString cD0 cPsi2');
-        unifyDCtx1 Unification cD0 cPsi1' cPsi2')
+         unifyDCtx1 Unification cD0 cPsi1' cPsi2'
 
 
     let matchTerm cD0 cPsi sM sN =

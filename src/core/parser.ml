@@ -776,7 +776,7 @@ GLOBAL: sgn;
           h = clf_head; ms = LIST0 clf_normal ->
             let spine = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Root (_loc, h, spine)
-          
+
         ]
 
     | RIGHTA
@@ -860,8 +860,8 @@ GLOBAL: sgn;
       |
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
-      
-      | 
+
+      |
          "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
 
@@ -1091,20 +1091,20 @@ GLOBAL: sgn;
                                           LF.Empty ctyp_decls in
          let branch =
            begin match mobj with
-            | PatEmpty _loc'   ->
+            | PatEmpty loc'   ->
                 (let pat = (match tau with
-                                None -> Comp.PatEmpty (_loc', pHat)
-                              | Some tau -> Comp.PatAnn (_loc', Comp.PatEmpty (_loc', pHat), tau))
+                                None -> Comp.PatEmpty (loc', pHat)
+                              | Some tau -> Comp.PatAnn (loc', Comp.PatEmpty (loc', pHat), tau))
                  in
-                  Comp.EmptyBranch (_loc, ctyp_decls', pat)
+                  Comp.EmptyBranch (loc', ctyp_decls', pat)
                 )
-           | PatCLFTerm (_loc', tM) ->
+           | PatCLFTerm (loc', tM) ->
                (let pat = (match tau with
-                               None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (_loc',  pHat,  tM))
-                             | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc,
-                                                    Comp.MetaObjAnn (_loc, pHat, tM)), tau))
+                               None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (loc',  pHat,  tM))
+                             | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(loc',
+                                                    Comp.MetaObjAnn (loc', pHat, tM)), tau))
                 in
-                  Comp.Branch (_loc, ctyp_decls', pat, e')
+                  Comp.Branch (loc', ctyp_decls', pat, e')
                )
            end in
 

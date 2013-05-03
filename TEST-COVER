@@ -121,7 +121,7 @@ sleep 1
  $INTERPRETER +t +coverage   copy/copy-simple.bel
  $INTERPRETER +t +coverage   copy/copy-simple-crec.bel
  $INTERPRETER +t +coverage   copy/copy-simple-explicit.bel
- $INTERPRETER +t +coverage   cut-elim-crec-cover.bel
+#  $INTERPRETER +t +coverage   cut-elim-crec-cover.bel
  $INTERPRETER +t +coverage   church-rosser/test.cfg
  $INTERPRETER +t +coverage   church-rosser/test-crec.cfg
  $INTERPRETER +t +coverage   church-rosser/test-crec-cover.cfg

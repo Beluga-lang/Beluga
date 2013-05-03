@@ -948,6 +948,7 @@ and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
       let m' = fmvApxTerm fMVs cD d_param  m in
       let s' = fmvApxSub fMVs cD d_param  s in
         Apx.LF.Dot (Apx.LF.Obj m', s')
+(*  | Apx.LF.SVar (u, s) -> *)
 
 
 and fmvApxSpine fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with

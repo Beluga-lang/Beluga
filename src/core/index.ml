@@ -517,6 +517,16 @@ let rec index_meta_obj cvars fcvars = function
       let (m', fcvars'') = index_term cvars  bvars fcvars' m in
         (Apx.Comp.MetaObjAnn (l, cPsi, m'), fcvars'')
 
+  | Ext.Comp.MetaSObj (l, phat, m) ->
+      let (psihat' , bvars) = index_psihat cvars fcvars phat in
+      let (m', fcvars') = index_sub cvars bvars fcvars m in
+        (Apx.Comp.MetaSub (l, psihat', m'), fcvars)
+
+  | Ext.Comp.MetaSObjAnn (l, cpsi, m) ->
+      let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
+      let (m', fcvars'') = index_sub cvars  bvars fcvars' m in
+        (Apx.Comp.MetaSubAnn (l, cPsi, m'), fcvars'')
+
 and index_meta_spine cvars fcvars = function
   | Ext.Comp.MetaNil ->
       (Apx.Comp.MetaNil , fcvars)

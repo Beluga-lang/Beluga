@@ -900,6 +900,21 @@ module Int = struct
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)
+      | Comp.MetaSObj (_, phat, tM) ->
+          let cond = lvl > 1 in
+          let cPsi = phatToDCtx phat in
+            fprintf ppf "%s[%a$ %a]%s"
+              (l_paren_if cond)
+               (fmt_ppr_lf_psi_hat cD 0) cPsi
+              (fmt_ppr_lf_sub cD cPsi 0) tM
+              (r_paren_if cond)
+      | Comp.MetaSObjAnn (_, cPsi, tM) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s[%a$ %a]%s"
+              (l_paren_if cond)
+               (fmt_ppr_lf_dctx cD 0) cPsi
+              (fmt_ppr_lf_sub cD cPsi 0) tM
+              (r_paren_if cond)
       | Comp.MetaParam (_, phat, h) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx phat in

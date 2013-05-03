@@ -2438,6 +2438,10 @@ let mctxPVarPos cD p =
         Comp.MetaObj (loc, cnorm_psihat phat m_id, norm (tM, LF.id))
     | Comp.MetaObjAnn (loc, cPsi, tM) ->
         Comp.MetaObjAnn (loc, normDCtx cPsi, norm (tM, LF.id))
+    | Comp.MetaSObj (loc, phat, tM) ->
+        Comp.MetaSObj (loc, cnorm_psihat phat m_id, normSub tM)
+    | Comp.MetaSObjAnn (loc, cPsi, tM) ->
+        Comp.MetaSObjAnn (loc, normDCtx cPsi, normSub tM)
     | Comp.MetaParam (loc, phat, PVar (PInst (_, {contents = Some h}, _, _, _ ), s)) ->
         begin match h with
           | BVar k -> let Head h' = LF.bvarSub k s in
@@ -2502,6 +2506,10 @@ let mctxPVarPos cD p =
         Comp.MetaObj (loc, cnorm_psihat phat t, norm (cnorm (tM, t), LF.id))
     | Comp.MetaObjAnn (loc, cPsi, tM) ->
         Comp.MetaObjAnn (loc, cnormDCtx (cPsi, t), norm (cnorm (tM, t), LF.id))
+    | Comp.MetaSObj (loc, phat, tM) ->
+        Comp.MetaSObj (loc, cnorm_psihat phat t, normSub (cnormSub (tM, t)))
+    | Comp.MetaSObjAnn (loc, cPsi, tM) ->
+        Comp.MetaSObjAnn (loc, cnormDCtx (cPsi, t), normSub (cnormSub (tM, t)))
 (*    | Comp.MetaParam (loc, phat, PVar (PInst (_, {contents = Some h}, _, _, _ ), s)) ->
         begin match h with
           | BVar k -> let Head h' = LF.bvarSub k s in Comp.MetaParam (loc, phat, h')

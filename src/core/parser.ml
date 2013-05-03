@@ -1322,6 +1322,12 @@ clf_pattern :
             | (_, _)                 ->
               raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
           end
+
+        | "<"; phat_or_psi = clf_hat_or_dctx ; "$"; tM = clf_sub_new; ">"   ->
+           begin match phat_or_psi with
+             | Dctx cPsi ->  Comp.MetaSObjAnn (_loc, cPsi, tM)
+             | Hat phat  ->  Comp.MetaSObj (_loc, phat, tM)
+           end
       ]
     ];
 

@@ -432,6 +432,7 @@ let rec isPatSub s = match s with
   | Apx.LF.Dot (Apx.LF.Head _, _s) -> false
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
+  | Apx.LF.SVar _ -> false
 
 
 (* ******************************************************************* *)
@@ -450,6 +451,7 @@ let rec isProjPatSub s = match s with
   | Apx.LF.Dot (Apx.LF.Head _, _s) -> false
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
+  | Apx.LF.SVar _ -> false
 
 let rec flattenProjPat s conv_list = match s with
   | Apx.LF.Id cpsi -> Apx.LF.Id cpsi
@@ -1639,7 +1641,9 @@ and elSub' loc recT cD cPsi s cPhi =
       let s = match s with
         | Apx.LF.Dot _ -> "Dot _ "
         | Apx.LF.EmptySub -> " . "
-        | Apx.LF.Id _ -> " .. " in
+        | Apx.LF.Id _ -> " .. "
+        | Apx.LF.SVar(u,s) -> "SVAR"
+        | Apx.LF.FSVar(u,s) -> "FSVAR" in
       "Expected substitution : " ^ P.dctxToString cD cPsi  ^ " |- " ^ s ^ " : " ^ P.dctxToString cD cPhi);
     raise SubTypingFailure
 

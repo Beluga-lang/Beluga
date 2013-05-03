@@ -1878,6 +1878,11 @@ let collectCDecl p cQ cdecl = match cdecl with
       let (cQ2, tA')    = collectTyp p cQ1 phat (tA, LF.id) in
         (cQ2, I.PDecl (u, tA', cPsi'))
   | I.CDecl _ -> (cQ, cdecl)
+  | I.SDecl (u, cPhi, cPsi) ->
+      let phat = Context.dctxToHat cPsi in
+      let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
+      let (cQ2, cPhi')    = collectDctx (Syntax.Loc.ghost) p cQ1 phat cPhi in
+        (cQ2, I.SDecl (u, cPhi', cPsi') )
 
 let rec collectCompKind p cQ cK = match cK with
   | Comp.Ctype _ -> (cQ, cK)
@@ -1904,6 +1909,15 @@ let rec collect_meta_obj p cQ cM = match cM with
       let (cQ', phat') = collectHat p cQ phat in
       let (cQ'', h') = collectHead p cQ' phat loc (h, LF.id) in
         (cQ'', Comp.MetaParam (loc, phat', h'))
+  | Comp.MetaSObj (loc, phat, tM) ->
+      let (cQ', phat') = collectHat p cQ phat in
+      let (cQ', tM') = collectSub p cQ' phat' tM in
+        (cQ', Comp.MetaSObj (loc, phat', tM'))
+  | Comp.MetaSObjAnn (loc, cPsi, tM) ->
+      let phat = Context.dctxToHat cPsi in
+      let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
+      let (cQ'', tM') = collectSub p cQ' phat tM in
+        (cQ'', Comp.MetaSObjAnn (loc, cPsi', tM'))
 
 and collect_meta_spine p cQ cS = match cS with
   | Comp.MetaNil -> (cQ, Comp.MetaNil)
@@ -2191,6 +2205,10 @@ let abstractMVarCdecl cQ offset cdecl = match cdecl with
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
         I.PDecl(p, tA', cPsi')
   | I.CDecl _ -> cdecl
+  | I.SDecl (s, cPhi, cPsi) ->
+      let cPsi' = abstractMVarDctx cQ offset cPsi in
+      let cPhi' = abstractMVarDctx cQ offset cPhi in
+        I.SDecl(s, cPhi', cPsi')
 
 let rec abstractMVarCompKind cQ (l,offset) cK = match cK with
   | Comp.Ctype _loc -> cK
@@ -2215,6 +2233,14 @@ let rec abstractMVarMetaObj cQ offset cM = match cM with
       let phat' = abstractMVarHat cQ offset phat in
       let h' = abstractMVarHead cQ offset h in
         Comp.MetaParam (loc, phat', h')
+  | Comp.MetaSObj (loc, phat, tM) ->
+      let phat' = abstractMVarHat cQ offset phat in
+      let tM' = abstractMVarSub  cQ  offset tM in
+        Comp.MetaSObj (loc, phat', tM')
+  | Comp.MetaSObjAnn (loc, cPsi, tM) ->
+      let cPsi' = abstractMVarDctx cQ offset cPsi in
+      let tM' = abstractMVarSub  cQ  offset tM in
+        Comp.MetaSObjAnn (loc, cPsi', tM')
 
 and abstractMVarMetaSpine cQ offset cS = match cS with
   | Comp.MetaNil -> Comp.MetaNil

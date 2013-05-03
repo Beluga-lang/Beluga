@@ -62,7 +62,7 @@ let printOneHole i =
         ()
 
 let printNumHoles () =
-  Printf.printf "\nThe number of holes is %d.\n" (DynArray.length holes)
+  Printf.printf "%d\n" (DynArray.length holes)
 
 let printHolePos i =
   try

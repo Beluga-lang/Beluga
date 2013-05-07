@@ -222,12 +222,12 @@ its buffer."
   "Stops the beli process and its buffer, if it exists."
   (condition-case nil
       (with-current-buffer beli-buffer
-        (progn
-          (comint-kill-subjob)
-          (kill-buffer beli-buffer)))
+        (comint-kill-subjob))
+    (kill-buffer beli-buffer)
     (error nil)))
 
 (defun beli-send (cmd)
+  "Sends commands to beli."
   (with-current-buffer beli-buffer
     (goto-char (point-max))
     (insert (concat "%:" cmd))
@@ -239,17 +239,21 @@ its buffer."
         (accept-process-output)))))
 
 (defun beli-receive ()
+  "Reads the last output of beli."
   (with-current-buffer beli-buffer
     (buffer-substring-no-properties comint-last-input-end (point-max))))
 
 (defun beli-load ()
+  "Loads the current file in beli."
   (interactive)
   (beli-send (concat "load " (buffer-file-name))))
 
-(defvar beli-holes-overlays ())
+(defvar beli-holes-overlays ()
+  "Will contain the list of hole overlays so that they can be resetted".)
 
 ;; Returns the initial position of line n (hackish much?)
 (defun beli-line-pos (n)
+  "Returns the initial position of line n"
   (let ((currp (point))
         (res (progn (goto-line n) (point))))
     (progn
@@ -257,6 +261,7 @@ its buffer."
       res)))
 
 (defun beli-create-overlay (pos)
+  "Creates an overlay at the position designed by the input."
   (let ((file-name (nth 0 pos))
         (start-line (nth 1 pos))
         (start-bol (nth 2 pos))
@@ -270,16 +275,19 @@ its buffer."
                      (- stop-off stop-bol)))))
 
 (defun beli-hole-pos (num)
+  "Returns the position of the hole designed by the input."
   (beli-send (concat "lochole " (number-to-string num)))
   (sit-for 0 500)
   (read (beli-receive)))
 
 (defun beli-hole-num ()
+  "Returns the number of holes in the loaded file."
   (beli-send "countholes")
   (sit-for 0 500)
   (string-to-number (beli-receive)))
 
 (defun beli-highlight-holes ()
+  "Creates overlays for each of the holes and color them."
   (interactive)
   (let ((numholes (beli-hole-num)))
     (dotimes (i numholes)
@@ -295,8 +303,6 @@ its buffer."
   (overlay-put beli-holes-overlays 'priority 0)
   (overlay-put beli-holes-overlays 'face '(background-color . "white")))
 
-(defun beli-filter input
-  input)
 
 ;;---------------------------- Loading of the mode ----------------------------;;
 
@@ -325,12 +331,6 @@ its buffer."
        (append '(?|) (if (boundp 'electric-indent-chars)
                          electric-indent-chars
                        '(?\n))))
-  (set (make-local-variable 'beli-buffer) ())
-  (set (make-local-variable 'beli-holes-overlays) ())
-  (beli-start)
-
-
-;;---------------------------- SMIE ----------------------------;;
 
   ;; SMIE setup.
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
@@ -357,8 +357,14 @@ its buffer."
 
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
-         (font-lock-syntactic-keywords . nil))))
+         (font-lock-syntactic-keywords . nil)))
 
+  ;; Beli startup.
+  (set (make-local-variable 'beli-buffer) ())
+  (set (make-local-variable 'beli-holes-overlays) ())
+  (beli-start))
+
+;;---------------------------- SMIE ----------------------------;;
 ;;; Our own copy of (a version of) SMIE.
 
 (defun belugasmie-set-prec2tab (table x y val &optional override)

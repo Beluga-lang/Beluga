@@ -1,8 +1,5 @@
 open Core
 open Format
-open ExtString.String
-open Store.Cid
-open Pretty.Int.DefaultPrinter
 
 module Options = struct
   let readline = ref true

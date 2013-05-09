@@ -5,6 +5,8 @@ module Loc = Camlp4.PreCast.Loc
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
+type hole = Loc.t * LF.mctx * Comp.gctx * (Comp.typ * LF.msub)
+
 let holes = DynArray.create ()
 
 let none () = DynArray.empty holes
@@ -42,7 +44,7 @@ let gctxToString cD =
       toString cG ^ "\n" ^ shift ^ (nameString n) ^ ": " ^ P.compTypToString cD tau
   in toString ++ Whnf.normCtx
 
-let printOne (loc, cD, cG, (tau, theta)) =
+let (printOne : hole -> unit) (loc, cD, cG, (tau, theta)) =
   Printf.printf "\n%s\n- Meta-Context: %s\n- Context: %s\n- Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
@@ -63,18 +65,10 @@ let printOneHole i =
         else
           ()
 
-let printNumHoles () =
-  Printf.printf "%d\n" (DynArray.length holes)
+let getNumHoles () = DynArray.length holes
 
-let printHolePos i =
-  if none () then Printf.printf "There is no hole at all!!\n"
-  else
+let getHolePos i =
     try
-      let  (loc, _, _, (_, _)) = DynArray.get holes i in
-      let  (file_name, start_line, start_bol, start_off, stop_line, stop_bol, stop_off, _ghost) = Loc.to_tuple loc in
-      Printf.printf "(\"%s\" %d %d %d %d %d %d)\n" file_name start_line start_bol start_off stop_line stop_bol stop_off
+      let  (loc, _, _, (_, _)) = DynArray.get holes i in Some loc
     with
-      | DynArray.Invalid_arg (_, _, _) -> if !Debug.chatter != 0 then
-          Printf.printf "There is no %d-th hole.\n" i
-        else
-          ()
+      | DynArray.Invalid_arg (_, _, _) -> None

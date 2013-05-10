@@ -29,7 +29,6 @@ ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V
 
 
 rec vs :  [. eval E V] -> [. value V] =
-
 fn e =>
  case e of
    [. ev_z] =>  [. v_z]

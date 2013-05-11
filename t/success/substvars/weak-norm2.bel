@@ -58,15 +58,15 @@ datatype Reduce : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
 
 
 rec eval : {g:ctx}{h:ctx}{A:[g.tp]}{M:[g.tm (A ..)]}{#S:g[h]} Reduce [h] [h. A #S[..] ] [h. M #S[..] ] =
-mlam g => mlam h => mlam A => mlam M => mlam #S => case [g. M ..] of
+mlam g => mlam h => mlam A => mlam M => mlam #S =>
+ case [g. M ..] of
 %| [g,x:tm T. x] => let Cons rs' r = rs in r
 %| [g,x:tm T. #p ..] => let Cons rs' r = rs in eval [g. #p ..] rs'
 | {T:[.tp]}{T2:[.tp]}{M1: [g.tm (arr T2 T)]}{M2:[g.tm T2]}
   [g. app (M1 ..) (M2 ..)]  =>
   let Arr f = eval [g] [h] [. (arr T2 T)] [g. M1 ..] [h $ #S[..] ] in
                               f [h] [h. M1 #S[..] ] [h. M2 #S[..]] Zero (eval [g] [h] [.T2] [g. M2 ..] [h $ #S[..] ])
+
 %| [g. lam (\x. M1 .. x)] => % This case is definitely wrong, but roughly the idea...
 %   mlam h' => mlam F => mlam N => fn wkn-f-m => fn rn => eval [g,x:tm _. M1 .. x] (Cons (all-wkn wkn-f-m rs) rn)
 ;
-
-

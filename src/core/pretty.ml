@@ -610,6 +610,7 @@ module Int = struct
 
       | LF.PInst _ ->               fprintf ppf "?PINST _ "
       | LF.Inst _ ->               fprintf ppf "?INST _ "
+      | LF.SInst _ ->               fprintf ppf "SINST _ "
 
     and fmt_ppr_lf_ctx_var cD ppf = function
       | LF.CInst (n, {contents = None}, _schema, _cD, theta) ->

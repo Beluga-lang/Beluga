@@ -77,6 +77,7 @@ module LF = struct
     | Offset of offset
     | MInst  of Int.LF.normal * Int.LF.typ * Int.LF.dctx
     | PInst  of Int.LF.head * Int.LF.typ * Int.LF.dctx
+    | SInst  of Int.LF.sub * Int.LF.dctx * Int.LF.dctx
 
   and dctx =
     | Null

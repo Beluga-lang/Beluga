@@ -1348,21 +1348,21 @@ and elExp' cD cG i = match i with
               let cPsi' = C.cnormDCtx (cPsi, theta) in
               (* let psihat' = Context.dctxToHat cPsi'  in *)
                 begin match mC with
-                  | Apx.Comp.MetaSub (loc', psihat, m) ->
+                  | Apx.Comp.MetaSub (loc', psihat, s) ->
                       begin try
                         let _      = dprint (fun () -> "[elExp']  MApp -  MetaSub") in
                         let _      = dprint (fun () -> "[elExp'] elaborate"^
                                                " MetaSub against type " ^
                                                (P.dctxToString cD cPsi') ^
                                                (P.dctxToString cD (C.cnormDCtx (tA, theta)))) in
-                        let tM'    = Lfrecon.elSub loc' Lfrecon.Pibox cD cPsi' m (C.cnormDCtx (tA, theta)) in
-                        let theta' = Int.LF.MDot (Int.LF.SObj (psihat, tM'), theta) in
+                        let s'    = Lfrecon.elSub loc' Lfrecon.Pibox cD cPsi' s (C.cnormDCtx (tA, theta)) in
+                        let theta' = Int.LF.MDot (Int.LF.SObj (psihat, s'), theta) in
                           (dprint (fun () -> "[elSyn] MApp : tau = " ^
                                      P.compTypToString cD (Whnf.cnormCTyp tau_theta' ));
-                           dprint (fun () -> "[elSyn] tM  = " ^ P.subToString cD cPsi' tM' );
+                           dprint (fun () -> "[elSyn] s'  = " ^ P.subToString cD cPsi' s' );
                            dprint (fun () -> "[elSyn] tau_theta = " ^
                                      P.compTypToString cD (Whnf.cnormCTyp (tau, theta'))) ;
-                           (Int.Comp.MApp (loc, i', (psihat, Int.Comp.SubstObj tM')), (tau, theta')))
+                           (Int.Comp.MApp (loc, i', (psihat, Int.Comp.SubstObj s')), (tau, theta')))
                       with Error.Violation msg ->
                         dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
                         raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
@@ -1443,7 +1443,7 @@ and elExp' cD cG i = match i with
   | Apx.Comp.MAnnApp (loc, i, (psi, m)) ->
       let _ = dprint (fun () -> "Reconstructing MAnnApp\n") in
       let (i0, tau_t) = (elExp' cD cG i) in
-      let _ = (dprint (fun () -> "[elExp'] MApp : " ^
+      let _ = (dprint (fun () -> "[elExp'] MAnnApp : " ^
                         P.expSynToString cD cG (Whnf.cnormExp' (i0, Whnf.m_id))) ;
               dprint (fun () -> "             : " ^
                         P.compTypToString cD (Whnf.cnormCTyp tau_t) )) in
@@ -1482,7 +1482,10 @@ and elExp' cD cG i = match i with
               let i'' = Int.Comp.MApp (loc, i_norm, (psihat', Int.Comp.NormObj tM'))  in
               let tau'' = Whnf.cnormCTyp (tau0, theta') in
                 (dprint (fun () -> "[elExp] MAnnApp Reconstructed EXPLICIT ARG:\n      " ^
-                           P.expSynToString cD cG (Whnf.cnormExp' (i'', Whnf.m_id)) ^ "\n");
+                           P.expSynToString cD cG (Whnf.cnormExp' (i'',  Whnf.m_id)) ^ "\n");
+                 dprint (fun () -> "[elExp] MAnnApp tau " ^ P.compTypToString cD (Whnf.cnormCTyp  tau_theta'));
+                 dprint (fun () -> "[elExp] MAnnApp theta' = " ^ P.msubToString cD theta');
+                 dprint (fun () -> "[elExp] MAnnApp of type tau'' :\n      " ^ P.compTypToString cD tau'');
                    (i'', (tau'', Whnf.m_id)))
             with Error.Violation msg ->
               dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);

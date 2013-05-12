@@ -35,6 +35,7 @@ type error =
   | CtxVarSchema of Id.name
   | SigmaTypImpos of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | SpineLengthMisMatch
+  | IllTypedSubVar of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
 
 exception Error of Syntax.Loc.t * error
 
@@ -84,6 +85,13 @@ let _ = Error.register_printer
 
         | IllTypedSub (cD, cPsi, s, cPsi') ->
           Format.fprintf ppf "Ill-typed substitution.@.";
+          Format.fprintf ppf "    Does not take context: %a@."
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi');
+          Format.fprintf ppf "    to context: %a@."
+            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
+
+        | IllTypedSubVar (cD, cPsi, cPsi') ->
+          Format.fprintf ppf "Ill-typed substitution variable.@.";
           Format.fprintf ppf "    Does not take context: %a@."
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi');
           Format.fprintf ppf "    to context: %a@."
@@ -1546,9 +1554,7 @@ and elClosedTerm' recT cD cPsi r = match r with
                 raise (Error (Syntax.Loc.ghost, CompTypAnn)))
 
 and elSub loc recT cD cPsi s cPhi =
-  try
     elSub' loc recT cD (Whnf.cnormDCtx (cPsi, Whnf.m_id)) s (Whnf.cnormDCtx (cPhi, Whnf.m_id))
-  with SubTypingFailure -> raise (Error (loc, IllTypedSub (cD, cPsi, s, cPhi)))
 
 and elSub' loc recT cD cPsi s cPhi =
   match (s, cPhi) with
@@ -1558,12 +1564,20 @@ and elSub' loc recT cD cPsi s cPhi =
       | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
     end
 
-  | (Apx.LF.SVar (Apx.LF.Offset offset, s), (Int.LF.CtxVar phi as _cPhi)) ->
+  | (Apx.LF.SVar (Apx.LF.Offset offset, s), (Int.LF.CtxVar phi as cPhi)) ->
     let (_, Int.LF.CtxVar phi', cPhi2) = Whnf.mctxSDec cD offset in
     if phi = phi' then
       let s' = elSub' loc recT cD cPsi s cPhi2 in
       Int.LF.SVar (Int.LF.Offset offset, 0, s')
-    else  raise SubTypingFailure
+    else
+       raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
+
+  | (Apx.LF.SVar (Apx.LF.SInst (s0, cPhi', cPhi2), s), (Int.LF.CtxVar phi as cPhi)) ->
+     if Whnf.convDCtx cPhi cPhi' then
+       let s' = elSub' loc recT cD cPsi s cPhi2 in
+          Substitution.LF.comp s0 s'
+     else
+       raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
 
   | (Apx.LF.Id _ , Int.LF.DDec (_cPhi', _decl)) ->
     elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi
@@ -1620,8 +1634,9 @@ and elSub' loc recT cD cPsi s cPhi =
         | Apx.LF.Id _ -> " .. "
         | Apx.LF.SVar(u,s) -> "SVAR"
         | Apx.LF.FSVar(u,s) -> "FSVAR" in
-      "Expected substitution : " ^ P.dctxToString cD cPsi  ^ " |- " ^ s ^ " : " ^ P.dctxToString cD cPhi);
-    raise SubTypingFailure
+      "Expected substitution : " ^ P.dctxToString cD cPsi  ^ " |- " ^ s ^ " : "  ^ P.dctxToString cD cPhi);
+       raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
+
 
 
 and elHead loc recT cD cPsi = function

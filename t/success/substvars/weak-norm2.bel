@@ -48,24 +48,51 @@ datatype Halts : {g:ctx} {A:[.tp]} {M:[g.tm A]} ctype =
 
 datatype Reduce : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
 | Base : Halts [g] [.i] [g. M ..] -> Reduce [g] [g . i] [g. M ..]
-| Arr :  {g:ctx}{A:[g.tp]}{B:[g.tp]}{M:[g.tm (arr (A ..) (B ..))]}{N:[g.tm (A ..)]}
-         ({h:ctx} {#R:g[h]} {N:[h. tm (A #R[..])]}
-          IsWeakening [g] [h] <h $ #R[..] > ->
-          Reduce [h] [h. A #R[..] ] [h. N ..] -> Reduce [h] [h. B #R[..] ] [h. app (M #R[..]) (N ..)])
-           -> Reduce [g] [g. arr (A ..) (B ..)] [g. M ..]
-
+| Arr :  {h:ctx}{A:[h.tp]}{B:[h.tp]}{M:[h.tm (arr (A ..) (B ..))]}
+         ({N:[h.tm (A ..)]}
+          Reduce [h] [h. A ..] [h. N ..] -> Reduce [h] [h. B .. ] [h. app (M ..) (N ..)])
+           -> Reduce [h] [h. arr (A ..) (B ..)] [h. M ..]
 ;
 
+%{
+Andrew's definition:
+
+| Arr :  {h0:ctx}{A:[h0.tp]}{B:[h0.tp]}{M:[h0.tm (arr (A ..) (B ..))]}{h0:[g.tm (A ..)]}
+         ({h:ctx} {#R:h0[h]} {N:[h. tm (A #R[..])]}
+          IsWeakening [h0] [h] <h $ #R[..] > ->
+          Reduce [h] [h. A #R[..] ] [h. N ..] -> Reduce [h] [h. B #R[..] ] [h. app (M #R[..]) (N ..)])
+           -> Reduce [h0] [h0. arr (A ..) (B ..)] [h0. M ..]
+}%
+
+%{
+BP: I would define reducible substitutions:
+
+datatype RedSub : {#S:g[h]} ctype =
+| Nil : RedSub [h $ . ]
+| Dot : RedSub [h $ #S[..] ] -> Reduce [h] [h. A ..] [h.M ..]
+         -> RedSub [h $ #S[..] (M ..) ]
+
+rec redVal : {g:ctx}{h:ctx}{#S:g[h]}{#p:[g.tm T ..]} RedSub [h $ #S[..]]
+              ->   {[h.tm (T #S[..]) ] = ?
+% Defined inductively on g (or #p or RedSub )
+}%
 
 rec eval : {g:ctx}{h:ctx}{A:[g.tp]}{M:[g.tm (A ..)]}{#S:g[h]} Reduce [h] [h. A #S[..] ] [h. M #S[..] ] =
 mlam g => mlam h => mlam A => mlam M => mlam #S =>
  case [g. M ..] of
-%| [g,x:tm T. x] => let Cons rs' r = rs in r
+% | [g,x:tm T. x] =>
+
 %| [g,x:tm T. #p ..] => let Cons rs' r = rs in eval [g. #p ..] rs'
-| {T:[g.tp]}{T2:[g.tp]}{M1: [g.tm (arr (T2 ..) (T ..))]}{M2:[g.tm (T2 ..)]}
-  [g. app (M1 ..) (M2 ..)]  =>
-  let Arr [g] [g.T2 ..] [g.T1 ..] [g.M1 ..] [g.M2 ..] f =
-    eval [g] [h] [g. arr (T2 ..) (T ..)] [g. M1 ..] [h $ #S[..] ] in ?
+| {T:[g'.tp]}{T2:[g'.tp]}{M1: [g'.tm (arr (T2 ..) (T ..))]}{M2:[g'.tm (T2 ..)]}
+  [g'. app (M1 ..) (M2 ..)]  =>
+  let rN : Reduce [h] [h.A' ..] [h.N2 ..] =
+      eval [g'] [h] [g'. T2 ..] [g'. M2 ..] [h $ #S[..] ] in
+  let Arr [h0] [h0.S2 ..] [h0.S1 ..] [h0.N1 ..] f =
+    eval [g'] [h] [g'. arr (T2 ..) (T ..)] [g'. M1 ..] [h $ #S[..] ] in
+   f [h.N2 ..] rN
+
+% Andrew's attempt...
+%   f [h'] [h $ #S[..]]  [h. N1 #S[..] ]  Zero ?
 %   f [h] [h $ #S[..]]  [h. M1 #S[..] ] [h. M2 #S[..]] Zero ?
  % (eval [g] [h] [g.T2 ..] [g. M2 ..] [h $ #S[..] ])
 

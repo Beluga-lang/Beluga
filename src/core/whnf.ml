@@ -2052,12 +2052,8 @@ and convSub subst1 subst2 = match (subst1, subst2) with
       n = k && psi = psi'
 
   | (SVar (Offset s1, n1, sigma1), SVar (Offset s2, n2, sigma2)) ->
-      (dprint (fun () -> "[convSub] ..");
-       if s1 = s2 then
-         (dprint (fun () -> "Offsets equal ");
-          n1 = n2 && convSub sigma1 sigma2)
-       else
-         (dprint (fun () -> "Offsets not equal "); false))
+     s1 = s2 &&
+     n1 = n2 && convSub sigma1 sigma2
 
   | (SVar (SInst (_, s1, _, _ , _), n1, sigma1), SVar (SInst(_, s2, _ , _ , _), n2, sigma2)) ->
       s1 == s2 && n1 = n2 && convSub sigma1 sigma2

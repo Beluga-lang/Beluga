@@ -984,6 +984,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
         (* must be defined -- n = offset
          * otherwise it is undefined
          *)
+    | (SVar (s, 0, sigma), CtxVar psi) ->
+        let cPsi' = (match s with
+                     | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  offset in cPsi'
+                     | SInst (_ , {contents=None}, _cPhi, cPsi', _ ) -> cPsi'
+                    ) in
+        SVar(s, 0, invSub cD0 phat (sigma, cPsi') ss rOccur)
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ssubst with
@@ -1556,6 +1562,19 @@ let rec blockdeclInDctx cPsi = match cPsi with
     | (Shift (_psi, _n), Null) -> (id, Null)
 
     | (Shift (_psi', _n), CtxVar psi) -> (id, CtxVar psi)
+
+    | (SVar (s, 0, sigma), CtxVar psi) ->
+        (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
+               D ;Psi |- sigma : Phi
+               D;Psi'' |- ss <= Psi
+               [ss] ([s[sigma] ] id ) exists
+        *)
+        let cPsi' = (match s with
+                     | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  offset in cPsi'
+                     | SInst (_ , {contents=None}, _cPhi', cPsi', _ ) -> cPsi'
+                    ) in
+        let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
+          (id,CtxVar psi)
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', TypDecl(x, tA))) ->
         let (_, ssubst) = ss in

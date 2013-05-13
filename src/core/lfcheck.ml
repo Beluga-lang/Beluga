@@ -351,10 +351,16 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
 
     | cPhi, SVar (Offset offset, 0, s'), CtxVar psi' ->
       let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in
-      if cPhi1 = CtxVar psi' then
-	checkSub loc cD cPsi s' cPsi1
+      if Whnf.convDCtx (Whnf.normDCtx cPhi1) (Whnf.normDCtx (CtxVar psi')) then
+	checkSub loc cD cPhi s' cPsi1
       else
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+        (dprint (fun () -> "[checkSub] Illtyped substitution : " ^
+                   P.dctxToString cD cPhi ^ "\n     |- "
+                   ^ P.subToString cD cPhi s ^ " \n    <= "
+                   ^ P.dctxToString cD cPsi');
+         dprint (fun () -> "[checkSub] SVar : " ^ P.dctxToString cD cPhi1 ^
+                   "[ " ^ P.dctxToString cD cPsi1 ^ " ]");
+	raise (Error (loc, IllTypedSub (cD, cPsi, s, cPsi'))))
 
     | cPhi, SVar (Offset offset, k, s'), DDec(cPsi,_tX) ->
       if k > 0 then
@@ -803,6 +809,22 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
             checkMSub loc cD ms cD1'
           else
             raise (Error.Violation ("Contextual substitution ill-typed - 3 "))
+
+
+    | MDot (MV p, ms), Dec(cD1', SDecl (_u, cPhi, cPsi)) ->
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
+        let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
+        let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD p in
+          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convDCtx cPhi1 cPhi' then
+            checkMSub loc cD ms cD1'
+          else
+            raise (Error.Violation ("Contextual substitution ill-typed - 4 "))
+
+    | MDot (SObj (_, s), ms), Dec(cD1', SDecl (_u, cPhi, cPsi)) ->
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
+        let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
+          (checkSub loc cD cPsi' s cPhi';
+           checkMSub loc cD ms cD1' )
 
     | MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in

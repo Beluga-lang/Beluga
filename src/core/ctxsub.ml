@@ -1001,7 +1001,7 @@ let rec mctxToMSub cD = match cD with
       let _ = dprint (fun () -> "tA =" ^ P.dctxToString cD' cPhi) in
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let cPhi'   = Whnf.cnormDCtx (cPhi, t) in
-      let u     = Whnf.newSVar (Some n) (cPsi', cPhi') in
+      let u     = Whnf.newSVar (Some n) (cPhi', cPsi') in
       let phat  = Context.dctxToHat cPsi' in
         MDot (SObj (phat, SVar (u, 0, Substitution.LF.id)) , t)
 

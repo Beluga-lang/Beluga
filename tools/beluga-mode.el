@@ -249,7 +249,7 @@ its buffer."
   (beli-send (concat "load " (buffer-file-name))))
 
 (defvar beli-holes-overlays ()
-  "Will contain the list of hole overlays so that they can be resetted".)
+  "Will contain the list of hole overlays so that they can be resetted.")
 
 ;; Returns the initial position of line n (hackish much?)
 (defun beli-line-pos (n)

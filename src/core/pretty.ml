@@ -305,6 +305,10 @@ module Int = struct
         | _ -> true)
       in
       let rec fmt_head_with proj = function
+      | LF.HClo (h, s) ->
+          fprintf ppf "%a[%a]"
+            (fmt_ppr_lf_head cD cPsi lvl) h
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
       | LF.BVar x  ->
           fprintf ppf "%s%s"
             (R.render_bvar cPsi x)

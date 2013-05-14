@@ -3241,14 +3241,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     | (Comp.MetaSObj (_, phat, s) , t) , (Comp.MetaSObj (_, phat', s') , t') ->
         let SDecl (_u, _cPhi, cPsi) = cdecl in
+        let _ = dprint (fun () -> "[unifyMetaObj] SObj ") in
         let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
           unifySub Unification cD cPsi1
             (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
 
-
-    (* Add MetaParam Obj ... *)
-
-    | _ -> raise (Failure "MetaObj mismatch")
+    | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') (cK, mt) = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
@@ -3266,7 +3264,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
           let mt' = begin match mOt with
                       | Comp.MetaCtx (loc, cPsi0) -> MDot (CObj(cPsi0), mt)
                       | Comp.MetaObj (loc, psihat, tM) -> MDot (MObj (psihat, tM), mt)
-                      | Comp.MetaParam (loc, psihat, h) -> MDot (PObj (psihat, h), mt)
+                      | Comp.MetaParam (loc, psihat, h) -> MDot (PObj (psihat,  h), mt)
+                      | Comp.MetaSObj (loc, phat, s) -> MDot (SObj (phat, s), mt)
                     end in
           unifyMetaSpine cD (mS, t) (mS', t') (cK', mt');
           dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES " ^ P.metaObjToString cD mOt ^ " == " ^

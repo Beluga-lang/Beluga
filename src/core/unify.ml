@@ -3202,6 +3202,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
     | (Comp.MetaCtx (_, cPsi), t) , (Comp.MetaCtx (_, cPsi'), t') ->
         unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
 
+    | (Comp.MetaParam (_, phat, h) , t) , (Comp.MetaParam (_, phat', h') , t') ->
+        let PDecl (_u, _tA, cPsi) = cdecl in
+        let cPsi = Whnf.cnormDCtx (cPsi, mt) in
+          unifyHead Unification cD cPsi
+            (Whnf.cnormHead (h , t)) (Whnf.cnormHead (h', t'))
+
     | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') ->
         let MDecl (_u, _tA, cPsi) = cdecl in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
@@ -3225,6 +3231,20 @@ let rec blockdeclInDctx cPsi = match cPsi with
           unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
           unifyTerm Unification cD cPsi1
             (Whnf.cnorm (tR, t), id) (Whnf.cnorm (tR', t'), id)
+
+    | (Comp.MetaSObjAnn (_, cPsi, s) , t) , (Comp.MetaSObjAnn (_, cPsi', s') , t') ->
+        let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
+        let cPsi2 = Whnf.cnormDCtx (cPsi', t') in
+          unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
+          unifySub Unification cD cPsi1
+            (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
+
+    | (Comp.MetaSObj (_, phat, s) , t) , (Comp.MetaSObj (_, phat', s') , t') ->
+        let SDecl (_u, _cPhi, cPsi) = cdecl in
+        let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
+          unifySub Unification cD cPsi1
+            (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
+
 
     (* Add MetaParam Obj ... *)
 

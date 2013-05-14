@@ -1443,6 +1443,7 @@ and cnorm (tM, t) = match tM with
 
 
   and cnormFront (ft, t) = match ft with
+    | Head (HClo (h , s))       -> Head (HClo (h, cnormSub (s,t)))
     | Head (BVar _ )            -> ft
     | Head (Const _ )           -> ft
     | Head (PVar (Offset i, r)) ->

@@ -60,7 +60,9 @@ module LF = struct
     | FMVar of name * sub                     (* free meta-variable for type
                                                  reconstruction                 *)
     | FPVar of name * sub                     (* free parameter variable for type
-                                                reconstruction                 *)
+                                                 reconstruction                 *)
+    | HClo  of head * sub                    (*   | HClo(x, #S[sigma]           *)
+                                             (*   | HClo(Proj(x,i), #S[sigma]   *)
 
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)

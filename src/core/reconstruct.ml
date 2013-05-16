@@ -2354,9 +2354,9 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
               *)
             let cG   = Whnf.normCtx cG in
             let cG'  = Whnf.cnormCtx (cG, t') in
-              (*    let _ = (dprint (fun () -> "tau' = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) ;
-                    dprint (fun () -> "t'   = " ^ P.msubToString cD1'' t' )) in
-              *)
+            let _ = (dprint (fun () -> "tau' = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) ;
+                     dprint (fun () -> "t'   = " ^ P.msubToString cD1'' t' )) in
+
             let tau'    = Whnf.cnormCTyp (tau, Whnf.mcomp theta t') in
 
             let _       = dprint (fun () -> "[elBranch] Elaborate branch \n" ^

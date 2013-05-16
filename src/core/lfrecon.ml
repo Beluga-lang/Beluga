@@ -1189,8 +1189,8 @@ and elTerm' recT cD cPsi r sP = match r with
 			    " : " ^ P.typToString cD cPhi (tQ, Substitution.LF.id)) in
           let _ = dprint (fun () -> " in cD = " ^ P.mctxToString cD ) in
 
-          let _ = dprint (fun () -> "\n Show cPsi = " ^ P.dctxToString cD  cPsi) in
-          let _ = dprint (fun () -> "\n Show cPhi = " ^ P.dctxToString cD cPhi) in
+          let _ = dprint (fun () -> "\n [elTerm] Show cPsi = " ^ P.dctxToString cD  cPsi) in
+          let _ = dprint (fun () -> "\n [elTerm] Show cPhi = " ^ P.dctxToString cD cPhi) in
           let s'' = elSub loc recT cD cPsi s' cPhi in
 
           let _ = dprint (fun () -> "[elTerm] " ^ P.dctxToString cD cPsi ^ " |- " ^ P.subToString cD cPsi s'' ^ " : " ^ P.dctxToString cD cPhi ) in
@@ -1588,9 +1588,10 @@ and elSub' loc recT cD cPsi s cPhi =
       | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
     end
 
-  | (Apx.LF.SVar (Apx.LF.Offset offset, s), (Int.LF.CtxVar phi as cPhi)) ->
-    let (_, Int.LF.CtxVar phi', cPhi2) = Whnf.mctxSDec cD offset in
-    if phi = phi' then
+  | (Apx.LF.SVar (Apx.LF.Offset offset, s), cPhi) ->
+    let (_, cPhi1, cPhi2) = Whnf.mctxSDec cD offset in
+    if  Whnf.convDCtx (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+                      (Whnf.cnormDCtx (cPhi1, Whnf.m_id)) then
       let s' = elSub' loc recT cD cPsi s cPhi2 in
       Int.LF.SVar (Int.LF.Offset offset, 0, s')
     else

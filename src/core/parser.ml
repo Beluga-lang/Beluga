@@ -834,6 +834,10 @@ GLOBAL: sgn;
           LF.Id (_loc)
 
       |
+         "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
+          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
+
+      |
         sigma = SELF;   h = clf_head ->
           LF.Dot (_loc, sigma, LF.Head h)
 
@@ -851,9 +855,6 @@ GLOBAL: sgn;
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
 
-      |
-         "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
-          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
 
       ]
     ]

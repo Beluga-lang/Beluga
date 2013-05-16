@@ -36,7 +36,7 @@ datatype Reduce : {g:ctx}{A:[g.tp]} {M:[g.tm (A ..)]} ctype =
           Reduce [g] [g . A ..] [g. N ..] -> Reduce [g] [g. B ..] [g . app (M ..) (N ..)])
            -> Reduce [g] [g. arr (A ..) (B ..)] [g. M ..]
 ;
-
+%{
 % TODO: Can we rewrite our definitions slightly so we don't need these? (Use Pis instead of ->s?)
 rec mstepTrans : (g:ctx){M:[g.tm A]} [g. mstep (M ..) (M' ..)] -> [g. mstep (M' ..) (M'' ..)] -> [g. mstep (M ..) (M'' ..)] =
 mlam M => fn s => fn s' => let [g. S ..] = s in let [g. S' ..] = s' in [g. trans (S ..) (S' ..)]
@@ -50,31 +50,32 @@ rec haltsMstep : (g:ctx) [g. mstep (M ..) (M' ..)] -> Halts [g] [g. A ..] [g. M'
 fn ms => fn h => let (h : Halts [g] [g. A ..] [g. M' ..]) = h in
 let Halts ms' v = h in Halts (mstepTrans [g. _] ms ms') v
 ;
-
+}%
 % CR2
-rec closed : Reduce [g] [g.A ..] [g. M' ..] -> [g. mstep (M ..) (M' ..)] -> Reduce [g] [g.A ..] [g. M ..] =
-fn r => fn s => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
+rec closed : Reduce [g] [g.A ..] [g. M' ..] -> [g. mstep (M ..) (M' ..)] -> Reduce [g] [g.A ..] [g. M ..] = ?
+%{fn r => fn s => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
 | Base ha => Base (haltsMstep s ha)
 | Arr [g] [g. A ..] [g. B ..] [g. M ..] ha f => Arr [g] [g. A ..] [g. B ..] [g. _]
   (haltsMstep s ha)
   (mlam N => fn rn => closed (f [g. N ..] rn) (mstepAppL [g. _] s))
+}%
 ;
-
+%{
 % CR1
 rec reify : Reduce [g] [g. A ..] [g. M ..] -> Halts [g] [g.A ..] [g. M ..] =
 fn r => let r : Reduce [g] [g. A ..] [g. M ..] = r in case r of
 | Base h => h
 | Arr [g] [g. A ..] [g. B ..] [g. M ..] ha f => ha
 ;
-
+}%
 datatype RedSub : {g:ctx}{h:ctx}{#S:g[h]} ctype =
 | Nil : {h:ctx} RedSub [] [h] <h $ ^ >
-| Dot : {g:ctx}{h:ctx}{A:[g. tp]}{#S:g[h]}{M:[h.tm (A #S[..])]}
+| Dot : {g:ctx}{h:ctx}{A:[g. tp]}{#S:g[h]}{M:[h.tm (A #S[..])]} % !!!!
         RedSub [g] [h] <h $ #S[..] > -> Reduce [h] [h. A #S[..] ] [h. M ..]
          -> RedSub [g,x:tm (A ..)] [h] <h $ #S[..] (M ..) >
 % The above should work, I think...
 ;
-
+%{
 rec redVar : {g:ctx}{h:ctx}{#S:g[h]}{#p:[g.tm (T ..)]} RedSub [g] [h] <h $ #S[..]>
               ->  Reduce [h] [h. T #S[..]] [h. #p #S[..] ] =
 mlam g => mlam h => mlam #S => mlam #p => fn rs =>
@@ -83,9 +84,32 @@ case [g. #p ..] of
  | [g',x:tm (A ..). #q ..] => ?
 % The above should work, I think...
 ;
+}%
+%{
+rec buildClosed :
+{g' : (some [T : tp] tm T)}
+{h : (some [T : tp] tm T)}
+{T32 : [g'. tp]}
+{T33 : [g'. tp]}
+{E1 : [g', y : tm (T32 ..). (tm (T33 ..))]}
+{S : g'[h]}
+RedSub [g'] [h] ([h$  #S[..]])
+->
+{N :: [h. (tm (T32 #^0S[..]))]}
+(Reduce [h] ([h. T32 #^0S[..]]) ([h. N ..])) ->
+Reduce [h] ([h. T33 #^0S[..]]) ([h. app (lam  (\x. E1 #^0S[..] x)) (N ..)])
+=
+mlam g' => mlam h => mlam T2 => mlam T => malm E1 => mlam #S =>
+(mlam N => fn rN => closed
+      (eval [g',x:tm (T2 ..)] [h] [g',x. T ..] [g',x. M1 .. x] [h $ #S[..] (N ..)]
+            (Dot [g',x:tm (T2 ..)] [h] [g',x:tm (T2 ..) . T ..]  [h $  #S[..] (N ..)]
+                 [g',x. E1 .. x] rs rN))
+             % Need to use Dot here
+      [h. beta])
 
+}%
 rec eval : {g:ctx}{h:ctx}{A:[g.tp]}{M:[g.tm (A ..)]}{#S:g[h]} RedSub [g] [h] <h $ #S[..] >
- -> Reduce [h] [h. A #S[..]] [h. M #S[..] ] =
+           -> Reduce [h] [h. A #S[..]] [h. M #S[..] ] =
 mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g. M ..] of
 %| {T:[g'.tp]}{#p:[g'. tm (T ..)]}
 %  [g'. #p ..] => redVar [g'] [h] [h $ #S[..] ] [g'. #p ..] rs
@@ -95,9 +119,13 @@ mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g. M ..] of
   Arr [h] [h. T2 #S[..]] [h. T #S[..]] [h. lam (\x. M1 #S[..] x)]
     (Halts [h. refl] Lam)
     (mlam N => fn rN => closed
-      (eval [g',x:tm (T2 ..)] [h] [g',x. T ..] [g',x. M1 .. x] [h $ #S[..] (N ..)]
+       (eval [g',x:tm (T2 ..)] [h] [g',x. T ..] [g',x. M1 .. x] [h $ #S[..] (N ..)]
             (Dot [g',x:tm (T2 ..)] [h] [g',x:tm (T2 ..) . T ..]  [h $  #S[..] (N ..)]
-                 [g',x. M1 .. x] rs rN))
+                 % [g',x. E1 .. x]
+                  [h. M1 #S[..] (N ..)]
+                 rs rN
+                 ))
+
              % Need to use Dot here
       [h. beta])
 %{ | {T:[g'.tp]}{T2:[g'.tp]}{M1:[g'. tm (arr (T2 ..) (T ..))]}{M2:[g'. tm (T2 ..)]}
@@ -109,12 +137,12 @@ mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g. M ..] of
 }%
 ;
 
-
+%{
 rec weakNorm2 : {A:[.tp]}{M:[. tm A]} Halts [] [. A] [. M] =
 mlam A => mlam M =>
 reify (eval [] [] [. A] [. M] [ $ ^ ] (Nil []))
 ;
-
+}%
 %rec weakNorm : {g:ctx}{A:[g.tp]}{M:[g. tm (A ..)]} Halts [g] [g. A ..] [g. M ..] =
 %mlam g => mlam A => mlam M =>
 %reify (eval [g] [g] [g. A ..] [g. M ..] [g $ ..] ?)

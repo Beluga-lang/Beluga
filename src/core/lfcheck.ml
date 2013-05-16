@@ -349,18 +349,24 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | Null, Shift (NoCtxShift, 0), Null -> ()
 
-    | cPhi, SVar (Offset offset, 0, s'), CtxVar psi' ->
-      let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in
-      if Whnf.convDCtx (Whnf.normDCtx cPhi1) (Whnf.normDCtx (CtxVar psi')) then
-	checkSub loc cD cPhi s' cPsi1
+    | cPhi, SVar (Offset offset, 0, s'), cPsi ->
+      (*  cD ; cPhi |- SVar (offset, n, s') : cPsi
+          cD(offset) =  cPhi_1[cPsi_1]
+                          Psi'  |- shift n : Psi
+                          Phi'  |- offset  : Psi'
+                          Phi   |- s'      : Phi'
+      *)
+      let (_, cPsi', cPhi') = Whnf.mctxSDec cD offset in
+      if Whnf.convDCtx (Whnf.normDCtx cPsi) (Whnf.normDCtx cPsi') then
+	checkSub loc cD cPhi s' cPhi'
       else
         (dprint (fun () -> "[checkSub] Illtyped substitution : " ^
                    P.dctxToString cD cPhi ^ "\n     |- "
                    ^ P.subToString cD cPhi s ^ " \n    <= "
-                   ^ P.dctxToString cD cPsi');
-         dprint (fun () -> "[checkSub] SVar : " ^ P.dctxToString cD cPhi1 ^
-                   "[ " ^ P.dctxToString cD cPsi1 ^ " ]");
-	raise (Error (loc, IllTypedSub (cD, cPsi, s, cPsi'))))
+                   ^ P.dctxToString cD cPsi);
+         dprint (fun () -> "[checkSub] SVar : " ^ P.dctxToString cD cPsi' ^
+                   "[ " ^ P.dctxToString cD cPhi' ^ " ]");
+	raise (Error (loc, IllTypedSub (cD, cPhi, s, cPsi))))
 
     | cPhi, SVar (Offset offset, k, s'), DDec(cPsi,_tX) ->
       if k > 0 then
@@ -847,5 +853,3 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
                             P.mctxToString cD ^ " |- " ^
                             P.msubToString cD ms ^ " <= "
                          ^ " = " ^ P.mctxToString cD'))
-
-

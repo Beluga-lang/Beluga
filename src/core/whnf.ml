@@ -183,6 +183,9 @@ let newMPVar n (cD, cPsi, tA) = match n with
   | None -> MPInst (Id.mk_name (Id.PVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [])
   | Some name -> MPInst (name, ref None, cD, cPsi, tA, ref [])
 
+let newMSVar n (cD, cPsi, cPhi) = match n with
+  | None -> MSInst (Id.mk_name (Id.SVarName None), ref None, cD, cPsi, cPhi, ref [])
+  | Some name -> MSInst (name, ref None, cD, cPsi, cPhi, ref [])
 
 
 (******************************)

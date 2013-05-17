@@ -83,8 +83,15 @@ mlam g => mlam h => mlam T => mlam #S => mlam #p => fn rs =>
 case [g. #p ..] of
 % [g',x:tm (A..) . tm (T .. x)]
 % [g', x:tm (A ..) . #p .. x] == [g',x:tm (A ..) . x]
- | {A:[g'. tp]} [g',x:tm (A ..). x] => ?
-% | [g',x:tm (A ..). #q ..] => ?
+ | {A:[g'. tp]} [g',x:tm (A ..). x] =>
+     ?
+%    (case rs of
+%     | {#R:g'[h]}
+%       Dot [g'] [h] [g'. A ..] <h $ #R[..] > [h . N .. ] rs' rN => rN)
+ | {#q : [g'. tm (T ..)]} [g',x:tm (A ..). #q ..] =>
+    ?
+%    let Dot [g'] [h] [g'. A ..] <h $ #R[..] > [h . N .. ] rs' rN = rs in
+%      redVar [g'] [h] [g'. T ..] [h $ #R[..] ] [g'. #q ..] rs'
 % The above should work, I think...
 ;
 

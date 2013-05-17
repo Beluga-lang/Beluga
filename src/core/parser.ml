@@ -1284,6 +1284,8 @@ clf_pattern :
                 (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaCtx (_loc,  cPsi))
                   | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaCtx (_loc, cPsi)), tau))
               end
+     | "<"; cPsi = clf_dctx ; "$"; tM = clf_sub_new; ">"   ->
+          Comp.PatMetaObj (_loc, Comp.MetaSObjAnn (_loc, cPsi, tM))
 
      | "ttrue" -> Comp.PatTrue (_loc)
      | "ffalse" -> Comp.PatFalse (_loc)

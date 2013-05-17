@@ -50,17 +50,17 @@ rec haltsMstep : (g:ctx) [g. mstep (M ..) (M' ..)] -> Halts [g] [g. A ..] [g. M'
 fn ms => fn h => let (h : Halts [g] [g. A ..] [g. M' ..]) = h in
 let Halts ms' v = h in Halts (mstepTrans [g. _] ms ms') v
 ;
-}%
+
 % CR2
-rec closed : Reduce [g] [g.A ..] [g. M' ..] -> [g. mstep (M ..) (M' ..)] -> Reduce [g] [g.A ..] [g. M ..] = ?
-%{fn r => fn s => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
+rec closed : Reduce [g] [g.A ..] [g. M' ..] -> [g. mstep (M ..) (M' ..)] -> Reduce [g] [g.A ..] [g. M ..] =
+fn r => fn s => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
 | Base ha => Base (haltsMstep s ha)
 | Arr [g] [g. A ..] [g. B ..] [g. M ..] ha f => Arr [g] [g. A ..] [g. B ..] [g. _]
   (haltsMstep s ha)
   (mlam N => fn rn => closed (f [g. N ..] rn) (mstepAppL [g. _] s))
-}%
+
 ;
-%{
+
 % CR1
 rec reify : Reduce [g] [g. A ..] [g. M ..] -> Halts [g] [g.A ..] [g. M ..] =
 fn r => let r : Reduce [g] [g. A ..] [g. M ..] = r in case r of
@@ -68,6 +68,7 @@ fn r => let r : Reduce [g] [g. A ..] [g. M ..] = r in case r of
 | Arr [g] [g. A ..] [g. B ..] [g. M ..] ha f => ha
 ;
 }%
+%  h |- #s : g
 datatype RedSub : {g:ctx}{h:ctx}{#S:g[h]} ctype =
 | Nil : {h:ctx} RedSub [] [h] <h $ ^ >
 | Dot : {g:ctx}{h:ctx}{A:[g. tp]}{#S:g[h]}{M:[h.tm (A #S[..])]} % !!!!
@@ -75,44 +76,24 @@ datatype RedSub : {g:ctx}{h:ctx}{#S:g[h]} ctype =
          -> RedSub [g,x:tm (A ..)] [h] <h $ #S[..] (M ..) >
 % The above should work, I think...
 ;
-%{
-rec redVar : {g:ctx}{h:ctx}{#S:g[h]}{#p:[g.tm (T ..)]} RedSub [g] [h] <h $ #S[..]>
+
+rec redVar : {g:ctx}{h:ctx}{T:[g.tp]}{#S:g[h]}{#p:[g.tm (T ..)]} RedSub [g] [h] <h $ #S[..]>
               ->  Reduce [h] [h. T #S[..]] [h. #p #S[..] ] =
-mlam g => mlam h => mlam #S => mlam #p => fn rs =>
+mlam g => mlam h => mlam T => mlam #S => mlam #p => fn rs =>
 case [g. #p ..] of
-% | {A:[g'. tp]} [g',x:tm (A ..). x] => ?
- | [g',x:tm (A ..). #q ..] => ?
+% [g',x:tm (A..) . tm (T .. x)]
+% [g', x:tm (A ..) . #p .. x] == [g',x:tm (A ..) . x]
+ | {A:[g'. tp]} [g',x:tm (A ..). x] => ?
+% | [g',x:tm (A ..). #q ..] => ?
 % The above should work, I think...
 ;
-}%
-%{
-rec buildClosed :
-{g' : (some [T : tp] tm T)}
-{h : (some [T : tp] tm T)}
-{T32 : [g'. tp]}
-{T33 : [g'. tp]}
-{E1 : [g', y : tm (T32 ..). (tm (T33 ..))]}
-{S : g'[h]}
-RedSub [g'] [h] ([h$  #S[..]])
-->
-{N :: [h. (tm (T32 #^0S[..]))]}
-(Reduce [h] ([h. T32 #^0S[..]]) ([h. N ..])) ->
-Reduce [h] ([h. T33 #^0S[..]]) ([h. app (lam  (\x. E1 #^0S[..] x)) (N ..)])
-=
-mlam g' => mlam h => mlam T2 => mlam T => malm E1 => mlam #S =>
-(mlam N => fn rN => closed
-      (eval [g',x:tm (T2 ..)] [h] [g',x. T ..] [g',x. M1 .. x] [h $ #S[..] (N ..)]
-            (Dot [g',x:tm (T2 ..)] [h] [g',x:tm (T2 ..) . T ..]  [h $  #S[..] (N ..)]
-                 [g',x. E1 .. x] rs rN))
-             % Need to use Dot here
-      [h. beta])
 
-}%
+%{
 rec eval : {g:ctx}{h:ctx}{A:[g.tp]}{M:[g.tm (A ..)]}{#S:g[h]} RedSub [g] [h] <h $ #S[..] >
            -> Reduce [h] [h. A #S[..]] [h. M #S[..] ] =
 mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g. M ..] of
-%| {T:[g'.tp]}{#p:[g'. tm (T ..)]}
-%  [g'. #p ..] => redVar [g'] [h] [h $ #S[..] ] [g'. #p ..] rs
+| {T:[g'.tp]}{#p:[g'. tm (T ..)]}
+  [g'. #p ..] => redVar [g'] [h] [g'.T ..] [h $ #S[..] ] [g'. #p ..] rs
 % The above should work, I think...
 | {T2:[g'.tp]}{T:[g'.tp]}{M1:[g', y:tm (T2 ..). tm (T ..)]}
   [g'. lam (\x. M1 .. x)] =>
@@ -120,31 +101,27 @@ mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g. M ..] of
     (Halts [h. refl] Lam)
     (mlam N => fn rN => closed
        (eval [g',x:tm (T2 ..)] [h] [g',x. T ..] [g',x. M1 .. x] [h $ #S[..] (N ..)]
-            (Dot [g',x:tm (T2 ..)] [h] [g',x:tm (T2 ..) . T ..]  [h $  #S[..] (N ..)]
-                 % [g',x. E1 .. x]
-                  [h. M1 #S[..] (N ..)]
-                 rs rN
+            (Dot [g'] [h] [g'. T2 ..]  [h $  #S[..]]
+                  [h. (N ..)] rs rN
                  ))
-
-             % Need to use Dot here
       [h. beta])
-%{ | {T:[g'.tp]}{T2:[g'.tp]}{M1:[g'. tm (arr (T2 ..) (T ..))]}{M2:[g'. tm (T2 ..)]}
+ | {T:[g'.tp]}{T2:[g'.tp]}{M1:[g'. tm (arr (T2 ..) (T ..))]}{M2:[g'. tm (T2 ..)]}
   [g'. app (M1 ..) (M2 ..)] =>
   let rM2 : Reduce [h] [h. A' ..] [h. N2 ..] = eval [g'] [h] [g'. T2 ..] [g'. M2 ..] [h $ #S[..] ] rs in
   let Arr [h0] [h0. S2 ..] [h0. S1 ..] [h0. N1 ..] ha f =
        eval [g'] [h] [g'. arr (T2 ..) (T ..)] [g'. M1 ..] [h $ #S[..] ] rs in
   f [h. N2 ..] rM2
-}%
 ;
 
-%{
+
 rec weakNorm2 : {A:[.tp]}{M:[. tm A]} Halts [] [. A] [. M] =
 mlam A => mlam M =>
 reify (eval [] [] [. A] [. M] [ $ ^ ] (Nil []))
 ;
-}%
+
 %rec weakNorm : {g:ctx}{A:[g.tp]}{M:[g. tm (A ..)]} Halts [g] [g. A ..] [g. M ..] =
 %mlam g => mlam A => mlam M =>
 %reify (eval [g] [g] [g. A ..] [g. M ..] [g $ ..] ?)
 % For this I need a lemma which says that RedSub holds of the identity substitution
 %;
+}%

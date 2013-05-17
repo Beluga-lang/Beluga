@@ -489,6 +489,11 @@ and norm (tM, sigma) = match tM with
   | Clo (tN, s) ->
       norm (tN, LF.comp s sigma)
 
+  | Root (loc, HClo (i, s, sigma'), tS) ->
+    let sigma'' = normSub (LF.comp sigma' sigma) in
+    let tS'     = normSpine (tS, sigma) in
+      Root (loc, HClo (i, s, sigma''), tS')
+
   | Root (loc, BVar i, tS) ->
       begin match LF.bvarSub i sigma with
         | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
@@ -870,6 +875,21 @@ and cnorm (tM, t) = match tM with
 
     | Root (loc, head, tS) ->
         begin match head with
+          | HClo (h, Offset i, sigma) ->
+            begin match LF.applyMSub i t with
+              | MV k -> Root (loc, HClo (h, Offset k, cnormSub (sigma, t)), cnormSpine (tS, t))
+              | SObj (phat, s) ->
+                let s' = cnormSub (sigma, t) in
+                begin  match LF.bvarSub h (LF.comp s s') with
+                  | Head h -> Root (loc, h, cnormSpine (tS, t))
+                  | Obj tM -> reduce (tM, s') (cnormSpine (tS, t))
+                end
+            end
+          | HClo (h, s, sigma) ->  (* s = SInst (None, _ , _ , _ ) *)
+            let sigma' = cnormSub (sigma, t) in
+            let tS'    = cnormSpine (tS, t) in
+            Root (loc, HClo (h, s, sigma'), tS')
+
           | BVar i -> Root(loc, BVar i, cnormSpine (tS, t))
 
           | MMVar (MInst (_n, {contents = Some tN}, _D, _cPsi, _tA, _cnstr), (t',s')) ->
@@ -1443,7 +1463,18 @@ and cnorm (tM, t) = match tM with
 
 
   and cnormFront (ft, t) = match ft with
-    | Head (HClo (h , s))       -> Head (HClo (h, cnormSub (s,t)))
+    | Head (HClo (h , Offset i , sigma))  ->
+        begin match LF.applyMSub i t with
+          | MV k -> Head (HClo (h, Offset k, cnormSub (sigma, t)))
+          | SObj (phat, s) ->
+            let s' = cnormSub (sigma, t) in
+              LF.bvarSub h (LF.comp s s')
+        end
+
+    | Head (HClo (h , s, sigma))  ->
+      let sigma' = cnormSub (sigma, t) in
+      Head (HClo (h, s, sigma'))
+
     | Head (BVar _ )            -> ft
     | Head (Const _ )           -> ft
     | Head (PVar (Offset i, r)) ->

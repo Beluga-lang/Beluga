@@ -202,7 +202,7 @@ module LF = struct
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
     | (n, Shift (_ , k)) -> Head (BVar (n + k))
-    | (n, SVar (_, _, _ )) -> Head (HClo(BVar n, s))
+    | (n, SVar (s, k, sigma )) -> Head (HClo(n+k, s, sigma))
 
 
   (* frontSub Ft s = Ft'
@@ -214,7 +214,7 @@ module LF = struct
    * and  Psi |- Ft' : [s]A
    *)
   and frontSub ft s = match ft with
-    | Head (HClo(BVar n, s')) -> Head (HClo (BVar n, comp s' s))
+    | Head (HClo(n, s', sigma)) -> Head (HClo (n, s', comp sigma s))
     | Head (BVar n)       ->  bvarSub n s
     | Head (FVar _)       -> ft
     | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))

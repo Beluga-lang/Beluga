@@ -855,6 +855,14 @@ let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
       let cPsi = Int.LF.CtxVar (Int.LF.CInst (n, ref None, schema_cid, cD, Whnf.m_id)) in
         (Int.Comp.MetaCtx (loc', cPsi),
          Int.LF.CObj cPsi)
+  | Int.LF.SDecl (n, cPhi, cPsi) ->
+      let cPsi' = C.cnormDCtx (cPsi, t) in
+      let psihat  = Context.dctxToHat cPsi' in
+      let cPhi'   = C.cnormDCtx (cPhi, t) in
+      let s = Whnf.newMSVar None (cD, cPsi', cPhi') in
+      let s' = Int.LF.MSVar (s, (Whnf.m_id, LF.id)) in (* Probably LF.id is wrong *)
+        (Int.Comp.MetaSObj (loc', psihat, s') ,
+         Int.LF.SObj (psihat, s'))
 
 let mgCompTyp cD (loc, c) =
   let cK = (CompTyp.get c).CompTyp.kind in
@@ -1678,6 +1686,12 @@ and elPatMetaObj cD pat (cdecl, theta) = begin match pat with
               | (Int.Comp.MetaObj (loc, phat, tM) as cM') ->
                   (Int.Comp.PatMetaObj (loc, cM'),
                    Int.LF.MDot (Int.LF.MObj (phat, tM), theta))
+           )
+       | Int.LF.SDecl (_, cPhi, cPsi) ->
+           (match  elMetaObj cD cM (Int.Comp.MetaSubTyp (cPhi, cPsi), theta)  with
+              | (Int.Comp.MetaSObj (loc, phat, s) as sigma') ->
+                  (Int.Comp.PatMetaObj (loc, sigma'),
+                   Int.LF.MDot (Int.LF.SObj (phat, s), theta))
            )
        | Int.LF.PDecl (_, tA, cPsi) ->
            (match elMetaObj cD cM (Int.Comp.MetaParamTyp (tA, cPsi), theta)  with

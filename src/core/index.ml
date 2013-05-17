@@ -799,6 +799,11 @@ and index_mobj cvars fcvars  mO = match mO with
     let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
     let (tM', fcvars2)           = index_term cvars bvars fcvars1 tM in
       (Apx.Comp.MetaObjAnn (loc, cPsi', tM') , fcvars2)
+  | Ext.Comp.MetaSObj (loc, phat, s) ->  raise (Error (loc, PatCtxRequired))
+  | Ext.Comp.MetaSObjAnn (loc, cPsi, s) ->
+    let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
+    let (s', fcvars2)           = index_sub cvars bvars fcvars1 s in
+      (Apx.Comp.MetaSubAnn (loc, cPsi', s') , fcvars2)
 
 and index_copat_spine cvars vars fcvars sp = match sp with
   | Ext.Comp.CopatNil loc -> (Apx.Comp.CopatNil loc, fcvars)

@@ -73,6 +73,7 @@ module LF = struct
     | SVar  of cvar * offset * sub            (*       | s[sigma]               *)
     | FSVar of name * sub                     (*       | s[sigma]               *)
     | Dot   of front * sub                    (*       | Ft . s                 *)
+    | MSVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
 
   and front =                                 (* Fronts:                        *)
     | Head of head                            (* Ft ::= H                       *)
@@ -116,6 +117,7 @@ module LF = struct
         (* D ; Psi |- M <= A
            provided constraint *)
     | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
+    | MSInst   of name * sub option ref * mctx * dctx * dctx * cnstr list ref
 
 
   and tvar =

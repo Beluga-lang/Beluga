@@ -578,6 +578,10 @@ and cnormApxBranch cD delta b (cD'', t) =
       let cD1 = append_mctx cD'' delta2' in
         Int.LF.Dec (cD1, Int.LF.PDeclOpt x)
 
+  | Apx.LF.Dec (delta2', Apx.LF.SDecl (x, _, _ )) ->
+      let cD1 = append_mctx cD'' delta2' in
+        Int.LF.Dec (cD1, Int.LF.SDeclOpt x)
+
   in
     match b with
       | Apx.Comp.Branch (loc, omega, delta', Apx.Comp.PatMetaObj (loc', mO), e) ->
@@ -677,6 +681,10 @@ and collectApxSub fMVs s = match s with
   | Apx.LF.Dot (Apx.LF.Obj m, s) ->
       let fMVs' = collectApxTerm fMVs m in
         collectApxSub fMVs' s
+  | Apx.LF.SVar (i,s) ->
+      collectApxSub fMVs s
+  | Apx.LF.FSVar (n,s) ->
+      collectApxSub (n::fMVs) s
 
 and collectApxSpine fMVs s = match s with
   | Apx.LF.Nil -> fMVs
@@ -724,10 +732,12 @@ and collectApxCTypDecl fMVs ct_decl = match ct_decl with
   | Apx.LF.MDecl ( _, a, c_psi) ->
       let fMVs' = collectApxDCtx fMVs c_psi in
         collectApxTyp fMVs' a
-
   | Apx.LF.PDecl ( _, a, c_psi) ->
       let fMVs' = collectApxDCtx fMVs c_psi in
         collectApxTyp fMVs' a
+  | Apx.LF.SDecl ( _, c_phi, c_psi) ->
+      let fMVs' = collectApxDCtx fMVs c_psi in
+        collectApxDCtx fMVs' c_phi
 
 and collectApxMetaObj fMVs mO = match mO with
   | Apx.Comp.MetaCtx (_loc, cPsi) ->
@@ -738,6 +748,12 @@ and collectApxMetaObj fMVs mO = match mO with
   | Apx.Comp.MetaObjAnn (_loc, cPsi, tR) ->
       let fMVd = collectApxDCtx fMVs cPsi in
         collectApxTerm fMVd tR
+  | Apx.Comp.MetaSub (_loc, phat, s) ->
+      let fMVh = collectApxHat fMVs phat  in
+      collectApxSub fMVh s
+  | Apx.Comp.MetaSubAnn (_loc, cPsi, s) ->
+      let fMVd = collectApxDCtx fMVs cPsi in
+        collectApxSub fMVd s
 
 and collectApxMetaSpine fMVs mS = match mS with
   | Apx.Comp.MetaNil -> fMVs

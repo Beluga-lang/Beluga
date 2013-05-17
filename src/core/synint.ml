@@ -127,9 +127,9 @@ module LF = struct
 
   and constrnt =                             (* Constraint                     *)
     | Queued                                 (* constraint ::= Queued          *)
-    | Eqn of mctx * dctx * normal * normal
-                                             (*            | Psi |-(M1 == M2)  *)
+    | Eqn of mctx * dctx * normal * normal   (*            | Psi |-(M1 == M2)  *)
     | Eqh of mctx * dctx * head * head       (*            | Psi |-(H1 == H2)  *)
+    | Eqs of mctx * dctx * sub * sub         (*            | Psi |-(s1 == s2)  *)
 
   and cnstr = constrnt ref
 

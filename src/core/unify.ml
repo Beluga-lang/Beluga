@@ -1622,8 +1622,18 @@ let rec blockdeclInDctx cPsi = match cPsi with
                     ) in
         SVar(sv, 0, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
+    | (SVar (sv, n, sigma), cPsi1) ->
+        (dprint (fun () -> "[pruneSubst] sv with offset " ^ string_of_int n);
+         raise (Error "[pruneSubst] Case not implemented"))
+
+    | (FSVar (n, sigma), cPsi1) ->
+        (dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name n);
+         raise (Error "[pruneSubst] Case not implemented"))
+    | (MSVar (_ , _ ), _cPsi1) ->
+        (dprint (fun () -> "[pruneSubst] MSVar   " ^ P.subToString cD cPsi s);
+         raise (Error "[pruneSubst] Case not implemented"))
     (* Other heads to be added ??
-    | (Dot (Head (FVar n), s'), DDec(cPsi', _dec)) ->
+
     | (Dot (Head , s'), DDec(cPsi', _dec)) ->
     *)
 
@@ -1645,6 +1655,9 @@ let rec blockdeclInDctx cPsi = match cPsi with
           | _ -> raise NotInvertible
         end
 
+    | (Dot (Head (h), _s'), DDec(_cPsi', _dec)) ->
+        (dprint (fun () -> "[pruneSubst] h = " ^ P.headToString cD cPsi h);
+         raise (Error "[pruneSubst] Case not implemented"))
 
     | (Dot (Obj tM, s'), DDec(cPsi', _dec))        ->
         (* below may raise NotInvertible *)
@@ -3165,6 +3178,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
         let mt = Whnf.cnormMSub mt in
         let _ = dprint (fun () -> "[unifySub - a] s2 = " ^ P.subToString cD0 cPsi (Whnf.normSub s2)) in
         let _ = dprint (fun () -> "[unifySub - a] s1 = " ^ P.subToString cD0 cPsi (Whnf.normSub s1)) in
+        let _ = dprint (fun () -> "[unifySub - a] cPhi2 = " ^ P.dctxToString cD0 (Whnf.cnormDCtx (cPhi2, mt))) in
+        let _ = dprint (fun () -> "[unifySub - a] cPhi1 = " ^ P.dctxToString cD0 (Whnf.cnormDCtx (cPhi1, mt))) in
         let _ = dprint (fun () -> "[unifySub - a] s1 == s2 ?? " ) in
         begin match (isPatSub s, isPatMSub mt) with
           | (true, true) ->

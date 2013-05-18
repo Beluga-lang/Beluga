@@ -1278,6 +1278,13 @@ let rec collectMctx  cQ cD = match cD with
       let (cQ2, tA')    = collectTyp 0 cQ'' phat (tA, LF.id) in
         (cQ2,  I.Dec(cD', I.PDecl(p, tA', cPsi')))
 
+  | I.Dec(cD, I.SDecl(u, cPhi, cPsi)) ->
+      let (cQ', cD')  = collectMctx cQ cD in
+      let psi_hat = Context.dctxToHat cPsi in
+      let phi_hat = Context.dctxToHat cPhi in
+      let (cQ0, cPsi') = collectDctx (Syntax.Loc.ghost) 0 cQ' psi_hat cPsi in
+      let (cQ1, cPhi') = collectDctx (Syntax.Loc.ghost) 0 cQ0 phi_hat cPhi in
+        (cQ1, I.Dec(cD', I.SDecl(u, cPhi', cPsi')))
 
 (* ****************************************************************** *)
 (* Abstraction over LF-bound variables                                *)
@@ -1681,6 +1688,13 @@ and abstractMVarMctx cQ cD (l,offset) = match cD with
       let cPsi' = abstractMVarDctx cQ (l, offset) cPsi in
       let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in
         I.Dec(cD', I.PDecl (u, tA', cPsi'))
+
+  | I.Dec(cD, I.SDecl(u, cPhi, cPsi)) ->
+      let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
+      let cPsi' = abstractMVarDctx cQ (l,offset) cPsi in
+      let cPhi' = abstractMVarDctx cQ (l,offset) cPhi in
+        I.Dec(cD', I.SDecl (u, cPhi', cPsi'))
+
 
 and abstractMVarCtx cQ l =  match cQ with
   | I.Empty -> I.Empty

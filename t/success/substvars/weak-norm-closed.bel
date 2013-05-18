@@ -85,7 +85,7 @@ case [g. #p ..] of
 % [g', x:tm (A ..) . #p .. x] == [g',x:tm (A ..) . x]
  | {A:[g'. tp]} [g',x:tm (A ..). x] =>
     (case rs of
-     | {#R:g'[h]}
+     | {A:[g'. tp]} {#R:g'[h]}{N:[h. tm (A #R[..])]}
        Dot [g'] [h] [g'. A ..] <h $ #R[..] > [h . N .. ] rs' rN => rN)
  | {#q : [g'. tm (T ..)]} [g',x:tm (A ..). #q ..] =>
     ?

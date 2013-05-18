@@ -1585,7 +1585,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
       let (mt, s') = ss in
       Substitution.LF.comp (Whnf.cnormSub (s,mt)) s'
 
-    | (SVar (sv, 0, sigma), cPsi1) ->
+    | (SVar (sv, n, sigma), cPsi1) ->
       (*  cD ; cPsi |- sv[sigma] : cPsi1    where sv:cPsi1[cPhi1]
           cD ; cPsi |- sigma : cPhi1
           ** because s must be in nf, sv = None **
@@ -1599,7 +1599,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                        else
                          cPsi'
                     ) in
-        SVar(sv, 0, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
+        SVar(sv, n, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
     (* Other heads to be added ??
     | (Dot (Head (FVar n), s'), DDec(cPsi', _dec)) ->
@@ -3144,7 +3144,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                 let _ = dprint (fun () -> "[unifySub - a ]  pattern sub case ... calling pruneSubst" ) in
                 let _ = dprint (fun () -> "[unifySub - a ] s_i = " ^ P.subToString cD0 cPhi2 s_i) in
                 let _ = dprint (fun () -> "[unifySub - a ] mt_i = " ^ P.msubToString cD mt_i) in
-                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi1, mt))) (mt_i, s_i) (MSVarRef r) in
+                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MSVarRef r) in
                 let _ = dprint (fun () -> "[unifySub - a ] pruned s2 = s2' = " ^ P.subToString cD cPhi2 (Whnf.normSub s2')) in
                 instantiateMSVar (r, s2', !cnstrs)
               with
@@ -3168,7 +3168,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
               try
                 let s_i = invert (Whnf.normSub s) in
                 let mt_i = Whnf.m_invert (Whnf.cnormMSub mt) in
-                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi1, mt))) (mt_i, s_i) (MSVarRef r) in
+                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MSVarRef r) in
                 instantiateMSVar (r, s2', !cnstrs)
               with
                 | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))

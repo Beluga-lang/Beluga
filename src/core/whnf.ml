@@ -395,6 +395,7 @@ and mfrontMSub ft t = match ft with
         | PObj(phat, p) ->  PObj(phat, p)
         | MObj(phat, tM) ->  MObj(phat, tM)
         | CObj(cPsi) -> CObj (cPsi)
+        | SObj(phat, s) -> SObj(phat,s)
         | MV k'         -> MV k'
         (* other cases impossible *)
       end

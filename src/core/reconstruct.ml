@@ -845,7 +845,7 @@ let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
       let cPsi' = C.cnormDCtx (cPsi, t) in
       let psihat  = Context.dctxToHat cPsi' in
       let cPhi'   = C.cnormDCtx (cPhi, t) in
-      let s = Whnf.newMSVar None (cD, cPsi', cPhi') in
+      let s = Whnf.newMSVar None (cD, cPhi', cPsi') in
       let s' = Int.LF.MSVar (s, (Whnf.m_id, LF.id)) in (* Probably LF.id is wrong *)
         (Int.Comp.MetaSObj (loc', psihat, s') ,
          Int.LF.SObj (psihat, s'))

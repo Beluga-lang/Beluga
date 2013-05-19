@@ -867,13 +867,13 @@ and collectSub p cQ phat s = match s with
                             argument to shift; if the substitution is
                             well-typed, then it has been already collected *)
   | I.Dot (I.Head h, s) ->
-      let (cQ1, s') =  collectSub p cQ phat s in
-      let (cQ2, h') = collectHead p cQ1 phat (Syntax.Loc.ghost) (h, LF.id) in
+      let (cQ1, h') = collectHead p cQ phat (Syntax.Loc.ghost) (h, LF.id) in
+      let (cQ2, s') =  collectSub p cQ1 phat s in
         (cQ2, I.Dot(I.Head h', s'))
 
   | I.Dot (I.Obj tM, s) ->
-      let (cQ1,s') =  collectSub p cQ phat s in
-      let (cQ2, tM') = collectTerm p cQ1 phat (tM, LF.id) in
+      let (cQ1, tM') = collectTerm p cQ phat (tM, LF.id) in
+      let (cQ2,s') =  collectSub p cQ1 phat s in
         (cQ2, I.Dot (I.Obj tM', s'))
 
   | I.Dot (I.Undef, s') ->

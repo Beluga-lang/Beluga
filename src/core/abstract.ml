@@ -1663,11 +1663,11 @@ and abstractMVarMctx cQ cD (l,offset) = match cD with
       let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in
         I.Dec(cD', I.PDecl (u, tA', cPsi'))
 
-  | I.Dec(cD, I.SDecl(u, cPhi, cPsi)) ->
+  | I.Dec(cD, I.SDecl(s, cPhi, cPsi)) ->
       let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
       let cPsi' = abstractMVarDctx cQ (l,offset) cPsi in
       let cPhi' = abstractMVarDctx cQ (l,offset) cPhi in
-        I.Dec(cD', I.SDecl (u, cPhi', cPsi'))
+        I.Dec(cD', I.SDecl (s, cPhi', cPsi'))
 
 
 and abstractMVarCtx cQ l =  match cQ with

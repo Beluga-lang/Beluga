@@ -1661,8 +1661,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     | (Dot (Obj tM, s'), DDec(cPsi', _dec))        ->
         (* below may raise NotInvertible *)
+        (dprint (fun () -> "[pruneSubst] tM = " ^ P.normalToString cD cPsi (tM, Substitution.LF.id));
         let tM' = prune cD cPsi  (Context.dctxToHat cPsi) (tM, Substitution.LF.id)  ss  rOccur in
-          Dot (Obj tM', pruneSubst cD cPsi (s', cPsi') ss rOccur)
+          dprint (fun () -> "[pruneSubst] tM' = " ^ P.normalToString cD cPsi (tM', Substitution.LF.id));
+          Dot (Obj tM', pruneSubst cD cPsi (s', cPsi') ss rOccur))
 
 
   (* pruneSub cD0 cPsi phat (s, cPsi1) ss rOccur = (s', cPsi1')
@@ -3189,8 +3191,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
                 let mt_i = Whnf.m_invert (Whnf.cnormMSub mt) in  (*  cD |- mt_i : cD0 *)
                 let _ = dprint (fun () -> "[unifySub - a ]  pattern sub case ... calling pruneSubst" ) in
                 let _ = dprint (fun () -> "[unifySub - a ] s_i = " ^ P.subToString cD0 cPhi2 s_i) in
-                let _ = dprint (fun () -> "[unifySub - a ] mt_i = " ^ P.msubToString cD mt_i) in
-                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MSVarRef r) in
+                let _ = dprint (fun () -> "[unifySub - a ] mt_i = " ^    P.msubToString cD mt_i) in
+                let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), (Whnf.cnormDCtx (cPhi1, mt))) (mt_i, s_i) (MSVarRef r) in
                 let _ = dprint (fun () -> "[unifySub - a ] pruned s2 = s2' = " ^ P.subToString cD cPhi2 (Whnf.normSub s2')) in
                 instantiateMSVar (r, s2', !cnstrs)
               with

@@ -369,6 +369,13 @@ let rec blockdeclInDctx cPsi = match cPsi with
     delayedCnstrs := cnstrL @ !delayedCnstrs;
     globalCnstrs := cnstrL @ !globalCnstrs
 
+
+  let instantiateSVar (s, sigma, cnstrL) =
+    s := Some sigma;
+    T.log globalTrail (InstSub s);
+    delayedCnstrs := cnstrL @ !delayedCnstrs;
+    globalCnstrs := cnstrL @ !globalCnstrs
+
   let instantiateMMVar (u, tM, cnstrL) =
     u := Some tM;
     T.log globalTrail (InstNormal u);
@@ -1615,7 +1622,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
       let cPsi' = (match sv with
                      | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD  offset in cPsi'
                      | SInst (_ , ({contents=None} as r), _cPhi, cPsi', _ ) ->
-                       if eq_cvarRef (MSVarRef r) rOccur then
+                       if eq_cvarRef (SVarRef r) rOccur then
                          raise (Failure "Variable occurrence")
                        else
                          cPsi'
@@ -3158,6 +3165,34 @@ let rec blockdeclInDctx cPsi = match cPsi with
         -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "SVar mismatch")
+
+      | (SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs),  0, s), s2) -> (* offset may not always be 0 ? -bp *)
+        let s = Whnf.normSub s in
+          begin match isPatSub s with
+            | true ->
+                begin try
+                  let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
+                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), cPhi1) (Whnf.m_id, s_i) (SVarRef r) in
+                    instantiateSVar (r, s2', !cnstrs)
+                with
+                  | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
+                end
+            | false -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
+          end
+
+      | (s2, SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs),  0, s))  ->
+        let s = Whnf.normSub s in
+          begin match isPatSub s with
+            | true ->
+                begin try
+                  let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
+                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), cPhi1) (Whnf.m_id, s_i) (SVarRef r) in
+                    instantiateSVar (r, s2', !cnstrs)
+                with
+                  | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
+                end
+            | false -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
+          end
 
       | (Dot (f, s), Dot (f', s'))
         -> (unifyFront mflag cD0 cPsi f f' ;

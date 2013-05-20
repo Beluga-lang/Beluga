@@ -703,9 +703,15 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
             | MetaObjAnn (_, cPsi, tM) -> I.MDot (I.MObj(Context.dctxToHat cPsi, tM), theta)
           )
     | I.PDecl (_, tA, cPsi) ->
-        let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in
+        let _ = checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), theta) in
           (match mO with
             | MetaParam (_, phat, h) ->  I.MDot(I.PObj(phat, h), theta)
+          )
+    | I.SDecl (_, cPhi, cPsi) ->
+        let _ = checkMetaObj loc cD mO (MetaSubTyp (cPhi, cPsi), theta) in
+          (match mO with
+            | MetaSObj (_, phat, s) ->  I.MDot(I.SObj(phat, s), theta)
+            | MetaSObjAnn (_, cPsi, s) -> I.MDot (I.SObj(Context.dctxToHat cPsi, s), theta)
           )
     | I.CDecl (_, w, _ ) ->
         let _ = checkMetaObj loc cD mO (MetaSchema w, theta) in

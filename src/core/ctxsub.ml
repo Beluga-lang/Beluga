@@ -1003,7 +1003,7 @@ let rec mctxToMSub cD = match cD with
       let cPhi'   = Whnf.cnormDCtx (cPhi, t) in
       let u     = Whnf.newSVar (Some n) (cPhi', cPsi') in
       let phat  = Context.dctxToHat cPsi' in
-        MDot (SObj (phat, SVar (u, 0, Substitution.LF.id)) , t)
+        MDot (SObj (phat, SVar (u, (NoCtxShift, 0), Substitution.LF.id)) , t)
 
   | Dec (cD', CDecl(n, sW, _)) ->
       let t = mctxToMSub cD' in

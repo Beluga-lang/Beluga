@@ -61,7 +61,7 @@ module LF = struct
                                                  reconstruction                 *)
     | FPVar of name * sub                     (* free parameter variable for type
                                                  reconstruction                 *)
-    | HClo  of offset * cvar * sub            (*   | HClo(x, #S[sigma]          *)
+    | HClo  of offset * cvar * sub            (*   | HClo(x, #S[sigma])         *)
 
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)
@@ -70,7 +70,7 @@ module LF = struct
 
   and sub =                                   (* Substitutions                  *)
     | Shift of ctx_offset * offset            (* sigma ::= ^(psi,n)             *)
-    | SVar  of cvar * offset * sub            (*       | s[sigma]               *)
+    | SVar  of cvar * (ctx_offset * offset) * sub (*   | s[sigma]               *)
     | FSVar of name * sub                     (*       | s[sigma]               *)
     | Dot   of front * sub                    (*       | Ft . s                 *)
     | MSVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)

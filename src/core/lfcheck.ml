@@ -349,7 +349,7 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | Null, Shift (NoCtxShift, 0), Null -> ()
 
-    | cPhi, SVar (Offset offset, 0, s'), cPsi ->
+    | cPhi, SVar (Offset offset, (NoCtxShift, 0), s'), cPsi ->
       (*  cD ; cPhi |- SVar (offset, n, s') : cPsi
           cD(offset) =  cPhi_1[cPsi_1]
                           Psi'  |- shift n : Psi
@@ -368,9 +368,9 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
                    "[ " ^ P.dctxToString cD cPhi' ^ " ]");
 	raise (Error (loc, IllTypedSub (cD, cPhi, s, cPsi))))
 
-    | cPhi, SVar (Offset offset, k, s'), DDec(cPsi,_tX) ->
+    | cPhi, SVar (Offset offset, (ctx_offset, k), s'), DDec(cPsi,_tX) ->
       if k > 0 then
-        checkSub loc cD cPhi (SVar (Offset offset, k-1, s')) cPsi
+        checkSub loc cD cPhi (SVar (Offset offset, (ctx_offset, k-1), s')) cPsi
       else
         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 

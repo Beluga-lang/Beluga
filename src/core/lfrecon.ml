@@ -1569,7 +1569,7 @@ and elSub' loc recT cD cPsi s cPhi =
     if  Whnf.convDCtx (Whnf.cnormDCtx (cPhi, Whnf.m_id))
                       (Whnf.cnormDCtx (cPhi1, Whnf.m_id)) then
       let s' = elSub' loc recT cD cPsi s cPhi2 in
-      Int.LF.SVar (Int.LF.Offset offset, 0, s')
+      Int.LF.SVar (Int.LF.Offset offset, (Int.LF.NoCtxShift, 0), s')
     else
        raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
 

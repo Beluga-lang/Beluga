@@ -69,15 +69,19 @@ module LF = struct
 
     (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
 
-    | (Shift (NoCtxShift, n), SVar(Offset offset, k, r)) ->
+    | (Shift (NoCtxShift, n), SVar(Offset offset, (ctx_shift, k), r)) ->
         (* psi, Psi |- s1 : psi   where |Psi| = n
+
+           ctx_shift must be either NoCtxShift or NegCtxShift
+
            Phi |- SVar(s, k, r): psi, Psi
+
            where  psi,Psi, Psi_k |- ^k : psi, Psi
            where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
-          therefore  Phi |- SVar (s, k+n, r) : psi
+          therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
                 and  psi, Psi, Psi_k |- ^(n+k) : psi
          *)
-      SVar (Offset offset, k+n, r)
+      SVar (Offset offset, (ctx_shift, k+n), r)
 
     | (Shift (NoCtxShift, n), Shift (NoCtxShift, m)) ->
         (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
@@ -112,8 +116,9 @@ module LF = struct
 
           | Shift (CtxShift _ , _ ) ->  raise (NotComposable "Composition       undefined - 2")
 
-          | SVar (offset, k, s') ->
-            SVar (offset, k + n, s') (* This is wrong *)
+          | SVar (offset, (ctx_shift, k), s') ->
+            (* ctx_shift is either NoCtxShift or NegCtxShift *)
+            SVar (offset, (ctx_shift, k + n), s')
 
 (*          | _ ->  raise (NotComposable "Composition undefined - 2") *)
         in
@@ -140,8 +145,8 @@ module LF = struct
     | (Shift (psi,n), Dot (_ft, s)) ->
         comp (Shift (psi, n - 1)) s
 
-    | (SVar (s, n, tau), s2) ->
-        SVar (s, n, comp tau s2)
+    | (SVar (s, (ctx_shift, n), tau), s2) ->
+        SVar (s, (ctx_shift, n), comp tau s2)
 
     | (Dot (ft, s), s') ->
         (* comp(s[tau], Shift(k)) = s[tau]
@@ -202,7 +207,9 @@ module LF = struct
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
     | (n, Shift (_ , k)) -> Head (BVar (n + k))
-    | (n, SVar (s, k, sigma )) -> Head (HClo(n+k, s, sigma))
+    | (n, SVar (s, (_cshift, k), sigma )) ->
+        (* WRONG - to be fixed; we really need phat of n ... *)
+        Head (HClo(n+k, s, sigma))
 
 
   (* frontSub Ft s = Ft'

@@ -420,8 +420,8 @@ let eqMVar mV1 mV2 = match (mV1, mV2) with
    where B iff mV and mV' represent same variable
 *)
 let eqSVar mV1 mV2 = match (mV1, mV2) with
-  | (I.SVar (I.SInst (_, r1, _, _, _), _, _ ) ,
-     SV (marker , I.SVar (I.SInst (_, r2, _, _, _), _, _))) ->
+  | (I.SVar (I.SInst (_, r1, _, _, _), (_, _ ), _ ) ,
+     SV (marker , I.SVar (I.SInst (_, r2, _, _, _),(_ ,  _), _))) ->
        if r1 == r2 then
          match marker with Pure -> Yes | Impure -> Cycle
        else
@@ -777,7 +777,7 @@ let rec ctxToMCtx cQ  = match cQ with
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
       I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi))
 
-  | I.Dec (cQ', SV (Pure, I.SVar (I.SInst (n, _, cPsi, cPhi, _), _, _s))) ->
+  | I.Dec (cQ', SV (Pure, I.SVar (I.SInst (n, _, cPsi, cPhi, _), (_ , _), _s))) ->
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
       I.Dec (ctxToMCtx cQ', I.SDecl (n, cPsi, cPhi))
 
@@ -868,7 +868,7 @@ and collectTuple p cQ phat = function
        where cQ'' contains all MVars and FVars in (S, s)
 
 *)
-and collectSpine p cQ phat sS = match sS with
+and collectSpine (p:int) cQ phat sS = match sS with
   | (I.Nil, _) -> (cQ, I.Nil)
 
   | (I.SClo (tS, s'), s) ->
@@ -888,7 +888,7 @@ and collectSpine p cQ phat sS = match sS with
    where cQ'' contains all MVars and FVars in s
 
 *)
-and collectSub p cQ phat s = match s with
+and collectSub (p:int) cQ phat s = match s with
   | I.Shift _ -> (cQ, s) (* we do not collect the context variable in the
                             argument to shift; if the substitution is
                             well-typed, then it has been already collected *)
@@ -910,22 +910,22 @@ and collectSub p cQ phat s = match s with
      let (cQ1, s) = collectSub p cQ phat  s' in
        (cQ1, I.Dot (I.Undef, s)))
 
-  | I.SVar (I.Offset offset, n, s) ->
+  | I.SVar (I.Offset offset, (ctx_offset, n), s) ->
     let (cQ1,s') = collectSub p cQ phat s in
-       (cQ1, I.SVar(I.Offset offset, n, s'))
+       (cQ1, I.SVar(I.Offset offset, (ctx_offset, n), s'))
 
-  | I.SVar (I.SInst (n, s, cPsi, cPhi, ({contents = cnstr} as c)) as sv, k, s') as sigma ->
+  | I.SVar (I.SInst (n, s, cPsi, cPhi, ({contents = cnstr} as c)) as sv, (ctx_offset, k), s') as sigma ->
     if constraints_solved cnstr then
       begin match checkOccurrence (eqSVar sigma) cQ with
         | Yes ->  let (cQ', s') = collectSub p cQ phat s' in
-                    (cQ', I.SVar(sv, k, s'))
+                    (cQ', I.SVar(sv, (ctx_offset, k), s'))
         | No  ->  let (cQ0, s') = collectSub p cQ phat s' in
                   let cQ' = I.Dec(cQ0, SV(Impure, sigma)) in
                   let psihat = Context.dctxToHat cPsi in
                   let (cQ1, cPsi')  = collectDctx (Syntax.Loc.ghost) k cQ' psihat cPsi in
                   let phihat = Context.dctxToHat cPhi in
                   let (cQ2, cPhi')  = collectDctx  (Syntax.Loc.ghost) k cQ1 phihat cPhi in
-                  let sigma' = I.SVar (I.SInst (n,s, cPsi', cPhi', c), k , s') in
+                  let sigma' = I.SVar (I.SInst (n,s, cPsi', cPhi', c), (ctx_offset, k) , s') in
                   (I.Dec (cQ2, SV (Pure, sigma')), sigma')
 
         | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantSV))
@@ -1225,7 +1225,7 @@ and collectHat p cQ phat = match phat with
                  phat)
         end
 
-and collectDctx loc p cQ (cvar, offset) cPsi =
+and collectDctx loc (p:int) cQ (cvar, offset) cPsi =
   collectDctx' loc p cQ (cvar, offset) (Whnf.normDCtx cPsi)
 
 and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
@@ -1340,7 +1340,7 @@ and abstractTermW cQ offset sM = match sM with
       I.Root (loc, abstractHead cQ offset tH, abstractSpine cQ offset (tS, s))
 
 
-and abstractHead cQ offset tH = match tH with
+and abstractHead cQ (offset:int) tH = match tH with
   | I.BVar x ->
       I.BVar x
 
@@ -1442,7 +1442,7 @@ and abstractDctx cQ cPsi l = match cPsi with
 
   (* other cases impossible in LF layer *)
 
-and abstractSub cQ offset s = match s with
+and abstractSub cQ (offset:int) s = match s with
   | I.Shift _   -> s
 
   | I.Dot (I.Head tH, s) ->
@@ -1620,8 +1620,8 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
   | I.Dot (I.Obj tM, s) ->
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.Offset s, n, sigma) ->
-      I.SVar (I.Offset s, n, abstractMVarSub' cQ offset sigma)
+  | I.SVar (I.Offset s, (ctx_offset, n), sigma) ->
+      I.SVar (I.Offset s, (ctx_offset, n), abstractMVarSub' cQ offset sigma)
 
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)

@@ -411,7 +411,8 @@ module Int = struct
         | LF.Shift (LF.NegCtxShift _, _) when hasCtxVar  -> fprintf ppf ".."    (* ??? *)
         | LF.Shift (LF.NegCtxShift _, _) when not hasCtxVar  ->    ()    (* ??? *)
 
-        | LF.SVar (c, n, s) ->
+        | LF.SVar (c, (_ , n), s) ->
+            (* Ignoring potential CtxShifts *)
             fprintf ppf "#^%d%a[%a]"
                n
                (fmt_ppr_lf_cvar cD lvl) c
@@ -479,7 +480,8 @@ module Int = struct
             fprintf ppf "^(NegShift( _ ) + %s)"
               (R.render_offset n)
 
-        | LF.SVar (c, n, s) ->
+        | LF.SVar (c, (_ , n), s) ->
+            (* Ignore CtxShifts for pretty printing *)
             fprintf ppf "#^%d%a[%a]"
               n
               (fmt_ppr_lf_cvar cD lvl) c

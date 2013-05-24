@@ -1006,12 +1006,13 @@ let rec blockdeclInDctx cPsi = match cPsi with
         (* must be defined -- n = offset
          * otherwise it is undefined
          *)
-    | (SVar (s, 0, sigma), CtxVar psi) ->
+    | (SVar (s, (NoCtxShift, 0), sigma), CtxVar psi) ->
+        (* other cases ? -bp *)
         let cPsi' = (match s with
                      | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  offset in cPsi'
                      | SInst (_ , {contents=None}, _cPhi, cPsi', _ ) -> cPsi'
                     ) in
-        SVar(s, 0, invSub cD0 phat (sigma, cPsi') ss rOccur)
+        SVar(s, (NoCtxShift, 0), invSub cD0 phat (sigma, cPsi') ss rOccur)
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ssubst with
@@ -1040,11 +1041,11 @@ let rec blockdeclInDctx cPsi = match cPsi with
         let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in
           Dot (Obj tM', invSub cD0 phat (s', cPsi') ss rOccur)
 
-    | (SVar (Offset s, n, t), cPsi1) -> (* This is probably buggy. Need to deal with the n *)
+    | (SVar (Offset s, (ctx_offset, n), t), cPsi1) -> (* This is probably buggy. Need to deal with the n *)
         let (_, _tA, cPsi1) = Whnf.mctxSDec cD0 s in
           begin match applyMSub s ms with
             | MV v ->
-                SVar(Offset v, n, invSub cD0 phat (t, cPsi1) ss rOccur)
+                SVar(Offset v, (ctx_offset, n), invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
     | _ -> (dprint (fun () -> "invSub -- undefined") ; raise (Error "invSub -- undefined"))
@@ -1613,7 +1614,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
       let (mt, s') = ss in
       Substitution.LF.comp (Whnf.cnormSub (s,mt)) s'
 
-    | (SVar (sv, n, sigma), cPsi1) ->
+    | (SVar (sv, (ctx_offset, n), sigma), cPsi1) ->
       (*  cD ; cPsi |- sv[sigma] : cPsi1    where sv:cPsi1[cPhi1]
           cD ; cPsi |- sigma : cPhi1
           ** because s must be in nf, sv = None **
@@ -1627,7 +1628,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                        else
                          cPsi'
                     ) in
-        SVar(sv, n, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
+        SVar(sv, (ctx_offset, n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
     | (SVar (sv, n, sigma), cPsi1) ->
         (dprint (fun () -> "[pruneSubst] sv with offset " ^ string_of_int n);
@@ -1701,7 +1702,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     | (Shift (_psi', _n), CtxVar psi) -> (id, CtxVar psi)
 
-    | (SVar (s, 0, sigma), CtxVar psi) ->
+    | (SVar (s, (NoCtxShift,0), sigma), CtxVar psi) ->
         (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
                D ;Psi |- sigma : Phi
                D;Psi'' |- ss <= Psi
@@ -3166,7 +3167,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "SVar mismatch")
 
-      | (SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs),  0, s), s2) -> (* offset may not always be 0 ? -bp *)
+      | (SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs),  (NoCtxShift , 0), s), s2) -> (* offset may not always be 0 ? -bp *)
         let s = Whnf.normSub s in
           begin match isPatSub s with
             | true ->
@@ -3180,7 +3181,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
             | false -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
           end
 
-      | (s2, SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs),  0, s))  ->
+      | (s2, SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs), (NoCtxShift, 0), s))  ->
+          (* other cases ? -bp *)
         let s = Whnf.normSub s in
           begin match isPatSub s with
             | true ->

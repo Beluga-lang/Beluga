@@ -33,7 +33,7 @@ datatype IsNormal : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
 | Lam : IsNormal [g,x:tm (A ..)] [g,x. B ..] [g,x:tm (A ..). M .. x]
      -> IsNormal [g] [g.arr (A ..) (B ..)] [g. lam (\x. M .. x)]
 and IsNeutral : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
-| Var : {#p:[g.tm (A ..)]} IsNeutral [g] [g.A ..] [g. #p ..]
+| Var : {A:[g. tp]}{#p:[g.tm (A ..)]} IsNeutral [g] [g.A ..] [g. #p ..]
 | App : IsNeutral [g] [g.arr (A ..) (B ..)] [g. M ..]
      -> IsNormal [g] [g.A ..] [g. N ..]
      -> IsNeutral [g] [g.B ..] [g. app (M ..) (N ..)]
@@ -74,44 +74,62 @@ mlam g => case [g. i] of % Because we can't pattern match directly on contexts y
     Cons [g. A ..] [g,x:tm (A ..) $ ..] [g,x:tm (A ..). x] (wknVarSub [g] [g] [g $ ..] [g. A ..] iv)
 ;
 
-% TODO: Can we rewrite our definitions slightly so we don't need these? (Use Pis instead of ->s?)
-rec mstepTrans : (g:ctx){M:[g.tm A]} [g. mstep (M ..) (M' ..)] -> [g. mstep (M' ..) (M'' ..)] -> [g. mstep (M ..) (M'' ..)] =
-mlam M => fn s => fn s' => let [g. S ..] = s in let [g. S' ..] = s' in [g. trans (S ..) (S' ..)]
+rec shiftIsVarSub : {g:ctx}{A:[g.tp]} IsVarSub [g] [g,x:tm (A ..)] < g,x $ .. > =
+mlam g => mlam A => 
+wknVarSub [g] [g] [g $ ..] [g. A ..] (idIsVarSub [g])
 ;
 
-rec mstepAppL : (g:ctx){M1:[g.tm (arr A B)]} [g. mstep (M1 ..) (M2 ..)] -> [g. mstep (app (M1 ..) (N ..)) (app (M2 ..) (N ..))] =
-mlam M => fn s => let [g. S ..] = s in [g. stepapp (S ..) refl]
-;
-
-rec haltsMstep : (g:ctx) [g. mstep (M ..) (M' ..)] -> Halts [g] [g. A ..] [g. M' ..] -> Halts [g] [g. A ..] [g. M ..] =
-fn ms => fn h => let (h : Halts [g] [g. A ..] [g. M' ..]) = h in
-let Halts ms' v = h in Halts (mstepTrans [g. _] ms ms') v
+rec haltsMstep2 : (g:ctx) {S:[g. mstep (M ..) (M' ..)]} Halts [g] [g. A ..] [g. M' ..] -> Halts [g] [g. A ..] [g. M ..] =
+mlam S => fn h => let (h : Halts [g] [g. A ..] [g. M' ..]) = h in
+let Halts [g. R ..] v = h in Halts [g. trans (S ..) (R ..)] v
 ;
 
 
-%rec closed2 : Reduce [g] [g.A ..] [g. M' ..] -> {S:[g. mstep (M ..) (M' ..)]} Reduce [g] [g.A ..] [g. M ..] =
-%fn r => mlam S => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
-%| Base ha => ? %Base (haltsMstep2 [g. S ..] ha)
-%| Arr [g] [g. A ..] [g. B ..] [g. M ..] f => Arr [g] [g. A ..] [g. B ..] [g. _]
-%  (mlam h => mlam #W => mlam N => fn iv => fn rn =>
-%     closed2 (f [h] [h $ #W[..]] [h. N ..] iv rn) [h. stepapp (S #W[..]) refl])
-%
-%;
-
-% CR2
-rec closed : Reduce [g] [g.A ..] [g. M' ..] -> [g. mstep (M ..) (M' ..)] -> Reduce [g] [g.A ..] [g. M ..] =
-fn r => fn s => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
-| Base ha => Base (haltsMstep s ha)
+% CR2 
+rec closed2 : {S:[g. mstep (M ..) (M' ..)]} Reduce [g] [g.A ..] [g. M' ..] -> Reduce [g] [g.A ..] [g. M ..] =
+mlam S => fn r => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
+| Base ha => Base (haltsMstep2 [g. S ..] ha)
 | Arr [g] [g. A ..] [g. B ..] [g. M ..] f => Arr [g] [g. A ..] [g. B ..] [g. _]
   (mlam h => mlam #W => mlam N => fn iv => fn rn =>
-    ?%  closed (f [h] [h $ #W[..]] [g. N ..] iv rn) (mstepAppL [g. _] s)
-   )
+     closed2 [h. stepapp (S #W[..]) refl] (f [h] [h $ #W[..]] [h. N ..] iv rn)
+  )
 
+;
+
+rec rwkn : {g:ctx}{h:ctx}{A:[g.tp]}{R:[g.tm (A ..)]}{#W:g[h]}
+     IsNeutral [g] [g. A ..] [g. R ..]
+  -> IsVarSub [g] [h] <h $ #W[..]>
+  -> IsNeutral [h] [h. A #W[..]] [h. R #W[..]] =
+?
+;
+
+rec reflect : {g:ctx}{A:[g.tp]}{R:[g.tm (A ..)]}
+  IsNeutral [g] [g. A ..] [g. R ..] -> Reduce [g] [g. A ..] [g. R ..] =
+mlam g => mlam A => mlam R => fn r => let r : IsNeutral [g] [g. A ..] [g. R ..] = r in case [g. A ..] of
+| [g.i] => Base (Halts [g. refl] (Neut r))
+| [g. arr (A ..) (B ..)] =>
+  Arr [g] [g. A ..] [g. B ..] [g. R ..]
+  (mlam h => mlam #W => mlam M2 => fn iv => fn rm2 =>
+    let {MS:[h. mstep (M2 ..) (M2' ..)]} 
+       Halts [h. MS ..] n = reify [h] [h. A #W[..]] [h. M2 ..] rm2 in
+    closed2 [h. stepapp refl (MS ..)]
+     (reflect [h] [h. B #W[..]] [h. app (R #W[..]) (M2' ..)] (App (rwkn [g] [h] [g. arr (A ..) (B ..)] [g. R ..] [h $ #W[..]] r iv) n)) 
+  )
+
+and reify : {g:ctx}{A:[g.tp]}{M:[g.tm (A ..)]} Reduce [g] [g. A ..] [g. M ..] -> Halts [g] [g. A ..] [g. M ..] =
+mlam g => mlam A => mlam M => fn r => let r : Reduce [g] [g. A ..] [g. M ..] = r in case r of
+| Base h => h
+| Arr [g] [g. A ..] [g. B ..] [g. M ..] f =>
+  let Halts [g,x:tm (A ..). S .. x] q2 = reify [g,x:tm (A ..)] [g,x. B ..] [g,x:tm (A ..). app (M ..) x] (f [g,x:tm (A ..)] [g,x:tm (A ..) $ ..] [g,x:tm (A ..). x] (shiftIsVarSub [g] [g. A ..])
+        (reflect [g,x:tm (A ..)] [g,x:tm (A ..). A ..] [g,x:tm (A ..). x] (Var [g,x:tm (A ..). A ..] [g,x:tm (A ..). x]))
+       )
+  in
+    Halts [g. trans (eta _) (steplam (\x. S .. x))] (Lam q2)
 ;
 
 datatype RedSub : {g:ctx}{h:ctx}{#S:g[h]} ctype =
 | Nil : {h:ctx} RedSub [] [h] <h $ ^ >
-| Dot : {g:ctx}{h:ctx}{A:[g. tp]}{#S:g[h]}{M:[h.tm (A #S[..])]} % !!!!
+| Dot : {g:ctx}{h:ctx}{A:[g. tp]}{#S:g[h]}{M:[h.tm (A #S[..])]}
         RedSub [g] [h] <h $ #S[..] > -> Reduce [h] [h. A #S[..] ] [h. M ..]
          -> RedSub [g,x:tm (A ..)] [h] <h $ #S[..] (M ..) >
 ;
@@ -120,7 +138,11 @@ rec wknRedSub : {g:ctx}{h:ctx}{h':ctx}{#S:g[h]}{#W:h[h']}
     RedSub [g] [h] <h $ #S[..] >
  -> IsVarSub [h] [h'] <h' $ #W[..] >
  -> RedSub [g] [h'] <h' $ #S[#W[..]] > =
-?
+mlam g => mlam h => mlam h' => mlam #S => mlam #W => fn rs => fn iv =>
+case rs of
+| Nil [h0] => ? %Nil [h'] % Should suffice. Need to make these convertible
+%| {#R:g0[h]}{A:[g0. tp]}{M:[h. tm (A #R[..])]}
+%  Dot [g0] [h] [g0. A ..] <h $ #R[..] > [h. M ..] rs' rm => ?
 ;
 
 rec redVar : {g:ctx}{h:ctx}{T:[g.tp]}{#S:g[h]}{#p:[g.tm (T ..)]} RedSub [g] [h] <h $ #S[..]>
@@ -157,13 +179,11 @@ mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs =>
   [g'. lam (\x. M1 .. x)] => 
   Arr [h] [h. T2 #S[..] ] [h. T #S[..] ] [h. lam (\x. M1 #S[..] x)]
   (mlam h' => mlam #W => mlam N => fn isVS => fn rN =>
-   closed
+   closed2 [h'. beta]
      (eval [g',x:tm (T2 ..)] [h'] [g',x. T ..] [g',x. M1 .. x] [h' $ #S[#W[..]] (N ..)]
         (Dot [g'] [h'] [g'. T2 ..] [h' $ #S[#W[..]] ] [h'. N ..]
            (wknRedSub [g'] [h] [h'] [h $ #S[..]] [h' $ #W[..]] rs isVS)
            rN)
      )
-     [h'. beta]
   )
-%   mlam h' => mlam F => mlam N => fn wkn-f-m => fn rn => eval [g,x:tm _. M1 .. x] (Cons (all-wkn wkn-f-m rs) rn)
 ;

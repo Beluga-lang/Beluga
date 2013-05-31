@@ -101,13 +101,26 @@ mlam S => fn r => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
 
 ;
 
+rec wknVar : {g:ctx}{h:ctx}{A:[g.tp]}{#p:[g.tm (A ..)]}{#W:g[h]}
+     IsVarSub [g] [h] <h $ #W[..]>
+  -> IsNeutral [h] [h. A #W[..]] [h. #p #W[..]] =
+mlam g => mlam h => mlam A => mlam #p => mlam #W => fn iv => 
+case [g. #p ..] of
+| {A:[g'. tp]} [g',x:tm (A ..). x] =>
+%  let {#R:g'[h]}{A:[g'.tp]}{#r:[h. tm (A #R[..])]}
+%      Cons [g'. A ..] <h $ #R[..]> [h. #r ..] iv' = iv in
+   ?
+| {#q : [g'. tm (T ..)]} [g',x:tm (A ..). #q ..] => ?
+;
+
 rec rwkn : {g:ctx}{h:ctx}{A:[g.tp]}{R:[g.tm (A ..)]}{#W:g[h]}
      IsNeutral [g] [g. A ..] [g. R ..]
   -> IsVarSub [g] [h] <h $ #W[..]>
   -> IsNeutral [h] [h. A #W[..]] [h. R #W[..]] =
 mlam g => mlam h => mlam A => mlam R => mlam #W => fn r => fn iv =>
 case r of 
-%TODO: | Var [g. A ..] [g. #p ..] => ?
+%TODO: | {A:[g.tp]}{#p:[g. tm (A ..)]}
+%  Var [g. A ..] [g. #p ..] => ?
 | App [g. B ..] [g. A ..] [g. R' ..] [g. N ..] r' n =>
   App [h. B #W[..]] [h. A #W[..]] [h. R' #W[..]] [h. N #W[..]]
      (rwkn [g] [h] [g. arr (B ..) (A ..)] [g. _] [h $ #W[..]] r' iv)
@@ -214,4 +227,18 @@ mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs =>
            rN)
      )
   )
+;
+
+rec idRedSub : {g:ctx} RedSub [g] [g] <g $ ..> =
+mlam g => case [g. i] of % Can't pattern match directly on g
+| [. i] => Nil []
+| [g',x:tm (A ..). i] =>
+ Dot [g'] [g',x:tm (A ..)] [g'. A ..] [g',x $ ..] [g',x. x]
+   (wknRedSub [g'] [g'] [g',x:tm (A ..)] [g' $ ..] [g',x $ ..] (idRedSub [g']) (shiftIsVarSub [g'] [g'. A ..]))
+   (reflect [g',x:tm (A ..)] [g',x. A ..] [g',x. x] (Var [g',x:tm (A ..). A ..] [g',x. x]))
+;
+
+rec weakNorm : {g:ctx}{A:[g.tp]}{M:[g. tm (A ..)]} Halts [g] [g. A ..] [g. M ..] =
+mlam g => mlam A => mlam M =>
+reify [g] [g. A ..] [g. M ..] (eval [g] [g] [g. A ..] [g. M ..] [g $ ..] (idRedSub [g]))
 ;

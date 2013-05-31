@@ -27,7 +27,6 @@ datatype IsVarSub : {g:ctx}  {h:ctx} {#S: g[h]}ctype =
 
 
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
-% TODO: Hmm, couldn't we use a block x:tm A , neut x schema all the way through? lam even adds the assumption that neut x?
 datatype IsNormal : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
 | Neut : IsNeutral [g] [g. i] [g. M ..] -> IsNormal [g] [g.i] [g. M ..]
 | Lam : {A:[g.tp]}{B:[g.tp]}{M:[g,x:tm (A ..). tm (B ..)]}
@@ -68,7 +67,7 @@ rec wknVarSub : {g:ctx}{h:ctx}{#S:g[h]}{A:[h. tp]} IsVarSub [g] [h] <h $ #S[..] 
 mlam g => mlam h => mlam #S => mlam A => fn r =>
 ?
 %case r of
-%| Nil => Nil
+%| Nil => Nil 
 % TODO: There's a case not implemented yet in pruneSubst where the head is a PVar
 %| {A:[g.tp]}{#S:g[h]}{#p:[h. tm (A #S[..])]}
 %  Cons [g. A ..] <h $ #S[..] > [h . #p ..] r =>

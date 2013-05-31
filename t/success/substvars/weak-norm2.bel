@@ -30,11 +30,13 @@ datatype IsVarSub : {g:ctx}  {h:ctx} {#S: g[h]}ctype =
 % TODO: Hmm, couldn't we use a block x:tm A , neut x schema all the way through? lam even adds the assumption that neut x?
 datatype IsNormal : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
 | Neut : IsNeutral [g] [g. i] [g. M ..] -> IsNormal [g] [g.i] [g. M ..]
-| Lam : IsNormal [g,x:tm (A ..)] [g,x. B ..] [g,x:tm (A ..). M .. x]
+| Lam : {A:[g.tp]}{B:[g.tp]}{M:[g,x:tm (A ..). tm (B ..)]}
+        IsNormal [g,x:tm (A ..)] [g,x. B ..] [g,x:tm (A ..). M .. x]
      -> IsNormal [g] [g.arr (A ..) (B ..)] [g. lam (\x. M .. x)]
 and IsNeutral : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
 | Var : {A:[g. tp]}{#p:[g.tm (A ..)]} IsNeutral [g] [g.A ..] [g. #p ..]
-| App : IsNeutral [g] [g.arr (A ..) (B ..)] [g. M ..]
+| App : {A:[g.tp]}{B:[g.tp]}{M:[g.tm (arr (A ..) (B ..))]}{N:[g. tm (A ..)]}
+        IsNeutral [g] [g.arr (A ..) (B ..)] [g. M ..]
      -> IsNormal [g] [g.A ..] [g. N ..]
      -> IsNeutral [g] [g.B ..] [g. app (M ..) (N ..)]
 ;
@@ -65,13 +67,16 @@ mlam g => mlam h => mlam #S => mlam A => fn r =>
 %  ? % Make a recursive call, etc
 ;
 
+rec extVarSub : {g:ctx} {h:ctx}{A:[g.tp]} {#S:g[h]} IsVarSub [g] [h] <h $ #S[..]>
+ -> IsVarSub [g,x:tm (A ..)] [h,x:tm (A #S[..])] <h,x:tm (A #S[..]) $ #S[..] x > =
+mlam g => mlam h => mlam A => mlam #S => fn r =>
+Cons [g. A ..] [h,x:tm (A #S[..]) $ #S[..]] [h,x:tm (A #S[..]). x] (wknVarSub [g] [h] [h $ #S[..]] [h. A #S[..]] r)
+;
+
 rec idIsVarSub : {g:ctx} IsVarSub [g] [g] <g $ .. > =
 mlam g => case [g. i] of % Because we can't pattern match directly on contexts yet
 | [. i] => Nil
-| {A:[g. tp]}
-  [g,x:tm (A ..). i] =>
-    let iv = idIsVarSub [g] in
-    Cons [g. A ..] [g,x:tm (A ..) $ ..] [g,x:tm (A ..). x] (wknVarSub [g] [g] [g $ ..] [g. A ..] iv)
+| {A:[g. tp]} [g,x:tm (A ..). i] => extVarSub [g] [g] [g. A ..] [g $ ..] (idIsVarSub [g]) 
 ;
 
 rec shiftIsVarSub : {g:ctx}{A:[g.tp]} IsVarSub [g] [g,x:tm (A ..)] < g,x $ .. > =
@@ -100,7 +105,27 @@ rec rwkn : {g:ctx}{h:ctx}{A:[g.tp]}{R:[g.tm (A ..)]}{#W:g[h]}
      IsNeutral [g] [g. A ..] [g. R ..]
   -> IsVarSub [g] [h] <h $ #W[..]>
   -> IsNeutral [h] [h. A #W[..]] [h. R #W[..]] =
-?
+mlam g => mlam h => mlam A => mlam R => mlam #W => fn r => fn iv =>
+case r of 
+%TODO: | Var [g. A ..] [g. #p ..] => ?
+| App [g. B ..] [g. A ..] [g. R' ..] [g. N ..] r' n =>
+  App [h. B #W[..]] [h. A #W[..]] [h. R' #W[..]] [h. N #W[..]]
+     (rwkn [g] [h] [g. arr (B ..) (A ..)] [g. _] [h $ #W[..]] r' iv)
+     (nwkn [g] [h] [g. B ..] [g. _] [h $ #W[..]] n iv)
+
+and nwkn : {g:ctx}{h:ctx}{A:[g.tp]}{N:[g.tm (A ..)]}{#W:g[h]}
+     IsNormal [g] [g. A ..] [g. N ..]
+  -> IsVarSub [g] [h] <h $ #W[..]>
+  -> IsNormal [h] [h. A #W[..]] [h. N #W[..]] =
+mlam g => mlam h => mlam A => mlam N => mlam #W => fn r => fn iv =>
+case r of
+| Neut r' => Neut (rwkn [g] [h] [g. A ..] [g. N ..] [h $ #W[..]] r' iv)
+| Lam [g. A ..] [g. B ..] [g,x:tm (A ..). M .. x] n =>
+  Lam [h. A #W[..]] [h. B #W[..]] [h,x:tm (A #W[..]). M #W[..] x]
+      (nwkn [g,x:tm (A ..)] [h,x:tm (A #W[..])] [g,x:tm (A ..). B ..] [g,x. M .. x] [h,x $ #W[..] x]
+            n
+            (extVarSub [g] [h] [g. A ..] [h $ #W[..]] iv) 
+      )
 ;
 
 rec reflect : {g:ctx}{A:[g.tp]}{R:[g.tm (A ..)]}
@@ -113,7 +138,10 @@ mlam g => mlam A => mlam R => fn r => let r : IsNeutral [g] [g. A ..] [g. R ..] 
     let {MS:[h. mstep (M2 ..) (M2' ..)]} 
        Halts [h. MS ..] n = reify [h] [h. A #W[..]] [h. M2 ..] rm2 in
     closed2 [h. stepapp refl (MS ..)]
-     (reflect [h] [h. B #W[..]] [h. app (R #W[..]) (M2' ..)] (App (rwkn [g] [h] [g. arr (A ..) (B ..)] [g. R ..] [h $ #W[..]] r iv) n)) 
+     (reflect [h] [h. B #W[..]] [h. app (R #W[..]) (M2' ..)]
+        (App [h. A #W[..]] [h. B #W[..]] [h. R #W[..]] [h. M2' ..]
+          (rwkn [g] [h] [g. arr (A ..) (B ..)] [g. R ..] [h $ #W[..]] r iv)
+          n)) 
   )
 
 and reify : {g:ctx}{A:[g.tp]}{M:[g.tm (A ..)]} Reduce [g] [g. A ..] [g. M ..] -> Halts [g] [g. A ..] [g. M ..] =
@@ -124,7 +152,7 @@ mlam g => mlam A => mlam M => fn r => let r : Reduce [g] [g. A ..] [g. M ..] = r
         (reflect [g,x:tm (A ..)] [g,x:tm (A ..). A ..] [g,x:tm (A ..). x] (Var [g,x:tm (A ..). A ..] [g,x:tm (A ..). x]))
        )
   in
-    Halts [g. trans (eta _) (steplam (\x. S .. x))] (Lam q2)
+    Halts [g. trans (eta _) (steplam (\x. S .. x))] (Lam [g. A ..] [g. B ..] [g,x:tm (A ..). _] q2)
 ;
 
 datatype RedSub : {g:ctx}{h:ctx}{#S:g[h]} ctype =

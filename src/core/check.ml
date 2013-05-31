@@ -682,7 +682,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             | MetaObjAnn (_, cPsi, tM) -> I.MDot (I.MObj(Context.dctxToHat cPsi, tM), theta)
           )
     | I.PDecl (_, tA, cPsi) ->
-        let _ = checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), theta) in
+        let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in
           (match mO with
             | MetaParam (_, phat, h) ->  I.MDot(I.PObj(phat, h), theta)
           )

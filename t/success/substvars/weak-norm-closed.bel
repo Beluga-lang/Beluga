@@ -1,4 +1,4 @@
-% Sketch of weak normalization for STLC that goes under binders
+% Proof of weak normalization for STLC that doesn't go under binders
 % Author: Andrew Cave
 
 tp : type.                %name tp T.

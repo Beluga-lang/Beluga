@@ -1,4 +1,5 @@
-% Sketch of weak normalization for STLC that goes under binders
+% Sketch of weak normalization for STLC that doesn't go under binders
+% Uses more LF level datatypes
 % Author: Andrew Cave
 
 tp : type.                %name tp T.
@@ -19,42 +20,41 @@ stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
-datatype IsValue : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
-| C : IsValue [g] [g. i]  [g. c]
-| Lam : IsValue [g] [g.arr (A ..) (B ..)] [g. lam (\x. M .. x)]
-;
+val : tm A -> type.
+val/c : val c.
+val/lam : val (lam M).
 
-datatype Halts : {g:ctx}{A:[g.tp]} {M:[g. tm (A ..)]} ctype =
-| Halts : {S:[g. mstep (M ..) (V ..)]} IsValue [g] [g. A ..] [g. V .. ] ->
-          Halts [g] [g. A ..] [g. M ..]
-;
+halts : {A:tp} tm A -> type.
+halts/m : mstep M M' -> val M' -> halts A M.
 
 datatype Reduce : {g:ctx}{A:[g.tp]} {M:[g.tm (A ..)]} ctype =
-| Base : Halts [g] [g.i] [g. M .. ] -> Reduce [g] [g. i] [g. M ..]
+| Base : [g. halts i (M ..)] -> Reduce [g] [g. i] [g. M ..]
 | Arr :  {g:ctx}{A:[g.tp]}{B:[g.tp]}{M:[g.tm (arr (A ..) (B ..))]}
-         Halts [g] [g. arr (A ..) (B ..)] [g. M ..] ->
+         [g. halts _ (M ..)] ->
          ({N:[g.tm (A ..)]}
           Reduce [g] [g . A ..] [g. N ..] -> Reduce [g] [g. B ..] [g . app (M ..) (N ..)])
            -> Reduce [g] [g. arr (A ..) (B ..)] [g. M ..]
 ;
 
-rec haltsMstep : (g:ctx) {S:[g. mstep (M ..) (M' ..)]} Halts [g] [g. A ..] [g. M' ..] -> Halts [g] [g. A ..] [g. M ..] =
-mlam MS => fn h => let (h : Halts [g] [g. A ..] [g. M' ..]) = h in
-let Halts [g. MS' ..] v = h in Halts [g. trans (MS ..) (MS' ..)] v
+rec haltsMstep : (g:ctx) {S:[g. mstep (M ..) (M' ..)]}
+  [g.halts (A ..) (M' ..)] ->  [g. halts (A ..) (M ..)] =
+mlam MS => fn h =>
+let [g. halts/m (MS' ..) (V ..)] = h in
+ [g. halts/m (trans (MS ..) (MS' ..)) (V ..)]
 ;
 
 % CR2
-rec closed : Reduce [g] [g.A ..] [g. M' ..] -> {S:[g. mstep (M ..) (M' ..)]} Reduce [g] [g.A ..] [g. M ..] =
-fn r => mlam S => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
+rec closed : {S:[g. mstep (M ..) (M' ..)]} Reduce [g] [g.A ..] [g. M' ..] -> Reduce [g] [g.A ..] [g. M ..] =
+mlam S => fn r => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
 | Base ha => Base (haltsMstep [g. S ..] ha)
 | Arr [g] [g. A ..] [g. B ..] [g. M ..] ha f => Arr [g] [g. A ..] [g. B ..] [g. _]
   (haltsMstep [g. S ..] ha)
-  (mlam N => fn rn => closed (f [g. N ..] rn) [g. stepapp (S ..) refl])
+  (mlam N => fn rn => closed [g. stepapp (S ..) refl] (f [g. N ..] rn))
 
 ;
 
 % CR1
-rec reify : Reduce [g] [g. A ..] [g. M ..] -> Halts [g] [g.A ..] [g. M ..] =
+rec reify : Reduce [g] [g. A ..] [g. M ..] -> [g. halts (A ..) (M ..)] =
 fn r => let r : Reduce [g] [g. A ..] [g. M ..] = r in case r of
 | Base h => h
 | Arr [g] [g. A ..] [g. B ..] [g. M ..] ha f => ha
@@ -92,31 +92,25 @@ mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g. M ..] of
 | {T2:[g'.tp]}{T:[g'.tp]}{M1:[g', y:tm (T2 ..). tm (T ..)]}
   [g'. lam (\x. M1 .. x)] =>
   Arr [h] [h. T2 #S[..]] [h. T #S[..]] [h. lam (\x. M1 #S[..] x)]
-    (Halts [h. refl] Lam)
-    (mlam N => fn rN => closed
+    [h. halts/m refl val/lam]
+    (mlam N => fn rN => closed [h. beta]
        (eval [g',x:tm (T2 ..)] [h] [g',x. T ..] [g',x. M1 .. x] [h $ #S[..] (N ..)]
             (Dot [g'] [h] [g'. T2 ..]  [h $  #S[..]]
                   [h. (N ..)] rs rN
                  ))
-      [h. beta])
+    )
  | {T:[g'.tp]}{T2:[g'.tp]}{M1:[g'. tm (arr (T2 ..) (T ..))]}{M2:[g'. tm (T2 ..)]}
   [g'. app (M1 ..) (M2 ..)] =>
   let rM2 : Reduce [h] [h. A' ..] [h. N2 ..] = eval [g'] [h] [g'. T2 ..] [g'. M2 ..] [h $ #S[..] ] rs in
   let Arr [h0] [h0. S2 ..] [h0. S1 ..] [h0. N1 ..] ha f =
        eval [g'] [h] [g'. arr (T2 ..) (T ..)] [g'. M1 ..] [h $ #S[..] ] rs in
   f [h. N2 ..] rM2
-| [g'. c] => Base (Halts [h. refl] C)
+| [g'. c] => Base [h. halts/m refl val/c]
 ;
 
 
-rec weakNorm2 : {A:[.tp]}{M:[. tm A]} Halts [] [. A] [. M] =
+rec weakNorm : {A:[.tp]}{M:[. tm A]} [. halts A M] =
 mlam A => mlam M =>
 reify (eval [] [] [. A] [. M] [ $ ^ ] (Nil []))
 ;
-
-%rec weakNorm : {g:ctx}{A:[g.tp]}{M:[g. tm (A ..)]} Halts [g] [g. A ..] [g. M ..] =
-%mlam g => mlam A => mlam M =>
-%reify (eval [g] [g] [g. A ..] [g. M ..] [g $ ..] ?)
-% For this I need a lemma which says that RedSub holds of the identity substitution
-%;
 

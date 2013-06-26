@@ -1,0 +1,110 @@
+% Sketch of weak normalization for STLC that doesn't go under binders
+% Uses more LF level datatypes
+% Author: Andrew Cave
+
+tp : type.                %name tp T.
+i :  tp.
+arr: tp -> tp -> tp.
+
+tm : tp -> type.          %name tm E.
+app : tm (arr T S) -> tm T -> tm S.
+lam : (tm T -> tm S) -> tm (arr T S).
+c : tm i.
+
+schema ctx = tm T;
+
+mstep : tm A -> tm A -> type.  %name mstep S.
+beta : mstep (app (lam M) N) (M N).
+stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
+refl : mstep M M.
+trans : mstep M M' -> mstep M' M'' -> mstep M M''.
+
+val : tm A -> type.
+val/c : val c.
+val/lam : val (lam M).
+
+halts : {A:tp} tm A -> type.
+halts/m : mstep M M' -> val M' -> halts A M.
+
+datatype Reduce : (g:ctx){A:[g.tp]} {M:[g.tm (A ..)]} ctype =
+| Base : [g. halts i (M ..)] -> Reduce [g. i] [g. M ..]
+| Arr :  {M:[g.tm (arr (A ..) (B ..))]}
+         [g. halts _ (M ..)] ->
+         ({N:[g.tm (A ..)]}
+          Reduce [g . A ..] [g. N ..] -> Reduce [g. B ..] [g . app (M ..) (N ..)])
+           -> Reduce [g. arr (A ..) (B ..)] [g. M ..]
+;
+
+rec haltsMstep : (g:ctx) {S:[g. mstep (M ..) (M' ..)]}
+  [g.halts (A ..) (M' ..)] ->  [g. halts (A ..) (M ..)] =
+mlam MS => fn h =>
+let [g. halts/m (MS' ..) (V ..)] = h in
+ [g. halts/m (trans (MS ..) (MS' ..)) (V ..)]
+;
+
+% CR2
+rec closed : {S:[g. mstep (M ..) (M' ..)]} Reduce [g.A ..] [g. M' ..] -> Reduce  [g.A ..] [g. M ..] =
+mlam S => fn r => let (r : Reduce [g.A..] [g. M'..]) = r in case r of
+| Base ha => Base (haltsMstep [g. S ..] ha)
+| Arr [g. M ..] ha f =>
+  Arr [g. _] (haltsMstep [g. S ..] ha)
+  (mlam N => fn rn => closed [g. stepapp (S ..) refl] (f [g. N ..] rn))
+;
+
+% CR1
+rec reify : Reduce [g. A ..] [g. M ..] -> [g. halts (A ..) (M ..)] =
+fn r => case r of
+| Base h => h
+| Arr [g. M ..] h f => h
+;
+
+%  h |- #s : g
+datatype RedSub : {g:ctx}(h:ctx){#S:g[h]} ctype =
+| Nil : RedSub [] <h $ ^ >
+| Dot : {A:[g. tp]}{#S:g[h]}{M:[h.tm (A #S[..])]} % !!!!
+        RedSub [g] <h $ #S[..] > -> Reduce [h. A #S[..] ] [h. M ..]
+         -> RedSub [g,x:tm (A ..)] <h $ #S[..] (M ..) >
+;
+
+rec redVar : {g:ctx}(h:ctx){T:[g.tp]}{#S:g[h]}{#p:[g.tm (T ..)]}
+ RedSub [g] <h $ #S[..]> ->  Reduce [h. T #S[..]] [h. #p #S[..] ] =
+mlam g => mlam T => mlam #S => mlam #p => fn rs =>
+case [g. #p ..] of
+ | {A:[g'. tp]} [g',x:tm (A ..). x] =>
+    let {#R:g'[h]}{A:[g'.tp]}{N:[h. tm (A #R[..])]}
+       Dot [g'. A ..] <h $ #R[..] > [h . N .. ] rs' rN = rs
+    in rN
+ | {#q : [g'. tm (T ..)]} [g',x:tm (A ..). #q ..] =>
+    let  {#R:g'[h]}{A:[g'.tp]}{N:[h. tm (A #R[..])]}
+        Dot [g'. A ..] <h $ #R[..] > [h . N .. ] rs' rN = rs in
+     redVar [g'] [g'. T ..] [h $ #R[..] ] [g'. #q ..] rs'
+;
+
+
+rec eval : {g:ctx}{h:ctx}{M:[g.tm (A ..)]}{#S:g[h]} RedSub [g] <h $ #S[..] >
+           -> Reduce [h. A #S[..]] [h. M #S[..] ] =
+mlam g => mlam h => mlam M => mlam #S => fn rs => case [g. M ..] of
+| {#p:[g'. tm (T ..)]}
+  [g'. #p ..] => redVar [g'] [g'.T ..] [h $ #S[..] ] [g'. #p ..] rs
+| {M1:[g', y:tm (T2 ..). tm (T ..)]}
+  [g'. lam (\x. M1 .. x)] =>
+  Arr [h. lam (\x. M1 #S[..] x)]
+    [h. halts/m refl val/lam]
+    (mlam N => fn rN => closed [h. beta]
+       (eval [g',x:tm (T2 ..)] [h] [g',x. M1 .. x] [h $ #S[..] (N ..)]
+            (Dot [g'. T2 ..]  [h $  #S[..]] [h. (N ..)] rs rN)
+       )
+    )
+ | {M1:[g'. tm (arr (T2 ..) (T ..))]}
+  [g'. app (M1 ..) (M2 ..)] =>
+  let rM2 = eval [g'] [h] [g'. M2 ..] [h $ #S[..] ] rs in
+  let Arr [h0. N1 ..] ha f = eval [g'] [h] [g'. M1 ..] [h $ #S[..] ] rs in
+  f [h. M2 #S[..]] rM2
+| [g'. c] => Base [h. halts/m refl val/c]
+;
+
+
+rec weakNorm : {M:[. tm A]} [. halts A M] =
+mlam M => reify (eval [] [] [. M] [ $ ^ ] Nil)
+;
+

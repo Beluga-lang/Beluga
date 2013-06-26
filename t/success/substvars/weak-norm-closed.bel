@@ -1,4 +1,4 @@
-% Sketch of weak normalization for STLC that goes under binders
+% Proof of weak normalization for STLC that doesn't go under binders
 % Author: Andrew Cave
 
 tp : type.                %name tp T.
@@ -8,6 +8,7 @@ arr: tp -> tp -> tp.
 tm : tp -> type.          %name tm E.
 app : tm (arr T S) -> tm T -> tm S.
 lam : (tm T -> tm S) -> tm (arr T S).
+c : tm i.
 
 schema ctx = tm T;
 
@@ -19,12 +20,12 @@ refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
 datatype IsValue : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
-| Var : {#p:[g.tm (A ..)]} IsValue [g] [g. A ..] [g. #p ..]
+| C : IsValue [g] [g. i]  [g. c]
 | Lam : IsValue [g] [g.arr (A ..) (B ..)] [g. lam (\x. M .. x)]
 ;
 
 datatype Halts : {g:ctx}{A:[g.tp]} {M:[g. tm (A ..)]} ctype =
-| Halts : [g. mstep (M ..) (V ..)] -> IsValue [g] [g. A ..] [g. V .. ] ->
+| Halts : {S:[g. mstep (M ..) (V ..)]} IsValue [g] [g. A ..] [g. V .. ] ->
           Halts [g] [g. A ..] [g. M ..]
 ;
 
@@ -37,27 +38,18 @@ datatype Reduce : {g:ctx}{A:[g.tp]} {M:[g.tm (A ..)]} ctype =
            -> Reduce [g] [g. arr (A ..) (B ..)] [g. M ..]
 ;
 
-% TODO: Can we rewrite our definitions slightly so we don't need these? (Use Pis instead of ->s?)
-rec mstepTrans : (g:ctx){M:[g.tm A]} [g. mstep (M ..) (M' ..)] -> [g. mstep (M' ..) (M'' ..)] -> [g. mstep (M ..) (M'' ..)] =
-mlam M => fn s => fn s' => let [g. S ..] = s in let [g. S' ..] = s' in [g. trans (S ..) (S' ..)]
-;
-
-rec mstepAppL : (g:ctx){M1:[g.tm (arr A B)]} [g. mstep (M1 ..) (M2 ..)] -> [g. mstep (app (M1 ..) (N ..)) (app (M2 ..) (N ..))] =
-mlam M => fn s => let [g. S ..] = s in [g. stepapp (S ..) refl]
-;
-
-rec haltsMstep : (g:ctx) [g. mstep (M ..) (M' ..)] -> Halts [g] [g. A ..] [g. M' ..] -> Halts [g] [g. A ..] [g. M ..] =
-fn ms => fn h => let (h : Halts [g] [g. A ..] [g. M' ..]) = h in
-let Halts ms' v = h in Halts (mstepTrans [g. _] ms ms') v
+rec haltsMstep : (g:ctx) {S:[g. mstep (M ..) (M' ..)]} Halts [g] [g. A ..] [g. M' ..] -> Halts [g] [g. A ..] [g. M ..] =
+mlam MS => fn h => let (h : Halts [g] [g. A ..] [g. M' ..]) = h in
+let Halts [g. MS' ..] v = h in Halts [g. trans (MS ..) (MS' ..)] v
 ;
 
 % CR2
-rec closed : Reduce [g] [g.A ..] [g. M' ..] -> [g. mstep (M ..) (M' ..)] -> Reduce [g] [g.A ..] [g. M ..] =
-fn r => fn s => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
-| Base ha => Base (haltsMstep s ha)
+rec closed : Reduce [g] [g.A ..] [g. M' ..] -> {S:[g. mstep (M ..) (M' ..)]} Reduce [g] [g.A ..] [g. M ..] =
+fn r => mlam S => let (r : Reduce [g] [g.A ..] [g. M' ..]) = r in  case r of
+| Base ha => Base (haltsMstep [g. S ..] ha)
 | Arr [g] [g. A ..] [g. B ..] [g. M ..] ha f => Arr [g] [g. A ..] [g. B ..] [g. _]
-  (haltsMstep s ha)
-  (mlam N => fn rn => closed (f [g. N ..] rn) (mstepAppL [g. _] s))
+  (haltsMstep [g. S ..] ha)
+  (mlam N => fn rn => closed (f [g. N ..] rn) [g. stepapp (S ..) refl])
 
 ;
 
@@ -113,6 +105,7 @@ mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g. M ..] of
   let Arr [h0] [h0. S2 ..] [h0. S1 ..] [h0. N1 ..] ha f =
        eval [g'] [h] [g'. arr (T2 ..) (T ..)] [g'. M1 ..] [h $ #S[..] ] rs in
   f [h. N2 ..] rM2
+| [g'. c] => Base (Halts [h. refl] C)
 ;
 
 
@@ -121,9 +114,9 @@ mlam A => mlam M =>
 reify (eval [] [] [. A] [. M] [ $ ^ ] (Nil []))
 ;
 
-rec weakNorm : {g:ctx}{A:[g.tp]}{M:[g. tm (A ..)]} Halts [g] [g. A ..] [g. M ..] =
-mlam g => mlam A => mlam M =>
-reify (eval [g] [g] [g. A ..] [g. M ..] [g $ ..] ?)
+%rec weakNorm : {g:ctx}{A:[g.tp]}{M:[g. tm (A ..)]} Halts [g] [g. A ..] [g. M ..] =
+%mlam g => mlam A => mlam M =>
+%reify (eval [g] [g] [g. A ..] [g. M ..] [g $ ..] ?)
 % For this I need a lemma which says that RedSub holds of the identity substitution
-;
+%;
 

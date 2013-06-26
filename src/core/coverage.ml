@@ -334,6 +334,7 @@ let opengoalsToString ogoals = goalsToString ogoals 1
 type result = Yes of LF.tclo * LF.tclo | Inst | SplitCand | No
 
 let pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with
+  | (_         , LF.MVar  _ ) -> Inst
   | (LF.BVar k , LF.BVar k') ->
       if k = k' then
 	let LF.TypDecl (_x, tA )  = Context.ctxDec cPsi  k  in
@@ -367,8 +368,6 @@ let pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with
   | (LF.Proj (LF.PVar _ , j)  , LF.Proj (LF.PVar _ , j'))  ->
       if j == j' then Inst else No
 
-  | (LF.MVar _ , LF.MVar _ ) -> Inst
-  | (_         , LF.MVar  _ ) -> Inst
   | (LF.MVar _ ,  _         ) -> SplitCand
 
   | (LF.PVar _ , LF.Const _) -> No
@@ -561,12 +560,13 @@ match (pat, ttau) , (pat_p, ttau_p) with
 	match_spines (cD, cG) (cD_p, cG_p) (pS, ttau) (pS', ttau') mC sC
       else
 	raise (Error (Syntax.Loc.ghost, MatchError "Const mismatch"))
-  | (Comp.PatFVar (_, v) , ttau),
-    (pat_p, ttau')  -> (* splitting candidate *)
-      (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
   | (pat, ttau),
     (Comp.PatVar (_, v), ttau') ->   (* success *)
       (mC, sC)
+  | (Comp.PatFVar (_, v) , ttau),
+    (pat_p, ttau')  -> (* splitting candidate *)
+      (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
+
 
   | (Comp.PatPair (_, pat1, pat2) , (Comp.TypCross (tau1, tau2), t)),
     (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (tau1', tau2'),t')) ->

@@ -56,8 +56,8 @@ fn r => case r of
 
 %  h |- #s : g
 datatype RedSub : (g:ctx){#S:g[]} ctype =
-| Nil : RedSub < $ ^ >
-| Dot : RedSub < $ #S[^] > -> Reduce [.A] [.M] -> RedSub < $ #S[^] M >
+| Nil : RedSub  < $ ^ >
+| Dot : RedSub  < $ #S[^] > -> Reduce [.A] [.M] -> RedSub  < $ #S[^] M >
 ;
 
 rec lookup : {g:ctx}{#p:[g.tm A]} RedSub < $ #S[^]> -> Reduce [.T] [. #p #S[^]] =
@@ -83,4 +83,3 @@ mlam g => mlam M => fn rs => case [g. M ..] of
 rec weakNorm : {M:[. tm A]} [. halts M] =
 mlam M => cr1 (eval [] [. M] Nil)
 ;
-

@@ -36,6 +36,7 @@ type error =
   | SigmaTypImpos of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | SpineLengthMisMatch
   | IllTypedSubVar of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
+  | NotPatSub
 
 exception Error of Syntax.Loc.t * error
 
@@ -48,6 +49,10 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+        | NotPatSub ->
+          Format.fprintf ppf
+            "Substitution associated with substitution variable is not a pattern substitution;\n
+             Please provide the type of the substitution variable."
         | SpineLengthMisMatch ->
             Format.fprintf ppf
               "Too few or to many arguments supplied to a type family."
@@ -1564,6 +1569,60 @@ and elSub' loc recT cD cPsi s cPhi =
       | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
     end
 
+  | (Apx.LF.EmptySub, Int.LF.CtxVar cvar) ->
+    begin match cvar with
+      | Int.LF.CInst (_, ({contents = None} as cref), s_cid, _, _ ) ->
+        (cref := Some (Int.LF.Null);
+         begin match Context.dctxToHat cPsi with
+           | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d)
+           | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
+         end)
+      | _     -> raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
+    end
+  | (Apx.LF.FSVar (s_name, sigma), cPhi) ->
+   (* cPsi' |- s_name : cPhi
+      cPsi  |-  sigma : cPsi'
+      Note: users cannot write closures involving subst.vars
+            hence, the offset associated with the svar will be 0.
+
+      Note: we could lower svars s.t. the domain of an svar, i.e. cPhi,
+            is a context variable.
+
+   *)
+      begin try
+        let (cD_d, Int.LF.SDecl(_,cPhi0 , cPsi0)) = FCVar.get s_name in
+	let d = Context.length cD - Context.length cD_d in
+	let (cPhi0', cPsi0') = if d = 0 then (cPhi0, cPsi0) else
+          (if d > 0 then
+	     (Whnf.cnormDCtx (cPhi0, Int.LF.MShift d), Whnf.cnormDCtx (cPsi0, Int.LF.MShift d))
+           else
+             let rec createMSub d = if d = 0 then Int.LF.MShift 0 else
+                Int.LF.MDot (Int.LF.MUndef, createMSub (d+1)) in
+             let t = createMSub d in
+               (Whnf.cnormDCtx (cPhi0, t), Whnf.cnormDCtx (cPsi0, t)))
+
+           in
+          (* For type reconstruction to succeed, we must have
+           *    . |- cPsi0 ctx and .|- cPhi0 ctx, i.e. cPsi0 and cPhi0  cannot depend on
+           * meta-variables in cD. This will be enforced during abstraction *)
+
+        let sigma' = elSub loc recT cD cPsi sigma cPsi0' in
+        begin try
+                Unify.unifyDCtx cD cPhi cPhi0;
+                Int.LF.FSVar(s_name, sigma')
+          with Unify.Failure msg ->
+            raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
+        end
+        with Not_found ->
+          if isPatSub sigma then
+            let (cPsi', sigma') = synDom cD loc cPsi sigma in
+             (FCVar.add s_name (cD, Int.LF.SDecl (s_name, cPhi, cPsi'));
+              Int.LF.FSVar (s_name, sigma'))
+          else
+            raise (Error (loc, NotPatSub))
+      end
+
+
   | (Apx.LF.SVar (Apx.LF.Offset offset, s), cPhi) ->
     let (_, cPhi1, cPhi2) = Whnf.mctxSDec cD offset in
     if  Whnf.convDCtx (Whnf.cnormDCtx (cPhi, Whnf.m_id))
@@ -1605,6 +1664,8 @@ and elSub' loc recT cD cPsi s cPhi =
             raise (Error.Violation "Id must be associated with ctxvar")
       end
 
+%  | (Apx.LF.Dot (Apx.LF.Head h, s),   ) ->
+
 
   | (Apx.LF.Dot (Apx.LF.Head h, s),   Int.LF.DDec (cPhi', Int.LF.TypDecl (_, tA))) ->
       (* NOTE: if decl = x:A, and cPsi(h) = A' s.t. A =/= A'
@@ -1620,6 +1681,14 @@ and elSub' loc recT cD cPsi s cPhi =
       with
         |  _ -> raise (Error (loc, TypMismatchElab (cD, cPsi, sA', (tA, s'))))
       end
+
+  | (Apx.LF.Dot (Apx.LF.Obj m, s), Int.LF.CtxVar cvar) ->
+    begin match cvar with
+      | Int.LF.CInst (_, ({contents = None} as cref), s_cid, _, _ ) ->
+
+
+      | _     -> raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
+    end
 
 
   | (Apx.LF.Dot (Apx.LF.Obj m, s),   Int.LF.DDec (cPhi', Int.LF.TypDecl(_, tA))) ->

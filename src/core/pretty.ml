@@ -410,6 +410,10 @@ module Int = struct
         | LF.Shift (LF.CtxShift _, _) when not hasCtxVar     -> fprintf ppf "????"
         | LF.Shift (LF.NegCtxShift _, _) when hasCtxVar  -> fprintf ppf ".."    (* ??? *)
         | LF.Shift (LF.NegCtxShift _, _) when not hasCtxVar  ->    ()    (* ??? *)
+        | LF.FSVar (s_name, s) ->
+          fprintf ppf "FSV %s[%a]"
+            (R.render_name s_name )
+            (fmt_ppr_lf_sub cD cPsi lvl) s
 
         | LF.SVar (c, (_ , n), s) ->
             (* Ignoring potential CtxShifts *)

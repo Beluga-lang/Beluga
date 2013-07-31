@@ -1,0 +1,81 @@
+datatype term: type =
+| app : term -> term -> term
+| lam : (term -> term) -> term
+;
+%name term M x.
+
+schema tctx = term;
+
+% Algorithmic Equality
+datatype Aeq : (g:tctx) [g.term] -> [g.term] -> ctype =
+| Ae_v : % {#p:[g.term]}
+             Aeq [g. #p ..] [ g.#p..]
+| Ae_a : Aeq [g.E1 ..] [g.F1 .. ] -> Aeq [g.E2 ..] [g.F2 ..]
+    -> Aeq [g. app (E1..) (E2..)] [g. app (F1 ..) (F2 ..)]
+| Ae_l :  Aeq [h,x:term. E .. x] [h,x:term. F .. x]
+        -> Aeq [h. lam (\x. E .. x)]  [h. lam (\x. F .. x)]
+;
+
+% Declarative Equality
+datatype Deq: (g:tctx) [g.term] -> [g.term] -> ctype =
+| De_v : Deq [g. #p ..] [ g.#p..]
+| De_l : Deq [g,x:term. T ..x] [g,x:term. T'..x]
+     -> Deq [g. lam (\x. T .. x)] [g. lam (\x. T' .. x)]
+| De_a : Deq [g.T1 ..] [g.S1 ..] -> Deq [g.T2 ..] [g.S2 ..]
+     -> Deq [g. app (T1 ..) (T2 ..)] [g. app (S1 ..) (S2..)]
+| De_r : {T: [g.term]}Deq [g.T..] [g.T..]
+| De_t : Deq [g.T ..] [g.R ..] -> Deq [g.R..] [g.S..]
+     -> Deq [g.T..] [g.S..]
+;
+
+% Reflexivity for Aeq is admissible
+rec ref : {g:tctx} {E : [g.term]} Aeq [g. E ..] [g. E ..] =
+mlam g => mlam E => case [g. E ..] of
+| [g. #p ..] => Ae_v % [g. #p ..]
+| [g. app (E1 ..) (E2 ..)] =>
+  let f1 = ref [g] [g. E1 ..] in
+  let f2 = ref [g] [g. E2 ..] in
+    Ae_a f1 f2
+| [g. lam \x. E .. x] =>
+  let f = ref [g,x:term] [g,x. E .. x] in
+     Ae_l f
+
+;
+
+% Transitivity for Aeq is admissible
+rec trans : (g:tctx) Aeq [g. E ..] [g. F ..] -> Aeq [g. F ..] [g. L ..] ->
+            Aeq [g. E ..] [g. L ..] =
+fn e => fn d => case e of
+| Ae_v  => let Ae_v  = d in Ae_v
+| Ae_a f1 f2 =>
+  let Ae_a d1 d2 = d in
+  let r1 = trans f1 d1 in
+  let r2 = trans f2 d2 in
+   Ae_a r1 r2
+| Ae_l f1 =>
+  let Ae_l d1 = d in
+  let r = trans f1 d1 in
+    Ae_l r
+;
+
+% Alternative proof for transitivity using simultanous pattern matching
+rec trans' : (g:tctx) Aeq [g. E ..] [g. F ..] -> Aeq [g. F ..] [g. L ..] ->
+            Aeq [g. E ..] [g. L ..] =
+fn e => fn d => case (e , d) of
+| ( Ae_v  , Ae_v ) =>  Ae_v
+| ( Ae_a f1 f2 ,  Ae_a d1 d2 ) =>
+  Ae_a (trans' f1 d1) (trans' f2 d2)
+| ( Ae_l f , Ae_l d) =>
+  Ae_l (trans' f d)
+;
+
+% Completeness of Aeq
+rec ceq : (g:tctx)
+         Deq [g. T ..] [g. S ..] -> Aeq [g. T ..] [g. S ..]  =
+fn d => case d of
+| De_l d => Ae_l (ceq d)
+| De_a d1 d2 => Ae_a (ceq d1) (ceq d2)
+| De_r [g. T ..] => ref [g] [g. T ..]
+| De_t d1 d2 => trans (ceq d1) (ceq d2)
+| De_v => Ae_v
+;

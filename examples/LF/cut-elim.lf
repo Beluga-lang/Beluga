@@ -42,19 +42,19 @@ truer' : (pos (true) -> hash).
 
 
 forallr' : ({a:i} pos (A a) -> hash)
-	    -> (pos (forall (\ x . A x)) -> hash). 
+	    -> (pos (forall (\ x . A x)) -> hash).
 
 foralll' : {T:i} (neg (A T) -> hash)
 	    -> (neg (forall (\ x . A x)) -> hash).
 
 ca' : {A:o} (pos A -> hash) -> (neg A -> hash) -> hash -> type.
- 
+
 ca_axiom'l : ca' A (\ p . axiom' N p) (\ n . E n) (E N).
 
 ca_axiom'r : ca' A (\ p . D p) (\ n . axiom' n P) (D P).
 
 
-ca_imp' : 
+ca_imp' :
        ca' B (\ p2 . F2 p2) (\ n2 . E2' n2) F
    -> ({p2:pos B} ca' A (\ p1 . E1' p1) (\ n1 . D1' n1 p2) (F2 p2))
          -> ({n1:neg A} {p2:pos B}
@@ -75,7 +75,7 @@ ca_imp' :
                    impl' (\ p . E1 n p) (\ n1 . E2 n n1) n) F.
 
 
-car_impr' : ({n1:neg B1} {p2:pos B2} 
+car_impr' : ({n1:neg B1} {p2:pos B2}
 	      ca' A (\ p . D p) (\ n . E1 n n1 p2) (F1 n1 p2))
          -> ca' A (\ p . D p)
                (\ n . impr' (\ n1 . \ p . E1 n n1 p) P)

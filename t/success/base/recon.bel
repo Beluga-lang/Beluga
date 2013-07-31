@@ -16,22 +16,22 @@ lam: (exp T1 -> exp T2) -> exp (arr T1 T2).
 app: exp (arr T1 T2) -> exp T1 -> exp T2.
 
 
-% rec test  : (exp T)[ ] -> (exp T)[ ] = 
-% fn e => case e of 
+% rec test  : (exp T)[ ] -> (exp T)[ ] =
+% fn e => case e of
 %   [ ] lam (\x. x)      => [ ] lam (\x. x)
 % | [ ] lam (\x. F)  => [ ] lam (\x. F)
 % | [ ] lam (\x. (F x))  => [ ] lam (\x. (F x))
 % ;
 
 %{
-rec test0 : (exp T)[ ] -> (exp T)[ ] = 
- fn e => case e of 
-  [ ] lam (\x. (E x)) => 
-     case test0 ([ ] lam (\x. (E x))) of 
+rec test0 : (exp T)[ ] -> (exp T)[ ] =
+ fn e => case e of
+  [ ] lam (\x. (E x)) =>
+     case test0 ([ ] lam (\x. (E x))) of
        [ ] lam (\x. x) => [ ] lam (\x. x)
      | [ ] lam (\x. F) => [ ] lam (\x. F)
 ;
- 
+
 }%
 tExp: type.
 
@@ -39,36 +39,36 @@ exS : tExp
     <- exp S.
 
 %{
-rec test1 : (exp T)[ ] -> tExp[ ] = 
-fn e => case e of 
- [ ] lam (\x. (E x)) => 
+rec test1 : (exp T)[ ] -> tExp[ ] =
+fn e => case e of
+ [ ] lam (\x. (E x)) =>
    test1 ([ ] lam (\x. (E x)))
 ;
 
 
- rec test2 : (exp T)[ ] -> tExp[ ] = 
-  fn e => case e of 
-   [ ] lam (\x. (E x)) => 
-     let [ ] exS F = test2 ([ ] lam (\x. (E x))) in 
-	[ ] exS F 
+ rec test2 : (exp T)[ ] -> tExp[ ] =
+  fn e => case e of
+   [ ] lam (\x. (E x)) =>
+     let [ ] exS F = test2 ([ ] lam (\x. (E x))) in
+	[ ] exS F
 ;
 
-rec test3 :  (exp T)[ ] -> tExp[ ] = 
-  fn e => case e of 
-   [ ] lam (\x. (E x)) => 
-	let [ ] exS (lam (\x. x)) = test3 ([ ] lam (\x. (E x))) in  
+rec test3 :  (exp T)[ ] -> tExp[ ] =
+  fn e => case e of
+   [ ] lam (\x. (E x)) =>
+	let [ ] exS (lam (\x. x)) = test3 ([ ] lam (\x. (E x))) in
           [ ] exS z
   ;
 
-% Not working: 
-% rec test :  (exp T)[ ] -> tExp[ ] = 
-%   fn e => case e of 
-%    [ ] lam (\x. (E x)) => 
-% 	let [ ] exS (lam (\x. x)) = test ([ ] lam (\x. (E x))) in  
+% Not working:
+% rec test :  (exp T)[ ] -> tExp[ ] =
+%   fn e => case e of
+%    [ ] lam (\x. (E x)) =>
+% 	let [ ] exS (lam (\x. x)) = test ([ ] lam (\x. (E x))) in
 %           [ ] exS (lam (\x. x)) % Error free uninstantiated variables left.
 %   ;
- 
+
 
 }%
-rec test4 : [. exp T] -> [. tExp] = 
+rec test4 : [. exp T] -> [. tExp] =
 fn e => case [. z] of [. U] => [. exS U] ;

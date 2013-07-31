@@ -1,13 +1,13 @@
 %{ Tutorial example by Marie-Andree B.Langlois }%
 
 terminals z suc lambda app
-syntax 
+syntax
 
 exp ::= z
 | suc exp
 | x
-| lambda \x .exp[x] 
-| app exp exp 
+| lambda \x .exp[x]
+| app exp exp
 | let exp = x in exp[x] ;
 
 notation value : exp value ;
@@ -62,7 +62,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	I: e1 eval e2;
 	---------------------------- ev-s
@@ -75,7 +75,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	-------------------------------------------------------- ev-lam
 	(lambda \x . e1[x]) eval (lambda \x . e1[x]);
@@ -86,7 +86,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	D1: e1 eval lambda \x . e3[x];
 	D2: e2 eval e2';
@@ -100,7 +100,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	I: e2[e1] eval e1';
 	H: e1 eval e1';
@@ -113,5 +113,5 @@ case rule
 
 end case
 
-end induction 
+end induction
 end theorem

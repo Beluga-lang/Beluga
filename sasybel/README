@@ -16,7 +16,7 @@ Structure
 src
 ---
   OMakefile
-  
+
 
 src/core:
 ---------
@@ -25,42 +25,42 @@ src/core:
     ast.ml              Syntax of Sasybel
     ast.mli
     check.ml            Typechecking
-    check.mli           
+    check.mli
     common.ml
     common.mli
-    context.ml          Contexts 
-    context.mli         
+    context.ml          Contexts
+    context.mli
     coverage.ml         Coverage checking
     coverage.mli
     ctxsub.ml           Context substitutions
-    ctxsub.mli          
+    ctxsub.mli
     cwhnf.ml            Contextual Weak head normalization
     cwhnf.mli
     debug.ml            Debugging flags
     error.ml
-    error.mli           Error handling 
+    error.mli           Error handling
     ext_print.ml        Printing of the expernal Beluga syntax
     gensym.ml           Unique symbol generation
-    gensym.mli          
+    gensym.mli
     id.ml               Identifiers, used for variables, constants, etc.
-    id.mli               
+    id.mli
     lexer.ml            Lexer
-    lexer.mli  
-    monitor.ml          Timing 
+    lexer.mli
+    monitor.ml          Timing
     monitor.mli
     parser.ml           Parser
     parser.mli
     pretty.ml           Pretty printing
-    pretty.mli 
+    pretty.mli
     reconstruct.ml      Type reconstruction for LF and computations
     reconstruct.mli
     slexer.ml           Lexer for Sasybel
-    slexer.mli          
+    slexer.mli
     sparser.ml          The Sasybel parser
     sparser.mli
     stoken.ml           Tokens for parsing Sasybel
     store.ml            Variable store, maps ids to variabin/interpreter name.slfble information, computing subordination
-    store.mli           
+    store.mli
     subord.ml           Using and displaying the subordination relation
     subord.mli
     substitution.ml     Explicit substitution operations (ordinary and contextual)
@@ -71,10 +71,10 @@ src/core:
     trail.ml            Trailing meta-variables for backtracking
     trail.mli
     transform.ml        The translation
-    transform.mli       
+    transform.mli
     unify.ml            Higher-order unification
     whnf.ml             Weak-head normalization
-    whnf.mli        
+    whnf.mli
 
 
 src/main

@@ -1,7 +1,7 @@
 %%% Expression representation using de Bruijn indices
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
-exp'   : type.  
+exp'   : type.
 
 one    : exp'.
 shift  : exp' -> exp'.  % ^
@@ -19,11 +19,11 @@ fix'   : exp' -> exp'.
 
 % Environments and values
 
-env    : type.  
-val    : type.  
+env    : type.
+val    : type.
 
 empty  : env.
-vcons  : env -> val -> env.   % ; 
+vcons  : env -> val -> env.   % ;
 cons   : env -> exp' -> env.  % +
 
 z_val     : val.

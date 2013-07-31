@@ -33,13 +33,13 @@ This tutorial gives a good introduction to \textmd{Sasybel}, the user-friendly v
 \end{abstract}
 
 \section{Introduction}
-\textmd{Beluga} is a strong tool to reason about systems and the proofs related to them, but as it is now, it might be difficult for someone new to type systems to learn the \textmd{Beluga} 
-syntax. The implementation of a beginner mode could make \textmd{Beluga} more accessible. \textmd{Beluga} could be useful in many undergraduate and graduate classes which introduce logic, types 
-and programming languages, as it permits the implementation of the theory learned in class and allows immediate feedback about theorems. This way the student can learn about their mistakes 
-while doing the work, instead of waiting to get their work corrected and not remembering why they wrote such answers upon getting their work back, improving their 
-learning process. 
-This tutorial explains how to use \textmd{Sasybel} which is the \textmd{SASyLF}, a proof checker for formal systems, syntax used for \textmd{Beluga} interpretation. 
-\textmd{SASyLF} has a really easy syntax, as close as possible to what one would write on paper, so users of \textmd{Sasybel} who are trying to learn types systems wont have to go through the 
+\textmd{Beluga} is a strong tool to reason about systems and the proofs related to them, but as it is now, it might be difficult for someone new to type systems to learn the \textmd{Beluga}
+syntax. The implementation of a beginner mode could make \textmd{Beluga} more accessible. \textmd{Beluga} could be useful in many undergraduate and graduate classes which introduce logic, types
+and programming languages, as it permits the implementation of the theory learned in class and allows immediate feedback about theorems. This way the student can learn about their mistakes
+while doing the work, instead of waiting to get their work corrected and not remembering why they wrote such answers upon getting their work back, improving their
+learning process.
+This tutorial explains how to use \textmd{Sasybel} which is the \textmd{SASyLF}, a proof checker for formal systems, syntax used for \textmd{Beluga} interpretation.
+\textmd{SASyLF} has a really easy syntax, as close as possible to what one would write on paper, so users of \textmd{Sasybel} who are trying to learn types systems wont have to go through the
 struggle of learning a new language to implement these.\\
 \subsection{Running Sasybel}
 The \textmd{Sasybel} can be compiled at the command line like regular \textmd{Beluga} code:
@@ -51,14 +51,14 @@ By putting {\tt .sbel} in the file name the compiler will assume that this is \t
 
 The \textmd{Sasybel} syntax will be introduced by commented examples:
 \subsubsection{Terminals Declaration}
-The {\tt terminals} declaration at the top of the file declares identifiers, which helps \textmd{Sasybel} detect mistakes; in \textmd{Sasybel} these 
-will be used to detect variables and symbols, it consist of the keyword {\tt terminals} and a list of terms. 
+The {\tt terminals} declaration at the top of the file declares identifiers, which helps \textmd{Sasybel} detect mistakes; in \textmd{Sasybel} these
+will be used to detect variables and symbols, it consist of the keyword {\tt terminals} and a list of terms.
 The terminal declaration is necessary, it can always be empty though.
 \begin{verbatim}
   terminals z suc
 \end{verbatim}
 \subsubsection{Simple Expressions Declarations}
-Before declaring any type the keyword syntax is needed. Types are declared with the following syntax: {\tt <type> ::= <alternative> $\vert$ <alternative> ...} . There is no upper bound 
+Before declaring any type the keyword syntax is needed. Types are declared with the following syntax: {\tt <type> ::= <alternative> $\vert$ <alternative> ...} . There is no upper bound
 on the number of alternatives, and order does not matter. Alternatives in \textmd{Sasybel} can be anything, but more examples will be shown later.
 \begin{verbatim}
   syntax
@@ -71,20 +71,20 @@ on the number of alternatives, and order does not matter. Alternatives in \textm
 \end{verbatim}
 \textmd{Sasybel} uses the same syntax for comments as beluga, beginning by {\tt \%\{ } and ending by {\tt \}\% } for multi-line comments, and {\tt \%} to comment the rests of a line.
 \subsubsection{Judgments}
-The syntax for a judgment is: {\tt notation <judgment\_name>:<premise>;} . The judgment name can be any string starting by a character. The premise is made of two types of words types and symbols. \textmd{Sasybel} 
-knows that the result must be a ``type'' like in \textmd{Beluga}, so the remaining tokens are analyzed and if they are a type declared in the syntax section 
-they are added to the translated result; otherwise they are considered a symbol and will be used later on. Terminals should not appear in the premises of a judgment. The {\tt ;} at the end is necessary since this how Sasybels 
+The syntax for a judgment is: {\tt notation <judgment\_name>:<premise>;} . The judgment name can be any string starting by a character. The premise is made of two types of words types and symbols. \textmd{Sasybel}
+knows that the result must be a ``type'' like in \textmd{Beluga}, so the remaining tokens are analyzed and if they are a type declared in the syntax section
+they are added to the translated result; otherwise they are considered a symbol and will be used later on. Terminals should not appear in the premises of a judgment. The {\tt ;} at the end is necessary since this how Sasybels
 knows that the premise is finished. A judgment is follow by one or more rules.
 \begin{verbatim}
 
   notation sum: nat + nat = nat;
 
 \end{verbatim}
-Rules are declared almost as on paper, they can consist of only a conclusion, in this case the inference line consist of a finite sequence of {\tt -} and the name of the rule is located at the end of it. Here again the premise 
+Rules are declared almost as on paper, they can consist of only a conclusion, in this case the inference line consist of a finite sequence of {\tt -} and the name of the rule is located at the end of it. Here again the premise
 must end by a {\tt ;} , but in this case the premise can be composed of alternatives and symbols that were previously declare in the judgments.
 (*** put this in example with context *) Judgments can be given a context to assume, by typing {\tt assume context\_name} right after the judgment definition.
 \begin{verbatim}
- 
+
   ------------- sum-z
   z + n1 = n1'
 
@@ -107,7 +107,7 @@ Rules can also have many premises, these also must end with a {\tt ;} they can b
 
 \end{verbatim}
 \subsubsection{Theorems}
-A theorem declaration starts with the keyword {\tt theorem} followed by the name of the theorem, then the statement that must be proven, 
+A theorem declaration starts with the keyword {\tt theorem} followed by the name of the theorem, then the statement that must be proven,
 which can be of the type {\tt exist <premise>} or {\tt forall <premise> exist <premise>} , these statements must also end with a {\tt;} .
 \begin{verbatim}
 
@@ -120,7 +120,7 @@ In the case of an induction proof what has to be proven is repeated and the prem
   x : n + (suc z) = (suc n) by induction on n :
 
 \end{verbatim}
-The different cases of the induction are listed, with the syntax: {\tt case <alternative> is} , then this is followed by a list of premises which possibly have names and are followed by a justification. 
+The different cases of the induction are listed, with the syntax: {\tt case <alternative> is} , then this is followed by a list of premises which possibly have names and are followed by a justification.
 A case is terminated with {\tt end case}.
 \begin{verbatim}
 
@@ -146,11 +146,11 @@ Specify that you are ending your induction and the theorem.
   end theorem
 \end{verbatim}
 $\linebreak$
-The next one is a very simple theorem, theres is no {\tt forall} part therefore this can only be proved by calling a rule. Note that a proof can also be justified by referring to a theorem 
+The next one is a very simple theorem, theres is no {\tt forall} part therefore this can only be proved by calling a rule. Note that a proof can also be justified by referring to a theorem
 that has been proven earlier.
 \begin{verbatim}
 
-  theorem z_less_suc_z: exists z < suc z; 
+  theorem z_less_suc_z: exists z < suc z;
 
    z < suc z by rule less-one;
 
@@ -198,7 +198,7 @@ This is a more complete example on types, and the proof has more cases and uses 
 \begin{verbatim}
 
 terminals z s lambda value app
-syntax 
+syntax
 
 \end{verbatim}
 The example illustrates the usual expressions one would want to declare using this kind of system.
@@ -209,14 +209,14 @@ exp ::= z
 | suc exp
 
 \end{verbatim}
-{\tt x}, must be declared as an alternative, this way the reconstruction will know that every {\tt x} is a variable. All variable must be declared separately, the translation recognizes 
-them for being alternatives of length one, that are not terminals. The following alternative declares a lambda term, the {\tt \textbackslash} \ is mandatory for the parser to understand that it's a lambda term. The \textbf{.} 
+{\tt x}, must be declared as an alternative, this way the reconstruction will know that every {\tt x} is a variable. All variable must be declared separately, the translation recognizes
+them for being alternatives of length one, that are not terminals. The following alternative declares a lambda term, the {\tt \textbackslash} \ is mandatory for the parser to understand that it's a lambda term. The \textbf{.}
 indicates that there is a binding coming. One of the \textmd{Sasybel} conventions is that {\tt exp[x]}
 denotes that the variable {\tt x} is bound in the expression {\tt exp}.
 \begin{verbatim}
 
 | x
-| lambda \x .exp[x] 
+| lambda \x .exp[x]
 
 \end{verbatim}
 The next alternative is simply the application of an expression, which is a function (lambda expression) to another expression. Then there is the declaration of a let statement, the keywords/symbol {\tt let},
@@ -224,7 +224,7 @@ The next alternative is simply the application of an expression, which is a func
  instead of {\tt let}, because {\tt let} is reserved in \textmd{Beluga}.
 \begin{verbatim}
 
-| app exp exp 
+| app exp exp
 | let exp = x in exp[x]
 
 \end{verbatim}
@@ -296,7 +296,7 @@ end case
 $\linebreak$
 This is the base case of the proof.
 \begin{verbatim}
-case rule 
+case rule
 
 	I: e1 eval e2;
 	---------------------------- ev-s
@@ -311,7 +311,7 @@ end case
 \end{verbatim}
 The other cases correspond to the evaluation rules.
 \begin{verbatim}
-case rule 
+case rule
 
 	-------------------------------------------------------- ev-lam
 	(lambda \x . e1[x]) eval (lambda \x . e1[x]);
@@ -322,7 +322,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	D1: e1 eval lambda \x . e3[x];
 	D2: e2 eval e2';
@@ -336,7 +336,7 @@ case rule
 
 end case
 
-case rule 
+case rule
 
 	I: e2[e1] eval e1';
 	H: e1 eval e1';
@@ -349,7 +349,7 @@ case rule
 
 end case
 
-end induction 
+end induction
 end theorem
 
 \end{verbatim}
@@ -360,9 +360,9 @@ The following example will show how different types can interact in \textmd{Sasy
 \begin{verbatim}
 
 
-terminals z susc lambda lit plus iff single double 
+terminals z susc lambda lit plus iff single double
 
-syntax 
+syntax
 
 nat ::= z
 | suc nat
@@ -382,22 +382,22 @@ exp ::= lit nat
 \end{verbatim}
 In the rules we are going to be able to specify that the {\tt exp} in {\tt plus} must be a {\tt lit nat} .
 \begin{verbatim}
- 
+
 | plus exp exp
 
 \end{verbatim}
 This alternative models a regular {\tt if  then  else statement}, since {\tt if} is a reserved word it has been replaced with {\tt iff}, which has nothing to do with if and only if in this case.
 \begin{verbatim}
- 
+
 | iff bool exp exp
 | x
-| y 
+| y
 
 \end{verbatim}
 Two lambda terms one with one variable and the second with two.
 \begin{verbatim}
- 
-| single \ x . exp[x] 
+
+| single \ x . exp[x]
 | double \ x y . exp[x] exp[x,y]
 
 \end{verbatim}

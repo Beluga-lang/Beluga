@@ -22,8 +22,14 @@ type cid_coercion = int
 (** A constant identifier for computation-level data-types *)
 type cid_comp_typ = int
 
+(** A constant identifier for computation-level codata-types *)
+type cid_comp_cotyp = int
+
 (** A constant identifier for computation-level constructors *)
 type cid_comp_const = int
+
+(** A constant identifier for computation-level destructors *)
+type cid_comp_dest = int
 
 (** A constant identifier for recursive computations/programs *)
 type cid_prog = int
@@ -37,14 +43,14 @@ type offset   = int
 type var      = int
 
 
-type name_guide = 
-  | NoName 
+type name_guide =
+  | NoName
   | MVarName of (unit -> string) option
   | PVarName of (unit -> string) option
   | BVarName of (unit -> string) option
   | SomeName of name
   | SomeString of string
 
-(** Smart constructor for `name'.  
+(** Smart constructor for `name'.
     `mk_name' generates a `name' with a guaranteed unique `string'. *)
 val mk_name : name_guide -> name

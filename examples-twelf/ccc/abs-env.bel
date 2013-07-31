@@ -9,7 +9,7 @@ schema ctx = some [a:obj] term a;
 rec pop : {g:(ctx)*} (env (cross P A))[g, x:term A] -> (env P)[g] =
     FN g => fn e => case e of
         [g, x:term A] (addv G X) => [g] G;
-        
+
 
 % we keep the environment around for the type
 rec absv : {g:(ctx)*} (env P)[g, x:term A] -> (term B)[g, x:term A] -> (mor P B)[] =
@@ -23,7 +23,7 @@ rec absv : {g:(ctx)*} (env P)[g, x:term A] -> (term B)[g, x:term A] -> (mor P B)
 
 rec abse : {g:(ctx)*} (env A)[g] -> (term B)[g] -> (mor A B)[] =
     FN g => fn e => fn t => case t of
-        [g] lunit => 
+        [g] lunit =>
           [] drop
 
       | [g] #p .. =>

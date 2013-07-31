@@ -13,7 +13,7 @@ notLam : exp -> type.
 notLam : notLam (app M N).
 
 eval : exp -> exp -> type.
-eval_lam : ({x:exp} eval x x -> notLam x -> eval (M x) (N x)) 
+eval_lam : ({x:exp} eval x x -> notLam x -> eval (M x) (N x))
            -> eval (lam M) (lam N).
 eval_app1 : eval M (lam M') -> eval (M' N) R -> eval (app M N) R.
 eval_app2 : eval M M' -> notLam M' -> eval N N' -> eval (app M N) (app M' N').
@@ -23,10 +23,10 @@ schema evctx = block x:exp, u:eval x x, _t:notLam x;
 rec deterministic : (g:evctx) [g. eval (M ..) (R ..)] -> [g. eval (M ..) (R' ..)]
 -> [g. eq (R ..) (R' ..)] =
 fn d => fn f =>
-case d of  
+case d of
 | [g. eval_app2 (D1 ..) (NL ..) (D2 ..)] =>
-  (case f of 
-    | [g. eval_app2 (F1 ..) (NL' ..) (F2 ..)] => 
+  (case f of
+    | [g. eval_app2 (F1 ..) (NL' ..) (F2 ..)] =>
       let [g. refl] = deterministic [g. D1 ..] [g. F1 ..] in
       let [g. refl] = deterministic [g. D2 ..] [g. F2 ..] in
       [g. refl]
@@ -35,7 +35,7 @@ case d of
       let [g. refl] = deterministic [g. D1 ..] [g. F1 ..] in
        impossible [g. NL ..] in [g])
 
- | [g. eval_lam (\x.\u.\v. D1 .. x u v)] => 
+ | [g. eval_lam (\x.\u.\v. D1 .. x u v)] =>
   let [g. eval_lam (\x.\u.\v. F1 .. x u v)] = f in
   let [g,b:block x:exp, v:eval x x, _t:notLam x. refl] =
     deterministic

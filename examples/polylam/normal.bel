@@ -35,7 +35,7 @@ schema ctx = some [t:tp] block x:exp t, _t:neutral t; % Q: why small T?
 %
 
 
-% normal2exp: convert a normal form to a regular expression 
+% normal2exp: convert a normal form to a regular expression
 %             also in the normal form
 
 
@@ -46,7 +46,7 @@ fn e => case e of
 | {S : [g,x:neutral T2. normal T1]} % we specify the type of S to help the type-checker
   [g. lam' \x.S..x] => let [g,b: block x:exp T, _t:neutral T. M..b.1] =
                        normal2exp[g,b: block x:exp T2, _t:neutral T2. S..b.2]
-                     in 
+                     in
                        [g. lam \y.M..y]
 
 and neutral2exp : (g: ctx) [g. neutral T] -> [g. exp T] =
@@ -81,7 +81,7 @@ fn e => case e of
 
 | {M : [g, x:exp T2. exp T1]}
   [g. lam \x.M..x] =>
-  let [g, b: block x:exp T, _t:neutral T. S..b.2] 
+  let [g, b: block x:exp T, _t:neutral T. S..b.2]
     = norm [g,b: block x:exp T2, _t:neutral T2. M..b.1]
   in
     [g. lam' \x.S..x]

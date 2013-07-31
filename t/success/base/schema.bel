@@ -37,7 +37,7 @@ tt  : exp bool.
 
 schema expCtx = some [t:tp] exp t;
 
-rec expnatter : {g:expCtx} [g. exp nat] -> [. exp nat] = 
+rec expnatter : {g:expCtx} [g. exp nat] -> [. exp nat] =
    mlam g => fn e => [. z]
 ;
 

@@ -1,0 +1,34 @@
+datatype atomic_tp: type =
+;
+
+datatype nat: type =
+| z: nat
+| s: nat -> nat
+;
+
+
+datatype Even: ctype =
+| Ze : Even
+| Ev : Odd -> Even
+and
+Odd: ctype =
+| Od : Even -> Odd
+;
+
+
+datatype Nat: ctype =
+| No : Odd -> Nat
+| Ne : Even -> Nat
+;
+
+
+rec count: Nat -> [. nat] =
+fn n => case n of
+| No o => let Od e = o in
+         let [. N] =  count (Ne e) in
+            [. s N]
+| Ne e => case e of
+          | Ze => [. z]
+          | Ev o => let [. N] = count (No o) in
+                             [. s N]
+;

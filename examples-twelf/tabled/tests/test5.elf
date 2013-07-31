@@ -19,7 +19,7 @@ p2: pt X Z
 p1: pt X Z
     <- pt X Y
     <- pt Y Z.
- 
+
 e1: et a b.
 e2: et a d.
 e3: et b c.

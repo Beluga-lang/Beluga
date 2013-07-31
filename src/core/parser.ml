@@ -15,10 +15,17 @@ exception MixError of (Format.formatter -> unit)
 exception IllFormedDataDecl
 exception WrongConsType of Id.name * Id.name * Id.name
 
+(** Remove any trailing newlines. Named after the Perl function that
+    does the same thing. *)
+let chomp = function
+  | "" -> ""
+  | s when s.[String.length s - 1] = '\n' -> String.sub s 0 (String.length s - 1)
+  | s -> s
+
 let _ = Error.register_printer
   (fun (Grammar.Loc.Exc_located (loc, exn)) ->
     Error.print_with_location loc (fun ppf ->
-      Format.fprintf ppf "Parse Error: %s" (Printexc.to_string exn)))
+      Format.fprintf ppf "Parse Error: %s" (chomp (Printexc.to_string exn))))
 
 let _ = Error.register_printer
   (fun (Stream.Error str) ->
@@ -41,10 +48,9 @@ let _ = Error.register_printer
         "Expected datatype" Format.pp_print_string a.string_of_name
         "Actual datatype"   Format.pp_print_string a'.string_of_name))
 
-let rec last l = begin match List.rev l with
+let last l = match List.rev l with
   | [] -> None
   | h::t -> Some (h, t)
-end
 
 type kind_or_typ =
   | Kind of LF.kind
@@ -65,7 +71,7 @@ type pair_or_atom_syn =
 
 type pair_or_atom_pat =
   | Pair_pat of Comp.pattern
-  | Atom_pat
+  | Atom_pat of Comp.typ option
 
 type clf_pattern =
   | PatEmpty of Loc.t
@@ -184,11 +190,22 @@ let check_datatype_decl a cs =
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
+let check_codatatype_decl a cs =
+  let rec retname = function
+    | Comp.TypArr (_, Comp.TypBase (_, c', _), _) -> c'
+    | Comp.TypCtxPi (_, _, tau) -> retname tau
+    | Comp.TypPiBox (_, _, tau) -> retname tau
+    | _ -> raise IllFormedDataDecl in
+  List.iter (fun (Sgn.CompDest (_, c, tau)) ->
+    let a' = retname tau in
+    if not (a = a') then raise (WrongConsType (c, a, a'))) cs
+
+
 (*******************************)
 (* Global Grammar Entry Points *)
 (*******************************)
 
-let sgn_eoi = Grammar.Entry.mk "sig_eoi"
+let sgn = Grammar.Entry.mk "sgn"
 
 (*****************************************)
 (* Dynamically Extensible Beluga Grammar *)
@@ -202,7 +219,7 @@ let sgn_eoi = Grammar.Entry.mk "sig_eoi"
 open Token
 
 EXTEND Grammar
-GLOBAL: sgn_eoi;
+GLOBAL: sgn;
 
   symbol:
     [
@@ -226,21 +243,31 @@ GLOBAL: sgn_eoi;
   gLambda: [[ "FN" -> ()
          | "Λ" -> () ]];  (* Unicode capital Lambda (HTML &Lambda;) *)
 
- sgn_eoi:
+  sgn:
+    [
+      [ prag = sgn_pragma_opts; decls = sgn_eoi -> Sgn.Pragma (_loc, prag) :: decls
+      | decls = sgn_eoi -> decls
+      ]
+    ];
+
+  sgn_eoi:
    [
      [ decl = sgn_decl; decls = SELF -> decl @ decls
      | `EOI -> []
      ]
-   ]
-;
+   ];
+
+  sgn_pragma_opts:
+    [
+      [ "%opts"; opts = LIST1 [ opt = SYMBOL -> opt]; ";" -> Sgn.OptsPrag opts ]
+    ];
 
   sgn_lf_typ :
     [
       [ a = SYMBOL; ":"; tA = lf_typ ->
           Sgn.Const   (_loc, Id.mk_name (Id.SomeString a), tA)
       ]
-    ]
-;
+    ];
 
 
   sgn_comp_typ :
@@ -248,6 +275,14 @@ GLOBAL: sgn_eoi;
       [
         a = UPSYMBOL; ":"; tau = cmp_typ ->
           Sgn.CompConst (_loc, Id.mk_name (Id.SomeString a), tau)
+      ]
+    ];
+
+  sgn_comp_cotyp :
+    [
+      [
+        a = UPSYMBOL; ":"; tau = cmp_typ ->
+          Sgn.CompDest (_loc, Id.mk_name (Id.SomeString a), tau)
       ]
     ];
 
@@ -261,17 +296,36 @@ GLOBAL: sgn_eoi;
              | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
            end
 
-      |
+(*      |
         "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
         const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
           Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
-
-
+*)
+      | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
+           [Sgn.MRecTyp(_loc, f)]
+(*
       | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
           check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
           Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+*)
 
-      | "type"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
+      | "datatype"; f = cmp_cdat;
+        g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
+                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+          begin match g with
+            | None -> [Sgn.MRecTyp(_loc, [f])]
+            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+          end
+
+      | "codatatype"; f = cocmp_cdat;
+        g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
+                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+          begin match g with
+            | None -> [Sgn.MRecTyp(_loc, [f])]
+            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+          end
+
+      | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
           [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
       |
         "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
@@ -291,10 +345,7 @@ GLOBAL: sgn_eoi;
           [Sgn.Rec (_loc, f)]
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
-        [Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
-
-(*      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
-            Sgn.Pragma (_loc, LF.NamePrag (Id.mk_name (Id.SomeString w), mv, x)) *)
+        [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
 
       | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
         if Option.is_some x then
@@ -304,7 +355,12 @@ GLOBAL: sgn_eoi;
           [Sgn.Query (_loc, None, a, e, t)]
 
       | "%not" ->
-        [Sgn.Pragma (_loc, LF.NotPrag)]
+        [Sgn.Pragma (_loc, Sgn.NotPrag)]
+
+      (* A naked expression, in REPL. *)
+      | i = cmp_exp_syn ->
+        [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
+
       ]
     ]
   ;
@@ -434,9 +490,11 @@ GLOBAL: sgn_eoi;
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
         |
-           "("; m = SELF; ")" ->
-             m
-
+            "("; m = SELF; ann = OPT [ ":"; a = lf_typ -> a ]; ")" ->
+            begin match ann with
+            | None -> m
+            | Some a -> LF.Ann (_loc, m, a)
+            end
 
         ]
     ]
@@ -658,8 +716,11 @@ GLOBAL: sgn_eoi;
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
         |
-           "("; m = clf_term_app; ")" ->
-             m
+           "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
+           begin match ann with
+           | None -> m
+           | Some a -> LF.Ann (_loc, m, a)
+           end
         |
            "<"; ms = LIST1 clf_term_app SEP ","; ">"  ->
              let rec fold = function [m] -> LF.Last m
@@ -715,6 +776,7 @@ GLOBAL: sgn_eoi;
           h = clf_head; ms = LIST0 clf_normal ->
             let spine = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Root (_loc, h, spine)
+
         ]
 
     | RIGHTA
@@ -740,9 +802,17 @@ GLOBAL: sgn_eoi;
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
-        "#"; p = SYMBOL;  sigma = clf_sub_new ->
-          LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+        "#"; p = SYMBOL;  sigmaOpt = OPT [ sigma = clf_sub_new -> sigma] ->
+          begin match sigmaOpt with
+            | None -> LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
+            | Some sigma ->           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+          end
 
+
+
+(*      |  "#"; p = SYMBOL ->
+           LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc)
+*)
       |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
@@ -755,8 +825,9 @@ GLOBAL: sgn_eoi;
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
 
-      | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
-          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
+ (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
+          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
+
 
       ]
     ]
@@ -789,6 +860,10 @@ GLOBAL: sgn_eoi;
       |
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
+
+      |
+         "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
+          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
 
       ]
     ]
@@ -868,7 +943,7 @@ GLOBAL: sgn_eoi;
     [
       [
         ","; e2 = cmp_exp_chk ; ")" -> Pair e2
-        
+
       | ")"                 -> Atom
       ]
     ]
@@ -890,11 +965,43 @@ GLOBAL: sgn_eoi;
       [
         ","; e2 = cmp_branch_pattern ; ")" -> Pair_pat e2
 
-      | ")"                 -> Atom_pat
+      | ")"; tauOpt = OPT [":" ; tau = cmp_typ -> tau]  -> Atom_pat tauOpt
 
       ]
     ]
   ;
+
+
+
+  cmp_dat:
+    [[
+     a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" ->
+       Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+    ]]
+  ;
+
+  cmp_cdat:
+    [[
+    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
+      check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+    ]]
+;
+ cocmp_cdat:
+    [[
+    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_cotyp SEP "|" ->
+      check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+      Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+    ]]
+;
+
+ mutual_cmp_cdat:
+    [[
+        "datatype"; f = cmp_cdat -> f
+
+      | "codatatype"; f = cocmp_cdat -> f
+   ]]
+;
 
   cmp_rec:
     [[
@@ -914,6 +1021,18 @@ GLOBAL: sgn_eoi;
     | -> Pragma.RegularCase
     ]];
 
+  copat_lst:
+    [[
+       f = UPSYMBOL -> Comp.CopatApp (_loc, Id.mk_name (Id.SomeString f), Comp.CopatNil _loc)
+     | g = meta_obj -> Comp.CopatMeta (_loc, g, Comp.CopatNil _loc)
+    ]];
+
+  cofun_lst:
+    [[
+      f = UPSYMBOL; csp = LIST0 copat_lst; rArr; e = cmp_exp_chk ->
+        ((Comp.CopatApp (_loc, Id.mk_name (Id.SomeString f), Comp.CopatNil _loc)) :: csp, e)
+    ]];
+
   (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
   cmp_exp_chkX:
     [ LEFTA
@@ -929,14 +1048,21 @@ GLOBAL: sgn_eoi;
       | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.MObj), e)
 
-(*      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString s), Comp.PObj), e)
-*)
+      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
+          Comp.MLam (_loc, (Id.mk_name (Id.SomeString s), Comp.SObj), e)
+
       | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e)
 
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)
+
+      | "cofun"; csp = LIST1 cofun_lst SEP "|" ->
+          let f head left = match (head, left) with
+            | (Comp.CopatApp (loc, a, csp'), csp'') -> Comp.CopatApp (loc, a, csp'')
+            | (Comp.CopatMeta (loc, a, csp'), csp'') -> Comp.CopatMeta (loc, a, csp'') in
+          let g = fun (csp1, e) -> (List.fold_right f csp1 (Comp.CopatNil _loc), e) in
+          Comp.Cofun (_loc, List.map g csp)
 
 (*      | "impossible"; i = cmp_exp_syn; "in";
          ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]"  ->
@@ -965,30 +1091,31 @@ GLOBAL: sgn_eoi;
                                           LF.Empty ctyp_decls in
          let branch =
            begin match mobj with
-            | PatEmpty _loc'   ->
+            | PatEmpty loc'   ->
                 (let pat = (match tau with
-                                None -> Comp.PatEmpty (_loc', pHat)
-                              | Some tau -> Comp.PatAnn (_loc', Comp.PatEmpty (_loc', pHat), tau))
+                                None -> Comp.PatEmpty (loc', pHat)
+                              | Some tau -> Comp.PatAnn (loc', Comp.PatEmpty (loc', pHat), tau))
                  in
-                  Comp.EmptyBranch (_loc, ctyp_decls', pat)
+                  Comp.EmptyBranch (loc', ctyp_decls', pat)
                 )
-           | PatCLFTerm (_loc', tM) ->
+           | PatCLFTerm (loc', tM) ->
                (let pat = (match tau with
-                               None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (_loc',  pHat,  tM))
-                             | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc,
-                                                    Comp.MetaObjAnn (_loc, pHat, tM)), tau))
+                               None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (loc',  pHat,  tM))
+                             | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(loc',
+                                                    Comp.MetaObjAnn (loc', pHat, tM)), tau))
                 in
-                  Comp.Branch (_loc, ctyp_decls', pat, e')
+                  Comp.Branch (loc', ctyp_decls', pat, e')
                )
            end in
 
          Comp.Case (_loc, Pragma.RegularCase, i, [branch])
-      | "let"; ctyp_decls = LIST0 clf_ctyp_decl; pat = cmp_branch_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
+      | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
+           pat = cmp_branch_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
                            LF.Empty ctyp_decls in
 
           let branch = Comp.Branch(_loc, ctyp_decls', pat, e)  in
-          Comp.Case (_loc, Pragma.RegularCase, i, [branch]) 
+          Comp.Case (_loc, Pragma.RegularCase, i, [branch])
       | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
           begin match p_or_a with
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
@@ -1050,8 +1177,14 @@ isuffix:
        | (Dctx cPsi, None)      -> (fun i -> Comp.CtxApp(_loc, i, cPsi))
        | (Hat [psi], None)      -> (fun i -> Comp.CtxApp(_loc, i, LF.CtxVar (_loc, psi)))
        | (Hat []  , None)       -> (fun i -> Comp.CtxApp(_loc, i, LF.Null))
-       | (_ , _)                -> 
+       | (_ , _)                ->
          raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
+     end
+
+   | "["; phat_or_psi = clf_hat_or_dctx ; "$"; tM = clf_sub_new; "]"   ->
+     begin match phat_or_psi with
+       | Dctx cPsi ->  (fun i -> Comp.MAnnSApp (_loc, i, (cPsi, tM)))
+       | Hat phat  ->  (fun i -> Comp.MSApp (_loc, i, (phat, tM)))
      end
 
 (* | "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))   *)
@@ -1085,7 +1218,7 @@ isuffix:
    | x = SYMBOL   ->
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name (Id.SomeString x)))))
    | x = UPSYMBOL   ->
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Const (_loc, Id.mk_name (Id.SomeString x)))))
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.DataConst (_loc, Id.mk_name (Id.SomeString x)))))
    | "ttrue"      ->
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, true))))
    | "ffalse"     ->
@@ -1161,10 +1294,11 @@ clf_pattern :
      | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) ->
          let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in
            Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
-     | "("; p = SELF; p_or_a = cmp_pair_atom_pat   ->  
+     | "("; p = SELF; p_or_a = cmp_pair_atom_pat   ->
          (match p_or_a with
             | Pair_pat p2 -> Comp.PatPair (_loc, p, p2)
-            | Atom_pat -> p)
+            | Atom_pat None -> p
+            | Atom_pat (Some tau) -> Comp.PatAnn (_loc, p, tau))
       ]
     ]
   ;

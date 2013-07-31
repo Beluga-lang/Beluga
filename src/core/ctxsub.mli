@@ -5,7 +5,7 @@
 
 open Syntax.Int.LF
 open Syntax.Int
-open Context 
+open Context
 
 open Error
 
@@ -42,7 +42,7 @@ val ctxnorm_csub : csub -> csub
 
 val ctxShift : dctx -> sub
 
-(* ctxToSub' cD cPhi cPsi = s 
+(* ctxToSub' cD cPhi cPsi = s
 
    if x1:A1, ... xn:An = cPsi
    then D = u1:A1[cPhi], ... un:An[cPhi]

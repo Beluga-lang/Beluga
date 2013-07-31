@@ -1,6 +1,6 @@
 %%% The Church-Rosser theorem for parallel reduction
 %%% Author: Frank Pfenning
-%%% Modified by Adam Poswolsky so subst creates a parametric function that can be used to 
+%%% Modified by Adam Poswolsky so subst creates a parametric function that can be used to
 %%%%  perform the substitution in dia.
 
 subst : ({x:term} x => x -> M x => M' x) -> ({x:term}{y:term} x => y -> M x => M' y) -> type.

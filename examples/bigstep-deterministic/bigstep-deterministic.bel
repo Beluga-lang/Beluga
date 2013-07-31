@@ -4,8 +4,8 @@
 notLam : exp -> type.
 notLam : notLam (app M N).
 
-eval : exp -> exp -> type.
-eval_lam : ({x:exp} eval x x -> notLam x -> eval (M x) (N x)) 
+eval : exp -> exp -> type. %name eval E.
+eval_lam : ({x:exp} eval x x -> notLam x -> eval (M x) (N x))
            -> eval (lam M) (lam N).
 eval_app1 : eval M (lam M') -> eval (M' N) R -> eval (app M N) R.
 eval_app2 : eval M M' -> notLam M' -> eval N N' -> eval (app M N) (app M' N').
@@ -15,8 +15,8 @@ schema evctx = block x:exp, v:eq x x, u:eval x x, _t:notLam x;
 rec eval_respects_eq : (g:evctx) [g. eq (M ..) (N ..)] -> [g. eval (M ..) (R ..)]
 -> [g. eval (N ..) (R ..)] =
 fn d => fn f =>
-case f of 
- | [g. eval_app2 (D1 ..) (NL ..) (D2 ..)] => 
+case f of
+ | [g. eval_app2 (D1 ..) (NL ..) (D2 ..)] =>
    let [g. eq_app (F1 ..) (F2 ..)] = d in
    let [g. E1 ..] = eval_respects_eq [g. F1 ..] [g. D1 ..] in
    let [g. E2 ..] = eval_respects_eq [g. F2 ..] [g. D2 ..] in
@@ -24,12 +24,15 @@ case f of
 
  | [g. eval_lam (\x.\u.\v. M' .. x u v)] =>
    let [g. eq_lam (\x.\u. F1 .. x u)] = d in
-   let [g,b:block x:exp, u:eq x x, v:eval x x, _t:notLam x. D1 .. b.1 b.3 b.4] =
+
+   let
+
+     [g,b:block x:exp, u:eq x x, v:eval x x, _t:notLam x. D1 .. b.1 b.3 b.4] =
      eval_respects_eq [g,b:block x:exp, u:eq x x, v:eval x x, _t:notLam x. F1 .. b.1 b.2]
        [g,b. M' .. b.1 b.3 b.4] in
    [g. eval_lam (\x.\u.\v. D1 .. x u v)]
 
- |  {D1 : [g. eval (X3 ..) (lam (\y1. Y2 .. y1))]} 
+ |  {D1 : [g. eval (X3 ..) (lam (\y1. Y2 .. y1))]}
     {D2 : [g. eval (Y2 .. (Y3 ..)) (X2 ..)]}
    [g. eval_app1 (D1 ..) (D2 ..)] =>
    let [g. eq_app (F1 ..) (F2 ..)] = d in
@@ -40,15 +43,16 @@ case f of
 
  | [g. #p.3 ..] =>
    let [g. #q.2 ..] = d in f
+
 ;
 
 rec deterministic : (g:evctx) [g. eval (M ..) (R ..)] -> [g. eval (M ..) (R' ..)]
 -> [g. eq (R ..) (R' ..)] =
 fn d => fn f =>
-case d of  
+case d of
 | [g. eval_app2 (D1 ..) (NL ..) (D2 ..)] =>
-  (case f of 
-    | [g. eval_app2 (F1 ..) (NL' ..) (F2 ..)] => 
+  (case f of
+    | [g. eval_app2 (F1 ..) (NL' ..) (F2 ..)] =>
       let [g. E1 ..] = deterministic [g. D1 ..] [g. F1 ..] in
       let [g. E2 ..] = deterministic [g. D2 ..] [g. F2 ..] in
       [g. eq_app (E1 ..) (E2 ..)]
@@ -80,7 +84,7 @@ case d of
          deterministic [g. D1 ..] [g. F1 ..] in
       impossible [g. NL ..] in [g])
 
-| [g. #p.3 ..] => let [g. #q.3 ..] = f in eq_refl [g] [ g . _ ] 
+| [g. #p.3 ..] => let [g. #q.3 ..] = f in eq_refl [g] [ g . _ ]
 
 ;
 

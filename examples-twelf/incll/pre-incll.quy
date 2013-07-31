@@ -1,8 +1,8 @@
 %
 % 3 + 2 * 1
 %
-o1i = rnil ,r # ^ fun end 
-          ,r # ^ con 1 ,r # ^ fun * ,r # ^ con 2 ,r # ^ fun + ,r # ^ con 3. 
+o1i = rnil ,r # ^ fun end
+          ,r # ^ con 1 ,r # ^ fun * ,r # ^ con 2 ,r # ^ fun + ,r # ^ con 3.
 o1o = rnil ,r del ,r del ,r del ,r del ,r del ,r del.
 
 o2 = rnil ,r # ^ fun end ,r # ^ con 1.

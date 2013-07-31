@@ -1,4 +1,4 @@
-exp  : type.  
+exp  : type.
 z    : exp.
 suc  : exp -> exp.
 letv : exp -> (exp -> exp) -> exp.
@@ -10,7 +10,7 @@ val_s   : {V:exp} value V -> value (suc V).
 eval : exp -> exp -> type.
 ev_z : eval z z.
 ev_s : {E:exp} {V:exp} eval E V -> eval (suc E) (suc V).
-ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp} 
+ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp}
        eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\ x . E2 x)) V.
 
 
@@ -18,5 +18,5 @@ vs: {E:exp}{V:exp}eval E V -> value V -> type.
 
 vs_z    : vs z z ev_z val_z.
 
-vs_s    : {E:exp}{V:exp}{D: eval E V}{P:value V} 
+vs_s    : {E:exp}{V:exp}{D: eval E V}{P:value V}
 	   vs E V D P -> vs (suc E) (suc V) (ev_s E V D) (val_s V P).

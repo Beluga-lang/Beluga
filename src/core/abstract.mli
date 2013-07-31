@@ -3,62 +3,46 @@
    modified: Joshua Dunfield
 *)
 
-open Syntax.Int 
+open Syntax.Int
+
+type varvariant =
+    VariantFV | VariantFCV | VariantMMV | VariantMPV
+  | VariantMV | VariantFMV | VariantPV | VariantFPV
 
 type error =
-    LeftoverCV
-  | LeftoverMV
-  | LeftoverMMV
+  | LeftoverVars of varvariant
   | LeftoverConstraints
-  | CyclicDependencyFV
-  | CyclicDependencyFCV
-  | CyclicDependencyMMV
-  | CyclicDependencyMV
-  | CyclicDependencyFMV
-  | CyclicDependencyPV
-  | CyclicDependencyFPV
+  | CyclicDependency of varvariant
   | UnknownIdentifier
+  | UnknownSchemaCtx of Id.name
+
 
 exception Error of Syntax.Loc.t * error
 
-val cnstr_ctyp : Comp.typ  -> bool
+val cnstr_ctyp : Comp.typ -> bool
 
-val abstrKind     : LF.kind -> LF.kind * Id.offset
+val kind    : LF.kind -> LF.kind * Id.offset
+val typ     : LF.typ  -> LF.typ  * Id.offset
 
-val abstrTyp      : LF.typ  -> LF.typ  * Id.offset
+val covgoal : LF.dctx -> LF.normal -> LF.typ -> LF.msub ->
+              LF.mctx * LF.dctx * LF.normal * LF.typ * LF.msub
+val covpatt : Comp.gctx -> Comp.pattern -> Comp.typ -> LF.msub ->
+              LF.mctx * Comp.gctx * Comp.pattern * Comp.typ * LF.msub
 
-val abstrCovGoal  : LF.dctx -> LF.normal -> LF.typ -> LF.msub -> 
-                      LF.mctx * LF.dctx * LF.normal * LF.typ * LF.msub
+val schema : LF.schema -> LF.schema
+val msub   : LF.msub -> LF.msub * LF.mctx
 
-val abstrCovPatt  : Comp.gctx -> Comp.pattern -> Comp.typ -> LF.msub -> 
-                     LF.mctx * Comp.gctx * Comp.pattern * Comp.typ * LF.msub
+val compkind : Comp.kind -> Comp.kind * Id.offset
+val comptyp  : Comp.typ -> Comp.typ * Id.offset
+val exp      : Comp.exp_chk -> Comp.exp_chk
 
-val abstrSchema   : LF.schema  -> LF.schema
+val pattern    : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ ->
+                 LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ
+val patobj     : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ ->
+                 LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
+val subpattern : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx ->
+                 LF.mctx * LF.dctx * LF.sub * LF.dctx
 
-val abstractMSub  : LF.msub -> LF.msub * LF.mctx
+val closedTyp : (LF.dctx * LF.typ) -> bool
 
-val abstrCompKind  : Comp.kind  -> Comp.kind * Id.offset
-
-val abstrCompTyp  : Comp.typ  -> Comp.typ * Id.offset
-
-val abstrExp      : Comp.exp_chk  -> Comp.exp_chk
-(* val abstrBranch   : (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) -> Comp.exp_chk  -> LF.msub 
-                  -> LF.mctx * (LF.dctx * (LF.psi_hat * LF.normal) * LF.typ) * Comp.exp_chk * LF.msub
-
-val abstrExpMSub  : Comp.exp_chk  -> LF.msub -> LF.mctx * LF.msub * Comp.exp_chk
-*)
-
-
-val abstrPattern  : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ -> 
-                    LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ 
-
-val abstrPatObj  : LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ -> 
-                    LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
-
-val abstrSubPattern  : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx -> 
-                    LF.mctx * LF.dctx * LF.sub * LF.dctx
-
-val closedTyp      : (LF.dctx * LF.typ) -> bool
-
-
-val printFreeMVars : LF.psi_hat -> LF.normal -> unit   
+val printFreeMVars : LF.psi_hat -> LF.normal -> unit

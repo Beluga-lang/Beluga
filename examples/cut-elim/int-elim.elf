@@ -59,7 +59,7 @@ ce_existsr : ce (existsr* T D1*) (existsr T D1)
 
 ce_existsl : ce (existsl* D1* H) (existsl D1 H)
 	      <- ({a:i} {h1:hyp (A1 a)} ce (D1* a h1) (D1 a h1)).
-		    
+
 %worlds (l1 | l2 | l3) (ce D* D).
 %covers ce +D *D*.
 %terminates D (ce D _).

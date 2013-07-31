@@ -14,7 +14,7 @@ module Control : sig
 
   val substitutionStyle : substitution_style ref
   val printImplicit : bool ref
- 
+
   val db : unit -> bool  (* true if !substitutionStyle = DeBruijn *)
 end
 
@@ -41,20 +41,24 @@ module Int : sig
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
-    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
+    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
 
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     ->  unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
+    val fmt_ppr_cmp_gctx      : LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
+    val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
 
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
-
+    val fmt_ppr_meta_typ      : LF.mctx -> lvl -> formatter -> Comp.meta_typ -> unit
+    val fmt_ppr_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
+    val fmt_ppr_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
 
     (* Regular Pretty Printers *)
     val ppr_sgn_decl      : Sgn.decl         -> unit
@@ -63,6 +67,7 @@ module Int : sig
     val ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> LF.typ_rec -> unit
     val ppr_lf_typ        : LF.mctx -> LF.dctx -> LF.typ     -> unit
     val ppr_lf_normal     : LF.mctx -> LF.dctx -> LF.normal  -> unit
+    val ppr_lf_tuple      : LF.mctx -> LF.dctx -> LF.tuple   -> unit
     val ppr_lf_head       : LF.mctx -> LF.dctx -> LF.head    -> unit
     val ppr_lf_spine      : LF.mctx -> LF.dctx -> LF.spine   -> unit
     val ppr_lf_sub        : LF.mctx -> LF.dctx -> LF.sub     -> unit
@@ -70,7 +75,7 @@ module Int : sig
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
 
-    (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
+    (* val ppr_lf_psi_hat    : LF.mctx -> LF. -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.dctx  -> unit
     val ppr_lf_mctx       : LF.mctx -> unit
     val ppr_cmp_kind      : LF.mctx -> Comp.kind -> unit
@@ -94,16 +99,17 @@ module Int : sig
 
     val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
 
-    val schemaToString    : LF.schema     -> string 
-    val schElemToString   : LF.sch_elem   -> string 
-    val gctxToString      : LF.mctx -> Comp.gctx  -> string
+    val schemaToString    : LF.schema     -> string
+    val schElemToString   : LF.sch_elem   -> string
+    val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
-    val expChkToString    : LF.mctx -> Comp.gctx  -> Comp.exp_chk  -> string
-    val expSynToString    : LF.mctx -> Comp.gctx  -> Comp.exp_syn  -> string
-    val branchToString    : LF.mctx -> Comp.gctx  -> Comp.branch   -> string
-    val compKindToString  : LF.mctx -> Comp.kind  -> string
-    val compTypToString   : LF.mctx -> Comp.typ   -> string
-    val msubToString      : LF.mctx -> LF.msub    -> string
+    val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
+    val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
+    val valueToString     :                         Comp.value   -> string
+    val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
+    val compKindToString  : LF.mctx              -> Comp.kind -> string
+    val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end
 
@@ -136,7 +142,7 @@ module Ext : sig
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
-    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit 
+    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
 
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     -> unit
@@ -166,7 +172,7 @@ module Ext : sig
 
     (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.dctx  -> unit
-    val ppr_lf_mctx       : LF.mctx -> unit 
+    val ppr_lf_mctx       : LF.mctx -> unit
     val ppr_cmp_kind      : LF.mctx -> Comp.kind -> unit
     val ppr_cmp_typ       : LF.mctx -> Comp.typ -> unit
     val ppr_cmp_exp_chk   : LF.ctyp_decl LF.ctx -> Comp.exp_chk -> unit

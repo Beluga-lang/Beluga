@@ -24,12 +24,12 @@ fn x => fn y =>
  (case x of
     [. z]                           : [. (exp nat)] => y
 
-  | {U:[. exp nat]} 
+  | {U:[. exp nat]}
     [. s U]                         : [. (exp nat)] =>
     (case (plus [. U] y) of
-       {V:[. exp nat]} 
+       {V:[. exp nat]}
         [. V] : [. (exp nat)]     =>  [. s V])
-  | {U:[. exp nat]} 
+  | {U:[. exp nat]}
      [. U]    => y
 )
 ;
@@ -42,25 +42,25 @@ mlam g => mlam T => mlam TT => fn e =>
      {T1:[. tp]} {T2:[. tp]} {#p:[g. exp T1]}
      [g,x: exp T2. (#p ..)]      : [g,x: exp T2. (exp T1)]   => [. z]
 
-   | {T':[. tp]} 
+   | {T':[. tp]}
      [g,x: exp T'. x]            : [g,x: exp T'. (exp T')]   => [. s z]
 
-   | {T':[. tp]} 
+   | {T':[. tp]}
      [g,x: exp T'. tt]           : [g,x: exp T'. (exp bool)] => [. z]
 
-   | {T':[. tp]} 
+   | {T':[. tp]}
      [g,x: exp T'. z]            : [g,x: exp T'. (exp nat)] => [. z]
 
    | {T':[. tp]} {U:[g, x:exp T'. exp nat]}
-      [g,x: exp T'. s (U .. x)]  : [g,x: exp T'. (exp nat)] => 
+      [g,x: exp T'. s (U .. x)]  : [g,x: exp T'. (exp nat)] =>
           cntV [g] [. T' ]  [ . nat ]   [g,x. (U .. x)]
 
-%{   | {T'::tp[ ]} {T1::tp[ ]} {T2::tp[ ]} 
+%{   | {T'::tp[ ]} {T1::tp[ ]} {T2::tp[ ]}
      {U1::(exp T1)[g, x:exp T']} {U2::(exp T2)[g, x:exp T', y:exp T1]}
 
       [g,x: exp T'] letv T1 T2 (U1 .. x) (\y . (U2 .. x y)) : (exp T2)[g, x:exp T'] =>
 
-          plus (cntV [g]           < . T' >    < . T1 >    ([g,x]   (U1 .. x))) 
+          plus (cntV [g]           < . T' >    < . T1 >    ([g,x]   (U1 .. x)))
                (cntV [g, y:exp T1] < . T' >    < . T2 >    ([g,y,x] (U2 .. x y)))
 
    | {T'::tp[ ]} {U::(exp nat)[g, x:exp T']} {W::(exp nat)[g, x:exp T']}

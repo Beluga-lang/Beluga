@@ -35,7 +35,7 @@ Beluga lexical categories:
          abcdefghijklmnopqrstuvwxyz
          !  $  &  '  *  +  -  /   : = ? @
          ^ _ ` | ~
-         
+
         (and any other UTF-8 character above 127)
 
      Characters after the first:
@@ -46,7 +46,7 @@ Beluga lexical categories:
          !  $  &  '  *  +  -  /   : = ? @
          ^ _ ` | ~
          #
-         
+
         (and any other UTF-8 character above 127)
 
    Keyword symbols:
@@ -59,7 +59,7 @@ Beluga lexical categories:
          block  case  fn  id  in
          impossible
          let  mlam  of
-         rec  schema  some  type 
+         rec  schema  some  type
          bool
          %name %not
 
@@ -76,13 +76,13 @@ Beluga lexical categories:
      No letter can follow a <
      No letter can PRECEDE a >
      A symbol containing < and/or > can only contain:
-      
+
          !  $  &  '  *  +  -  /   : = ? @
          ^ ` | ~
-         # 
+         #
 
 - Integers
-         
+
         Any sequence of '0'-'9' [generates token INTLIT]
 *)
 
@@ -155,7 +155,7 @@ let mk_integer  s = Token.INTLIT s
 (** @see http://www.cduce.org/ulex/ See [ulex] for details *)
 
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
-let rec lex_token loc = lexer
+let lex_token loc = lexer
   | "->"
   | "<-"
   | "::"
@@ -172,7 +172,7 @@ let rec lex_token loc = lexer
 (*  | "id"   removed 2010-07-31 *)
   | "if"
   | "impossible"
-  | "in"      
+  | "in"
   | "let"
   | "mlam"  (* was missing -- added 2009-02-18 *)
   | "of"
@@ -184,6 +184,7 @@ let rec lex_token loc = lexer
   | "ttrue"
   | "ffalse"
   | "%name"
+  | "%opts"
   | "%not"
   | "%query"
   | "?"
@@ -227,28 +228,28 @@ let skip_nestable depth loc =
 lexer
   | '\n' ->
       loc := Loc.move_line 1 !loc
-  
+
   | '%'+ [^'{' '%' '\n'] ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-  
+
   | [^'\n' '%' '}' ]+ ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-  
+
   | '}' [^'%' '\n']+ ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 
   | '}' '\n' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
-  
+
   | '}' '%' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-    ; if !depth <= 0 then 
+    ; if !depth <= 0 then
         ( print_string ("Parse error: \"}%\" with no comment to close\n");
           raise Ulexing.Error )
       else
         depth := !depth - 1
-  
+
   | '%'+ '{' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; depth := !depth + 1
@@ -283,7 +284,7 @@ let skip_line_comment loc = lexer
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
 (*    ; print_string ("AFT " ^ Loc.to_string !loc ^ "\n") *)
-  
+
   | '%' '\n' ->
 (*     print_string ("BEF " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
@@ -291,7 +292,7 @@ let skip_line_comment loc = lexer
 
 (* Skip non-newline whitespace and advance the location reference. *)
 let skip_whitespace loc = lexer
-  | [ ' ' '\t' ]+         -> 
+  | [ ' ' '\t' ]+         ->
 (*     print_string ("bef " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
         loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 (*    ;   print_string ("aft " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)

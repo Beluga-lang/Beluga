@@ -9,7 +9,7 @@
 pres_st_judg_inversion_aux
                : sttp_wf ST -> st_wf S -> st_judg S ST ->
                  sttp_lookup ST L T ->
-                 st_lookup S L V 
+                 st_lookup S L V
                   -> val_judg ST V T -> type.
 %mode pres_st_judg_inversion_aux +DSTWf +DSWf +DStTc +SttpLookup +StLookup -DValTc.
 -hit_hit       : pres_st_judg_inversion_aux DSTWf DSWf (st_judg_cons DValTc' _)
@@ -31,9 +31,9 @@ pres_st_judg_inversion_aux
                                          DValTc
 		  <- sttp_wf_tail DSTWf DSTWf'
 		  <- st_wf_tail DSWf DSWf'
-		  <- pres_st_judg_inversion_aux DSTWf' DSWf' DStTc' 
-                                             DSttpLookup' 
-                                             DStLookup' 
+		  <- pres_st_judg_inversion_aux DSTWf' DSWf' DStTc'
+                                             DSttpLookup'
+                                             DStLookup'
                                              DValTc'
 		  <- sttp_wf_cons_implies_extend_cons DSTWf DSttpExtend'
 		  <- sttp_weak_val_judg DValTc' DSttpExtend' DValTc.
@@ -59,10 +59,10 @@ pres_st_judg_inversion_aux
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pres_st_judg_inversion 
+pres_st_judg_inversion
                : stwf_judg S ST ->
                  sttp_lookup ST L T ->
-                 st_lookup S L V 
+                 st_lookup S L V
                   -> val_judg ST V T -> type.
 %mode pres_st_judg_inversion +DStTcWf +SttpLookup +StLookup -DValTc.
 -              : pres_st_judg_inversion (stwf_judg_  DSTWf DSWf DStTc)

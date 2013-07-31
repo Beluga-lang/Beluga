@@ -1,5 +1,5 @@
 set chatter 1
-Timers.reset 
+Timers.reset
 OS.chDir examples-twelf-orig/
 
 reset
@@ -11,7 +11,7 @@ make ccc/sources.cfg
 reset
 make church-rosser/sources.cfg
 reset
-make cpsocc/sources.cfg 
+make cpsocc/sources.cfg
 reset
 make compile/cls/sources.cfg
 reset
@@ -23,13 +23,13 @@ make compile/debruijn1/sources.cfg
 reset
 make compile/cps/sources.cfg
 reset
-make cut-elim/sources.cfg 
+make cut-elim/sources.cfg
 reset
-make fol/sources.cfg 
+make fol/sources.cfg
 reset
-make handbook/sources.cfg 
+make handbook/sources.cfg
 reset
-make kolm/sources.cfg 
+make kolm/sources.cfg
 reset
 make lp/sources.cfg
 reset

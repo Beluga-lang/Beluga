@@ -1,3 +1,4 @@
-Cannot pattern-match on values of this type.
-  Scrutinee: g
-  Type: [. nat] -> [. nat]
+Ill-typed pattern.
+    Expected type: [. nat] -> [. nat]
+    Inferred type: Bool
+In pattern: ttrue

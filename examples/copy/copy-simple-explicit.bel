@@ -6,7 +6,7 @@ schema tctx = some [] term;
 
 % Doesn't cover, and not used below.  Commented out  -jd 2010-05-23
 %
-% rec copy' : term [ ] -> term [ ] = 
+% rec copy' : term [ ] -> term [ ] =
 %  fn t =>  case t of [ ] lam (\x . x) : term[ ] => t
 % ;
 
@@ -17,7 +17,7 @@ mlam g => fn e =>
      [g. (#p ..)] : [g. term] => [g. (#p ..)]
 
   | {U:[g, x : term. term]}
-    [g. lam (\x. (U .. x))] : [g. term] => 
+    [g. lam (\x. (U .. x))] : [g. term] =>
 
        (case (copy [g, x:term]  [g,x. (U .. x)]) of
 

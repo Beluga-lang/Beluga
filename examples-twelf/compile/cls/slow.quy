@@ -21,7 +21,7 @@ cev_complete
                               (fev_app
                                   (fev_case_s
                                       (fev_s
-                                          
+
 (fev_app
     (fev_case_s
         (fev_s
@@ -45,7 +45,7 @@ cev_complete
                                   (fev_app (fev_case_z fev_1 (fev_^ fev_1))
                                       (fev_^ fev_1)
                                       (fev_app fev_lam
-                                          
+
 (fev_app (fev_case_z fev_z (fev_^ fev_1)) (fev_^ fev_1)
     (fev_app fev_lam fev_1 (fev_^ (fev_^ (fev_^ (fev_1+ (fev_fix fev_lam)))))))
                                           (fev_^

@@ -27,7 +27,7 @@ _ =
 ((exists [x:i] (A x or B x)) imp ((exists [x:i] A x) or (exists [x:i] B x))) : o.
 
 % sequent derivation
-_ = 
+_ =
 ([A:i -> o] [B:i -> o]
    impr [h1:hyp (exists [x:i] (A x or B x))]
    (existsl ([a:i] [h2:hyp (A a or B a)]
@@ -42,7 +42,7 @@ conc ((exists [x:i] (A x or B x)) imp (exists [x:i] A x) or (exists [x:i] B x)).
 % Example 3
 _ = (A' or B') imp (B' or A') : o.
 
-_ = 
+_ =
 ([A':o] [B':o]
    impr [h1:hyp (A' or B')]
    (orl ([h2:hyp A'] orr2 (axiom h2))
@@ -76,7 +76,7 @@ ca
 (F A B h1).
 }%
 % Example 5 (Classical Logic)
-_ = 
+_ =
 ([A:o] [p:pos (A or not A)]
    orr1' ([p1:pos A]
 	    orr2' ([p2:pos (not A)]

@@ -10,6 +10,6 @@ cvalCS_init : cvalCS ([k]cdot).
 cvalCS_vlam : cvalCS ([k](ccons (Phi k) (vlam ([v] E v k))))
               <- cvalCS Phi
               <- {v:ctriv}{cvv:cvalT v}
-                 cvalE ([c] E v c).   
+                 cvalE ([c] E v c).
 
 %terminates Phi (cvalCS Phi).

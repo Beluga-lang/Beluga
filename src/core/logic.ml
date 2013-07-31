@@ -11,7 +11,7 @@ module Options = struct
   (* Enable the logic programming engine (disabled by default). *)
   let enableLogic = ref true
 
-  (* Control verbosity level: 
+  (* Control verbosity level:
        0 => No output.
        1 => Query and success notification.
        2 => + Error messages.
@@ -89,17 +89,17 @@ module Shift : sig
   val shiftAtom : LF.typ -> (int * int * int) -> LF.typ
 
 end = struct
-    
+
   (* NB.
-     
+
      Only BVar's in LF.Atom's are affected.
      Enclosed substitutions are not shifted.
-     
+
      i: De Bruijn index.
      k: Shifting measure.
-     
+
      Algorithm:
-     
+
      BV bound by λ remain invariant.
       - i < lR |- BV(i) -> BV(i)
 
@@ -217,12 +217,12 @@ module Convert = struct
   let typToClause tM =
     typToClause' LF.Null True tM (0, 0, 0)
 
-  (* etaExpand Psi (A, s) = normal 
+  (* etaExpand Psi (A, s) = normal
      Invariants:
        Psi |- s : Phi
        Phi |- A : LF.typ
 
-     Effects: 
+     Effects:
        None.
   *)
   let rec etaExpand cPsi sA =
@@ -283,10 +283,6 @@ module Index = struct
 
   open Store
 
-  type typConst = sgnClause DynArray.t  (* tC ::= sgnClause DynArray.t *)
-
-  and sgnClause = Id.cid_term * clause  (* sgnClause ::= (c, sCl)      *)
-
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
   type inst = (Id.name * LF.normal)     (* I ::= (x, MVar)             *)
@@ -304,7 +300,7 @@ module Index = struct
 
   let querySub = ref S.id
 
-  (* addTyp c = sgnClause DynArray.t 
+  (* addTyp c = sgnClause DynArray.t
      Create a new entry for a type constant, c, in the `types' table and
      return it's mapping, i.e. an empty DynArray.
   *)
@@ -312,7 +308,7 @@ module Index = struct
     Hashtbl.add types cidTyp (DynArray.create ()) ;
     Hashtbl.find types cidTyp
 
-  (* addSgnClause tC, sCl = () 
+  (* addSgnClause tC, sCl = ()
      Add a new sgnClause, sCl, to the DynArray tC.
   *)
   let addSgnClause typConst sgnClause =
@@ -322,21 +318,17 @@ module Index = struct
      Add a new sgnQuery to the `queries' DynArray.
   *)
   let addSgnQuery (p, a, a', q, xs, e, t) =
-    DynArray.add queries 
+    DynArray.add queries
       { query = q ;
         typ = a ;
         skinnyTyp = a' ;
-        optName = p ; 
-        expected = e ; 
-        tries = t ; 
+        optName = p ;
+        expected = e ;
+        tries = t ;
         instMVars = xs }
 
-  (* lookupTyp c = typConst *)
-  let lookupTyp cidTyp =
-    Hashtbl.find types cidTyp
-
-  (* compileSgnClause c = (c, sCl) 
-     Retrieve LF.typ for term constant c, clausify it into sCl and 
+  (* compileSgnClause c = (c, sCl)
+     Retrieve LF.typ for term constant c, clausify it into sCl and
      return an sgnClause (c, sCl).
   *)
   let compileSgnClause cidTerm =
@@ -351,7 +343,7 @@ module Index = struct
     (Cid.Term.get cidTerm).Cid.Term.name
 
   (* storeTypConst c = ()
-     Add a new entry in `types' for type constant c and fill the DynArray 
+     Add a new entry in `types' for type constant c and fill the DynArray
      with the clauses corresponding to the term constants associated with c.
      The revIter function serves to preserve the order of term constants
      intrinsic to the Beluga source file, since the constructors for c are
@@ -382,14 +374,11 @@ module Index = struct
   let robStore () =
     List.iter storeTypConst !Cid.Typ.entry_list
 
-  (* iterSClauses f c = () 
+  (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.
   *)
   let iterSClauses f cidTyp =
     DynArray.iter f (Hashtbl.find types cidTyp)
-
-  let iterTypConst f =
-    Hashtbl.iter f types
 
   let iterAllSClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) types
@@ -422,12 +411,12 @@ module Printer = struct
     P.normalToString LF.Empty cPsi sM
 
   let declToString cPsi (tD, s) = match tD with
-    | LF.TypDeclOpt x -> 
+    | LF.TypDeclOpt x ->
       nameToString x ^ ":_"
-    | LF.TypDecl (x, tM) -> 
+    | LF.TypDecl (x, tM) ->
       nameToString x ^ ":" ^ typToString cPsi (tM, s)
 
-  (* goalToString Psi (g, s) = string 
+  (* goalToString Psi (g, s) = string
      Invariants:
        Psi |- s : Phi
        Phi |- g : goal
@@ -446,12 +435,12 @@ module Printer = struct
       (declToString cPsi (tD, s))
       (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
 
-  (* resToString cPsi (r, s) = string 
+  (* resToString cPsi (r, s) = string
      Invariants:
        Psi |- s: Phi
        Phi |- r : res
        Psi |- r[s] : res
-     
+
      Effects:
        None.
   *)
@@ -480,14 +469,6 @@ module Printer = struct
       (typToString sCl.eVars (sCl.tHead, S.id))
       (subGoalsToString sCl.eVars (sCl.subGoals, S.id))
 
-  (* dClauseToString Psi (dCl, s) = string
-     String representation of dynamic clause.
-  *)
-  and dClauseToString cPsi (dCl, s) =
-    sprintf "%s\n%s"
-      (typToString cPsi (dCl.tHead, s))
-      (subGoalsToString cPsi (dCl.subGoals, s))
-
   let boundToString b = match b with
     | Some i -> string_of_int i
     | None -> "*"
@@ -498,19 +479,19 @@ module Printer = struct
       (boundToString q.tries)
       (typToString LF.Null (q.typ, S.id))
 
-  (* instToString xs = string 
+  (* instToString xs = string
      Return string representation of existential variable
      instantiations in the query.
   *)
   let rec instToString xs = match xs with
     | ((x, tM) :: []) -> sprintf "%s = %s."
-      (nameToString x) 
+      (nameToString x)
       (normalToString LF.Null (tM, S.id))
-    | ((x, tM) :: ys) -> sprintf "%s = %s;\n%s" 
+    | ((x, tM) :: ys) -> sprintf "%s = %s;\n%s"
       (nameToString x)
       (normalToString LF.Null (tM, S.id))
       (instToString ys)
-    | [] -> "Empty substitution."        
+    | [] -> "Empty substitution."
 
   let printQuery q =
     printf "%s.\n\n" (sgnQueryToString q)
@@ -518,16 +499,14 @@ module Printer = struct
   let printSignature () =
     iterAllSClauses (fun w -> printf "%s\n" (sgnClauseToString w))
 
-  let dash s = "---------- " ^ s ^ " ----------"
-
 end
 
 
 module Solver = struct
 
   module U = Unify.StdTrail
-  module C = Convert   
-  module P = Printer  
+  module C = Convert
+  module P = Printer
   module I = Index
 
   (* Dynamic Assumptions *)
@@ -535,7 +514,7 @@ module Solver = struct
     | Empty                              (*      | Empty            *)
     | DynCl of (dPool * (clause * int))  (*      | (dP', (dCl, k))  *)
 
-  (* unify Psi (A, s) (B, s') sc = () 
+  (* unify Psi (A, s) (B, s') sc = ()
      Invariants:
        sc : unit -> unit
 
@@ -554,7 +533,7 @@ module Solver = struct
     let () = U.mark () in
     try f () ; U.unwind () with e -> (U.unwind (); raise e)
 
-  (* eqHead A dCl = bool 
+  (* eqHead A dCl = bool
      Compare the cid_typ's of A and the head of dCl.
   *)
   let eqHead tM dCl = match (tM, dCl.tHead) with
@@ -568,7 +547,7 @@ module Solver = struct
     | _ -> invalid_arg
       "Logic.Solver.cidFromAtom: Match failure against LF.Atom (_,_,_)."
 
-  (* shiftSub k = ^k 
+  (* shiftSub k = ^k
      Invariants:
        Psi, x1:_, x2:_, ... xk:_ |- ^k : Psi
   *)
@@ -617,7 +596,7 @@ module Solver = struct
   and matchAtom dPool (cPsi, k) (tA, s) sc =
 
     (* matchDProg dPool = ()
-       Try all the dynamic clauses in dPool starting with the most 
+       Try all the dynamic clauses in dPool starting with the most
        recent one. If dPool is empty, try the signature.
     *)
     let rec matchDProg dPool = match dPool with
@@ -629,9 +608,9 @@ module Solver = struct
           (* Trail to undo MVar instantiations. *)
           (try trail (fun () -> unify cPsi (tA, s) (dCl.tHead, s')
             (fun () -> solveSubGoals dPool (cPsi, k) (dCl.subGoals, s')
-              (fun (u, tS) -> 
+              (fun (u, tS) ->
                 sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS tS)))))
-           with U.Unify _ -> ()) ; matchDProg dPool'
+           with U.Failure _ -> ()) ; matchDProg dPool'
         else matchDProg dPool'
       | Empty ->
         matchSig (cidFromAtom tA)
@@ -655,11 +634,11 @@ module Solver = struct
       try trail (fun () -> unify cPsi (tA, s) (sCl.tHead, s')
         (fun () -> solveSubGoals dPool (cPsi, k) (sCl.subGoals, s')
           (fun (u, tS) -> sc (u, LF.Root (Syntax.Loc.ghost, LF.Const (cidTerm), fS tS)))))
-      with U.Unify _ -> ()
+      with U.Failure _ -> ()
 
     in matchDProg dPool
 
-  (* solveSubGoals dPool (Psi, k) (G, s) sc = () 
+  (* solveSubGoals dPool (Psi, k) (G, s) sc = ()
      Invariants:
        dPool ~ Psi
        G = (G', g) | T
@@ -706,8 +685,8 @@ module Frontend = struct
 
   (* timeLimit o f = ()
      Effects:
-       If o = Some (ref t), sets a signal handler to raise the TimeLimit 
-     exception when SIGALARM is received and schedules a signal alarm in 
+       If o = Some (ref t), sets a signal handler to raise the TimeLimit
+     exception when SIGALARM is received and schedules a signal alarm in
      t seconds.
        Any effects (f ()) might have.
   *)
@@ -716,12 +695,12 @@ module Frontend = struct
       | "Unix" | "Cygwin" ->
         (match optLimit with
           | Some t -> Sys.set_signal Sys.sigalrm
-            (Sys.Signal_handle (fun _ -> raise TimeLimit)) ; 
+            (Sys.Signal_handle (fun _ -> raise TimeLimit)) ;
             ignore (Unix.alarm t) ; f ()
           | None -> f ())
       | "Win32" -> () (* Unsupported *)
 
-  (* exceeds B1 B2 = b 
+  (* exceeds B1 B2 = b
      True if B1 = * or B1 >= B2.
   *)
   let exceeds x y = match (x, y) with
@@ -729,7 +708,7 @@ module Frontend = struct
     | (Some i, None) -> false
     | (None, _) -> true
 
-  (* boundEq B1 B2 = b 
+  (* boundEq B1 B2 = b
      Equality function for bounds.
   *)
   let boundEq x y = match (x, y) with
@@ -748,7 +727,7 @@ module Frontend = struct
 
   (* checkSolutions e t s = () *)
   let checkSolutions e t s = match (e, t) with
-    | (None, None) -> () 
+    | (None, None) -> ()
     | _ ->
       if not (boundEq (lowerBound e t) (Some s)) then
         abort ("Query error: Wrong number of solutions -- "
@@ -771,10 +750,10 @@ module Frontend = struct
     let solutions = ref 0 in
 
     (* Type checking function. *)
-    let check cPsi tM s = Check.LF.check LF.Empty 
+    let check cPsi tM s = Check.LF.check LF.Empty
       cPsi (tM, S.id) (sgnQuery.skinnyTyp, s) in
-    
- 
+
+
     (* Initial success continuation. *)
     let scInit (cPsi, tM) =
       ignore (incr solutions) ;
@@ -788,7 +767,7 @@ module Frontend = struct
       if !Options.chatter >= 3 then
         begin
           printf "---------- Solution %d ----------\n[%s]\n%s\n"
-            !solutions (P.dctxToString cPsi) 
+            !solutions (P.dctxToString cPsi)
             (P.instToString sgnQuery.instMVars) ;
           (* Print proof term. *)
           (match sgnQuery.optName with

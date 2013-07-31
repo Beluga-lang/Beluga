@@ -8,7 +8,7 @@ r: node -> type.
 s: node -> type.
 %tabled s.
 
-r2: r a 
+r2: r a
      <- s b.
 s3: s b
      <- s a.

@@ -17,15 +17,15 @@ perm1 : prog ( ( ^ (elem X) =0 ^ (perm L K) ) =0 ^ (perm (X | L) K) ).
 perm2 : prog ( ^ (perm nil K) =0 ^(elem X) =0 ^ (perm nil (X | K)) ).
 perm3 : prog ( ^(perm nil nil) ).
 
-rev1 : prog( (^(elem X) =>> ^(rev L K)) =>> ^(rev (X | L) K) ). 
+rev1 : prog( (^(elem X) =>> ^(rev L K)) =>> ^(rev (X | L) K) ).
 rev2 : prog( ^(rev nil K) =>> ^(elem X) =>> ^(rev nil (X | K)) ).
 rev3 : prog( ^(rev nil nil) ).
 
-id1 : prog( (^(elem X) >=> ^(id L K)) =>> ^(id (X | L) K) ). 
+id1 : prog( (^(elem X) >=> ^(id L K)) =>> ^(id (X | L) K) ).
 id2 : prog( ^(id nil K) =>> ^(elem X) =>> ^(id nil (X | K)) ).
 id3 : prog( ^(id nil nil) ).
 
-idl1 : prog( (^(elem X) >=> ^(idl L K)) >=> ^(idl (X | L) K) ). 
+idl1 : prog( (^(elem X) >=> ^(idl L K)) >=> ^(idl (X | L) K) ).
 idl2 : prog( ^(idl nil K) =>> ^(elem X) =>> ^(idl nil (X | K)) ).
 idl3 : prog( ^(idl nil nil) ).
 

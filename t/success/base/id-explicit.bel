@@ -19,43 +19,43 @@ schema w = some [t:tp] exp t;
 
 
 rec identity' : {g:w}{T: [g. tp]} [g. exp (T ..)] -> [g. exp (T ..)] =
-mlam g =>  mlam T => 
+mlam g =>  mlam T =>
     fn x =>
       case x of
           [g. z]   : [g. (exp nat)] => [g. z]
-        | {U:[g. exp nat]} 
+        | {U:[g. exp nat]}
           [g. s (U ..)] : [g. (exp nat)] => [g. s (U ..)]
 
 	| {T:[g. tp]}{#p: [g. exp (T ..)]}
-          [g. (#p ..)] : [g. (exp (T ..))] => 
+          [g. (#p ..)] : [g. (exp (T ..))] =>
 	    [g. (#p ..)]
 ;
 
 
 rec copy : {g:w}{T: [g. tp]} [g. exp (T ..)] -> [g. exp (T ..)] =
-mlam g =>  mlam T => 
+mlam g =>  mlam T =>
     fn x =>
       case x of
 
           [g. z]   : [g. (exp nat)] => [g. z]
 
-        | {U:[g. exp nat]} 
-           [g. s (U ..)] : [g. (exp nat)] => 
+        | {U:[g. exp nat]}
+           [g. s (U ..)] : [g. (exp nat)] =>
 	   (case (copy [g] [ g. nat ] [g. (U ..)]) of
 	      {V:[g. exp nat]}
               [g. (V ..)] : [g. (exp nat)]=> [g. s (V ..)])
 
         | {T1:[g. tp]}{T2:[g. tp]}{E:[g, x:exp (T1 ..). exp (T2 ..)]}
 
-           [g. lam (T1 ..)  (T2 ..)  (\x. (E .. x))] : [g. (exp (arr (T1 ..) (T2 ..)))] => 
-             [g. lam (T1 ..)  (T2 ..)  (\x. (E .. x))] 					  
+           [g. lam (T1 ..)  (T2 ..)  (\x. (E .. x))] : [g. (exp (arr (T1 ..) (T2 ..)))] =>
+             [g. lam (T1 ..)  (T2 ..)  (\x. (E .. x))]
 
         | {T1:[g. tp]}{T2:[g. tp]}{E:[g, x:exp (T1 ..). exp (T2 ..)]}
 
-           [g. lam (T1 ..)  (T2 ..)  (\x. (E .. x))] : [g. (exp (arr (T1..) (T2 ..)))] => 
+           [g. lam (T1 ..)  (T2 ..)  (\x. (E .. x))] : [g. (exp (arr (T1..) (T2 ..)))] =>
 
 	   x
 
- 	| {T:[g. tp]}{#p:[g. exp (T ..)]} 
+ 	| {T:[g. tp]}{#p:[g. exp (T ..)]}
             [g. (#p ..)] : [g. (exp (T ..))] => [g. (#p ..)]
 ;

@@ -4,7 +4,7 @@ suc : nat -> nat.
 
 schema w = nat;
 
-rec copynat1 : {g:w} [g. nat] -> [g. nat] = 
+rec copynat1 : {g:w} [g. nat] -> [g. nat] =
   mlam g => fn e => copynat1 [g] e;
 
 

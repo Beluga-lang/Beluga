@@ -2,17 +2,17 @@
 
 set -e
 
-suppress=NO
+bailout=NO
 
-git status 2> /dev/null \
-    |  egrep 'Changes not staged for commit|Changes to be committed' > /dev/null \
-    && suppress=SUPPRESS
+git status --porcelain | grep "" && bailout=YES
 
-if [ $suppress = SUPPRESS ]; then
+if [ $bailout = YES ]; then
     echo
-    echo '`git status'"'"' reports changed files.'
-    echo 'This script will continue, but will not build a final .tar.gz file.'
+    echo 'git status reports a working tree that is not pristine.'
+    echo 'Please run this release script in a clean directory, such as after'
     echo
+    echo '$ git clone'
+    exit 1
 fi
 
 echo 'Version number is:'
@@ -20,7 +20,7 @@ echo
 cat VERSION || ( echo "VERSION file doesn't exist; aborting release" ; exit 1 )
 echo
 
-release=./beluga-"`cat VERSION`"-"`date +%Y%m%d`"
+release=./beluga-`cat VERSION`
 
 echo 'Release directory name is:'
 echo
@@ -34,45 +34,48 @@ fi
 
 mkdir $release
 
-echo 'Copying files in root'
+echo 'Copying files in root ...'
 cp -a \
     INSTALL \
     OMakefile \
     OMakeroot \
-    README \
-    STYLE \
+    AUTHORS \
+    COPYRIGHT \
+    LICENSE \
+    VERSION \
     $release
 
 mkdir $release/bin
 
-echo 'Copying src'
+# Set the RELEASE to true by default.
+sed -i 's/RELEASE *= *false/RELEASE = true/' $release/OMakeroot
+
+echo 'Copying src ...'
 cp -a \
     src \
     $release
 
-echo 'Copying tools'
+echo 'Copying tools ...'
 cp -a \
     tools \
     $release
 
-echo 'Copying examples examples-twelf'
+echo 'Copying examples ...'
 cp -a \
     examples \
-    examples-twelf \
     $release
 
 cd $release
 echo Deleting useless files:
 useless=$(find . -print | egrep '~|.DS_Store' || true)
-echo rm $useless
+echo rm -rf $useless
 rm -rf $useless
 
 # Remove examples not yet ready for public consumption
-rm -rf examples/notworking
-rm -rf examples/cfg
-rm -rf examples/beluga
+echo rm -rf examples/{notworking,cfg,beluga}
+rm -rf examples/{notworking,cfg,beluga}
 
-echo "Copying $release to $release-sandbox"
+echo "Copying $release to $release-sandbox ..."
 cd ..
 if [ -e $release-sandbox ]; then
     echo Release sandbox directory "$release-sandbox" already exists.
@@ -80,42 +83,37 @@ if [ -e $release-sandbox ]; then
 fi
 cp -a $release $release-sandbox
 
-echo 'Building (bytecode) in-tree first, for testing'
+echo 'Building (bytecode) in-tree first, for testing ...'
 omake clean
-omake || ( echo 'omake failed; aborting release' ; exit 1 )
+omake || ( echo 'omake failed; aborting release.' ; exit 1 )
 
-echo 'Running TEST (bytecode)'
-./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
+echo 'Running TEST (bytecode) ...'
+./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
 
-echo 'Building (native) in-tree first, for testing'
+echo 'Building (native) in-tree first, for testing ...'
 omake clean
 omake NATIVE_ENABLED=true clean
-omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
+omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release.' ; exit 1 )
 
-echo 'Running TEST (native)'
-./TEST || ( echo 'TEST failed; aborting release' ; exit 1 )
+echo 'Running TEST (native) ...'
+./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
 
 cd $release-sandbox
 
-echo 'Building (bytecode) in release directory'
-omake || ( echo 'omake failed; aborting release' ; exit 1 )
+echo 'Building (bytecode) in release directory ...'
+omake || ( echo 'omake failed; aborting release.' ; exit 1 )
 
-echo 'Building (native) in release directory'
+echo 'Building (native) in release directory ...'
 omake clean
 omake NATIVE_ENABLED=true clean
-omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release' ; exit 1 )
+omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release.' ; exit 1 )
 
 cd ..
-echo 'Leaving '$release-sandbox' around if you want to test further'
-
-if [ $suppress = SUPPRESS ]; then
-    echo 'There are uncommitted changes.  Please commit them and run RELEASE again.'
-    exit 3
-fi
+echo 'Leaving '$release-sandbox' around if you want to test further.'
 
 sleep 1
-echo 'Building archive' $release.tar
-tar zcf $release.tar.gz $release || ( echo 'tar failed' ; exit 1 )
+echo 'Building archive' $release.tar.gz
+tar zcf $release.tar.gz $release || ( echo 'tar failed.' ; exit 1 )
 echo
 ls -l $release.tar.gz
 echo

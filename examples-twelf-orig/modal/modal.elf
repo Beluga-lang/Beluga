@@ -1,4 +1,4 @@
-% An implementation of intutitionistic modal logic based upon Alex 
+% An implementation of intutitionistic modal logic based upon Alex
 % Simpson's thesis
 
 w : type.  % worlds
@@ -81,7 +81,7 @@ R : w -> w -> type. %infix left 5 R.
 %establish 6 {} (k_axiom2 D).
 }%
 
-%{ 
+%{
 %theorem modal_equiv1 : exists {D:{W:w}{A:o} ((□ A) ⇒ (¬ (<> (¬ A)))) @ W} true.
 %establish 5 {} (modal_equiv1 D).
 
@@ -113,23 +113,23 @@ axiom : hyp P W -> conc P W.
 
 ⊤R : conc ⊤ W.
 
-⊥L : hyp ⊥ W1 -> 
+⊥L : hyp ⊥ W1 ->
    % ----------
      conc P W2.
-     
+
 ⇒L : (hyp P2 W1 -> conc P3 W2) ->
      (conc P1 W1) ->
    % ---------------------------------
      (hyp (P1 ⇒  P2) W1 -> conc P3 W2).
-     
+
 ⇒R : (hyp P1 W -> conc P2 W) ->
    % --------------------------
      conc (P1 ⇒ P2) W.
-     
+
 □L : (hyp P1 W2 -> conc P2 W3) ->
    % ----------------------------
       (W1 R W2 -> hyp (□ P1) W1 -> conc P2 W3).
-      
+
 □R : (W1 R W2 -> conc P W2) ->
    % -------------------------
      conc (□ P) W1.
@@ -138,7 +138,7 @@ axiom : hyp P W -> conc P W.
     % ---------------------------------------
       (hyp (<> P1) W1 -> conc P2 W3).
 
-<>R : conc P W2 -> 
+<>R : conc P W2 ->
     % ---------
       (W1 R W2 -> conc (<> P) W1).
 

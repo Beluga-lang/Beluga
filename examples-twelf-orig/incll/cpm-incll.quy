@@ -3,9 +3,9 @@
 %
 
 % ceval (app (lam [x] (vl x)) z) V.
-% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>> 
+% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>>
 %	^(ev (appm (lamm [x] (vl x)) z)))).
-%query 1 1 (sqnt rnil rnil rnil rnil (^(return V) =>> 
+%query 1 1 (sqnt rnil rnil rnil rnil (^(return V) =>>
 	^(ev (appm (lamm [x] (vl x)) z)))).
 
 % Doubling 3
@@ -17,7 +17,7 @@
 % this query has successfully completed on my machine (~ 4 minutes to run)
 %
 
-% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>> 
+% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>>
 % 	^(ev (appm (fix [double] lamm [x]
 %              case (vl x) z
 %              [x'] s (s (appm double (vl x')))) (s (s (s z)))) ))).
@@ -37,7 +37,7 @@
 % has successfully run, in about 5 hours.
 %
 
-% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>> 
+% %query 1 * (sqnt rnil rnil rnil rnil (^(return V) =>>
 %	^(ev (letv (lamm [x] fix [add] lamm [y]
 %               case (vl y) (vl x) [y'] s (appm add (vl y'))) [add]
 %         (letv (lamm [x] fix [mult] lamm [y]

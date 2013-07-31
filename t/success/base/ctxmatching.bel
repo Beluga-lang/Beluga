@@ -1,10 +1,10 @@
 nat: type.
 z: nat.
 
-schema nctx = nat; 
+schema nctx = nat;
 
 rec cmatch_correct1 : (g:nctx) [g. nat] -> [g. nat] =
-fn n  => case n of 
+fn n  => case n of
  | [g. z] => [g. z]
  | [g. #p ..] => [g. #p ..]
 
@@ -12,7 +12,7 @@ fn n  => case n of
 
 
 rec cmatch_correct2 : (g:nctx) [g. nat] -> [g. nat] =
-fn n  => case n of 
+fn n  => case n of
  | [g. z] => [g. z]
  | [h,x:nat. x] => [h,x:nat. x]
  | [g,x:nat. #p ..] => [g,x:nat. #p ..]

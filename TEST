@@ -9,6 +9,7 @@ usage() {
     echo "  -h,--help        Display this usage information."
     echo "  -c,--color       Force colorized output even when piped."
     echo "  --noexamples     Do not also test $EXAMPLEDIR."
+    echo "  --examples       Only test $EXAMPLEDIR."
     echo "  --reset          Replace all .out files with new output (use with caution!)."
     echo
     echo "Notes:"
@@ -25,7 +26,7 @@ echo
 echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
 
 # Set $EXE to the executable to test.
-echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/interpreter}
+echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/beluga}
 
 # Test cases.
 echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t}
@@ -34,7 +35,7 @@ echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t}
 echo -e "\t" EXAMPLEDIR: ${EXAMPLEDIR:=$BELUGADIR/examples}
 
 # Time limit.
-echo -e "\t" TIMEOUT: ${TIMEOUT:=2} seconds
+echo -e "\t" TIMEOUT: ${TIMEOUT:=10} seconds
 
 echo
 
@@ -140,6 +141,10 @@ do
 	    ;;
 	--noexamples)
 	    EXAMPLEDIR=/dev/null
+	    shift
+	    ;;
+	--examples)
+	    TESTDIR=/dev/null
 	    shift
 	    ;;
 	--reset)

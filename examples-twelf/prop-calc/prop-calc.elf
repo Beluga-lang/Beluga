@@ -25,7 +25,7 @@ left : |- (imp (& A B)  A).
 right : |- (imp (& A B) B).
 
 % Inference Rule.
-mp : |- (imp A B) -> |- A -> |- B. 
+mp : |- (imp A B) -> |- A -> |- B.
 
 % Natural Deduction.
 

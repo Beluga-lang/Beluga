@@ -12,8 +12,8 @@ int : sort.
 con : trm int -> atm.
 
 op = arrow int (arrow int int).
-+ : trm op.  
-* : trm op.  
++ : trm op.
+* : trm op.
 end : trm op.
 
 fun : trm op -> atm.
@@ -40,7 +40,7 @@ ev_1 : prog (
 ).
 
 ev_2 : prog (
-^ evo Op (app (app Op X) Y) <<= ^ fun end 
+^ evo Op (app (app Op X) Y) <<= ^ fun end
                             <<= ^ con X <<= ^ fun Op <<= ^ con Y
 ).
 

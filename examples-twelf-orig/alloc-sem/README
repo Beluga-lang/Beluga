@@ -1,4 +1,4 @@
-Simply Typed Lambda-Calculus with a small-step, allocation semantics. 
+Simply Typed Lambda-Calculus with a small-step, allocation semantics.
 Matthew Fluet (June 2005)
 
 This is an attempt to get a feel for Twelf with a problem somewhere
@@ -204,7 +204,7 @@ substituted.  Unfortunately, I seemed to be required to propagate
 think that this approach would have run into problems similar to the
 one described in the next few paragraphs.
 
-Having revised the definition of lambda expressions to 
+Having revised the definition of lambda expressions to
 
 lam_e          : (exp -> exp) -> exp.
 
@@ -234,7 +234,7 @@ requires the substitution of a location (expression) for the formal
 argument of a lambda expression to preserve the type of the
 application expression; i.e., to preserve the type of the body of the
 lambda expression.  Of course, one cannot simply apply the hypothesis
-of the "|-exp_lam" judgement to the argument 
+of the "|-exp_lam" judgement to the argument
 ("|-exp ST (loc_e L2) Tx"), since the hypothesis is phrased in terms
 of "{x:exp} |-var x T".  Following the discussion on the wiki, I
 simply prove the lemma that asserts that such a substitution is type
@@ -259,21 +259,21 @@ simple syntactic change.  However, one interesting situation arises.
 Coverage checking of the Preservation Lemma fails, reporting the
 following missing case (slightly editted for presentation):
 
-   {S1:st} {L1:loc} {L2:loc} {F1:exp -> exp} {ST1:sttp} {ST2:sttp} 
+   {S1:st} {L1:loc} {L2:loc} {F1:exp -> exp} {ST1:sttp} {ST2:sttp}
    {T1:tp} {T2:tp} {T3:tp}
-   {X1:st_lookup S1 L1 (lam_v T2 F1)} 
+   {X1:st_lookup S1 L1 (lam_v T2 F1)}
    {X2:st_wf S1}
-   {X3:sttp_wf ST1} 
-   {DStTc1:|-st S1 ST1} 
+   {X3:sttp_wf ST1}
+   {DStTc1:|-st S1 ST1}
    {X4:sttp_lookup ST1 L1 (fn_t T3 T1)}
-   {X5:sttp_lookup ST1 L2 T3} 
+   {X5:sttp_lookup ST1 L2 T3}
    {X6:sttp_extend ST1 ST2}
-   {DStTcWf1:|-stwf S1 ST2} 
+   {DStTcWf1:|-stwf S1 ST2}
    {DExpTc1:|-exp ST2 (F1 (loc_e L2)) T1}
-   |- pres (app_beta_step X1) 
+   |- pres (app_beta_step X1)
            (|-stwf_ X2 X3 DStTc1)
-           (|-exp_app (|-exp_loc (|-loc_ X4)) (|-exp_loc (|-loc_ X5))) 
-           X6 
+           (|-exp_app (|-exp_loc (|-loc_ X4)) (|-exp_loc (|-loc_ X5)))
+           X6
            DStTcWf1
            DExpTc1.
 
@@ -301,15 +301,15 @@ lemmas related to the inversion of the store typing judgement.  What I
 found interesting is that the LF types of these lemmas are identical,
 only their modes differ:
 
-pres_|-st_inversion 
+pres_|-st_inversion
                : |-stwf S ST ->
                  sttp_lookup ST L T ->
-                 st_lookup S L V 
+                 st_lookup S L V
                   -> |-val ST V T -> type.
 %mode pres_|-st_inversion +DStTcWf +SttpLookup +StLookup -DValTc.
-prog_|-st_inversion 
+prog_|-st_inversion
                : |-stwf S ST ->
-                 sttp_lookup ST L T 
+                 sttp_lookup ST L T
                   -> st_lookup S L V ->
                      |-val ST V T -> type.
 %mode prog_|-st_inversion +DStTcWf +SttpLookup -StLookup -DValTc.
@@ -388,9 +388,9 @@ annoying was the lack of any form of local term abbreviations.  For
 example, here is the definition for store allocation on a non-empty
 store:
 
-st_alloc_cons  : st_alloc (cons_st (mkLoc N) V S) 
-		          V' 
-		          (cons_st (mkLoc (s_nat N)) V' (cons_st (mkLoc N) V S)) 
+st_alloc_cons  : st_alloc (cons_st (mkLoc N) V S)
+		          V'
+		          (cons_st (mkLoc (s_nat N)) V' (cons_st (mkLoc N) V S))
 		          (mkLoc (s_nat N)).
 
 I feel that there is a lot of repetition that obscures things.  I was

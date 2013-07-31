@@ -1,4 +1,4 @@
-% Value soundness 
+% Value soundness
 % Author: Brigitte Pientka
 %
 
@@ -23,22 +23,21 @@ ev_l : eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 
 ev_lam: eval (lam (\x. E x)) (lam (\x. E x)).
 
-ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V 
-     -> eval (app E1 E2) V.
+ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V
+      -> eval (app E1 E2) V.
 
 
 
-rec vs :  [. eval E V] -> [. value V] = 
-
+rec vs :  [. eval E V] -> [. value V] =
 fn e =>
- case e of 
+ case e of
    [. ev_z] =>  [. v_z]
- 
- | [. ev_s  D]  => 
-   let [. F] =  vs [. D] in 
+
+ | [. ev_s  D]  =>
+   let [. F] =  vs [. D] in
         [. v_s F]
 
-| [. ev_l D2 D1] 
+| [. ev_l D2 D1]
      =>  vs [. D2]
 
 | [. ev_lam]          => [. v_lam]

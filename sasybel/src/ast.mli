@@ -1,5 +1,3 @@
-(* -*- coding: us-ascii; indent-tabs-mode: nil; -*- *)
-
 (**
    @author Marie-Andree B.Langlois
 *)
@@ -18,9 +16,9 @@ type section =
   | ContextDecl of Loc.t * cName * vAlternative list
   | Theorems of Loc.t * tName * statement * proof list
 
-and file = section list 
+and file = section list
 
-and aName = 
+and aName =
   | AName of string
 
 and jName =
@@ -44,17 +42,17 @@ and tName =
 and terminal =
   | Terminal of Loc.t * string
 
-and production = 
+and production =
   | Production of Loc.t * typ * alternative list
  (* | ContextProd of Loc.t * typ * alternative list*)
 
-and typ = 
+and typ =
   | Typ of Loc.t * string
   | Ctx of Loc.t * string
 
-and alternative =                       
+and alternative =
   | AltAtomic of Loc.t * string * alternative option     (* z, suc nat *)
-  | AltLam of Loc.t * aName * alternative option (* * alternative binding*)(* * typ * alternative list *)    (* lam \x. e[x] *)  
+  | AltLam of Loc.t * aName * alternative option (* * alternative binding*)(* * typ * alternative list *)    (* lam \x. e[x] *)
   | AltFn of Loc.t * typ * typ_or_alt * alternative option                             (* tau -> tau *)
   | AltLet of Loc.t * alternative * alternative * alternative
   | AltBin of Loc.t * alternative                             (* e[x] *)      (* let N x. M[x] *)
@@ -65,20 +63,20 @@ and alternative =
 and typ_or_alt =
   | Ty of typ
   | La of alternative list
-                                             
+
 and jsyntax =
-  | JSyntax of Loc.t * context option * judge list 
+  | JSyntax of Loc.t * context option * judge list
 
 and judge =
-  | Judge of Loc.t * string 
+  | Judge of Loc.t * string
 
-and symbol = 
+and symbol =
   | Sign of Loc.t * string
 
 and context =
   | Context of cName * alternative list
 
-and assptn = 
+and assptn =
   | Assptn of cName
 
 (* should the diference between premise and conclusion be done here? *)
@@ -95,7 +93,7 @@ and premise =
 and pJudge =
   | PJudge of Loc.t * vAlternative
 
-and projection = 
+and projection =
   | Proj of Loc.t * string * int
 
 and vAlternative =
@@ -104,10 +102,10 @@ and vAlternative =
   | VAltLam of Loc.t * aName * vAlternative (* * vName * vAlternative list*)
   | VAltFn of Loc.t * vName * typ_or_valt * vAlternative option
   | VAltBin of Loc.t * vAlternative
-  | VAltLet of Loc.t * vAlternative                              
-  | VAltOft of Loc.t * ( string * vAlternative ) * vAlternative option * vAlternative  
+  | VAltLet of Loc.t * vAlternative
+  | VAltOft of Loc.t * ( string * vAlternative ) * vAlternative option * vAlternative
   | VAltOftBlock of Loc.t * ( string * vAlternative ) list * vAlternative option
-  | VAltCtx of Loc.t * cName * vAlternative list              (* for contexts Gamma, x : tau, AltOft list to be more specific *)  
+  | VAltCtx of Loc.t * cName * vAlternative list              (* for contexts Gamma, x : tau, AltOft list to be more specific *)
   | VAltPar of Loc.t * vAlternative * vAlternative option
   | VAltEmpty of Loc.t
 
@@ -120,32 +118,26 @@ and pContext =
   | Con of string
 
 and tpremise =
-  | TPremisse of Loc.t * pName option * pContext list option *  vAlternative 
+  | TPremisse of Loc.t * pName option * pContext list option *  vAlternative
 
-and statement = 
-  | ForAllExist of Loc.t * tpremise list * premise      
+and statement =
+  | ForAllExist of Loc.t * tpremise list * premise
   | Exist of Loc.t  * premise
 
-and proof = 
+and proof =
   | Proof of Loc.t * tpremise * tpremise * argument list      (* a proof in SASyLF is an induction statement and a list of arguments; dt: e value by induction on ds ... arguments *)
   | PRule of Loc.t * tpremise * proof * tpremise list
   | Induction of Loc.t * name
   | InductionHyp of Loc.t
   | CaseAn of Loc.t * tpremise * vName list * argument list
-  | PTheorem of Loc.t * tName 
+  | PTheorem of Loc.t * tName
   | URule of Loc.t * tpremise * rName * tpremise list option
   | Unique of Loc.t * tpremise
 
-and argument = 
-  | Argument of Loc.t * rules * proof list 
+and argument =
+  | Argument of Loc.t * rules * proof list
   | Arg of Loc.t * tpremise * proof list
 
 type kind_or_typ =
   | Kind of Ext.LF.kind
   | Typp  of Ext.LF.typ
- 
-
-
-
-
-

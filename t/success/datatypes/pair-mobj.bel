@@ -1,0 +1,21 @@
+datatype bool : type =
+| true : bool
+| false : bool
+;
+
+schema ctx = bool;
+
+rec test : (g:ctx) [g.bool] -> [g.bool] = 
+fn p => case p of [g. X ..] => p;
+
+
+rec fst : (g:ctx) [g.bool] * [g.bool] -> [g.bool] =
+    fn p => case p of
+      | ([g.X..], [g.Y..]) => [g.X..]
+;
+
+rec snd : (g:ctx) [g.bool] * [g.bool] -> [g.bool] =
+    fn p => case p of
+      | ([g.X..], [g.Y..]) => [g.Y..]
+;
+

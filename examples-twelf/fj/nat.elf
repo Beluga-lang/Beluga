@@ -3,7 +3,7 @@ Benjamin Pierce and Philip Wadler) in the Twelf logical Framework.
 It was developed by Stephanie Weirich <sweirich@cis.upenn.edu> and
 Geoffrey Washburn <geoffw@cis.upenn.edu>. }%
 
-%{ Library for natural numbers.  
+%{ Library for natural numbers.
    Decided to write this myself so that I was sure to understand everything }%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -20,7 +20,7 @@ s : nat -> nat.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Predecessor function
-% Necessary for some inductive reasoning, because equality on nats is not 
+% Necessary for some inductive reasoning, because equality on nats is not
 % inductively defined.
 
 pred : nat -> nat -> type. %name nat PRED pred.
@@ -123,7 +123,7 @@ nat_lte_s : nat_lte N1 N2 ->
 % Less than or equal to algorithm
 
 comp_nat_lte : {N1:nat} {N2:nat} nat_lte N1 N2 -> type.
-%mode comp_nat_lte +N1 +N2 -LTE. 
+%mode comp_nat_lte +N1 +N2 -LTE.
 
 comp_nat_lte_z : comp_nat_lte z N (nat_lte_z).
 
@@ -170,16 +170,16 @@ comp_nat_gt_s : comp_nat_gt N1 N2 GT ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% excluded middle for natural numbers
 
-%% nat_em is a datatype for the excluded middle property 
-%% of natural number equality. Either two numbers are equal 
-%% or they are not. 
+%% nat_em is a datatype for the excluded middle property
+%% of natural number equality. Either two numbers are equal
+%% or they are not.
 
 nat_em : nat -> nat -> type.
 nat_em_eq : nat_eq N M -> nat_em N M.
 nat_em_neq : nat_neq N M -> nat_em N M.
 
 %% nat_excluded takes two numbers and returns the datatype
-%% that contains either a proof of their equality or 
+%% that contains either a proof of their equality or
 %% disequality. :-)
 
 %% It is defined in conjunction with nat_em_helper that
@@ -206,7 +206,7 @@ nat_em_helper : nat_em N M -> nat_em (s N) (s M) -> type.
 %total N (nat_em_helper N M).
 %unique (nat_em_helper +N -1M).
 
--: nat_em_helper R RR -> nat_excluded N M R -> 
+-: nat_em_helper R RR -> nat_excluded N M R ->
     nat_excluded (s N) (s M) RR.
 
 %worlds () (nat_excluded M N MN).
@@ -245,7 +245,7 @@ nat_neq_sym   : nat_neq M N -> nat_neq N M -> type.
 
 %% congruence rules/would be nice to have Leibniz equality.
 %%     if M = N then P(M) => P (N).
-%% But we can't prove things in that generality. We must prove it for each 
+%% But we can't prove things in that generality. We must prove it for each
 %% particular case.
 
 %% this is congruence over inequality.
@@ -277,12 +277,12 @@ false_imp_nat_eq : {N1:nat} {N2:nat} false -> nat_eq N1 N2 -> type.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % If two nats are equal and they have a predecessor, their predecessors are also
-% equal.  Not true when one of the nats is zero, so we also require that the 
+% equal.  Not true when one of the nats is zero, so we also require that the
 % inputs are not equal to zero.
 %
 % This is necessary because we do not have inductive reasoning over equality.
 
-pred_eq_lemma: nat_neq N1 z -> nat_neq N2 z -> 
+pred_eq_lemma: nat_neq N1 z -> nat_neq N2 z ->
 nat_eq N1 N2 -> pred N1 N3 -> pred N2 N4 -> nat_eq N3 N4 -> type.
 %mode pred_eq_lemma +NNEQ1 +NNEQ2 +NEQ1 +PRED1 +PRED2 -NEQ2.
 
@@ -318,10 +318,10 @@ succ_eq_lemma : nat_eq N1 N2 -> nat_eq (s N1) (s N2) -> type.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% If we add equal nats we get an equal result. 
+% If we add equal nats we get an equal result.
 
-plus_eq_lemma : 
-nat_eq N1 N2 -> nat_eq N3 N4 -> 
+plus_eq_lemma :
+nat_eq N1 N2 -> nat_eq N3 N4 ->
 plus N1 N3 N5 -> plus N2 N4 N6 -> nat_eq N5 N6 -> type.
 %mode plus_eq_lemma +NEQ1 +NEQ2 +PL1 +PL2 -NEQ.
 
@@ -329,7 +329,7 @@ plus N1 N3 N5 -> plus N2 N4 N6 -> nat_eq N5 N6 -> type.
 
 - : succ_eq_lemma NEQ4 NEQ5 ->
     plus_eq_lemma NEQ3 NEQ2 PL1 PL2 NEQ4 ->
-    pred_eq_lemma_alt NEQ1 NEQ3 -> 
+    pred_eq_lemma_alt NEQ1 NEQ3 ->
   % ------------------------------------------------------------------------------
    plus_eq_lemma NEQ1 NEQ2 (plus_s PL1) (plus_s PL2) NEQ5.
 
@@ -346,7 +346,7 @@ nat_lt_eq : nat_lt N1 N2 -> nat_eq N2 N3 -> nat_lt N1 N3 -> type.
 -: nat_lt_eq (nat_lt_z) (nat_refl) (nat_lt_z).
 
 -: nat_lt_eq NLT1 NEQ2 NLT2 ->
-   pred_eq_lemma_alt NEQ1 NEQ2 -> 
+   pred_eq_lemma_alt NEQ1 NEQ2 ->
  % -----------------------------------------
    nat_lt_eq (nat_lt_s NLT1) NEQ1 (nat_lt_s NLT2).
 

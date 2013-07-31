@@ -24,8 +24,8 @@ schema ctx = exp T;
 schema tctx = tp;
 
 rec justfoolingaround : {g:ctx} [g. exp T] -> [g. exp T] =
-mlam g  => 
- fn e => 
+mlam g  =>
+ fn e =>
    let [g. U..] = e in
    let [g,x:tp. U..] = [g. U..] in
       e

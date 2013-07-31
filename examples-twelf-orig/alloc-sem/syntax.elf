@@ -9,9 +9,9 @@
 
 loc       : type.   %name loc L.    %% loc.elf
 exp       : type.   %name exp E.    %% exp.elf
-val       : type.   %name val V.    %% val.elf       
-st        : type.   %name st S.     %% store.elf 
+val       : type.   %name val V.    %% val.elf
+st        : type.   %name st S.     %% store.elf
 tp        : type.   %name tp T.     %% tp.elf
-sttp      : type.   %name sttp ST.  %% storetp.elf  
+sttp      : type.   %name sttp ST.  %% storetp.elf
 %% machine.elf
-mach      : type.   %name mach M.   
+mach      : type.   %name mach M.

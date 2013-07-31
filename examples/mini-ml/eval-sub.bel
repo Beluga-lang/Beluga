@@ -12,31 +12,31 @@ app : exp -> exp -> exp.
 lam : (exp -> exp) -> exp.
 letn: exp -> (exp -> exp) -> exp.
 letv: exp -> (exp -> exp) -> exp.
-fix : (exp -> exp) -> exp. 
+fix : (exp -> exp) -> exp.
 
 
-% Call-By-Name evaluation 
-rec eval : [. exp] -> [. exp] = 
+% Call-By-Name evaluation
+rec eval : [. exp] -> [. exp] =
 fn e =>  case e of
 | [. z] => [. z]
 | [. suc E]  =>
-  let [. E'] = eval [. E] in 
+  let [. E'] = eval [. E] in
     [. suc E']
 
-| [. app E1 E2] =>   
-  let [. lam (\x. E x)]  =  eval [. E1] in 
-    eval [. (E E2)]  
-        
+| [. app E1 E2] =>
+  let [. lam (\x. E x)]  =  eval [. E1] in
+    eval [. (E E2)]
+
 | [. lam (\x. (E x))] =>  e
 
-| [. letv E1 (\x. E2 x )] => 
-  let [. V1] = eval [. E1] in 
-    eval [. E2 V1] 
+| [. letv E1 (\x. E2 x )] =>
+  let [. V1] = eval [. E1] in
+    eval [. E2 V1]
 
-| [. letn E1 (\x. E2 x)]  => 
+| [. letn E1 (\x. E2 x)]  =>
    eval [. (E2 E1)]
 
-| [. fix (\x. E x)]  =>  
+| [. fix (\x. E x)]  =>
    eval [. E (fix (\ x. E x))]
 ;
 

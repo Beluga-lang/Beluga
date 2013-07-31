@@ -2,7 +2,7 @@
    A formalization of Chapter 13 from _Types and Programming Languages_:
    the simply typed lambda-calculus with references. Only the progress and
    preservation theorems are included here (with associated lemmas).
-   
+
    Author: Brian E. Aydemir (baydemir [at] cis.upenn.edu).
 }%
 
@@ -293,7 +293,7 @@ check_wt_inv :
       (find_in_heap_no Fheap)
       Q
    <- check_wt_inv C Fstore Fheap Q.
-      
+
 %worlds (bind) (check_wt_inv _ _ _ _).
 %total F (check_wt_inv _ _ F _).
 %unique check_wt_inv +Z +Fstore +Fheap -1Q.
@@ -317,7 +317,7 @@ wt_heap_inv :
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Lemma 13.5.4 (substitution). And you thought we wouldn't need this...
 
-substitution : 
+substitution :
    %{ if   }%   ({x:exp} var x T2 -> of S (E1 x) T1) -> of S E2 T2 ->
    %{ then }%   of S (E1 E2) T1 -> type.
 %mode substitution +D +Q1 -Q2.
@@ -337,7 +337,7 @@ substitution :
    <- substitution Q2 Q3 Q2'.
 
 -: substitution ([x] [d] t_unit) _ t_unit.
- 
+
 -: substitution ([x] [d] t_loc L) _ (t_loc L).
 
 -: substitution ([x] [d] t_ref (Q1 x d)) Q2 (t_ref Q1')
@@ -391,12 +391,12 @@ of_store_extends : of S1 E T -> store_extends S1 S2 -> of S2 E T -> type.
 -: of_store_extends (t_app Qarg Qfun) P (t_app Qarg' Qfun')
    <- of_store_extends Qarg P Qarg'
    <- of_store_extends Qfun P Qfun'.
-   
+
 -: of_store_extends t_unit P t_unit.
 
 -: of_store_extends (t_loc F) P (t_loc F')
    <- store_find_extends F P F'.
-   
+
 -: of_store_extends (t_ref Q) P (t_ref Q')
    <- of_store_extends Q P Q'.
 
@@ -552,7 +552,7 @@ preservation :
 
 -: preservation (t_deref Q) W (e_deref S) P' W' (t_deref Q')
    <- preservation Q W S P' W' Q'.
-   
+
 -: preservation (t_assign Qv Ql) W (e_gets1 S) P' W' (t_assign Qv' Ql')
    <- preservation Ql W S P' W' Ql'
    <- of_store_extends Qv P' Qv'.
@@ -574,7 +574,7 @@ preservation :
       Qres
    <- substitution Qbody Qarg Qres
    <- store_extends_refl S P.
-   
+
 -: preservation
       (t_ref Q : of S (alloc E) (ref T))
       W
@@ -658,7 +658,7 @@ alloc_progresses : progresses H E -> progresses H (alloc E) -> type.
       (can_step (e_allocVal L A V))
    <- can_append_heap H E A
    <- can_length_heap H L.
-   
+
 -: alloc_progresses (can_step S) (can_step (e_alloc S)).
 
 %worlds () (alloc_progresses _ _).
@@ -708,7 +708,7 @@ deref_progresses:
       (is_val v_loc)
       (can_step (e_derefVal Y))
    <- find_lemma W X Y.
-   
+
 %worlds () (deref_progresses _ _ _ _).
 %total P (deref_progresses _ _ P _).
 %unique deref_progresses +Q +Z +P1 -1P2.
@@ -746,7 +746,7 @@ assign_progresses:
    <- progress Qval Z Pval
    <- progress Qloc Z Ploc
    <- assign_progresses Qloc Z Ploc Pval P.
-   
+
 
 
 %%% No more cases.

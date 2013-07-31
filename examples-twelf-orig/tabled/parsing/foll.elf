@@ -1,6 +1,6 @@
 % Parsing first-order formulae
 % no use of deterministic
-% instead of hypothetical judgements use 
+% instead of hypothetical judgements use
 % explicit lists.
 %{
 
@@ -106,15 +106,15 @@ nil: tokens.
 idconv: tok -> id -> type.
 predconv: tok -> (id -> id) -> type.
 
-% explicit context for bvars 
-% to only retrieve the first instance 
-ctx: type.   
-hyp: type.   
+% explicit context for bvars
+% to only retrieve the first instance
+ctx: type.
+hyp: type.
 bvar: tok -> id -> hyp.
 # : hyp -> ctx -> ctx.   %infix right 10 #.
 e : ctx.
 
-%  
+%
 neq: tok -> tok -> type.
 %tabled neq.
 
@@ -126,7 +126,7 @@ nyz: neq 'y' 'z'.
 nsym: neq T T'
        <- neq T' T.
 
-% returns the first occurrence of (bvar T I) 
+% returns the first occurrence of (bvar T I)
 % in the context, i.e. later shadows earlier occurrences
 % of bound variables
 lookup: tok -> ctx -> id -> type.

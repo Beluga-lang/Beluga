@@ -10,7 +10,7 @@ ceval (vl+ (lam+ [x':cval] [k:cval -> cexp]
      V.
 
 %query 1 *
-ceval 
+ceval
     (app+
        (lam+ [x':cval] [k:cval -> cexp]
           snd+ x' ([x1':cval] fst+ x' ([x2':cval] k (pair+ x1' x2'))))

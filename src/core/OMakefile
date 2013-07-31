@@ -1,5 +1,3 @@
-# -*- coding: utf-8; indent-tabs-mode: nil; -*-
-
 # Declare an OCaml library
 LIBRARY = beluga-core
 # Declare an OCaml package
@@ -40,6 +38,7 @@ FILES[] =
         trail
         token
         unify
+        version
         whnf
         monitor
 
@@ -72,3 +71,11 @@ files: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), 
 # dummy variables created by ulex / camlp4
 OCAMLFLAGS += -w z
 lexer: $(addsuffixes $(if $(BYTE_ENABLED), .cmo) $(if $(NATIVE_ENABLED), .cmx), lexer)
+
+version.ml: version.mlp
+        section
+            stdout = $(fopen version.ml, w)
+            fsubst($<)
+            case $"%VERSION%%" g
+                value <NONE>
+            close($(stdout))

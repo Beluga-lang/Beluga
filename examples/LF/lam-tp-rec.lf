@@ -1,5 +1,5 @@
 % Typed Mini-ML with value soundness
-% (Adapted from Twelf) 
+% (Adapted from Twelf)
 % Author: Brigitte Pientka
 %
 
@@ -11,7 +11,7 @@ prod: tp -> tp -> tp.
 
 % Expressions indexed with types
 
-exp : tp -> type. 
+exp : tp -> type.
 z    : exp nat.
 s    : exp nat -> exp nat.
 case' : exp nat -> exp T -> (exp nat -> exp T) -> exp T.
@@ -25,7 +25,7 @@ letn : exp T1 -> (exp T1 -> exp T2) -> exp T2.
 fix  : (exp T -> exp T) -> exp T.
 
 
-% Type-preserving evaluation 
+% Type-preserving evaluation
 
 eval : exp T -> exp T -> type.
 
@@ -46,25 +46,25 @@ ev_fst : eval E (pair V1 V2) -> eval (fst E) V1.
 ev_snd : eval E (pair V1 V2) -> eval (snd E) V2.
 
 ev_app :
-      eval E1 (lam (\ x . E1' x)) -> eval E2 V2 -> eval (E1' V2) V 
+      eval E1 (lam (\ x . E1' x)) -> eval E2 V2 -> eval (E1' V2) V
    -> eval (app E1 E2) V.
 
 ev_lam: eval (lam (\ x . E x)) (lam (\ x . E x)).
 
 
 ev_letv :
-      eval E1 V1 -> eval (E2 V1) V 
+      eval E1 V1 -> eval (E2 V1) V
    -> eval (letv E1 (\ x . E2 x)) V.
 
 ev_letn :
-      eval (E2 E1) V 
+      eval (E2 E1) V
    -> eval (letn E1 (\x . E2 x)) V.
 
-ev_fix : eval (E (fix (\ x . E x))) V 
+ev_fix : eval (E (fix (\ x . E x))) V
       -> eval (fix (\ x . E x)) V.
 
 
-% Values 
+% Values
 
 value : exp T -> type.
 v_z   : value z.
@@ -91,7 +91,7 @@ vs_fst  : vs D' (v_p P1 P2)
 
 vs_snd  : vs D' (v_p P1 P2)
        -> vs (ev_snd D') P2.
-  
+
 vs_pair : vs D1 P1 -> vs D2 P2
 	-> vs (ev_pair D1 D2) (v_p P1 P2).
 
@@ -106,7 +106,7 @@ vs_letv :  vs D2 P2
 
 vs_letn :  vs D2 P2
 	-> vs (ev_letn D2) P2.
-	  
+
 
 vs_fix :  vs D1 P1
        -> vs (ev_fix D1) P1.

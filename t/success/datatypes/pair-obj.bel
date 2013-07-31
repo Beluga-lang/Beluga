@@ -1,0 +1,13 @@
+rec fst : Bool * Bool -> Bool =
+    fn p => case p of
+      | (x,y) => x
+;
+
+rec snd : Bool * Bool -> Bool =
+    fn p => case p of
+      | (x,y) => y
+;
+
+let t1 = fst (ttrue, ffalse);
+let t2 = snd (ttrue, ffalse);
+let t3 = fst (t1, t2);

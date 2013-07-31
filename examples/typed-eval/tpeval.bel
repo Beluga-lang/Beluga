@@ -21,14 +21,14 @@ iff   : exp bool -> exp T -> exp T -> exp T.
 letv :  exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 rec equal : [. exp nat] -> [. exp nat] -> [. exp bool] =
-fn x => fn y => 
+fn x => fn y =>
   case x of
-    [. z]  => 
+    [. z]  =>
       (case y of
           [. z]     => [. tt]
         | [. suc E] => [. ff])
 
-  | [. suc E] => 
+  | [. suc E] =>
       (case y of
          [. z]      => [. ff]
       |  [. suc V]  => equal [. E] [. V])
@@ -37,16 +37,16 @@ fn x => fn y =>
 
 
 
-rec eval : [. exp T] -> [. exp T] = 
- fn e => case e of 
+rec eval : [. exp T] -> [. exp T] =
+ fn e => case e of
   | [. tt] => [. tt]
 
   | [. ff] => [. ff]
 
   | [. z]  => [. z]
 
-  | [. suc E] => 
-    let [. V]  = eval [. E] in [. suc V]   
+  | [. suc E] =>
+    let [. V]  = eval [. E] in [. suc V]
 
   | [. eq E1 E2] =>
     equal (eval [. E1])  (eval  [. E2])

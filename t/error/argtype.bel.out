@@ -1,0 +1,4 @@
+Ill-typed expression.
+    Expected: dependent function type
+    Inferred type: ([. nat] -> [. nat]) -> [. list] -> [. list]
+In expression: map

@@ -1,12 +1,12 @@
 CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
      {g:dtriv}{g':ctriv}{cg:cpsT g g'}
-     cpsR (dexp->droot 
+     cpsR (dexp->droot
            (dtriv->dexp
             (dlam [x:dtriv]
-                   dexp->droot 
+                   dexp->droot
                     (dapp (dapp (dtriv->dexp f) (dtriv->dexp x))
-                          (dapp (dtriv->dexp g) 
-                                (dtriv->dexp x)))))) 
+                          (dapp (dtriv->dexp g)
+                                (dtriv->dexp x))))))
           (R' f' g').
                            Solving...
 
@@ -60,14 +60,14 @@ no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
            {g:dtriv}{g':ctriv}{cg:cpsT g g'}
-           cpsR (dexp->droot 
+           cpsR (dexp->droot
                      (dtriv->dexp
                            (dlam [x:dtriv]
-                                  dexp->droot 
-                                      (dapp (dapp (dtriv->dexp f) 
+                                  dexp->droot
+                                      (dapp (dapp (dtriv->dexp f)
                                                   (dtriv->dexp x))
-                                            (dapp (dtriv->dexp g) 
-                                                  (dtriv->dexp x)))))) 
+                                            (dapp (dtriv->dexp g)
+                                                  (dtriv->dexp x))))))
                 (R' f' g')]
 sigma[CVR : {f':ctriv}{cvf:cvalT f'}
             {g':ctriv}{cvg:cvalT g'}
@@ -122,14 +122,14 @@ no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
            {g:dtriv}{g':ctriv}{cg:cpsT g g'}
-           cpsR (dexp->droot 
+           cpsR (dexp->droot
                      (dtriv->dexp
                            (dlam [x:dtriv]
-                                  dexp->droot 
-                                      (dapp (dapp (dtriv->dexp f) 
+                                  dexp->droot
+                                      (dapp (dapp (dtriv->dexp f)
                                                   (dtriv->dexp x))
-                                            (dapp (dtriv->dexp g) 
-                                                  (dtriv->dexp x)))))) 
+                                            (dapp (dtriv->dexp g)
+                                                  (dtriv->dexp x))))))
                 (R' f' g')]
 sigma[VVR : {f':ctriv}{vvf:{Xi:stack}vvalT Xi f' Xi}
             {g':ctriv}{vvg:{Xi:stack}vvalT Xi g' Xi}
@@ -153,10 +153,10 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                     (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                     (dapp (dtriv->dexp
                                  (dlam [x:dtriv]
-                                        dexp->droot 
+                                        dexp->droot
                                             (dtriv->dexp x)))
                            (dtriv->dexp f)))
                 (R' f').
@@ -192,10 +192,10 @@ CVR =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                     (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                     (dapp (dtriv->dexp
                                  (dlam [x:dtriv]
-                                        dexp->droot 
+                                        dexp->droot
                                             (dtriv->dexp x)))
                            (dtriv->dexp f)))
                 (R' f')]
@@ -233,10 +233,10 @@ VVR =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                     (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                     (dapp (dtriv->dexp
                                  (dlam [x:dtriv]
-                                        dexp->droot 
+                                        dexp->droot
                                             (dtriv->dexp x)))
                            (dtriv->dexp f)))
                 (R' f')]
@@ -257,10 +257,10 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                     (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                     (dapp (dtriv->dexp
                                  (dlam [x:dtriv]
-                                        dexp->droot 
+                                        dexp->droot
                                             (dtriv->dexp x)))
                            (dtriv->dexp f)))
                 (R' f')]
@@ -276,10 +276,10 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                     (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                     (dapp (dtriv->dexp
                                  (dlam [x:dtriv]
-                                        dexp->droot 
+                                        dexp->droot
                                             (dtriv->dexp x)))
                            (dtriv->dexp f)))
                 (R' f')]
@@ -295,10 +295,10 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                     (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                     (dapp (dtriv->dexp
                                  (dlam [x:dtriv]
-                                        dexp->droot 
+                                        dexp->droot
                                             (dtriv->dexp x)))
                            (dtriv->dexp f)))
                 (R' f')]
@@ -315,10 +315,10 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                     (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                     (dapp (dtriv->dexp
                                  (dlam [x:dtriv]
-                                        dexp->droot 
+                                        dexp->droot
                                             (dtriv->dexp x)))
                            (dtriv->dexp f)))
                 (R' f')]
@@ -335,19 +335,19 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
-                                 (dtriv->dexp 
+                                dexp->droot
+                                 (dtriv->dexp
                                    (dlam [y:dtriv]
-                                         dexp->droot 
+                                         dexp->droot
                                           (dapp (dtriv->dexp x)
                                           (dtriv->dexp y))))))
 
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f').
@@ -417,19 +417,19 @@ CVR =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
-                                 (dtriv->dexp 
+                                dexp->droot
+                                 (dtriv->dexp
                                    (dlam [y:dtriv]
-                                         dexp->droot 
+                                         dexp->droot
                                           (dapp (dtriv->dexp x)
                                           (dtriv->dexp y))))))
 
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -499,19 +499,19 @@ VVR =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
-                                 (dtriv->dexp 
+                                dexp->droot
+                                 (dtriv->dexp
                                    (dlam [y:dtriv]
-                                         dexp->droot 
+                                         dexp->droot
                                           (dapp (dtriv->dexp x)
                                           (dtriv->dexp y))))))
 
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -544,19 +544,19 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
-                                 (dtriv->dexp 
+                                dexp->droot
+                                 (dtriv->dexp
                                    (dlam [y:dtriv]
-                                         dexp->droot 
+                                         dexp->droot
                                           (dapp (dtriv->dexp x)
                                           (dtriv->dexp y))))))
 
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -580,19 +580,19 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
-                                 (dtriv->dexp 
+                                dexp->droot
+                                 (dtriv->dexp
                                    (dlam [y:dtriv]
-                                         dexp->droot 
+                                         dexp->droot
                                           (dapp (dtriv->dexp x)
                                           (dtriv->dexp y))))))
 
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -616,19 +616,19 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
-                                 (dtriv->dexp 
+                                dexp->droot
+                                 (dtriv->dexp
                                    (dlam [y:dtriv]
-                                         dexp->droot 
+                                         dexp->droot
                                           (dapp (dtriv->dexp x)
                                           (dtriv->dexp y))))))
 
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -653,19 +653,19 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
-                                 (dtriv->dexp 
+                                dexp->droot
+                                 (dtriv->dexp
                                    (dlam [y:dtriv]
-                                         dexp->droot 
+                                         dexp->droot
                                           (dapp (dtriv->dexp x)
                                           (dtriv->dexp y))))))
 
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -690,14 +690,14 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
+                                dexp->droot
                                  (dtriv->dexp x)))
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f').
@@ -747,14 +747,14 @@ CVR =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
+                                dexp->droot
                                  (dtriv->dexp x)))
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -804,14 +804,14 @@ VVR =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
+                                dexp->droot
                                  (dtriv->dexp x)))
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -836,14 +836,14 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
+                                dexp->droot
                                  (dtriv->dexp x)))
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -861,14 +861,14 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
+                                dexp->droot
                                  (dtriv->dexp x)))
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -886,14 +886,14 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
+                                dexp->droot
                                  (dtriv->dexp x)))
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -912,14 +912,14 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
-           cpsR (dexp->droot 
-                  (dapp (dtriv->dexp 
+           cpsR (dexp->droot
+                  (dapp (dtriv->dexp
                           (dlam [x:dtriv]
-                                dexp->droot 
+                                dexp->droot
                                  (dtriv->dexp x)))
-                        (dapp (dtriv->dexp 
+                        (dapp (dtriv->dexp
                                 (dlam [x:dtriv]
-                                      dexp->droot 
+                                      dexp->droot
                                        (dtriv->dexp x)))
                               (dtriv->dexp f))))
                 (R' f')]
@@ -948,10 +948,10 @@ A =
 ;
 no more solutions
 -------------------------------------------------------------------------------
-PROOF : th8-1 (cval_cret (cval_vlam [v:ctriv] [CVT:cvalT v] 
+PROOF : th8-1 (cval_cret (cval_vlam [v:ctriv] [CVT:cvalT v]
                                       cval_cret cval_k CVT)
-                          (cval_xlam [x:ctriv] [CVT:cvalT x] 
-                                      cval_klam (cval_capp cval_k CVT CVT))) 
+                          (cval_xlam [x:ctriv] [CVT:cvalT x]
+                                      cval_klam (cval_capp cval_k CVT CVT)))
                A.
             Solving...
 
@@ -968,7 +968,7 @@ sigma[ASS : cvalE ([k':ccont]
                                       capp x x (vlam [v:ctriv]
                                                       capp v v (vlam [v1:ctriv]
                                                                       cret k v1)))
-                         (xlam [x:ctriv]klam [k:ccont]capp x x k) 
+                         (xlam [x:ctriv]klam [k:ccont]capp x x k)
                          (vlam [v2:ctriv]cret k' v2))]
 th8-2 ASS A.
                         Solving...
@@ -1020,9 +1020,9 @@ A = cvalS_vlam ([v:ctriv] [cvv:cvalT v] cval_cret cval_k cvv) cvalS_init.
 no more solutions
 -------------------------------------------------------------------------------
 A : {x:ctriv}{y:ctriv}
-    cstack_substE ([k:ccont]capp x x (vlam [v:ctriv]capp x x (vlam [v1:ctriv] cret k v1))) 
+    cstack_substE ([k:ccont]capp x x (vlam [v:ctriv]capp x x (vlam [v1:ctriv] cret k v1)))
           ([k:ccont]
-            (cdot ; 
+            (cdot ;
              (vlam [v:ctriv]cret k (xlam[x1:ctriv]klam[k1:ccont]capp x x k1)) ;
              vlam [v:ctriv] capp y y k))
           (E x y).
@@ -1058,8 +1058,8 @@ no more solutions
 A : {x:ctriv}{y:ctriv}
     {k1:ccont}{k2:ccont}{cvx:cvalT x}{cvy:cvalT y}
     cvalCS ([k:ccont]
-           (cdot 
-            ; (vlam [v:ctriv]cret k (xlam[x1:ctriv]klam[k:ccont]capp x x k)) 
+           (cdot
+            ; (vlam [v:ctriv]cret k (xlam[x1:ctriv]klam[k:ccont]capp x x k))
             ; vlam [v:ctriv] capp y y k)).
                   Solving...
 
@@ -1077,8 +1077,8 @@ no more solutions
 sigma[CVS:{x:ctriv}{y:ctriv}
     {cvx:cvalT x}{cvy:cvalT y}
     cvalCS ([k:ccont]
-           (cdot 
-            ; (vlam [v:ctriv]cret k (xlam[x1:ctriv]klam[k:ccont]capp x x k)) 
+           (cdot
+            ; (vlam [v:ctriv]cret k (xlam[x1:ctriv]klam[k:ccont]capp x x k))
             ; vlam [v:ctriv] capp y y k))]
 sigma[CVE:{f':ctriv}{cvf:cvalT f'}
       {g':ctriv}{cvg:cvalT g'}
@@ -1091,7 +1091,7 @@ sigma[CVE:{f':ctriv}{cvf:cvalT f'}
 sigma[CSE:{x:ctriv}{y:ctriv}{v:ctriv}
           cstack_substE ([k:ccont]capp y y k)
                         ([k:ccont]
-                         (cdot 
+                         (cdot
                           ; (vlam [v:ctriv]cret k (xlam[x1:ctriv]klam[k:ccont]capp x x k))))
                         (E1 v x y)]
 {x:ctriv}{y:ctriv}
@@ -1117,8 +1117,8 @@ no more solutions
 sigma[CVS:{x:ctriv}{y:ctriv}
     {cvx:cvalT x}{cvy:cvalT y}
     cvalCS ([k:ccont]
-           (cdot 
-            ; (vlam [v:ctriv]cret k (xlam[x1:ctriv]klam[k:ccont]capp x x k)) 
+           (cdot
+            ; (vlam [v:ctriv]cret k (xlam[x1:ctriv]klam[k:ccont]capp x x k))
             ; vlam [v:ctriv] capp y y k))]
 sigma[CVE:{f':ctriv}{cvf:cvalT f'}
       {g':ctriv}{cvg:cvalT g'}
@@ -1145,13 +1145,13 @@ no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
      {g:dtriv}{g':ctriv}{cg:cpsT g g'}
-     cpsR (dexp->droot 
+     cpsR (dexp->droot
            (dtriv->dexp
             (dlam [x:dtriv]
-                   dexp->droot 
+                   dexp->droot
                     (dapp (dapp (dtriv->dexp f) (dtriv->dexp x))
-                          (dapp (dtriv->dexp g) 
-                                (dtriv->dexp x)))))) 
+                          (dapp (dtriv->dexp g)
+                                (dtriv->dexp x))))))
           (R' f' g')]
 sigma[CVR : {f':ctriv}{cvf:cvalT f'}
             {g':ctriv}{cvg:cvalT g'}
@@ -1185,12 +1185,12 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {g:dtriv}{g':ctriv}{cg:cpsT g g'}
-     cpsR (dexp->droot 
+     cpsR (dexp->droot
            (dapp (dtriv->dexp
                   (dlam [x:dtriv]
-                         dexp->droot 
+                         dexp->droot
                           (dtriv->dexp
-                                 (dlam [y:dtriv]dexp->droot 
+                                 (dlam [y:dtriv]dexp->droot
                                         (dapp (dtriv->dexp y)
                                               (dtriv->dexp x))))))
                  (dtriv->dexp g)))
@@ -1221,7 +1221,7 @@ R' =
 no more solutions
 -------------------------------------------------------------------------------
 sigma[CR : {g:dtriv}{g':ctriv}{cg:cpsT g g'}
-     cpsR (dexp->droot (dapp 
+     cpsR (dexp->droot (dapp
            (dtriv->dexp (dlam ([x:dtriv]dexp->droot (dapp (dtriv->dexp x)(dtriv->dexp g))))) (dtriv->dexp (dlam ([x:dtriv]dexp->droot (dtriv->dexp x))))))
           (R' g')]
 sigma[CVR : {g':ctriv}{cvg:cvalT g'}
@@ -1292,7 +1292,7 @@ sigma[ASS1 : {v':ctriv}{cvv':cvalT v'}
                                       capp x x (vlam [v:ctriv]
                                                       capp x x (vlam [v1:ctriv]
                                                                       capp v v1 k)))
-                         (xlam [x:ctriv]klam [k:ccont]capp x x k) 
+                         (xlam [x:ctriv]klam [k:ccont]capp x x k)
                          (vlam [v2:ctriv]capp v' v2 k))]
 {v':ctriv}{vvv':{xi:stack}vvalT (xi , v') v' xi}
 {cvv':cvalT v'}
@@ -1428,7 +1428,7 @@ vvalE (dot , v') (
                          (xlam [x:ctriv]klam [k:ccont]capp x x k)
                          (vlam [v2:ctriv]capp v' v2 k))]
 {v':ctriv}{vvv':{xi:stack}vvalT (xi , v') v' xi}{k:ccont}{vvk:vvalC dot k}{dsk:dstack_substC k dot k}{dsv':{xi:stack}{t:ctriv}dstack_substT v' (xi , t) t xi}{lTk: lemma17-1C vvk dsk}
-lemma17-1E (ASS v' vvv' k vvk dsk dsv' lTk) 
+lemma17-1E (ASS v' vvv' k vvk dsk dsv' lTk)
            (DSE v' vvv' k vvk dsk dsv' lTk).
 
 DSE =
@@ -1453,7 +1453,7 @@ sigma[ASS : {k:ccont}{vvk:vvalC dot k}{dsk:dstack_substC k dot k}
                                       capp x x (vlam [v:ctriv]
                                                       capp x v (vlam [v1:ctriv]
                                                                       cret k v1)))
-                         (xlam [x:ctriv]klam [k:ccont]capp x x k) 
+                         (xlam [x:ctriv]klam [k:ccont]capp x x k)
                          (vlam [v2:ctriv]cret k v2))]
 {k:ccont}{vvk:vvalC dot k}{dsk:dstack_substC k dot k}
 {lTk: lemma17-1C vvk dsk}
@@ -1481,7 +1481,7 @@ sigma[VVE : {k:ccont}{vvk:vvalC dot k}
                                                                       capp v v1 k)))
                          (xlam [x:ctriv]klam [k:ccont]capp x x k)
                          (vlam [v2:ctriv]capp v v2 k))]
-sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)] 
+sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)]
 sigma[VVMS : {v:ctriv}vvalMS (XXi1 v) (Xi1 (xlam [x:ctriv]
                                 klam [k:ccont]
                                       capp x x (vlam [v:ctriv]
@@ -1539,14 +1539,14 @@ sigma[VVE : {k:ccont}{vvk:vvalC dot k}
             vvalE (XXi1 v1 v) (capp v v1 k)]
 sigma[APP1 : {v:ctriv}app ((dot , v) & (dot , (xlam [x:ctriv]
                                                 klam [k:ccont]
-                                                      capp x x k))) (Xi1 v)] 
+                                                      capp x x k))) (Xi1 v)]
 sigma[VVMS : {v1:ctriv}{v:ctriv}vvalMS (XXi1 v1 v) (Xi1 (xlam [x:ctriv]
                                                 klam [k:ccont]
                                                       cret k x))]
 sigma[DSE : {k:ccont}{dsk:dstack_substC k dot k}
             {v1:ctriv}{dsv1:{xi:stack}{t:ctriv}dstack_substT v1 (xi , t) t xi}
             {v:ctriv}{dsv:{xi:stack}{t:ctriv}dstack_substT v (xi , t) t xi}
-            dstack_substE (capp v v1 k) 
+            dstack_substE (capp v v1 k)
                           (Xi1 v)
                           (E v k)]
 sigma[DSE' : {k:ccont}{dsk:dstack_substC k dot k}
@@ -1556,7 +1556,7 @@ sigma[DSE' : {k:ccont}{dsk:dstack_substC k dot k}
 {k:ccont}{vvk:vvalC dot k}{dsk:dstack_substC k dot k}
 {v1:ctriv}{vvv1:{xi:stack}vvalT (xi , v1) v1 xi}
 {dsv1:{xi:stack}{t:ctriv}dstack_substT v1 (xi , t) t xi}
-lemma17-2 V (APP v1) (VVE k vvk v1 vvv1) APP1 (VVMS v1) (DSE k dsk v1 dsv1) 
+lemma17-2 V (APP v1) (VVE k vvk v1 vvv1) APP1 (VVMS v1) (DSE k dsk v1 dsv1)
           (DSE' k dsk v1 dsv1).
                                                                            Solving...
 
@@ -1575,7 +1575,7 @@ sigma[VVE : {k:ccont}{vvk:vvalC dot k}
                                       capp x x k)
                          (xlam [x:ctriv]klam [k:ccont]capp x x k)
                          (vlam [v2:ctriv]capp v v2 k))]
-sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)] 
+sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)]
 sigma[VVMS : {v:ctriv}vvalMS (XXi1 v) (Xi1 (xlam [x:ctriv]
                                 klam [k:ccont]cret k x))]
 sigma[DSE : {k:ccont}{dsk:dstack_substC k dot k}
@@ -1593,10 +1593,10 @@ sigma[DSE' : {k:ccont}{dsk:dstack_substC k dot k}
                                 klam [k:ccont]
                                       capp x x k)
                          (xlam [x:ctriv]klam [k:ccont]capp x x k)
-                         (vlam [v2:ctriv]capp v v2 k)) 
+                         (vlam [v2:ctriv]capp v v2 k))
                            (Xi1 (xlam [x:ctriv]
                                 klam [k:ccont]
-                                      cret k x)) 
+                                      cret k x))
                            (E1 (xlam [x:ctriv]
                                 klam [k:ccont]
                                       cret k x) k)]
@@ -1623,7 +1623,7 @@ sigma[VVE : {k:ccont}{vvk:vvalC dot k}
                                       capp x x k)
                          (xlam [x:ctriv]klam [k:ccont]capp x x k)
                          (vlam [v2:ctriv]capp v v2 k))]
-sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)] 
+sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)]
 sigma[VVMS : {v:ctriv}vvalMS (XXi1 v) (Xi1 (xlam [x:ctriv]
                                 klam [k:ccont]cret k x))]
 sigma[DSE : {k:ccont}{dsk:dstack_substC k dot k}
@@ -1641,10 +1641,10 @@ sigma[DSE' : {k:ccont}{dsk:dstack_substC k dot k}
                                 klam [k:ccont]
                                       capp x x k)
                          (xlam [x:ctriv]klam [k:ccont]capp x x k)
-                         (vlam [v2:ctriv]capp v v2 k)) 
+                         (vlam [v2:ctriv]capp v v2 k))
                            (Xi1 (xlam [x:ctriv]
                                 klam [k:ccont]
-                                      cret k x)) 
+                                      cret k x))
                            (E1 (xlam [x:ctriv]
                                 klam [k:ccont]
                                       cret k x) k)]
@@ -1666,7 +1666,7 @@ sigma[APP : {v:ctriv}app ((dot , v) & dot) (XXi1  v)]
 sigma[VVE : {k:ccont}{vvk:vvalC dot k}
             {v:ctriv}{vvv:{xi:stack}vvalT (xi , v) v xi}
             vvalE (XXi1 v) (cret (vlam [v1:ctriv] capp v v1 k)(xlam [x:ctriv] klam [k:ccont] capp x x k)) ]
-sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)] 
+sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)]
 sigma[VVMS : {v:ctriv}vvalMS (XXi1 v) (Xi1 (xlam [x:ctriv]
                                                 klam [k:ccont]
                                                       cret k x))]
@@ -1679,7 +1679,7 @@ sigma[DSE' : {k:ccont}{dsk:dstack_substC k dot k}
              {v:ctriv}{dsv:{xi:stack}{t:ctriv}dstack_substT v (xi , t) t xi}
              dstack_substE (cret (vlam [v1:ctriv] capp v v1 k)(xlam [x:ctriv] klam [k:ccont] capp x x k)) (Xi1 (xlam [x:ctriv]klam [k:ccont] cret k x)) (E (xlam [x:ctriv]klam [k:ccont] cret k x) k)]
 {k:ccont}{vvk:vvalC dot k}{dsk:dstack_substC k dot k}
-lemma17-2 V APP (VVE k vvk) APP1 VVMS (DSE k dsk) 
+lemma17-2 V APP (VVE k vvk) APP1 VVMS (DSE k dsk)
           (DSE' k dsk).
                                                    Solving...
 
@@ -1697,7 +1697,7 @@ sigma[VVE : {k:ccont}{vvk:vvalC dot k}
             {v1:ctriv}{vvv1:{xi:stack}vvalT (xi , v1) v1 xi}
             {v:ctriv}{vvv:{xi:stack}vvalT (xi , v) v xi}
             vvalE (XXi1 v1 v) (cret (vlam [v1:ctriv] capp v v1 k) v1) ]
-sigma[APP1 : {v1:ctriv}{v:ctriv}app ((dot , v) & (dot , v1)) (Xi1 v1 v)] 
+sigma[APP1 : {v1:ctriv}{v:ctriv}app ((dot , v) & (dot , v1)) (Xi1 v1 v)]
 sigma[VVMS : {v1:ctriv}{v:ctriv}vvalMS (XXi1 v1 v) (Xi1 v1 (xlam [x:ctriv]
                                                 klam [k:ccont]
                                                       cret k x))]
@@ -1714,7 +1714,7 @@ sigma[DSE' : {k:ccont}{dsk:dstack_substC k dot k}
 {k:ccont}{vvk:vvalC dot k}{dsk:dstack_substC k dot k}
 {v1:ctriv}{vvv1:{xi:stack}vvalT (xi , v1) v1 xi}
 {dsv1:{xi:stack}{t:ctriv}dstack_substT v1 (xi , t) t xi}
-lemma17-2 V (APP v1) (VVE k vvk v1 vvv1) (APP1 v1) (VVMS v1) (DSE k dsk v1 dsv1) 
+lemma17-2 V (APP v1) (VVE k vvk v1 vvv1) (APP1 v1) (VVMS v1) (DSE k dsk v1 dsv1)
           (DSE' k dsk v1 dsv1).
 -------------------------------------------------------------------------------
 sigma[APP : {v1:ctriv}{v:ctriv}app ((dot , v) & (dot , v1)) (XXi1  v1 v)]
@@ -1722,7 +1722,7 @@ sigma[VVE : {k:ccont}{vvk:vvalC dot k}
             {v1:ctriv}{vvv1:{xi:stack}vvalT (xi , v1) v1 xi}
             {v:ctriv}{vvv:{xi:stack}vvalT (xi , v) v xi}
             vvalE (XXi1 v1 v) (cret (vlam [v1:ctriv] capp v v1 k) v1) ]
-sigma[APP1 : {v1:ctriv}{v:ctriv}app ((dot , v) & (dot , v1)) (Xi1 v1 v)] 
+sigma[APP1 : {v1:ctriv}{v:ctriv}app ((dot , v) & (dot , v1)) (Xi1 v1 v)]
 sigma[VVMS : {v1:ctriv}{v:ctriv}vvalMS (XXi1 v1 v) (Xi1 v1 v)]
 sigma[DSE : {k:ccont}{dsk:dstack_substC k dot k}
             {v1:ctriv}{dsv1:{xi:stack}{t:ctriv}dstack_substT v1 (xi , t) t xi}
@@ -1737,21 +1737,21 @@ sigma[DSE' : {k:ccont}{dsk:dstack_substC k dot k}
 {k:ccont}{vvk:vvalC dot k}{dsk:dstack_substC k dot k}
 {v1:ctriv}{vvv1:{xi:stack}vvalT (xi , v1) v1 xi}
 {dsv1:{xi:stack}{t:ctriv}dstack_substT v1 (xi , t) t xi}
-lemma17-2 V (APP v1) (VVE k vvk v1 vvv1) (APP1 v1) (VVMS v1) (DSE k dsk v1 dsv1) 
+lemma17-2 V (APP v1) (VVE k vvk v1 vvv1) (APP1 v1) (VVMS v1) (DSE k dsk v1 dsv1)
           (DSE' k dsk v1 dsv1).
 -------------------------------------------------------------------------------
    theorem 18
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
            {g:dtriv}{g':ctriv}{cg:cpsT g g'}
-           cpsR (dexp->droot 
+           cpsR (dexp->droot
                      (dtriv->dexp
                            (dlam [x:dtriv]
-                                  dexp->droot 
-                                      (dapp (dapp (dtriv->dexp f) 
+                                  dexp->droot
+                                      (dapp (dapp (dtriv->dexp f)
                                                   (dtriv->dexp x))
-                                            (dapp (dtriv->dexp g) 
-                                                  (dtriv->dexp x)))))) 
+                                            (dapp (dtriv->dexp g)
+                                                  (dtriv->dexp x))))))
                 (R' f' g')]
 sigma[VVR : {f':ctriv}{vvf:{xi:stack}vvalT xi f' xi}
             {g':ctriv}{vvg:{xi:stack}vvalT xi g' xi}
@@ -1770,12 +1770,12 @@ th18-1 (VVR f' vvf g' vvg) (CVR f' cvf g' cvg) (DR f' g' df' dg') (BR f' g').
 -------------------------------------------------------------------------------
 sigma[CR : {f:dtriv}{f':ctriv}{cf:cpsT f f'}
            {g:dtriv}{g':ctriv}{cg:cpsT g g'}
-           cpsR (dexp->droot 
+           cpsR (dexp->droot
            (dtriv->dexp
             (dlam [x:dtriv]
-                   dexp->droot 
+                   dexp->droot
                     (dapp (dapp (dtriv->dexp f) (dtriv->dexp x))
-                          (dapp (dtriv->dexp g) 
+                          (dapp (dtriv->dexp g)
                                 (dtriv->dexp x))))))
                 (R' f' g')]
 sigma[VVR : {f':ctriv}{vvf:{xi:stack}vvalT xi f' xi}
@@ -1796,8 +1796,8 @@ th18-1 (VVR f' vvf g' vvg) (CVR f' cvf g' cvg) (DR f' g' df' dg') (BR f' g').
 sigma[CR : cpsR (dexp->droot
                  (dapp (dtriv->dexp
                          (dlam [f:dtriv]
-                                (dexp->droot 
-                                 (dapp (dtriv->dexp 
+                                (dexp->droot
+                                 (dapp (dtriv->dexp
                                         (dlam [x:dtriv]
                                                (dexp->droot (dtriv->dexp x))))
                                        (dtriv->dexp f)))))
@@ -1835,8 +1835,8 @@ th18-1 VVR CVR DR BR.
 sigma[CR : cpsR (dexp->droot
                  (dapp (dapp (dtriv->dexp
                          (dlam [f:dtriv]
-                                (dexp->droot 
-                                 (dapp (dtriv->dexp 
+                                (dexp->droot
+                                 (dapp (dtriv->dexp
                                         (dlam [x:dtriv]
                                                (dexp->droot (dtriv->dexp x))))
                                        (dtriv->dexp f)))))
@@ -1845,8 +1845,8 @@ sigma[CR : cpsR (dexp->droot
                                (dexp->droot (dtriv->dexp f)))))
                       (dapp (dtriv->dexp
                          (dlam [f:dtriv]
-                                (dexp->droot 
-                                 (dapp (dtriv->dexp 
+                                (dexp->droot
+                                 (dapp (dtriv->dexp
                                         (dlam [x:dtriv]
                                                (dexp->droot (dtriv->dexp x))))
                                        (dtriv->dexp f)))))
@@ -1870,7 +1870,7 @@ sigma[VVE : {k:ccont}{vvk:vvalC dot k}
                                                                       capp v v1 k)))
                          (xlam [x:ctriv]klam [k:ccont]capp x x k)
                          (vlam [v2:ctriv]capp v v2 k))]
-sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)] 
+sigma[APP1 : {v:ctriv}app ((dot , v) & dot) (Xi1 v)]
 sigma[VVALMS : {v:ctriv}vvalMS (XXi1 v) (Xi1 v)]
 sigma[DSE : {k:ccont}{dsk:dstack_substC k dot k}
              {v:ctriv}{dsv:{xi:stack}{t:ctriv}dstack_substT v (xi , t) t xi}
@@ -1894,5 +1894,5 @@ sigma[DSE' : {k:ccont}{dsk:dstack_substC k dot k}
                          (vlam [v2:ctriv]capp v v2 k)) (Xi1 v) (E1 v k)]
 {k:ccont}{vvk:vvalC dot k}{dsk:dstack_substC k dot k}
 lemma17-2 ([v:ctriv]v) APP (VVE k vvk) APP1 VVALMS (DSE k dsk) (DSE' k dsk).
- 
+
 

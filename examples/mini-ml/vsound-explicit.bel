@@ -1,4 +1,4 @@
-% Value soundness 
+% Value soundness
 % Author: Brigitte Pientka
 %
 
@@ -15,32 +15,32 @@ v_s   : {E:exp} value E -> value (suc E).
 eval : exp -> exp -> type.  %name eval D.
 ev_z : eval z z.
 ev_s : {E:exp} {V:exp} eval E V -> eval (suc E) (suc V).
-ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp} 
+ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp}
        eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 
-rec vs : {E:[. exp]} {V:[. exp]} [. eval E V] -> [. value V] = 
+rec vs : {E:[. exp]} {V:[. exp]} [. eval E V] -> [. value V] =
 mlam E => mlam V => fn e =>
-  case e of 
+  case e of
      [. ev_z] : [. (eval z z)] =>  [. v_z]
 
    | {E1:[. exp]}{V1:[. exp]}{D:[. eval  E1 V1]}
      [. ev_s E1 V1 D] : [. (eval (suc E1) (suc V1))]
-     => 
+     =>
 
-     (case   (vs  [. E1 ] [. V1 ] [. D]) of 
+     (case   (vs  [. E1 ] [. V1 ] [. D]) of
 
        {V':[. exp]}{F:[. value V']}
-        [. F] : [. (value V')] 
-        =>    [. v_s V1 F] 
+        [. F] : [. (value V')]
+        =>    [. v_s V1 F]
       )
 
    | {E1:[. exp]} {E2:[x:exp. exp]} {V1:[. exp]} {V2:[. exp]}
      {D1:[. eval E1 V1]} {D2:[. eval (E2 V1) V2]}
 
       [. ev_l E1 (\x . (E2 x)) V1 V2 D2 D1] :
-        [. (eval (letv E1 (\x . (E2 x))) V2)] 
+        [. (eval (letv E1 (\x . (E2 x))) V2)]
 
-      => 
+      =>
            vs [ . (E2 V1) ]  [ . V2 ]  [. D2]
 
 ;

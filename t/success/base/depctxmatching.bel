@@ -8,18 +8,18 @@ z: term nat.
 % pair: term T -> term S -> term (cross T S).
 
 
-schema tctx = term S; 
+schema tctx = term S;
 
 %{
 rec cmatch_correct1 : (g:tctx) [g. term T] -> [g. term T] =
-fn n  => case n of 
+fn n  => case n of
  | [g. z] => [g. z]
  | [g. #p ..] => [g. #p ..]
 ;
 }%
 
 rec cmatch_correct2 : (g:tctx) [g. term (T ..)] -> [g. term (T ..)] =
-fn n  => case n of 
+fn n  => case n of
  | [g. z] => [g. z]
  | [h,x:term (S ..). x] => [h,x:term (S ..). x]
  | % {#p::(term T)[g]}
@@ -28,7 +28,7 @@ fn n  => case n of
 
 
 rec cmatch_correct3 : (g:tctx) [g. term T] -> [g. term T] =
-fn n  => case n of 
+fn n  => case n of
  | [g. z] => [g. z]
  | [h,x:term S. x] => [h,x:term S. x]
  |  {#p:[g. term T]}

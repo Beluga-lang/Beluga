@@ -15,17 +15,17 @@ st_s : step (st K (ev (s E)))
 st_match : step (st K (ev (match E1 E2 (\x. E3 x))))
              (st (c K  (\x1. match1 x1 E2 (\x. E3 x))) (ev E1)).
 
-st_match1_z : step (st K  (match1 z_val E2 (\x. E3 x))) 
+st_match1_z : step (st K  (match1 z_val E2 (\x. E3 x)))
                (st K  (ev E2)).
 
 st_match1_s : step (st K (match1 (s_val V1') E2 (\x. E3 x)))
                 (st K (ev (E3 V1'))).
 
 % Pairs
-st_pair : step (st K (ev (pair E1 E2))) 
+st_pair : step (st K (ev (pair E1 E2)))
 	   (st (c K  (\x1. pair1 x1 E2)) (ev E1)).
 
-st_pair1 : step (st K (pair1 V1 E2)) 
+st_pair1 : step (st K (pair1 V1 E2))
 	    (st (c K  (\x2. return (pair_val V1 x2))) (ev E2)).
 
 st_fst   : step (st K (ev (fst E)))

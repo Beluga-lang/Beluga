@@ -1,10 +1,10 @@
 % asdf
 %%
-% 
+%
 %{
 this is within a nested comment, depth 1
 }%
-exp : type.  
+exp : type.
 
 z    : exp.
 %{  depth 1 %{ depth 2 }%  also-part-of-comment : exp. %{gggggg }%

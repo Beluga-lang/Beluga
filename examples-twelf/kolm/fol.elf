@@ -12,4 +12,4 @@ not    : o -> o.        %prefix 12 not.
 true   : o.
 false  : o.
 forall : (i -> o) -> o.
-exists : (i -> o) -> o. 
+exists : (i -> o) -> o.

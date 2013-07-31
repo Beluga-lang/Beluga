@@ -8,7 +8,7 @@ s   : exp nat -> exp nat.
 schema expCtx = some [t:tp] exp t;
 
 rec cntV : {g:expCtx}  [g, xxx : exp (T ..). exp (S .. xxx)] -> [. exp nat] =
-mlam g => 
+mlam g =>
  fn e =>
   case e of  % e : exp (S .. x) [g, x:exp (T ..)]
 

@@ -7,8 +7,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %theorem
-nat!N_lt_sN_thm : 
-          forall {N:nat} 
+nat!N_lt_sN_thm :
+          forall {N:nat}
           exists {DNatLt: nat_lt N (s_nat N)}
           true.
 %prove 2 N (nat!N_lt_sN_thm N _).

@@ -30,14 +30,14 @@ v_suc : val nat -> val nat.
 
 
 rec equal : [. val nat] -> [. val nat] -> [. val bool] =
-fn x => fn y => 
+fn x => fn y =>
   case x of
-    [. v_z]  => 
+    [. v_z]  =>
       (case y of
           [. v_z]     => [. v_tt]
         | [. v_suc E] => [. v_ff])
 
-  | [. v_suc E] => 
+  | [. v_suc E] =>
       (case y of
          [. v_z]      => [. v_ff]
       |  [. v_suc V]  => equal [. E] [. V])
@@ -46,16 +46,16 @@ fn x => fn y =>
 
 
 
-rec eval : [. exp T] -> [. val T] = 
- fn e => case e of 
+rec eval : [. exp T] -> [. val T] =
+ fn e => case e of
   | [. tt] => [. v_tt]
 
   | [. ff] => [. v_ff]
 
   | [. z]  => [. v_z]
 
-  | [. suc E] => 
-    let [. V]  = eval [. E] in [. v_suc V]   
+  | [. suc E] =>
+    let [. V]  = eval [. E] in [. v_suc V]
 
   | [. eq E1 E2] =>
     equal (eval [. E1])  (eval  [. E2])

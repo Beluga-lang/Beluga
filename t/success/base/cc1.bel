@@ -1,7 +1,7 @@
 term :  type.
 z    : term.
 suc  : term -> term.
-% app  : term -> term -> term.    
+% app  : term -> term -> term.
 % lam  : (term -> term) -> term.
 
 schema termCtx = some [] term;
@@ -100,9 +100,9 @@ mlam g => fn e =>
       | [g, x:term, y:term]  #p ..   => [g] z
 
     %{
-      | [g] app (U ..) (V ..)  => 
-          let [g] (U' ..)  = fff [g] ([g] (U ..)) in 
-          let [g] (V' ..)  = fff [g] ([g] (V ..)) in 
+      | [g] app (U ..) (V ..)  =>
+          let [g] (U' ..)  = fff [g] ([g] (U ..)) in
+          let [g] (V' ..)  = fff [g] ([g] (V ..)) in
             [g] app (U' ..) (V' ..)
     }%
     ;

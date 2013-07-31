@@ -15,22 +15,22 @@ z : trm rInt.
 s : trm rInt -> trm rInt. %prefix 10 s.
 
 
-gt1 : prog( 
-^ gt (s X) (s Y) 
-     <= ^ gt X Y 
+gt1 : prog(
+^ gt (s X) (s Y)
+     <= ^ gt X Y
 ).
 
-gt2 : prog( 
-^ gt (s X) z 
+gt2 : prog(
+^ gt (s X) z
 ).
 
-lte1 : prog( 
-^ lte (s X) (s Y) 
-      <= ^ lte X Y 
+lte1 : prog(
+^ lte (s X) (s Y)
+      <= ^ lte X Y
 ).
 
-lte2 : prog( 
-^ lte z X 
+lte2 : prog(
+^ lte z X
 ).
 
 merge1 : prog(
@@ -45,22 +45,22 @@ merge2 : prog(
 	<= ^ merge T1 (H2 | T2) T3
 ).
 
-merge3 : prog( 
-^ merge L nil L 
+merge3 : prog(
+^ merge L nil L
 ).
 
-merge4 : prog( 
-^ merge nil L L 
+merge4 : prog(
+^ merge nil L L
 ).
 
 
 msort1: prog(
 ^ mergeSort (H | T) L
         <<= (^ srt (H | nil) =>> ^ mergeSort T L)
-). 
+).
 
 msort2 : prog(
-^ mergeSort nil L 
+^ mergeSort nil L
 	<<= ^ msort L
 ).
 
@@ -70,14 +70,14 @@ msort2 : prog(
 msort3 : prog(
 ^(msort L)
 	<<= ^ srt L1
-	<<= ^ srt L2 
+	<<= ^ srt L2
 	<=  ^ merge L1 L2 L12
 	<=< (^ srt L12 >=> ^ msort L)
 ).
 
 
 msort4 : prog(
- ^ msort L 
+ ^ msort L
 	<<= ^ srt L
 ).
 

@@ -967,20 +967,549 @@ This uses SMIE's tables and is expected to be placed on `post-self-insert-hook'.
             (let ((blink-matching-check-function #'belugasmie-blink-matching-check))
               (blink-matching-open))))))))
 
-;;; Beluga indentation and navigation via SMIE
+;;; The indentation engine.
 
-(defcustom beluga-indent-basic nil
+(defcustom belugasmie-indent-basic 4
   "Basic amount of indentation."
   :type 'integer)
+
+(defvar belugasmie-indent-rules 'unset
+  ;; TODO: For SML, we need more rule formats, so as to handle
+  ;;   structure Foo =
+  ;;      Bar (toto)
+  ;; and
+  ;;   structure Foo =
+  ;;   struct ... end
+  ;; I.e. the indentation after "=" depends on the parent ("structure")
+  ;; as well as on the following token ("struct").
+  "Rules of the following form.
+\((:before . TOK) . OFFSET-RULES)	how to indent TOK itself.
+\(TOK . OFFSET-RULES)	how to indent right after TOK.
+\(list-intro . TOKENS)	declare TOKENS as being followed by what may look like
+			  a funcall but is just a sequence of expressions.
+\(t . OFFSET)		basic indentation step.
+\(args . OFFSET)		indentation of arguments.
+\((T1 . T2) OFFSET)	like ((:before . T2) (:parent T1 OFFSET)).
+
+OFFSET-RULES is a list of elements which can each either be:
+
+\(:hanging . OFFSET-RULES)	if TOK is hanging, use OFFSET-RULES.
+\(:parent PARENT . OFFSET-RULES) if TOK's parent is PARENT, use OFFSET-RULES.
+\(:next TOKEN . OFFSET-RULES)	if TOK is followed by TOKEN, use OFFSET-RULES.
+\(:prev TOKEN . OFFSET-RULES)	if TOK is preceded by TOKEN, use
+\(:bolp . OFFSET-RULES)		If TOK is first on a line, use OFFSET-RULES.
+OFFSET				the offset to use.
+
+PARENT can be either the name of the parent or a list of such names.
+
+OFFSET can be of the form:
+`point'				align with the token.
+`parent'				align with the parent.
+NUMBER				offset by NUMBER.
+\(+ OFFSETS...)			use the sum of OFFSETS.
+VARIABLE			use the value of VARIABLE as offset.
+
+The precise meaning of `point' depends on various details: it can
+either mean the position of the token we're indenting, or the
+position of its parent, or the position right after its parent.
+
+A nil offset for indentation after an opening token defaults
+to `belugasmie-indent-basic'.")
+
+(defun belugasmie-indent--hanging-p ()
+  ;; A hanging keyword is one that's at the end of a line except it's not at
+  ;; the beginning of a line.
+  (and (save-excursion
+         (when (zerop (length (funcall belugasmie-forward-token-function)))
+           ;; Could be an open-paren.
+           (forward-char 1))
+         (skip-chars-forward " \t")
+         (eolp))
+       (not (belugasmie-indent--bolp))))
+
+(defun belugasmie-indent--bolp ()
+  (save-excursion (skip-chars-backward " \t") (bolp)))
+
+(defun belugasmie-indent--offset (elem)
+  (or (cdr (assq elem belugasmie-indent-rules))
+      (cdr (assq t belugasmie-indent-rules))
+      belugasmie-indent-basic))
+
+(defvar belugasmie-indent-debug-log)
+
+(defun belugasmie-indent--offset-rule (tokinfo &optional after parent)
+  "Apply the OFFSET-RULES in TOKINFO.
+Point is expected to be right in front of the token corresponding to TOKINFO.
+If computing the indentation after the token, then AFTER is the position
+after the token, otherwise it should be nil.
+PARENT if non-nil should be the parent info returned by `belugasmie-backward-sexp'."
+  (let ((rules (cdr tokinfo))
+        next prev
+        offset)
+    (while (consp rules)
+      (let ((rule (pop rules)))
+        (cond
+         ((not (consp rule)) (setq offset rule))
+         ((eq (car rule) '+) (setq offset rule))
+         ((eq (car rule) :hanging)
+          (when (belugasmie-indent--hanging-p)
+            (setq rules (cdr rule))))
+         ((eq (car rule) :bolp)
+          (when (belugasmie-indent--bolp)
+            (setq rules (cdr rule))))
+         ((eq (car rule) :eolp)
+          (unless after
+            (error "Can't use :eolp in :before indentation rules"))
+          (when (> after (line-end-position))
+            (setq rules (cdr rule))))
+         ((eq (car rule) :prev)
+          (unless prev
+            (save-excursion
+              (setq prev (belugasmie-indent-backward-token))))
+          (when (equal (car prev) (cadr rule))
+            (setq rules (cddr rule))))
+         ((eq (car rule) :next)
+          (unless next
+            (unless after
+              (error "Can't use :next in :before indentation rules"))
+            (save-excursion
+              (goto-char after)
+              (setq next (belugasmie-indent-forward-token))))
+          (when (equal (car next) (cadr rule))
+            (setq rules (cddr rule))))
+         ((eq (car rule) :parent)
+          (unless parent
+            (save-excursion
+              (if after (goto-char after))
+              (setq parent (belugasmie-backward-sexp 'halfsexp))))
+          (when (if (listp (cadr rule))
+                    (member (nth 2 parent) (cadr rule))
+                  (equal (nth 2 parent) (cadr rule)))
+            (setq rules (cddr rule))))
+         (t (error "Unknown rule %s for indentation of %s"
+                   rule (car tokinfo))))))
+    ;; If `offset' is not set yet, use `rules' to handle the case where
+    ;; the tokinfo uses the old-style ((PARENT . TOK). OFFSET).
+    (unless offset (setq offset rules))
+    (when (boundp 'belugasmie-indent-debug-log)
+      (push (list (point) offset tokinfo) belugasmie-indent-debug-log))
+    offset))
+
+(defun belugasmie-indent--column (offset &optional base parent virtual-point)
+  "Compute the actual column to use for a given OFFSET.
+BASE is the base position to use, and PARENT is the parent info, if any.
+If VIRTUAL-POINT is non-nil, then `point' is virtual."
+  (cond
+   ((eq (car-safe offset) '+)
+    (apply '+ (mapcar (lambda (offset) (belugasmie-indent--column offset nil parent))
+                      (cdr offset))))
+   ((integerp offset)
+    (+ offset
+       (case base
+         ((nil) 0)
+         (parent (goto-char (cadr parent))
+                 (belugasmie-indent-virtual))
+         (t
+          (goto-char base)
+          ;; For indentation after "(let" in SML-mode, we end up accumulating
+          ;; the offset of "(" and the offset of "let", so we use `min' to try
+          ;; and get it right either way.
+          (min (belugasmie-indent-virtual) (current-column))))))
+   ((eq offset 'point)
+    ;; In indent-keyword, if we're indenting `then' wrt `if', we want to use
+    ;; indent-virtual rather than use just current-column, so that we can
+    ;; apply the (:before . "if") rule which does the "else if" dance in SML.
+    ;; But in other cases, we do not want to use indent-virtual
+    ;; (e.g. indentation of "*" w.r.t "+", or ";" wrt "(").  We could just
+    ;; always use indent-virtual and then have indent-rules say explicitly
+    ;; to use `point' after things like "(" or "+" when they're not at EOL,
+    ;; but you'd end up with lots of those rules.
+    ;; So we use a heuristic here, which is that we only use virtual if
+    ;; the parent is tightly linked to the child token (they're part of
+    ;; the same BNF rule).
+    (if (and virtual-point (null (car parent))) ;Black magic :-(
+        (belugasmie-indent-virtual) (current-column)))
+   ((eq offset 'parent)
+    (unless parent
+      (setq parent (or (belugasmie-backward-sexp 'halfsexp) :notfound)))
+    (if (consp parent) (goto-char (cadr parent)))
+    (belugasmie-indent-virtual))
+   ((eq offset nil) nil)
+   ((and (symbolp offset) (boundp 'offset))
+    (belugasmie-indent--column (symbol-value offset) base parent virtual-point))
+   (t (error "Unknown indentation offset %s" offset))))
+
+(defun belugasmie-indent-forward-token ()
+  "Skip token forward and return it, along with its levels."
+  (let ((tok (funcall belugasmie-forward-token-function)))
+    (cond
+     ((< 0 (length tok)) (assoc tok belugasmie-op-levels))
+     ((looking-at "\\s(")
+      (forward-char 1)
+      (list (buffer-substring (1- (point)) (point)) nil 0)))))
+
+(defun belugasmie-indent-backward-token ()
+  "Skip token backward and return it, along with its levels."
+  (let ((tok (funcall belugasmie-backward-token-function)))
+    (cond
+     ((< 0 (length tok)) (assoc tok belugasmie-op-levels))
+     ;; 4 == Open paren syntax.
+     ((eq 4 (syntax-class (syntax-after (1- (point)))))
+      (forward-char -1)
+      (list (buffer-substring (point) (1+ (point))) nil 0)))))
+
+(defun belugasmie-indent-virtual ()
+  ;; We used to take an optional arg (with value :not-hanging) to specify that
+  ;; we should only use (belugasmie-indent-calculate) if we're looking at a hanging
+  ;; keyword.  This was a bad idea, because the virtual indent of a position
+  ;; should not depend on the caller, since it leads to situations where two
+  ;; dependent indentations get indented differently.
+  "Compute the virtual indentation to use for point.
+This is used when we're not trying to indent point but just
+need to compute the column at which point should be indented
+in order to figure out the indentation of some other (further down) point."
+  ;; Trust pre-existing indentation on other lines.
+  (if (belugasmie-indent--bolp) (current-column) (belugasmie-indent-calculate)))
+
+(defun belugasmie-indent-fixindent ()
+  ;; Obey the `fixindent' special comment.
+  (and (belugasmie-indent--bolp)
+       (save-excursion
+         (comment-normalize-vars)
+         (re-search-forward (concat comment-start-skip
+                                    "fixindent"
+                                    comment-end-skip)
+                            ;; 1+ to account for the \n comment termination.
+                            (1+ (line-end-position)) t))
+       (current-column)))
+
+(defun belugasmie-indent-bob ()
+  ;; Start the file at column 0.
+  (save-excursion
+    (forward-comment (- (point)))
+    (if (bobp) 0)))
+
+(defun belugasmie-indent-close ()
+  ;; Align close paren with opening paren.
+  (save-excursion
+    ;; (forward-comment (point-max))
+    (when (looking-at "\\s)")
+      (while (not (zerop (skip-syntax-forward ")")))
+        (skip-chars-forward " \t"))
+      (condition-case nil
+          (progn
+            (backward-sexp 1)
+            (belugasmie-indent-virtual))      ;:not-hanging
+        (scan-error nil)))))
+
+(defun belugasmie-indent-keyword ()
+  ;; Align closing token with the corresponding opening one.
+  ;; (e.g. "of" with "case", or "in" with "let").
+  (save-excursion
+    (let* ((pos (point))
+           (toklevels (belugasmie-indent-forward-token))
+           (token (pop toklevels)))
+      (if (null (car toklevels))
+          (save-excursion
+            (goto-char pos)
+            ;; Different cases:
+            ;; - belugasmie-indent--bolp: "indent according to others".
+            ;; - common hanging: "indent according to others".
+            ;; - SML-let hanging: "indent like parent".
+            ;; - if-after-else: "indent-like parent".
+            ;; - middle-of-line: "trust current position".
+            (cond
+             ((null (cdr toklevels)) nil) ;Not a keyword.
+             ((belugasmie-indent--bolp)
+              ;; For an open-paren-like thingy at BOL, always indent only
+              ;; based on other rules (typically belugasmie-indent-after-keyword).
+              nil)
+             (t
+              ;; We're only ever here for virtual-indent, which is why
+              ;; we can use (current-column) as answer for `point'.
+              (let* ((tokinfo (or (assoc (cons :before token)
+                                         belugasmie-indent-rules)
+                                  ;; By default use point unless we're hanging.
+                                  `((:before . ,token) (:hanging nil) point)))
+                     ;; (after (prog1 (point) (goto-char pos)))
+                     (offset (belugasmie-indent--offset-rule tokinfo)))
+                (belugasmie-indent--column offset)))))
+
+        ;; FIXME: This still looks too much like black magic!!
+        ;; FIXME: Rather than a bunch of rules like (PARENT . TOKEN), we
+        ;; want a single rule for TOKEN with different cases for each PARENT.
+        (let* ((parent (belugasmie-backward-sexp 'halfsexp))
+               (tokinfo
+                (or (assoc (cons (caddr parent) token)
+                           belugasmie-indent-rules)
+                    (assoc (cons :before token) belugasmie-indent-rules)
+                    ;; Default rule.
+                    `((:before . ,token)
+                      ;; (:parent open 0)
+                      point)))
+               (offset (save-excursion
+                         (goto-char pos)
+                         (belugasmie-indent--offset-rule tokinfo nil parent))))
+          ;; Different behaviors:
+          ;; - align with parent.
+          ;; - parent + offset.
+          ;; - after parent's column + offset (actually, after or before
+          ;;   depending on where backward-sexp stopped).
+          ;; ? let it drop to some other indentation function (almost never).
+          ;; ? parent + offset + parent's own offset.
+          ;; Different cases:
+          ;; - bump into a same-level operator.
+          ;; - bump into a specific known parent.
+          ;; - find a matching open-paren thingy.
+          ;; - bump into some random parent.
+          ;; ? borderline case (almost never).
+          ;; ? bump immediately into a parent.
+          (cond
+           ((not (or (< (point) pos)
+                     (and (cadr parent) (< (cadr parent) pos))))
+            ;; If we didn't move at all, that means we didn't really skip
+            ;; what we wanted.  Should almost never happen, other than
+            ;; maybe when an infix or close-paren is at the beginning
+            ;; of a buffer.
+            nil)
+           ((eq (car parent) (car toklevels))
+            ;; We bumped into a same-level operator. align with it.
+            (if (and (belugasmie-indent--bolp) (/= (point) pos)
+                     (save-excursion
+                       (goto-char (goto-char (cadr parent)))
+                       (not (belugasmie-indent--bolp)))
+                     ;; Check the offset of `token' rather then its parent
+                     ;; because its parent may have used a special rule.  E.g.
+                     ;;    function foo;
+                     ;;      line2;
+                     ;;      line3;
+                     ;; The ; on the first line had a special rule, but when
+                     ;; indenting line3, we don't care about it and want to
+                     ;; align with line2.
+                     (memq offset '(point nil)))
+                ;; If the parent is at EOL and its children are indented like
+                ;; itself, then we can just obey the indentation chosen for the
+                ;; child.
+                ;; This is important for operators like ";" which
+                ;; are usually at EOL (and have an offset of 0): otherwise we'd
+                ;; always go back over all the statements, which is
+                ;; a performance problem and would also mean that fixindents
+                ;; in the middle of such a sequence would be ignored.
+                ;;
+                ;; This is a delicate point!
+                ;; Even if the offset is not 0, we could follow the same logic
+                ;; and subtract the offset from the child's indentation.
+                ;; But that would more often be a bad idea: OT1H we generally
+                ;; want to reuse the closest similar indentation point, so that
+                ;; the user's choice (or the fixindents) are obeyed.  But OTOH
+                ;; we don't want this to affect "unrelated" parts of the code.
+                ;; E.g. a fixindent in the body of a "begin..end" should not
+                ;; affect the indentation of the "end".
+                (current-column)
+              (goto-char (cadr parent))
+              ;; Don't use (belugasmie-indent-virtual :not-hanging) here, because we
+              ;; want to jump back over a sequence of same-level ops such as
+              ;;    a -> b -> c
+              ;;    -> d
+              ;; So as to align with the earliest appropriate place.
+              (belugasmie-indent-virtual)))
+           (tokinfo
+            (if (and (= (point) pos) (belugasmie-indent--bolp)
+                     (or (eq offset 'point)
+                         (and (consp offset) (memq 'point offset))))
+                ;; Since we started at BOL, we're not computing a virtual
+                ;; indentation, and we're still at the starting point, so
+                ;; we can't use `current-column' which would cause
+                ;; indentation to depend on itself.
+                nil
+              (belugasmie-indent--column offset 'parent parent
+                                  ;; If we're still at pos, indent-virtual
+                                  ;; will inf-loop.
+                                  (unless (= (point) pos) 'virtual))))))))))
+
+(defun belugasmie-indent-comment ()
+  "Compute indentation of a comment."
+  ;; Don't do it for virtual indentations.  We should normally never be "in
+  ;; front of a comment" when doing virtual-indentation anyway.  And if we are
+  ;; (as can happen in octave-mode), moving forward can lead to inf-loops.
+  (and (belugasmie-indent--bolp)
+       (let ((pos (point)))
+         (save-excursion
+           (beginning-of-line)
+           (and (re-search-forward comment-start-skip (line-end-position) t)
+                (eq pos (or (match-end 1) (match-beginning 0))))))
+       (save-excursion
+         (forward-comment (point-max))
+         (skip-chars-forward " \t\r\n")
+         (belugasmie-indent-calculate))))
+
+(defun belugasmie-indent-comment-continue ()
+  ;; indentation of comment-continue lines.
+  (let ((continue (and comment-continue
+                       (comment-string-strip comment-continue t t))))
+    (and (< 0 (length continue))
+         (looking-at (regexp-quote continue)) (nth 4 (syntax-ppss))
+         (let ((ppss (syntax-ppss)))
+           (save-excursion
+             (forward-line -1)
+             (if (<= (point) (nth 8 ppss))
+                 (progn (goto-char (1+ (nth 8 ppss))) (current-column))
+               (skip-chars-forward " \t")
+               (if (looking-at (regexp-quote continue))
+                   (current-column))))))))
+
+(defun belugasmie-indent-comment-close ()
+  (and (boundp 'comment-end-skip)
+       comment-end-skip
+       (not (looking-at " \t*$"))       ;Not just a \n comment-closer.
+       (looking-at comment-end-skip)
+       (nth 4 (syntax-ppss))
+       (save-excursion
+         (goto-char (nth 8 (syntax-ppss)))
+         (current-column))))
+
+(defun belugasmie-indent-comment-inside ()
+  (and (nth 4 (syntax-ppss))
+       'noindent))
+
+(defun belugasmie-indent-after-keyword ()
+  ;; Indentation right after a special keyword.
+  (save-excursion
+    (let* ((pos (point))
+           (toklevel (belugasmie-indent-backward-token))
+           (tok (car toklevel))
+           (tokinfo (assoc tok belugasmie-indent-rules)))
+      ;; Set some default indent rules.
+      (if (and toklevel (null (cadr toklevel)) (null tokinfo))
+          (setq tokinfo (list (car toklevel))))
+      ;; (if (and tokinfo (null toklevel))
+      ;;     (error "Token %S has indent rule but has no parsing info" tok))
+      (when toklevel
+        (unless tokinfo
+          ;; The default indentation after a keyword/operator is 0 for
+          ;; infix and t for prefix.
+          ;; Using the BNF syntax, we could come up with better
+          ;; defaults, but we only have the precedence levels here.
+          (setq tokinfo (list tok 'default-rule
+                              (if (cadr toklevel) 0 (belugasmie-indent--offset t)))))
+        (let ((offset
+               (or (belugasmie-indent--offset-rule tokinfo pos)
+                   (belugasmie-indent--offset t))))
+          (let ((before (point)))
+            (goto-char pos)
+            (belugasmie-indent--column offset before)))))))
+
+(defun belugasmie-indent-exps ()
+  ;; Indentation of sequences of simple expressions without
+  ;; intervening keywords or operators.  E.g. "a b c" or "g (balbla) f".
+  ;; Can be a list of expressions or a function call.
+  ;; If it's a function call, the first element is special (it's the
+  ;; function).  We distinguish function calls from mere lists of
+  ;; expressions based on whether the preceding token is listed in
+  ;; the `list-intro' entry of belugasmie-indent-rules.
+  ;;
+  ;; TODO: to indent Lisp code, we should add a way to specify
+  ;; particular indentation for particular args depending on the
+  ;; function (which would require always skipping back until the
+  ;; function).
+  ;; TODO: to indent C code, such as "if (...) {...}" we might need
+  ;; to add similar indentation hooks for particular positions, but
+  ;; based on the preceding token rather than based on the first exp.
+  (save-excursion
+    (let ((positions nil)
+          arg)
+      (while (and (null (car (belugasmie-backward-sexp)))
+                  (push (point) positions)
+                  (not (belugasmie-indent--bolp))))
+      (save-excursion
+        ;; Figure out if the atom we just skipped is an argument rather
+        ;; than a function.
+        (setq arg (or (null (car (belugasmie-backward-sexp)))
+                      (member (funcall belugasmie-backward-token-function)
+                              (cdr (assoc 'list-intro belugasmie-indent-rules))))))
+      (cond
+       ((null positions)
+        ;; We're the first expression of the list.  In that case, the
+        ;; indentation should be (have been) determined by its context.
+        nil)
+       (arg
+        ;; There's a previous element, and it's not special (it's not
+        ;; the function), so let's just align with that one.
+        (goto-char (car positions))
+        (current-column))
+       ((cdr positions)
+        ;; We skipped some args plus the function and bumped into something.
+        ;; Align with the first arg.
+        (goto-char (cadr positions))
+        (current-column))
+       (positions
+        ;; We're the first arg.
+        (goto-char (car positions))
+        ;; FIXME: Use belugasmie-indent--column.
+        (+ (belugasmie-indent--offset 'args)
+           ;; We used to use (belugasmie-indent-virtual), but that
+           ;; doesn't seem right since it might then indent args less than
+           ;; the function itself.
+           (current-column)))))))
+
+(defvar belugasmie-indent-functions
+  '(belugasmie-indent-fixindent belugasmie-indent-bob belugasmie-indent-close
+    belugasmie-indent-comment belugasmie-indent-comment-continue belugasmie-indent-comment-close
+    belugasmie-indent-comment-inside belugasmie-indent-keyword belugasmie-indent-after-keyword
+    belugasmie-indent-exps)
+  "Functions to compute the indentation.
+Each function is called with no argument, shouldn't move point, and should
+return either nil if it has no opinion, or an integer representing the column
+to which that point should be aligned, if we were to reindent it.")
+
+(defun belugasmie-indent-calculate ()
+  "Compute the indentation to use for point."
+  (run-hook-with-args-until-success 'belugasmie-indent-functions))
+
+(defun belugasmie-indent-line ()
+  "Indent current line using the SMIE indentation engine."
+  (interactive)
+  (let* ((savep (point))
+	 (indent (condition-case-no-debug nil
+		     (save-excursion
+                       (forward-line 0)
+                       (skip-chars-forward " \t")
+                       (if (>= (point) savep) (setq savep nil))
+                       (or (belugasmie-indent-calculate) 0))
+                   (error 0))))
+    (if (not (numberp indent))
+        ;; If something funny is used (e.g. `noindent'), return it.
+        indent
+      (if (< indent 0) (setq indent 0)) ;Just in case.
+      (if savep
+          (save-excursion (indent-line-to indent))
+        (indent-line-to indent)))))
+
+(defun belugasmie-indent-debug ()
+  "Show the rules used to compute indentation of current line."
+  (interactive)
+  (let ((belugasmie-indent-debug-log '()))
+    (belugasmie-indent-calculate)
+    ;; FIXME: please improve!
+    (message "%S" belugasmie-indent-debug-log)))
+
+(defun belugasmie-setup (op-levels indent-rules)
+  (set (make-local-variable 'belugasmie-indent-rules) indent-rules)
+  (set (make-local-variable 'belugasmie-op-levels) op-levels)
+  (set (make-local-variable 'indent-line-function) 'belugasmie-indent-line))
+
+
+
+;;; Beluga indentation and navigation via SMIE
 
 (defconst beluga-smie-punct-re
   (regexp-opt '("->" "<-" "=>" "\\" "." "<" ">" "," ";" "..")))
 
 (defun beluga-smie-forward-token ()
   (forward-comment (point-max))
-  (if (looking-at "\\.[ \t]*\\(?:$\\|[0-9]\\(\\)\\)")
-      ;; Either an LF-terminating dot, or a projection-dot.
-      (progn (forward-char 1) (if (match-end 1) ".n" ";."))
+  (if (looking-at "\\.[ \t]*$")
+      ;; One of the LF-terminating dots.
+      (progn (forward-char 1) ";.")
     (buffer-substring-no-properties
      (point)
      (progn (cond
@@ -993,10 +1522,10 @@ This uses SMIE's tables and is expected to be placed on `post-self-insert-hook'.
 (defun beluga-smie-backward-token ()
   (forward-comment (- (point-max)))
   (if (and (eq ?\. (char-before))
-           (looking-at "[ \t]*\\(?:$\\|[0-9]\\(\\)\\)")
+           (looking-at "[ \t]*$") ;; "[ \t]*\\(?:$\\|[0-9]\\(\\)\\)"
            (not (looking-back "\\.\\." (- (point) 2))))
       ;; Either an LF-terminating dot, or a projection-dot.
-      (progn (forward-char -1) (if (match-end 1) ".n" ";."))
+      (progn (forward-char -1) ";.") ;; (if (match-end 1) ".n" ";.")
     (buffer-substring-no-properties
      (point)
      (progn (cond

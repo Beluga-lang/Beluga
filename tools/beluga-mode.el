@@ -1,4 +1,4 @@
-;;; beluga-mode.el --- Major mode for Beluga source code  -*- coding: utf-8 -*-
+;;; beluga-mode.el --- Major mode for Beluga source code  -*- coding: utf-8; lexical-binding:t -*-
 
 ;; Copyright (C) 2009, 2010, 2012, 2013  Free Software Foundation, Inc.
 
@@ -39,8 +39,8 @@
 (defvar beluga-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c\C-c" 'compile)
-    (define-key map "\C-c\C-l" 'beli-load)
-    (define-key map "\C-c\C-p" 'beli-highlight-holes)
+    (define-key map "\C-c\C-l" 'beluga-load)
+    (define-key map "\C-c\C-p" 'beluga-highlight-holes)
     map))
 
 (defvar beluga-mode-syntax-table
@@ -205,113 +205,137 @@ Regexp match data 0 points to the chars."
 
 ;;---------------------------- Interactive mode ----------------------------;;
 
-(defvar beli-buffer ()
-  "Will contain the buffer of the beli process.")
+(defvar beluga--proc ()
+  "Contain the process running beli.")
+(make-variable-buffer-local 'beluga--proc)
 
-(defun beli-start ()
-  "Starts a beli process with the -emacs option into a buffer called
-*belip*. If a previous beli process existed, it is killed together with
-its buffer."
-  (beli-stop)
-  (setq beli-buffer
-        (make-comint "belip"
-                     (concat beluga-interpreter-name "/beli")
-                     nil "-emacs")))
+(defun beluga--proc ()
+  (unless (process-live-p beluga--proc) (beluga--start))
+  beluga--proc)
 
-(defun beli-stop ()
-  "Stops the beli process and its buffer, if it exists."
-  (condition-case nil
-      (with-current-buffer beli-buffer
-        (comint-kill-subjob))
-    (kill-buffer beli-buffer)
-    (error nil)))
+;; (defun beluga-buffer ()
+;;   (process-buffer (beluga--proc)))
 
-(defun beli-send (cmd)
-  "Sends commands to beli."
-  (with-current-buffer beli-buffer
-    (goto-char (point-max))
-    (insert (concat "%:" cmd))
-    (comint-send-input)
-    (progn
-      (while (progn
-               (goto-char comint-last-input-end)
-               (not (re-search-forward comint-prompt-regexp nil t)))
-        (accept-process-output)))))
+(defun beluga--start ()
+  "Start an inferior beli process with the -emacs option.
+The process is put into a buffer called \"*beli*\".
+If a previous beli process already exists, kill it first."
+  (beluga--stop)
+  (setq beluga--proc
+        (get-buffer-process
+         (make-comint "beli"
+                      (concat (file-name-directory beluga-interpreter-name)
+                              "beli")
+                      nil "-emacs"))))
 
-(defun beli-receive ()
+(defun beluga--stop ()
+  "Stop the beli process."
+  (when (processp beluga--proc)
+    (kill-process beluga--proc)))
+
+(defun beluga--wait (proc)
+  (assert (eq (current-buffer) (process-buffer proc)))
+  (while (and (progn
+                (goto-char comint-last-input-end)
+                (not (re-search-forward comint-prompt-regexp nil t)))
+              (accept-process-output proc))))
+
+(defun beluga--send (cmd)
+  "Send commands to beli."
+  (let ((proc (beluga--proc)))
+    (with-current-buffer (process-buffer proc)
+      (beluga--wait proc)
+      ;; We could also just use `process-send-string', but then we wouldn't
+      ;; have the input text in the buffer to separate the various prompts.
+      (goto-char (point-max))
+      (insert (concat "%:" cmd))
+      (comint-send-input))))
+
+(defun beluga--receive ()
   "Reads the last output of beli."
-  (with-current-buffer beli-buffer
-    (buffer-substring-no-properties comint-last-input-end (point-max))))
+  (let ((proc (beluga--proc)))
+    (with-current-buffer (process-buffer proc)
+      (beluga--wait proc)
+      (buffer-substring-no-properties comint-last-input-end (point-max)))))
 
-(defun beli-load ()
+(defun beluga--rpc (cmd)
+  (beluga--send cmd)
+  (beluga--receive))
+
+
+(defun beluga-load ()
   "Loads the current file in beli."
   (interactive)
-  (beli-send (concat "load " (buffer-file-name))))
+  (beluga--send (concat "load " (buffer-file-name))))
 
-(defvar beli-holes-overlays ()
+(defvar beluga--holes-overlays ()
   "Will contain the list of hole overlays so that they can be resetted.")
+(make-variable-buffer-local 'beluga--holes-overlays)
 
-;; Returns the initial position of line n (hackish much?)
-(defun beli-line-pos (n)
-  "Returns the initial position of line n"
-  (let ((currp (point))
-        (res (progn (goto-line n) (point))))
-    (progn
-      (goto-char currp)
-      res)))
+(defface beluga-holes
+  '((t :background "yellow")) ;; :foreground "white"
+  "Face used to highlight holes in Beluga mode.")
 
-(defun beli-create-overlay (pos)
-  "Creates an overlay at the position designed by the input."
-  (let ((file-name (nth 0 pos))
-        (start-line (nth 1 pos))
-        (start-bol (nth 2 pos))
-        (start-off (+ 1 (nth 3 pos))) ;; counting like dijstra vs von neumann issue
-        (stop-line (nth 4 pos))
-        (stop-bol (nth 5 pos))
-        (stop-off (+ 1 (nth 6 pos))))
-    (make-overlay (+ (beli-line-pos start-line)
-                     (- start-off start-bol))
-                  (+ (beli-line-pos stop-line)
-                     (- stop-off stop-bol)))))
+(defun beluga--pos (_line _bol offset)
+  ;; According to http://caml.inria.fr/mantis/view.php?id=5159,
+  ;; `line' can refer to line numbers in various source files,
+  ;; whereas `bol' and `offset' refer to "character" (byte?) positions within
+  ;; the actual parsed stream.
+  ;; So if there might be #line directives, we need to do:
+  ;;  (save-excursion
+  ;;    (goto-char (point-min))
+  ;;    (forward-line (1- line)) ;Lines count from 1 :-(
+  ;;    (+ (point) (- offset bol)))
+  ;; But as long as we know there's no #line directive, we can ignore all that
+  ;; and use the more efficient code below.  When #line directives can appear,
+  ;; we will need to make further changes anyway, such as passing the file-name
+  ;; to select the appropriate buffer.
+  (+ (point-min) offset))
 
-(defun beli-hole-pos (num)
-  "Returns the position of the hole designed by the input."
-  (beli-send (concat "lochole " (number-to-string num)))
-  (sit-for 0 500)
-  (read (beli-receive)))
+(defun beluga--create-overlay (pos)
+  "Create an overlay at the position described by POS (a Loc.to_tuple)."
+  (let* (;; (file-name (nth 0 pos))
+         (start-line (nth 1 pos))
+         (start-bol (nth 2 pos))
+         (start-off (nth 3 pos))
+         (stop-line (nth 4 pos))
+         (stop-bol (nth 5 pos))
+         (stop-off (nth 6 pos))
+         (ol
+          (make-overlay (beluga--pos start-line start-bol start-off)
+                        (beluga--pos stop-line  stop-bol  stop-off))))
+    (overlay-put ol 'face 'beluga-holes)
+    ol))
 
-(defun beli-hole-num ()
-  "Returns the number of holes in the loaded file."
-  (beli-send "countholes")
-  (sit-for 0 500)
-  (string-to-number (beli-receive)))
-
-(defun beli-highlight-holes ()
-  "Creates overlays for each of the holes and color them."
+(defun beluga-highlight-holes ()
+  "Create overlays for each of the holes and color them."
   (interactive)
-  (let ((numholes (beli-hole-num)))
+  (beluga-erase-holes)
+  (let ((numholes (string-to-number (beluga--rpc "countholes"))))
     (dotimes (i numholes)
-      (let ((beli-hole (beli-create-overlay (beli-hole-pos i))))
-        (setq beli-holes-overlays beli-hole)
-        (overlay-put beli-hole 'priority 10)
-        (overlay-put beli-hole 'face '(background-color . "yellow"))
-;;        (overlay-put beli-hole 'face '(foreground-color . "white"))
+      (let* ((pos (read (beluga--rpc (format "lochole %d" i))))
+             (ol (beluga--create-overlay pos))
+             (info (beluga--rpc (format "printhole %d" i))))
+        (overlay-put ol 'help-echo info)
+        (push ol beluga--holes-overlays)
         ))))
 
-(defun beli-erase-holes ()
+(defun beluga-erase-holes ()
   (interactive)
-  (overlay-put beli-holes-overlays 'priority 0)
-  (overlay-put beli-holes-overlays 'face '(background-color . "white")))
+  (mapc #'delete-overlay beluga--holes-overlays)
+  (setq beluga--holes-overlays nil))
 
 
 ;;---------------------------- Loading of the mode ----------------------------;;
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.bel\\'" . beluga-mode))
-(add-to-list 'auto-mode-alist '("\\.sbel\\'" . beluga-mode))
+(add-to-list 'auto-mode-alist '("\\.s?bel\\'" . beluga-mode))
+
+(unless (fboundp 'prog-mode)
+  (defalias 'prog-mode #'fundamental-mode))
 
 ;;;###autoload
-(define-derived-mode beluga-mode nil "Beluga"
+(define-derived-mode beluga-mode prog-mode "Beluga"
   "Major mode to edit Beluga source code."
   (set (make-local-variable 'imenu-generic-expression)
        beluga-imenu-generic-expression)
@@ -335,34 +359,34 @@ its buffer."
   ;; SMIE setup.
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
   (if (fboundp 'smie-setup)
-      (smie-setup beluga-smie-grammar #'beluga-smie-indent-rules
+      ;; `beluga-smie-grammar' is defined further, because it needs to be
+      ;; defined after the `belugasmie-' stuff, which I'd rather not move
+      ;; up here.
+      (smie-setup (with-no-warnings beluga-smie-grammar)
+                  #'beluga-smie-indent-rules
                   :forward-token #'beluga-smie-forward-token
                   :backward-token #'beluga-smie-backward-token)
-    (belugasmie-setup beluga-smie-grammar beluga-smie-indent-rules)
-    (set (make-local-variable 'belugasmie-indent-basic) beluga-indent-basic)
-    (set (make-local-variable 'forward-sexp-function)
-         #'belugasmie-forward-sexp-command)
-    (set (make-local-variable 'belugasmie-forward-token-function)
-         #'beluga-smie-forward-token)
-    (set (make-local-variable 'belugasmie-backward-token-function)
-         #'beluga-smie-backward-token)
-    (set (make-local-variable 'belugasmie-closer-alist)
-         '(("<" . ">"))) ;; (t . ".")
-    ;; Only needed for interactive calls to blink-matching-open.
-    (set (make-local-variable 'blink-matching-check-function)
-         #'belugasmie-blink-matching-check)
-    (add-hook 'post-self-insert-hook
-              #'belugasmie-blink-matching-open 'append 'local)
-    (set (make-local-variable 'belugasmie-blink-matching-triggers) '(?>)))
+    (with-no-warnings
+      (belugasmie-setup beluga-smie-grammar beluga-smie-indent-rules)
+      (set (make-local-variable 'belugasmie-indent-basic) beluga-indent-basic)
+      (set (make-local-variable 'forward-sexp-function)
+           #'belugasmie-forward-sexp-command)
+      (set (make-local-variable 'belugasmie-forward-token-function)
+           #'beluga-smie-forward-token)
+      (set (make-local-variable 'belugasmie-backward-token-function)
+           #'beluga-smie-backward-token)
+      (set (make-local-variable 'belugasmie-closer-alist)
+           '(("<" . ">"))) ;; (t . ".")
+      ;; Only needed for interactive calls to blink-matching-open.
+      (set (make-local-variable 'blink-matching-check-function)
+           #'belugasmie-blink-matching-check)
+      (add-hook 'post-self-insert-hook
+                #'belugasmie-blink-matching-open 'append 'local)
+      (set (make-local-variable 'belugasmie-blink-matching-triggers) '(?>))))
 
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
-         (font-lock-syntactic-keywords . nil)))
-
-  ;; Beli startup.
-  (set (make-local-variable 'beli-buffer) ())
-  (set (make-local-variable 'beli-holes-overlays) ())
-  (beli-start))
+         (font-lock-syntactic-keywords . nil))))
 
 ;;---------------------------- SMIE ----------------------------;;
 ;;; Our own copy of (a version of) SMIE.
@@ -1614,6 +1638,10 @@ to which that point should be aligned, if we were to reindent it.")
 
 ;;; Beluga indentation and navigation via SMIE
 
+(defcustom beluga-indent-basic 4
+  "Basic amount of indentation."
+  :type 'integer)
+
 (defconst beluga-smie-punct-re
   (regexp-opt '("->" "<-" "=>" "\\" "." "<" ">" "," ";" "..")))
 
@@ -1772,10 +1800,6 @@ to which that point should be aligned, if we were to reindent it.")
      ((and (equal token "=") (smie-rule-parent-p "datatype")) 2)
      ((member token '("case" "fn" "mlam"))
       (if (smie-rule-prev-p "=>") (smie-rule-parent)))))))
-
-(defcustom beluga-indent-basic 4
-  "Basic amount of indentation."
-  :type 'integer)
 
 ;; (defcustom beluga-indent-args beluga-indent-basic
 ;;   "Amount of indentation of args below their function."

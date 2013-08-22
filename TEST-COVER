@@ -115,13 +115,14 @@ sleep 1
 
 # echo 'covering cases with non-empty context: '
 # # $INTERPRETER -noprint +t +coverage $* \
+ $INTERPRETER +t +coverage   t/success/cov-unsound.bel
  $INTERPRETER +t +coverage   copy/copy.bel
  $INTERPRETER +t +coverage   copy/copy-crec.bel
  $INTERPRETER +t +coverage   copy/copy-explicit.bel
  $INTERPRETER +t +coverage   copy/copy-simple.bel
  $INTERPRETER +t +coverage   copy/copy-simple-crec.bel
  $INTERPRETER +t +coverage   copy/copy-simple-explicit.bel
- $INTERPRETER +t +coverage   cut-elim-crec-cover.bel
+#  $INTERPRETER +t +coverage   cut-elim-crec-cover.bel
  $INTERPRETER +t +coverage   church-rosser/test.cfg
  $INTERPRETER +t +coverage   church-rosser/test-crec.cfg
  $INTERPRETER +t +coverage   church-rosser/test-crec-cover.cfg

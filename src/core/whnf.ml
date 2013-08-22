@@ -153,6 +153,10 @@ let newMVar n (cPsi, tA) = match n with
   | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [])
   | Some name -> Inst (name, ref None, cPsi, tA, ref [])
 
+let newSVar n (cPsi, cPhi) = match n with
+  | None -> SInst (Id.mk_name Id.NoName, ref None, cPsi, cPhi, ref [])
+  | Some name -> SInst (name, ref None, cPsi, cPhi, ref [])
+
 
 (* newMMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
  *
@@ -309,6 +313,9 @@ and mfrontMSub ft t = match ft with
   | MObj (phat, tM)     ->
       let phat = cnorm_psihat phat t in
         MObj (phat, cnorm(tM, t))
+  | SObj (phat, tM)     ->
+      let phat = cnorm_psihat phat t in
+        SObj (phat, cnormSub(tM, t))
 
   | PObj (phat, PVar (Offset k, s))  ->
       let phat = cnorm_psihat phat t in
@@ -715,7 +722,9 @@ and normSub s = match s with
 
   | Shift _      -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
-  | SVar (Offset offset, s') -> SVar (Offset offset, normSub s')
+  | SVar (Offset offset, n, s') -> SVar (Offset offset, n, normSub s')
+(*  | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, theta), n, s') ->
+    normSub *)
 
 and normFt ft = match ft with
   | Obj tM ->
@@ -1408,7 +1417,7 @@ and cnorm (tM, t) = match tM with
     | Shift (CtxShift (CtxName psi), k) -> s
     | Shift (_ , k ) -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
-    | SVar (Offset offset, s') -> SVar(Offset offset, cnormSub (s',t))
+    | SVar (Offset offset, n, s') -> SVar(Offset offset, n, cnormSub (s',t))
      (* substitution variables ignored for how -bp *)
 
 
@@ -1550,7 +1559,9 @@ and cnormMSub t = match t with
   | MDot (MObj(phat, tM), t) ->
       MDot (MObj (cnorm_psihat phat m_id,
                   norm(tM, LF.id)), cnormMSub t)
-
+  | MDot (SObj(phat, s), t) ->
+      MDot (SObj(cnorm_psihat phat m_id,
+                  normSub s), cnormMSub t)
   | MDot (CObj (cPsi), t) ->
         let t' = cnormMSub t in
         let cPsi' = normDCtx cPsi in
@@ -1595,7 +1606,7 @@ and cnormMSub t = match t with
 
   | MDot (MV u, t) -> MDot (MV u, cnormMSub t)
 
-
+  | MDot (MUndef, t) -> MDot (MUndef, cnormMSub t)
 
 (* ************************************************************** *)
 
@@ -2019,8 +2030,8 @@ and convSub subst1 subst2 = match (subst1, subst2) with
   | (Shift (psi,n), Shift (psi', k)) ->
       n = k && psi = psi'
 
-  | (SVar (Offset s1, sigma1), SVar (Offset s2, sigma2)) ->
-      s1 = s2 && convSub sigma1 sigma2
+  | (SVar (Offset s1, n1, sigma1), SVar (Offset s2, n2, sigma2)) ->
+      s1 = s2 && n1 = n2 && convSub sigma1 sigma2
 
   | (Dot (f, s), Dot (f', s')) ->
       convFront f f' && convSub s s'
@@ -2425,6 +2436,8 @@ let mctxPVarPos cD p =
   let rec normCTyp tau = match tau with
     | Comp.TypBase (loc, c, mS) ->
         Comp.TypBase (loc, c, normMetaSpine mS)
+    | Comp.TypCobase (loc, c, mS) ->
+        Comp.TypCobase (loc, c, normMetaSpine mS)
     | Comp.TypBox (loc, tA, cPsi)
       -> Comp.TypBox(loc, normTyp(tA, LF.id), normDCtx cPsi)
     | Comp.TypParam (loc, tA, cPsi)
@@ -2488,6 +2501,9 @@ let mctxPVarPos cD p =
       | (Comp.TypBase (loc, a, mS), t) ->
           let mS' = cnormMetaSpine (mS, t) in
             Comp.TypBase (loc, a, mS')
+      | (Comp.TypCobase (loc, a, mS), t) ->
+          let mS' = cnormMetaSpine (mS, t) in
+            Comp.TypCobase (loc, a, mS')
       | (Comp.TypBox (loc, tA, cPsi), t) ->
           let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
           let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
@@ -2553,6 +2569,9 @@ let mctxPVarPos cD p =
     | (Comp.TypBase (loc, c, mS) , t) ->
         let mS' = normMetaSpine (cnormMetaSpine (mS, t)) in
           (Comp.TypBase (loc, c, mS'), m_id)
+    | (Comp.TypCobase (loc, c, mS) , t) ->
+        let mS' = normMetaSpine (cnormMetaSpine (mS, t)) in
+          (Comp.TypCobase (loc, c, mS'), m_id)
 
     | (Comp.TypBox (loc, tA, cPsi), t)
       ->
@@ -2598,6 +2617,9 @@ let mctxPVarPos cD p =
 
     | (Comp.Fun (loc, x, e), t) -> Comp.Fun (loc, x, cnormExp (e,t))
 
+    | (Comp.Cofun (loc, bs), t) ->
+        Comp.Cofun (loc, List.map (fun (cps, e) -> (cps, cnormExp (e, t))) bs)
+
     | (Comp.CtxFun (loc, psi, e) , t ) ->
         Comp.CtxFun (loc, psi, cnormExp (e, mvar_dot1 t))
 
@@ -2632,6 +2654,7 @@ let mctxPVarPos cD p =
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i
     | (Comp.DataConst _, _ ) -> i
+    | (Comp.DataDest _, _ ) -> i
     | (Comp.Const _, _ ) -> i
 
     | (Comp.Apply (loc, i, e), t) -> Comp.Apply (loc, cnormExp' (i, t), cnormExp (e,t))
@@ -2820,6 +2843,12 @@ let mctxPVarPos cD p =
             convMetaSpine mS1 mS2
           else false
 
+    | ((Comp.TypCobase (_, c1, mS1), _t1), (Comp.TypCobase (_, c2, mS2), _t2)) ->
+          if c1 = c2 then
+            (* t1 = t2 = id by invariant *)
+            convMetaSpine mS1 mS2
+          else false
+
     | ((Comp.TypBox (_, tA1, cPsi1), _t1), (Comp.TypBox (_, tA2, cPsi2), _t2)) (* t1 = t2 = id *)
       ->
         convDCtx cPsi1 cPsi2
@@ -3002,6 +3031,7 @@ and closedMetaObj mO = match mO with
 let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true
   | Comp.TypBase (_, _c, mS) -> closedMetaSpine mS
+  | Comp.TypCobase (_, _c, mS) -> closedMetaSpine mS
   | Comp.TypBox (_ , tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
   | Comp.TypSub (_ , cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi
   | Comp.TypArr (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2

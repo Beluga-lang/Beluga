@@ -1,0 +1,33 @@
+label: type.
+term: type.
+ref: term -> term.
+!  : term -> term.
+assign: term -> term -> term.
+lbl: label -> term.
+
+mapsto: label -> term -> type.
+
+schema env = some [t:term] block l:label, u:mapsto l t;
+
+datatype Env : {g:env} ctype =
+| Empty : Env []
+| Cons  : Env [g]  -> Env [g, b: block (l:label, u: mapsto l V)];
+
+rec update : [g.label] -> [.term] -> Env [g] -> Env [g] = ? ;
+
+datatype Rel : {g:env} {h:env} ctype =
+| Same : Rel [g] [g]
+| Skip : Rel [g] [h] -> Rel [g] [h, b: block (l:label, u: mapsto l W)]
+| More : Rel [g] [h] -> Rel [g, b: block (l:label, u: mapsto l V)]
+                           [h, b:block (l:label, u:mapsto l W)];
+
+datatype Step : (g:env)(h:env) [g.term] -> [h.term] -> ctype =
+| E-Deref : Step [g.T..] [h.T'..]
+            -> Step [g.! (T ..) ] [h. ! (T' ..)]
+
+| E-Lookup: {#p: [g. block l:label, u: mapsto l (W ..)]}
+             Step [g. ! (lbl (#p.1 ..)) ] [g.W ..]
+
+| E-Assign3 : Update [g.#p.1] [g. V ..] [h]
+      -> Step [g. assign (lbl (#p.1 ..)) (V ..)]  [h. unit]
+;

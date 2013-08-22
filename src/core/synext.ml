@@ -42,7 +42,6 @@ module LF = struct
     | PVar  of Loc.t * name * sub
     | ProjName  of Loc.t * int * name
     | ProjPVar  of Loc.t * int * (name * sub)
-    | SVar  of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
 
   and spine =
     | Nil
@@ -52,6 +51,7 @@ module LF = struct
     | EmptySub of Loc.t
     | Dot      of Loc.t * sub * front
     | Id       of Loc.t
+    | SVar     of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
 
   and front =
     | Head     of head
@@ -110,7 +110,7 @@ module Comp = struct
    | MetaTyp of Loc.t * LF.dctx * LF.typ
    | MetaParamTyp of Loc.t * LF.dctx * LF.typ
 
- type mabstr = CObj | MObj | PObj
+ type mabstr = CObj | MObj | PObj | SObj
 
  type typ =                                     (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine
@@ -128,6 +128,7 @@ module Comp = struct
   and exp_chk =                            (* Computation-level expressions *)
      | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
      | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
+     | Cofun  of Loc.t * (copattern_spine * exp_chk) list  (*    | (cofun hd => e | tl => e') *)
      | CtxFun of Loc.t * name * exp_chk         (*    | FN f => e           *)
      | MLam   of Loc.t * (name * mabstr) * exp_chk  (*| mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
@@ -151,6 +152,9 @@ module Comp = struct
      | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
                                                 (*    | i [Psi hat. M]      *)
      | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
+     | MSApp   of Loc.t * exp_syn * (LF.psi_hat * LF.sub)
+                                                (*    | i [Psi hat $ sigma]      *)
+     | MAnnSApp   of Loc.t * exp_syn * (LF.dctx * LF.sub) (* i [Psi $ sigma]     *)
      | BoxVal of Loc.t * LF.dctx * LF.normal
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
@@ -190,6 +194,11 @@ module Comp = struct
   and branch_pattern =
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
+
+  and copattern_spine =
+    | CopatNil of Loc.t
+    | CopatApp of Loc.t * name * copattern_spine
+    | CopatMeta of Loc.t * meta_obj * copattern_spine
 
  type rec_fun = RecFun of name * typ * exp_chk
 
@@ -238,7 +247,9 @@ module Sgn = struct
     | Const    of Loc.t * name * LF.typ
     | Typ      of Loc.t * name * LF.kind
     | CompTyp  of Loc.t * name * Comp.kind
+    | CompCotyp of Loc.t * name * Comp.kind
     | CompConst of Loc.t * name * Comp.typ
+    | CompDest of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema   of Loc.t * name * LF.schema
     | Pragma   of Loc.t * pragma

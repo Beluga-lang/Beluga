@@ -7,10 +7,10 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
+let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 (* ********************************************************************************)
 
-exception NotImplemented
+(* exception NotImplemented *)
 
 type error =
   | CtxOverGeneral
@@ -423,11 +423,19 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 
   | Apx.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
 
+  | Apx.Comp.Cofun (loc, bs) ->
+      (dprint (fun () -> "[cnormApxExp] Cofun ");
+       let f = function (csp, e) -> (csp, cnormApxExp cD delta e (cD'', t)) in
+         Apx.Comp.Cofun (loc, List.map f bs))
+
 
 and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var _x -> i
   | Apx.Comp.DataConst _c -> (dprint (fun () -> "[cnormApxExp'] Const " ^
 				       (R.render_cid_comp_const _c));
+      i)
+  | Apx.Comp.DataDest _c -> (dprint (fun () -> "[cnormApxExp'] Dest " ^
+				       (R.render_cid_comp_dest _c));
       i)
   | Apx.Comp.Const _c -> (dprint (fun () -> "[cnormApxExp'] Const " ^
 				    R.render_cid_prog _c ); i)
@@ -1068,10 +1076,16 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
 
   | Apx.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
 
+  | Apx.Comp.Cofun (loc, bs) ->
+      let f = function (csp, e) -> (csp, fmvApxExp fMVs cD d_param e) in
+        Apx.Comp.Cofun (loc, List.map f bs)
+          (*Might be needed to get metaobjs from csp before call fmvApxExp on e *)
+
 
 and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
   | Apx.Comp.Var _x -> i
   | Apx.Comp.DataConst _c -> i
+  | Apx.Comp.DataDest _c -> i
   | Apx.Comp.Const _c -> i
   | Apx.Comp.Apply (loc, i, e) ->
       let i' = fmvApxExp' fMVs cD d_param  i in

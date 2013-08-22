@@ -72,6 +72,8 @@ let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
 (* The following is for coverage. Probably needs to be phased out. *)
 let information = ref []
 
+let resetInformation () = information := []
+
 let getInformation () =
   match List.rev !information with
     | [] -> ""

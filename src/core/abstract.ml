@@ -31,6 +31,33 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
+let getLocation' (loc, i) = match i with
+  | Comp.MApp (loc, _, _ ) -> loc
+  | Comp.CtxApp (loc, _, _ ) -> loc
+  | Comp.Apply (loc, _, _ ) -> loc
+  | Comp.Equal (loc, _, _ ) -> loc
+  | Comp.PairVal (loc, _ , _) -> loc
+  | _ -> loc
+
+let getLocation e = match e with
+  | Comp.Syn (loc , i ) ->
+    getLocation' (loc, i)
+  | Comp.Rec (loc, _ , _ ) -> loc
+  | Comp.Fun (loc, _, _ ) -> loc
+  | Comp.Cofun (loc, _ ) -> loc
+  | Comp.MLam (loc, _, _) -> loc
+  | Comp.Pair (loc, _, _ ) -> loc
+  | Comp.LetPair (loc, _, _ ) -> loc
+  | Comp.CtxFun (loc, _, _ ) -> loc
+  | Comp.Box (loc, _, _ )    -> loc
+  | Comp.SBox (loc, _, _) -> loc
+  | Comp.Case (loc, _, _, _ ) -> loc
+  | Comp.If (loc, _, _, _ ) -> loc
+  | Comp.Hole loc -> loc
+
+
+
+
 let string_of_varvariant = function
   | VariantFV  -> "free variables"
   | VariantFCV -> "free context variables"
@@ -51,7 +78,7 @@ let _ = Error.register_printer
         | LeftoverVars VariantFCV ->
           Format.fprintf ppf "Abstraction not valid LF-type because of leftover context variable"
         | LeftoverVars VariantMV ->
-          Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
+          Format.fprintf ppf "Leftover meta-variables in computation-level expression; implicit arguments cannot be determined uniquely. Please provide a type annotation"
         | LeftoverVars (VariantMMV | VariantMPV as varvariant) ->
           Format.fprintf ppf
             ("Encountered %s,@ which we cannot abstract over@ \
@@ -855,8 +882,9 @@ and collectSub p cQ phat s = match s with
      let (cQ1, s) = collectSub p cQ phat  s' in
        (cQ1, I.Dot (I.Undef, s)))
 
-  | I.SVar (I.Offset _offset, s) ->
-       collectSub p cQ phat s
+  | I.SVar (I.Offset offset, n, s) ->
+    let (cQ1,s') = collectSub p cQ phat s in
+       (cQ1, I.SVar(I.Offset offset, n, s'))
 
 
 (* collectMSub p cQ theta = cQ' *)
@@ -1532,8 +1560,8 @@ and abstractMVarSub' cQ offset s = match s with
   | I.Dot (I.Obj tM, s) ->
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.Offset s, sigma) ->
-      I.SVar (I.Offset s, abstractMVarSub' cQ offset sigma)
+  | I.SVar (I.Offset s, n, sigma) ->
+      I.SVar (I.Offset s, n, abstractMVarSub' cQ offset sigma)
 
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)
@@ -1812,6 +1840,9 @@ let rec collectCompTyp p cQ tau = match tau with
   | Comp.TypBase (loc, a, ms) ->
       let (cQ', ms') = collect_meta_spine p cQ ms in
         (cQ', Comp.TypBase (loc, a, ms'))
+  | Comp.TypCobase (loc, a, ms) ->
+      let (cQ', ms') = collect_meta_spine p cQ ms in
+        (cQ', Comp.TypCobase (loc, a, ms'))
 
   | Comp.TypBox (loc, tA, cPsi) ->
       let phat = Context.dctxToHat cPsi in
@@ -1888,6 +1919,10 @@ let rec collectExp cQ e = match e with
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.Fun (loc, x, e'))
 
+  | Comp.Cofun (loc, bs) ->
+      let (cQ', bs') = collectCofuns cQ bs in
+        (cQ', Comp.Cofun (loc, bs'))
+
   | Comp.MLam (loc, u, e) ->
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.MLam (loc, u, e'))
@@ -1938,6 +1973,7 @@ let rec collectExp cQ e = match e with
 and collectExp' cQ i = match i with
   | Comp.Var _x -> (cQ , i)
   | Comp.DataConst _c ->  (cQ , i)
+  | Comp.DataDest _c -> (cQ , i)
   | Comp.Const _c ->  (cQ , i)
   | Comp.Apply (loc, i, e) ->
       let (cQ', i') = collectExp' cQ i  in
@@ -1980,6 +2016,23 @@ and collectExp' cQ i = match i with
 
   | Comp.Boolean b -> (cQ, Comp.Boolean b)
 
+and collectCofun cQ csp = match csp with
+  | Comp.CopatNil loc -> (cQ, Comp.CopatNil loc)
+  | Comp.CopatApp (loc, dest, csp') ->
+      let (cQ, csp') = collectCofun cQ csp' in
+        (cQ, Comp.CopatApp (loc, dest, csp'))
+  | Comp.CopatMeta (loc, cM, csp') ->
+      let (cQ, cM') = collect_meta_obj 0 cQ cM in
+      let (cQ, csp') = collectCofun cQ csp' in
+        (cQ, Comp.CopatMeta (loc, cM', csp'))
+
+and collectCofuns cQ csps = match csps with
+  | [] -> (cQ, [])
+  | (c, e)::csps' ->
+      let (cQ', c') = collectCofun cQ c in
+      let (cQ2, e') = collectExp cQ' e in
+      let (cQ2', csps'') =  collectCofuns cQ' csps' in
+        (cQ2', (c', e')::csps'')
 
 and collectPatObj cQ pat = match pat with
   | Comp.PatEmpty (loc, cPsi) ->
@@ -2104,6 +2157,9 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypBase (loc, a, cS) ->
       let cS' = abstractMVarMetaSpine cQ offset cS in
         Comp.TypBase (loc, a , cS')
+  | Comp.TypCobase (loc, a, cS) ->
+      let cS' = abstractMVarMetaSpine cQ offset cS in
+        Comp.TypCobase (loc, a , cS')
   | Comp.TypBox (loc, tA, cPsi) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
@@ -2390,11 +2446,12 @@ let abstrSubPattern cD1 cPsi1  sigma cPhi1 =
 
 let abstrExp e =
   let (cQ, e')    = collectExp I.Empty e in
+  let loc = getLocation e' in
     begin match cQ with
         I.Empty -> e'
       | _       ->
             let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
-              raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMV))
+              raise (Error (loc, LeftoverVars VariantMV))
     end
 
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)

@@ -11,9 +11,9 @@ tref: term T -> term (ref T).
 assign: term (ref T) -> term T -> term unit.
 lbl: loc T -> term (ref T).
 
-value: term T -> type.
-v_l : value (lbl l).
-v_u : value tunit.
+value: {T:tp}term T -> type.
+v_l : value (ref T) (lbl L).
+v_u : value unit tunit.
 
 schema lctx = loc T;
 
@@ -21,12 +21,24 @@ schema lctx = loc T;
 % as an environment; the store is a possibly cyclic set and the store typing
 % is context of types.
 
+
 datatype Env' : {g:lctx} {g':lctx} ctype =
 | Empty : Env' [g0] []
-| Cons  : {V:[g0.term T]} [g0.value (V ..)] -> Env' [g0] [g]  -> Env' [g0] [g, l:loc T] ;
+| Cons  : {V:[g0.term T]}[g0.value T (V ..)] -> Env' [g0] [g]  -> Env' [g0] [g, l:loc T] ;
 
 datatype Env: {g:lctx} ctype =
 Env : Env' [g] [g] -> Env [g] ;
+
+%{
+datatype env : type =
+| empty : env
+| cons  : value T V -> loc T -> env -> env
+
+datatype Env: [g.env] -> ctype =
+| Empty : Env [.empty]
+| Cons  :
+}%
+
 
 datatype Clo : (g:lctx) {T:[.tp]} [g.term T] -> ctype =
 | Clo : Env [g] -> {M:[g.term T]} Clo [.T]  [g.M ..];
@@ -36,25 +48,29 @@ datatype Result : [.tp] -> ctype =
 
 datatype ValOption : (g:lctx) [g.term T] -> ctype =
 | None : ValOption [g.M ..]
-| Some : {M:[g.term T]}[g.value (M ..)] -> ValOption [g.M ..]
+| Some : [g.value T (M ..)] -> ValOption [g.M ..]
 ;
 
 
 rec is_value : {g:lctx}{M:[g.term T]} ValOption [g.M ..] =
 mlam g => mlam M => case [g.M ..] of
-| [g. lbl (#p ..)] => Some [g.M ..] [g.v_l]
-| [g. tunit] => Some [g.M ..] [g.v_u]
+| [g. lbl (#p ..)] => Some [g.v_l]
+| [g. tunit] => Some [g.v_u]
 | [g. E .. ] => None
 ;
 
-rec lookup :{g:lctx} {#p:[g.loc T]}  Env [g] -> Result [.T]  =
-mlam g => mlam #p => fn env => case [g.#p ..] of
-| [g,l:loc T. l] => let Env (Cons [g,l:loc T.V .. l] v env') = env in
-Result env [g,l:loc T.V ..]
+rec lookup :{g:lctx} {#p:[g.loc T]} Env [g] -> Result [.T]  =
+mlam g => mlam #p => fn env => case  [g.#p..] of
+| [g,l:loc T. l] =>
+let Env (Cons [g0.V ..] v env') = env in
+   Result env [g0.V ..]
+| [g,l:loc T. #p .. ] =>
+let Env (Cons v env') = env in
+lookup [g] [g.#p ..] env'
 ;
 
-rec update : {g:lctx} {#p:[g.loc T]} Env [g] -> {V:[g.term T]}[g.value V]
--> Env [g]  = ? ;
+rec update : {g:lctx} {#p:[g.loc T]} Env [g] -> {V:[g.term T]}[g.value (V ..)]
+             -> Env [g]  = ? ;
 
 rec weaken_env : {T:[.tp]} Env' [g] [g] -> Env' [g, l:loc T] [g] = ? ;
 
@@ -63,9 +79,9 @@ fn cl => case cl of
 | Clo env  [g. ! (lbl (#p ..))] =>  lookup [g] [g.#p ..] env
 | Clo env  [g. ! (E ..)] =>
   let Result env' [h.E' ..] = step (Clo env [g. E .. ] ) in
-  Result env' [h. ! (E' ..) ]
+    Result env' [h. ! (E' ..) ]
 
-| Clo env [g.tunit] => Result env [g.tunit]
+% | Clo env [g.tunit] => Result env [g.tunit]
 
 | Clo env [g.tref (E ..)] =>
   case is_value [g] [g.E ..] of

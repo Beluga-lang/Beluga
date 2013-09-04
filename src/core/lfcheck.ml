@@ -349,7 +349,7 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | Null, Shift (NoCtxShift, 0), Null -> ()
 
-    | cPhi, SVar (Offset offset, (NoCtxShift, 0), s'), cPsi ->
+    | cPhi, SVar (Offset offset, (_ , 0), s'), cPsi ->
       (*  cD ; cPhi |- SVar (offset, n, s') : cPsi
           cD(offset) =  cPhi_1[cPsi_1]
                           Psi'  |- shift n : Psi

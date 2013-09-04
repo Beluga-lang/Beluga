@@ -34,7 +34,7 @@ datatype Reduce : {A:[.tp]} {M:[.tm A]} ctype =
   -> Reduce [. arr A B] [. M]
 ;
 
-rec haltsMstep : {MS:[.mstep M M']} [. halts M'] -> [. halts M] =
+%{ rec haltsMstep : {MS:[.mstep M M']} [. halts M'] -> [. halts M] =
 mlam MS => fn h => let [.halts/m MS' V] = h in
  [. halts/m (trans MS MS') V]
 ;
@@ -53,13 +53,16 @@ fn r => case r of
 | I h => h
 | Arr h f => h
 ;
-
+}%
 %  h |- #s : g
-datatype RedSub : (g:ctx){#S:g[]} ctype =
-| Nil : RedSub  < $ ^ >
-| Dot : RedSub  < $ #S[^] > -> Reduce [.A] [.M] -> RedSub  < $ #S[^] M >
+datatype RedSub : {g:ctx}{#S:g[]} ctype =
+| Nil : RedSub  [ ] < $ ^ >
+| Dot : {#S:g[]}RedSub  [g] < $ #S[^] > -> Reduce [.A] [.M]
+        -> RedSub [g, x:tm A] < $ #S[^] M >
 ;
 
+
+%{
 rec lookup : {g:ctx}{#p:[g.tm A]} RedSub < $ #S[^]> -> Reduce [.T] [. #p #S[^]] =
 mlam g => mlam #p => fn rs =>
 case [g. #p ..] of
@@ -83,3 +86,4 @@ mlam g => mlam M => fn rs => case [g. M ..] of
 rec weakNorm : {M:[. tm A]} [. halts M] =
 mlam M => cr1 (eval [] [. M] Nil)
 ;
+}%

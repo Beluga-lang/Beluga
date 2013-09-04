@@ -468,7 +468,6 @@ module Int = struct
             fprintf ppf "^(ctxShift ( _ ) + %s)"
               (R.render_offset n)
 
-
         | LF.Shift (LF.NegCtxShift (LF.CtxOffset psi), n) ->
             fprintf ppf "^(NegShift(%s) + %s)"
               (R.render_ctx_var cD psi)
@@ -479,10 +478,15 @@ module Int = struct
             fprintf ppf "^(NegShift( _ ) + %s)"
               (R.render_offset n)
 
-        | LF.SVar (c, (_ , n), s) ->
+        | LF.SVar (c, (cshift , n), s) ->
+            let cs = match cshift with
+              | LF.NegCtxShift _ -> "^NegCtxShift _ + " ^ string_of_int n
+              | LF.NoCtxShift _ -> "^NoCtxShift _ + " ^ string_of_int n
+              | LF.CtxShift _ -> "CtxShift _ + " ^ string_of_int n
+            in
             (* Ignore CtxShifts for pretty printing *)
-            fprintf ppf "#^%d%a[%a]"
-              n
+            fprintf ppf "#^(%s)%a[%a]"
+              cs
               (fmt_ppr_lf_cvar cD lvl) c
               (self lvl) s
 

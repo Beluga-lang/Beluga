@@ -62,14 +62,17 @@ datatype RedSub : {g:ctx}{#S:g[]} ctype =
 ;
 
 
-%{
-rec lookup : {g:ctx}{#p:[g.tm A]} RedSub < $ #S[^]> -> Reduce [.T] [. #p #S[^]] =
-mlam g => mlam #p => fn rs =>
-case [g. #p ..] of
- | [g',x:tm A. x] => let Dot rs' rN = rs in rN
- | [g',x:tm A. #q ..] => let Dot rs' rN = rs in lookup [g'] [g'. #q ..] rs'
+
+rec lookup : {g:ctx}{#S:g[]}{#p:[g.tm A]} RedSub [g] < $ #S[^]> -> Reduce [.A] [. #p #S[^]] =
+
+ mlam g => mlam #S => mlam #p => fn rs =>
+ case [g. #p ..] of
+ | [g',x:tm A. x] => ? % let Dot < $ #S[^] > rs' rN = rs in rN
+% | [g',x:tm A. #q ..] => let Dot < $ #S[^] > rs' rN = rs in
+%                      lookup [g'] [ $ #S[^] ] [g'. #q ..] rs'
 ;
 
+%{
 rec eval : {g:ctx}{M:[g.tm (A ..)]} RedSub < $ #S[^]> -> Reduce [.A] [. M #S[^]] =
 mlam g => mlam M => fn rs => case [g. M ..] of
 | [g. #p ..] => lookup [g] [g. #p ..] rs
@@ -86,4 +89,5 @@ mlam g => mlam M => fn rs => case [g. M ..] of
 rec weakNorm : {M:[. tm A]} [. halts M] =
 mlam M => cr1 (eval [] [. M] Nil)
 ;
+
 }%

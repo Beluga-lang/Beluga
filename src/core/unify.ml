@@ -1613,7 +1613,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
         (dprint (fun () -> "[pruneSubst] sv with offset " ^ string_of_int n);
          raise (Error "[pruneSubst] Case not implemented"))
 *)
-    | (FSVar (n, sigma), cPsi1) ->
+    | (FSVar (n, _ , sigma), cPsi1) ->
         (dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name n);
          raise (Error "[pruneSubst] Case not implemented"))
     | (MSVar (_ , _ ), _cPsi1) ->

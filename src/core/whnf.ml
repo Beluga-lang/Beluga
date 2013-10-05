@@ -729,7 +729,7 @@ and normSub s = match s with
 
   | Shift _      -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
-  | FSVar ( s , sigma) -> FSVar (s, normSub sigma)
+  | FSVar ( s , n, sigma) -> FSVar (s, n, normSub sigma)
   | SVar (Offset offset, n, s') -> SVar (Offset offset, n, normSub s')
   | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), (cshift, n), s') ->
     (* cPsi |- s : cPhi  and  cPhi |- Shift n : cPhi'
@@ -1466,6 +1466,9 @@ and cnorm (tM, t) = match tM with
 
     | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, n, s') ->
       SVar (sigma, n , cnormSub (s',t))
+
+    | FSVar (s_name,  n, s') ->
+        FSVar (s_name, n, cnormSub (s', t))
 
     | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs), (mt,s')) ->
       let sigma = cnormSub (s, mt) in

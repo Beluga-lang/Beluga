@@ -410,9 +410,10 @@ module Int = struct
         | LF.Shift (LF.CtxShift _, _) when not hasCtxVar     -> fprintf ppf "????"
         | LF.Shift (LF.NegCtxShift _, _) when hasCtxVar  -> fprintf ppf ".."    (* ??? *)
         | LF.Shift (LF.NegCtxShift _, _) when not hasCtxVar  ->    ()    (* ??? *)
-        | LF.FSVar (s_name, s) ->
-          fprintf ppf "FSV %s[%a]"
+        | LF.FSVar (s_name, (_, n), s) ->
+          fprintf ppf "$ FSV %s^%d[%a]"
             (R.render_name s_name )
+            n
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
         | LF.SVar (c, (_ , n), s) ->
@@ -478,6 +479,17 @@ module Int = struct
             fprintf ppf "^(NegShift( _ ) + %s)"
               (R.render_offset n)
 
+        | LF.FSVar (s_name, (cshift , n), s) ->
+            let cs = match cshift with
+              | LF.NegCtxShift _ -> "^NegCtxShift _ + " ^ string_of_int n
+              | LF.NoCtxShift _ -> "^NoCtxShift _ + " ^ string_of_int n
+              | LF.CtxShift _ -> "CtxShift _ + " ^ string_of_int n
+            in
+          fprintf ppf "$ FSV %s^%s[%a]"
+            (R.render_name s_name )
+            cs
+            (fmt_ppr_lf_sub cD cPsi lvl) s
+
         | LF.SVar (c, (cshift , n), s) ->
             let cs = match cshift with
               | LF.NegCtxShift _ -> "^NegCtxShift _ + " ^ string_of_int n
@@ -491,11 +503,11 @@ module Int = struct
               (self lvl) s
 
         | LF.Dot (f, s) ->
-            fprintf ppf "%a . %a"
+            fprintf ppf "%a  %a"
               (fmt_ppr_lf_front cD cPsi 1) f
               (self lvl) s
       in
-        fprintf ppf "[%a]"
+        fprintf ppf "[ %a ]"
           (self lvl) s
 
 
@@ -916,13 +928,13 @@ module Int = struct
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)
-      | Comp.MetaSObj (_, phat, tM) ->
+      | Comp.MetaSObj (_, phat, s) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx phat in
-            fprintf ppf "%s[%a$ %a]%s"
+            fprintf ppf "%s[%a. $ %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) tM
+              (fmt_ppr_lf_sub cD cPsi 0) s
               (r_paren_if cond)
       | Comp.MetaSObjAnn (_, cPsi, tM) ->
           let cond = lvl > 1 in

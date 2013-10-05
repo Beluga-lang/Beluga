@@ -548,7 +548,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
       else
          raise (Error.Violation ("Contexts do not match - MetaSObj not of the appropriate meta-type" ))
 
-  | (Apx.Comp.MetaSubAnn (loc, cPhi, tM), (Int.Comp.MetaSubTyp (tA, cPsi), theta)) ->
+  | (Apx.Comp.MetaSubAnn (loc, cPhi, s), (Int.Comp.MetaSubTyp (cPsi0, cPsi), theta)) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in
@@ -561,14 +561,14 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
         with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
       let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in
-      let tA' = C.cnormDCtx (tA, theta) in
-      let _        = dprint (fun () -> "[elMetaSObj] tA = " ^ P.dctxToString cD tA' ) in
-      let tM' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' tM tA' in
+      let cPsi0' = C.cnormDCtx (cPsi0, theta) in
+      let _        = dprint (fun () -> "[elMetaSObj] (domain) cPsi0 = " ^ P.dctxToString cD cPsi0' ) in
+      let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cPsi0' in
       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
       let _        = Unify.resetGlobalCnstrs () in
         (* RETURN POSSIBLY A PARAMETER OBJECT *)
-      let _        = dprint (fun () -> "[elMetaSObj] tM = " ^ P.subToString cD cPsi' tM') in
-        Int.Comp.MetaSObj (loc, phat, tM')
+      let _        = dprint (fun () -> "[elMetaSObj] s = " ^ P.subToString cD cPsi' s') in
+        Int.Comp.MetaSObj (loc, phat, s')
 
   | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.Comp.MetaTyp (tA, cPsi), theta)) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in

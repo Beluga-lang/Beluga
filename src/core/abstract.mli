@@ -8,6 +8,7 @@ open Syntax.Int
 type varvariant =
     VariantFV | VariantFCV | VariantMMV | VariantMPV
   | VariantMV | VariantFMV | VariantPV | VariantFPV | VariantSV
+  | VariantFSV
 
 type error =
   | LeftoverVars of varvariant

@@ -121,11 +121,12 @@ module LF = struct
 
           | SVar (offset, (NoCtxShift, k), s') ->
             (* if    . |- offset : psi  then return s' *)
-            SVar (offset, (ctx_shift, k + n), s')
+            SVar (offset, (NoCtxShift, k + n), s')
 
           | SVar (offset, (ctx_shift, k), s') ->
             (* ctx_shift is NoCtxShift *)
             SVar (offset, (ctx_shift, k + n), s')
+
           | FSVar (s, (NegCtxShift psi', k), s') ->
                 comp (Shift (NoCtxShift, k)) s'
           | FSVar (s, (ctx_shift, k), s') ->

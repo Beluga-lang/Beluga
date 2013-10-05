@@ -444,6 +444,8 @@ let rec isPatSub s = match s with
   | Apx.LF.SVar _ -> false
 
 
+  | _ -> false
+
 (* ******************************************************************* *)
 (* isProjPatSub s = true *)
 let rec isProjPatSub s = match s with
@@ -461,6 +463,7 @@ let rec isProjPatSub s = match s with
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
   | Apx.LF.SVar _ -> false
+  | Apx.LF.FSVar _ -> false
 
 let rec flattenProjPat s conv_list = match s with
   | Apx.LF.Id cpsi -> Apx.LF.Id cpsi

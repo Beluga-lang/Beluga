@@ -2104,9 +2104,19 @@ and convSub subst1 subst2 = match (subst1, subst2) with
   | (Shift (psi,n), Shift (psi', k)) ->
       n = k && psi = psi'
 
+  | (SVar (Offset _s1, (CtxShift _ , 0) , _sigma1), Shift (NoCtxShift , 0 ) ) ->
+      true
+
+  | (Shift (NoCtxShift , 0 ) , SVar (Offset _s1, (CtxShift _ , 0) , _sigma1) ) ->
+      true
+
   | (SVar (Offset s1, n1, sigma1), SVar (Offset s2, n2, sigma2)) ->
+      (match n1 , n2 with
+        | (NoCtxShift , k) , (NoCtxShift , k') ->  k = k'
+        | (CtxShift _ , k) , (CtxShift _ , k') -> k = k'
+        | (NegCtxShift _ , k) , (NegCtxShift _ , k') -> k = k') &&
      s1 = s2 &&
-     n1 = n2 && convSub sigma1 sigma2
+     convSub sigma1 sigma2
 
   | (SVar (SInst (_, s1, _, _ , _), n1, sigma1), SVar (SInst(_, s2, _ , _ , _), n2, sigma2)) ->
       s1 == s2 && n1 = n2 && convSub sigma1 sigma2

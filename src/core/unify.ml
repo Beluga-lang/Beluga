@@ -1048,6 +1048,13 @@ let rec blockdeclInDctx cPsi = match cPsi with
                 SVar(Offset v, (ctx_offset, n), invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
+    | (FSVar (s_name, n , t), cPsi1) ->
+        (dprint (fun () -> "invSub FSVar");
+        FSVar (s_name, n, invSub cD0 phat (t, cPsi1) ss rOccur))
+(*        if ssubst = id then s else
+        (dprint (fun () -> "invSub FSVar -- undefined") ; raise (Error "invSub for
+        free substitution variables -- not defined"))*)
+
     | _ -> (dprint (fun () -> "invSub -- undefined") ; raise (Error "invSub -- undefined"))
 
 
@@ -2386,11 +2393,11 @@ let rec blockdeclInDctx cPsi = match cPsi with
                                   P.mctxToString cD ^ ";\n" ^
                                   P.dctxToString cD cPsi1 ^ "\n  |- " ^
                                   P.normalToString cD cPsi1 (sM2', id) ^ "\n" ) in
-                 dprint (fun () -> "Instantiate meta^2-variable  " ^
-                                        P.normalToString cD0 cPsi sM1);
+                dprint (fun () -> "Instantiate meta^2-variable  " ^
+                          P.normalToString cD0 cPsi sM1);
                 instantiateMMVar (r, sM2', !cnstrs) ;
-                 dprint (fun () -> "   to : " ^
-                                        P.normalToString cD0 cPsi sM1)
+                dprint (fun () -> "   to : " ^
+                              P.normalToString cD0 cPsi sM1)
             with
               | NotInvertible ->
                 addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
@@ -3130,6 +3137,20 @@ let rec blockdeclInDctx cPsi = match cPsi with
               ()
             else
               raise (Error "Substitutions not well-typed")
+
+      | (FSVar (s1, n1, sigma1), FSVar (s2, n2, sigma2))
+        -> if s1 = s2 && n1 = n2 then
+          unifySub mflag cD0 cPsi sigma1 sigma2
+        else raise (Failure "FSVar mismatch")
+
+      | (Shift (NoCtxShift, 0), FSVar (_s , (CtxShift _ , 0), sigma1) ) ->
+          ()
+
+      | (FSVar (_s , (CtxShift _ , 0), sigma1) , Shift (NoCtxShift, 0) ) ->
+          ()
+
+      | (SVar(Offset s1, n1, sigma1), Shift (NoCtxShift, 0) ) -> ()
+      | (Shift (NoCtxShift, 0), SVar(Offset s1, n1, sigma1) ) -> ()
 
       | (SVar(Offset s1, n1, sigma1), SVar(Offset s2, n2, sigma2))
         -> if s1 = s2 && n1 = n2 then

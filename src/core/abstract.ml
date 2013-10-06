@@ -1670,7 +1670,11 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
   | I.SVar (I.Offset s, (ctx_offset, n), sigma) ->
-      I.SVar (I.Offset s, (ctx_offset, n), abstractMVarSub' cQ offset sigma)
+      let _ = dprint (fun () -> "[abstractMVarSub] d = " ^ string_of_int d) in
+(*      let k = lengthCollection cQ in
+      if s > d then I.SVar (I.Offset (s + k), (ctx_offset, n), abstractMVarSub' cQ offset sigma)
+      else*)
+        I.SVar (I.Offset s, (ctx_offset, n), abstractMVarSub' cQ offset sigma)
 
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)
@@ -1678,6 +1682,7 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
   | I.SVar (I.SInst (_n, _r, _cPsi, _cPhi, _cnstr), k, s') as sigma ->
     let s = index_of cQ (SV (Pure, sigma)) + d  in
     I.SVar (I.Offset s, k, abstractMVarSub' cQ offset s')
+
   | I.FSVar (s, (ctx_shift, n), sigma) ->
       let x = index_of cQ (FSV (Pure, s, None)) + d in
         I.SVar (I.Offset x, (ctx_shift, n), abstractMVarSub cQ offset sigma)
@@ -1817,13 +1822,19 @@ and abstractMVarCtx cQ l =  match cQ with
 
         I.Dec (cQ', FMV (Pure, u, Some (tA', cPsi')))
 
-
   | I.Dec (cQ, FPV (Pure, u, Some (tA, cPsi))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
       let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
       let tA'   = abstractMVarTyp cQ (l,0) (tA, LF.id) in
 
         I.Dec (cQ', FPV (Pure, u, Some (tA', cPsi')))
+
+  | I.Dec (cQ, FSV (Pure, u, Some (cPhi, cPsi))) ->
+      let cQ'   = abstractMVarCtx cQ (l-1) in
+      let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
+      let cPhi' = abstractMVarDctx cQ (l,0) cPhi in
+        I.Dec (cQ', FSV (Pure, u, Some (cPhi', cPsi')))
+
 
   | I.Dec (cQ, MV (Impure, _u)) ->
       abstractMVarCtx  cQ l
@@ -1841,6 +1852,9 @@ and abstractMVarCtx cQ l =  match cQ with
       abstractMVarCtx  cQ l
 
   | I.Dec (cQ, FPV (Impure, _q, _)) ->
+      abstractMVarCtx  cQ l
+
+  | I.Dec (cQ, FSV (Impure, _u, _)) ->
       abstractMVarCtx  cQ l
 
   | I.Dec (cQ, FMV (Impure, _u, _)) ->
@@ -1886,7 +1900,6 @@ let rec abstrMSub cQ t =
 
       | I.MDot (I.MV k, t) ->
           I.MDot (I.MV k, abstrMSub' t)
-
   in
     abstrMSub' t
 

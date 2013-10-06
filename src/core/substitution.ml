@@ -121,18 +121,23 @@ module LF = struct
 
           | SVar (offset, (NoCtxShift, k), s') ->
             (* if    . |- offset : psi  then return s' *)
-            SVar (offset, (NoCtxShift, k + n), s')
+            SVar (offset, (CtxShift psi, k + n), s')
 
-          | SVar (offset, (ctx_shift, k), s') ->
-            (* ctx_shift is NoCtxShift *)
+(*          | SVar (offset, (ctx_shift, k), s') ->
+            (* ctx_shift = CtxShift phi cannot happen *)
             SVar (offset, (ctx_shift, k + n), s')
-
+*)
           | FSVar (s, (NegCtxShift psi', k), s') ->
                 comp (Shift (NoCtxShift, k)) s'
-          | FSVar (s, (ctx_shift, k), s') ->
-              FSVar (s, (ctx_shift, k + n), s')
 
-(*          | _ ->  raise (NotComposable "Composition undefined - 2") *)
+          | FSVar (s, (NoCtxShift, k), s') ->
+              FSVar (s, (CtxShift psi, k + n), s')
+
+(*          | FSVar (s, (ctxShift, k), s') ->
+              (* ctxShift = CtxShift phi cannot happen *)
+              FSVar (s, (ctx_shift, k + n), s')
+*)
+          | _ ->  raise (NotComposable "Composition undefined - 2")
         in
           ctx_shift m s2
 

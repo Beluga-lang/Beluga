@@ -124,7 +124,12 @@ and recSgnDecl d =
             fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
 	    dprint (fun () ->  "\nDOUBLE CHECK for data type constant " ^a.string_of_name ^
             " successful!");
-        let _a = CompTyp.add (CompTyp.mk_entry a cK' i) in ()
+        let _a = CompTyp.add (CompTyp.mk_entry a cK' i) in
+          (if (!Debug.chatter) == 0 then ()
+          else (Format.printf "\ndatatype %s : @[%a@] = \n"
+                 (a.string_of_name)
+                 (P.fmt_ppr_cmp_kind Int.LF.Empty Pretty.std_lvl) cK'))
+
 
   | Ext.Sgn.CompCotyp (_ , a, extK) ->
         let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ a.string_of_name) in
@@ -168,7 +173,13 @@ and recSgnDecl d =
 	let _         = (Monitor.timer ("Data-type Constant: Type Check",
 					fun () -> Check.Comp.checkTyp cD tau'))
         in	let cid_ctypfamily = get_target_cid_comptyp tau' in
-        let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in ()
+        let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
+          (if (!Debug.chatter) == 0 then ()
+           else (Format.printf " | %s : @[%a@] \n"
+                   (c.string_of_name)
+                   (P.fmt_ppr_cmp_typ Int.LF.Empty Pretty.std_lvl) tau'))
+
+
 
    | Ext.Sgn.CompDest (_ , c, tau) ->
         let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ c.string_of_name) in

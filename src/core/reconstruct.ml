@@ -340,6 +340,7 @@ let elCDecl recT cD cdecl = match cdecl with
       let cPsi = Lfrecon.elDCtx recT cD psi in
       let tA   = Lfrecon.elTyp recT cD cPsi a in
         Int.LF.MDecl (u, tA, cPsi)
+
   | Apx.LF.PDecl (u, a, psi) ->
       let cPsi = Lfrecon.elDCtx recT cD psi in
       let tA   = Lfrecon.elTyp recT cD cPsi a in
@@ -826,6 +827,7 @@ let rec elCompTyp cD tau = match tau with
   | Apx.Comp.TypPiBox (cdecl, tau) ->
       let cdecl' = elCDecl Lfrecon.Pibox cD cdecl  in
       let tau'   = elCompTyp (Int.LF.Dec (cD, cdecl')) tau in
+      let _ = dprint (fun () -> "[elCompTyp] cD = " ^ P.mctxToString (Int.LF.Dec (cD, cdecl'))) in
         Int.Comp.TypPiBox ((cdecl', Int.Comp.Explicit), tau')
 
   | Apx.Comp.TypBool -> Int.Comp.TypBool

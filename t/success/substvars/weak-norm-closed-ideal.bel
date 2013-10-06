@@ -70,11 +70,12 @@ datatype RedSub : {g:ctx}{#S:g[]} ctype =
 ;
 
 
-
+%{ wrapper in reconstruct.ml which adds appropriate mlams in appropriate place
+   is too limited if we omit #S declaration }%
 rec lookup : % {g:ctx}{#S:g[]}{#p:[g.tm A]} RedSub [g] < $ #S[^]> -> Reduce [.A] [. #p #S[^]] =
 {g:ctx}{#S:g[]}{#p:[g.tm A]} RedSub [g] < $ #S[^]> -> Reduce [. #p #S[^]] =
  mlam g => mlam #S => mlam #p => fn rs => case [g. #p ..] of
- | [g',x:tm A. x] => ? % let Dot < $ #S[^] > rs' rN = rs in rN
+ | [g',x:tm A. x] => ? % let (Dot rs' rN) = rs in rN
 % | [g',x:tm A. #q ..] => let Dot < $ #S[^] > rs' rN = rs in
 %                      lookup [g'] [ $ #S[^] ] [g'. #q ..] rs'
 ;

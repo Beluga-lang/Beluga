@@ -1008,10 +1008,13 @@ let rec blockdeclInDctx cPsi = match cPsi with
          *)
     | (SVar (s, (NoCtxShift, 0), sigma), CtxVar psi) ->
         (* other cases ? -bp *)
-        let cPsi' = (match s with
-                     | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  offset in cPsi'
-                     | SInst (_ , {contents=None}, _cPhi, cPsi', _ ) -> cPsi'
+        let (cPhi, cPsi') = (match s with
+                     | Offset offset -> let (_, cPhi, _cPsi') = Whnf.mctxSDec cD0  offset in (cPhi, _cPsi')
+                     | SInst (_ , {contents=None}, cPhi, _cPsi', _ ) -> (cPhi, _cPsi')
                     ) in
+        let _ = dprint (fun () -> "[invSub]" ^ P.dctxToString cD0 (Context.hatToDCtx phat) ^ " |- "
+        ^ P.subToString cD0 (Context.hatToDCtx phat) sigma ^ " : " ^
+        P.dctxToString cD0 cPsi') in
         SVar(s, (NoCtxShift, 0), invSub cD0 phat (sigma, cPsi') ss rOccur)
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
@@ -1042,7 +1045,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           Dot (Obj tM', invSub cD0 phat (s', cPsi') ss rOccur)
 
     | (SVar (Offset s, (ctx_offset, n), t), cPsi1) -> (* This is probably buggy. Need to deal with the n *)
-        let (_, _tA, cPsi1) = Whnf.mctxSDec cD0 s in
+        let (_, _cPhi, cPsi1) = Whnf.mctxSDec cD0 s in
           begin match applyMSub s ms with
             | MV v ->
                 SVar(Offset v, (ctx_offset, n), invSub cD0 phat (t, cPsi1) ss rOccur)
@@ -1050,12 +1053,16 @@ let rec blockdeclInDctx cPsi = match cPsi with
           end
     | (FSVar (s_name, n , t), cPsi1) ->
         (dprint (fun () -> "invSub FSVar");
-        FSVar (s_name, n, invSub cD0 phat (t, cPsi1) ss rOccur))
+        let (_, SDecl (_, _cPhi,  cPsi')) = Store.FCVar.get s_name in
+        FSVar (s_name, n, invSub cD0 phat (t, cPsi') ss rOccur))
 (*        if ssubst = id then s else
         (dprint (fun () -> "invSub FSVar -- undefined") ; raise (Error "invSub for
         free substitution variables -- not defined"))*)
 
-    | _ -> (dprint (fun () -> "invSub -- undefined") ; raise (Error "invSub -- undefined"))
+    | (s, _ ) -> (dprint (fun () -> "invSub -- undefined: s = " ^
+                      P.subToString cD0 (Context.hatToDCtx phat) s) ;
+                  dprint (fun () -> "domain cPsi1 = " ^ P.dctxToString cD0 cPsi1);
+                  raise (Error "invSub --   undefined"))
 
 
 
@@ -1328,14 +1335,13 @@ let rec blockdeclInDctx cPsi = match cPsi with
                                           ^ " ) = " ^ P.dctxToString cD0 cPsi1) in
                         let _ = dprint (fun () -> "   cPsi' " ^ P.dctxToString cD0 cPsi') in
                         let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
-                              (*                        let (_, ssSubst) = ss in
-                                                        dprint (fun () -> "##       s  = " ^ P.subToString cD0 cPsi' s);
-                                                        dprint (fun () -> "##       t  = " ^ P.subToString cD0 cPsi' t);
-                                                        dprint (fun () -> "##       ss = " ^ P.subToString cD0 cPsi' ssSubst);
-                                                        dprint (fun () -> "##       s' = " ^ P.subToString cD0 cPsi' s');
-                                                        dprint (fun () -> "## comp t s = " ^ P.subToString cD0 cPsi' (comp t s));
-*)
-                              returnNeutral (MVar (Offset v, s'))
+                        let (_, ssSubst) = ss in
+                          dprint (fun () -> "##       s  = " ^ P.subToString cD0 cPsi' s);
+                          dprint (fun () -> "##       t  = " ^ P.subToString cD0 cPsi' t);
+                          dprint (fun () -> "##       ss = " ^ P.subToString cD0 cPsi' ssSubst);
+                          dprint (fun () -> "##       s' = " ^ P.subToString cD0 cPsi' s');
+                          dprint (fun () -> "## comp t s = " ^ P.subToString cD0 cPsi' (comp t s));
+                          returnNeutral (MVar (Offset v, s'))
                       with
                         | Error.Violation msg ->
                             raise (Failure ("ERROR: prune: " ^ msg ^
@@ -1700,6 +1706,16 @@ let rec blockdeclInDctx cPsi = match cPsi with
                     ) in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
           (id,CtxVar psi)
+
+    | (FSVar (s, (NoCtxShift,0), sigma), CtxVar psi) ->
+        (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
+               D ;Psi |- sigma : Phi
+               D;Psi'' |- ss <= Psi
+               [ss] ([s[sigma] ] id ) exists
+        *)
+        let (_, SDecl (_, _cPhi,  cPsi')) = Store.FCVar.get s in
+        let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
+          (id, CtxVar psi)
 
     (*(Dot (Head (HClo  .... )  to be added -bp
        SVar case (offset might not be 0 ) and domain is cPsi
@@ -3401,7 +3417,9 @@ let rec blockdeclInDctx cPsi = match cPsi with
       | (CtxVar cvar, CtxVar cvar') ->
           if cvar = cvar' then ()
           else
-             raise (Failure "Bound (named) context variable clash")
+            (dprint (fun () ->" [unifyDCtx] cPsi1 = " ^ P.dctxToString cD0 cPsi1)
+          ; dprint (fun () ->" [unifyDCtx] cPsi2 = " ^ P.dctxToString cD0 cPsi2);
+             raise (Failure "Bound (named) context variable clash"))
 
       | (DDec (cPsi1, TypDecl(_y , tA1)) , DDec (cPsi2, TypDecl(_x , tA2))) ->
             (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;
@@ -3827,6 +3845,13 @@ let unify_phat psihat phihat =
     let matchTyp cD0 cPsi sA sB =
       unifyTyp' Matching cD0 cPsi sA sB
 
+    let unifyCompTyp cD ttau ttau' =
+      begin try
+        unifyCompTyp cD ttau ttau'
+      with Failure msg ->
+        (dprint (fun () -> "[unifyCompTyp " ^ msg) ;
+         raise (Failure msg))
+      end
 end
 
 

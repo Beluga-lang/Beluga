@@ -482,7 +482,7 @@ module Int = struct
         | LF.FSVar (s_name, (cshift , n), s) ->
             let cs = match cshift with
               | LF.NegCtxShift _ -> "^NegCtxShift _ + " ^ string_of_int n
-              | LF.NoCtxShift _ -> "^NoCtxShift _ + " ^ string_of_int n
+              | LF.NoCtxShift -> "^NoCtxShift _ + " ^ string_of_int n
               | LF.CtxShift _ -> "CtxShift _ + " ^ string_of_int n
             in
           fprintf ppf "$ FSV %s^%s[%a]"
@@ -493,7 +493,7 @@ module Int = struct
         | LF.SVar (c, (cshift , n), s) ->
             let cs = match cshift with
               | LF.NegCtxShift _ -> "^NegCtxShift _ + " ^ string_of_int n
-              | LF.NoCtxShift _ -> "^NoCtxShift _ + " ^ string_of_int n
+              | LF.NoCtxShift -> "^NoCtxShift _ + " ^ string_of_int n
               | LF.CtxShift _ -> "CtxShift _ + " ^ string_of_int n
             in
             (* Ignore CtxShifts for pretty printing *)

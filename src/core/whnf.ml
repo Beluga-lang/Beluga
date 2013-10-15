@@ -740,8 +740,8 @@ and normSub s = match s with
   | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, n, s') ->
       SVar (sigma, n ,normSub s')
 
-  | MSVar (sigma, (mt, s')) ->
-      MSVar (sigma, (mt, normSub s'))
+  | MSVar (sigma, cshift, (mt, s')) ->
+      MSVar (sigma, cshift, (mt, normSub s'))
 
 and normFt ft = match ft with
   | Obj tM ->
@@ -1470,17 +1470,17 @@ and cnorm (tM, t) = match tM with
     | FSVar (s_name,  n, s') ->
         FSVar (s_name, n, cnormSub (s', t))
 
-    | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs), (mt,s')) ->
-      let sigma = cnormSub (s, mt) in
-      let sigma' = LF.comp sigma s' in
-        cnormSub (sigma',  t)
+    | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs),
+             (ctx_shift, n), (mt,s')) ->
+        let cshift = cnormSub (Shift (ctx_shift, n), t) in
+          LF.comp (cnormSub (LF.comp cshift s , mt)) s'
 
-    | MSVar (MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstr) as sigma, (mt, s')) ->
-     (* cD'      |- mt <= cD0   and cD' ; cPsi' |- s' <= |[mt]|cPsi *)
-      let sigma'  = cnormSub (s', t) in
-      let mt' = cnormMSub (mcomp mt t) in
-        MSVar (sigma, (mt', sigma'))
-     (* substitution variables ignored for how -bp *)
+    | MSVar (s ,
+             (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
+             (ctx_shift, n), (mt,s')) ->
+        let Shift (cshift, d) = cnormSub (Shift (ctx_shift, n) , t) in
+          MSVar (s, (cshift, d), (cnormMSub (mcomp mt t), cnormSub (s',t)))
+
 
 
   and cnormFront (ft, t) = match ft with

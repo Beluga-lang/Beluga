@@ -49,7 +49,7 @@ module LF = struct
     | BVar  of offset                         (* H ::= x                        *)
     | Const of cid_term                       (*   | c                          *)
     | MMVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
-    | MPVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
+    | MPVar of mm_var * (msub * sub)          (*   | p[t ; s]                   *)
     | MVar  of cvar * sub                     (*   | u[s]                       *)
     | PVar  of cvar * sub                     (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
@@ -70,11 +70,13 @@ module LF = struct
 
   and sub =                                   (* Substitutions                  *)
     | Shift of ctx_offset * offset            (* sigma ::= ^(psi,n)             *)
-    | SVar  of cvar * (ctx_offset * offset) * sub (*   | s[sigma]               *)
-    | FSVar of name * (ctx_offset * offset) * sub (*   | s[sigma]               *)
-(*    | FSVar of name *  sub                    (*   | s[sigma]               *) *)
+    | SVar  of cvar *
+        (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
+    | FSVar of name *
+        (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*       | Ft . s                 *)
-    | MSVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
+    | MSVar of mm_var *
+        (ctx_offset * offset) * (msub * sub)  (*   | u[t ; s]                   *)
 
   and front =                                 (* Fronts:                        *)
     | Head of head                            (* Ft ::= H                       *)

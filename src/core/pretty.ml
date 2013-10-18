@@ -433,10 +433,11 @@ module Int = struct
                (fmt_ppr_lf_cvar cD lvl) c
                (self lvl) s
 
-        | LF.MSVar (_sigma, (t,s)) ->
-            fprintf ppf "#??S[%a ; %a]"
-            (fmt_ppr_lf_msub cD lvl) t
-               (self lvl) s
+        | LF.MSVar (_sigma, (_ , n), (t,s)) ->
+            fprintf ppf "#?S^%d[%a ; %a]"
+              n
+              (fmt_ppr_lf_msub cD lvl) t
+              (self lvl) s
 
         | LF.Dot (f, s) when hasCtxVar ->
             fprintf ppf "%a %a"

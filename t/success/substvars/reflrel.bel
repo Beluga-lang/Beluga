@@ -12,7 +12,7 @@ schema xaG = block x:tm, u:aeq x x;
 
 datatype CtxRel : {phi:xG} {psi: xaG} {#S:phi[psi]} ctype =
 | Empty : CtxRel [] [] < $ ^ >
-| Dot   : {phi:xG}{psi:xaG}{#S:phi[psi]}
+| Dot   : % {phi:xG}{psi:xaG}{#S:phi[psi]}
               CtxRel [phi] [psi] <psi $ #S[..] >
            -> CtxRel [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] < psi, b $ #S[..] b.1 >
 ;
@@ -28,30 +28,38 @@ datatype CtxRel : {phi:xG} {psi: xaG} {#S:phi[psi]} ctype =
 rec refl : CtxRel [phi] [psi] < psi $ #S[..] > -> {M: [phi . tm]}
           [psi . aeq (M #S[..]) (M #S[..])] = ? ;
 }%
-rec refl : {phi:xG}{psi:xaG}{#S:phi[psi]}{M: [phi . tm]} CtxRel [phi] [psi] < psi $ #S[..] > ->
+rec refl : % {phi:xG}{psi:xaG}{#S:phi[psi]}
+        {phi:xG}{M: [phi . tm]}
+            CtxRel [phi] [psi] < psi $ #S[..] > ->
           [psi . aeq (M #S[..]) (M #S[..])] =
-mlam phi => mlam psi => mlam #S => mlam M => fn cr => case [phi . M ..] of
-%{ | [phi, x:tm . x] =>
-  let {phi:xG}{psi:xaG}{#S:phi[psi]}
+% mlam phi => mlam psi => mlam #S => mlam M => fn cr => case [phi . M ..] of
+mlam phi => mlam M => fn cr => case [phi . M ..] of
+ | [phi, x:tm . x] =>
+   let Dot cr' = cr in ? % [psi, b: block (x:tm, u:aeq x x) . b.2]
+%{  let {phi:xG}{psi:xaG}{#S:phi[psi]}
       Dot [phi] [psi] < psi $ #S[..] > cr' = cr in [psi, b: block (x:tm, u:aeq x x) . b.2]}
-| [phi, x:tm . #p ..] =>
-  let {phi:xG}{psi:xaG}{#S:phi[psi]}
+}%
+| [phi, x:tm . #p ..] => ?
+%{  let % {phi:xG}{psi:xaG}{#S:phi[psi]}
       Dot [phi] [psi] < psi $ #R[..] > cr' = cr in
   refl [phi] [psi] [psi $ #R[..] ] [phi. #p ..] cr'
 }%
-
-%{| [phi . app (M .. ) (N ..)] =>
-  let [psi. D1 .. ] = refl [phi] [psi] [ psi $ #S[..] ] [phi.M ..] cr in
-  let [psi. D2 .. ] = refl [phi] [psi] [ psi $ #S[..] ] [phi.N ..] cr in
+| [phi . app (M .. ) (N ..)] =>
+  let [psi. D1 .. ] = refl [phi] [phi.M ..] cr in
+  let [psi. D2 .. ] = refl [phi] [phi.N ..] cr in
     [psi. ae_a (D1 ..) (D2 ..) ]
-}%
 
-| [phi . lam \x.M .. x] =>
-  let  {#S:phi[psi]}{M:[phi, x:tm. tm]}
-%       {D:[psi, x:tm, u:aeq x x. aeq (M #S[^2] x) (M #S[^2] x)]}
-%       {D:[psi, x:tm, u:aeq x x. aeq (M #S[..] x) (M #S[..] x)]}
-       {D:[psi, b: block (x:tm, u:aeq x x). aeq (M #S[..] b.1) (M #S[..] b.1)]}
-      [psi, b:block (x:tm, u:aeq x x). D .. b] =
+
+| [phi . lam \x.M .. x] => ?
+%{  let [psi, b:block (x:tm, u:aeq x x). D .. b.1 b.2] =
+      refl [phi, x:tm] [phi,x:tm. M .. x]
+           (Dot  cr)  % : CtxRel [phi,x:tm] [psi, b:block (x:tm, u:aeq x x)] < psi $ #S[..] b.1 >
+ in ?
+}%
+%{
+  let % {#S:phi[psi]}{M:[phi, x:tm. tm]}
+      % {D:[psi, x:tm, u:aeq x x. aeq (M #S[^2] x) (M #S[^2] x)]}
+      [psi, b:block (x:tm, u:aeq x x). D .. b.1 b.2] =
       % [psi, b . aeq (M #S[..] b.1) (M #S[..] b.1) ]
       refl [phi, x:tm] [psi, b:block (x:tm, u:aeq x x)]
            [psi, b $ #S[..] b.1 ] [phi,x:tm. M .. x]
@@ -65,5 +73,5 @@ mlam phi => mlam psi => mlam #S => mlam M => fn cr => case [phi . M ..] of
 
                           % Expected:   [psi . aeq #S[..](lam \x. M .. x)   #S[..](lam \x.M .. x)
                           %          =  [psi . aeq (lam \x. M #S[^1] x) (lam \x.M #S[^1] x)
-
+}%
  ;

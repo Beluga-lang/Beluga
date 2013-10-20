@@ -153,6 +153,7 @@ let newMVar n (cPsi, tA) = match n with
   | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [])
   | Some name -> Inst (name, ref None, cPsi, tA, ref [])
 
+(* *)
 let newSVar n (cPsi, cPhi) = match n with
   | None -> SInst (Id.mk_name Id.NoName, ref None, cPsi, cPhi, ref [])
   | Some name -> SInst (name, ref None, cPsi, cPhi, ref [])
@@ -181,10 +182,11 @@ let newMPVar n (cD, cPsi, tA) = match n with
   | None -> MPInst (Id.mk_name (Id.PVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [])
   | Some name -> MPInst (name, ref None, cD, cPsi, tA, ref [])
 
+
 let newMSVar n (cD, cPsi, cPhi) = match n with
   | None -> MSInst (Id.mk_name (Id.SVarName None), ref None, cD, cPsi, cPhi, ref [])
   | Some name -> MSInst (name, ref None, cD, cPsi, cPhi, ref [])
-
+  (* Note : cPsi | - s : cPhi *)
 
 (******************************)
 (* Lowering of Meta-Variables *)
@@ -1481,7 +1483,8 @@ and cnorm (tM, t) = match tM with
         let Shift (cshift, d) = cnormSub (Shift (ctx_shift, n) , t) in
           MSVar (s, (cshift, d), (cnormMSub (mcomp mt t), cnormSub (s',t)))
 
-
+    | _ -> (dprint (fun () -> "[cnormSub] undefined ? ");
+            raise (Error.Violation "Cannot guarantee that parameter variable remains head"))
 
   and cnormFront (ft, t) = match ft with
     | Head (HClo (h , Offset i , sigma))  ->

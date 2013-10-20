@@ -513,6 +513,13 @@ module Int = struct
               (fmt_ppr_lf_cvar cD lvl) c
               (self lvl) s
 
+
+        | LF.MSVar (_sigma, (_ , n), (t,s)) ->
+            fprintf ppf "#?S^%d[%a ; %a]"
+              n
+              (fmt_ppr_lf_msub cD lvl) t
+              (self lvl) s
+
         | LF.Dot (f, s) ->
             fprintf ppf "%a  %a"
               (fmt_ppr_lf_front cD cPsi 1) f
@@ -1660,7 +1667,6 @@ module Int = struct
     let schElemToString sch_elem =
       fmt_ppr_lf_sch_elem std_lvl str_formatter sch_elem
       ; flush_str_formatter ()
-
 
     let metaObjToString  cD mO =
       let mO' = Whnf.cnormMetaObj (mO, Whnf.m_id) in

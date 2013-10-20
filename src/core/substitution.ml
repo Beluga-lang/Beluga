@@ -133,6 +133,12 @@ module LF = struct
           | FSVar (s, (NoCtxShift, k), s') ->
               FSVar (s, (CtxShift psi, k + n), s')
 
+          | MSVar (s, (NoCtxShift, k), (t',s')) ->
+              MSVar (s, (CtxShift psi, k + n), (t',s'))
+
+          | MSVar (s, (NegCtxShift psi', k), (t',s')) ->
+              comp (Shift (NoCtxShift, k)) s'
+
 (*          | FSVar (s, (ctxShift, k), s') ->
               (* ctxShift = CtxShift phi cannot happen *)
               FSVar (s, (ctx_shift, k + n), s')
@@ -231,8 +237,19 @@ module LF = struct
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
     | (n, Shift (_ , k)) -> Head (BVar (n + k))
+(*    | (n, MSVar (s, (_cshift, k), (mt, sigma ))) ->
+        (* Should be fixed; we really need phat of n to avoid printing
+           Free BVar (n+k) ...
+           (Head (HClo (phat. BVar n+k , s , sigma ))
+           -bp *)
+        Head (HMClo(n+k, s, (mt,sigma)))
+
+      Can this happen ?
+*)
+
     | (n, SVar (s, (_cshift, k), sigma )) ->
-        (* WRONG - to be fixed; we really need phat of n ... *)
+        (* Should be fixed; we really need phat of n to avoid printing
+           Free BVar (n+k) ... -bp *)
         Head (HClo(n+k, s, sigma))
 
 
@@ -291,9 +308,10 @@ module LF = struct
     | Head (Const c)      -> Head (Const c)
     | Obj u               -> Obj (Clo (u, s))
     | Undef               -> Undef
-    | Head (FPVar (_n, _s' )) -> ft
     | Head (MMVar (_n, _ )) -> raise (Error "[frontSub] mmvar undefined ")
-
+    | Head (FPVar (_n, _s' )) -> ft
+(*    | Head (HMClo(n, s', (theta, sigma))) ->
+        Head (HMClo (n, s', (mt, comp sigma s)) ?? *)
 
   (* dot1 (s) = s'
    *

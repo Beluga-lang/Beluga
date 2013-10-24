@@ -136,7 +136,7 @@ module LF = struct
 
           | SVar (offset, (NoCtxShift, k), s') ->
             (* if    . |- offset : psi  then return s' *)
-            SVar (offset, (CtxShift psi, k + n), s')
+            SVar (offset, (CtxShift psi, k + m), s')
 
 (*          | SVar (offset, (ctx_shift, k), s') ->
             (* ctx_shift = CtxShift phi cannot happen *)
@@ -146,10 +146,10 @@ module LF = struct
                 comp (Shift (NoCtxShift, k)) s'
 
           | FSVar (s, (NoCtxShift, k), s') ->
-              FSVar (s, (CtxShift psi, k + n), s')
+              FSVar (s, (CtxShift psi, k + m), s')
 
           | MSVar (s, (NoCtxShift, k), (t',s')) ->
-              MSVar (s, (CtxShift psi, k + n), (t',s'))
+              MSVar (s, (CtxShift psi, k + m), (t',s'))
 
           | MSVar (s, (NegCtxShift psi', k), (t',s')) ->
               comp (Shift (NoCtxShift, k)) s'

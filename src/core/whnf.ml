@@ -700,7 +700,9 @@ and normSpine (tS, sigma) =
 and reduce sM spine = match (sM, spine) with
   | ((Root (_, _, _) as root, s), Nil)    -> norm (root, s)
   | ((Lam (_, _y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
-  | ((Clo (tM, s'), s), tS)               -> reduce (tM , LF.comp s' s) tS
+  | ((Clo (tM, s'), s), tS)               ->
+(*      reduce (norm (tM, s'), s) tS *)
+      reduce (tM , LF.comp s' s) tS
       (* other cases are impossible *)
 
 

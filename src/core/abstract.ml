@@ -1732,27 +1732,44 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
   | I.Dot (I.Obj tM, s) ->
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.Offset s, (ctx_offset, n), sigma) ->
+  | I.SVar (I.Offset s, (ctx_shift, n), sigma) ->
       let _ = dprint (fun () -> "[abstractMVarSub] d = " ^ string_of_int d) in
 (*      let k = lengthCollection cQ in
       if s > d then I.SVar (I.Offset (s + k), (ctx_offset, n), abstractMVarSub' cQ offset sigma)
       else*)
-        I.SVar (I.Offset s, (ctx_offset, n), abstractMVarSub' cQ offset sigma)
+    let ctx_shift' = match ctx_shift with
+      | I.CtxShift c_var -> I.CtxShift (abstractMVarCtxV cQ offset c_var)
+      | I.NoCtxShift -> I.NoCtxShift
+      | I.NegCtxShift c_var -> I.NegCtxShift (abstractMVarCtxV cQ offset c_var )
+    in
+        I.SVar (I.Offset s, (ctx_shift', n), abstractMVarSub' cQ offset sigma)
 
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.SInst (_n, _r, _cPsi, _cPhi, _cnstr), k, s') as sigma ->
+  | I.SVar (I.SInst (_n, _r, _cPsi, _cPhi, _cnstr), (ctx_shift, k), s') as sigma ->
     let s = index_of cQ (SV (Pure, sigma)) + d  in
-    I.SVar (I.Offset s, k, abstractMVarSub' cQ offset s')
+    let ctx_shift' = match ctx_shift with
+      | I.CtxShift c_var -> I.CtxShift (abstractMVarCtxV cQ offset c_var )
+      | I.NoCtxShift -> I.NoCtxShift
+      | I.NegCtxShift c_var -> I.NegCtxShift (abstractMVarCtxV cQ offset c_var) in
+    I.SVar (I.Offset s, (ctx_shift', k), abstractMVarSub' cQ offset s')
 
   | I.FSVar (s, (ctx_shift, n), sigma) ->
       let x = index_of cQ (FSV (Pure, s, None)) + d in
-        I.SVar (I.Offset x, (ctx_shift, n), abstractMVarSub cQ offset sigma)
+      let ctx_shift' = match ctx_shift with
+      | I.CtxShift c_var -> I.CtxShift (abstractMVarCtxV cQ offset c_var )
+      | I.NoCtxShift -> I.NoCtxShift
+      | I.NegCtxShift c_var -> I.NegCtxShift (abstractMVarCtxV cQ offset c_var) in
+      I.SVar (I.Offset x, (ctx_shift', n), abstractMVarSub cQ offset sigma)
 
-  | I.MSVar (I.MSInst (_n, _r, _cD, _cPsi, _cPhi, _cnstr), k, (_mt, s')) as sigma ->
+  | I.MSVar (I.MSInst (_n, _r, _cD, _cPsi, _cPhi, _cnstr), (ctx_shift, k), (_mt, s')) as sigma ->
     let s = index_of cQ (MSV (Pure, sigma)) + d  in
-    I.SVar (I.Offset s, k, abstractMVarSub' cQ offset s')
+    let ctx_shift' = match ctx_shift with
+      | I.CtxShift c_var -> I.CtxShift (abstractMVarCtxV cQ offset c_var)
+      | I.NoCtxShift -> I.NoCtxShift
+      | I.NegCtxShift c_var -> I.NegCtxShift (abstractMVarCtxV cQ offset c_var) in
+    I.SVar (I.Offset s, (ctx_shift', k), abstractMVarSub' cQ offset s')
 
 
 and abstractMVarHat cQ (l,offset) phat = match phat with

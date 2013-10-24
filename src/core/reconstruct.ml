@@ -1106,9 +1106,11 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                         P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ " == "
                         ^
                         P.compTypToString cD (Whnf.cnormCTyp (tau,t) )) in
+      let tau0 = Whnf.cnormCTyp (tau,t) in
+      let tau1 = Whnf.cnormCTyp tau_t' in
         begin try
           dprint (fun () -> "Unifying computation-level types\n") ;
-          Unify.unifyCompTyp cD (tau, t) (tau_t');
+          Unify.unifyCompTyp cD (tau0, Whnf.m_id) (tau1, Whnf.m_id);
           dprint (fun () -> "Unified computation-level types\n") ;
           dprint (fun () -> "     " ^
                         P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ "\n         == \n"
@@ -2553,7 +2555,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
               *)
             let cG   = Whnf.normCtx cG in
             let cG'  = Whnf.cnormCtx (cG, t') in
-            let _ = (dprint (fun () -> "tau' = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) ;
+            let _ = (dprint (fun () -> "Target type tau' = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) ;
                      dprint (fun () -> "t'   = " ^ P.msubToString cD1'' t' )) in
 
             let tau'    = Whnf.cnormCTyp (tau, Whnf.mcomp theta t') in
@@ -2633,9 +2635,8 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
       (* Note: e' is in the scope of cD1''  *)
     let _       = dprint (fun () -> "[Apx.cnormApxExp ] done ") in
 
-    let _ = (dprint (fun () -> "tau' = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) ;
+    let _ = (dprint (fun () -> "Target type tau' = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) ;
              dprint (fun () -> "t'   = " ^ P.msubToString cD1'' t' )) in
-
     let tau'    = Whnf.cnormCTyp (tau, Whnf.mcomp theta t') in
 
     let _       = dprint (fun () -> "[elBranch] Elaborate branch \n" ^

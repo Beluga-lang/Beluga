@@ -320,6 +320,12 @@ module Int = struct
             (R.render_bvar cPsi h)
             (fmt_ppr_lf_cvar cD lvl) s
             (fmt_ppr_lf_sub  cD cPsi lvl) sigma
+      | LF.HMClo (h, s, (theta,sigma)) ->
+          fprintf ppf "%s[#%a[%a ; %a]]"
+            (R.render_bvar cPsi h)
+            (fmt_ppr_lf_mmvar lvl) s
+            (fmt_ppr_lf_msub  cD lvl) theta
+            (fmt_ppr_lf_sub  cD cPsi lvl) sigma
       | LF.BVar x  ->
           fprintf ppf "%s%s"
             (R.render_bvar cPsi x)
@@ -676,6 +682,29 @@ module Int = struct
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_normal cD cPsi lvl) m
+
+      | LF.MSInst (_, ({ contents = None } as u), _, _, cPsi, _) ->
+          begin
+            try
+              fprintf ppf "?%s"
+                (SInstHashtbl.find sinst_hashtbl u)
+            with
+              | Not_found ->
+                  (* (* Should probably create a sep. generator for this -dwm *)
+                  let sym = String.uppercase (Gensym.VarData.gensym ()) in
+                  *)
+                  (* Not working -bp *)
+                  let sym = Gensym.MVarData.gensym ()
+                  in
+                      SInstHashtbl.replace sinst_hashtbl u sym
+                    ; fprintf ppf "#?%s" sym
+          end
+
+      | LF.MSInst (_, {contents = Some s}, cD, cPsi, _, _) ->
+          (* fprintf ppf "MMV SOME %a" *)
+          fprintf ppf " #%a"
+            (fmt_ppr_lf_sub cD cPsi lvl) s
+
 
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n ->

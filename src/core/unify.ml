@@ -1678,6 +1678,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                      ^ P.subToString cD cPsi s
                      ^ " : " ^ P.dctxToString cD cPsi');
            raise NotInvertible)
+
   (* pruneSub cD0 cPsi phat (s, cPsi1) ss rOccur = (s', cPsi1')
 
      if phat = hat(Psi)  and
@@ -1705,34 +1706,50 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     | (Shift (_psi', _n), CtxVar psi) -> (id, CtxVar psi)
 
-    | (SVar (s, (NoCtxShift,0), sigma), CtxVar psi) ->
-        (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
+    | (SVar (s, cshift, sigma), cPsi1) ->
+        (*     D ; cPsi1' | cshift : cPsi1
+               D; Psi |- s[sigma] : cPsi1'  where s: cPsi1'[Phi]
                D ;Psi |- sigma : Phi
                D;Psi'' |- ss <= Psi
                [ss] ([s[sigma] ] id ) exists
         *)
+      let s' , cPsi1' = match cshift , cPsi1 with
+        | (NoCtxShift, _n) , cPsi1 -> (id, cPsi1)
+        | (CtxShift _, _n) , cPsi1 -> (id, cPsi1)
+        | (NegCtxShift _ , _n) , cPsi1 -> (id, cPsi1) in
+
         let cPsi' = (match s with
                      | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  offset in cPsi'
                      | SInst (_ , {contents=None}, cPsi', _cPhi', _ ) -> cPsi'
                     ) in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
-          (id,CtxVar psi)
+          (s',cPsi1')
 
-    | (MSVar (s, (NoCtxShift, 0), (_theta,sigma)), CtxVar psi) ->
-        let MSInst (_ ,{contents=None}, _cD, cPhi1, cPhi2, _cnstrs) = s in
-        let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
-        let _ = invSub cD0 phat (sigma, cPhi1') ss rOccur  in
-          (id, CtxVar psi)
+    | (MSVar (s, cshift, (_theta,sigma)), cPsi1) ->
+      let s' , cPsi1' = match cshift , cPsi1 with
+        | (NoCtxShift, _n) , cPsi1 -> (id, cPsi1)
+        | (CtxShift _, _n) , cPsi1 -> (id, cPsi1)
+        | (NegCtxShift _ , _n) , cPsi1 -> (id, cPsi1) in
 
-    | (FSVar (s, (NoCtxShift,0), sigma), CtxVar psi) ->
+      let MSInst (_ ,{contents=None}, _cD, cPhi1, cPhi2, _cnstrs) = s in
+      let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
+      let _ = invSub cD0 phat (sigma, cPhi1') ss rOccur  in
+          (s', cPsi1')
+
+    | (FSVar (s, cshift, sigma), cPsi1) ->
         (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
                D ;Psi |- sigma : Phi
                D;Psi'' |- ss <= Psi
                [ss] ([s[sigma] ] id ) exists
         *)
+      let s' , cPsi1' = match cshift , cPsi1 with
+        | (NoCtxShift, _n) , cPsi1 -> (id, cPsi1)
+        | (CtxShift _, _n) , cPsi1 -> (id, cPsi1)
+        | (NegCtxShift _ , _n) , cPsi1 -> (id, cPsi1) in
+
         let (_, SDecl (_, _cPhi,  cPsi')) = Store.FCVar.get s in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
-          (id, CtxVar psi)
+        (s', cPsi1')
 
     (*(Dot (Head (HClo  .... )  to be added -bp
        SVar case (offset might not be 0 ) and domain is cPsi

@@ -1508,8 +1508,9 @@ and elExp' cD cG i = match i with
   | Apx.Comp.MAnnApp (loc, i, (psi, m)) ->
       let _ = dprint (fun () -> "Reconstructing MAnnApp\n") in
       let (i0, tau_t) = (elExp' cD cG i) in
-      let _ = (dprint (fun () -> "[elExp'] MAnnApp : " ^
-                        P.expSynToString cD cG (Whnf.cnormExp' (i0, Whnf.m_id))) ;
+      let _ = (dprint (fun () -> ("[elExp'] MAnnApp : " ^
+                                     P.mctxToString cD ^ "\n |- " ^
+                                     P.expSynToString cD cG (Whnf.cnormExp' (i0, Whnf.m_id)))) ;
               dprint (fun () -> "             : " ^
                         P.compTypToString cD (Whnf.cnormCTyp tau_t) )) in
 

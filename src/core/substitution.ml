@@ -136,7 +136,7 @@ module LF = struct
 
           | SVar (offset, (NoCtxShift, k), s') ->
             (* if    . |- offset : psi  then return s' *)
-            SVar (offset, (CtxShift psi, k + m), s')
+            SVar (offset, (CtxShift psi, k + n), s')
 
 (*          | SVar (offset, (ctx_shift, k), s') ->
             (* ctx_shift = CtxShift phi cannot happen *)
@@ -146,10 +146,10 @@ module LF = struct
                 comp (Shift (NoCtxShift, k)) s'
 
           | FSVar (s, (NoCtxShift, k), s') ->
-              FSVar (s, (CtxShift psi, k + m), s')
+              FSVar (s, (CtxShift psi, k + n), s')
 
           | MSVar (s, (NoCtxShift, k), (t',s')) ->
-              MSVar (s, (CtxShift psi, k + m), (t',s'))
+              MSVar (s, (CtxShift psi, k + n), (t',s'))
 
           | MSVar (s, (NegCtxShift psi', k), (t',s')) ->
               comp (Shift (NoCtxShift, k)) s'
@@ -266,9 +266,10 @@ module LF = struct
            Free BVar (n+k) ... -bp *)
         Head (HClo(n+k, s, sigma))
     | (n, MSVar (s, (_cshift, k), (t,sigma ))) ->
-        (print_string "[bvarSub] n, MSVar - not implemented";
+      Head (HMClo (n+k, s, (t,sigma)))
+(*        (print_string "[bvarSub] n, MSVar - not implemented";
         raise (NotComposable "grr"))
-
+*)
 
   (* frontSub Ft s = Ft'
    *
@@ -280,6 +281,7 @@ module LF = struct
    *)
   and frontSub ft s = match ft with
     | Head (HClo(n, s', sigma)) -> Head (HClo (n, s', comp sigma s))
+    | Head (HMClo(n, s', (theta,sigma))) -> Head (HMClo (n, s', (theta, comp sigma s)))
     | Head (BVar n)       ->  bvarSub n s
     | Head (FVar _)       -> ft
     | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))

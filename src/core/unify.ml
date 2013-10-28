@@ -2578,6 +2578,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
               let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in
               let phat = Context.dctxToHat cPsi in
               let sM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (mtt, ss) (MMVarRef r)) in
+              let _ = dprint (fun () -> "   pruned sM1 = " ^
+                                P.normalToString cD0 cPsi2 (sM1', idsub)) in
                 instantiateMMVar (r, sM1', !cnstrs)
             with
               | NotInvertible ->

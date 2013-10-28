@@ -1248,6 +1248,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
                       let cPsi'' = Whnf.cnormDCtx (cPsi', i_msub) in
                       (* ss = (ms, ssubst)   cD ; cPsi0 |- ss cPsi' *)
                       (* let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t', cPsi1') ss rOccur in *)
+                      let _ = dprint (fun () -> "[prune] MMVar t' = " ^
+                                        P.subToString cD0 cPsi' t') in
                       let (idsub, cPsi2) = pruneSub  cD2 cPsi'' phat (t', cPsi1') ss rOccur in
                       (* cD2 ; [|mt|]Psi1 |- idsub   : Psi2
                          cD2 ; Psi2 |- idsub_i : [|mt|]Psi1
@@ -1313,16 +1315,40 @@ let rec blockdeclInDctx cPsi = match cPsi with
                         let s' = invSub cD0 phat (comp t s, cPsi1)  ss rOccur in
                           Root (loc, MVar (u, s'), Nil)
                       *)
+                      let (_ , ssubst) = ss in
+                      let _ = dprint (fun () -> "[prune] MVar - calling pruneSub ") in
+                      let _ = dprint (fun () -> "[prune] t = " ^
+                                        P.subToString cD0 (Context.hatToDCtx phat) t) in
+
+                      let _ = dprint (fun () -> "[prune] ss = " ^
+                                        P.subToString cD0 cPsi' ssubst) in
                        let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
                       (* Psi1 |- idsub   : Psi2
                          Psi2 |- idsub_i : Psi1
                        *)
                         (* could maybe just prune tP and cPsi1 ?
                            29 Jan, 2011  -bp  *)
+                         (* *)
                       let idsub_i = invert idsub in
                       let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) in
                       (* let _ = print_string ("prune non-pattern sub s  where u[s] \n") in *)
-                      let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
+                      let _ = dprint (fun () -> "[prune] BEFORE Inst. r = " ^
+                                     P.normalToString cD0 (Context.hatToDCtx phat) (tM,s) ) in
+                      let _ = instantiateMVar (r, Root (loc, MVar (v, idsub),
+                                        Nil), !cnstrs) in
+                      let _ = dprint (fun () -> "[prune] cPsi2 = " ^
+                                        P.dctxToString cD0 cPsi2) in
+                      let _ = dprint (fun () -> "[prune] cPsi1 = " ^
+                                        P.dctxToString cD0 cPsi1) in
+                      let _ = dprint (fun () -> "[prune] cPsi = " ^
+                                        P.dctxToString cD0 (Context.hatToDCtx phat)) in
+                      let _ = dprint (fun () -> "[prune] Inst. r = " ^
+                                     P.normalToString cD0 (Context.hatToDCtx phat) (tM,s) ) in
+                      let _ = dprint (fun () -> "[prune] ssubst = " ^
+                                        P.subToString cD0 cPsi' ssubst)
+                      in
+                      let _ = dprint (fun () -> "[prune] pruned tM = " ^
+                                     P.normalToString cD0 cPsi' (tM,comp s ssubst) ) in
                         Clo(tM, comp s ssubst)
                           (* may raise NotInvertible *)
 
@@ -1723,6 +1749,9 @@ let rec blockdeclInDctx cPsi = match cPsi with
                      | SInst (_ , {contents=None}, cPsi', _cPhi', _ ) -> cPsi'
                     ) in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
+        let _ = dprint (fun () -> "[pruneSub] result = " ^
+                       P.subToString cD0 cPsi (comp s' (SVar (s, cshift, sigma)))) in
+
           (s',cPsi1')
 
     | (MSVar (s, cshift, (_theta,sigma)), cPsi1) ->
@@ -2060,14 +2089,32 @@ let rec blockdeclInDctx cPsi = match cPsi with
                   begin match  (isProjPatSub t1' , isProjPatSub t2') with
                     | ( _ , true ) ->
                         begin try
-(*                          let _ = dprint (fun () -> "about to call flattenDCtx from unify.ml projpatsub case; cPsi = " ^ P.dctxToString cD0 cPsi) in*)
+                          let _ = dprint (fun () -> "- 1 - about to call flattenDCtx from unify.ml projpatsub case; \ncPsi = " ^
+                                            P.dctxToString cD0 cPsi) in
                           let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
                           let phat = Context.dctxToHat flat_cPsi in
                           let t_flat = ConvSigma.strans_sub cD0 t2' conv_list in
                           let tM1'   = ConvSigma.strans_norm cD0 sM1 conv_list in
                           let ss = invert t_flat in
-                          let sM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (MShift 0, ss) (MVarRef r2)) in
-                            instantiateMVar (r2, sM1', !cnstrs2)
+                          let _ = dprint (fun () -> "          flat_cPsi = " ^ P.dctxToString cD0 flat_cPsi) in
+                          let _ = dprint (fun () -> "          cPsi2 = " ^ P.dctxToString cD0 cPsi2) in
+                            (*  cPsi  |- t2' : cPsi2
+                                flat_cPsi |- t_flat : cPsi2
+                                cPsi2     |- ss : flat_cPsi
+                                cPsi1      |- r
+                                cPsi1      | [ss] tM2'
+                            *)
+
+                          let _ = dprint (fun () -> "          ss (flat) = " ^
+                                            P.subToString cD0 cPsi2 ss)
+                                            in
+                          let _ = dprint (fun () -> "          t_flat) = " ^
+                                            P.subToString cD0 flat_cPsi t_flat) in
+                          let tM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (MShift 0, ss) (MVarRef r2)) in
+                          let _ = dprint (fun () -> "         sM1' = " ^
+                                            P.normalToString cD0 cPsi2 (tM1', Substitution.LF.id)) in
+
+                            instantiateMVar (r2, tM1', !cnstrs2)
                         with
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
@@ -2077,6 +2124,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
                     | ( true , _ ) ->
                         begin try
+                          let _ = dprint (fun () -> " - 2 - about to call flattenDCtx from unify.ml projpatsub case; cPsi = " ^ P.dctxToString cD0 cPsi) in
                           let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
                           let phat = Context.dctxToHat flat_cPsi in
                           let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in

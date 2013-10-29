@@ -1018,9 +1018,14 @@ let rec blockdeclInDctx cPsi = match cPsi with
          *)
     | (SVar (s, (NoCtxShift, 0), sigma), CtxVar psi) ->
         (* other cases ? -bp *)
-        let (cPhi, cPsi') = (match s with
-                     | Offset offset -> let (_, cPhi, _cPsi') = Whnf.mctxSDec cD0  offset in (cPhi, _cPsi')
-                     | SInst (_ , {contents=None}, cPhi, _cPsi', _ ) -> (cPhi, _cPsi')
+        let (s,cPhi, cPsi') = (match s with
+                     | Offset offset -> (match applyMSub offset ms with
+                                           | MV v -> let (_, cPhi, cPsi') =
+                                               Whnf.mctxSDec cD0  v in (Offset v, cPhi, cPsi')
+                                           | MUndef -> raise NotInvertible
+                                        )
+
+                     | SInst (_ , {contents=None}, cPhi, _cPsi', _ ) -> (s,cPhi, _cPsi')
                     ) in
         let _ = dprint (fun () -> "[invSub]" ^ P.dctxToString cD0 (Context.hatToDCtx phat) ^ " |- "
         ^ P.subToString cD0 (Context.hatToDCtx phat) sigma ^ " : " ^
@@ -1054,11 +1059,22 @@ let rec blockdeclInDctx cPsi = match cPsi with
         let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in
           Dot (Obj tM', invSub cD0 phat (s', cPsi') ss rOccur)
 
-    | (SVar (Offset s, (ctx_offset, n), t), cPsi1) -> (* This is probably buggy. Need to deal with the n *)
-        let (_, _cPhi, cPsi1) = Whnf.mctxSDec cD0 s in
+    | (SVar (Offset s, (ctx_offset, n), t), cPsi1) -> (* This is probably
+      buggy. Need to deal with the n *)
+        let ctx_offset' = match ctx_offset with
+          | NoCtxShift -> NoCtxShift
+          | CtxShift (CtxOffset offset) -> (match applyMSub offset ms with
+              | MV v -> CtxShift (CtxOffset v)
+              | MUndef -> raise NotInvertible)
+          | NegCtxShift (CtxOffset offset) -> (match applyMSub offset ms with
+              | MV v -> NegCtxShift (CtxOffset v)
+              | MUndef -> raise NotInvertible)
+          | _ -> ctx_offset in
           begin match applyMSub s ms with
             | MV v ->
-                SVar(Offset v, (ctx_offset, n), invSub cD0 phat (t, cPsi1) ss rOccur)
+                let (_, cPhi, cPsi1) = Whnf.mctxSDec cD0  v  in
+                  (* applyMSub to ctx_offset ? *)
+                SVar(Offset v, (ctx_offset', n), invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
     | (FSVar (s_name, n , t), cPsi1) ->
@@ -1757,6 +1773,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
     end
 
   and pruneSub' cD0 cPsi phat (s, cPsi1) ss rOccur =
+    let (mt, _ ) = ss in
     match (s, cPsi1) with
     | (Shift (psi, n), DDec(_cPsi', _dec)) ->
         pruneSub' cD0 cPsi phat (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur
@@ -1777,10 +1794,16 @@ let rec blockdeclInDctx cPsi = match cPsi with
         | (CtxShift _, _n) , cPsi1 -> (id, cPsi1)
         | (NegCtxShift _ , _n) , cPsi1 -> (id, cPsi1) in
 
-        let cPsi' = (match s with
-                     | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  offset in cPsi'
+
+      let cPsi' = (match s with
+                     | Offset offset -> (match applyMSub offset mt with
+                                           | MV v -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  v in cPsi'
+                                           | MUndef -> raise NotInvertible
+                                        )
+
                      | SInst (_ , {contents=None}, cPsi', _cPhi', _ ) -> cPsi'
                     ) in
+
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
         let _ = dprint (fun () -> "[pruneSub] result = " ^
                        P.subToString cD0 cPsi (comp s' (SVar (s, cshift, sigma)))) in

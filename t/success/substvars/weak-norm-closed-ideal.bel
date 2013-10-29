@@ -20,20 +20,20 @@ stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
-val : tm A -> type.
+val : tm A -> type. %name val V.
 val/c : val c.
 val/lam : val (lam M).
 
-halts : tm A -> type.
+halts : tm A -> type.  %name halts H.
 halts/m : mstep M M' -> val M' -> halts M.
 
-%{ datatype Reduce : {A:[.tp]} {M:[.tm A]} ctype =
+datatype Reduce : {A:[.tp]} {M:[.tm A]} ctype =
 | I : [. halts M] -> Reduce [. i] [. M]
 | Arr :  [. halts M] ->
     ({N:[.tm A]} Reduce [. A] [. N] -> Reduce [. B] [. app M N])
   -> Reduce [. arr A B] [. M]
 ;
-}%
+
 datatype Reduce : {M:[.tm A]} ctype =
 | I : [. halts M] -> Reduce [. M]
 | Arr :  [. halts M] ->
@@ -41,99 +41,75 @@ datatype Reduce : {M:[.tm A]} ctype =
   -> Reduce  [. M]
 ;
 
- rec haltsMstep : {MS:[.mstep M M']} [. halts M'] -> [. halts M] = ?
-%{mlam MS => fn h => let [.halts/m MS' V] = h in
+ rec haltsMstep : {MS:[.mstep M M']} [. halts M'] -> [. halts M] =
+mlam MS => fn h => let [.halts/m MS' V] = h in
  [. halts/m (trans MS MS') V]
-}%
+
 ;
 
 % CR2
-rec closed : {MS:[. mstep M M']} Reduce [.M'] -> Reduce [.M] = ?
-%{mlam MS => fn r => case r of
+rec closed : {MS:[. mstep M M']} Reduce [.M'] -> Reduce [.M] =
+mlam MS => fn r => case r of
 | I ha => I (haltsMstep [. MS] ha)
 | Arr ha f => Arr (haltsMstep [. MS] ha)
   (mlam N => fn rn => closed [. stepapp MS refl] (f [. N] rn))
-}%
+
 ;
 
 % CR1
-rec cr1 : Reduce [.M] -> [. halts M] = ?
-%{
+rec cr1 : Reduce [.M] -> [. halts M] =
 fn r => case r of
 | I h => h
 | Arr h f => h
-}%
 ;
 
 %  h |- #s : g
 datatype RedSub : {g:ctx}{#S:g[]} ctype =
 | Nil : RedSub  [ ] < $ ^ >
 | Dot :     RedSub  [g] < $ #S[^] >  % #S : g[]
-          -> Reduce [.M]          % A:[.tp], M:[.tm A]
+          -> Reduce [.M]              % A:[.tp], M:[.tm A]
           -> RedSub [g, x:tm A] < $ #S[^] M >   %  M : [ . tm (A ^ [^CtxShift g #S[..] ]
 ;
 
 
-rec lookup : % {g:ctx}{#S:g[]}{#p:[g.tm A]} RedSub [g] < $ #S[^]> -> Reduce [.A] [. #p #S[^]] =
-% {g:ctx}{#S:g[]}{#p:[g.tm A]}
-% {#S:g[]}
-% Var [g.#p ..] ->
- {g:ctx}{#p:[g.tm A]}RedSub [g] < $ #S[^]> -> Reduce [. #p #S[^]] =
-?
-%{ mlam g => mlam #p => fn rs => case [g.#p ..] of
- | [g',x:tm A. x] =>   let (Dot rs' rN) = rs in
-                      % rs : redSub [g',x:tm A] < $ #S[^] >
-                      % #S = (#R[..] M)  where
-                      % rs' = redSub [g'] < $ #R[^] >   and rN = Reduce [.A[#R ..]] [.M]
-                      % RETURN TYPE: [#R[..] M)/#S in (Reduce [.A[(CtxShift (g') + 1) ^ #S[^..]] [. (g',x.x) #S[^]])
-                      %    [#R[..] M)/#S  [.A[(CtxShift (g') + 1) ^ #S[^..]] [.M]
-                      %  comp (CtxShift (g') + 1) (#R[..] M)
-
-                       rN
+rec lookup : {g:ctx}{#p:[g.tm A]}RedSub [g] < $ #S[^]> -> Reduce [. #p #S[^]] =
+mlam g => mlam #p => fn rs => case [g.#p ..] of
+ | [g',x:tm A. x] =>   let (Dot rs' rN) = rs in rN
  | [g',x:tm A. #q ..] => let Dot rs' rN = rs in
                       lookup [g'] [g'. #q ..] rs'
-}%
 ;
 
-rec aux : {M:[g.tm (arr A B)]} RedSub [g] < $ #S[^]> -> {N:[.tm A]}Reduce [. N]
-          -> Reduce  [. app (M #S[^]) N] =  ?;
-
-rec eval : {g:ctx}{M:[g.tm A]} RedSub [g] < $ #S[^]> -> Reduce  [. M #S[^]] =
- mlam g => mlam M => fn rs => case [g. M ..] of
-% | [g. #p ..] => lookup [g] [g. #p ..] rs
-| [g. lam (\x. M1 .. x)] =>
- Arr [. halts/m refl val/lam]  (aux [g. lam \x.M1 .. x] rs)
-%{    (mlam N => fn rN =>
-     let r = eval [g,x:tm _] [g,x. M1 .. x] (Dot rs rN) in closed [. beta] r)
+rec aux : {g:ctx}{M:[g.tm (arr A B)]} RedSub [g] < $ #S[^]> ->
+         {N:[.tm A]}Reduce [. N] -> Reduce  [. app (M #S[^]) N] =
+(mlam g => mlam M => fn rs =>
+ let [g. lam \x.M1 .. x] = [g.M ..] in
+ mlam N => fn rN =>
+ let r = eval [g,x:tm _] [g,x. M1 .. x] (Dot rs rN) in
+ closed [.beta] r )
+%{(mlam => mlam M => fn rs =>
+mlam N => fn rN =>
+closed [. beta]
+ let r = eval [g,x:tm _] [g,x. M1 .. x] (Dot rs rN) in closed [. beta] r)
 }%
-% closed [. beta] r )
+%{rec aux : {M:[g,x:tm A.tm B]} RedSub [g, x:tm A] < $ #S[^]> ->
+          {N:[.tm A]}Reduce [. N] -> Reduce  [. app (lam \x. M #S[^] x) N] =
+ ?
+}%
+and eval : {g:ctx}{M:[g.tm A]} RedSub [g] < $ #S[^]> -> Reduce  [. M #S[^]] =
+ mlam g => mlam M => fn rs => case [g. M ..] of
+| [g. #p ..] => lookup [g] [g. #p ..] rs
+| [g. lam (\x. M1 .. x)] =>
+ Arr [. halts/m refl val/lam]   (aux [g] [g. lam \x. M1 .. x] rs)
+%    (mlam N => fn rN =>
+%    let r = eval [g,x:tm _] [g,x. M1 .. x] (Dot rs rN) in closed [. beta] r)
 
-%{ | [g. app (M1 ..) (M2 ..)] =>
+ | [g. app (M1 ..) (M2 ..)] =>
   let Arr ha f = eval [g] [g. M1 ..] rs in
   f [._ ] (eval [g] [g. M2 ..] rs)
 | [g'. c] => I [. halts/m refl val/c]
-}%
+
 ;
 
-%{
-rec eval : {g:ctx}{M:[g.tm (A ..)]} RedSub < $ #S[^]> -> Reduce [.A] [. M #S[^]] =
-mlam g => mlam M => fn rs => case [g. M ..] of
-| [g. #p ..] => lookup [g] [g. #p ..] rs
-| [g. lam (\x. M1 .. x)] =>
-  Arr [h. halts/m refl val/lam]
-    (mlam N => fn rN => closed [h. beta]
-       (eval [g,x:tm _] [g,x. M1 .. x] (Dot rs rN)))
- | [g. app (M1 ..) (M2 ..)] =>
-  let Arr ha f = eval [g] [g. M1 ..] rs in
-  f [._] (eval [g] [g. M2 ..] rs)
-| [g'. c] => I [. halts/m refl val/c]
-;
-
-rec weakNorm : {M:[. tm A]} [. halts M] =
-mlam M => cr1 (eval [] [. M] Nil)
-;
-
-}%
 rec weakNorm : {M:[. tm A]} [. halts M] =
 mlam M => cr1 (eval [] [. M] Nil)
 ;

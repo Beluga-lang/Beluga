@@ -152,6 +152,7 @@ module LF = struct
               MSVar (s, (CtxShift psi, k + n), (t',s'))
 
           | MSVar (s, (NegCtxShift psi', k), (t',s')) ->
+              (* mcomp  with t' *)
               comp (Shift (NoCtxShift, k)) s'
 
 (*          | FSVar (s, (ctxShift, k), s') ->

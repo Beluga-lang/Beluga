@@ -749,8 +749,15 @@ and normSub s = match s with
   | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, n, s') ->
       SVar (sigma, n ,normSub s')
 
-  | MSVar (sigma, cshift, (mt, s')) ->
-      MSVar (sigma, cshift, (mt, normSub s'))
+  | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs),
+    (cshift,n), (mt, s')) ->
+      let Shift (cshift, n) = normSub (Shift (cshift, n)) in
+      let s0 = cnormSub (LF.comp (normSub s) (normSub s'), mt) in
+      LF.comp (Shift (cshift, n)) s0
+
+  | MSVar (sigma, (cshift,n), (mt,s')) ->
+      let Shift (cshift, n) = normSub (Shift (cshift, n)) in
+      MSVar (sigma, (cshift,n), (mt, normSub s'))
 
 and normFt ft = match ft with
   | Obj tM ->
@@ -1472,8 +1479,9 @@ and cnorm (tM, t) = match tM with
       begin match LF.applyMSub offset t with
         | MV offset' -> SVar (Offset offset', (cnormCtxShift (cshift,t) n), cnormSub (s', t))
         | SObj (_phat, r) ->
-          let (cshift', n') = cnormCtxShift (cshift, t) n in
-          LF.comp (LF.comp (Shift (cshift', n')) r) (cnormSub (s',t))
+            let (cshift', n') = cnormCtxShift (cshift,t) n in
+              LF.comp (LF.comp (Shift (cshift', n')) r) (cnormSub (s',t))
+
       end
 
     | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), (cshift, n), s') ->
@@ -1482,8 +1490,13 @@ and cnorm (tM, t) = match tM with
        and   cPsi' |- s' : cPsi
       LF.comp (LF.comp (Shift (NoCtxShift, n)) (normSub s)) (normSub s')
     *)
-      let (cshift', n') = cnormCtxShift (cshift,t) n in
-      cnormSub (LF.comp (LF.comp (Shift  (cshift', n')) (normSub s)) (normSub s'),  t)
+      (* let (cshift', n') = cnormCtxShift (cshift,t) n in
+      let s0 = cnormSub (normSub s, t) in
+      let s0' = cnormSub (normSub s', t) in
+         LF.comp (LF.comp (Shift  (cshift', n')) s0)  s0' *)
+        let _ = dprint (fun () -> "[cnormSub] SVar - SInst") in
+        let s0 = LF.comp (LF.comp (Shift (cshift, n)) (normSub s)) (normSub s') in
+          cnormSub (s0, t)
 
     | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, (cshift, n), s') ->
       let (cshift', n') = cnormCtxShift (cshift,t) n in
@@ -1493,30 +1506,36 @@ and cnorm (tM, t) = match tM with
         FSVar (s_name, (cnormCtxShift (cshift,t) n), cnormSub (s', t))
 
     | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs),
-             (ctx_shift, n), (mt,s')) ->
-      let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
+             (cshift, n), (mt,s')) ->
+(*      let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
       let cshift = cnormSub (Shift (cshift', n'), t) in
       LF.comp (cnormSub (LF.comp cshift s , mt)) s'
+*)
+        let _ = dprint (fun () -> "[cnormSub] MSVar - MSInst") in
+        let s0 = cnormSub (LF.comp (normSub s) (normSub s') , mt) in
+        let s0' = LF.comp (Shift (cshift, n)) s0 in
+          cnormSub (s0', t)
+
 
     | MSVar (s ,
              (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
              (ctx_shift, n), (mt,s')) ->
       let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
-        let Shift (cshift, d) = cnormSub (Shift (cshift', n') , t) in
-          MSVar (s, (cshift, d), (cnormMSub (mcomp mt t), cnormSub (s',t)))
+          MSVar (s, (cshift', n'), (cnormMSub (mcomp mt t), s'))
 
     | _ -> (dprint (fun () -> "[cnormSub] undefined ? ");
             raise (Error.Violation "Cannot guarantee that parameter variable remains head"))
 
-  and cnormCtxShift (ctx_shift,t) k = match ctx_shift with
+
+  and cnormCtxShift (ctx_shift, t) k = match ctx_shift with
     | CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
       begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) -> (CtxShift ctx_v, k + d)
+          | (Some ctx_v, d) -> cnormCtxShift (CtxShift ctx_v, t) (k + d)
           | (None, d) -> (NoCtxShift, k + d)
       end
     | NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
       begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) -> (NegCtxShift ctx_v, k)
+          | (Some ctx_v, d) -> cnormCtxShift (NegCtxShift ctx_v, t) k
           | (None, d) -> (NoCtxShift, k)
       end
     | CtxShift (CtxOffset offset) ->

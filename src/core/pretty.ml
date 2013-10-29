@@ -560,22 +560,25 @@ module Int = struct
           in
           begin match cshift with
               | LF.NegCtxShift cshift ->
-                fprintf ppf "#^(NegCtxShift %a  + %s) #?S [%a]"
+                fprintf ppf "#^(NegCtxShift %a  + %s) #?S [%a][|%a|]"
                   (fmt_ppr_lf_dctx cD lvl) (toDctx cshift)
                   (R.render_offset n)
                   (self lvl) s
+                  (fmt_ppr_lf_msub cD 0) t
 
               | LF.NoCtxShift ->
                 fprintf ppf
-                  "#^(NoCtxShift  + %s) #?S [%a]"
+                  "#^(NoCtxShift  + %s) #?S [%a][|%a|]"
                   (R.render_offset n)
                   (self lvl) s
+                  (fmt_ppr_lf_msub cD 0) t
 
               | LF.CtxShift cshift ->
-                fprintf ppf "#^(CtxShift %a  + %s) #?S [%a]"
+                fprintf ppf "#^(CtxShift %a  + %s) #?S [%a][|%a|]"
                   (fmt_ppr_lf_dctx cD lvl) (toDctx cshift)
                   (R.render_offset n)
                   (self lvl) s
+                  (fmt_ppr_lf_msub cD 0) t
            end
 
         | LF.Dot (f, s) ->
@@ -678,7 +681,7 @@ module Int = struct
                     ; fprintf ppf "?%s" sym
           end
 
-      | LF.MInst (_, {contents = Some m}, cD, cPsi, _, _) ->
+      | LF.MInst (_, {contents = Some m}, cD, cPsi, _, _ ) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_normal cD cPsi lvl) m

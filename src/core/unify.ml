@@ -1297,7 +1297,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                       (* ss = (ms, ssubst)   cD ; cPsi0 |- ss cPsi' *)
                       (* let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t', cPsi1') ss rOccur in *)
                       let _ = dprint (fun () -> "[prune] MMVar t' = " ^
-                                        P.subToString cD0 cPsi' t') in
+                                        P.subToString cD2 cPsi' t') in
                       let (idsub, cPsi2) = pruneSub  cD2 cPsi'' phat (t', cPsi1') ss rOccur in
                       (* cD2 ; [|mt|]Psi1 |- idsub   : Psi2
                          cD2 ; Psi2 |- idsub_i : [|mt|]Psi1

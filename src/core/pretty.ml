@@ -951,24 +951,34 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.TypCtxPi ((psi, w, dep), tau) ->
-          let dep' = match dep with Comp.Explicit -> LF.No | Comp.Implicit -> LF.Maybe in
-          let cond = lvl > 1 in
-            fprintf ppf "%s{%s : %s}@ %a%s"
-              (l_paren_if cond)
-              (R.render_name psi)
-              (R.render_cid_schema w)
-              (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, dep'))) 0) tau
-              (r_paren_if cond)
-
+          ( match (dep,!Control.printImplicit) with
+          | ( _ , true)
+          | (Comp.Explicit, _) ->
+              let cond = lvl > 1 in
+              fprintf ppf "%s{%s : %s}@ %a%s"
+                (l_paren_if cond)
+                (R.render_name psi)
+                (R.render_cid_schema w)
+                (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, LF.No))) 0) tau
+                (r_paren_if cond)
+          | (Comp.Implicit, false) ->
+              fprintf ppf "%a"
+                (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, LF.No))) 0) tau
+              )
       | Comp.TypPiBox ((ctyp_decl, dep ), tau) ->
-          let d = match dep with Comp.Explicit -> "^e" | Comp.Implicit -> "^i" in
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a%s@ %a%s"
+          ( match (dep,!Control.printImplicit) with
+          | (_, true)
+          | (Comp.Explicit, _) ->
+              let cond = lvl > 1 in
+            fprintf ppf "%s%a@ %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
-              d
               (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
               (r_paren_if cond)
+          | (Comp.Implicit, false) ->
+            fprintf ppf "%a"
+              (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
+)
 
       | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo! "
 

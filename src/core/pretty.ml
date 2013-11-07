@@ -981,7 +981,17 @@ module Int = struct
             (fmt_ppr_pat_obj cD cG (lvl+1)) pat
             (fmt_ppr_pat_spine cD cG lvl) pat_spine)
 
-    and fmt_ppr_pat_obj cD cG lvl ppf = function
+    and fmt_ppr_pat_obj cD cG lvl ppf =
+      let rec dropSpineLeft ms n = match (ms, n) with
+      | (_, 0) -> ms
+      | (Comp.PatNil, _) -> ms
+      | (Comp.PatApp (_l,_p,rest), n) -> dropSpineLeft rest (n-1)
+      in let deimplicitize_spine c ms =
+          let ia = if !Control.printImplicit
+                 then 0
+                else Store.Cid.CompConst.get_implicit_arguments c in
+       dropSpineLeft ms ia in
+      function
       | Comp.PatEmpty (_, cPsi) ->
           let cond = lvl > 1 in
             fprintf ppf "%s[%a. {}]%s"
@@ -995,6 +1005,7 @@ module Int = struct
               (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
       | Comp.PatConst (_, c, pat_spine) ->
+          let pat_spine = deimplicitize_spine c pat_spine in
           let cond = lvl > 1 in
             fprintf ppf "%s%s %a%s"
               (l_paren_if cond)

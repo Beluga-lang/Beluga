@@ -1157,7 +1157,6 @@ module Int = struct
         i
       else
         let (i', _ ) = strip_mapp_args' cD cG i in i'
-
     and strip_mapp_args' cD cG i = match i with
       | Comp.Const prog ->
           (i,  implicitCompArg  (Store.Cid.Comp.get prog).Store.Cid.Comp.typ)
@@ -1165,35 +1164,40 @@ module Int = struct
           (i,  implicitCompArg  (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ)
       | Comp.Var x ->
           begin match Context.lookup cG x with
-              None -> (i, 0)
+              None -> (i, [])
             | Some tau -> (i,  implicitCompArg tau)
           end
 
       | Comp.Apply (loc, i, e) ->
-          let (i', _ ) = strip_mapp_args' cD cG i in
-            (Comp.Apply (loc, i', e), 0)
+          let (i', _) = strip_mapp_args' cD cG i in
+            (Comp.Apply (loc, i', e), [])
+
+
 
       | Comp.CtxApp (loc, i, cPsi) ->
-          let (i', _ ) = strip_mapp_args' cD cG i in
-            (Comp.CtxApp (loc, i', cPsi), 0)
-
+          let (i', stripArg ) = strip_mapp_args' cD cG i in
+          (match stripArg with
+          | false :: sA -> (i', sA)
+          | true  :: sA -> (Comp.CtxApp (loc, i', cPsi), sA)
+          | []          -> (i', [])                )
       | Comp.MApp (loc, i1, (phat, tM) ) ->
           let (i', stripArg) = strip_mapp_args' cD cG i1 in
-            if stripArg = 0 then
-              (Comp.MApp (loc , i', (phat, tM)), 0)
-            else
-              (i', stripArg - 1 )
-
-      | Comp.Ann (e, tau) -> (Comp.Ann (e, tau), 0)
+          (match stripArg with
+          | false :: sA -> (i', sA)
+          | true  :: sA -> (Comp.MApp (loc , i', (phat, tM)), sA)
+          | []          -> (i', [])                )
+      | Comp.Ann (e, tau) -> (Comp.Ann (e, tau), [])
 
 
     and implicitCompArg tau = begin match tau with
+      | Comp.TypCtxPi ((_,_, Comp.Implicit), tau)
       | Comp.TypPiBox ((LF.MDecl _ , Comp.Implicit), tau) ->
-          implicitCompArg tau + 1
-      | _ -> 0
+          (false)::(implicitCompArg tau)
+      | Comp.TypCtxPi (_, tau)
+      | Comp.TypPiBox (_ , tau) ->
+          (true)::(implicitCompArg tau)
+      | _ -> []
     end
-
-
     and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
       | Comp.Var x ->
           fprintf ppf "%s"

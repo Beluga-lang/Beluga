@@ -283,6 +283,28 @@ let rec blockdeclInDctx cPsi = match cPsi with
     | _                     -> false
     end
 
+
+  let simplifySub cD0 cPsi sigma = match sigma with
+    | SVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
+      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
+      (* cPsi  |- s2 : cPsi' *)
+      begin match Context.dctxToHat (cPsi) with
+        | (None, k) -> Shift (NoCtxShift , k)
+        | (Some cvar, k) -> Shift (CtxShift cvar, k)
+      end
+    |SVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
+      begin match Context.dctxToHat (cPsi) with
+        | (None, k) -> Shift (NegCtxShift cv , k)
+        | (Some cv', k) ->
+          if cv = cv' then
+            Shift (NoCtxShift, k)
+          else
+            sigma
+      end
+
+    | _ -> sigma
+
+
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
 
@@ -2030,8 +2052,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
            meta-variables are lowered during whnf, s1 = s2 = id or co-id
            r1 and r2 are uninstantiated  (None)
         *)
-        let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *) in
-        let t2' = Whnf.normSub (comp t2 s2) in (* cD ; cPsi |- t2' <= cPsi2 *)
+        let t1' = simplifySub cD0 cPsi (Whnf.normSub (comp t1 s1))    (* cD ; cPsi |- t1' <= cPsi1 *) in
+        let t2' = simplifySub cD0 cPsi (Whnf.normSub (comp t2 s2)) in (* cD ; cPsi |- t2' <= cPsi2 *)
         let _ = dprint (fun () ->  "\n[Unify] MVar-MVar:"  ) in
         let _ = dprint (fun () -> "          cPsi = " ^ P.dctxToString cD0 cPsi) in
         let _ = dprint (fun () -> "          sM1 =   "^ P.normalToString cD0 cPsi  sM1 ) in
@@ -2205,7 +2227,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
     (* MVar-normal case *)
     | ((Root (_, MVar (Inst (_n, r, cPsi1, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
 (*        dprnt "(001) MVar-_";*)
-        let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s1)) in
+        let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s1)) in
           if isPatSub t' then
             try
               let ss = invert t' in
@@ -2256,8 +2278,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
     (* normal-MVar case *)
     | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (_n, r, cPsi1, tP1, cnstrs), t), _tS), s2) as sM2)) ->
 (*        dprnt "(002) _-MVar"; *)
-        let t' = Monitor.timer ("Normalisation" , fun () -> Whnf.normSub (comp t s2)) in
-
+        let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s2)) in
           if isPatSub t' then
             try
 (*              dprnt "isPatSub";
@@ -2319,8 +2340,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
            meta^2-variables are lowered during whnf, s1 = s2 = id
            r1 and r2 are uninstantiated  (None)
         *)
-        let t1' = Whnf.normSub (comp t1 s1)    (* cD ; cPsi |- t1' <= cPsi1 *)
-        and t2' = Whnf.normSub (comp t2 s2)    (* cD ; cPsi |- t2' <= cPsi2 *)
+        let t1' = simplifySub cD0 cPsi (Whnf.normSub (comp t1 s1))    (* cD ; cPsi |- t1' <= cPsi1 *)
+        and t2' = simplifySub cD0 cPsi (Whnf.normSub (comp t2 s2))    (* cD ; cPsi |- t2' <= cPsi2 *)
         in
           if r1 == r2 then (* by invariant:  cD1 = cD2, cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isPatMSub mt1, isProjPatSub t1' , isPatMSub mt2, isProjPatSub t2') with
@@ -2528,7 +2549,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             instantiateMMVar (r, tN,!cnstrs);
             unifyTerm mflag cD0 cPsi sM1 sM2)
         else
-        let t' = Whnf.normSub (comp t s1) in
+        let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s1)) in
         let _ = dprint (fun () -> "t' = " ^ P.subToString cD0 cPsi t') in
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
           if isPatSub t' && isPatMSub (Whnf.cnormMSub mt) then
@@ -2621,7 +2642,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             instantiateMMVar (r, tN,!cnstrs);
             unifyTerm mflag cD0 cPsi sM1 sM2)
         else
-        let t' = Whnf.normSub (comp t s2) in
+        let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s2)) in
           if isPatSub t' && isPatMSub mt then
             try
                let _ = dprint (fun () ->
@@ -3278,8 +3299,9 @@ let rec blockdeclInDctx cPsi = match cPsi with
       (* Nil/App or App/Nil cannot occur by typing invariants *)
 
     and unifySub mflag cD0 cPsi s1 s2 =
-    unifySub' mflag cD0 cPsi (Whnf.cnormSub (s1, Whnf.m_id))
-                             (Whnf.cnormSub (s2, Whnf.m_id))
+    unifySub' mflag cD0 cPsi (simplifySub cD0 cPsi (Whnf.cnormSub (s1, Whnf.m_id)))
+                             (simplifySub cD0 cPsi (Whnf.cnormSub (s2, Whnf.m_id)))
+
     and unifySub' mflag cD0 cPsi s1 s2 = match (s1, s2) with
       | (Shift (psi, n), Shift (phi, k)) ->
           let rec compatible_cv = function

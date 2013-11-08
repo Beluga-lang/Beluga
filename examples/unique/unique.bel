@@ -48,7 +48,7 @@ Proof by induction on E.
 %block l = some [t:tp] block x:exp. type_of x t;
 %world tctx = l
 
-schema tctx =  some [t:tp] block x:exp, _t:type_of x t;
+schema tctx = some [t:tp] block (x:exp, _t:type_of x t);
 
 
 rec unique : {g:tctx}{E:[g. exp]} [g. type_of (E ..) T] -> [g. type_of (E ..) T']

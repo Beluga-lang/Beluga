@@ -609,7 +609,7 @@ module Solver = struct
           (try trail (fun () -> unify cPsi (tA, s) (dCl.tHead, s')
             (fun () -> solveSubGoals dPool (cPsi, k) (dCl.subGoals, s')
               (fun (u, tS) ->
-                sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS tS)))))
+                sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS (spineFromRevList tS))))))
            with U.Failure _ -> ()) ; matchDProg dPool'
         else matchDProg dPool'
       | Empty ->
@@ -633,10 +633,14 @@ module Solver = struct
       (* Trail to undo MVar instantiations. *)
       try trail (fun () -> unify cPsi (tA, s) (sCl.tHead, s')
         (fun () -> solveSubGoals dPool (cPsi, k) (sCl.subGoals, s')
-          (fun (u, tS) -> sc (u, LF.Root (Syntax.Loc.ghost, LF.Const (cidTerm), fS tS)))))
+          (fun (u, tS) -> sc (u, LF.Root (Syntax.Loc.ghost, LF.Const (cidTerm), fS (spineFromRevList tS))))))
       with U.Failure _ -> ()
 
     in matchDProg dPool
+(* spineFromRevList : LF.normal list -> LF.spine
+  build an LF.spine out of a list of LF.normal, reversing the order of the elements*)
+  and spineFromRevList lS =
+      List.fold_left (fun tSc tMc -> LF.App(tMc, tSc)) LF.Nil lS
 
   (* solveSubGoals dPool (Psi, k) (G, s) sc = ()
      Invariants:
@@ -654,11 +658,11 @@ module Solver = struct
        Any effect of (sc S).
   *)
   and solveSubGoals dPool (cPsi, k) (cG, s) sc = match cG with
-    | True -> sc (cPsi, LF.Nil)
+    | True -> sc (cPsi, [])
     | Conjunct (cG', g) ->
       gSolve dPool (cPsi, k) (g, s)
         (fun (u, tM) -> solveSubGoals dPool (cPsi, k) (cG', s)
-          (fun (v, tS) -> sc (v, LF.App (tM, tS))))
+          (fun (v, tS) -> sc (v, tM::tS)))
 
   (* solve (g, s) sc = ()
      Invariants:

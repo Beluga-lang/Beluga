@@ -1014,6 +1014,10 @@ module Int = struct
             (fmt_ppr_lf_typ cD cPsi lvl) tA
       | Comp.MetaSchema (s_cid) ->
           fprintf ppf "%s" (R.render_cid_schema s_cid)
+      | Comp.MetaSubTyp (cPhi, cPsi) ->
+           fprintf ppf "%a[%a]"
+            (fmt_ppr_lf_dctx cD lvl) cPsi
+            (fmt_ppr_lf_dctx cD lvl) cPhi
 
     let rec fmt_ppr_meta_spine cD lvl ppf = function
       | Comp.MetaNil ->

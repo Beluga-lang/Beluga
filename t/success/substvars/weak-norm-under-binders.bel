@@ -20,7 +20,7 @@ trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
 datatype IsVarSub : {g:ctx} (h:ctx) {#S: g[h]}ctype =
 | Nil : IsVarSub [] <h $ ^ >
-| Cons : {#S:g[h]}{#p:[h. tm A]} IsVarSub [g] <h $ #S[..] >
+| Cons : {h:ctx}{#S:g[h]}{#p:[h. tm A]} IsVarSub [g] <h $ #S[..] >
          -> IsVarSub [g,x:tm A] <h $ #S[..] (#p ..)  >
 ;
 
@@ -83,7 +83,7 @@ case r of
 | Nil => Nil
 % TODO: There's a case not implemented yet in pruneSubst where the head is a PVar
 % Is the above still  true?
-%| Cons <h $ #S[..] > [h . #p ..] r =>
+%| Cons <h $ #S[..] > [h . #p ..] r => ?
 %  ? % Make a recursive call, etc
 ;
 
@@ -103,7 +103,7 @@ case [g. #p ..] of
 rec extVarSub : {g:ctx} {h:ctx}{A:[.tp]} {#S:g[h]} IsVarSub [g] <h $ #S[..]>
  -> IsVarSub [g,x:tm A] <h,x:tm A $ #S[..] x > =
 mlam g => mlam h => mlam A => mlam #S => fn r =>
-? %Cons [h,x:tm A $ #S[..]] [h,x:tm A. x] (wknVarSub [g] [h] [h $ #S[..]] [. A] r)
+? %Cons [h,x:tm A] [h,x:tm A $ #S[..]] [h,x:tm A. x] (wknVarSub [g] [h] [h $ #S[..]] [. A] r)
 ;
 
 rec idIsVarSub : {g:ctx} IsVarSub [g] <g $ .. > =
@@ -175,11 +175,11 @@ case r of
 | Base h =>
   let Halts [g. S ..] q2 = h in
   Base (Halts [h. S #W[..]] (nwkn [g] [h] [g. _] [h $ #W[..]] q2 iv))
-| Arr [g. M ..] f => ?
-  %Arr [h. M #W[..]]
-  %(mlam h' => mlam #W2 => mlam N => fn iv2 => fn rn =>
-  % f [h'] [h' $ #W[#W2[..]]] [h'. N ..] (varSubCompose [h $ #W[..]] [h' $ #W2[..]] iv iv2) rn
-  %)
+| Arr [g. M ..] f =>
+  Arr [h. M #W[..]]
+   (mlam h' => mlam #W2 => mlam N => fn iv2 => fn rn =>
+    f [h'] [h' $ #W[#W2[..]]] [h'. N ..] (varSubCompose iv iv2) rn
+   )
 ;
 
 datatype RedSub : {g:ctx}(h:ctx){#S:g[h]} ctype =
@@ -223,16 +223,17 @@ mlam g => mlam h =>  mlam M => mlam #S => fn rs =>
     eval [g'] [h]  [g'. M1 ..] [h $ #S[..] ] rs in
    f [h] [h $ .. ] [h. _] (idIsVarSub [h]) rN
 
-| [g'. lam (\x. M1 .. x)] => ?
-  % Arr [h. lam (\x. M1 #S[..] x)]
-  % (mlam h' => mlam #W => mlam N => fn isVS => fn rN =>
-  %  closed2 [h'. beta]
-  %    (eval [g',x:tm _] [h'] [g',x. M1 .. x] [h' $ #S[#W[..]] (N ..)]
-  %       (Dot [h' $ #S[#W[..]] ]
-  %          (wknRedSub [g'] [h] [h'] [h $ #S[..]] [h' $ #W[..]] rs isVS)
-  %          rN)
-  %    )
-  % )
+| [g'. lam (\x. M1 .. x)] =>
+   Arr [h. lam (\x. M1 #S[..] x)]
+   (mlam h' => mlam #W => mlam N => fn isVS => fn rN =>
+     let quux = (eval [g',x:tm _] [h'] [g',x. M1 .. x] [h' $ #S[#W[..]] (N ..)]
+         ?
+         % (Dot [h'] [h' $ #S[#W[..]] ]
+         %    (wknRedSub [g'] [h] [h'] [h $ #S[..]] [h' $ #W[..]] rs isVS)
+         %    rN)
+      ) in
+     ? %closed2 [h'. beta] ?
+   )
 ;
 
 rec idRedSub : {g:ctx} RedSub [g] <g $ ..> =

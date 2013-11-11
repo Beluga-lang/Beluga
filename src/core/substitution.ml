@@ -69,7 +69,7 @@ module LF = struct
 
     (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
 
-    | (Shift (NoCtxShift, n), SVar(Offset offset, (ctx_shift, k), r)) ->
+    | (Shift (NoCtxShift, n), SVar(s, (ctx_shift, k), r)) ->
         (* psi, Psi |- s1 : psi   where |Psi| = n
 
            ctx_shift must be either NoCtxShift or NegCtxShift
@@ -81,7 +81,7 @@ module LF = struct
           therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
                 and  psi, Psi, Psi_k |- ^(n+k) : psi
          *)
-      SVar (Offset offset, (ctx_shift, k+n), r)
+      SVar (s, (ctx_shift, k+n), r)
 
     | (Shift (NoCtxShift, n), MSVar(s, (ctx_shift, k), (t,r))) ->
         (* psi, Psi |- s1 : psi   where |Psi| = n
@@ -97,6 +97,8 @@ module LF = struct
          *)
       MSVar (s, (ctx_shift, k+n), (t,r))
 
+    | (Shift (NoCtxShift, n), FSVar (s, (ctx_shift, k), tau)) ->
+       FSVar (s, (ctx_shift, k+n), tau)
 
     | (Shift (NoCtxShift, n), Shift (NoCtxShift, m)) ->
         (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
@@ -138,9 +140,10 @@ module LF = struct
             (* if    . |- offset : psi  then return s' *)
             SVar (offset, (CtxShift psi, k + n), s')
 
-(*          | SVar (offset, (ctx_shift, k), s') ->
+          | SVar (offset, (CtxShift _, k), s') ->
+              raise (NotComposable "Ill-typed composition: SVar CtxShift")
             (* ctx_shift = CtxShift phi cannot happen *)
-            SVar (offset, (ctx_shift, k + n), s')
+(*            SVar (offset, (ctx_shift, k + n), s')
 *)
           | FSVar (s, (NegCtxShift psi', k), s') ->
                 comp (Shift (NoCtxShift, k)) s'
@@ -155,11 +158,14 @@ module LF = struct
               (* mcomp  with t' *)
               comp (Shift (NoCtxShift, k)) s'
 
-(*          | FSVar (s, (ctxShift, k), s') ->
+          | MSVar (s, (CtxShift _, k), (t',s')) ->
+              raise (NotComposable "Ill-typed composition: MSVar CtxShift")
+
+          | FSVar (s, (CtxShift _, k), s') ->
+              raise (NotComposable "Ill-typed composition: FSVar CtxShift")
               (* ctxShift = CtxShift phi cannot happen *)
-              FSVar (s, (ctx_shift, k + n), s')
+(*              FSVar (s, (ctx_shift, k + n), s')
 *)
-          | _ ->  raise (NotComposable "Composition undefined - 2")
         in
           ctx_shift m s2
 
@@ -228,7 +234,13 @@ module LF = struct
 (*        Shift (CtxShift psi2, k1 + k2)           (* ADDED -jd 2010-06-24 *) *)
         raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o CtxShift " ^ string_of_int k2 ^ "?"))
 
-
+    | (Shift (NegCtxShift psi, k), SVar(offset, (CtxShift psi', n), s)) ->
+       if psi = psi' then
+        SVar (offset, (NoCtxShift, k+n), s)
+       else
+        raise (NotComposable "Composition not defined?") (* SVar (offset, (NegCtxShift psi, k+n), s) *)
+      (*Shift (NegCtxShift psi, k) *)
+    (* raise (NotComposable "Composition not defined? NegCtxShift") *)
     | (_s1, _s2) ->
         raise (NotComposable "Composition not defined?")
 

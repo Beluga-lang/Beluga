@@ -1,4 +1,4 @@
-% Illustrates a missing case in unifySub
+% Weak normalization under binders. Very carefully tiptoes around various gaps in the implementation
 
 tp : type.                %name tp T.
 i :  tp.
@@ -18,10 +18,14 @@ stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
+datatype IsVar : (g:ctx){M:[g.tm A]} ctype =
+| IsVar : {#p:[g.tm A]} IsVar [g. #p ..];
+
 datatype IsVarSub : {g:ctx} (h:ctx) {#S: g[h]}ctype =
 | Nil : IsVarSub [] <h $ ^ >
-| Cons : {g:ctx}{h:ctx}{A:[.tp]}{#S:g[h]}{#p:[h. tm A]} IsVarSub [g] <h $ #S[..] >
-         -> IsVarSub [g,x:tm A] <h $ #S[..] (#p ..)  >
+| Cons : {g:ctx}{h:ctx}{A:[.tp]}{#S:g[h]}{M:[h. tm A]} IsVarSub [g] <h $ #S[..] >
+         -> IsVar [h. M ..] % I would like to directly quantify over #p, but bugs
+         -> IsVarSub [g,x:tm A] <h $ #S[..] (M ..)  >
 ;
 
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
@@ -53,13 +57,32 @@ datatype Reduce : (g:ctx) {A:[.tp]}{M:[g.tm A]} ctype =
          -> Reduce [. arr A B] [h0. M ..]
 ;
 
-rec varSubCompose : (g:ctx)(h:ctx)(h':ctx)
+rec wknVar : {g:ctx}(h:ctx){A:[.tp]}{#p:[g.tm A]}{#W:g[h]}
+     IsVarSub [g] <h $ #W[..]>
+   -> IsVar [h. #p #W[..]] =
+mlam g => mlam A => mlam #p => mlam #W => fn ivs =>
+case [g. #p ..] of
+| [g',x:tm B. x] =>
+  let {#R:g'[h]} Cons [g'] [h] [. B] <h $ #R[..]> [h. M ..] ivs' iv = ivs in
+  iv
+| {#q : [g'. tm T]} [g',x:tm B. #q ..] =>
+  let {#R:g'[h]} Cons [g'] [h] [. B] <h $ #R[..]> [h. M ..] ivs' iv = ivs in
+  wknVar [g'] [. T] [g'. #q ..] [h $ #R[..]] ivs'
+;
+
+rec varSubCompose' : {g:ctx}{h:ctx}{h':ctx}{#W:g[h]}{#W2:h[h']}
     IsVarSub [g] <h  $ #W[..]>
  -> IsVarSub [h] <h' $ #W2[..]>
  -> IsVarSub [g] <h' $ #W[#W2[..]]> =
-fn r1 => fn r2 => case r1 of
-| Nil => ? %Nil
-%| {#p:[h. tm A]} {#W:g'[h]} Cons [g'] [h] [. A] <h $ #W[..]> [h . #p ..] r => ?
+mlam g => mlam h => mlam h' => mlam #W => mlam #W2 => fn r1 => fn r2 =>
+case [g. i] of % Would prefer to pattern match on r1, but can't, because bugs
+| [. i] => ? %Nil
+| [g',x:tm A. i] =>
+  let {#R:g'[h]} Cons [g'] [h] [. B] <h $ #R[..]> [h. M ..] ivs' iv = r1 in
+  let q0 = varSubCompose' [g'] [h] [h'] [h $ #R[..]] [h' $ #W2[..]] ivs' r2 in
+  let IsVar [h. #p ..] = iv in
+  let q1 = wknVar [h] [.B] [h. #p ..] [h' $ #W2[..]] r2 in
+  Cons [g'] [h'] [.B] [h' $ #R[#W2[..]]] [h'. _] q0 q1
 ;
 
 rec haltsMstep2 : (g:ctx) {M:[g. tm A]}{S:[g. mstep (M ..) (M' ..)]} Halts [g. M' ..] -> Halts [g. M ..] =
@@ -80,29 +103,21 @@ mlam S => fn r => let (r : Reduce [.A] [g. M' ..]) = r in  case r of
 rec wknVarSub : {g:ctx}{h:ctx}{#S:g[h]}{A:[. tp]} IsVarSub [g] <h $ #S[..] >
  -> IsVarSub [g] <h,x:tm A $ #S[..] > =
 mlam g => mlam h => mlam #S => mlam A => fn r =>
-case r of
-| Nil => Nil
-%| {#p:[h.tm A]} Cons [g'] [h] [. A] <h $ #S[..] > [h . #p ..] r => ?
-%  ? % Make a recursive call, etc
+case [g. i] of % Would prefer to pattern match on r, but can't
+| [. i] => ? % Nil
+| [g',x:tm B. i] =>
+ let {#R:g'[h]} Cons [g'] [h] [. B] <h $ #R[..] > [h. M ..] r' iv = r in
+ let q0 = wknVarSub [g'] [h] [h $ #R[..]] [. A] r' in
+ let IsVar [h. #p ..] = iv in
+ Cons [g'] [h,x:tm A] [. B] [h,x:tm A $ #R[..]] [h,x:tm A. #p ..] q0 (IsVar [h,x:tm A. #p ..])
 ;
 
-rec wknVar : {g:ctx}(h:ctx){A:[.tp]}{#p:[g.tm A]}{#W:g[h]}
-     IsVarSub [g] <h $ #W[..]>
-  -> IsNeutral [h. #p #W[..]] =
-mlam g => mlam A => mlam #p => mlam #W => fn iv =>
-case [g. #p ..] of
-| [g',x:tm B. x] =>
-  %let {#R:g'[h]}{#r:[h.tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
-   ?
-| {#q : [g'. tm T]} [g',x:tm B. #q ..] =>
-  %let {#r:[h. tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
-  ?
-;
+
 
 rec extVarSub : {g:ctx} {h:ctx}{A:[.tp]} {#S:g[h]} IsVarSub [g] <h $ #S[..]>
  -> IsVarSub [g,x:tm A] <h,x:tm A $ #S[..] x > =
 mlam g => mlam h => mlam A => mlam #S => fn r =>
-Cons [g] [h,x:tm A] [. A] [h,x:tm A $ #S[..]] [h,x:tm A. x] (wknVarSub [g] [h] [h $ #S[..]] [. A] r)
+Cons [g] [h,x:tm A] [. A] [h,x:tm A $ #S[..]] [h,x:tm A. x] (wknVarSub [g] [h] [h $ #S[..]] [. A] r) (IsVar [h,x:tm A. x])
 ;
 
 rec idIsVarSub : {g:ctx} IsVarSub [g] <g $ .. > =
@@ -116,13 +131,19 @@ mlam g => mlam A =>
 wknVarSub [g] [g] [g $ ..] [. A] (idIsVarSub [g])
 ;
 
+rec varIsNeutral : {g:ctx}{M:[g.tm A]} IsVar [g. M ..] -> IsNeutral [g. M ..] =
+mlam g => mlam M => fn r =>
+let IsVar [g. #p ..] = r in Var [g. #p ..]
+;
+
 rec rwkn : {g:ctx}{h:ctx}{R:[g.tm A]}{#W:g[h]}
      IsNeutral [g. R ..]
   -> IsVarSub [g]  <h $ #W[..]>
   -> IsNeutral [h. R #W[..]] =
 mlam g => mlam h => mlam R => mlam #W => fn r => fn iv =>
 case r of
-| Var [g. #p ..] => wknVar [g] [. _] [g. #p ..] [h $ #W[..]] iv
+| Var [g. #p ..] =>
+  varIsNeutral [h] [h. _] (wknVar [g] [. _] [g. #p ..] [h $ #W[..]] iv)
 | App r' n =>
   App (rwkn [g] [h] [g. _] [h $ #W[..]] r' iv)
       (nwkn [g] [h] [g. _] [h $ #W[..]] n iv)
@@ -177,7 +198,7 @@ case r of
 | Arr [g. M ..] f =>
   Arr [h. M #W[..]]
    (mlam h' => mlam #W2 => mlam N => fn iv2 => fn rn =>
-    f [h'] [h' $ #W[#W2[..]]] [h'. N ..] (varSubCompose iv iv2) rn
+    f [h'] [h' $ #W[#W2[..]]] [h'. N ..] (varSubCompose' [g] [h] [h'] [h $ #W[..]] [h' $ #W2[..]] iv iv2) rn
    )
 ;
 

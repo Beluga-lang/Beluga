@@ -25,6 +25,7 @@ datatype IsVarSub : {g:ctx} (h:ctx) {#S: g[h]}ctype =
 ;
 
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
+% Could enforce also eta longness easily, but meh
 datatype IsNormal : (g:ctx) {M:[g.tm A]} ctype =
 | Neut : IsNeutral [g. M ..] -> IsNormal [g. M ..]
 | Lam : IsNormal [g,x:tm A. M .. x]
@@ -59,7 +60,7 @@ rec varSubCompose : (g:ctx)(h:ctx)(h':ctx)
 fn r1 => fn r2 => case r1 of
 | Nil => ? %Nil
 % TODO: There's a case not implemented yet in pruneSubst where the head is a PVar
-%| {#p:[h. tm A]} Cons [g'] [h] [. A] <h $ #W[..]> [h . #p ..] r => ?
+%| {#p:[h. tm A]} {#W:g'[h]} Cons [g'] [h] [. A] <h $ #W[..]> [h . #p ..] r => ?
 ;
 
 rec haltsMstep2 : (g:ctx) {M:[g. tm A]}{S:[g. mstep (M ..) (M' ..)]} Halts [g. M' ..] -> Halts [g. M ..] =
@@ -93,7 +94,7 @@ rec wknVar : {g:ctx}(h:ctx){A:[.tp]}{#p:[g.tm A]}{#W:g[h]}
 mlam g => mlam A => mlam #p => mlam #W => fn iv =>
 case [g. #p ..] of
 | [g',x:tm B. x] =>
-  %let {#r:[h.tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
+  %let {#R:g'[h]}{#r:[h.tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
    ?
 | {#q : [g'. tm T]} [g',x:tm B. #q ..] =>
   %let {#r:[h. tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in

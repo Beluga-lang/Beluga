@@ -1758,9 +1758,11 @@ let rec blockdeclInDctx cPsi = match cPsi with
           | _ -> raise NotInvertible
         end
 
-    | (Dot (Head (h), _s'), DDec(_cPsi', _dec)) ->
+    | (Dot (Head (h), s'), DDec(cPsi', _dec)) ->
         (dprint (fun () -> "[pruneSubst] h = " ^ P.headToString cD cPsi h);
-         raise (Error "[pruneSubst] Case not implemented"))
+         let Root(_,h',_) = prune cD cPsi (Context.dctxToHat cPsi) (Root(Syntax.Loc.ghost,h,Nil), Substitution.LF.id)  ss  rOccur in
+         Dot (Head h', pruneSubst cD cPsi (s', cPsi') ss rOccur))
+         (* -ac: verify that this is reasonable. *)
 
     | (Dot (Obj tM, s'), DDec(cPsi', _dec))        ->
         (* below may raise NotInvertible *)

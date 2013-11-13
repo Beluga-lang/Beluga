@@ -1600,6 +1600,7 @@ and cnorm (tM, t) = match tM with
           | MV k -> Head(PVar (Offset k, cnormSub (r,t)))
           | PObj(_phat, FPVar _) -> raise (Error.Violation "Head FPVar")
                                     (* -ac: should this arise? What to do? *)
+          | PObj(_phat, PVar(PInst _, _)) -> raise (Error.Violation "Head PVar Inst?")
               (* other case MObj _ cannot happen *)
         end
 

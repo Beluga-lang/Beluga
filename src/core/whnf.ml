@@ -1598,6 +1598,8 @@ and cnorm (tM, t) = match tM with
              Head(PVar(Offset n, LF.comp s' (cnormSub (r,t))))
           | PObj (_phat, BVar j)    ->  LF.bvarSub j (cnormSub (r,t))
           | MV k -> Head(PVar (Offset k, cnormSub (r,t)))
+          | PObj(_phat, FPVar _) -> raise (Error.Violation "Head FPVar")
+                                    (* -ac: should this arise? What to do? *)
               (* other case MObj _ cannot happen *)
         end
 

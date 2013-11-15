@@ -194,7 +194,7 @@ rec wknRedSub : {g:ctx}{h:ctx}{h':ctx}{#S:g[h]}{#W:h[h']}
  -> RedSub [g] <h' $ #S[#W[..]] > =
 mlam g => mlam h => mlam h' => mlam #S => mlam #W => fn rs => fn iv =>
 case [g. i] of % Pattern match on g because pattern matching on rs is giving me trouble
-| [. i] => ? % Nil % Should suffice. Need to make these unifiable? Missing simplifySub somewhere?
+| [. i] => Nil
 | [g',x:tm A. i] =>
   let {#R:g'[h]} Dot [g'] [h] [. A] [h. M ..] <h $ #R[..] > rs' rN = rs in
   let wrs' = wknRedSub [g'] [h] [h'] [h $ #R[..]] [h' $ #W[..]] rs' iv in

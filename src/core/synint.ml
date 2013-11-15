@@ -112,14 +112,15 @@ module LF = struct
         (* D ; Psi |- M <= A   provided constraint *)
     | PInst  of name * head   option ref * dctx * typ * cnstr list ref
         (* D ; Psi |- H => A  provided constraint *)
-    | SInst  of name * sub    option ref * dctx * dctx * cnstr list ref
+    | SInst  of name * sub    option ref * dctx (*cPsi*) * dctx (*cPhi *) * cnstr list ref
+        (* D ; Psi |- sigma <= cPhi  provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
     | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
         (* D ; Psi |- M <= A     provided constraint *)
     | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
     | MSInst   of name * sub option ref * mctx * dctx (* cPsi *) * dctx (* cPhi *) * cnstr list ref
-        (* cD ; cPhi |- s : cPsi ?? *)
+        (* cD ; cPsi |- s <= cPhi *)
 
   and tvar =
     | TInst   of typ option ref * dctx * kind * cnstr list ref

@@ -58,7 +58,7 @@ rec varSubCompose : (g:ctx)(h:ctx)(h':ctx)
  -> IsVarSub [h] <h' $ #W2[..]>
  -> IsVarSub [g] <h' $ #W[#W2[..]]> =
 fn r1 => fn r2 => case r1 of
-| Nil => ? %Nil
+| Nil => Nil
 %| {#p:[h. tm A]} {#W:g'[h]} Cons [g'] [h] [. A] <h $ #W[..]> [h . #p ..] r => ?
 ;
 

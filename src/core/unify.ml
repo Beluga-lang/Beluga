@@ -3655,8 +3655,11 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     | (Comp.MetaSObj (_, phat, s) , t) , (Comp.MetaSObj (_, phat', s') , t') ->
         let SDecl (_u, _cPhi, cPsi) = cdecl in
+        let cPsi1 = Whnf.cnormDCtx (cPsi, mt) in
         let _ = dprint (fun () -> "[unifyMetaObj] SObj ") in
-        let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
+        let _ = dprint (fun () -> "      cPsi = " ^ P.dctxToString cD cPsi1) in
+        let _ = dprint (fun () -> "         s = " ^ P.subToString cD cPsi1 (simplifySub cD cPsi1 (Whnf.cnormSub (s,t)))) in
+        let _ = dprint (fun () -> "         s' = " ^ P.subToString cD cPsi1 (simplifySub cD cPsi1 (Whnf.cnormSub (s',t')))) in
           unifySub Unification cD cPsi1
             (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
 

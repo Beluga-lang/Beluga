@@ -301,9 +301,18 @@ let rec blockdeclInDctx cPsi = match cPsi with
           else
             sigma
       end
-
+    | SVar (s , (NoCtxShift , _ ), _s2 ) ->
+      let (cPhi, cPsi1) = match s with
+    (* cPhi |- s : cPsi1 *)
+        | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
+        | SInst (_,  _ ,  cPhi, cPsi1, _ ) -> (cPhi, cPsi1)
+      in
+      begin match cPsi1 , Context.dctxToHat (cPsi) with
+        | Null , (None, k) -> Shift (NoCtxShift, k)
+        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
+        | _     -> sigma
+      end
     | _ -> sigma
-
 
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)

@@ -571,6 +571,10 @@ and cnormApxBranch cD delta b (cD'', t) =
   and append_mctx cD'' delta' = match delta' with
   | Apx.LF.Empty -> cD''
 
+  | Apx.LF.Dec (delta2', Apx.LF.CDecl (x, _ )) ->
+      let cD1'' = append_mctx cD'' delta2' in
+        Int.LF.Dec (cD1'', Int.LF.CDeclOpt x)
+
   | Apx.LF.Dec (delta2', Apx.LF.MDecl (x, _, _ )) ->
       let cD1'' = append_mctx cD'' delta2' in
         Int.LF.Dec (cD1'', Int.LF.MDeclOpt x)

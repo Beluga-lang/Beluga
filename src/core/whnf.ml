@@ -1598,15 +1598,23 @@ and cnorm (tM, t) = match tM with
              Head(PVar(Offset n, LF.comp s' (cnormSub (r,t))))
           | PObj (_phat, BVar j)    ->  LF.bvarSub j (cnormSub (r,t))
           | MV k -> Head(PVar (Offset k, cnormSub (r,t)))
-          | PObj(_phat, FPVar _) -> raise (Error.Violation "Head FPVar")
+          | PObj(_phat, FPVar (p, s)) ->
+              Head (FPVar (p, LF.comp s (cnormSub (r,t))))
                                     (* -ac: should this arise? What to do? *)
-          | PObj(_phat, PVar(PInst _, _)) -> raise (Error.Violation "Head PVar Inst?")
+          | PObj(_phat, PVar(p, s)) ->
+              Head (PVar (p, LF.comp s (cnormSub (r,t))))
+          | _ -> raise (Error.Violation "PVar is replaced by an MVar")
               (* other case MObj _ cannot happen *)
         end
 
     | Head (PVar (p, r)) ->
         let r'  = cnormSub (r,t) in
           Head (PVar (p, r'))
+
+    | Head (FPVar (p, r)) ->
+        let r'  = cnormSub (r,t) in
+          Head (FPVar (p, r'))
+
 
     | Head (MPVar (p, (mr, r))) ->
         let r'  = cnormSub (r,t) in

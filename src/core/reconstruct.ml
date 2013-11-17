@@ -2483,7 +2483,8 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
      let _  = dprint (fun () -> "[elBranch] Reconstruction of general pattern of type "
                        ^ P.compTypToString cD tau_s) in
     let cD' = elMCtx Lfrecon.Pibox delta in
-    let _ = dprint (fun () -> "[recPatObj] reconstruction of delta done") in
+    let _ = dprint (fun () -> "[recPatObj] reconstruction of delta done : cD_p  (explicit) = " ^ P.mctxToString cD') in
+
     let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat (cD, tau_s) in
     let _ = dprint (fun () -> "[recPatObj] done") in
     let _ = dprint (fun () -> "           " ^ P.mctxToString cD1' ^ " ; " ^

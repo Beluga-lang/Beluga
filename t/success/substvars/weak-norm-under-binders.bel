@@ -30,11 +30,11 @@ rec varSubCompose : (g:ctx)(h:ctx)(h':ctx)
  -> IsVarSub [g] <h' $ #W[#W2[..]]> =
 fn r1 => fn r2 => case r1 of
 | Nil => Nil
-|  {g':ctx}{h':ctx}{A:[.tp]} {#W:g'[h']}{#p:[h'. tm A]}
+| % {g':ctx}{h':ctx}{A:[.tp]} {#W:g'[h']}{#p:[h'. tm A]}
   Cons [g'] [h'] [. A] <h' $ #W[..]> [h' . #p ..] r => ?
 ;
 
-%{
+
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
 % Could enforce also eta longness easily, but meh
 datatype IsNormal : (g:ctx) {M:[g.tm A]} ctype =
@@ -85,7 +85,8 @@ rec wknVarSub : {g:ctx}{h:ctx}{#S:g[h]}{A:[. tp]} IsVarSub [g] <h $ #S[..] >
 mlam g => mlam h => mlam #S => mlam A => fn r =>
 case r of
 | Nil => Nil
-%| {#p:[h.tm A]} Cons [g'] [h] [. A] <h $ #S[..] > [h . #p ..] r => ?
+| % {#p:[h.tm A]}
+   Cons [g'] [h] [. A] <h $ #S[..] > [h . #p ..] r => ?
 %  ? % Make a recursive call, etc
 ;
 
@@ -95,10 +96,11 @@ rec wknVar : {g:ctx}(h:ctx){A:[.tp]}{#p:[g.tm A]}{#W:g[h]}
 mlam g => mlam A => mlam #p => mlam #W => fn iv =>
 case [g. #p ..] of
 | [g',x:tm B. x] =>
-  %let {#R:g'[h]}{#r:[h.tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
+  let % {#R:g'[h]}{#r:[h.tm B]}
+      Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
    ?
 | {#q : [g'. tm T]} [g',x:tm B. #q ..] =>
-  %let {#r:[h. tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
+  let {#r:[h. tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
   ?
 ;
 
@@ -258,4 +260,4 @@ rec weakNorm : {g:ctx}{A:[.tp]}{M:[g. tm A]} Halts  [g. M ..] =
 mlam g => mlam A => mlam M =>
 reify (eval [g] [g] [g. M ..] [g $ ..] (idRedSub [g]))
 ;
-}%
+

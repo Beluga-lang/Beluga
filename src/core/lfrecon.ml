@@ -1716,6 +1716,33 @@ and elSub' loc recT cD cPsi s cPhi =
 
 (* | (Apx.LF.Dot (Apx.LF.Head h, s),   ) -> *)
 
+  | (Apx.LF.Dot (Apx.LF.Head ((Apx.LF.FPVar (p,s')) as h) , s),   Int.LF.DDec (cPhi',  Int.LF.TypDecl (_, tA))) ->
+      let sigma = elSub'  loc recT cD cPsi s cPhi' in
+       begin try
+        let (_, _) = FCVar.get p in
+        let (h', sA') = elHead loc recT cD cPsi h in
+          begin try
+            Unify.unifyTyp cD cPsi sA' (tA, sigma);
+            Int.LF.Dot (Int.LF.Head h', sigma)
+          with
+            |  _ -> raise (Error (loc, TypMismatchElab (cD, cPsi, sA', (tA, sigma))))
+          end
+       with
+         | Not_found -> if isPatSub s' then
+                let (cPhi, s'') = synDom cD loc cPsi s' in
+                let si          = Substitution.LF.invert s'' in
+                let tA = pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi)  (tA, sigma)
+                                (Int.LF.MShift 0, si)  in
+                  (* For type reconstruction to succeed, we must have
+                   * . ; cPhi |- tA <= type  and . ; cPsi |- s' <= cPhi
+                   * This will be enforced during abstraction.
+                   *)
+                  FCVar.add p (cD, Int.LF.PDecl(p, Whnf.normTyp (tA,Substitution.LF.id),  cPhi));
+                  Int.LF.Dot (Int.LF.Head (Int.LF.FPVar (p,s'')), sigma)
+           else
+             raise (Error (loc, NotPatternSpine))
+       end
+
 
   | (Apx.LF.Dot (Apx.LF.Head h, s),   Int.LF.DDec (cPhi', Int.LF.TypDecl (_, tA))) ->
       (* NOTE: if decl = x:A, and cPsi(h) = A' s.t. A =/= A'

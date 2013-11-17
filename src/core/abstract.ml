@@ -1376,6 +1376,10 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
 let rec collectMctx  cQ cD = match cD with
   | I.Empty -> (cQ, I.Empty)
 
+  | I.Dec(cD, I.CDecl(g, sW, dep)) ->
+      let (cQ', cD')  = collectMctx cQ cD in
+        (cQ', I.Dec(cD', I.CDecl(g, sW, dep)))
+
   | I.Dec(cD, I.MDecl(u, tA, cPsi)) ->
       let (cQ', cD')  = collectMctx cQ cD in
       let phat = Context.dctxToHat cPsi in
@@ -1831,6 +1835,9 @@ and abstractMVarMctx cQ cD (l,offset) = match cD with
       let cPhi' = abstractMVarDctx cQ (l,offset) cPhi in
         I.Dec(cD', I.SDecl (s, cPhi', cPsi'))
 
+  | I.Dec(cD, I.CDecl(g, sW, dep)) ->
+      let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
+        I.Dec(cD', I.CDecl (g, sW, dep))
 
 and abstractMVarCtx cQ l =  match cQ with
   | I.Empty -> I.Empty

@@ -3353,11 +3353,13 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
       | (SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs),  (NoCtxShift , 0), s), s2) -> (* offset may not always be 0 ? -bp *)
         let s = Whnf.normSub s in
+        let _ = dprint (fun () -> "[unifySub]  s = " ^ P.subToString cD0 cPsi s1) in
+        let _ = dprint (fun () -> "            s' = " ^ P.subToString cD0 cPsi s2) in
           begin match isPatSub s with
             | true ->
                 begin try
                   let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), cPsi2) (Whnf.m_id, s_i) (SVarRef r) in
+                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), Whnf.cnormDCtx (cPsi2, Whnf.m_id)) (Whnf.m_id, s_i) (SVarRef r) in
                     instantiateSVar (r, s2', !cnstrs)
                 with
                   | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
@@ -3368,11 +3370,14 @@ let rec blockdeclInDctx cPsi = match cPsi with
       | (s2, SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs), (NoCtxShift, 0), s))  ->
           (* other cases ? -bp *)
         let s = Whnf.normSub s in
+        let _ = dprint (fun () -> "[unifySub]  s = " ^ P.subToString cD0 cPsi s1) in
+        let _ = dprint (fun () -> "            s' = " ^ P.subToString cD0 cPsi s2) in
           begin match isPatSub s with
             | true ->
                 begin try
+                  let _ = dprint (fun () -> "[unifySub] SVar - ispatsub ") in
                   let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), cPsi2) (Whnf.m_id, s_i) (SVarRef r) in
+                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), Whnf.cnormDCtx (cPsi2, Whnf.m_id)) (Whnf.m_id, s_i) (SVarRef r) in
                     instantiateSVar (r, s2', !cnstrs)
                 with
                   | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))

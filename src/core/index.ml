@@ -464,7 +464,8 @@ let rec index_mctx cvars fvars = function
       let (omega', delta', cvars', fvars') = index_mctx cvars fvars delta in
       let (cdec', cvars'', fvars'') = index_cdecl cvars' fvars' cdec in
         begin match cdec' with
-          | Apx.LF.CDecl _ -> (Apx.LF.Dec(omega', cdec'), delta', cvars'', fvars'')
+          | Apx.LF.CDecl _ -> (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
+              (* (Apx.LF.Dec(omega', cdec'), delta', cvars'', fvars'') *)
           | _       -> (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
         end
 

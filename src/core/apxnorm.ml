@@ -473,25 +473,17 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 
 and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var _x -> i
-  | Apx.Comp.DataConst _c -> (dprint (fun () -> "[cnormApxExp'] Const " ^
-				       (R.render_cid_comp_const _c));
-      i)
-  | Apx.Comp.DataDest _c -> (dprint (fun () -> "[cnormApxExp'] Dest " ^
-				       (R.render_cid_comp_dest _c));
-      i)
-  | Apx.Comp.Const _c -> (dprint (fun () -> "[cnormApxExp'] Const " ^
-				    R.render_cid_prog _c ); i)
+  | Apx.Comp.DataConst _c -> i
+  | Apx.Comp.DataDest _c ->  i
+  | Apx.Comp.Const _c ->  i
   | Apx.Comp.PairVal (loc, i1, i2) ->
       let i1' = cnormApxExp' cD delta i1 cDt in
       let i2' = cnormApxExp' cD delta i2 cDt in
         Apx.Comp.PairVal (loc, i1', i2')
 
   | Apx.Comp.Apply (loc, i, e) ->
-      let _ = dprint (fun () -> "[cnormApxExp'] Apply left arg ") in
       let i' = cnormApxExp' cD delta i cDt in
-      let _ = dprint (fun () -> "[cnormApxExp'] Apply right arg ") in
       let e' = cnormApxExp cD delta e cDt in
-      let _ = dprint (fun () -> "[cnormApxExp'] Apply right arg done ") in
         Apx.Comp.Apply (loc, i', e')
 
   | Apx.Comp.CtxApp (loc, i, psi) ->
@@ -532,7 +524,6 @@ and cnormApxExp' cD delta i cDt = match i with
         Apx.Comp.MAnnSApp (loc, i', (psi', sigma'))
 
   | Apx.Comp.BoxVal (loc, psi, m) ->
-      let _    = dprint (fun () -> "[cnormApxExp'] BoxVal ") in
       let psi' = cnormApxDCtx loc cD delta psi cDt in
       let m'   = cnormApxTerm cD delta m cDt in
         Apx.Comp.BoxVal (loc, psi', m')
@@ -590,22 +581,13 @@ and cnormApxBranch cD delta b (cD'', t) =
   in
     match b with
       | Apx.Comp.Branch (loc, omega, delta', Apx.Comp.PatMetaObj (loc', mO), e) ->
-      (*   16/12/11 -bp
-        let cs' = match apxget_ctxvar_mobj mO with None -> cs
-                      | Some _ -> Ctxsub.cdot1 cs in *)
-	  let _ = dprint (fun () -> "[cnormApxExp] Branch PatMetaObj cD = "
-			    ^ P.mctxToString cD) in
           let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
                                                            mvar_dot_apx t delta') in
-	  let _ = dprint (fun () -> "[cnormApxExp] Branch PatMetaObj done " ) in
             Apx.Comp.Branch (loc, omega, delta', Apx.Comp.PatMetaObj (loc', mO), e')
 
       | Apx.Comp.Branch (loc, omega, delta', pat, e) ->
-	  let _ = dprint (fun () -> "[cnormApxExp] Branch Pattern cD = "
-			    ^ P.mctxToString cD) in
           let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
                                                            mvar_dot_apx t delta') in
-	  let _ = dprint (fun () -> "[cnormApxExp] Branch Pattern done " ) in
             Apx.Comp.Branch (loc, omega, delta', pat, e')
 
 
@@ -740,6 +722,7 @@ and collectApxCTypDecl fMVs ct_decl = match ct_decl with
   | Apx.LF.PDecl ( _, a, c_psi) ->
       let fMVs' = collectApxDCtx fMVs c_psi in
         collectApxTyp fMVs' a
+  | Apx.LF.CDecl ( _,  _) ->  fMVs
   | Apx.LF.SDecl ( _, c_phi, c_psi) ->
       let fMVs' = collectApxDCtx fMVs c_psi in
         collectApxDCtx fMVs' c_phi
@@ -847,10 +830,9 @@ let rec fmvApxTerm fMVs cD ((l_cd1, l_delta, k) as d_param) m =   match m with
           Apx.LF.Root (loc, Apx.LF.FMVar (u, s'), Apx.LF.Nil)
       else
         begin try
-          let _ = dprint (fun () -> "[fmvApxTerm] Looking up position of " ^ R.render_name u ^ "\n") in
           let (offset, (_tP, _cPhi)) = Whnf.mctxMVarPos cD u in
-	  let _ = dprint (fun () -> "[fmvApxTerm] " ^ R.render_name u
-                               ^ " has  position " ^ R.render_offset (offset+k))  in
+(*	  let _ = dprint (fun () -> "[fmvApxTerm] " ^ R.render_name u
+                               ^ " has  position " ^ R.render_offset (offset+k))  in*)
             Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset (offset+k), s'), Apx.LF.Nil)
         with Whnf.Fmvar_not_found -> (dprint (fun () -> "[fmvApxTerm]  Error.UnboundName") ;
                                       raise (Index.Error (loc, Index.UnboundName u)))
@@ -1025,7 +1007,8 @@ and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
       if List.mem u fMVs then
         Apx.LF.FSVar (u, sigma')
       else
-        let (offset, (_cPsi, _cPhi)) = Whnf.mctxMVarPos cD u  in
+        let (offset, (_cPhi, _cPsi)) = Whnf.mctxSVarPos cD u  in
+          (*  cPsi |- s : cPhi  *)
           Apx.LF.SVar (Apx.LF.Offset (offset+k), sigma')
 
   | Apx.LF.SVar (Apx.LF.SInst (s, cPsi, cPhi), sigma) ->
@@ -1092,10 +1075,11 @@ and fmvApxTypRec fMVs cD ((l_cd1, l_delta, k) as d_param)  t_rec = match t_rec w
 let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi with
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) ->
-      let _ = dprint (fun () -> "[fmvApxDCtx] CtxOffset " ^ R.render_offset offset) in
+(*      let _ = dprint (fun () -> "[fmvApxDCtx] CtxOffset " ^ R.render_offset
+        offset) in *)
       if offset > (l_delta + k) then
-	let _ = dprint (fun () -> "[fmvApxDCtx] New CtxOffset " ^
-			  R.render_offset (offset + l_cd1)) in
+(*	let _ = dprint (fun () -> "[fmvApxDCtx] New CtxOffset " ^
+			  R.render_offset (offset + l_cd1)) in *)
         Apx.LF.CtxVar(Apx.LF.CtxOffset (offset + l_cd1))
       else psi
 
@@ -1105,9 +1089,9 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi 
       else
 	begin try
 	  let (offset, _w) = Whnf.mctxCVarPos cD x  in
-	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ R.render_name x ^
+(*	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ R.render_name x ^
 			    " with CtxOffset " ^ R.render_offset offset) in
-(*	  let _ = dprint (fun () -> "[fmvApxDCtx] in cD " ^ P.mctxToString cD) in
+	  let _ = dprint (fun () -> "[fmvApxDCtx] in cD " ^ P.mctxToString cD) in
 	  let _ = dprint (fun () -> "[fmvApxDCtx] l_cd1 " ^ string_of_int l_cd1) in
 	  let _ = dprint (fun () -> "[fmvApxDCtx] l_delta " ^ string_of_int l_delta) in
 	  let _ = dprint (fun () -> "[fmvApxDCtx] k " ^ string_of_int k) in *)
@@ -1133,8 +1117,8 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
 	else
 	  begin try
             let (offset, _) = Whnf.mctxCVarPos cD psi in
-	    let _ = dprint (fun () -> "[fmvApxHat] CtxName " ^ R.render_name psi ^
-			      " with " ^ R.render_offset offset ) in
+(*	    let _ = dprint (fun () -> "[fmvApxHat] CtxName " ^ R.render_name psi ^
+			      " with " ^ R.render_offset offset ) in *)
               (Some (Int.LF.CtxOffset (offset + k)), d)
 	  with Whnf.Fmvar_not_found ->
 	    (Printf.printf "Unbound context variable %s"  (R.render_name psi);

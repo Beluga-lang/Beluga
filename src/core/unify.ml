@@ -73,7 +73,6 @@ module type UNIFY = sig
 
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
-  val unifyCSub    : csub  -> csub -> unit
 
   val matchTerm    : mctx -> dctx -> nclo -> nclo -> unit
   val matchTyp     : mctx -> dctx -> tclo -> tclo -> unit
@@ -307,6 +306,30 @@ let rec blockdeclInDctx cPsi = match cPsi with
         | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
         | SInst (_,  _ ,  cPhi, cPsi1, _ ) -> (cPhi, cPsi1)
       in
+      begin match cPsi1 , Context.dctxToHat (cPsi) with
+        | Null , (None, k) -> Shift (NoCtxShift, k)
+        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
+        | _     -> sigma
+      end
+
+    | FSVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
+      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
+      (* cPsi  |- s2 : cPsi' *)
+      begin match Context.dctxToHat (cPsi) with
+        | (None, k) -> Shift (NoCtxShift , k)
+        | (Some cvar, k) -> Shift (CtxShift cvar, k)
+      end
+    | FSVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
+      begin match Context.dctxToHat (cPsi) with
+        | (None, k) -> Shift (NegCtxShift cv , k)
+        | (Some cv', k) ->
+          if cv = cv' then
+            Shift (NoCtxShift, k)
+          else
+            sigma
+      end
+    | FSVar (s_name , (NoCtxShift , _ ), _s2 ) ->
+      let (_, SDecl (_, cPsi1,  _cPhi)) = Store.FCVar.get s_name in
       begin match cPsi1 , Context.dctxToHat (cPsi) with
         | Null , (None, k) -> Shift (NoCtxShift, k)
         | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
@@ -1150,16 +1173,31 @@ let rec blockdeclInDctx cPsi = match cPsi with
         let tM' = invNorm cD0 (phat, (tM, id), (ms, id), rOccur) in
           MDot (MObj (phat, tM'), invMSub cD0 (mt', cD') ms rOccur)
 
-
+    | (MDot (CObj cPsi, mt'), Dec(cD', CDecl _))        ->
+        raise (Error.Violation "Not Implemented")
+(*        (* below may raise NotInvertible *)
+        let tM' = invDCtx cD0  cPsi (ms, id) rOccur in
+          MDot (MObj (phat, tM'), invMSub cD0 (mt', cD') ms rOccur)
+*)
     | (MDot (PObj (phat, h), mt'), Dec(cD', PDecl _))        ->
         (* below may raise NotInvertible *)
         let h' = invHead cD0 (phat, h, (ms, id), rOccur) in
           MDot (PObj (phat, h'), invMSub cD0 (mt', cD') ms rOccur)
 
+    | (MDot (SObj (phat, sigma), mt'), Dec(cD', SDecl (_ , cPhi, _cPsi)))   ->
+        (* below may raise NotInvertible *)
+        let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
+          MDot (SObj (phat, sigma'), invMSub cD0 (mt', cD') ms rOccur)
 
 
-
-
+(*  and invDCtx cD cPsi ms rOccur = match cPsi with
+    | Null -> Null
+    | DDec (cPsi, dec) ->
+        let cPsi' = invDCtx cD cPsi ms rOccur in
+        let dec'  = invDec  cD dec ms rOccur in
+          DDec (cPsi', dec')
+    | CtxVar
+*)
   (* prune cD0 cPsi'' (phat, (tM, s), ss, rOccur) = tM'
 
      Given: cD ; cPsi  |- s <= cPsi'  and
@@ -1556,8 +1594,13 @@ let rec blockdeclInDctx cPsi = match cPsi with
                         returnNeutral (MPVar(v, ( Whnf.mcomp (Whnf.mcomp mt id_msub) ms, comp (comp t id_sub) ssubst)))
                     else (* t and mt not patsub *)
                       let (ms, ssubst) = ss in
+                      let _ = dprint (fun () -> "[prune] MPVar - compute invSub") in
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                      let _ = dprint (fun () -> "[prune] MPVar - compute invMSub") in
+                      let _ = dprint (fun () -> "[prune] mt = " ^ P.msubToString cD0 mt) in
+                      let _ = dprint (fun () -> "[prune] cD1 = " ^ P.mctxToString cD1) in
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in
+                      let _ = dprint (fun () -> "[prune] MPVar - computing invMSub done") in
                         returnNeutral (MPVar (q, (mt', s')))
 
 
@@ -3566,7 +3609,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
    succeeded *)
     (* Pre-condition: cPsi1, cPsi2 are in normal form *)
 
- and unifyDCtx1 mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
+    and unifyDCtx1 mflag cD cPsi1 cPsi2 =
+    unifyDCtx1' mflag cD (Whnf.cnormDCtx (cPsi1, Whnf.m_id)) (Whnf.cnormDCtx (cPsi2, Whnf.m_id))
+
+ and unifyDCtx1' mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 
       | (CtxVar (CInst (n1, ({contents = None} as cvar_ref1), schema1, cD1, theta1)) ,
@@ -3603,15 +3649,15 @@ let rec blockdeclInDctx cPsi = match cPsi with
           else
             raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
 
-      | (CtxVar cvar, CtxVar cvar') ->
-          if cvar = cvar' then ()
+      | (CtxVar cv , CtxVar cv' ) ->
+          if cv = cv' then ()
           else
             (dprint (fun () ->" [unifyDCtx] cPsi1 = " ^ P.dctxToString cD0 cPsi1)
           ; dprint (fun () ->" [unifyDCtx] cPsi2 = " ^ P.dctxToString cD0 cPsi2);
              raise (Failure "Bound (named) context variable clash"))
 
       | (DDec (cPsi1, TypDecl(_y , tA1)) , DDec (cPsi2, TypDecl(_x , tA2))) ->
-            (unifyDCtx1 mflag cD0 cPsi1 cPsi2 ;
+            (unifyDCtx1' mflag cD0 cPsi1 cPsi2 ;
              dprint (fun () -> "[unifyDCtx] unify type-decl \n");
              dprint (fun () -> "            " ^ P.typToString cD0 cPsi1 (tA1, id)
                        ^ "   ==   " ^ P.typToString cD0 cPsi2 (tA2, id));
@@ -3619,7 +3665,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             )
 
       | (DDec (cPsi1, _) , DDec (cPsi2, _ )) ->
-            unifyDCtx1 mflag cD0 cPsi1 cPsi2
+            unifyDCtx1' mflag cD0 cPsi1 cPsi2
       | _ ->
           (dprint (fun () -> "Unify Context clash: cPsi1 = " ^
                      P.dctxToString cD0 cPsi1
@@ -3908,12 +3954,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     let unify cD0 cPsi sM sN =
       dprint (fun () -> "Unify " ^ P.normalToString cD0 cPsi sM
-                      ^ "\n with \n" ^ P.normalToString Empty cPsi sN);
+                      ^ "\n with \n" ^ P.normalToString cD0 cPsi sN);
       unify' Unification cD0 cPsi sM sN;
-      dprint (fun () -> "Unify DONE: " ^ P.normalToString cD0 cPsi sM ^ "\n ==  \n" ^ P.normalToString Empty cPsi sN)
+      dprint (fun () -> "Unify DONE: " ^ P.normalToString cD0 cPsi sM ^ "\n ==  \n" ^ P.normalToString cD0 cPsi sN)
 
     let unifyH cD phat h h' =
-      unifyHead Unification Empty (Context.hatToDCtx phat) h h'
+      unifyHead Unification cD (Context.hatToDCtx phat) h h'
    (* **************************************************************** *)
 
     let rec unifyMSub' ms mt = match (ms, mt) with
@@ -3947,22 +3993,6 @@ let rec blockdeclInDctx cPsi = match cPsi with
            unifyMSub' ms mt)
 
     let unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
-
-
-
-    let rec unifyCSub cs ct = match (cs, ct) with
-      | (CShift _k, CShift _k') -> ()
-      | (CDot ( _ , cs), CShift k) ->
-          unifyCSub cs (CShift (k-1))
-      | (CShift k, CDot ( _ , cs)) ->
-          unifyCSub cs (CShift (k-1))
-
-      | (CDot (cPsi, cs), CDot (cPhi, ct)) ->
-          (unifyDCtx1 Unification Empty (Whnf.cnormDCtx (cPsi, Whnf.m_id))
-                                        (Whnf.cnormDCtx (cPhi, Whnf.m_id)) ;
-           unifyCSub cs ct )
-
-
 
 
 let unify_phat psihat phihat =

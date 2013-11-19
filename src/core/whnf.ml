@@ -50,6 +50,24 @@ let rec isPatSub = function
   | Dot (Undef, s)        -> isPatSub s
   | _                     -> false
 
+
+let rec isPatSVSub = function
+  | Shift (_,_k)              -> true
+  | SVar _ -> true
+  | Dot (Head(BVar n), s) ->
+    let rec checkBVar s' = match s' with
+      | Shift (_ , k)           -> n <= k
+      | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
+      | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s
+      | Dot (Undef, s)          -> checkBVar s
+      | _                       -> false in
+    checkBVar s && isPatSVSub s
+  | Dot (Undef, s)        -> isPatSVSub s
+  | _                     -> false
+
+
+
+
   (* isPatMSub t = B
 
      Invariant:
@@ -366,7 +384,7 @@ and mfrontMSub ft t = match ft with
         begin match h' with
           | BVar i -> begin match LF.bvarSub i s with
                         | Obj tM -> MObj (cnorm_psihat phat t, cnorm (tM, t))
-                        | Head (BVar k) -> PObj (phat,  BVar k)
+                        | Head (BVar k) -> PObj (cnorm_psihat phat t,  BVar k)
                         | Head h        -> PObj (cnorm_psihat phat t, cnormHead (h, t))
                         | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
                             (* Undef should not happen ! *)
@@ -1311,7 +1329,7 @@ and cnorm (tM, t) = match tM with
     | BVar i -> BVar i
     | MPVar (p, (ms, s)) ->
         let _ = dprint (fun () -> "[cnormHead] MPVar ] ") in
-        if isPatSub s && isPatMSub ms then
+        if isPatSVSub s && isPatMSub ms then
           begin match p with
             | MPInst (_, {contents = None}, _cD, _cPsi, _tA, _cnstr) ->
                 MPVar (p, (mcomp ms t, s))
@@ -1331,7 +1349,7 @@ and cnorm (tM, t) = match tM with
           (* if this arises the function needs to be generalized to return not a head but "either a head or a term" *)
           raise (Error.Violation "Cannot guarantee that parameter variable remains head")
     | PVar (p, r) ->
-        if isPatSub r then
+        if isPatSVSub r then
           begin match p with
             | PInst (_, {contents = None}, _cPsi, _tA, _ ) -> PVar (p, r)
             | PInst (_, {contents = Some (BVar x)}, _cPsi, _tA, _ ) ->
@@ -1603,6 +1621,9 @@ and cnorm (tM, t) = match tM with
                                     (* -ac: should this arise? What to do? *)
           | PObj(_phat, PVar(p, s)) ->
               Head (PVar (p, LF.comp s (cnormSub (r,t))))
+          | PObj(_phat, MPVar(p, (mt,s))) ->
+              let mt' = cnormMSub (mcomp mt t) in
+              Head (MPVar (p, (mt', LF.comp s (cnormSub (r,t)))))
           | _ -> raise (Error.Violation "PVar is replaced by an MVar")
               (* other case MObj _ cannot happen *)
         end
@@ -1737,13 +1758,13 @@ and cnormMSub t = match t with
   | MShift _n -> t
   | MDot (MObj(phat, tM), t) ->
       MDot (MObj (cnorm_psihat phat m_id,
-                  norm(tM, LF.id)), cnormMSub t)
+                  norm (cnorm (tM, m_id), LF.id)) , cnormMSub t)
   | MDot (SObj(phat, s), t) ->
       MDot (SObj(cnorm_psihat phat m_id,
-                  normSub s), cnormMSub t)
+                normSub (cnormSub (s, m_id))), cnormMSub t)
   | MDot (CObj (cPsi), t) ->
         let t' = cnormMSub t in
-        let cPsi' = normDCtx cPsi in
+        let cPsi' = cnormDCtx (normDCtx cPsi, m_id) in
           MDot (CObj cPsi' , t')
 
   | MDot (PObj(phat, PVar(Offset k, s)), t) ->
@@ -1782,6 +1803,55 @@ and cnormMSub t = match t with
 
   | MDot(PObj(phat, PVar (PInst (_, {contents = Some (Proj (PVar (q,s), i))}, _cPsi, _tA, _ ) , r)), t) ->
       cnormMSub (MDot (PObj (cnorm_psihat phat m_id, Proj (PVar(q, LF.comp s r), i)), t))
+
+
+  (* MPVar cases *)
+  | MDot (PObj(phat, MPVar(MPInst (_, {contents = None}, _, _cPsi, _tA, _ ) as p, (mt, s))), t) ->
+      MDot (PObj(cnorm_psihat phat m_id, MPVar(p, (mt,s))), cnormMSub t)
+
+  | MDot(PObj(phat, MPVar (MPInst (_, {contents = Some (BVar x)}, _, _cPsi, _tA, _) , (_mt,r))), t) ->
+        let t' = cnormMSub t in
+        begin match LF.bvarSub x r with
+          | Head h  ->
+             MDot (PObj(cnorm_psihat phat m_id, h), t')
+          | Obj tM  ->
+              MDot (MObj(cnorm_psihat phat m_id,  norm (tM, LF.id)), t')
+        end
+
+  | MDot(PObj(phat, MPVar (MPInst (_, {contents = Some (Proj(BVar x, i))}, _, _cPsi, _tA, _ ) , (_mt, r))), t) ->
+        let t' = cnormMSub t in
+        begin match LF.bvarSub x r with
+          | Head h ->
+             MDot (PObj(cnorm_psihat phat m_id, Proj(h, i)), t')
+        end
+
+  | MDot(PObj(phat, MPVar (MPInst (_, {contents = Some (PVar (q,s))}, _, _cPsi, _tA, _ ) , (mt,r))), t) ->
+      let p = cnormHead (PVar (q,s) , mt) in
+      let mf = begin match p with
+          | BVar i -> begin match LF.bvarSub i r with
+                        | Obj tM -> MObj (cnorm_psihat phat t, tM)
+                        | Head (BVar k) -> PObj (cnorm_psihat phat m_id,  BVar k)
+                        | Head h        -> PObj (cnorm_psihat phat m_id, h)
+                        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
+                            (* Undef should not happen ! *)
+            end
+          | PVar (p, s') -> PObj (phat, PVar (p, LF.comp s' r))
+      end in
+        MDot (mf, cnormMSub t)
+
+  | MDot(PObj(phat, MPVar (MPInst (_, {contents = Some (Proj (PVar (q,s), i))}, _, _cPsi, _tA, _ ) , (mt, r))), t) ->
+      let p = cnormHead (Proj (PVar (q,s), i), mt) in
+      let mf = begin match p with
+          | BVar k -> begin match LF.bvarSub k r with
+(*                        | Obj tM -> MObj (cnorm_psihat phat t, tM) *)
+                        | Head (BVar k) -> PObj (cnorm_psihat phat m_id,  Proj  (BVar k, i))
+                        | Head h        -> PObj (cnorm_psihat phat m_id, Proj  (h, i))
+                        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
+                            (* Undef should not happen ! *)
+            end
+          | PVar (p, s') -> PObj (phat, Proj (PVar (p, LF.comp s' r), i))
+      end in
+        MDot (mf, cnormMSub t)
 
   | MDot (MV u, t) -> MDot (MV u, cnormMSub t)
 
@@ -2606,6 +2676,22 @@ let mctxPVarPos cD p =
   in
     lookup cD 1
 
+
+
+let mctxSVarPos cD u =
+  let rec lookup cD k = match cD  with
+    | Dec (cD, SDecl(v, cPhi, cPsi))    -> (*  cPsi |- s : cPhi *)
+        if v = u then
+         (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
+         (k, (cnormDCtx (cPhi, MShift k), cnormDCtx (cPsi, MShift k)) )
+        else
+          lookup cD (k+1)
+
+    | Dec (cD, _) -> lookup cD (k+1)
+
+    | Empty  -> (dprint (fun () -> "mctxSVarPos \n") ; raise Fmvar_not_found)
+  in
+    lookup cD 1
 
   (******************************************
      Contextual weak head normal form for

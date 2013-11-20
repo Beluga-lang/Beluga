@@ -11,3 +11,4 @@
 .omake*
 release
 bin
+_build

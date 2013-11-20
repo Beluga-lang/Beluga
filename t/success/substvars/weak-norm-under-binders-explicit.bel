@@ -76,10 +76,12 @@ case r1 of
 |  {g:ctx}{h0:ctx}{A:[.tp]} {#W:g[h0]}{#p:[h0. tm A]}
   Cons [g] [h0] [. A] <h0 $ #W[..]> [h0 . #p ..] r =>
   let r3 = varSubCompose r r2 in
+  % let Var [h'.#q .. ] = wknVar [g] [.A][g.#p ..] [h' $ #W2[..]] r2 in
+  % Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #q .. ] r3
    Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #p #W2[..] ] r3
 ;
 
-
+%{
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
 % Could enforce also eta longness easily, but meh
 
@@ -272,6 +274,4 @@ rec weakNorm : {g:ctx}{A:[.tp]}{M:[g. tm A]} Halts  [g. M ..] =
 mlam g => mlam A => mlam M =>
 reify (eval [g] [g] [g. M ..] [g $ ..] (idRedSub [g]))
 ;
-
-
-
+}%

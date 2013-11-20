@@ -53,7 +53,10 @@ module type UNIFY = sig
   val forceGlobalCnstr : cnstr list -> unit
   val solveConstraint   : cnstr -> unit
 
+  val isVar             : head -> bool
   val isPatSub          : sub  -> bool
+  val isProjPatSub          : sub  -> bool
+  val isPatMSub         : msub  -> bool
 
   (* unification *)
 
@@ -175,6 +178,20 @@ let rec blockdeclInDctx cPsi = match cPsi with
          cPsi |- comp  ss' s_proj   : cPhi' *)
     let ss_proj = Substitution.LF.comp ss' s_proj in
       Root (loc, MMVar (u, (Whnf.m_id, ss_proj)), Nil)
+
+
+let isVar h = match h with
+  | Int.LF.BVar _ -> true
+  | Int.LF.Proj (Int.LF.BVar _ , _ ) -> true
+  | Int.LF.PVar ( _ , sigma) -> isPatSub sigma
+  | Int.LF.FPVar ( _ , sigma) -> isPatSub sigma
+  | Int.LF.MPVar (_ , (theta, sigma)) ->
+    isPatSub sigma && isPatMSub theta
+  | Int.LF.Proj(Int.LF.PVar ( _ , sigma), _ ) -> isPatSub sigma
+  | Int.LF.Proj(Int.LF.FPVar ( _ , sigma), _ ) -> isPatSub sigma
+  | Int.LF.Proj(Int.LF.MPVar (_ , (theta, sigma)), _ ) ->
+    isPatSub sigma && isPatMSub theta
+  | _ -> false
 
 
   (* isPatSub s = B
@@ -2991,6 +3008,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
     | (MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1), (mt1, s1)) , h) ->
         (* ?#p[mt1, s1] ==  BVar k    or     ?#p[mt1, s1] = PVar (q, s) *)
         dprnt "(013) _-MPVar - head";
+      if isVar h then
         if isPatSub s1 && isPatMSub mt1 then
           let ss = invert (Whnf.normSub s1) in
           let mtt = Whnf.m_invert (Whnf.cnormMSub mt1) in
@@ -3005,11 +3023,14 @@ let rec blockdeclInDctx cPsi = match cPsi with
                              end
 
              | _ -> raise (Failure "Meta^2-Parameter failure")
-          end
+           end
+        else
+          raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
 
 
     | (h, MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1), (mt1, s1)) ) ->
         dprnt "(013) _-MPVar - head";
+      if isVar h then
         if isPatSub s1 && isPatMSub mt1 then
           let ss = invert (Whnf.normSub s1) in
           let mtt = Whnf.m_invert (Whnf.cnormMSub mt1) in
@@ -3024,6 +3045,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
                              end
              | _ -> raise (Failure "Meta^2-Parameter failure")
           end
+        else
+          raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
 
     (* PVar - PVar *)
 

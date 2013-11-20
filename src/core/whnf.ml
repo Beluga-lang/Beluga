@@ -37,7 +37,7 @@ let rec raiseType cPsi tA = match cPsi with
    then  B iff  n1, .., nm pairwise distinct
    and  ni <= k or ni = _ for all 1 <= i <= m
 *)
-let rec isPatSub = function
+(* let rec isPatSub = function
   | Shift (_,_k)              -> true
   | Dot (Head(BVar n), s) ->
     let rec checkBVar s' = match s' with
@@ -50,6 +50,7 @@ let rec isPatSub = function
   | Dot (Undef, s)        -> isPatSub s
   | _                     -> false
 
+*)
 
 let rec isPatSVSub = function
   | Shift (_,_k)              -> true

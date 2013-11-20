@@ -1447,16 +1447,21 @@ and elExp' cD cG i = match i with
                        let _ = dprint (fun () -> "[elExp'] Mapp case : PDecl ") in
                        let cPsi' = C.cnormDCtx (cPsi, theta) in
                        let (h', sB) = Lfrecon.elHead loc Lfrecon.Pibox cD cPsi' h  in
-                       let theta' = Int.LF.MDot (Int.LF.PObj (psihat, h'), theta) in
-                       let sA' = (C.cnormTyp (tA, theta), LF.id) in
+                       (* Verify that h' is indeed a variable and cannot possibly be a general term -bp *)
+                       if Unify.isVar h' then
+                         let _ = dprint (fun () -> "[elExp'] MApp case - PVAR ") in
+                         let theta' = Int.LF.MDot (Int.LF.PObj (psihat, h'), theta) in
+                         let sA' = (C.cnormTyp (tA, theta), LF.id) in
                          begin try
-                           (Unify.unifyTyp cD cPsi' sB  sA' ;
-                            dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
-                          (Int.Comp.MApp (loc, i', (psihat, Int.Comp.NeutObj h')), (tau, theta')))
-                         with Unify.Failure msg ->
-                           (Printf.printf "%s\n" msg;
-                            raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
+                                 (Unify.unifyTyp cD cPsi' sB  sA' ;
+                                  dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
+                                  (Int.Comp.MApp (loc, i', (psihat, Int.Comp.NeutObj h')), (tau, theta')))
+                           with Unify.Failure msg ->
+                             (Printf.printf "%s\n" msg;
+                              raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
                          end
+                       else
+                         raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta))))
                   | _ ->
                        (dprint (fun () -> "[elTerm] Error.Violation: Not a head");
                       raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))

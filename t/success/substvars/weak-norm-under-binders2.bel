@@ -42,15 +42,15 @@ and IsNeutral : (g:ctx) {M:[g.tm A]} ctype =
      -> IsNeutral [g. app (M ..) (N ..)]
 ;
 
-datatype Halts : (g:ctx) {M:[g. tm A]} ctype =
+datatype Halts : (g:ctx) {A:[.tp]}{M:[g. tm A]} ctype =
 | Halts : [g. mstep (M ..) (V ..)] -> IsNormal [g. V .. ] ->
-          Halts [g. M ..]
+          Halts [.A] [g. M ..]
 ;
 
 % The type is explicit because I need to be explicit that
 % Base only applies to base type, not arrow type! (important for coverage later)
 datatype Reduce : (g:ctx) {A:[.tp]}{M:[g.tm A]} ctype =
-| Base : Halts [g. M ..] -> Reduce [ . i] [g. M ..]
+| Base : Halts [.i] [g. M ..] -> Reduce [ . i] [g. M ..]
 | Arr :  {M:[h0.tm (arr A B)]}
          ({h:ctx} {#R:h0[h]} {N:[h. tm A]}
           IsVarSub [h0] <h $ #R[..] > -> Reduce [. A] [h. N ..]
@@ -93,15 +93,19 @@ case r1 of % Would prefer to pattern match on r1, but can't, because bugs
   Cons  q0 q1
 ;
 
-%{
-rec haltsMstep2 : (g:ctx) {M:[g. tm A]}{S:[g. mstep (M ..) (M' ..)]} Halts [g. M' ..] -> Halts [g. M ..] =
-mlam M => mlam S => fn h => let (h : Halts [g. M' ..]) = h in
+
+rec haltsMstep2 : (g:ctx) % {M:[g. tm A]}
+                          {S:[g. mstep (M ..) (M' ..)]} Halts [.A] [g. M' ..] ->
+                          Halts [.A] [g. M ..] =
+ mlam S => fn h => let (h : Halts [.A] [g. M' ..]) = h in
 let Halts [g. R ..] v = h in Halts [g. trans (S ..) (R ..)] v
 ;
 
-rec closed2 : {S:[g. mstep (M ..) (M' ..)]} Reduce [.A] [g. M' ..] -> Reduce [.A] [g. M ..] =
+
+rec closed2 :  {S:[g. mstep (M ..) (M' ..)]}
+Reduce [.A] [g. M' ..] -> Reduce [.A] [g. M ..] =
 mlam S => fn r => let (r : Reduce [.A] [g. M' ..]) = r in  case r of
-| Base ha => Base (haltsMstep2 [g. _] [g. S ..] ha)
+| Base ha => Base (haltsMstep2  [g. S ..] ha)
 | Arr [g. M ..] f => Arr [g. _]
   (mlam h => mlam #W => mlam N => fn iv => fn rn =>
      closed2 [h. stepapp (S #W[..]) refl] (f [h] [h $ #W[..]] [h. N ..] iv rn)
@@ -109,26 +113,36 @@ mlam S => fn r => let (r : Reduce [.A] [g. M' ..]) = r in  case r of
 
 ;
 
-rec wknVarSub : {g:ctx}{h:ctx}{#S:g[h]}{A:[. tp]} IsVarSub [g] <h $ #S[..] >
+
+rec wknVarSub : % {g:ctx}{h:ctx}{#S:g[h]}
+        {A:[. tp]}
+    IsVarSub [g] <h $ #S[..] >
  -> IsVarSub [g] <h,x:tm A $ #S[..] > =
-mlam g => mlam h => mlam #S => mlam A => fn r =>
-case [g. i] of % Would prefer to pattern match on r, but can't
-| [. i] =>  Nil
-| [g',x:tm B. i] =>
- let {#R:g'[h]} Cons [g'] [h] [. B] <h $ #R[..] > [h. M ..] r' iv = r in
- let q0 = wknVarSub [g'] [h] [h $ #R[..]] [. A] r' in
+% mlam g => mlam h => mlam #S => mlam A =>
+mlam A =>
+fn r =>
+case r of % Would prefer to pattern match on r, but can't
+| Nil =>  Nil
+| Cons r' iv =>
+% let {#R:g'[h]} Cons [g'] [h] [. B] <h $ #R[..] > [h. M ..] r' iv = r in
+ let q0  = wknVarSub [.A] r' in
  let IsVar [h. #p ..] = iv in
- Cons [g'] [h,x:tm A] [. B] [h,x:tm A $ #R[..]] [h,x:tm A. #p ..] q0 (IsVar [h,x:tm A. #p ..])
+ Cons  q0 (IsVar [h,x:tm A . #p ..])
 ;
 
 
 
-rec extVarSub : {g:ctx} {h:ctx}{A:[.tp]} {#S:g[h]} IsVarSub [g] <h $ #S[..]>
+rec extVarSub : % {g:ctx} {h:ctx}{A:[.tp]} {#S:g[h]}
+{h:ctx}{A:[.tp]}
+    IsVarSub [g] <h $ #S[..]>
  -> IsVarSub [g,x:tm A] <h,x:tm A $ #S[..] x > =
-mlam g => mlam h => mlam A => mlam #S => fn r =>
-Cons [g] [h,x:tm A] [. A] [h,x:tm A $ #S[..]] [h,x:tm A. x] (wknVarSub [g] [h] [h $ #S[..]] [. A] r) (IsVar [h,x:tm A. x])
+% mlam g => mlam h => mlam A => mlam #S =>
+mlam h => mlam A => fn r =>
+Cons % [g] [h,x:tm A] [. A] [h,x:tm A $ #S[..]] [h,x:tm A. x]
+     (wknVarSub  [. A] r) (IsVar [h,x:tm A. x])
 ;
 
+%{
 rec idIsVarSub : {g:ctx} IsVarSub [g] <g $ .. > =
 mlam g => case [g. i] of % Because we can't pattern match directly on contexts yet
 | [. i] => Nil

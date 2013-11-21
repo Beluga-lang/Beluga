@@ -1,0 +1,3 @@
+true : use_ocamlfind, annot
+
+<src/core> : include

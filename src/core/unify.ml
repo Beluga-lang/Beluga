@@ -670,7 +670,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
      fails  instead.
   *)
   let rec invNorm cD0 (phat, sM, ss, rOccur) =
-    let _ : (msub * sub) = ss in
+    let _u : (msub * sub) = ss in
     invNorm' cD0 (phat, Whnf.whnf sM, ss, rOccur)
 
   and invNorm' cD0 ((cvar, offset) as phat, sM, ((ms, ssubst) as ss), rOccur) = match sM with
@@ -1621,7 +1621,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           Sigma typ_rec'
 
   and pruneTyp cD0 cPsi1 phat sA ss rOccur =
-    let _ : (msub * sub) = ss in
+    let _u : (msub * sub) = ss in
       pruneTypW cD0 cPsi1 phat (Whnf.whnfTyp sA) ss rOccur
 
   and pruneTypRec cD0 cPsi phat (typ_rec, s) (mss, ss) rOccur = match (typ_rec, s) with

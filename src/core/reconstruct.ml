@@ -756,8 +756,11 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
 
         | Int.LF.PDecl (_u, tA, cPsi) ->
             let (Int.Comp.MetaParam (_, psihat, h) as cM) = elMetaObj cD m (Int.Comp.MetaParamTyp (tA, cPsi), theta)  in
-            let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.PObj(psihat, h), theta)) in
+            if Unify.isVar h then
+              let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.PObj(psihat, h), theta)) in
               Int.Comp.MetaApp (cM, cS)
+            else
+              raise (Error (loc,  MetaObjectClash (cD, (Int.Comp.MetaParamTyp (tA, cPsi), theta))))
 
         | Int.LF.SDecl (_u, cPhi, cPsi) ->
             let (Int.Comp.MetaSObj (loc, psihat, tM) as cM) = elMetaObj cD m (Int.Comp.MetaSubTyp (cPhi, cPsi), theta)  in
@@ -1470,18 +1473,22 @@ and elExp' cD cG i = match i with
                 | Apx.LF.Root (_, h, Apx.LF.Nil) ->
                   let _ = dprint (fun () -> "[elExp'] Mapp case :  PDecl ") in
                   let (h', sB) = Lfrecon.elHead loc Lfrecon.Pibox cD cPsi' h  in
-                  let theta' = Int.LF.MDot (Int.LF.PObj (psihat', h'), theta)  in
-                  let sA' = (C.cnormTyp (tA, theta), LF.id) in
-                  let i_norm = Whnf.cnormExp' (i', Whnf.m_id) in
-                  begin
-                    try
-                      (Unify.unifyTyp cD cPsi' sB  sA' ;
-                       dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
-                       (Int.Comp.MApp (loc, i_norm, (psihat', Int.Comp.NeutObj h')), (tau, theta')))
-                    with Unify.Failure msg ->
-                      (Printf.printf "%s\n" msg;
-                       raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
-                  end
+                  let _ = dprint (fun () -> "\n[elExp'] PDecl instantiated with " ^ P.headToString cD cPsi' h') in
+                    let theta' = Int.LF.MDot (Int.LF.PObj (psihat', h'), theta)  in
+                    let sA' = (C.cnormTyp (tA, theta), LF.id) in
+                    let i_norm = Whnf.cnormExp' (i', Whnf.m_id) in
+                    (if Unify.isVar h' then
+                        begin
+                          try
+                            (Unify.unifyTyp cD cPsi' sB  sA' ;
+                             dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
+                             (Int.Comp.MApp (loc, i_norm, (psihat', Int.Comp.NeutObj h')), (tau, theta')))
+                          with Unify.Failure msg ->
+                            (Printf.printf "%s\n" msg;
+                             raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
+                        end
+                     else
+                        raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
                 | _ ->
                   (dprint (fun () -> "[elTerm] Violation: Not a head");
                    raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaTyp (tA, cPsi), theta)))))

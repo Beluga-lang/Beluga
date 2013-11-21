@@ -180,19 +180,6 @@ let rec blockdeclInDctx cPsi = match cPsi with
       Root (loc, MMVar (u, (Whnf.m_id, ss_proj)), Nil)
 
 
-let isVar h = match h with
-  | Int.LF.BVar _ -> true
-  | Int.LF.Proj (Int.LF.BVar _ , _ ) -> true
-  | Int.LF.PVar ( _ , sigma) -> isPatSub sigma
-  | Int.LF.FPVar ( _ , sigma) -> isPatSub sigma
-  | Int.LF.MPVar (_ , (theta, sigma)) ->
-    isPatSub sigma && isPatMSub theta
-  | Int.LF.Proj(Int.LF.PVar ( _ , sigma), _ ) -> isPatSub sigma
-  | Int.LF.Proj(Int.LF.FPVar ( _ , sigma), _ ) -> isPatSub sigma
-  | Int.LF.Proj(Int.LF.MPVar (_ , (theta, sigma)), _ ) ->
-    isPatSub sigma && isPatMSub theta
-  | _ -> false
-
 
   (* isPatSub s = B
 
@@ -298,6 +285,22 @@ let isVar h = match h with
     | MDot (MUndef, s)       -> isPatMSub s
     | _                     -> false
     end
+
+
+
+let isVar h = match h with
+  | BVar _ -> true
+  | Proj (BVar _ , _ ) -> true
+  | PVar ( _ , sigma) -> isProjPatSub sigma
+  | FPVar ( _ , sigma) -> isProjPatSub sigma
+  | MPVar (_ , (theta, sigma)) ->
+    isProjPatSub sigma && isPatMSub theta
+  | Proj(PVar ( _ , sigma), _ ) -> isProjPatSub sigma
+  | Proj(FPVar ( _ , sigma), _ ) -> isProjPatSub sigma
+  | Proj(MPVar (_ , (theta, sigma)), _ ) ->
+    isProjPatSub sigma && isPatMSub theta
+  | _ -> false
+
 
 
   let simplifySub cD0 cPsi sigma = match sigma with

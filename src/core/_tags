@@ -9,3 +9,6 @@ true : use_ocamlfind, annot
 <lexer.ml> : syntax(camlp4o), package(ulex)
 <{lexer,parser}.mli> : use_camlp4
 <parser.ml> : camlp4o, use_camlp4,package(extlib)
+
+
+<*.cmx> and not <core.cmx> : for-pack(Core)

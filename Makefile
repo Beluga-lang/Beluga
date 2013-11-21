@@ -8,7 +8,11 @@ LFLAGS = -I,+camlp4,camlp4lib.cma
 #OCB = ocamlbuild -classic-display -use-ocamlfind #-cflags $(CFLAGS)
 OCB = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $(LFLAGS)
 
-default: beluga-byte
+#horrible, horrible, hack!
+NLFLAGS = -I,+camlp4,camlp4lib.cmxa
+OCBN = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $(NLFLAGS)
+
+default: corepack-native
 
 
 corepack-byte:
@@ -17,27 +21,18 @@ corepack-byte:
 beluga-byte: corepack-byte
 	$(OCB) src/beluga/main.byte
 
-# BELUGA_DIRS = src/beluga
-# BELI_DIRS = src/beli
+beli-byte: corepack-byte
+	$(OCB) src/beli/main.byte
 
-# CFLAGS = -I,+extlib
-# #CFLAGS =
+####################
+corepack-native:
+	$(OCBN) src/core/core.cmx # lib
 
-# default: beluga-byte
+beluga-native: corepack-native
+	$(OCBN) src/beluga/main.native
 
-# core-byte:
-# 	ocamlbuild core.cmo
-
-# core-native:
-# 	ocamlbuild core.cmx
-
-# beluga-native: #core-native
-# 	ocamlbuild  -cflags $(CFLAGS) -Is $(BELUGA_DIRS) -use-ocamlfind main.native
-# #	ocamlbuild  -Is $(BELUGA_DIRS) -use-ocamlfind -yaccflags --explain main.native
-
-# beluga-byte: #core-byte
-# 	ocamlbuild -cflags $(CFLAGS) -Is $(BELUGA_DIRS) -use-ocamlfind main.byte
-# #	ocamlbuild $(OBFLAGS) -Is $(BELUGA_DIRS) -use-ocamlfind -yaccflags --explain main.byte
+beli-native: corepack-native
+	$(OCBN) src/beli/main.native
 
 clean:
 	ocamlbuild -clean

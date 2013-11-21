@@ -61,7 +61,8 @@ case [g. #p ..] of
    Var [h.#r ..]
 | {#q : [g'. tm T]} [g',x:tm B. #q ..] =>
   let {#r:[h. tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
-   Var [h. #q #R[..] ]
+  wknVar [g'] [.T] [g'.#q ..] [h $ #R[..] ] iv'
+%   Var [h. #q #R[..] ]
 ;
 
 
@@ -76,9 +77,11 @@ case r1 of
 |  {g:ctx}{h0:ctx}{A:[.tp]} {#W:g[h0]}{#p:[h0. tm A]}
   Cons [g] [h0] [. A] <h0 $ #W[..]> [h0 . #p ..] r =>
   let r3 = varSubCompose r r2 in
-  % let Var [h'.#q .. ] = wknVar [g] [.A][g.#p ..] [h' $ #W2[..]] r2 in
-  % Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #q .. ] r3
-   Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #p #W2[..] ] r3
+  let  Var [h'.#q .. ] = wknVar [h0] [.A][h0.#p ..] [h' $ #W2[..]] r2
+                       % IsNeutral [h. #p #W2[..]]
+  in
+   Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #q .. ] r3
+  % Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #p #W2[..] ] r3
 ;
 
 %{

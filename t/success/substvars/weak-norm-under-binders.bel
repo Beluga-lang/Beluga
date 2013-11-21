@@ -20,7 +20,8 @@ trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
 datatype IsVarSub : {g:ctx} (h:ctx) {#S: g[h]}ctype =
 | Nil : IsVarSub [] <h $ ^ >
-| Cons : {#p:[h. tm A]}IsVarSub [g] <h $ #S[..] >
+| Cons : % {#p:[h. tm A]}
+             IsVarSub [g] <h $ #S[..] >
       -> IsVarSub [g,x:tm A] <h $ #S[..] (#p ..)  >
 ;
 
@@ -32,12 +33,12 @@ fn r1 => fn r2 => case r1 of
 | Nil => Nil
 |  % {g':ctx}{h':ctx}{A:[.tp]} {#W:g'[h']}{#p:[h'. tm A]}
   Cons % [g'] [h'] [. A] <h' $ #W[..]>
-      [h0 . #p ..]
+      % [h0 . #p ..]
       r =>
   let (r2 : IsVarSub [h] <h' $ #W2[..]> ) = r2 in
   let r3 =  varSubCompose r r2 in
-  Cons % [g'] [h'] [.A] [ h' $ #W[..] ]
-      [h' . #p #W2[..]] r3
+  ? %Cons % [g'] [h'] [.A] [ h' $ #W[..] ]
+    %  [h' . #p #W2[..]] r3
 
 ;
 

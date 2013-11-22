@@ -1,30 +1,31 @@
-
 INCLUDE_DIRS = src/core
 
 CFLAGS = -I,src/core
 
 LFLAGS = -I,+camlp4,camlp4lib.cma
 
-#OCB = ocamlbuild -classic-display -use-ocamlfind #-cflags $(CFLAGS)
 OCB = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $(LFLAGS)
 
-#horrible, horrible, hack!
-NLFLAGS = -I,+camlp4,camlp4lib.cmxa
+NLFLAGS = -I,+camlp4,camlp4lib.cmxa # ocamlfind cannot find the library for camlp4 so we provid it by hand
 OCBN = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $(NLFLAGS)
 
-default: corepack-native
+default: byte
 
+native: beluga-native beli-native
+
+byte: beluga-byte beli-byte
 
 corepack-byte:
 	$(OCB) src/core/core.cmo # lib
 
 beluga-byte: corepack-byte
 	$(OCB) src/beluga/main.byte
+	mv main.byte bin/beluga
 
 beli-byte: corepack-byte
 	$(OCB) src/beli/main.byte
+	mv main.byte bin/beli
 
-####################
 corepack-native:
 	$(OCBN) src/core/core.cmx # lib
 

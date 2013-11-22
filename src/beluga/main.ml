@@ -35,8 +35,9 @@ let usage () =
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
         ^ "    +logic        turn on logic programming engine\n"
         ^ "    +test         Make output suitable for test harness. Implies -print\n"
-        ^ "    +strengthen   Perform metavariable strengthening automatically."
+        ^ "    +strengthen   Perform metavariable strengthening automatically.\n"
   in
+  fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
     "Usage: %s [options] file.(bel|cfg)\noptions:\n%s"
     Sys.argv.(0) options;

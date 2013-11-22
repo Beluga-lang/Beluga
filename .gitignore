@@ -12,3 +12,4 @@
 release
 bin
 _build
+version.ml

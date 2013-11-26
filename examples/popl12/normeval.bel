@@ -33,8 +33,7 @@ datatype Sem : {g:ctx} [. tp] -> ctype =
            -> Sem [g] [ . arr A B]
 ;
 
-rec extendSub : (g:ctx)(h:ctx)
-               ({T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T])
+rec extendSub : ({T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T])
             ->  ({T:[.tp]} NeutVar [g, x:neut S] [.T] ->  NeutVar [h, x:neut S] [.T]) =
 fn s => let (s : {T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T]) = s in
 (mlam T => fn y => case y of
@@ -43,8 +42,7 @@ fn s => let (s : {T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T]) = s in
                  let NeutVar [h. #q ..] = s [. T] (NeutVar [g . #p ..]) in
                    NeutVar [h,x:neut Tx. #q ..])
 ;
-rec nsubst :  (g:ctx)(h:ctx)
-             ({T:[.tp]} NeutVar [g] [.T]  -> NeutVar [h] [.T])
+rec nsubst :  ({T:[.tp]} NeutVar [g] [.T]  -> NeutVar [h] [.T])
            -> [g . neut S]
            -> [h . neut S] =
 fn s => fn e => case e of
@@ -56,8 +54,7 @@ fn s => fn e => case e of
   let {N':[h. norm T]} [h . N' .. ] = nosubst s [g . N .. ] in
     [h . rapp (R' ..) (N' .. ) ]
 
-and nosubst : (g:ctx)(h:ctx)
-              ({T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T])
+and nosubst : ({T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T])
 	    -> [g . norm S]
             -> [h . norm S] =
 fn s => fn n =>
@@ -74,8 +71,7 @@ case n of
    [h . nlam (\x. N' .. x)]
 ;
 
-rec subst : (g:ctx)(h:ctx)
-	     ({T:[.tp]} NeutVar [g] [ .T] -> NeutVar [h] [.T])
+rec subst : ({T:[.tp]} NeutVar [g] [ .T] -> NeutVar [h] [.T])
           -> Sem [g] [. A]
           -> Sem [h] [.A] =
 fn s => fn e =>
@@ -86,23 +82,21 @@ case e of
     Slam (mlam h' => fn s' => fn e => f [h'] (mlam T => fn y => s' [.T] (s [.T] y)) e)
 ;
 
-rec weaken : (g :ctx) {T:[.tp]} NeutVar [g] [.T] -> NeutVar [g,x:neut S] [. T] =
+rec weaken : {T:[.tp]} NeutVar [g] [.T] -> NeutVar [g,x:neut S] [. T] =
 mlam T => fn x => let NeutVar [g.#p ..] = x in NeutVar [g,x:neut _. #p ..]
 ;
 
-rec extend : (g:tctx)(h:ctx)
-  ({T:[.tp]} TmVar [g] [. T] -> Sem [h] [.T]) -> Sem [h] [.S]
+rec extend : ({T:[.tp]} TmVar [g] [. T] -> Sem [h] [.T]) -> Sem [h] [.S]
 -> ({T:[.tp]} TmVar [g, x:tm S] [. T] ->  Sem [h] [.T]) =
 fn s => fn e => mlam T => fn x => case x of
 | TmVar [g,x:tm S. x] => e
 | TmVar [g,x:tm S. #q .. ] => s [. T ] (TmVar [g . #q ..])
 ;
 
-rec id : (g:ctx)  {T:[.tp]} NeutVar [g] [.  T] -> NeutVar [g] [ . T] =
+rec id : {T:[.tp]} NeutVar [g] [.  T] -> NeutVar [g] [ . T] =
 mlam T => fn y => y ;
 
-rec eval : (g:tctx)(h:ctx)
-           ({T:[.tp]} TmVar [g] [. T] -> Sem [h] [.T])
+rec eval : ({T:[.tp]} TmVar [g] [. T] -> Sem [h] [.T])
            -> [g. tm S] -> Sem [h] [.S]  =
 fn s => fn t =>
 let (s : ({T:[.tp]} TmVar [g] [. T] -> Sem [h] [.T])) = s in
@@ -119,7 +113,7 @@ case t of
 ;
 
 
-rec reflect : (g:ctx) [g. neut A] ->  Sem [g] [.A] =
+rec reflect : [g. neut A] ->  Sem [g] [.A] =
 fn r => let [g. R .. ] : [g. neut A] = r in
 case [. A] of
 | [. atomic P ] => Syn [g . R ..]

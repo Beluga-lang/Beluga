@@ -1,21 +1,27 @@
 
 atomic_tp : type.
-tp : type.                %name tp T.
-atomic : atomic_tp -> tp.
-arr: tp -> tp -> tp.
 
-tm : tp -> type.          %name tm E.
-app : tm (arr T S) -> tm T -> tm S.
-lam : (tm T -> tm S) -> tm (arr T S).
+datatype tp : type =
+| atomic : atomic_tp -> tp
+| arr: tp -> tp -> tp;
 
-schema tctx = tm T;
+%name tp T.
 
-neut : tp -> type.       %name neut R.
-norm : tp -> type.       %name norm M.
-nlam : (neut T -> norm S) -> norm (arr T S).
-rapp : neut (arr T S) -> norm T -> neut S.
-embed : neut (atomic P) -> norm (atomic P).
+datatype tm : tp -> type =
+| app : tm (arr T S) -> tm T -> tm S
+| lam : (tm T -> tm S) -> tm (arr T S);
 
+%name tm E.
+
+schema tctx = some [t:tp] tm t;
+
+datatype neut : tp -> type =
+| rapp : neut (arr T S) -> norm T -> neut S
+and norm : tp -> type =
+| nlam : (neut T -> norm S) -> norm (arr T S)
+| embed : neut (atomic P) -> norm (atomic P);
+%name neut R.
+%name norm M.
 schema ctx = neut T;
 
 datatype NeutVar : {g:ctx} [.tp] -> ctype =
@@ -25,19 +31,20 @@ datatype NeutVar : {g:ctx} [.tp] -> ctype =
 datatype TmVar : {g:tctx} [.tp] -> ctype =
 | TmVar : {#p:[g.tm T]} TmVar [g] [.T]
 ;
-typedef Subst : {g:ctx} {h:ctx} ctype =
+
+typedef Sub : {g:ctx} {h:ctx} ctype =
 {T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T];
 
 datatype Sem : {g:ctx} [. tp] -> ctype =
 | Syn :  [g . neut (atomic P)] -> Sem [g] [ .atomic P]
-| Slam : ({h:ctx}  Subst [g] [h] -> Sem [h] [ .A] -> Sem [h] [ . B])
+| Slam : ({h:ctx}  Sub [g] [h] -> Sem [h] [ .A] -> Sem [h] [ . B])
            -> Sem [g] [ . arr A B]
 ;
 
 
 
 rec extendSub : (g:ctx)(h:ctx)
-                 Subst [g] [h] -> Subst [g,x:neut S] [h, x:neut S]
+                 Sub [g] [h] -> Sub [g,x:neut S] [h, x:neut S]
  =
 fn s => let (s : {T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T]) = s in
 (mlam T => fn y => case y of
@@ -48,7 +55,7 @@ fn s => let (s : {T:[.tp]} NeutVar [g] [.T] ->  NeutVar [h] [.T]) = s in
 ;
 
 rec nsubst :  (g:ctx)(h:ctx)
-             Subst [g] [h]
+             Sub [g] [h]
            -> [g . neut S]
            -> [h . neut S] =
 fn s => fn e => case e of
@@ -61,7 +68,7 @@ fn s => fn e => case e of
     [h . rapp (R' ..) (N' .. ) ]
 
 and nosubst : (g:ctx)(h:ctx)
-              Subst [g] [h]
+              Sub [g] [h]
 	    -> [g . norm S]
             -> [h . norm S] =
 fn s => fn n =>
@@ -79,11 +86,11 @@ case n of
 ;
 
 rec subst : (g:ctx)(h:ctx)
-	    Subst [g] [h]
+	    Sub [g] [h]
           -> Sem [g] [. A]
           -> Sem [h] [.A] =
 fn s => fn e =>
-let (s : Subst [g] [h])  = s in
+let (s : Sub [g] [h])  = s in
 case e of
 | Syn [g . R ..] => Syn (nsubst s [g. R ..])
 | Slam  f =>
@@ -105,7 +112,7 @@ fn s => fn e => mlam T => fn x => case x of
 | TmVar [g,x:tm S. #q .. ] => s [. T ] (TmVar [g . #q ..])
 ;
 
-rec id : (g:ctx)  Subst [g] [g] =
+rec id : (g:ctx)  Sub [g] [g] =
 mlam T => fn y => y ;
 
 rec eval : (g:tctx)(h:ctx)
@@ -134,7 +141,7 @@ case [. A] of
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
 and extendSem : [g.neut (arr A B)] ->
-                ({h:ctx} Subst [g] [h]  -> Sem [h] [ .A] -> Sem [h] [ . B])
+                ({h:ctx} Sub [g] [h]  -> Sem [h] [ .A] -> Sem [h] [ . B])
 =
 fn r => mlam h => fn s => fn e =>
 let [h. N .. ] = reify e in

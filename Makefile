@@ -31,9 +31,11 @@ corepack-native:
 
 beluga-native: corepack-native
 	$(OCBN) src/beluga/main.native
+	mv main.native bin/beluga
 
 beli-native: corepack-native
 	$(OCBN) src/beli/main.native
+	mv main.native bin/beli
 
 clean:
 	ocamlbuild -clean

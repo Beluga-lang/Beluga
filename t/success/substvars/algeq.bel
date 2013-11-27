@@ -1,0 +1,95 @@
+% Completeness of algorithmic equality for declarative equality (beta eta equivalence)
+
+tp : type.                %name tp T.
+i :  tp.
+arr: tp -> tp -> tp.
+
+tm : type.          %name tm E.
+app : tm -> tm -> tm.
+lam : (tm -> tm) -> tm.
+
+oft : tm -> tp -> type.
+of/app : oft M (arr T S) -> oft N T -> oft (app M N) S.
+of/lam : ({x:tm} oft x T -> oft (M x) S) -> oft (lam M) (arr T S).
+
+schema ctx = tm;
+schema tctx = some [t:tp] block x:tm,y:oft x t;
+
+mstep : tm -> tm -> type.  %name mstep S.
+beta : mstep (app (lam M) N) (M N).
+%eta : {M:tm (arr A B)} mstep M (lam (\x. app M x)).
+%steplam : ({x:tm A} mstep (M x) (M' x)) -> mstep (lam M) (lam M').
+stepapp : mstep M M'
+        %-> mstep N N'
+        -> mstep (app M N) (app M' N').
+refl : mstep M M.
+trans : mstep M M' -> mstep M' M'' -> mstep M M''.
+
+datatype AlgEqN : (g:tctx) {A:[.tp]}{M:[g. tm]} {N:[g.tm]} ctype =
+| AlgBase : [g. mstep (M ..) (P ..)]
+          -> [g. mstep (N ..) (Q ..)]
+          -> AlgEqR [. i] [g. P ..] [g. Q ..]
+          -> AlgEqN [. i] [g. M ..] [g. N ..]
+| AlgArr :  AlgEqN [. S] [g,b:block x:tm,d:oft x T. app (M ..) b.1] [g,b. app (N ..) b.1]
+          -> AlgEqN [. arr T S] [g. (M ..)] [g. (N ..)]
+and         AlgEqR : (g:tctx) {A:[.tp]}{M:[g. tm]} {N:[g.tm]} ctype =
+| AlgVar : {#p:[g. block x:tm,d:oft x T]}
+           AlgEqR [. T] [g. (#p.1 ..)] [g. (#p.1 ..)]
+| AlgApp : AlgEqR [. arr T S] [g. M1 ..] [g. M2 ..]
+         -> AlgEqN [. T] [g. N1 ..] [g. N2 ..]
+         -> AlgEqR [. S] [g. app (M1 ..) (N1 ..)] [g. app (M2 ..) (N2 ..)]
+;
+
+datatype LogEq : (g:tctx) {A:[.tp]}{M:[g. tm]}{N:[g. tm]} ctype =
+| LogBase : AlgEqN [. i] [g. M ..] [g. N ..]
+          -> LogEq  [. i] [g. M ..] [g. N ..]
+| LogArr  : {M1:[h0.tm]}{M2:[h0.tm]}
+             ({h:tctx} {#R:h0[h]} {N1:[h.tm]}{N2:[h.tm]}
+               % TODO: Express that #R is a weakening
+                LogEq [. T] [h. N1 ..] [h. N2 ..]
+              -> LogEq [. S] [h. app (M1 #R[..]) (N1 ..)] [h. app (M2 #R[..]) (N2 ..)])
+            -> LogEq [. arr T S] [h0. M1 ..] [h0. M2 ..]
+;
+
+rec algEqR_Monotone : {g:tctx}(h:tctx){#W:g[h]} AlgEqR [. A] [g. M1 ..] [g. M2 ..]
+                                              -> AlgEqR [. A] [h. M1 #W[..]] [h. M2 #W[..]] =
+mlam g => mlam #W => fn r => case r of
+| AlgVar [g. #p ..] => ? % TODO: Need to actually enforce that #W is var-for-var
+| AlgApp r' n' => ?
+;
+
+rec reflect : {A:[.tp]} AlgEqR [. A] [g. M1 ..] [g. M2 ..] -> LogEq [. A] [g. M1 ..] [g. M2 ..] =
+mlam A => fn r => let r : AlgEqR [. A] [g. M1 ..] [g. M2 ..] = r in case [. A] of
+| [.i] => LogBase (AlgBase [g. refl] [g. refl] r)
+| [. arr A B] =>
+  LogArr [g. M1 ..] [g. M2 ..]
+   (mlam h => mlam #W => mlam N1 => mlam N2 => fn rn =>
+    reflect [. B] (AlgApp (algEqR_Monotone [g] [h $ #W[..]] r) (reify rn))
+   )
+and reify : LogEq [. A] [g. M1 ..] [g. M2 ..] -> AlgEqN [. A] [g. M1 ..] [g. M2 ..] =
+fn r => case r of
+| LogBase a => a
+| LogArr [g. M1 ..] [g. M2 ..] f =>
+  AlgArr (reify (f [g,b:block x:tm,y:oft x _] [g,b $ ..] [g,b. b.1] [g,b. b.1]
+                   (reflect [._] (AlgVar [g,b:block x:tm, y:oft x _. b]))))
+;
+
+datatype DecEq : (g:tctx) {A:[.tp]}{M:[g. tm]} {N:[g.tm]} ctype =
+| DecBeta : DecEq [. S] [g,b:block x:tm,d:oft x T. M2 .. b.1] [g,b. N2 .. b.1]
+          -> DecEq [. T] [g. M1 ..] [g. N1 ..]
+          -> DecEq [. S] [g. (app (lam (\x. M2 .. x)) (M1 ..))] [g. N2 .. (N1 ..)]
+| DecLam :  DecEq [. S] [g,b:block x:tm,d:oft x T. M .. b.1] [g,b. N .. b.1]
+          -> DecEq [. arr T S] [g. lam (\x. M .. x)] [g. lam (\x. N .. x)]
+| DecExt :  DecEq [. S] [g,b:block x:tm,d:oft x T. app (M ..) b.1] [g,b. app (N ..) b.1]
+          -> DecEq [. arr T S] [g. (M ..)] [g. (N ..)]
+| DecVar : {#p:[g. block x:tm,d:oft x T]}
+           DecEq [. T] [g. (#p.1 ..)] [g. (#p.1 ..)]
+| DecApp : DecEq [. arr T S] [g. M1 ..] [g. M2 ..]
+         -> DecEq [. T] [g. N1 ..] [g. N2 ..]
+         -> DecEq [. S] [g. app (M1 ..) (N1 ..)] [g. app (M2 ..) (N2 ..)]
+| DecSym : DecEq [. T] [g. M ..] [g. N ..]
+         -> DecEq [. T] [g. N ..] [g. M ..]
+| DecTrans : DecEq [. T] [g. M ..] [g. N ..]
+           -> DecEq [. T] [g. N ..] [g. O ..]
+           -> DecEq [. T] [g. M ..] [g. O ..]
+;

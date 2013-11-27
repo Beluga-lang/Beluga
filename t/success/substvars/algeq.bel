@@ -137,13 +137,16 @@ case d of
     f [h] [h'] [h' $ ..] [h'. _] [h'. _] (thm [g] [h] d2 s)
 | DecLam d1 =>
    LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
-   ?
+     let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]]  s in
+     let q1 = Dot q0 rn in
+     let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 q1 in
+     ?
    )
 | DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
    let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]]  s in
    let q1 = Dot q0 rn in
-   thm [g,b:block x:tm,y:oft x _] [h0] d1 q1
+   ? %thm [g,b:block x:tm,y:oft x _] [h0] d1 q1
   )
 % | DecBeta d1 d2 => ?
 % | DecSym d1 => ?

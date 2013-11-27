@@ -12,5 +12,5 @@ mlam g => mlam M => f [g] [g] [g $ .. ] [g. M ..]
 ;
 
 datatype IsWeakening : {g:ctx} {h:ctx} {#S:g[h]}ctype =
-| Con : IsWeakening [g] [g] <g $ .. >
-; 
+| Con : IsWeakening [g] [g] [g $ .. ]
+;

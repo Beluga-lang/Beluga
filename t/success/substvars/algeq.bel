@@ -93,3 +93,27 @@ datatype DecEq : (g:tctx) {A:[.tp]}{M:[g. tm]} {N:[g.tm]} ctype =
            -> DecEq [. T] [g. N ..] [g. O ..]
            -> DecEq [. T] [g. M ..] [g. O ..]
 ;
+
+datatype LogEqSub : {g:ctx}(h:tctx){#S1:g[h]}{#S2:g[h]} ctype =
+| Nil : LogEqSub [] [h $ ^] [h $ ^]
+| Dot : LogEqSub [g] [h $ #S1[..]] [h $ #S2[..]] -> LogEq [. T] [h. M1 ..] [h. M2 ..]
+      -> LogEqSub [g,x:tm] [h $ #S1[..] (M1 ..)] [h $ #S2[..] (M2 ..)]
+;
+
+% This subordination needs to be carefully considered... Does it really make sense?
+rec thm : {g:tctx}{h:tctx} DecEq [. T] [g. M1 ..] [g. M2 ..] -> LogEqSub [g] [h $ #S1[..]] [h $ #S2[..]]
+        -> LogEq [. T] [h. M1 #S1[..]] [h. M2 #S2[..]] =
+mlam g => mlam h => fn d => fn s => case d of
+| DecVar [g. #p ..] => ?
+| DecApp d1 d2 =>
+  let LogArr [h. M1 ..] [h. M2 ..] f = thm [g] [h] d1 s in
+  f [h] [h $ ..] [h. _] [h. _] (thm [g] [h] d2 s)
+| DecLam d1 =>
+  LogArr [h. _] [h. _] (mlam h' => mlam #W => mlam N1 => mlam N2 => fn rn =>
+  ?
+  )
+| DecExt d1 => ?
+| DecBeta d1 d2 => ?
+| DecSym d1 => ?
+| DecTrans d1 d2 => ?
+;

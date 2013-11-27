@@ -25,95 +25,127 @@ stepapp : mstep M M'
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
-datatype AlgEqN : (g:tctx) {A:[.tp]}{M:[g. tm]} {N:[g.tm]} ctype =
-| AlgBase : [g. mstep (M ..) (P ..)]
-          -> [g. mstep (N ..) (Q ..)]
-          -> AlgEqR [. i] [g. P ..] [g. Q ..]
-          -> AlgEqN [. i] [g. M ..] [g. N ..]
-| AlgArr :  AlgEqN [. S] [g,b:block x:tm,d:oft x T. app (M ..) b.1] [g,b. app (N ..) b.1]
-          -> AlgEqN [. arr T S] [g. (M ..)] [g. (N ..)]
-and         AlgEqR : (g:tctx) {A:[.tp]}{M:[g. tm]} {N:[g.tm]} ctype =
-| AlgVar : {#p:[g. block x:tm,d:oft x T]}
-           AlgEqR [. T] [g. (#p.1 ..)] [g. (#p.1 ..)]
-| AlgApp : AlgEqR [. arr T S] [g. M1 ..] [g. M2 ..]
-         -> AlgEqN [. T] [g. N1 ..] [g. N2 ..]
-         -> AlgEqR [. S] [g. app (M1 ..) (N1 ..)] [g. app (M2 ..) (N2 ..)]
+% Interesting that it looks like we needed to code up what it means to check
+% equivalence of variables
+datatype EqV : {g:tctx}(g':ctx) {A:[.tp]}{#p:[g'. tm]}{#q:[g'. tm]} ctype =
+| Top : EqV [g,b:block x:tm,y:oft x T] [. T] [g',x:tm. x] [g',x:tm. x]
+| Pop : EqV [g] [. T] [g'. #p ..] [g'. #q ..]
+      -> EqV [g,b:block x:tm,y:oft x T] [.T] [g',x:tm. #p ..] [g',x:tm. #q ..];
+
+% Think of g' as an output
+datatype AlgEqN : {g:tctx}(g':ctx){A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
+| AlgBase : [g'. mstep (M ..) (P ..)]
+          -> [g'. mstep (N ..) (Q ..)]
+          -> AlgEqR [g] [. i] [g'. P ..] [g'. Q ..]
+          -> AlgEqN [g] [. i] [g'. M ..] [g'. N ..]
+| AlgArr :  AlgEqN [g,b:block x:tm,d:oft x T] [. S] [g',x:tm. app (M ..) x] [g',x. app (N ..) x]
+          -> AlgEqN [g] [. arr T S] [g'. (M ..)] [g'. (N ..)]
+% g' and the type A are outputs
+and      AlgEqR : {g:tctx}(g':ctx){A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
+| AlgVar : {#p:[g'. tm]}{#q:[g'.tm]}
+           EqV [g] [. T] [g'. #p ..] [g'. #q ..]
+         -> AlgEqR [g] [. T] [g'. #p ..] [g'. #q ..]
+| AlgApp : AlgEqR [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
+         -> AlgEqN [g] [. T] [g'. N1 ..] [g'. N2 ..]
+         -> AlgEqR [g] [. S] [g'. app (M1 ..) (N1 ..)] [g'. app (M2 ..) (N2 ..)]
 ;
 
-datatype LogEq : (g:tctx) {A:[.tp]}{M:[g. tm]}{N:[g. tm]} ctype =
-| LogBase : AlgEqN [. i] [g. M ..] [g. N ..]
-          -> LogEq  [. i] [g. M ..] [g. N ..]
-| LogArr  : {M1:[h0.tm]}{M2:[h0.tm]}
-             ({h:tctx} {#R:h0[h]} {N1:[h.tm]}{N2:[h.tm]}
+datatype LogEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
+| LogBase : AlgEqN [g] [. i] [g'. M ..] [g'. N ..]
+          -> LogEq [g] [. i] [g'. M ..] [g'. N ..]
+| LogArr  : {M1:[g'.tm]}{M2:[g'.tm]}
+             ({h:tctx}{h':ctx} {#R:g'[h']} {N1:[h'.tm]}{N2:[h'.tm]}
                % TODO: Express that #R is a weakening
-                LogEq [. T] [h. N1 ..] [h. N2 ..]
-              -> LogEq [. S] [h. app (M1 #R[..]) (N1 ..)] [h. app (M2 #R[..]) (N2 ..)])
-            -> LogEq [. arr T S] [h0. M1 ..] [h0. M2 ..]
+               % TODO: Express that #R is well-typed
+                LogEq [h] [. T] [h'. N1 ..] [h'. N2 ..]
+              -> LogEq [h] [. S] [h'. app (M1 #R[..]) (N1 ..)] [h'. app (M2 #R[..]) (N2 ..)])
+            -> LogEq [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
 ;
 
-rec algEqR_Monotone : {g:tctx}(h:tctx){#W:g[h]} AlgEqR [. A] [g. M1 ..] [g. M2 ..]
-                                              -> AlgEqR [. A] [h. M1 #W[..]] [h. M2 #W[..]] =
-mlam g => mlam #W => fn r => case r of
-| AlgVar [g. #p ..] => ? % TODO: Need to actually enforce that #W is var-for-var
+% Obviously false without fact that #W is weakening and well-typed
+rec algEqR_Monotone : {g':ctx}{#W:g'[h']} AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..]
+                                -> AlgEqR [h] [. A] [h'. M1 #W[..]] [h'. M2 #W[..]] =
+mlam g' => mlam #W => fn r => case r of
+%| AlgVar [g'. #p..] [g'. #q..] v => ? % TODO: Need to actually enforce that #W is var-for-var
 | AlgApp r' n' => ?
 ;
 
-rec reflect : {A:[.tp]} AlgEqR [. A] [g. M1 ..] [g. M2 ..] -> LogEq [. A] [g. M1 ..] [g. M2 ..] =
-mlam A => fn r => let r : AlgEqR [. A] [g. M1 ..] [g. M2 ..] = r in case [. A] of
-| [.i] => LogBase (AlgBase [g. refl] [g. refl] r)
+rec reflect : {A:[.tp]} AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..] -> LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] =
+mlam A => fn r => let r : AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..] = r in case [. A] of
+| [.i] => LogBase (AlgBase [g'. refl] [g'. refl] r)
 | [. arr A B] =>
-  LogArr [g. M1 ..] [g. M2 ..]
-   (mlam h => mlam #W => mlam N1 => mlam N2 => fn rn =>
-    reflect [. B] (AlgApp (algEqR_Monotone [g] [h $ #W[..]] r) (reify rn))
+  LogArr [g'. M1 ..] [g'. M2 ..]
+   (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rn =>
+    reflect [. B] (AlgApp (algEqR_Monotone [g'] [h' $ #W[..]] r) (reify rn))
    )
-and reify : LogEq [. A] [g. M1 ..] [g. M2 ..] -> AlgEqN [. A] [g. M1 ..] [g. M2 ..] =
-fn r => case r of
+and reify : LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] -> AlgEqN [g] [. A] [g'. M1 ..] [g'. M2 ..] =
+fn r => let r : LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] = r in case r of
 | LogBase a => a
-| LogArr [g. M1 ..] [g. M2 ..] f =>
-  AlgArr (reify (f [g,b:block x:tm,y:oft x _] [g,b $ ..] [g,b. b.1] [g,b. b.1]
-                   (reflect [._] (AlgVar [g,b:block x:tm, y:oft x _. b]))))
+| LogArr [g'. M1 ..] [g'. M2 ..] f =>
+  AlgArr (reify (f [g,b:block x:tm,y:oft x _] [g',x:tm] [g',x $ ..] [g',x. x] [g',x. x]
+                   (reflect [._] (AlgVar [g',x:tm. x] [g',x. x] Top))))
 ;
 
-datatype DecEq : (g:tctx) {A:[.tp]}{M:[g. tm]} {N:[g.tm]} ctype =
-| DecBeta : DecEq [. S] [g,b:block x:tm,d:oft x T. M2 .. b.1] [g,b. N2 .. b.1]
-          -> DecEq [. T] [g. M1 ..] [g. N1 ..]
-          -> DecEq [. S] [g. (app (lam (\x. M2 .. x)) (M1 ..))] [g. N2 .. (N1 ..)]
-| DecLam :  DecEq [. S] [g,b:block x:tm,d:oft x T. M .. b.1] [g,b. N .. b.1]
-          -> DecEq [. arr T S] [g. lam (\x. M .. x)] [g. lam (\x. N .. x)]
-| DecExt :  DecEq [. S] [g,b:block x:tm,d:oft x T. app (M ..) b.1] [g,b. app (N ..) b.1]
-          -> DecEq [. arr T S] [g. (M ..)] [g. (N ..)]
-| DecVar : {#p:[g. block x:tm,d:oft x T]}
-           DecEq [. T] [g. (#p.1 ..)] [g. (#p.1 ..)]
-| DecApp : DecEq [. arr T S] [g. M1 ..] [g. M2 ..]
-         -> DecEq [. T] [g. N1 ..] [g. N2 ..]
-         -> DecEq [. S] [g. app (M1 ..) (N1 ..)] [g. app (M2 ..) (N2 ..)]
-| DecSym : DecEq [. T] [g. M ..] [g. N ..]
-         -> DecEq [. T] [g. N ..] [g. M ..]
-| DecTrans : DecEq [. T] [g. M ..] [g. N ..]
-           -> DecEq [. T] [g. N ..] [g. O ..]
-           -> DecEq [. T] [g. M ..] [g. O ..]
+datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
+| DecBeta : DecEq [g,b:block x:tm,d:oft x T] [. S] [g',x:tm. M2 .. x] [g',x. N2 .. x]
+          -> DecEq [g] [. T] [g'. M1 ..] [g'. N1 ..]
+          -> DecEq [g] [. S] [g'. (app (lam (\x. M2 .. x)) (M1 ..))] [g'. N2 .. (N1 ..)]
+| DecLam :  DecEq [g,b:block x:tm,d:oft x T] [. S] [g',x:tm. M .. x] [g',x. N .. x]
+          -> DecEq [g] [. arr T S] [g'. lam (\x. M .. x)] [g'. lam (\x. N .. x)]
+| DecExt :  DecEq [g,b:block x:tm,d:oft x T] [. S] [g',x:tm. app (M ..) x] [g',x. app (N ..) x]
+          -> DecEq [g] [. arr T S] [g'. (M ..)] [g'. (N ..)]
+| DecVar : {#p:[g'. tm]}{#q:[g'.tm]}
+           EqV   [g] [. T] [g'. #p ..] [g'. #q ..]
+         -> DecEq [g] [. T] [g'. #p ..] [g'. #q ..]
+| DecApp : DecEq [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
+         -> DecEq [g] [. T] [g'. N1 ..] [g'. N2 ..]
+         -> DecEq [g] [. S] [g'. app (M1 ..) (N1 ..)] [g'. app (M2 ..) (N2 ..)]
+| DecSym : DecEq [g] [. T] [g'. M ..] [g'. N ..]
+         -> DecEq [g] [. T] [g'. N ..] [g'. M ..]
+| DecTrans : DecEq [g] [. T] [g'. M ..] [g'. N ..]
+           -> DecEq [g] [. T] [g'. N ..] [g'. O ..]
+           -> DecEq [g] [. T] [g'. M ..] [g'. O ..]
 ;
 
-datatype LogEqSub : {g:ctx}(h:tctx){#S1:g[h]}{#S2:g[h]} ctype =
-| Nil : LogEqSub [] [h $ ^] [h $ ^]
-| Dot : LogEqSub [g] [h $ #S1[..]] [h $ #S2[..]] -> LogEq [. T] [h. M1 ..] [h. M2 ..]
-      -> LogEqSub [g,x:tm] [h $ #S1[..] (M1 ..)] [h $ #S2[..] (M2 ..)]
+datatype CtxRel : {g:tctx}{g:ctx} ctype =
+| RNil : CtxRel [] []
+| RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
+
+% Could we actually say #S1:g'[h] and let subordination do that part?
+datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} ctype =
+| Nil : %CtxRel [h] [h'] -> % Is this necessary?
+        LogEqSub [] [] [h] [h' $ ^] [h' $ ^]
+| Dot : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] -> LogEq [h] [. T] [h'. M1 ..] [h'. M2 ..]
+      -> LogEqSub [g,b:block x:tm,d:oft x T] [g',x:tm] [h] [h' $ #S1[..] (M1 ..)] [h' $ #S2[..] (M2 ..)]
 ;
 
-% This subordination needs to be carefully considered... Does it really make sense?
-rec thm : {g:tctx}{h:tctx} DecEq [. T] [g. M1 ..] [g. M2 ..] -> LogEqSub [g] [h $ #S1[..]] [h $ #S2[..]]
-        -> LogEq [. T] [h. M1 #S1[..]] [h. M2 #S2[..]] =
-mlam g => mlam h => fn d => fn s => case d of
-| DecVar [g. #p ..] => ?
+% TODO: This is also false without refinement
+rec wknLogEqSub : {h0:tctx}{h':ctx}{#W:h'[h0']} % {#S1:g'[h']}{#S2:g'[h']}
+                               LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+                             -> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] =
+?
+;
+
+rec thm : {g:tctx}{h:tctx} DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
+        -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+        -> LogEq [h] [. T] [h'. M1 #S1[..]] [h'. M2 #S2[..]] =
+mlam g => mlam h => fn d => fn s => let s : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] = s in
+case d of
+%| DecVar [g'. #p ..] [g'. #p ..] v => ?
 | DecApp d1 d2 =>
-  let LogArr [h. M1 ..] [h. M2 ..] f = thm [g] [h] d1 s in
-  f [h] [h $ ..] [h. _] [h. _] (thm [g] [h] d2 s)
+   let LogArr [h'. M1 ..] [h'. M2 ..] f = thm [g] [h] d1 s in
+    f [h] [h'] [h' $ ..] [h'. _] [h'. _] (thm [g] [h] d2 s)
 | DecLam d1 =>
-  LogArr [h. _] [h. _] (mlam h' => mlam #W => mlam N1 => mlam N2 => fn rn =>
-  ?
+   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
+   ?
+   )
+| DecExt d1 =>
+  LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
+   let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]]  s in
+   let q1 = Dot q0 rn in
+   thm [g,b:block x:tm,y:oft x _] [h0] d1 q1
   )
-| DecExt d1 => ?
-| DecBeta d1 d2 => ?
-| DecSym d1 => ?
-| DecTrans d1 d2 => ?
+% | DecBeta d1 d2 => ?
+% | DecSym d1 => ?
+% | DecTrans d1 d2 => ?
 ;

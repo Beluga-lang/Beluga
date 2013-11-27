@@ -884,6 +884,8 @@ and what_head = function
   | FVar _ -> "FVar"
   | FMVar _ -> "FMVar"
   | FPVar _ -> "FPVar"
+  | HClo _ -> "HClo"
+  | HMClo _ -> "HMClo"
 
 
 

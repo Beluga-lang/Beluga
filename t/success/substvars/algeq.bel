@@ -106,12 +106,18 @@ fn r => case r of
 rec shiftIsVarSub : CtxRel [g] [g'] -> IsVarSub [g] [g'] [g,b:block x:tm,y:oft x A] [g',x:tm $ .. ] =
 fn r => wknVarSub (idIsVarSub r);
 
+rec algVar : Lookup [g] [. T] [g'. M ..] -> AlgEqR [g] [. T] [g'. M ..] [g'. M ..] =
+fn iv => case iv of
+| Top => AlgVar Top
+| Pop iv' => let v = algVar iv' in ? % TODO: Hmm..
+;
+
 % Obviously false without fact that #W is weakening and well-typed
 rec algEqR_Monotone :   IsVarSub [g] [g'] [h] [h' $ #W[..]]
                       -> AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..]
                       -> AlgEqR [h] [. A] [h'. M1 #W[..]] [h'. M2 #W[..]] =
 fn iv => fn r => case r of
-| AlgVar v => let q0 = wknVar v iv in ? % Tricky.. Making AlgVar more general is kind of cheating
+| AlgVar v => algVar (wknVar v iv)
 | AlgApp r' n' => AlgApp (algEqR_Monotone iv r') (algEqN_Monotone iv n')
 and algEqN_Monotone : IsVarSub [g] [g'] [h] [h' $ #W[..]]
                     -> AlgEqN [g] [. A] [g'. M1 ..] [g'. M2 ..]

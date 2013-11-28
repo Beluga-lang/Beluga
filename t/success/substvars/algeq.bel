@@ -17,20 +17,16 @@ schema tctx = some [t:tp] block x:tm,y:oft x t;
 
 mstep : tm -> tm -> type.  %name mstep S.
 beta : mstep (app (lam M) N) (M N).
-%eta : {M:tm (arr A B)} mstep M (lam (\x. app M x)).
-%steplam : ({x:tm A} mstep (M x) (M' x)) -> mstep (lam M) (lam M').
-stepapp : mstep M M'
-        %-> mstep N N'
-        -> mstep (app M N) (app M' N').
+stepapp : mstep M M' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
 % Interesting that it looks like we needed to code up what it means to check
 % equivalence of variables
-datatype EqV : {g:tctx}(g':ctx) {A:[.tp]}{#p:[g'. tm]}{#q:[g'. tm]} ctype =
+datatype EqV : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
 | Top : EqV [g,b:block x:tm,y:oft x T] [. T] [g',x:tm. x] [g',x:tm. x]
 | Pop : EqV [g] [. T] [g'. #p ..] [g'. #q ..]
-      -> EqV [g,b:block x:tm,y:oft x T] [.T] [g',x:tm. #p ..] [g',x:tm. #q ..];
+      -> EqV [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. #p ..] [g',x:tm. #q ..];
 
 % Think of g' as an output
 datatype AlgEqN : {g:tctx}(g':ctx){A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
@@ -94,7 +90,7 @@ datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
           -> DecEq [g] [. arr T S] [g'. lam (\x. M .. x)] [g'. lam (\x. N .. x)]
 | DecExt :  DecEq [g,b:block x:tm,d:oft x T] [. S] [g',x:tm. app (M ..) x] [g',x. app (N ..) x]
           -> DecEq [g] [. arr T S] [g'. (M ..)] [g'. (N ..)]
-| DecVar : {#p:[g'. tm]}{#q:[g'.tm]}
+| DecVar : % {#p:[g'. tm]}{#q:[g'.tm]}
            EqV   [g] [. T] [g'. #p ..] [g'. #q ..]
          -> DecEq [g] [. T] [g'. #p ..] [g'. #q ..]
 | DecApp : DecEq [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
@@ -107,9 +103,9 @@ datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
            -> DecEq [g] [. T] [g'. M ..] [g'. O ..]
 ;
 
-datatype CtxRel : {g:tctx}{g:ctx} ctype =
-| RNil : CtxRel [] []
-| RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
+% datatype CtxRel : {g:tctx}{g:ctx} ctype =
+% | RNil : CtxRel [] []
+% | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
 
 % Could we actually say #S1:g'[h] and let subordination do that part?
 datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} ctype =
@@ -119,28 +115,82 @@ datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} cty
       -> LogEqSub [g,b:block x:tm,d:oft x T] [g',x:tm] [h] [h' $ #S1[..] (M1 ..)] [h' $ #S2[..] (M2 ..)]
 ;
 
-% TODO: This is also false without refinement
+% TODO: This is also false. Need to say that #W is var-for-var and well-typed
 rec wknLogEqSub : {h0:tctx}{h':ctx}{#W:h'[h0']} % {#S1:g'[h']}{#S2:g'[h']}
                                LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
                              -> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] =
 ?
 ;
 
+rec closed : {S1:[g'. mstep (N1 ..) (M1 ..)]} {S2:[g'. mstep (N2 ..) (M2 ..)]}
+    LogEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
+  -> LogEq [g] [. T] [g'. N1 ..] [g'. N2 ..] =
+mlam S1 => mlam S2 => fn e => case e of
+| LogBase (AlgBase [g'. S1' ..] [g'. S2' ..] a) =>
+  LogBase (AlgBase [g'. trans (S1 ..) (S1' ..)] [g'. trans (S2 ..) (S2' ..)] a)
+| LogArr [g'. M1 ..] [g'. M2 ..] f =>
+  LogArr [g'. _] [g'. _] (mlam h => mlam h' => mlam #W => mlam P1 => mlam P2 => fn rp =>
+   let q0 = f [h] [h'] [h' $ #W[..]] [h'. P1 ..] [h'. P2 ..] rp in
+   closed [h'. stepapp (S1 #W[..])] [h'. stepapp (S2 #W[..])] q0
+  )
+;
+
+rec lookup : EqV [g] [. T] [g'. M1 ..] [g'. M2 ..]
+ -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+ -> LogEq [h] [. T] [h'. M1 #S1[..]] [h'. M2 #S2[..]] =
+fn v => fn s => case v of
+| Top =>    let Dot s' e = s in e
+| Pop v' => let Dot s' e = s in lookup v' s'
+;
+
+rec varEqSym :
+  EqV [g] [. T] [g'. #p ..] [g'. #q ..]
+-> EqV [g] [. T] [g'. #q ..] [g'. #p ..] =
+fn e => case e of
+| Top => Top
+| Pop e' => Pop (varEqSym e')
+;
+
+rec algEqRSym :
+  AlgEqR [g] [. T] [g'. N1 ..] [g'. N2 ..]
+-> AlgEqR [g] [. T] [g'. N2 ..] [g'. N1 ..] =
+fn a => case a of
+| AlgVar [g'. #p ..] [g'. #q ..] v => AlgVar [g'. #q ..] [g'. #p ..] (varEqSym v)
+| AlgApp a1 a2 => AlgApp (algEqRSym a1) (algEqNSym a2)
+and algEqNSym :
+  AlgEqN [g] [. T] [g'. N1 ..] [g'. N2 ..]
+-> AlgEqN [g] [. T] [g'. N2 ..] [g'. N1 ..] =
+fn a => case a of
+| AlgBase s1 s2 a' => AlgBase s2 s1 (algEqRSym a')
+| AlgArr a' => AlgArr (algEqNSym a')
+;
+
+rec logEqSym :
+   LogEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
+ -> LogEq [g] [. T] [g'. M2 ..] [g'. M1 ..] =
+fn e => case e of
+| LogBase a => LogBase (algEqNSym a)
+| LogArr [g'. M1 ..] [g'. M2 ..] f =>
+  LogArr [g'. M2 ..] [g'. M1 ..] (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rn =>
+   logEqSym (f [h] [h'] [h' $ #W[..]] [h'. N2 ..] [h'. N1 ..] (logEqSym rn))
+  )
+;
+
 rec thm : {g:tctx}{h:tctx} DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
         -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
         -> LogEq [h] [. T] [h'. M1 #S1[..]] [h'. M2 #S2[..]] =
-mlam g => mlam h => fn d => fn s => let s : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] = s in
+mlam g => mlam h => fn d => let d : DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..] = d in
+ fn s => let s : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] = s in
 case d of
-%| DecVar [g'. #p ..] [g'. #p ..] v => ?
+| DecVar v => lookup v s
 | DecApp d1 d2 =>
    let LogArr [h'. M1 ..] [h'. M2 ..] f = thm [g] [h] d1 s in
     f [h] [h'] [h' $ ..] [h'. _] [h'. _] (thm [g] [h] d2 s)
 | DecLam d1 =>
    LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
-     let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]]  s in
-     let q1 = Dot q0 rn in
-     let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 q1 in
-     ?
+     let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]] s in
+     let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 (Dot q0 rn) in
+     ? %closed [h0'. beta] [h0'. beta] q2 % Should work?
    )
 | DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
@@ -148,7 +198,12 @@ case d of
    let q1 = Dot q0 rn in
    ? %thm [g,b:block x:tm,y:oft x _] [h0] d1 q1
   )
-% | DecBeta d1 d2 => ?
-% | DecSym d1 => ?
+| DecBeta d1 d2 =>
+   let q0 = thm [g] [h] d2 s in
+   let q1 = thm [g,b:block x:tm,y:oft x _] [h] d1 (Dot s q0) in
+   closed [h'. beta] [h'. refl] q1
+| DecSym d1 =>
+   let q0 = thm [g] [h] d1 s in
+   ?
 % | DecTrans d1 d2 => ?
 ;

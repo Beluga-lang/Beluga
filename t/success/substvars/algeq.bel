@@ -74,13 +74,19 @@ datatype LogEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
             -> LogEq [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
 ;
 
-% Obviously false without fact that #W is weakening and well-typed
-rec algEqR_Monotone : {g':ctx}{#W:g'[h']} AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..]
-                                -> AlgEqR [h] [. A] [h'. M1 #W[..]] [h'. M2 #W[..]] =
-mlam g' => mlam #W => fn r => case r of
-%| AlgVar [g'. #p..] [g'. #q..] v => ? % TODO: Need to actually enforce that #W is var-for-var
-| AlgApp r' n' => ?
-;
+rec wknVar : Lookup [g] [. A] [g'. M ..] -> IsVarSub [g] [g'] [h] [h' $ #W[..]]
+ -> Lookup [h] [. A] [h'. M #W[..]] =
+fn iv => fn ivs => case iv of
+| Top =>    let Cons ivs' iv = ivs in iv
+| Pop iv' => let Cons ivs' iv = ivs in wknVar iv' ivs';
+
+
+rec varSubCompose : IsVarSub [g] [g'] [h] [h' $ #W[..]]
+                   -> IsVarSub [h] [h'] [h0] [h0' $ #W2[..]]
+                   -> IsVarSub [g] [g'] [h0] [h0' $ #W[#W2[..]]] =
+fn r1 => fn r2 => case r1 of
+| Nil => Nil
+| Cons ivs' iv => Cons (varSubCompose ivs' r2) (wknVar iv r2);
 
 rec wknVarSub : IsVarSub [g] [g'] [h] [h' $ #S[..]]
  -> IsVarSub [g] [g'] [h,b:block x:tm,y:oft x T] [h',x:tm $ #S[..] ] =
@@ -100,13 +106,40 @@ fn r => case r of
 rec shiftIsVarSub : CtxRel [g] [g'] -> IsVarSub [g] [g'] [g,b:block x:tm,y:oft x A] [g',x:tm $ .. ] =
 fn r => wknVarSub (idIsVarSub r);
 
+% Obviously false without fact that #W is weakening and well-typed
+rec algEqR_Monotone :   IsVarSub [g] [g'] [h] [h' $ #W[..]]
+                      -> AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..]
+                      -> AlgEqR [h] [. A] [h'. M1 #W[..]] [h'. M2 #W[..]] =
+fn iv => fn r => case r of
+| AlgVar v => let q0 = wknVar v iv in ? % Tricky.. Making AlgVar more general is kind of cheating
+| AlgApp r' n' => AlgApp (algEqR_Monotone iv r') (algEqN_Monotone iv n')
+and algEqN_Monotone : IsVarSub [g] [g'] [h] [h' $ #W[..]]
+                    -> AlgEqN [g] [. A] [g'. M1 ..] [g'. M2 ..]
+                    -> AlgEqN [h] [. A] [h'. M1 #W[..]] [h'. M2 #W[..]] =
+fn iv => let iv : IsVarSub [h] [g'] [h] [h' $ #W[..]] = iv in fn r => case r of
+| AlgBase [g'. S1 ..] [g'. S2 ..] r' => AlgBase [h'. S1 #W[..]] [h'. S2 #W[..]] (algEqR_Monotone iv r')
+| AlgArr r' => AlgArr (algEqN_Monotone (extVarSub iv) r')
+;
+
+rec logEq_Monotone : IsVarSub [g] [g'] [h] [h' $ #W[..]]
+                   -> LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..]
+                   -> LogEq [h] [. A] [h'. M1 #W[..]] [h'. M2 #W[..]] =
+fn iv => let iv : IsVarSub [g] [g'] [h] [h' $ #W[..]] = iv in fn e => case e of
+| LogBase v => LogBase (algEqN_Monotone iv v)
+| LogArr [g'. M1 ..] [g'. M2 ..] f =>
+  LogArr [h'. M1 #W[..]] [h'. M2 #W[..]]
+   (mlam h0 => mlam h0' => mlam #W2 => mlam N1 => mlam N2 => fn rh => fn iv' => fn rn =>
+    f [h0] [h0'] [h0' $ #W[#W2[..]]] [h0'. N1 ..] [h0'. N2 ..] rh (varSubCompose iv iv') rn
+   )
+;
+
 rec reflect : {A:[.tp]} AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..] -> LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] =
 mlam A => fn r => let r : AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..] = r in case [. A] of
 | [.i] => LogBase (AlgBase [g'. refl] [g'. refl] r)
 | [. arr A B] =>
   LogArr [g'. M1 ..] [g'. M2 ..]
    (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
-    reflect [. B] (AlgApp (algEqR_Monotone [g'] [h' $ #W[..]] r) (reify rh rn))
+    reflect [. B] (AlgApp (algEqR_Monotone iv r) (reify rh rn))
    )
 and reify : CtxRel [g] [g'] -> LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] -> AlgEqN [g] [. A] [g'. M1 ..] [g'. M2 ..] =
 fn r => fn e => let e : LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] = e in case e of
@@ -145,11 +178,13 @@ datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} cty
       -> LogEqSub [g,b:block x:tm,d:oft x T] [g',x:tm] [h] [h' $ #S1[..] (M1 ..)] [h' $ #S2[..] (M2 ..)]
 ;
 
-% % TODO: This is also false. Need to say that #W is var-for-var and well-typed
-rec wknLogEqSub : {h0:tctx}{h':ctx}{#W:h'[h0']} % {#S1:g'[h']}{#S2:g'[h']}
-                               LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+rec wknLogEqSub :
+ IsVarSub [h] [h'] [h0] [h0' $ #W[..]]
+                             -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
                              -> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] =
-?
+fn iv => fn es => case es of
+| Nil => Nil
+| Dot rs' rN => Dot (wknLogEqSub iv rs') (logEq_Monotone iv rN)
 ;
 
 rec closed : {S1:[g'. mstep (N1 ..) (M1 ..)]} {S2:[g'. mstep (N2 ..) (M2 ..)]}
@@ -285,13 +320,13 @@ case d of
     f [h] [h'] [h' $ ..] [h'. _] [h'. _] r (idIsVarSub r) (thm [g] [h] d2 r s)
 | DecLam d1 =>
    LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
-     let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]] s in
+     let q0 = wknLogEqSub iv s in
      let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 rh (Dot q0 rn) in
      ? %closed [h0'. beta] [h0'. beta] q2 % Should work?
    )
 | DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
-   let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]]  s in
+   let q0 = wknLogEqSub iv s in
    let q1 = Dot q0 rn in
    ? %thm [g,b:block x:tm,y:oft x _] [h0] d1 q1 % Should work?
   )
@@ -312,7 +347,7 @@ rec idLogEqSub : CtxRel [g] [g']
 fn r => case r of
 | RNil => Nil
 | RCons r' => let r' : CtxRel [g0] [g0'] = r' in
-  Dot (wknLogEqSub [g0,b:block x:tm,y:oft x _] [g0'] [g0',x:tm $ ..] (idLogEqSub r'))
+  Dot (wknLogEqSub (shiftIsVarSub r') (idLogEqSub r'))
       (reflect [._] (AlgVar Top))
 ;
 

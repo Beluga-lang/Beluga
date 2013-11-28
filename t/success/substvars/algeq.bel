@@ -27,12 +27,17 @@ datatype CtxRel : {g:tctx}{g':ctx} ctype =
 | RNil : CtxRel [] []
 | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
 
+datatype Lookup : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} ctype =
+| Top : Lookup [g,b:block x:tm,y:oft x T] [. T] [g',x:tm. x]
+| Pop : Lookup [g] [. T] [g'. M ..]
+      -> Lookup [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. M ..];
+
 % Interesting that it looks like we needed to code up what it means to check
 % equivalence of variables
-datatype EqV : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
-| Top : EqV [g,b:block x:tm,y:oft x T] [. T] [g',x:tm. x] [g',x:tm. x]
-| Pop : EqV [g] [. T] [g'. #p ..] [g'. #q ..]
-      -> EqV [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. #p ..] [g',x:tm. #q ..];
+% datatype EqV : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
+% | Top : EqV [g,b:block x:tm,y:oft x T] [. T] [g',x:tm. x] [g',x:tm. x]
+% | Pop : EqV [g] [. T] [g'. #p ..] [g'. #q ..]
+%       -> EqV [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. #p ..] [g',x:tm. #q ..];
 
 % Think of g' as an output
 datatype AlgEqN : {g:tctx}(g':ctx){A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
@@ -42,23 +47,28 @@ datatype AlgEqN : {g:tctx}(g':ctx){A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
           -> AlgEqN [g] [. i] [g'. M ..] [g'. N ..]
 | AlgArr :  AlgEqN [g,b:block x:tm,d:oft x T] [. S] [g',x:tm. app (M ..) x] [g',x. app (N ..) x]
           -> AlgEqN [g] [. arr T S] [g'. (M ..)] [g'. (N ..)]
-% g' and the type A are outputs
+% The type A is output
 and      AlgEqR : {g:tctx}(g':ctx){A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
-| AlgVar : {#p:[g'. tm]}{#q:[g'.tm]}
-           EqV [g] [. T] [g'. #p ..] [g'. #q ..]
-         -> AlgEqR [g] [. T] [g'. #p ..] [g'. #q ..]
+| AlgVar : % {#p:[g'. tm]}
+           Lookup [g] [. T] [g'. #p ..]
+         -> AlgEqR [g] [. T] [g'. #p ..] [g'. #p ..]
 | AlgApp : AlgEqR [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
          -> AlgEqN [g] [. T] [g'. N1 ..] [g'. N2 ..]
          -> AlgEqR [g] [. S] [g'. app (M1 ..) (N1 ..)] [g'. app (M2 ..) (N2 ..)]
 ;
+
+datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: g'[h']}ctype =
+| Nil : IsVarSub [] [] [h] [h' $ ^ ]
+| Cons :  IsVarSub [g] [g'] [h] [h' $ #S[..]] -> Lookup [h] [. A] [h'. M ..]
+         -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h] [h' $ #S[..] (M ..)];
 
 datatype LogEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
 | LogBase : AlgEqN [g] [. i] [g'. M ..] [g'. N ..]
           -> LogEq [g] [. i] [g'. M ..] [g'. N ..]
 | LogArr  : {M1:[g'.tm]}{M2:[g'.tm]}
              ({h:tctx}{h':ctx} {#R:g'[h']} {N1:[h'.tm]}{N2:[h'.tm]}
-               % TODO: Express that #R is a weakening
-               % TODO: Express that #R is well-typed
+                CtxRel [h] [h'] ->
+                IsVarSub [g] [g'] [h] [h' $ #R[..]] ->
                 LogEq [h] [. T] [h'. N1 ..] [h'. N2 ..]
               -> LogEq [h] [. S] [h'. app (M1 #R[..]) (N1 ..)] [h'. app (M2 #R[..]) (N2 ..)])
             -> LogEq [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
@@ -72,20 +82,38 @@ mlam g' => mlam #W => fn r => case r of
 | AlgApp r' n' => ?
 ;
 
+rec wknVarSub : IsVarSub [g] [g'] [h] [h' $ #S[..]]
+ -> IsVarSub [g] [g'] [h,b:block x:tm,y:oft x T] [h',x:tm $ #S[..] ] =
+fn r => case r of
+| Nil => Nil
+| Cons r' v => Cons (wknVarSub r') (Pop v);
+
+rec extVarSub : IsVarSub [g] [g'] [h] [h' $ #S[..]]
+ -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h,b:block x:tm,y:oft x A] [h',x:tm $ #S[..] x ] =
+fn r => let r : IsVarSub [g] [g'] [h] [h' $ #S[..]] = r in Cons (wknVarSub r) Top;
+
+rec idIsVarSub : CtxRel [g] [g'] -> IsVarSub [g] [g'] [g] [g' $ .. ] =
+fn r => case r of
+| RNil => Nil
+| RCons r' => extVarSub (idIsVarSub r');
+
+rec shiftIsVarSub : CtxRel [g] [g'] -> IsVarSub [g] [g'] [g,b:block x:tm,y:oft x A] [g',x:tm $ .. ] =
+fn r => wknVarSub (idIsVarSub r);
+
 rec reflect : {A:[.tp]} AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..] -> LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] =
 mlam A => fn r => let r : AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..] = r in case [. A] of
 | [.i] => LogBase (AlgBase [g'. refl] [g'. refl] r)
 | [. arr A B] =>
   LogArr [g'. M1 ..] [g'. M2 ..]
-   (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rn =>
-    reflect [. B] (AlgApp (algEqR_Monotone [g'] [h' $ #W[..]] r) (reify rn))
+   (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+    reflect [. B] (AlgApp (algEqR_Monotone [g'] [h' $ #W[..]] r) (reify rh rn))
    )
-and reify : LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] -> AlgEqN [g] [. A] [g'. M1 ..] [g'. M2 ..] =
-fn r => let r : LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] = r in case r of
+and reify : CtxRel [g] [g'] -> LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] -> AlgEqN [g] [. A] [g'. M1 ..] [g'. M2 ..] =
+fn r => fn e => let e : LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] = e in case e of
 | LogBase a => a
 | LogArr [g'. M1 ..] [g'. M2 ..] f =>
-  AlgArr (reify (f [g,b:block x:tm,y:oft x _] [g',x:tm] [g',x $ ..] [g',x. x] [g',x. x]
-                   (reflect [._] (AlgVar [g',x:tm. x] [g',x. x] Top))))
+  AlgArr (reify (RCons r) (f [g,b:block x:tm,y:oft x _] [g',x:tm] [g',x $ ..] [g',x. x] [g',x. x]
+                 (RCons r) (shiftIsVarSub r) (reflect [._] (AlgVar Top))))
 ;
 
 datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
@@ -97,8 +125,8 @@ datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
 | DecExt :  DecEq [g,b:block x:tm,d:oft x T] [. S] [g',x:tm. app (M ..) x] [g',x. app (N ..) x]
           -> DecEq [g] [. arr T S] [g'. (M ..)] [g'. (N ..)]
 | DecVar : % {#p:[g'. tm]}{#q:[g'.tm]}
-           EqV   [g] [. T] [g'. #p ..] [g'. #q ..]
-         -> DecEq [g] [. T] [g'. #p ..] [g'. #q ..]
+           Lookup [g] [. T] [g'. #p ..]
+         -> DecEq [g] [. T] [g'. #p ..] [g'. #p ..]
 | DecApp : DecEq [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
          -> DecEq [g] [. T] [g'. N1 ..] [g'. N2 ..]
          -> DecEq [g] [. S] [g'. app (M1 ..) (N1 ..)] [g'. app (M2 ..) (N2 ..)]
@@ -117,7 +145,7 @@ datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} cty
       -> LogEqSub [g,b:block x:tm,d:oft x T] [g',x:tm] [h] [h' $ #S1[..] (M1 ..)] [h' $ #S2[..] (M2 ..)]
 ;
 
-% TODO: This is also false. Need to say that #W is var-for-var and well-typed
+% % TODO: This is also false. Need to say that #W is var-for-var and well-typed
 rec wknLogEqSub : {h0:tctx}{h':ctx}{#W:h'[h0']} % {#S1:g'[h']}{#S2:g'[h']}
                                LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
                              -> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] =
@@ -131,33 +159,25 @@ mlam S1 => mlam S2 => fn e => case e of
 | LogBase (AlgBase [g'. S1' ..] [g'. S2' ..] a) =>
   LogBase (AlgBase [g'. trans (S1 ..) (S1' ..)] [g'. trans (S2 ..) (S2' ..)] a)
 | LogArr [g'. M1 ..] [g'. M2 ..] f =>
-  LogArr [g'. _] [g'. _] (mlam h => mlam h' => mlam #W => mlam P1 => mlam P2 => fn rp =>
-   let q0 = f [h] [h'] [h' $ #W[..]] [h'. P1 ..] [h'. P2 ..] rp in
+  LogArr [g'. _] [g'. _] (mlam h => mlam h' => mlam #W => mlam P1 => mlam P2 => fn rh => fn iv => fn rp =>
+   let q0 = f [h] [h'] [h' $ #W[..]] [h'. P1 ..] [h'. P2 ..] rh iv rp in
    closed [h'. stepapp (S1 #W[..])] [h'. stepapp (S2 #W[..])] q0
   )
 ;
 
-rec lookup : EqV [g] [. T] [g'. M1 ..] [g'. M2 ..]
+rec lookup : Lookup [g] [. T] [g'. M1 ..]
  -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
- -> LogEq [h] [. T] [h'. M1 #S1[..]] [h'. M2 #S2[..]] =
+ -> LogEq [h] [. T] [h'. M1 #S1[..]] [h'. M1 #S2[..]] =
 fn v => fn s => case v of
 | Top =>    let Dot s' e = s in e
 | Pop v' => let Dot s' e = s in lookup v' s'
-;
-
-rec varEqSym :
-  EqV [g] [. T] [g'. #p ..] [g'. #q ..]
--> EqV [g] [. T] [g'. #q ..] [g'. #p ..] =
-fn e => case e of
-| Top => Top
-| Pop e' => Pop (varEqSym e')
 ;
 
 rec algEqRSym :
   AlgEqR [g] [. T] [g'. N1 ..] [g'. N2 ..]
 -> AlgEqR [g] [. T] [g'. N2 ..] [g'. N1 ..] =
 fn a => case a of
-| AlgVar [g'. #p ..] [g'. #q ..] v => AlgVar [g'. #q ..] [g'. #p ..] (varEqSym v)
+| AlgVar v => AlgVar v
 | AlgApp a1 a2 => AlgApp (algEqRSym a1) (algEqNSym a2)
 and algEqNSym :
   AlgEqN [g] [. T] [g'. N1 ..] [g'. N2 ..]
@@ -173,8 +193,8 @@ rec logEqSym :
 fn e => case e of
 | LogBase a => LogBase (algEqNSym a)
 | LogArr [g'. M1 ..] [g'. M2 ..] f =>
-  LogArr [g'. M2 ..] [g'. M1 ..] (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rn =>
-   logEqSym (f [h] [h'] [h' $ #W[..]] [h'. N2 ..] [h'. N1 ..] (logEqSym rn))
+  LogArr [g'. M2 ..] [g'. M1 ..] (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+   logEqSym (f [h] [h'] [h' $ #W[..]] [h'. N2 ..] [h'. N1 ..] rh iv (logEqSym rn))
   )
 ;
 
@@ -186,13 +206,12 @@ fn e => case e of
 | Dot e' e1 => Dot (logEqSubSym e') (logEqSym e1)
 ;
 
-
 datatype EqTp : [.tp] -> [.tp] -> ctype =
 | ReflTp : EqTp [. T] [. T];
 
 rec varEqUnique :
-  EqV [g] [. T] [g'. #p ..] [g'. #q ..]
--> EqV [g] [. S] [g'. #q ..] [g'. #r ..]
+  Lookup [g] [. T] [g'. M ..]
+-> Lookup [g] [. S] [g'. M ..]
 -> EqTp [. T] [. S] =
 fn e1 => fn e2 => case (e1,e2) of
 | (Top,Top) => ReflTp
@@ -204,19 +223,10 @@ rec algEqRUnique :
 -> AlgEqR [g] [. S] [g'. N2 ..] [g'. N3 ..]
 -> EqTp [. T] [. S] =
 fn e1 => fn e2 => case (e1,e2) of
-| (AlgVar [g'. #p ..] [g'. #q ..] e1', AlgVar [g'. #q ..] [g'. #r ..] e2') =>
+| (AlgVar e1', AlgVar e2') =>
   varEqUnique e1' e2'
 | (AlgApp a1 a2, AlgApp b1 b2) =>
   let ReflTp = algEqRUnique a1 b1 in ReflTp
-;
-
-rec varEqTrans :
-  EqV [g] [. T] [g'. #p ..] [g'. #q ..]
--> EqV [g] [. T] [g'. #q ..] [g'. #r ..]
--> EqV [g] [. T] [g'. #p ..] [g'. #r ..] =
-fn e1 => fn e2 => case (e1,e2) of
-| (Top, Top) => Top
-| (Pop e1', Pop e2') => Pop (varEqTrans e1' e2')
 ;
 
 rec algEqRTrans :
@@ -224,8 +234,8 @@ rec algEqRTrans :
 -> AlgEqR [g] [. T] [g'. N2 ..] [g'. N3 ..]
 -> AlgEqR [g] [. T] [g'. N1 ..] [g'. N3 ..] =
 fn a1 => fn a2 => case (a1,a2) of
-| (AlgVar [g'. #p ..] [g'. #q ..] e1, AlgVar [g'. #q ..] [g'. #r ..] e2) =>
-  AlgVar [g'. #p ..] [g'. #r ..] (varEqTrans e1 e2)
+| (AlgVar e1, AlgVar e2) =>
+  AlgVar e1
 | (AlgApp a1' b1, AlgApp a2' b2) =>
   let ReflTp = algEqRUnique a1' a2' in
   AlgApp (algEqRTrans a1' a2') (algEqNTrans b1 b2)
@@ -246,9 +256,9 @@ rec logEqTrans :
 fn e1 => fn e2 => case (e1, e2) of
 | (LogBase a1, LogBase a2) => LogBase (algEqNTrans a1 a2)
 | (LogArr [g'. M ..] [g'. N ..] f1, LogArr [g'. N ..] [g'. P ..] f2) =>
-  LogArr [g'. M ..] [g'. P ..] (mlam h => mlam h' => mlam #W => mlam V1 => mlam V2 => fn v =>
-   logEqTrans (f1 [h] [h'] [h' $ #W[..]] [h'. V1 ..] [h'. V2 ..] v)
-              (f2 [h] [h'] [h' $ #W[..]] [h'. V2 ..] [h'. V2 ..]
+  LogArr [g'. M ..] [g'. P ..] (mlam h => mlam h' => mlam #W => mlam V1 => mlam V2 => fn rh => fn iv => fn v =>
+   logEqTrans (f1 [h] [h'] [h' $ #W[..]] [h'. V1 ..] [h'. V2 ..] rh iv v)
+              (f2 [h] [h'] [h' $ #W[..]] [h'. V2 ..] [h'. V2 ..] rh iv
                 (logEqTrans (logEqSym v) v))
   )
 ;
@@ -263,36 +273,37 @@ fn e1 => fn e2 => case (e1, e2) of
 ;
 
 rec thm : {g:tctx}{h:tctx} DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
+        -> CtxRel [h] [h']
         -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
         -> LogEq [h] [. T] [h'. M1 #S1[..]] [h'. M2 #S2[..]] =
 mlam g => mlam h => fn d => let d : DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..] = d in
- fn s => let s : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] = s in
+ fn r => fn s => let s : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] = s in
 case d of
 | DecVar v => lookup v s
 | DecApp d1 d2 =>
-   let LogArr [h'. M1 ..] [h'. M2 ..] f = thm [g] [h] d1 s in
-    f [h] [h'] [h' $ ..] [h'. _] [h'. _] (thm [g] [h] d2 s)
+   let LogArr [h'. M1 ..] [h'. M2 ..] f = thm [g] [h] d1 r s in
+    f [h] [h'] [h' $ ..] [h'. _] [h'. _] r (idIsVarSub r) (thm [g] [h] d2 r s)
 | DecLam d1 =>
-   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
+   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
      let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]] s in
-     let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 (Dot q0 rn) in
+     let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 rh (Dot q0 rn) in
      ? %closed [h0'. beta] [h0'. beta] q2 % Should work?
    )
 | DecExt d1 =>
-  LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
+  LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
    let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]]  s in
    let q1 = Dot q0 rn in
    ? %thm [g,b:block x:tm,y:oft x _] [h0] d1 q1 % Should work?
   )
 | DecBeta d1 d2 =>
-   let q0 = thm [g] [h] d2 s in
-   let q1 = thm [g,b:block x:tm,y:oft x _] [h] d1 (Dot s q0) in
+   let q0 = thm [g] [h] d2 r s in
+   let q1 = thm [g,b:block x:tm,y:oft x _] [h] d1 r (Dot s q0) in
    closed [h'. beta] [h'. refl] q1
 | DecSym d1 =>
-   logEqSym (thm [g] [h] d1 (logEqSubSym s))
+   logEqSym (thm [g] [h] d1 r (logEqSubSym s))
 | DecTrans d1 d2 =>
-  logEqTrans (thm [g] [h] d1 s)
-             (thm [g] [h] d2 (logEqSubTrans (logEqSubSym s) s))
+  logEqTrans (thm [g] [h] d1 r s)
+             (thm [g] [h] d2 r (logEqSubTrans (logEqSubSym s) s))
 ;
 
 
@@ -302,15 +313,15 @@ fn r => case r of
 | RNil => Nil
 | RCons r' => let r' : CtxRel [g0] [g0'] = r' in
   Dot (wknLogEqSub [g0,b:block x:tm,y:oft x _] [g0'] [g0',x:tm $ ..] (idLogEqSub r'))
-      (reflect [._] (AlgVar [g0',x:tm. x] [g0',x. x] Top))
+      (reflect [._] (AlgVar Top))
 ;
 
 rec corollary : {g:tctx} CtxRel [g] [g']
 -> DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
 -> LogEq [g] [. T] [g'. M1 ..] [g'. M2 ..] =
-mlam g => fn r => fn e => thm [g] [g] e (idLogEqSub r);
+mlam g => fn r => fn e => thm [g] [g] e r (idLogEqSub r);
 
 rec completeness : {g:tctx} CtxRel [g] [g']
 -> DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
 -> AlgEqN [g] [. T] [g'. M1 ..] [g'. M2 ..] =
-mlam g => fn r => fn e => reify (corollary [g] r e);
+mlam g => fn r => fn e => reify r (corollary [g] r e);

@@ -118,7 +118,7 @@ and algEqN_Monotone : IsVarSub [g] [g'] [h] [h' $ #W[..]]
                     -> AlgEqN [h] [. A] [h'. M1 #W[..]] [h'. M2 #W[..]] =
 fn iv => let iv : IsVarSub [h] [g'] [h] [h' $ #W[..]] = iv in fn r => case r of
 | AlgBase [g'. S1 ..] [g'. S2 ..] r' => AlgBase [h'. S1 #W[..]] [h'. S2 #W[..]] (algEqR_Monotone iv r')
-| AlgArr r' => AlgArr (algEqN_Monotone (extVarSub iv) r')
+| AlgArr r'' => AlgArr (algEqN_Monotone (extVarSub iv) r'')
 ;
 
 rec logEq_Monotone : IsVarSub [g] [g'] [h] [h' $ #W[..]]

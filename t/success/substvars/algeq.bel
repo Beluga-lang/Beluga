@@ -21,6 +21,12 @@ stepapp : mstep M M' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
+
+% I suspect we could allow g' to be longer than g everywhere...
+datatype CtxRel : {g:tctx}{g':ctx} ctype =
+| RNil : CtxRel [] []
+| RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
+
 % Interesting that it looks like we needed to code up what it means to check
 % equivalence of variables
 datatype EqV : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
@@ -102,10 +108,6 @@ datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
            -> DecEq [g] [. T] [g'. N ..] [g'. O ..]
            -> DecEq [g] [. T] [g'. M ..] [g'. O ..]
 ;
-
-% datatype CtxRel : {g:tctx}{g:ctx} ctype =
-% | RNil : CtxRel [] []
-% | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
 
 % Could we actually say #S1:g'[h] and let subordination do that part?
 datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} ctype =
@@ -280,7 +282,7 @@ case d of
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rn =>
    let q0 = wknLogEqSub [h0] [h'] [h0' $ #W[..]]  s in
    let q1 = Dot q0 rn in
-   ? %thm [g,b:block x:tm,y:oft x _] [h0] d1 q1
+   ? %thm [g,b:block x:tm,y:oft x _] [h0] d1 q1 % Should work?
   )
 | DecBeta d1 d2 =>
    let q0 = thm [g] [h] d2 s in
@@ -289,7 +291,26 @@ case d of
 | DecSym d1 =>
    logEqSym (thm [g] [h] d1 (logEqSubSym s))
 | DecTrans d1 d2 =>
-  let q0 = thm [g] [h] d1 s in
-  let q1 = thm [g] [h] d2 (logEqSubTrans (logEqSubSym s) s) in
-  logEqTrans q0 q1
+  logEqTrans (thm [g] [h] d1 s)
+             (thm [g] [h] d2 (logEqSubTrans (logEqSubSym s) s))
 ;
+
+
+rec idLogEqSub : CtxRel [g] [g']
+-> LogEqSub [g] [g'] [g] [g' $ ..] [g' $ ..] =
+fn r => case r of
+| RNil => Nil
+| RCons r' => let r' : CtxRel [g0] [g0'] = r' in
+  Dot (wknLogEqSub [g0,b:block x:tm,y:oft x _] [g0'] [g0',x:tm $ ..] (idLogEqSub r'))
+      (reflect [._] (AlgVar [g0',x:tm. x] [g0',x. x] Top))
+;
+
+rec corollary : {g:tctx} CtxRel [g] [g']
+-> DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
+-> LogEq [g] [. T] [g'. M1 ..] [g'. M2 ..] =
+mlam g => fn r => fn e => thm [g] [g] e (idLogEqSub r);
+
+rec completeness : {g:tctx} CtxRel [g] [g']
+-> DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
+-> AlgEqN [g] [. T] [g'. M1 ..] [g'. M2 ..] =
+mlam g => fn r => fn e => reify (corollary [g] r e);

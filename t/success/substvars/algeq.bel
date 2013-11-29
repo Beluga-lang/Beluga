@@ -1,4 +1,7 @@
 % Completeness of algorithmic equality for declarative equality (beta eta equivalence)
+% Based on "On equivalence and canonical forms in the LF type theory" (Harper and Pfenning '05)
+% as well as Advanced Topics in Types and Programming Languages Ch 6
+% Author: Andrew Cave
 
 tp : type.                %name tp T.
 i :  tp.
@@ -23,7 +26,6 @@ mstep : tm -> tm -> type.  %name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
-% I suspect we could allow g' to be longer than g everywhere...
 datatype CtxRel : {g:tctx}{g':ctx} ctype =
 | RNil : CtxRel [] []
 | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
@@ -73,14 +75,12 @@ fn iv => fn ivs => case iv of
 | Top =>    let Cons ivs' iv = ivs in iv
 | Pop iv' => let Cons ivs' iv = ivs in wknVar iv' ivs';
 
-
 rec varSubCompose : IsVarSub [g] [g'] [h] [h' $ #W[..]]
                    -> IsVarSub [h] [h'] [h0] [h0' $ #W2[..]]
                    -> IsVarSub [g] [g'] [h0] [h0' $ #W[#W2[..]]] =
 fn r1 => fn r2 => case r1 of
 | Nil => Nil
 | Cons ivs' iv => Cons (varSubCompose ivs' r2) (wknVar iv r2);
-
 
 rec pop' : Lookup [g] [.T] [g'. M ..]
          -> Lookup [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. M ..] =
@@ -153,7 +153,7 @@ fn r => fn e => let e : LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] = e in case e of
 | LogBase a => a
 | LogArr [g'. M1 ..] [g'. M2 ..] f =>
   AlgArr (reify (RCons r) (f [g,b:block x:tm,y:oft x _] [g',x:tm] [g',x $ ..] [g',x. x] [g',x. x]
-                 (RCons r) (shiftIsVarSub r) (reflect [._] (AlgVar Top))))
+                (RCons r) (shiftIsVarSub r) (reflect [._] (AlgVar Top))))
 ;
 
 datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
@@ -177,18 +177,16 @@ datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
            -> DecEq [g] [. T] [g'. M ..] [g'. O ..]
 ;
 
-% Could we actually say #S1:g'[h] and let subordination do that part?
 datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} ctype =
-| Nil : %CtxRel [h] [h'] -> % Is this necessary?
-        LogEqSub [] [] [h] [h' $ ^] [h' $ ^]
+| Nil : LogEqSub [] [] [h] [h' $ ^] [h' $ ^]
 | Dot : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] -> LogEq [h] [. T] [h'. M1 ..] [h'. M2 ..]
       -> LogEqSub [g,b:block x:tm,d:oft x T] [g',x:tm] [h] [h' $ #S1[..] (M1 ..)] [h' $ #S2[..] (M2 ..)]
 ;
 
 rec wknLogEqSub :
- IsVarSub [h] [h'] [h0] [h0' $ #W[..]]
-                             -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
-                             -> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] =
+  IsVarSub [h] [h'] [h0] [h0' $ #W[..]]
+-> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+-> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] =
 fn iv => fn es => case es of
 | Nil => Nil
 | Dot rs' rN => Dot (wknLogEqSub iv rs') (logEq_Monotone iv rN)
@@ -393,56 +391,48 @@ fn e1 => fn e2 => case (e1, e2) of
 | (Dot e1' x1, Dot e2' x2) => Dot (logEqSubTrans e1' e2') (logEqTrans x1 x2)
 ;
 
-rec thm : {g:tctx}{h:tctx} DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
+rec thm :  DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
         -> CtxRel [h] [h']
         -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
         -> LogEq [h] [. T] [h'. M1 #S1[..]] [h'. M2 #S2[..]] =
-mlam g => mlam h => fn d => let d : DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..] = d in
+fn d => let d : DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..] = d in
  fn r => fn s => let s : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] = s in
 case d of
 | DecVar v => lookup v s
-| DecApp d1 d2 =>
-   let LogArr [h'. M1 ..] [h'. M2 ..] f = thm [g] [h] d1 r s in
-    f [h] [h'] [h' $ ..] [h'. _] [h'. _] r (idIsVarSub r) (thm [g] [h] d2 r s)
+| DecApp d1 d2 => let LogArr [h'. M1 ..] [h'. M2 ..] f = thm d1 r s in
+    f [h] [h'] [h' $ ..] [h'. _] [h'. _] r (idIsVarSub r) (thm d2 r s)
 | DecLam d1 =>
    LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
-     let q0 = wknLogEqSub iv s in
-     let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 rh (Dot q0 rn) in
+     let q2 = thm d1 rh (Dot (wknLogEqSub iv s) rn) in
      ? %closed [h0'. trans1 beta refl] [h0'. trans1 beta refl] q2 % Should work?
    )
 | DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
-   let q0 = wknLogEqSub iv s in
-   let q1 = Dot q0 rn in
-   ? % thm [g,b:block x:tm,y:oft x _] [h0] d1 q1 % Should work?
+   let q1 = Dot (wknLogEqSub iv s) rn in
+   ? %thm d1 q1 % Should work?
   )
 | DecBeta d1 d2 =>
-   let q0 = thm [g] [h] d2 r s in
-   let q1 = thm [g,b:block x:tm,y:oft x _] [h] d1 r (Dot s q0) in
-   closed [h'. trans1 beta refl] [h'. refl] q1
-| DecSym d1 =>
-   logEqSym (thm [g] [h] d1 r (logEqSubSym s))
-| DecTrans d1 d2 =>
-  logEqTrans (thm [g] [h] d1 r s)
-             (thm [g] [h] d2 r (logEqSubTrans (logEqSubSym s) s))
+   closed [h'. trans1 beta refl] [h'. refl] (thm d1 r (Dot s (thm d2 r s)))
+| DecSym d1 => logEqSym (thm d1 r (logEqSubSym s))
+| DecTrans d1 d2 => logEqTrans (thm d1 r s) (thm d2 r (logEqSubTrans (logEqSubSym s) s))
 ;
-
 
 rec idLogEqSub : CtxRel [g] [g']
 -> LogEqSub [g] [g'] [g] [g' $ ..] [g' $ ..] =
 fn r => case r of
 | RNil => Nil
-| RCons r' => let r' : CtxRel [g0] [g0'] = r' in
-  Dot (wknLogEqSub (shiftIsVarSub r') (idLogEqSub r'))
-      (reflect [._] (AlgVar Top))
+| RCons r' => Dot (wknLogEqSub (shiftIsVarSub r') (idLogEqSub r'))
+                 (reflect [._] (AlgVar Top))
 ;
 
-rec corollary : {g:tctx} CtxRel [g] [g']
+rec corollary : CtxRel [g] [g']
 -> DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
 -> LogEq [g] [. T] [g'. M1 ..] [g'. M2 ..] =
-mlam g => fn r => fn e => thm [g] [g] e r (idLogEqSub r);
+fn r => fn e => thm e r (idLogEqSub r);
 
-rec completeness : {g:tctx} CtxRel [g] [g']
+rec completeness : CtxRel [g] [g']
 -> DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
 -> AlgEqN [g] [. T] [g'. M1 ..] [g'. M2 ..] =
-mlam g => fn r => fn e => reify r (corollary [g] r e);
+fn r => fn e => reify r (corollary r e);
+
+% TODO: Decidability and soundness?

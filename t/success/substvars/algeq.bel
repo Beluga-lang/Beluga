@@ -15,12 +15,13 @@ of/lam : ({x:tm} oft x T -> oft (M x) S) -> oft (lam M) (arr T S).
 schema ctx = tm;
 schema tctx = some [t:tp] block x:tm,y:oft x t;
 
-mstep : tm -> tm -> type.  %name mstep S.
-beta : mstep (app (lam M) N) (M N).
-stepapp : mstep M M' -> mstep (app M N) (app M' N').
-refl : mstep M M.
-trans : mstep M M' -> mstep M' M'' -> mstep M M''.
+step : tm -> tm -> type.  %name step S.
+beta : step (app (lam M) N) (M N).
+stepapp : step M M' -> step (app M N) (app M' N).
 
+mstep : tm -> tm -> type.  %name mstep S.
+refl : mstep M M.
+trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
 % I suspect we could allow g' to be longer than g everywhere...
 datatype CtxRel : {g:tctx}{g':ctx} ctype =
@@ -193,16 +194,36 @@ fn iv => fn es => case es of
 | Dot rs' rN => Dot (wknLogEqSub iv rs') (logEq_Monotone iv rN)
 ;
 
-rec closed : {S1:[g'. mstep (N1 ..) (M1 ..)]} {S2:[g'. mstep (N2 ..) (M2 ..)]}
-    LogEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
+rec mstep_trans : (g':ctx) [g'. mstep (M ..) (N ..)] -> [g'. mstep (N ..) (P ..)] -> [g'. mstep (M ..) (P ..)] =
+fn s1 => fn s2 => case s1 of
+| [g'. refl] => let [g'. S2 ..] = s2 in [g'. S2 ..]
+| [g'. trans1 (S1 ..) (MS1 ..)] =>
+  let [g'. MSR ..] = mstep_trans [g'. MS1 ..] s2 in
+  [g'. trans1 (S1 ..) (MSR ..)]
+;
+
+rec trans1' : (g':ctx) [g'. step (M ..) (N ..)] -> [g'. mstep (N ..) (P ..)] -> [g'. mstep (M ..) (P ..)] =
+fn s1 => fn s2 => case (s1,s2) of
+| ([g'. S ..], [g'. MS ..]) => [g'. trans1 (S ..) (MS ..)]
+;
+
+rec mstep_app : (g':ctx) [g'. mstep (M ..) (N ..)] -> [g'. mstep (app (M ..) (P ..)) (app (N ..) (P ..))] =
+fn s1 => case s1 of
+| [g'. refl] => [g'. refl]
+| [g'. trans1 (S ..) (MS ..)] => trans1' [g'. stepapp (S ..)] (mstep_app [g'. MS ..]);
+
+rec closed : [g'. mstep (N1 ..) (M1 ..)] -> [g'. mstep (N2 ..) (M2 ..)]
+  -> LogEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
   -> LogEq [g] [. T] [g'. N1 ..] [g'. N2 ..] =
-mlam S1 => mlam S2 => fn e => case e of
+fn s1 => fn s2 => fn e => case e of
 | LogBase (AlgBase [g'. S1' ..] [g'. S2' ..] a) =>
-  LogBase (AlgBase [g'. trans (S1 ..) (S1' ..)] [g'. trans (S2 ..) (S2' ..)] a)
+  LogBase (AlgBase (mstep_trans s1 [g'. S1' ..]) (mstep_trans s2 [g'. S2' ..]) a)
 | LogArr [g'. M1 ..] [g'. M2 ..] f =>
+  let [g'. S1 ..] = s1 in
+  let [g'. S2 ..] = s2 in
   LogArr [g'. _] [g'. _] (mlam h => mlam h' => mlam #W => mlam P1 => mlam P2 => fn rh => fn iv => fn rp =>
    let q0 = f [h] [h'] [h' $ #W[..]] [h'. P1 ..] [h'. P2 ..] rh iv rp in
-   closed [h'. stepapp (S1 #W[..])] [h'. stepapp (S2 #W[..])] q0
+   closed (mstep_app [h'. S1 #W[..]] ) (mstep_app [h'. S2 #W[..]]) q0
   )
 ;
 
@@ -270,6 +291,63 @@ fn e1 => fn e2 => case (e1,e2) of
   let ReflTp = algEqRUnique a1 b1 in ReflTp
 ;
 
+datatype EqTm : (g':ctx) [g'. tm] -> [g'. tm] -> ctype =
+| ReflTm : EqTm [g'. M ..] [g'. M ..];
+
+% May need to pattern match a little deeper to convince coverage?
+rec determinacy : (g':ctx) [g'. step (M ..) (N ..)] -> [g'. step (M ..) (P ..)] -> EqTm [g'. N ..] [g'. P ..] =
+fn s1 => fn s2 => case (s1,s2) of
+| ([g'. beta],[g'. beta]) => ReflTm
+| ([g'. stepapp (S1 ..)],[g'. stepapp (S2 ..)]) =>
+  let ReflTm = determinacy [g'. S1 ..] [g'. S2 ..] in ReflTm
+;
+
+datatype HasCommonReduct : (g':ctx) [g'. tm] -> [g'. tm] -> ctype =
+| Common : [g'. mstep (M1 ..) (N ..)] -> [g'. mstep (M2 ..) (N ..)] -> HasCommonReduct [g'. M1 ..] [g'. M2 ..];
+
+% Confluence is trivial because it's deterministic. This is just a convenient
+% way to work with determinacy
+rec confluence : [g'. mstep (M ..) (N ..)] -> [g'. mstep (M ..) (P ..)] -> HasCommonReduct [g'. N ..] [g'. P ..] =
+fn s1 => fn s2 => case (s1,s2) of
+| ([g'. refl],s2) => Common s2 [g'. refl]
+| (s1,[g'. refl]) => Common [g'. refl] s1
+| ([g'. trans1 (S1 ..) (MS1 ..)],[g'. trans1 (S2 ..) (MS2 ..)]) =>
+  let ReflTm = determinacy [g'. S1 ..] [g'. S2 ..] in
+  confluence [g'. MS1 ..] [g'. MS2 ..]
+;
+
+datatype empty : type =;
+
+rec neutral_doesnt_step :
+  [g'. step (M ..) (N ..)]
+-> AlgEqR [g] [. T] [g'. M ..] [g'. P ..]
+-> [.empty] =
+fn s => fn e => case (s,e) of
+% | ([g'. beta],AlgApp r n) => impossible r
+| ([g'. stepapp (S ..)], AlgApp r n) => neutral_doesnt_step [g'. S ..] r
+;
+
+rec neutral_mstep :
+  [g'. mstep (M ..) (N ..)]
+-> AlgEqR [g] [. T] [g'. M ..] [g'. P ..]
+-> EqTm [g'. M ..] [g'. N ..] =
+fn s => fn e => case s of
+| [g'. refl] => ReflTm
+| [g'. trans1 (S1 ..) (MS ..)] => impossible (neutral_doesnt_step [g'. S1 ..] e) in []
+;
+
+rec determinacy' :
+  [g'. mstep (M ..) (M1 ..)] -> [g'. mstep (M ..) (M2 ..)]
+-> AlgEqR [g] [. T] [g'. N1 ..] [g'. M1 ..]
+-> AlgEqR [g] [. T] [g'. M2 ..] [g'. N2 ..]
+-> EqTm [g'. M1 ..] [g'. M2 ..] =
+fn s1 => fn s2 => fn e1 => fn e2 => case (confluence s1 s2) of
+| Common s1' s2' =>
+  let ReflTm = neutral_mstep s1' (algEqRSym e1) in
+  let ReflTm = neutral_mstep s2' e2 in
+  ReflTm
+;
+
 rec algEqRTrans :
   AlgEqR [g] [. T] [g'. N1 ..] [g'. N2 ..]
 -> AlgEqR [g] [. T] [g'. N2 ..] [g'. N3 ..]
@@ -285,7 +363,9 @@ and algEqNTrans :
 -> AlgEqN [g] [. T] [g'. N2 ..] [g'. N3 ..]
 -> AlgEqN [g] [. T] [g'. N1 ..] [g'. N3 ..] =
 fn a1 => fn a2 => case (a1,a2) of
-| (AlgBase s1 s2 a1', AlgBase s2' s3 a2') => ? % This one requires more lemmas (determinacy)
+| (AlgBase s1 s2 a1', AlgBase s2' s3 a2') =>
+  let ReflTm = determinacy' s2 s2' a1' a2' in
+  AlgBase s1 s3 (algEqRTrans a1' a2')
 | (AlgArr a1', AlgArr a2') =>
   AlgArr (algEqNTrans a1' a2')
 ;
@@ -328,7 +408,7 @@ case d of
    LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
      let q0 = wknLogEqSub iv s in
      let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 rh (Dot q0 rn) in
-     ? % closed [h0'. beta] [h0'. beta] q2 % Should work?
+     ? %closed [h0'. trans1 beta refl] [h0'. trans1 beta refl] q2 % Should work?
    )
 | DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
@@ -339,7 +419,7 @@ case d of
 | DecBeta d1 d2 =>
    let q0 = thm [g] [h] d2 r s in
    let q1 = thm [g,b:block x:tm,y:oft x _] [h] d1 r (Dot s q0) in
-   closed [h'. beta] [h'. refl] q1
+   closed [h'. trans1 beta refl] [h'. refl] q1
 | DecSym d1 =>
    logEqSym (thm [g] [h] d1 r (logEqSubSym s))
 | DecTrans d1 d2 =>

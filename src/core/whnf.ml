@@ -936,8 +936,24 @@ and cnorm (tM, t) = match tM with
                 let tS'    = cnormSpine (tS, t) in
                 Root (loc, HClo (h, s, sigma'), tS')
               | SInst (_n, {contents = Some s},  _cPhi, _cPsi, _cnstr) ->
-                begin match LF.bvarSub h (LF.comp s sigma) with
+                begin match LF.bvarSub h (cnormSub (LF.comp s sigma, t)) with
                   | Obj tM        -> reduce (tM, LF.id) (cnormSpine (tS, t))
+                  | Head (BVar k) ->  Root (loc, BVar k, cnormSpine (tS, t))
+                  | Head head     ->  cnorm (Root (loc, head, cnormSpine (tS, t)), m_id)
+                  | Undef         -> raise (Error.Violation ("Encountered undef while solving HClo\n"))
+                     (* Undef should not happen ! *)
+                end)
+          | HMClo (h, s, (t',sigma)) ->
+            (match s with
+              | MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstr) ->
+                let sigma' = cnormSub (sigma,t) in
+                let t'' = cnormMSub (mcomp t' t) in
+                let tS' = cnormSpine (tS, t) in
+                Root(loc, HMClo(h, s, (t'',sigma')), tS')
+              | MSInst (_n, {contents = Some s}, _cD0, cPhi, _cPsi, _constr) ->
+                (* -ac: double check! *)
+                begin match LF.bvarSub h (cnormSub (LF.comp (cnormSub (s, t')) sigma, t)) with
+                  | Obj tM        ->  reduce (tM, LF.id) (cnormSpine (tS, t))
                   | Head (BVar k) ->  Root (loc, BVar k, cnormSpine (tS, t))
                   | Head head     ->  cnorm (Root (loc, head, cnormSpine (tS, t)), m_id)
                   | Undef         -> raise (Error.Violation ("Encountered undef while solving HClo\n"))

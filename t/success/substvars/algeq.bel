@@ -35,6 +35,7 @@ datatype Lookup : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} ctype =
 | Pop : Lookup [g] [. T] [g'. #p ..]
       -> Lookup [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. #p ..];
 
+% Would make more sense to reorder the arguments so the tp is after the terms...
 datatype AlgEqN : {g:tctx}(g':ctx){A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
 | AlgBase : [g'. mstep (M ..) (P ..)]
           -> [g'. mstep (N ..) (Q ..)]
@@ -408,8 +409,7 @@ case d of
    )
 | DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
-   let q1 = Dot (wknLogEqSub iv s) rn in
-   ? %thm d1 q1 % Should work?
+   thm d1 rh (Dot (wknLogEqSub iv s) rn)
   )
 | DecBeta d1 d2 =>
    closed [h'. trans1 beta refl] [h'. refl] (thm d1 r (Dot s (thm d2 r s)))

@@ -29,17 +29,9 @@ datatype CtxRel : {g:tctx}{g':ctx} ctype =
 
 datatype Lookup : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} ctype =
 | Top : Lookup [g,b:block x:tm,y:oft x T] [. T] [g',x:tm. x]
-| Pop : Lookup [g] [. T] [g'. M ..]
-      -> Lookup [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. M ..];
+| Pop : Lookup [g] [. T] [g'. #p ..]
+      -> Lookup [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. #p ..];
 
-% Interesting that it looks like we needed to code up what it means to check
-% equivalence of variables
-% datatype EqV : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
-% | Top : EqV [g,b:block x:tm,y:oft x T] [. T] [g',x:tm. x] [g',x:tm. x]
-% | Pop : EqV [g] [. T] [g'. #p ..] [g'. #q ..]
-%       -> EqV [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. #p ..] [g',x:tm. #q ..];
-
-% Think of g' as an output
 datatype AlgEqN : {g:tctx}(g':ctx){A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
 | AlgBase : [g'. mstep (M ..) (P ..)]
           -> [g'. mstep (N ..) (Q ..)]
@@ -88,11 +80,20 @@ fn r1 => fn r2 => case r1 of
 | Nil => Nil
 | Cons ivs' iv => Cons (varSubCompose ivs' r2) (wknVar iv r2);
 
+
+rec pop' : Lookup [g] [.T] [g'. M ..]
+         -> Lookup [g,b:block x:tm,y:oft x S] [.T] [g',x:tm. M ..] =
+fn r => case r of
+| Top => Pop Top
+| Pop v => Pop (Pop v)
+;
+
 rec wknVarSub : IsVarSub [g] [g'] [h] [h' $ #S[..]]
  -> IsVarSub [g] [g'] [h,b:block x:tm,y:oft x T] [h',x:tm $ #S[..] ] =
 fn r => case r of
 | Nil => Nil
-| Cons r' v => Cons (wknVarSub r') (Pop v);
+| Cons r' v => Cons (wknVarSub r') (pop' v)
+;
 
 rec extVarSub : IsVarSub [g] [g'] [h] [h' $ #S[..]]
  -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h,b:block x:tm,y:oft x A] [h',x:tm $ #S[..] x ] =
@@ -109,10 +110,9 @@ fn r => wknVarSub (idIsVarSub r);
 rec algVar : Lookup [g] [. T] [g'. M ..] -> AlgEqR [g] [. T] [g'. M ..] [g'. M ..] =
 fn iv => case iv of
 | Top => AlgVar Top
-| Pop iv' => let v = algVar iv' in ? % TODO: Hmm..
+| Pop iv' => let AlgVar v = algVar iv' in AlgVar (Pop v)
 ;
 
-% Obviously false without fact that #W is weakening and well-typed
 rec algEqR_Monotone :   IsVarSub [g] [g'] [h] [h' $ #W[..]]
                       -> AlgEqR [g] [. A] [g'. M1 ..] [g'. M2 ..]
                       -> AlgEqR [h] [. A] [h'. M1 #W[..]] [h'. M2 #W[..]] =
@@ -328,13 +328,13 @@ case d of
    LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
      let q0 = wknLogEqSub iv s in
      let q2 = thm [g,b:block x:tm,y:oft x _] [h0] d1 rh (Dot q0 rn) in
-     ? %closed [h0'. beta] [h0'. beta] q2 % Should work?
+     ? % closed [h0'. beta] [h0'. beta] q2 % Should work?
    )
 | DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
    let q0 = wknLogEqSub iv s in
    let q1 = Dot q0 rn in
-   ? %thm [g,b:block x:tm,y:oft x _] [h0] d1 q1 % Should work?
+   ? % thm [g,b:block x:tm,y:oft x _] [h0] d1 q1 % Should work?
   )
 | DecBeta d1 d2 =>
    let q0 = thm [g] [h] d2 r s in

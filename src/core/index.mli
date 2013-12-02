@@ -32,3 +32,5 @@ val comptypdef : Syntax.Ext.Comp.typ * Syntax.Ext.Comp.kind
 val exp      : Store.Var.t -> Syntax.Ext.Comp.exp_chk -> Syntax.Apx.Comp.exp_chk
 
 val exp'     : Store.Var.t -> Syntax.Ext.Comp.exp_syn -> Syntax.Apx.Comp.exp_syn
+
+val hexp     : Store.CVar.t ->  Store.Var.t -> Syntax.Ext.Comp.exp_chk -> Syntax.Apx.Comp.exp_chk

@@ -897,7 +897,8 @@ module Int = struct
               (fmt_ppr_lf_head cD cPsi 0) h
               (r_paren_if cond)
 
-    let rec fmt_ppr_cmp_typ cD lvl ppf = function
+    let rec fmt_ppr_cmp_typ cD lvl ppf =
+      function
       | Comp.TypBase (_, c, mS)->
           let cond = lvl > 1 in
             fprintf ppf "%s%s%a%s"
@@ -945,24 +946,34 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.TypCtxPi ((psi, w, dep), tau) ->
-          let dep' = match dep with Comp.Explicit -> LF.No | Comp.Implicit -> LF.Maybe in
-          let cond = lvl > 1 in
-            fprintf ppf "%s{%s : %s}@ %a%s"
-              (l_paren_if cond)
-              (R.render_name psi)
-              (R.render_cid_schema w)
-              (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, dep'))) 0) tau
-              (r_paren_if cond)
-
+          ( match (dep,!Control.printImplicit) with
+          | ( _ , true)
+          | (Comp.Explicit, _) ->
+              let cond = lvl > 1 in
+              fprintf ppf "%s{%s : %s}@ %a%s"
+                (l_paren_if cond)
+                (R.render_name psi)
+                (R.render_cid_schema w)
+                (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, LF.No))) 0) tau
+                (r_paren_if cond)
+          | (Comp.Implicit, false) ->
+              fprintf ppf "%a"
+                (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, LF.No))) 0) tau
+              )
       | Comp.TypPiBox ((ctyp_decl, dep ), tau) ->
-          let d = match dep with Comp.Explicit -> "^e" | Comp.Implicit -> "^i" in
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a%s@ %a%s"
+          ( match (dep,!Control.printImplicit) with
+          | (_, true)
+          | (Comp.Explicit, _) ->
+              let cond = lvl > 1 in
+            fprintf ppf "%s%a@ %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
-              d
               (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
               (r_paren_if cond)
+          | (Comp.Implicit, false) ->
+            fprintf ppf "%a"
+              (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
+)
 
       | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo! "
 
@@ -975,7 +986,17 @@ module Int = struct
             (fmt_ppr_pat_obj cD cG (lvl+1)) pat
             (fmt_ppr_pat_spine cD cG lvl) pat_spine)
 
-    and fmt_ppr_pat_obj cD cG lvl ppf = function
+    and fmt_ppr_pat_obj cD cG lvl ppf =
+     let rec dropSpineLeft ms n = match (ms, n) with
+      | (_, 0) -> ms
+      | (Comp.PatNil, _) -> ms
+      | (Comp.PatApp (_l,_p,rest), n) -> dropSpineLeft rest (n-1)
+      in let deimplicitize_spine c ms =
+          let ia = if !Control.printImplicit
+                 then 0
+                else Store.Cid.CompConst.get_implicit_arguments c in
+       dropSpineLeft ms ia in
+      function
       | Comp.PatEmpty (_, cPsi) ->
           let cond = lvl > 1 in
             fprintf ppf "%s[%a. {}]%s"
@@ -990,6 +1011,7 @@ module Int = struct
               (r_paren_if cond)
       | Comp.PatConst (_, c, pat_spine) ->
           let cond = lvl > 1 in
+          let pat_spine = deimplicitize_spine c pat_spine in
             fprintf ppf "%s%s %a%s"
               (l_paren_if cond)
               (R.render_cid_comp_const c)
@@ -1123,7 +1145,8 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 0) e2
               (r_paren_if cond)
 
-      | Comp.Hole (_) -> fprintf ppf " ? "
+      | Comp.Hole (loc, f) ->
+          fprintf ppf " ? %%{ %d }%%" ( try f() with _ -> -1 )
 
     and strip_mapp_args cD cG i =
       if !Control.printImplicit then
@@ -1138,35 +1161,40 @@ module Int = struct
           (i,  implicitCompArg  (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ)
       | Comp.Var x ->
           begin match Context.lookup cG x with
-              None -> (i, 0)
+              None -> (i, [])
             | Some tau -> (i,  implicitCompArg tau)
           end
 
       | Comp.Apply (loc, i, e) ->
-          let (i', _ ) = strip_mapp_args' cD cG i in
-            (Comp.Apply (loc, i', e), 0)
+          let (i', _) = strip_mapp_args' cD cG i in
+            (Comp.Apply (loc, i', e), [])
+
+
 
       | Comp.CtxApp (loc, i, cPsi) ->
-          let (i', _ ) = strip_mapp_args' cD cG i in
-            (Comp.CtxApp (loc, i', cPsi), 0)
-
+          let (i', stripArg ) = strip_mapp_args' cD cG i in
+          (match stripArg with
+          | false :: sA -> (i', sA)
+          | true  :: sA -> (Comp.CtxApp (loc, i', cPsi), sA)
+          | []          -> (i', [])                )
       | Comp.MApp (loc, i1, (phat, tM) ) ->
           let (i', stripArg) = strip_mapp_args' cD cG i1 in
-            if stripArg = 0 then
-              (Comp.MApp (loc , i', (phat, tM)), 0)
-            else
-              (i', stripArg - 1 )
-
-      | Comp.Ann (e, tau) -> (Comp.Ann (e, tau), 0)
+          (match stripArg with
+          | false :: sA -> (i', sA)
+          | true  :: sA -> (Comp.MApp (loc , i', (phat, tM)), sA)
+          | []          -> (i', [])                )
+      | Comp.Ann (e, tau) -> (Comp.Ann (e, tau), [])
 
 
     and implicitCompArg tau = begin match tau with
+      | Comp.TypCtxPi ((_,_, Comp.Implicit), tau)
       | Comp.TypPiBox ((LF.MDecl _ , Comp.Implicit), tau) ->
-          implicitCompArg tau + 1
-      | _ -> 0
+          (false)::(implicitCompArg tau)
+      | Comp.TypCtxPi (_, tau)
+      | Comp.TypPiBox (_ , tau) ->
+          (true)::(implicitCompArg tau)
+      | _ -> []
     end
-
-
     and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
       | Comp.Var x ->
           fprintf ppf "%s"

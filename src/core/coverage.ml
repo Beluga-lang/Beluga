@@ -2104,4 +2104,3 @@ let stage problem =
 let force f =
   (match !problems with [] -> []
      | _ ->   List.map (fun problem -> f (covers problem None)) (List.rev !problems))
-

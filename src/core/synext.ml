@@ -141,7 +141,7 @@ module Comp = struct
      | SBox   of Loc.t * LF.psi_hat * LF.sub
      | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
      | If of Loc.t * exp_syn * exp_chk * exp_chk(*    | if i then e1 else e2 *)
-     | Hole of Loc.t				(*    | ?                   *)
+     | Hole of Loc.t
 
   and exp_syn =
      | Var    of Loc.t * name                   (*  i ::= x                 *)
@@ -227,7 +227,7 @@ module Comp = struct
      | Box     (_loc, _, _) -> "Box(...)"
      | Case    (_loc, _, syn, _) -> "Case(" ^ synToString syn ^ " of ...)"
      | If      (_loc, syn, chk1, chk2) -> "If(" ^ synToString syn ^ " Then " ^  chkToString chk1 ^ " Else " ^ chkToString chk2 ^ ")"
-     | Hole    (_loc) -> "Hole"
+     | Hole    (_) -> "Hole"
 
 end
 

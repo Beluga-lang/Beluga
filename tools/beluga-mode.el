@@ -210,7 +210,8 @@ Regexp match data 0 points to the chars."
 (make-variable-buffer-local 'beluga--proc)
 
 (defun beluga--proc ()
-  (unless (process-live-p beluga--proc) (beluga--start))
+(unless (process-live-p beluga--proc) (beluga--start))
+;;  (beluga--start)
   beluga--proc)
 
 ;; (defun beluga-buffer ()
@@ -224,14 +225,13 @@ If a previous beli process already exists, kill it first."
   (setq beluga--proc
         (get-buffer-process
          (make-comint "beli"
-                      (concat (file-name-directory beluga-interpreter-name)
-                              "beli")
+                      "beli"
                       nil "-emacs"))))
 
 (defun beluga--stop ()
   "Stop the beli process."
-  (when (processp beluga--proc)
-    (kill-process beluga--proc)))
+  (when (processp 'beluga--proc)
+    (kill-process 'beluga--proc)))
 
 (defun beluga--wait (proc)
   (assert (eq (current-buffer) (process-buffer proc)))
@@ -326,6 +326,8 @@ If a previous beli process already exists, kill it first."
   (setq beluga--holes-overlays nil))
 
 
+
+
 ;;---------------------------- Loading of the mode ----------------------------;;
 
 ;;;###autoload
@@ -346,7 +348,8 @@ If a previous beli process already exists, kill it first."
     (set (make-local-variable 'compile-command)
          ;; Quite dubious, but it's the intention that counts.
          (concat beluga-interpreter-name
-                 "/beluga " (shell-quote-argument buffer-file-name))))
+                 " "
+                 (shell-quote-argument buffer-file-name))))
   (set (make-local-variable 'comment-start) "% ")
   (set (make-local-variable 'comment-start-skip) "%[%{]*[ \t]*")
   (set (make-local-variable 'comment-end-skip) "[ \t]*\\(?:\n\\|}%\\)")

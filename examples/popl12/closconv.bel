@@ -60,10 +60,10 @@ fn cr => fn m => case m of
   let Rsnoc (cr': Ctx_rel [g] [h]) = cr in
     [h, x:ctm . x]
 
-| [g', x:tm . #p ..] =>
-  let Rsnoc cr' = cr in
-  let [h'. M .. ] = conv cr' [g'. #p ..] in
-  [h', x:ctm . M .. ]
+| [g', x:tm . #p ..] => ?
+%  let Rsnoc cr' = cr in
+%  let [h'. M .. ] = conv cr' [g'. #p ..] in
+%  [h', x:ctm . M .. ]
 
 | [g .  lam \x. M .. x ] =>
   let [h,x:ctm . M' .. x] = conv (Rsnoc cr) [g,x:tm . M .. x] in
@@ -76,4 +76,3 @@ fn cr => fn m => case m of
   let [h . N' ..] = conv cr [g . N .. ] in
     [h . open (M' ..) (\env. \f. capp f (create (snoc env (N' ..) )))]
 ;
-

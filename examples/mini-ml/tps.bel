@@ -75,11 +75,10 @@ tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
 rec tps :  [. eval E V] -> [. oft E T]
          -> [. oft V T]  =
 fn f => fn d => case f of
-| [. ev_z] =>
-  let [. tp_z] = d in [. tp_z]
+| [. ev_z] => d
 
 | [. ev_s F1]  =>
-  let [. tp_s D1] = d in
+  let [. tp_s D1] = d in ? %{
   let [. C1]      = tps [. F1] [. D1] in
   [. tp_s C1]
 
@@ -92,7 +91,7 @@ fn f => fn d => case f of
   let [. tp_s C]    =   tps [. F] [. D] in
   tps [. F2] [. (D2 _ C)]
 
-| [. ev_lam] =>   d
+| [. ev_lam] =>  d
   %    let [ ] tp_lam (\x. \u. (D x u)) = d in d
 
 
@@ -106,4 +105,5 @@ fn f => fn d => case f of
   let [. tp_letv (\x.\u. D2 x u) D1]     = d in
   let [. C1]                = tps [. F1] [. D1] in
     tps [. F2] [. D2 _ C1]
+}%
 ;

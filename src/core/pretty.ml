@@ -1045,7 +1045,7 @@ module Int = struct
 
     let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function
       | Comp.Syn (_, i) ->
-          fmt_ppr_cmp_exp_syn cD cG lvl ppf (strip_mapp_args cD cG i)
+          fmt_ppr_cmp_exp_syn cD cG lvl ppf (strip_mapp_args cD cG i )
 
       | Comp.Fun (_, x, e) ->
           let cond = lvl > 0 in
@@ -1167,13 +1167,9 @@ module Int = struct
               None -> (i, [])
             | Some tau -> (i,  implicitCompArg tau)
           end
-
       | Comp.Apply (loc, i, e) ->
           let (i', _) = strip_mapp_args' cD cG i in
             (Comp.Apply (loc, i', e), [])
-
-
-
       | Comp.CtxApp (loc, i, cPsi) ->
           let (i', stripArg ) = strip_mapp_args' cD cG i in
           (match stripArg with
@@ -1186,9 +1182,15 @@ module Int = struct
           | false :: sA -> (i', sA)
           | true  :: sA -> (Comp.MApp (loc , i', (phat, tM)), sA)
           | []          -> (i', [])                )
-      | Comp.Ann (e, tau) -> (Comp.Ann (e, tau), [])
-
-
+      | Comp.PairVal (loc, i1, i2) ->
+          let (i1', _) = strip_mapp_args' cD cG i1 in
+          let (i2', _) = strip_mapp_args' cD cG i2 in
+          (Comp.PairVal (loc, i1', i2') , [])
+      | Comp.Equal (loc, i1, i2) ->
+          let (i1', _) = strip_mapp_args' cD cG i1 in
+          let (i2', _) = strip_mapp_args' cD cG i2 in
+          (Comp.Equal (loc, i1', i2'), [])
+      | _ -> (i, [])
     and implicitCompArg tau = begin match tau with
       | Comp.TypCtxPi ((_,_, Comp.Implicit), tau)
       | Comp.TypPiBox ((LF.MDecl _ , Comp.Implicit), tau) ->

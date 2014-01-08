@@ -1372,7 +1372,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                   if eq_cvarRef (PVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
-                    if isPatSub t & isPatMSub mt then
+                    if isPatSub t && isPatMSub mt then
                       let (id_sub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
                         (* cD ; cPsi1 |- idsub <= cPsi2 *)
                       let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
@@ -1420,7 +1420,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                   if eq_cvarRef (PVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
-                    if isPatSub t & isPatMSub mt then
+                    if isPatSub t && isPatMSub mt then
                       let (id_sub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
                         (* cD ; cPsi1 |- idsub <= cPsi2 *)
                       let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in

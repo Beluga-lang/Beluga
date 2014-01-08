@@ -85,7 +85,7 @@ let rec process_options = function
   | [] -> []
   | arg :: rest ->
       let first = String.get arg 0 in
-        if first = '-' or first = '+' then
+        if first = '-' || first = '+' then
           process_options (process_option arg rest)
         else  (* reached end of options: return this and remaining arguments *)
           arg :: rest

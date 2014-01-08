@@ -5,7 +5,6 @@
 
 open Syntax.Int.LF
 open Syntax.Int
-open Context
 
 
 val whnf       : nclo -> nclo

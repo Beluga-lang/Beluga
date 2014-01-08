@@ -3,9 +3,7 @@
 *)
 
 open Core
-open Syntax
-open Id
-open Error
+
 (*
 val makeTerminals : Ast.terminal list -> string list
 val checkString : string -> string list -> bool

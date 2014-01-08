@@ -5,9 +5,6 @@
 
 open Syntax.Int.LF
 open Syntax.Int
-open Context
-
-open Error
 
 val csub_ckind : mctx -> dctx -> int -> Comp.kind -> Comp.kind
 val csub_ctyp  : mctx -> dctx -> int -> Comp.typ -> Comp.typ

@@ -1,5 +1,3 @@
-open Core
-open Ast
 
 
 module Grammar : Camlp4.Sig.Grammar.Static
@@ -36,6 +34,3 @@ val parse_file   :
      name:string
   -> 'a Grammar.Entry.t
   -> 'a
-
-
-

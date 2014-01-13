@@ -9,7 +9,7 @@ OCB = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $(
 NLFLAGS = -I,+camlp4,camlp4lib.cmxa # ocamlfind cannot find the library for camlp4 so we provid it by hand
 OCBN = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $(NLFLAGS)
 
-default: byte
+default: native
 
 native: bin-directory beluga-native beli-native
 

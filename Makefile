@@ -1,6 +1,6 @@
 INCLUDE_DIRS = src/core
 
-CFLAGS = -I,src/core,-w,Aep-27-29-37,-warn-error,Ap-37
+CFLAGS = -I,src/core,-w,Aep-27-29-37,-warn-error,Ap-37-44
 
 LFLAGS = -I,+camlp4,camlp4lib.cma
 
@@ -11,9 +11,9 @@ OCBN = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $
 
 default: byte
 
-native: beluga-native beli-native
+native: bin-directory beluga-native beli-native
 
-byte: beluga-byte beli-byte
+byte: bin-directory beluga-byte beli-byte
 
 corepack-byte:
 	$(OCB) src/core/core.cmo # lib
@@ -37,5 +37,11 @@ beli-native: corepack-native
 	$(OCBN) src/beli/main.native
 	mv main.native bin/beli
 
+bin-directory:
+	if ! [ -d bin ]; then mkdir bin; fi
+
 clean:
 	ocamlbuild -clean
+	if [ -f bin/beli ]; then rm bin/beli; fi
+	if [ -f bin/beluga ]; then rm bin/beluga; fi
+	if [ -d bin ]; then rmdir bin; fi

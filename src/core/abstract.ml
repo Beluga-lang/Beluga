@@ -1146,6 +1146,8 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
       else
         raise (Error (loc, LeftoverConstraints))
 
+(*  | (I.MMVar (I.MInst (n, ({contents = None} as q), I.Empty, cPsi, tA,
+    ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) -> *)
   | (I.MMVar (I.MInst (n, ({contents = None} as q), I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
       if constraints_solved cnstr then
           begin match checkOccurrence (eqMMVar u) cQ with

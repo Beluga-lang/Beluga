@@ -69,7 +69,7 @@ datatype LogEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]}{N:[g'. tm]} ctype =
               -> LogEq [h] [. S] [h'. app (M1 #R[..]) (N1 ..)] [h'. app (M2 #R[..]) (N2 ..)])
             -> LogEq [g] [. arr T S] [g'. M1 ..] [g'. M2 ..]
 ;
-
+%{
 rec wknVar : Lookup [g] [. A] [g'. M ..] -> IsVarSub [g] [g'] [h] [h' $ #W[..]]
  -> Lookup [h] [. A] [h'. M #W[..]] =
 fn iv => fn ivs => case iv of
@@ -156,7 +156,7 @@ fn r => fn e => let e : LogEq [g] [. A] [g'. M1 ..] [g'. M2 ..] = e in case e of
   AlgArr (reify (RCons r) (f [g,b:block x:tm,y:oft x _] [g',x:tm] [g',x $ ..] [g',x. x] [g',x. x]
                 (RCons r) (shiftIsVarSub r) (reflect [._] (AlgVar Top))))
 ;
-
+}%
 datatype DecEq : {g:tctx}(g':ctx) {A:[.tp]}{M:[g'. tm]} {N:[g'.tm]} ctype =
 | DecBeta : DecEq [g,b:block x:tm,d:oft x T] [. S] [g',x:tm. M2 .. x] [g',x. N2 .. x]
           -> DecEq [g] [. T] [g'. M1 ..] [g'. N1 ..]
@@ -187,10 +187,11 @@ datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} cty
 rec wknLogEqSub :
   IsVarSub [h] [h'] [h0] [h0' $ #W[..]]
 -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
--> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] =
-fn iv => fn es => case es of
+-> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] = ?
+%{fn iv => fn es => case es of
 | Nil => Nil
 | Dot rs' rN => Dot (wknLogEqSub iv rs') (logEq_Monotone iv rN)
+}%
 ;
 
 rec mstep_trans : (g':ctx) [g'. mstep (M ..) (N ..)] -> [g'. mstep (N ..) (P ..)] -> [g'. mstep (M ..) (P ..)] =
@@ -213,10 +214,11 @@ fn s1 => case s1 of
 
 rec closed : [g'. mstep (N1 ..) (M1 ..)] -> [g'. mstep (N2 ..) (M2 ..)]
   -> LogEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
-  -> LogEq [g] [. T] [g'. N1 ..] [g'. N2 ..] =
-fn s1 => fn s2 => fn e => case e of
+  -> LogEq [g] [. T] [g'. N1 ..] [g'. N2 ..] = ?
+%{fn s1 => fn s2 => fn e => case e of
 | LogBase (AlgBase [g'. S1' ..] [g'. S2' ..] a) =>
   LogBase (AlgBase (mstep_trans s1 [g'. S1' ..]) (mstep_trans s2 [g'. S2' ..]) a)
+
 | LogArr [g'. M1 ..] [g'. M2 ..] f =>
   let [g'. S1 ..] = s1 in
   let [g'. S2 ..] = s2 in
@@ -224,8 +226,10 @@ fn s1 => fn s2 => fn e => case e of
    let q0 = f [h] [h'] [h' $ #W[..]] [h'. P1 ..] [h'. P2 ..] rh iv rp in
    closed (mstep_app [h'. S1 #W[..]] ) (mstep_app [h'. S2 #W[..]]) q0
   )
+}%
 ;
 
+%{
 rec lookup : Lookup [g] [. T] [g'. M1 ..]
  -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
  -> LogEq [h] [. T] [h'. M1 #S1[..]] [h'. M1 #S2[..]] =
@@ -292,7 +296,8 @@ fn e1 => fn e2 => case (e1,e2) of
 
 datatype EqTm : (g':ctx) [g'. tm] -> [g'. tm] -> ctype =
 | ReflTm : EqTm [g'. M ..] [g'. M ..];
-
+}%
+%{
 % May need to pattern match a little deeper to convince coverage?
 rec determinacy : (g':ctx) [g'. step (M ..) (N ..)] -> [g'. step (M ..) (P ..)] -> EqTm [g'. N ..] [g'. P ..] =
 fn s1 => fn s2 => case (s1,s2) of
@@ -314,9 +319,10 @@ fn s1 => fn s2 => case (s1,s2) of
   let ReflTm = determinacy [g'. S1 ..] [g'. S2 ..] in
   confluence [g'. MS1 ..] [g'. MS2 ..]
 ;
-
+}%
 datatype empty : type =;
 
+%{
 rec neutral_doesnt_step :
   [g'. step (M ..) (N ..)]
 -> AlgEqR [g] [. T] [g'. M ..] [g'. P ..]
@@ -335,6 +341,7 @@ fn s => fn e => case s of
 | [g'. trans1 (S1 ..) (MS ..)] => impossible (neutral_doesnt_step [g'. S1 ..] e) in []
 ;
 
+
 rec determinacy' :
   [g'. mstep (M ..) (M1 ..)] -> [g'. mstep (M ..) (M2 ..)]
 -> AlgEqR [g] [. T] [g'. N1 ..] [g'. M1 ..]
@@ -346,7 +353,8 @@ fn s1 => fn s2 => fn e1 => fn e2 => case (confluence s1 s2) of
   let ReflTm = neutral_mstep s2' e2 in
   ReflTm
 ;
-
+}%
+%{
 rec algEqRTrans :
   AlgEqR [g] [. T] [g'. N1 ..] [g'. N2 ..]
 -> AlgEqR [g] [. T] [g'. N2 ..] [g'. N3 ..]
@@ -369,6 +377,7 @@ fn a1 => fn a2 => case (a1,a2) of
   AlgArr (algEqNTrans a1' a2')
 ;
 
+
 rec logEqTrans :
    LogEq [g] [. T] [g'. M ..] [g'. N ..]
  -> LogEq [g] [. T] [g'. N ..] [g'. P ..]
@@ -382,15 +391,17 @@ fn e1 => fn e2 => case (e1, e2) of
                 (logEqTrans (logEqSym v) v))
   )
 ;
+}%
 
 rec logEqSubTrans :
    LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
  -> LogEqSub [g] [g'] [h] [h' $ #S2[..]] [h' $ #S3[..]]
- -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S3[..]] =
-fn e1 => fn e2 => case (e1, e2) of
+ -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S3[..]] = ? ;
+%{fn e1 => fn e2 => case (e1, e2) of
 | (Nil, Nil) => Nil
 | (Dot e1' x1, Dot e2' x2) => Dot (logEqSubTrans e1' e2') (logEqTrans x1 x2)
 ;
+}%
 
 rec thm :  DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
         -> CtxRel [h] [h']
@@ -399,15 +410,18 @@ rec thm :  DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..]
 fn d => let d : DecEq [g] [. T] [g'. M1 ..] [g'. M2 ..] = d in
  fn r => fn s => let s : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] = s in
 case d of
-| DecVar v => lookup v s
+%{| DecVar v => lookup v s
 | DecApp d1 d2 => let LogArr [h'. M1 ..] [h'. M2 ..] f = thm d1 r s in
     f [h] [h'] [h' $ ..] [h'. _] [h'. _] r (idIsVarSub r) (thm d2 r s)
+}%
 | DecLam d1 =>
    LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
      let q2 = thm d1 rh (Dot (wknLogEqSub iv s) rn) in
-     ? %closed [h0'. trans1 beta refl] [h0'. trans1 beta refl] q2 % Should work?
+%     let x  = [h0'. trans1 beta refl] in %
+%      let f =  in
+       closed  [h0'. trans1 beta refl] [h0'. trans1 beta refl] q2 % Should work?
    )
-| DecExt d1 =>
+%{| DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
    thm d1 rh (Dot (wknLogEqSub iv s) rn)
   )
@@ -415,8 +429,9 @@ case d of
    closed [h'. trans1 beta refl] [h'. refl] (thm d1 r (Dot s (thm d2 r s)))
 | DecSym d1 => logEqSym (thm d1 r (logEqSubSym s))
 | DecTrans d1 d2 => logEqTrans (thm d1 r s) (thm d2 r (logEqSubTrans (logEqSubSym s) s))
+}%
 ;
-
+%{
 rec idLogEqSub : CtxRel [g] [g']
 -> LogEqSub [g] [g'] [g] [g' $ ..] [g' $ ..] =
 fn r => case r of
@@ -436,3 +451,4 @@ rec completeness : CtxRel [g] [g']
 fn r => fn e => reify r (corollary r e);
 
 % TODO: Decidability and soundness?
+}%

@@ -30,13 +30,12 @@ datatype CtxRel : {g:tctx}{g':ctx} ctype =
 | RNil : CtxRel [] []
 | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
 
-datatype Lookup : {g:tctx}(g':ctx) {M:[g'. tm]} {A:[.tp]} ctype =
+datatype Lookup : {g:tctx}(g':ctx) [g'. tm] -> [.tp] -> ctype =
 | Top : Lookup [g,b:block x:tm,y:oft x T] [g',x:tm. x] [. T]
 | Pop : Lookup [g] [g'. #p ..] [. T]
       -> Lookup [g,b:block x:tm,y:oft x S] [g',x:tm. #p ..] [. T];
 
-% Would make more sense to reorder the arguments so the tp is after the terms...
-datatype AlgEqN : {g:tctx}(g':ctx){M:[g'. tm]} {N:[g'.tm]} {A:[.tp]} ctype =
+datatype AlgEqN : {g:tctx}(g':ctx) [g'. tm] -> [g'.tm] -> [.tp] -> ctype =
 | AlgBase : [g'. mstep (M ..) (P ..)]
           -> [g'. mstep (N ..) (Q ..)]
           -> AlgEqR [g] [g'. P ..] [g'. Q ..] [.i]
@@ -44,7 +43,7 @@ datatype AlgEqN : {g:tctx}(g':ctx){M:[g'. tm]} {N:[g'.tm]} {A:[.tp]} ctype =
 | AlgArr :  AlgEqN [g,b:block x:tm,d:oft x T] [g',x:tm. app (M ..) x] [g',x. app (N ..) x] [. S]
           -> AlgEqN [g] [g'. (M ..)] [g'. (N ..)] [. arr T S]
 % The type A is output
-and      AlgEqR : {g:tctx}(g':ctx){M:[g'. tm]} {N:[g'.tm]}{A:[.tp]} ctype =
+and      AlgEqR : {g:tctx}(g':ctx) [g'. tm] -> [g'.tm] -> [.tp] -> ctype =
 | AlgVar : % {#p:[g'. tm]}
            Lookup [g] [g'. #p ..] [. T]
          -> AlgEqR [g] [g'. #p ..] [g'. #p ..] [. T]
@@ -58,7 +57,7 @@ datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: g'[h']}ctype =
 | Cons :  IsVarSub [g] [g'] [h] [h' $ #S[..]] -> Lookup [h] [h'. M ..] [. A]
          -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h] [h' $ #S[..] (M ..)];
 
-datatype LogEq : {g:tctx}(g':ctx) {M:[g'. tm]}{N:[g'. tm]} {A:[.tp]}ctype =
+datatype LogEq : {g:tctx}(g':ctx) [g'. tm] -> [g'. tm] -> [.tp] -> ctype =
 | LogBase : AlgEqN [g] [g'. M ..] [g'. N ..] [.i]
           -> LogEq [g] [g'. M ..] [g'. N ..] [.i]
 | LogArr  : {M1:[g'.tm]}{M2:[g'.tm]}
@@ -157,7 +156,7 @@ fn r => fn e => let e : LogEq [g] [g'. M1 ..] [g'. M2 ..] [. A] = e in case e of
                 (RCons r) (shiftIsVarSub r) (reflect [._] (AlgVar Top))))
 ;
 
-datatype DecEq : {g:tctx}(g':ctx){M:[g'. tm]} {N:[g'.tm]} {A:[.tp]} ctype =
+datatype DecEq : {g:tctx}(g':ctx) [g'. tm] -> [g'.tm] -> [.tp] -> ctype =
 | DecBeta : DecEq [g,b:block x:tm,d:oft x T] [g',x:tm. M2 .. x] [g',x. N2 .. x] [. S]
           -> DecEq [g] [g'. M1 ..] [g'. N1 ..] [. T]
           -> DecEq [g] [g'. (app (lam (\x. M2 .. x)) (M1 ..))] [g'. N2 .. (N1 ..)] [. S]
@@ -402,10 +401,11 @@ case d of
 | DecVar v => lookup v s
 | DecApp d1 d2 => let LogArr [h'. M1 ..] [h'. M2 ..] f = thm d1 r s in
     f [h] [h'] [h' $ ..] [h'. _] [h'. _] r (idIsVarSub r) (thm d2 r s)
-| DecLam d1 =>
-   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+| DecLam d1 : DecEq [g, b:block x:tm,d:oft x T] [g', x:tm. M1 .. x] [g', x:tm. M2 .. x] [. T] =>
+   LogArr [h'. lam (\x. M1 #S1[..] x)] [h'. lam (\x. M2 #S2[..] x)]
+     (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
      let q2 = thm d1 rh (Dot (wknLogEqSub iv s) rn) in
-     ? %closed [h0'. trans1 beta refl] [h0'. trans1 beta refl] q2 % Should work?
+     closed [h0'. trans1 beta refl] [h0'. trans1 beta refl] q2
    )
 | DecExt d1 =>
   LogArr [h'. _] [h'. _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>

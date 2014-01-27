@@ -200,6 +200,15 @@ let rec mctxToMMSub cD0 cD = match cD with
       let phat  = Context.dctxToHat cPsi' in
         MDot (MObj (phat, Root (Syntax.Loc.ghost, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil)) , t)
 
+  | Dec (cD', SDecl(n, cPhi, cPsi)) -> (* cPsi |- sigma : cPhi *)
+      let t     = mctxToMMSub cD0 cD' in
+      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
+      let cPhi' = Whnf.cnormDCtx (cPhi,t) in
+      let u     = Whnf.newMSVar (Some n) (cD0, cPsi', cPhi') in
+      let phat  = Context.dctxToHat cPsi' in
+        MDot (SObj (phat, MSVar (u, (NoCtxShift, 0),
+                                 (Whnf.m_id, Substitution.LF.id))), t)
+
   | Dec(cD', PDecl(n, tA, cPsi)) ->
      (* This is somewhat a hack...  *)
       let t    = mctxToMSub cD' in

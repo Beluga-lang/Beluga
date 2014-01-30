@@ -2007,15 +2007,28 @@ let rec check_emptiness cD = match cD with
 
   | LF.Dec (cD', LF.CDecl _ ) -> check_emptiness cD'
 
+
+let rec check_empty_comp cG = match cG with
+  | LF.Empty -> false
+  | LF.Dec (cG, Comp.CTypDecl (_x, tau)) ->
+      let cov_goals' = genPatCGoals cD cG tau [] in
+        match  cov_goals' with
+          | [] -> true
+          | _ -> check_empty_comp cG
+
 let rec revisit_opengoals ogoals = begin match ogoals with
   | [] -> ([], [])
-  | ((cD, _cG, _patt) as og) :: ogoals ->
+  | ((cD, cG, _patt) as og) :: ogoals ->
       if check_emptiness cD then
         let (oglist , trivial_list) = revisit_opengoals ogoals in
 	  (oglist, og::trivial_list)
       else
-	let (oglist, trivial_list) = revisit_opengoals ogoals in
-	  (og :: oglist, trivial_list)
+        if check_empty_comp cG then
+        let (oglist , trivial_list) = revisit_opengoals ogoals in
+	  (oglist, og::trivial_list)
+        else
+	  let (oglist, trivial_list) = revisit_opengoals ogoals in
+	    (og :: oglist, trivial_list)
 end
 
 let check_coverage_success problem  =

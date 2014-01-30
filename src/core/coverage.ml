@@ -2006,15 +2006,19 @@ let rec check_emptiness cD = match cD with
       end
 
   | LF.Dec (cD', LF.CDecl _ ) -> check_emptiness cD'
+  | LF.Dec (cD', LF.SDecl _ ) -> check_emptiness cD'
 
 
-let rec check_empty_comp cG = match cG with
-  | LF.Empty -> false
-  | LF.Dec (cG, Comp.CTypDecl (_x, tau)) ->
-      let cov_goals' = genPatCGoals cD cG tau [] in
-        match  cov_goals' with
-          | [] -> true
-          | _ -> check_empty_comp cG
+let rec check_empty_comp cD cG = match cG with
+  | [] -> false
+  | (_x, tau)::cG ->
+      begin try
+        let cov_goals' = genPatCGoals cD cG tau [] in
+          match  cov_goals' with
+            | [] -> true
+            | _ -> check_empty_comp cD cG
+      with _ -> check_empty_comp cD cG
+      end
 
 let rec revisit_opengoals ogoals = begin match ogoals with
   | [] -> ([], [])
@@ -2023,7 +2027,7 @@ let rec revisit_opengoals ogoals = begin match ogoals with
         let (oglist , trivial_list) = revisit_opengoals ogoals in
 	  (oglist, og::trivial_list)
       else
-        if check_empty_comp cG then
+        if check_empty_comp cD cG then
         let (oglist , trivial_list) = revisit_opengoals ogoals in
 	  (oglist, og::trivial_list)
         else

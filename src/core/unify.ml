@@ -2202,7 +2202,17 @@ match sigma with
 
   let rec unifyTerm  mflag cD0 cPsi sN sM = unifyTerm'  mflag cD0 cPsi (Whnf.whnf sN) (Whnf.whnf sM)
 
+  and unifyTuple mflag cD0 cPsi sTup1 sTup2 = match (sTup1, sTup2) with
+    | ((Last tM, s1) ,  (Last tN, s2)) ->
+      unifyTerm mflag cD0 cPsi (tM, s1) (tN, s2)
+    | ((Cons (tM, tup1), s1), (Cons (tN, tup2), s2)) ->
+      (unifyTerm mflag cD0 cPsi (tM, s1) (tN, s2);
+       unifyTuple mflag cD0 cPsi (tup1, s1) (tup2, s2))
+
   and unifyTerm'  mflag cD0 cPsi sN sM = match (sN, sM) with
+    | ((Tuple(_ , tup1),s1) , (Tuple (_ , tup2),s2)) ->
+      unifyTuple mflag cD0 cPsi (tup1, s1) (tup2, s2)
+
     | ((Lam (_, _, tN), s1), (Lam (_ , x, tM), s2)) ->
         unifyTerm  mflag cD0 (DDec(cPsi, TypDeclOpt x)) (tN, dot1 s1) (tM, dot1 s2)
 

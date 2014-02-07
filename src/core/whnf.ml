@@ -646,6 +646,8 @@ and norm (tM, sigma) = match tM with
       begin match LF.bvarSub i sigma with
         | Head (BVar j)      -> Root (loc, Proj (BVar j, k), normSpine (tS, sigma))
         | Head (PVar (p, s)) ->  norm (Root (loc, Proj (PVar (p, s), k), SClo (tS, sigma)), LF.id)
+        | Obj (Tuple (_ , tup)) -> Clo (whnfRedex ((whnfTupleRedex (tup, LF.id) k),  (tS, sigma)))
+
                 (* Root (loc, Proj (PVar (p, s), k), normSpine (tS, sigma)) *)
       end
 
@@ -696,9 +698,6 @@ and norm (tM, sigma) = match tM with
 
   | Root (loc, FVar x, tS) ->
       Root (loc, FVar x, normSpine (tS, sigma))
-
-
-
 
 and normTuple (tuple, t) = match tuple with
   | Last tM -> Last (norm (tM, t))
@@ -1076,7 +1075,7 @@ and cnorm (tM, t) = match tM with
               begin match LF.bvarSub x (cnormSub (r,t)) with
                 | Head h  ->
                     Root (loc, h, cnormSpine (tS, t))
-                | Obj tM  -> Clo (whnfRedex ((tM, LF.id), (cnormSpine (tS, t), LF.id)))
+                | Obj tM  -> Clo (whnfRedex((tM, LF.id), (cnormSpine (tS, t), LF.id)))
               end
               )
 
@@ -2164,6 +2163,10 @@ and whnfRedex (sM, sS) = match (sM, sS) with
   | ((Clo (tM, s), s1), sS) ->
       whnfRedex ((tM, LF.comp s s1), sS)
 
+and whnfTupleRedex (tup,s) k = match (tup, k) with
+  | (Last tM, 1)  -> (tM,s)
+  | (Cons (tM, _rest) , 1) -> (tM,s)
+  | (Cons (_ , rest) , k) -> whnfTupleRedex (rest,s) k
 
 (* whnfTyp (tA, sigma) = tA'
  *

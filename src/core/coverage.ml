@@ -561,12 +561,21 @@ match (pat, ttau) , (pat_p, ttau_p) with
 	match_spines (cD, cG) (cD_p, cG_p) (pS, ttau) (pS', ttau') mC sC
       else
 	raise (Error (loc, MatchError "Const mismatch"))
-  | (Comp.PatFVar (_, v) , ttau),
-    (pat_p, ttau')  -> (* splitting candidate *)
-      (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
   | (pat, ttau),
     (Comp.PatVar (_, v), ttau') ->   (* success *)
       (mC, sC)
+
+(*  | (Comp.PatFVar (_, _v) , ttau),
+      (Comp.PatVar (_, _p) , ttau')  -> (* success *)
+      let _ = print_string "\n\n [match_pattern] – PatVar - PatVar case \n\n" in
+      let covGoal = CovPatt (cG, pat, ttau) in
+      let patt = GenPatt (cG_p, pat_p, ttau_p) in
+      let mC' = (EqnPatt (covGoal, patt)) :: mC in
+        (mC', sC)
+*)
+  | (Comp.PatFVar (_, v) , ttau),
+    (pat_p, ttau')  -> (* splitting candidate *)
+      (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
 
   | (Comp.PatPair (_, pat1, pat2) , (Comp.TypCross (tau1, tau2), t)),
     (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (tau1', tau2'),t')) ->
@@ -1429,9 +1438,9 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
 let genPatt (cD_p,tau_v) (c, tau_c) =
   let (cG, pS, (tau,t)) = genPattSpine  (tau_c, Whnf.m_id) in
   let pat = Comp.PatConst (Syntax.Loc.ghost, c, pS) in
-  let _ = dprint (fun () -> "[genPatt] " ^ P.patternToString LF.Empty (gctxToCompgctx cG) pat ^
+  let _ = dprint (fun () -> "\n[genPatt] " ^ P.patternToString LF.Empty (gctxToCompgctx cG) pat ^
 		    " : " ^ P.compTypToString LF.Empty (Whnf.cnormCTyp (tau,t))) in
-  let _ = dprint (fun () -> "          expected type: " ^ P.compTypToString cD_p tau_v) in
+  let _ = dprint (fun () -> "          expected type: " ^ P.compTypToString cD_p tau_v ^"\n") in
   let ms    = Ctxsub.mctxToMSub cD_p in
     begin try
       U.unifyCompTyp LF.Empty (tau,t) (tau_v, ms);
@@ -1442,7 +1451,7 @@ let genPatt (cD_p,tau_v) (c, tau_c) =
 			 unify; therefore c pS is not inhabit tau_v *)
                        None
       | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
-	(print_string ("WARNING: Encountered left-over constraints in higher-order unification\n");
+	(print_string ("WARNING: Generation of pattern encountered left-over constraints in higher-order unification\n");
 	 raise e)
     end
 
@@ -1496,7 +1505,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 
 
   | Comp.TypBase (_, c, mS) ->
-      let _ = dprint (fun () -> "[genPatCGoals] for " ^ P.compTypToString cD tau) in
+      let _ = dprint (fun () -> "\n[genPatCGoals] for " ^ P.compTypToString cD tau  ^ "\n") in
       let constructors = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors in
       let _ = if constructors = [] then dprint (fun () -> "[genPatCGoals] No Constructors defined for " ^ P.compTypToString cD tau) else () in
       let constructors = List.rev constructors in
@@ -1761,15 +1770,16 @@ let refine ( (cD, cG, candidates, patt) as cov_problem ) =
     | pvlist ->  (* there are pattern variables to be split *)
 	let _ = dprint (fun () -> "[refine] coverage problem ") in
 
-	let _ = dprint (fun () -> "[refine] Pattern = " ^ P.patternToString cD (gctxToCompgctx cG) patt) in
-	let _ = dprint (fun () -> "[refine] found " ^ string_of_int (List.length pvlist) ^ " candidates") in
+	let _ = dprint (fun () -> "\n\n[refine] Pattern = " ^ P.patternToString cD (gctxToCompgctx cG) patt) in
+	let _ = dprint (fun () -> "\n[refine] found " ^ string_of_int (List.length pvlist) ^ " candidates\n") in
 	let (pv_splits, pv) = best_pv_cand (cD, cG) pvlist in
 	let r_cands =  refine_patt_cands cov_problem (pv_splits, pv) in
-	let _ = dprint (fun () -> "[refine] refined cov_problem = " ) in
+	let _ = dprint (fun () -> "\n[refine] refined cov_problem = " ) in
 	let _ = List.map (fun (cD', cG', cands, patt) ->
-			    (dprint (fun () -> " Pattern : " ^ P.patternToString cD' (gctxToCompgctx cG') patt);
-			    dprint (fun () -> " Candidates : " ^
-				      candidatesToString (cD', cG', cands, patt))))
+			    (dprint (fun () -> "\n Pattern : " ^ P.patternToString cD' (gctxToCompgctx cG') patt);
+			    dprint (fun () -> "\n Candidates : " ^
+				      candidatesToString (cD', cG', cands, patt)
+	                                  ^ "\n")))
 	  r_cands
 	in
 	  r_cands
@@ -1817,8 +1827,8 @@ let rec check_covproblem cov_problem  =
     | ((Cand (cD_p, cG_p, matchCand, splitCand )) as c) :: cands ->
 	(match splitCand with
 	   |  [] ->
-		let _ = dprint (fun () -> "Check whether " ^
-				  P.patternToString cD (gctxToCompgctx cG) cg ^ " is covered?\n") in
+		let _ = dprint (fun () -> "\n\n CHECK WHETHER  " ^
+				  P.patternToString cD (gctxToCompgctx cG) cg ^" IS COVERED?\n") in
 		(match solve cD cD_p matchCand with
 		   | Solved -> (* No new splitting candidates and all match
 				  candidates are satisfied *)
@@ -1831,6 +1841,7 @@ let rec check_covproblem cov_problem  =
 		       existsCandidate cands (cand :: nCands) open_cg
 		   | NotSolvable -> (* match candidates were not solvable; this candidate gives rise to coverage failure ? *)
 		       let open_goal = (cD, cG, cg) in
+                       let _ = dprint (fun () -> "   NOT COVERD\n") in
 	               (* open_cov_goals := ((cO, cD), cPhi,  tM)::!open_cov_goals ;  *)
 		       existsCandidate cands nCands  (open_goal::open_cg)
 		)
@@ -1995,16 +2006,33 @@ let rec check_emptiness cD = match cD with
       end
 
   | LF.Dec (cD', LF.CDecl _ ) -> check_emptiness cD'
+  | LF.Dec (cD', LF.SDecl _ ) -> check_emptiness cD'
+
+
+let rec check_empty_comp cD cG = match cG with
+  | [] -> false
+  | (_x, tau)::cG ->
+      begin try
+        let cov_goals' = genPatCGoals cD cG tau [] in
+          match  cov_goals' with
+            | [] -> true
+            | _ -> check_empty_comp cD cG
+      with _ -> check_empty_comp cD cG
+      end
 
 let rec revisit_opengoals ogoals = begin match ogoals with
   | [] -> ([], [])
-  | ((cD, _cG, _patt) as og) :: ogoals ->
+  | ((cD, cG, _patt) as og) :: ogoals ->
       if check_emptiness cD then
         let (oglist , trivial_list) = revisit_opengoals ogoals in
 	  (oglist, og::trivial_list)
       else
-	let (oglist, trivial_list) = revisit_opengoals ogoals in
-	  (og :: oglist, trivial_list)
+        if check_empty_comp cD cG then
+        let (oglist , trivial_list) = revisit_opengoals ogoals in
+	  (oglist, og::trivial_list)
+        else
+	  let (oglist, trivial_list) = revisit_opengoals ogoals in
+	    (og :: oglist, trivial_list)
 end
 
 let check_coverage_success problem  =

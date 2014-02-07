@@ -1683,11 +1683,14 @@ and elSub' loc recT cD cPsi s cPhi =
        raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
 
   | (Apx.LF.SVar (Apx.LF.SInst (s0, cPhi', cPhi2), s), (Int.LF.CtxVar phi as cPhi)) ->
-     if Whnf.convDCtx cPhi cPhi' then
-       let s' = elSub' loc recT cD cPsi s cPhi2 in
+(*     if Whnf.convDCtx cPhi cPhi' then *)
+      begin try
+        Unify.unifyDCtx cD cPhi cPhi';
+        let s' = elSub' loc recT cD cPsi s cPhi2 in
           Substitution.LF.comp s0 s'
-     else
+      with _ ->
        raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
+      end
 
   | (Apx.LF.Id _ , Int.LF.DDec (_cPhi', _decl)) ->
     elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi

@@ -2924,7 +2924,7 @@ match sigma with
 
 
     | (PVar (PInst (_n, q, _cPsi1, tA1, cnstr), s1) as h1, BVar k2) ->
-        let s1' = Whnf.normSub s1 in
+        let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
           if isPatSub s1' then
            (begin try
                let TypDecl(_ , tA2) = Context.ctxDec cPsi k2 in
@@ -2945,7 +2945,7 @@ match sigma with
             addConstraint (cnstr, ref (Eqh (cD0, cPsi, h1, BVar k2))))
 
     | (BVar k1, (PVar (PInst (_n, q, _cPsi2, tA2, cnstr), s2) as h1)) ->
-        let s2' = Whnf.normSub s2 in
+        let s2' = simplifySub cD0 cPsi (Whnf.normSub s2) in
           if isPatSub s2' then
             begin
               begin try
@@ -2964,8 +2964,8 @@ match sigma with
     (* MPVar - MPVar *)
     | (MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1) as q1', (mt1, s1)) ,
        MPVar (MPInst (_n2, q2, cD2, cPsi2, tA2, cnstr2) as q2', (mt2, s2)) ) ->
-        let s1' = Whnf.normSub s1 in
-        let s2' = Whnf.normSub s2 in
+        let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
+        let s2' = simplifySub cD0 cPsi (Whnf.normSub s2) in
         let mt1' = Whnf.cnormMSub mt1 in
         let mt2' = Whnf.cnormMSub mt2 in
         (* check s1' and s2' are pattern substitutions; possibly generate constraints;
@@ -3346,7 +3346,7 @@ match sigma with
 
 
     | (Proj(BVar k, i) , PVar (PInst (_n1, q1, _cPsi1, _tA1, cnstr1), s1)) ->
-        let s1' = Whnf.normSub s1 in
+        let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
          if isPatSub s1' then
            let ss' = invert (Whnf.normSub s1') in
              begin match bvarSub k ss' with
@@ -3359,7 +3359,7 @@ match sigma with
 
     | (PVar (PInst (_n1, q1, _cPsi1, _tA1, cnstr1), s1), Proj(BVar k, i)) ->
         let _ = dprint (fun () -> "[unifyHead] PVar - Proj (BVar )") in
-        let s1' = Whnf.normSub s1 in
+        let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
          if isPatSub s1' then
            let ss' = invert (Whnf.normSub s1') in
              begin match bvarSub k ss' with
@@ -3395,6 +3395,7 @@ match sigma with
 
 
     | ((PVar (Offset k, s1)) as _sM1,   ((PVar (PInst (_n, r, cPsi1, tp1, cnstrs), t')) as _sM2)) ->
+        let t' = simplifySub cD0 cPsi (Whnf.normSub t') in
           if isPatSub t' then
             try
 (*              let _ = dprint (fun () ->
@@ -3404,7 +3405,7 @@ match sigma with
                                   P.headToString cD0 cPsi sM2 ^
                                   " : " ^ P.typToString cD0 cPsi (tP1,   t')) in
 *)
-              let ss = invert (Whnf.normSub t') in
+              let ss = invert t' in
               let sM1' = PVar (Offset k, comp s1 ss) in
 
               let _phat = Context.dctxToHat cPsi in
@@ -3841,7 +3842,7 @@ match sigma with
         let cPsi2 = Whnf.cnormDCtx (cPsi', t') in
           unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
           unifySub Unification cD cPsi1
-            (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
+           (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
 
     | (Comp.MetaSObj (_, phat, s) , t) , (Comp.MetaSObj (_, phat', s') , t') ->
         let SDecl (_u, _cPhi, cPsi) = cdecl in
@@ -3851,7 +3852,7 @@ match sigma with
         let _ = dprint (fun () -> "         s = " ^ P.subToString cD cPsi1 (simplifySub cD cPsi1 (Whnf.cnormSub (s,t)))) in
         let _ = dprint (fun () -> "         s' = " ^ P.subToString cD cPsi1 (simplifySub cD cPsi1 (Whnf.cnormSub (s',t')))) in
           unifySub Unification cD cPsi1
-            (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
+            (simplifySub cD cPsi1 (Whnf.cnormSub (s, t))) (simplifySub cD cPsi1 (Whnf.cnormSub (s', t')))
 
     | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
 

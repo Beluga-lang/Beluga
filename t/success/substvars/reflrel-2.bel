@@ -16,11 +16,12 @@ datatype Ctx_xaR : {phi:xG} {psi: xaG} {#S:phi[psi]} ctype =
            -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b $ #S[..] b.1 ]
 ;
 
-% Compact version
-rec refl : {phi:xG}{M: [phi . tm]}
+rec ctx_membership :
+          {#p: [phi . tm] }
           Ctx_xaR [phi] [psi] [ psi $ #S[..] ] ->
-          [psi . aeq (M #S[..]) (M #S[..])] =
-mlam phi => mlam M => fn cr => case [phi . M ..] of
+          [psi. aeq (#p #S[..]) (#p #S[..])] =
+mlam #p => fn cr =>  let (cr : Ctx_xaR [phi] [psi] [ psi $ #S[..] ]) = cr  in
+case [phi. #p ..] of
  | [phi, x:tm . x] =>
    let Cons_xa cr' = cr in
    let (cr' : Ctx_xaR [phi] [psi] [ psi $ #S[..] ]) = cr' in
@@ -28,8 +29,17 @@ mlam phi => mlam M => fn cr => case [phi . M ..] of
 
 | [phi, x:tm . #p ..] =>
   let Cons_xa cr' = cr in
-  let [psi. E ..] =  refl [phi] [phi.#p..] cr' in
+  let [psi. E ..] =  ctx_membership [phi.#p..] cr'  in
       [psi, b: block (x:tm,u:aeq x x) . E .. ]
+;
+
+
+% Compact version
+rec refl : {phi:xG}{M: [phi . tm]}
+          Ctx_xaR [phi] [psi] [ psi $ #S[..] ] ->
+          [psi . aeq (M #S[..]) (M #S[..])] =
+mlam phi => mlam M => fn cr => case [phi . M ..] of
+| [phi. #p ..] => ctx_membership [phi. #p..] cr
 
 | [phi . app (M .. ) (N ..)] =>
   let [psi. D1 .. ] = refl [phi] [phi.M ..] cr in

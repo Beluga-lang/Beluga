@@ -2166,7 +2166,7 @@ and whnfRedex (sM, sS) = match (sM, sS) with
 and whnfTupleRedex (tup,s) k = match (tup, k) with
   | (Last tM, 1)  -> (tM,s)
   | (Cons (tM, _rest) , 1) -> (tM,s)
-  | (Cons (_ , rest) , k) -> whnfTupleRedex (rest,s) k
+  | (Cons (_ , rest) , k) -> whnfTupleRedex (rest,s) (k-1)
 
 (* whnfTyp (tA, sigma) = tA'
  *

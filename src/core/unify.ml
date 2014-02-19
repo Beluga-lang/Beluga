@@ -133,7 +133,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
        | _  ->    blockdeclInDctx cPsi'
      end
 
-(* expandPatSub is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
+(* expandPatSub is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary*)
   let rec _expandPatSub t cPsi = match (t, cPsi) with
     | Shift ( _ , k) , Null -> t
     | Shift ( _ , k) , CtxVar _ -> t
@@ -162,7 +162,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
     let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-    let u = Whnf.newMMVar None (cD, cPhi', TClo(tQ,ssi')) in
+    let u = Whnf.newMMVar None (cD, cPhi', TClo(tQ,ssi')) Explicit in
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -435,7 +435,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
    | (MShift k, Dec (_, CDecl (_x, _w, _dep))) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
-   | (MShift k, Dec (_, MDecl (_x, _tA, _cPsi))) ->
+   | (MShift k, Dec (_, MDecl (_x, _tA, _cPsi, _))) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
    | (MShift k, Dec (_, PDecl (_x, _tA, _cPsi))) ->
@@ -458,7 +458,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
 
 
-   | (MDot (MV k, mt), Dec (cD1, MDecl (u, tA, cPsi))) ->
+   | (MDot (MV k, mt), Dec (cD1, MDecl (u, tA, cPsi, mDep))) ->
        let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
          (* cD1 |- mt' <= cD2 *)
          begin match applyMSub k ms with
@@ -472,7 +472,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                let mtt'  = Whnf.m_invert (Whnf.cnormMSub mt') in
                let cPsi' = Whnf.cnormDCtx (cPsi, mtt') in
                let tA'   = Whnf.cnormTyp  (tA , mtt') in
-               (Whnf.mvar_dot1 mt',  Dec(cD2, MDecl(u, tA', cPsi')))
+               (Whnf.mvar_dot1 mt',  Dec(cD2, MDecl(u, tA', cPsi', mDep)))
          end
 
 
@@ -600,7 +600,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
      and  mt' patsub   s.t.  [mt1]mt'  = [mt2]mt'
   *)
   let rec m_intersection  subst1 subst2 cD' = begin match (subst1, subst2, cD') with
-    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', MDecl (x, tA, cPsi))) ->
+    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', MDecl (x, tA, cPsi, mDep))) ->
         let (mt', cD'') = m_intersection  mt1 mt2 cD' in
           (* cD' |- mt' : cD'' where cD'' =< cD' *)
           if k1 = k2 then
@@ -613,7 +613,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
               (* NOTE: Can't create m-closures CtxMClo(cPsi, mtt') and TMClo(tA'', mtt') *)
             let cPsi''  = Whnf.cnormDCtx (cPsi, mtt') in
             let tA''    = Whnf.cnormTyp (tA, mtt') in
-              (Whnf.mvar_dot1 mt', Dec (cD'', MDecl(x, tA'', cPsi'')))
+              (Whnf.mvar_dot1 mt', Dec (cD'', MDecl(x, tA'', cPsi'', mDep)))
 
           else  (* k1 =/= k2 *)
             (Whnf.mcomp mt' (MShift 1), cD'')
@@ -677,7 +677,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
     | (Lam (loc, x, tM), s) ->
         Lam (loc, x, invNorm cD0 ((cvar, offset + 1), (tM, dot1 s), (ms, dot1 ssubst), rOccur))
 
-    | (Root (loc, MVar (Inst (_n, r, cPsi1, _tP, _cnstrs) as u, t), _tS (* Nil *)), s) ->
+    | (Root (loc, MVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t), _tS (* Nil *)), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered;
            hence tS = Nil and s = id *)
         let ( _ , ssubst) = ss in
@@ -699,7 +699,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             else (* t' not patsub *)
               Root(loc, MVar(u, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
 
-   | (Root (loc, MMVar (MInst (_n, r, cD, cPsi1, _tP, _cnstrs) as u, (mt,s')), _tS (* Nil *)), s) ->
+   | (Root (loc, MMVar (MInst (_n, r, cD, cPsi1, _tP, _cnstrs, _) as u, (mt,s')), _tS (* Nil *)), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered;
            hence tS = Nil and s = id *)
         if eq_cvarRef (MVarRef r) rOccur then
@@ -738,7 +738,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           end
 
     | (Root (loc, FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, MDecl(_, _tA, cPsi1)) = Store.FCVar.get u in
+        let (cD_d, MDecl(_, _tA, cPsi1, _)) = Store.FCVar.get u in
 	let d = Context.length cD0 - Context.length cD_d in
 	let cPsi1 = if d = 0 then cPsi1 else
 	   Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -856,7 +856,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
          Occurs check is necessary on tA Dec 15 2008 -bp  :(
        *)
 
-    | MVar (Inst (_n, r, cPsi1, _tP, _cnstrs) as u, t) ->
+    | MVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t) ->
         if eq_cvarRef (MVarRef r) rOccur then
           raise NotInvertible
         else
@@ -892,7 +892,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           end
 
 
-    | PVar (Inst (_n, r, cPsi1, _tP, _cnstrs) as u, t) ->
+    | PVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t) ->
         let t = Monitor.timer ("Normalisation", fun () -> Whnf.normSub t) in
         if eq_cvarRef (MVarRef r) rOccur then
           raise NotInvertible
@@ -919,7 +919,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           end
 
 
-    | Proj(PVar (Inst (_n, r, cPsi1, _tP, _cnstrs) as u, t), i) ->
+    | Proj(PVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t), i) ->
         let t = Monitor.timer ("Normalisation", fun () -> Whnf.normSub t) in
         if eq_cvarRef (MVarRef r) rOccur then
           raise NotInvertible
@@ -1094,7 +1094,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             Root (loc, newHead, tS')
         in
           match head with
-            | MMVar (MInst (_n, r, cD1, cPsi1, tP, cnstrs) as _u, (mt, t)) ->  (* s = id *)
+            | MMVar (MInst (_n, r, cD1, cPsi1, tP, cnstrs, mdep) as _u, (mt, t)) ->  (* s = id *)
               (* cD |- t <= cD1
                  cD ; cPsi |- t <= [|mt|]Psi1
                  cD ; cPsi |- [t]([|mt|]tP)
@@ -1148,7 +1148,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                                         ^ P.normalToString cD0 (Context.hatToDCtx phat) sM
                                      ^ "\n  with respect to ssubst = " ^ P.subToString cD0 cPsi' ssubst) in
 
-                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', i_sub)) in
+                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', i_sub)) mdep in
                       let tN = Root (loc, MMVar (v, (id_msub, id_sub)), Nil) in
                       let _ = dprint (fun () -> "[prune] new mvar created : " ^ P.normalToString cD0 cPsi1 (tN, Substitution.LF.id)) in
                       let _ = dprint (fun () -> "[prune] new mvar has type : [ " ^ P.dctxToString cD2 cPsi2'
@@ -1207,7 +1207,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                          cD2 ; cPsi2' |-  [id_sub_i]  [|id_msub^-1|] tP
                       *)
                       let tP' = Whnf.cnormTyp (tP, id_msub_i) in
-                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', invert idsub_i)) in
+                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', invert idsub_i)) mdep in
 
                         (instantiateMMVar (r, Root (loc, MMVar (v, (id_msub, idsub)), Nil), !cnstrs) ;
                          Clo(tM, comp s ssubst) )
@@ -1217,7 +1217,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
 
 
-            | MVar (Inst (_n, r, cPsi1, tP, cnstrs) (*as u*), t) ->  (* s = id *)
+            | MVar (Inst (_n, r, cPsi1, tP, cnstrs, mdep) (*as u*), t) ->  (* s = id *)
                 let tM = Root(loc, head, tS) in
                 let t  = Whnf.normSub (comp t s) in
                   (* by invariant: MVars are lowered since tM is in whnf *)
@@ -1242,7 +1242,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                            cD ; cPsi1 |- idsub <= cPsi2 and
                            cD ; cPsi |- t o s o idsub <= cPsi2 *)
                       let idsub_i = invert idsub in
-                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) in
+                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) mdep in
 
                       let _  = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
                        Clo(tM, comp s ssubst)
@@ -1266,7 +1266,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                         (* could maybe just prune tP and cPsi1 ?
                            29 Jan, 2011  -bp  *)
                       let idsub_i = invert idsub in
-                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) in
+                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) mdep in
                       (* let _ = print_string ("prune non-pattern sub s  where u[s] \n") in *)
                       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
                         Clo(tM, comp s ssubst)
@@ -1317,7 +1317,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                 end
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, MDecl (_, _tA, cPsi1)) = Store.FCVar.get u in
+                let (cD_d, MDecl (_, _tA, cPsi1, _)) = Store.FCVar.get u in
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1746,8 +1746,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
         unifyTerm  mflag cD0 (DDec(cPsi, TypDeclOpt x)) (tN, dot1 s1) (tM, dot1 s2)
 
     (* MVar-MVar case *)
-    | (((Root (_, MVar (Inst (_n1, r1,  cPsi1,  tP1, cnstrs1), t1), _tS1) as _tM1), s1) as sM1,
-       (((Root (_, MVar (Inst (_n2, r2, cPsi2,  tP2, cnstrs2), t2), _tS2) as _tM2), s2) as sM2)) ->
+    | (((Root (_, MVar (Inst (_n1, r1,  cPsi1,  tP1, cnstrs1, mdep1), t1), _tS1) as _tM1), s1) as sM1,
+       (((Root (_, MVar (Inst (_n2, r2, cPsi2,  tP2, cnstrs2, mdep2), t2), _tS2) as _tM2), s2) as sM2)) ->
          dprnt "(000) MVar-MVar";
         (* by invariant of whnf:
            meta-variables are lowered during whnf, s1 = s2 = id or co-id
@@ -1780,7 +1780,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                     let ss' = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')) in
                       (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
 
-                    let w = Whnf.newMVar None (cPsi', TClo(tP1, ss')) in
+                    let w = Whnf.newMVar None (cPsi', TClo(tP1, ss')) mdep1 in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -1907,7 +1907,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             end
 
     (* MVar-normal case *)
-    | ((Root (_, MVar (Inst (_n, r, cPsi1, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
+    | ((Root (_, MVar (Inst (_n, r, cPsi1, _tP, cnstrs, _), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         dprnt "(001) MVar-_";
         let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s1)) in
           if isPatSub t' then
@@ -1958,7 +1958,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
 
     (* normal-MVar case *)
-    | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (_n, r, cPsi1, tP1, cnstrs), t), _tS), s2) as sM2)) ->
+    | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (_n, r, cPsi1, tP1, cnstrs, _), t), _tS), s2) as sM2)) ->
         dprnt "(002) _-MVar";
         let t' = Monitor.timer ("Normalisation" , fun () -> Whnf.normSub (comp t s2)) in
 
@@ -2016,8 +2016,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
 
     (* MMVar-MMVar case *)
-    | (((Root (_, MMVar (MInst (_n1, r1,  cD1, cPsi1,  tP1, cnstrs1), (mt1, t1)), _tS1) as _tM1), s1) as sM1,
-       (((Root (_, MMVar (MInst (_n2, r2, _cD2, cPsi2, tP2, cnstrs2), (mt2, t2)), _tS2) as _tM2), s2) as sM2)) ->
+    | (((Root (_, MMVar (MInst (_n1, r1,  cD1, cPsi1,  tP1, cnstrs1, mdep1), (mt1, t1)), _tS1) as _tM1), s1) as sM1,
+       (((Root (_, MMVar (MInst (_n2, r2, _cD2, cPsi2, tP2, cnstrs2, mdep2), (mt2, t2)), _tS2) as _tM2), s2) as sM2)) ->
         dprnt "(010) MMVar-MMVar";
         (* by invariant of whnf:
            meta^2-variables are lowered during whnf, s1 = s2 = id
@@ -2060,7 +2060,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
                     let tP1_n  = Whnf.cnormTyp (TClo(tP1,ss'), mtt') in
 
 
-                    let w = Whnf.newMMVar None (cD', cPsi_n, tP1_n) in
+                    let w = Whnf.newMMVar None (cD', cPsi_n, tP1_n) mdep1 in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -2225,7 +2225,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
 
     (* MMVar-normal case *)
-    | ((Root (loc, MMVar (MInst (_n, r, cD,  cPsi1, tP, cnstrs), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
+    | ((Root (loc, MMVar (MInst (_n, r, cD,  cPsi1, tP, cnstrs, mdep), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
         dprnt "(011) MMVar-_";
         if blockdeclInDctx (Whnf.cnormDCtx (cPsi1, Whnf.m_id)) then
           (dprnt "(011) - blockinDCtx";
@@ -2319,7 +2319,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
 
     (* normal-MMVar case *)
-    | ((_tM1, _s1) as sM1, ((Root (loc, MMVar (MInst (_n, r, cD2, cPsi2, tP, cnstrs), (mt, t)), _tS), s2) as sM2)) ->
+    | ((_tM1, _s1) as sM1, ((Root (loc, MMVar (MInst (_n, r, cD2, cPsi2, tP, cnstrs, mdep), (mt, t)), _tS), s2) as sM2)) ->
         dprnt "(012) _-MMVar";
         if blockdeclInDctx (Whnf.cnormDCtx (cPsi2, Whnf.m_id)) then
           (dprnt "(012) - blockinDCtx";
@@ -3197,7 +3197,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
         unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
 
     | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') ->
-        let MDecl (_u, _tA, cPsi) = cdecl in
+        let MDecl (_u, _tA, cPsi, _) = cdecl in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
 (*        let cPsi  = Context.hatToDCtx phat in
         let cPsi' = Context.hatToDCtx phat' in
@@ -3305,15 +3305,15 @@ let rec blockdeclInDctx cPsi = match cPsi with
           else
             raise (Failure "CtxPi schema clash")
 
-      | ((Comp.TypPiBox ((MDecl(u, tA, cPsi), _ ), tau), t),
-         (Comp.TypPiBox ((MDecl(_, tA', cPsi'), _ ), tau'), t')) ->
+      | ((Comp.TypPiBox ((MDecl(u, tA, cPsi, mDep), _ ), tau), t),
+         (Comp.TypPiBox ((MDecl(_, tA', cPsi', mDep'), _ ), tau'), t')) ->
           let tAn    = Whnf.cnormTyp (tA, t) in
           let tAn'   = Whnf.cnormTyp (tA', t') in
           let cPsin  = Whnf.cnormDCtx (cPsi, t) in
           let cPsin' = Whnf.cnormDCtx (cPsi', t') in
             (unifyDCtx1 Unification cD cPsin cPsin';
              unifyTyp Unification cD cPsin (tAn, id)  (tAn', id);
-             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin)))
+             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin, mDep)))
                (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
             )
 
@@ -3326,7 +3326,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           let cPsin' = Whnf.cnormDCtx (cPsi', t') in
             (unifyDCtx1 Unification cD cPsin cPsin';
              unifyTyp Unification cD cPsin (tAn, id)  (tAn', id);
-             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin)))
+             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin, Explicit))) (*SCOTT*)
                (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
             )
 

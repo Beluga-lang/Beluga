@@ -179,7 +179,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
       let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in
+      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) Int.LF.Implicit in (*SCOTT*)
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -862,7 +862,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   Int.LF.Root (loc, Int.LF.FVar x, tS)
 		with NotPatSpine ->
                   (let _ = dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...") in
-                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) in
+                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Explicit in   (*SCOTT*)
                    let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in
                    add_fvarCnstr (tAvar, m, v);
                    Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil))
@@ -890,7 +890,7 @@ and elTerm' recT cD cPsi r sP = match r with
           | Pi ->
               (* let u =  Whnf.newMVar (cPsi, tA) in
                 Int.LF.Root (loc, Int.LF.MVar(u, Substitution.LF.id), tS) *)
-              let u =  Whnf.newMVar None (Int.LF.Null, tA) in
+              let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Implicit in    (*SCOTT*)
                 Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
           | Pibox ->
               begin match tA with
@@ -904,10 +904,10 @@ and elTerm' recT cD cPsi r sP = match r with
                                    let ssi' = Substitution.LF.invert ss' in
                                      (* cPhi' |- ssi : cPhi *)
                                      (* cPhi' |- [ssi]tQ    *)
-                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) in
+                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Implicit in (*SCOTT*)
                                      Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.comp ss'  s_proj))
                                  else
-                                   let u = Whnf.newMMVar None (cD, cPhi, tA') in
+                                   let u = Whnf.newMMVar None (cD, cPhi, tA') Int.LF.Implicit in (*SCOTT*)
                                      Int.LF.MMVar (u, (Whnf.m_id, s_proj))
                     in
                       Int.LF.Root (loc, h, tS)
@@ -919,7 +919,7 @@ and elTerm' recT cD cPsi r sP = match r with
   (* We only allow free meta-variables of atomic type *)
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) as m ->
       begin try
-        let (cD_d, Int.LF.MDecl(_, tQ, cPhi)) = FCVar.get u in
+        let (cD_d, Int.LF.MDecl(_, tQ, cPhi, mDep)) = FCVar.get u in
 	let _ = dprint (fun () -> "Retrieving type of FMV " ^ R.render_name u ^
       " of type " ^ P.typToString cD_d cPhi (tQ, Substitution.LF.id) ^ "[" ^
 			  P.dctxToString cD_d cPhi ^ "]" ^
@@ -977,7 +977,7 @@ and elTerm' recT cD cPsi r sP = match r with
 	      let _ = dprint (fun () -> "Added FMVar " ^ R.render_name u ^
 				" of type " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^
 				"[" ^ P.dctxToString cD cPhi ^ "]") in
-                FCVar.add u (cD, Int.LF.MDecl(u, tP, cPhi));
+                FCVar.add u (cD, Int.LF.MDecl(u, tP, cPhi, Int.LF.Implicit )); (*SCOTT*)
                 Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
           else
            if isProjPatSub s then
@@ -1021,11 +1021,11 @@ and elTerm' recT cD cPsi r sP = match r with
                                P.typToString cD cPhi (tP, Substitution.LF.id) ^ " [ " ^
                                P.dctxToString cD cPhi ^ " ] ") in
 
-            FCVar.add u (cD, Int.LF.MDecl (u, tP, cPhi));
+            FCVar.add u (cD, Int.LF.MDecl (u, tP, cPhi, Int.LF.Implicit )); (*SCOTT*)
             Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
 
             else
-              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) in
+              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Implicit in
                 add_fcvarCnstr (m, v);
                 Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil)
 
@@ -1967,7 +1967,7 @@ let rec elDCtx recT cD psi = match psi with
 let rec solve_fvarCnstr recT cD cnstr = match cnstr with
   | [] -> ()
   | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine),
-      Int.LF.Inst (_, ({contents = None} as r), cPsi, tP, _)) :: cnstrs) ->
+      Int.LF.Inst (_, ({contents = None} as r), cPsi, tP, _, _)) :: cnstrs) ->
       begin try
 	begin match FVar.get x with
           | Int.LF.Type tA ->
@@ -1996,7 +1996,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
 
   | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine),
-      Int.LF.Inst (_, {contents = Some tR}, cPsi, tP, _ )) :: cnstrs) ->
+      Int.LF.Inst (_, {contents = Some tR}, cPsi, tP, _ , _)) :: cnstrs) ->
       begin try
         begin match FVar.get x with
         | Int.LF.Type tA ->
@@ -2030,9 +2030,9 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
 let rec solve_fcvarCnstr cD cnstr = match cnstr with
   | [] -> ()
-  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (_, r, cPsi, _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (_, r, cPsi, _, _, _)) :: cnstrs) ->
       begin try
-        let (cD_d, Int.LF.MDecl (_, _tP, cPhi)) = FCVar.get u in
+        let (cD_d, Int.LF.MDecl (_, _tP, cPhi, _)) = FCVar.get u in
 	let d = Context.length cD - Context.length cD_d in
 	let cPhi = (if d = 0 then cPhi else
                       Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in
@@ -2043,7 +2043,7 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
         raise (Error (loc, LeftoverConstraints u))
       end
 
-  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, cPsi, _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, cPsi, _, _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.PDecl (_, tA, cPhi)) = FCVar.get x in
 	let d = Context.length cD - Context.length cD_d in

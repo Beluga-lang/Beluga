@@ -262,14 +262,14 @@ and inferHead loc cD cPsi head = match head with
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MVar (Inst (_n, {contents = None}, cPsi', tA, _cnstr), s) ->
+  | MVar (Inst (_n, {contents = None}, cPsi', tA, _cnstr, _), s) ->
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MMVar (MInst (_n, {contents = None}, cD' , cPsi', tA, _cnstr) , (t', r)) ->
+  | MMVar (MInst (_n, {contents = None}, cD' , cPsi', tA, _cnstr, _) , (t', r)) ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
@@ -776,7 +776,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Error.Violation ("Contextual substitution ill-formed"))
 
-    | MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi)) ->
+    | MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi, _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ;
@@ -785,7 +785,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
         (checkSchema loc cD cPsi (Schema.get_schema w);
          checkMSub loc cD ms cD1')
 
-    | MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi)) ->
+    | MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi, _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         let (_, tA1, cPsi1) = Whnf.mctxMDec cD u in
@@ -824,3 +824,5 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
                             P.mctxToString cD ^ " |- " ^
                             P.msubToString cD ms ^ " <= "
                          ^ " = " ^ P.mctxToString cD'))
+
+

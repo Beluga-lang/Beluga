@@ -609,7 +609,7 @@ module Cid = struct
   end (* Int.DefaultRenderer *)
 
 
-  (* RENDERER for Internal Syntax using names *)
+  (* RENDERER for Internal Syntax using names *)  (****)
   module NamedRenderer : RENDERER = struct
 
     open Id
@@ -684,7 +684,6 @@ module BVar = struct
   let get          = List.nth
 
 end
-
 
 
 (* Free Bound Variables *)

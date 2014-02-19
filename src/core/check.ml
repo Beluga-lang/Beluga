@@ -309,7 +309,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
               checkMetaObj loc cD mO (MetaSchema schema_cid , t);
               checkMetaSpine loc cD mS (cK, theta')
 
-        | I.MDecl (_u, tA, cPsi) ->
+        | I.MDecl (_u, tA, cPsi, _) ->
             let MetaObj (loc, psihat, tM) = mO in
               checkMetaObj loc cD mO (MetaTyp (tA, cPsi), t) ;
               checkMetaSpine loc cD mS (cK, I.MDot (I.MObj(psihat, tM), t))
@@ -322,7 +322,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           let _ = Schema.get_schema schema_cid in ()
         with _ -> raise (Error.Violation "Schema undefined")
         end
-    | I.MDecl (_, tA, cPsi) ->
+    | I.MDecl (_, tA, cPsi, _) ->
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
     | I.PDecl (_, tA, cPsi) ->
@@ -416,8 +416,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         check (I.Dec(cD, I.CDecl(psi, schema, dep')))
           (C.cnormCtx (cG, I.MShift 1)) e (tau, C.mvar_dot1 t)
 
-    | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
+    | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi, mDep), _), tau), t)) ->
+        check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t), mDep)))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (MLam (_, u, e), (TypPiBox ((I.PDecl(_u, tA, cPsi), _), tau), t)) ->
@@ -568,7 +568,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         end
     | MApp (loc, e, (phat, cObj)) ->
         begin match (cObj, C.cwhnfCTyp (syn cD cG e)) with
-          | (NormObj tM, (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t)) ->
+          | (NormObj tM, (TypPiBox ((I.MDecl(_, tA, cPsi, _), _ ), tau), t)) ->
               LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
               (tau, I.MDot(I.MObj (phat, tM), t))
 
@@ -685,7 +685,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
-    | I.MDecl (_, tA, cPsi) ->
+    | I.MDecl (_, tA, cPsi, _) ->
         let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in
           (match mO with
             | MetaObj (_, phat, tM) ->  I.MDot(I.MObj(phat, tM), theta)

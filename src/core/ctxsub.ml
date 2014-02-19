@@ -115,9 +115,9 @@ and ctxnorm_head (h,cs) = match h with
   | FPVar (u, s) -> FPVar (u, ctxnorm_sub (s, cs))
   | MVar (u, s) -> MVar (u, ctxnorm_sub (s, cs))
   | PVar (p, s) -> PVar (p, ctxnorm_sub (s, cs))
-  | MMVar (MInst(n, ({contents = None} as u), cD, cPsi, tA, cnstr), (t,s)) ->
+  | MMVar (MInst(n, ({contents = None} as u), cD, cPsi, tA, cnstr, mdep), (t,s)) ->
       (* cnstr must be empty *)
-      MMVar (MInst (n, u,ctxnorm_mctx (cD, cs), ctxnorm_dctx (cPsi, cs), ctxnorm_typ (tA, cs), cnstr)
+      MMVar (MInst (n, u,ctxnorm_mctx (cD, cs), ctxnorm_dctx (cPsi, cs), ctxnorm_typ (tA, cs), cnstr, mdep)
                , (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs)))
 
 (*  | MMVar (u, (t,s)) -> MMVar (u, (ctxnorm_msub (t,cs) , ctxnorm_sub (s,cs))) *)
@@ -265,8 +265,8 @@ and ctxnorm_mctx (cD, cs) = match cD with
       Dec (ctxnorm_mctx (cD', cs), ctxnorm_cdec (cdec, cs))
 
 and ctxnorm_cdec (cdec, cs) = match cdec with
-  | MDecl (u, tA, cPsi) ->
-      MDecl(u, ctxnorm_typ (tA, cs), ctxnorm_dctx (cPsi, cs))
+  | MDecl (u, tA, cPsi, dep) ->
+      MDecl(u, ctxnorm_typ (tA, cs), ctxnorm_dctx (cPsi, cs), dep)
   | PDecl (u, tA, cPsi) ->
       PDecl(u, ctxnorm_typ (tA, cs), ctxnorm_dctx (cPsi, cs))
   | MDeclOpt _ -> cdec
@@ -468,8 +468,8 @@ and csub_ckind cD cPsi k cK = begin match cK with
         | Syntax.Int.LF.CDecl _ ->
             let cK' = csub_ckind cD (ctxnorm_dctx (cPsi, CShift 1)) (k+1) cK' in
               Syntax.Int.Comp.PiKind (loc, (cdecl, dep), cK')
-        | Syntax.Int.LF.MDecl (u, tA, cPhi) ->
-            let mdecl = MDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi) in
+        | Syntax.Int.LF.MDecl (u, tA, cPhi, mDep) ->
+            let mdecl = MDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi, mDep) in
             let cK'    = csub_ckind (Dec(cD, mdecl)) (Whnf.cnormDCtx (cPsi, MShift 1)) k cK' in
               Syntax.Int.Comp.PiKind (loc, (mdecl, dep), cK')
         | Syntax.Int.LF.PDecl (u, tA, cPhi) ->
@@ -499,8 +499,8 @@ and csub_ctyp cD cPsi k tau = match tau with
   | Syntax.Int.Comp.TypCtxPi (psi_decl, tau) ->
       Syntax.Int.Comp.TypCtxPi (psi_decl, csub_ctyp cD (ctxnorm_dctx (cPsi, CShift 1)) (k+1) tau)
 
-  | Syntax.Int.Comp.TypPiBox ((MDecl (u, tA, cPhi), dep), tau) ->
-      let mdecl = MDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi) in
+  | Syntax.Int.Comp.TypPiBox ((MDecl (u, tA, cPhi, mDep), dep), tau) ->
+      let mdecl = MDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi, mDep) in
       Syntax.Int.Comp.TypPiBox ((mdecl, dep),
                      csub_ctyp (Dec(cD, mdecl)) (Whnf.cnormDCtx (cPsi, MShift 1)) k tau)
 
@@ -566,11 +566,11 @@ and csub_dctx cD cPsi k cPhi =
 
 and csub_mctx cPsi k cD = match cD with
   | Empty -> Empty
-  | Dec(cD', MDecl(n, tA, cPhi)) ->
+  | Dec(cD', MDecl(n, tA, cPhi, mDep)) ->
       let cD''   = csub_mctx cPsi k cD'  in
       let tA' = csub_typ cPsi k tA in
       let cPhi' = csub_dctx cD'' cPsi k cPhi in
-        Dec(cD'', MDecl(n, tA', cPhi'))
+        Dec(cD'', MDecl(n, tA', cPhi', mDep))
   | Dec(cD', PDecl(n, tA, cPhi)) ->
       let cD''   = csub_mctx cPsi k cD'  in
       let tA' = csub_typ cPsi k tA in
@@ -901,7 +901,7 @@ let ctxToSub_mclosed cD psi cPsi =
 
       let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
         (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
-        (Dec (cD', MDecl(u_name , tA', Whnf.cnormDCtx (psi, MShift k))), result, k+1)
+        (Dec (cD', MDecl(u_name , tA', Whnf.cnormDCtx (psi, MShift k), Implicit)), result, k+1)               (*SCOTT*)
   in
     toSub cPsi
 
@@ -969,7 +969,7 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
 let rec mctxToMSub cD = match cD with
   | Empty -> Whnf.m_id
-  | Dec (cD', MDecl(n, tA, cPsi)) ->
+  | Dec (cD', MDecl(n, tA, cPsi, mdep)) ->
       let t     = mctxToMSub cD' in
 (*      let _ = dprint (fun () -> "[mctxToMSub] cD' = " ^ P.mctxToString cD') in
       let _     = dprint (fun () -> "[mctxToMSub] t = " ^ P.msubToString Empty t) in
@@ -977,7 +977,7 @@ let rec mctxToMSub cD = match cD with
       let _ = dprint (fun () -> "tA =" ^ P.typToString cD' cPsi (tA, Substitution.LF.id)) in *)
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let tA'   = Whnf.cnormTyp (tA, t) in
-      let u     = Whnf.newMVar (Some n) (cPsi', tA') in
+      let u     = Whnf.newMVar (Some n) (cPsi', tA') mdep in
       let phat  = Context.dctxToHat cPsi' in
         MDot (MObj (phat, Root (Syntax.Loc.ghost, MVar (u, Substitution.LF.id), Nil)) , t)
 
@@ -1014,11 +1014,11 @@ let rec mctxToMSub cD = match cD with
 
 let rec mctxToMMSub cD0 cD = match cD with
   | Empty -> MShift (Context.length cD0)
-  | Dec (cD', MDecl(n, tA, cPsi)) ->
+  | Dec (cD', MDecl(n, tA, cPsi, mdep)) ->
       let t     = mctxToMMSub cD0 cD' in
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let tA'   = Whnf.cnormTyp (tA, t) in
-      let u     = Whnf.newMMVar (Some n) (cD0, cPsi', tA') in
+      let u     = Whnf.newMMVar (Some n) (cD0, cPsi', tA') mdep in
       let phat  = Context.dctxToHat cPsi' in
         MDot (MObj (phat, Root (Syntax.Loc.ghost, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil)) , t)
 
@@ -1061,7 +1061,7 @@ let rec isomorphic cD1 cD2 = match (cD1, cD2) with
        isomorphic cD1' cD2' && isomorphic_ctyp_decl dec1 dec2
 
 and isomorphic_ctyp_decl dec1 dec2 = match (dec1, dec2) with
-  | (MDecl(_, tA1, dctx1),  MDecl(_, tA2, dctx2)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2
+  | (MDecl(_, tA1, dctx1, mDep1),  MDecl(_, tA2, dctx2, mDep2)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2              
   | (PDecl(_, tA1, dctx1),  PDecl(_, tA2, dctx2)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2
   | (SDecl(_, dctx1A, dctx1B),  SDecl(_, dctx2A, dctx2B)) -> isomorphic_dctx dctx1A dctx2A && isomorphic_dctx dctx2A dctx2B
   | (CDecl _, CDecl _) -> false  (* unsupported *)

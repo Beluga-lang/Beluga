@@ -32,7 +32,6 @@ type name_guide =
   | SomeName of name
   | SomeString of string
 
-
 let mk_name = function
     (* If no {!name} is given, create a new unique {!name}.
        This prevents the problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is

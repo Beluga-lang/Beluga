@@ -191,7 +191,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
       let ssi' = LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in
+      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) Int.LF.Explicit in               (*SCOTT*)
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -338,7 +338,8 @@ let elCDecl recT cD cdecl = match cdecl with
   | Apx.LF.MDecl (u, a, psi) ->
       let cPsi = Lfrecon.elDCtx recT cD psi in
       let tA   = Lfrecon.elTyp recT cD cPsi a in
-        Int.LF.MDecl (u, tA, cPsi)
+        Int.LF.MDecl (u, tA, cPsi, Int.LF.Explicit)
+
   | Apx.LF.PDecl (u, a, psi) ->
       let cPsi = Lfrecon.elDCtx recT cD psi in
       let tA   = Lfrecon.elTyp recT cD cPsi a in
@@ -403,11 +404,11 @@ let mgAtomicTyp cD cPsi a kK =
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)
                        (* cPhi' |- [ssi]tQ    *)
-                     let u  = Whnf.newMMVar (Some n) (cD, cPhi' , Int.LF.TClo (tA1', ssi')) in
+                     let u  = Whnf.newMMVar (Some n) (cD, cPhi' , Int.LF.TClo (tA1', ssi')) Int.LF.Explicit in (*SCOTT*)
                      let ss_proj = LF.comp ss' s_proj in
                        Int.LF.MMVar (u, (Whnf.m_id, ss_proj)))
                    else
-                     let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1') in
+                     let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1') Int.LF.Explicit in (*SCOTT*)
                      Int.LF.MMVar (u, (Whnf.m_id, s_proj))
         in
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
@@ -456,7 +457,7 @@ let rec mgTyp cD cPsi tA = begin match tA with
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
 
 and genMAppW loc cD (i, tau_t) = match tau_t with
-  | (Int.Comp.TypPiBox ((Int.LF.MDecl(n, tA, cPsi), Int.Comp.Implicit), tau), theta) ->
+  | (Int.Comp.TypPiBox ((Int.LF.MDecl(n, tA, cPsi, _), Int.Comp.Implicit), tau), theta) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let psihat  = Context.dctxToHat cPsi' in
       let tA'   = C.cnormTyp (tA, theta) in
@@ -645,7 +646,7 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
       let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.CObj(cPsi), theta)) in
         Int.Comp.MetaApp (Int.Comp.MetaCtx (loc, cPsi), cS)
 
-  | (s, (Int.Comp.PiKind (_loc, (Int.LF.MDecl (n , tA, cPsi), Int.Comp.Implicit), cK), theta )) ->
+  | (s, (Int.Comp.PiKind (_loc, (Int.LF.MDecl (n , tA, cPsi, _), Int.Comp.Implicit), cK), theta )) ->
       let psihat  = Context.dctxToHat cPsi in
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let tA'   = C.cnormTyp (tA, theta) in
@@ -675,7 +676,7 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
             let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.CObj(cPsi'), theta)) in
               Int.Comp.MetaApp (Int.Comp.MetaCtx (loc, cPsi'), cS)
 
-        | Int.LF.MDecl (_u, tA, cPsi) ->
+        | Int.LF.MDecl (_u, tA, cPsi, _) ->
             let (Int.Comp.MetaObj (loc, psihat, tM) as cM) = elMetaObj cD m (Int.Comp.MetaTyp (tA, cPsi), theta)  in
             let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.MObj(psihat, tM), theta)) in
               Int.Comp.MetaApp (cM, cS)
@@ -794,7 +795,7 @@ let rec elCompTyp cD tau = match tau with
 (* *******************************************************************************)
 
 let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
-  | Int.LF.MDecl (n, tA, cPsi) ->
+  | Int.LF.MDecl (n, tA, cPsi, _) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
       let psihat  = Context.dctxToHat cPsi' in
       let tA'   = C.cnormTyp (tA, t) in
@@ -857,18 +858,19 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
                               (Int.LF.Dec (cD_s, Int.LF.CDecl (name, sW, Int.LF.Maybe)),  tau) in
         Int.Comp.TypCtxPi((name, sW,  Int.Comp.Implicit), tau')
 
-  | Int.Comp.TypPiBox ((Int.LF.MDecl (x, (Int.LF.Atom (_, a, _ ) as tP), cPsi), dep), tau) ->
+  | Int.Comp.TypPiBox ((Int.LF.MDecl (x, (Int.LF.Atom (_, a, _ ) as tP), cPsi, mDep), dep), tau) ->
       let cPsi' = mgCtx cD' (cD_s, cPsi) in
       let tP'   = mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind  in
-      let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.MDecl(x,tP', cPsi')))
-                               (Int.LF.Dec (cD_s, Int.LF.MDecl(x,tP, cPsi)), tau) in
-        Int.Comp.TypPiBox ((Int.LF.MDecl (x, tP', cPsi'), dep), tau')
+      let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.MDecl(x,tP', cPsi', mDep)))
+                               (Int.LF.Dec (cD_s, Int.LF.MDecl(x,tP, cPsi, mDep)), tau) in
+        Int.Comp.TypPiBox ((Int.LF.MDecl (x, tP', cPsi', mDep), dep), tau')
 
   | Int.Comp.TypPiBox ((Int.LF.PDecl (x, tA, cPsi), dep), tau) ->
+      let mDep  = match dep with Int.Comp.Explicit -> Int.LF.Explicit | Int.Comp.Implicit -> Int.LF.Implicit in
       let cPsi' = mgCtx cD' (cD_s, cPsi) in
       let tA'   = mgTyp cD' cPsi' tA in
-      let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.MDecl(x,tA', cPsi')))
-                               (Int.LF.Dec (cD_s, Int.LF.MDecl(x,tA, cPsi)), tau) in
+      let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.MDecl(x,tA', cPsi', mDep)))
+                               (Int.LF.Dec (cD_s, Int.LF.MDecl(x,tA, cPsi, mDep)), tau) in
         Int.Comp.TypPiBox ((Int.LF.PDecl (x, tA', cPsi'), dep), tau')
 
   | Int.Comp.TypBox (loc, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
@@ -945,8 +947,8 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
         Int.Comp.CtxFun (loc, psi_name, e')
 
-  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi), Int.Comp.Explicit), tau), theta))  ->
-      let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in
+  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi, _), Int.Comp.Explicit), tau), theta))  ->
+      let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta), Int.LF.Explicit)) in
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let _   = dprint (fun () -> "[elExp] MLam ... \n     cD = " ^
                                    P.mctxToString cD' ^ "\n     cG =" ^
@@ -977,10 +979,10 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let e' = elExp cD' cG'  e' (tau, C.mvar_dot1 theta) in
         Int.Comp.CtxFun (Syntax.Loc.ghost, psi_name, e')
 
-  | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
+  | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(u, tA, cPsi, _), Int.Comp.Implicit), tau), theta))  ->
       (* let u' = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA)) in *)
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in
+      let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta), Int.LF.Implicit)) in
       let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
       let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (Syntax.Loc.ghost, u , e')
@@ -1282,7 +1284,7 @@ and elExp' cD cG i = match i with
       let (i', tau_theta') = genMApp loc cD (i0, tau_t) in
       let _ = dprint (fun () -> "\n MApp - Generated implicit args.\n") in
         begin match tau_theta' with
-          | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Explicit), tau), theta) ->
+          | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi, _), Int.Comp.Explicit), tau), theta) ->
               let cPsi' = C.cnormDCtx (cPsi, theta) in
               (* let psihat' = Context.dctxToHat cPsi'  in *)
                 begin match mC with
@@ -1419,7 +1421,7 @@ and elExp' cD cG i = match i with
               dprint (fun () -> "[elExp] MAnnApp Reconstructed (partially) AFTER GENERATING IMPLICIT ARGS:\n      " ^
                 P.expSynToString cD cG (Whnf.cnormExp' (i', Whnf.m_id)) ^ "\n");
       begin match tau_theta' with
-        | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi), Int.Comp.Explicit), tau0), theta) ->
+        | (Int.Comp.TypPiBox ((Int.LF.MDecl (_, tA, cPsi, _), Int.Comp.Explicit), tau0), theta) ->
           let cPsi    = C.cnormDCtx (cPsi, theta) in
           begin
             try
@@ -1729,7 +1731,7 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
 and elPatMetaObj cD pat (cdecl, theta) = begin match pat with
   | Apx.Comp.PatMetaObj (loc, cM) ->
     (match cdecl with
-       | Int.LF.MDecl (_, tA, cPsi) ->
+       | Int.LF.MDecl (_, tA, cPsi, _) ->
            (match  elMetaObj cD cM (Int.Comp.MetaTyp (tA, cPsi), theta)  with
               | (Int.Comp.MetaObj (loc, phat, tM) as cM') ->
                   (Int.Comp.PatMetaObj (loc, cM'),
@@ -1759,7 +1761,7 @@ and elPatMetaObj cD pat (cdecl, theta) = begin match pat with
       (let tau' = elCompTyp cD tau in
       let (_cG', pat') = elPatChk cD (Int.LF.Empty) pat (tau', Whnf.m_id) in
         begin match pat' , cdecl with
-          |  (Int.Comp.MetaObj (loc, phat, tM) as cM') , Int.LF.MDecl (_, tA, cPsi) ->
+          |  (Int.Comp.MetaObj (loc, phat, tM) as cM') , Int.LF.MDecl (_, tA, cPsi, _) ->
                let ttau = (Int.Comp.TypBox (Syntax.Loc.ghost, tA, cPsi), theta) in
                let ttau' = (tau', Whnf.m_id) in
                  begin try
@@ -1928,7 +1930,7 @@ and elPatSpine (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat_spine ttau =
 and elPatSpineW cD cG pat_spine ttau = match pat_spine with
   | Apx.Comp.PatNil loc ->
       (match ttau with
-         | (Int.Comp.TypPiBox ((Int.LF.MDecl (n, tA, cPsi), Int.Comp.Implicit), tau), theta) ->
+         | (Int.Comp.TypPiBox ((Int.LF.MDecl (n, tA, cPsi, _), Int.Comp.Implicit), tau), theta) ->
              let cPsi' = C.cnormDCtx (cPsi, theta) in
              let tA'   = C.cnormTyp (tA, theta) in
              let psihat  = Context.dctxToHat cPsi' in
@@ -1987,7 +1989,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let (pat, theta') = elPatMetaObj cD pat' (Int.LF.CDecl(x,w, Int.LF.No), theta) in
              let (cG1, pat_spine, ttau2) = elPatSpine cD cG pat_spine' (tau, theta') in
                (cG1, Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
-         | (Int.Comp.TypPiBox ((Int.LF.MDecl (n, tA, cPsi), Int.Comp.Implicit), tau), theta) ->
+         | (Int.Comp.TypPiBox ((Int.LF.MDecl (n, tA, cPsi, _), Int.Comp.Implicit), tau), theta) ->
              let _ = (dprint (fun () -> "[elPatSpine] TypPiBox implicit ttau = ");
                       dprint (fun () -> "       " ^ P.compTypToString cD (Whnf.cnormCTyp ttau))) in
              let cPsi' = Whnf.normDCtx (C.cnormDCtx (cPsi, theta)) in

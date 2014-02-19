@@ -78,6 +78,7 @@ module Int = struct
     val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
     val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
     val fmt_ppr_lf_ctyp_decl  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
+    val fmt_ppr_lf_ctyp_decl_markings  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
 
     val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
@@ -550,7 +551,7 @@ module Int = struct
           fprintf ppf " %a"
             (fmt_ppr_lf_head cD cPsi lvl) h
 
-      | LF.MInst (_, ({ contents = None } as u), _, _, tA, _) ->
+      | LF.MInst (_, ({ contents = None } as u), _, _, tA, _, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -569,7 +570,7 @@ module Int = struct
                     ; fprintf ppf "?%s" sym
           end
 
-      | LF.MInst (_, {contents = Some m}, cD, cPsi, _, _) ->
+      | LF.MInst (_, {contents = Some m}, cD, cPsi, _, _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_normal cD cPsi lvl) m
@@ -579,7 +580,7 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_cvar cD n)
 
-      | LF.Inst (_, ({ contents = None } as u), _, tA, _) ->
+      | LF.Inst (_, ({ contents = None } as u), _, tA, _, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -626,6 +627,7 @@ module Int = struct
       | LF.CtxName psi ->
           fprintf ppf "%s"
             (R.render_name psi)
+
 
     and fmt_ppr_lf_typ_rec cD cPsi _lvl ppf typrec =
        let ppr_element cD cPsi ppf suffix = function
@@ -804,9 +806,14 @@ module Int = struct
               (r_paren_if cond)
 
 
-
+     (*******************         MCTX                    ****************************)
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
-      | LF.MDecl (u, tA, cPsi) ->
+      | LF.MDecl (u, tA, cPsi, LF.Implicit) ->
+          fprintf ppf "{%s :: [%a. %a]}"
+            (R.render_name u)
+            (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 2) tA
+      | LF.MDecl (u, tA, cPsi, LF.Explicit) ->
           fprintf ppf "{%s :: [%a. %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -816,7 +823,55 @@ module Int = struct
           fprintf ppf "{#%s :: [%a.%a]}"
             (R.render_name p)
             (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 2) tA 
+
+      | LF.SDecl (u, cPhi, cPsi) ->
+          fprintf ppf "{%s :: [%a. %a]}"
+            (R.render_name u)
+            (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_dctx cD 0) cPhi
+
+      | LF.CDecl (name, schemaName, LF.No) ->
+          fprintf ppf "{%s :: (%a)}"
+            (R.render_name name)
+            (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
+
+      | LF.CDecl (name, schemaName, LF.Maybe) ->
+          fprintf ppf "{%s :: {%a}}"
+            (R.render_name name)
+            (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
+
+      | LF.MDeclOpt name ->
+          fprintf ppf "{%s :: _ }"
+            (R.render_name name)
+
+      | LF.PDeclOpt name ->
+          fprintf ppf "{%s :: _ }"
+            (R.render_name name)
+      | LF.CDeclOpt name ->
+          fprintf ppf "{%s :: _ }"
+            (R.render_name name)
+
+     (* Exact Same as fmt_ppr_lf_ctyp_decl but includes ^i and ^e for MDecl
+          January 30, 2014 13:00
+          - SC *)
+    let fmt_ppr_lf_ctyp_decl_markings cD _lvl ppf = function
+      | LF.MDecl (u, tA, cPsi, LF.Implicit) ->
+          fprintf ppf "{%s :: [%a. %a]}^i"
+            (R.render_name u)
+            (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 2) tA
+      | LF.MDecl (u, tA, cPsi, LF.Explicit) ->
+          fprintf ppf "{%s :: [%a. %a]}^e"
+            (R.render_name u)
+            (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 2) tA
+
+      | LF.PDecl (p, tA, cPsi) ->
+          fprintf ppf "{#%s :: [%a.%a]}"
+            (R.render_name p)
+            (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 2) tA 
 
       | LF.SDecl (u, cPhi, cPsi) ->
           fprintf ppf "{%s :: [%a. %a]}"
@@ -845,7 +900,6 @@ module Int = struct
       | LF.CDeclOpt name ->
           fprintf ppf "{%s :: _ }"
             (R.render_name name)
-
 
     (* Computation-level *)
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
@@ -1461,7 +1515,7 @@ module Int = struct
           let cPsi = phatToDCtx psihat in
           let u    =
             begin match decl with
-              | LF.MDecl(u, _ , _ ) -> u
+              | LF.MDecl(u, _ , _ , _ ) -> u
               | LF.MDeclOpt u -> u
             end in
           fprintf ppf "%a . %a = %s"

@@ -5,6 +5,18 @@ module Loc = Camlp4.PreCast.Loc
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
+
+
+(**********************************************
+
+cD : LF.mctx
+cG : Comp.gctx
+tau : Comp.typ
+theta :LF.msub
+
+***********************************************)
+
+
 let holes = DynArray.create ()
 
 let none () = DynArray.empty holes
@@ -17,9 +29,10 @@ let ( ++ ) f g = function x -> f (g x)
 let nameString n = n.Id.string_of_name
 
 let ctypDeclToString cD ctypDecl =
-  P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl Format.str_formatter ctypDecl ;
+  P.fmt_ppr_lf_ctyp_decl_markings cD Pretty.std_lvl Format.str_formatter ctypDecl ;
   Format.flush_str_formatter ()
 
+(*mctxToString cD*)
 let mctxToString =
   let shift = " " in
   let rec toString = function
@@ -30,7 +43,7 @@ let mctxToString =
     | LF.Dec (cD, ctypDecl) ->
       toString cD ^ "\n" ^ shift ^ ctypDeclToString cD ctypDecl
   in toString ++ Whnf.normMCtx
-
+ 
 let gctxToString cD =
   let shift = " " in
   let rec toString = function

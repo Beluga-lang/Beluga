@@ -170,7 +170,7 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) in
+      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) LF.Implicit in             (*SCOTT*)
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -597,8 +597,8 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
                          (pat, (tau1,t)) (pat', (tau1',t')) mC sC in
 	match_spines (cD,cG) (cD_p, cG_p)
 	  (pS, (tau2,t)) (pS', (tau2',t')) mC1 sC1
-  | (Comp.PatApp (_ , pat, pS) , (Comp.TypPiBox ((LF.MDecl (_, tA, cPsi), _ ), tau2), t)),
-    (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox ((LF.MDecl (_, tA', cPsi'), _), tau2'), t')) ->
+  | (Comp.PatApp (_ , pat, pS) , (Comp.TypPiBox ((LF.MDecl (_, tA, cPsi, _), _ ), tau2), t)),
+    (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox ((LF.MDecl (_, tA', cPsi', _), _), tau2'), t')) ->
       let Comp.PatMetaObj (_, mO) = pat in
       let Comp.PatMetaObj (_, mO') = pat' in
       let tau1 = Comp.MetaTyp (Whnf.cnormTyp (tA,t), Whnf.cnormDCtx (cPsi, t)) in
@@ -1191,8 +1191,8 @@ let rec check_empty_pattern k candidates = match candidates with
 
 let rec addToMCtx cD (cD_tail, ms) = match cD_tail with
   | [] -> (cD , ms)
-  | LF.MDecl (u, tA, cPsi) :: cD_tail ->
-      let mdec = LF.MDecl(u, Whnf.cnormTyp (tA, ms), Whnf.cnormDCtx (cPsi, ms)) in
+  | LF.MDecl (u, tA, cPsi, mDep) :: cD_tail ->
+      let mdec = LF.MDecl(u, Whnf.cnormTyp (tA, ms), Whnf.cnormDCtx (cPsi, ms), mDep) in
 	addToMCtx (LF.Dec (cD, mdec)) (cD_tail, Whnf.mvar_dot1 ms)
   | LF.PDecl (u, tA, cPsi) :: cD_tail ->
       let pdec = LF.PDecl(u, Whnf.cnormTyp (tA, ms), Whnf.cnormDCtx (cPsi, ms)) in
@@ -1280,7 +1280,7 @@ let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
 	let _ = dprint (fun () -> "[Subord.thin'] ss' = " ^ P.subToString cD'' cPsi' ssi) in
 	let _ = dprint (fun () -> "[genCtx] generated mvar of type " ^ P.dctxToString cD'' cPsi'  ^ " |- " ^
 			  P.typToString cD'' cPsi' (tP, ssi)) in
-	let mdec = LF.MDecl (x, LF.TClo(tP,ssi), cPsi') in
+	let mdec = LF.MDecl (x, LF.TClo(tP,ssi), cPsi, LF.Implicit) in (*SCOTT*)
 	let mv   = LF.Root(Syntax.Loc.ghost, LF.MVar(LF.Offset 1, Whnf.cnormSub  (ss', LF.MShift 1)), LF.Nil) in
 	  (LF.Dec (cD'', mdec) , LF.Dot(LF.Obj mv, Whnf.cnormSub (s', LF.MShift 1)))
 
@@ -1340,7 +1340,7 @@ let genCtxGoals cD (LF.CDecl(x, schema_cid, dep)) =
 *)
 
 let genCGoals (cD':LF.mctx) mdec = match mdec with
-  | LF.MDecl (_u, tA, cPsi) ->
+  | LF.MDecl (_u, tA, cPsi, _) ->
       let _ = dprint (fun () -> "[SPLIT] CovGoal : " ^ P.dctxToString cD' cPsi ^ " . " ^
 			P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in
       let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in
@@ -1447,7 +1447,7 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
       let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.CObj(cPsi'), t)) in
 	(cG, Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau0)
 
-  | (Comp.TypPiBox ((LF.MDecl (u, tP,  cPsi), _ ), tau), t) ->
+  | (Comp.TypPiBox ((LF.MDecl (u, tP,  cPsi, _), _ ), tau), t) ->
       let tP' = Whnf.cnormTyp (tP, t) in
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let tR    = etaExpandMVstr LF.Empty cPsi' (tP', S.LF.id) in
@@ -1507,7 +1507,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 	[ (cD, cg, Whnf.m_id) ]
 
   | Comp.TypBox (loc, tA, cPsi) ->
-      let (cgoals, _ ) = genCGoals cD (LF.MDecl(Id.mk_name(Id.NoName), tA, cPsi)) in
+      let (cgoals, _ ) = genCGoals cD (LF.MDecl(Id.mk_name(Id.NoName), tA, cPsi, LF.Explicit)) in (*SCOTT*)
 
 	List.map (fun (cD', cg, ms) ->
 		    let CovGoal (cPsi', tR, sA') = cg in
@@ -1982,7 +1982,7 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 *)
 let initialize_coverage problem projOpt = begin match problem.ctype with
   | Comp.TypBox(loc, tA, cPsi) ->
-      let cD'        = LF.Dec (problem.cD, LF.MDecl(Id.mk_name (Id.NoName), tA, cPsi)) in
+      let cD'        = LF.Dec (problem.cD, LF.MDecl(Id.mk_name (Id.NoName), tA, cPsi, LF.Explicit)) in (*SCOTT*)
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = LF.MVar (LF.Offset 1, idSub) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
@@ -2032,7 +2032,7 @@ end
 
 let rec check_emptiness cD = match cD with
   | LF.Empty -> false
-  | LF.Dec(cD', LF.MDecl (_u, tA, cPsi)) ->
+  | LF.Dec(cD', LF.MDecl (_u, tA, cPsi, _)) ->
       begin try
 	(match genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)) with
 	   | [] -> true
@@ -2166,3 +2166,4 @@ let stage problem =
 let force f =
   (match !problems with [] -> []
      | _ ->   List.map (fun problem -> f (covers problem None)) (List.rev !problems))
+

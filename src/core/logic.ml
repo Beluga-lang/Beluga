@@ -229,7 +229,7 @@ module Convert = struct
     let (tA, s) = Whnf.whnfTyp sA
     in match tA with
       | LF.Atom (_) as tA ->
-        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) in
+        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) LF.Implicit in (*SCOTT*)
         LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
         LF.Lam (Syntax.Loc.ghost, x, etaExpand

@@ -17,13 +17,14 @@ let rec conv_listToString clist = match clist with
   | [] -> " "
   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
 
-let rec blockdeclInDctx cPsi = match cPsi with
+(* blockdeclInDctx is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
+let rec _blockdeclInDctx cPsi = match cPsi with
   | Int.LF.Null -> false
   | Int.LF.CtxVar psi -> false
   |Int.LF.DDec (cPsi',Int.LF.TypDecl(x, tA)) ->
      begin match Whnf.whnfTyp (tA, LF.id) with
        | (Int.LF.Sigma _ , _ ) -> true
-       | _  ->    blockdeclInDctx cPsi'
+       | _  ->    _blockdeclInDctx cPsi'
      end
 
 type error =
@@ -37,9 +38,8 @@ let _ = Error.register_printer
       match err with
         | BlockInDctx (cD, h, tA, cPsi) ->
             Format.fprintf ppf
-              "Encountered contextual object [%a.%a] of type [%a.%a] during type reconstruction.@.\
-               Unification cannot prune it because its context contains blocks.@.\
-               Solution: Make the meta-variable explicit restricting its dependencies."
+              "Encountered contextual object [%a.%a] of type [%a.%a].@.\
+               Unification cannot prune it because its context contains blocks.@."
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
             (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) h
             (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
@@ -62,10 +62,10 @@ and strans_normW cD (tM, s) conv_list = match tM with
 and strans_head loc cD h conv_list = match h with
   | Int.LF.BVar x -> Int.LF.BVar (new_index x conv_list)
   | Int.LF.MVar (Int.LF.Offset u, sigma) ->
-      let (_, tA, cPsi') =  Whnf.mctxMDec cD u in
+(*      let (_, tA, cPsi') =  Whnf.mctxMDec cD u in
         if blockdeclInDctx cPsi' then
           raise (Error (loc, BlockInDctx (cD, h, tA, cPsi')))
-        else
+        else *)
           Int.LF.MVar(Int.LF.Offset u, strans_sub cD sigma conv_list)
   | Int.LF.MVar (u, sigma) ->
           Int.LF.MVar(u, strans_sub cD sigma conv_list)
@@ -80,6 +80,11 @@ and strans_head loc cD h conv_list = match h with
   | Int.LF.Proj (Int.LF.FPVar (p, sigma), j) ->
       Int.LF.Proj (Int.LF.FPVar (p, strans_sub cD sigma conv_list), j)
 
+  | Int.LF.Proj (Int.LF.MPVar (p, (ms, sigma)), j) ->
+      let ms' = strans_msub cD ms conv_list in
+      let sigma' = strans_sub cD sigma conv_list in
+        Int.LF.Proj (Int.LF.MPVar (p, (ms', sigma')), j)
+
   | Int.LF.Const c -> Int.LF.Const c
   | Int.LF.FVar x -> Int.LF.FVar x
   | Int.LF.FMVar (u,s) -> Int.LF.FMVar (u, strans_sub cD s conv_list)
@@ -88,6 +93,10 @@ and strans_head loc cD h conv_list = match h with
       let ms' = strans_msub cD ms conv_list in
       let s'  = strans_sub cD s conv_list in
         Int.LF.MMVar (u, (ms', s'))
+  | Int.LF.MPVar  (u, (ms, s)) ->
+      let ms' = strans_msub cD ms conv_list in
+      let s'  = strans_sub cD s conv_list in
+        Int.LF.MPVar (u, (ms', s'))
 
 and strans_msub cD ms conv_list = match ms with
   | Int.LF.MShift k -> Int.LF.MShift k

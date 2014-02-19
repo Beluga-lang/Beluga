@@ -11,6 +11,10 @@ module LF = struct
   type depend =
     | No
     | Maybe
+  
+  type inferred =                            (* Inferred Status for MDecl       *)
+     | Implicit                              
+     | Explicit
 
   type kind =
     | Typ
@@ -21,7 +25,7 @@ module LF = struct
     | TypDeclOpt of name                      (*   |  x:_                       *)
 
   and ctyp_decl =                             (* Contextual Declarations        *)
-    | MDecl of name * typ  * dctx             (* D ::= u::A[Psi]                *)
+    | MDecl of name * typ  * dctx * inferred  (* D ::= u::A[Psi]                *)
     | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
     | SDecl of name * dctx * dctx             (*   |   s::A[Psi]                *)
     | CDecl of name * cid_schema * depend
@@ -31,15 +35,15 @@ module LF = struct
                                               (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)
-    | Atom  of Loc.t * cid_typ * spine (* A ::= a M1 ... Mn              *)
+    | Atom  of Loc.t * cid_typ * spine        (* A ::= a M1 ... Mn              *)
     | PiTyp of (typ_decl * depend) * typ      (*   | Pi x:A.B                   *)
     | Sigma of typ_rec
     | TClo  of (typ * sub)                    (*   | TClo(A,s)                  *)
 
 
   and normal =                                (* normal terms                   *)
-    | Lam  of Loc.t * name * normal    (* M ::= \x.M                     *)
-    | Root of Loc.t * head * spine     (*   | h . S                      *)
+    | Lam  of Loc.t * name * normal           (* M ::= \x.M                     *)
+    | Root of Loc.t * head * spine            (*   | h . S                      *)
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
 
@@ -99,7 +103,7 @@ module LF = struct
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of name * normal option ref * dctx * typ * cnstr list ref
+    | Inst   of name * normal option ref * dctx * typ * cnstr list ref * inferred
         (* D ; Psi |- M <= A
            provided constraint *)
     | PInst  of name * head   option ref * dctx * typ * cnstr list ref
@@ -107,7 +111,7 @@ module LF = struct
            provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
+    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * inferred
         (* D ; Psi |- M <= A
            provided constraint *)
     | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
@@ -244,17 +248,17 @@ module Comp = struct
   (* MetaSClo of meta_spine * msub *)
 
   type typ =
-    | TypBase  of Loc.t * cid_comp_typ * meta_spine
-    | TypDef  of Loc.t * cid_comp_typ * meta_spine
-    | TypBox   of Loc.t * LF.typ  * LF.dctx
-    | TypSub   of Loc.t * LF.dctx * LF.dctx
-    | TypArr   of typ * typ
-    | TypCross of typ * typ
-    | TypCtxPi of (name * cid_schema * depend) * typ
-    | TypPiBox of (LF.ctyp_decl * depend) * typ
-    | TypClo   of typ *  LF.msub
+    | TypBase   of Loc.t * cid_comp_typ * meta_spine
+    | TypDef    of Loc.t * cid_comp_typ * meta_spine
+    | TypBox    of Loc.t * LF.typ  * LF.dctx
+    | TypParam  of Loc.t * LF.typ  * LF.dctx
+    | TypSub    of Loc.t * LF.dctx * LF.dctx
+    | TypArr    of typ * typ
+    | TypCross  of typ * typ
+    | TypCtxPi  of (name * cid_schema * depend) * typ
+    | TypPiBox  of (LF.ctyp_decl * depend) * typ
+    | TypClo    of typ *  LF.msub
     | TypBool
-
 
   type ctyp_decl =
     | CTypDecl    of name * typ

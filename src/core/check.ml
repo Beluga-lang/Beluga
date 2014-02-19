@@ -263,7 +263,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
               checkMetaObj loc cD mO (MetaSchema schema_cid , t);
               checkMetaSpine loc cD mS (cK, theta')
 
-        | I.MDecl (_u, tA, cPsi) ->
+        | I.MDecl (_u, tA, cPsi, _) ->
             let MetaObj (loc, psihat, tM) = mO in
               checkMetaObj loc cD mO (MetaTyp (tA, cPsi), t) ;
               checkMetaSpine loc cD mS (cK, I.MDot (I.MObj(psihat, tM), t))
@@ -276,13 +276,14 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           let _ = Schema.get_schema schema_cid in ()
         with _ -> raise (Error.Violation "Schema undefined")
         end
-    | I.MDecl (_, tA, cPsi) ->
+    | I.MDecl (_, tA, cPsi, _) ->
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
     | I.PDecl (_, tA, cPsi) ->
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
 
+    | _ -> ()
 
   let rec checkKind cD cK = match cK with
     | Ctype _ -> ()
@@ -358,8 +359,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         check (I.Dec(cD, I.CDecl(psi, schema, dep')))
           (C.cnormCtx (cG, I.MShift 1)) e (tau, C.mvar_dot1 t)
 
-    | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
+    | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi, mDep), _), tau), t)) ->
+        check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t), mDep)))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (MLam (_, u, e), (TypPiBox ((I.PDecl(_u, tA, cPsi), _), tau), t)) ->
@@ -393,6 +394,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           let cPsi' = C.cnormDCtx (cPsi, t) in
           let tA'   = C.cnormTyp (tA, t) in
 *)
+        let _ = dprint (fun () -> "[comp check ] " ^
+	  P.mctxToString cD ^ " ; " ^
+	  P.dctxToString cD cPsi ^ " |- " ^
+	  P.normalToString cD cPsi (tM, S.LF.id) ^
+          " <= " ^ P.typToString cD cPsi (tA, S.LF.id) ) in
             LF.check cD  cPsi (tM, S.LF.id) (tA, S.LF.id)
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
@@ -406,13 +412,20 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         end
 
     | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')),
-      branches), (tau, t)) ->
+             branches), (tau, t)) ->
+        let (tau_sc, projOpt) =  (match tR with
+                   | I.Root (_, I.PVar _ , _ ) ->
+                       (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), None)
+                   | I.Root (_, I.Proj (I.PVar _, k ), _ ) ->
+                       (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), Some k)
+                   | _ ->
+                       (TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), None)) in
         let tau_s = TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
-        let problem = Coverage.make loc prag cD branches tau_s in
+        let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
           checkBranches (IndexObj (phat, tR)) cD cG branches tau_s (tau, t);
-          Coverage.process problem
+          Coverage.process problem projOpt
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
         begin match C.cwhnfCTyp (syn cD cG i) with
@@ -425,11 +438,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
               let problem = Coverage.make loc prag cD branches tau_s in
               (* Coverage.stage problem; *)
                 checkBranches DataObj cD cG branches tau_s (tau,t);
-                Coverage.process problem
+                Coverage.process problem None
           | (tau',t') ->
               let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
               checkBranches DataObj cD cG branches (C.cnormCTyp (tau', t')) (tau,t);
-                Coverage.process problem
+                Coverage.process problem None
         end
 
     | (Syn (loc, i), (tau, t)) ->
@@ -450,6 +463,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | (Hole (_loc), (_tau, _t)) -> ()
 
   and check cD cG e (tau, t) =
+    let _ =  dprint (fun () -> "[check]  " ^
+                       P.expChkToString cD cG e ^
+                        " against \n    " ^
+                  P.mctxToString cD ^ " |- " ^
+                  P.compTypToString cD (Whnf.cnormCTyp (tau, t))) in
     checkW cD cG e (C.cwhnfCTyp (tau, t));
 
   and syn cD cG e = match e with
@@ -491,7 +509,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         end
     | MApp (loc, e, (phat, cObj)) ->
         begin match (cObj, C.cwhnfCTyp (syn cD cG e)) with
-          | (NormObj tM, (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t)) ->
+          | (NormObj tM, (TypPiBox ((I.MDecl(_, tA, cPsi, _), _ ), tau), t)) ->
               LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
               (tau, I.MDot(I.MObj (phat, tM), t))
 
@@ -595,7 +613,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
-    | I.MDecl (_, tA, cPsi) ->
+    | I.MDecl (_, tA, cPsi, _) ->
         let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in
           (match mO with
             | MetaObj (_, phat, tM) ->  I.MDot(I.MObj(phat, tM), theta)
@@ -658,6 +676,13 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             check cD1' (Context.append cG' cG1) e1 (tau', Whnf.m_id)
 
 
+  let rec wf_mctx cD = match cD with
+    | I.Empty -> ()
+    | I.Dec (cD, cdecl) ->
+        (wf_mctx cD ; checkCDecl cD cdecl)
+
+
+
 end
 
 module Sgn = struct
@@ -692,5 +717,8 @@ module Sgn = struct
 
     | Syntax.Int.Sgn.Pragma (_a) :: decls ->
         check_sgn_decls decls
+
+
+
 
 end

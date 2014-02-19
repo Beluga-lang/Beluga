@@ -28,6 +28,7 @@ type error =
   | UnknownIdentifier
   | UnknownSchemaCtx of name
 
+
 exception Error of Syntax.Loc.t * error
 
 let string_of_varvariant = function
@@ -202,7 +203,7 @@ let rec collectionToString cQ = match cQ with
         R.render_name psi ^ ":" ^
         R.render_cid_schema s_cid ^ "\n"
 
-  | I.Dec(cQ, MV (Pure, (I.MVar (I.Inst(_n, _r, cPsi, tP, _c), _s) as h))) ->
+  | I.Dec(cQ, MV (Pure, (I.MVar (I.Inst(_n, _r, cPsi, tP, _c, _), _s) as h))) ->
       let (ctx_var, tA) = raiseType cPsi tP in
       let cD = I.Empty in
         collectionToString cQ ^ " "
@@ -212,7 +213,7 @@ let rec collectionToString cQ = match cQ with
       ^ " . "
       ^ P.typToString cD I.Null (tA , LF.id)
       ^ "\n"
-  | I.Dec(cQ, MV (Impure , (I.MVar (I.Inst(_n, _r, cPsi, tP, _c), _s) as h))) ->
+  | I.Dec(cQ, MV (Impure , (I.MVar (I.Inst(_n, _r, cPsi, tP, _c, _), _s) as h))) ->
       let (ctx_var, tA) = raiseType cPsi tP in
       let cD = I.Empty in
         collectionToString cQ ^ " ["
@@ -223,7 +224,7 @@ let rec collectionToString cQ = match cQ with
       ^ P.typToString cD I.Null (tA , LF.id)
       ^ " ]\n"
 
-  | I.Dec(cQ, MMV (_ , (I.MMVar (I.MInst(_n, _r, cD, cPsi, tP, _c), _s) as h))) ->
+  | I.Dec(cQ, MMV (_ , (I.MMVar (I.MInst(_n, _r, cD, cPsi, tP, _c, mdep), _s) as h))) ->
       let (ctx_var, tA) = raiseType cPsi tP in
        collectionToString cQ ^ " "
      ^ P.normalToString cD I.Null  (I.Root (Syntax.Loc.ghost, h, I.Nil), LF.id)
@@ -356,7 +357,7 @@ let etaExpandHead loc h tA =
    where B iff mV and mV' represent same variable
 *)
 let eqMMVar mmV1 mmV2 = match (mmV1, mmV2) with
-  | (I.MMVar (I.MInst (_, r1, _, _, _, _), _s) , MMV (marker , I.MMVar (I.MInst (_, r2, _, _, _, _), _s'))) ->
+  | (I.MMVar (I.MInst (_, r1, _, _, _, _, _), _s) , MMV (marker , I.MMVar (I.MInst (_, r2, _, _, _, _, _), _s'))) ->
       if r1 == r2 then
         match marker with Pure -> Yes  | Impure -> Cycle
       else
@@ -379,7 +380,7 @@ let eqMPVar mmV1 mmV2 = match (mmV1, mmV2) with
    where B iff mV and mV' represent same variable
 *)
 let eqMVar mV1 mV2 = match (mV1, mV2) with
-  | (I.MVar (I.Inst (_, r1, _, _, _), _s) , MV (marker , I.MVar (I.Inst (_, r2, _, _, _), _s'))) ->
+  | (I.MVar (I.Inst (_, r1, _, _, _, _), _s) , MV (marker , I.MVar (I.Inst (_, r2, _, _, _, _), _s'))) ->
        if r1 == r2 then
          match marker with Pure -> Yes | Impure -> Cycle
        else
@@ -502,7 +503,7 @@ and cnstr_spine sS = match sS with
 
 
 and cnstr_head h = match h with
-  | I.MMVar(I.MInst (_, _r, _, _ , _ , cnstr), (_ms, s)) ->
+  | I.MMVar(I.MInst (_, _r, _, _ , _ , cnstr, _), (_ms, s)) ->
        (if constraints_solved (!cnstr) then
           cnstr_sub s
         else false)
@@ -511,7 +512,7 @@ and cnstr_head h = match h with
           cnstr_sub s
         else false)
 
-  | I.MVar(I.Inst (_, _r, _ , _ , cnstr), s) ->
+  | I.MVar(I.Inst (_, _r, _ , _ , cnstr, _), s) ->
        (if constraints_solved (!cnstr) then
           cnstr_sub s
         else false)
@@ -664,7 +665,7 @@ let rec ctxToDctx cQ = match cQ with
   | I.Dec (cQ', FV (Impure, _ , _ )) ->
       ctxToDctx cQ'
 
-  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_, _, cPsi, tA, _), _s))) ->
+  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_, _, cPsi, tA, _, _), _s))) ->
       begin match raiseType cPsi tA with
         | (None, tA') ->
             let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in
@@ -680,7 +681,7 @@ let rec ctxToCtx cQ = match cQ with
   | I.Empty ->
       I.Empty
 
-  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_, _, cPsi, tA, _), _s))) ->
+  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (_, _, cPsi, tA, _, _), _s))) ->
       begin match raiseType cPsi tA with
         | (None, tA') ->
             let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in
@@ -697,21 +698,17 @@ let rec ctxToCtx cQ = match cQ with
   | I.Dec (cQ', MV (Impure, _u )) ->
     ctxToCtx cQ'
 
-
-
-
-
 let rec ctxToMCtx cQ  = match cQ with
   | I.Empty ->
       I.Empty
 
   (* The case where cD is not empty and a meta^2-variable is uninstantiated
      should never happen. -bp *)
-  | I.Dec (cQ', MMV (Pure, I.MMVar (I.MInst (n, _, I.Empty, cPsi, tA, _), _s))) ->
+  | I.Dec (cQ', MMV (Pure, I.MMVar (I.MInst (n, _, I.Empty, cPsi, tA, _, mdep), _s))) ->
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
-      I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi))
+      I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi, mdep))
 
-  | I.Dec (_cQ', MMV (Pure, I.MMVar (I.MInst (_, _, _cD, _cPsi, _tA, _), _s))) ->
+  | I.Dec (_cQ', MMV (Pure, I.MMVar (I.MInst (_, _, _cD, _cPsi, _tA, _, _), _s))) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
 
   | I.Dec (cQ', MPV (Pure, I.MPVar (I.MPInst (n, _, I.Empty, cPsi, tA, _), _s))) ->
@@ -721,9 +718,9 @@ let rec ctxToMCtx cQ  = match cQ with
   | I.Dec (_cQ', MPV (Pure, I.MPVar (I.MPInst (_, _, _cD, _cPsi, _tA, _), _s))) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMPV))
 
-  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (n, _, cPsi, tA, _), _s))) ->
+  | I.Dec (cQ', MV (Pure, I.MVar (I.Inst (n, _, cPsi, tA, _, mDep), _s))) ->
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
-      I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi))
+      I.Dec (ctxToMCtx cQ', I.MDecl (n, tA, cPsi, mDep))
 
   | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _theta)))) ->
       (* let psi = Id.mk_name (NoName) in *)
@@ -739,7 +736,7 @@ let rec ctxToMCtx cQ  = match cQ with
       I.Dec (ctxToMCtx cQ', I.CDecl (psi, s_cid, I.Maybe))
 
   | I.Dec (cQ', FMV (Pure, u, Some (tA, cPsi))) ->
-      I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi))
+      I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi, I.Explicit))
 
   | I.Dec (cQ', FPV (Pure, p, Some (tA, cPsi))) ->
       I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi))
@@ -819,7 +816,7 @@ and collectSpine p cQ phat sS = match sS with
       collectSpine p cQ phat (tS, LF.comp s' s)
 
   | (I.App (tM, tS), s) ->
-    let (cQ', tM') = collectTerm p cQ phat (tM, s) in
+    let (cQ', tM') = collectTerm p cQ phat (tM, LF.id)  in
     let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in
       (cQ'', I.App (tM', tS'))
 
@@ -908,13 +905,20 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
               let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s) in (cQ', I.FMVar (u, sigma))
           | No ->
               let (cQ0, sigma) = collectSub k cQ phat (LF.comp s' s) in
-              let (cD_d, I.MDecl (_, tA, cPhi))  = FCVar.get u in
+              let (cD_d, I.MDecl (_, tA, cPhi, _))  = FCVar.get u in
 	      let d = k - Context.length cD_d in
-	      let (tA,cPhi) = (if d <= 0    then (tA,cPhi) else
-                      (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in
+	      let (tA,cPhi) = (if d <= 0  then (tA,cPhi)
+                               else
+                                 (Whnf.cnormTyp (tA, Int.LF.MShift d),
+                                  Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in
               let phihat = Context.dctxToHat cPhi in
               let cQ' = I.Dec(cQ0, FMV(Impure, u, None)) in
               let (cQ1, cPhi')  = collectDctx loc k cQ' phihat cPhi in
+              let _ = dprint (fun () -> "[collectTerm] FMVar "
+                                ^ R.render_name u ^ " has typ " ^
+                                P.typToString I.Empty cPhi (tA, LF.id))
+              in
+
               let (cQ'', tA')   = collectTyp k cQ1  phihat (tA, LF.id) in
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,
@@ -925,7 +929,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
           | Cycle -> raise (Error (loc, CyclicDependency VariantFMV))
       end
 
-  | (I.MVar (I.Inst (n, q, cPsi, tA,  ({contents = cnstr} as c)) as r, s') as u, _s) ->
+  | (I.MVar (I.Inst (n, q, cPsi, tA,  ({contents = cnstr} as c), mdep) as r, s') as u, _s) ->
       if constraints_solved cnstr then
           begin match checkOccurrence (eqMVar u) cQ with
             | Yes ->
@@ -938,14 +942,14 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                 let phihat = Context.dctxToHat cPsi in
                 let (cQ1, cPsi')  = collectDctx loc k cQ' phihat cPsi in
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
-                let v = I.MVar (I.Inst (n, q, cPsi', tA',  c), sigma) in
+                let v = I.MVar (I.Inst (n, q, cPsi', tA',  c, mdep), sigma) in
                   (I.Dec (cQ'', MV (Pure, v)) , v)
             | Cycle -> raise (Error (loc, CyclicDependency VariantMV))
           end
       else
         raise (Error (loc, LeftoverConstraints))
 
-  | (I.MMVar (I.MInst (n, ({contents = None} as q), I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
+  | (I.MMVar (I.MInst (n, ({contents = None} as q), I.Empty, cPsi, tA,  ({contents = cnstr} as c), mdep) as r, (ms', s')) as u, _s) ->
       if constraints_solved cnstr then
           begin match checkOccurrence (eqMMVar u) cQ with
             | Yes ->
@@ -958,16 +962,22 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
 
                 let cQ' = I.Dec(cQ2, MMV(Impure, u)) in
                 let phihat = Context.dctxToHat cPsi in
+                let (_ , offset) = phihat in
+                (* let cPsi = Whnf.normDCtx cPsi in *)
                 let (cQ1, cPsi')  = collectDctx loc k cQ' phihat cPsi in
+                let _ = dprint (fun () -> "[collect] (collect in cPsi and tA) for MMV : " ^ P.headToString I.Empty (Context.hatToDCtx phihat) head) in
+                let _ = dprint (fun () -> "[collect] offset = " ^ string_of_int offset) in
+                let _ = dprint (fun () -> "[collect] MMV before : cPsi = " ^ P.dctxToString I.Empty cPsi) in
+                let _ = dprint (fun () -> "[collect] MMV after: cPsi' = " ^ P.dctxToString I.Empty cPsi') in
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
-                let v = I.MMVar (I.MInst (n, q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in
+                let v = I.MMVar (I.MInst (n, q, I.Empty, cPsi', tA',  c, mdep), (ms1, sigma)) in
                   (I.Dec (cQ'', MMV (Pure, v)) , v)
             | Cycle -> raise (Error (loc, CyclicDependency VariantMMV))
           end
       else
         raise (Error (loc, LeftoverConstraints))
 
-  | (I.MMVar (I.MInst (_n, _r, _cD, _cPsi, _tA,  _), _),  _s) ->
+  | (I.MMVar (I.MInst (_n, _r, _cD, _cPsi, _tA,  _, _), _),  _s) ->
       raise (Error (loc, LeftoverVars VariantMMV))
 
   | (I.MPVar (I.MPInst (n, ({contents = None} as q), I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
@@ -1130,7 +1140,10 @@ and collectHat p cQ phat = match phat with
                  phat)
         end
 
-and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
+and collectDctx loc p cQ (cvar, offset) cPsi =
+  collectDctx' loc p cQ (cvar, offset) (Whnf.normDCtx cPsi)
+
+and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
   | I.Null ->  (cQ, I.Null)
 
   | I.CtxVar (I.CtxName psi) ->
@@ -1148,7 +1161,7 @@ and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
 
   | I.CtxVar (I.CInst (_, {contents = Some cPsi} , _, _cD, theta)) ->
-      collectDctx loc p cQ (cvar, offset) (Whnf.cnormDCtx (cPsi, theta))
+      collectDctx' loc p cQ (cvar, offset) (Whnf.cnormDCtx (cPsi, theta))
 
   | I.CtxVar (I.CInst (_, {contents = None} , _, _cD, _theta) as psi) ->
         (* this case should not happen *)
@@ -1157,7 +1170,8 @@ and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
           | No ->  (I.Dec (cQ, CV (cPsi)) , cPsi)
         end
   | I.DDec(cPsi, I.TypDecl(x, tA)) ->
-      let (cQ', cPsi') =  collectDctx loc p cQ (cvar, offset - 1) cPsi in
+      let (cQ', cPsi') =  collectDctx' loc p cQ (cvar, offset - 1) cPsi in
+
       let (cQ'', tA')  =  collectTyp p cQ' (cvar, offset - 1) (tA, LF.id) in
         (cQ'', I.DDec (cPsi', I.TypDecl(x, tA')))
 
@@ -1165,12 +1179,12 @@ and collectDctx loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
 let rec collectMctx  cQ cD = match cD with
   | I.Empty -> (cQ, I.Empty)
 
-  | I.Dec(cD, I.MDecl(u, tA, cPsi)) ->
+  | I.Dec(cD, I.MDecl(u, tA, cPsi, dep)) ->
       let (cQ', cD')  = collectMctx cQ cD in
       let phat = Context.dctxToHat cPsi in
       let (cQ'', cPsi') = collectDctx (Syntax.Loc.ghost) 0 cQ' phat cPsi in
       let (cQ2, tA')    =  collectTyp 0 cQ'' phat  (tA, LF.id) in
-        (cQ2, I.Dec(cD', I.MDecl(u, tA', cPsi')))
+        (cQ2, I.Dec(cD', I.MDecl(u, tA', cPsi', dep)))
 
   | I.Dec(cD, I.PDecl(p, tA, cPsi)) ->
       let (cQ', cD')  = collectMctx cQ cD in
@@ -1225,7 +1239,7 @@ and abstractTermW cQ offset sM = match sM with
   | (I.Lam (loc, x, tM), s) ->
       I.Lam (loc, x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
-  | (I.Root (loc, (I.MVar (I.Inst (_n, _r, cPsi, _tP, _cnstr), s) as tH), _tS (* Nil *)), _s (* LF.id *)) ->
+  | (I.Root (loc, (I.MVar (I.Inst (_n, _r, cPsi, _tP, _cnstr, _), s) as tH), _tS (* Nil *)), _s (* LF.id *)) ->
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MV (Pure, tH)) + offset in
         I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)
@@ -1233,7 +1247,7 @@ and abstractTermW cQ offset sM = match sM with
   | (I.Root (loc, tH, tS), s (* LF.id *)) ->
       I.Root (loc, abstractHead cQ offset tH, abstractSpine cQ offset (tS, s))
 
-
+(*SCOTT - LATER*)
 and abstractHead cQ offset tH = match tH with
   | I.BVar x ->
       I.BVar x
@@ -1289,7 +1303,7 @@ and abstractCtx cQ =  match cQ with
   | I.Dec (cQ, FV (Impure, _ , _ )) ->
       abstractCtx cQ
 
-  | I.Dec (cQ, MV (Pure, I.MVar (I.Inst (n, r, cPsi, tA, cnstr), s))) ->
+  | I.Dec (cQ, MV (Pure, I.MVar (I.Inst (n, r, cPsi, tA, cnstr, mdep), s))) ->
       let cQ'   = abstractCtx cQ  in
       let l     = length cPsi in
       let cPsi' = abstractDctx cQ cPsi l in
@@ -1301,7 +1315,7 @@ and abstractCtx cQ =  match cQ with
         (P.dctxToString I.Empty I.Empty cPsi)
         (P.subToString I.Empty I.Empty cPsi s) in *)
       let s'    = abstractSub cQ l s in
-      let u'    = I.MVar (I.Inst (n, r, cPsi', tA', cnstr), s') in
+      let u'    = I.MVar (I.Inst (n, r, cPsi', tA', cnstr, mdep), s') in
         I.Dec (cQ', MV (Pure, u'))
 
   | I.Dec (cQ, PV (Pure, I.PVar (I.PInst (n, r, cPsi, tA, cnstr), s))) ->
@@ -1417,11 +1431,11 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
       let x = index_of cQ (FPV (Pure, p, None)) + d in
         I.PVar (I.Offset x, abstractMVarSub cQ offset s)
 
-  | I.MMVar (I.MInst(_n, _r, I.Empty, _cPsi, _tP , _cnstr), (_ms, s)) ->
+  | I.MMVar (I.MInst(_n, _r, I.Empty, _cPsi, _tP , _cnstr, _), (_ms, s)) ->
       let x = index_of cQ (MMV (Pure, tH)) + d in
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
-  | I.MMVar (I.MInst(_n, _r, _cD, _cPsi, _tP , _cnstr), (_ms, _s)) ->
+  | I.MMVar (I.MInst(_n, _r, _cD, _cPsi, _tP , _cnstr, _), (_ms, _s)) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
 
   | I.MPVar (I.MPInst(_n, _r, I.Empty, _cPsi, _tP , _cnstr), (_ms, s)) ->
@@ -1431,7 +1445,7 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
   | I.MPVar (I.MPInst(_n, _r, _cD, _cPsi, _tP , _cnstr), (_ms, _s)) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMPV))
 
-  | I.MVar (I.Inst(_n, _r, cPsi, _tP , _cnstr), s) ->
+  | I.MVar (I.Inst(_n, _r, cPsi, _tP , _cnstr, _), s) ->
       let x = index_of cQ (MV (Pure, tH)) + d in
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
@@ -1525,11 +1539,7 @@ and abstractMVarSub' cQ offset s = match s with
 *)
 
 
-(*and abstractMVarCSub cQ ((l, offset) as d) cs = match cs with
-  | I.CShift n -> I.CShift n
-  | I.CDot (cPsi, cs') ->
-      I.CDot (abstractMVarDctx cQ d cPsi , abstractMVarCSub cQ d cs')
-*)
+
 and abstractMVarHat cQ (l,offset) phat = match phat with
   | (None, _ ) -> phat
   | (Some (I.CtxOffset x), k ) ->
@@ -1543,7 +1553,7 @@ and abstractMVarHat cQ (l,offset) phat = match phat with
   | (Some (I.CInst (_, {contents = None}, _, _, _theta ) as psi), k) ->
       let x = index_of cQ (CV (I.CtxVar psi)) + offset in
         (Some (I.CtxOffset x  ), k)
-
+  |  _ -> abstractMVarHat cQ (l,offset) (Whnf.cnorm_psihat phat Whnf.m_id)
 
 and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.Null ->
@@ -1571,11 +1581,11 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
 and abstractMVarMctx cQ cD (l,offset) = match cD with
   | I.Empty -> I.Empty
 
-  | I.Dec(cD, I.MDecl(u, tA, cPsi)) ->
+  | I.Dec(cD, I.MDecl(u, tA, cPsi, dec)) ->
       let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
       let cPsi' = abstractMVarDctx cQ (l,offset) cPsi in
       let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in
-        I.Dec(cD', I.MDecl (u, tA', cPsi'))
+        I.Dec(cD', I.MDecl (u, tA', cPsi', dec))
 
   | I.Dec(cD, I.PDecl(u, tA, cPsi)) ->
       let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
@@ -1586,16 +1596,16 @@ and abstractMVarMctx cQ cD (l,offset) = match cD with
 and abstractMVarCtx cQ l =  match cQ with
   | I.Empty -> I.Empty
 
-  | I.Dec (cQ, MMV (Pure, I.MMVar (I.MInst (n, r, I.Empty, cPsi, tA, cnstr), (ms, s)))) ->
+  | I.Dec (cQ, MMV (Pure, I.MMVar (I.MInst (n, r, I.Empty, cPsi, tA, cnstr, mdep), (ms, s)))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
       let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
       let tA'   = abstractMVarTyp cQ (l,0) (tA, LF.id) in
       let s'    = abstractMVarSub cQ (l,0) s in
         (* Do we need to consider the substitution s here? -bp *)
-      let u'    = I.MMVar (I.MInst (n, r, I.Empty, cPsi', tA', cnstr), (ms, s')) in
+      let u'    = I.MMVar (I.MInst (n, r, I.Empty, cPsi', tA', cnstr, mdep), (ms, s')) in
         I.Dec (cQ', MMV (Pure, u'))
 
-  | I.Dec (_cQ, MMV (Pure, I.MMVar (I.MInst (_n, _r, _cD, _cPsi, _tA, _cnstr), _s))) ->
+  | I.Dec (_cQ, MMV (Pure, I.MMVar (I.MInst (_n, _r, _cD, _cPsi, _tA, _cnstr, mdep), _s))) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
 
   | I.Dec (cQ, MPV (Pure, I.MPVar (I.MPInst (n, r, I.Empty, cPsi, tA, cnstr), (ms, s)))) ->
@@ -1610,13 +1620,13 @@ and abstractMVarCtx cQ l =  match cQ with
   | I.Dec (_cQ, MPV (Pure, I.MPVar (I.MPInst (_n, _r, _cD, _cPsi, _tA, _cnstr), _s))) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMPV))
 
-  | I.Dec (cQ, MV (Pure, I.MVar (I.Inst (n, r, cPsi, tA, cnstr), s))) ->
+  | I.Dec (cQ, MV (Pure, I.MVar (I.Inst (n, r, cPsi, tA, cnstr, mdep), s))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
       let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
       let tA'   = abstractMVarTyp cQ (l,0) (tA, LF.id) in
       let s'    = abstractMVarSub cQ (l,0) s in
         (* Do we need to consider the substitution s here? -bp *)
-      let u'    = I.MVar (I.Inst (n, r, cPsi', tA', cnstr), s') in
+      let u'    = I.MVar (I.Inst (n, r, cPsi', tA', cnstr, mdep), s') in
         I.Dec (cQ', MV (Pure, u'))
 
 
@@ -1749,11 +1759,11 @@ and abstrTyp tA =
 (* Abstract over computations *)
 (* *********************************************************************** *)
 let collectCDecl p cQ cdecl = match cdecl with
-  | I.MDecl (u, tA, cPsi) ->
+  | I.MDecl (u, tA, cPsi, dec) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
       let (cQ2, tA')    = collectTyp p cQ1 phat (tA, LF.id) in
-        (cQ2, I.MDecl (u, tA', cPsi') )
+        (cQ2, I.MDecl (u, tA', cPsi', dec) )
   | I.PDecl (u, tA, cPsi) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
@@ -1825,12 +1835,12 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ1, tau') = collectCompTyp p cQ tau  in
         (cQ1, Comp.TypCtxPi (ctx_dec, tau'))
 
-  | Comp.TypPiBox ((I.MDecl(u, tA, cPsi), dep ), tau) ->
+  | Comp.TypPiBox ((I.MDecl(u, tA, cPsi, mDep), dep ), tau) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
       let (cQ2, tA')    = collectTyp p cQ1 phat (tA, LF.id) in
       let (cQ3, tau')  = collectCompTyp p cQ2 tau in
-        (cQ3 , Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep ), tau'))
+        (cQ3 , Comp.TypPiBox ((I.MDecl(u, tA', cPsi', mDep), dep ), tau'))
 
 
   | Comp.TypPiBox ((I.PDecl(u, tA, cPsi), dep ), tau) ->
@@ -2045,10 +2055,10 @@ and collectBranches cQ branches = match branches with
 
 
 let abstractMVarCdecl cQ offset cdecl = match cdecl with
-  | I.MDecl (u, tA, cPsi) ->
+  | I.MDecl (u, tA, cPsi, dep) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
-        I.MDecl(u, tA', cPsi')
+        I.MDecl(u, tA', cPsi', dep)
   | I.PDecl (p, tA, cPsi) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
@@ -2070,6 +2080,10 @@ let rec abstractMVarMetaObj cQ offset cM = match cM with
       let phat' = abstractMVarHat cQ offset phat in
       let tM' = abstractMVarTerm  cQ  offset (tM, LF.id) in
         Comp.MetaObj (loc, phat', tM')
+  | Comp.MetaObjAnn (loc, cPsi, tM) ->
+      let cPsi' = abstractMVarDctx cQ offset cPsi in
+      let tM' = abstractMVarTerm  cQ  offset (tM, LF.id) in
+        Comp.MetaObjAnn (loc, cPsi', tM')
   | Comp.MetaParam (loc, phat, h) ->
       let phat' = abstractMVarHat cQ offset phat in
       let h' = abstractMVarHead cQ offset h in
@@ -2107,11 +2121,11 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypCtxPi (ctx_decl, tau) ->
       Comp.TypCtxPi (ctx_decl, abstractMVarCompTyp cQ (l,d+1) tau)
 
-  | Comp.TypPiBox ((I.MDecl(u, tA, cPsi), dep), tau) ->
+  | Comp.TypPiBox ((I.MDecl(u, tA, cPsi, mDep), dep), tau) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
       let tau'  = abstractMVarCompTyp cQ (l,d+1) tau in
-        Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep), tau')
+        Comp.TypPiBox ((I.MDecl(u, tA', cPsi', mDep), dep), tau')
 
   | Comp.TypPiBox ((I.PDecl(u, tA, cPsi), dep), tau) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
@@ -2311,9 +2325,7 @@ let abstrCompTyp tau =
   let tau'' = raiseCompTyp cD' tau' in
     (tau'', Context.length cD' )
 
-
-
-let abstrPatObj cD cG pat tau =
+let abstrPatObj loc cD cG pat tau =
   let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
   let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
   let (cQ1, cD1') = collectMctx I.Empty cD in
@@ -2325,10 +2337,11 @@ let abstrPatObj cD cG pat tau =
   let cG'     = abstractMVarGctx cQ' (0,offset) cG in
   let pat'    = abstractMVarPatObj cQ' cG' (0,offset) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in
+  let cD'     = ctxToMCtx cQ' in 
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
-  let cD'     = ctxToMCtx cQ' in
   let cD      = Context.append cD' cD2 in
-    (cD, cG', pat', tau')
+      (cD, cG', pat', tau')
+
 (*
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
    2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA

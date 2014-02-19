@@ -157,7 +157,7 @@ let rec getNameDCtx cPsi k = match (cPsi, k) with
   | (DDec (cPsi, _ ) , k) -> getNameDCtx cPsi (k-1)
 
 let rec getNameMCtx cD k = match (cD, k) with
-  | (Dec (_cD, MDecl(u, _, _ )), 1) -> u
+  | (Dec (_cD, MDecl(u, _, _ , _)), 1) -> u
   | (Dec (_cD, PDecl(u, _, _ )), 1) -> u
   | (Dec (_cD, CDecl(u, _, _)), 1) -> u
   | (Dec (_cD, MDeclOpt u), 1) -> u

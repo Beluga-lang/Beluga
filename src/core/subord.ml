@@ -247,7 +247,8 @@ let thin0 cD a cPsi =
           ( (*print_string "Keeping context variable\n"; *)
             (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
         else
-          ( (* print_string ("Denying that the context variable is relevant to anything in " ^ basisToString basis ^ "\n"); *)
+          ( (* print_string ("Denying that the context variable is relevant to anything in " ^
+               basisToString basis ^ "\n"); *)
             (Shift(CtxShift psi, 0),  Null) )  (* psi |- shift(noCtx, 0) : . *)
     | DDec(cPsi, TypDecl(name, tA)) ->
         begin match relevant (Whnf.normTyp (tA, Substitution.LF.id)) basis with
@@ -278,3 +279,17 @@ let thin' cD a cPsi =
       end
   | _ -> thin0 cD a cPsi
   end
+
+
+(* BP: Should probably be added
+
+(* thinBlock  (ctx_schema1) (ctx_schema2) =  subst_list
+
+s.t.for each block b_i in ctx_schema1.
+     there exists a block b'_k in chtx_schema2.
+    s.t.   b_i |- s_i : b'_k
+    where s_i is a strengthening substitution.
+
+
+*)
+*)

@@ -223,7 +223,7 @@ and recSgnDecl d =
           let _                  = Unify.resetGlobalCnstrs () in
           let tau'               = Whnf.cnormCTyp (tau, theta) in
           let i'                 = Whnf.cnormExp' (i', Whnf.m_id) in
-          let _                  = dprint (fun () ->  "\n [AFTER Reconstruction] let " ^ x.string_of_name ^
+          let _                  = dprint (fun () ->  "\n [AFTER Reconstruction Val] let " ^ x.string_of_name ^
 					     "\n   : " ^ P.compTypToString cD tau' ^
 					     "\n  =  " ^
                                 P.expSynToString cD cG i' ^ "\n") in
@@ -256,11 +256,14 @@ and recSgnDecl d =
 
           let apx_i   = Index.exp' (Var.create ()) i in
 
-          let i'      = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp cG (Apx.Comp.Syn(loc, apx_i)) (tau', C.m_id)) in
+          let i'      = Monitor.timer ("Function Elaboration",
+                                       fun () ->
+                                         Reconstruct.exp cG (Apx.Comp.Syn(loc, apx_i)) (tau', C.m_id)) in
+          let i'      = Whnf.cnormExp (i', Whnf.m_id) in
           let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           let _       = Unify.resetGlobalCnstrs () in
-
-          let _       = dprint (fun () ->  "\n [AFTER Reconstruction] let " ^ x.string_of_name ^
+          let tau'               = Whnf.cnormCTyp (tau', C.m_id) in
+          let _       = dprint (fun () ->  "\n [AFTER Reconstruction Val - 2] let " ^ x.string_of_name ^
                                "\n   : " ^ P.compTypToString cD tau' ^
                                 "\n  =  " ^
                                 P.expChkToString cD cG i' ^ "\n") in

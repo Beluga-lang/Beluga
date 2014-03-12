@@ -78,7 +78,7 @@ module Int = struct
     val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
     val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
     val fmt_ppr_lf_ctyp_decl  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
-    val fmt_ppr_lf_ctyp_decl_markings  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
+    val fmt_ppr_lf_ctyp_decl_holes  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
 
     val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
@@ -855,18 +855,19 @@ module Int = struct
      (* Exact Same as fmt_ppr_lf_ctyp_decl but includes ^i and ^e for MDecl
           January 30, 2014 13:00
           - SC *)
-    let fmt_ppr_lf_ctyp_decl_markings cD _lvl ppf = function
-      | LF.MDecl (u, tA, cPsi, LF.Implicit) ->
+    let fmt_ppr_lf_ctyp_decl_holes cD _lvl ppf = function
+      | LF.MDecl (u, tA, cPsi, mdecl) ->
+        (match mdecl with
+        | LF.Implicit -> 
           fprintf ppf "{%s :: [%a. %a]}^i"
-            (R.render_name u)
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_typ cD cPsi 2) tA
-      | LF.MDecl (u, tA, cPsi, LF.Explicit) ->
+          (R.render_name u)
+          (fmt_ppr_lf_dctx cD 0) cPsi
+          (fmt_ppr_lf_typ cD cPsi 2) tA
+        | LF.Explicit -> 
           fprintf ppf "{%s :: [%a. %a]}^e"
-            (R.render_name u)
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_typ cD cPsi 2) tA
-
+          (R.render_name u)
+          (fmt_ppr_lf_dctx cD 0) cPsi
+          (fmt_ppr_lf_typ cD cPsi 2) tA)
       | LF.PDecl (p, tA, cPsi) ->
           fprintf ppf "{#%s :: [%a.%a]}"
             (R.render_name p)

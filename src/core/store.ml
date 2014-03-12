@@ -1,6 +1,30 @@
 open Syntax
 
 
+module NamedHoles = struct
+
+    let printingHoles = ref false
+
+    let usingRealNames = ref false
+
+    let newNames = ref []
+
+    let getName n = 
+    if !usingRealNames then n.Id.string_of_name else
+      let s = n.Id.string_of_name in
+      try
+          List.assoc s !newNames
+      with
+      | _ -> 
+          let newName = Gensym.MVarData.gensym () in
+          (newNames := (s,newName) :: (!newNames)) ;
+          newName
+
+    let reset () = Gensym.MVarData.reset () ; newNames := []
+
+
+end
+
 type error =
   | FrozenType of Id.cid_typ
 
@@ -590,16 +614,23 @@ module Cid = struct
   module DefaultRenderer : RENDERER = struct
 
     open Id
+    
+    let render_name       n    = 
+      if !NamedHoles.printingHoles then
+        NamedHoles.getName n
+      else
+        n.string_of_name
 
-    let render_name       n    = n.string_of_name
-    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
-    let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
-    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
-    let render_cid_comp_dest c = render_name (CompDest.get c).CompDest.name
-    let render_cid_typ    a    = render_name (Typ.get a).Typ.name
-    let render_cid_term   c    = render_name (Term.get c).Term.name
-    let render_cid_schema w    = render_name (Schema.get w).Schema.name
-    let render_cid_prog   f    = render_name (Comp.get f).Comp.name
+    let render_name_mod n = n.string_of_name
+
+    let render_cid_comp_typ c  = render_name_mod (CompTyp.get c).CompTyp.name
+    let render_cid_comp_cotyp c = render_name_mod (CompCotyp.get c).CompCotyp.name
+    let render_cid_comp_const c = render_name_mod (CompConst.get c).CompConst.name
+    let render_cid_comp_dest c = render_name_mod (CompDest.get c).CompDest.name
+    let render_cid_typ    a    = render_name_mod (Typ.get a).Typ.name
+    let render_cid_term   c    = render_name_mod (Term.get c).Term.name
+    let render_cid_schema w    = render_name_mod (Schema.get w).Schema.name
+    let render_cid_prog   f    = render_name_mod (Comp.get f).Comp.name
     let render_ctx_var _cO g   =  string_of_int g
     let render_cvar    _cD u   = "mvar " ^ string_of_int u
     let render_bvar  _cPsi i   = string_of_int i
@@ -614,15 +645,21 @@ module Cid = struct
 
     open Id
 
-    let render_name        n   = n.string_of_name
-    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
-    let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
-    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
-    let render_cid_comp_dest c = render_name (CompDest.get c).CompDest.name
-    let render_cid_typ     a   = render_name (Typ.get a).Typ.name
-    let render_cid_term    c   = render_name (Term.get c).Term.name
-    let render_cid_schema  w   = render_name (Schema.get w).Schema.name
-    let render_cid_prog    f   = render_name (Comp.get f).Comp.name
+    let render_name       n    = 
+      if !NamedHoles.printingHoles then
+        NamedHoles.getName n
+      else
+        n.string_of_name
+
+    let render_name_mod n = n.string_of_name
+    let render_cid_comp_typ c  = render_name_mod (CompTyp.get c).CompTyp.name
+    let render_cid_comp_cotyp c = render_name_mod (CompCotyp.get c).CompCotyp.name
+    let render_cid_comp_const c = render_name_mod (CompConst.get c).CompConst.name
+    let render_cid_comp_dest c = render_name_mod (CompDest.get c).CompDest.name
+    let render_cid_typ     a   = render_name_mod (Typ.get a).Typ.name
+    let render_cid_term    c   = render_name_mod (Term.get c).Term.name
+    let render_cid_schema  w   = render_name_mod (Schema.get w).Schema.name
+    let render_cid_prog    f   = render_name_mod (Comp.get f).Comp.name
     let render_ctx_var cO g    =
       begin try
         render_name (Context.getNameMCtx cO g)

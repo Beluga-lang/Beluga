@@ -29,7 +29,7 @@ let ( ++ ) f g = function x -> f (g x)
 let nameString n = n.Id.string_of_name
 
 let ctypDeclToString cD ctypDecl =
-  P.fmt_ppr_lf_ctyp_decl_markings cD Pretty.std_lvl Format.str_formatter ctypDecl ;
+  P.fmt_ppr_lf_ctyp_decl_holes cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
   Format.flush_str_formatter ()
 
 (*mctxToString cD*)
@@ -56,6 +56,7 @@ let gctxToString cD =
   in toString ++ Whnf.normCtx
 
 let printOne (loc, cD, cG, (tau, theta)) =
+  Store.NamedHoles.reset () ;
   Printf.printf "\n%s\n- Meta-Context: %s\n- Context: %s\n- Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
@@ -63,4 +64,6 @@ let printOne (loc, cD, cG, (tau, theta)) =
     (P.compTypToString cD (Whnf.cnormCTyp (tau, theta)))
 
 let printAll () =
-  DynArray.iter printOne holes
+  Store.NamedHoles.printingHoles := true;
+  DynArray.iter printOne holes;
+  Store.NamedHoles.printingHoles := false;

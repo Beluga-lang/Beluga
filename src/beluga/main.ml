@@ -36,6 +36,8 @@ let usage () =
         ^ "    +logic        turn on logic programming engine\n"
         ^ "    +test         Make output suitable for test harness. Implies -print\n"
         ^ "    +strengthen   Perform metavariable strengthening automatically.\n"
+        ^ "    +realNames    Print holes using real names\n"
+        ^ "    -realNames    Print holes using freshly generated names (default)\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -79,6 +81,8 @@ let process_option arg rest = match arg with
   | "+logic" -> Logic.Options.enableLogic := true ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
   | "+strengthen" -> Lfrecon.strengthen := true; rest
+  | "+realNames" -> Store.NamedHoles.usingRealNames := true; rest
+  | "-realNames" -> Store.NamedHoles.usingRealNames := false; rest
   | _ -> usage ()
 
 let rec process_options = function

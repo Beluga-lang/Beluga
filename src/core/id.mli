@@ -3,7 +3,8 @@
     printing.  Names should never be constructed directly.
     See `mk_name'. *)
 type name     = private {
-  string_of_name : string
+  string_of_name : string ;
+  was_generated : bool
 }
 
 (** A constant identifier for types *)

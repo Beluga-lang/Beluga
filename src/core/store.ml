@@ -11,15 +11,17 @@ module NamedHoles = struct
 
     let getName n = 
     if !usingRealNames then n.Id.string_of_name else
-      let s = n.Id.string_of_name in
-      try
-          List.assoc s !newNames
-      with
-      | _ -> 
-          let newName = Gensym.MVarData.gensym () in
-          (newNames := (s,newName) :: (!newNames)) ;
-          newName
-
+      if n.Id.was_generated then
+        let s = n.Id.string_of_name in
+        try
+            List.assoc s !newNames
+        with
+        | _ -> 
+            let newName = Gensym.MVarData.gensym () in
+            (newNames := (s,newName) :: (!newNames)) ;
+            newName
+      else n.Id.string_of_name
+      
     let reset () = Gensym.MVarData.reset () ; newNames := []
 
 

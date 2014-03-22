@@ -37,13 +37,11 @@ let rec lookupFun cG f = match cG with
 let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypBase (_, a, _ ) -> a
   | Int.Comp.TypArr (_ , tau) -> get_target_cid_comptyp tau
-  | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
 
 let rec get_target_cid_compcotyp tau = match tau with
   | Int.Comp.TypCobase (_, a, _ ) -> a
   | Int.Comp.TypArr (tau , _) -> get_target_cid_compcotyp tau
-  | Int.Comp.TypCtxPi (_, tau) -> get_target_cid_compcotyp tau
   | Int.Comp.TypPiBox (_, tau) -> get_target_cid_compcotyp tau
 
 let freeze_from_name tau = match tau with

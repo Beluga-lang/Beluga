@@ -305,8 +305,6 @@ let rec ctxnorm_ctyp (cT, cs) = match cT with
   | Comp.TypPiBox ((cdecl, dep), cT) ->
       Comp.TypPiBox ((ctxnorm_cdec (cdecl, cs), dep),
                      ctxnorm_ctyp (cT, cs))
-  | Comp.TypCtxPi (ctx_dec, cT) ->
-     Comp.TypCtxPi (ctx_dec, ctxnorm_ctyp (cT, cdot1 cs))
   | Comp.TypClo (cT, t) ->
       Comp.TypClo (ctxnorm_ctyp (cT, cs), ctxnorm_msub (t, cs))
 
@@ -496,9 +494,6 @@ and csub_ctyp cD cPsi k tau = match tau with
   | Syntax.Int.Comp.TypCross (tau1, tau2) ->
       Syntax.Int.Comp.TypCross (csub_ctyp cD cPsi k tau1, csub_ctyp cD cPsi k tau2)
 
-  | Syntax.Int.Comp.TypCtxPi (psi_decl, tau) ->
-      Syntax.Int.Comp.TypCtxPi (psi_decl, csub_ctyp cD (ctxnorm_dctx (cPsi, CShift 1)) (k+1) tau)
-
   | Syntax.Int.Comp.TypPiBox ((MDecl (u, tA, cPhi), dep), tau) ->
       let mdecl = MDecl (u, csub_typ cPsi k tA, csub_dctx cD cPsi k cPhi) in
       Syntax.Int.Comp.TypPiBox ((mdecl, dep),
@@ -607,8 +602,7 @@ let rec csub_exp_chk cPsi k e' =
       Comp.Rec(loc, n, csub_exp_chk cPsi k e)
   | Comp.Fun (loc, n, e) ->
       Comp.Fun(loc, n, csub_exp_chk cPsi k e)
-  | Comp.CtxFun (loc, n, e) ->
-      Comp.CtxFun(loc, n, csub_exp_chk (ctxnorm_dctx (cPsi, CShift 0)) (k+1) e)
+
   | Comp.MLam (loc, u, e) ->
       Comp.MLam(loc, u, csub_exp_chk cPsi k e)
   | Comp.Pair (loc, e1, e2) ->
@@ -800,8 +794,6 @@ let rec ctxnorm_exp_chk (e', cs) =
       Comp.Rec(loc, n, ctxnorm_exp_chk (e,cs))
   | Comp.Fun (loc, n, e) ->
       Comp.Fun(loc, n, ctxnorm_exp_chk (e, cs))
-  | Comp.CtxFun (loc, n, e) ->
-      Comp.CtxFun(loc, n, ctxnorm_exp_chk (e, cdot1 cs))
   | Comp.MLam (loc, u, e) ->
       Comp.MLam(loc, u, ctxnorm_exp_chk (e, cs))
   | Comp.Pair (loc, e1, e2) ->

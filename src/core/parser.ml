@@ -82,7 +82,6 @@ type mixtyp =
   | MTBase of Loc.t * Id.name * Comp.meta_spine
   | MTArr of Loc.t * mixtyp * mixtyp
   | MTCross of Loc.t * mixtyp * mixtyp
-(*   | MTCtxPi of  Loc.t * (Id.name * Id.name * Comp.depend) * mixtyp *)
   | MTBool of Loc.t
   | MTBox of Loc.t * mixtyp * LF.dctx
   | MTPBox of Loc.t * mixtyp * LF.dctx
@@ -99,7 +98,6 @@ let mixloc = function
   |  MTCompKind l -> l
   |  MTArr(l, _, _) -> l
   |  MTCross(l, _, _) -> l
-(*  |  MTCtxPi(l, _, _) -> l *)
   |  MTBool l -> l
   |  MTBox(l, _, _) -> l
   |  MTPBox(l, _, _) -> l
@@ -129,18 +127,12 @@ let rec unmix = function
                                   | (_, _) -> unmixfail (mixloc mt2)
                            end
   | MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
-(*  | MTCtxPi(l, (sym1, sym2, dep), mt0) ->
-       begin match unmix mt0 with
-         | CompKindMix mk -> CompKindMix(Comp.PiKind (l, (LF.CDecl (l, sym1, sym2), dep), mk))
-         | CompMix mt -> CompMix (Comp.TypCtxPi(l, (sym1, sym2, dep), mt))
-         | _ -> unmixfail (mixloc mt0)
-       end*)
-  |  MTBool l -> CompMix(Comp.TypBool)
-  |  MTCtx  (l, schema) -> CompMix(Comp.TypCtx (l, schema))
-  |  MTPBox(l, mt0, dctx) -> CompMix(Comp.TypPBox(l, toLF mt0, dctx))
-  |  MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
-  |  MTSub(l, dctx1, dctx) -> CompMix(Comp.TypSub(l, dctx1, dctx))
-  |  MTPiBox(l, (cdecl,dep), mt0) ->
+  | MTBool l -> CompMix(Comp.TypBool)
+  | MTCtx  (l, schema) -> CompMix(Comp.TypCtx (l, schema))
+  | MTPBox(l, mt0, dctx) -> CompMix(Comp.TypPBox(l, toLF mt0, dctx))
+  | MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
+  | MTSub(l, dctx1, dctx) -> CompMix(Comp.TypSub(l, dctx1, dctx))
+  | MTPiBox(l, (cdecl,dep), mt0) ->
        begin match unmix mt0 with
          | CompKindMix mk -> CompKindMix (Comp.PiKind(l, (cdecl, dep), mk))
          | CompMix mt -> CompMix(Comp.TypPiBox(l, (cdecl, dep), mt))
@@ -183,7 +175,6 @@ let check_datatype_decl a cs =
   let rec retname = function
     | Comp.TypBase (_, c', _) -> c'
     | Comp.TypArr (_, _, tau) -> retname tau
-(*    | Comp.TypCtxPi (_, _, tau) -> retname tau *)
     | Comp.TypPiBox (_, _, tau) -> retname tau
     | _ -> raise IllFormedDataDecl in
   List.iter (fun (Sgn.CompConst (_, c, tau)) ->
@@ -193,7 +184,6 @@ let check_datatype_decl a cs =
 let check_codatatype_decl a cs =
   let rec retname = function
     | Comp.TypArr (_, Comp.TypBase (_, c', _), _) -> c'
-(*    | Comp.TypCtxPi (_, _, tau) -> retname tau *)
     | Comp.TypPiBox (_, _, tau) -> retname tau
     | _ -> raise IllFormedDataDecl in
   List.iter (fun (Sgn.CompDest (_, c, tau)) ->
@@ -1344,18 +1334,11 @@ clf_pattern :
                            Comp.Explicit) in
           MTPiBox (_loc, ctyp_decl, mixtau)
 
-(*          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi),
-                          Id.mk_name (Id.SomeString w), Comp.Explicit), mixtau)
-
-*)
   | "("; psi = SYMBOL; ":";  w = SYMBOL; ")"; mixtau = SELF ->
           let ctyp_decl = (LF.CDecl(_loc, Id.mk_name (Id.SomeString psi),
                                    Id.mk_name (Id.SomeString w)) ,
                            Comp.Implicit) in
           MTPiBox (_loc, ctyp_decl, mixtau)
-(*          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi),
-                          Id.mk_name (Id.SomeString w), Comp.Implicit), mixtau)
-*)
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->
           MTPiBox (_loc, (ctyp_decl, Comp.Explicit), mixtau)

@@ -615,8 +615,8 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
 	match_spines (cD,cG) (cD_p, cG_p)
 	  (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
 
-  | (Comp.PatApp (_ , pat, pS) , (Comp.TypCtxPi ((_x,w, _dep), tau2), t)),
-    (Comp.PatApp (_, pat', pS') , (Comp.TypCtxPi ((_,w',_ ) , tau2'), t')) ->
+  | (Comp.PatApp (_ , pat, pS) , (Comp.TypPiBox ((LF.CDecl(_x,w, _ ), _dep), tau2), t)),
+    (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox ((LF.CDecl(_,w',_ ), _dep') , tau2'), t')) ->
       let Comp.PatMetaObj (_, mO) = pat in
       let Comp.PatMetaObj (_, mO') = pat' in
       let tau1 = Comp.MetaSchema w in
@@ -1440,7 +1440,7 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
       let (cG, pS, ttau) = genPattSpine (tau2,t) in
 	((pv1, Whnf.cnormCTyp (tau1,t))::cG ,
 	 Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau)
-  | (Comp.TypCtxPi ((x, sW, _ ), tau), t) ->
+  | (Comp.TypPiBox ((LF.CDecl(x, sW, _ ), _ ), tau), t) ->
       let cPsi' = LF.CtxVar (LF.CInst (x, ref None, sW, LF.Empty, Whnf.m_id)) in
       let pat1 = Comp.PatMetaObj (Syntax.Loc.ghost,
 				  Comp.MetaCtx (Syntax.Loc.ghost, cPsi')) in

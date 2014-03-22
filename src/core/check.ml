@@ -366,10 +366,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         checkTyp cD tau1;
         checkTyp cD tau2
 
-    | TypCtxPi ((psi_name, schema_cid, dep ), tau) ->
-        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        checkTyp (I.Dec (cD, I.CDecl (psi_name, schema_cid, dep'))) tau
-
     | TypPiBox ((cdecl, _), tau') ->
         dprint (fun () -> "[checkCompTyp] " ^
                   P.mctxToString cD ^ " |- " ^
@@ -410,16 +406,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
            let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
            in check cD cG e' ttau'
          in let _ = List.map f bs in ()
-
-    | (CtxFun (_, psi, e), (TypCtxPi ((_psi, schema, dep ), tau), t)) ->
-        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        check (I.Dec(cD, I.CDecl(psi, schema, dep')))
-          (C.cnormCtx (cG, I.MShift 1)) e (tau, C.mvar_dot1 t)
-
-    | (CtxFun (_, psi, e), (TypPiBox ((I.CDecl(_psi, schema, _ ), dep), tau), t)) ->
-        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        check (I.Dec(cD, I.CDecl(psi, schema, dep')))
-          (C.cnormCtx (cG, I.MShift 1)) e (tau, C.mvar_dot1 t)
 
     | (MLam (_, psi, e), (TypPiBox ((I.CDecl(_psi, schema,_ ), dep), tau), t)) ->
         let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
@@ -564,15 +550,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | CtxApp (loc, e, cPsi) ->
         begin match C.cwhnfCTyp (syn cD cG e) with
-          | ((TypCtxPi ((_psi, w, _ ) , tau), t) as tt) ->
-              let theta' = I.MDot (I.CObj (cPsi), t) in
-              LF.checkSchema loc cD cPsi (Schema.get_schema w);
-              (dprint (fun () -> "[check: syn] CtxApp : tau = " ^
-                         P.compTypToString cD (Whnf.cnormCTyp tt) );
-               dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
-               dprint (fun () -> "[check: syn] tau1 = " ^
-                          P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ;
-                 (tau, theta')
           | ((TypPiBox ((I.CDecl(_psi, w, _ ), dep) , tau), t) as tt) ->
               let theta' = I.MDot (I.CObj (cPsi), t) in
               LF.checkSchema loc cD cPsi (Schema.get_schema w);
@@ -697,9 +674,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           synPatSpine cD cG pat_spine (tau2, theta)
         | (TypPiBox ((cdecl, _), tau), theta) ->
           let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
-          synPatSpine cD cG pat_spine (tau, theta')
-        | (TypCtxPi ((x, w, dep), tau), theta) ->
-          let theta' =  checkPatAgainstCDecl cD pat (I.CDecl(x,w, I.No), theta) in
           synPatSpine cD cG pat_spine (tau, theta')
       end
 

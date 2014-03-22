@@ -213,8 +213,7 @@ and eval_chk e (theta, eta) =
           dprint (fun () -> "[MLamValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.MLamValue (n, e', Whnf.cnormMSub theta, eta)
-      | Comp.CtxFun (loc, n, e') ->
-          Comp.CtxValue (n, e', Whnf.cnormMSub theta, eta)
+
       | Comp.Fun (loc, n, e') ->
           dprint (fun () -> "[FunValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));

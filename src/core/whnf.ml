@@ -2467,9 +2467,6 @@ let mctxPVarPos cD p =
     | Comp.TypPiBox ((ctx_dec , dep), tau)      ->
          Comp.TypPiBox ((ctx_dec, dep), normCTyp tau)
 
-    | Comp.TypCtxPi (ctx_dec , tau)      ->
-         Comp.TypCtxPi (ctx_dec, normCTyp tau)
-
     | Comp.TypBool -> Comp.TypBool
 
   let cnormMetaTyp (mC, t) = match mC with
@@ -2525,9 +2522,6 @@ let mctxPVarPos cD p =
 
       | (Comp.TypCross (tT1, tT2), t)   ->
           Comp.TypCross (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
-
-      | (Comp.TypCtxPi (ctx_dec , tau), t)      ->
-          Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, mvar_dot1 t))
 
       | (Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau), t)    ->
           let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
@@ -2593,8 +2587,6 @@ let mctxPVarPos cD p =
 
     | (Comp.TypCross (_tT1, _tT2), _t)   -> thetaT
 
-    | (Comp.TypCtxPi _, _)             -> thetaT
-
     | (Comp.TypPiBox (_, _) , _)       -> thetaT
 
     | (Comp.TypClo (tT, t'), t)        -> cwhnfCTyp (tT, mcomp t' t)
@@ -2625,9 +2617,6 @@ let mctxPVarPos cD p =
 
     | (Comp.Cofun (loc, bs), t) ->
         Comp.Cofun (loc, List.map (fun (cps, e) -> (cps, cnormExp (e, t))) bs)
-
-    | (Comp.CtxFun (loc, psi, e) , t ) ->
-        Comp.CtxFun (loc, psi, cnormExp (e, mvar_dot1 t))
 
     | (Comp.MLam (loc, u, e), t) -> Comp.MLam (loc, u, cnormExp (e, mvar_dot1  t))
 
@@ -2876,12 +2865,6 @@ let mctxPVarPos cD p =
         &&
           convCTyp (tT2, t) (tT2', t')
 
-
-    | ((Comp.TypCtxPi ((_psi, cid_schema, _ ), tT1), t) , (Comp.TypCtxPi ((_psi', cid_schema', _ ), tT1'), t'))
-      -> cid_schema = cid_schema'
-        &&
-          convCTyp (tT1, mvar_dot1 t) (tT1', mvar_dot1 t')
-
     | ((Comp.TypPiBox ((MDecl(_, tA, cPsi), dep), tT), t), (Comp.TypPiBox ((MDecl(_, tA', cPsi'), dep'), tT'), t'))
       -> dep = dep'
         &&
@@ -3050,7 +3033,6 @@ let rec closedCTyp cT = match cT with
   | Comp.TypSub (_ , cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi
   | Comp.TypArr (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2
   | Comp.TypCross (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2
-  | Comp.TypCtxPi (_ctx_decl, cT) -> closedCTyp cT
   | Comp.TypPiBox ((ctyp_decl, _ ), cT) ->
       closedCTyp cT && closedCDecl ctyp_decl
   | Comp.TypClo (cT, t) -> closedCTyp(cnormCTyp (cT, t))  (* to be improved Sun Dec 13 11:45:15 2009 -bp *)

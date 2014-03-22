@@ -950,21 +950,6 @@ module Int = struct
               (fmt_ppr_cmp_typ cD 0) tau2
               (r_paren_if cond)
 
-      | Comp.TypCtxPi ((psi, w, dep), tau) ->
-          ( match (dep,!Control.printImplicit) with
-          | ( _ , true)
-          | (Comp.Explicit, _) ->
-              let cond = lvl > 1 in
-              fprintf ppf "%s{%s : %s}@ %a%s"
-                (l_paren_if cond)
-                (R.render_name psi)
-                (R.render_cid_schema w)
-                (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, LF.No))) 0) tau
-                (r_paren_if cond)
-          | (Comp.Implicit, false) ->
-              fprintf ppf "%a"
-                (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(psi, w, LF.No))) 0) tau
-              )
       | Comp.TypPiBox ((ctyp_decl, dep ), tau) ->
           ( match (dep,!Control.printImplicit) with
           | (_, true)
@@ -1063,15 +1048,6 @@ module Int = struct
 (*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
             fprintf ppf "%sSome cofun%s"
               (l_paren_if cond)
-              (r_paren_if cond)
-
-
-      | Comp.CtxFun (_, x, e) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[<2>%smlam %s =>@ %a%s@]"
-              (l_paren_if cond)
-              (R.render_name x)
-              (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.CDeclOpt x)) cG 0) e
               (r_paren_if cond)
 
       | Comp.MLam (_, x, e) ->
@@ -1192,10 +1168,8 @@ module Int = struct
           (Comp.Equal (loc, i1', i2'), [])
       | _ -> (i, [])
     and implicitCompArg tau = begin match tau with
-      | Comp.TypCtxPi ((_,_, Comp.Implicit), tau)
       | Comp.TypPiBox ((LF.MDecl _ , Comp.Implicit), tau) ->
           (false)::(implicitCompArg tau)
-      | Comp.TypCtxPi (_, tau)
       | Comp.TypPiBox (_ , tau) ->
           (true)::(implicitCompArg tau)
       | _ -> []

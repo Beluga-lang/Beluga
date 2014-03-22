@@ -3295,16 +3295,6 @@ let rec blockdeclInDctx cPsi = match cPsi with
            unifyCompTyp cD (tau2, t) (tau2', t')
           )
 
-      | ((Comp.TypCtxPi ( (psi, schema, dep), tau), t) ,
-         (Comp.TypCtxPi ( (_, schema', dep'), tau'), t')) ->
-          if schema = schema' && dep = dep' then
-            let cdep = (match dep with Comp.Implicit -> Maybe |  Comp.Explicit -> No) in
-            unifyCompTyp
-              (Dec(cD, CDecl (psi, schema, cdep)))
-              (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
-          else
-            raise (Failure "CtxPi schema clash")
-
       | ((Comp.TypPiBox ( (CDecl(psi, schema, _), dep), tau), t) ,
          (Comp.TypPiBox ( (CDecl(_, schema', _ ), dep'), tau'), t')) ->
           if schema = schema' && dep = dep' then

@@ -48,7 +48,6 @@ let getLocation e = match e with
   | Comp.MLam (loc, _, _) -> loc
   | Comp.Pair (loc, _, _ ) -> loc
   | Comp.LetPair (loc, _, _ ) -> loc
-  | Comp.CtxFun (loc, _, _ ) -> loc
   | Comp.Box (loc, _, _ )    -> loc
   | Comp.SBox (loc, _, _) -> loc
   | Comp.Case (loc, _, _, _ ) -> loc
@@ -1940,10 +1939,6 @@ let rec collectExp cQ e = match e with
       let (cQ2, e') = collectExp cQi e in
         (cQ2, Comp.Let (loc, i', (x, e')))
 
-  | Comp.CtxFun (loc, psi, e) ->
-      let (cQ', e') = collectExp cQ e in
-        (cQ', Comp.CtxFun (loc, psi, e'))
-
   | Comp.Box (loc, phat, tM) ->
       let (cQ', phat') = collectHat 0 cQ phat in
       let (cQ'', tM') = collectTerm 0 cQ'  phat' (tM, LF.id)  in
@@ -2240,84 +2235,6 @@ and abstractMVarPatSpine cQ cG offset pat_spine = match pat_spine with
         Comp.PatApp (loc, pat', pat_spine')
 
 
-(* REDUNDANT Tue Apr 21 09:50:08 2009 -bp
-let rec abstractMVarExp cQ offset e = match e with
-  | Comp.Syn (loc, i) -> Comp.Syn (loc, abstractMVarExp' cQ offset i)
-
-  | Comp.Rec (loc, f, e) -> Comp.Rec (loc, f, abstractMVarExp cQ offset e)
-
-  | Comp.Fun (loc, x, e) -> Comp.Fun (loc, x, abstractMVarExp  cQ offset e)
-
-  | Comp.MLam (loc, u, e) -> Comp.MLam (loc, u, abstractMVarExp  cQ (offset+1) e)
-
-  | Comp.Pair (loc, e1, e2) ->
-      let e1' = abstractMVarExp  cQ offset e1 in
-      let e2' = abstractMVarExp  cQ offset e2 in
-        Comp.Pair (e1', e2')
-
-  | Comp.LetPair (loc, i, (x, y, e)) ->
-      let i' = abstractMVarExp' cQ offset i in
-      let e' = abstractMVarExp cQ offset e in
-        Comp.LetPair (loc, i', (x, y, e'))
-
-  | Comp.CtxFun (loc, psi, e) -> Comp.CtxFun (loc, psi, abstractMVarExp cQ offset e)
-
-  | Comp.Box (loc, phat, tM) -> Comp.Box (loc, phat, abstractMVarTerm  cQ  offset (tM, LF.id) )
-
-  | Comp.Case (loc, i, branches) ->
-      let i' = abstractMVarExp' cQ offset i in
-        Comp.Case(loc, i', abstractMVarBranches cQ offset branches)
-
-
-and abstractMVarExp' cQ offset i = match i with
-  | Comp.Var x -> Comp.Var x
-  | Comp.Const _c ->  i
-  | Comp.Apply (loc, i, e) ->
-      let i' = abstractMVarExp' cQ offset i  in
-      let e' = abstractMVarExp  cQ offset e in
-        Comp.Apply (loc, i', e')
-
-  | Comp.CtxApp (loc, i, cPsi) ->
-      let i' = abstractMVarExp' cQ offset i  in
-      let cPsi' = abstractMVarDctx cQ offset cPsi in
-        Comp.CtxApp (loc, i', cPsi')
-
-  | Comp.MApp (loc, i, (phat, tM)) ->
-      let i' = abstractMVarExp' cQ offset i  in
-      let tM' = abstractMVarTerm cQ offset (tM, LF.id) in
-        Comp.MApp (loc, i', (phat, tM'))
-
-  | Comp.Ann  (e, tau) ->
-      let e' = abstractMVarExp cQ offset e in
-      let tau' = abstractMVarCompTyp cQ offset tau in
-        Comp.Ann (e', tau')
-
-and abstractMVarBranches cQ offset branches =
-  List.map (function b -> abstractMVarBranch cQ offset b) branches
-
-and abstractMVarBranch cQ offset branch = match branch with
-  | Comp.BranchBox(cD, (cPsi, tM, (t, cD')), e) ->
-      (* cD, tM, tA, cPsi cannot contain any free meta-variables *)
-      let offset  = Context.length cD + offset in
-      let e'      = abstractMVarExp  cQ offset e in
-        Comp.BranchBox (cD, (phat, tM, (tA, cPsi)), e')
-
-*)
-(*
-let raiseCompTyp cD tau =
-  let rec roll tau = match tau with
-    | Comp.TypCtxPi (ctx_decl, tau) ->
-        Comp.TypCtxPi (ctx_decl, roll tau)
-    | tau -> raisePiBox cD tau
-
-  and raisePiBox cD tau = match cD with
-    | I.Empty -> tau
-    | I.Dec(cD ,mdecl) ->
-        raisePiBox cD (Comp.TypPiBox ((mdecl, Comp.Implicit), tau))
-  in
-    roll tau
-*)
-
 let rec raiseCompTyp cD tau =  match cD with
   | I.Empty -> tau
   | I.Dec(cD, I.CDecl (psi, w, dep)) ->
@@ -2365,8 +2282,6 @@ let abstrCompKind cK =
 
 let abstrCompTyp tau =
   let rec roll tau cQ = match tau with
-    | Comp.TypCtxPi ((_psi, _w, _ ) as ctx_decl, tau) ->
-        roll tau (I.Dec(cQ, CtxV (ctx_decl)))
     | Comp.TypPiBox ((I.CDecl(psi, w, _ ) , dep), tau) ->
         roll tau (I.Dec(cQ, CtxV (psi,w,dep)))
     | tau -> (cQ, tau)

@@ -596,21 +596,6 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
 	| Ext.Comp.Implicit -> Apx.Comp.Implicit in
         (Apx.Comp.TypPiBox ((cdecl', apxdep), tau'), fcvars2)
 
-(*  | Ext.Comp.TypCtxPi (loc, (ctx_name, schema_name, dep), tau) ->
-    begin
-      try
-	let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.CV ctx_name)) in
-	let schema_cid = Schema.index_of_name schema_name in
-	(* if exception Not_found is raised, it means schema_name does not exist *)
-	let apxdep = match dep with
-	    Ext.Comp.Explicit -> Apx.Comp.Explicit
-	  | Ext.Comp.Implicit -> Apx.Comp.Implicit in
-	let (tau', fcvars1) = index_comptyp cvars' fcvars tau in
-        (Apx.Comp.TypCtxPi ((ctx_name, schema_cid, apxdep), tau'), fcvars1)
-      with
-          Not_found -> raise (Error (loc, UnboundCtxSchemaName schema_name))
-    end
-*)
   | Ext.Comp.TypBool -> (Apx.Comp.TypBool, fcvars)
 
   | Ext.Comp.TypPBox (loc, _, _) -> raise (Error (loc, IllFormedCompTyp))
@@ -633,10 +618,6 @@ let rec index_exp cvars vars fcvars = function
       in
         Apx.Comp.Cofun (loc, copatterns')
 
-(*  | Ext.Comp.CtxFun (loc, psi_name, e) ->
-        let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.CV psi_name)) in
-        Apx.Comp.CtxFun (loc, psi_name, index_exp cvars' vars fcvars e)
-*)
   | Ext.Comp.MLam (loc, (psi_name, Ext.Comp.CObj), e) ->
         let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.CV psi_name)) in
         Apx.Comp.MLam (loc, psi_name, index_exp cvars' vars fcvars e)

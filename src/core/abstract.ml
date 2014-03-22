@@ -1866,17 +1866,12 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in
         (cQ2, Comp.TypCross (tau1', tau2'))
 
-  | Comp.TypCtxPi (ctx_dec, tau) ->
-      let (cQ1, tau') = collectCompTyp p cQ tau  in
-        (cQ1, Comp.TypCtxPi (ctx_dec, tau'))
-
   | Comp.TypPiBox ((I.MDecl(u, tA, cPsi), dep ), tau) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
       let (cQ2, tA')    = collectTyp p cQ1 phat (tA, LF.id) in
       let (cQ3, tau')  = collectCompTyp p cQ2 tau in
         (cQ3 , Comp.TypPiBox ((I.MDecl(u, tA', cPsi'), dep ), tau'))
-
 
   | Comp.TypPiBox ((I.PDecl(u, tA, cPsi), dep ), tau) ->
       let phat = Context.dctxToHat cPsi in
@@ -1885,7 +1880,6 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ3, tau')  = collectCompTyp p cQ2 tau in
         (cQ3 , Comp.TypPiBox ((I.PDecl(u, tA', cPsi'), dep ), tau'))
 
-
   | Comp.TypPiBox ((I.SDecl(u, cPhi, cPsi), dep ), tau) ->
       let phat = Context.dctxToHat cPsi in
       let phat' = Context.dctxToHat cPhi in
@@ -1893,6 +1887,10 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ2, cPhi')    = collectDctx (Syntax.Loc.ghost) p cQ1 phat' cPhi in
       let (cQ3, tau')  = collectCompTyp p cQ2 tau in
         (cQ3 , Comp.TypPiBox ((I.SDecl(u, cPhi', cPsi'), dep ), tau'))
+
+  | Comp.TypPiBox ((ctx_dec, dep), tau) ->
+      let (cQ1, tau') = collectCompTyp p cQ tau  in
+        (cQ1, Comp.TypPiBox ((ctx_dec, dep), tau'))
 
   | Comp.TypBool  -> (cQ, tau)
   | Comp.TypClo _ -> (dprint (fun () -> "collectCTyp -- TypClo missing");
@@ -2178,9 +2176,6 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
       Comp.TypCross (abstractMVarCompTyp cQ offset tau1,
                      abstractMVarCompTyp cQ offset tau2)
 
-  | Comp.TypCtxPi (ctx_decl, tau) ->
-      Comp.TypCtxPi (ctx_decl, abstractMVarCompTyp cQ (l,d+1) tau)
-
   | Comp.TypPiBox ((I.MDecl(u, tA, cPsi), dep), tau) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
@@ -2193,12 +2188,14 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
       let tau'  = abstractMVarCompTyp cQ (l, d+1) tau in
         Comp.TypPiBox ((I.PDecl(u, tA', cPsi'), dep), tau')
 
-
   | Comp.TypPiBox ((I.SDecl(u, cPhi, cPsi), dep), tau) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let cPhi' = abstractMVarDctx cQ offset cPhi in
       let tau'  = abstractMVarCompTyp cQ (l,d+1) tau in
         Comp.TypPiBox ((I.SDecl(u, cPhi', cPsi'), dep), tau')
+
+  | Comp.TypPiBox ((ctx_decl, dep), tau) ->
+      Comp.TypPiBox ((ctx_decl, dep), abstractMVarCompTyp cQ (l,d+1) tau)
 
   | Comp.TypBool -> Comp.TypBool
 
@@ -2370,6 +2367,8 @@ let abstrCompTyp tau =
   let rec roll tau cQ = match tau with
     | Comp.TypCtxPi ((_psi, _w, _ ) as ctx_decl, tau) ->
         roll tau (I.Dec(cQ, CtxV (ctx_decl)))
+    | Comp.TypPiBox ((I.CDecl(psi, w, _ ) , dep), tau) ->
+        roll tau (I.Dec(cQ, CtxV (psi,w,dep)))
     | tau -> (cQ, tau)
   in
   let (cQ, tau')  = roll tau I.Empty in

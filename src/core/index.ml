@@ -588,10 +588,13 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
 	(Apx.Comp.TypCross (tau1, tau2), fcvars2)
 
 
-  | Ext.Comp.TypPiBox (_loc, cdecl, tau)    ->
+  | Ext.Comp.TypPiBox (_loc, (cdecl, dep), tau)    ->
       let (cdecl', cvars', fcvars1) = index_cdecl cvars fcvars cdecl in
       let (tau', fcvars2) = index_comptyp cvars' fcvars1 tau in
-        (Apx.Comp.TypPiBox (cdecl', tau'), fcvars2)
+      let apxdep = match dep with
+	  Ext.Comp.Explicit -> Apx.Comp.Explicit
+	| Ext.Comp.Implicit -> Apx.Comp.Implicit in
+        (Apx.Comp.TypPiBox ((cdecl', apxdep), tau'), fcvars2)
 
   | Ext.Comp.TypCtxPi (loc, (ctx_name, schema_name, dep), tau) ->
     begin

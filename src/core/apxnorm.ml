@@ -730,7 +730,7 @@ let rec collectApxCompTyp fMVd tau = match tau with
 	collectApxCompTyp fMVd1 tau2
   | Apx.Comp.TypCtxPi (_, tau) ->
       collectApxCompTyp fMVd tau
-  | Apx.Comp.TypPiBox (cdecl, tau) ->
+  | Apx.Comp.TypPiBox ((cdecl, _), tau) ->
       let fMVd1 = collectApxCDecl fMVd cdecl in
 	collectApxCompTyp fMVd1 tau
   | Apx.Comp.TypBox (loc, tA, cPsi) ->

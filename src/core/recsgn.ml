@@ -353,6 +353,9 @@ and recSgnDecl d =
 
           (* let _       = Monitor.timer ("Function Type Reconstruction", fun () -> recCompTyp cO cD tau') in *)
           let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.comptyp tau') in
+          let _ = dprint (fun () ->  "Abstracted elaborated function type " ^ f.string_of_name ^
+                                   " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
+
           let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
           let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
           let _       = FCVar.clear () in

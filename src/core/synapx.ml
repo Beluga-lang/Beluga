@@ -137,7 +137,7 @@ module Comp = struct
    | TypArr     of typ * typ
    | TypCross   of typ * typ
    | TypCtxPi   of (name * cid_schema * depend) * typ
-   | TypPiBox   of LF.ctyp_decl * typ
+   | TypPiBox   of (LF.ctyp_decl * depend) * typ
    | TypBool
 
   and exp_chk =

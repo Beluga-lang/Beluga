@@ -82,13 +82,13 @@ type mixtyp =
   | MTBase of Loc.t * Id.name * Comp.meta_spine
   | MTArr of Loc.t * mixtyp * mixtyp
   | MTCross of Loc.t * mixtyp * mixtyp
-  | MTCtxPi of  Loc.t * (Id.name * Id.name * Comp.depend) * mixtyp
+(*   | MTCtxPi of  Loc.t * (Id.name * Id.name * Comp.depend) * mixtyp *)
   | MTBool of Loc.t
   | MTBox of Loc.t * mixtyp * LF.dctx
   | MTPBox of Loc.t * mixtyp * LF.dctx
   | MTCtx of Loc.t * Id.name
   | MTSub of Loc.t * LF.dctx * LF.dctx
-  | MTPiBox of Loc.t * LF.ctyp_decl * mixtyp
+  | MTPiBox of Loc.t * (LF.ctyp_decl * Comp.depend) * mixtyp
 (* -bp Pi-types should not occur in computation-level types
   |  MTPiTyp of Loc.t * LF.typ_decl * mixtyp *)
   | MTAtom of Loc.t * Id.name * LF.spine
@@ -99,7 +99,7 @@ let mixloc = function
   |  MTCompKind l -> l
   |  MTArr(l, _, _) -> l
   |  MTCross(l, _, _) -> l
-  |  MTCtxPi(l, _, _) -> l
+(*  |  MTCtxPi(l, _, _) -> l *)
   |  MTBool l -> l
   |  MTBox(l, _, _) -> l
   |  MTPBox(l, _, _) -> l
@@ -129,21 +129,21 @@ let rec unmix = function
                                   | (_, _) -> unmixfail (mixloc mt2)
                            end
   | MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
-  | MTCtxPi(l, (sym1, sym2, dep), mt0) ->
+(*  | MTCtxPi(l, (sym1, sym2, dep), mt0) ->
        begin match unmix mt0 with
          | CompKindMix mk -> CompKindMix(Comp.PiKind (l, (LF.CDecl (l, sym1, sym2), dep), mk))
          | CompMix mt -> CompMix (Comp.TypCtxPi(l, (sym1, sym2, dep), mt))
          | _ -> unmixfail (mixloc mt0)
-       end
+       end*)
   |  MTBool l -> CompMix(Comp.TypBool)
   |  MTCtx  (l, schema) -> CompMix(Comp.TypCtx (l, schema))
   |  MTPBox(l, mt0, dctx) -> CompMix(Comp.TypPBox(l, toLF mt0, dctx))
   |  MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
   |  MTSub(l, dctx1, dctx) -> CompMix(Comp.TypSub(l, dctx1, dctx))
-  |  MTPiBox(l, cdecl, mt0) ->
+  |  MTPiBox(l, (cdecl,dep), mt0) ->
        begin match unmix mt0 with
-         | CompKindMix mk -> CompKindMix (Comp.PiKind(l, (cdecl, Comp.Explicit), mk))
-         | CompMix mt -> CompMix(Comp.TypPiBox(l, cdecl, mt))
+         | CompKindMix mk -> CompKindMix (Comp.PiKind(l, (cdecl, dep), mk))
+         | CompMix mt -> CompMix(Comp.TypPiBox(l, (cdecl, dep), mt))
          | _ -> unmixfail (mixloc mt0)
        end
 
@@ -1339,17 +1339,26 @@ clf_pattern :
     [ RIGHTA
       [
         "{"; psi = SYMBOL; ":";  w = SYMBOL; "}"; mixtau = SELF ->
-          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi),
+          let ctyp_decl = (LF.CDecl(_loc, Id.mk_name (Id.SomeString psi),
+                                   Id.mk_name (Id.SomeString w)) ,
+                           Comp.Explicit) in
+          MTPiBox (_loc, ctyp_decl, mixtau)
+
+(*          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi),
                           Id.mk_name (Id.SomeString w), Comp.Explicit), mixtau)
 
-
+*)
   | "("; psi = SYMBOL; ":";  w = SYMBOL; ")"; mixtau = SELF ->
-          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi),
+          let ctyp_decl = (LF.CDecl(_loc, Id.mk_name (Id.SomeString psi),
+                                   Id.mk_name (Id.SomeString w)) ,
+                           Comp.Implicit) in
+          MTPiBox (_loc, ctyp_decl, mixtau)
+(*          MTCtxPi (_loc, (Id.mk_name (Id.SomeString psi),
                           Id.mk_name (Id.SomeString w), Comp.Implicit), mixtau)
-
+*)
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->
-          MTPiBox (_loc, ctyp_decl, mixtau)
+          MTPiBox (_loc, (ctyp_decl, Comp.Explicit), mixtau)
       |
         mixtau1 = SELF; rarr; mixtau2 = SELF ->
           MTArr (_loc, mixtau1, mixtau2)

@@ -2452,9 +2452,6 @@ let mctxPVarPos cD p =
     | Comp.TypCross (tT1, tT2)   ->
         Comp.TypCross (normCTyp tT1, normCTyp tT2)
 
-    | Comp.TypCtxPi (ctx_dec , tau)      ->
-         Comp.TypCtxPi (ctx_dec, normCTyp tau)
-
     | Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau)    ->
         Comp.TypPiBox ((MDecl (u, normTyp (tA, LF.id), normDCtx cPsi), dep),
                        normCTyp tau)
@@ -2466,6 +2463,12 @@ let mctxPVarPos cD p =
     | Comp.TypPiBox ((SDecl(u, cPhi, cPsi) , dep), tau)    ->
         Comp.TypPiBox ((SDecl (u, normDCtx cPhi, normDCtx cPsi), dep),
                        normCTyp tau)
+
+    | Comp.TypPiBox ((ctx_dec , dep), tau)      ->
+         Comp.TypPiBox ((ctx_dec, dep), normCTyp tau)
+
+    | Comp.TypCtxPi (ctx_dec , tau)      ->
+         Comp.TypCtxPi (ctx_dec, normCTyp tau)
 
     | Comp.TypBool -> Comp.TypBool
 
@@ -2526,6 +2529,7 @@ let mctxPVarPos cD p =
       | (Comp.TypCtxPi (ctx_dec , tau), t)      ->
           Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, mvar_dot1 t))
 
+
       | (Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau), t)    ->
           let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
           let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
@@ -2543,6 +2547,9 @@ let mctxPVarPos cD p =
           let cPhi' = normDCtx (cnormDCtx(cPhi, t)) in
           Comp.TypPiBox ((SDecl (u, cPhi', cPsi'), dep),
                          cnormCTyp (tau, mvar_dot1 t))
+
+      | (Comp.TypPiBox ((ctx_dec , dep), tau), t)      ->
+          Comp.TypPiBox ((ctx_dec, dep), cnormCTyp (tau, mvar_dot1 t))
 
       | (Comp.TypClo (tT, t'), t)        ->
           cnormCTyp (tT, mcomp t' t)
@@ -2885,7 +2892,8 @@ let mctxPVarPos cD p =
         &&
           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
 
-    | ((Comp.TypPiBox ((PDecl(_, tA, cPsi), dep), tT), t), (Comp.TypPiBox ((PDecl(_, tA', cPsi'), dep'), tT'), t'))
+    | ((Comp.TypPiBox ((PDecl(_, tA, cPsi), dep), tT), t),
+       (Comp.TypPiBox ((PDecl(_, tA', cPsi'), dep'), tT'), t'))
       -> dep = dep'
         &&
           convTyp (cnormTyp (tA, t), LF.id) (cnormTyp (tA', t'), LF.id)
@@ -2894,7 +2902,8 @@ let mctxPVarPos cD p =
         &&
           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
 
-    | ((Comp.TypPiBox ((SDecl(_, cPhi, cPsi), dep), tT), t), (Comp.TypPiBox ((SDecl(_, cPhi', cPsi'), dep'), tT'), t'))
+    | ((Comp.TypPiBox ((SDecl(_, cPhi, cPsi), dep), tT), t),
+       (Comp.TypPiBox ((SDecl(_, cPhi', cPsi'), dep'), tT'), t'))
       -> dep = dep'
         &&
           convDCtx (cnormDCtx (cPhi, t)) (cnormDCtx (cPhi', t'))
@@ -2903,7 +2912,13 @@ let mctxPVarPos cD p =
         &&
           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
 
-
+    | ((Comp.TypPiBox ((CDecl(_psi, cid_schema, _ ), dep), tT), t) ,
+       (Comp.TypPiBox ((CDecl(_psi', cid_schema', _ ), dep'), tT'), t'))
+      -> dep = dep'
+        &&
+        cid_schema = cid_schema'
+        &&
+          convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
 
     | ((Comp.TypBool, _t ), (Comp.TypBool, _t')) -> true
 

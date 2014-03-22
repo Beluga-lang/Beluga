@@ -122,7 +122,8 @@ module Comp = struct
    | TypCross of Loc.t * typ * typ              (*    | tau * tau          *)
    | TypCtxPi of Loc.t * (name * name * depend) * typ
        (*     | Pi psi:(w)*. tau  *)
-   | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *)
+   | TypPiBox of Loc.t * (LF.ctyp_decl * depend) * typ
+                                                (*     | Pi u::U.tau       *)
    | TypBool                                    (*     | Bool              *)
 
   and exp_chk =                            (* Computation-level expressions *)

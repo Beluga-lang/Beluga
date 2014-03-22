@@ -2322,7 +2322,7 @@ let rec raiseCompTyp cD tau =  match cD with
   | I.Empty -> tau
   | I.Dec(cD, I.CDecl (psi, w, dep)) ->
       let dep' = match dep with I.No -> Comp.Explicit | I.Maybe -> Comp.Implicit in
-      raiseCompTyp cD (Comp.TypCtxPi ((psi, w, dep'), tau))
+      raiseCompTyp cD (Comp.TypPiBox ((I.CDecl(psi, w, dep), dep'), tau))
   | I.Dec(cD ,mdecl) ->
       raiseCompTyp cD (Comp.TypPiBox ((mdecl, Comp.Implicit), tau))
 

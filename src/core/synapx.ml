@@ -136,7 +136,6 @@ module Comp = struct
    | TypSub     of Loc.t * LF.dctx  * LF.dctx
    | TypArr     of typ * typ
    | TypCross   of typ * typ
-   | TypCtxPi   of (name * cid_schema * depend) * typ
    | TypPiBox   of (LF.ctyp_decl * depend) * typ
    | TypBool
 
@@ -144,7 +143,7 @@ module Comp = struct
      | Syn    of Loc.t * exp_syn
      | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list         (* Cofun hd => e | tl => e' *)
-     | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *)
+(*     | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *) *)
      | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (* (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)

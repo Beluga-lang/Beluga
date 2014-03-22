@@ -505,7 +505,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
                          (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)))
 
 
-  | (Int.Comp.TypCtxPi ((psi_name, schema_cid, Int.Comp.Implicit), tau), theta)
+(*  | (Int.Comp.TypCtxPi ((psi_name, schema_cid, Int.Comp.Implicit), tau), theta)
     ->
       let cPsi = Int.LF.CtxVar (Int.LF.CInst (psi_name, ref None, schema_cid, cD, Whnf.m_id)) in
       let _   = dprint (fun () -> "\n[genMApp] Generated ctx-variable " ^
@@ -515,7 +515,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
                         (Whnf.cnormCTyp (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)))) in
         genMApp loc cD  ((Int.Comp.CtxApp (loc, i, cPsi)),
                          (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)))
-
+*)
   | _ ->
       let _ = dprint (fun () -> "[genMApp]  done " ^
                                 P.mctxToString cD ^ " \n   |- " ^
@@ -786,7 +786,7 @@ let rec elCompTyp cD tau = match tau with
       let tau2' = elCompTyp cD tau2 in
         Int.Comp.TypCross (tau1', tau2')
 
-  | Apx.Comp.TypCtxPi ((x, schema_cid, apx_dep) , tau) ->
+(*  | Apx.Comp.TypCtxPi ((x, schema_cid, apx_dep) , tau) ->
       let cdep = match apx_dep with
           Apx.Comp.Explicit -> Int.LF.No
         | Apx.Comp.Implicit -> Int.LF.Maybe in
@@ -795,7 +795,7 @@ let rec elCompTyp cD tau = match tau with
         | Apx.Comp.Implicit -> Int.Comp.Implicit in
       let tau' = elCompTyp (Int.LF.Dec (cD, Int.LF.CDecl (x, schema_cid, cdep))) tau in
         Int.Comp.TypCtxPi ((x, schema_cid, dep), tau')
-
+*)
   | Apx.Comp.TypPiBox ((cdecl, apx_dep), tau) ->
       let cdecl' = elCDecl Lfrecon.Pibox cD cdecl  in
       let tau'   = elCompTyp (Int.LF.Dec (cD, cdecl')) tau in
@@ -862,7 +862,7 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
       let tau2' = inferPatTyp' cD' (cD_s, tau2) in
         Int.Comp.TypArr (tau1', tau2')
 
-  | Int.Comp.TypCtxPi((name, sW, Int.Comp.Explicit), tau) ->
+(*  | Int.Comp.TypCtxPi((name, sW, Int.Comp.Explicit), tau) ->
       let tau' = inferPatTyp' (Int.LF.Dec (cD', Int.LF.CDecl (name, sW, Int.LF.No)))
                               (Int.LF.Dec (cD_s, Int.LF.CDecl (name, sW, Int.LF.No)),  tau) in
         Int.Comp.TypCtxPi((name, sW, Int.Comp.Explicit), tau')
@@ -871,7 +871,7 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
       let tau' = inferPatTyp' (Int.LF.Dec (cD', Int.LF.CDecl (name, sW, Int.LF.Maybe)))
                               (Int.LF.Dec (cD_s, Int.LF.CDecl (name, sW, Int.LF.Maybe)),  tau) in
         Int.Comp.TypCtxPi((name, sW,  Int.Comp.Implicit), tau')
-
+*)
   | Int.Comp.TypPiBox ((Int.LF.MDecl (x, (Int.LF.Atom (_, a, _ ) as tP), cPsi), dep), tau) ->
       let cPsi' = mgCtx cD' (cD_s, cPsi) in
       let tP'   = mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind  in
@@ -947,7 +947,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       in Int.Comp.Cofun (loc, bs')
 
 
-  | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
+(*  | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No))  in
       let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
@@ -963,8 +963,8 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                         P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
         e''
 
-
-  | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypPiBox ((Int.LF.CDecl(_, schema_cid, dep), Int.Comp.Explicit), tau), theta)) ->
+*)
+ (* | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypPiBox ((Int.LF.CDecl(_, schema_cid, dep), Int.Comp.Explicit), tau), theta)) ->
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No))  in
       let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
@@ -972,23 +972,22 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       done ") in
       let _ = dprint (fun () -> "[elExp] ctx-mlam e' = " ^ P.expChkToString cD' cG' e')
       in
-      let e'' =  Int.Comp.CtxFun (loc, psi_name, e') in
+      let e'' =  Int.Comp.MLam (loc, psi_name, e') in
       let _ = dprint (fun () -> "[elExp] ctx-mlam : cG = " ^ P.gctxToString cD cG) in
       let _ = dprint (fun () -> "[elExp] ctx-mlam result ") in
       let _ = dprint (fun () -> "        " ^ P.expChkToString cD cG e'' ) in
-      let _ = dprint (fun () -> "[elExp] has type " ^
-                        P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
+      let _ = dprint (fun () -> "[elExp] has type " ^ P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
         e''
-
+ *)
 
 
   (* Allow uniform abstractions for all meta-objects *)
-  | (Apx.Comp.MLam (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
+(*  | (Apx.Comp.MLam (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No)) in
       let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
-        Int.Comp.CtxFun (loc, psi_name, e')
-
+        Int.Comp.MLam (loc, psi_name, e')
+*)
   | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi), Int.Comp.Explicit), tau), theta))  ->
       let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
@@ -1017,21 +1016,22 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No)) in
       let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
-        Int.Comp.CtxFun (loc, psi_name, e')
+        Int.Comp.MLam (loc, psi_name, e')
 
-  | (e, (Int.Comp.TypCtxPi((psi_name, schema_cid, Int.Comp.Implicit), tau), theta))  ->
+
+(*  | (e, (Int.Comp.TypCtxPi((psi_name, schema_cid, Int.Comp.Implicit), tau), theta))  ->
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.Maybe)) in
       let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
       let e' = elExp cD' cG'  e' (tau, C.mvar_dot1 theta) in
         Int.Comp.CtxFun (Syntax.Loc.ghost, psi_name, e')
-
+*)
   | (e, (Int.Comp.TypPiBox((Int.LF.CDecl(psi_name, schema_cid, _dep),Int.Comp.Implicit), tau), theta))  ->
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.Maybe)) in
       let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
       let e' = elExp cD' cG'  e' (tau, C.mvar_dot1 theta) in
-        Int.Comp.CtxFun (Syntax.Loc.ghost, psi_name, e')
+        Int.Comp.MLam (Syntax.Loc.ghost, psi_name, e')
 
   | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
       (* let u' = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA)) in *)
@@ -1246,8 +1246,9 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
   (* Error handling cases *)
   | (Apx.Comp.Fun (loc, _x, _e),  tau_theta ) ->
       raise (Check.Comp.Error (loc, Check.Comp.FunMismatch (cD, cG, tau_theta)))
-  | (Apx.Comp.CtxFun (loc, _psi_name, _e), tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.CtxFunMismatch (cD, cG, tau_theta)))
+(*  | (Apx.Comp.CtxFun (loc, _psi_name, _e), tau_theta) ->
+      raise (Check.Comp.Error (loc, Check.Comp.CtxFunMismatch (cD, cG,
+    tau_theta))) *)
   | (Apx.Comp.MLam (loc, _u, _e), tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.MLamMismatch (cD, cG, tau_theta)))
   | (Apx.Comp.Pair(loc, _ , _ ), tau_theta) ->
@@ -1314,7 +1315,7 @@ and elExp' cD cG i = match i with
   | Apx.Comp.CtxApp (loc, i, cPsi) ->
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
         begin match tau_theta' with
-          | ((Int.Comp.TypCtxPi ((_psi, _sW, _explicit ), tau), theta) as tt)->
+(*          | ((Int.Comp.TypCtxPi ((_psi, _sW, _explicit ), tau), theta) as tt)->
               let cPsi'  = Lfrecon.elDCtx Lfrecon.Pibox cD cPsi in
               let theta' = Int.LF.MDot (Int.LF.CObj (cPsi'), theta) in
               let _ = (dprint (fun () -> "[elExp'] CtxApp : tau = " ^
@@ -1323,6 +1324,7 @@ and elExp' cD cG i = match i with
               let _ = dprint (fun () -> "[elExp'] CtxApp : [cPsi/psi]tau' = " ^
                                  P.compTypToString cD (Whnf.cnormCTyp   (tau,theta')) ) in
                 (Int.Comp.CtxApp (loc, i', cPsi'), (tau, theta'))
+*)
           | ((Int.Comp.TypPiBox ((Int.LF.CDecl(_psi, _sW, _), _explicit ), tau), theta) as tt)->
               let cPsi'  = Lfrecon.elDCtx Lfrecon.Pibox cD cPsi in
               let theta' = Int.LF.MDot (Int.LF.CObj (cPsi'), theta) in
@@ -1443,7 +1445,7 @@ and elExp' cD cG i = match i with
               end
 
          (* Allow uniform applications for all meta-objects *)
-          | ((Int.Comp.TypCtxPi ((_psi, sW, _explicit ), tau), theta) as tt)->
+(*          | ((Int.Comp.TypCtxPi ((_psi, sW, _explicit ), tau), theta) as tt)->
               begin match mC with
                 | Apx.Comp.MetaCtx (loc, cPsi) ->
                     let cPsi'  = Lfrecon.elDCtx Lfrecon.Pibox cD cPsi in
@@ -1457,7 +1459,7 @@ and elExp' cD cG i = match i with
                       (Int.Comp.CtxApp (loc, i', cPsi'), (tau, theta))
                 | _ ->  raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaSchema sW, theta))))
               end
-
+*)
           | (Int.Comp.TypArr (Int.Comp.TypBox(_, tP, cPsi), tau), theta) ->
               begin match mC with
                 | Apx.Comp.MetaObj (loc, psihat, m) ->
@@ -2042,13 +2044,13 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
                  (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
 
-          | (Int.Comp.TypCtxPi ((n, w, Int.Comp.Implicit), tau), theta) ->
+(*          | (Int.Comp.TypCtxPi ((n, w, Int.Comp.Implicit), tau), theta) ->
                let cPsi  = Int.LF.CtxVar (Int.LF.CInst (n, ref None, w,  cD, Whnf.m_id)) in
                let ttau' = (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)) in
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaCtx (loc, cPsi)) in
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
                  (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
-
+*)
           | _ ->   (cG, Int.Comp.PatNil, ttau))
 
   | Apx.Comp.PatApp (loc, pat', pat_spine')  ->
@@ -2070,12 +2072,13 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let _ = dprint (fun () -> "              " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta'))) in
              let (cG1, pat_spine, ttau2) = elPatSpine cD cG pat_spine' (tau, theta') in
                (cG1, Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
-         | (Int.Comp.TypCtxPi ((x, w, Int.Comp.Explicit), tau), theta) ->
+(*         | (Int.Comp.TypCtxPi ((x, w, Int.Comp.Explicit), tau), theta) ->
              let _ = dprint (fun () -> "[elPatSpine] TypCtxPi Explicit - ttau = " ^
                                P.compTypToString cD (Whnf.cnormCTyp ttau)) in
              let (pat, theta') = elPatMetaObj cD pat' (Int.LF.CDecl(x,w, Int.LF.No), theta) in
              let (cG1, pat_spine, ttau2) = elPatSpine cD cG pat_spine' (tau, theta') in
                (cG1, Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
+*)
          | (Int.Comp.TypPiBox ((Int.LF.MDecl (n, tA, cPsi), Int.Comp.Implicit), tau), theta) ->
              let _ = (dprint (fun () -> "[elPatSpine] TypPiBox implicit ttau = ");
                       dprint (fun () -> "       " ^ P.compTypToString cD (Whnf.cnormCTyp ttau))) in
@@ -2124,7 +2127,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
                  (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
 
-          | (Int.Comp.TypCtxPi ((n, w, Int.Comp.Implicit), tau), theta) ->
+(*          | (Int.Comp.TypCtxPi ((n, w, Int.Comp.Implicit), tau), theta) ->
              let _ = dprint (fun () -> "[elPatSpine] TypCtxPi implicit ttau = " ^
                                P.compTypToString cD (Whnf.cnormCTyp ttau)) in
                let cPsi  = Int.LF.CtxVar (Int.LF.CInst (n, ref None, w, cD, Whnf.m_id)) in
@@ -2132,6 +2135,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaCtx (loc, cPsi)) in
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
                  (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
+*)
           | _ ->  raise (Error (loc, TooManyMetaObj))
       )
 

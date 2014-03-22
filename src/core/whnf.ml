@@ -2529,7 +2529,6 @@ let mctxPVarPos cD p =
       | (Comp.TypCtxPi (ctx_dec , tau), t)      ->
           Comp.TypCtxPi (ctx_dec, cnormCTyp (tau, mvar_dot1 t))
 
-
       | (Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau), t)    ->
           let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
           let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in

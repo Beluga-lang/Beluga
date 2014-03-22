@@ -1,2 +1,3 @@
-Found function abstraction, but expected type {g : expCtx} {T :: [. tp]}
+Found function abstraction, but expected type {g :: (some [t : tp] exp t)}
+{T :: [. tp]}
 [g. (exp (T ))] -> [g. (exp (T ))].

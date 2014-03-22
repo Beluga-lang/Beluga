@@ -183,7 +183,7 @@ let check_datatype_decl a cs =
   let rec retname = function
     | Comp.TypBase (_, c', _) -> c'
     | Comp.TypArr (_, _, tau) -> retname tau
-    | Comp.TypCtxPi (_, _, tau) -> retname tau
+(*    | Comp.TypCtxPi (_, _, tau) -> retname tau *)
     | Comp.TypPiBox (_, _, tau) -> retname tau
     | _ -> raise IllFormedDataDecl in
   List.iter (fun (Sgn.CompConst (_, c, tau)) ->
@@ -193,7 +193,7 @@ let check_datatype_decl a cs =
 let check_codatatype_decl a cs =
   let rec retname = function
     | Comp.TypArr (_, Comp.TypBase (_, c', _), _) -> c'
-    | Comp.TypCtxPi (_, _, tau) -> retname tau
+(*    | Comp.TypCtxPi (_, _, tau) -> retname tau *)
     | Comp.TypPiBox (_, _, tau) -> retname tau
     | _ -> raise IllFormedDataDecl in
   List.iter (fun (Sgn.CompDest (_, c, tau)) ->
@@ -1040,10 +1040,10 @@ GLOBAL: sgn;
            Comp.Fun (_loc, Id.mk_name (Id.SomeString f), e)
 
       | gLambda; f = SYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.CtxFun (_loc, Id.mk_name (Id.SomeString f), e)
+          Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.CObj), e)
 
       | "mlam"; f = SYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.CtxFun (_loc, Id.mk_name (Id.SomeString f), e)
+          Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.CObj), e)
 
       | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.MObj), e)

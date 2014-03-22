@@ -362,11 +362,11 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
   | Apx.Comp.Fun (loc, f, e)    ->
       (dprint (fun () -> "[cnormApxExp] Fun ");
       Apx.Comp.Fun (loc, f, cnormApxExp cD delta e (cD'', t)))
-  | Apx.Comp.CtxFun (loc, g, e) ->
+(*  | Apx.Comp.CtxFun (loc, g, e) ->
       (dprint (fun () -> "cnormApxExp -- CtxFun ") ;
       Apx.Comp.CtxFun (loc, g, cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.CDeclOpt g)) e
                          (Int.LF.Dec (cD'', Int.LF.CDeclOpt g), Whnf.mvar_dot1 t))
-      )
+      )*)
   | Apx.Comp.MLam (loc, u, e)   ->
       (dprint (fun () -> "cnormApxExp -- MLam (or could be PLam)") ;
       Apx.Comp.MLam (loc, u, cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.MDeclOpt u)) e
@@ -728,8 +728,6 @@ let rec collectApxCompTyp fMVd tau = match tau with
   | Apx.Comp.TypCross (tau1, tau2) ->
       let fMVd1 = collectApxCompTyp fMVd tau1 in
 	collectApxCompTyp fMVd1 tau2
-  | Apx.Comp.TypCtxPi (_, tau) ->
-      collectApxCompTyp fMVd tau
   | Apx.Comp.TypPiBox ((cdecl, _), tau) ->
       let fMVd1 = collectApxCDecl fMVd cdecl in
 	collectApxCompTyp fMVd1 tau
@@ -1042,8 +1040,8 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
   | Apx.Comp.Syn (loc, i)       -> Apx.Comp.Syn (loc, fmvApxExp' fMVs cD d_param  i)
   | Apx.Comp.Fun (loc, f, e)    ->
       Apx.Comp.Fun (loc, f, fmvApxExp fMVs cD d_param  e)
-  | Apx.Comp.CtxFun (loc, g, e) ->
-      Apx.Comp.CtxFun (loc, g, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1)) e)
+(*  | Apx.Comp.CtxFun (loc, g, e) ->
+      Apx.Comp.CtxFun (loc, g, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1)) e)*)
   | Apx.Comp.MLam (loc, u, e)   ->
       Apx.Comp.MLam (loc, u, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1))  e)
   | Apx.Comp.Pair (loc, e1, e2) ->

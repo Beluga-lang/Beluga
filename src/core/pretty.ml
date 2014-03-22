@@ -1451,6 +1451,8 @@ module Int = struct
           let psi    =
             begin match decl with
               | LF.CDecl(psi, _ , _) -> psi
+              | LF.MDeclOpt psi -> psi (* this is because we are cheating when
+                                          printing an mlam *)
               | LF.CDeclOpt psi -> psi
             end in
           fprintf ppf "%a = %s"

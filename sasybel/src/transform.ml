@@ -799,7 +799,7 @@ let stmt_to_prove l lt st lju lsym =
                            let ls = List.fold_left (fun x y ->
                                                       match y with |TPremisse(_,Some(PName(s)),_,_) -> s::x
                                                         |TPremisse(_,None,_,_) -> x) [] t in
-                             (Ext.Comp.TypCtxPi(l1, (Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2),
+                             (Ext.Comp.TypPiBox(l1, (Ext.LF.CDecl(l4, Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2)),
                                                      Ext.Comp.Explicit), cta), Some(ls))
 
                        | VAltOftBlock(l4, _,Some(va3)) -> let s = locToString(l2) in
@@ -810,7 +810,7 @@ let stmt_to_prove l lt st lju lsym =
                              | Some(PName(n1)) -> let ls = List.fold_left (fun x y ->
                                                                              match y with |TPremisse(_,Some(PName(s)),_,_) -> s::x
                                                                                |TPremisse(_,None,_,_) -> x) [] t in
-                                 (Ext.Comp.TypCtxPi(l1, (Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2),
+                                 (Ext.Comp.TypPiBox(l1, (Ext.LF.CDecl(l1, Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2)),
                                                          Ext.Comp.Implicit), cta), Some(n1::ls))
                              | None -> let s = locToString(l2) in
                                let s1 = "This premise needs a name.  " ^ s in
@@ -1065,7 +1065,9 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                                             let cc = Ext.Comp.Case(l1,Pragma.RegularCase, Ext.Comp.BoxVal(l2,
                                                      Ext.LF.CtxVar(l2, Id.mk_name(Id.SomeString c)), va1), cbranch) in
 
-                                            Ext.Comp.CtxFun(l1, Id.mk_name(Id.SomeString c),Ext.Comp.MLam(l1, (Id.mk_name(Id.SomeString s1),Ext.Comp.MObj),cc))
+                                            Ext.Comp.MLam(l1,
+                                                          (Id.mk_name(Id.SomeString c), Ext.Comp.CObj),
+                                                            Ext.Comp.MLam(l1, (Id.mk_name(Id.SomeString s1),Ext.Comp.MObj),cc))
 
                                     | _ -> let s = locToString(l1) in
                                                let s1 = "This is not a valid induction variable.  " ^ s in

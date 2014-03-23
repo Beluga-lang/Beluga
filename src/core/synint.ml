@@ -214,6 +214,9 @@ module LF = struct
           getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
 
     | _ -> raise Not_found
+
+
+
 end
 
 
@@ -359,6 +362,7 @@ module Comp = struct
     | CopatMeta of Loc.t * meta_obj * copattern_spine
 
   type tclo = typ * LF.msub
+
 end
 
 

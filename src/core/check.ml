@@ -380,6 +380,16 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 ;;
 
+let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
+  | I.CDecl(_psi, schema,_ ) ->
+      let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
+        I.Dec(cD, I.CDecl(x, schema, dep'))
+  | I.MDecl(_u, tA, cPsi) ->
+      I.Dec(cD, I.MDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t)))
+  | I.PDecl(_u, tA, cPsi) ->
+      I.Dec(cD, I.PDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t)))
+  | I.SDecl (_s, cPhi, cPsi) ->
+      I.Dec(cD, I.SDecl(x, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t)))
 
   (* check cD cG e (tau, theta) = ()
    *
@@ -407,21 +417,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
            in check cD cG e' ttau'
          in let _ = List.map f bs in ()
 
-    | (MLam (_, psi, e), (TypPiBox ((I.CDecl(_psi, schema,_ ), dep), tau), t)) ->
-        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        check (I.Dec(cD, I.CDecl(psi, schema, dep')))
-          (C.cnormCtx (cG, I.MShift 1)) e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
-          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.PDecl(_u, tA, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.PDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
-          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.SDecl(_u, cPhi, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.SDecl(u, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t))))
+    | (MLam (_, u, e), (TypPiBox (cdec, tau), t)) ->
+        check (extend_mctx cD (u, cdec, t))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->

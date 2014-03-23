@@ -169,6 +169,24 @@ let rec get_ctxvar cPsi  = match cPsi with
   | Int.LF.DDec (cPsi, _ ) -> get_ctxvar cPsi
 
 
+let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
+  | Int.LF.CDecl(_psi, schema,_ ) ->
+      let dep' = match dep with Int.Comp.Explicit -> Int.LF.No | Int.Comp.Implicit -> Int.LF.Maybe in
+        Int.LF.Dec(cD, Int.LF.CDecl(x, schema, dep'))
+  | Int.LF.MDecl(_u, tA, cPsi) ->
+      Int.LF.Dec(cD, Int.LF.MDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t)))
+  | Int.LF.PDecl(_u, tA, cPsi) ->
+      Int.LF.Dec(cD, Int.LF.PDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t)))
+  | Int.LF.SDecl (_s, cPhi, cPsi) ->
+      Int.LF.Dec(cD, Int.LF.SDecl(x, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t)))
+
+
+let mk_name_cdec cdec = match cdec with
+  | Int.LF.MDecl (u, tA, cPsi) -> mk_name (SomeName u) (* mk_name (MVarName (Typ.gen_mvar_name tA)) *)
+  | Int.LF.PDecl (p, tA, cPsi) -> mk_name (PVarName None)
+  | Int.LF.CDecl (psi_name, schema_cid, _ ) -> mk_name (SomeName (psi_name))
+  | Int.LF.SDecl (s, cPsi, cPhi) -> mk_name (SomeName s)
+
 (* etaExpandMMV loc cD cPsi sA  = tN
  *
  *  cD ; cPsi   |- [s]A <= typ
@@ -914,59 +932,19 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       in Int.Comp.Cofun (loc, bs')
 
   (* Allow uniform abstractions for all meta-objects *)
-  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.MDecl(_u, tA, cPsi), Int.Comp.Explicit), tau), theta))  ->
-      let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in
+  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((cdec, Int.Comp.Explicit), tau), theta))  ->
+      let cD' = extend_mctx cD (u, (cdec, Int.Comp.Explicit), theta) in
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let _   = dprint (fun () -> "[elExp] MLam ... \n     cD = " ^
-                                   P.mctxToString cD' ^ "\n     cG =" ^
-                                   P.gctxToString cD' cG'
-                       ) in
-
       let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (loc, u, e')
 
-  | (Apx.Comp.MLam (loc, p, e) , (Int.Comp.TypPiBox((Int.LF.PDecl(_u, tA, cPsi), Int.Comp.Explicit), tau), theta))  ->
-      let cD' = Int.LF.Dec (cD, Int.LF.PDecl (p, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in
+  | (e, (Int.Comp.TypPiBox((cdec, Int.Comp.Implicit), tau), theta))  ->
+      let u = mk_name_cdec cdec in
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
-        Int.Comp.MLam (loc, p, e')
-
-
-  | (Apx.Comp.MLam (loc, s, e) , (Int.Comp.TypPiBox((Int.LF.SDecl(_u, cPhi, cPsi), Int.Comp.Explicit), tau), theta))  ->
-      let cD' = Int.LF.Dec (cD, Int.LF.SDecl (s, C.cnormDCtx (cPhi, theta), C.cnormDCtx (cPsi, theta))) in
-      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
-         Int.Comp.MLam (loc, s, e')
-
-  | (Apx.Comp.MLam (loc, psi_name, e), (Int.Comp.TypPiBox ((Int.LF.CDecl(_, schema_cid, _dep), Int.Comp.Explicit), tau), theta)) ->
-      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No)) in
-      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
-        Int.Comp.MLam (loc, psi_name, e')
-
-  | (e, (Int.Comp.TypPiBox((Int.LF.CDecl(psi_name, schema_cid, _dep),Int.Comp.Implicit), tau), theta))  ->
-      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.Maybe)) in
-      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
-      let e' = elExp cD' cG'  e' (tau, C.mvar_dot1 theta) in
-        Int.Comp.MLam (Syntax.Loc.ghost, psi_name, e')
-
-  | (e, (Int.Comp.TypPiBox((Int.LF.MDecl(u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
-      (* let u' = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA)) in *)
-      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let cD' = Int.LF.Dec (cD, Int.LF.MDecl (u, C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in
+      let cD' = extend_mctx cD (u, (cdec, Int.Comp.Implicit), theta) in
       let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
       let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (Syntax.Loc.ghost, u , e')
-
-  | (e, (Int.Comp.TypPiBox((Int.LF.PDecl(_u, tA, cPsi), Int.Comp.Implicit), tau), theta))  ->
-      let u' = Id.mk_name (Id.PVarName None) in
-      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let cD' = Int.LF.Dec (cD, Int.LF.PDecl (u', C.cnormTyp (tA, theta), C.cnormDCtx (cPsi, theta))) in
-      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
-      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
-        Int.Comp.MLam (Syntax.Loc.ghost, u' , e')
-
 
   | (Apx.Comp.Syn (loc, i), (tau,t)) ->
       let _ = dprint (fun () -> "[elExp] Syn") in

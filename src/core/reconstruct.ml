@@ -1261,12 +1261,13 @@ and elExp' cD cG i = match i with
                       end
                 |  Apx.Comp.MetaSub (loc', psihat, m) , Int.LF.SDecl (_, tA, cPsi) ->
                      begin try
-                        let tM'    = Lfrecon.elSub loc' Lfrecon.Pibox cD cPsi' m (C.cnormDCtx (tA, theta)) in
-                        let theta' = Int.LF.MDot (Int.LF.SObj (psihat, tM'), theta) in
-                           (Int.Comp.MApp (loc, i', (psihat, Int.Comp.SubstObj tM')), (tau, theta'))
-                      with Error.Violation msg ->
-                        dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
-                        raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
+                       let cPsi' = C.cnormDCtx (cPsi, theta) in
+                       let tM'    = Lfrecon.elSub loc' Lfrecon.Pibox cD cPsi' m (C.cnormDCtx (tA, theta)) in
+                       let theta' = Int.LF.MDot (Int.LF.SObj (psihat, tM'), theta) in
+                         (Int.Comp.MApp (loc, i', (psihat, Int.Comp.SubstObj tM')), (tau, theta'))
+                     with Error.Violation msg ->
+                       dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+                       raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
                      end
                 | Apx.Comp.MetaCtx (loc, cPsi) , Int.LF.CDecl(_psi, sW, _dep) ->
                     let cPsi'  = Lfrecon.elDCtx Lfrecon.Pibox cD cPsi in
@@ -1294,7 +1295,10 @@ and elExp' cD cG i = match i with
                       dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
                       raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
                   end
-                | _ -> raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
+                | _ , Int.Comp.TypBox(_, tP, cPsi) ->
+                    raise (Check.Comp.Error (loc, Check.Comp.AppMismatch (cD, (Int.Comp.MetaTyp (tP, cPsi), theta))))
+                | _ ->
+                    raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, (tau1, theta))))
               end
 
           | _ ->

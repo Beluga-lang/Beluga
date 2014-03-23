@@ -297,7 +297,6 @@ let etaExpandHead loc h tA =
 
 
 
-
 (* let etaExpandApxHead loc h tA =
   let rec etaExpApxSpine k tS tA = begin match  tA with
     | Int.LF.Atom _  -> (k, tS)

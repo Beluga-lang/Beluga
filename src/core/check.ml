@@ -300,7 +300,7 @@ let checkParamTypeValid cD cPsi tA =
   | (MetaSObjAnn (loc, _cPhi, tM), (MetaSubTyp (tA, cPsi), t)) ->
       LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) tM (C.cnormDCtx (tA, t))
 
-  | (MetaParam (loc, _phat, h), (MetaTyp (tA, cPsi), t)) ->
+  | (MetaParam (loc, _phat, h), (MetaParamTyp (tA, cPsi), t)) ->
       let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
       let tA  = C.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
@@ -323,6 +323,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             let MetaObj (loc, psihat, tM) = mO in
               checkMetaObj loc cD mO (MetaTyp (tA, cPsi), t) ;
               checkMetaSpine loc cD mS (cK, I.MDot (I.MObj(psihat, tM), t))
+
+        | I.PDecl (_u, tA, cPsi) ->
+            let MetaParam (loc, psihat, tM) = mO in
+              checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), t) ;
+              checkMetaSpine loc cD mS (cK, I.MDot (I.PObj(psihat, tM), t))
 
         | I.SDecl (_u, cPhi, cPsi) ->
             let MetaSObj (loc, psihat, tM) = mO in

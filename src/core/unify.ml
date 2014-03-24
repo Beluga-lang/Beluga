@@ -1162,10 +1162,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
                   if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "Variable occurrence")
                   else
+(*                     if isId ssubst && isMId ms  then returnNeutral head *)
                     if isPatSub t && isPatMSub mt then
                       let _ = dprint (fun () -> "[prune] patsub case " ) in
                       let _ = dprint (fun () -> "[prune] Ctx : cPsi1 = " ^ P.dctxToString cD1 cPsi1) in
                       let _ = dprint (fun () -> "[prune] t : " ^ P.subToString cD0 (Context.hatToDCtx phat) (comp t s)) in
+
                       let (id_sub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
                       let _ = dprint (fun () -> "[prune] pruneCtx done " ) in
                         (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= [|mt|]cPsi1
@@ -1642,9 +1644,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
          raise (Error "[pruneSubst] Case not implemented"))
 
     | (FSVar (n, sigma), cPsi1) ->
+
         (dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name n);
          raise (Error "[pruneSubst] Case not implemented"))
-    | (MSVar (_ , _ ), _cPsi1) ->
+    | (MSVar (_ , _, _ ), _cPsi1) ->
         (dprint (fun () -> "[pruneSubst] MSVar   " ^ P.subToString cD cPsi s);
          raise (Error "[pruneSubst] Case not implemented"))
     (* Other heads to be added ??
@@ -2318,9 +2321,9 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
 
                     let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (mtt2, ss2) (MVarRef r2)) in
-                      instantiateMMVar (r2, tM1', !cnstrs2)
-(*                       dprint (fun () -> "Instantiated with new meta^2-variable " ^
-                                        P.normalToString cD0 cPsi sM2) )*)
+                     ( instantiateMMVar (r2, tM1', !cnstrs2);
+                      dprint (fun () -> "Instantiated with new meta^2-variable " ^
+                                        P.normalToString cD0 cPsi sM2) )
                   with
                     | NotInvertible ->
                       addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))
@@ -3230,7 +3233,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (psi, n+1)))
 
 
-      | (MSVar (MSInst (_ ,({contents=None} as r), cD, cPhi1, cPhi2, cnstrs) , (mt, s)) as s1 ,  s2)->
+      | (MSVar (MSInst (_ ,({contents=None} as r), cD, cPhi1, cPhi2, cnstrs) , (_cshift,_n), (mt, s)) as s1 ,  s2)->
         (* cD0 ; cPsi |- s <= cPhi_2
            cD0        |- mt <= cD
          *)
@@ -3259,7 +3262,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
           | (_ , _ ) -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
         end
 
-      | (s2, (MSVar (MSInst (_ ,({contents=None} as r), _cD, cPhi1, cPhi2, cnstrs) , (mt, s)) as s1))->
+      | (s2, (MSVar (MSInst (_ ,({contents=None} as r), _cD, cPhi1, cPhi2,
+                             cnstrs) , (_cshift, _n), (mt, s)) as s1))->
         (* cD0 ; cPsi |- s <= cPhi_2
            cD0        |- mt <= cD
          *)

@@ -35,6 +35,7 @@ type error =
   | LeftoverConstraints of Id.name
   | PruningFailed
   | CompTypAnn
+  | CompTypAnnSub
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
   | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
@@ -143,6 +144,8 @@ let _ = Error.register_printer
 
         | CompTypAnn ->
           Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
+        | CompTypAnnSub ->
+          Format.fprintf ppf "Synthesizing the type meta-variable associated with a substitution variable failed (use typing annotation)."
 
         | NotPatternSpine ->
           Format.fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole." (* TODO *)
@@ -973,11 +976,16 @@ and elTerm' recT cD cPsi r sP = match r with
           (* For type reconstruction to succeed, we must have
            *    . ; cPsi |- tA <= type , i.e. cPsi and tA cannot depend on
            * meta-variables in cD. This will be enforced during abstraction *)
-	let _ = dprint (fun () -> "Normalized retrieved type of FMV " ^ R.render_name u ^
+	let _ = dprint (fun () -> "[elTerm] Normalized retrieved type of FMV " ^ R.render_name u ^
       " of type " ^ P.typToString cD cPhi' (tQ', Substitution.LF.id) ^ "[" ^
 			  P.dctxToString cD cPhi' ^ "]") in
         let s'' = elSub loc recT cD cPsi s cPhi' in
-          (* We do not check here that tP approx. [s']tP' --
+        let _ = dprint (fun () -> "[elTerm] s = " ^ P.subToString cD cPsi s'') in
+        let _ = dprint (fun () -> "[elTerm] domain : " ^ P.dctxToString cD cPhi') in
+        let _ = dprint (fun () -> "[elTerm] range : " ^ P.dctxToString cD cPsi) in
+        let _ = dprint (fun () -> "[elTerm] Expected type : " ^ P.typToString cD cPsi sP)
+          in
+        (* We do not check here that tP approx. [s']tP' --
            * this check is delayed to reconstruction *)
         let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil) in
         begin try
@@ -1055,11 +1063,16 @@ and elTerm' recT cD cPsi r sP = match r with
             FCVar.add u (cD, Int.LF.MDecl (u, tP, cPhi));
             Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
 
-            else
-              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) in
-                add_fcvarCnstr (m, v);
-                Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil)
-
+           else
+             ( (* if s = substvar whose type is known *)
+               match s with
+                 | Apx.LF.SVar (_ , _ ) ->
+                     raise (Error (loc, CompTypAnnSub ))
+                 | _ ->
+                     let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) in
+                       add_fcvarCnstr (m, v);
+                       Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil)
+             )
         | Error.Violation msg  ->
             dprint (fun () -> "[elClosedTerm] Violation: " ^ msg) ;
             raise (Error (loc, CompTypAnn ))
@@ -1662,10 +1675,12 @@ and elSub' loc recT cD cPsi s cPhi =
           if isPatSub sigma then
             let (cPsi', sigma') = synDom cD loc cPsi sigma in
             let ctxShift = (Int.LF.NoCtxShift, 0) in
-(*            let ctxShift = match cPhi, cPsi' with
+(* Not quite right ..
+            let ctxShift = match cPhi, cPsi' with
               | Int.LF.CtxVar _,  Int.LF.CtxVar _ -> (Int.LF.NoCtxShift, 0)
               | Int.LF.CtxVar cv , Int.LF.Null -> (Int.LF.NegCtxShift cv, 0)
-              | _ -> raise (Error (loc, SubstTyp)) in *)
+              | _ -> raise (Error (loc, SubstTyp)) in
+*)
               (FCVar.add s_name (cD, Int.LF.SDecl (s_name, cPhi, cPsi'));
                Int.LF.FSVar (s_name, ctxShift, sigma'))
           else
@@ -1766,6 +1781,11 @@ and elSub' loc recT cD cPsi s cPhi =
 
   | (Apx.LF.Dot (Apx.LF.Obj m, s),   Int.LF.DDec (cPhi', Int.LF.TypDecl(_, tA))) ->
       let s' = elSub' loc recT cD cPsi s cPhi' in
+      let _ = dprint (fun () -> "[elSub]: s := " ^ P.dctxToString cD cPsi ^
+                        " |- " ^ P.subToString cD cPsi s' ^ " : " ^
+                        P.dctxToString cD cPhi' ) in
+      let _ = dprint (fun () -> "[elSub] in context type : " ^ P.typToString cD cPhi' (tA, Substitution.LF.id)) in
+      let _ = dprint (fun () -> "[elSub] elaborate argument checking against type : " ^ P.typToString cD cPsi (tA, s')) in
       let m' = elTerm recT cD cPsi m (tA, s') in
         Int.LF.Dot (Int.LF.Obj m', s')
 

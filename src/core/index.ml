@@ -339,7 +339,8 @@ and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
       else
         begin try
           let offset = CVar.index_of_name cvars (CVar.SV u) in
-          let (s', fvs')     = index_sub cvars bvars fvars s in
+          let (s', fvs') = index_sub cvars bvars fvars s in
+          let _ = dprint (fun () -> "[index_sub] s = " ^ string_of_int offset) in
             (Apx.LF.SVar (Apx.LF.Offset offset, s') , fvs')
         with Not_found ->
 	  if closed_flag then

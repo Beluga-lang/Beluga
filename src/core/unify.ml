@@ -1740,14 +1740,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
                     ) in
         SVar(sv, (ctx_offset, n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
-    | (SVar (sv, n, sigma), cPsi1) ->
-        (dprint (fun () -> "[pruneSubst] sv with offset " ^ string_of_int n);
-         raise (Error "[pruneSubst] Case not implemented"))
-
-    | (FSVar (n, sigma), cPsi1) ->
-
-        (dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name n);
-         raise (Error "[pruneSubst] Case not implemented"))
+    | (FSVar (s_name, n , sigma), cPsi1) ->
+      let _ = dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name s_name)        in
+      let (_, SDecl (_, _cPhi,  cPsi')) = Store.FCVar.get s_name in
+        FSVar (s_name, n, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
     | (MSVar ((MSInst (_ ,( {contents=None} as r), _cD, cPhi1, cPhi2, _cnstrs) as rho),
               (ctx_offset, n), (mt, sigma) ), _cPsi1) ->

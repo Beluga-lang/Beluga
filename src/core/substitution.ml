@@ -83,6 +83,21 @@ module LF = struct
          *)
       SVar (Offset offset, (ctx_shift, k+n), r)
 
+    | (Shift (NoCtxShift, n), MSVar(s, (ctx_shift, k), (t,r))) ->
+        (* psi, Psi |- s1 : psi   where |Psi| = n
+
+           ctx_shift must be either NoCtxShift or NegCtxShift
+
+           Phi |- SVar(s, k, r): psi, Psi
+
+           where  psi,Psi, Psi_k |- ^k : psi, Psi
+           where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
+          therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
+                and  psi, Psi, Psi_k |- ^(n+k) : psi
+         *)
+      MSVar (s, (ctx_shift, k+n), (t,r))
+
+
     | (Shift (NoCtxShift, n), Shift (NoCtxShift, m)) ->
         (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
          *  therefore  psi, Psi2 |- s : psi, Psi1  where s = s1 o s2
@@ -239,11 +254,13 @@ module LF = struct
 
       Can this happen ?
 *)
-
     | (n, SVar (s, (_cshift, k), sigma )) ->
         (* Should be fixed; we really need phat of n to avoid printing
            Free BVar (n+k) ... -bp *)
         Head (HClo(n+k, s, sigma))
+    | (n, MSVar (s, (_cshift, k), (t,sigma ))) ->
+        (print_string "[bvarSub] n, MSVar - not implemented";
+        raise (NotComposable "grr"))
 
 
   (* frontSub Ft s = Ft'

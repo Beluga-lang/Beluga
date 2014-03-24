@@ -1429,12 +1429,14 @@ and cnorm (tM, t) = match tM with
           LF.comp (LF.comp (Shift (NoCtxShift, n)) r) (cnormSub (s',t))
       end
 
-    (* | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), n, s') ->
+    | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), n, s') ->
     (* cPsi |- s : cPhi  and  cPhi |- Shift n : cPhi'
        where cPhi = cPhi', x1:A1, ... xn:An
-       and   cPsi' |- s' : cPsi  *)
+       and   cPsi' |- s' : cPsi
       LF.comp (LF.comp (Shift (NoCtxShift, n)) (normSub s)) (normSub s')
     *)
+      cnormSub (LF.comp (LF.comp (Shift (NoCtxShift, n)) (normSub s)) (normSub s'),  t)
+
     | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, n, s') ->
       SVar (sigma, n , cnormSub (s',t))
      (* substitution variables ignored for how -bp *)
@@ -2050,7 +2052,15 @@ and convSub subst1 subst2 = match (subst1, subst2) with
       n = k && psi = psi'
 
   | (SVar (Offset s1, n1, sigma1), SVar (Offset s2, n2, sigma2)) ->
-      s1 = s2 && n1 = n2 && convSub sigma1 sigma2
+      (dprint (fun () -> "[convSub] ..");
+       if s1 = s2 then
+         (dprint (fun () -> "Offsets equal ");
+          n1 = n2 && convSub sigma1 sigma2)
+       else
+         (dprint (fun () -> "Offsets not equal "); false))
+
+  | (SVar (SInst (_, s1, _, _ , _), n1, sigma1), SVar (SInst(_, s2, _ , _ , _), n2, sigma2)) ->
+      s1 == s2 && n1 = n2 && convSub sigma1 sigma2
 
   | (Dot (f, s), Dot (f', s')) ->
       convFront f f' && convSub s s'
@@ -2062,7 +2072,7 @@ and convSub subst1 subst2 = match (subst1, subst2) with
       convSub subst1 (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)))
 
   | _ ->
-      false
+     (dprint (fun () -> "[convSub] unspecified case"); false)
 
 and convFront front1 front2 = match (front1, front2) with
   | (Head (BVar i), Head (BVar k)) ->
@@ -2847,6 +2857,10 @@ let mctxPVarPos cD p =
         convDCtx  cPsi cPsi'
     | (Comp.MetaObj (_, _phat, tM) , Comp.MetaObj (_, _phat', tM')) ->
         conv (tM, LF.id) (tM', LF.id)
+    | (Comp.MetaParam (_, _phat, tH) , Comp.MetaParam (_, _phat', tH')) ->
+        convHead (tH, LF.id) (tH', LF.id)
+    | (Comp.MetaSObj (_, _phat, s) , Comp.MetaSObj (_, _phat', s')) ->
+        convSub s s'
     | _ -> false
 
   and convMetaSpine mS mS' = match (mS, mS') with
@@ -2883,23 +2897,39 @@ let mctxPVarPos cD p =
           convDCtx cPsi2 cPsi2'
 
     | ((Comp.TypArr (tT1, tT2), t), (Comp.TypArr (tT1', tT2'), t'))
-      -> convCTyp (tT1, t) (tT1', t')
+      -> (dprint (fun () -> "[convCtyp] arr part 1");
+          convCTyp (tT1, t) (tT1', t'))
         &&
-          convCTyp (tT2, t) (tT2', t')
+          (dprint (fun () -> "[convCtyp] arr part 2");
+           convCTyp (tT2, t) (tT2', t'))
 
     | ((Comp.TypCross (tT1, tT2), t), (Comp.TypCross (tT1', tT2'), t'))
       -> convCTyp (tT1, t) (tT1', t')
         &&
           convCTyp (tT2, t) (tT2', t')
 
+<<<<<<< HEAD
+=======
+
+    | ((Comp.TypCtxPi ((_psi, cid_schema, _ ), tT1), t) , (Comp.TypCtxPi ((_psi', cid_schema', _ ), tT1'), t'))
+      ->
+        (dprint (fun () -> "[convCtyp] CtxPi ");
+         cid_schema = cid_schema'
+        &&
+          convCTyp (tT1, mvar_dot1 t) (tT1', mvar_dot1 t'))
+
+>>>>>>> newSVar switched domain/range; fixed convMetaObj and added cases for SObj; various other fixes
     | ((Comp.TypPiBox ((MDecl(_, tA, cPsi), dep), tT), t), (Comp.TypPiBox ((MDecl(_, tA', cPsi'), dep'), tT'), t'))
-      -> dep = dep'
+      ->
+        (dprint (fun () -> "[convCtyp] PiBox Mdec");
+        dep = dep'
         &&
           convTyp (cnormTyp (tA, t), LF.id) (cnormTyp (tA', t'), LF.id)
         &&
           convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
         &&
-          convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
+         (dprint (fun () -> "[convCtyp] PiBox decl done");
+        convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')))
 
     | ((Comp.TypPiBox ((PDecl(_, tA, cPsi), dep), tT), t),
        (Comp.TypPiBox ((PDecl(_, tA', cPsi'), dep'), tT'), t'))
@@ -2919,7 +2949,8 @@ let mctxPVarPos cD p =
         &&
           convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
         &&
-          convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
+          (dprint (fun () -> "[convCtyp] PiBox Sdec done");
+           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')))
 
     | ((Comp.TypPiBox ((CDecl(_psi, cid_schema, _ ), dep), tT), t) ,
        (Comp.TypPiBox ((CDecl(_psi', cid_schema', _ ), dep'), tT'), t'))
@@ -2931,7 +2962,7 @@ let mctxPVarPos cD p =
 
     | ((Comp.TypBool, _t ), (Comp.TypBool, _t')) -> true
 
-    | ( _ , _ ) -> false
+    | ( _ , _ ) -> (dprint (fun () -> "[convCtyp] falls through?");false)
 
 and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
     convCtx cPsi cPsi'

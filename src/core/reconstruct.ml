@@ -969,6 +969,26 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       in let bs' = List.map copatMap bs
       in Int.Comp.Cofun (loc, bs')
 
+<<<<<<< HEAD
+=======
+
+  | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
+      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
+      let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No))  in
+      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
+      let _ = dprint (fun () -> "[elExp] ctx-mlam " ^ R.render_name psi_name ^ "
+      done ") in
+     (* let _ = dprint (fun () -> "[elExp] ctx-mlam e' = " ^ P.expChkToString cD' cG' e')
+      in*)
+      let e'' =  Int.Comp.CtxFun (loc, psi_name, e') in
+      let _ = dprint (fun () -> "[elExp] ctx-mlam : cG = " ^ P.gctxToString cD cG) in
+(*      let _ = dprint (fun () -> "[elExp] ctx-mlam result ") in
+      let _ = dprint (fun () -> "        " ^ P.expChkToString cD cG e'' ) in *)
+      let _ = dprint (fun () -> "[elExp] has type " ^
+                        P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
+        e''
+
+>>>>>>> newSVar switched domain/range; fixed convMetaObj and added cases for SObj; various other fixes
   (* Allow uniform abstractions for all meta-objects *)
   | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((cdec, Int.Comp.Explicit), tau), theta))  ->
       let cD' = extend_mctx cD (u, (cdec, Int.Comp.Explicit), theta) in
@@ -2332,6 +2352,13 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
                                      "\n |- \n " ^ P.msubToString cD1'' t1 ^
                                      " \n<= " ^ P.mctxToString cD' ^ "\n") in
 
+          let _ = dprint (fun () -> "\nChecking refinement substitution") in
+          let _        = dprint (fun () -> "    " ^  P.mctxToString cD1'' ^
+                                   "\n |- \n " ^ P.msubToString cD1'' t' ^
+                                   " \n<= " ^ P.mctxToString cD ^ "\n") in
+          let _     = Check.LF.checkMSub loc cD1'' t' cD in
+          let _ = dprint (fun () -> "\nChecking refinement substitution :      DONE\n") in
+
             (*  if cD,cD0     |- e apx_exp   and  cD1' = cD1, cD0
                 then cD, cD1' |- e1 apx_exp
             *)
@@ -2400,10 +2427,9 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
     (*   cD1' |- cG1     cD1'' |- t1 : cD, cD1'    cD, cD1' |- ?   cD1' *)
     let cD'      = Context.append cD cD1' in
     let _ = dprint (fun () -> "cD' = " ^ P.mctxToString cD') in
-    let _ = dprint (fun () -> "    ' |- cG1 = " ^ P.gctxToString cD' cG1 ) in
-    let _ = dprint (fun () -> " t1 : cD' = " ^ P.msubToString cD1'' t1) in
+    let _ = dprint (fun () -> "\n     |- cG1 = " ^ P.gctxToString cD' cG1 ) in
+    let _ = dprint (fun () -> " \n t1 : cD' = " ^ P.msubToString cD1'' t1) in
     let cG1'    = Whnf.cnormCtx (Whnf.normCtx cG1, t1) in
-
     let _ = dprint (fun () -> " cD1'' |- cG1 = " ^ P.gctxToString cD1''  cG1') in
 
     let cG'     = Whnf.cnormCtx (Whnf.normCtx cG, t') in

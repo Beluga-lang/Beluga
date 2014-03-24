@@ -1480,6 +1480,19 @@ module Int = struct
             (fmt_ppr_lf_head cD cPsi lvl) h
             (R.render_name p)
 
+      | LF.SObj (phat, sigma) ->
+          let cPsi = phatToDCtx phat in
+(*          let s =
+            begin match decl with
+              | LF.SDecl(s, _ , _ ) -> s
+              | LF.SDeclOpt s -> s
+            end in
+*)
+          fprintf ppf "%a . %a = #SVAR"
+            (fmt_ppr_lf_psi_hat cD lvl) cPsi
+            (fmt_ppr_lf_sub cD cPsi lvl) sigma
+(*            (R.render_name s) *)
+
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->

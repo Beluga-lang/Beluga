@@ -662,6 +662,12 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
 
     | pat ->
         let (loc, ttau') = synPattern cD cG pat in
+        let tau' = Whnf.cnormCTyp ttau' in
+        let tau = Whnf.cnormCTyp ttau in
+        let ttau' = (tau', Whnf.m_id) in
+        let ttau = (tau, Whnf.m_id) in
+        let _ = dprint (fun () -> "\n Checking conv: " ^ P.compTypToString cD tau
+        ^ "\n == " ^ P.compTypToString cD tau' ^ "\n") in
           if C.convCTyp ttau ttau' then ()
           else
             raise (Error (loc, PatIllTyped (cD, cG, pat, ttau, ttau')))

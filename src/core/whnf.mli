@@ -92,6 +92,7 @@ val mctxCDec   : mctx -> int -> Id.name * Id.cid_schema
 val mctxCVarPos : mctx -> Id.name -> (Id.offset * Id.cid_schema)
 val mctxMVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
 val mctxPVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
+val mctxSVarPos : mctx -> Id.name -> (Id.offset * (dctx * dctx))
 
 
 val cnorm      : normal * msub -> normal

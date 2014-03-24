@@ -1050,13 +1050,12 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                         P.compTypToString cD (Whnf.cnormCTyp tau1))  in
       let (i', tau_t') = genMApp loc cD (i1, tau1) in
       let _ = dprint (fun () -> "[elExp] Unify computation-level types: \n" ^
-                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ " == "
+                        P.compTypToString cD (Whnf.cnormCTyp tau_t') ^ " \n      ==        \n"
                         ^
                         P.compTypToString cD (Whnf.cnormCTyp (tau,t) )) in
       let tau0 = Whnf.cnormCTyp (tau,t) in
       let tau1 = Whnf.cnormCTyp tau_t' in
         begin try
-          dprint (fun () -> "Unifying computation-level types\n") ;
           Unify.unifyCompTyp cD (tau0, Whnf.m_id) (tau1, Whnf.m_id);
           dprint (fun () -> "Unified computation-level types\n") ;
           dprint (fun () -> "     " ^
@@ -2040,6 +2039,8 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let _   = dprint (fun () -> "[elPatSpine] new MPVar #p = " ^ P.headToString cD cPsi' p ^ "\n") in
               let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaParam (loc, psihat, p)) in
              let ttau' = (tau, Int.LF.MDot (Int.LF.PObj (psihat, p), theta)) in
+             let _ = (dprint (fun () -> "theta = " ^ P.msubToString cD (Int.LF.MDot (Int.LF.PObj (psihat, p), theta)));
+                      dprint (fun () -> "ttau'   " ^ P.compTypToString cD (Whnf.cnormCTyp ttau'))) in
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
                (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
 

@@ -83,13 +83,13 @@ rec varSubCompose' : % {g:ctx}{h:ctx}{h':ctx}{#W:g[h]}{#W2:h[h']}
  -> IsVarSub [g] <h' $ #W[#W2[..]]> =
 % mlam g => mlam h => mlam h' => mlam #W => mlam #W2 =>
 fn r1 => fn r2 =>
-case r2 of % Would prefer to pattern match on r1, but can't, because bugs
+case r1 of % Would prefer to pattern match on r1, but can't, because bugs
 | Nil => Nil
 | Cons ivs' iv =>
   let Cons ivs' iv = r1 in
   let q0 = varSubCompose' ivs' r2 in
   let IsVar [h. #p ..] = iv in
-  let q1 = wknVar r2 in
+  let q1 = wknVar [h]  [h. #p ..]  r2 in
   Cons  q0 q1
 ;
 

@@ -303,6 +303,71 @@ let isVar h = match h with
 
 
 
+  let simplifySub cD0 cPsi sigma =
+    let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in
+    let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
+match sigma with
+    | SVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
+      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
+      (* cPsi  |- s2 : cPsi' *)
+      begin match Context.dctxToHat (cPsi) with
+        | (None, k) ->
+            let s = Shift (NoCtxShift , k) in
+              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
+        | (Some cvar, k) -> Shift (CtxShift cvar, k)
+      end
+    |SVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
+      begin match Context.dctxToHat (cPsi) with
+        | (None, k) -> Shift (NegCtxShift cv , k)
+        | (Some cv', k) ->
+          if cv = cv' then
+            let s = Shift (NoCtxShift, k) in
+              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
+          else
+            sigma
+      end
+    | SVar (s , (NoCtxShift , _ ), _s2 ) ->
+      let (cPhi, cPsi1) = match s with
+    (* cPhi |- s : cPsi1 *)
+        | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
+        | SInst (_,  _ ,  cPhi, cPsi1, _ ) -> (cPhi, cPsi1)
+      in
+      begin match cPsi1 , Context.dctxToHat (cPsi) with
+        | Null , (None, k) -> let s = Shift (NoCtxShift, k) in               (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
+        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
+        | _     -> sigma
+      end
+
+    | FSVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
+      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
+      (* cPsi  |- s2 : cPsi' *)
+      begin match Context.dctxToHat (cPsi) with
+        | (None, k) ->
+            let s = Shift (NoCtxShift , k) in
+              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
+        | (Some cvar, k) -> Shift (CtxShift cvar, k)
+      end
+    | FSVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
+      begin match Context.dctxToHat (cPsi) with
+        | (None, k) -> Shift (NegCtxShift cv , k)
+        | (Some cv', k) ->
+          if cv = cv' then
+            let s =  Shift (NoCtxShift, k) in
+              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
+          else
+            sigma
+      end
+    | FSVar (s_name , (NoCtxShift , _ ), _s2 ) ->
+      let (_, SDecl (_, cPsi1,  _cPhi)) = Store.FCVar.get s_name in
+      begin match cPsi1 , Context.dctxToHat (cPsi) with
+        | Null , (None, k) -> let s = Shift (NoCtxShift, k) in
+              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
+        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
+        | _     -> sigma
+      end
+    | _ -> sigma
+
+(*
   let simplifySub cD0 cPsi sigma = match sigma with
     | SVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
       (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
@@ -356,7 +421,7 @@ let isVar h = match h with
         | _     -> sigma
       end
     | _ -> sigma
-
+*)
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
 
@@ -1410,7 +1475,7 @@ let isVar h = match h with
 
             | MVar (Inst (_n, r, cPsi1, tP, cnstrs) (*as u*), t) ->  (* s = id *)
                 let tM = Root(loc, head, tS) in
-                let t  = Whnf.normSub (comp t s) in
+                let t  = simplifySub cD0 cPsi' (Whnf.normSub (comp t s)) in
                   (* by invariant: MVars are lowered since tM is in whnf *)
                   if eq_cvarRef (MVarRef r) rOccur then
                     raise (Failure "Variable occurrence")
@@ -1497,23 +1562,21 @@ let isVar h = match h with
                         let _ = dprint (fun () -> "   cPsi1 (context of mvar)  " ^             (R.render_cvar cD0 v)
                                           ^ " ) = " ^ P.dctxToString cD0 cPsi1) in
                         let _ = dprint (fun () -> "   cPsi' " ^ P.dctxToString cD0 cPsi') in
-                        let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
-                        let _ = dprint (fun () -> "AFTER invSub") in
-                              (*                        let (_, ssSubst) = ss in
-                                                        dprint (fun () -> "##       s  = " ^ P.subToString cD0 cPsi' s);
-                                                        dprint (fun () -> "##       t  = " ^ P.subToString cD0 cPsi' t);
-                                                        dprint (fun () -> "##       ss = " ^ P.subToString cD0 cPsi' ssSubst);
-                                                        dprint (fun () -> "##       s' = " ^ P.subToString cD0 cPsi' s');
-                                                        dprint (fun () -> "## comp t s = " ^ P.subToString cD0 cPsi' (comp t s));
-*)
 
-                              returnNeutral (MVar (Offset v, s'))
-                        with
-                        | NotInvertible ->
-                          (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^
-                              "\n Looking for " ^ R.render_cvar cD0 u ^
-                              "\n in context " ^ P.mctxToString cD0);
-                           raise (Failure ("Pruning")))
+                        let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
+(*                         let s0 = invSub cD0 phat (comp t s, cPsi1) ss rOccur
+                           in
+                        let s' = simplifySub  cD0 cPsi' s0 in *)
+                        let s' = invSub cD0 phat (t' , cPsi1) ss rOccur in
+                        let (_, ssSubst) = ss in
+                          dprint (fun () -> "##       s  = " ^ P.subToString cD0 cPsi' s);
+                          dprint (fun () -> "##       t  = " ^ P.subToString cD0 cPsi' t);
+                          dprint (fun () -> "##       ss = " ^ P.subToString cD0 cPsi' ssSubst);
+(*                          dprint (fun () -> "##       s0' = " ^ P.subToString cD0 cPsi' s0);*)
+                          dprint (fun () -> "##       s' = " ^ P.subToString   cD0 cPsi' s');
+                          dprint (fun () -> "## comp t s = " ^ P.subToString cD0 cPsi' (comp t s));
+                          returnNeutral (MVar (Offset v, s'))
+                      with
                         | Error.Violation msg ->
                             (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
                               "\n Looking for " ^ R.render_cvar cD0 u ^
@@ -1536,7 +1599,9 @@ let isVar h = match h with
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
-                let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
+(*                let t' = comp t s in *)
+                let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
                   returnNeutral (FMVar (u, s'))
 
             | FPVar (p, t)   (* tS = Nil,   s = id *) ->
@@ -1544,14 +1609,16 @@ let isVar h = match h with
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
-                let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
+                let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
                   returnNeutral (FPVar (p, s'))
 
             | PVar (Offset p, t)   (* tS = Nil,   s = id *) ->
                 begin match applyMSub p ms with
                   | MV q ->
                       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
-                      let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                      let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
+                      let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
                         returnNeutral (PVar (Offset q, s'))
                   | MUndef -> raise (Failure "[Prune] Bound PVar dependency")
                 end
@@ -1560,13 +1627,15 @@ let isVar h = match h with
                 begin match applyMSub p ms with
                   | MV q ->
                       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
-                      let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                      let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
+                      let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
                         returnNeutral (Proj (PVar (Offset q, s'), i))
                   | MUndef -> raise (Failure "[Prune] Bound PVar dependency in projection")
                 end
 
             | PVar (PInst (_n, r, cPsi1, tA, cnstrs) as q, t) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
+                let t = simplifySub cD0 (Context.hatToDCtx phat) t in
                   if eq_cvarRef (PVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
@@ -1584,6 +1653,7 @@ let isVar h = match h with
 
             | MPVar (MPInst (_n, r, cD1, cPsi1, tA, cnstrs) as q, (mt, t)) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
+                let t = simplifySub cD0 (Context.hatToDCtx phat) t in
                   if eq_cvarRef (PVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
@@ -1637,6 +1707,7 @@ let isVar h = match h with
 
             | Proj(MPVar (MPInst (_n, r, cD1, cPsi1, tA, cnstrs) as q, (mt, t)), index) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
+                let t = simplifySub cD0 (Context.hatToDCtx phat) t in
                   if eq_cvarRef (PVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
@@ -1684,6 +1755,7 @@ let isVar h = match h with
 
             | Proj (PVar (PInst (_n, r, cPsi1, tA, cnstrs) as q, t), i)  (* s = id *) ->
                 let t = Whnf.normSub t in
+                let t = simplifySub cD0 (Context.hatToDCtx phat) t in
                 if eq_cvarRef (PVarRef r) rOccur then
                   raise (Failure "[Prune] Parameter variable occurrence")
                 else
@@ -1705,7 +1777,8 @@ let isVar h = match h with
                   let d = Context.length cD0 - Context.length cD_d in
 	          let cPsi1 = if d = 0 then cPsi1 else
 	                        Whnf.cnormDCtx (cPsi1, MShift d) in
-                  let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                  let t = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
+                  let s' = invSub cD0 phat (t, cPsi1) ss rOccur in
                     returnNeutral (Proj (FPVar(p,s'), i))
                 with
                   | Not_found ->
@@ -2641,6 +2714,7 @@ let isVar h = match h with
             unifyTerm mflag cD0 cPsi sM1 sM2)
         else
         let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s1)) in
+        let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cD0 cPsi) in
         let _ = dprint (fun () -> "t' = " ^ P.subToString cD0 cPsi t') in
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
           if isPatSub t' && isPatMSub (Whnf.cnormMSub mt) then

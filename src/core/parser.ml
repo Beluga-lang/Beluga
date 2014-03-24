@@ -73,6 +73,11 @@ type pair_or_atom_pat =
   | Pair_pat of Comp.pattern
   | Atom_pat of Comp.typ option
 
+
+type term_or_sub =
+  | Sub of LF.sub
+  | Term of LF.normal
+
 type clf_pattern =
   | PatEmpty of Loc.t
   | PatCLFTerm of Loc.t * LF.normal
@@ -1254,6 +1259,13 @@ clf_pattern :
     ]
   ;
 
+  term_or_sub:
+  [
+    [
+      "." ; tM = clf_term_app -> Term tM
+    | "$" ; s  = clf_sub_new -> Sub s
+    ]
+  ];
 
   cmp_branch_pattern:
     [
@@ -1274,8 +1286,13 @@ clf_pattern :
                 (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaCtx (_loc,  cPsi))
                   | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaCtx (_loc, cPsi)), tau))
               end
-     | "<"; cPsi = clf_dctx ; "$"; tM = clf_sub_new; ">"   ->
-          Comp.PatMetaObj (_loc, Comp.MetaSObjAnn (_loc, cPsi, tM))
+
+      | "["; cPsi = clf_dctx ; "$"; s = clf_sub_new; "]"   ->
+          Comp.PatMetaObj (_loc, Comp.MetaSObjAnn (_loc, cPsi, s))
+
+
+     | "<"; cPsi = clf_dctx ; "$"; s = clf_sub_new; ">"   ->
+          Comp.PatMetaObj (_loc, Comp.MetaSObjAnn (_loc, cPsi, s))
 
      | "ttrue" -> Comp.PatTrue (_loc)
      | "ffalse" -> Comp.PatFalse (_loc)
@@ -1311,14 +1328,18 @@ clf_pattern :
     ]
   ;
 
+
+
   meta_obj:
     [
       [
 
-        "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT ["."; tM = clf_term_app -> tM ]; "]"   ->
+        "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [ tM = term_or_sub -> tM ]; "]"   ->
           begin match (phat_or_psi , mobj) with
-            | (Dctx cPsi, Some tM)   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
-            | (Hat phat, Some tM)    -> Comp.MetaObj (_loc, phat, tM)
+            | (Dctx cPsi, Some(Term tM))   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
+            | (Hat phat, Some(Term tM))    -> Comp.MetaObj (_loc, phat, tM)
+            | (Dctx cPsi, Some(Sub s))   -> Comp.MetaSObjAnn (_loc, cPsi,  s)
+            | (Hat phat, Some(Sub s))    -> Comp.MetaSObj (_loc, phat, s)
             | (Dctx cPsi, None)      -> Comp.MetaCtx (_loc, cPsi)
             | (Hat [psi], None)      -> Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi))
             | (Hat [], None)         -> Comp.MetaCtx (_loc, LF.Null)
@@ -1326,11 +1347,7 @@ clf_pattern :
               raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
           end
 
-        | "<"; phat_or_psi = clf_hat_or_dctx ; "$"; tM = clf_sub_new; ">"   ->
-           begin match phat_or_psi with
-             | Dctx cPsi ->  Comp.MetaSObjAnn (_loc, cPsi, tM)
-             | Hat phat  ->  Comp.MetaSObj (_loc, phat, tM)
-           end
+
       ]
     ];
 

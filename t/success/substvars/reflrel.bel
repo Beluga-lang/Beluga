@@ -11,19 +11,19 @@ schema xG = tm;
 schema xaG = block x:tm, u:aeq x x;
 
 datatype CtxRel : {phi:xG} {psi: xaG} {#S:phi[psi]} ctype =
-| Empty : CtxRel [] [] < $ ^ >
-| Dot   : CtxRel [phi] [psi] <psi $ #S[..] >
-           -> CtxRel [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] < psi, b $ #S[..] b.1 >
+| Empty : CtxRel [] [] [ $ ^ ]
+| Dot   : CtxRel [phi] [psi] [psi $ #S[..] ]
+           -> CtxRel [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b $ #S[..] b.1 ]
 ;
 
 
 rec refl : {phi:xG}{M: [phi . tm]}
-          CtxRel [phi] [psi] < psi $ #S[..] > ->
+          CtxRel [phi] [psi] [ psi $ #S[..] ] ->
           [psi . aeq (M #S[..]) (M #S[..])] =
 mlam phi => mlam M => fn cr => case [phi . M ..] of
  | [phi, x:tm . x] =>
    let Dot cr' = cr in
-   let (cr' : CtxRel [phi] [psi] < psi $ #S[..] >) = cr' in
+   let (cr' : CtxRel [phi] [psi] [ psi $ #S[..] ]) = cr' in
      [psi, b: block (x:tm, u:aeq x x) . b.2]
 
 | [phi, x:tm . #p ..] =>

@@ -19,21 +19,21 @@ refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
 datatype IsVarSub : {g:ctx} (h:ctx) {#S: g[h]}ctype =
-| Nil : IsVarSub [] <h $ ^ >
+| Nil : IsVarSub [] [h $ ^ ]
 | Cons :  {g:ctx}{h:ctx}{A:[.tp]}{#S:g[h]}{#p:[h. tm A]}
-      IsVarSub [g] <h $ #S[..] >
-      -> IsVarSub [g,x:tm A] <h $ #S[..] (#p ..)  >
+      IsVarSub [g] [h $ #S[..] ]
+      -> IsVarSub [g,x:tm A] [h $ #S[..] (#p ..)  ]
 ;
 
 
 rec wknVarSub : {g:ctx}{h:ctx}{#S:g[h]}{A:[. tp]}
-                   IsVarSub [g] <h $ #S[..] >
-                -> IsVarSub [g] <h,x:tm A $ #S[..] > =
+                   IsVarSub [g] [h $ #S[..] ]
+                -> IsVarSub [g] [h,x:tm A $ #S[..] ] =
 mlam g => mlam h => mlam #S => mlam B => fn r =>
 case r of
 | Nil => Nil
 |  {#p:[h.tm A]}
-   Cons [g'] [h] [. A] <h $ #S[..] > [h . #p ..] r =>
+   Cons [g'] [h] [. A] [ h $ #S[..] ] [h . #p ..] r =>
    let r' = wknVarSub [g'] [h] [h $ #S[..] ] [.B] r in
    Cons [g'] [h, x:tm B] [.A] [h,x $ #S[..] ][h,x . #p ..] r'
 ;
@@ -51,36 +51,36 @@ and IsNeutral : (g:ctx) {M:[g.tm A]} ctype =
 ;
 
 rec wknVar : {g:ctx}(h:ctx){A:[.tp]}{#p:[g.tm A]}{#W:g[h]}
-     IsVarSub [g] <h $ #W[..]>
+     IsVarSub [g] [h $ #W[..]]
   -> IsNeutral [h. #p #W[..]] =
 mlam g => mlam A => mlam #p => mlam #W => fn iv =>
 case [g. #p ..] of
 | [g',x:tm B. x] =>
   let % {#R:g'[h]}{#r:[h.tm B]}
-      Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
+      Cons [g'] [h] [. B] [h $ #R[..]] [h. #r ..] iv' = iv in
    Var [h.#r ..]
 | {#q : [g'. tm T]} [g',x:tm B. #q ..] =>
-  let {#r:[h. tm B]} Cons [g'] [h] [. B] <h $ #R[..]> [h. #r ..] iv' = iv in
+  let {#r:[h. tm B]} Cons [g'] [h] [. B] [h $ #R[..]] [h. #r ..] iv' = iv in
   wknVar [g'] [.T] [g'.#q ..] [h $ #R[..] ] iv'
 %   Var [h. #q #R[..] ]
 ;
 
 
 rec varSubCompose : (g:ctx)(h:ctx)(h':ctx)
-    IsVarSub [g] <h  $ #W[..]>
- -> IsVarSub [h] <h' $ #W2[..]>
- -> IsVarSub [g] <h' $ #W[#W2[..]]> =
+    IsVarSub [g] [h  $ #W[..]]
+ -> IsVarSub [h] [h' $ #W2[..]]
+ -> IsVarSub [g] [h' $ #W[#W2[..]]] =
 fn r1 => fn r2 =>
- let (r2 : IsVarSub [h] <h' $ #W2[..]> ) = r2 in
+ let (r2 : IsVarSub [h] [h' $ #W2[..]] ) = r2 in
 case r1 of
 | Nil => Nil
 |  {g:ctx}{h0:ctx}{A:[.tp]} {#W:g[h0]}{#p:[h0. tm A]}
-  Cons [g] [h0] [. A] <h0 $ #W[..]> [h0 . #p ..] r =>
+  Cons [g] [h0] [. A] [h0 $ #W[..]] [h0 . #p ..] r =>
   let r3 = varSubCompose r r2 in
   let  Var [h'.#q .. ] = wknVar [h0] [.A][h0.#p ..] [h' $ #W2[..]] r2
                        % IsNeutral [h. #p #W2[..]]
-  in
-   Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #q .. ] r3
+  in ?
+%   Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #q .. ] r3
   % Cons [g] [h'] [.A] [ h' $ #W[#W2[..] ] ] [h' . #p #W2[..] ] r3
 ;
 

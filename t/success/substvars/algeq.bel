@@ -334,8 +334,8 @@ rec neutral_doesnt_step :
 -> AlgEqR [g] [g'. M ..] [g'. P ..] [. T]
 -> [.empty] =
 fn s => fn e => case (s,e) of
-% | ([g'. beta],AlgApp r n) => impossible r
 | ([g'. stepapp (S ..)], AlgApp r n) => neutral_doesnt_step [g'. S ..] r
+% | ([g'. beta], AlgApp r n) => impossible r in []
 ;
 
 rec neutral_mstep :

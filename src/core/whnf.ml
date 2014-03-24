@@ -2582,6 +2582,21 @@ let mctxPVarPos cD p =
     | Comp.MetaApp (mO, mS) ->
         Comp.MetaApp (cnormMetaObj (mO,t), cnormMetaSpine (mS,t))
 
+  let cnormCDecl (cdecl, t) = match cdecl with
+    | MDecl(u, tA, cPsi) ->
+        let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
+        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
+          MDecl (u, tA', cPsi')
+    | PDecl(u, tA, cPsi) ->
+        let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
+        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
+          PDecl (u, tA', cPsi')
+    | SDecl(s, cPhi, cPsi) ->
+        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
+        let cPhi' = normDCtx (cnormDCtx(cPhi, t)) in
+          SDecl (s, cPhi', cPsi')
+    | CDecl (psi, sW, dep) -> CDecl (psi, sW, dep)
+
   let rec cnormCTyp thetaT =
     begin match thetaT with
       | (Comp.TypBase (loc, a, mS), t) ->
@@ -2609,26 +2624,10 @@ let mctxPVarPos cD p =
       | (Comp.TypCross (tT1, tT2), t)   ->
           Comp.TypCross (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
 
-      | (Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau), t)    ->
-          let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
-          let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          Comp.TypPiBox ((MDecl (u, tA', cPsi'), dep),
+      | (Comp.TypPiBox ((cdecl, dep), tau), t)    ->
+          let cdecl' = cnormCDecl (cdecl, t) in
+          Comp.TypPiBox ((cdecl', dep),
                          cnormCTyp (tau, mvar_dot1 t))
-
-      | (Comp.TypPiBox ((PDecl(u, tA, cPsi) , dep), tau), t)    ->
-          let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
-          let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          Comp.TypPiBox ((PDecl (u, tA', cPsi'), dep),
-                         cnormCTyp (tau, mvar_dot1 t))
-
-      | (Comp.TypPiBox ((SDecl(u, cPhi, cPsi) , dep), tau), t)    ->
-          let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          let cPhi' = normDCtx (cnormDCtx(cPhi, t)) in
-          Comp.TypPiBox ((SDecl (u, cPhi', cPsi'), dep),
-                         cnormCTyp (tau, mvar_dot1 t))
-
-      | (Comp.TypPiBox ((ctx_dec , dep), tau), t)      ->
-          Comp.TypPiBox ((ctx_dec, dep), cnormCTyp (tau, mvar_dot1 t))
 
       | (Comp.TypClo (tT, t'), t)        ->
           cnormCTyp (tT, mcomp t' t)
@@ -2636,16 +2635,14 @@ let mctxPVarPos cD p =
       | (Comp.TypBool, _t) -> Comp.TypBool
     end
 
+  let rec cnormCKind (cK, t) = match cK with
+    | Comp.Ctype loc -> Comp.Ctype loc
+    | Comp.PiKind (loc, (cdecl, impl ) , cK) ->
+        let cdecl' = cnormCDecl (cdecl, t) in
+          Comp.PiKind (loc, (cdecl', impl),
+                       cnormCKind (cK, mvar_dot1 t))
 
-  (* cwhnfCTyp (tT1, t1) = (tT2, t2)
-
-     Invariant:
-     If  cD1 ; cG1 |- tT1 ctype
-     cD        |- t1 <= cD1
-     then
-     cD2 ; cG2 |- tT2 ctype
-     cD        |- t2 <= cD2
-
+(*
      cD        |- [|t2|]cG2 = [|t1|]cG1 = cG'
      cD ; cG'  |- [|t2|]tT2 = [|t1|]tT2 = tT
   *)

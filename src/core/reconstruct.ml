@@ -694,19 +694,23 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
 
   | (s, (Int.Comp.PiKind (_ , (Int.LF.CDecl (psi_name , schema_cid, _ ), Int.Comp.Implicit ), cK), theta )) ->
       let cPsi = Int.LF.CtxVar (Int.LF.CInst (psi_name, ref None, schema_cid, cD, Whnf.m_id)) in
-      let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.CObj(cPsi), theta)) in
+      let _ = dprint (fun () -> "[elMetaSpine] Implicit context quantification K = " ) in
+      let _ = dprint (fun () ->  P.compKindToString cD (Whnf.cnormCKind (cK, Int.LF.MDot (Int.LF.CObj(cPsi), theta)))) in
+      let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.CObj(cPsi), theta))
+      in
         Int.Comp.MetaApp (Int.Comp.MetaCtx (loc, cPsi), cS)
 
   | (s, (Int.Comp.PiKind (_loc, (Int.LF.MDecl (n , tA, cPsi), Int.Comp.Implicit), cK), theta )) ->
-      let psihat  = Context.dctxToHat cPsi in
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let tA'   = C.cnormTyp (tA, theta) in
-
+      let psihat  = Context.dctxToHat cPsi' in
       (* let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in *)
       let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
                   else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
+      let mO    = Int.Comp.MetaObj (loc, psihat, tM') in
       let mS    = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)) in
-        Int.Comp.MetaApp (Int.Comp.MetaObj (loc, psihat, tM'), mS)
+      let _     = dprint (fun () -> "[elMetaSpine] Insert MMVar for implicit  argument " ^ P.metaObjToString cD mO) in
+        Int.Comp.MetaApp (mO, mS)
 
   | (s, (Int.Comp.PiKind (_loc, (Int.LF.PDecl (n , tA, cPsi), Int.Comp.Implicit), cK), theta )) ->
       let psihat  = Context.dctxToHat cPsi in

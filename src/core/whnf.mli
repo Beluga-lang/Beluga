@@ -109,6 +109,7 @@ val cnormMetaTyp : Comp.meta_typ * msub -> Comp.meta_typ
 val cnormMSub  : msub -> msub
 val cnormCSub  : (csub * msub) -> csub
 
+val cnormCKind : Comp.kind * msub -> Comp.kind
 val cnormCTyp  : Comp.typ * msub -> Comp.typ
 val cwhnfCTyp  : Comp.typ * msub -> Comp.typ * msub
 val cwhnfCtx   : Comp.gctx * msub -> Comp.gctx

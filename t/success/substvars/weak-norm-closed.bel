@@ -67,7 +67,7 @@ datatype RedSub : {g:ctx}{h:ctx}{#S:g[h]} ctype =
         RedSub [g] [h] <h $ #S[..] > -> Reduce [h] [h. A #S[..] ] [h. M ..]
          -> RedSub [g,x:tm (A ..)] [h] <h $ #S[..] (M ..) >
 ;
-
+%{
 rec redVar : {g:ctx}{h:ctx}{T:[g.tp]}{#S:g[h]}{#p:[g.tm (T ..)]} RedSub [g] [h] <h $ #S[..]>
               ->  Reduce [h] [h. T #S[..]] [h. #p #S[..] ] =
 mlam g => mlam h => mlam T => mlam #S => mlam #p => fn rs =>
@@ -120,3 +120,4 @@ reify (eval [] [] [. A] [. M] [ $ ^ ] (Nil []))
 % For this I need a lemma which says that RedSub holds of the identity substitution
 %;
 
+}%

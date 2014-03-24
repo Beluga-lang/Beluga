@@ -1645,21 +1645,29 @@ and elSub' loc recT cD cPsi s cPhi =
            * meta-variables in cD. This will be enforced during abstraction *)
 
         let sigma' = elSub loc recT cD cPsi sigma cPsi0' in
+        let ctxShift = match cPhi, cPhi0 with
+          | Int.LF.CtxVar _,  Int.LF.CtxVar _ -> (Int.LF.NoCtxShift, 0)
+          | Int.LF.CtxVar cv , Int.LF.Null -> (Int.LF.NegCtxShift cv, 0)
+          | _ -> raise (Error (loc, SubstTyp)) in
         begin try
                 Unify.unifyDCtx cD cPhi cPhi0;
-                Int.LF.FSVar(s_name, sigma')
+                Int.LF.FSVar(s_name, ctxShift, sigma')
           with Unify.Failure msg ->
             raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
         end
         with Not_found ->
           if isPatSub sigma then
             let (cPsi', sigma') = synDom cD loc cPsi sigma in
-             (FCVar.add s_name (cD, Int.LF.SDecl (s_name, cPhi, cPsi'));
-              Int.LF.FSVar (s_name, sigma'))
+            let ctxShift = (Int.LF.NoCtxShift, 0) in
+(*            let ctxShift = match cPhi, cPsi' with
+              | Int.LF.CtxVar _,  Int.LF.CtxVar _ -> (Int.LF.NoCtxShift, 0)
+              | Int.LF.CtxVar cv , Int.LF.Null -> (Int.LF.NegCtxShift cv, 0)
+              | _ -> raise (Error (loc, SubstTyp)) in *)
+              (FCVar.add s_name (cD, Int.LF.SDecl (s_name, cPhi, cPsi'));
+               Int.LF.FSVar (s_name, ctxShift, sigma'))
           else
             raise (Error (loc, NotPatSub))
       end
-
 
   | (Apx.LF.SVar (Apx.LF.Offset offset, s), cPhi) ->
     let (_, cPhi1, cPhi2) = Whnf.mctxSDec cD offset in
@@ -1669,13 +1677,15 @@ and elSub' loc recT cD cPsi s cPhi =
     if  Whnf.convDCtx (Whnf.cnormDCtx (cPhi, Whnf.m_id))
                       (Whnf.cnormDCtx (cPhi1, Whnf.m_id)) then
       let s' = elSub' loc recT cD cPsi s cPhi2 in
-      let ctxShift = match cPhi1, cPhi2 with
+      let ctxShift = match cPhi, cPhi1 with (* cPhi1 , cPhi2 *)
         | Int.LF.CtxVar _,  Int.LF.CtxVar _ -> (Int.LF.NoCtxShift, 0)
         | Int.LF.CtxVar cv , Int.LF.Null -> (Int.LF.NegCtxShift cv, 0)
         | _ -> raise (Error (loc, SubstTyp)) in
       let sigma = Int.LF.SVar (Int.LF.Offset offset, ctxShift, s') in
       let _ = dprint (fun () -> "[elSub] reconstructed subst = " ^
                         P.subToString cD cPsi sigma) in
+      let _ = dprint (fun () -> "[elSub] domain : " ^ P.dctxToString cD cPhi) in
+      let _ = dprint (fun () -> "[elSub] range : " ^ P.dctxToString cD cPsi) in
         sigma
 
     else

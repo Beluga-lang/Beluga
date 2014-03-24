@@ -296,6 +296,48 @@ and cnormApxSub cD delta s (cD'', t) = match s with
       let s' = cnormApxSub cD delta s (cD'', t) in
         Apx.LF.Dot (Apx.LF.Obj m', s')
 
+  | Apx.LF.SVar (Apx.LF.Offset offset , sigma) ->
+      let sigma' = cnormApxSub cD delta sigma (cD'', t) in
+      let l_delta = lengthApxMCtx delta in
+      let offset' = (offset - l_delta)  in
+        if offset > l_delta then
+          begin match Substitution.LF.applyMSub offset  t with
+            | Int.LF.MV u ->
+                Apx.LF.SVar (Apx.LF.Offset u, sigma')
+            | Int.LF.SObj (_phat, s) ->
+                let (_s, cPsi, cPhi) = Whnf.mctxSDec cD offset' in
+                let rec drop t l_delta = match (l_delta, t) with
+                  | (0, t) -> t
+                  | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
+
+                let t' = drop t l_delta in
+		let _  = dprint (fun () -> "[cnormApxSub] cPsi = " ^
+                                   P.dctxToString cD cPsi) in
+		let _  = dprint (fun () -> "[cnormApxSub] cPhi = " ^
+                                   P.dctxToString cD cPhi) in
+                let (cPsi', cPhi')  = (Whnf.cnormDCtx (cPsi, t'), Whnf.cnormDCtx
+		(cPhi, t')) in
+		let _  = dprint (fun () -> "[cnormApxSub] cPsi' = " ^
+                                   P.dctxToString cD'' cPsi') in
+		let _  = dprint (fun () -> "[cnormApxSub] cPhi' = " ^
+                                   P.dctxToString cD'' cPhi') in
+		let _ = dprint (fun () -> "[cnormApxSub - SVar] done") in
+                  Apx.LF.SVar (Apx.LF.SInst (s, cPsi', cPhi'), sigma')
+          end
+        else
+	  let _ = dprint (fun () -> "[cnormApxSub] SVar offset = " ^
+                  R.render_offset offset ) in
+          Apx.LF.SVar (Apx.LF.Offset offset, sigma')
+
+  | Apx.LF.SVar (Apx.LF.SInst (s, cPsi, cPhi), sigma) ->
+      let s' = Whnf.cnormSub (s, t) in
+      let (cPsi', cPhi') = (Whnf.cnormDCtx (cPsi, t) , Whnf.cnormDCtx (cPhi, t)) in
+      let sigma' = cnormApxSub cD delta sigma (cD'', t) in
+        Apx.LF.SVar (Apx.LF.SInst (s', cPsi', cPhi'), sigma')
+
+  | Apx.LF.FSVar (s, sigma) ->
+      let sigma' = cnormApxSub cD delta sigma (cD'', t) in
+        Apx.LF.FSVar (s, sigma')
 
 and cnormApxSpine cD delta s (cD'', t) = match s with
   | Apx.LF.Nil -> s
@@ -443,44 +485,50 @@ and cnormApxExp' cD delta i cDt = match i with
       let i1' = cnormApxExp' cD delta i1 cDt in
       let i2' = cnormApxExp' cD delta i2 cDt in
         Apx.Comp.PairVal (loc, i1', i2')
+
   | Apx.Comp.Apply (loc, i, e) ->
       let _ = dprint (fun () -> "[cnormApxExp'] Apply left arg ") in
       let i' = cnormApxExp' cD delta i cDt in
       let _ = dprint (fun () -> "[cnormApxExp'] Apply right arg ") in
       let e' = cnormApxExp cD delta e cDt in
         Apx.Comp.Apply (loc, i', e')
+
   | Apx.Comp.CtxApp (loc, i, psi) ->
         let i' = cnormApxExp' cD delta i cDt in
         let psi' = cnormApxDCtx loc cD delta psi cDt in
           Apx.Comp.CtxApp (loc, i', psi')
 
   | Apx.Comp.MApp (loc, i, Apx.Comp.MetaObj (loc', phat, m)) ->
-      let _ = dprint (fun () -> "[cnormApxExp'] MApp left arg") in
-      let i' = cnormApxExp' cD delta i cDt in
-      let _ = dprint (fun () -> "[cnormApxExp'] MApp right arg") in
-      let _ = dprint (fun () -> "[cnormApxExp'] phat = " ^
-			P.dctxToString cD (Context.hatToDCtx phat)) in
+      let i'        = cnormApxExp' cD delta i cDt in
       let (_cD', t) = cDt in
-      let _ = dprint (fun () -> "[cnormApxExp'] _cD' = " ^ P.mctxToString _cD') in
-      let _ = dprint (fun () -> "[cnormApxExp']    |- t = " ^ P.msubToString _cD' t) in
-      let _ = dprint (fun () -> "[cnormApxExp']  : cD = " ^ P.mctxToString cD) in
-
-      let cPsi = Context.hatToDCtx phat in
-      let _ = dprint (fun () -> "[cnormApxExp'] MApp phat = " ^ P.dctxToString cD cPsi) in
-      let l_delta = lengthApxMCtx delta in
-      let _ = dprint (fun () -> "[cnormApxExp'] l_delta = " ^ string_of_int l_delta) in
-      let phat' = Whnf.cnorm_psihat phat t in
-      let _ = dprint (fun () -> "[cnormApxExp'] MApp = cnorm_psihat done") in
-      let m' = cnormApxTerm cD delta m cDt in
+      let phat'     = Whnf.cnorm_psihat phat t in
+      let m'        = cnormApxTerm cD delta m cDt in
         Apx.Comp.MApp (loc, i', Apx.Comp.MetaObj (loc', phat', m'))
 
   | Apx.Comp.MAnnApp (loc, i, (psi, m)) ->
-      let _ = dprint (fun () -> "[cnormApxExp'] MAnnApp ") in
-      let i' = cnormApxExp' cD delta i cDt in
-      let _ = dprint (fun () -> "[cnormApxExp'] MAnnApp - cnormApxDCtx ") in
+      let i'   = cnormApxExp' cD delta i cDt in
       let psi' = cnormApxDCtx loc cD delta psi cDt in
-      let m' = cnormApxTerm cD delta m cDt in
+      let m'   = cnormApxTerm cD delta m cDt in
         Apx.Comp.MAnnApp (loc, i', (psi', m'))
+
+  | Apx.Comp.MApp (loc, i, Apx.Comp.MetaSub (loc', phat, sigma)) ->
+      let i'     = cnormApxExp' cD delta i cDt in
+      let (_cD', t) = cDt in
+      let phat'  = Whnf.cnorm_psihat phat t in
+      let sigma' = cnormApxSub cD delta sigma cDt in
+        Apx.Comp.MApp (loc, i', Apx.Comp.MetaSub (loc', phat', sigma'))
+
+  | Apx.Comp.MApp (loc, i, Apx.Comp.MetaSubAnn (loc', psi, sigma)) ->
+      let i'     = cnormApxExp' cD delta i cDt in
+      let psi'   = cnormApxDCtx loc cD delta psi cDt in
+      let sigma' = cnormApxSub cD delta sigma cDt in
+        Apx.Comp.MApp (loc, i', Apx.Comp.MetaSubAnn (loc', psi', sigma'))
+
+  | Apx.Comp.MAnnSApp (loc, i, (psi, sigma)) ->
+      let i'     = cnormApxExp' cD delta i cDt in
+      let psi'   = cnormApxDCtx loc cD delta psi cDt in
+      let sigma' = cnormApxSub cD delta sigma cDt in
+        Apx.Comp.MAnnSApp (loc, i', (psi', sigma'))
 
   | Apx.Comp.BoxVal (loc, psi, m) ->
       let _    = dprint (fun () -> "[cnormApxExp'] BoxVal ") in

@@ -23,7 +23,7 @@ module LF = struct
   and ctyp_decl =                             (* Contextual Declarations        *)
     | MDecl of name * typ  * dctx             (* D ::= u::A[Psi]                *)
     | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
-    | SDecl of name * dctx * dctx             (*   |   s::A[Psi]                *)
+    | SDecl of name * dctx * dctx             (*   |   s::Phi[Psi]              *)
     | CDecl of name * cid_schema * depend
     | MDeclOpt of name
     | PDeclOpt of name

@@ -11,7 +11,7 @@ lam : (tm T -> tm S) -> tm (arr T S).
 
 schema ctx = tm T;
 
-mstep : tm A -> tm A -> type.
+mstep : tm A -> tm A -> type.  %name mstep S.
 beta : mstep (app (lam M) N) (M N).
 eta : {M:tm (arr A B)} mstep M (lam (\x. app M x)).
 steplam : ({x:tm A} mstep (M x) (M' x)) -> mstep (lam M) (lam M').
@@ -48,7 +48,7 @@ datatype Halts : {g:ctx} {A:[.tp]} {M:[g.tm A]} ctype =
 
 datatype Reduce : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
 | Base : Halts [g] [.i] [g. M ..] -> Reduce [g] [g . i] [g. M ..]
-| Arr : {A:[g.tp]}{B:[g.tp]}{M:[g.tm (arr (A ..) (B ..))]}{N:[g.tm (A ..)]}
+| Arr :  {g:ctx}{A:[g.tp]}{B:[g.tp]}{M:[g.tm (arr (A ..) (B ..))]}{N:[g.tm (A ..)]}
          ({h:ctx} {#S:g[h]} {N:[h. tm (A #S[..])]}
           IsWeakening [g] [h] <h $ #S[..] > ->
           Reduce [h] [h. A #S[..] ] [h. N ..] -> Reduce [h] [h. B #S[..] ] [h. app (M #S[..]) (N ..)])
@@ -62,10 +62,12 @@ mlam g => mlam h => mlam A => mlam M => mlam #S =>
  case [g. M ..] of
 %| [g,x:tm T. x] => let Cons rs' r = rs in r
 %| [g,x:tm T. #p ..] => let Cons rs' r = rs in eval [g. #p ..] rs'
-| {T:[.tp]}{T2:[.tp]}{M1: [g.tm (arr T2 T)]}{M2:[g.tm T2]}
+| {T:[g.tp]}{T2:[g.tp]}{M1: [g.tm (arr (T2 ..) (T ..))]}{M2:[g.tm (T2 ..)]}
   [g. app (M1 ..) (M2 ..)]  =>
-  let Arr f = eval [g] [h] [. (arr T2 T)] [g. M1 ..] [h $ #S[..] ] in
-                              f [h] [h. M1 #S[..] ] [h. M2 #S[..]] Zero (eval [g] [h] [.T2] [g. M2 ..] [h $ #S[..] ])
+  let Arr [g] [g.T2 ..] [g.T1 ..] [g.M1 ..] [g.M2 ..] f = eval [g] [h] [g. arr (T2 ..) (T ..)] [g. M1 ..] [h $ #S[..] ] in
+?
+ %   f [h] [h. M1 #S[..] ] [h. M2 #S[..]] Zero ?
+ % (eval [g] [h] [g.T2 ..] [g. M2 ..] [h $ #S[..] ])
 
 %| [g. lam (\x. M1 .. x)] => % This case is definitely wrong, but roughly the idea...
 %   mlam h' => mlam F => mlam N => fn wkn-f-m => fn rn => eval [g,x:tm _. M1 .. x] (Cons (all-wkn wkn-f-m rs) rn)

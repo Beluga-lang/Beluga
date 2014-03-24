@@ -2506,10 +2506,10 @@ let mctxPVarPos cD p =
         Comp.MetaObj (loc, cnorm_psihat phat t, norm (cnorm (tM, t), LF.id))
     | Comp.MetaObjAnn (loc, cPsi, tM) ->
         Comp.MetaObjAnn (loc, cnormDCtx (cPsi, t), norm (cnorm (tM, t), LF.id))
-    | Comp.MetaSObj (loc, phat, tM) ->
-        Comp.MetaSObj (loc, cnorm_psihat phat t, normSub (cnormSub (tM, t)))
-    | Comp.MetaSObjAnn (loc, cPsi, tM) ->
-        Comp.MetaSObjAnn (loc, cnormDCtx (cPsi, t), normSub (cnormSub (tM, t)))
+    | Comp.MetaSObj (loc, phat, sigma) ->
+        Comp.MetaSObj (loc, cnorm_psihat phat t, normSub (cnormSub (sigma, t)))
+    | Comp.MetaSObjAnn (loc, cPsi, sigma) ->
+        Comp.MetaSObjAnn (loc, cnormDCtx (cPsi, t), normSub (cnormSub (sigma, t)))
 (*    | Comp.MetaParam (loc, phat, PVar (PInst (_, {contents = Some h}, _, _, _ ), s)) ->
         begin match h with
           | BVar k -> let Head h' = LF.bvarSub k s in Comp.MetaParam (loc, phat, h')

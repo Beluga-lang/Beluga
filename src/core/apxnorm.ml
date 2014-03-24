@@ -491,6 +491,7 @@ and cnormApxExp' cD delta i cDt = match i with
       let i' = cnormApxExp' cD delta i cDt in
       let _ = dprint (fun () -> "[cnormApxExp'] Apply right arg ") in
       let e' = cnormApxExp cD delta e cDt in
+      let _ = dprint (fun () -> "[cnormApxExp'] Apply right arg done ") in
         Apx.Comp.Apply (loc, i', e')
 
   | Apx.Comp.CtxApp (loc, i, psi) ->

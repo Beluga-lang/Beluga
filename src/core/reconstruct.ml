@@ -1278,17 +1278,22 @@ and elExp' cD cG i = match i with
                                 ^ "\n") in
               let _ = dprint (fun () -> "[elExp'] Check argument has type " ^
                                 P.compTypToString cD (Whnf.cnormCTyp (tau2,theta))) in
-              let _ = dprint (fun () -> "[elExp'] Result has type " ^
-                                P.compTypToString cD (Whnf.cnormCTyp (tau,theta))) in
+              let _ = dprint (fun () -> "\n[elExp'] Result has type " ^
+                                P.compTypToString cD (Whnf.cnormCTyp (tau,theta))
+                             ^ "\n") in
               let tau' = Whnf.cnormCTyp (tau, theta) in
+
               let e' = elExp cD cG e (tau2, theta) in
+
               let i'' = Int.Comp.Apply (loc, i', e') in
+
               (* let tau'' = Whnf.cnormCTyp (tau', Whnf.m_id) in *)
               let _ = dprint (fun () -> "[elExp'] Apply done : " ) in
+              let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
               let _ = dprint (fun () -> "         " ^
                                 P.expSynToString cD cG (Whnf.cnormExp' (i'', Whnf.m_id))) in
               let _ = dprint (fun () -> "         has type " ^
-                                P.compTypToString cD (Whnf.cnormCTyp (tau', Whnf.m_id))) in
+                                P.compTypToString cD tau' ^ "\n") in
                (*  (i'', (tau, theta))  - not returnig the type in normal form
       leads to subsequent whnf failure and the fact that indices for context in
       MetaObj are off *)
@@ -2223,11 +2228,12 @@ and recPatObj loc cD pat (cD_s, tau_s) =
        cD1' ; |[t]|(|[r]|cPsi) |- |[t]|(|[r]|cP)  =   |[t]|(|[r1]|tP1)
 *)
 and synRefine loc caseT (cD, cD1) pattern1 (cPsi, tP) (cPsi1, tP1) =
-  let _ = dprint (fun () -> "\n Expected Pattern type : " ^ P.dctxToString cD cPsi ^ " . " ^
-    P.typToString cD cPsi (tP, Substitution.LF.id) ^ "\n") in
-  let _ = dprint (fun () -> "\n Inferred Pattern type : " ^ P.dctxToString cD1 cPsi1 ^ " . " ^
-    P.typToString cD1 cPsi1 (tP1, Substitution.LF.id) ^ "\n") in
     let cD'    = Context.append cD cD1 in  (*         cD'  = cD, cD1     *)
+  let _ = dprint (fun () -> "\n Expected Pattern type : " ^ P.dctxToString cD' cPsi ^ " . " ^
+    P.typToString cD' cPsi (tP, Substitution.LF.id) ^ "\n") in
+  let _ = dprint (fun () -> "\n Inferred Pattern type : " ^ P.dctxToString cD1 cPsi1 ^ " . " ^
+    P.typToString cD' cPsi1 (tP1, Substitution.LF.id) ^ "\n") in
+
     let _      = dprint (fun () -> "[synRefine] cD' = " ^ P.mctxToString cD') in
     let t      = Ctxsub.mctxToMSub cD'  in  (*         .  |- t   <= cD'   *)
     let _      = dprint (fun () -> "[synRefine] mctxToMSub .  |- t <= cD' ") in
@@ -2464,7 +2470,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
             let _       = FCVar.clear() in
             let _ = dprint (fun () -> "[elBranch] Pattern " ^
                               P.patternToString cD1'' Int.LF.Empty (Int.Comp.PatMetaObj (loc',pat))) in
-            let _        = dprint (fun () -> "[elBranch] Body done \n") in
+            let _        = dprint (fun () -> "[elBranch] Body : \n") in
             let _ = dprint (fun () -> "        " ^ P.expChkToString cD1'' cG' eE') in
             let b = Int.Comp.Branch (loc, cD1'', Int.LF.Empty,
                                      Int.Comp.PatMetaObj (loc', pat), t', eE')

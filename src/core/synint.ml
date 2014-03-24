@@ -71,7 +71,9 @@ module LF = struct
   and sub =                                   (* Substitutions                  *)
     | Shift of ctx_offset * offset            (* sigma ::= ^(psi,n)             *)
     | SVar  of cvar * (ctx_offset * offset) * sub (*   | s[sigma]               *)
-    | FSVar of name * sub                     (*       | s[sigma]               *)
+(*    | FSVar of name * (ctx_offset * offset) * sub (*   |
+      s[sigma]               *)*)
+    | FSVar of name *  sub                    (*   | s[sigma]               *)
     | Dot   of front * sub                    (*       | Ft . s                 *)
     | MSVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
 

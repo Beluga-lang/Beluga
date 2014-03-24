@@ -498,6 +498,11 @@ and norm (tM, sigma) = match tM with
     let tS'     = normSpine (tS, sigma) in
       Root (loc, HClo (i, s, sigma''), tS')
 
+  | Root (loc, HMClo (i, s, (theta,sigma')), tS) ->
+    let sigma'' = normSub (LF.comp sigma' sigma) in
+    let tS'     = normSpine (tS, sigma) in
+      Root (loc, HMClo (i, s, (theta,sigma'')), tS')
+
   | Root (loc, BVar i, tS) ->
       begin match LF.bvarSub i sigma with
         | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
@@ -897,9 +902,19 @@ and cnorm (tM, t) = match tM with
                 end
             end
           | HClo (h, s, sigma) ->  (* s = SInst (None, _ , _ , _ ) *)
-            let sigma' = cnormSub (sigma, t) in
-            let tS'    = cnormSpine (tS, t) in
-            Root (loc, HClo (h, s, sigma'), tS')
+            (match s with
+              | SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) ->
+                let sigma' = cnormSub (sigma, t) in
+                let tS'    = cnormSpine (tS, t) in
+                Root (loc, HClo (h, s, sigma'), tS')
+              | SInst (_n, {contents = Some s},  _cPhi, _cPsi, _cnstr) ->
+                begin match LF.bvarSub h (LF.comp s sigma) with
+                  | Obj tM        -> reduce (tM, LF.id) (cnormSpine (tS, t))
+                  | Head (BVar k) ->  Root (loc, BVar k, cnormSpine (tS, t))
+                  | Head head     ->  cnorm (Root (loc, head, cnormSpine (tS, t)), m_id)
+                  | Undef         -> raise (Error.Violation ("Encountered undef while solving HClo\n"))
+                     (* Undef should not happen ! *)
+                end)
 
           | BVar i -> Root(loc, BVar i, cnormSpine (tS, t))
 
@@ -1455,9 +1470,9 @@ and cnorm (tM, t) = match tM with
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
     | SVar (Offset offset, (cshift, n), s') ->
       begin match LF.applyMSub offset t with
-        | MV offset' -> SVar (Offset offset', (cnormCtxShift cshift n), cnormSub (s', t))
+        | MV offset' -> SVar (Offset offset', (cnormCtxShift (cshift,t) n), cnormSub (s', t))
         | SObj (_phat, r) ->
-          let (cshift', n') = cnormCtxShift cshift n in
+          let (cshift', n') = cnormCtxShift (cshift, t) n in
           LF.comp (LF.comp (Shift (cshift', n')) r) (cnormSub (s',t))
       end
 
@@ -1467,33 +1482,33 @@ and cnorm (tM, t) = match tM with
        and   cPsi' |- s' : cPsi
       LF.comp (LF.comp (Shift (NoCtxShift, n)) (normSub s)) (normSub s')
     *)
-      let (cshift', n') = cnormCtxShift cshift n in
+      let (cshift', n') = cnormCtxShift (cshift,t) n in
       cnormSub (LF.comp (LF.comp (Shift  (cshift', n')) (normSub s)) (normSub s'),  t)
 
     | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, (cshift, n), s') ->
-      let (cshift', n') = cnormCtxShift cshift n in
+      let (cshift', n') = cnormCtxShift (cshift,t) n in
       SVar (sigma, (cshift', n') , cnormSub (s',t))
 
     | FSVar (s_name, (cshift, n), s') ->
-        FSVar (s_name, (cnormCtxShift cshift n), cnormSub (s', t))
+        FSVar (s_name, (cnormCtxShift (cshift,t) n), cnormSub (s', t))
 
     | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs),
              (ctx_shift, n), (mt,s')) ->
-      let (cshift', n') = cnormCtxShift ctx_shift n in
+      let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
       let cshift = cnormSub (Shift (cshift', n'), t) in
       LF.comp (cnormSub (LF.comp cshift s , mt)) s'
 
     | MSVar (s ,
              (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
              (ctx_shift, n), (mt,s')) ->
-      let (cshift', n') = cnormCtxShift ctx_shift n in
+      let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
         let Shift (cshift, d) = cnormSub (Shift (cshift', n') , t) in
           MSVar (s, (cshift, d), (cnormMSub (mcomp mt t), cnormSub (s',t)))
 
     | _ -> (dprint (fun () -> "[cnormSub] undefined ? ");
             raise (Error.Violation "Cannot guarantee that parameter variable remains head"))
 
-  and cnormCtxShift ctx_shift k = match ctx_shift with
+  and cnormCtxShift (ctx_shift,t) k = match ctx_shift with
     | CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
       begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
           | (Some ctx_v, d) -> (CtxShift ctx_v, k + d)
@@ -1504,6 +1519,25 @@ and cnorm (tM, t) = match tM with
           | (Some ctx_v, d) -> (NegCtxShift ctx_v, k)
           | (None, d) -> (NoCtxShift, k)
       end
+    | CtxShift (CtxOffset offset) ->
+      begin match LF.applyMSub offset t with
+        | CObj(cPsi) ->
+            begin match Context.dctxToHat (cPsi) with
+              | (None, i) -> (NoCtxShift, k+i)
+              | (Some cvar', i) -> (CtxShift cvar', i+k)
+            end
+        | MV offset' -> (CtxShift (CtxOffset offset'), k)
+      end
+    | NegCtxShift (CtxOffset offset) ->
+      begin match LF.applyMSub offset t with
+        | CObj(cPsi) ->
+            begin match Context.dctxToHat (cPsi) with
+              | (None, _i) -> (NoCtxShift , k) (* convert i to undefs? *)
+              | (Some cvar', _i) -> (NegCtxShift cvar', k)
+            end
+        | MV offset' -> (CtxShift (CtxOffset offset'), k)
+      end
+
     | _ -> (ctx_shift, k)
 
   and cnormFront (ft, t) = match ft with
@@ -1516,8 +1550,26 @@ and cnorm (tM, t) = match tM with
         end
 
     | Head (HClo (h , s, sigma))  ->
-      let sigma' = cnormSub (sigma, t) in
-      Head (HClo (h, s, sigma'))
+      (match s with
+        | SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) ->
+          let sigma' = cnormSub (sigma, t) in
+          Head (HClo (h, s, sigma'))
+        | SInst (_n, {contents = Some s},  _cPhi, _cPsi, _cnstr) ->
+          let s' = cnormSub (sigma, t) in
+          LF.bvarSub h (LF.comp s s')
+      )
+
+    | Head (HMClo (h , s, (theta,sigma)))  ->
+      (match s with
+        | MSInst (_n, {contents = None}, _cD,_cPhi, _cPsi, _cnstr) ->
+          let t'' = cnormMSub (mcomp theta t) in
+          let s' = cnormSub (sigma, t) in
+          Head (HMClo (h, s, (t'', s')))
+        | MSInst (_n, {contents = Some s}, _cD, _cPhi, _cPsi, _cnstr) ->
+          let s' = cnormSub (sigma, t) in
+          let t'' = cnormMSub (mcomp theta t) in
+          cnormFront (LF.bvarSub h (LF.comp s s'), t'')
+      )
 
     | Head (BVar _ )            -> ft
     | Head (Const _ )           -> ft

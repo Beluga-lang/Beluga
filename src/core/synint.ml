@@ -62,7 +62,7 @@ module LF = struct
     | FPVar of name * sub                     (* free parameter variable for type
                                                  reconstruction                 *)
     | HClo  of offset * cvar * sub            (*   | HClo(x, #S[sigma])         *)
-(*    | HMClo of offset * mm_var * (msub * sub) (*   | HMClo(x, #S[theta;sigma])  *) *)
+    | HMClo of offset * mm_var * (msub * sub) (*   | HMClo(x, #S[theta;sigma])  *)
 
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)

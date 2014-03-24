@@ -886,26 +886,32 @@ let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
       let cPsi = Int.LF.CtxVar (Int.LF.CInst (n, ref None, schema_cid, cD, Whnf.m_id)) in
         (Int.Comp.MetaCtx (loc', cPsi),
          Int.LF.CObj cPsi)
+
   | Int.LF.SDecl (n, cPhi, cPsi) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
       let psihat  = Context.dctxToHat cPsi' in
       let cPhi'   = C.cnormDCtx (cPhi, t) in
-      let s = Whnf.newMSVar None (cD, cPhi', cPsi') in
+      let s = Whnf.newMSVar None (cD, cPsi', cPhi') in
       let s' = Int.LF.MSVar (s, (Int.LF.NoCtxShift,0),
-                             (Whnf.m_id, LF.id)) in (* Probably LF.id is wrong *)
+                             (Whnf.m_id, LF.id)) in (* Probably LF.id is  wrong *)
+      let s' = Whnf.normSub s' in
         (Int.Comp.MetaSObj (loc', psihat, s') ,
          Int.LF.SObj (psihat, s'))
 
 let mgCompTyp cD (loc, c) =
   let cK = (CompTyp.get c).CompTyp.kind in
+  let _ = dprint (fun () -> "[mgCompTyp] kind of constant " ^
+              (R.render_cid_comp_typ c)) in
+  let _ = dprint (fun () -> "               " ^
+                    P.compKindToString Int.LF.Empty cK) in
   let rec genMetaSpine (cK, t) = match (cK, t) with
     | (Int.Comp.Ctype _, _t) -> Int.Comp.MetaNil
     | (Int.Comp.PiKind (loc', (cdecl, _ ), cK), t) ->
         let (mO, mF) = genMetaVar loc cD (loc', cdecl, t) in
         let mS = genMetaSpine (cK, Int.LF.MDot (mF, t)) in
-          Int.Comp.MetaApp (mO, mS)
-  in
-    Int.Comp.TypBase (loc, c, genMetaSpine (cK, Whnf.m_id))
+          Int.Comp.MetaApp (mO, mS) in
+  let mS = genMetaSpine (cK, Whnf.m_id) in
+    Int.Comp.TypBase (loc, c, mS)
 
 let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
   | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
@@ -925,10 +931,10 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
       let tau1' = inferPatTyp' cD' (cD_s, tau1) in
       let tau2' = inferPatTyp' cD' (cD_s, tau2) in
         Int.Comp.TypCross (tau1', tau2')
-  | Int.Comp.TypBase (loc, c, _ )  ->
-      mgCompTyp cD' (loc, c)
- | Int.Comp.TypCobase (loc, c, _ )  ->
-      mgCompTyp cD' (loc, c)
+
+  | Int.Comp.TypBase (loc, c, _ )  -> mgCompTyp cD' (loc, c)
+
+ | Int.Comp.TypCobase (loc, c, _ )  -> mgCompTyp cD' (loc, c)
 
   | Int.Comp.TypArr (tau1, tau2)  ->
       let tau1' = inferPatTyp' cD' (cD_s, tau1) in
@@ -2089,6 +2095,8 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
         (cG', pat', ttau')
 
   | _ ->
+      let _ = dprint (fun () -> "[recPatObj'] -~~> inferPatTyp ") in
+      let _ = dprint (fun () -> "[inferPatTyp] : tau_s = " ^ P.compTypToString cD_s  tau_s) in
       let tau_p = inferPatTyp cD (cD_s, tau_s) in
       let _ = dprint (fun () -> "[inferPatTyp] : tau_p = " ^ P.compTypToString cD  tau_p) in
       let ttau' = (tau_p, Whnf.m_id) in
@@ -2097,7 +2105,8 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
 
 
 and recPatObj loc cD pat (cD_s, tau_s) =
-  let _ = dprint (fun () -> "[recPatObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in
+  let _ = dprint (fun () -> "[recPatObj] scrutinee has type tau = " ) in
+  let _ = dprint (fun () -> "       " ^  P.compTypToString cD_s  tau_s) in
   let (cG', pat', ttau') = recPatObj' cD pat (cD_s, tau_s) in
     (* cD' ; cG' |- pat' => tau' (may contain free contextual variables) *)
     (* where cD' = cD1, cD and cD1 are the free contextual variables in pat'
@@ -2105,8 +2114,10 @@ and recPatObj loc cD pat (cD_s, tau_s) =
        cG' and cD' are handled destructively via FVar and FCVar store
       *)
     let _                      = Lfrecon.solve_constraints cD in
-    let _ = dprint (fun () -> "[recPatObj] pat (before abstraction) = " ^
-                      P.gctxToString cD cG' ^ " \n  |-  " ^
+    let _ = dprint (fun () -> "[recPatObj] pat (before abstraction) = " ) in
+    let _ = dprint (fun () -> "               " ^
+                      P.gctxToString cD cG' ) in
+    let _ = dprint (fun () -> " \n  |-  " ^
                       P.patternToString cD cG' pat' ) in
     let _ = dprint (fun () -> "[recPatObj] Abstract over pattern and its type") in
     let (cD1, cG1, pat1, tau1) = Abstract.patobj loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) pat' (Whnf.cnormCTyp ttau') in
@@ -2463,6 +2474,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
      let _  = dprint (fun () -> "[elBranch] Reconstruction of general pattern of type "
                        ^ P.compTypToString cD tau_s) in
     let cD' = elMCtx Lfrecon.Pibox delta in
+    let _ = dprint (fun () -> "[recPatObj] reconstruction of delta done") in
     let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat (cD, tau_s) in
     let _ = dprint (fun () -> "[recPatObj] done") in
     let _ = dprint (fun () -> "           " ^ P.mctxToString cD1' ^ " ; " ^

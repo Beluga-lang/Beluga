@@ -62,6 +62,7 @@ module LF = struct
     | FPVar of name * sub                     (* free parameter variable for type
                                                  reconstruction                 *)
     | HClo  of offset * cvar * sub            (*   | HClo(x, #S[sigma])         *)
+(*    | HMClo of offset * mm_var * (msub * sub) (*   | HMClo(x, #S[theta;sigma])  *) *)
 
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)
@@ -74,7 +75,7 @@ module LF = struct
         (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
     | FSVar of name *
         (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
-    | Dot   of front * sub                    (*       | Ft . s                 *)
+    | Dot   of front * sub                    (*   | Ft . s                     *)
     | MSVar of mm_var *
         (ctx_offset * offset) * (msub * sub)  (*   | u[t ; s]                   *)
 
@@ -108,20 +109,17 @@ module LF = struct
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
     | Inst   of name * normal option ref * dctx * typ * cnstr list ref
-        (* D ; Psi |- M <= A
-           provided constraint *)
+        (* D ; Psi |- M <= A   provided constraint *)
     | PInst  of name * head   option ref * dctx * typ * cnstr list ref
-        (* D ; Psi |- H => A
-           provided constraint *)
+        (* D ; Psi |- H => A  provided constraint *)
     | SInst  of name * sub    option ref * dctx * dctx * cnstr list ref
 
   and mm_var  =                               (* Meta^2 Variables                *)
     | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
-        (* D ; Psi |- M <= A
-           provided constraint *)
+        (* D ; Psi |- M <= A     provided constraint *)
     | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
-    | MSInst   of name * sub option ref * mctx * dctx * dctx * cnstr list ref
-
+    | MSInst   of name * sub option ref * mctx * dctx (* cPsi *) * dctx (* cPhi *) * cnstr list ref
+        (* cD ; cPhi |- s : cPsi ?? *)
 
   and tvar =
     | TInst   of typ option ref * dctx * kind * cnstr list ref

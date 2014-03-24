@@ -38,10 +38,13 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 
 val newMMVar    : Id.name option -> mctx * dctx * typ -> mm_var
 val newMPVar    : Id.name option -> mctx * dctx * typ -> mm_var
-val newMSVar    : Id.name option -> mctx * dctx * dctx -> mm_var
+val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> mm_var
+                  (* cD ; cPsi |- msvar : cPhi *)
+
 val newMVar     : Id.name option -> dctx * typ -> cvar
 val newPVar     : Id.name option -> dctx * typ -> cvar
-val newSVar     : Id.name option -> dctx * dctx -> cvar
+val newSVar     : Id.name option -> dctx (* cPsi *) * dctx (* cPhi *) -> cvar
+                  (* cPsi |- svar : cPhi *)
 val newCVar     : Id.name option -> Id.cid_schema -> ctx_var
 
 val raiseType   : dctx -> typ -> typ

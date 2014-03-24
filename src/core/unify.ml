@@ -1631,7 +1631,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
       let _ = dprint (fun () -> "[pruneSubst] SVar case ") in
       let cPsi' = (match sv with
                      | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD  offset in cPsi'
-                     | SInst (_ , ({contents=None} as r), _cPhi, cPsi', _ ) ->
+                     | SInst (_ , ({contents=None} as r), cPsi', _cPhi', _ ) ->
                        if eq_cvarRef (SVarRef r) rOccur then
                          raise (Failure "Variable occurrence")
                        else
@@ -1647,9 +1647,17 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
         (dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name n);
          raise (Error "[pruneSubst] Case not implemented"))
-    | (MSVar (_ , _, _ ), _cPsi1) ->
+
+    | (MSVar ((MSInst (_ ,( {contents=None} as r), _cD, cPhi1, cPhi2, _cnstrs) as rho),
+              (ctx_offset, n), (mt, sigma) ), _cPsi1) ->
         (dprint (fun () -> "[pruneSubst] MSVar   " ^ P.subToString cD cPsi s);
-         raise (Error "[pruneSubst] Case not implemented"))
+        if eq_cvarRef (MSVarRef r) rOccur then
+          raise (Failure "Variable occurrence")
+        else
+          let sigma = Whnf.normSub sigma in
+          let sigma' = pruneSubst cD cPsi (sigma, cPhi1) ss rOccur in
+          MSVar (rho, (ctx_offset, n), (mt, sigma'))
+        )
     (* Other heads to be added ??
 
     | (Dot (Head , s'), DDec(cPsi', _dec)) ->
@@ -1684,7 +1692,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
           dprint (fun () -> "[pruneSubst] tM' = " ^ P.normalToString cD cPsi (tM', Substitution.LF.id));
           Dot (Obj tM', pruneSubst cD cPsi (s', cPsi') ss rOccur))
 
-
+    | (s, cPsi') ->(dprint (fun () -> "[pruneSubst] other cases not defined? " );
+           dprint (fun () -> "[pruneSubst] - substitution ill-typed ?" ) ;
+           dprint (fun () -> "             " ^ P.dctxToString cD cPsi ^ " |- "
+                     ^ P.subToString cD cPsi s
+                     ^ " : " ^ P.dctxToString cD cPsi');
+           raise NotInvertible)
   (* pruneSub cD0 cPsi phat (s, cPsi1) ss rOccur = (s', cPsi1')
 
      if phat = hat(Psi)  and
@@ -1720,10 +1733,27 @@ let rec blockdeclInDctx cPsi = match cPsi with
         *)
         let cPsi' = (match s with
                      | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  offset in cPsi'
-                     | SInst (_ , {contents=None}, _cPhi', cPsi', _ ) -> cPsi'
+                     | SInst (_ , {contents=None}, cPsi', _cPhi', _ ) -> cPsi'
                     ) in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
           (id,CtxVar psi)
+
+
+    | (MSVar (s, (NoCtxShift, 0), (_theta,sigma)), CtxVar psi) ->
+        let MSInst (_ ,{contents=None}, _cD, cPhi1, cPhi2, _cnstrs) = s in
+        let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
+        let _ = invSub cD0 phat (sigma, cPhi1') ss rOccur  in
+          (id, CtxVar psi)
+
+    | (FSVar (s, (NoCtxShift,0), sigma), CtxVar psi) ->
+        (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
+               D ;Psi |- sigma : Phi
+               D;Psi'' |- ss <= Psi
+               [ss] ([s[sigma] ] id ) exists
+        *)
+        let (_, SDecl (_, _cPhi,  cPsi')) = Store.FCVar.get s in
+        let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
+          (id, CtxVar psi)
 
     (*(Dot (Head (HClo  .... )  to be added -bp
        SVar case (offset might not be 0 ) and domain is cPsi
@@ -3197,7 +3227,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             | true ->
                 begin try
                   let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), cPhi1) (Whnf.m_id, s_i) (SVarRef r) in
+                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), cPsi2) (Whnf.m_id, s_i) (SVarRef r) in
                     instantiateSVar (r, s2', !cnstrs)
                 with
                   | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
@@ -3212,7 +3242,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
             | true ->
                 begin try
                   let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), cPhi1) (Whnf.m_id, s_i) (SVarRef r) in
+                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), cPsi2) (Whnf.m_id, s_i) (SVarRef r) in
                     instantiateSVar (r, s2', !cnstrs)
                 with
                   | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
@@ -3252,8 +3282,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
                 let mt_i = Whnf.m_invert (Whnf.cnormMSub mt) in  (*  cD |- mt_i : cD0 *)
                 let _ = dprint (fun () -> "[unifySub - a ]  pattern sub case ... calling pruneSubst" ) in
                 let _ = dprint (fun () -> "[unifySub - a ] s_i = " ^ P.subToString cD0 cPhi2 s_i) in
-                let _ = dprint (fun () -> "[unifySub - a ] mt_i = " ^    P.msubToString cD mt_i) in
-                let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), (Whnf.cnormDCtx (cPhi1, mt))) (mt_i, s_i) (MSVarRef r) in
+                let _ = dprint (fun () -> "[unifySub - a ] mt_i = " ^
+                                  P.msubToString cD mt_i) in
+                let s2 = Whnf.normSub (Whnf.cnormSub (s2, mt)) in
+                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MSVarRef r) in
                 let _ = dprint (fun () -> "[unifySub - a ] pruned s2 = s2' = " ^ P.subToString cD cPhi2 (Whnf.normSub s2')) in
                 instantiateMSVar (r, s2', !cnstrs)
               with
@@ -3278,6 +3310,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
               try
                 let s_i = invert (Whnf.normSub s) in
                 let mt_i = Whnf.m_invert (Whnf.cnormMSub mt) in
+                let s2 = Whnf.normSub (Whnf.cnormSub (s2, mt)) in
                 let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MSVarRef r) in
                 instantiateMSVar (r, s2', !cnstrs)
               with

@@ -2955,17 +2955,6 @@ let mctxPVarPos cD p =
         &&
           convCTyp (tT2, t) (tT2', t')
 
-<<<<<<< HEAD
-=======
-
-    | ((Comp.TypCtxPi ((_psi, cid_schema, _ ), tT1), t) , (Comp.TypCtxPi ((_psi', cid_schema', _ ), tT1'), t'))
-      ->
-        (dprint (fun () -> "[convCtyp] CtxPi ");
-         cid_schema = cid_schema'
-        &&
-          convCTyp (tT1, mvar_dot1 t) (tT1', mvar_dot1 t'))
-
->>>>>>> newSVar switched domain/range; fixed convMetaObj and added cases for SObj; various other fixes
     | ((Comp.TypPiBox ((MDecl(_, tA, cPsi), dep), tT), t), (Comp.TypPiBox ((MDecl(_, tA', cPsi'), dep'), tT'), t'))
       ->
         (dprint (fun () -> "[convCtyp] PiBox Mdec");

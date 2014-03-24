@@ -969,26 +969,6 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       in let bs' = List.map copatMap bs
       in Int.Comp.Cofun (loc, bs')
 
-<<<<<<< HEAD
-=======
-
-  | (Apx.Comp.CtxFun (loc, psi_name, e), (Int.Comp.TypCtxPi ((_, schema_cid, Int.Comp.Explicit), tau), theta)) ->
-      let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
-      let cD' = Int.LF.Dec (cD, Int.LF.CDecl (psi_name, schema_cid, Int.LF.No))  in
-      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
-      let _ = dprint (fun () -> "[elExp] ctx-mlam " ^ R.render_name psi_name ^ "
-      done ") in
-     (* let _ = dprint (fun () -> "[elExp] ctx-mlam e' = " ^ P.expChkToString cD' cG' e')
-      in*)
-      let e'' =  Int.Comp.CtxFun (loc, psi_name, e') in
-      let _ = dprint (fun () -> "[elExp] ctx-mlam : cG = " ^ P.gctxToString cD cG) in
-(*      let _ = dprint (fun () -> "[elExp] ctx-mlam result ") in
-      let _ = dprint (fun () -> "        " ^ P.expChkToString cD cG e'' ) in *)
-      let _ = dprint (fun () -> "[elExp] has type " ^
-                        P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
-        e''
-
->>>>>>> newSVar switched domain/range; fixed convMetaObj and added cases for SObj; various other fixes
   (* Allow uniform abstractions for all meta-objects *)
   | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((cdec, Int.Comp.Explicit), tau), theta))  ->
       let cD' = extend_mctx cD (u, (cdec, Int.Comp.Explicit), theta) in

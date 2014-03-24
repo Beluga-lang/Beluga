@@ -21,14 +21,11 @@ let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
-<<<<<<< HEAD
   | ProjBVarImpossible of Int.LF.mctx * Int.LF.dctx * Int.LF.head
   | BVarTypMissing  of Int.LF.mctx * Int.LF.dctx * Int.LF.head
   | IdCtxsub
-=======
   | SubstTyp
   | MissingInformationCtx of Int.LF.mctx * Int.LF.dctx
->>>>>>> Associate SVars with NegCtx if the SVar has domain g but range empty; this is needed to allow a meaningful composition of an NegCtx(psi) with SVar of type psi[] which results in Shift 0 (NoCtxShift); added also more error handling when reconstruction fails in the presence of SVars
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | IllTypedElab    of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
   | IllTypedSub     of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub * Int.LF.dctx
@@ -2251,7 +2248,7 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
 let solve_constraints cD' =
   (solve_fcvarCnstr cD' !fcvar_cnstr ;
   reset_fcvarCnstr ();
-  Unify.forceGlobalCnstr ();
+  Unify.forceGlobalCnstr (!Unify.globalCnstrs);
   Unify.resetGlobalCnstrs () )
 
 let solve_fvarCnstr rectyp =

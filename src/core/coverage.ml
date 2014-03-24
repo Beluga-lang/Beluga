@@ -716,7 +716,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
 		      P.typToString LF.Empty cPsi' (tA', S.LF.id) )      in
 *)
     let tM = LF.Root (Syntax.Loc.ghost, tH' , genSpine LF.Empty cPsi' (tA', S.LF.id) tP') in
-    let _  = U.forceGlobalCnstr () in
+    let _  = U.forceGlobalCnstr (!U.globalCnstrs) in
     let (cD', cPsi', tR, tP', ms') =
       begin try
 	Abstract.covgoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
@@ -941,7 +941,7 @@ let trivially_empty_param cov_problem =
 let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
   | [] -> (match sCands' with
              | []  ->  begin try ((* dprint (fun () -> "[solve'] Check that all global constraints are true");*)
-                                  U.forceGlobalCnstr ();
+                                  U.forceGlobalCnstr (!U.globalCnstrs);
                                   dprint (fun () -> "[solve'] All global constraints are true.");
                                   Solved)
                       with
@@ -1877,9 +1877,11 @@ let rec check_covproblem cov_problem  =
 	(match splitCand with
 	   |  [] ->
 		let _ = dprint (fun () -> "\n\n CHECK WHETHER  " ^
-				  P.patternToString cD (gctxToCompgctx cG) cg ^" IS COVERED?\n") in
-		(match solve cD cD_p matchCand with
-		   | Solved -> (* No new splitting candidates and all match
+				  P.patternToString cD (gctxToCompgctx cG) cg ^"
+	                     IS COVERED?\n") in
+                let s_result = solve cD cD_p matchCand in
+                   (match (s_result , U.unresolvedGlobalCnstrs ()) with
+		   | (Solved, false) -> (* No new splitting candidates and all match
 				  candidates are satisfied *)
 			 dprint (fun () -> "[check_covproblem] COVERED " ^
 				   P.patternToString cD (gctxToCompgctx cG) cg) ;

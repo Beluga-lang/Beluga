@@ -3214,7 +3214,7 @@ let mctxSVarPos cD u =
           convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
         &&
           (dprint (fun () -> "[convCtyp] PiBox Sdec done");
-           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')))
+           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t'))
 
     | ((Comp.TypPiBox ((CDecl(_psi, cid_schema, _ ), dep), tT), t) ,
        (Comp.TypPiBox ((CDecl(_psi', cid_schema', _ ), dep'), tT'), t'))
@@ -3299,6 +3299,15 @@ and closedSpine (tS,s) = match tS with
   | SClo(tS', s')  -> closedSpine (tS', LF.comp s' s)
 
 and closedSub s = match s with
+ | SVar (Offset _ , (cshift,_n) , sigma) ->
+      (match cshift with
+        | CtxShift (CInst (_, {contents = None}, _, _, _)) -> false
+        | CtxShift _ -> true
+        | NoCtxShift -> true
+        | NegCtxShift (CInst (_, {contents = None}, _, _, _)) -> false
+        | NegCtxShift _ -> true)
+        &&
+        closedSub sigma
   | Shift _ -> true
   | Dot (ft, s) -> closedFront ft && closedSub s
 
@@ -3346,6 +3355,9 @@ and closedMetaObj mO = match mO with
   | Comp.MetaCtx (_, cPsi) -> closedDCtx cPsi
   | Comp.MetaObj (_, phat, tM) ->
       closedDCtx (Context.hatToDCtx phat) && closed (tM, LF.id)
+  | Comp.MetaSObj (_, phat, sigma) ->
+      closedDCtx (Context.hatToDCtx phat) && closedSub sigma
+
 
 let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true

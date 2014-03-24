@@ -50,7 +50,7 @@ module type UNIFY = sig
 
   val nextCnstr         : unit -> cnstr option
   val addConstraint     : cnstr list ref * cnstr -> unit
-  val forceGlobalCnstr  : unit -> unit
+  val forceGlobalCnstr  : cnstr list -> unit
   val solveConstraint   : cnstr -> unit
 
   val isVar             : head -> bool
@@ -4007,7 +4007,7 @@ match sigma with
                         " = " ^ P.headToString cD cPsi h2 ^ "\n"))
           end )
 
-    and forceGlobalCnstr ()      =
+(*    and forceGlobalCnstr ()      =
       let cnstr = !globalCnstrs in
         (resetGlobalCnstrs ();
         forceGlobalCnstr' cnstr;
@@ -4015,12 +4015,12 @@ match sigma with
           | [] -> ()
           | _ -> raise (Failure "Unresolved constraints")
         end)
-
-    and forceGlobalCnstr' c_list = match c_list with
+*)
+    and forceGlobalCnstr c_list = match c_list with
       | [ ] -> ()
       | c::cnstrs ->
           match !c with
-            | Queued (* in process elsewhere *) -> forceGlobalCnstr' cnstrs
+            | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs
             |  Eqn (cD, cPsi, tM1, tM2) ->
                  let _ = solveConstraint c in
                    (dprint (fun () ->  "Solve global constraint:\n") ;
@@ -4030,7 +4030,7 @@ match sigma with
                       (unify1 Unification cD cPsi (tM1, id) (tM2, id);
                        dprint (fun () ->  "Solved global constraint (DONE): " ^ P.normalToString cD cPsi (tM1, id)  ^
                                  " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
-                      forceGlobalCnstr' cnstrs)
+                      forceGlobalCnstr cnstrs)
                     with Failure _ ->
                       let cnstr_string = (P.normalToString cD cPsi (tM1, id)  ^ " =/= " ^ P.normalToString cD cPsi (tM2, id)) in
                       let getLoc tM1 = begin match tM1 with
@@ -4047,7 +4047,7 @@ match sigma with
                      unifyHead Unification cD cPsi h1 h2;
                      dprint (fun () -> "Solved global constraint (H): " ^ P.headToString cD cPsi h1  ^
                             " = " ^ P.headToString cD cPsi h2 ^ "\n");
-                      forceGlobalCnstr' cnstrs
+                      forceGlobalCnstr cnstrs
                    with Failure _ ->
                      let cnstr_string = (P.headToString cD cPsi h1  ^ " =/= " ^ P.headToString cD cPsi h2) in
                      let loc = Syntax.Loc.ghost in
@@ -4057,7 +4057,7 @@ match sigma with
 
     let unresolvedGlobalCnstrs () =
       begin try
-        forceGlobalCnstr ();
+        forceGlobalCnstr (!globalCnstrs);
         resetGlobalCnstrs () ;
         false
       with Failure _ -> resetGlobalCnstrs () ; true

@@ -77,15 +77,11 @@ datatype LogEq : {g:tctx}(g':ctx) [g'. tm] -> [g'. tm] -> [.tp] -> ctype =
             -> LogEq [g] [g'. M1 ..] [g'. M2 ..] [. arr T S]
 ;
 
-<<<<<<< HEAD
-%{
-rec wknVar : Lookup [g] [. A] [g'. M ..] -> IsVarSub [g] [g'] [h] [h' $ #W[..]]
- -> Lookup [h] [. A] [h'. M #W[..]] =
-=======
+
 % Half a dozen straightforward constructions on renaming substitutions:
 rec wknVar : Lookup [g] [g'. M ..] [. A] -> IsVarSub [g] [g'] [h] [h' $ #W[..]]
  -> Lookup [h] [h'. M #W[..]] [. A]=
->>>>>>> Added logical relations examples to examples directory
+
 fn iv => fn ivs => case iv of
 | Top =>    let Cons ivs' iv = ivs in iv
 | Pop iv' => let Cons ivs' iv = ivs in wknVar iv' ivs';
@@ -171,16 +167,9 @@ fn r => fn e => let e : LogEq [g] [g'. M1 ..] [g'. M2 ..] [. A] = e in case e of
                 (RCons r) (shiftIsRen r) (reflect [._] (AlgVar Top))))
 ;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-datatype DecEq : {g:tctx}(g':ctx){M:[g'. tm]} {N:[g'.tm]} {A:[.tp]} ctype =
-=======
-=======
 % Declarative equality. Written _|-_=_:_ in the paper
->>>>>>> Added logical relations examples to examples directory
 datatype DecEq : {g:tctx}(g':ctx) [g'. tm] -> [g'.tm] -> [.tp] -> ctype =
->>>>>>> Managed to complete algeq proof by supplying a few more argumetnts to reconstruction
 | DecBeta : DecEq [g,b:block x:tm,d:oft x T] [g',x:tm. M2 .. x] [g',x. N2 .. x] [. S]
           -> DecEq [g] [g'. M1 ..] [g'. N1 ..] [. T]
           -> DecEq [g] [g'. (app (lam (\x. M2 .. x)) (M1 ..))] [g'. N2 .. (N1 ..)] [. S]
@@ -188,13 +177,7 @@ datatype DecEq : {g:tctx}(g':ctx) [g'. tm] -> [g'.tm] -> [.tp] -> ctype =
           -> DecEq [g] [g'. lam (\x. M .. x)] [g'. lam (\x. N .. x)] [. arr T S]
 | DecExt :  DecEq [g,b:block x:tm,d:oft x T] [g',x:tm. app (M ..) x] [g',x. app (N ..) x] [. S]
           -> DecEq [g] [g'. (M ..)] [g'. (N ..)] [. arr T S]
-<<<<<<< HEAD
-
-| DecVar : % {#p:[g'. tm]}{#q:[g'.tm]}
-           Lookup [g] [g'. #p ..] [. T]
-=======
 | DecVar : Lookup [g] [g'. #p ..] [. T]
->>>>>>> Added logical relations examples to examples directory
          -> DecEq [g] [g'. #p ..] [g'. #p ..] [. T]
 | DecApp : DecEq [g] [g'. M1 ..] [g'. M2 ..] [. arr T S]
          -> DecEq [g] [g'. N1 ..] [g'. N2 ..] [. T]
@@ -258,17 +241,9 @@ fn s1 => fn s2 => fn e => case e of
   LogArr [g'. _] [g'. _] (mlam h => mlam h' => mlam #W => mlam P1 => mlam P2 => fn rh => fn iv => fn rp =>
    let q0 = f [h] [h'] [h' $ #W[..]] [h'. P1 ..] [h'. P2 ..] rh iv rp in
    closed (mstep_app [h'. S1 #W[..]] ) (mstep_app [h'. S2 #W[..]]) q0
-<<<<<<< HEAD
-  )
-}%
-;
-
-
-=======
   );
 
 % Looking up a variable in logically equivalence substitutions gives a logical equivalence
->>>>>>> Added logical relations examples to examples directory
 rec lookup : Lookup [g] [g'. M1 ..] [. T]
  -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
  -> LogEq [h] [h'. M1 #S1[..]] [h'. M1 #S2[..]] [. T] =
@@ -342,14 +317,9 @@ fn e1 => fn e2 => case (e1,e2) of
 % Equality of terms
 datatype EqTm : (g':ctx) [g'. tm] -> [g'. tm] -> ctype =
 | ReflTm : EqTm [g'. M ..] [g'. M ..];
-<<<<<<< HEAD
-}%
-%{
-% May need to pattern match a little deeper to convince coverage?
-=======
+
 
 % Determinacy of weak head reduction
->>>>>>> Added logical relations examples to examples directory
 rec determinacy : (g':ctx) [g'. step (M ..) (N ..)] -> [g'. step (M ..) (P ..)] -> EqTm [g'. N ..] [g'. P ..] =
 fn s1 => fn s2 => case (s1,s2) of
 | ([g'. beta],[g'. beta]) => ReflTm
@@ -370,7 +340,7 @@ fn s1 => fn s2 => case (s1,s2) of
   let ReflTm = determinacy [g'. S1 ..] [g'. S2 ..] in
   confluence [g'. MS1 ..] [g'. MS2 ..]
 ;
-}%
+
 datatype empty : type =;
 
 % Terms in algorithmic path equivalence cannot step

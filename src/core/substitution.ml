@@ -193,6 +193,13 @@ module LF = struct
     | (SVar (s, (ctx_shift, n), tau), s2) ->
         SVar (s, (ctx_shift, n), comp tau s2)
 
+    | (MSVar (s, (ctx_shift, n), (theta, tau)), s2) ->
+      (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
+        MSVar (s, (ctx_shift, n), (theta, comp tau s2))
+
+    | (FSVar (s, (ctx_shift, n), tau), s2) ->
+        FSVar (s, (ctx_shift, n), comp tau s2)
+
     | (Dot (ft, s), s') ->
         (* comp(s[tau], Shift(k)) = s[tau]
          * where s :: Psi[Phi]  and |Psi| = k

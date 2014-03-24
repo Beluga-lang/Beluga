@@ -80,13 +80,8 @@ let _ = Error.register_printer
         | LeftoverVars VariantFCV ->
           Format.fprintf ppf "Abstraction not valid LF-type because of leftover context variable"
         | LeftoverVars VariantMV ->
-<<<<<<< HEAD
-          Format.fprintf ppf "Leftover meta-variables in computation-level expression; implicit arguments cannot be determined uniquely. Please provide a type annotation"
-        | LeftoverVars (VariantMMV | VariantMPV as varvariant) ->
-=======
           Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
         | LeftoverVars (VariantMMV | VariantMPV | VariantMSV as varvariant) ->
->>>>>>> Stated and enforce clear typing invariant for FSVar, MSVar, SVar, SDecl and fixed the code to uniformly enforce the invariant
           Format.fprintf ppf
             ("Encountered %s,@ which we cannot abstract over@ \
             because they depend on meta-variables;@ \

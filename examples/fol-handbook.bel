@@ -25,7 +25,7 @@ impe : nd (imp A B) -> nd A -> nd B.
 noti : ({p:o} nd A -> nd p) -> nd (not A).
 note : nd (not A) -> {C:o} nd A -> nd C.
 alli : ({a:i} nd (A a)) -> nd (all (\x. A x)).
-alle : nd (all \x.A x) -> {T:i} nd (A T).
+alle : nd (all (\x.A x)) -> {T:i} nd (A T).
 
 
 

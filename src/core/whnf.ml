@@ -1552,6 +1552,47 @@ and cnorm (tM, t) = match tM with
         let s0' = LF.comp (Shift (cshift, n)) s0 in
           cnormSub (s0', t)
 
+    | MSVar (s ,
+             (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
+             (ctx_shift, n), (mt,s')) ->
+      let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
+          MSVar (s, (cshift', n'), (cnormMSub (mcomp mt t), s'))
+
+    | _ -> (dprint (fun () -> "[cnormSub] undefined ? ");
+            raise (Error.Violation "Cannot guarantee that parameter variable remains head"))
+
+
+  and cnormCtxShift (ctx_shift, t) k = match ctx_shift with
+    | CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
+      begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
+          | (Some ctx_v, d) -> cnormCtxShift (CtxShift ctx_v, t) (k + d)
+          | (None, d) -> (NoCtxShift, k + d)
+      end
+    | NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
+      begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
+          | (Some ctx_v, d) -> cnormCtxShift (NegCtxShift ctx_v, t) k
+          | (None, d) -> (NoCtxShift, k)
+      end
+    | CtxShift (CtxOffset offset) ->
+      begin match LF.applyMSub offset t with
+        | CObj(cPsi) ->
+            begin match Context.dctxToHat (cPsi) with
+              | (None, i) -> (NoCtxShift, k+i)
+              | (Some cvar', i) -> (CtxShift cvar', i+k)
+            end
+        | MV offset' -> (CtxShift (CtxOffset offset'), k)
+      end
+    | NegCtxShift (CtxOffset offset) ->
+      begin match LF.applyMSub offset t with
+        | CObj(cPsi) ->
+            begin match Context.dctxToHat (cPsi) with
+              | (None, _i) -> (NoCtxShift , k) (* convert i to undefs? *)
+              | (Some cvar', _i) -> (NegCtxShift cvar', k)
+            end
+        | MV offset' -> (CtxShift (CtxOffset offset'), k)
+      end
+
+(* =====
 
     | MSVar (s ,
              (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
@@ -1593,6 +1634,8 @@ and cnorm (tM, t) = match tM with
         | MV offset' -> (CtxShift (CtxOffset offset'), k)
       end
 
+>>>>>>> fdc170be06128aa07b1660deb1dc2d51ea42f6f6
+*)
     | _ -> (ctx_shift, k)
 
   and cnormFront (ft, t) = match ft with
@@ -3205,6 +3248,7 @@ let mctxSVarPos cD u =
         &&
           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
 
+
     | ((Comp.TypPiBox ((SDecl(_, cPhi, cPsi), dep), tT), t),
        (Comp.TypPiBox ((SDecl(_, cPhi', cPsi'), dep'), tT'), t'))
       -> dep = dep'
@@ -3357,7 +3401,6 @@ and closedMetaObj mO = match mO with
       closedDCtx (Context.hatToDCtx phat) && closed (tM, LF.id)
   | Comp.MetaSObj (_, phat, sigma) ->
       closedDCtx (Context.hatToDCtx phat) && closedSub sigma
-
 
 let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true

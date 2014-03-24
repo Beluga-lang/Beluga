@@ -1166,6 +1166,11 @@ match sigma with
 
                      | SInst (_ , {contents=None}, cPhi, _cPsi', _ ) -> (s,cPhi, _cPsi')
                     ) in
+
+        let _ = dprint (fun () -> "[invSub]" ^ P.dctxToString cD0 (Context.hatToDCtx phat) ^ " |- "
+        ^ P.subToString cD0 (Context.hatToDCtx phat) sigma ^ " : " ^
+        P.dctxToString cD0 cPsi') in
+
         SVar(s, (NoCtxShift, 0), invSub cD0 phat (sigma, cPsi') ss rOccur)
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
@@ -1206,7 +1211,6 @@ match sigma with
               | MV v -> NegCtxShift (CtxOffset v)
               | MUndef -> raise NotInvertible)
           | _ -> ctx_offset in
-
           begin match applyMSub s ms with
             | MV v ->
                 let (_, cPhi, cPsi1) = Whnf.mctxSDec cD0  v  in
@@ -1216,12 +1220,17 @@ match sigma with
           end
     | (FSVar (s_name, n , t), cPsi1) ->
         (dprint (fun () -> "invSub FSVar");
-        FSVar (s_name, n, invSub cD0 phat (t, cPsi1) ss rOccur))
+        let (_, SDecl (_, _cPhi,  cPsi')) = Store.FCVar.get s_name in
+        FSVar (s_name, n, invSub cD0 phat (t, cPsi') ss rOccur))
 (*        if ssubst = id then s else
         (dprint (fun () -> "invSub FSVar -- undefined") ; raise (Error "invSub for
         free substitution variables -- not defined"))*)
 
-    | _ -> (dprint (fun () -> "invSub -- undefined") ; raise (Error "invSub -- undefined"))
+    | (s, _ ) -> (dprint (fun () -> "invSub -- undefined: s = " ^
+                      P.subToString cD0 (Context.hatToDCtx phat) s) ;
+                  dprint (fun () -> "domain cPsi1 = " ^ P.dctxToString cD0 cPsi1);
+                  raise (Error "invSub --   undefined"))
+
 
 
 
@@ -1360,14 +1369,14 @@ match sigma with
                         let _ = dprint (fun () -> "[prune] pruneCtx done - MMVar case ") in
                         let _ = dprint (fun () -> "cPsi1 = " ^ P.dctxToString cD1 cPsi1) in
                         let _ = dprint (fun () -> "cPsi2 = " ^ P.dctxToString cD1 cPsi2) in
-
                         (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= [|mt|]cPsi1
                            cD ; cPsi |-  t o s <= [|mt|]cPsi1 and
                            cD ; [|mt|]cPsi1 |- id_sub <= cPsi2 and
                            cD ; cPsi |- t o s o idsub <= cPsi2 *)
                       let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
-
-                      let _ = dprint (fun () -> "[prune] pruneMCtx done " ) in
+                        let _ = dprint (fun () -> "[prune] pruneMCtx done - MMVar case ") in
+                        let _ = dprint (fun () -> P.mctxToString cD1 ^ " |- id_msub : " ^ P.mctxToString cD2) in
+                        let _ = dprint (fun () -> "id_msub " ^ P.msubToString  cD1 id_msub) in
                         (* cD  |- mt <= cD1
                          * cD1 |- id_msub <=  cD2
                          * cD  |- [|mt|]id_msub <= cD2
@@ -1991,7 +2000,6 @@ match sigma with
 
           (s',cPsi1')
 
-
     | (MSVar (s, cshift, (_theta,sigma)), cPsi1) ->
       let s' , cPsi1' = match cshift , cPsi1 with
         | (NoCtxShift, _n) , cPsi1 -> (id, cPsi1)
@@ -2400,7 +2408,6 @@ match sigma with
     | ((Root (_, MVar (Inst (_n, r, cPsi1, _tP, cnstrs), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
 (*        dprnt "(001) MVar-_";*)
         let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s1)) in
-
           if isPatSub t' then
             try
               let ss = invert t' in
@@ -2451,6 +2458,7 @@ match sigma with
     (* normal-MVar case *)
     | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (_n, r, cPsi1, tP1, cnstrs), t), _tS), s2) as sM2)) ->
         (*        dprnt "(002) _-MVar"; *)
+
         let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s2)) in
           if isPatSub t' then
             try
@@ -3783,7 +3791,9 @@ match sigma with
       | (CtxVar cv , CtxVar cv' ) ->
           if cv = cv' then ()
           else
-             raise (Failure "Bound (named) context variable clash")
+            (dprint (fun () ->" [unifyDCtx] cPsi1 = " ^ P.dctxToString cD0 cPsi1)
+          ; dprint (fun () ->" [unifyDCtx] cPsi2 = " ^ P.dctxToString cD0 cPsi2);
+             raise (Failure "Bound (named) context variable clash"))
 
       | (DDec (cPsi1, TypDecl(_y , tA1)) , DDec (cPsi2, TypDecl(_x , tA2))) ->
             (unifyDCtx1' mflag cD0 cPsi1 cPsi2 ;
@@ -4199,6 +4209,13 @@ let unify_phat psihat phihat =
     let matchTyp cD0 cPsi sA sB =
       unifyTyp' Matching cD0 cPsi sA sB
 
+    let unifyCompTyp cD ttau ttau' =
+      begin try
+        unifyCompTyp cD ttau ttau'
+      with Failure msg ->
+        (dprint (fun () -> "[unifyCompTyp " ^ msg) ;
+         raise (Failure msg))
+      end
 end
 
 

@@ -1422,6 +1422,7 @@ let rec collectMctx  cQ cD = match cD with
       let (cQ2, tA')    = collectTyp 0 cQ'' phat (tA, LF.id) in
         (cQ2,  I.Dec(cD', I.PDecl(p, tA', cPsi')))
 
+
   | I.Dec(cD, I.SDecl(s, cPhi, cPsi)) ->
       let (cQ', cD')  = collectMctx cQ cD in
       let psi_hat = Context.dctxToHat cPsi in

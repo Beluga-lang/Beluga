@@ -56,6 +56,7 @@ fn iv => fn ivs => case iv of
 | Top => let Cons ivs' iv = ivs in iv
 | Pop iv' => let Cons ivs' iv = ivs in wknVar' iv' ivs';
 
+
 rec varSubCompose' : IsVarSub [g] [h  $ #W[..]] -> IsVarSub [h] [h' $ #W2[..]] -> IsVarSub [g] [h' $ #W[#W2[..]]] =
 fn r1 => fn r2 => case r1 of
 | Nil => Nil
@@ -72,10 +73,12 @@ mlam S => fn r => let (r : Reduce [.A] [g. M' ..]) = r in  case r of
   (mlam h => mlam #W => mlam N => fn iv => fn rn =>
     closed2 [h. stepapp (S #W[..]) refl] (f [h] [h $ #W[..]] [h. N ..] iv rn));
 
+
 rec wknVarSub : IsVarSub [g] [h $ #S[..] ] -> IsVarSub [g] [h,x:tm A $ #S[..] ] =
 fn r => case r of
 | Nil => Nil
 | Cons r' iv => Cons (wknVarSub r') (Pop iv);
+
 
 rec extVarSub : IsVarSub [g] [h $ #S[..]] -> IsVarSub [g,x:tm A] [h,x:tm A $ #S[..] x ] =
 fn r => let r : IsVarSub [g] [h $ #S[..]] = r in Cons (wknVarSub r) Top;
@@ -84,6 +87,7 @@ rec idIsVarSub : {g:ctx} IsVarSub [g] [g $ .. ] =
 mlam g => case [g. i] of % pattern match on context
 | [. i] => Nil
 | [g,x:tm _. i] => extVarSub (idIsVarSub [g]);
+
 
 rec shiftIsVarSub :  {g:ctx} IsVarSub [g] [ g,x:tm A $ .. ] =
 mlam g => wknVarSub (idIsVarSub [g]);
@@ -115,6 +119,7 @@ fn r => case r of
   let Halts [g,x:tm _. MS .. x] q2 = reify q1 in
   Halts [g. trans (eta _) (steplam (\x. MS .. x))] (Lam q2);
 
+
 rec wknRed : Reduce  [. A] [g. M ..] -> IsVarSub [g] [h $ #W[..] ] -> Reduce [. A] [h. M #W[..]] =
 fn r => fn iv => let (iv : IsVarSub [g] [h $ #W[..] ] ) = iv in
 case r of
@@ -133,10 +138,12 @@ fn rs => fn iv => case rs of
 | Nil => Nil
 | Dot rs' rN => Dot (wknRedSub rs' iv) (wknRed rN iv);
 
+
 rec redVar : {g:ctx}{#p:[g.tm T]} RedSub [g] [h $ #S[..]] ->  Reduce [. T] [h. #p #S[..] ] =
 mlam g => mlam #p => fn rs => case [g. #p ..] of
 | [g',x:tm A. x] =>    let Dot rs' rN = rs in rN
 | [g',x:tm A. #q ..] => let Dot rs' rN = rs in redVar [g'] [g'. #q ..] rs';
+
 
 rec eval : {M:[g.tm A]} RedSub [g] [h $ #S[..] ] -> Reduce [.A] [h. M #S[..] ] =
 mlam M => fn rs => let (rs : RedSub [g] [h $ #S[..] ]) = rs in
@@ -149,6 +156,7 @@ mlam M => fn rs => let (rs : RedSub [g] [h $ #S[..] ]) = rs in
    Arr [h. lam (\x. M1 #S[..] x)]
    (mlam h' => mlam #W => mlam N => fn isVS => fn rN =>
      closed2 [h'. beta] (eval [g',x:tm _. M1 .. x] (Dot (wknRedSub rs isVS) rN)));
+
 
 rec idRedSub : {g:ctx} RedSub [g] [g $ ..] =
 mlam g => case [g. i] of % Can't pattern match directly on g

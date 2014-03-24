@@ -528,6 +528,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
                         (tau, Int.LF.MDot (Int.LF.SObj (psihat, sigma), theta)))
 
 
+
   | (Int.Comp.TypPiBox ((Int.LF.CDecl(psi_name, schema_cid, _), Int.Comp.Implicit), tau), theta)
     ->
       let cPsi = Int.LF.CtxVar (Int.LF.CInst (psi_name, ref None, schema_cid, cD, Whnf.m_id)) in
@@ -960,6 +961,7 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
                                (Int.LF.Dec (cD_s, Int.LF.MDecl(x,tA, cPsi)), tau) in
         Int.Comp.TypPiBox ((Int.LF.PDecl (x, tA', cPsi'), dep), tau')
 
+
   | Int.Comp.TypPiBox((Int.LF.CDecl(name, sW, dep), Int.Comp.Implicit), tau) ->
       let tau' = inferPatTyp' (Int.LF.Dec (cD', Int.LF.CDecl (name, sW, Int.LF.Maybe)))
                               (Int.LF.Dec (cD_s, Int.LF.CDecl (name, sW, Int.LF.Maybe)),  tau) in
@@ -976,7 +978,6 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
       let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.SDecl(x,cPhi', cPsi')))
                                (Int.LF.Dec (cD_s, Int.LF.SDecl(x,cPhi, cPsi)), tau) in
         Int.Comp.TypPiBox ((Int.LF.SDecl (x, cPhi', cPsi'), dep), tau')
-
 
   | Int.Comp.TypBox (loc, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
       let cPsi' = mgCtx cD' (cD_s, cPsi) in
@@ -1348,7 +1349,6 @@ and elExp' cD cG i = match i with
                         dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
                         raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
                       end
-
                 | Apx.Comp.MetaObj (_loc', psihat , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
                      Int.LF.PDecl (_, tA, cPsi) ->
                     let cPsi' = C.cnormDCtx (cPsi, theta) in

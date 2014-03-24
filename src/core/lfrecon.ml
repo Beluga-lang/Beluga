@@ -72,7 +72,6 @@ let _ = Error.register_printer
             Format.fprintf ppf
               "The domain of the substitution cannot be inferred; please provide
   it explicitly.\n"
-
         | NotPatSub ->
           Format.fprintf ppf
             "Substitution associated with substitution variable is not a pattern substitution;\n
@@ -324,7 +323,10 @@ let etaExpandHead loc h tA =
 
 
 
-(* let etaExpandApxHead loc h tA =
+
+
+(*
+let etaExpandApxHead loc h tA =
   let rec etaExpApxSpine k tS tA = begin match  tA with
     | Int.LF.Atom _  -> (k, tS)
 
@@ -345,7 +347,6 @@ let etaExpandHead loc h tA =
                     | Apx.LF.FVar _ -> h
                   end  in
     etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS'), tA)
-
 *)
 
 let etaExpandApxTerm  loc h tS tA =

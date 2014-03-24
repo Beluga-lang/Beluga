@@ -6,6 +6,11 @@
 open Syntax.Int.LF
 open Syntax.Int
 
+open Context
+
+open Error
+
+
 (* Moved from reconstruct.ml: *)
 
 val ctxShift : dctx -> sub

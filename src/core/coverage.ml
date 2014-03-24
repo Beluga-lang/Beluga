@@ -583,6 +583,18 @@ match (pat, ttau) , (pat_p, ttau_p) with
     (pat_p, ttau')  -> (* splitting candidate *)
       (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
 
+(*  | (Comp.PatFVar (_, _v) , ttau),
+      (Comp.PatVar (_, _p) , ttau')  -> (* success *)
+      let _ = print_string "\n\n [match_pattern] – PatVar - PatVar case \n\n" in
+      let covGoal = CovPatt (cG, pat, ttau) in
+      let patt = GenPatt (cG_p, pat_p, ttau_p) in
+      let mC' = (EqnPatt (covGoal, patt)) :: mC in
+        (mC', sC)
+
+  | (Comp.PatFVar (_, v) , ttau),
+    (pat_p, ttau')  -> (* splitting candidate *)
+      (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
+*)
   | (Comp.PatPair (_, pat1, pat2) , (Comp.TypCross (tau1, tau2), t)),
     (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (tau1', tau2'),t')) ->
       let (mC1, sC1) = match_pattern (cD,cG) (cD_p, cG_p)

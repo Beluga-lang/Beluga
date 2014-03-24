@@ -217,17 +217,6 @@ let rec mctxToMMSub cD0 cD = match cD with
         MDot (CObj (CtxVar cvar), t)
 
 
-
-
-let rec cctxToCSub cO cD = match cO with
-  | Empty -> CShift 0
-  | Dec (cO, CDecl (psi, schema, _)) ->
-      let ctxVar = CtxVar (CInst (psi, ref None, schema, cD, Whnf.m_id)) in
-      let cs = cctxToCSub cO cD  in
-        CDot (ctxVar, cs)
-
-
-
 (* The following functions are from an attempt to improve printing of meta-variables;
    the idea was to check if the result of applying a substitution produced an "equivalent"
    context, and if so, to use the original names.  -jd 2010-07 *)

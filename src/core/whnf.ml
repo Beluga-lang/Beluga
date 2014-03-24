@@ -729,6 +729,7 @@ and normSub s = match s with
 
   | Shift _      -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
+  | FSVar ( s , sigma) -> FSVar (s, normSub sigma)
   | SVar (Offset offset, n, s') -> SVar (Offset offset, n, normSub s')
   | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), (cshift, n), s') ->
     (* cPsi |- s : cPhi  and  cPhi |- Shift n : cPhi'

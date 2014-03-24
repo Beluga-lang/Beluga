@@ -124,9 +124,15 @@ and strans_sub cD s conv_list = match s with
         Int.LF.Shift (ctx_offset, offset')
   | Int.LF.Dot (ft, s) ->
       Int.LF.Dot (strans_front cD ft conv_list, strans_sub cD s conv_list)
-  | Int.LF.SVar _ -> s
-  | Int.LF.FSVar _ -> s
-  | Int.LF.MSVar _ -> s
+  | Int.LF.SVar (s, (ctx_offset, offset), sigma) ->
+      let sigma' = strans_sub cD sigma conv_list in
+        Int.LF.SVar (s, (ctx_offset, offset), sigma')
+  | Int.LF.FSVar (s, n , sigma) ->
+      let sigma' = strans_sub cD sigma conv_list in
+        Int.LF.FSVar (s, n, sigma')
+  | Int.LF.MSVar (rho, (ctx_offset, offset), (mt, sigma)) ->
+      let sigma' = strans_sub cD sigma conv_list in
+        Int.LF.MSVar (rho, (ctx_offset, offset), (mt, sigma'))
 
 and strans_front cD ft  conv_list = match ft with
   | Int.LF.Head h -> Int.LF.Head (strans_head Syntax.Loc.ghost cD h conv_list)

@@ -2198,7 +2198,7 @@ and convSub subst1 subst2 = match (subst1, subst2) with
   | (Shift (psi,n), Shift (psi', k)) ->
       n = k && psi = psi'
 
-  | (SVar (Offset _s1, (CtxShift _ , _ ) , _sigma1), _s2 ) ->
+  | (SVar (_s1, (CtxShift _ , _ ) , _sigma1), _s2 ) ->
     (* if subst1 and subst2 are well-typed, then their domain
        must be empty;
        _s2 is either Shift (NoCtxShift , 0 )
@@ -2206,7 +2206,7 @@ and convSub subst1 subst2 = match (subst1, subst2) with
     *)
       true
 
-  | (_s2  , SVar (Offset _s1, (CtxShift _ , _) , _sigma1) ) ->
+  | (_s2  , SVar (_s1, (CtxShift _ , _) , _sigma1) ) ->
     (* see comment above *)
       true
 

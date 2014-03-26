@@ -821,6 +821,8 @@ and elTerm' recT cD cPsi r sP = match r with
   | Apx.LF.Ann (_loc, m, a) ->
     elTerm' recT cD cPsi m sP
     
+  | Apx.LF.LFHole _loc -> 
+    Lfholes.collect (_loc, cD, cPsi, sP); Int.LF.LFHole _loc
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
       let i  = (Term.get c).Term.implicit_arguments in
@@ -909,10 +911,6 @@ and elTerm' recT cD cPsi r sP = match r with
      (let (_l, pat_spine) = patSpine spine in
       let sshift = mkShift recT cPsi in
       let (tS, tA) = elSpineSynth recT  cD cPsi pat_spine sshift sP in
-        (* For Beluga type reconstruction to succeed, we must have
-         *  cPsi |- tA <= type  and cPsi |- tS : tA <= [s]tP
-         *  This will be enforced during abstraction.
-         *)
         (* For LF type reconstruction to succeed, we must have
          *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
          *  This will be enforced during abstraction.
@@ -922,7 +920,7 @@ and elTerm' recT cD cPsi r sP = match r with
           | Pi ->
               (* let u =  Whnf.newMVar (cPsi, tA) in
                 Int.LF.Root (loc, Int.LF.MVar(u, Substitution.LF.id), tS) *)
-              let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Implicit in    (*SCOTT*)
+              let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Implicit in
                 Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
           | Pibox ->
               begin match tA with

@@ -186,7 +186,7 @@ module LF = struct
   (**********************)
   (* Type Abbreviations *)
   (**********************)
-
+  
   type nclo     = normal  * sub          (* Ns = [s]N                      *)
   type sclo     = spine   * sub          (* Ss = [s]S                      *)
   type tclo     = typ     * sub          (* As = [s]A                      *)

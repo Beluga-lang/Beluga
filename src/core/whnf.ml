@@ -511,7 +511,7 @@ and norm (tM, sigma) = match tM with
 
   | Clo (tN, s) ->
       norm (tN, LF.comp s sigma)
-
+  | LFHole _ -> tM
   | Root (loc, HClo (i, s, sigma'), tS) ->
     let sigma'' = normSub (LF.comp sigma' sigma) in
     let tS'     = normSpine (tS, sigma) in
@@ -916,6 +916,8 @@ and cnorm (tM, t) = match tM with
 
     | Clo (tN, s)        -> Clo(cnorm (tN, t), cnormSub(s, t))
 
+    | LFHole _loc -> LFHole _loc
+    
     | Root (loc, head, tS) ->
         begin match head with
           | HClo (h, Offset i, sigma) ->
@@ -2179,6 +2181,8 @@ and whnf sM = match sM with
         (Root (loc, Proj(MPVar (p', (t, LF.comp r sigma)) , k), SClo(tS, sigma)), LF.id)
 
   | (Root (_, Proj (MPVar _, _), _), _) -> (dprint (fun () -> "oops 3"); exit 3)
+
+  | (LFHole _loc, _s) -> (LFHole _loc, _s)
   | _ -> (dprint (fun () -> "oops 4"); exit 4)
 
 (* whnfRedex((tM,s1), (tS, s2)) = (R,s')

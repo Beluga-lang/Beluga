@@ -290,7 +290,8 @@ module Int = struct
                 (R.render_name x)
                 (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
                 (r_paren_if cond)
-
+        | LF.LFHole _ ->
+          fprintf ppf "?"
         | LF.Tuple (_, tuple) ->
            fprintf ppf "<%a>"
              (fmt_ppr_lf_tuple cD cPsi lvl) tuple

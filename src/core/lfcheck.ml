@@ -138,6 +138,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
       (tM, Substitution.LF.dot1 s1)
       (tB, Substitution.LF.dot1 s2)
 
+  | (LFHole _, _), _ -> ()
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 

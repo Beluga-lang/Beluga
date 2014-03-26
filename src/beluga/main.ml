@@ -178,6 +178,10 @@ let main () =
             printf "\n## Holes: %s  ##\n" file_name;
             Holes.printAll ()
           end;
+          if not (Lfholes.none ()) && !Debug.chatter != 0 then begin
+            printf "\n## LFHoles: %s  ##\n" file_name;
+            Lfholes.printAll ()
+          end;
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer ()
       with e ->

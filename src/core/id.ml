@@ -28,6 +28,7 @@ type var        = int
 type name_guide =
   | NoName
   | MVarName of (unit -> string) option
+  | SVarName of (unit -> string) option
   | PVarName of (unit -> string) option
   | BVarName of (unit -> string) option
   | SomeName of name
@@ -51,6 +52,10 @@ let mk_name = function
   | PVarName None  ->
       { string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true }
 
+  | SVarName None ->
+      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true}
+  | SVarName (Some vGen) ->
+      { string_of_name = vGen() ; was_generated = true;}
 
   | BVarName (Some vGen)   ->
         { string_of_name = vGen() ; was_generated = true }

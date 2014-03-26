@@ -100,6 +100,8 @@ module Comp = struct
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
    | MetaParam of Loc.t * LF.psi_hat * LF.head
+   | MetaSObj of Loc.t * LF.psi_hat * LF.sub
+   | MetaSObjAnn of Loc.t * LF.dctx * LF.sub
 
  type meta_spine =
    | MetaNil
@@ -121,16 +123,15 @@ module Comp = struct
    | TypSub   of Loc.t * LF.dctx * LF.dctx      (*    | Phi[Psi]           *)
    | TypArr   of Loc.t * typ * typ              (*    | tau -> tau         *)
    | TypCross of Loc.t * typ * typ              (*    | tau * tau          *)
-   | TypCtxPi of Loc.t * (name * name * depend) * typ
-       (*     | Pi psi:(w)*. tau  *)
-   | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::A[Psi].tau  *)
+   | TypPiBox of Loc.t * (LF.ctyp_decl * depend) * typ
+                                                (*     | Pi u::U.tau       *)
    | TypBool                                    (*     | Bool              *)
 
   and exp_chk =                            (* Computation-level expressions *)
      | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
      | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list  (*    | (cofun hd => e | tl => e') *)
-     | CtxFun of Loc.t * name * exp_chk         (*    | FN f => e           *)
+(*     | CtxFun of Loc.t * name * exp_chk         (*    | FN f => e           *) *)
      | MLam   of Loc.t * (name * mabstr) * exp_chk  (*| mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
@@ -223,7 +224,6 @@ module Comp = struct
  and chkToString = function
      | Syn     (_loc,  syn) -> "Syn(" ^ synToString syn ^ ")"
      | Fun     (_loc, _, chk) -> "Fun(_, " ^ chkToString chk ^ ")"
-     | CtxFun  (_loc, _, chk) ->  "CtxFun(_, " ^ chkToString chk ^ ")"
      | MLam    (_loc, _, chk) ->  "MLam(_, " ^ chkToString chk ^ ")"
      | Pair    (_loc, chk1, chk2) ->  "Fun(_, " ^ chkToString chk1 ^ ", " ^ chkToString chk2 ^ ")"
      | LetPair (_loc, syn, (_, _, chk)) -> "LetPair(" ^ synToString syn ^",  (_, _, " ^ chkToString chk ^ "))"

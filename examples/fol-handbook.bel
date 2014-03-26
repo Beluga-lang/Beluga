@@ -11,13 +11,22 @@ imp : o -> o -> o.
 all : (i -> o) -> o.
 not  : o -> o.
 
+%{
+even: i -> o.
+all (\x. impl (even x)  (even x))
+
+(\x. impl (even x)  (even x)) a  ----> imp (even a) (even a)
+}%
+
+
 nd : o -> type. % Natural deduction
 impi : (nd A -> nd B) -> nd (imp A B).
 impe : nd (imp A B) -> nd A -> nd B.
 noti : ({p:o} nd A -> nd p) -> nd (not A).
 note : nd (not A) -> {C:o} nd A -> nd C.
 alli : ({a:i} nd (A a)) -> nd (all (\x. A x)).
-alle : nd (all A) -> {T:i} nd (A T).
+alle : nd (all (\x.A x)) -> {T:i} nd (A T).
+
 
 
 hil : o -> type.  % Hilbert deductions
@@ -65,8 +74,8 @@ rec ded: {g:hilCtx} [g, u:hil (A ..). hil (B ..)] -> [g. hil (imp (A ..) (B ..))
   in
      [g. mp f2 (ug  \x. (H' .. x))]
 
-| {H1 : [g, u : hil (A ..). hil (imp (B1 ..) (B2 ..))]}
-  {H2 : [g, u : hil (A ..). hil (B1 ..)]}
+| % {H1 : [g, u : hil (A ..). hil (imp (B1 ..) (B2 ..))]}
+  % {H2 : [g, u : hil (A ..). hil (B1 ..)]}
   [g, u: hil (A ..) . (mp (H1 .. u) (H2 .. u))] =>
   let [g. H2' ..] = ded [g] [g,u. H2 .. u] in
   let [g. H1' ..] = ded [g] [g,u. H1 .. u] in

@@ -78,6 +78,7 @@ module LF = struct
     | Offset of offset
     | MInst  of Int.LF.normal * Int.LF.typ * Int.LF.dctx
     | PInst  of Int.LF.head * Int.LF.typ * Int.LF.dctx
+    | SInst  of Int.LF.sub * Int.LF.dctx * Int.LF.dctx
 
   and dctx =
     | Null
@@ -137,15 +138,14 @@ module Comp = struct
    | TypSub     of Loc.t * LF.dctx  * LF.dctx
    | TypArr     of typ * typ
    | TypCross   of typ * typ
-   | TypCtxPi   of (name * cid_schema * depend) * typ
-   | TypPiBox   of LF.ctyp_decl * typ
+   | TypPiBox   of (LF.ctyp_decl * depend) * typ
    | TypBool
 
   and exp_chk =
      | Syn    of Loc.t * exp_syn
      | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list         (* Cofun hd => e | tl => e' *)
-     | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *)
+(*     | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *) *)
      | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (* (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)

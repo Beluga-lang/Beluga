@@ -290,7 +290,17 @@ let checkParamTypeValid cD cPsi tA =
   | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->
       LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
 
-  | (MetaParam (loc, _phat, h), (MetaTyp (tA, cPsi), t)) ->
+  | (MetaSObj (loc, phat, tM), (MetaSubTyp (tA, cPsi), t)) ->
+      let cPsi' = C.cnormDCtx (cPsi, t) in
+      if phat = Context.dctxToHat cPsi' then
+        LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
+      else
+        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
+
+  | (MetaSObjAnn (loc, _cPhi, tM), (MetaSubTyp (tA, cPsi), t)) ->
+      LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) tM (C.cnormDCtx (tA, t))
+
+  | (MetaParam (loc, _phat, h), (MetaParamTyp (tA, cPsi), t)) ->
       let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
       let tA  = C.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
@@ -313,6 +323,16 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             let MetaObj (loc, psihat, tM) = mO in
               checkMetaObj loc cD mO (MetaTyp (tA, cPsi), t) ;
               checkMetaSpine loc cD mS (cK, I.MDot (I.MObj(psihat, tM), t))
+
+        | I.PDecl (_u, tA, cPsi) ->
+            let MetaParam (loc, psihat, tM) = mO in
+              checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), t) ;
+              checkMetaSpine loc cD mS (cK, I.MDot (I.PObj(psihat, tM), t))
+
+        | I.SDecl (_u, cPhi, cPsi) ->
+            let MetaSObj (loc, psihat, tM) = mO in
+              checkMetaObj loc cD mO (MetaSubTyp (cPhi, cPsi), t) ;
+              checkMetaSpine loc cD mS (cK, I.MDot (I.SObj(psihat, tM), t))
     end
 
 
@@ -366,10 +386,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         checkTyp cD tau1;
         checkTyp cD tau2
 
-    | TypCtxPi ((psi_name, schema_cid, dep ), tau) ->
-        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        checkTyp (I.Dec (cD, I.CDecl (psi_name, schema_cid, dep'))) tau
-
     | TypPiBox ((cdecl, _), tau') ->
         dprint (fun () -> "[checkCompTyp] " ^
                   P.mctxToString cD ^ " |- " ^
@@ -384,6 +400,16 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 ;;
 
+let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
+  | I.CDecl(_psi, schema,_ ) ->
+      let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
+        I.Dec(cD, I.CDecl(x, schema, dep'))
+  | I.MDecl(_u, tA, cPsi, mDep) ->
+      I.Dec(cD, I.MDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t), mDep))
+  | I.PDecl(_u, tA, cPsi) ->
+      I.Dec(cD, I.PDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t)))
+  | I.SDecl (_s, cPhi, cPsi) ->
+      I.Dec(cD, I.SDecl(x, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t)))
 
   (* check cD cG e (tau, theta) = ()
    *
@@ -411,21 +437,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
            in check cD cG e' ttau'
          in let _ = List.map f bs in ()
 
-    | (CtxFun (_, psi, e), (TypCtxPi ((_psi, schema, dep ), tau), t)) ->
-        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        check (I.Dec(cD, I.CDecl(psi, schema, dep')))
-          (C.cnormCtx (cG, I.MShift 1)) e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi, mDep), _), tau), t)) ->
-        check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t), mDep)))
-          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.PDecl(_u, tA, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.PDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
-          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.SDecl(_u, cPhi, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.SDecl(u, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t))))
+    | (MLam (_, u, e), (TypPiBox (cdec, tau), t)) ->
+        check (extend_mctx cD (u, cdec, t))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->
@@ -554,7 +567,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | CtxApp (loc, e, cPsi) ->
         begin match C.cwhnfCTyp (syn cD cG e) with
-          | ((TypCtxPi ((_psi, w, _ ) , tau), t) as tt) ->
+          | ((TypPiBox ((I.CDecl(_psi, w, _ ), dep) , tau), t) as tt) ->
               let theta' = I.MDot (I.CObj (cPsi), t) in
               LF.checkSchema loc cD cPsi (Schema.get_schema w);
               (dprint (fun () -> "[check: syn] CtxApp : tau = " ^
@@ -654,6 +667,12 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | pat ->
         let (loc, ttau') = synPattern cD cG pat in
+        let tau' = Whnf.cnormCTyp ttau' in
+        let tau = Whnf.cnormCTyp ttau in
+        let ttau' = (tau', Whnf.m_id) in
+        let ttau = (tau, Whnf.m_id) in
+        let _ = dprint (fun () -> "\n Checking conv: " ^ P.compTypToString cD tau
+        ^ "\n == " ^ P.compTypToString cD tau' ^ "\n") in
           if C.convCTyp ttau ttau' then ()
           else
             raise (Error (loc, PatIllTyped (cD, cG, pat, ttau, ttau')))
@@ -679,9 +698,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         | (TypPiBox ((cdecl, _), tau), theta) ->
           let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
           synPatSpine cD cG pat_spine (tau, theta')
-        | (TypCtxPi ((x, w, dep), tau), theta) ->
-          let theta' =  checkPatAgainstCDecl cD pat (I.CDecl(x,w, I.No), theta) in
-          synPatSpine cD cG pat_spine (tau, theta')
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
@@ -692,9 +708,15 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             | MetaObjAnn (_, cPsi, tM) -> I.MDot (I.MObj(Context.dctxToHat cPsi, tM), theta)
           )
     | I.PDecl (_, tA, cPsi) ->
-        let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in
+        let _ = checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), theta) in
           (match mO with
             | MetaParam (_, phat, h) ->  I.MDot(I.PObj(phat, h), theta)
+          )
+    | I.SDecl (_, cPhi, cPsi) ->
+        let _ = checkMetaObj loc cD mO (MetaSubTyp (cPhi, cPsi), theta) in
+          (match mO with
+            | MetaSObj (_, phat, s) ->  I.MDot(I.SObj(phat, s), theta)
+            | MetaSObjAnn (_, cPsi, s) -> I.MDot (I.SObj(Context.dctxToHat cPsi, s), theta)
           )
     | I.CDecl (_, w, _ ) ->
         let _ = checkMetaObj loc cD mO (MetaSchema w, theta) in

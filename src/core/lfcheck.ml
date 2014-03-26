@@ -350,18 +350,15 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | Null, Shift (NoCtxShift, 0), Null -> ()
 
-    | cPhi, SVar (Offset offset, 0, s'), CtxVar psi' ->
-      let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD offset in
-      if cPhi1 = CtxVar psi' then
-	checkSub loc cD cPsi s' cPsi1
-      else
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
-
-    | cPhi, SVar (Offset offset, k, s'), DDec(cPsi,_tX) ->
-      if k > 0 then
-        checkSub loc cD cPhi (SVar (Offset offset, k-1, s')) cPsi
-      else
-        raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+    | cPhi, SVar (Offset offset, (cs, k), s'), cPsi ->
+      (*  cD ; cPhi |- SVar (offset, shift, s') : cPsi
+          cD(offset) =  Psi'[Phi'] (i.e. Phi'  |- offset  : Psi')
+                          Psi'  |- shift (cs , k) : Psi
+                          Phi   |- s'             : Phi'
+      *)
+      let (_, cPsi', cPhi') = Whnf.mctxSDec cD offset in
+      checkSub loc cD cPsi' (Shift (cs, k)) cPsi;
+      checkSub loc cD cPhi  s'            cPhi'
 
     | CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi' ->
       (* if psi = psi' then *)
@@ -802,6 +799,22 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
             checkMSub loc cD ms cD1'
           else
             raise (Error.Violation ("Contextual substitution ill-typed - 3 "))
+
+
+    | MDot (MV p, ms), Dec(cD1', SDecl (_u, cPhi, cPsi)) ->
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
+        let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
+        let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD p in
+          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convDCtx cPhi1 cPhi' then
+            checkMSub loc cD ms cD1'
+          else
+            raise (Error.Violation ("Contextual substitution ill-typed - 4 "))
+
+    | MDot (SObj (_, s), ms), Dec(cD1', SDecl (_u, cPhi, cPsi)) ->
+        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
+        let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
+          (checkSub loc cD cPsi' s cPhi';
+           checkMSub loc cD ms cD1' )
 
     | MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in

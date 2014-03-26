@@ -172,7 +172,7 @@ let rec eval_syn i (theta, eta) =
       dprint (fun () -> "EVALUATE CtxApp ");
       dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
       begin match eval_syn i' (theta, eta) with
-        | Comp.CtxValue (_psi, e', theta1, eta1) ->
+        | Comp.MLamValue (_psi, e', theta1, eta1) ->
           let theta1' =  LF.MDot(LF.CObj(cPsi'), theta1) in
           dprint (fun () -> "[CtxApp] theta1' = " ^ P.msubToString LF.Empty  theta1');
           eval_chk e' (theta1', eta1)
@@ -213,8 +213,7 @@ and eval_chk e (theta, eta) =
           dprint (fun () -> "[MLamValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.MLamValue (n, e', Whnf.cnormMSub theta, eta)
-      | Comp.CtxFun (loc, n, e') ->
-          Comp.CtxValue (n, e', Whnf.cnormMSub theta, eta)
+
       | Comp.Fun (loc, n, e') ->
           dprint (fun () -> "[FunValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));

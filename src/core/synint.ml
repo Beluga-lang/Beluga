@@ -27,11 +27,13 @@ module LF = struct
   and ctyp_decl =                             (* Contextual Declarations        *)
     | MDecl of name * typ  * dctx * inferred  (* D ::= u::A[Psi]                *)
     | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
-    | SDecl of name * dctx * dctx             (*   |   s::A[Psi]                *)
+    | SDecl of name * dctx (* Phi *) * dctx (* Psi *)
+                                              (*   |   s::Phi[Psi],i.e. Psi|-s:Phi  *)
     | CDecl of name * cid_schema * depend
     | MDeclOpt of name
     | PDeclOpt of name
     | CDeclOpt of name
+    | SDeclOpt of name
                                               (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)
@@ -52,7 +54,7 @@ module LF = struct
     | BVar  of offset                         (* H ::= x                        *)
     | Const of cid_term                       (*   | c                          *)
     | MMVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
-    | MPVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
+    | MPVar of mm_var * (msub * sub)          (*   | p[t ; s]                   *)
     | MVar  of cvar * sub                     (*   | u[s]                       *)
     | PVar  of cvar * sub                     (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
@@ -63,7 +65,9 @@ module LF = struct
     | FMVar of name * sub                     (* free meta-variable for type
                                                  reconstruction                 *)
     | FPVar of name * sub                     (* free parameter variable for type
-                                                reconstruction                 *)
+                                                 reconstruction                 *)
+    | HClo  of offset * cvar * sub            (*   | HClo(x, #S[sigma])         *)
+    | HMClo of offset * mm_var * (msub * sub) (*   | HMClo(x, #S[theta;sigma])  *)
 
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)
@@ -72,9 +76,13 @@ module LF = struct
 
   and sub =                                   (* Substitutions                  *)
     | Shift of ctx_offset * offset            (* sigma ::= ^(psi,n)             *)
-    | SVar  of cvar * offset * sub            (*       | s[sigma]               *)
-    | FSVar of name * sub                     (*       | s[sigma]               *)
-    | Dot   of front * sub                    (*       | Ft . s                 *)
+    | SVar  of cvar *
+        (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
+    | FSVar of name *
+        (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
+    | Dot   of front * sub                    (*   | Ft . s                     *)
+    | MSVar of mm_var *
+        (ctx_offset * offset) * (msub * sub)  (*   | u[t ; s]                   *)
 
   and front =                                 (* Fronts:                        *)
     | Head of head                            (* Ft ::= H                       *)
@@ -109,16 +117,17 @@ module LF = struct
         (* D ; Psi |- M <= A
            provided constraint *)
     | PInst  of name * head   option ref * dctx * typ * cnstr list ref
-        (* D ; Psi |- H => A
-           provided constraint *)
-    | SInst  of name * sub    option ref * dctx * dctx * cnstr list ref
+        (* D ; Psi |- H => A  provided constraint *)
+    | SInst  of name * sub    option ref * dctx (*cPsi*) * dctx (*cPhi *) * cnstr list ref
+        (* D ; Psi |- sigma <= cPhi  provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
     | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * inferred
         (* D ; Psi |- M <= A
            provided constraint *)
     | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
-
+    | MSInst   of name * sub option ref * mctx * dctx (* cPsi *) * dctx (* cPhi *) * cnstr list ref
+        (* cD ; cPsi |- s <= cPhi *)
 
   and tvar =
     | TInst   of typ option ref * dctx * kind * cnstr list ref
@@ -127,9 +136,9 @@ module LF = struct
 
   and constrnt =                             (* Constraint                     *)
     | Queued                                 (* constraint ::= Queued          *)
-    | Eqn of mctx * dctx * normal * normal
-                                             (*            | Psi |-(M1 == M2)  *)
+    | Eqn of mctx * dctx * normal * normal   (*            | Psi |-(M1 == M2)  *)
     | Eqh of mctx * dctx * head * head       (*            | Psi |-(H1 == H2)  *)
+    | Eqs of mctx * dctx * sub * sub         (*            | Psi |-(s1 == s2)  *)
 
   and cnstr = constrnt ref
 
@@ -219,6 +228,9 @@ module LF = struct
           getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
 
     | _ -> raise Not_found
+
+
+
 end
 
 
@@ -245,6 +257,8 @@ module Comp = struct
     | MetaObj of Loc.t * LF.psi_hat * LF.normal
     | MetaObjAnn of Loc.t * LF.dctx * LF.normal
     | MetaParam of Loc.t * LF.psi_hat * LF.head
+    | MetaSObj of Loc.t * LF.psi_hat * LF.sub
+    | MetaSObjAnn of Loc.t * LF.dctx * LF.sub
 
   type meta_spine =
     | MetaNil
@@ -260,7 +274,6 @@ module Comp = struct
     | TypSub    of Loc.t * LF.dctx * LF.dctx
     | TypArr    of typ * typ
     | TypCross  of typ * typ
-    | TypCtxPi  of (name * cid_schema * depend) * typ
     | TypPiBox  of (LF.ctyp_decl * depend) * typ
     | TypClo    of typ *  LF.msub
     | TypBool
@@ -297,7 +310,6 @@ module Comp = struct
     | Rec    of Loc.t * name * exp_chk
     | Fun    of Loc.t * name * exp_chk
     | Cofun  of Loc.t * (copattern_spine * exp_chk) list
-    | CtxFun of Loc.t * name * exp_chk
     | MLam   of Loc.t * name * exp_chk
     | Pair   of Loc.t * exp_chk * exp_chk
     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
@@ -365,6 +377,7 @@ module Comp = struct
     | CopatMeta of Loc.t * meta_obj * copattern_spine
 
   type tclo = typ * LF.msub
+
 end
 
 

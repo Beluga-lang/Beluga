@@ -1,0 +1,16 @@
+% Sketch of weak normalization for STLC that goes under binders
+% Author: Andrew Cave
+
+tp : type.                %name tp T.
+
+tm : tp -> type.          %name tm E.
+
+schema ctx = tm T;
+
+datatype Reduce : {g:ctx} {A:[g.tp]} {M:[g.tm (A ..)]} ctype =
+;
+
+rec eval : {g:ctx}{h:ctx}{M:[g.tm (A ..)]}{#S:g[h]} Reduce [h] [h. A #S[..] ] [h. M #S[..] ] =
+mlam g => mlam h => mlam M => mlam #S => ?
+% impossible [g. M ..] in [g]
+;

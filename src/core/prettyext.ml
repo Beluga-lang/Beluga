@@ -616,7 +616,7 @@ module Ext = struct
               (fmt_ppr_cmp_typ cD 0) tau2
               (r_paren_if cond)
 
-      | Comp.TypCtxPi (l, (psi, w, dep), tau) ->
+(*      | Comp.TypCtxPi (l, (psi, w, dep), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s{%s:(%s)*}@ %a%s"
               (l_paren_if cond)
@@ -624,8 +624,17 @@ module Ext = struct
               (R.render_name w)
               (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(l, psi, w))) 0) tau
               (r_paren_if cond)
+*)
+      | Comp.TypPiBox (_, (LF.CDecl (l, name, schema), Comp.Implicit), tau) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s(%s:(%s)*)@ %a%s"
+              (l_paren_if cond)
+              (R.render_name name)
+              (R.render_name schema)
+              (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(l, name, schema))) 0) tau
+              (r_paren_if cond)
 
-      | Comp.TypPiBox (_, ctyp_decl, tau) ->
+      | Comp.TypPiBox (_, (ctyp_decl, _dep), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a@ %a%s"
               (l_paren_if cond)
@@ -694,14 +703,14 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
-      | Comp.CtxFun (_, x, e) ->
+(*      | Comp.CtxFun (_, x, e) ->
           let cond = lvl > 0 in
             fprintf ppf "@[<2>%sFN %s =>@ %a%s@]"
               (l_paren_if cond)
               (R.render_name x)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond)
-
+*)
       | Comp.MLam (_, (x, Comp.MObj), e) ->
           let cond = lvl > 0 in
             fprintf ppf "%smlam %s => "

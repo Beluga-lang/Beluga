@@ -716,6 +716,10 @@ GLOBAL: sgn;
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
         |
+            "?" ->
+            LF.LFHole _loc
+
+        |
            "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
            begin match ann with
            | None -> m

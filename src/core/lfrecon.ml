@@ -788,7 +788,7 @@ and elTerm' recT cD cPsi r sP = match r with
 
   | Apx.LF.Ann (_loc, m, a) ->
     elTerm' recT cD cPsi m sP
-
+    
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
       let i  = (Term.get c).Term.implicit_arguments in

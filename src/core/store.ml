@@ -23,8 +23,6 @@ module NamedHoles = struct
       else n.Id.string_of_name
       
     let reset () = Gensym.MVarData.reset () ; newNames := []
-
-
 end
 
 type error =

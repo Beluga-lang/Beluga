@@ -486,7 +486,12 @@ and cnormApxExp' cD delta i cDt = match i with
       let e' = cnormApxExp cD delta e cDt in
         Apx.Comp.Apply (loc, i', e')
 
-  | Apx.Comp.CtxApp (loc, i, psi) ->
+  | Apx.Comp.MApp (loc, i, mobj) ->
+      let i'        = cnormApxExp' cD delta i cDt in
+      let mobj'     = cnormApxMetaObj cD delta mobj cDt in
+        Apx.Comp.MApp (loc, i', mobj')
+
+(*  | Apx.Comp.CtxApp (loc, i, psi) ->
         let i' = cnormApxExp' cD delta i cDt in
         let psi' = cnormApxDCtx loc cD delta psi cDt in
           Apx.Comp.CtxApp (loc, i', psi')
@@ -517,12 +522,7 @@ and cnormApxExp' cD delta i cDt = match i with
       let sigma' = cnormApxSub cD delta sigma cDt in
         Apx.Comp.MApp (loc, i', Apx.Comp.MetaSubAnn (loc', psi', sigma'))
 
-  | Apx.Comp.MAnnSApp (loc, i, (psi, sigma)) ->
-      let i'     = cnormApxExp' cD delta i cDt in
-      let psi'   = cnormApxDCtx loc cD delta psi cDt in
-      let sigma' = cnormApxSub cD delta sigma cDt in
-        Apx.Comp.MAnnSApp (loc, i', (psi', sigma'))
-
+*)
   | Apx.Comp.BoxVal (loc, psi, m) ->
       let psi' = cnormApxDCtx loc cD delta psi cDt in
       let m'   = cnormApxTerm cD delta m cDt in
@@ -540,6 +540,38 @@ and cnormApxExp' cD delta i cDt = match i with
     let i1' = cnormApxExp' cD delta i1 cDt in
     let i2' = cnormApxExp' cD delta i2 cDt in
       Apx.Comp.Equal (loc, i1', i2')
+
+and cnormApxMetaObj cD delta mobj cDt = let (_cD', t) = cDt in
+  match mobj with
+    | Apx.Comp.MetaObj (loc', phat, m) ->
+        let phat'     = Whnf.cnorm_psihat phat t in
+        let m'        = cnormApxTerm cD delta m cDt in
+          Apx.Comp.MetaObj (loc', phat', m')
+
+    | Apx.Comp.MetaCtx (loc', psi) ->
+        let psi' = cnormApxDCtx loc' cD delta psi cDt in
+          Apx.Comp.MetaCtx (loc', psi')
+
+    | Apx.Comp.MetaObjAnn (loc', psi, m) ->
+        let psi' = cnormApxDCtx loc' cD delta psi cDt in
+        let m'   = cnormApxTerm cD delta m cDt in
+          Apx.Comp.MetaObjAnn (loc', psi', m')
+
+    | Apx.Comp.MetaParam (loc, phat, h) ->
+        let phat'     = Whnf.cnorm_psihat phat t in
+        let h' = cnormApxHead cD delta h cDt in
+          Apx.Comp.MetaParam (loc, phat', h')
+
+    | Apx.Comp.MetaSub (loc, phat, sigma) ->
+      let phat'  = Whnf.cnorm_psihat phat t in
+      let sigma' = cnormApxSub cD delta sigma cDt in
+        Apx.Comp.MetaSub (loc, phat', sigma')
+
+    | Apx.Comp.MetaSubAnn (loc, psi, sigma) ->
+      let psi'   = cnormApxDCtx loc cD delta psi cDt in
+      let sigma' = cnormApxSub cD delta sigma cDt in
+        Apx.Comp.MetaSubAnn (loc, psi', sigma')
+
 
 
 and cnormApxBranches cD delta branches cDt = match branches with
@@ -1179,39 +1211,11 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
       let i' = fmvApxExp' fMVs cD d_param  i in
       let e' = fmvApxExp fMVs cD d_param  e in
         Apx.Comp.Apply (loc, i', e')
-  | Apx.Comp.CtxApp (loc, i, psi) ->
-      let i' = fmvApxExp' fMVs cD d_param  i in
-      let psi' = fmvApxDCtx loc fMVs cD  d_param  psi  in
-        Apx.Comp.CtxApp (loc, i', psi')
 
-  | Apx.Comp.MApp (loc, i, Apx.Comp.MetaSub (loc', phat, sigma)) ->
+  | Apx.Comp.MApp (loc, i, mobj) ->
       let i' = fmvApxExp' fMVs cD d_param  i in
-      let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.MApp (loc, i', Apx.Comp.MetaSub (loc', (fmvApxHat loc' fMVs cD d_param phat), sigma'))
-
-  | Apx.Comp.MApp (loc, i, Apx.Comp.MetaSubAnn (loc', psi, sigma)) ->
-      let i' = fmvApxExp' fMVs cD d_param  i in
-      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
-      let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.MApp (loc, i', Apx.Comp.MetaSubAnn (loc', psi', sigma'))
-
-
-  | Apx.Comp.MApp (loc, i, Apx.Comp.MetaObj (loc', phat, m)) ->
-      let i' = fmvApxExp' fMVs cD d_param  i in
-      let m' = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.MApp (loc, i', Apx.Comp.MetaObj (loc', (fmvApxHat loc' fMVs cD d_param phat), m'))
-
-  | Apx.Comp.MAnnApp (loc, i, (psi, m)) ->
-      let i' = fmvApxExp' fMVs cD d_param  i in
-      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
-      let m' = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.MAnnApp (loc, i', (psi', m'))
-
-  | Apx.Comp.MAnnSApp (loc, i, (psi, sigma)) ->
-      let i' = fmvApxExp' fMVs cD d_param  i in
-      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
-      let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.MAnnSApp (loc, i', (psi', sigma'))
+      let mobj' = fmvApxMetaObj fMVs cD d_param  mobj in
+        Apx.Comp.MApp (loc, i', mobj')
 
   | Apx.Comp.BoxVal (loc, psi, m) ->
       let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
@@ -1235,6 +1239,36 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
       let i1' = fmvApxExp' fMVs cD d_param  i1 in
       let i2' = fmvApxExp' fMVs cD d_param  i2 in
         Apx.Comp.Equal (loc, i1', i2')
+
+and fmvApxMetaObj fMVs cD ((l_cd1, l_delta, k) as d_param) mobj = match mobj with
+  | Apx.Comp.MetaObj (loc', phat, m) ->
+      let phat' = fmvApxHat loc' fMVs cD d_param phat in
+      let m'    = fmvApxTerm fMVs cD d_param  m in
+        Apx.Comp.MetaObj (loc', phat', m')
+
+  | Apx.Comp.MetaCtx (loc, psi) ->
+      let psi' = fmvApxDCtx loc fMVs cD  d_param  psi  in
+        Apx.Comp.MetaCtx (loc, psi')
+
+  | Apx.Comp.MetaObjAnn (loc, psi, m) ->
+      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
+      let m' = fmvApxTerm fMVs cD d_param  m in
+        Apx.Comp.MetaObjAnn (loc, psi', m')
+
+  | Apx.Comp.MetaParam (loc, phat, h) ->
+      let phat' = fmvApxHat loc fMVs cD d_param phat in
+      let h' = fmvApxHead fMVs cD d_param  h in
+        Apx.Comp.MetaParam (loc, phat', h')
+
+  | Apx.Comp.MetaSub (loc, phat, sigma) ->
+      let phat' = fmvApxHat loc fMVs cD d_param phat in
+      let sigma' = fmvApxSub fMVs cD d_param  sigma in
+        Apx.Comp.MetaSub (loc, phat', sigma')
+
+  | Apx.Comp.MetaSubAnn (loc, psi, sigma) ->
+      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
+      let sigma' = fmvApxSub fMVs cD d_param  sigma in
+        Apx.Comp.MetaSubAnn (loc, psi', sigma')
 
 
 

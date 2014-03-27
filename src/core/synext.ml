@@ -149,13 +149,16 @@ module Comp = struct
      | DataConst  of Loc.t * name               (*    | c                   *)
      | Const  of Loc.t * name                   (*    | c                   *)
      | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
-     | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)
+     | MApp of Loc.t * exp_syn * meta_obj       (*    | i [C]               *)
+(*     | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)
      | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
                                                 (*    | i [Psi hat. M]      *)
      | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
      | MSApp   of Loc.t * exp_syn * (LF.psi_hat * LF.sub)
                                                 (*    | i [Psi hat $ sigma]      *)
-     | MAnnSApp   of Loc.t * exp_syn * (LF.dctx * LF.sub) (* i [Psi $ sigma]     *)
+     | MAnnSApp   of Loc.t * exp_syn * (LF.dctx * LF.sub) (* i [Psi $
+  sigma]     *)
+*)
      | BoxVal of Loc.t * LF.dctx * LF.normal
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
@@ -213,8 +216,8 @@ module Comp = struct
  let rec synToString = function
      | Var    (_loc,  _) -> "Var"
      | Apply  (_loc,  syn, chk) -> "Apply(" ^ synToString syn ^ ", " ^ chkToString chk ^ ")"
-     | CtxApp (_loc,  syn, _dctx) -> "CtxApp(" ^ synToString syn ^ ", _dctx)"
-     | MApp   (_loc,  syn, (_, _)) -> "MApp(" ^ synToString syn ^ ", ...)"
+(*     | CtxApp (_loc,  syn, _dctx) -> "CtxApp(" ^ synToString syn ^ ", _dctx)" *)
+     | MApp   (_loc,  syn, _) -> "MApp(" ^ synToString syn ^ ", ...)"
      | BoxVal (_loc, _, _) -> "BoxVal(...)"
      | Ann    (_loc, chk, _) -> "Ann(" ^ chkToString chk ^ ", _)"
      | Equal   (_loc,  syn1, syn2) -> "Equal("  ^ synToString syn1 ^ " == " ^ synToString syn2 ^ ")"

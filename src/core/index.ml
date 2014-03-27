@@ -742,34 +742,10 @@ and index_exp' cvars vars fcvars = function
       let e' = index_exp  cvars vars fcvars e in
         Apx.Comp.Apply (loc, i', e')
 
-  | Ext.Comp.CtxApp (loc, i, psi) ->
-      let i'   = index_exp' cvars vars fcvars i in
-      let (psi', _ , _ ) = index_dctx cvars (BVar.create ()) fcvars psi in
-        Apx.Comp.CtxApp (loc, i', psi')
-
-  | Ext.Comp.MApp (loc, i, (psihat, m)) ->
+  | Ext.Comp.MApp (loc, i, mO) ->
       let i'      = index_exp' cvars vars fcvars i in
-      let (psihat', bvars) = index_psihat cvars fcvars psihat in
-      let (m', _ ) = index_term cvars bvars fcvars m in
-        Apx.Comp.MApp (loc, i', Apx.Comp.MetaObj (loc, psihat', m'))
-
-  | Ext.Comp.MAnnApp (loc, i, (psi, m)) ->
-      let i'      = index_exp' cvars vars fcvars i in
-      let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars psi in
-      let (m', _ ) = index_term cvars bvars fcvars m in
-        Apx.Comp.MAnnApp (loc, i', (psi', m'))
-
-  | Ext.Comp.MSApp (loc, i, (psihat, s)) ->
-      let i'      = index_exp' cvars vars fcvars i in
-      let (psihat', bvars) = index_psihat cvars fcvars psihat in
-      let (s', _ ) = index_sub cvars bvars fcvars s in
-        Apx.Comp.MApp (loc, i', Apx.Comp.MetaSub (loc, psihat', s'))
-
-  | Ext.Comp.MAnnSApp (loc, i, (psi, s)) ->
-      let i'      = index_exp' cvars vars fcvars i in
-      let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars psi in
-      let (s', _ ) = index_sub cvars bvars fcvars s in
-        Apx.Comp.MAnnSApp (loc, i', (psi', s'))
+      let (mobj', _ )  = index_mobj cvars fcvars mO in
+        Apx.Comp.MApp (loc, i', mobj')
 
   | Ext.Comp.BoxVal (loc, psi, m) ->
       let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars  psi in

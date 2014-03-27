@@ -1309,7 +1309,7 @@ and elExp' cD cG i = match i with
                 (* TODO postpone to reconstruction *)
         end
 
-  | Apx.Comp.CtxApp (loc, i, cPsi) ->
+(*  | Apx.Comp.CtxApp (loc, i, cPsi) ->
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
         begin match tau_theta' with
           | ((Int.Comp.TypPiBox ((Int.LF.CDecl(_psi, _sW, _), _explicit ), tau), theta) as tt)->
@@ -1328,7 +1328,7 @@ and elExp' cD cG i = match i with
               raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantCtxPi, tau_theta')))
                 (* TODO postpone to reconstruction *)
         end
-
+*)
   | Apx.Comp.MApp (loc, i, mC) ->
       let _ = dprint (fun () -> "Elaborating MApp.\n") in
       let (i0, tau_t) = (elExp' cD cG i) in
@@ -1349,6 +1349,30 @@ and elExp' cD cG i = match i with
                         dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
                         raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
                       end
+                | Apx.Comp.MetaObjAnn (_loc', psi, m) , Int.LF.MDecl (_, tA, cPsi) ->
+                    let cPsi' = C.cnormDCtx (cPsi, theta) in
+                    let cPhi =  Lfrecon.elDCtx Lfrecon.Pibox cD psi in
+                      (begin try
+                        Unify.unifyDCtx cD cPsi' cPhi
+                      with
+                        | Unify.Failure "Context clash" ->
+                            let expected_tau = Int.Comp.TypBox (Syntax.Loc.ghost,Whnf.cnormTyp (tA, theta),
+                                                                Whnf.cnormDCtx (cPsi, theta))   in
+                              raise (Error (loc, CtxMismatch (cD, expected_tau, cPhi)))
+                       end;
+                       begin try
+                         let cPhi' = Whnf.normDCtx cPhi in
+                         let phihat' = Context.dctxToHat cPhi'  in
+                         let i_norm = Whnf.cnormExp' (i', Whnf.m_id) in
+                        let tM'    = Lfrecon.elTerm Lfrecon.Pibox cD cPhi' m (C.cnormTyp (tA, theta), LF.id) in
+                        let theta' = Int.LF.MDot (Int.LF.MObj (phihat', tM'), theta) in
+                        let tau'' = Whnf.cnormCTyp (tau, theta') in
+                           (Int.Comp.MApp (loc, i_norm, (phihat', Int.Comp.NormObj tM')), (tau'', Whnf.m_id))
+                      with Error.Violation msg ->
+                        dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+                        raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
+                       end)
+
                 | Apx.Comp.MetaObj (_loc', psihat , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
                      Int.LF.PDecl (_, tA, cPsi) ->
                     let cPsi' = C.cnormDCtx (cPsi, theta) in
@@ -1363,6 +1387,43 @@ and elExp' cD cG i = match i with
                         (Printf.printf "%s\n" msg;
                          raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
                       end
+
+                | Apx.Comp.MetaObjAnn (_loc', psi , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
+                     Int.LF.PDecl (_, tA, cPsi) ->
+                    let cPsi  = C.cnormDCtx (cPsi, theta) in
+                    let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
+                      (begin try
+                         Unify.unifyDCtx cD cPsi cPsi'
+                       with
+                         | Unify.Failure "Context clash" ->
+                             let expected_tau = Int.Comp.TypBox (Syntax.Loc.ghost,Whnf.cnormTyp (tA, theta),
+                                                                 Whnf.cnormDCtx (cPsi, theta))   in
+                               raise (Error (loc, CtxMismatch (cD, expected_tau, cPsi')))
+                       end ;
+
+                       let cPsi' = Whnf.normDCtx cPsi' in
+                       let psihat' = Context.dctxToHat cPsi'  in
+                       let _ = dprint (fun () -> "[elExp'] Mapp case :  PDecl ") in
+                       let (h', sB) = Lfrecon.elHead loc Lfrecon.Pibox cD cPsi' h  in
+                       let _ = dprint (fun () -> "\n[elExp'] PDecl instantiated with " ^ P.headToString cD cPsi' h') in
+                       let theta' = Int.LF.MDot (Int.LF.PObj (psihat', h'), theta)  in
+                       let sA' = (C.cnormTyp (tA, theta), LF.id) in
+                       let i_norm = Whnf.cnormExp' (i', Whnf.m_id) in
+                         (if Unify.isVar h' then
+                            begin
+                              try
+                                (Unify.unifyTyp cD cPsi' sB  sA' ;
+                                 dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
+                                 (Int.Comp.MApp (loc, i_norm, (psihat', Int.Comp.NeutObj h')), (tau, theta')))
+                              with Unify.Failure msg ->
+                                (Printf.printf "%s\n" msg;
+                                 raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
+                            end
+                          else
+                            raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
+                      )
+
+
                 |  Apx.Comp.MetaSub (loc', psihat, s) , Int.LF.SDecl (_, cPhi, cPsi) ->
                      begin try
                        let cPsi' = C.cnormDCtx (cPsi, theta) in
@@ -1410,7 +1471,7 @@ and elExp' cD cG i = match i with
         end
 
 
-  | Apx.Comp.MAnnApp (loc, i, (psi, m)) ->
+  (*| Apx.Comp.MAnnApp (loc, i, (psi, m)) ->
       let _ = dprint (fun () -> "Reconstructing MAnnApp\n") in
       let (i0, tau_t) = (elExp' cD cG i) in
       let _ = (dprint (fun () -> ("[elExp'] MAnnApp : " ^
@@ -1597,7 +1658,7 @@ and elExp' cD cG i = match i with
           raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantPiBox, tau_theta')))
           (* TODO postpone to reconstruction *)
         end
-
+  *)
 
   | Apx.Comp.BoxVal (loc, psi, r) ->
       let _ = dprint (fun () -> "[elExp'] BoxVal dctx ") in

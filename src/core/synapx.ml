@@ -164,10 +164,11 @@ module Comp = struct
      | DataDest of cid_comp_dest                            (* c              *)
      | Const  of cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
-     | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
+(*     | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]
+*) *)
      | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)
-     | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
-     | MAnnSApp   of Loc.t * exp_syn * (LF.dctx * LF.sub) (* i [Psi. M]     *)
+(*     | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
+     | MAnnSApp   of Loc.t * exp_syn * (LF.dctx * LF.sub) (* i [Psi. M]     *) *)
      | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (Psi. tR)  *)
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                              (* e : tau        *)

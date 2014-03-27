@@ -1168,19 +1168,22 @@ isuffix:
 
   "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT ["."; tM = clf_term_app -> tM ]; "]"   ->
      begin match (phat_or_psi , mobj) with
-       | (Dctx cPsi, Some tM)   -> (fun i -> Comp.MAnnApp (_loc, i, (cPsi,  tM)))
-       | (Hat phat, Some tM)    -> (fun i -> Comp.MApp (_loc, i, (phat, tM)))
-       | (Dctx cPsi, None)      -> (fun i -> Comp.CtxApp(_loc, i, cPsi))
-       | (Hat [psi], None)      -> (fun i -> Comp.CtxApp(_loc, i, LF.CtxVar (_loc, psi)))
-       | (Hat []  , None)       -> (fun i -> Comp.CtxApp(_loc, i, LF.Null))
+       | (Dctx cPsi, Some tM)   -> (fun i -> Comp.MApp (_loc, i,
+                                                        Comp.MetaObjAnn(_loc, cPsi,  tM)))
+       | (Hat phat, Some tM)    -> (fun i -> Comp.MApp (_loc, i,
+                                                        Comp.MetaObj (_loc, phat, tM)))
+       | (Dctx cPsi, None)      -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx (_loc,cPsi)))
+       | (Hat [psi], None)      -> (fun i -> Comp.MApp(_loc, i,
+                                                       Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi))))
+       | (Hat []  , None)       -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx(_loc, LF.Null)))
        | (_ , _)                ->
          raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
      end
 
-   | "["; phat_or_psi = clf_hat_or_dctx ; "$"; tM = clf_sub_new; "]"   ->
+   | "["; phat_or_psi = clf_hat_or_dctx ; "$"; s = clf_sub_new; "]"   ->
      begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MAnnSApp (_loc, i, (cPsi, tM)))
-       | Hat phat  ->  (fun i -> Comp.MSApp (_loc, i, (phat, tM)))
+       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
+       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
      end
 
 (* | "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))   *)
@@ -1198,8 +1201,8 @@ isuffix:
 *)
  | "<"; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; ">"   ->
      begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MAnnApp (_loc, i, (cPsi, tM)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, (phat, tM)))
+       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaObjAnn (_loc,cPsi, tM)))
+       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaObj (_loc,phat, tM)))
      end
 
 (* | "["; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; "]"   ->

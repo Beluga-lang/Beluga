@@ -70,6 +70,7 @@ let _ = Error.register_printer
       | IllFormedCompTyp ->
 	Format.fprintf ppf "Ill-formed computation-level type."))
 
+
 type free_cvars =
     FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name
 
@@ -744,7 +745,7 @@ and index_exp' cvars vars fcvars = function
 
   | Ext.Comp.MApp (loc, i, mO) ->
       let i'      = index_exp' cvars vars fcvars i in
-      let (mobj', _ )  = index_mobj cvars fcvars mO in
+      let (mobj', _ )  = index_meta_obj cvars fcvars mO in
         Apx.Comp.MApp (loc, i', mobj')
 
   | Ext.Comp.BoxVal (loc, psi, m) ->
@@ -767,12 +768,14 @@ and index_exp' cvars vars fcvars = function
 
   | Ext.Comp.Boolean (loc , b) -> Apx.Comp.Boolean (loc, b)
 
-and index_mobj cvars fcvars  mO = match mO with
+
+and index_pattern_mobj cvars fcvars  mO = match mO with
   | Ext.Comp.MetaCtx (loc, cPsi) ->
     let (cPsi', _bvars, fcvars')  = index_dctx cvars (BVar.create ()) fcvars cPsi in
       (Apx.Comp.MetaCtx (loc, cPsi') , fcvars')
 
-  | Ext.Comp.MetaObj (loc, phat, tM) ->  raise (Error (loc, PatCtxRequired))
+  | Ext.Comp.MetaObj (loc, phat, tM) ->
+      raise (Error (loc, PatCtxRequired))
   | Ext.Comp.MetaObjAnn (loc, cPsi, tM) ->
     let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
     let (tM', fcvars2)           = index_term cvars bvars fcvars1 tM in
@@ -818,7 +821,7 @@ and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
 	(Apx.Comp.PatConst (loc, cid, pat_spine'), fcvars', fvars')
 
   | Ext.Comp.PatMetaObj (loc, mO) ->
-    let (mO', fcvars1) = index_mobj cvars fcvars mO in
+    let (mO', fcvars1) = index_pattern_mobj cvars fcvars mO in
       (Apx.Comp.PatMetaObj (loc, mO') , fcvars1, fvars)
   | Ext.Comp.PatEmpty (loc, cpsi) ->
       let (cPsi, _bvars, fcvars ) = index_dctx cvars (BVar.create ()) fcvars cpsi in
@@ -912,7 +915,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
 
     let (omega, cD', cvars1, fcvars1)  =
       index_mctx (CVar.create()) (fcvars', not term_closed) cD in
-    let (mO', (fcvars2, _)) = index_mobj cvars1 fcvars1 mO in
+    let (mO', (fcvars2, _)) = index_pattern_mobj cvars1 fcvars1 mO in
     let _ = dprint (fun () -> "fcvars in pattern = " ^ fcvarsToString fcvars2) in
     let cvars_all  = CVar.append cvars1 cvars in
     let fcvars3    = List.append fcvars2 fcvars in

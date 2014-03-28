@@ -1087,14 +1087,16 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                          | InductionHyp(l2) -> let v1 = VAltAtomic(l1,s,None) in
                                                begin match tp with
                                                  | TPremisse(_,Some(PName(s1)),_,_) ->
-                                                             let v2 = VAltAtomic(l1,s1,None) in
-                                                             let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
-                                                             let v3 = valtpPar l1 lt lsym v1 in
-                                                             let cbranch = comp_branch l lt n (Some([s1])) lsym llam lju [ag] cb  cano in
-                                                             Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)),
-                                                             ([], v3)), cbranch)
-                                                 | _ ->      let v3 = valtpPar l1 lt lsym v1 in
-                                                             Ext.Comp.Syn(l1,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)), ([], v3)))
+                                                     let v2 = VAltAtomic(l1,s1,None) in
+                                                     let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
+                                                     let v3 = Ext.Comp.MetaObj (l1, [], valtpPar l1 lt lsym v1) in
+                                                     let cbranch = comp_branch l lt n (Some([s1])) lsym llam lju [ag] cb  cano in
+                                                       Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)),
+                                                                                                         v3),
+                                                                     cbranch)
+                                                 | _ ->
+                                                     let v3 = Ext.Comp.MetaObj(l1, [], valtpPar l1 lt lsym v1) in
+                                                       Ext.Comp.Syn(l1,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)), v3))
                                                end
                          | _ -> raise (Error ("Sorry not implemented yet in prule1."))
                        end
@@ -1118,24 +1120,29 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                                                 Ext.Comp.Case(l1,Pragma.RegularCase, lca, cbranch)
 
                                     | TPremisse(l4,None,_,v2) ->
+                                        let cv = Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)) in
 
-                                                let cv = Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)) in
+                                        let lca = List.fold_left (fun x (TPremisse(l3,None,c,va1)) ->
+                                                                    begin match c with
+                                                                      | Some([Con(s)]) ->
+                                                                          let va3 = valtpPar l lt lsym va1 in
+                                                                          let psi = Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)) in
+                                                                          let mobj = Ext.Comp.MetaObjAnn (l1, psi, va3) in
+                                                                            Ext.Comp.MApp(l1, x, mobj)
 
-                                                let lca = List.fold_left (fun x (TPremisse(l3,None,c,va1)) ->
-                                                          begin match c with
-                                                            | Some([Con(s)]) -> let va3 = valtpPar l lt lsym va1 in
-                                                                                Ext.Comp.MAnnApp(l1, x, (Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)), va3))
-
-                                                            | Some(Con(s)::[NewCon(s1, va4)]) -> let va3 = valtpPar l lt lsym va1 in
-                                                                                                 let ctxv = Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)) in
-                                                                        let va5 = context_sch l4 (["x"]) lsym lju va4 in
-                                                                        let td = Ext.LF.TypDecl(Id.mk_name(Id.SomeString s1), Ext.LF.Sigma(l4, va5)) in
-                                                                        let dd = Ext.LF.DDec(ctxv, td) in
-                                                                        Ext.Comp.MAnnApp(l1, x, (dd, va3))
+                                                                      | Some(Con(s)::[NewCon(s1, va4)]) ->
+                                                                          let va3 = valtpPar l lt lsym va1 in
+                                                                          let ctxv = Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)) in
+                                                                          let va5 = context_sch l4 (["x"]) lsym lju va4 in
+                                                                          let td = Ext.LF.TypDecl(Id.mk_name(Id.SomeString s1), Ext.LF.Sigma(l4, va5)) in
+                                                                          let dd = Ext.LF.DDec(ctxv, td) in
+                                                                          let mobj = Ext.Comp.MetaObjAnn (l1,dd, va3) in
+                                                                            Ext.Comp.MApp(l1, x, mobj)
 
                                                             | Some(Con(s)::[Con(s1)]) -> let va3 = valtpPar l lt lsym va1 in
                                                                         let dd = (Id.mk_name(Id.SomeString s))::[Id.mk_name(Id.SomeString s1)] in
-                                                                        Ext.Comp.MApp(l1, x, (dd, va3))
+                                                                        let mobj = Ext.Comp.MetaObj (l1, dd, va3) in
+                                                                        Ext.Comp.MApp(l1, x, mobj)
 
                                                             | _ -> let s = locToString(l4) in
                                                                            let s1 = "Problem with the context of your premisse." ^ s in

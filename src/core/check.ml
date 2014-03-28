@@ -214,20 +214,23 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
               "Expected type" Format.pp_print_string                "base type"
               "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau)
 
-          | AppMismatch (cD, (MetaTyp (tP, cPsi), tau)) ->
+          | AppMismatch (cD, (MetaTyp (tP, cPsi), theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tP, cPsi), tau))
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tP, cPsi), theta))
 
-          | MAppMismatch (cD, (MetaTyp (tA, cPsi), tau)) ->
+          | MAppMismatch (cD, (MetaTyp (tA, cPsi), theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), tau))
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), theta))
 
-(*          | MAppMismatch (cD, (MetaSubTyp (cPhi, cPsi), tau)) ->
+          | MAppMismatch (cD, (MetaSubTyp (cPhi, cPsi), theta)) ->
+              let cPhi', cPsi'  = Whnf.cnormDCtx (cPhi, theta) , Whnf.cnormDCtx  (cPsi, theta) in
+              let cdec = I.SDecl(Id.mk_name (Id.SVarName None), cPhi', cPsi') in
             Format.fprintf ppf
               "Expected contextual substitution object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), tau)) *)
+              (P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl)
+              cdec
 
           | MAppMismatch (cD, (MetaSchema cid_schema, tau)) ->
             Format.fprintf ppf

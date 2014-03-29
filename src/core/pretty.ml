@@ -124,7 +124,6 @@ module Int = struct
     val ppr_lf_schema     : LF.schema        -> unit
     val ppr_lf_sch_elem   : LF.sch_elem      -> unit
 
-    (* val ppr_lf_psi_hat    : LF.mctx -> LF.dctx -> unit *)
     val ppr_lf_dctx       : LF.mctx -> LF.dctx  -> unit
     val ppr_lf_mctx       : LF.mctx -> unit
     val ppr_cmp_kind      : LF.mctx -> Comp.kind -> unit
@@ -239,9 +238,7 @@ module Int = struct
 
       | LF.Sigma typRec ->
           fprintf ppf "block (%a)"
-(*            (l_paren_if (lvl > 0)) *)
             (fmt_ppr_lf_typ_rec cD cPsi lvl) typRec
-(*            (r_paren_if (lvl > 0)) *)
 
       | LF.TClo (typ, s) ->
           fprintf ppf "TClo(%a,@ %a)"
@@ -1224,7 +1221,6 @@ module Int = struct
 
       | Comp.MLam (_, x, e) ->
           let cond = lvl > 0 in
-(*            fprintf ppf "@[<2>%smlam %s => @ %a%s@]" *)
             fprintf ppf "%smlam %s => "
               (l_paren_if cond)
               (R.render_name x);
@@ -1281,7 +1277,6 @@ module Int = struct
 
       | Comp.Case (_, prag, i, bs) ->
           let cond = lvl > 0 in
-(*            fprintf ppf "@ @[<0>%scase %a of%s@ @[<0>%a@]%s@]" *)
             fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
@@ -1318,17 +1313,12 @@ module Int = struct
       | Comp.Apply (loc, i, e) ->
           let (i', _) = strip_mapp_args' cD cG i in
             (Comp.Apply (loc, i', e), [])
-      | Comp.CtxApp (loc, i, cPsi) ->
-          let (i', stripArg ) = strip_mapp_args' cD cG i in
-          (match stripArg with
-          | false :: sA -> (i', sA)
-          | true  :: sA -> (Comp.CtxApp (loc, i', cPsi), sA)
-          | []          -> (i', [])                )
-      | Comp.MApp (loc, i1, (phat, tM) ) ->
+
+      | Comp.MApp (loc, i1, mC) ->
           let (i', stripArg) = strip_mapp_args' cD cG i1 in
           (match stripArg with
           | false :: sA -> (i', sA)
-          | true  :: sA -> (Comp.MApp (loc , i', (phat, tM)), sA)
+          | true  :: sA -> (Comp.MApp (loc , i', mC), sA)
           | []          -> (i', [])                )
       | Comp.PairVal (loc, i1, i2) ->
           let (i1', _) = strip_mapp_args' cD cG i1 in
@@ -1371,45 +1361,14 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 2) e
               (r_paren_if cond)
 
-      | Comp.CtxApp (_, i, cPsi) ->
+      | Comp.MApp (_, i, mC) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a [%a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD cG 1) i
-              (fmt_ppr_lf_dctx cD 0) cPsi
-              (r_paren_if cond)
-
-      | Comp.MApp (_, i, (pHat, Comp.NormObj tM )) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s%a@ [%s%a. %a%s]%s"
+            fprintf ppf "%s%a@ [%s%a%s]%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               ("")
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) tM
+              (fmt_ppr_meta_obj cD 0) mC
               ("")
-              (r_paren_if cond)
-
-
-      | Comp.MApp (_, i, (pHat, Comp.NeutObj head)) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s%a @ < %a. %a > %s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD cG 1) i
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_head cD cPsi 0) head
-              (r_paren_if cond)
-
-      | Comp.MApp (_, i, (pHat, Comp.SubstObj s)) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s%a @ < %a. %a > %s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD cG 1) i
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) s
               (r_paren_if cond)
 
       | Comp.PairVal (loc, i1, i2) ->
@@ -1424,8 +1383,6 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 1) e
               (fmt_ppr_cmp_typ cD 2) (Whnf.cnormCTyp (tau, Whnf.m_id))
               (r_paren_if cond)
-
-
 
       | Comp.Equal (_, i1, i2) ->
             fprintf ppf "%a == %a"
@@ -1552,18 +1509,15 @@ module Int = struct
 (*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
             fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a. %a])@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
               (ppr_ctyp_decls ) cD1'
-              (* (fmt_ppr_lf_psi_hat cO' 0) cPsi *)
               (fmt_ppr_lf_dctx cD1' 0) cPsi
               (fmt_ppr_pattern cD1' cPsi) pattern
                  (* this point is where the " : " is in the string above *)
-              (* (fmt_ppr_lf_msub cD1' 2) t   *)
               (fmt_ppr_refinement cD1' cD 2) t
               (* NOTE: Technically: cD |- cG ctx and
                *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
                * -bp
                *)
               (fmt_ppr_branch_body cD1' cG t) pattern
-(*              (fmt_ppr_cmp_exp_chk cO' cD1' (Whnf.cnormCtx (cG, t)) 1) e *)
 
 
     (* cD |- t : cD'  *)
@@ -1632,17 +1586,9 @@ module Int = struct
 
       | LF.SObj (phat, sigma) ->
           let cPsi = phatToDCtx phat in
-(*          let s =
-            begin match decl with
-              | LF.SDecl(s, _ , _ ) -> s
-              | LF.SDeclOpt s -> s
-            end in
-*)
           fprintf ppf "%a . %a = #SVAR"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_sub cD cPsi lvl) sigma
-(*            (R.render_name s) *)
-
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->

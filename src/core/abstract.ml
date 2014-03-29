@@ -34,7 +34,6 @@ exception Error of Syntax.Loc.t * error
 
 let getLocation' (loc, i) = match i with
   | Comp.MApp (loc, _, _ ) -> loc
-  | Comp.CtxApp (loc, _, _ ) -> loc
   | Comp.Apply (loc, _, _ ) -> loc
   | Comp.Equal (loc, _, _ ) -> loc
   | Comp.PairVal (loc, _ , _) -> loc
@@ -363,12 +362,6 @@ let rec lengthCollection cQ = match cQ with
   | I.Dec (cQ', FPV(Impure, _ , _ )) -> lengthCollection cQ'
   | I.Dec (cQ', FSV(Impure, _ , _ )) -> lengthCollection cQ'
   | I.Dec (cQ', SV(Impure, _ )) -> lengthCollection cQ'
-(*  | I.Dec (cQ', MMV(Pure, _ )) -> lengthCollection cQ' + 1
-  | I.Dec (cQ', MV(Pure, _ )) -> lengthCollection cQ'+ 1
-  | I.Dec (cQ', PV(Pure, _ )) -> lengthCollection cQ'+ 1
-  | I.Dec (cQ', FV(Pure, _ , _ )) -> lengthCollection cQ' + 1
-  | I.Dec (cQ', FMV(Pure, _ , _ )) -> lengthCollection cQ' + 1
-  | I.Dec (cQ', FPV(Pure, _ , _ )) -> lengthCollection cQ' + 1  *)
   | I.Dec (cQ', _ )  -> lengthCollection cQ' + 1
 
 
@@ -1172,8 +1165,6 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
       else
         raise (Error (loc, LeftoverConstraints))
 
-(*  | (I.MMVar (I.MInst (n, ({contents = None} as q), I.Empty, cPsi, tA,
-    ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) -> *)
   | (I.MMVar (I.MInst (n, ({contents = None} as q), I.Empty, cPsi, tA,  ({contents = cnstr} as c)) as r, (ms', s')) as u, _s) ->
       if constraints_solved cnstr then
           begin match checkOccurrence (eqMMVar u) cQ with
@@ -1187,13 +1178,15 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
 
                 let cQ' = I.Dec(cQ2, MMV(Impure, u)) in
                 let phihat = Context.dctxToHat cPsi in
-                let (_ , offset) = phihat in
                 (* let cPsi = Whnf.normDCtx cPsi in *)
                 let (cQ1, cPsi')  = collectDctx loc k cQ' phihat cPsi in
-                let _ = dprint (fun () -> "[collect] (collect in cPsi and tA) for MMV : " ^ P.headToString I.Empty (Context.hatToDCtx phihat) head) in
-                let _ = dprint (fun () -> "[collect] offset = " ^ string_of_int offset) in
-                let _ = dprint (fun () -> "[collect] MMV before : cPsi = " ^ P.dctxToString I.Empty cPsi) in
-                let _ = dprint (fun () -> "[collect] MMV after: cPsi' = " ^ P.dctxToString I.Empty cPsi') in
+                (* let (_ , offset) = phihat in
+                   let _ = dprint (fun () -> "[collect] (collect in cPsi and tA) for MMV : " ^ P.headToString I.Empty (Context.hatToDCtx phihat) head) in
+                   let _ = dprint (fun () -> "[collect] offset = " ^ string_of_int offset) in
+                   let _ = dprint (fun () -> "[collect] MMV before : cPsi = " ^ P.dctxToString I.Empty cPsi) in
+                   let _ = dprint (fun () -> "[collect] MMV after: cPsi' = " ^
+                   P.dctxToString I.Empty cPsi') in
+                *)
                 let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
                 let v = I.MMVar (I.MInst (n, q, I.Empty, cPsi', tA',  c), (ms1, sigma)) in
                   (I.Dec (cQ'', MMV (Pure, v)) , v)
@@ -1232,10 +1225,6 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
       let h' = Whnf.cnormHead (h,ms') in
       collectHead k cQ phat loc (h', LF.comp s' s)
 
-(*      (Printf.printf "[collectHead] non-normal MPVar : ";
-       dprint (fun () -> "             " ^ P.headToString cD cPsi h);
-       raise (Error (loc, LeftoverConstraints)))
-*)
   | (I.MPVar (I.MPInst (_n, _r, _cD, _cPsi, _tA,  _), _),  _s) ->
       raise (Error (loc, LeftoverVars VariantMPV))
 
@@ -1544,13 +1533,7 @@ and abstractCtx cQ =  match cQ with
       let cQ'   = abstractCtx cQ  in
       let l     = length cPsi in
       let cPsi' = abstractDctx cQ cPsi l in
-      (* let  (_, depth)  = dctxToHat cPsi in   *)
-      (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
       let tA'   = abstractTyp cQ l (tA, LF.id) in
-(*      let _     = Printf.printf "Abstraction: mvar r of type tA = %s\n in context = %s\n with substitution s = %s\n\n"
-        (P.typToString I.Empty I.Empty cPsi (tA, LF.id))
-        (P.dctxToString I.Empty I.Empty cPsi)
-        (P.subToString I.Empty I.Empty cPsi s) in *)
       let s'    = abstractSub cQ l s in
       let u'    = I.MVar (I.Inst (n, r, cPsi', tA', cnstr), s') in
         I.Dec (cQ', MV (Pure, u'))
@@ -1559,8 +1542,6 @@ and abstractCtx cQ =  match cQ with
       let cQ'   = abstractCtx cQ  in
       let l     = length cPsi in
       let cPsi' = abstractDctx cQ cPsi l in
-      (* let  (_, depth)  = dctxToHat cPsi in   *)
-      (* let tA'   = abstractTyp cQ 0 (tA, LF.id) in *)
       let tA'   = abstractTyp cQ l (tA, LF.id) in
       let s'    = abstractSub cQ l s in
       let p'    = I.PVar (I.PInst (n, r, cPsi', tA', cnstr), s') in
@@ -2280,24 +2261,10 @@ and collectExp' cQ i = match i with
       let (cQ'', e') = collectExp cQ' e in
         (cQ'', Comp.Apply (loc, i', e'))
 
-  | Comp.CtxApp (loc, i, cPsi) ->
+  | Comp.MApp (loc, i, cM) ->
       let (cQ', i') = collectExp' cQ i  in
-      let phat = Context.dctxToHat cPsi in
-      let (cQ'', cPsi') = collectDctx loc 0 cQ' phat cPsi in
-        (cQ'', Comp.CtxApp (loc, i', cPsi'))
-
-  | Comp.MApp (loc, i, (phat, cObj)) ->
-      let (cQ', i') = collectExp' cQ i  in
-      let (cQ', phat') = collectHat 0 cQ' phat in
-      let (cQ'', cObj') = begin match cObj with
-                              | Comp.NormObj tM ->
-                                  let (cQ'', tM') = collectTerm 0 cQ' phat' (tM, LF.id)  in (cQ'', Comp.NormObj tM')
-                              | Comp.NeutObj h  ->
-                                  let (cQ'', h')  = collectHead 0 cQ' phat' loc (h, LF.id)   in (cQ'', Comp.NeutObj h')
-                              | Comp.SubstObj s ->
-                                  let (cQ'', s')  = collectSub 0 cQ' phat' s             in (cQ'', Comp.SubstObj s')
-                         end in
-        (cQ'', Comp.MApp (loc, i', (phat', cObj')))
+      let (cQ'', cM') = collect_meta_obj 0 cQ cM in
+        (cQ'', Comp.MApp (loc, i', cM'))
 
   | Comp.Ann  (e, tau) ->
       let (cQ', e') = collectExp cQ e in

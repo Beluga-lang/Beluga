@@ -143,7 +143,7 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected FunValue")
       end
 
-    | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
+    | Comp.MApp (_, i', Comp.MetaObj (_, phat, tM)) ->
       let tM' = Whnf.cnorm (tM, theta) in
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
@@ -156,7 +156,7 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected MLamValue ")
       end
 
-    | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
+    | Comp.MApp (_, i', Comp.MetaParam (_, phat, h)) ->
         let h' = Whnf.cnormHead (h, theta) in
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
@@ -167,7 +167,7 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
-    | Comp.CtxApp (loc, i', cPsi) ->
+    | Comp.MApp (loc, i', Comp.MetaCtx (_, cPsi)) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
       dprint (fun () -> "EVALUATE CtxApp ");
       dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');

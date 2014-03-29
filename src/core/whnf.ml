@@ -3012,21 +3012,9 @@ let mctxSVarPos cD u =
 
     | (Comp.PairVal (loc, i1, i2), t) ->
         Comp.PairVal (loc, cnormExp' (i1,t), cnormExp' (i2, t))
-    | (Comp.CtxApp (loc, i, cPsi), t) -> Comp.CtxApp (loc, cnormExp' (i, t), normDCtx (cnormDCtx (cPsi, t)))
 
-    | (Comp.MApp (loc, i, (psihat, Comp.NormObj tM)), t) ->
-        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.NormObj (norm (cnorm (tM, t), LF.id))))
-
-    | (Comp.MApp (loc, i, (psihat, Comp.NeutObj h)), t) ->
-       begin match normFt (Head (cnormHead (h,t))) with
-          | Head h' ->  Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.NeutObj h'))
-          | _       -> raise (Error.Violation ("Object does not remain head under msub"))
-       end
-
-
-    | (Comp.MApp (loc, i, (psihat, Comp.SubstObj s)), t) ->
-        let s' = normSub (cnormSub (s,t)) in
-        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.SubstObj s'))
+    | (Comp.MApp (loc, i, cM), t) ->
+        Comp.MApp (loc, cnormExp' (i, t),  cnormMetaObj (cM, t))
 
     | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), cnormCTyp (tau, mcomp t' t))
 

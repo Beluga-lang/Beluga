@@ -324,8 +324,7 @@ module Comp = struct
     | DataDest of cid_comp_dest
     | Const  of cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
-    | CtxApp of Loc.t * exp_syn * LF.dctx
-    | MApp   of Loc.t * exp_syn * (LF.psi_hat * contextual_obj)
+    | MApp   of Loc.t * exp_syn * meta_obj
     | Ann    of exp_chk * typ
     | Equal  of Loc.t * exp_syn * exp_syn
     | PairVal of Loc.t * exp_syn * exp_syn

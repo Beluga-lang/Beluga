@@ -1186,32 +1186,11 @@ isuffix:
        | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
      end
 
-(* | "["; cPsi = clf_dctx; "]"   ->   (fun i -> Comp.CtxApp(_loc, i, cPsi))   *)
-(*   "["; phat_or_psi = clf_hat_or_dctx; "]" ->
-     begin match phat_or_psi with
-       | Dctx cPsi -> (fun i -> Comp.CtxApp(_loc, i, cPsi))
-       | Hat phat -> raise (MixError _loc)
-     end
-
- | "["; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; "]"   ->
-     begin match phat_or_psi with
-       | Dctx cPsi  -> (fun i -> Comp.MAnnApp (_loc, i, (cPsi,  tM)))
-       | Hat phat   -> (fun i -> Comp.MApp (_loc, i, (phat, tM)))
-     end
-*)
  | "<"; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; ">"   ->
      begin match phat_or_psi with
        | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaObjAnn (_loc,cPsi, tM)))
        | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaObj (_loc,phat, tM)))
      end
-
-(* | "["; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; "]"   ->
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MAnnApp (_loc, i, (cPsi, tM)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, (phat, tM)))
-     end
-
-*)
 
    | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
    | x = SYMBOL   ->

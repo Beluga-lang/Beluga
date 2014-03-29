@@ -28,7 +28,7 @@ val ctxToSub_mclosed : mctx  -> dctx -> dctx -> mctx * sub * int
 val mctxToMSub  : mctx -> msub
 val mctxToMMSub : mctx -> mctx -> msub
 
-val isomorphic : mctx -> mctx -> bool
+(* val isomorphic : mctx -> mctx -> bool *)
 
 (* lookupSchemaOpt cO psi_offset *)
 (* val lookupSchemaOpt : mctx -> int -> schema option *)

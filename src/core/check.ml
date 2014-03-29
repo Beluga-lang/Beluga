@@ -557,8 +557,7 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
         begin match C.cwhnfCTyp (syn cD cG e1) with
           | (TypArr (tau2, tau), t) ->
               dprint (fun () -> "[SYN: APPLY ] synthesized type  " ^
-                          P.compTypToString cD (Whnf.cnormCTyp (TypArr (tau2,
-        tau), t) ));
+                     P.compTypToString cD (Whnf.cnormCTyp (TypArr (tau2, tau), t) ));
               dprint (fun () -> ("[check: APPLY] argument has appropriate type " ^
                                        P.expChkToString cD cG e2));
               dprint (fun () -> "[check: APPLY] cG " ^ P.gctxToString cD cG );
@@ -568,27 +567,19 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
               raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
         end
 
-    | CtxApp (loc, e, cPsi) ->
-        begin match C.cwhnfCTyp (syn cD cG e) with
-          | ((TypPiBox ((I.CDecl(_psi, w, _ ), dep) , tau), t) as tt) ->
+    | MApp (loc, e, mC) ->
+        begin match (mC, C.cwhnfCTyp (syn cD cG e)) with
+          | (MetaCtx (loc, cPsi), (TypPiBox ((I.CDecl (_ , w, _ ), _ ), tau), t)) ->
               let theta' = I.MDot (I.CObj (cPsi), t) in
               LF.checkSchema loc cD cPsi (Schema.get_schema w);
-              (dprint (fun () -> "[check: syn] CtxApp : tau = " ^
-                         P.compTypToString cD (Whnf.cnormCTyp tt) );
-               dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
+              (dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
                dprint (fun () -> "[check: syn] tau1 = " ^
                           P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ;
                  (tau, theta')
-          | (tau, t) ->
-              raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
-        end
-    | MApp (loc, e, (phat, cObj)) ->
-        begin match (cObj, C.cwhnfCTyp (syn cD cG e)) with
-          | (NormObj tM, (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t)) ->
-              LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
-              (tau, I.MDot(I.MObj (phat, tM), t))
-
-          | (NeutObj h, (TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
+          | (MetaObj (loc, psihat, tM) , (TypPiBox ((I.MDecl (_u, tA, cPsi), _ ), tau), t)) ->
+              checkMetaObj loc cD mC (MetaTyp (tA, cPsi), t) ;
+              (tau, I.MDot(I.MObj (psihat, tM), t))
+          | (MetaParam(_, phat, h), (TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
               let _ =  dprint (fun () -> "[check: inferHead] cPsi = " ^
                                  P.dctxToString cD (C.cnormDCtx (cPsi,t) )) in
               let tB = LF.inferHead loc cD (C.cnormDCtx (cPsi,t)) h in
@@ -596,9 +587,11 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
                   (tau, I.MDot(I.PObj (phat, h), t))
                 else
                   raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-          | (SubstObj s, (TypPiBox ((I.SDecl(_, tA, cPsi), _ ), tau), t)) ->
+          | (MetaSObj(_, phat, s), (TypPiBox ((I.SDecl(_, tA, cPsi), _ ), tau), t)) ->
               LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
               (tau, I.MDot(I.SObj (phat, s), t))
+          | ( _ , ((TypPiBox ((I.CDecl _ , _ ), _ )) as tau, t) ) ->
+              raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
           | (_ , (tau, t)) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end

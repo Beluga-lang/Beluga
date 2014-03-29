@@ -1249,7 +1249,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let e'  =  elExp cD cG1 e (tau, theta) in
         Int.Comp.Let (loc, i', (x,  e'))
 
-  | (Apx.Comp.Box (loc, psihat, tM), ((Int.Comp.TypBox (_loc, tA, cPsi), theta) as tau_theta)) ->
+  | (Apx.Comp.Box (loc, Apx.Comp.MetaObj (_ , psihat, tM)), ((Int.Comp.TypBox (_loc, tA, cPsi), theta) as tau_theta)) ->
    (* if psihat = Context.dctxToHat cPsi then *)
       let _ = dprint (fun () -> "[elExp] BOX\n") in
       let cPsi' = C.cnormDCtx (cPsi, theta) in
@@ -1281,7 +1281,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
          raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, tau_theta))) )
 
 
-  | (Apx.Comp.SBox (loc, psihat, sigma), ((Int.Comp.TypSub (_loc, cPhi, cPsi), theta))) ->
+(*  | (Apx.Comp.SBox (loc, psihat, sigma), ((Int.Comp.TypSub (_loc, cPhi, cPsi), theta))) ->
    (* if psihat = Context.dctxToHat cPsi then *)
       if Lfrecon.unify_phat cD psihat (Context.dctxToHat cPsi) then
         let sigma' = Lfrecon.elSub loc Lfrecon.Pibox cD (C.cnormDCtx (cPsi, theta)) sigma (C.cnormDCtx (cPhi, theta)) in
@@ -1293,7 +1293,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
            dprint (fun () -> "cPsi = " ^ P.dctxToString cD (C.cnormDCtx (cPsi, theta))  ^ "\n psihat  = " ^ string_of_int k ^ "\n") ;
            raise (Check.Comp.Error (loc, Check.Comp.SBoxMismatch (cD, cG, (C.cnormDCtx (cPhi, theta)), (C.cnormDCtx (cPsi, theta)))) ))
 
-
+*)
   | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
       let _ = dprint (fun () -> "[elExp] case ") in
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
@@ -1393,7 +1393,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       raise (Check.Comp.Error (loc, Check.Comp.MLamMismatch (cD, cG, tau_theta)))
   | (Apx.Comp.Pair(loc, _ , _ ), tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.PairMismatch (cD, cG, tau_theta)))
-  | (Apx.Comp.Box (loc, _, _ ) , tau_theta) ->
+  | (Apx.Comp.Box (loc, _ ) , tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, tau_theta)))
 
 and elExp' cD cG i = match i with

@@ -764,30 +764,11 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond)
 
-      | Comp.Box (_ , pHat, tM) ->
+      | Comp.Box (_ , m) ->
           let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a] %a%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) tM
-              (r_paren_if cond)
-
-
-      | Comp.SBox (_ , pHat, sigma) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a] %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) sigma
-              (r_paren_if cond)
-
-      | Comp.CtxBox (_ , dctx) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s[%a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_dctx cD 0) dctx
+              (fmt_ppr_meta_obj  cD 0) m
               (r_paren_if cond)
 
       | Comp.Case (_, prag, i, bs) ->
@@ -861,7 +842,7 @@ module Ext = struct
 
       | Comp.MApp (_, i, mO) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ [%s%a%s]%s"
+            fprintf ppf "%s%a@ %s%a%s%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               ("")

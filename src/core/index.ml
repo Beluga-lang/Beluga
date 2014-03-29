@@ -665,49 +665,15 @@ let rec index_exp cvars vars fcvars = function
       let e' = index_exp cvars vars1 fcvars e in
         Apx.Comp.Let (loc, i', (x,e'))
 
-  (* SVars are parsed as terms but are actually substitutions *)
-(*  | Ext.Comp.Box (loc1, psihat, Ext.LF.Root(loc2, Ext.LF.SVar(loc3,s, sigma), spine)) ->
-      let (psihat' , bvars) = index_psihat cvars fcvars psihat in
-      let _ctxOpt = begin match psihat' with
-                   | None , _  -> None
-                   | Some (Int.LF.CtxOffset psi) , _  ->  Some (Apx.LF.CtxOffset psi)
-                   | Some (Int.LF.CtxName psi)  , _   ->  Some (Apx.LF.CtxName psi)
-                   end in
-
-      let rec create_sub s spine = match spine with
-        | Ext.LF.Nil -> s
-        | Ext.LF.App (loc, m', spine') ->
-            let (m', _ ) = index_term cvars (bvars) fcvars  m' in
-             create_sub (Apx.LF.Dot (Apx.LF.Obj m', s)) spine'
-      in
-      let (sigma', _ ) =  index_sub cvars (bvars) fcvars sigma in
-
-        begin try
-          let offset = CVar.index_of_name cvars (CVar.SV s) in
-            Apx.Comp.SBox (loc1, psihat',
-                           create_sub (Apx.LF.SVar (Apx.LF.Offset offset, sigma')) spine )
-        with Not_found ->
-          raise (Error (loc3, UnboundName s))
-        end *)
-
-
-  | Ext.Comp.Box (loc, psihat, m) ->
-      let (psihat', bvars) = index_psihat cvars fcvars psihat in
-      let (m', _ ) = index_term cvars bvars fcvars m in
-        Apx.Comp.Box (loc, psihat', m')
-
-
-  | Ext.Comp.SBox (loc, psihat,s) ->
-      let (psihat', bvars) = index_psihat cvars fcvars psihat in
-      let (s', _ ) = index_sub cvars bvars fcvars s in
-        Apx.Comp.SBox (loc, psihat', s')
+  | Ext.Comp.Box (loc, m)  ->
+      let (m', fcvars')  = index_meta_obj  cvars fcvars m in
+        Apx.Comp.Box (loc, m')
 
   | Ext.Comp.Case (loc, prag, i, branches) ->
       let i' = index_exp' cvars vars fcvars i in
       let _ = dprint (fun () -> "index case") in
       let branches' = List.map (function b -> index_branch cvars vars fcvars b) branches in
         Apx.Comp.Case (loc, prag, i', branches')
-
 
   | Ext.Comp.If (loc, i, e1, e2) ->
       let i' = index_exp' cvars vars fcvars i in

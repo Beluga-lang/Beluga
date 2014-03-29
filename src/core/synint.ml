@@ -278,12 +278,6 @@ module Comp = struct
 
   type gctx = ctyp_decl LF.ctx
 
-  type contextual_obj =
-      NormObj of LF.normal
-    | NeutObj of LF.head
-    | SubstObj of LF.sub
-    | CtxObj   of LF.dctx
-
   type env =
     | Empty
     | Cons of value * env

@@ -836,8 +836,10 @@ let stmt_to_prove l lt st lju lsym =
 
 let comp_box l lt lsym co va =
   match co with
-    | Some([Con(s)]) -> let va1 = valtpPar l lt lsym va in
-                      Ext.Comp.Box(l, [Id.mk_name(Id.SomeString s)],va1)
+    | Some([Con(s)]) ->
+        let va1 = valtpPar l lt lsym va in
+        let  m = Ext.Comp.MetaObj (l, [Id.mk_name(Id.SomeString s)],va1) in
+          Ext.Comp.Box(l,m)
     | _ -> raise (Error ("Should use a context that has already been specified \n"))
 
 (* check if you have alambda term *)
@@ -1026,7 +1028,8 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
 
                     | (Some(vn),Some([s1])) -> let va = VAltAtomic(l1,s1,None) in
                                                let v1 = valtp l1 lt lsym va in
-                                               Ext.Comp.Box(l, [], Ext.LF.Root(l1, Ext.LF.Name( l1, Id.mk_name(Id.SomeString n1)),v1))
+                                               let m = Ext.Comp.MetaObj (l, [], Ext.LF.Root(l1, Ext.LF.Name( l1, Id.mk_name(Id.SomeString n1)),v1)) in
+                                               Ext.Comp.Box(l, m)
                     |  (_, Some(l)) -> let s1 = "more than one element in mlam  1  "  in
                                        raise (Error (s1)) (* see case below if you raise this error *)
                   end

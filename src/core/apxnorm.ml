@@ -428,21 +428,10 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
       let e' = cnormApxExp  cD delta e (cD'', t) in
         Apx.Comp.Let (loc, i', (x, e'))
 
-  | Apx.Comp.Box(loc, phat, m) ->
+  | Apx.Comp.Box(loc,  m) ->
       let _ = dprint (fun () -> "[cnormApxExp] BOX") in
-      let phat' = Whnf.cnorm_psihat phat t in
-      let _ = dprint (fun () ->
-			let s = match phat' with
-			  | (None, _ ) -> ""
-			  | (Some (Int.LF.CtxName psi) , _ ) -> R.render_name  psi
-			  | (Some (Int.LF.CtxOffset k) , _ ) -> R.render_offset   k in
-			  "[cnormApxExp] phat' = " ^ s ) in
-      Apx.Comp.Box (loc, phat', cnormApxTerm cD delta m (cD'', t))
-
-  | Apx.Comp.SBox(loc, phat, s) ->
-      let phat' = Whnf.cnorm_psihat phat t in
-      Apx.Comp.SBox (loc, phat', cnormApxSub cD delta s (cD'', t))
-
+      let m'     = cnormApxMetaObj cD delta m (cD'', t) in
+      Apx.Comp.Box (loc, m')
 
   | Apx.Comp.Case (loc, prag, i, branch) ->
       let _  = dprint (fun () -> "[cnormApxExp] Case Scrutinee ... ") in
@@ -1138,11 +1127,9 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
       let e' = fmvApxExp  fMVs cD d_param  e in
         Apx.Comp.Let (loc, i', (x, e'))
 
-  | Apx.Comp.Box(loc, phat, m) ->
-      Apx.Comp.Box (loc, fmvApxHat loc fMVs cD d_param phat, fmvApxTerm fMVs cD d_param  m)
-
-  | Apx.Comp.SBox(loc, phat, s) ->
-      Apx.Comp.SBox (loc, fmvApxHat loc fMVs cD d_param  phat, fmvApxSub fMVs cD d_param  s)
+  | Apx.Comp.Box(loc, m) ->
+      let m' = fmvApxMetaObj fMVs cD d_param  m in
+      Apx.Comp.Box (loc, m')
 
   | Apx.Comp.Case (loc, prag, i, branch) ->
       Apx.Comp.Case (loc, prag, fmvApxExp' fMVs cD d_param  i,

@@ -1128,7 +1128,7 @@ GLOBAL: sgn;
         "["; phat_or_psi = clf_hat_or_dctx ; "." ; tM = clf_term_app;  "]"  ->
           begin match phat_or_psi with
             | Dctx cPsi ->  Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tM))
-            | Hat phat  ->                 Comp.Box (_loc, phat, tM)
+            | Hat phat  ->                 Comp.Box (_loc, Comp.MetaObj (_loc, phat, tM))
       end
 
 

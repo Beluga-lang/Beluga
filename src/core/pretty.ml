@@ -1256,10 +1256,9 @@ module Int = struct
 
       | Comp.Box (_ , cM) ->
           let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
             fprintf ppf "%s%a%s"
               (l_paren_if cond)
-              (fmt_ppr_meta_obj cD 0) mC
+              (fmt_ppr_meta_obj cD 0) cM
               (r_paren_if cond)
 
 
@@ -1390,7 +1389,8 @@ module Int = struct
       | Comp.CtxValue _ -> fprintf ppf " mlam "
       | Comp.PsiValue psi -> fprintf ppf "[%a]" (fmt_ppr_lf_dctx LF.Empty lvl) psi
       | Comp.BoxValue (phat, tM) ->
-        fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl ppf (Comp.Box (Syntax.Loc.ghost, phat, tM))
+        fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl ppf
+          (Comp.Box (Syntax.Loc.ghost, Comp.MetaObj (Syntax.Loc.ghost ,phat, tM)))
       | Comp.ConstValue _ -> fprintf ppf " const "
       | Comp.BoolValue true -> fprintf ppf "ttrue"
       | Comp.BoolValue false -> fprintf ppf "ffalse"

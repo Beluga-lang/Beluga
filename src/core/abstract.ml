@@ -48,8 +48,7 @@ let getLocation e = match e with
   | Comp.MLam (loc, _, _) -> loc
   | Comp.Pair (loc, _, _ ) -> loc
   | Comp.LetPair (loc, _, _ ) -> loc
-  | Comp.Box (loc, _, _ )    -> loc
-  | Comp.SBox (loc, _, _) -> loc
+  | Comp.Box (loc, _)    -> loc
   | Comp.Case (loc, _, _, _ ) -> loc
   | Comp.If (loc, _, _, _ ) -> loc
   | Comp.Hole loc -> loc
@@ -2227,16 +2226,10 @@ let rec collectExp cQ e = match e with
       let (cQ2, e') = collectExp cQi e in
         (cQ2, Comp.Let (loc, i', (x, e')))
 
-  | Comp.Box (loc, phat, tM) ->
-      let (cQ', phat') = collectHat 0 cQ phat in
-      let (cQ'', tM') = collectTerm 0 cQ'  phat' (tM, LF.id)  in
-        (cQ'', Comp.Box (loc, phat', tM') )
+  | Comp.Box (loc, cM) ->
+      let (cQ'', cM') = collect_meta_obj 0 cQ cM in
+        (cQ'', Comp.Box (loc, cM'))
 
-
-  | Comp.SBox (loc, phat, sigma) ->
-      let (cQ', phat') = collectHat 0 cQ phat in
-      let (cQ'', sigma') = collectSub 0 cQ'  phat' sigma  in
-        (cQ'', Comp.SBox (loc, phat', sigma') )
 
   | Comp.Case (loc, prag, i, branches) ->
       let (cQ', i') = collectExp' cQ i in

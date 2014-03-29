@@ -2983,13 +2983,8 @@ let mctxSVarPos cD u =
     | (Comp.Let (loc, i, (x, e)), t) ->
         Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
 
-    | (Comp.Box (loc, psihat, tM), t) ->
-        Comp.Box (loc, (cnorm_psihat psihat t),
-                  norm (cnorm (tM, t), LF.id))
-
-    | (Comp.SBox (loc, psihat, sigma), t) ->
-        Comp.SBox (loc, (cnorm_psihat psihat t),
-                  normSub (cnormSub (sigma, t)))
+    | (Comp.Box (loc, cM), t) ->
+        Comp.Box (loc, cnormMetaObj (cM,t))
 
     | (Comp.Case (loc, prag, i, branches), t) ->
         Comp.Case (loc, prag, cnormExp' (i,t),

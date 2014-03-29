@@ -231,11 +231,12 @@ and eval_chk e (theta, eta) =
           let w = eval_syn i (theta, eta) in
             eval_chk e (theta, Comp.Cons (w, eta))
 
-      | Comp.Box (loc, phat, tM) ->
-        let tM'   = Whnf.cnorm (tM, theta) in
-        let phat' = Whnf.cnorm_psihat phat theta in
-        dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box (loc, phat, tM')));
-        Comp.BoxValue (phat', tM')
+      | Comp.Box (loc, cM) ->
+          begin match Whnf.cnormMetaObj (cM, theta) with
+            | Comp.MetaObj (_ , phat, tM) -> Comp.BoxValue (phat, tM)
+            | Comp.MetaParam (_ , phat, h) -> Comp.ParamValue (phat, h)
+            | Comp.MetaCtx (_,cPsi) -> Comp.PsiValue cPsi
+          end
 
       | Comp.Case (loc, _prag, i, branches) ->
         let vscrut = eval_syn i (theta, eta) in

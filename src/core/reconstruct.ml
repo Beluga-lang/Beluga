@@ -1296,7 +1296,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
       let _ = dprint (fun () -> "[elExp] case on " ^ P.expSynToString cD cG (Whnf.cnormExp' (i', Whnf.m_id))) in
       begin match (i', C.cwhnfCTyp tau_theta') with
-        | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ) as i,
+        | (Int.Comp.Ann (Int.Comp.Box (_ , Int.Comp.MetaObj (_,phat,tR)), _ ) as i,
            (Int.Comp.TypBox (_, tP, cPsi) as tau_s, t (* m_id *))) ->
           let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           if Whnf.closed (tR, LF.id) then
@@ -1311,7 +1311,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
           else
             raise (Error (loc, ValueRestriction (cD, cG, i, (tau_s,t))))
 
-        | (Int.Comp.Ann (Int.Comp.Box (_ , phat,tR), _ ) as i, (tau_s, t)) ->
+        | (Int.Comp.Ann (Int.Comp.Box (_ , Int.Comp.MetaObj (_,phat,tR)), _ ) as i, (tau_s, t)) ->
           raise (Error (loc, (IllegalCase (cD, cG, i, (tau_s, t)))))
 
         | (i, (Int.Comp.TypBox (_, tP, cPsi) as tau_s, _mid)) ->

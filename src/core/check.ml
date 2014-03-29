@@ -461,12 +461,8 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
           | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
         end
 
-    | (Box (_, _phat, tM), (TypBox (_, tA, cPsi), t)) ->
+    | (Box (_, MetaObj (_ , _phat, tM)), (TypBox (_, tA, cPsi), t)) ->
         begin try
-(*        Already done during cwhnfCTyp ... -bp
-          let cPsi' = C.cnormDCtx (cPsi, t) in
-          let tA'   = C.cnormTyp (tA, t) in
-*)
         let _ = dprint (fun () -> "[comp check ] " ^
 	  P.mctxToString cD ^ " ; " ^
 	  P.dctxToString cD cPsi ^ " |- " ^
@@ -477,14 +473,7 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
-    | (SBox (loc , _phat, sigma), (TypSub (_, cPhi, cPsi), t)) ->
-        begin try
-            LF.checkSub loc cD  cPsi sigma cPhi
-        with Whnf.FreeMVar (I.FMVar (u, _ )) ->
-          raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
-        end
-
-    | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')),
+    | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)), TypBox (_, tA', cPsi')),
              branches), (tau, t)) ->
         let (tau_sc, projOpt) =  (match tR with
                    | I.Root (_, I.PVar _ , _ ) ->

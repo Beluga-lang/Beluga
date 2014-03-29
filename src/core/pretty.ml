@@ -1254,25 +1254,13 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x)) 0) e
               (r_paren_if cond)
 
-      | Comp.Box (_ , pHat, tM) ->
+      | Comp.Box (_ , cM) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a. %a]%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) tM
+              (fmt_ppr_meta_obj cD 0) mC
               (r_paren_if cond)
-
-
-      | Comp.SBox (_ , pHat, sigma) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a. %a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) sigma
-              (r_paren_if cond)
-
 
 
       | Comp.Case (_, prag, i, bs) ->
@@ -1363,7 +1351,7 @@ module Int = struct
 
       | Comp.MApp (_, i, mC) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ [%s%a%s]%s"
+            fprintf ppf "%s%a@ %s%a%s%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               ("")

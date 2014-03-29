@@ -1018,7 +1018,8 @@ let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
             let cM = Int.Comp.MetaObj (loc, psihat, tM') in
             (Int.Comp.MApp (loc, i, cM), (tau, theta'))
           else
-            (Int.Comp.Apply (loc, i, Int.Comp.Box (loc,psihat, tM')), (tau, theta))
+            let cM = Int.Comp.MetaObj (loc, psihat, tM') in
+            (Int.Comp.Apply (loc, i, Int.Comp.Box (loc, cM)), (tau, theta))
         with Error.Violation msg ->
           dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
           raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
@@ -1045,7 +1046,8 @@ let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
                let cM = Int.Comp.MetaObj (loc, phihat', tM') in
                  (Int.Comp.MApp (loc, i_norm, cM), (tau'', Whnf.m_id))
              else
-               (Int.Comp.Apply (loc, i_norm, Int.Comp.Box (loc, phihat', tM')), (tau, theta))
+               let cM = Int.Comp.MetaObj (loc, phihat', tM') in
+               (Int.Comp.Apply (loc, i_norm, Int.Comp.Box (loc, cM)), (tau, theta))
          with Error.Violation msg ->
            dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
            raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
@@ -1256,13 +1258,8 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       if Lfrecon.unify_phat cD psihat (Context.dctxToHat cPsi') then
         let tM' = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (C.cnormTyp (tA, theta), LF.id) in
         let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let e   = Int.Comp.Box (loc, psihat, tM') in
-        let _   = (dprint (fun () -> "[elExp] Box : " ^ P.expChkToString cD cG e ) ;
-                   dprint (fun () -> "[elExp] Box checked against "  ^
-                             P.typToString cD cPsi' (C.cnormTyp (tA, theta), LF.id) ^ "[" ^
-                             P.dctxToString cD cPsi' ^ "]")) in
-
-          Int.Comp.Box (loc, psihat, tM')
+        let cM = Int.Comp.MetaObj (loc, psihat, tM') in
+          Int.Comp.Box (loc, cM)
       else
         (* raise (Error.Error (loc, Error.CompBoxCtxMismatch (cD, cPsi, (psihat, tM')))) *)
         (begin match psihat with
@@ -1487,7 +1484,8 @@ and elExp' cD cG i = match i with
       (* let sP    = synTerm Lfrecon.Pibox cD cPsi (tR, LF.id) in *)
       let phat     = Context.dctxToHat cPsi in
       let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.TClo sP, cPsi) in
-        (Int.Comp.Ann (Int.Comp.Box (loc, phat, tR), tau), (tau, C.m_id))
+      let cM       = Int.Comp.MetaObj (loc, phat, tR) in
+        (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
 
   | Apx.Comp.PairVal (loc, i1, i2) ->
       let (i1', (tau1,t1)) = genMApp loc cD (elExp' cD cG i1) in

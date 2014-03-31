@@ -511,6 +511,7 @@ and recSgnDecl d =
           in
             match order with
               | Ext.Sgn.Arg x ->
+                  (* check that p refers to a type we can do induction over *)
                   let p = pos x args 1 in
                     (Printf.printf "\n## Totality declaration: %s terminates in position %s ##\n"
                       (R.render_name c) (string_of_int p);

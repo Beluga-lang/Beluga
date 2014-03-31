@@ -1041,6 +1041,10 @@ module Ext = struct
 
       | Sgn.Pragma (_, Sgn.NamePrag _) ->  ()
 
+      | Sgn.Pragma (_, Sgn.Total (_x, c, _args)) ->
+          fprintf ppf "Totality declaration for %s"
+            (R.render_name c)
+
       | Sgn.Val (_, x, _, i) ->
           fprintf ppf "let %s = %a"
             (R.render_name  x)

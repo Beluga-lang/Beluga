@@ -402,25 +402,23 @@ module Cid = struct
     type entry = {
       name                : Id.name;
       implicit_arguments  : int;
-      typ                : Int.Comp.typ
+      typ                 : Int.Comp.typ
     }
 
 
     let mk_entry name tau implicit_arguments  =  {
       name               = name;
       implicit_arguments = implicit_arguments;
-      typ               = tau
+      typ                = tau
     }
 
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
-
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
-
 
     let add cid_ctyp entry =
       let cid_comp_const = DynArray.length store in
@@ -529,7 +527,8 @@ module Cid = struct
       implicit_arguments : int;
       typ                : Int.Comp.typ;
       prog               : Int.Comp.value;
-      mut_rec            : Id.name list
+      mut_rec            : Id.name list;
+      order              : Order.dec option
     }
 
     let mk_entry name typ implicit_arguments v name_list = {
@@ -537,7 +536,8 @@ module Cid = struct
       implicit_arguments = implicit_arguments;
       typ                = typ;
       prog               = v;
-      mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
+      mut_rec            = name_list;  (* names of functions with which n is mutually recursive *)
+      order              = None
     }
 
     (*  store : entry DynArray.t *)
@@ -548,6 +548,8 @@ module Cid = struct
 
     let index_of_name n = Hashtbl.find directory n
 
+    let get = DynArray.get store
+
     let add f =
       let cid_prog = DynArray.length store in
       let e = f cid_prog in
@@ -555,7 +557,16 @@ module Cid = struct
       Hashtbl.replace directory e.name cid_prog;
       cid_prog
 
-    let get = DynArray.get store
+    let add_total cid_name order =
+      let cid_const = index_of_name cid_name in
+      let entry     = get cid_const  in
+      let new_entry = {name               = entry.name ;
+                       implicit_arguments = entry.implicit_arguments ;
+                       typ                = entry.typ ;
+                       prog               = entry.prog ;
+                       mut_rec            = entry.mut_rec ;
+                       order              = Some order} in
+        DynArray.set store cid_const new_entry
 
     let clear () =
       DynArray.clear store;

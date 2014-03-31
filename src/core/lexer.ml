@@ -184,6 +184,7 @@ let lex_token loc = lexer
   | "ttrue"
   | "ffalse"
   | "%name"
+  | "total"
   | "%opts"
   | "%not"
   | "%query"

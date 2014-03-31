@@ -488,7 +488,7 @@ and recSgnDecl d =
       let _c'       = Logic.storeQuery name (tA', i) expected tries in
       ()
 
-    | Ext.Sgn.Pragma(loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
+    | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
         begin try
           begin match v_name with
             | None ->
@@ -501,3 +501,23 @@ and recSgnDecl d =
           end
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end
+
+    | Ext.Sgn.Pragma (loc, Ext.Sgn.Total (order, c, args)) ->
+        begin try
+          let _ = print_string "Total Pragma" in
+          let rec pos x args k = match args with
+            | [] -> raise (Index.Error (loc, Index.UnboundName x))
+            | (Some y)::ys -> if x = y then k else pos x ys (k+1)
+            | None::ys -> pos x ys (k+1)
+          in
+            match order with
+              | Ext.Sgn.Arg x ->
+                  let p = pos x args 1 in
+                    (Printf.printf "\n## Totality declaration: %s terminates in position %s ##\n"
+                      (R.render_name c) (string_of_int p);
+                    Comp.add_total c (Order.Dec (Order.Arg p, Order.Empty)))
+              | _ -> ()
+        with
+            _ -> raise (Index.Error (loc, Index.UnboundName c))
+        end
+

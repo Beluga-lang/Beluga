@@ -339,6 +339,10 @@ GLOBAL: sgn;
         "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
           [Sgn.Rec (_loc, f)]
 
+
+      | "total" ; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ; ")" ;  ";" ->
+          [Sgn.Pragma (_loc, Sgn.Total (x, Id.mk_name (Id.SomeString r), args))]
+
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
         [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
 
@@ -352,8 +356,6 @@ GLOBAL: sgn;
       | "%not" ->
         [Sgn.Pragma (_loc, Sgn.NotPrag)]
 
-      | "%total" ; x = order ; "("; r = SYMBOL ; args = LIST0 call_args ; ")" ->
-          [Sgn.Pragma (_loc,Sgn.Total (x, Id.mk_name (Id.SomeString r), args))]
 
       (* A naked expression, in REPL. *)
       | i = cmp_exp_syn ->
@@ -365,19 +367,23 @@ GLOBAL: sgn;
 
   call_args:
     [
-      [ x = UPSYMBOL -> Some (Id.mk_name (Id.SomeString x))
-      | x = SYMBOL -> Some (Id.mk_name (Id.SomeString x))
-      |"_" -> None
+      [
+        x = SYMBOL -> Some (Id.mk_name (Id.SomeString x))
+
+      | "_" -> None
       ]
     ]
 ;
-  order:
+
+  total_order:
     [
-      [x = UPSYMBOL -> Id.mk_name (Id.SomeString x)
+      [
+        x = SYMBOL -> Sgn.Arg (Id.mk_name (Id.SomeString x))
 (*    | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
       ]
     ]
 ;
+
   bound:
     [
       [ "*" -> None

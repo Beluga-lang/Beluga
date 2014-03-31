@@ -43,7 +43,7 @@ module Cid : sig
     type entry = private {
       name               : name;
       implicit_arguments : int;
-      typ                : LF.typ
+      typ                : LF.typ;
     }
 
     val mk_entry      : name -> LF.typ -> int -> entry
@@ -152,7 +152,8 @@ module Cid : sig
       implicit_arguments : int;
       typ                : Comp.typ;
       prog               : Comp.value;
-      mut_rec            : name list
+      mut_rec            : name list;
+      order              : Order.dec option
     }
 
     val mk_entry  : name -> Comp.typ -> int -> Comp.value -> name list -> entry
@@ -164,6 +165,7 @@ module Cid : sig
         provide the cid_prog it generated to store the entry, thus
         tying the recursive knot. *)
     val add           : (cid_prog -> entry) -> cid_prog
+    val add_total     : name -> Order.dec -> unit
     val get           : cid_prog -> entry
     val index_of_name : name -> cid_prog
 

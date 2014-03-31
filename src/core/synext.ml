@@ -229,7 +229,11 @@ end
 (** External Signature Syntax *)
 module Sgn = struct
 
-  type order = name
+  type order =
+      Arg of name			(* O ::= x                    *)
+    | Lex of order list                 (*     | {O1 .. On}           *)
+    | Simul of order list               (*     | [O1 .. On]           *)
+
 
   type pragma =
     | OptsPrag of string list

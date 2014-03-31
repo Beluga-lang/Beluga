@@ -352,6 +352,9 @@ GLOBAL: sgn;
       | "%not" ->
         [Sgn.Pragma (_loc, Sgn.NotPrag)]
 
+      | "%total" ; x = order ; "("; r = SYMBOL ; args = LIST0 call_args ; ")" ->
+          [Sgn.Pragma (_loc,Sgn.Total (x, Id.mk_name (Id.SomeString r), args))]
+
       (* A naked expression, in REPL. *)
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
@@ -360,6 +363,21 @@ GLOBAL: sgn;
     ]
   ;
 
+  call_args:
+    [
+      [ x = UPSYMBOL -> Some (Id.mk_name (Id.SomeString x))
+      | x = SYMBOL -> Some (Id.mk_name (Id.SomeString x))
+      |"_" -> None
+      ]
+    ]
+;
+  order:
+    [
+      [x = UPSYMBOL -> Id.mk_name (Id.SomeString x)
+(*    | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
+      ]
+    ]
+;
   bound:
     [
       [ "*" -> None

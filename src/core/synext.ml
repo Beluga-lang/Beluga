@@ -229,10 +229,13 @@ end
 (** External Signature Syntax *)
 module Sgn = struct
 
+  type order = name
+
   type pragma =
     | OptsPrag of string list
     | NamePrag of name * string * string option
     | NotPrag
+    | Total of order * name * (name option) list
 
   type decl =
     | Const    of Loc.t * name * LF.typ

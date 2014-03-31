@@ -340,8 +340,8 @@ GLOBAL: sgn;
           [Sgn.Rec (_loc, f)]
 
 
-      | "total" ; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ; ")" ;  ";" ->
-          [Sgn.Pragma (_loc, Sgn.Total (x, Id.mk_name (Id.SomeString r), args))]
+(*      | "total" ; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ; ")" ;  ";" ->
+          [Sgn.Pragma (_loc, Sgn.Total (x, Id.mk_name (Id.SomeString r), args))] *)
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
         [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
@@ -371,6 +371,16 @@ GLOBAL: sgn;
         x = SYMBOL -> Some (Id.mk_name (Id.SomeString x))
 
       | "_" -> None
+      ]
+    ]
+;
+
+  total_decl:
+    [
+      [  "total" ; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ;
+    ")" ;  ";" ->
+      let _ = print_string "PARSING TOTAL DECLARATION" in
+          [Sgn.Pragma (_loc, Sgn.Total (x, Id.mk_name (Id.SomeString r), args))]
       ]
     ]
 ;
@@ -1025,7 +1035,9 @@ GLOBAL: sgn;
 
   cmp_rec:
     [[
-      f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk -> Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)
+      f = SYMBOL; ":"; tau = cmp_typ; "=";
+       OPT [ t = total_decl -> t ] ;
+       e = cmp_exp_chk -> Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)
     ]]
   ;
 

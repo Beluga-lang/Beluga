@@ -723,7 +723,7 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
             checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id)
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
-          let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
+          let _ = dprint (fun () -> "\nCheckBranch with normal pattern") in
           let _ = dprint (fun () -> "where scrutinee has type" ^
                             P.compTypToString cD tau_s) in
           let TypBox (_, (I.Atom(_, a, _) as tP) , cPsi) = tau_s in
@@ -741,7 +741,7 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
                             ^ "\n   has type " ^  P.typToString cD1'  cPsi1  (tP1, S.LF.id)
                             ^ "\n   in " ^ P.dctxToString cD1' cPsi1 ) in
           let _     = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in
-          let cG'   = Total.wf_rec_calls cD1' cG' tau_s in
+(*          let cG'   = Total.wf_rec_calls cD1' cG' in *)
             check cD1' cG' e1 (tau', Whnf.m_id)
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
@@ -792,7 +792,7 @@ module Sgn = struct
     | Syntax.Int.Sgn.Rec (f, tau, e) :: decls ->
         let cD = Syntax.Int.LF.Empty in
         let cG = Syntax.Int.LF.Empty in
-        let _  = Total.initialize f in
+(*        let _  = Total.initialize f in *)
           Comp.checkTyp cD tau;
           Comp.check cD cG e (tau, Whnf.m_id);
           check_sgn_decls decls

@@ -2,7 +2,6 @@ nat :  type.     %name nat N x.
 z : nat.
 s : nat -> nat.
 
-
 rec plus : [. nat] -> [. nat] -> [. nat] =
 fn x => fn y =>  case x of
 | [. z]  => y
@@ -11,7 +10,7 @@ fn x => fn y =>  case x of
     [. s V]
 ;
 
-total x (plus x y);
+% total x (plus x y);
 
 %{
 rec plus' : [. nat] -> [. nat] -> [. nat] =

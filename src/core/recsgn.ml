@@ -504,7 +504,6 @@ and recSgnDecl d =
 
     | Ext.Sgn.Pragma (loc, Ext.Sgn.Total (order, c, args)) ->
         begin try
-          let _ = print_string "Total Pragma" in
           let rec pos x args k = match args with
             | [] -> raise (Index.Error (loc, Index.UnboundName x))
             | (Some y)::ys -> if x = y then k else pos x ys (k+1)

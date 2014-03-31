@@ -254,6 +254,7 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
 
+
 let checkParamTypeValid cD cPsi tA =
   let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
   | Syntax.Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA))) *)
@@ -739,7 +740,8 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
           let _ = dprint (fun () -> "[check] MetaObj " ^ P.metaObjToString cD1'  mO
                             ^ "\n   has type " ^  P.typToString cD1'  cPsi1  (tP1, S.LF.id)
                             ^ "\n   in " ^ P.dctxToString cD1' cPsi1 ) in
-          let _ = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in
+          let _     = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in
+          let cG'   = Total.wf_rec_calls cD1' cG' tau_s in
             check cD1' cG' e1 (tau', Whnf.m_id)
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
@@ -790,6 +792,7 @@ module Sgn = struct
     | Syntax.Int.Sgn.Rec (f, tau, e) :: decls ->
         let cD = Syntax.Int.LF.Empty in
         let cG = Syntax.Int.LF.Empty in
+        let _  = Total.initialize f in
           Comp.checkTyp cD tau;
           Comp.check cD cG e (tau, Whnf.m_id);
           check_sgn_decls decls

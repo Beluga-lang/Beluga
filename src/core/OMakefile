@@ -38,6 +38,7 @@ FILES[] =
         synint
         trail
         token
+        total
         unify
         version
         whnf

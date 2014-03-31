@@ -115,6 +115,7 @@ val cnormCSub  : (csub * msub) -> csub
 
 val cnormCKind : Comp.kind * msub -> Comp.kind
 val cnormCTyp  : Comp.typ * msub -> Comp.typ
+val cnormCDecl : LF.ctyp_decl * msub -> LF.ctyp_decl
 val cwhnfCTyp  : Comp.typ * msub -> Comp.typ * msub
 val cwhnfCtx   : Comp.gctx * msub -> Comp.gctx
 

@@ -74,6 +74,7 @@ module type UNIFY = sig
   val unifyDCtx    : mctx -> dctx -> dctx -> unit
   val unify_phat   : psi_hat -> psi_hat -> unit
 
+  val unifyCDecl   : mctx -> (ctyp_decl * LF.msub) -> (ctyp_decl * LF.msub) -> unit
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
 
@@ -3891,6 +3892,50 @@ match sigma with
 
     | _ -> raise (Failure "Meta-Spine mismatch")
 
+
+  let unifyMetaTyp cD  (cU, t) (cU', t') = match (cU, t) , (cU', t') with
+    | (Comp.MetaTyp (tA, cPsi), t) , (Comp.MetaTyp (tA', cPsi'), t') ->
+         let tAn    = Whnf.cnormTyp (tA, t) in
+         let tAn'   = Whnf.cnormTyp (tA', t') in
+         let cPsin  = Whnf.cnormDCtx (cPsi, t) in
+         let cPsin' = Whnf.cnormDCtx (cPsi', t') in
+           (unifyDCtx1 Unification cD cPsin cPsin';
+            unifyTyp Unification cD cPsin (tAn, id)  (tAn', id))
+
+    | (Comp.MetaParamTyp (tA, cPsi), t) , (Comp.MetaParamTyp (tA', cPsi'), t') ->
+         let tAn    = Whnf.cnormTyp (tA, t) in
+         let tAn'   = Whnf.cnormTyp (tA', t') in
+         let cPsin  = Whnf.cnormDCtx (cPsi, t) in
+         let cPsin' = Whnf.cnormDCtx (cPsi', t') in
+           (unifyDCtx1 Unification cD cPsin cPsin';
+            unifyTyp Unification cD cPsin (tAn, id)  (tAn', id))
+
+    | (Comp.MetaSubTyp (cPsi, cPhi) ,t) , (Comp.MetaSubTyp (cPsi', cPhi'), t') ->
+         let cPsin  = Whnf.cnormDCtx (cPsi, t) in
+         let cPsin' = Whnf.cnormDCtx (cPsi', t') in
+         let cPhin  = Whnf.cnormDCtx (cPhi, t) in
+         let cPhin' = Whnf.cnormDCtx (cPhi', t') in
+           (unifyDCtx1 Unification cD cPsin cPsin';
+            unifyDCtx1 Unification cD cPhin cPhin')
+
+    | (Comp.MetaSchema w, _t) , (Comp.MetaSchema w', _t') ->
+        if w = w' then () else
+          raise (Failure "CtxPi schema clash")
+
+  let rec unifyCDecl cD (cdecl, t) (cdecl', t') =  match (cdecl,t) , (cdecl',t') with
+    |  (MDecl(u, tA, cPsi), t) ,  (MDecl(_, tA', cPsi'), t') ->
+         unifyMetaTyp cD (Comp.MetaTyp (tA, cPsi), t) (Comp.MetaTyp (tA', cPsi'), t')
+
+
+    |  (PDecl(u, tA, cPsi), t) ,  (PDecl(_, tA', cPsi'), t') ->
+         unifyMetaTyp cD (Comp.MetaParamTyp (tA, cPsi), t) (Comp.MetaParamTyp (tA', cPsi'), t')
+
+    |  (SDecl(s, cPhi, cPsi), t), (SDecl(_, cPhi', cPsi'), t') ->
+         unifyMetaTyp cD (Comp.MetaSubTyp (cPhi, cPsi), t) (Comp.MetaSubTyp (cPhi', cPsi'), t')
+
+    | (CDecl (_, w, _ ) , t) , (CDecl (_, w', _ ), t') ->
+        unifyMetaTyp cD (Comp.MetaSchema w, t) (Comp.MetaSchema w', t')
+
     let rec unifyCompTyp cD tau_t tau_t' =
       unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t')
 
@@ -3938,7 +3983,7 @@ match sigma with
            unifyCompTyp cD (tau2, t) (tau2', t')
           )
 
-      | ((Comp.TypPiBox ( (CDecl(psi, schema, _), dep), tau), t) ,
+(*      | ((Comp.TypPiBox ( (CDecl(psi, schema, _), dep), tau), t) ,
          (Comp.TypPiBox ( (CDecl(_, schema', _ ), dep'), tau'), t')) ->
           if schema = schema' && dep = dep' then
             let cdep = (match dep with Comp.Implicit -> Maybe |  Comp.Explicit -> No) in
@@ -3947,29 +3992,11 @@ match sigma with
               (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
           else
             raise (Failure "CtxPi schema clash")
-
-      | ((Comp.TypPiBox ((MDecl(u, tA, cPsi), _ ), tau), t),
-         (Comp.TypPiBox ((MDecl(_, tA', cPsi'), _ ), tau'), t')) ->
-          let tAn    = Whnf.cnormTyp (tA, t) in
-          let tAn'   = Whnf.cnormTyp (tA', t') in
-          let cPsin  = Whnf.cnormDCtx (cPsi, t) in
-          let cPsin' = Whnf.cnormDCtx (cPsi', t') in
-            (unifyDCtx1 Unification cD cPsin cPsin';
-             unifyTyp Unification cD cPsin (tAn, id)  (tAn', id);
-             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin)))
-               (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
-            )
-
-
-      | ((Comp.TypPiBox ((PDecl(u, tA, cPsi), _ ), tau), t),
-         (Comp.TypPiBox ((PDecl(_, tA', cPsi'), _ ), tau'), t')) ->
-          let tAn    = Whnf.cnormTyp (tA, t) in
-          let tAn'   = Whnf.cnormTyp (tA', t') in
-          let cPsin  = Whnf.cnormDCtx (cPsi, t) in
-          let cPsin' = Whnf.cnormDCtx (cPsi', t') in
-            (unifyDCtx1 Unification cD cPsin cPsin';
-             unifyTyp Unification cD cPsin (tAn, id)  (tAn', id);
-             unifyCompTyp (Dec(cD, MDecl(u, tAn, cPsin)))
+*)
+      | ((Comp.TypPiBox ((cdec, _ ), tau), t),
+         (Comp.TypPiBox ((cdec', _ ), tau'), t')) ->
+            (unifyCDecl cD (cdec,t) (cdec', t);
+             unifyCompTyp (Dec(cD, Whnf.cnormCDecl (cdec,t)))
                (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
             )
 

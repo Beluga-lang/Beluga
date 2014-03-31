@@ -270,7 +270,14 @@ module Comp = struct
     | TypBool
 
 
+
+  type args =
+    | M  of meta_obj
+    | V  of offset
+    | DC (* don't care *)
+
   type ctyp_decl =
+    | WfRec of name * args list * typ
     | CTypDecl    of name * typ
     | CTypDeclOpt of name
 

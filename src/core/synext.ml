@@ -192,7 +192,14 @@ module Comp = struct
     | CopatApp of Loc.t * name * copattern_spine
     | CopatMeta of Loc.t * meta_obj * copattern_spine
 
- type rec_fun = RecFun of name * typ * exp_chk
+ type order =
+      Arg of name			(* O ::= x                    *)
+    | Lex of order list                 (*     | {O1 .. On}           *)
+    | Simul of order list               (*     | [O1 .. On]           *)
+
+ type total_dec = Total of Loc.t * order * name * (name option) list
+
+ type rec_fun = RecFun of name * total_dec option * typ * exp_chk
 
  type  kind =
    | Ctype of Loc.t
@@ -229,17 +236,11 @@ end
 (** External Signature Syntax *)
 module Sgn = struct
 
-  type order =
-      Arg of name			(* O ::= x                    *)
-    | Lex of order list                 (*     | {O1 .. On}           *)
-    | Simul of order list               (*     | [O1 .. On]           *)
-
 
   type pragma =
     | OptsPrag of string list
     | NamePrag of name * string * string option
     | NotPrag
-    | Total of order * name * (name option) list
 
   type decl =
     | Const    of Loc.t * name * LF.typ

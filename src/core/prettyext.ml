@@ -991,11 +991,24 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ cD LF.Null lvl) tau
 
+
+    let total_to_string tdec = match tdec with
+      | None -> ""
+      | Some (Comp.Total (_ , Comp.Arg n, f, args)) ->
+      let rec args_to_string args = match args with
+        | [] -> ""
+        | Some n :: args' -> R.render_name n ^ " " ^ args_to_string args'
+        | None :: args' -> " _ " ^ args_to_string args'
+      in
+      "/ total " ^ R.render_name n ^ " ( " ^
+        R.render_name f ^ " " ^ args_to_string args ^ ") /"
+
     let fmt_ppr_cmp_rec lvl ppf = function
-      | Comp.RecFun (x, a, e) ->
-          fprintf ppf "rec %s : %a => @ %a"
+      | Comp.RecFun (x, total, a, e) ->
+          fprintf ppf "rec %s : %a %s = @ %a"
             (R.render_name x)
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
+            (total_to_string total)
             (fmt_ppr_cmp_exp_chk LF.Empty lvl)  e
 
     let rec fmt_ppr_rec lvl ppf = function
@@ -1040,10 +1053,6 @@ module Ext = struct
            (fmt_ppr_rec lvl ppf) lrec
 
       | Sgn.Pragma (_, Sgn.NamePrag _) ->  ()
-
-      | Sgn.Pragma (_, Sgn.Total (_x, c, _args)) ->
-          fprintf ppf "Totality declaration for %s"
-            (R.render_name c)
 
       | Sgn.Val (_, x, _, i) ->
           fprintf ppf "let %s = %a"

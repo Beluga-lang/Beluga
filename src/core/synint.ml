@@ -277,7 +277,7 @@ module Comp = struct
     | DC (* don't care *)
 
   type ctyp_decl =
-    | WfRec of cid_prog * args list * typ
+    | WfRec of name * args list * typ
     | CTypDecl    of name * typ
     | CTypDeclOpt of name
 

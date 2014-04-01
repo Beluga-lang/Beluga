@@ -349,35 +349,51 @@ and recSgnDecl d =
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
         let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in
 
+        let rec pos loc x args k = match args with
+          | [] -> raise (Index.Error (loc, Index.UnboundName x))
+          | (Some y)::ys -> if x = y then k else pos loc x ys (k+1)
+          | None::ys -> pos loc x ys (k+1)
+        in
+        let mk_total_decl (Ext.Comp.Total (loc, order, f, args)) =
+          match order with
+            | Ext.Comp.Arg x ->
+                let p = pos loc x args 1 in Order.Arg p
+        in
+
+
         let rec preprocess l = match l with
           | [] -> (Int.LF.Empty, Var.create (), [])
-          | Ext.Comp.RecFun (f, tau, _e) :: lf ->
-          let apx_tau = Index.comptyp  tau in
-          let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
-          let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
-          let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-          (* Are some FMVars delayed since we can't infer their type? - Not associated with pattsub *)
-          let _        = dprint (fun () ->  "Elaboration of function type " ^ f.string_of_name ^
-                                   " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
+          | Ext.Comp.RecFun (f, total, tau, _e) :: lf ->
+              let apx_tau = Index.comptyp  tau in
+              let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
+              let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
+              let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+                (* Are some FMVars delayed since we can't infer their type? - Not associated with pattsub *)
+              let _        = dprint (fun () ->  "Elaboration of function type " ^ f.string_of_name ^
+                                       " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
 
-          (* let _       = Monitor.timer ("Function Type Reconstruction", fun () -> recCompTyp cO cD tau') in *)
-          let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.comptyp tau') in
-          let _ = dprint (fun () ->  "Abstracted elaborated function type " ^ f.string_of_name ^
-                                   " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
+              let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.comptyp tau') in
+              let _ = dprint (fun () ->  "Abstracted elaborated function type " ^ f.string_of_name ^
+                            " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
 
-          let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
-          let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
-          let _       = FCVar.clear () in
-
-          let (cG, vars, n_list) = preprocess lf in
-            (* check that names are unique ? *)
-            (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list )
+              let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
+              let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
+              let _       = FCVar.clear () in
+              let (cG, vars, n_list) = preprocess lf in
+                (* check that names are unique ? *)
+                (begin match total with
+                  | None -> ()
+                  | Some t ->
+                      (Coverage.enableCoverage := true;
+                      Total.extend_dec (Total.make_dec f tau' (mk_total_decl t)))
+                end ;
+                (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
 
         in
 
         let (cG , vars', n_list ) = preprocess recFuns in
 
-        let reconFun f e =
+        let reconFun f  e =
           let apx_e   = Index.exp vars' e in
           let _       = dprint (fun () -> "\n  Indexing  expression done \n") in
           let tau'    = lookupFun cG f in
@@ -403,7 +419,7 @@ and recSgnDecl d =
                                 "\n   result:  " ^
                                 P.expChkToString cD cG e' ^ "\n") in
 
-          let e'' = Whnf.cnormExp (e', Whnf.m_id) in
+          let e''     = Whnf.cnormExp (e', Whnf.m_id) in
           let e_r'    = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp e'' ) in
 
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
@@ -415,14 +431,20 @@ and recSgnDecl d =
         in
 
         let rec reconRecFun recFuns = match recFuns with
-          | [] -> ()
-          | Ext.Comp.RecFun (f, _tau, e) :: lf ->
-            let (e_r' , tau') = reconFun f e in
+          | [] ->   (Coverage.enableCoverage := false ; ())
+          | Ext.Comp.RecFun (f, total, _tau, e) :: lf ->
+            let (e_r' , tau') = reconFun f  e in
             if !Debug.chatter <> 0 then
               Printf.printf  "and %s : %s =\n %s\n"
                 (R.render_name f)
                 (P.compTypToString cD tau')
                 (P.expChkToString cD cG e_r');
+              begin match total with
+              | None -> ()
+              | Some t -> let Order.Arg p = mk_total_decl t in
+                  Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
+                    (R.render_name f) (string_of_int p)
+              end ;
             if !Coverage.enableCoverage then
               Printf.printf "\n## Coverage checking done: %s  ##\n"
                 (R.render_name f);
@@ -434,7 +456,7 @@ and recSgnDecl d =
                   n_list) in
             reconRecFun lf in
         begin match recFuns with
-          | Ext.Comp.RecFun (f, _tau, e) :: lf ->
+          | Ext.Comp.RecFun (f, total, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f e in
             if !Debug.chatter <> 0 then
               Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
@@ -442,11 +464,17 @@ and recSgnDecl d =
                 (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.normCTyp tau')
                 (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl)
                 (Whnf.cnormExp (e_r', Whnf.m_id));
+              begin match total with
+              | None -> ()
+              | Some t -> let Order.Arg p = mk_total_decl t in
+                  Total.clear () ;
+                  Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
+                    (R.render_name f) (string_of_int p)
+              end ;
             if !Coverage.enableCoverage then
               Printf.printf "\n## Coverage checking done: %s  ##\n"
                 (R.render_name f);
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
-
             let _x = Comp.add
               (fun cid ->
                 Comp.mk_entry f tau' 0
@@ -502,7 +530,7 @@ and recSgnDecl d =
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end
 
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.Total (order, c, args)) ->
+(*    | Ext.Sgn.Pragma (loc, Ext.Sgn.Total (order, c, args)) ->
         begin try
           let rec pos x args k = match args with
             | [] -> raise (Index.Error (loc, Index.UnboundName x))
@@ -520,4 +548,4 @@ and recSgnDecl d =
         with
             _ -> raise (Index.Error (loc, Index.UnboundName c))
         end
-
+*)

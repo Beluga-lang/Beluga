@@ -229,7 +229,7 @@ let rec mctxToMMSub cD0 cD = match cD with
 (* The following functions are from an attempt to improve printing of meta-variables;
    the idea was to check if the result of applying a substitution produced an "equivalent"
    context, and if so, to use the original names.  -jd 2010-07 *)
-let rec isomorphic cD1 cD2 = match (cD1, cD2) with
+(* let rec isomorphic cD1 cD2 = match (cD1, cD2) with
   | (Empty, Empty) -> true
   | (Empty, _) -> false
   | (_, Empty) -> false
@@ -250,3 +250,4 @@ and isomorphic_dctx dctx1 dctx2 = (dctx1 = dctx2) (* match (dctx1, dctx2) with *
 
 and isomorphic_typ tA1 tA2 = (tA1 = tA2)
 ;; (* ocaml is unhappy without the ;; *)
+*)

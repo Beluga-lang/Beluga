@@ -93,6 +93,21 @@ let gen_var loc cD cdecl = match cdecl with
       let cPsi = LF.CtxVar (LF.CInst (psi_name, ref None, schema_cid, cD, Whnf.m_id)) in
         (Comp.MetaCtx (loc, cPsi) , LF.CObj (cPsi) )
 
+(* Given i and tau, compute vector V
+  s.t. for all k < i
+
+  if k-th position in V = 0 then
+     type at i-th position in tau does NOT depend on it
+
+     k-th position in V = 1 then
+     type at i-th position in tau does depend on it
+
+
+  We then generate a spine of arguments using V; any position
+  marked with 0 in V, will generate DC; positions marked with 1
+  will generate a term M.
+*)
+
 
 let rec rec_spine cD (cM, cU)  (i, ttau) = match (i, ttau) with
   | (1 , (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
@@ -167,5 +182,3 @@ let wf_rec_calls cD  =
   and arguments in generated wf-call.
 
 *)
-
-

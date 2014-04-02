@@ -3922,7 +3922,7 @@ match sigma with
         if w = w' then () else
           raise (Failure "CtxPi schema clash")
 
-  let rec unifyCDecl cD (cdecl, t) (cdecl', t') =  match (cdecl,t) , (cdecl',t') with
+  let unifyCDecl cD (cdecl, t) (cdecl', t') =  match (cdecl,t) , (cdecl',t') with
     |  (MDecl(u, tA, cPsi), t) ,  (MDecl(_, tA', cPsi'), t') ->
          unifyMetaTyp cD (Comp.MetaTyp (tA, cPsi), t) (Comp.MetaTyp (tA', cPsi'), t')
 

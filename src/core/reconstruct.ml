@@ -169,7 +169,7 @@ let rec get_ctxvar cPsi  = match cPsi with
   | Int.LF.DDec (cPsi, _ ) -> get_ctxvar cPsi
 
 
-let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
+let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
   | Int.LF.CDecl(_psi, schema,_ ) ->
       let dep' = match dep with Int.Comp.Explicit -> Int.LF.No | Int.Comp.Implicit -> Int.LF.Maybe in
         Int.LF.Dec(cD, Int.LF.CDecl(x, schema, dep'))

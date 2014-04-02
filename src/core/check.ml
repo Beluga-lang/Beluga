@@ -79,6 +79,8 @@ module Comp = struct
     | UnsolvableConstraints of Id.name * string
 
 
+(*  type rec_call = bool *)
+
   exception Error of Syntax.Loc.t * error
 
   let string_of_typeVariant = function
@@ -250,7 +252,7 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
     | DataObj
 
   let rec lookup cG k = match (cG, k) with
-    | (I.Dec (_cG', CTypDecl (_,  tau)), 1) -> tau
+    | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> tau
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
 
@@ -404,7 +406,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 ;;
 
-let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
+let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
   | I.CDecl(_psi, schema,_ ) ->
       let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
         I.Dec(cD, I.CDecl(x, schema, dep'))
@@ -534,7 +536,9 @@ let rec extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
     checkW cD (cG, cIH) e (C.cwhnfCTyp (tau, t));
 
   and syn cD (cG,cIH) e = match e with
-    | Var x   -> (lookup cG x, C.m_id)
+    | Var x   ->
+      let tau = lookup cG x in
+      (tau, C.m_id)
     | DataConst c ->
         ((CompConst.get c).CompConst.typ, C.m_id)
     | DataDest c ->

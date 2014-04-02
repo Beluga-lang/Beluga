@@ -10,7 +10,6 @@ fn x => fn y =>  case x of
     [. s V]
 ;
 
-% total x (plus x y);
 
 %{
 rec plus' : [. nat] -> [. nat] -> [. nat] =

@@ -108,7 +108,7 @@ let rec rec_spine cD (cM, cU)  (i, ttau) = match (i, ttau) with
       let cdec = LF.MDecl(u, tA, cPsi) in
         begin try
           Unify.unifyCDecl cD (cU, Whnf.m_id) (cdec, theta);
-          ([] , Whnf.cnormCTyp (tau, theta))
+          ([Comp.M cM] , Whnf.cnormCTyp (tau, theta))
         with
             _ -> raise Not_compatible
         end
@@ -155,8 +155,8 @@ let rec gen_rec_calls cD cG (cD', k) = match cD' with
           _ -> gen_rec_calls cD cG (cD', k+1)
       end
 
-let wf_rec_calls cD cG  =
-  gen_rec_calls cD cG (cD, 1)
+let wf_rec_calls cD  =
+  gen_rec_calls cD (LF.Empty) (cD, 1)
 
 
 

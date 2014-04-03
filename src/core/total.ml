@@ -175,6 +175,28 @@ let wf_rec_calls cD  =
 
 
 
+let rec filter cIH e2 = match e2, cIH with
+  | _ , LF.Empty -> LF.Empty
+  | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, Comp.TypPiBox ((_cdecl, _ ),tau'))) ->
+      let cIH' = filter cIH e2 in
+        if Whnf.convMetaObj cM' cM then
+          LF.Dec (cIH', Comp.WfRec (f, args, tau'))
+            (* Note: tau' is understood as the approximate type *)
+        else
+          cIH'
+
+  | Comp.V y , LF.Dec (cIH,Comp.WfRec (f , Comp.V x :: args, Comp.TypArr (_tau, tau') )) ->
+      let cIH' = filter cIH e2 in
+        if x = y then
+          LF.Dec (cIH', Comp.WfRec (f, args, tau'))
+            (* Note: tau' is understood as the approximate type *)
+        else
+          cIH'
+(* other cases are invalid /not valid recursive calls *)
+
+
+
+
 (* check a recursive call in the program is wf
 
   f = recursive call in the initial state

@@ -127,6 +127,7 @@ val normCTyp   : Comp.typ  -> Comp.typ
 
 
 val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
+val convMetaObj: Comp.meta_obj -> Comp.meta_obj -> bool
 
 val closed     : nclo -> bool
 val closedTyp  : tclo -> bool

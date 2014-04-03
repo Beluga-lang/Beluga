@@ -167,7 +167,7 @@ let fill = { name = "fill" ;
                        let i = Holes.getStagedHoleNum ll in
                        let loc' = Interactive.nextLoc loc in
                        Holes.setStagedHolePos i loc';
-                       Synint.Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))) intexp in
+                       Synint.Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))) intexp in (* makes sure that new holes have unique location *)
                      Interactive.replaceHole i intexp'
                    with
                    | e -> fprintf ppf "Error while replacing hole with expression : %s" (Printexc.to_string e) ))

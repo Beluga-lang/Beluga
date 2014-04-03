@@ -17,6 +17,7 @@ let rec gctxToCompgctx cG = match cG with
   | (x,tau) :: cG ->
       LF.Dec(gctxToCompgctx cG, Comp.CTypDecl (x, tau))
 
+(* drop the first i element of cD *)
 let rec dropIMCtx i cD = match (i, cD) with
 | (1, LF.Dec (cD', _)) -> cD'
 | (i, LF.Dec (cD', a)) ->
@@ -24,6 +25,7 @@ let rec dropIMCtx i cD = match (i, cD) with
    LF.Dec (cD', a)
 | _ -> failwith "dropIMCtx removed more than the context could take"
 
+(* insert mfront as the ith element of ms *)
 let rec insertIMSub i mfront ms = match (i, ms) with
 | (1, ms) -> LF.MDot (mfront, ms)
 | (i, LF.MDot (mf, ms')) ->
@@ -136,7 +138,9 @@ let branchCovGoals loc i cG0 tA cgs =
        let ms = (if i = 0 then ms else insertIMSub i (LF.MObj(Context.dctxToHat cPsi, tR)) ms) in
       Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);
    Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
-      Comp.BranchBox (LF.Empty,cD, (cPsi , Comp.NormalPattern (tR, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))), ms, LF.CShift 0)) (* random csub... *)
+       let patt = PatMetaObj ( Loc.ghost, MetaObjAnn (Loc.ghost, cPsi, tR)) in
+       Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
+(*      Comp.BranchBox (LF.Empty,cD, (cPsi , Comp.NormalPattern (tR, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))), ms, LF.CShift 0)) (* random csub... *)  BranchBox is deprecated*)
   | Cover.CovPatt (cG, patt, (_tA',ms')) ->
       let loc' = nextLoc loc in
       Printf.printf "CovPat %s \n" (P.msubToString cD ms);
@@ -227,10 +231,14 @@ and mapHoleBranch f = function
   | Branch (l, cD, cG, p, mS, ec) ->
       let ec' =  mapHoleChk f ec  in
       Branch (l, cD, cG, p, mS, ec')
-  | BranchSBox (l, cD1, cD2, cG, ec) ->
+  | e -> e
+(*   %% deprecated
+| BranchSBox (l, cD1, cD2, cG, ec) ->
      let ec' =  mapHoleChk f ec in
      BranchSBox (l, cD1, cD2, cG, ec')
-  | e -> e
+  | BranchBox (l, cD, (cPsi, NormalPattern( n, ec), ms, tA)) ->
+     let ec' =  mapHoleChk f ec in
+     BranchBox (l, cD, (cPsi, NormalPattern (n, ec'), ms, tA)) *)
 
 
 
@@ -338,7 +346,7 @@ let search tA =
   Logic.runLogicOn (Some (Id.mk_name (Id.SomeString "L"))) (tA', i) None (Some 1)
 
 
-(* merge consecutive splits (on newly introduced variables) together (to pattern match deeper). *)
+(* idea: merge consecutive splits (on newly introduced variables) together (to pattern match deeper). *)
 (* split : String -> int -> Comp.exp_chk  option *)
 let split e i =
   let (loc, cD0, cG0, tH) = Holes.getOneHole i in

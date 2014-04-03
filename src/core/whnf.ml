@@ -887,6 +887,11 @@ and what_head = function
   | HMClo _ -> "HMClo"
 
 
+and what_front = function
+  | Head h -> ("Head " ^ what_head h)
+  | Obj _  -> "Obj _ "
+  | _      -> "Undef "
+
 
 and cnorm_psihat (phat: psi_hat) t = match phat with
   | (None , _ ) -> phat
@@ -2305,7 +2310,12 @@ and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
       p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (MVar (Offset u , s'), MVar (Offset w, s'')) ->
-      u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+    (print_string "[convHead] MVar- MVar case\n";
+     if u = w then
+       (print_string "[convHead] SAME MVAR - Compare subst.\n" ;
+        convSub (LF.comp s' s1) (LF.comp s'' s2))
+     else false)
+(* u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)) *)
 
   | (MVar (Inst(_n, u, _cPsi, _tA, _cnstr) , s'), MVar (Inst(_, w, _, _, _ ), s'')) ->
       u == w && convSub (LF.comp s' s1) (LF.comp s'' s2)
@@ -2357,18 +2367,23 @@ and convSub subst1 subst2 = match (subst1, subst2) with
       true
 
   | (SVar (Offset s1, n1, sigma1), SVar (Offset s2, n2, sigma2)) ->
+    (print_string "[convSub] \n";
       (match n1 , n2 with
         | (NoCtxShift , k) , (NoCtxShift , k') ->  k = k'
         | (CtxShift _ , k) , (CtxShift _ , k') -> k = k'
         | (NegCtxShift _ , k) , (NegCtxShift _ , k') -> k = k') &&
      s1 = s2 &&
-     convSub sigma1 sigma2
+     convSub sigma1 sigma2)
 
   | (SVar (SInst (_, s1, _, _ , _), n1, sigma1), SVar (SInst(_, s2, _ , _ , _), n2, sigma2)) ->
       s1 == s2 && n1 = n2 && convSub sigma1 sigma2
 
   | (Dot (f, s), Dot (f', s')) ->
-      convFront f f' && convSub s s'
+    (print_string "[convSub] Dot ";
+     if convFront f f' then
+       (print_string " fronts equal\n"; convSub s s')
+     else
+       (print_string " fronts NOT equal\n"; false))
 
   | (Shift (psi, n), Dot (Head BVar _k, _s')) ->
       convSub (Dot (Head (BVar (n + 1)), Shift (psi, n + 1))) subst2
@@ -2402,7 +2417,8 @@ and convFront front1 front2 = match (front1, front2) with
       u = v && convSub s s'
 
   | (Head (Proj (head, k)), Head (Proj (head', k'))) ->
-      k = k' && convFront (Head head) (Head head')
+    (print_string "[convHead] Proj";
+      k = k' && convFront (Head head) (Head head'))
 
   | (Head (FVar x), Head (FVar y)) ->
       x = y
@@ -2425,8 +2441,15 @@ and convFront front1 front2 = match (front1, front2) with
   | (Undef, Undef) ->
       true
 
-  | (_, _) ->
-      false
+  | (Head (HClo (k, Offset s, sigma)), Head (HClo (k', Offset s', sigma'))) ->
+    k = k' && s = s' && convSub sigma sigma'
+
+  | (Head h, Head h') ->
+    (print_string ("[convFront] " ^      what_head h ^ " == " ^ what_head h' ^ " \n") ;
+     false)
+  | (h, h') ->
+    ( print_string ("[convFront] None of the above - " ^      what_front h ^ " == " ^ what_front h' ^ " \n") ;
+      false)
 
 
 and convMSub subst1 subst2 = match (subst1, subst2) with
@@ -2454,6 +2477,8 @@ and convMFront front1 front2 = match (front1, front2) with
       phat = phat' && k = k'
   | (PObj (phat, PVar(p,s)), PObj (phat', PVar(q, s'))) ->
       phat = phat' && p = q && convSub s s'
+  | (SObj (phat, s), SObj (phat', s')) ->
+      phat = phat' && convSub s s'
   | (_, _) ->
       false
 
@@ -2511,14 +2536,17 @@ and convDCtx cPsi cPsi' = match (cPsi, cPsi') with
       c1 = c2
 
   | (DDec (cPsi1, TypDecl (_, tA)), DDec (cPsi2, TypDecl (_, tB))) ->
-      convTyp (tA, LF.id) (tB, LF.id) && convDCtx cPsi1 cPsi2
+    if       convTyp (tA, LF.id) (tB, LF.id)
+    then (print_string "[convDCtx] type-decl are convertible\n";
+          convDCtx cPsi1 cPsi2)
+    else
+      (print_string "[convDCtx] type-decl are not convertible\n";
+       false)
+(*      convTyp (tA, LF.id) (tB, LF.id) && convDCtx cPsi1 cPsi2 *)
 
-(*  | (SigmaDec (cPsi , SigmaDecl(_, typrec )),
-     SigmaDec (cPsi', SigmaDecl(_, typrec'))) ->
-      convDCtx cPsi cPsi' && convTypRec (typrec, LF.id) (typrec', LF.id)
-*)
   | (_, _) ->
-      false
+    (print_string "[convDCtx] fall-through case - type-decl are not convertible\n";
+      false)
 
 
 (* convCtx cPsi cPsi' = true iff
@@ -3153,15 +3181,23 @@ let mctxSVarPos cD u =
 
 
 
-  let rec convMetaObj mO mO' = match (mO , mO) with
+  let rec convMetaObj mO mO' = match (mO , mO') with
     | (Comp.MetaCtx (_loc, cPsi) , Comp.MetaCtx (_ , cPsi'))  ->
-        convDCtx  cPsi cPsi'
+        if convDCtx  (cnormDCtx (cPsi, m_id)) (cnormDCtx (cPsi', m_id))
+        then (print_string "[convMetaObj] convDCtx - ok\n" ; true)
+        else (print_string "[convMetaObj] convDCtx - FALSE \n" ; false)
+
     | (Comp.MetaObj (_, _phat, tM) , Comp.MetaObj (_, _phat', tM')) ->
-        conv (tM, LF.id) (tM', LF.id)
+      if  conv (tM, LF.id) (tM', LF.id) then
+        (print_string "[convMetaObj] convMetaObj - ok\n" ; true)
+      else
+        (print_string "[convMetaObj] convMetaObj - FALSE\n" ; false)
+
     | (Comp.MetaParam (_, _phat, tH) , Comp.MetaParam (_, _phat', tH')) ->
         convHead (tH, LF.id) (tH', LF.id)
+
     | (Comp.MetaSObj (_, _phat, s) , Comp.MetaSObj (_, _phat', s')) ->
-        convSub s s'
+        convSub (cnormSub (s, m_id)) (cnormSub (s', m_id))
     | _ -> false
 
   and convMetaSpine mS mS' = match (mS, mS') with
@@ -3177,7 +3213,7 @@ let mctxSVarPos cD u =
     | ((Comp.TypBase (_, c1, mS1), _t1), (Comp.TypBase (_, c2, mS2), _t2)) ->
           if c1 = c2 then
             (* t1 = t2 = id by invariant *)
-            convMetaSpine mS1 mS2
+            convMetaSpine (cnormMetaSpine (mS1, m_id))  (cnormMetaSpine (mS2, m_id))
           else false
 
     | ((Comp.TypCobase (_, c1, mS1), _t1), (Comp.TypCobase (_, c2, mS2), _t2)) ->

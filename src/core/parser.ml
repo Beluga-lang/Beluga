@@ -378,7 +378,7 @@ GLOBAL: sgn;
   total_decl:
     [
       [
-        "total" ; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ;  ")"  ->
+        "total"; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ;  ")"  ->
             Comp.Total (_loc, x, Id.mk_name (Id.SomeString r), args)
       ]
     ]
@@ -1034,9 +1034,8 @@ GLOBAL: sgn;
 
   cmp_rec:
     [[
-      f = SYMBOL; ":"; tau = cmp_typ; "=";
-       t = OPT [ "/" ; td = total_decl ; "/" -> td ] ;
-       e = cmp_exp_chk -> Comp.RecFun (Id.mk_name (Id.SomeString f), t, tau, e)
+      f = SYMBOL; ":"; tau = cmp_typ; "="; t = OPT [ "/"; td = total_decl; "/" -> td] ; e = cmp_exp_chk ->
+       Comp.RecFun (Id.mk_name (Id.SomeString f), t, tau, e)
     ]]
   ;
 

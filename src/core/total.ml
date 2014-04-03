@@ -27,6 +27,8 @@ let make_dec f tau order =
 let extend_dec l =
 mutual_decs := l::!mutual_decs
 
+
+
 let rec args_to_string cD args = match args with
   | [] -> ""
   | (Comp.M cM)::args ->
@@ -38,6 +40,13 @@ let calls_to_string cD (f, args, tau) =
   (R.render_name f) ^ " " ^
     args_to_string cD args ^ " : "  ^
     P.compTypToString cD tau
+
+let rec ih_to_string cD cIH = match cIH with
+  | LF.Empty -> "\n"
+  | LF.Dec(cIH, Comp.WfRec (f, args, tau) ) ->
+   "IH: " ^  calls_to_string cD (f, args, tau) ^ "\n"
+     ^ ih_to_string cD cIH
+
 
 let get_order () =
   let [dec] = !mutual_decs in
@@ -174,24 +183,30 @@ let wf_rec_calls cD  =
   gen_rec_calls cD (LF.Empty) (cD, 1)
 
 
-
-let rec filter cIH e2 = match e2, cIH with
+let rec filter cD cG cIH e2 = match e2, cIH with
   | _ , LF.Empty -> LF.Empty
-  | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, Comp.TypPiBox ((_cdecl, _ ),tau'))) ->
-      let cIH' = filter cIH e2 in
-        if Whnf.convMetaObj cM' cM then
-          LF.Dec (cIH', Comp.WfRec (f, args, tau'))
-            (* Note: tau' is understood as the approximate type *)
-        else
-          cIH'
+  | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
+    let cIH' = filter cD cG cIH e2 in
+    if Whnf.convMetaObj cM' cM then
+      (dprint (fun () -> ("[filter IH] IH and recursive call agree on : "
+                          ^ P.metaObjToString cD cM' ^ " == " ^
+                            P.metaObjToString cD cM));
+      LF.Dec (cIH', Comp.WfRec (f, args, tau)))
+      (* Note: tau' is understood as the approximate type *)
+    else
+      (dprint (fun () -> ("[filter IH] - IH and recursive call do NOT agree : "
+        ^ P.metaObjToString cD cM' ^ " == " ^
+          P.metaObjToString cD cM));
+      cIH')
 
-  | Comp.V y , LF.Dec (cIH,Comp.WfRec (f , Comp.V x :: args, Comp.TypArr (_tau, tau') )) ->
-      let cIH' = filter cIH e2 in
-        if x = y then
-          LF.Dec (cIH', Comp.WfRec (f, args, tau'))
-            (* Note: tau' is understood as the approximate type *)
-        else
-          cIH'
+  | Comp.V y , LF.Dec (cIH,Comp.WfRec (f , Comp.V x :: args, tau )) ->
+    let cIH' = filter cD cG cIH e2 in
+    if x = y then
+      LF.Dec (cIH', Comp.WfRec (f, args, tau))
+      (* Note: tau is the overall return type of ih type
+         and it is not the type of f args : tau *)
+    else
+      cIH'
 (* other cases are invalid /not valid recursive calls *)
 
 

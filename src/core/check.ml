@@ -254,9 +254,19 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
     | DataObj
 
   let rec lookup cG k = match (cG, k) with
-    | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> tau
+    | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> (f,tau)
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
+
+
+  let lookup' cG k =
+    let (f,tau) = lookup cG k in tau
+
+  let rec isRecFun cIH f = match cIH with
+    | I.Empty -> false
+    | I.Dec(cIH, WfRec (f', _ , _ )) ->
+      if f = f' then true
+      else isRecFun cIH f
 
 
 let checkParamTypeValid cD cPsi tA =
@@ -419,6 +429,29 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
   | I.SDecl (_s, cPhi, cPsi) ->
       I.Dec(cD, I.SDecl(x, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t)))
 
+let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
+  | None -> None
+  | Some cIH ->
+  (* We are making a recursive call *)
+    let cIH = match cIH with
+      | I.Empty -> raise (Error (loc, InvalidRecCall))
+      | cIH  -> match e2 with
+          | Box (_,cM) -> Total.filter cD cG cIH (M cM)
+          | Syn(_ , Var x)  -> Total.filter cD cG cIH (V x)
+          | _      -> raise (Error (loc, InvalidRecCall))
+    in
+    let _ = dprint (fun () -> "[useIH] Partially used IH: " ^ Total.ih_to_string cD cIH) in
+  (* We have now partially checked for the recursive call *)
+    match cIH with
+      | I.Dec(_ , WfRec (_, [], _ )) ->
+      (* We have fully used a recursive call
+           and we now are finished checking for well-formedness
+         of rec. call. *)
+        None
+      | I.Empty -> raise (Error (loc, InvalidRecCall))
+      | _ -> Some cIH
+
+
   (* check cD cG e (tau, theta) = ()
    *
    * Invariant:
@@ -544,38 +577,37 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
                   P.compTypToString cD (Whnf.cnormCTyp (tau, t))) in
     checkW cD (cG, cIH) e (C.cwhnfCTyp (tau, t));
 
-  and syn cD (cG,cIH) e : (bool * typ * I.msub) = match e with
+  and syn cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
     | Var x   ->
-      let tau = lookup cG x in
-      (false, tau, C.m_id)
+      let (f,tau) = lookup cG x in
+      if isRecFun cIH f then
+        (Some cIH, tau, C.m_id)
+      else
+        (None, tau, C.m_id)
+
     | DataConst c ->
-        (false,(CompConst.get c).CompConst.typ, C.m_id)
+        (None,(CompConst.get c).CompConst.typ, C.m_id)
     | DataDest c ->
-        (false,(CompDest.get c).CompDest.typ, C.m_id)
+        (None,(CompDest.get c).CompDest.typ, C.m_id)
 
     | Const prog ->
-        (false,(Comp.get prog).Comp.typ, C.m_id)
+        (None,(Comp.get prog).Comp.typ, C.m_id)
 
     | Apply (loc , e1, e2) ->
-        let (rec_flag, tau1, t1) = syn cD (cG,cIH) e1 in
+        let (cIH_opt , tau1, t1) = syn cD (cG,cIH) e1 in
         let (tau1,t1) = C.cwhnfCTyp (tau1,t1) in
-        begin match (rec_flag, tau1, t1) with
-          | (flag, TypArr (tau2, tau), t) ->
+        begin match (tau1, t1) with
+          | (TypArr (tau2, tau), t) ->
               dprint (fun () -> "[SYN: APPLY ] synthesized type  " ^
                      P.compTypToString cD (Whnf.cnormCTyp (TypArr (tau2, tau), t) ));
               dprint (fun () -> ("[check: APPLY] argument has appropriate type " ^
                                        P.expChkToString cD cG e2));
               dprint (fun () -> "[check: APPLY] cG " ^ P.gctxToString cD cG );
-              let cIH = if flag then
-                          begin match e2 with
-                            | Box (_,cM) -> Total.filter cIH (M cM)
-                            | Syn(_ , Var x)  -> Total.filter cIH (V x)
-                            | _      -> raise (Error (loc, InvalidRecCall))
-                          end
-                        else cIH in
+              dprint (fun () -> match cIH_opt with
+                | None -> "" | Some ih -> "[APPLY IH] IH = " ^ Total.ih_to_string cD ih);
               check cD (cG,cIH) e2 (tau2, t);
-              (flag, tau, t)
-          | (_, tau, t) ->
+              (useIH loc cD cG cIH_opt e2, tau, t)
+          | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
         end
 
@@ -583,27 +615,27 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
         let (rec_flag, tau, t) = syn cD (cG,cIH) e in
         let (tau,t) = C.cwhnfCTyp (tau,t) in
         begin match (mC, (rec_flag, tau, t)) with
-          | (MetaCtx (loc, cPsi), (false, TypPiBox ((I.CDecl (_ , w, _ ), _ ), tau), t)) ->
+          | (MetaCtx (loc, cPsi), (None, TypPiBox ((I.CDecl (_ , w, _ ), _ ), tau), t)) ->
               let theta' = I.MDot (I.CObj (cPsi), t) in
               LF.checkSchema loc cD cPsi (Schema.get_schema w);
               (dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
                dprint (fun () -> "[check: syn] tau1 = " ^
                           P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ;
-                 (false, tau, theta')
-          | (MetaObj (loc, psihat, tM) , (false, TypPiBox ((I.MDecl (_u, tA, cPsi), _ ), tau), t)) ->
+                 (None, tau, theta')
+          | (MetaObj (loc, psihat, tM) , (None, TypPiBox ((I.MDecl (_u, tA, cPsi), _ ), tau), t)) ->
               checkMetaObj loc cD mC (MetaTyp (tA, cPsi), t) ;
-              (false, tau, I.MDot(I.MObj (psihat, tM), t))
-          | (MetaParam(_, phat, h), (false, TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
+              (None, tau, I.MDot(I.MObj (psihat, tM), t))
+          | (MetaParam(_, phat, h), (None, TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
               let _ =  dprint (fun () -> "[check: inferHead] cPsi = " ^
                                  P.dctxToString cD (C.cnormDCtx (cPsi,t) )) in
               let tB = LF.inferHead loc cD (C.cnormDCtx (cPsi,t)) h in
                 if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
-                  (false, tau, I.MDot(I.PObj (phat, h), t))
+                  (None, tau, I.MDot(I.PObj (phat, h), t))
                 else
                   raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-          | (MetaSObj(_, phat, s), (false, TypPiBox ((I.SDecl(_, tA, cPsi), _ ), tau), t)) ->
+          | (MetaSObj(_, phat, s), (None, TypPiBox ((I.SDecl(_, tA, cPsi), _ ), tau), t)) ->
               LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
-              (false, tau, I.MDot(I.SObj (phat, s), t))
+              (None, tau, I.MDot(I.SObj (phat, s), t))
           | ( _ , (_ , ((TypPiBox ((I.CDecl _ , _ ), _ )) as tau), t) ) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
           | (_ , (_ , tau, t)) ->
@@ -615,28 +647,28 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
         let (_, tau2,t2) =  syn cD (cG,cIH) i2 in
         let (tau1,t1)    = C.cwhnfCTyp (tau1, t1) in
         let (tau2,t2)    = C.cwhnfCTyp (tau2, t2) in
-          (false, TypCross (TypClo (tau1,t1),
+          (None, TypCross (TypClo (tau1,t1),
                             TypClo (tau2,t2)), C.m_id)
 
 
     | Ann (e, tau) ->
         check cD (cG, cIH) e (tau, C.m_id);
-        (false, tau, C.m_id)
+        (None, tau, C.m_id)
 
     | Equal(loc, i1, i2) ->
          let (_, tau1, t1) = syn cD (cG,cIH) i1 in
          let (_, tau2, t2) = syn cD (cG,cIH) i2 in
            if Whnf.convCTyp (tau1,t1) (tau2,t2) then
              begin match Whnf.cwhnfCTyp (tau1,t1) with
-               | (TypBox _ , _ ) ->  (false, TypBool, C.m_id)
-               | (TypBool, _ )   ->  (false, TypBool, C.m_id)
+               | (TypBox _ , _ ) ->  (None, TypBool, C.m_id)
+               | (TypBool, _ )   ->  (None, TypBool, C.m_id)
                | (tau1,t1)       ->  raise (Error (loc, EqTyp (cD, (tau1,t1))))
              end
 
            else
              raise (Error(loc, EqMismatch (cD, (tau1,t1), (tau2,t2))))
 
-    | Boolean _  -> (false, TypBool, C.m_id)
+    | Boolean _  -> (None, TypBool, C.m_id)
 
   and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
     | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
@@ -686,7 +718,7 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
         let ttau = (tau, Whnf.m_id) in
         let _ = dprint (fun () -> "\n Checking conv: " ^ P.compTypToString cD tau
         ^ "\n == " ^ P.compTypToString cD tau' ^ "\n") in
-          if C.convCTyp ttau ttau' then ()
+          if C.convCTyp ttau  ttau' then ()
           else
             raise (Error (loc, PatIllTyped (cD, cG, pat, ttau, ttau')))
 
@@ -694,7 +726,7 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
     | PatConst (loc, c, pat_spine) ->
         let tau = (CompConst.get c).CompConst.typ in
           (loc, synPatSpine cD cG pat_spine (tau , C.m_id))
-    | PatVar (loc, k) -> (loc, (lookup cG k, C.m_id))
+    | PatVar (loc, k) -> (loc, (lookup' cG k, C.m_id))
     | PatTrue loc -> (loc, (TypBool, C.m_id))
     | PatFalse loc -> (loc, (TypBool, C.m_id))
     | PatAnn (loc, pat, tau) ->

@@ -800,7 +800,8 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
                             ^ "\n   has type " ^  P.typToString cD1'  cPsi1  (tP1, S.LF.id)
                             ^ "\n   in " ^ P.dctxToString cD1' cPsi1 ) in
           let _     = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in
-          let cIH'  = Total.wf_rec_calls cD1' in
+          let cIH'  = if Total.struct_smaller  mO then Total.wf_rec_calls cD1'
+                     else I.Empty in
             check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->

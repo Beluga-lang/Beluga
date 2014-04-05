@@ -357,7 +357,7 @@ and recSgnDecl d =
         let mk_total_decl (Ext.Comp.Total (loc, order, f, args)) =
           match order with
             | Ext.Comp.Arg x ->
-                let p = pos loc x args 1 in Order.Arg p
+                let p = pos loc x args 1 in (Order.Arg p , args)
         in
 
 
@@ -441,7 +441,7 @@ and recSgnDecl d =
                 (P.expChkToString cD cG e_r');
               begin match total with
               | None -> ()
-              | Some t -> let Order.Arg p = mk_total_decl t in
+              | Some t -> let (Order.Arg p, _ ) = mk_total_decl t in
                   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
                     (R.render_name f) (string_of_int p)
               end ;
@@ -466,7 +466,7 @@ and recSgnDecl d =
                 (Whnf.cnormExp (e_r', Whnf.m_id));
               begin match total with
               | None -> ()
-              | Some t -> let Order.Arg p = mk_total_decl t in
+              | Some t -> let (Order.Arg p, _ ) = mk_total_decl t in
                   Total.clear () ;
                   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
                     (R.render_name f) (string_of_int p)

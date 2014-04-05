@@ -7,19 +7,44 @@ module R = Store.Cid.DefaultRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
+let struct_smaller cM = match  cM with
+  | Comp.MetaCtx (_ , LF.DDec (_ , _ )) -> true
+  | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
+      (match h with
+        | LF.Const _ -> true
+        | LF.BVar _ -> true
+        | _ -> false)
+  | Comp.MetaObjAnn (_, _cPsi, LF.Root (_, h, _spine)) ->
+      (match h with
+        | LF.Const _ -> true
+        | LF.BVar _ -> true
+        | _ -> false)
+  | Comp.MetaParam (_, (Some _ , n), h ) ->
+      if n > 0 then
+        match h with LF.PVar (_, s) -> Whnf.convSub s (Substitution.LF.id)
+          | _ -> false
+      else
+        false
+  | _ -> false
+(*  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
+  | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
+*)
+
+
 type dec =
 {name : Id.name ;
+ args : (Id.name option) list;
  typ  : Comp.typ ;
  order: Order.order
 }
-
 
 let mutual_decs : (dec list) ref = ref []
 
 let clear () = (mutual_decs :=  [])
 
-let make_dec f tau order =
+let make_dec f tau (order,args) =
   { name = f;
+    args = args;
     typ  = tau;
     order = order
   }
@@ -27,13 +52,27 @@ let make_dec f tau order =
 let extend_dec l =
 mutual_decs := l::!mutual_decs
 
-
+let mobjToFront cM = match cM with
+  | Comp.MetaCtx (_ , cPsi) -> LF.CObj cPsi
+  | Comp.MetaObj (_, phat, tM ) -> LF.MObj (phat, tM)
+  | Comp.MetaObjAnn (_, cPsi, tM ) -> LF.MObj (Context.dctxToHat cPsi, tM)
+  | Comp.MetaParam (_, phat, h ) -> LF.PObj (phat, h)
+  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
+  | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
 
 let rec args_to_string cD args = match args with
   | [] -> ""
   | (Comp.M cM)::args ->
       P.metaObjToString cD cM ^ " " ^
         args_to_string cD args
+  | Comp.DC ::args ->
+     " _ " ^
+        args_to_string cD args
+  | Comp.V _ ::args ->
+     " (V _) " ^
+        args_to_string cD args
+
+
 
 let calls_to_string cD (f, args, tau) =
 (*   (R.render_cid_prog f) ^ " " ^ *)
@@ -54,7 +93,8 @@ let get_order () =
 (*  let _ = dprint (fun () -> "[get_order] " ^ (R.render_cid_prog dec.name) ^
 " : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
   let Order.Arg x = dec.order in
-    (dec.name, x, (tau, Whnf.m_id))
+  let k = List.length (dec.args) in
+    (dec.name, x, k, (tau, Whnf.m_id))
 
 (* let check (f,e) tau =
   match (Comp.get f).Comp.order with
@@ -118,31 +158,42 @@ let gen_var loc cD cdecl = match cdecl with
 *)
 
 
-let rec rec_spine cD (cM, cU)  (i, ttau) = match (i, ttau) with
-  | (1 , (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
-      begin try
-        Unify.unifyCDecl cD (cU, Whnf.m_id) (cdecl, theta);
-        ([Comp.M cM] , Whnf.cnormCTyp (tau, theta))
-      with
-          _ -> raise Not_compatible
-      end
+let rec rec_spine cD (cM, cU)  (i, k, ttau) =
+  if i = 0 then
+    match (k, ttau) with
+      | (0, _ ) -> ([], Whnf.cnormCTyp ttau)
+      | (n, (Comp.TypArr (_, tau), theta)) ->
+          let (spine, tau_r) = rec_spine cD (cM,cU) (i, k-1, (tau,theta)) in
+            (Comp.DC :: spine, tau_r)
+  else
+    match (i, ttau) with
+      | (1 , (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
+          begin try
+            Unify.unifyCDecl cD (cU, Whnf.m_id) (cdecl, theta);
+            let ft = mobjToFront cM in
+            let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1, (tau, LF.MDot (ft, theta))) in
+              (Comp.M cM::spine, tau_r )
+          with
+              _ -> raise Not_compatible
+          end
 
   | (1, (Comp.TypArr (Comp.TypBox (loc, tA, cPsi), tau), theta)) ->
       let u = Id.mk_name (Id.MVarName None) in
       let cdec = LF.MDecl(u, tA, cPsi) in
         begin try
           Unify.unifyCDecl cD (cU, Whnf.m_id) (cdec, theta);
-          ([Comp.M cM] , Whnf.cnormCTyp (tau, theta))
+          let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1,(tau, theta)) in
+            (Comp.M cM::spine, tau_r )
         with
             _ -> raise Not_compatible
         end
   | (n ,  (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
       let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
-      let (spine, tau_r)  = rec_spine cD (cM, cU) (n-1, (tau, LF.MDot (ft, theta))) in
+      let (spine, tau_r)  = rec_spine cD (cM, cU) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
         (Comp.M cN :: spine, tau_r)
 
   | (n, (Comp.TypArr (_, tau2), theta) ) ->
-      let (spine, tau_r) = rec_spine cD (cM, cU) (n-1, (tau2, theta)) in
+      let (spine, tau_r) = rec_spine cD (cM, cU) (n-1, k-1, (tau2, theta)) in
         (Comp.DC :: spine, tau_r)
 
 
@@ -169,9 +220,9 @@ let rec gen_rec_calls cD cG (cD', k) = match cD' with
       begin try
         let cM   = gen_meta_obj (cdecl, LF.MShift k) k in
         let _ = dprint (fun () -> "[gen_rec_calls] cM = " ^ P.metaObjToString cD cM) in
-        let (f, x, ttau) = get_order () in
+        let (f, x, k, ttau) = get_order () in
         let _ = dprint (fun () -> "[gen_rec_calls] f = " ^ P.compTypToString cD (Whnf.cnormCTyp ttau)) in
-        let (args, tau) = rec_spine cD (cM, cdecl) (x,ttau) in
+        let (args, tau) = rec_spine cD (cM, cdecl) (x,k,ttau) in
         let d = Comp.WfRec (f, args, tau) in
         let _ = print_string ("Recursive call : " ^ calls_to_string cD (f, args, tau) ^ "\n") in
           gen_rec_calls cD (LF.Dec(cG, d)) (cD', k+1)
@@ -207,6 +258,10 @@ let rec filter cD cG cIH e2 = match e2, cIH with
          and it is not the type of f args : tau *)
     else
       cIH'
+  | _ , LF.Dec (cIH,Comp.WfRec (f , Comp.DC :: args, tau )) ->
+    let cIH' = filter cD cG cIH e2 in
+      LF.Dec (cIH', Comp.WfRec (f, args, tau))
+
 (* other cases are invalid /not valid recursive calls *)
 
 

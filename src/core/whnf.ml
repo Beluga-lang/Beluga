@@ -3117,12 +3117,26 @@ let mctxSVarPos cD u =
     | Dec(cG, Comp.CTypDecl(x, tau)) ->
         let tdcl = Comp.CTypDecl (x, cnormCTyp (tau, t)) in
         Dec (cnormCtx (cG, t), tdcl)
+    | Dec(cG, Comp.WfRec (f, args, tau)) ->
+        let tau' = cnormCTyp (tau, t) in
+        let args' = List.map (function m -> match m with
+                                | Comp.M cM -> Comp.M (cnormMetaObj (cM, t))
+                                | _ -> m) args in
+          Dec (cnormCtx(cG,t), Comp.WfRec (f, args', tau'))
     | Dec(cG, Comp.CTypDeclOpt x) ->
         Dec (cnormCtx (cG, t), Comp.CTypDeclOpt x)
 
   let rec normCtx cG = match cG with
     | Empty -> Empty
-    | Dec(cG, Comp.CTypDecl (x, tau)) -> Dec (normCtx cG, Comp.CTypDecl(x, normCTyp (cnormCTyp (tau, m_id))))
+    | Dec(cG, Comp.CTypDecl (x, tau)) ->
+        Dec (normCtx cG, Comp.CTypDecl(x, normCTyp (cnormCTyp (tau, m_id))))
+
+    | Dec(cG, Comp.WfRec (f, args, tau)) ->
+        let tau' = normCTyp (cnormCTyp (tau, m_id)) in
+        let args' = List.map (function m -> match m with
+                                | Comp.M cM -> Comp.M (normMetaObj(cnormMetaObj (cM, m_id)))
+                                | _ -> m) args in
+          Dec (normCtx cG, Comp.WfRec (f, args', tau'))
 
   let rec normMCtx cD = match cD with
     | Empty -> Empty

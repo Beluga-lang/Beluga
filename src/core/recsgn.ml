@@ -441,7 +441,8 @@ and recSgnDecl d =
                 (P.expChkToString cD cG e_r');
               begin match total with
               | None -> ()
-              | Some t -> let (Order.Arg p, _ ) = mk_total_decl t in
+              | Some t ->
+                  let (Order.Arg p, _ ) = mk_total_decl t in
                   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
                     (R.render_name f) (string_of_int p)
               end ;

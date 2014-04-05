@@ -388,7 +388,7 @@ GLOBAL: sgn;
     [
       [
         x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x))
-(*    | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
+(*      | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
       ]
     ]
 ;

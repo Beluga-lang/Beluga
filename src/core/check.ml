@@ -612,33 +612,38 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
         end
 
     | MApp (loc, e, mC) ->
-        let (rec_flag, tau, t) = syn cD (cG,cIH) e in
+        let (cIH_opt, tau, t) = syn cD (cG,cIH) e in
         let (tau,t) = C.cwhnfCTyp (tau,t) in
-        begin match (mC, (rec_flag, tau, t)) with
-          | (MetaCtx (loc, cPsi), (None, TypPiBox ((I.CDecl (_ , w, _ ), _ ), tau), t)) ->
+        begin match (mC, (tau, t)) with
+          | (MetaCtx (loc, cPsi), (TypPiBox ((I.CDecl (_ , w, _ ), _ ), tau), t)) ->
               let theta' = I.MDot (I.CObj (cPsi), t) in
               LF.checkSchema loc cD cPsi (Schema.get_schema w);
               (dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
                dprint (fun () -> "[check: syn] tau1 = " ^
                           P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ;
-                 (None, tau, theta')
-          | (MetaObj (loc, psihat, tM) , (None, TypPiBox ((I.MDecl (_u, tA, cPsi), _ ), tau), t)) ->
+                 (useIH loc cD cG cIH_opt (Box (loc, mC)) , tau, theta')
+
+          | (MetaObj (loc, psihat, tM) , (TypPiBox ((I.MDecl (_u, tA, cPsi), _ ), tau), t)) ->
               checkMetaObj loc cD mC (MetaTyp (tA, cPsi), t) ;
-              (None, tau, I.MDot(I.MObj (psihat, tM), t))
-          | (MetaParam(_, phat, h), (None, TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
+              (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(I.MObj (psihat, tM), t))
+
+          | (MetaParam(_, phat, h), (TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
               let _ =  dprint (fun () -> "[check: inferHead] cPsi = " ^
                                  P.dctxToString cD (C.cnormDCtx (cPsi,t) )) in
               let tB = LF.inferHead loc cD (C.cnormDCtx (cPsi,t)) h in
                 if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
-                  (None, tau, I.MDot(I.PObj (phat, h), t))
+                  (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(I.PObj (phat, h), t))
                 else
                   raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-          | (MetaSObj(_, phat, s), (None, TypPiBox ((I.SDecl(_, tA, cPsi), _ ), tau), t)) ->
+
+          | (MetaSObj(_, phat, s), (TypPiBox ((I.SDecl(_, tA, cPsi), _ ), tau), t)) ->
               LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
-              (None, tau, I.MDot(I.SObj (phat, s), t))
-          | ( _ , (_ , ((TypPiBox ((I.CDecl _ , _ ), _ )) as tau), t) ) ->
+              (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(I.SObj (phat, s), t))
+
+          | ( _ , (((TypPiBox ((I.CDecl _ , _ ), _ )) as tau), t) ) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
-          | (_ , (_ , tau, t)) ->
+
+          | (_ , ( tau, t)) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end
 
@@ -790,6 +795,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           let tP1   = Whnf.cnormTyp (tP, t1) in
           let cPsi1 = Whnf.cnormDCtx (cPsi, t1) in
           let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
+          let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
           let t''   = Whnf.mcomp t t1 in
           let tau'  = Whnf.cnormCTyp (tau, t'') in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n") in
@@ -800,13 +806,14 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
                             ^ "\n   has type " ^  P.typToString cD1'  cPsi1  (tP1, S.LF.id)
                             ^ "\n   in " ^ P.dctxToString cD1' cPsi1 ) in
           let _     = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in
-          let cIH'  = if Total.struct_smaller  mO then Total.wf_rec_calls cD1'
+          let cIH'  = if Total.struct_smaller mO then Total.wf_rec_calls cD1'
                      else I.Empty in
             check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
           let cG'   = Whnf.cnormCtx (cG, t1) in
+          let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
           let t''   = Whnf.mcomp t t1 in
           let tau'  = Whnf.cnormCTyp (tau, t'') in
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n") in

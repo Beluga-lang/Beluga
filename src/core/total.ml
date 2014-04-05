@@ -214,20 +214,59 @@ let gen_meta_obj (cdecl, theta) k = match cdecl with
       let pv = LF.PVar (LF.Offset k, Substitution.LF.id) in
         Comp.MetaParam (Syntax.Loc.ghost, psihat', pv)
 
-let rec gen_rec_calls cD cG (cD', k) = match cD' with
+let uninstantiated_arg cM = match Whnf.cnormMetaObj (cM, Whnf.m_id) with
+  | Comp.MetaCtx (_ , LF.CtxVar (LF.CInst _)) -> true
+  | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
+      (match h with
+        | LF.MMVar (_ , _ ) -> true
+        | _ -> false)
+  | Comp.MetaObjAnn (_, _cPsi, LF.Root (_, h, _spine)) ->
+      (match h with
+        | LF.MMVar (_ , _ ) -> true
+        | _ -> false)
+  | Comp.MetaParam (_, (Some _ , n), h ) ->
+      if n > 0 then
+        match h with LF.MPVar (_, _) -> true
+          | _ -> false
+      else
+        false
+  | Comp.MetaSObj (_, _phat, LF.MSVar (_, _ , _ )) -> true
+  | Comp.MetaSObjAnn (_, _cPsi, LF.MSVar (_, _ , _ )) -> true
+  | _ -> false
+
+let rec generalize args = match args with
+  | [] -> []
+  | Comp.M cM :: args ->
+      if uninstantiated_arg cM then
+        Comp.DC :: generalize args
+      else
+        Comp.M cM :: generalize args
+  | Comp.V x :: args ->
+      Comp.V x:: generalize args
+  | Comp.DC :: args ->
+      Comp.DC :: generalize args
+
+let rec gen_rec_calls cD cG (cD', j) = match cD' with
   | LF.Empty -> cG
   | LF.Dec (cD', cdecl) ->
       begin try
-        let cM   = gen_meta_obj (cdecl, LF.MShift k) k in
-        let _ = dprint (fun () -> "[gen_rec_calls] cM = " ^ P.metaObjToString cD cM) in
+        let cM  = gen_meta_obj (cdecl, LF.MShift j) j in
+        let cU  = Whnf.cnormCDecl (cdecl, LF.MShift j) in
+(*      let _   = print_string ("[gen_rec_calls] cD = " ^ P.mctxToString cD
+                                ^" -- j = " ^ string_of_int j ^ "\n") in
+        let _   = print_string ("[gen_rec_calls] cM = " ^ P.metaObjToString cD cM
+                              ^ "\n") in *)
         let (f, x, k, ttau) = get_order () in
-        let _ = dprint (fun () -> "[gen_rec_calls] f = " ^ P.compTypToString cD (Whnf.cnormCTyp ttau)) in
-        let (args, tau) = rec_spine cD (cM, cdecl) (x,k,ttau) in
+(*        let _ = print_string ( "[gen_rec_calls] for f = " ^
+                                 P.compTypToString cD (Whnf.cnormCTyp ttau)) in *)
+        let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
+        let args = generalize args in
         let d = Comp.WfRec (f, args, tau) in
-        let _ = print_string ("Recursive call : " ^ calls_to_string cD (f, args, tau) ^ "\n") in
-          gen_rec_calls cD (LF.Dec(cG, d)) (cD', k+1)
+        let _ = print_string ("\nRecursive call : " ^ calls_to_string cD (f, args, tau) ^ "\n") in
+          gen_rec_calls cD (LF.Dec(cG, d)) (cD', j+1)
       with
-          _ -> gen_rec_calls cD cG (cD', k+1)
+          _ ->
+            gen_rec_calls cD cG (cD', j+1)
       end
 
 let wf_rec_calls cD  =
@@ -239,13 +278,13 @@ let rec filter cD cG cIH e2 = match e2, cIH with
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
     let cIH' = filter cD cG cIH e2 in
     if Whnf.convMetaObj cM' cM then
-      (dprint (fun () -> ("[filter IH] IH and recursive call agree on : "
-                          ^ P.metaObjToString cD cM' ^ " == " ^
-                            P.metaObjToString cD cM));
+      (print_string  ("IH and recursive call agree on : "
+                      ^ P.metaObjToString cD cM' ^ " == " ^
+                      P.metaObjToString cD cM ^ "\n");
       LF.Dec (cIH', Comp.WfRec (f, args, tau)))
       (* Note: tau' is understood as the approximate type *)
     else
-      (dprint (fun () -> ("[filter IH] - IH and recursive call do NOT agree : "
+      (dprint (fun () -> ("IH and recursive call do NOT agree : "
         ^ P.metaObjToString cD cM' ^ " == " ^
           P.metaObjToString cD cM));
       cIH')

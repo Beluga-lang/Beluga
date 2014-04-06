@@ -149,6 +149,7 @@ module Int = struct
 
     val schemaToString    : LF.schema     -> string
     val schElemToString   : LF.sch_elem   -> string
+    val cdeclToString     : LF.mctx -> LF.ctyp_decl  -> string
 
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
@@ -1696,6 +1697,10 @@ module Int = struct
 
     let schElemToString sch_elem =
       fmt_ppr_lf_sch_elem std_lvl str_formatter sch_elem
+      ; flush_str_formatter ()
+
+    let cdeclToString cD cdecl =
+      fmt_ppr_lf_ctyp_decl cD std_lvl str_formatter cdecl
       ; flush_str_formatter ()
 
     let metaObjToString  cD mO =

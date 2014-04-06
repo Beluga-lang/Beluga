@@ -162,6 +162,9 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
   if i = 0 then
     match (k, ttau) with
       | (0, _ ) -> ([], Whnf.cnormCTyp ttau)
+      | (n, (Comp.TypPiBox ( _ , tau), theta)) ->
+          let (spine, tau_r) = rec_spine cD (cM,cU) (i, k-1, (tau,theta)) in
+            (Comp.DC :: spine, tau_r)
       | (n, (Comp.TypArr (_, tau), theta)) ->
           let (spine, tau_r) = rec_spine cD (cM,cU) (i, k-1, (tau,theta)) in
             (Comp.DC :: spine, tau_r)
@@ -199,7 +202,7 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
 
 let gen_meta_obj (cdecl, theta) k = match cdecl with
   | LF.CDecl (psi_name, schema_cid, _ ) ->
-      Comp.MetaCtx (Syntax.Loc.ghost, LF.CtxVar (LF.CtxOffset (k+1) ))
+      Comp.MetaCtx (Syntax.Loc.ghost, LF.CtxVar (LF.CtxOffset k))
 (*  | LF.SDecl (s,cPhi, cPsi) -> todo *)
   | LF.MDecl (u, tA, cPsi) ->
       let phat  = Context.dctxToHat cPsi in
@@ -250,27 +253,28 @@ let rec gen_rec_calls cD cG (cD', j) = match cD' with
   | LF.Empty -> cG
   | LF.Dec (cD', cdecl) ->
       begin try
-        let cM  = gen_meta_obj (cdecl, LF.MShift j) j in
-        let cU  = Whnf.cnormCDecl (cdecl, LF.MShift j) in
-(*      let _   = print_string ("[gen_rec_calls] cD = " ^ P.mctxToString cD
+        let cM  = gen_meta_obj (cdecl, LF.MShift (j+1)) (j+1) in
+        let cU  = Whnf.cnormCDecl (cdecl, LF.MShift (j+1)) in
+        let _   = print_string ("[gen_rec_calls] cD = " ^ P.mctxToString cD
                                 ^" -- j = " ^ string_of_int j ^ "\n") in
         let _   = print_string ("[gen_rec_calls] cM = " ^ P.metaObjToString cD cM
-                              ^ "\n") in *)
+                                ^ " : " ^ P.cdeclToString cD cU
+                                ^ "\n") in
         let (f, x, k, ttau) = get_order () in
-(*        let _ = print_string ( "[gen_rec_calls] for f = " ^
-                                 P.compTypToString cD (Whnf.cnormCTyp ttau)) in *)
+        let _ = print_string ( "[gen_rec_calls] for f = " ^
+                                 P.compTypToString cD (Whnf.cnormCTyp ttau)) in
         let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
         let args = generalize args in
         let d = Comp.WfRec (f, args, tau) in
         let _ = print_string ("\nRecursive call : " ^ calls_to_string cD (f, args, tau) ^ "\n") in
           gen_rec_calls cD (LF.Dec(cG, d)) (cD', j+1)
       with
-          _ ->
+          Not_compatible ->
             gen_rec_calls cD cG (cD', j+1)
       end
 
 let wf_rec_calls cD  =
-  gen_rec_calls cD (LF.Empty) (cD, 1)
+  gen_rec_calls cD (LF.Empty) (cD, 0)
 
 
 let rec filter cD cG cIH e2 = match e2, cIH with

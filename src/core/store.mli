@@ -149,14 +149,13 @@ module Cid : sig
 
     type entry = private {
       name               : name;
-      implicit_arguments : int;
       typ                : Comp.typ;
       prog               : Comp.value;
       mut_rec            : name list;
-      order              : Order.dec option
+      total              : bool
     }
 
-    val mk_entry  : name -> Comp.typ -> int -> Comp.value -> name list -> entry
+    val mk_entry  : name -> Comp.typ ->  Comp.value -> name list -> entry
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this
@@ -165,7 +164,7 @@ module Cid : sig
         provide the cid_prog it generated to store the entry, thus
         tying the recursive knot. *)
     val add           : (cid_prog -> entry) -> cid_prog
-    val add_total     : name -> Order.dec -> unit
+    val add_total     : name -> unit
     val get           : cid_prog -> entry
     val index_of_name : name -> cid_prog
 

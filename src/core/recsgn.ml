@@ -292,7 +292,7 @@ and recSgnDecl d =
 
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
+            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' v []) in
             if (!Debug.chatter) <> 0 then
               Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
                 (R.render_name x)
@@ -328,7 +328,7 @@ and recSgnDecl d =
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
+            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' v []) in
             if (!Debug.chatter) <> 0 then
 	      Printf.printf "\nlet %s : %s = %s\n===>  %s\n"
 		(R.render_name x)
@@ -354,10 +354,15 @@ and recSgnDecl d =
           | (Some y)::ys -> if x = y then k else pos loc x ys (k+1)
           | None::ys -> pos loc x ys (k+1)
         in
-        let mk_total_decl (Ext.Comp.Total (loc, order, f, args)) =
+
+        let get_rec_arg (Ext.Comp.Total (_loc, order, _f, _args)) =
+          match order with
+            | Ext.Comp.Arg x -> x
+        in
+        let mk_total_decl (Ext.Comp.Total (loc, order, _f, args)) =
           match order with
             | Ext.Comp.Arg x ->
-                let p = pos loc x args 1 in (Order.Arg p , args)
+                 let p = pos loc x args 1 in (Order.Arg p , args)
         in
 
 
@@ -442,9 +447,9 @@ and recSgnDecl d =
               begin match total with
               | None -> ()
               | Some t ->
-                  let (Order.Arg p, _ ) = mk_total_decl t in
+                  let x = get_rec_arg t in
                   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-                    (R.render_name f) (string_of_int p)
+                    (R.render_name f) (R.render_name x)
               end ;
             if !Coverage.enableCoverage then
               Printf.printf "\n## Coverage checking done: %s  ##\n"
@@ -452,11 +457,15 @@ and recSgnDecl d =
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
             let _x = Comp.add
               (fun cid ->
-                Comp.mk_entry f tau' 0
+                Comp.mk_entry f tau'
                   (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
                   n_list) in
             reconRecFun lf in
-        begin match recFuns with
+
+(* For checking totality of mutual recursive functions,
+   we should check all functions together by creating a variable
+   which collects all total declarations *)
+          begin match recFuns with
           | Ext.Comp.RecFun (f, total, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f e in
             if !Debug.chatter <> 0 then
@@ -467,10 +476,10 @@ and recSgnDecl d =
                 (Whnf.cnormExp (e_r', Whnf.m_id));
               begin match total with
               | None -> ()
-              | Some t -> let (Order.Arg p, _ ) = mk_total_decl t in
+              | Some t -> let x = get_rec_arg t in
                   Total.clear () ;
                   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-                    (R.render_name f) (string_of_int p)
+                    (R.render_name f) (R.render_name x)
               end ;
             if !Coverage.enableCoverage then
               Printf.printf "\n## Coverage checking done: %s  ##\n"
@@ -478,7 +487,7 @@ and recSgnDecl d =
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
             let _x = Comp.add
               (fun cid ->
-                Comp.mk_entry f tau' 0
+                Comp.mk_entry f tau'
                   (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
                   n_list) in
             reconRecFun lf

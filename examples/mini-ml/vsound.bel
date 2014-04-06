@@ -26,9 +26,7 @@ ev_lam: eval (lam (\x. E x)) (lam (\x. E x)).
 ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V
       -> eval (app E1 E2) V.
 
-
-
-rec vs :  [. eval E V] -> [. value V] =
+rec vs :  [. eval E V] -> [. value V] = / total e (vs _ _ e) /
 fn e =>
  case e of
    [. ev_z] =>  [. v_z]
@@ -43,6 +41,4 @@ fn e =>
 | [. ev_lam]          => [. v_lam]
 
 | [. ev_app D1 D2 D3] =>  vs [. D3]
-
-
 ;

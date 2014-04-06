@@ -2022,7 +2022,8 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 
 
   | Comp.TypParam(loc, tA, cPsi) ->
-      let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
+(*      let _ = print_endline ("Encountering parameter : " ^ P.typToString
+        problem.cD cPsi (tA, S.LF.id) ^ " ") in *)
       let cD'        = LF.Dec (problem.cD, LF.PDecl(Id.mk_name (Id.NoName), tA, cPsi)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = match projOpt with None -> LF.PVar (LF.Offset 1, idSub) | Some k -> LF.Proj(LF.PVar (LF.Offset 1, idSub), k) in

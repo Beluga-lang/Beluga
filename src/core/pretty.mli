@@ -101,6 +101,7 @@ module Int : sig
 
     val schemaToString    : LF.schema     -> string
     val schElemToString   : LF.sch_elem   -> string
+    val cdeclToString     : LF.mctx -> LF.ctyp_decl  -> string
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string

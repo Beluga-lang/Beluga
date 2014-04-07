@@ -90,13 +90,14 @@ let rec ih_to_string cD cIH = match cIH with
 
 
 let get_order () =
-  let [dec] = !mutual_decs in
-  let tau = dec.typ in
-(*  let _ = dprint (fun () -> "[get_order] " ^ (R.render_cid_prog dec.name) ^
-" : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
-  let Order.Arg x = dec.order in
-  let k = List.length (dec.args) in
-    (dec.name, x, k, (tau, Whnf.m_id))
+  List.map (function dec ->
+              let tau = dec.typ in
+                (*  let _ = dprint (fun () -> "[get_order] " ^ (R.render_cid_prog dec.name) ^
+                    " : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
+              let Order.Arg x = dec.order in
+              let k = List.length (dec.args) in
+                (dec.name, x, k, (tau, Whnf.m_id)))
+    !mutual_decs
 
 (* let check (f,e) tau =
   match (Comp.get f).Comp.order with
@@ -262,14 +263,31 @@ let rec gen_rec_calls cD cG (cD', j) = match cD' with
         let _   = print_string ("[gen_rec_calls] cM = " ^ P.metaObjToString cD cM
                                 ^ " : " ^ P.cdeclToString cD cU
                                 ^ "\n") in
-        let (f, x, k, ttau) = get_order () in
-        let _ = print_string ( "[gen_rec_calls] for f = " ^
-                                 P.compTypToString cD (Whnf.cnormCTyp ttau)) in
-        let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
-        let args = generalize args in
-        let d = Comp.WfRec (f, args, tau) in
-        let _ = print_string ("\nRecursive call : " ^ calls_to_string cD (f, args, tau) ^ "\n") in
-          gen_rec_calls cD (LF.Dec(cG, d)) (cD', j+1)
+        let mf_list = get_order () in
+        let _ = List.iter (function (f,x,k,ttau) ->
+                             print_string ( "[gen_rec_calls] for f = " ^
+                                              P.compTypToString cD
+                                              (Whnf.cnormCTyp ttau)
+                                          ^ "\n"))
+          mf_list
+        in
+        let mk_wfrec (f,x,k,ttau) =
+          let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
+          let args = generalize args in
+          let d = Comp.WfRec (f, args, tau) in
+          let _ = print_string ("\nRecursive call : " ^
+                                  calls_to_string cD (f, args, tau)
+                                ^ "\n") in
+            d
+        in
+        let rec mk_all (cG,j) mf_list = match mf_list with
+          | [] -> (cG, j)
+          | (f,x,k,ttau)::mf_list ->
+              let d = mk_wfrec (f,x,k,ttau) in
+                mk_all (LF.Dec(cG, d), j+1) mf_list
+        in
+        let (cG',j') = mk_all (cG, j) mf_list in
+          gen_rec_calls cD cG'  (cD', j')
       with
           Not_compatible ->
             gen_rec_calls cD cG (cD', j+1)

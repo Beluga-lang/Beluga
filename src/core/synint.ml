@@ -320,7 +320,7 @@ module Comp = struct
     | Var    of offset
     | DataConst of cid_comp_const
     | DataDest of cid_comp_dest
-    | Const  of cid_prog
+    | Const  of Loc.t * cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | MApp   of Loc.t * exp_syn * meta_obj
     | Ann    of exp_chk * typ

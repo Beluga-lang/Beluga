@@ -555,16 +555,6 @@ module Cid = struct
       Hashtbl.replace directory e.name cid_prog;
       cid_prog
 
-    let add_total cid_name =
-      let cid_const = index_of_name cid_name in
-      let entry     = get cid_const  in
-      let new_entry = {name               = entry.name ;
-                       typ                = entry.typ ;
-                       prog               = entry.prog ;
-                       mut_rec            = entry.mut_rec ;
-                       total              = true} in
-        DynArray.set store cid_const new_entry
-
     let clear () =
       DynArray.clear store;
       Hashtbl.clear directory

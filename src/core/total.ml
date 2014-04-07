@@ -276,7 +276,10 @@ let rec gen_rec_calls cD cG (cD', j) = match cD' with
       end
 
 let wf_rec_calls cD  =
-  gen_rec_calls cD (LF.Empty) (cD, 0)
+  if !enabled then
+    gen_rec_calls cD (LF.Empty) (cD, 0)
+  else
+    LF.Empty
 
 
 let rec filter cD cG cIH e2 = match e2, cIH with

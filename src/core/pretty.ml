@@ -1289,7 +1289,7 @@ module Int = struct
       else
         let (i', _ ) = strip_mapp_args' cD cG i in i'
     and strip_mapp_args' cD cG i = match i with
-      | Comp.Const prog ->
+      | Comp.Const (_, prog) ->
           (i,  implicitCompArg  (Store.Cid.Comp.get prog).Store.Cid.Comp.typ)
       | Comp.DataConst c ->
           (i,  implicitCompArg  (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ)
@@ -1329,7 +1329,7 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_var cG x)
 
-      | Comp.Const prog ->
+      | Comp.Const (_ ,prog) ->
           fprintf ppf "%s"
             (R.render_cid_prog prog)
 

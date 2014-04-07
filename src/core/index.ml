@@ -688,7 +688,7 @@ and index_exp' cvars vars fcvars = function
       begin try
         Apx.Comp.Var (Var.index_of_name vars x)
       with Not_found -> try
-        Apx.Comp.Const (Comp.index_of_name x)
+        Apx.Comp.Const (loc,Comp.index_of_name x)
       with Not_found -> try
         Apx.Comp.DataConst (CompConst.index_of_name x)
       with Not_found -> try

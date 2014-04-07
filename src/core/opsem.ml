@@ -78,7 +78,7 @@ where  cD ; cG |- e <= wf_exp
 let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
-    | Comp.Const cid ->
+    | Comp.Const (_ ,cid) ->
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
       begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
         | Comp.RecValue (cid, e', theta', eta') ->

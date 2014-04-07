@@ -164,7 +164,6 @@ module Cid : sig
         provide the cid_prog it generated to store the entry, thus
         tying the recursive knot. *)
     val add           : (cid_prog -> entry) -> cid_prog
-    val add_total     : name -> unit
     val get           : cid_prog -> entry
     val index_of_name : name -> cid_prog
 

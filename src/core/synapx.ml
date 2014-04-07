@@ -160,7 +160,7 @@ module Comp = struct
      | FVar   of name                                       (* x              *)
      | DataConst of cid_comp_const                          (* c              *)
      | DataDest of cid_comp_dest                            (* c              *)
-     | Const  of cid_prog                                   (* c              *)
+     | Const  of Loc.t * cid_prog                           (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
 
      | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)

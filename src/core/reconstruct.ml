@@ -1413,8 +1413,8 @@ and elExp' cD cG i = match i with
                         P.compTypToString cD ((CompDest.get c).CompDest.typ)) in
      (Int.Comp.DataDest c, ((CompDest.get c).CompDest.typ, C.m_id))
 
-  | Apx.Comp.Const prog ->
-     (Int.Comp.Const prog, ((Comp.get prog).Comp.typ, C.m_id))
+  | Apx.Comp.Const (loc,prog) ->
+     (Int.Comp.Const (loc,prog), ((Comp.get prog).Comp.typ, C.m_id))
 
   | Apx.Comp.Apply (loc, i, e) ->
       let _ = dprint (fun () -> "[elExp'] Apply") in

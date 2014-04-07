@@ -530,12 +530,12 @@ module Cid = struct
       total              : bool
     }
 
-    let mk_entry name typ v name_list = {
+    let mk_entry name typ total v name_list = {
       name               = name;
       typ                = typ;
       prog               = v;
       mut_rec            = name_list;  (* names of functions with which n is mutually recursive *)
-      total              = false
+      total              = total
     }
 
     (*  store : entry DynArray.t *)

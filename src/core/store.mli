@@ -155,7 +155,7 @@ module Cid : sig
       total              : bool
     }
 
-    val mk_entry  : name -> Comp.typ ->  Comp.value -> name list -> entry
+    val mk_entry  : name -> Comp.typ ->  bool -> Comp.value -> name list -> entry
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this

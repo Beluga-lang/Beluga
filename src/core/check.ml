@@ -78,6 +78,7 @@ module Comp = struct
     | TypMismatch     of I.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name * string
     | InvalidRecCall
+    | MissingTotal of Id.cid_prog
 
 (*  type rec_call = bool *)
 
@@ -94,6 +95,9 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
+          | MissingTotal prog ->
+            Format.fprintf ppf "Function %s not known to be total."
+              (R.render_cid_prog prog)
           | InvalidRecCall ->
             Format.fprintf ppf "Recursive call not structurally smaller."
           | IllegalParamTyp (cD, cPsi, tA) ->
@@ -583,7 +587,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
       if isRecFun cIH f then
         (Some cIH, tau, C.m_id)
       else
-        (None, tau, C.m_id)
+          (None, tau, C.m_id)
 
     | DataConst c ->
         (None,(CompConst.get c).CompConst.typ, C.m_id)
@@ -591,7 +595,15 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
         (None,(CompDest.get c).CompDest.typ, C.m_id)
 
     | Const prog ->
-        (None,(Comp.get prog).Comp.typ, C.m_id)
+        if !Total.enabled then
+          if (Comp.get prog).Comp.total then
+            (print_string ("Call to " ^ R.render_cid_prog prog ^
+                             " is known to  be total\n");
+             (None,(Comp.get prog).Comp.typ, C.m_id))
+          else
+            raise (Error (Syntax.Loc.ghost, MissingTotal prog))
+        else
+          (None,(Comp.get prog).Comp.typ, C.m_id)
 
     | Apply (loc , e1, e2) ->
         let (cIH_opt , tau1, t1) = syn cD (cG,cIH) e1 in

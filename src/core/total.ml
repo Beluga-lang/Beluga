@@ -7,6 +7,8 @@ module R = Store.Cid.DefaultRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
+let enabled = ref false
+
 let struct_smaller cM = match  cM with
   | Comp.MetaCtx (_ , LF.DDec (_ , _ )) -> true
   | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->

@@ -292,7 +292,7 @@ and recSgnDecl d =
 
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' v []) in
+            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' false v []) in
             if (!Debug.chatter) <> 0 then
               Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
                 (R.render_name x)
@@ -328,7 +328,7 @@ and recSgnDecl d =
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' v []) in
+            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' false v []) in
             if (!Debug.chatter) <> 0 then
 	      Printf.printf "\nlet %s : %s = %s\n===>  %s\n"
 		(R.render_name x)
@@ -364,7 +364,8 @@ and recSgnDecl d =
             | Ext.Comp.Arg x ->
                  let p = pos loc x args 1 in (Order.Arg p , args)
         in
-
+        let is_total total =
+          match total with None -> false | Some _ -> true in
 
         let rec preprocess l = match l with
           | [] -> (Int.LF.Empty, Var.create (), [])
@@ -390,7 +391,8 @@ and recSgnDecl d =
                   | None -> ()
                   | Some t ->
                       (Coverage.enableCoverage := true;
-                      Total.extend_dec (Total.make_dec f tau' (mk_total_decl t)))
+                       Total.enabled := true;
+                       Total.extend_dec (Total.make_dec f tau' (mk_total_decl t)))
                 end ;
                 (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
 
@@ -436,7 +438,9 @@ and recSgnDecl d =
         in
 
         let rec reconRecFun recFuns = match recFuns with
-          | [] ->   (Coverage.enableCoverage := false ; ())
+          | [] ->   (Coverage.enableCoverage := false ;
+                     Total.enabled := false;
+                     ())
           | Ext.Comp.RecFun (f, total, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f  e in
             if !Debug.chatter <> 0 then
@@ -445,7 +449,7 @@ and recSgnDecl d =
                 (P.compTypToString cD tau')
                 (P.expChkToString cD cG e_r');
               begin match total with
-              | None -> ()
+                | None -> ()
               | Some t ->
                   let x = get_rec_arg t in
                   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
@@ -457,7 +461,7 @@ and recSgnDecl d =
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
             let _x = Comp.add
               (fun cid ->
-                Comp.mk_entry f tau'
+                Comp.mk_entry f tau' (is_total total)
                   (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
                   n_list) in
             reconRecFun lf in
@@ -487,7 +491,7 @@ and recSgnDecl d =
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
             let _x = Comp.add
               (fun cid ->
-                Comp.mk_entry f tau'
+                Comp.mk_entry f tau' (is_total total)
                   (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
                   n_list) in
             reconRecFun lf

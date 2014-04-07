@@ -73,6 +73,7 @@ module Comp : sig
     | TypMismatch     of LF.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name * string
     | InvalidRecCall
+    | MissingTotal    of Id.cid_prog
 
   exception Error of Syntax.Loc.t * error
 

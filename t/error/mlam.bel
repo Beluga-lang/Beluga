@@ -23,12 +23,12 @@ something: exp T -> opt.
 schema expCtx = some [t:tp] block _t:exp t;
 
 % no need for mlam here
-rec noneedformlam: (g:expCtx) [g.exp T] -> [g.exp T] =
+rec noneedformlam: (g:expCtx) [g |- exp T] -> [g |- exp T] =
  fn e => e
 ;
 
 % uh oh, we need a mlam for the explicit context variable g
-rec forgetmlam: {g:expCtx} [g.exp T] -> [g.exp T] =
+rec forgetmlam: {g:expCtx} [g |- exp T] -> [g |- exp T] =
  fn e => e
 ;
 

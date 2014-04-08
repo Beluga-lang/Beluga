@@ -117,6 +117,12 @@ module Comp = struct
    | Ctype of Loc.t
    | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
 
+ type meta_typ =
+   | MetaSchema of Loc.t * name
+   | MetaTyp of Loc.t * LF.typ * LF.dctx 
+   | MetaParamTyp of Loc.t * LF.typ * LF.dctx 
+   | MetaSubTyp  of Loc.t * LF.dctx * LF.dctx
+
  type meta_obj =
    | MetaCtx of Loc.t * LF.dctx
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
@@ -133,8 +139,7 @@ module Comp = struct
    | TypBase of Loc.t * cid_comp_typ * meta_spine
    | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
    | TypDef of Loc.t * cid_comp_typ * meta_spine
-   | TypBox     of Loc.t * LF.typ  * LF.dctx
-   | TypSub     of Loc.t * LF.dctx  * LF.dctx
+   | TypBox of Loc.t * meta_typ
    | TypArr     of typ * typ
    | TypCross   of typ * typ
    | TypPiBox   of (LF.ctyp_decl * depend) * typ

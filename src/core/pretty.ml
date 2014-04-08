@@ -1089,17 +1089,17 @@ module Int = struct
               (fmt_ppr_meta_spine cD 2) mS
               (r_paren_if cond)
 
-      | Comp.TypBox (_, tA, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaTyp(tA, cPsi)) ->
           fprintf ppf "[%a. %a]"
                 (fmt_ppr_lf_dctx cD 0) cPsi
                 (fmt_ppr_lf_typ cD cPsi 2) tA
 
-      | Comp.TypParam (_, tA, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaParamTyp (tA, cPsi)) ->
           fprintf ppf "#[%a. %a]"
                 (fmt_ppr_lf_dctx cD 0) cPsi
                 (fmt_ppr_lf_typ cD cPsi 2) tA
 
-      | Comp.TypSub (_, cPhi, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaSubTyp(cPhi, cPsi)) ->
           fprintf ppf "[%a. %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi

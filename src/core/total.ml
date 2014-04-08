@@ -9,7 +9,9 @@ let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 let enabled = ref false
 
-let struct_smaller cM = match  cM with
+type rec_arg = M of Comp.meta_obj | V of Comp.exp_syn
+
+let smaller_meta_obj cM = match  cM with
   | Comp.MetaCtx (_ , LF.DDec (_ , _ )) -> true
   | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
       (match h with
@@ -32,6 +34,16 @@ let struct_smaller cM = match  cM with
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
 *)
 
+
+let rec struct_smaller patt = match patt with
+  | Comp.PatMetaObj (loc', mO) -> smaller_meta_obj mO
+  | Comp.PatConst (_, _, _ ) -> true
+  | Comp.PatVar (_, _ ) -> false
+  | Comp.PatPair (_, pat1, pat2 ) ->
+      (* This is quite naive - possibly one of them being smaller is enough *)
+      struct_smaller pat1 && struct_smaller pat2
+  | Comp.PatAnn (_, pat, _) -> struct_smaller pat
+  | _ -> false
 
 type dec =
 {name : Id.name ;
@@ -183,7 +195,7 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
               _ -> raise Not_compatible
           end
 
-  | (1, (Comp.TypArr (Comp.TypBox (loc, tA, cPsi), tau), theta)) ->
+  | (1, (Comp.TypArr (Comp.TypBox (loc, Comp.MetaTyp(tA, cPsi)), tau), theta)) ->
       let u = Id.mk_name (Id.MVarName None) in
       let cdec = LF.MDecl(u, tA, cPsi) in
         begin try
@@ -293,9 +305,18 @@ let rec gen_rec_calls cD cG (cD', j) = match cD' with
             gen_rec_calls cD cG (cD', j+1)
       end
 
-let wf_rec_calls cD  =
+let gen_rec_calls' cD cG cIH (cG, j) = match cG with
+  | LF.Empty -> cIH
+(*  | LF.Dec(cG',CTypDecl (_x, tau)) ->
+      let x = Comp.Var (j+1) in
+      let mf_list = get_order () in
+
+*)
+
+let wf_rec_calls cD cG  =
   if !enabled then
-    gen_rec_calls cD (LF.Empty) (cD, 0)
+    let cIH = gen_rec_calls cD (LF.Empty) (cD, 0) in
+      gen_rec_calls' cD cG cIH (cG, 0)
   else
     LF.Empty
 

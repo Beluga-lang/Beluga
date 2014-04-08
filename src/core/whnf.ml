@@ -2786,13 +2786,13 @@ let mctxSVarPos cD u =
         Comp.TypBase (loc, c, normMetaSpine mS)
     | Comp.TypCobase (loc, c, mS) ->
         Comp.TypCobase (loc, c, normMetaSpine mS)
-    | Comp.TypBox (loc, tA, cPsi)
-      -> Comp.TypBox(loc, normTyp(tA, LF.id), normDCtx cPsi)
-    | Comp.TypParam (loc, tA, cPsi)
-      -> Comp.TypParam(loc, normTyp(tA, LF.id), normDCtx cPsi)
+    | Comp.TypBox (loc, Comp.MetaTyp(tA, cPsi))
+      -> Comp.TypBox(loc, Comp.MetaTyp (normTyp(tA, LF.id), normDCtx cPsi))
+    | Comp.TypBox (loc, Comp.MetaParamTyp (tA, cPsi))
+      -> Comp.TypBox (loc, Comp.MetaParamTyp (normTyp(tA, LF.id), normDCtx cPsi))
 
-    | Comp.TypSub (loc, cPsi, cPsi')
-      -> Comp.TypSub (loc, normDCtx cPsi, normDCtx cPsi')
+    | Comp.TypBox (loc, Comp.MetaSubTyp(cPsi, cPsi'))
+      -> Comp.TypBox (loc, Comp.MetaSubTyp (normDCtx cPsi, normDCtx cPsi'))
 
     | Comp.TypArr (tT1, tT2)   ->
         Comp.TypArr (normCTyp tT1, normCTyp tT2)
@@ -2871,18 +2871,18 @@ let mctxSVarPos cD u =
       | (Comp.TypCobase (loc, a, mS), t) ->
           let mS' = cnormMetaSpine (mS, t) in
             Comp.TypCobase (loc, a, mS')
-      | (Comp.TypBox (loc, tA, cPsi), t) ->
+      | (Comp.TypBox (loc, Comp.MetaTyp(tA, cPsi)), t) ->
           let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
           let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-            Comp.TypBox(loc, tA', cPsi')
+            Comp.TypBox(loc, Comp.MetaTyp (tA', cPsi'))
 
-      | (Comp.TypParam (loc, tA, cPsi), t) ->
+      | (Comp.TypBox (loc, Comp.MetaParamTyp (tA, cPsi)), t) ->
           let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
           let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-            Comp.TypParam(loc, tA', cPsi')
+            Comp.TypBox (loc, Comp.MetaParamTyp (tA', cPsi'))
 
-      | (Comp.TypSub (loc, cPsi, cPsi'), t) ->
-          Comp.TypSub (loc, cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))
+      | (Comp.TypBox (loc, Comp.MetaSubTyp (cPsi, cPsi')), t) ->
+          Comp.TypBox (loc, Comp.MetaSubTyp (cnormDCtx(cPsi, t), cnormDCtx(cPsi', t)))
 
       | (Comp.TypArr (tT1, tT2), t)   ->
           Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
@@ -2922,15 +2922,15 @@ let mctxSVarPos cD u =
         let mS' = normMetaSpine (cnormMetaSpine (mS, t)) in
           (Comp.TypCobase (loc, c, mS'), m_id)
 
-    | (Comp.TypBox (loc, tA, cPsi), t)
+    | (Comp.TypBox (loc, Comp.MetaTyp (tA, cPsi)), t)
       ->
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
         let tA' = normTyp (cnormTyp(tA, t), LF.id) in
-          (Comp.TypBox(loc, tA', cPsi') , m_id)
+          (Comp.TypBox(loc, Comp.MetaTyp (tA', cPsi')) , m_id)
 
 
-    | (Comp.TypSub (loc, cPsi, cPsi'), t)
-      -> (Comp.TypSub(loc, cnormDCtx(cPsi, t), cnormDCtx(cPsi', t)), m_id)
+    | (Comp.TypBox (loc, Comp.MetaSubTyp (cPsi, cPsi')), t)
+      -> (Comp.TypBox(loc, Comp.MetaSubTyp (cnormDCtx(cPsi, t), cnormDCtx(cPsi', t))), m_id)
 
     | (Comp.TypArr (_tT1, _tT2), _t)   -> thetaT
 
@@ -3197,13 +3197,15 @@ let mctxSVarPos cD u =
             convMetaSpine mS1 mS2
           else false
 
-    | ((Comp.TypBox (_, tA1, cPsi1), _t1), (Comp.TypBox (_, tA2, cPsi2), _t2)) (* t1 = t2 = id *)
+    | ((Comp.TypBox (_, Comp.MetaTyp (tA1, cPsi1)), _t1),
+       (Comp.TypBox (_, Comp.MetaTyp(tA2, cPsi2)), _t2)) (* t1 = t2 = id *)
       ->
         convDCtx cPsi1 cPsi2
         &&
           convTyp (tA1, LF.id) (tA2, LF.id)
 
-    | ((Comp.TypSub (_, cPsi1, cPsi2), _t), (Comp.TypSub (_, cPsi1', cPsi2'), _t'))  (* t1 = t2 = id *)
+    | ((Comp.TypBox (_, Comp.MetaSubTyp(cPsi1, cPsi2)), _t),
+        (Comp.TypBox (_, Comp.MetaSubTyp (cPsi1', cPsi2')), _t'))  (* t1 = t2 = id *)
       -> convDCtx cPsi1 cPsi1'
         &&
           convDCtx cPsi2 cPsi2'
@@ -3400,8 +3402,8 @@ let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true
   | Comp.TypBase (_, _c, mS) -> closedMetaSpine mS
   | Comp.TypCobase (_, _c, mS) -> closedMetaSpine mS
-  | Comp.TypBox (_ , tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
-  | Comp.TypSub (_ , cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi
+  | Comp.TypBox (_ , Comp.MetaTyp (tA, cPsi)) -> closedTyp (tA, LF.id) && closedDCtx cPsi
+  | Comp.TypBox (_ , Comp.MetaSubTyp (cPhi, cPsi)) -> closedDCtx cPhi && closedDCtx cPsi
   | Comp.TypArr (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2
   | Comp.TypCross (cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2
   | Comp.TypPiBox ((ctyp_decl, _ ), cT) ->

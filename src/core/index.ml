@@ -539,6 +539,28 @@ and index_meta_spine cvars fcvars = function
       let (s', fcvars'') = index_meta_spine cvars fcvars' s in
         (Apx.Comp.MetaApp (m', s') , fcvars'')
 
+let rec index_meta_typ cvars fcvars = function
+  | Ext.Comp.MetaTyp (loc, a, psi) ->
+    begin match a with
+      | Ext.LF.Atom (_ , name, Ext.LF.Nil)
+          when (try ignore (CVar.index_of_name cvars (CVar.CV name)); true with Not_found -> false) ->
+        let offset = CVar.index_of_name cvars (CVar.CV name) in
+        let (psi', _ , fcvars1) = index_dctx cvars (BVar.create ()) fcvars psi in
+        let _ = dprint (fun () -> "Indexing TypSub -- turning TypBox into TypSub") in
+          (Apx.Comp.MetaSubTyp (loc, Apx.LF.CtxVar (Apx.LF.CtxOffset offset), psi'), fcvars1)
+      | _ ->
+        let (psi', bvars', fcvars') = index_dctx cvars (BVar.create ()) fcvars psi in
+        let (a', fcvars'' )         = index_typ cvars bvars' fcvars' a   in
+        (Apx.Comp.MetaTyp (loc, a', psi'), fcvars'')
+    end
+
+ | Ext.Comp.MetaSubTyp (loc, phi, psi)    ->
+      let (psi', _ , fcvars1 ) = index_dctx cvars (BVar.create ()) fcvars psi in
+      let (phi', _ , fcvars2 ) = index_dctx cvars (BVar.create ()) fcvars1 phi in
+        (Apx.Comp.MetaSubTyp (loc, phi', psi'), fcvars2)
+
+
+
 let rec index_compkind cvars fcvars = function
   | Ext.Comp.Ctype loc -> Apx.Comp.Ctype loc
 
@@ -569,25 +591,9 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
           raise (Error (loc, UnboundName a))
         end
       end
-  | Ext.Comp.TypBox (loc, a, psi) ->
-    begin match a with
-      | Ext.LF.Atom (_ , name, Ext.LF.Nil)
-          when (try ignore (CVar.index_of_name cvars (CVar.CV name)); true with Not_found -> false) ->
-        let offset = CVar.index_of_name cvars (CVar.CV name) in
-        let (psi', _ , fcvars1) = index_dctx cvars (BVar.create ()) fcvars psi in
-        let _ = dprint (fun () -> "Indexing TypSub -- turning TypBox into TypSub") in
-        (Apx.Comp.TypSub (loc, Apx.LF.CtxVar (Apx.LF.CtxOffset offset), psi'), fcvars1)
-      | _ ->
-        let (psi', bvars', fcvars') = index_dctx cvars (BVar.create ()) fcvars psi in
-        let (a', fcvars'' )         = index_typ cvars bvars' fcvars' a   in
-        (Apx.Comp.TypBox (loc, a', psi'), fcvars'')
-    end
-
-  | Ext.Comp.TypSub (loc, phi, psi)    ->
-      let (psi', _ , fcvars1 ) = index_dctx cvars (BVar.create ()) fcvars psi in
-      let (phi', _ , fcvars2 ) = index_dctx cvars (BVar.create ()) fcvars1 phi in
-        (Apx.Comp.TypSub (loc, phi', psi'), fcvars2)
-
+  | Ext.Comp.TypBox (loc, mU) ->
+      let (mU', fcvars') = index_meta_typ cvars fcvars mU in
+        (Apx.Comp.TypBox (loc, mU'), fcvars')
 
   | Ext.Comp.TypArr (_loc, tau, tau') ->
       let (tau1, fcvars1) = index_comptyp cvars fcvars tau in
@@ -611,8 +617,6 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
 
   | Ext.Comp.TypBool -> (Apx.Comp.TypBool, fcvars)
 
-  | Ext.Comp.TypPBox (loc, _, _) -> raise (Error (loc, IllFormedCompTyp))
-  | Ext.Comp.TypCtx (loc, _) -> raise (Error (loc, IllFormedCompTyp))
 
 let rec index_exp cvars vars fcvars = function
   | Ext.Comp.Syn (loc , i)   ->

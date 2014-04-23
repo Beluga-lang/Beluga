@@ -1,6 +1,6 @@
 INCLUDE_DIRS = src/core
 
-CFLAGS = -I,src/core,-w,Aep-27-29-37,-warn-error,Ap-37-44
+CFLAGS = -I,src/core,-w,Aep-27-29-37-44,-warn-error,Ap-37
 
 LFLAGS = -I,+camlp4,camlp4lib.cma
 

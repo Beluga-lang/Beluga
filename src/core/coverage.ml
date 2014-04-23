@@ -1168,8 +1168,8 @@ let rec refine_pattern cov_goals ( (cD, cG, candidates, patt ) as cov_problem ) 
 	 let cG'     = cnormCtx (cG, ms) in
        let candidates' = refine_candidates (cD_cg, cG', ms) (cD, cG, candidates) in
 
-       let _ =  dprint (fun () -> "[refine_candidates] DONE : There are
-			    remaining #refined candidates = " ^
+       let _ =  dprint (fun () -> "[refine_candidates] DONE : There are" ^
+                            "remaining #refined candidates = " ^
 			  string_of_int (List.length candidates')) in
        let pat' = Whnf.cnormPattern (patt, ms) in
 	 let _ = dprint (fun () -> "cG = " ^ P.gctxToString cD (gctxToCompgctx cG)) in
@@ -1889,8 +1889,7 @@ let rec check_covproblem cov_problem  =
 	(match splitCand with
 	   |  [] ->
 		let _ = dprint (fun () -> "\n\n CHECK WHETHER  " ^
-				  P.patternToString cD (gctxToCompgctx cG) cg ^"
-	                     IS COVERED?\n") in
+                                  P.patternToString cD (gctxToCompgctx cG) cg ^" IS COVERED?\n") in
                 let s_result = solve cD cD_p matchCand in
                    (match (s_result , U.unresolvedGlobalCnstrs ()) with
 		   | (Solved, false) -> (* No new splitting candidates and all match

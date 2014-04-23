@@ -66,16 +66,16 @@ let _ = Error.register_printer
 (*              (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) h *)
         | SubstTyp ->
             Format.fprintf ppf
-              "We currently only support substitution variables which either map a context
-  variable to another context variable or to an empty context."
+              "We currently only support substitution variables which either map a context\
+\n variable to another context variable or to an empty context."
         | MissingInformationCtx (_cD, _cPsi) ->
             Format.fprintf ppf
-              "The domain of the substitution cannot be inferred; please provide
-  it explicitly.\n"
+              "The domain of the substitution cannot be inferred; please provide\
+\n it explicitly.\n"
         | NotPatSub ->
           Format.fprintf ppf
-            "Substitution associated with substitution variable is not a pattern substitution;\n
-             Please provide the type of the substitution variable."
+            "Substitution associated with substitution variable is not a pattern substitution;\
+\nPlease provide the type of the substitution variable."
         | SpineLengthMisMatch ->
             Format.fprintf ppf
               "Too few or to many arguments supplied to a type family."

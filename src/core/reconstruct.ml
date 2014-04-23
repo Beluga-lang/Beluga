@@ -53,7 +53,7 @@ let _ = Error.register_printer
             Format.fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
               (P.fmt_ppr_lf_mctx Pretty.std_lvl) cD
         | PatIndexMatch (cD, cPsi, tR) ->
-            Format.fprintf ppf "Pattern matching on index argument %a fails. @@
+            Format.fprintf ppf "Pattern matching on index argument %a fails. @@\
   Note that unification is conservative and will fail if it cannot handle a case."
               (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tR
         | PatAnn     ->

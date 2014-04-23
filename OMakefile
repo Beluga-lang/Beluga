@@ -18,7 +18,7 @@ OCAMLPACKS[] =
 # 1. Pattern match failure warnings
 # 2. Profiling information in compiled code (-p)
 
-DEBUG = true
+# DEBUG = true
 
 OCAMLFLAGS += $(if $(DEBUG), -w Ae-44  -warn-error Ap-37 \
                            , -w Aep-44 -warn-error A-37)

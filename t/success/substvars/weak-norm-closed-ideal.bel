@@ -68,7 +68,7 @@ datatype RedSub : {g:ctx}{#S:g[]} ctype =
 | Nil : RedSub  [ ] [ $ ^ ]
 | Dot :     RedSub  [g] [ $ #S[^] ]  % #S : g[]
           -> Reduce [ |- M]              % A:[ |- tp], M:[ |- tm A]
-          -> RedSub [g, x:tm A] [ $ #S[^] M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[ |- .] ]
+          -> RedSub [g, x:tm A] [ $ #S[^] M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[..] ]
 ;
 
 

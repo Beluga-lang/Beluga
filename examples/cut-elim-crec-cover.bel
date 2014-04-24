@@ -53,7 +53,7 @@ fn e => case e of
 
 | [g |- assume (A .. ) (impl (D1 ..) (\h2. D2 .. h2) (H .. )) (\h. E .. h)] =>
   let [g, h2: hyp _  |-  D2' .. h2] = ca [g, h2: hyp _ |-  assume  (A ..)
-                                                           (D2 .. h2) (\h .  E .. h)] in
+                                                           (D2 .. h2) (\h  .   E .. h)] in
     [g |- impl (D1 ..) (\h2. D2' .. h2) (H ..)]
 
 | [g |- assume (A ..)  (notl (D1 ..) (H ..)) (\h. E .. h)] => [g |- notl (D1 ..) (H ..)]

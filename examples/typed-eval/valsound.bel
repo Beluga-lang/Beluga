@@ -27,11 +27,11 @@ val: exp T -> type.
 v_lam: val (lam (\x. E x)).
 
 
-rec vs : [. eval E V] -> [. val V] =
+rec vs : [ |- eval E V] -> [ |- val V] =
 fn d => case d of
 
-  [. ev_lam] => [. v_lam]
+  [ |- ev_lam] => [ |- v_lam]
 
-| [. ev_app D3 D2 D1] =>  vs [. D3]
+| [ |- ev_app D3 D2 D1] =>  vs [ |- D3]
 
 ;

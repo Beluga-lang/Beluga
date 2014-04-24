@@ -86,30 +86,30 @@ v_s    : value N -> value (succ N).
 Lemma: Value Soundness
 }%
 
-rec vsound : [. eval E V] -> [. value V] =
+rec vsound : [ |- eval E V] -> [ |- value V] =
 fn d => case d of
-| [. ev_true]   => [. v_true]
-| [. ev_false]  => [. v_false]
-| [. ev_z]      => [. v_z]
-| [. ev_succ D] =>
-  let [. V] = vsound [. D] in
-    [. v_s V]
-| [. ev_switch_true D D1] =>
-  vsound [. D1]
-| [. ev_switch_false D D2] =>
-  vsound [. D2]
-| [. ev_pred_zero _] =>
-    [. v_z]
+| [ |- ev_true]   => [ |- v_true]
+| [ |- ev_false]  => [ |- v_false]
+| [ |- ev_z]      => [ |- v_z]
+| [ |- ev_succ D] =>
+  let [ |- V] = vsound [ |- D] in
+    [ |- v_s V]
+| [ |- ev_switch_true D D1] =>
+  vsound [ |- D1]
+| [ |- ev_switch_false D D2] =>
+  vsound [ |- D2]
+| [ |- ev_pred_zero _] =>
+    [ |- v_z]
 
-| [. ev_pred_succ D] =>
-  let [. v_s V] =  vsound [. D] in
-    [. V]
+| [ |- ev_pred_succ D] =>
+  let [ |- v_s V] =  vsound [ |- D] in
+    [ |- V]
 
-| [. ev_iszero_zero _] =>
-    [. v_true]
+| [ |- ev_iszero_zero _] =>
+    [ |- v_true]
 
-| [. ev_iszero_succ D] =>
-    [. v_false]
+| [ |- ev_iszero_succ D] =>
+    [ |- v_false]
 ;
 
 
@@ -118,14 +118,14 @@ fn d => case d of
 }%
 
 
-rec vself : [. value V] -> [. eval V V] =
+rec vself : [ |- value V] -> [ |- eval V V] =
 fn v => case v of
-| [. v_true]  => [. ev_true]
-| [. v_false] => [. ev_false]
-| [. v_z]     => [. ev_z]
-| [. v_s V]   =>
-  let [. D] = vself [. V] in
-    [. ev_succ D]
+| [ |- v_true]  => [ |- ev_true]
+| [ |- v_false] => [ |- ev_false]
+| [ |- v_z]     => [ |- ev_z]
+| [ |- v_s V]   =>
+  let [ |- D] = vself [ |- V] in
+    [ |- ev_succ D]
 
 ;
 
@@ -191,12 +191,12 @@ m_ref  : mstep M M.   % Reflexive
 Admissibility of transitivity for mstep:
 }%
 
-rec m_trans : [. mstep M N'] -> [. mstep N' N] -> [. mstep M N] =
+rec m_trans : [ |- mstep M N'] -> [ |- mstep N' N] -> [ |- mstep M N] =
 fn ms1 => fn ms2 => case ms1 of
-| [. m_ref]  => ms2
-| [. m_step  S1 MS1] =>
-  let [. MS1'] = m_trans [. MS1] ms2 in
-    [. m_step S1 MS1']
+| [ |- m_ref]  => ms2
+| [ |- m_step  S1 MS1] =>
+  let [ |- MS1'] = m_trans [ |- MS1] ms2 in
+    [ |- m_step S1 MS1']
 ;
 
 
@@ -210,15 +210,15 @@ Lemma: IF multi-step T T'
 }%
 
 rec mstep_switch :
-  {T2:[. term]}{T3:[. term]}
-  [. mstep T T'] ->
-  [. mstep (switch T T2 T3) (switch T' T2 T3)] =
+  {T2:[ |- term]}{T3:[ |- term]}
+  [ |- mstep T T'] ->
+  [ |- mstep (switch T T2 T3) (switch T' T2 T3)] =
 mlam T2 => mlam T3 =>
 fn ms => case ms of
-| [. m_ref] => [. m_ref]
-| [. m_step S MS] =>
-  let [. MS'] = mstep_switch [ . T2 ] [ . T3 ] [. MS] in
-  [. m_step (s_switch S) MS']
+| [ |- m_ref] => [ |- m_ref]
+| [ |- m_step S MS] =>
+  let [ |- MS'] = mstep_switch [ |- T2 ] [ |- T3 ] [ |- MS] in
+  [ |- m_step (s_switch S) MS']
 
 ;
 
@@ -230,12 +230,12 @@ Lemma: IF multi-step T T'
 }%
 
 rec mstep_succ :
- [. mstep M M'] -> [. mstep (succ M) (succ M') ] =
+ [ |- mstep M M'] -> [ |- mstep (succ M) (succ M') ] =
 fn ms => case ms of
-| [. m_ref] => [. m_ref]
-| [. m_step S MS] =>
-  let [. MS'] = mstep_succ [. MS] in
-    [. m_step (s_succ S) MS']
+| [ |- m_ref] => [ |- m_ref]
+| [ |- m_step S MS] =>
+  let [ |- MS'] = mstep_succ [ |- MS] in
+    [ |- m_step (s_succ S) MS']
 ;
 
 
@@ -247,12 +247,12 @@ Lemma: IF multi-step T T'
 }%
 
 rec mstep_pred :
-  [. mstep M M'] -> [. mstep (pred M) (pred M')] =
+  [ |- mstep M M'] -> [ |- mstep (pred M) (pred M')] =
 fn ms => case ms of
-| [. m_ref] => [. m_ref]
-| [. m_step S MS] =>
-  let [. MS'] = mstep_pred [. MS] in
-    [. m_step (s_pred S) MS']
+| [ |- m_ref] => [ |- m_ref]
+| [ |- m_step S MS] =>
+  let [ |- MS'] = mstep_pred [ |- MS] in
+    [ |- m_step (s_pred S) MS']
 ;
 
 
@@ -264,12 +264,12 @@ Lemma: IF multi-step T T'
 }%
 
 rec mstep_iszero :
- [. mstep M M'] -> [. mstep (iszero M) (iszero M') ] =
+ [ |- mstep M M'] -> [ |- mstep (iszero M) (iszero M') ] =
 fn ms => case ms of
-| [. m_ref] => [. m_ref]
-| [. m_step S MS] =>
-  let [. MS'] = mstep_iszero [. MS] in
-    [. m_step (s_iszero S) MS']
+| [ |- m_ref] => [ |- m_ref]
+| [ |- m_step S MS] =>
+  let [ |- MS'] = mstep_iszero [ |- MS] in
+    [ |- m_step (s_iszero S) MS']
 ;
 
 
@@ -283,69 +283,69 @@ big_to_small : If eval M V then mstep M V
 
 }%
 
-rec big_to_small : [. eval M V] -> [. mstep M V] =
+rec big_to_small : [ |- eval M V] -> [ |- mstep M V] =
 fn d => case d of
-| [. ev_true]  => [. m_ref]
-| [. ev_false] => [. m_ref]
+| [ |- ev_true]  => [ |- m_ref]
+| [ |- ev_false] => [ |- m_ref]
 
-| [. ev_switch_true D D1] : [. (eval (switch M M1 M2) V)] =>
-  let [. Mtrue]  = big_to_small [. D] in
+| [ |- ev_switch_true D D1] : [ |- (eval (switch M M1 M2) V)] =>
+  let [ |- Mtrue]  = big_to_small [ |- D] in
     % Mtrue : multi_step M true
-  let [. MS]     = mstep_switch [ . M1 ] [ . M2 ] [. Mtrue ] in
+  let [ |- MS]     = mstep_switch [ |- M1 ] [ |- M2 ] [ |- Mtrue ] in
     % MS : multi_step (switch M M1 M2) (switch true M1 M2)
-  let [. MS1]    = big_to_small [. D1] in
+  let [ |- MS1]    = big_to_small [ |- D1] in
     % MS1 : multi_step  M1 V
-   m_trans [. MS] [. m_step s_switch_true MS1]
+   m_trans [ |- MS] [ |- m_step s_switch_true MS1]
 
 
- | [. ev_switch_false D D1] : [. (eval (switch M M1 M2) V)] =>
-  let [. Mfalse]  = big_to_small [. D] in
+ | [ |- ev_switch_false D D1] : [ |- (eval (switch M M1 M2) V)] =>
+  let [ |- Mfalse]  = big_to_small [ |- D] in
     % Mfalse : multi_step M false
-  let [. MS]     = mstep_switch [ . M1 ] [ . M2 ] [. Mfalse ] in
+  let [ |- MS]     = mstep_switch [ |- M1 ] [ |- M2 ] [ |- Mfalse ] in
     % MS : multi_step (switch M M1 M2) (switch false M1 M2)
-  let [. MS1]    = big_to_small [. D1] in
+  let [ |- MS1]    = big_to_small [ |- D1] in
     % MS1 : multi_step  M1 V
-    m_trans [. MS] [. m_step  s_switch_false MS1]
+    m_trans [ |- MS] [ |- m_step  s_switch_false MS1]
 
 
-| [. ev_z]        => [. m_ref]
+| [ |- ev_z]        => [ |- m_ref]
 
-| [. ev_succ D]   =>
-  let [. MS]   = big_to_small [. D] in
+| [ |- ev_succ D]   =>
+  let [ |- MS]   = big_to_small [ |- D] in
     % MS: multi_step N V
-    mstep_succ [. MS]
+    mstep_succ [ |- MS]
 
-| [. ev_pred_zero D] =>
-  let [. Mzero] = big_to_small [. D] in
+| [ |- ev_pred_zero D] =>
+  let [ |- Mzero] = big_to_small [ |- D] in
     % Mzero: multi_step M z
-  let [. MS]    = mstep_pred [. Mzero] in
+  let [ |- MS]    = mstep_pred [ |- Mzero] in
     % MS   : multi_step (pred M)  (pred z)
-    m_trans [. MS] [. m_step s_pred_zero m_ref]
+    m_trans [ |- MS] [ |- m_step s_pred_zero m_ref]
 
 
-| [. ev_pred_succ D] =>
-  let [. v_s V]     = vsound [. D] in
-  let [. Msucc] = big_to_small [. D] in
+| [ |- ev_pred_succ D] =>
+  let [ |- v_s V]     = vsound [ |- D] in
+  let [ |- Msucc] = big_to_small [ |- D] in
     % Msucc : multi_step M (succ V)
-  let [. MS]    = mstep_pred [. Msucc] in
+  let [ |- MS]    = mstep_pred [ |- Msucc] in
     % MS    : multi_step (pred M) (pred (succ V))
-    m_trans [. MS] [. m_step (s_pred_succ V)  m_ref]
+    m_trans [ |- MS] [ |- m_step (s_pred_succ V)  m_ref]
 
 
-| [. ev_iszero_zero D] =>
-  let [. Mzero] = big_to_small [. D] in
+| [ |- ev_iszero_zero D] =>
+  let [ |- Mzero] = big_to_small [ |- D] in
     % Mzero : multi_step M zero
-  let [. MS]    = mstep_iszero [. Mzero] in
+  let [ |- MS]    = mstep_iszero [ |- Mzero] in
     % MS    : multi_step (iszero M) (iszero z)
-    m_trans [. MS] [. m_step s_iszero_zero m_ref]
+    m_trans [ |- MS] [ |- m_step s_iszero_zero m_ref]
 
-| [. ev_iszero_succ D] =>
-  let [. v_s V] = vsound [. D] in
-  let [. Msucc] = big_to_small [. D] in
+| [ |- ev_iszero_succ D] =>
+  let [ |- v_s V] = vsound [ |- D] in
+  let [ |- Msucc] = big_to_small [ |- D] in
     % Msucc : multi_step M (succ V)
-  let [. MS]    = mstep_iszero [. Msucc] in
+  let [ |- MS]    = mstep_iszero [ |- Msucc] in
     % MS    : multi_step (iszero M) (iszero (succ V))
-    m_trans [. MS] [. m_step (s_iszero_succ V) m_ref]
+    m_trans [ |- MS] [ |- m_step (s_iszero_succ V) m_ref]
 
 ;
 
@@ -363,13 +363,13 @@ Values evaluate to themselves.
 }%
 
 
-rec vs : [. value V] -> [. mstep V V] =
+rec vs : [ |- value V] -> [ |- mstep V V] =
 fn v => case v of
-| [. v_true] => [. m_ref]
-| [. v_false] => [. m_ref]
-| [. v_z]     => [. m_ref]
-| [. v_s V] =>
-  let [. _]  = vs [. V] in [. m_ref]
+| [ |- v_true] => [ |- m_ref]
+| [ |- v_false] => [ |- m_ref]
+| [ |- v_z]     => [ |- m_ref]
+| [ |- v_s V] =>
+  let [ |- _]  = vs [ |- V] in [ |- m_ref]
 ;
 
 
@@ -397,25 +397,25 @@ pred_subseq_zero : mstep M z -> mstep z V
 pred_subseq_succ : mstep M (succ NV) -> value NV -> mstep NV V
 		   -> split_pred_seq M V.
 
-rec pred_lemma : [. mstep (pred M) V] -> [. value V]
-			 -> [. split_pred_seq M V] =
+rec pred_lemma : [ |- mstep (pred M) V] -> [ |- value V]
+			 -> [ |- split_pred_seq M V] =
 fn s => fn v => case s of
-| [. m_step (s_pred S) MS] =>    % MS : mstep (pred M')  V
-  (case pred_lemma [. MS] v of
-   | [. pred_subseq_zero M2zero Zero2V] =>
+| [ |- m_step (s_pred S) MS] =>    % MS : mstep (pred M')  V
+  (case pred_lemma [ |- MS] v of
+   | [ |- pred_subseq_zero M2zero Zero2V] =>
      % M2zero : mstep M' zero      and     Zero=V : eq zero V
-     [. pred_subseq_zero (m_step S M2zero) Zero2V]
+     [ |- pred_subseq_zero (m_step S M2zero) Zero2V]
 
-   | [. pred_subseq_succ M2succ NV Succ2V] =>
-     [. pred_subseq_succ (m_step S M2succ) NV Succ2V]
+   | [ |- pred_subseq_succ M2succ NV Succ2V] =>
+     [ |- pred_subseq_succ (m_step S M2succ) NV Succ2V]
      )
-| [. m_step s_pred_zero MS] =>
-    [. pred_subseq_zero m_ref MS]
+| [ |- m_step s_pred_zero MS] =>
+    [ |- pred_subseq_zero m_ref MS]
 
-| [. m_step (s_pred_succ V) MS] =>
-    [. pred_subseq_succ m_ref V MS]
+| [ |- m_step (s_pred_succ V) MS] =>
+    [ |- pred_subseq_succ m_ref V MS]
 
-| [. m_ref] => (case v of [. {}])
+| [ |- m_ref] => (case v of [ |- {}])
 ;
 
 
@@ -437,17 +437,17 @@ split_succ_seq: term -> term -> type.
 succ_subseq : mstep M V' -> value V' -> mstep (succ V') V
 		   -> split_succ_seq M V.
 
-rec succ_lemma : [. mstep (succ M) V] -> [. value V]
-			 -> [. split_succ_seq M V] =
+rec succ_lemma : [ |- mstep (succ M) V] -> [ |- value V]
+			 -> [ |- split_succ_seq M V] =
 fn ms => fn v => case ms of
-| [. m_ref] =>
-  let [. v_s V]     = v in
-  let [. Vself]     = vs [. V] in
-   [. succ_subseq Vself V m_ref]
+| [ |- m_ref] =>
+  let [ |- v_s V]     = v in
+  let [ |- Vself]     = vs [ |- V] in
+   [ |- succ_subseq Vself V m_ref]
 
-| [. m_step (s_succ S) MS] =>
-  let [. succ_subseq MS' V' Suc2V] = succ_lemma [. MS] v in
-    [. succ_subseq (m_step S MS') V' Suc2V]
+| [ |- m_step (s_succ S) MS] =>
+  let [ |- succ_subseq MS' V' Suc2V] = succ_lemma [ |- MS] v in
+    [ |- succ_subseq (m_step S MS') V' Suc2V]
 ;
 
 
@@ -474,25 +474,25 @@ iszero_subseq_zero : mstep M z -> mstep true V
 iszero_subseq_succ : mstep M (succ NV) -> value NV -> mstep false V
 		   -> split_iszero_seq M V.
 
-rec iszero_lemma : [. mstep (iszero M) V] -> [. value V]
-			 -> [. split_iszero_seq M V] =
+rec iszero_lemma : [ |- mstep (iszero M) V] -> [ |- value V]
+			 -> [ |- split_iszero_seq M V] =
 fn s => fn v => case s of
-| [. m_step (s_iszero S) MS] =>    % MS : mstep (pred M')  V
-  (case iszero_lemma [. MS] v of
-     | [. iszero_subseq_zero M2zero True2V] =>
+| [ |- m_step (s_iszero S) MS] =>    % MS : mstep (pred M')  V
+  (case iszero_lemma [ |- MS] v of
+     | [ |- iszero_subseq_zero M2zero True2V] =>
 	 % M2zero : mstep M' zero      and     true2V : mstep true V
-	 [. iszero_subseq_zero (m_step S M2zero) True2V]
+	 [ |- iszero_subseq_zero (m_step S M2zero) True2V]
 
-     | [. iszero_subseq_succ M2succ NV False2V] =>
-	 [. iszero_subseq_succ (m_step S M2succ) NV False2V]
+     | [ |- iszero_subseq_succ M2succ NV False2V] =>
+	 [ |- iszero_subseq_succ (m_step S M2succ) NV False2V]
      )
-| [. m_step s_iszero_zero MS] =>
-    [. iszero_subseq_zero m_ref MS]
+| [ |- m_step s_iszero_zero MS] =>
+    [ |- iszero_subseq_zero m_ref MS]
 
-| [. m_step (s_iszero_succ V) MS] =>
-    [. iszero_subseq_succ m_ref V MS]
+| [ |- m_step (s_iszero_succ V) MS] =>
+    [ |- iszero_subseq_succ m_ref V MS]
 
-| [. m_ref] => (case v of [. {}])
+| [ |- m_ref] => (case v of [ |- {}])
 ;
 
 
@@ -506,100 +506,100 @@ switch_subseq_false: mstep M false -> mstep M2 V
 		    -> split_switch_seq M M1 M2 V.
 
 
-rec switch_lemma : [. mstep (switch M M1 M2) V] -> [. value V]
-			 -> [. split_switch_seq M M1 M2 V] =
+rec switch_lemma : [ |- mstep (switch M M1 M2) V] -> [ |- value V]
+			 -> [ |- split_switch_seq M M1 M2 V] =
 fn s => fn v => case s of
-| [. m_step (s_switch S) MS] =>    % MS : mstep (pred M')  V
-  (case switch_lemma [. MS] v of
-     | [. switch_subseq_true M2zero M1V] =>
+| [ |- m_step (s_switch S) MS] =>    % MS : mstep (pred M')  V
+  (case switch_lemma [ |- MS] v of
+     | [ |- switch_subseq_true M2zero M1V] =>
 	 % M2zero : mstep M' zero      and     M1V : mstep M1 V
-	 [. switch_subseq_true (m_step S M2zero) M1V]
+	 [ |- switch_subseq_true (m_step S M2zero) M1V]
 
-     | [. switch_subseq_false M2succ M2V] =>
-	 [. switch_subseq_false (m_step S M2succ) M2V]
+     | [ |- switch_subseq_false M2succ M2V] =>
+	 [ |- switch_subseq_false (m_step S M2succ) M2V]
      )
-| [. m_step s_switch_true MS] =>
-    [. switch_subseq_true m_ref MS]
+| [ |- m_step s_switch_true MS] =>
+    [ |- switch_subseq_true m_ref MS]
 
-| [. m_step s_switch_false MS] =>
-    [. switch_subseq_false m_ref MS]
+| [ |- m_step s_switch_false MS] =>
+    [ |- switch_subseq_false m_ref MS]
 
-| [. m_ref] => (case v of [. {}])
+| [ |- m_ref] => (case v of [ |- {}])
 ;
 
 empty : type.
-rec values_dont_step : [. step M M'] -> [. value M ] -> [. empty]=
+rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- empty]=
 fn s => fn v => case v of
-| [. v_true]    => (case s of [ .{}] )
-| [. v_false]   => (case s of [ .{}] )
-| [. v_z] => (case s of [ .{}] )
-| [. (v_s V)] =>
-    (case s of [. s_succ D] =>
-		values_dont_step [. D] [. V])
+| [ |- v_true]    => (case s of [ |- {}] )
+| [ |- v_false]   => (case s of [ |- {}] )
+| [ |- v_z] => (case s of [ |- {}] )
+| [ |- (v_s V)] =>
+    (case s of [ |- s_succ D] =>
+		values_dont_step [ |- D] [ |- V])
 ;
 
-rec values_mstep_to_themselves: [. value V] -> [. mstep V V'] -> [. eq V V'] =
+rec values_mstep_to_themselves: [ |- value V] -> [ |- mstep V V'] -> [ |- eq V V'] =
 fn v => fn ms => case ms of
- | [. m_ref] => [. ref]
- | [. m_step S MS] => case (values_dont_step [. S] v) of [. {}]
+ | [ |- m_ref] => [ |- ref]
+ | [ |- m_step S MS] => case (values_dont_step [ |- S] v) of [ |- {}]
 ;
 
-rec small_to_big : {M:[. term]}[. mstep M V] -> [. value V] -> [. eval M V] =
-mlam M => fn ms => fn v => case [. M] of
+rec small_to_big : {M:[ |- term]}[ |- mstep M V] -> [ |- value V] -> [ |- eval M V] =
+mlam M => fn ms => fn v => case [ |- M] of
 % | [ ] z     =>  vself v
-| [. switch M M1 M2] =>
+| [ |- switch M M1 M2] =>
     (case switch_lemma  ms v of
-       | [. switch_subseq_true M2true M1V] =>
-	   let [. D]  = small_to_big [ . M  ] [. M2true] [. v_true] in
-	   let [. D1] = small_to_big [ . M1 ] [. M1V] v in
-	   [. ev_switch_true D D1]
-       | [. switch_subseq_false M2false M2V] =>
-	   let [. D]  = small_to_big [ . M  ] [. M2false] [. v_false] in
-	   let [. D2] = small_to_big [ . M2 ] [. M2V] v in
-	   [. ev_switch_false D D2]
+       | [ |- switch_subseq_true M2true M1V] =>
+	   let [ |- D]  = small_to_big [ |- M  ] [ |- M2true] [ |- v_true] in
+	   let [ |- D1] = small_to_big [ |- M1 ] [ |- M1V] v in
+	   [ |- ev_switch_true D D1]
+       | [ |- switch_subseq_false M2false M2V] =>
+	   let [ |- D]  = small_to_big [ |- M  ] [ |- M2false] [ |- v_false] in
+	   let [ |- D2] = small_to_big [ |- M2 ] [ |- M2V] v in
+	   [ |- ev_switch_false D D2]
     )
 
-| [. pred M] =>
+| [ |- pred M] =>
   (case pred_lemma ms v of
-     | [. pred_subseq_zero Mzero m_ref]  =>  % Mzero : mstep M zero
-       let [. D] = small_to_big [ . M ]  [. Mzero] [. v_z] in
-         [. ev_pred_zero D]
+     | [ |- pred_subseq_zero Mzero m_ref]  =>  % Mzero : mstep M zero
+       let [ |- D] = small_to_big [ |- M ]  [ |- Mzero] [ |- v_z] in
+         [ |- ev_pred_zero D]
 
-     | [. pred_subseq_succ Msucc NV MS]  =>   % Msuc : mstep M (succ NV)
-       let [. D] = small_to_big [ . M ] [. Msucc] [. v_s NV] in
-       let [. ref] = values_mstep_to_themselves [. NV] [. MS] in
-  	 [. ev_pred_succ D]
+     | [ |- pred_subseq_succ Msucc NV MS]  =>   % Msuc : mstep M (succ NV)
+       let [ |- D] = small_to_big [ |- M ] [ |- Msucc] [ |- v_s NV] in
+       let [ |- ref] = values_mstep_to_themselves [ |- NV] [ |- MS] in
+  	 [ |- ev_pred_succ D]
   )
 
-| [. iszero M] =>
+| [ |- iszero M] =>
   (case iszero_lemma ms v of
-     | [. iszero_subseq_zero Mzero m_ref] =>
-       let [. D] = small_to_big [ . M ] [. Mzero] [. v_z] in
-         [. ev_iszero_zero D]
-     | [. iszero_subseq_succ Msuc NV m_ref] =>
-       let [. D] = small_to_big [ . M ] [. Msuc] [. v_s NV] in
-         [. ev_iszero_succ D]
+     | [ |- iszero_subseq_zero Mzero m_ref] =>
+       let [ |- D] = small_to_big [ |- M ] [ |- Mzero] [ |- v_z] in
+         [ |- ev_iszero_zero D]
+     | [ |- iszero_subseq_succ Msuc NV m_ref] =>
+       let [ |- D] = small_to_big [ |- M ] [ |- Msuc] [ |- v_s NV] in
+         [ |- ev_iszero_succ D]
   )
 
-| [. succ M] =>
+| [ |- succ M] =>
   (case succ_lemma ms v of
-  | [. succ_subseq MS NV MS'] =>
-    let [. ref] = values_mstep_to_themselves [. v_s NV] [. MS'] in
-    let [. D]   = small_to_big [ . M ] [. MS] [. NV] in
-      [. ev_succ D]
+  | [ |- succ_subseq MS NV MS'] =>
+    let [ |- ref] = values_mstep_to_themselves [ |- v_s NV] [ |- MS'] in
+    let [ |- D]   = small_to_big [ |- M ] [ |- MS] [ |- NV] in
+      [ |- ev_succ D]
 
   )
 
-| [. true] =>
-  let [. m_ref] = ms in
+| [ |- true] =>
+  let [ |- m_ref] = ms in
     vself v
 
-| [. false] =>
-  let [. m_ref] = ms in
+| [ |- false] =>
+  let [ |- m_ref] = ms in
     vself v
 
-| [. z] =>
-  let [. m_ref] = ms in
+| [ |- z] =>
+  let [ |- m_ref] = ms in
     vself v
 
 ;

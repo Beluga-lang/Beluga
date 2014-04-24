@@ -13,8 +13,8 @@ datatype list: nat -> type =
 | cons: nat -> list I -> list (s I)
 ;
 
-datatype IsList : [.list N] -> ctype =
-IL: {L:[.list N]} IsList [.L]
+datatype IsList : [|- list N] -> ctype =
+IL: {L:[|- list N]} IsList [|- L]
 ;
 
 

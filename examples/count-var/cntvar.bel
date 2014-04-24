@@ -1,26 +1,50 @@
 % Variable counting (see Pientka [POPL'08])
 % Author:  Brigitte Pientka
 %
-% This example only uses weak higher-order abstract syntax.
+% This example only uses higher-order abstract syntax.
 
-tp  : type.   %name tp T.
-nat : tp.
-bool: tp.
+datatype tp  : type =
+| nat : tp
+| bool: tp
+;
+%name tp T.
+
+datatype Int : ctype =
+| Zero : Int
+| Suc : Int -> Int
+;
 
 exp : tp -> type.   %name exp E x.
 z   : exp nat.
 s   : exp nat -> exp nat.
-
 tt  : exp bool.
-
 add : exp nat -> exp nat -> exp nat.
 letv: {T1:tp}exp T1 -> (exp T1 -> exp T2) -> exp T2.
 %%% letv: exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
-
 schema expCtx = some [t:tp] exp t;
+schema natCtx = exp nat;
+%{ schema intCtx = int;
+schema inCtx = int + exp nat;
+schema inCtx' = block (i:int, x:exp nat) ;
+}%
+
+rec add : Int -> Int -> Int = ? ;
+
+rec count : (g:expCtx) [g. exp T] -> Int =
+fn e => case e of
+| [g. #p ..] => Zero  % variable
+| [g . z] => Zero
+| [g . s (E ..) ] => count [g. E ..]
+| [g . letv T1 (E1 ..) (\x.E2 .. x) ] =>
+  let x = count [g. E1 ..] in
+  let y = count [g, x:exp _ . E2 .. x] in
+  Suc (add x y)
+;
 
 
+
+%{
 rec plus : [. exp nat] -> [. exp nat] -> [. exp nat] =
 fn x => fn y =>
 case x of
@@ -82,3 +106,4 @@ mlam g =>
      plus (cntV [g] [g,x. (U .. x)])
           (cntV [g] [g,x. (W .. x)])
 ;
+}%

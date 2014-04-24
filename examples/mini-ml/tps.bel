@@ -14,8 +14,6 @@ letv : exp -> (exp -> exp) -> exp.  % let x = e1 in e2
 lam  : tp -> (exp -> exp) -> exp.
 app  : exp -> exp -> exp.
 
-
-
 % Evaluation
 eval : exp -> exp -> type.  %name eval F.
 ev_z : eval z z.

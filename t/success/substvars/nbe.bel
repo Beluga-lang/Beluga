@@ -30,9 +30,9 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype =
 rec sem_wkn : {g:ctx} {h:ctx}{#W:g[h]} Sem [g] [ |- A] -> Sem [h] [ |- A] =
 mlam g => mlam h => mlam #W => fn e =>
 case e of
-| Syn [g |- R ..] => Syn ([h |- R #W[ |- .]])
+| Syn [g |- R ..] => Syn ([h |- R #W[..]])
 | Slam [g] [ |- A] [ |- B] f =>
-    Slam [h] [ |- A] [ |- B] (mlam h' => mlam #W2 => fn e => f [h'] [h' $ #W[#W2[ |- .]]] e
+    Slam [h] [ |- A] [ |- B] (mlam h' => mlam #W2 => fn e => f [h'] [h' $ #W[#W2[..]]] e
     )
 ;
 
@@ -51,7 +51,7 @@ case t of
 | [g |- #p .. ]           : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p .. ])
 | [g |- lam (\x. E .. x) ] : [g |- tm (arr A B)] =>
   Slam [h] [ |- A] [ |- B] (mlam h' => mlam #W => fn e =>
-         eval (extend (mlam T => fn x => sem_wkn [h] [h'] [h' $ #W[ |- .]] (s [ |- T] x))  e)
+         eval (extend (mlam T => fn x => sem_wkn [h] [h'] [h' $ #W[..]] (s [ |- T] x))  e)
               [g,x:tm A |-  E .. x]
          )
 
@@ -67,7 +67,7 @@ case [ |- A] of
 | [ |- atomic P ] => Syn [g |- R ..]
 | [ |- arr T S ] =>  Slam [g] [ |- T] [ |- S] (mlam h => mlam #W => fn e =>
    let [h |- N ..] = reify e in
-   reflect [h |- rapp (R #W[ |- .]) (N ..)]
+   reflect [h |- rapp (R #W[..]) (N ..)]
   )
 
 and reify : Sem [g] [ |- A] -> [g |- norm A] =

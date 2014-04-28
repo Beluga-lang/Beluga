@@ -539,7 +539,7 @@ and index_meta_spine cvars fcvars = function
       let (s', fcvars'') = index_meta_spine cvars fcvars' s in
         (Apx.Comp.MetaApp (m', s') , fcvars'')
 
-let rec index_meta_typ cvars fcvars = function
+let index_meta_typ cvars fcvars = function
   | Ext.Comp.MetaTyp (loc, a, psi) ->
     begin match a with
       | Ext.LF.Atom (_ , name, Ext.LF.Nil)

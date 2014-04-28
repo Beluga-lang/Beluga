@@ -182,7 +182,7 @@ let split = { name = "split" ;
               run = (fun ppf args ->
                 Printexc.record_backtrace true;
                 try
-                  if (List.length args) < 2 then failwith "Failure in split, 2 arguments expected" else (
+                  if (List.length args) < 2 then failwith "2 arguments expected, 1 - name of the variable 2 - hole #" else (
                   let e = (List.hd args) in
                   let i = to_int (List.hd (List.tl args)) in
                   (match (Interactive.split e i) with

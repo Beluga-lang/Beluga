@@ -26,7 +26,7 @@ echo
 echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
 
 # Set $EXE to the executable to test.
-echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/beluga}
+echo -e "\t" EXE: ${EXE:=$BELUGADIR/beluga}
 
 # Test cases.
 echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t}

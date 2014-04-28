@@ -12,13 +12,13 @@ datatype tm : type =
 
 schema tctx = tm ;
 
-datatype Nlist: {g:tctx} [.nat] -> ctype =
-| Nnil : Nlist [g] [.zero]
-| Ncons: [g.tm] -> Nlist [g] [.N] -> Nlist [g] [.(succ N)]
+datatype Nlist: {g:tctx} [ |- nat] -> ctype =
+| Nnil : Nlist [g] [ |- zero]
+| Ncons: [g |- tm] -> Nlist [g] [ |- N] -> Nlist [g] [ |- (succ N)]
 ;
 
 
-rec tail: Nlist [g] [. succ M] -> Nlist [g] [. M]  =
+rec tail: Nlist [g] [ |- succ M] -> Nlist [g] [ |- M]  =
  mlam g => fn l => case l of
     | Ncons t l' => l'
 ;

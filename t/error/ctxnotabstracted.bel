@@ -6,6 +6,6 @@ datatype tm : type =
 schema tctx = tm ;
 
 %Not_found
-rec tail : [g. tm] -> [g. tm] =
+rec tail : [g |- tm] -> [g |- tm] =
     fn x => x
 ;

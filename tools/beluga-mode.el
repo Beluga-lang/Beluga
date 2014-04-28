@@ -1609,7 +1609,7 @@ to which that point should be aligned, if we were to reindent it.")
   "Indent current line using the SMIE indentation engine."
   (interactive)
   (let* ((savep (point))
-	 (indent (condition-case-no-debug nil
+         (indent (condition-case-unless-debug nil
 		     (save-excursion
                        (forward-line 0)
                        (skip-chars-forward " \t")
@@ -1665,13 +1665,14 @@ to which that point should be aligned, if we were to reindent it.")
 (defun beluga-smie-backward-token ()
   (forward-comment (- (point-max)))
   (if (and (eq ?\. (char-before))
-           (looking-at "[ \t]*$"))
-      ;; One of the LF-terminating dots.
-      (progn (forward-char -1) ";.")
+           (looking-at "[ \t]*$") ;; "[ \t]*\\(?:$\\|[0-9]\\(\\)\\)"
+           (not (looking-back "\\.\\." (- (point) 2))))
+      ;; Either an LF-terminating dot, or a projection-dot.
+      (progn (forward-char -1) ";.") ;; (if (match-end 1) ".n" ";.")
     (buffer-substring-no-properties
      (point)
      (progn (cond
-             ((looking-back beluga-smie-punct-re 2 'greedy)
+             ((looking-back beluga-smie-punct-re (- (point) 2) 'greedy)
               (goto-char (match-beginning 0)))
              ((not (zerop (skip-syntax-backward "w_'"))))
              ;; In case of non-ASCII punctuation.

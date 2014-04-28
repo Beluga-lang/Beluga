@@ -77,6 +77,7 @@ module LF = struct
     | Offset of offset
     | MInst  of Int.LF.normal * Int.LF.typ * Int.LF.dctx
     | PInst  of Int.LF.head * Int.LF.typ * Int.LF.dctx
+    | SInst  of Int.LF.sub * Int.LF.dctx * Int.LF.dctx
 
   and dctx =
     | Null
@@ -121,6 +122,8 @@ module Comp = struct
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
    | MetaParam of Loc.t * LF.psi_hat * LF.head
+   | MetaSub of Loc.t * LF.psi_hat * LF.sub
+   | MetaSubAnn of Loc.t * LF.dctx * LF.sub
 
  type meta_spine =
    | MetaNil
@@ -134,23 +137,20 @@ module Comp = struct
    | TypSub     of Loc.t * LF.dctx  * LF.dctx
    | TypArr     of typ * typ
    | TypCross   of typ * typ
-   | TypCtxPi   of (name * cid_schema * depend) * typ
-   | TypPiBox   of LF.ctyp_decl * typ
+   | TypPiBox   of (LF.ctyp_decl * depend) * typ
    | TypBool
 
   and exp_chk =
      | Syn    of Loc.t * exp_syn
      | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list         (* Cofun hd => e | tl => e' *)
-     | CtxFun of Loc.t * name * exp_chk         (* FN   f => e         *)
      | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (* (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
                                                 (* let (x,y) = i in e  *)
      | Let    of Loc.t * exp_syn * (name * exp_chk)
                                                 (* let x = i in e      *)
-     | Box    of Loc.t * LF.psi_hat * LF.normal (* box (Psi hat. M)    *)
-     | SBox   of Loc.t * LF.psi_hat * LF.sub    (* box (Psi hat. M)    *)
+     | Box    of Loc.t * meta_obj               (* box (Psi hat. M)    *)
      | Case   of Loc.t * case_pragma * exp_syn * branch list
      | If      of Loc.t * exp_syn * exp_chk * exp_chk
      | Hole   of Loc.t
@@ -162,9 +162,8 @@ module Comp = struct
      | DataDest of cid_comp_dest                            (* c              *)
      | Const  of cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
-     | CtxApp of Loc.t * exp_syn * LF.dctx                  (* i [Psi]        *)
+
      | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)
-     | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
      | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (Psi. tR)  *)
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                              (* e : tau        *)

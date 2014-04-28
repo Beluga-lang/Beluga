@@ -10,10 +10,10 @@ schema nat3 = block x:nat, y:nat, _t:nat;
 schema bool = boolean;
 
 %not
-rec loop1 : {g:nat3} [. nat] -> [. nat]
+rec loop1 : {g:nat3} [ |- nat] -> [ |- nat]
  = mlam g => fn e => loop1[g, zz:block zz1:nat, _t:nat] e;
 
-rec loop1 : {g:nat3} [. nat] -> [. nat]
+rec loop1 : {g:nat3} [ |- nat] -> [ |- nat]
  = mlam g => fn e => loop1[g, zz:block zz1:nat, zz2:nat, _t:nat] e;
 
 

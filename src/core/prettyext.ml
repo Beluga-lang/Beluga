@@ -212,8 +212,7 @@ module Ext = struct
         | LF.Name _
         | LF.Hole _
         | LF.ProjName _
-        | LF.ProjPVar _
-        | LF.SVar _ -> ms
+        | LF.ProjPVar _ -> ms
 
       in function
         | LF.Lam (_, x, m) ->
@@ -251,12 +250,12 @@ module Ext = struct
             (fmt_ppr_lf_sub  cD cPsi lvl) s
             (r_paren_if (paren s))
 
-      | LF.SVar (_, x, s) ->
-          fprintf ppf "%s%s%a%s"
-            (l_paren_if (paren s))
-            (R.render_name x)
-            (fmt_ppr_lf_sub  cD cPsi lvl) s
-            (r_paren_if (paren s))
+      (* | LF.SVar (_, x, s) -> *)
+      (*     fprintf ppf "%s%s%a%s" *)
+      (*       (l_paren_if (paren s)) *)
+      (*       (R.render_name x) *)
+      (*       (fmt_ppr_lf_sub  cD cPsi lvl) s *)
+      (*       (r_paren_if (paren s)) *)
 
       | LF.PVar (_,  x, s) ->
           fprintf ppf "%s#%s%a%s"
@@ -327,6 +326,10 @@ module Ext = struct
 
         | LF.EmptySub _ when hasCtxVar ->
             fprintf ppf ""
+        | LF.SVar (_, s, f) ->
+            fprintf ppf "#%s[%a]"
+              (R.render_name s)
+              (self lvl) f
 
 
       in
@@ -613,7 +616,7 @@ module Ext = struct
               (fmt_ppr_cmp_typ cD 0) tau2
               (r_paren_if cond)
 
-      | Comp.TypCtxPi (l, (psi, w, dep), tau) ->
+(*      | Comp.TypCtxPi (l, (psi, w, dep), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s{%s:(%s)*}@ %a%s"
               (l_paren_if cond)
@@ -621,8 +624,17 @@ module Ext = struct
               (R.render_name w)
               (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(l, psi, w))) 0) tau
               (r_paren_if cond)
+*)
+      | Comp.TypPiBox (_, (LF.CDecl (l, name, schema), Comp.Implicit), tau) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s(%s:(%s)*)@ %a%s"
+              (l_paren_if cond)
+              (R.render_name name)
+              (R.render_name schema)
+              (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(l, name, schema))) 0) tau
+              (r_paren_if cond)
 
-      | Comp.TypPiBox (_, ctyp_decl, tau) ->
+      | Comp.TypPiBox (_, (ctyp_decl, _dep), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a@ %a%s"
               (l_paren_if cond)
@@ -691,14 +703,14 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
-      | Comp.CtxFun (_, x, e) ->
+(*      | Comp.CtxFun (_, x, e) ->
           let cond = lvl > 0 in
             fprintf ppf "@[<2>%sFN %s =>@ %a%s@]"
               (l_paren_if cond)
               (R.render_name x)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond)
-
+*)
       | Comp.MLam (_, (x, Comp.MObj), e) ->
           let cond = lvl > 0 in
             fprintf ppf "%smlam %s => "
@@ -711,6 +723,15 @@ module Ext = struct
       | Comp.MLam (_, (x, Comp.PObj), e) ->
           let cond = lvl > 0 in
             fprintf ppf "%smlam # %s => "
+              (l_paren_if cond)
+              (R.render_name x);
+            fprintf ppf "%a%s"
+              (fmt_ppr_cmp_exp_chk cD 0) e
+              (r_paren_if cond);
+
+     | Comp.MLam (_, (x, Comp.SObj), e) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%smlam #%s => "
               (l_paren_if cond)
               (R.render_name x);
             fprintf ppf "%a%s"
@@ -743,30 +764,11 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond)
 
-      | Comp.Box (_ , pHat, tM) ->
+      | Comp.Box (_ , m) ->
           let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a] %a%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) tM
-              (r_paren_if cond)
-
-
-      | Comp.SBox (_ , pHat, sigma) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a] %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) sigma
-              (r_paren_if cond)
-
-      | Comp.CtxBox (_ , dctx) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s[%a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_dctx cD 0) dctx
+              (fmt_ppr_meta_obj  cD 0) m
               (r_paren_if cond)
 
       | Comp.Case (_, prag, i, bs) ->
@@ -804,14 +806,10 @@ module Ext = struct
           let (i', _ ) = strip_mapp_args' cD i in
             (Comp.Apply (loc, i', e), 0)
 
-      | Comp.CtxApp (loc, i, cPsi) ->
-          let (i', _ ) = strip_mapp_args' cD i in
-            (Comp.CtxApp (loc, i', cPsi), 0)
-
-      | Comp.MApp (loc, i1, (phat, tM) ) ->
+      | Comp.MApp (loc, i1, mO ) ->
           let (i', stripArg) = strip_mapp_args' cD i1 in
             if stripArg = 0 then
-              (Comp.MApp (loc , i', (phat, tM)), 0)
+              (Comp.MApp (loc , i', mO), 0)
             else
               (i', stripArg - 1 )
 
@@ -842,34 +840,13 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 2) e
               (r_paren_if cond)
 
-      | Comp.CtxApp (_, i, cPsi) ->
+      | Comp.MApp (_, i, mO) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ [%a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD 1) i
-              (fmt_ppr_lf_dctx cD 0) cPsi
-              (r_paren_if cond)
-
-      | Comp.MApp (_, i, (pHat, normal)) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s%a@ <%s%a. %a%s>%s"
+            fprintf ppf "%s%a@ %s%a%s%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               ("")
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) normal
-              ("")
-              (r_paren_if cond)
-
-      | Comp.MAnnApp (_, i, (cPsi, normal)) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a@ %s%a. %a%s%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD 1) i
-              ("")
-              (fmt_ppr_lf_dctx cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) normal
+              (fmt_ppr_meta_obj cD 0) mO
               ("")
               (r_paren_if cond)
 

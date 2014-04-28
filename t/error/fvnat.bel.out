@@ -1,3 +1,3 @@
 Ill-typed expression.
-    Expected type: [g. opt]
-    Inferred type: [g, x : exp (Z1 ). opt]
+    Expected type: [g |- opt]
+    Inferred type: [g, x : exp (Y1 ) |- opt]

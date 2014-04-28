@@ -1,0 +1,25 @@
+tm : type.
+i : tm.
+
+schema ctx = tm;
+
+rec f : {g:ctx}{h:ctx} {#S : g[h]} { M : [g |- tm]} [h |- tm] =
+mlam g => mlam h => mlam #S => mlam M => [h |- M #S[..] ]
+;
+
+rec f2 : {g:ctx} [ |- tm] =
+mlam g => f [x:tm] [] [ $ i ] [x:tm |-  x]
+;
+
+rec f3 : {g:ctx} [ |- tm] =
+mlam g => f [x:tm,y:tm] [] [ $ i i ] [x:tm,y:tm |-  x]
+;
+
+rec f4 : {g:ctx} [z:tm |-  tm] =
+mlam g => f [x:tm,y:tm] [z:tm] [z:tm $ i z] [x:tm,y:tm |-  x]
+;
+
+rec f5 : {g:ctx} [z:tm |-  tm] =
+mlam g => f [x:tm,y:tm] [z:tm] [z:tm $ z z] [x:tm,y:tm |-  x]
+;
+

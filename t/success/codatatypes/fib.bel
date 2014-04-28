@@ -4,14 +4,14 @@ datatype nat : type =
 ;
 
 codatatype Stream : ctype =
-| Hd : Stream -> [. nat]
+| Hd : Stream -> [ |- nat]
 | Tl : Stream -> Stream
 ;
 
-rec plus : [. nat] -> [. nat] -> [. nat] =
+rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn e => fn f => case e of
-| [. z] => f
-| [. s N] => let [. M] = f in plus [. N] [. s M]
+| [ |- z] => f
+| [ |- s N] => let [ |- M] = f in plus [ |- N] [ |- s M]
 ;
 
 rec zipwith : Stream -> Stream -> Stream =
@@ -20,8 +20,8 @@ fn e => fn f => cofun Hd => plus (Hd e) (Hd f)
 ;
 
 rec fib : Stream =
-cofun Hd => [. z]
-    | Tl Hd => [. s z]
+cofun Hd => [ |- z]
+    | Tl Hd => [ |- s z]
     | Tl Tl => zipwith fib (Tl fib)
 ;
 

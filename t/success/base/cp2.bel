@@ -9,23 +9,23 @@ suc  : term nat -> term nat.
 schema termCtx = some [t:tp] term t;
 
 
-rec fff : {g:termCtx} [g. term nat] -> [g. term nat] =
+rec fff : {g:termCtx} [g |- term nat] -> [g |- term nat] =
 mlam g => fn e =>
   case e of
-  | [g. z]     => [g. z]
+  | [g |- z]     => [g |- z]
 
-  | [g. suc (U ..)]   => [g. z]
+  | [g |- suc (U ..)]   => [g |- z]
 
-  | [g. #p ..]   => [g. z]
+  | [g |- #p ..]   => [g |- z]
 ;
 
 
-rec fffForgotParamVarCase : {g:termCtx} [g. term nat] -> [g. term nat] =
+rec fffForgotParamVarCase : {g:termCtx} [g |- term nat] -> [g |- term nat] =
 mlam g => fn e =>
   case e of %not
-  | [g. z]     => [g. z]
+  | [g |- z]     => [g |- z]
 
-  | [g. suc (U ..)]   => [g. z]
+  | [g |- suc (U ..)]   => [g |- z]
 
 %%%  | [g]  #p ..   => [g] z
 ;

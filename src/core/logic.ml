@@ -656,8 +656,11 @@ module Solver = struct
       with U.Failure _ -> ()
 
     in matchDProg dPool
+(* spineFromRevList : LF.normal list -> LF.spine
+  build an LF.spine out of a list of LF.normal, reversing the order of the elements*)
   and spineFromRevList lS =
       List.fold_left (fun tSc tMc -> LF.App(tMc, tSc)) LF.Nil lS
+
   (* solveSubGoals dPool (Psi, k) (G, s) sc = ()
      Invariants:
        dPool ~ Psi

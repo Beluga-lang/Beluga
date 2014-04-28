@@ -54,7 +54,8 @@ module Comp = struct
   type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
   type error =
-      MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
+    | IllegalParamTyp of I.mctx * I.dctx * I.typ
+    | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
     | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
     | CtxFunMismatch  of I.mctx * gctx  * tclo
@@ -91,10 +92,14 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
-        | UnsolvableConstraints (f,cnstrs) ->
+          | IllegalParamTyp (cD, cPsi, tA) ->
             Format.fprintf ppf
-            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables. \n
-The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
+              "Parameter type %a is illegal."
+              (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp (tA, Substitution.LF.id))
+          | UnsolvableConstraints (f,cnstrs) ->
+            Format.fprintf ppf
+            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables.\
+\nThe constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
               cnstrs (R.render_name f)
           | CtxHatMismatch (cD, cPsi, phat, cM) ->
           let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
@@ -209,15 +214,23 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
               "Expected type" Format.pp_print_string                "base type"
               "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau)
 
-          | AppMismatch (cD, (MetaTyp (tP, cPsi), tau)) ->
+          | AppMismatch (cD, (MetaTyp (tP, cPsi), theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tP, cPsi), tau))
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tP, cPsi), theta))
 
-          | MAppMismatch (cD, (MetaTyp (tA, cPsi), tau)) ->
+          | MAppMismatch (cD, (MetaTyp (tA, cPsi), theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), tau))
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), theta))
+
+          | MAppMismatch (cD, (MetaSubTyp (cPhi, cPsi), theta)) ->
+              let cPhi', cPsi'  = Whnf.cnormDCtx (cPhi, theta) , Whnf.cnormDCtx  (cPsi, theta) in
+              let cdec = I.SDecl(Id.mk_name (Id.SVarName None), cPhi', cPsi') in
+            Format.fprintf ppf
+              "Expected contextual substitution object of type %a."
+              (P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl)
+              cdec
 
           | MAppMismatch (cD, (MetaSchema cid_schema, tau)) ->
             Format.fprintf ppf
@@ -241,6 +254,31 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
 
+let checkParamTypeValid cD cPsi tA =
+  let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
+  | Syntax.Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA))) *)
+  | Syntax.Int.LF.CtxVar psi ->
+     (* tA is an instance of a schema block *)
+      let Syntax.Int.LF.Schema s_elems =
+	Schema.get_schema (Context.lookupCtxVarSchema cD psi) in
+      begin try
+        let _ = LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems in ()
+        with _ -> raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA)))
+      end
+
+  | Syntax.Int.LF.DDec (cPsi0', Syntax.Int.LF.TypDecl (x, tB)) ->
+     (* tA is instance of tB *)
+    let tB' = Syntax.Int.LF.TClo(tB, Syntax.Int.LF.Shift (Syntax.Int.LF.NoCtxShift, n)) in
+    let ms  = Ctxsub.mctxToMSub cD in
+    let tB0 = Whnf.cnormTyp (tB', ms) in
+    begin try Unify.unifyTyp cD cPsi (tA, Substitution.LF.id) (tB0, Substitution.LF.id) with
+      | _ ->  checkParamTypeValid' (cPsi0', n+1)
+    end
+  in
+  checkParamTypeValid' (cPsi , 1)
+
+
+
   let rec checkMetaObj loc cD cM cTt = match  (cM, cTt) with
   | (MetaCtx (loc, cPsi), (MetaSchema  w, _)) ->
       LF.checkSchema loc cD cPsi (Schema.get_schema w)
@@ -255,7 +293,17 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
   | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->
       LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
 
-  | (MetaParam (loc, _phat, h), (MetaTyp (tA, cPsi), t)) ->
+  | (MetaSObj (loc, phat, tM), (MetaSubTyp (tA, cPsi), t)) ->
+      let cPsi' = C.cnormDCtx (cPsi, t) in
+      if phat = Context.dctxToHat cPsi' then
+        LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
+      else
+        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
+
+  | (MetaSObjAnn (loc, _cPhi, tM), (MetaSubTyp (tA, cPsi), t)) ->
+      LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) tM (C.cnormDCtx (tA, t))
+
+  | (MetaParam (loc, _phat, h), (MetaParamTyp (tA, cPsi), t)) ->
       let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
       let tA  = C.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
@@ -278,6 +326,16 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             let MetaObj (loc, psihat, tM) = mO in
               checkMetaObj loc cD mO (MetaTyp (tA, cPsi), t) ;
               checkMetaSpine loc cD mS (cK, I.MDot (I.MObj(psihat, tM), t))
+
+        | I.PDecl (_u, tA, cPsi) ->
+            let MetaParam (loc, psihat, tM) = mO in
+              checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), t) ;
+              checkMetaSpine loc cD mS (cK, I.MDot (I.PObj(psihat, tM), t))
+
+        | I.SDecl (_u, cPhi, cPsi) ->
+            let MetaSObj (loc, psihat, tM) = mO in
+              checkMetaObj loc cD mO (MetaSubTyp (cPhi, cPsi), t) ;
+              checkMetaSpine loc cD mS (cK, I.MDot (I.SObj(psihat, tM), t))
     end
 
 
@@ -292,7 +350,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         LF.checkTyp  cD cPsi (tA, S.LF.id)
     | I.PDecl (_, tA, cPsi) ->
         LF.checkDCtx cD cPsi;
-        LF.checkTyp  cD cPsi (tA, S.LF.id)
+        LF.checkTyp  cD cPsi (tA, S.LF.id);
+        checkParamTypeValid cD cPsi tA
 
     | _ -> ()
 
@@ -330,10 +389,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         checkTyp cD tau1;
         checkTyp cD tau2
 
-    | TypCtxPi ((psi_name, schema_cid, dep ), tau) ->
-        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        checkTyp (I.Dec (cD, I.CDecl (psi_name, schema_cid, dep'))) tau
-
     | TypPiBox ((cdecl, _), tau') ->
         dprint (fun () -> "[checkCompTyp] " ^
                   P.mctxToString cD ^ " |- " ^
@@ -348,6 +403,16 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 ;;
 
+let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
+  | I.CDecl(_psi, schema,_ ) ->
+      let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
+        I.Dec(cD, I.CDecl(x, schema, dep'))
+  | I.MDecl(_u, tA, cPsi) ->
+      I.Dec(cD, I.MDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t)))
+  | I.PDecl(_u, tA, cPsi) ->
+      I.Dec(cD, I.PDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t)))
+  | I.SDecl (_s, cPhi, cPsi) ->
+      I.Dec(cD, I.SDecl(x, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t)))
 
   (* check cD cG e (tau, theta) = ()
    *
@@ -375,21 +440,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
            in check cD cG e' ttau'
          in let _ = List.map f bs in ()
 
-    | (CtxFun (_, psi, e), (TypCtxPi ((_psi, schema, dep ), tau), t)) ->
-        let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        check (I.Dec(cD, I.CDecl(psi, schema, dep')))
-          (C.cnormCtx (cG, I.MShift 1)) e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.MDecl(_u, tA, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.MDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
-          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.PDecl(_u, tA, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.PDecl(u, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t))))
-          (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, e), (TypPiBox ((I.SDecl(_u, cPhi, cPsi), _), tau), t)) ->
-        check (I.Dec(cD, I.SDecl(u, C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t))))
+    | (MLam (_, u, e), (TypPiBox (cdec, tau), t)) ->
+        check (extend_mctx cD (u, cdec, t))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->
@@ -409,12 +461,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
         end
 
-    | (Box (_, _phat, tM), (TypBox (_, tA, cPsi), t)) ->
+    | (Box (_, MetaObj (_ , _phat, tM)), (TypBox (_, tA, cPsi), t)) ->
         begin try
-(*        Already done during cwhnfCTyp ... -bp
-          let cPsi' = C.cnormDCtx (cPsi, t) in
-          let tA'   = C.cnormTyp (tA, t) in
-*)
         let _ = dprint (fun () -> "[comp check ] " ^
 	  P.mctxToString cD ^ " ; " ^
 	  P.dctxToString cD cPsi ^ " |- " ^
@@ -425,14 +473,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
-    | (SBox (loc , _phat, sigma), (TypSub (_, cPhi, cPsi), t)) ->
-        begin try
-            LF.checkSub loc cD  cPsi sigma cPhi
-        with Whnf.FreeMVar (I.FMVar (u, _ )) ->
-          raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
-        end
-
-    | (Case (loc, prag, Ann (Box (_, phat, tR), TypBox (_, tA', cPsi')),
+    | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)), TypBox (_, tA', cPsi')),
              branches), (tau, t)) ->
         let (tau_sc, projOpt) =  (match tR with
                    | I.Root (_, I.PVar _ , _ ) ->
@@ -450,8 +491,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
         begin match C.cwhnfCTyp (syn cD cG i) with
-          | (TypBox (loc, tA, cPsi),  t') ->
-              let tau_s = TypBox (loc, C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in
+          | (TypBox (loc', tA, cPsi),  t') ->
+              let tau_s = TypBox (loc', C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in
               let _ = dprint (fun () -> "[check] Case - Scrutinee " ^
                                 P.expSynToString cD cG i ^
                                 "\n   has type " ^ P.compTypToString cD tau_s)
@@ -505,8 +546,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         begin match C.cwhnfCTyp (syn cD cG e1) with
           | (TypArr (tau2, tau), t) ->
               dprint (fun () -> "[SYN: APPLY ] synthesized type  " ^
-                          P.compTypToString cD (Whnf.cnormCTyp (TypArr (tau2,
-        tau), t) ));
+                     P.compTypToString cD (Whnf.cnormCTyp (TypArr (tau2, tau), t) ));
               dprint (fun () -> ("[check: APPLY] argument has appropriate type " ^
                                        P.expChkToString cD cG e2));
               dprint (fun () -> "[check: APPLY] cG " ^ P.gctxToString cD cG );
@@ -516,27 +556,19 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
               raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
         end
 
-    | CtxApp (loc, e, cPsi) ->
-        begin match C.cwhnfCTyp (syn cD cG e) with
-          | ((TypCtxPi ((_psi, w, _ ) , tau), t) as tt) ->
+    | MApp (loc, e, mC) ->
+        begin match (mC, C.cwhnfCTyp (syn cD cG e)) with
+          | (MetaCtx (loc, cPsi), (TypPiBox ((I.CDecl (_ , w, _ ), _ ), tau), t)) ->
               let theta' = I.MDot (I.CObj (cPsi), t) in
               LF.checkSchema loc cD cPsi (Schema.get_schema w);
-              (dprint (fun () -> "[check: syn] CtxApp : tau = " ^
-                         P.compTypToString cD (Whnf.cnormCTyp tt) );
-               dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
+              (dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
                dprint (fun () -> "[check: syn] tau1 = " ^
                           P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ;
                  (tau, theta')
-          | (tau, t) ->
-              raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
-        end
-    | MApp (loc, e, (phat, cObj)) ->
-        begin match (cObj, C.cwhnfCTyp (syn cD cG e)) with
-          | (NormObj tM, (TypPiBox ((I.MDecl(_, tA, cPsi), _ ), tau), t)) ->
-              LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id);
-              (tau, I.MDot(I.MObj (phat, tM), t))
-
-          | (NeutObj h, (TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
+          | (MetaObj (loc, psihat, tM) , (TypPiBox ((I.MDecl (_u, tA, cPsi), _ ), tau), t)) ->
+              checkMetaObj loc cD mC (MetaTyp (tA, cPsi), t) ;
+              (tau, I.MDot(I.MObj (psihat, tM), t))
+          | (MetaParam(_, phat, h), (TypPiBox ((I.PDecl(_, tA, cPsi), _ ), tau), t)) ->
               let _ =  dprint (fun () -> "[check: inferHead] cPsi = " ^
                                  P.dctxToString cD (C.cnormDCtx (cPsi,t) )) in
               let tB = LF.inferHead loc cD (C.cnormDCtx (cPsi,t)) h in
@@ -544,7 +576,11 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
                   (tau, I.MDot(I.PObj (phat, h), t))
                 else
                   raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-
+          | (MetaSObj(_, phat, s), (TypPiBox ((I.SDecl(_, tA, cPsi), _ ), tau), t)) ->
+              LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
+              (tau, I.MDot(I.SObj (phat, s), t))
+          | ( _ , ((TypPiBox ((I.CDecl _ , _ ), _ )) as tau, t) ) ->
+              raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
           | (_ , (tau, t)) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end
@@ -616,6 +652,12 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
     | pat ->
         let (loc, ttau') = synPattern cD cG pat in
+        let tau' = Whnf.cnormCTyp ttau' in
+        let tau = Whnf.cnormCTyp ttau in
+        let ttau' = (tau', Whnf.m_id) in
+        let ttau = (tau, Whnf.m_id) in
+        let _ = dprint (fun () -> "\n Checking conv: " ^ P.compTypToString cD tau
+        ^ "\n == " ^ P.compTypToString cD tau' ^ "\n") in
           if C.convCTyp ttau ttau' then ()
           else
             raise (Error (loc, PatIllTyped (cD, cG, pat, ttau, ttau')))
@@ -641,9 +683,6 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         | (TypPiBox ((cdecl, _), tau), theta) ->
           let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
           synPatSpine cD cG pat_spine (tau, theta')
-        | (TypCtxPi ((x, w, dep), tau), theta) ->
-          let theta' =  checkPatAgainstCDecl cD pat (I.CDecl(x,w, I.No), theta) in
-          synPatSpine cD cG pat_spine (tau, theta')
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
@@ -654,9 +693,15 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
             | MetaObjAnn (_, cPsi, tM) -> I.MDot (I.MObj(Context.dctxToHat cPsi, tM), theta)
           )
     | I.PDecl (_, tA, cPsi) ->
-        let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in
+        let _ = checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), theta) in
           (match mO with
             | MetaParam (_, phat, h) ->  I.MDot(I.PObj(phat, h), theta)
+          )
+    | I.SDecl (_, cPhi, cPsi) ->
+        let _ = checkMetaObj loc cD mO (MetaSubTyp (cPhi, cPsi), theta) in
+          (match mO with
+            | MetaSObj (_, phat, s) ->  I.MDot(I.SObj(phat, s), theta)
+            | MetaSObjAnn (_, cPsi, s) -> I.MDot (I.SObj(Context.dctxToHat cPsi, s), theta)
           )
     | I.CDecl (_, w, _ ) ->
         let _ = checkMetaObj loc cD mO (MetaSchema w, theta) in

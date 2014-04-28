@@ -1,0 +1,454 @@
+% Completeness of algorithmic equality for declarative equality for simply typed lambda calculus
+% Accompanies Mechanizing Logical Relations using Contextual Type Theory
+% by Andrew Cave and Brigitte Pientka
+
+tp : type.         %name tp T.
+i :  tp.
+arr: tp -> tp -> tp.
+
+tm : type.          %name tm E.
+app : tm -> tm -> tm.
+lam : (tm -> tm) -> tm.
+
+oft : tm -> tp -> type.
+of/app : oft M (arr T S) -> oft N T -> oft (app M N) S.
+of/lam : ({x:tm} oft x T -> oft (M x) S) -> oft (lam M) (arr T S).
+
+schema ctx = tm;
+schema tctx = some [t:tp] block x:tm,y:oft x t;
+
+step : tm -> tm -> type.  %name step S.
+beta : step (app (lam M) N) (M N).
+stepapp : step M M' -> step (app M N) (app M' N).
+
+mstep : tm -> tm -> type.  %name mstep S.
+refl : mstep M M.
+trans1 : step M M' -> mstep M' M'' -> mstep M M''.
+
+datatype CtxRel : {g:tctx}{g':ctx} ctype =
+| RNil : CtxRel [] []
+| RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
+
+datatype Lookup : {g:tctx}(g':ctx) [g' |-  tm] -> [ |- tp] -> ctype =
+| Top : Lookup [g,b:block x:tm,y:oft x T] [g',x:tm |-  x] [ |- T]
+| Pop : Lookup [g] [g' |-  #p ..] [ |- T]
+      -> Lookup [g,b:block x:tm,y:oft x S] [g',x:tm |-  #p ..] [ |- T];
+
+% Generalize Pop to all terms for convenience
+rec pop' : Lookup [g] [g' |-  M ..] [ |- T]
+         -> Lookup [g,b:block x:tm,y:oft x S] [g',x:tm |-  M ..] [ |- T] =
+fn r => case r of
+| Top => Pop Top
+| Pop v => Pop (Pop v);
+
+% Algorithmic equality of terms. _|-_<=>_:_ in the paper
+datatype AlgEqN : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+| AlgBase : [g' |-  mstep (M ..) (P ..)]
+          -> [g' |-  mstep (N ..) (Q ..)]
+          -> AlgEqR [g] [g' |-  P ..] [g' |-  Q ..] [ |- i]
+          -> AlgEqN [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
+| AlgArr :  AlgEqN [g,b:block x:tm,d:oft x T] [g',x:tm |-  app (M ..) x] [g',x |-  app (N ..) x] [ |- S]
+          -> AlgEqN [g] [g' |-  (M ..)] [g' |-  (N ..)] [ |- arr T S]
+% Algorithmic equality of paths. _|-_<->_:_ in the paper
+and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+| AlgVar : Lookup [g] [g' |-  #p ..] [ |- T]
+         -> AlgEqR [g] [g' |-  #p ..] [g' |-  #p ..] [ |- T]
+| AlgApp : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- arr T S]
+         -> AlgEqN [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
+         -> AlgEqR [g] [g' |-  app (M1 ..) (N1 ..)] [g' |-  app (M2 ..) (N2 ..)] [ |- S]
+;
+
+% Well-typed variable-for-variable substitutions (renaming substitutions). _|-v_:_ in the paper
+datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: g'[h']}ctype =
+| Nil : IsVarSub [] [] [h] [h' $ ^ ]
+| Cons :  IsVarSub [g] [g'] [h] [h' $ #S[..]] -> Lookup [h] [h' |-  M ..] [ |- A]
+         -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h] [h' $ #S[..] (M ..)];
+
+% Logical equivalence. _|-_~~_:_ in the paper
+datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype =
+| LogBase : AlgEqN [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
+          -> LogEq [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
+| LogArr  : {M1:[g' |- tm]}{M2:[g' |- tm]}
+             ({h:tctx}{h':ctx} {#R:g'[h']} {N1:[h' |- tm]}{N2:[h' |- tm]}
+                CtxRel [h] [h'] ->
+                IsVarSub [g] [g'] [h] [h' $ #R[..]] ->
+                LogEq [h] [h' |-  N1 ..] [h' |-  N2 ..] [ |- T]
+              -> LogEq [h] [h' |-  app (M1 #R[..]) (N1 ..)] [h' |-  app (M2 #R[..]) (N2 ..)] [ |- S])
+            -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- arr T S]
+;
+
+
+
+% Half a dozen straightforward constructions on renaming substitutions:
+rec wknVar : Lookup [g] [g' |-  M ..] [ |- A] -> IsVarSub [g] [g'] [h] [h' $ #W[..]]
+ -> Lookup [h] [h' |-  M #W[..]] [ |- A]=
+fn iv => fn ivs => case iv of
+| Top =>    let Cons ivs' iv = ivs in iv
+| Pop iv' => let Cons ivs' iv = ivs in wknVar iv' ivs';
+
+% Composition of renaming is still renaming
+rec renCompose : IsVarSub [g] [g'] [h] [h' $ #W[..]]
+                   -> IsVarSub [h] [h'] [h0] [h0' $ #W2[..]]
+                   -> IsVarSub [g] [g'] [h0] [h0' $ #W[#W2[..]]] =
+fn r1 => fn r2 => case r1 of
+| Nil => Nil
+| Cons ivs' iv => Cons (renCompose ivs' r2) (wknVar iv r2);
+
+% Weakening a renaming is still a renaming
+rec wknVarSub : IsVarSub [g] [g'] [h] [h' $ #S[..]]
+ -> IsVarSub [g] [g'] [h,b:block x:tm,y:oft x T] [h',x:tm $ #S[..] ] =
+fn r => case r of
+| Nil => Nil
+| Cons r' v => Cons (wknVarSub r') (pop' v);
+
+% Extending a renaming with a fresh variable is still a renaming
+rec extVarSub : IsVarSub [g] [g'] [h] [h' $ #S[..]]
+ -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h,b:block x:tm,y:oft x A] [h',x:tm $ #S[..] x ] =
+fn r => let r : IsVarSub [g] [g'] [h] [h' $ #S[..]] = r in Cons (wknVarSub r) Top;
+
+% The identity substitution is a renaming
+rec idIsVarSub : CtxRel [g] [g'] -> IsVarSub [g] [g'] [g] [g' $ .. ] =
+fn r => case r of
+| RNil => Nil
+| RCons r' => extVarSub (idIsVarSub r');
+
+% The shift substitution (weakening substitution) is a renaming
+rec shiftIsRen : CtxRel [g] [g'] -> IsVarSub [g] [g'] [g,b:block x:tm,y:oft x A] [g',x:tm $ .. ] =
+fn r => wknVarSub (idIsVarSub r);
+
+% Generalizing AlgVar to terms
+rec algVar : Lookup [g] [g' |-  M ..] [ |- T] -> AlgEqR [g] [g' |-  M ..] [g' |-  M ..] [ |- T] =
+fn iv => case iv of
+| Top => AlgVar Top
+| Pop iv' => let AlgVar v = algVar iv' in AlgVar (Pop v);
+
+% Monotonicity of algorithmic equivalence
+rec algEqR_Monotone :   IsVarSub [g] [g'] [h] [h' $ #W[..]]
+                      -> AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A]
+                      -> AlgEqR [h] [h' |-  M1 #W[..]] [h' |-  M2 #W[..]] [ |- A] =
+fn iv => fn r => case r of
+| AlgVar v => algVar (wknVar v iv)
+| AlgApp r' n' => AlgApp (algEqR_Monotone iv r') (algEqN_Monotone iv n')
+and algEqN_Monotone : IsVarSub [g] [g'] [h] [h' $ #W[..]]
+                    -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A]
+                    -> AlgEqN [h] [h' |-  M1 #W[..]] [h' |-  M2 #W[..]] [ |- A] =
+fn iv => let iv : IsVarSub [h] [g'] [h] [h' $ #W[..]] = iv in fn r => case r of
+| AlgBase [g' |-  S1 ..] [g' |-  S2 ..] r' => AlgBase [h' |-  S1 #W[..]] [h' |-  S2 #W[..]] (algEqR_Monotone iv r')
+| AlgArr r'' => AlgArr (algEqN_Monotone (extVarSub iv) r'')
+;
+
+% Monotonicity of logical equivalence
+rec logEq_Monotone : IsVarSub [g] [g'] [h] [h' $ #W[..]]
+                   -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A]
+                   -> LogEq [h] [h' |-  M1 #W[..]] [h' |-  M2 #W[..]] [ |- A] =
+fn iv => let iv : IsVarSub [g] [g'] [h] [h' $ #W[..]] = iv in fn e => case e of
+| LogBase v => LogBase (algEqN_Monotone iv v)
+| LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
+  LogArr [h' |-  M1 #W[..]] [h' |-  M2 #W[..]]
+   (mlam h0 => mlam h0' => mlam #W2 => mlam N1 => mlam N2 => fn rh => fn iv' => fn rn =>
+    f [h0] [h0'] [h0' $ #W[#W2[..]]] [h0' |-  N1 ..] [h0' |-  N2 ..] rh (renCompose iv iv') rn
+   )
+;
+
+% Main lemma to escape logical relation
+rec reflect : {A:[ |- tp]} AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] =
+mlam A => fn r => let r : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = r in case [ |- A] of
+| [ |- i] => LogBase (AlgBase [g' |-  refl] [g' |-  refl] r)
+| [ |- arr A B] =>
+  LogArr [g' |-  M1 ..] [g' |-  M2 ..]
+   (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+    reflect [ |- B] (AlgApp (algEqR_Monotone iv r) (reify rh rn))
+   )
+and reify : CtxRel [g] [g'] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] =
+fn r => fn e => let e : LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = e in case e of
+| LogBase a => a
+| LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
+  AlgArr (reify (RCons r) (f [g,b:block x:tm,y:oft x _] [g',x:tm] [g',x $ ..] [g',x |-  x] [g',x |-  x]
+                (RCons r) (shiftIsRen r) (reflect [ |- _] (AlgVar Top))))
+;
+
+% Declarative equality. Written _|-_=_:_ in the paper
+datatype DecEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+| DecBeta : DecEq [g,b:block x:tm,d:oft x T] [g',x:tm |-  M2 .. x] [g',x |-  N2 .. x] [ |- S]
+          -> DecEq [g] [g' |-  M1 ..] [g' |-  N1 ..] [ |- T]
+          -> DecEq [g] [g' |-  (app (lam (\x. M2 .. x)) (M1 ..))] [g' |-  N2 .. (N1 ..)] [ |- S]
+| DecLam :  DecEq [g,b:block x:tm,d:oft x T] [g',x:tm |-  M .. x] [g',x |-  N .. x] [ |- S]
+          -> DecEq [g] [g' |-  lam (\x. M .. x)] [g' |-  lam (\x. N .. x)] [ |- arr T S]
+| DecExt :  DecEq [g,b:block x:tm,d:oft x T] [g',x:tm |-  app (M ..) x] [g',x |-  app (N ..) x] [ |- S]
+          -> DecEq [g] [g' |-  (M ..)] [g' |-  (N ..)] [ |- arr T S]
+| DecVar : Lookup [g] [g' |-  #p ..] [ |- T]
+         -> DecEq [g] [g' |-  #p ..] [g' |-  #p ..] [ |- T]
+| DecApp : DecEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- arr T S]
+         -> DecEq [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
+         -> DecEq [g] [g' |-  app (M1 ..) (N1 ..)] [g' |-  app (M2 ..) (N2 ..)] [ |- S]
+| DecSym : DecEq [g] [g' |-  M ..] [g' |-  N ..] [ |- T]
+         -> DecEq [g] [g' |-  N ..] [g' |-  M ..] [ |- T]
+| DecTrans : DecEq [g] [g' |-  M ..] [g' |-  N ..] [ |- T]
+           -> DecEq [g] [g' |-  N ..] [g' |-  O ..] [ |- T]
+           -> DecEq [g] [g' |-  M ..] [g' |-  O ..] [ |- T]
+;
+
+% Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
+datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:g'[h']}{#S2:g'[h']} ctype =
+| Nil : LogEqSub [] [] [h] [h' $ ^] [h' $ ^]
+| Dot : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] -> LogEq [h] [h' |-  M1 ..] [h' |-  M2 ..] [ |- T]
+      -> LogEqSub [g,b:block x:tm,d:oft x T] [g',x:tm] [h] [h' $ #S1[..] (M1 ..)] [h' $ #S2[..] (M2 ..)]
+;
+
+% Monotonicity of logical equivalence on substitutions
+rec wknLogEqSub :
+  IsVarSub [h] [h'] [h0] [h0' $ #W[..]]
+-> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+-> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] =
+fn iv => fn es => case es of
+| Nil => Nil
+| Dot rs' rN => Dot (wknLogEqSub iv rs') (logEq_Monotone iv rN)
+;
+
+% Transitivity of mstep
+rec mstep_trans : (g':ctx) [g' |-  mstep (M ..) (N ..)] -> [g' |-  mstep (N ..) (P ..)] -> [g' |-  mstep (M ..) (P ..)] =
+fn s1 => fn s2 => case s1 of
+| [g' |-  refl] => let [g' |-  S2 ..] = s2 in [g' |-  S2 ..]
+| [g' |-  trans1 (S1 ..) (MS1 ..)] => let [g' |-  MSR ..] = mstep_trans [g' |-  MS1 ..] s2 in
+  [g' |-  trans1 (S1 ..) (MSR ..)]
+;
+
+% Boxed form of trans1 for convenience
+rec trans1' : (g':ctx) [g' |-  step (M ..) (N ..)] -> [g' |-  mstep (N ..) (P ..)] -> [g' |-  mstep (M ..) (P ..)] =
+fn s1 => fn s2 => case (s1,s2) of
+| ([g' |-  S ..], [g' |-  MS ..]) => [g' |-  trans1 (S ..) (MS ..)]
+;
+
+% multi-step reduction under the function position of application
+rec mstep_app : (g':ctx) [g' |-  mstep (M ..) (N ..)] -> [g' |-  mstep (app (M ..) (P ..)) (app (N ..) (P ..))] =
+fn s1 => case s1 of
+| [g' |-  refl] => [g' |-  refl]
+| [g' |-  trans1 (S ..) (MS ..)] => trans1' [g' |-  stepapp (S ..)] (mstep_app [g' |-  MS ..]);
+
+% Logical equality is backward closed under weak head reduction
+rec closed : [g' |-  mstep (N1 ..) (M1 ..)] -> [g' |-  mstep (N2 ..) (M2 ..)]
+  -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
+  -> LogEq [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T] =
+fn s1 => fn s2 => fn e => case e of
+| LogBase (AlgBase [g' |-  S1' ..] [g' |-  S2' ..] a) =>
+  LogBase (AlgBase (mstep_trans s1 [g' |-  S1' ..]) (mstep_trans s2 [g' |-  S2' ..]) a)
+| LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
+  let [g' |-  S1 ..] = s1 in
+  let [g' |-  S2 ..] = s2 in
+  LogArr [g' |-  _] [g' |-  _] (mlam h => mlam h' => mlam #W => mlam P1 => mlam P2 => fn rh => fn iv => fn rp =>
+   let q0 = f [h] [h'] [h' $ #W[..]] [h' |-  P1 ..] [h' |-  P2 ..] rh iv rp in
+   closed (mstep_app [h' |-  S1 #W[..]] ) (mstep_app [h' |-  S2 #W[..]]) q0
+  );
+
+% Looking up a variable in logically equivalence substitutions gives a logical equivalence
+rec lookup : Lookup [g] [g' |-  M1 ..] [ |- T]
+ -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+ -> LogEq [h] [h' |-  M1 #S1[..]] [h' |-  M1 #S2[..]] [ |- T] =
+fn v => fn s => case v of
+| Top =>    let Dot s' e = s in e
+| Pop v' => let Dot s' e = s in lookup v' s'
+;
+
+% Symmetry of algorithmic equivalence
+rec algEqRSym :
+  AlgEqR [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
+-> AlgEqR [g] [g' |-  N2 ..] [g' |-  N1 ..] [ |- T] =
+fn a => case a of
+| AlgVar v => AlgVar v
+| AlgApp a1 a2 => AlgApp (algEqRSym a1) (algEqNSym a2)
+and algEqNSym :
+  AlgEqN [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
+-> AlgEqN [g] [g' |-  N2 ..] [g' |-  N1 ..] [ |- T] =
+fn a => case a of
+| AlgBase s1 s2 a' => AlgBase s2 s1 (algEqRSym a')
+| AlgArr a' => AlgArr (algEqNSym a')
+;
+
+% Symmetry of logical equivalence
+rec logEqSym :
+   LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
+ -> LogEq [g] [g' |-  M2 ..] [g' |-  M1 ..] [ |- T] =
+fn e => case e of
+| LogBase a => LogBase (algEqNSym a)
+| LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
+  LogArr [g' |-  M2 ..] [g' |-  M1 ..] (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+   logEqSym (f [h] [h'] [h' $ #W[..]] [h' |-  N2 ..] [h' |-  N1 ..] rh iv (logEqSym rn))
+  );
+
+% Symmetry of logical equivalence on substitutions
+rec logEqSubSym :
+   LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+ -> LogEqSub [g] [g'] [h] [h' $ #S2[..]] [h' $ #S1[..]] =
+fn e => case e of
+| Nil => Nil
+| Dot e' e1 => Dot (logEqSubSym e') (logEqSym e1);
+
+% Several of the following lemmas are to establish transitivity of algorithmic equivalenc
+
+% Equality on types
+datatype EqTp : [ |- tp] -> [ |- tp] -> ctype =
+| ReflTp : EqTp [ |- T] [ |- T];
+
+% Lookup produces unique types
+rec varEqUnique :
+  Lookup [g] [g' |-  M ..] [ |- T]
+-> Lookup [g] [g' |-  M ..] [ |- S]
+-> EqTp [ |- T] [ |- S] =
+fn e1 => fn e2 => case (e1,e2) of
+| (Top,Top) => ReflTp
+| (Pop e1', Pop e2') => varEqUnique e1' e2'
+;
+
+% The types from algorithmic path equivalence are uniquely determined
+rec algEqRUnique :
+  AlgEqR [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
+-> AlgEqR [g] [g' |-  N2 ..] [g' |-  N3 ..] [ |- S]
+-> EqTp [ |- T] [ |- S] =
+fn e1 => fn e2 => case (e1,e2) of
+| (AlgVar e1', AlgVar e2') =>
+  varEqUnique e1' e2'
+| (AlgApp a1 a2, AlgApp b1 b2) =>
+  let ReflTp = algEqRUnique a1 b1 in ReflTp
+;
+
+% Equality of terms
+datatype EqTm : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
+| ReflTm : EqTm [g' |-  M ..] [g' |-  M ..];
+
+% Determinacy of weak head reduction
+rec determinacy : (g':ctx) [g' |-  step (M ..) (N ..)] -> [g' |-  step (M ..) (P ..)] -> EqTm [g' |-  N ..] [g' |-  P ..] =
+fn s1 => fn s2 => case (s1,s2) of
+| ([g' |-  beta],[g' |-  beta]) => ReflTm
+| ([g' |-  stepapp (S1 ..)],[g' |-  stepapp (S2 ..)]) =>
+  let ReflTm = determinacy [g' |-  S1 ..] [g' |-  S2 ..] in ReflTm
+;
+
+datatype HasCommonReduct : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
+| Common : [g' |-  mstep (M1 ..) (N ..)] -> [g' |-  mstep (M2 ..) (N ..)] -> HasCommonReduct [g' |-  M1 ..] [g' |-  M2 ..];
+
+% Confluence is trivial because it's deterministic. This is just a convenient
+% way to work with determinacy
+rec confluence : [g' |-  mstep (M ..) (N ..)] -> [g' |-  mstep (M ..) (P ..)] -> HasCommonReduct [g' |-  N ..] [g' |-  P ..] =
+fn s1 => fn s2 => case (s1,s2) of
+| ([g' |-  refl],s2) => Common s2 [g' |-  refl]
+| (s1,[g' |-  refl]) => Common [g' |-  refl] s1
+| ([g' |-  trans1 (S1 ..) (MS1 ..)],[g' |-  trans1 (S2 ..) (MS2 ..)]) =>
+  let ReflTm = determinacy [g' |-  S1 ..] [g' |-  S2 ..] in
+  confluence [g' |-  MS1 ..] [g' |-  MS2 ..]
+;
+
+datatype empty : type =;
+
+% Terms in algorithmic path equivalence cannot step
+rec neutral_doesnt_step :
+  [g' |-  step (M ..) (N ..)]
+-> AlgEqR [g] [g' |-  M ..] [g' |-  P ..] [ |- T]
+-> [ |- empty] =
+fn s => fn e => case (s,e) of
+| ([g' |-  stepapp (S ..)], AlgApp r n) => neutral_doesnt_step [g' |-  S ..] r;
+
+% Similarly for multi-step reduction
+rec neutral_mstep :
+  [g' |-  mstep (M ..) (N ..)]
+-> AlgEqR [g] [g' |-  M ..] [g' |-  P ..] [ |- T]
+-> EqTm [g' |-  M ..] [g' |-  N ..] =
+fn s => fn e => case s of
+| [g' |-  refl] => ReflTm
+| [g' |-  trans1 (S1 ..) (MS ..)] => impossible (neutral_doesnt_step [g' |-  S1 ..] e) in [];
+
+
+% Corollary of determinacy
+rec determinacy' :
+  [g' |-  mstep (M ..) (M1 ..)] -> [g' |-  mstep (M ..) (M2 ..)]
+-> AlgEqR [g] [g' |-  N1 ..] [g' |-  M1 ..] [ |- T]
+-> AlgEqR [g] [g' |-  M2 ..] [g' |-  N2 ..] [ |- T]
+-> EqTm [g' |-  M1 ..] [g' |-  M2 ..] =
+fn s1 => fn s2 => fn e1 => fn e2 => case (confluence s1 s2) of
+| Common s1' s2' =>
+  let ReflTm = neutral_mstep s1' (algEqRSym e1) in
+  let ReflTm = neutral_mstep s2' e2 in
+  ReflTm
+;
+
+% Transitivity of algorithmic equivalence
+rec algEqRTrans :
+  AlgEqR [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
+-> AlgEqR [g] [g' |-  N2 ..] [g' |-  N3 ..] [ |- T]
+-> AlgEqR [g] [g' |-  N1 ..] [g' |-  N3 ..] [ |- T] =
+fn a1 => fn a2 => case (a1,a2) of
+| (AlgVar e1, AlgVar e2) => AlgVar e1
+| (AlgApp a1' b1, AlgApp a2' b2) =>
+  let ReflTp = algEqRUnique a1' a2' in
+  AlgApp (algEqRTrans a1' a2') (algEqNTrans b1 b2)
+and algEqNTrans :
+  AlgEqN [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
+-> AlgEqN [g] [g' |-  N2 ..] [g' |-  N3 ..] [ |- T]
+-> AlgEqN [g] [g' |-  N1 ..] [g' |-  N3 ..] [ |- T] =
+fn a1 => fn a2 => case (a1,a2) of
+| (AlgBase s1 s2 a1', AlgBase s2' s3 a2') =>
+  let ReflTm = determinacy' s2 s2' a1' a2' in
+  AlgBase s1 s3 (algEqRTrans a1' a2')
+| (AlgArr a1', AlgArr a2') => AlgArr (algEqNTrans a1' a2')
+;
+
+% Transitivity of logical equivalence
+rec logEqTrans :
+   LogEq [g] [g' |-  M ..] [g' |-  N ..] [ |- T]
+ -> LogEq [g] [g' |-  N ..] [g' |-  P ..] [ |- T]
+ -> LogEq [g] [g' |-  M ..] [g' |-  P ..] [ |- T] =
+fn e1 => fn e2 => case (e1, e2) of
+| (LogBase a1, LogBase a2) => LogBase (algEqNTrans a1 a2)
+| (LogArr [g' |-  M ..] [g' |-  N ..] f1, LogArr [g' |-  N ..] [g' |-  P ..] f2) =>
+  LogArr [g' |-  M ..] [g' |-  P ..] (mlam h => mlam h' => mlam #W => mlam V1 => mlam V2 => fn rh => fn iv => fn v =>
+   logEqTrans (f1 [h] [h'] [h' $ #W[..]] [h' |-  V1 ..] [h' |-  V2 ..] rh iv v)
+              (f2 [h] [h'] [h' $ #W[..]] [h' |-  V2 ..] [h' |-  V2 ..] rh iv
+                (logEqTrans (logEqSym v) v)));
+
+% Transitivity of logical equivalence on substitutions
+rec logEqSubTrans :
+   LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+ -> LogEqSub [g] [g'] [h] [h' $ #S2[..]] [h' $ #S3[..]]
+ -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S3[..]] =
+fn e1 => fn e2 => case (e1, e2) of
+| (Nil, Nil) => Nil
+| (Dot e1' x1, Dot e2' x2) => Dot (logEqSubTrans e1' e2') (logEqTrans x1 x2);
+
+% Fundamental theorem
+rec thm :  DecEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
+        -> CtxRel [h] [h']
+        -> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
+        -> LogEq [h] [h' |-  M1 #S1[..]] [h' |-  M2 #S2[..]] [ |- T] =
+fn d => let d : DecEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T] = d in
+ fn r => fn s => let s : LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]] = s in
+case d of
+| DecVar v => lookup v s
+| DecApp d1 d2 => let LogArr [h' |-  M1 ..] [h' |-  M2 ..] f = thm d1 r s in
+    f [h] [h'] [h' $ ..] [h' |-  _] [h' |-  _] r (idIsVarSub r) (thm d2 r s)
+| (DecLam d1) : DecEq [g] [g' |-  lam (\x. M1 .. x)] [g' |-  lam (\x. M2 .. x)] [ |- arr T S] =>
+   LogArr [h' |-  lam (\x. M1 #S1[..] x)] [h' |-  lam (\x. M2 #S2[..] x)]
+     (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+     let q2 = thm d1 rh (Dot (wknLogEqSub iv s) rn) in
+     closed [h0' |-  trans1 beta refl] [h0' |-  trans1 beta refl] q2
+   )
+| DecExt d1 =>
+  LogArr [h' |-  _] [h' |-  _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+   thm d1 rh (Dot (wknLogEqSub iv s) rn)
+  )
+| DecBeta d1 d2 =>
+   closed [h' |-  trans1 beta refl] [h' |-  refl] (thm d1 r (Dot s (thm d2 r s)))
+| DecSym d1 => logEqSym (thm d1 r (logEqSubSym s))
+| DecTrans d1 d2 => logEqTrans (thm d1 r s) (thm d2 r (logEqSubTrans (logEqSubSym s) s))
+;
+
+% The identity substitution is logically related to itself
+rec idLogEqSub : CtxRel [g] [g']
+-> LogEqSub [g] [g'] [g] [g' $ ..] [g' $ ..] =
+fn r => case r of
+| RNil => Nil
+| RCons r' => Dot (wknLogEqSub (shiftIsRen r') (idLogEqSub r'))
+                 (reflect [ |- _] (AlgVar Top));
+
+rec completeness : CtxRel [g] [g']
+-> DecEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
+-> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T] =
+fn r => fn e => reify r (thm e r (idLogEqSub r));

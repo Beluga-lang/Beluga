@@ -6,24 +6,24 @@ suc  : term -> term.
 schema termCtx = some [] term;
 
 
-rec fff : {g:termCtx} [g. term] -> [g. term] =
+rec fff : {g:termCtx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
   case e of
-  | [g. z]     => [g. z]
+  | [g |- z]     => [g |- z]
 
-  | [g. suc (U ..)]   => [g. z]
+  | [g |- suc (U ..)]   => [g |- z]
 
-  | [g. #p ..]   => [g. z]
+  | [g |- #p ..]   => [g |- z]
 ;
 
 
 
-rec fffForgotParamVarCase : {g:termCtx} [g. term] -> [g. term] =
+rec fffForgotParamVarCase : {g:termCtx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
   case e of %not
-  | [g. z]     => [g. z]
+  | [g |- z]     => [g |- z]
 
-  | [g. suc (U ..)]   => [g. z]
+  | [g |- suc (U ..)]   => [g |- z]
 
 %%%  | [g]  #p ..   => [g] z
 ;

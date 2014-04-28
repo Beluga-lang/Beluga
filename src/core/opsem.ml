@@ -143,7 +143,7 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected FunValue")
       end
 
-    | Comp.MApp (_, i', (phat, Comp.NormObj tM)) ->
+    | Comp.MApp (_, i', Comp.MetaObj (_, phat, tM)) ->
       let tM' = Whnf.cnorm (tM, theta) in
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
@@ -156,7 +156,7 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected MLamValue ")
       end
 
-    | Comp.MApp (_, i', (phat, Comp.NeutObj h)) ->
+    | Comp.MApp (_, i', Comp.MetaParam (_, phat, h)) ->
         let h' = Whnf.cnormHead (h, theta) in
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
@@ -167,12 +167,12 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
-    | Comp.CtxApp (loc, i', cPsi) ->
+    | Comp.MApp (loc, i', Comp.MetaCtx (_, cPsi)) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
       dprint (fun () -> "EVALUATE CtxApp ");
       dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
       begin match eval_syn i' (theta, eta) with
-        | Comp.CtxValue (_psi, e', theta1, eta1) ->
+        | Comp.MLamValue (_psi, e', theta1, eta1) ->
           let theta1' =  LF.MDot(LF.CObj(cPsi'), theta1) in
           dprint (fun () -> "[CtxApp] theta1' = " ^ P.msubToString LF.Empty  theta1');
           eval_chk e' (theta1', eta1)
@@ -213,8 +213,7 @@ and eval_chk e (theta, eta) =
           dprint (fun () -> "[MLamValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.MLamValue (n, e', Whnf.cnormMSub theta, eta)
-      | Comp.CtxFun (loc, n, e') ->
-          Comp.CtxValue (n, e', Whnf.cnormMSub theta, eta)
+
       | Comp.Fun (loc, n, e') ->
           dprint (fun () -> "[FunValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
@@ -232,11 +231,12 @@ and eval_chk e (theta, eta) =
           let w = eval_syn i (theta, eta) in
             eval_chk e (theta, Comp.Cons (w, eta))
 
-      | Comp.Box (loc, phat, tM) ->
-        let tM'   = Whnf.cnorm (tM, theta) in
-        let phat' = Whnf.cnorm_psihat phat theta in
-        dprint (fun () -> "[BoxValue]:  " ^ P.expChkToString LF.Empty LF.Empty (Comp.Box (loc, phat, tM')));
-        Comp.BoxValue (phat', tM')
+      | Comp.Box (loc, cM) ->
+          begin match Whnf.cnormMetaObj (cM, theta) with
+            | Comp.MetaObj (_ , phat, tM) -> Comp.BoxValue (phat, tM)
+            | Comp.MetaParam (_ , phat, h) -> Comp.ParamValue (phat, h)
+            | Comp.MetaCtx (_,cPsi) -> Comp.PsiValue cPsi
+          end
 
       | Comp.Case (loc, _prag, i, branches) ->
         let vscrut = eval_syn i (theta, eta) in

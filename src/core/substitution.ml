@@ -69,6 +69,37 @@ module LF = struct
 
     (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
 
+    | (Shift (NoCtxShift, n), SVar(s, (ctx_shift, k), r)) ->
+        (* psi, Psi |- s1 : psi   where |Psi| = n
+
+           ctx_shift must be either NoCtxShift or NegCtxShift
+
+           Phi |- SVar(s, k, r): psi, Psi
+
+           where  psi,Psi, Psi_k |- ^k : psi, Psi
+           where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
+          therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
+                and  psi, Psi, Psi_k |- ^(n+k) : psi
+         *)
+      SVar (s, (ctx_shift, k+n), r)
+
+    | (Shift (NoCtxShift, n), MSVar(s, (ctx_shift, k), (t,r))) ->
+        (* psi, Psi |- s1 : psi   where |Psi| = n
+
+           ctx_shift must be either NoCtxShift or NegCtxShift
+
+           Phi |- SVar(s, k, r): psi, Psi
+
+           where  psi,Psi, Psi_k |- ^k : psi, Psi
+           where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
+          therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
+                and  psi, Psi, Psi_k |- ^(n+k) : psi
+         *)
+      MSVar (s, (ctx_shift, k+n), (t,r))
+
+    | (Shift (NoCtxShift, n), FSVar (s, (ctx_shift, k), tau)) ->
+       FSVar (s, (ctx_shift, k+n), tau)
+
     | (Shift (NoCtxShift, n), Shift (NoCtxShift, m)) ->
         (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
          *  therefore  psi, Psi2 |- s : psi, Psi1  where s = s1 o s2
@@ -102,7 +133,39 @@ module LF = struct
 
           | Shift (CtxShift _ , _ ) ->  raise (NotComposable "Composition       undefined - 2")
 
-(*          | _ ->  raise (NotComposable "Composition undefined - 2") *)
+          | SVar (offset, (NegCtxShift psi', k), s') ->
+                comp (Shift (NoCtxShift, k)) s'
+
+          | SVar (offset, (NoCtxShift, k), s') ->
+            (* if    . |- offset : psi  then return s' *)
+            SVar (offset, (CtxShift psi, k + n), s')
+
+          | SVar (offset, (CtxShift _, k), s') ->
+              raise (NotComposable "Ill-typed composition: SVar CtxShift")
+            (* ctx_shift = CtxShift phi cannot happen *)
+(*            SVar (offset, (ctx_shift, k + n), s')
+*)
+          | FSVar (s, (NegCtxShift psi', k), s') ->
+                comp (Shift (NoCtxShift, k)) s'
+
+          | FSVar (s, (NoCtxShift, k), s') ->
+              FSVar (s, (CtxShift psi, k + n), s')
+
+          | MSVar (s, (NoCtxShift, k), (t',s')) ->
+              MSVar (s, (CtxShift psi, k + n), (t',s'))
+
+          | MSVar (s, (NegCtxShift psi', k), (t',s')) ->
+              (* mcomp  with t' *)
+              comp (Shift (NoCtxShift, k)) s'
+
+          | MSVar (s, (CtxShift _, k), (t',s')) ->
+              raise (NotComposable "Ill-typed composition: MSVar CtxShift")
+
+          | FSVar (s, (CtxShift _, k), s') ->
+              raise (NotComposable "Ill-typed composition: FSVar CtxShift")
+              (* ctxShift = CtxShift phi cannot happen *)
+(*              FSVar (s, (ctx_shift, k + n), s')
+*)
         in
           ctx_shift m s2
 
@@ -127,8 +190,15 @@ module LF = struct
     | (Shift (psi,n), Dot (_ft, s)) ->
         comp (Shift (psi, n - 1)) s
 
-    | (SVar (s, tau), s2) ->
-        SVar (s, comp tau s2)
+    | (SVar (s, (ctx_shift, n), tau), s2) ->
+        SVar (s, (ctx_shift, n), comp tau s2)
+
+    | (MSVar (s, (ctx_shift, n), (theta, tau)), s2) ->
+      (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
+        MSVar (s, (ctx_shift, n), (theta, comp tau s2))
+
+    | (FSVar (s, (ctx_shift, n), tau), s2) ->
+        FSVar (s, (ctx_shift, n), comp tau s2)
 
     | (Dot (ft, s), s') ->
         (* comp(s[tau], Shift(k)) = s[tau]
@@ -171,7 +241,13 @@ module LF = struct
 (*        Shift (CtxShift psi2, k1 + k2)           (* ADDED -jd 2010-06-24 *) *)
         raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o CtxShift " ^ string_of_int k2 ^ "?"))
 
-
+    | (Shift (NegCtxShift psi, k), SVar(offset, (CtxShift psi', n), s)) ->
+       if psi = psi' then
+        SVar (offset, (NoCtxShift, k+n), s)
+       else
+        raise (NotComposable "Composition not defined?") (* SVar (offset, (NegCtxShift psi, k+n), s) *)
+      (*Shift (NegCtxShift psi, k) *)
+    (* raise (NotComposable "Composition not defined? NegCtxShift") *)
     | (_s1, _s2) ->
         raise (NotComposable "Composition not defined?")
 
@@ -189,7 +265,24 @@ module LF = struct
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
     | (n, Shift (_ , k)) -> Head (BVar (n + k))
+(*    | (n, MSVar (s, (_cshift, k), (mt, sigma ))) ->
+        (* Should be fixed; we really need phat of n to avoid printing
+           Free BVar (n+k) ...
+           (Head (HClo (phat. BVar n+k , s , sigma ))
+           -bp *)
+        Head (HMClo(n+k, s, (mt,sigma)))
 
+      Can this happen ?
+*)
+    | (n, SVar (s, (_cshift, k), sigma )) ->
+        (* Should be fixed; we really need phat of n to avoid printing
+           Free BVar (n+k) ... -bp *)
+        Head (HClo(n+k, s, sigma))
+    | (n, MSVar (s, (_cshift, k), (t,sigma ))) ->
+      Head (HMClo (n+k, s, (t,sigma)))
+(*        (print_string "[bvarSub] n, MSVar - not implemented";
+        raise (NotComposable "grr"))
+*)
 
   (* frontSub Ft s = Ft'
    *
@@ -200,6 +293,8 @@ module LF = struct
    * and  Psi |- Ft' : [s]A
    *)
   and frontSub ft s = match ft with
+    | Head (HClo(n, s', sigma)) -> Head (HClo (n, s', comp sigma s))
+    | Head (HMClo(n, s', (theta,sigma))) -> Head (HMClo (n, s', (theta, comp sigma s)))
     | Head (BVar n)       ->  bvarSub n s
     | Head (FVar _)       -> ft
     | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))
@@ -245,9 +340,10 @@ module LF = struct
     | Head (Const c)      -> Head (Const c)
     | Obj u               -> Obj (Clo (u, s))
     | Undef               -> Undef
-    | Head (FPVar (_n, _s' )) -> ft
     | Head (MMVar (_n, _ )) -> raise (Error "[frontSub] mmvar undefined ")
-
+    | Head (FPVar (_n, _s' )) -> ft
+(*    | Head (HMClo(n, s', (theta, sigma))) ->
+        Head (HMClo (n, s', (mt, comp sigma s)) ?? *)
 
   (* dot1 (s) = s'
    *

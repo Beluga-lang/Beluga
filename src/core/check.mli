@@ -24,6 +24,7 @@ module LF : sig
   exception Error of Syntax.Loc.t * error
 
   val check       : mctx -> dctx -> nclo -> tclo -> unit
+
   val syn         : mctx -> dctx -> nclo -> tclo
   val checkTyp    : mctx -> dctx -> tclo         -> unit
   val checkKind   : mctx -> dctx -> kind         -> unit
@@ -48,7 +49,8 @@ module Comp : sig
   type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
   type error =
-      MismatchChk     of LF.mctx * gctx * exp_chk * tclo * tclo
+    | IllegalParamTyp of LF.mctx * LF.dctx * LF.typ
+    | MismatchChk     of LF.mctx * gctx * exp_chk * tclo * tclo
     | MismatchSyn     of LF.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of LF.mctx * gctx * pattern * tclo * tclo
     | CtxFunMismatch  of LF.mctx * gctx  * tclo

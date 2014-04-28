@@ -15,25 +15,25 @@ letv: exp -> (nat -> exp) -> exp.
 z  : nat.
 suc: nat -> nat.
 
-rec add : [. nat] -> [. nat] -> [. nat] =
+rec add : [|- nat] -> [|- nat] -> [|- nat] =
 fn a => fn b =>
    (case a of
-        [. z]  => b
-      | [. suc U] =>
-      let [. V] = b in add [. U] [. suc V]
+        [|- z]  => b
+      | [|- suc U] =>
+      let [|- V] = b in add [|- U] [|- suc V]
 )
 ;
 
-rec eval : [. exp] -> [. nat] =
+rec eval : [|- exp] -> [|- nat] =
 fn e =>
 (case e of
-   [. num U] => [. U]
- | [. add U W]  =>
-       add (eval [. U]) (eval [. W])
+   [|- num U] => [|- U]
+ | [|- add U W]  =>
+       add (eval [|- U]) (eval [|- W])
 
- | [. letv U (\ x . (W x))]  =>
+ | [|- letv U (\ x . (W x))]  =>
 
-    case (eval [. U]) of
-        [. V]  =>
-          eval [. (W V)]
+    case (eval [|- U]) of
+        [|- V]  =>
+          eval [|- (W V)]
 );

@@ -3,51 +3,51 @@ z : nat.
 s : nat -> nat.
 
 
-rec plus : [. nat] -> [. nat] -> [. nat] =
+rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn x => fn y =>  case x of
-| [. z]  => y
-| [. s U]  =>
-  let [. V] = plus [. U ] y in
-    [. s V]
+| [ |- z]  => y
+| [ |- s U]  =>
+  let [ |- V] = plus [ |- U ] y in
+    [ |- s V]
 ;
 
-rec plus' : [. nat] -> [. nat] -> [. nat] =
+rec plus' : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn x => case x of
-| [. z]  => (fn y => y)
-| [. s U] =>
+| [ |- z]  => (fn y => y)
+| [ |- s U] =>
   fn y =>
-   let [. V] = plus' [. U] y in
-     [. s V]
+   let [ |- V] = plus' [ |- U] y in
+     [ |- s V]
 ;
 
 
-rec mult : [. nat] -> [. nat] -> [. nat] =
+rec mult : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn x => fn y =>  case x of
-| [. z]  => y
-| [. s U]  =>
-  let [. V] = mult [. U ] y  in
-    plus [. V] y
+| [ |- z]  => y
+| [ |- s U]  =>
+  let [ |- V] = mult [ |- U ] y  in
+    plus [ |- V] y
 ;
 
 
-rec mult : [. nat] -> [. nat] -> [. nat] =
+rec mult : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn x => fn y => case x of
-| [. z] => [. z]
-| [. s U] =>
-  let [. V] = mult [. U] y in
-    plus [. V] y
+| [ |- z] => [ |- z]
+| [ |- s U] =>
+  let [ |- V] = mult [ |- U] y in
+    plus [ |- V] y
 ;
 
 
-rec fact : [. nat] -> [. nat] =
+rec fact : [ |- nat] -> [ |- nat] =
 fn x => case x of
-| [. z] => [. s z]
-| [. s U] =>
-  let [. V] = fact [. U]  in
-     mult [. V] x
+| [ |- z] => [ |- s z]
+| [ |- s U] =>
+  let [ |- V] = fact [ |- U]  in
+     mult [ |- V] x
 ;
 
-let x = plus [. z] [. s z] ;
-let y = fact [. s (s z)];
-let w = fact [. s (s (s z))];
+let x = plus [ |- z] [ |- s z] ;
+let y = fact [ |- s (s z)];
+let w = fact [ |- s (s (s z))];
 

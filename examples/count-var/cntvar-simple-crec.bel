@@ -13,13 +13,13 @@ letv: exp -> (exp  -> exp) -> exp.
 
 schema expCtx = exp;
 
-rec plus : [. exp] -> [. exp] -> [. exp] =
+rec plus : [ |- exp] -> [ |- exp] -> [ |- exp] =
 fn x => fn y =>
 case x of
-  [. z]    => y
+  [ |- z]    => y
 
-| [. s U]  =>
-  let [. V] = plus [. U] y in [. s V];
+| [ |- s U]  =>
+  let [ |- V] = plus [ |- U] y in [ |- s V];
 
 % G, x:exp T |-  z  ==>  0
 % G, x:exp T |-  tt  ==>  0
@@ -31,23 +31,23 @@ case x of
 % if  G, x: exp T |-  U .. x ==> n1
 % if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
 
-rec cntV : (g:expCtx)  [g, x:exp. exp] -> [. exp] =
+rec cntV : (g:expCtx)  [g, x:exp |-  exp] -> [ |- exp] =
 fn e => case e of
- | [g,x:exp . tt]      => [. z]
- | [g,x:exp. #p ..]     => [. z]
- | [g,x:exp. x]        => [. s z]
- | [g,x:exp . z]       => [. z]
- | [g,x:exp. (U .. )]   => [. z]
+ | [g,x:exp  |-  tt]      => [ |- z]
+ | [g,x:exp |-  #p ..]     => [ |- z]
+ | [g,x:exp |-  x]        => [ |- s z]
+ | [g,x:exp  |-  z]       => [ |- z]
+ | [g,x:exp |-  (U .. )]   => [ |- z]
 
- | [g,x:exp. s (W .. x)]  => cntV [g,x. (W .. x)]
+ | [g,x:exp |-  s (W .. x)]  => cntV [g,x |- (W .. x)]
 
- | [g,x:exp. letv (U1 .. x) (\y . (U2 .. x y))] =>
-      plus  (cntV  [g,x. (U1 .. x)])
-            (cntV   [g,y:exp,x:exp. (U2 .. x y)])
+ | [g,x:exp |-  letv (U1 .. x) (\y . (U2 .. x y))] =>
+      plus  (cntV  [g,x |- (U1 .. x)])
+            (cntV   [g,y:exp,x:exp |-  (U2 .. x y)])
 
- | [g,x:exp. add (U .. x) (W .. x)]  =>
-     plus (cntV [g,x. (U .. x)])
-          (cntV [g,x. (W .. x)])
+ | [g,x:exp |-  add (U .. x) (W .. x)]  =>
+     plus (cntV [g,x |- (U .. x)])
+          (cntV [g,x |- (W .. x)])
 
 ;
 

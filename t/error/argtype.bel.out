@@ -1,4 +1,1 @@
-Ill-typed expression.
-    Expected: dependent function type
-    Inferred type: ([. nat] -> [. nat]) -> [. list] -> [. list]
-In expression: map
+Found box-expression that does not have type [ |- nat] -> [ |- nat].

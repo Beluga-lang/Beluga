@@ -749,72 +749,76 @@ let rec conTypArr l lt lju lsym ltp =
 let stmt_to_prove l lt st lju lsym =
   match st with
     | ForAllExist (l1, tp, p) ->
-                  (match (tp,p) with
-                   | ([TPremisse(l2,nao1,None,va1)],Premisse(l3,nao2,None,va2)) ->
-                                 begin match va1 with
-                                   |VAltAtomic(l4,s1,None) ->
-                                                               let (jn,lsym1)= findJ va2 lju in
-                                                               let v1 = valtp l3 lt lsym1 va2 in
-                                                               (Ext.Comp.TypPiBox(l1,Ext.LF.MDecl(l2,Id.mk_name(Id.SomeString s1),
-                                                               Ext.LF.Atom(l2,Id.mk_name(Id.SomeString "n"),Ext.LF.Nil),
-                                                               Ext.LF.Null),
-                                                               Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null)),
-                                                               Some([s1]))
+        (match (tp,p) with
+           | ([TPremisse(l2,nao1,None,va1)],Premisse(l3,nao2,None,va2)) ->
+               begin match va1 with
+                 |VAltAtomic(l4,s1,None) ->
+                    let (jn,lsym1)= findJ va2 lju in
+                    let v1 = valtp l3 lt lsym1 va2 in
+                      (Ext.Comp.TypPiBox(l1,(Ext.LF.MDecl(l2,
+                                                          Id.mk_name(Id.SomeString s1),
+                                                          Ext.LF.Atom(l2,Id.mk_name(Id.SomeString "n"),Ext.LF.Nil),
+                                                          Ext.LF.Null),
+                                             Ext.Comp.Explicit),
+                                         Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null)),
+                       Some([s1]))
 
-                                   | _ ->
-                                          begin match nao1 with
-                                            | Some(PName(n1)) ->
-                                                   let (jn,lsym1)= findJ va1 lju in
-                                                   let  aa1  = valtp l2 lt lsym va1  in
-                                                   let (jn2,lsym2)= findJ va2 lju in
-                                                   let v1 = valtp l3 lt lsym va2 in
+                 | _ ->
+                     begin match nao1 with
+                       | Some(PName(n1)) ->
+                           let (jn,lsym1)= findJ va1 lju in
+                           let  aa1  = valtp l2 lt lsym va1  in
+                           let (jn2,lsym2)= findJ va2 lju in
+                           let v1 = valtp l3 lt lsym va2 in
+                             (Ext.Comp.TypPiBox(l1,(Ext.LF.MDecl(l2,Id.mk_name(Id.SomeString n1),
+                                                                 Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),aa1),
+                                                                 Ext.LF.Null),
+                                                    Ext.Comp.Explicit),
+                                                Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn2),v1),Ext.LF.Null)),
+                              Some([n1]))
+                       | None -> let s = locToString(l2) in
+                         let s1 = "This premise needs a name.  " ^ s in
+                           raise (Error (s1))
+                     end
+               end
 
-                                                   (Ext.Comp.TypPiBox(l1,Ext.LF.MDecl(l2,Id.mk_name(Id.SomeString n1),
-                                                   Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),aa1), Ext.LF.Null),
-                                                   Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn2),v1),Ext.LF.Null)),
-                                                   Some([n1]))
-                                            | None -> let s = locToString(l2) in
-                                                      let s1 = "This premise needs a name.  " ^ s in
-                                                      raise (Error (s1))
-                                          end
-                                 end
+           | (TPremisse(l2,nao1,Some(c1),va1)::t ,Premisse(l3,nao2,co,va2)) ->
+               begin match c1 with
+                 | [NewCon(s1,x2)] -> let lp1 = [TPremisse(l2,nao1,Some([Con(s1)]),va1)] @ t @ [TPremisse(l3,nao2,co,va2)] in
+                   let (s2, ls2) = findJ x2 lju in
+                     begin match va1 with
+                       | VAltOftBlock(l4, [(s3, VAltAtomic(l5,s5,None))],None) ->
+                           let (jn, lsym1) = findJ va2 lju in
+                           let va4 = valts l2 lsym va2 in
+                           let va3 = Ext.LF.Atom(l1, Id.mk_name(Id.SomeString jn), va4) in
+                           let tbox = Ext.Comp.TypBox(l5, va3,Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s1)))in
+                           let cta = Ext.Comp.TypPiBox(l4, (Ext.LF.MDecl(l4,Id.mk_name(Id.SomeString s3),
+                                                                         Ext.LF.Atom(l2,Id.mk_name(Id.SomeString s5), Ext.LF.Nil),
+                                                                         Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s1))),
+                                                            Ext.Comp.Explicit), tbox) in
+                           let ls = List.fold_left (fun x y ->
+                                                      match y with |TPremisse(_,Some(PName(s)),_,_) -> s::x
+                                                        |TPremisse(_,None,_,_) -> x) [] t in
+                             (Ext.Comp.TypPiBox(l1, (Ext.LF.CDecl(l4, Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2)),
+                                                     Ext.Comp.Explicit), cta), Some(ls))
 
-                   | (TPremisse(l2,nao1,Some(c1),va1)::t ,Premisse(l3,nao2,co,va2)) ->
-                      begin match c1 with
-                        | [NewCon(s1,x2)] -> let lp1 = [TPremisse(l2,nao1,Some([Con(s1)]),va1)] @ t @ [TPremisse(l3,nao2,co,va2)] in
-                                             let (s2, ls2) = findJ x2 lju in
-                                             begin match va1 with
-                                               | VAltOftBlock(l4, [(s3, VAltAtomic(l5,s5,None))],None) ->
-                                                              let (jn, lsym1) = findJ va2 lju in
-                                                              let va4 = valts l2 lsym va2 in
-                                                              let va3 = Ext.LF.Atom(l1, Id.mk_name(Id.SomeString jn), va4) in
-                                                              let tbox = Ext.Comp.TypBox(l5, va3,Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s1)))in
-                                                              let cta = Ext.Comp.TypPiBox(l4, Ext.LF.MDecl(l4,Id.mk_name(Id.SomeString s3),
-                                                                        Ext.LF.Atom(l2,Id.mk_name(Id.SomeString s5), Ext.LF.Nil),
-                                                                        Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s1))), tbox) in
-                                                              let ls = List.fold_left (fun x y ->
-                                                                       match y with |TPremisse(_,Some(PName(s)),_,_) -> s::x
-                                                                                    |TPremisse(_,None,_,_) -> x) [] t in
-                                                              (Ext.Comp.TypCtxPi(l1, (Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2),
-                                                               Ext.Comp.Explicit), cta), Some(ls))
-
-                                               | VAltOftBlock(l4, _,Some(va3)) -> let s = locToString(l2) in
-                                                                  let s1 = "Stmt to prove valtoftblock some.  " ^ s in
-                                                                  raise (Error (s1))
-                                               | _ -> let cta = conTypArr l1 lt lju lsym lp1 in
-                                                      begin match nao1 with
-                                                        | Some(PName(n1)) -> let ls = List.fold_left (fun x y ->
-                                                                                match y with |TPremisse(_,Some(PName(s)),_,_) -> s::x
-                                                                                             |TPremisse(_,None,_,_) -> x) [] t in
-                                                                  (Ext.Comp.TypCtxPi(l1, (Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2),
-                                                                  Ext.Comp.Implicit), cta), Some(n1::ls))
-                                                        | None -> let s = locToString(l2) in
-                                                                  let s1 = "This premise needs a name.  " ^ s in
-                                                                  raise (Error (s1))
-                                                      end
-                                            end
-                        | [Con(s)] -> let s2 = locToString(l2) in
-                                    let s1 = "Specify the type of " ^ s ^ " " ^ s2 in
+                       | VAltOftBlock(l4, _,Some(va3)) -> let s = locToString(l2) in
+                         let s1 = "Stmt to prove valtoftblock some.  " ^ s in
+                           raise (Error (s1))
+                       | _ -> let cta = conTypArr l1 lt lju lsym lp1 in
+                           begin match nao1 with
+                             | Some(PName(n1)) -> let ls = List.fold_left (fun x y ->
+                                                                             match y with |TPremisse(_,Some(PName(s)),_,_) -> s::x
+                                                                               |TPremisse(_,None,_,_) -> x) [] t in
+                                 (Ext.Comp.TypPiBox(l1, (Ext.LF.CDecl(l1, Id.mk_name(Id.SomeString s1), Id.mk_name(Id.SomeString s2)),
+                                                         Ext.Comp.Implicit), cta), Some(n1::ls))
+                             | None -> let s = locToString(l2) in
+                               let s1 = "This premise needs a name.  " ^ s in
+                                 raise (Error (s1))
+                           end
+                     end
+                 | [Con(s)] -> let s2 = locToString(l2) in
+                   let s1 = "Specify the type of " ^ s ^ " " ^ s2 in
                                     raise (Error (s1))
                       end
                    | _ -> let s = locToString(l) in
@@ -832,8 +836,10 @@ let stmt_to_prove l lt st lju lsym =
 
 let comp_box l lt lsym co va =
   match co with
-    | Some([Con(s)]) -> let va1 = valtpPar l lt lsym va in
-                      Ext.Comp.Box(l, [Id.mk_name(Id.SomeString s)],va1)
+    | Some([Con(s)]) ->
+        let va1 = valtpPar l lt lsym va in
+        let  m = Ext.Comp.MetaObj (l, [Id.mk_name(Id.SomeString s)],va1) in
+          Ext.Comp.Box(l,m)
     | _ -> raise (Error ("Should use a context that has already been specified \n"))
 
 (* check if you have alambda term *)
@@ -1022,7 +1028,8 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
 
                     | (Some(vn),Some([s1])) -> let va = VAltAtomic(l1,s1,None) in
                                                let v1 = valtp l1 lt lsym va in
-                                               Ext.Comp.Box(l, [], Ext.LF.Root(l1, Ext.LF.Name( l1, Id.mk_name(Id.SomeString n1)),v1))
+                                               let m = Ext.Comp.MetaObj (l, [], Ext.LF.Root(l1, Ext.LF.Name( l1, Id.mk_name(Id.SomeString n1)),v1)) in
+                                               Ext.Comp.Box(l, m)
                     |  (_, Some(l)) -> let s1 = "more than one element in mlam  1  "  in
                                        raise (Error (s1)) (* see case below if you raise this error *)
                   end
@@ -1061,7 +1068,9 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                                             let cc = Ext.Comp.Case(l1,Pragma.RegularCase, Ext.Comp.BoxVal(l2,
                                                      Ext.LF.CtxVar(l2, Id.mk_name(Id.SomeString c)), va1), cbranch) in
 
-                                            Ext.Comp.CtxFun(l1, Id.mk_name(Id.SomeString c),Ext.Comp.MLam(l1, (Id.mk_name(Id.SomeString s1),Ext.Comp.MObj),cc))
+                                            Ext.Comp.MLam(l1,
+                                                          (Id.mk_name(Id.SomeString c), Ext.Comp.CObj),
+                                                            Ext.Comp.MLam(l1, (Id.mk_name(Id.SomeString s1),Ext.Comp.MObj),cc))
 
                                     | _ -> let s = locToString(l1) in
                                                let s1 = "This is not a valid induction variable.  " ^ s in
@@ -1081,14 +1090,16 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                          | InductionHyp(l2) -> let v1 = VAltAtomic(l1,s,None) in
                                                begin match tp with
                                                  | TPremisse(_,Some(PName(s1)),_,_) ->
-                                                             let v2 = VAltAtomic(l1,s1,None) in
-                                                             let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
-                                                             let v3 = valtpPar l1 lt lsym v1 in
-                                                             let cbranch = comp_branch l lt n (Some([s1])) lsym llam lju [ag] cb  cano in
-                                                             Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)),
-                                                             ([], v3)), cbranch)
-                                                 | _ ->      let v3 = valtpPar l1 lt lsym v1 in
-                                                             Ext.Comp.Syn(l1,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)), ([], v3)))
+                                                     let v2 = VAltAtomic(l1,s1,None) in
+                                                     let ag = Arg(l1,TPremisse(l1, None, None, v2),t) in
+                                                     let v3 = Ext.Comp.MetaObj (l1, [], valtpPar l1 lt lsym v1) in
+                                                     let cbranch = comp_branch l lt n (Some([s1])) lsym llam lju [ag] cb  cano in
+                                                       Ext.Comp.Case(l1,Pragma.RegularCase,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)),
+                                                                                                         v3),
+                                                                     cbranch)
+                                                 | _ ->
+                                                     let v3 = Ext.Comp.MetaObj(l1, [], valtpPar l1 lt lsym v1) in
+                                                       Ext.Comp.Syn(l1,Ext.Comp.MApp(l1,Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)), v3))
                                                end
                          | _ -> raise (Error ("Sorry not implemented yet in prule1."))
                        end
@@ -1112,24 +1123,29 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
                                                 Ext.Comp.Case(l1,Pragma.RegularCase, lca, cbranch)
 
                                     | TPremisse(l4,None,_,v2) ->
+                                        let cv = Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)) in
 
-                                                let cv = Ext.Comp.Var(l1,Id.mk_name(Id.SomeString n)) in
+                                        let lca = List.fold_left (fun x (TPremisse(l3,None,c,va1)) ->
+                                                                    begin match c with
+                                                                      | Some([Con(s)]) ->
+                                                                          let va3 = valtpPar l lt lsym va1 in
+                                                                          let psi = Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)) in
+                                                                          let mobj = Ext.Comp.MetaObjAnn (l1, psi, va3) in
+                                                                            Ext.Comp.MApp(l1, x, mobj)
 
-                                                let lca = List.fold_left (fun x (TPremisse(l3,None,c,va1)) ->
-                                                          begin match c with
-                                                            | Some([Con(s)]) -> let va3 = valtpPar l lt lsym va1 in
-                                                                                Ext.Comp.MAnnApp(l1, x, (Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)), va3))
-
-                                                            | Some(Con(s)::[NewCon(s1, va4)]) -> let va3 = valtpPar l lt lsym va1 in
-                                                                                                 let ctxv = Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)) in
-                                                                        let va5 = context_sch l4 (["x"]) lsym lju va4 in
-                                                                        let td = Ext.LF.TypDecl(Id.mk_name(Id.SomeString s1), Ext.LF.Sigma(l4, va5)) in
-                                                                        let dd = Ext.LF.DDec(ctxv, td) in
-                                                                        Ext.Comp.MAnnApp(l1, x, (dd, va3))
+                                                                      | Some(Con(s)::[NewCon(s1, va4)]) ->
+                                                                          let va3 = valtpPar l lt lsym va1 in
+                                                                          let ctxv = Ext.LF.CtxVar(l1, Id.mk_name(Id.SomeString s)) in
+                                                                          let va5 = context_sch l4 (["x"]) lsym lju va4 in
+                                                                          let td = Ext.LF.TypDecl(Id.mk_name(Id.SomeString s1), Ext.LF.Sigma(l4, va5)) in
+                                                                          let dd = Ext.LF.DDec(ctxv, td) in
+                                                                          let mobj = Ext.Comp.MetaObjAnn (l1,dd, va3) in
+                                                                            Ext.Comp.MApp(l1, x, mobj)
 
                                                             | Some(Con(s)::[Con(s1)]) -> let va3 = valtpPar l lt lsym va1 in
                                                                         let dd = (Id.mk_name(Id.SomeString s))::[Id.mk_name(Id.SomeString s1)] in
-                                                                        Ext.Comp.MApp(l1, x, (dd, va3))
+                                                                        let mobj = Ext.Comp.MetaObj (l1, dd, va3) in
+                                                                        Ext.Comp.MApp(l1, x, mobj)
 
                                                             | _ -> let s = locToString(l4) in
                                                                            let s1 = "Problem with the context of your premisse." ^ s in

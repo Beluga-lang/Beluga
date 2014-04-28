@@ -184,9 +184,6 @@ let rec mapHoleChk f = function
  | MLam (l, n, ec) ->
    let ec' =  mapHoleChk f ec in
    MLam (l, n, ec')
- | CtxFun (l, n, ec) ->
-   let ec' =  mapHoleChk f ec in
-   CtxFun(l, n, ec')
  | Let (t, es, (n, ec)) ->
      let es' =  mapHoleSyn f es in
      let ec' = mapHoleChk f ec  in
@@ -209,9 +206,6 @@ and mapHoleSyn f = function
       let es' = mapHoleSyn f es in
       let ec' = mapHoleChk f ec in
       Apply(l, es', ec')
-  | CtxApp (l, es, d) ->
-     let es' = mapHoleSyn f es in
-     CtxApp(l, es', d)
   | MApp (l, es, c) ->
      let es' =  mapHoleSyn f es in
      MApp(l, es', c)
@@ -310,15 +304,6 @@ let  intro i =
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
          Some (Comp.Fun(Loc.ghost, nam, exp))
            )
- | Comp.TypCtxPi ((n,sch,d), t') ->
-     used := true;
-     let dlf =
-       (match d with
-       | Comp.Explicit -> LF.No
-       | Comp.Implicit -> LF.Maybe
-             ) in
-     let Some exp = crawl (LF.Dec (cD, LF.CDecl(n,sch,dlf))) cG t' in
-      Some (Comp.CtxFun(Loc.ghost, n, exp))
  | Comp.TypPiBox ((tdec,d), t') ->
      used := true;
      let nam = nameOfLFcTypDecl tdec in
@@ -363,9 +348,6 @@ let split e i =
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
             let bl = branchCovGoals loc 0 cG0 tH cgs in
             Some (matchFromPatterns l (Comp.Var i) bl)
-        | Comp.TypCtxPi ((n,sch,d), tA) ->
-            let loc' = nextLoc loc in
-            Some (Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
         | _ ->
             failwith ("Found variable in gCtx, cannot split on "^(nameString n)))
       else
@@ -389,7 +371,7 @@ let rec searchMctx i = function
              let cS = (match vPsi with
                         | None -> LF.NoCtxShift
                         | Some cV -> LF.CtxShift cV) in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.MVar (LF.Offset i, LF.Shift (cS, vOff )), LF.Nil)), Comp.TypBox(Loc.ghost, tA,cPsi)) in
+             let entry = Comp.Ann ( Comp.Box(Loc.ghost, Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.MVar (LF.Offset i, LF.Shift (cS, vOff )), LF.Nil))), Comp.TypBox(Loc.ghost, tA,cPsi)) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')
@@ -401,7 +383,7 @@ let rec searchMctx i = function
              let cS = (match vPsi with
                         | None -> LF.NoCtxShift
                         | Some cV -> LF.CtxShift cV) in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.PVar (LF.Offset i, LF.Shift (cS, vOff )), LF.Nil)), Comp.TypBox(Loc.ghost, tA,cPsi)) in
+             let entry = Comp.Ann ( Comp.Box(Loc.ghost, Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.PVar (LF.Offset i, LF.Shift (cS, vOff )), LF.Nil))), Comp.TypBox(Loc.ghost, tA,cPsi)) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')

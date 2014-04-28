@@ -182,11 +182,12 @@ let split = { name = "split" ;
               run = (fun ppf args ->
                 Printexc.record_backtrace true;
                 try
+                  if (List.length args) < 2 then failwith "Failure in split, 2 arguments expected" else (
                   let e = (List.hd args) in
                   let i = to_int (List.hd (List.tl args)) in
                   (match (Interactive.split e i) with
                   | None -> fprintf ppf "No variable %s found\n" e
-                  | Some exp -> Interactive.replaceHole i exp )
+                  | Some exp -> Interactive.replaceHole i exp ))
                 with
                 | Failure s  -> fprintf ppf "Error in split: %s \n" s;  (Printexc.print_backtrace stdout)
                 | _  -> fprintf ppf "Error in split. \n";  (Printexc.print_backtrace stdout)

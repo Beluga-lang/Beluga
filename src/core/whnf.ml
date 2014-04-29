@@ -886,16 +886,6 @@ and what_head = function
   | HClo _ -> "HClo"
   | HMClo _ -> "HMClo"
 
-<<<<<<< HEAD
-
-=======
-(*
-and what_front = function
-  | Head h -> ("Head " ^ what_head h)
-  | Obj _  -> "Obj _ "
-  | _      -> "Undef "
-*)
->>>>>>> 9a691ca1af2ddcc2e75f7be1e6ebefa99a2af1b7
 
 and cnorm_psihat (phat: psi_hat) t = match phat with
   | (None , _ ) -> phat

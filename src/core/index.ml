@@ -539,8 +539,7 @@ and index_meta_spine cvars fcvars = function
       let (s', fcvars'') = index_meta_spine cvars fcvars' s in
         (Apx.Comp.MetaApp (m', s') , fcvars'')
 
-<<<<<<< HEAD
-=======
+
 let index_meta_typ cvars fcvars = function
   | Ext.Comp.MetaTyp (loc, a, psi) ->
     begin match a with
@@ -563,7 +562,6 @@ let index_meta_typ cvars fcvars = function
 
 
 
->>>>>>> 9a691ca1af2ddcc2e75f7be1e6ebefa99a2af1b7
 let rec index_compkind cvars fcvars = function
   | Ext.Comp.Ctype loc -> Apx.Comp.Ctype loc
 

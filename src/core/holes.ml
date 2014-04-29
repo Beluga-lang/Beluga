@@ -28,13 +28,15 @@ let ( ++ ) f g = function x -> f (g x)
 
 let nameString n = n.Id.string_of_name
 
+let break = "____________________________________________________________________________\n"
+
 let ctypDeclToString cD ctypDecl =
-  P.fmt_ppr_lf_ctyp_decl_holes cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
+  P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
   Format.flush_str_formatter ()
 
 (*mctxToString cD*)
 let mctxToString =
-  let shift = " " in
+  let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
       "."
@@ -45,7 +47,7 @@ let mctxToString =
   in toString ++ Whnf.normMCtx
  
 let gctxToString cD =
-  let shift = " " in
+  let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
       "."
@@ -57,7 +59,10 @@ let gctxToString cD =
 
 let printOne (loc, cD, cG, (tau, theta)) =
   Store.NamedHoles.reset () ;
-  Printf.printf "\n%s\n- Meta-Context: %s\n- Context: %s\n- Type: %s\n"
+  Printf.printf "\n%s\n
+    - Meta-Context: %s\n____________________________________________________________________________\n
+    - Context: %s\n\n============================================================================\n
+    - Goal Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
     (gctxToString cD cG)

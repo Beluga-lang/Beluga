@@ -270,7 +270,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (p, s1')
                    end
-               | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _ ) as p ,s1) ->
+               | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _, _) as p ,s1) ->
                    Int.LF.PVar (p, Whnf.cnormSub (s1, t))
 
                end in
@@ -976,7 +976,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
                    (* | Int.LF.PVar (Int.LF.PInst (_, {contents = Some h1} , _cPsi, _tA, _ ), s1) ->
                        Int.LF.PVar (h1, Whnf.cnormMSub (s1, r)) *)
 
-                   | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _ ) as p ,s1) ->
+                   | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _, _ ) as p ,s1) ->
                        Int.LF.PVar (p, Whnf.cnormSub (s1, r))
                    end in
         Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s'), j)

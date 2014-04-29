@@ -11,10 +11,6 @@ module LF = struct
   type depend =
     | No
     | Maybe
-  
-  type inferred =                            (* Inferred Status for MDecl       *)
-     | Implicit                              
-     | Explicit
 
   type kind =
     | Typ
@@ -25,9 +21,9 @@ module LF = struct
     | TypDeclOpt of name                      (*   |  x:_                       *)
 
   and ctyp_decl =                             (* Contextual Declarations        *)
-    | MDecl of name * typ  * dctx * inferred  (* D ::= u::A[Psi]                *)
-    | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
-    | SDecl of name * dctx (* Phi *) * dctx (* Psi *)
+    | MDecl of name * typ  * dctx * depend  (* D ::= u::A[Psi]                *)
+    | PDecl of name * typ  * dctx * depend    (*   |   p::A[Psi]                *)
+    | SDecl of name * dctx (* Phi *) * dctx * depend (* Psi *)
                                               (*   |   s::Phi[Psi],i.e. Psi|-s:Phi  *)
     | CDecl of name * cid_schema * depend
     | MDeclOpt of name
@@ -113,20 +109,20 @@ module LF = struct
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of name * normal option ref * dctx * typ * cnstr list ref * inferred
+    | Inst   of name * normal option ref * dctx * typ * cnstr list ref * depend
         (* D ; Psi |- M <= A
            provided constraint *)
-    | PInst  of name * head   option ref * dctx * typ * cnstr list ref
+    | PInst  of name * head   option ref * dctx * typ * cnstr list ref * depend
         (* D ; Psi |- H => A  provided constraint *)
-    | SInst  of name * sub    option ref * dctx (*cPsi*) * dctx (*cPhi *) * cnstr list ref
+    | SInst  of name * sub    option ref * dctx (*cPsi*) * dctx (*cPhi *) * cnstr list ref  * depend
         (* D ; Psi |- sigma <= cPhi  provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * inferred
+    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * depend
         (* D ; Psi |- M <= A
            provided constraint *)
-    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
-    | MSInst   of name * sub option ref * mctx * dctx (* cPsi *) * dctx (* cPhi *) * cnstr list ref
+    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref * depend
+    | MSInst   of name * sub option ref * mctx * dctx (* cPsi *) * dctx (* cPhi *) * cnstr list ref * depend
         (* cD ; cPsi |- s <= cPhi *)
 
   and tvar =
@@ -274,7 +270,7 @@ module Comp = struct
     | TypSub    of Loc.t * LF.dctx * LF.dctx
     | TypArr    of typ * typ
     | TypCross  of typ * typ
-    | TypPiBox  of (LF.ctyp_decl * depend) * typ
+    | TypPiBox  of LF.ctyp_decl * typ
     | TypClo    of typ *  LF.msub
     | TypBool
 

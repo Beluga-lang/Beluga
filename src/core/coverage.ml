@@ -170,7 +170,7 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) LF.Implicit in             (*SCOTT*)
+      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) LF.Maybe in             (*?*)
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -618,8 +618,8 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
                          (pat, (tau1,t)) (pat', (tau1',t')) mC sC in
 	match_spines (cD,cG) (cD_p, cG_p)
 	  (pS, (tau2,t)) (pS', (tau2',t')) mC1 sC1
-  | (Comp.PatApp (_ , pat, pS) , (Comp.TypPiBox ((LF.MDecl (_, tA, cPsi, _), _ ), tau2), t)),
-    (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox ((LF.MDecl (_, tA', cPsi', _), _), tau2'), t')) ->
+  | (Comp.PatApp (_ , pat, pS) , (Comp.TypPiBox (LF.MDecl (_, tA, cPsi, _), tau2), t)),
+    (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox (LF.MDecl (_, tA', cPsi', _), tau2'), t')) ->
       let Comp.PatMetaObj (_, mO) = pat in
       let Comp.PatMetaObj (_, mO') = pat' in
       let tau1 = Comp.MetaTyp (Whnf.cnormTyp (tA,t), Whnf.cnormDCtx (cPsi, t)) in
@@ -636,8 +636,8 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
 	match_spines (cD,cG) (cD_p, cG_p)
 	  (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
 
-  | (Comp.PatApp (_ , pat, pS) , (Comp.TypPiBox ((LF.CDecl(_x,w, _ ), _dep), tau2), t)),
-    (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox ((LF.CDecl(_,w',_ ), _dep') , tau2'), t')) ->
+  | (Comp.PatApp (_ , pat, pS) , (Comp.TypPiBox ((LF.CDecl(_x,w, _ )), tau2), t)),
+    (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox ((LF.CDecl(_,w',_ )) , tau2'), t')) ->
       let Comp.PatMetaObj (_, mO) = pat in
       let Comp.PatMetaObj (_, mO') = pat' in
       let tau1 = Comp.MetaSchema w in
@@ -821,10 +821,10 @@ let genPVar (cD, cPsi, tP)   =
 	      let (pdecl, tA)  = (match trec' with
 				      LF.SigmaLast tA ->
 					(LF.PDecl(new_parameter_name "p@",
-						  tA, Whnf.cnormDCtx (cvar_psi, LF.MShift offset)) , tA)
+						  tA, Whnf.cnormDCtx (cvar_psi, LF.MShift offset), LF.Maybe) , tA)   (*?*)
 				    | LF.SigmaElem _  ->
 					(LF.PDecl (new_parameter_name "p@",
-						   LF.Sigma trec', Whnf.cnormDCtx (cvar_psi, LF.MShift offset)) , LF.Sigma trec')
+						   LF.Sigma trec', Whnf.cnormDCtx (cvar_psi, LF.MShift offset), LF.Maybe) , LF.Sigma trec')  (*?*)
 			   ) in
 
 	      let cD'_pdecl = LF.Dec(cD', pdecl) in
@@ -1215,8 +1215,8 @@ let rec addToMCtx cD (cD_tail, ms) = match cD_tail with
   | LF.MDecl (u, tA, cPsi, mDep) :: cD_tail ->
       let mdec = LF.MDecl(u, Whnf.cnormTyp (tA, ms), Whnf.cnormDCtx (cPsi, ms), mDep) in
 	addToMCtx (LF.Dec (cD, mdec)) (cD_tail, Whnf.mvar_dot1 ms)
-  | LF.PDecl (u, tA, cPsi) :: cD_tail ->
-      let pdec = LF.PDecl(u, Whnf.cnormTyp (tA, ms), Whnf.cnormDCtx (cPsi, ms)) in
+  | LF.PDecl (u, tA, cPsi, mDep) :: cD_tail ->
+      let pdec = LF.PDecl(u, Whnf.cnormTyp (tA, ms), Whnf.cnormDCtx (cPsi, ms), mDep) in
 	addToMCtx (LF.Dec (cD, pdec)) (cD_tail, Whnf.mvar_dot1 ms)
   | cdecl :: cD_tail ->
       addToMCtx (LF.Dec (cD, cdecl)) (cD_tail, Whnf.mvar_dot1 ms)
@@ -1301,7 +1301,7 @@ let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
 	let _ = dprint (fun () -> "[Subord.thin'] ss' = " ^ P.subToString cD'' cPsi' ssi) in
 	let _ = dprint (fun () -> "[genCtx] generated mvar of type " ^ P.dctxToString cD'' cPsi'  ^ " |- " ^
 			  P.typToString cD'' cPsi' (tP, ssi)) in
-	let mdec = LF.MDecl (x, LF.TClo(tP,ssi), cPsi, LF.Implicit) in (*SCOTT*)
+	let mdec = LF.MDecl (x, LF.TClo(tP,ssi), cPsi, LF.Maybe) in (*?*)
 	let mv   = LF.Root(Syntax.Loc.ghost, LF.MVar(LF.Offset 1, Whnf.cnormSub  (ss', LF.MShift 1)), LF.Nil) in
 	  (LF.Dec (cD'', mdec) , LF.Dot(LF.Obj mv, Whnf.cnormSub (s', LF.MShift 1)))
 
@@ -1366,7 +1366,7 @@ let genCGoals (cD':LF.mctx) mdec = match mdec with
 			P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in
       let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in
 	(genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)) , dep0)
-  | LF.PDecl (_u, tA, cPsi) ->
+  | LF.PDecl (_u, tA, cPsi, mDep) ->
       let _ = dprint (fun () -> "[SPLIT] CovGoal (PVAR): " ^ P.dctxToString cD' cPsi ^ " . " ^
 			P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in
       let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in
@@ -1461,14 +1461,14 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
       let (cG, pS, ttau) = genPattSpine (tau2,t) in
 	((pv1, Whnf.cnormCTyp (tau1,t))::cG ,
 	 Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau)
-  | (Comp.TypPiBox ((LF.CDecl(x, sW, _ ), _ ), tau), t) ->
+  | (Comp.TypPiBox ((LF.CDecl(x, sW, _ )), tau), t) ->
       let cPsi' = LF.CtxVar (LF.CInst (x, ref None, sW, LF.Empty, Whnf.m_id)) in
       let pat1 = Comp.PatMetaObj (Syntax.Loc.ghost,
 				  Comp.MetaCtx (Syntax.Loc.ghost, cPsi')) in
       let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.CObj(cPsi'), t)) in
 	(cG, Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau0)
 
-  | (Comp.TypPiBox ((LF.MDecl (u, tP,  cPsi, _), _ ), tau), t) ->
+  | (Comp.TypPiBox ((LF.MDecl (u, tP,  cPsi, _)), tau), t) ->
       let tP' = Whnf.cnormTyp (tP, t) in
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let tR    = etaExpandMVstr LF.Empty cPsi' (tP', S.LF.id) in
@@ -1528,7 +1528,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 	[ (cD, cg, Whnf.m_id) ]
 
   | Comp.TypBox (loc, tA, cPsi) ->
-      let (cgoals, _ ) = genCGoals cD (LF.MDecl(Id.mk_name(Id.NoName), tA, cPsi, LF.Explicit)) in (*SCOTT*)
+      let (cgoals, _ ) = genCGoals cD (LF.MDecl(Id.mk_name(Id.NoName), tA, cPsi, LF.No)) in (*?*)
 
 	List.map (fun (cD', cg, ms) ->
 		    let CovGoal (cPsi', tR, sA') = cg in
@@ -2006,7 +2006,7 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 *)
 let initialize_coverage problem projOpt = begin match problem.ctype with
   | Comp.TypBox(loc, tA, cPsi) ->
-      let cD'        = LF.Dec (problem.cD, LF.MDecl(Id.mk_name (Id.NoName), tA, cPsi, LF.Explicit)) in (*SCOTT*)
+      let cD'        = LF.Dec (problem.cD, LF.MDecl(Id.mk_name (Id.NoName), tA, cPsi, LF.No)) in (*?*)
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = LF.MVar (LF.Offset 1, idSub) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
@@ -2023,7 +2023,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 
   | Comp.TypParam(loc, tA, cPsi) ->
       let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
-      let cD'        = LF.Dec (problem.cD, LF.PDecl(Id.mk_name (Id.NoName), tA, cPsi)) in
+      let cD'        = LF.Dec (problem.cD, LF.PDecl(Id.mk_name (Id.NoName), tA, cPsi, LF.No)) in (*?*)
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = match projOpt with None -> LF.PVar (LF.Offset 1, idSub) | Some k -> LF.Proj(LF.PVar (LF.Offset 1, idSub), k) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
@@ -2067,9 +2067,9 @@ let rec check_emptiness cD = match cD with
 	print_endline "Try next meta-variable ...";
 	check_emptiness cD'
       end
-  | LF.Dec(cD', LF.PDecl (_u, LF.Sigma _ , _cPsi)) ->
+  | LF.Dec(cD', LF.PDecl (_u, LF.Sigma _ , _cPsi, _ )) ->
       check_emptiness cD'
-  | LF.Dec(cD', LF.PDecl (_u, tA, cPsi)) ->
+  | LF.Dec(cD', LF.PDecl (_u, tA, cPsi, _)) ->
       begin try
 	(match genBCovGoals (cD' , cPsi, Whnf.normTyp (tA, S.LF.id)) with
 	   | [] -> true

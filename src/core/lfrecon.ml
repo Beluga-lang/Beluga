@@ -205,7 +205,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
       let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) Int.LF.Implicit in (*SCOTT*)
+      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) Int.LF.Maybe in (*?*)
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -896,7 +896,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   Int.LF.Root (loc, Int.LF.FVar x, tS)
 		with NotPatSpine ->
                   (let _ = dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...") in
-                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Explicit in   (*SCOTT*)
+                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.No in   (*?*)
                    let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in
                    add_fvarCnstr (tAvar, m, v);
                    Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil))
@@ -920,7 +920,7 @@ and elTerm' recT cD cPsi r sP = match r with
           | Pi ->
               (* let u =  Whnf.newMVar (cPsi, tA) in
                 Int.LF.Root (loc, Int.LF.MVar(u, Substitution.LF.id), tS) *)
-              let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Implicit in
+              let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Maybe in
                 Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
           | Pibox ->
               begin match tA with
@@ -934,10 +934,10 @@ and elTerm' recT cD cPsi r sP = match r with
                                    let ssi' = Substitution.LF.invert ss' in
                                      (* cPhi' |- ssi : cPhi *)
                                      (* cPhi' |- [ssi]tQ    *)
-                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Implicit in (*SCOTT*)
+                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Maybe in (*?*)
                                      Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.comp ss'  s_proj))
                                  else
-                                   let u = Whnf.newMMVar None (cD, cPhi, tA') Int.LF.Implicit in (*SCOTT*)
+                                   let u = Whnf.newMMVar None (cD, cPhi, tA') Int.LF.Maybe in (*?*)
                                      Int.LF.MMVar (u, (Whnf.m_id, s_proj))
                     in
                       Int.LF.Root (loc, h, tS)
@@ -1012,7 +1012,7 @@ and elTerm' recT cD cPsi r sP = match r with
 	      let _ = dprint (fun () -> "Added FMVar " ^ R.render_name u ^
 				" of type " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^
 				"[" ^ P.dctxToString cD cPhi ^ "]") in
-                FCVar.add u (cD, Int.LF.MDecl(u, tP, cPhi, Int.LF.Implicit )); (*SCOTT*)
+                FCVar.add u (cD, Int.LF.MDecl(u, tP, cPhi, Int.LF.Maybe )); (*?*)
                 Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
           else
            if isProjPatSub s then
@@ -1056,7 +1056,7 @@ and elTerm' recT cD cPsi r sP = match r with
                                P.typToString cD cPhi (tP, Substitution.LF.id) ^ " [ " ^
                                P.dctxToString cD cPhi ^ " ] ") in
 
-            FCVar.add u (cD, Int.LF.MDecl (u, tP, cPhi, Int.LF.Implicit )); (*SCOTT*)
+            FCVar.add u (cD, Int.LF.MDecl (u, tP, cPhi, Int.LF.Maybe )); (*?*)
             Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
 
            else
@@ -1065,7 +1065,7 @@ and elTerm' recT cD cPsi r sP = match r with
                  | Apx.LF.SVar (_ , _ ) ->
                      raise (Error (loc, CompTypAnnSub ))
                  | _ ->
-              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Implicit in
+              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in
                 add_fcvarCnstr (m, v);
                 Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil)
 
@@ -1080,7 +1080,7 @@ and elTerm' recT cD cPsi r sP = match r with
 
   | Apx.LF.Root (loc, Apx.LF.FPVar (p, s), spine) as m ->
       begin try
-        let (cD_d, Int.LF.PDecl (_, tA, cPhi)) = FCVar.get p in
+        let (cD_d, Int.LF.PDecl (_, tA, cPhi, _)) = FCVar.get p in
 	let d = Context.length cD - Context.length cD_d in
 	let (tA, cPhi) = if d = 0 then (tA, cPhi) else
 	  (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in
@@ -1125,11 +1125,11 @@ and elTerm' recT cD cPsi r sP = match r with
                     dprint (fun () -> "cPsi = " ^ P.dctxToString cD cPsi);
                     dprint (fun () -> "s = " ^ P.subToString cD cPhi s'')
                   | _ -> () end in
-                  FCVar.add p (cD, Int.LF.PDecl(p, Whnf.normTyp (tP,Substitution.LF.id),  cPhi));
+                  FCVar.add p (cD, Int.LF.PDecl(p, Whnf.normTyp (tP,Substitution.LF.id),  cPhi, Int.LF.Maybe));  (*?*)
                   Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
 
             | (Apx.LF.Nil, false) ->
-                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in
+                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (loc, Int.LF.PVar (q, Substitution.LF.id), Int.LF.Nil)
 
@@ -1146,7 +1146,7 @@ and elTerm' recT cD cPsi r sP = match r with
         begin try
           let _ = dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
 			    p.string_of_name ^ "." ^ string_of_int k) in
-          let (cD_d, Int.LF.PDecl (_, ((Int.LF.Sigma typRec) as tA), cPhi)) = FCVar.get  p in
+          let (cD_d, Int.LF.PDecl (_, ((Int.LF.Sigma typRec) as tA), cPhi, _)) = FCVar.get  p in
 	  let d = Context.length cD - Context.length cD_d in
 	  let (tA, cPhi) = if d = 0 then (tA, cPhi) else
 	    (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in
@@ -1199,11 +1199,11 @@ and elTerm' recT cD cPsi r sP = match r with
                       (dprint (fun () -> "synType for PVar: [SigmaElem]" ^ P.typRecToString cD cPhi (typRec', s_inst) ^ "\n") ;
                        Int.LF.Sigma typRec' )
                   end in
-                  FCVar.add p (cD, Int.LF.PDecl (p, Whnf.normTyp (tB, s_inst), cPhi));
+                  FCVar.add p (cD, Int.LF.PDecl (p, Whnf.normTyp (tB, s_inst), cPhi, Int.LF.Maybe));   (*?*)
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k),  Int.LF.Nil)
 
             | (false, Apx.LF.Nil) ->
-                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in
+                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in  (*?*)
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil)
 
@@ -1641,7 +1641,7 @@ and elSub' loc recT cD cPsi s cPhi =
 
    *)
       begin try
-        let (cD_d, Int.LF.SDecl(_,cPhi0 , cPsi0)) = FCVar.get s_name in
+        let (cD_d, Int.LF.SDecl(_,cPhi0 , cPsi0, mDep)) = FCVar.get s_name in
 	let d = Context.length cD - Context.length cD_d in
 	let (cPhi0', cPsi0') = if d = 0 then (cPhi0, cPsi0) else
           (if d > 0 then
@@ -1679,7 +1679,7 @@ and elSub' loc recT cD cPsi s cPhi =
               | Int.LF.CtxVar cv , Int.LF.Null -> (Int.LF.NegCtxShift cv, 0)
               | _ -> raise (Error (loc, SubstTyp)) in
 *)
-              (FCVar.add s_name (cD, Int.LF.SDecl (s_name, cPhi, cPsi'));
+              (FCVar.add s_name (cD, Int.LF.SDecl (s_name, cPhi, cPsi', Int.LF.No));  (*?*)
                Int.LF.FSVar (s_name, ctxShift, sigma'))
           else
             raise (Error (loc, NotPatSub))
@@ -1765,7 +1765,7 @@ and elSub' loc recT cD cPsi s cPhi =
                    * . ; cPhi |- tA <= type  and . ; cPsi |- s' <= cPhi
                    * This will be enforced during abstraction.
                    *)
-                  FCVar.add p (cD, Int.LF.PDecl(p, Whnf.normTyp (tA,Substitution.LF.id),  cPhi));
+                  FCVar.add p (cD, Int.LF.PDecl(p, Whnf.normTyp (tA,Substitution.LF.id),  cPhi, Int.LF.No));  (*?*)
                   Int.LF.Dot (Int.LF.Head (Int.LF.FPVar (p,s'')), sigma)
            else
              raise (Error (loc, NotPatternSpine))
@@ -2230,7 +2230,7 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
 
   | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, cPsi, _, _, _)) :: cnstrs) ->
       begin try
-        let (cD_d, Int.LF.PDecl (_, tA, cPhi)) = FCVar.get x in
+        let (cD_d, Int.LF.PDecl (_, tA, cPhi, _)) = FCVar.get x in
 	let d = Context.length cD - Context.length cD_d in
 	let (tA, cPhi) = if d = 0 then (tA, cPhi) else
 	  (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in

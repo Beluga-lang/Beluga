@@ -298,7 +298,7 @@ and inferHead loc cD cPsi head = match head with
     TClo (tA, s)
 
 
-  | PVar (PInst (_, {contents = None}, cPsi', tA, _ ) , s) ->
+  | PVar (PInst (_, {contents = None}, cPsi', tA, _ , _) , s) ->
     (* cD ; cPsi' |- tA <= type *)
     dprnt "[inferHead] PVar case";
     dprint (fun () -> "[inferHead] PVar case:    s = " ^ P.subToString cD cPsi s);
@@ -792,7 +792,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
           else
             raise (Error.Violation ("Contextual substitution ill-typed - 2 "))
 
-    | MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi)) ->
+    | MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi, _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         let (_, tA1, cPsi1) = Whnf.mctxPDec cD p in
@@ -802,7 +802,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
             raise (Error.Violation ("Contextual substitution ill-typed - 3 "))
 
 
-    | MDot (MV p, ms), Dec(cD1', SDecl (_u, cPhi, cPsi)) ->
+    | MDot (MV p, ms), Dec(cD1', SDecl (_u, cPhi, cPsi, _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
         let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD p in
@@ -811,13 +811,13 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
           else
             raise (Error.Violation ("Contextual substitution ill-typed - 4 "))
 
-    | MDot (SObj (_, s), ms), Dec(cD1', SDecl (_u, cPhi, cPsi)) ->
+    | MDot (SObj (_, s), ms), Dec(cD1', SDecl (_u, cPhi, cPsi, _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
           (checkSub loc cD cPsi' s cPhi';
            checkMSub loc cD ms cD1' )
 
-    | MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi)) ->
+    | MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi, _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with

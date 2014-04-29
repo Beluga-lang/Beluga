@@ -195,7 +195,7 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
               _ -> raise Not_compatible
           end
 
-  | (1, (Comp.TypArr (Comp.TypBox (loc, tA, cPsi), tau), theta)) ->
+  | (1, (Comp.TypArr (Comp.TypBox (loc, Comp.MetaTyp(tA, cPsi)), tau), theta)) ->
       let u = Id.mk_name (Id.MVarName None) in
       let cdec = LF.MDecl(u, tA, cPsi) in
         begin try

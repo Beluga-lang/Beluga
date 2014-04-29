@@ -1,5 +1,14 @@
-<{synint,synapx,synext,syntax,token,holes,unify,lexer,parser}.ml{i,}> : package(camlp4)
-<{holes,logic,parser,store,unify}.ml{,i}> : package(extlib)
-<{token,lexer,parser}.ml> : syntax(camlp4o)
-<lexer.ml> : package(ulex)
+true : use_ocamlfind, annot
+
+<{synint,synapx,synext,syntax,token,holes}.ml> : use_camlp4
+<store.mli> : package(extlib)
+<store.ml> : package(extlib)
+<{holes,logic}.ml> : package(extlib)
+<unify.ml> :  package(extlib), use_camlp4
+<token.ml> : camlp4o
+<lexer.ml> : syntax(camlp4o), package(ulex)
+<{lexer,parser}.mli> : use_camlp4
+<parser.ml> : camlp4o, use_camlp4,package(extlib)
+
+
 <*.cmx> and not <core.cmx> : for-pack(Core)

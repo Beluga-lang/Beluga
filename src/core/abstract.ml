@@ -1,7 +1,7 @@
 (**
    @author Renaud Germain
    @author Brigitte Pientka
-*) 
+*)
 open Store
 open Store.Cid
 open Substitution
@@ -558,8 +558,8 @@ let rec constraints_solved cnstr = match cnstr with
 
 (* Check that a synthesized computation-level type is free of constraints *)
 let rec cnstr_ctyp tau =  match tau  with
-  | Comp.TypBox (_, tA, cPsi) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
-  | Comp.TypSub (_, cPhi, cPsi) -> cnstr_dctx cPhi && cnstr_dctx cPsi
+  | Comp.TypBox (_, Comp.MetaTyp (tA, cPsi)) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
+  | Comp.TypBox (_, Comp.MetaSubTyp (cPhi, cPsi)) -> cnstr_dctx cPhi && cnstr_dctx cPsi
 
 and cnstr_typ sA = match sA with
   | (I.Atom  (_, _a, spine),  s)  -> cnstr_spine (spine , s)
@@ -2130,17 +2130,17 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ', ms') = collect_meta_spine p cQ ms in
         (cQ', Comp.TypCobase (loc, a, ms'))
 
-  | Comp.TypBox (loc, tA, cPsi) ->
+  | Comp.TypBox (loc, Comp.MetaTyp( tA, cPsi)) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
       let (cQ'', tA')  = collectTyp p cQ' phat (tA, LF.id) in
-        (cQ'', Comp.TypBox (loc, tA', cPsi'))
+        (cQ'', Comp.TypBox (loc, Comp.MetaTyp(tA', cPsi')))
 
-  | Comp.TypSub (loc, cPhi, cPsi) ->
+  | Comp.TypBox (loc, Comp.MetaSubTyp (cPhi, cPsi)) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
       let (cQ'', cPhi') = collectDctx loc p cQ phat cPhi in
-        (cQ'', Comp.TypSub(loc, cPhi', cPsi'))
+        (cQ'', Comp.TypBox(loc, Comp.MetaSubTyp (cPhi', cPsi')))
 
   | Comp.TypArr (tau1, tau2) ->
       let (cQ1, tau1') = collectCompTyp p cQ tau1 in
@@ -2248,7 +2248,7 @@ and collectExp' cQ i = match i with
   | Comp.Var _x -> (cQ , i)
   | Comp.DataConst _c ->  (cQ , i)
   | Comp.DataDest _c -> (cQ , i)
-  | Comp.Const  _c ->  (cQ , i)
+  | Comp.Const (_, _c) ->  (cQ , i)
   | Comp.Apply (loc, i, e) ->
       let (cQ', i') = collectExp' cQ i  in
       let (cQ'', e') = collectExp cQ' e in
@@ -2432,15 +2432,15 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypCobase (loc, a, cS) ->
       let cS' = abstractMVarMetaSpine cQ offset cS in
         Comp.TypCobase (loc, a , cS')
-  | Comp.TypBox (loc,tA, cPsi) ->
+  | Comp.TypBox (loc, Comp.MetaTyp (tA, cPsi)) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
-        Comp.TypBox (loc, tA', cPsi')
+        Comp.TypBox (loc, Comp.MetaTyp (tA', cPsi'))
 
-  | Comp.TypSub (loc,cPhi, cPsi) ->
+  | Comp.TypBox (loc, Comp.MetaSubTyp (cPhi, cPsi)) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let cPhi' = abstractMVarDctx cQ offset cPhi in
-        Comp.TypSub (loc,cPhi', cPsi')
+        Comp.TypBox (loc, Comp.MetaSubTyp (cPhi', cPsi'))
 
   | Comp.TypArr (tau1, tau2) ->
       Comp.TypArr (abstractMVarCompTyp cQ offset tau1,

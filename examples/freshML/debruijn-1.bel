@@ -28,26 +28,6 @@ app'   : exp' (arr A B) -> exp' A -> exp' B.
 
 schema ctx = value T ;
 
-<<<<<<< HEAD
-rec var2db : {g:ctx}{#p:[g. value S]}  [.exp' S] = / total g (var2db g _ ) /
-mlam g => mlam #p => case [g.#p ..] of
-| [h,x:value T. x] => [. one]
-
- | % {#p:[h. value S']} This is necessary in the absence of subordination, since we need S' to be closed.
- [h,x:value T. #p ..]  =>
- let [. Db] = var2db [h] [h. #p ..] in
- [. shift Db]
-;
-
-rec vhoas2db : (g:ctx) [g. value S]  -> [. exp' S] = / total v (vhoas2db _ _ v) /
-fn v =>  case v of
-  | [g. #p ..] => var2db [g] [g.#p ..]
-  | [g. lam T (\x. E .. x)] =>
-   let [. F]  =  hoas2db [g,x:value T. E .. x] in
-     [. lam' T F]
-
-and hoas2db : (g:ctx) [g. exp T] ->  [. exp' T] = / total e (hoas2db _ _ e) /
-=======
 rec vhoas2db : (g:ctx) [g |- value S]  -> [ |- exp' S] =
 fn v =>  case v of
  | [h,x:value T |-  x] => [ |- one]
@@ -62,7 +42,6 @@ fn v =>  case v of
 
 
 and hoas2db : (g:ctx) [g |- exp T] ->  [ |- exp' T] =
->>>>>>> master
   fn e =>  case e of
   | [g |- app (E1 .. ) (E2 .. )] =>
    let [ |- F1] = hoas2db [g |- E1 ..]  in
@@ -73,8 +52,6 @@ and hoas2db : (g:ctx) [g |- exp T] ->  [ |- exp' T] =
 ;
 
 
-<<<<<<< HEAD
-=======
 rec db2vhoas : (g:ctx) [g |- exp' T] -> [g |- value T] =
   fn e => case e of
   | [h,x:value T |-  one] : [h,x:value T |-  (exp' T)] =>
@@ -99,4 +76,3 @@ and db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
 rec tohoas : [ |- exp' T] -> [ |- exp T] =
 fn e => db2hoas e ;
 
->>>>>>> master

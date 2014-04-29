@@ -721,10 +721,12 @@ let rec conTypArr l lt lju lsym ltp =
                 let v1 = valtp l lt lsym1 va1 in
                 begin match co with
                   | None ->
-                            Ext.Comp.TypBox(l2, Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null)
+                            Ext.Comp.TypBox(l2,
+                                           Ext.Comp.MetaTyp(l2, Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null))
                   | Some([Con(s)]) ->
                                     let c = Ext.LF.CtxVar(l2, Id.mk_name(Id.SomeString s)) in
-                                    Ext.Comp.TypBox(l2, Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1), c)
+                                    Ext.Comp.TypBox(l2,
+                                                    Ext.Comp.MetaTyp(l2, Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1), c))
                   | _ -> let s = locToString(l2) in
                          let s1 = s ^ " Let me know if you raise this error. " in
                          raise (Error (s1))
@@ -734,12 +736,13 @@ let rec conTypArr l lt lju lsym ltp =
                 begin match co with
                   | None ->
                             Ext.Comp.TypArr(l2, Ext.Comp.TypBox(l2,
-                                                                Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1),
-                                                                                 Ext.LF.Null),
+                                                                Ext.Comp.MetaTyp(l2, Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1),
+                                                                                 Ext.LF.Null)),
                                             conTypArr l2 lt lju lsym t)
                   | Some([Con(s)]) ->
                                     let c = Ext.LF.CtxVar(l2, Id.mk_name(Id.SomeString s)) in
-                                    Ext.Comp.TypArr(l2, Ext.Comp.TypBox(l2,Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1), c),
+                                    Ext.Comp.TypArr(l2, Ext.Comp.TypBox(l2,
+                                                                        Ext.Comp.MetaTyp(l2,Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),v1), c)),
                                                     conTypArr l2 lt lju lsym t)
                   | _ -> let s = locToString(l2) in
                          let s1 = s ^ " Let me know if you raise this error. " in
@@ -762,7 +765,7 @@ let stmt_to_prove l lt st lju lsym =
                                                           Ext.LF.Atom(l2,Id.mk_name(Id.SomeString "n"),Ext.LF.Nil),
                                                           Ext.LF.Null),
                                              Ext.Comp.Explicit),
-                                         Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null)),
+                                         Ext.Comp.TypBox(l3,Ext.Comp.MetaTyp(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn),v1),Ext.LF.Null))),
                        Some([s1]))
 
                  | _ ->
@@ -776,7 +779,7 @@ let stmt_to_prove l lt st lju lsym =
                                                                  Ext.LF.Atom(l2,Id.mk_name(Id.SomeString jn),aa1),
                                                                  Ext.LF.Null),
                                                     Ext.Comp.Explicit),
-                                                Ext.Comp.TypBox(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn2),v1),Ext.LF.Null)),
+                                                Ext.Comp.TypBox(l3,Ext.Comp.MetaTyp(l3,Ext.LF.Atom(l3,Id.mk_name(Id.SomeString jn2),v1),Ext.LF.Null))),
                               Some([n1]))
                        | None -> let s = locToString(l2) in
                          let s1 = "This premise needs a name.  " ^ s in
@@ -793,7 +796,7 @@ let stmt_to_prove l lt st lju lsym =
                            let (jn, lsym1) = findJ va2 lju in
                            let va4 = valts l2 lsym va2 in
                            let va3 = Ext.LF.Atom(l1, Id.mk_name(Id.SomeString jn), va4) in
-                           let tbox = Ext.Comp.TypBox(l5, va3,Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s1)))in
+                           let tbox = Ext.Comp.TypBox(l5, Ext.Comp.MetaTyp(l5, va3,Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s1))))in
                            let cta = Ext.Comp.TypPiBox(l4, (Ext.LF.MDecl(l4,Id.mk_name(Id.SomeString s3),
                                                                          Ext.LF.Atom(l2,Id.mk_name(Id.SomeString s5), Ext.LF.Nil),
                                                                          Ext.LF.CtxVar(l4,Id.mk_name(Id.SomeString s1))),
@@ -832,7 +835,7 @@ let stmt_to_prove l lt st lju lsym =
                | Premisse( l2, None, None, va) ->
                                                   let (jn, lsym) = findJ va lju in
                                                   let va1 = valts l2 lsym va in
-                                                  (Ext.Comp.TypBox(l1,Ext.LF.Atom(l1, Id.mk_name(Id.SomeString jn), va1), Ext.LF.Null),None)
+                                                  (Ext.Comp.TypBox(l1, Ext.Comp.MetaTyp(l1,Ext.LF.Atom(l1, Id.mk_name(Id.SomeString jn), va1), Ext.LF.Null)),None)
                | Premisse _ -> raise (Error ("Not implemented."))
              end
 

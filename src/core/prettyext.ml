@@ -581,21 +581,21 @@ module Ext = struct
               (fmt_ppr_meta_spine cD 2) mS
               (r_paren_if cond)
 
-      | Comp.TypBox (_,  tA, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaTyp (_, tA, cPsi)) ->
           fprintf ppf "%a[%a]"
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
 
-      | Comp.TypPBox (_, tA, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaParamTyp (_, tA, cPsi)) ->
           fprintf ppf "%a[%a]"
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
 
-      | Comp.TypCtx (_, x) ->
+      | Comp.TypBox (_, Comp.MetaSchema(_, x)) ->
             fprintf ppf "%s"
               (R.render_name x)
 
-      | Comp.TypSub(_, cPhi, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaSubTyp (_, cPhi, cPsi)) ->
           fprintf ppf "%a[%a]"
             (fmt_ppr_lf_dctx cD 0) cPhi
             (fmt_ppr_lf_dctx cD 0) cPsi

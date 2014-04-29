@@ -14,6 +14,7 @@ schema evctx = block x:exp, v:eq x x, u:eval x x, _t:notLam x;
 
 rec eval_respects_eq : (g:evctx) [g |- eq (M ..) (N ..)] -> [g |- eval (M ..) (R ..)]
 -> [g |- eval (N ..) (R ..)] =
+% / total f (eval_respects_eq _ _ _ _ _ f ) /
 fn d => fn f =>
 case f of
  | [g |- eval_app2 (D1 ..) (NL ..) (D2 ..)] =>

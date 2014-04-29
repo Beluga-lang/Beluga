@@ -61,7 +61,7 @@ Beluga lexical categories:
          let  mlam  of
          rec  schema  some  type
          bool
-         %name %not
+         %name %not %positive
 
      presently reserved but unused:           box
 
@@ -184,6 +184,7 @@ let lex_token loc = lexer
   | "ttrue"
   | "ffalse"
   | "%name"
+  | "%positive"
   | "total"
   | "%opts"
   | "%not"

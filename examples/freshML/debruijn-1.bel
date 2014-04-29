@@ -29,11 +29,11 @@ app'   : exp' (arr A B) -> exp' A -> exp' B.
 schema ctx = value T ;
 
 rec vhoas2db : (g:ctx) [g |- value S]  -> [ |- exp' S] =
+/ total g (vhoas2db g  _ _ ) /
 fn v =>  case v of
  | [h,x:value T |-  x] => [ |- one]
 
- | % {#p:[h |- value S']} This is necessary in the absence of subordination, since we need S' to be closed.
-   [h,x:value T |-  #p ..]  =>
+ | [h,x:value T |-  #p ..]  =>
      let [ |- Db] = vhoas2db [h |- #p ..] in
        [ |- shift Db]
 | [g |- lam T (\x. E .. x)] =>
@@ -42,6 +42,7 @@ fn v =>  case v of
 
 
 and hoas2db : (g:ctx) [g |- exp T] ->  [ |- exp' T] =
+ / total e (hoas2db _ _ e ) /
   fn e =>  case e of
   | [g |- app (E1 .. ) (E2 .. )] =>
    let [ |- F1] = hoas2db [g |- E1 ..]  in

@@ -361,3 +361,27 @@ let rec filter cD cG cIH e2 = match e2, cIH with
   and arguments in generated wf-call.
 
 *)
+
+
+(*
+let rec positive a tau = match tau  with
+| TypBase _ ->  true 
+| TypBox _ -> true
+| TypArr (tau1, tau2) ->  
+  check_positive a tau1 && 
+  positive a tau2 
+
+let rec check_positive a tau = match tau with 
+| TypBase (_, c, _mS) ->  a = c  || c declared to be positive 
+| TypBox _ ->  true
+| TypArr (tau1, tau2) -> 
+  check_neg a tau1 && check_positive a tau2
+
+and check_neg a tau = match tau with 
+| TypBase (_ , c, mS) ->  not (a = c) && c declared to be positive 
+
+| TypArr (tau1, tau2)   -> 
+  check_positive a tau1  && check_negative a tau2  
+
+
+*)

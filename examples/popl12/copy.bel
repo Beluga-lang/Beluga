@@ -1,4 +1,4 @@
-exp: type.
+exp: type. %name exp E.
 lam: (exp -> exp) -> exp.
 app: exp -> exp -> exp.
 z: exp.
@@ -6,7 +6,7 @@ s: exp -> exp.
 
 schema ctx = exp;
 
-datatype IsExp : {g:ctx} [g |- exp] -> ctype =
+datatype IsExp : {g:ctx} [g |- exp] -> ctype %positive =
 | IsZero : (g:ctx) IsExp [g] [g |- z]
 | IsSuc : (g:ctx) IsExp [g] [g |- M ..] -> IsExp [g] [g |- s (M ..)]
 | IsVar : (g:ctx) IsExp [g] [g |- #p..]

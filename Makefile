@@ -17,8 +17,8 @@ OCAMLBUILD = ocamlbuild -use-ocamlfind \
 all: all.otarget
 	rm -f main.native
 	mkdir -p bin
-	ln -sf _build/src/beluga/main.native bin/beluga
-	ln -sf _build/src/beli/main.native bin/beli
+	ln -sf ../_build/src/beluga/main.native bin/beluga
+	ln -sf ../_build/src/beli/main.native bin/beli
 
 clean:
 	$(OCAMLBUILD) -clean

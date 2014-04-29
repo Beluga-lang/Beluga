@@ -540,26 +540,6 @@ and index_meta_spine cvars fcvars = function
         (Apx.Comp.MetaApp (m', s') , fcvars'')
 
 
-let index_meta_typ cvars fcvars = function
-  | Ext.Comp.MetaTyp (loc, a, psi) ->
-    begin match a with
-      | Ext.LF.Atom (_ , name, Ext.LF.Nil)
-          when (try ignore (CVar.index_of_name cvars (CVar.CV name)); true with Not_found -> false) ->
-        let offset = CVar.index_of_name cvars (CVar.CV name) in
-        let (psi', _ , fcvars1) = index_dctx cvars (BVar.create ()) fcvars psi in
-        let _ = dprint (fun () -> "Indexing TypSub -- turning TypBox into TypSub") in
-          (Apx.Comp.MetaSubTyp (loc, Apx.LF.CtxVar (Apx.LF.CtxOffset offset), psi'), fcvars1)
-      | _ ->
-        let (psi', bvars', fcvars') = index_dctx cvars (BVar.create ()) fcvars psi in
-        let (a', fcvars'' )         = index_typ cvars bvars' fcvars' a   in
-        (Apx.Comp.MetaTyp (loc, a', psi'), fcvars'')
-    end
-
- | Ext.Comp.MetaSubTyp (loc, phi, psi)    ->
-      let (psi', _ , fcvars1 ) = index_dctx cvars (BVar.create ()) fcvars psi in
-      let (phi', _ , fcvars2 ) = index_dctx cvars (BVar.create ()) fcvars1 phi in
-        (Apx.Comp.MetaSubTyp (loc, phi', psi'), fcvars2)
-
 
 
 let rec index_compkind cvars fcvars = function

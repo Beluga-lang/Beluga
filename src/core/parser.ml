@@ -346,9 +346,7 @@ GLOBAL: sgn;
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
         [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
-
-%      | "%positive"; w = SYMBOL ; "." -> 
-      
+    
 
       | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
         if Option.is_some x then

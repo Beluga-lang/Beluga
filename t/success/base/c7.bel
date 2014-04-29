@@ -5,13 +5,13 @@ trip  : term -> term -> term
 
 schema termCtx = some [] term;
 
-rec fff : [. term] -> [. term] = fn e =>
+rec fff : [ |- term] -> [ |- term] = fn e =>
   case e of
-  | [. z]         => [. z]
+  | [ |- z]         => [ |- z]
 
-  | [. trip (trip U1 U2 U3) V W] => [. z]
-  | [. trip U (trip V1 V2 V3) W] => [. z]
-  | [. trip U V (trip W1 W2 W3)] => [. z]
+  | [ |- trip (trip U1 U2 U3) V W] => [ |- z]
+  | [ |- trip U (trip V1 V2 V3) W] => [ |- z]
+  | [ |- trip U V (trip W1 W2 W3)] => [ |- z]
 
-  | [. trip (trip (trip (trip (trip (trip A1 A2 A3) B2 B3) C2 C3) D2 D3) E2 E3) z W] => [. z]
+  | [ |- trip (trip (trip (trip (trip (trip A1 A2 A3) B2 B3) C2 C3) D2 D3) E2 E3) z W] => [ |- z]
 ;

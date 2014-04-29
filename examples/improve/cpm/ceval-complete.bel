@@ -24,71 +24,71 @@
 % argument for the resulting computation.
 %
 
-rec ccp : [. eval E V]
-       -> [. mstep (st K (return V)) (answer W)]
-       -> [. mstep (st K (ev E)) (answer W)] =
+rec ccp : [ |- eval E V]
+       -> [ |- mstep (st K (return V)) (answer W)]
+       -> [ |- mstep (st K (ev E)) (answer W)] =
 fn d => fn s => case d of
-  [. ev_z] => let [. S'] = s in [. << S' st_z]
+  [ |- ev_z] => let [ |- S'] = s in [ |- << S' st_z]
 
- | [. ev_s D1] =>
-      (let [. S']  = s in
-       let [. S1]  = ccp [. D1] [. << S' (st_return (\v. return (s_val v)) _)] in
-        [. << S1 st_s])
-
-
- | [. ev_match_z D2 D1] : [. (eval (match E E1 (\y. (E2 y))) V)] =>
-   (let [. S2]  = ccp [. D2] s in
-    let [. S1]  = ccp [. D1] [. << (<< S2 st_match1_z) (st_return (\v. match1 v E1 (\y. (E2 y))) _)] in
-      [. << S1 st_match])
-
- | [. ev_match_s D3 D1] : [. (eval (match E E1 (\y. (E2 y))) V)] =>
-   (let [. S3]  = ccp [. D3] s in
-    let [. S1]  = ccp [. D1] [. << (<< S3 st_match1_s) (st_return (\v. match1 v E1 (\y. (E2 y))) _)] in
-      [. << S1 st_match])
-
- | [. ev_pair D2 D1] : [. (eval (pair E1 E2) (pair_val V1 V2))]  =>
-   let [. S'] = s in
-   let [. S2] = ccp [. D2] [. << S' (st_return  (\x. return (pair_val V1 x))  _)] in
-   let [. S1] = ccp [. D1] [. << (<< S2 st_pair1) (st_return  (\x. pair1 x E2) _)] in
-     [. << S1 st_pair]
-
- | [. ev_fst D1] =>
-   (let [. S'] = s in
-    let [. S1] = ccp [. D1] [. << (<< S' st_fst1) (st_return (\v. fst1 v)  _)] in
-       [. << S1 st_fst])
-
- | [. ev_snd D1] =>
-   (let [. S'] = s in
-    let [. S1] = ccp [. D1] [. << (<< S' st_snd1) (st_return (\v. snd1 v) _)] in
-       [. << S1 st_snd])
-
- | [. ev_lam]    => let [. S'] = s in [. << S' st_lam]
-
- | {D1: [. eval E1 (lam_val (\x. (E' x)))]}
-   {D2: [. eval E2 V2]}{D3: [. eval (E' V2) V] }
-   [. ev_app D3 D2 D1] : [. (eval (app E1 E2) V)] =>
-   let [. S3] = ccp [. D3] s in
-   let [. S2] = ccp [. D2] [. << (<< S3 st_app2) (st_return  (\v. app2 (lam_val (\x. (E' x))) v)  _)]  in
-   let [. S1] = ccp [. D1] [. << (<< S2 st_app1) (st_return (\x1. app1 x1 E2)  _)]  in
-     [. << S1 st_app]
-
- | [. ev_letv D2 D1] : [. (eval (letv E1 (\x. (E2 x))) V)] =>
-     let [. S2] = ccp [. D2] s in
-     let [. S1] = ccp [. D1] [. << S2 (st_return  (\x1. ev (E2 x1))  _)] in
-       [. << S1 st_letv]
+ | [ |- ev_s D1] =>
+      (let [ |- S']  = s in
+       let [ |- S1]  = ccp [ |- D1] [ |- << S' (st_return (\v. return (s_val v)) _)] in
+        [ |- << S1 st_s])
 
 
- | [. ev_letn D1] : [. (eval (letn E1 (\x. (E2 x))) V)] =>
-     let [. S1] = ccp [. D1] s in
-       [. << S1 st_letn]
+ | [ |- ev_match_z D2 D1] : [ |- (eval (match E E1 (\y. (E2 y))) V)] =>
+   (let [ |- S2]  = ccp [ |- D2] s in
+    let [ |- S1]  = ccp [ |- D1] [ |- << (<< S2 st_match1_z) (st_return (\v. match1 v E1 (\y. (E2 y))) _)] in
+      [ |- << S1 st_match])
+
+ | [ |- ev_match_s D3 D1] : [ |- (eval (match E E1 (\y. (E2 y))) V)] =>
+   (let [ |- S3]  = ccp [ |- D3] s in
+    let [ |- S1]  = ccp [ |- D1] [ |- << (<< S3 st_match1_s) (st_return (\v. match1 v E1 (\y. (E2 y))) _)] in
+      [ |- << S1 st_match])
+
+ | [ |- ev_pair D2 D1] : [ |- (eval (pair E1 E2) (pair_val V1 V2))]  =>
+   let [ |- S'] = s in
+   let [ |- S2] = ccp [ |- D2] [ |- << S' (st_return  (\x. return (pair_val V1 x))  _)] in
+   let [ |- S1] = ccp [ |- D1] [ |- << (<< S2 st_pair1) (st_return  (\x. pair1 x E2) _)] in
+     [ |- << S1 st_pair]
+
+ | [ |- ev_fst D1] =>
+   (let [ |- S'] = s in
+    let [ |- S1] = ccp [ |- D1] [ |- << (<< S' st_fst1) (st_return (\v. fst1 v)  _)] in
+       [ |- << S1 st_fst])
+
+ | [ |- ev_snd D1] =>
+   (let [ |- S'] = s in
+    let [ |- S1] = ccp [ |- D1] [ |- << (<< S' st_snd1) (st_return (\v. snd1 v) _)] in
+       [ |- << S1 st_snd])
+
+ | [ |- ev_lam]    => let [ |- S'] = s in [ |- << S' st_lam]
+
+ | {D1: [ |- eval E1 (lam_val (\x. (E' x)))]}
+   {D2: [ |- eval E2 V2]}{D3: [ |- eval (E' V2) V] }
+   [ |- ev_app D3 D2 D1] : [ |- (eval (app E1 E2) V)] =>
+   let [ |- S3] = ccp [ |- D3] s in
+   let [ |- S2] = ccp [ |- D2] [ |- << (<< S3 st_app2) (st_return  (\v. app2 (lam_val (\x. (E' x))) v)  _)]  in
+   let [ |- S1] = ccp [ |- D1] [ |- << (<< S2 st_app1) (st_return (\x1. app1 x1 E2)  _)]  in
+     [ |- << S1 st_app]
+
+ | [ |- ev_letv D2 D1] : [ |- (eval (letv E1 (\x. (E2 x))) V)] =>
+     let [ |- S2] = ccp [ |- D2] s in
+     let [ |- S1] = ccp [ |- D1] [ |- << S2 (st_return  (\x1. ev (E2 x1))  _)] in
+       [ |- << S1 st_letv]
 
 
- | [. ev_fix D] : [. (eval (fix (\x. (E x))) V)] =>
-     let [. S] = ccp [. D] s in
-       [. << S st_fix]
+ | [ |- ev_letn D1] : [ |- (eval (letn E1 (\x. (E2 x))) V)] =>
+     let [ |- S1] = ccp [ |- D1] s in
+       [ |- << S1 st_letn]
 
 
- | [. ev_vl] => let [. S'] = s in [. << S' st_vl]
+ | [ |- ev_fix D] : [ |- (eval (fix (\x. (E x))) V)] =>
+     let [ |- S] = ccp [ |- D] s in
+       [ |- << S st_fix]
+
+
+ | [ |- ev_vl] => let [ |- S'] = s in [ |- << S' st_vl]
 
 
 ;
@@ -104,10 +104,10 @@ fn d => fn s => case d of
 % }%
 
 
-rec ceval_complete : [. eval E V] -> [. ceval E V] =
+rec ceval_complete : [ |- eval E V] -> [ |- ceval E V] =
 fn d =>
-  let [. D] : [. eval E V] = d in
-  let [. C] = ccp [. D]  [. << stop st_init] in
-    [. cev C]
+  let [ |- D] : [ |- eval E V] = d in
+  let [ |- C] = ccp [ |- D]  [ |- << stop st_init] in
+    [ |- cev C]
 
 ;

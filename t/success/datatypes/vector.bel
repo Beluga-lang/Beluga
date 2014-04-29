@@ -3,17 +3,17 @@ datatype nat : type =
 | suc : nat -> nat
 ;
 
-datatype Vector : [.nat] -> ctype =
-| Nil : Vector [. z]
-| Cons : Bool -> Vector [.N] -> Vector [. suc N]
+datatype Vector : [ |- nat] -> ctype =
+| Nil : Vector [ |- z]
+| Cons : Bool -> Vector [ |- N] -> Vector [ |- suc N]
 ;
 
-rec hd : Vector [.suc N] -> Bool =
+rec hd : Vector [ |- suc N] -> Bool =
     fn xs => case xs of
       | Cons x xs => x
 ;
 
-rec tl : Vector [.suc N] -> Vector [. N] =
+rec tl : Vector [ |- suc N] -> Vector [ |- N] =
     fn xs => case xs of
       | Cons x xs => xs
 ;

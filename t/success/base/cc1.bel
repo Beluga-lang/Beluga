@@ -7,85 +7,85 @@ suc  : term -> term.
 schema termCtx = some [] term;
 
 
-rec fff : {g:termCtx} [g. term] -> [g. term] =
+rec fff : {g:termCtx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
   case e of
-  | [g. z]     => [g. z]
+  | [g |- z]     => [g |- z]
 
-  | [g. suc (U ..)]   => [g. z]
+  | [g |- suc (U ..)]   => [g |- z]
 
-  | [g. #p ..]   => [g. z]
+  | [g |- #p ..]   => [g |- z]
 ;
 
-rec fffForgotConcreteVarCase : {g:termCtx} [g, x:term. term] -> [g. term] =
+rec fffForgotConcreteVarCase : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of %not
-  | [g, x:term. z]     => [g. z]
-  | [g, x:term. suc (U .. x)]   => [g. z]
-  | [g, x:term. #p ..]   => [g. z]
+  | [g, x:term |-  z]     => [g |- z]
+  | [g, x:term |-  suc (U .. x)]   => [g |- z]
+  | [g, x:term |-  #p ..]   => [g |- z]
 ;
 
-rec fffConcreteOK : {g:termCtx} [g, x:term. term] -> [g. term] =
+rec fffConcreteOK : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of
-  | [g, x:term. z]     => [g. z]
-  | [g, x:term. suc (U .. x)]   => [g. z]
-  | [g, x:term. #p ..]   => [g. z]
-  | [g, x:term. x]   => [g. z]
+  | [g, x:term |-  z]     => [g |- z]
+  | [g, x:term |-  suc (U .. x)]   => [g |- z]
+  | [g, x:term |-  #p ..]   => [g |- z]
+  | [g, x:term |-  x]   => [g |- z]
 ;
 
 
-rec fffConcreteIncludedInMVar : {g:termCtx} [g, x:term. term] -> [g. term] =
+rec fffConcreteIncludedInMVar : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of
-  | [g, x:term. U .. x] => [g. z]
+  | [g, x:term |-  U .. x] => [g |- z]
 ;
 
 
-rec fffNo-g-MVar : {g:termCtx} [g, x:term. term] -> [g. term] =
+rec fffNo-g-MVar : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of
-  | [g, x:term. U x] => [g. z]       % x could refer to vars in g, so this is effectively like U .. x
+  | [g, x:term |-  U x] => [g |- z]       % x could refer to vars in g, so this is effectively like U .. x
 ;
 
 
-rec fffEmptyMVar : {g:termCtx} [g, x:term. term] -> [g. term] =
+rec fffEmptyMVar : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of %not
-  | [g, x:term. U] => [g. z]
+  | [g, x:term |-  U] => [g |- z]
 ;
 
 
-rec fffConcreteOmittedFromMVar : {g:termCtx} [g, x:term. term] -> [g. term] =
+rec fffConcreteOmittedFromMVar : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of %not
-  | [g, x:term. U ..] => [g. z]
+  | [g, x:term |-  U ..] => [g |- z]
 ;
 
 
-rec fffSplitCasesBad : {g:termCtx} [g, x:term. term] -> [g. term] =
+rec fffSplitCasesBad : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of %not
-  | [g, x:term. U ..]   => [g. z]
-  | [g, x:term. x]      => [g. z]
+  | [g, x:term |-  U ..]   => [g |- z]
+  | [g, x:term |-  x]      => [g |- z]
   % Doesn't cover suc (suc x)
 ;
 
-rec fffSplitCasesOK : {g:termCtx} [g, x:term. term] -> [g. term] =
+rec fffSplitCasesOK : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of
-  | [g, x:term. U ..]   => [g. z]
-  | [g, x:term. x]      => [g. z]
-  | [g, x:term. suc (U .. x)] => [g. z]
+  | [g, x:term |-  U ..]   => [g |- z]
+  | [g, x:term |-  x]      => [g |- z]
+  | [g, x:term |-  suc (U .. x)] => [g |- z]
 ;
 
 
-rec fffForgotParamVarCase : {g:termCtx} [g. term] -> [g. term] =
+rec fffForgotParamVarCase : {g:termCtx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
   case e of %not
-  | [g. z]     => [g. z]
+  | [g |- z]     => [g |- z]
 
-  | [g. suc (U ..)]   => [g. z]
+  | [g |- suc (U ..)]   => [g |- z]
 ;
 
 

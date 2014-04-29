@@ -14,5 +14,5 @@ rec indep : (dep N)[] -> nat[] =
  fn d => case d of [] D => [] N;
 }%
 
-rec indep : {N:[. nat]}[. dep N] -> [. nat] =
-mlam N => fn d => [. z];
+rec indep : {N:[ |- nat]}[ |- dep N] -> [ |- nat] =
+mlam N => fn d => [ |- z];

@@ -70,5 +70,5 @@ rec test3 :  (exp T)[ ] -> tExp[ ] =
 
 
 }%
-rec test4 : [. exp T] -> [. tExp] =
-fn e => case [. z] of [. U] => [. exS U] ;
+rec test4 : [ |- exp T] -> [ |- tExp] =
+fn e => case [ |- z] of [ |- U] => [ |- exS U] ;

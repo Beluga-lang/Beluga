@@ -53,7 +53,7 @@ let _ = Error.register_printer
             Format.fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
               (P.fmt_ppr_lf_mctx Pretty.std_lvl) cD
         | PatIndexMatch (cD, cPsi, tR) ->
-            Format.fprintf ppf "Pattern matching on index argument %a fails. @@
+            Format.fprintf ppf "Pattern matching on index argument %a fails. @@\
   Note that unification is conservative and will fail if it cannot handle a case."
               (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tR
         | PatAnn     ->
@@ -836,19 +836,19 @@ let rec elCompTyp cD tau = match tau with
         Whnf.cnormCTyp (tau, ms)
         (* Int.Comp.TypDef (loc, a, cS') *)
 
-  | Apx.Comp.TypBox (loc, Apx.Comp.MetaTyp (_, a, psi)) ->
+  | Apx.Comp.TypBox (loc, a, psi) ->
       let _ = dprint (fun () -> "[elCompTyp] TypBox" ) in
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
       let _ = dprint (fun () -> "[elCompTyp] TypBox - cPsi = " ^ P.dctxToString cD cPsi) in
       let tA   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
-      let tT = Int.Comp.TypBox (loc, Int.Comp.MetaTyp(tA, cPsi)) in
+      let tT = Int.Comp.TypBox (loc, tA, cPsi) in
         (dprint (fun () -> "[elCompTyp] " ^ P.compTypToString cD tT);
          tT)
 
-  | Apx.Comp.TypBox (loc, Apx.Comp.MetaSubTyp (_,psi, phi)) ->
+  | Apx.Comp.TypSub (loc, psi, phi) ->
       let cPsi = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
       let cPhi = Lfrecon.elDCtx Lfrecon.Pibox cD phi in
-        Int.Comp.TypBox (loc, Int.Comp.MetaSubTyp (cPsi, cPhi))
+        Int.Comp.TypSub (loc, cPsi, cPhi)
 
   | Apx.Comp.TypArr (tau1, tau2) ->
       let tau1' = elCompTyp cD tau1 in
@@ -982,10 +982,10 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
                                (Int.LF.Dec (cD_s, Int.LF.SDecl(x,cPhi, cPsi)), tau) in
         Int.Comp.TypPiBox ((Int.LF.SDecl (x, cPhi', cPsi'), dep), tau')
 
-  | Int.Comp.TypBox (loc, Int.Comp.MetaTyp((Int.LF.Atom(_, a, _) as _tP) , cPsi))  ->
+  | Int.Comp.TypBox (loc, (Int.LF.Atom(_, a, _) as _tP) , cPsi)  ->
       let cPsi' = mgCtx cD' (cD_s, cPsi) in
       let tP' = mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind  in
-        Int.Comp.TypBox (loc, Int.Comp.MetaTyp (tP', cPsi'))
+        Int.Comp.TypBox (loc, tP', cPsi')
 
 
 let inferPatTyp cD' (cD_s, tau_s) = inferPatTyp' cD' (cD_s, Whnf.cnormCTyp (tau_s, Whnf.m_id))
@@ -1024,17 +1024,16 @@ let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
           dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
           raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
         end
-  | Apx.Comp.MetaObjAnn (loc', psi, m) , Int.LF.MDecl (_, tA, cPsi) ->
+  | Apx.Comp.MetaObjAnn (_loc', psi, m) , Int.LF.MDecl (_, tA, cPsi) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let cPhi =  Lfrecon.elDCtx Lfrecon.Pibox cD psi in
         (begin try
            Unify.unifyDCtx cD cPsi' cPhi
          with
            | Unify.Failure "Context clash" ->
-               let expected_tau = Int.Comp.TypBox (loc',
-                                                   Int.Comp.MetaTyp(Whnf.cnormTyp (tA, theta),
-                                                   Whnf.cnormDCtx (cPsi, theta)))   in
-                 raise (Error (loc', CtxMismatch (cD, expected_tau, cPhi)))
+               let expected_tau = Int.Comp.TypBox (Syntax.Loc.ghost,Whnf.cnormTyp (tA, theta),
+                                                   Whnf.cnormDCtx (cPsi, theta))   in
+                 raise (Error (loc, CtxMismatch (cD, expected_tau, cPhi)))
          end;
          begin try
            let cPhi' = Whnf.normDCtx cPhi in
@@ -1070,7 +1069,7 @@ let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
            raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
         end
 
-  | Apx.Comp.MetaObjAnn (loc', psi , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
+  | Apx.Comp.MetaObjAnn (_loc', psi , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
         Int.LF.PDecl (_, tA, cPsi) ->
       let cPsi  = C.cnormDCtx (cPsi, theta) in
       let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
@@ -1078,9 +1077,8 @@ let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
            Unify.unifyDCtx cD cPsi cPsi'
          with
            | Unify.Failure "Context clash" ->
-               let expected_tau = Int.Comp.TypBox (loc',
-                                                   Int.Comp.MetaParamTyp (Whnf.cnormTyp (tA, theta),
-                                                                       Whnf.cnormDCtx (cPsi, theta)))   in
+               let expected_tau = Int.Comp.TypBox (Syntax.Loc.ghost,Whnf.cnormTyp (tA, theta),
+                                                   Whnf.cnormDCtx (cPsi, theta))   in
                  raise (Error (loc, CtxMismatch (cD, expected_tau, cPsi')))
          end ;
 
@@ -1253,7 +1251,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let e'  =  elExp cD cG1 e (tau, theta) in
         Int.Comp.Let (loc, i', (x,  e'))
 
-  | (Apx.Comp.Box (loc, Apx.Comp.MetaObj (_ , psihat, tM)), ((Int.Comp.TypBox (_loc, Int.Comp.MetaTyp(tA, cPsi)), theta) as tau_theta)) ->
+  | (Apx.Comp.Box (loc, Apx.Comp.MetaObj (_ , psihat, tM)), ((Int.Comp.TypBox (_loc, tA, cPsi), theta) as tau_theta)) ->
    (* if psihat = Context.dctxToHat cPsi then *)
       let _ = dprint (fun () -> "[elExp] BOX\n") in
       let cPsi' = C.cnormDCtx (cPsi, theta) in
@@ -1299,7 +1297,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let _ = dprint (fun () -> "[elExp] case on " ^ P.expSynToString cD cG (Whnf.cnormExp' (i', Whnf.m_id))) in
       begin match (i', C.cwhnfCTyp tau_theta') with
         | (Int.Comp.Ann (Int.Comp.Box (_ , Int.Comp.MetaObj (_,phat,tR)), _ ) as i,
-           (Int.Comp.TypBox (_, Int.Comp.MetaTyp( tP, cPsi)) as tau_s, t (* m_id *))) ->
+           (Int.Comp.TypBox (_, tP, cPsi) as tau_s, t (* m_id *))) ->
           let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           if Whnf.closed (tR, LF.id) then
             let recBranch b =
@@ -1316,7 +1314,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
         | (Int.Comp.Ann (Int.Comp.Box (_ , Int.Comp.MetaObj (_,phat,tR)), _ ) as i, (tau_s, t)) ->
           raise (Error (loc, (IllegalCase (cD, cG, i, (tau_s, t)))))
 
-        | (i, (Int.Comp.TypBox (_, Int.Comp.MetaTyp(tP, cPsi)) as tau_s, _mid)) ->
+        | (i, (Int.Comp.TypBox (_, tP, cPsi) as tau_s, _mid)) ->
           let _      = dprint (fun () -> "[elExp]"
             ^ "Contexts cD  = " ^ P.mctxToString cD ^ "\n"
             ^ "cG = " ^ P.gctxToString cD cG ^ "\n"
@@ -1415,8 +1413,8 @@ and elExp' cD cG i = match i with
                         P.compTypToString cD ((CompDest.get c).CompDest.typ)) in
      (Int.Comp.DataDest c, ((CompDest.get c).CompDest.typ, C.m_id))
 
-  | Apx.Comp.Const (loc,prog) ->
-     (Int.Comp.Const (loc,prog), ((Comp.get prog).Comp.typ, C.m_id))
+  | Apx.Comp.Const prog ->
+     (Int.Comp.Const prog, ((Comp.get prog).Comp.typ, C.m_id))
 
   | Apx.Comp.Apply (loc, i, e) ->
       let _ = dprint (fun () -> "[elExp'] Apply") in
@@ -1468,7 +1466,7 @@ and elExp' cD cG i = match i with
               elApply cD (loc, i', mC) (cdec, tau) theta true
 
           | (Int.Comp.TypArr (tau1, tau), theta) -> begin match tau1 with
-              | Int.Comp.TypBox(_, Int.Comp.MetaTyp (tP, cPsi)) ->
+              | Int.Comp.TypBox(_, tP, cPsi) ->
                   elApply cD (loc, i', mC) (Int.LF.MDecl (Id.mk_name (Id.MVarName None), tP, cPsi), tau) theta false
                 | _ ->
                     raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, (tau1, theta))))
@@ -1485,8 +1483,7 @@ and elExp' cD cG i = match i with
       let _ = dprint (fun () -> "[elExp'] BoxVal tR done ") in
       (* let sP    = synTerm Lfrecon.Pibox cD cPsi (tR, LF.id) in *)
       let phat     = Context.dctxToHat cPsi in
-      let tau      = Int.Comp.TypBox (Syntax.Loc.ghost,
-                                      Int.Comp.MetaTyp( Int.LF.TClo sP, cPsi)) in
+      let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.TClo sP, cPsi) in
       let cM       = Int.Comp.MetaObj (loc, phat, tR) in
         (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
 
@@ -1732,7 +1729,7 @@ end
 and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) with
   | (Apx.Comp.PatEmpty (loc, cpsi), (tau, theta)) ->
       let cPsi' = Lfrecon.elDCtx (Lfrecon.Pibox) cD cpsi in
-      let Int.Comp.TypBox (_ , Int.Comp.MetaTyp(_tQ, cPsi_s)) = Whnf.cnormCTyp ttau  in
+      let Int.Comp.TypBox (_ , _tQ, cPsi_s) = Whnf.cnormCTyp ttau  in
         begin try
           Unify.unifyDCtx (Int.LF.Empty) cPsi' cPsi_s;
           (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi'))
@@ -1774,7 +1771,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
       let (cG2, pat2') = elPatChk cD cG1 pat2 (tau2, theta) in
         (cG2, Int.Comp.PatPair (loc, pat1', pat2'))
 
-  | (Apx.Comp.PatMetaObj (loc, cM), (Int.Comp.TypBox (_loc, Int.Comp.MetaTyp (tA, cPsi)), theta)) ->
+  | (Apx.Comp.PatMetaObj (loc, cM), (Int.Comp.TypBox (_loc, tA, cPsi), theta)) ->
       (* cM = MetaObj or MetaObjAnn *)
       let cM' = elMetaObj cD cM (Int.Comp.MetaTyp (tA, cPsi), theta) in
         (cG, Int.Comp.PatMetaObj (loc, cM'))
@@ -1958,16 +1955,16 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
       )
 
 and recPatObj' cD pat (cD_s, tau_s) = match pat with
-  | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (loc, _) as pat') , Apx.Comp.TypBox (loc', Apx.Comp.MetaTyp(_,a, psi) )) ->
+  | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (loc, _) as pat') , Apx.Comp.TypBox (loc', a, psi) ) ->
       let _ = dprint (fun () -> "[recPatObj' - PatMetaObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
       let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
         begin try
-          let Int.Comp.TypBox (_ , Int.Comp.MetaTyp( _tQ, cPsi_s)) = tau_s  in
+          let Int.Comp.TypBox (_ , _tQ, cPsi_s) = tau_s  in
           let _       = inferCtxSchema loc (cD_s, cPsi_s) (cD, cPsi) in
             (* as a side effect we will update FCVAR with the schema for the
                context variable occurring in cPsi' *)
-          let ttau' = (Int.Comp.TypBox(loc',Int.Comp.MetaTyp ( tP, cPsi)), Whnf.m_id) in
+          let ttau' = (Int.Comp.TypBox(loc',tP, cPsi), Whnf.m_id) in
           let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
             (cG', pat', ttau')
         with
@@ -1977,12 +1974,12 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
   | Apx.Comp.PatEmpty (loc, cpsi) ->
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cpsi in
       begin match tau_s with
-       | Int.Comp.TypBox (_ , Int.Comp.MetaTyp ((Int.LF.Atom(_, a, _) as _tQ), cPsi_s)) ->
+       | Int.Comp.TypBox (_ , (Int.LF.Atom(_, a, _) as _tQ), cPsi_s) ->
          let _       = inferCtxSchema loc (cD_s, cPsi_s) (cD, cPsi) in
          let tP     =  mgAtomicTyp cD cPsi a (Typ.get a).Typ.kind in
          let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of empty type  " ^
                         P.typToString cD cPsi (tP, LF.id)) in
-         let ttau' = (Int.Comp.TypBox (loc, Int.Comp.MetaTyp (tP, cPsi)), Whnf.m_id) in
+         let ttau' = (Int.Comp.TypBox (loc, tP, cPsi), Whnf.m_id) in
            (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi), ttau')
       | _ -> raise (Error (loc, CompTypEmpty (cD_s, (tau_s, Whnf.m_id))))
     end
@@ -2285,7 +2282,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
   | Apx.Comp.Branch (loc, _omega, delta, Apx.Comp.PatMetaObj(loc',mO), e) ->
       let _ = dprint (fun () -> "[elBranch] Reconstruction of pattern ... ") in
         begin match tau_s with
-          | Int.Comp.TypBox (_, Int.Comp.MetaTyp((Int.LF.Atom(_, a, _) as tP) , cPsi)) ->
+          | Int.Comp.TypBox (_, (Int.LF.Atom(_, a, _) as tP) , cPsi) ->
             let typAnn = (cD, PartialTyp a, cPsi) in
             let cD'    = elMCtx  Lfrecon.Pibox delta in
               (* ***************  RECONSTRUCT PATTERN BEGIN *************** *)

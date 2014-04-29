@@ -18,9 +18,9 @@ teste: (term -> term) -> type.
 t_lam_eta: teste (\x. lam (E x)).
 t_lam: teste (\x. lam (\y. E x y)).
 
-rec foo : [. term] -> [. term] =
+rec foo : [ |- term] -> [ |- term] =
 fn t => case t of
- | [. lam \x. E x] => t
+ | [ |- lam \x. E x] => t
 ;
 
 %{
@@ -46,7 +46,7 @@ FN g => fn t => case t of
 
 }%
 
-rec foo : [. term] -> [. term] =
+rec foo : [ |- term] -> [ |- term] =
 fn t => case t of
- | [. lam E] => t
+ | [ |- lam E] => t
 ;

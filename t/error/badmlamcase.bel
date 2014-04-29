@@ -2,7 +2,7 @@ nat : type.
 z : nat.
 s : nat -> nat.
 
-rec f : {N:[.nat]} [.nat] =
+rec f : {N:[ |- nat]} [ |- nat] =
   mlam N => case N of
-    | [.z] => [.z]
+    | [ |- z] => [ |- z]
 ;

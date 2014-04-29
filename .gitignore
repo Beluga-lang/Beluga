@@ -11,5 +11,10 @@
 .omake*
 release
 bin
-_build
 version.ml
+*.native
+_build
+*.byte
+*.d.native
+*.p.byte
+

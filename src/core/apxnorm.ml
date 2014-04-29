@@ -463,7 +463,7 @@ and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var _x -> i
   | Apx.Comp.DataConst _c -> i
   | Apx.Comp.DataDest _c ->  i
-  | Apx.Comp.Const (_, _c) ->  i
+  | Apx.Comp.Const  _c ->  i
   | Apx.Comp.PairVal (loc, i1, i2) ->
       let i1' = cnormApxExp' cD delta i1 cDt in
       let i2' = cnormApxExp' cD delta i2 cDt in
@@ -771,7 +771,7 @@ let rec collectApxCompTyp fMVd tau = match tau with
   | Apx.Comp.TypPiBox ((cdecl, _), tau) ->
       let fMVd1 = collectApxCDecl fMVd cdecl in
 	collectApxCompTyp fMVd1 tau
-  | Apx.Comp.TypBox (loc, Apx.Comp.MetaTyp(loc', tA, cPsi)) ->
+  | Apx.Comp.TypBox  (loc, tA, cPsi)  ->
       (let fMVd1 = collectApxTyp fMVd tA in
 	 collectApxDCtx fMVd1 cPsi )
   | Apx.Comp.TypBool -> fMVd
@@ -1152,7 +1152,7 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
   | Apx.Comp.Var _x -> i
   | Apx.Comp.DataConst _c -> i
   | Apx.Comp.DataDest _c -> i
-  | Apx.Comp.Const (_, _c) -> i
+  | Apx.Comp.Const  _c -> i
   | Apx.Comp.Apply (loc, i, e) ->
       let i' = fmvApxExp' fMVs cD d_param  i in
       let e' = fmvApxExp fMVs cD d_param  e in

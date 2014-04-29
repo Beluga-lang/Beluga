@@ -19,41 +19,41 @@ tt  : exp bool.
 schema expCtx = some [t:tp] exp t;
 
 
-rec plus : [. exp nat] -> [. exp nat] -> [. exp nat] =
+rec plus : [ |- exp nat] -> [ |- exp nat] -> [ |- exp nat] =
 fn x => fn y =>
  (case x of
-    [. z]                           : [. (exp nat)] => y
+    [ |- z]                           : [ |- (exp nat)] => y
 
-  | {U:[. exp nat]}
-    [. s U]                         : [. (exp nat)] =>
-    (case (plus [. U] y) of
-       {V:[. exp nat]}
-        [. V] : [. (exp nat)]     =>  [. s V])
-  | {U:[. exp nat]}
-     [. U]    => y
+  | {U:[ |- exp nat]}
+    [ |- s U]                         : [ |- (exp nat)] =>
+    (case (plus [ |- U] y) of
+       {V:[ |- exp nat]}
+        [ |- V] : [ |- (exp nat)]     =>  [ |- s V])
+  | {U:[ |- exp nat]}
+     [ |- U]    => y
 )
 ;
 
 
-rec cntV : {g:expCtx} {T:[. tp]} {S:[. tp]} [g, x:(exp T). exp S] -> [. exp nat] =
+rec cntV : {g:expCtx} {T:[ |- tp]} {S:[ |- tp]} [g, x:(exp T) |-  exp S] -> [ |- exp nat] =
 
 mlam g => mlam T => mlam TT => fn e =>
  case e of
-     {T1:[. tp]} {T2:[. tp]} {#p:[g. exp T1]}
-     [g,x: exp T2. (#p ..)]      : [g,x: exp T2. (exp T1)]   => [. z]
+     {T1:[ |- tp]} {T2:[ |- tp]} {#p:[g |- exp T1]}
+     [g,x: exp T2 |-  (#p ..)]      : [g,x: exp T2 |-  (exp T1)]   => [ |- z]
 
-   | {T':[. tp]}
-     [g,x: exp T'. x]            : [g,x: exp T'. (exp T')]   => [. s z]
+   | {T':[ |- tp]}
+     [g,x: exp T' |-  x]            : [g,x: exp T' |-  (exp T')]   => [ |- s z]
 
-   | {T':[. tp]}
-     [g,x: exp T'. tt]           : [g,x: exp T'. (exp bool)] => [. z]
+   | {T':[ |- tp]}
+     [g,x: exp T' |-  tt]           : [g,x: exp T' |-  (exp bool)] => [ |- z]
 
-   | {T':[. tp]}
-     [g,x: exp T'. z]            : [g,x: exp T'. (exp nat)] => [. z]
+   | {T':[ |- tp]}
+     [g,x: exp T' |-  z]            : [g,x: exp T' |-  (exp nat)] => [ |- z]
 
-   | {T':[. tp]} {U:[g, x:exp T'. exp nat]}
-      [g,x: exp T'. s (U .. x)]  : [g,x: exp T'. (exp nat)] =>
-          cntV [g] [. T' ]  [ . nat ]   [g,x. (U .. x)]
+   | {T':[ |- tp]} {U:[g, x:exp T' |-  exp nat]}
+      [g,x: exp T' |-  s (U .. x)]  : [g,x: exp T' |-  (exp nat)] =>
+          cntV [g] [ |- T' ]  [ |- nat ]   [g,x |- (U .. x)]
 
 %{   | {T'::tp[ ]} {T1::tp[ ]} {T2::tp[ ]}
      {U1::(exp T1)[g, x:exp T']} {U2::(exp T2)[g, x:exp T', y:exp T1]}

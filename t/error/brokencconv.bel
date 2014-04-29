@@ -55,12 +55,12 @@ datatype member_tp: nat -> tp -> tp -> type =
 %Error (Reconstruction): unbound data-level variable (ordinary or meta-variable) or constructor:
 %makeproj return the nth project of pair y
 %makeproj n = tfst( ... (tfst y))
-rec makeproj: {N: [. nat]} [. member_tp N R Q] -> [xenv:(target Q). target R] =
-mlam N  => fn p => case [. N] of
-| [. z] => let [. m_last] = p in
-      	     [xenv:(target Q). (tfst xenv)]
-| [. suc M] =>
-  let [. (m_cons L)] : [. member_tp (suc N) R (cross T' S)] = p in
-  let [xenv:target S . F xenv] = makeproj [.M] [. L] in
-      [xenv:target (cross T' S). (F (tsnd xenv))]
+rec makeproj: {N: [ |- nat]} [ |- member_tp N R Q] -> [xenv:(target Q) |-  target R] =
+mlam N  => fn p => case [ |- N] of
+| [ |- z] => let [ |- m_last] = p in
+      	     [xenv:(target Q) |-  (tfst xenv)]
+| [ |- suc M] =>
+  let [ |- (m_cons L)] : [ |- member_tp (suc N) R (cross T' S)] = p in
+  let [xenv:target S  |-  F xenv] = makeproj [ |- M] [ |- L] in
+      [xenv:target (cross T' S) |-  (F (tsnd xenv))]
 ;

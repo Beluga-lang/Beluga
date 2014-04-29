@@ -8,7 +8,6 @@ OCAMLFINDFLAGS = -syntax camlp4o
 OCAMLPACKS[] =
         camlp4
         extlib
-        oUnit
         ulex
         dynlink
         unix
@@ -20,8 +19,8 @@ OCAMLPACKS[] =
 
 # DEBUG = true
 
-OCAMLFLAGS += $(if $(DEBUG), -w Ae  -warn-error Ap-37-44 \
-                           , -w Aep -warn-error A-37-44)
+OCAMLFLAGS += $(if $(DEBUG), -w Ae-44  -warn-error Ap-37-11 \
+                           , -w Aep-44 -warn-error A-37-11)
 
 OCAMLFLAGS += $(if $(RELEASE), -warn-error a)
 

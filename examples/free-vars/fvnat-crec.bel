@@ -20,35 +20,35 @@ something: exp T -> opt.
 
 schema w = some [t:tp] exp t;
 
-rec free_var : (g:w) [g. exp (T ..)] -> [g. opt] =
+rec free_var : (g:w) [g |- exp (T ..)] -> [g |- opt] =
 fn e =>  case e of
-  [g. z]         => [g. nothing]
-| [g. tt]        => [g. nothing]
-| [g. ff]        => [g. nothing]
+  [g |- z]         => [g |- nothing]
+| [g |- tt]        => [g |- nothing]
+| [g |- ff]        => [g |- nothing]
 
-| [g. (#p ..)]    => [g. something  (#p ..)]
+| [g |- (#p ..)]    => [g |- something  (#p ..)]
 
-| [g. suc (U ..)] => free_var [g. (U ..)]
+| [g |- suc (U ..)] => free_var [g |- (U ..)]
 
-| [g. andalso (U ..) (V ..)]  =>
-  (case free_var [g. (U ..)] of
-     [g. nothing]   => free_var [g. V ..]
-   | [g. something  (T ..)]  => [g. something  (T ..)])
+| [g |- andalso (U ..) (V ..)]  =>
+  (case free_var [g |- (U ..)] of
+     [g |- nothing]   => free_var [g |- V ..]
+   | [g |- something  (T ..)]  => [g |- something  (T ..)])
 
-| [g. app (U ..) (V ..)]  =>
-    (case free_var [g. (U ..)] of
-       [g. nothing]   => free_var [g. (V ..)]
-     | [g. something  (T ..)]  => [g. something  (T ..)])
+| [g |- app (U ..) (V ..)]  =>
+    (case free_var [g |- (U ..)] of
+       [g |- nothing]   => free_var [g |- (V ..)]
+     | [g |- something  (T ..)]  => [g |- something  (T ..)])
 
-| [g. lam (\x . (U .. x))] =>
+| [g |- lam (\x . (U .. x))] =>
 
-   (case (free_var [g, x:exp _. (U .. x)]) of
-      [g, x: exp _ . nothing]       => [g. nothing]
-    | [g, x: exp _ . something x]   => [g. nothing]
+   (case (free_var [g, x:exp _ |-  (U .. x)]) of
+      [g, x: exp _  |-  nothing]       => [g |- nothing]
+    | [g, x: exp _  |-  something x]   => [g |- nothing]
            % technically we need to initiate backtracking
 %    | [g, x: exp _ ] something (#p ..) => [g] something (#p ..)
-    | [g, x: exp _ . something (U .. )]  => [g. something (U ..)]
-    | [g, x: exp _ . something (U .. x)]  => [g. nothing]
+    | [g, x: exp _  |-  something (U .. )]  => [g |- something (U ..)]
+    | [g, x: exp _  |-  something (U .. x)]  => [g |- nothing]
 
    )
 ;

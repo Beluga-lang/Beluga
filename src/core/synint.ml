@@ -260,7 +260,9 @@ module Comp = struct
     | TypBase   of Loc.t * cid_comp_typ * meta_spine
     | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
     | TypDef    of Loc.t * cid_comp_typ * meta_spine
-    | TypBox    of Loc.t * meta_typ
+    | TypBox    of Loc.t * LF.typ  * LF.dctx
+    | TypParam  of Loc.t * LF.typ  * LF.dctx
+    | TypSub    of Loc.t * LF.dctx * LF.dctx
     | TypArr    of typ * typ
     | TypCross  of typ * typ
     | TypPiBox  of (LF.ctyp_decl * depend) * typ
@@ -318,7 +320,7 @@ module Comp = struct
     | Var    of offset
     | DataConst of cid_comp_const
     | DataDest of cid_comp_dest
-    | Const  of Loc.t * cid_prog
+    | Const  of cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | MApp   of Loc.t * exp_syn * meta_obj
     | Ann    of exp_chk * typ

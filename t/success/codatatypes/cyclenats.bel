@@ -4,18 +4,18 @@ datatype nat : type =
 ;
 
 codatatype Stream : ctype =
-| Hd : Stream -> [. nat]
+| Hd : Stream -> [ |- nat]
 | Tl : Stream -> Stream
 ;
 
-let a = [. s (s z)];
+let a = [ |- s (s z)];
 
-rec cycleNats : [. nat] -> Stream =
+rec cycleNats : [ |- nat] -> Stream =
 fn e => cofun Hd => e
            | Tl => (case e of
-                   | [. z] => cycleNats a
-                   | [. s N] => cycleNats [. N])
+                   | [ |- z] => cycleNats a
+                   | [ |- s N] => cycleNats [ |- N])
 ;
 
-let b = cycleNats [.s z];
+let b = cycleNats [ |- s z];
 let c = ((Hd b, Hd (Tl b)), Hd (Tl (Tl b)));

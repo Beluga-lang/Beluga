@@ -1470,7 +1470,7 @@ to which that point should be aligned, if we were to reindent it.")
   "Indent current line using the SMIE indentation engine."
   (interactive)
   (let* ((savep (point))
-	 (indent (condition-case-no-debug nil
+         (indent (condition-case-unless-debug nil
 		     (save-excursion
                        (forward-line 0)
                        (skip-chars-forward " \t")

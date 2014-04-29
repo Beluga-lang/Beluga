@@ -117,7 +117,10 @@ module Comp = struct
 
  type typ =                                     (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine
-   | TypBox  of Loc.t * meta_typ
+   | TypBox   of Loc.t * LF.typ  * LF.dctx      (* tau ::= A[Psi]          *)
+   | TypPBox  of Loc.t * LF.typ  * LF.dctx      (* tau ::= #A[Psi]         *)
+   | TypCtx   of Loc.t * name                   (*    | W    (ctx schema)  *)
+   | TypSub   of Loc.t * LF.dctx * LF.dctx      (*    | Phi[Psi]           *)
    | TypArr   of Loc.t * typ * typ              (*    | tau -> tau         *)
    | TypCross of Loc.t * typ * typ              (*    | tau * tau          *)
    | TypPiBox of Loc.t * (LF.ctyp_decl * depend) * typ

@@ -24,7 +24,7 @@ schema expCtx = some [t:tp] block _t:exp t;
 
 
 
-rec forgetfn: {g:expCtx} [g.exp T] -> [g. opt] -> [g.exp T] =
+rec forgetfn: {g:expCtx} [g |- exp T] -> [g |- opt] -> [g |- exp T] =
  mlam g => fn e => e
 ;
 

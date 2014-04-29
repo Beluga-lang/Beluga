@@ -1,7 +1,7 @@
 (**
    @author Renaud Germain
    @author Brigitte Pientka
-*)
+*) 
 open Store
 open Store.Cid
 open Substitution

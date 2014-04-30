@@ -1212,7 +1212,7 @@ and proofs l lt n omlam pl lsym llam lju cb cano =
 let theorem l lt n st pl lju lsym llam cb = (* omlam = [d,f] *)
   let (ctb,omlam) =  stmt_to_prove l lt st lju lsym in
   let prf = proofs l lt n omlam pl lsym llam lju cb None in
-    [Ext.Sgn.Rec(l, [Ext.Comp.RecFun(Id.mk_name(Id.SomeString n), None, ctb, prf)])]
+    [Ext.Sgn.Rec(l, [Ext.Comp.RecFun(l, Id.mk_name(Id.SomeString n), None, ctb, prf)])]
 
 
 (* string list -> string list -> Ext.Sgn.decl list, first list terminals secong types *)

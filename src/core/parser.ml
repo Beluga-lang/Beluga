@@ -1037,7 +1037,7 @@ GLOBAL: sgn;
   cmp_rec:
     [[
       f = SYMBOL; ":"; tau = cmp_typ; "="; t = OPT [ "/"; td = total_decl; "/" -> td] ; e = cmp_exp_chk ->
-       Comp.RecFun (Id.mk_name (Id.SomeString f), t, tau, e)
+       Comp.RecFun (_loc, Id.mk_name (Id.SomeString f), t, tau, e)
     ]]
   ;
 

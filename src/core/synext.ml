@@ -197,7 +197,7 @@ module Comp = struct
 
  type total_dec = Total of Loc.t * order * name * (name option) list
 
- type rec_fun = RecFun of name * total_dec option * typ * exp_chk
+ type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
 
  type  kind =
    | Ctype of Loc.t

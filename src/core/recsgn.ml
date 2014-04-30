@@ -17,6 +17,7 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 type error =
   | UnexpectedSucess
   | IllegalOptsPrag
+  | TotalDeclError of name * name 
 
 exception Error of Syntax.Loc.t * error
 
@@ -27,7 +28,12 @@ let _ = Error.register_printer
 	| UnexpectedSucess ->
 	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
         | IllegalOptsPrag ->
-          Format.fprintf ppf "%%opts pragma can only appear before any declarations."))
+          Format.fprintf ppf "%%opts pragma can only appear before any declarations."
+	| TotalDeclError (f, f') -> 
+	  Format.fprintf ppf "Expected totalilty declaration for %s \nFound totality declaration for %s\n" 
+	    (R.render_name f) (R.render_name f')
+    )
+  )
 
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
@@ -359,10 +365,14 @@ and recSgnDecl d =
           match order with
             | Ext.Comp.Arg x -> x
         in
-        let mk_total_decl (Ext.Comp.Total (loc, order, _f, args)) =
-          match order with
-            | Ext.Comp.Arg x ->
-                 let p = pos loc x args 1 in (Order.Arg p , args)
+        let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
+	  if f = f' then 
+            match order with
+              | Ext.Comp.Arg x ->
+                let p = pos loc x args 1 in (Order.Arg p , args)
+	  else 
+	    raise (Error (loc, TotalDeclError (f, f')))
+	    
         in
         let is_total total =
           match total with None -> false | Some _ -> true in
@@ -392,7 +402,7 @@ and recSgnDecl d =
                   | Some t ->
                       (Coverage.enableCoverage := true;
                        Total.enabled := true;
-                       Total.extend_dec (Total.make_dec f tau' (mk_total_decl t)))
+                       Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
                 end ;
                 (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
 

@@ -29,7 +29,7 @@ app'   : exp' (arr A B) -> exp' A -> exp' B.
 schema ctx = value T ;
 
 rec vhoas2db : (g:ctx) [g |- value S]  -> [ |- exp' S] =
-/ total g (vhoas2db g  _ _ ) /
+% / total g (vhoas2db g  _ _ ) /
 fn v =>  case v of
  | [h,x:value T |-  x] => [ |- one]
 

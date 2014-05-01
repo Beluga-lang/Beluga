@@ -3756,18 +3756,21 @@ match sigma with
       | (Null , Null) -> ()
 
       | (CtxVar (CInst (n1, ({contents = None} as cvar_ref1), schema1, cD1, theta1)) ,
-         CtxVar (CInst (_n2, ({contents = None} as cvar_ref2), _schema2,  _cD2, theta2))) ->
+         CtxVar (CInst (_n2, ({contents = None} as cvar_ref2), schema2,  _cD2, theta2))) ->
           if cvar_ref1 == cvar_ref2 then
-             begin match ( isPatMSub theta1 , isPatMSub theta2) with
-                | (true , true ) ->  (if  Whnf.convMSub theta1 theta2 then () else
+	    (if schema1 = schema2 then 
+              begin match ( isPatMSub theta1 , isPatMSub theta2) with
+                    | (true , true ) ->  (if  Whnf.convMSub theta1 theta2 then () else
                    let (mt', cD') = m_intersection (Whnf.cnormMSub theta1)  (Whnf.cnormMSub theta2) cD1 in
                     let cPsi = CtxVar (CInst (n1, {contents = None}, schema1, cD', mt')) in
-                      instantiateCtxVar (cvar_ref1, cPsi)
-                                     )
-                | ( _ , _ ) ->
-                raise (Error.Violation "Case where we need to unify the same context variables which are associated with different meta-stitutions which are non-patterns is not handled")
+                    instantiateCtxVar (cvar_ref1, cPsi)
+					 )
+                    | ( _ , _ ) ->
+                       raise (Error.Violation "Case where we need to unify the same context variables which are associated with different meta-stitutions which are non-patterns is not handled")
               end
-
+	    else 
+	      raise (Error.Violation "Schema mismatch")
+	    )
           else
             begin match ( isPatMSub theta1 , isPatMSub theta2 ) with
               | (true , true ) ->
@@ -3777,11 +3780,13 @@ match sigma with
             end
 
       | (CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cD, theta)) , cPsi) ->
-          if isPatMSub theta then
-            let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
-              instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1))
-          else
-            raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
+             if isPatMSub theta then
+               let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
+               instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1))
+             else
+               raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
+
+
       | (cPsi , CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cD, theta) )) ->
           if isPatMSub theta then
             let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in

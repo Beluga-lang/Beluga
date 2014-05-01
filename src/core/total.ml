@@ -7,9 +7,13 @@ module R = Store.Cid.DefaultRenderer
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
+exception Not_compatible
+exception CtxNot_compatible
+
 let enabled = ref false
 
 type rec_arg = M of Comp.meta_obj | V of Comp.exp_syn
+
 
 let smaller_meta_obj cM = match  cM with
   | Comp.MetaCtx (_ , LF.DDec (_ , _ )) -> true
@@ -111,6 +115,7 @@ let get_order () =
                 (dec.name, x, k, (tau, Whnf.m_id)))
     !mutual_decs
 
+
 (* let check (f,e) tau =
   match (Comp.get f).Comp.order with
     | None -> ()
@@ -131,7 +136,7 @@ let get_order () =
 
 
 *)
-exception Not_compatible
+
 
 let gen_var loc cD cdecl = match cdecl with
   | LF.MDecl (n, tA, cPsi) ->
@@ -296,6 +301,9 @@ let rec gen_rec_calls cD cG (cD', j) = match cD' with
           | [] -> (cG, j)
           | (f,x,k,ttau)::mf_list ->
               let d = mk_wfrec (f,x,k,ttau) in
+	      (* Check that generated call is valid - 
+mostly this prevents cases where we have contexts not matching
+a given schema *)
                 mk_all (LF.Dec(cG, d), j+1) mf_list
         in
         let (cG',j') = mk_all (cG, j) mf_list in

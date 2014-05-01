@@ -499,6 +499,86 @@ let rec flattenProjPat s conv_list = match s with
 
  (* these are the only cases which can happen *)
 
+(* isTuplePatSub s = true *)
+let rec isTuplePatSub s = match s with
+  | Apx.LF.Id _ -> true
+
+  | Apx.LF.EmptySub -> true
+
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
+      isTuplePatSub s
+
+  | Apx.LF.Dot (Apx.LF.Head _ , s) -> false
+
+  | Apx.LF.Dot (Apx.LF.Obj  (Apx.LF.Tuple (_, tM)) , _s) -> 
+     isVarTuple tM && isTuplePatSub s
+  | Apx.LF.Dot (Apx.LF.Obj  _ , _s) ->  false 
+  | Apx.LF.SVar _ -> false
+  | Apx.LF.FSVar _ -> false
+
+  and isVar tM  = match tM with 
+    | Apx.LF.Root(_ , Apx.LF.BVar k, Apx.LF.Nil) -> true
+    | _ -> false
+ 
+  and isVarTuple s = match s with 
+    | Apx.LF.Last tM -> isVar tM 
+    | Apx.LF.Cons (tM, t) -> 
+       isVar tM && isVarTuple t
+
+let rec flattenSub s = match s with 
+  | Apx.LF.Id _ -> s
+
+  | Apx.LF.EmptySub -> s
+
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
+      Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), flattenSub s)
+
+  | Apx.LF.Dot (Apx.LF.Head h , s) -> 
+     Apx.LF.Dot (Apx.LF.Head h, flattenSub s)
+
+  | Apx.LF.Dot (Apx.LF.Obj  (Apx.LF.Tuple (_, tM)) , s) -> 
+     flattenVarTuple tM (flattenSub s)
+
+(*  | Apx.LF.SVar _ -> undefined
+  | Apx.LF.FSVar _ -> undefined
+ *)
+  and extractHead tM  = match tM with 
+    | Apx.LF.Root(_ , Apx.LF.BVar k, Apx.LF.Nil) -> Apx.LF.Head (Apx.LF.BVar k)
+  (* other cases should not happen -bp *)								
+ 
+  and flattenVarTuple s sigma = match s with 
+    | Apx.LF.Last tM -> Apx.LF.Dot (extractHead tM, sigma)
+    | Apx.LF.Cons (tM, t) -> 
+       Apx.LF.Dot(extractHead tM, flattenVarTuple t sigma)
+
+(* TO BE FIXED -bp 
+
+(* sigmifyDctx cPhi s  = (cPhi', rho, k) s.t. 
+   cPhi' |-  rho : cPhi and 
+   cPsi  |- s    : cPhi' where 
+   s is a variable pattern substitution (or a Tuple Pattern
+   Substitution)
+   k is an offset corresponding to the number of declarations
+   which have been contracted into a block, i.e.
+   x:tA, y:tB  ~~> block (x:tA, y:tB) means k = 1
+ *)
+let rec sigmifyDctx cPhi s = match cPhi , s with 
+  |  cPhi , Apx.LF.Id _  -> (cPhi , s, k')
+  |  cPhi , Apx.LF.EmptySub -> (cPhi, s, k')
+  |  cPhi , Apx.LF.Dot ( Apx.LF.Obj (Apx.LF.Tuple (_ , tM)), s) ->
+      let cPhi1, tA, vars_proj, k = extractBlock cPhi tM k' in (* where tA is some Sigma-type *)
+      let cPhi', rho = sigmifyDctx cPhi1 s  in 
+      let rho'  = extend rho vars_proj in 
+       Int.LF.DDec (cPhi', Int.LF.TypDecl (Id.mk_name None, tA)) ,
+       rho' , k' + k
+
+  | Int.LF.DDec (cPhi, Int.LF.TypDecl (x, tA)) ,
+    Apx.LF.Dot ( Apx.LF.Head (Apx.LF.BVar x) , s) -> 
+     let cPhi', rhom k = sigmifyDctx cPhi s in 
+     let h = Apx.LF.BVar (x - k) in 
+      Int.LF.DDec (cPhi', Int.LF.TypDecl (x, tA)) , Apx.LF.Dot ( Apx.LF.Head h , rho)
+  
+ *)
 
 (* ******************************************************************* *)
 (* PHASE 1 : Elaboration and Reconstruction (one pass)                 *)
@@ -999,23 +1079,23 @@ and elTerm' recT cD cPsi r sP = match r with
           (* 1) given cPsi and s synthesize the domain cPhi
            * 2) [s]^-1 ([s']tP) is the type of u
            *)
-          let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name
-                         ^ " in context " ^ P.dctxToString cD cPsi) in
-          let (cPhi, s'') = synDom cD loc cPsi s in
-          let ss =  Substitution.LF.invert s'' in
-          let _ = dprint (fun () ->  " with substitution "  ^ P.subToString cD cPhi s'' ^
-                         " and domain  " ^ P.dctxToString cD cPhi ) in
-              let tP = pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
-                (* let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in *)
-                (* For type reconstruction to succeed, we must have
+            let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name
+				      ^ " in context " ^ P.dctxToString cD cPsi) in
+            let (cPhi, s'') = synDom cD loc cPsi s in
+            let ss =  Substitution.LF.invert s'' in
+            let _ = dprint (fun () ->  " with substitution "  ^ P.subToString cD cPhi s'' ^
+					 " and domain  " ^ P.dctxToString cD cPhi ) in
+            let tP = pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
+            (* let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in *)
+            (* For type reconstruction to succeed, we must have
                  * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                  * This will be enforced during abstraction.
                  *)
-	      let _ = dprint (fun () -> "Added FMVar " ^ R.render_name u ^
-				" of type " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^
-				"[" ^ P.dctxToString cD cPhi ^ "]") in
-                FCVar.add u (cD, Int.LF.MDecl(u, tP, cPhi));
-                Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
+	    let _ = dprint (fun () -> "Added FMVar " ^ R.render_name u ^
+					" of type " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^
+					  "[" ^ P.dctxToString cD cPhi ^ "]") in
+            FCVar.add u (cD, Int.LF.MDecl(u, tP, cPhi));
+            Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
           else
            if isProjPatSub s then
              let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name ) in
@@ -1062,6 +1142,34 @@ and elTerm' recT cD cPsi r sP = match r with
             Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
 
            else
+(*  TO BE ADDED -bp
+	     if isTuplePatSub s then 
+               let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name
+					 ^ " in context "
+					 ^ P.dctxToString cD cPsi) in
+	       let s_flat = flattenSub s in 
+               let (cPhi, s'') = synDom cD loc cPsi s_flat in
+               let ss =  Substitution.LF.invert s'' in
+               let _ = dprint (fun () ->  " with substitution "  ^ P.subToString cD cPhi s'' ^
+					    " and domain  " ^ P.dctxToString cD cPhi ) in
+               let tP = pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
+               (* let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in *)
+               (* For type reconstruction to succeed, we must have
+                 * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
+                 * This will be enforced during abstraction.
+                 *)
+	       let (cPhi', rho') = sigmifyDctx cPhi s0 in (* cPhi' |-  rho : cPhi *)
+	       let rho = elSub loc recT cD cPhi' rho' cPhi in
+	       let s0 = elSub loc recT cD cPsi s cPhi' in
+	       let tP' = Whnf.normTyp (tP, rho) in 
+	       let _ = dprint (fun () -> "Added FMVar " ^ R.render_name u ^
+					" of type " ^ P.typToString cD cPhi' (tP', Substitution.LF.id) ^
+					  "[" ^ P.dctxToString cD cPhi' ^ "]") in
+               FCVar.add u (cD, Int.LF.MDecl(u, Whnf.norm (tP, rho), cPhi'));
+               Int.LF.Root (loc, Int.LF.FMVar (u, s0), Int.LF.Nil)
+
+	     else 
+ *)
              ( (* if s = substvar whose type is known *)
                match s with
                  | Apx.LF.SVar (_ , _ ) ->

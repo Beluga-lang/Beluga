@@ -40,8 +40,8 @@ module LF = struct
 
 
   and normal =                                (* normal terms                   *)
-    | Lam  of Loc.t * name * normal    (* M ::= \x.M                     *)
-    | Root of Loc.t * head * spine     (*   | h . S                      *)
+    | Lam  of Loc.t * name * normal           (* M ::= \x.M                     *)
+    | Root of Loc.t * head * spine            (*   | h . S                      *)
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
 

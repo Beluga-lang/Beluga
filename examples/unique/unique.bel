@@ -121,19 +121,28 @@ equal: tp -> tp -> type.
 e_ref: equal T T.
 
 rec unique3 : (g:tctx)[g |- type_of (E ..) T] -> [g |- type_of (E ..) T']
-             ->  [ |- equal T T'] =
+             ->  [ |- equal T T'] =  / total d (unique3 _ _ _ _ d) /
 fn d => fn f => case d of
 | [g |- t_app (D1 ..) (D2 ..)] =>
   let [g |- t_app (F1 ..) (F2 ..)] = f in
-  let [ |- e_ref]  = unique3 [g |- D1 ..] [g |- F1 ..] in
+  let [ |- e_ref]  = unique3  [g |- D1 ..] [g |- F1 ..] in
     [ |- e_ref]
 
-| [g |- t_lam (\x.\u. D .. x u)] =>
+| {D: [g, b: block x:exp, _t:type_of x T |- type_of ( M .. b.1) S]}
+  [g |- t_lam (\x.\u. D .. <x, u>)] =>
   let [g |- t_lam (\x.\u. F .. x u)] = f in
-  let [ |- e_ref] = unique3 [g,b: block x:exp, _t:type_of x _ |-  D .. b.1 b.2] [g,b |- F .. b.1 b.2] in
+  let [ |- e_ref] = unique3 [g,b: block x:exp, _t:type_of x _ |-  D .. b] [g,b |- F .. b.1 b.2] in
    [ |- e_ref]
 
 | [g |- #q.2 ..] =>           % d : type_of #q.1 T
   let [g |- #r.2 ..] = f  in  % f : type_of #q.1 T'
     [ |- e_ref]
 ;
+
+
+% let v : [ |- type_of (lam \x.x) (arr nat nat)]  = [ |- t_lam \x.\u. u ] ;
+
+let v : [ |- equal (arr nat nat) (arr nat nat)] = 
+  unique3 [ |- t_lam \x.\u. u] [ |- t_lam \x.\u.u]
+;
+

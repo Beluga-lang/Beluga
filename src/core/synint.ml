@@ -380,7 +380,7 @@ module Sgn = struct
   type decl =
     | Typ           of cid_typ  * LF.kind
     | Const         of cid_term * LF.typ
-    | CompTyp       of Loc.t * name * Comp.kind
+    | CompTyp       of Loc.t * name * Comp.kind  * bool (*true for positivity checking*)
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ

@@ -20,6 +20,7 @@ type error =
   | TotalDeclError of name * name 
   | MutualTotalDecl of name
   | MutualTotalDeclAfter of name
+  | NoPositive of string
 
 exception Error of Syntax.Loc.t * error
 
@@ -38,6 +39,8 @@ let _ = Error.register_printer
 	  Format.fprintf ppf "All functions in a mutual function declaration must be declared total.\nFunction %s does not have a totality declaration.\n" (R.render_name f)
 	| MutualTotalDeclAfter f -> 
 	  Format.fprintf ppf "Function %s has a totality declaration, but not all mutually recursive functions have a totality declaration.\n" (R.render_name f)
+   	| NoPositive n -> 
+	  Format.fprintf ppf "Positivity checking of constructor %s fails." n
     )
   )
 
@@ -60,7 +63,7 @@ let freeze_from_name tau = match tau with
   |Ext.Sgn.Typ ( _, n, _) ->  let a = Typ.index_of_name n in
                                Typ.freeze a;
                                ()
-  |Ext.Sgn.CompTyp (_, n, _) -> let a =   CompTyp.index_of_name n in
+  |Ext.Sgn.CompTyp (_, n, _, _) -> let a =   CompTyp.index_of_name n in
                                CompTyp.freeze a;
                                ()
    |Ext.Sgn.CompCotyp (_, n, _) -> let a =   CompCotyp.index_of_name n in
@@ -113,7 +116,7 @@ and recSgnDecl d =
 					fun () -> Check.Comp.checkTyp cD tau)) in
         let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
 
-    | Ext.Sgn.CompTyp (_ , a, extK) ->
+    | Ext.Sgn.CompTyp (_ , a, extK, pflag) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -134,7 +137,9 @@ and recSgnDecl d =
             fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
 	    dprint (fun () ->  "\nDOUBLE CHECK for data type constant " ^a.string_of_name ^
             " successful!");
-        let _a = CompTyp.add (CompTyp.mk_entry a cK' i) in
+
+	let p = match pflag with | None -> false | Some _ -> true in
+        let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
           (if (!Debug.chatter) == 0 then ()
           else (Format.printf "\ndatatype %s : @[%a@] = \n"
                  (a.string_of_name)
@@ -165,7 +170,7 @@ and recSgnDecl d =
         let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in ()
 
 
-    | Ext.Sgn.CompConst (_ , c, tau) ->
+    | Ext.Sgn.CompConst (loc , c, tau) ->
         let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -182,6 +187,16 @@ and recSgnDecl d =
 	let _         = (Monitor.timer ("Data-type Constant: Type Check",
 					fun () -> Check.Comp.checkTyp cD tau'))
         in	let cid_ctypfamily = get_target_cid_comptyp tau' in
+
+	let flag = (CompTyp.get cid_ctypfamily).CompTyp.positivity in
+	(if flag then 
+	    (
+	      if Total.positive cid_ctypfamily tau' then ()
+	      else raise (Error (loc, (NoPositive c.string_of_name)))
+	     )
+	 else ());
+
+
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
           (if (!Debug.chatter) == 0 then ()
            else (Format.printf " | %s : @[%a@] \n"

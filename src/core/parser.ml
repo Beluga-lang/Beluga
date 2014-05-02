@@ -386,6 +386,14 @@ GLOBAL: sgn;
     ]
 ;
 
+  positive_flag:
+    [
+      [
+	"#positivity" -> Sgn.Positive
+      ]
+    ]
+;
+
   total_order:
     [
       [
@@ -1013,9 +1021,9 @@ GLOBAL: sgn;
 
   cmp_cdat:
     [[
-    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
+    a = UPSYMBOL; ":"; k = cmp_kind ; p = OPT [f = positive_flag ->  f]  ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
       check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k, p) :: c_decls
     ]]
 ;
  cocmp_cdat:

@@ -1,0 +1,40 @@
+datatype Person :ctype  #positivity = P : Person ; 
+
+% datatype Man : ctype  = M : Man;
+
+% datatype List :  ctype  = 
+%   | Nil : List
+%   | Cons: Person -> List -> List
+% ;
+
+datatype Nat :ctype  #positivity
+  =
+  | Z : Nat 
+  | Succ : Nat -> Nat
+; 
+
+
+
+datatype Foo : ctype  #positivity
+  =
+  | F1 : Person -> Foo
+  | F2 :  (Person -> Foo) -> Foo
+;
+
+datatype TestA : ctype  #positivity
+  =
+  | Ta1 : TestA 
+  | Ta2 : (Nat -> Nat)-> (Nat -> Nat) -> TestA
+;
+
+
+datatype TestB : ctype #positivity
+ =
+  | Tb1 : (Person -> Person -> TestB ) -> ( Person  -> TestB) -> TestB
+  | Tb2 : (Person -> Person -> TestB ) * (Person -> TestB) -> TestB
+  | Tb3 : ((TestA -> Person) -> TestB) -> TestB
+  % | Tb4 : ((((TestB -> Person) -> TestB) -> Person -> Person) -> TestB) -> TestB
+  % | Tb5 : ((((TestB -> Person) -> (TestB -> Person) -> TestB) -> Person -> Person) -> TestB) -> TestB
+  % | Tb6 : ((((TestB -> Person) -> (TestB -> Person) -> TestB) -> TestB -> Person) -> TestB) -> TestB
+ 
+;

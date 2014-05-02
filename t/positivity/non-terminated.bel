@@ -1,0 +1,14 @@
+datatype Empty : ctype = E : Empty;
+
+datatype D : ctype 
+ = 
+ | Con : (D -> Empty) -> D
+;
+
+rec t1 : D -> Empty
+ = fn d => case d of 
+   | Con f => f d
+;
+
+rec t2 : Empty = t1 (Con t1);
+

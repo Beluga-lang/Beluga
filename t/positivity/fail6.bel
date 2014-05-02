@@ -1,0 +1,7 @@
+datatype Person : ctype #positivity  = P : Person ;
+
+datatype Test : ctype #positivity
+ =
+ | T  : Test 
+ | T1 : ((Test -> Person)  *  (Person -> Test)  -> Person) -> Test
+;

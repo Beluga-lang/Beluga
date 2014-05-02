@@ -1,0 +1,5 @@
+datatype A: ctype #positivity
+=
+ | A3: (A -> (A * A)) -> A % fail
+;
+

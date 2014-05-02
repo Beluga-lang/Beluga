@@ -308,14 +308,16 @@ module Cid = struct
       implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
                                     are factored into implicit arguments *)
       kind                : Int.Comp.kind;
-      mutable frozen       : bool;
+      positivity          : bool ;  (* flag for positivity checking *)
+      mutable frozen      : bool;
       mutable constructors: Id.cid_comp_const list
     }
 
-    let mk_entry name kind implicit_arguments  =  {
+    let mk_entry name kind implicit_arguments positivity =  {
       name               = name;
       implicit_arguments = implicit_arguments;
       kind               = kind;
+      positivity         = positivity;
       frozen             = false;
       constructors       = []
     }

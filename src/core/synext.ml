@@ -233,7 +233,7 @@ end
 
 (** External Signature Syntax *)
 module Sgn = struct
-
+  type positive_flag = Positive
 
   type pragma =
     | OptsPrag of string list
@@ -243,7 +243,7 @@ module Sgn = struct
   type decl =
     | Const    of Loc.t * name * LF.typ
     | Typ      of Loc.t * name * LF.kind
-    | CompTyp  of Loc.t * name * Comp.kind
+    | CompTyp  of Loc.t * name * Comp.kind  * positive_flag option
     | CompCotyp of Loc.t * name * Comp.kind
     | CompConst of Loc.t * name * Comp.typ
     | CompDest of Loc.t * name * Comp.typ

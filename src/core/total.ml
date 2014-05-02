@@ -5,6 +5,21 @@ module Unify = Unify.StdTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
+
+type error =
+  | NoPositiveCheck of string 
+
+exception Error of Syntax.Loc.t * error
+
+let _ = Error.register_printer
+  (fun (Error (loc, err)) -> 
+    Error.print_with_location loc (fun ppf ->
+      match err with 
+	| NoPositiveCheck n -> 
+  	  Format.fprintf ppf "Datatype %s hasn't done positivity checking."  n (* (R.render_name n) *)
+    )
+  )
+
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 exception Not_compatible
@@ -371,25 +386,52 @@ let rec filter cD cG cIH e2 = match e2, cIH with
 *)
 
 
-(*
-let rec positive a tau = match tau  with
-| TypBase _ ->  true 
-| TypBox _ -> true
-| TypArr (tau1, tau2) ->  
-  check_positive a tau1 && 
-  positive a tau2 
 
-let rec check_positive a tau = match tau with 
-| TypBase (_, c, _mS) ->  a = c  || c declared to be positive 
-| TypBox _ ->  true
-| TypArr (tau1, tau2) -> 
-  check_neg a tau1 && check_positive a tau2
+(* positivity checking *)
+exception Unimplemented 
+let rec no_occurs a tau =
+  match tau with
+    | Comp.TypBase (loc, c , _) ->
+      not (a = c) &&
+	((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity 
+	 || let n =  R.render_cid_comp_typ c in
+            raise (Error (loc, (NoPositiveCheck n)))
+	)
+    | Comp.TypCobase _ ->  raise Unimplemented
+    | Comp.TypDef  _  ->  raise Unimplemented
+    | Comp.TypBox  _ -> true 
+    | Comp.TypArr (tau1, tau2)   -> (no_occurs a tau1) && (no_occurs a tau2) 
+    | Comp.TypCross (tau1, tau2) -> (no_occurs a tau1) && (no_occurs a tau2)
+    | Comp.TypPiBox (_, tau')    ->  no_occurs a tau' 
+    | Comp.TypClo   _            ->  raise Unimplemented
+    | Comp.TypBool               -> true 
 
-and check_neg a tau = match tau with 
-| TypBase (_ , c, mS) ->  not (a = c) && c declared to be positive 
+let rec check_positive a tau =
+  match tau with
+    | Comp.TypBase (loc, c , _) -> 
+      (a = c) 
+      || (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity 
+      || let n =  R.render_cid_comp_typ c in
+         raise (Error (loc, (NoPositiveCheck n)))
+    | Comp.TypCobase _  ->  raise Unimplemented
+    | Comp.TypDef  _  -> raise Unimplemented
+    | Comp.TypBox  _ -> true 
+    | Comp.TypArr (tau1, tau2)   -> (no_occurs a tau1) && (check_positive a tau2) 
+    | Comp.TypCross (tau1, tau2) -> (check_positive a tau1) && (check_positive a tau2)
+    | Comp.TypPiBox (_, tau')    -> check_positive a tau' 
+    | Comp.TypClo   _            ->  raise Unimplemented
+    | Comp.TypBool               -> true 
 
-| TypArr (tau1, tau2)   -> 
-  check_positive a tau1  && check_negative a tau2  
 
+let rec positive a tau =
+  match tau with 
+    | Comp.TypBase _  -> true
+    | Comp.TypCobase _ -> true
+    | Comp.TypDef  _  -> raise Unimplemented
+    | Comp.TypBox _   -> true
+    | Comp.TypArr (tau1, tau2)   -> (check_positive a tau1) && (positive a tau2) 
+    | Comp.TypCross (tau1, tau2) -> (positive a tau1) && (positive a tau2)
+    | Comp.TypPiBox (_, tau')    -> positive a tau' 
+    | Comp.TypClo   _            ->  raise Unimplemented
+    | Comp.TypBool               -> true 
 
-*)

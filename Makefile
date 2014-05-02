@@ -15,6 +15,10 @@ OCAMLBUILD = ocamlbuild -use-ocamlfind \
 .PHONY: all clean
 
 all: all.otarget
+	rm -f main.native
+	mkdir -p bin
+	cp  _build/src/beluga/main.native bin/beluga
+	cp  _build/src/beli/main.native bin/beli
 
 clean:
 	$(OCAMLBUILD) -clean

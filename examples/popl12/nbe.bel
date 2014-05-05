@@ -18,15 +18,15 @@ embed : neut (atomic P) -> norm (atomic P).
 
 schema ctx = neut T;
 
-datatype NeutVar : {g:ctx} [ |- tp] -> ctype =
+datatype NeutVar : {g:ctx} [ |- tp] -> ctype  =
 | NeutVar : {#p:[g |- neut T]} NeutVar [g] [ |- T]
 ;
 
-datatype TmVar : {g:tctx} [ |- tp] -> ctype =
+datatype TmVar : {g:tctx} [ |- tp] -> ctype  =
 | TmVar : {#p:[g |- tm T]} TmVar [g] [ |- T]
 ;
 
-datatype Extends : {g:ctx} {h:ctx} ctype =
+datatype Extends : {g:ctx} {h:ctx} ctype  =
 | Zero : Extends [g] [g]
 | Succ :  {h:ctx}
           Extends [g] [h] -> Extends [g] [h,x:neut A]

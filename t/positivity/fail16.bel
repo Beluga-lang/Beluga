@@ -1,4 +1,4 @@
-datatype A: ctype #positivity
+datatype A: ctype #positive
 =
  | A2: A * A -> A
 ;
@@ -10,7 +10,7 @@ datatype B: ctype
  | B4: (A -> (A -> B)) -> B
 ;
 
-datatype C: ctype #positivity
+datatype C: ctype #positive
 =
  | C1: (A -> B) * (A -> C) -> C
  | C2: (B -> A) -> (C * (A -> C)) -> C

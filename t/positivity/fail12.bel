@@ -1,4 +1,4 @@
-datatype A: ctype #positivity
+datatype A: ctype #positive
 =
  | A3: (A -> (A * A)) -> A % fail
 ;

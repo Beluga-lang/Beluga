@@ -389,14 +389,25 @@ GLOBAL: sgn;
   positive_flag:
     [
       [
-	"#positivity" -> Sgn.Positive
+	"#positive" -> Sgn.Positivity
+      | "#stratify" ; k = INTLIT ->  Sgn.Stratify (int_of_string k)
+      (* | "#stratify" ; x = num stratify_order ; "(";  r = UPSYMBOL; args = LIST0 call_args ;  ")"    ->  *)
+      (*        Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args) *)
       ]
     ]
 ;
 
+(*   stratify_order: *)
+(*     [ *)
+(*       [ *)
+(*         x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x)) *)
+(*       ] *)
+(*     ] *)
+(* ; *)
+
   total_order:
     [
-      [
+      [  
         x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x))
 (*      | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
       ]
@@ -911,7 +922,7 @@ GLOBAL: sgn;
   clf_dctx:
     [
       [
-       (* "."  *)
+       (* "|-"  *)
         ->
           LF.Null
 

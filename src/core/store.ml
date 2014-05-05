@@ -308,7 +308,7 @@ module Cid = struct
       implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
                                     are factored into implicit arguments *)
       kind                : Int.Comp.kind;
-      positivity          : bool ;  (* flag for positivity checking *)
+      positivity          : bool;  (* flag for positivity checking *)
       mutable frozen      : bool;
       mutable constructors: Id.cid_comp_const list
     }

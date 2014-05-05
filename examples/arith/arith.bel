@@ -3,7 +3,7 @@ z : nat.
 s : nat -> nat.
 
 
-rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] = / total x (plus x _) / 
+rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] = / total x (plus x _ s) / 
 fn x => fn y =>  case x of
 | [ |- z]  => y
 | [ |- s U]  =>

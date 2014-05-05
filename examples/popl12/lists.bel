@@ -1,4 +1,4 @@
-datatype nat: type =
+datatype nat  : type =
 | z: nat
 | s: nat -> nat
 ;

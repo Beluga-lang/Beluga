@@ -377,6 +377,12 @@ end
 (** Internal Signature Syntax *)
 module Sgn = struct
 
+  (* type positivity_flag =  *)
+  (*   | Noflag *)
+  (*   | Positivity *)
+  (*   | Stratify of Loc.t * Comp.order * name * (name option) list  *)
+
+
   type decl =
     | Typ           of cid_typ  * LF.kind
     | Const         of cid_term * LF.typ

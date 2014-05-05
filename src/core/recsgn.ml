@@ -21,6 +21,7 @@ type error =
   | MutualTotalDecl of name
   | MutualTotalDeclAfter of name
   | NoPositive of string
+  | Unimplemented 
 
 exception Error of Syntax.Loc.t * error
 
@@ -138,7 +139,14 @@ and recSgnDecl d =
 	    dprint (fun () ->  "\nDOUBLE CHECK for data type constant " ^a.string_of_name ^
             " successful!");
 
+	(* let p = match pflag with  *)
+	(*   | None -> Int.Sgn. Noflag  *)
+	(*   | Some Ext. Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args)  *)
+	(*         -> Int.Sgn.Stratify   (_loc, x, Id.mk_name (Id.SomeString r), args)  *)
+	(*   | Some _ -> Int.Sgn.Positivity *)
+ 
 	let p = match pflag with | None -> false | Some _ -> true in
+
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
           (if (!Debug.chatter) == 0 then ()
           else (Format.printf "\ndatatype %s : @[%a@] = \n"
@@ -189,13 +197,15 @@ and recSgnDecl d =
         in	let cid_ctypfamily = get_target_cid_comptyp tau' in
 
 	let flag = (CompTyp.get cid_ctypfamily).CompTyp.positivity in
-	(if flag then 
-	    (
-	      if Total.positive cid_ctypfamily tau' then ()
-	      else raise (Error (loc, (NoPositive c.string_of_name)))
-	     )
-	 else ());
-
+	(* match flag with *)
+	(*   | Int.Sgn.Noflag     -> ()  *)
+	(*   | Int.Sgn.Positivity ->  if Total.positive cid_ctypfamily tau' then () *)
+	(*                            else raise (Error (loc, (NoPositive c.string_of_name))) *)
+	(*   | Int.Sgn.Stratify   -> raise  (Error (loc, (Unimplemented c.string_of_name))) *)	     
+	(* ; *)
+	(if flag then if Total.positive cid_ctypfamily tau' then () 
+                               else raise (Error (loc, (NoPositive c.string_of_name)))
+	else () );
 
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
           (if (!Debug.chatter) == 0 then ()

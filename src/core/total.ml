@@ -393,7 +393,7 @@ let rec no_occurs a tau =
   match tau with
     | Comp.TypBase (loc, c , _) ->
       not (a = c) &&
-	((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity 
+	((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity
 	 || let n =  R.render_cid_comp_typ c in
             raise (Error (loc, (NoPositiveCheck n)))
 	)
@@ -410,7 +410,7 @@ let rec check_positive a tau =
   match tau with
     | Comp.TypBase (loc, c , _) -> 
       (a = c) 
-      || (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity 
+      || (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity
       || let n =  R.render_cid_comp_typ c in
          raise (Error (loc, (NoPositiveCheck n)))
     | Comp.TypCobase _  ->  raise Unimplemented

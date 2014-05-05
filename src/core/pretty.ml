@@ -1159,7 +1159,7 @@ module Int = struct
       function
       | Comp.PatEmpty (_, cPsi) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a. {}]%s"
+            fprintf ppf "%s[%a |- {}]%s"
               (l_paren_if cond)
               (fmt_ppr_lf_dctx cD 0) cPsi
               (r_paren_if cond)
@@ -1469,7 +1469,7 @@ module Int = struct
           let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
           let cG_ext = Context.append cG_t cG' in
 
-          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ . %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
              (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_cmp_gctx cD1' 0) cG'
              (fmt_ppr_pat_obj cD1' cG' 0) pat
@@ -1496,7 +1496,7 @@ module Int = struct
           in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
 (*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a. %a])@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a |- %a])@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
               (ppr_ctyp_decls ) cD1'
               (fmt_ppr_lf_dctx cD1' 0) cPsi
               (fmt_ppr_pattern cD1' cPsi) pattern
@@ -1555,7 +1555,7 @@ module Int = struct
               | LF.MDecl(u, _ , _ ) -> u
               | LF.MDeclOpt u -> u
             end in
-          fprintf ppf "%a . %a = %s"
+          fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_normal cD cPsi lvl) m
             (R.render_name u)
@@ -1568,14 +1568,14 @@ module Int = struct
               | LF.PDeclOpt p -> p
               | LF.MDeclOpt u -> u
             end in
-          fprintf ppf "%a . %a = #%s"
+          fprintf ppf "%a |- %a = #%s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_head cD cPsi lvl) h
             (R.render_name p)
 
       | LF.SObj (phat, sigma) ->
           let cPsi = phatToDCtx phat in
-          fprintf ppf "%a . %a = #SVAR"
+          fprintf ppf "%a |- %a = #SVAR"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_sub cD cPsi lvl) sigma
 

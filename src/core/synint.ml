@@ -28,10 +28,7 @@ module LF = struct
 
   and ctyp_decl =                             (* Contextual Declarations        *)
     | Decl of name * ctyp
-    | MDeclOpt of name
-    | PDeclOpt of name
-    | CDeclOpt of name
-    | SDeclOpt of name
+    | DeclOpt of name
                                               (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)

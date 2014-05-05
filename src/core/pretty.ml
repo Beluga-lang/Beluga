@@ -984,15 +984,7 @@ module Int = struct
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
-      | LF.MDeclOpt name ->
-          fprintf ppf "{%s :: _ }"
-            (R.render_name name)
-
-
-      | LF.PDeclOpt name ->
-          fprintf ppf "{%s :: _ }"
-            (R.render_name name)
-      | LF.CDeclOpt name ->
+      | LF.DeclOpt name ->
           fprintf ppf "{%s :: _ }"
             (R.render_name name)
 
@@ -1225,7 +1217,7 @@ module Int = struct
               (l_paren_if cond)
               (R.render_name x);
             fprintf ppf "%a%s"
-              (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.MDeclOpt x)) (Whnf.cnormCtx (cG, LF.MShift 1)) 0) e
+              (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.DeclOpt x)) (Whnf.cnormCtx (cG, LF.MShift 1)) 0) e
               (r_paren_if cond);
 
       | Comp.Pair (_, e1, e2) ->
@@ -1539,9 +1531,7 @@ module Int = struct
           let psi    =
             begin match decl with
               | LF.Decl(psi, LF.CTyp (_ , _)) -> psi
-              | LF.MDeclOpt psi -> psi (* this is because we are cheating when
-                                          printing an mlam *)
-              | LF.CDeclOpt psi -> psi
+              | LF.DeclOpt psi -> psi 
             end in
           fprintf ppf "%a = %s"
             (fmt_ppr_lf_dctx cD lvl) cPsi
@@ -1552,7 +1542,7 @@ module Int = struct
           let u    =
             begin match decl with
               | LF.Decl(u, LF.MTyp (_ , _) ) -> u
-              | LF.MDeclOpt u -> u
+              | LF.DeclOpt u -> u
             end in
           fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
@@ -1564,8 +1554,7 @@ module Int = struct
           let p =
             begin match decl with
               | LF.Decl(p, LF.PTyp (_ , _) ) -> p
-              | LF.PDeclOpt p -> p
-              | LF.MDeclOpt u -> u
+              | LF.DeclOpt p -> p
             end in
           fprintf ppf "%a |- %a = #%s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi

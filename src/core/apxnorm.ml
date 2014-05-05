@@ -411,7 +411,7 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
   | Apx.Comp.MLam (loc, u, e)   ->
       (dprint (fun () -> "cnormApxExp -- MLam (or could be PLam)") ;
       Apx.Comp.MLam (loc, u, cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.MDeclOpt u)) e
-                       (Int.LF.Dec (cD'', Int.LF.MDeclOpt u), Whnf.mvar_dot1 t)))
+                       (Int.LF.Dec (cD'', Int.LF.DeclOpt u), Whnf.mvar_dot1 t)))
 
   | Apx.Comp.Pair (loc, e1, e2) ->
       let e1' = cnormApxExp cD delta e1 (cD'', t) in
@@ -552,19 +552,19 @@ and cnormApxBranch cD delta b (cD'', t) =
 
   | Apx.LF.Dec (delta2', Apx.LF.CDecl (x, _ )) ->
       let cD1'' = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1'', Int.LF.CDeclOpt x)
+        Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
 
   | Apx.LF.Dec (delta2', Apx.LF.MDecl (x, _, _ )) ->
       let cD1'' = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1'', Int.LF.MDeclOpt x)
+        Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
 
   | Apx.LF.Dec (delta2', Apx.LF.PDecl (x, _, _ )) ->
       let cD1 = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1, Int.LF.PDeclOpt x)
+        Int.LF.Dec (cD1, Int.LF.DeclOpt x)
 
   | Apx.LF.Dec (delta2', Apx.LF.SDecl (x, _, _ )) ->
       let cD1 = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1, Int.LF.SDeclOpt x)
+        Int.LF.Dec (cD1, Int.LF.DeclOpt x)
 
   in
     match b with

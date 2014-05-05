@@ -772,16 +772,16 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Error.Violation ("Contextual substitution ill-formed"))
 
-    | MDot (MObj(_ , tM), ms), Dec(cD1', MDecl (_u, tA, cPsi)) ->
+    | MDot (MObj(_ , tM), ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ;
          checkMSub loc cD ms cD1')
-    | MDot (CObj(cPsi), ms), Dec(cD1', CDecl (_psi, w, _)) ->
+    | MDot (CObj(cPsi), ms), Dec(cD1', Decl (_psi, CTyp (w, _))) ->
         (checkSchema loc cD cPsi (Schema.get_schema w);
          checkMSub loc cD ms cD1')
 
-    | MDot (MV u, ms), Dec(cD1', MDecl (_u, tA, cPsi)) ->
+    | MDot (MV u, ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         let (_, tA1, cPsi1) = Whnf.mctxMDec cD u in
@@ -790,7 +790,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
           else
             raise (Error.Violation ("Contextual substitution ill-typed - 2 "))
 
-    | MDot (MV p, ms), Dec(cD1', PDecl (_u, tA, cPsi)) ->
+    | MDot (MV p, ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         let (_, tA1, cPsi1) = Whnf.mctxPDec cD p in
@@ -800,7 +800,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
             raise (Error.Violation ("Contextual substitution ill-typed - 3 "))
 
 
-    | MDot (MV p, ms), Dec(cD1', SDecl (_u, cPhi, cPsi)) ->
+    | MDot (MV p, ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
         let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD p in
@@ -809,13 +809,13 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
           else
             raise (Error.Violation ("Contextual substitution ill-typed - 4 "))
 
-    | MDot (SObj (_, s), ms), Dec(cD1', SDecl (_u, cPhi, cPsi)) ->
+    | MDot (SObj (_, s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
           (checkSub loc cD cPsi' s cPhi';
            checkMSub loc cD ms cD1' )
 
-    | MDot (PObj (_, h), ms), Dec(cD1', PDecl (_u, tA, cPsi)) ->
+    | MDot (PObj (_, h), ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with

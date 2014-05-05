@@ -157,10 +157,7 @@ let rec getNameDCtx cPsi k = match (cPsi, k) with
   | (DDec (cPsi, _ ) , k) -> getNameDCtx cPsi (k-1)
 
 let rec getNameMCtx cD k = match (cD, k) with
-  | (Dec (_cD, MDecl(u, _, _ )), 1) -> u
-  | (Dec (_cD, PDecl(u, _, _ )), 1) -> u
-  | (Dec (_cD, CDecl(u, _, _)), 1) -> u
-  | (Dec (_cD, SDecl(u, _, _)), 1) -> u
+  | (Dec (_cD, Decl(u, _ )), 1) -> u
   | (Dec (_cD, MDeclOpt u), 1) -> u
   | (Dec (_cD, PDeclOpt u), 1) -> u
   | (Dec (_cD, CDeclOpt u), 1) -> u
@@ -212,14 +209,14 @@ let rec lookup cG k = match (cG, k) with
       lookup cG' (k - 1)
 
 let rec lookupSchema cD psi_offset = match (cD, psi_offset) with
-  | (Dec (_cD, CDecl (_, cid_schema, _)), 1) -> cid_schema
+  | (Dec (_cD, Decl (_, CTyp (cid_schema, _))), 1) -> cid_schema
   | (Dec (cD, _) , i) ->
       lookupSchema cD (i-1)
 
 and lookupCtxVar cD cvar =
   let rec lookup cD offset = match cD with
       | Empty -> raise (Error.Violation "Context variable not found")
-      | Dec (cD, CDecl (psi, schemaName, _)) ->
+      | Dec (cD, Decl (psi, CTyp (schemaName, _))) ->
           begin match cvar with
             | CtxName phi when psi = phi ->  (psi, schemaName)
             | (CtxName _phi)             -> lookup cD (offset+1)

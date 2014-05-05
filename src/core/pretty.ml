@@ -956,30 +956,30 @@ module Int = struct
 
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
-      | LF.MDecl (u, tA, cPsi) ->
+      | LF.Decl (u, LF.MTyp (tA, cPsi)) ->
           fprintf ppf "{%s :: [%a |- %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 2) tA
 
-      | LF.PDecl (p, tA, cPsi) ->
+      | LF.Decl (p, LF.PTyp (tA, cPsi)) ->
           fprintf ppf "{#%s :: [%a |- %a]}"
             (R.render_name p)
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 2) tA
 
-      | LF.SDecl (u, cPhi, cPsi) ->
+      | LF.Decl (u, LF.STyp (cPhi, cPsi)) ->
           fprintf ppf "{%s :: [%a |- %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi
 
-      | LF.CDecl (name, schemaName, LF.No) ->
+      | LF.Decl (name, LF.CTyp (schemaName, LF.No)) ->
           fprintf ppf "{%s :: (%a)}"
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
-      | LF.CDecl (name, schemaName, LF.Maybe) ->
+      | LF.Decl (name, LF.CTyp (schemaName, LF.Maybe)) ->
           fprintf ppf "{%s :: {%a}}"
             (R.render_name name)
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
@@ -1317,7 +1317,7 @@ module Int = struct
           (Comp.Equal (loc, i1', i2'), [])
       | _ -> (i, [])
     and implicitCompArg tau = begin match tau with
-      | Comp.TypPiBox ((LF.MDecl _ , Comp.Implicit), tau) ->
+      | Comp.TypPiBox ((LF.Decl (_, LF.MTyp (_,_)) , Comp.Implicit), tau) ->
           (false)::(implicitCompArg tau)
       | Comp.TypPiBox (_ , tau) ->
           (true)::(implicitCompArg tau)
@@ -1538,7 +1538,7 @@ module Int = struct
       | LF.CObj (cPsi) ->
           let psi    =
             begin match decl with
-              | LF.CDecl(psi, _ , _) -> psi
+              | LF.Decl(psi, LF.CTyp (_ , _)) -> psi
               | LF.MDeclOpt psi -> psi (* this is because we are cheating when
                                           printing an mlam *)
               | LF.CDeclOpt psi -> psi
@@ -1551,7 +1551,7 @@ module Int = struct
           let cPsi = phatToDCtx psihat in
           let u    =
             begin match decl with
-              | LF.MDecl(u, _ , _ ) -> u
+              | LF.Decl(u, LF.MTyp (_ , _) ) -> u
               | LF.MDeclOpt u -> u
             end in
           fprintf ppf "%a |- %a = %s"
@@ -1563,7 +1563,7 @@ module Int = struct
           let cPsi = phatToDCtx psihat in
           let p =
             begin match decl with
-              | LF.PDecl(p, _ , _ ) -> p
+              | LF.Decl(p, LF.PTyp (_ , _) ) -> p
               | LF.PDeclOpt p -> p
               | LF.MDeclOpt u -> u
             end in

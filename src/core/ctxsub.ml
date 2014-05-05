@@ -77,7 +77,7 @@ let ctxToSub_mclosed cD psi cPsi =
 
       let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
         (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
-        (Dec (cD', MDecl(u_name , tA', Whnf.cnormDCtx (psi, MShift k))), result, k+1)
+        (Dec (cD', Decl(u_name , MTyp (tA', Whnf.cnormDCtx (psi, MShift k)))), result, k+1)
   in
     toSub cPsi
 
@@ -145,54 +145,35 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
 
 
+(* TODO: Clean this up more *)
+let declToCVar (n, ctypn) = match ctypn with
+  | MTyp (tA, cPsi) ->
+    let u     = Whnf.newMVar (Some n) (cPsi, tA) in
+    let phat  = Context.dctxToHat cPsi in
+    MObj (phat, Root (Syntax.Loc.ghost, MVar (u, Substitution.LF.id), Nil))
+  | PTyp (tA, cPsi) ->
+	let p    = Whnf.newPVar (Some n) (cPsi, tA) in
+	let phat = dctxToHat cPsi in
+	PObj (phat, PVar (p, Substitution.LF.id))
+  | STyp (cPhi, cPsi) ->
+        let u     = Whnf.newSVar (Some n) (cPsi, cPhi) (* I guess these swap? *) in
+	let phat  = Context.dctxToHat cPsi in
+        SObj (phat, SVar (u, (NoCtxShift, 0), Substitution.LF.id))
+  | CTyp (sW, _) ->
+        let cvar = Whnf.newCVar (Some n) sW in
+	CObj (CtxVar cvar)
+
 let rec mctxToMSub cD = match cD with
   | Empty -> Whnf.m_id
-  | Dec (cD', MDecl(n, tA, cPsi)) ->
+  | Dec (cD', Decl(n, ctyp)) ->
       let t     = mctxToMSub cD' in
-(*      let _ = dprint (fun () -> "[mctxToMSub] cD' = " ^ P.mctxToString cD') in
-      let _     = dprint (fun () -> "[mctxToMSub] t = " ^ P.msubToString Empty t) in
-      let _ = dprint (fun () -> "cPsi =" ^ P.dctxToString cD' cPsi) in
-      let _ = dprint (fun () -> "tA =" ^ P.typToString cD' cPsi (tA, Substitution.LF.id)) in *)
-      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
-      let tA'   = Whnf.cnormTyp (tA, t) in
-      let u     = Whnf.newMVar (Some n) (cPsi', tA') in
-      let phat  = Context.dctxToHat cPsi' in
-        MDot (MObj (phat, Root (Syntax.Loc.ghost, MVar (u, Substitution.LF.id), Nil)) , t)
-
-  | Dec(cD', PDecl(n, tA, cPsi)) ->
-      let t = mctxToMSub cD' in
-(*      let _ = dprint (fun () -> "[mctxToMSub] cD' = " ^ P.mctxToString cD') in
-      let _ = dprint (fun () -> "[mctxToMSub] t = " ^ P.msubToString Empty t) in
-      let _ = dprint (fun () -> "#cPsi =" ^ P.dctxToString cD' cPsi) in
-      let _ = dprint (fun () -> "#tA =" ^ P.typToString cD' cPsi (tA,Substitution.LF.id)) in*)
-      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
-      let p    = Whnf.newPVar (Some n) (cPsi', Whnf.cnormTyp (tA, t)) in
-      let phat = dctxToHat cPsi' in
-        MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
-
-  | Dec (cD', SDecl(n, cPhi, cPsi)) ->
-      let t     = mctxToMSub cD' in
-(*      let _ = dprint (fun () -> "[mctxToMSub] cD' = " ^ P.mctxToString cD') in
-      let _     = dprint (fun () -> "[mctxToMSub] t = " ^ P.msubToString Empty t) in
-      let _ = dprint (fun () -> "cPsi =" ^ P.dctxToString cD' cPsi) in
-      let _ = dprint (fun () -> "tA =" ^ P.dctxToString cD' cPhi) in *)
-      let cPsi' = Whnf.cnormDCtx (cPsi,t) in
-      let cPhi'   = Whnf.cnormDCtx (cPhi, t) in
-      let u     = Whnf.newSVar (Some n) (cPsi', cPhi') in
-      let phat  = Context.dctxToHat cPsi' in
-        MDot (SObj (phat, SVar (u, (NoCtxShift, 0), Substitution.LF.id)) , t)
-
-  | Dec (cD', CDecl(n, sW, _)) ->
-      let t = mctxToMSub cD' in
-      let cvar = Whnf.newCVar (Some n) sW in
-        MDot (CObj (CtxVar cvar), t)
-
-
+      let ctypn = Whnf.cnormLFCTyp (ctyp, t) in
+      MDot (declToCVar (n, ctypn) , t)
 
 
 let rec mctxToMMSub cD0 cD = match cD with
   | Empty -> MShift (Context.length cD0)
-  | Dec (cD', MDecl(n, tA, cPsi)) ->
+  | Dec (cD', Decl(n, MTyp (tA, cPsi))) ->
       let t     = mctxToMMSub cD0 cD' in
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let tA'   = Whnf.cnormTyp (tA, t) in
@@ -200,7 +181,7 @@ let rec mctxToMMSub cD0 cD = match cD with
       let phat  = Context.dctxToHat cPsi' in
         MDot (MObj (phat, Root (Syntax.Loc.ghost, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil)) , t)
 
-  | Dec (cD', SDecl(n, cPhi, cPsi)) -> (* cPsi |- sigma : cPhi *)
+  | Dec (cD', Decl(n, STyp (cPhi, cPsi))) -> (* cPsi |- sigma : cPhi *)
       let t     = mctxToMMSub cD0 cD' in
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let cPhi' = Whnf.cnormDCtx (cPhi,t) in
@@ -209,7 +190,7 @@ let rec mctxToMMSub cD0 cD = match cD with
         MDot (SObj (phat, MSVar (u, (NoCtxShift, 0),
                                  (Whnf.m_id, Substitution.LF.id))), t)
 
-  | Dec(cD', PDecl(n, tA, cPsi)) ->
+  | Dec(cD', Decl(n, PTyp (tA, cPsi))) ->
      (* This is somewhat a hack...  *)
       let t    = mctxToMSub cD' in
       let cPsi' = Whnf.cnormDCtx (cPsi, t) in
@@ -217,7 +198,7 @@ let rec mctxToMMSub cD0 cD = match cD with
       let phat = dctxToHat cPsi' in
         MDot (PObj (phat, PVar (p, Substitution.LF.id)) , t)
 
-  | Dec (cD', CDecl (n, sW, _ )) ->
+  | Dec (cD', Decl (n, CTyp (sW, _) )) ->
      (* This is somewhat a hack...  *)
       (* let _     = dprint (fun () -> "[mctxToString] CDecl " ^ n.string_of_name) in *)
       let t = mctxToMMSub cD0 cD' in

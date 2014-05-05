@@ -1781,8 +1781,6 @@ and cnorm (tM, t) = match tM with
         TypDecl (x, cnormTyp (tA, t))
     | TypDeclOpt x -> TypDeclOpt x
 
-
-
   (* cnormDCtx (cPsi, t) = cPsi
 
    If cO ; cD  |- cPsi lf-dctx
@@ -1812,8 +1810,7 @@ and cnorm (tM, t) = match tM with
 
     | DDec(cPsi, decl) ->
         DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
-
-
+   
 
 and cnormMSub t = match t with
   | MShift _n -> t
@@ -2615,10 +2612,10 @@ end
 *)
 let mctxMDec cD' k =
   let rec lookup cD k' = match (cD, k') with
-    | (Dec (_cD, MDecl(u, tA, cPsi)), 1)
+    | (Dec (_cD, Decl(u, MTyp (tA, cPsi))), 1)
       -> (u, cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k))
 
-    | (Dec (_cD, PDecl _), 1)
+    | (Dec (_cD, Decl (_, PTyp (_,_))), 1)
       -> raise (Error.Violation "Expected meta-variable; Found parameter variable")
 
     | (Dec (cD, _), k')
@@ -2633,19 +2630,15 @@ let mctxMDec cD' k =
 *)
 let mctxPDec cD k =
   let rec lookup cD k' = match (cD, k') with
-    | (Dec (_cD, PDecl (p, tA, cPsi)),  1)
+    | (Dec (_cD, Decl (p, PTyp (tA, cPsi))),  1)
       -> (p, cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k))
         (* (p, mshiftTyp tA k, mshiftDCtx cPsi k)*)
 
 (*    | (Dec (_cD, MDecl (p, tA, cPsi)),  1)
       -> (p, mshiftTyp tA k, mshiftDCtx cPsi k)
 *)
-    | (Dec (_cD, MDecl  _),  1)
-      -> raise (Error.Violation ("Expected parameter variable, but found meta-variable"))
-    | (Dec (_cD, CDecl  _),  1)
-      -> raise (Error.Violation ("Expected parameter variable, but found context variable"))
-    | (Dec (_cD, SDecl  _),  1)
-      -> raise (Error.Violation ("Expected parameter variable, but found substitution variable"))
+    | (Dec (_cD, Decl  _),  1)
+      -> raise (Error.Violation ("Expected parameter variable"))
 
     | (Dec (cD, _),  k')
       -> lookup cD (k' - 1)
@@ -2657,16 +2650,12 @@ let mctxPDec cD k =
 
 let mctxSDec cD' k =
   let rec lookup cD k' = match (cD, k') with
-    | (Dec (_cD, SDecl(u, cPhi, cPsi)), 1)
+    | (Dec (_cD, Decl(u, STyp (cPhi, cPsi))), 1)
       -> (* (u,mshiftDCtx cPhi k, mshiftDCtx cPsi k) *)
         (u, cnormDCtx (cPhi, MShift k), cnormDCtx (cPsi, MShift k))
 
-    | (Dec (_cD, PDecl _), 1)
-      -> raise (Error.Violation "Expected substitution variable; found parameter variable")
-    | (Dec (_cD, MDecl _), 1)
-      -> raise (Error.Violation "Expected substitution variable; found meta-variable")
-    | (Dec (_cD, CDecl _), 1)
-      -> raise (Error.Violation "Expected substitution variable; found context-variable")
+    | (Dec (_cD, Decl _), 1)
+      -> raise (Error.Violation "Expected substitution variable")
 
     | (Dec (cD, _), k')
       -> lookup cD (k' - 1)
@@ -2680,15 +2669,11 @@ let mctxSDec cD' k =
 *)
 let mctxCDec cD k =
   let rec lookup cD k' = match (cD, k') with
-    | (Dec (_cD, CDecl (psi, sW, dep)),  1)
+    | (Dec (_cD, Decl (psi, CTyp (sW, dep))),  1)
       -> (psi, sW)
 
-    | (Dec (_cD, MDecl  _),  1)
-      -> raise (Error.Violation ("Expected context variable, but found meta-variable"))
-    | (Dec (_cD, PDecl  _),  1)
-      -> raise (Error.Violation ("Expected context variable, but found parameter-variable"))
-    | (Dec (_cD, SDecl  _),  1)
-      -> raise (Error.Violation ("Expected context variable, but found substitution-variable"))
+    | (Dec (_cD, Decl  _),  1)
+      -> raise (Error.Violation ("Expected context variable"))
     | (Dec (cD, _),  k')
       -> lookup cD (k' - 1)
 
@@ -2698,7 +2683,7 @@ let mctxCDec cD k =
 
 let mctxCVarPos cD psi =
   let rec lookup cD k = match cD  with
-    | Dec (cD, CDecl(phi, s_cid, _))    ->
+    | Dec (cD, Decl(phi, CTyp (s_cid, _)))    ->
         if psi = phi then
           (k, s_cid)
         else
@@ -2713,7 +2698,7 @@ let mctxCVarPos cD psi =
 
 let mctxMVarPos cD u =
   let rec lookup cD k = match cD  with
-    | Dec (cD, MDecl(v, tA, cPsi))    ->
+    | Dec (cD, Decl(v, MTyp (tA, cPsi)))    ->
         if v = u then
          (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
          (k, (cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k)) )
@@ -2728,7 +2713,7 @@ let mctxMVarPos cD u =
 
 let mctxPVarPos cD p =
   let rec lookup cD k = match cD  with
-    | Dec (cD, PDecl(q, tA, cPsi))    ->
+    | Dec (cD, Decl(q, PTyp (tA, cPsi)))    ->
         if p = q then
           (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
          (k, (cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k)) )
@@ -2745,7 +2730,7 @@ let mctxPVarPos cD p =
 
 let mctxSVarPos cD u =
   let rec lookup cD k = match cD  with
-    | Dec (cD, SDecl(v, cPhi, cPsi))    -> (*  cPsi |- s : cPhi *)
+    | Dec (cD, Decl(v, STyp (cPhi, cPsi)))    -> (*  cPsi |- s : cPhi *)
         if v = u then
          (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
          (k, (cnormDCtx (cPhi, MShift k), cnormDCtx (cPsi, MShift k)) )
@@ -2806,16 +2791,16 @@ let mctxSVarPos cD u =
     | Comp.TypCross (tT1, tT2)   ->
         Comp.TypCross (normCTyp tT1, normCTyp tT2)
 
-    | Comp.TypPiBox ((MDecl(u, tA, cPsi) , dep), tau)    ->
-        Comp.TypPiBox ((MDecl (u, normTyp (tA, LF.id), normDCtx cPsi), dep),
+    | Comp.TypPiBox ((Decl(u, MTyp (tA, cPsi)) , dep), tau)    ->
+        Comp.TypPiBox ((Decl (u, MTyp (normTyp (tA, LF.id), normDCtx cPsi)), dep),
                        normCTyp tau)
 
-    | Comp.TypPiBox ((PDecl(u, tA, cPsi) , dep), tau)    ->
-        Comp.TypPiBox ((PDecl (u, normTyp (tA, LF.id), normDCtx cPsi), dep),
+    | Comp.TypPiBox ((Decl(u, PTyp (tA, cPsi)) , dep), tau)    ->
+        Comp.TypPiBox ((Decl (u, PTyp (normTyp (tA, LF.id), normDCtx cPsi)), dep),
                        normCTyp tau)
 
-    | Comp.TypPiBox ((SDecl(u, cPhi, cPsi) , dep), tau)    ->
-        Comp.TypPiBox ((SDecl (u, normDCtx cPhi, normDCtx cPsi), dep),
+    | Comp.TypPiBox ((Decl(u, STyp (cPhi, cPsi)) , dep), tau)    ->
+        Comp.TypPiBox ((Decl (u, STyp (normDCtx cPhi, normDCtx cPsi)), dep),
                        normCTyp tau)
 
     | Comp.TypPiBox ((ctx_dec , dep), tau)      ->
@@ -2855,19 +2840,19 @@ let mctxSVarPos cD u =
         Comp.MetaApp (cnormMetaObj (mO,t), cnormMetaSpine (mS,t))
 
   let cnormCDecl (cdecl, t) = match cdecl with
-    | MDecl(u, tA, cPsi) ->
+    | Decl(u, MTyp (tA, cPsi)) ->
         let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          MDecl (u, tA', cPsi')
-    | PDecl(u, tA, cPsi) ->
+          Decl (u, MTyp (tA', cPsi'))
+    | Decl(u, PTyp (tA, cPsi)) ->
         let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          PDecl (u, tA', cPsi')
-    | SDecl(s, cPhi, cPsi) ->
+          Decl (u, PTyp (tA', cPsi'))
+    | Decl(s, STyp (cPhi, cPsi)) ->
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
         let cPhi' = normDCtx (cnormDCtx(cPhi, t)) in
-          SDecl (s, cPhi', cPsi')
-    | CDecl (psi, sW, dep) -> CDecl (psi, sW, dep)
+          Decl (s, STyp (cPhi', cPsi'))
+    | Decl (psi, CTyp (sW, dep)) -> Decl (psi, CTyp (sW, dep))
 
   let rec cnormCTyp thetaT =
     begin match thetaT with
@@ -3113,6 +3098,12 @@ let mctxSVarPos cD u =
                                     cs))
 
 
+  let cnormLFCTyp (ctyp, mtt') = match ctyp with
+     | CTyp (w, dep) -> CTyp (w, dep)
+     | MTyp (tA, cPsi) -> MTyp (cnormTyp (tA, mtt'), cnormDCtx (cPsi, mtt'))
+     | PTyp (tA, cPsi) -> PTyp (cnormTyp (tA, mtt'), cnormDCtx (cPsi, mtt'))
+     | STyp (cPhi, cPsi) -> STyp (cnormDCtx (cPhi, mtt'), cnormDCtx (cPsi, mtt'))
+
   let rec cwhnfCtx (cG, t) = match cG with
     | Empty  -> Empty
     | Dec(cG, Comp.CTypDecl (x, tau)) -> Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t)))
@@ -3132,14 +3123,14 @@ let mctxSVarPos cD u =
 
   let rec normMCtx cD = match cD with
     | Empty -> Empty
-    | Dec(cD, MDecl(u, tA, cPsi)) ->
-        Dec (normMCtx cD, MDecl (u, normTyp (tA, LF.id), normDCtx cPsi))
+    | Dec(cD, Decl(u, MTyp (tA, cPsi))) ->
+        Dec (normMCtx cD, Decl (u, MTyp (normTyp (tA, LF.id), normDCtx cPsi)))
 
-    | Dec(cD, PDecl(p, tA, cPsi)) ->
-        Dec (normMCtx cD, PDecl (p, normTyp (tA, LF.id), normDCtx cPsi))
+    | Dec(cD, Decl(p, PTyp (tA, cPsi))) ->
+        Dec (normMCtx cD, Decl (p, PTyp (normTyp (tA, LF.id), normDCtx cPsi)))
 
-    | Dec(cD, SDecl(u, cPhi, cPsi)) ->
-        Dec (normMCtx cD, SDecl (u, normDCtx cPhi, normDCtx cPsi))
+    | Dec(cD, Decl(u, STyp (cPhi, cPsi))) ->
+        Dec (normMCtx cD, Decl (u, STyp (normDCtx cPhi, normDCtx cPsi)))
 
 
     | Dec(cD, decl) ->
@@ -3209,7 +3200,7 @@ let mctxSVarPos cD u =
         &&
           convCTyp (tT2, t) (tT2', t')
 
-    | ((Comp.TypPiBox ((MDecl(_, tA, cPsi), dep), tT), t), (Comp.TypPiBox ((MDecl(_, tA', cPsi'), dep'), tT'), t'))
+    | ((Comp.TypPiBox ((Decl(_, MTyp (tA, cPsi)), dep), tT), t), (Comp.TypPiBox ((Decl(_, MTyp (tA', cPsi')), dep'), tT'), t'))
       ->
         (dprint (fun () -> "[convCtyp] PiBox Mdec");
         dep = dep'
@@ -3221,8 +3212,8 @@ let mctxSVarPos cD u =
          (dprint (fun () -> "[convCtyp] PiBox decl done");
         convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')))
 
-    | ((Comp.TypPiBox ((PDecl(_, tA, cPsi), dep), tT), t),
-       (Comp.TypPiBox ((PDecl(_, tA', cPsi'), dep'), tT'), t'))
+    | ((Comp.TypPiBox ((Decl(_, PTyp (tA, cPsi)), dep), tT), t),
+       (Comp.TypPiBox ((Decl(_, PTyp (tA', cPsi')), dep'), tT'), t'))
       -> dep = dep'
         &&
           convTyp (cnormTyp (tA, t), LF.id) (cnormTyp (tA', t'), LF.id)
@@ -3232,8 +3223,8 @@ let mctxSVarPos cD u =
           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
 
 
-    | ((Comp.TypPiBox ((SDecl(_, cPhi, cPsi), dep), tT), t),
-       (Comp.TypPiBox ((SDecl(_, cPhi', cPsi'), dep'), tT'), t'))
+    | ((Comp.TypPiBox ((Decl(_, STyp (cPhi, cPsi)), dep), tT), t),
+       (Comp.TypPiBox ((Decl(_, STyp (cPhi', cPsi')), dep'), tT'), t'))
       -> dep = dep'
         &&
           convDCtx (cnormDCtx (cPhi, t)) (cnormDCtx (cPhi', t'))
@@ -3243,8 +3234,8 @@ let mctxSVarPos cD u =
           (dprint (fun () -> "[convCtyp] PiBox Sdec done");
            convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t'))
 
-    | ((Comp.TypPiBox ((CDecl(_psi, cid_schema, _ ), dep), tT), t) ,
-       (Comp.TypPiBox ((CDecl(_psi', cid_schema', _ ), dep'), tT'), t'))
+    | ((Comp.TypPiBox ((Decl(_psi, CTyp (cid_schema, _ )), dep), tT), t) ,
+       (Comp.TypPiBox ((Decl(_psi', CTyp (cid_schema', _) ), dep'), tT'), t'))
       -> dep = dep'
         &&
         cid_schema = cid_schema'
@@ -3398,9 +3389,9 @@ let rec closedCTyp cT = match cT with
   | Comp.TypClo (cT, t) -> closedCTyp(cnormCTyp (cT, t))  (* to be improved Sun Dec 13 11:45:15 2009 -bp *)
 
 and closedCDecl ctyp_decl = match ctyp_decl with
-  | MDecl(_, tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
-  | PDecl(_, tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
-  | SDecl(_, cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi
+  | Decl(_, MTyp (tA, cPsi)) -> closedTyp (tA, LF.id) && closedDCtx cPsi
+  | Decl(_, PTyp (tA, cPsi)) -> closedTyp (tA, LF.id) && closedDCtx cPsi
+  | Decl(_, STyp (cPhi, cPsi)) -> closedDCtx cPhi && closedDCtx cPsi
   | _ -> true
 
 let rec closedGCtx cG = match cG with

@@ -271,12 +271,11 @@ let rec collectionToString cQ = match cQ with
      ^ P.typToString cD I.Null (tA , LF.id)
      ^ "\n"
 
-  | I.Dec (cQ, FMV (Pure, u, Some (I.MTyp (tP, cPhi)))) ->
+  | I.Dec (cQ, FMV (Pure, u, Some mtyp)) ->
       let cD = I.Empty in
        collectionToString cQ
      ^ " " ^ R.render_name u ^ " : "
-     ^ P.typToString cD cPhi (tP, LF.id)
-     ^ " [ "  ^ P.dctxToString cD cPhi ^ "]\n"
+     ^ P.mtypToString cD mtyp ^"\n"
 
   | I.Dec(cQ, PV (_ , (I.PVar (I.PInst(_n, _r, cPsi, tA', _c), _s) as h))) ->
       let (ctx_var, tA) = raiseType cPsi tA' in
@@ -296,20 +295,6 @@ let rec collectionToString cQ = match cQ with
       ^ "(" ^ P.typToString cD I.Null (tA, LF.id) ^ ")"
       ^ "\n"
 
-  | I.Dec(cQ, FMV (_marker, n, Some (I.PTyp (tA, cPsi)))) ->
-      let (ctx_var, tA') = raiseType cPsi tA in
-      let cD = I.Empty in
-        collectionToString cQ
-      ^ " FPV " ^ n.string_of_name ^ " : "
-      ^ ctxVarToString ctx_var ^ "." ^ P.typToString cD I.Null (tA', LF.id)
-      ^ "\n"
-
-  | I.Dec (cQ, FMV (Pure, u, Some (I.STyp (cPsi, cPhi)))) ->
-      let cD = I.Empty in
-       collectionToString cQ
-     ^ " " ^ R.render_name u ^ " : "
-     ^ P.dctxToString cD cPsi
-     ^ " [ "  ^ P.dctxToString cD cPhi ^ "]\n"
 
   | I.Dec(cQ, MMV ( _, _ )) -> "MMV _ ? "
   | I.Dec(cQ, MPV ( _, _ )) -> "MPV _ ? "
@@ -1192,8 +1177,8 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                    and LF objects which occur in computations. *)
 
               let cQ' = I.Dec(cQ2, FMV(Impure, u, None)) in
-              let (cQ'', I.PTyp (tA', cPhi'))   = collectMTyp k cQ' mtyp in
-                (I.Dec (cQ'', FMV (Pure, u, Some (I.PTyp (tA', cPhi')))), I.FPVar (u, sigma))
+              let (cQ'', mtyp)   = collectMTyp k cQ' mtyp in
+                (I.Dec (cQ'', FMV (Pure, u, Some mtyp)), I.FPVar (u, sigma))
           | Cycle -> raise (Error (loc, CyclicDependency VariantFPV))
         end
 
@@ -1863,27 +1848,10 @@ and abstractMVarCtx cQ l =  match cQ with
       let cQ'   = abstractMVarCtx  cQ (l-1) in
       I.Dec(cQ', FCV (psi, Some s_cid))
 
- (* TODO: Cleanup *)
-  | I.Dec (cQ, FMV (Pure, u, Some (I.MTyp (tA, cPsi)))) ->
+  | I.Dec (cQ, FMV (Pure, u, Some mtyp)) ->
       let cQ'   = abstractMVarCtx cQ (l-1) in
-      let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
-      let tA'   = abstractMVarTyp cQ (l,0) (tA, LF.id) in
-
-        I.Dec (cQ', FMV (Pure, u, Some (I.MTyp (tA', cPsi'))))
-
-  | I.Dec (cQ, FMV (Pure, u, Some (I.PTyp (tA, cPsi)))) ->
-      let cQ'   = abstractMVarCtx  cQ (l-1) in
-      let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
-      let tA'   = abstractMVarTyp cQ (l,0) (tA, LF.id) in
-
-        I.Dec (cQ', FMV (Pure, u, Some (I.PTyp (tA', cPsi'))))
-
-  | I.Dec (cQ, FMV (Pure, u, Some (I.STyp (cPhi, cPsi)))) ->
-      let cQ'   = abstractMVarCtx cQ (l-1) in
-      let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
-      let cPhi' = abstractMVarDctx cQ (l,0) cPhi in
-        I.Dec (cQ', FMV (Pure, u, Some (I.STyp (cPhi', cPsi'))))
-
+      let mtyp' = abstractMVarMTyp cQ mtyp (l, 0) in
+      I.Dec (cQ', FMV (Pure, u, Some mtyp'))
 
   | I.Dec (cQ, MV (Impure, _u)) ->
       abstractMVarCtx  cQ l

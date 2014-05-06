@@ -26,8 +26,6 @@ let () =
     | After_options ->
       pflag ["ocaml"; "compile"] "warn" (fun s -> S[A"-w"; A s]);
       pflag ["ocaml"; "compile"] "warn-error" (fun s -> S[A"-warn-error"; A s]);
-      copy_rule "The Beluga executable" "src/beluga/main.native" "beluga";
-      copy_rule "The Beli executable" "src/beli/main.native" "beli";
       rule "Version file" ~prods:[version_file] (fun env _ -> Echo ([version_content ()], version_file))
     | _ -> ()
   end

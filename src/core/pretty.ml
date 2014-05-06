@@ -1584,7 +1584,7 @@ module Int = struct
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->
-          fprintf ppf "|-"
+          fprintf ppf "."
 
       | LF.Dec (cG, Comp.CTypDecl (x, tau)) ->
           fprintf ppf "%a, %s: %a"

@@ -26,8 +26,6 @@ let collect (loc, cD, cPsi, typ) =
 
 let ( ++ ) f g = function x -> f (g x)
 
-let nameString n = n.Id.string_of_name
-
 let ctypDeclToString cD ctypDecl =
   P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
   Format.flush_str_formatter ()
@@ -51,7 +49,10 @@ let cpsiToString cD cPsi = P.dctxToString cD cPsi
 
 let printOne (loc, cD, cPsi, typ) =
   Store.NamedHoles.reset () ;
-  Printf.printf "\n%s\n- Meta-Context: %s\n- LF Context: %s\n- Type: %s\n"
+    Printf.printf "\n%s\n
+    - Meta-Context: %s\n____________________________________________________________________________\n
+    - LF Context: %s\n\n============================================================================\n
+    - Goal Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
     (cpsiToString cD cPsi)

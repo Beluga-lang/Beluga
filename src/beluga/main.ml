@@ -175,11 +175,11 @@ let main () =
           print_newline ();
           Logic.runLogic ();
           if not (Holes.none ()) && !Debug.chatter != 0 then begin
-            printf "\n## Holes: %s  ##\n" file_name;
+            printf "\n## Holes: %s  ##" file_name;
             Holes.printAll ()
           end;
           if not (Lfholes.none ()) && !Debug.chatter != 0 then begin
-            printf "\n## LFHoles: %s  ##\n" file_name;
+            printf "\n\n## LF Holes: %s  ##" file_name;
             Lfholes.printAll ()
           end;
           if !Monitor.on || !Monitor.onf then

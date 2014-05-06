@@ -934,7 +934,7 @@ and collectSub (p:int) cQ phat s = match s with
               let (cQ0, sigma) = collectSub p cQ phat s' in
               let (cD_d, I.Decl (_, mtyp))  = FCVar.get s_name in
 	      let d = p - Context.length cD_d in
-	      let mtyp' = Whnf.cnormLFCTyp (mtyp, Int.LF.MShift d) in
+	      let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
               let cQ' = I.Dec(cQ0, FMV(Impure, s_name, None)) in
               let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
                 (* tA must be closed with respect to cPhi *)
@@ -1050,7 +1050,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
           | No ->
               let (cQ0, sigma) = collectSub k cQ phat (LF.comp s' s) in
               let (cD_d, I.Decl (_, mtyp))  = FCVar.get u in
-	      let mtyp = (Whnf.cnormLFCTyp (mtyp, Int.LF.MShift (k - Context.length cD_d))) in
+	      let mtyp = (Whnf.cnormMTyp (mtyp, Int.LF.MShift (k - Context.length cD_d))) in
               let cQ' = I.Dec(cQ0, FMV(Impure, u, None)) in
               let (cQ1, I.MTyp (tA', cPhi'))  = collectMTyp k cQ' mtyp in
                 (* tA must be closed with respect to cPhi *)
@@ -1157,7 +1157,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
           | No  ->
               let (cQ2, sigma) = collectSub k cQ phat s' (* (LF.comp s' s) *) in
               let (cD_d, I.Decl (_, mtyp))  = FCVar.get u in
-	      let mtyp = Whnf.cnormLFCTyp (mtyp, Int.LF.MShift (k - Context.length cD_d)) in
+	      let mtyp = Whnf.cnormMTyp (mtyp, Int.LF.MShift (k - Context.length cD_d)) in
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,
                    there are no context variables; different abstraction

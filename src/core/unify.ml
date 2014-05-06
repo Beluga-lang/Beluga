@@ -617,7 +617,7 @@ match sigma with
                (* cD1, u:A[Psi] |- mt' <= cD2, u:([mt']^-1 (A[cPsi])) since
                   A = [mt']([mt']^-1 A)  and cPsi = [mt']([mt']^-1 cPsi *)
                let mtt'  = Whnf.m_invert (Whnf.cnormMSub mt') in
-               (Whnf.mvar_dot1 mt', Dec(cD2, (Decl (n, Whnf.cnormLFCTyp (ctyp, mtt')))))
+               (Whnf.mvar_dot1 mt', Dec(cD2, (Decl (n, Whnf.cnormMTyp (ctyp, mtt')))))
          end
 
    | (MDot (MUndef, mt), Dec (cD1, _)) ->
@@ -735,7 +735,7 @@ match sigma with
             let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
               (* cD'' |- mtt' <= cD' *)
               (* NOTE: Can't create m-closures CtxMClo(cPsi, mtt') and TMClo(tA'', mtt') *)
-              (Whnf.mvar_dot1 mt', Dec (cD'', Decl(x, (Whnf.cnormLFCTyp (ctyp, mtt')))))
+              (Whnf.mvar_dot1 mt', Dec (cD'', Decl(x, (Whnf.cnormMTyp (ctyp, mtt')))))
 
           else  (* k1 =/= k2 *)
             (Whnf.mcomp mt' (MShift 1), cD'')
@@ -3894,8 +3894,8 @@ match sigma with
 
       | ((Comp.TypPiBox ((Decl(u, ctyp1), _ ), tau), t),
          (Comp.TypPiBox ((Decl(_, ctyp2), _ ), tau'), t')) ->
-	let ctyp1n = Whnf.cnormLFCTyp (ctyp1, t) in
-	let ctyp2n = Whnf.cnormLFCTyp (ctyp2, t') in
+	let ctyp1n = Whnf.cnormMTyp (ctyp1, t) in
+	let ctyp2n = Whnf.cnormMTyp (ctyp2, t') in
 	(unifyCLFTyp Unification cD ctyp1n ctyp2n;
 	 unifyCompTyp (Dec(cD, Decl(u, ctyp1n))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t'))
 

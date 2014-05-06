@@ -167,7 +167,7 @@ let rec mctxToMSub cD = match cD with
   | Empty -> Whnf.m_id
   | Dec (cD', Decl(n, ctyp)) ->
       let t     = mctxToMSub cD' in
-      let ctypn = Whnf.cnormLFCTyp (ctyp, t) in
+      let ctypn = Whnf.cnormMTyp (ctyp, t) in
       MDot (declToCVar (n, ctypn) , t)
 
 

@@ -408,7 +408,7 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
       let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
         I.Dec(cD, I.Decl(x, I.CTyp (schema, dep')))
   | I.Decl (_u, ctyp) ->
-      I.Dec (cD, I.Decl (x, C.cnormLFCTyp (ctyp, t)))
+      I.Dec (cD, I.Decl (x, C.cnormMTyp (ctyp, t)))
 
   (* check cD cG e (tau, theta) = ()
    *

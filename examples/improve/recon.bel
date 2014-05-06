@@ -16,10 +16,10 @@ t_lam: ({x:exp} oft x T -> oft (M x) S)
 
 schema ctx = exp ;
 
-rec copy : (g:ctx) [g. exp] -> [g. exp] =
+rec copy : (g:ctx) [g |- exp] -> [g |- exp] =
 fn e => case e of
-| [h. lam (\x. M .. x)] =>
-  let [h,x:exp . N .. x] = copy [h, x:exp. M .. x] in
-    [h . lam \x. N .. x ]
+| [h |- lam (\x. M .. x)] =>
+  let [h,x:exp |- N .. x] = copy [h, x:exp |- M .. x] in
+    [h |- lam \x. N .. x ]
 ;
 

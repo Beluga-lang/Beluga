@@ -131,16 +131,13 @@ module Comp = struct
      | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
      | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list  (*    | (cofun hd => e | tl => e') *)
-(*     | CtxFun of Loc.t * name * exp_chk         (*    | FN f => e           *) *)
      | MLam   of Loc.t * (name * mabstr) * exp_chk  (*| mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
                                                 (*    | let (x,y) = i in e  *)
      | Let    of Loc.t * exp_syn * (name * exp_chk)
                                                 (*    | let x = i in e      *)
-     | Box    of Loc.t * LF.psi_hat * LF.normal (*    | box (Psi hat. M)    *)
-     | CtxBox of Loc.t * LF.dctx                (*    | box (Psi)           *)
-     | SBox   of Loc.t * LF.psi_hat * LF.sub
+     | Box of Loc.t * meta_obj
      | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
      | If of Loc.t * exp_syn * exp_chk * exp_chk(*    | if i then e1 else e2 *)
      | Hole of Loc.t				(*    | ?                   *)
@@ -150,13 +147,7 @@ module Comp = struct
      | DataConst  of Loc.t * name               (*    | c                   *)
      | Const  of Loc.t * name                   (*    | c                   *)
      | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
-     | CtxApp of Loc.t * exp_syn * LF.dctx      (*    | i [Psi]             *)
-     | MApp   of Loc.t * exp_syn * (LF.psi_hat * LF.normal)
-                                                (*    | i [Psi hat. M]      *)
-     | MAnnApp   of Loc.t * exp_syn * (LF.dctx * LF.normal) (* i [Psi. M]     *)
-     | MSApp   of Loc.t * exp_syn * (LF.psi_hat * LF.sub)
-                                                (*    | i [Psi hat $ sigma]      *)
-     | MAnnSApp   of Loc.t * exp_syn * (LF.dctx * LF.sub) (* i [Psi $ sigma]     *)
+     | MApp of Loc.t * exp_syn * meta_obj       (*    | i [C]               *)
      | BoxVal of Loc.t * LF.dctx * LF.normal
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
@@ -214,8 +205,8 @@ module Comp = struct
  let rec synToString = function
      | Var    (_loc,  _) -> "Var"
      | Apply  (_loc,  syn, chk) -> "Apply(" ^ synToString syn ^ ", " ^ chkToString chk ^ ")"
-     | CtxApp (_loc,  syn, _dctx) -> "CtxApp(" ^ synToString syn ^ ", _dctx)"
-     | MApp   (_loc,  syn, (_, _)) -> "MApp(" ^ synToString syn ^ ", ...)"
+(*     | CtxApp (_loc,  syn, _dctx) -> "CtxApp(" ^ synToString syn ^ ", _dctx)" *)
+     | MApp   (_loc,  syn, _) -> "MApp(" ^ synToString syn ^ ", ...)"
      | BoxVal (_loc, _, _) -> "BoxVal(...)"
      | Ann    (_loc, chk, _) -> "Ann(" ^ chkToString chk ^ ", _)"
      | Equal   (_loc,  syn1, syn2) -> "Equal("  ^ synToString syn1 ^ " == " ^ synToString syn2 ^ ")"
@@ -228,7 +219,7 @@ module Comp = struct
      | Pair    (_loc, chk1, chk2) ->  "Fun(_, " ^ chkToString chk1 ^ ", " ^ chkToString chk2 ^ ")"
      | LetPair (_loc, syn, (_, _, chk)) -> "LetPair(" ^ synToString syn ^",  (_, _, " ^ chkToString chk ^ "))"
      | Let (_loc, syn, (_, chk)) -> "Let(" ^ synToString syn ^",  (_, " ^ chkToString chk ^ "))"
-     | Box     (_loc, _, _) -> "Box(...)"
+     | Box     (_loc, _) -> "Box(...)"
      | Case    (_loc, _, syn, _) -> "Case(" ^ synToString syn ^ " of ...)"
      | If      (_loc, syn, chk1, chk2) -> "If(" ^ synToString syn ^ " Then " ^  chkToString chk1 ^ " Else " ^ chkToString chk2 ^ ")"
      | Hole    (_loc) -> "Hole"

@@ -22,13 +22,13 @@ datatype Nat: ctype =
 ;
 
 
-rec count: Nat -> [. nat] =
+rec count: Nat -> [ |- nat] =
 fn n => case n of
 | No o => let Od e = o in
-         let [. N] =  count (Ne e) in
-            [. s N]
+         let [ |- N] =  count (Ne e) in
+            [ |- s N]
 | Ne e => case e of
-          | Ze => [. z]
-          | Ev o => let [. N] = count (No o) in
-                             [. s N]
+          | Ze => [ |- z]
+          | Ev o => let [ |- N] = count (No o) in
+                             [ |- s N]
 ;

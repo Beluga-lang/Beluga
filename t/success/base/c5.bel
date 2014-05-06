@@ -5,9 +5,9 @@ fiver  : term -> term -> term -> term -> term
 
 schema termCtx = some [] term;
 
-rec fff : [. term] -> [. term] = fn e =>
+rec fff : [ |- term] -> [ |- term] = fn e =>
   case e of
-  | [. z]         => [. z]
-  | [. fiver U V W X Y] => [. z]
+  | [ |- z]         => [ |- z]
+  | [ |- fiver U V W X Y] => [ |- z]
 ;
 

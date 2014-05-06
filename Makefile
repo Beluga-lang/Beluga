@@ -1,47 +1,27 @@
-INCLUDE_DIRS = src/core
+#DEBUG = true
+#PROFILE = true
+#WARN_PATTERN = true
+#VERBOSE = 0
+#BYTE = true
+PARALLEL = 4
 
-CFLAGS = -I,src/core,-w,Aep-27-29-37,-warn-error,Ap-37-44
+OCAMLBUILD = ocamlbuild -use-ocamlfind \
+	$(if $(PARALLEL),-j $(PARALLEL),) \
+	$(if $(PROFILE),-tag profile,) \
+	$(if $(DEBUG),-tag debug,) \
+	$(if $(VERBOSE),-verbose $(VERBOSE),) \
+	$(if $(WARN_PATTERN),-tag warn\(P\) -tag warn-error\(p\),)
 
-LFLAGS = -I,+camlp4,camlp4lib.cma
+.PHONY: all clean
 
-OCB = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $(LFLAGS)
-
-NLFLAGS = -I,+camlp4,camlp4lib.cmxa # ocamlfind cannot find the library for camlp4 so we provid it by hand
-OCBN = ocamlbuild -Is $(INCLUDE_DIRS) -use-ocamlfind -cflags $(CFLAGS) -lflags $(NLFLAGS)
-
-default: native
-
-native: bin-directory beluga-native beli-native
-
-byte: bin-directory beluga-byte beli-byte
-
-corepack-byte:
-	$(OCB) src/core/core.cmo # lib
-
-beluga-byte: corepack-byte
-	$(OCB) src/beluga/main.byte
-	mv main.byte bin/beluga
-
-beli-byte: corepack-byte
-	$(OCB) src/beli/main.byte
-	mv main.byte bin/beli
-
-corepack-native:
-	$(OCBN) src/core/core.cmx # lib
-
-beluga-native: corepack-native
-	$(OCBN) src/beluga/main.native
-	mv main.native bin/beluga
-
-beli-native: corepack-native
-	$(OCBN) src/beli/main.native
-	mv main.native bin/beli
-
-bin-directory:
-	if ! [ -d bin ]; then mkdir bin; fi
+all: all.otarget
+	rm -f main.native
+	mkdir -p bin
+	ln -sf ../_build/src/beluga/main.native bin/beluga
+	ln -sf ../_build/src/beli/main.native bin/beli
 
 clean:
-	ocamlbuild -clean
-	if [ -f bin/beli ]; then rm bin/beli; fi
-	if [ -f bin/beluga ]; then rm bin/beluga; fi
-	if [ -d bin ]; then rmdir bin; fi
+	$(OCAMLBUILD) -clean
+
+%:
+	$(OCAMLBUILD) $@

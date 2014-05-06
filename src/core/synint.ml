@@ -280,8 +280,6 @@ module Comp = struct
 
   type gctx = ctyp_decl LF.ctx
 
-  type contextual_obj = NormObj of LF.normal | NeutObj of LF.head | SubstObj of LF.sub
-
   type env =
     | Empty
     | Cons of value * env
@@ -310,8 +308,9 @@ module Comp = struct
     | Pair   of Loc.t * exp_chk * exp_chk
     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
     | Let    of Loc.t * exp_syn * (name * exp_chk)
-    | Box    of Loc.t * LF.psi_hat * LF.normal
-    | SBox   of Loc.t * LF.psi_hat * LF.sub
+    | Box    of Loc.t * meta_obj
+(*    | Box    of Loc.t * LF.psi_hat * LF.normal
+    | SBox   of Loc.t * LF.psi_hat * LF.sub *)
     | Case   of Loc.t * case_pragma * exp_syn * branch list
     | If     of Loc.t * exp_syn * exp_chk * exp_chk
     | Hole   of Loc.t
@@ -322,8 +321,7 @@ module Comp = struct
     | DataDest of cid_comp_dest
     | Const  of cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
-    | CtxApp of Loc.t * exp_syn * LF.dctx
-    | MApp   of Loc.t * exp_syn * (LF.psi_hat * contextual_obj)
+    | MApp   of Loc.t * exp_syn * meta_obj
     | Ann    of exp_chk * typ
     | Equal  of Loc.t * exp_syn * exp_syn
     | PairVal of Loc.t * exp_syn * exp_syn

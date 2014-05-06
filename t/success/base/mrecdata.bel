@@ -28,13 +28,13 @@ and ctm: type =
 
 schema cctx = ctm;
 
-rec envrSize: [. envr] -> [. nat] =
+rec envrSize: [ |- envr] -> [ |- nat] =
 fn e => case e of
-|[. nil] => [. z]
-|[. snoc U V] =>
-     let [. N] = envrSize [. U] in
-     case [.V] of
-       |[. clam (\x.W x)] => [. N]
-       |[. _] => [. s N]
+|[ |- nil] => [ |- z]
+|[ |- snoc U V] =>
+     let [ |- N] = envrSize [ |- U] in
+     case [ |- V] of
+       |[ |- clam (\x.W x)] => [ |- N]
+       |[ |- _] => [ |- s N]
 ;
 

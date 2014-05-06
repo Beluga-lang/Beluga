@@ -18,19 +18,19 @@ app' : term -> term -> term.
 
 schema ctx = some [t:tp] block x:term , _t:value t ;
 
-rec conv: (g:ctx)[g. exp T] -> [g. term] =
+rec conv: (g:ctx)[g |- exp T] -> [g |- term] =
 fn e => case e of
-| [g. app (E1 .. ) (E2 ..)] =>
-  let [g. T1 ..] = conv [g. E1 ..] in
-  let [g. T2 ..] = conv [g. E2 ..] in
-    [g. app' (T1 .. ) (T2 ..)]
-| [g. ret (V .. )] => convv [g. V .. ]
+| [g |- app (E1 .. ) (E2 ..)] =>
+  let [g |- T1 ..] = conv [g |- E1 ..] in
+  let [g |- T2 ..] = conv [g |- E2 ..] in
+    [g |- app' (T1 .. ) (T2 ..)]
+| [g |- ret (V .. )] => convv [g |- V .. ]
 
-and convv: (g:ctx)[g. value T] -> [g. term] =
+and convv: (g:ctx)[g |- value T] -> [g |- term] =
 fn v => case v of
-| [g. #p.2 ..] => [g. #p.1 ..]
-| [g. lam A (\v. E .. v)] =>
-    let [g,b:block x:term, _t:value A. T .. b.1] = conv [g,b:block (x:term , _t:value A). E .. b.2] in
-      [g. lam' \x. T .. x]
+| [g |- #p.2 ..] => [g |- #p.1 ..]
+| [g |- lam A (\v. E .. v)] =>
+    let [g,b:block x:term, _t:value A |-  T .. b.1] = conv [g,b:block (x:term , _t:value A) |-  E .. b.2] in
+      [g |- lam' \x. T .. x]
 
 ;

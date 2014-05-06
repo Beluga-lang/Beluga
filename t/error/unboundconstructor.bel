@@ -8,7 +8,7 @@ datatype plus: nat -> nat -> nat -> type =
 | psn: plus N M Q -> plus (succ N) M (succ Q)
 ;
 
-datatype Addup: [.nat] -> ctype =
-| AddNil: Addup [. zero]
-| AddSuc: Addup [. plus N Y Q]
+datatype Addup: [ |- nat] -> ctype =
+| AddNil: Addup [ |- zero]
+| AddSuc: Addup [ |- plus N Y Q]
 ;

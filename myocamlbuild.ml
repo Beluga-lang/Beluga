@@ -4,39 +4,28 @@ open Unix
 let hardcoded_version_file = ".version"
 let version_file = "src/core/version.ml"
 
-let get_version_from_git () =
-  try
+
+let version_content () =
+  let version_from_git () =
     let i = open_process_in "git describe --dirty" in
     let l = input_line i in
-    let s = close_process_in i in
-    if s = WEXITED 0 then
-      l
-    else
-      "Unknown"
-  with
-  | _ -> "Unknowable"
-
-let hardcoded_version_exists () =
-  Sys.file_exists hardcoded_version_file
-
-let get_hardcoded_version () =
-  let i = open_in hardcoded_version_file in
-  let s = input_line i in
-  close_in i ; s
-
-let get_version () =
-  if hardcoded_version_exists () then
-    get_hardcoded_version ()
-  else
-    get_version_from_git ()
-
-let make_content version = 
+    if close_process_in i = WEXITED 0 then l
+    else raise Not_found in
+  let hardcoded_version () =
+    let i = open_in hardcoded_version_file in
+    let s = input_line i in
+    close_in i; s in
+  let version =
+    try hardcoded_version () with _ ->
+      try version_from_git () with _ ->
+        failwith "Unable to determine version" in
   "let beluga_version = \"" ^ version ^ "\"\n"
 
-let make_version () = 
-  let content = make_content (get_version()) in
-  let o = open_out version_file in
-  output_string o content ;
-  close_out o
-
-let _ = make_version ()
+let () =
+  dispatch begin function
+    | After_options ->
+      pflag ["ocaml"; "compile"] "warn" (fun s -> S[A"-w"; A s]);
+      pflag ["ocaml"; "compile"] "warn-error" (fun s -> S[A"-warn-error"; A s]);
+      rule "Version file" ~prods:[version_file] (fun env _ -> Echo ([version_content ()], version_file))
+    | _ -> ()
+  end

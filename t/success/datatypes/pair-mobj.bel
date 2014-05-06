@@ -5,17 +5,17 @@ datatype bool : type =
 
 schema ctx = bool;
 
-rec test : (g:ctx) [g.bool] -> [g.bool] = 
-fn p => case p of [g. X ..] => p;
+rec test : (g:ctx) [g |- bool] -> [g |- bool] = 
+fn p => case p of [g |- X ..] => p;
 
 
-rec fst : (g:ctx) [g.bool] * [g.bool] -> [g.bool] =
+rec fst : (g:ctx) [g |- bool] * [g |- bool] -> [g |- bool] =
     fn p => case p of
-      | ([g.X..], [g.Y..]) => [g.X..]
+      | ([g |- X..], [g |- Y..]) => [g |- X..]
 ;
 
-rec snd : (g:ctx) [g.bool] * [g.bool] -> [g.bool] =
+rec snd : (g:ctx) [g |- bool] * [g |- bool] -> [g |- bool] =
     fn p => case p of
-      | ([g.X..], [g.Y..]) => [g.Y..]
+      | ([g |- X..], [g |- Y..]) => [g |- Y..]
 ;
 

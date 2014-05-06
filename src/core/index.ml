@@ -70,6 +70,7 @@ let _ = Error.register_printer
       | IllFormedCompTyp ->
 	Format.fprintf ppf "Ill-formed computation-level type."))
 
+
 type free_cvars =
     FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name
 
@@ -667,49 +668,15 @@ let rec index_exp cvars vars fcvars = function
       let e' = index_exp cvars vars1 fcvars e in
         Apx.Comp.Let (loc, i', (x,e'))
 
-  (* SVars are parsed as terms but are actually substitutions *)
-(*  | Ext.Comp.Box (loc1, psihat, Ext.LF.Root(loc2, Ext.LF.SVar(loc3,s, sigma), spine)) ->
-      let (psihat' , bvars) = index_psihat cvars fcvars psihat in
-      let _ctxOpt = begin match psihat' with
-                   | None , _  -> None
-                   | Some (Int.LF.CtxOffset psi) , _  ->  Some (Apx.LF.CtxOffset psi)
-                   | Some (Int.LF.CtxName psi)  , _   ->  Some (Apx.LF.CtxName psi)
-                   end in
-
-      let rec create_sub s spine = match spine with
-        | Ext.LF.Nil -> s
-        | Ext.LF.App (loc, m', spine') ->
-            let (m', _ ) = index_term cvars (bvars) fcvars  m' in
-             create_sub (Apx.LF.Dot (Apx.LF.Obj m', s)) spine'
-      in
-      let (sigma', _ ) =  index_sub cvars (bvars) fcvars sigma in
-
-        begin try
-          let offset = CVar.index_of_name cvars (CVar.SV s) in
-            Apx.Comp.SBox (loc1, psihat',
-                           create_sub (Apx.LF.SVar (Apx.LF.Offset offset, sigma')) spine )
-        with Not_found ->
-          raise (Error (loc3, UnboundName s))
-        end *)
-
-
-  | Ext.Comp.Box (loc, psihat, m) ->
-      let (psihat', bvars) = index_psihat cvars fcvars psihat in
-      let (m', _ ) = index_term cvars bvars fcvars m in
-        Apx.Comp.Box (loc, psihat', m')
-
-
-  | Ext.Comp.SBox (loc, psihat,s) ->
-      let (psihat', bvars) = index_psihat cvars fcvars psihat in
-      let (s', _ ) = index_sub cvars bvars fcvars s in
-        Apx.Comp.SBox (loc, psihat', s')
+  | Ext.Comp.Box (loc, m)  ->
+      let (m', fcvars')  = index_meta_obj  cvars fcvars m in
+        Apx.Comp.Box (loc, m')
 
   | Ext.Comp.Case (loc, prag, i, branches) ->
       let i' = index_exp' cvars vars fcvars i in
       let _ = dprint (fun () -> "index case") in
       let branches' = List.map (function b -> index_branch cvars vars fcvars b) branches in
         Apx.Comp.Case (loc, prag, i', branches')
-
 
   | Ext.Comp.If (loc, i, e1, e2) ->
       let i' = index_exp' cvars vars fcvars i in
@@ -745,34 +712,10 @@ and index_exp' cvars vars fcvars = function
       let e' = index_exp  cvars vars fcvars e in
         Apx.Comp.Apply (loc, i', e')
 
-  | Ext.Comp.CtxApp (loc, i, psi) ->
-      let i'   = index_exp' cvars vars fcvars i in
-      let (psi', _ , _ ) = index_dctx cvars (BVar.create ()) fcvars psi in
-        Apx.Comp.CtxApp (loc, i', psi')
-
-  | Ext.Comp.MApp (loc, i, (psihat, m)) ->
+  | Ext.Comp.MApp (loc, i, mO) ->
       let i'      = index_exp' cvars vars fcvars i in
-      let (psihat', bvars) = index_psihat cvars fcvars psihat in
-      let (m', _ ) = index_term cvars bvars fcvars m in
-        Apx.Comp.MApp (loc, i', Apx.Comp.MetaObj (loc, psihat', m'))
-
-  | Ext.Comp.MAnnApp (loc, i, (psi, m)) ->
-      let i'      = index_exp' cvars vars fcvars i in
-      let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars psi in
-      let (m', _ ) = index_term cvars bvars fcvars m in
-        Apx.Comp.MAnnApp (loc, i', (psi', m'))
-
-  | Ext.Comp.MSApp (loc, i, (psihat, s)) ->
-      let i'      = index_exp' cvars vars fcvars i in
-      let (psihat', bvars) = index_psihat cvars fcvars psihat in
-      let (s', _ ) = index_sub cvars bvars fcvars s in
-        Apx.Comp.MApp (loc, i', Apx.Comp.MetaSub (loc, psihat', s'))
-
-  | Ext.Comp.MAnnSApp (loc, i, (psi, s)) ->
-      let i'      = index_exp' cvars vars fcvars i in
-      let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars psi in
-      let (s', _ ) = index_sub cvars bvars fcvars s in
-        Apx.Comp.MAnnSApp (loc, i', (psi', s'))
+      let (mobj', _ )  = index_meta_obj cvars fcvars mO in
+        Apx.Comp.MApp (loc, i', mobj')
 
   | Ext.Comp.BoxVal (loc, psi, m) ->
       let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars  psi in
@@ -794,12 +737,14 @@ and index_exp' cvars vars fcvars = function
 
   | Ext.Comp.Boolean (loc , b) -> Apx.Comp.Boolean (loc, b)
 
-and index_mobj cvars fcvars  mO = match mO with
+
+and index_pattern_mobj cvars fcvars  mO = match mO with
   | Ext.Comp.MetaCtx (loc, cPsi) ->
     let (cPsi', _bvars, fcvars')  = index_dctx cvars (BVar.create ()) fcvars cPsi in
       (Apx.Comp.MetaCtx (loc, cPsi') , fcvars')
 
-  | Ext.Comp.MetaObj (loc, phat, tM) ->  raise (Error (loc, PatCtxRequired))
+  | Ext.Comp.MetaObj (loc, phat, tM) ->
+      raise (Error (loc, PatCtxRequired))
   | Ext.Comp.MetaObjAnn (loc, cPsi, tM) ->
     let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
     let (tM', fcvars2)           = index_term cvars bvars fcvars1 tM in
@@ -845,7 +790,7 @@ and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
 	(Apx.Comp.PatConst (loc, cid, pat_spine'), fcvars', fvars')
 
   | Ext.Comp.PatMetaObj (loc, mO) ->
-    let (mO', fcvars1) = index_mobj cvars fcvars mO in
+    let (mO', fcvars1) = index_pattern_mobj cvars fcvars mO in
       (Apx.Comp.PatMetaObj (loc, mO') , fcvars1, fvars)
   | Ext.Comp.PatEmpty (loc, cpsi) ->
       let (cPsi, _bvars, fcvars ) = index_dctx cvars (BVar.create ()) fcvars cpsi in
@@ -939,7 +884,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
 
     let (omega, cD', cvars1, fcvars1)  =
       index_mctx (CVar.create()) (fcvars', not term_closed) cD in
-    let (mO', (fcvars2, _)) = index_mobj cvars1 fcvars1 mO in
+    let (mO', (fcvars2, _)) = index_pattern_mobj cvars1 fcvars1 mO in
     let _ = dprint (fun () -> "fcvars in pattern = " ^ fcvarsToString fcvars2) in
     let cvars_all  = CVar.append cvars1 cvars in
     let fcvars3    = List.append fcvars2 fcvars in

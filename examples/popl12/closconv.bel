@@ -29,12 +29,12 @@ and ctm: type =
 
 schema cctx = ctm;
 
-rec addProjs : (g:cctx) [.nat] -> [g, e:envr . ctm] ->  [e:envr . ctm] =
+rec addProjs : (g:cctx) [ |- nat] -> [g, e:envr  |-  ctm] ->  [e:envr  |-  ctm] =
 fn n => fn m => case m of
-| [ e:envr . M e ] => [e:envr . M e]
-| [ g,x:ctm, e:envr . M .. x e] =>
-  let [.N] = n in
-   addProjs [. s N] [g, e:envr . M .. (proj e N) e]
+| [ e:envr  |-  M e ] => [e:envr  |-  M e]
+| [ g,x:ctm, e:envr  |-  M .. x e] =>
+  let [ |- N] = n in
+   addProjs [ |- s N] [g, e:envr  |-  M .. (proj e N) e]
 ;
 
 datatype Ctx_rel : {g:ctx}{h:cctx} ctype =
@@ -46,33 +46,33 @@ datatype CtxObj : {h:cctx} ctype =
 | Ctx : {h:cctx} CtxObj [h] ;
 
 
-rec ctxToEnv : CtxObj [h] -> [h . envr] =
+rec ctxToEnv : CtxObj [h] -> [h |- envr] =
 fn ctx => case ctx of
-| Ctx [] => [ . nil]
+| Ctx [] => [ |- nil]
 | Ctx [h,x:ctm] =>
-  let [h' . Env .. ] = ctxToEnv (Ctx [h]) in
-    [h', x:ctm . snoc (Env ..) x]
+  let [h'  |-  Env .. ] = ctxToEnv (Ctx [h]) in
+    [h', x:ctm  |-  snoc (Env ..) x]
 ;
 
-rec conv :  Ctx_rel [g] [h] -> [g . tm] -> [h . ctm] =
+rec conv :  Ctx_rel [g] [h] -> [g |- tm] -> [h |- ctm] =
 fn cr => fn m => case m of
-| [g', x:tm . x ] =>
+| [g', x:tm  |-  x ] =>
   let Rsnoc (cr': Ctx_rel [g] [h]) = cr in
-    [h, x:ctm . x]
+    [h, x:ctm  |-  x]
 
-| [g', x:tm . #p ..] =>
+| [g', x:tm  |-  #p ..] =>
   let Rsnoc cr' = cr in
-  let [h'. M .. ] = conv cr' [g'. #p ..] in
-  [h', x:ctm . M .. ]
+  let [h' |-  M .. ] = conv cr' [g' |-  #p ..] in
+  [h', x:ctm  |-  M .. ]
 
-| [g .  lam \x. M .. x ] =>
-  let [h,x:ctm . M' .. x] = conv (Rsnoc cr) [g,x:tm . M .. x] in
-  let [e:envr . N e] = addProjs [.z] [h,x:ctm, e:envr . M' .. x] in
-  let [h . Env .. ]  = ctxToEnv (Ctx [h]) in
-    [h . close (clam \e. N e) (Env .. )]
+| [g |- lam \x. M .. x ] =>
+  let [h,x:ctm  |-  M' .. x] = conv (Rsnoc cr) [g,x:tm  |-  M .. x] in
+  let [e:envr  |-  N e] = addProjs [ |- z] [h,x:ctm, e:envr  |-  M' .. x] in
+  let [h |- Env .. ]  = ctxToEnv (Ctx [h]) in
+    [h |- close (clam \e. N e) (Env .. )]
 
-| [ g . app (M ..) (N ..) ] =>
-  let [h . M' .. ] = conv cr [g . M .. ] in
-  let [h . N' ..] = conv cr [g . N .. ] in
-    [h . open (M' ..) (\env. \f. capp f (create (snoc env (N' ..) )))]
+| [g |- app (M ..) (N ..) ] =>
+  let [h |- M' .. ] = conv cr [g |- M .. ] in
+  let [h |- N' ..] = conv cr [g |- N .. ] in
+    [h |- open (M' ..) (\env. \f. capp f (create (snoc env (N' ..) )))]
 ;

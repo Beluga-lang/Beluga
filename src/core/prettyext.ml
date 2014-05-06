@@ -766,30 +766,11 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond)
 
-      | Comp.Box (_ , pHat, tM) ->
+      | Comp.Box (_ , m) ->
           let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a] %a%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) tM
-              (r_paren_if cond)
-
-
-      | Comp.SBox (_ , pHat, sigma) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s[%a] %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) sigma
-              (r_paren_if cond)
-
-      | Comp.CtxBox (_ , dctx) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s[%a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_dctx cD 0) dctx
+              (fmt_ppr_meta_obj  cD 0) m
               (r_paren_if cond)
 
       | Comp.Case (_, prag, i, bs) ->
@@ -827,14 +808,10 @@ module Ext = struct
           let (i', _ ) = strip_mapp_args' cD i in
             (Comp.Apply (loc, i', e), 0)
 
-      | Comp.CtxApp (loc, i, cPsi) ->
-          let (i', _ ) = strip_mapp_args' cD i in
-            (Comp.CtxApp (loc, i', cPsi), 0)
-
-      | Comp.MApp (loc, i1, (phat, tM) ) ->
+      | Comp.MApp (loc, i1, mO ) ->
           let (i', stripArg) = strip_mapp_args' cD i1 in
             if stripArg = 0 then
-              (Comp.MApp (loc , i', (phat, tM)), 0)
+              (Comp.MApp (loc , i', mO), 0)
             else
               (i', stripArg - 1 )
 
@@ -865,56 +842,13 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 2) e
               (r_paren_if cond)
 
-      | Comp.CtxApp (_, i, cPsi) ->
+      | Comp.MApp (_, i, mO) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ [%a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD 1) i
-              (fmt_ppr_lf_dctx cD 0) cPsi
-              (r_paren_if cond)
-
-      | Comp.MApp (_, i, (pHat, normal)) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s%a@ <%s%a. %a%s>%s"
+            fprintf ppf "%s%a@ %s%a%s%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               ("")
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) normal
-              ("")
-              (r_paren_if cond)
-
-      | Comp.MAnnApp (_, i, (cPsi, normal)) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a@ %s%a. %a%s%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD 1) i
-              ("")
-              (fmt_ppr_lf_dctx cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) normal
-              ("")
-              (r_paren_if cond)
-      | Comp.MSApp (_, i, (pHat, sub)) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx pHat in
-            fprintf ppf "%s%a@ [%s%a$ %a%s]%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD 1) i
-              ("")
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) sub
-              ("")
-              (r_paren_if cond)
-
-      | Comp.MAnnSApp (_, i, (cPsi, sub)) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a@ [%s%a$ %a%s]%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD 1) i
-              ("")
-              (fmt_ppr_lf_dctx cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) sub
+              (fmt_ppr_meta_obj cD 0) mO
               ("")
               (r_paren_if cond)
 

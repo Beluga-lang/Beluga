@@ -30,66 +30,66 @@ assume: {A:o}conc A -> (hyp A -> conc C) -> ass A C.
 
 % (assum A D (\h. E h))
 %  {A:o} conc A -> (hyp A -> conc C) -> conc C.
-rec ca : (g:ctx) [g. ass (A ..) (C ..)]  -> [g. conc (C ..)] =
+rec ca : (g:ctx) [g |- ass (A ..) (C ..)]  -> [g |- conc (C ..)] =
 fn e => case e of
-| [g. assume (A ..)             (axiom (H ..))      (\h.E .. h)]                            => [g. (E .. (H ..))]
-| [g. assume (A ..)             (D ..)              (\h. axiom h)]                         => [g. D ..]
-| [g. assume (imp (A ..) (B ..)) (impr (\h.D .. h))  (\h. impl (E1 .. h) (\h2.E2 .. h h2) h)] =>
-  let [g. E1' ..] = ca [g. assume (imp (A ..) (B ..)) (impr (\h.D .. h)) (\h.E1 .. h)]    in
-  let [g. D2' ..] = ca [g. assume (A ..)              (E1' ..)          (\h.D  .. h)]    in
-  let [g, h2: hyp (B ..). E2' .. h2] =
-                  ca [g,h2: hyp (B ..). assume (imp (A ..) (B ..)) (impr (\h.D .. h)) (\h.E2 .. h h2)] in
-    ca [g. assume (B ..)  (D2' ..) (\h2. E2' .. h2)]
+| [g |- assume (A ..)             (axiom (H ..))      (\h.E .. h)]                            => [g |- (E .. (H ..))]
+| [g |- assume (A ..)             (D ..)              (\h. axiom h)]                         => [g |- D ..]
+| [g |- assume (imp (A ..) (B ..)) (impr (\h.D .. h))  (\h. impl (E1 .. h) (\h2.E2 .. h h2) h)] =>
+  let [g |- E1' ..] = ca [g |- assume (imp (A ..) (B ..)) (impr (\h.D .. h)) (\h.E1 .. h)]    in
+  let [g |- D2' ..] = ca [g |- assume (A ..)              (E1' ..)          (\h.D  .. h)]    in
+  let [g, h2: hyp (B ..) |-  E2' .. h2] =
+                  ca [g,h2: hyp (B ..) |-  assume (imp (A ..) (B ..)) (impr (\h.D .. h)) (\h.E2 .. h h2)] in
+    ca [g |- assume (B ..)  (D2' ..) (\h2. E2' .. h2)]
 
-| [g. assume (not (A .. )) (notr (\p.\h2. D .. p h2)) (\h. notl (E1 .. h) h)]  =>
-  let [g. F1 ..]       = ca [g. assume (not (A ..)) (notr (\p.\h2. D .. p h2))  (\h. E1 .. h)] in
-  let [g,p:o. F2 .. p] = ca [g,p:o. assume (A .. )     (F1 ..)                    (\h. D .. p h)] in
-    [g. F2 .. _]
+| [g |- assume (not (A .. )) (notr (\p.\h2. D .. p h2)) (\h. notl (E1 .. h) h)]  =>
+  let [g |- F1 ..]       = ca [g |- assume (not (A ..)) (notr (\p.\h2. D .. p h2))  (\h. E1 .. h)] in
+  let [g,p:o |-  F2 .. p] = ca [g,p:o |-  assume (A .. )     (F1 ..)                    (\h. D .. p h)] in
+    [g |- F2 .. _]
 
-| [g. assume (forall (\x. A1 .. x)) (forallr \a. D1 .. a) (\h.foralll (T ..) (\h1. E1 .. h h1) h)] =>
-  let [g,h2: hyp _ . E1' .. h2] =
-         ca [g, h2:hyp _. assume (forall (\x. A1 .. x)) (forallr \a. D1 .. a) (\h. E1 .. h h2)] in
-    ca [g. assume (A1 .. (T ..)) (D1 .. (T .. )) (\h2. E1' .. h2)]
+| [g |- assume (forall (\x. A1 .. x)) (forallr \a. D1 .. a) (\h.foralll (T ..) (\h1. E1 .. h h1) h)] =>
+  let [g,h2: hyp _  |-  E1' .. h2] =
+         ca [g, h2:hyp _ |-  assume (forall (\x. A1 .. x)) (forallr \a. D1 .. a) (\h. E1 .. h h2)] in
+    ca [g |- assume (A1 .. (T ..)) (D1 .. (T .. )) (\h2. E1' .. h2)]
 
-| [g. assume (A .. ) (impl (D1 ..) (\h2. D2 .. h2) (H .. )) (\h. E .. h)] =>
-  let [g, h2: hyp _ . D2' .. h2] = ca [g, h2: hyp _. assume  (A ..)
-                                                           (D2 .. h2) (\h. E .. h)] in
-    [g. impl (D1 ..) (\h2. D2' .. h2) (H ..)]
+| [g |- assume (A .. ) (impl (D1 ..) (\h2. D2 .. h2) (H .. )) (\h. E .. h)] =>
+  let [g, h2: hyp _  |-  D2' .. h2] = ca [g, h2: hyp _ |-  assume  (A ..)
+                                                           (D2 .. h2) (\h  .   E .. h)] in
+    [g |- impl (D1 ..) (\h2. D2' .. h2) (H ..)]
 
-| [g. assume (A ..)  (notl (D1 ..) (H ..)) (\h. E .. h)] => [g. notl (D1 ..) (H ..)]
+| [g |- assume (A ..)  (notl (D1 ..) (H ..)) (\h. E .. h)] => [g |- notl (D1 ..) (H ..)]
 
-| [g. assume (A ..)  (foralll (T ..) (\h1. D1 .. h1) (H .. )) (\h. E .. h)]  =>
-  let [g,h:hyp _. D1' .. h] = ca [g,h:hyp _. assume (A ..) (D1 .. h) (\h.E .. h)] in
-    [g. foralll (T ..) (\h1. D1' .. h1) (H ..)]
+| [g |- assume (A ..)  (foralll (T ..) (\h1. D1 .. h1) (H .. )) (\h. E .. h)]  =>
+  let [g,h:hyp _ |-  D1' .. h] = ca [g,h:hyp _ |-  assume (A ..) (D1 .. h) (\h.E .. h)] in
+    [g |- foralll (T ..) (\h1. D1' .. h1) (H ..)]
 
 %%%%
-| [g. assume (A ..) (D ..) (\h. axiom (H ..))] => [g. axiom (H ..)]
-| [g. assume (A ..) (D ..) (\h. impr (\h1. E2 .. h1 h))] =>
-  let [g, h1:hyp _. E2' .. h1] = ca [g,h1:hyp _. assume (A .. ) (D ..) (\h. E2 .. h1 h)] in
-    [g. impr \h1. E2' .. h1]
+| [g |- assume (A ..) (D ..) (\h. axiom (H ..))] => [g |- axiom (H ..)]
+| [g |- assume (A ..) (D ..) (\h. impr (\h1. E2 .. h1 h))] =>
+  let [g, h1:hyp _ |-  E2' .. h1] = ca [g,h1:hyp _ |-  assume (A .. ) (D ..) (\h. E2 .. h1 h)] in
+    [g |- impr \h1. E2' .. h1]
 
-| [g. assume (A ..) (D ..) (\h. impl (E1 .. h) (\h2. E2 .. h2 h) (H ..))] =>
-  let [g. E1' ..] = ca [g. assume (A ..) (D ..) (\h. E1 .. h)] in
-  let [g, h2: hyp _ . E2' .. h2] = ca [g, h2: hyp _. assume (A ..) (D ..) (\h. E2 .. h2 h)] in
-    [g. impl (E1' ..) (\h2. E2' .. h2) (H ..)]
+| [g |- assume (A ..) (D ..) (\h. impl (E1 .. h) (\h2. E2 .. h2 h) (H ..))] =>
+  let [g |- E1' ..] = ca [g |- assume (A ..) (D ..) (\h. E1 .. h)] in
+  let [g, h2: hyp _  |-  E2' .. h2] = ca [g, h2: hyp _ |-  assume (A ..) (D ..) (\h. E2 .. h2 h)] in
+    [g |- impl (E1' ..) (\h2. E2' .. h2) (H ..)]
 
-| [g. assume (A ..) (D ..) (\h.notr (\p.\h1. E1 .. h p h1))] =>
-  let [g, h1:hyp _ ,p:o. E1' .. p h1] = ca [g,h1:hyp _, p:o. assume (A ..) (D ..) (\h. E1 .. h p h1)] in
-    [g. notr \p.\h1. E1' .. p h1]
+| [g |- assume (A ..) (D ..) (\h.notr (\p.\h1. E1 .. h p h1))] =>
+  let [g, h1:hyp _ ,p:o |-  E1' .. p h1] = ca [g,h1:hyp _, p:o |-  assume (A ..) (D ..) (\h. E1 .. h p h1)] in
+    [g |- notr \p.\h1. E1' .. p h1]
 
-| [g. assume (A ..) (D ..) (\h.notl (E1 .. h) (H ..))] =>
-  let [g. E1' ..] = ca [g. assume (A ..) (D ..) (\h.E1 .. h)] in
-    [g. notl (E1' ..) (H ..)]
+| [g |- assume (A ..) (D ..) (\h.notl (E1 .. h) (H ..))] =>
+  let [g |- E1' ..] = ca [g |- assume (A ..) (D ..) (\h.E1 .. h)] in
+    [g |- notl (E1' ..) (H ..)]
 
-| [g. assume (A ..) (D ..) (\h. truer)] => [g. truer]
+| [g |- assume (A ..) (D ..) (\h. truer)] => [g |- truer]
 
-| [g. assume (A ..) (D ..) (\h. forallr (\a. E1 .. a h))] =>
-  let [g,a:i. E1' .. a] = ca [g,a:i. assume (A ..) (D ..) (\h. E1 .. a h)] in
-    [g. forallr \a. E1' .. a]
+| [g |- assume (A ..) (D ..) (\h. forallr (\a. E1 .. a h))] =>
+  let [g,a:i |-  E1' .. a] = ca [g,a:i |-  assume (A ..) (D ..) (\h. E1 .. a h)] in
+    [g |- forallr \a. E1' .. a]
 
- | [g. assume (A ..) (D ..) (\h.foralll (T ..) (\h1.E1 .. h h1) (H ..))] =>
-   let [g, h1:hyp _ . E1' .. h1] = ca [g, h1:hyp _. assume (A .. ) (D .. ) (\h.E1 .. h h1)] in
-   [g. foralll (T ..) (\h1. E1' .. h1) (H ..)]
+ | [g |- assume (A ..) (D ..) (\h.foralll (T ..) (\h1.E1 .. h h1) (H ..))] =>
+   let [g, h1:hyp _  |-  E1' .. h1] = ca [g, h1:hyp _ |-  assume (A .. ) (D .. ) (\h.E1 .. h h1)] in
+   [g |- foralll (T ..) (\h1. E1' .. h1) (H ..)]
 
 ;
 

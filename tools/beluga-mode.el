@@ -1,6 +1,6 @@
 ;;; beluga-mode.el --- Major mode for Beluga source code  -*- coding: utf-8 -*-
 
-;; Copyright (C) 2009, 2010, 2012, 2013  Free Software Foundation, Inc.
+;; Copyright (C) 2009, 2010, 2012, 2013, 2014  Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Keywords:
@@ -55,54 +55,40 @@
     (modify-syntax-entry ?< "." st)
     (modify-syntax-entry ?> "." st)
     (modify-syntax-entry ?- "." st)
+    (modify-syntax-entry ?| "." st)
     (modify-syntax-entry ?= "." st)
+    (modify-syntax-entry ?\' "_" st)
     st))
 
-(defcustom beluga-font-lock-symbols t
-  "Display \\ and -> and such using symbols in fonts.
+(defcustom beluga-font-lock-symbols
+  (not (fboundp 'prettify-symbols-mode))
+  "Display |- and -> and such using symbols in fonts.
 This may sound like a neat trick, but be extra careful: it changes the
-alignment and can thus lead to nasty surprises w.r.t layout.
-If t, try to use whichever font is available.  Otherwise you can
-set it to a particular font of your preference among `japanese-jisx0208'
-and `unicode'."
-  :type '(choice (const nil)
-	         (const t)
-	         (const unicode)
-	         (const japanese-jisx0208)))
+alignment and can thus lead to nasty surprises w.r.t layout."
+  :type 'boolean)
+(when (fboundp 'prettify-symbols-mode)
+  (make-obsolete-variable 'beluga-font-lock-symbols
+                          'prettify-symbols-mode "Emacs-24.4"))
 
 (defconst beluga-font-lock-symbols-alist
   ;; Not sure about fn → λ, since we could also have \ → λ.
-  (append
-   ;; The symbols can come from a JIS0208 font.
-   (and (fboundp 'make-char) (fboundp 'charsetp) (charsetp 'japanese-jisx0208)
-	(memq beluga-font-lock-symbols '(t japanese-jisx0208))
-	(list (cons "not" (make-char 'japanese-jisx0208 34 76))
-	      ;; (cons "fn" (make-char 'japanese-jisx0208 38 75))
-	      ;;(cons "\" (make-char 'japanese-jisx0208 38 75))
-              (cons "Sigma" (make-char 'japanese-jisx0208 38 50))
-	      (cons "FN" (make-char 'japanese-jisx0208 38 43))
-	      (cons "->" (make-char 'japanese-jisx0208 34 42))
-	      (cons "<-" (make-char 'japanese-jisx0208 34 43))
-	      (cons "=>" (make-char 'japanese-jisx0208 34 77))
-	      ;; (cons ".." (make-char 'japanese-jisx0208 33 68)) ; "..."
-	      ;; (cons ".." (make-char 'japanese-jisx0208 33 69)) ; Why bother?
-              ;; (cons "forall" (make-char 'japanese-jisx0208 34 79))
-              ))
-   ;; Or a unicode font.
-   (and (fboundp 'decode-char)
-	(memq beluga-font-lock-symbols '(t unicode))
-	'(;;("not"   . ?¬)
-          ;; ("fn"    . ?λ)
-          ("FN"    . ?Λ)
-          ("Sigma" . ?Σ)
-          ("->"    . ?→)
-          ("<-"    . ?←)
-          ("=>"    . ?⇒)
-          ;; ("::"    . ?∷)
-          (".." . ?…) ; Actually "..."
-          ;;(".."    . ?‥)
-          ;; ("forall" . ?∀)
-          )))
+  '(("not"   . ?¬)
+    ;; ("fn"    . ?λ)
+    ("FN"    . ?Λ)
+    ("|-"    . ?⊢)
+    ("psi"   . ?ψ)
+    ("phi"   . ?φ)
+    ("gamma" . ?γ)
+    ("omega" . ?ω)
+    ("Sigma" . ?Σ)
+    ("->"    . ?→)
+    ("<-"    . ?←)
+    ("=>"    . ?⇒)
+    ;; ("::"    . ?∷)
+    (".." . ?…) ; Actually "..."
+    ;;(".."    . ?‥)
+    ;; ("forall" . ?∀)
+    )
   "Alist mapping Beluga symbols to chars.
 Each element has the form (STRING . CHAR) or (STRING CHAR PREDICATE).
 STRING is the Beluga symbol.
@@ -142,7 +128,7 @@ Regexp match data 0 points to the chars."
   nil)
 
 (defun beluga-font-lock-symbols-keywords ()
-  (when (fboundp 'compose-region)
+  (when (and (fboundp 'compose-region) beluga-font-lock-symbols)
     (let ((alist nil))
       (dolist (x beluga-font-lock-symbols-alist)
 	(when (and (if (fboundp 'char-displayable-p)
@@ -249,6 +235,8 @@ Regexp match data 0 points to the chars."
               #'belugasmie-blink-matching-open 'append 'local)
     (set (make-local-variable 'belugasmie-blink-matching-triggers) '(?>)))
 
+  (set (make-local-variable 'prettify-symbols-alist)
+       beluga-font-lock-symbols-alist)
   (set (make-local-variable 'font-lock-defaults)
        '(beluga-font-lock-keywords nil nil () nil
          (font-lock-syntactic-keywords . nil))))
@@ -1470,7 +1458,7 @@ to which that point should be aligned, if we were to reindent it.")
   "Indent current line using the SMIE indentation engine."
   (interactive)
   (let* ((savep (point))
-	 (indent (condition-case-no-debug nil
+         (indent (condition-case-unless-debug nil
 		     (save-excursion
                        (forward-line 0)
                        (skip-chars-forward " \t")
@@ -1573,7 +1561,7 @@ to which that point should be aligned, if we were to reindent it.")
      ;; be sufficient.
      (sdecl (atom ":" type))
      (sdecls (sdecl) (sdecls "," sdecls))
-     (dotted-type (sdecls "." type))
+     (dotted-type (sdecls "|-" type))
      (type (simpletype)
            ("\\" atom "." type)         ;dotted-type
            ("block" sdecls "." type)    ;dotted-type

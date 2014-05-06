@@ -2987,13 +2987,8 @@ let mctxSVarPos cD u =
     | (Comp.Let (loc, i, (x, e)), t) ->
         Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
 
-    | (Comp.Box (loc, psihat, tM), t) ->
-        Comp.Box (loc, (cnorm_psihat psihat t),
-                  norm (cnorm (tM, t), LF.id))
-
-    | (Comp.SBox (loc, psihat, sigma), t) ->
-        Comp.SBox (loc, (cnorm_psihat psihat t),
-                  normSub (cnormSub (sigma, t)))
+    | (Comp.Box (loc, cM), t) ->
+        Comp.Box (loc, cnormMetaObj (cM,t))
 
     | (Comp.Case (loc, prag, i, branches), t) ->
         Comp.Case (loc, prag, cnormExp' (i,t),
@@ -3016,21 +3011,9 @@ let mctxSVarPos cD u =
 
     | (Comp.PairVal (loc, i1, i2), t) ->
         Comp.PairVal (loc, cnormExp' (i1,t), cnormExp' (i2, t))
-    | (Comp.CtxApp (loc, i, cPsi), t) -> Comp.CtxApp (loc, cnormExp' (i, t), normDCtx (cnormDCtx (cPsi, t)))
 
-    | (Comp.MApp (loc, i, (psihat, Comp.NormObj tM)), t) ->
-        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.NormObj (norm (cnorm (tM, t), LF.id))))
-
-    | (Comp.MApp (loc, i, (psihat, Comp.NeutObj h)), t) ->
-       begin match normFt (Head (cnormHead (h,t))) with
-          | Head h' ->  Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.NeutObj h'))
-          | _       -> raise (Error.Violation ("Object does not remain head under msub"))
-       end
-
-
-    | (Comp.MApp (loc, i, (psihat, Comp.SubstObj s)), t) ->
-        let s' = normSub (cnormSub (s,t)) in
-        Comp.MApp (loc, cnormExp' (i, t), (cnorm_psihat psihat t, Comp.SubstObj s'))
+    | (Comp.MApp (loc, i, cM), t) ->
+        Comp.MApp (loc, cnormExp' (i, t),  cnormMetaObj (cM, t))
 
     | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), cnormCTyp (tau, mcomp t' t))
 

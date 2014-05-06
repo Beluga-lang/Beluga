@@ -107,28 +107,28 @@ ev_vtrans: fev_vtr K F V
 	    <- feval K F W.
 
 
-rec map_eval : [. eval E V] -> [. trans K F E]
- 	      -> [. fev_vtr K F V] =
+rec map_eval : [ |- eval E V] -> [ |- trans K F E]
+ 	      -> [ |- fev_vtr K F V] =
 fn d => fn c => case c of
 
-   [. tr_1 (vtr_lam (tr_lam (\w. \x. \v. (C2 w x v))))]  =>
-     let [. ev_lam] = d in
-        [. ev_vtrans (fev_1) (vtr_lam (tr_lam (\w. \x. \v. (C2 w x v))))]
+   [ |- tr_1 (vtr_lam (tr_lam (\w. \x. \v. (C2 w x v))))]  =>
+     let [ |- ev_lam] = d in
+        [ |- ev_vtrans (fev_1) (vtr_lam (tr_lam (\w. \x. \v. (C2 w x v))))]
 
- | [. tr_lam (\w. \x. \u. (C1 w x u))] =>
-   let [. ev_lam] = d in
-        [. ev_vtrans (fev_lam) (vtr_lam (tr_lam (\w.\x.\u. (C1 w x u))))]
+ | [ |- tr_lam (\w. \x. \u. (C1 w x u))] =>
+   let [ |- ev_lam] = d in
+        [ |- ev_vtrans (fev_lam) (vtr_lam (tr_lam (\w.\x.\u. (C1 w x u))))]
 
- | [. tr_^ C1] =>
-     let [. ev_vtrans  D1' U1] = (map_eval d) [. C1] in
-        [. ev_vtrans   (fev_^ D1') U1]
+ | [ |- tr_^ C1] =>
+     let [ |- ev_vtrans  D1' U1] = (map_eval d) [ |- C1] in
+        [ |- ev_vtrans   (fev_^ D1') U1]
 
-    | [. tr_app C2 C1] =>
-      let [. ev_app D3 D2 D1] = d in
-      let [. ev_vtrans D1' (vtr_lam (tr_lam (\w. \x. \v. (C3 w x v))))] = (map_eval [. D1]) [. C1] in
-      let [. ev_vtrans D2' U2] = (map_eval [. D2]) [. C2] in
-      let [. ev_vtrans D3' U3] = (map_eval [. D3]) [. (C3 _ _ U2)] in
-        [. ev_vtrans (fev_app D3' D2' D1') U3]
+    | [ |- tr_app C2 C1] =>
+      let [ |- ev_app D3 D2 D1] = d in
+      let [ |- ev_vtrans D1' (vtr_lam (tr_lam (\w. \x. \v. (C3 w x v))))] = (map_eval [ |- D1]) [ |- C1] in
+      let [ |- ev_vtrans D2' U2] = (map_eval [ |- D2]) [ |- C2] in
+      let [ |- ev_vtrans D3' U3] = (map_eval [ |- D3]) [ |- (C3 _ _ U2)] in
+        [ |- ev_vtrans (fev_app D3' D2' D1') U3]
 
    ;
 

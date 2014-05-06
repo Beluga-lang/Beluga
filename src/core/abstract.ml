@@ -1389,36 +1389,36 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
         (cQ'', I.DDec (cPsi', I.TypDecl(x, tA')))
 
 
-(* TODO: Cleanup *)
+let collectMTyp p cQ = function 
+  | I.CTyp (sW, dep) -> (cQ, I.CTyp (sW, dep))
+  | I.MTyp (tA, cPsi) -> 
+    let phat = Context.dctxToHat cPsi in
+    let (cQ', cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
+    let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
+    (cQ'', I.MTyp (tA', cPsi'))
+  | I.PTyp (tA, cPsi) -> 
+    let phat = Context.dctxToHat cPsi in
+    let (cQ', cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
+    let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
+    (cQ'', I.PTyp (tA', cPsi'))
+  | I.STyp (cPhi, cPsi) ->
+     let psi_hat = Context.dctxToHat cPsi in
+     let phi_hat = Context.dctxToHat cPhi in
+     let (cQ0, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ psi_hat cPsi in
+     let (cQ1, cPhi') = collectDctx (Syntax.Loc.ghost) p cQ0 phi_hat cPhi in
+       (cQ1, I.STyp (cPhi', cPsi'))
+
+let collectCDecl p cQ cdecl = match cdecl with
+  | I.Decl (u, mtyp) -> 
+    let (cQ', mtyp') = collectMTyp p cQ mtyp in
+    (cQ', I.Decl(u, mtyp'))
+
 let rec collectMctx  cQ cD = match cD with
   | I.Empty -> (cQ, I.Empty)
-
-  | I.Dec(cD, I.Decl(g, I.CTyp (sW, dep))) ->
+  | I.Dec(cD, cdecl) ->
       let (cQ', cD')  = collectMctx cQ cD in
-        (cQ', I.Dec(cD', I.Decl(g, I.CTyp (sW, dep))))
-
-  | I.Dec(cD, I.Decl(u, I.MTyp (tA, cPsi))) ->
-      let (cQ', cD')  = collectMctx cQ cD in
-      let phat = Context.dctxToHat cPsi in
-      let (cQ'', cPsi') = collectDctx (Syntax.Loc.ghost) 0 cQ' phat cPsi in
-      let (cQ2, tA')    =  collectTyp 0 cQ'' phat  (tA, LF.id) in
-        (cQ2, I.Dec(cD', I.Decl(u, I.MTyp (tA', cPsi'))))
-
-  | I.Dec(cD, I.Decl(p, I.PTyp (tA, cPsi))) ->
-      let (cQ', cD')  = collectMctx cQ cD in
-      let phat = Context.dctxToHat cPsi in
-      let (cQ'', cPsi') = collectDctx (Syntax.Loc.ghost) 0 cQ' phat cPsi in
-      let (cQ2, tA')    = collectTyp 0 cQ'' phat (tA, LF.id) in
-        (cQ2,  I.Dec(cD', I.Decl(p, I.PTyp (tA', cPsi'))))
-
-
-  | I.Dec(cD, I.Decl(s, I.STyp (cPhi, cPsi))) ->
-      let (cQ', cD')  = collectMctx cQ cD in
-      let psi_hat = Context.dctxToHat cPsi in
-      let phi_hat = Context.dctxToHat cPhi in
-      let (cQ0, cPsi') = collectDctx (Syntax.Loc.ghost) 0 cQ' psi_hat cPsi in
-      let (cQ1, cPhi') = collectDctx (Syntax.Loc.ghost) 0 cQ0 phi_hat cPhi in
-        (cQ1, I.Dec(cD', I.Decl(s, I.STyp (cPhi', cPsi'))))
+      let (cQ'', cdecl') = collectCDecl 0 cQ' cdecl in
+        (cQ'', I.Dec(cD', cdecl'))
 
 (* ****************************************************************** *)
 (* Abstraction over LF-bound variables                                *)
@@ -1824,30 +1824,19 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
       let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in
         I.DDec (cPsi', I.TypDecl (x, tA'))
 
+and abstractMVarMTyp cQ mtyp (l,offset) = match mtyp with
+  | I.MTyp (tA, cPsi) ->
+    I.MTyp (abstractMVarTyp cQ (l,offset) (tA, LF.id), abstractMVarDctx cQ (l,offset) cPsi)
+  | I.PTyp (tA, cPsi) ->
+    I.PTyp (abstractMVarTyp cQ (l,offset) (tA, LF.id), abstractMVarDctx cQ (l,offset) cPsi)
+  | I.STyp (cPhi, cPsi) ->
+    I.STyp (abstractMVarDctx cQ (l,offset) cPhi, abstractMVarDctx cQ (l,offset) cPsi)
+  | I.CTyp (sW, dep) -> I.CTyp (sW, dep)
+
 and abstractMVarMctx cQ cD (l,offset) = match cD with
   | I.Empty -> I.Empty
-
-  | I.Dec(cD, I.Decl(u, I.MTyp (tA, cPsi))) ->
-      let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
-      let cPsi' = abstractMVarDctx cQ (l,offset) cPsi in
-      let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in
-        I.Dec(cD', I.Decl (u, I.MTyp (tA', cPsi')))
-
-  | I.Dec(cD, I.Decl(u, I.PTyp (tA, cPsi))) ->
-      let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
-      let cPsi' = abstractMVarDctx cQ (l, offset) cPsi in
-      let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in
-        I.Dec(cD', I.Decl (u, I.PTyp (tA', cPsi')))
-
-  | I.Dec(cD, I.Decl(s, I.STyp (cPhi, cPsi))) ->
-      let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
-      let cPsi' = abstractMVarDctx cQ (l,offset) cPsi in
-      let cPhi' = abstractMVarDctx cQ (l,offset) cPhi in
-        I.Dec(cD', I.Decl (s, I.STyp (cPhi', cPsi')))
-
-  | I.Dec(cD, I.Decl(g, I.CTyp (sW, dep))) ->
-      let cD' = abstractMVarMctx cQ cD (l, offset - 1) in
-        I.Dec(cD', I.Decl (g, I.CTyp (sW, dep)))
+  | I.Dec(cD, I.Decl(u, mtyp)) ->
+    I.Dec(abstractMVarMctx cQ cD (l, offset - 1), I.Decl(u, abstractMVarMTyp cQ mtyp (l, offset)))
 
 and abstractMVarCtx cQ l =  match cQ with
   | I.Empty -> I.Empty
@@ -2063,23 +2052,7 @@ and abstrTyp tA =
 (* *********************************************************************** *)
 (* Abstract over computations *)
 (* *********************************************************************** *)
-let collectCDecl p cQ cdecl = match cdecl with
-  | I.Decl (u, I.MTyp (tA, cPsi)) ->
-      let phat = Context.dctxToHat cPsi in
-      let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
-      let (cQ2, tA')    = collectTyp p cQ1 phat (tA, LF.id) in
-        (cQ2, I.Decl (u, I.MTyp (tA', cPsi')) )
-  | I.Decl (u, I.PTyp (tA, cPsi)) ->
-      let phat = Context.dctxToHat cPsi in
-      let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
-      let (cQ2, tA')    = collectTyp p cQ1 phat (tA, LF.id) in
-        (cQ2, I.Decl (u, I.PTyp (tA', cPsi')))
-  | I.Decl (_, I.CTyp (_,_)) -> (cQ, cdecl)
-  | I.Decl (u, I.STyp (cPhi, cPsi)) ->
-      let phat = Context.dctxToHat cPsi in
-      let (cQ1, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
-      let (cQ2, cPhi')    = collectDctx (Syntax.Loc.ghost) p cQ1 phat cPhi in
-        (cQ2, I.Decl (u, I.STyp (cPhi', cPsi')) )
+
 
 let rec collectCompKind p cQ cK = match cK with
   | Comp.Ctype _ -> (cQ, cK)

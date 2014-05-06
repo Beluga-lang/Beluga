@@ -1062,34 +1062,31 @@ and collectSub (p:int) cQ phat s = match s with
     else
         raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
 
-
+and collectMObj p cQ1 = function 
+  | I.MObj(phat, tM) ->
+      let (cQ1, phat') = collectHat p cQ1 phat in
+      let (cQ2, tM') = collectTerm p cQ1 phat' (tM, LF.id) in
+        (cQ2 , I.MObj (phat', tM'))
+  | I.PObj(phat, h) ->
+      let (cQ1, phat') = collectHat p cQ1 phat in
+      let (cQ2, h') = collectHead p cQ1 phat' (Syntax.Loc.ghost) (h, LF.id) in
+        (cQ2, I.PObj (phat', h'))
+  | I.CObj (cPsi) ->
+      let phat = Context.dctxToHat cPsi in
+      let (cQ2, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ1 phat cPsi in
+        (cQ2, I.CObj (cPsi'))
+  | I.SObj (phat, s) ->
+    let (cQ1, phat') = collectHat p cQ1 phat in
+    let (cQ2, s')    = collectSub p cQ1 phat' s in
+      (cQ2, I.SObj(phat', s'))
 
 (* collectMSub p cQ theta = cQ' *)
 and collectMSub p cQ theta =  match theta with
   | I.MShift _n ->  (cQ , theta)
-  | I.MDot(I.MObj(phat, tM), t) ->
-      let (cQ1, t') =  collectMSub p cQ t in
-      let (cQ1, phat') = collectHat p cQ1 phat in
-      let (cQ2, tM') = collectTerm p cQ1 phat' (tM, LF.id) in
-        (cQ2 , I.MDot (I.MObj (phat', tM'), t'))
-
-  | I.MDot(I.PObj(phat, h), t) ->
-      let (cQ1, t') =  collectMSub p cQ t in
-      let (cQ1, phat') = collectHat p cQ1 phat in
-      let (cQ2, h') = collectHead p cQ1 phat' (Syntax.Loc.ghost) (h, LF.id) in
-        (cQ2, I.MDot (I.PObj (phat', h'), t'))
-
-  | I.MDot (I.CObj (cPsi), t) ->
-      let (cQ1, t') =  collectMSub p cQ t in
-      let phat = Context.dctxToHat cPsi in
-      let (cQ2, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ1 phat cPsi in
-        (cQ2, I.MDot (I.CObj (cPsi'), t'))
-
-  | I.MDot (I.SObj (phat, s), t) ->
-    let (cQ1, t') =  collectMSub p cQ t in
-    let (cQ1, phat') = collectHat p cQ1 phat in
-    let (cQ2, s')    = collectSub p cQ1 phat' s in
-      (cQ2, I.MDot (I.SObj(phat', s'), t'))
+  | I.MDot(mobj, t) ->
+    let (cQ1, t') = collectMSub p cQ t in
+    let (cQ2, mobj') = collectMObj p cQ1 mobj in
+     (cQ2, I.MDot (mobj', t'))
 
 and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
     match sH with
@@ -1981,37 +1978,32 @@ and abstractMVarCtx cQ l =  match cQ with
 
 
 (* Cases for: FMV, FPV *)
+let abstrMObj cQ = function
+  | I.MObj(phat, tM) ->
+     let phat' = abstractMVarHat cQ (0,0) phat in
+     let tM' = abstractMVarTerm cQ (0,0) (tM, LF.id) in
+     I.MObj(phat', tM')
+
+  | I.PObj(phat, h) ->
+     let phat' = abstractMVarHat cQ (0,0) phat in
+     let h' = abstractMVarHead cQ (0,0) h in
+     I.PObj(phat', h')
+
+  | I.CObj(cPsi) ->
+     I.CObj(abstractMVarDctx cQ (0,0) cPsi)
+
+  | I.SObj (phat, s) ->
+     let phat' = abstractMVarHat cQ (0,0) phat in
+     let s'    = abstractMVarSub cQ (0,0) s in
+     I.SObj (phat', s')
+  | I.MV k -> I.MV k
 
 let rec abstrMSub cQ t =
   let l = lengthCollection cQ in
   let rec abstrMSub' t =
     match t with
       | I.MShift n -> I.MShift (n+l)
-      | I.MDot(I.MObj(phat, tM), t) ->
-          let s'  = abstrMSub' t  in
-          let phat' = abstractMVarHat cQ (0,0) phat in
-          let tM' = abstractMVarTerm cQ (0,0) (tM, LF.id) in
-            I.MDot(I.MObj(phat', tM'), s')
-
-      | I.MDot(I.PObj(phat, h), t) ->
-          let s' = abstrMSub' t in
-          let phat' = abstractMVarHat cQ (0,0) phat in
-          let h' = abstractMVarHead cQ (0,0) h in
-            I.MDot(I.PObj(phat', h'), s')
-
-      | I.MDot(I.CObj(cPsi), t) ->
-          let t'    = abstrMSub' t in
-          let cPsi' = abstractMVarDctx cQ (0,0) cPsi in
-            I.MDot(I.CObj(cPsi'), t')
-
-      | I.MDot (I.SObj (phat, s), t) ->
-        let t'    = abstrMSub' t in
-        let phat' = abstractMVarHat cQ (0,0) phat in
-        let s'    = abstractMVarSub cQ (0,0) s in
-          I.MDot (I.SObj (phat', s'), t')
-
-      | I.MDot (I.MV k, t) ->
-          I.MDot (I.MV k, abstrMSub' t)
+      | I.MDot(mobj, t) -> I.MDot(abstrMObj cQ mobj, abstrMSub' t)
   in
     abstrMSub' t
 

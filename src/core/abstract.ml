@@ -1117,27 +1117,16 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
               let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s) in (cQ', I.FMVar (u, sigma))
           | No ->
               let (cQ0, sigma) = collectSub k cQ phat (LF.comp s' s) in
-              let (cD_d, I.Decl (_, I.MTyp (tA, cPhi)))  = FCVar.get u in
-	      let d = k - Context.length cD_d in
-	      let (tA,cPhi) = (if d <= 0  then (tA,cPhi)
-                               else
-                                 (Whnf.cnormTyp (tA, Int.LF.MShift d),
-                                  Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in
-              let phihat = Context.dctxToHat cPhi in
+              let (cD_d, I.Decl (_, mtyp))  = FCVar.get u in
+	      let mtyp = (Whnf.cnormLFCTyp (mtyp, Int.LF.MShift (k - Context.length cD_d))) in
               let cQ' = I.Dec(cQ0, FMV(Impure, u, None)) in
-              let (cQ1, cPhi')  = collectDctx loc k cQ' phihat cPhi in
-              let _ = dprint (fun () -> "[collectTerm] FMVar "
-                                ^ R.render_name u ^ " has typ " ^
-                                P.typToString I.Empty cPhi (tA, LF.id))
-              in
-
-              let (cQ'', tA')   = collectTyp k cQ1  phihat (tA, LF.id) in
+              let (cQ1, I.MTyp (tA', cPhi'))  = collectMTyp k cQ' mtyp in
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,
                    there are no context variables; different abstraction
                    is necessary for handling computation-level expressions,
                    and LF objects which occur in comp utations. *)
-                (I.Dec (cQ'', FMV (Pure, u, Some (tA', cPhi'))), I.FMVar (u, sigma))
+                (I.Dec (cQ1, FMV (Pure, u, Some (tA', cPhi'))), I.FMVar (u, sigma))
           | Cycle -> raise (Error (loc, CyclicDependency VariantFMV))
       end
 
@@ -1235,21 +1224,16 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                 (cQ', I.FPVar (u, sigma))
           | No  ->
               let (cQ2, sigma) = collectSub k cQ phat s' (* (LF.comp s' s) *) in
-              let (cD_d, I.Decl (_, I.PTyp (tA, cPhi)))  = FCVar.get u in
-              let d = k - Context.length cD_d in
-
-	      let (tA, cPhi) = (if d <= 0 then (tA,cPhi) else
-                      (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in
+              let (cD_d, I.Decl (_, mtyp))  = FCVar.get u in
+	      let mtyp = Whnf.cnormLFCTyp (mtyp, Int.LF.MShift (k - Context.length cD_d)) in
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,
                    there are no context variables; different abstraction
                    is necessary for handling computation-level expressions,
                    and LF objects which occur in computations. *)
 
-              let phihat = Context.dctxToHat cPhi in
               let cQ' = I.Dec(cQ2, FPV(Impure, u, None)) in
-              let (cQ1, cPhi')  = collectDctx loc k cQ' phihat cPhi in
-              let (cQ'', tA')   = collectTyp k cQ1  phihat (tA, LF.id) in
+              let (cQ'', I.PTyp (tA', cPhi'))   = collectMTyp k cQ' mtyp in
                 (I.Dec (cQ'', FPV (Pure, u, Some (tA', cPhi'))), I.FPVar (u, sigma))
           | Cycle -> raise (Error (loc, CyclicDependency VariantFPV))
         end
@@ -1386,7 +1370,7 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
         (cQ'', I.DDec (cPsi', I.TypDecl(x, tA')))
 
 
-let collectMTyp p cQ = function 
+and collectMTyp p cQ = function 
   | I.CTyp (sW, dep) -> (cQ, I.CTyp (sW, dep))
   | I.MTyp (tA, cPsi) -> 
     let phat = Context.dctxToHat cPsi in

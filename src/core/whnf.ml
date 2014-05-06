@@ -2616,9 +2616,6 @@ let rec cnormCSub (cs, t) = begin match cs with
       CDot (cnormDCtx (cPsi, t) , cnormCSub (cs, t))
 end
 
-
-
-
 let lookup cD k = 
  let rec lookup cD k' = 
    match (cD, k') with
@@ -2626,16 +2623,16 @@ let lookup cD k =
       -> (u, cnormMTyp (mtyp, MShift k))
      | (Dec (_cD, DeclOpt u), 1)
       -> raise (Error.Violation "Expected declaration to have type")
-    | (Dec (cD, _), k')
-      -> lookup cD (k' - 1)
-    | (_ , _ ) -> raise (Error.Violation ("Meta-variable out of bounds -- looking for " ^ string_of_int k ^ "in context"))
+    | (Dec (cD, _), k') -> lookup cD (k' - 1)
+    | (Empty , _ ) -> raise (Error.Violation ("Meta-variable out of bounds -- looking for " ^ string_of_int k ^ "in context"))
  in
  lookup cD k
 
 (* ************************************************* *)
 
-(*
-*)
+(* Note: If we don't actually handle this particular exception gracefully, then
+   there's no need to have these four distinct functions. Inline them and let it throw
+   the match exception instead. *)
 let mctxMDec cD' k =
  match (lookup cD' k) with
    | (u, MTyp (tA, cPsi)) -> (u, tA, cPsi)
@@ -2656,67 +2653,17 @@ let mctxCDec cD k =
     | (u, CTyp (sW, _)) -> (u, sW)
     | _ -> raise (Error.Violation ("Expected context variable"))
 
-let mctxCVarPos cD psi =
-  let rec lookup cD k = match cD  with
-    | Dec (cD, Decl(phi, CTyp (s_cid, _)))    ->
-        if psi = phi then
-          (k, s_cid)
-        else
-          lookup cD (k+1)
-
-    | Dec (cD, _) -> lookup cD (k+1)
-
-    | Empty  -> (dprint (fun () -> "mctxCVarPos \n") ; raise Fmvar_not_found)
-  in
-    lookup cD 1
-
-
 let mctxMVarPos cD u =
-  let rec lookup cD k = match cD  with
-    | Dec (cD, Decl(v, MTyp (tA, cPsi)))    ->
+  let rec lookup cD k = match cD with
+    | Dec (cD, Decl(v, mtyp))    ->
         if v = u then
-         (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
-         (k, (cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k)) )
+         (k, cnormMTyp (mtyp, MShift k))
         else
           lookup cD (k+1)
-
     | Dec (cD, _) -> lookup cD (k+1)
-
-    | Empty  -> (dprint (fun () -> "mctxMVarPos \n") ; raise Fmvar_not_found)
-  in
-    lookup cD 1
-
-let mctxPVarPos cD p =
-  let rec lookup cD k = match cD  with
-    | Dec (cD, Decl(q, PTyp (tA, cPsi)))    ->
-        if p = q then
-          (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
-         (k, (cnormTyp (tA, MShift k), cnormDCtx (cPsi, MShift k)) )
-        else
-          lookup cD (k+1)
-
-    | Dec (cD, _) -> lookup cD (k+1)
-
     | Empty  -> raise Fmvar_not_found
   in
-    lookup cD 1
-
-
-
-let mctxSVarPos cD u =
-  let rec lookup cD k = match cD  with
-    | Dec (cD, Decl(v, STyp (cPhi, cPsi)))    -> (*  cPsi |- s : cPhi *)
-        if v = u then
-         (* (k, (mshiftTyp tA k, mshiftDCtx cPsi k)) *)
-         (k, (cnormDCtx (cPhi, MShift k), cnormDCtx (cPsi, MShift k)) )
-        else
-          lookup cD (k+1)
-
-    | Dec (cD, _) -> lookup cD (k+1)
-
-    | Empty  -> (dprint (fun () -> "mctxSVarPos \n") ; raise Fmvar_not_found)
-  in
-    lookup cD 1
+   lookup cD 1
 
   (******************************************
      Contextual weak head normal form for

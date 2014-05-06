@@ -1884,7 +1884,7 @@ and elHead loc recT cD cPsi = function
 
   | Apx.LF.FMVar (u, s) ->
       begin try
-        let (offset, (tP, cPhi)) = Whnf.mctxMVarPos cD u  in
+        let (offset, Int.LF.MTyp (tP, cPhi)) = Whnf.mctxMVarPos cD u  in
         let s' = elSub loc recT cD cPsi s cPhi in
          (Int.LF.MVar (Int.LF.Offset offset,s'), (tP, s'))
       with Whnf.Fmvar_not_found ->
@@ -1892,7 +1892,7 @@ and elHead loc recT cD cPsi = function
       end
 
   | Apx.LF.FPVar (p, s) ->
-      let (offset, (tA, cPhi)) = Whnf.mctxPVarPos cD p  in
+      let (offset, Int.LF.PTyp (tA, cPhi)) = Whnf.mctxMVarPos cD p  in
       let s' = elSub loc recT cD cPsi s cPhi in
         (Int.LF.PVar (Int.LF.Offset offset, s') , (tA, s'))
 

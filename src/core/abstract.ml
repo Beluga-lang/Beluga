@@ -932,29 +932,17 @@ and collectSub (p:int) cQ phat s = match s with
                 (cQ', I.FSVar (s_name, (ctx_offset, n), sigma))
           | No ->
               let (cQ0, sigma) = collectSub p cQ phat s' in
-              let (cD_d, I.Decl (_, I.STyp (cPsi, cPhi)))  = FCVar.get s_name in
+              let (cD_d, I.Decl (_, mtyp))  = FCVar.get s_name in
 	      let d = p - Context.length cD_d in
-	      let (tA,cPhi) = (if d <= 0  then (cPsi,cPhi)
-                               else
-                                 (Whnf.cnormDCtx (cPsi, Int.LF.MShift d),
-                                  Whnf.cnormDCtx (cPhi, Int.LF.MShift d))) in
-              let phihat = Context.dctxToHat cPhi in
-              let psihat = Context.dctxToHat cPhi in
+	      let mtyp' = Whnf.cnormLFCTyp (mtyp, Int.LF.MShift d) in
               let cQ' = I.Dec(cQ0, FMV(Impure, s_name, None)) in
-              let loc = (Syntax.Loc.ghost) in
-              let (cQ1, cPhi')  = collectDctx loc p cQ' phihat cPhi in
-              let _ = dprint (fun () -> "[collectTerm] FSVar "
-                                ^ R.render_name s_name ^ " has range " ^
-                                P.dctxToString I.Empty cPhi)
-              in
-
-              let (cQ'', cPsi')   = collectDctx loc p cQ1  psihat cPsi in
+              let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,
                    there are no context variables; different abstraction
                    is necessary for handling computation-level expressions,
                    and LF objects which occur in comp utations. *)
-                (I.Dec (cQ'', FMV (Pure, s_name, Some (I.STyp (cPsi', cPhi')))),
+                (I.Dec (cQ1, FMV (Pure, s_name, Some mtyp'')),
                  I.FSVar (s_name, (ctx_offset, n), sigma))
 
           | Cycle -> raise (Error ((Syntax.Loc.ghost), CyclicDependency VariantFSV))

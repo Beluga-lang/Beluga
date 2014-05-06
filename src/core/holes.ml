@@ -28,8 +28,6 @@ let ( ++ ) f g = function x -> f (g x)
 
 let nameString n = n.Id.string_of_name
 
-let break = "____________________________________________________________________________\n"
-
 let ctypDeclToString cD ctypDecl =
   P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
   Format.flush_str_formatter ()

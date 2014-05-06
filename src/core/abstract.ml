@@ -815,7 +815,7 @@ let rec ctxToCtx cQ = match cQ with
   | I.Dec (cQ', MV (Impure, _u )) ->
     ctxToCtx cQ'
 
-let rec ctxToMCtx cQ  = match cQ with
+let rec ctxToMCtx ?(dep=I.Maybe) cQ = match cQ with
   | I.Empty ->
       I.Empty
 
@@ -853,7 +853,7 @@ let rec ctxToMCtx cQ  = match cQ with
   | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _theta)))) ->
       (* let psi = Id.mk_name (NoName) in *)
       (* this case should not happen? -bp *)
-      I.Dec (ctxToMCtx cQ', I.CDecl (n, s_cid, I.Maybe))      (*?*)
+      I.Dec (ctxToMCtx cQ', I.CDecl (n, s_cid, dep))      (*?*)
 
   (* Can this case ever happen?  I don't think so. -bp *)
   | I.Dec (cQ', PV (Pure, I.PVar (I.PInst (n, _, cPsi, tA, _, mDep), _s))) ->
@@ -861,16 +861,16 @@ let rec ctxToMCtx cQ  = match cQ with
       I.Dec (ctxToMCtx cQ', I.PDecl (n, tA, cPsi, mDep))
 
   | I.Dec (cQ', FCV (psi, Some (s_cid))) ->
-      I.Dec (ctxToMCtx cQ', I.CDecl (psi, s_cid, I.Maybe))      (*?*)
+      I.Dec (ctxToMCtx cQ', I.CDecl (psi, s_cid, dep))      (*?*)
 
   | I.Dec (cQ', FMV (Pure, u, Some (tA, cPsi))) ->
-      I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi, I.Maybe))        (*?*)
+      I.Dec (ctxToMCtx cQ', I.MDecl (u, tA, cPsi, dep))        (*?*)
 
   | I.Dec (cQ', FSV (Pure, u, Some (cPhi, cPsi))) ->
-      I.Dec (ctxToMCtx cQ', I.SDecl (u, cPhi, cPsi, I.Maybe))        (*?*)
+      I.Dec (ctxToMCtx cQ', I.SDecl (u, cPhi, cPsi, dep))        (*?*)
 
   | I.Dec (cQ', FPV (Pure, p, Some (tA, cPsi))) ->
-      I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi, I.Maybe))          (*?*)
+      I.Dec (ctxToMCtx cQ', I.PDecl (p, tA, cPsi, dep))          (*?*)
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       let dep' = match dep with Comp.Explicit -> I.No | Comp.Implicit -> I.Maybe in
@@ -2596,7 +2596,7 @@ let abstrCompKind cK =
   let l           = (k - l') in
   let cQ'  = abstractMVarCtx cQ (l-1-p)  in
   let cK' = abstractMVarCompKind cQ' (l,0) cK1 in
-  let cD'  = ctxToMCtx cQ' in
+  let cD' = ctxToMCtx cQ' in
   let cK2 = raiseCompKind cD' cK' in
     (cK2, Context.length cD')
 
@@ -2616,10 +2616,9 @@ let abstrCompTyp tau =
   let cQ'  = abstractMVarCtx cQ (l-1-p) in
   (* let cQ'  = abstractMVarCtx cQ (l-1) in  *)
   let tau' = abstractMVarCompTyp cQ' (l,0) tau1 in
-  let cD'  = ctxToMCtx cQ' in
+  let cD' = ctxToMCtx cQ' in
   let tau'' = raiseCompTyp cD' tau' in
     (tau'', Context.length cD' )
-
 
 
 let abstrPatObj loc cD cG pat tau =
@@ -2634,7 +2633,7 @@ let abstrPatObj loc cD cG pat tau =
   let cG'     = abstractMVarGctx cQ' (0,offset) cG in
   let pat'    = abstractMVarPatObj cQ' cG' (0,offset) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in
-  let cD'     = ctxToMCtx cQ' in 
+  let cD'     = ctxToMCtx ~dep:I.No cQ' in 
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD      = Context.append cD' cD2 in
       (cD, cG', pat', tau')
@@ -2654,7 +2653,7 @@ let abstrPattern cD1 cPsi1  (phat, tM) tA =
   let cD2     = abstractMVarMctx cQ' cD1' (0, offset-1) in
 (*  let cs1'    = abstractMVarCSub cQ' offset cs1 in
   let cs'     = abstractMVarCSub cQ' offset cs in *)
-  let cD'     = ctxToMCtx cQ' in
+  let cD'     = ctxToMCtx ~dep:I.No cQ' in
   let cD      = Context.append cD' cD2 in
     (cD, cPsi2, (phat, tM2), tA2)
 
@@ -2673,7 +2672,7 @@ let abstrSubPattern cD1 cPsi1  sigma cPhi1 =
   let sigma2   = abstractMVarSub cQ' (0,offset) sigma' in
   let cPhi2    = abstractMVarDctx cQ' (0,offset) cPhi1' in
   let cD2      = abstractMVarMctx cQ' cD1' (0, offset-1) in
-  let cD'      = ctxToMCtx cQ' in
+  let cD'      = ctxToMCtx ~dep:I.No cQ' in
   let cD       = Context.append cD' cD2 in
     (cD, cPsi2, sigma2, cPhi2)
 

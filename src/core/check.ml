@@ -400,7 +400,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 ;;
 
-let rec extend_mctx cD (x, cdecl, t) = match cdecl with             (*?*)
+let extend_mctx cD (x, cdecl, t) = match cdecl with             (*?*)
   | I.CDecl(_psi, schema,dep ) ->
         I.Dec(cD, I.CDecl(x, schema, dep))
   | I.MDecl(_u, tA, cPsi, mDep) ->

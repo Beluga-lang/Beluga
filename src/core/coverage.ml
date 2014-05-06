@@ -1528,7 +1528,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 	[ (cD, cg, Whnf.m_id) ]
 
   | Comp.TypBox (loc, tA, cPsi) ->
-      let (cgoals, _ ) = genCGoals cD (LF.MDecl(Id.mk_name(Id.NoName), tA, cPsi, LF.No)) in (*?*)
+      let (cgoals, _ ) = genCGoals cD (LF.MDecl(Id.mk_name(Id.NoName), tA, cPsi, LF.Maybe)) in (*?*)
 
 	List.map (fun (cD', cg, ms) ->
 		    let CovGoal (cPsi', tR, sA') = cg in
@@ -2006,7 +2006,7 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 *)
 let initialize_coverage problem projOpt = begin match problem.ctype with
   | Comp.TypBox(loc, tA, cPsi) ->
-      let cD'        = LF.Dec (problem.cD, LF.MDecl(Id.mk_name (Id.NoName), tA, cPsi, LF.No)) in (*?*)
+      let cD'        = LF.Dec (problem.cD, LF.MDecl(Id.mk_name (Id.NoName), tA, cPsi, LF.Maybe)) in (*?*)
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = LF.MVar (LF.Offset 1, idSub) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
@@ -2023,7 +2023,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 
   | Comp.TypParam(loc, tA, cPsi) ->
       let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
-      let cD'        = LF.Dec (problem.cD, LF.PDecl(Id.mk_name (Id.NoName), tA, cPsi, LF.No)) in (*?*)
+      let cD'        = LF.Dec (problem.cD, LF.PDecl(Id.mk_name (Id.NoName), tA, cPsi, LF.Maybe)) in (*?*)
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = match projOpt with None -> LF.PVar (LF.Offset 1, idSub) | Some k -> LF.Proj(LF.PVar (LF.Offset 1, idSub), k) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in

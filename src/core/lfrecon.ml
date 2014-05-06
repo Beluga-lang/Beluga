@@ -611,7 +611,7 @@ let rec synDom cD loc cPsi s = begin match s with
                *  Wed Jan 14 13:51:11 2009 -bp
                *)
             let ss = Substitution.LF.invert s' in
-            let tA' = pruningTyp loc cD cPsi (*?*)
+            let tA' = pruningTyp loc cD cPsi
 	      (Context.dctxToHat cPsi) (tA, Substitution.LF.id)  (Int.LF.MShift 0, ss)  in
               (Int.LF.DDec (cPhi,
                             Int.LF.TypDecl (x, tA')),
@@ -633,7 +633,7 @@ let rec synDom cD loc cPsi s = begin match s with
             let ss = Substitution.LF.invert s' in
 
             let Int.LF.Sigma typRec =
-              pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi) (tB, Substitution.LF.id) (Int.LF.MShift 0, ss)  in
+              pruningTyp loc cD cPsi (Context.dctxToHat cPsi) (tB, Substitution.LF.id) (Int.LF.MShift 0, ss)  in
               begin try
                 let sQ = Int.LF.getType  (Int.LF.BVar k) (typRec, Substitution.LF.id) k 1 in
 
@@ -896,7 +896,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   Int.LF.Root (loc, Int.LF.FVar x, tS)
 		with NotPatSpine ->
                   (let _ = dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...") in
-                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.No in   (*?*)
+                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in   (*?*)
                    let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in
                    add_fvarCnstr (tAvar, m, v);
                    Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil))
@@ -1003,7 +1003,7 @@ and elTerm' recT cD cPsi r sP = match r with
           let ss =  Substitution.LF.invert s'' in
           let _ = dprint (fun () ->  " with substitution "  ^ P.subToString cD cPhi s'' ^
                          " and domain  " ^ P.dctxToString cD cPhi ) in
-              let tP = pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
+              let tP = pruningTyp loc cD cPsi (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
                 (* let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in *)
                 (* For type reconstruction to succeed, we must have
                  * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
@@ -1043,7 +1043,7 @@ and elTerm' recT cD cPsi r sP = match r with
 (*             let _ = dprint (fun () -> "[synDom] Prune flattened type (2 with resp. cPhi) (may not exist yet)" ^ P.typToString cD cPhi (tP', ss) ) in *)
              let _ = dprint (fun () -> "         with respect to ss = " ^ P.subToString cD cPhi ss ) in
 
-             let tP = pruningTyp loc cD flat_cPsi (*?*)
+             let tP = pruningTyp loc cD flat_cPsi
                          (Context.dctxToHat flat_cPsi) (tP', Substitution.LF.id) (Int.LF.MShift 0, ss)  in
 
              let sorig = elSub loc recT cD cPsi s cPhi in
@@ -1111,7 +1111,7 @@ and elTerm' recT cD cPsi r sP = match r with
                 (* Need to check that the inferred type for p is indeed in cPsi's schema -bp *)
                 let (cPhi, s'') = synDom cD loc cPsi s in
                 let si          = Substitution.LF.invert s'' in
-                let tP = pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi) sP
+                let tP = pruningTyp loc cD cPsi (Context.dctxToHat cPsi) sP
                                 (Int.LF.MShift 0, si)  in
                 (* let tP          = Whnf.normTyp (Int.LF.TClo sP, si) in*)
                   (* For type reconstruction to succeed, we must have
@@ -1178,7 +1178,7 @@ and elTerm' recT cD cPsi r sP = match r with
             | (true, Apx.LF.Nil) ->
                 let (cPhi, s'') = synDom cD loc cPsi s in
                 let si          = Substitution.LF.invert s'' in
-                let tP = pruningTyp loc cD cPsi (*?*)
+                let tP = pruningTyp loc cD cPsi
 		  (Context.dctxToHat  cPsi) sP (Int.LF.MShift 0, si)  in
                 let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in
                 let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cD cPsi) in
@@ -1679,7 +1679,7 @@ and elSub' loc recT cD cPsi s cPhi =
               | Int.LF.CtxVar cv , Int.LF.Null -> (Int.LF.NegCtxShift cv, 0)
               | _ -> raise (Error (loc, SubstTyp)) in
 *)
-              (FCVar.add s_name (cD, Int.LF.SDecl (s_name, cPhi, cPsi', Int.LF.No));  (*?*)
+              (FCVar.add s_name (cD, Int.LF.SDecl (s_name, cPhi, cPsi', Int.LF.Maybe));  (*?*)
                Int.LF.FSVar (s_name, ctxShift, sigma'))
           else
             raise (Error (loc, NotPatSub))
@@ -1759,13 +1759,13 @@ and elSub' loc recT cD cPsi s cPhi =
          | Not_found -> if isPatSub s' then
                 let (cPhi, s'') = synDom cD loc cPsi s' in
                 let si          = Substitution.LF.invert s'' in
-                let tA = pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi)  (tA, sigma)
+                let tA = pruningTyp loc cD cPsi (Context.dctxToHat cPsi)  (tA, sigma)
                                 (Int.LF.MShift 0, si)  in
                   (* For type reconstruction to succeed, we must have
                    * . ; cPhi |- tA <= type  and . ; cPsi |- s' <= cPhi
                    * This will be enforced during abstraction.
                    *)
-                  FCVar.add p (cD, Int.LF.PDecl(p, Whnf.normTyp (tA,Substitution.LF.id),  cPhi, Int.LF.No));  (*?*)
+                  FCVar.add p (cD, Int.LF.PDecl(p, Whnf.normTyp (tA,Substitution.LF.id),  cPhi, Int.LF.Maybe));  (*?*)
                   Int.LF.Dot (Int.LF.Head (Int.LF.FPVar (p,s'')), sigma)
            else
              raise (Error (loc, NotPatternSpine))
@@ -2094,7 +2094,7 @@ and elKSpine loc recT cD cPsi spine sK =
 and elSpineSynth recT cD cPsi spine s' sP = match (spine, sP) with
   | (Apx.LF.Nil, (_tP, _s))  ->
       let ss = Substitution.LF.invert s' in
-      let tQ = pruningTyp Syntax.Loc.ghost cD cPsi (*?*) (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
+      let tQ = pruningTyp Syntax.Loc.ghost cD cPsi (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
       (* PROBLEM: [s'][ss] [s]P is not really P; in fact [ss][s]P may not exist;
        * We use pruning to ensure that [ss][s]P does exist
        *)
@@ -2108,7 +2108,7 @@ and elSpineSynth recT cD cPsi spine s' sP = match (spine, sP) with
       let ss = Substitution.LF.invert s' in
       (* let tA' = Whnf.normTyp (tA, ss) in *)
       (* Is [ss]A  always guaranteed to exist? - No. Use pruning to ensure it does exist. *)
-      let tA' = pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi)  (tA, Substitution.LF.id) (Int.LF.MShift 0, ss) in
+      let tA' = pruningTyp loc cD cPsi (Context.dctxToHat cPsi)  (tA, Substitution.LF.id) (Int.LF.MShift 0, ss) in
 
       let _ = dprint (fun () -> "elSpineSynth: PruneTyp done\n") in
 

@@ -781,33 +781,11 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
         (checkSchema loc cD cPsi (Schema.get_schema w);
          checkMSub loc cD ms cD1')
 
-    | MDot (MV u, ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi))) ->
-        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
-        let tA'   = Whnf.cnormTyp (tA, ms) in
-        let (_, tA1, cPsi1) = Whnf.mctxMDec cD u in
-          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', Substitution.LF.id) (tA1, Substitution.LF.id) then
-                     checkMSub loc cD ms cD1'
-          else
-            raise (Error.Violation ("Contextual substitution ill-typed - 2 "))
-
-    | MDot (MV p, ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi))) ->
-        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
-        let tA'   = Whnf.cnormTyp (tA, ms) in
-        let (_, tA1, cPsi1) = Whnf.mctxPDec cD p in
-          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convTyp (tA', Substitution.LF.id) (tA1, Substitution.LF.id) then
-            checkMSub loc cD ms cD1'
-          else
-            raise (Error.Violation ("Contextual substitution ill-typed - 3 "))
-
-
-    | MDot (MV p, ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi))) ->
-        let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
-        let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
-        let (_, cPhi1, cPsi1) = Whnf.mctxSDec cD p in
-          if Whnf.convDCtx cPsi1 cPsi' && Whnf.convDCtx cPhi1 cPhi' then
-            checkMSub loc cD ms cD1'
-          else
-            raise (Error.Violation ("Contextual substitution ill-typed - 4 "))
+    | MDot (MV u, ms), Dec(cD1', Decl (_u, mtyp1)) ->
+      let mtyp1 = Whnf.cnormMTyp (mtyp1, ms) in
+      let (_, mtyp2) = Whnf.mctxLookup cD u in
+      if Whnf.convMTyp mtyp1 mtyp2 then checkMSub loc cD ms cD1'
+      else raise (Error.Violation ("Contextual substitution ill-typed"))
 
     | MDot (SObj (_, s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in

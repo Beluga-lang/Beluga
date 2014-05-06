@@ -83,6 +83,7 @@ val m_invert     : msub -> msub
 (* val invExp     : Comp.exp_chk * msub -> int -> Comp.exp_chk
 val invTerm    : normal    * msub -> int -> normal
 *)
+val mctxLookup : mctx -> int -> Id.name * ctyp
 val mctxMDec   : mctx -> int -> Id.name * typ * dctx
 val mctxPDec   : mctx -> int -> Id.name * typ * dctx
 val mctxSDec   : mctx -> int -> Id.name * dctx * dctx
@@ -122,7 +123,7 @@ val cnormExp'  : Comp.exp_syn * msub -> Comp.exp_syn
 val normCtx    : Comp.gctx -> Comp.gctx
 val normCTyp   : Comp.typ  -> Comp.typ
 
-
+val convMTyp   : ctyp -> ctyp -> bool
 val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
 
 val closed     : nclo -> bool

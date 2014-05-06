@@ -170,7 +170,6 @@ let rec mctxToMSub cD = match cD with
       let ctypn = Whnf.cnormMTyp (ctyp, t) in
       MDot (declToCVar (n, ctypn) , t)
 
-
 let mdeclToMMVar cD0 n mtyp = match mtyp with
   | MTyp (tA, cPsi) ->
     let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA) in
@@ -194,7 +193,6 @@ let rec mctxToMMSub cD0 cD = match cD with
       let t     = mctxToMMSub cD0 cD' in
       let mtyp' = Whnf.cnormMTyp (mtyp,t) in
       MDot (mdeclToMMVar cD0 n mtyp' , t)
-
 
 
 (* The following functions are from an attempt to improve printing of meta-variables;

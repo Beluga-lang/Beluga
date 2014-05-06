@@ -2616,7 +2616,7 @@ let rec cnormCSub (cs, t) = begin match cs with
       CDot (cnormDCtx (cPsi, t) , cnormCSub (cs, t))
 end
 
-let lookup cD k = 
+let mctxLookup cD k = 
  let rec lookup cD k' = 
    match (cD, k') with
     | (Dec (_cD, Decl (u, mtyp)), 1)
@@ -2634,22 +2634,22 @@ let lookup cD k =
    there's no need to have these four distinct functions. Inline them and let it throw
    the match exception instead. *)
 let mctxMDec cD' k =
- match (lookup cD' k) with
+ match (mctxLookup cD' k) with
    | (u, MTyp (tA, cPsi)) -> (u, tA, cPsi)
    | _ -> raise (Error.Violation "Expected ordinary meta-variable")
 
 let mctxPDec cD k =
-  match (lookup cD k) with
+  match (mctxLookup cD k) with
     | (u, PTyp (tA, cPsi)) -> (u, tA, cPsi)
     | _ -> raise (Error.Violation ("Expected parameter variable"))
 
 let mctxSDec cD' k =
-  match (lookup cD' k) with
+  match (mctxLookup cD' k) with
     | (u, STyp (cPhi, cPsi)) -> (u, cPhi, cPsi)
     | _ -> raise (Error.Violation "Expected substitution variable")
 
 let mctxCDec cD k =
-  match (lookup cD k) with
+  match (mctxLookup cD k) with
     | (u, CTyp (sW, _)) -> (u, sW)
     | _ -> raise (Error.Violation ("Expected context variable"))
 

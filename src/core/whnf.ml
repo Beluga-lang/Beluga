@@ -3055,6 +3055,16 @@ let mctxMVarPos cD u =
         convMetaObj mO mO' && convMetaSpine mS mS'
 
   (* convCTyp (tT1, t1) (tT2, t2) = true iff [|t1|]tT1 = [|t2|]tT2 *)
+  
+  let convMTyp thetaT1 thetaT2 = match (thetaT1, thetaT2) with
+    | (MTyp (tA1, cPsi1)) , (MTyp (tA2, cPsi2)) ->
+         convTyp (tA1, LF.id) (tA2, LF.id) && convDCtx cPsi1 cPsi2
+    | (STyp (cPhi, cPsi)) , (STyp (cPhi', cPsi')) ->
+         convDCtx cPhi cPhi' && convDCtx cPsi cPsi'
+    | (PTyp (tA, cPsi)) , (PTyp (tA', cPsi')) ->
+         convTyp (tA, LF.id) (tA', LF.id)  && convDCtx cPsi cPsi'
+    | (CTyp (cid_schema, _)) , (CTyp (cid_schema', _)) ->
+         cid_schema = cid_schema'
 
   let rec convCTyp thetaT1 thetaT2 = convCTyp' (cwhnfCTyp thetaT1) (cwhnfCTyp thetaT2)
 
@@ -3094,47 +3104,15 @@ let mctxMVarPos cD u =
         &&
           convCTyp (tT2, t) (tT2', t')
 
-    | ((Comp.TypPiBox ((Decl(_, MTyp (tA, cPsi)), dep), tT), t), (Comp.TypPiBox ((Decl(_, MTyp (tA', cPsi')), dep'), tT'), t'))
+    | ((Comp.TypPiBox ((Decl(_, mtyp1), dep), tT), t), (Comp.TypPiBox ((Decl(_, mtyp2), dep'), tT'), t'))
       ->
         (dprint (fun () -> "[convCtyp] PiBox Mdec");
         dep = dep'
         &&
-          convTyp (cnormTyp (tA, t), LF.id) (cnormTyp (tA', t'), LF.id)
-        &&
-          convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
+          convMTyp (cnormMTyp (mtyp1, t)) (cnormMTyp (mtyp2, t'))
         &&
          (dprint (fun () -> "[convCtyp] PiBox decl done");
         convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')))
-
-    | ((Comp.TypPiBox ((Decl(_, PTyp (tA, cPsi)), dep), tT), t),
-       (Comp.TypPiBox ((Decl(_, PTyp (tA', cPsi')), dep'), tT'), t'))
-      -> dep = dep'
-        &&
-          convTyp (cnormTyp (tA, t), LF.id) (cnormTyp (tA', t'), LF.id)
-        &&
-          convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
-        &&
-          convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
-
-
-    | ((Comp.TypPiBox ((Decl(_, STyp (cPhi, cPsi)), dep), tT), t),
-       (Comp.TypPiBox ((Decl(_, STyp (cPhi', cPsi')), dep'), tT'), t'))
-      -> dep = dep'
-        &&
-          convDCtx (cnormDCtx (cPhi, t)) (cnormDCtx (cPhi', t'))
-        &&
-          convDCtx (cnormDCtx (cPsi, t)) (cnormDCtx (cPsi', t'))
-        &&
-          (dprint (fun () -> "[convCtyp] PiBox Sdec done");
-           convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t'))
-
-    | ((Comp.TypPiBox ((Decl(_psi, CTyp (cid_schema, _ )), dep), tT), t) ,
-       (Comp.TypPiBox ((Decl(_psi', CTyp (cid_schema', _) ), dep'), tT'), t'))
-      -> dep = dep'
-        &&
-        cid_schema = cid_schema'
-        &&
-          convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
 
     | ((Comp.TypBool, _t ), (Comp.TypBool, _t')) -> true
 

@@ -20,16 +20,15 @@ module LF = struct
     | TypDecl of name * typ                   (* D := x:A                       *)
     | TypDeclOpt of name                      (*   |  x:_                       *)
 
+  and ctyp =
+    | MTyp of typ * dctx * depend
+    | PTyp of typ * dctx * depend
+    | STyp of dctx * dctx * depend
+    | CTyp of cid_schema * depend
+
   and ctyp_decl =                             (* Contextual Declarations        *)
-    | MDecl of name * typ  * dctx * depend  (* D ::= u::A[Psi]                *)
-    | PDecl of name * typ  * dctx * depend    (*   |   p::A[Psi]                *)
-    | SDecl of name * dctx (* Phi *) * dctx * depend (* Psi *)
-                                              (*   |   s::Phi[Psi],i.e. Psi|-s:Phi  *)
-    | CDecl of name * cid_schema * depend
-    | MDeclOpt of name
-    | PDeclOpt of name
-    | CDeclOpt of name
-    | SDeclOpt of name
+    | Decl of name * ctyp
+    | DeclOpt of name
                                               (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)

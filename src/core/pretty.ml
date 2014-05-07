@@ -81,6 +81,7 @@ module Int = struct
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
 
     val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
+    val fmt_ppr_lf_mtyp       : LF.mctx                    -> formatter -> LF.ctyp  -> unit
     val fmt_ppr_lf_tuple      : LF.mctx -> LF.dctx -> lvl  -> formatter -> LF.tuple  -> unit
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
@@ -137,6 +138,7 @@ module Int = struct
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
+    val mtypToString      : LF.mctx -> LF.ctyp -> string
     val typRecToString    : LF.mctx -> LF.dctx -> LF.trec_clo -> string
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.dctx -> LF.nclo     -> string
@@ -955,124 +957,77 @@ module Int = struct
               (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
               (r_paren_if cond)
 
+    and fmt_ppr_lf_mtyp cD ppf = function
+      | LF.MTyp (tA, cPsi, _) ->
+          fprintf ppf "[%a |- %a]"
+            (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 2) tA
 
-
-    and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
-      | LF.MDecl (u, tA, cPsi, mDep) ->
-          (match (mDep, !Control.printImplicit) with
-            | (LF.Maybe, false) -> fprintf ppf ""
-            | _, _ -> 
-              (let s = match mDep with |LF.Maybe -> "^i" | LF.No -> "^e" in
-              fprintf ppf "{%s :: [%a|- %a]}%s"
-                (R.render_name u)
-                (fmt_ppr_lf_dctx cD 0) cPsi
-                (fmt_ppr_lf_typ cD cPsi 2) tA
-                (s)))
-
-      | LF.PDecl (p, tA, cPsi, mDep) ->
-          (match (mDep, !Control.printImplicit) with
-            | (LF.Maybe, false) -> fprintf ppf ""
-            | _, _ -> 
-              (let s = match mDep with |LF.Maybe -> "^i" | LF.No -> "^e" in
-              fprintf ppf "{#%s :: [%a.%a]}%s"
-                (R.render_name p)
-                (fmt_ppr_lf_dctx cD 0) cPsi
-                (fmt_ppr_lf_typ cD cPsi 2) tA
-                (s))) 
-
-      | LF.SDecl (u, cPhi, cPsi, mDep) ->
-          (match (mDep, !Control.printImplicit) with
-            | (LF.Maybe, false) -> fprintf ppf ""
-            | _, _ -> 
-              (let s = match mDep with |LF.Maybe -> "^i" | LF.No -> "^e" in
-              fprintf ppf "{%s :: [%a. %a]}%s"
-                (R.render_name u)
-                (fmt_ppr_lf_dctx cD 0) cPsi
-                (fmt_ppr_lf_dctx cD 0) cPhi
-                (s)))
-
-      | LF.CDecl (name, schemaName, mDep) ->
-          (match (mDep, !Control.printImplicit) with
-            | (LF.Maybe, false) -> fprintf ppf ""
-            | _, _ -> 
-              (let s = match mDep with |LF.Maybe -> "^i" | LF.No -> "^e" in
-              fprintf ppf "{%s :: (%a)}%s"
-                (R.render_name name)
-                (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
-                (s)))
-
-      | LF.MDeclOpt name ->
-          fprintf ppf "{%s :: _ }"
-            (R.render_name name)
-
-      | LF.PDeclOpt name ->
-          fprintf ppf "{%s :: _ }"
-            (R.render_name name)
-      | LF.CDeclOpt name ->
-          fprintf ppf "{%s :: _ }"
-            (R.render_name name)
-
-    (*  (* Exact Same as fmt_ppr_lf_ctyp_decl but includes ^i and ^e for MDecl
-          January 30, 2014 13:00
-          - SC *)
-    let fmt_ppr_lf_ctyp_decl_holes cD _lvl ppf = function
-      | LF.MDecl (u, tA, cPsi, mdecl) ->
-        (match mdecl with
-        | LF.Implicit -> 
-          fprintf ppf "{%s :: [%a. %a]}^i"
-          (R.render_name u)
-          (fmt_ppr_lf_dctx cD 0) cPsi
-          (fmt_ppr_lf_typ cD cPsi 2) tA
-        | LF.Explicit -> 
-          fprintf ppf "{%s :: [%a. %a]}^e"
-          (R.render_name u)
-          (fmt_ppr_lf_dctx cD 0) cPsi
-          (fmt_ppr_lf_typ cD cPsi 2) tA)
-      | LF.PDecl (p, tA, cPsi) ->
-          fprintf ppf "{#%s :: [%a |- %a]}"
-            (R.render_name p)
+      | LF.PTyp (tA, cPsi, _) ->
+          fprintf ppf "#[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 2) tA 
 
-      | LF.SDecl (u, cPhi, cPsi) ->
-          fprintf ppf "{%s :: [%a |- %a]}"
-            (R.render_name u)
+      | LF.STyp (cPhi, cPsi, _) ->
+          fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi
 
-      | LF.CDecl (name, schemaName, LF.No) ->
-          fprintf ppf "{%s :: (%a)}"
-            (R.render_name name)
+      | LF.CTyp (schemaName, LF.No) ->
+          fprintf ppf "(%a)"
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
-      | LF.CDecl (name, schemaName, LF.Maybe) ->
-          fprintf ppf "{%s :: {%a}}"
-            (R.render_name name)
+      | LF.CTyp (schemaName, LF.Maybe) ->
+          fprintf ppf "{%a}"
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
-      | LF.MDeclOpt name ->
+    and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
+      | LF.Decl (u, mtyp) ->
+          fprintf ppf "{%s :: %a}%s"
+            (R.render_name u)
+            (fmt_ppr_lf_mtyp cD) mtyp
+            (dependent_string mtyp)
+
+      | LF.DeclOpt name ->
           fprintf ppf "{%s :: _ }"
             (R.render_name name)
 
+    and dependent_string = function
+      | LF.MTyp (_, _, dep) ->
+          begin match dep with
+            | LF.No -> "^e"
+            | LF.Maybe -> "^i"
+          end
 
-      | LF.PDeclOpt name ->
-          fprintf ppf "{%s :: _ }"
-            (R.render_name name)
-      | LF.CDeclOpt name ->
-          fprintf ppf "{%s :: _ }"
-            (R.render_name name) *)
+      | LF.PTyp (_, _, dep) ->
+          begin match dep with
+            | LF.No -> "^e"
+            | LF.Maybe -> "^i"
+          end
+
+      | LF.STyp (_, _, dep) ->
+          begin match dep with
+            | LF.No -> "^e"
+            | LF.Maybe -> "^i"
+          end
+      | LF.CTyp (_, dep) ->
+          begin match dep with
+            | LF.No -> "^e"
+            | LF.Maybe -> "^i"
+          end
 
     (* Computation-level *)
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
       | Comp.Ctype _ -> fprintf ppf "ctype"
       | Comp.PiKind (_, (ctyp_decl, _dep), cK) ->
-          let cond = lvl > 0 in
+          let cond = lvl > 0 in 
+          begin
             fprintf ppf "@[<1>%s%a@ %a%s@]"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
               (fmt_ppr_cmp_kind (LF.Dec(cD, ctyp_decl)) 1) cK
               (r_paren_if cond)
-
+          end
 
     let fmt_ppr_meta_typ cD lvl ppf = function
       | Comp.MetaTyp (tA, cPsi) ->
@@ -1291,7 +1246,7 @@ module Int = struct
               (l_paren_if cond)
               (R.render_name x);
             fprintf ppf "%a%s"
-              (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.MDeclOpt x)) (Whnf.cnormCtx (cG, LF.MShift 1)) 0) e
+              (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.DeclOpt x)) (Whnf.cnormCtx (cG, LF.MShift 1)) 0) e
               (r_paren_if cond);
 
       | Comp.Pair (_, e1, e2) ->
@@ -1383,7 +1338,7 @@ module Int = struct
           (Comp.Equal (loc, i1', i2'), [])
       | _ -> (i, [])
     and implicitCompArg tau = begin match tau with
-      | Comp.TypPiBox ((LF.MDecl (_,_,_,LF.Maybe)), tau) -> (*?*)
+      | Comp.TypPiBox ((LF.Decl (_, LF.MTyp (_,_, LF.Maybe))), tau) ->
           (false)::(implicitCompArg tau)
       | Comp.TypPiBox (_ , tau) ->
           (true)::(implicitCompArg tau)
@@ -1604,10 +1559,8 @@ module Int = struct
       | LF.CObj (cPsi) ->
           let psi    =
             begin match decl with
-              | LF.CDecl(psi, _ , _) -> psi
-              | LF.MDeclOpt psi -> psi (* this is because we are cheating when
-                                          printing an mlam *)
-              | LF.CDeclOpt psi -> psi
+              | LF.Decl(psi, LF.CTyp (_ , _)) -> psi
+              | LF.DeclOpt psi -> psi 
             end in
           fprintf ppf "%a = %s"
             (fmt_ppr_lf_dctx cD lvl) cPsi
@@ -1617,8 +1570,8 @@ module Int = struct
           let cPsi = phatToDCtx psihat in
           let u    =
             begin match decl with
-              | LF.MDecl(u, _ , _ , _ ) -> u
-              | LF.MDeclOpt u -> u
+              | LF.Decl(u, LF.MTyp (_ , _, _) ) -> u
+              | LF.DeclOpt u -> u
             end in
           fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
@@ -1629,9 +1582,8 @@ module Int = struct
           let cPsi = phatToDCtx psihat in
           let p =
             begin match decl with
-              | LF.PDecl(p, _ , _ , _) -> p
-              | LF.PDeclOpt p -> p
-              | LF.MDeclOpt u -> u
+              | LF.Decl(p, LF.PTyp (_ , _, _) ) -> p
+              | LF.DeclOpt p -> p
             end in
           fprintf ppf "%a |- %a = #%s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
@@ -1722,6 +1674,11 @@ module Int = struct
     let typToString cD cPsi sA    =
       let tA = Whnf.normTyp sA in
         fmt_ppr_lf_typ cD cPsi std_lvl str_formatter tA
+        ; flush_str_formatter ()
+
+    let mtypToString cD mtyp    =
+      (* let tA = Whnf.normTyp sA in *)
+        fmt_ppr_lf_mtyp cD str_formatter mtyp
         ; flush_str_formatter ()
 
     let typRecToString cD cPsi typrec_clo =

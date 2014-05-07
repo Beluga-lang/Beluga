@@ -2,7 +2,7 @@ datatype Empty : ctype #positive
  = 
  ;
 
-datatype D : ctype   #positive
+datatype D : ctype    #positive
  = 
  | Con :  (D -> Empty) -> D
 ;

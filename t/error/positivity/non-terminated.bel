@@ -1,6 +1,6 @@
-datatype Empty : ctype #positive
- = 
+datatype Empty : ctype    #positive =
  ;
+
 
 datatype D : ctype    #positive
  = 
@@ -13,5 +13,5 @@ fn d => case d of
    | Con f => f d
 ;
 
-let t2 : Empty = t1 (Con t1);
+% let t2 : Empty = t1 (Con t1); 
 

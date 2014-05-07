@@ -958,17 +958,17 @@ module Int = struct
               (r_paren_if cond)
 
     and fmt_ppr_lf_mtyp cD ppf = function
-      | LF.MTyp (tA, cPsi, _) ->
+      | LF.MTyp (tA, cPsi, dep) ->
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 2) tA
 
-      | LF.PTyp (tA, cPsi, _) ->
+      | LF.PTyp (tA, cPsi, dep) ->
           fprintf ppf "#[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 2) tA 
 
-      | LF.STyp (cPhi, cPsi, _) ->
+      | LF.STyp (cPhi, cPsi, dep) ->
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi
@@ -983,6 +983,7 @@ module Int = struct
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
       | LF.Decl (u, mtyp) ->
+          if not !Control.printImplicit && (isInferred mtyp) then fprintf ppf "" else
           fprintf ppf "{%s :: %a}%s"
             (R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
@@ -991,6 +992,29 @@ module Int = struct
       | LF.DeclOpt name ->
           fprintf ppf "{%s :: _ }"
             (R.render_name name)
+
+    and isInferred = function
+      | LF.MTyp (_, _, dep) ->
+          begin match dep with
+            | LF.No -> false
+            | LF.Maybe -> true
+          end
+      | LF.PTyp (_, _, dep) ->
+          begin match dep with
+            | LF.No -> false
+            | LF.Maybe -> true
+          end
+
+      | LF.STyp (_, _, dep) ->
+          begin match dep with
+            | LF.No -> false
+            | LF.Maybe -> true
+          end
+      | LF.CTyp (_, dep) ->
+          begin match dep with
+            | LF.No -> false
+            | LF.Maybe -> true
+          end
 
     and dependent_string = function
       | LF.MTyp (_, _, dep) ->

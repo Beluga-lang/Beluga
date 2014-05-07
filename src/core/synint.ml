@@ -40,8 +40,8 @@ module LF = struct
 
 
   and normal =                                (* normal terms                   *)
-    | Lam  of Loc.t * name * normal    (* M ::= \x.M                     *)
-    | Root of Loc.t * head * spine     (*   | h . S                      *)
+    | Lam  of Loc.t * name * normal           (* M ::= \x.M                     *)
+    | Root of Loc.t * head * spine            (*   | h . S                      *)
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
 
@@ -377,10 +377,16 @@ end
 (** Internal Signature Syntax *)
 module Sgn = struct
 
+  (* type positivity_flag =  *)
+  (*   | Noflag *)
+  (*   | Positivity *)
+  (*   | Stratify of Loc.t * Comp.order * name * (name option) list  *)
+
+
   type decl =
     | Typ           of cid_typ  * LF.kind
     | Const         of cid_term * LF.typ
-    | CompTyp       of Loc.t * name * Comp.kind
+    | CompTyp       of Loc.t * name * Comp.kind  * bool (*true for positivity checking*)
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ

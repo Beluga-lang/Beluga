@@ -1,0 +1,4 @@
+datatype A: ctype #positive
+=
+ | A1: ((A -> A) -> A) -> A % fail
+;

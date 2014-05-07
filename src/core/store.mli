@@ -60,11 +60,12 @@ module Cid : sig
       name               : name;
       implicit_arguments : int;
       kind               : Comp.kind;
+      positivity         : bool;
       mutable frozen             : bool;
       mutable constructors : cid_comp_const list
     }
 
-    val mk_entry  : name -> Comp.kind -> int -> entry
+    val mk_entry  : name -> Comp.kind -> int ->  bool -> entry
 
     val add           : entry -> cid_comp_typ
     val get           : cid_comp_typ -> entry
@@ -99,8 +100,7 @@ module Cid : sig
     type entry = private {
       name               : name;
       implicit_arguments : int;
-      typ                : Comp.typ
-    }
+      typ                : Comp.typ    }
 
     val mk_entry      : name -> Comp.typ -> int -> entry
     val add           : cid_comp_typ -> entry -> cid_comp_const

@@ -16,17 +16,17 @@ letv  : term T1 -> (term T1 -> term T2) -> term T2.
 schema ctx = term T;
 
 
-rec eval : [. term T] -> [. term T] =
+rec eval : [ |- term T] -> [ |- term T] =
 fn e => case e of
-| [. app E1 E2] =>
-  let [. (lam \x. E' x)] = eval [. E1] in
+| [ |- app E1 E2] =>
+  let [ |- (lam \x. E' x)] = eval [ |- E1] in
   % Note: typing guarantees this is the only possible case
-  let [. V2]             = eval [. E2] in
-   eval [. E' V2]
+  let [ |- V2]             = eval [ |- E2] in
+   eval [ |- E' V2]
 
-| [. lam \x. E x] => e
-| [. letv E (\x. E' x)] =>
-  let [. V] = eval [. E] in
-    eval [. E' V]
+| [ |- lam \x. E x] => e
+| [ |- letv E (\x. E' x)] =>
+  let [ |- V] = eval [ |- E] in
+    eval [ |- E' V]
 
 ;

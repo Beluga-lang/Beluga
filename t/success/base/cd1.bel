@@ -6,22 +6,22 @@ list : nat -> type.
 nil : list z.
 cons : list N -> list (suc N).
 
-rec nillist : [. list z] -> [. nat] = fn e =>
+rec nillist : [ |- list z] -> [ |- nat] = fn e =>
   case e of
-  | [. nil]         => [. z]
+  | [ |- nil]         => [ |- z]
 ;
 
-rec nillist : [. list z] -> [. nat] = fn e =>
+rec nillist : [ |- list z] -> [ |- nat] = fn e =>
   case e of
-  | [. nil]         => (case e of [. nil] => [. z])
-  | [. nil]         => [. z]
-  | [. nil]         => [. suc (suc (suc (suc (suc (suc (suc (suc (suc (suc z)))))))))]
+  | [ |- nil]         => (case e of [ |- nil] => [ |- z])
+  | [ |- nil]         => [ |- z]
+  | [ |- nil]         => [ |- suc (suc (suc (suc (suc (suc (suc (suc (suc (suc z)))))))))]
 ;
 
 
 % following rejected by reconstruction, doesn't reach coverage
 %not
-rec nillistBad : [. list z] -> [. nat] = fn e =>
+rec nillistBad : [ |- list z] -> [ |- nat] = fn e =>
   case e of
-  | [. cons U]        => [. z]
+  | [ |- cons U]        => [ |- z]
 ;

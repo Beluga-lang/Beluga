@@ -3,33 +3,33 @@ z: nat.
 s: nat -> nat.
 
 datatype NatPair: ctype =
-| Pair: [. nat] -> [. nat] -> NatPair
+| Pair: [ |- nat] -> [ |- nat] -> NatPair
 ;
 
 rec copy : NatPair -> NatPair =
 fn n => case n of
-| Pair [. z] [. z] => n
-| Pair [. z] [. s M] => let Pair [. N'] [. M'] = copy (Pair [.z] [. M]) in
-                         Pair [. z] [. s M']
-| Pair [. s N] [. s M] => let Pair [. N'] [. M'] = copy (Pair [. N] [. M]) in
-			 Pair [. s N'] [. s M']
-| Pair [. s N] [. z] => let Pair [. N'] [. M'] = copy (Pair [. N] [. z]) in
-                         Pair [. s N'] [.z]
+| Pair [ |- z] [ |- z] => n
+| Pair [ |- z] [ |- s M] => let Pair [ |- N'] [ |- M'] = copy (Pair [ |- z] [ |- M]) in
+                         Pair [ |- z] [ |- s M']
+| Pair [ |- s N] [ |- s M] => let Pair [ |- N'] [ |- M'] = copy (Pair [ |- N] [ |- M]) in
+			 Pair [ |- s N'] [ |- s M']
+| Pair [ |- s N] [ |- z] => let Pair [ |- N'] [ |- M'] = copy (Pair [ |- N] [ |- z]) in
+                         Pair [ |- s N'] [ |- z]
 ;
 
 %{
 rec copy2 : NatPair -> NatPair =
 fn n => case n of
-| Pair [. z] [. z] => n
-| Pair [. z] [. s M] => case  copy2 Pair [.z] [. M] of
-                           | Pair [. N'] [. M']  =>
-			    Pair [. z] [. s M']
-| Pair [. s N] [. s M] => case  copy2 (Pair [. N] [. M]) of
-                          | Pair [. N'] [. M'] =>
-			 Pair [. s N'] [. s M']
-| Pair [. s N] [. z] => case copy2 (Pair [. N] [. z]) of
-                          | Pair [. N'] [. M'] =>
-                         Pair [. s N'] [.z]
+| Pair [ |- z] [ |- z] => n
+| Pair [ |- z] [ |- s M] => case  copy2 Pair [ |- z] [ |- M] of
+                           | Pair [ |- N'] [ |- M']  =>
+			    Pair [ |- z] [ |- s M']
+| Pair [ |- s N] [ |- s M] => case  copy2 (Pair [ |- N] [ |- M]) of
+                          | Pair [ |- N'] [ |- M'] =>
+			 Pair [ |- s N'] [ |- s M']
+| Pair [ |- s N] [ |- z] => case copy2 (Pair [ |- N] [ |- z]) of
+                          | Pair [ |- N'] [ |- M'] =>
+                         Pair [ |- s N'] [ |- z]
 ;
 
 }%

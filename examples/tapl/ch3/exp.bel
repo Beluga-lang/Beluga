@@ -19,10 +19,10 @@ iszero: term -> term.
 
 % Examples : Valid Terms
 
-let v1 = [. switch false true (switch true false true)] ;
+let v1 = [ |- switch false true (switch true false true)] ;
 
 
 %not
-let w2 = [. switch true false] ;
+let w2 = [ |- switch true false] ;
 
 

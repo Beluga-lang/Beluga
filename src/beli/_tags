@@ -1,1 +1,0 @@
-<main.{byte,native}> : package(camlp4), package(dynlink), package(extlib), package(unix), package(ulex)

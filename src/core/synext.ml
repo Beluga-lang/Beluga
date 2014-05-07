@@ -197,7 +197,7 @@ module Comp = struct
 
  type total_dec = Total of Loc.t * order * name * (name option) list
 
- type rec_fun = RecFun of name * total_dec option * typ * exp_chk
+ type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
 
  type  kind =
    | Ctype of Loc.t
@@ -233,7 +233,10 @@ end
 
 (** External Signature Syntax *)
 module Sgn = struct
-
+  type positivity_flag = 
+    | Positivity
+    | Stratify of int
+    (* | Stratify of Loc.t * Comp.order * name * (name option) list  *)
 
   type pragma =
     | OptsPrag of string list
@@ -243,7 +246,7 @@ module Sgn = struct
   type decl =
     | Const    of Loc.t * name * LF.typ
     | Typ      of Loc.t * name * LF.kind
-    | CompTyp  of Loc.t * name * Comp.kind
+    | CompTyp  of Loc.t * name * Comp.kind  * positivity_flag option
     | CompCotyp of Loc.t * name * Comp.kind
     | CompConst of Loc.t * name * Comp.typ
     | CompDest of Loc.t * name * Comp.typ

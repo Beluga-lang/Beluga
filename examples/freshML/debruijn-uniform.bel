@@ -42,34 +42,36 @@ all'   : obj' typ -> obj' typ.
 
 schema ctx = some [a:term_or_typ] obj a ;
 
-rec vhoas2db : {g:ctx}{#p: [g. obj S]} [. obj' S] = / total g (vhoas2db g _ _ ) /
-mlam g => mlam #p => case [g.#p ..] of
-| [h,x:obj S. x] => [. one]
 
-| [h,x:obj T. #p ..]  =>
-  let [. Db] = vhoas2db [h] [h. #p ..] in [. shift Db]
+rec vhoas2db: {g:ctx} {#p: [g |- obj S]}[ |- obj' S] = / total g (vhoas2db g _ _) /
+mlam g => mlam #p => case [g |- #p ..] of  
+| [h,x:obj S |-  x] => [ |- one]
+
+| % {#p:[h |- obj S]}
+  [h,x:obj T |-  #p ..]  =>
+  let [ |- Db] = vhoas2db [h] [h |- #p ..] in [ |- shift Db]
 ;
 
-rec hoas2db : (g:ctx) [g. obj S]  -> [. obj' S] = / total g (hoas2db g _ ) /
+rec hoas2db : (g:ctx) [g |- obj S]  -> [ |- obj' S] = / total x (hoas2db _ _ x) /
 fn v =>  case v of
-| [g. #p ..] => vhoas2db [g] [g.#p ..]
-| [g. lam (\x. E .. x)] =>
-  let [. F]  =  hoas2db [g,x:obj _. E .. x] in
-    [. lam' F]
+| [g |- #p ..] => vhoas2db [g] [g |- #p ..]
+| [g |- lam (\x. E .. x)] =>
+  let [ |- F]  =  hoas2db [g,x:obj _ |-  E .. x] in
+    [ |- lam' F]
 
-| [g. app (E1 .. ) (E2 .. )] =>
-  let [. F1] = hoas2db [g. E1 ..]  in
-  let [. F2] = hoas2db [g. E2 ..]  in [. app' F1 F2]
+| [g |- app (E1 .. ) (E2 .. )] =>
+  let [ |- F1] = hoas2db [g |- E1 ..]  in
+  let [ |- F2] = hoas2db [g |- E2 ..]  in [ |- app' F1 F2]
 
-| [g. nat]               => [. nat']
+| [g |- nat]               => [ |- nat']
 
-| [g. arr (T ..) (S ..)]   =>
-  let [. T'] = hoas2db [g. T ..] in
-  let [. S'] = hoas2db [g. S ..] in [. arr' T' S']
+| [g |- arr (T ..) (S ..)]   =>
+  let [ |- T'] = hoas2db [g |- T ..] in
+  let [ |- S'] = hoas2db [g |- S ..] in [ |- arr' T' S']
 
-| [g. all \a. T .. a] =>
-  let [. T'] = hoas2db [g, a:obj typ. T .. a] in
-    [. all' T']
+| [g |- all \a. T .. a] =>
+  let [ |- T'] = hoas2db [g, a:obj typ |-  T .. a] in
+    [ |- all' T']
 
 ;
 

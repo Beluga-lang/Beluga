@@ -17,6 +17,11 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 type error =
   | UnexpectedSucess
   | IllegalOptsPrag
+  | TotalDeclError of name * name 
+  | MutualTotalDecl of name
+  | MutualTotalDeclAfter of name
+  | NoPositive of string
+  | Unimplemented 
 
 exception Error of Syntax.Loc.t * error
 
@@ -27,7 +32,18 @@ let _ = Error.register_printer
 	| UnexpectedSucess ->
 	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
         | IllegalOptsPrag ->
-          Format.fprintf ppf "%%opts pragma can only appear before any declarations."))
+          Format.fprintf ppf "%%opts pragma can only appear before any declarations."
+	| TotalDeclError (f, f') -> 
+	  Format.fprintf ppf "Expected totalilty declaration for %s \nFound totality declaration for %s\n" 
+	    (R.render_name f) (R.render_name f')
+	| MutualTotalDecl f -> 
+	  Format.fprintf ppf "All functions in a mutual function declaration must be declared total.\nFunction %s does not have a totality declaration.\n" (R.render_name f)
+	| MutualTotalDeclAfter f -> 
+	  Format.fprintf ppf "Function %s has a totality declaration, but not all mutually recursive functions have a totality declaration.\n" (R.render_name f)
+   	| NoPositive n -> 
+	  Format.fprintf ppf "Positivity checking of constructor %s fails." n
+    )
+  )
 
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
@@ -48,7 +64,7 @@ let freeze_from_name tau = match tau with
   |Ext.Sgn.Typ ( _, n, _) ->  let a = Typ.index_of_name n in
                                Typ.freeze a;
                                ()
-  |Ext.Sgn.CompTyp (_, n, _) -> let a =   CompTyp.index_of_name n in
+  |Ext.Sgn.CompTyp (_, n, _, _) -> let a =   CompTyp.index_of_name n in
                                CompTyp.freeze a;
                                ()
    |Ext.Sgn.CompCotyp (_, n, _) -> let a =   CompCotyp.index_of_name n in
@@ -101,7 +117,7 @@ and recSgnDecl d =
 					fun () -> Check.Comp.checkTyp cD tau)) in
         let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
 
-    | Ext.Sgn.CompTyp (_ , a, extK) ->
+    | Ext.Sgn.CompTyp (_ , a, extK, pflag) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -122,7 +138,16 @@ and recSgnDecl d =
             fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
 	    dprint (fun () ->  "\nDOUBLE CHECK for data type constant " ^a.string_of_name ^
             " successful!");
-        let _a = CompTyp.add (CompTyp.mk_entry a cK' i) in
+
+	(* let p = match pflag with  *)
+	(*   | None -> Int.Sgn. Noflag  *)
+	(*   | Some Ext. Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args)  *)
+	(*         -> Int.Sgn.Stratify   (_loc, x, Id.mk_name (Id.SomeString r), args)  *)
+	(*   | Some _ -> Int.Sgn.Positivity *)
+ 
+	let p = match pflag with | None -> false | Some _ -> true in
+
+        let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
           (if (!Debug.chatter) == 0 then ()
           else (Format.printf "\ndatatype %s : @[%a@] = \n"
                  (a.string_of_name)
@@ -153,7 +178,7 @@ and recSgnDecl d =
         let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in ()
 
 
-    | Ext.Sgn.CompConst (_ , c, tau) ->
+    | Ext.Sgn.CompConst (loc , c, tau) ->
         let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -170,6 +195,18 @@ and recSgnDecl d =
 	let _         = (Monitor.timer ("Data-type Constant: Type Check",
 					fun () -> Check.Comp.checkTyp cD tau'))
         in	let cid_ctypfamily = get_target_cid_comptyp tau' in
+
+	let flag = (CompTyp.get cid_ctypfamily).CompTyp.positivity in
+	(* match flag with *)
+	(*   | Int.Sgn.Noflag     -> ()  *)
+	(*   | Int.Sgn.Positivity ->  if Total.positive cid_ctypfamily tau' then () *)
+	(*                            else raise (Error (loc, (NoPositive c.string_of_name))) *)
+	(*   | Int.Sgn.Stratify   -> raise  (Error (loc, (Unimplemented c.string_of_name))) *)	     
+	(* ; *)
+	(if flag then if Total.positive cid_ctypfamily tau' then () 
+                               else raise (Error (loc, (NoPositive c.string_of_name)))
+	else () );
+
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
           (if (!Debug.chatter) == 0 then ()
            else (Format.printf " | %s : @[%a@] \n"
@@ -359,17 +396,21 @@ and recSgnDecl d =
           match order with
             | Ext.Comp.Arg x -> x
         in
-        let mk_total_decl (Ext.Comp.Total (loc, order, _f, args)) =
-          match order with
-            | Ext.Comp.Arg x ->
-                 let p = pos loc x args 1 in (Order.Arg p , args)
+        let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
+	  if f = f' then 
+            match order with
+              | Ext.Comp.Arg x ->
+                let p = pos loc x args 1 in (Order.Arg p , args)
+	  else 
+	    raise (Error (loc, TotalDeclError (f, f')))
+	    
         in
         let is_total total =
           match total with None -> false | Some _ -> true in
 
-        let rec preprocess l = match l with
+        let rec preprocess l m = match l with
           | [] -> (Int.LF.Empty, Var.create (), [])
-          | Ext.Comp.RecFun (f, total, tau, _e) :: lf ->
+          | Ext.Comp.RecFun (loc, f, total, tau, _e) :: lf ->
               let apx_tau = Index.comptyp  tau in
               let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
               let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
@@ -385,20 +426,33 @@ and recSgnDecl d =
               let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
               let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
               let _       = FCVar.clear () in
-              let (cG, vars, n_list) = preprocess lf in
                 (* check that names are unique ? *)
                 (begin match total with
-                  | None -> ()
+                  | None -> 
+		    if !Total.enabled then 
+		      raise (Error (loc, MutualTotalDecl f))
+		    else 
+		      () 
                   | Some t ->
-                      (Coverage.enableCoverage := true;
-                       Total.enabled := true;
-                       Total.extend_dec (Total.make_dec f tau' (mk_total_decl t)))
-                end ;
-                (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
+		    if !Total.enabled then 
+		      (print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); 
+	   	      Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
+		    else 
+		      (if m = 1 then 
+			  (Coverage.enableCoverage := true;
+			   Total.enabled := true;
+			   print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); 
+			   Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
+		       else			  
+			  raise (Error (loc, MutualTotalDeclAfter f))
+		      )
+                 end ;
+		 let (cG, vars, n_list) = preprocess lf (m+1) in
+                 (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
 
         in
 
-        let (cG , vars', n_list ) = preprocess recFuns in
+        let (cG , vars', n_list ) = preprocess recFuns 1 in
 
         let reconFun f  e =
           let apx_e   = Index.exp vars' e in
@@ -441,7 +495,7 @@ and recSgnDecl d =
           | [] ->   (Coverage.enableCoverage := false ;
                      Total.enabled := false;
                      ())
-          | Ext.Comp.RecFun (f, total, _tau, e) :: lf ->
+          | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f  e in
             if !Debug.chatter <> 0 then
               Printf.printf  "and %s : %s =\n %s\n"
@@ -470,7 +524,7 @@ and recSgnDecl d =
    we should check all functions together by creating a variable
    which collects all total declarations *)
           begin match recFuns with
-          | Ext.Comp.RecFun (f, total, _tau, e) :: lf ->
+          | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f e in
             if !Debug.chatter <> 0 then
               Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"

@@ -1,4 +1,4 @@
-exp: type.
+exp: type. %name exp E.
 lam: (exp -> exp) -> exp.
 app: exp -> exp -> exp.
 z: exp.
@@ -6,18 +6,19 @@ s: exp -> exp.
 
 schema ctx = exp;
 
-datatype IsExp : {g:ctx} [g. exp] -> ctype =
-| IsZero : (g:ctx) IsExp [g] [g. z]
-| IsSuc : (g:ctx) IsExp [g] [g. M ..] -> IsExp [g] [g. s (M ..)]
-| IsVar : (g:ctx) IsExp [g] [g. #p..]
-| IsApp: (g:ctx) IsExp [g] [g. M..] -> IsExp [g] [g. N ..]
-         -> IsExp [g] [g. app (M ..) (N ..)]
+datatype IsExp : {g:ctx} [g |- exp] -> ctype % positive 
+=
+| IsZero : (g:ctx) IsExp [g] [g |- z]
+| IsSuc : (g:ctx) IsExp [g] [g |- M ..] -> IsExp [g] [g |- s (M ..)]
+| IsVar : (g:ctx) IsExp [g] [g |- #p..]
+| IsApp: (g:ctx) IsExp [g] [g |- M..] -> IsExp [g] [g |- N ..]
+         -> IsExp [g] [g |- app (M ..) (N ..)]
 
-| IsLam: (g:ctx) IsExp [g,x:exp] [g,x. M .. x] -> IsExp [g] [g. lam \x. M .. x ]
+| IsLam: (g:ctx) IsExp [g,x:exp] [g,x |- M .. x] -> IsExp [g] [g |- lam \x. M .. x ]
 ;
 
 
-rec copy : (g:ctx)IsExp [g] [g.M..] -> IsExp [g] [g. M ..] =
+rec copy : (g:ctx)IsExp [g] [g |- M..] -> IsExp [g] [g |- M ..] =
 fn e => case e of
  | IsZero => IsZero
  | IsSuc m => IsSuc (copy m)

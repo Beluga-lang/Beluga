@@ -7,18 +7,18 @@ s   : exp nat -> exp nat.
 
 schema expCtx = some [t:tp] exp t;
 
-rec cntV : {g:expCtx}  [g, xxx : exp (T ..). exp (S .. xxx)] -> [. exp nat] =
+rec cntV : {g:expCtx}  [g, xxx : exp (T ..) |-  exp (S .. xxx)] -> [ |- exp nat] =
 mlam g =>
  fn e =>
   case e of  % e : exp (S .. x) [g, x:exp (T ..)]
 
-  | [g, xx: exp (TTT ..) . zero]           => [. zero]
+  | [g, xx: exp (TTT ..)  |-  zero]           => [ |- zero]
 
-  | [g, xx : exp _ . #p ..]    => [. zero]
+  | [g, xx : exp _  |-  #p ..]    => [ |- zero]
 
-  | [g,x : exp _ . x]           => [. zero]
+  | [g,x : exp _  |-  x]           => [ |- zero]
 
 %  | [g,x : exp _ ] U ..  => [ ] zero
 
-  | [g,x : exp _ . s (W .. x)]  => [. zero]
+  | [g,x : exp _  |-  s (W .. x)]  => [ |- zero]
 ;

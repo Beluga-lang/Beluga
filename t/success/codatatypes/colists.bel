@@ -5,7 +5,7 @@ datatype nat : type =
 
 datatype MuColist : ctype =
 | Nil : MuColist
-| Cons : [. nat] -> NuColist -> MuColist
+| Cons : [ |- nat] -> NuColist -> MuColist
 
 and codatatype NuColist : ctype =
 | Out : NuColist -> MuColist
@@ -13,7 +13,7 @@ and codatatype NuColist : ctype =
 
 datatype List : ctype =
 | Lnil : List
-| Lcons : [. nat] -> List -> List
+| Lcons : [ |- nat] -> List -> List
 ;
 
 rec append : List -> NuColist -> NuColist =
@@ -22,7 +22,7 @@ fn e => fn f => case e of
 | Lcons g h => (cofun Out => Cons g (append h f))
 ;
 
-rec zipWith : ([. nat] -> [. nat] -> [. nat]) -> NuColist -> NuColist -> NuColist =
+rec zipWith : ([ |- nat] -> [ |- nat] -> [ |- nat]) -> NuColist -> NuColist -> NuColist =
 fn f => fn xs => fn ys => cofun Out => (case Out xs of
 | Nil => Nil
 | Cons x xs' => (case Out ys of

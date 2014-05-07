@@ -8,9 +8,9 @@ rec copynat1 : {g:(w)*} nat[g] -> nat[g] =
     FN g => fn e => copynat1 [g] e;
 
 }%
-rec copynat : {g:w} [g. nat] -> [g. nat] =
+rec copynat : {g:w} [g |- nat] -> [g |- nat] =
   mlam g =>  fn e => case e of
-    | [g. #p ..] => [g. #p ..]
-    | [g. z]    =>  [g. z]
-    | [g. suc (U ..)] => copynat [g] [g. (U .. )]
+    | [g |- #p ..] => [g |- #p ..]
+    | [g |- z]    =>  [g |- z]
+    | [g |- suc (U ..)] => copynat [g] [g |- (U .. )]
 ;

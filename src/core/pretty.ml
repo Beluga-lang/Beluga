@@ -958,19 +958,19 @@ module Int = struct
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
       | LF.MDecl (u, tA, cPsi) ->
-          fprintf ppf "{%s :: [%a. %a]}"
+          fprintf ppf "{%s :: [%a |- %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 2) tA
 
       | LF.PDecl (p, tA, cPsi) ->
-          fprintf ppf "{#%s :: [%a.%a]}"
+          fprintf ppf "{#%s :: [%a |- %a]}"
             (R.render_name p)
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 2) tA
 
       | LF.SDecl (u, cPhi, cPsi) ->
-          fprintf ppf "{%s :: [%a. %a]}"
+          fprintf ppf "{%s :: [%a |- %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi
@@ -1012,7 +1012,7 @@ module Int = struct
 
     let fmt_ppr_meta_typ cD lvl ppf = function
       | Comp.MetaTyp (tA, cPsi) ->
-          fprintf ppf "[%a.%a]"
+          fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_typ cD cPsi lvl) tA
       | Comp.MetaSchema (s_cid) ->
@@ -1037,14 +1037,14 @@ module Int = struct
       | Comp.MetaObj (_, phat, tM) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx phat in
-            fprintf ppf "%s[%a. %a]%s"
+            fprintf ppf "%s[%a |- %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)
       | Comp.MetaObjAnn (_, cPsi, tM) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a. %a]%s"
+            fprintf ppf "%s[%a |- %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
@@ -1052,7 +1052,7 @@ module Int = struct
       | Comp.MetaSObj (_, phat, s) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx phat in
-            fprintf ppf "%s[%a. $ %a]%s"
+            fprintf ppf "%s[%a |- $ %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) s
@@ -1090,17 +1090,17 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.TypBox (_, Comp.MetaTyp(tA, cPsi)) ->
-          fprintf ppf "[%a. %a]"
+          fprintf ppf "[%a |- %a]"
                 (fmt_ppr_lf_dctx cD 0) cPsi
                 (fmt_ppr_lf_typ cD cPsi 2) tA
 
       | Comp.TypBox (_, Comp.MetaParamTyp (tA, cPsi)) ->
-          fprintf ppf "#[%a. %a]"
+          fprintf ppf "#[%a |- %a]"
                 (fmt_ppr_lf_dctx cD 0) cPsi
                 (fmt_ppr_lf_typ cD cPsi 2) tA
 
       | Comp.TypBox (_, Comp.MetaSubTyp(cPhi, cPsi)) ->
-          fprintf ppf "[%a. %a]"
+          fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi
 
@@ -1159,7 +1159,7 @@ module Int = struct
       function
       | Comp.PatEmpty (_, cPsi) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a. {}]%s"
+            fprintf ppf "%s[%a |- {}]%s"
               (l_paren_if cond)
               (fmt_ppr_lf_dctx cD 0) cPsi
               (r_paren_if cond)
@@ -1469,7 +1469,7 @@ module Int = struct
           let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
           let cG_ext = Context.append cG_t cG' in
 
-          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ . %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
              (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_cmp_gctx cD1' 0) cG'
              (fmt_ppr_pat_obj cD1' cG' 0) pat
@@ -1496,7 +1496,7 @@ module Int = struct
           in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
 (*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a. %a])@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a |- %a])@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
               (ppr_ctyp_decls ) cD1'
               (fmt_ppr_lf_dctx cD1' 0) cPsi
               (fmt_ppr_pattern cD1' cPsi) pattern
@@ -1555,7 +1555,7 @@ module Int = struct
               | LF.MDecl(u, _ , _ ) -> u
               | LF.MDeclOpt u -> u
             end in
-          fprintf ppf "%a . %a = %s"
+          fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_normal cD cPsi lvl) m
             (R.render_name u)
@@ -1568,20 +1568,20 @@ module Int = struct
               | LF.PDeclOpt p -> p
               | LF.MDeclOpt u -> u
             end in
-          fprintf ppf "%a . %a = #%s"
+          fprintf ppf "%a |- %a = #%s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_head cD cPsi lvl) h
             (R.render_name p)
 
       | LF.SObj (phat, sigma) ->
           let cPsi = phatToDCtx phat in
-          fprintf ppf "%a . %a = #SVAR"
+          fprintf ppf "%a |- %a = #SVAR"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_sub cD cPsi lvl) sigma
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->
-          fprintf ppf "."
+          fprintf ppf "|-"
 
       | LF.Dec (cG, Comp.CTypDecl (x, tau)) ->
           fprintf ppf "%a, %s: %a"

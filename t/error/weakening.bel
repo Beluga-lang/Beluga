@@ -5,16 +5,16 @@ s: term -> term.
 schema ctx = term ;
 
 
-rec test : [x:term. term] -> [x:term. term] =
+rec test : [x:term |-  term] -> [x:term |-  term] =
 fn t => case t of
-| [h,x:term. U .. x] => [x:term. x]
+| [h,x:term |-  U .. x] => [x:term |-  x]
 
 ;
 
 
-rec test' : [. term] -> [. term] =
+rec test' : [ |- term] -> [ |- term] =
 fn t => case t of
-| [h. U ..]  => [. z]
+| [h |- U ..]  => [ |- z]
 
 ;
 

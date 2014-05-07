@@ -69,16 +69,16 @@ tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
 
 schema expCtx = exp ;
 
-rec synth : {g:expCtx} {E : [g. exp]} [. oft-option] =
+rec synth : {g:expCtx} {E : [g |- exp]} [ |- oft-option] =
   mlam g => mlam E =>
-     [. none]
-and check : {g:expCtx} {E : [g. exp]} {T : [. tp]} [. boolean] =
+     [ |- none]
+and check : {g:expCtx} {E : [g |- exp]} {T : [ |- tp]} [ |- boolean] =
   mlam g => mlam E => mlam T =>
-    [. false]
+    [ |- false]
 ;
 
 let r1 = (check []) ;
-let r2 = (check []) [. suc (suc z)];
-let r3 = (check []) [. suc (suc z)] [. even];
-let r4 = r2 [. even];
-let r5 = r1 [. suc (suc z)] [. even];
+let r2 = (check []) [ |- suc (suc z)];
+let r3 = (check []) [ |- suc (suc z)] [ |- even];
+let r4 = r2 [ |- even];
+let r5 = r1 [ |- suc (suc z)] [ |- even];

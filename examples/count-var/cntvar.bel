@@ -31,31 +31,33 @@ schema inCtx' = block (i:int, x:exp nat) ;
 
 rec add : Int -> Int -> Int = ? ;
 
-rec count : (g:expCtx) [g. exp T] -> Int =
+rec count : (g:expCtx) [g |- exp T] -> Int =
 fn e => case e of
-| [g. #p ..] => Zero  % variable
-| [g . z] => Zero
-| [g . s (E ..) ] => count [g. E ..]
-| [g . letv T1 (E1 ..) (\x.E2 .. x) ] =>
-  let x = count [g. E1 ..] in
-  let y = count [g, x:exp _ . E2 .. x] in
+| [g |- #p ..] => Zero  % variable
+| [g |- z] => Zero
+| [g |- s (E ..) ] => count [g |- E ..]
+| [g |- letv T1 (E1 ..) (\x.E2 .. x) ] =>
+  let x = count [g |- E1 ..] in
+  let y = count [g, x:exp _ |- E2 .. x] in
   Suc (add x y)
 ;
 
 
 
+
 %{
 rec plus : [. exp nat] -> [. exp nat] -> [. exp nat] =
+
 fn x => fn y =>
 case x of
-  [. z]    => y
+  [ |- z]    => y
 
-| [. s U]  =>
-  let [. V] = plus [. U] y in [. s V]
+| [ |- s U]  =>
+  let [ |- V] = plus [ |- U] y in [ |- s V]
 
 % formerly missing cases (jd 2010-05-23):
-| [. add U V] => plus [. U] [. V]
-| [. W] => let [. V] = y in [. add W V]
+| [ |- add U V] => plus [ |- U] [ |- V]
+| [ |- W] => let [ |- V] = y in [ |- add W V]
 ;
 
 % G, x:exp T |-  z  ==>  0
@@ -68,25 +70,25 @@ case x of
 % if  G, x: exp T |-  U .. x ==> n1
 % if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
 
-rec cntV : {g:expCtx}  [g, x:exp (T ..). exp (S .. x)] -> [. exp nat] =
+rec cntV : {g:expCtx}  [g, x:exp (T ..) |-  exp (S .. x)] -> [ |- exp nat] =
 mlam g =>
  fn e =>
   case e of  % e : exp (S .. x) [g, x:exp (T ..)]
 
-   | {T':[g. tp]}
-     [g,x : exp (T' ..) . tt]
-     => [. z]
+   | {T':[g |- tp]}
+     [g,x : exp (T' ..)  |-  tt]
+     => [ |- z]
 
-  | [g,x : exp _ . (#p .. )]    => [. z]
+  | [g,x : exp _  |-  (#p .. )]    => [ |- z]
 
-  | [g,x : exp _ . x]           => [. s z]
+  | [g,x : exp _  |-  x]           => [ |- s z]
 
 
-  | [g,x : exp _ . z]           => [. z]
+  | [g,x : exp _  |-  z]           => [ |- z]
 
-  | [g,x : exp _ . (U .. )]  => [. z]
+  | [g,x : exp _  |-  (U .. )]  => [ |- z]
 
-  | [g,x : exp _ . s (W .. x)]  => cntV [g] [g,x. (W .. x)]
+  | [g,x : exp _  |-  s (W .. x)]  => cntV [g] [g,x |- (W .. x)]
 %
 %
 %  NOT WORKING IF WE OMIT T1 ..  since from the pattern we simply infer
@@ -97,13 +99,13 @@ mlam g =>
 %                  (cntV [g, y:exp _ ]  ([g,y,x] (U2 .. x y)))
 
 
-   | [g,x : exp _ . letv (T1 ..)  (U1 .. x) (\y . (U2 .. x y))] =>
-      plus  (cntV [g]          [g,x. (U1 .. x)])
-            (cntV [g, y:exp _]  [g,y,x. (U2 .. x y)])
+   | [g,x : exp _  |-  letv (T1 ..)  (U1 .. x) (\y . (U2 .. x y))] =>
+      plus  (cntV [g]          [g,x |- (U1 .. x)])
+            (cntV [g, y:exp _]  [g,y,x |-  (U2 .. x y)])
 
 
-   | [g,x: exp _ . add (U .. x) (W .. x)]  =>
-     plus (cntV [g] [g,x. (U .. x)])
-          (cntV [g] [g,x. (W .. x)])
+   | [g,x: exp _  |-  add (U .. x) (W .. x)]  =>
+     plus (cntV [g] [g,x |- (U .. x)])
+          (cntV [g] [g,x |- (W .. x)])
 ;
 }%

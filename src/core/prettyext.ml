@@ -1004,7 +1004,7 @@ module Ext = struct
         R.render_name f ^ " " ^ args_to_string args ^ ") /"
 
     let fmt_ppr_cmp_rec lvl ppf = function
-      | Comp.RecFun (x, total, a, e) ->
+      | Comp.RecFun (_, x, total, a, e) ->
           fprintf ppf "rec %s : %a %s = @ %a"
             (R.render_name x)
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
@@ -1039,7 +1039,7 @@ module Ext = struct
             (fmt_ppr_cmp_kind LF.Empty lvl) k
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
 
-      | Sgn.CompTyp (_, x, k) ->
+      | Sgn.CompTyp (_, x, k, _) ->
           fprintf ppf "%s : %a.@.@?"
             (R.render_name  x)
             (fmt_ppr_cmp_kind LF.Empty lvl) k

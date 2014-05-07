@@ -18,72 +18,72 @@ embed : neut (atomic P) -> norm (atomic P).
 
 schema ctx = neut T;
 
-datatype TmVar : {g:tctx} [.tp] -> ctype =
-| TmVar : {#p:[g.tm T]} TmVar [g] [.T]
+datatype TmVar : {g:tctx} [ |- tp] -> ctype =
+| TmVar : {#p:[g |- tm T]} TmVar [g] [ |- T]
 ;
-datatype Sem : {g:ctx} [. tp] -> ctype =
-| Syn :  [g . neut (atomic P)] -> Sem [g] [ .atomic P]
-| Slam : {g:ctx}{A:[.tp]}{B:[.tp]}({h:ctx} {#W:g[h]} Sem [h] [ .A] -> Sem [h] [ . B])
-           -> Sem [g] [ . arr A B]
+datatype Sem : {g:ctx} [ |- tp] -> ctype =
+| Syn :  [g |- neut (atomic P)] -> Sem [g] [ |- atomic P]
+| Slam : {g:ctx}{A:[ |- tp]}{B:[ |- tp]}({h:ctx} {#W:g[h]} Sem [h] [ |- A] -> Sem [h] [ |- B])
+           -> Sem [g] [ |- arr A B]
 ;
 
-rec sem_wkn : {g:ctx} {h:ctx}{#W:g[h]} Sem [g] [. A] -> Sem [h] [.A] =
+rec sem_wkn : {g:ctx} {h:ctx}{#W:g[h]} Sem [g] [ |- A] -> Sem [h] [ |- A] =
 mlam g => mlam h => mlam #W => fn e =>
 case e of
-| Syn [g . R ..] => Syn ([h. R #W[..]])
-| Slam [g] [.A] [.B] f =>
-    Slam [h] [.A] [.B] (mlam h' => mlam #W2 => fn e => f [h'] [h' $ #W[#W2[..]]] e
+| Syn [g |- R ..] => Syn ([h |- R #W[..]])
+| Slam [g] [ |- A] [ |- B] f =>
+    Slam [h] [ |- A] [ |- B] (mlam h' => mlam #W2 => fn e => f [h'] [h' $ #W[#W2[..]]] e
     )
 ;
 
-rec extend : ({T:[.tp]} TmVar [g] [. T] -> Sem [h] [.T]) -> Sem [h] [.S]
--> ({T:[.tp]} TmVar [g, x:tm S] [. T] ->  Sem [h] [.T]) =
+rec extend : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) -> Sem [h] [ |- S]
+-> ({T:[ |- tp]} TmVar [g, x:tm S] [ |- T] ->  Sem [h] [ |- T]) =
 fn s => fn e => mlam T => fn x => case x of
-| TmVar [g,x:tm S. x] => e
-| TmVar [g,x:tm S. #q .. ] => s [. T ] (TmVar [g . #q ..])
+| TmVar [g,x:tm S |-  x] => e
+| TmVar [g,x:tm S |-  #q .. ] => s [ |- T ] (TmVar [g |- #q ..])
 ;
 
-rec eval : ({T:[.tp]} TmVar [g] [. T] -> Sem [h] [.T])
-           -> [g. tm S] -> Sem [h] [.S]  =
+rec eval : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
+           -> [g |- tm S] -> Sem [h] [ |- S]  =
 fn s => fn t =>
-let (s : ({T:[.tp]} TmVar [g] [. T] -> Sem [h] [.T])) = s in
+let (s : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])) = s in
 case t of
-| [g . #p .. ]           : [g. tm S] =>  s [.S] (TmVar [g . #p .. ])
-| [g. lam (\x. E .. x) ] : [g . tm (arr A B)] =>
-  Slam [h] [.A] [.B] (mlam h' => mlam #W => fn e =>
-         eval (extend (mlam T => fn x => sem_wkn [h] [h'] [h' $ #W[..]] (s [.T] x))  e)
-              [g,x:tm A. E .. x]
+| [g |- #p .. ]           : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p .. ])
+| [g |- lam (\x. E .. x) ] : [g |- tm (arr A B)] =>
+  Slam [h] [ |- A] [ |- B] (mlam h' => mlam #W => fn e =>
+         eval (extend (mlam T => fn x => sem_wkn [h] [h'] [h' $ #W[..]] (s [ |- T] x))  e)
+              [g,x:tm A |-  E .. x]
          )
 
-| [g. app (E1 ..) (E2 ..) ] =>
-  let (Slam [h] [. A] [. B] f ) : Sem [h] [. arr A B] =  eval s [g . E1 ..] in
-    f [h] [h $ ..] (eval s [g . E2 ..])
+| [g |- app (E1 ..) (E2 ..) ] =>
+  let (Slam [h] [ |- A] [ |- B] f ) : Sem [h] [ |- arr A B] =  eval s [g |- E1 ..] in
+    f [h] [h $ ..] (eval s [g |- E2 ..])
 ;
 
 
-rec reflect : [g. neut A] ->  Sem [g] [.A] =
-fn r => let [g. R .. ] : [g. neut A] = r in
-case [. A] of
-| [. atomic P ] => Syn [g . R ..]
-| [. arr T S ] =>  Slam [g] [.T] [.S] (mlam h => mlam #W => fn e =>
-   let [h. N ..] = reify e in
-   reflect [h. rapp (R #W[..]) (N ..)]
+rec reflect : [g |- neut A] ->  Sem [g] [ |- A] =
+fn r => let [g |- R .. ] : [g |- neut A] = r in
+case [ |- A] of
+| [ |- atomic P ] => Syn [g |- R ..]
+| [ |- arr T S ] =>  Slam [g] [ |- T] [ |- S] (mlam h => mlam #W => fn e =>
+   let [h |- N ..] = reify e in
+   reflect [h |- rapp (R #W[..]) (N ..)]
   )
 
-and reify : Sem [g] [.A] -> [g. norm A] =
-fn e => let (e : Sem [g] [.A]) = e in
+and reify : Sem [g] [ |- A] -> [g |- norm A] =
+fn e => let (e : Sem [g] [ |- A]) = e in
 case e of
-| Syn [g . R ..] => [g. embed (R ..)]
-| Slam [g] [.A] [.B] f =>
-     let s = (f [g,x:neut _] [g,x $ ..] (reflect [g,x:neut _. x])) in
-     let [g,x:neut _. E .. x] = reify s
-     in [g. nlam (\x. E .. x)]
+| Syn [g |- R ..] => [g |- embed (R ..)]
+| Slam [g] [ |- A] [ |- B] f =>
+     let s = (f [g,x:neut _] [g,x $ ..] (reflect [g,x:neut _ |-  x])) in
+     let [g,x:neut _ |-  E .. x] = reify s
+     in [g |- nlam (\x. E .. x)]
 ;
 
-rec initialMap :  {T:[.tp]} TmVar [ ] [. T] -> Sem [ ] [.T] =
-mlam T => fn y => let TmVar [.#p] = y in impossible [.#p] in [ ];
+rec initialMap :  {T:[ |- tp]} TmVar [ ] [ |- T] -> Sem [ ] [ |- T] =
+mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] in [ ];
 
-rec nbe : [. tm A] -> [. norm A] =
+rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify  (eval initialMap t)
 ;
 

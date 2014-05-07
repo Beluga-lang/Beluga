@@ -9,13 +9,13 @@ list : type.
 nil  : list.
 cons : nat -> list -> list.
 
-rec map : ([. nat ] -> [. nat ]) -> [. list ] -> [. list ] =
+rec map : ([ |- nat ] -> [ |- nat ]) -> [ |- list ] -> [ |- list ] =
 fn f => fn l => case l of
-| [. nil ] => l
-| [. cons H T ] => let [. HH ] = f [. H] in
-    let [. TT ] = map f [. T ] in
-        [. cons HH TT ]
+| [ |- nil ] => l
+| [ |- cons H T ] => let [ |- HH ] = f [ |- H] in
+    let [ |- TT ] = map f [ |- T ] in
+        [ |- cons HH TT ]
 ;
 
-let l = [. (cons (s z) ( cons z nil )) ];
-let y = map [. s] l ;
+let l = [ |- (cons (s z) ( cons z nil )) ];
+let y = map [ |- s] l ;

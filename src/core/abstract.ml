@@ -812,7 +812,12 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
       I.Dec (ctxToMCtx cQ', I.Decl (psi, I.CTyp (s_cid, I.Maybe)))
 
   | I.Dec (cQ', FMV (Pure, u, Some mtyp)) ->
-      I.Dec (ctxToMCtx cQ', I.Decl (u, mtyp))
+      let mtyp' = begin match mtyp with
+        | I.MTyp(tA, cPsi, _) -> I.MTyp(tA, cPsi, dep')
+        | I.PTyp(tA, cPsi, _) -> I.PTyp(tA, cPsi, dep')
+        | I.STyp(cPhi, cPsi, _) -> I.STyp(cPhi, cPsi, dep')
+      end in
+      I.Dec (ctxToMCtx cQ', I.Decl (u, mtyp'))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       let dep' = match dep with Comp.Explicit -> I.No | Comp.Implicit -> I.Maybe in
@@ -2420,7 +2425,7 @@ let abstrPattern cD1 cPsi1  (phat, tM) tA =
   let cD2     = abstractMVarMctx cQ' cD1' (0, offset-1) in
 (*  let cs1'    = abstractMVarCSub cQ' offset cs1 in
   let cs'     = abstractMVarCSub cQ' offset cs in *)
-  let cD'     = ctxToMCtx cQ' in
+  let cD'     = ctxToMCtx ~dep':I.No cQ' in
   let cD      = Context.append cD' cD2 in
     (cD, cPsi2, (phat, tM2), tA2)
 

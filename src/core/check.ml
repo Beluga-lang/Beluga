@@ -352,7 +352,9 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         LF.checkTyp  cD cPsi (tA, S.LF.id);
         checkParamTypeValid cD cPsi tA
 
-    | _ -> () (* TODO: Doesn't this silently pass things that shouldn't pass? *)
+    | I.STyp (cPhi, cPsi) ->
+	LF.checkDCtx cD cPhi;
+	LF.checkDCtx cD cPsi
 
   let checkCDecl cD cdecl = match cdecl with
     | I.Decl (_, ctyp) -> checkCLFTyp cD ctyp

@@ -43,6 +43,9 @@ cp -a \
     COPYRIGHT \
     LICENSE \
     VERSION \
+    myocamlbuild.ml \
+    Makefile \
+    _tags \
     $release
 
 mkdir $release/bin

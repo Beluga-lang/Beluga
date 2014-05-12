@@ -411,7 +411,7 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
   | Apx.Comp.MLam (loc, u, e)   ->
       (dprint (fun () -> "cnormApxExp -- MLam (or could be PLam)") ;
       Apx.Comp.MLam (loc, u, cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.MDeclOpt u)) e
-                       (Int.LF.Dec (cD'', Int.LF.MDeclOpt u), Whnf.mvar_dot1 t)))
+                       (Int.LF.Dec (cD'', Int.LF.DeclOpt u), Whnf.mvar_dot1 t)))
 
   | Apx.Comp.Pair (loc, e1, e2) ->
       let e1' = cnormApxExp cD delta e1 (cD'', t) in
@@ -552,19 +552,19 @@ and cnormApxBranch cD delta b (cD'', t) =
 
   | Apx.LF.Dec (delta2', Apx.LF.CDecl (x, _ )) ->
       let cD1'' = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1'', Int.LF.CDeclOpt x)
+        Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
 
   | Apx.LF.Dec (delta2', Apx.LF.MDecl (x, _, _ )) ->
       let cD1'' = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1'', Int.LF.MDeclOpt x)
+        Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
 
   | Apx.LF.Dec (delta2', Apx.LF.PDecl (x, _, _ )) ->
       let cD1 = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1, Int.LF.PDeclOpt x)
+        Int.LF.Dec (cD1, Int.LF.DeclOpt x)
 
   | Apx.LF.Dec (delta2', Apx.LF.SDecl (x, _, _ )) ->
       let cD1 = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1, Int.LF.SDeclOpt x)
+        Int.LF.Dec (cD1, Int.LF.DeclOpt x)
 
   in
     match b with
@@ -816,7 +816,7 @@ let rec fmvApxTerm fMVs cD ((l_cd1, l_delta, k) as d_param) m =   match m with
           Apx.LF.Root (loc, Apx.LF.FMVar (u, s'), Apx.LF.Nil)
       else
         begin try
-          let (offset, (_tP, _cPhi)) = Whnf.mctxMVarPos cD u in
+          let (offset, _) = Whnf.mctxMVarPos cD u in
 (*	  let _ = dprint (fun () -> "[fmvApxTerm] " ^ R.render_name u
                                ^ " has  position " ^ R.render_offset (offset+k))  in*)
             Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset (offset+k), s'), Apx.LF.Nil)
@@ -848,7 +848,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
       if List.mem p fMVs then
         Apx.LF.FPVar (p, s')
       else
-        let (offset, (_tA, _cPhi)) = Whnf.mctxPVarPos cD p  in
+        let (offset, _) = Whnf.mctxMVarPos cD p  in
           Apx.LF.PVar (Apx.LF.Offset (offset+k), s')
 
   | Apx.LF.FMVar (u, s) ->
@@ -856,7 +856,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
       if List.mem u fMVs then
         Apx.LF.FMVar (u, s')
       else
-        let (offset, (_tA, _cPhi)) = Whnf.mctxMVarPos cD u  in
+        let (offset, _) = Whnf.mctxMVarPos cD u  in
           Apx.LF.MVar (Apx.LF.Offset (offset+k), s')
 
   | Apx.LF.Proj (Apx.LF.FPVar (p,s), j) ->
@@ -864,7 +864,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
         if List.mem p fMVs then
           Apx.LF.Proj (Apx.LF.FPVar (p, s'), j)
         else
-          let (offset, (_tA, _cPhi)) = Whnf.mctxPVarPos cD p  in
+          let (offset, _) = Whnf.mctxMVarPos cD p  in
             Apx.LF.Proj(Apx.LF.PVar (Apx.LF.Offset (offset + k), s'), j)
 
 
@@ -993,7 +993,7 @@ and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
       if List.mem u fMVs then
         Apx.LF.FSVar (u, sigma')
       else
-        let (offset, (_cPhi, _cPsi)) = Whnf.mctxSVarPos cD u  in
+        let (offset, _) = Whnf.mctxMVarPos cD u  in
           (*  cPsi |- s : cPhi  *)
           Apx.LF.SVar (Apx.LF.Offset (offset+k), sigma')
 
@@ -1070,7 +1070,7 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi 
 	psi
       else
 	begin try
-	  let (offset, _w) = Whnf.mctxCVarPos cD x  in
+	  let (offset, _w) = Whnf.mctxMVarPos cD x  in
 (*	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ R.render_name x ^
 			    " with CtxOffset " ^ R.render_offset offset) in
 	  let _ = dprint (fun () -> "[fmvApxDCtx] in cD " ^ P.mctxToString cD) in
@@ -1098,7 +1098,7 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
 	  phat
 	else
 	  begin try
-            let (offset, _) = Whnf.mctxCVarPos cD psi in
+            let (offset, _) = Whnf.mctxMVarPos cD psi in
               (Some (Int.LF.CtxOffset (offset + k)), d)
 	  with Whnf.Fmvar_not_found ->
 	    (Printf.printf "Unbound context variable %s"  (R.render_name psi);

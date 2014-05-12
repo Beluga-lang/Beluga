@@ -87,16 +87,15 @@ fi
 cp -a $release $release-sandbox
 
 echo 'Building (bytecode) in-tree first, for testing ...'
-omake clean
-omake || ( echo 'omake failed; aborting release.' ; exit 1 )
+make clean
+make BYTE=1 || ( echo 'make failed; aborting release.' ; exit 1 )
 
 echo 'Running TEST (bytecode) ...'
 ./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
 
 echo 'Building (native) in-tree first, for testing ...'
-omake clean
-omake NATIVE_ENABLED=true clean
-omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release.' ; exit 1 )
+make clean
+make || ( echo 'native make failed; aborting release.' ; exit 1 )
 
 echo 'Running TEST (native) ...'
 ./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
@@ -104,17 +103,15 @@ echo 'Running TEST (native) ...'
 cd $release-sandbox
 
 echo 'Building (bytecode) in release directory ...'
-omake || ( echo 'omake failed; aborting release.' ; exit 1 )
+make BYTE=1 || ( echo 'omake failed; aborting release.' ; exit 1 )
 
 echo 'Building (native) in release directory ...'
-omake clean
-omake NATIVE_ENABLED=true clean
-omake NATIVE_ENABLED=true || ( echo 'native omake failed; aborting release.' ; exit 1 )
+make clean
+make || ( echo 'native omake failed; aborting release.' ; exit 1 )
 
 cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further.'
 
-sleep 1
 echo 'Building archive' $release.tar.gz
 tar zcf $release.tar.gz $release || ( echo 'tar failed.' ; exit 1 )
 echo

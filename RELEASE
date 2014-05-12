@@ -27,6 +27,20 @@ echo
 echo '    '$release
 echo
 
+echo 'Building (bytecode) in-tree first, for testing ...'
+make clean
+make BYTE=1 || ( echo 'make failed; aborting release.' ; exit 1 )
+
+echo 'Running TEST (bytecode) ...'
+./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
+
+echo 'Building (native) in-tree first, for testing ...'
+make clean
+make || ( echo 'native make failed; aborting release.' ; exit 1 )
+
+echo 'Running TEST (native) ...'
+./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
+
 if [ -e $release ]; then
     echo Release directory "$release" already exists.
     exit 1
@@ -85,20 +99,6 @@ if [ -e $release-sandbox ]; then
     exit 1
 fi
 cp -a $release $release-sandbox
-
-echo 'Building (bytecode) in-tree first, for testing ...'
-make clean
-make BYTE=1 || ( echo 'make failed; aborting release.' ; exit 1 )
-
-echo 'Running TEST (bytecode) ...'
-./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
-
-echo 'Building (native) in-tree first, for testing ...'
-make clean
-make || ( echo 'native make failed; aborting release.' ; exit 1 )
-
-echo 'Running TEST (native) ...'
-./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
 
 cd $release-sandbox
 

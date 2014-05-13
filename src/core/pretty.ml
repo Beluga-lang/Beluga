@@ -77,7 +77,7 @@ module Int = struct
     (* Contextual Format Based Pretty Printers *)
     val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
     val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
-    val fmt_ppr_lf_ctyp_decl  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
+    val fmt_ppr_lf_ctyp_decl  : ?print_status:bool -> LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
 
     val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
@@ -981,13 +981,13 @@ module Int = struct
           fprintf ppf "{%a}"
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
-    and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
+    and fmt_ppr_lf_ctyp_decl ?(print_status=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp) ->
           if not !Control.printImplicit && (isInferred mtyp) then fprintf ppf "" else
           fprintf ppf "{%s :: %a}%s"
             (R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
-            (dependent_string mtyp)
+            (if print_status then dependent_string mtyp else "")
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s :: _ }"

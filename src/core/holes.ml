@@ -29,7 +29,7 @@ let ( ++ ) f g = function x -> f (g x)
 let nameString n = n.Id.string_of_name
 
 let ctypDeclToString cD ctypDecl =
-  P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
+  P.fmt_ppr_lf_ctyp_decl ~print_status:true cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
   Format.flush_str_formatter ()
 
 (*mctxToString cD*)

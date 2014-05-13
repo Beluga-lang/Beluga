@@ -1,13 +1,6 @@
 This document describes the compilation and installation procedures
 for Beluga.
 
-*      [Prerequisites]
-       *        [GODI]
-       *        [GODI Installation Instructions]
-
-*      [Building]
-
-
 Prerequisites
 =============
 
@@ -17,7 +10,7 @@ Debian
 Under Debian Linux, all the necessary prerequisites can be installed
 with just the following command:
 
-# apt-get install ocaml omake ocaml-findlib libextlib-ocaml-dev libounit-ocaml-dev ocaml-ulex
+# apt-get install ocaml ocaml-findlib libextlib-ocaml-dev ocaml-ulex
 
 The same might hold for other distributions.
 
@@ -29,114 +22,42 @@ so you might also want to consider:
 Generic
 -------
 
-*IMPORTANT NOTE: Before downloading and installing any of these, or
- giving up in despair, see the following section about the OCaml GODI
- distribution.*
+If all of the above fail, you can download and install the following
+packages by hand:
 
-ocaml 3.11.2 or greater: http://caml.inria.fr/download.en.html
+ocaml 3.12.2 or greater: http://caml.inria.fr/download.en.html
 extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
 ulex:                    http://www.cduce.org/download.html#side
-omake:                   http://omake.metaprl.org/index.html
-ounit:                   http://ounit.forge.ocamlcore.org/
 
 Optional dependencies (for improved interactive mode):
 
 rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/
 
-GODI
-----
-
-The above list of required packages may seem excessive and you may
-feel that you shouldn't have to manually download and install five or
-more separate packages to compile this software.
-
-That's why, rather than downloading the extremely barebones OCaml
-compiler, you can instead download the OCaml GODI] distribution
-and have it download and install the necessary packages for you.
-
- http://godi.camlcity.org/godi/index.html
-
-
-GODI Installation Instructions
-------------------------------
-
-1. Download the most recent GODI tarball, e.g.,
-   `godi-rocketboost-20080630.tar.gz`
-
-2. Extract the GODI tarball to somewhere convenient, e.g.,
-   `/tmp/godi-rocketboost-20080630`
-
-3. `cd /tmp/godi-rocketboost-20080630` or wherever you extracted to.
-
-4. Run the first bootstrap script, placing the GODI installation
-   somewhere convenient, e.g.,
-
-       $ ./bootstrap -prefix ~/local/GODI
-
-5. After the bootstrap completes, make sure to add the GODI bin and
-   man directories to your $PATH and $MANPATH variables respectively,
-   e.g.,
-
-       # GODI
-       export PATH=~/local/GODI/bin:~/local/GODI/sbin:$PATH
-       export MANPATH=~/local/GODI/man:$MANPATH
-
-6. Either restart your terminal, or refresh your shell configuration,
-
-       $ source ~/.profile
-
-   if you use `~/.profile` to set your environment variables.
-
-7. Still within `/tmp/godi-rocketboost-20080630`, run
-
-       $ ./bootstrap_stage2
-
-   During this phase, your GODI installation will synchronize with the
-   central GODI repository and obtain the necessary information to
-   download and build the packages.
-
-   *NOTE: If this stage fails, it may give you a message about PCRE
-   not being found.  If this is the case, edit and uncomment the line:
-   `GODI_BASEPKG_PCRE=yes` in `~/local/GODI/etc/godi.conf`, then rerun
-   `./bootstrap_stage2`.*
-
-   This phase will take a little while since it will download,
-   compile, and install the basic ocaml compiler and several other
-   fundamental packages.  Once the second bootstrap phase has
-   completed, you have a basic GODI installation.
-
-8. Now we will install the Beluga dependencies mentioned above:
-
-       $ godi_wish -build godi-extlib -build godi-ulex -build godi-omake -build godi-ounit
-
-       $ godi_perform -wishes
-
-   You should now see GODI begin to build and install the packages.
-   Once this stage finishes, you are ready to follow the build
-   instructions below for Beluga itself.
-
 
 Building
 ========
 
-Install the dependencies and then run "omake", after which you'll have an
-"interpreter" executable in the "bin" directory.
+Install the dependencies and then run "make", after which you'll have an
+"beluga" executable in the "bin" directory that can be run.
 
+Compilation options
+-------------------
 
-Native code compilation
-========================
+Setting the following environment variables for "make" enables the
+following compilation option:
 
-If Beluga seems too slow, try using the OCaml native code compiler:
+BYTE:          sets byte-code compilation instead of native
+DEBUG:         enables the -g option of ocamlc
+PROFILE:       enables the -p option of ocamlc
+WARN_PATTERN:  enables warning for non-exhaustive patterns
+VERBOSE:       sets verbosity level of ocamlbuild
+PARALLEL:      sets max number of parallel processes
 
-  omake NATIVE_ENABLED=true
+For instance, to enable byte-code compilation, run:
 
-This typically results in about a 6x speedup.  Note, however, that if you
-ever need to run `omake clean', you should pass the same option:
+make BYTE=true
 
-  omake NATIVE_ENABLED=true clean
-
-Running `omake clean' without setting NATIVE_ENABLED may not properly
-remove the native code.
+Running `make clean' will clean the directory of compilation results
 
 
 Running Ruby script to convert to new syntax

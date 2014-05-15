@@ -41,11 +41,8 @@ let mctxToString =
     | LF.Dec (cD, ctypDecl) ->
       toString cD ^ "\n" ^ shift ^ ctypDeclToString cD ctypDecl
   in toString ++ Whnf.normMCtx
- 
 
- (*****CHANGE*****)
-let cpsiToString cD cPsi = P.dctxToString cD cPsi
-  
+let cpsiToString cD cPsi = P.dctxToString cD (Whnf.normDCtx cPsi)
 
 let printOne (loc, cD, cPsi, typ) =
   Store.NamedHoles.reset () ;

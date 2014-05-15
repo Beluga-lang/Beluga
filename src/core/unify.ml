@@ -2803,7 +2803,6 @@ match sigma with
               (dprint (fun () -> "(014) Add constraints ");
               addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
 
-
     | (((Root(_, h1,tS1), s1) as _sM1), ((Root(_, h2, tS2), s2) as _sM2)) ->
         dprnt "(020) Root-Root";
         let _ = dprint (fun () ->

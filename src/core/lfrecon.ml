@@ -1142,7 +1142,8 @@ and elTerm' recT cD cPsi r sP = match r with
             Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
 
            else
-(*  TO BE ADDED -bp
+(*  TO BE ADDED, if we want to synthesize the type of meta-variables 
+    applied to variable tuples instead of individual variables -bp 
 	     if isTuplePatSub s then 
                let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name
 					 ^ " in context "

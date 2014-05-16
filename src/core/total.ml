@@ -16,7 +16,7 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match err with 
 	| NoPositiveCheck n -> 
-  	  Format.fprintf ppf "Datatype %s hasn't done positivity checking."  n (* (R.render_name n) *)
+  	  Format.fprintf ppf "Datatype %s has not been checked for positivity."  n (* (R.render_name n) *)
     )
   )
 
@@ -291,16 +291,16 @@ let rec gen_rec_calls cD cG (cD', j) = match cD' with
         let cM  = gen_meta_obj (cdecl, LF.MShift (j+1)) (j+1) in
         let cU  = Whnf.cnormCDecl (cdecl, LF.MShift (j+1)) in
         let _   = print_string ("[gen_rec_calls] cD = " ^ P.mctxToString cD
-                                ^" -- j = " ^ string_of_int j ^ "\n") in
+                                ^" -- j = " ^ string_of_int j ^ "\n\n") in
         let _   = print_string ("[gen_rec_calls] cM = " ^ P.metaObjToString cD cM
                                 ^ " : " ^ P.cdeclToString cD cU
-                                ^ "\n") in
+                                ^ "\n\n") in
         let mf_list = get_order () in
         let _ = List.iter (function (f,x,k,ttau) ->
                              print_string ( "[gen_rec_calls] for f = " ^
                                               P.compTypToString cD
                                               (Whnf.cnormCTyp ttau)
-                                          ^ "\n"))
+                                          ^ "\n\n"))
           mf_list
         in
         let mk_wfrec (f,x,k,ttau) =
@@ -317,8 +317,8 @@ let rec gen_rec_calls cD cG (cD', j) = match cD' with
           | (f,x,k,ttau)::mf_list ->
               let d = mk_wfrec (f,x,k,ttau) in
 	      (* Check that generated call is valid - 
-mostly this prevents cases where we have contexts not matching
-a given schema *)
+		 mostly this prevents cases where we have contexts not matching
+		 a given schema *)
                 mk_all (LF.Dec(cG, d), j+1) mf_list
         in
         let (cG',j') = mk_all (cG, j) mf_list in
@@ -344,8 +344,119 @@ let wf_rec_calls cD cG  =
     LF.Empty
 
 
+(*  ------------------------------------------------------------------------ *) 
+(* wkSub cPsi cPsi' = s 
+
+   iff cPsi' is a prefix of cPsi and 
+       cPsi |- s : cPsi'
+
+*)
+exception WkViolation 
+
+let rec wkSub cPsi cPsi' = 
+  if Whnf.convDCtx cPsi cPsi' then 
+   Substitution.LF.id 
+  else 
+    (match cPsi with 
+       | LF.DDec (cPsi0, _ ) -> 
+	   Substitution.LF.comp  (wkSub cPsi0 cPsi') (Substitution.LF.shift)
+       | _ -> raise (WkViolation)
+    )
+
+(* convDCtxMod cPsi cPsi' = sigma 
+  
+   iff
+   
+    cD |- cPsi ctx,  cD |- cPsi' ctx 
+   and there exists a  variable substitution sigma s.t. 
+
+   cPsi' |- sigma : cPsi   
+
+   Note: this could be generalized to allow for subordination
+
+*)
+let convDCtxMod cD cPsi cPhi = 
+  let cPhi', conv_list = ConvSigma.flattenDCtx cD cPhi in 
+  let s_proj = ConvSigma.gen_conv_sub conv_list in 
+    (*  cPhi |- s_proj : cPhi' *)
+    begin try 
+      let wk_sub = wkSub cPhi' cPsi in 
+	(* cPhi' |- wk_sub cPsi *)
+	  Some (Substitution.LF.comp wk_sub s_proj)
+    with _ -> None
+    end
+
+
+let shiftMetaObj cM (cPsi', s_proj, cPsi) = 
+  let phat  = Context.dctxToHat cPsi in 
+  let phat0 = Context.dctxToHat cPsi in 
+    match cM with 
+      | Comp.MetaCtx (l, cPhi) -> 
+	  if Whnf.convDCtx cPsi cPhi then 
+	    Comp.MetaCtx (l, cPsi')
+	  else 
+	    cM
+      | Comp.MetaObj (l , phat', tM) -> 
+	  if Whnf.conv_hat_ctx phat phat' then 
+	    Comp.MetaObj (l, phat0, Whnf.norm (tM, s_proj))
+	  else 
+	    cM
+      | Comp.MetaParam (l, phat', tH) -> 
+	  if Whnf.conv_hat_ctx phat phat' then 
+	    let LF.Root (_, tH', _ ) = Whnf.norm (LF.Root (l, tH, LF.Nil), s_proj)  in 
+	      Comp.MetaParam (l, phat0, tH')
+	  else 
+	    cM
+      | Comp.MetaSObj (l, phat', s) -> 
+	  if Whnf.conv_hat_ctx phat phat' then 
+	    Comp.MetaSObj (l, phat0, Substitution.LF.comp s s_proj) 
+	  else 
+	    cM
+
+let rec shiftArgs args (cPsi', s_proj, cPsi) = match args with 
+  | [] -> []
+  | Comp.DC :: args -> Comp.DC :: shiftArgs args (cPsi', s_proj, cPsi)
+  | Comp.V x :: args ->  Comp.V x :: shiftArgs args (cPsi', s_proj, cPsi)
+  | Comp.M cM :: args -> 
+      let cM' = shiftMetaObj cM (cPsi', s_proj, cPsi) in 
+	Comp.M cM' :: shiftArgs args (cPsi', s_proj, cPsi)
+
+(*  ------------------------------------------------------------------------ *) 
+
+
+(* filter cD cG cIH e2 = cIH' 
+
+   if  cD      |- cIH  
+       cD ; cG |- e2 
+
+       and f e2' args in cIH 
+       and e2' ~ e2  (size-equivalent)
+  then 
+       f args in cIH'
+
+*)
+
 let rec filter cD cG cIH e2 = match e2, cIH with
   | _ , LF.Empty -> LF.Empty
+  (* We are treating contexts in the list of arguments supplied to the IH
+     special to allow for context transformations which preserve the size
+    *)
+  | Comp.M (Comp.MetaCtx (_, cPsi)) , 
+    LF.Dec (cIH, Comp.WfRec (f , Comp.M (Comp.MetaCtx (_,cPhi)) :: args, tau )) ->
+    let cIH' = filter cD cG cIH e2 in
+    let cPsi = Whnf.cnormDCtx (cPsi, Whnf.m_id) in 
+    let cPhi = Whnf.cnormDCtx (cPhi, Whnf.m_id) in 
+      if Whnf.convDCtx cPsi cPhi then 
+	LF.Dec (cIH', Comp.WfRec (f, args, tau))
+      else 
+	(match convDCtxMod cD cPhi cPsi with
+	  | Some s_proj ->  (*  cPsi |- s_proj : cPhi *)
+	      let args' = shiftArgs args (cPsi, s_proj, cPhi) in 
+	      (* let tau' = shiftCompTyp tau (cPsi, s_proj, cPhi) in  *)
+		LF.Dec (cIH', Comp.WfRec (f, args', tau))
+	  | None -> cIH'
+	)
+
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
     let cIH' = filter cD cG cIH e2 in
     if Whnf.convMetaObj cM' cM then

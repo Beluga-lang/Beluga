@@ -3159,7 +3159,10 @@ let mctxSVarPos cD u =
      computation-level types
   *)
 
-
+  let conv_hat_ctx psi_hat phi_hat = 
+    let psi = cnorm_psihat psi_hat m_id in
+    let phi = cnorm_psihat phi_hat m_id in
+      psi = phi 
 
   let rec convMetaObj mO mO' = match (mO , mO') with
     | (Comp.MetaCtx (_loc, cPsi) , Comp.MetaCtx (_ , cPsi'))  ->

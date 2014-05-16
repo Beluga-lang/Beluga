@@ -9,30 +9,7 @@ type command = { name : string ;
                  run : Format.formatter -> string list -> unit ;
                    help : string }
 
-(* registered commands *)
-let reg : command list ref = ref []
 
-let register cmd f hp = reg := {name = cmd; run = f; help = hp} :: !reg
-
-let is_command str =
-  let str' = strip str in
-  let l = String.length str' in
-  if l > 1 && String.sub str' 0 2 = "%:" then
-    let (_, cmd) = ExtString.String.split str' ":" in
-    `Cmd (strip cmd)
-  else
-    `Input str
-
-let do_command ppf cmd =
-  try
-    let head :: arglist = ExtString.String.nsplit cmd " " in
-    let command = List.find (fun x -> head = x.name) !reg in
-    command.run ppf arglist
-  with
-  | Not_found -> fprintf ppf "Such command does not exist!\n";
-      let command = List.find (fun x -> "help" = x.name) !reg in
-      command.run ppf []
-  | ExtString.Invalid_string-> fprintf ppf "Splitting error\n"
 
 
 (* The built in commands *)
@@ -54,24 +31,28 @@ let split = {name = "split";
               help = " ... " }
 *)
 
+let reg : command list ref = ref []
+
 let countholes = {name = "countholes";
                   run = (fun ppf _ -> fprintf ppf "%d\n" (Holes.getNumHoles()));
-                  help = "Print the total number of holes"} in
+                  help = "Print the total number of holes"}
 
 let chatteron = {name = "chatteron";
                  run = (fun ppf _ -> Debug.chatter :=1; fprintf ppf "The chatter is on now.\n");
-                 help = "Turn on the chatter"} in
+                 help = "Turn on the chatter"}
+
 
 let chatteroff = {name = "chatteroff";
                   run = (fun ppf _ -> Debug.chatter :=0; fprintf ppf "The chatter is off now.\n");
-                  help = "Turn off the chatter"} in
+                  help = "Turn off the chatter"}
+
 
 let types = {name = "types";
              run = (fun ppf _ ->
                let entrylist = List.rev_map Typ.get (!Typ.entry_list) in
                let dctx = Synint.LF.Null in
                List.iter (fun x -> fprintf ppf "%s:" x.Typ.name.Id.string_of_name; ppr_lf_kind dctx x.Typ.kind; fprintf ppf " \n") entrylist);
-             help = "Print out all types currently defined"} in
+             help = "Print out all types currently defined"}
 
 
 let load = {name = "load";
@@ -83,7 +64,7 @@ let load = {name = "load";
                 fprintf ppf "The file has been successfully loaded.\n"
               with
               |Failure _ -> fprintf ppf "Please provide the file name\n");
-            help = "Load the file \"filename\" into the interpreter"} in
+            help = "Load the file \"filename\" into the interpreter"}
 
 
 
@@ -94,7 +75,7 @@ let printhole = {name = "printhole";
                      Holes.printOneHole (to_int arg)
                    with
                    |Failure _ -> fprintf ppf "Error occurs when analyzing argument list\n");
-                 help = "Print out all the information of the i-th hole passed as a parameter"} in
+                 help = "Print out all the information of the i-th hole passed as a parameter"}
 
 let lochole = {name = "lochole";
                run = (fun ppf arglist ->
@@ -118,7 +99,7 @@ let lochole = {name = "lochole";
                    | None -> fprintf ppf "Error no such hole"
                  with
                  |Failure _ -> fprintf ppf "Error occurs when analyzing argument list\n");
-               help = "Print out the location information of the i-th hole passed as a parameter"} in
+               help = "Print out the location information of the i-th hole passed as a parameter"}
 
 let constructors = {name = "constructors";
                     run = (fun ppf arglist ->
@@ -133,13 +114,13 @@ let constructors = {name = "constructors";
                       with
                       | Not_found -> fprintf ppf "Such type does not exist!!\n"
                       | Failure _ -> fprintf ppf "Error occurs when analyzing argument list\n");
-                    help = "Print all constructors of a given type passed as a parameter"} in
+                    help = "Print all constructors of a given type passed as a parameter"}
 
 
 
 let helpme = {name = "help";
               run = (fun ppf _ -> List.iter (fun x -> fprintf ppf "%%:%15s\t %s\n" x.name x.help) !reg);
-              help = "list all availale commands with a short description"} in
+              help = "list all availale commands with a short description"}
 
 
 
@@ -175,7 +156,7 @@ let fill = { name = "fill" ;
                    failwith "See help"
                with
                | _ -> fprintf ppf "Error in fill\n");
-             help = "\"fill\" i \"with\" exp fills the ith hole with exp"} in
+             help = "\"fill\" i \"with\" exp fills the ith hole with exp"}
 
 
 let split = { name = "split" ;
@@ -192,7 +173,7 @@ let split = { name = "split" ;
                 | Failure s  -> fprintf ppf "Error in split: %s \n" s;  (Printexc.print_backtrace stdout)
                 | _  -> fprintf ppf "Error in split. \n";  (Printexc.print_backtrace stdout)
                       );
-              help = "split e n  tries to split on variable e in the nth hole"} in
+              help = "split e n  tries to split on variable e in the nth hole"}
 
 let intro = {name = "intro";
               run = (fun ppf args ->
@@ -204,7 +185,7 @@ let intro = {name = "intro";
                 with
                 | Failure s -> fprintf ppf "Error in intro: %s\n" s
                 |  _ ->      fprintf ppf "Error in intro\n"  );
-              help = "intro n tries to introduce variables in the nth hole"} in
+              help = "intro n tries to introduce variables in the nth hole"}
 
 
 let compconst = {name = "Constructors";
@@ -219,7 +200,7 @@ let compconst = {name = "Constructors";
                       with
                       | Not_found -> fprintf ppf "Such type does not exist!!\n"
                       | Failure _ -> fprintf ppf "Error occurs when analyzing argument list\n");
-                    help = "Print all constructors of a given computational datatype passed as a parameter"} in
+                    help = "Print all constructors of a given computational datatype passed as a parameter"}
 
 
 let signature = {name = "fsig";
@@ -235,7 +216,7 @@ let signature = {name = "fsig";
                       with
                       | Not_found -> fprintf ppf "Such function does not exist!\n"
                       | Failure _ -> fprintf ppf "Error occurs when analyzing argument list\n");
-                    help = "fsig e : Prints the signature of the function e, if such function is currently defined" } in
+                    help = "fsig e : Prints the signature of the function e, if such function is currently defined" }
 
 
 let printfun = {name = "fdef";
@@ -253,12 +234,15 @@ let printfun = {name = "fdef";
                       with
                       | Not_found -> fprintf ppf "Such function does not exist!\n"
                       | Failure _ -> fprintf ppf "Error occurs when analyzing argument list\n");
-                    help = "Print all the type of the functions currently defined" } in
+                    help = "Print all the type of the functions currently defined" }
 
-
+let quit = {name = "quit";
+            run = (fun _ ->
+                    exit 0);
+            help = "Exit Interactive Mode"}
 (* Registering built-in commands *)
 
-reg := [helpme       ;
+let _ = reg := [helpme       ;
         chatteroff   ;
         chatteron    ;
         countholes   ;
@@ -271,6 +255,31 @@ reg := [helpme       ;
         split        ;
         intro        ;
         compconst    ;
-         signature   ;
-        printfun
-       ]
+        signature    ;
+        printfun     ;
+        quit]
+
+(* registered commands *)
+
+let register cmd f hp = reg := {name = cmd; run = f; help = hp} :: !reg
+
+let is_command str =
+  let str' = strip str in
+  let l = String.length str' in
+  if l > 1 && String.sub str' 0 2 = "%:" then
+    let (_, cmd) = ExtString.String.split str' ":" in
+    `Cmd (strip cmd)
+  else
+    `Input str
+
+let do_command ppf cmd =
+  try
+    let head :: arglist = ExtString.String.nsplit cmd " " in
+    let command = List.find (fun x -> head = x.name) !reg in
+    command.run ppf arglist
+  with
+  | Not_found -> fprintf ppf "Such command does not exist!\n";
+      let command = List.find (fun x -> "help" = x.name) !reg in
+      command.run ppf []
+  | ExtString.Invalid_string-> fprintf ppf "Splitting error\n"
+  | _ -> helpme.run ppf []

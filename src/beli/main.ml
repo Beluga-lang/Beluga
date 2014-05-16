@@ -66,8 +66,8 @@ let rec loop ppf =
 
 let main () =
   let ppf = Format.std_formatter in
-  let args = process_options (List.tl (Array.to_list Sys.argv)) in
-  if args <> [] then usage ();
+  let files = process_options (List.tl (Array.to_list Sys.argv)) in
+  
 
   (* If readline wrapper exists, replace current process with a call
      to it and ask it to run us, wrapped. Line editing is then
@@ -78,6 +78,15 @@ let main () =
     with Unix.Unix_error _ -> ()
   end;
 
+  if List.length files = 1 then
+    try
+      let arg = List.hd files in
+      let sgn = Parser.parse_file ~name:arg Parser.sgn in
+      Recsgn.recSgnDecls sgn;
+      fprintf ppf "The file has been successfully loaded.\n"
+    with
+    |Failure _ -> fprintf ppf "Please provide the file name\n" ;
+  else if List.length files > 1 then fprintf ppf "Please supply only 1 file" ;
   init_repl ppf;
   loop ppf
 

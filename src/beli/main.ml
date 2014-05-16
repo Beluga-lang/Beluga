@@ -88,6 +88,7 @@ let main () =
     |Failure _ -> fprintf ppf "Please provide the file name\n" ;
   else if List.length files > 1 then fprintf ppf "Please supply only 1 file" ;
   init_repl ppf;
+  Command.print_usage ppf ;
   loop ppf
 
 let _ = Format.set_margin 80

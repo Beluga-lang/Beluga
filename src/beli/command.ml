@@ -283,3 +283,7 @@ let do_command ppf cmd =
       command.run ppf []
   | ExtString.Invalid_string-> fprintf ppf "Splitting error\n"
   | _ -> helpme.run ppf []
+
+let print_usage ppf = 
+  let _ = fprintf ppf "Usage: \n" in
+  helpme.run ppf []

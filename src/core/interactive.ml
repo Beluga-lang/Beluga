@@ -35,25 +35,17 @@ let rec insertIMSub i mfront ms = match (i, ms) with
 
 let nameString n = n.Id.string_of_name
 
-let nameOfLFcTypDecl td =
-  match td with
-| LF.MDecl(n,tA,psi) -> n
-| LF.PDecl(n,tA,psi) -> Id.mk_name (Id.PVarName (Some (fun () -> (nameString n))))
-| LF.SDecl(n,psi1,psi2) -> n
-| LF.CDecl(n,sch,psi) -> n
-| LF.MDeclOpt(n) -> n
-| LF.PDeclOpt(n) -> n
-| LF.CDeclOpt(n) -> n
+let nameOfLFcTypDecl = (function
+| LF.Decl(n, _) -> n
+| LF.DeclOpt n -> n)
 
 let cvarOfLFcTypDecl td =
  match td with
-| LF.MDecl(n,tA,psi) -> Store.CVar.MV n
-| LF.PDecl(n,tA,psi) -> Store.CVar.PV ( Id.mk_name (Id.PVarName (Some (fun () -> (nameString n)))))
-| LF.SDecl(n,psi1,psi2) -> Store.CVar.SV n
-| LF.CDecl(n,sch,psi) -> Store.CVar.CV n
-| LF.MDeclOpt(n) -> Store.CVar.MV n
-| LF.PDeclOpt(n) -> Store.CVar.PV n
-| LF.CDeclOpt(n) -> Store.CVar.CV n
+| LF.Decl(n, LF.MTyp _) -> Store.CVar.MV n
+| LF.Decl(n, LF.PTyp _) -> Store.CVar.PV ( Id.mk_name (Id.PVarName (Some (fun () -> (nameString n)))))
+| LF.Decl(n, LF.STyp _) -> Store.CVar.SV n
+| LF.Decl(n, LF.CTyp _) -> Store.CVar.CV n
+| LF.DeclOpt(n) -> Store.CVar.MV n
 
 let nameOfCompcTypDecl = function
   | CTypDecl (n, _) -> n
@@ -357,13 +349,14 @@ let rec searchMctx i = function
   | LF.Empty ->
       None
   | LF.Dec (cD', ctypDecl) ->
-     (match ctypDecl with
-      | LF.CDecl(n, _, _) ->
+      let LF.Decl(n, ctyp) = ctypDecl in
+     (match ctyp with
+      | LF.CTyp(_, _) ->
           (if (nameString n) = e then
             failwith ("Found variable in mCtx, cannot split on "^(nameString n)) (* could create a ctype wrapper, and split on it *)
           else
               searchMctx (i+1) cD' )
-      | LF.MDecl (n,tA,cPsi) ->
+      | LF.MTyp (tA,cPsi) ->
           (if (nameString n) = e then
              let cgs = Cover.genCovGoals ((dropIMCtx i cD0),cPsi,tA) in
              let bl = branchCovGoals loc i cG0 tH cgs in
@@ -375,7 +368,7 @@ let rec searchMctx i = function
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')
-      | LF.PDecl (n,tA,cPsi) ->
+      | LF.PTyp (tA,cPsi) ->
           (if (nameString n) = e then
             let cgs = Cover.genCovGoals (cD',cPsi,tA) in
             let bl = branchCovGoals loc i cG0 tH cgs in

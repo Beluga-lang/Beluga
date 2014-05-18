@@ -290,26 +290,27 @@ let rec gen_rec_calls cD cG (cD', j) = match cD' with
       begin try
         let cM  = gen_meta_obj (cdecl, LF.MShift (j+1)) (j+1) in
         let cU  = Whnf.cnormCDecl (cdecl, LF.MShift (j+1)) in
-        let _   = print_string ("[gen_rec_calls] cD = " ^ P.mctxToString cD
+        let mf_list = get_order () in
+(*        let _   = print_string ("[gen_rec_calls] cD = " ^ P.mctxToString cD
                                 ^" -- j = " ^ string_of_int j ^ "\n\n") in
         let _   = print_string ("[gen_rec_calls] cM = " ^ P.metaObjToString cD cM
                                 ^ " : " ^ P.cdeclToString cD cU
                                 ^ "\n\n") in
-        let mf_list = get_order () in
+
         let _ = List.iter (function (f,x,k,ttau) ->
                              print_string ( "[gen_rec_calls] for f = " ^
                                               P.compTypToString cD
                                               (Whnf.cnormCTyp ttau)
                                           ^ "\n\n"))
-          mf_list
-        in
+          mf_list    in 
+*)
         let mk_wfrec (f,x,k,ttau) =
           let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
           let args = generalize args in
           let d = Comp.WfRec (f, args, tau) in
           let _ = print_string ("\nRecursive call : " ^
                                   calls_to_string cD (f, args, tau)
-                                ^ "\n") in
+                                ^ "\n\n") in
             d
         in
         let rec mk_all (cG,j) mf_list = match mf_list with
@@ -387,6 +388,18 @@ let convDCtxMod cD cPsi cPhi =
     end
 
 
+let prefix_hat phat phat' = match phat, phat' with
+  | (None, k) , (None, k') -> Some (k' - k )
+  | (Some (LF.CtxOffset g), k) , (Some (LF.CtxOffset g'), k') -> 
+      if g = g' then Some (k' - k )
+      else None
+  | _, _ -> None
+
+
+let rec dot_k s k = if k = 0 then s
+else dot_k (Substitution.LF.dot1 s) (k-1)
+
+
 let shiftMetaObj cM (cPsi', s_proj, cPsi) = 
   let phat  = Context.dctxToHat cPsi in 
   let phat0 = Context.dctxToHat cPsi in 
@@ -397,10 +410,16 @@ let shiftMetaObj cM (cPsi', s_proj, cPsi) =
 	  else 
 	    cM
       | Comp.MetaObj (l , phat', tM) -> 
-	  if Whnf.conv_hat_ctx phat phat' then 
+	  (match prefix_hat (Whnf.cnorm_psihat phat Whnf.m_id) 
+ 	                    (Whnf.cnorm_psihat phat' Whnf.m_id)  with 
+	    | None -> cM 
+	    | Some k -> 
+		Comp.MetaObj (l, phat0, Whnf.norm (tM, dot_k s_proj k)))
+	  (* phat' >= phat, i.e.  phat is a prefix of phat' possibly *)
+(*	  if Whnf.conv_hat_ctx phat phat' then 
 	    Comp.MetaObj (l, phat0, Whnf.norm (tM, s_proj))
 	  else 
-	    cM
+	    cM *)
       | Comp.MetaParam (l, phat', tH) -> 
 	  if Whnf.conv_hat_ctx phat phat' then 
 	    let LF.Root (_, tH', _ ) = Whnf.norm (LF.Root (l, tH, LF.Nil), s_proj)  in 
@@ -446,6 +465,8 @@ let rec filter cD cG cIH e2 = match e2, cIH with
     let cIH' = filter cD cG cIH e2 in
     let cPsi = Whnf.cnormDCtx (cPsi, Whnf.m_id) in 
     let cPhi = Whnf.cnormDCtx (cPhi, Whnf.m_id) in 
+    let _ = print_string ("MetaCtx : FOUND " ^ P.dctxToString cD cPhi ^
+			    "\n         EXPECTED " ^ P.dctxToString cD cPsi ^ "\n\n") in
       if Whnf.convDCtx cPsi cPhi then 
 	LF.Dec (cIH', Comp.WfRec (f, args, tau))
       else 

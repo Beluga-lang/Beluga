@@ -94,7 +94,7 @@ equal: tp -> tp -> type.
 e_ref: equal T T.
 
 rec unique2 : {g:tctx}{E:[g |- exp]} [g |- type_of (E ..) T] -> [g |- type_of (E ..) T']
-             ->  [ |- equal T T'] =
+             ->  [ |- equal T T'] = / total e (unique2 _ _ _ e) / 
 mlam g => mlam E => fn d => fn f => case [g |- E .. ] of
 | [g |- app (E1 .. ) (E2 .. )] =>
   let [g |- t_app (D1 ..) (D2 ..)] = d in
@@ -121,7 +121,8 @@ equal: tp -> tp -> type.
 e_ref: equal T T.
 
 rec unique3 : (g:tctx)[g |- type_of (E ..) T] -> [g |- type_of (E ..) T']
-             ->  [ |- equal T T'] =  / total d (unique3 _ _ _ _ d) /
+             ->  [ |- equal T T'] =  
+/ total d (unique3 _ _ _ _ d) /
 fn d => fn f => case d of
 | [g |- t_app (D1 ..) (D2 ..)] =>
   let [g |- t_app (F1 ..) (F2 ..)] = f in

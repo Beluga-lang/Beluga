@@ -8,6 +8,7 @@ module R = Store.Cid.DefaultRenderer
 
 type error =
   | NoPositiveCheck of string 
+  | RecCallIncompatible of LF.mctx * Comp.args * Comp.ctyp_decl
 
 exception Error of Syntax.Loc.t * error
 
@@ -15,6 +16,22 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) -> 
     Error.print_with_location loc (fun ppf ->
       match err with 
+	| RecCallIncompatible (cD, x, Comp.WfRec (f, args, _tau)) -> 
+	    (match x , args with 
+	       | _ , [] -> 
+		   Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n Report as a bug."
+	       | Comp.M cM  , (Comp.M cM' :: _ ) -> 
+		   Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \nBeluga cannot establish that the given recursive call is a size-preserving variant of it.\nArgument found: %a@\nArgument expected: %a@"
+		     (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+		     (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM'
+
+	       | Comp.M cM  , (Comp.V _ :: _ ) -> 
+		   Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n\nArgument found: %a@\nExpected computation-level variable.\n\nCheck specified totality declaration. "
+		     (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+
+	       | Comp.V _ , _ -> 
+		   Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n\n Found computation-level variable while generated recursive call expected a meta-object.\n\nCheck specified totality declaration."
+	    )
 	| NoPositiveCheck n -> 
   	  Format.fprintf ppf "Datatype %s has not been checked for positivity."  n (* (R.render_name n) *)
     )
@@ -364,6 +381,51 @@ let rec wkSub cPsi cPsi' =
        | _ -> raise (WkViolation)
     )
 
+
+(* weakSub cPsi cPsi' = s 
+
+   iff cPsi' is a subset of cPsi and 
+       cPsi |- s : cPsi'
+ 
+*)
+(* pos cPsi tA k = k' 
+  
+   if cPsi0 = cPsi, x1:tB1, .., xk:tBk 
+    and k' is the position of the declaration (y:tA) in cPsi0
+
+
+   i.e.  (k'-k) is the position of (y:tA) in cPsi
+
+   NOTE: there might be more than one declaration in cPsi with type tA;
+   this will return the rightmost position. We do not compute all possible
+   positions.
+*)
+let rec pos cPsi tA k = match cPsi with 
+  (* cPsi |- tA *)
+  | LF.Null     -> None
+  | LF.CtxVar _ -> None
+  | LF.DDec (cPsi, LF.TypDecl (_x, tB)) -> 
+      if Whnf.convTyp (tA, Substitution.LF.invShift) (tB, Substitution.LF.id) then
+	Some (k)
+      else 
+	pos cPsi (Whnf.normTyp (tA, Substitution.LF.invShift)) (k+1)
+
+let rec weakSub cD cPsi cPsi' = 
+  if Whnf.convDCtx cPsi cPsi' then 
+   Substitution.LF.id 
+  else 
+    (match cPsi' with 
+       | LF.DDec (cPsi', LF.TypDecl (x, tA)) -> 
+	   let s = weakSub cD cPsi cPsi' in (*  cPsi |- s : cPsi' *)
+	   let _ = print_string ("Is " ^ P.typToString cD cPsi' (tA, Substitution.LF.id)
+	     ^ "\n in " ^ P.dctxToString cD cPsi ^ " ? \n") in
+	   (match pos cPsi (Whnf.normTyp (tA,s)) 1 with 
+	      | Some k ->  
+		  (print_string (" Found at " ^ string_of_int k ^ "\n");
+		  LF.Dot( LF.Head (LF.BVar k), s))
+	      | None -> print_string (" Not Found.\n") ; raise WkViolation)
+       | _ -> LF.Shift (LF.NoCtxShift, Context.dctxLength cPsi))
+
 (* convDCtxMod cPsi cPsi' = sigma 
   
    iff
@@ -384,7 +446,14 @@ let convDCtxMod cD cPsi cPhi =
       let wk_sub = wkSub cPhi' cPsi in 
 	(* cPhi' |- wk_sub cPsi *)
 	  Some (Substitution.LF.comp wk_sub s_proj)
-    with _ -> None
+    with _ -> 
+      try 
+	let _ = (print_string "[convDCtxMod] compute possible weakening substitution which allows for permutations : \n" ;
+		 print_string (" cPsi = " ^ P.dctxToString cD cPsi ^ "\n");
+		 print_string (" cPhi' = " ^ P.dctxToString cD cPhi' ^ "\n") ) in
+      let wk_sub = weakSub cD cPhi' cPsi in 
+	  Some (Substitution.LF.comp wk_sub s_proj)
+      with _ -> None
     end
 
 
@@ -455,18 +524,18 @@ let rec shiftArgs args (cPsi', s_proj, cPsi) = match args with
 
 *)
 
-let rec filter cD cG cIH e2 = match e2, cIH with
+let rec filter cD cG cIH (loc, e2) = match e2, cIH with
   | _ , LF.Empty -> LF.Empty
   (* We are treating contexts in the list of arguments supplied to the IH
      special to allow for context transformations which preserve the size
     *)
   | Comp.M (Comp.MetaCtx (_, cPsi)) , 
     LF.Dec (cIH, Comp.WfRec (f , Comp.M (Comp.MetaCtx (_,cPhi)) :: args, tau )) ->
-    let cIH' = filter cD cG cIH e2 in
+    let cIH' = filter cD cG cIH (loc, e2) in
     let cPsi = Whnf.cnormDCtx (cPsi, Whnf.m_id) in 
     let cPhi = Whnf.cnormDCtx (cPhi, Whnf.m_id) in 
     let _ = print_string ("MetaCtx : FOUND " ^ P.dctxToString cD cPhi ^
-			    "\n         EXPECTED " ^ P.dctxToString cD cPsi ^ "\n\n") in
+			    "\n           EXPECTED " ^ P.dctxToString cD cPsi ^ "\n\n") in
       if Whnf.convDCtx cPsi cPhi then 
 	LF.Dec (cIH', Comp.WfRec (f, args, tau))
       else 
@@ -479,7 +548,7 @@ let rec filter cD cG cIH e2 = match e2, cIH with
 	)
 
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
-    let cIH' = filter cD cG cIH e2 in
+    let cIH' = filter cD cG cIH (loc, e2) in
     if Whnf.convMetaObj cM' cM then
       (print_string  ("IH and recursive call agree on : "
                       ^ P.metaObjToString cD cM' ^ " == " ^
@@ -493,7 +562,7 @@ let rec filter cD cG cIH e2 = match e2, cIH with
       cIH')
 
   | Comp.V y , LF.Dec (cIH,Comp.WfRec (f , Comp.V x :: args, tau )) ->
-    let cIH' = filter cD cG cIH e2 in
+    let cIH' = filter cD cG cIH (loc, e2) in
     if x = y then
       LF.Dec (cIH', Comp.WfRec (f, args, tau))
       (* Note: tau is the overall return type of ih type
@@ -501,9 +570,11 @@ let rec filter cD cG cIH e2 = match e2, cIH with
     else
       cIH'
   | _ , LF.Dec (cIH,Comp.WfRec (f , Comp.DC :: args, tau )) ->
-    let cIH' = filter cD cG cIH e2 in
+    let cIH' = filter cD cG cIH (loc, e2) in
       LF.Dec (cIH', Comp.WfRec (f, args, tau))
 
+  | x, LF.Dec (cIH, wf) -> 
+      raise (Error (loc, RecCallIncompatible (cD, x, wf)))
 (* other cases are invalid /not valid recursive calls *)
 
 

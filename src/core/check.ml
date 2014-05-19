@@ -440,8 +440,8 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
     let cIH = match cIH with
       | I.Empty -> raise (Error (loc, InvalidRecCall))
       | cIH  -> match e2 with
-          | Box (_,cM) -> Total.filter cD cG cIH (M cM)
-          | Syn(_ , Var x)  -> Total.filter cD cG cIH (V x)
+          | Box (_,cM) -> Total.filter cD cG cIH (loc, M cM)
+          | Syn(_ , Var x)  -> Total.filter cD cG cIH (loc, V x)
           | _      -> raise (Error (loc, InvalidRecCall))
     in
     let _ = dprint (fun () -> "[useIH] Partially used IH: " ^ Total.ih_to_string cD cIH) in

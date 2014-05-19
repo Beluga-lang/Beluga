@@ -26,10 +26,11 @@ datatype equal: exp -> exp -> type =
 
 schema eqCtx = block x:exp, u: eq x x
 ;
-schema equalCtx = block x: exp, u:eq x x, v: equal x x
+schema equalCtx = block x: exp, v: equal x x, u:eq x x
 ;
 
 rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq (U ..) (U ..)] =
+/ total m (ref g m) /
 mlam g => mlam U => case [g |- U ..] of
  | [g |- #p.1 .. ] => [g |- #p.2 .. ]
  | [g |- lam \x. L .. x ] =>
@@ -50,6 +51,7 @@ rec trans: (g:eqCtx)
 -> [g |- eq (RR ..) (SS ..)]     % e2 : eq R S
 -> [g |- eq (TT ..) (SS ..)]     % result : eq T S
 =
+/ total e1 (trans g t r s e1) /
 fn e1 => fn e2 => case e1 of
 
  | [g |- #p.2 .. ] => e2
@@ -83,8 +85,9 @@ fn e1 => fn e2 => case e1 of
 
 
 rec ceq: (g:equalCtx) [g |- equal (T ..) (S ..)] -> [g |- eq (T ..) (S ..)]  =
+/ total e (ceq g t s e) /
 fn e => case e of
- | [g |- #p.3 .. ] => [g |- #p.2 .. ]
+ | [g |- #p.2 .. ] => [g |- #p.3 .. ]
 
  | [g |- e_r (T .. )] => ref [g] [g |- T .. ]
 
@@ -95,8 +98,8 @@ fn e => case e of
 
  | [g |- e_l \x.\u. D .. x u] =>
   let
-     [g,b:block (x:exp,u:eq x x,v:equal x x)  |-  F .. b.1 b.2] =
-        ceq  [g, b:block (x:exp, u:eq x x, v:equal x x)  |-  D .. b.1 b.3]
+     [g,b:block (x:exp,v:equal x x,u:eq x x)  |-  F .. b.1 b.3] =
+        ceq  [g, b:block (x:exp, v:equal x x, u:eq x x)  |-  D .. b.1 b.2]
   in
      [g |- eq_lam \x.\v. F .. x v]
 
@@ -108,7 +111,9 @@ fn e => case e of
 ;
 
 
-rec ceq_main: [ |- equal T S] -> [ |- eq T S] =  fn e =>  ceq e
+rec ceq_main: [ |- equal T S] -> [ |- eq T S] =  
+/ total e (ceq_main t s e) /
+fn e =>  ceq e
 ;
 
 

@@ -46,7 +46,7 @@ rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq (U ..) (U ..)] =
 % General transitivity is admissible
 rec trans: (g:eqCtx)
    [g |- eq (TT ..) (RR ..)]     % e1 : eq T R
--> [g |- eq (RR ..) (SS ..)]     % e2 : eq R S
+-> [g |- eq (RR ..) .(SS ..)]     % e2 : eq R S
 -> [g |- eq (TT ..) (SS ..)]     % result : eq T S
 =
 / total e1 (trans g t r s e1) /

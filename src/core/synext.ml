@@ -195,7 +195,7 @@ module Comp = struct
     | Lex of order list                 (*     | {O1 .. On}           *)
     | Simul of order list               (*     | [O1 .. On]           *)
 
- type total_dec = Total of Loc.t * order * name * (name option) list
+ type total_dec = Total of Loc.t * order option * name * (name option) list
 
  type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
 

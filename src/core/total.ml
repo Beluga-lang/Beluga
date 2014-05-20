@@ -102,6 +102,15 @@ let make_dec f tau (order,args) =
 let extend_dec l =
 mutual_decs := l::!mutual_decs
 
+
+let exists_total_decl f = 
+  let rec exists decs = match decs with 
+    | [] -> false
+    | l :: decs -> l.name = f || exists decs
+  in 
+    exists (!mutual_decs)
+
+
 let mobjToFront cM = match cM with
   | Comp.MetaCtx (_ , cPsi) -> LF.CObj cPsi
   | Comp.MetaObj (_, phat, tM ) -> LF.MObj (phat, tM)

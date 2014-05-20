@@ -584,7 +584,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
   and syn cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
     | Var x   ->
       let (f,tau) = lookup cG x in
-      if isRecFun cIH f then
+      if Total.exists_total_decl f then
         (Some cIH, tau, C.m_id)
       else
           (None, tau, C.m_id)

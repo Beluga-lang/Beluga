@@ -18,6 +18,7 @@ FILES[] =
         error
         gensym
         holes
+        html
         id
         index
         interactive

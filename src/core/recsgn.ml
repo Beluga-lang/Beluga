@@ -55,6 +55,7 @@ let freeze_from_name tau = match tau with
                                CompCotyp.freeze a;
                                 ()
 
+let sgnDeclToString d = Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl ~asHtml:true Prettyext.std_lvl Format.str_formatter d ; Format.flush_str_formatter ()
 
 let rec recSgnDecls = function
   | [] -> ()
@@ -87,6 +88,9 @@ and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
+        let s = sgnDeclToString d in
+        let _ = Html.appendAsAnchor s (a.string_of_name) in
+
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         (* index cT  in a context which contains arguments to cK *)
         let (apx_tau, apxK) = Index.comptypdef  (cT, cK) in
@@ -102,6 +106,9 @@ and recSgnDecl d =
         let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
 
     | Ext.Sgn.CompTyp (_ , a, extK) ->
+        let s = sgnDeclToString d in
+        let _ = Html.appendAsAnchor s (a.string_of_name) in
+
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -130,6 +137,9 @@ and recSgnDecl d =
 
 
   | Ext.Sgn.CompCotyp (_ , a, extK) ->
+        let s = sgnDeclToString d in
+        let _ = Html.appendAsAnchor s (a.string_of_name) in
+
         let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -154,6 +164,9 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.CompConst (_ , c, tau) ->
+        let s = sgnDeclToString d in
+        let _ = Html.appendAsAnchor s (c.string_of_name) in
+
         let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -179,6 +192,9 @@ and recSgnDecl d =
 
 
    | Ext.Sgn.CompDest (_ , c, tau) ->
+        let s = sgnDeclToString d in
+        let _ = Html.appendAsAnchor s (c.string_of_name) in
+
         let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -199,6 +215,9 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Typ (_, a, extK)   ->
+        let s = sgnDeclToString d in
+        let _ = Html.appendAsAnchor s (a.string_of_name) in
+
         let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in
         let (apxK, _ ) = Index.kind extK in
         let _        = FVar.clear () in
@@ -224,6 +243,9 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Const (loc, c, extT) ->
+        let s = sgnDeclToString d in
+        let _ = Html.appendAsAnchor s (c.string_of_name) in
+
         let (apxT, _ ) = Index.typ extT in
         let rec get_type_family = function
                            | Apx.LF.Atom(_loc, a, _spine) -> a
@@ -275,6 +297,9 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Val (loc, x, None, i) ->
+          let s = sgnDeclToString d in
+          let _ = Html.appendAsAnchor s (x.string_of_name) in
+
           let apx_i              = Index.exp' (Var.create ()) i in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
           let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp' cG apx_i) in
@@ -302,6 +327,9 @@ and recSgnDecl d =
 	  end
 
     | Ext.Sgn.Val (loc, x, Some tau, i) ->
+          let s = sgnDeclToString d in
+        let _ = Html.appendAsAnchor s (x.string_of_name) in
+
           let apx_tau = Index.comptyp tau in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
           let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
@@ -352,6 +380,8 @@ and recSgnDecl d =
         let rec preprocess l = match l with
           | [] -> (Int.LF.Empty, Var.create (), [])
           | Ext.Comp.RecFun (f, tau, _e) :: lf ->
+          let s = sgnDeclToString d in
+          let _ = Html.appendAsAnchor s (f.string_of_name) in
           let apx_tau = Index.comptyp  tau in
           let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
           let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
@@ -509,3 +539,4 @@ and recSgnDecl d =
           end
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end
+ 

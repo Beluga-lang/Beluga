@@ -36,6 +36,7 @@ let usage () =
         ^ "    +logic        turn on logic programming engine\n"
         ^ "    +test         Make output suitable for test harness. Implies -print\n"
         ^ "    +strengthen   Perform metavariable strengthening automatically.\n"
+        ^ "    +html         Generate an HTML page of the original file.\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -79,6 +80,8 @@ let process_option arg rest = match arg with
   | "+logic" -> Logic.Options.enableLogic := true ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
   | "+strengthen" -> Lfrecon.strengthen := true; rest
+  | "+html"
+  | "+HTML" -> Html.genHtml := true; rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -175,7 +178,9 @@ let main () =
             Holes.printAll ()
           end;
           if !Monitor.on || !Monitor.onf then
-            Monitor.print_timer ()
+            Monitor.print_timer () ;
+          if !Html.genHtml then
+            Html.generatePage (file_name ^ ".html") ;
       with e ->
         Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
         output_string stderr (Printexc.to_string e);

@@ -46,6 +46,10 @@ let enabled = ref false
 
 type rec_arg = M of Comp.meta_obj | V of Comp.exp_syn
 
+let sub_smaller phat s = match phat , s with 
+  | (_ , n) , LF.Shift (_, n') -> 
+      (n-n') < n'
+  | _ -> false
 
 let smaller_meta_obj cM = match  cM with
   | Comp.MetaCtx (_ , LF.DDec (_ , _ )) -> true
@@ -53,26 +57,31 @@ let smaller_meta_obj cM = match  cM with
       (match h with
         | LF.Const _ -> true
         | LF.BVar _ -> true
+	| LF.PVar (_, s) -> (print_string "Checking whether pvar is smaller (0)\n";
+	    sub_smaller phat s)
+	| LF.MVar (_, s) -> sub_smaller phat  s
         | _ -> false)
-  | Comp.MetaObjAnn (_, _cPsi, LF.Root (_, h, _spine)) ->
+  | Comp.MetaObjAnn (_, cPsi, LF.Root (_, h, _spine)) ->
       (match h with
         | LF.Const _ -> true
         | LF.BVar _ -> true
-        | _ -> false)
-  | Comp.MetaParam (_, (Some _ , n), h ) ->
-      if n > 0 then
-        match h with LF.PVar (_, s) -> Whnf.convSub s (Substitution.LF.id)
-          | _ -> false
-      else
-        false
-  | _ -> false
+	| LF.PVar (_, s) -> (print_string "Checking whether pvar is smaller (1)\n";
+			     sub_smaller (Context.dctxToHat cPsi) s)
+	| LF.MVar (_, s) -> sub_smaller (Context.dctxToHat cPsi) s
+	| _ -> false
+      )
+  | Comp.MetaParam (_, phat, h ) ->
+      match h with 
+	| LF.PVar (_, s) -> sub_smaller phat s
+	| _ -> false
 (*  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
 *)
 
 
 let rec struct_smaller patt = match patt with
-  | Comp.PatMetaObj (loc', mO) -> smaller_meta_obj mO
+  | Comp.PatMetaObj (loc', mO) -> 
+      smaller_meta_obj mO 
   | Comp.PatConst (_, _, _ ) -> true
   | Comp.PatVar (_, _ ) -> false
   | Comp.PatPair (_, pat1, pat2 ) ->
@@ -92,12 +101,19 @@ let mutual_decs : (dec list) ref = ref []
 
 let clear () = (mutual_decs :=  [])
 
+let order_to_string order = match order with 
+  | None -> " _ " 
+  | Some (Order.Arg x) -> string_of_int x
+
 let make_dec f tau (order,args) =
+((* print_string ("Total declaration for " ^ 
+R.render_name f ^ " : " ^ "total in position " ^ order_to_string order ^ 
+" in total number of args " ^ string_of_int (List.length args) ^ "\n");*)
   { name = f;
     args = args;
     typ  = tau;
     order = order
-  }
+  })
 
 let extend_dec l =
 mutual_decs := l::!mutual_decs
@@ -226,6 +242,8 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
     match (i, ttau) with
       | (1 , (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
           begin try
+	    print_string ("rec_spine: Unify " ^ P.cdeclToString cD cU ^ 
+			    "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");
             Unify.unifyCDecl cD (cU, Whnf.m_id) (cdecl, theta);
             let ft = mobjToFront cM in
             let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1, (tau, LF.MDot (ft, theta))) in
@@ -340,11 +358,18 @@ let rec generalize args = match args with
 let rec gen_rec_calls cD cIH (cD', j) = match cD' with
   | LF.Empty -> cIH
   | LF.Dec (cD', cdecl) ->
-      begin try
         let cM  = gen_meta_obj (cdecl, LF.MShift (j+1)) (j+1) in
         let cU  = Whnf.cnormCDecl (cdecl, LF.MShift (j+1)) in
         let mf_list = get_order () in
+	let _ = print_string ("Considering " ^ 
+				string_of_int (List.length mf_list)  ^ 
+				" rec. functions\n") in
         let mk_wfrec (f,x,k,ttau) =
+	  let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD cU ^ 
+				  " ") in 
+	  let _ = print_string ("for position " ^ string_of_int x ^ 
+				  " considering in total " ^ string_of_int k ^
+				  "\n") in
           let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
           let args = generalize args in
           let d = Comp.WfRec (f, args, tau) in
@@ -354,26 +379,26 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
             d
         in
         let rec mk_all (cIH,j) mf_list = match mf_list with
-          | [] -> (cIH, j)
+          | [] -> cIH
 	  | (f, None, _ , _ttau)::mf_list ->  mk_all (cIH, j) mf_list
           | (f, Some x, k, ttau)::mf_list ->
-              let d = mk_wfrec (f,x,k,ttau) in
-	      (* Check that generated call is valid - 
-		 mostly this prevents cases where we have contexts not matching
-		 a given schema *)
-                mk_all (LF.Dec(cIH, d), j+1) mf_list (* ? why j + 1 ? *)
+	      begin try 
+		let d = mk_wfrec (f,x,k,ttau) in
+		  (* Check that generated call is valid - 
+		     mostly this prevents cases where we have contexts not matching
+		     a given schema *)
+                mk_all (LF.Dec(cIH, d),j) mf_list 
+	      with 
+		  Not_compatible -> mk_all (cIH,j) mf_list 
+	      end
         in
-        let (cIH',j') = mk_all (cIH, j) mf_list in
-          gen_rec_calls cD cIH'  (cD', j')
-      with
-          Not_compatible ->
-            gen_rec_calls cD cIH (cD', j+1)
-      end
+        let cIH' = mk_all (cIH,j)  mf_list in
+          gen_rec_calls cD cIH'  (cD', j+1)
+
 
 let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
   | LF.Empty -> cIH
   | LF.Dec(cG', Comp.CTypDecl (_x, tau)) ->
-      begin try 
 	let y = j+1 in
 	let mf_list = get_order () in
 	let mk_wfrec (f,x,k, ttau) = 
@@ -389,25 +414,30 @@ let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
           | [] -> cIH
 	  | (f, None, _ , _ttau)::mf_list ->  mk_all cIH mf_list
           | (f, Some x, k, ttau)::mf_list ->
-              let d = mk_wfrec (f,x,k,ttau) in
-		(* Check that generated call is valid - 
-		   mostly this prevents cases where we have contexts not matching
-		   a given schema *)
-		mk_all (LF.Dec(cIH, d)) mf_list 
+	      begin try 
+		let d = mk_wfrec (f,x,k,ttau) in
+		  (* Check that generated call is valid - 
+		     mostly this prevents cases where we have contexts not matching
+		     a given schema *)
+		  mk_all (LF.Dec(cIH, d)) mf_list 
+	      with
+		  Not_compatible ->
+		    mk_all cIH mf_list
+	      end 
 	in
 	let cIH' = mk_all cIH mf_list in
           gen_rec_calls' cD cIH' (cG', j+1)
-      with
-          Not_compatible ->
-            gen_rec_calls' cD cIH (cG', j+1)
-      end
+
 	
 
 
 let wf_rec_calls cD cG  =
   if !enabled then
+    ((* print_string ("Generate recursive calls from \n" 
+		     ^ "cD = " ^ P.mctxToString cD 
+		     ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n\n");*)
     let cIH = gen_rec_calls cD (LF.Empty) (cD, 0) in
-      gen_rec_calls' cD cIH (cG, 0)
+      gen_rec_calls' cD cIH (cG, 0))
   else
     LF.Empty
 

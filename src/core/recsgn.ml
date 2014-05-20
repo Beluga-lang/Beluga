@@ -437,13 +437,13 @@ and recSgnDecl d =
 		      () 
                   | Some t ->
 		    if !Total.enabled then 
-		      (print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); 
+		      ((*print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 	   	      Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
 		    else 
 		      (if m = 1 then 
 			  (Coverage.enableCoverage := true;
 			   Total.enabled := true;
-			   print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); 
+			   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 			   Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
 		       else			  
 			  raise (Error (loc, MutualTotalDeclAfter f))

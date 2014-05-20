@@ -204,7 +204,7 @@ module Ext = struct
            fmt_ppr_lf_normal cD cPsi lvl ppf tM
 
       | LF.Cons(tM, rest) ->
-           fprintf ppf "%a, %a"`
+           fprintf ppf "%a, %a"
              (fmt_ppr_lf_normal cD cPsi lvl) tM
              (fmt_ppr_tuple cD cPsi lvl) rest
 

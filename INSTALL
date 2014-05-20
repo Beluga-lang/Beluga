@@ -1,47 +1,92 @@
-This document describes the compilation and installation procedures
-for Beluga.
+========================================================================
+Beluga Installation & Configuration Guide
+========================================================================
 
-Prerequisites
-=============
+Table of contents:
 
-Debian
-------
+1. Installation
+  1.1 Generic prerequisites
+    1.1.1 Debian/Ubuntu
+    1.1.2 Windows
+  1.2 Buldinging
+    1.2.1 Compilation Options
+  1.3 Troubleshooting
+2. Configuration
+  2.1 Running Ruby script to convert to new syntax
+  2.2 Beluga-mode for Emacs
 
-Under Debian Linux, all the necessary prerequisites can be installed
-with just the following command:
+=========================
+1. Installation
+=========================
 
-# apt-get install ocaml ocaml-findlib libextlib-ocaml-dev ocaml-ulex
+1.1 Generic Prerequisites
+=========================
 
-The same might hold for other distributions.
+The following packages must be installed to use Beluga:
 
-The interactive mode is greatly improved if you have rlwrap installed,
-so you might also want to consider:
-
-# apt-get install rlwrap
-
-Generic
--------
-
-If all of the above fail, you can download and install the following
-packages by hand:
-
-ocaml 3.12.2 or greater: http://caml.inria.fr/download.en.html
+ocaml 3.12.2+:           http://caml.inria.fr/download.en.html
 extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
 ulex:                    http://www.cduce.org/download.html#side
+
+Users not running Windows may wish to build using omake:
+
+omake:			 http://omake.metaprl.org/index.html
 
 Optional dependencies (for improved interactive mode):
 
 rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/
 
 
-Building
-========
-
-Install the dependencies and then run "make", after which you'll have an
-"beluga" executable in the "bin" directory that can be run.
-
-Compilation options
+1.1.1 Debian/Ubuntu
 -------------------
+
+Under Debian Linux, all the necessary prerequisites can be installed
+with just the following command:
+
+# apt-get install ocaml ocaml-findlib libextlib-ocaml-dev ocaml-ulex
+
+The interactive mode is greatly improved if you have rlwrap installed,
+so you might also want to consider:
+
+# apt-get install rlwrap
+
+These commands may work under other distributions.
+
+1.1.2 Windows
+-------------
+
+Beluga can be executed on Windows through Cygwin. The necessary prerequisites can be installed
+using an OCalm package manager called WODI. 
+
+1. Download WODI's graphical installer wodi32/64.exe
+http://wodi.forge.ocamlcore.org/download.html
+
+2. Run wodi32/64.exe and step through the installation wizard
+Note: if you don't already have Cygwin installed, it will be installed for you. The installation directory you select will be the root directory within the WODI Cygwin terminal.
+
+3. From the start menu, select Wodi32/64 Package Manager. Don't be alarmed if WODI cannot read all PATH entries.
+
+4. Search for each of the prerequisite packages: extlib, ulex, ounit, findlib. Check the box beside each of the packages and click "Apply". The checkbox will be greyed out if the package has already been installed.
+
+More inforamtion about WODI: http://wodi.forge.ocamlcore.org/
+More information about Cygwin: http://www.cygwin.com/
+
+1.2 Building
+============
+
+Compile by running "make" from the Beluga directory.
+
+./beluga
+# make
+
+You can now run Beluga programs with the newly 
+"beluga" executable in the "bin" directory
+
+./beluga
+# ./bin/beluga path/to/program.bel
+
+1.2.1 Compilation options
+-------------------------
 
 Setting the following environment variables for "make" enables the
 following compilation option:
@@ -59,9 +104,28 @@ make BYTE=true
 
 Running `make clean' will clean the directory of compilation results
 
+1.3 Troubleshooting
+===================
 
-Running Ruby script to convert to new syntax
-=============================================
+Attempting to build Beluga before installing the prequisites may cause
+libraries to be only partially updated. You may recieve a new error message
+once you've set up the prereq packages.
+
+Error: The files [path/to/file]
+        and [path/to/file]
+        make inconsistent assumptions over interface [library name]
+
+Try cleaning the Beluga directory.
+
+./beluga
+# ./make clean all
+
+=========================
+2. Configuration
+=========================
+
+2.1 Running Ruby script to convert to new syntax
+================================================
 
 You will need Ruby 1.9 for running the script.
 
@@ -81,3 +145,28 @@ Then you can say:
 
 Note, you will want to add .rvm/bin to your .bashrc directory, so you will be able to
 find rvm without giving the full path.
+
+2.2 Beluga-mode for GNU Emacs
+=============================
+
+Beluga includes a major mode for programming in Emacs. The elisp file is locationed in the
+./beluga/tools directory. To configure Beluga-mode:
+
+1. Update your ~/.emacs configuration file with the lines written below. XEmacs users must 
+update ~/.xemacs and ~/.xema.cs/init.el with the same text. Create any of these files if 
+they do not exist already.
+
+(add-to-list 'load-path "/home/bpientka/complogic/beluga/tools/")
+(load "beluga-mode.el")
+
+NOTE: Feel free to move ther beluga-mode.el file to another directory so long as you 
+ensure its location is included in the Emacs load-path.
+
+2. Restart Emacs.
+ .
+Emacs will now launch in Beluga-mode automatically when you open a Beluga program. 
+
+
+
+
+

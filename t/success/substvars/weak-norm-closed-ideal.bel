@@ -75,6 +75,7 @@ datatype RedSub : {g:ctx}{#S:g[]} ctype =
 
 
 rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ $ #S[^]] -> Reduce [ |- A] [ |- #p #S[^]] =
+% / total g (lookup g) /
 mlam g => mlam #p => fn rs => case [g |- #p ..] of
  | [g',x:tm A |-  x] =>   let (Dot rs' rN) = rs in rN
  | [g',x:tm A |-  #q ..] => let Dot rs' rN = rs in
@@ -83,6 +84,7 @@ mlam g => mlam #p => fn rs => case [g |- #p ..] of
 ;
 
 rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ $ #S[^]] -> Reduce  [ |- A] [ |- M #S[^]] =
+% / total m (eval g a m) /
  mlam g => mlam M => fn rs => case [g |- M ..] of
 | [g |- #p ..] => lookup [g] [g |- #p ..] rs
 | [g |- lam (\x. M1 .. x)] =>
@@ -97,5 +99,6 @@ rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ $ #S[^]] -> Reduce  [ |- A] [ |- 
 ;
 
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
+% / total (weakNorm) /
 mlam M => cr1 (eval [] [ |- M] Nil)
 ;

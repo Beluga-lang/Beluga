@@ -2526,7 +2526,7 @@ let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
       convTyp (tA, LF.id) (tB, LF.id) && convCtx cPsi1 cPsi2
 
   | _ -> false
-(* convPrefixCtx and convSubsetCtx should take into account subordination *)
+(* convPrefixCtx and convSubsetCtx should take into account subordination
 let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (_ , Empty) ->
       true
@@ -2535,7 +2535,7 @@ let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
       convTyp (tA, LF.id) (tB, LF.id) && convPrefixCtx cPsi1 cPsi2
 
   | _ -> false
-
+ *)
 let rec convSubsetCtx cPsi cPsi' = match cPsi, cPsi' with
   | (_ , Empty) -> true
   | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) -> 

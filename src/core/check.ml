@@ -266,12 +266,12 @@ module Comp = struct
   let lookup' cG k =
     let (f,tau) = lookup cG k in tau
 
-  let rec isRecFun cIH f = match cIH with
+(*  let rec isRecFun cIH f = match cIH with
     | I.Empty -> false
     | I.Dec(cIH, WfRec (f', _ , _ )) ->
       if f = f' then true
       else isRecFun cIH f
-
+*)
 
 let checkParamTypeValid cD cPsi tA =
   let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with

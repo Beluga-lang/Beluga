@@ -89,7 +89,7 @@ and recSgnDecl d =
     match d with
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
         let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (a.string_of_name) in
+        let _ = Html.appendAsAnchor s (a.string_of_name) Html.None in
 
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         (* index cT  in a context which contains arguments to cK *)
@@ -107,7 +107,7 @@ and recSgnDecl d =
 
     | Ext.Sgn.CompTyp (_ , a, extK) ->
         let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (a.string_of_name) in
+        let _ = Html.appendAsAnchor s (a.string_of_name) Html.None in
 
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
@@ -138,7 +138,7 @@ and recSgnDecl d =
 
   | Ext.Sgn.CompCotyp (_ , a, extK) ->
         let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (a.string_of_name) in
+        let _ = Html.appendAsAnchor s (a.string_of_name) Html.None in
 
         let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
@@ -165,7 +165,7 @@ and recSgnDecl d =
 
     | Ext.Sgn.CompConst (_ , c, tau) ->
         let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (c.string_of_name) in
+        let _ = Html.appendAsAnchor s (c.string_of_name) Html.None in
 
         let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
@@ -193,7 +193,7 @@ and recSgnDecl d =
 
    | Ext.Sgn.CompDest (_ , c, tau) ->
         let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (c.string_of_name) in
+        let _ = Html.appendAsAnchor s (c.string_of_name) Html.None in
 
         let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
@@ -216,7 +216,7 @@ and recSgnDecl d =
 
     | Ext.Sgn.Typ (_, a, extK)   ->
         let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (a.string_of_name) in
+        let _ = Html.appendAsAnchor s (a.string_of_name) Html.Kind in
 
         let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in
         let (apxK, _ ) = Index.kind extK in
@@ -244,7 +244,7 @@ and recSgnDecl d =
 
     | Ext.Sgn.Const (loc, c, extT) ->
         let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (c.string_of_name) in
+        let _ = Html.appendAsAnchor s (c.string_of_name) Html.Const in
 
         let (apxT, _ ) = Index.typ extT in
         let rec get_type_family = function
@@ -298,7 +298,7 @@ and recSgnDecl d =
 
     | Ext.Sgn.Val (loc, x, None, i) ->
           let s = sgnDeclToString d in
-          let _ = Html.appendAsAnchor s (x.string_of_name) in
+          let _ = Html.appendAsAnchor s (x.string_of_name) Html.None in
 
           let apx_i              = Index.exp' (Var.create ()) i in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
@@ -328,7 +328,7 @@ and recSgnDecl d =
 
     | Ext.Sgn.Val (loc, x, Some tau, i) ->
           let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (x.string_of_name) in
+        let _ = Html.appendAsAnchor s (x.string_of_name) Html.None in
 
           let apx_tau = Index.comptyp tau in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
@@ -381,7 +381,7 @@ and recSgnDecl d =
           | [] -> (Int.LF.Empty, Var.create (), [])
           | Ext.Comp.RecFun (f, tau, _e) :: lf ->
           let s = sgnDeclToString d in
-          let _ = Html.appendAsAnchor s (f.string_of_name) in
+          let _ = Html.appendAsAnchor s (f.string_of_name) Html.Fun in
           let apx_tau = Index.comptyp  tau in
           let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
           let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in

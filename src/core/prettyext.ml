@@ -41,7 +41,7 @@ module Ext = struct
 
     (* Contextual Format Based Pretty Printers *)
     val fmt_ppr_sgn_decl      : ?asHtml:bool -> lvl -> formatter -> Sgn.decl  -> unit
-    val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
+    val fmt_ppr_lf_kind       : ?asHtml:bool -> LF.dctx -> lvl -> formatter -> LF.kind      -> unit
     val fmt_ppr_lf_ctyp_decl  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
 
@@ -157,12 +157,12 @@ module Ext = struct
     let rec fmt_ppr_lf_typ ?(asHtml = false) cD cPsi lvl ppf = function
       | LF.Atom (_, a, LF.Nil) ->
           let name = (R.render_name a) in
-          let s = if asHtml then "<a href=#" ^ name ^ ">" ^ name ^ "</a>" else name in
+          let s = if asHtml then "<a href=#" ^ name ^ " class=const>" ^ name ^ "</a>" else name in
           fprintf ppf "%s" s
 
       | LF.Atom (_, a, ms) ->
           let name = (R.render_name a) in
-          let s = if asHtml then "<a href=#" ^ name ^ ">" ^ name ^ "</a>" else name in
+          let s = if asHtml then "<a href=#" ^ name ^ " class=const>" ^ name ^ "</a>" else name in
           let cond = lvl > 1 in
             fprintf ppf "%s%s%a%s"
               (l_paren_if cond)
@@ -491,17 +491,20 @@ module Ext = struct
             (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
 
 
-    and fmt_ppr_lf_kind cPsi lvl ppf = function
+    and fmt_ppr_lf_kind ?(asHtml=false) cPsi lvl ppf = function
       | LF.Typ _ ->
-          fprintf ppf "type"
+          fprintf ppf
+          (if asHtml then"<span class=keyword>type</span>" else "type")
 
       | LF.PiKind (_,LF.TypDecl (x, a), k) ->
+          let name = R.render_name x in
+
           let cond = lvl > 0 in
             fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
               (l_paren_if cond)
-              (R.render_name   x)
-              (fmt_ppr_lf_typ LF.Empty cPsi  0) a
-              (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDecl (x, a))) 0) k
+              (if asHtml then "<a href=#" ^ name ^ " class=kind>" ^ name ^ "</a>" else name)
+              (fmt_ppr_lf_typ ~asHtml:asHtml LF.Empty cPsi  0) a
+              (fmt_ppr_lf_kind ~asHtml:asHtml (LF.DDec(cPsi, LF.TypDecl (x, a))) 0) k
               (r_paren_if cond)
 
       | LF.ArrKind (_, a, k) ->
@@ -994,17 +997,18 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ cD LF.Null lvl) tau
 
-    let fmt_ppr_cmp_rec lvl ppf = function
+    let fmt_ppr_cmp_rec ?(asHtml=false) lvl ppf = function
       | Comp.RecFun (x, a, e) ->
-          fprintf ppf "rec %s : %a => @ %a"
+          fprintf ppf "%s %s : %a => @ %a"
+            (if asHtml then "<span class=keyword>rec</span>" else "rec")
             (R.render_name x)
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
             (fmt_ppr_cmp_exp_chk LF.Empty lvl)  e
 
-    let rec fmt_ppr_rec lvl ppf = function
+    let rec fmt_ppr_rec ?(asHtml=false) lvl ppf = function
       | [] -> ()
       | h::t -> fprintf ppf "%a %a \n"
-                   (fmt_ppr_cmp_rec lvl) h
+                   (fmt_ppr_cmp_rec ~asHtml:asHtml lvl) h
                    (fmt_ppr_rec lvl) t
 
     let fmt_ppr_sgn_decl ?(asHtml = false) lvl ppf = function
@@ -1040,7 +1044,7 @@ module Ext = struct
             (fmt_ppr_lf_schema lvl) schema
 
      | Sgn.Rec (_, lrec) ->
-           (fmt_ppr_rec lvl ppf) lrec
+           (fmt_ppr_rec ~asHtml:asHtml lvl ppf) lrec
 
       | Sgn.Pragma (_, Sgn.NamePrag _) ->  ()
 

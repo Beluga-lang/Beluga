@@ -265,7 +265,7 @@ module Comp = struct
     | TypCross  of typ * typ
     | TypPiBox  of (LF.ctyp_decl * depend) * typ
     | TypClo    of typ *  LF.msub
-    | TypBool
+    | TypBool 
 
 
 
@@ -383,10 +383,17 @@ module Sgn = struct
   (*   | Stratify of Loc.t * Comp.order * name * (name option) list  *)
 
 
+  type positivity_flag =
+    | Nocheck
+    | Positivity
+    | Stratify of int
+
+
+
   type decl =
     | Typ           of cid_typ  * LF.kind
     | Const         of cid_term * LF.typ
-    | CompTyp       of Loc.t * name * Comp.kind  * bool (*true for positivity checking*)
+    | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag (*true for positivity checking*)
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ

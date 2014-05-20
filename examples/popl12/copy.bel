@@ -19,6 +19,7 @@ datatype IsExp : {g:ctx} [g |- exp] -> ctype % positive
 
 
 rec copy : (g:ctx)IsExp [g] [g |- M..] -> IsExp [g] [g |- M ..] =
+/ total e (copy g m e) /
 fn e => case e of
  | IsZero => IsZero
  | IsSuc m => IsSuc (copy m)

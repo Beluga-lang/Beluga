@@ -2526,16 +2526,25 @@ let rec convCtx cPsi cPsi' = match (cPsi, cPsi') with
       convTyp (tA, LF.id) (tB, LF.id) && convCtx cPsi1 cPsi2
 
   | _ -> false
-
+(* convPrefixCtx and convSubsetCtx should take into account subordination
 let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (_ , Empty) ->
       true
 
   | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
-      convTyp (tA, LF.id) (tB, LF.id) && convCtx cPsi1 cPsi2
+      convTyp (tA, LF.id) (tB, LF.id) && convPrefixCtx cPsi1 cPsi2
 
   | _ -> false
-
+ *)
+let rec convSubsetCtx cPsi cPsi' = match cPsi, cPsi' with
+  | (_ , Empty) -> true
+  | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) -> 
+      if convTyp (tA, LF.id) (tB, LF.id) then 
+	convSubsetCtx cPsi1 cPsi2 
+      else 
+	(* keep tBs around and check that tA is a subordinate of tB,
+	   i.e. anything in tA cannot influence tB *)
+	convSubsetCtx cPsi1 cPsi'
 
 (* convPrefixTypRec((recA,s), (recB,s'))
  *
@@ -2543,23 +2552,25 @@ let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
  *        cD ; cPsi  |- s <= cPsi       and cD ; cPsi  |- s' <= Psi2
  *
  * returns true iff recA and recB are convertible where
- *    cD ; cPsi |-   [s']recB is a prefix of [s]recA
+ *    cD ; cPsi |-   [s']recB is a prefix (subset) of [s]recA
  *)
 and convPrefixTypRec sArec sBrec = match (sArec, sBrec) with
   | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
       convTyp (lastA, s) (lastB, s')
 
-  | ((SigmaElem (_xA, tA, _recA), s), (SigmaLast tB, s')) ->
-      convTyp (tA, s) (tB, s')
+  | ((SigmaElem (_xA, tA, recA), s), (SigmaLast tB, s')) ->
+      convTyp (tA, s) (tB, s') ||
+	convPrefixTypRec (recA, LF.dot1 s) sBrec
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaElem(_xB, tB, recB), s')) ->
-      convTyp (tA, s) (tB, s') && convPrefixTypRec (recA, LF.dot1 s) (recB, LF.dot1 s')
+      if convTyp (tA, s) (tB, s') 
+      then convPrefixTypRec (recA, LF.dot1 s) (recB, LF.dot1 s')
+      else convPrefixTypRec (recA, LF.dot1 s) sBrec
 
-  | (_, _) -> (* lengths differ *)
-      false
+  | ((SigmaLast _ , _ ), _ ) -> false
 
 let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
-  convPrefixCtx cSome1 cSome2 && convPrefixTypRec (typRec1, LF.id) (typRec2, LF.id)
+  convSubsetCtx cSome1 cSome2 && convPrefixTypRec (typRec1, LF.id) (typRec2, LF.id)
 
 (* *********************************************************************** *)
 (* Contextual substitutions                                                *)

@@ -104,6 +104,48 @@ let _ = Error.register_printer
 
 exception SpineMismatch
 
+let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
+  | (_ , Empty) ->
+      true
+
+  | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
+      Whnf.convTyp (tA, Substitution.LF.id) (tB, Substitution.LF.id) && convPrefixCtx cPsi1 cPsi2
+
+  | _ -> false
+
+(* let rec convSubsetCtx cPsi cPsi' = match cPsi, cPsi' with
+  | (_ , Empty) -> true
+  | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) -> 
+      if Whnf.convTyp (tA, Substitution.LF.id) (tB, Substitution.LF.id) then 
+	convSubsetCtx cPsi1 cPsi2 
+      else 
+	convSubsetCtx cPsi1 cPsi'
+*)
+
+let rec dot_k s k = if k = 0 then s
+else dot_k (Substitution.LF.dot1 s) (k-1)
+
+let rec convPrefixTypRec sArec sBrec  = match (sArec, sBrec) with
+  | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
+      Whnf.convTyp (lastA, s) (lastB, s')
+
+  | ((SigmaElem (_xA, tA, recA), s), (SigmaLast tB, s')) ->
+      Whnf.convTyp (tA, s) (tB, s') ||
+	convPrefixTypRec (recA, Substitution.LF.dot1 s) 
+	                 (SigmaLast tB, Substitution.LF.comp s' Substitution.LF.shift)
+
+  | ((SigmaElem (_xA, tA, recA), s), ((SigmaElem(xB, tB, recB) as rB), s')) ->
+      if Whnf.convTyp (tA, s) (tB, s') 
+      then convPrefixTypRec (recA, Substitution.LF.dot1 s) (recB, Substitution.LF.dot1 s') 
+      else convPrefixTypRec (recA, Substitution.LF.dot1 s) (rB, Substitution.LF.comp s' Substitution.LF.shift)  
+
+  | ((SigmaLast _ , _ ), _ ) -> false
+
+let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
+  convPrefixCtx cSome1 cSome2 && 
+    convPrefixTypRec (typRec1, Substitution.LF.id) (typRec2, Substitution.LF.id) 
+
+
 (* ctxToSub' cPhi cPsi = s
 
    if x1:A1, ... xn:An = cPsi
@@ -660,11 +702,12 @@ and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) =
  *
  * so checking a context element against a context element is just equality.
  *)
-and checkElementAgainstElement __cD elem1 elem2 =
+
+and checkElementAgainstElement _cD elem1 elem2 =
   let result =
     (*         Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in *)
-    Whnf.prefixSchElem elem2 elem1 (* (cSome1 = cSome2) && (block1 = block2)  *) in
-  dprint (fun () -> "checkElementAgainstElement "
+    prefixSchElem elem2 elem1 (* (cSome1 = cSome2) && (block1 = block2)  *) in
+    dprint (fun () -> "checkElementAgainstElement "
     ^ P.schemaToString (Schema[elem1])
     ^ " <== "
     ^ P.schemaToString (Schema[elem2])

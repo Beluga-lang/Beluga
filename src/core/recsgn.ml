@@ -408,13 +408,15 @@ and recSgnDecl d =
 
         let get_rec_arg (Ext.Comp.Total (_loc, order, _f, _args)) =
           match order with
-            | Ext.Comp.Arg x -> x
+            | Some (Ext.Comp.Arg x) -> Some x
+	    | None -> None
         in
         let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
 	  if f = f' then 
             match order with
-              | Ext.Comp.Arg x ->
-                let p = pos loc x args 1 in (Order.Arg p , args)
+              | Some (Ext.Comp.Arg x) ->
+                let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
+	      | None -> (None, [])
 	  else 
 	    raise (Error (loc, TotalDeclError (f, f')))
 	    
@@ -449,13 +451,13 @@ and recSgnDecl d =
 		      () 
                   | Some t ->
 		    if !Total.enabled then 
-		      (print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); 
+		      ((*print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 	   	      Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
 		    else 
 		      (if m = 1 then 
 			  (Coverage.enableCoverage := true;
 			   Total.enabled := true;
-			   print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); 
+			   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 			   Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
 		       else			  
 			  raise (Error (loc, MutualTotalDeclAfter f))
@@ -520,8 +522,13 @@ and recSgnDecl d =
                 | None -> ()
               | Some t ->
                   let x = get_rec_arg t in
-                  Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-                    (R.render_name f) (R.render_name x)
+		    (match x with 
+		       | Some x -> 
+			   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
+			     (R.render_name f) (R.render_name x)
+		       | None -> 
+			   Printf.printf "\n## Totality checking: %s terminates. ##\n"
+			     (R.render_name f) )
               end ;
             if !Coverage.enableCoverage then
               Printf.printf "\n## Coverage checking done: %s  ##\n"
@@ -550,8 +557,13 @@ and recSgnDecl d =
               | None -> ()
               | Some t -> let x = get_rec_arg t in
                   Total.clear () ;
-                  Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-                    (R.render_name f) (R.render_name x)
+		  (match x with 
+		     | Some x -> 
+			 Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
+			   (R.render_name f) (R.render_name x)
+		     | None -> 
+			 Printf.printf "\n## Totality checking: %s terminates ##\n"
+			   (R.render_name f))
               end ;
             if !Coverage.enableCoverage then
               Printf.printf "\n## Coverage checking done: %s  ##\n"

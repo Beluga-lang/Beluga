@@ -55,7 +55,8 @@ let freeze_from_name tau = match tau with
                                CompCotyp.freeze a;
                                 ()
 
-let sgnDeclToString d = Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl ~asHtml:true Prettyext.std_lvl Format.str_formatter d ; Format.flush_str_formatter ()
+let sgnDeclToString d = 
+  if !Html.genHtml then Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl ~asHtml:true Prettyext.std_lvl Format.str_formatter d ; Format.flush_str_formatter ()
 
 let rec recSgnDecls = function
   | [] -> ()

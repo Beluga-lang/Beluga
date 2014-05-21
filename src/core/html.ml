@@ -3,7 +3,7 @@ let genHtml = ref false
 let indent = ref 0
 let ids = ref []
 
-let spacess : string =	String.make (!indent) ' '
+let spaces : string =	String.make (!indent) ' '
 
 let page = ref ""
 
@@ -35,7 +35,7 @@ end
 
 let appendAsAnchor innerHtml id htmlClass =
 	ids := id :: !ids ;
-	page := (!page) ^ "\n" ^ spacess ^ "<span id=" ^ id ^ 
+	page := (!page) ^ "\n" ^ spaces ^ "<span id=" ^ id ^ 
 			(match htmlClass with
 				| Kind -> " class=kind "
 				| Const -> " class=const "
@@ -44,10 +44,10 @@ let appendAsAnchor innerHtml id htmlClass =
 			^ ">" ^ innerHtml ^ "</span>\n"
 
 (* let appendAsLink innerHtml id =
-	page := (!page) ^ "\n" ^ spacess ^ "<a href=#" ^ id ^ ">" ^ innerHtml ^ "</a>" *)
+	page := (!page) ^ "\n" ^ spaces ^ "<a href=#" ^ id ^ ">" ^ innerHtml ^ "</a>" *)
 
 let append innerHtml =
-	page := (!page) ^ "\n" ^ spacess ^ "<span>" ^ innerHtml ^ "</span>"
+	page := (!page) ^ "\n" ^ spaces ^ "<span>" ^ innerHtml ^ "</span>"
 
 
 

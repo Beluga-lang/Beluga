@@ -10,6 +10,7 @@ type error =
   | NoStratifyCheck of string 
   | WrongArgNum  of int
   | RecCallIncompatible of LF.mctx * Comp.args * Comp.ctyp_decl
+  | NotImplemented of string
 
 exception Error of Syntax.Loc.t * error
 
@@ -38,7 +39,9 @@ let _ = Error.register_printer
 	| NoStratifyCheck n -> 
   	  Format.fprintf ppf "Datatype %s hasn't done stratification checking."  n (* (R.render_name n) *)
 	| WrongArgNum n -> 
-  	  Format.fprintf ppf "The argument number %d wrong."  n (* (R.render_name n) *)
+  	  Format.fprintf ppf "The argument number %d is wrong."  n (* (R.render_name n) *)
+	| NotImplemented n      -> 
+  	  Format.fprintf ppf "The case %s is not implemented yet."  n
 
     )
   )
@@ -743,110 +746,162 @@ let rec positive a tau =
 (*should compare *)
 
 let rec less_dctx cPsi1 cPsi2 = 
-  (* print_string ("let's start\n"); *)
-  let cPsi = Whnf.cnormDCtx (cPsi1, Whnf.m_id) in
-  let cPhi = Whnf.cnormDCtx (cPsi2, Whnf.m_id) in
-  match cPsi, cPhi with
+  match cPsi1, cPsi2 with
     | LF.Null, LF.Null -> false  
     | LF.Null, _       -> true 
-    | _ , LF.DDec (cPsi', _ )  -> Whnf.convDCtx cPsi cPsi' || less_dctx cPsi cPsi' 
+    | _ , LF.DDec (cPsi', _ )  -> Whnf.convDCtx cPsi1 cPsi' || less_dctx cPsi1 cPsi' 
     | _ , _    -> false
  
-let rec less_phat phat1 phat2 = 
-  (* print_string ("let's start2\n"); *)
-  let psi = Whnf.cnorm_psihat phat1 Whnf.m_id in
-  let phi = Whnf.cnorm_psihat phat2 Whnf.m_id in 
-  match psi, phi with
-    | (Some cv1, offset1), (Some cv2, offset2) -> cv1 = cv2 && offset1 < offset2
-    | (None, offset1)    , (None, offset2)     -> offset1 < offset2
-    | _ , _  -> false
+(* let rec less_phat phat1 phat2 =  *)
+(*   (\* print_string ("let's start2\n"); *\) *)
+(*   let psi = Whnf.cnorm_psihat phat1 Whnf.m_id in *)
+(*   let phi = Whnf.cnorm_psihat phat2 Whnf.m_id in  *)
+(*   match psi, phi with *)
+(*     | (Some cv1, offset1), (Some cv2, offset2) -> cv1 = cv2 && offset1 < offset2 *)
+(*     | (None, offset1)    , (None, offset2)     -> offset1 < offset2 *)
+(*     | _ , _  -> false *)
+
+let  less_phat phat1 phat2 =
+  match prefix_hat phat1 phat2 with
+    | Some k -> k > 0
+    | _ -> false 
+
 
 let equal_meta_obj = Whnf.convMetaObj  
   (* match cM1, cM2 with *)
   (*   | Comp.MetaCtx (_, cPsi1),     Comp.MetaCtx (_, cPsi2) -> true *)
-  (*   | Comp.MetaObj (_, phat1, n1), Comp.MetaObj (_, phat2, n2) -> true  *)
+  (*   | Comp.MetaObj (_, phat1, tM1), Comp.MetaObj (_, phat2, tM2) -> true  *)
   (*   | _, _  -> false  *)
 
 
-let rec less_meta_obj mObj1 mObj2 = 
-  match mObj1, mObj2 with
+let rec less_meta_obj mC1 mC2 = 
+  match mC1, mC2 with
     | Comp.MetaCtx (_, cPsi1), Comp.MetaCtx(_, cPsi2) -> less_dctx cPsi1 cPsi2
 
-    | Comp.MetaObj (_, phat1, n1), Comp.MetaObj (loc2, phat2, n2) ->
-      (match n2 with 
-	| LF.Root(_, h , sp)  ->  
-	  let rec leq_some_hat = fun spine -> 
-	    ( match spine with 
-	      | LF.App (n', spine') -> 
-		leq_meta_obj mObj1 (Comp.MetaObj (loc2, phat2 , n')) || leq_some_hat spine'
-	      | _ -> false
-	    ) in  leq_some_hat sp
-	| _  -> false
-      ) 
-      || ((less_phat phat1 phat2)   && (Whnf.conv (n1, Substitution.LF.id) (n2, Substitution.LF.id)) )  
+    | Comp.MetaObj (_, phat1, tM1), Comp.MetaObj (loc2, phat2, tM2) ->
+      (match tM2 with
+  	| LF.Root(_, h , tS)  ->
+  	  let rec leq_some_hat = fun spine ->
+  	    ( match spine with
+  	      | LF.App (n', spine') ->
+  		leq_meta_obj mC1 (Comp.MetaObj (loc2, phat2 , n')) || leq_some_hat spine'
+  	      | _ -> false
+  	    ) in  leq_some_hat tS
+  	| _  -> false
+      )
+      || ((less_phat phat1 phat2)   && (Whnf.conv (tM1, Substitution.LF.id) (tM2, Substitution.LF.id)) )
       
 
-    | Comp.MetaObjAnn (_, cPsi1, n1), Comp.MetaObjAnn ( loc2,  cPsi2, n2) -> 
-      (match n2 with 
-	| LF.Root(_, h , sp)  -> 
-	  let rec leq_some_dctx = fun spine -> 
-	    ( match spine with 
-	      | LF.App (n', spine') -> 
-		leq_meta_obj mObj1 (Comp.MetaObjAnn (loc2,  cPsi2 , n')) || leq_some_dctx spine'
-	      | _ -> false
-	    ) in  leq_some_dctx sp
-	| _  -> false
-      ) 
-      || ((less_dctx  cPsi1  cPsi2)   && (Whnf.conv (n1, Substitution.LF.id) (n2, Substitution.LF.id)) )  
+    | Comp.MetaObjAnn (_, cPsi1, tM1), Comp.MetaObjAnn ( loc2,  cPsi2, tM2) ->
+      (match tM2 with
+  	| LF.Root(_, h , tS)  ->
+  	  let rec leq_some_dctx = fun spine ->
+  	    ( match spine with
+  	      | LF.App (n', spine') ->
+  		leq_meta_obj mC1 (Comp.MetaObjAnn (loc2,  cPsi2 , n')) || leq_some_dctx spine'
+  	      | _ -> false
+  	    ) in  leq_some_dctx tS
+  	| _  -> false
+      )
+      || ((less_dctx  cPsi1  cPsi2)   && (Whnf.conv (tM1, Substitution.LF.id) (tM2, Substitution.LF.id)) )
+
+  
+    | Comp.MetaParam (_, phat1, tH1) , Comp. MetaParam (_, phat2, tH2) -> 
+      (less_phat  phat1 phat2)   && (Whnf.convHead (tH1, Substitution.LF.id) (tH2, Substitution.LF.id)) 
+    (* is the first rule still applied in this case?  *)
+
+    | Comp.MetaSObj (loc1, _, _ ), Comp.MetaSObj (_, _ , _) -> raise (Error (loc1, NotImplemented "Comp.MetaSObj"))
+
+    | Comp.MetaSObjAnn (loc1, _, _ ), Comp.MetaSObjAnn (_, _ , _) ->  raise (Error (loc1, NotImplemented "Comp.MetaSObjAnn"))
 
     | _ , _  -> false
   
 
-and leq_meta_obj mObj1 mObj2 =
-  equal_meta_obj mObj1 mObj2 || less_meta_obj mObj1 mObj2 
-  || (match mObj2 with 
-    | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) -> 
-      leq_meta_obj mObj1 (Comp.MetaObj (loc,  (cv , offset + 1 ), n))
-    | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) -> 
-      leq_meta_obj mObj1 (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n))
+and leq_meta_obj mC1 mC2 =
+  equal_meta_obj mC1 mC2 || less_meta_obj mC1 mC2
+  || (match mC2 with
+    | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) ->
+      leq_meta_obj mC1 (Comp.MetaObj (loc,  (cv , offset + 1 ), n))
+    | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) ->
+      leq_meta_obj mC1 (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n))
     | _ -> false
-  ) 
-  || (match mObj1 with 
-    | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) -> 
-      leq_meta_obj (Comp.MetaObj (loc,  (cv , offset + 1 ), n)) mObj2
-    | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) -> 
-      leq_meta_obj (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n)) mObj2
+  )
+  || (match mC1 with
+    | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) ->
+      leq_meta_obj (Comp.MetaObj (loc,  (cv , offset + 1 ), n)) mC2
+    | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) ->
+      leq_meta_obj (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n)) mC2
     | _ -> false
-  ) 
+  )
 
 
-(*find the meta obj need to be compared*)
-let rec find_meta_obj mspine  n =
-  match (mspine, n) with
-    | (Comp.MetaApp (obj, _), 0 ) -> (* print_string ((P.metaObjToString LF.Empty  obj)^"\n" ); *) Whnf.cnormMetaObj (obj, Whnf.m_id)
-    | (Comp.MetaApp (obj, sp), _ ) -> find_meta_obj sp (n-1)
-    | (Comp.MetaNil , _)  -> raise Not_compatible (* raise (Error (loc, (WrongArgNum n))) *)
+(*find the meta obj needs to be compared*)
+let rec find_meta_obj cD mS n =
+  match mS, n with
+    | Comp.MetaApp (mC, _)  , 1   -> (cD, mC) (* print_string ((P.metaObjToString LF.Empty  obj)^"\n" ); *) 
+    | Comp.MetaApp (mC, mS'), _   -> find_meta_obj cD mS' (n-1)
+    | Comp.MetaNil          , _   -> raise Not_compatible (* raise (Error (loc, (WrongArgNum n))) *)
 
-let rec get_typfamily tau =
+let rec get_typbase cD tau =
   match tau with
-    | Comp.TypBase (_, _, mspine)  ->  mspine
-    | Comp.TypArr (tau1, tau2)     ->  get_typfamily tau2
-    | Comp.TypPiBox (_, tau')      ->  get_typfamily (Whnf.cnormCTyp (tau', LF.MShift (-1)) )
+    | Comp.TypBase (_, _, mS)      -> (* print_string ((P.mctxToString cD)^"\n" ); *)(cD,  mS)
+    | Comp.TypArr (tau1, tau2)     ->   get_typbase cD tau2
+    | Comp.TypPiBox ((dec,_), tau')    ->   get_typbase (LF.Dec (cD, dec)) tau'
     | _   -> raise Not_compatible
 
-let rec compare a tau n m =
-  (* let  n1 = R.render_cid_comp_typ a in *)
-  (* print_string (n1 ^ " = " ^ (string_of_int a)^"\n"); *)
-  match  tau with
-    | Comp.TypBase  (loc, c, mspine) ->
-      (* print_string ("let's start3\n"); *)
-      (* let  n2 = R.render_cid_comp_typ c in *)
-      (* print_string (n2 ^ " = "^(string_of_int c)^" in\n"); *)
-      not (a = c) ||
-      less_meta_obj (find_meta_obj  mspine n)  m
-    | Comp.TypArr   (tau1, tau2)  ->(compare a tau1 n m) && (compare a tau2 n m)
-    | Comp.TypCross (tau1, tau2)  -> (compare a tau1 n m) && (compare a tau2 n m)
-    | Comp.TypPiBox (_, tau')     -> (* print_string ("PiBox \n"); *)  compare a tau' n (Whnf.cnormMetaObj (m, LF.MShift 1) )
+
+
+let rec ctxlength cD = 
+  match cD with
+    | LF. Empty -> 0
+    | LF. Dec (cD', _) -> ctxlength cD' + 1
+
+(* compare a (cD1', tau1) n (cD2, mC2) cD0 = bool 
+if type_family(tau1) = a 
+   cD  |- tau : ctype 
+   cD0 |- mC
+
+*)
+
+let rec compare a (cD1',tau1) n (cD2, mC2) cD0= 
+  match  tau1 with
+    | Comp.TypBase  (loc, c, mS) ->
+      not (a = c) ||     
+	(*  cD1  = cD0, cDa *)
+	(*  cD2  = cD0, cDb *)
+	(* k0 = | cD0 | *)
+	(* k1 = | cD1 | *)
+	(* k2 = | cD2 | *)
+	let (cD1, mC1) =  find_meta_obj cD1' mS n in
+
+	let k0  = ctxlength cD0  in
+	let k1  = ctxlength cD1  in
+	let k2  = ctxlength cD2  in	
+	
+	let _ = dprint (fun () -> ("cD1 : " ^ (P.mctxToString  cD1) ^ "\n" ) ^
+	  ("cD2 : " ^ (P.mctxToString  cD2) ^ "\n" ) ^
+	  ("cD0 : " ^ (P.mctxToString  cD0) ^ "\n" ) ^
+	  ((P.metaObjToString cD1  mC1 )^"  shift offset:"^(string_of_int (k1-k0))^"\n" )^ 
+	  ((P.metaObjToString cD2  mC2) ^"  shift offset:"^(string_of_int (k2-k0))^"\n" ) )in
+
+	
+	let mC1 = Whnf.cnormMetaObj   (mC1 , LF.MShift  (k0-k1)) in
+	let mC2 = Whnf.cnormMetaObj   (mC2 , LF.MShift  (k0-k2)) in
+	
+
+	let _ = dprint (fun () -> 
+	  ("mC1: " ^  (P.metaObjToString cD0  mC1)^"\n" ) ^
+	  ("mC2: " ^  (P.metaObjToString cD0  mC2)^"\n" ) ) in
+	let _ = dprint (fun () -> 
+	  ("meta mC1: " ^  (P.metaObjToString LF.Empty  mC1)^"\n" ) ^
+	  ("meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ) ) in
+
+	
+	less_meta_obj mC1 mC2
+
+    | Comp.TypArr   (tau, tau')  -> (compare a (cD1', tau) n (cD2, mC2) cD0) && (compare a (cD1', tau') n (cD2, mC2) cD0)
+    | Comp.TypCross (tau, tau')  -> (compare a (cD1', tau) n (cD2, mC2) cD0) && (compare a (cD1', tau') n (cD2, mC2) cD0)
+    | Comp.TypPiBox ((dec,_), tau)   -> compare a (LF.Dec (cD1', dec), tau)  n  (cD2, mC2) cD0
     | Comp.TypBox _    -> true
     | Comp.TypClo _    -> true
     | Comp.TypBool     -> true
@@ -854,18 +909,46 @@ let rec compare a tau n m =
     | Comp.TypDef _    -> true
  
 
-let rec stratify a tau n =
-  let mspine = get_typfamily tau in
-  let m = find_meta_obj mspine n  in
-  match tau with
-    | Comp.TypBase _   -> true
-    | Comp.TypCobase _ -> true
-    | Comp.TypDef  _   -> raise Unimplemented
-    | Comp.TypBox  _   -> true
-    | Comp.TypArr (tau1, tau2)   -> (compare a tau1 n m) && (stratify a tau2 n)
-    | Comp.TypCross (tau1, tau2) -> (compare a tau1 n m) && (compare  a tau2 n m)
-    | Comp.TypPiBox (_, tau')    -> stratify a tau' n
-    | Comp.TypClo  _            -> raise Unimplemented
-    | Comp.TypBool               -> true
+(* stratify a tau n = bool 
 
- 
+Preconditions:
+    |- tau : ctype
+    type_family (tau) = a, i.e. the target type of tau has type family a
+    n is the position of an argument given to the type family s
+   
+if  all occurrence of the type family a in tau are stratified in n
+then return true
+false otherwise
+
+*)
+let stratify a tau n =
+  let (cD, mS) = get_typbase LF.Empty tau in
+  let cD_mC = find_meta_obj cD mS n  in
+  let rec strat cD0 tau0 = 
+    match tau0 with
+      | Comp.TypBase _   -> true
+      | Comp.TypCobase _ -> true
+      | Comp.TypDef  _   -> raise Unimplemented
+      | Comp.TypBox  _   -> true
+      | Comp.TypArr   (tau1, tau2)   -> (compare a (cD0,tau1) n cD_mC cD0) && (strat cD0 tau2)
+      | Comp.TypCross (tau1, tau2)   -> (compare a (cD0,tau1) n cD_mC cD0) && (compare a (cD0,tau2) n cD_mC cD0)
+      | Comp.TypPiBox ((dec,_), tau')    ->  strat (LF.Dec (cD0, dec)) tau'
+      | Comp.TypClo  _            -> raise Unimplemented
+      | Comp.TypBool               -> true
+  in 
+  strat LF.Empty tau
+
+let rec mS_size mS = 
+  match mS with
+    | Comp.MetaApp (mC, mS')   -> mS_size mS' + 1
+    | Comp.MetaNil             -> 0
+
+
+  
+
+let stratifyAll a tau =
+  let (cD, mS) = get_typbase LF.Empty tau in
+  let mSize = mS_size mS in
+  let rec stratAll n =
+     (n>=1) &&  ((stratify a tau n) || stratAll (n-1))
+  in stratAll mSize

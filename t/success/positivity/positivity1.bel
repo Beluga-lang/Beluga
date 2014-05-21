@@ -57,9 +57,9 @@ datatype list: nat -> type =
 | cons: nat -> list I -> list (s I)
 ;
 
-datatype IsList : [|- list N] -> ctype #stratify 0
+datatype IsList : [|- list N] -> ctype #positive
 =
-IL: {L:[|- list N]} IsList [|- L]
+IL: {L:[|- list N]} IsList [|- L] 
 ;
 
 

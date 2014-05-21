@@ -106,8 +106,8 @@ module Comp = struct
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp (tA, Substitution.LF.id))
           | UnsolvableConstraints (f,cnstrs) ->
             Format.fprintf ppf
-            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables. \n
-The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
+            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables.\
+\nThe constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
               cnstrs (R.render_name f)
           | CtxHatMismatch (cD, cPsi, phat, cM) ->
           let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
@@ -266,12 +266,12 @@ The constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-type
   let lookup' cG k =
     let (f,tau) = lookup cG k in tau
 
-  let rec isRecFun cIH f = match cIH with
+(*  let rec isRecFun cIH f = match cIH with
     | I.Empty -> false
     | I.Dec(cIH, WfRec (f', _ , _ )) ->
       if f = f' then true
       else isRecFun cIH f
-
+*)
 
 let checkParamTypeValid cD cPsi tA =
   let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
@@ -440,8 +440,8 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
     let cIH = match cIH with
       | I.Empty -> raise (Error (loc, InvalidRecCall))
       | cIH  -> match e2 with
-          | Box (_,cM) -> Total.filter cD cG cIH (M cM)
-          | Syn(_ , Var x)  -> Total.filter cD cG cIH (V x)
+          | Box (_,cM) -> Total.filter cD cG cIH (loc, M cM)
+          | Syn(_ , Var x)  -> Total.filter cD cG cIH (loc, V x)
           | _      -> raise (Error (loc, InvalidRecCall))
     in
     let _ = dprint (fun () -> "[useIH] Partially used IH: " ^ Total.ih_to_string cD cIH) in
@@ -584,7 +584,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
   and syn cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
     | Var x   ->
       let (f,tau) = lookup cG x in
-      if isRecFun cIH f then
+      if Total.exists_total_decl f then
         (Some cIH, tau, C.m_id)
       else
           (None, tau, C.m_id)
@@ -834,7 +834,10 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           let _     = LF.checkMSub loc  cD1' t1 cD in
           let _ = dprint (fun () -> "\nChecking refinement substitution : DONE\n") in
           let _ = checkPattern cD1' cG1 pat (tau_p, Whnf.m_id) in
-            check cD1' ((Context.append cG' cG1), cIH) e1 (tau', Whnf.m_id)
+          let cIH'  = if Total.struct_smaller pat then
+                       Total.wf_rec_calls cD1' cG1
+                     else I.Empty in
+            check cD1' ((Context.append cG' cG1), Context.append cIH cIH') e1 (tau', Whnf.m_id)
 
 
   let rec wf_mctx cD = match cD with

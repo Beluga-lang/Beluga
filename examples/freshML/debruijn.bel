@@ -1,0 +1,48 @@
+% Author: Brigitte Pientka
+% Translating system F into deBruijn representation
+%
+
+% Expressions
+exp   :  type.        %name exp E.
+app   : exp -> exp -> exp.
+lam   : (exp -> exp) -> exp.
+
+% Translating to untyped deBruijn terms
+
+exp'   : type.
+one    : exp'.
+shift  : exp' -> exp'.  % ^
+lam'   : exp'  -> exp' .
+app'   : exp'  -> exp'  -> exp'.
+
+schema ctx = exp;
+
+rec vhoas2db : {g:ctx}{#p:[g |- exp]}  [ |- exp'] =    
+ / total g (vhoas2db g _ ) /
+% / total p (vhoas2db g p ) /
+mlam g => mlam #p =>  case [g |- #p ..] of
+   % f [h] _
+ | [h,x:exp |- x] => [ |- one ]
+
+ | % f [h] _
+   [h,x:exp |- #p .. ] =>
+   let [ |- Db] = vhoas2db [h] [h |- #p ..] in
+     [ |- shift Db]
+;
+
+
+rec hoas2db : (g:ctx) [g |- exp] ->  [ |- exp' ] = / total e ( hoas2db _  e) /
+ fn e =>  case e of
+  | [g |- #p .. ] => vhoas2db [g] [g |- #p ..]
+
+ | [g |- lam  (\x. E .. x)] =>
+   let [ |- F] =  hoas2db  [g,x:exp |- E .. x ] in
+     [ |- lam' F ]
+
+ | [g |- app (E1 .. ) (E2 .. )] =>
+   let [ |- F1] = hoas2db  [g |- E1 ..]  in
+   let [ |- F2] = hoas2db  [g |- E2 ..]  in
+     [ |- app' F1 F2]
+;
+
+

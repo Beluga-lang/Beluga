@@ -380,7 +380,7 @@ GLOBAL: sgn;
   total_decl:
     [
       [
-        "total"; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ;  ")"  ->
+        "total"; x = OPT total_order ; "("; r = SYMBOL ; args = LIST0 call_args ;  ")"  ->
             Comp.Total (_loc, x, Id.mk_name (Id.SomeString r), args)
       ]
     ]

@@ -21,6 +21,7 @@ type error =
   | MutualTotalDecl of name
   | MutualTotalDeclAfter of name
   | NoPositive of string
+  | NoStratify of string
   | Unimplemented 
 
 exception Error of Syntax.Loc.t * error
@@ -42,6 +43,10 @@ let _ = Error.register_printer
 	  Format.fprintf ppf "Function %s has a totality declaration, but not all mutually recursive functions have a totality declaration.\n" (R.render_name f)
    	| NoPositive n -> 
 	  Format.fprintf ppf "Positivity checking of constructor %s fails." n
+	| NoStratify n -> 
+	  Format.fprintf ppf "Stratification checking of constructor %s fails." n
+
+	| Unimplemented -> Format.fprintf ppf "Unimplemented."
     )
   )
 
@@ -117,7 +122,7 @@ and recSgnDecl d =
 					fun () -> Check.Comp.checkTyp cD tau)) in
         let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
 
-    | Ext.Sgn.CompTyp (_ , a, extK, pflag) ->
+    | Ext.Sgn.CompTyp (loc , a, extK, pflag) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -145,8 +150,12 @@ and recSgnDecl d =
 	(*         -> Int.Sgn.Stratify   (_loc, x, Id.mk_name (Id.SomeString r), args)  *)
 	(*   | Some _ -> Int.Sgn.Positivity *)
  
-	let p = match pflag with | None -> false | Some _ -> true in
-
+	let p = (match pflag with 
+	          | None -> Int.Sgn.Nocheck 
+		  | Some (Ext.Sgn.Stratify n) ->  Int.Sgn.Stratify n
+		  | Some (Ext.Sgn.Positivity) -> Int.Sgn.Positivity
+		  | _    -> raise (Error (loc, Unimplemented)) 
+                ) in
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
           (if (!Debug.chatter) == 0 then ()
           else (Format.printf "\ndatatype %s : @[%a@] = \n"
@@ -197,15 +206,20 @@ and recSgnDecl d =
         in	let cid_ctypfamily = get_target_cid_comptyp tau' in
 
 	let flag = (CompTyp.get cid_ctypfamily).CompTyp.positivity in
-	(* match flag with *)
-	(*   | Int.Sgn.Noflag     -> ()  *)
-	(*   | Int.Sgn.Positivity ->  if Total.positive cid_ctypfamily tau' then () *)
-	(*                            else raise (Error (loc, (NoPositive c.string_of_name))) *)
-	(*   | Int.Sgn.Stratify   -> raise  (Error (loc, (Unimplemented c.string_of_name))) *)	     
-	(* ; *)
-	(if flag then if Total.positive cid_ctypfamily tau' then () 
-                               else raise (Error (loc, (NoPositive c.string_of_name)))
-	else () );
+
+	(match flag with
+	  | Int.Sgn.Nocheck    -> ()
+	  | Int.Sgn.Positivity ->  if Total.positive cid_ctypfamily tau' then ()
+	                           else raise (Error (loc, (NoPositive c.string_of_name)))
+	  | Int.Sgn.Stratify n   -> if Total.stratify cid_ctypfamily tau' n then ()
+	                           else raise (Error (loc, (NoStratify c.string_of_name)))
+	);
+	
+
+
+	(* (if flag then if Total.positive cid_ctypfamily tau' then ()  *)
+        (*                        else raise (Error (loc, (NoPositive c.string_of_name))) *)
+	(* else () ); *)
 
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
           (if (!Debug.chatter) == 0 then ()
@@ -394,13 +408,15 @@ and recSgnDecl d =
 
         let get_rec_arg (Ext.Comp.Total (_loc, order, _f, _args)) =
           match order with
-            | Ext.Comp.Arg x -> x
+            | Some (Ext.Comp.Arg x) -> Some x
+	    | None -> None
         in
         let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
 	  if f = f' then 
             match order with
-              | Ext.Comp.Arg x ->
-                let p = pos loc x args 1 in (Order.Arg p , args)
+              | Some (Ext.Comp.Arg x) ->
+                let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
+	      | None -> (None, [])
 	  else 
 	    raise (Error (loc, TotalDeclError (f, f')))
 	    
@@ -435,13 +451,13 @@ and recSgnDecl d =
 		      () 
                   | Some t ->
 		    if !Total.enabled then 
-		      (print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); 
+		      ((*print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 	   	      Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
 		    else 
 		      (if m = 1 then 
 			  (Coverage.enableCoverage := true;
 			   Total.enabled := true;
-			   print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); 
+			   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 			   Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
 		       else			  
 			  raise (Error (loc, MutualTotalDeclAfter f))
@@ -506,8 +522,13 @@ and recSgnDecl d =
                 | None -> ()
               | Some t ->
                   let x = get_rec_arg t in
-                  Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-                    (R.render_name f) (R.render_name x)
+		    (match x with 
+		       | Some x -> 
+			   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
+			     (R.render_name f) (R.render_name x)
+		       | None -> 
+			   Printf.printf "\n## Totality checking: %s terminates. ##\n"
+			     (R.render_name f) )
               end ;
             if !Coverage.enableCoverage then
               Printf.printf "\n## Coverage checking done: %s  ##\n"
@@ -536,8 +557,13 @@ and recSgnDecl d =
               | None -> ()
               | Some t -> let x = get_rec_arg t in
                   Total.clear () ;
-                  Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-                    (R.render_name f) (R.render_name x)
+		  (match x with 
+		     | Some x -> 
+			 Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
+			   (R.render_name f) (R.render_name x)
+		     | None -> 
+			 Printf.printf "\n## Totality checking: %s terminates ##\n"
+			   (R.render_name f))
               end ;
             if !Coverage.enableCoverage then
               Printf.printf "\n## Coverage checking done: %s  ##\n"

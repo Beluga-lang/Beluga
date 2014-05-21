@@ -40,6 +40,7 @@ datatype Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype =
 ;
 
 rec haltsMstep : [ |- mstep M M'] -> [ |- halts M'] -> [ |- halts M] =
+/ total (haltsMstep) /
 fn s => fn h => let [ |- MS] = s in let [ |- halts/m MS' V] = h in
  [ |- halts/m (trans MS MS') V]
 
@@ -47,6 +48,7 @@ fn s => fn h => let [ |- MS] = s in let [ |- halts/m MS' V] = h in
 
 % CR1
 rec cr1 : Reduce [ |- A] [ |- M] -> [ |- halts M] =
+/ total (cr1) /
 fn r => case r of
 | I h => h
 | Arr h f => h
@@ -54,25 +56,26 @@ fn r => case r of
 
 % CR2
 rec closed : [ |- mstep M M'] -> Reduce [ |- A] [ |- M'] -> Reduce [ |- A] [ |- M] =
-fn s => fn r => case r of
+/ total a (closed a) /
+ fn s => fn r => case r of
 | I ha => I (haltsMstep s ha)
-| Arr ha f =>
+| (Arr ha f) =>
     Arr (haltsMstep s ha)
         (mlam N => fn rn =>
-         let [ |- MS] = s in closed [ |- stepapp MS refl] (f [ |- N] rn))
+         let [ |- MS] = s in closed  [ |- stepapp MS refl] (f [ |- N] rn))
 ;
 
 %  h |- #s : g
 datatype RedSub : {g:ctx}{#S:g[]} ctype =
 | Nil : RedSub  [ ] [ $ ^ ]
 | Dot :     RedSub  [g] [ $ #S[^] ]  % #S : g[]
-
           -> Reduce [ |- A] [ |- M]              % A:[ |- tp], M:[ |- tm A]
           -> RedSub [g, x:tm A] [ $ #S[^] M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[..] ]
 ;
 
 
 rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ $ #S[^]] -> Reduce [ |- A] [ |- #p #S[^]] =
+% / total g (lookup g) /
 mlam g => mlam #p => fn rs => case [g |- #p ..] of
  | [g',x:tm A |-  x] =>   let (Dot rs' rN) = rs in rN
  | [g',x:tm A |-  #q ..] => let Dot rs' rN = rs in
@@ -81,12 +84,13 @@ mlam g => mlam #p => fn rs => case [g |- #p ..] of
 ;
 
 rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ $ #S[^]] -> Reduce  [ |- A] [ |- M #S[^]] =
+% / total m (eval g a m) /
  mlam g => mlam M => fn rs => case [g |- M ..] of
 | [g |- #p ..] => lookup [g] [g |- #p ..] rs
 | [g |- lam (\x. M1 .. x)] =>
  Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
-    closed [ |- beta] (eval [g,x:tm _] [g,x |- M1 .. x] (Dot rs rN)))
+    closed  [ |- beta] (eval [g,x:tm _] [g,x |- M1 .. x] (Dot rs rN)))
  | [g |- app (M1 ..) (M2 ..)] =>
   let Arr ha f = eval [g] [g |- M1 ..] rs in
   f [ |- _ ] (eval [g] [g |- M2 ..] rs)
@@ -95,5 +99,6 @@ rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ $ #S[^]] -> Reduce  [ |- A] [ |- 
 ;
 
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
+% / total (weakNorm) /
 mlam M => cr1 (eval [] [ |- M] Nil)
 ;

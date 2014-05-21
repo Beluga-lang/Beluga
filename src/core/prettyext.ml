@@ -994,14 +994,20 @@ module Ext = struct
 
     let total_to_string tdec = match tdec with
       | None -> ""
-      | Some (Comp.Total (_ , Comp.Arg n, f, args)) ->
+      | Some (Comp.Total (_ , order, f, args)) ->
       let rec args_to_string args = match args with
         | [] -> ""
         | Some n :: args' -> R.render_name n ^ " " ^ args_to_string args'
         | None :: args' -> " _ " ^ args_to_string args'
       in
-      "/ total " ^ R.render_name n ^ " ( " ^
-        R.render_name f ^ " " ^ args_to_string args ^ ") /"
+	(match order with 
+	  | Some (Comp.Arg n) -> 
+	      "/ total " ^ R.render_name n ^ " ( " ^
+		R.render_name f ^ " " ^ args_to_string args ^ ") /"
+	  | None -> 
+	      "/ total " ^ " ( " ^
+		R.render_name f ^ " " ^ args_to_string args ^ ") /"
+	)
 
     let fmt_ppr_cmp_rec lvl ppf = function
       | Comp.RecFun (_, x, total, a, e) ->

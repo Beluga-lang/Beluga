@@ -51,22 +51,34 @@ let sub_smaller phat s = match phat , s with
       (n-n') < n'
   | _ -> false
 
-let smaller_meta_obj cM = match  cM with
+let rec smaller_meta_obj cM = match  cM with
   | Comp.MetaCtx (_ , LF.DDec (_ , _ )) -> true
-  | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
+  | Comp.MetaObj (l, phat, LF.Root (l', h, spine)) ->
       (match h with
         | LF.Const _ -> true
         | LF.BVar _ -> true
-	| LF.PVar (_, s) -> (print_string "Checking whether pvar is smaller (0)\n";
-	    sub_smaller phat s)
+	| LF.PVar (_, s) -> 
+	    (print_string "Checking whether pvar is smaller (0)\n";
+	     match spine with 
+	       | LF.Nil -> sub_smaller phat s
+	       | _ -> true)
+	| LF.Proj (h, _ ) -> 
+	    (print_string "Checking whether proj is smaller (1)\n";
+	    smaller_meta_obj (Comp.MetaObj (l, phat, LF.Root(l', h, spine))))
 	| LF.MVar (_, s) -> sub_smaller phat  s
         | _ -> false)
-  | Comp.MetaObjAnn (_, cPsi, LF.Root (_, h, _spine)) ->
+  | Comp.MetaObjAnn (l, cPsi, LF.Root (l', h, spine)) ->
       (match h with
         | LF.Const _ -> true
         | LF.BVar _ -> true
-	| LF.PVar (_, s) -> (print_string "Checking whether pvar is smaller (1)\n";
-			     sub_smaller (Context.dctxToHat cPsi) s)
+	| LF.PVar (_, s) -> 
+	    (print_string "Checking whether pvar is smaller (1)\n";
+	     match spine with 
+	       | LF.Nil -> sub_smaller (Context.dctxToHat cPsi) s
+	       | _ -> true)
+	| LF.Proj (h, _ ) -> 
+	    (print_string "Checking whether proj is smaller (1)\n";
+	    smaller_meta_obj (Comp.MetaObjAnn (l, cPsi, LF.Root(l', h, spine))))
 	| LF.MVar (_, s) -> sub_smaller (Context.dctxToHat cPsi) s
 	| _ -> false
       )
@@ -81,7 +93,7 @@ let smaller_meta_obj cM = match  cM with
 
 let rec struct_smaller patt = match patt with
   | Comp.PatMetaObj (loc', mO) -> 
-      smaller_meta_obj mO 
+      smaller_meta_obj mO
   | Comp.PatConst (_, _, _ ) -> true
   | Comp.PatVar (_, _ ) -> false
   | Comp.PatPair (_, pat1, pat2 ) ->
@@ -361,15 +373,15 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
         let cM  = gen_meta_obj (cdecl, LF.MShift (j+1)) (j+1) in
         let cU  = Whnf.cnormCDecl (cdecl, LF.MShift (j+1)) in
         let mf_list = get_order () in
-	let _ = print_string ("Considering " ^ 
+	(* let _ = print_string ("Considering a total of " ^ 
 				string_of_int (List.length mf_list)  ^ 
-				" rec. functions\n") in
+				" rec. functions\n") in *)
         let mk_wfrec (f,x,k,ttau) =
-	  let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD cU ^ 
+	  (* let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD cU ^ 
 				  " ") in 
 	  let _ = print_string ("for position " ^ string_of_int x ^ 
 				  " considering in total " ^ string_of_int k ^
-				  "\n") in
+				  "\n") in *)
           let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
           let args = generalize args in
           let d = Comp.WfRec (f, args, tau) in
@@ -433,11 +445,11 @@ let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ((* print_string ("Generate recursive calls from \n" 
+    ( (*print_string ("Generate recursive calls from \n" 
 		     ^ "cD = " ^ P.mctxToString cD 
 		     ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n\n");*)
     let cIH = gen_rec_calls cD (LF.Empty) (cD, 0) in
-      gen_rec_calls' cD cIH (cG, 0))
+      gen_rec_calls' cD cIH (cG, 0)) 
   else
     LF.Empty
 

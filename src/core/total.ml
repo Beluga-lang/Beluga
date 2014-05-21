@@ -5,9 +5,10 @@ module Unify = Unify.StdTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
-
 type error =
   | NoPositiveCheck of string 
+  | NoStratifyCheck of string 
+  | WrongArgNum  of int
   | RecCallIncompatible of LF.mctx * Comp.args * Comp.ctyp_decl
 
 exception Error of Syntax.Loc.t * error
@@ -33,7 +34,12 @@ let _ = Error.register_printer
 		   Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n\n Found computation-level variable while generated recursive call expected a meta-object.\n\nCheck specified totality declaration."
 	    )
 	| NoPositiveCheck n -> 
-  	  Format.fprintf ppf "Datatype %s has not been checked for positivity."  n (* (R.render_name n) *)
+  	  Format.fprintf ppf "Datatype %s hasn't done positivity checking."  n (* (R.render_name n) *)
+	| NoStratifyCheck n -> 
+  	  Format.fprintf ppf "Datatype %s hasn't done stratification checking."  n (* (R.render_name n) *)
+	| WrongArgNum n -> 
+  	  Format.fprintf ppf "The argument number %d wrong."  n (* (R.render_name n) *)
+
     )
   )
 
@@ -689,10 +695,15 @@ let rec no_occurs a tau =
   match tau with
     | Comp.TypBase (loc, c , _) ->
       not (a = c) &&
-	((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity
-	 || let n =  R.render_cid_comp_typ c in
-            raise (Error (loc, (NoPositiveCheck n)))
+	( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with 
+	  | Sgn.Positivity -> true
+	  | _ ->  let n =  R.render_cid_comp_typ c in
+		  raise (Error (loc, (NoPositiveCheck n)))
 	)
+	(* ((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity *)
+	(*  || let n =  R.render_cid_comp_typ c in *)
+        (*     raise (Error (loc, (NoPositiveCheck n))) *)
+	(* ) *)
     | Comp.TypCobase _ ->  raise Unimplemented
     | Comp.TypDef  _  ->  raise Unimplemented
     | Comp.TypBox  _ -> true 
@@ -705,10 +716,15 @@ let rec no_occurs a tau =
 let rec check_positive a tau =
   match tau with
     | Comp.TypBase (loc, c , _) -> 
-      (a = c) 
-      || (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity
-      || let n =  R.render_cid_comp_typ c in
-         raise (Error (loc, (NoPositiveCheck n)))
+      (a = c) ||
+      ( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with 
+	 | Sgn.Positivity -> true
+	 | _ -> let n =  R.render_cid_comp_typ c in
+		raise (Error (loc, (NoPositiveCheck n)))
+      )
+      (* (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity *)
+      (* || let n =  R.render_cid_comp_typ c in *)
+      (*    raise (Error (loc, (NoPositiveCheck n))) *)
     | Comp.TypCobase _  ->  raise Unimplemented
     | Comp.TypDef  _  -> raise Unimplemented
     | Comp.TypBox  _ -> true 
@@ -731,3 +747,137 @@ let rec positive a tau =
     | Comp.TypClo   _            ->  raise Unimplemented
     | Comp.TypBool               -> true 
 
+
+
+(* stratification  *)
+
+
+(*should compare *)
+
+let rec less_dctx cPsi1 cPsi2 = 
+  (* print_string ("let's start\n"); *)
+  let cPsi = Whnf.cnormDCtx (cPsi1, Whnf.m_id) in
+  let cPhi = Whnf.cnormDCtx (cPsi2, Whnf.m_id) in
+  match cPsi, cPhi with
+    | LF.Null, LF.Null -> false  
+    | LF.Null, _       -> true 
+    | _ , LF.DDec (cPsi', _ )  -> Whnf.convDCtx cPsi cPsi' || less_dctx cPsi cPsi' 
+    | _ , _    -> false
+ 
+let rec less_phat phat1 phat2 = 
+  (* print_string ("let's start2\n"); *)
+  let psi = Whnf.cnorm_psihat phat1 Whnf.m_id in
+  let phi = Whnf.cnorm_psihat phat2 Whnf.m_id in 
+  match psi, phi with
+    | (Some cv1, offset1), (Some cv2, offset2) -> cv1 = cv2 && offset1 < offset2
+    | (None, offset1)    , (None, offset2)     -> offset1 < offset2
+    | _ , _  -> false
+
+let equal_meta_obj = Whnf.convMetaObj  
+  (* match cM1, cM2 with *)
+  (*   | Comp.MetaCtx (_, cPsi1),     Comp.MetaCtx (_, cPsi2) -> true *)
+  (*   | Comp.MetaObj (_, phat1, n1), Comp.MetaObj (_, phat2, n2) -> true  *)
+  (*   | _, _  -> false  *)
+
+
+let rec less_meta_obj mObj1 mObj2 = 
+  match mObj1, mObj2 with
+    | Comp.MetaCtx (_, cPsi1), Comp.MetaCtx(_, cPsi2) -> less_dctx cPsi1 cPsi2
+
+    | Comp.MetaObj (_, phat1, n1), Comp.MetaObj (loc2, phat2, n2) ->
+      (match n2 with 
+	| LF.Root(_, h , sp)  ->  
+	  let rec leq_some_hat = fun spine -> 
+	    ( match spine with 
+	      | LF.App (n', spine') -> 
+		leq_meta_obj mObj1 (Comp.MetaObj (loc2, phat2 , n')) || leq_some_hat spine'
+	      | _ -> false
+	    ) in  leq_some_hat sp
+	| _  -> false
+      ) 
+      || ((less_phat phat1 phat2)   && (Whnf.conv (n1, Substitution.LF.id) (n2, Substitution.LF.id)) )  
+      
+
+    | Comp.MetaObjAnn (_, cPsi1, n1), Comp.MetaObjAnn ( loc2,  cPsi2, n2) -> 
+      (match n2 with 
+	| LF.Root(_, h , sp)  -> 
+	  let rec leq_some_dctx = fun spine -> 
+	    ( match spine with 
+	      | LF.App (n', spine') -> 
+		leq_meta_obj mObj1 (Comp.MetaObjAnn (loc2,  cPsi2 , n')) || leq_some_dctx spine'
+	      | _ -> false
+	    ) in  leq_some_dctx sp
+	| _  -> false
+      ) 
+      || ((less_dctx  cPsi1  cPsi2)   && (Whnf.conv (n1, Substitution.LF.id) (n2, Substitution.LF.id)) )  
+
+    | _ , _  -> false
+  
+
+and leq_meta_obj mObj1 mObj2 =
+  equal_meta_obj mObj1 mObj2 || less_meta_obj mObj1 mObj2 
+  || (match mObj2 with 
+    | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) -> 
+      leq_meta_obj mObj1 (Comp.MetaObj (loc,  (cv , offset + 1 ), n))
+    | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) -> 
+      leq_meta_obj mObj1 (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n))
+    | _ -> false
+  ) 
+  || (match mObj1 with 
+    | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) -> 
+      leq_meta_obj (Comp.MetaObj (loc,  (cv , offset + 1 ), n)) mObj2
+    | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) -> 
+      leq_meta_obj (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n)) mObj2
+    | _ -> false
+  ) 
+
+
+(*find the meta obj need to be compared*)
+let rec find_meta_obj mspine  n =
+  match (mspine, n) with
+    | (Comp.MetaApp (obj, _), 0 ) -> (* print_string ((P.metaObjToString LF.Empty  obj)^"\n" ); *) Whnf.cnormMetaObj (obj, Whnf.m_id)
+    | (Comp.MetaApp (obj, sp), _ ) -> find_meta_obj sp (n-1)
+    | (Comp.MetaNil , _)  -> raise Not_compatible (* raise (Error (loc, (WrongArgNum n))) *)
+
+let rec get_typfamily tau =
+  match tau with
+    | Comp.TypBase (_, _, mspine)  ->  mspine
+    | Comp.TypArr (tau1, tau2)     ->  get_typfamily tau2
+    | Comp.TypPiBox (_, tau')      ->  get_typfamily (Whnf.cnormCTyp (tau', LF.MShift (-1)) )
+    | _   -> raise Not_compatible
+
+let rec compare a tau n m =
+  (* let  n1 = R.render_cid_comp_typ a in *)
+  (* print_string (n1 ^ " = " ^ (string_of_int a)^"\n"); *)
+  match  tau with
+    | Comp.TypBase  (loc, c, mspine) ->
+      (* print_string ("let's start3\n"); *)
+      (* let  n2 = R.render_cid_comp_typ c in *)
+      (* print_string (n2 ^ " = "^(string_of_int c)^" in\n"); *)
+      not (a = c) ||
+      less_meta_obj (find_meta_obj  mspine n)  m
+    | Comp.TypArr   (tau1, tau2)  ->(compare a tau1 n m) && (compare a tau2 n m)
+    | Comp.TypCross (tau1, tau2)  -> (compare a tau1 n m) && (compare a tau2 n m)
+    | Comp.TypPiBox (_, tau')     -> (* print_string ("PiBox \n"); *)  compare a tau' n (Whnf.cnormMetaObj (m, LF.MShift 1) )
+    | Comp.TypBox _    -> true
+    | Comp.TypClo _    -> true
+    | Comp.TypBool     -> true
+    | Comp.TypCobase _ -> true
+    | Comp.TypDef _    -> true
+ 
+
+let rec stratify a tau n =
+  let mspine = get_typfamily tau in
+  let m = find_meta_obj mspine n  in
+  match tau with
+    | Comp.TypBase _   -> true
+    | Comp.TypCobase _ -> true
+    | Comp.TypDef  _   -> raise Unimplemented
+    | Comp.TypBox  _   -> true
+    | Comp.TypArr (tau1, tau2)   -> (compare a tau1 n m) && (stratify a tau2 n)
+    | Comp.TypCross (tau1, tau2) -> (compare a tau1 n m) && (compare  a tau2 n m)
+    | Comp.TypPiBox (_, tau')    -> stratify a tau' n
+    | Comp.TypClo  _            -> raise Unimplemented
+    | Comp.TypBool               -> true
+
+ 

@@ -212,7 +212,7 @@ module Ext : sig
   end
 
   (* External Syntax Pretty Printer Functor *)
-  module Make : functor (R : Store.Cid.RENDERER) -> PRINTER
+     module Make : functor (R : Store.Cid.RENDERER) -> PRINTER
 
   (* Default External Syntax Pretty Printer Functor Instantiation *)
   module DefaultPrinter : PRINTER

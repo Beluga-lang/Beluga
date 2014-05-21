@@ -21,6 +21,7 @@ FILES[] =
         holes
         id
         index
+        interactive
 	logic
         lfholes
         opsem

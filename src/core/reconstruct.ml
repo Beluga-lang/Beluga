@@ -1393,7 +1393,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
   | (Apx.Comp.Hole (loc), (tau, theta)) ->
     let () = Holes.collect (loc, cD, cG, (tau, theta)) in
-    Int.Comp.Hole (loc)
+    Int.Comp.Hole (loc, (fun () -> Holes.getHoleNum loc))
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
@@ -2491,5 +2491,6 @@ let comptypdef loc a (tau, cK) =
 
 
 let exp  = elExp  Int.LF.Empty
+
 
 let exp' = elExp' Int.LF.Empty

@@ -1116,7 +1116,8 @@ module Int = struct
               (fmt_ppr_lf_head cD cPsi 0) h
               (r_paren_if cond)
 
-    let rec fmt_ppr_cmp_typ cD lvl ppf = function
+    let rec fmt_ppr_cmp_typ cD lvl ppf =
+      function
       | Comp.TypBase (_, c, mS)->
           let cond = lvl > 1 in
             fprintf ppf "%s%s%a%s"
@@ -1216,6 +1217,7 @@ module Int = struct
       | Comp.PatConst (_, c, pat_spine) ->
           let pat_spine = deimplicitize_spine c pat_spine in
           let cond = lvl > 1 in
+          let pat_spine = deimplicitize_spine c pat_spine in
             fprintf ppf "%s%s %a%s"
               (l_paren_if cond)
               (R.render_cid_comp_const c)
@@ -1325,7 +1327,8 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 0) e2
               (r_paren_if cond)
 
-      | Comp.Hole (_) -> fprintf ppf " ? "
+      | Comp.Hole (loc, f) ->
+          fprintf ppf " ? %%{ %d }%%" ( try f() with _ -> -1 )
 
     and strip_mapp_args cD cG i =
       if !Control.printImplicit then
@@ -1361,6 +1364,7 @@ module Int = struct
           let (i2', _) = strip_mapp_args' cD cG i2 in
           (Comp.Equal (loc, i1', i2'), [])
       | _ -> (i, [])
+
     and implicitCompArg tau = begin match tau with
       | Comp.TypPiBox ((LF.Decl (_, LF.MTyp (_,_, LF.Maybe))), tau) ->
           (false)::(implicitCompArg tau)

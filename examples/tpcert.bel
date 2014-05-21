@@ -53,7 +53,11 @@ mlam g => mlam U =>
     | [g |- _]                 => [g |- cert_illtyped bot]
   )
 
+<<<<<<< HEAD
+ | [g. #p.1 ..]  => ? %[g. certify _   (#p.2 ..)]
+=======
  | [g |- #p.1 ..]  => [g |- certify _   (#p.2 ..)]
+>>>>>>> master
 
  | [g |- lam T \x. E .. x] =>
    (case    infer' [g, b: block x:term, _t:oft x T] [ g,b  |-  E .. b.1]    of
@@ -63,6 +67,18 @@ mlam g => mlam U =>
    	[g |- certify (arr T1 T2) (o_lam \x.\u. D .. <x, u>)]
     )
 
+<<<<<<< HEAD
+ | [g. app (E1 ..) (E2 ..)] =>
+   (case infer'  [g] [ g . E1 .. ] of
+    | [g. certify (arr T2 T) (D1 ..)] =>
+      (case infer'  [g] [ g . E2 .. ]   of
+       | {D2: [g, t:tp. oft (E2 ..) t]}
+	 [g. certify T2' (D2 .. T2')] =>
+	 if equal [. T2] [. T2']
+	  then [g. certify T (o_app (D1 ..) (D2 .. T2))]
+	 else ? % [g. cert_illtyped bot]
+       | [g. _] => [g. cert_illtyped bot]
+=======
  | [g |- app (E1 ..) (E2 ..)] =>
    (case infer'  [g] [g |- E1 .. ] of
     | [g |- certify (arr T2 T) (D1 ..)] =>
@@ -73,6 +89,7 @@ mlam g => mlam U =>
 	  then [g |- certify T (o_app (D1 ..) (D2 .. T2))]
 	 else [g |- cert_illtyped bot]
        | [g |- _] => [g |- cert_illtyped bot]
+>>>>>>> master
        )
     | [g |- _] => [g |- cert_illtyped bot]
     )

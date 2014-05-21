@@ -391,6 +391,25 @@ module Index = struct
   *)
   let clearIndex () = DynArray.clear queries ; Hashtbl.clear types
 
+
+  let singleQuery (p, (tM, i), e, t) f =
+    let (q, tM', s, xs) = (Convert.typToQuery (tM, i)) in
+    ignore (querySub := s) ;
+    robStore();
+    let bchatter = !Options.chatter in
+    Options.chatter := 0;
+    let sgnQ = { query = q ;
+        typ = tM ;
+        skinnyTyp = tM' ;
+        optName = p ;
+        expected = e ;
+        tries = t ;
+        instMVars = xs } in
+    f sgnQ;
+    Options.chatter := bchatter;
+   Hashtbl.clear types
+
+
 end
 
 
@@ -839,3 +858,7 @@ let runLogic () =
       Index.clearIndex ()
     end
   else () (* NOP *)
+
+
+let runLogicOn n (tA,i) e t  =
+  Index.singleQuery (n,(tA,i),e,t) Frontend.solve

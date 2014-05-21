@@ -344,6 +344,8 @@ module Cid = struct
       constructors       = []
     }
 
+    let entry_list  = ref []
+
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
@@ -357,9 +359,12 @@ module Cid = struct
       let cid_comp_typ = DynArray.length store in
         DynArray.add store e;
         Hashtbl.replace directory e.name cid_comp_typ;
+        entry_list := cid_comp_typ :: !entry_list;
         cid_comp_typ
 
     let get = DynArray.get store
+
+    let get_implicit_arguments c = (get c).implicit_arguments
 
     let freeze a =
           (get a).frozen <- true
@@ -369,6 +374,7 @@ module Cid = struct
         entry.constructors <- c :: entry.constructors
 
     let clear () =
+      entry_list := [];
       DynArray.clear store;
       Hashtbl.clear directory
   end
@@ -567,21 +573,32 @@ module Cid = struct
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
+    let entry_list  = ref []
+
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
 
-    let add f =
+    let add loc f =
       let cid_prog = DynArray.length store in
       let e = f cid_prog in
       DynArray.add store e;
-      Hashtbl.replace directory e.name cid_prog;
-      cid_prog
+      try
+        let cid_prog' = Hashtbl.find directory e.name in
+        let loc' = List.assoc cid_prog'  !entry_list in
+        Hashtbl.replace directory e.name cid_prog;
+        entry_list := (cid_prog,loc)::(List.remove_assoc cid_prog' !entry_list);
+        Some loc'
+      with Not_found ->
+        Hashtbl.replace directory e.name cid_prog;
+        entry_list := (cid_prog,loc) :: !entry_list;
+        None
 
     let get = DynArray.get store
 
     let clear () =
+      entry_list := [];
       DynArray.clear store;
       Hashtbl.clear directory
 

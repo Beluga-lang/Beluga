@@ -72,14 +72,16 @@ module Cid : sig
       mutable constructors : cid_comp_const list
     }
 
+    val entry_list : Id.cid_comp_typ list ref
     val mk_entry  : name -> Comp.kind -> int -> entry
 
     val add           : entry -> cid_comp_typ
     val get           : cid_comp_typ -> entry
     val freeze : cid_comp_typ -> unit
-    val addConstructor: cid_comp_const -> cid_comp_typ -> unit
+    val addConstructor : cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : name -> cid_comp_typ
     val clear         : unit -> unit
+    val get_implicit_arguments : cid_comp_typ -> int
   end
 
   module CompCotyp : sig
@@ -163,7 +165,7 @@ module Cid : sig
       mut_rec            : name list
     }
 
-    val mk_entry  : name -> Comp.typ -> int -> Comp.value -> name list -> entry
+    val mk_entry  :  name -> Comp.typ -> int -> Comp.value -> name list -> entry
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this
@@ -171,10 +173,11 @@ module Cid : sig
         this 'add' function expects a function to which it will
         provide the cid_prog it generated to store the entry, thus
         tying the recursive knot. *)
-    val add           : (cid_prog -> entry) -> cid_prog
+    val add           : Loc.t -> (cid_prog -> entry) -> Loc.t option (*cid_prog  *)
     val get           : cid_prog -> entry
     val index_of_name : name -> cid_prog
 
+    val entry_list : (Id.cid_prog * Loc.t) list ref
     val clear         : unit -> unit
   end
 

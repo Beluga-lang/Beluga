@@ -520,7 +520,7 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end
 
-    | (Hole (_loc), (_tau, _t)) -> ()
+    | (Hole (_loc, _f), (_tau, _t)) -> ()
 
   and check cD cG e (tau, t) =
     let _ =  dprint (fun () -> "[check]  " ^

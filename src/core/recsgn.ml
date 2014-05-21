@@ -292,7 +292,7 @@ and recSgnDecl d =
 
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
+            let _l = Comp.add  loc (fun _ -> Comp.mk_entry x tau' 0 v []) in
             if (!Debug.chatter) <> 0 then
               Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
                 (R.render_name x)
@@ -328,7 +328,7 @@ and recSgnDecl d =
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
+            let _l = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 v []) in
             if (!Debug.chatter) <> 0 then
 	      Printf.printf "\nlet %s : %s = %s\n===>  %s\n"
 		(R.render_name x)
@@ -345,7 +345,7 @@ and recSgnDecl d =
           let   _   = recSgnDecls recConts' in
           let  _  = List.map freeze_from_name recTyps in
                ()
-    | Ext.Sgn.Rec (_, recFuns) ->
+    | Ext.Sgn.Rec (loc, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
         let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in
 
@@ -418,6 +418,15 @@ and recSgnDecl d =
           | [] -> ()
           | Ext.Comp.RecFun (f, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f e in
+            let l = Comp.add loc
+                (fun cid ->
+                  Comp.mk_entry f tau' 0
+                    (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+                    n_list) in
+            (match l with
+            | Some loc -> Holes.destroyHoles(loc)
+            | None -> ());
+            Holes.commitHoles();
             if !Debug.chatter <> 0 then
               Printf.printf  "and %s : %s =\n %s\n"
                 (R.render_name f)
@@ -427,15 +436,20 @@ and recSgnDecl d =
               Printf.printf "\n## Coverage checking done: %s  ##\n"
                 (R.render_name f);
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
-            let _x = Comp.add
-              (fun cid ->
-                Comp.mk_entry f tau' 0
-                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
-                  n_list) in
+
             reconRecFun lf in
         begin match recFuns with
           | Ext.Comp.RecFun (f, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f e in
+            let l = Comp.add loc
+              (fun cid ->
+                Comp.mk_entry  f tau' 0
+                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+                  n_list) in
+            (match l with
+            | Some loc -> Holes.destroyHoles(loc)
+            | None -> ());
+            Holes.commitHoles();
             if !Debug.chatter <> 0 then
               Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
                 (R.render_name f)
@@ -446,12 +460,6 @@ and recSgnDecl d =
               Printf.printf "\n## Coverage checking done: %s  ##\n"
                 (R.render_name f);
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
-
-            let _x = Comp.add
-              (fun cid ->
-                Comp.mk_entry f tau' 0
-                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
-                  n_list) in
             reconRecFun lf
 
           | _ -> raise (Error.Violation "No recursive function defined")

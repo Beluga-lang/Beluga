@@ -44,7 +44,7 @@ FILES[] =
         version
         whnf
         monitor
-
+        
 # Declare one pseudo target for the package and one for the files it
 # contains
 .PHONY: lexer src files pack

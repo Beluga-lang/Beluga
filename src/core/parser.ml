@@ -603,7 +603,7 @@ GLOBAL: sgn;
 
       |
         "{"; hash = "#"; s = UPSYMBOL; ":";
-         cPhi = clf_dctx; "["; cPsi = clf_dctx; "]"; "}" ->
+         cPsi = clf_dctx; "|-"; cPhi = clf_dctx; "}" ->
                 LF.SDecl (_loc, Id.mk_name (Id.SomeString s), cPhi, cPsi)
 
 

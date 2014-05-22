@@ -1,6 +1,23 @@
 open Id
 open Syntax.Int
 
+module OpPragmas : sig
+  type fixPragma = {
+    name : Id.name;
+    fix : Syntax.Ext.Sgn.fix;
+    precedence : int;
+    assoc : Syntax.Ext.Sgn.assoc option;
+  }
+
+  val clear : unit -> unit
+
+  val addPragma : Id.name -> Syntax.Ext.Sgn.fix -> int -> Syntax.Ext.Sgn.assoc option -> unit
+
+  val getPragma : Id.name -> fixPragma option
+
+  val pragmaExists : Id.name -> bool
+end
+
 module Cid : sig
 
   module Typ : sig

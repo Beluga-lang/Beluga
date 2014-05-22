@@ -86,6 +86,10 @@ let rec recSgnDecls = function
 and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc_option)) -> 
+        let _ = dprint(fun () -> "Pragma found for " ^ (R.render_name name)) in
+        OpPragmas.addPragma name fix precedence assoc_option
+
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         (* index cT  in a context which contains arguments to cK *)

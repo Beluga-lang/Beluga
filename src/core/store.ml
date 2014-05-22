@@ -7,6 +7,39 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 (* Register error printer at the end of this module. *)
+module OpPragmas = struct
+  type fixPragma = {
+    name : Id.name;
+    fix : Ext.Sgn.fix;
+    precedence : int;
+    assoc : Ext.Sgn.assoc option;
+  }
+
+  let pragmas = ref []
+  
+  let clear () = pragmas := []
+  
+  let addPragma n f p a = 
+    let new_entry = {name = n; fix = f; precedence = p; assoc = a} in
+    pragmas := new_entry :: !pragmas
+
+  let getPragma name = 
+    begin
+      try
+        Some(List.find ((fun p -> name = p.name)) (!pragmas))
+      with
+      | _ -> None
+    end
+
+  let pragmaExists name = begin
+    try
+      ignore (List.find ((fun p-> name == p.name)) (!pragmas));
+      true
+    with
+    | _ -> false
+  end
+
+end
 
 module Cid = struct
 

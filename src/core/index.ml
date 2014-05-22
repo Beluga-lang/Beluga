@@ -39,6 +39,7 @@ type error =
   | UnboundIdSub
   | PatVarNotUnique
   | IllFormedCompTyp
+  | MispacedOperator of Id.name
 
 exception Error of Syntax.Loc.t * error
 
@@ -180,6 +181,170 @@ and index_typ cvars bvars fvars = function
       let (typRec', fvars') = index_typ_rec cvars bvars fvars typRec in
       (Apx.LF.Sigma typRec' , fvars')
 
+  | Ext.LF.AtomTerm(loc, (Ext.LF.App(loc', n, Ext.LF.Nil))) ->
+      let _ = dprint (fun () -> "AtomTerm: ") in
+      let _ = dprint (fun () -> normalToString n) in
+      begin match n with
+        | Ext.LF.TList(loc2,nl) ->
+            let prag_list = getOps nl in
+            (* let _ = dprint (fun () -> "prag_list length: " ^ string_of_int (List.length prag_list)) in *)
+            let Ext.LF.Root(_, Ext.LF.Name(_, a), s') = fixNormalList nl prag_list in
+            index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, s')) 
+            
+        | Ext.LF.Root(loc2, Ext.LF.Name(_,name), sp) -> 
+            index_typ cvars bvars fvars (Ext.LF.Atom(loc2, name, sp))
+      end
+
+and getNormalLoc = function
+  | Ext.LF.Lam(l,_,_) -> l
+  | Ext.LF.Root(l,_,_) -> l
+  | Ext.LF.Tuple(l,_) -> l
+  | Ext.LF.Ann(l,_,_) -> l
+  | Ext.LF.TList(l,_) -> l
+
+and spaces i = if i <= 0 then "" else "-" ^ (spaces (i-1))
+
+and g i a = begin match a with
+  | Ext.LF.Nil -> (spaces i) ^ ".\n"
+  | Ext.LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) end
+
+and f i = function
+  | Ext.LF.Lam(_,name,n) -> (spaces i) ^ "Lam: " ^ (R.render_name name) ^ "\n" ^ (f (i+1) n)
+  | Ext.LF.Root(_,Ext.LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,Ext.LF.MVar(_, u, _), s) -> (spaces i) ^ "Root (MVar): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,Ext.LF.PVar(_, u, _), s) -> (spaces i) ^ "Root (PVar): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,_, s) -> (spaces i) ^ "Root (?)\n" ^ (g (i+1) s)
+  | Ext.LF.Tuple(_,_) -> "Tuple"
+  | Ext.LF.Ann(_,n,_) -> (spaces i) ^ "Ann\n" ^ (f (i+1) n)
+  | Ext.LF.TList(_,nl) -> (spaces i) ^ "TList\n" ^ (List.fold_right (fun n acc -> (f (i+1) n) ^ acc) nl "")
+
+and normalToString n = f 0 n
+
+and normalListToSpine = function
+    | [] -> Ext.LF.Nil
+    | (Ext.LF.TList(loc,nl))::t -> Ext.LF.App(loc, fixNormalList nl (getOps nl), normalListToSpine t)
+    | h::t -> Ext.LF.App(getNormalLoc h, h, normalListToSpine t)
+ 
+and getOps = function
+    | [] -> []
+    | n::rest -> 
+      begin match n with
+        | Ext.LF.Root(_, Ext.LF.Name(_, name), Ext.LF.Nil) -> 
+            begin match Store.OpPragmas.getPragma name with
+            | None -> getOps rest
+            | Some prag -> prag::(getOps rest)
+            end
+        | Ext.LF.TList(_, nl') -> (getOps nl') @ (getOps rest)
+        | _ ->(getOps rest)
+      end 
+
+and fixNormalList (nl : Ext.LF.normal list) (prag_list : (Store.OpPragmas.fixPragma) list) : Ext.LF.normal = 
+  if prag_list = [] then  (*No operators that were declared in pragma -- assume 1st element is a root with an empty spine*)
+    let h::t = nl in
+    begin match h with
+      | Ext.LF.Root(loc, head, Ext.LF.Nil) -> Ext.LF.Root(loc, head, normalListToSpine t)
+      | Ext.LF.Lam(loc, name, Ext.LF.Root(loc2, head, Ext.LF.Nil)) ->
+          Ext.LF.Lam(loc, name, Ext.LF.Root(loc2, head, normalListToSpine t))
+      | Ext.LF.Lam(loc, name, n) ->
+          Ext.LF.Lam(loc, name, fixNormalList (n::t) [])
+      | Ext.LF.TList _ -> failwith "TList as head in fixNormalList"
+      | _ -> failwith (normalToString (Ext.LF.TList(Loc.ghost, nl)))
+    end
+  else      
+  let prag::prag_list' = 
+    List.sort (fun (a : Store.OpPragmas.fixPragma) (b : Store.OpPragmas.fixPragma) -> 
+      b.Store.OpPragmas.precedence - a.Store.OpPragmas.precedence) prag_list in
+  let deleteElement i l =
+    let rec f x y = function
+    | [] -> []
+    | h::t -> if x=y then t else h::(f (x+1) y t)
+  in f 0 i l in 
+  let splitAt i =     (* x < i in 1st half, x >= i in 2nd half *)
+    let rec f x = function
+    | [] -> ([],[])
+    | (h::t) as l-> if x < i then let (a,b) = f (x+1) t in (h::a, b) else ([], l)
+    in f 0 in
+  if prag.Store.OpPragmas.fix = Ext.Sgn.Infix then begin
+    try
+      let indeces = List.map (fun (_,i) -> i) (List.filter (fun (a,_) -> a) (List.mapi (fun a b -> (
+        match b with 
+        | Ext.LF.Root(_,Ext.LF.Name(_,name), _) -> (prag.Store.OpPragmas.name = name, a)
+        | _ -> (false, a))) nl)) in
+      let indeces = begin match prag.Store.OpPragmas.assoc with
+      | Some(Ext.Sgn.Left) -> indeces
+      | Some(Ext.Sgn.Right) -> List.rev indeces
+      | Some(Ext.Sgn.None) -> 
+          if List.length indeces = 1 then indeces 
+          else if List.length indeces > 1 then
+            let Ext.LF.Root(loc, Ext.LF.Name(_,n), _) = List.nth nl (List.hd indeces) in 
+            raise (Error(loc, MispacedOperator n))
+          else []
+      end in
+      let _ = dprint (fun () -> "Indeces of infix operators: " ^ (List.fold_right (fun a b -> (string_of_int a) ^ " " ^ b) (indeces) "")) in
+      let rec firstReleventIndex x = 
+        if x = [] then (raise Not_found) else let i::indeces = x in
+        begin match List.nth nl i with
+        | Ext.LF.Root(loc, head, Ext.LF.Nil) -> i
+        | _ -> firstReleventIndex indeces end
+      in 
+      let i = firstReleventIndex indeces in
+      begin try
+        let Ext.LF.Root(loc, head, Ext.LF.Nil) = List.nth nl i in
+        let a = List.nth nl (i-1) in
+        let b = List.nth nl (i+1) in
+        let new_list = deleteElement (i-1) (deleteElement i (deleteElement (i+1) nl)) in
+        let new_root = Ext.LF.Root(loc, head, Ext.LF.App(getNormalLoc a, a, Ext.LF.App(getNormalLoc b, b, Ext.LF.Nil))) in
+        let (x, y) = splitAt (i-1) new_list in
+        if new_list = [] then 
+          new_root
+        else 
+          let _ = dprint(fun () -> "1st half:\n" ^ (normalToString (Ext.LF.TList(Loc.ghost, x)))) in
+          let _ = dprint(fun () -> "New Root:\n" ^ (normalToString new_root)) in
+          let _ = dprint(fun () -> "2nd half:\n" ^ (normalToString (Ext.LF.TList(Loc.ghost, y)))) in
+          fixNormalList (x @ (new_root::y)) prag_list
+          (* let rest = fixNormalList new_list prag_list' in
+          appendNormals rest new_root  *)
+      with
+        | Invalid_argument "List.nth" -> 
+        let Ext.LF.Root(loc, Ext.LF.Name(_,n), _) = List.nth nl i in
+        (raise (Error(loc, MispacedOperator n)))
+      end
+    with 
+    | Not_found -> fixNormalList nl prag_list'
+  end
+  else (* if prag.Store.OpPragmas.fix = Ext.Sgn.Postfix then *) begin
+    try
+      let indeces = List.map (fun (_,i) -> i) (List.filter (fun (a,_) -> a) (List.mapi (fun a b -> (
+        match b with 
+        | Ext.LF.Root(_,Ext.LF.Name(_,name), _) -> (prag.Store.OpPragmas.name = name, a)
+        | _ -> (false, a))) nl)) in
+      let rec firstReleventIndex x = 
+        if x = [] then (raise Not_found) else let i::indeces = x in
+        begin match List.nth nl i with
+        | Ext.LF.Root(loc, head, Ext.LF.Nil) -> i
+        | _ -> firstReleventIndex indeces end
+      in 
+      let i = firstReleventIndex indeces in
+      begin try
+        let Ext.LF.Root(loc, head, Ext.LF.Nil) = List.nth nl i in
+        let a = List.nth nl (i-1) in
+        let new_list = deleteElement (i-1) (deleteElement i nl) in
+        let new_root = Ext.LF.Root(loc, head, Ext.LF.App(getNormalLoc a, a, Ext.LF.Nil)) in
+        let (x,y) = splitAt (i-1) new_list in
+        if new_list = [] then 
+          new_root
+        else
+          fixNormalList (x @ (new_root::y)) prag_list
+      with
+        | Invalid_argument "List.nth" -> 
+        let (Ext.LF.Root(loc, Ext.LF.Name(_,n), _)) = List.nth nl i in
+        (raise (Error(loc, MispacedOperator n)))
+      end
+    with
+    | Not_found -> fixNormalList nl prag_list'
+  end
+
+
 and index_typ_rec cvars bvars fvars = function
   | Ext.LF.SigmaLast a ->
       let (last, fvars') = index_typ cvars bvars fvars a in
@@ -218,6 +383,9 @@ and index_term cvars bvars fvars = function
     let (a', fvars') = index_typ cvars bvars fvars a in
     let (m', fvars'') = index_term cvars bvars fvars' m in
     (Apx.LF.Ann (loc, m', a'), fvars'')
+
+  | Ext.LF.TList (loc, nl) ->
+    index_term cvars bvars fvars (fixNormalList nl (getOps nl))
 
 and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.Name (_, n) ->
@@ -296,9 +464,14 @@ and index_spine cvars bvars fvars = function
       (Apx.LF.Nil , fvars)
 
   | Ext.LF.App (_, m, s) ->
-      let (m', fvars')  = index_term  cvars bvars fvars m in
-      let (s', fvars'') = index_spine cvars bvars fvars' s in
-        (Apx.LF.App (m', s') , fvars'')
+    match m with
+      | Ext.LF.TList(loc, nl) -> 
+        let n = fixNormalList nl (getOps nl) in
+        index_spine cvars bvars fvars (Ext.LF.App (getNormalLoc n, n, s))
+      | _ ->
+        let (m', fvars')  = index_term  cvars bvars fvars m in
+        let (s', fvars'') = index_spine cvars bvars fvars' s in
+          (Apx.LF.App (m', s') , fvars'')
 
 and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
   | Ext.LF.Id loc ->

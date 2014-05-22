@@ -14,7 +14,8 @@ let usage () =
   let options =
       "    -help         this usage message\n"
     ^ "    (+|-)readline (enable|disable) readline support (requires rlwrap installed)\n"
-    ^ "    -emacs        mode used to interact with emacs (not recommended in command line)"
+    ^ "    -emacs        mode used to interact with emacs (not recommended in command line)\n"
+    ^ "    -debug        Pipe debugging information in 'beli.log'\n"
   in
     fprintf Format.err_formatter
       "Usage: %s [options]\noptions:\n%s"
@@ -26,6 +27,7 @@ let process_option arg rest = match arg with
   | "+readline" -> Options.readline := true; rest
   | "-readline" -> Options.readline := false; rest
   | "-emacs" -> Options.emacs := true; Debug.chatter := 0; rest
+  | "-debug" -> Debug.pipeDebug := true; Debug.showAll (); Printexc.record_backtrace true; rest
   | _ -> usage ()
 
 let rec process_options = function

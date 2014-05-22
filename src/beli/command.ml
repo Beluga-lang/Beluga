@@ -266,7 +266,7 @@ let query = {name = "query";
                         let _        = Unify.StdTrail.resetGlobalCnstrs () in
                         let _        = Monitor.timer ("Constant Check",
                                                       fun () -> Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id)) in
-                        let _c'       = Logic.runLogicOn name (tA', i) expected tries in
+                        let _c'      = Logic.runLogicOn name (tA', i) expected tries in
                         ()
                       end
                     with

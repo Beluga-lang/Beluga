@@ -31,7 +31,7 @@
 type flags
 
 val chatter : int ref
-
+val pipeDebug : bool ref
 val makeFunctions : flags -> ((unit -> string) -> unit) * (string -> unit)
 
 (* In most cases, you should use `makeFunctions' rather than `print'/`prnt' directly *)

@@ -390,11 +390,21 @@ GLOBAL: sgn;
     [
       [
 	"#positive" -> Sgn.Positivity
-      | "#stratify" ; k = INTLIT ->  Sgn.Stratify (int_of_string k)
+      | "#stratify" ; k = OPT stratify_arg ->  (Sgn.Stratify k)
       (* | "#stratify" ; x = num stratify_order ; "(";  r = UPSYMBOL; args = LIST0 call_args ;  ")"    ->  *)
       (*        Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args) *)
       ]
     ]
+;
+
+   stratify_arg:
+    [
+      [
+	k = INTLIT -> k
+	
+      ]
+    ]
+
 ;
 
 (*   stratify_order: *)

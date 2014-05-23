@@ -387,6 +387,7 @@ module Sgn = struct
     | Nocheck
     | Positivity
     | Stratify of int
+    | StratifyAll
 
 
 

@@ -15,13 +15,15 @@ module OpPragmas = struct
     assoc : Ext.Sgn.assoc option;
   }
 
+  let pragmaCount = ref 0
+
   let pragmas = ref []
   
   let clear () = pragmas := []
   
   let addPragma n f p a = 
     let new_entry = {name = n; fix = f; precedence = p; assoc = a} in
-    pragmas := new_entry :: !pragmas
+    pragmas := new_entry :: !pragmas ; incr pragmaCount
 
   let getPragma name = 
     begin

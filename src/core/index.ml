@@ -225,7 +225,7 @@ and normalListToSpine = function
     | (Ext.LF.TList(loc,nl))::t -> Ext.LF.App(loc, fixNormalList nl (getOps nl), normalListToSpine t)
     | h::t -> Ext.LF.App(getNormalLoc h, h, normalListToSpine t)
  
-and getOps = function
+and getOps l = if !Store.OpPragmas.pragmaCount = 0 then [] else match l with
     | [] -> []
     | n::rest -> 
       begin match n with

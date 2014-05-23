@@ -8,6 +8,7 @@ rec subst : (g:ctx)
              [g, x:term, u:pred x x |-  pred (M .. x) (M' .. x)]
           -> [g |- pred (N ..) (N' ..)]
           -> [g |- pred (M .. (N ..)) (M' .. (N' ..))] =
+% / total d (subst g m m' n n' d) /
 fn d => fn e => case d of
 | [g, x:term, u:pred x x |-  u] => e
 
@@ -44,6 +45,7 @@ assume: pred M M1 -> pred M M2 -> split_red M1 M2.
 
 rec dia : (g:ctx) [g |- split_red (M1 ..) (M2 ..)]
                -> [g |- dia_prop (M1 ..) (M2 ..)] =
+% / total d (dia g m1 m2 d) /
 fn d => case d of
 | [g |- assume (ap (lm \y.\v. R1a .. y v) (R2 ..))
              (beta (\y . \v. R1' .. y v) (R2' ..))] =>
@@ -93,6 +95,7 @@ strip_result: pred* M' N -> pred M'' N
 
 rec strip_lemma: (g:ctx)[g |- pred (M ..) (M' ..)] -> [g |- pred* (M ..) (M'' ..)]
                 -> [g |- strip_prop (M' ..) (M'' ..)] =
+% / total s (strip_lemma g m m' m'' r s) /
 fn r => fn s =>      let [g |- R ..] = r in case s of
  | [g |- id*] => [g |- strip_result id* (R ..)]
 
@@ -110,6 +113,7 @@ conf_result: pred* M' N -> pred* M'' N
 
 rec conf : (g:ctx) [g |- pred* (M ..) (M' ..)] -> [g |- pred* (M ..) (M'' ..)]
          -> [g |- conf_prop (M' ..) (M'' .. )] =
+% / total r (conf g m m' m'' r) /
 fn r => fn s => case r of
 | [g |- id*] => let [g |- R* ..] = s in [g |- conf_result (R* ..) id*]
 | [g |- next (R1 ..) (R2* ..)] =>
@@ -128,6 +132,7 @@ cr_result: pred* M N  ->  pred* M'  N
 
 
 rec cr: (g:ctx) [g |- pred= (M ..)  (M' ..)]  ->  [g |- cr_prop (M ..) (M' ..)] =
+% / total e (cr g m m' e) /
 fn e => case e of
 |[g |- reduce (R* ..)] => [g |- cr_result (R* ..) id*]
 |[g |- expand (R* ..)] => [g |- cr_result id* (R* ..)]

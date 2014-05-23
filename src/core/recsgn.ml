@@ -23,6 +23,7 @@ type error =
   | NoPositive of string
   | NoStratify of string
   | Unimplemented 
+  | TotalArgsError of name
 
 exception Error of Syntax.Loc.t * error
 
@@ -42,9 +43,11 @@ let _ = Error.register_printer
 	| MutualTotalDeclAfter f -> 
 	  Format.fprintf ppf "Function %s has a totality declaration, but not all mutually recursive functions have a totality declaration.\n" (R.render_name f)
    	| NoPositive n -> 
-	  Format.fprintf ppf "Positivity checking of constructor %s fails." n
+	  Format.fprintf ppf "Positivity checking of constructor %s fails.\n" n
 	| NoStratify n -> 
-	  Format.fprintf ppf "Stratification checking of constructor %s fails." n
+	  Format.fprintf ppf "Stratification checking of constructor %s fails.\n" n
+	| TotalArgsError f ->
+	  Format.fprintf ppf "Totality declaration for %s takes too many arguments.\n" (R.render_name f)
 
 	| Unimplemented -> Format.fprintf ppf "Unimplemented."
     )
@@ -152,9 +155,9 @@ and recSgnDecl d =
  
 	let p = (match pflag with 
 	          | None -> Int.Sgn.Nocheck 
-		  | Some (Ext.Sgn.Stratify n) -> 
+		  | Some (Ext.Sgn.Stratify (loc_p, n)) -> 
 		    (match n with 
-		      |Some s -> Int.Sgn.Stratify (int_of_string s)
+		      |Some s -> Int.Sgn.Stratify (loc_p, int_of_string s)
 		      |None   -> Int.Sgn.StratifyAll
 		    )
 		  | Some (Ext.Sgn.Positivity) -> Int.Sgn.Positivity
@@ -215,7 +218,7 @@ and recSgnDecl d =
 	  | Int.Sgn.Nocheck    -> ()
 	  | Int.Sgn.Positivity ->  if Total.positive cid_ctypfamily tau' then ()
 	                           else raise (Error (loc, (NoPositive c.string_of_name)))
-	  | Int.Sgn.Stratify n   -> if Total.stratify cid_ctypfamily tau' n then ()
+	  | Int.Sgn.Stratify (loc_s, n)   -> if Total.stratify cid_ctypfamily tau' n then ()
 	                           else raise (Error (loc, (NoStratify c.string_of_name)))
 	  | Int.Sgn.StratifyAll   -> if Total.stratifyAll cid_ctypfamily tau' then ()
 	                           else raise (Error (loc, (NoStratify c.string_of_name)))
@@ -419,6 +422,7 @@ and recSgnDecl d =
 	    | None -> None
         in
         let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
+	  (* print_string ("args length: "^string_of_int (List.length args) ^"\n" ); *)
 	  if f = f' then 
             match order with
               | Some (Ext.Comp.Arg x) ->
@@ -435,6 +439,7 @@ and recSgnDecl d =
           | [] -> (Int.LF.Empty, Var.create (), [])
           | Ext.Comp.RecFun (loc, f, total, tau, _e) :: lf ->
               let apx_tau = Index.comptyp  tau in
+	      (* print_string ("Reconstructing function " ^  f.string_of_name ^ " \n"); *)
               let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
               let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
               let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
@@ -445,6 +450,21 @@ and recSgnDecl d =
               let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.comptyp tau') in
               let _ = dprint (fun () ->  "Abstracted elaborated function type " ^ f.string_of_name ^
                             " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
+
+
+              (* print_string ( "Abstracted elaborated function type " ^ f.string_of_name ^ *)
+              (*               " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" ) ; *)
+
+	      (*calculate the number of args of the function*)
+	      let rec calc_args tau0 = 
+		match tau0 with 
+		  | Int.Comp.TypBase  _ -> 0
+		  | Int.Comp.TypArr   (_tau1, tau2) ->  calc_args tau2 + 1
+		  | Int.Comp.TypPiBox (_, tau2)  -> calc_args tau2 + 1
+		  | _  -> 0
+	      in 
+	      let k' = calc_args tau' in
+	     
 
               let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
               let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
@@ -457,18 +477,23 @@ and recSgnDecl d =
 		    else 
 		      () 
                   | Some t ->
-		    if !Total.enabled then 
-		      ((*print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
-	   	      Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
+		    (*compare the number of args of the function and the args of the total declaration *)
+		    (* declaration should not have more agrs than the function*)
+		    let Ext.Comp.Total (loc', _order, f', args) = t in
+		    if (List.length args > k') then raise (Error (loc', TotalArgsError f')) 
 		    else 
-		      (if m = 1 then 
-			  (Coverage.enableCoverage := true;
-			   Total.enabled := true;
-			   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
-			   Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
-		       else			  
-			  raise (Error (loc, MutualTotalDeclAfter f))
-		      )
+		      (if !Total.enabled then 
+			(* (print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
+	   		  Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t))
+		       else 
+			  (if m = 1 then 
+			      (Coverage.enableCoverage := true;
+			       Total.enabled := true;
+			     (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
+			       Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
+			   else			  
+			      raise (Error (loc, MutualTotalDeclAfter f))
+			  ))
                  end ;
 		 let (cG, vars, n_list) = preprocess lf (m+1) in
                  (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
@@ -551,7 +576,7 @@ and recSgnDecl d =
 (* For checking totality of mutual recursive functions,
    we should check all functions together by creating a variable
    which collects all total declarations *)
-          begin match recFuns with
+        begin match recFuns with
           | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f e in
             if !Debug.chatter <> 0 then

@@ -45,7 +45,7 @@ fn a => fn b => case a of
 %makeproj return the nth project of pair y
 %makeproj n = tfst( ... (tfst y))
 rec makeproj': [ |- nat]  -> [xenv:target |-  target] =
-/ total n (makeproj' n) / 
+/ total n (makeproj' n ) / 
 fn n => case n of
 | [ |- z] => [xenv:target |-  (tfst xenv)]
 | [ |- suc M] =>

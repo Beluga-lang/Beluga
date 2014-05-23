@@ -235,7 +235,7 @@ end
 module Sgn = struct
   type positivity_flag = 
     | Positivity
-    | Stratify of string  option
+    | Stratify of Loc.t * (string  option)
     (* | Stratify of Loc.t * Comp.order * name * (name option) list  *)
 
   type pragma =

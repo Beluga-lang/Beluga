@@ -386,7 +386,7 @@ module Sgn = struct
   type positivity_flag =
     | Nocheck
     | Positivity
-    | Stratify of int
+    | Stratify of  Loc.t * int
     | StratifyAll
 
 
@@ -394,7 +394,7 @@ module Sgn = struct
   type decl =
     | Typ           of cid_typ  * LF.kind
     | Const         of cid_term * LF.typ
-    | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag (*true for positivity checking*)
+    | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag 
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ

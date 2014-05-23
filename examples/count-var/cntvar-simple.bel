@@ -26,6 +26,7 @@ case x of
 }%
 
 rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =
+/ total x (plus x) /
 fn x => fn y =>
 case x of
 | [ |- z]    => y
@@ -44,6 +45,7 @@ case x of
 % if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
 
 rec cntV : {g:expCtx}  [g, x:exp |-  exp] -> [ |- nat] =
+% / total e (cntV g e) /
 mlam g => fn e => case e of
 % | [g,x:exp  |-  tt]    => [ |- z]
 

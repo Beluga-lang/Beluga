@@ -7,6 +7,7 @@ cr+ord_result: -->* M N  ->  -->* M' N
 	       -> cr+ord_prop M M'.
 
 rec cr_ord : [ |- <-> M M']  ->  [ |- cr+ord_prop M M'] =
+% / total c (cr_ord  m m' c) /
 fn c =>
  let [ |- C'] = eq6 c in
  let [ |- cr_result R* R*'] = cr [ |- C'] in

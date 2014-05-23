@@ -28,6 +28,7 @@ schema ctx = some [a: o] hyp a + i + o;
 
 rec ca : {g:ctx}{A:[g |- o]} [g |- conc (A ..)] -> [g, u: hyp (A .. ) |-  conc (C ..)]
        -> [g |- conc (C ..)] =
+% / total e (ca _ _ _ _ e) /
 mlam g => mlam A' => fn d => fn e => case e of
  | [g, h:hyp (B ..) |-  axiom (H1 ..)] =>  [g |- axiom (H1 ..)]
 

@@ -33,7 +33,7 @@ let split = {name = "split";
 let reg : command list ref = ref []
 
 let countholes = {name = "countholes";
-                  run = (fun ppf _ -> fprintf ppf " - %d\n" (Holes.getNumHoles()));
+                  run = (fun ppf _ -> fprintf ppf " - Computation Level Holes: %d\n - LF Level Holes: %d\n" (Holes.getNumHoles()) (Lfholes.getNumHoles()));
                   help = "Print the total number of holes"}
 
 let chatteron = {name = "chatteron";
@@ -76,11 +76,44 @@ let printhole = {name = "printhole";
                    |Failure _ -> fprintf ppf " - Error occurs when analyzing argument list\n");
                  help = "Print out all the information of the i-th hole passed as a parameter"}
 
+let printlfhole = {name = "printhole-lf";
+                 run = (fun ppf arglist ->
+                   try
+                     let arg = List.hd arglist in
+                     Lfholes.printOneHole (to_int arg)
+                   with
+                   |Failure _ -> fprintf ppf " - Error occurs when analyzing argument list\n");
+                 help = "Print out all the information of the i-th LF hole passed as a parameter"}
+
 let lochole = {name = "lochole";
                run = (fun ppf arglist ->
                  try
                    let arg = List.hd arglist in
                    match Holes.getHolePos (to_int arg) with
+                   | Some loc ->
+                       let (file_name,
+                            start_line,
+                            start_bol,
+                            start_off,
+                            stop_line,
+                            stop_bol,
+                            stop_off,
+                            _ghost) = Core.Syntax.Loc.to_tuple loc in
+                       fprintf ppf
+                         " - (\"%s\" %d %d %d %d %d %d)\n"
+                         file_name
+                         start_line start_bol start_off
+                         stop_line stop_bol stop_off
+                   | None -> fprintf ppf " - Error no such hole"
+                 with
+                 |Failure _ -> fprintf ppf " - Error occured when analyzing argument list\n");
+               help = "Print out the location information of the i-th hole passed as a parameter"}
+
+let loclfhole = {name = "lochole-lf";
+               run = (fun ppf arglist ->
+                 try
+                   let arg = List.hd arglist in
+                   match Lfholes.getHolePos (to_int arg) with
                    | Some loc ->
                        let (file_name,
                             start_line,
@@ -290,7 +323,9 @@ let _ = reg := [helpme       ;
         countholes   ;
         load         ;
         printhole    ;
+        printlfhole  ;
         lochole      ;
+        loclfhole    ;
         constructors ;
         types        ;
         fill         ;
@@ -300,7 +335,7 @@ let _ = reg := [helpme       ;
         signature    ;
         printfun     ;
         quit         ;
-        query
+        query        ;
         (*          ;
         save *)]
 

@@ -47,9 +47,9 @@ let cpsiToString cD cPsi = P.dctxToString cD (Whnf.normDCtx cPsi)
 let printOne (loc, cD, cPsi, typ) =
   Store.NamedHoles.reset () ;
     Printf.printf "\n%s\n
-    - Meta-Context: %s\n____________________________________________________________________________\n
-    - LF Context: %s\n\n============================================================================\n
-    - Goal Type: %s\n"
+     - Meta-Context: %s\n____________________________________________________________________________\n
+     - LF Context: %s\n\n============================================================================\n
+     - Goal Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
     (cpsiToString cD cPsi)
@@ -58,4 +58,22 @@ let printOne (loc, cD, cPsi, typ) =
 let printAll () =
   Store.NamedHoles.printingHoles := true;
   DynArray.iter printOne holes;
-  Store.NamedHoles.printingHoles := false;
+  Store.NamedHoles.printingHoles := false
+
+let getNumHoles () = DynArray.length holes
+
+let getHolePos i =
+    try
+      let  (loc, _, _, (_, _)) = DynArray.get holes i in Some loc
+    with
+      | DynArray.Invalid_arg (_, _, _) -> None
+
+let printOneHole i =
+  if none () then Printf.printf " - There are no lf holes.\n"
+  else
+    try
+      printOne (DynArray.get holes i)
+    with
+      | DynArray.Invalid_arg (_, _, _) -> 
+          if !Debug.chatter != 0 then
+            Printf.printf " - There is no lf hole # %d.\n" i

@@ -128,14 +128,14 @@ let printAll () =
   Store.NamedHoles.printingHoles := false
 
 let printOneHole i =
-  if none () then Printf.printf "There is no hole at all!!\n"
+  if none () then Printf.printf " - There are no holes.\n"
   else
     try
       printOne (DynArray.get holes i)
     with
       | DynArray.Invalid_arg (_, _, _) -> 
           if !Debug.chatter != 0 then
-            Printf.printf "There is not %d-th hole.\n" i
+            Printf.printf " - There is no hole # %d.\n" i
 
 
 let getOneHole i = DynArray.get holes i

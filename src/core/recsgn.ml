@@ -152,7 +152,11 @@ and recSgnDecl d =
  
 	let p = (match pflag with 
 	          | None -> Int.Sgn.Nocheck 
-		  | Some (Ext.Sgn.Stratify n) ->  Int.Sgn.Stratify n
+		  | Some (Ext.Sgn.Stratify n) -> 
+		    (match n with 
+		      |Some s -> Int.Sgn.Stratify (int_of_string s)
+		      |None   -> Int.Sgn.StratifyAll
+		    )
 		  | Some (Ext.Sgn.Positivity) -> Int.Sgn.Positivity
 		  | _    -> raise (Error (loc, Unimplemented)) 
                 ) in
@@ -213,6 +217,9 @@ and recSgnDecl d =
 	                           else raise (Error (loc, (NoPositive c.string_of_name)))
 	  | Int.Sgn.Stratify n   -> if Total.stratify cid_ctypfamily tau' n then ()
 	                           else raise (Error (loc, (NoStratify c.string_of_name)))
+	  | Int.Sgn.StratifyAll   -> if Total.stratifyAll cid_ctypfamily tau' then ()
+	                           else raise (Error (loc, (NoStratify c.string_of_name)))
+
 	);
 	
 

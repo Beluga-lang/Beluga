@@ -4,6 +4,7 @@ open Format
 module Options = struct
   let readline = ref true
   let emacs = ref false
+  let debug = ref false
 end
 
 let bailout msg =
@@ -15,7 +16,7 @@ let usage () =
       "    -help         this usage message\n"
     ^ "    (+|-)readline (enable|disable) readline support (requires rlwrap installed)\n"
     ^ "    -emacs        mode used to interact with emacs (not recommended in command line)\n"
-    ^ "    -debug        Pipe debugging information in 'beli.log'\n"
+    ^ "    -debug        Pipe debugging information into '"^ Debug.debugFilename ^ "'\n"
   in
     fprintf Format.err_formatter
       "Usage: %s [options]\noptions:\n%s"
@@ -27,7 +28,7 @@ let process_option arg rest = match arg with
   | "+readline" -> Options.readline := true; rest
   | "-readline" -> Options.readline := false; rest
   | "-emacs" -> Options.emacs := true; Debug.chatter := 0; rest
-  | "-debug" -> Debug.pipeDebug := true; Debug.showAll (); Printexc.record_backtrace true; rest
+  | "-debug" ->Options.debug := true; Debug.pipeDebug := true; Debug.showAll (); Printexc.record_backtrace true; rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -76,7 +77,8 @@ let main () =
      available. Otherwise don't bother. *)
   if !Options.readline && (not !Options.emacs) then begin
     try
-      Unix.execvp "rlwrap" (Array.append [| "rlwrap"; Sys.executable_name; "-readline" |] (Array.of_list files))
+      let args = if !Options.debug then ("-debug"::files) else files in
+      Unix.execvp "ledit" (Array.append [| "ledit"; Sys.executable_name; "-readline" |] (Array.of_list args))
     with Unix.Unix_error _ -> ()
   end;
 

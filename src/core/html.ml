@@ -19,8 +19,8 @@ let header =
 	\n\t\t:link { color: #00C; background: transparent }
 	\n\t\t:visited { color: #00C; background: transparent }
 	\n\t\ta:active { color: #C00; background: transparent }
-	\n\t\t.keyword { color: #600000 ; background: transparent }
-	\n\t\tcode { display:block; border:1px solid #d4d4d4;background-color:#f1f1f1;color:#444444;padding:5px;margin:0; }
+	\n\t\t.keyword { color: #3333cc ; background: transparent }
+	\n\t\tcode { display:block; background-color: #dddddd;border: 1px dashed maroon; color: black;font-family: \"courier\";padding:5px;margin:0; }
 	\n\t</style>
 	\n</head>\n"
 

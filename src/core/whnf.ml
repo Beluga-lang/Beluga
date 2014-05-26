@@ -53,6 +53,8 @@ let rec raiseType cPsi tA = match cPsi with
 *)
 
 let rec isPatSVSub = function
+  | EmptySub -> true
+  | Undefs -> true
   | Shift (_,_k)              -> true
   | SVar _ -> true
   | Dot (Head(BVar n), s) ->
@@ -730,6 +732,8 @@ and reduce sM spine = match (sM, spine) with
 
 
 and normSub s = match s with
+  | EmptySub -> EmptySub
+  | Undefs -> Undefs
   | Shift (CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
       begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
         | (Some ctx_v, d) ->
@@ -1440,6 +1444,8 @@ and cnorm (tM, t) = match tM with
           Cons (tM', rest')
 
   and cnormSub (s, t) = match s with
+    | EmptySub -> EmptySub
+    | Undefs -> Undefs
     | Shift (CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
         begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
           | (Some ctx_v, d) ->
@@ -2351,6 +2357,10 @@ and convSpine spine1 spine2 = match (spine1, spine2) with
       convSpine (tS, LF.comp s s') spine2
 
 and convSub subst1 subst2 = match (subst1, subst2) with
+  | (EmptySub, _) -> true (* this relies on the assumption that both are the same type... *)
+  | (_,EmptySub) -> true
+  | (Undefs,_) -> true (* hopefully Undefs only show up with empty domain? *)
+  | (_,Undefs) -> true
   | (Shift (psi,n), Shift (psi', k)) ->
       n = k && psi = psi'
 
@@ -3189,6 +3199,8 @@ and closedSpine (tS,s) = match tS with
   | SClo(tS', s')  -> closedSpine (tS', LF.comp s' s)
 
 and closedSub s = match s with
+ | EmptySub -> true
+ | Undefs -> true
  | SVar (Offset _ , (cshift,_n) , sigma) ->
       (match cshift with
         | CtxShift (CInst (_, {contents = None}, _, _, _)) -> false

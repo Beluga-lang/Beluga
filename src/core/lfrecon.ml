@@ -589,14 +589,14 @@ let rec synDom cD loc cPsi s = begin match s with
             raise (Index.Error (loc, Index.UnboundIdSub))
       end
 
-  | Apx.LF.EmptySub ->
-      begin match Context.dctxToHat cPsi with
-        | (Some psi, d) ->
-            (Int.LF.Null, Int.LF.Shift (Int.LF.CtxShift psi, d))
+  | Apx.LF.EmptySub -> (Int.LF.Null, Int.LF.EmptySub)
+      (* begin match Context.dctxToHat cPsi with *)
+      (*   | (Some psi, d) -> *)
+      (*       (Int.LF.Null, Int.LF.Shift (Int.LF.CtxShift psi, d)) *)
 
-        | (None, d) ->
-            (Int.LF.Null, Int.LF.Shift (Int.LF.NoCtxShift, d))
-      end
+      (*   | (None, d) -> *)
+      (*       (Int.LF.Null, Int.LF.Shift (Int.LF.NoCtxShift, d)) *)
+      (* end *)
 
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
       begin match Context.ctxDec cPsi k with

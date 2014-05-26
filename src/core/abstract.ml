@@ -904,6 +904,8 @@ and collectSpine (p:int) cQ phat sS = match sS with
 
 *)
 and collectSub (p:int) cQ phat s = match s with
+  | I.EmptySub -> (cQ, s)
+  | I.Undefs -> (cQ, s)
   | I.Shift _ -> (cQ, s) (* we do not collect the context variable in the
                             argument to shift; if the substitution is
                             well-typed, then it has been already collected *)
@@ -1645,6 +1647,8 @@ and abstractMVarSub cQ offset s = abstractMVarSub'
   cQ offset (Whnf.cnormSub (s, Whnf.m_id))
 
 and abstractMVarSub' cQ ((l,d) as offset) s = match s with
+  | I.EmptySub -> I.EmptySub
+  | I.Undefs -> I.Undefs
   | I.Shift (I.CtxShift ctx_var, d)   ->
       let ctx_var' = abstractMVarCtxV cQ offset ctx_var in
         I.Shift (I.CtxShift ctx_var', d)

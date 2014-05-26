@@ -419,6 +419,8 @@ module Int = struct
        (* Print ".." for a Shift when there is a context variable present,
           and nothing otherwise *)
        (* above is WRONG *)
+        | LF.EmptySub -> ()
+        | LF.Undefs -> ()
         | LF.Shift (LF.NoCtxShift, _) when hasCtxVar -> fprintf ppf ".."
         | LF.Shift (LF.NoCtxShift, _) when not hasCtxVar -> ()
         | LF.Shift (LF.CtxShift _, _) when hasCtxVar     ->    ()
@@ -467,6 +469,8 @@ module Int = struct
 
     and fmt_ppr_lf_sub_deBruijn cD cPsi lvl ppf s =
       let rec self lvl ppf = function
+        | LF.EmptySub -> fprintf ppf "EmptySub"
+        | LF.Undefs -> fprintf ppf "Undefs"
         | LF.Shift (LF.NoCtxShift,n) ->
             fprintf ppf "^%s"
               (R.render_offset n)

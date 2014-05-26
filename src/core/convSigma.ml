@@ -116,6 +116,8 @@ and strans_mfront cD mf conv_list = match mf with
 
 and strans_sub cD s conv_list = match s with
 (*  | Int.LF.Shift (Int.LF.NoCtxShift, 0) ->s *)
+  | Int.LF.EmptySub -> Int.LF.EmptySub
+  | Int.LF.Undefs -> Int.LF.Undefs
   | Int.LF.Shift (ctx_offset, offset) ->
       let offset' = List.fold_left (fun x -> fun y -> x + y) 0 conv_list in
       let _ = dprint (fun () -> "conv_list = " ^ conv_listToString conv_list ) in

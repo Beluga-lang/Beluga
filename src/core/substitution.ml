@@ -54,7 +54,8 @@ module LF = struct
    * then s' patsub
    *)
   let rec comp s1 s2 = match (s1, s2) with
-
+    | (EmptySub, s2) -> EmptySub
+    | (Undefs, s2) -> Undefs
     | (Shift (NoCtxShift , 0), s2) ->
         (*  Psi |- s1 : Psi   and Psi2 |- s2 : Psi
          *  therefore   Psi2 |- s2 : Psi  and s2 = s1 o s2
@@ -68,6 +69,9 @@ module LF = struct
         s
 
     (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
+
+    | (Shift (NoCtxShift, n), EmptySub) -> raise (NotComposable "Shift, EmptySub")
+    | (Shift (NoCtxShift, n), Undefs) -> Undefs
 
     | (Shift (NoCtxShift, n), SVar(s, (ctx_shift, k), r)) ->
         (* psi, Psi |- s1 : psi   where |Psi| = n
@@ -106,6 +110,8 @@ module LF = struct
          *)
         Shift (NoCtxShift, n + m)
 
+    | (Shift (CtxShift psi, n), EmptySub) -> raise (NotComposable "CtxShift, EmptySub case")
+    | (Shift (CtxShift psi, n), Undefs) -> EmptySub
     | (Shift (CtxShift psi, n), Shift (NegCtxShift psi', k)) ->
         (* Psi{n}, Psi'{k} |- s2 : psi, Psi{n}    and   psi, Psi{n} |- s1 : .
          * therefore  Psi{n},Psi'{k} |- s : .
@@ -118,6 +124,8 @@ module LF = struct
     | (Shift (CtxShift psi , m), s2) ->
        (* psi, cPsi |-  s1 : .     and     cPsi' |- s2 : psi, cPsi  *)
         let rec ctx_shift n s2 = match s2 with
+          | EmptySub -> EmptySub
+	  | Undefs -> Undefs
           | Dot(_ft, s) -> ctx_shift (n - 1) s
               (*  psi, Psi |- s1 : .   and Psi2 |- s2. ft : psi, Psi  *)
 
@@ -168,7 +176,8 @@ module LF = struct
 *)
         in
           ctx_shift m s2
-
+    | (Shift (NegCtxShift psi, k), EmptySub) -> Undefs
+    | (Shift (NegCtxShift psi, k), Undefs) -> Undefs
     | (Shift (NegCtxShift psi, k), Shift (NoCtxShift, m)) ->
         (* Psi1 |- s1 : psi     and   Psi1, Psi |- s2 : Psi1
          *  therefore   Psi1, Psi |- s : psi      where s = s1 o s2
@@ -249,7 +258,7 @@ module LF = struct
       (*Shift (NegCtxShift psi, k) *)
     (* raise (NotComposable "Composition not defined? NegCtxShift") *)
     | (_s1, _s2) ->
-        raise (NotComposable "Composition not defined?")
+        raise (NotComposable "Composition not defined? (last)")
 
 
   (* bvarSub n s = Ft'
@@ -262,6 +271,7 @@ module LF = struct
    * and Psi |- Ft' <= [s]A
    *)
   and bvarSub n s = match (n, s) with
+    | (_, Undefs) -> Undef
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
     | (n, Shift (_ , k)) -> Head (BVar (n + k))
@@ -413,6 +423,8 @@ module LF = struct
    *)
   let invert s =
     let rec lookup n s p = match s with
+      | EmptySub                -> None
+      | Undefs                  -> None
       | Shift _                 -> None
       | Dot (Undef, s')         -> lookup (n + 1) s' p
       | Dot (Head (BVar k), s') ->
@@ -431,7 +443,11 @@ module LF = struct
           in
             invert'' (p - 1) (Dot (front, si)) in
 
-    let rec invert' n s = match s with
+    let rec invert' n s maxoffset = match s with
+      | EmptySub ->
+          invert'' maxoffset Undefs
+      | Undefs ->
+          invert'' maxoffset Undefs
 
       | Shift (NoCtxShift, p) ->
           invert'' p (Shift (NoCtxShift, n))
@@ -447,11 +463,14 @@ module LF = struct
           (* Psi |- s : psi  Hence psi |- si : Psi *)
           invert'' p (Shift (CtxShift psi, n))
 
-      | Dot (_, s') ->
-          invert' (n + 1) s'
+      | Dot (Head (BVar k), s') ->
+          invert' (n + 1) s' (max k maxoffset)
+
+      | Dot (_,s') -> (* Is this really necessary? -ac *)
+          invert' (n + 1) s' maxoffset
 
     in
-      invert' 0 s
+      invert' 0 s 0
 
 
   (* strengthen s Psi = Psi'

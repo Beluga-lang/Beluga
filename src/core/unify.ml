@@ -193,6 +193,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
   let rec isPatSub s =
     (* let s = (Whnf.normSub s) in  *)
     begin match s with
+      | EmptySub -> true
+      | Undefs -> true
     | Shift (_,_k)              -> true
     | Dot (Head(BVar n), s) ->
         let rec checkBVar s' = match s' with
@@ -200,6 +202,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
           | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s
           | Dot (Undef, s)          -> checkBVar s
+	  | EmptySub -> true
+	  | Undefs -> true
           | _                       -> false
         in
           checkBVar s && isPatSub s
@@ -223,6 +227,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
   let rec isProjPatSub s =
     (* let s = (Whnf.normSub s) in  *)
     begin match s with
+    | EmptySub -> true
+    | Undefs -> true 
     | Shift (_,_k)              -> true
     | Dot (Head(BVar n), s) ->
         let rec checkBVar s' = match s' with
@@ -230,6 +236,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
           | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s
           | Dot (Undef, s)          -> checkBVar s
+	  | EmptySub -> true
+	  | Undefs -> true
           | _                       -> false
         in
           checkBVar s && isProjPatSub s
@@ -1067,6 +1075,8 @@ match sigma with
         D ; cPsi'' |- [ss]s <= cPsi'
    *)
   and invSub cD0 phat (s, cPsi1) ((ms , ssubst) as ss) rOccur = match (s, cPsi1) with
+    | (EmptySub, Null) -> EmptySub
+    | (Undefs, Null) -> EmptySub
     | (Shift (psi, n), DDec(_cPsi', _dec)) ->
         invSub cD0 phat (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur
 
@@ -1347,7 +1357,13 @@ match sigma with
                       let _ = dprint (fun () -> "[prune] tM (before instantiation) = " ^
                                         P.normalToString cD0 cPsi' sM) in
                       let _ = instantiateMMVar (r, Root (loc, MMVar (v, (id_msub, id_sub)), Nil), !cnstrs) in
-                      let tM'= Whnf.cnorm (Whnf.norm (tM, comp s ssubst), ms) in
+                      let _ = dprint (fun () -> "[prune] tM (after instantiation) = " ^
+                                        P.normalToString cD0 cPsi' sM) in
+                      let s' = comp s ssubst in
+		      let _ = dprint (fun () -> "composition done") in
+		      let tM' = Whnf.norm (tM, s') in
+		      let _ = dprint (fun () -> "norm done") in
+                      let tM'= Whnf.cnorm (tM', ms) in
                                  (* Clo(tM, comp s ssubst) *)
                       let _ = dprint (fun () -> "[prune] tM' = " ^
                                         P.normalToString cD0 cPsi' (tM', Substitution.LF.id)) in
@@ -1874,10 +1890,10 @@ match sigma with
 
   (* pruneSub cD0 cPsi phat (s, cPsi1) ss rOccur = (s', cPsi1')
 
-     if phat = hat(Psi)  and
-        D ; Psi  |- s <= Psi1
-        D ; Psi''|- ss <= Psi
-     then  cPsi1 |- s' <= Psi1'
+     if phat = hat(cPsi)  and
+        D ; cPsi  |- s <= cPsi1
+        D ; cPsi''|- ss <= cPsi
+     then  cPsi1 |- s' <= cPsi1'
            ss' = [ss][s](s')   if it exists, and
         D ; cPsi'' |- [ss][s]s' <= cPsi1'
    *)
@@ -1897,6 +1913,8 @@ match sigma with
         pruneSub' cD0 cPsi phat (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur
 
     | (Shift (_psi, _n), Null) -> (id, Null)
+    | (EmptySub, Null) -> (id, Null)
+    | (Undefs, Null) -> (id, Null)
 
     | (Shift (_psi', _n), CtxVar psi) -> (id, CtxVar psi)
 
@@ -2047,6 +2065,8 @@ match sigma with
   *)
 
   and pruneCtx' phat (t, cPsi1) ss = match (t, cPsi1) with
+    | (EmptySub, Null) -> (id, Null)
+    | (Undefs, Null) -> (id, Null)
     | (Shift (_psi ,_k), Null) ->
         (id, Null)
 
@@ -2059,6 +2079,7 @@ match sigma with
                then (Shift (CtxShift phi, 0 ), Null)
                else (dprint (fun () -> "??? ") ; raise NotInvertible)
           | (k, Dot (Undef, ssubst')) -> check_negshift (k-1) ssubst'
+	  | (k, Undefs) -> (EmptySub, Null)
           | (_ , _ ) -> (id, CtxVar psi)
         end
         in
@@ -2162,7 +2183,7 @@ match sigma with
         *)
         let t1' = simplifySub cD0 cPsi (Whnf.normSub (comp t1 s1))    (* cD ; cPsi |- t1' <= cPsi1 *) in
         let t2' = simplifySub cD0 cPsi (Whnf.normSub (comp t2 s2)) in (* cD ; cPsi |- t2' <= cPsi2 *)
-        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar:"  ) in
+        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar (0):"  ) in
         let _ = dprint (fun () -> "          cPsi = " ^ P.dctxToString cD0 cPsi) in
         let _ = dprint (fun () -> "          sM1 =   "^ P.normalToString cD0 cPsi  sM1 ) in
         let _ = dprint (fun () ->  "with type: "  ) in
@@ -2196,9 +2217,9 @@ match sigma with
                       instantiateMVar (r1, Root(Syntax.Loc.ghost, MVar(w, s'),Nil), !cnstrs1)
 
               | (true, false) ->
-                    addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                    dprint (fun () -> "??? 0"); addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
               | (false, true) ->
-                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                  dprint (fun () -> "??? 1"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
               | (false, false) ->
                   if Whnf.convSub t1' t2' then
                     ()
@@ -2210,7 +2231,7 @@ match sigma with
                               P.normalToString cD0 cPsi sM2 ^  "\n with type: " ^
                               P.dctxToString cD0 cPsi2 ^ " |- " ^ P.typToString cD0 cPsi2 (tP2 , id) ^ "\n Generate constraint\n"
                           );*)
-                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *))
+                   dprint (fun () -> "??? 3"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *))
           else
             begin match (isPatSub t1' , isPatSub t2') with
               | (true, _) ->
@@ -2238,7 +2259,8 @@ match sigma with
                   with
                     | NotInvertible ->
                         ((* Printf.printf "Added constraints: NotInvertible: \n "; *)
-                         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+			  (dprint (fun () -> "Add constraint (0)");
+                         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
                   end
               | (false, true) ->
                   begin try
@@ -2268,7 +2290,8 @@ match sigma with
                   with
                     | NotInvertible ->
                         ((* Printf.printf "Added constraints: NotInvertible: \n" ; *)
-                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1))))
+			  (dprint (fun () -> "Add constraint (6)");
+                           addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))))
                   end
               | (false , false) ->
                   (* Check if t1' or t2' are proj-patt sub *)
@@ -2304,7 +2327,8 @@ match sigma with
                         with
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
-                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+				(dprint (fun () -> "Add constraint (7)");
+                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
                         end
 
 
@@ -2321,14 +2345,15 @@ match sigma with
                         with
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
-                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+				(dprint (fun () -> "Add constraint (8)");
+                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
                         end
 
 
                     | ( false , false ) ->
                         (* neither t1' nor t2' are pattern substitutions *)
                         let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in
-                          addConstraint (cnstrs1, cnstr)
+                          dprint (fun () -> "neither pat sub"); addConstraint (cnstrs1, cnstr)
                   end
             end
 
@@ -2361,7 +2386,8 @@ match sigma with
             with
               | NotInvertible ->
                   (* Printf.printf "Added constraints: NotInvertible: \n";*)
-                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+                  (dprint (fun () -> "Add constraint (9)");
+		  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
             else
               if isProjPatSub t' then
                 begin try
@@ -2375,7 +2401,8 @@ match sigma with
                 with
                   | NotInvertible ->
                       ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
-                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+			(dprint (fun () -> "Add constraint (10)");
+                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
               end
             else
              (dprint (fun () -> "Add constraint: MVAR-Normal case"
@@ -2558,7 +2585,8 @@ match sigma with
 
                   with
                     | NotInvertible ->
-                      addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+                      (dprint (fun () -> "Add constraint (1)");
+		      addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
                   end
               | (_ , _, true, true) ->
                   begin try
@@ -2584,7 +2612,8 @@ match sigma with
                                         P.normalToString cD0 cPsi sM2) )
                   with
                     | NotInvertible ->
-                      addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))
+		      (dprint (fun () -> "Add constraint (2)");
+                      addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1))))
                   end
 (*              | ( _ , false , _ , _ ) ->
                   (* neither t1' is not pattern substitutions -- add projPat case *)
@@ -2621,7 +2650,8 @@ match sigma with
                             instantiateMMVar (r2, sM1', !cnstrs2)
                         with
                           | NotInvertible ->
-                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+			    (dprint (fun () -> "Add constraint (3)");
+                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
                         end
 
 
@@ -2637,7 +2667,8 @@ match sigma with
                             instantiateMMVar (r1, sM2', !cnstrs1)
                         with
                           | NotInvertible ->
-                            addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+			    (dprint (fun () -> "Add constraint (4)");
+                            addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
                         end
 
 
@@ -2645,6 +2676,7 @@ match sigma with
                     | ( _ , _ ) ->
                         (* neither t1' nor t2' are pattern substitutions *)
                         let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in
+			let _ = dprint (fun () -> "Add constraint (5)") in
                           addConstraint (cnstrs1, cnstr)
                   end
             end
@@ -3565,6 +3597,10 @@ match sigma with
             end
           | (_ , _ ) -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
         end
+      | (EmptySub, _) -> ()
+      | (_,EmptySub) -> ()
+      | (_,Undefs) -> () (* hopefully only occurs at empty domain.. *)
+      | (Undefs,_) -> () 
       |  _
         -> raise (Failure (
                             "Substitution mismatch :\n " ^ P.dctxToString cD0 cPsi

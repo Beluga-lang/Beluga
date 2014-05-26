@@ -77,6 +77,8 @@ module LF = struct
     | Dot   of front * sub                    (*   | Ft . s                     *)
     | MSVar of mm_var *
         (ctx_offset * offset) * (msub * sub)  (*   | u[t ; s]                   *)
+    | EmptySub
+    | Undefs
 
   and front =                                 (* Fronts:                        *)
     | Head of head                            (* Ft ::= H                       *)

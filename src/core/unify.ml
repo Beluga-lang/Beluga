@@ -1791,6 +1791,7 @@ match sigma with
           [s']([mt]s) = r
   *)
   and pruneSubst cD cPsi (s, cPsi1) ss rOccur = match (s, cPsi1) with
+    | (EmptySub, Null) -> EmptySub
     | (Shift (psi, n), DDec(_cPsi', _dec)) ->
         pruneSubst cD cPsi (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur
     | (Shift (_psi, _n), Null) ->

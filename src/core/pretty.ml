@@ -608,7 +608,7 @@ module Int = struct
             (fmt_ppr_lf_normal cD cPsi lvl) m
 
       | LF.Undef ->
-          fprintf ppf "_"
+          fprintf ppf "undef"
 
     and fmt_ppr_lf_msub cD lvl ppf = function
       | LF.MShift k ->

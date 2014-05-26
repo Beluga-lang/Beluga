@@ -9,7 +9,7 @@ mlam g => mlam A => fn d => fn e => case e of
  %%
  %% Right Commutative Conversions
 
- | [g, h:hyp (A ..) |-  axiom H1] =>  [g |- axiom H1]
+ | [g, h:hyp (A ..) |-  axiom (H1 ..)] =>  [g |- axiom (H1 ..)]
 
  | [g, h:hyp (A ..) |-  axiom h]  => d
 

@@ -1624,11 +1624,11 @@ and elSub' loc recT cD cPsi s cPhi =
   | (Apx.LF.EmptySub, Int.LF.CtxVar cvar) ->
     begin match cvar with
       | Int.LF.CInst (_, ({contents = None} as cref), s_cid, _, _ ) ->
-        (cref := Some (Int.LF.Null);
-         begin match Context.dctxToHat cPsi with
-           | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d)
-           | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
-         end)
+        (cref := Some (Int.LF.Null); Int.LF.EmptySub
+         (* begin match Context.dctxToHat cPsi with *)
+         (*   | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d) *)
+         (*   | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d) *)
+         (* end *))
       | _     -> raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
     end
   | (Apx.LF.FSVar (s_name, sigma), cPhi) ->
@@ -1659,11 +1659,7 @@ and elSub' loc recT cD cPsi s cPhi =
            * meta-variables in cD. This will be enforced during abstraction *)
 
         let sigma' = elSub loc recT cD cPsi sigma cPsi0' in
-        let ctxShift = match Context.dctxToHat cPhi, Context.dctxToHat cPhi0' with
-          | (Some _, d),  (Some _, 0)  -> (Int.LF.NoCtxShift, d)
-          | (Some cv, d),  (None, 0)   -> (Int.LF.NegCtxShift cv, d)
-          | (None, 0)   , (Some cv, d) -> (Int.LF.CtxShift cv, d)
-          | _ -> raise (Error (loc, SubstTyp)) in
+        let ctxShift = (Int.LF.NoCtxShift, 0) in
         begin try
                 Unify.unifyDCtx cD cPhi cPhi0';
                 Int.LF.FSVar(s_name, ctxShift, sigma')
@@ -1674,12 +1670,6 @@ and elSub' loc recT cD cPsi s cPhi =
           if isPatSub sigma then
             let (cPsi', sigma') = synDom cD loc cPsi sigma in
             let ctxShift = (Int.LF.NoCtxShift, 0) in
-(* Not quite right ..
-            let ctxShift = match cPhi, cPsi' with
-              | Int.LF.CtxVar _,  Int.LF.CtxVar _ -> (Int.LF.NoCtxShift, 0)
-              | Int.LF.CtxVar cv , Int.LF.Null -> (Int.LF.NegCtxShift cv, 0)
-              | _ -> raise (Error (loc, SubstTyp)) in
-*)
               (FCVar.add s_name (cD, Int.LF.Decl (s_name, Int.LF.STyp (cPhi, cPsi')));
                Int.LF.FSVar (s_name, ctxShift, sigma'))
           else
@@ -1694,10 +1684,7 @@ and elSub' loc recT cD cPsi s cPhi =
     if  Whnf.convDCtx (Whnf.cnormDCtx (cPhi, Whnf.m_id))
                       (Whnf.cnormDCtx (cPhi1, Whnf.m_id)) then
       let s' = elSub' loc recT cD cPsi s cPhi2 in
-      let ctxShift = match cPhi, cPhi1 with (* cPhi1 , cPhi2 *)
-        | Int.LF.CtxVar _,  Int.LF.CtxVar _ -> (Int.LF.NoCtxShift, 0)
-        | Int.LF.CtxVar cv , Int.LF.Null -> (Int.LF.NegCtxShift cv, 0)
-        | _ -> raise (Error (loc, SubstTyp)) in
+      let ctxShift = (Int.LF.NoCtxShift, 0) in
       let sigma = Int.LF.SVar (Int.LF.Offset offset, ctxShift, s') in
       let _ = dprint (fun () -> "[elSub] reconstructed subst = " ^
                         P.subToString cD cPsi sigma) in

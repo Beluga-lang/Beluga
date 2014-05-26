@@ -88,6 +88,13 @@ let rec recSgnDecls = function
 and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
+    | Ext.Sgn.Comment(_, x) ->
+        if !Html.genHtml then
+          let len = String.length x in
+          let innerHtml = String.sub (String.sub x 0 (len - 2)) 2 (len - 4) in
+          let _ = print_string ("COMENT:\n" ^ innerHtml ^ "\n") in
+          Html.appendAsComment innerHtml
+        else ()
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
         let s = sgnDeclToString d in
         let _ = Html.appendAsAnchor s (a.string_of_name) Html.None in

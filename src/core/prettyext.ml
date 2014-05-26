@@ -494,7 +494,7 @@ module Ext = struct
     and fmt_ppr_lf_kind ?(asHtml=false) cPsi lvl ppf = function
       | LF.Typ _ ->
           fprintf ppf
-          (if asHtml then"<span class=keyword>type</span>" else "type")
+          "type"
 
       | LF.PiKind (_,LF.TypDecl (x, a), k) ->
           let name = R.render_name x in
@@ -694,6 +694,13 @@ module Ext = struct
           fprintf ppf "%s"
             (R.render_name x)
 
+    let rec fmt_ppr_cmp_copattern_spine cD lvl ppf = function
+    | Comp.CopatNil _ -> fprintf ppf ""
+    | Comp.CopatApp(_, n, c) -> fprintf ppf "%s %a" (R.render_name n) (fmt_ppr_cmp_copattern_spine cD lvl) c
+    | Comp.CopatMeta(_, m, c) -> 
+        fprintf ppf "%a %a" 
+          (fmt_ppr_meta_obj cD lvl) m 
+          (fmt_ppr_cmp_copattern_spine cD lvl) c
 
     let rec fmt_ppr_cmp_exp_chk cD lvl ppf = function
       | Comp.Syn (_, i) ->
@@ -709,6 +716,12 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
+      | Comp.Cofun(_, x) ->
+          List.iter (fun (cpsp, exp_chk) ->
+            fprintf ppf "%a%a" 
+              (fmt_ppr_cmp_copattern_spine cD lvl) cpsp 
+              (fmt_ppr_cmp_exp_chk cD lvl) exp_chk
+            ) x
 (*      | Comp.CtxFun (_, x, e) ->
           let cond = lvl > 0 in
             fprintf ppf "@[<2>%sFN %s =>@ %a%s@]"
@@ -738,6 +751,14 @@ module Ext = struct
      | Comp.MLam (_, (x, Comp.SObj), e) ->
           let cond = lvl > 0 in
             fprintf ppf "%smlam #%s => "
+              (l_paren_if cond)
+              (R.render_name x);
+            fprintf ppf "%a%s"
+              (fmt_ppr_cmp_exp_chk cD 0) e
+              (r_paren_if cond);
+      | Comp.MLam(_, (x, _), e) ->
+          let cond = lvl > 0 in
+            fprintf ppf "%sΛ %s => "
               (l_paren_if cond)
               (R.render_name x);
             fprintf ppf "%a%s"
@@ -1000,7 +1021,7 @@ module Ext = struct
     let fmt_ppr_cmp_rec ?(asHtml=false) lvl ppf = function
       | Comp.RecFun (x, a, e) ->
           fprintf ppf "%s %s : %a => @ %a"
-            (if asHtml then "<span class=keyword>rec</span>" else "rec")
+            "rec"
             (R.render_name x)
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
             (fmt_ppr_cmp_exp_chk LF.Empty lvl)  e

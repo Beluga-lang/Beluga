@@ -11,6 +11,7 @@ OCAMLPACKS[] =
         ulex
         dynlink
         unix
+        str
 
 # Compile with debugging options?  This enables:
 #
@@ -19,8 +20,8 @@ OCAMLPACKS[] =
 
 # DEBUG = true
 
-OCAMLFLAGS += $(if $(DEBUG), -w Ae-44  -warn-error Ap-37 \
-                           , -w Aep-44 -warn-error A-37)
+OCAMLFLAGS += $(if $(DEBUG), -w Ae-44  -warn-error Ap-32-37 \
+                           , -w Aep-44 -warn-error A-32-37)
 
 OCAMLFLAGS += $(if $(RELEASE), -warn-error a)
 

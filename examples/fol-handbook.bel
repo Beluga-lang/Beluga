@@ -11,7 +11,7 @@ imp : o -> o -> o.
 all : (i -> o) -> o.
 not  : o -> o.
 
-%{
+%{  
 even: i -> o.
 all (\x. impl (even x)  (even x))
 

@@ -356,8 +356,7 @@ GLOBAL: sgn;
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
-      | "%{"; x = LIST0 [ x = STRING -> x]  ; "}%" ->
-          [Sgn.Comment(_loc, String.concat " " x) ]
+      | x = COMMENT -> [Sgn.Comment(_loc, x)]
       ]
     ]
   ;

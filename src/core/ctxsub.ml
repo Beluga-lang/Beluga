@@ -29,12 +29,12 @@ module Comp = Syntax.Int.Comp
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [12])
 
 
-let rec ctxShift cPsi = match cPsi with
-  | Null              -> Shift (NoCtxShift , 0 )
-  | CtxVar psi        -> Shift (CtxShift psi, 0)
-  | DDec   (cPsi, _x) ->
-      let Shift(cshift, n) = ctxShift cPsi in
-        Shift (cshift, n+1)
+let ctxShift cPsi = EmptySub (* match cPsi with *)
+  (* | Null              -> Shift (NoCtxShift , 0 ) *)
+  (* | CtxVar psi        -> Shift (CtxShift psi, 0) *)
+  (* | DDec   (cPsi, _x) -> *)
+  (*     let Shift(cshift, n) = ctxShift cPsi in *)
+  (*       Shift (cshift, n+1) *)
 
 (* ctxToSub_mclosed cD psi cPsi = (cD', s)
 

@@ -1615,11 +1615,11 @@ and elSub loc recT cD cPsi s cPhi =
 
 and elSub' loc recT cD cPsi s cPhi =
   match (s, cPhi) with
-  | (Apx.LF.EmptySub, Int.LF.Null) ->
-    begin match Context.dctxToHat cPsi with
-      | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d)
-      | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d)
-    end
+  | (Apx.LF.EmptySub, Int.LF.Null) -> Int.LF.EmptySub
+    (* begin match Context.dctxToHat cPsi with *)
+    (*   | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d) *)
+    (*   | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d) *)
+    (* end *)
 
   | (Apx.LF.EmptySub, Int.LF.CtxVar cvar) ->
     begin match cvar with

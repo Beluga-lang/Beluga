@@ -199,7 +199,7 @@ let thin cD (tP, cPsi) =
             (Shift(NoCtxShift, 0),  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
         else
           ( (* print_string ("Denying that the context variable is relevant to anything in " ^ basisToString basis ^ "\n"); *)
-            (Shift(CtxShift psi, 0),  Null) )  (* psi |- shift(noCtx, 0) : . *)
+            ( EmptySub (*Shift(CtxShift psi, 0) *),  Null) )  (* psi |- shift(noCtx, 0) : . *)
     | DDec(cPsi, TypDecl(name, tA)) ->
         begin match relevant (Whnf.normTyp (tA, Substitution.LF.id)) basis with
           | [] ->

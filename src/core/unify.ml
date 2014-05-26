@@ -342,7 +342,7 @@ match sigma with
       in
       begin match cPsi1 , Context.dctxToHat (cPsi) with
         | Null , (None, k) -> let s = Shift (NoCtxShift, k) in               (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
+        | Null , (Some cvar, k) -> EmptySub (* Shift (CtxShift cvar, k) *)
         | _     -> sigma
       end
 

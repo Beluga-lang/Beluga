@@ -4025,6 +4025,12 @@ match sigma with
                      let loc = Syntax.Loc.ghost in
                        raise (GlobalCnstrFailure (loc, cnstr_string))
                    end)
+            | Eqs (cD, cPsi, s1, s2) ->
+	      let _ = solveConstraint c in
+	      begin try
+		      (unifySub Unification cD cPsi s1 s2; forceGlobalCnstr cnstrs)
+		with Failure _ -> raise (GlobalCnstrFailure (Syntax.Loc.ghost, "s1 =/= s2"))
+	      end 
 
 
     let unresolvedGlobalCnstrs () =

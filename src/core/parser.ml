@@ -1183,7 +1183,7 @@ isuffix:
          raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
      end
 
-   | "["; phat_or_psi = clf_hat_or_dctx ; "$"; s = clf_sub_new; "]"   ->
+   | "["; phat_or_psi = clf_hat_or_dctx ; turnstile; s = clf_sub_new; "]"   ->
      begin match phat_or_psi with
        | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
        | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
@@ -1272,11 +1272,11 @@ clf_pattern :
                   | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaCtx (_loc, cPsi)), tau))
               end
 
-      | "["; cPsi = clf_dctx ; "$"; s = clf_sub_new; "]"   ->
+      | "["; cPsi = clf_dctx ; turnstile; s = clf_sub_new; "]"   ->
           Comp.PatMetaObj (_loc, Comp.MetaSObjAnn (_loc, cPsi, s))
 
 
-     | "<"; cPsi = clf_dctx ; "$"; s = clf_sub_new; ">"   ->
+     | "<"; cPsi = clf_dctx ; turnstile; s = clf_sub_new; ">"   ->
           Comp.PatMetaObj (_loc, Comp.MetaSObjAnn (_loc, cPsi, s))
 
      | "ttrue" -> Comp.PatTrue (_loc)

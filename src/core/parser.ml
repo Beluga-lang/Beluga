@@ -1259,21 +1259,26 @@ clf_pattern :
   cmp_branch_pattern:
     [
       [
-        "["; cPsi = clf_dctx ; mobj = OPT [turnstile; tM = clf_pattern -> tM ]; "]" ;
+        "["; cPsi = clf_dctx ; turnstile; tM = clf_pattern; "]" ;
          tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic"; "]" -> Comp.TypBox(_loc,tA, cPsi)]
           ->
-              begin match  mobj with
-            | Some (PatEmpty _loc')   ->
+              begin match tM with
+            | PatEmpty _loc'   ->
                 (match tau with None -> Comp.PatEmpty (_loc', cPsi)
                    | Some tau -> Comp.PatAnn (_loc', Comp.PatEmpty (_loc', cPsi), tau)
                 )
-            | Some (PatCLFTerm (_loc', tM))   ->
+            | PatCLFTerm (_loc', tM)  ->
                 (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (_loc',  cPsi,  tM))
                   | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaObjAnn (_loc, cPsi,    tM)), tau))
 
-            | None ->
-                (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaCtx (_loc,  cPsi))
-                  | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaCtx (_loc, cPsi)), tau))
+              end
+
+      |"["; cPsi = clf_dctx ; "]" ;
+         tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic"; "]" -> Comp.TypBox(_loc,tA, cPsi)]
+	->
+            begin match tau with 
+	    |None -> Comp.PatMetaObj (_loc, Comp.MetaCtx (_loc,  cPsi))
+            | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaCtx (_loc, cPsi)), tau)
               end
 
       | "["; cPsi = clf_dctx ; turnstile; s = clf_sub_new; "]"   ->

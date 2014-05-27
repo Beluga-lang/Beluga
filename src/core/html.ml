@@ -3,26 +3,24 @@ let genHtml = ref false
 let ids = ref []
 
 
-
 let page = ref ""
 (* \n\t\tspan {margin: 2em 1em 2em 1em;} *)
 let header =
-	"<head>
-	\n\t<style type=\"text/css\">
-	\n\t\tbody {
-	\n\t\t\tpadding: 2em 1em 2em 1em;
-	\n\t\t\tmargin: 0;
-	\n\t\t\tfont-family: sans-serif;
-	\n\t\t\tcolor: black;
-	\n\t\t\tbackground: white;}
-	
-	\n\t\t:link { color: #00C; background: transparent }
-	\n\t\t:visited { color: #00C; background: transparent }
-	\n\t\ta:active { color: #C00; background: transparent }
-	\n\t\t.keyword { color: #3333cc ; background: transparent }
-	\n\t\tcode { display:block; background-color: #dddddd;border: 1px dashed maroon; color: black;font-family: \"courier\";padding:5px;margin:0; }
-	\n\t</style>
-	\n</head>\n"
+"<head>
+  <style type=\"text/css\">
+    body {
+      padding: 2em 1em 2em 1em;
+      margin: 0;
+      font-family: sans-serif;
+      color: black;
+      background: white;}
+    :link { color: #00C; background: transparent }
+    :visited { color: #00C; background: transparent }
+    a:active { color: #C00; background: transparent }
+    .keyword { color: #3333cc ; background: transparent }
+    code { display:block; background-color: #dddddd;border: 1px dashed maroon; color: black;font-family: \"courier\";padding:5px;margin:0; }
+  </style>
+</head>\n"
 
 let generatePage filename = 
 begin
@@ -38,18 +36,22 @@ begin
 	close_out oc
 end
 
-let urlEncode innerHtml =
-	let keywords = Str.regexp "\\(rec\\|let\\|case\\|of\\|
+let replaceNewLine = Str.global_replace (Str.regexp_string "\n") "<br>"
+
+let replaceKeyWords = let keywords = Str.regexp "\\(rec\\|let\\|case\\|of\\|
 							FN\\|and\\|block\\|Bool\\|datatype\\|
 							else\\|mlam\\|schema\\|type\\|
 							ttrue\\|ffalse\\|%name\\|
 							%opts\\|%not\\|%query\\)" in
-	let br = Str.regexp_string "\n" in
-	let innerHtml = Str.global_replace keywords "<span class=\"keyword\">\\0</span>" innerHtml in
-	let innerHtml = Str.global_replace br "<br>" innerHtml in
-	innerHtml 
-(* 	let l = removeSpaces s in
-	String.concat "&nbsp" l *)
+	Str.global_replace keywords "<span class=\"keyword\">\\0</span>"
+
+let replaceSpace s = Str.global_replace (Str.regexp_string " ") "&nbsp" s
+
+let replaceIDs s = List.fold_right (fun x y -> Str.global_replace 
+		(Str.regexp ("\\(:\\|(\\|&nbsp\\)" ^ x ^ "&nbsp")) ("\\1<a href=#" ^ x ^ ">" ^ x ^ "</a>&nbsp") y) !ids s
+
+let urlEncode innerHtml =
+	replaceIDs (replaceKeyWords (replaceNewLine (replaceSpace innerHtml)))
 
 
 let appendAsAnchor innerHtml id htmlClass =
@@ -71,8 +73,8 @@ let append innerHtml =
 	page := (!page) ^ "\n"  ^ "<br><div>" ^ innerHtml ^ "</div>"
 
 let appendAsComment innerHtml = 
-	let innerHtml = urlEncode innerHtml in
-	page := (!page) ^ "\n" ^ "<br><p>" ^ innerHtml ^ "</p>"
+	let innerHtml = replaceNewLine innerHtml in
+	page := (!page) ^ "\n" ^ "<p>" ^ innerHtml ^ "</p>"
 
 (********************
 	TODO:

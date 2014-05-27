@@ -131,15 +131,15 @@ module Ext : sig
     open Syntax.Ext
 
     (* Contextual Format Based Pretty Printers *)
-    val fmt_ppr_sgn_decl      : ?asHtml:bool -> lvl -> formatter -> Sgn.decl  -> unit
-    val fmt_ppr_lf_kind       : ?asHtml:bool -> LF.dctx -> lvl -> formatter -> LF.kind      -> unit
+    val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
+    val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
     val fmt_ppr_lf_ctyp_decl  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
 
-    val fmt_ppr_lf_typ        : ?asHtml:bool -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
+    val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
-    val fmt_ppr_lf_spine      : ?asHtml:bool -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
+    val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
     val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
 
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit

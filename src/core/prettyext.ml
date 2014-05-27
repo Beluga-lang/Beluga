@@ -40,15 +40,15 @@ module Ext = struct
   module type PRINTER = sig
 
     (* Contextual Format Based Pretty Printers *)
-    val fmt_ppr_sgn_decl      : ?asHtml:bool -> lvl -> formatter -> Sgn.decl  -> unit
-    val fmt_ppr_lf_kind       : ?asHtml:bool -> LF.dctx -> lvl -> formatter -> LF.kind      -> unit
+    val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
+    val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
     val fmt_ppr_lf_ctyp_decl  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
 
-    val fmt_ppr_lf_typ        : ?asHtml:bool -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
+    val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
-    val fmt_ppr_lf_spine      : ?asHtml:bool -> LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
+    val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
     val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
 
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
@@ -154,20 +154,18 @@ module Ext = struct
     let rec has_ctx_var psi = match psi with LF.CtxVar _ -> true | LF.Null -> false |  LF.DDec(cPsi, _x) -> has_ctx_var cPsi
 
 
-    let rec fmt_ppr_lf_typ ?(asHtml = false) cD cPsi lvl ppf = function
+    let rec fmt_ppr_lf_typ  cD cPsi lvl ppf = function
       | LF.Atom (_, a, LF.Nil) ->
           let name = (R.render_name a) in
-          let s = if asHtml then "<a href=#" ^ name ^ " class=const>" ^ name ^ "</a>" else name in
-          fprintf ppf "%s" s
+          fprintf ppf "%s" name
 
       | LF.Atom (_, a, ms) ->
           let name = (R.render_name a) in
-          let s = if asHtml then "<a href=#" ^ name ^ " class=const>" ^ name ^ "</a>" else name in
           let cond = lvl > 1 in
             fprintf ppf "%s%s%a%s"
               (l_paren_if cond)
-              s
-              (fmt_ppr_lf_spine ~asHtml:asHtml cD cPsi 2) ms
+              name
+              (fmt_ppr_lf_spine cD cPsi 2) ms
               (r_paren_if cond)
 
       | LF.PiTyp (_,LF.TypDecl (x, a), b) ->
@@ -187,8 +185,8 @@ module Ext = struct
           let cond = lvl > 1 in
             fprintf ppf "%s%a -> %a%s"
               (l_paren_if cond)
-              (fmt_ppr_lf_typ ~asHtml:asHtml cD cPsi 0) t1
-              (fmt_ppr_lf_typ ~asHtml:asHtml cD cPsi 0) t2
+              (fmt_ppr_lf_typ cD cPsi 0) t1
+              (fmt_ppr_lf_typ cD cPsi 0) t2
               (r_paren_if cond)
 
       | LF.Ctx   (_, cPsi)  ->
@@ -286,7 +284,7 @@ module Ext = struct
           ("." ^ string_of_int k)
       end
 
-    and fmt_ppr_lf_spine ?(asHtml = false) cD cPsi lvl ppf = function
+    and fmt_ppr_lf_spine cD cPsi lvl ppf = function
       | LF.Nil ->
           fprintf ppf ""
 
@@ -491,7 +489,7 @@ module Ext = struct
             (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
 
 
-    and fmt_ppr_lf_kind ?(asHtml=false) cPsi lvl ppf = function
+    and fmt_ppr_lf_kind cPsi lvl ppf = function
       | LF.Typ _ ->
           fprintf ppf
           "type"
@@ -502,9 +500,9 @@ module Ext = struct
           let cond = lvl > 0 in
             fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
               (l_paren_if cond)
-              (if asHtml then "<a href=#" ^ name ^ " class=kind>" ^ name ^ "</a>" else name)
-              (fmt_ppr_lf_typ ~asHtml:asHtml LF.Empty cPsi  0) a
-              (fmt_ppr_lf_kind ~asHtml:asHtml (LF.DDec(cPsi, LF.TypDecl (x, a))) 0) k
+              (name)
+              (fmt_ppr_lf_typ LF.Empty cPsi  0) a
+              (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDecl (x, a))) 0) k
               (r_paren_if cond)
 
       | LF.ArrKind (_, a, k) ->
@@ -565,14 +563,14 @@ module Ext = struct
       | Comp.MetaObj (_, phat, tM) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx phat in
-            fprintf ppf "%s[%a. %a]%s"
+            fprintf ppf "%s[%a|- %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)
       | Comp.MetaObjAnn (_, cPsi, tM) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a. %a]%s"
+            fprintf ppf "%s[%a|- %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
@@ -661,7 +659,7 @@ module Ext = struct
     and fmt_ppr_pat_obj cD lvl ppf = function
       | Comp.PatEmpty (_, cPsi) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a. {}]%s"
+            fprintf ppf "%s[%a|- {}]%s"
               (l_paren_if cond)
               (fmt_ppr_lf_dctx cD 0) cPsi
               (r_paren_if cond)
@@ -962,7 +960,7 @@ module Ext = struct
 
       | Comp.Branch (_, cD1', pat, e) ->
 
-          fprintf ppf "@ @[<v2>| @[<v0>%a ; @[ . %a @]  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "@ @[<v2>| @[<v0>%a ; @[ |- %a @]  => @]@ @[<2>@ %a@]@]@ "
              (fmt_ppr_cmp_branch_prefix  0) cD1'
              (fmt_ppr_pat_obj cD1' 0) pat
              (fmt_ppr_cmp_exp_chk cD1' 1) e
@@ -1018,7 +1016,7 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ cD LF.Null lvl) tau
 
-    let fmt_ppr_cmp_rec ?(asHtml=false) lvl ppf = function
+    let fmt_ppr_cmp_rec lvl ppf = function
       | Comp.RecFun (x, a, e) ->
           fprintf ppf "%s %s : %a => @ %a"
             "rec"
@@ -1026,17 +1024,17 @@ module Ext = struct
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
             (fmt_ppr_cmp_exp_chk LF.Empty lvl)  e
 
-    let rec fmt_ppr_rec ?(asHtml=false) lvl ppf = function
+    let rec fmt_ppr_rec lvl ppf = function
       | [] -> ()
       | h::t -> fprintf ppf "%a %a \n"
-                   (fmt_ppr_cmp_rec ~asHtml:asHtml lvl) h
+                   (fmt_ppr_cmp_rec lvl) h
                    (fmt_ppr_rec lvl) t
 
-    let fmt_ppr_sgn_decl ?(asHtml = false) lvl ppf = function
+    let fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (_, x, a) ->
           fprintf ppf "%s : %a.@.@?"
             (R.render_name x)
-            (fmt_ppr_lf_typ ~asHtml:asHtml LF.Empty LF.Null lvl)  a
+            (fmt_ppr_lf_typ LF.Empty LF.Null lvl)  a
 
       | Sgn.CompConst (_, x, a) ->
           fprintf ppf "%s : %a.@.@?"
@@ -1065,7 +1063,7 @@ module Ext = struct
             (fmt_ppr_lf_schema lvl) schema
 
      | Sgn.Rec (_, lrec) ->
-           (fmt_ppr_rec ~asHtml:asHtml lvl ppf) lrec
+           (fmt_ppr_rec lvl ppf) lrec
 
       | Sgn.Pragma (_, Sgn.NamePrag _) ->  ()
 

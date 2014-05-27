@@ -56,7 +56,7 @@ let freeze_from_name tau = match tau with
                                 ()
 
 let sgnDeclToString d = 
-  if !Html.genHtml then Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl ~asHtml:true Prettyext.std_lvl Format.str_formatter d ; Format.flush_str_formatter ()
+  if !Html.genHtml then Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl Prettyext.std_lvl Format.str_formatter d ; Format.flush_str_formatter ()
 
 let rec recSgnDecls = function
   | [] -> ()
@@ -90,10 +90,7 @@ and recSgnDecl d =
     match d with
     | Ext.Sgn.Comment(_, x) ->
         if !Html.genHtml then
-          let len = String.length x in
-          let innerHtml = String.sub (String.sub x 0 (len - 2)) 2 (len - 4) in
-          let _ = print_string ("COMENT:\n" ^ innerHtml ^ "\n") in
-          Html.appendAsComment innerHtml
+          Html.appendAsComment (Str.global_replace (Str.regexp "\\(%{\\|}%\\)") "" x)
         else ()
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
         let s = sgnDeclToString d in

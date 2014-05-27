@@ -1169,17 +1169,21 @@ GLOBAL: sgn;
 isuffix:
  [ LEFTA [
 
-  "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [turnstile; tM = clf_term_app -> tM ]; "]"   ->
-     begin match (phat_or_psi , mobj) with
-       | (Dctx cPsi, Some tM)   -> (fun i -> Comp.MApp (_loc, i,
+  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = clf_term_app; "]"   ->
+     begin match phat_or_psi with
+       | Dctx cPsi   -> (fun i -> Comp.MApp (_loc, i,
                                                         Comp.MetaObjAnn(_loc, cPsi,  tM)))
-       | (Hat phat, Some tM)    -> (fun i -> Comp.MApp (_loc, i,
+       | Hat phat    -> (fun i -> Comp.MApp (_loc, i,
                                                         Comp.MetaObj (_loc, phat, tM)))
-       | (Dctx cPsi, None)      -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx (_loc,cPsi)))
-       | (Hat [psi], None)      -> (fun i -> Comp.MApp(_loc, i,
+     end
+
+  | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
+     begin match phat_or_psi with
+       | Dctx cPsi     -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx (_loc,cPsi)))
+       | Hat [psi]      -> (fun i -> Comp.MApp(_loc, i,
                                                        Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi))))
-       | (Hat []  , None)       -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx(_loc, LF.Null)))
-       | (_ , _)                ->
+       | Hat []       -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx(_loc, LF.Null)))
+       | _                      ->
          raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
      end
 
@@ -1247,8 +1251,8 @@ clf_pattern :
   term_or_sub:
   [
     [
-      turnstile ; tM = clf_term_app -> Term tM
-    | "$" ; s  = clf_sub_new -> Sub s
+      tM = clf_term_app -> Term tM
+    | s  = clf_sub_new -> Sub s
     ]
   ];
 
@@ -1319,7 +1323,7 @@ clf_pattern :
     [
       [
 
-        "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [tM = term_or_sub -> tM ]; "]"   ->
+        "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [turnstile; tM = term_or_sub -> tM ]; "]"   ->
           begin match (phat_or_psi , mobj) with
             | (Dctx cPsi, Some(Term tM))   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
             | (Hat phat, Some(Term tM))    -> Comp.MetaObj (_loc, phat, tM)

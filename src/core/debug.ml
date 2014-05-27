@@ -4,7 +4,7 @@
 
 let chatter : int ref =  ref 1
 
-let pipeDebug = ref true
+let pipeDebug = ref false
 
 let debugFilename = "debug.out"
 

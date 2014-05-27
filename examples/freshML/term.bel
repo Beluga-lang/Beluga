@@ -18,6 +18,7 @@ const : nat -> term.
 schema ctx = term ;
 
 rec add: [ |- nat] -> [ |- nat] -> [ |- nat] =
+/ total m (add m n) /
 fn m => fn n => case m of
 | [ |- z] => n
 | [ |- suc M] =>
@@ -26,6 +27,7 @@ fn m => fn n => case m of
 ;
 
 rec size : {g:ctx} [g |- term] -> [ |- nat] =
+/ total t (size g t) /
 mlam g => fn t => case t of
 | [g |- #p ..] => [ |- suc z]
 | [g |- lam \x. T .. x] =>

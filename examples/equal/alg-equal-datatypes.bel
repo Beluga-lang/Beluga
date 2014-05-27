@@ -7,7 +7,7 @@ datatype term: type =
 schema tctx = term;
 
 % Algorithmic Equality
-datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype =
+datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratify 2 =
 | Ae_v : % {#p:[g |- term]}
              Aeq [g |- #p ..] [g |- #p..]
 | Ae_a : Aeq [g |- E1 ..] [g |- F1 .. ] -> Aeq [g |- E2 ..] [g |- F2 ..]
@@ -30,6 +30,7 @@ datatype Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype =
 
 % Reflexivity for Aeq is admissible
 rec ref : {g:tctx} {E : [g |- term]} Aeq [g |- E ..] [g |- E ..] =
+/ total e (ref g e) /
 mlam g => mlam E => case [g |- E ..] of
 | [g |- #p ..] => Ae_v % [g |- #p ..]
 | [g |- app (E1 ..) (E2 ..)] =>
@@ -45,6 +46,7 @@ mlam g => mlam E => case [g |- E ..] of
 % Transitivity for Aeq is admissible
 rec trans : (g:tctx) Aeq [g |- E ..] [g |- F ..] -> Aeq [g |- F ..] [g |- L ..] ->
             Aeq [g |- E ..] [g |- L ..] =
+/ total e (trans g _ _ _ e) / 
 fn e => fn d => case e of
 | Ae_v  => let Ae_v  = d in Ae_v
 | Ae_a f1 f2 =>
@@ -72,6 +74,7 @@ fn e => fn d => case (e , d) of
 % Completeness of Aeq
 rec ceq : (g:tctx)
          Deq [g |- T ..] [g |- S ..] -> Aeq [g |- T ..] [g |- S ..]  =
+/ total d (ceq g t s d)/
 fn d => case d of
 | De_l d => Ae_l (ceq d)
 | De_a d1 d2 => Ae_a (ceq d1) (ceq d2)

@@ -28,6 +28,7 @@ v_lam: val (lam (\x. E x)).
 
 
 rec vs : [ |- eval E V] -> [ |- val V] =
+/ total d (vs e v d)/
 fn d => case d of
 
   [ |- ev_lam] => [ |- v_lam]

@@ -20,7 +20,7 @@ eq_lam :  ({x : exp} eq x x -> eq (M x) (N x))
 schema eCtx = block x:exp, _t:eq x x;
 
 rec ref : {g:eCtx} {M:[g |- exp]} [g |- eq (M ..) (M ..)] =
-/ total m (ref g m) /
+/ total m (ref g m ) /
  mlam g => mlam M => case [g |- (M ..)] of
 | [g |- #p.1 ..] => [g |- #p.2 ..]
 

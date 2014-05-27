@@ -332,6 +332,18 @@ let gen_meta_obj (cdecl, theta) k = match cdecl with
       let pv = LF.PVar (LF.Offset k, Substitution.LF.id) in
         Comp.MetaParam (Syntax.Loc.ghost, psihat', pv)
 
+  | LF.SDecl _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SDecl in Total.gen_meta_obj"))
+
+  | LF.MDeclOpt _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.MDeclOpt in Total.gen_meta_obj"))
+
+  | LF.PDeclOpt _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.PDelOpt in Total.gen_meta_obj"))
+
+  | LF.CDeclOpt _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.CDelOpt in Total.gen_meta_obj"))
+
+  | LF.SDeclOpt _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SDelOpt in Total.gen_meta_obj"))
+
+
+
 let uninstantiated_arg cM = match Whnf.cnormMetaObj (cM, Whnf.m_id) with
   | Comp.MetaCtx (_ , LF.CtxVar (LF.CInst _)) -> true
   | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
@@ -814,9 +826,9 @@ let rec less_meta_obj mC1 mC2 =
       (less_phat  phat1 phat2)   && (Whnf.convHead (tH1, Substitution.LF.id) (tH2, Substitution.LF.id)) 
     (* is the first rule still applied in this case?  *)
 
-    | Comp.MetaSObj (loc1, _, _ ), Comp.MetaSObj (_, _ , _) -> raise (Error (loc1, NotImplemented "Comp.MetaSObj"))
+    | Comp.MetaSObj (loc1, _, _ ), Comp.MetaSObj (_, _ , _) -> raise (Error (loc1, NotImplemented "Comp.MetaSObj in Total.less_meta_obj"))
 
-    | Comp.MetaSObjAnn (loc1, _, _ ), Comp.MetaSObjAnn (_, _ , _) ->  raise (Error (loc1, NotImplemented "Comp.MetaSObjAnn"))
+    | Comp.MetaSObjAnn (loc1, _, _ ), Comp.MetaSObjAnn (_, _ , _) ->  raise (Error (loc1, NotImplemented "Comp.MetaSObjAnn in Total.less_meta_obj"))
 
     | _ , _  -> false
   

@@ -27,6 +27,7 @@
 rec ccp : [ |- eval E V]
        -> [ |- mstep (st K (return V)) (answer W)]
        -> [ |- mstep (st K (ev E)) (answer W)] =
+/ total d (ccp e v k w d)/ 
 fn d => fn s => case d of
   [ |- ev_z] => let [ |- S'] = s in [ |- << S' st_z]
 

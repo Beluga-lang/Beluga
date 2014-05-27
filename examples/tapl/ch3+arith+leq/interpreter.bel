@@ -10,6 +10,7 @@ yes : yes_or_no.
 no  : yes_or_no.
 
 rec isvalue : [ |- term] -> [ |- yes_or_no] =
+/ total m (isvalue m)/
 fn m => case m of
 | [ |- true] => [ |- yes]
 | [ |- false] => [ |- yes]
@@ -25,6 +26,7 @@ interim    : term -> optInterim.
 
 
 rec small_step : [ |- term] -> [ |- optInterim] =
+% / total m (small_step m)/
 fn m => case m of
 | [ |- succ M]    =>
   (case small_step [ |- M] of [ |- no_interim] => [ |- no_interim]
@@ -116,6 +118,7 @@ let r3 = mstep v3 ; % Result will be : [ ] no_val
 % Interpreter based on big-step rules
 
 rec eval : [ |- term] -> [ |- optVal] =
+% / total m (eval m)/
 fn m => case m of
 | [ |- succ M] =>
   (case eval [ |- M ] of
@@ -177,12 +180,14 @@ no_typ: optTyp.
 typ   : tp -> optTyp.
 
 rec equal : [ |- tp] -> [ |- tp] -> [ |- yes_or_no] =
+/ total t1 (equal t1)/
 fn t1 => fn t2 => case t1 of
 | [ |- nat]  => (case t2 of [ |- nat] => [ |- yes] | [ |- _] => [ |- no])
 | [ |- bool] => (case t2 of [ |- bool] => [ |- yes] | [ |- _] => [ |- no])
 ;
 
 rec infer : [ |- term] -> [ |- optTyp] =
+% / total m (infer m)/
 fn m => case m of
 | [ |- z] => [ |- typ nat]
 | [ |- true] => [ |- typ bool]

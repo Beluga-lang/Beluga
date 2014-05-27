@@ -19,6 +19,7 @@ ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp}
        eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 
 rec vs : {E:[ |- exp]} {V:[ |- exp]} [ |- eval E V] -> [ |- value V] =
+/ total e (vs _ _ e) /
 mlam E => mlam V => fn e =>
   case e of
      [ |- ev_z] : [ |- (eval z z)] =>  [ |- v_z]

@@ -78,7 +78,7 @@ schema jctx' = block x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _npt: npath y
 rec bred_ltr :  (g:jctx') [g |- bred (N ..) (V  ..)]
              -> [g |- path (N ..) (P ..)] -> [g |- npath (V ..) (P ..)]
     =
-/ total br (bred_ltr g n v p br) /
+ / total br (bred_ltr g n v p br) /
 fn br => fn pt => case br of
 | [g |- #p.3 ..] => let [g |- #p.5 ..] = pt in [g |- #p.6 ..]
 | [g |- r_app (R1 ..) (R2 ..)] =>
@@ -127,7 +127,7 @@ fn br => fn pt => case br of
 rec bred_rtl : (g:jctx')[g |- bred (M ..) (U ..)] ->
                [g |- npath (U ..) (P ..)] -> [g |- path (M ..) (P ..)]
    =
-/ total br (bred_rtl g m u p br) /
+ / total br (bred_rtl g m u p br) /
 fn br => fn pt => case br of
 | [g |- #p.3 ..] => let [g |- #p.6 ..] = pt in [g |- #p.5 ..]
 | [g |- r_app (R1 ..) (R2 ..)] =>
@@ -269,7 +269,7 @@ rec same_paths_join_c : {U:[ |- nf]}{V:[ |- nf]}
                        ({P:[ |- p]} [ |- path M P] -> [ |- path N P])
                       -> [ |- nf_eq U V]
 =
-/ total (same_paths_join_c ) /
+ / total (same_paths_join_c ) /
 mlam U => mlam V => fn r1 => fn r2 => fn pf =>
  tm_same [] [ |- U] [ |- V]  (mlam P => fn l => bred_ltr r2 (pf [ |- P] (bred_rtl r1 l)))
  ;
@@ -280,7 +280,7 @@ rec same_paths_join : {g:jctx}{U:[g |- nf]}{V:[g |- nf]}
                        ({P:[g |- p]} [g |- path (M ..) (P ..)] -> [g |- path (N ..) (P ..)])
                       -> [g |- nf_eq (U ..) (V ..)]
 =
-/ total (same_paths_join) /
+ / total (same_paths_join) /
 mlam g => mlam U => mlam V => fn r1 => fn r2 => fn pf =>
  tm_same  [g] [g |- U ..] [g |- V ..]
       (mlam P => fn l => bred_ltr r2 (pf [g |- P ..] (bred_rtl r1 l)))

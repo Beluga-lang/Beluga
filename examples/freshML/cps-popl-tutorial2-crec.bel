@@ -27,6 +27,7 @@ clam   : (cvalue A -> (cvalue B -> contra) -> contra) -> cvalue (arr A B).
 schema ctx = some [a:tp] block x:value a, _t:cvalue a ;
 
 rec cps : (g:ctx)[g |- value A] -> [g |- cvalue A] =
+/ total v (cps g a v)/
 fn v => case v of
 | [g |- #p.1 ..] => [g |- #p.2 ..]
 | {E:[g, x:value A |-  exp B]} % Explicit type annotation for E is necessary
@@ -38,6 +39,7 @@ fn v => case v of
 
 
 and cpse : (g:ctx)[g |- exp A] -> [g, c: cvalue A -> contra |-  contra] =
+/ total e (cpse g a e) /
 fn e => case e of
 | [g |- ret (V .. )] =>
   let [g |- V' ..] = cps [g |- V .. ] in
@@ -54,6 +56,7 @@ cval: type.
 cv: cvalue T -> cval.
 
 rec eval : [ |- contra] -> [ |- cval] =
+% / total e (eval e) /
 fn e => case e of
  | [ |- capp (clam \v.\k. E v k)  Cv2  (\x. K x)] =>
      eval [ |- E Cv2 (\x. K x)]

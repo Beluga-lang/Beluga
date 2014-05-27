@@ -36,6 +36,7 @@ refl: equal E E .
 not_possible : type.
 
 rec values_dont_step : [ |- step M M' ] -> [ |- value M  ] -> [ |- not_possible]=
+/ total v (values_dont_step m m' s v)/
 fn s => fn v => case v of
 | [ |- v_lam] => impossible s in []
 ;
@@ -44,6 +45,7 @@ steps_to_terms: term -> term -> term -> type.
 andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
 rec det : [ |- steps_to_terms T T1 T2 ] -> [ |- equal T1 T2 ] =
+% / total s (det t t1 t2 s)/
 fn s => case s of
 | [ |- andalso (step_app_1 DstepE1') (step_app_1 DstepE1'')] =>
   let [ |- refl] = det [ |- andalso DstepE1' DstepE1''] in

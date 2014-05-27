@@ -5,6 +5,7 @@
 }%
 
 rec small_step_cont : [ |- term] -> ([ |- term] -> [ |- optInterim]) -> [ |- optInterim] =
+% / total t (small_step_cont t)/
 fn t => fn cont => case t of
 | [ |- succ M] =>
    small_step_cont [ |- M ] (fn m' => let [ |- M'] = m' in cont [ |- succ M'])
@@ -58,6 +59,7 @@ fn t => fn cont => case t of
 
 
 rec mstep' : [ |- term] -> [ |- optVal] =
+% / total m (mstep' m)/
 fn m => case isvalue m of
 | [ |- yes] => let [ |- M] = m in [ |- val M]
 | [ |- no]  => (case small_step_cont m (fn m => let [ |- M] = m in [ |- interim M] )of

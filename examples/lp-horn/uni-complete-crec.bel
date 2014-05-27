@@ -9,6 +9,7 @@ andalso : {D:pf A} atm D
     -> atomic_prfs A.
 
 rec cmpcs: (g:c_ctx)[g |- can (A ..) (D ..) ] -> [g |- solve (A ..) ] =
+% / total cn (cmpcs g a d cn)/
 fn cn => case cn of
 |[g |- can_andi (CN2 ..) (CN1 ..)] =>
    let [g |- S1..] = cmpcs [g |- CN1 ..] in
@@ -35,6 +36,7 @@ fn cn => case cn of
 
 and cmpai: (g:c_ctx)[g |- atomic_prfs (A ..)] ->
 	       [g, q:p, u:focus (A ..) q |-  solve (atom q)] =
+% / total at (cmpai g a at)/
 fn at => case at of
   | [g |- andalso (#p.2 .. ) (#p.3 ..)] => [g,q,u |-  s_atom u (#p.1 ..)]
 

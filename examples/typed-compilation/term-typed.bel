@@ -17,6 +17,7 @@ schema ctx = term T;
 
 
 rec eval : [ |- term T] -> [ |- term T] =
+% / total e (eval e)/
 fn e => case e of
 | [ |- app E1 E2] =>
   let [ |- (lam \x. E' x)] = eval [ |- E1] in

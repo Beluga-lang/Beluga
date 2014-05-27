@@ -99,7 +99,7 @@ fn d => case d of
 % Promotion lemmas (explicit)
 datatype CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype = 
 | Cnil : CtxRel [] [] [ |- ^ ] 
-| Ccons: {g:daG}{h:xaG}{#W:h |- g}
+| Ccons: {g:daG}{h:xaG}{#W:g |- h}
          CtxRel [g] [h] [g |- #W[..] ] 
 	 -> CtxRel [g, b:block (x:tm, u:aeq x x, v: deq x x)]
 		   [h, b:block (x:tm, u:aeq x x)]
@@ -107,7 +107,7 @@ datatype CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype =
 ;
 
 datatype StrTm : (g:daG)[g |- tm] ->  ctype = 
-| StrTm :  {g:daG}{h:xaG}{#W: h |- g} 
+| StrTm :  {g:daG}{h:xaG}{#W:g |- h} 
 	  CtxRel [g] [h] [g |- #W[..] ] 
       -> {M: [h |- tm]} StrTm [g |- M #W[..] ];
 
@@ -117,8 +117,8 @@ datatype Ctx_xaG : {g:xaG} ctype = Ctx_xaG : {g:xaG} Ctx_xaG [g] ;
 datatype EqCtx : {h:xaG} {h':xaG} ctype = 
 | RefCtx : EqCtx [h] [h] ;
 
-datatype EqSub : {g:daG}{h:xaG}{h':xaG} {#W:g |- h}{#W':g' |- h'} ctype = 
-| RefSub : {g:daG}{h:xaG}  {#W: g |- h} 
+datatype EqSub : {g:daG}{h:xaG}{h':xaG} {#W:g |- h}{#W':g |- h'} ctype = 
+| RefSub : {g:daG}{h:xaG}  {#W:g |- h} 
 		  EqSub [g] [h] [h] [g |- #W[..] ] [g |- #W[..] ] ;
 
 rec deterministic_CtxRel : CtxRel [g] [h] [g |- #W[..] ] 
@@ -170,7 +170,7 @@ mlam g => mlam M => case [g |- M ..] of
 
 
 | [g |- lam \x. M .. x ] => 
- let {#W: h |- g}
+ let {#W:g |- h}
      StrTm [g,b:block (x:tm, u:aeq x x,v:deq x x)]
            [h,b:block (x:tm, u:aeq x x)]
 	   [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..] <b.1, b.2>]
@@ -193,7 +193,7 @@ let [h |- D .. ] = reflG [h] [h |- N ..] in
 ;
 
 datatype StrAeq : (g:daG){M:[g |- tm]}{N:[g |- tm]}[g |- aeq (M ..) (N ..)] ->  ctype = 
-| StrAeq :  {g:daG}{h:xaG}{#W: h |- g} {M:[h |- tm]}{N:[h |- tm]}
+| StrAeq :  {g:daG}{h:xaG}{#W:g |- h} {M:[h |- tm]}{N:[h |- tm]}
   	    CtxRel [g] [h] [g |- #W[..] ] -> 
 	    {D: [h |- aeq (M ..) (N ..)]}
 	    StrAeq [g |- M #W[..]] [g |- N #W[..]] [g |- D #W[..]];

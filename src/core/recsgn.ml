@@ -22,7 +22,6 @@ type error =
   | MutualTotalDeclAfter of name
   | NoPositive of string
   | NoStratify of string
-  | Unimplemented 
 
 exception Error of Syntax.Loc.t * error
 
@@ -45,8 +44,6 @@ let _ = Error.register_printer
 	  Format.fprintf ppf "Positivity checking of constructor %s fails." n
 	| NoStratify n -> 
 	  Format.fprintf ppf "Stratification checking of constructor %s fails." n
-
-	| Unimplemented -> Format.fprintf ppf "Unimplemented."
     )
   )
 
@@ -158,7 +155,6 @@ and recSgnDecl d =
 		      |None   -> Int.Sgn.StratifyAll
 		    )
 		  | Some (Ext.Sgn.Positivity) -> Int.Sgn.Positivity
-		  | _    -> raise (Error (loc, Unimplemented)) 
                 ) in
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
           (if (!Debug.chatter) == 0 then ()

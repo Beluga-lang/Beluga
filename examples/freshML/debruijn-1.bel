@@ -28,15 +28,23 @@ app'   : exp' (arr A B) -> exp' A -> exp' B.
 
 schema ctx = value T ;
 
-rec vhoas2db : (g:ctx) [g |- value S]  -> [ |- exp' S] =
- / total g (vhoas2db g) /
-fn v =>  case v of
- | [h,x:value T |-  x] => [ |- one]
 
- | [h,x:value T |-  #p ..]  =>
-     let [ |- Db] = vhoas2db [h |- #p ..] in
-       [ |- shift Db]
-| [g |- lam T (\x. E .. x)] =>
+ rec var : {g:ctx}{#p:[g |- value S]}  [ |- exp' S] = 
+/ total g (var g) /
+mlam g => mlam #p => case [g |- #p ..] of
+| [g,x:value S |- x] =>  [ |- one]
+| [g,x:value S |- #q ..] => 
+  let [ |- Db] = var [g] [g |- #q ..] in
+  [ |- shift Db]
+; 
+
+
+rec vhoas2db : (g:ctx) [g |- value S]  -> [ |- exp' S] =
+ / total v (vhoas2db g s v) /
+fn v =>  case v of
+ | [g |-  #p ..] => var [g] [g |- #p ..]
+			
+ | [g |- lam T (\x. E .. x)] =>
    let [ |- F]  =  hoas2db [g,x:value T |-  E .. x] in
      [ |- lam' T F]
 

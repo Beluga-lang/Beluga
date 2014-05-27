@@ -6,7 +6,7 @@ let chatter : int ref =  ref 1
 
 let pipeDebug = ref false
 
-let debugFilename = "debug.out"
+let filename = ref "debug"
 
 type flags = int
 
@@ -73,7 +73,7 @@ let print flags f =
     ()
   else begin
     if !pipeDebug then begin
-      let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o640 "debug.out" in
+      let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o640 (!filename ^ ".out") in
       let out = output_string oc in
       (print_level_spaces out ();
       let s = try f()

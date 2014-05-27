@@ -8,7 +8,6 @@
 open Core
 open Printf
 
-
 let bailout msg =
   fprintf stderr "%s\n" msg;
   exit 2

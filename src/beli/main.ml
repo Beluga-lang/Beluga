@@ -16,7 +16,7 @@ let usage () =
       "    -help         this usage message\n"
     ^ "    (+|-)readline (enable|disable) readline support (requires rlwrap installed)\n"
     ^ "    -emacs        mode used to interact with emacs (not recommended in command line)\n"
-    ^ "    -debug        Pipe debugging information into '"^ Debug.debugFilename ^ "'\n"
+    ^ "    +d            Pipe debugging information into '"^ !Debug.filename ^ ".out" ^ "'\n"
   in
     fprintf Format.err_formatter
       "Usage: %s [options]\noptions:\n%s"
@@ -28,7 +28,7 @@ let process_option arg rest = match arg with
   | "+readline" -> Options.readline := true; rest
   | "-readline" -> Options.readline := false; rest
   | "-emacs" -> Options.emacs := true; Debug.chatter := 0; rest
-  | "-debug" ->Options.debug := true; Debug.pipeDebug := true; Debug.showAll (); Printexc.record_backtrace true; rest
+  | "+d" -> Options.debug := true; Debug.pipeDebug := true; Debug.showAll (); Printexc.record_backtrace true; rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -77,7 +77,7 @@ let main () =
      available. Otherwise don't bother. *)
   if !Options.readline && (not !Options.emacs) then begin
     try
-      let args = if !Options.debug then ("-debug"::files) else files in
+      let args = if !Options.debug then ("+d"::files) else files in
       Unix.execvp "ledit" (Array.append [| "ledit"; Sys.executable_name; "-readline" |] (Array.of_list args))
     with Unix.Unix_error _ -> ()
   end;
@@ -90,7 +90,19 @@ let main () =
       fprintf ppf "The file has been successfully loaded.\n"
     with
     |Failure _ -> fprintf ppf "Please provide the file name\n" ;
-  else if List.length files > 1 then fprintf ppf "Please supply only 1 file" ;
+  else begin if List.length files > 1 then fprintf ppf "Please supply only 1 file" end;
+
+  if !Options.debug && Sys.file_exists (!Debug.filename ^ ".out") then begin
+    print_string "DEBUG.OUT EXISTS\n";
+    let x = ref 1 in
+    while Sys.file_exists (!Debug.filename ^ "(" ^ (string_of_int !x) ^ ").out") do
+      incr x
+    done ;
+    Debug.filename := (!Debug.filename ^ "(" ^ (string_of_int !x) ^ ")") ;
+    print_string !Debug.filename;
+    print_string "\n"
+  end;
+
   init_repl ppf;
   Command.print_usage ppf ;
   loop ppf

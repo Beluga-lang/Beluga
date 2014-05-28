@@ -1049,7 +1049,6 @@ match sigma with
       (* s' *) (* This is wrong! Below is correct *)
       (match s' with
       	| Shift (NoCtxShift, _) -> s'
-      	(* | Shift (NegCtxShift _, _) -> raise NotInvertible *)
 	| Undefs -> raise NotInvertible
       )
         (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)

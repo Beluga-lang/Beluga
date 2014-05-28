@@ -1080,11 +1080,11 @@ match sigma with
 
     | (Shift (psi, n), CtxVar _psi) ->
       let s' = comp (Shift (psi, n)) ssubst in 
-      s' (* This is wrong! Below is correct *)
-      (* (match s' with *)
-      (* 	| Shift (NoCtxShift, _) -> s' *)
-      (* 	| Shift (NegCtxShift _, _) -> raise NotInvertible *)
-      (* ) *)
+      (* s' *) (* This is wrong! Below is (more) correct *)
+      (match s' with
+      	| Shift (NoCtxShift, _) -> s'
+      	| Shift (NegCtxShift _, _) -> raise NotInvertible
+      )
         (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
         (* must be defined -- n = offset
          * otherwise it is undefined

@@ -315,25 +315,6 @@ let isVar h = match h with
     let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in
     let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
 match sigma with
-    | SVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
-      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
-      (* cPsi  |- s2 : cPsi' *)
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) ->
-            let s = Shift (NoCtxShift , k) in
-              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-        | (Some cvar, k) -> Shift (CtxShift cvar, k)
-      end
-    |SVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NegCtxShift cv , k)
-        | (Some cv', k) ->
-          if cv = cv' then
-            let s = Shift (NoCtxShift, k) in
-              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-          else
-            sigma
-      end
     | SVar (s , (NoCtxShift , _ ), _s2 ) ->
       let (cPhi, cPsi1) = match s with
     (* cPhi |- s : cPsi1 *)
@@ -344,26 +325,6 @@ match sigma with
         | Null , (None, k) -> let s = Shift (NoCtxShift, k) in               (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
         | Null , (Some cvar, k) -> EmptySub (* Shift (CtxShift cvar, k) *)
         | _     -> sigma
-      end
-
-    | FSVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
-      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
-      (* cPsi  |- s2 : cPsi' *)
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) ->
-            let s = Shift (NoCtxShift , k) in
-              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-        | (Some cvar, k) -> Shift (CtxShift cvar, k)
-      end
-    | FSVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NegCtxShift cv , k)
-        | (Some cv', k) ->
-          if cv = cv' then
-            let s =  Shift (NoCtxShift, k) in
-              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-          else
-            sigma
       end
     | FSVar (s_name , (NoCtxShift , _ ), _s2 ) ->
       let (_, Decl (_, STyp (cPsi1,  _cPhi))) = Store.FCVar.get s_name in
@@ -713,12 +674,6 @@ match sigma with
 
     | (Shift (NoCtxShift, _k), Shift (NoCtxShift, _k'), cPsi) -> (id, cPsi)
         (* both substitutions are the same number of shifts by invariant *)
-
-    | (Shift (CtxShift _psi, _k), Shift (CtxShift _psi', _k'), cPsi) -> (id, cPsi)
-        (* psi = psi' and k = k' by invariant *)
-
-    | (Shift (NegCtxShift _psi, _k), Shift (NegCtxShift _psi', _k'), cPsi) -> (id, cPsi)
-        (* psi = psi' and k = k' by invariant *)
 
     | (EmptySub, EmptySub , cPsi) -> (id , cPsi)
     (* all other cases impossible for pattern substitutions *)
@@ -1091,11 +1046,12 @@ match sigma with
 
     | (Shift (psi, n), CtxVar _psi) ->
       let s' = comp (Shift (psi, n)) ssubst in 
-      s' (* This is wrong! Below is correct *)
-      (* (match s' with *)
-      (* 	| Shift (NoCtxShift, _) -> s' *)
-      (* 	| Shift (NegCtxShift _, _) -> raise NotInvertible *)
-      (* ) *)
+      (* s' *) (* This is wrong! Below is correct *)
+      (match s' with
+      	| Shift (NoCtxShift, _) -> s'
+      	(* | Shift (NegCtxShift _, _) -> raise NotInvertible *)
+	| Undefs -> raise NotInvertible
+      )
         (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
         (* must be defined -- n = offset
          * otherwise it is undefined
@@ -1147,15 +1103,7 @@ match sigma with
 
     | (SVar (Offset s, (ctx_offset, n), t), cPsi1) -> (* This is probably
       buggy. Need to deal with the n *)
-        let ctx_offset' = match ctx_offset with
-          | NoCtxShift -> NoCtxShift
-          | CtxShift (CtxOffset offset) -> (match applyMSub offset ms with
-              | MV v -> CtxShift (CtxOffset v)
-              | MUndef -> raise NotInvertible)
-          | NegCtxShift (CtxOffset offset) -> (match applyMSub offset ms with
-              | MV v -> NegCtxShift (CtxOffset v)
-              | MUndef -> raise NotInvertible)
-          | _ -> ctx_offset in
+        let ctx_offset' = ctx_offset in
           begin match applyMSub s ms with
             | MV v ->
                 let (_, cPhi, cPsi1) = Whnf.mctxSDec cD0  v  in
@@ -1933,10 +1881,7 @@ match sigma with
                D;Psi'' |- ss <= Psi
                [ss] ([s[sigma] ] id ) exists
         *)
-      let s' , cPsi1' = match cshift , cPsi1 with
-        | (NoCtxShift, _n) , cPsi1 -> (id, cPsi1)
-        | (CtxShift _, _n) , cPsi1 -> (id, cPsi1)
-        | (NegCtxShift _ , _n) , cPsi1 -> (id, cPsi1) in
+      let s' , cPsi1' = (id, cPsi1) in
 
 
       let cPsi' = (match s with
@@ -1955,10 +1900,7 @@ match sigma with
           (s',cPsi1')
 
     | (MSVar (s, cshift, (_theta,sigma)), cPsi1) ->
-      let s' , cPsi1' = match cshift , cPsi1 with
-        | (NoCtxShift, _n) , cPsi1 -> (id, cPsi1)
-        | (CtxShift _, _n) , cPsi1 -> (id, cPsi1)
-        | (NegCtxShift _ , _n) , cPsi1 -> (id, cPsi1) in
+      let s' , cPsi1' = (id, cPsi1) in
 
       let MSInst (_ ,{contents=None}, _cD, cPhi1, cPhi2, _cnstrs) = s in
       let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
@@ -1971,10 +1913,7 @@ match sigma with
                D;Psi'' |- ss <= Psi
                [ss] ([s[sigma] ] id ) exists
         *)
-      let s' , cPsi1' = match cshift , cPsi1 with
-        | (NoCtxShift, _n) , cPsi1 -> (id, cPsi1)
-        | (CtxShift _, _n) , cPsi1 -> (id, cPsi1)
-        | (NegCtxShift _ , _n) , cPsi1 -> (id, cPsi1) in
+      let s' , cPsi1' = (id, cPsi1) in
 
         let (_, Decl (_, STyp (_cPhi,  cPsi'))) = Store.FCVar.get s in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
@@ -2081,20 +2020,12 @@ match sigma with
     | (Shift (NoCtxShift, k), CtxVar psi) ->
         let ( _ , ssubst) = ss in
         let rec check_negshift k ssubst = begin match (k, ssubst) with
-          | (0 , Shift (NegCtxShift phi, 0)) ->
-               if Whnf.convDCtx (Whnf.cnormDCtx (CtxVar phi, Whnf.m_id))
-                                (Whnf.cnormDCtx (CtxVar psi, Whnf.m_id))
-               then (Shift (CtxShift phi, 0 ), Null)
-               else (dprint (fun () -> "??? ") ; raise NotInvertible)
           | (k, Dot (Undef, ssubst')) -> check_negshift (k-1) ssubst'
 	  | (k, Undefs) -> (EmptySub, Null)
           | (_ , _ ) -> (id, CtxVar psi)
         end
         in
           check_negshift k ssubst
-
-    | (Shift (_, _k), CtxVar psi) ->
-        (id, CtxVar psi)
 
    | (Shift (psi, k), DDec (_, TypDecl (_x, _tA))) ->
        pruneCtx' phat (Dot (Head (BVar (k + 1)), Shift (psi, k + 1)), cPsi1) ss
@@ -2574,6 +2505,8 @@ match sigma with
                                       ^ "\n") in
                     let phat = Context.dctxToHat cPsi in
                     let _    = dprint (fun () -> "ss1 = " ^ P.subToString cD0 cPsi1 ss1 ) in
+		      (* is this really necessary? Can't we just prune regardless?
+                         there seems to be one test that loops if we remove this... -ac *)
                       if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
                         let tM2 = Whnf.norm sM2 in
                         let tM2' = Whnf.norm (Whnf.cnorm (tM2, mtt1), ss1) in
@@ -3467,19 +3400,7 @@ match sigma with
 
     and unifySub' mflag cD0 cPsi s1 s2 = match (s1, s2) with
       | (Shift (psi, n), Shift (phi, k)) ->
-          let rec compatible_cv = function
-            | (CtxName n1,  CtxName n2) -> n1 = n2
-            | (CtxOffset off1,  CtxOffset off2) -> off1 = off2
-            | (CInst (_, {contents=None}, _, _, _theta),  _) -> true
-            | (_,  CInst (_, {contents=None}, _, _, _theta)) -> true
-            | (_, _) -> false
-          and compatible = function
-            | (NoCtxShift, NoCtxShift) -> true
-            | (CtxShift ctx_var1, CtxShift ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
-            | (NegCtxShift ctx_var1, NegCtxShift ctx_var2) -> compatible_cv (ctx_var1, ctx_var2)
-            | (_, _) -> false
-          in
-            if n = k && compatible (psi, phi) then
+            if n = k then
               ()
             else
               raise (Error "Substitutions not well-typed")
@@ -3488,12 +3409,6 @@ match sigma with
         -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "FSVar mismatch")
-
-      | (Shift (NoCtxShift, 0), FSVar (_s , (CtxShift _ , 0), sigma1) ) ->
-          ()
-
-      | (FSVar (_s , (CtxShift _ , 0), sigma1) , Shift (NoCtxShift, 0) ) ->
-          ()
 
       | (SVar(Offset s1, n1, sigma1), Shift (NoCtxShift, 0) ) -> ()
       | (Shift (NoCtxShift, 0), SVar(Offset s1, n1, sigma1) ) -> ()

@@ -103,9 +103,7 @@ module LF = struct
    | CDot   of dctx * csub                   (*       | cPsi .delta            *)
 
  and ctx_offset =
-    | CtxShift of ctx_var
     | NoCtxShift
-    | NegCtxShift of ctx_var
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)

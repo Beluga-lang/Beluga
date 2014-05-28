@@ -367,14 +367,6 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
 (*      if not (subsumes cD psi' psi) then *)
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
-    | CtxVar (CtxOffset _ as psi), Shift (CtxShift (psi'), 0), Null ->
-      if not (psi = psi') then
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
-
-    | Null, Shift (NegCtxShift (_psi'), 0), CtxVar (CtxOffset _ as _psi) ->
-      (* if not (psi = psi') then *)
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
-
     (* SVar case to be added - bp *)
 
     | DDec (cPsi, _tX),  Shift (psi, k),  Null ->

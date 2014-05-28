@@ -12,9 +12,7 @@ open Store.Cid
 module P = Pretty.Int.DefaultPrinter
 
 let rec subToString = function
-  | Shift(CtxShift _, n) -> "Shift(CtxShift _, " ^ string_of_int n ^ ")"
   | Shift(NoCtxShift, n) -> "Shift(NoCtxShift, " ^ string_of_int n ^ ")"
-  | Shift(NegCtxShift _, n) -> "Shift(NegCtxShift _, " ^ string_of_int n ^ ")"
   | SVar _ -> "SVar(_,_)"
   | FSVar _ -> "FSVar(_,_)"
   | Dot(front, s) -> "Dot(" ^ frontToString front ^ ", " ^ subToString s ^ ")"

@@ -734,30 +734,6 @@ and reduce sM spine = match (sM, spine) with
 and normSub s = match s with
   | EmptySub -> EmptySub
   | Undefs -> Undefs
-  | Shift (CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
-      begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-        | (Some ctx_v, d) ->
-            normSub (Shift (CtxShift ctx_v, k + d))
-        | (None, d) ->
-            Shift (NoCtxShift, k + d)
-      end
-
-    | Shift (NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
-        let rec undef_sub d s =
-          if d = 0 then s
-          else undef_sub (d-1) (Dot(Undef, s))
-        in
-          begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) ->
-          (* Phi |- s : psi  and psi not in Psi and |Psi| = k
-           * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi
-           *)
-              normSub (undef_sub d (Shift (NegCtxShift ctx_v, k)))
-
-          | (None, d) -> undef_sub d (Shift (NoCtxShift, k))
-
-          end
-
   | Shift _      -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
   | FSVar ( s , n, sigma) -> FSVar (s, n, normSub sigma)
@@ -1446,75 +1422,6 @@ and cnorm (tM, t) = match tM with
   and cnormSub (s, t) = match s with
     | EmptySub -> EmptySub
     | Undefs -> Undefs
-    | Shift (CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
-        begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) ->
-              cnormSub (Shift (CtxShift ctx_v, k + d), t)
-          | (None, d) ->
-              cnormSub (Shift (NoCtxShift, k + d), t)
-        end
-
-    | Shift (NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)), k) ->
-        let rec undef_sub d s =
-          if d = 0 then s
-          else undef_sub (d-1) (Dot(Undef, s))
-        in
-          begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) ->
-          (* Phi |- s : psi  and psi not in Psi and |Psi| = k
-           * Psi |- Shift(negCtxShift(phi), k) . Undef ....  : phi, Phi
-           *)
-              cnormSub (undef_sub d (Shift (NegCtxShift ctx_v, k)) , t )
-
-          | (None, d) -> cnormSub (undef_sub d (Shift (NoCtxShift, k)), t)
-
-          end
-
-    | Shift (NegCtxShift (CtxOffset psi), k) ->
-        (*  |cPsi| = k
-            cPsi |- s : psi *)
-        let rec undef_sub d s =
-          if d = 0 then s
-          else undef_sub (d-1) (Dot(Undef, s))
-        in
-        begin match LF.applyMSub psi t with
-          | MV psi' -> Shift (NegCtxShift (CtxOffset psi'), k)
-          | CObj (CtxVar psi) -> Shift (NegCtxShift (psi), k)
-          | CObj (Null) -> Shift (NoCtxShift, k)
-          | CObj (DDec _ as cPsi) ->
-              begin match Context.dctxToHat cPsi with
-                | (Some ctx_v, d) ->
-                    undef_sub d (Shift (NegCtxShift ctx_v, k))
-                | (None, d) -> undef_sub d (Shift (NoCtxShift, k))
-              end
-        end
-
-    | Shift (NoCtxShift, _k) -> s
-    | Shift (CtxShift (CtxOffset psi), k) ->
-        (* let _ = dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi
-                         ^ " k = " ^ string_of_int k) in *)
-        begin match LF.applyMSub psi t with
-          | MV psi' -> Shift (CtxShift (CtxOffset psi'), k)
-          | CObj (CtxVar psi) -> Shift (CtxShift (psi), k)
-          | CObj (Null) -> Shift (NoCtxShift, k)
-          | CObj (DDec _ as cPsi) ->
-            begin match Context.dctxToHat cPsi with
-              | (Some ctx_v, d) ->
-                  Shift (CtxShift ctx_v, k + d)
-
-              | (None, d) ->
-                  Shift (NoCtxShift, k + d)
-            end
-          | MObj _ -> (dprint (fun () -> "[applyMSub] ill-typed MObj for CObj");
-                       dprint (fun () -> "[cnormSub] ctx_offset " ^ string_of_int  psi)
-                  ; raise (Error.Violation "illtyped msub"))
-
-
-        end
-    (* this case does happen during type reconstruction when we are inferring
-       the type of a pattern which is a meta-object
-    *)
-    | Shift (CtxShift (CtxName psi), k) -> s
     | Shift (_ , k ) -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
     | SVar (Offset offset, (cshift, n), s') ->
@@ -1568,81 +1475,7 @@ and cnorm (tM, t) = match tM with
             raise (Error.Violation "Cannot guarantee that parameter variable remains head"))
 
 
-  and cnormCtxShift (ctx_shift, t) k = match ctx_shift with
-    | CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
-      begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) -> cnormCtxShift (CtxShift ctx_v, t) (k + d)
-          | (None, d) -> (NoCtxShift, k + d)
-      end
-    | NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
-      begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) -> cnormCtxShift (NegCtxShift ctx_v, t) k
-          | (None, d) -> (NoCtxShift, k)
-      end
-    | CtxShift (CtxOffset offset) ->
-      begin match LF.applyMSub offset t with
-        | CObj(cPsi) ->
-            begin match Context.dctxToHat (cPsi) with
-              | (None, i) -> (NoCtxShift, k+i)
-              | (Some cvar', i) -> (CtxShift cvar', i+k)
-            end
-        | MV offset' -> (CtxShift (CtxOffset offset'), k)
-      end
-    | NegCtxShift (CtxOffset offset) ->
-      begin match LF.applyMSub offset t with
-        | CObj(cPsi) ->
-            begin match Context.dctxToHat (cPsi) with
-              | (None, _i) -> (NoCtxShift , k) (* convert i to undefs? *)
-              | (Some cvar', _i) -> (NegCtxShift cvar', k)
-            end
-        | MV offset' -> (CtxShift (CtxOffset offset'), k)
-      end
-
-(* =====
-
-    | MSVar (s ,
-             (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
-             (ctx_shift, n), (mt,s')) ->
-      let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
-          MSVar (s, (cshift', n'), (cnormMSub (mcomp mt t), s'))
-
-    | _ -> (dprint (fun () -> "[cnormSub] undefined ? ");
-            raise (Error.Violation "Cannot guarantee that parameter variable remains head"))
-
-
-  and cnormCtxShift (ctx_shift, t) k = match ctx_shift with
-    | CtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
-      begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) -> cnormCtxShift (CtxShift ctx_v, t) (k + d)
-          | (None, d) -> (NoCtxShift, k + d)
-      end
-    | NegCtxShift (CInst (_n, {contents = Some cPhi }, _schema, _mctx, theta)) ->
-      begin match Context.dctxToHat (cnormDCtx (cPhi, theta)) with
-          | (Some ctx_v, d) -> cnormCtxShift (NegCtxShift ctx_v, t) k
-          | (None, d) -> (NoCtxShift, k)
-      end
-    | CtxShift (CtxOffset offset) ->
-      begin match LF.applyMSub offset t with
-        | CObj(cPsi) ->
-            begin match Context.dctxToHat (cPsi) with
-              | (None, i) -> (NoCtxShift, k+i)
-              | (Some cvar', i) -> (CtxShift cvar', i+k)
-            end
-        | MV offset' -> (CtxShift (CtxOffset offset'), k)
-      end
-    | NegCtxShift (CtxOffset offset) ->
-      begin match LF.applyMSub offset t with
-        | CObj(cPsi) ->
-            begin match Context.dctxToHat (cPsi) with
-              | (None, _i) -> (NoCtxShift , k) (* convert i to undefs? *)
-              | (Some cvar', _i) -> (NegCtxShift cvar', k)
-            end
-        | MV offset' -> (CtxShift (CtxOffset offset'), k)
-      end
-
->>>>>>> fdc170be06128aa07b1660deb1dc2d51ea42f6f6
-*)
-    | _ -> (ctx_shift, k)
+  and cnormCtxShift (ctx_shift, t) k = (ctx_shift, k)
 
   and cnormFront (ft, t) = match ft with
     | Head (HClo (h , Offset i , sigma))  ->
@@ -2364,23 +2197,8 @@ and convSub subst1 subst2 = match (subst1, subst2) with
   | (Shift (psi,n), Shift (psi', k)) ->
       n = k && psi = psi'
 
-  | (SVar (_s1, (CtxShift _ , _ ) , _sigma1), _s2 ) ->
-    (* if subst1 and subst2 are well-typed, then their domain
-       must be empty;
-       _s2 is either Shift (NoCtxShift , 0 )
-       or SVar (Offset _r1, (CtxShift _ , _ ) , _sigma1')
-    *)
-      true
-
-  | (_s2  , SVar (_s1, (CtxShift _ , _) , _sigma1) ) ->
-    (* see comment above *)
-      true
-
-  | (SVar (Offset s1, n1, sigma1), SVar (Offset s2, n2, sigma2)) ->
-      (match n1 , n2 with
-        | (NoCtxShift , k) , (NoCtxShift , k') ->  k = k'
-        | (CtxShift _ , k) , (CtxShift _ , k') -> k = k'
-        | (NegCtxShift _ , k) , (NegCtxShift _ , k') -> k = k') &&
+  | (SVar (Offset s1, (_,k), sigma1), SVar (Offset s2, (_,k'), sigma2)) ->
+     k = k' &&
      s1 = s2 &&
      convSub sigma1 sigma2
 
@@ -3202,13 +3020,6 @@ and closedSub s = match s with
  | EmptySub -> true
  | Undefs -> true
  | SVar (Offset _ , (cshift,_n) , sigma) ->
-      (match cshift with
-        | CtxShift (CInst (_, {contents = None}, _, _, _)) -> false
-        | CtxShift _ -> true
-        | NoCtxShift -> true
-        | NegCtxShift (CInst (_, {contents = None}, _, _, _)) -> false
-        | NegCtxShift _ -> true)
-        &&
         closedSub sigma
   | Shift _ -> true
   | Dot (ft, s) -> closedFront ft && closedSub s

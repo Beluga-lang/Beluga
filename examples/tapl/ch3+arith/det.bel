@@ -72,7 +72,7 @@ fn s => fn v => case v of
 
 
 rec det : [ |- steps_to_terms T T1 T2] -> [ |- equal T1 T2] =
-% / total s (det t t1 t2 s)/
+ % / total s (det t t1 t2 s)/
 fn s => case s of
 
 | [ |- andalso (e_succ D)        (e_succ F)]   =>

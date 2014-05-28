@@ -196,6 +196,7 @@ module Comp = struct
     | Simul of order list               (*     | [O1 .. On]           *)
 
  type total_dec = Total of Loc.t * order option * name * (name option) list
+		  | Trust of Loc.t
 
  type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
 

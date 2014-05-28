@@ -26,13 +26,13 @@ rec ffff4 : {g:(wblock)*} {h:(tps)*} nat[g] -> nat[g] =
 
 %not
 rec ffff3 : {h:tps} [h |- tp] -> [h |- tp] =
-/ total e (ffff3 h e)/
+% / total e (ffff3 h e)/
   mlam h => fn eTp =>
     case eTp of [h |- #pp.1 ..] => [h |- #pp.3 ..]       % Fails: tps doesn't include any Sigmas
 ;
 
 rec ffff4 : {g:wblock} {h:tps} [g |- nat] -> [g |- nat] =
-/ total e (ffff4 h e)/
+% / total e (ffff4 h e)/
   mlam g => mlam h => fn eNat =>
     case eNat of %not
 %    | [g] #pppppp.1 .. => [g] z

@@ -25,6 +25,7 @@ type error =
   | Unimplemented 
   | TotalArgsError of name
 
+
 exception Error of Syntax.Loc.t * error
 
 let _ = Error.register_printer
@@ -45,11 +46,13 @@ let _ = Error.register_printer
    	| NoPositive n -> 
 	  Format.fprintf ppf "Positivity checking of constructor %s fails.\n" n
 	| NoStratify n -> 
+
 	  Format.fprintf ppf "Stratification checking of constructor %s fails.\n" n
 	| TotalArgsError f ->
 	  Format.fprintf ppf "Totality declaration for %s takes too many arguments.\n" (R.render_name f)
 
 	| Unimplemented -> Format.fprintf ppf "Unimplemented."
+
     )
   )
 
@@ -161,7 +164,6 @@ and recSgnDecl d =
 		      |None   -> Int.Sgn.StratifyAll
 		    )
 		  | Some (Ext.Sgn.Positivity) -> Int.Sgn.Positivity
-		  | _    -> raise (Error (loc, Unimplemented)) 
                 ) in
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
           (if (!Debug.chatter) == 0 then ()
@@ -476,20 +478,21 @@ and recSgnDecl d =
 		      raise (Error (loc, MutualTotalDecl f))
 		    else 
 		      () 
+		  | Some (Ext.Comp.Trust _) -> ()
                   | Some t ->
-		    (*compare the number of args of the function and the args of the total declaration *)
-		    (* declaration should not have more agrs than the function*)
+			(*compare the number of args of the function and the args of the total declaration *)
+			(* declaration should not have more agrs than the function*)
 		    let Ext.Comp.Total (loc', _order, f', args) = t in
 		    if (List.length args > k') then raise (Error (loc', TotalArgsError f')) 
 		    else 
 		      (if !Total.enabled then 
-			(* (print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
+			      (* (print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 	   		  Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t))
 		       else 
 			  (if m = 1 then 
 			      (Coverage.enableCoverage := true;
 			       Total.enabled := true;
-			     (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
+				   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 			       Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
 			   else			  
 			      raise (Error (loc, MutualTotalDeclAfter f))
@@ -552,26 +555,30 @@ and recSgnDecl d =
                 (P.expChkToString cD cG e_r');
               begin match total with
                 | None -> ()
-              | Some t ->
-                  let x = get_rec_arg t in
-		    (match x with 
-		       | Some x -> 
-			   Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-			     (R.render_name f) (R.render_name x)
-		       | None -> 
-			   Printf.printf "\n## Totality checking: %s terminates. ##\n"
-			     (R.render_name f) )
+		| Some (Ext.Comp.Trust _) ->   
+		      Printf.printf "\n## Totality checking: %s is trusted. ##\n"
+			    (R.render_name f) 
+		| Some t ->
+	          let x = get_rec_arg t in
+		  (match x with 
+		    | Some x -> 
+		      Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
+			(R.render_name f) (R.render_name x)
+		    | None -> 
+		      Printf.printf "\n## Totality checking: %s terminates. ##\n"
+			(R.render_name f) )
+		    
               end ;
-            if !Coverage.enableCoverage then
-              Printf.printf "\n## Coverage checking done: %s  ##\n"
-                (R.render_name f);
-            dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
-            let _x = Comp.add
-              (fun cid ->
-                Comp.mk_entry f tau' (is_total total)
-                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
-                  n_list) in
-            reconRecFun lf in
+              if !Coverage.enableCoverage then
+		Printf.printf "\n## Coverage checking done: %s  ##\n"
+                  (R.render_name f);
+              dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
+              let _x = Comp.add
+		(fun cid ->
+                  Comp.mk_entry f tau' (is_total total)
+                    (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+                    n_list) in
+              reconRecFun lf in
 
 (* For checking totality of mutual recursive functions,
    we should check all functions together by creating a variable
@@ -587,6 +594,9 @@ and recSgnDecl d =
                 (Whnf.cnormExp (e_r', Whnf.m_id));
               begin match total with
               | None -> ()
+	      | Some (Ext.Comp.Trust _ ) -> 
+		Printf.printf "\n## Totality checking: %s is trusted. ##\n"
+		  (R.render_name f) 
               | Some t -> let x = get_rec_arg t in
                   Total.clear () ;
 		  (match x with 

@@ -188,6 +188,7 @@ let lex_token loc = lexer
   | "%name"
   | "#positive"
   | "#stratify"
+  | "strust"
   | "total"
   | "%opts"
   | "%not"

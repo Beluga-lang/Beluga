@@ -382,6 +382,7 @@ GLOBAL: sgn;
       [
         "total"; x = OPT total_order ; "("; r = SYMBOL ; args = LIST0 call_args ;  ")"  ->
             Comp.Total (_loc, x, Id.mk_name (Id.SomeString r), args)
+      | "trust" -> Comp.Trust _loc
       ]
     ]
 ;
@@ -397,23 +398,15 @@ GLOBAL: sgn;
     ]
 ;
 
-   stratify_arg:
+  stratify_arg:
     [
       [
-	k = INTLIT -> k
-	
+	k = INTLIT -> k	
       ]
     ]
 
 ;
 
-(*   stratify_order: *)
-(*     [ *)
-(*       [ *)
-(*         x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x)) *)
-(*       ] *)
-(*     ] *)
-(* ; *)
 
   total_order:
     [

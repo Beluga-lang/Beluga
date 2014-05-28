@@ -1,3 +1,5 @@
+#opts +strengthen;
+
 % Author: Brigitte Pientka
 %
 nat: type.

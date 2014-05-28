@@ -1,3 +1,4 @@
+#opts +strengthen;
 % Sketch of weak normalization for STLC that doesn't go under binders
 % Uses more LF level datatypes
 % Author: Andrew Cave

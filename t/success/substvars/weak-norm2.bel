@@ -1,3 +1,4 @@
+#opts -strengthen;
 % Sketch of weak normalization for STLC that goes under binders
 % Author: Andrew Cave
 

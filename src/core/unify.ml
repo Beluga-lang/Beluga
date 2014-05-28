@@ -720,6 +720,7 @@ match sigma with
     | (Shift (NegCtxShift _psi, _k), Shift (NegCtxShift _psi', _k'), cPsi) -> (id, cPsi)
         (* psi = psi' and k = k' by invariant *)
 
+    | (EmptySub, EmptySub , cPsi) -> (id , cPsi)
     (* all other cases impossible for pattern substitutions *)
 
     | (_s1, _s2, _cPsi )  ->

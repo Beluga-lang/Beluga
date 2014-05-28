@@ -154,6 +154,7 @@ let rec index_kind cvars bvars fvars = function
 
 and index_typ cvars bvars fvars = function
   | Ext.LF.Atom (loc, a, s) ->
+    let _ = dprint (fun () -> g 0 s) in
     begin
       try
         let a' = Typ.index_of_name a in
@@ -179,6 +180,23 @@ and index_typ cvars bvars fvars = function
   | Ext.LF.Sigma (_, typRec) ->
       let (typRec', fvars') = index_typ_rec cvars bvars fvars typRec in
       (Apx.LF.Sigma typRec' , fvars')
+
+and spaces i = if i <= 0 then "" else " " ^ (spaces (i-1))
+
+
+and g i a = begin match a with
+  | Ext.LF.Nil -> ""
+  | Ext.LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) end
+
+and f i = function
+  | Ext.LF.Lam(_,_,n) -> (spaces i) ^ "Lam\n" ^ (f (i+1) n)
+  | Ext.LF.Root(_,Ext.LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,Ext.LF.MVar(_, u, _), s) -> (spaces i) ^ "Root (MVar): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,Ext.LF.PVar(_, u, _), s) -> (spaces i) ^ "Root (PVar): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,_, s) -> (spaces i) ^ "Root (?)\n" ^ (g (i+1) s)
+  | Ext.LF.Tuple(_,_) -> "Tuple"
+  | Ext.LF.Ann(_,n,_) -> (spaces i) ^ "Ann\n" ^ (f (i+1) n)
+
 
 and index_typ_rec cvars bvars fvars = function
   | Ext.LF.SigmaLast a ->

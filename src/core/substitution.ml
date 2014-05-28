@@ -23,7 +23,7 @@ module LF = struct
    *
    * Note: we do not take into account weakening here.
    *)
-  let id =  Shift (NoCtxShift , 0)
+  let id =  Shift 0
 
   (* shift = ^1
    *
@@ -31,7 +31,7 @@ module LF = struct
    *
    * cPsi, x:tA |- ^ : cPsi     ^ is patsub
    *)
-  let shift =  Shift (NoCtxShift , 1)
+  let shift =  Shift 1
 
   (* invShift = ^-1 = _.^0
    *
@@ -56,13 +56,13 @@ module LF = struct
   let rec comp s1 s2 = match (s1, s2) with
     | (EmptySub, s2) -> EmptySub
     | (Undefs, s2) -> Undefs
-    | (Shift (NoCtxShift , 0), s2) ->
+    | (Shift 0, s2) ->
         (*  Psi |- s1 : Psi   and Psi2 |- s2 : Psi
          *  therefore   Psi2 |- s2 : Psi  and s2 = s1 o s2
          *)
         s2
 
-    | (s, Shift (NoCtxShift, 0)) ->
+    | (s, Shift 0) ->
         (*  Psi1 |- s1 : Psi   and Psi1 |- s2 : Psi1
          *  therefore   Psi1 |- s1 : Psi  and s1 = s1 o s2
          *)
@@ -70,10 +70,10 @@ module LF = struct
 
     (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
 
-    | (Shift (NoCtxShift, n), EmptySub) -> raise (NotComposable "Shift, EmptySub")
-    | (Shift (NoCtxShift, n), Undefs) -> Undefs
+    | (Shift n, EmptySub) -> raise (NotComposable "Shift, EmptySub")
+    | (Shift n, Undefs) -> Undefs
 
-    | (Shift (NoCtxShift, n), SVar(s, (ctx_shift, k), r)) ->
+    | (Shift n, SVar(s, k, r)) ->
         (* psi, Psi |- s1 : psi   where |Psi| = n
 
            ctx_shift must be either NoCtxShift or NegCtxShift
@@ -85,9 +85,9 @@ module LF = struct
           therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
                 and  psi, Psi, Psi_k |- ^(n+k) : psi
          *)
-      SVar (s, (ctx_shift, k+n), r)
+      SVar (s, (k+n), r)
 
-    | (Shift (NoCtxShift, n), MSVar(s, (ctx_shift, k), (t,r))) ->
+    | (Shift n, MSVar(s, k, (t,r))) ->
         (* psi, Psi |- s1 : psi   where |Psi| = n
 
            ctx_shift must be either NoCtxShift or NegCtxShift
@@ -99,29 +99,29 @@ module LF = struct
           therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
                 and  psi, Psi, Psi_k |- ^(n+k) : psi
          *)
-      MSVar (s, (ctx_shift, k+n), (t,r))
+      MSVar (s, (k+n), (t,r))
 
-    | (Shift (NoCtxShift, n), FSVar (s, (ctx_shift, k), tau)) ->
-       FSVar (s, (ctx_shift, k+n), tau)
+    | (Shift n, FSVar (s, k, tau)) ->
+       FSVar (s, (k+n), tau)
 
-    | (Shift (NoCtxShift, n), Shift (NoCtxShift, m)) ->
+    | (Shift n, Shift m) ->
         (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
          *  therefore  psi, Psi2 |- s : psi, Psi1  where s = s1 o s2
          *)
-        Shift (NoCtxShift, n + m)
+        Shift (n + m)
 
-    | (Shift (psi,n), Dot (_ft, s)) ->
-        comp (Shift (psi, n - 1)) s
+    | (Shift n, Dot (_ft, s)) ->
+        comp (Shift (n - 1)) s
 
-    | (SVar (s, (ctx_shift, n), tau), s2) ->
-        SVar (s, (ctx_shift, n), comp tau s2)
+    | (SVar (s, n, tau), s2) ->
+        SVar (s, n, comp tau s2)
 
-    | (MSVar (s, (ctx_shift, n), (theta, tau)), s2) ->
+    | (MSVar (s, n, (theta, tau)), s2) ->
       (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
-        MSVar (s, (ctx_shift, n), (theta, comp tau s2))
+        MSVar (s, n, (theta, comp tau s2))
 
-    | (FSVar (s, (ctx_shift, n), tau), s2) ->
-        FSVar (s, (ctx_shift, n), comp tau s2)
+    | (FSVar (s, n, tau), s2) ->
+        FSVar (s, n, comp tau s2)
 
     | (Dot (ft, s), s') ->
         (* comp(s[tau], Shift(k)) = s[tau]
@@ -151,7 +151,7 @@ module LF = struct
     | (_, Undefs) -> Undef
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
-    | (n, Shift (_ , k)) -> Head (BVar (n + k))
+    | (n, Shift k) -> Head (BVar (n + k))
 (*    | (n, MSVar (s, (_cshift, k), (mt, sigma ))) ->
         (* Should be fixed; we really need phat of n to avoid printing
            Free BVar (n+k) ...
@@ -161,11 +161,11 @@ module LF = struct
 
       Can this happen ?
 *)
-    | (n, SVar (s, (_cshift, k), sigma )) ->
+    | (n, SVar (s, k, sigma )) ->
         (* Should be fixed; we really need phat of n to avoid printing
            Free BVar (n+k) ... -bp *)
         Head (HClo(n+k, s, sigma))
-    | (n, MSVar (s, (_cshift, k), (t,sigma ))) ->
+    | (n, MSVar (s, k, (t,sigma ))) ->
       Head (HMClo (n+k, s, (t,sigma)))
 (*        (print_string "[bvarSub] n, MSVar - not implemented";
         raise (NotComposable "grr"))
@@ -247,7 +247,7 @@ module LF = struct
   (* roughly 15% on standard suite for Twelf 1.1 *)
   (* Sat Feb 14 10:16:16 1998 -fp *)
   and dot1 s = match s with
-    | Shift (_ , 0) -> s
+    | Shift 0 -> s
     | s             -> Dot (Head (BVar 1), comp s shift)
 
 
@@ -324,8 +324,8 @@ module LF = struct
       | Undefs ->
           invert'' maxoffset Undefs
 
-      | Shift (NoCtxShift, p) ->
-          invert'' p (Shift (NoCtxShift, n))
+      | Shift p ->
+          invert'' p (Shift n)
 
       | Dot (Head (BVar k), s') ->
           invert' (n + 1) s' (max k maxoffset)
@@ -343,10 +343,10 @@ module LF = struct
    * then D ; Psi'  |- s : Psi  and Psi' subcontext of Psi
    *)
   let rec strengthen s cPsi = match (s, cPsi) with
-    | (Shift (NoCtxShift, _ (* 0 *)), Null) ->
+    | (Shift  _ (* 0 *) , Null) ->
         Null
 
-    | (Shift (NoCtxShift, _ ), CtxVar psi) ->
+    | (Shift _ , CtxVar psi) ->
         CtxVar psi
 
     | (Dot (Head (BVar _k) (* k = 1 *), t), DDec (cPsi, decl)) ->
@@ -360,8 +360,8 @@ module LF = struct
     | (Dot (Undef, t), DDec (cPsi, _)) ->
         strengthen t cPsi
 
-    | (Shift (psi, n), cPsi) ->
-        strengthen (Dot (Head (BVar (n + 1)), Shift (psi, n + 1))) cPsi
+    | (Shift n, cPsi) ->
+        strengthen (Dot (Head (BVar (n + 1)), Shift (n + 1))) cPsi
 
 
   (* isId : sub -> bool
@@ -373,7 +373,7 @@ module LF = struct
    *)
   let isId s =
     let rec isId' s k' = match s with
-      | Shift (NoCtxShift, k)   -> k = k'
+      | Shift k   -> k = k'
       | Dot (Head (BVar n), s') -> n = (k' + 1) && isId' s' (k' + 1)
       | _                       -> false
     in
@@ -445,8 +445,8 @@ let rec applyMSub n t = match (n, t) with
    *)
   let identity cPsi =
     let rec inner n = function
-    | Null -> Shift(NoCtxShift, n)
-    | CtxVar _ -> Shift(NoCtxShift, n)
+    | Null -> Shift n
+    | CtxVar _ -> Shift n
     | DDec(cPsi, _) -> let n = n + 1 in Dot(Head (BVar n), inner n cPsi)
     in
       inner 0 cPsi
@@ -460,8 +460,8 @@ let rec applyMSub n t = match (n, t) with
    *)
   let justCtxVar cPsi =
     let rec inner n = function
-    | Null -> Shift(NoCtxShift, n)
-    | CtxVar _ -> Shift(NoCtxShift, n)
+    | Null -> Shift n
+    | CtxVar _ -> Shift n
     | DDec(cPsi, _) -> let n = n + 1 in inner n cPsi
     in
       inner 0 cPsi

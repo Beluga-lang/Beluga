@@ -421,22 +421,22 @@ module Int = struct
        (* above is WRONG *)
         | LF.EmptySub -> ()
         | LF.Undefs -> ()
-        | LF.Shift (LF.NoCtxShift, _) when hasCtxVar -> fprintf ppf ".."
-        | LF.Shift (LF.NoCtxShift, _) when not hasCtxVar -> ()
-        | LF.FSVar (s_name, (_, n), s) ->
+        | LF.Shift _ when hasCtxVar -> fprintf ppf ".."
+        | LF.Shift _ when not hasCtxVar -> ()
+        | LF.FSVar (s_name, n, s) ->
           fprintf ppf "$ FSV %s^%d[%a]"
             (R.render_name s_name )
             n
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
-        | LF.SVar (c, (_ , n), s) ->
+        | LF.SVar (c, n, s) ->
             (* Ignoring potential CtxShifts *)
             fprintf ppf "#^%d%a[%a]"
                n
                (fmt_ppr_lf_cvar cD lvl) c
                (self lvl) s
 
-        | LF.MSVar (_sigma, (_ , n), (t,s)) ->
+        | LF.MSVar (_sigma, n, (t,s)) ->
             fprintf ppf "#?S^%d[%a ; %a]"
               n
               (fmt_ppr_lf_msub cD lvl) t
@@ -467,39 +467,30 @@ module Int = struct
       let rec self lvl ppf = function
         | LF.EmptySub -> fprintf ppf "EmptySub"
         | LF.Undefs -> fprintf ppf "Undefs"
-        | LF.Shift (LF.NoCtxShift,n) ->
+        | LF.Shift n ->
             fprintf ppf "^%s"
               (R.render_offset n)
 
-        | LF.FSVar (s_name, (cshift , n), s) ->
-          begin match cshift with
-              | LF.NoCtxShift ->
+        | LF.FSVar (s_name, n, s) ->
                 fprintf ppf
-                  "#^(NoCtxShift + %s) FSV %s[%a]"
+                  "#^%s FSV %s[%a]"
                   (R.render_offset n)
                   (R.render_name s_name)
                   (self lvl) s
-           end
 
-        | LF.SVar (c, (cshift , n), s) ->
-          begin match cshift with
-              | LF.NoCtxShift ->
-                fprintf ppf
-                  "#^(NoCtxShift  + %s) %a[%a]"
+        | LF.SVar (c, n, s) ->
+	  fprintf ppf
+                  "#^%s %a[%a]"
                   (R.render_offset n)
                   (fmt_ppr_lf_cvar cD lvl) c
                   (self lvl) s
-           end
 
-        | LF.MSVar (_sigma, (cshift , n), (t,s)) ->
-          begin match cshift with
-              | LF.NoCtxShift ->
+        | LF.MSVar (_sigma, n, (t,s)) ->
                 fprintf ppf
-                  "#^(NoCtxShift  + %s) #?S [%a][|%a|]"
+                  "#^%s #?S [%a][|%a|]"
                   (R.render_offset n)
                   (self lvl) s
                   (fmt_ppr_lf_msub cD 0) t
-           end
 
         | LF.Dot (f, s) ->
             fprintf ppf "%a  %a"

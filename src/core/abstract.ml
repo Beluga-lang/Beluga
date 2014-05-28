@@ -415,8 +415,8 @@ let eqMVar mV1 mV2 = match (mV1, mV2) with
    where B iff mV and mV' represent same variable
 *)
 let eqSVar mV1 mV2 = match (mV1, mV2) with
-  | (I.SVar (I.SInst (_, r1, _, _, _), (_, _ ), _ ) ,
-     SV (marker , I.SVar (I.SInst (_, r2, _, _, _),(_ ,  _), _))) ->
+  | (I.SVar (I.SInst (_, r1, _, _, _), _, _ ) ,
+     SV (marker , I.SVar (I.SInst (_, r2, _, _, _),_, _))) ->
        if r1 == r2 then
          match marker with Pure -> Yes | Impure -> Cycle
        else
@@ -798,7 +798,7 @@ let rec ctxToMCtx cQ  = match cQ with
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
       I.Dec (ctxToMCtx cQ', I.Decl (n, I.MTyp (tA, cPsi)))
 
-  | I.Dec (cQ', SV (Pure, I.SVar (I.SInst (n, _, cPsi, cPhi, _), (_ , _), _s))) ->
+  | I.Dec (cQ', SV (Pure, I.SVar (I.SInst (n, _, cPsi, cPhi, _), _, _s))) ->
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
       I.Dec (ctxToMCtx cQ', I.Decl (n, I.STyp (cPhi, cPsi)))
 
@@ -927,11 +927,11 @@ and collectSub (p:int) cQ phat s = match s with
      let (cQ1, s) = collectSub p cQ phat  s' in
        (cQ1, I.Dot (I.Undef, s)))
 
-  | I.FSVar (s_name, (ctx_offset, n), s') ->
+  | I.FSVar (s_name, n, s') ->
         begin match checkOccurrence (eqFSVar s_name) cQ with
           | Yes ->
               let (cQ', sigma) = collectSub p cQ phat s' in
-                (cQ', I.FSVar (s_name, (ctx_offset, n), sigma))
+                (cQ', I.FSVar (s_name, n, sigma))
           | No ->
               let (cQ0, sigma) = collectSub p cQ phat s' in
               let (cD_d, I.Decl (_, mtyp))  = FCVar.get s_name in
@@ -945,27 +945,27 @@ and collectSub (p:int) cQ phat s = match s with
                    is necessary for handling computation-level expressions,
                    and LF objects which occur in comp utations. *)
                 (I.Dec (cQ1, FMV (Pure, s_name, Some mtyp'')),
-                 I.FSVar (s_name, (ctx_offset, n), sigma))
+                 I.FSVar (s_name, n, sigma))
 
           | Cycle -> raise (Error ((Syntax.Loc.ghost), CyclicDependency VariantFSV))
         end
 
-  | I.SVar (I.Offset offset, (ctx_offset, n), s) ->
+  | I.SVar (I.Offset offset, n, s) ->
     let (cQ1,s') = collectSub p cQ phat s in
-       (cQ1, I.SVar(I.Offset offset, (ctx_offset, n), s'))
+       (cQ1, I.SVar(I.Offset offset, n, s'))
 
-  | I.SVar (I.SInst (n, s, cPsi, cPhi, ({contents = cnstr} as c)) as sv, (ctx_offset, k), s') as sigma ->
+  | I.SVar (I.SInst (n, s, cPsi, cPhi, ({contents = cnstr} as c)) as sv, k, s') as sigma ->
     if constraints_solved cnstr then
       begin match checkOccurrence (eqSVar sigma) cQ with
         | Yes ->  let (cQ', s') = collectSub p cQ phat s' in
-                    (cQ', I.SVar(sv, (ctx_offset, k), s'))
+                    (cQ', I.SVar(sv, k, s'))
         | No  ->  let (cQ0, s') = collectSub p cQ phat s' in
                   let cQ' = I.Dec(cQ0, SV(Impure, sigma)) in
                   let psihat = Context.dctxToHat cPsi in
                   let (cQ1, cPsi')  = collectDctx (Syntax.Loc.ghost) k cQ' psihat cPsi in
                   let phihat = Context.dctxToHat cPhi in
                   let (cQ2, cPhi')  = collectDctx  (Syntax.Loc.ghost) k cQ1 phihat cPhi in
-                  let sigma' = I.SVar (I.SInst (n,s, cPsi', cPhi', c), (ctx_offset, k) , s') in
+                  let sigma' = I.SVar (I.SInst (n,s, cPsi', cPhi', c), k , s') in
                   (I.Dec (cQ2, SV (Pure, sigma')), sigma')
 
         | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantSV))
@@ -973,13 +973,13 @@ and collectSub (p:int) cQ phat s = match s with
     else
         raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
 
-  | I.MSVar (I.MSInst (n, s, cD, cPsi, cPhi, ({contents = cnstr} as c)) as sv, (ctx_offset, k), (ms',s')) as sigma ->
+  | I.MSVar (I.MSInst (n, s, cD, cPsi, cPhi, ({contents = cnstr} as c)) as sv, k, (ms',s')) as sigma ->
     if constraints_solved cnstr then
       begin match checkOccurrence (eqMSVar sigma) cQ with
         | Yes ->
             let (cQ0, ms') = collectMSub k cQ ms' in
             let (cQ', s') = collectSub p cQ0 phat s' in
-              (cQ', I.MSVar(sv, (ctx_offset, k), (ms',s')))
+              (cQ', I.MSVar(sv, k, (ms',s')))
         | No  ->
             let (cQ, ms') = collectMSub k cQ ms' in
             let (cQ0, s') = collectSub p cQ phat s' in
@@ -988,7 +988,7 @@ and collectSub (p:int) cQ phat s = match s with
             let (cQ1, cPsi')  = collectDctx (Syntax.Loc.ghost) k cQ' psihat cPsi in
             let phihat = Context.dctxToHat cPhi in
             let (cQ2, cPhi')  = collectDctx  (Syntax.Loc.ghost) k cQ1 phihat cPhi in
-            let sigma' = I.MSVar (I.MSInst (n,s, cD, cPsi', cPhi', c), (ctx_offset, k) , (ms',s')) in
+            let sigma' = I.MSVar (I.MSInst (n,s, cD, cPsi', cPhi', c), k , (ms',s')) in
               (I.Dec (cQ2, MSV (Pure, sigma')), sigma')
 
         | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantMSV))
@@ -1406,10 +1406,10 @@ and abstractHead cQ (offset:int) tH = match tH with
 
 
 and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
-  | (I.Shift (I.NoCtxShift,_k), I.Null) ->  tS
+  | (I.Shift _k, I.Null) ->  tS
 
-  | (I.Shift (I.NoCtxShift, k) , I.DDec(_cPsi', _dec)) ->
-       subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (I.NoCtxShift, (k + 1))), cPsi) tS
+  | (I.Shift k , I.DDec(_cPsi', _dec)) ->
+       subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (k + 1)), cPsi) tS
 
   | (I.Dot (I.Head (I.BVar k), s), I.DDec(cPsi', I.TypDecl (_, tA))) ->
       let tN = etaExpandHead Syntax.Loc.ghost (I.BVar k) (Whnf.normTyp (tA, LF.id)) in
@@ -1632,7 +1632,7 @@ and abstractMVarSub cQ offset s = abstractMVarSub'
 and abstractMVarSub' cQ ((l,d) as offset) s = match s with
   | I.EmptySub -> I.EmptySub
   | I.Undefs -> I.Undefs
-  | I.Shift (I.NoCtxShift, _) -> s
+  | I.Shift _ -> s
 
   | I.Dot (I.Head tH, s) ->
       I.Dot (I.Head (abstractMVarHead cQ offset tH), abstractMVarSub' cQ offset s)
@@ -1640,31 +1640,27 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
   | I.Dot (I.Obj tM, s) ->
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.Offset s, (ctx_shift, n), sigma) ->
+  | I.SVar (I.Offset s, n, sigma) ->
       let _ = dprint (fun () -> "[abstractMVarSub] d = " ^ string_of_int d) in
 (*      let k = lengthCollection cQ in
       if s > d then I.SVar (I.Offset (s + k), (ctx_offset, n), abstractMVarSub' cQ offset sigma)
       else*)
-    let ctx_shift' = ctx_shift in
-        I.SVar (I.Offset s, (ctx_shift', n), abstractMVarSub' cQ offset sigma)
+        I.SVar (I.Offset s, n, abstractMVarSub' cQ offset sigma)
 
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.SInst (_n, _r, _cPsi, _cPhi, _cnstr), (ctx_shift, k), s') as sigma ->
+  | I.SVar (I.SInst (_n, _r, _cPsi, _cPhi, _cnstr), k, s') as sigma ->
     let s = index_of cQ (SV (Pure, sigma)) + d  in
-    let ctx_shift' = ctx_shift in
-    I.SVar (I.Offset s, (ctx_shift', k), abstractMVarSub' cQ offset s')
+    I.SVar (I.Offset s, k, abstractMVarSub' cQ offset s')
 
-  | I.FSVar (s, (ctx_shift, n), sigma) ->
+  | I.FSVar (s, n, sigma) ->
       let x = index_of cQ (FMV (Pure, s, None)) + d in
-      let ctx_shift' = ctx_shift in
-      I.SVar (I.Offset x, (ctx_shift', n), abstractMVarSub cQ offset sigma)
+      I.SVar (I.Offset x, n, abstractMVarSub cQ offset sigma)
 
-  | I.MSVar (I.MSInst (_n, _r, _cD, _cPsi, _cPhi, _cnstr), (ctx_shift, k), (_mt, s')) as sigma ->
+  | I.MSVar (I.MSInst (_n, _r, _cD, _cPsi, _cPhi, _cnstr), k, (_mt, s')) as sigma ->
     let s = index_of cQ (MSV (Pure, sigma)) + d  in
-    let ctx_shift' = ctx_shift in
-    I.SVar (I.Offset s, (ctx_shift', k), abstractMVarSub' cQ offset s')
+    I.SVar (I.Offset s, k, abstractMVarSub' cQ offset s')
 
 
 and abstractMVarHat cQ (l,offset) phat = match phat with
@@ -1751,14 +1747,14 @@ and abstractMVarCtx cQ l =  match cQ with
 
 
   | I.Dec (cQ, MSV (Pure, I.MSVar (I.MSInst (n, r, I.Empty, cPsi, cPhi, cnstr),
-                                   (c_offset, k),  (ms, s)))) ->
+                                   k,  (ms, s)))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
       let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
       let cPhi' = abstractMVarDctx cQ (l,0) cPhi in
       let s'    = abstractMVarSub cQ (l,0) s in
         (* Do we need to consider the substitution s here? -bp *)
       let s'    = I.MSVar (I.MSInst (n, r, I.Empty, cPsi', cPhi', cnstr),
-                           (c_offset, k), (ms, s')) in
+                           k, (ms, s')) in
         I.Dec (cQ', MSV (Pure, s'))
 
   | I.Dec (_cQ, MSV (Pure, I.MSVar (I.MSInst (_n, _r, _cD, _cPsi, _cPhi,_cnstr), _, _s))) ->

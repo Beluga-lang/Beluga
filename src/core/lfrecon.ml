@@ -175,11 +175,11 @@ exception NotPatSpine
 (* ******************************************************************* *)
 let mkShift recT cPsi = match recT with
   | Pibox ->
-      Int.LF.Shift (Int.LF.NoCtxShift, 0)
+      Int.LF.Shift 0
 
   | Pi ->
       let (None, d) = Context.dctxToHat cPsi in
-        Int.LF.Shift (Int.LF.NoCtxShift, d)
+        Int.LF.Shift d
 
 
 
@@ -583,7 +583,7 @@ let rec synDom cD loc cPsi s = begin match s with
         | (Some psi, d) ->
             let _ = dprint (fun () -> "[synDom] cPsi = " ^ P.dctxToString cD cPsi) in
             let _ = dprint (fun () -> "[synDom] d = " ^ string_of_int d) in
-            (Int.LF.CtxVar psi, Int.LF.Shift (Int.LF.NoCtxShift, d))
+            (Int.LF.CtxVar psi, Int.LF.Shift d)
 
         | (None, _d) ->
             raise (Index.Error (loc, Index.UnboundIdSub))
@@ -1659,19 +1659,17 @@ and elSub' loc recT cD cPsi s cPhi =
            * meta-variables in cD. This will be enforced during abstraction *)
 
         let sigma' = elSub loc recT cD cPsi sigma cPsi0' in
-        let ctxShift = (Int.LF.NoCtxShift, 0) in
         begin try
                 Unify.unifyDCtx cD cPhi cPhi0';
-                Int.LF.FSVar(s_name, ctxShift, sigma')
+                Int.LF.FSVar(s_name, 0, sigma')
           with Unify.Failure msg ->
             raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
         end
         with Not_found ->
           if isPatSub sigma then
             let (cPsi', sigma') = synDom cD loc cPsi sigma in
-            let ctxShift = (Int.LF.NoCtxShift, 0) in
               (FCVar.add s_name (cD, Int.LF.Decl (s_name, Int.LF.STyp (cPhi, cPsi')));
-               Int.LF.FSVar (s_name, ctxShift, sigma'))
+               Int.LF.FSVar (s_name, 0, sigma'))
           else
             raise (Error (loc, NotPatSub))
       end
@@ -1684,8 +1682,7 @@ and elSub' loc recT cD cPsi s cPhi =
     if  Whnf.convDCtx (Whnf.cnormDCtx (cPhi, Whnf.m_id))
                       (Whnf.cnormDCtx (cPhi1, Whnf.m_id)) then
       let s' = elSub' loc recT cD cPsi s cPhi2 in
-      let ctxShift = (Int.LF.NoCtxShift, 0) in
-      let sigma = Int.LF.SVar (Int.LF.Offset offset, ctxShift, s') in
+      let sigma = Int.LF.SVar (Int.LF.Offset offset, 0, s') in
       let _ = dprint (fun () -> "[elSub] reconstructed subst = " ^
                         P.subToString cD cPsi sigma) in
       let _ = dprint (fun () -> "[elSub] domain : " ^ P.dctxToString cD cPhi) in
@@ -1716,11 +1713,11 @@ and elSub' loc recT cD cPsi s cPhi =
                               P.mctxToString cD ^ "\n cPsi " ^ P.dctxToString cD cPsi
                               ^ "\n phi = " ^ P.dctxToString cD cPhi ^ "\n") in
             if unify_phat cD (Some phi, 0) (Some psi, 0) then
-              Int.LF.Shift(Int.LF.NoCtxShift, d)
+              Int.LF.Shift d
             else
               (* check for context subsumption *)
               (* if Check.LF.subsumes cD phi psi (* psi |- wk_sub : phi *)then *)
-                Int.LF.Shift (Int.LF.NoCtxShift, d)
+                Int.LF.Shift d
 (*              else
                 raise (Error.Violation ("elSub: not identity substitution between ctxvar: "
                                         ^ "`" ^ P.dctxToString cD cPhi ^ "' does not match `" ^

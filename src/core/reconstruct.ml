@@ -522,7 +522,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
       let psihat  = Context.dctxToHat cPsi' in
       let cPhi' = C.cnormDCtx (cPhi, theta) in
       let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') in
-      let sigma = Int.LF.MSVar (s, (Int.LF.NoCtxShift, 0), (Whnf.m_id, LF.id)) in
+      let sigma = Int.LF.MSVar (s, 0, (Whnf.m_id, LF.id)) in
       let _   = dprint (fun () -> "[genMApp] Generated meta^2-variable " ^
                             P.dctxToString cD cPsi' ^ " . " ^
                             P.subToString cD cPsi' sigma) in
@@ -903,7 +903,7 @@ let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
       let psihat  = Context.dctxToHat cPsi' in
       let cPhi'   = C.cnormDCtx (cPhi, t) in
       let s = Whnf.newMSVar None (cD, cPsi', cPhi') in
-      let s' = Int.LF.MSVar (s, (Int.LF.NoCtxShift,0),
+      let s' = Int.LF.MSVar (s, 0,
                              (Whnf.m_id, LF.id)) in (* Probably LF.id is  wrong *)
       let s' = Whnf.normSub s' in
         (Int.Comp.MetaSObj (loc', psihat, s') ,
@@ -1858,7 +1858,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                let psihat  = Context.dctxToHat cPsi' in
                let cPhi' = C.cnormDCtx (cPhi, theta) in
                let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') in
-               let sigma = Int.LF.MSVar (s, (Int.LF.NoCtxShift, 0), (Whnf.m_id, LF.id)) in
+               let sigma = Int.LF.MSVar (s, 0, (Whnf.m_id, LF.id)) in
                let ttau'  = (tau, Int.LF.MDot (Int.LF.SObj (psihat, sigma), theta)) in
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaSObj (loc, psihat, sigma)) in
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
@@ -1938,7 +1938,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                let psihat  = Context.dctxToHat cPsi' in
                let cPhi' = C.cnormDCtx (cPhi, theta) in
                let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') in
-               let sigma = Int.LF.MSVar (s, (Int.LF.NoCtxShift, 0), (Whnf.m_id, LF.id)) in
+               let sigma = Int.LF.MSVar (s, 0, (Whnf.m_id, LF.id)) in
                let ttau'  = (tau, Int.LF.MDot (Int.LF.SObj (psihat, sigma), theta)) in
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaSObj (loc, psihat, sigma)) in
                let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in

@@ -145,10 +145,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
 (* expandPatSub is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
   let rec _expandPatSub t cPsi = match (t, cPsi) with
-    | Shift ( _ , k) , Null -> t
-    | Shift ( _ , k) , CtxVar _ -> t
-    | Shift ( c , k) , DDec (cPsi,TypDecl(x, tA)) ->
-      Dot(Head (BVar (k+1)), _expandPatSub (Shift (c, k+1)) cPsi)
+    | Shift ( k) , Null -> t
+    | Shift ( k) , CtxVar _ -> t
+    | Shift ( k) , DDec (cPsi,TypDecl(x, tA)) ->
+      Dot(Head (BVar (k+1)), _expandPatSub (Shift ( k+1)) cPsi)
     | Dot (h, s) , DDec (cPsi, tdec) ->
       Dot (h, _expandPatSub s cPsi)
 
@@ -195,10 +195,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
     begin match s with
       | EmptySub -> true
       | Undefs -> true
-    | Shift (_,_k)              -> true
+    | Shift (_k)              -> true
     | Dot (Head(BVar n), s) ->
         let rec checkBVar s' = match s' with
-          | Shift (_ , k)           -> n <= k
+          | Shift ( k)           -> n <= k
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
           | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s
           | Dot (Undef, s)          -> checkBVar s
@@ -229,10 +229,10 @@ let rec blockdeclInDctx cPsi = match cPsi with
     begin match s with
     | EmptySub -> true
     | Undefs -> true 
-    | Shift (_,_k)              -> true
+    | Shift (_k)              -> true
     | Dot (Head(BVar n), s) ->
         let rec checkBVar s' = match s' with
-          | Shift (_ , k)           -> n <= k
+          | Shift ( k)           -> n <= k
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
           | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s
           | Dot (Undef, s)          -> checkBVar s
@@ -244,7 +244,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
     | Dot (Head(Proj(BVar n, index)), s) ->
         let rec checkBVar s' = match s' with
-          | Shift (_ , k)           -> n <= k
+          | Shift ( k)           -> n <= k
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
           | Dot (Head (Proj(BVar n', index')), s) -> (n <> n' || index' <> index) && checkBVar s
           | Dot (Undef, s)          -> checkBVar s
@@ -315,21 +315,21 @@ let isVar h = match h with
     let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in
     let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
 match sigma with
-    | SVar (s , (NoCtxShift , _ ), _s2 ) ->
+    | SVar (s , ( _ ), _s2 ) ->
       let (cPhi, cPsi1) = match s with
     (* cPhi |- s : cPsi1 *)
         | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
         | SInst (_,  _ ,  cPhi, cPsi1, _ ) -> (cPhi, cPsi1)
       in
       begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> let s = Shift (NoCtxShift, k) in               (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
+        | Null , (None, k) -> let s = Shift (k) in               (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
         | Null , (Some cvar, k) -> EmptySub (* Shift (CtxShift cvar, k) *)
         | _     -> sigma
       end
-    | FSVar (s_name , (NoCtxShift , _ ), _s2 ) ->
+    | FSVar (s_name , ( _ ), _s2 ) ->
       let (_, Decl (_, STyp (cPsi1,  _cPhi))) = Store.FCVar.get s_name in
       begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> let s = Shift (NoCtxShift, k) in
+        | Null , (None, k) -> let s = Shift ( k) in
               (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
         | Null , (Some cvar, k) -> EmptySub (* Shift (CtxShift cvar, k) *)
         | _     -> sigma
@@ -666,13 +666,13 @@ match sigma with
         let (s', cPsi'') = intersection phat s1 s2 cPsi' in
             (comp s' shift, cPsi'')
 
-    | ((Dot _ as s1), Shift (psi, n2), cPsi) ->
-        intersection phat s1 (Dot (Head (BVar (n2 + 1)), Shift (psi, n2 + 1))) cPsi
+    | ((Dot _ as s1), Shift ( n2), cPsi) ->
+        intersection phat s1 (Dot (Head (BVar (n2 + 1)), Shift (n2 + 1))) cPsi
 
-    | (Shift (psi, n1), (Dot _ as s2), cPsi) ->
-        intersection phat (Dot (Head (BVar (n1 + 1)), Shift (psi, n1 + 1))) s2 cPsi
+    | (Shift (n1), (Dot _ as s2), cPsi) ->
+        intersection phat (Dot (Head (BVar (n1 + 1)), Shift ( n1 + 1))) s2 cPsi
 
-    | (Shift (NoCtxShift, _k), Shift (NoCtxShift, _k'), cPsi) -> (id, cPsi)
+    | (Shift ( _k), Shift ( _k'), cPsi) -> (id, cPsi)
         (* both substitutions are the same number of shifts by invariant *)
 
     | (EmptySub, EmptySub , cPsi) -> (id , cPsi)
@@ -1033,29 +1033,29 @@ match sigma with
   and invSub cD0 phat (s, cPsi1) ((ms , ssubst) as ss) rOccur = match (s, cPsi1) with
     | (EmptySub, Null) -> EmptySub
     | (Undefs, Null) -> EmptySub
-    | (Shift (psi, n), DDec(_cPsi', _dec)) ->
-        invSub cD0 phat (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur
+    | (Shift ( n), DDec(_cPsi', _dec)) ->
+        invSub cD0 phat (Dot (Head (BVar (n + 1)), Shift ( n + 1)), cPsi1) ss rOccur
 
-    | (Shift (psi, n), Null) ->
-        let r = comp (Shift (psi, n)) ssubst  in
+    | (Shift ( n), Null) ->
+        let r = comp (Shift ( n)) ssubst  in
           r
       (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
       (* must be defined -- n = offset
        * otherwise it is undefined
        *)
 
-    | (Shift (psi, n), CtxVar _psi) ->
-      let s' = comp (Shift (psi, n)) ssubst in 
+    | (Shift (n), CtxVar _psi) ->
+      let s' = comp (Shift ( n)) ssubst in 
       (* s' *) (* This is wrong! Below is correct *)
       (match s' with
-      	| Shift (NoCtxShift, _) -> s'
+      	| Shift ( _) -> s'
 	| Undefs -> raise NotInvertible
       )
         (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
         (* must be defined -- n = offset
          * otherwise it is undefined
          *)
-    | (SVar (s, (NoCtxShift, 0), sigma), CtxVar psi) ->
+    | (SVar (s, ( 0), sigma), CtxVar psi) ->
         (* other cases ? -bp *)
         let (s,cPhi, cPsi') = (match s with
                      | Offset offset -> (match applyMSub offset ms with
@@ -1071,7 +1071,7 @@ match sigma with
         ^ P.subToString cD0 (Context.hatToDCtx phat) sigma ^ " : " ^
         P.dctxToString cD0 cPsi') in
 
-        SVar(s, (NoCtxShift, 0), invSub cD0 phat (sigma, cPsi') ss rOccur)
+        SVar(s, ( 0), invSub cD0 phat (sigma, cPsi') ss rOccur)
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ssubst with
@@ -1100,14 +1100,13 @@ match sigma with
         let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in
           Dot (Obj tM', invSub cD0 phat (s', cPsi') ss rOccur)
 
-    | (SVar (Offset s, (ctx_offset, n), t), cPsi1) -> (* This is probably
+    | (SVar (Offset s, (n), t), cPsi1) -> (* This is probably
       buggy. Need to deal with the n *)
-        let ctx_offset' = ctx_offset in
           begin match applyMSub s ms with
             | MV v ->
                 let (_, cPhi, cPsi1) = Whnf.mctxSDec cD0  v  in
                   (* applyMSub to ctx_offset ? *)
-                SVar(Offset v, (ctx_offset', n), invSub cD0 phat (t, cPsi1) ss rOccur)
+                SVar(Offset v, ( n), invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
     | (FSVar (s_name, n , t), cPsi1) ->
@@ -1746,9 +1745,9 @@ match sigma with
   *)
   and pruneSubst cD cPsi (s, cPsi1) ss rOccur = match (s, cPsi1) with
     | (EmptySub, Null) -> EmptySub
-    | (Shift (psi, n), DDec(_cPsi', _dec)) ->
-        pruneSubst cD cPsi (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur
-    | (Shift (_psi, _n), Null) ->
+    | (Shift (n), DDec(_cPsi', _dec)) ->
+        pruneSubst cD cPsi (Dot (Head (BVar (n + 1)), Shift ( n + 1)), cPsi1) ss rOccur
+    | (Shift (_n), Null) ->
       let (mt, s') = ss in  (* **    cD' |- mt : cD
                                      cD' ; cPsi' |- s' : [mt]Psi
                                      cD  ; Psi   |- s  : .
@@ -1758,7 +1757,7 @@ match sigma with
                                      cD' ; cPsi'  |- [s'] ([mt]s) : [mt]cPsi1 *)
       Whnf.cnormSub (Substitution.LF.comp s s', mt)
 
-    | (Shift (_psi', _n), CtxVar psi) ->
+    | (Shift (_n), CtxVar psi) ->
       (*  cD ; cPsi |- s : psi
           cD' |- mt : cD
           cD'; cPsi' |- s' : [mt]Psi
@@ -1768,7 +1767,7 @@ match sigma with
       let (mt, s') = ss in
       Whnf.cnormSub (Substitution.LF.comp s s', mt)
 
-    | (SVar (sv, (ctx_offset, n), sigma), cPsi1) ->
+    | (SVar (sv, (n), sigma), cPsi1) ->
       (*  cD ; cPsi |- sv[sigma] : cPsi1    where sv:cPsi1[cPhi1]
           cD ; cPsi |- sigma : cPhi1
           ** because s must be in nf, sv = None **
@@ -1782,7 +1781,7 @@ match sigma with
                        else
                          cPsi'
                     ) in
-        SVar(sv, (ctx_offset, n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
+        SVar(sv, ( n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
     | (FSVar (s_name, n , sigma), cPsi1) ->
       let _ = dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name s_name)        in
@@ -1790,7 +1789,7 @@ match sigma with
         FSVar (s_name, n, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
     | (MSVar ((MSInst (_ ,( {contents=None} as r), _cD, cPhi1, cPhi2, _cnstrs) as rho),
-              (ctx_offset, n), (mt, sigma) ), _cPsi1) ->
+              n, (mt, sigma) ), _cPsi1) ->
         (dprint (fun () -> "[pruneSubst] MSVar   " ^ P.subToString cD cPsi s);
          let (mt', _s') = ss in
         if eq_cvarRef (MSVarRef r) rOccur then
@@ -1798,7 +1797,7 @@ match sigma with
         else
           let sigma = Whnf.normSub sigma in
           let sigma' = pruneSubst cD cPsi (sigma, cPhi1) ss rOccur in
-          MSVar (rho, (ctx_offset, n), (Whnf.mcomp mt mt', sigma'))
+          MSVar (rho, n, (Whnf.mcomp mt mt', sigma'))
         )
     (* Other heads to be added ??
 
@@ -1864,14 +1863,14 @@ match sigma with
   and pruneSub' cD0 cPsi phat (s, cPsi1) ss rOccur =
     let (mt, _ ) = ss in
     match (s, cPsi1) with
-    | (Shift (psi, n), DDec(_cPsi', _dec)) ->
-        pruneSub' cD0 cPsi phat (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)), cPsi1) ss rOccur
+    | (Shift ( n), DDec(_cPsi', _dec)) ->
+        pruneSub' cD0 cPsi phat (Dot (Head (BVar (n + 1)), Shift ( n + 1)), cPsi1) ss rOccur
 
-    | (Shift (_psi, _n), Null) -> (id, Null)
+    | (Shift ( _n), Null) -> (id, Null)
     | (EmptySub, Null) -> (id, Null)
     | (Undefs, Null) -> (id, Null)
 
-    | (Shift (_psi', _n), CtxVar psi) -> (id, CtxVar psi)
+    | (Shift ( _n), CtxVar psi) -> (id, CtxVar psi)
 
     | (SVar (s, cshift, sigma), cPsi1) ->
         (*     D ; cPsi1' | cshift : cPsi1
@@ -2013,10 +2012,10 @@ match sigma with
   and pruneCtx' phat (t, cPsi1) ss = match (t, cPsi1) with
     | (EmptySub, Null) -> (id, Null)
     | (Undefs, Null) -> (id, Null)
-    | (Shift (_psi ,_k), Null) ->
+    | (Shift (_k), Null) ->
         (id, Null)
 
-    | (Shift (NoCtxShift, k), CtxVar psi) ->
+    | (Shift ( k), CtxVar psi) ->
         let ( _ , ssubst) = ss in
         let rec check_negshift k ssubst = begin match (k, ssubst) with
           | (k, Dot (Undef, ssubst')) -> check_negshift (k-1) ssubst'
@@ -2026,8 +2025,8 @@ match sigma with
         in
           check_negshift k ssubst
 
-   | (Shift (psi, k), DDec (_, TypDecl (_x, _tA))) ->
-       pruneCtx' phat (Dot (Head (BVar (k + 1)), Shift (psi, k + 1)), cPsi1) ss
+   | (Shift k, DDec (_, TypDecl (_x, _tA))) ->
+       pruneCtx' phat (Dot (Head (BVar (k + 1)), Shift (k + 1)), cPsi1) ss
 
 
    | (Dot (Head (BVar k), s), DDec (cPsi1, TypDecl (x, tA))) ->
@@ -3398,7 +3397,7 @@ match sigma with
                              (simplifySub cD0 cPsi (Whnf.cnormSub (s2, Whnf.m_id)))
 
     and unifySub' mflag cD0 cPsi s1 s2 = match (s1, s2) with
-      | (Shift (psi, n), Shift (phi, k)) ->
+      | (Shift n, Shift k) ->
             if n = k then
               ()
             else
@@ -3409,15 +3408,15 @@ match sigma with
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "FSVar mismatch")
 
-      | (SVar(Offset s1, n1, sigma1), Shift (NoCtxShift, 0) ) -> ()
-      | (Shift (NoCtxShift, 0), SVar(Offset s1, n1, sigma1) ) -> ()
+      | (SVar(Offset s1, n1, sigma1), Shift ( 0) ) -> ()
+      | (Shift ( 0), SVar(Offset s1, n1, sigma1) ) -> ()
 
       | (SVar(Offset s1, n1, sigma1), SVar(Offset s2, n2, sigma2))
         -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "SVar mismatch")
 
-      | (SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs),  (NoCtxShift , 0), s), s2) -> (* offset may not always be 0 ? -bp *)
+      | (SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs),  ( 0), s), s2) -> (* offset may not always be 0 ? -bp *)
         let s = Whnf.normSub s in
         let _ = dprint (fun () -> "[unifySub]  s = " ^ P.subToString cD0 cPsi s1) in
         let _ = dprint (fun () -> "            s' = " ^ P.subToString cD0 cPsi s2) in
@@ -3433,7 +3432,7 @@ match sigma with
             | false -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
           end
 
-      | (s2, SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs), (NoCtxShift, 0), s))  ->
+      | (s2, SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs), ( 0), s))  ->
           (* other cases ? -bp *)
         let s = Whnf.normSub s in
         let _ = dprint (fun () -> "[unifySub]  s = " ^ P.subToString cD0 cPsi s1) in
@@ -3455,16 +3454,16 @@ match sigma with
         -> (unifyFront mflag cD0 cPsi f f' ;
             unifySub mflag cD0 cPsi s s')
 
-      | (Shift (psi, n), Dot(Head BVar _k, _s'))
+      | (Shift n, Dot(Head BVar _k, _s'))
           ->
-           unifySub mflag cD0 cPsi (Dot (Head (BVar (n+1)), Shift (psi, n+1))) s2
+           unifySub mflag cD0 cPsi (Dot (Head (BVar (n+1)), Shift (n+1))) s2
 
-      | (Dot(Head BVar _k, _s'), Shift (psi, n))
+      | (Dot(Head BVar _k, _s'), Shift n)
           ->
-            unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (psi, n+1)))
+            unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (n+1)))
 
 
-      | (MSVar (MSInst (_ ,({contents=None} as r), cD, cPhi1, cPhi2, cnstrs) , (_cshift,_n), (mt, s)) as s1 ,  s2)->
+      | (MSVar (MSInst (_ ,({contents=None} as r), cD, cPhi1, cPhi2, cnstrs) , _n, (mt, s)) as s1 ,  s2)->
         (* cD0 ; cPsi |- s <= cPhi_2
            cD0        |- mt <= cD
          *)
@@ -3496,7 +3495,7 @@ match sigma with
         end
 
       | (s2, (MSVar (MSInst (_ ,({contents=None} as r), _cD, cPhi1, cPhi2,
-                             cnstrs) , (_cshift, _n), (mt, s)) as s1))->
+                             cnstrs) , _n, (mt, s)) as s1))->
         (* cD0 ; cPsi |- s <= cPhi_2
            cD0        |- mt <= cD
          *)

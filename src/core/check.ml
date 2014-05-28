@@ -268,7 +268,7 @@ let checkParamTypeValid cD cPsi tA =
 
   | Syntax.Int.LF.DDec (cPsi0', Syntax.Int.LF.TypDecl (x, tB)) ->
      (* tA is instance of tB *)
-    let tB' = Syntax.Int.LF.TClo(tB, Syntax.Int.LF.Shift (Syntax.Int.LF.NoCtxShift, n)) in
+    let tB' = Syntax.Int.LF.TClo(tB, Syntax.Int.LF.Shift n) in
     let ms  = Ctxsub.mctxToMSub cD in
     let tB0 = Whnf.cnormTyp (tB', ms) in
     begin try Unify.unifyTyp cD cPsi (tA, Substitution.LF.id) (tB0, Substitution.LF.id) with

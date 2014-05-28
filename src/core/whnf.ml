@@ -55,11 +55,11 @@ let rec raiseType cPsi tA = match cPsi with
 let rec isPatSVSub = function
   | EmptySub -> true
   | Undefs -> true
-  | Shift (_,_k)              -> true
+  | Shift _              -> true
   | SVar _ -> true
   | Dot (Head(BVar n), s) ->
     let rec checkBVar s' = match s' with
-      | Shift (_ , k)           -> n <= k
+      | Shift k           -> n <= k
       | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
       | Dot (Head (Proj(BVar n', _)), s) -> n <> n' && checkBVar s
       | Dot (Undef, s)          -> checkBVar s
@@ -453,12 +453,12 @@ and m_invert s =
           Some n
         else lookup (n + 1) t' p
 
-    | MDot (MObj(_phat, Root(_, MVar (Offset k, Shift (_,0)), Nil)), t') ->
+    | MDot (MObj(_phat, Root(_, MVar (Offset k, Shift 0), Nil)), t') ->
         if k = p then
           Some n
         else lookup (n + 1) t' p
 
-    | MDot (PObj (_phat, PVar (Offset k, Shift (_, 0))), t') ->
+    | MDot (PObj (_phat, PVar (Offset k, Shift 0)), t') ->
         if k = p then
           Some n
         else lookup (n + 1) t' p
@@ -738,24 +738,22 @@ and normSub s = match s with
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
   | FSVar ( s , n, sigma) -> FSVar (s, n, normSub sigma)
   | SVar (Offset offset, n, s') -> SVar (Offset offset, n, normSub s')
-  | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), (cshift, n), s') ->
+  | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), n, s') ->
     (* cPsi |- s : cPhi  and  cPhi |- Shift n : cPhi'
        where cPhi = cPhi', x1:A1, ... xn:An
        and   cPsi' |- s' : cPsi  *)
-    LF.comp (LF.comp (Shift  (cshift, n)) (normSub s)) (normSub s')
+    LF.comp (LF.comp (Shift n) (normSub s)) (normSub s')
 
   | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, n, s') ->
       SVar (sigma, n ,normSub s')
 
   | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs),
-    (cshift,n), (mt, s')) ->
-      let Shift (cshift, n) = normSub (Shift (cshift, n)) in
+    n, (mt, s')) ->
       let s0 = cnormSub (LF.comp (normSub s) (normSub s'), mt) in
-      LF.comp (Shift (cshift, n)) s0
+      LF.comp (Shift n) s0
 
-  | MSVar (sigma, (cshift,n), (mt,s')) ->
-      let Shift (cshift, n) = normSub (Shift (cshift, n)) in
-      MSVar (sigma, (cshift,n), (mt, normSub s'))
+  | MSVar (sigma, n, (mt,s')) ->
+      MSVar (sigma, n, (mt, normSub s'))
 
 and normFt ft = match ft with
   | Obj tM ->
@@ -986,8 +984,8 @@ and cnorm (tM, t) = match tM with
                   | PVar (p, s) ->
                       (dprint (fun () -> "h' = PVar ");
                        (match (s, s') with
-                          | Shift (_, 0), Shift (_, 0) -> dprint (fun () -> " compose id ")
-                          | Shift (_, 0), _ -> dprint (fun () -> " s' not id ")
+                          | Shift 0, Shift 0 -> dprint (fun () -> " compose id ")
+                          | Shift 0, _ -> dprint (fun () -> " s' not id ")
                           | _ , _ -> dprint (fun () -> " s  not id "));
                       norm (Root (loc, PVar (p, LF.comp s s'), cnormSpine (tS, t)), LF.id))
                   | MPVar (q, (t', r')) ->
@@ -1205,8 +1203,8 @@ and cnorm (tM, t) = match tM with
                   | PVar (p, s) ->
                       (dprint (fun () -> ".... Proj h' = Proj PVar ");
                        (match (s, s') with
-                          | Shift (_, 0), Shift (_, 0) -> dprint (fun () -> " compose id ")
-                          | Shift (_, 0), _ -> dprint (fun () -> " s' not id ")
+                          | Shift 0, Shift 0 -> dprint (fun () -> " compose id ")
+                          | Shift 0, _ -> dprint (fun () -> " s' not id ")
                           | _ , _ -> dprint (fun () -> " s  not id "));
                       norm (Root (loc, Proj(PVar (p, LF.comp s s'), k), cnormSpine (tS, t)), LF.id))
                   | MPVar (q, (t', r')) ->
@@ -1422,18 +1420,16 @@ and cnorm (tM, t) = match tM with
   and cnormSub (s, t) = match s with
     | EmptySub -> EmptySub
     | Undefs -> Undefs
-    | Shift (_ , k ) -> s
+    | Shift k -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
-    | SVar (Offset offset, (cshift, n), s') ->
+    | SVar (Offset offset, n, s') ->
       begin match LF.applyMSub offset t with
-        | MV offset' -> SVar (Offset offset', (cnormCtxShift (cshift,t) n), cnormSub (s', t))
+        | MV offset' -> SVar (Offset offset', n, cnormSub (s', t))
         | SObj (_phat, r) ->
-            let (cshift', n') = cnormCtxShift (cshift,t) n in
-              LF.comp (LF.comp (Shift (cshift', n')) r) (cnormSub (s',t))
-
+              LF.comp (LF.comp (Shift n) r) (cnormSub (s',t))
       end
 
-    | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), (cshift, n), s') ->
+    | SVar (SInst (_n, {contents = Some s}, _cPhi, _cPsi, _cnstr), n, s') ->
     (* cPsi |- s : cPhi  and  cPhi |- Shift n : cPhi'
        where cPhi = cPhi', x1:A1, ... xn:An
        and   cPsi' |- s' : cPsi
@@ -1444,38 +1440,33 @@ and cnorm (tM, t) = match tM with
       let s0' = cnormSub (normSub s', t) in
          LF.comp (LF.comp (Shift  (cshift', n')) s0)  s0' *)
         let _ = dprint (fun () -> "[cnormSub] SVar - SInst") in
-        let s0 = LF.comp (LF.comp (Shift (cshift, n)) (normSub s)) (normSub s') in
+        let s0 = LF.comp (LF.comp (Shift n) (normSub s)) (normSub s') in
           cnormSub (s0, t)
 
-    | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, (cshift, n), s') ->
-      let (cshift', n') = cnormCtxShift (cshift,t) n in
-      SVar (sigma, (cshift', n') , cnormSub (s',t))
+    | SVar (SInst (_n, {contents = None}, _cPhi, _cPsi, _cnstr) as sigma, n, s') ->
+      SVar (sigma, n , cnormSub (s',t))
 
-    | FSVar (s_name, (cshift, n), s') ->
-        FSVar (s_name, (cnormCtxShift (cshift,t) n), cnormSub (s', t))
+    | FSVar (s_name, n, s') ->
+        FSVar (s_name, n, cnormSub (s', t))
 
     | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs),
-             (cshift, n), (mt,s')) ->
+             n, (mt,s')) ->
 (*      let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
       let cshift = cnormSub (Shift (cshift', n'), t) in
       LF.comp (cnormSub (LF.comp cshift s , mt)) s'
 *)
         let _ = dprint (fun () -> "[cnormSub] MSVar - MSInst") in
         let s0 = cnormSub (LF.comp (normSub s) (normSub s') , mt) in
-        let s0' = LF.comp (Shift (cshift, n)) s0 in
+        let s0' = LF.comp (Shift n) s0 in
           cnormSub (s0', t)
 
     | MSVar (s ,
              (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
-             (ctx_shift, n), (mt,s')) ->
-      let (cshift', n') = cnormCtxShift (ctx_shift,t) n in
-          MSVar (s, (cshift', n'), (cnormMSub (mcomp mt t), s'))
+             n, (mt,s')) ->
+          MSVar (s, n, (cnormMSub (mcomp mt t), s'))
 
     | _ -> (dprint (fun () -> "[cnormSub] undefined ? ");
             raise (Error.Violation "Cannot guarantee that parameter variable remains head"))
-
-
-  and cnormCtxShift (ctx_shift, t) k = (ctx_shift, k)
 
   and cnormFront (ft, t) = match ft with
     | Head (HClo (h , Offset i , sigma))  ->
@@ -1902,7 +1893,7 @@ and whnf sM = match sM with
       (* constraints associated with u must be in solved form *)
       let r' = normSub r in
       let tM' = begin match r' with
-                  | Shift (NoCtxShift, 0) -> tM
+                  | Shift 0 -> tM
                   | _ ->   norm(tM, r') (* this can be expensive -bp *)
                 end  in
      (* it does not work to call whnfRedex ((tM, LF.comp r sigma), (tS, sigma)) -bp *)
@@ -2194,10 +2185,8 @@ and convSub subst1 subst2 = match (subst1, subst2) with
   | (_,EmptySub) -> true
   | (Undefs,_) -> true (* hopefully Undefs only show up with empty domain? *)
   | (_,Undefs) -> true
-  | (Shift (psi,n), Shift (psi', k)) ->
-      n = k && psi = psi'
-
-  | (SVar (Offset s1, (_,k), sigma1), SVar (Offset s2, (_,k'), sigma2)) ->
+  | (Shift n, Shift k) -> n = k 
+  | (SVar (Offset s1, k, sigma1), SVar (Offset s2, k', sigma2)) ->
      k = k' &&
      s1 = s2 &&
      convSub sigma1 sigma2
@@ -2208,11 +2197,11 @@ and convSub subst1 subst2 = match (subst1, subst2) with
   | (Dot (f, s), Dot (f', s')) ->
       convFront f f' && convSub s s'
 
-  | (Shift (psi, n), Dot (Head BVar _k, _s')) ->
-      convSub (Dot (Head (BVar (n + 1)), Shift (psi, n + 1))) subst2
+  | (Shift n, Dot (Head BVar _k, _s')) ->
+      convSub (Dot (Head (BVar (n + 1)), Shift (n + 1))) subst2
 
-  | (Dot (Head BVar _k, _s'), Shift (psi, n)) ->
-      convSub subst1 (Dot (Head (BVar (n + 1)), Shift (psi, n + 1)))
+  | (Dot (Head BVar _k, _s'), Shift n) ->
+      convSub subst1 (Dot (Head (BVar (n + 1)), Shift (n + 1)))
 
   | _ ->
      (dprint (fun () -> "[convSub] unspecified case"); false)
@@ -3019,7 +3008,7 @@ and closedSpine (tS,s) = match tS with
 and closedSub s = match s with
  | EmptySub -> true
  | Undefs -> true
- | SVar (Offset _ , (cshift,_n) , sigma) ->
+ | SVar (Offset _ , _ , sigma) ->
         closedSub sigma
   | Shift _ -> true
   | Dot (ft, s) -> closedFront ft && closedSub s

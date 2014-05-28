@@ -2205,7 +2205,7 @@ match sigma with
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isProjPatSub t1' , isProjPatSub t2') with
               | (true, true) ->
-                  if Whnf.convSub t1' t2' then
+                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
                     ()
                   else
                     let phat = Context.dctxToHat cPsi in
@@ -2229,7 +2229,7 @@ match sigma with
               | (false, true) ->
                   dprint (fun () -> "??? 1"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
               | (false, false) ->
-                  if Whnf.convSub t1' t2' then
+                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
                     ()
                   else
                     ((* dprint (fun () ->  "\nAttempt to unify :"
@@ -2490,7 +2490,7 @@ match sigma with
           if r1 == r2 then (* by invariant:  cD1 = cD2, cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isPatMSub mt1, isProjPatSub t1' , isPatMSub mt2, isProjPatSub t2') with
               | (true, true, true, true) ->
-                  if Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
+                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
                     ()
                   else
                     let phat = Context.dctxToHat cPsi in
@@ -2574,7 +2574,7 @@ match sigma with
                                       ^ "\n") in
                     let phat = Context.dctxToHat cPsi in
                     let _    = dprint (fun () -> "ss1 = " ^ P.subToString cD0 cPsi1 ss1 ) in
-                      if Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
+                      if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
                         let tM2 = Whnf.norm sM2 in
                         let tM2' = Whnf.norm (Whnf.cnorm (tM2, mtt1), ss1) in
                           (instantiateMMVar (r1, tM2', !cnstrs1);
@@ -2949,9 +2949,9 @@ match sigma with
         if q1 == q2 then (* cPsi1 = _cPsi2 *)
           (match (isPatMSub mt1', isPatSub s1' ,  isPatMSub mt2', isPatSub s2') with
             | ( true, true, true, true ) ->
-                if Whnf.convSub s1' s2' && Whnf.convMSub mt1' mt2' then
-                  ()
-                else
+                (* if Whnf.convSub s1' s2' && Whnf.convMSub mt1' mt2' then *)
+                (*   () *)
+                (* else *)
                 let phat = Context.dctxToHat cPsi in
                 let (s', cPsi') = intersection phat s1' s2' cPsi1 in
                   (* if cD ; cPsi |- s1' <= cPsi1 and cD ; cPsi |- s2' <= cPsi1

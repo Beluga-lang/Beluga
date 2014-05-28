@@ -372,8 +372,8 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
       if not (psi = psi') then
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
-    | Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi) ->
-      if not (psi = psi') then
+    | Null, Shift (NegCtxShift (_psi'), 0), CtxVar (CtxOffset _ as _psi) ->
+      (* if not (psi = psi') then *)
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     (* SVar case to be added - bp *)

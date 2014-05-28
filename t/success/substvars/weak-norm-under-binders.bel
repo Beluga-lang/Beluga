@@ -82,7 +82,7 @@ fn r => let r : IsVarSub [g] [h $ #S[..]] = r in Cons (wknVarSub r) (IsVar [h,x:
 rec idIsVarSub : {g:ctx} IsVarSub [g] [g $ .. ] =
 mlam g => case [g |- i] of % pattern match on context
 | [ |- i] => Nil
-| [g,x:tm _ |-  i] => extVarSub (idIsVarSub [g]);
+| [g,x:tm T |-  i] => extVarSub (idIsVarSub [g]);
 
 rec shiftIsVarSub :  {g:ctx} IsVarSub [g] [ g,x:tm A $ .. ] =
 mlam g => wknVarSub (idIsVarSub [g]);

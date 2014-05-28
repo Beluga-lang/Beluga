@@ -1,3 +1,5 @@
+#opts +strengthen; 
+
 % Type-preserving substitution-based interpreter
 %
 % Author: Brigitte Pientka

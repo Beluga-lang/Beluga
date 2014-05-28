@@ -348,8 +348,7 @@ and canAppear cD cPsi head sA loc=
 and checkSub loc cD cPsi1 s1 cPsi1' =
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | cPsi, EmptySub, Null -> ()
-    | cPsi, Undefs, _ -> () (* This should have Null domain, but these seem to get used
-			       for strange "strengthenings" *)
+    | cPsi, Undefs, Null -> ()
     | Null, Shift (NoCtxShift, 0), Null -> ()
 
     | cPhi, SVar (Offset offset, (cs, k), s'), cPsi ->

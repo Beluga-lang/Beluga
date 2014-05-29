@@ -168,27 +168,31 @@ let satisfies_order cD cG i =
   let total_decs = !mutual_decs in 
  (* let m = List.length total_decs in  *)
   (* let cg_length = Context.length cG in  *)
-  let rec relative_order (Comp.Var x) (tau, order,k,w) = match tau with 
+  let rec relative_order (Comp.Var x) (tau, order,l,k,w) = match tau with 
     (* k = implicit arguments encountered so far 
+       l = non-implicit arguments encountered so far
        w = total number of arguments in totality declaration
        w - k = number of variables introduces via fn in cG
     *)
-    | Comp.TypPiBox (_, tau) -> relative_order (Comp.Var x) (tau, order, k+1,w) 
+    | Comp.TypPiBox (_, tau) -> relative_order (Comp.Var x) (tau, order,l, k+1,w) 
     | Comp.TypArr (_ , tau) -> 
     (match order with 
-       | Order.Arg y -> let p = y - k in 
-	   if x = p + (w-y) 
+       | Order.Arg y -> let _p = y - k - l in  
+	   if x = (w - y)+1 (* assumes that all cdecls are before the actual
+			       rec. arg. *)
 	   (* comparing de Bruijn position of x in cG with the position
 	      described by y *)
 	 then 
-	   ((* print_string ("Considering inductive case for " ^ 
-	      P.expSynToString cD cG i ^ 
-	      " - comparing to relative position " ^ string_of_int (y-k) ^ " - Yes\n");*)true)
+	   ( (* print_string ("Considering inductive case for " ^ 
+	      P.expSynToString cD cG i ^  " - comparing to position " ^
+	      string_of_int y ^ 
+	      " - comparing to relative position " ^ string_of_int (y-k-l) ^ " - Yes\n");*)true)
 	 else 
-	   ((* print_string ("Considering inductive case for " ^ 
-			   P.expSynToString cD cG i ^ 
+	   ( (* print_string ("Considering inductive case for " ^ 
+			   P.expSynToString cD cG i ^ 	 " - comparing to arg. "
+			   ^ string_of_int y ^ 
 	      " - comparing to relative position " ^ string_of_int (y-k) ^ "? - No\n");*)
-	   relative_order (Comp.Var x) (tau, order,  k+1, w) )
+	   relative_order (Comp.Var x) (tau, order, l+1, k, w) )
   
        | _ -> false)
 
@@ -200,14 +204,16 @@ let satisfies_order cD cG i =
 (*		      let _ = (print_string ("Considering type " ^
 					      P.compTypToString LF.Empty dec.typ ^ "\n"); 
 			       print_string ("In cG " ^ P.gctxToString cD cG ^ "\n")) in
-		      let _ = print_string ("Given order " ^ order_to_string dec.order ^ "\n") in 
-		      let _ = print_string ("Considering variable " ^ P.expSynToString cD cG i ^ "\n") in
+		      let _ = print_string ("Given order " ^ order_to_string
+					      dec.order ^ "\n") in  
+		      let _ = print_string ("Considering variable " ^
+					      P.expSynToString cD cG i ^ "\n") in 
 *)
 		      let w = List.length (dec.args) in (* total arguments given in totality declaration *)
 		      match dec.order with
 			| None -> false
 			| Some order -> 
-			    relative_order i (dec.typ, order,0,w) ) total_decs
+			    relative_order i (dec.typ, order,0,0,w) ) total_decs
       | _ -> false
 
 
@@ -491,7 +497,7 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
           let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
           let args = generalize args in
           let d = Comp.WfRec (f, args, tau) in
-          let _ = print_string ("\nRecursive call : " ^
+          let _ = print_string ("\nGenerated Recursive Call : " ^
                                   calls_to_string cD (f, args, tau)
                                 ^ "\n\n") in
             d

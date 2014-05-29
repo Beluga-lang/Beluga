@@ -53,7 +53,7 @@ datatype Crel : {g:tCtx} {h:taCtx} ctype #stratify  =
 % 1) When given [g |- M ..] then we can always weaken it to obtain [h |- N ..]
 % 2) When given [h |- N ..] we can always strengthen it to obtain [g |- M ..]
 
-datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratify =
+datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 | TRvar0 : {h: taCtx} Crel [g] [h] ->
             TRel [g, x:term |-  x]
  		 [h, b:block (x:term, u:aeq x x) |- b.1]

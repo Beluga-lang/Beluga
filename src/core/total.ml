@@ -8,6 +8,7 @@ module R = Store.Cid.DefaultRenderer
 type error =
   | NoPositiveCheck of string 
   | NoStratifyCheck of string 
+  | NoStratifyOrPositiveCheck of string 
   | WrongArgNum  of Id.cid_comp_typ * int
   | RecCallIncompatible of LF.mctx * Comp.args * Comp.ctyp_decl
   | NotImplemented of string
@@ -38,6 +39,8 @@ let _ = Error.register_printer
   	  Format.fprintf ppf "Datatype %s hasn't done positivity or stratification checking."  n (* (R.render_name n) *)
 	| NoStratifyCheck n -> 
   	  Format.fprintf ppf "Datatype %s hasn't done stratification checking."  n (* (R.render_name n) *)
+	| NoStratifyOrPositiveCheck n -> 
+  	  Format.fprintf ppf "Datatype %s hasn't done stratification or positivity checking."  n (* (R.render_name n) *)
 	| WrongArgNum (n, num) -> 
   	  Format.fprintf ppf "Stratification declaration for %s uses a wrong argument number %d" (R.render_cid_comp_typ n) num
 	| NotImplemented n      -> 
@@ -777,10 +780,10 @@ let rec less_dctx cPsi1 cPsi2 =
 (*     | (None, offset1)    , (None, offset2)     -> offset1 < offset2 *)
 (*     | _ , _  -> false *)
 
-let  less_phat phat1 phat2 =
-  match prefix_hat phat1 phat2 with
-    | Some k -> k > 0
-    | _ -> false 
+(* let  less_phat phat1 phat2 = *)
+(*   match prefix_hat phat1 phat2 with *)
+(*     | Some k -> k > 0 *)
+(*     | _ -> false  *)
 
 
 let equal_meta_obj = Whnf.convMetaObj  
@@ -794,43 +797,61 @@ let rec less_meta_obj mC1 mC2 =
   match mC1, mC2 with
     | Comp.MetaCtx (_, cPsi1), Comp.MetaCtx(_, cPsi2) -> less_dctx cPsi1 cPsi2
 
-    | Comp.MetaObj (_, phat1, tM1), Comp.MetaObj (loc2, phat2, tM2) ->
+    | Comp.MetaObj (_, phat1, tM1), Comp.MetaObj (loc2, phat2, tM2) -> 
       (match tM2 with
   	| LF.Root(_, h , tS)  ->
   	  let rec leq_some_hat = fun spine ->
   	    ( match spine with
   	      | LF.App (n', spine') ->
   		leq_meta_obj mC1 (Comp.MetaObj (loc2, phat2 , n')) || leq_some_hat spine'
-  	      | _ -> false
+	      | LF.Nil   ->  false
+  	      | LF.SClo (spine', sub) ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
   	    ) in  leq_some_hat tS
-  	| _  -> false
+  	| _  ->   false
       )
-      || ((less_phat phat1 phat2)   && (Whnf.conv (tM1, Substitution.LF.id) (tM2, Substitution.LF.id)) )
-      
+      ||
+	(  
+	  let p = prefix_hat phat1 phat2 in
+	  match p with
+	    | Some k -> Whnf.conv (tM1, LF.Shift(LF.NoCtxShift, k)) (tM2, Substitution.LF.id)
+	    | _ -> false
+	)
+	
 
-    | Comp.MetaObjAnn (_, cPsi1, tM1), Comp.MetaObjAnn ( loc2,  cPsi2, tM2) ->
+    | Comp.MetaObjAnn (_, cPsi1, tM1), Comp.MetaObjAnn ( loc2,  cPsi2, tM2) ->  
       (match tM2 with
   	| LF.Root(_, h , tS)  ->
   	  let rec leq_some_dctx = fun spine ->
   	    ( match spine with
   	      | LF.App (n', spine') ->
   		leq_meta_obj mC1 (Comp.MetaObjAnn (loc2,  cPsi2 , n')) || leq_some_dctx spine'
-  	      | _ -> false
+	      | LF.Nil   -> false
+  	      | LF.SClo (spine', sub) ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
   	    ) in  leq_some_dctx tS
   	| _  -> false
       )
-      || ((less_dctx  cPsi1  cPsi2)   && (Whnf.conv (tM1, Substitution.LF.id) (tM2, Substitution.LF.id)) )
+      || 
+	(less_dctx  cPsi1  cPsi2)   && 
+	    (* (let k = (Context.dctxLength cPsi2) - (Context.dctxLength cPsi1) in *)
+	    (*  Whnf.conv (tM1, LF.Shift(LF.NoCtxShift, k)) (tM2, Substitution.LF.id))  *)
+	Whnf.conv (tM1, (wkSub cPsi2 cPsi1)) (tM2, Substitution.LF.id)
 
-  
+   
     | Comp.MetaParam (_, phat1, tH1) , Comp. MetaParam (_, phat2, tH2) -> 
-      (less_phat  phat1 phat2)   && (Whnf.convHead (tH1, Substitution.LF.id) (tH2, Substitution.LF.id)) 
-    (* is the first rule still applied in this case?  *)
+      (let p = prefix_hat phat1 phat2 in
+       match p with
+	 | Some k -> Whnf.convHead (tH1, LF.Shift(LF.NoCtxShift, k)) (tH2, Substitution.LF.id)
+	 | _ -> false
+      )
+     (*  (less_phat  phat1 phat2)   && (Whnf.convHead (tH1, Substitution.LF.id) (tH2, Substitution.LF.id))  *)
+     (*  is the first rule still applied in this case?  *)
 
     | Comp.MetaSObj (loc1, _, _ ), Comp.MetaSObj (_, _ , _) -> raise (Error (loc1, NotImplemented "Comp.MetaSObj in Total.less_meta_obj"))
 
     | Comp.MetaSObjAnn (loc1, _, _ ), Comp.MetaSObjAnn (_, _ , _) ->  raise (Error (loc1, NotImplemented "Comp.MetaSObjAnn in Total.less_meta_obj"))
 
-    | _ , _  -> false
+    | _, _ -> false
+
   
 
 and leq_meta_obj mC1 mC2 =
@@ -840,14 +861,14 @@ and leq_meta_obj mC1 mC2 =
       leq_meta_obj mC1 (Comp.MetaObj (loc,  (cv , offset + 1 ), n))
     | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) ->
       leq_meta_obj mC1 (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n))
-    | _ -> false
+    | _ ->  false
   )
   || (match mC1 with
     | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) ->
       leq_meta_obj (Comp.MetaObj (loc,  (cv , offset + 1 ), n)) mC2
     | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) ->
       leq_meta_obj (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n)) mC2
-    | _ -> false
+    | _ ->  false
   )
 
 
@@ -894,25 +915,27 @@ However, cD1 and cD2 share some parts but may have their own different contexts.
 cD0 is used to track the common parts, then we shift the differences.
 *)
 
-let rec mctxlength cD = 
-  match cD with
-    | LF. Empty -> 0
-    | LF. Dec (cD', _) -> mctxlength cD' + 1
 
 
 let rec compare a cD tau1  mC2 n = 
   match  tau1 with
     | Comp.TypBase  (loc, c, mS1) ->
-      not (a = c) ||     
+      if a = c then
 	let  mC1 =  find_meta_obj mS1 n in
 	
 	let _ = dprint (fun () ->  ("mC1: " ^  (P.metaObjToString cD  mC1)^"\n"  ^
 				       "mC2: " ^  (P.metaObjToString cD  mC2)^"\n" ) ) in
 	let _ = dprint (fun () ->  ("meta mC1: " ^  (P.metaObjToString LF.Empty  mC1)^"\n" ^
-				       "meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ))in
-	
+				       "meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ))in	
 	less_meta_obj mC1 mC2
-
+      else
+	(match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with 
+	  | Sgn.Positivity -> true
+	  | Sgn.Stratify _ -> true
+	  | Sgn.StratifyAll _ -> true
+	  | _ ->  let n =  R.render_cid_comp_typ c in
+		  raise (Error (loc, (NoStratifyOrPositiveCheck n)))
+	)
     | Comp.TypArr   (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
     | Comp.TypCross (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
     | Comp.TypPiBox ((dec,_), tau)   ->
@@ -958,20 +981,18 @@ let stratify a tau n =
 	  (* cD |- mC   *)
 	  (* cD = cD0, cDa *)
 	  (*shif tau1 to be  cD |- tau1'  *)
-	  let k0  = mctxlength cD0  in  
-	  let k  = mctxlength cD  in		
+	  let k0  = Context.length cD0  in  
+	  let k   = Context.length cD  in		
 	  let tau1' = Whnf.cnormCTyp (tau1, LF.MShift(k- k0)) in
 	  (compare a cD tau1' mC n) && (strat cD0 tau2)
 	
 	| Comp.TypCross (tau1, tau2)   -> 
-	  let k0  = mctxlength cD0  in
-	  let k  = mctxlength cD  in		
+	  let k0  = Context.length cD0  in
+	  let k  =  Context.length cD  in		
 	  let tau1' = Whnf.cnormCTyp (tau1, LF.MShift(k-k0)) in
-	  let tau2' = Whnf.cnormCTyp (tau2, LF.MShift(k-k0)) in
-	  
+	  let tau2' = Whnf.cnormCTyp (tau2, LF.MShift(k-k0)) in	  
 	  (compare a cD tau1' mC n) && (compare a cD tau2' mC n)
-	
-	
+		
 	| Comp.TypPiBox ((dec,_), tau')    ->  strat (LF.Dec (cD0, dec)) tau'
 	| Comp.TypClo  _            -> raise Unimplemented
 	| Comp.TypBool               -> true

@@ -16,7 +16,7 @@ value     : term -> result.
 
 
 rec eval : [ |- term] -> [ |- result] =
-%/ total t (eval t)/
+/ total t (eval t)/
 fn t => case t of
 | [ |- app M N] =>
   (case eval [ |- M] of

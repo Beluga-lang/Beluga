@@ -25,11 +25,11 @@ mstep : tm -> tm -> type.  %name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
-datatype CtxRel : {g:tctx}{g':ctx} ctype  =
+datatype CtxRel : {g:tctx}{g':ctx} ctype  #stratify=
 | RNil : CtxRel [] []
 | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
 
-datatype Lookup : {g:tctx}(g':ctx) [g' |-  tm] -> [ |- tp] -> ctype  =
+datatype Lookup : {g:tctx}(g':ctx) [g' |-  tm] -> [ |- tp] -> ctype =
 | Top : Lookup [g,b:block x:tm,y:oft x T] [g',x:tm |-  x] [ |- T]
 | Pop : Lookup [g] [g' |-  #p ..] [ |- T]
       -> Lookup [g,b:block x:tm,y:oft x S] [g',x:tm |-  #p ..] [ |- T];
@@ -60,13 +60,13 @@ and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctyp
 ;
 
 % Well-typed variable-for-variable substitutions (renaming substitutions). _|-v_:_ in the paper
-datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: g'[h']} ctype  #stratify 1 =
+datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: g'[h']} ctype   =
 | Nil : IsVarSub [] [] [h] [h' $ ^ ]
 | Cons :  IsVarSub [g] [g'] [h] [h' $ #S[..]] -> Lookup [h] [h' |-  M ..] [ |- A]
          -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h] [h' $ #S[..] (M ..)];
 
 % Logical equivalence. _|-_~~_:_ in the paper
-datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype  #stratify 5=
+datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype  =
 | LogBase : AlgEqN [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
           -> LogEq [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
 | LogArr  : {M1:[g' |- tm]}{M2:[g' |- tm]}

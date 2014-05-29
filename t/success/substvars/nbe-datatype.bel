@@ -18,7 +18,7 @@ embed : neut (atomic P) -> norm (atomic P).
 
 schema ctx = neut T;
 
-datatype Sem : {g:ctx} [ |- tp] -> ctype =
+datatype Sem : {g:ctx} [ |- tp] -> ctype #stratify=
 | Syn :  [g |- neut (atomic P)] -> Sem [g] [ |- atomic P]
 | Slam : {g:ctx}{A:[ |- tp]}{B:[ |- tp]}
           ({h:ctx} {#W:g[h]} Sem [h] [ |- A] -> Sem [h] [ |- B])

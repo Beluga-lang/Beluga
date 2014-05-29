@@ -1021,7 +1021,6 @@ match sigma with
 
 
 
-
   (* invSub cD0 (phat, s, ss, rOccur) = s'
 
      if phat = hat(Psi)  and
@@ -1033,29 +1032,22 @@ match sigma with
   and invSub cD0 phat (s, cPsi1) ((ms , ssubst) as ss) rOccur = match (s, cPsi1) with
     | (EmptySub, Null) -> EmptySub
     | (Undefs, Null) -> EmptySub
-    | (Shift ( n), DDec(_cPsi', _dec)) ->
-        invSub cD0 phat (Dot (Head (BVar (n + 1)), Shift ( n + 1)), cPsi1) ss rOccur
+    | (Shift n, DDec(_cPsi', _dec)) ->
+        invSub cD0 phat (Dot (Head (BVar (n + 1)), Shift (n + 1)), cPsi1) ss rOccur
 
-    | (Shift ( n), Null) ->
-        let r = comp (Shift ( n)) ssubst  in
-          r
-      (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
-      (* must be defined -- n = offset
-       * otherwise it is undefined
-       *)
+    | (Shift n, Null) -> EmptySub
 
-    | (Shift (n), CtxVar _psi) ->
-      let s' = comp (Shift ( n)) ssubst in 
-      (* s' *) (* This is wrong! Below is correct *)
-      (match s' with
-      	| Shift ( _) -> s'
+    | (Shift n, CtxVar _psi) ->
+      (* can we pull this function out into something more generally useful?
+	 it finds the context variable part of a (inverse) substitution *)
+      let rec shiftInvSub n ss = match ss with
 	| Undefs -> raise NotInvertible
-      )
-        (* Sat Dec 27 15:45:18 2008 -bp DOUBLE CHECK *)
-        (* must be defined -- n = offset
-         * otherwise it is undefined
-         *)
-    | (SVar (s, ( 0), sigma), CtxVar psi) ->
+	| Shift k -> Shift (n+k)
+        | Dot (ft, ss') -> shiftInvSub (n-1) ss'
+      in 
+      shiftInvSub n ssubst
+
+    | (SVar (s, 0, sigma), CtxVar psi) ->
         (* other cases ? -bp *)
         let (s,cPhi, cPsi') = (match s with
                      | Offset offset -> (match applyMSub offset ms with
@@ -1063,7 +1055,6 @@ match sigma with
                                                Whnf.mctxSDec cD0  v in (Offset v, cPhi, cPsi')
                                            | MUndef -> raise NotInvertible
                                         )
-
                      | SInst (_ , {contents=None}, cPhi, _cPsi', _ ) -> (s,cPhi, _cPsi')
                     ) in
 
@@ -1075,20 +1066,13 @@ match sigma with
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ssubst with
-          | Undef ->
-              (* let si = invSub cD0 phat (s', cPsi') ss rOccur in *)
-                (* Dot(Undef, si)  *)
-                raise NotInvertible
-                  (* Mon Feb  9 14:37:27 2009 -bp : previously raise NotInvertible) *)
+          | Undef -> raise NotInvertible
           | ft   -> Dot (ft , invSub cD0 phat (s', cPsi') ss rOccur)
         end
 
     | (Dot (Head (Proj (BVar n, k)), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ssubst with
-          | Undef ->
-              let si = invSub cD0 phat (s', cPsi') ss rOccur in
-                Dot(Undef, si)
-                  (* Mon Feb  9 14:37:27 2009 -bp : previously raise NotInvertible) *)
+          | Undef -> raise NotInvertible
           | Head(BVar m)  ->
               Dot (Head (Proj (BVar m, k)) , invSub cD0 phat (s', cPsi') ss rOccur)
           | _ -> raise NotInvertible

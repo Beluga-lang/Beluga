@@ -41,6 +41,16 @@ module LF = struct
    *)
   let invShift = Dot (Undef, id)
 
+  let shiftComp n s2 = match (n, s2) with
+    | (0,s) -> s
+    | (n,EmptySub) -> raise (NotComposable "Shift, EmptySub")
+    | (n,Undefs) -> Undefs
+    | (n,SVar(s, k, r)) -> SVar (s, (k+n), r)
+    | (n,MSVar(s, k, (t,r))) -> MSVar (s, (k+n), (t,r))
+    | (n,FSVar (s, k, tau)) -> FSVar (s, (k+n), tau)
+    | (n,Shift m) -> Shift (n + m)
+    | (n,Dot (_ft, s)) -> shiftComp (n - 1) s
+ 
   (* comp s1 s2 = s'
    *
    * Invariant:
@@ -56,63 +66,8 @@ module LF = struct
   let rec comp s1 s2 = match (s1, s2) with
     | (EmptySub, s2) -> EmptySub
     | (Undefs, s2) -> Undefs
-    | (Shift 0, s2) ->
-        (*  Psi |- s1 : Psi   and Psi2 |- s2 : Psi
-         *  therefore   Psi2 |- s2 : Psi  and s2 = s1 o s2
-         *)
-        s2
-
-    | (s, Shift 0) ->
-        (*  Psi1 |- s1 : Psi   and Psi1 |- s2 : Psi1
-         *  therefore   Psi1 |- s1 : Psi  and s1 = s1 o s2
-         *)
-        s
-
-    (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
-
-    | (Shift n, EmptySub) -> raise (NotComposable "Shift, EmptySub")
-    | (Shift n, Undefs) -> Undefs
-
-    | (Shift n, SVar(s, k, r)) ->
-        (* psi, Psi |- s1 : psi   where |Psi| = n
-
-           ctx_shift must be either NoCtxShift or NegCtxShift
-
-           Phi |- SVar(s, k, r): psi, Psi
-
-           where  psi,Psi, Psi_k |- ^k : psi, Psi
-           where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
-          therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
-                and  psi, Psi, Psi_k |- ^(n+k) : psi
-         *)
-      SVar (s, (k+n), r)
-
-    | (Shift n, MSVar(s, k, (t,r))) ->
-        (* psi, Psi |- s1 : psi   where |Psi| = n
-
-           ctx_shift must be either NoCtxShift or NegCtxShift
-
-           Phi |- SVar(s, k, r): psi, Psi
-
-           where  psi,Psi, Psi_k |- ^k : psi, Psi
-           where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
-          therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
-                and  psi, Psi, Psi_k |- ^(n+k) : psi
-         *)
-      MSVar (s, (k+n), (t,r))
-
-    | (Shift n, FSVar (s, k, tau)) ->
-       FSVar (s, (k+n), tau)
-
-    | (Shift n, Shift m) ->
-        (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
-         *  therefore  psi, Psi2 |- s : psi, Psi1  where s = s1 o s2
-         *)
-        Shift (n + m)
-
-    | (Shift n, Dot (_ft, s)) ->
-        comp (Shift (n - 1)) s
-
+    | (s, Shift 0) -> s (* Optimization *)
+    | (Shift n , s2) -> shiftComp n s2
     | (SVar (s, n, tau), s2) ->
         SVar (s, n, comp tau s2)
 

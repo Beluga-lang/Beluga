@@ -127,7 +127,7 @@ fn br => fn pt => case br of
 rec bred_rtl : (g:jctx')[g |- bred (M ..) (U ..)] ->
                [g |- npath (U ..) (P ..)] -> [g |- path (M ..) (P ..)]
    =
-/ total br (bred_rtl g m u p br) /
+/ total br (bred_rtl g m u p br pt) /
 fn br => fn pt => case br of
 | [g |- #p.3 ..] => let [g |- #p.6 ..] = pt in [g |- #p.5 ..]
 | [g |- r_app (R1 ..) (R2 ..)] =>

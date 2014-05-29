@@ -105,9 +105,8 @@ mlam T => fn y => y ;
 
 rec eval :  [g |- tm S] -> ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
            -> Sem [h] [ |- S]  =
-/ total t (eval g h t) / 
+/ total t (eval g h _ t s) / 
 fn t => fn s =>
-let (s : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])) = s in
 case t of
 | [g |- #p .. ]           : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p .. ])
 | [g |- lam (\x. E .. x) ] : [g |- tm (arr A B)] =>

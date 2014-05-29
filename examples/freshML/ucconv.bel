@@ -34,7 +34,7 @@ schema ctx = term;
 schema tctx = target;
 
 rec append:(g:ctx)[g |- fvlist] -> [g |- fvlist] -> [g |- fvlist] =
-/ total a (append g a) / 
+/ total a (append g a b) / 
 fn a => fn b => case a of
 | [g |- nil] => b
 | [g |- cons (E..) (Ta..)] =>

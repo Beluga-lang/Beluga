@@ -158,7 +158,7 @@ and recSgnDecl d =
 		      |None   -> Int.Sgn.StratifyAll
 		    )
 		  | Some (Ext.Sgn.Positivity) -> Int.Sgn.Positivity
-		  | _    -> raise (Error (loc, Unimplemented)) 
+(*		  | _    -> raise (Error (loc, Unimplemented))  *)
                 ) in
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
           (if (!Debug.chatter) == 0 then ()
@@ -346,7 +346,7 @@ and recSgnDecl d =
           let i''                = Monitor.timer ("Function Abstraction", fun () ->
 						    Abstract.exp (Int.Comp.Syn (loc, i'))) in
           let _                  = Monitor.timer ("Function Check", fun () ->
-						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
+						    Check.Comp.check None cD  cG i'' (tau', C.m_id)) in
 
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
@@ -383,7 +383,8 @@ and recSgnDecl d =
                                 P.expChkToString cD cG i' ^ "\n") in
 
           let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp i') in
-          let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
+          let _       = Monitor.timer ("Function Check", fun () ->
+					 Check.Comp.check None cD  cG i'' (tau', C.m_id)) in
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
             let _x = Comp.add (fun _ -> Comp.mk_entry x tau' false v []) in
@@ -459,13 +460,13 @@ and recSgnDecl d =
                   | Some t ->
 		    if !Total.enabled then 
 		      ((*print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
-	   	      Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
+	   	      Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
 		    else 
 		      (if m = 1 then 
 			  (Coverage.enableCoverage := true;
 			   Total.enabled := true;
 			   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
-			   Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
+			   Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
 		       else			  
 			  raise (Error (loc, MutualTotalDeclAfter f))
 		      )
@@ -509,7 +510,9 @@ and recSgnDecl d =
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
 
           let _       = Monitor.timer ("Function Check", fun () ->
-                                         Check.Comp.check cD  cG e_r' (tau', C.m_id)
+					    Check.Comp.check
+					      (Total.get_order_for f)
+					      cD cG e_r' (tau', C.m_id)
                                       ) in
              (e_r' , tau')
         in

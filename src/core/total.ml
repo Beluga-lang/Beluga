@@ -11,6 +11,7 @@ type error =
   | WrongArgNum  of int
   | RecCallIncompatible of LF.mctx * Comp.args * Comp.ctyp_decl
   | NotImplemented of string
+  | TooManyArg of Id.name 
 
 exception Error of Syntax.Loc.t * error
 
@@ -18,6 +19,9 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) -> 
     Error.print_with_location loc (fun ppf ->
       match err with 
+	| TooManyArg f -> 
+	    Format.fprintf ppf "Totality declaration for %s has too many arguments.\n"
+	      (R.render_name f)
 	| RecCallIncompatible (cD, x, Comp.WfRec (f, args, _tau)) -> 
 	    (match x , args with 
 	       | _ , [] -> 
@@ -93,7 +97,8 @@ let rec smaller_meta_obj cM = match  cM with
       )
   | Comp.MetaParam (_, phat, h ) ->
       match h with 
-	| LF.PVar (_, s) -> sub_smaller phat s
+	| LF.PVar (_, s) -> 
+	    (print_string "Checking whether proj is smaller (1)\n";sub_smaller phat s)
 	| _ -> false
 (*  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
@@ -126,18 +131,85 @@ let order_to_string order = match order with
   | None -> " _ " 
   | Some (Order.Arg x) -> string_of_int x
 
-let make_dec f tau (order,args) =
+let make_dec loc f tau (order,args) =
+  let n = List.length args in 
+  let rec valid_args tau n = match tau, n with 
+    | Comp.TypPiBox (_ , tau), 1 -> true
+    | Comp.TypArr   (_ , tau), 1 -> true
+    | Comp.TypPiBox (_ , tau), n -> valid_args tau (n-1)
+    | Comp.TypArr   (_ , tau), n -> valid_args tau (n-1)
+    | _ -> false
+  in 
 ((* print_string ("Total declaration for " ^ 
 R.render_name f ^ " : " ^ "total in position " ^ order_to_string order ^ 
 " in total number of args " ^ string_of_int (List.length args) ^ "\n");*)
-  { name = f;
-    args = args;
-    typ  = tau;
-    order = order
-  })
+  if n = 0 || valid_args tau n then 
+      { name = f;
+	args = args;
+	typ  = tau;
+	order = order
+      }
+    else 
+      raise (Error (loc, TooManyArg f))
+)
 
 let extend_dec l =
 mutual_decs := l::!mutual_decs
+
+(* Check whether the argument specified by i 
+   corresponds to a given totality order 
+
+      i = Var x then  Order.Arg x
+      i = Pair(Var x, Var y) then Order.Lex / Order.Sim  
+         where x and y are in the specified order.   
+
+*)
+let satisfies_order cD cG i = 
+  let total_decs = !mutual_decs in 
+ (* let m = List.length total_decs in  *)
+  (* let cg_length = Context.length cG in  *)
+  let rec relative_order (Comp.Var x) (tau, order,k,w) = match tau with 
+    (* k = implicit arguments encountered so far 
+       w = total number of arguments in totality declaration
+       w - k = number of variables introduces via fn in cG
+    *)
+    | Comp.TypPiBox (_, tau) -> relative_order (Comp.Var x) (tau, order, k+1,w) 
+    | Comp.TypArr (_ , tau) -> 
+    (match order with 
+       | Order.Arg y -> let p = y - k in 
+	   if x = p + (w-y) 
+	   (* comparing de Bruijn position of x in cG with the position
+	      described by y *)
+	 then 
+	   ((* print_string ("Considering inductive case for " ^ 
+	      P.expSynToString cD cG i ^ 
+	      " - comparing to relative position " ^ string_of_int (y-k) ^ " - Yes\n");*)true)
+	 else 
+	   ((* print_string ("Considering inductive case for " ^ 
+			   P.expSynToString cD cG i ^ 
+	      " - comparing to relative position " ^ string_of_int (y-k) ^ "? - No\n");*)
+	   relative_order (Comp.Var x) (tau, order,  k+1, w) )
+  
+       | _ -> false)
+
+    | _ -> false
+  in 
+    match i with 
+      | Comp.Var x -> 
+      List.exists  (function dec -> 
+(*		      let _ = (print_string ("Considering type " ^
+					      P.compTypToString LF.Empty dec.typ ^ "\n"); 
+			       print_string ("In cG " ^ P.gctxToString cD cG ^ "\n")) in
+		      let _ = print_string ("Given order " ^ order_to_string dec.order ^ "\n") in 
+		      let _ = print_string ("Considering variable " ^ P.expSynToString cD cG i ^ "\n") in
+*)
+		      let w = List.length (dec.args) in (* total arguments given in totality declaration *)
+		      match dec.order with
+			| None -> false
+			| Some order -> 
+			    relative_order i (dec.typ, order,0,w) ) total_decs
+      | _ -> false
+
 
 
 let exists_total_decl f = 
@@ -195,6 +267,19 @@ let get_order () =
 		  | None -> (dec.name, None, 0, (tau, Whnf.m_id))
 	   )
     !mutual_decs
+
+let get_order_for f  =
+  let rec find decs = match decs with 
+    | [] -> None
+    | dec::decs -> 
+	if dec.name = f then 
+	  (match dec.order with
+	    | Some (Order.Arg x) -> Some x
+	    | None -> None
+	   )
+	else 
+	  find decs 
+  in find !mutual_decs
 
 
 (* Given C:U, f, order Arg i, and type T of f where

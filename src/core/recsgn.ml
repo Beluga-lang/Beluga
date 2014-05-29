@@ -22,7 +22,7 @@ type error =
   | MutualTotalDeclAfter of name
   | NoPositive of string
   | NoStratify of string
-  | Unimplemented 
+  | NoStratifyOrPositive of string
   | TotalArgsError of name
 
 
@@ -46,13 +46,11 @@ let _ = Error.register_printer
    	| NoPositive n -> 
 	  Format.fprintf ppf "Positivity checking of constructor %s fails.\n" n
 	| NoStratify n -> 
-
 	  Format.fprintf ppf "Stratification checking of constructor %s fails.\n" n
+	| NoStratifyOrPositive n ->
+	  Format.fprintf ppf "Stratification or positivity checking of datatype %s fails.\n" n
 	| TotalArgsError f ->
 	  Format.fprintf ppf "Totality declaration for %s takes too many arguments.\n" (R.render_name f)
-
-	| Unimplemented -> Format.fprintf ppf "Unimplemented."
-
     )
   )
 
@@ -158,13 +156,14 @@ and recSgnDecl d =
  
 	let p = (match pflag with 
 	          | None -> Int.Sgn.Nocheck 
-		  | Some (Ext.Sgn.Stratify (loc_p, n)) -> 
+		  | Some (Ext.Sgn.Stratify (loc_s, n)) -> 
 		    (match n with 
-		      |Some s -> Int.Sgn.Stratify (loc_p, int_of_string s)
-		      |None   -> Int.Sgn.StratifyAll
+		      |Some s -> Int.Sgn.Stratify (loc_s, int_of_string s)
+		      |None   -> Int.Sgn.StratifyAll loc_s
 		    )
 		  | Some (Ext.Sgn.Positivity) -> Int.Sgn.Positivity
                 ) in
+	Total.stratNum := -1 ;
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
           (if (!Debug.chatter) == 0 then ()
           else (Format.printf "\ndatatype %s : @[%a@] = \n"
@@ -222,8 +221,14 @@ and recSgnDecl d =
 	                           else raise (Error (loc, (NoPositive c.string_of_name)))
 	  | Int.Sgn.Stratify (loc_s, n)   -> if Total.stratify cid_ctypfamily tau' n then ()
 	                           else raise (Error (loc, (NoStratify c.string_of_name)))
-	  | Int.Sgn.StratifyAll   -> if Total.stratifyAll cid_ctypfamily tau' then ()
-	                           else raise (Error (loc, (NoStratify c.string_of_name)))
+	  | Int.Sgn.StratifyAll loc_s   -> 
+	    let t =  Total.stratifyAll cid_ctypfamily tau' in
+	    let t' = (t land (!Total.stratNum)) in	    
+	    if t'<>0 then Total.stratNum := t'
+	    else raise (Error (loc_s, (NoStratifyOrPositive  (R.render_cid_comp_typ cid_ctypfamily) )))
+	      
+	(* if true (\* Total.stratifyAll cid_ctypfamily tau'  *\)then () *)
+	(* else raise (Error (loc, (NoStratify c.string_of_name))) *)
 
 	);
 	

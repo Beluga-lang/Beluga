@@ -308,7 +308,7 @@ module Cid = struct
       implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
                                     are factored into implicit arguments *)
       kind                : Int.Comp.kind;
-      positivity          : Int.Sgn.positivity_flag;  (* flag for positivity checking *)
+      positivity          : Int.Sgn.positivity_flag;  (* flag for positivity and stratification checking *)
       mutable frozen      : bool;
       mutable constructors: Id.cid_comp_const list
     }
@@ -325,7 +325,6 @@ module Cid = struct
     (*  store : entry DynArray.t *)
     let store = DynArray.create ()
 
-
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
     let directory = Hashtbl.create 0
 
@@ -336,6 +335,7 @@ module Cid = struct
         DynArray.add store e;
         Hashtbl.replace directory e.name cid_comp_typ;
         cid_comp_typ
+	
 
     let get = DynArray.get store
 

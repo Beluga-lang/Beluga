@@ -387,7 +387,7 @@ module Sgn = struct
     | Nocheck
     | Positivity
     | Stratify of  Loc.t * int
-    | StratifyAll
+    | StratifyAll of Loc.t
 
 
 

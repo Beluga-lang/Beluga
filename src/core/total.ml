@@ -701,7 +701,7 @@ let rec no_occurs a tau =
 	( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with 
 	  | Sgn.Positivity -> true
 	  | Sgn.Stratify _ -> true
-	  | Sgn.StratifyAll -> true
+	  | Sgn.StratifyAll _ -> true
 	  | _ ->  let n =  R.render_cid_comp_typ c in
 		  raise (Error (loc, (NoPositiveCheck n)))
 	)
@@ -725,7 +725,7 @@ let rec check_positive a tau =
       ( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with 
 	 | Sgn.Positivity -> true
 	 | Sgn.Stratify _ -> true
-	 | Sgn.StratifyAll -> true
+	 | Sgn.StratifyAll _ -> true
 	 | _ -> let n =  R.render_cid_comp_typ c in
 		raise (Error (loc, (NoPositiveCheck n)))
       )
@@ -852,10 +852,10 @@ and leq_meta_obj mC1 mC2 =
 
 
 (*find the meta obj needs to be compared*)
-let rec find_meta_obj cD mS n =
+let rec find_meta_obj mS n =
   match mS, n with
-    | Comp.MetaApp (mC, _)  , 1   -> (cD, mC) (* print_string ((P.metaObjToString LF.Empty  obj)^"\n" ); *) 
-    | Comp.MetaApp (mC, mS'), _   -> find_meta_obj cD mS' (n-1)
+    | Comp.MetaApp (mC, _)  , 1   ->  mC (* print_string ((P.metaObjToString LF.Empty  obj)^"\n" ); *) 
+    | Comp.MetaApp (mC, mS'), _   -> find_meta_obj  mS' (n-1)
     | Comp.MetaNil          , _   -> raise Not_compatible (* raise (Error (loc, (WrongArgNum n))) *)
 
 
@@ -874,8 +874,12 @@ let rec mS_size mS =
   match mS with
     | Comp.MetaApp (mC, mS')   -> mS_size mS' + 1
     | Comp.MetaNil             -> 0
+
+
 (* 
 compare a (cD1', tau1) n (cD2, mC2) cD0 = bool 
+
+mC2 is the target
 
  type_family(tau1) = a 
    cD1'  |- tau1 : ctype 
@@ -890,57 +894,37 @@ However, cD1 and cD2 share some parts but may have their own different contexts.
 cD0 is used to track the common parts, then we shift the differences.
 *)
 
-let rec compare a (cD1',tau1) n (cD2, mC2) cD0= 
+let rec mctxlength cD = 
+  match cD with
+    | LF. Empty -> 0
+    | LF. Dec (cD', _) -> mctxlength cD' + 1
+
+
+let rec compare a cD tau1  mC2 n = 
   match  tau1 with
-    | Comp.TypBase  (loc, c, mS) ->
+    | Comp.TypBase  (loc, c, mS1) ->
       not (a = c) ||     
-	let (cD1, mC1) =  find_meta_obj cD1' mS n in
-
-	(*  cD1  = cD0, cDa *)
-	(*  cD2  = cD0, cDb *)
-	(* k0 = | cD0 | *)
-	(* k1 = | cD1 | *)
-	(* k2 = | cD2 | *)
-
-	let rec ctxlength cD = 
-	  match cD with
-	    | LF. Empty -> 0
-	    | LF. Dec (cD', _) -> ctxlength cD' + 1
-	in
-
-	let k0  = ctxlength cD0  in
-	let k1  = ctxlength cD1  in
-	let k2  = ctxlength cD2  in	
+	let  mC1 =  find_meta_obj mS1 n in
 	
-	let _ = dprint (fun () -> ("cD1 : " ^ (P.mctxToString  cD1) ^ "\n" ) ^
-	  ("cD2 : " ^ (P.mctxToString  cD2) ^ "\n" ) ^
-	  ("cD0 : " ^ (P.mctxToString  cD0) ^ "\n" ) ^
-	  ((P.metaObjToString cD1  mC1 )^"  shift offset:"^(string_of_int (k1-k0))^"\n" )^ 
-	  ((P.metaObjToString cD2  mC2) ^"  shift offset:"^(string_of_int (k2-k0))^"\n" ) )in
-
-	
-	let mC1 = Whnf.cnormMetaObj   (mC1 , LF.MShift  (k0-k1)) in
-	let mC2 = Whnf.cnormMetaObj   (mC2 , LF.MShift  (k0-k2)) in
-	
-
-	let _ = dprint (fun () -> 
-	  ("mC1: " ^  (P.metaObjToString cD0  mC1)^"\n" ) ^
-	    ("mC2: " ^  (P.metaObjToString cD0  mC2)^"\n" ) ) in
-	let _ = dprint (fun () -> 
-	  ("meta mC1: " ^  (P.metaObjToString LF.Empty  mC1)^"\n" ) ^
-	    ("meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ) ) in
-
+	let _ = dprint (fun () ->  ("mC1: " ^  (P.metaObjToString cD  mC1)^"\n"  ^
+				       "mC2: " ^  (P.metaObjToString cD  mC2)^"\n" ) ) in
+	let _ = dprint (fun () ->  ("meta mC1: " ^  (P.metaObjToString LF.Empty  mC1)^"\n" ^
+				       "meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ))in
 	
 	less_meta_obj mC1 mC2
 
-    | Comp.TypArr   (tau, tau')  -> (compare a (cD1', tau) n (cD2, mC2) cD0) && (compare a (cD1', tau') n (cD2, mC2) cD0)
-    | Comp.TypCross (tau, tau')  -> (compare a (cD1', tau) n (cD2, mC2) cD0) && (compare a (cD1', tau') n (cD2, mC2) cD0)
-    | Comp.TypPiBox ((dec,_), tau)   -> compare a (LF.Dec (cD1', dec), tau)  n  (cD2, mC2) cD0
+    | Comp.TypArr   (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
+    | Comp.TypCross (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
+    | Comp.TypPiBox ((dec,_), tau)   ->
+      compare a (LF.Dec (cD, dec))  tau    (Whnf.cnormMetaObj   (mC2 , LF.MShift  1))  n 
     | Comp.TypBox _    -> true
     | Comp.TypClo _    -> true
     | Comp.TypBool     -> true
     | Comp.TypCobase _ -> true
     | Comp.TypDef _    -> true
+
+
+
  
 
 (* stratify a tau n = bool 
@@ -961,15 +945,33 @@ let stratify a tau n =
   if (mSize < n || n <=0 ) 
   then raise (Error ( (Syntax.Loc.ghost) , (WrongArgNum (a, n))))
   else
-    let cD_mC = find_meta_obj cD mS n  in
+    let mC = find_meta_obj mS n  in
     let rec strat cD0 tau0 = 
       match tau0 with
 	| Comp.TypBase _   -> true
 	| Comp.TypCobase _ -> true
 	| Comp.TypDef  _   -> raise Unimplemented
 	| Comp.TypBox  _   -> true
-	| Comp.TypArr   (tau1, tau2)   -> (compare a (cD0,tau1) n cD_mC cD0) && (strat cD0 tau2)
-	| Comp.TypCross (tau1, tau2)   -> (compare a (cD0,tau1) n cD_mC cD0) && (compare a (cD0,tau2) n cD_mC cD0)
+	| Comp.TypArr   (tau1, tau2)   ->
+	  
+	  (* cD0 |- tau1  *)
+	  (* cD |- mC   *)
+	  (* cD = cD0, cDa *)
+	  (*shif tau1 to be  cD |- tau1'  *)
+	  let k0  = mctxlength cD0  in  
+	  let k  = mctxlength cD  in		
+	  let tau1' = Whnf.cnormCTyp (tau1, LF.MShift(k- k0)) in
+	  (compare a cD tau1' mC n) && (strat cD0 tau2)
+	
+	| Comp.TypCross (tau1, tau2)   -> 
+	  let k0  = mctxlength cD0  in
+	  let k  = mctxlength cD  in		
+	  let tau1' = Whnf.cnormCTyp (tau1, LF.MShift(k-k0)) in
+	  let tau2' = Whnf.cnormCTyp (tau2, LF.MShift(k-k0)) in
+	  
+	  (compare a cD tau1' mC n) && (compare a cD tau2' mC n)
+	
+	
 	| Comp.TypPiBox ((dec,_), tau')    ->  strat (LF.Dec (cD0, dec)) tau'
 	| Comp.TypClo  _            -> raise Unimplemented
 	| Comp.TypBool               -> true
@@ -978,6 +980,132 @@ let stratify a tau n =
 
 
 
+
+
+(* stratifyAll a tau = int list
+Preconditions:
+    |- tau : ctype
+    type_family (tau) = a, i.e. the target type of tau has type family a
+
+if the target type has not arguments , then check positvity
+otherwise check whether there is a position of arguments which makes stratification satisfied
+*)  
+
+let stratNum = ref 0
+
+(* let rec calc_exp2 n =  *)
+(*   if (n <=1) then 1 *)
+(*   else 2 * (calc_exp2 (n-1)) *)
+
+let stratifyAll a tau =
+  let (cD, mS) = get_target LF.Empty tau in
+  let mSize = mS_size mS in
+  if mSize = 0 then  
+    if (positive a tau) then -1
+    else 0
+  else
+  let rec stratAll n =
+    if n>=1 then 
+      if (stratify a tau n) then (stratAll (n-1)) * 2 + 1 
+      else (stratAll (n-1)) * 2
+      (* let t = if (stratify a tau n) then calc_exp2 n else 0 *)
+      (* in t lor (stratAll (n-1)) *)
+      (* if (stratify a tau n) then  ((calc_exp2 n) lor (stratAll (n-1) num) ) ) *)
+      (* else stratAll (n-1) num *)
+    else 0
+  in stratAll mSize
+
+
+
+(* let rec compare a (cD1',tau1) n (cD2, mC2) cD0=  *)
+(*   match  tau1 with *)
+(*     | Comp.TypBase  (loc, c, mS) -> *)
+(*       not (a = c) ||      *)
+(* 	let (cD1, mC1) =  find_meta_obj cD1' mS n in *)
+
+(* 	(\*  cD1  = cD0, cDa *\) *)
+(* 	(\*  cD2  = cD0, cDb *\) *)
+(* 	(\* k0 = | cD0 | *\) *)
+(* 	(\* k1 = | cD1 | *\) *)
+(* 	(\* k2 = | cD2 | *\) *)
+
+(* 	let rec ctxlength cD =  *)
+(* 	  match cD with *)
+(* 	    | LF. Empty -> 0 *)
+(* 	    | LF. Dec (cD', _) -> ctxlength cD' + 1 *)
+(* 	in *)
+
+(* 	let k0  = ctxlength cD0  in *)
+(* 	let k1  = ctxlength cD1  in *)
+(* 	let k2  = ctxlength cD2  in	 *)
+	
+(* 	let _ = dprint (fun () -> ("cD1 : " ^ (P.mctxToString  cD1) ^ "\n" ) ^ *)
+(* 	  ("cD2 : " ^ (P.mctxToString  cD2) ^ "\n" ) ^ *)
+(* 	  ("cD0 : " ^ (P.mctxToString  cD0) ^ "\n" ) ^ *)
+(* 	  ((P.metaObjToString cD1  mC1 )^"  shift offset:"^(string_of_int (k1-k0))^"\n" )^  *)
+(* 	  ((P.metaObjToString cD2  mC2) ^"  shift offset:"^(string_of_int (k2-k0))^"\n" ) )in *)
+
+	
+(* 	let mC1 = Whnf.cnormMetaObj   (mC1 , LF.MShift  (k0-k1)) in *)
+(* 	let mC2 = Whnf.cnormMetaObj   (mC2 , LF.MShift  (k0-k2)) in *)
+	
+
+(* 	let _ = dprint (fun () ->  *)
+(* 	  ("mC1: " ^  (P.metaObjToString cD0  mC1)^"\n" ) ^ *)
+(* 	    ("mC2: " ^  (P.metaObjToString cD0  mC2)^"\n" ) ) in *)
+(* 	let _ = dprint (fun () ->  *)
+(* 	  ("meta mC1: " ^  (P.metaObjToString LF.Empty  mC1)^"\n" ) ^ *)
+(* 	    ("meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ) ) in *)
+
+	
+(* 	less_meta_obj mC1 mC2 *)
+
+(*     | Comp.TypArr   (tau, tau')  -> (compare a (cD1', tau) n (cD2, mC2) cD0) && (compare a (cD1', tau') n (cD2, mC2) cD0) *)
+(*     | Comp.TypCross (tau, tau')  -> (compare a (cD1', tau) n (cD2, mC2) cD0) && (compare a (cD1', tau') n (cD2, mC2) cD0) *)
+(*     | Comp.TypPiBox ((dec,_), tau)   -> compare a (LF.Dec (cD1', dec), tau)  n  (cD2, mC2) cD0 *)
+(*     | Comp.TypBox _    -> true *)
+(*     | Comp.TypClo _    -> true *)
+(*     | Comp.TypBool     -> true *)
+(*     | Comp.TypCobase _ -> true *)
+(*     | Comp.TypDef _    -> true *)
+
+
+
+
+(* let stratify a tau n = *)
+(*   let (cD, mS) = get_target LF.Empty tau in *)
+(*   let mSize = mS_size mS in *)
+(*   if (mSize < n || n <=0 )  *)
+(*   then raise (Error ( (Syntax.Loc.ghost) , (WrongArgNum (a, n)))) *)
+(*   else *)
+(*     let (cD', mC') = find_meta_obj cD mS n  in *)
+(*     let rec strat cD0 tau0 =  *)
+(*       match tau0 with *)
+(* 	| Comp.TypBase _   -> true *)
+(* 	| Comp.TypCobase _ -> true *)
+(* 	| Comp.TypDef  _   -> raise Unimplemented *)
+(* 	| Comp.TypBox  _   -> true *)
+(* 	| Comp.TypArr   (tau1, tau2)   -> *)
+	  
+(* 	  let k0  = mctxlength cD0  in *)
+(* 	  let k'  = mctxlength cD'  in		 *)
+(* 	  let tau1' = Whnf.cnormTyp (tau1, LF.MShif(k'-k0)) in *)
+(* 	  (compare a (cD',tau1') n (cD', mC') cD0) && (strat cD0 tau2) *)
+	
+(* 	| Comp.TypCross (tau1, tau2)   ->  *)
+(* 	  let k0  = mctxlength cD0  in *)
+(* 	  let k'  = mctxlength cD'  in		 *)
+(* 	  let tau1' = Whnf.cnormTyp (tau1, LF.MShif(k'-k0)) in *)
+
+	  
+(* 	  (compare a (cD',tau1) n (cD', mC') cD0) && (compare a (cD0,tau2) n (cD',mC') cD0) *)
+	
+	
+(* 	| Comp.TypPiBox ((dec,_), tau')    ->  strat (LF.Dec (cD0, dec)) tau' *)
+(* 	| Comp.TypClo  _            -> raise Unimplemented *)
+(* 	| Comp.TypBool               -> true *)
+(*     in  *)
+(*     strat LF.Empty tau *)
 
 
 (* stratifyAll a tau = bool
@@ -989,11 +1117,11 @@ if the target type has not arguments , then check positvity
 otherwise check whether there is a position of arguments which makes stratification satisfied
 *)  
 
-let stratifyAll a tau =
-  let (cD, mS) = get_target LF.Empty tau in
-  let mSize = mS_size mS in
-  if mSize = 0 then positive a tau
-  else 
-    let rec stratAll n =
-      (n>=1) &&  ((stratify a tau n) || stratAll (n-1))
-    in stratAll mSize
+(* let stratifyAll a tau = *)
+(*   let (cD, mS) = get_target LF.Empty tau in *)
+(*   let mSize = mS_size mS in *)
+(*   if mSize = 0 then positive a tau *)
+(*   else  *)
+(*     let rec stratAll n = *)
+(*       (n>=1) &&  ((stratify a tau n) || stratAll (n-1)) *)
+(*     in stratAll mSize *)

@@ -1,0 +1,19 @@
+
+tp : type.                %name tp T.
+
+neut : tp -> type.       %name neut R.
+
+schema ctx = neut T;
+
+
+datatype Extends : {g:ctx} {h:ctx} ctype #stratify =
+| Zero : Extends [g] [g]
+| Succ :  {h:ctx}
+          Extends [g] [h] -> Extends [g] [h,x:neut A]
+| Succ2 :   {h:ctx}
+           Extends [g] [h] -> Extends [g,x:neut A] [h]
+;
+
+
+
+

@@ -72,7 +72,6 @@ module LF = struct
         SVar (s, n, comp tau s2)
 
     | (MSVar (s, n, (theta, tau)), s2) ->
-      (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
         MSVar (s, n, (theta, comp tau s2))
 
     | (FSVar (s, n, tau), s2) ->
@@ -88,10 +87,6 @@ module LF = struct
          *)
         let h = frontSub ft s' in
           Dot (h, comp s s')
-
-    (* | (_s1, _s2) -> *)
-    (*     raise (NotComposable "Composition not defined? (last)") *)
-
 
   (* bvarSub n s = Ft'
    *

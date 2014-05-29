@@ -190,6 +190,39 @@ let fill = { name = "fill" ;
                | e -> fprintf ppf " - \nError in fill: %s\n" (Printexc.to_string e));
              help = "\"fill\" i \"with\" exp fills the ith hole with exp"}
 
+(* let fill-lf = { name = "filllf" ;
+                run = (fun ppf args ->
+                  try
+                 let i = to_int (List.hd args) in
+                 let eq = List.hd (List.tl args) in
+                 let str = String.concat " " (List.tl (List.tl args)) in
+                 let input = "let t = "^str^";" in
+                 if eq = "with" then (
+                   let sgn = Parser.parse_string ~name:"<fill>" ~input:input Parser.sgn in
+                   let Syntax.Ext.Sgn.Rec (_, (Synext.Comp.RecFun(_,_,outexp))::[])::[] = sgn in
+                   (try
+                     let (loc, cD, psi, tclo) = Lfholes.getOneHole i in
+                     (if !Debug.chatter != 0 then fprintf ppf " - LF Fill: EXT done\n");
+                     let vars = Interactive.dctxToMVars psi in
+                     let cvars = Interactive.mctxToCVars cD in
+                     let apxexp = Index.hexp cvars vars outexp in
+                     (if !Debug.chatter != 0 then fprintf ppf " - LF Fill: APX done\n");
+                     let intexp = Reconstruct.elExp cD cG apxexp tclo in
+                     (if !Debug.chatter != 0 then fprintf ppf " - LF Fill: INT done\n");
+                     Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
+                     let intexp' = Interactive.mapHoleChk (fun ll -> fun _ ->
+                       let i = Holes.getStagedHoleNum ll in
+                       let loc' = Interactive.nextLoc loc in
+                       Holes.setStagedHolePos i loc';
+                       Synint.Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))) intexp in (* makes sure that new holes have unique location *)
+                     Interactive.replaceHole i intexp'
+                   with
+                   | e -> fprintf ppf " - Error while replacing LF hole with expression : %s" (Printexc.to_string e) ))
+                 else
+                   failwith " - See help"
+               with
+               | e -> fprintf ppf " - \nError in fill-lf: %s\n" (Printexc.to_string e));
+              help = "'fill-lf' i 'with' exp fills the ith lf hole with exp" } *)
 
 let split = { name = "split" ;
               run = (fun ppf args ->
@@ -299,7 +332,8 @@ let query = {name = "query";
                         let _        = Unify.StdTrail.resetGlobalCnstrs () in
                         let _        = Monitor.timer ("Constant Check",
                                                       fun () -> Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id)) in
-                        let _c'      = Logic.runLogicOn name (tA', i) expected tries in
+                        let _c'      = Logic.storeQuery name (tA', i) expected tries in
+                        let _ = Logic.runLogic() in
                         ()
                       end
                     with

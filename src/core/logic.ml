@@ -26,9 +26,6 @@ module Options = struct
   (* Type check the proof terms. *)
   let checkProofs = ref false
 
-  (* Interrupt solver after time limit expires. *)
-  let timeOut = ref (Some 5) (* sec. *)
-
 end
 
 
@@ -704,24 +701,6 @@ module Frontend = struct
 
   exception Done                        (* Solved query successfully. *)
   exception AbortQuery of string        (* Abort solving the query.   *)
-  exception TimeLimit                   (* Time limit reached.        *)
-
-  (* timeLimit o f = ()
-     Effects:
-       If o = Some (ref t), sets a signal handler to raise the TimeLimit
-     exception when SIGALARM is received and schedules a signal alarm in
-     t seconds.
-       Any effects (f ()) might have.
-  *)
-  let timeLimit optLimit f =
-    match Sys.os_type with
-      | "Unix" | "Cygwin" ->
-        (match optLimit with
-          | Some t -> Sys.set_signal Sys.sigalrm
-            (Sys.Signal_handle (fun _ -> raise TimeLimit)) ;
-            ignore (Unix.alarm t) ; f ()
-          | None -> f ())
-      | "Win32" -> () (* Unsupported *)
 
   (* exceeds B1 B2 = b
      True if B1 = * or B1 >= B2.
@@ -815,15 +794,14 @@ module Frontend = struct
           P.printQuery sgnQuery
         else () ;
         try
-          (* Enforce time limit for solving the query. *)
-          timeLimit !Options.timeOut
-            (fun () -> Solver.solve sgnQuery.query scInit) ;
+          
+          Solver.solve sgnQuery.query scInit ;
           (* Check solution bounds. *)
           checkSolutions sgnQuery.expected sgnQuery.tries !solutions
         with
           | Done -> printf "Done.\n"
-          | TimeLimit -> printf "---------- TIME OUT ----------\n"
           | AbortQuery (s) -> printf "%s\n" s
+          | _ -> ()
       end
 
     else if !Options.chatter >= 2 then

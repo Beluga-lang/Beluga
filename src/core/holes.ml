@@ -105,6 +105,9 @@ let getStagedHoleNum loc =
     DynArray.index_of
       (fun (loc', _cD, _cG, (_tau, _mS)) -> if loc = loc' then true else false) stagedholes
 
+let setStagedHolePos i l =
+      let  (loc, cD, cG, tclo) = DynArray.get stagedholes i in
+      DynArray.set stagedholes i (l, cD, cG, tclo)
 
 let (printOne : hole -> unit) (loc, cD, cG, (tau, theta)) =
   Store.NamedHoles.reset () ;

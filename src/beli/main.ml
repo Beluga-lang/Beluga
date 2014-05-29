@@ -93,14 +93,11 @@ let main () =
   else begin if List.length files > 1 then fprintf ppf "Please supply only 1 file" end;
 
   if !Options.debug && Sys.file_exists (!Debug.filename ^ ".out") then begin
-    print_string "DEBUG.OUT EXISTS\n";
     let x = ref 1 in
     while Sys.file_exists (!Debug.filename ^ "(" ^ (string_of_int !x) ^ ").out") do
       incr x
     done ;
     Debug.filename := (!Debug.filename ^ "(" ^ (string_of_int !x) ^ ")") ;
-    print_string !Debug.filename;
-    print_string "\n"
   end;
 
   init_repl ppf;

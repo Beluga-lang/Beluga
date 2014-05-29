@@ -69,6 +69,16 @@ let rec mctxToCVars cD = match cD with
      Store.CVar.extend vars' (Store.CVar.mk_entry (cvarOfLFcTypDecl td))
 | LF.Empty  -> Store.CVar.create ()
 
+(*   and dctx =                                 (* LF Context                     *)
+    | Null                                   (* Psi ::= .                      *)
+    | CtxVar   of ctx_var                    | psi                         
+    | DDec     of dctx * typ_decl            (* | Psi, x:A   or x:block ...    *)
+
+let rec psiToM = function
+| LF.Null -> failwith "IDK"
+| LF.DDec(psi', LF.TypDecl(n, tA)) -> 
+| LF.DDec(psi', LF.TypDeclOpt(n)) ->
+ *)
 let printCtxGoal (cD,cPsi,mS) =
 " ["^P.dctxToString cD cPsi^"]"
 

@@ -18,6 +18,7 @@ const : nat -> term.
 schema ctx = term ;
 
 rec add: [ |- nat] -> [ |- nat] -> [ |- nat] =
+/ total m (add m n) /
 fn m => fn n => case m of
 | [ |- z] => n
 | [ |- suc M] =>
@@ -26,6 +27,7 @@ fn m => fn n => case m of
 ;
 
 rec size : (g:ctx) [g |- term] -> [ |- nat] =
+/ total t (size g t) /
 fn t => case t of
 | [g |- #p ..] => [ |- suc z]
 | [g |- lam \x. T .. x] =>
@@ -82,6 +84,7 @@ cons: term -> list -> list.
 
 
 rec append: (g:ctx) [g |- list] -> [g |- list] -> [g |- list] =
+/ total l1 (append g l1 l2) /
 fn l1 => fn l2 => case l1 of
 | [g |- nil] => l2
 | [g |- cons (X ..) (L ..)] =>
@@ -98,6 +101,7 @@ fn l1 => fn l2 => case l1 of
 % see rm' function.
 
 rec rm : (g:ctx) [g,x:term |-  list] -> [g |- list] =
+% / total l (rm g l) /
 fn l => case l of
 | [g,x:term |-  nil] => [g |- nil]
 | [g,x:term |-  cons x (L .. x)]  =>
@@ -114,6 +118,7 @@ fn l => case l of
 % OR more generally ...
 
 rec rm' : (g:ctx) [g,x:term |-  list] -> [g |- list] =
+/ total l (rm' g l) /
 fn l => case l of
 | [g,x:term |-  nil] => [g |- nil]
 
@@ -129,6 +134,7 @@ fn l => case l of
 
 
 rec fv : (g:ctx) [g |- term] -> [g |- list] =
+/ total t (fv g t)/
 fn t => case t of
 | [g |- const I] => [g |- nil]
 | [g |- #p ..]    => [g |- cons (#p ..) nil]
@@ -169,6 +175,7 @@ just: tp -> opt.
 schema tms = tm ;
 
 rec memb: (g:tms) [g |- tm] -> [g |- env] -> [ |- opt] =
+/ total l (memb e l)/
 fn e => fn l => case l of
 | [g |- empty] => [ |- nothing]
 | [g |- push (E' .. ) T (L .. )] =>
@@ -180,6 +187,7 @@ fn e => fn l => case l of
 
 
 rec typing: (g:tms) [g |- tm] -> [g |- env] -> [ |- opt] =
+% / total e (typing g e)/ 
 fn e => fn l => case e of
 | [g |- #p ..]  =>  memb [g |- #p .. ] l
 

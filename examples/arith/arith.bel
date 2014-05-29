@@ -3,7 +3,7 @@ z : nat.
 s : nat -> nat.
 
 
-rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] = / total x (plus x _ ) / 
+rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =  / trust  /
 fn x => fn y =>  case x of
 | [ |- z]  => y
 | [ |- s U]  =>
@@ -22,8 +22,7 @@ fn x => case x of
      [ |- s V]
 ;
 
-%{
-rec mult : [ |- nat] -> [ |- nat] -> [ |- nat] =
+rec mult : [ |- nat] -> [ |- nat] -> [ |- nat] = / total x (mult x y) / 
 fn x => fn y =>  case x of
 | [ |- z]  => y
 | [ |- s U]  =>
@@ -32,16 +31,18 @@ fn x => fn y =>  case x of
 ;
 
 
-rec mult : [ |- nat] -> [ |- nat] -> [ |- nat] =
-fn x => fn y => case x of
-| [ |- z] => [ |- z]
+rec mult' : [ |- nat] -> [ |- nat] -> [ |- nat] = / total x (mult' x) / 
+fn x => case x of
+| [ |- z] => fn y => [ |- z]
 | [ |- s U] =>
-  let [ |- V] = mult [ |- U] y in
+  fn y =>
+  let [ |- V] = mult' [ |- U] y in
     plus [ |- V] y
 ;
 
 
 rec fact : [ |- nat] -> [ |- nat] =
+/ total x (fact x) /
 fn x => case x of
 | [ |- z] => [ |- s z]
 | [ |- s U] =>
@@ -54,4 +55,3 @@ let y = fact [ |- s (s z)];
 let w = fact [ |- s (s (s z))];
 
 
-}%

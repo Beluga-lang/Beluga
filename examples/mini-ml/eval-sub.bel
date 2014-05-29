@@ -17,6 +17,7 @@ fix : (exp -> exp) -> exp.
 
 % Call-By-Name evaluation
 rec eval : [ |- exp] -> [ |- exp] =
+% / total e (eval e)/
 fn e =>  case e of
 | [ |- z] => [ |- z]
 | [ |- suc E]  =>

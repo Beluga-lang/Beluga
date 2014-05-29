@@ -39,7 +39,8 @@ mlam #p => fn env => case env  of
 ;
 
 
-rec build: (g:tctx)[g |- env] -> [g |- env] -> [arg':target, xve:target |-  target] =
+rec build: (g:tctx)[g |- env] -> [g |- env] -> [arg':target, xve:target |-  target] = 
+% / total l (build g lorig l) /
 fn lorig => fn l => case l of
 | [g |- enil] => [arg', xve |-  tunit]
 | [g |- econs (#p .. ) (Xs .. )] =>

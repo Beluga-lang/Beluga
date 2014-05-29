@@ -86,6 +86,7 @@ fn e1 => fn e2 => case e1 of
 
 rec ceq: (g:equalCtx)
          [g |- equal (T ..) (S ..)] -> [g |- eq (T ..) (S ..)]  =
+/ total e (ceq g t s e)/
 fn e => case e of
 | [g |- #p.2 ..] => [g |- #p.3 ..]
 | [g |- e_r] => ref [g] [g |- _  ]

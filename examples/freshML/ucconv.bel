@@ -45,7 +45,7 @@ fn a => fn b => case a of
 %makeproj return the nth project of pair y
 %makeproj n = tfst( ... (tfst y))
 rec makeproj': [ |- nat]  -> [xenv:target |-  target] =
-/ total n (makeproj' n) / 
+/ total n (makeproj' n ) / 
 fn n => case n of
 | [ |- z] => [xenv:target |-  (tfst xenv)]
 | [ |- suc M] =>
@@ -63,6 +63,7 @@ fn n =>
 
 
 rec remove:(g:ctx)[g,x:term |-  fvlist] -> [g |- fvlist] =
+% / total l (remove g l)/
 fn l => case l of
 | [g,x:term |-  nil] => [g |- nil]
 | [g,x:term |-  cons x (L..x)] => remove[g,x:term |-  L..x]
@@ -73,6 +74,7 @@ fn l => case l of
 
 %Extend the mapping with id function, used for the local variable in lam and let.
 rec e_map : (g:ctx){h:tctx} ([g |- term] -> [h |- target])  ->  [g,x:term |-  term] -> [h,x:target |-  target] =
+% / total e' (e_map g h map e')/
 mlam h => fn map => fn e' => case e' of
    | [g,x:term |-  x] => [h,x:target |-  x]
    | [g,x:term |-  (#p..)] =>
@@ -85,6 +87,7 @@ mlam h => fn map => fn e' => case e' of
 
 rec b_map:(g:ctx)([g,x:term |-  term] -> [xenv:target |-  target]) -> [g |- fvlist] -> [ |- nat] ->
 	  [g,x:term |-  term] -> [xenv:target |-  target] =
+% / total l (b_map g map l )/
 fn map => fn l => fn n => case l of
 | [g |- nil] => (fn e => case e of
 	       |[g,x:term |-  x] => [xenv:target |-  (tsnd xenv)]
@@ -104,6 +107,7 @@ fn map => fn l => fn n => case l of
 
 %Build the environement tuble xenv that will be packed next to a lam. Map should contain the idmapping from x:term to x:target at this stage.
 rec b_env:(g:ctx){h:tctx}( [g |- term] -> [h |- target]) -> [g |- fvlist] -> [h |- target] =
+/ total fvar (b_env g h map fvar)/
 mlam h => fn map => fn fvar => case fvar of
 | [g |- nil] => [h |- tunit]
 | [g |- cons (E..) (Ta..)] =>
@@ -115,6 +119,7 @@ mlam h => fn map => fn fvar => case fvar of
 
 
 rec fvar:(g:ctx) [g |- term] -> [g |- fvlist] =
+% / total e (fvar g e)/
 fn e => case e of
 | [g |- (#p ..)] => [g |- cons (#p ..) nil]
 | [g |- elam (\x.(U..x))] =>

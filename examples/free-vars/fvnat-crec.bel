@@ -21,6 +21,7 @@ something: exp T -> opt.
 schema w = some [t:tp] exp t;
 
 rec free_var : (g:w) [g |- exp (T ..)] -> [g |- opt] =
+/ total e (free_var g t e)/
 fn e =>  case e of
   [g |- z]         => [g |- nothing]
 | [g |- tt]        => [g |- nothing]

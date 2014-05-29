@@ -62,6 +62,7 @@ andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 not_possible : type.
 
 rec values_dont_step : [ |- step M M'] -> [ |- num_value M ] -> [ |- not_possible]=
+/ total v (values_dont_step m m' s v)/
 fn s => fn v => case v of
 | [ |- v_z]   => (case s of [ |- {}] )
 | [ |- v_s V] =>
@@ -71,6 +72,7 @@ fn s => fn v => case v of
 
 
 rec det : [ |- steps_to_terms T T1 T2] -> [ |- equal T1 T2] =
+ % / total s (det t t1 t2 s)/
 fn s => case s of
 
 | [ |- andalso (e_succ D)        (e_succ F)]   =>

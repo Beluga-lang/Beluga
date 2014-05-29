@@ -5,6 +5,7 @@
 schema ctx = some [a:o] block u: assume a , _t:pf a + i ;
 
 rec s_sound : (g:ctx)[g |- solve (A ..)] -> [g |- pf (A ..)] =
+/ total s (s_sound g a s)/
 fn s => case s of
 | [g |- s_and (S2 ..) (S1 ..)] =>
   let [g |- D1 ..] = s_sound [g |- S1 ..] in
@@ -18,6 +19,7 @@ fn s => case s of
      [g |- D .. (#p.2 ..)]
 
 and i_sound : (g:ctx)[g |- focus (A ..) (P ..)] -> [g, u:pf (A ..) |-  pf (atom (P ..))] =
+/ total f (i_sound g a p f)/
 fn f => case f of
 | [g |- i_andl (I1 ..)] =>
   let [g,u:pf _  |-  D1 .. u] = i_sound [g |- I1 ..] in

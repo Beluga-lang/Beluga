@@ -6,6 +6,7 @@ schema ctx = block x:term, _t:pred x x;
 
 
 rec eq1: (g:ctx) [g |- pred (M ..) (N ..)] -> [g |- -->* (M ..) (N ..)] =
+% / total r (eq1 g m n r) /
  fn r => case r of
 | [g |- #p.2 ..] => [g |- id1]
 | [g |- beta (\x.\u. R1 .. x u) (R2 ..)] =>
@@ -48,6 +49,7 @@ rec eq1: (g:ctx) [g |- pred (M ..) (N ..)] -> [g |- -->* (M ..) (N ..)] =
 
 
 rec eq2 : (g:ctx) [g |- --> (M ..) (N ..)] -> [g |- pred (M ..) (N ..)] =
+% / total r (eq2 g m n r) /
 fn r => case r of
  | [g |- beta1] : [g |- (--> (app (lam \x. M1 .. x) (M2 ..)) (M1 .. (M2 ..)))]  =>
   let [g,b:block x:term,_t:pred x x |-  I1 .. b] =
@@ -78,6 +80,7 @@ fn r => case r of
 
 
 rec eq3:(g:ctx) [g |- -->* (M ..) (N ..)] -> [g |- pred* (M ..) (N ..)] =
+% / total r (eq3 g m n r) /
 fn r => case r of
 | [g |- id1] => [g |- id*]
 | [g |- step1 (R1 ..) (R2* ..)] =>
@@ -90,6 +93,7 @@ fn r => case r of
 % If M =>* N then M -->* N.
 
 rec eq4 : (g:ctx) [g |- pred* (M ..) (N ..)] -> [g |- -->* (M ..) (N ..)] =
+% / total r (eq4 g m n r) /
 fn r => case r of
 | [g |- id*] => [g |- id1]
 | [g |- next (R1 ..) (R2* ..)] =>
@@ -107,6 +111,7 @@ we now proceed to prove properties for the empty context.
 % If M <=> N then M <-> N.
 
 rec eq5 : [ |- pred= M N] -> [ |- <-> M N] =
+% / total r (eq5 m n r) /
 fn r => case r of
 | [ |- reduce R*] =>
   let [ |- S*] = eq4 [ |- R*] in
@@ -126,6 +131,7 @@ fn r => case r of
 % If M <=> N then N <=> M.
 
 rec sym_pconv: [ |- pred= M N]  ->  [ |- pred= N M] =
+% / total r (sym_pconv m n r) /
 fn r => case r of
 | [ |- reduce R*] => [ |- expand R*]
 | [ |- expand R*] => [ |- reduce R*]
@@ -152,7 +158,7 @@ fn r => case r of
 
 
 rec eq6 : [ |- <-> M N]  -> [ |- pred= M N] =
-
+% / total c (eq6 m n c) /
 fn c => case c of
 | [ |- refl]   => [ |- reduce id*]
 | [ |- sym C1] =>

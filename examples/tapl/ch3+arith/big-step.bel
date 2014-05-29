@@ -54,6 +54,7 @@ Lemma: Value Soundness
 }%
 
 rec vsound : [ |- eval E V] -> [ |- value V] =
+/ total d (vsound e v d)/
 fn d => case d of
 | [ |- ev_true]   => [ |- v_true]
 | [ |- ev_false]  => [ |- v_false]
@@ -77,6 +78,7 @@ fn d => case d of
 ;
 
 rec vself : [ |- value V] -> [ |- eval V V] =
+% / total v (vself _ v)/
 fn v => case v of
 | [ |- v_true]  => [ |- ev_true]
 | [ |- v_false] => [ |- ev_false]
@@ -98,6 +100,7 @@ THEOREM:
 }%
 
 rec big_to_small : [ |- eval M V] -> [ |- multi_step M V] =
+/ total d (big_to_small m v d)/
 fn d => case d of
 | [ |- ev_true]  => [ |- ms_ref]
 | [ |- ev_false] => [ |- ms_ref]

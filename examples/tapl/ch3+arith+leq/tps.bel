@@ -37,6 +37,7 @@ t_leq    : oft N nat -> oft M nat
 }%
 
 rec tps : [ |- step M N] -> [ |- oft M T] -> [ |- oft N T] =
+/ total s (tps m n t s)/
 fn s => fn d => case s of
 | [ |- e_switch_true] =>
   let [ |- t_switch D D1 D2] = d in [ |- D1]

@@ -63,6 +63,7 @@ andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
 
 rec det : [ |- steps_to_terms T T1 T2] -> [ |- equal T1 T2] =
+% / total s (det t t1 t2 s) /
 fn s => case s of
 | [ |- andalso (e_switch_true)  (e_switch_true)]  =>  [ |- ref]
 | [ |- andalso (e_switch_false) (e_switch_false)] =>  [ |- ref]
@@ -93,6 +94,7 @@ m_ref  : mstep M M.   % Reflexive
 }%
 
 rec lemma_val_2 : [ |- value N] -> [ |- mstep N M] -> [ |- equal M N] =
+/ total v (lemma_val_2 n m v)/
 fn v => fn s => case v of
 | [ |- v_true] =>
     let [ |- m_ref]  = s in
@@ -103,6 +105,7 @@ fn v => fn s => case v of
       [ |- ref]
 ;
 rec lemma_val_1 : [ |- value N] -> [ |- mstep N M] -> [ |- equal N M] =
+/ total v (lemma_val_1 n m v)/
 fn v => fn s => case v of
 | [ |- v_true] =>
     let [ |- m_ref]  = s in
@@ -118,6 +121,7 @@ fn v => fn s => case v of
 
 absurd : type.
 rec values_dont_step : [ |- value N] -> [ |- step N M] -> [ |- absurd] =
+/ total v (values_dont_step n m v )/
 fn v => fn s => case v of
 | [ |- v_true] => impossible s in []
 | [ |- v_false] => impossible s in [];
@@ -181,6 +185,7 @@ Admissibility of transitivity for mstep:
 }%
 
 rec m_trans : [ |- mstep M N'] -> [ |- mstep N' N] -> [ |- mstep M N] =
+/ total ms1 (m_trans m n' n ms1 ms2)/
 fn ms1 => fn ms2 => case ms1 of
 | [ |- m_ref]  => ms2
 | [ |- m_step  S1 MS1] =>
@@ -190,6 +195,7 @@ fn ms1 => fn ms2 => case ms1 of
 
 
 rec sound : [ |- mstep M N] -> [ |- multi_step M N] =
+/ total ms (sound m n ms)/
 fn ms => case ms of
 | [ |- m_ref] => [ |- ms_ref]
 | [ |- m_step S MS] =>
@@ -199,6 +205,7 @@ fn ms => case ms of
 
 
 rec complete : [ |- multi_step M N] -> [ |- mstep M N] =
+/ total ms (complete m n ms)/
 fn ms =>  case ms of
 | [ |- ms_ref] =>
     [ |- m_ref]
@@ -225,6 +232,7 @@ rec mstep_switch :
   {T2:[ |- term]}{T3:[ |- term]}
   [ |- multi_step T T'] ->
   [ |- multi_step (switch T T2 T3) (switch T' T2 T3)] =
+/ total ms (mstep_switch _ _ _ _ ms)/
 mlam T2 => mlam T3 =>
 fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
@@ -246,6 +254,7 @@ fn ms => case ms of
 }%
 
 rec terminate : {M:[ |- term]} [ |- steps_to_val M] =
+/ total m (terminate m)/
 mlam M => case [ |- M] of
 | [ |- true] =>
    [ |- result ms_ref v_true]

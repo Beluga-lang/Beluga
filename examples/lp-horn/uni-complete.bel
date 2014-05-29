@@ -5,6 +5,7 @@
 schema c_ctx = some [a:o] block u: assume a, v:pf a , _t:atm v ;
 
 rec cmpcs: {g:c_ctx}[g |- can (A ..) (D ..) ] -> [g |- solve (A ..) ] =
+% / total cn (cmpcs g a d cn)/
 mlam g => fn cn => case cn of
 |[g |- can_andi (CN2 ..) (CN1 ..)] =>
    let [g |- S1..] = cmpcs [g] [g |- CN1 ..] in
@@ -29,6 +30,7 @@ mlam g => fn cn => case cn of
 
 and cmpai: {g:c_ctx}{E:[g |- pf (B ..)]}[g |- atm (E ..)] ->
 	       [g, q:p, u:focus (B ..) q  |-  solve (atom q)] =
+%/ total at (cmpai g a at)/
 mlam g => mlam D => fn at => case [g |- D .. ] of
   | [g |- #p.2 ..] => [g,q,u |-  s_atom u (#p.1 ..)]
   | [g |- andel (D1 .. )] =>

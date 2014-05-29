@@ -30,6 +30,7 @@ v_suc : val nat -> val nat.
 
 
 rec equal : [ |- val nat] -> [ |- val nat] -> [ |- val bool] =
+/ total x (equal x)/
 fn x => fn y =>
   case x of
     [ |- v_z]  =>
@@ -47,6 +48,7 @@ fn x => fn y =>
 
 
 rec eval : [ |- exp T] -> [ |- val T] =
+% / total e (eval e)/
  fn e => case e of
   | [ |- tt] => [ |- v_tt]
 

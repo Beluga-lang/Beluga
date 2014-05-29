@@ -31,7 +31,7 @@ datatype Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
 ;
 
 % Algorithmic Equality in context tctx
-datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype =
+datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratify 2 =
 | Ae_v : % {#p:[g |- term]}
              Aeq [g |- #p ..] [g |- #p..]
 | Ae_a : Aeq [g |- E1 ..] [g |- F1 .. ] -> Aeq [g |- E2 ..] [g |- F2 ..]
@@ -42,7 +42,7 @@ datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype =
 
 % Declarative Equality
 
-datatype Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype =
+datatype Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype  =
 | De_v : Deq [g |- #p ..] [g |- #p..]
 | De_l : Deq [g,x:term |-  T ..x] [g,x:term |-  T'..x]
      -> Deq [g |- lam (\x. T .. x)] [g |- lam (\x. T' .. x)]
@@ -72,6 +72,7 @@ de_t: deq T R -> deq R S
 % To keep the translation simple, we first translate contextual objects
 % [g |- aeq (M ..) (N ..) to Aeq' objects within the same context g.
 rec atrans_c :(g:aCtx) [g |- aeq (M ..) (N ..)] -> Aeq' [g |- M ..] [g |- N ..] =
+/ total ae (atrans_c g m n ae) /
 fn ae => case ae of
 | [g |- #p.2 ..] => Ae_v' % [g |- #p ..]
 | [g |- ae_a (D1 ..) (D2 ..)] =>
@@ -81,6 +82,7 @@ fn ae => case ae of
 ;
 
 rec atrans_s :(g:aCtx)  Aeq' [g |- M ..] [g |- N ..] -> [g |- aeq (M ..) (N ..)] =
+/ total ae (atrans_s g m n ae ) /
 fn ae => case ae of
 | Ae_v' =>
   let ae : Aeq' [g |- #p.1 ..] [g |- #p.1 ..] = ae in [g |- #p.2 ..]
@@ -116,6 +118,7 @@ datatype TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
 rec aeq_str: (h:aCtx)(g:tctx) Aeq' [h |- M ..] [h |- N ..] ->
             TRel [g |- M' ..] [h |- M ..] -> TRel  [g |- N' ..] [h |- N ..] ->
             Aeq [g |- M' ..] [g |- N' ..] =
+% / total tr1 (aeq_str h g m n m' n' ae' tr1 )/
 fn ae' => fn tr1 => fn tr2 => case tr1  of
 | TRvar0 [h] =>
    let Ae_v'  = ae' in
@@ -150,6 +153,7 @@ rec aeq_wk: (h:aCtx)(g:tctx)  Aeq [g |- M' ..] [g |- N' ..] ->
             TRel [g |- M' ..] [h |- M ..] -> TRel  [g |- N' ..] [h |- N ..] ->
             Aeq' [h |- M ..] [h |- N ..]
             =
+% / total tr1 (aeq_wk h g m' n' m n ae tr1) /
 fn ae => fn tr1 => fn tr2 => case tr1  of
  | TRvar0 [h] =>
    let Ae_v = ae in

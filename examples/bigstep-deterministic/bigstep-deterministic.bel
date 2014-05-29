@@ -47,7 +47,7 @@ fn d => fn f => case f of
 ;
 
 rec deterministic : (g:evctx) [g |- eval (M ..) (R ..)] -> [g |- eval (M ..) (R' ..)]
--> [g |- eq (R ..) (R' ..)] =
+-> [g |- eq (R ..) (R' ..)] =  / total d (deterministic g m r r' d)/
 fn d => fn f =>
 case d of
 | [g |- eval_app2 (D1 ..) (NL ..) (D2 ..)] =>

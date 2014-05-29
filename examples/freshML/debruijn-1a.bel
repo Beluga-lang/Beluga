@@ -38,6 +38,7 @@ schema ctx = value T + tp;
 schema tctx = tp;
 
 rec vhoas2db : {g:ctx}[g |- value (S ..)] ->  [g |- exp' (S ..)] =
+% / total v (vhoas2db g s v) /
 mlam g => fn v =>  case v of
  | [h,x:value (T ..)  |-  x] => [h, x:value (T ..) |-  one (T ..)]
 
@@ -60,6 +61,7 @@ mlam g => fn v =>  case v of
 
 
 and hoas2db : {g:ctx} [g |- exp (T ..)] ->  [g |- exp' (T ..) ] =
+% / total e (hoas2db _ _ e ) /
 mlam g => fn e =>  case e of
  | [g |- app (E1 .. ) (E2 .. )] =>
    let [g |- F1 ..] = hoas2db [g] [g |- E1 ..]  in

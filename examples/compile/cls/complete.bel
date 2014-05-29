@@ -10,6 +10,7 @@
 rec append : [ |- mstep (st Ks P S)  (st Ks' P' S')]
            -> [ |- mstep (st Ks' P' S') (st Ks'' P'' S'')]
 	   -> [ |- mstep (st Ks P S) (st Ks'' P'' S'')] =
+/ total c (append ks p s ks' p' s' ks'' p'' s'' c _)/
 fn c =>  fn c' => case c of
 | [ |- id_step] =>  c'
 % Rewrote definition of to s.t. it is clear what a state is,
@@ -37,6 +38,7 @@ fn c =>  fn c' => case c of
 rec subcomp : {Ks:[ |- envstack]}{P:[ |- program]}{S: [ |- env]}
               [ |- feval K F W] ->
               [ |- mstep (st (push Ks K) (prog (ev F) P) S) (st Ks P (vcons S  W))] =
+/ total d (subcomp _ _ _ _ _ _ d) /
 mlam Ks => mlam P => mlam S =>
 fn d => case d of
   [ |- fev_1]  =>  [ |- to c_1 id_step]
@@ -133,6 +135,7 @@ fn d => case d of
 
 
 rec cev_complete : [ |- feval K F W] -> [ |- ceval K F W] =
+/ total d (cev_complete k f w d) /
  fn d =>
   let [ |- C] = subcomp [ |- emptys ] [ |- done ] [ |- empty ] d in
     [ |- run C]

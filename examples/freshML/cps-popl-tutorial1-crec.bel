@@ -30,6 +30,7 @@ cthrow : ccont A -> cvalue A -> contra.
 schema ctx = some [a:tp] block x:value a, _t:cvalue a ;
 
 rec cps : (g:ctx) [g |- value A] -> [g |- cvalue A] =
+/ total v (cps g a v) /
 fn v =>  case v of
 | [g |- #p.1 ..] =>  [g |- #p.2 ..]
 
@@ -41,6 +42,7 @@ fn v =>  case v of
 
 
 and cpse : (g:ctx)[g |- exp A] -> [g,k:ccont A |-  contra] =
+/ total e (cpse g a e) /
 fn e => case e of
 | [g |- ret (V .. )] =>
   let [g |- V' ..] = cps [g |- V .. ] in

@@ -11,6 +11,7 @@ schema tctx = term;
 % Transitivity of multi-step reduction
 rec appd: (g:tctx) [g |- -->* (M ..) (M'..)]  ->  [g |- -->*  (M' ..) (M'' ..)]
         ->  [g |- -->* (M ..) (M'' ..)] =
+% / total r (appd g m m' m'' r) /
 fn r => fn s => case r of
 | [g |- id1] => s
 | [g |- step1 (R1 ..) (R2* ..)] =>
@@ -22,6 +23,7 @@ fn r => fn s => case r of
 % Multi-step reduction is a congruence
 rec lm1* : (g:tctx) [g,x:term |-  -->* (M .. x) (M' .. x)]
       ->  [g |- -->* (lam (\x. M .. x)) (lam (\x. M' .. x))] =
+% / total r (lm1* g m m' r) /
 fn r => case r of
 | [g,x:term |-  id1] => [g |- id1]
 | [g,x:term |-  step1 (R1 .. x) (R2* .. x)] =>
@@ -32,6 +34,7 @@ fn r => case r of
 
 rec apl1* :(g:tctx) {M2:[g |- term]} [g |- -->* (M1 ..) (M1' ..)]
                  ->  [g |- -->*  (app (M1 ..) (M2 ..)) (app (M1' ..) (M2 ..))] =
+% / total r (apl1* g m1 m1' m2 r) /
 mlam M2 => fn r => case r of
 | [g |- id1] => [g |- id1]
 | [g |- step1 (R1 ..) (R2* ..)] =>
@@ -41,6 +44,7 @@ mlam M2 => fn r => case r of
 
 rec apr1* :(g:tctx){M1:[g |- term]} [g |- -->* (M2 ..) (M2' ..)]
                  ->  [g |- -->*  (app (M1 ..) (M2 ..)) (app (M1 ..) (M2' ..))] =
+% / total r (apr1* g m2 m2' m1 r) /
 mlam M1 => fn r => case r of
 | [g |- id1] => [g |- id1]
 | [g |- step1 (R1 ..) (R2* ..)] =>

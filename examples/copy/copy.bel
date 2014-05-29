@@ -18,6 +18,7 @@ schema tctx = some [t:tp] term t;
 % total ([g] [g |- M ..])  (copy [g] [g |- M ..] ).
 
 rec copy : {g:tctx} [g |- term (T ..)] -> [g |- term (T ..)] =
+/ total e (copy _ _ e ) /
 mlam g => fn e => case e of
 
 | [g |- z]      => [g |- z]

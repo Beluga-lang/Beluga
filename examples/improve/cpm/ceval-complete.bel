@@ -27,6 +27,7 @@
 rec ccp : [ |- eval E V]
        -> [ |- mstep (st K (return V)) (answer W)]
        -> [ |- mstep (st K (ev E)) (answer W)] =
+/ total d (ccp e v k w d s)/ 
 fn d => fn s => case d of
   [ |- ev_z] => let [ |- S'] = s in [ |- << S' st_z]
 
@@ -105,6 +106,7 @@ fn d => fn s => case d of
 
 
 rec ceval_complete : [ |- eval E V] -> [ |- ceval E V] =
+/ total (ceval_complete) /
 fn d =>
   let [ |- D] : [ |- eval E V] = d in
   let [ |- C] = ccp [ |- D]  [ |- << stop st_init] in

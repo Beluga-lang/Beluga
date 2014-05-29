@@ -32,6 +32,7 @@ schema ctx = block x:exp, x':cval , _t:(cval -> cexp) ;
 %
 
 rec cmp : {g:ctx} [g |- exp] -> [g,x:cval |-  cexp] -> [g |- cexp] =
+/ total e (cmp g e k) /
 mlam g => fn e => fn k => let [g,x:cval |-  K .. x] = k in
 case e of
 | [g |- #p.1 ..] => [g |- ((#p.3 .. ) (#p.2 ..))]

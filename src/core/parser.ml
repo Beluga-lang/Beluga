@@ -382,6 +382,7 @@ GLOBAL: sgn;
       [
         "total"; x = OPT total_order ; "("; r = SYMBOL ; args = LIST0 call_args ;  ")"  ->
             Comp.Total (_loc, x, Id.mk_name (Id.SomeString r), args)
+      | "trust" -> Comp.Trust _loc
       ]
     ]
 ;
@@ -390,30 +391,22 @@ GLOBAL: sgn;
     [
       [
 	"#positive" -> Sgn.Positivity
-      | "#stratify" ; k = OPT stratify_arg ->  (Sgn.Stratify k)
+      | "#stratify" ; k = OPT stratify_arg ->  (Sgn.Stratify (_loc, k))
       (* | "#stratify" ; x = num stratify_order ; "(";  r = UPSYMBOL; args = LIST0 call_args ;  ")"    ->  *)
       (*        Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args) *)
       ]
     ]
 ;
 
-   stratify_arg:
+  stratify_arg:
     [
       [
-	k = INTLIT -> k
-	
+	k = INTLIT -> k	
       ]
     ]
 
 ;
 
-(*   stratify_order: *)
-(*     [ *)
-(*       [ *)
-(*         x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x)) *)
-(*       ] *)
-(*     ] *)
-(* ; *)
 
   total_order:
     [

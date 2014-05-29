@@ -23,6 +23,7 @@ letv: exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 
 rec add : [ |- exp nat] -> [ |- exp nat] -> [ |- exp nat] =
+% / total a (add a)/
 fn a => fn b =>
  case a of
    [ |- z]  => b
@@ -32,6 +33,7 @@ fn a => fn b =>
 ;
 
 rec logical_and : [ |- exp bool] -> [ |- exp bool] -> [ |- exp bool] =
+% / total a (logical_and a)/
 fn a => fn b =>
  case a of
    [ |- tt] => b

@@ -38,6 +38,7 @@ schema tctx = tp + some [t:tp] block x:exp,u:type_of x t, v:step x x , _t:notLam
 % Prove: If G |- type_of M T  and  G |- step M M' then  G |- type_of M' T
 rec tps': (g:tctx)[g |- type_of (M ..) (T ..)] -> [g |- step (M ..) (N ..)]
          -> [g |- type_of (N ..) (T ..)] =
+/ total s (tps' _ _ _ _ d s)/
 fn d => fn s => case s of
 | [g |- s_lam \x.\v. \n. S .. x v n] =>
   let [g |- tof_lam \x.\u. D .. x u] = d in
@@ -70,6 +71,7 @@ fn d => fn s => case s of
 % Prove: If G |- type_of M (T ..)  and  G |- step M M' then  G |- type_of M' (T ..)
 rec tps: (g:tctx)[g |- type_of (M ..) (T ..)] -> [g |- step (M ..) (N ..)]
          -> [g |- type_of (N ..) (T ..)] =
+% / total d (tps _ _ _ _ d s)/
 fn d => fn s => case d of
 | [g |- tof_lam \x.\u. D .. x u] =>
   let [g |- s_lam \x.\v. \n. S .. x v n] = s in

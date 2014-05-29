@@ -19,7 +19,6 @@ schema ctx = exp;
 
 rec vhoas2db : {g:ctx}{#p:[g |- exp]}  [ |- exp'] =    
  / total p (vhoas2db g p ) /
-% / total p (vhoas2db g p ) /
 mlam g => mlam #p =>  case [g |- #p ..] of
    % f [h] _
  | [h,x:exp |- x] => [ |- one ]

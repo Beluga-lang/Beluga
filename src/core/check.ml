@@ -624,8 +624,8 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
     | Const (loc,prog) ->
         if !Total.enabled then
           if (Comp.get prog).Comp.total then
-            (print_string ("Call to " ^ R.render_cid_prog prog ^
-                             " is known to  be total\n");
+            ((* print_string ("Call to " ^ R.render_cid_prog prog ^
+                             " is known to  be total\n"); *)
              (None,(Comp.get prog).Comp.typ, C.m_id))
           else
             raise (Error (loc, MissingTotal prog))

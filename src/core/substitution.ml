@@ -41,7 +41,7 @@ module LF = struct
    *)
   let invShift = Dot (Undef, id)
 
-  let shiftComp n s2 = match (n, s2) with
+  let rec shiftComp n s2 = match (n, s2) with
     | (0,s) -> s
     | (n,EmptySub) -> raise (NotComposable "Shift, EmptySub")
     | (n,Undefs) -> Undefs

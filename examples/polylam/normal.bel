@@ -42,7 +42,7 @@ schema ctx = some [t:tp] block x:exp t, _t:neutral t; % Q: why small T?
 rec normal2exp : (g: ctx) [g |- normal T] -> [g |- exp T] =
 / total e (normal2exp e) /
 fn e => case e of
-| [g |- neut (M..)] => neutral2exp[g |- M..]
+| [g |- neut (M..)] => neutral2exp [g |- M..]
 
 | {S : [g,x:neutral T2 |-  normal T1]} % we specify the type of S to help the type-checker
   [g |- lam' \x.S..x] => let [g,b: block x:exp T, _t:neutral T |-  M..b.1] =

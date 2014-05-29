@@ -47,10 +47,12 @@ let _ = Error.register_printer
 	  Format.fprintf ppf "Positivity checking of constructor %s fails.\n" n
 	| NoStratify n -> 
 	  Format.fprintf ppf "Stratification checking of constructor %s fails.\n" n
+
 	| NoStratifyOrPositive n ->
 	  Format.fprintf ppf "Stratification or positivity checking of datatype %s fails.\n" n
 	| TotalArgsError f ->
 	  Format.fprintf ppf "Totality declaration for %s takes too many arguments.\n" (R.render_name f)
+
     )
   )
 
@@ -356,7 +358,7 @@ and recSgnDecl d =
           let i''                = Monitor.timer ("Function Abstraction", fun () ->
 						    Abstract.exp (Int.Comp.Syn (loc, i'))) in
           let _                  = Monitor.timer ("Function Check", fun () ->
-						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
+						    Check.Comp.check None cD  cG i'' (tau', C.m_id)) in
 
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
@@ -393,7 +395,8 @@ and recSgnDecl d =
                                 P.expChkToString cD cG i' ^ "\n") in
 
           let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp i') in
-          let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
+          let _       = Monitor.timer ("Function Check", fun () ->
+					 Check.Comp.check None cD  cG i'' (tau', C.m_id)) in
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
             let _x = Comp.add (fun _ -> Comp.mk_entry x tau' false v []) in
@@ -460,18 +463,7 @@ and recSgnDecl d =
 
 
               (* print_string ( "Abstracted elaborated function type " ^ f.string_of_name ^ *)
-              (*               " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" ) ; *)
-
-	      (*calculate the number of args of the function*)
-	      let rec calc_args tau0 = 
-		match tau0 with 
-		  | Int.Comp.TypBase  _ -> 0
-		  | Int.Comp.TypArr   (_tau1, tau2) ->  calc_args tau2 + 1
-		  | Int.Comp.TypPiBox (_, tau2)  -> calc_args tau2 + 1
-		  | _  -> 0
-	      in 
-	      let k' = calc_args tau' in
-	     
+              (*               " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" ) ; *)    
 
               let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
               let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
@@ -485,24 +477,19 @@ and recSgnDecl d =
 		      () 
 		  | Some (Ext.Comp.Trust _) -> ()
                   | Some t ->
-			(*compare the number of args of the function and the args of the total declaration *)
-			(* declaration should not have more agrs than the function*)
-		    let Ext.Comp.Total (loc', _order, f', args) = t in
-		    if (List.length args > k') then raise (Error (loc', TotalArgsError f')) 
+		    if !Total.enabled then 
+		      ((*print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
+	   	      Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
 		    else 
-		      (if !Total.enabled then 
-			      (* (print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
-	   		  Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t))
-		       else 
-			  (if m = 1 then 
-			      (Coverage.enableCoverage := true;
-			       Total.enabled := true;
-				   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
-			       Total.extend_dec (Total.make_dec f tau' (mk_total_decl f t)))
-			   else			  
-			      raise (Error (loc, MutualTotalDeclAfter f))
-			  ))
-                 end ;
+		      (if m = 1 then 
+			  (Coverage.enableCoverage := true;
+			   Total.enabled := true;
+			   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
+			   Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
+		       else			  
+			  raise (Error (loc, MutualTotalDeclAfter f))
+		      )
+                end ;
 		 let (cG, vars, n_list) = preprocess lf (m+1) in
                  (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
 
@@ -542,7 +529,9 @@ and recSgnDecl d =
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
 
           let _       = Monitor.timer ("Function Check", fun () ->
-                                         Check.Comp.check cD  cG e_r' (tau', C.m_id)
+					    Check.Comp.check
+					      (Total.get_order_for f)
+					      cD cG e_r' (tau', C.m_id)
                                       ) in
              (e_r' , tau')
         in

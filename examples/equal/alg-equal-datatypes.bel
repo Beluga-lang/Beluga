@@ -46,7 +46,7 @@ mlam g => mlam E => case [g |- E ..] of
 % Transitivity for Aeq is admissible
 rec trans : (g:tctx) Aeq [g |- E ..] [g |- F ..] -> Aeq [g |- F ..] [g |- L ..] ->
             Aeq [g |- E ..] [g |- L ..] =
-/ total e (trans g _ _ _ e) / 
+/ total e (trans g _ _ _ e _) / 
 fn e => fn d => case e of
 | Ae_v  => let Ae_v  = d in Ae_v
 | Ae_a f1 f2 =>

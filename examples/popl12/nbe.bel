@@ -46,7 +46,7 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype  #stratify  =
 ;
 
 rec weak_neut : (g:ctx)(h:ctx) Extends [g] [h] -> [g |- neut A] -> [h |- neut A] =
-/ total e (weak_neut g h a e) /
+/ total e (weak_neut g h a e r) /
 fn e => fn r => case e of
 | Zero => r
 | Succ [h] e' => let [h |- R ..] = weak_neut e' r in [h,x:neut _ |-  R ..]
@@ -80,9 +80,8 @@ rec eval : (g:tctx)(h:ctx)
            [g |- tm S] ->
            ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
            -> Sem [h] [ |- S]  =
-/ total t (eval g h s t) / 
+/ total t (eval g h s t _) / 
 fn t => fn s =>
-let (s : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])) = s in
 case t of
 | [g |- #p .. ]            : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p .. ])
 | [g |- lam (\x. E .. x) ] : [g |- tm (arr A B)] =>

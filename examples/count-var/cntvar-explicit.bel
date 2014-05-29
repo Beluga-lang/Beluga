@@ -20,7 +20,7 @@ schema expCtx = some [t:tp] exp t;
 
 
 rec plus : [ |- exp nat] -> [ |- exp nat] -> [ |- exp nat] =
-/ total x (plus x) /
+/ total x (plus x y) /
 fn x => fn y =>
  (case x of
     [ |- z]                           : [ |- (exp nat)] => y
@@ -61,13 +61,13 @@ mlam g => mlam T => mlam TT => fn e =>
 
       [g,x: exp T'] letv T1 T2 (U1 .. x) (\y . (U2 .. x y)) : (exp T2)[g, x:exp T'] =>
 
-          plus (cntV [g]           < . T' >    < . T1 >    ([g,x]   (U1 .. x)))
-               (cntV [g, y:exp T1] < . T' >    < . T2 >    ([g,y,x] (U2 .. x y)))
+          plus (cntV [g]           [ . T' ]    [ . T1 ]    ([g,x]   (U1 .. x)))
+               (cntV [g, y:exp T1] [ . T' ]    [ . T2 ]    ([g,y,x] (U2 .. x y)))
 
    | {T'::tp[ ]} {U::(exp nat)[g, x:exp T']} {W::(exp nat)[g, x:exp T']}
      [g,x : exp T'] add (U .. x) (W .. x)                   : (exp nat)[g, x: exp T'] =>
-          plus (cntV [g] < . T' > < . nat > ([g,x] (U .. x)))
-               (cntV [g] < . T' > < . nat > ([g,x] (W .. x)))
+          plus (cntV [g] [ . T' ] [ . nat] ([g,x] (U .. x)))
+               (cntV [g] [ . T' ] [ . nat] ([g,x] (W .. x)))
 }%
 ;
 

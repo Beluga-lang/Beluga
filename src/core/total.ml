@@ -12,6 +12,7 @@ type error =
   | WrongArgNum  of Id.cid_comp_typ * int
   | RecCallIncompatible of LF.mctx * Comp.args * Comp.ctyp_decl
   | NotImplemented of string
+  | TooManyArg of Id.name 
 
 exception Error of Syntax.Loc.t * error
 
@@ -19,6 +20,9 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) -> 
     Error.print_with_location loc (fun ppf ->
       match err with 
+	| TooManyArg f -> 
+	    Format.fprintf ppf "Totality declaration for %s has too many arguments.\n"
+	      (R.render_name f)
 	| RecCallIncompatible (cD, x, Comp.WfRec (f, args, _tau)) -> 
 	    (match x , args with 
 	       | _ , [] -> 
@@ -63,28 +67,41 @@ let sub_smaller phat s = match phat , s with
       (n-n') < n'
   | _ -> false
 
-let smaller_meta_obj cM = match  cM with
+let rec smaller_meta_obj cM = match  cM with
   | Comp.MetaCtx (_ , LF.DDec (_ , _ )) -> true
-  | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
+  | Comp.MetaObj (l, phat, LF.Root (l', h, spine)) ->
       (match h with
         | LF.Const _ -> true
         | LF.BVar _ -> true
-	| LF.PVar (_, s) -> (print_string "Checking whether pvar is smaller (0)\n";
-	    sub_smaller phat s)
+	| LF.PVar (_, s) -> 
+	    (print_string "Checking whether pvar is smaller (0)\n";
+	     match spine with 
+	       | LF.Nil -> sub_smaller phat s
+	       | _ -> true)
+	| LF.Proj (h, _ ) -> 
+	    (print_string "Checking whether proj is smaller (1)\n";
+	    smaller_meta_obj (Comp.MetaObj (l, phat, LF.Root(l', h, spine))))
 	| LF.MVar (_, s) -> sub_smaller phat  s
         | _ -> false)
-  | Comp.MetaObjAnn (_, cPsi, LF.Root (_, h, _spine)) ->
+  | Comp.MetaObjAnn (l, cPsi, LF.Root (l', h, spine)) ->
       (match h with
         | LF.Const _ -> true
         | LF.BVar _ -> true
-	| LF.PVar (_, s) -> (print_string "Checking whether pvar is smaller (1)\n";
-			     sub_smaller (Context.dctxToHat cPsi) s)
+	| LF.PVar (_, s) -> 
+	    (print_string "Checking whether pvar is smaller (1)\n";
+	     match spine with 
+	       | LF.Nil -> sub_smaller (Context.dctxToHat cPsi) s
+	       | _ -> true)
+	| LF.Proj (h, _ ) -> 
+	    (print_string "Checking whether proj is smaller (1)\n";
+	    smaller_meta_obj (Comp.MetaObjAnn (l, cPsi, LF.Root(l', h, spine))))
 	| LF.MVar (_, s) -> sub_smaller (Context.dctxToHat cPsi) s
 	| _ -> false
       )
   | Comp.MetaParam (_, phat, h ) ->
       match h with 
-	| LF.PVar (_, s) -> sub_smaller phat s
+	| LF.PVar (_, s) -> 
+	    (print_string "Checking whether proj is smaller (1)\n";sub_smaller phat s)
 	| _ -> false
 (*  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
@@ -93,7 +110,7 @@ let smaller_meta_obj cM = match  cM with
 
 let rec struct_smaller patt = match patt with
   | Comp.PatMetaObj (loc', mO) -> 
-      smaller_meta_obj mO 
+      smaller_meta_obj mO
   | Comp.PatConst (_, _, _ ) -> true
   | Comp.PatVar (_, _ ) -> false
   | Comp.PatPair (_, pat1, pat2 ) ->
@@ -117,18 +134,91 @@ let order_to_string order = match order with
   | None -> " _ " 
   | Some (Order.Arg x) -> string_of_int x
 
-let make_dec f tau (order,args) =
+let make_dec loc f tau (order,args) =
+  let n = List.length args in 
+  let rec valid_args tau n = match tau, n with 
+    | Comp.TypPiBox (_ , tau), 1 -> true
+    | Comp.TypArr   (_ , tau), 1 -> true
+    | Comp.TypPiBox (_ , tau), n -> valid_args tau (n-1)
+    | Comp.TypArr   (_ , tau), n -> valid_args tau (n-1)
+    | _ -> false
+  in 
 ((* print_string ("Total declaration for " ^ 
 R.render_name f ^ " : " ^ "total in position " ^ order_to_string order ^ 
 " in total number of args " ^ string_of_int (List.length args) ^ "\n");*)
-  { name = f;
-    args = args;
-    typ  = tau;
-    order = order
-  })
+  if n = 0 || valid_args tau n then 
+      { name = f;
+	args = args;
+	typ  = tau;
+	order = order
+      }
+    else 
+      raise (Error (loc, TooManyArg f))
+)
 
 let extend_dec l =
 mutual_decs := l::!mutual_decs
+
+(* Check whether the argument specified by i 
+   corresponds to a given totality order 
+
+      i = Var x then  Order.Arg x
+      i = Pair(Var x, Var y) then Order.Lex / Order.Sim  
+         where x and y are in the specified order.   
+
+*)
+let satisfies_order cD cG i = 
+  let total_decs = !mutual_decs in 
+ (* let m = List.length total_decs in  *)
+  (* let cg_length = Context.length cG in  *)
+  let rec relative_order (Comp.Var x) (tau, order,l,k,w) = match tau with 
+    (* k = implicit arguments encountered so far 
+       l = non-implicit arguments encountered so far
+       w = total number of arguments in totality declaration
+       w - k = number of variables introduces via fn in cG
+    *)
+    | Comp.TypPiBox (_, tau) -> relative_order (Comp.Var x) (tau, order,l, k+1,w) 
+    | Comp.TypArr (_ , tau) -> 
+    (match order with 
+       | Order.Arg y -> let _p = y - k - l in  
+	   if x = (w - y)+1 (* assumes that all cdecls are before the actual
+			       rec. arg. *)
+	   (* comparing de Bruijn position of x in cG with the position
+	      described by y *)
+	 then 
+	   ( (* print_string ("Considering inductive case for " ^ 
+	      P.expSynToString cD cG i ^  " - comparing to position " ^
+	      string_of_int y ^ 
+	      " - comparing to relative position " ^ string_of_int (y-k-l) ^ " - Yes\n");*)true)
+	 else 
+	   ( (* print_string ("Considering inductive case for " ^ 
+			   P.expSynToString cD cG i ^ 	 " - comparing to arg. "
+			   ^ string_of_int y ^ 
+	      " - comparing to relative position " ^ string_of_int (y-k) ^ "? - No\n");*)
+	   relative_order (Comp.Var x) (tau, order, l+1, k, w) )
+  
+       | _ -> false)
+
+    | _ -> false
+  in 
+    match i with 
+      | Comp.Var x -> 
+      List.exists  (function dec -> 
+(*		      let _ = (print_string ("Considering type " ^
+					      P.compTypToString LF.Empty dec.typ ^ "\n"); 
+			       print_string ("In cG " ^ P.gctxToString cD cG ^ "\n")) in
+		      let _ = print_string ("Given order " ^ order_to_string
+					      dec.order ^ "\n") in  
+		      let _ = print_string ("Considering variable " ^
+					      P.expSynToString cD cG i ^ "\n") in 
+*)
+		      let w = List.length (dec.args) in (* total arguments given in totality declaration *)
+		      match dec.order with
+			| None -> false
+			| Some order -> 
+			    relative_order i (dec.typ, order,0,0,w) ) total_decs
+      | _ -> false
+
 
 
 let exists_total_decl f = 
@@ -186,6 +276,19 @@ let get_order () =
 		  | None -> (dec.name, None, 0, (tau, Whnf.m_id))
 	   )
     !mutual_decs
+
+let get_order_for f  =
+  let rec find decs = match decs with 
+    | [] -> None
+    | dec::decs -> 
+	if dec.name = f then 
+	  (match dec.order with
+	    | Some (Order.Arg x) -> Some x
+	    | None -> None
+	   )
+	else 
+	  find decs 
+  in find !mutual_decs
 
 
 (* Given C:U, f, order Arg i, and type T of f where
@@ -385,19 +488,19 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
         let cM  = gen_meta_obj (cdecl, LF.MShift (j+1)) (j+1) in
         let cU  = Whnf.cnormCDecl (cdecl, LF.MShift (j+1)) in
         let mf_list = get_order () in
-	let _ = print_string ("Considering " ^ 
+	(* let _ = print_string ("Considering a total of " ^ 
 				string_of_int (List.length mf_list)  ^ 
-				" rec. functions\n") in
+				" rec. functions\n") in *)
         let mk_wfrec (f,x,k,ttau) =
-	  let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD cU ^ 
+	  (* let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD cU ^ 
 				  " ") in 
 	  let _ = print_string ("for position " ^ string_of_int x ^ 
 				  " considering in total " ^ string_of_int k ^
-				  "\n") in
+				  "\n") in *)
           let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
           let args = generalize args in
           let d = Comp.WfRec (f, args, tau) in
-          let _ = print_string ("\nRecursive call : " ^
+          let _ = print_string ("\nGenerated Recursive Call : " ^
                                   calls_to_string cD (f, args, tau)
                                 ^ "\n\n") in
             d
@@ -457,11 +560,11 @@ let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ((* print_string ("Generate recursive calls from \n" 
+    ( (*print_string ("Generate recursive calls from \n" 
 		     ^ "cD = " ^ P.mctxToString cD 
 		     ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n\n");*)
     let cIH = gen_rec_calls cD (LF.Empty) (cD, 0) in
-      gen_rec_calls' cD cIH (cG, 0))
+      gen_rec_calls' cD cIH (cG, 0)) 
   else
     LF.Empty
 

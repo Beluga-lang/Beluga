@@ -194,7 +194,7 @@ Admissibility of transitivity for mstep:
 }%
 
 rec m_trans : [ |- mstep M N'] -> [ |- mstep N' N] -> [ |- mstep M N] =
-/ total ms1 (m_trans m n' n ms1)/
+/ total ms1 (m_trans m n' n ms1 ms2)/
 fn ms1 => fn ms2 => case ms1 of
 | [ |- m_ref]  => ms2
 | [ |- m_step  S1 MS1] =>
@@ -408,7 +408,7 @@ pred_subseq_succ : mstep M (succ NV) -> value NV -> mstep NV V
 
 rec pred_lemma : [ |- mstep (pred M) V] -> [ |- value V]
 			 -> [ |- split_pred_seq M V] =
-/ total s (pred_lemma m v s)/
+/ total s (pred_lemma m v s _)/
 fn s => fn v => case s of
 | [ |- m_step (s_pred S) MS] =>    % MS : mstep (pred M')  V
   (case pred_lemma [ |- MS] v of
@@ -449,7 +449,7 @@ succ_subseq : mstep M V' -> value V' -> mstep (succ V') V
 
 rec succ_lemma : [ |- mstep (succ M) V] -> [ |- value V]
 			 -> [ |- split_succ_seq M V] =
-/ total ms (succ_lemma m v ms)/
+/ total ms (succ_lemma m v ms _ )/
 fn ms => fn v => case ms of
 | [ |- m_ref] =>
   let [ |- v_s V]     = v in
@@ -487,7 +487,7 @@ iszero_subseq_succ : mstep M (succ NV) -> value NV -> mstep false V
 
 rec iszero_lemma : [ |- mstep (iszero M) V] -> [ |- value V]
 			 -> [ |- split_iszero_seq M V] =
-/ total s (iszero_lemma m v s)/
+/ total s (iszero_lemma m v s _ )/
 fn s => fn v => case s of
 | [ |- m_step (s_iszero S) MS] =>    % MS : mstep (pred M')  V
   (case iszero_lemma [ |- MS] v of
@@ -520,7 +520,7 @@ switch_subseq_false: mstep M false -> mstep M2 V
 
 rec switch_lemma : [ |- mstep (switch M M1 M2) V] -> [ |- value V]
 			 -> [ |- split_switch_seq M M1 M2 V] =
-/ total s (switch_lemma m m1 m2 v s)/
+/ total s (switch_lemma m m1 m2 v s _ )/
 fn s => fn v => case s of
 | [ |- m_step (s_switch S) MS] =>    % MS : mstep (pred M')  V
   (case switch_lemma [ |- MS] v of
@@ -542,7 +542,7 @@ fn s => fn v => case s of
 
 empty : type.
 rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- empty]=
-/ total v (values_dont_step m m' s v)/
+/ total v (values_dont_step m m' s v )/
 fn s => fn v => case v of
 | [ |- v_true]    => (case s of [ |- {}] )
 | [ |- v_false]   => (case s of [ |- {}] )
@@ -560,7 +560,7 @@ fn v => fn ms => case ms of
 ;
 
 rec small_to_big : {M:[ |- term]}[ |- mstep M V] -> [ |- value V] -> [ |- eval M V] =
-/ total m (small_to_big v m)/
+/ total m (small_to_big v m _ _ )/
 mlam M => fn ms => fn v => case [ |- M] of
 % | [ ] z     =>  vself v
 | [ |- switch M M1 M2] =>

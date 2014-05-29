@@ -145,7 +145,7 @@ andalso': mstep M M1 -> mstep M M2 -> msteps_to_terms M M1 M2.
 rec unique : [ |- mstep M N1] -> [ |- mstep M N2]
              -> [ |- value N1] -> [ |- value N2]
 	     -> [ |- equal N1 N2] =
-/ total ms1 (unique m n1 n2 ms1)/
+/ total ms1 (unique m n1 n2 ms1 _ _ _ )/
 fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of
 | [ |- m_step S1 MS1] =>
   (case ms2 of
@@ -191,7 +191,7 @@ Admissibility of transitivity for mstep:
 }%
 
 rec m_trans : [ |- mstep M N'] -> [ |- mstep N' N] -> [ |- mstep M N] =
-/ total ms1 (m_trans m n' n ms1)/
+/ total ms1 (m_trans m n' n ms1 ms2)/
 fn ms1 => fn ms2 => case ms1 of
 | [ |- m_ref]  => ms2
 | [ |- m_step  S1 MS1] =>

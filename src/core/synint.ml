@@ -267,17 +267,18 @@ module Comp = struct
     | TypClo    of typ *  LF.msub
     | TypBool 
 
-
-
+  (* For ih *)
   type args =
     | M  of meta_obj
     | V  of offset
+    | E  
     | DC (* don't care *)
 
   type ctyp_decl =
     | WfRec of name * args list * typ
     | CTypDecl    of name * typ
     | CTypDeclOpt of name
+
 
   type gctx = ctyp_decl LF.ctx
 

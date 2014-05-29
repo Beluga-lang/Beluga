@@ -185,7 +185,7 @@ Admissibility of transitivity for mstep:
 }%
 
 rec m_trans : [ |- mstep M N'] -> [ |- mstep N' N] -> [ |- mstep M N] =
-/ total ms1 (m_trans m n' n ms1)/
+/ total ms1 (m_trans m n' n ms1 ms2)/
 fn ms1 => fn ms2 => case ms1 of
 | [ |- m_ref]  => ms2
 | [ |- m_step  S1 MS1] =>

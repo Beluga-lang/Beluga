@@ -77,8 +77,8 @@ module Comp : sig
 
   exception Error of Syntax.Loc.t * error
 
-  val check       : LF.mctx -> gctx -> exp_chk -> tclo -> unit
-  val syn         : LF.mctx -> gctx -> exp_syn -> tclo
+  val check       : int option -> LF.mctx -> gctx -> exp_chk -> tclo -> unit
+  val syn         : int option -> LF.mctx -> gctx -> exp_syn -> tclo
   val checkKind   : LF.mctx -> kind                -> unit
   val checkTyp    : LF.mctx -> typ                  -> unit
   val wf_mctx     : LF.mctx -> unit

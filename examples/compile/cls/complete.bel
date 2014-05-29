@@ -10,7 +10,7 @@
 rec append : [ |- mstep (st Ks P S)  (st Ks' P' S')]
            -> [ |- mstep (st Ks' P' S') (st Ks'' P'' S'')]
 	   -> [ |- mstep (st Ks P S) (st Ks'' P'' S'')] =
-/ total c (append ks p s ks' p' s' ks'' p'' s'' c)/
+/ total c (append ks p s ks' p' s' ks'' p'' s'' c _)/
 fn c =>  fn c' => case c of
 | [ |- id_step] =>  c'
 % Rewrote definition of to s.t. it is clear what a state is,

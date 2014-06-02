@@ -846,13 +846,12 @@ GLOBAL: sgn;
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
 
       |
-        sigma = SELF;   h = clf_head ->
+        sigma = SELF;  h = clf_head ->
           LF.Dot (_loc, sigma, LF.Head h)
 
       |
-        sigma = SELF;  tM = clf_normal ->
+        sigma = SELF; tM = clf_normal ->
           LF.Dot (_loc, sigma, LF.Normal tM)
-
 
       |
         h = clf_head ->
@@ -862,6 +861,10 @@ GLOBAL: sgn;
       |
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
+
+      |
+         subs = LIST1 SELF SEP "," ->
+         List.hd subs
 
 
       ]

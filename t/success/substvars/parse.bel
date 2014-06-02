@@ -12,7 +12,7 @@ mlam g => f [x:tm] [] [ |- i ] [x:tm |-  x]
 ;
 
 rec f3 : {g:ctx} [ |- tm] =
-mlam g => f [x:tm,y:tm] [] [ |- i i ] [x:tm,y:tm |-  x]
+mlam g => f [x:tm,y:tm] [] [ |- i, i ] [x:tm,y:tm |-  x]
 ;
 
 rec f4 : {g:ctx} [z:tm |-  tm] =

@@ -41,6 +41,7 @@
     (define-key map "\C-c\C-c" 'compile)
     (define-key map "\C-c\C-l" 'beluga-load)
     (define-key map "\C-c\C-p" 'beluga-highlight-holes)
+    (define-key map "\C-c\C-x" 'beli-cmd)
     map))
 
 (defvar beluga-mode-syntax-table
@@ -228,6 +229,7 @@ If a previous beli process already exists, kill it first."
 
 (defun beluga--send (cmd)
   "Send commands to beli."
+  (interactive)
   (let ((proc (beluga--proc)))
     (with-current-buffer (process-buffer proc)
       (beluga--wait proc)
@@ -248,6 +250,15 @@ If a previous beli process already exists, kill it first."
   (beluga--send cmd)
   (beluga--receive))
 
+(defun beli ()
+  "Start beli mode"
+  (interactive)
+  (beluga--start))
+
+(defun beli-cmd (cmd)
+  "Run a command in beli"
+  (interactive "MCommand: ")
+  (beluga--rpc cmd))
 
 (defun beluga-load ()
   "Loads the current file in beli."
@@ -310,8 +321,6 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (mapc #'delete-overlay beluga--holes-overlays)
   (setq beluga--holes-overlays nil))
-
-
 
 
 ;;---------------------------- Loading of the mode ----------------------------;;

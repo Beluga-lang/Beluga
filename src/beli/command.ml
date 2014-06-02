@@ -351,7 +351,8 @@ let query = {name = "query";
             } *)
 (* Registering built-in commands *)
 
-let _ = reg := [helpme       ;
+let _ = reg := [
+        helpme       ;
         chatteroff   ;
         chatteron    ;
         countholes   ;
@@ -370,8 +371,7 @@ let _ = reg := [helpme       ;
         printfun     ;
         quit         ;
         query        ;
-        (*          ;
-        save *)]
+        ]
 
 (* registered commands *)
 

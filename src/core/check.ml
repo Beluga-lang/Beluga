@@ -264,7 +264,10 @@ module Comp = struct
     | IndIndexObj (_ , _ ) -> true
     | _ -> false
 
-
+  let ind_to_string case_typ = match case_typ with
+    | IndDataObj -> "IndDataObj"
+    | IndIndexObj (_ , _ ) -> "IndIndexObj"
+    | _ -> "NON-INDUCTIVE"
 
   let rec lookup cG k = match (cG, k) with
     | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> (f,tau)
@@ -433,7 +436,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
   | I.CDecl(_psi, schema,_ ) ->
-      let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
+      let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe | Inductive -> I.Inductive in
         I.Dec(cD, I.CDecl(x, schema, dep'))
   | I.MDecl(_u, tA, cPsi) ->
       I.Dec(cD, I.MDecl(x, C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t)))
@@ -553,12 +556,11 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
             begin match C.cwhnfCTyp (tau',t') with
               | (TypBox (loc', MetaTyp(tA, cPsi)),  t') ->
 		  let tau_s = TypBox (loc', MetaTyp(C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t'))) in
-		  let _ = dprint (fun () -> "[check] Case - Scrutinee " ^
+		  let _ = print_string ("[check] Case " ^ ind_to_string total_pragma ^ " - Scrutinee " ^
                                     P.expSynToString cD cG i ^
-                                    "\n   has type " ^ P.compTypToString cD tau_s)
-		  in
+                                    "\n   has type " ^ P.compTypToString cD tau_s ^ "\n") in 		  
+		    
 		  let problem = Coverage.make loc prag cD branches tau_s in
-		    (* Coverage.stage problem; *)
                     checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
                     Coverage.process problem None
               | (tau',t') ->
@@ -571,12 +573,16 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 	    (match i with 
 	       | Var x ->  
 		   let (f,tau') = lookup cG x in
-		   let ind = match tau' with 
-		     | TypInd tau -> true
-		     | _ -> false in 
-		(* check that Var _ is the one we want to induct on *)
-		   if ind && Total.satisfies_order cD cG i then
-		     chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)
+		   let _ = print_string ("\nTotality checking enabled - encountered " ^ P.expSynToString cD cG i ^ 
+			      " with type " ^ P.compTypToString cD tau' ^ "\n") in
+		   let ind = match Whnf.cnormCTyp (tau', Whnf.m_id) with 
+		     | TypInd _tau -> (print_string ("Encountered Var " ^
+					 P.expSynToString cD cG i ^ " - INDUCTIVE\n"); true)
+		     | _ -> (print_string ("Encountered Var " ^ 
+					 P.expSynToString cD cG i ^ " - NON-INDUCTIVE\n");false) in 
+		   if ind  then
+		     (print_string " Inductive and Order satisfied\n";
+		     chkBranch IndDataObj cD (cG,cIH) i branches (tau,t))
 		   else 
 		     chkBranch DataObj cD (cG,cIH) i branches (tau,t)
 	       | _ -> chkBranch DataObj cD (cG,cIH) i branches (tau,t)
@@ -615,7 +621,9 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
   and syn cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
     | Var x   ->
       let (f,tau') = lookup cG x in
-      let tau = match tau' with 
+      let _ = print_string ("Looking up " ^ P.expSynToString cD cG e ^ 
+			      " with type " ^ P.compTypToString cD tau' ^ "\n") in
+      let tau = match Whnf.cnormCTyp (tau', Whnf.m_id) with 
 	| TypInd tau -> tau
 	| _ -> tau' in 
       if Total.exists_total_decl f then
@@ -851,9 +859,12 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           let _ = dprint (fun () -> "[check] MetaObj " ^ P.metaObjToString cD1'  mO
                             ^ "\n   has type " ^  P.typToString cD1'  cPsi1  (tP1, S.LF.id)
                             ^ "\n   in " ^ P.dctxToString cD1' cPsi1 ) in
-          let _     = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id) in
+          let _     = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id)
+          in
+	  let _ = print_string ("[check] Branch " ^ (ind_to_string caseTyp) ^ "\n") in 
           let cIH'  = if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO)) then
-	                 Total.wf_rec_calls cD1' (I.Empty)
+	    (print_string "Generate recursive calls .. \n";
+	     Total.wf_rec_calls cD1' (I.Empty))
                       else I.Empty in
             check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)
 

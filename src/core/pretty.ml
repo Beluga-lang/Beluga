@@ -1138,6 +1138,9 @@ module Int = struct
       | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo! "
 
       | Comp.TypBool -> fprintf ppf "Bool"
+      | Comp.TypInd tau -> 
+            fprintf ppf "(%a)*"
+              (fmt_ppr_cmp_typ cD 1) tau
 
     let rec fmt_ppr_pat_spine cD cG lvl ppf = (function
       | Comp.PatNil -> fprintf ppf ""

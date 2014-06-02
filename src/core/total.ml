@@ -166,7 +166,7 @@ mutual_decs := l::!mutual_decs
       i = Pair(Var x, Var y) then Order.Lex / Order.Sim  
          where x and y are in the specified order.   
 
-*)
+
 let satisfies_order cD cG i = 
   let total_decs = !mutual_decs in 
  (* let m = List.length total_decs in  *)
@@ -219,7 +219,7 @@ let satisfies_order cD cG i =
 			    relative_order i (dec.typ, order,0,0,w) ) total_decs
       | _ -> false
 
-
+*)
 
 let exists_total_decl f = 
   let rec exists decs = match decs with 
@@ -796,16 +796,20 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
 
 (*  ------------------------------------------------------------------------ *) 
 
-let rec annotate loc f tau = 
-  let pos = match get_order_for f with Some x -> x | None -> assert false in 
+let annotate loc f tau = 
   let rec ann tau pos = match tau , pos with
   | Comp.TypPiBox ( (cdecl, _), tau) , 1 -> Comp.TypPiBox ((cdecl, Comp.Inductive), tau)
   | Comp.TypArr (tau1, tau2) , 1 -> Comp.TypArr (Comp.TypInd tau1, tau2)
   | Comp.TypArr (tau1, tau2) , n -> Comp.TypArr (tau1, ann tau2 (n-1))
   | Comp.TypPiBox (cd , tau) , n -> Comp.TypPiBox( cd, ann tau (n-1))
   |  _ , _ -> raise (Error (loc, TooManyArg f))
- in 
-   ann tau pos
+  in
+    match get_order_for f with 
+      Some x -> (print_string ("Annotate " ^ P.compTypToString LF.Empty tau ^
+				 " in pos = " ^ string_of_int x ^ "\n"); 
+		 ann tau x)
+      | None -> tau 
+
 
 (*  ------------------------------------------------------------------------ *) 
 

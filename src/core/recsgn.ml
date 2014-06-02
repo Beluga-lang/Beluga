@@ -527,11 +527,11 @@ and recSgnDecl d =
           let e_r'    = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp e'' ) in
 
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
-	  let _tau_ann = if !Total.enabled then Total.annotate loc f tau' 
+	  let tau_ann = if !Total.enabled then Total.annotate loc f tau' 
  	                else tau' in 
           let _       = Monitor.timer ("Function Check", fun () ->
 					    Check.Comp.check
-					      cD cG e_r' (tau', C.m_id)
+					      cD cG e_r' (tau_ann, C.m_id)
                                       ) in
              (e_r' , tau')
         in

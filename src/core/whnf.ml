@@ -2826,6 +2826,8 @@ let mctxSVarPos cD u =
     | Comp.TypPiBox ((ctx_dec , dep), tau)      ->
          Comp.TypPiBox ((ctx_dec, dep), normCTyp tau)
 
+    | Comp.TypInd tau -> Comp.TypInd (normCTyp tau)
+
     | Comp.TypBool -> Comp.TypBool
 
   let cnormMetaTyp (mC, t) = match mC with
@@ -2909,6 +2911,8 @@ let mctxSVarPos cD u =
       | (Comp.TypClo (tT, t'), t)        ->
           cnormCTyp (tT, mcomp t' t)
 
+      | (Comp.TypInd tau, t) -> Comp.TypInd (cnormCTyp (tau, t))
+
       | (Comp.TypBool, _t) -> Comp.TypBool
     end
 
@@ -2953,7 +2957,7 @@ let mctxSVarPos cD u =
 
     | (Comp.TypBool, _t)               -> thetaT
 
-
+    | (Comp.TypInd tau, t)             -> (Comp.TypInd (Comp.TypClo (tau, t)), m_id)
 
 
   (* WHNF and Normalization for computation-level terms to be added -bp *)
@@ -3280,6 +3284,12 @@ let mctxSVarPos cD u =
 
     | ((Comp.TypBool, _t ), (Comp.TypBool, _t')) -> true
 
+    | ((Comp.TypInd tau, t) , ttau' ) -> 
+	convCTyp (tau,t) ttau'
+
+    | (ttau, (Comp.TypInd tau', t')) -> 
+	convCTyp ttau (tau',t') 
+
     | ( _ , _ ) -> (dprint (fun () -> "[convCtyp] falls through?");false)
 
 and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
@@ -3423,6 +3433,7 @@ let rec closedCTyp cT = match cT with
   | Comp.TypPiBox ((ctyp_decl, _ ), cT) ->
       closedCTyp cT && closedCDecl ctyp_decl
   | Comp.TypClo (cT, t) -> closedCTyp(cnormCTyp (cT, t))  (* to be improved Sun Dec 13 11:45:15 2009 -bp *)
+  | Comp.TypInd tau -> closedCTyp tau
 
 and closedCDecl ctyp_decl = match ctyp_decl with
   | MDecl(_, tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi

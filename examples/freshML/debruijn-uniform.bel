@@ -43,7 +43,7 @@ all'   : obj' typ -> obj' typ.
 schema ctx = some [a:term_or_typ] obj a ;
 
 
-rec vhoas2db: {g:ctx} {#p: [g |- obj S]}[ |- obj' S] = / total g (vhoas2db g _ _) /
+rec vhoas2db: {g:ctx} {#p: [g |- obj S]}[ |- obj' S] = / total p (vhoas2db g _ p) /
 mlam g => mlam #p => case [g |- #p ..] of  
 | [h,x:obj S |-  x] => [ |- one]
 

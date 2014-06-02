@@ -11,6 +11,7 @@ module LF = struct
   type depend =
     | No
     | Maybe
+    | Inductive
 
   type kind =
     | Typ

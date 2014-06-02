@@ -35,7 +35,7 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype =
 
 rec extendSub : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
             ->  ({T:[ |- tp]} NeutVar [g, x:neut S] [ |- T] ->  NeutVar [h, x:neut S] [ |- T]) =
-/ total y (extendSub g h s s t y) /
+/ total y (extendSub g h _ s t y) /
 fn s => let (s : {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) = s in
 (mlam T => fn y => case y of
               | NeutVar [g,x:neut Tx |-  x ] => NeutVar [h,x:neut Tx |-  x]
@@ -46,7 +46,7 @@ fn s => let (s : {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) = s i
 rec nsubst :  ({T:[ |- tp]} NeutVar [g] [ |- T]  -> NeutVar [h] [ |- T])
            -> [g |- neut S]
            -> [h |- neut S] =
-/ total n (nsubst g h s n) /
+/ total n (nsubst g h _ s n ) /
 fn s => fn e => case e of
 | {#p: [g |- neut T]}
   [g |- #p .. ] => let NeutVar [h |- #q ..] = s [ |- T] (NeutVar [g |- #p .. ]) in [h |- #q ..]

@@ -497,7 +497,7 @@ and recSgnDecl d =
 
         let (cG , vars', n_list ) = preprocess recFuns 1 in
 
-        let reconFun f  e =
+        let reconFun loc f  e =
           let apx_e   = Index.exp vars' e in
           let _       = dprint (fun () -> "\n  Indexing  expression done \n") in
           let tau'    = lookupFun cG f in
@@ -527,7 +527,8 @@ and recSgnDecl d =
           let e_r'    = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp e'' ) in
 
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
-
+	  let _tau_ann = if !Total.enabled then Total.annotate loc f tau' 
+ 	                else tau' in 
           let _       = Monitor.timer ("Function Check", fun () ->
 					    Check.Comp.check
 					      (Total.get_order_for f)
@@ -541,7 +542,7 @@ and recSgnDecl d =
                      Total.enabled := false;
                      ())
           | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
-            let (e_r' , tau') = reconFun f  e in
+            let (e_r' , tau') = reconFun loc f  e in
             if !Debug.chatter <> 0 then
               Printf.printf  "and %s : %s =\n %s\n"
                 (R.render_name f)
@@ -579,7 +580,7 @@ and recSgnDecl d =
    which collects all total declarations *)
         begin match recFuns with
           | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
-            let (e_r' , tau') = reconFun f e in
+            let (e_r' , tau') = reconFun loc f e in
             if !Debug.chatter <> 0 then
               Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
                 (R.render_name f)

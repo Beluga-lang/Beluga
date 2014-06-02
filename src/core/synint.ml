@@ -23,13 +23,14 @@ module LF = struct
   and ctyp_decl =                             (* Contextual Declarations        *)
     | MDecl of name * typ  * dctx             (* D ::= u::A[Psi]                *)
     | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
-    | SDecl of name * dctx (* Phi *) * dctx (* Psi *)
+    | SDecl of name * dctx (* Phi *) * dctx  (* Psi *)
                                               (*   |   s::Phi[Psi],i.e. Psi|-s:Phi  *)
     | CDecl of name * cid_schema * depend
     | MDeclOpt of name
     | PDeclOpt of name
     | CDeclOpt of name
     | SDeclOpt of name
+     
                                               (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)
@@ -232,6 +233,7 @@ module Comp = struct
   type depend =
     | Implicit   (* Maybe *)
     | Explicit   (* No *)
+    | Inductive
 
   type  kind =
     | Ctype of Loc.t
@@ -266,6 +268,7 @@ module Comp = struct
     | TypPiBox  of (LF.ctyp_decl * depend) * typ
     | TypClo    of typ *  LF.msub
     | TypBool 
+    | TypInd of typ 
 
   (* For ih *)
   type args =

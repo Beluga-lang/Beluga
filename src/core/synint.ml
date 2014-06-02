@@ -69,14 +69,16 @@ module LF = struct
     | SClo of (spine * sub)                   (*   | SClo(S,s)                  *)
 
   and sub =                                   (* Substitutions                  *)
-    | Shift of ctx_offset * offset            (* sigma ::= ^(psi,n)             *)
+    | Shift of offset            (* sigma ::= ^(psi,n)             *)
     | SVar  of cvar *
-        (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
+        offset * sub           (*   | s[sigma]                   *)
     | FSVar of name *
-        (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
+        offset * sub           (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
     | MSVar of mm_var *
-        (ctx_offset * offset) * (msub * sub)  (*   | u[t ; s]                   *)
+        offset * (msub * sub)  (*   | u[t ; s]                   *)
+    | EmptySub
+    | Undefs
 
   and front =                                 (* Fronts:                        *)
     | Head of head                            (* Ft ::= H                       *)
@@ -99,11 +101,6 @@ module LF = struct
  and csub =                                  (* Context substitutions          *)
    | CShift of int                           (* delta ::= ^n                   *)
    | CDot   of dctx * csub                   (*       | cPsi .delta            *)
-
- and ctx_offset =
-    | CtxShift of ctx_var
-    | NoCtxShift
-    | NegCtxShift of ctx_var
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)

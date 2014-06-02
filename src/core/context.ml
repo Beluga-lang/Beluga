@@ -57,7 +57,7 @@ let ctxDec cPsi k =
    *)
   let rec ctxDec' = function
     | (DDec (_cPsi', TypDecl (x, tA')), 1) ->
-        TypDecl (x, TClo (tA', Shift (NoCtxShift, k)))
+        TypDecl (x, TClo (tA', Shift k))
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
@@ -90,7 +90,7 @@ let ctxSigmaDec cPsi k =
    *)
   let rec ctxDec' = function
     | (DDec (_cPsi', TypDecl (x, Sigma tArec)), 1) ->
-        TypDecl (x, Sigma (sigmaShift tArec  (Shift (NoCtxShift, k))))
+        TypDecl (x, Sigma (sigmaShift tArec  (Shift k)))
 
     | (DDec (cPsi', TypDecl (_x, Sigma _)), k') ->
         ctxDec' (cPsi', k' - 1)

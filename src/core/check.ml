@@ -479,40 +479,40 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
    * otherwise exception Error is raised
    *)
 
-  let rec checkW order cD ((cG , cIH) : ctyp_decl I.ctx * ctyp_decl I.ctx) e ttau = match (e, ttau) with
+  let rec checkW cD ((cG , cIH) : ctyp_decl I.ctx * ctyp_decl I.ctx) e ttau = match (e, ttau) with
     | (Rec (_, f, e), (tau, t)) ->
-        check order cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), cIH) e ttau
+        check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), cIH) e ttau
 
     | (Fun (_, x, e), (TypArr (tau1, tau2), t)) ->
-        check order cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), cIH) e (tau2, t)
+        check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), cIH) e (tau2, t)
 
     | (Cofun (_, bs), (TypCobase (_, cid, sp), t)) ->
          let f = fun (CopatApp (loc, dest, csp), e') ->
            let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
-           in check order cD (cG,cIH) e' ttau'
+           in check cD (cG,cIH) e' ttau'
          in let _ = List.map f bs in ()
 
     | (MLam (_, u, e), (TypPiBox (cdec, tau), t)) ->
-        check order (extend_mctx cD (u, cdec, t))
+        check (extend_mctx cD (u, cdec, t))
           (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->
-        check order cD (cG,cIH) e1 (tau1, t);
-        check order cD (cG,cIH) e2 (tau2, t)
+        check cD (cG,cIH) e1 (tau1, t);
+        check cD (cG,cIH) e2 (tau2, t)
 
     | (Let (_, i, (x, e)), (tau, t)) ->
-        let (_ , tau', t') = syn order cD (cG,cIH) i in
+        let (_ , tau', t') = syn cD (cG,cIH) i in
         let (tau', t') =  C.cwhnfCTyp (tau',t') in
         let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau', t'))) in
-          check order cD (cG',cIH) e (tau,t)
+          check cD (cG',cIH) e (tau,t)
 
     | (LetPair (_, i, (x, y, e)), (tau, t)) ->
-        let (_ , tau', t') = syn order cD (cG,cIH) i in
+        let (_ , tau', t') = syn cD (cG,cIH) i in
         let (tau', t') =  C.cwhnfCTyp (tau',t') in
         begin match (tau',t') with
           | (TypCross (tau1, tau2), t') ->
               let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t'))), CTypDecl (y, TypClo(tau2, t'))) in
-                check order cD (cG',cIH) e (tau,t)
+                check cD (cG',cIH) e (tau,t)
           | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
         end
 
@@ -544,12 +544,12 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
         let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
-          checkBranches order total_pragma cD (cG,cIH) branches tau_s (tau, t);
+          checkBranches total_pragma cD (cG,cIH) branches tau_s (tau, t);
           Coverage.process problem projOpt
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
 	let chkBranch total_pragma cD (cG, cIH) i branches (tau,t) = 
-          let (_ , tau', t') = syn order cD (cG,cIH) i in
+          let (_ , tau', t') = syn cD (cG,cIH) i in
             begin match C.cwhnfCTyp (tau',t') with
               | (TypBox (loc', MetaTyp(tA, cPsi)),  t') ->
 		  let tau_s = TypBox (loc', MetaTyp(C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t'))) in
@@ -559,19 +559,23 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 		  in
 		  let problem = Coverage.make loc prag cD branches tau_s in
 		    (* Coverage.stage problem; *)
-                    checkBranches order total_pragma cD (cG,cIH) branches tau_s (tau,t);
+                    checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
                     Coverage.process problem None
               | (tau',t') ->
 		  let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
-		    checkBranches order total_pragma cD (cG,cIH) branches (C.cnormCTyp (tau', t')) (tau,t);
+		    checkBranches total_pragma cD (cG,cIH) branches (C.cnormCTyp (tau', t')) (tau,t);
                     Coverage.process problem None
             end
 	in 
 	  if !Total.enabled then
 	    (match i with 
-	       | Var _ ->  
+	       | Var x ->  
+		   let (f,tau') = lookup cG x in
+		   let ind = match tau' with 
+		     | TypInd tau -> true
+		     | _ -> false in 
 		(* check that Var _ is the one we want to induct on *)
-		   if Total.satisfies_order cD cG i then
+		   if ind && Total.satisfies_order cD cG i then
 		     chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)
 		   else 
 		     chkBranch DataObj cD (cG,cIH) i branches (tau,t)
@@ -581,7 +585,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 	    chkBranch DataObj cD (cG,cIH) i branches (tau,t)
 
     | (Syn (loc, i), (tau, t)) ->
-        let (_, tau',t') = syn order cD (cG,cIH) i in
+        let (_, tau',t') = syn cD (cG,cIH) i in
         let (tau',t') = Whnf.cwhnfCTyp (tau',t') in
         if C.convCTyp (tau,t)  (tau',t') then
           ()
@@ -589,28 +593,31 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau',t'))))
 
     | (If (loc, i, e1, e2), (tau,t)) ->
-        let (_flag, tau', t') = syn order cD (cG,cIH) i in
+        let (_flag, tau', t') = syn cD (cG,cIH) i in
         let (tau',t') = C.cwhnfCTyp (tau',t') in
           begin match  (tau',t') with
           | (TypBool , _ ) ->
-              (check order cD (cG,cIH) e1 (tau,t) ;
-               check order cD (cG,cIH) e1 (tau,t) )
+              (check cD (cG,cIH) e1 (tau,t) ;
+               check cD (cG,cIH) e1 (tau,t) )
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end
 
     | (Hole (_loc), (_tau, _t)) -> ()
 
-  and check order cD (cG, cIH) e (tau, t) =
+  and check cD (cG, cIH) e (tau, t) =
     let _ =  dprint (fun () -> "[check]  " ^
                        P.expChkToString cD cG e ^
                         " against \n    " ^
                   P.mctxToString cD ^ " |- " ^
                   P.compTypToString cD (Whnf.cnormCTyp (tau, t))) in
-    checkW order cD (cG, cIH) e (C.cwhnfCTyp (tau, t));
+    checkW cD (cG, cIH) e (C.cwhnfCTyp (tau, t));
 
-  and syn order cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
+  and syn cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
     | Var x   ->
-      let (f,tau) = lookup cG x in
+      let (f,tau') = lookup cG x in
+      let tau = match tau' with 
+	| TypInd tau -> tau
+	| _ -> tau' in 
       if Total.exists_total_decl f then
         (Some cIH, tau, C.m_id)
       else
@@ -633,7 +640,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           (None,(Comp.get prog).Comp.typ, C.m_id)
 
     | Apply (loc , e1, e2) ->
-        let (cIH_opt , tau1, t1) = syn order cD (cG,cIH) e1 in
+        let (cIH_opt , tau1, t1) = syn cD (cG,cIH) e1 in
         let (tau1,t1) = C.cwhnfCTyp (tau1,t1) in
         begin match (tau1, t1) with
           | (TypArr (tau2, tau), t) ->
@@ -644,14 +651,14 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
               dprint (fun () -> "[check: APPLY] cG " ^ P.gctxToString cD cG );
               dprint (fun () -> match cIH_opt with
                 | None -> "" | Some ih -> "[APPLY IH] IH = " ^ Total.ih_to_string cD ih);
-              check order cD (cG,cIH) e2 (tau2, t);
+              check cD (cG,cIH) e2 (tau2, t);
               (useIH loc cD cG cIH_opt e2, tau, t)
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
         end
 
     | MApp (loc, e, mC) ->
-        let (cIH_opt, tau, t) = syn order cD (cG,cIH) e in
+        let (cIH_opt, tau, t) = syn cD (cG,cIH) e in
         let (tau,t) = C.cwhnfCTyp (tau,t) in
         begin match (mC, (tau, t)) with
           | (MetaCtx (loc, cPsi), (TypPiBox ((I.CDecl (_ , w, _ ), _ ), tau), t)) ->
@@ -687,8 +694,8 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
         end
 
     | PairVal (loc, i1, i2) ->
-        let (_, tau1,t1) =  syn order cD (cG,cIH) i1 in
-        let (_, tau2,t2) =  syn order cD (cG,cIH) i2 in
+        let (_, tau1,t1) =  syn cD (cG,cIH) i1 in
+        let (_, tau2,t2) =  syn cD (cG,cIH) i2 in
         let (tau1,t1)    = C.cwhnfCTyp (tau1, t1) in
         let (tau2,t2)    = C.cwhnfCTyp (tau2, t2) in
           (None, TypCross (TypClo (tau1,t1),
@@ -696,12 +703,12 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 
 
     | Ann (e, tau) ->
-        check order cD (cG, cIH) e (tau, C.m_id);
+        check cD (cG, cIH) e (tau, C.m_id);
         (None, tau, C.m_id)
 
     | Equal(loc, i1, i2) ->
-         let (_, tau1, t1) = syn order cD (cG,cIH) i1 in
-         let (_, tau2, t2) = syn order cD (cG,cIH) i2 in
+         let (_, tau1, t1) = syn cD (cG,cIH) i1 in
+         let (_, tau2, t2) = syn cD (cG,cIH) i2 in
            if Whnf.convCTyp (tau1,t1) (tau2,t2) then
              begin match Whnf.cwhnfCTyp (tau1,t1) with
                | (TypBox _ , _ ) ->  (None, TypBool, C.m_id)
@@ -812,10 +819,10 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           (match mO with
             | MetaCtx (_, cPsi) -> I.MDot (I.CObj (cPsi) , theta)
           )
-  and checkBranches order caseTyp cD (cG, cIH) branches tAbox ttau =
-    List.iter (fun branch -> checkBranch order caseTyp cD (cG,cIH) branch tAbox ttau) branches
+  and checkBranches caseTyp cD (cG, cIH) branches tAbox ttau =
+    List.iter (fun branch -> checkBranch caseTyp cD (cG,cIH) branch tAbox ttau) branches
 
-  and checkBranch order caseTyp cD (cG, cIH) branch tau_s (tau, t) =
+  and checkBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
     match branch with
       | EmptyBranch (loc, cD1', pat, t1) ->
           let _ = dprint (fun () -> "\nCheckBranch - Empty Pattern\n") in
@@ -848,7 +855,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           let cIH'  = if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO)) then
 	                 Total.wf_rec_calls cD1' (I.Empty)
                       else I.Empty in
-            check order cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)
+            check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
@@ -864,7 +871,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           let cIH'  = if is_inductive caseTyp && Total.struct_smaller pat then
                        Total.wf_rec_calls cD1' cG1
                      else I.Empty in
-            check order cD1' ((Context.append cG' cG1), Context.append cIH cIH') e1 (tau', Whnf.m_id)
+            check cD1' ((Context.append cG' cG1), Context.append cIH cIH') e1 (tau', Whnf.m_id)
 
 
   let rec wf_mctx cD = match cD with
@@ -873,14 +880,14 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
         (wf_mctx cD ; checkCDecl cD cdecl)
 
 
-let syn order cD cG e =
+let syn cD cG e =
   let cIH = Syntax.Int.LF.Empty in
-  let (_ , tau, t) = syn order cD (cG,cIH) e in
+  let (_ , tau, t) = syn cD (cG,cIH) e in
     (tau,t)
 
-let check order cD cG e ttau =
+let check cD cG e ttau =
   let cIH = Syntax.Int.LF.Empty in
-    check order cD (cG,cIH) e ttau
+    check cD (cG,cIH) e ttau
 
 
 
@@ -916,7 +923,7 @@ module Sgn = struct
         let cG = Syntax.Int.LF.Empty in
 (*        let _  = Total.initialize f in *)
           Comp.checkTyp cD tau; 
-          Comp.check (Total.get_order_for  (S.Comp.get f).S.Comp.name) cD cG e (tau, Whnf.m_id);
+          Comp.check cD cG e (tau, Whnf.m_id);
           check_sgn_decls decls
 
     | Syntax.Int.Sgn.Pragma (_a) :: decls ->

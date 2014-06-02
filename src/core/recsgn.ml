@@ -358,7 +358,7 @@ and recSgnDecl d =
           let i''                = Monitor.timer ("Function Abstraction", fun () ->
 						    Abstract.exp (Int.Comp.Syn (loc, i'))) in
           let _                  = Monitor.timer ("Function Check", fun () ->
-						    Check.Comp.check None cD  cG i'' (tau', C.m_id)) in
+						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
@@ -396,7 +396,7 @@ and recSgnDecl d =
 
           let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp i') in
           let _       = Monitor.timer ("Function Check", fun () ->
-					 Check.Comp.check None cD  cG i'' (tau', C.m_id)) in
+					 Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
             let _x = Comp.add (fun _ -> Comp.mk_entry x tau' false v []) in
@@ -531,7 +531,6 @@ and recSgnDecl d =
  	                else tau' in 
           let _       = Monitor.timer ("Function Check", fun () ->
 					    Check.Comp.check
-					      (Total.get_order_for f)
 					      cD cG e_r' (tau', C.m_id)
                                       ) in
              (e_r' , tau')

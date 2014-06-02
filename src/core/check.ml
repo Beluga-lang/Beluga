@@ -269,6 +269,20 @@ module Comp = struct
     | IndIndexObj (_ , _ ) -> "IndIndexObj"
     | _ -> "NON-INDUCTIVE"
 
+
+(*  let is_ind _cD _x  = true 
+ match x with
+    | I.Offset x, sigma -> 
+	let (_, tA, cPsi', dp) = Whnf.mctxMDec cD u in
+        let d = match dep with
+         | I.Inductive -> true
+         | _ -> false in 
+         is_id sigma && dep 
+
+
+
+
+*)
   let rec lookup cG k = match (cG, k) with
     | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> (f,tau)
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
@@ -534,15 +548,17 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
     | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)), TypBox (_, MetaTyp(tA', cPsi'))),
              branches), (tau, t)) ->
         let (total_pragma, tau_sc, projOpt) =  (match  tR with
-                   | I.Root (_, I.PVar _ , _ ) ->
+                   | I.Root (_, I.PVar (x,s) , _ ) ->
 		       let order = if !Total.enabled then IndIndexObj (phat, tR) else IndexObj(phat, tR) in
                        (order, TypBox(loc, MetaParamTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)
-                   | I.Root (_, I.Proj (I.PVar _, k ), _ ) ->
-		       let order = if !Total.enabled then IndIndexObj(phat, tR) else IndexObj(phat, tR) in
+                   | I.Root (_, I.Proj (I.PVar (x,s), k ), _ ) ->
+		       let order = if  !Total.enabled then IndIndexObj(phat, tR) else IndexObj(phat, tR) in
                        (order, TypBox (loc, MetaParamTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), Some k)
-                   | _ ->
-		       let order = if !Total.enabled then IndIndexObj(phat, tR) else IndexObj(phat, tR) in
-                       (order, TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)) in
+		   | I.Root (_, I.MVar (x,s), _ ) -> 
+		       let order = if  !Total.enabled then IndIndexObj(phat, tR) else IndexObj(phat, tR) in
+                       (order, TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)
+		   | _ -> 
+		       (IndexObj (phat, tR), TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)		       ) in
         let tau_s = TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
         let problem = Coverage.make loc prag cD branches tau_sc in

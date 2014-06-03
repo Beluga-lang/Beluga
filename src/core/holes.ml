@@ -1,7 +1,7 @@
 (* module Holes *)
 
 module P = Pretty.Int.DefaultPrinter
-module Loc = Camlp4.PreCast.Loc
+module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 module Cover = Coverage
@@ -25,7 +25,6 @@ let ctypDeclToString cD ctypDecl =
   P.fmt_ppr_lf_ctyp_decl ~print_status:true cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
   Format.flush_str_formatter ()
 
-(*mctxToString cD*)
 let mctxToString =
   let shift = "\t" in
   let rec toString = function
@@ -109,7 +108,7 @@ let setStagedHolePos i l =
       let  (loc, cD, cG, tclo) = DynArray.get stagedholes i in
       DynArray.set stagedholes i (l, cD, cG, tclo)
 
-let (printOne : hole -> unit) (loc, cD, cG, (tau, theta)) =
+let printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
   Store.NamedHoles.reset () ;
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in

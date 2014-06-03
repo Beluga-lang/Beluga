@@ -1,21 +1,9 @@
-(* module Holes *)
+(* module Lfoles *)
 
 module P = Pretty.Int.DefaultPrinter
-module Loc = Camlp4.PreCast.Loc
+module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
-
-
-
-(**********************************************
-
-cD : LF.mctx
-cG : Comp.gctx
-tau : Comp.typ
-theta :LF.msub
-
-***********************************************)
-
 
 let holes = DynArray.create ()
 
@@ -32,7 +20,6 @@ let ctypDeclToString cD ctypDecl =
   P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
   Format.flush_str_formatter ()
 
-(*mctxToString cD*)
 let mctxToString =
   let shift = " " in
   let rec toString = function
@@ -50,8 +37,7 @@ let printOne (loc, cD, cPsi, typ) =
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
   Store.NamedHoles.reset () ;
-    Printf.printf "\n%s\n
-     - Meta-Context: %s\n%s\n- LF Context: %s\n\n%s\n- Goal Type: %s\n"
+    Printf.printf "\n%s\n - Meta-Context: %s\n%s\n - LF Context: %s\n\n%s\n - Goal Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
     (b1)

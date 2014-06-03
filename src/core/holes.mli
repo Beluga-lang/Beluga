@@ -11,7 +11,7 @@ val getOneHole : int -> Loc.t * LF.mctx * Comp.gctx * (Comp.typ * LF.msub)
 val locWithin : Loc.t -> Loc.t -> bool
 val getHoleNum : Loc.t -> int
 val getNumHoles : unit -> int
-val getHolePos : int -> Camlp4.PreCast.Loc.t option
+val getHolePos : int -> Syntax.Loc.t option
 val destroyHoles : Loc.t -> unit
 
 val commitHoles : unit -> unit

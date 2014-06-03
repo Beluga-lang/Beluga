@@ -404,10 +404,18 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
 ;;
 
-(* TODO: Clean up more *)
+(* extend_mctx cD (x, cdecl, t) = cD' 
+
+   if cD mctx 
+      cD' |- cU   where cdecl = _ : cU
+      cD  |- t : cD
+   the 
+      cD, x:[t]U  mctx
+
+ *)
 let extend_mctx cD (x, cdecl, t) = match cdecl with
-  | I.Decl (_u, ctyp) ->
-      I.Dec (cD, I.Decl (x, C.cnormMTyp (ctyp, t)))
+  | I.Decl (_u, cU) ->
+      I.Dec (cD, I.Decl (x, C.cnormMTyp (cU, t)))
 
   (* check cD cG e (tau, theta) = ()
    *

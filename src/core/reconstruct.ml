@@ -180,7 +180,15 @@ let rec get_ctxvar cPsi  = match cPsi with
   | Int.LF.DDec (cPsi, _ ) -> get_ctxvar cPsi
 
 
-(* TODO: Cleanup *)
+(* extend_mctx cD (x, cdecl, t) = cD' 
+
+   if cD mctx 
+      cD' |- cU   where cdecl = _ : cU
+      cD  |- t : cD
+   the 
+      cD, x:[t]U  mctx
+
+ *)
 let extend_mctx cD (x, cdecl, t) = match cdecl with
   | Int.LF.Decl(_psi, Int.LF.CTyp (schema,dep) ) ->
         Int.LF.Dec(cD, Int.LF.Decl(x, Int.LF.CTyp (schema, dep)))

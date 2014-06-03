@@ -311,6 +311,7 @@ module Int = struct
 
     and fmt_ppr_lf_head cD cPsi lvl ppf head =
       let paren s = not (Control.db()) && lvl > 0 && (match s with
+        | LF.EmptySub | LF.Undefs -> false
         | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
         | _ -> true)
       in
@@ -399,8 +400,7 @@ module Int = struct
 
 
     and fmt_ppr_lf_spine cD cPsi lvl ppf = function
-      | LF.Nil ->
-          fprintf ppf ""
+      | LF.Nil -> ()
 
       | LF.App (m, ms) ->
           fprintf ppf " %a%a"
@@ -881,7 +881,7 @@ module Int = struct
             (fmt_ppr_lf_dctx cD 0) cPhi
 
       | LF.CTyp (schemaName, LF.No) ->
-          fprintf ppf "(%a)"
+          fprintf ppf "%a"
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
       | LF.CTyp (schemaName, LF.Maybe) ->
@@ -891,13 +891,13 @@ module Int = struct
     and fmt_ppr_lf_ctyp_decl ?(print_status=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp) ->
           if not !Control.printImplicit && (isInferred mtyp) then fprintf ppf "" else
-          fprintf ppf "{%s :: %a}%s"
+          fprintf ppf "{%s : %a}%s"
             (R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
             (if print_status then dependent_string mtyp else "")
 
       | LF.DeclOpt name ->
-          fprintf ppf "{%s :: _ }"
+          fprintf ppf "{%s : _ }"
             (R.render_name name)
 
     and isInferred = function
@@ -1071,20 +1071,12 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.TypPiBox ((ctyp_decl), tau) ->
-(*           ( match (dep,!Control.printImplicit) with
-          | (_, true)
-          | (Comp.Explicit, _) ->
-              let cond = lvl > 1 in *)
         let cond = lvl > 1 in
         fprintf ppf "%s%a@ %a%s"
           (l_paren_if cond)
           (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
           (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
           (r_paren_if cond)
- (*          | (Comp.Implicit, false) ->
-            fprintf ppf "%a"
-              (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
-) *)
 
       | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo! "
 

@@ -70,14 +70,11 @@ module LF = struct
     | SClo of (spine * sub)                   (*   | SClo(S,s)                  *)
 
   and sub =                                   (* Substitutions                  *)
-    | Shift of offset            (* sigma ::= ^(psi,n)             *)
-    | SVar  of cvar *
-        offset * sub           (*   | s[sigma]                   *)
-    | FSVar of name *
-        offset * sub           (*   | s[sigma]                   *)
+    | Shift of offset                         (* sigma ::= ^(psi,n)             *)
+    | SVar  of cvar *  offset * sub           (*   | s[sigma]                   *)
+    | FSVar of name *  offset * sub           (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
-    | MSVar of mm_var *
-        offset * (msub * sub)  (*   | u[t ; s]                   *)
+    | MSVar of mm_var * offset * (msub * sub) (*   | u[t ; s]                   *)
     | EmptySub
     | Undefs
 
@@ -300,8 +297,6 @@ module Comp = struct
     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
     | Let    of Loc.t * exp_syn * (name * exp_chk)
     | Box    of Loc.t * meta_obj
-(*    | Box    of Loc.t * LF.psi_hat * LF.normal
-    | SBox   of Loc.t * LF.psi_hat * LF.sub *)
     | Case   of Loc.t * case_pragma * exp_syn * branch list
     | If     of Loc.t * exp_syn * exp_chk * exp_chk
     | Hole   of Loc.t

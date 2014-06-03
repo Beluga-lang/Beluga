@@ -35,6 +35,7 @@ let usage () =
         ^ "    +logic        turn on logic programming engine\n"
         ^ "    +test         Make output suitable for test harness. Implies -print\n"
         ^ "    +strengthen   Perform metavariable strengthening automatically.\n"
+        ^ "    -strengthen   Turn off metavariable strengthening.\n"
         ^ "    +realNames    Print holes using real names\n"
         ^ "    -realNames    Print holes using freshly generated names (default)\n"
   in
@@ -80,6 +81,7 @@ let process_option arg rest = match arg with
   | "+logic" -> Logic.Options.enableLogic := true ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
   | "+strengthen" -> Lfrecon.strengthen := true; rest
+  | "-strengthen" -> Lfrecon.strengthen := false; rest
   | "+realNames" -> Store.NamedHoles.usingRealNames := true; rest
   | "-realNames" -> Store.NamedHoles.usingRealNames := false; rest
   | _ -> usage ()

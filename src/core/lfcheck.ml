@@ -349,49 +349,43 @@ and canAppear cD cPsi head sA loc=
  *)
 and checkSub loc cD cPsi1 s1 cPsi1' =
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
-    | Null, Shift (NoCtxShift, 0), Null -> ()
+    | cPsi, EmptySub, Null -> ()
+    | cPsi, Undefs, Null -> ()
+    | Null, Shift 0, Null -> ()
 
-    | cPhi, SVar (Offset offset, (cs, k), s'), cPsi ->
+    | cPhi, SVar (Offset offset, k, s'), cPsi ->
       (*  cD ; cPhi |- SVar (offset, shift, s') : cPsi
           cD(offset) =  Psi'[Phi'] (i.e. Phi'  |- offset  : Psi')
                           Psi'  |- shift (cs , k) : Psi
                           Phi   |- s'             : Phi'
       *)
       let (_, cPsi', cPhi') = Whnf.mctxSDec cD offset in
-      checkSub loc cD cPsi' (Shift (cs, k)) cPsi;
+      checkSub loc cD cPsi' (Shift k) cPsi;
       checkSub loc cD cPhi  s'            cPhi'
 
-    | CtxVar psi, Shift (NoCtxShift, 0), CtxVar psi' ->
+    | CtxVar psi, Shift 0, CtxVar psi' ->
       (* if psi = psi' then *)
       if not (psi = psi') then
 (*      if not (subsumes cD psi' psi) then *)
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
-    | CtxVar (CtxOffset _ as psi), Shift (CtxShift (psi'), 0), Null ->
-      if not (psi = psi') then
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
-
-    | Null, Shift (NegCtxShift (psi'), 0), CtxVar (CtxOffset _ as psi) ->
-      if not (psi = psi') then
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
-
     (* SVar case to be added - bp *)
 
-    | DDec (cPsi, _tX),  Shift (psi, k),  Null ->
+    | DDec (cPsi, _tX),  Shift k,  Null ->
       if k > 0 then
-	checkSub loc cD cPsi (Shift (psi, k - 1)) Null
+	checkSub loc cD cPsi (Shift (k - 1)) Null
       else
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
-    | DDec (cPsi, _tX),  Shift (phi, k),  CtxVar psi ->
+    | DDec (cPsi, _tX),  Shift k,  CtxVar psi ->
       if k > 0 then
-	checkSub loc cD cPsi (Shift (phi, k - 1)) (CtxVar psi)
+	checkSub loc cD cPsi (Shift (k - 1)) (CtxVar psi)
       else
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
-    | cPsi',  Shift (psi, k),  cPsi ->
+    | cPsi',  Shift k,  cPsi ->
       if k >= 0 then
-	checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (psi, k + 1))) cPsi
+	checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
       else
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 

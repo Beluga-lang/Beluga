@@ -369,10 +369,7 @@ let rec searchMctx i = function
              let cgs = Cover.genCovGoals ((dropIMCtx i cD0),cPsi,tA) in
              let bl = branchCovGoals loc i cG0 tH cgs in
              let (vPsi, vOff) = dctxToHat cPsi in
-             let cS = (match vPsi with
-                        | None -> LF.NoCtxShift
-                        | Some cV -> LF.CtxShift cV) in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.MVar (LF.Offset i, LF.Shift (cS, vOff )), LF.Nil))), Comp.TypBox(Loc.ghost, tA,cPsi)) in
+             let entry = Comp.Ann ( Comp.Box(Loc.ghost, Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.MVar (LF.Offset i, LF.Shift  vOff), LF.Nil))), Comp.TypBox(Loc.ghost, tA,cPsi)) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')
@@ -381,10 +378,7 @@ let rec searchMctx i = function
             let cgs = Cover.genCovGoals (cD',cPsi,tA) in
             let bl = branchCovGoals loc i cG0 tH cgs in
              let (vPsi, vOff) = dctxToHat cPsi in
-             let cS = (match vPsi with
-                        | None -> LF.NoCtxShift
-                        | Some cV -> LF.CtxShift cV) in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.PVar (LF.Offset i, LF.Shift (cS, vOff )), LF.Nil))), Comp.TypBox(Loc.ghost, tA,cPsi)) in
+             let entry = Comp.Ann ( Comp.Box(Loc.ghost, Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.PVar (LF.Offset i, LF.Shift vOff), LF.Nil))), Comp.TypBox(Loc.ghost, tA,cPsi)) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')

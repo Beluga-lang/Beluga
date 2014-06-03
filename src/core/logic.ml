@@ -567,7 +567,7 @@ module Solver = struct
      Invariants:
        Psi, x1:_, x2:_, ... xk:_ |- ^k : Psi
   *)
-  let shiftSub k = LF.Shift (LF.NoCtxShift, k)
+  let shiftSub k = LF.Shift k
 
   (* gSolve dPool (Psi, k) (g, s) sc = ()
      Invariants:

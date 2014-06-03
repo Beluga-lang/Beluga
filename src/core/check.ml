@@ -268,7 +268,7 @@ let checkParamTypeValid cD cPsi tA =
 
   | Syntax.Int.LF.DDec (cPsi0', Syntax.Int.LF.TypDecl (x, tB)) ->
      (* tA is instance of tB *)
-    let tB' = Syntax.Int.LF.TClo(tB, Syntax.Int.LF.Shift (Syntax.Int.LF.NoCtxShift, n)) in
+    let tB' = Syntax.Int.LF.TClo(tB, Syntax.Int.LF.Shift n) in
     let ms  = Ctxsub.mctxToMSub cD in
     let tB0 = Whnf.cnormTyp (tB', ms) in
     begin try Unify.unifyTyp cD cPsi (tA, Substitution.LF.id) (tB0, Substitution.LF.id) with
@@ -314,7 +314,7 @@ let checkParamTypeValid cD cPsi tA =
 
 and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
   | (MetaNil , (Ctype _ , _ )) -> ()
-  | (MetaApp (mO, mS), (PiKind (_, (I.Decl (_u, ctyp), _ ), cK) , t)) ->
+  | (MetaApp (mO, mS), (PiKind (_, I.Decl (_u, ctyp), cK) , t)) ->
       begin match ctyp with
         | I.CTyp (schema_cid, _ ) ->
             let MetaCtx (_, cPsi) = mO in
@@ -361,7 +361,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
   let rec checkKind cD cK = match cK with
     | Ctype _ -> ()
-    | PiKind (_, (cdecl,dep), cK) ->
+    | PiKind (_, cdecl, cK) ->
         checkCDecl cD cdecl;
         checkKind (I.Dec(cD, cdecl)) cK
 
@@ -405,10 +405,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 ;;
 
 (* TODO: Clean up more *)
-let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
-  | I.Decl(_psi, I.CTyp (schema,_) ) ->
-      let dep' = match dep with Explicit -> I.No | Implicit -> I.Maybe in
-        I.Dec(cD, I.Decl(x, I.CTyp (schema, dep')))
+let extend_mctx cD (x, cdecl, t) = match cdecl with
   | I.Decl (_u, ctyp) ->
       I.Dec (cD, I.Decl (x, C.cnormMTyp (ctyp, t)))
 
@@ -439,7 +436,7 @@ let extend_mctx cD (x, (cdecl, dep), t) = match cdecl with
          in let _ = List.map f bs in ()
 
     | (MLam (_, u, e), (TypPiBox (cdec, tau), t)) ->
-        check (extend_mctx cD (u, (cdec, Implicit), t))
+        check (extend_mctx cD (u, cdec, t))
           (C.cnormCtx (cG, I.MShift 1))   e (tau, C.mvar_dot1 t)
 
     | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->

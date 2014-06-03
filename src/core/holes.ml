@@ -111,13 +111,15 @@ let setStagedHolePos i l =
 
 let (printOne : hole -> unit) (loc, cD, cG, (tau, theta)) =
   Store.NamedHoles.reset () ;
-  Printf.printf "\n%s\n
-    - Meta-Context: %s\n____________________________________________________________________________\n
-    - Context: %s\n\n============================================================================\n
-    - Goal Type: %s\n"
+  let b1 = "____________________________________________________________________________" in
+  let b2 = "============================================================================" in
+  Printf.printf 
+    "\n%s\n- Meta-Context: %s\n%s\n- Context: %s\n\n%s\n- Goal Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
+    (b1)
     (gctxToString cD cG)
+    (b2)
     (P.compTypToString cD (Whnf.cnormCTyp (tau, theta)))
 (*    (P.expChkToString cD cG (Interactive.intro tau))
     (try (match (Interactive.split "s" cD cG) with
@@ -144,10 +146,6 @@ let printOneHole i =
 let getOneHole i = DynArray.get holes i
 
 let getNumHoles () = DynArray.length holes
-
-let setStagedHolePos i l =
-      let  (loc, cD, cG, tclo) = DynArray.get stagedholes i in
-      DynArray.set stagedholes i (l, cD, cG, tclo)
 
 let getHolePos i =
     try

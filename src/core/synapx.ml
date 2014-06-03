@@ -44,6 +44,7 @@ module LF = struct
   and normal =
     | Lam  of Loc.t * name * normal
     | Root of Loc.t * head * spine
+    | LFHole of Loc.t
     | Tuple of Loc.t * tuple
     | Ann of Loc.t * normal * typ
 

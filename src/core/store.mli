@@ -1,6 +1,14 @@
 open Id
 open Syntax.Int
 
+
+module NamedHoles : sig
+  val printingHoles : bool ref
+  val usingRealNames : bool ref
+  val getName : Id.name -> string
+  val reset : unit -> unit
+end
+
 module Cid : sig
 
   module Typ : sig
@@ -190,7 +198,6 @@ module Cid : sig
 
     open Id
     open Syntax.Int
-
     val render_name         : name         -> string
     val render_cid_comp_typ : cid_comp_typ -> string
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
@@ -319,3 +326,4 @@ module CVar : sig
   val length        : t -> int
 
 end
+

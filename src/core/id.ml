@@ -1,5 +1,6 @@
 type name     = {
-  string_of_name : string
+  string_of_name : string ;
+  was_generated : bool
 }
 
 type cid_typ    = int
@@ -33,7 +34,6 @@ type name_guide =
   | SomeName of name
   | SomeString of string
 
-
 let mk_name = function
     (* If no {!name} is given, create a new unique {!name}.
        This prevents the problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is
@@ -41,28 +41,28 @@ let mk_name = function
        This prevents the case where two entries appear to refer to the same name
        because {!None} = {!None}. *)
   | MVarName (Some vGen)  ->
-      { string_of_name = vGen() }
+      { string_of_name = vGen() ; was_generated = true}
 
   | MVarName None  ->
-      { string_of_name = Gensym.MVarData.gensym() }
+      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true }
 
   | PVarName (Some vGen)  ->
-      { string_of_name = "#" ^ vGen() }
+      { string_of_name = "#" ^ vGen() ; was_generated = true }
 
   | PVarName None  ->
-      { string_of_name = "#" ^ Gensym.VarData.gensym() }
+      { string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true }
 
   | SVarName None ->
-      { string_of_name = Gensym.MVarData.gensym() }
+      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true}
   | SVarName (Some vGen) ->
-      { string_of_name = vGen() }
+      { string_of_name = vGen() ; was_generated = true;}
 
   | BVarName (Some vGen)   ->
-        { string_of_name = vGen() }
+        { string_of_name = vGen() ; was_generated = true }
 
   | SomeName x  -> x
 
   | SomeString x     ->
-        { string_of_name = x }
+        { string_of_name = x ; was_generated = false }
 
-  | _     -> { string_of_name = (Gensym.VarData.gensym ()) }
+  | _     -> { string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true}

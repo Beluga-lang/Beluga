@@ -37,6 +37,8 @@ let usage () =
         ^ "    +test         Make output suitable for test harness. Implies -print\n"
         ^ "    +strengthen   Perform metavariable strengthening automatically.\n"
         ^ "    -strengthen   Turn off metavariable strengthening.\n"
+        ^ "    +realNames    Print holes using real names\n"
+        ^ "    -realNames    Print holes using freshly generated names (default)\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -81,6 +83,8 @@ let process_option arg rest = match arg with
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
   | "+strengthen" -> Lfrecon.strengthen := true; rest
   | "-strengthen" -> Lfrecon.strengthen := false; rest
+  | "+realNames" -> Store.NamedHoles.usingRealNames := true; rest
+  | "-realNames" -> Store.NamedHoles.usingRealNames := false; rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -173,8 +177,12 @@ let main () =
           print_newline ();
           Logic.runLogic ();
           if not (Holes.none ()) && !Debug.chatter != 0 then begin
-            printf "\n## Holes: %s  ##\n" file_name;
+            printf "\n## Holes: %s  ##" file_name;
             Holes.printAll ()
+          end;
+          if not (Lfholes.none ()) && !Debug.chatter != 0 then begin
+            printf "\n\n## LF Holes: %s  ##" file_name;
+            Lfholes.printAll ()
           end;
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer ()

@@ -379,7 +379,7 @@ and recSgnDecl d =
 
         let reconFun f e =
           let apx_e   = Index.exp vars' e in
-          let _       = dprint (fun () -> "\n  Indexing  expression done \n") in
+          let _       = dprint (fun () -> "\n  Indexing expression done \n") in
           let tau'    = lookupFun cG f in
           let e'      = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp cG apx_e (tau', C.m_id)) in
 

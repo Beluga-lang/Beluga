@@ -1,4 +1,4 @@
-open Core
+(* open Core *)
 open ExtString.String
 open Store.Cid
 open Pretty.Int.DefaultPrinter
@@ -90,7 +90,7 @@ let lochole = {name = "lochole";
                             stop_line,
                             stop_bol,
                             stop_off,
-                            _ghost) = Core.Syntax.Loc.to_tuple loc in
+                            _ghost) = Syntax.Loc.to_tuple loc in
                        fprintf ppf
                          "(\"%s\" %d %d %d %d %d %d)\n"
                          file_name

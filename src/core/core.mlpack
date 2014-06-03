@@ -9,6 +9,9 @@ Debug
 Error
 Gensym
 Holes
+Html
+Command
+Interactive
 Id
 Index
 Lexer

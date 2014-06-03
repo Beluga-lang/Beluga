@@ -106,7 +106,7 @@ let getStagedHoleNum loc =
       (fun (loc', _cD, _cG, (_tau, _mS)) -> if loc = loc' then true else false) stagedholes
 
 
-let (printOne : hole -> unit) (loc, cD, cG, (tau, theta)) =
+let printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
   Printf.printf "\n%s\n- Meta-Context: %s\n- Context: %s\n- Type: %s \n"
     (Loc.to_string loc)
     (mctxToString cD)

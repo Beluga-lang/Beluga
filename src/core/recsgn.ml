@@ -90,7 +90,7 @@ and recSgnDecl d =
     match d with
     | Ext.Sgn.Comment(_, x) ->
         if !Html.genHtml then
-          Html.appendAsComment (Str.global_replace (Str.regexp "\\(%{\\|}%\\)") "" x)
+          Html.appendAsComment x
         else ()
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
         let s = sgnDeclToString d in

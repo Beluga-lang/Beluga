@@ -6,21 +6,21 @@ let ids = ref []
 let page = ref ""
 (* \n\t\tspan {margin: 2em 1em 2em 1em;} *)
 let header =
-"<head>
-  <style type=\"text/css\">
-    body {
-      padding: 2em 1em 2em 1em;
-      margin: 0;
-      font-family: sans-serif;
-      color: black;
-      background: white;}
-    :link { color: #00C; background: transparent }
-    :visited { color: #00C; background: transparent }
-    a:active { color: #C00; background: transparent }
-    .keyword { color: #3333cc ; background: transparent }
-    code { display:block; background-color: #dddddd;border: 1px dashed maroon; color: black;font-family: \"courier\";padding:5px;margin:0; }
-  </style>
-</head>\n"
+"<head>" ^
+  "<style type=\"text/css\">" ^
+    "body {" ^
+      "padding: 2em 1em 2em 1em;" ^
+      "margin: 0;" ^
+      "font-family: sans-serif;" ^
+      "color: black;" ^
+      "background: white;}" ^
+    ":link { color: #00C; background: transparent }" ^
+    ":visited { color: #00C; background: transparent }" ^
+    "a:active { color: #C00; background: transparent }" ^
+    ".keyword { color: #3333cc ; background: transparent }" ^
+    "code { display:block; background-color: #dddddd;border: 1px dashed maroon; color: black;font-family: \"courier\";padding:5px;margin:0; }" ^
+  "</style>" ^
+"</head>\n"
 
 let generatePage filename = 
 begin
@@ -38,11 +38,11 @@ end
 
 let replaceNewLine = Str.global_replace (Str.regexp_string "\n") "<br>"
 
-let replaceKeyWords = let keywords = Str.regexp "\\(rec\\|let\\|case\\|of\\|
-							FN\\|and\\|block\\|Bool\\|datatype\\|
-							else\\|mlam\\|schema\\|type\\|
-							ttrue\\|ffalse\\|%name\\|
-							%opts\\|%not\\|%query\\)" in
+let keywords = "\\(rec\\|let\\|case\\|of\\|FN\\|and\\|block\\|Bool\\|datatype\\"^
+			   "|else\\|mlam\\|schema\\|type\\|ttrue\\|ffalse\\|%name\\|%opts\\|" ^ 
+			   "%not\\|%query\\|#infix\\|#postifix\\)"
+let
+ replaceKeyWords = let keywords = Str.regexp keywords in
 	Str.global_replace keywords "<span class=\"keyword\">\\0</span>"
 
 let replaceSpace s = Str.global_replace (Str.regexp_string " ") "&nbsp" s
@@ -73,6 +73,7 @@ let append innerHtml =
 	page := (!page) ^ "\n"  ^ "<br><div>" ^ innerHtml ^ "</div>"
 
 let appendAsComment innerHtml = 
+	let innerHtml = Str.global_replace (Str.regexp "\\(%{\\|}%\\)") "" innerHtml in
 	let innerHtml = replaceNewLine innerHtml in
 	page := (!page) ^ "\n" ^ "<p>" ^ innerHtml ^ "</p>"
 

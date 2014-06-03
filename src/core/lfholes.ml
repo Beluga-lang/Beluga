@@ -47,14 +47,16 @@ let mctxToString =
 let cpsiToString cD cPsi = P.dctxToString cD (Whnf.normDCtx cPsi)
 
 let printOne (loc, cD, cPsi, typ) =
+  let b1 = "____________________________________________________________________________" in
+  let b2 = "============================================================================" in
   Store.NamedHoles.reset () ;
     Printf.printf "\n%s\n
-     - Meta-Context: %s\n____________________________________________________________________________\n
-     - LF Context: %s\n\n============================================================================\n
-     - Goal Type: %s\n"
+     - Meta-Context: %s\n%s\n- LF Context: %s\n\n%s\n- Goal Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
+    (b1)
     (cpsiToString cD cPsi)
+    (b2)
     (P.typToString cD cPsi typ)
 
 let printAll () =

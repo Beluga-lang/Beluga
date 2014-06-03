@@ -253,7 +253,7 @@ let intro = {name = "intro";
               help = " - intro n tries to introduce variables in the nth hole"}
 
 
-let compconst = {name = "Constructors";
+let compconst = {name = "constructors-comp";
                     run = (fun ppf arglist ->
                       try
                         let arg = List.hd arglist in
@@ -340,37 +340,34 @@ let query = {name = "query";
                     | e -> fprintf ppf " - Error in query : %s\n" (Printexc.to_string e));
             help = "%:query EXPECTED TRIES TYP.\tQuery solutions to a given type"}
 
-(* let save = {name = "save";
-            run = (fun ppf arglist ->
-              let name = if List.length arglist <> 1 then "out.bel" else List.hd arglist in
-              let oc = open_out name in
-              let 
-
-                    );
-            help = "Save working file with a given filename. If no filename is provided, fill with be \"out.bel\""
-            } *)
+let reset = {name= "reset";
+             run=
+                (fun _ _ ->
+                  Store.clear ());
+              help="Reset the store"}
 (* Registering built-in commands *)
 
 let _ = reg := [
         helpme       ;
         chatteroff   ;
         chatteron    ;
-        countholes   ;
         load         ;
-        printhole    ;
-        printlfhole  ;
+        countholes   ;
         lochole      ;
         loclfhole    ;
-        constructors ;
+        printhole    ;
+        printlfhole  ;
         types        ;
+        constructors ;
         fill         ;
         split        ;
         intro        ;
         compconst    ;
         signature    ;
         printfun     ;
-        quit         ;
         query        ;
+        reset        ;
+        quit         ;
         ]
 
 (* registered commands *)

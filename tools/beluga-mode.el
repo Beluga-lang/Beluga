@@ -263,6 +263,7 @@ If a previous beli process already exists, kill it first."
 (defun beluga-load ()
   "Loads the current file in beli."
   (interactive)
+  (beluga--start)
   (beluga--send (concat "load " (buffer-file-name))))
 
 (defvar beluga--holes-overlays ()

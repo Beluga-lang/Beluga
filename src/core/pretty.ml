@@ -720,17 +720,21 @@ module Int = struct
          |  LF.Empty -> LF.Null
          |  LF.Dec (rest, last) -> LF.DDec (projectCtxIntoDctx rest, last)
 
-    and fmt_ppr_lf_schema lvl ppf = function
-      | LF.Schema [] -> ()
+    and fmt_ppr_lf_schema lvl ppf s = 
+      try
+        fprintf ppf "%s" (R.render_name (Store.Cid.Schema.get_name_from_schema s))
+      with
+        | _ -> match s with
+          | LF.Schema [] -> ()
 
-      | LF.Schema (f :: []) ->
-            fprintf ppf "%a"
-              (fmt_ppr_lf_sch_elem lvl) f
+          | LF.Schema (f :: []) ->
+                fprintf ppf "%a"
+                  (fmt_ppr_lf_sch_elem lvl) f
 
-      | LF.Schema (f :: fs) ->
-            fprintf ppf "@[%a@]@ +@ @[%a@]"
-              (fmt_ppr_lf_sch_elem lvl) f
-              (fmt_ppr_lf_schema lvl) (LF.Schema fs)
+          | LF.Schema (f :: fs) ->
+                fprintf ppf "@[%a@]@ +@ @[%a@]"
+                  (fmt_ppr_lf_sch_elem lvl) f
+                  (fmt_ppr_lf_schema lvl) (LF.Schema fs)
 
     and frugal_block cD cPsi lvl ppf = function
       | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
@@ -901,22 +905,9 @@ module Int = struct
             (R.render_name name)
 
     and isInferred = function
-      | LF.MTyp (_, _, dep) ->
-          begin match dep with
-            | LF.No -> false
-            | LF.Maybe -> true
-          end
-      | LF.PTyp (_, _, dep) ->
-          begin match dep with
-            | LF.No -> false
-            | LF.Maybe -> true
-          end
-
-      | LF.STyp (_, _, dep) ->
-          begin match dep with
-            | LF.No -> false
-            | LF.Maybe -> true
-          end
+      | LF.MTyp (_, _, dep)
+      | LF.PTyp (_, _, dep)
+      | LF.STyp (_, _, dep)
       | LF.CTyp (_, dep) ->
           begin match dep with
             | LF.No -> false
@@ -924,23 +915,9 @@ module Int = struct
           end
 
     and dependent_string = function
-      | LF.MTyp (_, _, dep) ->
-          begin match dep with
-            | LF.No -> "^e"
-            | LF.Maybe -> "^i"
-          end
-
-      | LF.PTyp (_, _, dep) ->
-          begin match dep with
-            | LF.No -> "^e"
-            | LF.Maybe -> "^i"
-          end
-
-      | LF.STyp (_, _, dep) ->
-          begin match dep with
-            | LF.No -> "^e"
-            | LF.Maybe -> "^i"
-          end
+      | LF.MTyp (_, _, dep)
+      | LF.PTyp (_, _, dep)
+      | LF.STyp (_, _, dep)
       | LF.CTyp (_, dep) ->
           begin match dep with
             | LF.No -> "^e"
@@ -1070,7 +1047,7 @@ module Int = struct
               (fmt_ppr_cmp_typ cD 0) tau2
               (r_paren_if cond)
 
-      | Comp.TypPiBox ((ctyp_decl), tau) ->
+      | Comp.TypPiBox (ctyp_decl, tau) ->
         let cond = lvl > 1 in
         fprintf ppf "%s%a@ %a%s"
           (l_paren_if cond)

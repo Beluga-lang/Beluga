@@ -1,3 +1,2 @@
-Found function abstraction, but expected type {g : some [t : tp] exp t}
-{T : [ |- tp]}
+Found function abstraction, but expected type {g : expCtx} {T : [ |- tp]}
 [g |- (exp T )] -> [g |- (exp T )].

@@ -20,13 +20,15 @@ module LF = struct
   and typ_decl =
     | TypDecl of name * typ
 
+  and ctyp =
+    | MTyp of typ * dctx * depend
+    | PTyp of typ * dctx * depend
+    | STyp of dctx * dctx * depend
+    | CTyp of cid_schema * depend
+
   and ctyp_decl =
-    | MDecl of  name * typ  * dctx
-    | PDecl of  name * typ  * dctx
-    | MDeclOpt of name
-    | CDeclOpt of name
-    | SDecl of name * dctx * dctx
-    | CDecl of name * cid_schema
+    | Decl of name * ctyp
+    | DeclOpt of name
 
   and typ =
     | Atom  of Loc.t * cid_typ * spine
@@ -110,13 +112,9 @@ end
 (** Approximate Computation Syntax *)
 module Comp = struct
 
- type depend =
-   | Implicit
-   | Explicit
-
  type  kind =
    | Ctype of Loc.t
-   | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
+   | PiKind  of Loc.t * LF.ctyp_decl * kind
 
  type meta_obj =
    | MetaCtx of Loc.t * LF.dctx
@@ -138,7 +136,7 @@ module Comp = struct
    | TypSub     of Loc.t * LF.dctx  * LF.dctx
    | TypArr     of typ * typ
    | TypCross   of typ * typ
-   | TypPiBox   of (LF.ctyp_decl * depend) * typ
+   | TypPiBox   of LF.ctyp_decl * typ
    | TypBool
 
   and exp_chk =

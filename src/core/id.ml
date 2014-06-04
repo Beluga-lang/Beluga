@@ -1,6 +1,7 @@
 type name     = {
   string_of_name : string ;
-  was_generated : bool
+  was_generated : bool ;
+  uppercase : bool
 }
 
 type cid_typ    = int
@@ -34,6 +35,9 @@ type name_guide =
   | SomeName of name
   | SomeString of string
 
+(* returns true iff c is an uppercase letter *)
+let is_uppercase (c : char) : bool = 0 = (Char.compare c (Char.uppercase c))
+
 let mk_name = function
     (* If no {!name} is given, create a new unique {!name}.
        This prevents the problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is
@@ -41,28 +45,28 @@ let mk_name = function
        This prevents the case where two entries appear to refer to the same name
        because {!None} = {!None}. *)
   | MVarName (Some vGen)  ->
-      { string_of_name = vGen() ; was_generated = true}
+      { string_of_name = vGen() ; was_generated = true; uppercase = true}
 
   | MVarName None  ->
-      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true }
+      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true; uppercase = true }
 
   | PVarName (Some vGen)  ->
-      { string_of_name = "#" ^ vGen() ; was_generated = true }
+      { string_of_name = "#" ^ vGen() ; was_generated = true; uppercase = false }
 
   | PVarName None  ->
-      { string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true }
+      { string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true; uppercase = false }
 
   | SVarName None ->
-      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true}
+      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true; uppercase = true}
   | SVarName (Some vGen) ->
-      { string_of_name = vGen() ; was_generated = true;}
+      { string_of_name = vGen() ; was_generated = true; uppercase = true}
 
   | BVarName (Some vGen)   ->
-        { string_of_name = vGen() ; was_generated = true }
+        { string_of_name = vGen() ; was_generated = true; uppercase = false }
 
   | SomeName x  -> x
 
   | SomeString x     ->
-        { string_of_name = x ; was_generated = false }
+        { string_of_name = x ; was_generated = false; uppercase = is_uppercase (x.[0]) }
 
-  | _     -> { string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true}
+  | _     -> { string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true; uppercase = false}

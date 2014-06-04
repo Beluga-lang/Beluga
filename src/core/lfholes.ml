@@ -21,7 +21,7 @@ let ctypDeclToString cD ctypDecl =
   Format.flush_str_formatter ()
 
 let mctxToString =
-  let shift = " " in
+  let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
       "."
@@ -37,7 +37,7 @@ let printOne (loc, cD, cPsi, typ) =
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
   Store.NamedHoles.reset () ;
-    Printf.printf "\n%s\n - Meta-Context: %s\n%s\n - LF Context: %s\n\n%s\n - Goal Type: %s\n"
+    Printf.printf "\n%s\n    - Meta-Context: %s\n%s\n    - LF Context: %s\n\n%s\n    - Goal Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
     (b1)

@@ -17,12 +17,15 @@ module NamedHoles = struct
             List.assoc s !newNames
         with
         | _ -> 
-            let newName = Gensym.MVarData.gensym () in
+            let newName = 
+              if (n.Id.uppercase) then 
+                Gensym.MVarData.gensym () 
+              else Gensym.VarData.gensym () in
             (newNames := (s,newName) :: (!newNames)) ;
             newName
       else n.Id.string_of_name
       
-    let reset () = Gensym.MVarData.reset () ; newNames := []
+    let reset () = Gensym.MVarData.reset () ; Gensym.VarData.reset (); newNames := []
 end
 
 type error =
@@ -319,6 +322,12 @@ module Cid = struct
     let get = DynArray.get store
 
     let get_schema name = (get name).schema
+
+    let get_name_from_schema s =
+      let f a b = if (b.schema = s) then Some(b.name) else a in
+      let n = DynArray.fold_left f None store in match n with
+      | Some(n) -> n
+      | _ -> raise Not_found
 
     let clear () =
       DynArray.clear store;

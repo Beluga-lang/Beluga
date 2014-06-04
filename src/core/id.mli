@@ -4,7 +4,8 @@
     See `mk_name'. *)
 type name     = private {
   string_of_name : string ;
-  was_generated : bool
+  was_generated : bool ;
+  uppercase : bool
 }
 
 (** A constant identifier for types *)

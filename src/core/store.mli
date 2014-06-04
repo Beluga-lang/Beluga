@@ -194,6 +194,7 @@ module Cid : sig
     val get             : cid_schema -> entry
     val get_schema      : cid_schema -> LF.schema
     val index_of_name   : name -> cid_schema
+    val get_name_from_schema : LF.schema -> name
     val clear           : unit -> unit
   end
 

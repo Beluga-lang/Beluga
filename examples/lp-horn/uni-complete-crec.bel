@@ -1,3 +1,4 @@
+#opts +strengthen;
 %%% Completeness of uniform proofs with respect to canonical deductions
 %%% Author: Frank Pfenning
 %%% Adapted: Brigitte Pientka
@@ -17,11 +18,11 @@ fn cn => case cn of
 
 |[g |- can_truei] => [g |- s_true]
 
-| {D:[g |- pf (atom (P ..))]}
-  {AT1:[g |- atm (D ..)]}
+| % {D:[g |- pf (atom (P ..))]}
+  % {AT1:[g |- atm (D ..)]}
   [g |- can_atm (AT1 ..)] =>
-  let [g,q:p,u:focus (A ..) q |-  I1 .. q u] = cmpai [g |- andalso (D .. ) (AT1 .. )] in
-    [g |- I1 .. (P ..) (i_atom)]
+  let [g,q:p,u:focus (A ..) q |-  I1 .. q u] = cmpai [g |- andalso _ (AT1 .. )] in
+    [g |- I1 .. _ (i_atom)]
 
 %{ % This case is only not necessary for the Horn fragment
   | {CN1::(can (B ..) (D .. u))[g,u:pf (A ..), v:atm u]}

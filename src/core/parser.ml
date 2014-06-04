@@ -255,7 +255,7 @@ GLOBAL: sgn;
 
   sgn_pragma_opts:
     [
-      [ "%opts"; opts = LIST1 [ opt = SYMBOL -> opt]; ";" -> Sgn.OptsPrag opts ]
+      [ "#opts"; opts = LIST1 [ opt = SYMBOL -> opt]; ";" -> Sgn.OptsPrag opts ]
     ];
 
   sgn_lf_typ :

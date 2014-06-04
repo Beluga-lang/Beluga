@@ -116,23 +116,25 @@ and strans_mfront cD mf conv_list = match mf with
 
 and strans_sub cD s conv_list = match s with
 (*  | Int.LF.Shift (Int.LF.NoCtxShift, 0) ->s *)
-  | Int.LF.Shift (ctx_offset, offset) ->
+  | Int.LF.EmptySub -> Int.LF.EmptySub
+  | Int.LF.Undefs -> Int.LF.Undefs
+  | Int.LF.Shift offset ->
       let offset' = List.fold_left (fun x -> fun y -> x + y) 0 conv_list in
       let _ = dprint (fun () -> "conv_list = " ^ conv_listToString conv_list ) in
       let _ = dprint (fun () -> "Old offset " ^ string_of_int offset ) in
       let _ = dprint (fun () -> "New offset " ^ string_of_int offset') in
-        Int.LF.Shift (ctx_offset, offset')
+        Int.LF.Shift offset'
   | Int.LF.Dot (ft, s) ->
       Int.LF.Dot (strans_front cD ft conv_list, strans_sub cD s conv_list)
-  | Int.LF.SVar (s, (ctx_offset, offset), sigma) ->
+  | Int.LF.SVar (s, offset, sigma) ->
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.SVar (s, (ctx_offset, offset), sigma')
+        Int.LF.SVar (s, offset, sigma')
   | Int.LF.FSVar (s, n , sigma) ->
       let sigma' = strans_sub cD sigma conv_list in
         Int.LF.FSVar (s, n, sigma')
-  | Int.LF.MSVar (rho, (ctx_offset, offset), (mt, sigma)) ->
+  | Int.LF.MSVar (rho, offset, (mt, sigma)) ->
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.MSVar (rho, (ctx_offset, offset), (mt, sigma'))
+        Int.LF.MSVar (rho, offset, (mt, sigma'))
 
 and strans_front cD ft  conv_list = match ft with
   | Int.LF.Head h -> Int.LF.Head (strans_head Syntax.Loc.ghost cD h conv_list)
@@ -228,7 +230,7 @@ and flattenDCtx' cD cPsi = match cPsi with
 let gen_conv_sub conv_list  =
   let l = List.length conv_list in
   let rec gen_sub conv_list pos = match conv_list with
-    | [] -> Int.LF.Shift (Int.LF.NoCtxShift, l)
+    | [] -> Int.LF.Shift l
     | 1::clist ->
         let s = gen_sub clist (pos + 1) in
           Int.LF.Dot (Int.LF.Head (Int.LF.BVar pos), s)

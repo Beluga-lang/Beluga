@@ -12,9 +12,7 @@ open Store.Cid
 module P = Pretty.Int.DefaultPrinter
 
 let rec subToString = function
-  | Shift(CtxShift _, n) -> "Shift(CtxShift _, " ^ string_of_int n ^ ")"
-  | Shift(NoCtxShift, n) -> "Shift(NoCtxShift, " ^ string_of_int n ^ ")"
-  | Shift(NegCtxShift _, n) -> "Shift(NegCtxShift _, " ^ string_of_int n ^ ")"
+  | Shift n -> "Shift(NoCtxShift, " ^ string_of_int n ^ ")"
   | SVar _ -> "SVar(_,_)"
   | FSVar _ -> "FSVar(_,_)"
   | Dot(front, s) -> "Dot(" ^ frontToString front ^ ", " ^ subToString s ^ ")"
@@ -29,12 +27,12 @@ module Comp = Syntax.Int.Comp
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [12])
 
 
-let rec ctxShift cPsi = match cPsi with
-  | Null              -> Shift (NoCtxShift , 0 )
-  | CtxVar psi        -> Shift (CtxShift psi, 0)
-  | DDec   (cPsi, _x) ->
-      let Shift(cshift, n) = ctxShift cPsi in
-        Shift (cshift, n+1)
+let ctxShift cPsi = EmptySub (* match cPsi with *)
+  (* | Null              -> Shift (NoCtxShift , 0 ) *)
+  (* | CtxVar psi        -> Shift (CtxShift psi, 0) *)
+  (* | DDec   (cPsi, _x) -> *)
+  (*     let Shift(cshift, n) = ctxShift cPsi in *)
+  (*       Shift (cshift, n+1) *)
 
 (* ctxToSub_mclosed cD psi cPsi = (cD', s)
 
@@ -158,7 +156,7 @@ let declToCVar (n, ctypn) = match ctypn with
   | STyp (cPhi, cPsi) ->
         let u     = Whnf.newSVar (Some n) (cPsi, cPhi) (* I guess these swap? *) in
 	let phat  = Context.dctxToHat cPsi in
-        SObj (phat, SVar (u, (NoCtxShift, 0), Substitution.LF.id))
+        SObj (phat, SVar (u, 0, Substitution.LF.id))
   | CTyp (sW, _) ->
         let cvar = Whnf.newCVar (Some n) sW in
 	CObj (CtxVar cvar)
@@ -178,7 +176,7 @@ let mdeclToMMVar cD0 n mtyp = match mtyp with
   | STyp (cPhi, cPsi) ->
     let u     = Whnf.newMSVar (Some n) (cD0, cPsi, cPhi) in
     let phat  = Context.dctxToHat cPsi in
-    SObj (phat, MSVar (u, (NoCtxShift, 0), (Whnf.m_id, Substitution.LF.id)))
+    SObj (phat, MSVar (u, 0, (Whnf.m_id, Substitution.LF.id)))
   | PTyp (tA, cPsi) ->
     let p    = Whnf.newPVar (Some n) (cPsi, tA) in
     let phat = dctxToHat cPsi in

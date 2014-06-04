@@ -161,19 +161,6 @@ let _ = Error.register_printer
              (Whnf.cnormCTyp (tau2, theta2))
 ))
 
-let forceDep (cdecl : Int.LF.ctyp_decl) (dep : Apx.Comp.depend) : (Int.LF.ctyp_decl) =
-  let dep = match dep with Apx.Comp.Implicit -> Int.LF.Maybe | Apx.Comp.Explicit -> Int.LF.No in
-  begin match cdecl with
-  | Int.LF.DeclOpt _ -> cdecl
-  | Int.LF.Decl(name, decl)-> 
-    begin match decl with
-    | Int.LF.MTyp(t, cD, _) -> Int.LF.Decl(name, Int.LF.MTyp(t, cD, dep))
-    | Int.LF.PTyp(t, cD, _) -> Int.LF.Decl(name, Int.LF.PTyp(t, cD, dep))
-    | Int.LF.STyp(cD, cD', _) -> Int.LF.Decl(name, Int.LF.STyp(cD, cD', dep))
-    | Int.LF.CTyp(s, _) -> Int.LF.Decl(name, Int.LF.CTyp(s, dep))
-    end
-  end
-
 let rec get_ctxvar cPsi  = match cPsi with
   | Int.LF.Null -> None
   | Int.LF.CtxVar (psi_name) -> Some psi_name
@@ -372,32 +359,36 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
                         P.typToString cD cPsi (tA, LF.id)) in
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
 
-let elCDecl recT cD cdecl = match cdecl with
-  | Apx.LF.MDecl (u, a, psi) ->
-      let cPsi = Lfrecon.elDCtx recT cD psi in
-      let tA   = Lfrecon.elTyp recT cD cPsi a in
-        Int.LF.Decl (u, Int.LF.MTyp (tA, cPsi, Int.LF.No))
+let elCDecl recT cD (Apx.LF.Decl(u, ctyp)) = match ctyp with (*?*)
+  | Apx.LF.MTyp (a, psi, dep) ->
+    let cPsi = Lfrecon.elDCtx recT cD psi in
+    let tA   = Lfrecon.elTyp recT cD cPsi a in
+    let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
+    Int.LF.Decl (u, Int.LF.MTyp (tA, cPsi, dep))  
 
-  | Apx.LF.PDecl (u, a, psi) ->
-      let cPsi = Lfrecon.elDCtx recT cD psi in
-      let tA   = Lfrecon.elTyp recT cD cPsi a in
-      (* The type tA is valid, if it either is part of the context schema
-         or if it is an instance of a concrete declaration in cPsi.
-         This is postponed to checking, since we may not have the
-         schema of the context yet.
+  | Apx.LF.PTyp (a, psi, dep) ->
+    let cPsi = Lfrecon.elDCtx recT cD psi in
+    let tA   = Lfrecon.elTyp recT cD cPsi a in
+    (* The type tA is valid, if it either is part of the context schema
+       or if it is an instance of a concrete declaration in cPsi.
+       This is postponed to checking, since we may not have the
+       schema of the context yet.
 
-         let elems =
-         let _ = Check.LF.checkTypeAgainstSchema (Syntax.ghost.loc) cD cPsi tA elems
-      *)
-        Int.LF.Decl (u, Int.LF.PTyp (tA, cPsi, Int.LF.No))
+       let elems =
+       let _ = Check.LF.checkTypeAgainstSchema (Syntax.ghost.loc) cD cPsi tA elems
+    *)
+    let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
+    Int.LF.Decl (u, Int.LF.PTyp (tA, cPsi, dep))
 
-  | Apx.LF.SDecl (u, phi, psi) ->
-      let cPsi = Lfrecon.elDCtx recT cD psi in
-      let cPhi = Lfrecon.elDCtx recT cD phi in
-        Int.LF.Decl (u, Int.LF.STyp (cPhi, cPsi, Int.LF.No))
+  | Apx.LF.STyp ( phi, psi, dep) ->
+    let cPsi = Lfrecon.elDCtx recT cD psi in
+    let cPhi = Lfrecon.elDCtx recT cD phi in
+    let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
+      Int.LF.Decl (u, Int.LF.STyp (cPhi, cPsi, dep))
 
-  | Apx.LF.CDecl (g, schema_cid) ->
-      Int.LF.Decl (g, Int.LF.CTyp (schema_cid, Int.LF.No))
+  | Apx.LF.CTyp (schema_cid, dep) ->
+    let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
+    Int.LF.Decl (u, Int.LF.CTyp (schema_cid, dep))
 
 let rec elMCtx recT delta = match delta with
   | Apx.LF.Empty -> Int.LF.Empty
@@ -574,9 +565,8 @@ let rec elCompKind cD k = match k with
   | Apx.Comp.Ctype loc ->
       Int.Comp.Ctype loc
 
-  | Apx.Comp.PiKind (loc, (cdecl, apx_dep), k') ->
+  | Apx.Comp.PiKind (loc, cdecl, k') ->
       let cdecl' = elCDecl Lfrecon.Pibox cD cdecl   in
-      let cdecl' = forceDep cdecl' apx_dep in
       let tK     = elCompKind  (Int.LF.Dec (cD, cdecl')) k' in
         Int.Comp.PiKind (loc, cdecl', tK)
 
@@ -878,9 +868,8 @@ let rec elCompTyp cD tau = match tau with
       let tau2' = elCompTyp cD tau2 in
         Int.Comp.TypCross (tau1', tau2')
 
-  | Apx.Comp.TypPiBox ((cdecl, apx_dep), tau) ->
+  | Apx.Comp.TypPiBox (cdecl, tau) ->
       let cdecl' = elCDecl Lfrecon.Pibox cD cdecl  in
-      let cdecl' = forceDep cdecl' apx_dep in
       let tau'   = elCompTyp (Int.LF.Dec (cD, cdecl')) tau in
         Int.Comp.TypPiBox (cdecl', tau')
 

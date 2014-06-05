@@ -17,6 +17,7 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 type error =
   | UnexpectedSucess
   | IllegalOptsPrag
+  | IllegalOperatorPrag of name * Ext.Sgn.fix * int
 
 exception Error of Syntax.Loc.t * error
 
@@ -24,10 +25,18 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-	| UnexpectedSucess ->
-	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
+      	| UnexpectedSucess ->
+      	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
         | IllegalOptsPrag ->
-          Format.fprintf ppf "%%opts pragma can only appear before any declarations."))
+          Format.fprintf ppf "%%opts pragma can only appear before any declarations."
+        | IllegalOperatorPrag(n, f, actual) ->
+          let (fix, expected) = match f with Ext.Sgn.Infix -> ("infix", 2) | Ext.Sgn.Postfix -> ("postfix", 1) in
+          Format.fprintf ppf 
+            "Illegal %s operator %s. Operator declared with %d arguments, but only operators with %d args permitted" 
+            (fix)
+            (R.render_name n)
+            (actual)
+            (expected)))
 
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
@@ -88,7 +97,19 @@ and recSgnDecl d =
     match d with
     | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc_option)) -> 
         let _ = dprint(fun () -> "Pragma found for " ^ (R.render_name name)) in
-        OpPragmas.addPragma name fix precedence assoc_option
+        let args_expected = match fix with
+          | Ext.Sgn.Postfix -> 1
+          | Ext.Sgn.Infix   -> 2 in
+        
+        let actual = 
+          try Typ.args_of_name name
+          with _ -> 
+            try Term.args_of_name name
+            with _ -> -1 in
+        if actual = -1 then () else
+          if args_expected = actual then 
+            OpPragmas.addPragma name fix precedence assoc_option
+          else raise (Error(loc, IllegalOperatorPrag(name, fix, actual)))
 
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in

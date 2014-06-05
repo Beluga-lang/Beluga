@@ -85,6 +85,13 @@ module Cid = struct
 
     let index_of_name n = Hashtbl.find directory n
 
+    let rec args = function
+    | Int.LF.Typ -> 0
+    | Int.LF.PiKind(_, k) -> 1 + (args k)
+
+    let args_of_name n = 
+      args ((DynArray.get store (index_of_name n)).kind)
+
     let get = DynArray.get store
 
     let freeze a =
@@ -267,7 +274,8 @@ module Cid = struct
       typ                : Int.LF.typ
     }
 
-    let mk_entry n t i = {
+    let mk_entry n t i = 
+      {
       name               = n;
       implicit_arguments = i;
       typ                = t
@@ -281,6 +289,15 @@ module Cid = struct
     let directory = Hashtbl.create 0
 
     let index_of_name name = Hashtbl.find directory name
+
+    let rec args = function
+    | Int.LF.PiTyp(_, tA) -> 1 + args tA
+    | _ -> 0
+
+    let args_of_name n = 
+      let e = (DynArray.get store (index_of_name n)) in
+      (args e.typ) - e.implicit_arguments
+
 
     let add loc e_typ entry =
       let cid_tm = DynArray.length store in

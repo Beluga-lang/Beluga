@@ -8,7 +8,24 @@
 open Syntax.Ext
 open Id
 
+(* let rec spaces i = if i <= 0 then "" else "-" ^ (spaces (i-1))
 
+and g i a = begin match a with
+  | LF.Nil -> (spaces i) ^ ".\n"
+  | LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) end
+
+and f i = function
+  | LF.Lam(_,u,n) -> (spaces i) ^ "Lam: " ^ (u.Id.string_of_name) ^ "\n" ^ (f (i+1) n)
+  | LF.Root(_,LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
+  | LF.Root(_,LF.MVar(_, u, _), s) -> (spaces i) ^ "Root (MVar): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
+  | LF.Root(_,LF.PVar(_, u, _), s) -> (spaces i) ^ "Root (PVar): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
+  | LF.Root(_,_, s) -> (spaces i) ^ "Root (?)\n" ^ (g (i+1) s)
+  | LF.Tuple(_,_) -> "Tuple"
+  | LF.Ann(_,n,_) -> (spaces i) ^ "Ann\n" ^ (f (i+1) n)
+  | LF.TList(_,nl) -> (spaces i) ^ "TList\n" ^ (List.fold_right (fun n acc -> (f (i+1) n) ^ acc) nl "")
+
+and normalToString n = f 0 n
+ *)
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
 exception MixError of (Format.formatter -> unit)
@@ -25,7 +42,7 @@ let chomp = function
 let _ = Error.register_printer
   (fun (Grammar.Loc.Exc_located (loc, exn)) ->
     Error.print_with_location loc (fun ppf ->
-      Format.fprintf ppf "%s (Parse Error)" (chomp (Printexc.to_string exn))))
+      Format.fprintf ppf "%s" (chomp (Printexc.to_string exn))))
 
 let _ = Error.register_printer
   (fun (Stream.Error str) ->
@@ -38,13 +55,13 @@ let _ = Error.register_printer
 let _ = Error.register_printer
   (fun IllFormedDataDecl ->
     Error.print (fun ppf ->
-      Format.fprintf ppf "Ill-formed datatype declaration."))
+      Format.fprintf ppf "Parse Error: Ill-formed datatype declaration."))
 
 let _ = Error.register_printer
   (fun (WrongConsType (c, a, a')) ->
     Error.print (fun ppf ->
       Error.report_mismatch ppf
-        ("Wrong datatype for constructor " ^ c.string_of_name ^ ".")
+        ("Parse Error: Wrong datatype for constructor " ^ c.string_of_name ^ ".")
         "Expected datatype" Format.pp_print_string a.string_of_name
         "Actual datatype"   Format.pp_print_string a'.string_of_name))
 
@@ -483,17 +500,7 @@ GLOBAL: sgn;
     "list" [
       l = LIST1 (lf_term LEVEL "lam") -> 
             (LF.TList(_loc, l))
-
-            (*PRIMARY*)
-            (*(LF.TList(_loc, t::l))*)
-
-            
-           (*begin match l with
-              | [LF.TList(_, l')] -> (LF.TList (_loc, t::l'))
-              | [LF.TList(_, l'); LF.TList(_,l'')] -> (LF.TList(_loc, t :: l' @ l''))
-              | _ ->  (LF.TList(_loc, t::l)) end   *) 
-    ]
-    
+      ]    
     | "lam" RIGHTA
         [
           "\\"; x = SYMBOL; "."; m = lf_term->
@@ -696,9 +703,11 @@ GLOBAL: sgn;
 
         |
            a = SYMBOL; ms = LIST0 clf_normal ->
-             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
-
+              LF.AtomTerm(_loc, LF.App(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms), LF.Nil))
+        |
+           a = UPSYMBOL; ms = LIST0 clf_normal ->
+              (* LF.AtomTerm(_loc, LF.App(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms), LF.Nil)) *)
+              LF.AtomTerm(_loc, LF.App(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms), LF.Nil))
 
         ]
     | "sigma"
@@ -798,14 +807,20 @@ GLOBAL: sgn;
   ;
 
   clf_term_app:
-    [ LEFTA
+    [ 
+      "infix"
+      [
+        "|"; u = UPSYMBOL; ms = LIST0 clf_normal; "|" -> 
+              let l = LF.TList(_loc, ((LF.Root(_loc, LF.Name(_loc, Id.mk_name (Id.SomeString u)), LF.Nil))::ms)) in
+              (* let l = LF.TList(_loc, ((LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil))::ms)) in *)
+              (* let _ = print_string (normalToString l) in *) l
+      ]
+    |
+      LEFTA
         [
-          h = clf_head; ms = LIST0 clf_normal ->
-            let spine = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Root (_loc, h, spine)
-
+           x = clf_term_x; ms = LIST0 clf_normal -> LF.TList(_loc, x::ms)
         ]
-
+(* 
     | RIGHTA
         [
           t = clf_term_x  ->
@@ -818,7 +833,7 @@ GLOBAL: sgn;
             t
 
 
-        ]
+        ] *)
     ]
   ;
 
@@ -851,11 +866,11 @@ GLOBAL: sgn;
       |
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
-
+(*       | x = UPSYMBOL ->
+         LF.MVar (_loc, Id.mk_name (Id.SomeString x), LF.EmptySub _loc)
+ *)
  (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
-
-
       ]
     ]
   ;

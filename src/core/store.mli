@@ -50,6 +50,7 @@ module Cid : sig
     val index_of_name     : name -> cid_typ
     val addConstructor    : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear             : unit -> unit
+    val args_of_name      : name -> int
 
     (* see subord.ml for an explanation of term-level subordination
          and type-level subordination *)
@@ -71,6 +72,7 @@ module Cid : sig
     val get           : cid_term -> entry
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
+    val args_of_name  : name -> int
     val clear         : unit -> unit
   end
 

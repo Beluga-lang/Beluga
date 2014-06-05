@@ -47,6 +47,9 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+      | MispacedOperator n ->
+        Format.fprintf ppf ("Invalid use of operator %s.") (R.render_name n)
+
       | UnboundName n ->
           Format.fprintf ppf
 	    "Unbound data-level variable (ordinary or meta-variable) or constructor: %s."
@@ -69,7 +72,7 @@ let _ = Error.register_printer
       | PatVarNotUnique ->
           Format.fprintf ppf "Pattern variable not linear."
       | IllFormedCompTyp ->
-	Format.fprintf ppf "Ill-formed computation-level type."))
+	       Format.fprintf ppf "Ill-formed computation-level type."))
 
 
 type free_cvars =
@@ -158,10 +161,10 @@ and index_typ cvars bvars fvars = function
     begin
       try
         let a' = Typ.index_of_name a in
-	let (s', fvars') = index_spine cvars bvars fvars s in
-        (Apx.LF.Atom (loc, a', s') , fvars')
-      with Not_found ->
-	raise (Error (loc, UnboundName a))
+	      let (s', fvars') = index_spine cvars bvars fvars s in
+          (Apx.LF.Atom (loc, a', s') , fvars')
+        with Not_found ->
+	        raise (Error (loc, UnboundName a))
     end
 
   | Ext.LF.ArrTyp (_loc, a, b) ->
@@ -182,20 +185,17 @@ and index_typ cvars bvars fvars = function
       (Apx.LF.Sigma typRec' , fvars')
 
   | Ext.LF.AtomTerm(loc, (Ext.LF.App(loc', n, Ext.LF.Nil))) ->
-      let _ = dprint (fun () -> "AtomTerm: ") in
-      let _ = dprint (fun () -> normalToString n) in
+      let _ = dprint (fun () -> normalToString n ) in
       begin match n with
         | Ext.LF.TList(loc2,nl) ->
             let prag_list = getOps nl in
-            (* let _ = dprint (fun () -> "prag_list length: " ^ string_of_int (List.length prag_list)) in *)
             let Ext.LF.Root(_, Ext.LF.Name(_, a), s') = fixNormalList nl prag_list in
             index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, s')) 
-            
         | Ext.LF.Root(loc2, Ext.LF.Name(_,name), sp) -> 
             index_typ cvars bvars fvars (Ext.LF.Atom(loc2, name, sp))
       end
 
-and getNormalLoc = function
+and locOfNormal = function
   | Ext.LF.Lam(l,_,_) -> l
   | Ext.LF.Root(l,_,_) -> l
   | Ext.LF.Tuple(l,_) -> l
@@ -223,18 +223,20 @@ and normalToString n = f 0 n
 and normalListToSpine = function
     | [] -> Ext.LF.Nil
     | (Ext.LF.TList(loc,nl))::t -> Ext.LF.App(loc, fixNormalList nl (getOps nl), normalListToSpine t)
-    | h::t -> Ext.LF.App(getNormalLoc h, h, normalListToSpine t)
+    | h::t -> Ext.LF.App(locOfNormal h, h, normalListToSpine t)
  
-and getOps l = if !Store.OpPragmas.pragmaCount = 0 then [] else match l with
+and getOps l = 
+  if !Store.OpPragmas.pragmaCount = 0 then [] else match l with
     | [] -> []
     | n::rest -> 
       begin match n with
-        | Ext.LF.Root(_, Ext.LF.Name(_, name), Ext.LF.Nil) -> 
+        | Ext.LF.Root(_, Ext.LF.Name(_, name), Ext.LF.Nil) 
+        | Ext.LF.Root(_, Ext.LF.PVar(_, name, _), Ext.LF.Nil)
+        | Ext.LF.Root(_, Ext.LF.MVar(_, name, _), Ext.LF.Nil) -> 
             begin match Store.OpPragmas.getPragma name with
             | None -> getOps rest
             | Some prag -> prag::(getOps rest)
             end
-        | Ext.LF.TList(_, nl') -> (getOps nl') @ (getOps rest)
         | _ ->(getOps rest)
       end 
 
@@ -247,7 +249,7 @@ and fixNormalList (nl : Ext.LF.normal list) (prag_list : (Store.OpPragmas.fixPra
           Ext.LF.Lam(loc, name, Ext.LF.Root(loc2, head, normalListToSpine t))
       | Ext.LF.Lam(loc, name, n) ->
           Ext.LF.Lam(loc, name, fixNormalList (n::t) [])
-      | Ext.LF.TList _ -> failwith "TList as head in fixNormalList"
+      | Ext.LF.TList (loc, nl) -> fixNormalList (nl@t) []
       | _ -> failwith (normalToString (Ext.LF.TList(Loc.ghost, nl)))
     end
   else      
@@ -293,7 +295,7 @@ and fixNormalList (nl : Ext.LF.normal list) (prag_list : (Store.OpPragmas.fixPra
         let a = List.nth nl (i-1) in
         let b = List.nth nl (i+1) in
         let new_list = deleteElement (i-1) (deleteElement i (deleteElement (i+1) nl)) in
-        let new_root = Ext.LF.Root(loc, head, Ext.LF.App(getNormalLoc a, a, Ext.LF.App(getNormalLoc b, b, Ext.LF.Nil))) in
+        let new_root = Ext.LF.Root(loc, head, Ext.LF.App(locOfNormal a, a, Ext.LF.App(locOfNormal b, b, Ext.LF.Nil))) in
         let (x, y) = splitAt (i-1) new_list in
         if new_list = [] then 
           new_root
@@ -329,7 +331,7 @@ and fixNormalList (nl : Ext.LF.normal list) (prag_list : (Store.OpPragmas.fixPra
         let Ext.LF.Root(loc, head, Ext.LF.Nil) = List.nth nl i in
         let a = List.nth nl (i-1) in
         let new_list = deleteElement (i-1) (deleteElement i nl) in
-        let new_root = Ext.LF.Root(loc, head, Ext.LF.App(getNormalLoc a, a, Ext.LF.Nil)) in
+        let new_root = Ext.LF.Root(loc, head, Ext.LF.App(locOfNormal a, a, Ext.LF.Nil)) in
         let (x,y) = splitAt (i-1) new_list in
         if new_list = [] then 
           new_root
@@ -384,7 +386,7 @@ and index_term cvars bvars fvars = function
     let (m', fvars'') = index_term cvars bvars fvars' m in
     (Apx.LF.Ann (loc, m', a'), fvars'')
 
-  | Ext.LF.TList (loc, nl) ->
+  | Ext.LF.TList (loc, nl)->
     index_term cvars bvars fvars (fixNormalList nl (getOps nl))
 
 and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
@@ -467,7 +469,7 @@ and index_spine cvars bvars fvars = function
     match m with
       | Ext.LF.TList(loc, nl) -> 
         let n = fixNormalList nl (getOps nl) in
-        index_spine cvars bvars fvars (Ext.LF.App (getNormalLoc n, n, s))
+        index_spine cvars bvars fvars (Ext.LF.App (loc, n, s))
       | _ ->
         let (m', fvars')  = index_term  cvars bvars fvars m in
         let (s', fvars'') = index_spine cvars bvars fvars' s in
@@ -894,7 +896,7 @@ and index_exp' cvars vars fcvars = function
   | Ext.Comp.PairVal (loc, i1, i2) ->
       let i1' = index_exp' cvars vars fcvars i1 in
       let i2' = index_exp' cvars vars fcvars i2 in
-	Apx.Comp.PairVal (loc, i1', i2')
+	    Apx.Comp.PairVal (loc, i1', i2')
 
   | Ext.Comp.Ann (_loc, e, tau) ->
       let (tau', _ ) =  index_comptyp cvars fcvars tau in

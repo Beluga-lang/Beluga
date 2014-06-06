@@ -226,7 +226,7 @@ let lex_token loc = lexer
 
   | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
-  | '%' '{' ( _ )* '}' '%' -> mk_tok_of_lexeme mk_comment loc lexbuf
+  | '%' '{'  ([^'%'])* '}' '%' -> mk_tok_of_lexeme mk_comment loc lexbuf
 
 (* Skip %...\n comments and advance the location reference. *)
 let skip_line_comment loc = lexer

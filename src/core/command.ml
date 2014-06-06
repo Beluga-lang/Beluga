@@ -1,4 +1,4 @@
-(* open Core *)
+open Core
 open ExtString.String
 open Store.Cid
 open Pretty.Int.DefaultPrinter

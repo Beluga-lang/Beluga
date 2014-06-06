@@ -356,7 +356,7 @@ GLOBAL: sgn;
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
-      | x = COMMENT -> [Sgn.Comment(_loc, x)]
+      | x = COMMENT -> print_string x; [Sgn.Comment(_loc, x)]
       ]
     ]
   ;

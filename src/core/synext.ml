@@ -28,7 +28,7 @@ module LF = struct
     | PiTyp  of Loc.t * typ_decl * typ
     | Sigma of Loc.t * typ_rec
     | Ctx   of Loc.t * dctx
-    | AtomTerm of Loc.t * spine
+    | AtomTerm of Loc.t * normal
 
   and normal =
     | Lam  of Loc.t * name * normal
@@ -239,7 +239,7 @@ module Sgn = struct
   type pragma =
     | OptsPrag of string list
     | NamePrag of name * string * string option
-    | FixPrag of name * fix * precedence * assoc option
+    | FixPrag of name * fix * precedence * assoc
     | NotPrag
 
   type decl =

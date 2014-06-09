@@ -95,21 +95,26 @@ let rec recSgnDecls = function
 and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
-    | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc_option)) -> 
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc)) -> 
         let _ = dprint(fun () -> "Pragma found for " ^ (R.render_name name)) in
-        let args_expected = match fix with
-          | Ext.Sgn.Postfix -> 1
-          | Ext.Sgn.Infix   -> 2 in
         
-        let actual = 
-          try Typ.args_of_name name
-          with _ -> 
-            try Term.args_of_name name
-            with _ -> -1 in
-        if actual = -1 then () else
-          if args_expected = actual then 
-            OpPragmas.addPragma name fix precedence assoc_option
-          else raise (Error(loc, IllegalOperatorPrag(name, fix, actual)))
+        if fix = Ext.Sgn.Prefix then 
+          OpPragmas.addPragma name fix precedence assoc
+        else begin
+          let args_expected = match fix with
+            | Ext.Sgn.Postfix -> 1
+            | Ext.Sgn.Infix   -> 2 in
+          
+          let actual = 
+            try Typ.args_of_name name
+            with _ -> 
+              try Term.args_of_name name
+              with _ -> -1 in
+          if actual = -1 then () else
+            if args_expected = actual then 
+              OpPragmas.addPragma name fix precedence assoc
+            else raise (Error(loc, IllegalOperatorPrag(name, fix, actual)))
+        end
 
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in

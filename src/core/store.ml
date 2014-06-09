@@ -12,7 +12,7 @@ module OpPragmas = struct
     name : Id.name;
     fix : Ext.Sgn.fix;
     precedence : int;
-    assoc : Ext.Sgn.assoc option;
+    assoc : Ext.Sgn.assoc;
   }
 
   let pragmaCount = ref 0
@@ -22,8 +22,14 @@ module OpPragmas = struct
   let clear () = pragmas := []
   
   let addPragma n f p a = 
-    let new_entry = {name = n; fix = f; precedence = p; assoc = a} in
-    pragmas := new_entry :: !pragmas ; incr pragmaCount
+    let _ = print_string (n.Id.string_of_name ^ "; ")in
+    if (List.exists (fun x -> x.name = n) !pragmas) then
+      pragmas := List.map
+        (fun x -> if x.name = n then {name = n; fix = f; precedence = p; assoc = a} else x)
+        !pragmas
+    else
+      let new_entry = {name = n; fix = f; precedence = p; assoc = a} in
+      pragmas := new_entry :: !pragmas ; incr pragmaCount
 
   let getPragma name = 
     begin
@@ -33,13 +39,7 @@ module OpPragmas = struct
       | _ -> None
     end
 
-  let pragmaExists name = begin
-    try
-      ignore (List.find ((fun p-> name == p.name)) (!pragmas));
-      true
-    with
-    | _ -> false
-  end
+  let pragmaExists name = List.exists (fun x -> x.name = name) !pragmas
 
 end
 
@@ -231,6 +231,7 @@ module Cid = struct
           inspectKind cid_tp (acc @ (inspect [] tA1)) tK2
 
     let add entry =
+      OpPragmas.addPragma entry.name Ext.Sgn.Prefix (-1) Ext.Sgn.Right ;
       let cid_tp = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tp;
@@ -300,6 +301,7 @@ module Cid = struct
 
 
     let add loc e_typ entry =
+      OpPragmas.addPragma entry.name Ext.Sgn.Prefix (-1) Ext.Sgn.Right ;
       let cid_tm = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tm;
@@ -909,7 +911,8 @@ let clear () =
   Cid.Schema.clear ();
   Cid.CompTyp.clear ();
   Cid.CompConst.clear ();
-  Cid.Comp.clear ()
+  Cid.Comp.clear ();
+  OpPragmas.clear()
 
 let _ = Error.register_printer
   (fun (Error (loc, err)) ->

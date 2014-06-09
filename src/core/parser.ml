@@ -112,7 +112,7 @@ type mixtyp =
 (* -bp Pi-types should not occur in computation-level types
   |  MTPiTyp of Loc.t * LF.typ_decl * mixtyp *)
   | MTAtom of Loc.t * Id.name * LF.spine
-  | MTAtomTerm of Loc.t * LF.spine
+  | MTAtomTerm of Loc.t * LF.normal
 
 type whichmix = LFMix of LF.typ | CompMix of Comp.typ | CompKindMix of Comp.kind
 
@@ -163,7 +163,7 @@ let rec unmix = function
        end
 (*  |  MTPiTyp(l, tdecl, mt0) -> LFMix(LF.PiTyp(l, tdecl, toLF mt0)) *)
   | MTAtom(l, name, spine) -> LFMix(LF.Atom(l, name, spine))
-  | MTAtomTerm(l, s) -> LFMix (LF.AtomTerm(l, s))
+  | MTAtomTerm(l, n) -> LFMix (LF.AtomTerm(l, n))
 
 and toLF mt = match unmix mt with
   |  LFMix lf -> lf
@@ -374,17 +374,16 @@ GLOBAL: sgn;
         "#infix"; i = SYMBOL; p = INTLIT; assoc = SYMBOL ->
           begin
             match assoc with
-            | "left" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some(Sgn.Left)))]
-            | "right" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some(Sgn.Right)))]
-            | "none" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some(Sgn.None)))]
-            | _ -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some(Sgn.None)))]
+            | "left" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Sgn.Left))]
+            | "right" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Sgn.Right))]
+            | _ -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Sgn.None))]
           end
       |
         "#postfix"; i = SYMBOL; p = INTLIT ->
-          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, None))]
+          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, Sgn.Left))]
       |
         "#prefix"; i = SYMBOL; p = INTLIT->
-          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p,None ))]
+          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Sgn.Left ))]
       (* A naked expression, in REPL. *)
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
@@ -485,8 +484,8 @@ GLOBAL: sgn;
           term = lf_term -> match term with
             | LF.NTyp(_, t) -> t
             | LF.TList(_, [LF.NTyp(_,t)]) -> t
-            | LF.TList(_, [n]) -> LF.AtomTerm(_loc, LF.App(_loc, n, LF.Nil))
-            | _ -> LF.AtomTerm (_loc, LF.App(_loc, term, LF.Nil))
+            | LF.TList(_, [n]) -> LF.AtomTerm(_loc, n)
+            | _ -> LF.AtomTerm (_loc, term)
 (*         |
           a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
@@ -503,25 +502,18 @@ GLOBAL: sgn;
       ]    
     | "lam" RIGHTA
         [
-          "\\"; x = SYMBOL; "."; m = lf_term->
-            LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), m)
+          "\\"; x = SYMBOL; "."; ms = LIST1 lf_term ->
+            LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), LF.TList(_loc, ms))
         ]
 
     | "atomic"
         [
          "("; m = lf_typ; ann = OPT [ ":"; a = lf_typ -> a ]; ")" ->
             begin match ann, m with
-              | None, LF.AtomTerm(_, LF.App(_, t, LF.Nil)) -> t
+              | None, LF.AtomTerm(_, t) -> t
               | None, _ -> LF.NTyp(_loc, m)
-              | Some a, LF.AtomTerm(_, LF.App(_,t, LF.Nil)) -> LF.Ann(_loc, t, a)
+              | Some a, LF.AtomTerm(_, t) -> LF.Ann(_loc, t, a)
             end
-            (* 
-            begin match ann with
-            | None -> begin match m with
-                      | LF.AtomTerm(_, LF.App(_, t, LF.Nil)) -> t
-                      | _ -> LF.NTyp(_loc, m)
-                      end
-            | Some a -> LF.Ann (_loc, LF.NTyp (_loc, m), a) *)
         |
             h = lf_head ->
              LF.Root (_loc, h, LF.Nil)
@@ -703,11 +695,11 @@ GLOBAL: sgn;
 
         |
            a = SYMBOL; ms = LIST0 clf_normal ->
-              LF.AtomTerm(_loc, LF.App(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms), LF.Nil))
+              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
         |
            a = UPSYMBOL; ms = LIST0 clf_normal ->
               (* LF.AtomTerm(_loc, LF.App(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms), LF.Nil)) *)
-              LF.AtomTerm(_loc, LF.App(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms), LF.Nil))
+              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
 
         ]
     | "sigma"
@@ -1439,17 +1431,17 @@ clf_pattern :
 
       |
           "#";"["; cPsi = clf_dctx; "|-";  ms = LIST1 clf_normal; "]"  ->
-              MTPBox (_loc, MTAtomTerm(_loc, LF.App(_loc, LF.TList (_loc, ms), LF.Nil)), cPsi )
+              MTPBox (_loc, MTAtomTerm(_loc, LF.TList (_loc, ms)), cPsi )
 
 
       |
           "["; cPsi = clf_dctx; "|-"; "(";  ms = LIST1 clf_normal; ")"; "]"  ->
-            MTBox (_loc, MTAtomTerm(_loc, LF.App(_loc, LF.TList (_loc, ms), LF.Nil)), cPsi )
+            MTBox (_loc, MTAtomTerm(_loc, LF.TList (_loc, ms)), cPsi )
 
 
       |
           "["; cPsi = clf_dctx; "|-";  ms = LIST1 clf_normal; "]"  ->
-            MTBox (_loc, MTAtomTerm(_loc, LF.App(_loc, LF.TList (_loc, ms), LF.Nil)), cPsi )
+            MTBox (_loc, MTAtomTerm(_loc, LF.TList (_loc, ms)), cPsi )
 
 (*       |
           "#";"["; cPsi = clf_dctx; "|-"; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->

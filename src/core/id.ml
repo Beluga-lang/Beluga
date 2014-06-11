@@ -45,28 +45,33 @@ let mk_name = function
        This prevents the case where two entries appear to refer to the same name
        because {!None} = {!None}. *)
   | MVarName (Some vGen)  ->
-      { string_of_name = vGen() ; was_generated = true; uppercase = true}
+      let x = vGen() in
+        { string_of_name = x ; was_generated = true; uppercase = is_uppercase (x.[0]) }
 
   | MVarName None  ->
       { string_of_name = Gensym.MVarData.gensym() ; was_generated = true; uppercase = true }
 
   | PVarName (Some vGen)  ->
-      { string_of_name = "#" ^ vGen() ; was_generated = true; uppercase = false }
+      let x = vGen() in
+        { string_of_name = x ; was_generated = true; uppercase = is_uppercase (x.[0]) }
 
   | PVarName None  ->
       { string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true; uppercase = false }
 
   | SVarName None ->
       { string_of_name = Gensym.MVarData.gensym() ; was_generated = true; uppercase = true}
+      
   | SVarName (Some vGen) ->
-      { string_of_name = vGen() ; was_generated = true; uppercase = true}
+      let x = vGen() in
+        { string_of_name = x ; was_generated = true; uppercase = is_uppercase (x.[0]) }
 
   | BVarName (Some vGen)   ->
-        { string_of_name = vGen() ; was_generated = true; uppercase = false }
+        let x = vGen() in
+        { string_of_name = x ; was_generated = true; uppercase = is_uppercase (x.[0]) }
 
   | SomeName x  -> x
 
-  | SomeString x     ->
+  | SomeString x -> 
         { string_of_name = x ; was_generated = false; uppercase = is_uppercase (x.[0]) }
 
   | _     -> { string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true; uppercase = false}

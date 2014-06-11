@@ -1,33 +1,5 @@
 open Syntax
 
-
-module NamedHoles = struct
-
-    let printingHoles = ref false
-
-    let usingRealNames = ref false
-
-    let newNames = ref []
-
-    let getName n = 
-    if !usingRealNames then n.Id.string_of_name else
-      if n.Id.was_generated then
-        let s = n.Id.string_of_name in
-        try
-            List.assoc s !newNames
-        with
-        | _ -> 
-            let newName = 
-              if (n.Id.uppercase) then 
-                Gensym.MVarData.gensym () 
-              else Gensym.VarData.gensym () in
-            (newNames := (s,newName) :: (!newNames)) ;
-            newName
-      else n.Id.string_of_name
-      
-    let reset () = Gensym.MVarData.reset () ; Gensym.VarData.reset (); newNames := []
-end
-
 type error =
   | FrozenType of Id.cid_typ
 
@@ -99,6 +71,16 @@ module Cid = struct
          cid_tp)
 
 
+    let rec cid_of_typ : Int.LF.typ -> Id.cid_typ = function
+      | Int.LF.Atom (_, a, _ ) -> a
+      | Int.LF.PiTyp(_, tA) -> cid_of_typ tA
+      | Int.LF.Sigma typRec -> cid_of_typRec typRec
+      | Int.LF.TClo (tA, s) -> cid_of_typ tA
+
+    and cid_of_typRec = function
+    | Int.LF.SigmaLast tA -> cid_of_typ tA
+    | Int.LF.SigmaElem(_, _, rest) -> cid_of_typRec rest
+    
     let var_gen cid_tp =  (get cid_tp).var_generator
     let mvar_gen cid_tp =  (get cid_tp).mvar_generator
 
@@ -596,6 +578,88 @@ module Cid = struct
 
   end
 
+
+  module NamedHoles = struct
+
+    let printingHoles = ref false
+
+    let usingRealNames = ref false
+
+    let newNames = ref []
+
+    let conventions = ref []
+
+    let explicitNames = ref []
+
+    let addExplicitName s = explicitNames := (s :: !explicitNames) 
+
+    let addNameConvention cid mvar var =
+      let vgen = match var with None -> None | Some x -> Some(Gensym.create_symbols [|x|]) in
+      conventions := (cid, (mvar, Gensym.create_symbols [|mvar|], var, vgen))::!conventions
+
+    let rec first_unique gen = 
+      let s = Stream.next gen in
+      if List.exists (fun (_, new_name) -> new_name = s) !newNames then first_unique gen else s
+
+    let haveNameFor n = try
+      Some(List.assoc n.Id.string_of_name !newNames)
+    with
+    | _ -> None
+
+    let getName ?(tA=None) n = 
+      if n.Id.was_generated && (not !usingRealNames) then
+        let s = n.Id.string_of_name in
+        try
+          List.assoc s !newNames
+        with
+        | Not_found -> 
+          let newName = match tA with
+          | None -> 
+            if (n.Id.uppercase) then 
+              Gensym.MVarData.gensym () 
+            else Gensym.VarData.gensym ()
+          | Some(tA) -> 
+            let cid = Typ.cid_of_typ tA in 
+            try 
+              let (_, mvar_gen, _, var_gen) = List.assoc cid !conventions in
+              if n.Id.uppercase then
+                first_unique mvar_gen 
+              else match var_gen with
+              | None -> Gensym.VarData.gensym ()
+              | Some x -> first_unique x
+            with _ -> 
+              if (n.Id.uppercase) then 
+                Gensym.MVarData.gensym () 
+              else Gensym.VarData.gensym ()
+
+
+           (*  let gen = 
+              if n.Id.uppercase then
+                Cid.Typ.gen_var_name tA
+              else (Cid.Typ.gen_mvar_name tA)
+            in begin match gen with
+              | None -> 
+                if (n.Id.uppercase) then 
+                  (Gensym.MVarData.gensym () )
+                else Gensym.VarData.gensym ()
+              | Some x -> x ()
+            end *)
+          in
+            (newNames := (s,newName) :: (!newNames)) ; newName        
+      else 
+        let s = n.Id.string_of_name in (newNames := (s,s) :: (!newNames)); s
+        
+      let reset () = 
+        Gensym.MVarData.reset () ; 
+        Gensym.VarData.reset (); 
+        newNames := []; 
+        conventions := List.map (fun (cid, (mvar, _, var, _)) -> 
+                        let vargen = match var with None -> None | Some x -> Some(Gensym.create_symbols [|x|]) in
+                        (cid, (mvar, Gensym.create_symbols [|mvar|], var, vargen)))
+                       !conventions
+  end
+
+
   module type RENDERER = sig
 
     open Id
@@ -623,23 +687,20 @@ module Cid = struct
   module DefaultRenderer : RENDERER = struct
 
     open Id
-    
-    let render_name       n    = 
-      if !NamedHoles.printingHoles then
-        NamedHoles.getName n
-      else
-        n.string_of_name
 
-    let render_name' n = n.string_of_name
+    let render_name n = 
+      if !NamedHoles.printingHoles then 
+        match NamedHoles.haveNameFor n with Some x -> x | _ ->  (n.string_of_name)
+      else n.string_of_name
 
-    let render_cid_comp_typ c  = render_name' (CompTyp.get c).CompTyp.name
-    let render_cid_comp_cotyp c = render_name' (CompCotyp.get c).CompCotyp.name
-    let render_cid_comp_const c = render_name' (CompConst.get c).CompConst.name
-    let render_cid_comp_dest c = render_name' (CompDest.get c).CompDest.name
-    let render_cid_typ    a    = render_name' (Typ.get a).Typ.name
-    let render_cid_term   c    = render_name' (Term.get c).Term.name
-    let render_cid_schema w    = render_name' (Schema.get w).Schema.name
-    let render_cid_prog   f    = render_name' (Comp.get f).Comp.name
+    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
+    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
+    let render_cid_comp_dest c = render_name (CompDest.get c).CompDest.name
+    let render_cid_typ    a    = render_name (Typ.get a).Typ.name
+    let render_cid_term   c    = render_name (Term.get c).Term.name
+    let render_cid_schema w    = render_name (Schema.get w).Schema.name
+    let render_cid_prog   f    = render_name (Comp.get f).Comp.name
     let render_ctx_var _cO g   =  string_of_int g
     let render_cvar    _cD u   = "mvar " ^ string_of_int u
     let render_bvar  _cPsi i   = string_of_int i
@@ -654,21 +715,19 @@ module Cid = struct
 
     open Id
 
-    let render_name       n    = 
-      if !NamedHoles.printingHoles then
-        NamedHoles.getName n
-      else
-        n.string_of_name
+    let render_name n = 
+      if !NamedHoles.printingHoles then 
+        match NamedHoles.haveNameFor n with Some x -> x | _ ->  (n.string_of_name)
+      else n.string_of_name
 
-    let render_name' n = n.string_of_name
-    let render_cid_comp_typ c  = render_name' (CompTyp.get c).CompTyp.name
-    let render_cid_comp_cotyp c = render_name' (CompCotyp.get c).CompCotyp.name
-    let render_cid_comp_const c = render_name' (CompConst.get c).CompConst.name
-    let render_cid_comp_dest c = render_name' (CompDest.get c).CompDest.name
-    let render_cid_typ     a   = render_name' (Typ.get a).Typ.name
-    let render_cid_term    c   = render_name' (Term.get c).Term.name
-    let render_cid_schema  w   = render_name' (Schema.get w).Schema.name
-    let render_cid_prog    f   = render_name' (Comp.get f).Comp.name
+    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
+    let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
+    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
+    let render_cid_comp_dest c = render_name (CompDest.get c).CompDest.name
+    let render_cid_typ     a   = render_name (Typ.get a).Typ.name
+    let render_cid_term    c   = render_name (Term.get c).Term.name
+    let render_cid_schema  w   = render_name (Schema.get w).Schema.name
+    let render_cid_prog    f   = render_name (Comp.get f).Comp.name
     let render_ctx_var cO g    =
       begin try
         render_name (Context.getNameMCtx cO g)

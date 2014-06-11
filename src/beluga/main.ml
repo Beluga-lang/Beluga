@@ -20,8 +20,8 @@ let usage () =
         ^ "    +ext          print external syntax before reconstruction\n"
         ^ "    -s=natural    print substitutions in a \"natural\" style (default)\n"
         ^ "    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n"
-        ^ "    +implicit     print implicit arguments (default -- for now)\n"
-        ^ "    -implicit     don't print implicit arguments\n"
+        ^ "    +implicit     print implicit arguments\n"
+        ^ "    -implicit     don't print implicit arguments (default)\n"
         ^ "    -t            turn timing off (default)\n"
         ^ "    +t            print timing information\n"
         ^ "    +tfile        print timing information to file \"time.txt\"\n"
@@ -37,8 +37,8 @@ let usage () =
         ^ "    +test         Make output suitable for test harness. Implies -print\n"
         ^ "    +strengthen   Perform metavariable strengthening automatically.\n"
         ^ "    -strengthen   Turn off metavariable strengthening.\n"
-        ^ "    +realNames    Print holes using real names\n"
-        ^ "    -realNames    Print holes using freshly generated names (default)\n"
+        ^ "    +realNames    Print holes using real names (default)\n"
+        ^ "    -realNames    Print holes using freshly generated names\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -83,8 +83,8 @@ let process_option arg rest = match arg with
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
   | "+strengthen" -> Lfrecon.strengthen := true; rest
   | "-strengthen" -> Lfrecon.strengthen := false; rest
-  | "+realNames" -> Store.NamedHoles.usingRealNames := true; rest
-  | "-realNames" -> Store.NamedHoles.usingRealNames := false; rest
+  | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
+  | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
   | _ -> usage ()
 
 let rec process_options = function

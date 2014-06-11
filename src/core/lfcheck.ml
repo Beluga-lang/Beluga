@@ -138,6 +138,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
       (tM, Substitution.LF.dot1 s1)
       (tB, Substitution.LF.dot1 s2)
 
+  | (LFHole _, _), _ -> ()
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
@@ -262,13 +263,14 @@ and inferHead loc cD cPsi head = match head with
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MVar (Inst (_n, {contents = None}, cPsi', tA, _cnstr), s) ->
+  | MVar (Inst (_n, {contents = None}, cPsi', tA, _cnstr, _), s) ->
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
-  | MMVar (MInst (_n, {contents = None}, cD' , cPsi', tA, _cnstr) , (t', r)) ->
+
+  | MMVar (MInst (_n, {contents = None}, cD' , cPsi', tA, _cnstr, _) , (t', r)) ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
@@ -296,7 +298,7 @@ and inferHead loc cD cPsi head = match head with
     TClo (tA, s)
 
 
-  | PVar (PInst (_, {contents = None}, cPsi', tA, _ ) , s) ->
+  | PVar (PInst (_, {contents = None}, cPsi', tA, _ , _) , s) ->
     (* cD ; cPsi' |- tA <= type *)
     dprnt "[inferHead] PVar case";
     dprint (fun () -> "[inferHead] PVar case:    s = " ^ P.subToString cD cPsi s);
@@ -766,7 +768,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Error.Violation ("Contextual substitution ill-formed"))
 
-    | MDot (MObj(_ , tM), ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi))) ->
+    | MDot (MObj(_ , tM), ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi, _))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ;
@@ -781,13 +783,13 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
       if Whnf.convMTyp mtyp1 mtyp2 then checkMSub loc cD ms cD1'
       else raise (Error.Violation ("Contextual substitution ill-typed"))
 
-    | MDot (SObj (_, s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi))) ->
+    | MDot (SObj (_, s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi, _))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
           (checkSub loc cD cPsi' s cPhi';
            checkMSub loc cD ms cD1' )
 
-    | MDot (PObj (_, h), ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi))) ->
+    | MDot (PObj (_, h), ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi, _))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with
@@ -808,3 +810,5 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
                             P.mctxToString cD ^ " |- " ^
                             P.msubToString cD ms ^ " <= "
                          ^ " = " ^ P.mctxToString cD'))
+
+

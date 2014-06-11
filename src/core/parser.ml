@@ -92,7 +92,7 @@ type mixtyp =
   | MTPBox of Loc.t * mixtyp * LF.dctx
   | MTCtx of Loc.t * Id.name
   | MTSub of Loc.t * LF.dctx * LF.dctx
-  | MTPiBox of Loc.t * (LF.ctyp_decl * Comp.depend) * mixtyp
+  | MTPiBox of Loc.t * LF.ctyp_decl * mixtyp
 (* -bp Pi-types should not occur in computation-level types
   |  MTPiTyp of Loc.t * LF.typ_decl * mixtyp *)
   | MTAtom of Loc.t * Id.name * LF.spine
@@ -125,10 +125,10 @@ let rec unmix = function
                                   | (CompMix c1, CompKindMix c2) ->
                                       let x = Id.mk_name (Id.NoName) in
                                       let (l, cdecl) = match c1 with
-                                          | Comp.TypBox (l, tA, cPsi) -> (l, LF.MDecl(l, x, tA, cPsi))
-                                          | Comp.TypPBox (l, tA, cPsi) -> (l, LF.PDecl (l, x, tA, cPsi))
-                                          | Comp.TypCtx (l, schema)    -> (l, LF.CDecl (l, x, schema)) in
-                                      CompKindMix(Comp.PiKind(l, (cdecl, Comp.Explicit), c2))
+                                          | Comp.TypBox (l, tA, cPsi) -> (l, LF.Decl(x, LF.MTyp(l, tA, cPsi, LF.No)))
+                                          | Comp.TypPBox (l, tA, cPsi) -> (l, LF.Decl(x, LF.PTyp(l, tA, cPsi, LF.No)))
+                                          | Comp.TypCtx (l, schema)    -> (l, LF.Decl(x, LF.CTyp(l, schema, LF.No))) in
+                                      CompKindMix(Comp.PiKind(l, cdecl, c2))
                                   | (_, _) -> unmixfail (mixloc mt2)
                            end
   | MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
@@ -137,10 +137,10 @@ let rec unmix = function
   | MTPBox(l, mt0, dctx) -> CompMix(Comp.TypPBox(l, toLF mt0, dctx))
   | MTBox(l, mt0, dctx) -> CompMix(Comp.TypBox(l, toLF mt0, dctx))
   | MTSub(l, dctx1, dctx) -> CompMix(Comp.TypSub(l, dctx1, dctx))
-  | MTPiBox(l, (cdecl,dep), mt0) ->
+  | MTPiBox(l, cdecl, mt0) ->
        begin match unmix mt0 with
-         | CompKindMix mk -> CompKindMix (Comp.PiKind(l, (cdecl, dep), mk))
-         | CompMix mt -> CompMix(Comp.TypPiBox(l, (cdecl, dep), mt))
+         | CompKindMix mk -> CompKindMix (Comp.PiKind(l, cdecl, mk))
+         | CompMix mt -> CompMix(Comp.TypPiBox(l, cdecl, mt))
          | _ -> unmixfail (mixloc mt0)
        end
 
@@ -599,22 +599,21 @@ GLOBAL: sgn;
       [
         "{"; hash = "#"; p = SYMBOL; ":";
          "["; cPsi = clf_dctx; "|-"; tA = clf_typ LEVEL "atomic";  "]"; "}" ->
-           LF.PDecl (_loc, Id.mk_name (Id.SomeString p), tA, cPsi)
+           LF.Decl(Id.mk_name (Id.SomeString p), LF.PTyp(_loc, tA, cPsi, LF.No))
 
       |
         "{"; hash = "#"; s = UPSYMBOL; ":";
          cPhi = clf_dctx; "["; cPsi = clf_dctx; "]"; "}" ->
-                LF.SDecl (_loc, Id.mk_name (Id.SomeString s), cPhi, cPsi)
-
+            LF.Decl(Id.mk_name (Id.SomeString s), LF.STyp(_loc, cPhi, cPsi, LF.No))
 
       |
           "{";  u = UPSYMBOL; ":";
          "["; cPsi = clf_dctx; "|-"; tA = clf_typ LEVEL "atomic";  "]"; "}" ->
-           LF.MDecl (_loc, Id.mk_name (Id.SomeString u), tA, cPsi)
+           LF.Decl(Id.mk_name (Id.SomeString u), LF.MTyp(_loc, tA, cPsi, LF.No))
 
       |
           "{"; psi = SYMBOL; ":"; w = SYMBOL; "}" ->
-            LF.CDecl (_loc, Id.mk_name (Id.SomeString psi), Id.mk_name (Id.SomeString w))
+            LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w), LF.No))
 
       ]
     ]
@@ -709,6 +708,10 @@ GLOBAL: sgn;
         |
             "_" ->
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
+
+        |
+            "?" ->
+            LF.LFHole _loc
 
         |
            "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
@@ -1337,19 +1340,15 @@ clf_pattern :
     [ RIGHTA
       [
         "{"; psi = SYMBOL; ":";  w = SYMBOL; "}"; mixtau = SELF ->
-          let ctyp_decl = (LF.CDecl(_loc, Id.mk_name (Id.SomeString psi),
-                                   Id.mk_name (Id.SomeString w)) ,
-                           Comp.Explicit) in
+          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w), LF.No))) in
           MTPiBox (_loc, ctyp_decl, mixtau)
 
   | "("; psi = SYMBOL; ":";  w = SYMBOL; ")"; mixtau = SELF ->
-          let ctyp_decl = (LF.CDecl(_loc, Id.mk_name (Id.SomeString psi),
-                                   Id.mk_name (Id.SomeString w)) ,
-                           Comp.Implicit) in
+          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w), LF.Maybe))) in
           MTPiBox (_loc, ctyp_decl, mixtau)
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->
-          MTPiBox (_loc, (ctyp_decl, Comp.Explicit), mixtau)
+          MTPiBox (_loc, ctyp_decl, mixtau)
       |
         mixtau1 = SELF; rarr; mixtau2 = SELF ->
           MTArr (_loc, mixtau1, mixtau2)

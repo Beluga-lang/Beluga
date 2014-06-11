@@ -6,6 +6,10 @@ open Pragma
 module Loc = Camlp4.PreCast.Loc
 
 module LF = struct
+  
+  type depend =
+    | Maybe
+    | No
 
   type kind =
     | Typ     of Loc.t
@@ -16,11 +20,21 @@ module LF = struct
     | TypDecl of name * typ
 (*      | TypDeclOpt of name  *)
 
-  and ctyp_decl =
+(*   and ctyp_decl =
     | MDecl of Loc.t * name * typ  * dctx
     | PDecl of Loc.t * name * typ  * dctx
     | SDecl of Loc.t * name * dctx * dctx
-    | CDecl of Loc.t * name * name
+    | CDecl of Loc.t * name * name *)
+
+  and ctyp =
+    | MTyp of Loc.t * typ * dctx * depend
+    | PTyp of Loc.t * typ * dctx * depend
+    | STyp of Loc.t * dctx * dctx * depend
+    | CTyp of Loc.t * name * depend
+
+  and ctyp_decl =
+    | Decl of name * ctyp
+    | DeclOpt of name
 
   and typ =
     | Atom   of Loc.t * name * spine
@@ -33,6 +47,7 @@ module LF = struct
     | Lam  of Loc.t * name * normal
     | Root of Loc.t * head * spine
     | Tuple of Loc.t * tuple
+    | LFHole of Loc.t
     | Ann of Loc.t * normal * typ
 
   and head =
@@ -90,10 +105,6 @@ end
 (** External Computation Syntax *)
 module Comp = struct
 
- type depend =
-   | Implicit
-   | Explicit
-
  type meta_obj =
    | MetaCtx of Loc.t * LF.dctx
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
@@ -122,7 +133,7 @@ module Comp = struct
    | TypSub   of Loc.t * LF.dctx * LF.dctx      (*    | Phi[Psi]           *)
    | TypArr   of Loc.t * typ * typ              (*    | tau -> tau         *)
    | TypCross of Loc.t * typ * typ              (*    | tau * tau          *)
-   | TypPiBox of Loc.t * (LF.ctyp_decl * depend) * typ
+   | TypPiBox of Loc.t * LF.ctyp_decl * typ
                                                 (*     | Pi u::U.tau       *)
    | TypBool                                    (*     | Bool              *)
 
@@ -197,7 +208,7 @@ module Comp = struct
  type  kind =
    | Ctype of Loc.t
 (*     | ArrKind of Loc.t * meta_typ  * kind *)
-   | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
+   | PiKind  of Loc.t * LF.ctyp_decl * kind
 
 
  (* Useful for debugging the parser, but there should be a better place for them... *)

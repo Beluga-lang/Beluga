@@ -502,7 +502,7 @@ GLOBAL: sgn;
       ]    
     | "lam" RIGHTA
         [
-          "\\"; x = SYMBOL; "."; ms = LIST1 lf_term ->
+          "\\"; x = SYMBOL; "."; ms = LIST1 (lf_term LEVEL "lam")->
             LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), LF.TList(_loc, ms))
         ]
 

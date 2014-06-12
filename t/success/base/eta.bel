@@ -31,13 +31,16 @@ fn t => case t of
 ;
 
 }%
+
 schema termCtx = term ;
+
 %{
 rec foo : {g:(termCtx)*} term [g, x:term] -> term [g, x:term] =
 FN g => fn t => case t of
  | [g] lam \x. E .. x => t
 ;
 }%
+
 %{
 rec foo : {g:(termCtx)*} term [g, x:term] -> term [g, x:term] =
 FN g => fn t => case t of

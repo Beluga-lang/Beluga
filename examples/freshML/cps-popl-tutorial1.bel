@@ -1,3 +1,4 @@
+#opts +strengthen;
 %
 % Author: Brigitte Pientka
 % Adapted from Twelf's POPL tutorial

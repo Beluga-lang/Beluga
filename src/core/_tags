@@ -1,7 +1,6 @@
-<{synint,synapx,synext,syntax,token,holes,unify,lexer,parser,interactive}.ml{i,}> : package(camlp4)
-<{holes,logic,parser,store,unify}.ml{,i}> : package(extlib)
+<{synint,synapx,synext,syntax,token,holes,unify,lexer,parser}.ml{i,}> : package(camlp4)
+<{holes,lfholes,logic,parser,store,unify}.ml{,i}> : package(extlib)
 <html.*> : use_str
 <{token,lexer,parser}.ml> : syntax(camlp4o)
 <lexer.ml> : package(ulex)
-<command.ml> : package(extlib)
 <*.cmx> and not <core.cmx> : for-pack(Core)

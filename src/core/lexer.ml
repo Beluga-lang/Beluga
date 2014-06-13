@@ -123,7 +123,6 @@ let regexp letter = [ 'a'-'z' 'A'-'Z' ]
 
 let regexp digit  = [ '0'-'9' ]
 
-
 (**************************************************)
 (* Location Update and Token Generation Functions *)
 (**************************************************)
@@ -186,7 +185,7 @@ let lex_token loc = lexer
   | "ttrue"
   | "ffalse"
   | "%name"
-  | "%opts"
+  | "#opts"
   | "%not"
   | "%query"
   | "?"
@@ -194,7 +193,7 @@ let lex_token loc = lexer
   | "}%"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 
-  | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"' ]  -> (* reserved character *)
+  | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
 (* print_string ("RSV [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
          mk_tok_of_lexeme mk_keyword loc lexbuf
 

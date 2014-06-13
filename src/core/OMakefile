@@ -1,3 +1,4 @@
+
 # Declare an OCaml library
 LIBRARY = beluga-core
 # Declare an OCaml package
@@ -21,8 +22,8 @@ FILES[] =
         html
         id
         index
-        interactive
 	logic
+        lfholes
         opsem
         parser
         pragma

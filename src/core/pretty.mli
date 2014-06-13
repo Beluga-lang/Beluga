@@ -28,7 +28,7 @@ module Int : sig
     (* Contextual Format Based Pretty Printers *)
     val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
     val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
-    val fmt_ppr_lf_ctyp_decl  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
+    val fmt_ppr_lf_ctyp_decl  : ?printing_holes:bool -> LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec -> unit
 
     val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
@@ -211,7 +211,7 @@ module Ext : sig
   end
 
   (* External Syntax Pretty Printer Functor *)
-     module Make : functor (R : Store.Cid.RENDERER) -> PRINTER
+  module Make : functor (R : Store.Cid.RENDERER) -> PRINTER
 
   (* Default External Syntax Pretty Printer Functor Instantiation *)
   module DefaultPrinter : PRINTER

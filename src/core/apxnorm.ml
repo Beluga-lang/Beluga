@@ -98,6 +98,9 @@ let rec cnormApxTerm cD delta m (cD'', t) = match m with
   | Apx.LF.Ann (loc, m', a) ->
     Apx.LF.Ann (loc, cnormApxTerm cD delta m' (cD'', t), a)
 
+  | Apx.LF.LFHole loc ->
+    m
+
 and cnormApxTuple cD delta tuple (cD'', t) = match tuple with
   | Apx.LF.Last m -> Apx.LF.Last (cnormApxTerm cD delta m (cD'' , t))
   | Apx.LF.Cons (m, tuple) ->
@@ -269,7 +272,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (p, s1')
                    end
-               | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _ ) as p ,s1) ->
+               | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _, _) as p ,s1) ->
                    Int.LF.PVar (p, Whnf.cnormSub (s1, t))
 
                end in
@@ -410,7 +413,7 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
       )*)
   | Apx.Comp.MLam (loc, u, e)   ->
       (dprint (fun () -> "cnormApxExp -- MLam (or could be PLam)") ;
-      Apx.Comp.MLam (loc, u, cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.MDeclOpt u)) e
+      Apx.Comp.MLam (loc, u, cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.DeclOpt u)) e
                        (Int.LF.Dec (cD'', Int.LF.DeclOpt u), Whnf.mvar_dot1 t)))
 
   | Apx.Comp.Pair (loc, e1, e2) ->
@@ -550,21 +553,9 @@ and cnormApxBranch cD delta b (cD'', t) =
   and append_mctx cD'' delta' = match delta' with
   | Apx.LF.Empty -> cD''
 
-  | Apx.LF.Dec (delta2', Apx.LF.CDecl (x, _ )) ->
+  | Apx.LF.Dec (delta2', Apx.LF.Decl(x, _)) ->
       let cD1'' = append_mctx cD'' delta2' in
         Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
-
-  | Apx.LF.Dec (delta2', Apx.LF.MDecl (x, _, _ )) ->
-      let cD1'' = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
-
-  | Apx.LF.Dec (delta2', Apx.LF.PDecl (x, _, _ )) ->
-      let cD1 = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1, Int.LF.DeclOpt x)
-
-  | Apx.LF.Dec (delta2', Apx.LF.SDecl (x, _, _ )) ->
-      let cD1 = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1, Int.LF.DeclOpt x)
 
   in
     match b with
@@ -623,6 +614,8 @@ let rec collectApxTerm fMVs  m = match m with
 
   | Apx.LF.Tuple (_loc, tuple) ->
        collectApxTuple fMVs  tuple
+
+  | Apx.LF.LFHole _loc -> fMVs
 
 and collectApxTuple fMVs tuple = match tuple with
   | Apx.LF.Last m -> collectApxTerm fMVs  m
@@ -704,16 +697,14 @@ and collectApxMCtx fMVs c_mctx = match c_mctx with
         collectApxCTypDecl fMVs' ct_decl
 
 and collectApxCTypDecl fMVs ct_decl = match ct_decl with
-  | Apx.LF.MDecl ( _, a, c_psi) ->
-      let fMVs' = collectApxDCtx fMVs c_psi in
+  | Apx.LF.Decl(_, Apx.LF.MTyp(a, c_psi, _))
+  | Apx.LF.Decl(_, Apx.LF.PTyp(a, c_psi, _)) ->
+    let fMVs' = collectApxDCtx fMVs c_psi in
         collectApxTyp fMVs' a
-  | Apx.LF.PDecl ( _, a, c_psi) ->
-      let fMVs' = collectApxDCtx fMVs c_psi in
-        collectApxTyp fMVs' a
-  | Apx.LF.CDecl ( _,  _) ->  fMVs
-  | Apx.LF.SDecl ( _, c_phi, c_psi) ->
-      let fMVs' = collectApxDCtx fMVs c_psi in
-        collectApxDCtx fMVs' c_phi
+  | Apx.LF.Decl(_, Apx.LF.STyp(c_phi, c_psi, _)) ->
+    let fMVs' = collectApxDCtx fMVs c_psi in
+      collectApxDCtx fMVs' c_phi
+  | Apx.LF.Decl(_, Apx.LF.CTyp _) ->  fMVs
 
 and collectApxMetaObj fMVs mO = match mO with
   | Apx.Comp.MetaCtx (_loc, cPsi) ->
@@ -753,13 +744,11 @@ and collectApxTypRec fMVd trec = match trec with
 	collectApxTypRec fMVd1 trec
 
 let collectApxCDecl fMVd cdecl = match cdecl with
-  | Apx.LF.MDecl (_, tA, cPsi) ->
-      let fMVd1 = collectApxDCtx fMVd cPsi in
-	collectApxTyp fMVd1 tA
-  | Apx.LF.PDecl (_, tA, cPsi) ->
-      let fMVd1 = collectApxDCtx fMVd cPsi in
-	collectApxTyp fMVd1 tA
-  | Apx.LF.CDecl (_, w) -> fMVd
+  | Apx.LF.Decl(_, Apx.LF.MTyp(tA, cPsi, _))
+  | Apx.LF.Decl(_, Apx.LF.PTyp(tA, cPsi, _)) ->
+    let fMVd1 = collectApxDCtx fMVd cPsi in
+	    collectApxTyp fMVd1 tA
+  | Apx.LF.Decl (_,Apx.LF.CTyp _) -> fMVd
 
 let rec collectApxCompTyp fMVd tau = match tau with
   | Apx.Comp.TypArr (tau1, tau2) ->
@@ -768,7 +757,7 @@ let rec collectApxCompTyp fMVd tau = match tau with
   | Apx.Comp.TypCross (tau1, tau2) ->
       let fMVd1 = collectApxCompTyp fMVd tau1 in
 	collectApxCompTyp fMVd1 tau2
-  | Apx.Comp.TypPiBox ((cdecl, _), tau) ->
+  | Apx.Comp.TypPiBox (cdecl, tau) ->
       let fMVd1 = collectApxCDecl fMVd cdecl in
 	collectApxCompTyp fMVd1 tau
   | Apx.Comp.TypBox (loc, tA, cPsi) ->
@@ -834,6 +823,8 @@ let rec fmvApxTerm fMVs cD ((l_cd1, l_delta, k) as d_param) m =   match m with
 
   | Apx.LF.Ann (loc, m', a) ->
     Apx.LF.Ann (loc, fmvApxTerm fMVs cD d_param m', a)
+
+  | Apx.LF.LFHole _ -> m
 
 and fmvApxTuple fMVs cD ((l_cd1, l_delta, k) as d_param)   tuple = match tuple with
   | Apx.LF.Last m -> Apx.LF.Last (fmvApxTerm fMVs cD d_param   m)
@@ -964,7 +955,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
                    (* | Int.LF.PVar (Int.LF.PInst (_, {contents = Some h1} , _cPsi, _tA, _ ), s1) ->
                        Int.LF.PVar (h1, Whnf.cnormMSub (s1, r)) *)
 
-                   | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _ ) as p ,s1) ->
+                   | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _, _ ) as p ,s1) ->
                        Int.LF.PVar (p, Whnf.cnormSub (s1, r))
                    end in
         Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s'), j)

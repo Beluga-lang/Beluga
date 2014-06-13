@@ -55,8 +55,13 @@ let freeze_from_name tau = match tau with
                                CompCotyp.freeze a;
                                 ()
 
-let sgnDeclToString d = 
-  if !Html.genHtml then Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl Prettyext.std_lvl Format.str_formatter d ; Format.flush_str_formatter ()
+let sgnDeclToHtml = function
+  | Ext.Sgn.Comment (_, x) -> Html.appendAsComment x
+  | d -> 
+    Html.printingHtml := true; 
+    Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl Prettyext.std_lvl Format.str_formatter d; 
+    Html.printingHtml := false; 
+    Html.append (Format.flush_str_formatter ())
 
 let rec recSgnDecls = function
   | [] -> ()
@@ -87,15 +92,11 @@ let rec recSgnDecls = function
 
 and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
+    if !Html.genHtml then sgnDeclToHtml d;
     match d with
-    | Ext.Sgn.Comment(_, x) ->
-        if !Html.genHtml then
-          Html.appendAsComment x
-        else ()
+    | Ext.Sgn.Comment _ ->
+        ()
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
-        let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (a.string_of_name) Html.None in
-
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         (* index cT  in a context which contains arguments to cK *)
         let (apx_tau, apxK) = Index.comptypdef  (cT, cK) in
@@ -111,9 +112,6 @@ and recSgnDecl d =
         let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
 
     | Ext.Sgn.CompTyp (_ , a, extK) ->
-        let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (a.string_of_name) Html.None in
-
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -142,9 +140,6 @@ and recSgnDecl d =
 
 
   | Ext.Sgn.CompCotyp (_ , a, extK) ->
-        let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (a.string_of_name) Html.None in
-
         let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -169,9 +164,6 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.CompConst (_ , c, tau) ->
-        let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (c.string_of_name) Html.None in
-
         let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -197,9 +189,6 @@ and recSgnDecl d =
 
 
    | Ext.Sgn.CompDest (_ , c, tau) ->
-        let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (c.string_of_name) Html.None in
-
         let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -220,9 +209,6 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Typ (_, a, extK)   ->
-        let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (a.string_of_name) Html.Kind in
-
         let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in
         let (apxK, _ ) = Index.kind extK in
         let _        = FVar.clear () in
@@ -248,9 +234,6 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Const (loc, c, extT) ->
-        let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (c.string_of_name) Html.Const in
-
         let (apxT, _ ) = Index.typ extT in
         let rec get_type_family = function
                            | Apx.LF.Atom(_loc, a, _spine) -> a
@@ -302,9 +285,6 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Val (loc, x, None, i) ->
-          let s = sgnDeclToString d in
-          let _ = Html.appendAsAnchor s (x.string_of_name) Html.None in
-
           let apx_i              = Index.exp' (Var.create ()) i in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
           let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp' cG apx_i) in
@@ -322,7 +302,7 @@ and recSgnDecl d =
 
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _l = Comp.add  loc (fun _ -> Comp.mk_entry x tau' 0 v []) in
+            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
             if (!Debug.chatter) <> 0 then
               Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
                 (R.render_name x)
@@ -332,9 +312,6 @@ and recSgnDecl d =
 	  end
 
     | Ext.Sgn.Val (loc, x, Some tau, i) ->
-          let s = sgnDeclToString d in
-        let _ = Html.appendAsAnchor s (x.string_of_name) Html.None in
-
           let apx_tau = Index.comptyp tau in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
           let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
@@ -361,7 +338,7 @@ and recSgnDecl d =
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 	  if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _l = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 v []) in
+            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
             if (!Debug.chatter) <> 0 then
 	      Printf.printf "\nlet %s : %s = %s\n===>  %s\n"
 		(R.render_name x)
@@ -378,15 +355,13 @@ and recSgnDecl d =
           let   _   = recSgnDecls recConts' in
           let  _  = List.map freeze_from_name recTyps in
                ()
-    | Ext.Sgn.Rec (loc, recFuns) ->
+    | Ext.Sgn.Rec (_, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
         let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in
 
         let rec preprocess l = match l with
           | [] -> (Int.LF.Empty, Var.create (), [])
           | Ext.Comp.RecFun (f, tau, _e) :: lf ->
-          let s = sgnDeclToString d in
-          let _ = Html.appendAsAnchor s (f.string_of_name) Html.Fun in
           let apx_tau = Index.comptyp  tau in
           let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
           let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
@@ -414,7 +389,7 @@ and recSgnDecl d =
 
         let reconFun f e =
           let apx_e   = Index.exp vars' e in
-          let _       = dprint (fun () -> "\n  Indexing  expression done \n") in
+          let _       = dprint (fun () -> "\n  Indexing expression done \n") in
           let tau'    = lookupFun cG f in
           let e'      = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp cG apx_e (tau', C.m_id)) in
 
@@ -453,15 +428,6 @@ and recSgnDecl d =
           | [] -> ()
           | Ext.Comp.RecFun (f, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f e in
-            let l = Comp.add loc
-                (fun cid ->
-                  Comp.mk_entry f tau' 0
-                    (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
-                    n_list) in
-            (match l with
-            | Some loc -> Holes.destroyHoles(loc)
-            | None -> ());
-            Holes.commitHoles();
             if !Debug.chatter <> 0 then
               Printf.printf  "and %s : %s =\n %s\n"
                 (R.render_name f)
@@ -471,20 +437,15 @@ and recSgnDecl d =
               Printf.printf "\n## Coverage checking done: %s  ##\n"
                 (R.render_name f);
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
-
+            let _x = Comp.add
+              (fun cid ->
+                Comp.mk_entry f tau' 0
+                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+                  n_list) in
             reconRecFun lf in
         begin match recFuns with
           | Ext.Comp.RecFun (f, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun f e in
-            let l = Comp.add loc
-              (fun cid ->
-                Comp.mk_entry  f tau' 0
-                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
-                  n_list) in
-            (match l with
-            | Some loc -> Holes.destroyHoles(loc)
-            | None -> ());
-            Holes.commitHoles();
             if !Debug.chatter <> 0 then
               Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
                 (R.render_name f)
@@ -495,6 +456,12 @@ and recSgnDecl d =
               Printf.printf "\n## Coverage checking done: %s  ##\n"
                 (R.render_name f);
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
+
+            let _x = Comp.add
+              (fun cid ->
+                Comp.mk_entry f tau' 0
+                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+                  n_list) in
             reconRecFun lf
 
           | _ -> raise (Error.Violation "No recursive function defined")
@@ -533,15 +500,13 @@ and recSgnDecl d =
 
     | Ext.Sgn.Pragma(loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
         begin try
+          let cid =
           begin match v_name with
             | None ->
-                let _cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None in
-                  (* Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp)) *) ()
+                Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None
             | Some x ->
-                let _cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
-                  (Some (Gensym.VarData.name_gensym x)) in
-                  (* Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp)) *) ()
-          end
+                Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
+                  (Some (Gensym.VarData.name_gensym x))
+          end in Store.Cid.NamedHoles.addNameConvention cid m_name v_name
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end
- 

@@ -229,7 +229,7 @@ module Convert = struct
     let (tA, s) = Whnf.whnfTyp sA
     in match tA with
       | LF.Atom (_) as tA ->
-        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) in
+        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) LF.Maybe in (*?*)
         LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
         LF.Lam (Syntax.Loc.ghost, x, etaExpand
@@ -391,25 +391,6 @@ module Index = struct
   *)
   let clearIndex () = DynArray.clear queries ; Hashtbl.clear types
 
-
-  let singleQuery (p, (tM, i), e, t) f =
-    let (q, tM', s, xs) = (Convert.typToQuery (tM, i)) in
-    ignore (querySub := s) ;
-    robStore();
-    let bchatter = !Options.chatter in
-    Options.chatter := 0;
-    let sgnQ = { query = q ;
-        typ = tM ;
-        skinnyTyp = tM' ;
-        optName = p ;
-        expected = e ;
-        tries = t ;
-        instMVars = xs } in
-    f sgnQ;
-    Options.chatter := bchatter;
-   Hashtbl.clear types
-
-
 end
 
 
@@ -570,7 +551,7 @@ module Solver = struct
      Invariants:
        Psi, x1:_, x2:_, ... xk:_ |- ^k : Psi
   *)
-  let shiftSub k = LF.Shift (LF.NoCtxShift, k)
+  let shiftSub k = LF.Shift k
 
   (* gSolve dPool (Psi, k) (g, s) sc = ()
      Invariants:
@@ -858,7 +839,3 @@ let runLogic () =
       Index.clearIndex ()
     end
   else () (* NOP *)
-
-
-let runLogicOn n (tA,i) e t  =
-  Index.singleQuery (n,(tA,i),e,t) Frontend.solve

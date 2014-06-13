@@ -1,6 +1,7 @@
 open Id
 open Syntax.Int
 
+
 module Cid : sig
 
   module Typ : sig
@@ -26,6 +27,7 @@ module Cid : sig
     val addNameConvention : name -> (unit -> string) option  -> (unit -> string) option -> cid_typ
     val gen_var_name      : LF.typ -> (unit -> string) option
     val gen_mvar_name     : LF.typ -> (unit -> string) option
+    val cid_of_typ        : LF.typ -> cid_typ
     val get               : cid_typ -> entry
     val index_of_name     : name -> cid_typ
     val addConstructor    : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
@@ -64,16 +66,14 @@ module Cid : sig
       mutable constructors : cid_comp_const list
     }
 
-    val entry_list : Id.cid_comp_typ list ref
     val mk_entry  : name -> Comp.kind -> int -> entry
 
     val add           : entry -> cid_comp_typ
     val get           : cid_comp_typ -> entry
     val freeze : cid_comp_typ -> unit
-    val addConstructor : cid_comp_const -> cid_comp_typ -> unit
+    val addConstructor: cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : name -> cid_comp_typ
     val clear         : unit -> unit
-    val get_implicit_arguments : cid_comp_typ -> int
   end
 
   module CompCotyp : sig
@@ -157,7 +157,7 @@ module Cid : sig
       mut_rec            : name list
     }
 
-    val mk_entry  :  name -> Comp.typ -> int -> Comp.value -> name list -> entry
+    val mk_entry  : name -> Comp.typ -> int -> Comp.value -> name list -> entry
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this
@@ -165,11 +165,10 @@ module Cid : sig
         this 'add' function expects a function to which it will
         provide the cid_prog it generated to store the entry, thus
         tying the recursive knot. *)
-    val add           : Loc.t -> (cid_prog -> entry) -> Loc.t option (*cid_prog  *)
+    val add           : (cid_prog -> entry) -> cid_prog
     val get           : cid_prog -> entry
     val index_of_name : name -> cid_prog
 
-    val entry_list : (Id.cid_prog * Loc.t) list ref
     val clear         : unit -> unit
   end
 
@@ -186,14 +185,25 @@ module Cid : sig
     val get             : cid_schema -> entry
     val get_schema      : cid_schema -> LF.schema
     val index_of_name   : name -> cid_schema
+    val get_name_from_schema : LF.schema -> name
     val clear           : unit -> unit
   end
+
+  module NamedHoles : sig
+    val printingHoles : bool ref
+    val usingRealNames : bool ref
+    val addExplicitName : string -> unit
+    val haveNameFor : name -> string option
+    val addNameConvention : cid_typ -> string -> string option -> unit
+    val getName : ?tA:LF.typ option -> Id.name -> string
+    val reset : unit -> unit
+  end
+
 
   module type RENDERER = sig
 
     open Id
     open Syntax.Int
-
     val render_name         : name         -> string
     val render_cid_comp_typ : cid_comp_typ -> string
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
@@ -322,3 +332,4 @@ module CVar : sig
   val length        : t -> int
 
 end
+

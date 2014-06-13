@@ -10,9 +10,7 @@ OCAML_LIBS[] +=
 PROGRAM = beli
 
 # Declare the files the program is built from
-FILES[] =
-        main
-        command
+FILES[] = main
 
 # Declare some phony empty targets so omake doesn't try to build
 # camlp4lib. May be a more elegant way to do this.

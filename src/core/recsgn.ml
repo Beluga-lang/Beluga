@@ -498,14 +498,13 @@ and recSgnDecl d =
 
     | Ext.Sgn.Pragma(loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
         begin try
+          let cid =
           begin match v_name with
             | None ->
-                let _cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None in
-                  (* Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp)) *) ()
+                Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None
             | Some x ->
-                let _cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
-                  (Some (Gensym.VarData.name_gensym x)) in
-                  (* Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp)) *) ()
-          end
+                Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
+                  (Some (Gensym.VarData.name_gensym x))
+          end in Store.Cid.NamedHoles.addNameConvention cid m_name v_name
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end

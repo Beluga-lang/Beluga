@@ -22,18 +22,31 @@ let ( ++ ) f g = function x -> f (g x)
 let nameString n = n.Id.string_of_name
 
 let ctypDeclToString cD ctypDecl =
-  P.fmt_ppr_lf_ctyp_decl ~print_status:true cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
+  P.fmt_ppr_lf_ctyp_decl ~printing_holes:true cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
   Format.flush_str_formatter ()
+
+let isExplicit = function
+  | LF.Decl(_, LF.MTyp (_, _, dep))
+  | LF.Decl(_, LF.PTyp (_, _, dep))
+  | LF.Decl(_, LF.STyp (_, _, dep))
+  | LF.Decl(_, LF.CTyp (_, dep)) ->
+      begin match dep with
+        | LF.No -> true
+        | LF.Maybe -> false
+      end
+  | _ -> true
 
 let mctxToString =
   let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
       "."
-    | LF.Dec (LF.Empty, ctypDecl) ->
+    | LF.Dec (LF.Empty, ctypDecl) when (isExplicit ctypDecl || !Pretty.Control.printImplicit) ->
       "\n" ^ shift ^ ctypDeclToString LF.Empty ctypDecl
-    | LF.Dec (cD, ctypDecl) ->
-      toString cD ^ "\n" ^ shift ^ ctypDeclToString cD ctypDecl
+    | LF.Dec (cD, ctypDecl) when (isExplicit ctypDecl || !Pretty.Control.printImplicit)->
+      let s = toString cD in
+      s ^ "\n" ^ shift ^ ctypDeclToString cD ctypDecl
+    | LF.Dec (cD, _ ) -> toString cD
   in toString ++ Whnf.normMCtx
  
 let gctxToString cD =
@@ -109,7 +122,7 @@ let setStagedHolePos i l =
       DynArray.set stagedholes i (l, cD, cG, tclo)
 
 let printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
-  Store.NamedHoles.reset () ;
+  Store.Cid.NamedHoles.reset () ;
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
   Printf.printf 
@@ -127,9 +140,9 @@ let printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
     with _ -> "Can't split on s") *)
 
 let printAll () =
-  Store.NamedHoles.printingHoles := true;
+  Store.Cid.NamedHoles.printingHoles := true;
   DynArray.iter printOne holes;
-  Store.NamedHoles.printingHoles := false
+  Store.Cid.NamedHoles.printingHoles := false
 
 let printOneHole i =
   if none () then Printf.printf " - There are no holes.\n"

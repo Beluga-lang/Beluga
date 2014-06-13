@@ -202,6 +202,7 @@ and locOfNormal = function
   | Ext.LF.Ann(l,_,_) -> l
   | Ext.LF.TList(l,_) -> l
 
+(* Functions for getting string representions of normals & spines for debugging *)
 and spaces i = if i <= 0 then "" else "-" ^ (spaces (i-1))
 
 and g i a = begin match a with
@@ -220,6 +221,16 @@ and f i = function
 
 and normalToString ?(x = false) n = if x then f 0 n else ""
 
+(* Adaptation of Dijkstra's 'shunting yard' algorithm for
+ * parsing infix, postfix, and prefix operators from a list
+ *
+ * Preconditions:
+ *    - All operators (constructors and typs) are contained in the store
+ * 
+ * Post: List of normals is converted to a Root with a head and a spine 
+ *        - Head contains the name of the atom term that is to be indexed
+ * 
+*)
 and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
   
   let get_pragma = function
@@ -255,36 +266,37 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
   | h::t, exps, [] when pragmaExists h -> 
     let p = get_pragma h in
     parse(t, exps, [p])
-  | h::t, exps, o::os when pragmaExists h -> begin
-    let p = get_pragma h in 
-    if lte p o then begin match o.Store.OpPragmas.fix with
-      | Ext.Sgn.Prefix ->
-        let args_expected = 
-          try Typ.args_of_name o.Store.OpPragmas.name with _ -> 
-          try Term.args_of_name o.Store.OpPragmas.name with _ -> 
-            failwith ("Unknown operator " ^ (o.Store.OpPragmas.name.Id.string_of_name)) in
-        let (ops, es) = take args_expected exps in
-        let loc = 
-          if args_expected > 0 then 
-            try locOfNormal (List.hd ops) with _ -> raise (Error(locOfNormal h, MispacedOperator o.Store.OpPragmas.name))
-          else Syntax.Loc.ghost in
-        let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), normalListToSpine ops) in
-        parse(h::t, e'::es, os)
+  | h::t, exps, o::os when pragmaExists h -> 
+    begin
+      let p = get_pragma h in 
+      if lte p o then begin match o.Store.OpPragmas.fix with
+        | Ext.Sgn.Prefix ->
+          let args_expected = 
+            try Typ.args_of_name o.Store.OpPragmas.name with _ -> 
+            try Term.args_of_name o.Store.OpPragmas.name with _ -> 
+              failwith ("Unknown operator " ^ (o.Store.OpPragmas.name.Id.string_of_name)) in
+          let (ops, es) = take args_expected exps in
+          let loc = 
+            if args_expected > 0 then 
+              try locOfNormal (List.hd ops) with _ -> raise (Error(locOfNormal h, MispacedOperator o.Store.OpPragmas.name))
+            else Syntax.Loc.ghost in
+          let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), normalListToSpine ops) in
+          parse(h::t, e'::es, os)
 
-      | Ext.Sgn.Postfix -> 
-        let e::es = exps in
-        let loc = locOfNormal e in
-        let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), Ext.LF.App(loc, e, Ext.LF.Nil)) in
-        parse(h::t, e'::es, os)
+        | Ext.Sgn.Postfix -> 
+          let e::es = exps in
+          let loc = locOfNormal e in
+          let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), Ext.LF.App(loc, e, Ext.LF.Nil)) in
+          parse(h::t, e'::es, os)
 
-      | Ext.Sgn.Infix -> 
-        let e2::e1::es = exps in
-        let loc = locOfNormal e1 in
-        let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), normalListToSpine [e1; e2]) in
-        parse(h::t, e'::es, os) 
+        | Ext.Sgn.Infix -> 
+          let e2::e1::es = exps in
+          let loc = locOfNormal e1 in
+          let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), normalListToSpine [e1; e2]) in
+          parse(h::t, e'::es, os) 
 
-    end else
-      parse(t, exps, p::o::os)
+      end else
+        parse(t, exps, p::o::os)
     end
   | h ::t, y, z -> parse(t, h::y, z)
   | [], y, z -> 
@@ -296,9 +308,8 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     let _ = List.iter o z in
     reconstruct (y, z)
 
-
   and reconstruct : Ext.LF.normal list * Store.OpPragmas.fixPragma list -> Ext.LF.normal = function
-  | [e], [] -> dprint( fun () -> normalToString e); e
+  | [e], [] -> dprint( fun () -> "AFTER RECONSTRUCT\n" ^(normalToString ~x:true e)); e
   | exps, o::os when (o.Store.OpPragmas.fix = Ext.Sgn.Prefix) ->
     let args_expected = 
       try Typ.args_of_name o.Store.OpPragmas.name with _ -> 
@@ -309,7 +320,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     let _ = List.iter (fun x -> dprint (fun () -> normalToString ~x:true x)) (ops) in
     let loc = 
       if args_expected > 0 then 
-        try locOfNormal (List.hd ops) with _ -> raise (Error(Syntax.Loc.ghost , MispacedOperator o.Store.OpPragmas.name))
+        try locOfNormal (List.hd ops) with _ -> raise (Error(Syntax.Loc.ghost, MispacedOperator o.Store.OpPragmas.name))
       else Syntax.Loc.ghost in
     let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), normalListToSpine ops) in
     reconstruct(e'::es, os)
@@ -346,133 +357,6 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
       | _  -> (c, l)
   in aux i l []
 in parse (l, [], [])
-(* 
-and normalListToSpine = function
-    | [] -> Ext.LF.Nil
-    | (Ext.LF.TList(loc,nl))::t -> Ext.LF.App(loc, fixNormalList nl (getOps nl), normalListToSpine t)
-    | h::t -> Ext.LF.App(locOfNormal h, h, normalListToSpine t)
- 
-and getOps l = 
-  if !Store.OpPragmas.pragmaCount = 0 then [] else match l with
-    | [] -> []
-    | n::rest -> 
-      begin match n with
-        | Ext.LF.Root(_, Ext.LF.Name(_, name), Ext.LF.Nil) 
-        | Ext.LF.Root(_, Ext.LF.PVar(_, name, _), Ext.LF.Nil)
-        | Ext.LF.Root(_, Ext.LF.MVar(_, name, _), Ext.LF.Nil) -> 
-            begin match Store.OpPragmas.getPragma name with
-            | None -> getOps rest
-            | Some prag -> prag::(getOps rest)
-            end
-        | _ ->(getOps rest)
-      end 
-
-and fixNormalList (nl : Ext.LF.normal list) (prag_list : (Store.OpPragmas.fixPragma) list) : Ext.LF.normal = 
-  if prag_list = [] then  (*No operators that were declared in pragma -- assume 1st element is a root with an empty spine*)
-    let h::t = nl in
-    begin match h with
-      | Ext.LF.Root(loc, head, Ext.LF.Nil) -> Ext.LF.Root(loc, head, normalListToSpine t)
-      | Ext.LF.Lam(loc, name, Ext.LF.Root(loc2, head, Ext.LF.Nil)) ->
-          Ext.LF.Lam(loc, name, Ext.LF.Root(loc2, head, normalListToSpine t))
-      | Ext.LF.Lam(loc, name, n) ->
-          Ext.LF.Lam(loc, name, fixNormalList (n::t) [])
-      | Ext.LF.TList (loc, nl) -> fixNormalList (nl@t) []
-      | _ -> failwith (normalToString (Ext.LF.TList(Loc.ghost, nl)))
-    end
-  else      
-  let prag::prag_list' = 
-    List.sort (fun (a : Store.OpPragmas.fixPragma) (b : Store.OpPragmas.fixPragma) -> 
-      b.Store.OpPragmas.precedence - a.Store.OpPragmas.precedence) prag_list in
-  let deleteElement i l =
-    let rec f x y = function
-    | [] -> []
-    | h::t -> if x=y then t else h::(f (x+1) y t)
-  in f 0 i l in 
-  let splitAt i =     (* x < i in 1st half, x >= i in 2nd half *)
-    let rec f x = function
-    | [] -> ([],[])
-    | (h::t) as l-> if x < i then let (a,b) = f (x+1) t in (h::a, b) else ([], l)
-    in f 0 in
-  if prag.Store.OpPragmas.fix = Ext.Sgn.Infix then begin
-    try
-      let indeces = List.map (fun (_,i) -> i) (List.filter (fun (a,_) -> a) (List.mapi (fun a b -> (
-        match b with 
-        | Ext.LF.Root(_,Ext.LF.Name(_,name), _) -> (prag.Store.OpPragmas.name = name, a)
-        | _ -> (false, a))) nl)) in
-      let indeces = begin match prag.Store.OpPragmas.assoc with
-      | (Ext.Sgn.Left) -> indeces
-      | (Ext.Sgn.Right) -> List.rev indeces
-      | (Ext.Sgn.None) -> 
-          if List.length indeces = 1 then indeces 
-          else if List.length indeces > 1 then
-            let Ext.LF.Root(loc, Ext.LF.Name(_,n), _) = List.nth nl (List.hd indeces) in 
-            raise (Error(loc, MispacedOperator n))
-          else []
-      end in
-      let _ = dprint (fun () -> "Indeces of infix operators: " ^ (List.fold_right (fun a b -> (string_of_int a) ^ " " ^ b) (indeces) "")) in
-      let rec firstReleventIndex x = 
-        if x = [] then (raise Not_found) else let i::indeces = x in
-        begin match List.nth nl i with
-        | Ext.LF.Root(loc, head, Ext.LF.Nil) -> i
-        | _ -> firstReleventIndex indeces end
-      in 
-      let i = firstReleventIndex indeces in
-      begin try
-        let Ext.LF.Root(loc, head, Ext.LF.Nil) = List.nth nl i in
-        let a = List.nth nl (i-1) in
-        let b = List.nth nl (i+1) in
-        let new_list = deleteElement (i-1) (deleteElement i (deleteElement (i+1) nl)) in
-        let new_root = Ext.LF.Root(loc, head, Ext.LF.App(locOfNormal a, a, Ext.LF.App(locOfNormal b, b, Ext.LF.Nil))) in
-        let (x, y) = splitAt (i-1) new_list in
-        if new_list = [] then 
-          new_root
-        else 
-          let _ = dprint(fun () -> "1st half:\n" ^ (normalToString (Ext.LF.TList(Loc.ghost, x)))) in
-          let _ = dprint(fun () -> "New Root:\n" ^ (normalToString new_root)) in
-          let _ = dprint(fun () -> "2nd half:\n" ^ (normalToString (Ext.LF.TList(Loc.ghost, y)))) in
-          fixNormalList (x @ (new_root::y)) prag_list
-          (* let rest = fixNormalList new_list prag_list' in
-          appendNormals rest new_root  *)
-      with
-        | Invalid_argument "List.nth" -> 
-        let Ext.LF.Root(loc, Ext.LF.Name(_,n), _) = List.nth nl i in
-        (raise (Error(loc, MispacedOperator n)))
-      end
-    with 
-    | Not_found -> fixNormalList nl prag_list'
-  end
-  else (* if prag.Store.OpPragmas.fix = Ext.Sgn.Postfix then *) begin
-    try
-      let indeces = List.map (fun (_,i) -> i) (List.filter (fun (a,_) -> a) (List.mapi (fun a b -> (
-        match b with 
-        | Ext.LF.Root(_,Ext.LF.Name(_,name), _) -> (prag.Store.OpPragmas.name = name, a)
-        | _ -> (false, a))) nl)) in
-      let rec firstReleventIndex x = 
-        if x = [] then (raise Not_found) else let i::indeces = x in
-        begin match List.nth nl i with
-        | Ext.LF.Root(loc, head, Ext.LF.Nil) -> i
-        | _ -> firstReleventIndex indeces end
-      in 
-      let i = firstReleventIndex indeces in
-      begin try
-        let Ext.LF.Root(loc, head, Ext.LF.Nil) = List.nth nl i in
-        let a = List.nth nl (i-1) in
-        let new_list = deleteElement (i-1) (deleteElement i nl) in
-        let new_root = Ext.LF.Root(loc, head, Ext.LF.App(locOfNormal a, a, Ext.LF.Nil)) in
-        let (x,y) = splitAt (i-1) new_list in
-        if new_list = [] then 
-          new_root
-        else
-          fixNormalList (x @ (new_root::y)) prag_list
-      with
-        | Invalid_argument "List.nth" -> 
-        let (Ext.LF.Root(loc, Ext.LF.Name(_,n), _)) = List.nth nl i in
-        (raise (Error(loc, MispacedOperator n)))
-      end
-    with
-    | Not_found -> fixNormalList nl prag_list'
-  end *)
-
 
 and index_typ_rec cvars bvars fvars = function
   | Ext.LF.SigmaLast a ->

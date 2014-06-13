@@ -698,8 +698,8 @@ GLOBAL: sgn;
               LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
         |
            a = UPSYMBOL; ms = LIST0 clf_normal ->
-              (* LF.AtomTerm(_loc, LF.App(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms), LF.Nil)) *)
-              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
+              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
+              (* LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms)) *)
 
         ]
     | "sigma"
@@ -803,29 +803,18 @@ GLOBAL: sgn;
       "infix"
       [
         "|"; u = UPSYMBOL; ms = LIST0 clf_normal; "|" -> 
-              let l = LF.TList(_loc, ((LF.Root(_loc, LF.Name(_loc, Id.mk_name (Id.SomeString u)), LF.Nil))::ms)) in
-              (* let l = LF.TList(_loc, ((LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil))::ms)) in *)
-              (* let _ = print_string (normalToString l) in *) l
+              LF.TList(_loc, ((LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil))::ms))
       ]
     |
       LEFTA
         [
            x = clf_term_x; ms = LIST0 clf_normal -> LF.TList(_loc, x::ms)
         ]
-(* 
-    | RIGHTA
+    |
+      "atomic"
         [
-          t = clf_term_x  ->
-            t
+          x = clf_term_x -> x
         ]
-
-    | "atomic"
-        [
-          t = clf_term_x  ->
-            t
-
-
-        ] *)
     ]
   ;
 

@@ -58,8 +58,11 @@ let freeze_from_name tau = match tau with
 let sgnDeclToHtml = function
   | Ext.Sgn.Comment (_, x) -> Html.appendAsComment x
   | d -> 
+    let margin = Format.get_margin () in
     Html.printingHtml := true; 
+    Format.set_margin 100000;
     Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl Prettyext.std_lvl Format.str_formatter d; 
+    Format.set_margin margin; 
     Html.printingHtml := false; 
     Html.append (Format.flush_str_formatter ())
 

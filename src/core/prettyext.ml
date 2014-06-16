@@ -395,11 +395,11 @@ module Ext = struct
        in
        let rec ppr_elements cD cPsi ppf = function
          | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-         | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
+(*          | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
              begin
-               ppr_element cD cPsi  ppf ". " (x, tA1);
+               ppr_element cD cPsi  ppf ", " (x, tA1);
                fprintf ppf "%a" (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, tA1))) 0) tA2
-             end
+             end *)
          | LF.SigmaElem (x, tA, tAs)  ->
              begin
                ppr_element cD cPsi ppf ", " (x, tA);
@@ -555,7 +555,7 @@ module Ext = struct
             (fmt_ppr_lf_dctx cD 0) cPsi
 
       | LF.Decl (name, LF.CTyp(_, schemaName, _)) ->
-          fprintf ppf "{%s :: (%s)*}"
+          fprintf ppf "{%s :: %s}"
             (R.render_name name)
             (R.render_name schemaName)
 
@@ -607,10 +607,18 @@ module Ext = struct
               (fmt_ppr_meta_spine cD 2) mS
               (r_paren_if cond)
 
+      | Comp.TypBox (_, tA, (LF.Null as cPsi)) ->
+          fprintf ppf "%a"
+            (fmt_ppr_lf_typ cD cPsi 2) tA
+
       | Comp.TypBox (_, tA, cPsi) ->
           fprintf ppf "%a[%a]"
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
+
+      | Comp.TypPBox (_, tA, (LF.Null as cPsi)) ->
+          fprintf ppf "%a"
+            (fmt_ppr_lf_typ cD cPsi 2) tA
 
       | Comp.TypPBox (_, tA, cPsi) ->
           fprintf ppf "%a[%a]"
@@ -721,50 +729,45 @@ module Ext = struct
 
       | Comp.Fun (_, x, e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s%s %s => "
+            fprintf ppf "%s%s %s =>@ %a%s"
               (l_paren_if cond)
               (to_html "fn" Keyword)
-              (R.render_name x);
-
-            fprintf ppf "%a%s"
+              (R.render_name x)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
-(*      | Comp.CtxFun (_, x, e) ->
-          let cond = lvl > 0 in
-            fprintf ppf "@[<2>%sFN %s =>@ %a%s@]"
-              (l_paren_if cond)
-              (R.render_name x)
-              (fmt_ppr_cmp_exp_chk cD 0) e
-              (r_paren_if cond)
-*)
       | Comp.MLam (_, (x, Comp.MObj), e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s%s %s => "
+            fprintf ppf "%s%s %s =>@ %a%s"
               (l_paren_if cond)
               (to_html "mlam" Keyword)
-              (R.render_name x);
-            fprintf ppf "%a%s"
+              (R.render_name x)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
       | Comp.MLam (_, (x, Comp.PObj), e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s%s # %s => "
+            fprintf ppf "%s%s # %s =>@ %a%s"
               (l_paren_if cond)
               (to_html "mlam" Keyword)
-              (R.render_name x);
-            fprintf ppf "%a%s"
+              (R.render_name x)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
      | Comp.MLam (_, (x, Comp.SObj), e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s%s #%s => "
+            fprintf ppf "%s%s #%s =>@ %a%s"
               (l_paren_if cond)
               (to_html "mlam" Keyword)
-              (R.render_name x);
-            fprintf ppf "%a%s"
+              (R.render_name x)
+              (fmt_ppr_cmp_exp_chk cD 0) e
+              (r_paren_if cond);
+      | Comp.MLam(_, (x, Comp.CObj), e) -> 
+          let cond = lvl > 0 in
+            fprintf ppf "%s%s %s =>@ %a%s"
+              (l_paren_if cond)
+              (to_html "FN" Keyword)
+              (R.render_name x)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
@@ -1034,7 +1037,7 @@ module Ext = struct
 
     let fmt_ppr_cmp_rec lvl ppf = function
       | Comp.RecFun (x, a, e) ->
-          fprintf ppf "%s %s : %a => @ %a"
+          fprintf ppf "%s %s : %a =@ %a"
             (to_html "rec" Keyword)
             (to_html (R.render_name x) (ID Fun))
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
@@ -1042,7 +1045,7 @@ module Ext = struct
 
     let rec fmt_ppr_rec lvl ppf = function
       | [] -> ()
-      | h::t -> fprintf ppf "%a %a \n"
+      | h::t -> fprintf ppf "%a %a@.@?"
                    (fmt_ppr_cmp_rec lvl) h
                    (fmt_ppr_rec lvl) t
 

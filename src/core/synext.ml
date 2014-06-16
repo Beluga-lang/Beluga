@@ -18,13 +18,6 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
-(*      | TypDeclOpt of name  *)
-
-(*   and ctyp_decl =
-    | MDecl of Loc.t * name * typ  * dctx
-    | PDecl of Loc.t * name * typ  * dctx
-    | SDecl of Loc.t * name * dctx * dctx
-    | CDecl of Loc.t * name * name *)
 
   and ctyp =
     | MTyp of Loc.t * typ * dctx * depend

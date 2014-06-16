@@ -1,3 +1,4 @@
 Cannot pattern-match on values of this type.
   Scrutinee: g
-  Type: [ |- nat] -> [ |- nat]
+  Type: [ |- nat] ->
+  [ |- nat]

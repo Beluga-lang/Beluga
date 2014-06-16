@@ -183,10 +183,6 @@ let main () =
             printf "\n## Holes: %s  ##" file_name;
             Holes.printAll ()
           end;
-          if not (Lfholes.none ()) && !Debug.chatter != 0 then begin
-            printf "\n\n## LF Holes: %s  ##" file_name;
-            Lfholes.printAll ()
-          end;
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;
           if !Html.genHtml then

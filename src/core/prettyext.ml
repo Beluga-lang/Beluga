@@ -259,8 +259,6 @@ module Ext = struct
                 (fmt_ppr_lf_head cD cPsi lvl) h
                 (fmt_ppr_lf_spine cD cPsi 2)  ms
                 (r_paren_if cond)
-        | LF.LFHole _ -> 
-          fprintf ppf "?"
 
     and fmt_ppr_lf_head cD cPsi lvl ppf head =
       let paren s = not (Control.db()) && lvl > 0 && true

@@ -98,9 +98,6 @@ let rec cnormApxTerm cD delta m (cD'', t) = match m with
   | Apx.LF.Ann (loc, m', a) ->
     Apx.LF.Ann (loc, cnormApxTerm cD delta m' (cD'', t), a)
 
-  | Apx.LF.LFHole loc ->
-    m
-
 and cnormApxTuple cD delta tuple (cD'', t) = match tuple with
   | Apx.LF.Last m -> Apx.LF.Last (cnormApxTerm cD delta m (cD'' , t))
   | Apx.LF.Cons (m, tuple) ->
@@ -615,8 +612,6 @@ let rec collectApxTerm fMVs  m = match m with
   | Apx.LF.Tuple (_loc, tuple) ->
        collectApxTuple fMVs  tuple
 
-  | Apx.LF.LFHole _loc -> fMVs
-
 and collectApxTuple fMVs tuple = match tuple with
   | Apx.LF.Last m -> collectApxTerm fMVs  m
   | Apx.LF.Cons (m, tuple) ->
@@ -823,8 +818,6 @@ let rec fmvApxTerm fMVs cD ((l_cd1, l_delta, k) as d_param) m =   match m with
 
   | Apx.LF.Ann (loc, m', a) ->
     Apx.LF.Ann (loc, fmvApxTerm fMVs cD d_param m', a)
-
-  | Apx.LF.LFHole _ -> m
 
 and fmvApxTuple fMVs cD ((l_cd1, l_delta, k) as d_param)   tuple = match tuple with
   | Apx.LF.Last m -> Apx.LF.Last (fmvApxTerm fMVs cD d_param   m)

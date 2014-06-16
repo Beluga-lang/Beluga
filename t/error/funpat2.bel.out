@@ -1,4 +1,5 @@
 Ill-typed pattern.
-    Expected type: [ |- nat] -> [ |- nat]
+    Expected type: [ |- nat] ->
+    [ |- nat]
     Inferred type: Bool
 In pattern: ttrue

@@ -32,7 +32,6 @@ type error =
   | LeftoverConstraints of Id.name
   | PruningFailed
   | CompTypAnn
-  | InvalidLFHole
   | CompTypAnnSub
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
@@ -141,11 +140,7 @@ let _ = Error.register_printer
 
         | CompTypAnn ->
           Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
-        | InvalidLFHole ->
-          Format.fprintf ppf
-            "Invalid LF Hole at %s"
-            (Loc.to_string loc)
-        
+  
         | CompTypAnnSub ->
           Format.fprintf ppf "Synthesizing the type meta-variable associated with a substitution variable failed (use typing annotation)."
 
@@ -803,8 +798,6 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
     let tM = elTerm recT cD cPsi m (tB, Substitution.LF.id) in
     let () = Unify.unifyTyp cD cPsi (tB, Substitution.LF.id) sA in
     tM
-  | (Apx.LF.LFHole loc, tA) ->
-      Lfholes.collect (loc, cD, cPsi, sA); Int.LF.LFHole loc
 
 and elTuple recT cD cPsi tuple (typRec, s) =
   match (tuple, typRec) with
@@ -828,9 +821,6 @@ and elTerm' recT cD cPsi r sP = match r with
 
   | Apx.LF.Ann (_loc, m, a) ->
     elTerm' recT cD cPsi m sP
-    
-  | Apx.LF.LFHole loc -> 
-    Lfholes.collect (loc, cD, cPsi, sP); Int.LF.LFHole loc
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
@@ -1502,8 +1492,6 @@ and synSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema ele
 
 
 and elClosedTerm' recT cD cPsi r = match r with
-  | Apx.LF.LFHole loc -> 
-      raise (Error (loc, InvalidLFHole))
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
       let i  = (Term.get c).Term.implicit_arguments in

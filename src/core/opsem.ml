@@ -78,7 +78,7 @@ where  cD ; cG |- e <= wf_exp
 let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
-    | Comp.Const cid ->
+    | Comp.Const (_, cid) ->
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
       begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
         | Comp.RecValue (cid, e', theta', eta') ->
@@ -92,13 +92,13 @@ let rec eval_syn i (theta, eta) =
         | v -> v
       end
 
-    | Comp.DataConst cid ->
+    | Comp.DataConst (_, cid) ->
       Comp.DataValue (cid, Comp.DataNil)
 
-    | Comp.DataDest cid ->
+    | Comp.DataDest (_, cid) ->
         Comp.CodataValue (cid, Comp.CodataNil)
 
-    | Comp.Var x ->
+    | Comp.Var (_, x) ->
       dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
       begin match lookupValue x eta with
         | Comp.RecValue (cid, e', theta', eta') ->

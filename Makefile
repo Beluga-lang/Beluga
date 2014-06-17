@@ -7,7 +7,7 @@ PARALLEL = 4
 
 EXT = $(if $(BYTE),byte,native)
 
-OCAMLBUILD = ocamlbuild -use-ocamlfind \
+OCAMLBUILD = ocamlbuild -r -use-ocamlfind \
 	$(if $(PARALLEL),-j $(PARALLEL),) \
 	$(if $(PROFILE),-tag profile,) \
 	$(if $(DEBUG),-tag debug,) \

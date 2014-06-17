@@ -87,6 +87,7 @@ and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
+        dprint (fun () -> "[RecSgn Checking] CompTypAbbrev at: \n" ^ Syntax.Loc.to_string loc);
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         (* index cT  in a context which contains arguments to cK *)
         let (apx_tau, apxK) = Index.comptypdef  (cT, cK) in
@@ -101,7 +102,8 @@ and recSgnDecl d =
 					fun () -> Check.Comp.checkTyp cD tau)) in
         let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
 
-    | Ext.Sgn.CompTyp (_ , a, extK) ->
+    | Ext.Sgn.CompTyp (loc , a, extK) ->
+        dprint (fun () -> "[RecSgn Checking] CompTyp at: \n" ^ Syntax.Loc.to_string loc);
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -129,7 +131,8 @@ and recSgnDecl d =
                  (P.fmt_ppr_cmp_kind Int.LF.Empty Pretty.std_lvl) cK'))
 
 
-  | Ext.Sgn.CompCotyp (_ , a, extK) ->
+  | Ext.Sgn.CompCotyp (loc , a, extK) ->
+        dprint (fun () -> "[RecSgn Checking] CompCotyp at: \n" ^ Syntax.Loc.to_string loc);
         let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -153,7 +156,8 @@ and recSgnDecl d =
         let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in ()
 
 
-    | Ext.Sgn.CompConst (_ , c, tau) ->
+    | Ext.Sgn.CompConst (loc , c, tau) ->
+        dprint (fun () -> "[RecSgn Checking] CompConst at: \n" ^ Syntax.Loc.to_string loc);
         let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -178,7 +182,8 @@ and recSgnDecl d =
 
 
 
-   | Ext.Sgn.CompDest (_ , c, tau) ->
+   | Ext.Sgn.CompDest (loc , c, tau) ->
+        dprint (fun () -> "[RecSgn Checking] CompDest at: \n" ^ Syntax.Loc.to_string loc);
         let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -198,7 +203,8 @@ and recSgnDecl d =
         let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in ()
 
 
-    | Ext.Sgn.Typ (_, a, extK)   ->
+    | Ext.Sgn.Typ (loc, a, extK)   ->
+        dprint (fun () -> "[RecSgn Checking] Typ at: \n" ^ Syntax.Loc.to_string loc);
         let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in
         let (apxK, _ ) = Index.kind extK in
         let _        = FVar.clear () in
@@ -224,6 +230,7 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Const (loc, c, extT) ->
+        dprint (fun () -> "[RecSgn Checking] Const at: \n" ^ Syntax.Loc.to_string loc);
         let (apxT, _ ) = Index.typ extT in
         let rec get_type_family = function
                            | Apx.LF.Atom(_loc, a, _spine) -> a
@@ -253,7 +260,8 @@ and recSgnDecl d =
 	let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in ()
 
 
-    | Ext.Sgn.Schema (_, g, schema) ->
+    | Ext.Sgn.Schema (loc, g, schema) ->
+        dprint (fun () -> "[RecSgn Checking] Schema at: \n" ^ Syntax.Loc.to_string loc);
         let apx_schema = Index.schema schema in
         let _        = dprint (fun () -> "\nReconstructing schema " ^ g.string_of_name ^ "\n") in
         let _        = FVar.clear () in
@@ -275,6 +283,7 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Val (loc, x, None, i) ->
+          dprint (fun () -> "[RecSgn Checking] Val at: \n" ^ Syntax.Loc.to_string loc);
           let apx_i              = Index.exp' (Var.create ()) i in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
           let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp' cG apx_i) in
@@ -302,6 +311,7 @@ and recSgnDecl d =
 	  end
 
     | Ext.Sgn.Val (loc, x, Some tau, i) ->
+          dprint (fun () -> "[RecSgn Checking] Val at: \n" ^ Syntax.Loc.to_string loc);
           let apx_tau = Index.comptyp tau in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
           let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
@@ -337,7 +347,8 @@ and recSgnDecl d =
 		(P.valueToString v)
   	  end
 
-    | Ext.Sgn.MRecTyp (_, recDats) ->
+    | Ext.Sgn.MRecTyp (loc, recDats) ->
+          dprint (fun () -> "[RecSgn Checking] MRecTyp at: \n" ^ Syntax.Loc.to_string loc); 
           let recTyps = List.map List.hd recDats in
           let   _   =  recSgnDecls recTyps in
           let recConts = List.map List.tl recDats in
@@ -346,6 +357,7 @@ and recSgnDecl d =
           let  _  = List.map freeze_from_name recTyps in
                ()
     | Ext.Sgn.Rec (loc, recFuns) ->
+        dprint (fun () -> "[RecSgn Checking] Rec at: \n" ^ Syntax.Loc.to_string loc); 
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
         let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in
 
@@ -408,7 +420,7 @@ and recSgnDecl d =
 
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
 
-          let _       = Monitor.timer ("Function Check", fun () ->
+          let _       = Monitor.timer ("Function Check: ", fun () ->                                         
                                          Check.Comp.check cD  cG e_r' (tau', C.m_id)
                                       ) in
              (e_r' , tau')
@@ -467,6 +479,7 @@ and recSgnDecl d =
 
 
     | Ext.Sgn.Query (loc, name, extT, expected, tries) ->
+      dprint (fun () -> "[RecSgn Checking] Query at: \n" ^ Syntax.Loc.to_string loc); 
       let (apxT, _ ) = Index.typ extT in
       let _          = dprint (fun () -> "Reconstructing query.") in
 
@@ -497,6 +510,7 @@ and recSgnDecl d =
       ()
 
     | Ext.Sgn.Pragma(loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
+        dprint (fun () -> "[RecSgn Checking] Pragma at: \n" ^ Syntax.Loc.to_string loc); 
         begin try
           let cid =
           begin match v_name with

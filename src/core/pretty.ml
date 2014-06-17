@@ -160,6 +160,7 @@ module Int = struct
     val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
     val compKindToString  : LF.mctx              -> Comp.kind -> string
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val subCompTypToString : LF.mctx              -> Comp.tclo  -> string
     val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end (* Int.PRINTER *)
@@ -1206,11 +1207,11 @@ module Int = struct
       else
         let (i', _ ) = strip_mapp_args' cD cG i in i'
     and strip_mapp_args' cD cG i = match i with
-      | Comp.Const prog ->
+      | Comp.Const (_, prog) ->
           (i,  implicitCompArg  (Store.Cid.Comp.get prog).Store.Cid.Comp.typ)
-      | Comp.DataConst c ->
+      | Comp.DataConst (_, c) ->
           (i,  implicitCompArg  (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ)
-      | Comp.Var x ->
+      | Comp.Var (_, x) ->
           begin match Context.lookup cG x with
               None -> (i, [])
             | Some tau -> (i,  implicitCompArg tau)
@@ -1243,19 +1244,19 @@ module Int = struct
       | _ -> []
     end
     and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
-      | Comp.Var x ->
+      | Comp.Var (_, x) ->
           fprintf ppf "%s"
             (R.render_var cG x)
 
-      | Comp.Const prog ->
+      | Comp.Const (_, prog) ->
           fprintf ppf "%s"
             (R.render_cid_prog prog)
 
-      | Comp.DataConst c ->
+      | Comp.DataConst (_, c) ->
           fprintf ppf "%s"
             (R.render_cid_comp_const c)
 
-      | Comp.DataDest c ->
+      | Comp.DataDest (_, c) ->
           fprintf ppf "%s"
             (R.render_cid_comp_dest c)
 
@@ -1449,6 +1450,7 @@ module Int = struct
           fprintf ppf "%a@ ,@ %a"
             (fmt_ppr_refine_elem cD decl 1) f
             (fmt_ppr_refinement cD cD' lvl) s
+      | _ -> fprintf ppf "No match"
     end
 
 
@@ -1651,6 +1653,11 @@ module Int = struct
       let tau' = Whnf.normCTyp (Whnf.cnormCTyp (tau, Whnf.m_id)) in
         fmt_ppr_cmp_typ cD std_lvl str_formatter tau'
         ; flush_str_formatter ()
+
+    let subCompTypToString cD sA  =
+      let tA = Whnf.normCTyp (Whnf.cnormCTyp sA) in
+        fmt_ppr_cmp_typ cD std_lvl str_formatter tA
+        ; flush_str_formatter ()        
 
     let compKindToString cD cK  =
 (*      let cK' = Whnf.normCKind cK in  *)

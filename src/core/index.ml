@@ -688,22 +688,22 @@ let rec index_exp cvars vars fcvars = function
 and index_exp' cvars vars fcvars = function
   | Ext.Comp.Var (loc, x) ->
       begin try
-        Apx.Comp.Var (Var.index_of_name vars x)
+        Apx.Comp.Var (loc, Var.index_of_name vars x)
       with Not_found -> try
-        Apx.Comp.Const (Comp.index_of_name x)
+        Apx.Comp.Const (loc, Comp.index_of_name x)
       with Not_found -> try
-        Apx.Comp.DataConst (CompConst.index_of_name x)
+        Apx.Comp.DataConst (loc, CompConst.index_of_name x)
       with Not_found -> try
-        Apx.Comp.DataDest (CompDest.index_of_name x)
+        Apx.Comp.DataDest (loc, CompDest.index_of_name x)
       with Not_found ->
         raise (Error (loc, UnboundCompName x))
       end
   | Ext.Comp.DataConst (loc, c) ->
     begin
       try
-	Apx.Comp.DataConst (CompConst.index_of_name c)
+	Apx.Comp.DataConst (loc, CompConst.index_of_name c)
       with Not_found -> try
-        Apx.Comp.DataDest (CompDest.index_of_name c)
+        Apx.Comp.DataDest (loc, CompDest.index_of_name c)
       with Not_found -> raise (Error (loc, UnboundCompConstName  c))
     end
   | Ext.Comp.Apply (loc, i, e) ->

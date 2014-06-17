@@ -19,10 +19,13 @@ FILES[] =
         error
         gensym
         holes
+        typeinfo
+        locs
+        loctesting
         id
         index
         interactive
-	logic
+		logic
         lfholes
         opsem
         parser

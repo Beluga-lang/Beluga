@@ -343,11 +343,11 @@ let split e i =
         | Comp.TypBox (l, tA, cPsi) -> (* tA:typ, cPsi: dctx *)
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
             let bl = branchCovGoals loc 0 cG0 tH cgs in
-            Some (matchFromPatterns l  (Comp.Var i) bl)
+            Some (matchFromPatterns l  (Comp.Var(l, i)) bl)
         | Comp.TypBase (l, c, mS) ->  (* c: cid_comp_typ , mS: meta_spine *)
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
             let bl = branchCovGoals loc 0 cG0 tH cgs in
-            Some (matchFromPatterns l (Comp.Var i) bl)
+            Some (matchFromPatterns l (Comp.Var(l, i)) bl)
         | _ ->
             failwith ("Found variable in gCtx, cannot split on "^(nameString n)))
       else

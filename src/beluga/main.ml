@@ -5,7 +5,6 @@
     @author Joshua Dunfield
 *)
 
-open Core
 open Printf
 
 let bailout msg =
@@ -38,6 +37,8 @@ let usage () =
         ^ "    -strengthen   Turn off metavariable strengthening.\n"
         ^ "    +realNames    Print holes using real names (default)\n"
         ^ "    -realNames    Print holes using freshly generated names\n"
+        ^ "    +annot        Generate a .annot file for use in emacs\n"
+        ^ "    +locs         Output location information (for testing)\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -84,6 +85,8 @@ let process_option arg rest = match arg with
   | "-strengthen" -> Lfrecon.strengthen := false; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
+  | "+annot"      -> Typeinfo.generate_annotations := true; rest
+  | "+locs"       -> Locs.gen_loc_info := true; rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -158,7 +161,7 @@ let main () =
         Recsgn.recSgnDecls sgn;
         if !Debug.chatter != 0 then
           printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-        ignore (Coverage.force
+          ignore (Coverage.force
                   (function
                     | Coverage.Success -> ()
                     | Coverage.Failure message ->
@@ -166,6 +169,7 @@ let main () =
                         Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
                       else
                         raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))));
+
           if !Coverage.enableCoverage then
             (if !Debug.chatter != 0 then
                 printf "\n## Coverage checking done: %s  ##\n" file_name);
@@ -183,6 +187,11 @@ let main () =
             printf "\n\n## LF Holes: %s  ##" file_name;
             Lfholes.printAll ()
           end;
+          if !Typeinfo.generate_annotations then
+            Typeinfo.print_annot file_name;
+          if !Locs.gen_loc_info then
+            List.iter Loctesting.store_locs sgn;
+            Locs.print_loc_info file_name;
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer ()
       with e ->

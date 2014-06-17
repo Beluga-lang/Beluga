@@ -2057,10 +2057,10 @@ let rec collectExp cQ e = match e with
   | Comp.Hole (loc, f) -> (cQ, Comp.Hole (loc, f))
 
 and collectExp' cQ i = match i with
-  | Comp.Var _x -> (cQ , i)
-  | Comp.DataConst _c ->  (cQ , i)
-  | Comp.DataDest _c -> (cQ , i)
-  | Comp.Const _c ->  (cQ , i)
+  | Comp.Var (_, _x) -> (cQ , i)
+  | Comp.DataConst (_, _c) ->  (cQ , i)
+  | Comp.DataDest (_, _c) -> (cQ , i)
+  | Comp.Const (_, _c) ->  (cQ , i)
   | Comp.Apply (loc, i, e) ->
       let (cQ', i') = collectExp' cQ i  in
       let (cQ'', e') = collectExp cQ' e in

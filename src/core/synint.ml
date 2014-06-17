@@ -302,10 +302,10 @@ module Comp = struct
     | Hole   of Loc.t * (unit -> int)
 
   and exp_syn =
-    | Var    of offset
-    | DataConst of cid_comp_const
-    | DataDest of cid_comp_dest
-    | Const  of cid_prog
+    | Var    of Loc.t * offset
+    | DataConst of Loc.t * cid_comp_const
+    | DataDest of Loc.t * cid_comp_dest
+    | Const  of Loc.t * cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | MApp   of Loc.t * exp_syn * meta_obj
     | Ann    of exp_chk * typ

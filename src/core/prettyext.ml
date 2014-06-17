@@ -217,24 +217,24 @@ module Ext = struct
       in function
         | LF.Lam (_, x, m) ->
             let cond = lvl > 0 in
-              fprintf ppf "%s\\%s. %a%s"
+              fprintf ppf "[PrettyExt Normal Lam] %s\\%s. %a%s"
                 (l_paren_if cond)
                 (R.render_name x)
                 (fmt_ppr_lf_normal cD cPsi 0   ) m
                 (r_paren_if cond)
 
         | LF.Tuple (_, tuple) ->
-           fprintf ppf "<%a>"
+           fprintf ppf "[PrettyExt Normal Tuple] <%a>"
              (fmt_ppr_tuple cD cPsi lvl) tuple
 
         | LF.Root (_, h, LF.Nil) ->
-            fprintf ppf "%a"
+            fprintf ppf "[PrettyExt Normal Root] %a"
               (fmt_ppr_lf_head cD cPsi lvl) h
 
         | LF.Root (_, h, ms)  ->
             let cond = lvl > 1 in
             let ms = deimplicitize_spine h ms in
-              fprintf ppf "%s%a%a%s"
+              fprintf ppf "[PrettyExt Normal Root with Spine] %s%a%a%s"
                 (l_paren_if cond)
                 (fmt_ppr_lf_head cD cPsi lvl) h
                 (fmt_ppr_lf_spine cD cPsi 2)  ms
@@ -246,7 +246,7 @@ module Ext = struct
       let paren s = not (Control.db()) && lvl > 0 && true
       in begin match head with
       | LF.MVar (_, x, s) ->
-          fprintf ppf "%s%s%a%s"
+          fprintf ppf "[PrettyExt MVar] %s%s%a%s"
             (l_paren_if (paren s))
             (R.render_name x)
             (fmt_ppr_lf_sub  cD cPsi lvl) s
@@ -260,37 +260,37 @@ module Ext = struct
       (*       (r_paren_if (paren s)) *)
 
       | LF.PVar (_,  x, s) ->
-          fprintf ppf "%s#%s%a%s"
+          fprintf ppf "[PrettyExt FPVar] %s#%s%a%s"
             (l_paren_if (paren s))
             (R.render_name x)
             (fmt_ppr_lf_sub  cD cPsi lvl) s
             (r_paren_if (paren s))
 
       | LF.Name(_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "[PrettyExt Name] %s"
             (R.render_name x)
 
       | LF.Hole (_) ->
           fprintf ppf "_"
 
       | LF.ProjPVar (_, k, (x, sigma)) ->
-          fprintf ppf "#%s%s%a"
+          fprintf ppf "[PrettyExt ProjPVar] #%s%s%a"
           (R.render_name x)
           ("." ^ string_of_int k)
           (fmt_ppr_lf_sub cD cPsi 0) sigma
 
       | LF.ProjName (_, k, x) ->
-          fprintf ppf "%s%s"
+          fprintf ppf "[PrettyExt ProjName] %s%s"
           (R.render_name x)
           ("." ^ string_of_int k)
       end
 
     and fmt_ppr_lf_spine cD cPsi lvl ppf = function
       | LF.Nil ->
-          fprintf ppf ""
+          fprintf ppf "[PrettyExt Spine Nil] "
 
       | LF.App (_, m, ms) ->
-          fprintf ppf " %a%a"
+          fprintf ppf " [PrettyExt Spine App] %a%a"
             (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
             (fmt_ppr_lf_spine   cD cPsi lvl) ms
 
@@ -556,19 +556,19 @@ module Ext = struct
 
     and fmt_ppr_meta_obj cD lvl ppf = function
       | Comp.MetaCtx (_, cPsi) ->
-            fprintf ppf "[%a]"
+            fprintf ppf "[PrettyExt MetaCtx] - [%a]"
               (fmt_ppr_lf_dctx cD 0) cPsi
       | Comp.MetaObj (_, phat, tM) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx phat in
-            fprintf ppf "%s[%a. %a]%s"
+            fprintf ppf "[PrettyExt MetaObj] - %s[%a. %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)
       | Comp.MetaObjAnn (_, cPsi, tM) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a. %a]%s"
+            fprintf ppf "[PrettyExt MetaObjAnn] - %s[%a. %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
@@ -697,11 +697,11 @@ module Ext = struct
 
       | Comp.Fun (_, x, e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%sfn %s => "
+            fprintf ppf "(\n\t[PrettyExt ExpChk] Fun - %sfn %s => "
               (l_paren_if cond)
               (R.render_name x);
 
-            fprintf ppf "%a%s"
+            fprintf ppf "%a%s)"
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
@@ -715,40 +715,40 @@ module Ext = struct
 *)
       | Comp.MLam (_, (x, Comp.MObj), e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%smlam %s => "
+            fprintf ppf "(\n\t[PrettyExt ExpChk] MLam - %smlam %s => "
               (l_paren_if cond)
               (R.render_name x);
-            fprintf ppf "%a%s"
+            fprintf ppf "%a%s)"
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
       | Comp.MLam (_, (x, Comp.PObj), e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%smlam # %s => "
+            fprintf ppf "(\n\t[PrettyExt ExpChk] MLam - %smlam # %s => "
               (l_paren_if cond)
               (R.render_name x);
-            fprintf ppf "%a%s"
+            fprintf ppf "%a%s)"
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
      | Comp.MLam (_, (x, Comp.SObj), e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%smlam #%s => "
+            fprintf ppf "(\n\t[PrettyExt ExpChk] MLam - %smlam #%s => "
               (l_paren_if cond)
               (R.render_name x);
-            fprintf ppf "%a%s"
+            fprintf ppf "%a%s)"
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
       | Comp.Pair (_, e1, e2) ->
-            fprintf ppf "(%a , %a)"
+            fprintf ppf "(\n\t[PrettyExt ExpChk] Pair - (%a , %a))"
               (fmt_ppr_cmp_exp_chk cD 0) e1
               (fmt_ppr_cmp_exp_chk cD 0) e2
 
 
       | Comp.LetPair(_, i, (x, y, e)) ->
           let cond = lvl > 1 in
-            fprintf ppf "@[<2>%slet <%s,%s> = %a@ in %a%s@]"
+            fprintf ppf "(\n\t[PrettyExt ExpChk] LetPair - @[<2>%slet <%s,%s> = %a@ in %a%s@])"
               (l_paren_if cond)
               (R.render_name x)
               (R.render_name y)
@@ -759,7 +759,7 @@ module Ext = struct
 
       | Comp.Let(_, i, (x, e)) ->
           let cond = lvl > 1 in
-            fprintf ppf "@[<2>%slet %s = %a@ in %a%s@]"
+            fprintf ppf "(\n\t[PrettyExt ExpChk] Let - @[<2>%slet %s = %a@ in %a%s@])"
               (l_paren_if cond)
               (R.render_name x)
               (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
@@ -768,27 +768,28 @@ module Ext = struct
 
       | Comp.Box (_ , m) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a%s"
+            fprintf ppf "(\n\t[PrettyExt ExpChk] Box - %s%a%s)"
               (l_paren_if cond)
               (fmt_ppr_meta_obj  cD 0) m
               (r_paren_if cond)
 
       | Comp.Case (_, prag, i, bs) ->
-            fprintf ppf "@[<v>case @[%a@] of%s%a"
+            fprintf ppf "(\n\t[PrettyExt ExpChk] Case - @[<v>case @[%a@] of%s%a)"
               (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
               (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " %not ")
               (fmt_ppr_cmp_branches cD 0) bs
 
       | Comp.If (_, i, e1, e2) ->
           let cond = lvl > 1 in
-            fprintf ppf "@[<2>%sif %a @[<-1>then %a @]else %a%s@]"
+            fprintf ppf "(\n\t[PrettyExt ExpChk] If - @[<2>%sif %a @[<-1>then %a @]else %a%s@])"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
               (fmt_ppr_cmp_exp_chk cD 0) e1
               (fmt_ppr_cmp_exp_chk cD 0) e2
               (r_paren_if cond)
 
-      | Comp.Hole (_) -> fprintf ppf " ? "
+      | Comp.Hole (_) -> fprintf ppf "(\n\t[PrettyExt ExpChk] Hole -  ? )"
+      | _ -> fprintf ppf "Pattern matching fail."
 
     and strip_mapp_args cD i =
       if !Control.printImplicit then
@@ -823,20 +824,20 @@ module Ext = struct
 
     and fmt_ppr_cmp_exp_syn cD lvl ppf = function
       | Comp.Var(_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(\n\t[PrettyExt ExpSyn] Var - %s)"
             (R.render_name x)
 
       | Comp.Const (_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(\n\t[PrettyExt ExpSyn] Const - %s)"
             (R.render_name x)
 
       | Comp.DataConst (_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(\n\t[PrettyExt ExpSyn] DataConst - %s)"
             (R.render_name x)
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s@[<2>%a@ %a@]%s"
+            fprintf ppf "(\n\t[PrettyExt ExpSyn] Apply - %s@[<2>%a@ %a@]%s)"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               (fmt_ppr_cmp_exp_chk cD 2) e
@@ -844,7 +845,7 @@ module Ext = struct
 
       | Comp.MApp (_, i, mO) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ %s%a%s%s"
+            fprintf ppf "(\n\t[PrettyExt ExpSyn] MApp - %s%a@ %s%a%s%s)"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               ("")
@@ -854,7 +855,7 @@ module Ext = struct
 
       | Comp.BoxVal (_, cPsi, normal) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s %s%a. %a%s%s"
+            fprintf ppf "(\n\t[PrettyExt ExpSyn] BoxVal - %s %s%a. %a%s%s)"
               (l_paren_if cond)
               ("")
               (fmt_ppr_lf_dctx cD 0) cPsi
@@ -864,7 +865,7 @@ module Ext = struct
 
       | Comp.Ann (_, e, tau) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a : %a%s"
+            fprintf ppf "(\n\t[PrettyExt ExpSyn] Ann - %s%a : %a%s)"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cD 1) e
               (fmt_ppr_cmp_typ cD 2) tau
@@ -873,15 +874,15 @@ module Ext = struct
 
 
       | Comp.Equal (_, i1, i2) ->
-            fprintf ppf "%a == %a"
+            fprintf ppf "(\n\t[PrettyExt ExpSyn] Equal - %a == %a)"
               (fmt_ppr_cmp_exp_syn cD 1) i1
               (fmt_ppr_cmp_exp_syn cD 1) i2
 
       | Comp.Boolean (_, true) ->
-          fprintf ppf "true"
+          fprintf ppf "(\n\t[PrettyExt ExpSyn] Bool - true)"
 
       | Comp.Boolean (_, false) ->
-          fprintf ppf "false"
+          fprintf ppf "(\n\t[PrettyExt ExpSyn] Bool - false)"
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function
       | LF.Empty -> ()
@@ -920,13 +921,13 @@ module Ext = struct
 
     and fmt_ppr_cmp_branch cD _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a] @]  @]@  "
+          fprintf ppf "[PrettyExt - EmptyBranch] @ @[<v2>| @[<v0>%a@[[ %a] @]  @]@  "
             (fmt_ppr_cmp_branch_prefix  0) cD1
             (fmt_ppr_pat_obj cD1 0) pat
 
 
       | Comp.Branch (_, cD1', Comp.PatMetaObj (_, mO), e) ->
-          fprintf ppf "@ | @[<v0>%a@[%a @  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "[PrettyExt - Branch PatMetaObj] @ | @[<v0>%a@[%a @  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* NOTE: Technically: cD |- cG ctx and
@@ -937,7 +938,7 @@ module Ext = struct
 
       | Comp.Branch (_, cD1', pat, e) ->
 
-          fprintf ppf "@ @[<v2>| @[<v0>%a ; @[ . %a @]  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "[PrettyExt - Branch Pat] @ @[<v2>| @[<v0>%a ; @[ . %a @]  => @]@ @[<2>@ %a@]@]@ "
              (fmt_ppr_cmp_branch_prefix  0) cD1'
              (fmt_ppr_pat_obj cD1' 0) pat
              (fmt_ppr_cmp_exp_chk cD1' 1) e
@@ -956,7 +957,7 @@ module Ext = struct
             | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
           in
 
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a] %a)@ @]  => @]@ @[<2>@ @]@]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[(\n\t[%a] %a)@ @]  => @]@ @[<2>@ @]@]@ "
               (ppr_ctyp_decls ) cD1'
 
               (fmt_ppr_lf_dctx cD1' 0) cPsi
@@ -976,7 +977,7 @@ module Ext = struct
             | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
           in
 
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a] %a)@ @]  => %a"
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[(\n\t[%a] %a)@ @]  => %a"
               (ppr_ctyp_decls ) cD1'
               (fmt_ppr_lf_dctx cD1' 0) cPsi
               (fmt_ppr_lf_sub  cD cPsi 0) s
@@ -993,7 +994,7 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ cD LF.Null lvl) tau
 
-    let fmt_ppr_cmp_rec lvl ppf = function
+    let fmt_ppr_cmp_rec lvl ppf = function (* +ext Pretty Printing Descends from here. *)
       | Comp.RecFun (x, a, e) ->
           fprintf ppf "rec %s : %a => @ %a"
             (R.render_name x)
@@ -1008,33 +1009,33 @@ module Ext = struct
 
     let fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (_, x, a) ->
-          fprintf ppf "%s : %a.@.@?"
+          fprintf ppf "(\n\t[PrettyExt SgnDecl] Const - %s : %a.@.@?)"
             (R.render_name x)
             (fmt_ppr_lf_typ LF.Empty LF.Null lvl)  a
 
       | Sgn.CompConst (_, x, a) ->
-          fprintf ppf "%s : %a.@.@?"
+          fprintf ppf "(\n\t[PrettyExt SgnDecl] CompConst - %s : %a.@.@?)"
             (R.render_name x)
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
 
       | Sgn.Typ (_, x, k) ->
-          fprintf ppf "%s : %a.@.@?"
+          fprintf ppf "(\n\t[PrettyExt SgnDecl] Typ - %s : %a.@.@?)"
             (R.render_name  x)
             (fmt_ppr_lf_kind LF.Null lvl) k
 
       | Sgn.CompTypAbbrev (_, x, k, a) ->
-          fprintf ppf "%s : %a.@.@?:%a"
+          fprintf ppf "(\n\t[PrettyExt SgnDecl] CompTypAbbrev - %s : %a.@.@?:%a)"
             (R.render_name  x)
             (fmt_ppr_cmp_kind LF.Empty lvl) k
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
 
       | Sgn.CompTyp (_, x, k) ->
-          fprintf ppf "%s : %a.@.@?"
+          fprintf ppf "(\n\t[PrettyExt SgnDecl] CompTyp - %s : %a.@.@?)"
             (R.render_name  x)
             (fmt_ppr_cmp_kind LF.Empty lvl) k
 
       | Sgn.Schema (_, x, schema) ->
-          fprintf ppf "schema %s : %a;@.@?"
+          fprintf ppf "(\n\t[PrettyExt SgnDecl] schema %s : %a;@.@?)"
             (R.render_name  x)
             (fmt_ppr_lf_schema lvl) schema
 
@@ -1044,17 +1045,19 @@ module Ext = struct
       | Sgn.Pragma (_, Sgn.NamePrag _) ->  ()
 
       | Sgn.Val (_, x, _, i) ->
-          fprintf ppf "let %s = %a"
+          fprintf ppf "(\n\t[PrettyExt SgnDecl] Val - let %s = %a)"
             (R.render_name  x)
             (fmt_ppr_cmp_exp_syn LF.Empty lvl) i
 
       | Sgn.Query _ ->
           fprintf ppf "query"
 
+      | _ -> fprintf ppf "Failed."
+
 
 
     (* Regular Pretty Printers *)
-    let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter
+     let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter
     let ppr_lf_ctyp_decl  cD   = fmt_ppr_lf_ctyp_decl cD    std_lvl std_formatter
     let ppr_lf_kind cPsi       = fmt_ppr_lf_kind cPsi          std_lvl std_formatter
     let ppr_lf_typ  cD cPsi    = fmt_ppr_lf_typ cD cPsi     std_lvl std_formatter

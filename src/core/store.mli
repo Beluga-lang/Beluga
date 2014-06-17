@@ -175,7 +175,6 @@ module Cid : sig
     val clear         : unit -> unit
   end
 
-
   module Schema : sig
 
     type entry = private {
@@ -234,8 +233,6 @@ module Cid : sig
 end
 
 val clear : unit -> unit
-
-
 
 module BVar : sig
 
@@ -335,4 +332,3 @@ module CVar : sig
   val length        : t -> int
 
 end
-

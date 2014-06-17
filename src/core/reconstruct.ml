@@ -1400,27 +1400,27 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, tau_theta)))
 
 and elExp' cD cG i = match i with
-  | Apx.Comp.Var offset ->
+  | Apx.Comp.Var (loc, offset) ->
       let tau = lookup cG offset in
       let _ = dprint (fun () -> "[elExp'] Variable " ^ R.render_var cG offset
                         ^ " has type " ^
                         P.compTypToString cD tau) in
-      (Int.Comp.Var offset, (tau, C.m_id))
+      (Int.Comp.Var (loc, offset), (tau, C.m_id))
 
-  | Apx.Comp.DataConst c ->
+  | Apx.Comp.DataConst (loc, c) ->
       let _ = dprint (fun () -> "[elExp'] DataConst " ^ R.render_cid_comp_const  c ^
                         "\n has type " ^ P.mctxToString cD ^ " |- " ^
                         P.compTypToString cD ((CompConst.get c).CompConst.typ)) in
-     (Int.Comp.DataConst c, ((CompConst.get c).CompConst.typ, C.m_id))
+     (Int.Comp.DataConst (loc, c), ((CompConst.get c).CompConst.typ, C.m_id))
 
-  | Apx.Comp.DataDest c ->
+  | Apx.Comp.DataDest (loc, c) ->
       let _ = dprint (fun () -> "[elExp'] DataDest " ^ R.render_cid_comp_dest  c ^
                         "\n has type " ^ P.mctxToString cD ^ " |- " ^
                         P.compTypToString cD ((CompDest.get c).CompDest.typ)) in
-     (Int.Comp.DataDest c, ((CompDest.get c).CompDest.typ, C.m_id))
+     (Int.Comp.DataDest (loc, c), ((CompDest.get c).CompDest.typ, C.m_id))
 
-  | Apx.Comp.Const prog ->
-     (Int.Comp.Const prog, ((Comp.get prog).Comp.typ, C.m_id))
+  | Apx.Comp.Const (loc, prog) ->
+     (Int.Comp.Const (loc, prog), ((Comp.get prog).Comp.typ, C.m_id))
 
   | Apx.Comp.Apply (loc, i, e) ->
       let _ = dprint (fun () -> "[elExp'] Apply") in

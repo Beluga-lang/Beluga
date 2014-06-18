@@ -861,11 +861,11 @@ GLOBAL: sgn;
       |
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
-
-      |
-         subs = LIST1 SELF SEP "," ->
-         List.hd subs
-
+          
+      | 
+         subs = LIST1 SELF SEP "," -> 
+         List.fold_left (fun acc s -> match s with 
+	    | LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) subs
 
       ]
     ]

@@ -343,8 +343,19 @@ let query = {name = "query";
 let reset = {name= "reset";
              run=
                 (fun _ _ ->
-                  Store.clear ());
+                  Store.clear ();
+                  Typeinfo.clear_all ());
               help="Reset the store"}
+
+let get_type = {name = "get-type";
+                run =
+                  (fun ppf args ->
+                    let typ = 
+                      try Typeinfo.type_of_position (int_of_string (List.hd args))
+                      with e -> fprintf ppf " - Error in get-type : %s\n" (Printexc.to_string e); ""
+                    in
+                    fprintf ppf "%s" typ);
+                help = "Get the location based on the distance from the start of the buffer (for use in emacs)"}
 (* Registering built-in commands *)
 
 let _ = reg := [
@@ -366,6 +377,7 @@ let _ = reg := [
         signature    ;
         printfun     ;
         query        ;
+        get_type     ;
         reset        ;
         quit         ;
         ]

@@ -1,12 +1,13 @@
 val generate_annotations : bool ref
 val print_annot : string -> unit
 val clear_all : unit -> unit
+val type_of_position : int -> string
 
 module Annot : sig
 	type entry = {
 		typ : string	
 	}
-
+	val store : (Syntax.Int.Loc.t, entry) Hashtbl.t
 	val mk_entry : string -> entry
 
 	val add : Syntax.Int.Loc.t -> entry -> unit

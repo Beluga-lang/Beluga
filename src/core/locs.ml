@@ -34,6 +34,8 @@ module Locs = struct
 					output_string pp e;
 					output_string pp "\n\tat: ";
 					output_string pp (Syntax.Loc.to_string loc);
+					output_string pp "\n\tposition: ";
+					output_string pp ((string_of_int (Syntax.Loc.start_off loc)) ^ ", " ^ (string_of_int (Syntax.Loc.stop_off loc)));
 					output_string pp "\n\n"
 		end
 

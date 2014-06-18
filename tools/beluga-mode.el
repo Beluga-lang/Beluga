@@ -42,6 +42,7 @@
     (define-key map "\C-c\C-l" 'beluga-load)
     (define-key map "\C-c\C-p" 'beluga-highlight-holes)
     (define-key map "\C-c\C-x" 'beli-cmd)
+    (define-key map "\C-c\C-t" 'beli--type)
     map))
 
 (defvar beluga-mode-syntax-table
@@ -249,6 +250,11 @@ If a previous beli process already exists, kill it first."
 (defun beluga--rpc (cmd)
   (beluga--send cmd)
   (beluga--receive))
+
+(defun beli--type ()
+  "Get the type at the current cursor position (if it exists)"
+  (interactive)
+  (beluga--rpc (format "get-type %d" (point))))
 
 (defun beli ()
   "Start beli mode"

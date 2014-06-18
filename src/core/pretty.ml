@@ -1471,6 +1471,7 @@ module Int = struct
             begin match decl with
               | LF.Decl(u, LF.MTyp (_ , _, _) ) -> u
               | LF.DeclOpt u -> u
+              | LF.Decl(u, _) -> u
             end in
           fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi

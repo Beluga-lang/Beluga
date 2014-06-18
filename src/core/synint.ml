@@ -221,6 +221,15 @@ module LF = struct
 
     | _ -> raise Not_found
 
+  let rec getIndex head s_recA target acc = match s_recA with
+    | (SigmaLast lastA, s) ->
+        raise Not_found
+        
+    | (SigmaElem (target, _tA, recA), s) ->
+        let tPj = Proj (head, acc) in
+          getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1)
+
+
 
 
 end

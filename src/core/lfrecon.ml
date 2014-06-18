@@ -162,6 +162,7 @@ let rec what_head = function
   | Apx.LF.PVar (Apx.LF.Offset _ , _ ) -> "PVar Offset "
   | Apx.LF.PVar (Apx.LF.PInst _ , _ ) -> "PVar PInst "
   | Apx.LF.Proj (head, k) -> "Proj " ^ what_head head ^ "." ^ string_of_int k
+  | Apx.LF.NamedProj (head, name) -> "Proj " ^ what_head head ^ "." ^ name.string_of_name
   | Apx.LF.FVar _ -> "FVar"
   | Apx.LF.FMVar _ -> "FMVar"
   | Apx.LF.FPVar _ -> "FPVar"
@@ -1404,6 +1405,48 @@ and elTerm' recT cD cPsi r sP = match r with
       with _   ->
         raise (Error (loc, CompTypAnn ))
         (* raise (Error.Error (loc, Error.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
+      end
+
+ | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.BVar x , k),  spine) ->
+      let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
+        begin try Context.ctxSigmaDec cPsi x with
+          _ -> raise Not_found
+        end in
+      let indk       = begin try Int.LF.getIndex (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
+                     with _ -> raise Not_found
+                     end
+       in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , indk),  spine)) sP
+
+   | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset p,t), k),  spine) ->
+    begin
+      match Whnf.mctxPDec cD p with
+        | (_, Int.LF.Sigma recA, cPsi') ->
+          let t' = elSub loc recT cD  cPsi t cPsi' in
+          let indk = begin try
+                      Int.LF.getIndex (Int.LF.PVar (Int.LF.Offset p, t')) (recA,  t') k 1
+                   with _ -> raise Not_found
+                    end
+          in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), indk),  spine)) sP
+    end
+
+    | Apx.LF.Root (loc, Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), k), spine) ->
+      begin try
+        let recA =
+              match tA with
+              | Int.LF.Sigma recA -> recA
+              | _ ->
+                  dprint (fun () -> "Type of Parameter variable " ^ P.headToString cD cPhi h
+                                  ^ "not a Sigma-Type, yet used with Projection; found "
+                                  ^ P.typToString cD cPhi (tA, Substitution.LF.id) ^ "\n ill-typed") ;
+                  raise (Error.Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
+        in
+        let s''       = elSub loc recT cD cPsi s' cPhi in
+        let indk        = begin try
+                           Int.LF.getIndex h (recA, s'') k 1
+                        with _ -> raise Not_found
+                        end
+        in elTerm' recT cD cPsi (Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), indk), spine)) sP
+       with _ -> raise Not_found
       end
 
   | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.MInst _ , _), _ ), _) ->

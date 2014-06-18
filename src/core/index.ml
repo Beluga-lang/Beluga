@@ -254,6 +254,10 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
       let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
         (Apx.LF.Proj(bvar, k), fvs')
 
+  | Ext.LF.NamedProjName (loc, k, n) ->
+      let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
+        (Apx.LF.NamedProj(bvar, k), fvs')
+
   | Ext.LF.PVar (loc, p, s) ->
       if lookup_fv fvars (FPV p) then
         let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in

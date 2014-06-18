@@ -52,6 +52,7 @@ module LF = struct
     | Const of cid_term
     | MVar  of cvar * sub
     | Proj  of head * int
+    | NamedProj  of head * name
     | Hole
     | PVar  of cvar * sub
     | FVar  of name

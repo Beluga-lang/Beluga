@@ -820,6 +820,9 @@ GLOBAL: sgn;
         x = SYMBOL; "."; k = INTLIT ->
           LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
       |
+        x = SYMBOL; "."; k = SYMBOL ->
+          LF.NamedProjName (_loc, Id.mk_name (Id.SomeString k), Id.mk_name (Id.SomeString x))
+      |
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
 
@@ -862,10 +865,10 @@ GLOBAL: sgn;
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
           
-      | 
+      (*| 
          subs = LIST1 SELF SEP "," -> 
          List.fold_left (fun acc s -> match s with 
-	    | LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) subs
+	    | LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) subs*)
 
       ]
     ]

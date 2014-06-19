@@ -64,7 +64,7 @@ mlam g => mlam E => fn d => fn f => case [g |- E .. ] of
   let [g |- t_lam (\x.(\u. D .. x u))] = d in
   let [g |- t_lam (\x.(\u. F .. x u))] = f in
   let [ |- C2] = unique [g,b: block x:exp, _t:type_of x T1]
-                      [g,b |- (E .. b.1) ] [g,b |- D .. b.1 b.2] [g,b |- F .. b.1 b.2] in
+                      [g,b |- (E .. b.x) ] [g,b |- D .. b.x b._t] [g,b |- F .. b.1 b.2] in
  let [ |- C1] = refl [ |- T1 ] in
    [ |- e_arr C1 C2]
 

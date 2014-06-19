@@ -284,6 +284,10 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
       let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
         (Apx.LF.Proj (pvar, k), fvs')
 
+  | Ext.LF.NamedProjPVar (loc, k, (p, s)) ->
+      let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
+        (Apx.LF.NamedProj (pvar, k), fvs')
+
 
   | Ext.LF.Hole _loc ->
       (Apx.LF.Hole , fvs)

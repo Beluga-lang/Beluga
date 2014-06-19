@@ -802,23 +802,32 @@ GLOBAL: sgn;
 
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
+
       |
         "#"; p = SYMBOL;  sigmaOpt = OPT [ sigma = clf_sub_new -> sigma] ->
           begin match sigmaOpt with
             | None -> LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
             | Some sigma ->           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+
           end
 
-
+      (*|
+        "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ->
+          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))*)
 
 (*      |  "#"; p = SYMBOL ->
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc)
 *)
       |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
+
       |
          "("; "#"; p = SYMBOL;  sigma = clf_sub_new ; ")" ->
           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+
+      (*|  
+          "("; "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ; ")" ->
+          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))*)
       |
         x = SYMBOL; "."; k = INTLIT ->
           LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))

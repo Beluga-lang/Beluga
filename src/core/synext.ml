@@ -43,6 +43,7 @@ module LF = struct
     | ProjName  of Loc.t * int * name
     | NamedProjName  of Loc.t * name * name
     | ProjPVar  of Loc.t * int * (name * sub)
+    | NamedProjPVar  of Loc.t * name * (name * sub)
 
   and spine =
     | Nil

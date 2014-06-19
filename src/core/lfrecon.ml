@@ -1406,7 +1406,7 @@ and elTerm' recT cD cPsi r sP = match r with
         raise (Error (loc, CompTypAnn ))
         (* raise (Error.Error (loc, Error.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
       end
-
+ (*projections specified by name are converted to indecies denoting their relative position*)
  | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.BVar x , k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
         begin try Context.ctxSigmaDec cPsi x with
@@ -1949,7 +1949,7 @@ and elHead loc recT cD cPsi = function
                 end
       in
         (Int.LF.Proj (head', i) , sAi )
-
+  (*the name of the projection is replaced by its index for the internal AST*)
   | Apx.LF.NamedProj(head, n) ->
 
     let (head', sA) = elHead loc recT cD cPsi head in

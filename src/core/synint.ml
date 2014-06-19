@@ -220,7 +220,13 @@ module LF = struct
           getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
 
     | _ -> raise Not_found
+ 
+  (* getIndex traverses the typ_rec from left to right;
+     target is the name of the projection we're looking for
 
+     acc is an accumulator set to 1 when the function is called
+
+  *)
   let rec getIndex head s_recA target acc = match s_recA with
     | (SigmaLast(None, _), s) -> raise Not_found
     | (SigmaLast(Some name, _), s) ->

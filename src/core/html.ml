@@ -1,6 +1,6 @@
 let genHtml = ref false
 let printingHtml = ref false
-
+let genCSS = ref true
 let page = ref ""
 
 
@@ -40,22 +40,22 @@ begin
 	(* Merge different code blocks into, as long as there isn't anything inbetween *)
 	let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
 	let page = Str.global_replace fixCodeRegex "\\1" !page in
-	let page = Str.global_replace (Str.regexp_string "|-") "&#x22A2" page in
-	let page = Str.global_replace (Str.regexp_string "->") "&#x2192" page in
-	let page = Str.global_replace (Str.regexp_string "=>") "&#x21D2" page in
+
 	(* Output the HTML file *)
 	let oc = open_out filename in
-	output_string oc header;
-	output_string oc "<body>\n";
-	output_string oc  (page ^ "\n");
-	output_string oc "</body>\n" ;
+	if !genCSS then begin
+		output_string oc header;
+		output_string oc "<body>\n";
+		output_string oc  (page ^ "\n");
+		output_string oc "</body>\n" ;
+	end else
+		output_string oc  (page ^ "\n");
 	close_out oc
 end
 
 let replaceNewLine = Str.global_replace (Str.regexp "[\n]") "<br>"
 
 let append innerHtml =
-	(* let innerHtml = replaceNewLine innerHtml in *)
 	page := (!page) ^ "<br><pre><code>" ^ innerHtml ^ "</code></pre>"
 
 let appendAsComment innerHtml = 

@@ -40,6 +40,7 @@ let usage () =
         ^ "    +realNames    Print holes using real names (default)\n"
         ^ "    -realNames    Print holes using freshly generated names\n"
         ^ "    +html         Generate an html page of the source code\n"
+        ^ "    -css          Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -88,6 +89,8 @@ let process_option arg rest = match arg with
   | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
   | "+html"
   | "+HTML" -> Html.genHtml := true; rest
+  | "-css"
+  | "-CSS"  -> Html.genCSS := false; rest
   | _ -> usage ()
 
 let rec process_options = function

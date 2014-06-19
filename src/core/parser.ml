@@ -840,7 +840,14 @@ GLOBAL: sgn;
   clf_sub_new:
     [
       [
+        h = SELF; ","; subs = LIST1 (clf_sub_new LEVEL "atomic") SEP "," -> 
+         List.fold_left (fun acc s -> match s with 
+           | LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) (List.rev subs)
 
+      ]
+    |
+      "atomic"
+      [ 
           "^" ->
           LF.EmptySub (_loc )
 
@@ -868,11 +875,6 @@ GLOBAL: sgn;
          tM = clf_normal ->
           LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
           
-      (*| 
-         subs = LIST1 SELF SEP "," -> 
-         List.fold_left (fun acc s -> match s with 
-	    | LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) subs*)
-
       ]
     ]
   ;

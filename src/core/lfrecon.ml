@@ -1413,7 +1413,7 @@ and elTerm' recT cD cPsi r sP = match r with
           _ -> raise Not_found
         end in
       let indk       = begin try Int.LF.getIndex (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
-                     with _ -> raise Not_found
+                     with _ -> dprint (fun () -> "[elTerm] Violation: Cannot find projection."); raise Not_found
                      end
        in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , indk),  spine)) sP
 
@@ -1424,7 +1424,7 @@ and elTerm' recT cD cPsi r sP = match r with
           let t' = elSub loc recT cD  cPsi t cPsi' in
           let indk = begin try
                       Int.LF.getIndex (Int.LF.PVar (Int.LF.Offset p, t')) (recA,  t') k 1
-                   with _ -> raise Not_found
+                   with _ -> dprint (fun () -> "[elTerm] Violation: Cannot find projection."); raise Not_found
                     end
           in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), indk),  spine)) sP
     end
@@ -1443,7 +1443,7 @@ and elTerm' recT cD cPsi r sP = match r with
         let s''       = elSub loc recT cD cPsi s' cPhi in
         let indk        = begin try
                            Int.LF.getIndex h (recA, s'') k 1
-                        with _ -> raise Not_found
+                        with _ -> dprint (fun () -> "[elTerm] Violation: Cannot find projection."); raise Not_found
                         end
         in elTerm' recT cD cPsi (Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), indk), spine)) sP
        with _ -> raise Not_found
@@ -1950,7 +1950,7 @@ and elHead loc recT cD cPsi = function
       in
         (Int.LF.Proj (head', i) , sAi )
 
-  | h -> raise (Error.Violation (what_head h))
+  | h -> raise (Error.Violation ("thisone" ^ what_head h))
 
 (* elSpineI  recT cD cPsi spine i sA  = (S : sP)
  * elSpineIW recT cD cPsi spine i sA  = (S : sP)

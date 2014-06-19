@@ -224,12 +224,11 @@ module LF = struct
   let rec getIndex head s_recA target acc = match s_recA with
     | (SigmaLast lastA, s) ->
         raise Not_found
-        
-    | (SigmaElem (target, _tA, recA), s) ->
-        let tPj = Proj (head, acc) in
+
+    | (SigmaElem (name, _tA, recA), s) -> if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+  else let tPj = Proj (head, acc) in
           getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1)
-
-
+        
 
 
 end

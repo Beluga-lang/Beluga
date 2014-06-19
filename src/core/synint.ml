@@ -165,7 +165,7 @@ module LF = struct
 
 
   and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
-    |  SigmaLast of typ                             (* ... . B *)
+    |  SigmaLast of name option * typ                             (* ... . B *)
     |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
 
   and tuple =
@@ -209,7 +209,7 @@ module LF = struct
     val getType : head -> trec_clo -> int -> int -> tclo
   *)
   let rec getType head s_recA target j = match (s_recA, target) with
-    | ((SigmaLast lastA, s), 1) ->
+    | ((SigmaLast (_, lastA), s), 1) ->
         (lastA, s)
 
     | ((SigmaElem (_x, tA, _recA), s), 1) ->
@@ -222,12 +222,15 @@ module LF = struct
     | _ -> raise Not_found
 
   let rec getIndex head s_recA target acc = match s_recA with
-    | (SigmaLast lastA, s) ->
-        raise Not_found
+    | (SigmaLast(None, _), s) -> raise Not_found
+    | (SigmaLast(Some name, _), s) ->
+      if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+      else raise Not_found
 
-    | (SigmaElem (name, _tA, recA), s) -> if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
-  else let tPj = Proj (head, acc) in
-          getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1)
+    | (SigmaElem (name, _tA, recA), s) -> 
+      if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+      else let tPj = Proj (head, acc) in
+      getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1)
         
 
 

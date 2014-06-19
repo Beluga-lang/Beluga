@@ -34,7 +34,7 @@ module LF = struct
     | Sigma of typ_rec
 
   and typ_rec =
-    | SigmaLast of typ
+    | SigmaLast of name option * typ
     | SigmaElem of name * typ * typ_rec
 
   and tuple =

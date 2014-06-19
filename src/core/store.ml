@@ -82,7 +82,7 @@ module Cid = struct
       | Int.LF.TClo (tA, s) -> gen_var_name tA
 
     and gen_var_name_typRec = function
-      | Int.LF.SigmaLast tA -> gen_var_name tA
+      | Int.LF.SigmaLast (_, tA) -> gen_var_name tA
       | Int.LF.SigmaElem(_, _, rest) -> gen_var_name_typRec rest
 
     let rec gen_mvar_name tA = match tA with
@@ -92,7 +92,7 @@ module Cid = struct
       | Int.LF.Sigma typRec    -> gen_mvar_name_typRec typRec
 
     and gen_mvar_name_typRec = function
-      | Int.LF.SigmaLast tA -> gen_mvar_name tA
+      | Int.LF.SigmaLast (n, tA) -> gen_mvar_name tA
       | Int.LF.SigmaElem(_, _, rest) -> gen_mvar_name_typRec rest
 
 

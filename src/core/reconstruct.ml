@@ -466,7 +466,7 @@ let rec mgTyp cD cPsi tA = begin match tA with
  end
 
  and mgTypRec cD cPsi trec = begin match trec with
-   | Int.LF.SigmaLast tA -> Int.LF.SigmaLast (mgTyp cD cPsi tA)
+   | Int.LF.SigmaLast(n, tA) -> Int.LF.SigmaLast (n, mgTyp cD cPsi tA)
    | Int.LF.SigmaElem (x, tA, trec) ->
        let tA' = mgTyp cD cPsi tA in
        let trec' = mgTypRec cD (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA'))) trec in

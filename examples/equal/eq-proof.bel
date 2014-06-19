@@ -64,8 +64,8 @@ rec trans: {g:eqCtx}
    let [g |- eq_lam \xx.\uu. D2 .. xx uu] =  e2  in
    let [g, b:block x:exp, _t:eq x x |-  E .. b] =
      trans [g, b:block x':exp, _t:eq x' x']
-         [g, b |-  D1 .. b.1 b.2]
-         [g, b |-  D2 .. b.1 b.2]
+         [g, b |-  D1 .. b.x' b._t]
+         [g, b |-  D2 .. b.x' b._t]
     in
       [g |- eq_lam \x. \u. E .. <x, u>]
 

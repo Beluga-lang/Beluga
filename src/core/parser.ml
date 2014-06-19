@@ -539,10 +539,10 @@ GLOBAL: sgn;
       "block"; OPT "("; a_list = LIST1 lf_typ_rec_elem SEP "," ; OPT ")"
         (* ","; _u=SYMBOL; ":"; a_last = clf_typ LEVEL "atomic" *)
         ->
-          begin match  last a_list with
-          | Some ((_ , a_last) , a_list) ->
+          begin match last a_list with
+          | Some ((x, a) , a_list) ->
               (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest))
-                (List.rev a_list) (LF.SigmaLast a_last))
+                (List.rev a_list) (LF.SigmaLast(Some x, a)))
         end
       ]
     ]
@@ -556,7 +556,10 @@ GLOBAL: sgn;
         -> b
       |
         a = lf_typ
-        -> LF.SigmaLast a
+        -> let aux = function
+           | LF.Atom(_, n, _) -> Some n
+           | _ -> None
+           in LF.SigmaLast(aux a, a)
       ]
     ]
   ;
@@ -734,9 +737,9 @@ GLOBAL: sgn;
        "block"; OPT "("; arg_list = LIST1 clf_typ_rec_elem SEP "," ; OPT ")"
        (* ; "."; a_last = clf_typ LEVEL "atomic" *)
          -> begin match  last arg_list with
-          | Some ((_ , a_last) , a_list) ->
+          | Some ((n , a_last) , a_list) ->
               let b0 = (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest))
-                          (List.rev a_list) (LF.SigmaLast a_last))
+                          (List.rev a_list) (LF.SigmaLast (Some n, a_last)))
               in
                 b0
         end

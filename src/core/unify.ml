@@ -2022,7 +2022,7 @@ match sigma with
       pruneTypW cD0 cPsi1 phat (Whnf.whnfTyp sA) ss rOccur
 
   and pruneTypRec cD0 cPsi phat (typ_rec, s) (mss, ss) rOccur = match (typ_rec, s) with
-    | (SigmaLast tA, s) -> SigmaLast (pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur)
+    | (SigmaLast(n, tA), s) -> SigmaLast(n, (pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur))
     | (SigmaElem (x, tA, typ_rec'), s) ->
       let tA' = pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur in
       let typ_rec'' = pruneTypRec cD0 cPsi phat (typ_rec', dot1 s) (mss, dot1 ss) rOccur in
@@ -3647,7 +3647,7 @@ match sigma with
 
 
     and unifyTypRecW mflag cD0 cPsi srec1 srec2 = match (srec1, srec2) with
-      | ((SigmaLast tA1, s1) ,   (SigmaLast tA2, s2)) ->
+      | ((SigmaLast(_, tA1), s1) ,   (SigmaLast(_, tA2), s2)) ->
           (* dprint (fun () -> "[unifyTypRecW] Last "
                           ^ P.typToString cD0 cPsi (tA1, s1)  ^ " == "
                           ^ P.typToString cD0 cPsi (tA2, s2) ^ "\n");*)

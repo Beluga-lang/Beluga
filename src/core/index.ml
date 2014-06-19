@@ -199,9 +199,9 @@ and f i = function
 
 
 and index_typ_rec cvars bvars fvars = function
-  | Ext.LF.SigmaLast a ->
+  | Ext.LF.SigmaLast(n, a) ->
       let (last, fvars') = index_typ cvars bvars fvars a in
-        (Apx.LF.SigmaLast last , fvars')
+        (Apx.LF.SigmaLast (n,last) , fvars')
   | Ext.LF.SigmaElem (x, a, rest) ->
       let (a', fvars1)    = index_typ cvars bvars fvars a in
       let bvars'          = BVar.extend bvars (BVar.mk_entry x) in
@@ -497,9 +497,9 @@ let rec index_mctx cvars fvars = function
  * We need to change the datatype for typ_rec to be typ_decl ctx
  *)
 let rec index_typrec cvars bvars fvars = function
-  | Ext.LF.SigmaLast last_a ->
+  | Ext.LF.SigmaLast (n, last_a) ->
       let (last, fvars') = index_typ cvars bvars fvars last_a in
-      (Apx.LF.SigmaLast last, fvars')
+      (Apx.LF.SigmaLast(n, last), fvars')
 
   | Ext.LF.SigmaElem (x, a, arec) ->
       let (a', fvars') = index_typ cvars bvars fvars a in

@@ -713,10 +713,10 @@ and elTyp recT cD cPsi a = match a with
 
 
 and elTypRec recT cD cPsi typ_rec = begin match typ_rec with
-  | Apx.LF.SigmaLast a ->
+  | Apx.LF.SigmaLast(n, a) ->
       let tA = elTyp recT cD cPsi a in
       let _ = dprint (fun () -> "[elTypRec] Last " ^ " : " ^ P.typToString cD cPsi (tA, Substitution.LF.id)) in
-        Int.LF.SigmaLast tA
+        Int.LF.SigmaLast(n, tA)
 
   | Apx.LF.SigmaElem (name, a, typRec) ->
       let tA = elTyp recT cD cPsi a in
@@ -802,7 +802,7 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
 and elTuple recT cD cPsi tuple (typRec, s) =
   match (tuple, typRec) with
   | (Apx.LF.Last m,
-     Int.LF.SigmaLast tA)
+     Int.LF.SigmaLast(n, tA))
     ->
       Int.LF.Last (elTerm' recT cD cPsi m (tA, s))
 
@@ -1195,7 +1195,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   end in
                 let tB  =
                   begin match typRec with
-                  | Int.LF.SigmaLast tA ->
+                  | Int.LF.SigmaLast(n, tA) ->
                       (dprint (fun () -> "synType for PVar: [SigmaLast]" ^ P.typToString cD cPhi (tA, s_inst) ^ "\n"); tA)
                   | typRec' ->
                       (dprint (fun () -> "synType for PVar: [SigmaElem]" ^ P.typRecToString cD cPhi (typRec', s_inst) ^ "\n") ;
@@ -1947,6 +1947,19 @@ and elHead loc recT cD cPsi = function
                  | (tA',s') -> raise (Error.Violation ("[elHead] expected Sigma type  "
                                                  ^ "found type " ^ P.typToString cD cPsi (tA', s')))
                 end
+      in
+        (Int.LF.Proj (head', i) , sAi )
+
+  | Apx.LF.NamedProj(head, n) ->
+
+    let (head', sA) = elHead loc recT cD cPsi head in
+    let (sAi, i) = begin match Whnf.whnfTyp sA with
+           | (Int.LF.Sigma tA'rec, s') ->
+              let j = Int.LF.getIndex head' (tA'rec, s') n 1 in 
+               (Int.LF.getType head' (tA'rec, s') j 1, j)
+           | (tA',s') -> raise (Error.Violation ("[elHead] expected Sigma type  "
+                                           ^ "found type " ^ P.typToString cD cPsi (tA', s')))
+          end
       in
         (Int.LF.Proj (head', i) , sAi )
 

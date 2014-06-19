@@ -163,7 +163,7 @@ and strans_typW cD (tA,s) conv_list = match tA with
 
 
 let rec flattenSigmaTyp cD cPsi strec conv_list = match strec with
-  | (Int.LF.SigmaLast tA, s) ->
+  | (Int.LF.SigmaLast(n, tA), s) ->
       let tA' = strans_typ cD (tA,s) conv_list in
      (Int.LF.DDec (cPsi, Int.LF.TypDecl (Id.mk_name Id.NoName, tA')), 1)
 

@@ -481,7 +481,7 @@ let rec pre_match_typ cD cD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
 
 
 and pre_match_trec cD cD_p cPsi cPhi srec1 srec2 matchCands splitCands = match (srec1, srec2) with
-  | (LF.SigmaLast tA1, s1)  , (LF.SigmaLast tA2, s2) ->
+  | (LF.SigmaLast(_, tA1), s1)  , (LF.SigmaLast (_, tA2), s2) ->
       pre_match_typ cD cD_p (cPsi , (tA1, s1)) (cPhi, (tA2, s2)) matchCands splitCands
   | (LF.SigmaElem (x1, tA1, trec1) , s1) , (LF.SigmaElem (x2, tA2, trec2) , s2) ->
       let (mC, sC) = pre_match_typ cD cD_p (cPsi , (tA1, s1)) (cPhi, (tA2, s2)) matchCands splitCands in
@@ -819,7 +819,7 @@ let genPVar (cD, cPsi, tP)   =
 	      let trec'     = Whnf.normTypRec (trec, s) in
 
 	      let (pdecl, tA)  = (match trec' with
-				      LF.SigmaLast tA ->
+				      LF.SigmaLast(n, tA) ->
 					(LF.Decl(new_parameter_name "p@",
 						  LF.PTyp (tA, Whnf.cnormDCtx (cvar_psi, LF.MShift offset))) , tA)
 				    | LF.SigmaElem _  ->
@@ -1322,7 +1322,7 @@ let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
 	let _ = dprint (fun () -> "[genCtx] s = " ^ P.subToString cD0 cpsi s) in
 	let cpsi' = LF.CtxVar (LF.CtxOffset (d+1)) in
          (* cD0 = cD, decls *)
-	let tA = match trec with LF.SigmaLast tA -> LF.TClo (tA, s) | _ -> LF.TClo(LF.Sigma trec, s) in
+	let tA = match trec with LF.SigmaLast(_, tA) -> LF.TClo (tA, s) | _ -> LF.TClo(LF.Sigma trec, s) in
 	let _ = dprint (fun () -> "[genCtx] tA = " ^ P.typToString cD0 cpsi' (tA, S.LF.id)) in
 	  (* cD0 ; cpsi |- tA : type *)
 	let ms = gen_mid cD0 cD' in

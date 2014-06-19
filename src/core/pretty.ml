@@ -788,12 +788,13 @@ module Int = struct
                suffix
        in
        let rec ppr_elements cD cPsi ppf = function
-         | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-         | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
+         | LF.SigmaLast (None, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
+         | LF.SigmaLast (Some x, tA) ->  ppr_element cD cPsi ppf "" (x, tA)
+(*          | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
              begin
                ppr_element cD cPsi  ppf ". " (x, tA1);
                fprintf ppf "%a" (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, tA1))) 0) tA2
-             end
+             end *)
          | LF.SigmaElem (x, tA, tAs)  ->
              begin
                ppr_element cD cPsi ppf ", " (x, tA);
@@ -824,7 +825,7 @@ module Int = struct
               (fmt_ppr_lf_schema lvl) (LF.Schema fs)
 
     and frugal_block cD cPsi lvl ppf = function
-      | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
+      | LF.SigmaLast(_,  tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
       | other -> fprintf ppf "block (%a)" (fmt_ppr_lf_typ_rec cD cPsi lvl) other
 
     and fmt_ppr_lf_sch_elem lvl ppf = function

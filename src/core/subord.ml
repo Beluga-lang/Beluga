@@ -149,7 +149,7 @@ let rec relevant tA basis = (match tA with
                             )
 
 and relevantTypRec tRec basis = (match tRec with
-  | SigmaLast tA -> relevant tA basis
+  | SigmaLast (_n, tA) -> relevant tA basis
   | SigmaElem (_name, tA, typRec) ->
       (relevant tA  basis)@ (relevantTypRec typRec basis))
 

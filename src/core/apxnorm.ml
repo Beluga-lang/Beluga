@@ -363,7 +363,7 @@ and cnormApxTypDecl cD delta t_decl cDt = match t_decl with
       Apx.LF.TypDecl(x, cnormApxTyp cD delta a cDt)
 
 and cnormApxTypRec cD delta t_rec (cD'', t) = match t_rec with
-  | Apx.LF.SigmaLast a -> Apx.LF.SigmaLast (cnormApxTyp cD delta a (cD'', t))
+  | Apx.LF.SigmaLast(n, a) -> Apx.LF.SigmaLast (n, cnormApxTyp cD delta a (cD'', t))
   | Apx.LF.SigmaElem (x, a, t_rec) ->
       let a' = cnormApxTyp cD delta a (cD'', t) in
       let t_rec' = cnormApxTypRec cD delta t_rec (cD'', t) in
@@ -675,7 +675,7 @@ and collectApxTyp fMVs a = match a with
   | Apx.LF.Sigma t_rec -> collectApxTypRec fMVs t_rec
 
 and collectApxTypRec fMVs t_rec = match t_rec with
-  | Apx.LF.SigmaLast a -> collectApxTyp fMVs a
+  | Apx.LF.SigmaLast(_, a) -> collectApxTyp fMVs a
   | Apx.LF.SigmaElem (_, a, t_rec) ->
       let fMVs' = collectApxTyp fMVs a in
         collectApxTypRec fMVs' t_rec
@@ -747,7 +747,7 @@ let rec collectApxTyp fMVd tA = match tA with
        collectApxTypRec fMVd trec
 
 and collectApxTypRec fMVd trec = match trec with
-  | Apx.LF.SigmaLast tA -> collectApxTyp fMVd tA
+  | Apx.LF.SigmaLast(n, tA) -> collectApxTyp fMVd tA
   | Apx.LF.SigmaElem (_, tA, trec) ->
       let fMVd1 = collectApxTyp fMVd tA in
 	collectApxTypRec fMVd1 trec
@@ -1052,7 +1052,7 @@ and fmvApxTypDecl fMVs cD ((l_cd1, l_delta, k) as d_param)  t_decl = match t_dec
       Apx.LF.TypDecl(x, fmvApxTyp fMVs cD d_param  a)
 
 and fmvApxTypRec fMVs cD ((l_cd1, l_delta, k) as d_param)  t_rec = match t_rec with
-  | Apx.LF.SigmaLast a -> Apx.LF.SigmaLast (fmvApxTyp fMVs cD d_param  a)
+  | Apx.LF.SigmaLast (n, a) -> Apx.LF.SigmaLast (n, fmvApxTyp fMVs cD d_param  a)
   | Apx.LF.SigmaElem (x, a, t_rec) ->
       let a' = fmvApxTyp fMVs cD d_param  a in
       let t_rec' = fmvApxTypRec fMVs cD d_param  t_rec in
